@@ -1,0 +1,10 @@
+poly
+	point -6 0
+	point 6 0
+	point 6 6
+	point 0 12
+	point -6 6
+	fill 255
+	line 0
+	color 255 236 132
+	stroke 1

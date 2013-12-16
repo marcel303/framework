@@ -1,0 +1,18 @@
+<h1>Critical Wave HD</h1>
+<span style="color:#C0FF00">Critical</span> <span style="color:#00C0FF">Wave</span> is a beautiful top down survival shooter which combines deadly foes, evolving bosses and an arsenal of weaponry to create a unique iPhone & iPod Touch experience&#0153;.
+<p>
+Features:
+<ul>
+	<li>Top down shooter action</li>
+	<li>On-line leaderboards</li>
+	<li>Real-time ranking - see your global rank as you play!</li>
+	<li>Multiple weapons, powerups, upgrades and high-powered special attacks</li>
+	<li>Touch controls optimized for the iPhone</li>
+	<li>Automatic game-save and restore</li>
+	<li>Evolving bosses, which get incrementally more insane as you progress</li>
+	<li>Wide variety of enemies and spawn and attack patterns</li>
+	<li>Beautiful, colourful graphics</li>
+	<li>Casual and hardcore game modes</li>
+	<li>SGE: Sharpest Graphics Ever&#0153;</li>
+	<li>Optimized to get the highest framerates out of your iPhone & iPod Touch</li>
+</ul>

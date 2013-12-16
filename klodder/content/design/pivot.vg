@@ -1,0 +1,101 @@
+circle
+	position 0 0
+	radius 15
+	stroke 3.5
+	hardness 2.5
+	filled 1
+	fill 255 0.2
+	line 255 0.5
+	color 255 255 255
+	filled 1
+circle
+	position 0 0
+	radius 15
+	stroke 1.5
+	hardness 2.0
+	filled 1
+	fill 255 0.2
+	line 255 0.7
+	color 0 0 0
+	filled 0
+
+circle
+	position 0 -5
+	radius 2
+	stroke 1
+	hardness 1.5
+	filled 1
+	fill 255 1.0
+	line 255 0.0
+	color 255 255 255
+circle
+	position 0 -5
+	radius 2
+	stroke 1
+	hardness 1.5
+	filled 0
+	fill 255 1.0
+	line 255 0.5
+	color 255 63 63
+	visible 1
+
+circle
+	position -5 0
+	radius 2
+	stroke 1
+	hardness 1.5
+	filled 1
+	fill 255 1.0
+	line 255 0.0
+	color 255 255 255
+circle
+	position -5 0
+	radius 2
+	stroke 1
+	hardness 1.5
+	filled 0
+	fill 255 1.0
+	line 255 1.0
+	color 127 191 255
+	visible 1
+	
+circle
+	position +5 0
+	radius 2
+	stroke 1
+	hardness 1.5
+	filled 1
+	fill 255 1.0
+	line 255 0.0
+	color 255 255 255
+circle
+	position +5 0
+	radius 2
+	stroke 1
+	hardness 1.5
+	filled 0
+	fill 255 1.0
+	line 255 1.0
+	color 127 191 255
+	visible 1
+
+circle
+	position 0 +5
+	radius 2
+	stroke 1
+	hardness 1.5
+	filled 1
+	fill 255 1.0
+	line 255 0.0
+	color 255 255 255
+circle
+	position 0 +5
+	radius 2
+	stroke 1
+	hardness 1.5
+	filled 0
+	fill 255 1.0
+	line 255 1.0
+	color 127 191 255
+	visible 1
+	

@@ -1,0 +1,149 @@
+// !$*UTF8*$!
+{
+	953D314B1502AA7E0035910E /* critwave-mac */ = {
+		isa = PBXExecutable;
+		activeArgIndices = (
+		);
+		argumentStrings = (
+		);
+		autoAttachOnCrash = 1;
+		breakpointsEnabled = 0;
+		configStateDict = {
+		};
+		customDataFormattersEnabled = 1;
+		dataTipCustomDataFormattersEnabled = 1;
+		dataTipShowTypeColumn = 1;
+		dataTipSortType = 0;
+		debuggerPlugin = GDBDebugging;
+		disassemblyDisplayState = 0;
+		enableDebugStr = 1;
+		environmentEntries = (
+		);
+		executableSystemSymbolLevel = 0;
+		executableUserSymbolLevel = 0;
+		libgmallocEnabled = 0;
+		name = "critwave-mac";
+		showTypeColumn = 0;
+		sourceDirectories = (
+		);
+	};
+	953D31581502AA830035910E /* Source Control */ = {
+		isa = PBXSourceControlManager;
+		fallbackIsa = XCSourceControlManager;
+		isSCMEnabled = 0;
+		scmConfiguration = {
+			repositoryNamesForRoots = {
+				"" = "";
+			};
+		};
+	};
+	953D31591502AA830035910E /* Code sense */ = {
+		isa = PBXCodeSenseManager;
+		indexTemplatePath = "";
+	};
+	95CAD6BF1502ABB800173695 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 95F160821502AB3A0051CCAD /* Base64.h */;
+		name = "Base64.h: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 89;
+		vrLoc = 0;
+	};
+	95CAD6C01502ABB800173695 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 95F160D61502AB4B0051CCAD /* Log.h */;
+		name = "Log.h: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 79;
+		vrLoc = 0;
+	};
+	95CAD6C11502ABB800173695 /* PBXBookmark */ = {
+		isa = PBXBookmark;
+		fRef = 95F160DC1502AB4B0051CCAD /* MatrixStack.cpp */;
+	};
+	95CAD6C21502ABB800173695 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 95F160DC1502AB4B0051CCAD /* MatrixStack.cpp */;
+		name = "MatrixStack.cpp: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 127;
+		vrLoc = 0;
+	};
+	95F160441502A9B40051CCAD /* Project object */ = {
+		activeBuildConfigurationName = Debug;
+		activeExecutable = 953D314B1502AA7E0035910E /* critwave-mac */;
+		activeTarget = 95F1604C1502A9B40051CCAD /* critwave-mac */;
+		codeSenseManager = 953D31591502AA830035910E /* Code sense */;
+		executables = (
+			953D314B1502AA7E0035910E /* critwave-mac */,
+		);
+		perUserDictionary = {
+			PBXConfiguration.PBXFileTableDataSource3.PBXFileTableDataSource = {
+				PBXFileTableDataSourceColumnSortingDirectionKey = "-1";
+				PBXFileTableDataSourceColumnSortingKey = PBXFileDataSource_Filename_ColumnID;
+				PBXFileTableDataSourceColumnWidthsKey = (
+					20,
+					364,
+					20,
+					48,
+					43,
+					43,
+					20,
+				);
+				PBXFileTableDataSourceColumnsKey = (
+					PBXFileDataSource_FiletypeID,
+					PBXFileDataSource_Filename_ColumnID,
+					PBXFileDataSource_Built_ColumnID,
+					PBXFileDataSource_ObjectSize_ColumnID,
+					PBXFileDataSource_Errors_ColumnID,
+					PBXFileDataSource_Warnings_ColumnID,
+					PBXFileDataSource_Target_ColumnID,
+				);
+			};
+			PBXPerProjectTemplateStateSaveDate = 352496557;
+			PBXWorkspaceStateSaveDate = 352496557;
+		};
+		perUserProjectItems = {
+			95CAD6BF1502ABB800173695 /* PBXTextBookmark */ = 95CAD6BF1502ABB800173695 /* PBXTextBookmark */;
+			95CAD6C01502ABB800173695 /* PBXTextBookmark */ = 95CAD6C01502ABB800173695 /* PBXTextBookmark */;
+			95CAD6C11502ABB800173695 /* PBXBookmark */ = 95CAD6C11502ABB800173695 /* PBXBookmark */;
+			95CAD6C21502ABB800173695 /* PBXTextBookmark */ = 95CAD6C21502ABB800173695 /* PBXTextBookmark */;
+		};
+		sourceControlManager = 953D31581502AA830035910E /* Source Control */;
+		userBuildSettings = {
+		};
+	};
+	95F1604C1502A9B40051CCAD /* critwave-mac */ = {
+		activeExec = 0;
+		executables = (
+			953D314B1502AA7E0035910E /* critwave-mac */,
+		);
+	};
+	95F160821502AB3A0051CCAD /* Base64.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {542, 368}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRange = "{0, 89}";
+		};
+	};
+	95F160D61502AB4B0051CCAD /* Log.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {542, 1376}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRange = "{0, 79}";
+		};
+	};
+	95F160DC1502AB4B0051CCAD /* MatrixStack.cpp */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {542, 1632}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRange = "{0, 127}";
+		};
+	};
+}

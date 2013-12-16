@@ -1,0 +1,5 @@
+<div id="picture_area">
+	<img src="[thumbnail]" alt="" id="picture" />
+	<br />
+	<a href="[link]">[name]</a>
+</div>

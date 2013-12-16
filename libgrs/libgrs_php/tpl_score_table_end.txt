@@ -1,0 +1,11 @@
+</table>
+<a href="[prev]">prev</a> | <a href="[next]">next</a>
+<br />
+<span>
+	list size:
+	<a href="?page_size=10">10</a> |
+	<a href="?page_size=25">25</a> |
+	<a href="?page_size=100">100</a> |
+	<a href="?page_size=1000">1000</a>
+</span>
+</div>

@@ -1,0 +1,6 @@
+<div class="news_item">
+	<div class="news_item_title">[title]</div>
+	<div class="news_item_info">[author] | [date] UTC | [age] day(s) ago</div>
+	<div class="news_item_text">[text]</div>
+</div>
+<hr />

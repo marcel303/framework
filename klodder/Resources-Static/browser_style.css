@@ -1,0 +1,37 @@
+div#page_header
+{
+	font-size: 20px;
+	font-family: arial;
+	font-weight: bold;
+	background: #F0F0F0;
+	border: 2px solid black;
+	padding: 4px;
+}
+
+div#page_footer
+{
+	font-size: 8px;
+	font-family: arial;
+	border: 2px solid #F0F0F0;
+	color: #808080;
+	padding: 4px;
+	clear: left;
+	text-align: right;
+}
+
+div#picture_area
+{
+	float: left;
+	width: 200px;
+	height: 300px;
+	background: #F0F0F0;
+	padding: 10px;
+	margin: 10px;
+	border: 2px solid black;
+	text-align: center;
+}
+
+img#picture
+{
+	border: 1px solid black;
+}

@@ -1,0 +1,68 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<link rel="stylesheet" type="text/css" href="tpl_style.css" />
+<link rel="stylesheet" href="videojs/video-js.css" type="text/css" media="screen" title="Video JS">
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+<title>
+grannies-games.com
+</title>
+</head>
+<body>
+
+<script type="text/javascript">
+/*
+if (typeof Meebo == 'undefined') {
+	Meebo=function(){(Meebo._=Meebo._||[]).push(arguments)};
+	(function(_){var d=document,b=d.body,c;if(!b){c=arguments.callee;
+	return setTimeout(function(){c(_)},100)}var a='appendChild',c='createElement',
+	m=b.insertBefore(d[c]('div'),b.firstChild),n=m[a](d[c]('m')),i=d[c]('iframe');
+	m.style.display='none';m.id='meebo';i.frameBorder="0";n[a](i).id="meebo-iframe";
+	function s(){return['<body onload=\'var d=document;d.getElementsByTagName("head")[0].',
+	a,'(d.',c,'("script")).src="http',_.https?'s':'','://',_.stage?'stage-':'',
+	'cim.meebo.com','/cim?iv=2&network=',_.network,_.lang?'&lang='+_.lang:'',
+	_.d?'&domain='+_.d:'','"\'></bo','dy>'].join('')}try{
+	d=i.contentWindow.document.open();d.write(s());d.close()}catch(e){
+	_.d=d.domain;i.src='javascript:d=document.open();d.write("'+s().replace(/"/g,'\\"')+'");d.close();'}})
+    ({ network: 'granniesgames_na25fu', stage: false });    
+    Meebo("makeEverythingSharable"); 
+*/
+}
+</script>
+
+<!-- Include the VideoJS Library -->
+<script src="videojs/video.js" type="text/javascript" charset="utf-8"></script>
+
+<script type="text/javascript">
+	VideoJS.setupAllWhenReady();
+
+	/*
+    VideoJS.setupAllWhenReady({
+      controlsBelow: false, // Display control bar below video instead of in front of
+      controlsHiding: true, // Hide controls when mouse is not over the video
+      defaultVolume: 0.85, // Will be overridden by user's last volume if available
+      flashVersion: 9, // Required flash version for fallback
+      linksHiding: true // Hide download links when video is supported
+    });
+    */
+</script>
+
+<div id="contentwrapper" style="width:1024px;margin-left:auto;margin-right:auto;clear:left;background:url('images/body_back.png')">
+	
+	<div>[err]</div>
+	
+	<div style="width:1024px;height:84px;background:url('images/menu_back.png') repeat-x">
+		
+		<div style="position:relative;left:30px;top:25px">
+			[button_news]
+			[button_games]
+			[button_highscores]
+			[button_contact]
+			[button_about]
+		</div>
+		
+		<!--div style="float:right;position:relative;right:10px;top:12px"><img src="images/menu_logo.png" alt="" /></div-->
+		
+	</div>
+	
+	<div id="contentmiddle" style="width:600px;margin-left:auto;margin-right:auto">

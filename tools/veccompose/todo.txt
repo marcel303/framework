@@ -1,0 +1,77 @@
+﻿--------------------
+veccompose
+--------------------
+
+- manage shape library
+- import vector shapes
+- reload shape library
+- split vector shapes by group
+- angle: textbox
+- behaviour flags (per link)
+	- turret type
+	- rotation mode (target player, target player/instant, random, none)
+- global behaviour
+	- thruster behaviour
+	- thruster speed
+	- agressiveness
+- move groups by their pivots (?)
+- save
+	- link graph
+- load
+	- link graph
+
+--------------------
+content tools
+--------------------
+
+- parse boss description
+- load vector shapes
+- generate optimized data structures
+- write binary
+
+--------------------
+content build process
+--------------------
+
+- incorporate boss descriptions
+
+--------------------
+engine
+--------------------
+
+- boss rendering
+	- bosses too large to be drawn as vector shapes
+	  (texture atlas limitations)
+		- draw filled triangles
+		- draw outline
+- boss hebaviour
+	- movement
+	- targeting
+	- firing
+	- damage infliction
+	- destruction (including sub segments)
+- boss animation
+	- destruction sequence
+- boss collision detection
+	- selection buffer too slow
+		- use optimized collision detection for bullets (point hit test)
+		- pre-transform vertices (requires extra data per segment)
+		- limit max # collision triangles to 5 per shape (no dynamic alloc shadow copy)
+		- speedup:
+			- use world grid (?)
+			- reduced CD frequency (10..20 Hz) (?)
+			- collision sphere per segment (rotation invariant) (?)
+			- don't bother with trees - too much overhead
+
+--------------------
+non-veccompose stuff
+--------------------
+- slowly targeting vulcans on boss
+- missiles follow target for limited amount of time, then resume linearly
+- missile trail to create a missile like effect (primary smoke, fades quickly, gray, secondary smoke, orange, fades slowly)
+- fix ship allocation pool issue
+- make min spread a little wider
+- use water effect on background, distort texture coordinates, lookup old integer water code
+	- update at 10 Hz, animate at 60
+- sparkle effect health/energy bar on invincibility powerup, bar -> blue
+- controller: texture overlay

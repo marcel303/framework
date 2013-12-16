@@ -1,0 +1,12 @@
+include MakeResources.lst
+
+DST_DIR = temp/
+
+RESOURCES_DST = $(addprefix $(DST_DIR), $(RESOURCES))
+
+all : $(RESOURCES_DST)
+#	echo $(RESOURCES_DST)
+
+$(DST_DIR)% : %
+	cp $< $@
+	

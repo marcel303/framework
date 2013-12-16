@@ -1,0 +1,38 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual C# Express 2008
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FontGen", "FontGen.csproj", "{36BC4148-5FD3-463C-8C01-AEFA0C5F1BD3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FontRendering", "..\FontRendering\FontRendering.csproj", "{DBC876C1-D481-40A4-8AA7-A160E2222416}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FontShared", "..\FontShared\FontShared.csproj", "{ECE189D6-1C75-47BF-AEAA-1BCCB7A68684}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FontTool", "..\FontTool\FontTool.csproj", "{BF992DCB-F187-4F57-A9A5-CC6C01E1FF73}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{36BC4148-5FD3-463C-8C01-AEFA0C5F1BD3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{36BC4148-5FD3-463C-8C01-AEFA0C5F1BD3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{36BC4148-5FD3-463C-8C01-AEFA0C5F1BD3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{36BC4148-5FD3-463C-8C01-AEFA0C5F1BD3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DBC876C1-D481-40A4-8AA7-A160E2222416}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DBC876C1-D481-40A4-8AA7-A160E2222416}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DBC876C1-D481-40A4-8AA7-A160E2222416}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DBC876C1-D481-40A4-8AA7-A160E2222416}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ECE189D6-1C75-47BF-AEAA-1BCCB7A68684}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ECE189D6-1C75-47BF-AEAA-1BCCB7A68684}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ECE189D6-1C75-47BF-AEAA-1BCCB7A68684}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ECE189D6-1C75-47BF-AEAA-1BCCB7A68684}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BF992DCB-F187-4F57-A9A5-CC6C01E1FF73}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BF992DCB-F187-4F57-A9A5-CC6C01E1FF73}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BF992DCB-F187-4F57-A9A5-CC6C01E1FF73}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BF992DCB-F187-4F57-A9A5-CC6C01E1FF73}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

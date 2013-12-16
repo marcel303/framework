@@ -1,0 +1,3 @@
+<div class="picture">
+	<img src="[url]" alt="" />
+</div>

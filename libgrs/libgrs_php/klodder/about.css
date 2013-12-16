@@ -1,0 +1,67 @@
+body
+{
+	margin: 0px
+}
+
+body
+{
+	padding:0px;
+	margin:0px 0px 0px 0px;
+	background:#303030;
+	color:white;
+	font:0.9em Arial, sans-serif;
+	line-height:1.5em;
+}
+
+a
+{
+	color:#D0EB55;
+	text-decoration:none;
+}
+
+a:hover
+{
+	color:#D0EB55;
+	text-decoration:underline;
+}
+
+h1
+{
+	font:bold 1.8em Arial, Sans-Serif;
+	padding:8px 0 4px 0;
+	margin:0px;
+	letter-spacing : -1px;
+}
+h2
+{
+	font:bold 1.4em Arial, Sans-Serif;
+	letter-spacing:-1px;
+}
+
+p
+{
+#	margin:10px 10px;
+}
+
+div.text
+{
+	margin: 10px;
+}
+
+div.credits
+{
+	margin: 10px;
+}
+
+img
+{
+	border:0px;
+}
+
+/* lists * rulers */
+
+ul
+{
+	list-style:square;
+}
+

@@ -1,0 +1,291 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 45;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		8DD76F650486A84900D96B5E /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 08FB7796FE84155DC02AAC07 /* main.cpp */; settings = {ATTRIBUTES = (); }; };
+		8DD76F6A0486A84900D96B5E /* psd-01.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = C6859E8B029090EE04C91782 /* psd-01.1 */; };
+		9525C8C0119C30980099248A /* Exception.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9525C8A6119C30980099248A /* Exception.cpp */; };
+		9525C8C1119C30980099248A /* FileStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9525C8A8119C30980099248A /* FileStream.cpp */; };
+		9525C8C2119C30980099248A /* IImageLoader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9525C8AA119C30980099248A /* IImageLoader.cpp */; };
+		9525C8C3119C30980099248A /* Image.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9525C8AC119C30980099248A /* Image.cpp */; };
+		9525C8C4119C30980099248A /* ImageLoader_Photoshop.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9525C8AE119C30980099248A /* ImageLoader_Photoshop.cpp */; };
+		9525C8C5119C30980099248A /* MemoryStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9525C8B0119C30980099248A /* MemoryStream.cpp */; };
+		9525C8C6119C30980099248A /* Parse.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9525C8B2119C30980099248A /* Parse.cpp */; };
+		9525C8C7119C30980099248A /* Stream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9525C8B4119C30980099248A /* Stream.cpp */; };
+		9525C8C8119C30980099248A /* StreamReader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9525C8B6119C30980099248A /* StreamReader.cpp */; };
+		9525C8C9119C30980099248A /* StreamWriter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9525C8B8119C30980099248A /* StreamWriter.cpp */; };
+		9525C8CA119C30980099248A /* StringEx.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9525C8BA119C30980099248A /* StringEx.cpp */; };
+		9525C8CB119C30980099248A /* Types.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9525C8BC119C30980099248A /* Types.cpp */; };
+		9525C8CC119C30980099248A /* TypesBase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9525C8BE119C30980099248A /* TypesBase.cpp */; };
+		9525C960119C58D40099248A /* Path.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9525C95E119C58D40099248A /* Path.cpp */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		8DD76F690486A84900D96B5E /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 8;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+				8DD76F6A0486A84900D96B5E /* psd-01.1 in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		08FB7796FE84155DC02AAC07 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		8DD76F6C0486A84900D96B5E /* psd-01 */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "psd-01"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9525C8A5119C30980099248A /* Arguments.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Arguments.h; path = ../../../prototypes/libgg/Arguments.h; sourceTree = SOURCE_ROOT; };
+		9525C8A6119C30980099248A /* Exception.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Exception.cpp; path = ../../../prototypes/libgg/Exception.cpp; sourceTree = SOURCE_ROOT; };
+		9525C8A7119C30980099248A /* Exception.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Exception.h; path = ../../../prototypes/libgg/Exception.h; sourceTree = SOURCE_ROOT; };
+		9525C8A8119C30980099248A /* FileStream.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = FileStream.cpp; path = ../../../prototypes/libgg/FileStream.cpp; sourceTree = SOURCE_ROOT; };
+		9525C8A9119C30980099248A /* FileStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FileStream.h; path = ../../../prototypes/libgg/FileStream.h; sourceTree = SOURCE_ROOT; };
+		9525C8AA119C30980099248A /* IImageLoader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = IImageLoader.cpp; path = ../../../prototypes/libgg/IImageLoader.cpp; sourceTree = SOURCE_ROOT; };
+		9525C8AB119C30980099248A /* IImageLoader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = IImageLoader.h; path = ../../../prototypes/libgg/IImageLoader.h; sourceTree = SOURCE_ROOT; };
+		9525C8AC119C30980099248A /* Image.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Image.cpp; path = ../../../prototypes/libgg/Image.cpp; sourceTree = SOURCE_ROOT; };
+		9525C8AD119C30980099248A /* Image.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Image.h; path = ../../../prototypes/libgg/Image.h; sourceTree = SOURCE_ROOT; };
+		9525C8AE119C30980099248A /* ImageLoader_Photoshop.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ImageLoader_Photoshop.cpp; path = ../../../prototypes/libgg/ImageLoader_Photoshop.cpp; sourceTree = SOURCE_ROOT; };
+		9525C8AF119C30980099248A /* ImageLoader_Photoshop.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ImageLoader_Photoshop.h; path = ../../../prototypes/libgg/ImageLoader_Photoshop.h; sourceTree = SOURCE_ROOT; };
+		9525C8B0119C30980099248A /* MemoryStream.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MemoryStream.cpp; path = ../../../prototypes/libgg/MemoryStream.cpp; sourceTree = SOURCE_ROOT; };
+		9525C8B1119C30980099248A /* MemoryStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MemoryStream.h; path = ../../../prototypes/libgg/MemoryStream.h; sourceTree = SOURCE_ROOT; };
+		9525C8B2119C30980099248A /* Parse.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Parse.cpp; path = ../../../prototypes/libgg/Parse.cpp; sourceTree = SOURCE_ROOT; };
+		9525C8B3119C30980099248A /* Parse.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Parse.h; path = ../../../prototypes/libgg/Parse.h; sourceTree = SOURCE_ROOT; };
+		9525C8B4119C30980099248A /* Stream.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Stream.cpp; path = ../../../prototypes/libgg/Stream.cpp; sourceTree = SOURCE_ROOT; };
+		9525C8B5119C30980099248A /* Stream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Stream.h; path = ../../../prototypes/libgg/Stream.h; sourceTree = SOURCE_ROOT; };
+		9525C8B6119C30980099248A /* StreamReader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StreamReader.cpp; path = ../../../prototypes/libgg/StreamReader.cpp; sourceTree = SOURCE_ROOT; };
+		9525C8B7119C30980099248A /* StreamReader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = StreamReader.h; path = ../../../prototypes/libgg/StreamReader.h; sourceTree = SOURCE_ROOT; };
+		9525C8B8119C30980099248A /* StreamWriter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StreamWriter.cpp; path = ../../../prototypes/libgg/StreamWriter.cpp; sourceTree = SOURCE_ROOT; };
+		9525C8B9119C30980099248A /* StreamWriter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = StreamWriter.h; path = ../../../prototypes/libgg/StreamWriter.h; sourceTree = SOURCE_ROOT; };
+		9525C8BA119C30980099248A /* StringEx.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StringEx.cpp; path = ../../../prototypes/libgg/StringEx.cpp; sourceTree = SOURCE_ROOT; };
+		9525C8BB119C30980099248A /* StringEx.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = StringEx.h; path = ../../../prototypes/libgg/StringEx.h; sourceTree = SOURCE_ROOT; };
+		9525C8BC119C30980099248A /* Types.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Types.cpp; path = ../../../prototypes/libgg/Types.cpp; sourceTree = SOURCE_ROOT; };
+		9525C8BD119C30980099248A /* Types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Types.h; path = ../../../prototypes/libgg/Types.h; sourceTree = SOURCE_ROOT; };
+		9525C8BE119C30980099248A /* TypesBase.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TypesBase.cpp; path = ../../../prototypes/libgg/TypesBase.cpp; sourceTree = SOURCE_ROOT; };
+		9525C8BF119C30980099248A /* TypesBase.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TypesBase.h; path = ../../../prototypes/libgg/TypesBase.h; sourceTree = SOURCE_ROOT; };
+		9525C95E119C58D40099248A /* Path.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Path.cpp; path = ../../../prototypes/libgg/Path.cpp; sourceTree = SOURCE_ROOT; };
+		9525C95F119C58D40099248A /* Path.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Path.h; path = ../../../prototypes/libgg/Path.h; sourceTree = SOURCE_ROOT; };
+		C6859E8B029090EE04C91782 /* psd-01.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = "psd-01.1"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		8DD76F660486A84900D96B5E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		08FB7794FE84155DC02AAC07 /* psd-01 */ = {
+			isa = PBXGroup;
+			children = (
+				C6859E8C029090F304C91782 /* Documentation */,
+				1AB674ADFE9D54B511CA2CBB /* Products */,
+				08FB7795FE84155DC02AAC07 /* Source */,
+			);
+			name = "psd-01";
+			sourceTree = "<group>";
+		};
+		08FB7795FE84155DC02AAC07 /* Source */ = {
+			isa = PBXGroup;
+			children = (
+				9525C8A5119C30980099248A /* Arguments.h */,
+				9525C8A6119C30980099248A /* Exception.cpp */,
+				9525C8A7119C30980099248A /* Exception.h */,
+				9525C8A8119C30980099248A /* FileStream.cpp */,
+				9525C8A9119C30980099248A /* FileStream.h */,
+				9525C8AA119C30980099248A /* IImageLoader.cpp */,
+				9525C8AB119C30980099248A /* IImageLoader.h */,
+				9525C8AC119C30980099248A /* Image.cpp */,
+				9525C8AD119C30980099248A /* Image.h */,
+				9525C8AE119C30980099248A /* ImageLoader_Photoshop.cpp */,
+				9525C8AF119C30980099248A /* ImageLoader_Photoshop.h */,
+				08FB7796FE84155DC02AAC07 /* main.cpp */,
+				9525C8B0119C30980099248A /* MemoryStream.cpp */,
+				9525C8B1119C30980099248A /* MemoryStream.h */,
+				9525C8B2119C30980099248A /* Parse.cpp */,
+				9525C8B3119C30980099248A /* Parse.h */,
+				9525C95E119C58D40099248A /* Path.cpp */,
+				9525C95F119C58D40099248A /* Path.h */,
+				9525C8B4119C30980099248A /* Stream.cpp */,
+				9525C8B5119C30980099248A /* Stream.h */,
+				9525C8B6119C30980099248A /* StreamReader.cpp */,
+				9525C8B7119C30980099248A /* StreamReader.h */,
+				9525C8B8119C30980099248A /* StreamWriter.cpp */,
+				9525C8B9119C30980099248A /* StreamWriter.h */,
+				9525C8BA119C30980099248A /* StringEx.cpp */,
+				9525C8BB119C30980099248A /* StringEx.h */,
+				9525C8BC119C30980099248A /* Types.cpp */,
+				9525C8BD119C30980099248A /* Types.h */,
+				9525C8BE119C30980099248A /* TypesBase.cpp */,
+				9525C8BF119C30980099248A /* TypesBase.h */,
+			);
+			name = Source;
+			sourceTree = "<group>";
+		};
+		1AB674ADFE9D54B511CA2CBB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				8DD76F6C0486A84900D96B5E /* psd-01 */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		C6859E8C029090F304C91782 /* Documentation */ = {
+			isa = PBXGroup;
+			children = (
+				C6859E8B029090EE04C91782 /* psd-01.1 */,
+			);
+			name = Documentation;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		8DD76F620486A84900D96B5E /* psd-01 */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1DEB923108733DC60010E9CD /* Build configuration list for PBXNativeTarget "psd-01" */;
+			buildPhases = (
+				8DD76F640486A84900D96B5E /* Sources */,
+				8DD76F660486A84900D96B5E /* Frameworks */,
+				8DD76F690486A84900D96B5E /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "psd-01";
+			productInstallPath = "$(HOME)/bin";
+			productName = "psd-01";
+			productReference = 8DD76F6C0486A84900D96B5E /* psd-01 */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		08FB7793FE84155DC02AAC07 /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = 1DEB923508733DC60010E9CD /* Build configuration list for PBXProject "psd-01" */;
+			compatibilityVersion = "Xcode 3.1";
+			hasScannedForEncodings = 1;
+			mainGroup = 08FB7794FE84155DC02AAC07 /* psd-01 */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				8DD76F620486A84900D96B5E /* psd-01 */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		8DD76F640486A84900D96B5E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8DD76F650486A84900D96B5E /* main.cpp in Sources */,
+				9525C8C0119C30980099248A /* Exception.cpp in Sources */,
+				9525C8C1119C30980099248A /* FileStream.cpp in Sources */,
+				9525C8C2119C30980099248A /* IImageLoader.cpp in Sources */,
+				9525C8C3119C30980099248A /* Image.cpp in Sources */,
+				9525C8C4119C30980099248A /* ImageLoader_Photoshop.cpp in Sources */,
+				9525C8C5119C30980099248A /* MemoryStream.cpp in Sources */,
+				9525C8C6119C30980099248A /* Parse.cpp in Sources */,
+				9525C8C7119C30980099248A /* Stream.cpp in Sources */,
+				9525C8C8119C30980099248A /* StreamReader.cpp in Sources */,
+				9525C8C9119C30980099248A /* StreamWriter.cpp in Sources */,
+				9525C8CA119C30980099248A /* StringEx.cpp in Sources */,
+				9525C8CB119C30980099248A /* Types.cpp in Sources */,
+				9525C8CC119C30980099248A /* TypesBase.cpp in Sources */,
+				9525C960119C58D40099248A /* Path.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		1DEB923208733DC60010E9CD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				INSTALL_PATH = /usr/local/bin;
+				PRODUCT_NAME = "psd-01";
+			};
+			name = Debug;
+		};
+		1DEB923308733DC60010E9CD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_MODEL_TUNING = G5;
+				INSTALL_PATH = /usr/local/bin;
+				PRODUCT_NAME = "psd-01";
+			};
+			name = Release;
+		};
+		1DEB923608733DC60010E9CD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = DEBUG;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PREBINDING = NO;
+				SDKROOT = macosx10.6;
+			};
+			name = Debug;
+		};
+		1DEB923708733DC60010E9CD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_PREPROCESSOR_DEFINITIONS = DEBUG;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				PREBINDING = NO;
+				SDKROOT = macosx10.6;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1DEB923108733DC60010E9CD /* Build configuration list for PBXNativeTarget "psd-01" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1DEB923208733DC60010E9CD /* Debug */,
+				1DEB923308733DC60010E9CD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1DEB923508733DC60010E9CD /* Build configuration list for PBXProject "psd-01" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1DEB923608733DC60010E9CD /* Debug */,
+				1DEB923708733DC60010E9CD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 08FB7793FE84155DC02AAC07 /* Project object */;
+}

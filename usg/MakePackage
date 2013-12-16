@@ -1,0 +1,20 @@
+RESCOMPILER = ../tools/rescompiler/rescompiler
+PKGCOMPILER = ../tools/pkgcompiler/pkgcompiler
+STG_DIR = Resources_Staging/
+
+RESOURCES_IMG = $(addsuffix .tga, $(addprefix $(STG_DIR), $(shell $(RESCOMPILER) -c resources.txt -l -t image)))
+RESOURCES_FNT = $(addsuffix .fnt, $(addprefix $(STG_DIR), $(shell $(RESCOMPILER) -c resources.txt -l -t font)))
+RESOURCES_SND = $(addsuffix .sfx, $(addprefix $(STG_DIR), $(shell $(RESCOMPILER) -c resources.txt -l -t sound)))
+RESOURCES_VEC = $(addsuffix .vgc, $(addprefix $(STG_DIR), $(shell $(RESCOMPILER) -c resources.txt -l -t vector)))
+RESOURCES_CMP = $(addsuffix .vcc, $(addprefix $(STG_DIR), $(shell $(RESCOMPILER) -c resources.txt -l -t composition)))
+RESOURCES_PVR4 = $(addsuffix .pvr4, $(addprefix $(STG_DIR), $(shell $(RESCOMPILER) -c resources.txt -l -t pvr4)))
+
+FILES += $(RESOURCES_IMG)
+FILES += $(RESOURCES_FNT)
+FILES += $(RESOURCES_SND)
+FILES += $(RESOURCES_VEC)
+FILES += $(RESOURCES_CMP)
+FILES += $(RESOURCES_PVR4)
+
+all :
+	@$(PKGCOMPILER) -c $(FILES) -o test.pkg

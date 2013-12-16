@@ -1,0 +1,27 @@
+[D]<a href="http://twitter.com/YourLink"><img src="http://twitterbuttons.com/images/ex/twitter_buttons5.png" title="By: TwitterButtons.com" width="160" height="40" /></a>
+
+</div><!-- contentmiddle -->
+<div class="push"></div>
+</div><!-- contentwrapper -->
+
+<div id="footer" class="footer">
+  <!--p>
+    <a href="http://validator.w3.org/check?uri=referer"><img
+        src="http://www.w3.org/Icons/valid-xhtml10-blue"
+        alt="Valid XHTML 1.0 Transitional" height="31" width="88" style="float:right"/></a>
+  </p-->
+	&#0169; 2010 grannies games
+[D] - page rendered in [page_time] seconds
+	<br />
+	<span style="font-size:0.8em">
+		Log <a href="?page=login">in</a> or
+		<a href="?auth_user=neo">out</a>
+	</span>
+</div>
+
+<script type="text/javascript">
+  Meebo("domReady");
+</script>
+
+</body>
+</html>

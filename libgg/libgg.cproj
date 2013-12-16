@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="3.5" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.21022</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{186330BA-7D65-4B31-BB3F-9824D4066109}</ProjectGuid>
+    <Target>Bin</Target>
+    <Language>CPP</Language>
+    <Compiler>
+      <Compiler ctype="GppCompiler" />
+    </Compiler>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\Debug</OutputPath>
+    <DefineSymbols>DEBUG MONODEVELOP LINUX</DefineSymbols>
+    <SourceDirectory>.</SourceDirectory>
+    <OutputName>libgg</OutputName>
+    <CompileTarget>StaticLibrary</CompileTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <OutputPath>bin\Release</OutputPath>
+    <DefineSymbols>MONODEVELOP</DefineSymbols>
+    <SourceDirectory>.</SourceDirectory>
+    <OptimizationLevel>3</OptimizationLevel>
+    <OutputName>libgg</OutputName>
+    <CompileTarget>StaticLibrary</CompileTarget>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="AngleController.cpp" />
+    <Compile Include="AnimTimer.cpp" />
+    <Compile Include="ArrayStream.cpp" />
+    <Compile Include="Base64.cpp" />
+    <Compile Include="Benchmark.cpp" />
+    <Compile Include="BezierPath.cpp" />
+    <Compile Include="ByteString.cpp" />
+    <Compile Include="Calc.cpp" />
+    <Compile Include="CallBack.cpp" />
+    <Compile Include="ColHashMap.cpp" />
+    <Compile Include="ColList.cpp" />
+    <Compile Include="DdsLoader.cpp" />
+    <Compile Include="Debugging.cpp" />
+    <Compile Include="DeltaTimer.cpp" />
+    <Compile Include="Directory.cpp" />
+    <Compile Include="Exception.cpp" />
+    <Compile Include="FileStream.cpp" />
+    <Compile Include="FileStreamExtends.cpp" />
+    <Compile Include="Hash.cpp" />
+    <Compile Include="Heap.cpp" />
+    <Compile Include="IImageLoader.cpp" />
+    <Compile Include="Image.cpp" />
+    <Compile Include="ImageLoader_FreeImage.cpp" />
+    <Compile Include="ImageLoader_Photoshop.cpp" />
+    <Compile Include="ImageLoader_Tga.cpp" />
+    <Compile Include="ImageLoader_Tiff.cpp" />
+    <Compile Include="Log.cpp" />
+    <Compile Include="Mat3x2.cpp" />
+    <Compile Include="MatrixStack.cpp" />
+    <Compile Include="MemAllocators.cpp" />
+    <Compile Include="MemOps.cpp" />
+    <Compile Include="MemoryStream.cpp" />
+    <Compile Include="Nullable.cpp" />
+    <Compile Include="Parse.cpp" />
+    <Compile Include="Path.cpp" />
+    <Compile Include="PolledTimer.cpp" />
+    <Compile Include="PsdChannel.cpp" />
+    <Compile Include="PsdColorModeData.cpp" />
+    <Compile Include="PsdCompression.cpp" />
+    <Compile Include="PsdForward.cpp" />
+    <Compile Include="PsdHeaderInfo.cpp" />
+    <Compile Include="PsdImageData.cpp" />
+    <Compile Include="PsdInfo.cpp" />
+    <Compile Include="PsdLayer.cpp" />
+    <Compile Include="PsdLayerAndMaskInfo.cpp" />
+    <Compile Include="PsdRect.cpp" />
+    <Compile Include="PsdResource.cpp" />
+    <Compile Include="PsdResource_ChannelNames.cpp" />
+    <Compile Include="PsdResource_DisplayInfo.cpp" />
+    <Compile Include="PsdResourceList.cpp" />
+    <Compile Include="PsdResource_ResolutionInfo.cpp" />
+    <Compile Include="PsdTypes.cpp" />
+    <Compile Include="Random.cpp" />
+    <Compile Include="Stream.cpp" />
+    <Compile Include="StreamReader.cpp" />
+    <Compile Include="StreamWriter.cpp" />
+    <Compile Include="StringBuilder.cpp" />
+    <Compile Include="StringEx.cpp" />
+    <Compile Include="SubStream.cpp" />
+    <Compile Include="TextureDDS.cpp" />
+    <Compile Include="TexturePVR.cpp" />
+    <Compile Include="TextureRGBA.cpp" />
+    <Compile Include="TgaLoader.cpp" />
+    <Compile Include="Timer.cpp" />
+    <Compile Include="TimeTracker.cpp" />
+    <Compile Include="Traveller.cpp" />
+    <Compile Include="TravellerCapturer.cpp" />
+    <Compile Include="TriggerTimer.cpp" />
+    <Compile Include="Types.cpp" />
+    <Compile Include="TypesBase.cpp" />
+    <Compile Include="Util_Angle.cpp" />
+    <Compile Include="Util_Color.cpp" />
+    <Compile Include="Vec2.cpp" />
+    <Compile Include="Vec3.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="AngleController.h" />
+    <None Include="AnimTimer.h" />
+    <None Include="Arguments.h" />
+    <None Include="ArrayStream.h" />
+    <None Include="Base64.h" />
+    <None Include="Benchmark.h" />
+    <None Include="BezierPath.h" />
+    <None Include="ByteString.h" />
+    <None Include="Calc.h" />
+    <None Include="CallBack.h" />
+    <None Include="ColHashMap.h" />
+    <None Include="ColList.h" />
+    <None Include="DdsLoader.h" />
+    <None Include="Debugging.h" />
+    <None Include="DeltaTimer.h" />
+    <None Include="Directory.h" />
+    <None Include="Endianness.h" />
+    <None Include="Exception.h" />
+    <None Include="FileStream.h" />
+    <None Include="FileStreamExtends.h" />
+    <None Include="FixedSizeArray.h" />
+    <None Include="FixedSizeString.h" />
+    <None Include="Hash.h" />
+    <None Include="Heap.h" />
+    <None Include="IImageLoader.h" />
+    <None Include="Image.h" />
+    <None Include="ImageLoader_FreeImage.h" />
+    <None Include="ImageLoader_Photoshop.h" />
+    <None Include="ImageLoader_Tga.h" />
+    <None Include="ImageLoader_Tiff.h" />
+    <None Include="IRes.h" />
+    <None Include="libgg_forward.h" />
+    <None Include="Log.h" />
+    <None Include="LogUdp.h" />
+    <None Include="Mat3x2.h" />
+    <None Include="Mat4x4.h" />
+    <None Include="MatrixStack.h" />
+    <None Include="MemAllocators.h" />
+    <None Include="MemOps.h" />
+    <None Include="MemoryStream.h" />
+    <None Include="Nullable.h" />
+    <None Include="Parse.h" />
+    <None Include="Path.h" />
+    <None Include="PolledTimer.h" />
+    <None Include="Precompiled.h" />
+    <None Include="PsdChannel.h" />
+    <None Include="PsdColorModeData.h" />
+    <None Include="PsdCompression.h" />
+    <None Include="PsdForward.h" />
+    <None Include="PsdHeaderInfo.h" />
+    <None Include="PsdImageData.h" />
+    <None Include="PsdInfo.h" />
+    <None Include="PsdLayer.h" />
+    <None Include="PsdLayerAndMaskInfo.h" />
+    <None Include="PsdLog.h" />
+    <None Include="PsdRect.h" />
+    <None Include="PsdResource.h" />
+    <None Include="PsdResource_ChannelNames.h" />
+    <None Include="PsdResource_DisplayInfo.h" />
+    <None Include="PsdResourceList.h" />
+    <None Include="PsdResource_ResolutionInfo.h" />
+    <None Include="PsdTypes.h" />
+    <None Include="Random.h" />
+    <None Include="Stream.h" />
+    <None Include="StreamReader.h" />
+    <None Include="StreamWriter.h" />
+    <None Include="StringBuilder.h" />
+    <None Include="StringEx.h" />
+    <None Include="SubStream.h" />
+    <None Include="TextureDDS.h" />
+    <None Include="TexturePVR.h" />
+    <None Include="TextureRGBA.h" />
+    <None Include="TgaLoader.h" />
+    <None Include="Timer.h" />
+    <None Include="TimeTracker.h" />
+    <None Include="Traveller.h" />
+    <None Include="TravellerCapturer.h" />
+    <None Include="TriggerTimer.h" />
+    <None Include="Types.h" />
+    <None Include="TypesBase.h" />
+    <None Include="Util_Angle.h" />
+    <None Include="Util_Color.h" />
+    <None Include="Vec2.h" />
+    <None Include="Vec3.h" />
+    <None Include="Vec4.h" />
+  </ItemGroup>
+</Project>

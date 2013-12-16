@@ -1,0 +1,600 @@
+// !$*UTF8*$!
+{
+	1D3623240D0F684500981E51 /* AppDelegate.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1412, 510}}";
+			sepNavSelRange = "{149, 0}";
+			sepNavVisRange = "{0, 271}";
+		};
+	};
+	1D3623250D0F684500981E51 /* AppDelegate.mm */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1412, 561}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRange = "{0, 572}";
+		};
+	};
+	1D6058900D05DD3D006BFB54 /* water-01 */ = {
+		activeExec = 0;
+		executables = (
+			9599B6E60FC2ABBA00275162 /* water-01 */,
+		);
+	};
+	28AD733E0D9D9553002E5188 /* MainWindow.xib */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1412, 3808}}";
+			sepNavSelRange = "{3048, 0}";
+			sepNavVisRange = "{2841, 1175}";
+		};
+	};
+	28FD14FC0DC6FC130079059D /* EAGLView.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1371, 532}}";
+			sepNavSelRange = "{672, 0}";
+			sepNavVisRange = "{24, 787}";
+		};
+	};
+	28FD14FD0DC6FC130079059D /* EAGLView.mm */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1371, 4158}}";
+			sepNavSelRange = "{1308, 0}";
+			sepNavVisRange = "{363, 1012}";
+		};
+	};
+	29B97313FDCFA39411CA2CEA /* Project object */ = {
+		activeBuildConfigurationName = Release;
+		activeExecutable = 9599B6E60FC2ABBA00275162 /* water-01 */;
+		activeSDKPreference = iphoneos3.1;
+		activeTarget = 1D6058900D05DD3D006BFB54 /* water-01 */;
+		addToTargets = (
+			1D6058900D05DD3D006BFB54 /* water-01 */,
+		);
+		breakpoints = (
+			9599B7DF0FC2B52200275162 /* WaterGrid.h:117 */,
+			9599B7E70FC2B53100275162 /* WaterGrid.h:107 */,
+		);
+		codeSenseManager = 9599B6F30FC2ABC500275162 /* Code sense */;
+		executables = (
+			9599B6E60FC2ABBA00275162 /* water-01 */,
+		);
+		perUserDictionary = {
+			PBXConfiguration.PBXFileTableDataSource3.PBXErrorsWarningsDataSource = {
+				PBXFileTableDataSourceColumnSortingDirectionKey = "-1";
+				PBXFileTableDataSourceColumnSortingKey = PBXErrorsWarningsDataSource_LocationID;
+				PBXFileTableDataSourceColumnWidthsKey = (
+					20,
+					733,
+					691.20849609375,
+				);
+				PBXFileTableDataSourceColumnsKey = (
+					PBXErrorsWarningsDataSource_TypeID,
+					PBXErrorsWarningsDataSource_MessageID,
+					PBXErrorsWarningsDataSource_LocationID,
+				);
+			};
+			PBXConfiguration.PBXFileTableDataSource3.PBXFileTableDataSource = {
+				PBXFileTableDataSourceColumnSortingDirectionKey = "-1";
+				PBXFileTableDataSourceColumnSortingKey = PBXFileDataSource_Filename_ColumnID;
+				PBXFileTableDataSourceColumnWidthsKey = (
+					20,
+					1193,
+					20,
+					48,
+					43,
+					43,
+					20,
+				);
+				PBXFileTableDataSourceColumnsKey = (
+					PBXFileDataSource_FiletypeID,
+					PBXFileDataSource_Filename_ColumnID,
+					PBXFileDataSource_Built_ColumnID,
+					PBXFileDataSource_ObjectSize_ColumnID,
+					PBXFileDataSource_Errors_ColumnID,
+					PBXFileDataSource_Warnings_ColumnID,
+					PBXFileDataSource_Target_ColumnID,
+				);
+			};
+			PBXPerProjectTemplateStateSaveDate = 294833242;
+			PBXWorkspaceStateSaveDate = 294833242;
+		};
+		perUserProjectItems = {
+			95043F950FD036F2008BA221 /* PBXTextBookmark */ = 95043F950FD036F2008BA221 /* PBXTextBookmark */;
+			95043F970FD036F2008BA221 /* PBXTextBookmark */ = 95043F970FD036F2008BA221 /* PBXTextBookmark */;
+			95043F990FD036F2008BA221 /* PBXTextBookmark */ = 95043F990FD036F2008BA221 /* PBXTextBookmark */;
+			951689280FC5D0EF00EE25C6 /* PBXTextBookmark */ = 951689280FC5D0EF00EE25C6 /* PBXTextBookmark */;
+			9524F9F81192CC1C00E26096 /* PBXTextBookmark */ = 9524F9F81192CC1C00E26096 /* PBXTextBookmark */;
+			9524F9F91192CC1C00E26096 /* PBXTextBookmark */ = 9524F9F91192CC1C00E26096 /* PBXTextBookmark */;
+			9524FA8E1192E4C700E26096 /* PBXTextBookmark */ = 9524FA8E1192E4C700E26096 /* PBXTextBookmark */;
+			9524FA8F1192E4C700E26096 /* PBXTextBookmark */ = 9524FA8F1192E4C700E26096 /* PBXTextBookmark */;
+			9524FA901192E4C700E26096 /* PBXTextBookmark */ = 9524FA901192E4C700E26096 /* PBXTextBookmark */;
+			953917830FF23BF7003B4E96 /* PlistBookmark */ = 953917830FF23BF7003B4E96 /* PlistBookmark */;
+			953F54690FF4C8AE00546315 /* PBXTextBookmark */ = 953F54690FF4C8AE00546315 /* PBXTextBookmark */;
+			953F54840FF4C8FD00546315 /* PBXTextBookmark */ = 953F54840FF4C8FD00546315 /* PBXTextBookmark */;
+			953F569B0FF4F07300546315 /* PBXTextBookmark */ = 953F569B0FF4F07300546315 /* PBXTextBookmark */;
+			954FB41C10C3364300F99143 /* PBXTextBookmark */ = 954FB41C10C3364300F99143 /* PBXTextBookmark */;
+			954FB43610C3370800F99143 /* PBXTextBookmark */ = 954FB43610C3370800F99143 /* PBXTextBookmark */;
+			954FB47D10C3389D00F99143 /* PBXTextBookmark */ = 954FB47D10C3389D00F99143 /* PBXTextBookmark */;
+			9599B71C0FC2AD2000275162 /* PBXTextBookmark */ = 9599B71C0FC2AD2000275162 /* PBXTextBookmark */;
+			9599B7750FC2B2C900275162 /* PBXTextBookmark */ = 9599B7750FC2B2C900275162 /* PBXTextBookmark */;
+			95DB325A0FC30F6C00429C81 /* PBXTextBookmark */ = 95DB325A0FC30F6C00429C81 /* PBXTextBookmark */;
+			95DB325B0FC30F6C00429C81 /* PBXTextBookmark */ = 95DB325B0FC30F6C00429C81 /* PBXTextBookmark */;
+			95DB325C0FC30F6C00429C81 /* PBXTextBookmark */ = 95DB325C0FC30F6C00429C81 /* PBXTextBookmark */;
+			95DB325F0FC30F6C00429C81 /* PBXTextBookmark */ = 95DB325F0FC30F6C00429C81 /* PBXTextBookmark */;
+			95FBC23210073687001542E2 /* PBXTextBookmark */ = 95FBC23210073687001542E2 /* PBXTextBookmark */;
+		};
+		sourceControlManager = 9599B6F20FC2ABC500275162 /* Source Control */;
+		userBuildSettings = {
+		};
+	};
+	29B97316FDCFA39411CA2CEA /* main.m */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1412, 510}}";
+			sepNavSelRange = "{229, 0}";
+			sepNavVisRange = "{0, 229}";
+		};
+	};
+	32CA4F630368D1EE00C91783 /* water_01_Prefix.pch */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1412, 510}}";
+			sepNavSelRange = "{177, 0}";
+			sepNavVisRange = "{0, 177}";
+		};
+	};
+	8D1107310486CEB800E47090 /* Info.plist */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1412, 527}}";
+			sepNavSelRange = "{170, 0}";
+			sepNavVisRange = "{0, 902}";
+			sepNavWindowFrame = "{{56, 75}, {750, 953}}";
+		};
+	};
+	95043F950FD036F2008BA221 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 95043F960FD036F2008BA221 /* Types.h */;
+		name = "Types.h: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 1074;
+		vrLoc = 0;
+	};
+	95043F960FD036F2008BA221 /* Types.h */ = {
+		isa = PBXFileReference;
+		lastKnownFileType = sourcecode.c.h;
+		name = Types.h;
+		path = "/Users/marcel303/Documents/projects/users/marcel/paint-01/Classes/Types.h";
+		sourceTree = "<absolute>";
+	};
+	95043F970FD036F2008BA221 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 95043F980FD036F2008BA221 /* Calc.h */;
+		name = "Calc.h: 47";
+		rLen = 357;
+		rLoc = 646;
+		rType = 0;
+		vrLen = 569;
+		vrLoc = 481;
+	};
+	95043F980FD036F2008BA221 /* Calc.h */ = {
+		isa = PBXFileReference;
+		lastKnownFileType = sourcecode.c.h;
+		name = Calc.h;
+		path = "/Users/marcel303/Documents/projects/users/marcel/paint-01/Classes/Calc.h";
+		sourceTree = "<absolute>";
+	};
+	95043F990FD036F2008BA221 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 9599B74C0FC2AFF900275162 /* Types.h */;
+		name = "Types.h: 31";
+		rLen = 0;
+		rLoc = 759;
+		rType = 0;
+		vrLen = 746;
+		vrLoc = 13;
+	};
+	951689280FC5D0EF00EE25C6 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 32CA4F630368D1EE00C91783 /* water_01_Prefix.pch */;
+		name = "water_01_Prefix.pch: 9";
+		rLen = 0;
+		rLoc = 177;
+		rType = 0;
+		vrLen = 177;
+		vrLoc = 0;
+	};
+	9524F9F81192CC1C00E26096 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 9599B73C0FC2AD7000275162 /* WaterGrid.h */;
+		name = "WaterGrid.h: 369";
+		rLen = 0;
+		rLoc = 6616;
+		rType = 0;
+		vrLen = 1027;
+		vrLoc = 5676;
+	};
+	9524F9F91192CC1C00E26096 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 9599B9940FC2E2E700275162 /* AppDelegate.mm */;
+		name = "AppDelegate.mm: 13";
+		rLen = 0;
+		rLoc = 273;
+		rType = 0;
+		vrLen = 646;
+		vrLoc = 0;
+	};
+	9524FA8E1192E4C700E26096 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 9599B75A0FC2B10000275162 /* EAGLView.h */;
+		name = "EAGLView.h: 22";
+		rLen = 11;
+		rLoc = 575;
+		rType = 0;
+		vrLen = 762;
+		vrLoc = 24;
+	};
+	9524FA8F1192E4C700E26096 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 28FD14FD0DC6FC130079059D /* EAGLView.mm */;
+		name = "EAGLView.mm: 5";
+		rLen = 0;
+		rLoc = 108;
+		rType = 0;
+		vrLen = 956;
+		vrLoc = 419;
+	};
+	9524FA901192E4C700E26096 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 28FD14FD0DC6FC130079059D /* EAGLView.mm */;
+		name = "EAGLView.mm: 40";
+		rLen = 0;
+		rLoc = 1308;
+		rType = 0;
+		vrLen = 1012;
+		vrLoc = 363;
+	};
+	953917830FF23BF7003B4E96 /* PlistBookmark */ = {
+		isa = PlistBookmark;
+		fRef = 8D1107310486CEB800E47090 /* Info.plist */;
+		fallbackIsa = PBXBookmark;
+		isK = 0;
+		kPath = (
+		);
+		name = "/Users/marcel303/Documents/projects/users/marcel/water-01/Info.plist";
+		rLen = 0;
+		rLoc = 2147483647;
+	};
+	953F54690FF4C8AE00546315 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 953F546A0FF4C8AE00546315 /* UIApplication.h */;
+		name = "UIApplication.h: 106";
+		rLen = 0;
+		rLoc = 4651;
+		rType = 0;
+		vrLen = 1447;
+		vrLoc = 4187;
+	};
+	953F546A0FF4C8AE00546315 /* UIApplication.h */ = {
+		isa = PBXFileReference;
+		lastKnownFileType = sourcecode.c.h;
+		name = UIApplication.h;
+		path = /Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS3.0.sdk/System/Library/Frameworks/UIKit.framework/Headers/UIApplication.h;
+		sourceTree = "<absolute>";
+	};
+	953F54840FF4C8FD00546315 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 1D3623240D0F684500981E51 /* AppDelegate.h */;
+		name = "AppDelegate.h: 9";
+		rLen = 0;
+		rLoc = 149;
+		rType = 0;
+		vrLen = 271;
+		vrLoc = 0;
+	};
+	953F569B0FF4F07300546315 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 953F569C0FF4F07300546315 /* EAGL.h */;
+		name = "EAGL.h: 46";
+		rLen = 0;
+		rLoc = 1470;
+		rType = 0;
+		vrLen = 976;
+		vrLoc = 1278;
+	};
+	953F569C0FF4F07300546315 /* EAGL.h */ = {
+		isa = PBXFileReference;
+		lastKnownFileType = sourcecode.c.h;
+		name = EAGL.h;
+		path = /Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS3.0.sdk/System/Library/Frameworks/OpenGLES.framework/Headers/EAGL.h;
+		sourceTree = "<absolute>";
+	};
+	954FB41C10C3364300F99143 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 954FB41D10C3364300F99143 /* gl.h */;
+		name = "gl.h: 680";
+		rLen = 8;
+		rLoc = 26754;
+		rType = 0;
+		vrLen = 2878;
+		vrLoc = 32869;
+	};
+	954FB41D10C3364300F99143 /* gl.h */ = {
+		isa = PBXFileReference;
+		lastKnownFileType = sourcecode.c.h;
+		name = gl.h;
+		path = /Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator3.1.sdk/System/Library/Frameworks/OpenGLES.framework/Headers/ES1/gl.h;
+		sourceTree = "<absolute>";
+	};
+	954FB43610C3370800F99143 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 95DB327C0FC30FE000429C81 /* Vec3.h */;
+		name = "Vec3.h: 6";
+		rLen = 0;
+		rLoc = 45;
+		rType = 0;
+		vrLen = 444;
+		vrLoc = 0;
+	};
+	954FB47D10C3389D00F99143 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 9599B98E0FC2E2E400275162 /* WaterGrid.cpp */;
+		name = "WaterGrid.cpp: 3";
+		rLen = 0;
+		rLoc = 24;
+		rType = 0;
+		vrLen = 24;
+		vrLoc = 0;
+	};
+	9599B6E60FC2ABBA00275162 /* water-01 */ = {
+		isa = PBXExecutable;
+		activeArgIndices = (
+		);
+		argumentStrings = (
+		);
+		autoAttachOnCrash = 1;
+		breakpointsEnabled = 0;
+		configStateDict = {
+		};
+		customDataFormattersEnabled = 1;
+		dataTipCustomDataFormattersEnabled = 1;
+		dataTipShowTypeColumn = 1;
+		dataTipSortType = 0;
+		debuggerPlugin = GDBDebugging;
+		disassemblyDisplayState = 0;
+		dylibVariantSuffix = "";
+		enableDebugStr = 1;
+		environmentEntries = (
+		);
+		executableSystemSymbolLevel = 0;
+		executableUserSymbolLevel = 0;
+		libgmallocEnabled = 0;
+		name = "water-01";
+		savedGlobals = {
+		};
+		showTypeColumn = 0;
+		sourceDirectories = (
+		);
+		variableFormatDictionary = {
+		};
+	};
+	9599B6F20FC2ABC500275162 /* Source Control */ = {
+		isa = PBXSourceControlManager;
+		fallbackIsa = XCSourceControlManager;
+		isSCMEnabled = 0;
+		scmConfiguration = {
+			repositoryNamesForRoots = {
+				"" = "";
+			};
+		};
+	};
+	9599B6F30FC2ABC500275162 /* Code sense */ = {
+		isa = PBXCodeSenseManager;
+		indexTemplatePath = "";
+	};
+	9599B71C0FC2AD2000275162 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 28AD733E0D9D9553002E5188 /* MainWindow.xib */;
+		name = "MainWindow.xib: 71";
+		rLen = 0;
+		rLoc = 3048;
+		rType = 0;
+		vrLen = 1175;
+		vrLoc = 2841;
+	};
+	9599B73C0FC2AD7000275162 /* WaterGrid.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1371, 5628}}";
+			sepNavSelRange = "{6616, 0}";
+			sepNavVisRange = "{5676, 1027}";
+		};
+	};
+	9599B73D0FC2AD7000275162 /* WaterGrid.cpp */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1412, 510}}";
+			sepNavSelRange = "{24, 0}";
+			sepNavVisRange = "{0, 24}";
+		};
+	};
+	9599B7480FC2AFC900275162 /* Types.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1412, 510}}";
+			sepNavSelRange = "{44, 0}";
+			sepNavVisRange = "{0, 44}";
+		};
+	};
+	9599B74C0FC2AFF900275162 /* Types.h */ = {
+		isa = PBXFileReference;
+		lastKnownFileType = sourcecode.c.h;
+		name = Types.h;
+		path = "/Users/marcel303/Documents/projects/users/marcel/water-01/Classes/Types.h";
+		sourceTree = "<absolute>";
+	};
+	9599B75A0FC2B10000275162 /* EAGLView.h */ = {
+		isa = PBXFileReference;
+		lastKnownFileType = sourcecode.c.h;
+		name = EAGLView.h;
+		path = "/Users/marcel303/Documents/projects/users/marcel/water-01/Classes/EAGLView.h";
+		sourceTree = "<absolute>";
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1371, 532}}";
+			sepNavSelRange = "{575, 11}";
+			sepNavVisRange = "{24, 762}";
+		};
+	};
+	9599B7750FC2B2C900275162 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 29B97316FDCFA39411CA2CEA /* main.m */;
+		name = "main.m: 10";
+		rLen = 0;
+		rLoc = 229;
+		rType = 0;
+		vrLen = 229;
+		vrLoc = 0;
+	};
+	9599B7DF0FC2B52200275162 /* WaterGrid.h:117 */ = {
+		isa = PBXFileBreakpoint;
+		actions = (
+		);
+		breakpointStyle = 0;
+		continueAfterActions = 0;
+		countType = 0;
+		delayBeforeContinue = 0;
+		fileReference = 9599B73C0FC2AD7000275162 /* WaterGrid.h */;
+		functionName = "Initialize(int sx, int sy)";
+		hitCount = 0;
+		ignoreCount = 0;
+		lineNumber = 117;
+		modificationTime = 294835030.102104;
+		originalNumberOfMultipleMatches = 0;
+		state = 2;
+	};
+	9599B7E70FC2B53100275162 /* WaterGrid.h:107 */ = {
+		isa = PBXFileBreakpoint;
+		actions = (
+		);
+		breakpointStyle = 0;
+		continueAfterActions = 0;
+		countType = 0;
+		delayBeforeContinue = 0;
+		fileReference = 9599B73C0FC2AD7000275162 /* WaterGrid.h */;
+		functionName = "Initialize(int sx, int sy)";
+		hitCount = 0;
+		ignoreCount = 0;
+		lineNumber = 107;
+		modificationTime = 294835030.102378;
+		originalNumberOfMultipleMatches = 0;
+		state = 2;
+	};
+	9599B98E0FC2E2E400275162 /* WaterGrid.cpp */ = {
+		isa = PBXFileReference;
+		lastKnownFileType = sourcecode.cpp.cpp;
+		name = WaterGrid.cpp;
+		path = "/Users/marcel303/Documents/projects/users/marcel/water-01/Classes/WaterGrid.cpp";
+		sourceTree = "<absolute>";
+	};
+	9599B9940FC2E2E700275162 /* AppDelegate.mm */ = {
+		isa = PBXFileReference;
+		lastKnownFileType = sourcecode.cpp.objcpp;
+		name = AppDelegate.mm;
+		path = "/Users/marcel303/Documents/projects/users/marcel/water-01/Classes/AppDelegate.mm";
+		sourceTree = "<absolute>";
+	};
+	95DB32510FC30EDE00429C81 /* Vec2.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1412, 510}}";
+			sepNavSelRange = "{84, 0}";
+			sepNavVisRange = "{0, 107}";
+		};
+	};
+	95DB32520FC30EDE00429C81 /* Vec2.cpp */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1412, 510}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRange = "{0, 19}";
+		};
+	};
+	95DB32540FC30EE400429C81 /* Vec3.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1412, 1275}}";
+			sepNavSelRange = "{13, 0}";
+			sepNavVisRange = "{0, 370}";
+		};
+	};
+	95DB32550FC30EE400429C81 /* Vec3.cpp */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1412, 510}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRange = "{0, 19}";
+		};
+	};
+	95DB32570FC30EEE00429C81 /* Vec4.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1412, 510}}";
+			sepNavSelRange = "{13, 0}";
+			sepNavVisRange = "{0, 159}";
+		};
+	};
+	95DB32580FC30EEE00429C81 /* Vec4.cpp */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1412, 510}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRange = "{0, 19}";
+		};
+	};
+	95DB325A0FC30F6C00429C81 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 95DB32580FC30EEE00429C81 /* Vec4.cpp */;
+		name = "Vec4.cpp: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 19;
+		vrLoc = 0;
+	};
+	95DB325B0FC30F6C00429C81 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 95DB32550FC30EE400429C81 /* Vec3.cpp */;
+		name = "Vec3.cpp: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 19;
+		vrLoc = 0;
+	};
+	95DB325C0FC30F6C00429C81 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 95DB32520FC30EDE00429C81 /* Vec2.cpp */;
+		name = "Vec2.cpp: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 19;
+		vrLoc = 0;
+	};
+	95DB325F0FC30F6C00429C81 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 95DB32570FC30EEE00429C81 /* Vec4.h */;
+		name = "Vec4.h: 2";
+		rLen = 0;
+		rLoc = 13;
+		rType = 0;
+		vrLen = 159;
+		vrLoc = 0;
+	};
+	95DB327C0FC30FE000429C81 /* Vec3.h */ = {
+		isa = PBXFileReference;
+		lastKnownFileType = sourcecode.c.h;
+		name = Vec3.h;
+		path = "/Users/marcel303/Documents/projects/users/marcel/water-01/Classes/Vec3.h";
+		sourceTree = "<absolute>";
+	};
+	95FBC23210073687001542E2 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 95DB32510FC30EDE00429C81 /* Vec2.h */;
+		name = "Vec2.h: 12";
+		rLen = 0;
+		rLoc = 84;
+		rType = 0;
+		vrLen = 107;
+		vrLoc = 0;
+	};
+}

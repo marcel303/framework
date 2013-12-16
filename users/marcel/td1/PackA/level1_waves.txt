@@ -1,0 +1,6 @@
+time=5|type=A|count=10|interval=0.1
+time=5|type=B|count=10|interval=0.1
+time=5|type=A|count=10|interval=0.1
+time=5|type=B|count=10|interval=0.1
+time=5|type=A|count=10|interval=0.1
+time=5|type=B|count=10|interval=0.1

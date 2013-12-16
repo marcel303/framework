@@ -1,0 +1,250 @@
+/* css reset */
+
+*
+{
+	margin:0px;
+//	padding:0px;
+}
+
+html, body
+{
+	height:100%;
+}
+
+body
+{
+	padding:0px;
+	margin:0px 0px 0px 0px;
+	background:black;
+	color:white;
+	font:0.75em Arial, sans-serif;
+	line-height:1.5em;
+}
+
+/* links */
+
+a
+{
+	color:#D0EB55;
+	text-decoration:none;
+}
+
+a:hover
+{
+	color:#D0EB55;
+	text-decoration:underline;
+}
+
+/* headers & paragraphs */
+
+h1
+{
+	font:bold 1.8em Arial, Sans-Serif;
+	padding:8px 0 4px 0;
+	margin:0px;
+	letter-spacing : -1px;
+}
+h2
+{
+	font:bold 1.6em Arial, Sans-Serif;
+	letter-spacing:-1px;
+}
+h3
+{
+	padding:4px 0;
+	margin:0px;
+}
+
+p
+{
+	margin:5px 0;
+}
+
+/* images */
+
+img
+{
+	border:0px;
+}
+
+/* lists * rulers */
+
+ul
+{
+	list-style:square;
+}
+
+hr
+{
+	height:1px;
+	border-style:none;
+	color:#D0D0D0;
+	background-color:#C0C0C0;
+	margin:10px 0;
+}
+
+/* scores table */
+
+table.scores
+{
+	background:#414141;
+	color:white;
+	border:1px solid #E0FF00;
+}
+
+table.scores tr
+{
+	font:1.0em Arial, sans-serif;
+	margin:2px 0;
+	padding:0px 5px;
+}
+
+table.scores tr:hover
+{
+	color:#FFFF80;
+	background:black;
+}
+
+table.scores th
+{
+	text-align:center;
+	width:100px;
+	background:#111111;
+}
+
+table.scores th.flag
+{
+	width:25px;
+}
+
+table.scores th.rank
+{
+	text-align:right;
+	width:50px;
+}
+
+table.scores th.name
+{
+	width:250px;
+}
+
+table.scores td
+{
+	text-align:center;
+	width:100px;
+	background:#111111;
+}
+
+table.scores td.flag
+{
+	width:25px;
+}
+
+table.scores td.rank
+{
+	text-align:right;
+	width:50px;
+}
+
+table.scores td.name
+{
+	width:250px;
+}
+
+/* news */
+
+div.news_item
+{
+	border:1px solid #C0FF00;
+	margin:16px 0px 0px 0px;
+	padding:4px;
+}
+
+div.news_item_title
+{
+	font:bold 1.8em Arial, Sans-Serif;
+	margin:0px;
+	letter-spacing : -1px;
+}
+
+div.news_item_info
+{
+	font:0.8em Arial, sans-serif;
+	margin:0px 0 8px 0;
+	border-bottom:1px solid #808080;
+}
+
+div.news_item_text
+{
+	font:1.0em Arial, sans-serif;
+}
+
+/* picture gallery */
+
+div.picture
+{
+	display:inline-block;
+	padding:3px;
+	margin:2px;
+	border:1px solid #E0FF00;
+}
+
+div.picture img
+{
+	border:0px;
+}
+
+/* footer */
+
+#contentwrapper {
+   min-height:100%;
+   height:auto !important;
+   height:100%;
+   margin:0 auto -50px;
+}
+
+#footer, .push 
+{
+	height:50px;
+	clear:both;
+}
+
+div.footer
+{
+	text-align:center;
+	color:#888;
+}
+
+/* simple form */
+
+form.simpleform input,textarea
+{
+	background:#111111;
+	color:white;
+	display:inline-block;
+	width:350px;
+	clear:right;
+	padding:0;
+	margin:0;
+}
+
+form.simpleform span.label
+{
+	display:inline-block;
+	width: 150px;
+	text-align:right;
+	padding:0px 10px 0px 0px;
+}
+
+/* CMS */
+
+.cms_item
+{
+	background:#C0FF00;
+	color:black;
+	margin:20px 0px 5px 0px;
+	padding:0px 0px 0px 12px;
+	font-weight:bold;
+	font-size:1.0em;
+	text-transform:uppercase;
+}

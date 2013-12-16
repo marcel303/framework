@@ -1,0 +1,5 @@
+circle
+	radius 7
+	color 210 255 150
+	fill 255 0.3
+	line 0 0.5

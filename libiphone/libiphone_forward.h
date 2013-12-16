@@ -1,0 +1,23 @@
+#pragma once
+
+class Color;
+class Event;
+class EventManager;
+class ISoundEffectMgr;
+class ISoundPlayer;
+class ISystem;
+class OpenGLState;
+class OpenGLState_BBOS;
+class SocialAPI;
+class SocialListener;
+class SocialScore;
+class SocialScoreList;
+class SoundEffect;
+class SoundEffectFenceMgr;
+class SoundEffectMgr;
+struct SpriteColor;
+class SpriteGfx;
+class TouchDelegator;
+class TouchDLG;
+class TouchInfo;
+class TouchMgr;

@@ -1,0 +1,405 @@
+// !$*UTF8*$!
+{
+	1D3623240D0F684500981E51 /* filesystem_01AppDelegate.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1335, 658}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRange = "{0, 357}";
+		};
+	};
+	1D3623250D0F684500981E51 /* filesystem_01AppDelegate.m */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1335, 658}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRange = "{0, 490}";
+		};
+	};
+	1D6058900D05DD3D006BFB54 /* filesystem-01 */ = {
+		activeExec = 0;
+		executables = (
+			95D07A9C0FB95C95002115B1 /* filesystem-01 */,
+		);
+	};
+	28D7ACF60DDB3853001CB0EB /* filesystem_01ViewController.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1335, 658}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRange = "{0, 541}";
+		};
+	};
+	28D7ACF70DDB3853001CB0EB /* filesystem_01ViewController.mm */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1321, 6482}}";
+			sepNavSelRange = "{5132, 69}";
+			sepNavVisRange = "{2407, 1273}";
+		};
+	};
+	29B97313FDCFA39411CA2CEA /* Project object */ = {
+		activeBuildConfigurationName = Release;
+		activeExecutable = 95D07A9C0FB95C95002115B1 /* filesystem-01 */;
+		activeSDKPreference = iphoneos2.2.1;
+		activeTarget = 1D6058900D05DD3D006BFB54 /* filesystem-01 */;
+		addToTargets = (
+			1D6058900D05DD3D006BFB54 /* filesystem-01 */,
+		);
+		breakpoints = (
+			95D07B8A0FB97B97002115B1 /* filesystem_01ViewController.mm:145 */,
+			95D07BB70FB97F9E002115B1 /* filesystem_01ViewController.mm:326 */,
+			95D07C0C0FB99A03002115B1 /* filesystem_01ViewController.mm:393 */,
+			95D07C2E0FB99C2D002115B1 /* filesystem_01ViewController.mm:416 */,
+			9545B0A70FBD931300D5DB67 /* filesystem_01ViewController.mm:418 */,
+		);
+		codeSenseManager = 95D07AAD0FB95C9A002115B1 /* Code sense */;
+		executables = (
+			95D07A9C0FB95C95002115B1 /* filesystem-01 */,
+		);
+		perUserDictionary = {
+			PBXConfiguration.PBXFileTableDataSource3.PBXFileTableDataSource = {
+				PBXFileTableDataSourceColumnSortingDirectionKey = "-1";
+				PBXFileTableDataSourceColumnSortingKey = PBXFileDataSource_Filename_ColumnID;
+				PBXFileTableDataSourceColumnWidthsKey = (
+					20,
+					10,
+					20,
+					48,
+					43,
+					43,
+					20,
+				);
+				PBXFileTableDataSourceColumnsKey = (
+					PBXFileDataSource_FiletypeID,
+					PBXFileDataSource_Filename_ColumnID,
+					PBXFileDataSource_Built_ColumnID,
+					PBXFileDataSource_ObjectSize_ColumnID,
+					PBXFileDataSource_Errors_ColumnID,
+					PBXFileDataSource_Warnings_ColumnID,
+					PBXFileDataSource_Target_ColumnID,
+				);
+			};
+			PBXPerProjectTemplateStateSaveDate = 293310909;
+			PBXWorkspaceStateSaveDate = 293310909;
+		};
+		perUserProjectItems = {
+			95099B69117BACC100C42195 /* PBXTextBookmark */ = 95099B69117BACC100C42195 /* PBXTextBookmark */;
+			9511B3510FF2A45400646CD0 /* PlistBookmark */ = 9511B3510FF2A45400646CD0 /* PlistBookmark */;
+			951719ED0FC29BBF005E3568 /* PBXTextBookmark */ = 951719ED0FC29BBF005E3568 /* PBXTextBookmark */;
+			951719EF0FC29BBF005E3568 /* PBXTextBookmark */ = 951719EF0FC29BBF005E3568 /* PBXTextBookmark */;
+			951719F00FC29BBF005E3568 /* PBXTextBookmark */ = 951719F00FC29BBF005E3568 /* PBXTextBookmark */;
+			951719F10FC29BBF005E3568 /* PBXTextBookmark */ = 951719F10FC29BBF005E3568 /* PBXTextBookmark */;
+			951719F20FC29BBF005E3568 /* PBXTextBookmark */ = 951719F20FC29BBF005E3568 /* PBXTextBookmark */;
+			951719F30FC29BBF005E3568 /* PBXTextBookmark */ = 951719F30FC29BBF005E3568 /* PBXTextBookmark */;
+			951719F40FC29BBF005E3568 /* PBXTextBookmark */ = 951719F40FC29BBF005E3568 /* PBXTextBookmark */;
+			953CFE0E0FF52282002A9985 /* PBXTextBookmark */ = 953CFE0E0FF52282002A9985 /* PBXTextBookmark */;
+			953CFF950FF527A3002A9985 /* PBXTextBookmark */ = 953CFF950FF527A3002A9985 /* PBXTextBookmark */;
+			95D07AE20FB96A54002115B1 /* PBXTextBookmark */ = 95D07AE20FB96A54002115B1 /* PBXTextBookmark */;
+		};
+		sourceControlManager = 95D07AAC0FB95C9A002115B1 /* Source Control */;
+		userBuildSettings = {
+		};
+	};
+	29B97316FDCFA39411CA2CEA /* main.m */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1335, 658}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRange = "{0, 229}";
+		};
+	};
+	32CA4F630368D1EE00C91783 /* filesystem_01_Prefix.pch */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1335, 658}}";
+			sepNavSelRange = "{24, 0}";
+			sepNavVisRange = "{0, 195}";
+		};
+	};
+	8D1107310486CEB800E47090 /* Info.plist */ = {
+		uiCtxt = {
+			sepNavWindowFrame = "{{358, -141}, {750, 939}}";
+		};
+	};
+	95099B69117BACC100C42195 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 28D7ACF70DDB3853001CB0EB /* filesystem_01ViewController.mm */;
+		name = "filesystem_01ViewController.mm: 199";
+		rLen = 69;
+		rLoc = 5132;
+		rType = 0;
+		vrLen = 1273;
+		vrLoc = 2407;
+	};
+	9511B3510FF2A45400646CD0 /* PlistBookmark */ = {
+		isa = PlistBookmark;
+		fRef = 8D1107310486CEB800E47090 /* Info.plist */;
+		fallbackIsa = PBXBookmark;
+		isK = 0;
+		kPath = (
+			CFBundleIconFile,
+		);
+		name = "/Users/marcel303/Documents/projects/users/marcel/filesystem-01/Info.plist";
+		rLen = 0;
+		rLoc = 2147483647;
+	};
+	951719ED0FC29BBF005E3568 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 28D7ACF60DDB3853001CB0EB /* filesystem_01ViewController.h */;
+		name = "filesystem_01ViewController.h: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 541;
+		vrLoc = 0;
+	};
+	951719EF0FC29BBF005E3568 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 1D3623250D0F684500981E51 /* filesystem_01AppDelegate.m */;
+		name = "filesystem_01AppDelegate.m: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 490;
+		vrLoc = 0;
+	};
+	951719F00FC29BBF005E3568 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 1D3623240D0F684500981E51 /* filesystem_01AppDelegate.h */;
+		name = "filesystem_01AppDelegate.h: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 357;
+		vrLoc = 0;
+	};
+	951719F10FC29BBF005E3568 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 95D07AD10FB96382002115B1 /* Test_MultiTouchView.h */;
+		name = "Test_MultiTouchView.h: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 166;
+		vrLoc = 0;
+	};
+	951719F20FC29BBF005E3568 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 95D07AD20FB96382002115B1 /* Test_MultiTouchView.m */;
+		name = "Test_MultiTouchView.m: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 881;
+		vrLoc = 0;
+	};
+	951719F30FC29BBF005E3568 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 32CA4F630368D1EE00C91783 /* filesystem_01_Prefix.pch */;
+		name = "filesystem_01_Prefix.pch: 2";
+		rLen = 0;
+		rLoc = 24;
+		rType = 0;
+		vrLen = 195;
+		vrLoc = 0;
+	};
+	951719F40FC29BBF005E3568 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 29B97316FDCFA39411CA2CEA /* main.m */;
+		name = "main.m: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 229;
+		vrLoc = 0;
+	};
+	953CFE0E0FF52282002A9985 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 95D07C210FB99BC2002115B1 /* resource.txt */;
+		name = "resource.txt: 1";
+		rLen = 0;
+		rLoc = 11;
+		rType = 0;
+		vrLen = 11;
+		vrLoc = 0;
+	};
+	953CFF950FF527A3002A9985 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 28D7ACF70DDB3853001CB0EB /* filesystem_01ViewController.mm */;
+		name = "filesystem_01ViewController.mm: 418";
+		rLen = 0;
+		rLoc = 9782;
+		rType = 0;
+		vrLen = 844;
+		vrLoc = 9377;
+	};
+	9545B0A70FBD931300D5DB67 /* filesystem_01ViewController.mm:418 */ = {
+		isa = PBXFileBreakpoint;
+		actions = (
+		);
+		breakpointStyle = 0;
+		continueAfterActions = 0;
+		countType = 0;
+		delayBeforeContinue = 0;
+		fileReference = 28D7ACF70DDB3853001CB0EB /* filesystem_01ViewController.mm */;
+		functionName = "-bundleRead:";
+		hitCount = 0;
+		ignoreCount = 0;
+		lineNumber = 418;
+		location = "filesystem-01";
+		modificationTime = 293316725.242241;
+		originalNumberOfMultipleMatches = 0;
+		state = 2;
+	};
+	95D07A9C0FB95C95002115B1 /* filesystem-01 */ = {
+		isa = PBXExecutable;
+		activeArgIndices = (
+		);
+		argumentStrings = (
+		);
+		autoAttachOnCrash = 1;
+		breakpointsEnabled = 1;
+		configStateDict = {
+		};
+		customDataFormattersEnabled = 1;
+		dataTipCustomDataFormattersEnabled = 1;
+		dataTipShowTypeColumn = 1;
+		dataTipSortType = 0;
+		debuggerPlugin = GDBDebugging;
+		disassemblyDisplayState = 0;
+		dylibVariantSuffix = "";
+		enableDebugStr = 1;
+		environmentEntries = (
+		);
+		executableSystemSymbolLevel = 0;
+		executableUserSymbolLevel = 0;
+		libgmallocEnabled = 0;
+		name = "filesystem-01";
+		savedGlobals = {
+		};
+		showTypeColumn = 0;
+		sourceDirectories = (
+		);
+		variableFormatDictionary = {
+		};
+	};
+	95D07AAC0FB95C9A002115B1 /* Source Control */ = {
+		isa = PBXSourceControlManager;
+		fallbackIsa = XCSourceControlManager;
+		isSCMEnabled = 0;
+		scmConfiguration = {
+			repositoryNamesForRoots = {
+				"" = "";
+			};
+		};
+	};
+	95D07AAD0FB95C9A002115B1 /* Code sense */ = {
+		isa = PBXCodeSenseManager;
+		indexTemplatePath = "";
+	};
+	95D07AD10FB96382002115B1 /* Test_MultiTouchView.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1335, 658}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRange = "{0, 166}";
+		};
+	};
+	95D07AD20FB96382002115B1 /* Test_MultiTouchView.m */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1476, 799}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRange = "{0, 881}";
+		};
+	};
+	95D07AE20FB96A54002115B1 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 95D07AE30FB96A54002115B1 /* MainController.mm */;
+		name = "MainController.mm: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 755;
+		vrLoc = 0;
+	};
+	95D07AE30FB96A54002115B1 /* MainController.mm */ = {
+		isa = PBXFileReference;
+		lastKnownFileType = sourcecode.cpp.objcpp;
+		name = MainController.mm;
+		path = "/Users/marcel303/Documents/projects/users/marcel/audio-02/Classes/MainController.mm";
+		sourceTree = "<absolute>";
+	};
+	95D07B8A0FB97B97002115B1 /* filesystem_01ViewController.mm:145 */ = {
+		isa = PBXFileBreakpoint;
+		actions = (
+		);
+		breakpointStyle = 0;
+		continueAfterActions = 0;
+		countType = 0;
+		delayBeforeContinue = 0;
+		fileReference = 28D7ACF70DDB3853001CB0EB /* filesystem_01ViewController.mm */;
+		functionName = "-userDocsRead:";
+		hitCount = 0;
+		ignoreCount = 0;
+		lineNumber = 145;
+		location = "filesystem-01";
+		modificationTime = 293316725.240776;
+		originalNumberOfMultipleMatches = 0;
+		state = 2;
+	};
+	95D07BB70FB97F9E002115B1 /* filesystem_01ViewController.mm:326 */ = {
+		isa = PBXFileBreakpoint;
+		actions = (
+		);
+		breakpointStyle = 0;
+		continueAfterActions = 0;
+		countType = 0;
+		delayBeforeContinue = 0;
+		fileReference = 28D7ACF70DDB3853001CB0EB /* filesystem_01ViewController.mm */;
+		functionName = "-cacheWrite:";
+		hitCount = 0;
+		ignoreCount = 0;
+		lineNumber = 326;
+		location = "filesystem-01";
+		modificationTime = 293316725.241203;
+		originalNumberOfMultipleMatches = 0;
+		state = 2;
+	};
+	95D07C0C0FB99A03002115B1 /* filesystem_01ViewController.mm:393 */ = {
+		isa = PBXFileBreakpoint;
+		actions = (
+		);
+		breakpointStyle = 0;
+		continueAfterActions = 0;
+		countType = 0;
+		delayBeforeContinue = 0;
+		fileReference = 28D7ACF70DDB3853001CB0EB /* filesystem_01ViewController.mm */;
+		functionName = "-tempWrite:";
+		hitCount = 0;
+		ignoreCount = 0;
+		lineNumber = 393;
+		location = "filesystem-01";
+		modificationTime = 293316725.241526;
+		originalNumberOfMultipleMatches = 0;
+		state = 2;
+	};
+	95D07C210FB99BC2002115B1 /* resource.txt */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {935, 624}}";
+			sepNavSelRange = "{11, 0}";
+			sepNavVisRange = "{0, 11}";
+		};
+	};
+	95D07C2E0FB99C2D002115B1 /* filesystem_01ViewController.mm:416 */ = {
+		isa = PBXFileBreakpoint;
+		actions = (
+		);
+		breakpointStyle = 0;
+		continueAfterActions = 0;
+		countType = 0;
+		delayBeforeContinue = 0;
+		fileReference = 28D7ACF70DDB3853001CB0EB /* filesystem_01ViewController.mm */;
+		functionName = "-bundleRead:";
+		hitCount = 0;
+		ignoreCount = 0;
+		lineNumber = 416;
+		location = "filesystem-01";
+		modificationTime = 293316725.241899;
+		originalNumberOfMultipleMatches = 0;
+		state = 2;
+	};
+}

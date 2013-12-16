@@ -1,0 +1,39 @@
+# todo: decide based on OS
+
+ifndef $(OS)
+	UNAME := $(shell uname)
+	OS = win
+	ifeq ($(UNAME), Linux)
+		OS = linux
+	endif
+	ifeq ($(UNAME), Darwin)
+		OS = macos
+	endif
+endif
+
+ifeq ($(OS), win)
+EXECUTABLE_EXT = .exe
+LIBALLEG = -lalleg
+CFLAGS = -m32 -O3 -ffast-math -msse3 -mfpmath=sse -fstrict-aliasing -DNO_ALLEGRO -DWIN32 -DDEPLOYMENT -DNDEBUG
+else
+ifeq ($(OS), linux)
+EXECUTABLE_EXT =
+LIBALLEG = -lalleg
+CFLAGS = -march=native -mtune=native -O3 -ffast-math -fno-math-errno -funsafe-math-optimizations -funroll-loops -msse2 -mfpmath=sse -fstrict-aliasing -Wall -DNO_ALLEGRO -DLINUX -DDEPLOYMENT -DNDEBUG
+#CFLAGS = -g -Wall -DNO_ALLEGRO -DLINUX -DDEBUG
+#-mtune=pentium4
+#-march=pentium4
+else
+EXECUTABLE_EXT =
+#LIBALLEG = `allegro-config --libs`
+LIBALLEG =
+#CFLAGS = -Wall -g -fast -O3 -ffast-math -DNO_ALLEGRO -DMACOS -DDEBUG
+CFLAGS   = -Wall -g -fast -O3 -ffast-math -DNO_ALLEGRO -DMACOS -DNDEBUG -DDEPLOYMENT
+CFLAGS32 = -Wall -g -fast -O3 -ffast-math -DNO_ALLEGRO -DMACOS -DNDEBUG -DDEPLOYMENT -m32
+#CFLAGS = -fast -march=core2 -mtune=native -O3 -ffast-math -fno-math-errno -msse2 -mfpmath=sse -fstrict-aliasing -Wall -Werror -DNO_ALLEGRO -DMACOS -DDEPLOYMENT -DNDEBUG
+#CFLAGS = -fast -march=core2 -mtune=native -O3 -ffast-math -fno-math-errno -msse2 -mfpmath=sse -fstrict-aliasing -Wall -DNO_ALLEGRO -DMACOS -DDEPLOYMENT -DNDEBUG
+# -arch i386
+endif
+endif
+
+.PHONY : dummy

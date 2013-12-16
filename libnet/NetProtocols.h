@@ -1,0 +1,19 @@
+#pragma once
+
+enum PROTOCOLS
+{
+	PROTOCOL_CHANNEL = 1,
+	PROTOCOL_CUSTOM = 4
+};
+
+#define CHANNELMSG_TRUNK         1
+#define CHANNELMSG_CONNECT       2
+#define CHANNELMSG_CONNECT_OK    3
+#define CHANNELMSG_CONNECT_ERROR 4
+#define CHANNELMSG_CONNECT_ACK   5
+#define CHANNELMSG_DISCONNECT    6
+#define CHANNELMSG_PING          7
+#define CHANNELMSG_PONG          8
+#define CHANNELMSG_RT_UPDATE     9
+#define CHANNELMSG_RT_ACK        10
+#define CHANNELMSG_UNPACK        11

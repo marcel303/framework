@@ -1,0 +1,541 @@
+# [platform] [dataset] [type] [name] [filename]
+
+# == a note on datasets ==
+# 0: non texture atlas data (sound, binary, pvr4)
+#    menus part 1
+#    virtual keyboard
+# 1: game atlas (enemies, powerups, particles, indicators)
+# 2: fonts
+# 3: uber bosses
+# 4: menus part 2
+# 5: iPad game select + new upgrade screen
+
+# ----------------------------------------
+# application
+# ----------------------------------------
+[ios]			0 binary		app_icon			Icon.png
+[ios]			0 binary		app_icon2x			Icon@2x.png
+[ios|ios_hd]	0 binary		app_icon_ipad		Icon-iPad-HQ.png
+[ios]			0 binary		app_default			Default.png
+[ios]			0 binary		app_default_2x		Default@2x.png
+[ios_hd]		0 binary		app_default_ipad_l	Default-Landscape-HQ.png
+[ios|ios_hd]	0 binary		app_artwork			iTunesArtwork
+#[psp]			0 binary		psp_batteryicon		batteryicon.tga
+[psp]			0 dds			psp_load_01			psp_load_01.png
+[psp]			0 vector		psp_save_icon		psp_save_icon.vg
+[psp]			0 binary		psp_save_icon0		psp_save_icon0.bin
+
+# ----------------------------------------
+# game: player
+# ----------------------------------------
+1 vector		player_ship				player_ship.vg
+1 vector		player_explosion_01		player_explosion_01.vg
+1 texture		player_spray_cone		player_spray_cone.png
+1 texture		player_health_ring		player_health_ring.png
+1 texture		player_health_shield	player_health_powerup.png
+1 vector		player_health_cross		player_health_cross.vg
+
+# ----------------------------------------
+# game: score indicators
+# ----------------------------------------
+1 vector		score_bronze		score_10.vg
+1 vector		score_silver		score_20.vg
+1 vector		score_gold			score_50.vg
+1 vector		score_platinum		score_1000.vg
+
+# ----------------------------------------
+# game: bullets
+# ----------------------------------------
+1 vector		bullet_vulcan			weapon_vulcan.vg
+1 vector		bullet_vulcan_strong	weapon_vulcan_strong.vg
+1 vector		bullet_vulcan_maxi		weapon_vulcan_maxi.vg
+1 vector		missile					weapon_missile.vg
+1 vector		missile_trail			weapon_missile_trail.vg
+1 vector		missile_trail_gray		weapon_missile_trail_gray.vg
+1 vector		bullet_maxi_blue		weapon_maxi_blue.vg
+1 vector		bullet_maxi_purple		weapon_maxi_purple.vg
+
+# ----------------------------------------
+# game: beam weapons
+# ----------------------------------------
+1 texture beam_01_core_corner1		beam_01_core_corner1.png
+1 texture beam_01_core_corner2		beam_01_core_corner2.png
+1 texture beam_01_core_body			beam_01_core_body.png
+1 texture beam_01_back_corner1		beam_01_back_corner1.png
+1 texture beam_01_back_corner2		beam_01_back_corner2.png
+1 texture beam_01_back_body			beam_01_back_body.png
+
+1 texture beam_02_core_corner1		beam_02_core_corner1.png
+1 texture beam_02_core_corner2		beam_02_core_corner2.png
+1 texture beam_02_core_body			beam_02_core_body.png
+1 texture beam_02_back_corner1		beam_02_back_corner1.png
+1 texture beam_02_back_corner2		beam_02_back_corner2.png
+1 texture beam_02_back_body			beam_02_back_body.png
+
+# ----------------------------------------
+# game: enemy shared
+# ----------------------------------------
+1 texture		enemy_explosion		enemy_explosion.png
+1 vector		enemy_twirly		enemy_twirly.vg
+
+# ----------------------------------------
+# game: generic
+# ----------------------------------------
+1 texture		color_white			Color_White.png
+1 texture		color_black			Color_Black.png
+1 vector		gamehelp_icon		gamehelp_icon.vg
+
+# ----------------------------------------
+# game: particles
+# ----------------------------------------
+1 texture		explosion_line		explosion_line.png
+1 texture		particle_spark		particle_spark.png
+1 texture		particle_circle		particle_circle.png
+1 texture		particle_menu		particle_menu.png
+1 texture		particle_heart		particle_heart.png
+
+# ----------------------------------------
+# game: enemies
+# ----------------------------------------
+1 vector		enemy_badsector			enemy_badsector_v2.vg
+1 vector		enemy_evilsquare		enemy_evilsquare.vg
+1 vector		enemy_evilsquare_big	enemy_evilsquare_big.vg
+1 vector		enemy_evilsquare_small	enemy_evilsquare_small.vg
+1 vector		enemy_eviltri_back		enemy_eviltri.vg
+1 vector		enemy_eviltri			enemy_eviltri_v2.vg
+1 vector		enemy_eviltri_big		enemy_eviltri_big_v2.vg
+1 vector		enemy_eviltri_small		enemy_eviltri_small.vg
+1 vector		enemy_eviltri_extreme	enemy_eviltri_ex.vg
+1 vector		enemy_kamikaze			enemy_kamikaze.vg
+1 vector		enemy_mine				enemy_mine.vg
+1 vector		enemy_patrol			enemy_patrol.vg
+1 vector 		enemy_shield			enemy_shield.vg
+1 vector 		enemy_shield_eye		enemy_shield_eye.vg
+1 vector 		enemy_shield_eye_closed	enemy_shield_eye_closed.vg
+1 vector		enemy_shield_shield		enemy_shield_shield.vg
+1 vector		enemy_smiley			enemy_smiley.vg
+1 vector		enemy_invisible			enemy_invisible.vg
+1 vector		mine_smoke				mine_smoke.vg
+
+# ----------------------------------------
+# game: powerups
+# ----------------------------------------
+1 vector		powerup_power_vulcan	powerup_power_vulcan.vg
+1 vector		powerup_power_missile	powerup_power_missile.vg
+1 vector		powerup_power_beam		powerup_power_beam.vg
+1 vector		powerup_power_shock		powerup_power_shock.vg
+1 vector		powerup_health_shield	powerup_health_shield.vg
+1 vector		powerup_health_life		powerup_health_life.vg
+1 vector		powerup_fun_paddo		powerup_fun_paddo.vg
+1 vector		powerup_fun_slowmo		powerup_fun_slowmo.vg
+1 vector		powerup_fun_beamfever	powerup_fun_beamfever.vg
+1 vector		powerup_credits			powerup_credits.vg
+1 vector		powerup_credits_small	powerup_credits_small.vg
+1 vector		powerup_special_max		powerup_special_max.vg
+1 texture		powerup_special_button	powerup_special_button.png
+1 vector		powerup_special_button_back	powerup_special_button_back.vg
+1 vector		powerup_patrol_reset	powerup_patrol_reset.vg
+
+# ----------------------------------------
+# game: mini boss 01 - snake
+# ----------------------------------------
+1 vector		boss_01_module_01		boss_01_module_01.vg
+1 vector		boss_01_module_02		boss_01_module_02.vg
+1 vector		boss_01_module_03		boss_01_module_03.vg
+1 vector		boss_01_module_head		boss_01_head.vg
+1 vector		boss_01_module_tail		boss_01_tail.vg
+
+# ----------------------------------------
+# game: mini boss 03 - spinner
+# ----------------------------------------
+1 vector		boss_03_module_01		boss_03_module_01.vg
+1 vector		boss_03_center			boss_03_center.vg
+1 vector		boss_03_back			boss_03_back.vg
+
+# ----------------------------------------
+# game: mini boss 04 - magnet
+# ----------------------------------------
+1 vector		mini_magnet_magnet1		mini_magnet_magnet1.vg
+1 vector		mini_magnet_magnet2		mini_magnet_magnet2.vg
+1 vector		mini_magnet_eye			mini_magnet_eye.vg
+1 vector		mini_magnet_core		mini_magnet_core.vg
+1 texture		mini_magnet_beam		mini_magnet_beam.png
+
+#
+
+# ----------------------------------------
+# fonts
+# ----------------------------------------
+2 font		font_calibri_large		font_calibri_large.png
+2 font		font_calibri_small		font_calibri_small.png
+2 font		font_lgs				font_lgs.png
+2 font		font_usuzi_small		font_usuzi_small.png
+
+#
+
+# ----------------------------------------
+# menu: generic
+# ----------------------------------------
+		0 texture		menu_color_white	Color_White.png
+		0 texture		menu_color_black	Color_Black.png
+		0 vector		menu_cursor			cursor.vg
+[psp]	0 vector		menu_cursor_psp		cursor_psp.vg
+		0 vector		button_back			button_back.vg
+		0 vector		button_refresh		button_refresh.vg
+		0 vector		button_pause		button_pause_v2.vg
+		0 vector		checkbox_0			checkbox_0.vg
+		0 vector		checkbox_1			checkbox_1.vg
+
+# ----------------------------------------
+# menu: menus
+# ----------------------------------------
+
+# MAIN VIEW
+[ios|win|mac|bbos]	0 vector		menu_main_start		menu_main_newgame.vg
+[ios_hd]			0 vector		menu_main_start		menu_main_newgame_ipad.vg
+0 vector		menu_main_continue	menu_main_continue.vg
+0 vector		menu_main_new		menu_main_new.vg
+0 vector		mainview_highscores	mainview_highscores.vg
+0 vector		mainview_logo		mainview_logo.vg
+0 vector		mainview_options	mainview_options_bbos.vg
+0 vector		mainview_gamecenter	mainview_gamecenter.vg
+
+# GAME SELECT VIEW
+			0 vector		menu_gameselect_easy		menu_gameselect_easy.vg
+			0 vector		menu_gameselect_hard		menu_gameselect_hard.vg
+			0 vector		menu_gameselect_custom		menu_gameselect_custom.vg
+			0 vector		menu_gameselect_help		menu_gameselect_help.vg
+[ios_hd]	5 texture		gameselect_mode_classic		gameselect_mode_classic.png
+[ios_hd]	5 texture		gameselect_mode_battle		gameselect_mode_battle.png
+[ios_hd]	5 texture		gameselect_mode_surviver	gameselect_mode_surviver.png
+
+# BANDIT ANNOUNCEMENT VIEW
+0 texture		menu_bandit_back	ann_back.png
+0 vector		banditview_thingy	banditview_thingy.vg
+0 texture		banditview_sweep	banditview_sweep.png
+0 texture		banditview_curve	banditview_curve.png
+
+# SCORE VIEW
+0 vector		scoreview_button_easy		scoreview_button_easy.vg
+0 vector		scoreview_button_hard		scoreview_button_hard.vg
+0 vector		scoreview_button_custom		scoreview_button_custom.vg
+0 vector		scoreview_button_findme		scoreview_button_findme.vg
+0 vector		scoreview_button_global		scoreview_button_global.vg
+0 vector		scoreview_button_local		scoreview_button_local.vg
+0 vector		scoreview_button_refresh	scoreview_button_refresh.vg
+0 vector		scoreview_time0				scoreview_time0.vg
+0 vector		scoreview_time1				scoreview_time1.vg
+
+#
+
+# SCORE SUBMIT VIEW
+4 vector		scoresubmit_dot			scoresubmit_dot.vg
+4 vector		scoresubmit_ringu		scoresubmit_ringu.vg
+4 vector		scoresubmit_ok			scoresubmit_ok.vg
+1 texture		scoresubmit_particle	scoresubmit_particle.png
+
+# PAUSE VIEW
+4 vector		pauseview_button_resume		pauseview_button_resume.vg
+4 vector		pauseview_button_options	pauseview_button_options.vg
+4 vector		pauseview_button_calibrate	pauseview_button_calibrate.vg
+4 vector		pauseview_button_quit		pauseview_button_quit.vg
+
+# UPGRADE VIEW
+4 texture		upgrade_back				upgrade_back.png
+4 texture		upgrade_overlay				upgrade_overlay.png
+4 vector		upgrade_state0				upgrade_state0.vg
+4 vector		upgrade_state1				upgrade_state1.vg
+4 vector		upgrade_state0_sm			upgrade_state0_sm.vg
+4 vector		upgrade_state1_sm			upgrade_state1_sm.vg
+4 vector		upgrade_cancel				upgrade_cancel.vg
+4 vector		upgradeview_powerup_back	upgradeview_powerup_back.vg
+
+# UPGRADEBOUGHT VIEW
+4 texture		upgradebought_vulcan	upgradebought_vulcan.png
+4 texture		upgradebought_shock		upgradebought_shock_v2.png
+4 texture		upgradebought_laser		upgradebought_laser.png
+4 texture		upgradebought_special	upgradebought_special_v2.png
+4 texture		upgradebought_patrol	upgradebought_patrol.png
+
+# OPTIONS VIEW
+4 vector		optionsview_accept		optionsview_accept.vg
+4 vector		optionsview_dismiss		optionsview_dismiss.vg
+4 vector		optionsview_credits		optionsview_credits.vg
+4 vector		optionsview_advanced	optionsview_advanced.vg
+4 vector		optionsview_basic		optionsview_basic.vg
+4 texture		optionsview_volume		optionsview_volume.png
+4 sound			optionsview_volume_set	sfx_volumeset.wav
+
+# OPTIONS VIEW (GAMEPAD)
+[win|mac]	4 texture	optionsview_gamepad	optionsview_gamepad.png
+
+# GAME VIEW
+#vector			gameview_weaponswitch			gameview_weaponswitch.vg
+4 vector		gameview_weaponswitch_beam		gameview_weaponswitch_beam.vg
+4 vector		gameview_weaponswitch_vulcan	gameview_weaponswitch_vulcan.vg
+4 texture		gameview_upgrade				gameview_upgrade.png
+4 texture		gameview_upgrade_back			gameview_upgrade_back.png
+4 texture		gameview_upgrade_back2			gameview_upgrade_back2.png
+
+# GAME OVER VIEW
+4 texture		gameover_hint_back	gameover_hint_back.png
+
+# ----------------------------------------
+# Keyboard
+# ----------------------------------------
+0 vector		kb_key				kb_key.vg
+0 vector		kb_slide			kb_slide.vg
+0 vector		kb_slide_alt		kb_slide_alt.vg
+0 vector		kb_slide_cancel		kb_slide_cancel.vg
+0 vector		kb_key_left			kb_key_left.vg
+0 vector		kb_key_right		kb_key_right.vg
+0 vector		kb_key_del			kb_key_del.vg
+0 vector		kb_key_back			kb_key_back.vg
+0 vector		kb_key_space		kb_key_space.vg
+0 vector		kb_key_ready		kb_key_ready.vg
+0 vector		kb_key_cancel		kb_key_cancel.vg
+0 vector		kb_key_cancel2		kb_key_cancel2.vg
+
+0 texture		textfield_back		textfield_back.png
+0 vector		kb_clear			kb_clear.vg
+
+# ----------------------------------------
+# game: indicators
+# ----------------------------------------
+1 vector		indicator_enemy			indicator_enemy.vg
+1 vector		indicator_enemy_mine	indicator_mine.vg
+1 vector		indicator_bandit2		indicator_bandit2.vg
+1 vector		indicator_powerup		indicator_powerup.vg
+1 vector		indicator_life			indicator_life_v2.vg
+1 vector		indicator_life_warn		indicator_life_warn.vg
+1 vector		indicator_life_warn2	indicator_life_warn2.vg
+1 vector		indicator_mine_symbol	indicator_mine_symbol.vg
+1 vector		indicator_spawnage		indicator_spawnage.vg
+1 vector		indicator_spawnage_dir	indicator_spawnage_dir.vg
+1 vector		indicator_upgrade		indicator_upgrade.vg
+1 vector		indicator_help			indicator_help.vg
+1 texture		indicator_critical		indicator_critical.png
+
+# ----------------------------------------
+# HUD: player controls
+# ----------------------------------------
+[ios|ios_hd|bbos]	0 vector		controller_outer		controller_outer.vg
+[ios|ios_hd|bbos]	0 vector		controller_button1		controller_button1.vg
+[ios|ios_hd|bbos]	0 vector		controller_angle_dir	controller_angle_dir.vg
+[ios|ios_hd|bbos]	0 vector		controller_move_arrows	controller_move_arrows.vg
+
+#[ios|ios_hd|bbos]	0 texture		special_slice			special_slice.png
+#[ios|ios_hd|bbos]	0 texture		special_gauge			special_gauge.png
+
+# ----------------------------------------
+# explosions
+# ----------------------------------------
+[ios|ios_hd]	0 pvr4		explosion_01	explosion1.png
+[ios|ios_hd]	0 pvr4		explosion_03	explosion3.png
+[psp]			0 dds_alpha	explosion_01	explosion1.png
+[psp]			0 dds_alpha	explosion_03	explosion3.png
+[win|mac|bbos]		0 image		explosion_01	explosion1.png
+[win|mac|bbos]		0 image		explosion_03	explosion3.png
+
+# ----------------------------------------
+# uber boss shared
+# ----------------------------------------
+3 vector		bandit_pod_vulcan		bandit_pod_vulcan.vg
+3 vector		bandit_pod_beam			bandit_pod_beam.vg
+3 vector		bandit_pod_missile		bandit_pod_missile.vg
+3 vector		bandit_pod_blue			bandit_pod_blue.vg
+3 vector		bandit_pod_purple		bandit_pod_purple.vg
+
+3 vector		bandit_core				bandit_core.vg
+3 vector		bandit_core_friendly	bandit_core_friendly.vg
+3 vector		bandit_thruster			thruster01.vg
+
+# ----------------------------------------
+# uber boss 01
+# ----------------------------------------
+3 composition	bandit_gunship		Bandit_Gunship.vc
+3 vector		bdt_Arm6020P1010	bdt_Arm6020P1010.vg
+3 vector		bdt_Circle10		bdt_Circle10.vg
+3 vector		bdt_Circle15		bdt_Circle15.vg
+3 vector		bdt_Exhaust			bdt_Exhaust.vg
+3 vector		bdt_Line2060		bdt_Line2060.vg
+3 vector		bdt_Line4020		bdt_Line4020.vg
+3 vector		bdt_Line6020		bdt_Line6020.vg
+3 vector		bdt_Line8020		bdt_Line8020.vg
+3 vector		bdt_Line16020		bdt_Line16020.vg
+3 vector		bdt_SLink			bdt_SLink.vg
+3 vector		bdt_Square2020		bdt_Square2020.vg
+3 vector		bdt_Tri6040			bdt_Tri6040.vg
+3 vector		bdt_spipe			bdt_spipe.vg
+3 vector		bdt_sline4020		bdt_sline4020.vg
+3 vector		bdt_Line4020P		bdt_Line4020P.vg
+3 vector		bdt_sline6020		bdt_sline6020.vg
+3 vector		bdt_scircle			bdt_scircle.vg
+3 vector		bdt_mouth			bdt_mouth.vg
+3 vector		bdt_pincer			bdt_pincer.vg
+
+# ----------------------------------------
+# uber boss 02
+# ----------------------------------------
+3 composition		bandit_spawner	Bandit_spawner.vc
+
+# ----------------------------------------
+# uber boss 03 -Ultra test-
+# ----------------------------------------
+3 composition		bandit_hard		bandit_ultraBoss_1.vc
+3 composition		bandit_easy		bandit_ultraBoss_1_easy.vc
+
+# ----------------------------------------
+# uber boss - angel 1
+# ----------------------------------------
+#[ios_hd] 3 composition		angel1			angel1.vc
+#[ios_hd] 3 vector			angel1_arm_b	angel1_arm-b.vg
+#[ios_hd] 3 vector			angel1_arm_l	angel1_arm-l.vg
+#[ios_hd] 3 vector			angel1_arm_r	angel1_arm-r.vg
+#[ios_hd] 3 vector			angel1_core		angel1_core.vg
+#[ios_hd] 3 vector			angel1_tail1	angel1_tail1.vg
+#[ios_hd] 3 vector			angel1_tail2	angel1_tail2.vg
+
+# ----------------------------------------
+# sounds
+# ----------------------------------------
+[ios|ios_hd]	0 sound	sound_hit_01				sfx_hit_loud.wav
+#[psp|win|mac]	0 sound	sound_hit_01				sfx_hit.wav
+[psp|win|mac|bbos]	0 sound	sound_hit_01				sfx_hit_v2.wav
+				0 sound	sound_zoom_in				sfx_zoom_in.wav
+				0 sound	sound_zoom_out				sfx_zoom_out.wav
+				0 sound	sound_enemy_destroy			sfx_enemy_destroy.wav
+#				0 sound	sound_enemy_destroy			sfx_enemy_destroy_v2.wav
+				0 sound	sound_enemy_spawn_prepared 	sfx_enemy_spawn_pop.wav
+				0 sound	sound_beam_charge			sfx_beam_charge.wav
+				0 sound	sound_beam_end				sfx_beam_end.wav
+				0 sound	sound_beam_loop				sfx_beam_loop.wav
+				0 sound	sound_pickup_default		sfx_pickup.wav
+#				0 sound	sound_pickup_default		sfx_pickup_v2.wav
+				0 sound	sound_explode_soft			sfx_explode1_trial3.wav
+				0 sound	sound_missile_launch		sfx_missile_launch1.wav
+#				0 sound	sound_missile_launch		sfx_missile_launch1_v2.wav
+				0 sound	sound_menu_click			sfx_button_click1.wav
+				0 sound	sound_boss_alarm_boss		sfx_boss_alarm_boss.wav
+				0 sound	sound_boss_alarm_miniboss	sfx_boss_alarm_miniboss.wav
+				0 sound	sound_player_explode		sfx_player_explode.wav
+				0 sound	sound_player_laser_short	sfx_laser_short.wav
+#				0 sound	sound_player_laser_short	sfx_laser_short_v2.wav
+				0 sound	sound_player_shockwave		sfx_shockwave.wav
+				0 sound	sound_keyboard_key1			sfx_keyboard_tick2.wav
+				0 sound	sound_keyboard_key2			sfx_keyboard_tick.wav
+
+0 sound	sound_enemy_shield_hit			sfx_shield_hit.wav
+0 sound	sound_enemy_shield_deflect		sfx_shield_deflect.wav
+
+0 sound	sound_boss_hit					sfx_boss_hit.wav
+0 sound	sound_magnet_beam				sfx_magnet_beam.wav
+
+0 sound		sound_bandit_segment_hit		sfx_bandit_segment_hit.wav
+0 sound		sound_bandit_segment_destroy	sfx_bandit_segment_destroy.wav
+0 sound		sound_bandit_core_hit			sfx_bandit_core_hit.wav
+0 sound		sound_bandit_core_destroy		sfx_bandit_core_destroy.wav
+0 sound		sound_maxi_beam_charge			sfx_maxi_beam_charge.wav
+#0 sound	sound_maxi_beam_charge			sfx_maxi_beam_charge_v2.wav
+0 sound		sound_maxi_beam_loop			sfx_maxi_beam_loop.wav
+0 sound		sound_maxi_beam_fire			sfx_maxi_beam_fire.wav
+#0 sound	sound_maxi_beam_fire			sfx_maxi_beam_fire_v2.wav
+
+0 sound		sound_maxi_blue					sfx_maxi_blue.wav
+0 sound		sound_maxi_purple				sfx_maxi_purple.wav
+#0 sound	sound_shockwave					sfx_shockwave.wav
+
+0 sound		sound_mine_heartbeat			sfx_mine_heartbeat.wav
+0 sound		sound_mine_transform			sfx_mine_transform.wav
+
+0 sound		sound_upgrademenu_open			sfx_upgrademenu_open.wav
+0 sound		sound_upgrademenu_buy			sfx_upgrademenu_buy.wav
+
+# ----------------------------------------
+# music
+# ----------------------------------------
+[ios]				0 binary   bgm_menu		bgm_menu2.mp3
+[psp]				0 binary   bgm_menu		bgm_menu2.at3
+[win|bbos|ios_hd]	0 binary   bgm_menu		bgm_menu2.ogg
+[ios]				0 binary   bgm_game3	bgm_game3.mp3
+[psp]				0 binary   bgm_game3	bgm_game3.at3
+[win|bbos|ios_hd]	0 binary   bgm_game3	bgm_game3.ogg
+[win|bbos|ios_hd]	0 binary   bgm_game4	bgm_game4.ogg
+[win|bbos|ios_hd]	0 binary   bgm_game5	bgm_game5.ogg
+
+# ----------------------------------------
+# help screens
+# ----------------------------------------
+[ios_hd|win|mac|bbos]	0 image		slide_01	slide_01_hd.tga
+[ios_hd|win|mac|bbos]	0 image		slide_02	slide_02_hd.tga
+[ios_hd|win|mac|bbos]	0 image		slide_03	slide_03_hd.tga
+[ios_hd|win|mac|bbos]	0 image		slide_04	slide_04_hd.tga
+[ios|psp]				0 image		slide_01	slide_01.tga
+[ios|psp]				0 image		slide_02	slide_02.tga
+[ios|psp]				0 image		slide_03	slide_03.tga
+[ios|psp]				0 image		slide_04	slide_04.tga
+
+# ----------------------------------------
+# backgrounds
+# ----------------------------------------
+[ios|ios_hd]	0 pvr4	background_09	back09.png
+[ios_hd]		0 pvr4	background_10	back10.png
+[ios_hd]		0 pvr4	background_11	back11.png
+[ios_hd]		0 pvr4	background_12	back12.png
+[ios_hd]		0 pvr4	background_13	back13.png
+[ios_hd]		0 pvr4	background_14	back14.png
+[psp]			0 dds	background_09	back09_psp.png
+[win|mac|bbos]	0 image	background_09	back09_win.png
+[win|mac|bbos]	0 image	background_10	back10.png
+[win|mac|bbos]	0 image	background_11	back11.png
+
+# ----------------------------------------
+# tutorial voice over
+# ----------------------------------------
+[win|mac]	0	binary	vo_tut_01	vo_tut_01.ogg
+[win|mac]	0	binary	vo_tut_02	vo_tut_02.ogg
+[win|mac]	0	binary	vo_tut_03	vo_tut_03.ogg
+[win|mac]	0	binary	vo_tut_04	vo_tut_04.ogg
+[win|mac]	0	binary	vo_tut_05	vo_tut_05.ogg
+[win|mac]	0	binary	vo_tut_06	vo_tut_06.ogg
+[win|mac]	0	binary	vo_tut_07	vo_tut_07.ogg
+[win|mac]	0	binary	vo_tut_08	vo_tut_08.ogg
+[win|mac]	0	binary	vo_tut_09	vo_tut_09.ogg
+[win|mac]	0	binary	vo_tut_10	vo_tut_10.ogg
+[win|mac]	0	binary	vo_tut_11	vo_tut_11.ogg
+[win|mac]	0	binary	vo_tut_12	vo_tut_12.ogg
+#[win|mac]	0	binary	vo_tut_13	vo_tut_13.ogg
+[win|mac]	0	binary	vo_tut_14	vo_tut_14.ogg
+[win|mac]	0	binary	vo_tut_15	vo_tut_15.ogg
+[win|mac]	0	binary	vo_tut_16	vo_tut_16.ogg
+[win|mac]	0	binary	vo_tut_17	vo_tut_17.ogg
+[win|mac]	0	binary	vo_tut_18	vo_tut_18b.ogg
+[win|mac]	0	binary	vo_tut_19	vo_tut_19.ogg
+[win|mac]	0	binary	vo_tut_20	vo_tut_20.ogg
+[win|mac]	0	binary	vo_tut_21	vo_tut_21.ogg
+[win|mac]	0	binary	vo_tut_22	vo_tut_22.ogg
+[win|mac]	0	binary	vo_tut_23	vo_tut_23.ogg
+[win|mac]	0	binary	vo_tut_24	vo_tut_24.ogg
+[win|mac]	0	binary	vo_tut_25	vo_tut_25.ogg
+[win|mac]	0	binary	vo_tut_26	vo_tut_26.ogg
+[win|mac]	0	binary	vo_tut_27	vo_tut_27.ogg
+
+# ----------------------------------------
+# test
+# ----------------------------------------
+
+#[ios_hd]		0	binary	md3test_01		player_ship_3d.md3
+#[ios_hd]		0	pvr4	player_ship_3d	player_ship_3d.jpg
+#[mac]			0	image	player_ship_3d	player_ship_3d.jpg
+[mac]			0	binary	bgm_game1		bgm_game_01.ogg
+[mac]			0	binary	bgm_game2		bgm_game_02.ogg
+[mac]			0	binary	bgm_game3		bgm_game_03.ogg
+[mac]			0	binary	bgm_game4		bgm_game_04.ogg
+[mac]			0	binary	bgm_game5		bgm_game_05.ogg
+[mac]			0	binary	bgm_game6		bgm_game_06.ogg
+[mac]			0	binary	bgm_game7		bgm_game_07.ogg
+[mac]			0	binary	bgm_main1		bgm_main_01.ogg
+[mac]			0	binary	bgm_main2		bgm_main_02.ogg
+[mac]			0	binary	bgm_main3		bgm_main_03.ogg
+[mac]			0	binary	bgm_main4		bgm_main_04.ogg
+[mac]			0	binary	bgm_main5		bgm_main_05.ogg

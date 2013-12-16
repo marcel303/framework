@@ -1,0 +1,41 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "vecdraw", "vecdraw.csproj", "{5F3EA59C-930A-4747-9FB2-F169778EF3AE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "veccompose", "..\veccompose\veccompose.csproj", "{1ECCD407-1628-4353-A028-0609B8406879}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "veccontrols", "..\veccontrols\veccontrols.csproj", "{DF000C3B-3036-4CC3-BB55-2AE4A4268347}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "vecwrite", "..\vecwrite\vecwrite.csproj", "{7EF09184-7161-4307-A3E5-3967619C8BE0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1ECCD407-1628-4353-A028-0609B8406879}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1ECCD407-1628-4353-A028-0609B8406879}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1ECCD407-1628-4353-A028-0609B8406879}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1ECCD407-1628-4353-A028-0609B8406879}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5F3EA59C-930A-4747-9FB2-F169778EF3AE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5F3EA59C-930A-4747-9FB2-F169778EF3AE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5F3EA59C-930A-4747-9FB2-F169778EF3AE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5F3EA59C-930A-4747-9FB2-F169778EF3AE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7EF09184-7161-4307-A3E5-3967619C8BE0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7EF09184-7161-4307-A3E5-3967619C8BE0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7EF09184-7161-4307-A3E5-3967619C8BE0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7EF09184-7161-4307-A3E5-3967619C8BE0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DF000C3B-3036-4CC3-BB55-2AE4A4268347}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DF000C3B-3036-4CC3-BB55-2AE4A4268347}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DF000C3B-3036-4CC3-BB55-2AE4A4268347}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DF000C3B-3036-4CC3-BB55-2AE4A4268347}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(MonoDevelopProperties) = preSolution
+		StartupItem = vecdraw.csproj
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,27 @@
+circle
+	radius 14
+	color 0 0 0
+	stroke 3.5
+	hardness 2.5
+	filled 0
+	line 255
+poly
+	point 10 -10
+	point -10 10
+	color 0 0 0
+	stroke 3.5
+	hardness 2.5
+
+circle
+	radius 14
+	color 255 255 255
+	stroke 2.0
+	hardness 1.5
+	filled 0
+	line 255
+poly
+	point 9 -9
+	point -9 9
+	color 255 255 255
+	stroke 2.0
+	hardness 1.5

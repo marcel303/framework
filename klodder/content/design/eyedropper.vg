@@ -1,0 +1,32 @@
+circle
+	filled 0
+	stroke 3.0
+	hardness 2
+	color 255 255 255
+	line 0
+	fill 0
+	radius 65
+circle
+	filled 0
+	stroke 2.0
+	hardness 2
+	color 255 255 255
+	line 255
+	fill 255
+	radius 65
+circle
+	filled 0
+	stroke 5.0
+	hardness 3
+	color 255 255 255
+	line 0
+	fill 0
+	radius 50
+circle
+	filled 0
+	stroke 3.0
+	hardness 3
+	color 255 255 255
+	line 191
+	fill 191
+	radius 50

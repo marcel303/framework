@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="3.5" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.21022</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{74D2233E-E03E-46F7-B79D-6ECC7D9EA4A2}</ProjectGuid>
+    <Target>Bin</Target>
+    <Language>CPP</Language>
+    <Compiler>
+      <Compiler ctype="GppCompiler" />
+    </Compiler>
+    <Packages>
+      <Packages>
+        <Package file="/home/marcel/Documenten/projects/libgg/libgg.md.pc" name="libgg" IsProject="true" />
+      </Packages>
+    </Packages>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\Debug</OutputPath>
+    <DefineSymbols>DEBUG MONODEVELOP</DefineSymbols>
+    <SourceDirectory>.</SourceDirectory>
+    <CompileTarget>Bin</CompileTarget>
+    <Externalconsole>true</Externalconsole>
+    <OutputName>libnet</OutputName>
+    <ExtraLinkerArguments>-lSDL</ExtraLinkerArguments>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <OutputPath>bin\Release</OutputPath>
+    <OptimizationLevel>3</OptimizationLevel>
+    <DefineSymbols>MONODEVELOP</DefineSymbols>
+    <SourceDirectory>.</SourceDirectory>
+    <Externalconsole>true</Externalconsole>
+    <OutputName>libnet</OutputName>
+    <CompileTarget>Bin</CompileTarget>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Address.cpp" />
+    <Compile Include="Channel.cpp" />
+    <Compile Include="ChannelManager.cpp" />
+    <Compile Include="NetSocket.cpp" />
+    <Compile Include="NetStats.cpp" />
+    <Compile Include="NetTimer.cpp" />
+    <Compile Include="Packet.cpp" />
+    <Compile Include="PacketDispatcher.cpp" />
+    <Compile Include="PacketListener.cpp" />
+    <Compile Include="test.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Address.h" />
+    <None Include="Channel.h" />
+    <None Include="ChannelHandler.h" />
+    <None Include="ChannelManager.h" />
+    <None Include="ChannelTypes.h" />
+    <None Include="libnet_forward.h" />
+    <None Include="NetDiag.h" />
+    <None Include="NetHandlePool.h" />
+    <None Include="NetHandlePool.inl" />
+    <None Include="NetProtocols.h" />
+    <None Include="NetSocket.h" />
+    <None Include="NetStats.h" />
+    <None Include="NetTimer.h" />
+    <None Include="Packet.h" />
+    <None Include="Packet.inl" />
+    <None Include="PacketDispatcher.h" />
+    <None Include="PacketListener.h" />
+  </ItemGroup>
+</Project>

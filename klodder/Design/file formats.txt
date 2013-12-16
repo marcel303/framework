@@ -1,0 +1,31 @@
+-----------------------------
+Klodder specific file formats
+-----------------------------
+
+- ImageDescription file (XML)
+	Contains a description of the image, including layer order, layer opacity.
+	Contains editing specific state such as the last selected color and tool.
+	Maintains file cursors into the CommandStream and DataStream files.
+
+- CommandStream file (binary)
+	Contains binary packets which when played back, reconstruct the image. Does not contain image data, etc.
+
+- DataStream file (binary)
+	Contains data required during playback, such as captured image data.
+
+- DataLayer file (binary)
+	Contains the binary data of each layer.
+	<xxx>_layer<n>.bin
+
+- Brushes file (binary)
+	Contains brushes. User created brushes are stored in a separate file.
+	<xxx>.brushes
+	
+- Preview file (binary)
+	Contains a binary representation of the final image. Used when loading the preview image in the
+	detail view.
+	<xxx>_preview.bin
+	
+- Package file (binary)
+	Contains multiple files, offered for download from the image gallery. Read by the viewer application
+	to perform the playback.

@@ -1,0 +1,12 @@
+# --------------------
+# general purpose
+# --------------------
+#vector		button_back			button_back
+#vector		button_refresh		button_refresh
+
+# --------------------
+# game select view
+# --------------------
+#vector		game_select_easy		game_select_easy
+#vector		game_select_hardcore	game_select_hardcore
+#vector		game_select_help		game_select_help

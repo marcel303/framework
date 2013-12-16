@@ -1,0 +1,2 @@
+- Decouple packet bytes from interface. Allow extraction without copying bytes.
+- Add callbacks to ChannelHandler for client channel. Make client channels fully managed.

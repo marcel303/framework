@@ -1,0 +1,17 @@
+<div class="right_side">
+<h1>Global Ranking: [game_name]</h1>
+<b>Showing past [hist] days</b>
+<table class="scores" style="margin:0px 0px 5px 0px">
+<tr>
+[D]<th class="Hacked?">Rank</th>
+<th class="flag">&nbsp;</th>
+<th class="rank">Rank</th>
+[D]<th class="rank">Rank2</th>
+[D]<th>User ID</th>
+<th class="name">Name</th>
+<th>Score</th>
+[D]<th>Date</th>
+</tr>
+</table>
+
+<table class="scores">

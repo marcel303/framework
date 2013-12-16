@@ -1,0 +1,161 @@
+QTEST_FIXTURE(FixManual3D, TestRenderRenderModel)
+{
+	TRACE_GUARD;
+
+	CHECK(initialized);
+
+	SharedTexture texture1 = TextureManager::I().Acquire("Resources'Textures:test2");
+	SharedTexture texture2 = TextureManager::I().Acquire("Resources'Textures:test4");
+
+	SharedModel model(new ResourceModel);
+
+	for (size_t i = 0; i < 25; ++i)
+	{
+		for (size_t j = 0; j < 25; ++j)
+		{
+			float u = i / float(25 - 1);
+			float v = j / float(25 - 1);
+
+			float x = (u - 0.5f) * 2.0f;
+			float y = (v - 0.5f) * 2.0f;
+
+			float scale = sin(sqrt(x * x + y * y) * M_PI * 2.0f * 2.0f);
+			scale *= 1.0f / 25.0f;
+
+			int color[3];
+			if (scale >= 0.0f)
+			{
+				color[0] = 255;
+				color[1] = 0;
+				color[2] = 0;
+			}
+			else
+			{
+				color[0] = 0;
+				color[1] = 255;
+				color[2] = 0;
+			}
+
+			ResourceModel::Skin skin;
+			SharedMesh mesh(new Mesh);
+			ShapeBuilder::I().PushTranslation(Vector(x, y, 0.0f));
+				ShapeBuilder::I().PushScaling(Vector(scale, scale, scale));
+					ShapeBuilder::I().CreateCube(*mesh, VertexBuffer::FVF_XYZ | VertexBuffer::FVF_NORMAL | VertexBuffer::FVF_COLOR);
+				ShapeBuilder::I().Pop();
+			ShapeBuilder::I().Pop();
+			ShapeBuilder::I().CalculateNormals(*mesh);
+			ShapeBuilder::I().Colorize(*mesh, color[0], color[1], color[2]);
+			skin.SetMesh(mesh);
+			model->AddSkin(skin);
+		}
+	}
+
+	Mesh bgMesh;
+	ShapeBuilder::I().CreateQuad(ShapeBuilder::AXIS_Z, bgMesh, VertexBuffer::FVF_XYZ | VertexBuffer::FVF_COLOR | VertexBuffer::FVF_TEX1);
+	bgMesh.GetVertexBuffer().tex[0][0].u = 0.0f;
+	bgMesh.GetVertexBuffer().tex[0][0].v = 0.0f;
+	bgMesh.GetVertexBuffer().tex[0][1].u = 1.0f;
+	bgMesh.GetVertexBuffer().tex[0][1].v = 0.0f;
+	bgMesh.GetVertexBuffer().tex[0][2].u = 1.0f;
+	bgMesh.GetVertexBuffer().tex[0][2].v = 1.0f;
+	bgMesh.GetVertexBuffer().tex[0][3].u = 0.0f;
+	bgMesh.GetVertexBuffer().tex[0][3].v = 1.0f;
+	ShapeBuilder::I().Colorize(bgMesh, 255, 255, 255, 127);
+
+	Renderer::I().SetGraphicsDevice(gfxDevice);
+
+	Timer timer;
+	Timer timer2;
+	timer2.SetTickIntervalMS(1);
+
+	float time = timer.GetTimeMS() / 1000.0f;
+	Quaternion rotation;
+
+	float clearColor[3] = { 0.0f };
+
+	while (!Input())
+	{
+		Update();
+		gfxDevice->Clear(GraphicsDevice::BT_ALL, clearColor[0], clearColor[1], clearColor[2], 1.0f, 0x00);
+		gfxDevice->BeginRender();
+
+		float zDomination = (sin(timer.GetTimeMS() / 2000.0f) + 1.0f) / 2.0f;
+
+		if (timer2.ReadTickEvent())
+		{
+			//int cMax = 15 / 255.0f;
+			float cMax = 7 / 255.0f;
+			clearColor[0] = cMax - clearColor[0];
+			clearColor[1] = cMax - clearColor[1];
+			clearColor[2] = cMax - clearColor[2];
+			timer2.SetTickIntervalMS(uint64((1.0f - zDomination) * 500.0f) + 1);
+		}
+
+		Vector axis(
+			sin(timer.GetTimeMS() / 1000.0f) * (1.0f - zDomination),
+			sin(timer.GetTimeMS() / 1300.0f) * (1.0f - zDomination),
+			sin(timer.GetTimeMS() / 1700.0f));
+		Quaternion rotator;
+		float deltaTime = timer.GetTimeMS() / 1000.0f - time;
+		time += deltaTime;
+		rotator.FromAxisAngle(axis, M_PI * 2.0f * deltaTime * 0.5f);
+		rotation *= rotator;
+		rotation.Normalize();
+
+		Matrix matProj;
+		Matrix matView;
+		Matrix matWorld;
+
+		matProj.MakePerspectiveFovLH(M_PI / 2.0f, display->GetHeight() / float(display->GetWidth()), 0.01f, 100.0f);
+		matView.MakeLookat(Vector(0.0f, 0.0f, 0.0f), Vector(0.0f, 0.0f, 1.0f), Vector(0.0f, 1.0f, 0.0f));
+		{
+			Matrix matWorldPos;
+			Matrix matWorldRot;
+			matWorldPos.MakeTranslation(Vector(0.0f, 0.0f, 2.0f));
+			matWorldRot.MakeRotationEuler(Vector(0.0f, timer.GetTimeMS() / 1000.0f, timer.GetTimeMS() / 1100.0f));
+			matWorldRot = rotation.ToMatrix();
+			matWorld = matWorldPos * matWorldRot;
+		}
+
+		gfxDevice->SetTransform(GraphicsDevice::MT_PROJECTION, matProj);
+		gfxDevice->SetTransform(GraphicsDevice::MT_VIEW, matView);
+		gfxDevice->SetTransform(GraphicsDevice::MT_WORLD, matWorld);
+
+		float time = timer.GetTimeMS() / 1000.0f;
+		qEngine::Light light;
+		light.type = qEngine::Light::LT_DIRECTIONAL;
+		light.diffuse.r = 1.0f;
+		light.diffuse.g = 1.0f;
+		light.diffuse.b = 1.0f;
+		light.direction.x = sin(time);
+		light.direction.y = -1.0f;
+		light.direction.z = cos(time);
+		light.direction.Normalize();
+		gfxDevice->SetLight(0, &light);
+		gfxDevice->EnableLight(0, true);
+
+		gfxDevice->SetRenderState(GraphicsDevice::RS_LIGHTING, GraphicsDevice::RSV_TRUE);
+		Renderer::I().RenderModel(model);
+		gfxDevice->SetRenderState(GraphicsDevice::RS_LIGHTING, GraphicsDevice::RSV_FALSE);
+
+#if 0
+		if (clearColor[0] == 0.0f)
+			gfxDevice->SetTexture(0, texture1.get());
+		else
+			gfxDevice->SetTexture(0, texture2.get());
+
+		Matrix matScale;
+		matScale.MakeScaling(Vector((1.0f - zDomination) * 0.95f, (1.0f - zDomination) * 0.95f, (1.0f - zDomination) * 0.95f));
+		matWorld = matWorld * matScale;
+
+		gfxDevice->SetTransform(GraphicsDevice::MT_WORLD, matWorld);
+
+		Renderer::I().RenderMesh(bgMesh);
+
+		gfxDevice->SetTexture(0, 0);
+#endif
+
+		gfxDevice->EndRender();
+		gfxDevice->Present();
+	}
+}

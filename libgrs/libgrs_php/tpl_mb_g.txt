@@ -1,0 +1,5 @@
+<a href="?page=[page]">
+<span style="display:block;float:left;background:url('images/mb_g_l.png');width:14px;height:42px"></span>
+<span style="display:block;float:left;background:url('images/mb_g_m.png') repeat-x;width:[width]px;height:42px;padding-top:12px;font-family:verdana,arial;font-size:14px">[text]</span>
+<span style="display:block;float:left;background:url('images/mb_g_r.png');width:14px;height:42px;margin-right:5px"></span>
+</a>

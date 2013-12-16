@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "control_pull", "control_pull.vcproj", "{3AD2BC61-C769-4243-9713-17C196A8C1BD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3AD2BC61-C769-4243-9713-17C196A8C1BD}.Debug|Win32.ActiveCfg = Debug|Win32
+		{3AD2BC61-C769-4243-9713-17C196A8C1BD}.Debug|Win32.Build.0 = Debug|Win32
+		{3AD2BC61-C769-4243-9713-17C196A8C1BD}.Release|Win32.ActiveCfg = Release|Win32
+		{3AD2BC61-C769-4243-9713-17C196A8C1BD}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,122 @@
+//  Copyright 2009-2010 Aurora Feint, Inc.
+// 
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//  
+//  	http://www.apache.org/licenses/LICENSE-2.0
+//  	
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+
+#pragma once
+
+#import "OFResource.h"
+
+@class OFService;
+@class OFLeaderboard;
+@class OFRequestHandle;
+class OFHttpService;
+class OFImageViewHttpServiceObserver;
+
+@protocol OFAbridgedHighScoreDelegate;
+
+//////////////////////////////////////////////////////////////////////////////////////////
+/// @category Public
+/// The public interface for OFAbridgedHighScore exposes a smaller faster to download
+/// highscore object that contains less details about the user.
+///
+//////////////////////////////////////////////////////////////////////////////////////////
+@interface OFAbridgedHighScore : OFResource<OFCallbackable>
+{
+@private
+	int64_t score;
+	NSString* leaderboardId;
+	NSString* displayText;
+	NSString* userId;
+	NSString* userName;
+	NSString* userProfilePictureUrl;
+	NSUInteger userGamerScore;
+	OFPointer<OFHttpService> mHttpService;
+	OFPointer<OFImageViewHttpServiceObserver> mHttpServiceObserver;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+/// Set a delegate for all OFAbridgedHighScore related actions. Must adopt the 
+/// OFAbridgedHighScoreDelegate protocol.
+///
+/// @note Defaults to nil. Weak reference
+//////////////////////////////////////////////////////////////////////////////////////////
++ (void)setDelegate:(id<OFAbridgedHighScoreDelegate>)delegate;
+
+//////////////////////////////////////////////////////////////////////////////////////////
+/// get the profile picture associated with this high score
+///
+/// @return OFRequestHandle for the server request.  Use this to cancel the request
+///
+/// @note Invokes			- (void)didGetProfilePicture:(UIImage*)image OFAbridgedHighScore:(OFAbridgedHighScore*)score; on success and
+///							- (void)didFailGetProfilePictureOFAbridgedHighScore:(OFAbridgedHighScore*)score; on failure
+//////////////////////////////////////////////////////////////////////////////////////////
+- (OFRequestHandle*)getProfilePicture;
+
+//////////////////////////////////////////////////////////////////////////////////////////
+/// Raw integral score value
+//////////////////////////////////////////////////////////////////////////////////////////
+@property (nonatomic, readonly)			int64_t		score;
+
+//////////////////////////////////////////////////////////////////////////////////////////
+/// Formatted string representation of score suitable for display
+//////////////////////////////////////////////////////////////////////////////////////////
+@property (nonatomic, readonly)			NSString*	displayText;
+
+//////////////////////////////////////////////////////////////////////////////////////////
+/// Resource id for the user the score belongs to
+//////////////////////////////////////////////////////////////////////////////////////////
+@property (nonatomic, readonly)			NSString*	userId;
+
+//////////////////////////////////////////////////////////////////////////////////////////
+/// Name of the user the score belongs to
+//////////////////////////////////////////////////////////////////////////////////////////
+@property (nonatomic, readonly)			NSString*	userName;
+
+//////////////////////////////////////////////////////////////////////////////////////////
+/// Gamer score of the user the score belongs to
+//////////////////////////////////////////////////////////////////////////////////////////
+@property (nonatomic, readonly)			NSUInteger	userGamerScore;
+
+//////////////////////////////////////////////////////////////////////////////////////////
+/// @internal
+//////////////////////////////////////////////////////////////////////////////////////////
++ (NSString*)getResourceName;
+@property (nonatomic, readonly)			NSString*	userProfilePictureUrl;
+
+@end
+
+
+/////////////////////////////////////////////////////////////////////////////////////
+/// Adopt the OFAbridgedHighScoreDelegate Protocol to receive information regarding OFAbridgedHighScore.
+/// You must call OFAbridgedHighScore's +(void)setDelegate: method to receive information.
+/////////////////////////////////////////////////////////////////////////////////////
+@protocol OFAbridgedHighScoreDelegate
+@optional
+
+//////////////////////////////////////////////////////////////////////////////////////////
+/// Invoked when getProfilePicture successfully completes
+///
+/// @param image		The image requested
+/// @param score		The OFAbridgedHighScore that the image belongs to
+//////////////////////////////////////////////////////////////////////////////////////////
+- (void)didGetProfilePicture:(UIImage*)image OFAbridgedHighScore:(OFAbridgedHighScore*)score;
+
+//////////////////////////////////////////////////////////////////////////////////////////
+/// Invoked when getProfilePicture fails
+///
+/// @param score		The OFAbridgedHighScore for which the image was requested.
+//////////////////////////////////////////////////////////////////////////////////////////
+- (void)didFailGetProfilePictureOFAbridgedHighScore:(OFAbridgedHighScore*)score;
+@end
+
+

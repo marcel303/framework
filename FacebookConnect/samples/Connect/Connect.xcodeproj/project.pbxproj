@@ -1,0 +1,315 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 45;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1D60589B0D05DD56006BFB54 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 29B97316FDCFA39411CA2CEA /* main.m */; };
+		1D60589F0D05DD5A006BFB54 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1D30AB110D05D00D00671497 /* Foundation.framework */; };
+		1DF5F4E00D08C38300B7A737 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1DF5F4DF0D08C38300B7A737 /* UIKit.framework */; };
+		28AD733F0D9D9553002E5188 /* MainWindow.xib in Resources */ = {isa = PBXBuildFile; fileRef = 28AD733E0D9D9553002E5188 /* MainWindow.xib */; };
+		8497D15210695FF00020606F /* FBStreamDialog.m in Sources */ = {isa = PBXBuildFile; fileRef = 8497D15110695FF00020606F /* FBStreamDialog.m */; };
+		BE68932E0F65180D00769658 /* FBLoginButton.m in Sources */ = {isa = PBXBuildFile; fileRef = BE68932D0F65180D00769658 /* FBLoginButton.m */; };
+		BE9D2B650F5E1F4B00F74C9B /* FBConnectGlobal.m in Sources */ = {isa = PBXBuildFile; fileRef = BE9D2B550F5E1F4B00F74C9B /* FBConnectGlobal.m */; };
+		BE9D2B660F5E1F4B00F74C9B /* FBSession.m in Sources */ = {isa = PBXBuildFile; fileRef = BE9D2B570F5E1F4B00F74C9B /* FBSession.m */; };
+		BE9D2B670F5E1F4B00F74C9B /* FBRequest.m in Sources */ = {isa = PBXBuildFile; fileRef = BE9D2B590F5E1F4B00F74C9B /* FBRequest.m */; };
+		BE9D2B680F5E1F4B00F74C9B /* FBXMLHandler.m in Sources */ = {isa = PBXBuildFile; fileRef = BE9D2B5B0F5E1F4B00F74C9B /* FBXMLHandler.m */; };
+		BE9D2B690F5E1F4B00F74C9B /* FBDialog.m in Sources */ = {isa = PBXBuildFile; fileRef = BE9D2B5D0F5E1F4B00F74C9B /* FBDialog.m */; };
+		BE9D2B6A0F5E1F4B00F74C9B /* FBLoginDialog.m in Sources */ = {isa = PBXBuildFile; fileRef = BE9D2B5F0F5E1F4B00F74C9B /* FBLoginDialog.m */; };
+		BE9D2B6C0F5E1F4B00F74C9B /* FBPermissionDialog.m in Sources */ = {isa = PBXBuildFile; fileRef = BE9D2B630F5E1F4B00F74C9B /* FBPermissionDialog.m */; };
+		BE9D2B6D0F5E1F4B00F74C9B /* FBConnect.bundle in Resources */ = {isa = PBXBuildFile; fileRef = BE9D2B640F5E1F4B00F74C9B /* FBConnect.bundle */; };
+		BEC1C0910EECDC79003DE1B0 /* ConnectAppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = BEC1C08E0EECDC79003DE1B0 /* ConnectAppDelegate.m */; };
+		BEC1C0920EECDC79003DE1B0 /* SessionViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = BEC1C0900EECDC79003DE1B0 /* SessionViewController.m */; };
+		BEC82F650EC42B7700F0BF5D /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BEC82F640EC42B7700F0BF5D /* CoreGraphics.framework */; };
+		BEE38CBA0EB0457500189902 /* SessionViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = BEE38CB90EB0457500189902 /* SessionViewController.xib */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		1D30AB110D05D00D00671497 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		1D6058910D05DD3D006BFB54 /* Connect.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Connect.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1DF5F4DF0D08C38300B7A737 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		28AD733E0D9D9553002E5188 /* MainWindow.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = MainWindow.xib; sourceTree = "<group>"; };
+		29B97316FDCFA39411CA2CEA /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		32CA4F630368D1EE00C91783 /* Connect_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Connect_Prefix.pch; sourceTree = "<group>"; };
+		8497D15110695FF00020606F /* FBStreamDialog.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = FBStreamDialog.m; path = ../../src/FBStreamDialog.m; sourceTree = SOURCE_ROOT; };
+		8497D15310695FFF0020606F /* FBStreamDialog.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FBStreamDialog.h; path = ../../src/FBConnect/FBStreamDialog.h; sourceTree = SOURCE_ROOT; };
+		8D1107310486CEB800E47090 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		BE68932C0F65180000769658 /* FBLoginButton.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FBLoginButton.h; path = ../../src/FBConnect/FBLoginButton.h; sourceTree = SOURCE_ROOT; };
+		BE68932D0F65180D00769658 /* FBLoginButton.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = FBLoginButton.m; path = ../../src/FBLoginButton.m; sourceTree = SOURCE_ROOT; };
+		BE9D2B530F5E1F4B00F74C9B /* FBConnect.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FBConnect.h; path = ../../src/FBConnect/FBConnect.h; sourceTree = SOURCE_ROOT; };
+		BE9D2B540F5E1F4B00F74C9B /* FBConnectGlobal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FBConnectGlobal.h; path = ../../src/FBConnect/FBConnectGlobal.h; sourceTree = SOURCE_ROOT; };
+		BE9D2B550F5E1F4B00F74C9B /* FBConnectGlobal.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = FBConnectGlobal.m; path = ../../src/FBConnectGlobal.m; sourceTree = SOURCE_ROOT; };
+		BE9D2B560F5E1F4B00F74C9B /* FBSession.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FBSession.h; path = ../../src/FBConnect/FBSession.h; sourceTree = SOURCE_ROOT; };
+		BE9D2B570F5E1F4B00F74C9B /* FBSession.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = FBSession.m; path = ../../src/FBSession.m; sourceTree = SOURCE_ROOT; };
+		BE9D2B580F5E1F4B00F74C9B /* FBRequest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FBRequest.h; path = ../../src/FBConnect/FBRequest.h; sourceTree = SOURCE_ROOT; };
+		BE9D2B590F5E1F4B00F74C9B /* FBRequest.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = FBRequest.m; path = ../../src/FBRequest.m; sourceTree = SOURCE_ROOT; };
+		BE9D2B5A0F5E1F4B00F74C9B /* FBXMLHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FBXMLHandler.h; path = ../../src/FBXMLHandler.h; sourceTree = SOURCE_ROOT; };
+		BE9D2B5B0F5E1F4B00F74C9B /* FBXMLHandler.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = FBXMLHandler.m; path = ../../src/FBXMLHandler.m; sourceTree = SOURCE_ROOT; };
+		BE9D2B5C0F5E1F4B00F74C9B /* FBDialog.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FBDialog.h; path = ../../src/FBConnect/FBDialog.h; sourceTree = SOURCE_ROOT; };
+		BE9D2B5D0F5E1F4B00F74C9B /* FBDialog.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = FBDialog.m; path = ../../src/FBDialog.m; sourceTree = SOURCE_ROOT; };
+		BE9D2B5E0F5E1F4B00F74C9B /* FBLoginDialog.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FBLoginDialog.h; path = ../../src/FBConnect/FBLoginDialog.h; sourceTree = SOURCE_ROOT; };
+		BE9D2B5F0F5E1F4B00F74C9B /* FBLoginDialog.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = FBLoginDialog.m; path = ../../src/FBLoginDialog.m; sourceTree = SOURCE_ROOT; };
+		BE9D2B620F5E1F4B00F74C9B /* FBPermissionDialog.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FBPermissionDialog.h; path = ../../src/FBConnect/FBPermissionDialog.h; sourceTree = SOURCE_ROOT; };
+		BE9D2B630F5E1F4B00F74C9B /* FBPermissionDialog.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = FBPermissionDialog.m; path = ../../src/FBPermissionDialog.m; sourceTree = SOURCE_ROOT; };
+		BE9D2B640F5E1F4B00F74C9B /* FBConnect.bundle */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.plug-in"; name = FBConnect.bundle; path = ../../src/FBConnect.bundle; sourceTree = SOURCE_ROOT; };
+		BEC1C08D0EECDC79003DE1B0 /* ConnectAppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ConnectAppDelegate.h; sourceTree = "<group>"; };
+		BEC1C08E0EECDC79003DE1B0 /* ConnectAppDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ConnectAppDelegate.m; sourceTree = "<group>"; };
+		BEC1C08F0EECDC79003DE1B0 /* SessionViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SessionViewController.h; sourceTree = "<group>"; };
+		BEC1C0900EECDC79003DE1B0 /* SessionViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SessionViewController.m; sourceTree = "<group>"; };
+		BEC82F640EC42B7700F0BF5D /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
+		BEE38CB90EB0457500189902 /* SessionViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = SessionViewController.xib; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		1D60588F0D05DD3D006BFB54 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1D60589F0D05DD5A006BFB54 /* Foundation.framework in Frameworks */,
+				1DF5F4E00D08C38300B7A737 /* UIKit.framework in Frameworks */,
+				BEC82F650EC42B7700F0BF5D /* CoreGraphics.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		19C28FACFE9D520D11CA2CBB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1D6058910D05DD3D006BFB54 /* Connect.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		29B97314FDCFA39411CA2CEA /* CustomTemplate */ = {
+			isa = PBXGroup;
+			children = (
+				29B97315FDCFA39411CA2CEA /* Source */,
+				BE9D2B520F5E1F4B00F74C9B /* FBConnect */,
+				29B97317FDCFA39411CA2CEA /* Resources */,
+				29B97323FDCFA39411CA2CEA /* Frameworks */,
+				19C28FACFE9D520D11CA2CBB /* Products */,
+			);
+			name = CustomTemplate;
+			sourceTree = "<group>";
+		};
+		29B97315FDCFA39411CA2CEA /* Source */ = {
+			isa = PBXGroup;
+			children = (
+				BEC1C08D0EECDC79003DE1B0 /* ConnectAppDelegate.h */,
+				BEC1C08E0EECDC79003DE1B0 /* ConnectAppDelegate.m */,
+				BEC1C08F0EECDC79003DE1B0 /* SessionViewController.h */,
+				BEC1C0900EECDC79003DE1B0 /* SessionViewController.m */,
+				32CA4F630368D1EE00C91783 /* Connect_Prefix.pch */,
+				29B97316FDCFA39411CA2CEA /* main.m */,
+			);
+			name = Source;
+			sourceTree = "<group>";
+		};
+		29B97317FDCFA39411CA2CEA /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				BEE38CB90EB0457500189902 /* SessionViewController.xib */,
+				28AD733E0D9D9553002E5188 /* MainWindow.xib */,
+				8D1107310486CEB800E47090 /* Info.plist */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+		};
+		29B97323FDCFA39411CA2CEA /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				BEC82F640EC42B7700F0BF5D /* CoreGraphics.framework */,
+				1DF5F4DF0D08C38300B7A737 /* UIKit.framework */,
+				1D30AB110D05D00D00671497 /* Foundation.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		BE9D2B520F5E1F4B00F74C9B /* FBConnect */ = {
+			isa = PBXGroup;
+			children = (
+				BE9D2B530F5E1F4B00F74C9B /* FBConnect.h */,
+				BE9D2B540F5E1F4B00F74C9B /* FBConnectGlobal.h */,
+				BE9D2B550F5E1F4B00F74C9B /* FBConnectGlobal.m */,
+				BE9D2B560F5E1F4B00F74C9B /* FBSession.h */,
+				BE9D2B570F5E1F4B00F74C9B /* FBSession.m */,
+				BE9D2B580F5E1F4B00F74C9B /* FBRequest.h */,
+				BE9D2B590F5E1F4B00F74C9B /* FBRequest.m */,
+				BE9D2B5A0F5E1F4B00F74C9B /* FBXMLHandler.h */,
+				BE9D2B5B0F5E1F4B00F74C9B /* FBXMLHandler.m */,
+				BE68932C0F65180000769658 /* FBLoginButton.h */,
+				BE68932D0F65180D00769658 /* FBLoginButton.m */,
+				BE9D2B5C0F5E1F4B00F74C9B /* FBDialog.h */,
+				BE9D2B5D0F5E1F4B00F74C9B /* FBDialog.m */,
+				BE9D2B5E0F5E1F4B00F74C9B /* FBLoginDialog.h */,
+				BE9D2B5F0F5E1F4B00F74C9B /* FBLoginDialog.m */,
+				BE9D2B620F5E1F4B00F74C9B /* FBPermissionDialog.h */,
+				BE9D2B630F5E1F4B00F74C9B /* FBPermissionDialog.m */,
+				8497D15310695FFF0020606F /* FBStreamDialog.h */,
+				8497D15110695FF00020606F /* FBStreamDialog.m */,
+				BE9D2B640F5E1F4B00F74C9B /* FBConnect.bundle */,
+			);
+			name = FBConnect;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		1D6058900D05DD3D006BFB54 /* Connect */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1D6058960D05DD3E006BFB54 /* Build configuration list for PBXNativeTarget "Connect" */;
+			buildPhases = (
+				1D60588D0D05DD3D006BFB54 /* Resources */,
+				1D60588E0D05DD3D006BFB54 /* Sources */,
+				1D60588F0D05DD3D006BFB54 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Connect;
+			productName = Connect;
+			productReference = 1D6058910D05DD3D006BFB54 /* Connect.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		29B97313FDCFA39411CA2CEA /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = C01FCF4E08A954540054247B /* Build configuration list for PBXProject "Connect" */;
+			compatibilityVersion = "Xcode 3.1";
+			hasScannedForEncodings = 1;
+			mainGroup = 29B97314FDCFA39411CA2CEA /* CustomTemplate */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				1D6058900D05DD3D006BFB54 /* Connect */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		1D60588D0D05DD3D006BFB54 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				28AD733F0D9D9553002E5188 /* MainWindow.xib in Resources */,
+				BEE38CBA0EB0457500189902 /* SessionViewController.xib in Resources */,
+				BE9D2B6D0F5E1F4B00F74C9B /* FBConnect.bundle in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		1D60588E0D05DD3D006BFB54 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1D60589B0D05DD56006BFB54 /* main.m in Sources */,
+				BEC1C0910EECDC79003DE1B0 /* ConnectAppDelegate.m in Sources */,
+				BEC1C0920EECDC79003DE1B0 /* SessionViewController.m in Sources */,
+				BE9D2B650F5E1F4B00F74C9B /* FBConnectGlobal.m in Sources */,
+				BE9D2B660F5E1F4B00F74C9B /* FBSession.m in Sources */,
+				BE9D2B670F5E1F4B00F74C9B /* FBRequest.m in Sources */,
+				BE9D2B680F5E1F4B00F74C9B /* FBXMLHandler.m in Sources */,
+				BE9D2B690F5E1F4B00F74C9B /* FBDialog.m in Sources */,
+				BE9D2B6A0F5E1F4B00F74C9B /* FBLoginDialog.m in Sources */,
+				BE9D2B6C0F5E1F4B00F74C9B /* FBPermissionDialog.m in Sources */,
+				BE68932E0F65180D00769658 /* FBLoginButton.m in Sources */,
+				8497D15210695FF00020606F /* FBStreamDialog.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		1D6058940D05DD3E006BFB54 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = Connect_Prefix.pch;
+				INFOPLIST_FILE = Info.plist;
+				PRODUCT_NAME = Connect;
+			};
+			name = Debug;
+		};
+		1D6058950D05DD3E006BFB54 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = Connect_Prefix.pch;
+				INFOPLIST_FILE = Info.plist;
+				PRODUCT_NAME = Connect;
+			};
+			name = Release;
+		};
+		C01FCF4F08A954540054247B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_PREPROCESSOR_DEFINITIONS = DEBUG;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = ../../src;
+				ONLY_ACTIVE_ARCH = YES;
+				PREBINDING = NO;
+				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
+				SDKROOT = iphonesimulator3.1.2;
+			};
+			name = Debug;
+		};
+		C01FCF5008A954540054247B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = ../../src;
+				PREBINDING = NO;
+				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
+				SDKROOT = iphoneos2.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1D6058960D05DD3E006BFB54 /* Build configuration list for PBXNativeTarget "Connect" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1D6058940D05DD3E006BFB54 /* Debug */,
+				1D6058950D05DD3E006BFB54 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C01FCF4E08A954540054247B /* Build configuration list for PBXProject "Connect" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C01FCF4F08A954540054247B /* Debug */,
+				C01FCF5008A954540054247B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 29B97313FDCFA39411CA2CEA /* Project object */;
+}

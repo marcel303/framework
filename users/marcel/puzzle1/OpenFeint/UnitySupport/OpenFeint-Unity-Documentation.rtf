@@ -1,0 +1,428 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1038\cocoasubrtf250
+{\fonttbl\f0\fnil\fcharset0 Verdana;\f1\fmodern\fcharset0 CourierNewPSMT;}
+{\colortbl;\red255\green255\blue255;}
+{\*\listtable{\list\listtemplateid1\listhybrid{\listlevel\levelnfc0\levelnfcn0\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{decimal\}.}{\leveltext\leveltemplateid1\'02\'00.;}{\levelnumbers\'01;}\fi-360\li720\lin720 }{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{circle\}}{\leveltext\leveltemplateid2\'01\uc0\u9702 ;}{\levelnumbers;}\fi-360\li1440\lin1440 }{\listname ;}\listid1}
+{\list\listtemplateid2\listhybrid{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{disc\}}{\leveltext\leveltemplateid101\'01\uc0\u8226 ;}{\levelnumbers;}\fi-360\li720\lin720 }{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{circle\}}{\leveltext\leveltemplateid102\'01\uc0\u9702 ;}{\levelnumbers;}\fi-360\li1440\lin1440 }{\listname ;}\listid2}
+{\list\listtemplateid3\listhybrid{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{disc\}}{\leveltext\leveltemplateid201\'01\uc0\u8226 ;}{\levelnumbers;}\fi-360\li720\lin720 }{\listname ;}\listid3}}
+{\*\listoverridetable{\listoverride\listid1\listoverridecount0\ls1}{\listoverride\listid2\listoverridecount0\ls2}{\listoverride\listid3\listoverridecount0\ls3}}
+\margl1440\margr1440\vieww14820\viewh12400\viewkind0
+\deftab720
+\pard\pardeftab720\ql\qnatural
+
+\f0\b\fs26 \cf0 OpenFeint Unity plugin documentation
+\b0 \
+\
+
+\b Getting started with the OpenFeint Unity iPhone plugin
+\b0 \
+\
+These instructions explain how to integrate OpenFeint into your Unity project:\
+\
+\pard\tx220\tx720\pardeftab720\li720\fi-720\ql\qnatural
+\ls1\ilvl0\cf0 {\listtext	1.	}If this is a new Unity project, make sure you set up your project's Player settings before proceeding (Edit->Project Settings->Player). If you do not do this, Unity will hang when you try to Build the project. NOTE: For now, you MUST set your "iPhone SDK Version" in the Player settings to 3.0 or higher. You may set your deployment target OS to something lower in your Xcode project settings. We are working on a solution to eliminate this requirement.\
+{\listtext	1.	}Import the OpenFeint Unity package located in the Unity Support folder by going to "Assets->Import Package..." (or double-clicking on the package file itself).\
+{\listtext	2.	}Click on the new "OpenFeint" menu item in the Unity editor, and then go to "Set Application Initialization Settings...". In this dialog, set up all of the OpenFeint initialization settings and click "Apply". This step only needs to be done once for each project.\
+{\listtext	3.	}If desired, copy your "openfeint_offline_config.xml" file into the "Editor/OpenFeint/Offline Config File Goes Here" folder. You will need to do this every time you make a change to achievements or leaderboards through the developer dashboard.\
+{\listtext	4.	}For your first build with OpenFeint support, in Unity go to "File->Build Settings" and "Build" the project.\
+\pard\tx940\tx1440\pardeftab720\li1440\fi-1440\ql\qnatural
+\ls1\ilvl1\cf0 {\listtext	\uc0\u9702 	}Do NOT use "Build & Run" for your first build with OpenFeint support or for "Replace" builds.\
+{\listtext	\uc0\u9702 	}Do NOT leave the "Unity-iPhone" Xcode project open during the first build with OpenFeint support or during "Replace" builds.\
+{\listtext	\uc0\u9702 	}DO use "Build & Run" for the rest of your builds. The Xcode project may be left open for this.\
+\pard\tx220\tx720\pardeftab720\li720\fi-720\ql\qnatural
+\ls1\ilvl0\cf0 {\listtext	5.	}Once you see the Finder pop-up stating that OpenFeint support has been integrated, you will still need to add the OpenFeint source files to your Xcode project. Follow the instructions in the OpenFeint readme.txt file.\
+{\listtext	6.	}Hit "Build & Run" in Xcode. Your application will launch on your device and the OpenFeint welcome screen will appear on your first run.\
+\pard\pardeftab720\ql\qnatural
+\cf0 \
+\
+
+\b What the automation process does
+\b0 \
+\
+If you're curious about what the plugin's automation process does (or if you're having a problem with the plugin, and you'd like to track down where you think the failure is occurring), here is a detailed description of just what happens during the process:\
+\
+\pard\tx220\tx720\pardeftab720\li720\fi-720\ql\qnatural
+\ls2\ilvl0\cf0 {\listtext	\'95	}When you set up the OpenFeint initialization settings from inside Unity, a header file is created that includes #defines for all of the settings. This header file is added to the "Unity-iPhone" Xcode project upon Build.\
+{\listtext	\'95	}The "PostprocessBuildPlayer" script gets executed when you click on "Build" or "Build & Run" inside Unity. This in turn executes the "UpdateXcodeWithOF" AppleScript which is where most of the automation process occurs.\
+{\listtext	\'95	}The AppleScript performs the following actions:\
+\pard\tx940\tx1440\pardeftab720\li1440\fi-1440\ql\qnatural
+\ls2\ilvl1\cf0 {\listtext	\uc0\u9702 	}Adds "AppController+OpenFeint.mm" to the Xcode project under the "Classes" group.\
+{\listtext	\uc0\u9702 	}Adds "OpenFeintSettingsDefines.h" under the "Classes" group (this is the file that was created when you clicked "Apply" in the "Set Application Initialization Settings..." dialog inside of Unity.\
+{\listtext	\uc0\u9702 	}Adds your "openfeint_offline_config.xml" file, if it was supplied.\
+{\listtext	\uc0\u9702 	}Updates "iPhone_target_Prefix.h" to include a line that imports "OpenFeintPrefix.pch".\
+{\listtext	\uc0\u9702 	}Adds the "CoreGraphics", "Security", and "MapKit" frameworks and the "libsqllite3" library.\
+{\listtext	\uc0\u9702 	}Adds the "-ObjC" linker flag and sets "GCC_OBJC_CALL_CXX_CDTORS" to YES in the Xcode project's settings.\
+{\listtext	\uc0\u9702 	}Weak links both "UIKit" and "MapKit" frameworks so that you can set your deployment target to an OS below 3.0. The Xcode project will close and reopen during this process as it is modified during this process.\
+\pard\pardeftab720\ql\qnatural
+\cf0 \
+\
+
+\b Using the OpenFeint Unity iPhone plugin
+\b0 \
+\
+Now that you have the OpenFeint plugin installed, you'll want to start using the methods, events, and properties found in "Plugins/OpenFeint/OpenFeint.cs" inside your Unity project folder. The following is a discussion on some common tasks you might perform while integrating OpenFeint into your project.\
+\
+\pard\pardeftab720\ql\qnatural
+
+\i \cf0 The OpenFeint class
+\i0 \
+The 
+\i OpenFeint
+\i0 \'a0class is declared inside "OpenFeint.cs". It is a static class (meaning all methods, properties, variables, etc. are declared as static). Unlike most scripts in Unity, you should not try to attach this to a GameObject as a component. The OpenFeint class is designed to be used like a series of utility functions and properties (much like 
+\i Mathf
+\i0 \'a0or 
+\i Random
+\i0 \'a0in Unity).\
+\
+The OpenFeint class bridges the gap between your Unity scripts and the OpenFeint Objective-C code which lives in your Xcode project. When you call a method or property from the OpenFeint class, a message immediately gets sent to Objective-C code which then gets passed on to OpenFeint. Information also gets passed to the OpenFeint class from Objective-C, and you can retrieve this information whenever it is necessary.\
+\
+The OpenFeint class divides communication with OpenFeint into four different types:\
+\pard\tx220\tx720\pardeftab720\li720\fi-720\ql\qnatural
+\ls3\ilvl0\cf0 {\listtext	\'95	}Methods - These are basically just functions that directly call an analogous OpenFeint function.\
+{\listtext	\'95	}Properties - These are technically functions but are used like variables in your scripts. They allow you to get some state information about OpenFeint.\
+{\listtext	\'95	}Events - Think of these as messages that get sent out from OpenFeint when something occurs. You can "subscribe" to these events to be notified when things occur.\
+{\listtext	\'95	}Delegates - Delegates are essentially functions that you supply which can then later be called to give you a result of a non-instantaneous query.\
+\pard\pardeftab720\ql\qnatural
+\cf0 \
+We'll give you examples of how to use each of these types in the next section.\
+\
+\pard\pardeftab720\ql\qnatural
+
+\i \cf0 Using the OpenFeint class
+\i0 \
+The following is a discussion on how to use the OpenFeint class within your Unity project. While the OpenFeint class itself has been written in C#, all of the methods, properties, events, and delegates it provides can be used in Javascript Unity scripts. When there are differences, we will show you both the C# and the Javascript usage.\
+\
+One of the simplest and quickest ways to get started is to simply launch the OpenFeint dashboard. In one of your scripts, simply do the following:\
+\
+\pard\pardeftab720\ql\qnatural
+
+\f1 \cf0 OpenFeint.LaunchDashboard();
+\f0 \
+\
+Notice how the OpenFeint class name precedes the method name. Whenever you need to access something from the OpenFeint class (including delegate and enumerated types), you should precede it with the OpenFeint class name.\
+\
+Now if you wanted to launch the dashboard to a specific page, you would do something like this:\
+\
+
+\f1 OpenFeint.LaunchDashboard(OpenFeint.eDashboardPage.Leaderboards);
+\f0 \
+\
+You'll notice we're using the eDashboardPage enumeration here, which can be found at the top of "OpenFeint.cs".\
+\
+Now say you want to submit a high score. You can do that very easily by using one of the "SubmitHighScore" methods.\
+\
+
+\f1 OpenFeint.SubmitHighScore(47, 99999);
+\f0 \
+\
+You'll notice that we used the "SubmitHighScore(long score, long leaderboardId)" method. The reason that there are four different versions of SubmitHighScore is to provide flexibility for you. For instance, you could create an enumeration of all of the leaderboards in your game, and pass an enumerated value to the "leaderboardId" parameter.\
+\
+The properties provided in the OpenFeint class allow you to get (and sometimes set) certain state information about OpenFeint. For example, you can easily get whether or not the user has approved the use of OpenFeint on their device.\
+\
+
+\f1 if(OpenFeint.hasUserApprovedFeint)
+\f0 \
+
+\f1 \{
+\f0 \
+
+\f1 \'a0\'a0 \'a0// Code goes here.\
+\}
+\f0 \
+\
+You can also set some properties, such as whether or not you want to allow notifications at this time.\
+\
+if(OpenFeint.allowNotifications)\
+\{\
+\'a0\'a0 \'a0OpenFeint.allowNotifications = false;\
+\}\
+\
+Events are a convenient way for you to be notified when something occurs in OpenFeint. In fact, events are necessary if you want to implement challenges or the network save card features of OpenFeint.\
+\
+Let's say you wanted to be notified when a user logs in and then perform some operation. You would "subscribe" to the "OnUserLoggedIn" event with a function of your own. This function must conform to the "UserLogInEventHandler" delegate. Here's an example:\
+\
+C# Example:\
+
+\f1 // Method signature must match that of the UserLogInEventHandler delegate.
+\f0 \
+
+\f1 private void MyUserLogInHandler(string userId)
+\f0 \
+
+\f1 \{
+\f0 \
+
+\f1 \'a0\'a0 \'a0Debug.Log("User " + userId + " logged in.");
+\f0 \
+
+\f1 \}
+\f0 \
+\
+
+\f1 ...\
+\pard\pardeftab720\ql\qnatural
+
+\f0 \cf0 \
+\pard\pardeftab720\ql\qnatural
+
+\f1 \cf0 // When you want to subscribe to the event (perhaps in Awake or Start).
+\f0 \
+
+\f1 OpenFeint.OnUserLoggedIn += new OpenFeint.UserLogInEventHandler(MyUserLogInHandler);
+\f0 \
+\
+Javascript Example:\
+
+\f1 // Function signature must match that of the UserLogInEventHandler delegate.
+\f0 \
+
+\f1 function MyUserLogInHandler(userId : string)
+\f0 \
+
+\f1 \{
+\f0 \
+
+\f1 \'a0\'a0 \'a0Debug.Log("User " + userId + " logged in.");
+\f0 \
+
+\f1 \}
+\f0 \
+
+\f1 \
+...\
+\
+// When you want to subscribe to the event (perhaps in Awake or Start).
+\f0 \
+
+\f1 OpenFeint.OnUserLoggedIn += OpenFeint.UserLogInEventHandler(MyUserLogInHandler);
+\f0 \
+\
+Now, whenever a user logs in, the "MyUserLogInHandler" function that you supplied will be called. You can unsubscribe from this event by doing the following:\
+\
+
+\f1 OpenFeint.OnUserLoggedIn -= MyUserLogInHandler;\
+\pard\pardeftab720\ql\qnatural
+
+\f0 \cf0 \
+NOTE: You must handle unsubscribing on your own. Since the OpenFeint class events are static, that means that subscriptions 
+\b persist across level loads
+\b0 . So if you subscribe to an event inside script attached to a GameObject that gets destroyed upon level load, you 
+\b must
+\b0 \'a0unsubscribe to that event when the object is destroyed (perhaps in "OnDisable"). If you don't unsubscribe from an event and the GameObject is destroyed, the next time the event is triggered, most likely a crash will occur. A possible way to avoid this is to make your event handler static or to call "DontDestroyOnLoad" in your GameObject's script.\
+\
+Finally, delegates are primarily used when you want to know some information, but it will take time for OpenFeint to retrieve it from the servers. For example, if you want to determine if the current local user is following any other OpenFeint users, you will need to supply a delegate function that will get called once OpenFeint has completed its query to the servers.\
+\
+C# Example:\
+\pard\pardeftab720\ql\qnatural
+
+\f1 \cf0 // Method signature must match that of the FollowingResultDelegate.
+\f0 \
+
+\f1 private void MyFollowingResultHandler(bool success, bool isFollowingAnyone)
+\f0 \
+
+\f1 \{
+\f0 \
+
+\f1 \'a0\'a0 \'a0if(success)\
+\'a0\'a0 \'a0\{\
+\'a0\'a0 \'a0\'a0\'a0 \'a0if(isFollowingAnyone)\
+\'a0\'a0 \'a0\'a0\'a0 \'a0\{\
+\'a0\'a0 \'a0\'a0\'a0 \'a0\'a0\'a0 \'a0Debug.Log("Awesome! He has friends.");\
+\'a0\'a0 \'a0\'a0\'a0 \'a0\}\
+\'a0\'a0 \'a0\'a0\'a0 \'a0else\
+\'a0\'a0 \'a0\'a0\'a0 \'a0\{\
+\'a0\'a0 \'a0\'a0\'a0 \'a0\'a0\'a0 \'a0Debug.Log("He lives a sad lonely existence.");\
+\'a0\'a0 \'a0\'a0\'a0 \'a0\}\
+\'a0\'a0 \'a0\}\
+\'a0\'a0 \'a0else\
+\'a0\'a0 \'a0\{\
+\'a0\'a0 \'a0\'a0\'a0 \'a0Debug.Log("The server request failed.");\
+\'a0\'a0 \'a0\}\
+\}\
+\
+...
+\f0 \
+\
+
+\f1 OpenFeint.IsLocalUserFollowingAnyone(MyFollowingResultHandler);
+\f0 \
+\
+Javascript Example:\
+
+\f1 // Method signature must match that of the FollowingResultDelegate.
+\f0 \
+
+\f1 function MyFollowingResultHandler(success : bool, isFollowingAnyone : bool)
+\f0 \
+
+\f1 \{
+\f0 \
+
+\f1 \'a0\'a0 \'a0if(success)\
+\'a0\'a0 \'a0\{\
+\'a0\'a0 \'a0\'a0\'a0 \'a0if(isFollowingAnyone)\
+\'a0\'a0 \'a0\'a0\'a0 \'a0\{\
+\'a0\'a0 \'a0\'a0\'a0 \'a0\'a0\'a0 \'a0Debug.Log("Awesome! He has friends.");\
+\'a0\'a0 \'a0\'a0\'a0 \'a0\}\
+\'a0\'a0 \'a0\'a0\'a0 \'a0else\
+\'a0\'a0 \'a0\'a0\'a0 \'a0\{\
+\'a0\'a0 \'a0\'a0\'a0 \'a0\'a0\'a0 \'a0Debug.Log("He lives a sad lonely existence.");\
+\'a0\'a0 \'a0\'a0\'a0 \'a0\}\
+\'a0\'a0 \'a0\}\
+\'a0\'a0 \'a0else\
+\'a0\'a0 \'a0\{\
+\'a0\'a0 \'a0\'a0\'a0 \'a0Debug.Log("The server request failed.");\
+\'a0\'a0 \'a0\}\
+\}\
+\
+...
+\f0 \
+\
+
+\f1 OpenFeint.IsLocalUserFollowingAnyone(MyFollowingResultHandler);
+\f0 \
+\
+The "MyFollowingResultHandler" will be called whenever a result is received from the OpenFeint call.\
+\
+That should give you a general run-down of the different ways you can communicate with OpenFeint from Unity script.\
+\
+\
+\pard\pardeftab720\ql\qnatural
+
+\b \cf0 Implementing challenge support in your Unity project
+\b0 \
+\
+Adding challenges to your Unity game can add an extra layer of depth to your gameplay. The following is a discussion on how to implement challenge support into your Unity project, and some information on things you should be aware of while implementing challenges.\
+\
+\pard\pardeftab720\ql\qnatural
+
+\i \cf0 Challenge data
+\i0 \
+When you begin implementing challenge support, you need to determine what format your challenge data will be in. Two challenge data formats are supported by the OpenFeint Unity iPhone plugin: PlayerPrefs key data and file data.\
+\
+With PlayerPrefs key data, you store the challenge information in a PlayerPrefs key or set of keys. These keys will get packaged up and sent as the challenge data to players upon sending a challenge, and unpackaged and stored upon starting a challenge. With file data, a file is sent as the challenge data instead. For the most part, file data will primarily be used by Unity iPhone Advanced licensees (as serialization is not available for Unity iPhone Basic licensees at this time). We will be discussing the PlayerPrefs key data method in this discussion, though the instructions should match fairly one-to-one with the file data method.\
+\
+Let's say that you want your challenge to consist of the player's score and time on a level. You might then have two PlayerPrefs keys for each of these stats:\
+\
+\pard\pardeftab720\ql\qnatural
+
+\f1 \cf0 PlayerPrefs.SetInt("ChallengeScore", playerScore);
+\f0 \
+
+\f1 PlayerPrefs.SetFloat("ChallengeTime", playerTime);
+\f0 \
+\
+These keys ("ChallengeScore" and "ChallengeTime") will be sent to the various challenge methods in "OpenFeint.cs".\
+\
+\pard\pardeftab720\ql\qnatural
+
+\i \cf0 Sending a challenge
+\i0 \
+When you are ready for the player to send a challenge, you'll want to display OpenFeint's send challenge modal, and provide it with the challenge data that will be sent to players who accept the challenge. The "DisplaySendChallengeModalWithPlayerPrefs" method is what we'll be using to accomplish this. You can use it like this:\
+\
+\pard\pardeftab720\ql\qnatural
+
+\f1 \cf0 string challengeText = "Score more than " + playerScore + " points in under " + playerTime + " seconds.";
+\f0 \
+
+\f1 string[] challengeKeys = new string[] \{ "ChallengeScore", "ChallengeTime" \};
+\f0 \
+
+\f1 OpenFeint.DisplaySendChallengeModalWithPlayerPrefs(myChallengeId, challengeText, challengeKeys);
+\f0 \
+\
+Notice how we created a string array with the PlayerPrefs challenge key data that we wanted to send as part of the challenge. This method on brings up the send challenge modal, but doesn't give you any indication of whether the user sent a challenge or not. To get that information, you'll need to subscribe to the "OnUserSentChallenges" and "OnSendChallengeScreenClosed" events. Be sure to unsubscribe from these events when you're finished with them.\
+\
+\pard\pardeftab720\ql\qnatural
+
+\i \cf0 Playing a challenge
+\i0 \
+Once that challenge has been sent to another player, that player can then accept the challenge and begin playing it. To be notified when the player wants to play a challenge, subscribe to the "OnStartedChallenge" event. When this event is triggered, it will send the challenge definition so you'll have some basic information about the challenge immediately. However, it will NOT supply you with the challenge data itself. To get that, you'll need to do something like the following:\
+\
+\pard\pardeftab720\ql\qnatural
+
+\f1 \cf0 string[] incomingChallengeKeys = new string[] \{ "IncomingChallengeScore", "IncomingChallengeTime" \};
+\f0 \
+
+\f1 OpenFeint.GetChallengeDataToPlayerPrefs(incomingChallengeKeys);\
+\pard\pardeftab720\ql\qnatural
+
+\f0 \cf0 \
+Once "GetChallengeDataToPlayerPrefs" is called, the "IncomingChallengeScore" and "IncomingChallengeTime" PlayerPrefs keys will be populated with the challenge data that was received from the player who created the challenge.\
+\
+NOTE: When the player starts a challenge, some challenge information (including the challenge data) is automatically serialized to a file. Due to this serialization, if the player quits your game during the challenge and then later starts the app again, you can simply call "GetChallengeDataToPlayerPrefs" again to retrieve the challenge data. You'll need to track whether the player was in a challenge or not yourself though.\
+\
+When the player has finished playing the challenge, you'll need to submit the challenge result to OpenFeint.\
+\
+\pard\pardeftab720\ql\qnatural
+
+\f1 \cf0 OpenFeint.SubmitChallengeResult(OpenFeint.eChallengeResult.RecipientWon, "Scored " + playerScore + " points in " + playerTime + " seconds.");
+\f0 \
+\
+You may also display the challenge complete modal by calling "DisplayChallengeCompletedModalWithPlayerPrefs". You must do this if you want the player to send his challenge result as a re-challenge. You can track when the player closes the modal with the "OnCompletedChallengeScreenClosed" event. "OnUserSentChallenges" gets sent if the player sends a re-challenge.\
+\
+You should also subscribe to the "OnRestartedChallenge" event if you allow for multi-attempt challenges.\
+\
+\
+\pard\pardeftab720\ql\qnatural
+
+\b \cf0 Implementing network save card support in your Unity project
+\b0 \
+\
+You can also implement network save card functionality in your Unity project. This allows you to save information about a player's game to OpenFeint's servers (the cloud), in essence allowing that user to continue their game from any of their devices.\
+\
+\pard\pardeftab720\ql\qnatural
+
+\i \cf0 Blob data
+\i0 \
+Network save card information is stored in data blobs. One way to think of data blobs is that they're like files where you store information about your player's progress through your game. When you want to save some player information to the cloud, you'll want to upload a blob. Much like challenge data, blob data can be uploaded (and downloaded) in two different formats: PlayerPrefs key data or file data. Read the information about challenge data above for more on this.\
+\
+
+\i Uploading blob data
+\i0 \
+Uploading a blob to the cloud is really simple. See the following:\
+\
+\pard\pardeftab720\ql\qnatural
+
+\f1 \cf0 string[] blobDataKeys = new string[] \{ "PlayerName", "PlayerLevel", "PlayerExperiencePoints", "PlayerItems" \};
+\f0 \
+
+\f1 OpenFeint.UploadBlobFromPlayerPrefs("PlayerStats", blobDataKeys);
+\f0 \
+\
+Just like setting up the challenge data, you create a string array of PlayerPrefs keys and pass that to "UploadBlobFromPlayerPrefs". Notice that you also set a key name for this blob. This means that you can upload multiple blobs for a single player.\
+\
+\pard\pardeftab720\ql\qnatural
+
+\i \cf0 Downloading blob data
+\i0 \
+Downloading blob data is simple as well. See the following:\
+\
+\pard\pardeftab720\ql\qnatural
+
+\f1 \cf0 private void DownloadedBlobResultCallback(bool success)
+\f0 \
+
+\f1 \{
+\f0 \
+
+\f1 \'a0\'a0 \'a0if(success)\
+\'a0\'a0 \'a0\{\
+\'a0\'a0 \'a0\'a0\'a0 \'a0Debug.Log("Downloaded blob from the cloud!");\
+\'a0\'a0 \'a0\}\
+\'a0\'a0 \'a0else\
+\'a0\'a0 \'a0\{\
+\'a0\'a0 \'a0\'a0\'a0 \'a0Debug.Log("A problem occurred while downloading the blob from the cloud.");\
+\'a0\'a0 \'a0\}\
+\}
+\f0 \
+\
+
+\f1 string[] blobDataKeys = new string[] \{ "PlayerName", "PlayerLevel", "PlayerExperiencePoints", "PlayerItems" \};
+\f0 \
+
+\f1 OpenFeint.DownloadBlobToPlayerPrefs("PlayerStats", blobDataKeys, DownloadedBlobResultCallback);
+\f0 \
+\
+Calling "DownloadBlobToPlayerPrefs" initiates the download from the cloud. Then the callback function supplied to the third parameter is called upon success or failure of the download.\
+}
