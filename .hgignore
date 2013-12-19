@@ -1,0 +1,12 @@
+syntax: glob
+*.o
+*.a
+prototypes/vecrend/veccompile
+tools/pkgcompiler/pkgcompiler
+tools/rescompiler/rescompiler
+tools/svntool/svntool
+tools/tgatool/tgatool
+tools/veccompiler/veccompiler-vc
+usg/build.txt
+usg/makebuild
+usg/IOSDATA/*
