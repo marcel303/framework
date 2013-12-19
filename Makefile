@@ -1,6 +1,6 @@
 .NOTPARALLEL :
 
-all : libgg svntool rescompiler pkgcompiler tgatool atlcompiler fontcompiler veccompile veccompile-vc
+all : libgg svntool rescompiler pkgcompiler tgatool atlcompiler fontcompiler veccompile veccompile-vc imgconvert
 
 clean :
 	cd libgg/ && $(MAKE) clean
@@ -13,6 +13,7 @@ clean :
 	cd tools/tgatool/ && $(MAKE) clean
 	cd tools/veccompiler/ && $(MAKE) clean
 	cd tools/psp_fixdds/ && $(MAKE) clean
+	cd tools/imgconvert/ && $(MAKE) clean
 
 libgg :
 	cd libgg/ && $(MAKE)
@@ -43,3 +44,6 @@ psp_fixdds :
 
 svntool :
 	cd tools/svntool/ && $(MAKE)
+
+imgconvert :
+	cd tools/imgconvert/ && $(MAKE)

@@ -2,6 +2,9 @@ syntax: glob
 *.o
 *.a
 prototypes/vecrend/veccompile
+tools/atlcompiler/atlcompiler
+tools/fontcompiler/fontcompiler
+tools/imgconvert/imgconvert
 tools/pkgcompiler/pkgcompiler
 tools/rescompiler/rescompiler
 tools/svntool/svntool
@@ -9,4 +12,6 @@ tools/tgatool/tgatool
 tools/veccompiler/veccompiler-vc
 usg/build.txt
 usg/makebuild
-usg/IOSDATA/*
+usg/IOSDATA*
+usg/IOSDATA2*
+usg/temp.idx
