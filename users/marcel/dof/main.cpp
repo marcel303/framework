@@ -1,16 +1,16 @@
 #include <math.h>
 #include <SDL/SDL.h>
-#include "../../../Documents/projects/libgg/SIMD.h"
+#include "../../../libgg/SIMD.h"
 
-#include "../../../Documents/projects/libgg/Exception.cpp"
-#include "../../../Documents/projects/libgg/Image.cpp"
-#include "../../../Documents/projects/libgg/IImageLoader.cpp"
-#include "../../../Documents/projects/libgg/ImageLoader_TGA.cpp"
-#include "../../../Documents/projects/libgg/StringEx.cpp"
-#include "../../../Documents/projects/libgg/Stream.cpp"
-#include "../../../Documents/projects/libgg/FileStream.cpp"
-#include "../../../Documents/projects/libgg/StreamReader.cpp"
-#include "../../../Documents/projects/libgg/StreamWriter.cpp"
+#include "../../../libgg/Exception.cpp"
+#include "../../../libgg/Image.cpp"
+#include "../../../libgg/IImageLoader.cpp"
+#include "../../../libgg/ImageLoader_TGA.cpp"
+#include "../../../libgg/StringEx.cpp"
+#include "../../../libgg/Stream.cpp"
+#include "../../../libgg/FileStream.cpp"
+#include "../../../libgg/StreamReader.cpp"
+#include "../../../libgg/StreamWriter.cpp"
 
 typedef SimdVec Vec;
 typedef SimdVecArg VecArg;

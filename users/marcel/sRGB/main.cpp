@@ -2,7 +2,7 @@
 #include <cmath>
 #include <CoreFoundation/CoreFoundation.h>
 #include <SDL/SDL.h>
-#include "../../../Documents/projects/libgg/SIMD.h"
+#include "../../../libgg/SIMD.h"
 
 typedef SimdVec Vec;
 typedef SimdVecArg VecArg;
