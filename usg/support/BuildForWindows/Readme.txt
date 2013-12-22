@@ -1,25 +1,35 @@
-mingw
+NOTE: msvc bin and include files are available in the Critical Wave DATA repository.
+	extract the lib and include directories fro 3rdparty/win32.rar into the appropriate MSVC directories
+	you can skip most of the steps below for setting up MSVC
+
+mingw:
 	install including msys
-	add mingw bin and msys bin paths to PATH
-	mingw for gcc, etc. msys for rsync, cp
+	add mingw bin and msys bin paths to the global PATH environment variable
+	mingw is required for gcc under Windows. msys is required for tools like rsync, cp
 
-boost
-	extract archive
-	./bootstrap
-	./b2 --with-system --with-filesystem --toolset=gcc
-	copy .a files to mingw bin folder, removing release and version from filesnames (so system-mt.a eg)
+boost (built with mingw):
+	download the latest version from http://boost.org/
+	extract the archive
+	open a command line (with mingw and msys bin paths added to PATH) in the extract boost folder
+	execute these commands:
+	> bootstrap
+	> b2 --with-system --with-filesystem --toolset=gcc
+	copy the generated .a files to the mingw bin folder, removing release and version from filesnames (so system-mt.a eg)
 
-SDL
-	extract to MSVC bin and include (in SDL folder)
+SDL (msvc):
+	extract to MSVC bin and include (into /include/SDL/)
+		#include <SDL/SDL.h>
 
-sox
+sox:
 	extract sox.exe to usg folder
 
-OpenAL
-	run installer
-	copy from program files to MSVC bin and include (in OpenAL folder)
-
-ogg/vorbis
+OpenAL (msvc):
+	run the installer
+	copy from location in program files where the installer puts it, into the
+		appropriate MSVC bin and include directories (into /include/OpenAL/)
+		#include <OpenAL/OpenAL.h>
+		
+ogg/vorbis:
 	copy lib files to MSVC lib directory
 	copy include/ogg and include/vorbis (from the source distribution) to MSVC include
 
@@ -27,9 +37,8 @@ ogg/vorbis
 
 build tools
 
-open command prompt
-navigate tool checkout location
-
+open a command prompt where the code has been checked out
+execute these commands:
 > set OS=win
 > mingw32-make
 
@@ -37,8 +46,9 @@ navigate tool checkout location
 
 build content
 
-checkout content repository in content_svn
-
+clone repository into /usg/content-hg/
+open a command prompt in /usg
+execute:
 > mingw32-make content PF=win
 
 ----
