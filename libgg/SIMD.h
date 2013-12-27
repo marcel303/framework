@@ -115,9 +115,12 @@ public:
 	inline void Set4(float x, float y, float z, float w);
 
 	inline SimdVec Select(SimdVecArg v, bool x, bool y, bool z, bool w) const;
+	inline SimdVec Select(SimdVecArg m, SimdVecArg v0, SimdVecArg v1) const;
 	inline SimdVec Permute(SimdVecArg v, unsigned int x, unsigned int y, unsigned int z, unsigned int w) const;
 
 	inline SimdVec AND(SimdVecArg v) const;
+	inline SimdVec NAND(SimdVecArg v) const;
+	inline SimdVec OR(SimdVecArg v) const;
 	
 	inline SimdVec CMP_EQ(SimdVecArg v) const;
 	inline SimdVec CMP_NE(SimdVecArg v) const;
@@ -624,6 +627,11 @@ inline SimdVec SimdVec::Select(SimdVecArg v, bool x, bool y, bool z, bool w) con
 		w ? v.ReplicateW() : ReplicateW());
 }
 
+inline SimdVec SimdVec::Select(SimdVecArg m, SimdVecArg v0, SimdVecArg v1) const
+{
+	return m.NAND(v0).OR(m.AND(v1));
+}
+
 inline SimdVec SimdVec::Permute(SimdVecArg v, unsigned int x, unsigned int y, unsigned int z, unsigned int w) const
 {
 	return SimdVec(
@@ -638,6 +646,16 @@ inline SimdVec SimdVec::AND(SimdVecArg v) const
 	return SimdVec(_mm_and_ps(mVec128, v.mVec128));
 }
 
+inline SimdVec SimdVec::NAND(SimdVecArg v) const
+{
+	return SimdVec(_mm_andnot_ps(mVec128, v.mVec128));
+}
+
+inline SimdVec SimdVec::OR(SimdVecArg v) const
+{
+	return SimdVec(_mm_or_ps(mVec128, v.mVec128));
+}
+	
 #pragma region element comparision
 
 inline SimdVec SimdVec::CMP_EQ(SimdVecArg v) const
