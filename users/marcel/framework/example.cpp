@@ -23,7 +23,7 @@ int main(int argc, char * argv[])
 			down = newDown;
 			if (down)
 			{
-				Sound("player/down.wav").play();
+				Sound("test.wav").play();
 				y += 10;
 			}
 			else
@@ -51,7 +51,7 @@ int main(int argc, char * argv[])
 			}
 		}
 		
-		framework.beginDraw(0, 255, 255, 0);
+		framework.beginDraw(255, 255, 255, 0);
 		{
 			setBlend(BLEND_ALPHA);
 			
@@ -74,6 +74,8 @@ int main(int argc, char * argv[])
 		}
 		framework.endDraw();
 	}
+	
+	framework.shutdown();
 	
 	return 0;
 }

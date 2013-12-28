@@ -1,3 +1,4 @@
+#include "audio.h"
 #include "internal.h"
 
 Globals g_globals;
@@ -31,6 +32,10 @@ void TextureCacheElem::load(const char * filename)
 	if (texture != 0)
 	{
 		// todo: load texture data
+		
+		// todo: tex image
+		
+		log("loaded %s", filename);
 	}
 }
 
@@ -63,7 +68,7 @@ TextureCacheElem & TextureCache::findOrCreate(const char * name)
 		return i->second;
 	}
 	else
-	{		
+	{
 		TextureCacheElem elem;
 		
 		elem.load(name);
@@ -85,8 +90,11 @@ void SoundCacheElem::free()
 {
 	if (buffer != 0)
 	{
-		// todo: free buffer
+		g_soundPlayer.stopSoundsForBuffer(buffer);
+		
+		alDeleteBuffers(1, &buffer);
 		buffer = 0;
+		g_soundPlayer.checkError();
 	}
 }
 
@@ -94,14 +102,61 @@ void SoundCacheElem::load(const char * filename)
 {
 	free();
 	
-	alGenBuffers(1, &buffer);
+	SoundData * soundData = loadSound(filename);
 	
-	if (buffer != 0)
+	if (soundData != 0)
 	{
+		alGenBuffers(1, &buffer);
+		g_soundPlayer.checkError();
+		
+		if (buffer != 0)
+		{
+			ALenum bufferFormat;
+			
+			if (soundData->channelCount == 1)
+			{
+				if (soundData->channelSize == 1)
+					bufferFormat = AL_FORMAT_MONO8;
+				else
+					bufferFormat = AL_FORMAT_MONO16;
+			}
+			else
+			{
+				if (soundData->channelSize == 1)
+					bufferFormat = AL_FORMAT_STEREO8;
+				else
+					bufferFormat = AL_FORMAT_STEREO16;
+			}
+			
+			ALuint bufferSize = soundData->sampleCount * soundData->channelCount * soundData->channelSize;
+			ALuint bufferSampleRate = soundData->sampleRate;
+			
+			log("WAVE: buffer=%u, bufferFormat=%d, samleData=%p, bufferSize=%d, sampleRate=%d",
+				buffer,
+				bufferFormat,
+				soundData->sampleData,
+				bufferSize,
+				soundData->sampleRate);
+
+			alBufferData(buffer, bufferFormat, soundData->sampleData, bufferSize, bufferSampleRate);
+			g_soundPlayer.checkError();
+			
+			log("loaded %s", filename);
+		}
+		else
+		{
+			logError("failed to create OpenAL buffer");
+		}
+		
+		delete soundData;
+	}
+	else
+	{
+		logError("failed to load sound: %s", filename);
 	}
 }
 
-	void SoundCache::clear()
+void SoundCache::clear()
 {
 	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
 	{
@@ -154,7 +209,7 @@ void FontCacheElem::free()
 	{
 		if (FT_Done_Face(face) != 0)
 		{
-			printf("failed to free face\n");
+			logError("failed to free face");
 		}
 		
 		face = 0;
@@ -165,9 +220,14 @@ void FontCacheElem::load(const char * filename)
 {
 	free();
 	
-	if (FT_New_Face(g_globals.g_freeType, filename, 0, &face))
+	if (FT_New_Face(g_globals.g_freeType, filename, 0, &face) != 0)
 	{
-		printf("unable to open font\n");
+		logError("unable to open font");
+		face = 0;
+	}
+	else
+	{
+		log("loaded %s", filename);
 	}
 }
 
@@ -183,8 +243,6 @@ void FontCache::clear()
 
 void FontCache::reload()
 {
-	// todo: invalidate glyph cache
-	
 	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
 	{
 		i->second.load(i->first.c_str());
@@ -290,6 +348,7 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, char c)
 		{
 			// failed to render the glyph. return the NULL texture handle
 			
+			logError("failed to render glyph");
 			elem.texture = 0;
 		}
 		

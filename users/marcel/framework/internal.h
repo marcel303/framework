@@ -132,6 +132,54 @@ public:
 	GlyphCacheElem & findOrCreate(FT_Face face, int size, char c);
 };
 
+class FileReader
+{
+public:
+	FileReader()
+	{
+		file = 0;
+	}
+	
+	~FileReader()
+	{
+		close();
+	}
+	
+	bool open(const char * filename)
+	{
+		file = fopen(filename, "rb");
+		
+		return file != 0;
+	}
+	
+	void close()
+	{
+		if (file != 0)
+		{
+			fclose(file);
+			file = 0;
+		}
+	}
+	
+	template <typename T>
+	bool read(T & dst)
+	{
+		return fread(&dst, sizeof(dst), 1, file) == 1;
+	}
+	
+	bool read(void * dst, int numBytes)
+	{
+		return fread(dst, numBytes, 1, file) == 1;
+	}
+	
+	bool skip(int numBytes)
+	{
+		return fseek(file, numBytes, SEEK_CUR) == 0;
+	}
+	
+	FILE * file;
+};
+
 extern Globals g_globals;
 extern TextureCache g_textureCache;
 extern SoundCache g_soundCache;

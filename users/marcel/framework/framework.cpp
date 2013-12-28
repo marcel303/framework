@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include "audio.h"
 #include "framework.h"
 #include "internal.h"
 
@@ -24,10 +25,12 @@ Gamepad gamepad[MAX_GAMEPAD];
 Framework::Framework()
 {
 	m_minification = 1;
+	m_numSoundSources = 32;
 }
 
 Framework::~Framework()
 {
+	shutdown();
 }
 
 void Framework::setMinification(int scale)
@@ -35,12 +38,26 @@ void Framework::setMinification(int scale)
 	m_minification = scale;
 }
 
-void Framework::init(int argc, char * argv[], int sx, int sy)
+void Framework::setNumSoundSources(int num)
+{
+	m_numSoundSources = num;
+}
+
+bool Framework::init(int argc, char * argv[], int sx, int sy)
 {
 	// initialize SDL
 	
-	SDL_Init(SDL_INIT_EVERYTHING);
-	SDL_SetVideoMode(sx / m_minification, sy / m_minification, 32, SDL_OPENGL);
+	if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
+	{
+		logError("failed to initialize SDL");
+		return false;
+	}
+	
+	if (SDL_SetVideoMode(sx / m_minification, sy / m_minification, 32, SDL_OPENGL) == 0)
+	{
+		logError("failed to set video mode");
+		return false;
+	}
 	
 	g_globals.g_displaySize[0] = sx;
 	g_globals.g_displaySize[1] = sy;
@@ -48,11 +65,34 @@ void Framework::init(int argc, char * argv[], int sx, int sy)
 	// initialize FreeType
 	
 	if (FT_Init_FreeType(&g_globals.g_freeType) != 0)
-		printf("failed to initialize FreeType\n");
+	{
+		logError("failed to initialize FreeType");
+		return false;
+	}
+	
+	// initialize sound player
+	
+	if (!g_soundPlayer.init(m_numSoundSources))
+	{
+		logError("failed to initialize sound player");
+		return false;
+	}
+	
+	return true;
 }
 
-void Framework::shutdown()
+bool Framework::shutdown()
 {
+	bool result = true;
+	
+	// shut down sound player
+	
+	if (!g_soundPlayer.shutdown())
+	{
+		logError("failed to shut down sound player");
+		result = false;
+	}
+	
 	// free resources
 	
 	g_textureCache.clear();
@@ -62,7 +102,10 @@ void Framework::shutdown()
 	// shut down FreeType
 	
 	if (FT_Done_FreeType(g_globals.g_freeType) != 0)
-		printf("failed to shut down FreeType\n");
+	{
+		logError("failed to shut down FreeType");
+		result = false;
+	}
 	g_globals.g_freeType = 0;
 	
 	// shut down SDL
@@ -76,11 +119,14 @@ void Framework::shutdown()
 	// reset self
 	
 	m_minification = 1;
+	m_numSoundSources = 32;
+	
+	return result;
 }
 
 void Framework::process()
 {
-	bool doReload = !keyboard.isDown(SDLK_F12);
+	bool doReload = !keyboard.isDown(SDLK_r);
 	
 	// poll SDL event queue
 	
@@ -106,7 +152,7 @@ void Framework::process()
 		}
 	}
 	
-	doReload &= keyboard.isDown(SDLK_F12);
+	doReload &= keyboard.isDown(SDLK_r);
 	
 	if (doReload)
 	{
@@ -119,6 +165,7 @@ void Framework::reloadCaches()
 	g_textureCache.reload();
 	g_soundCache.reload();
 	g_fontCache.reload();
+	g_glyphCache.clear();
 }
 
 void Framework::beginDraw(int r, int g, int b, int a)
@@ -157,7 +204,7 @@ void Framework::endDraw()
 	GLenum error = glGetError();
 	
 	if (error != GL_NO_ERROR)
-		printf("OpenGL error: %x\n", error);
+		logError("OpenGL error: %x", error);
 		
 	// flip back buffers
 	
@@ -262,26 +309,47 @@ void Sprite::setFrame(int frame)
 Sound::Sound(const char * filename)
 {
 	m_sound = &g_soundCache.findOrCreate(filename);
+	m_playId = -1;
 }
 
-void Sound::play()
+void Sound::play(float volume, float speed)
 {
+	stop();
+	
+	if (m_sound->buffer != 0)
+	{
+		m_playId = g_soundPlayer.playSound(m_sound->buffer, volume, false);
+	}
 }
 
 void Sound::stop()
 {
+	if (m_playId != -1)
+	{
+		g_soundPlayer.stopSound(m_playId);
+		m_playId = -1;
+	}
 }
 
 void Sound::setVolume(float volume)
 {
+	if (m_playId != -1)
+	{
+		g_soundPlayer.setSoundVolume(m_playId, volume);
+	}
 }
 
 void Sound::setSpeed(float speed)
 {
+	if (m_playId != -1)
+	{
+		// todo
+	}
 }
 
 void Sound::stopAll()
 {
+	g_soundPlayer.stopAllSounds();
 }
 
 // -----
@@ -394,12 +462,12 @@ void setBlend(BLEND_MODE blendMode)
 
 void setColor(const Color & color)
 {
-	setColor(color.r, color.g, color.b, color.a);
+	setColorf(color.r, color.g, color.b, color.a);
 }
 
 void setColor(int r, int g, int b, int a)
 {
-	setColor(r/255.f, g/255.f, b/255.f, a/255.f);
+	setColorf(r/255.f, g/255.f, b/255.f, a/255.f);
 }
 
 void setColorf(float r, float g, float b, float a)
@@ -492,4 +560,37 @@ void drawText(float x, float y, int size, int alignX, int alignY, const char * f
 		drawTextInternal(g_globals.g_font->face, size, text);
 	}
 	glPopMatrix();
+}
+
+void log(const char * format, ...)
+{
+	char text[1024];
+	va_list args;
+	va_start(args, format);
+	vsprintf(text, format, args); // todo: safer version
+	va_end(args);
+	
+	fprintf(stderr, "[II] %s\n", text);
+}
+
+void logWarning(const char * format, ...)
+{
+	char text[1024];
+	va_list args;
+	va_start(args, format);
+	vsprintf(text, format, args); // todo: safer version
+	va_end(args);
+	
+	fprintf(stderr, "[WW] %s\n", text);
+}
+
+void logError(const char * format, ...)
+{
+	char text[1024];
+	va_list args;
+	va_start(args, format);
+	vsprintf(text, format, args); // todo: safer version
+	va_end(args);
+	
+	fprintf(stderr, "[EE] %s\n", text);
 }

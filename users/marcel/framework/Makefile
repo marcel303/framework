@@ -1,5 +1,5 @@
 EXE = framework
-OBJS = example.o framework.o internal.o
+OBJS = example.o framework.o internal.o audio.o
 
 all : $(EXE)
 	./framework

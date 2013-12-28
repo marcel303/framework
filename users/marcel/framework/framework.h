@@ -48,9 +48,10 @@ public:
 	~Framework();
 	
 	void setMinification(int scale);
+	void setNumSoundSources(int num);
 	
-	void init(int argc, char * argv[], int sx, int sy);
-	void shutdown();
+	bool init(int argc, char * argv[], int sx, int sy);
+	bool shutdown();
 	void process();
 	void reloadCaches();
 	
@@ -59,6 +60,7 @@ public:
 	
 private:
 	int m_minification;
+	int m_numSoundSources;
 };
 
 class Color
@@ -106,7 +108,7 @@ class Sound
 public:
 	Sound(const char * filename);
 	
-	void play();
+	void play(float volume = 1.f, float speed = 1.f);
 	void stop();
 	void setVolume(float volume);
 	void setSpeed(float speed);
@@ -115,6 +117,7 @@ public:
 	
 private:
 	class SoundCacheElem * m_sound;
+	int m_playId;
 };
 
 class Music
@@ -177,6 +180,10 @@ void setFont(Font & font);
 void drawLine(float x1, float y1, float x2, float y2);
 void drawRect(float x1, float y1, float x2, float y2);
 void drawText(float x, float y, int size, int alignX, int alignY, const char * format, ...);
+
+void log(const char * format, ...);
+void logWarning(const char * format, ...);
+void logError(const char * format, ...);
 
 //
 
