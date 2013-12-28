@@ -12,6 +12,9 @@ int main(int argc, char * argv[])
 	
 	Music("bgm.ogg").play();
 	
+	Sprite sprite("sprite.png");
+	sprite.startAnim("walk");
+	
 	while (!keyboard.isDown(SDLK_ESCAPE))
 	{
 		framework.process();
@@ -59,7 +62,7 @@ int main(int argc, char * argv[])
 			Sprite("background.png").draw();
 			
 			setColor(255, 255, 255, 255 - y);
-			Sprite("player/sprite.png", 20, 30).drawEx(x, y, 0, 1, BLEND_ALPHA);
+			sprite.drawEx(x, y, 0, 1, BLEND_ALPHA);
 			
 			Font font("test.ttf");
 			setFont(font);

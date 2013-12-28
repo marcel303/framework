@@ -3,6 +3,7 @@
 
 Globals g_globals;
 TextureCache g_textureCache;
+AnimCache g_animCache;
 SoundCache g_soundCache;
 FontCache g_fontCache;
 GlyphCache g_glyphCache;
@@ -70,6 +71,241 @@ TextureCacheElem & TextureCache::findOrCreate(const char * name)
 	else
 	{
 		TextureCacheElem elem;
+		
+		elem.load(name);
+		
+		i = m_map.insert(Map::value_type(key, elem)).first;
+		
+		return i->second;
+	}
+}
+
+// -----
+
+AnimCacheElem::AnimCacheElem()
+{
+	free();
+}
+
+void AnimCacheElem::free()
+{
+	m_animCellCount[0] = m_animCellCount[1] = 1;
+	
+	m_animMap.clear();
+}
+
+static bool isWhite(char c)
+{
+	return c == '\t' || c == ' ' || c == '\r' || c == '\n';
+}
+
+static void splitString(std::string & str, std::vector<std::string> & result)
+{
+	int start = -1;
+	
+	for (size_t i = 0; i <= str.size(); ++i)
+	{
+		const char c = i < str.size() ? str[i] : ' ';
+		
+		if (start == -1)
+		{
+			// found start
+			if (!isWhite(c))
+				start = i;
+		}
+		else if (isWhite(c))
+		{
+			// found end
+			result.push_back(str.substr(start, i - start));
+			start = -1;
+		}
+	}
+}
+
+void AnimCacheElem::load(const char * filename)
+{
+	free();
+	
+	FileReader r;
+	
+	if (!r.open(filename))
+	{
+		logError("failed to open %s", filename);
+	}
+	else
+	{	
+		Anim * currentAnim = 0;
+		
+		std::string line;
+		
+		while (r.read(line))
+		{
+			// format: <name> <key>:<value> <key:value> <key..
+							
+			std::vector<std::string> parts;
+			splitString(line, parts);
+			
+			if (parts.size() == 0 || parts[0][0] == '#')
+			{
+				// empty line or comment
+				continue;
+			}
+				
+			if (parts.size() == 1)
+			{
+				logError("missing parameters: %s (%s)", line.c_str(), parts[0].c_str());
+				continue;
+			}
+			
+			const std::string section = parts[0];
+			Dictionary args;
+			
+			for (size_t i = 1; i < parts.size(); ++i)
+			{
+				const size_t separator = parts[i].find(':');
+				
+				if (separator == std::string::npos)
+				{
+					logError("incorrect key:value syntax: %s (%s)", line.c_str(), parts[i].c_str());
+					continue;
+				}
+				
+				const std::string key = parts[i].substr(0, separator);
+				const std::string value = parts[i].substr(separator + 1, parts[i].size() - separator - 1);
+				
+				if (key.size() == 0 || value.size() == 0)
+				{
+					logError("incorrect key:value syntax: %s (%s)", line.c_str(), parts[i].c_str());
+					continue;
+				}
+				
+				if (args.contains(key.c_str()))
+				{
+					logError("duplicate key: %s (%s)", line.c_str(), key.c_str());
+					continue;
+				}
+				
+				//log("added: %s:%s", key.c_str(), value.c_str());
+				
+				args.setString(key.c_str(), value.c_str());
+			}
+			
+			// sheet pivot_x:0 pivot_y:0 cells_x:4 cells_y:8
+			// animation name:walk grid_x:0 grid_y:0 frames:12 rate:4 loop:0 pivot_x:2 pivot_y:2
+			// trigger frame:3 action:sound sound:test.wav
+			
+			if (section == "sheet")
+			{
+				m_animCellCount[0] = args.getInt("grid_x", 1);
+				m_animCellCount[1] = args.getInt("grid_y", 1);
+				m_pivot[0] = args.getInt("pivot_x", 0);
+				m_pivot[1] = args.getInt("pivot_y", 0);
+			}
+			else if (section == "animation")
+			{
+				Anim anim;
+				anim.name = args.getString("name", "(noname)");
+				const int gridX = args.getInt("grid_x", 0);
+				const int gridY = args.getInt("grid_y", 0);
+				anim.firstCell = gridX + gridY * m_animCellCount[0];
+				anim.numFrames = args.getInt("frames", 1);
+				anim.frameRate = args.getInt("rate", 1);
+				anim.pivot[0] = args.getInt("pivot_x", m_pivot[0]);
+				anim.pivot[1] = args.getInt("pivot_y", m_pivot[1]);
+				anim.loop = args.getInt("loop", 1) != 0;
+				anim.frameTriggers.resize(anim.numFrames);
+				currentAnim = &m_animMap.insert(AnimMap::value_type(anim.name, anim)).first->second;
+			}
+			else if (section == "trigger")
+			{
+				if (currentAnim == 0)
+				{
+					logError("cannot add trigger when no animation defined yet");
+				}
+				else
+				{
+					const int frame = args.getInt("frame", 0);
+					const std::string event = args.getString("on", "enter");
+					const std::string action = args.getString("action", "");
+					
+					if (frame >= currentAnim->numFrames)
+					{
+						logError("value for 'frame' is out of range: %s", line.c_str());
+					}
+					else
+					{
+						bool ok = true;
+						
+						AnimTrigger::Event eventEnum;
+						
+						if (event == "enter")
+							eventEnum = AnimTrigger::OnEnter;
+						else if (event == "leave")
+							eventEnum = AnimTrigger::OnLeave;
+						else
+						{
+							logError("invalid value for 'on", line.c_str());
+							ok = false;
+						}
+						
+						if (ok)
+						{
+							log("added frame trigger. frame=%d, on=%s, action=%s", frame, event.c_str(), action.c_str());
+							
+							AnimTrigger trigger;
+							trigger.event = eventEnum;
+							trigger.action = action;
+							trigger.args = args;
+							
+							currentAnim->frameTriggers[frame].push_back(trigger);
+						}
+					}
+				}
+			}
+			else
+			{
+				logError("unknown section: %s (%s)", line.c_str(), section.c_str());
+			}
+		}
+	}
+}
+
+int AnimCacheElem::getVersion() const
+{
+	return g_globals.g_resourceVersion;
+}
+
+void AnimCache::clear()
+{
+	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
+	{
+		i->second.free();
+	}
+	
+	m_map.clear();
+}
+
+void AnimCache::reload()
+{
+	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
+	{
+		i->second.load(i->first.c_str());
+	}
+}
+
+AnimCacheElem & AnimCache::findOrCreate(const char * name)
+{
+	Key key = name;
+	
+	Map::iterator i = m_map.find(key);
+	
+	if (i != m_map.end())
+	{
+		return i->second;
+	}
+	else
+	{
+		AnimCacheElem elem;
 		
 		elem.load(name);
 		

@@ -1,6 +1,11 @@
 #include <assert.h>
+#include <cmath>
+#include <map>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <string>
+#include <vector>
+
 #include "audio.h"
 #include "framework.h"
 #include "internal.h"
@@ -26,6 +31,7 @@ Framework::Framework()
 {
 	m_minification = 1;
 	m_numSoundSources = 32;
+	m_actionHandler = 0;
 }
 
 Framework::~Framework()
@@ -41,6 +47,11 @@ void Framework::setMinification(int scale)
 void Framework::setNumSoundSources(int num)
 {
 	m_numSoundSources = num;
+}
+
+void Framework::setActionHandler(ActionHandler actionHandler)
+{
+	m_actionHandler = actionHandler;
 }
 
 bool Framework::init(int argc, char * argv[], int sx, int sy)
@@ -120,12 +131,15 @@ bool Framework::shutdown()
 	
 	m_minification = 1;
 	m_numSoundSources = 32;
+	m_actionHandler = 0;
 	
 	return result;
 }
 
 void Framework::process()
 {
+	const float dt = 1.f / 60.f;
+	
 	bool doReload = !keyboard.isDown(SDLK_r);
 	
 	// poll SDL event queue
@@ -158,6 +172,24 @@ void Framework::process()
 	{
 		reloadCaches();
 	}
+	
+	for (SpriteSet::iterator i = m_sprites.begin(); i != m_sprites.end(); ++i)
+	{
+		(*i)->updateAnimation(dt);
+	}
+}
+
+void Framework::processAction(const std::string & action, const Dictionary & args)
+{
+	if (action == "sound")
+	{
+		Sound(args.getString("sound", "").c_str()).play(args.getInt("volume", 100));
+	}
+	
+	if (m_actionHandler)
+	{
+		m_actionHandler(action, args);
+	}
 }
 
 void Framework::reloadCaches()
@@ -166,6 +198,13 @@ void Framework::reloadCaches()
 	g_soundCache.reload();
 	g_fontCache.reload();
 	g_glyphCache.clear();
+	
+	g_globals.g_resourceVersion++;
+	
+	for (SpriteSet::iterator i = m_sprites.begin(); i != m_sprites.end(); ++i)
+	{
+		(*i)->updateAnimationSegment();
+	}
 }
 
 void Framework::beginDraw(int r, int g, int b, int a)
@@ -211,6 +250,16 @@ void Framework::endDraw()
 	SDL_GL_SwapBuffers();
 }
 
+void Framework::registerSprite(Sprite * sprite)
+{
+	m_sprites.insert(sprite);
+}
+
+void Framework::unregisterSprite(Sprite * sprite)
+{
+	m_sprites.erase(m_sprites.find(sprite));
+}
+
 // -----
 
 Color::Color()
@@ -238,8 +287,8 @@ Color::Color(float r, float g, float b, float a)
 
 Sprite::Sprite(const char * filename, float pivotX, float pivotY)
 {
+	// drawing
 	m_texture = &g_textureCache.findOrCreate(filename);
-	
 	m_pivotX = pivotX;
 	m_pivotY = pivotY;
 	m_positionX = 0.f;
@@ -250,6 +299,25 @@ Sprite::Sprite(const char * filename, float pivotX, float pivotY)
 	m_blendMode = BLEND_ALPHA;
 	m_flipX = false;
 	m_flipY = false;
+	
+	// animation
+	std::string sheetFilename = filename;
+	size_t dot = sheetFilename.rfind('.');
+	if (dot != std::string::npos)
+		sheetFilename = sheetFilename.substr(0, dot) + ".txt";
+	m_anim = &g_animCache.findOrCreate(sheetFilename.c_str());
+	m_animVersion = m_anim->getVersion();
+	m_animSegment = 0;
+	m_isAnimActive = false;
+	m_animFrame = 0.f;
+	m_animSpeed = 1.f;
+	
+	framework.registerSprite(this);
+}
+
+Sprite::~Sprite()
+{
+	framework.unregisterSprite(this);
 }
 
 void Sprite::draw()
@@ -294,14 +362,80 @@ void Sprite::setFlip(bool flipX, bool flipY)
 	m_flipY = flipY;
 }
 
-void Sprite::setAnim(const char * anim)
+void Sprite::startAnim(const char * name, int frame)
 {
-	// todo
+	m_isAnimActive = true;
+	m_animSegmentName = name;
+	m_animFrame = frame;
+
+	m_animVersion = -1;
+	updateAnimationSegment();
 }
 
-void Sprite::setFrame(int frame)
+void Sprite::stopAnim()
 {
-	// todo
+	m_isAnimActive = false;
+}
+
+void Sprite::setAnimFrame(int frame)
+{
+	if (m_animSegment)
+	{
+		AnimCacheElem::Anim * anim = reinterpret_cast<AnimCacheElem::Anim*>(m_animSegment);
+		
+		m_animFrame = frame % anim->numFrames;
+	}
+}
+
+int Sprite::getAnimFrame() const
+{
+	return (int)m_animFrame;
+}
+
+void Sprite::setAnimSpeed(float speed)
+{
+	m_animSpeed = speed;
+}
+
+void Sprite::updateAnimationSegment()
+{
+	if (m_animVersion != m_anim->getVersion())
+	{
+		m_animVersion = m_anim->getVersion();
+		
+		if (m_anim->m_animMap.count(m_animSegmentName) != 0)
+			m_animSegment = &m_anim->m_animMap[m_animSegmentName];
+		else
+			m_animSegment = 0;
+		
+		if (!m_animSegment)
+		{
+			log("unable to find anim segment for %s", m_animSegmentName.c_str());
+			m_animFrame = 0.f;
+		}
+	}
+}
+
+void Sprite::updateAnimation(float dt)
+{
+	if (m_isAnimActive && m_animSegment)
+	{
+		AnimCacheElem::Anim * anim = reinterpret_cast<AnimCacheElem::Anim*>(m_animSegment);
+		
+		const float step = m_animSpeed * anim->frameRate * dt;
+		
+		const int frame1 = getAnimFrame();
+		m_animFrame = std::fmod(m_animFrame + step, anim->numFrames);
+		const int frame2 = getAnimFrame();
+		
+		for (int frame = frame1; frame != frame2; )
+		{
+			// process frame triggers
+			anim->processTriggersForFrame(frame, AnimCacheElem::AnimTrigger::OnLeave);
+			frame = (frame + 1) % anim->numFrames;
+			anim->processTriggersForFrame(frame, AnimCacheElem::AnimTrigger::OnEnter);
+		}
+	}
 }
 
 // -----
@@ -312,13 +446,13 @@ Sound::Sound(const char * filename)
 	m_playId = -1;
 }
 
-void Sound::play(float volume, float speed)
+void Sound::play(int volume, int speed)
 {
 	stop();
 	
 	if (m_sound->buffer != 0)
 	{
-		m_playId = g_soundPlayer.playSound(m_sound->buffer, volume, false);
+		m_playId = g_soundPlayer.playSound(m_sound->buffer, volume / 100.f, false);
 	}
 }
 
@@ -331,15 +465,15 @@ void Sound::stop()
 	}
 }
 
-void Sound::setVolume(float volume)
+void Sound::setVolume(int volume)
 {
 	if (m_playId != -1)
 	{
-		g_soundPlayer.setSoundVolume(m_playId, volume);
+		g_soundPlayer.setSoundVolume(m_playId, volume / 100.f);
 	}
 }
 
-void Sound::setSpeed(float speed)
+void Sound::setSpeed(int speed)
 {
 	if (m_playId != -1)
 	{
