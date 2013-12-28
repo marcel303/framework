@@ -1,0 +1,45 @@
+sheet pivot_x:16 pivot_y:32 grid_sx:12 grid_sy:8
+
+# first row
+
+animation name:0d grid_x:0 grid_y:0 frames:3 rate:6 loop:1
+animation name:0l grid_x:0 grid_y:1 frames:3 rate:6 loop:1
+animation name:0r grid_x:0 grid_y:2 frames:3 rate:6 loop:1
+animation name:0u grid_x:0 grid_y:3 frames:3 rate:6 loop:1
+
+animation name:1d grid_x:3 grid_y:0 frames:3 rate:6 loop:1
+animation name:1l grid_x:3 grid_y:1 frames:3 rate:6 loop:1
+animation name:1r grid_x:3 grid_y:2 frames:3 rate:6 loop:1
+animation name:1u grid_x:3 grid_y:3 frames:3 rate:6 loop:1
+
+animation name:2d grid_x:6 grid_y:0 frames:3 rate:6 loop:1
+animation name:2l grid_x:6 grid_y:1 frames:3 rate:6 loop:1
+animation name:2r grid_x:6 grid_y:2 frames:3 rate:6 loop:1
+animation name:2u grid_x:6 grid_y:3 frames:3 rate:6 loop:1
+
+animation name:3d grid_x:9 grid_y:0 frames:3 rate:6 loop:1
+animation name:3l grid_x:9 grid_y:1 frames:3 rate:6 loop:1
+animation name:3r grid_x:9 grid_y:2 frames:3 rate:6 loop:1
+animation name:3u grid_x:9 grid_y:3 frames:3 rate:6 loop:1
+
+# second row
+
+animation name:4d grid_x:0 grid_y:4 frames:3 rate:6 loop:1
+animation name:4l grid_x:0 grid_y:5 frames:3 rate:6 loop:1
+animation name:4r grid_x:0 grid_y:6 frames:3 rate:6 loop:1
+animation name:4u grid_x:0 grid_y:7 frames:3 rate:6 loop:1
+
+animation name:5d grid_x:3 grid_y:4 frames:3 rate:6 loop:1
+animation name:5l grid_x:3 grid_y:5 frames:3 rate:6 loop:1
+animation name:5r grid_x:3 grid_y:6 frames:3 rate:6 loop:1
+animation name:5u grid_x:3 grid_y:7 frames:3 rate:6 loop:1
+
+animation name:6d grid_x:6 grid_y:4 frames:3 rate:6 loop:1
+animation name:6l grid_x:6 grid_y:5 frames:3 rate:6 loop:1
+animation name:6r grid_x:6 grid_y:6 frames:3 rate:6 loop:1
+animation name:6u grid_x:6 grid_y:7 frames:3 rate:6 loop:1
+
+animation name:7d grid_x:9 grid_y:4 frames:3 rate:6 loop:1
+animation name:7l grid_x:9 grid_y:5 frames:3 rate:6 loop:1
+animation name:7r grid_x:9 grid_y:6 frames:3 rate:6 loop:1
+animation name:7u grid_x:9 grid_y:7 frames:3 rate:6 loop:1

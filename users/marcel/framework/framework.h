@@ -51,12 +51,14 @@ class Sprite;
 
 //
 
+typedef void (*ActionHandler)(const std::string & action, const Dictionary & args);
+	
+//
+
 class Framework
 {
 public:
 	friend class Sprite;
-	
-	typedef void (*ActionHandler)(const std::string & action, const Dictionary & args);
 	
 	Framework();
 	~Framework();
@@ -114,6 +116,13 @@ public:
 		m_map[name] = value;
 	}
 	
+	void setInt(const char * name, int value)
+	{
+		char text[32];
+		sprintf(text, "%d", value);
+		setString(name, text);
+	}
+	
 	std::string getString(const char * name, const char * _default) const
 	{
 		Map::const_iterator i = m_map.find(name);
@@ -138,7 +147,7 @@ class Sprite
 public:
 	friend class Framework;
 
-	Sprite(const char * filename, float pivotX = 0.f, float pivotY = 0.f);
+	Sprite(const char * filename, float pivotX = 0.f, float pivotY = 0.f, const char * spritesheet = 0);
 	~Sprite();
 	
 	void draw();
@@ -150,9 +159,15 @@ public:
 	void setBlend(BLEND_MODE blendMode);
 	void setFlip(bool flipX, bool flipY = false);
 	
+	float getX() const { return m_positionX; }
+	float getY() const { return m_positionY; }
+	
 	// animation
 	void startAnim(const char * anim, int frame = 0);
 	void stopAnim();
+	const std::string & getAnim() const;
+	void pauseAnim();
+	void resumeAnim();
 	void setAnimFrame(int frame);
 	int getAnimFrame() const;
 	void setAnimSpeed(float speed);
@@ -177,11 +192,14 @@ private:
 	std::string m_animSegmentName;
 	void * m_animSegment;
 	bool m_isAnimActive;
+	bool m_isAnimPaused;
 	float m_animFrame;
 	float m_animSpeed;
 
 	void updateAnimationSegment();
 	void updateAnimation(float dt);
+	void processAnimationFrameChange(int frame1, int frame2);
+	void processAnimationTriggersForFrame(int frame, int event);
 };
 
 class Sound

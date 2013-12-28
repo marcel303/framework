@@ -1,11 +1,11 @@
 EXE = framework
-OBJS = example.o framework.o internal.o audio.o
+OBJS = example.o framework.o internal.o audio.o image.o
 
 all : $(EXE)
 	./framework
 
 $(EXE) : $(OBJS)
-	gcc -o $(EXE) $(OBJS) `freetype-config --libs` `sdl-config --static-libs` -framework OpenAL -lstdc++
+	gcc -o $(EXE) $(OBJS) `freetype-config --libs` `sdl-config --static-libs` -framework OpenAL -lFreeImage -lstdc++
 
 %.o : %.cpp
 	#gcc -c $< -o $@ -Wall -ffast-math -O3 -msse3 `freetype-config --cflags`

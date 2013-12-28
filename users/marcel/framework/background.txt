@@ -1,0 +1,3 @@
+sheet pivot_x:64 pivot_y:64 grid_sx:8 grid_sy:8
+animation name:default grid_x:0 grid_y:0 frames:64 rate:1 loop:1
+	#trigger frame:0 on:enter action:sound sound:test.wav

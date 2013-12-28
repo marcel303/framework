@@ -1,4 +1,5 @@
 #include "audio.h"
+#include "image.h"
 #include "internal.h"
 
 Globals g_globals;
@@ -13,6 +14,7 @@ GlyphCache g_glyphCache;
 TextureCacheElem::TextureCacheElem()
 {
 	texture = 0;
+	sx = sy = 0;
 }
 
 void TextureCacheElem::free()
@@ -21,6 +23,7 @@ void TextureCacheElem::free()
 	{
 		glDeleteTextures(1, &texture);
 		texture = 0;
+		sx = sy = 0;
 	}
 }
 
@@ -28,15 +31,64 @@ void TextureCacheElem::load(const char * filename)
 {
 	free();
 	
-	glGenTextures(1, &texture);
+	ImageData * imageData = loadImage(filename);
 	
-	if (texture != 0)
+	if (!imageData)
 	{
-		// todo: load texture data
+		logError("failed to load %s", filename);
+	}
+	else
+	{
+		glGenTextures(1, &texture);
 		
-		// todo: tex image
+		if (texture != 0)
+		{
+			// capture current OpenGL states before we change them
+			
+			GLuint restoreTexture;
+			glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+			GLint restoreUnpack;
+			glGetIntegerv(GL_UNPACK_ALIGNMENT, &restoreUnpack);
+			
+			// copy image data
+						
+			glBindTexture(GL_TEXTURE_2D, texture);
+			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+			glTexImage2D(
+				GL_TEXTURE_2D,
+				0,
+				GL_RGBA,
+				imageData->sx,
+				imageData->sy,
+				0,
+				GL_RGBA,
+				GL_UNSIGNED_BYTE,
+				imageData->imageData);
+			
+		#if 1
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		#else
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		#endif
+			
+			// restore previous OpenGL states
+			
+			glBindTexture(GL_TEXTURE_2D, restoreTexture);
+			glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpack);
+			
+			sx = imageData->sx;
+			sy = imageData->sy;
+			
+			log("loaded %s", filename);
+		}
 		
-		log("loaded %s", filename);
+		delete imageData;
 	}
 }
 
@@ -130,7 +182,7 @@ void AnimCacheElem::load(const char * filename)
 	
 	if (!r.open(filename))
 	{
-		logError("failed to open %s", filename);
+		//logError("failed to open %s", filename);
 	}
 	else
 	{	
@@ -196,8 +248,8 @@ void AnimCacheElem::load(const char * filename)
 			
 			if (section == "sheet")
 			{
-				m_animCellCount[0] = args.getInt("grid_x", 1);
-				m_animCellCount[1] = args.getInt("grid_y", 1);
+				m_animCellCount[0] = args.getInt("grid_sx", 1);
+				m_animCellCount[1] = args.getInt("grid_sy", 1);
 				m_pivot[0] = args.getInt("pivot_x", 0);
 				m_pivot[1] = args.getInt("pivot_y", 0);
 			}
@@ -250,7 +302,7 @@ void AnimCacheElem::load(const char * filename)
 						
 						if (ok)
 						{
-							log("added frame trigger. frame=%d, on=%s, action=%s", frame, event.c_str(), action.c_str());
+							//log("added frame trigger. frame=%d, on=%s, action=%s", frame, event.c_str(), action.c_str());
 							
 							AnimTrigger trigger;
 							trigger.event = eventEnum;
@@ -329,8 +381,8 @@ void SoundCacheElem::free()
 		g_soundPlayer.stopSoundsForBuffer(buffer);
 		
 		alDeleteBuffers(1, &buffer);
-		buffer = 0;
 		g_soundPlayer.checkError();
+		buffer = 0;
 	}
 }
 
@@ -590,7 +642,7 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, char c)
 		
 		i = m_map.insert(Map::value_type(key, elem)).first;
 		
-		printf("added glyph cache element. face=%p, size=%d, character=%c, texture=%u. count=%d\n", face, size, c, elem.texture, (int)m_map.size());
+		//printf("added glyph cache element. face=%p, size=%d, character=%c, texture=%u. count=%d\n", face, size, c, elem.texture, (int)m_map.size());
 		
 		return i->second;
 	}

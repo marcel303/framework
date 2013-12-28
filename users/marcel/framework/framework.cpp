@@ -107,8 +107,10 @@ bool Framework::shutdown()
 	// free resources
 	
 	g_textureCache.clear();
+	g_animCache.clear();
 	g_soundCache.clear();
 	g_fontCache.clear();
+	g_glyphCache.clear();
 	
 	// shut down FreeType
 	
@@ -195,6 +197,7 @@ void Framework::processAction(const std::string & action, const Dictionary & arg
 void Framework::reloadCaches()
 {
 	g_textureCache.reload();
+	g_animCache.reload();
 	g_soundCache.reload();
 	g_fontCache.reload();
 	g_glyphCache.clear();
@@ -285,7 +288,7 @@ Color::Color(float r, float g, float b, float a)
 	
 // -----
 
-Sprite::Sprite(const char * filename, float pivotX, float pivotY)
+Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * spritesheet)
 {
 	// drawing
 	m_texture = &g_textureCache.findOrCreate(filename);
@@ -301,14 +304,24 @@ Sprite::Sprite(const char * filename, float pivotX, float pivotY)
 	m_flipY = false;
 	
 	// animation
-	std::string sheetFilename = filename;
-	size_t dot = sheetFilename.rfind('.');
-	if (dot != std::string::npos)
-		sheetFilename = sheetFilename.substr(0, dot) + ".txt";
+	std::string sheetFilename;
+	if (spritesheet)
+	{
+		sheetFilename = spritesheet;
+	}
+	else
+	{
+		sheetFilename = filename;
+		size_t dot = sheetFilename.rfind('.');
+		if (dot != std::string::npos)
+			sheetFilename = sheetFilename.substr(0, dot) + ".txt";
+	}
+	
 	m_anim = &g_animCache.findOrCreate(sheetFilename.c_str());
 	m_animVersion = m_anim->getVersion();
 	m_animSegment = 0;
 	m_isAnimActive = false;
+	m_isAnimPaused = false;
 	m_animFrame = 0.f;
 	m_animSpeed = 1.f;
 	
@@ -327,11 +340,57 @@ void Sprite::draw()
 
 void Sprite::drawEx(float x, float y, float angle, float scale, BLEND_MODE blendMode)
 {
-	// todo: set blend mode
-	
-	// todo: setup matrices
-	
-	// todo: draw
+	if (m_texture->texture)
+	{
+		setBlend(blendMode);
+		
+		glPushMatrix();
+		{
+			glTranslatef(x, y, 0.f);
+			glScalef(scale, scale, 1.f);
+			glRotatef(angle, 0.f, 0.f, 1.f);
+			glTranslatef(-m_pivotX, -m_pivotY, 0.f);
+			
+			glBindTexture(GL_TEXTURE_2D, m_texture->texture);
+			glEnable(GL_TEXTURE_2D);
+			
+			int cellIndex;
+			
+			if (m_animSegment)
+			{
+				AnimCacheElem::Anim * anim = reinterpret_cast<AnimCacheElem::Anim*>(m_animSegment);
+				
+				cellIndex = getAnimFrame() + anim->firstCell;
+			}
+			else
+			{
+				cellIndex = 0;
+			}
+			
+			const int cellX = cellIndex % m_anim->m_animCellCount[0];
+			const int cellY = cellIndex / m_anim->m_animCellCount[0];
+			
+			const float tx1 = (cellX + 0 + 0.01f) / float(m_anim->m_animCellCount[0]);
+			const float ty1 = (cellY + 0 + 0.01f) / float(m_anim->m_animCellCount[1]);
+			const float tx2 = (cellX + 1 - 0.01f) / float(m_anim->m_animCellCount[0]);
+			const float ty2 = (cellY + 1 - 0.01f) / float(m_anim->m_animCellCount[1]);
+			
+			const int rsx = m_texture->sx / m_anim->m_animCellCount[0];
+			const int rsy = m_texture->sy / m_anim->m_animCellCount[1];
+			
+			glBegin(GL_QUADS);
+			{
+		 		glTexCoord2f(tx1, ty1); glVertex2f(0.f, 0.f);
+		 		glTexCoord2f(tx2, ty1); glVertex2f(rsx, 0.f);
+		 		glTexCoord2f(tx2, ty2); glVertex2f(rsx, rsy);
+		 		glTexCoord2f(tx1, ty2); glVertex2f(0.f, rsy);
+			}
+			glEnd();
+			
+			glDisable(GL_TEXTURE_2D);
+		}
+		glPopMatrix();
+	}
 }
 
 void Sprite::setPosition(float x, float y)
@@ -365,16 +424,34 @@ void Sprite::setFlip(bool flipX, bool flipY)
 void Sprite::startAnim(const char * name, int frame)
 {
 	m_isAnimActive = true;
+	m_isAnimPaused = false;
 	m_animSegmentName = name;
 	m_animFrame = frame;
 
 	m_animVersion = -1;
 	updateAnimationSegment();
+	
+	processAnimationTriggersForFrame(m_animFrame, AnimCacheElem::AnimTrigger::OnEnter);
 }
 
 void Sprite::stopAnim()
 {
 	m_isAnimActive = false;
+}
+
+const std::string & Sprite::getAnim() const
+{
+	return m_animSegmentName;
+}
+
+void Sprite::pauseAnim()
+{
+	m_isAnimPaused = true;
+}
+
+void Sprite::resumeAnim()
+{
+	m_isAnimPaused = false;
 }
 
 void Sprite::setAnimFrame(int frame)
@@ -383,7 +460,11 @@ void Sprite::setAnimFrame(int frame)
 	{
 		AnimCacheElem::Anim * anim = reinterpret_cast<AnimCacheElem::Anim*>(m_animSegment);
 		
+		const int frame1 = getAnimFrame();
 		m_animFrame = frame % anim->numFrames;
+		const int frame2 = getAnimFrame();
+		
+		processAnimationFrameChange(frame1, frame2);
 	}
 }
 
@@ -399,7 +480,7 @@ void Sprite::setAnimSpeed(float speed)
 
 void Sprite::updateAnimationSegment()
 {
-	if (m_animVersion != m_anim->getVersion())
+	if (m_animVersion != m_anim->getVersion() && !m_animSegmentName.empty())
 	{
 		m_animVersion = m_anim->getVersion();
 		
@@ -413,27 +494,66 @@ void Sprite::updateAnimationSegment()
 			log("unable to find anim segment for %s", m_animSegmentName.c_str());
 			m_animFrame = 0.f;
 		}
+		else
+		{
+			AnimCacheElem::Anim * anim = reinterpret_cast<AnimCacheElem::Anim*>(m_animSegment);
+			
+			m_pivotX = anim->pivot[0];
+			m_pivotY = anim->pivot[1];
+		}
 	}
 }
 
 void Sprite::updateAnimation(float dt)
 {
-	if (m_isAnimActive && m_animSegment)
+	if (m_isAnimActive && m_animSegment && !m_isAnimPaused)
 	{
 		AnimCacheElem::Anim * anim = reinterpret_cast<AnimCacheElem::Anim*>(m_animSegment);
 		
 		const float step = m_animSpeed * anim->frameRate * dt;
 		
 		const int frame1 = getAnimFrame();
-		m_animFrame = std::fmod(m_animFrame + step, anim->numFrames);
+		m_animFrame += step;
 		const int frame2 = getAnimFrame();
 		
-		for (int frame = frame1; frame != frame2; )
+		for (int frame = frame1; frame < frame2; frame++)
 		{
-			// process frame triggers
-			anim->processTriggersForFrame(frame, AnimCacheElem::AnimTrigger::OnLeave);
-			frame = (frame + 1) % anim->numFrames;
-			anim->processTriggersForFrame(frame, AnimCacheElem::AnimTrigger::OnEnter);
+			const int oldFrame = (frame + 0) % anim->numFrames;
+			const int newFrame = (frame + 1) % anim->numFrames;
+			processAnimationFrameChange(oldFrame, newFrame);
+		}
+		
+		m_animFrame = std::fmod(m_animFrame, anim->numFrames);
+	}
+}
+
+void Sprite::processAnimationFrameChange(int frame1, int frame2)
+{
+	if (frame1 != frame2)
+	{
+		// process frame triggers
+		processAnimationTriggersForFrame(frame1, AnimCacheElem::AnimTrigger::OnLeave);
+		processAnimationTriggersForFrame(frame2, AnimCacheElem::AnimTrigger::OnEnter);
+	}
+}
+
+void Sprite::processAnimationTriggersForFrame(int frame, int event)
+{
+	AnimCacheElem::Anim * anim = reinterpret_cast<AnimCacheElem::Anim*>(m_animSegment);
+		
+	for (size_t i = 0; i < anim->frameTriggers[frame].size(); ++i)
+	{
+		const AnimCacheElem::AnimTrigger & trigger = anim->frameTriggers[frame][i];
+		
+		if (trigger.event == event)
+		{
+			//log("event == this->event");
+			
+			Dictionary args = trigger.args;
+			args.setInt("x", args.getInt("x", 0) + m_positionX);
+			args.setInt("y", args.getInt("y", 0) + m_positionY);
+			
+			framework.processAction(trigger.action, args);
 		}
 	}
 }

@@ -35,6 +35,8 @@ class TextureCacheElem
 {
 public:
 	GLuint texture;
+	int sx;
+	int sy;
 	
 	TextureCacheElem();
 	void free();
@@ -71,15 +73,6 @@ public:
 		Event event;
 		std::string action;
 		Dictionary args;
-		
-		void process(Event event)
-		{
-			if (event == this->event)
-			{
-				log("event == this->event");
-				framework.processAction(action, args);
-			}
-		}
 	};
 
 	class Anim
@@ -101,14 +94,6 @@ public:
 			frameRate = 0.f;
 			pivot[0] = pivot[1] = 0;
 			loop = false;
-		}
-		
-		void processTriggersForFrame(int frame, AnimTrigger::Event event)
-		{
-			for (size_t i = 0; i < frameTriggers[frame].size(); ++i)
-			{
-				frameTriggers[frame][i].process(event);
-			}
 		}
 	};
 	

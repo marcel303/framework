@@ -1,12 +1,11 @@
-sheet pivot_x:0 pivot_y:0 cells_x:4 cells_y:8
+sheet pivot_x:24 pivot_y:53 grid_sx:6 grid_sy:4
 
 # movement
-animation name:walk grid_x:0 grid_y:0 frames:12 rate:4 loop:0 pivot_x:2 pivot_y:2
-	trigger frame:3 on:leave action:sound sound:test.wav
-	trigger frame:4 action:sound sound:test.wav
-	trigger frame:5 action:sound sound:test.wav
-	trigger frame:12 action:sound sound:test.wav
-animation name:jump grid_x:0 grid_y:3 frames:8  rate:4 loop:1
-
-# response
-animation name:hurt grid_x:0 grid_y:5 frames:12 rate:4 loop:1
+animation name:walk-u grid_x:3 grid_y:0 frames:3 rate:6 loop:1
+	trigger frame:0 on:enter action:sound sound:test.wav
+animation name:walk-r grid_x:3 grid_y:1 frames:3 rate:6 loop:1
+	trigger frame:0 on:enter action:sound sound:test.wav
+animation name:walk-d grid_x:3 grid_y:2 frames:3 rate:6 loop:1
+	trigger frame:0 on:enter action:sound sound:test.wav
+animation name:walk-l grid_x:3 grid_y:3 frames:3 rate:6 loop:1
+	trigger frame:0 on:enter action:sound sound:test.wav

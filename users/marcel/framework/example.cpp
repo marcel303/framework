@@ -1,23 +1,61 @@
 #include <SDL/SDL.h>
 #include "framework.h"
 
+static Sprite * createRandomSprite()
+{
+	const int index = rand() % 4;
+	char filename[32];
+	sprintf(filename, "%s%d.png", "rpg", index);
+	
+	Sprite * sprite = new Sprite(filename, 0, 0, "rpg.txt");
+	
+	char anim[32];
+	const int guy = rand() % 8;
+	const int dir = rand() % 4;
+	char dirName[4] = { 'u', 'd', 'l', 'r' };
+	sprintf(anim, "%d%c", guy, dirName[dir]);
+	
+	sprite->startAnim(anim);
+	sprite->setPosition(rand() % 1920, rand() % 1280);
+	sprite->setScale(4);
+	
+	return sprite;
+}
+
 int main(int argc, char * argv[])
 {
 	framework.setMinification(2);
 	framework.init(argc, argv, 1920, 1280);
 	
 	bool down = false;
-	int x = 0;
-	int y = 0;
+	int x = 1920/2;
+	int y = 1280/4;
 	
 	Music("bgm.ogg").play();
 	
+	Sprite background("background.png");
+	background.startAnim("default");
+	
 	Sprite sprite("sprite.png");
-	sprite.startAnim("walk");
+	//sprite.startAnim("walk");
+	
+	const int numSprites = 32;
+	Sprite * sprites[numSprites];
+	for (int i = 0; i < numSprites; ++i)
+		sprites[i] = createRandomSprite();
 	
 	while (!keyboard.isDown(SDLK_ESCAPE))
 	{
 		framework.process();
+		
+		if (keyboard.isDown(SDLK_a))
+		{
+			for (int i = 0; i < numSprites; ++i)
+			{
+				delete sprites[i];
+				sprites[i] = createRandomSprite();
+			}
+		}
 		
 		bool newDown = keyboard.isDown(SDLK_SPACE);
 		
@@ -38,11 +76,39 @@ int main(int argc, char * argv[])
 			}
 		}
 		
-		if (keyboard.isDown(SDLK_LEFT))
-			x--;
-		if (keyboard.isDown(SDLK_RIGHT))
-			x++;
+		int dx = 0;
+		int dy = 0;
 		
+		if (keyboard.isDown(SDLK_LEFT))
+			dx--;
+		if (keyboard.isDown(SDLK_RIGHT))
+			dx++;
+		if (keyboard.isDown(SDLK_UP))
+			dy--;
+		if (keyboard.isDown(SDLK_DOWN))
+			dy++;
+		
+		const char * wantAnim = 0;
+		
+		if (dx < 0)
+			wantAnim = "walk-l";
+		if (dx > 0)
+			wantAnim = "walk-r";
+		if (dy < 0)
+			wantAnim = "walk-u";
+		if (dy > 0)
+			wantAnim = "walk-d";
+			
+		if (!wantAnim)
+			sprite.pauseAnim();
+		else if (sprite.getAnim() == wantAnim)
+			sprite.resumeAnim();
+		else
+			sprite.startAnim(wantAnim);
+		
+		x += dx;
+		y += dy;
+
 		for (int i = 0; i < 4; ++i)
 		{
 			if (gamepad[i].isConnected())
@@ -54,15 +120,34 @@ int main(int argc, char * argv[])
 			}
 		}
 		
-		framework.beginDraw(255, 255, 255, 0);
+		framework.beginDraw(165, 125, 65, 0);
 		{
 			setBlend(BLEND_ALPHA);
 			
 			setColor(255, 255, 255);
-			Sprite("background.png").draw();
+			background.drawEx(1920 - 132, 132, 0, 2);
 			
-			setColor(255, 255, 255, 255 - y);
-			sprite.drawEx(x, y, 0, 1, BLEND_ALPHA);
+			setColor(255, 191, 127, 255);
+			for (int i = 0; i < numSprites; ++i)
+			{
+				char dirName = sprites[i]->getAnim()[1];
+				int dx = 0;
+				int dy = 0;
+				if (dirName == 'l') dx = -1;
+				if (dirName == 'r') dx = +1;
+				if (dirName == 'u') dy = -1;
+				if (dirName == 'd') dy = +1;
+				sprites[i]->setPosition(sprites[i]->getX() + dx, sprites[i]->getY() + dy);
+				sprites[i]->draw();
+				
+				if ((rand() % 100) == 0)
+					sprites[i]->setAngle((rand() % 40) - 20);
+				if ((rand() % 300) == 0)
+					sprites[i]->setScale(((rand() % 200) + 50) / 100.f * 4.f);
+			}
+			
+			setColor(255, 255, 255, 255);
+			sprite.drawEx(x, y, 0, 4, BLEND_ALPHA);
 			
 			Font font("test.ttf");
 			setFont(font);
@@ -72,11 +157,14 @@ int main(int argc, char * argv[])
 			drawText(mouse.getX(), mouse.getY() + 30, 20, 0, 0, "(demo only)", rand() % 10);
 			
 			setColor(255, 0, 0, 255);
-			drawLine(0, 0, 1920, 1280);
-			drawLine(1920, 0, 0, 1280);
+			//drawLine(0, 0, 1920, 1280);
+			//drawLine(1920, 0, 0, 1280);
 		}
 		framework.endDraw();
 	}
+	
+	for (int i = 0; i < numSprites; ++i)
+		delete sprites[i];
 	
 	framework.shutdown();
 	
