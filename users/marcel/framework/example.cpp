@@ -16,10 +16,21 @@ static Sprite * createRandomSprite()
 	sprintf(anim, "%d%c", guy, dirName[dir]);
 	
 	sprite->startAnim(anim);
-	sprite->setPosition(rand() % 1920, rand() % 1280);
-	sprite->setScale(4);
+	sprite->x = rand() % 1920;
+	sprite->y = rand() % 1280;
+	sprite->scale = 4;
 	
 	return sprite;
+}
+
+static bool compareSprites(const Sprite * sprite1, const Sprite * sprite2)
+{
+	return sprite1->y < sprite2->y;
+}
+
+static void sortSprites(Sprite ** sprites, int numSprites)
+{
+	std::sort(sprites, sprites + numSprites, compareSprites);
 }
 
 int main(int argc, char * argv[])
@@ -39,7 +50,7 @@ int main(int argc, char * argv[])
 	Sprite sprite("sprite.png");
 	//sprite.startAnim("walk");
 	
-	const int numSprites = 32;
+	const int numSprites = 100;
 	Sprite * sprites[numSprites];
 	for (int i = 0; i < numSprites; ++i)
 		sprites[i] = createRandomSprite();
@@ -128,6 +139,7 @@ int main(int argc, char * argv[])
 			background.drawEx(1920 - 132, 132, 0, 2);
 			
 			setColor(255, 191, 127, 255);
+			sortSprites(sprites, numSprites);
 			for (int i = 0; i < numSprites; ++i)
 			{
 				char dirName = sprites[i]->getAnim()[1];
@@ -137,13 +149,14 @@ int main(int argc, char * argv[])
 				if (dirName == 'r') dx = +1;
 				if (dirName == 'u') dy = -1;
 				if (dirName == 'd') dy = +1;
-				sprites[i]->setPosition(sprites[i]->getX() + dx, sprites[i]->getY() + dy);
+				sprites[i]->x += dx;
+				sprites[i]->y += dy;
 				sprites[i]->draw();
 				
 				if ((rand() % 100) == 0)
-					sprites[i]->setAngle((rand() % 40) - 20);
+					sprites[i]->angle = (rand() % 40) - 20;
 				if ((rand() % 300) == 0)
-					sprites[i]->setScale(((rand() % 200) + 50) / 100.f * 4.f);
+					sprites[i]->scale = ((rand() % 200) + 50) / 100.f * 4.f;
 			}
 			
 			setColor(255, 255, 255, 255);

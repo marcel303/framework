@@ -102,65 +102,26 @@ public:
 class Dictionary
 {
 	typedef std::map<std::string, std::string> Map;
-
 	Map m_map;
 	
 public:
-	bool contains(const char * name) const
-	{
-		return m_map.count(name) != 0;
-	}
-	
-	void setString(const char * name, const char * value)
-	{
-		m_map[name] = value;
-	}
-	
-	void setInt(const char * name, int value)
-	{
-		char text[32];
-		sprintf(text, "%d", value);
-		setString(name, text);
-	}
-	
-	std::string getString(const char * name, const char * _default) const
-	{
-		Map::const_iterator i = m_map.find(name);
-		if (i != m_map.end())
-			return i->second;
-		else
-			return _default;
-	}
-	
-	int getInt(const char * name, int _default) const
-	{
-		Map::const_iterator i = m_map.find(name);
-		if (i != m_map.end())
-			return atoi(i->second.c_str());
-		else
-			return _default;
-	}
+	bool contains(const char * name) const;
+	void setString(const char * name, const char * value);	
+	void setInt(const char * name, int value);	
+	std::string getString(const char * name, const char * _default) const;	
+	int getInt(const char * name, int _default) const;
 };
 
 class Sprite
 {
 public:
 	friend class Framework;
-
+	
 	Sprite(const char * filename, float pivotX = 0.f, float pivotY = 0.f, const char * spritesheet = 0);
 	~Sprite();
 	
 	void draw();
 	void drawEx(float x, float y, float angle = 0.f, float scale = 1.f, BLEND_MODE blendMode = BLEND_ALPHA);
-	
-	void setPosition(float x, float y);
-	void setAngle(float angle);
-	void setScale(float scale);
-	void setBlend(BLEND_MODE blendMode);
-	void setFlip(bool flipX, bool flipY = false);
-	
-	float getX() const { return m_positionX; }
-	float getY() const { return m_positionY; }
 	
 	// animation
 	void startAnim(const char * anim, int frame = 0);
@@ -172,19 +133,20 @@ public:
 	int getAnimFrame() const;
 	void setAnimSpeed(float speed);
 	
+	// drawing
+	float pivotX;
+	float pivotY;
+	float x;
+	float y;
+	float angle;
+	float scale;
+	BLEND_MODE blend;
+	bool flipX;
+	bool flipY;
+	
 private:
 	// drawing
 	class TextureCacheElem * m_texture;
-	float m_pivotX;
-	float m_pivotY;
-	float m_positionX;
-	float m_positionY;
-	float m_angle;
-	float m_scaleX;
-	float m_scaleY;
-	BLEND_MODE m_blendMode;
-	bool m_flipX;
-	bool m_flipY;
 	
 	// animation
 	class AnimCacheElem * m_anim;

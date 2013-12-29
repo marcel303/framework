@@ -21,38 +21,38 @@ SoundData * loadSound(const char * filename)
 	char id[4];
 	
 	if (!r.read(id, 4)) // 'RIFF'
-		return false;
+		return 0;
 	
 	if (id[0] != 'R' || id[1] != 'I' || id[2] != 'F' || id[3] != 'F')
 	{
 		logError("not a RIFF file");
-		return false;
+		return 0;
 	}
 	
 	int32_t size;
 	
 	if (!r.read(size))
-		return false;
+		return 0;
 	
 	if (size < 0)
-		return false;
+		return 0;
 
 	if (!r.read(id, 4)) // 'WAVE'
-		return false;
+		return 0;
 	
 	if (id[0] != 'W' || id[1] != 'A' || id[2] != 'V' || id[3] != 'E')
 	{
 		logError("not a WAVE file");
-		return false;
+		return 0;
 	}
 	
 	if (!r.read(id, 4)) // 'fmt '
-		return false;
+		return 0;
 	
 	if (id[0] != 'f' || id[1] != 'm' || id[2] != 't' || id[3] != ' ')
 	{
 		logError("WAVE loader got confused");
-		return false;
+		return 0;
 	}
 	
 	bool ok = true;
@@ -76,7 +76,7 @@ SoundData * loadSound(const char * filename)
 	ok &= r.read(fmtExtraLength);
 	
 	if (!ok)
-		return false;
+		return 0;
 	
 	if (false)
 	{
@@ -109,33 +109,33 @@ SoundData * loadSound(const char * filename)
 	}
 	
 	if (!ok)
-		return false;
+		return 0;
 	
 	if (!r.read(id, 4)) // "fllr" or "data"
-		return false;
+		return 0;
 	
 	if (id[0] == 'F' && id[1] == 'L' && id[2] == 'L' && id[3] == 'R')
 	{
 		int32_t byteCount;
 		if (!r.read(byteCount))
-			return false;
+			return 0;
 		
-		logWarning("wave loader: skipping %d bytes of filler", byteCount); // todo: log
+		//log("wave loader: skipping %d bytes of filler", byteCount);
 		r.skip(byteCount + 2);
 		
 		if (!r.read(id, 4)) // 'data'
-			return false;
+			return 0;
 	}
 	
 	if (id[0] != 'd' || id[1] != 'a' || id[2] != 't' || id[3] != 'a')
 	{
 		logError("WAVE loader got confused: id=%.*s", 4, id);
-		return false;
+		return 0;
 	}
 	
 	int32_t byteCount;
 	if (!r.read(byteCount))
-		return false;
+		return 0;
 	
 	uint8_t * bytes = new uint8_t[byteCount];
 	
@@ -143,7 +143,7 @@ SoundData * loadSound(const char * filename)
 	{
 		logError("failed to load WAVE data");
 		delete [] bytes;
-		return false;
+		return 0;
 	}
 	
 	SoundData * soundData = new SoundData;
@@ -334,7 +334,10 @@ bool SoundPlayer::init(int numSources)
 	checkError();
 	
 	if (!m_device)
+	{
+		logError("failed to open OpenAL audio device");
 		return false;
+	}
 
 	// create context
 	
@@ -342,7 +345,10 @@ bool SoundPlayer::init(int numSources)
 	checkError();
 	
 	if (!m_context)
+	{
+		logError("failed to create OpenAL audio context");
 		return false;
+	}
 	
 	// make context current
 
@@ -380,7 +386,6 @@ bool SoundPlayer::shutdown()
 	for (int i = 0; i < m_numSources; ++i)
 	{
 		destroySource(m_sources[i].source);
-		checkError();
 	}
 	
 	m_numSources = 0;
@@ -396,15 +401,21 @@ bool SoundPlayer::shutdown()
 	
 	// destroy context
 	
-	alcDestroyContext(m_context);
-	m_context = 0;
-	checkError();
+	if (m_context != 0)
+	{
+		alcDestroyContext(m_context);
+		m_context = 0;
+		checkError();
+	}
 	
 	// close device
 	
-	alcCloseDevice(m_device);
-	m_device = 0;
-	checkError();
+	if (m_device != 0)
+	{
+		alcCloseDevice(m_device);
+		m_device = 0;
+		checkError();
+	}
 	
 	return true;
 }
@@ -433,7 +444,7 @@ int SoundPlayer::playSound(ALuint buffer, float volume, bool loop)
 		alSourcei(source->source, AL_LOOPING, loop ? AL_TRUE : AL_FALSE);
 		checkError();
 		
-		alSourcef(source->source, AL_GAIN, volume); // todo: check for correctness
+		alSourcef(source->source, AL_GAIN, volume);
 		checkError();
 	
 		// start playback on source
@@ -447,6 +458,10 @@ int SoundPlayer::playSound(ALuint buffer, float volume, bool loop)
 
 void SoundPlayer::stopSound(int playId)
 {
+	fassert(playId != -1);
+	if (playId == -1)
+		return;
+	
 	for (int i = 0; i < m_numSources; ++i)
 	{
 		if (m_sources[i].playId == playId)
@@ -465,6 +480,10 @@ void SoundPlayer::stopSound(int playId)
 
 void SoundPlayer::stopSoundsForBuffer(ALuint buffer)
 {
+	fassert(buffer != 0);
+	if (buffer == 0)
+		return;
+	
 	for (int i = 0; i < m_numSources; ++i)
 	{
 		if (m_sources[i].buffer == buffer)
@@ -498,11 +517,15 @@ void SoundPlayer::stopAllSounds()
 
 void SoundPlayer::setSoundVolume(int playId, float volume)
 {
+	fassert(playId != -1);
+	if (playId == -1)
+		return;
+	
 	for (int i = 0; i < m_numSources; ++i)
 	{
 		if (m_sources[i].playId == playId)
 		{
-			alSourcef(m_sources[i].source, AL_GAIN, volume); // todo: check for correctness
+			alSourcef(m_sources[i].source, AL_GAIN, volume);
 			checkError();
 		}
 	}
@@ -520,6 +543,6 @@ void SoundPlayer::stopMusic()
 
 void SoundPlayer::setMusicVolume(float volume)
 {
-	alSourcef(m_musicSource, AL_GAIN, volume); // todo: check for correctness
+	alSourcef(m_musicSource, AL_GAIN, volume);
 	checkError();
 }

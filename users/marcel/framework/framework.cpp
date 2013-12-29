@@ -285,23 +285,58 @@ Color::Color(float r, float g, float b, float a)
 	this->b = b;
 	this->a = a;
 }
-	
+
+// -----
+
+bool Dictionary::contains(const char * name) const
+{
+	return m_map.count(name) != 0;
+}
+
+void Dictionary::setString(const char * name, const char * value)
+{
+	m_map[name] = value;
+}
+
+void Dictionary::setInt(const char * name, int value)
+{
+	char text[32];
+	sprintf(text, "%d", value);
+	setString(name, text);
+}
+
+std::string Dictionary::getString(const char * name, const char * _default) const
+{
+	Map::const_iterator i = m_map.find(name);
+	if (i != m_map.end())
+		return i->second;
+	else
+		return _default;
+}
+
+int Dictionary::getInt(const char * name, int _default) const
+{
+	Map::const_iterator i = m_map.find(name);
+	if (i != m_map.end())
+		return atoi(i->second.c_str());
+	else
+		return _default;
+}
+
 // -----
 
 Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * spritesheet)
 {
 	// drawing
-	m_texture = &g_textureCache.findOrCreate(filename);
-	m_pivotX = pivotX;
-	m_pivotY = pivotY;
-	m_positionX = 0.f;
-	m_positionY = 0.f;
-	m_angle = 0.f;
-	m_scaleX = 1.f;
-	m_scaleY = 1.f;
-	m_blendMode = BLEND_ALPHA;
-	m_flipX = false;
-	m_flipY = false;
+	this->pivotX = pivotX;
+	this->pivotY = pivotY;
+	x = 0.f;
+	y = 0.f;
+	angle = 0.f;
+	scale = 1.f;
+	blend = BLEND_ALPHA;
+	flipX = false;
+	flipY = false;
 	
 	// animation
 	std::string sheetFilename;
@@ -325,6 +360,9 @@ Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * s
 	m_animFrame = 0.f;
 	m_animSpeed = 1.f;
 	
+	// texture
+	m_texture = &g_textureCache.findOrCreate(filename, m_anim->m_gridSize[0], m_anim->m_gridSize[1]);
+	
 	framework.registerSprite(this);
 }
 
@@ -335,12 +373,12 @@ Sprite::~Sprite()
 
 void Sprite::draw()
 {
-	drawEx(m_positionX, m_positionY, m_angle, m_scaleX, m_blendMode);
+	drawEx(x, y, angle, scale, blend);
 }
 
 void Sprite::drawEx(float x, float y, float angle, float scale, BLEND_MODE blendMode)
 {
-	if (m_texture->texture)
+	if (m_texture->textures)
 	{
 		setBlend(blendMode);
 		
@@ -349,10 +387,7 @@ void Sprite::drawEx(float x, float y, float angle, float scale, BLEND_MODE blend
 			glTranslatef(x, y, 0.f);
 			glScalef(scale, scale, 1.f);
 			glRotatef(angle, 0.f, 0.f, 1.f);
-			glTranslatef(-m_pivotX, -m_pivotY, 0.f);
-			
-			glBindTexture(GL_TEXTURE_2D, m_texture->texture);
-			glEnable(GL_TEXTURE_2D);
+			glTranslatef(-pivotX, -pivotY, 0.f);
 			
 			int cellIndex;
 			
@@ -367,23 +402,20 @@ void Sprite::drawEx(float x, float y, float angle, float scale, BLEND_MODE blend
 				cellIndex = 0;
 			}
 			
-			const int cellX = cellIndex % m_anim->m_animCellCount[0];
-			const int cellY = cellIndex / m_anim->m_animCellCount[0];
+			fassert(cellIndex >= 0 && cellIndex < (m_anim->m_gridSize[0] * m_anim->m_gridSize[1]));
 			
-			const float tx1 = (cellX + 0 + 0.01f) / float(m_anim->m_animCellCount[0]);
-			const float ty1 = (cellY + 0 + 0.01f) / float(m_anim->m_animCellCount[1]);
-			const float tx2 = (cellX + 1 - 0.01f) / float(m_anim->m_animCellCount[0]);
-			const float ty2 = (cellY + 1 - 0.01f) / float(m_anim->m_animCellCount[1]);
+			glBindTexture(GL_TEXTURE_2D, m_texture->textures[cellIndex]);
+			glEnable(GL_TEXTURE_2D);
 			
-			const int rsx = m_texture->sx / m_anim->m_animCellCount[0];
-			const int rsy = m_texture->sy / m_anim->m_animCellCount[1];
+			const int rsx = m_texture->sx / m_anim->m_gridSize[0];
+			const int rsy = m_texture->sy / m_anim->m_gridSize[1];
 			
 			glBegin(GL_QUADS);
 			{
-		 		glTexCoord2f(tx1, ty1); glVertex2f(0.f, 0.f);
-		 		glTexCoord2f(tx2, ty1); glVertex2f(rsx, 0.f);
-		 		glTexCoord2f(tx2, ty2); glVertex2f(rsx, rsy);
-		 		glTexCoord2f(tx1, ty2); glVertex2f(0.f, rsy);
+		 		glTexCoord2f(0.f, 0.f); glVertex2f(0.f, 0.f);
+		 		glTexCoord2f(1.f, 0.f); glVertex2f(rsx, 0.f);
+		 		glTexCoord2f(1.f, 1.f); glVertex2f(rsx, rsy);
+		 		glTexCoord2f(0.f, 1.f); glVertex2f(0.f, rsy);
 			}
 			glEnd();
 			
@@ -391,34 +423,6 @@ void Sprite::drawEx(float x, float y, float angle, float scale, BLEND_MODE blend
 		}
 		glPopMatrix();
 	}
-}
-
-void Sprite::setPosition(float x, float y)
-{
-	m_positionX = x;
-	m_positionY = y;
-}
-
-void Sprite::setAngle(float angle)
-{
-	m_angle = angle;
-}
-
-void Sprite::setScale(float scale)
-{
-	m_scaleX = scale;
-	m_scaleY = scale;
-}
-
-void Sprite::setBlend(BLEND_MODE blendMode)
-{
-	m_blendMode = blendMode;
-}
-
-void Sprite::setFlip(bool flipX, bool flipY)
-{
-	m_flipX = flipX;
-	m_flipY = flipY;
 }
 
 void Sprite::startAnim(const char * name, int frame)
@@ -491,16 +495,19 @@ void Sprite::updateAnimationSegment()
 		
 		if (!m_animSegment)
 		{
-			log("unable to find anim segment for %s", m_animSegmentName.c_str());
+			log("unable to find animation: %s", m_animSegmentName.c_str());
 			m_animFrame = 0.f;
 		}
 		else
 		{
 			AnimCacheElem::Anim * anim = reinterpret_cast<AnimCacheElem::Anim*>(m_animSegment);
 			
-			m_pivotX = anim->pivot[0];
-			m_pivotY = anim->pivot[1];
+			this->pivotX = anim->pivot[0];
+			this->pivotY = anim->pivot[1];
 		}
+		
+		// recache texture, since the animation grid size may have changed
+		m_texture = &g_textureCache.findOrCreate(m_texture->name.c_str(), m_anim->m_gridSize[0], m_anim->m_gridSize[1]);
 	}
 }
 
@@ -550,8 +557,8 @@ void Sprite::processAnimationTriggersForFrame(int frame, int event)
 			//log("event == this->event");
 			
 			Dictionary args = trigger.args;
-			args.setInt("x", args.getInt("x", 0) + m_positionX);
-			args.setInt("y", args.getInt("y", 0) + m_positionY);
+			args.setInt("x", args.getInt("x", 0) + this->x);
+			args.setInt("y", args.getInt("y", 0) + this->y);
 			
 			framework.processAction(trigger.action, args);
 		}
@@ -695,21 +702,21 @@ void setBlend(BLEND_MODE blendMode)
 		break;
 	case BLEND_ALPHA:
 		glEnable(GL_BLEND);
+		glBlendEquation(GL_FUNC_ADD);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		//assert(false); // todo: blend op
 		break;
 	case BLEND_ADD:
 		glEnable(GL_BLEND);
+		glBlendEquation(GL_FUNC_ADD);
 		glBlendFunc(GL_ONE, GL_ONE);
-		assert(false);
 		break;
 	case BLEND_SUBTRACT:
 		glEnable(GL_BLEND);
+		glBlendEquation(GL_FUNC_SUBTRACT);
 		glBlendFunc(GL_ONE, GL_ONE);
-		assert(false);
 		break;
 	default:
-		assert(false);
+		fassert(false);
 		break;
 	}
 }

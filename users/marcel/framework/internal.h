@@ -1,13 +1,16 @@
 #pragma once
 
-#include <OpenAL/al.h>
+#include <assert.h>
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include <map>
+#include <OpenAL/al.h>
 #include <SDL/SDL.h>
 #include <SDL/SDL_opengl.h>
 #include <string>
 #include "framework.h"
+
+#define fassert assert
 
 class Globals
 {
@@ -34,26 +37,46 @@ public:
 class TextureCacheElem
 {
 public:
-	GLuint texture;
+	std::string name;
+	GLuint * textures;
 	int sx;
 	int sy;
+	int gridSx;
+	int gridSy;
 	
 	TextureCacheElem();
 	void free();
-	void load(const char * filename);
+	void load(const char * filename, int gridSx, int gridSy);
 };
 
 class TextureCache
 {
 public:
-	typedef std::string Key;
+	class Key
+	{
+	public:
+		std::string name;
+		int gridSx;
+		int gridSy;
+		
+		inline bool operator<(const Key & other) const
+		{
+			if (name != other.name)
+				return name < other.name;
+			if (gridSx != other.gridSx)
+				return gridSx < other.gridSx;
+			if (gridSy != other.gridSy)
+				return gridSy < other.gridSy;
+			return false;
+		}
+	};
 	typedef std::map<Key, TextureCacheElem> Map;
 	
 	Map m_map;
 	
 	void clear();
 	void reload();
-	TextureCacheElem & findOrCreate(const char * name);
+	TextureCacheElem & findOrCreate(const char * name, int gridSx, int gridSy);
 };
 
 //
@@ -99,7 +122,7 @@ public:
 	
 	typedef std::map<std::string, Anim> AnimMap;
 	
-	int m_animCellCount[2];
+	int m_gridSize[2];
 	int m_pivot[2];
 	AnimMap m_animMap;
 	

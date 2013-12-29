@@ -13,23 +13,31 @@ GlyphCache g_glyphCache;
 	
 TextureCacheElem::TextureCacheElem()
 {
-	texture = 0;
+	textures = 0;
 	sx = sy = 0;
+	gridSx = gridSy = 0;
 }
 
 void TextureCacheElem::free()
 {
-	if (texture != 0)
+	if (textures != 0)
 	{
-		glDeleteTextures(1, &texture);
-		texture = 0;
+		const int numTextures = gridSx * gridSy;
+		glDeleteTextures(numTextures, textures);
+		delete [] textures;
+		
+		name.clear();
+		textures = 0;
 		sx = sy = 0;
+		gridSx = gridSy = 0;
 	}
 }
 
-void TextureCacheElem::load(const char * filename)
+void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 {
 	free();
+	
+	name = filename;
 	
 	ImageData * imageData = loadImage(filename);
 	
@@ -39,51 +47,84 @@ void TextureCacheElem::load(const char * filename)
 	}
 	else
 	{
-		glGenTextures(1, &texture);
-		
-		if (texture != 0)
+		if ((imageData->sx % gridSx) != 0 || (imageData->sy % gridSy) != 0)
 		{
-			// capture current OpenGL states before we change them
+			logError("image size (%d, %d) must be a multiple of the grid size (%d, %d)",
+				imageData->sx, imageData->sy, gridSx, gridSy);
+		}
+		else
+		{
+			const int numTextures = gridSx * gridSy;
+			const int cellSx = imageData->sx / gridSx;
+			const int cellSy = imageData->sy / gridSy;
 			
-			GLuint restoreTexture;
-			glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-			GLint restoreUnpack;
-			glGetIntegerv(GL_UNPACK_ALIGNMENT, &restoreUnpack);
+			textures = new GLuint[numTextures];
 			
-			// copy image data
-						
-			glBindTexture(GL_TEXTURE_2D, texture);
-			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-			glTexImage2D(
-				GL_TEXTURE_2D,
-				0,
-				GL_RGBA,
-				imageData->sx,
-				imageData->sy,
-				0,
-				GL_RGBA,
-				GL_UNSIGNED_BYTE,
-				imageData->imageData);
+			glGenTextures(numTextures, textures);
 			
-		#if 1
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		#else
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		#endif
-			
-			// restore previous OpenGL states
-			
-			glBindTexture(GL_TEXTURE_2D, restoreTexture);
-			glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpack);
-			
-			sx = imageData->sx;
-			sy = imageData->sy;
+			for (int i = 0; i < numTextures; ++i)
+			{
+				fassert(textures[i] != 0);
+				
+				if (textures[i] != 0)
+				{
+					const int cellX = i % gridSx;
+					const int cellY = i / gridSx;
+					const int sourceX = cellX * cellSx;
+					const int sourceY = cellY * cellSy;
+					const int sourceOffset = sourceX + sourceY * imageData->sx;
+					
+					// capture current OpenGL states before we change them
+					
+					GLuint restoreTexture;
+					glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+					GLint restoreUnpackAlignment;
+					glGetIntegerv(GL_UNPACK_ALIGNMENT, &restoreUnpackAlignment);
+					GLint restoreUnpackRowLength;
+					glGetIntegerv(GL_UNPACK_ROW_LENGTH, &restoreUnpackRowLength);
+					
+					// copy image data
+					
+					const void * source = ((int*)imageData->imageData) + sourceOffset;
+					
+					glBindTexture(GL_TEXTURE_2D, textures[i]);
+					glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+					glPixelStorei(GL_UNPACK_ROW_LENGTH, imageData->sx);
+					glTexImage2D(
+						GL_TEXTURE_2D,
+						0,
+						GL_RGBA,
+						cellSx,
+						cellSy,
+						0,
+						GL_RGBA,
+						GL_UNSIGNED_BYTE,
+						source);
+					
+				#if 1
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+				#else
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				#endif
+					
+					// restore previous OpenGL states
+					
+					glBindTexture(GL_TEXTURE_2D, restoreTexture);
+					glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpackAlignment);
+					glPixelStorei(GL_UNPACK_ROW_LENGTH, restoreUnpackRowLength);
+				}
+				
+				this->sx = imageData->sx;
+				this->sy = imageData->sy;
+				this->gridSx = gridSx;
+				this->gridSy = gridSy;
+			}
 			
 			log("loaded %s", filename);
 		}
@@ -106,13 +147,16 @@ void TextureCache::reload()
 {
 	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
 	{
-		i->second.load(i->first.c_str());
+		i->second.load(i->first.name.c_str(), i->first.gridSx, i->first.gridSy);
 	}
 }
 
-TextureCacheElem & TextureCache::findOrCreate(const char * name)
+TextureCacheElem & TextureCache::findOrCreate(const char * name, int gridSx, int gridSy)
 {
-	Key key = name;
+	Key key;
+	key.name = name;
+	key.gridSx = gridSx;
+	key.gridSy = gridSy;
 	
 	Map::iterator i = m_map.find(key);
 	
@@ -124,7 +168,7 @@ TextureCacheElem & TextureCache::findOrCreate(const char * name)
 	{
 		TextureCacheElem elem;
 		
-		elem.load(name);
+		elem.load(name, gridSx, gridSy);
 		
 		i = m_map.insert(Map::value_type(key, elem)).first;
 		
@@ -141,8 +185,8 @@ AnimCacheElem::AnimCacheElem()
 
 void AnimCacheElem::free()
 {
-	m_animCellCount[0] = m_animCellCount[1] = 1;
-	
+	m_gridSize[0] = m_gridSize[1] = 1;
+	m_pivot[0] = m_pivot[1] = 0;
 	m_animMap.clear();
 }
 
@@ -182,7 +226,7 @@ void AnimCacheElem::load(const char * filename)
 	
 	if (!r.open(filename))
 	{
-		//logError("failed to open %s", filename);
+		//logError("%s: failed to open file!", filename);
 	}
 	else
 	{	
@@ -205,7 +249,7 @@ void AnimCacheElem::load(const char * filename)
 				
 			if (parts.size() == 1)
 			{
-				logError("missing parameters: %s (%s)", line.c_str(), parts[0].c_str());
+				logError("%s: missing parameters: %s (%s)", filename, line.c_str(), parts[0].c_str());
 				continue;
 			}
 			
@@ -218,7 +262,7 @@ void AnimCacheElem::load(const char * filename)
 				
 				if (separator == std::string::npos)
 				{
-					logError("incorrect key:value syntax: %s (%s)", line.c_str(), parts[i].c_str());
+					logError("%s: incorrect key:value syntax: %s (%s)", filename, line.c_str(), parts[i].c_str());
 					continue;
 				}
 				
@@ -227,17 +271,15 @@ void AnimCacheElem::load(const char * filename)
 				
 				if (key.size() == 0 || value.size() == 0)
 				{
-					logError("incorrect key:value syntax: %s (%s)", line.c_str(), parts[i].c_str());
+					logError("%s: incorrect key:value syntax: %s (%s)", filename, line.c_str(), parts[i].c_str());
 					continue;
 				}
 				
 				if (args.contains(key.c_str()))
 				{
-					logError("duplicate key: %s (%s)", line.c_str(), key.c_str());
+					logError("%s: duplicate key: %s (%s)", filename, line.c_str(), key.c_str());
 					continue;
 				}
-				
-				//log("added: %s:%s", key.c_str(), value.c_str());
 				
 				args.setString(key.c_str(), value.c_str());
 			}
@@ -248,75 +290,100 @@ void AnimCacheElem::load(const char * filename)
 			
 			if (section == "sheet")
 			{
-				m_animCellCount[0] = args.getInt("grid_sx", 1);
-				m_animCellCount[1] = args.getInt("grid_sy", 1);
+				const int gridSx = args.getInt("grid_sx", 1);
+				const int gridSy = args.getInt("grid_sy", 1);
+				if (gridSx <= 0 || gridSy <= 0)
+				{
+					logError("%s: grid size must be > 0: %s", filename, line.c_str());
+					continue;
+				}
+				m_gridSize[0] = gridSx;
+				m_gridSize[1] = gridSy;
 				m_pivot[0] = args.getInt("pivot_x", 0);
 				m_pivot[1] = args.getInt("pivot_y", 0);
 			}
 			else if (section == "animation")
 			{
+				currentAnim = 0;
+				
 				Anim anim;
-				anim.name = args.getString("name", "(noname)");
+				anim.name = args.getString("name", "");
+				if (anim.name.empty())
+				{
+					logError("%s: name not set: %s", filename, line.c_str());
+					continue;
+				}
 				const int gridX = args.getInt("grid_x", 0);
 				const int gridY = args.getInt("grid_y", 0);
-				anim.firstCell = gridX + gridY * m_animCellCount[0];
+				if (gridX < 0 || gridY < 0)
+				{
+					logError("%s: grid_x and grid_y must be >= 0: %s", filename, line.c_str());
+					continue;
+				}
+				anim.firstCell = gridX + gridY * m_gridSize[0];
 				anim.numFrames = args.getInt("frames", 1);
+				const int lastCell = anim.firstCell + anim.numFrames;
+				if (lastCell > m_gridSize[0] * m_gridSize[1])
+				{
+					logError("%s: animation lies (partially or completely) outside the grid: %s", filename, line.c_str());
+					continue;
+				}
 				anim.frameRate = args.getInt("rate", 1);
+				if (anim.frameRate <= 0)
+				{
+					logError("%s: frame rate must be >= 1: %s", filename, line.c_str());
+					continue;
+				}
 				anim.pivot[0] = args.getInt("pivot_x", m_pivot[0]);
 				anim.pivot[1] = args.getInt("pivot_y", m_pivot[1]);
 				anim.loop = args.getInt("loop", 1) != 0;
 				anim.frameTriggers.resize(anim.numFrames);
+				
 				currentAnim = &m_animMap.insert(AnimMap::value_type(anim.name, anim)).first->second;
 			}
 			else if (section == "trigger")
 			{
 				if (currentAnim == 0)
 				{
-					logError("cannot add trigger when no animation defined yet");
+					logError("%s: must first define an animation before adding triggers to it! %s", filename, line.c_str());
+					continue;
 				}
+				
+				const int frame = args.getInt("frame", 0);
+				
+				if (frame < 0 || frame >= currentAnim->numFrames)
+				{
+					logWarning("%s: frame is not a key frame within the animation: %s", filename, line.c_str());
+					continue;
+				}
+				
+				const std::string event = args.getString("on", "enter");
+				const std::string action = args.getString("action", "");
+								
+				AnimTrigger::Event eventEnum;
+				
+				if (event == "enter")
+					eventEnum = AnimTrigger::OnEnter;
+				else if (event == "leave")
+					eventEnum = AnimTrigger::OnLeave;
 				else
 				{
-					const int frame = args.getInt("frame", 0);
-					const std::string event = args.getString("on", "enter");
-					const std::string action = args.getString("action", "");
-					
-					if (frame >= currentAnim->numFrames)
-					{
-						logError("value for 'frame' is out of range: %s", line.c_str());
-					}
-					else
-					{
-						bool ok = true;
-						
-						AnimTrigger::Event eventEnum;
-						
-						if (event == "enter")
-							eventEnum = AnimTrigger::OnEnter;
-						else if (event == "leave")
-							eventEnum = AnimTrigger::OnLeave;
-						else
-						{
-							logError("invalid value for 'on", line.c_str());
-							ok = false;
-						}
-						
-						if (ok)
-						{
-							//log("added frame trigger. frame=%d, on=%s, action=%s", frame, event.c_str(), action.c_str());
-							
-							AnimTrigger trigger;
-							trigger.event = eventEnum;
-							trigger.action = action;
-							trigger.args = args;
-							
-							currentAnim->frameTriggers[frame].push_back(trigger);
-						}
-					}
+					logError("%s: invalid value for 'on': %s", filename, line.c_str());
+					continue;
 				}
+				
+				//log("added frame trigger. frame=%d, on=%s, action=%s", frame, event.c_str(), action.c_str());
+				
+				AnimTrigger trigger;
+				trigger.event = eventEnum;
+				trigger.action = action;
+				trigger.args = args;
+				
+				currentAnim->frameTriggers[frame].push_back(trigger);
 			}
 			else
 			{
-				logError("unknown section: %s (%s)", line.c_str(), section.c_str());
+				logError("%s: unknown section: %s (%s)", filename, line.c_str(), section.c_str());
 			}
 		}
 	}
@@ -394,46 +461,57 @@ void SoundCacheElem::load(const char * filename)
 	
 	if (soundData != 0)
 	{
-		alGenBuffers(1, &buffer);
-		g_soundPlayer.checkError();
+		ALenum bufferFormat = (ALenum)-1;
 		
-		if (buffer != 0)
+		if (soundData->channelCount == 1)
 		{
-			ALenum bufferFormat;
+			if (soundData->channelSize == 1)
+				bufferFormat = AL_FORMAT_MONO8;
+			else if (soundData->channelSize == 2)
+				bufferFormat = AL_FORMAT_MONO16;
+		}
+		else if (soundData->channelCount == 2)
+		{
+			if (soundData->channelSize == 1)
+				bufferFormat = AL_FORMAT_STEREO8;
+			else if (soundData->channelSize == 2)
+				bufferFormat = AL_FORMAT_STEREO16;
+		}
+		
+		if (bufferFormat != -1)
+		{
+			alGenBuffers(1, &buffer);
+			g_soundPlayer.checkError();
 			
-			if (soundData->channelCount == 1)
+			if (buffer != 0)
 			{
-				if (soundData->channelSize == 1)
-					bufferFormat = AL_FORMAT_MONO8;
-				else
-					bufferFormat = AL_FORMAT_MONO16;
+				ALuint bufferSize = soundData->sampleCount * soundData->channelCount * soundData->channelSize;
+				ALuint bufferSampleRate = soundData->sampleRate;
+				
+				log("%s: buffer=%u, bufferFormat=%d, samleData=%p, bufferSize=%d, sampleRate=%d",
+					filename,
+					buffer,
+					bufferFormat,
+					soundData->sampleData,
+					bufferSize,
+					soundData->sampleRate);
+	
+				alBufferData(buffer, bufferFormat, soundData->sampleData, bufferSize, bufferSampleRate);
+				g_soundPlayer.checkError();
+				
+				log("loaded %s", filename);
 			}
 			else
 			{
-				if (soundData->channelSize == 1)
-					bufferFormat = AL_FORMAT_STEREO8;
-				else
-					bufferFormat = AL_FORMAT_STEREO16;
+				logError("%s: failed to create OpenAL buffer", filename);
 			}
-			
-			ALuint bufferSize = soundData->sampleCount * soundData->channelCount * soundData->channelSize;
-			ALuint bufferSampleRate = soundData->sampleRate;
-			
-			log("WAVE: buffer=%u, bufferFormat=%d, samleData=%p, bufferSize=%d, sampleRate=%d",
-				buffer,
-				bufferFormat,
-				soundData->sampleData,
-				bufferSize,
-				soundData->sampleRate);
-
-			alBufferData(buffer, bufferFormat, soundData->sampleData, bufferSize, bufferSampleRate);
-			g_soundPlayer.checkError();
-			
-			log("loaded %s", filename);
 		}
 		else
 		{
-			logError("failed to create OpenAL buffer");
+			logError("%s: unknown channel config: channelCount=%d, channelSize=%d",
+				filename,
+				soundData->channelCount,
+				soundData->channelSize);
 		}
 		
 		delete soundData;
@@ -510,7 +588,7 @@ void FontCacheElem::load(const char * filename)
 	
 	if (FT_New_Face(g_globals.g_freeType, filename, 0, &face) != 0)
 	{
-		logError("unable to open font");
+		logError("%s: unable to open font", filename);
 		face = 0;
 	}
 	else
@@ -642,7 +720,7 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, char c)
 		
 		i = m_map.insert(Map::value_type(key, elem)).first;
 		
-		//printf("added glyph cache element. face=%p, size=%d, character=%c, texture=%u. count=%d\n", face, size, c, elem.texture, (int)m_map.size());
+		//log("added glyph cache element. face=%p, size=%d, character=%c, texture=%u. count=%d\n", face, size, c, elem.texture, (int)m_map.size());
 		
 		return i->second;
 	}
