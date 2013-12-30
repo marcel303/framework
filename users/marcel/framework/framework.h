@@ -27,7 +27,8 @@ enum BUTTON
 enum ANALOG
 {
 	ANALOG_X,
-	ANALOG_Y
+	ANALOG_Y,
+	ANALOG_MAX
 };
 
 enum GAMEPAD
@@ -36,12 +37,17 @@ enum GAMEPAD
 	DPAD_RIGHT,
 	DPAD_UP,
 	DPAD_DOWN,
+	GAMEPAD_A,
+	GAMEPAD_B,
+	GAMEPAD_X,
+	GAMEPAD_Y,
 	GAMEPAD_L1,
 	GAMEPAD_L2,
 	GAMEPAD_R1,
 	GAMEPAD_R2,
-	GAMEPAD_MENU1,
-	GAMEPAD_MENU2
+	GAMEPAD_START,
+	GAMEPAD_BACK,
+	GAMEPAD_MAX
 };
 
 //
@@ -236,15 +242,14 @@ public:
 
 class Gamepad
 {
+	float m_analog[2][ANALOG_MAX];
+
 public:
-	Gamepad()
-	{
-		isConnected = false;
-	}
+	Gamepad();
 	
 	bool isConnected;
-	bool isDown(GAMEPAD button);
-	float getAnalog(int stick, ANALOG analog);
+	bool isDown[GAMEPAD_MAX];
+	float getAnalog(int stick, ANALOG analog, float scale = 1.f) const;
 };
 
 //

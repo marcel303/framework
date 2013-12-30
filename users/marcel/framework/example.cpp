@@ -123,9 +123,9 @@ int main(int argc, char * argv[])
 		{
 			if (gamepad[i].isConnected)
 			{
-				if (gamepad[i].isDown(DPAD_LEFT))
+				if (gamepad[i].isDown[DPAD_LEFT])
 					x--;
-				if (gamepad[i].isDown(DPAD_RIGHT))
+				if (gamepad[i].isDown[DPAD_RIGHT])
 					x--;
 			}
 		}

@@ -176,6 +176,55 @@ void Framework::process()
 		}
 	}
 	
+#ifdef __WIN32__
+	// use XInput to poll gamepad state
+	for (int i = 0; i < MAX_GAMEPAD; ++i)
+	{
+		XINPUT_STATE state;
+		ZeroMemory(&state, sizeof(XINPUT_STATE));
+		DWORD result = XInputGetState(i, &state);
+
+        if (result == ERROR_SUCCESS)
+        {
+        	gamepad[i].isConnected = true;
+        	
+        	const Gamepad & g = state.Gamepad;
+        	
+       	#define APPLY_DEADZONE(v, t) (std::abs(v) <= t ? 0.f : clamp((std::abs(v) - t) * std::sign(v) / float(32767 - t), -1.f, +1.f))
+       	
+       		float ** analog = gamepad[i].m_analog;
+       		
+			analog[0][ANALOG_X] = APPLY_DEADZONE(g.sThumbLX, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
+			analog[0][ANALOG_Y] = APPLY_DEADZONE(g.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
+			analog[1][ANALOG_X] = APPLY_DEADZONE(g.sThumbRX, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
+			analog[1][ANALOG_Y] = APPLY_DEADZONE(g.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
+			
+		#undef APPLY_DEADZONE
+			
+			const int buttons = g.wButtons;
+			bool * isDown = gamepad[i].isDown;
+			
+			isDown[DPAD_LEFT]     = buttons & XINPUT_GAMEPAD_DPAD_LEFT;
+			isDown[DPAD_RIGHT]    = buttons & XINPUT_GAMEPAD_DPAD_RIGHT;
+			isDown[DPAD_UP]       = buttons & XINPUT_GAMEPAD_DPAD_UP;
+			isDown[DPAD_DOWN]     = buttons & XINPUT_GAMEPAD_DPAD_DOWN;
+			isDown[GAMEPAD_A]     = buttons & XINPUT_GAMEPAD_A;
+			isDown[GAMEPAD_B]     = buttons & XINPUT_GAMEPAD_B;
+			isDown[GAMEPAD_X]     = buttons & XINPUT_GAMEPAD_X;
+			isDown[GAMEPAD_Y]     = buttons & XINPUT_GAMEPAD_Y;
+			isDown[GAMEPAD_L1]    = buttons & XINPUT_GAMEPAD_LEFT_SHOULDER;
+			isDown[GAMEPAD_R1]    = buttons & XINPUT_GAMEPAD_RIGHT_SHOULDER;
+			isDown[GAMEPAD_L2]    = g.bLeftTrigger  > XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
+			isDown[GAMEPAD_R2]    = g.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
+			isDown[GAMEPAD_START] = buttons & XINPUT_GAMEPAD_START;
+			isDown[GAMEPAD_BACK]  = buttons & XINPUT_GAMEPAD_BACK;
+        }
+        else
+        {
+        	memset(&gamepad[i], 0, sizeof(Gamepad));
+        }
+#endif
+	
 	doReload &= keyboard.isDown(SDLK_r);
 	
 	if (doReload)
@@ -729,14 +778,18 @@ bool Keyboard::isDown(SDLKey key)
 
 // -----
 
-bool Gamepad::isDown(GAMEPAD button)
+Gamepad::Gamepad()
 {
-	return false;
+	memset(this, 0, sizeof(Gamepad));
 }
 
-float Gamepad::getAnalog(int stick, ANALOG analog)
+float Gamepad::getAnalog(int stick, ANALOG analog, float scale) const
 {
-	return 0.f;
+	fassert(stick >= 0 && stick <= 1);
+	if (stick >= 0 && stick <= 1)
+		return m_analog[stick][analog] * scale;
+	else
+		return 0.f;
 }
 
 // -----
