@@ -12,7 +12,7 @@ SoundData * loadSound(const char * filename)
 {
 	FileReader r;
 	
-	if (!r.open(filename))
+	if (!r.open(filename, false))
 	{
 		logError("failed to open %s", filename);
 		return 0;

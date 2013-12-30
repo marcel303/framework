@@ -19,6 +19,7 @@ static Sprite * createRandomSprite()
 	sprite->x = rand() % 1920;
 	sprite->y = rand() % 1280;
 	sprite->scale = 4;
+	sprite->animSpeed = 1.f + (rand() % 100) / 100.f;
 	
 	return sprite;
 }
@@ -48,7 +49,8 @@ int main(int argc, char * argv[])
 	background.startAnim("default");
 	
 	Sprite sprite("sprite.png");
-	//sprite.startAnim("walk");
+	sprite.startAnim("walk-l");
+	sprite.pauseAnim();
 	
 	const int numSprites = 100;
 	Sprite * sprites[numSprites];
@@ -80,10 +82,7 @@ int main(int argc, char * argv[])
 			}
 			else
 			{
-				Sound sound("player/up.wav");
-				sound.setVolume(50);
-				sound.setSpeed(200);
-				sound.play();
+				Sound("test.wav").play(50, 200);
 			}
 		}
 		
@@ -122,7 +121,7 @@ int main(int argc, char * argv[])
 
 		for (int i = 0; i < 4; ++i)
 		{
-			if (gamepad[i].isConnected())
+			if (gamepad[i].isConnected)
 			{
 				if (gamepad[i].isDown(DPAD_LEFT))
 					x--;
@@ -138,25 +137,34 @@ int main(int argc, char * argv[])
 			setColor(255, 255, 255);
 			background.drawEx(1920 - 132, 132, 0, 2);
 			
-			setColor(255, 191, 127, 255);
 			sortSprites(sprites, numSprites);
 			for (int i = 0; i < numSprites; ++i)
 			{
-				char dirName = sprites[i]->getAnim()[1];
+				const char dirName = sprites[i]->getAnim()[1];
 				int dx = 0;
 				int dy = 0;
 				if (dirName == 'l') dx = -1;
 				if (dirName == 'r') dx = +1;
 				if (dirName == 'u') dy = -1;
 				if (dirName == 'd') dy = +1;
-				sprites[i]->x += dx;
-				sprites[i]->y += dy;
-				sprites[i]->draw();
+				sprites[i]->x += dx * sprites[i]->animSpeed * 0.7f;
+				sprites[i]->y += dy * sprites[i]->animSpeed * 0.7f;
+				
+				sprites[i]->animSpeed = std::max(0.f, sprites[i]->animSpeed - framework.timeStep * 0.1f);
 				
 				if ((rand() % 100) == 0)
 					sprites[i]->angle = (rand() % 40) - 20;
 				if ((rand() % 300) == 0)
 					sprites[i]->scale = ((rand() % 200) + 50) / 100.f * 4.f;
+				
+				setColor(255, 191, 127, 2048 * sprites[i]->animSpeed);
+				sprites[i]->draw();
+				
+				if (sprites[i]->animSpeed == 0.f)
+				{
+					delete sprites[i];
+					sprites[i] = createRandomSprite();
+				}
 			}
 			
 			setColor(255, 255, 255, 255);
@@ -166,8 +174,8 @@ int main(int argc, char * argv[])
 			setFont(font);
 			
 			setColor(0, 0, 0, 255);
-			drawText(mouse.getX(), mouse.getY(), 28, 0, 0, "PROTO[%d]TYPE", rand() % 10);
-			drawText(mouse.getX(), mouse.getY() + 30, 20, 0, 0, "(demo only)", rand() % 10);
+			drawText(mouse.x, mouse.y, 28, 0, 0, "PROTO[%d]TYPE", rand() % 10);
+			drawText(mouse.x, mouse.y + 30, 20, 0, 0, "(demo only)", rand() % 10);
 			
 			setColor(255, 0, 0, 255);
 			//drawLine(0, 0, 1920, 1280);

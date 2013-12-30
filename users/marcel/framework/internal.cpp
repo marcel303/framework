@@ -224,7 +224,7 @@ void AnimCacheElem::load(const char * filename)
 	
 	FileReader r;
 	
-	if (!r.open(filename))
+	if (!r.open(filename, true))
 	{
 		//logError("%s: failed to open file!", filename);
 	}

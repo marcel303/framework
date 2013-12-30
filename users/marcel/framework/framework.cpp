@@ -27,11 +27,21 @@ Gamepad gamepad[MAX_GAMEPAD];
 
 // -----
 
+template <typename T>
+static T clamp(T v, T vmin, T vmax)
+{
+	return std::min(std::max(v, vmin), vmax);
+}
+
+// -----
+
 Framework::Framework()
 {
 	m_minification = 1;
 	m_numSoundSources = 32;
 	m_actionHandler = 0;
+	
+	timeStep = 1.f / 60.f;
 }
 
 Framework::~Framework()
@@ -139,9 +149,7 @@ bool Framework::shutdown()
 }
 
 void Framework::process()
-{
-	const float dt = 1.f / 60.f;
-	
+{	
 	bool doReload = !keyboard.isDown(SDLK_r);
 	
 	// poll SDL event queue
@@ -163,8 +171,8 @@ void Framework::process()
 		}
 		else if (e.type == SDL_MOUSEMOTION)
 		{
-			g_globals.g_mouseX = e.motion.x * m_minification;
-			g_globals.g_mouseY = e.motion.y * m_minification;
+			mouse.x = e.motion.x * m_minification;
+			mouse.y = e.motion.y * m_minification;
 		}
 	}
 	
@@ -177,7 +185,7 @@ void Framework::process()
 	
 	for (SpriteSet::iterator i = m_sprites.begin(); i != m_sprites.end(); ++i)
 	{
-		(*i)->updateAnimation(dt);
+		(*i)->updateAnimation(timeStep);
 	}
 }
 
@@ -356,9 +364,10 @@ Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * s
 	m_animVersion = m_anim->getVersion();
 	m_animSegment = 0;
 	m_isAnimActive = false;
-	m_isAnimPaused = false;
-	m_animFrame = 0.f;
-	m_animSpeed = 1.f;
+	animIsPaused = false;
+	m_animFramef = 0.f;
+	m_animFrame = 0;
+	animSpeed = 1.f;
 	
 	// texture
 	m_texture = &g_textureCache.findOrCreate(filename, m_anim->m_gridSize[0], m_anim->m_gridSize[1]);
@@ -385,9 +394,15 @@ void Sprite::drawEx(float x, float y, float angle, float scale, BLEND_MODE blend
 		glPushMatrix();
 		{
 			glTranslatef(x, y, 0.f);
-			glScalef(scale, scale, 1.f);
-			glRotatef(angle, 0.f, 0.f, 1.f);
-			glTranslatef(-pivotX, -pivotY, 0.f);
+			
+			if (scale != 1.f)
+				glScalef(scale, scale, 1.f);
+			if (angle != 0.f)
+				glRotatef(angle, 0.f, 0.f, 1.f);
+			if (flipX || flipY)
+				glScalef(flipX ? -1.f : +1.f, flipY ? -1.f : +1.f, 1.f);
+			if (pivotX != 0.f || pivotY != 0.f)
+				glTranslatef(-pivotX, -pivotY, 0.f);
 			
 			int cellIndex;
 			
@@ -410,6 +425,31 @@ void Sprite::drawEx(float x, float y, float angle, float scale, BLEND_MODE blend
 			const int rsx = m_texture->sx / m_anim->m_gridSize[0];
 			const int rsy = m_texture->sy / m_anim->m_gridSize[1];
 			
+		#if 1
+			const float verts[16] =
+			{
+				0.f, 0.f, 0.f, 1.f,
+				rsx, 0.f, 0.f, 1.f,
+				rsx, rsy, 0.f, 1.f,
+				0.f, rsy, 0.f, 1.f
+			};
+			
+			static const float texs[8] =
+			{
+				0.f, 0.f,
+				1.f, 0.f,
+				1.f, 1.f,
+				0.f, 1.f
+			};
+			
+			glEnableClientState(GL_VERTEX_ARRAY);
+			glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+			glVertexPointer(4, GL_FLOAT, 0, verts);
+			glTexCoordPointer(2, GL_FLOAT, 0, texs);
+			glDrawArrays(GL_QUADS, 0, 4);
+			glDisableClientState(GL_VERTEX_ARRAY);
+			glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		#else
 			glBegin(GL_QUADS);
 			{
 		 		glTexCoord2f(0.f, 0.f); glVertex2f(0.f, 0.f);
@@ -418,8 +458,9 @@ void Sprite::drawEx(float x, float y, float angle, float scale, BLEND_MODE blend
 		 		glTexCoord2f(0.f, 1.f); glVertex2f(0.f, rsy);
 			}
 			glEnd();
+		#endif
 			
-			glDisable(GL_TEXTURE_2D);
+			//glDisable(GL_TEXTURE_2D);
 		}
 		glPopMatrix();
 	}
@@ -428,8 +469,9 @@ void Sprite::drawEx(float x, float y, float angle, float scale, BLEND_MODE blend
 void Sprite::startAnim(const char * name, int frame)
 {
 	m_isAnimActive = true;
-	m_isAnimPaused = false;
+	animIsPaused = false;
 	m_animSegmentName = name;
+	m_animFramef = frame;
 	m_animFrame = frame;
 
 	m_animVersion = -1;
@@ -448,25 +490,24 @@ const std::string & Sprite::getAnim() const
 	return m_animSegmentName;
 }
 
-void Sprite::pauseAnim()
-{
-	m_isAnimPaused = true;
-}
-
-void Sprite::resumeAnim()
-{
-	m_isAnimPaused = false;
-}
-
 void Sprite::setAnimFrame(int frame)
 {
+	fassert(frame >= 0);
+	
 	if (m_animSegment)
 	{
 		AnimCacheElem::Anim * anim = reinterpret_cast<AnimCacheElem::Anim*>(m_animSegment);
 		
-		const int frame1 = getAnimFrame();
-		m_animFrame = frame % anim->numFrames;
-		const int frame2 = getAnimFrame();
+		const int frame1 = m_animFrame;
+		{
+			m_animFramef = frame;
+			
+			if (anim->loop)
+				m_animFrame = frame % anim->numFrames;
+			else
+				m_animFrame = std::min(frame, anim->numFrames - 1);
+		}
+		const int frame2 = m_animFrame;
 		
 		processAnimationFrameChange(frame1, frame2);
 	}
@@ -474,12 +515,7 @@ void Sprite::setAnimFrame(int frame)
 
 int Sprite::getAnimFrame() const
 {
-	return (int)m_animFrame;
-}
-
-void Sprite::setAnimSpeed(float speed)
-{
-	m_animSpeed = speed;
+	return m_animFrame;
 }
 
 void Sprite::updateAnimationSegment()
@@ -496,7 +532,8 @@ void Sprite::updateAnimationSegment()
 		if (!m_animSegment)
 		{
 			log("unable to find animation: %s", m_animSegmentName.c_str());
-			m_animFrame = 0.f;
+			m_animFramef = 0.f;
+			m_animFrame = 0;
 		}
 		else
 		{
@@ -511,17 +548,22 @@ void Sprite::updateAnimationSegment()
 	}
 }
 
-void Sprite::updateAnimation(float dt)
+void Sprite::updateAnimation(float timeStep)
 {
-	if (m_isAnimActive && m_animSegment && !m_isAnimPaused)
+	if (m_isAnimActive && m_animSegment && !animIsPaused)
 	{
 		AnimCacheElem::Anim * anim = reinterpret_cast<AnimCacheElem::Anim*>(m_animSegment);
 		
-		const float step = m_animSpeed * anim->frameRate * dt;
-		
-		const int frame1 = getAnimFrame();
-		m_animFrame += step;
-		const int frame2 = getAnimFrame();
+		const int frame1 = m_animFrame;
+		{
+			const float step = animSpeed * anim->frameRate * timeStep;
+			
+			m_animFramef += step;
+			
+			if (!anim->loop)
+				m_animFrame = std::min((int)m_animFramef, anim->numFrames - 1);
+		}
+		const int frame2 = m_animFrame;
 		
 		for (int frame = frame1; frame < frame2; frame++)
 		{
@@ -530,7 +572,14 @@ void Sprite::updateAnimation(float dt)
 			processAnimationFrameChange(oldFrame, newFrame);
 		}
 		
-		m_animFrame = std::fmod(m_animFrame, anim->numFrames);
+		if (anim->loop)
+		{
+			m_animFramef = std::fmod(m_animFramef, anim->numFrames);
+			m_animFrame = (int)m_animFramef;
+		}
+		
+		//if (m_animSegmentName == "default")
+		//	log("%d (%d)", m_animFrame, anim->numFrames);
 	}
 }
 
@@ -571,10 +620,20 @@ Sound::Sound(const char * filename)
 {
 	m_sound = &g_soundCache.findOrCreate(filename);
 	m_playId = -1;
+	m_volume = 100;
+	m_speed = 100;
 }
 
 void Sound::play(int volume, int speed)
 {
+	if (volume == -1)
+		volume = m_volume;
+	if (speed == -1)
+		speed = m_speed;
+	
+	volume = clamp(volume, 0, 100);
+	speed = std::max(0, speed);
+	
 	stop();
 	
 	if (m_sound->buffer != 0)
@@ -594,6 +653,8 @@ void Sound::stop()
 
 void Sound::setVolume(int volume)
 {
+	m_volume = volume;
+	
 	if (m_playId != -1)
 	{
 		g_soundPlayer.setSoundVolume(m_playId, volume / 100.f);
@@ -602,6 +663,8 @@ void Sound::setVolume(int volume)
 
 void Sound::setSpeed(int speed)
 {
+	m_speed = speed;
+	
 	if (m_playId != -1)
 	{
 		// todo
@@ -644,16 +707,6 @@ Font::Font(const char * filename)
 
 // -----
 
-float Mouse::getX()
-{
-	return g_globals.g_mouseX;
-}
-
-float Mouse::getY()
-{
-	return g_globals.g_mouseY;
-}
-
 bool Mouse::isDown(BUTTON button)
 {
 	switch (button)
@@ -675,11 +728,6 @@ bool Keyboard::isDown(SDLKey key)
 }
 
 // -----
-
-bool Gamepad::isConnected()
-{
-	return false;
-}
 
 bool Gamepad::isDown(GAMEPAD button)
 {
@@ -733,6 +781,11 @@ void setColor(int r, int g, int b, int a)
 
 void setColorf(float r, float g, float b, float a)
 {
+	r = clamp(r, 0.f, 1.f);
+	g = clamp(g, 0.f, 1.f);
+	b = clamp(b, 0.f, 1.f);
+	a = clamp(a, 0.f, 1.f);
+	
 	glColor4f(r, g, b, a);
 }
 

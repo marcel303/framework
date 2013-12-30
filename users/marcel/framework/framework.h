@@ -76,6 +76,8 @@ public:
 	void beginDraw(int r, int g, int b, int a);
 	void endDraw();
 	
+	float timeStep;
+	
 private:
 	typedef std::set<Sprite*> SpriteSet;
 	
@@ -126,12 +128,11 @@ public:
 	// animation
 	void startAnim(const char * anim, int frame = 0);
 	void stopAnim();
+	void pauseAnim() { animIsPaused = true; }
+	void resumeAnim() { animIsPaused = false; }
 	const std::string & getAnim() const;
-	void pauseAnim();
-	void resumeAnim();
 	void setAnimFrame(int frame);
 	int getAnimFrame() const;
-	void setAnimSpeed(float speed);
 	
 	// drawing
 	float pivotX;
@@ -144,6 +145,10 @@ public:
 	bool flipX;
 	bool flipY;
 	
+	// animation
+	float animSpeed;
+	bool animIsPaused;
+	
 private:
 	// drawing
 	class TextureCacheElem * m_texture;
@@ -154,12 +159,11 @@ private:
 	std::string m_animSegmentName;
 	void * m_animSegment;
 	bool m_isAnimActive;
-	bool m_isAnimPaused;
-	float m_animFrame;
-	float m_animSpeed;
+	float m_animFramef;
+	int m_animFrame;
 
 	void updateAnimationSegment();
-	void updateAnimation(float dt);
+	void updateAnimation(float timeStep);
 	void processAnimationFrameChange(int frame1, int frame2);
 	void processAnimationTriggersForFrame(int frame, int event);
 };
@@ -169,7 +173,7 @@ class Sound
 public:
 	Sound(const char * filename);
 	
-	void play(int volume = 100, int speed = 100);
+	void play(int volume = -1, int speed = -1);
 	void stop();
 	void setVolume(int volume);
 	void setSpeed(int speed);
@@ -179,6 +183,8 @@ public:
 private:
 	class SoundCacheElem * m_sound;
 	int m_playId;
+	int m_volume;
+	int m_speed;
 };
 
 class Music
@@ -211,8 +217,14 @@ private:
 class Mouse
 {
 public:
-	float getX();
-	float getY();
+	int x;
+	int y;
+	
+	Mouse()
+	{
+		x = y = 0;
+	}
+	
 	bool isDown(BUTTON button);
 };
 
@@ -225,7 +237,12 @@ public:
 class Gamepad
 {
 public:
-	bool isConnected();
+	Gamepad()
+	{
+		isConnected = false;
+	}
+	
+	bool isConnected;
 	bool isDown(GAMEPAD button);
 	float getAnalog(int stick, ANALOG analog);
 };

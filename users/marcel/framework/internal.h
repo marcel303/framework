@@ -26,8 +26,6 @@ public:
 	BLEND_MODE g_blendMode;
 	Color g_color;
 	FontCacheElem * g_font;
-	int g_mouseX;
-	int g_mouseY;
 	bool g_mouseDown[2];
 	bool g_keyDown[SDLK_LAST];
 };
@@ -247,9 +245,9 @@ public:
 		close();
 	}
 	
-	bool open(const char * filename)
+	bool open(const char * filename, bool textMode)
 	{
-		file = fopen(filename, "rb");
+		file = fopen(filename, textMode ? "rt" : "rb");
 		
 		return file != 0;
 	}
