@@ -173,9 +173,9 @@ int main(int argc, char * argv[])
 			Font font("test.ttf");
 			setFont(font);
 			
-			setColor(0, 0, 0, 255);
-			drawText(mouse.x, mouse.y, 28, 0, 0, "PROTO[%d]TYPE", rand() % 10);
-			drawText(mouse.x, mouse.y + 30, 20, 0, 0, "(demo only)", rand() % 10);
+			setColor(255, 255, 255, 255);
+			drawText(mouse.x, mouse.y, 35, 0, 0, "PROTO[%d]TYPE", rand() % 10);
+			drawText(mouse.x, mouse.y + 40, 20, 0, 0, "(demo only)", rand() % 10);
 			
 			setColor(255, 0, 0, 255);
 			//drawLine(0, 0, 1920, 1280);

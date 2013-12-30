@@ -611,6 +611,8 @@ void Sprite::updateAnimation(float timeStep)
 			
 			if (!anim->loop)
 				m_animFrame = std::min((int)m_animFramef, anim->numFrames - 1);
+			else
+				m_animFrame = (int)m_animFramef;
 		}
 		const int frame2 = m_animFrame;
 		
