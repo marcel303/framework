@@ -187,6 +187,31 @@ void drawLine(float x1, float y1, float x2, float y2)
 	glEnd();
 }
 
+void setColor(int r, int g, int b, int a = 255)
+{
+	glColor4ub(r, g, b, a);
+}
+
+void setColorf(float r, float g, float b, float a = 1.f)
+{
+	glColor4f(r, g, b, a);
+}
+
+void setPos(float x, float y)
+{
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glTranslatef(x, y, 0.f);
+}
+
+void setPosRot(float x, float y, float angle)
+{
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glTranslatef(x, y, 0.f);
+	glRotatef(angle, 0.f, 0.f, 1.f);	
+}
+
 int main(int argc, char * argv[])
 {
 	SDL_Init(SDL_INIT_EVERYTHING);
@@ -288,7 +313,7 @@ int main(int argc, char * argv[])
 		
 		// draw lines
 		
-		glColor4ub(255, 0, 0, 255);
+		setColor(255, 0, 0, 255);
 		drawLine(0.f, 200.f, 600.f, 200.f);
 		drawLine(300.f, 0.f, 300.f, 400.f);
 		
@@ -301,28 +326,19 @@ int main(int argc, char * argv[])
 		
 		for (int i = numLoops - 1; i >= 0; --i)
 		{
-			glPushMatrix();
-			{
-				glTranslatef(300.f, 200.f, 0.f);
-				glRotatef(frameCount + i * 11, 0.f, 0.f, 1.f);
-				glColor4ub(i == 0 ? 191 : 255, 0, 0, 255 - i * 255 / numLoops);
-				drawText(face1, text, 32);
-			}
-			glPopMatrix();
+			setPosRot(300.f, 200.f, frameCount + i * 11);
+			setColor(i == 0 ? 191 : 255, 0, 0, 255 - i * 255 / numLoops);
+			drawText(face1, text, 32);
 		}
 		
-		glColor4ub(0, 0, 0, 127);
+		setPos(0.f, 0.f);
+		setColor(0, 0, 0, 127);
 		drawText(face3, "OpenGL font rendering test app using FreeType", 18);
-		
-		glPushMatrix();
-		{
-			sprintf(text, "(%d, %d)", mouseX, mouseY);
-		
-			glTranslatef(mouseX, mouseY - 24, 0.f);
-			glColor4ub(0, 0, 255, 255);
-			drawText(face2, text, 24);
-		}
-		glPopMatrix();
+
+		sprintf(text, "(%d, %d)", mouseX, mouseY);
+		setPos(mouseX, mouseY - 24);
+		setColor(0, 0, 255, 255);
+		drawText(face2, text, 24);
 		
   		// check for errors
   		
