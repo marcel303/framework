@@ -9,3 +9,5 @@ animation name:walk-d grid_x:3 grid_y:2 frames:3 rate:6 loop:1
 	trigger frame:0 on:enter action:sound sound:test.wav
 animation name:walk-l grid_x:3 grid_y:3 frames:3 rate:6 loop:1
 	trigger frame:0 on:enter action:sound sound:test.wav
+
+animation name:walk-once grid_x:0 grid_y:0 frames:24 rate:30 loop:0

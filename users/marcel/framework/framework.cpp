@@ -24,6 +24,7 @@ Framework framework;
 Mouse mouse;
 Keyboard keyboard;
 Gamepad gamepad[MAX_GAMEPAD];
+Stage stage;
 
 // -----
 
@@ -412,8 +413,9 @@ Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * s
 	m_anim = &g_animCache.findOrCreate(sheetFilename.c_str());
 	m_animVersion = m_anim->getVersion();
 	m_animSegment = 0;
-	m_isAnimActive = false;
+	animIsActive = false;
 	animIsPaused = false;
+	m_isAnimStarted = false;
 	m_animFramef = 0.f;
 	m_animFrame = 0;
 	animSpeed = 1.f;
@@ -517,21 +519,25 @@ void Sprite::drawEx(float x, float y, float angle, float scale, BLEND_MODE blend
 
 void Sprite::startAnim(const char * name, int frame)
 {
-	m_isAnimActive = true;
 	animIsPaused = false;
 	m_animSegmentName = name;
+	m_isAnimStarted = true;
 	m_animFramef = frame;
 	m_animFrame = frame;
 
 	m_animVersion = -1;
 	updateAnimationSegment();
 	
-	processAnimationTriggersForFrame(m_animFrame, AnimCacheElem::AnimTrigger::OnEnter);
+	if (animIsActive)
+	{
+		processAnimationTriggersForFrame(m_animFrame, AnimCacheElem::AnimTrigger::OnEnter);
+	}
 }
 
 void Sprite::stopAnim()
 {
-	m_isAnimActive = false;
+	animIsActive = false;
+	m_isAnimStarted = false;
 }
 
 const std::string & Sprite::getAnim() const
@@ -569,7 +575,7 @@ int Sprite::getAnimFrame() const
 
 void Sprite::updateAnimationSegment()
 {
-	if (m_animVersion != m_anim->getVersion() && !m_animSegmentName.empty())
+	if (m_isAnimStarted && m_animVersion != m_anim->getVersion() && !m_animSegmentName.empty())
 	{
 		m_animVersion = m_anim->getVersion();
 		
@@ -581,6 +587,7 @@ void Sprite::updateAnimationSegment()
 		if (!m_animSegment)
 		{
 			log("unable to find animation: %s", m_animSegmentName.c_str());
+			animIsActive = false;
 			m_animFramef = 0.f;
 			m_animFrame = 0;
 		}
@@ -590,6 +597,8 @@ void Sprite::updateAnimationSegment()
 			
 			this->pivotX = anim->pivot[0];
 			this->pivotY = anim->pivot[1];
+			
+			animIsActive = true;
 		}
 		
 		// recache texture, since the animation grid size may have changed
@@ -599,7 +608,7 @@ void Sprite::updateAnimationSegment()
 
 void Sprite::updateAnimation(float timeStep)
 {
-	if (m_isAnimActive && m_animSegment && !animIsPaused)
+	if (m_isAnimStarted && m_animSegment && !animIsPaused)
 	{
 		AnimCacheElem::Anim * anim = reinterpret_cast<AnimCacheElem::Anim*>(m_animSegment);
 		
@@ -628,6 +637,11 @@ void Sprite::updateAnimation(float timeStep)
 			m_animFramef = std::fmod(m_animFramef, anim->numFrames);
 			m_animFrame = (int)m_animFramef;
 		}
+		else
+		{
+			if (m_animFramef >= anim->numFrames)
+				animIsActive = false;
+		}
 		
 		//if (m_animSegmentName == "default")
 		//	log("%d (%d)", m_animFrame, anim->numFrames);
@@ -636,6 +650,8 @@ void Sprite::updateAnimation(float timeStep)
 
 void Sprite::processAnimationFrameChange(int frame1, int frame2)
 {
+	fassert(animIsActive);
+	
 	if (frame1 != frame2)
 	{
 		// process frame triggers
@@ -646,6 +662,8 @@ void Sprite::processAnimationFrameChange(int frame1, int frame2)
 
 void Sprite::processAnimationTriggersForFrame(int frame, int event)
 {
+	fassert(animIsActive);
+	
 	AnimCacheElem::Anim * anim = reinterpret_cast<AnimCacheElem::Anim*>(m_animSegment);
 		
 	for (size_t i = 0; i < anim->frameTriggers[frame].size(); ++i)
@@ -792,6 +810,113 @@ float Gamepad::getAnalog(int stick, ANALOG analog, float scale) const
 		return m_analog[stick][analog] * scale;
 	else
 		return 0.f;
+}
+
+// -----
+
+StageObject::StageObject()
+{
+	isDead = false;
+	sprite = 0;
+}
+
+StageObject::~StageObject()
+{
+	delete sprite;
+	sprite = 0;
+}
+
+void StageObject::process(float timeStep)
+{
+}
+
+void StageObject::draw()
+{
+	if (sprite)
+	{
+		sprite->draw();
+	}
+}
+
+// -----
+
+StageObject_SpriteAnim::StageObject_SpriteAnim(const char * name, const char * anim, const char * sheet)
+{
+	sprite = new Sprite(name, 0.f, 0.f, sheet);
+	
+	sprite->startAnim(anim);
+}
+
+void StageObject_SpriteAnim::process(float timeStep)
+{
+	StageObject::process(timeStep);
+	
+	if (!sprite->animIsActive)
+	{
+		isDead = true;
+	}
+}
+
+// -----
+
+Stage::Stage()
+{
+	m_objectId = 0;
+}
+
+void Stage::process(float timeStep)
+{
+	for (ObjectList::iterator i = m_objects.begin(); i != m_objects.end(); )
+	{
+		StageObject * obj = i->second;
+		
+		ObjectList::iterator next = i;
+		++next;
+		
+		if (obj->isDead)
+		{
+			delete obj;
+			m_objects.erase(i);
+		}
+		else
+		{
+			obj->process(timeStep);
+		}
+		
+		i = next;
+	}
+}
+
+void Stage::draw()
+{
+	for (ObjectList::iterator i = m_objects.begin(); i != m_objects.end(); ++i)
+	{
+		StageObject * obj = i->second;
+		
+		obj->draw();
+	}
+}
+
+int Stage::addObject(StageObject * object)
+{
+	const int objectId = m_objectId++;
+	
+	m_objects.insert(ObjectList::value_type(objectId, object));
+	
+	return objectId;
+}
+
+void Stage::removeObject(int objectId)
+{
+	if (m_objects.count(objectId) != 0)
+	{
+		log("removing object with object ID %d", objectId);
+		m_objects.erase(m_objects.find(objectId));
+	}
+	else
+	{
+		log("removing object with object ID %d (but already dead)", objectId);
+	}
 }
 
 // -----

@@ -17,7 +17,7 @@ static Sprite * createRandomSprite()
 	
 	sprite->startAnim(anim);
 	sprite->x = rand() % 1920;
-	sprite->y = rand() % 1280;
+	sprite->y = rand() % 1080;
 	sprite->scale = 4;
 	sprite->animSpeed = 1.f + (rand() % 100) / 100.f;
 	
@@ -37,11 +37,11 @@ static void sortSprites(Sprite ** sprites, int numSprites)
 int main(int argc, char * argv[])
 {
 	framework.setMinification(2);
-	framework.init(argc, argv, 1920, 1280);
+	framework.init(argc, argv, 1920, 1080);
 	
 	bool down = false;
 	int x = 1920/2;
-	int y = 1280/4;
+	int y = 1080/4;
 	
 	Music("bgm.ogg").play();
 	
@@ -60,6 +60,8 @@ int main(int argc, char * argv[])
 	while (!keyboard.isDown(SDLK_ESCAPE))
 	{
 		framework.process();
+		
+		stage.process(framework.timeStep);
 		
 		if (keyboard.isDown(SDLK_a))
 		{
@@ -130,12 +132,33 @@ int main(int argc, char * argv[])
 			}
 		}
 		
+		if (keyboard.isDown(SDLK_s))
+		{
+			const char * name = "sprite.png";
+			const char * anim = "walk-once";
+			
+			for (int i = 0; i < 10; ++i)
+			{
+				StageObject * obj = new StageObject_SpriteAnim(name, anim);
+				obj->sprite->x = rand() % 1920;
+				obj->sprite->y = rand() % 1080;
+				obj->sprite->scale = 3;
+				
+				const int objectId = stage.addObject(obj);
+			
+				if (i == 0)
+					stage.removeObject(objectId);
+			}
+		}
+		
 		framework.beginDraw(165, 125, 65, 0);
 		{
 			setBlend(BLEND_ALPHA);
 			
 			setColor(255, 255, 255);
 			background.drawEx(1920 - 132, 132, 0, 2);
+			
+			stage.draw();
 			
 			sortSprites(sprites, numSprites);
 			for (int i = 0; i < numSprites; ++i)
@@ -178,8 +201,8 @@ int main(int argc, char * argv[])
 			drawText(mouse.x, mouse.y + 40, 20, 0, 0, "(demo only)", rand() % 10);
 			
 			setColor(255, 0, 0, 255);
-			//drawLine(0, 0, 1920, 1280);
-			//drawLine(1920, 0, 0, 1280);
+			//drawLine(0, 0, 1920, 1080);
+			//drawLine(1920, 0, 0, 1080);
 		}
 		framework.endDraw();
 	}

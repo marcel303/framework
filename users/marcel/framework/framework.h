@@ -153,6 +153,7 @@ public:
 	
 	// animation
 	float animSpeed;
+	bool animIsActive;
 	bool animIsPaused;
 	
 private:
@@ -164,7 +165,7 @@ private:
 	int m_animVersion;
 	std::string m_animSegmentName;
 	void * m_animSegment;
-	bool m_isAnimActive;
+	bool m_isAnimStarted;
 	float m_animFramef;
 	int m_animFrame;
 
@@ -252,6 +253,45 @@ public:
 	float getAnalog(int stick, ANALOG analog, float scale = 1.f) const;
 };
 
+class StageObject
+{	
+public:
+	StageObject();
+	~StageObject();
+	
+	virtual void process(float timeStep);
+	virtual void draw();
+	
+	bool isDead;
+	Sprite * sprite;
+};
+
+class StageObject_SpriteAnim : public StageObject
+{
+public:
+	StageObject_SpriteAnim(const char * name, const char * anim, const char * sheet = 0);
+	
+	virtual void process(float timeStep);
+};
+
+class Stage
+{
+	typedef std::map<int, StageObject*> ObjectList;
+	
+	ObjectList m_objects;
+	
+	int m_objectId;
+	
+public:
+	Stage();
+	
+	void process(float timeStep);
+	void draw();
+	
+	int addObject(StageObject * object);
+	void removeObject(int objectId);
+};
+
 //
 
 void setBlend(BLEND_MODE blendMode);
@@ -282,4 +322,5 @@ extern Framework framework;
 extern Mouse mouse;
 extern Keyboard keyboard;
 extern Gamepad gamepad[MAX_GAMEPAD];
+extern Stage stage;
 
