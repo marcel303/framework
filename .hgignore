@@ -10,6 +10,8 @@ tools/rescompiler/rescompiler
 tools/svntool/svntool
 tools/tgatool/tgatool
 tools/veccompiler/veccompiler-vc
+users/marcel/framework/Debug
+users/marcel/framework/Release
 usg/build.txt
 usg/makebuild
 usg/IOSDATA*
