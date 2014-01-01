@@ -12,6 +12,15 @@
 
 #define fassert assert
 
+#ifndef WIN32
+static int fopen_s(FILE ** file, const char * filename, const char * mode)
+{
+	*file = fopen(filename, mode);
+	return *file ? 0 : EINVAL;
+}
+#define sprintf_s(s, ss, f, ...) sprintf(s, f, __va_args__)
+#endif
+
 class Globals
 {
 public:
@@ -247,7 +256,7 @@ public:
 	
 	bool open(const char * filename, bool textMode)
 	{
-		file = fopen(filename, textMode ? "rt" : "rb");
+		fopen_s(&file, filename, textMode ? "rt" : "rb");
 		
 		return file != 0;
 	}

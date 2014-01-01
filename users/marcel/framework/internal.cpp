@@ -328,7 +328,7 @@ void AnimCacheElem::load(const char * filename)
 					logError("%s: animation lies (partially or completely) outside the grid: %s", filename, line.c_str());
 					continue;
 				}
-				anim.frameRate = args.getInt("rate", 1);
+				anim.frameRate = (float)args.getInt("rate", 1);
 				if (anim.frameRate <= 0)
 				{
 					logError("%s: frame rate must be >= 1: %s", filename, line.c_str());

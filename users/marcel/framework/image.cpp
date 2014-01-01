@@ -1,3 +1,6 @@
+#ifdef WIN32
+	#include <Windows.h>
+#endif
 #include <FreeImage.h>
 #include "framework.h"
 #include "image.h"
