@@ -52,7 +52,7 @@ inline Vec LinearToGamma(VecArg v)
 		LinearToGamma(v.Z()),
 		LinearToGamma(v.W()));
 }
-#else
+#elif 0
 inline float GammaToLinear(float v)
 {
 	return v * v;
@@ -71,6 +71,26 @@ inline Vec GammaToLinear(VecArg v)
 inline Vec LinearToGamma(VecArg v)
 {
 	return v.Sqrt();
+}
+#else
+inline float GammaToLinear(float v)
+{
+	return v;
+}
+
+inline float LinearToGamma(float v)
+{
+	return v;
+}
+
+inline Vec GammaToLinear(VecArg v)
+{
+	return v;
+}
+
+inline Vec LinearToGamma(VecArg v)
+{
+	return v;
 }
 #endif
 
@@ -94,7 +114,7 @@ int RaySphere(
 	Vec & out_normalX,
 	Vec & out_normalY,
 	Vec & out_normalZ)
-{ 
+{
 	const Vec a =
 		rayDirectionX * rayDirectionX +
 		rayDirectionY * rayDirectionY +
@@ -121,31 +141,40 @@ int RaySphere(
 
 	const Vec bb4ac = b * b - 4.f * a * c;
 
-	const Vec hasSolution = a.CMP_GT(VEC_ZERO).AND(bb4ac.CMP_GE(VEC_ZERO));
+	const Vec hasSolution = /*a.CMP_GT(VEC_ZERO).AND*/(bb4ac.CMP_GE(VEC_ZERO));
 
 	if (hasSolution.BITTEST())
 	{
 		const Vec bb4acSqrt = bb4ac.Sqrt();
-		const Vec t1 = (-b + bb4acSqrt) / (2.f * a);
-		const Vec t2 = (-b - bb4acSqrt) / (2.f * a);
+		const Vec t1 = (-b - bb4acSqrt) / (2.f * a);
+		const Vec t2 = (-b + bb4acSqrt) / (2.f * a);
 		const Vec t = t1.Min(t2).Max(VEC_ZERO);
-		
-		const Vec positionX = rayOriginX + rayDirectionX * t;
-		const Vec positionY = rayOriginY + rayDirectionY * t;
-		const Vec positionZ = rayOriginZ + rayDirectionZ * t;
-
-		const Vec normalX = positionX - sphereEq.ReplicateX();
-		const Vec normalY = positionY - sphereEq.ReplicateY();
-		const Vec normalZ = positionZ - sphereEq.ReplicateZ();
 		
 		const Vec mask = hasSolution.AND(t.CMP_LT(out_t));
 		
-		out_t = out_t.Select(mask, out_t, t);
-		out_normalX = out_normalX.Select(mask, out_normalX, normalX);
-		out_normalY = out_normalY.Select(mask, out_normalY, normalY);
-		out_normalZ = out_normalZ.Select(mask, out_normalZ, normalZ);
+		const int result = mask.BITTEST();
 		
-		return mask.BITTEST();
+		if (result)
+		{
+			const Vec positionX = rayOriginX + rayDirectionX * t;
+			const Vec positionY = rayOriginY + rayDirectionY * t;
+			const Vec positionZ = rayOriginZ + rayDirectionZ * t;
+	
+			const Vec normalX = positionX - sphereEq.ReplicateX();
+			const Vec normalY = positionY - sphereEq.ReplicateY();
+			const Vec normalZ = positionZ - sphereEq.ReplicateZ();
+				
+			out_t = out_t.Select(mask, out_t, t);
+			out_normalX = out_normalX.Select(mask, out_normalX, normalX);
+			out_normalY = out_normalY.Select(mask, out_normalY, normalY);
+			out_normalZ = out_normalZ.Select(mask, out_normalZ, normalZ);
+			
+			return result;
+		}
+		else
+		{
+			return 0;
+		}
 	}
 	else
 	{
@@ -166,13 +195,13 @@ int RayPlane(
 	Vec & out_normalY,
 	Vec & out_normalZ)
 {
-	Vec d =
+	const Vec d =
 		rayOriginX.Mul(planeEq.ReplicateX()).Add(
 		rayOriginY.Mul(planeEq.ReplicateY()).Add(
 		rayOriginZ.Mul(planeEq.ReplicateZ()).Add(
 		planeEq.ReplicateW())));
 		
-	Vec dd =
+	const Vec dd =
 		rayDirectionX.Mul(planeEq.ReplicateX()).Add(
 		rayDirectionY.Mul(planeEq.ReplicateY()).Add(
 		rayDirectionZ.Mul(planeEq.ReplicateZ()).Add(
@@ -185,19 +214,28 @@ int RayPlane(
 	const Vec hasSolution = t.CMP_GE(VEC_ZERO);
 		
 	if (hasSolution.BITTEST())
-	{	
-		const Vec normalX = planeEq.ReplicateX();
-		const Vec normalY = planeEq.ReplicateY();
-		const Vec normalZ = planeEq.ReplicateZ();
-		
+	{
 		const Vec mask = hasSolution.AND(t.CMP_LT(out_t));
 		
-		out_t = out_t.Select(mask, out_t, t);
-		out_normalX = out_normalX.Select(mask, out_normalX, normalX);
-		out_normalY = out_normalY.Select(mask, out_normalY, normalY);
-		out_normalZ = out_normalZ.Select(mask, out_normalZ, normalZ);
+		const int result = mask.BITTEST();
 		
-		return mask.BITTEST();
+		if (result)
+		{
+			const Vec normalX = planeEq.ReplicateX();
+			const Vec normalY = planeEq.ReplicateY();
+			const Vec normalZ = planeEq.ReplicateZ();
+					
+			out_t = out_t.Select(mask, out_t, t);
+			out_normalX = out_normalX.Select(mask, out_normalX, normalX);
+			out_normalY = out_normalY.Select(mask, out_normalY, normalY);
+			out_normalZ = out_normalZ.Select(mask, out_normalZ, normalZ);
+			
+			return result;
+		}
+		else
+		{
+			return 0;
+		}
 	}
 	else
 	{
@@ -209,7 +247,8 @@ int main(int argc, char * argv[])
 {
 	SDL_Init(SDL_INIT_EVERYTHING);
 	//SDL_Surface * surface = SDL_SetVideoMode(300, 200, 32, SDL_DOUBLEBUF | SDL_SWSURFACE);
-	SDL_Surface * surface = SDL_SetVideoMode(600, 400, 32, SDL_DOUBLEBUF | SDL_SWSURFACE);
+	//SDL_Surface * surface = SDL_SetVideoMode(600, 400, 32, SDL_DOUBLEBUF | SDL_SWSURFACE);
+	SDL_Surface * surface = SDL_SetVideoMode(800, 600, 32, SDL_DOUBLEBUF | SDL_SWSURFACE);
 	if (!surface)
 		return 0;
 	
