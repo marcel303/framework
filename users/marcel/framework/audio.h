@@ -52,7 +52,8 @@ class SoundPlayer
 	int m_numSources;
 	Source * m_sources;
 	
-	ALuint m_musicSource;
+	class AudioStream_Vorbis * m_musicStream;
+	class AudioOutput_OpenAL * m_musicOutput;
 	
 	int m_playId;
 	
@@ -67,6 +68,7 @@ public:
 	
 	bool init(int numSources);
 	bool shutdown();
+	void process();
 	
 	int playSound(ALuint buffer, float volume, bool loop);
 	void stopSound(int playId);

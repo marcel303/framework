@@ -196,15 +196,14 @@ private:
 
 class Music
 {
+	std::string m_filename;
+	
 public:
 	Music(const char * filename);
 	
 	void play();
 	void stop();
-	void setVolume(float volume);
-	
-private:
-	// ???
+	void setVolume(int volume);
 };
 
 class Font
@@ -304,6 +303,7 @@ void drawLine(float x1, float y1, float x2, float y2);
 void drawRect(float x1, float y1, float x2, float y2);
 void drawText(float x, float y, int size, int alignX, int alignY, const char * format, ...);
 
+void logDebug(const char * format, ...);
 void log(const char * format, ...);
 void logWarning(const char * format, ...);
 void logError(const char * format, ...);

@@ -1,4 +1,6 @@
 #include "audio.h"
+#include "audiostream/AudioOutput.h"
+#include "audiostream/AudioStreamVorbis.h"
 #include "framework.h"
 #include "internal.h"
 
@@ -318,7 +320,8 @@ SoundPlayer::SoundPlayer()
 	m_numSources = 0;
 	m_sources = 0;
 	
-	m_musicSource = 0;
+	m_musicStream = 0;
+	m_musicOutput = 0;
 	
 	m_playId = 0;
 }
@@ -372,7 +375,14 @@ bool SoundPlayer::init(int numSources)
 	
 	// create music source
 	
-	m_musicSource = createSource();
+	m_musicStream = new AudioStream_Vorbis;
+	m_musicOutput = new AudioOutput_OpenAL;
+	
+	if (!m_musicOutput->Initialize(2, 44100))
+	{
+		logError("failed to initialize OpenAL audio output");
+		return false;
+	}
 	
 	m_playId = 0;
 	
@@ -394,10 +404,10 @@ bool SoundPlayer::shutdown()
 	
 	// destroy music source
 	
-	if (m_musicSource != 0)
-	{
-		destroySource(m_musicSource);
-	}
+	delete m_musicStream;
+	delete m_musicOutput;
+	m_musicStream = 0;
+	m_musicOutput = 0;
 	
 	// destroy context
 	
@@ -418,6 +428,11 @@ bool SoundPlayer::shutdown()
 	}
 	
 	return true;
+}
+
+void SoundPlayer::process()
+{
+	m_musicOutput->Update(m_musicStream);
 }
 
 int SoundPlayer::playSound(ALuint buffer, float volume, bool loop)
@@ -533,16 +548,16 @@ void SoundPlayer::setSoundVolume(int playId, float volume)
 
 void SoundPlayer::playMusic(const char * filename)
 {
-	checkError();
+	m_musicStream->Open(filename, true);
+	m_musicOutput->Play();
 }
 
 void SoundPlayer::stopMusic()
 {
-	checkError();
+	m_musicStream->Close();
 }
 
 void SoundPlayer::setMusicVolume(float volume)
 {
-	alSourcef(m_musicSource, AL_GAIN, volume);
-	checkError();
+	m_musicOutput->Volume_set(volume);
 }

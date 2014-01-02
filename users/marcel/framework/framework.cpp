@@ -150,7 +150,9 @@ bool Framework::shutdown()
 }
 
 void Framework::process()
-{	
+{
+	g_soundPlayer.process();
+	
 	bool doReload = !keyboard.isDown(SDLK_r);
 	
 	// poll SDL event queue
@@ -749,22 +751,22 @@ void Sound::stopAll()
 
 Music::Music(const char * filename)
 {
-	// todo
+	m_filename = filename;
 }
 
 void Music::play()
 {
-	// todo
+	g_soundPlayer.playMusic(m_filename.c_str());
 }
 
 void Music::stop()
 {
-	// todo
+	g_soundPlayer.stopMusic();
 }
 
-void Music::setVolume(float volume)
+void Music::setVolume(int volume)
 {
-	// todo
+	g_soundPlayer.setMusicVolume(volume / 100.f);
 }
 
 // -----
@@ -873,14 +875,13 @@ void Stage::process(float timeStep)
 		ObjectList::iterator next = i;
 		++next;
 		
+		fassert(!obj->isDead);
+		obj->process(timeStep);
+		
 		if (obj->isDead)
 		{
 			delete obj;
 			m_objects.erase(i);
-		}
-		else
-		{
-			obj->process(timeStep);
 		}
 		
 		i = next;
@@ -908,10 +909,14 @@ int Stage::addObject(StageObject * object)
 
 void Stage::removeObject(int objectId)
 {
-	if (m_objects.count(objectId) != 0)
+	ObjectList::iterator i = m_objects.find(objectId);
+	
+	if (i != m_objects.end())
 	{
 		log("removing object with object ID %d", objectId);
-		m_objects.erase(m_objects.find(objectId));
+		StageObject * obj = i->second;
+		delete obj;
+		m_objects.erase(i);
 	}
 	else
 	{
@@ -1054,6 +1059,17 @@ void drawText(float x, float y, int size, int alignX, int alignY, const char * f
 		drawTextInternal(g_globals.g_font->face, size, text);
 	}
 	glPopMatrix();
+}
+
+void logDebug(const char * format, ...)
+{
+	char text[1024];
+	va_list args;
+	va_start(args, format);
+	vsprintf(text, format, args); // todo: safer version
+	va_end(args);
+	
+	fprintf(stderr, "[DD] %s\n", text);
 }
 
 void log(const char * format, ...)
