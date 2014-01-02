@@ -672,7 +672,7 @@ void Sprite::updateAnimation(float timeStep)
 		
 		if (anim->loop)
 		{
-			m_animFramef = std::fmodf(m_animFramef, (float)anim->numFrames);
+			m_animFramef = std::fmod(m_animFramef, (float)anim->numFrames);
 			m_animFrame = (int)m_animFramef;
 		}
 		else

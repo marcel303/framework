@@ -328,7 +328,6 @@ SoundPlayer::SoundPlayer()
 
 SoundPlayer::~SoundPlayer()
 {
-	shutdown();
 }
 
 bool SoundPlayer::init(int numSources)
@@ -408,7 +407,12 @@ bool SoundPlayer::shutdown()
 	delete m_musicOutput;
 	m_musicStream = 0;
 	m_musicOutput = 0;
+	checkError();
 	
+	// deactivate context
+	
+	alcMakeContextCurrent(NULL);
+
 	// destroy context
 	
 	if (m_context != 0)
