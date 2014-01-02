@@ -6,8 +6,17 @@
 
 namespace Textures
 {
-	const static int GAMESELECT_MODE_BATTLE = 0;
-	const static int GAMESELECT_MODE_CLASSIC = 1;
-	const static int GAMESELECT_MODE_SURVIVER = 2;
-	const extern CompiledResInfo ResIndex[3];
+	const static int GAMEOVER_HINT_BACK = 0;
+	const static int GAMEVIEW_UPGRADE = 1;
+	const static int GAMEVIEW_UPGRADE_BACK = 2;
+	const static int GAMEVIEW_UPGRADE_BACK2 = 3;
+	const static int OPTIONSVIEW_VOLUME = 4;
+	const static int UPGRADEBOUGHT_LASER = 5;
+	const static int UPGRADEBOUGHT_PATROL = 6;
+	const static int UPGRADEBOUGHT_SHOCK = 7;
+	const static int UPGRADEBOUGHT_SPECIAL = 8;
+	const static int UPGRADEBOUGHT_VULCAN = 9;
+	const static int UPGRADE_BACK = 10;
+	const static int UPGRADE_OVERLAY = 11;
+	const extern CompiledResInfo ResIndex[12];
 };
