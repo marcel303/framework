@@ -254,6 +254,7 @@ ifeq ($(OS), macos)
 	GAME_SRC += ../libiphone/AudioOutput.cpp
 	GAME_SRC += ../libiphone/AudioStreamVorbis.cpp
 	GAME_SRC += ../libiphone/System_Linux.cpp
+	CFLAGS += -I/Developer4/SDKs/MacOSX10.6.sdk/usr/X11/include/
 endif
 ifeq ($(OS), win)
 	GAME_SRC += ../libiphone/System_Win32.cpp
@@ -313,7 +314,6 @@ endif
 
 %.o : %.cpp
 	gcc -c $< -o $@ $(CFLAGS) $(GAME_INCLUDE)
-# -I../libgg -I../libiphone -IClasses -IClasses/Game -I../libgrs/libgrs_cpp -I../tools/rescompiler -I../prototypes/vecrend -I../tools/fontcompiler -I../tools/atlcompiler -I../tools/veccompiler -I../tools/pkgcompiler
 
 %.o : %.c
 	gcc -c $< -o $@ $(CFLAGS) $(GAME_INCLUDE)
