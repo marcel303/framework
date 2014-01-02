@@ -8,14 +8,14 @@ AudioOutput_OpenAL::AudioOutput_OpenAL()
 	, mSampleRate(0)
 	, mSourceId(0)
 	, mIsPlaying(false)
-	, mHasFinished(true)
+	, mHasFinished(false)
 	, mVolume(1.0f)
 {
 	for (int i = 0; i < kBufferCount; ++i)
 		mBufferIds[i] = 0;
 }
 
-void AudioOutput_OpenAL::Initialize(int numChannels, int sampleRate)
+bool AudioOutput_OpenAL::Initialize(int numChannels, int sampleRate)
 {
 	Assert(numChannels == 1 || numChannels == 2);
 	Assert(mBufferIds[0] == 0);
@@ -25,48 +25,49 @@ void AudioOutput_OpenAL::Initialize(int numChannels, int sampleRate)
 		mFormat = AL_FORMAT_MONO16;
 	else if (numChannels == 2)
 		mFormat = AL_FORMAT_STEREO16;
+	else
+	{
+		LOG_ERR("OpenAL-Stream: invalid number of channels", 0);
+		return false;
+	}
 	
 	mSampleRate = sampleRate;
 	
 	alGenBuffers(kBufferCount, mBufferIds);
 	CheckError();
-	LOG_DBG("OpenAL-Stream: created buffers", 0);
-	
-#if 1
-	char bufferData[kBufferSize];
-	int bufferSize = 0;
-	memset(bufferData, 0, sizeof(bufferData));
-	bufferSize = sizeof(bufferData);
-	
-	if (bufferSize)
+	for (int i = 0; i < kBufferCount; ++i)
 	{
-		for (int i = 0; i < kBufferCount; ++i)
+		if (!mBufferIds[i])
 		{
-			alBufferData(mBufferIds[i], mFormat, bufferData, bufferSize, mSampleRate);
-			CheckError();
-			LOG_DBG("OpenAL-Stream: set buffer data", 0);
+			LOG_ERR("OpenAL-Stream: failed to create buffer", 0);
+			return false;
 		}
 	}
-#endif
+	LOG_DBG("OpenAL-Stream: created buffers", 0);
 	
 	// generate source and enqueue buffers
 	
 	alGenSources(1, &mSourceId);
 	CheckError();
+	if (mSourceId == 0)
+	{
+		LOG_ERR("OpenAL-Stream: failed to create source", 0);
+		return false;
+	}
 	LOG_DBG("OpenAL-Stream: created source", 0);
 	
 	alSourcef(mSourceId, AL_GAIN, mVolume);
 	LOG_DBG("OpenAL-Stream: set volume", 0);
 	
-	alSourceQueueBuffers(mSourceId, kBufferCount, mBufferIds);
-	CheckError();
-	LOG_DBG("OpenAL-Stream: enqueued buffers", 0);
-	
-	mHasFinished = false;
+	return true;
 }
 
-void AudioOutput_OpenAL::Shutdown()
+bool AudioOutput_OpenAL::Shutdown()
 {
+	bool result = true;
+	
+	Stop();
+	
 	if (mSourceId != 0)
 	{
 		alSourceStop(mSourceId);
@@ -77,17 +78,21 @@ void AudioOutput_OpenAL::Shutdown()
 		LOG_DBG("OpenAL-Stream: destroyed source", 0);
 	}
 	
-	if (mBufferIds[0] != 0)
+	for (int i = 0; i < kBufferCount; ++i)
 	{
-		alDeleteBuffers(kBufferCount, mBufferIds);
-		CheckError();
-		for (int i = 0; i < kBufferCount; ++i)
+		if (mBufferIds[i] != 0)
+		{
+			alDeleteBuffers(1, &mBufferIds[i]);
+			CheckError();
 			mBufferIds[i] = 0;
-		LOG_DBG("OpenAL-Stream: destroyed buffers", 0);
+			LOG_DBG("OpenAL-Stream: destroyed buffers", 0);
+		}
 	}
 	
 	mFormat = 0;
 	mSampleRate = 0;
+	
+	return result;
 }
 
 void AudioOutput_OpenAL::Play()
@@ -99,11 +104,22 @@ void AudioOutput_OpenAL::Play()
 	Volume_set(mVolume);
 #endif
 
-	alSourcePlay(mSourceId);
-	CheckError();
-	LOG_DBG("OpenAL-Stream: play", 0);
-
-	mIsPlaying = true;
+	if (mIsPlaying == false)
+	{
+		SetEmptyBufferData();
+		
+		alSourceQueueBuffers(mSourceId, kBufferCount, mBufferIds);
+		CheckError();
+		LOG_DBG("OpenAL-Stream: enqueued buffers", 0);
+		
+		alSourcePlay(mSourceId);
+		CheckError();
+		LOG_DBG("OpenAL-Stream: play", 0);
+		
+		mIsPlaying = true;
+	}
+	
+	mHasFinished = false;
 }
 
 void AudioOutput_OpenAL::Stop()
@@ -131,7 +147,7 @@ void AudioOutput_OpenAL::Update(AudioStream* stream)
 	{
 		if (!mIsPlaying)
 		{
-			LOG_DBG("OpenAL-Stream: processed %d buffers, but not playing.. providing samples anyway..", processed);
+			LOG_DBG("OpenAL-Stream: processed %d buffers, but not playing. won't enqueue new buffer data", processed);
 		}
 
 		//LOG_DBG("OpenAL-Stream: processed %d buffers", processed);
@@ -148,7 +164,7 @@ void AudioOutput_OpenAL::Update(AudioStream* stream)
 		{
 			LOG_DBG("OpenAL-Stream: failed to unqueue buffer", 0);
 		}
-		else
+		else if (mIsPlaying)
 		{
 			const int maxSamples = kBufferSize >> 2;
 			AudioSample samples[maxSamples];
@@ -172,16 +188,19 @@ void AudioOutput_OpenAL::Update(AudioStream* stream)
 
 				//LOG_DBG("OpenAL-Stream: got zero bytes of sample data. audio stream stopped", bufferSize);
 
-				// stop the source. but first, queue the buffer again without providing any samples
+				// emit silence
 
-				alBufferData(bufferId, mFormat, samples, 0, mSampleRate);
+				memset(samples, 0, sizeof(samples));
+
+				alBufferData(bufferId, mFormat, samples, maxSamples, mSampleRate);
 				CheckError();
 
 				alSourceQueueBuffers(mSourceId, 1, &bufferId);
 				CheckError();
 
-				alSourceStop(mSourceId);
-				CheckError();
+				//alSourceStop(mSourceId);
+				//CheckError();
+				//mIsPlaying = false;
 			}
 		}
 	}
@@ -196,6 +215,8 @@ void AudioOutput_OpenAL::Update(AudioStream* stream)
 
 		if (state != AL_PLAYING)
 		{
+			Assert(false);
+			
 			alSourcePlay(mSourceId);
 			CheckError();
 			LOG_DBG("OpenAL-Stream: initiated play, because source was not playing (state was: %x)", state);
@@ -217,6 +238,19 @@ void AudioOutput_OpenAL::Volume_set(float volume)
 bool AudioOutput_OpenAL::HasFinished_get()
 {
 	return mHasFinished;
+}
+
+void AudioOutput_OpenAL::SetEmptyBufferData()
+{
+	char bufferData[kBufferSize];
+	memset(bufferData, 0, kBufferSize);
+	
+	for (int i = 0; i < kBufferCount; ++i)
+	{
+		alBufferData(mBufferIds[i], mFormat, bufferData, kBufferSize, mSampleRate);
+		CheckError();
+		LOG_DBG("OpenAL-Stream: set empty buffer data", 0);
+	}
 }
 
 void AudioOutput_OpenAL::CheckError()

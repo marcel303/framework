@@ -1,5 +1,6 @@
 #pragma once
 
+#include "AudioMixer.h"
 #include "libiphone_fwd.h"
 
 class AudioOutput
@@ -25,8 +26,8 @@ class AudioOutput_OpenAL : public AudioOutput
 public:
 	AudioOutput_OpenAL();
 	
-	void Initialize(int numChannels, int sampleRate);
-	void Shutdown();
+	bool Initialize(int numChannels, int sampleRate);
+	bool Shutdown();
 	
 	virtual void Play();
 	virtual void Stop();
@@ -38,6 +39,7 @@ private:
 	const static int kBufferSize = 8192 * 2;
 	const static int kBufferCount = 3;
 	
+	void SetEmptyBufferData();
 	void CheckError();
 	
 	ALuint mFormat;
