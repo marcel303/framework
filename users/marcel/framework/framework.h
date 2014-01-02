@@ -242,6 +242,8 @@ public:
 
 class Gamepad
 {
+	friend class Framework;
+
 	float m_analog[2][ANALOG_MAX];
 
 public:

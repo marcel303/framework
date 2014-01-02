@@ -1,11 +1,11 @@
-#include <SDL/SDL.h>
+#include <algorithm>
 #include "framework.h"
 
 static Sprite * createRandomSprite()
 {
 	const int index = rand() % 4;
 	char filename[32];
-	sprintf(filename, "%s%d.png", "rpg", index);
+	sprintf_s(filename, sizeof(filename), "%s%d.png", "rpg", index);
 	
 	Sprite * sprite = new Sprite(filename, 0, 0, "rpg.txt");
 	
@@ -13,7 +13,7 @@ static Sprite * createRandomSprite()
 	const int guy = rand() % 8;
 	const int dir = rand() % 4;
 	char dirName[4] = { 'u', 'd', 'l', 'r' };
-	sprintf(anim, "%d%c", guy, dirName[dir]);
+	sprintf_s(anim, sizeof(anim), "%d%c", guy, dirName[dir]);
 	
 	sprite->startAnim(anim);
 	sprite->x = rand() % 1920;
@@ -193,9 +193,18 @@ int main(int argc, char * argv[])
 			setColor(255, 255, 255, 255);
 			sprite.drawEx(x, y, 0, 4, BLEND_ALPHA);
 			
+			for (int i = 0; i < MAX_GAMEPAD; ++i)
+			{
+				Font font("calibri.ttf");
+				setFont(font);
+
+				setColor(255, 255, 0, 255);
+				drawText(5, 5 + i * 40, 35, 0, 0, "gamepad[%d]: %s", i, gamepad[i].isConnected ? "connected" : "not connected");
+			}
+
 			Font font("test.ttf");
 			setFont(font);
-			
+
 			setColor(255, 255, 255, 255);
 			drawText(mouse.x, mouse.y, 35, 0, 0, "PROTO[%d]TYPE", rand() % 10);
 			drawText(mouse.x, mouse.y + 40, 20, 0, 0, "(demo only)", rand() % 10);

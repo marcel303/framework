@@ -1,3 +1,6 @@
+#define NOMINMAX
+
+#include <algorithm>
 #include <assert.h>
 #include <cmath>
 #include <map>
@@ -5,6 +8,13 @@
 #include <stdlib.h>
 #include <string>
 #include <vector>
+
+#ifdef WIN32
+	#include <SDL/SDL_opengl.h>
+	#include <Windows.h>
+	#include <Xinput.h>
+	static PFNGLBLENDEQUATIONPROC glBlendEquation = 0;
+#endif
 
 #include "audio.h"
 #include "framework.h"
@@ -47,7 +57,6 @@ Framework::Framework()
 
 Framework::~Framework()
 {
-	shutdown();
 }
 
 void Framework::setMinification(int scale)
@@ -75,7 +84,18 @@ bool Framework::init(int argc, char * argv[], int sx, int sy)
 		return false;
 	}
 	
-	if (SDL_SetVideoMode(sx / m_minification, sy / m_minification, 32, SDL_OPENGL) == 0)
+	SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE, 32);
+	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0);
+	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
+
+	SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 1); // make sure we have vsync enabled
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+
+	if (SDL_SetVideoMode(sx / m_minification, sy / m_minification, 32, SDL_OPENGL | (m_minification == 1 ? SDL_FULLSCREEN : 0)) == 0)
 	{
 		logError("failed to set video mode");
 		return false;
@@ -83,6 +103,19 @@ bool Framework::init(int argc, char * argv[], int sx, int sy)
 	
 	g_globals.g_displaySize[0] = sx;
 	g_globals.g_displaySize[1] = sy;
+
+#ifdef WIN32
+	if (glBlendEquation == 0)
+	{
+		glBlendEquation = (PFNGLBLENDEQUATIONPROC)wglGetProcAddress("glBlendEquation");
+	
+		if (glBlendEquation == 0)
+		{
+			logError("unable to find required OpenGL extension(s)");
+			return false;
+		}
+	}
+#endif
 	
 	// initialize FreeType
 	
@@ -132,6 +165,10 @@ bool Framework::shutdown()
 	}
 	g_globals.g_freeType = 0;
 	
+#ifdef WIN32
+	glBlendEquation = 0;
+#endif
+
 	// shut down SDL
 	
 	SDL_Quit();
@@ -187,45 +224,44 @@ void Framework::process()
 		ZeroMemory(&state, sizeof(XINPUT_STATE));
 		DWORD result = XInputGetState(i, &state);
 
-        if (result == ERROR_SUCCESS)
-        {
-        	gamepad[i].isConnected = true;
-        	
-        	const Gamepad & g = state.Gamepad;
-        	
-       	#define APPLY_DEADZONE(v, t) (std::abs(v) <= t ? 0.f : clamp((std::abs(v) - t) * std::sign(v) / float(32767 - t), -1.f, +1.f))
-       	
-       		float ** analog = gamepad[i].m_analog;
-       		
-			analog[0][ANALOG_X] = APPLY_DEADZONE(g.sThumbLX, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
-			analog[0][ANALOG_Y] = APPLY_DEADZONE(g.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
-			analog[1][ANALOG_X] = APPLY_DEADZONE(g.sThumbRX, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
-			analog[1][ANALOG_Y] = APPLY_DEADZONE(g.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
+		if (result == ERROR_SUCCESS)
+		{
+			gamepad[i].isConnected = true;
+			
+			const XINPUT_GAMEPAD & g = state.Gamepad;
+			
+		#define APPLY_DEADZONE(v, t) (std::abs(v) <= t ? 0.f : clamp((std::abs(v) - t) * (v < 0.f ? -1.f : +1.f) / float(32767 - t), -1.f, +1.f))
+
+			gamepad[i].m_analog[0][ANALOG_X] = APPLY_DEADZONE(g.sThumbLX, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
+			gamepad[i].m_analog[0][ANALOG_Y] = APPLY_DEADZONE(g.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
+			gamepad[i].m_analog[1][ANALOG_X] = APPLY_DEADZONE(g.sThumbRX, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
+			gamepad[i].m_analog[1][ANALOG_Y] = APPLY_DEADZONE(g.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
 			
 		#undef APPLY_DEADZONE
 			
 			const int buttons = g.wButtons;
 			bool * isDown = gamepad[i].isDown;
 			
-			isDown[DPAD_LEFT]     = buttons & XINPUT_GAMEPAD_DPAD_LEFT;
-			isDown[DPAD_RIGHT]    = buttons & XINPUT_GAMEPAD_DPAD_RIGHT;
-			isDown[DPAD_UP]       = buttons & XINPUT_GAMEPAD_DPAD_UP;
-			isDown[DPAD_DOWN]     = buttons & XINPUT_GAMEPAD_DPAD_DOWN;
-			isDown[GAMEPAD_A]     = buttons & XINPUT_GAMEPAD_A;
-			isDown[GAMEPAD_B]     = buttons & XINPUT_GAMEPAD_B;
-			isDown[GAMEPAD_X]     = buttons & XINPUT_GAMEPAD_X;
-			isDown[GAMEPAD_Y]     = buttons & XINPUT_GAMEPAD_Y;
-			isDown[GAMEPAD_L1]    = buttons & XINPUT_GAMEPAD_LEFT_SHOULDER;
-			isDown[GAMEPAD_R1]    = buttons & XINPUT_GAMEPAD_RIGHT_SHOULDER;
+			isDown[DPAD_LEFT]     = 0 != (buttons & XINPUT_GAMEPAD_DPAD_LEFT);
+			isDown[DPAD_RIGHT]    = 0 != (buttons & XINPUT_GAMEPAD_DPAD_RIGHT);
+			isDown[DPAD_UP]       = 0 != (buttons & XINPUT_GAMEPAD_DPAD_UP);
+			isDown[DPAD_DOWN]     = 0 != (buttons & XINPUT_GAMEPAD_DPAD_DOWN);
+			isDown[GAMEPAD_A]     = 0 != (buttons & XINPUT_GAMEPAD_A);
+			isDown[GAMEPAD_B]     = 0 != (buttons & XINPUT_GAMEPAD_B);
+			isDown[GAMEPAD_X]     = 0 != (buttons & XINPUT_GAMEPAD_X);
+			isDown[GAMEPAD_Y]     = 0 != (buttons & XINPUT_GAMEPAD_Y);
+			isDown[GAMEPAD_L1]    = 0 != (buttons & XINPUT_GAMEPAD_LEFT_SHOULDER);
+			isDown[GAMEPAD_R1]    = 0 != (buttons & XINPUT_GAMEPAD_RIGHT_SHOULDER);
 			isDown[GAMEPAD_L2]    = g.bLeftTrigger  > XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
 			isDown[GAMEPAD_R2]    = g.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
-			isDown[GAMEPAD_START] = buttons & XINPUT_GAMEPAD_START;
-			isDown[GAMEPAD_BACK]  = buttons & XINPUT_GAMEPAD_BACK;
-        }
-        else
-        {
-        	memset(&gamepad[i], 0, sizeof(Gamepad));
-        }
+			isDown[GAMEPAD_START] = 0 != (buttons & XINPUT_GAMEPAD_START);
+			isDown[GAMEPAD_BACK]  = 0 != (buttons & XINPUT_GAMEPAD_BACK);
+		}
+		else
+		{
+			memset(&gamepad[i], 0, sizeof(Gamepad));
+		}
+	}
 #endif
 	
 	doReload &= keyboard.isDown(SDLK_r);
@@ -361,7 +397,7 @@ void Dictionary::setString(const char * name, const char * value)
 void Dictionary::setInt(const char * name, int value)
 {
 	char text[32];
-	sprintf(text, "%d", value);
+	sprintf_s(text, sizeof(text), "%d", value);
 	setString(name, text);
 }
 
@@ -475,8 +511,8 @@ void Sprite::drawEx(float x, float y, float angle, float scale, BLEND_MODE blend
 			glBindTexture(GL_TEXTURE_2D, m_texture->textures[cellIndex]);
 			glEnable(GL_TEXTURE_2D);
 			
-			const int rsx = m_texture->sx / m_anim->m_gridSize[0];
-			const int rsy = m_texture->sy / m_anim->m_gridSize[1];
+			const float rsx = float(m_texture->sx / m_anim->m_gridSize[0]);
+			const float rsy = float(m_texture->sy / m_anim->m_gridSize[1]);
 			
 		#if 1
 			const float verts[16] =
@@ -524,7 +560,7 @@ void Sprite::startAnim(const char * name, int frame)
 	animIsPaused = false;
 	m_animSegmentName = name;
 	m_isAnimStarted = true;
-	m_animFramef = frame;
+	m_animFramef = (float)frame;
 	m_animFrame = frame;
 
 	m_animVersion = -1;
@@ -557,7 +593,7 @@ void Sprite::setAnimFrame(int frame)
 		
 		const int frame1 = m_animFrame;
 		{
-			m_animFramef = frame;
+			m_animFramef = (float)frame;
 			
 			if (anim->loop)
 				m_animFrame = frame % anim->numFrames;
@@ -597,8 +633,8 @@ void Sprite::updateAnimationSegment()
 		{
 			AnimCacheElem::Anim * anim = reinterpret_cast<AnimCacheElem::Anim*>(m_animSegment);
 			
-			this->pivotX = anim->pivot[0];
-			this->pivotY = anim->pivot[1];
+			this->pivotX = (float)anim->pivot[0];
+			this->pivotY = (float)anim->pivot[1];
 			
 			animIsActive = true;
 		}
@@ -636,7 +672,7 @@ void Sprite::updateAnimation(float timeStep)
 		
 		if (anim->loop)
 		{
-			m_animFramef = std::fmod(m_animFramef, anim->numFrames);
+			m_animFramef = std::fmodf(m_animFramef, (float)anim->numFrames);
 			m_animFrame = (int)m_animFramef;
 		}
 		else
@@ -677,8 +713,8 @@ void Sprite::processAnimationTriggersForFrame(int frame, int event)
 			//log("event == this->event");
 			
 			Dictionary args = trigger.args;
-			args.setInt("x", args.getInt("x", 0) + this->x);
-			args.setInt("y", args.getInt("y", 0) + this->y);
+			args.setInt("x", args.getInt("x", 0) + (int)this->x);
+			args.setInt("y", args.getInt("y", 0) + (int)this->y);
 			
 			framework.processAction(trigger.action, args);
 		}
@@ -1022,8 +1058,8 @@ static void drawTextInternal(FT_Face face, int size, const char * text)
 			
 			glBegin(GL_QUADS);
 			{
-				const float sx = elem.g.bitmap.width;
-				const float sy = elem.g.bitmap.rows;
+				const float sx = float(elem.g.bitmap.width);
+				const float sy = float(elem.g.bitmap.rows);
 				const float x1 = x + elem.g.bitmap_left;
 				const float y1 = y - elem.g.bitmap_top;
 				const float x2 = x1 + sx;
@@ -1049,7 +1085,7 @@ void drawText(float x, float y, int size, int alignX, int alignY, const char * f
 	char text[1024];
 	va_list args;
 	va_start(args, format);
-	vsprintf(text, format, args); // todo: safer version
+	vsprintf_s(text, sizeof(text), format, args);
 	va_end(args);
 	
 	glPushMatrix();
@@ -1077,7 +1113,7 @@ void log(const char * format, ...)
 	char text[1024];
 	va_list args;
 	va_start(args, format);
-	vsprintf(text, format, args); // todo: safer version
+	vsprintf_s(text, sizeof(text), format, args);
 	va_end(args);
 	
 	fprintf(stderr, "[II] %s\n", text);
@@ -1088,7 +1124,7 @@ void logWarning(const char * format, ...)
 	char text[1024];
 	va_list args;
 	va_start(args, format);
-	vsprintf(text, format, args); // todo: safer version
+	vsprintf_s(text, sizeof(text), format, args);
 	va_end(args);
 	
 	fprintf(stderr, "[WW] %s\n", text);
@@ -1099,7 +1135,7 @@ void logError(const char * format, ...)
 	char text[1024];
 	va_list args;
 	va_start(args, format);
-	vsprintf(text, format, args); // todo: safer version
+	vsprintf_s(text, sizeof(text), format, args);
 	va_end(args);
 	
 	fprintf(stderr, "[EE] %s\n", text);
