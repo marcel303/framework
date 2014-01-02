@@ -23,6 +23,7 @@ public:
 	void Initialize()
 	{
 		mAudioOutput.Initialize(2, 44100); // fixme!
+		mAudioOutput.Play();
 	}
 	
 	void Shutdown()
@@ -115,7 +116,7 @@ public:
 					Layer& layer = mLayers[i];
 					
 					if (layer.isSet)
-					{					
+					{
 						if (!layer.isActive && layer.isActiveEffective)
 						{
 							AudioSheet& layerSheet = *layer.sheet;
@@ -143,6 +144,8 @@ public:
 	
 	void AudioLayerData_set(int layerIndex, const char* fileName, AudioSheet* sheet)
 	{
+		Assert(layerIndex >= 0 && layerIndex <= kMaxLayers-1);
+		
 		Layer& layer = mLayers[layerIndex];
 		
 		//
@@ -166,11 +169,14 @@ public:
 	
 	bool AudioLayerIsActive_get(int layerIndex)
 	{
+		Assert(layerIndex >= 0 && layerIndex <= kMaxLayers-1);
 		return mLayers[layerIndex].isActive;
 	}
 	
 	void AudioLayerIsActive_set(int layerIndex, bool isActive)
 	{
+		Assert(layerIndex >= 0 && layerIndex <= kMaxLayers-1);
+		
 		Layer& layer = mLayers[layerIndex];
 		
 		layer.isActive = isActive;

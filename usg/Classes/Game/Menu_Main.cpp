@@ -1,4 +1,7 @@
-#include "GameCenter.h"
+#if defined(IPHONEOS)
+	#include "GameCenter.h"
+#endif
+
 #include "GameSave.h"
 #include "GameSettings.h"
 #include "GameState.h"
@@ -143,7 +146,9 @@ namespace GameMenu
 
 		view->Show(::View_Main);
 		
+		#if defined(IPHONEOS)
 		g_gameCenter->ShowGameCenter();
+		#endif
 	}
 
 	void Menu_Main::Handle_Options(void* obj, void* arg)

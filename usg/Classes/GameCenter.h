@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include "CallBack.h"
 
 class GameCenter

@@ -37,7 +37,9 @@ namespace Game
 	#ifdef MACOS
 		Res* bgm1 = g_GameState->m_ResMgr.Get(Resources::BGM_MAIN1);
 		Res* bgm2 = g_GameState->m_ResMgr.Get(Resources::BGM_MAIN2);
+		#ifndef DEBUG
 		g_GameState->PlayMusic(bgm1, bgm2);
+		#endif
 	#else
 		g_GameState->PlayMusic(g_GameState->m_ResMgr.Get(Resources::BGM_MENU));
 	#endif

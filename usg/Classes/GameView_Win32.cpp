@@ -85,7 +85,12 @@ static QuickTimeEncoder sQtEncoder;
 static MacImage sQtImage;
 #endif
 
-#if 1
+#ifdef DEBUG
+	#define TEST_AUDIOMANAGER 1
+#else
+	#define TEST_AUDIOMANAGER 0
+#endif
+#if TEST_AUDIOMANAGER
 #include "AudioManager.h"
 #include "System.h"
 AudioManager* sAudioManager = 0;
@@ -494,13 +499,14 @@ public:
 						int res = -1;
 						if (g_GameState->m_GameRound->GameModeIsIntroScreen())
 						{
-#if 1
+							#if TEST_AUDIOMANAGER
 							if (index >= 0 && index <= 3)
 							{
 								sAudioManager->AudioLayerIsActive_set(index, !sAudioManager->AudioLayerIsActive_get(index));
 								return true;
 							}
-#endif
+							#endif
+							
 							const int resList[] =
 							{
 								Resources::BGM_MAIN1,
@@ -960,7 +966,9 @@ void GameView_Win32::Update()
 		g_ViewListener.Update(1.0f / LOGIC_FPS);
 	}
 	
-	//TestAudioManager();
+	#if TEST_AUDIOMANAGER
+	TestAudioManager();
+	#endif
 }
 
 void GameView_Win32::Render()
