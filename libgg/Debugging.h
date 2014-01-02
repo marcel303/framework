@@ -4,14 +4,12 @@
 #include "Log.h"
 
 #ifdef DEBUG
-inline void Assert(bool x)
+inline void HandleAssert(const char * func, int line, const char * expr)
 {
-	if (!x)
-	{
-		LOG_ERR("assertion failed", 0);
-		//assert(x);
-	}
+	LOG_ERR("assertion failed: %s: %d: %s", func, line, expr);
+	//assert(x);
 }
+#define Assert(x) do { if (!(x)) { HandleAssert(__FUNCTION__, __LINE__, #x); } } while (false)
 #else
 #define Assert(x) do { } while (false)
 #endif
