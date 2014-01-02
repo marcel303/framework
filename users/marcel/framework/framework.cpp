@@ -194,6 +194,8 @@ void Framework::process()
 	
 	// poll SDL event queue
 	
+	memset(g_globals.g_keyChange, 0, sizeof(g_globals.g_keyChange));
+	
 	SDL_Event e;
 	
 	while (SDL_PollEvent(&e))
@@ -202,6 +204,7 @@ void Framework::process()
 		{
 			if (e.key.keysym.sym >= 0 && e.key.keysym.sym < SDLK_LAST)
 				g_globals.g_keyDown[e.key.keysym.sym] = e.key.state == SDL_PRESSED;
+			g_globals.g_keyChange[e.key.keysym.sym] = true;
 		}
 		else if (e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP)
 		{
@@ -829,9 +832,19 @@ bool Mouse::isDown(BUTTON button)
 
 // -----
 
-bool Keyboard::isDown(SDLKey key)
+bool Keyboard::isDown(SDLKey key) const
 {
 	return g_globals.g_keyDown[key];
+}
+
+bool Keyboard::wentDown(SDLKey key) const
+{
+	return isDown(key) && g_globals.g_keyChange[key];
+}
+
+bool Keyboard::wentUp(SDLKey key) const
+{
+	return !isDown(key) && g_globals.g_keyChange[key];
 }
 
 // -----

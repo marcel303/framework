@@ -43,7 +43,8 @@ int main(int argc, char * argv[])
 	int x = 1920/2;
 	int y = 1080/4;
 	
-	Music("bgm.ogg").play();
+	Music bgm("bgm.ogg");
+	bgm.play();
 	
 	Sprite background("background.png");
 	background.startAnim("default");
@@ -87,6 +88,11 @@ int main(int argc, char * argv[])
 				Sound("test.wav").play(50, 200);
 			}
 		}
+		
+		if (keyboard.wentDown(SDLK_o))
+			bgm.stop();
+		if (keyboard.wentDown(SDLK_p))
+			bgm.play();
 		
 		int dx = 0;
 		int dy = 0;

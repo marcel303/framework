@@ -237,7 +237,9 @@ public:
 class Keyboard
 {
 public:
-	bool isDown(SDLKey key);
+	bool isDown(SDLKey key) const;
+	bool wentDown(SDLKey key) const;
+	bool wentUp(SDLKey key) const;
 };
 
 class Gamepad

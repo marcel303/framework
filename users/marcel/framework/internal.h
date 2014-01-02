@@ -38,6 +38,7 @@ public:
 	FontCacheElem * g_font;
 	bool g_mouseDown[2];
 	bool g_keyDown[SDLK_LAST];
+	bool g_keyChange[SDLK_LAST];
 };
 
 //

@@ -559,6 +559,7 @@ void SoundPlayer::playMusic(const char * filename)
 void SoundPlayer::stopMusic()
 {
 	m_musicStream->Close();
+	m_musicOutput->Stop();
 }
 
 void SoundPlayer::setMusicVolume(float volume)

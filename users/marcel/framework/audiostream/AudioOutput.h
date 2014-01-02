@@ -34,6 +34,7 @@ private:
 	const static int kBufferSize = 8192 * 2;
 	const static int kBufferCount = 3;
 	
+	void SetEmptyBufferData();
 	void CheckError();
 	
 	ALuint mFormat;
