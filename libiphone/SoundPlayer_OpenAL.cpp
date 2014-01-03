@@ -42,16 +42,23 @@ void SoundPlayer_OpenAL::Play(Res* res1, Res* res2, Res* res3, Res* res4, bool l
 
 	Open();
 	
-	Start();
+	if (mIsEnabled)
+	{
+		Start();
+	}
 }
 
 void SoundPlayer_OpenAL::Start()
 {
+	LOG_DBG(__FUNCTION__, 0);
+	
 	mAudioOutput.Play();
 }
 
 void SoundPlayer_OpenAL::Stop()
 {
+	LOG_DBG(__FUNCTION__, 0);
+	
 	mAudioOutput.Stop();
 }
 
@@ -100,17 +107,13 @@ void SoundPlayer_OpenAL::Update()
 		Start();
 	}
 	
-	if (mIsEnabled && mAudioOutput.HasFinished_get() == false)
+	if (mIsEnabled)
 	{
 	#ifdef BBOS
 		mAudioOutput.Update(&mVorbisStreams[0]);
 	#else
 		mAudioOutput.Update(&mAudioMixer);
 	#endif
-	}
-	else
-	{
-		// assert not playing ..
 	}
 }
 

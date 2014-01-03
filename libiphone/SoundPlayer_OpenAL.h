@@ -18,8 +18,10 @@ public:
 	void Shutdown();
 	
 	void Play(Res* res1, Res* res2, Res* res3, Res* res4, bool loop);
+private:
 	void Start();
 	void Stop();
+public:
 	bool HasFinished_get();
 	
 	void IsEnabled_set(bool enabled);
