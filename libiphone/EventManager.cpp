@@ -22,6 +22,7 @@ void EventManager::RemoveEventHandler(EventHandler* handler, int prio)
 {
 	Assert(mEventHandlers[prio].handler == handler);
 
+	mEventHandlers[prio].enabled = false;
 	mEventHandlers[prio].handler = 0;
 }
 
