@@ -127,6 +127,8 @@ void AudioOutput_OpenAL::Stop()
 	logDebug("OpenAL-Stream: stop", 0);
 
 	mIsPlaying = false;
+	
+	Update(NULL);
 }
 
 void AudioOutput_OpenAL::Update(AudioStream* stream)
@@ -210,8 +212,6 @@ void AudioOutput_OpenAL::Update(AudioStream* stream)
 
 		if (state != AL_PLAYING)
 		{
-			fassert(false);
-			
 			alSourcePlay(mSourceId);
 			CheckError();
 			logDebug("OpenAL-Stream: initiated play, because source was not playing (state was: %x)", state);
