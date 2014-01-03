@@ -132,6 +132,8 @@ void AudioOutput_OpenAL::Stop()
 	LOG_DBG("OpenAL-Stream: stop", 0);
 
 	mIsPlaying = false;
+	
+	Update(NULL);
 }
 
 void AudioOutput_OpenAL::Update(AudioStream* stream)
