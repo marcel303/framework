@@ -27,6 +27,7 @@ namespace Game
 
 	private:
 		EventHandler_PlayerController_Gamepad_Psp();
+		~EventHandler_PlayerController_Gamepad_Psp();
 
 		virtual bool OnEvent(Event& event);
 	};

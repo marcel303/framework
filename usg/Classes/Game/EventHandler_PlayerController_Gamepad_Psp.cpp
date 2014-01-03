@@ -23,6 +23,11 @@ namespace Game
 
 		Clear();
 	}
+	
+	EventHandler_PlayerController_Gamepad_Psp::~EventHandler_PlayerController_Gamepad_Psp()
+	{
+		EventManager::I().RemoveEventHandler(this, EVENT_PRIO_JOYSTICK);
+	}
 
 	bool EventHandler_PlayerController_Gamepad_Psp::OnEvent(Event& event)
 	{

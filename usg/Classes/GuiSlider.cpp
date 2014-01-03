@@ -97,6 +97,8 @@ namespace GameMenu
 
 	static void SliderShut()
 	{
+		Assert(sSliderIsInitialized >= 1);
+		
 		sSliderIsInitialized--;
 
 		if (sSliderIsInitialized == 0)
