@@ -63,6 +63,12 @@ bool OpenALState::Shutdown()
 
 	LOG_INF("shutting down OpenAL", 0);
 
+	// reset current context
+	
+	if (!alcMakeContextCurrent(NULL))
+		LOG_ERR("failed to reset OpenAL context", 0);
+	AL_CHECKERROR(this);
+	
 	// destroy context
 	
 	alcDestroyContext(m_Context);
