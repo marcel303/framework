@@ -19,6 +19,11 @@ namespace GameMenu
 	{
 		mActiveOption = SetupOption_Undefined;
 	}
+	
+	Menu_WinSetup::~Menu_WinSetup()
+	{
+		EventManager::I().RemoveEventHandler(this, EVENT_PRIO_JOYSETUP);
+	}
 
 	void Menu_WinSetup::Init()
 	{

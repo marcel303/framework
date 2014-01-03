@@ -20,6 +20,11 @@ namespace Game
 		Clear();
 	}
 
+	EventHandler_PlayerController_Keyboard::~EventHandler_PlayerController_Keyboard()
+	{
+		EventManager::I().RemoveEventHandler(this, EVENT_PRIO_KEYBOARD);
+	}
+	
 	void EventHandler_PlayerController_Keyboard::UpdateMoveDir()
 	{
 		if (!mKeyboardX && !mKeyboardY)

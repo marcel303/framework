@@ -29,6 +29,7 @@ namespace GameMenu
 	{
 	public:
 		Menu_WinSetup();
+		~Menu_WinSetup();
 
 		virtual void Init();
 

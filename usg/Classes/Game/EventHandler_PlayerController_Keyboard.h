@@ -39,6 +39,7 @@ namespace Game
 		bool mMoveY[2];
 
 		EventHandler_PlayerController_Keyboard();
+		~EventHandler_PlayerController_Keyboard();
 
 		virtual bool OnEvent(Event& event);
 	};
