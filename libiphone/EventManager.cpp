@@ -81,7 +81,7 @@ EventManager::~EventManager()
 {
 	for (int i = 0; i < MAX_EVENT_HANDLERS; ++i)
 	{
-		Assert(mEventHandlers[i].enabled == false);
+		//Assert(mEventHandlers[i].enabled == false);
 		Assert(mEventHandlers[i].handler == 0);
 	}
 }
