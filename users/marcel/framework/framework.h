@@ -21,7 +21,8 @@ enum BLEND_MODE
 enum BUTTON
 {
 	BUTTON_LEFT,
-	BUTTON_RIGHT
+	BUTTON_RIGHT,
+	BUTTON_MAX
 };
 
 enum ANALOG
@@ -69,8 +70,6 @@ public:
 	Framework();
 	~Framework();
 	
-	void setMinification(int scale);
-	void setNumSoundSources(int num);
 	void setActionHandler(ActionHandler actionHandler);
 	
 	bool init(int argc, char * argv[], int sx, int sy);
@@ -84,12 +83,14 @@ public:
 	
 	float timeStep;
 	
+	bool fullscreen;
+	int minification;
+	int numSoundSources;
+	std::string windowTitle;
+	ActionHandler actionHandler;
+	
 private:
 	typedef std::set<Sprite*> SpriteSet;
-	
-	int m_minification;
-	int m_numSoundSources;
-	ActionHandler m_actionHandler;
 	
 	SpriteSet m_sprites;
 	
@@ -113,11 +114,19 @@ class Dictionary
 	Map m_map;
 	
 public:
+	bool parse(const std::string & line);
+	
 	bool contains(const char * name) const;
+	
 	void setString(const char * name, const char * value);	
-	void setInt(const char * name, int value);	
+	void setInt(const char * name, int value);
+	void setBool(const char * name, bool value);
+	
 	std::string getString(const char * name, const char * _default) const;	
 	int getInt(const char * name, int _default) const;
+	bool getBool(const char * name, bool _default) const;
+	
+	std::string & operator[](const char * name);
 };
 
 class Sprite
@@ -129,7 +138,7 @@ public:
 	~Sprite();
 	
 	void draw();
-	void drawEx(float x, float y, float angle = 0.f, float scale = 1.f, BLEND_MODE blendMode = BLEND_ALPHA);
+	void drawEx(float x, float y, float angle = 0.f, float scale = 1.f, BLEND_MODE blendMode = BLEND_ALPHA, bool pixelpos = true);
 	
 	// animation
 	void startAnim(const char * anim, int frame = 0);
@@ -150,6 +159,10 @@ public:
 	BLEND_MODE blend;
 	bool flipX;
 	bool flipY;
+	bool pixelpos;
+	
+	int getWidth() const;
+	int getHeight() const;
 	
 	// animation
 	float animSpeed;
@@ -223,15 +236,16 @@ private:
 class Mouse
 {
 public:
-	int x;
-	int y;
+	int x, y;
 	
 	Mouse()
 	{
 		x = y = 0;
 	}
 	
-	bool isDown(BUTTON button);
+	bool isDown(BUTTON button) const;
+	bool wentDown(BUTTON button) const;
+	bool wentUp(BUTTON button) const;
 };
 
 class Keyboard
@@ -297,6 +311,30 @@ public:
 
 //
 
+class Ui
+{
+	class UiCacheElem * m_ui;
+	
+	std::string m_over;
+	std::string m_down;
+	
+	std::string getImage(Dictionary & d);
+	bool getArea(Dictionary & d, int & x, int & y, int & sx, int & sy);
+	std::string findMouseOver();
+	
+public:
+	Ui();
+	Ui(const char * filename);
+	
+	void load(const char * filename);
+	void process();
+	void draw();
+	
+	Dictionary & operator[](const char * name);
+};
+
+//
+
 void setBlend(BLEND_MODE blendMode);
 void setColor(const Color & color);
 void setColor(int r, int g, int b, int a = 255);
@@ -327,4 +365,4 @@ extern Mouse mouse;
 extern Keyboard keyboard;
 extern Gamepad gamepad[MAX_GAMEPAD];
 extern Stage stage;
-
+extern Ui ui;

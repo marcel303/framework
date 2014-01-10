@@ -1,7 +1,7 @@
 EXE = framework
 OBJS = example.o framework.o internal.o audio.o image.o audiostream/AudioMixer.o audiostream/AudioOutput.o audiostream/AudioStreamVorbis.o audiostream/oggvorbis.o
-CFLAGS = -Wall -ffast-math -g -DDEBUG
-#CFLAGS = -Wall -ffast-math -O3 -msse3
+#CFLAGS = -Wall -ffast-math -g -DDEBUG
+CFLAGS = -Wall -ffast-math -O3 -msse3
 CFLAGS += -I./ -I./AudioStream/
 CFLAGS += `freetype-config --cflags`
 

@@ -8,6 +8,7 @@ AnimCache g_animCache;
 SoundCache g_soundCache;
 FontCache g_fontCache;
 GlyphCache g_glyphCache;
+UiCache g_uiCache;
 
 // -----
 	
@@ -195,7 +196,7 @@ static bool isWhite(char c)
 	return c == '\t' || c == ' ' || c == '\r' || c == '\n';
 }
 
-static void splitString(std::string & str, std::vector<std::string> & result)
+void splitString(const std::string & str, std::vector<std::string> & result)
 {
 	int start = -1;
 	
@@ -721,6 +722,93 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, char c)
 		i = m_map.insert(Map::value_type(key, elem)).first;
 		
 		//log("added glyph cache element. face=%p, size=%d, character=%c, texture=%u. count=%d\n", face, size, c, elem.texture, (int)m_map.size());
+		
+		return i->second;
+	}
+}
+
+//
+
+void UiCacheElem::free()
+{
+	map.clear();
+}
+
+void UiCacheElem::load(const char * filename)
+{
+	free();
+	
+	FileReader r;
+	
+	if (!r.open(filename, true))
+	{
+		//logError("%s: failed to open file!", filename);
+	}
+	else
+	{
+		std::string line;
+		
+		int nameAlloc = 0;
+		
+		while (r.read(line))
+		{
+			if (line.size() == 0 || line[0] == '#')
+			{
+				// empty line or comment
+				continue;
+			}
+			
+			Dictionary d;
+			
+			if (!d.parse(line))
+			{
+				logError("%s: parse error: %s", filename, line.c_str());
+			}
+			else
+			{
+				std::string name = d.getString("name", "");
+				
+				if (name.empty())
+				{
+					char temp[32];
+					sprintf_s(temp, sizeof(temp), "noname_%d", nameAlloc++);
+					name = temp;
+				}
+				
+				map[name] = d;
+			}
+		}
+	}
+}
+
+void UiCache::clear()
+{
+	m_map.clear();
+}
+
+void UiCache::reload()
+{
+	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
+	{
+		i->second.load(i->first.c_str());
+	}
+}
+
+UiCacheElem & UiCache::findOrCreate(const char * filename)
+{
+	Map::iterator i = m_map.find(filename);
+	
+	if (i != m_map.end())
+	{
+		return i->second;
+	}
+	else
+	{
+		UiCacheElem elem;
+		
+		elem.load(filename);
+		
+		i = m_map.insert(Map::value_type(filename, elem)).first;
 		
 		return i->second;
 	}

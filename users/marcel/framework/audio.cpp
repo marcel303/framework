@@ -6,11 +6,15 @@
 
 //
 
+#define THREADED_MUSIC_PLAYER 0
+
+//
+
 SoundPlayer g_soundPlayer;
 
 //
 
-SoundData * loadSound(const char * filename)
+SoundData * loadSound_WAV(const char * filename)
 {
 	FileReader r;
 	
@@ -158,6 +162,40 @@ SoundData * loadSound(const char * filename)
 	return soundData;
 }
 
+SoundData * loadSound_OGG(const char * filename)
+{
+	static const int kMaxSamples = 44100 * sizeof(short) * 2 * 120;
+	
+	AudioStream_Vorbis stream;
+	stream.Open(filename, false);
+	AudioSample * samples = new AudioSample[kMaxSamples];
+	const int numSamples = stream.Provide(kMaxSamples, samples);
+	const int numBytes = numSamples * sizeof(AudioSample);
+	const int sampleRate = stream.mSampleRate;
+	stream.Close();
+	
+	void * bytes = new char[numBytes];
+	memcpy(bytes, samples, numBytes);
+	delete [] samples;
+	
+	SoundData * soundData = new SoundData;
+	soundData->channelSize = 2;
+	soundData->channelCount = 2;
+	soundData->sampleCount = numSamples;
+	soundData->sampleRate = sampleRate;
+	soundData->sampleData = bytes;
+	
+	return soundData;
+}
+
+SoundData * loadSound(const char * filename)
+{
+	if (strstr(filename, ".ogg"))
+		return loadSound_OGG(filename);
+	else
+		return loadSound_WAV(filename);
+}
+
 //
 
 ALuint SoundPlayer::createSource()
@@ -233,7 +271,29 @@ SoundPlayer::Source * SoundPlayer::allocSource()
 	
 	return 0;
 }
+
+int SoundPlayer::executeMusicThreadProc(void * obj)
+{
+	SoundPlayer * self = (SoundPlayer*)obj;
 	
+	self->executeMusicThread();
+	
+	return 0;
+}
+
+void SoundPlayer::executeMusicThread()
+{
+#if THREADED_MUSIC_PLAYER
+	while (m_quitMusicThread == false)
+	{
+		SDL_Delay(1);
+		
+		MutexScope scope(m_musicMutex);
+		m_musicOutput->Update(m_musicStream);
+	}
+#endif
+}
+
 void SoundPlayer::checkError()
 {
 	ALenum error = alGetError();
@@ -324,6 +384,10 @@ SoundPlayer::SoundPlayer()
 	m_musicOutput = 0;
 	
 	m_playId = 0;
+	
+	m_musicThread = 0;
+	m_musicMutex = 0;
+	m_quitMusicThread = false;
 }
 
 SoundPlayer::~SoundPlayer()
@@ -385,11 +449,27 @@ bool SoundPlayer::init(int numSources)
 	
 	m_playId = 0;
 	
+	// create music thread
+	
+	m_musicMutex = SDL_CreateMutex();
+	m_musicThread = SDL_CreateThread(executeMusicThreadProc, this);
+	m_quitMusicThread = false;
+	
 	return true;
 }
 
 bool SoundPlayer::shutdown()
 {
+	// stop music thread
+	
+	m_quitMusicThread = true;
+	SDL_WaitThread(m_musicThread, 0);
+	SDL_DestroyMutex(m_musicMutex);
+	
+	m_musicThread = 0;
+	m_musicMutex = 0;
+	m_quitMusicThread = false;
+	
 	// destroy audio sources
 	
 	for (int i = 0; i < m_numSources; ++i)
@@ -436,7 +516,9 @@ bool SoundPlayer::shutdown()
 
 void SoundPlayer::process()
 {
+#if !THREADED_MUSIC_PLAYER
 	m_musicOutput->Update(m_musicStream);
+#endif
 }
 
 int SoundPlayer::playSound(ALuint buffer, float volume, bool loop)
@@ -552,17 +634,20 @@ void SoundPlayer::setSoundVolume(int playId, float volume)
 
 void SoundPlayer::playMusic(const char * filename)
 {
+	MutexScope scope(m_musicMutex);
 	m_musicStream->Open(filename, true);
 	m_musicOutput->Play();
 }
 
 void SoundPlayer::stopMusic()
 {
+	MutexScope scope(m_musicMutex);
 	m_musicStream->Close();
 	m_musicOutput->Stop();
 }
 
 void SoundPlayer::setMusicVolume(float volume)
 {
+	MutexScope scope(m_musicMutex);
 	m_musicOutput->Volume_set(volume);
 }

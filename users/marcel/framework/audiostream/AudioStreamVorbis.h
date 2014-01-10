@@ -16,13 +16,13 @@ public:
 	int Position_get();
 	bool HasLooped_get();
 	
-	int mNumChannels;
 	int mSampleRate;
 	
 private:
 	std::string mFileName;
 	FILE* mFile;
 	struct OggVorbis_File* mVorbisFile;
+	int mNumChannels;
 	int mPosition;
 	bool mLoop;
 	bool mHasLooped;

@@ -35,6 +35,7 @@ Mouse mouse;
 Keyboard keyboard;
 Gamepad gamepad[MAX_GAMEPAD];
 Stage stage;
+Ui ui;
 
 // -----
 
@@ -48,9 +49,11 @@ static T clamp(T v, T vmin, T vmax)
 
 Framework::Framework()
 {
-	m_minification = 1;
-	m_numSoundSources = 32;
-	m_actionHandler = 0;
+	fullscreen = false;
+	minification = 1;
+	windowTitle = "GGJ 2014 - Unknown Project";
+	numSoundSources = 32;
+	actionHandler = 0;
 	
 	timeStep = 1.f / 60.f;
 }
@@ -59,47 +62,56 @@ Framework::~Framework()
 {
 }
 
-void Framework::setMinification(int scale)
-{
-	m_minification = scale;
-}
-
-void Framework::setNumSoundSources(int num)
-{
-	m_numSoundSources = num;
-}
-
-void Framework::setActionHandler(ActionHandler actionHandler)
-{
-	m_actionHandler = actionHandler;
-}
-
 bool Framework::init(int argc, char * argv[], int sx, int sy)
 {
+#ifdef WIN32
+	_putenv("SDL_VIDEO_WINDOW_POS");
+	_putenv("SDL_VIDEO_CENTERED=1");
+#endif
+
 	// initialize SDL
 	
-	if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
+	const int initFlags = SDL_INIT_NOPARACHUTE | SDL_INIT_TIMER | SDL_INIT_VIDEO;
+	
+	if (SDL_Init(initFlags) < 0)
 	{
-		logError("failed to initialize SDL");
+		logError("failed to initialize SDL: %s", SDL_GetError());
 		return false;
 	}
 	
+#if 1
 	SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE, 32);
 	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
+#endif
+
+#if 1
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0);
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
+#endif
 
+#if 1
 	SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 1); // make sure we have vsync enabled
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+#endif
 
-	if (SDL_SetVideoMode(sx / m_minification, sy / m_minification, 32, SDL_OPENGL | (m_minification == 1 ? SDL_FULLSCREEN : 0)) == 0)
+	int flags = SDL_OPENGL;
+	
+	if (fullscreen && minification == 1)
 	{
-		logError("failed to set video mode");
+		flags |= SDL_DOUBLEBUF;
+		flags |= SDL_FULLSCREEN;
+	}
+	
+	if (SDL_SetVideoMode(sx / minification, sy / minification, 32, flags) == 0)
+	{
+		logError("failed to set video mode (%dx%d @ %dbpp): %s", sx / minification, sy / minification, 32, SDL_GetError());
 		return false;
 	}
+	
+	SDL_WM_SetCaption(windowTitle.c_str(), 0);
 	
 	g_globals.g_displaySize[0] = sx;
 	g_globals.g_displaySize[1] = sy;
@@ -127,11 +139,15 @@ bool Framework::init(int argc, char * argv[], int sx, int sy)
 	
 	// initialize sound player
 	
-	if (!g_soundPlayer.init(m_numSoundSources))
+	if (!g_soundPlayer.init(numSoundSources))
 	{
 		logError("failed to initialize sound player");
 		return false;
 	}
+	
+	// initialize UI
+	
+	ui.load("default_ui");
 	
 	return true;
 }
@@ -155,6 +171,7 @@ bool Framework::shutdown()
 	g_soundCache.clear();
 	g_fontCache.clear();
 	g_glyphCache.clear();
+	g_uiCache.clear();
 	
 	// shut down FreeType
 	
@@ -179,9 +196,9 @@ bool Framework::shutdown()
 	
 	// reset self
 	
-	m_minification = 1;
-	m_numSoundSources = 32;
-	m_actionHandler = 0;
+	minification = 1;
+	numSoundSources = 32;
+	actionHandler = 0;
 	
 	return result;
 }
@@ -195,6 +212,7 @@ void Framework::process()
 	// poll SDL event queue
 	
 	memset(g_globals.g_keyChange, 0, sizeof(g_globals.g_keyChange));
+	memset(g_globals.g_mouseChange, 0, sizeof(g_globals.g_mouseChange));
 	
 	SDL_Event e;
 	
@@ -203,19 +221,24 @@ void Framework::process()
 		if (e.type == SDL_KEYDOWN || e.type == SDL_KEYUP)
 		{
 			if (e.key.keysym.sym >= 0 && e.key.keysym.sym < SDLK_LAST)
+			{
 				g_globals.g_keyDown[e.key.keysym.sym] = e.key.state == SDL_PRESSED;
-			g_globals.g_keyChange[e.key.keysym.sym] = true;
+				g_globals.g_keyChange[e.key.keysym.sym] = true;
+			}
 		}
 		else if (e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP)
 		{
-			const int index = e.button.type == SDL_BUTTON_LEFT ? 0 : e.button.type == SDL_BUTTON_RIGHT ? 1 : -1;
+			const int index = e.button.button == SDL_BUTTON_LEFT ? 0 : e.button.button == SDL_BUTTON_RIGHT ? 1 : -1;
 			if (index >= 0)
+			{
 				g_globals.g_mouseDown[index] = e.button.state == SDL_PRESSED;
+				g_globals.g_mouseChange[index] = true;
+			}
 		}
 		else if (e.type == SDL_MOUSEMOTION)
 		{
-			mouse.x = e.motion.x * m_minification;
-			mouse.y = e.motion.y * m_minification;
+			mouse.x = e.motion.x * minification;
+			mouse.y = e.motion.y * minification;
 		}
 	}
 	
@@ -287,9 +310,9 @@ void Framework::processAction(const std::string & action, const Dictionary & arg
 		Sound(args.getString("sound", "").c_str()).play(args.getInt("volume", 100));
 	}
 	
-	if (m_actionHandler)
+	if (actionHandler)
 	{
-		m_actionHandler(action, args);
+		actionHandler(action, args);
 	}
 }
 
@@ -300,6 +323,7 @@ void Framework::reloadCaches()
 	g_soundCache.reload();
 	g_fontCache.reload();
 	g_glyphCache.clear();
+	g_uiCache.reload();
 	
 	g_globals.g_resourceVersion++;
 	
@@ -318,7 +342,7 @@ void Framework::beginDraw(int r, int g, int b, int a)
 	
 	// initialize viewport and OpenGL matrices
 	
-	glViewport(0, 0, g_globals.g_displaySize[0] / m_minification, g_globals.g_displaySize[1] / m_minification);
+	glViewport(0, 0, g_globals.g_displaySize[0] / minification, g_globals.g_displaySize[1] / minification);
 	glMatrixMode(GL_PROJECTION);
 	{
 		glLoadIdentity();
@@ -387,6 +411,49 @@ Color::Color(float r, float g, float b, float a)
 
 // -----
 
+bool Dictionary::parse(const std::string & line)
+{
+	bool result = true;
+	
+	m_map.clear();
+	
+	std::vector<std::string> parts;
+	splitString(line, parts);
+	
+	for (size_t i = 0; i < parts.size(); ++i)
+	{
+		const size_t separator = parts[i].find(':');
+		
+		if (separator == std::string::npos)
+		{
+			logError("%s: incorrect key:value syntax: %s (%s)", __FUNCTION__, line.c_str(), parts[i].c_str());
+			result = false;
+			continue;
+		}
+		
+		const std::string key = parts[i].substr(0, separator);
+		const std::string value = parts[i].substr(separator + 1, parts[i].size() - separator - 1);
+		
+		if (key.size() == 0 || value.size() == 0)
+		{
+			logError("%s: incorrect key:value syntax: %s (%s)", __FUNCTION__, line.c_str(), parts[i].c_str());
+			result = false;
+			continue;
+		}
+		
+		if (contains(key.c_str()))
+		{
+			logError("%s: duplicate key: %s (%s)", __FUNCTION__, line.c_str(), key.c_str());
+			result = false;
+			continue;
+		}
+		
+		setString(key.c_str(), value.c_str());
+	}
+	
+	return result;
+}
+
 bool Dictionary::contains(const char * name) const
 {
 	return m_map.count(name) != 0;
@@ -402,6 +469,11 @@ void Dictionary::setInt(const char * name, int value)
 	char text[32];
 	sprintf_s(text, sizeof(text), "%d", value);
 	setString(name, text);
+}
+
+void Dictionary::setBool(const char * name, bool value)
+{
+	setInt(name, value ? 1 : 0);
 }
 
 std::string Dictionary::getString(const char * name, const char * _default) const
@@ -422,6 +494,16 @@ int Dictionary::getInt(const char * name, int _default) const
 		return _default;
 }
 
+bool Dictionary::getBool(const char * name, bool _default) const
+{
+	return getInt(name, _default) != 0;
+}
+
+std::string & Dictionary::operator[](const char * name)
+{
+	return m_map[name];
+}
+
 // -----
 
 Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * spritesheet)
@@ -436,6 +518,7 @@ Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * s
 	blend = BLEND_ALPHA;
 	flipX = false;
 	flipY = false;
+	pixelpos = true;
 	
 	// animation
 	std::string sheetFilename;
@@ -474,10 +557,10 @@ Sprite::~Sprite()
 
 void Sprite::draw()
 {
-	drawEx(x, y, angle, scale, blend);
+	drawEx(x, y, angle, scale, blend, pixelpos);
 }
 
-void Sprite::drawEx(float x, float y, float angle, float scale, BLEND_MODE blendMode)
+void Sprite::drawEx(float x, float y, float angle, float scale, BLEND_MODE blendMode, bool pixelpos)
 {
 	if (m_texture->textures)
 	{
@@ -485,6 +568,12 @@ void Sprite::drawEx(float x, float y, float angle, float scale, BLEND_MODE blend
 		
 		glPushMatrix();
 		{
+			if (pixelpos)
+			{
+				x = std::floor(x / framework.minification) * framework.minification;
+				y = std::floor(y / framework.minification) * framework.minification;
+			}
+			
 			glTranslatef(x, y, 0.f);
 			
 			if (scale != 1.f)
@@ -724,6 +813,16 @@ void Sprite::processAnimationTriggersForFrame(int frame, int event)
 	}
 }
 
+int Sprite::getWidth() const
+{
+	return m_texture->sx / m_anim->m_gridSize[0];
+}
+
+int Sprite::getHeight() const
+{
+	return m_texture->sy / m_anim->m_gridSize[1];
+}
+
 // -----
 
 Sound::Sound(const char * filename)
@@ -817,17 +916,42 @@ Font::Font(const char * filename)
 
 // -----
 
-bool Mouse::isDown(BUTTON button)
+static int getButtonIndex(BUTTON button)
 {
 	switch (button)
 	{
 	case BUTTON_LEFT:
-		return g_globals.g_mouseDown[0];
+		return 0;
 	case BUTTON_RIGHT:
-		return g_globals.g_mouseDown[1];
+		return 1;
+	default:
+		fassert(false);
 	}
-	
-	return false;
+	return -1;
+}
+
+bool Mouse::isDown(BUTTON button) const
+{
+	const int index = getButtonIndex(button);
+	if (index < 0)
+		return false;
+	return g_globals.g_mouseDown[index];
+}
+
+bool Mouse::wentDown(BUTTON button) const
+{
+	const int index = getButtonIndex(button);
+	if (index < 0)
+		return false;
+	return isDown(button) && g_globals.g_mouseChange[index];
+}
+
+bool Mouse::wentUp(BUTTON button) const
+{
+	const int index = getButtonIndex(button);
+	if (index < 0)
+		return false;
+	return !isDown(button) && g_globals.g_mouseChange[index];
 }
 
 // -----
@@ -971,6 +1095,150 @@ void Stage::removeObject(int objectId)
 	{
 		log("removing object with object ID %d (but already dead)", objectId);
 	}
+}
+
+// -----
+
+Ui::Ui()
+{
+	m_ui = 0;
+}
+
+Ui::Ui(const char * filename)
+{
+	m_ui = 0;
+	
+	load(filename);
+}
+
+void Ui::load(const char * filename)
+{
+	m_ui = &g_uiCache.findOrCreate(filename);
+
+	m_over.clear();
+	m_down.clear();
+}
+
+std::string Ui::getImage(Dictionary & d)
+{
+	const std::string name = d.getString("name", "");
+	const std::string type = d.getString("type", "");
+	const bool isOver = name == m_over;
+	const bool isDown = name == m_down && type == "button";
+	const std::string filenameDefault = d.getString("image", "");
+	const std::string filenameOver = d.getString("image_over", filenameDefault.c_str());
+	const std::string filenameDown = d.getString("image_down", filenameDefault.c_str());
+	const std::string & filename = (isDown && m_over == m_down) ? filenameDown : isOver ? filenameOver : filenameDefault;
+	return filename;
+}
+
+bool Ui::getArea(Dictionary & d, int & x, int & y, int & sx, int & sy)
+{
+	const std::string type = d.getString("type", "");
+	
+	if (type == "image" || type == "button")
+	{
+		const Sprite sprite(getImage(d).c_str());
+		const int scale = d.getInt("scale", 1);
+		x = d.getInt("x", 0);
+		y = d.getInt("y", 0);
+		sx = d.getInt("w", sprite.getWidth()) * scale;
+		sy = d.getInt("h", sprite.getHeight()) * scale;
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+std::string Ui::findMouseOver()
+{
+	for (UiCacheElem::Map::iterator i = m_ui->map.begin(); i != m_ui->map.end(); ++i)
+	{
+		Dictionary & d = i->second;
+		
+		int x, y, sx, sy;
+		
+		if (getArea(d, x, y, sx, sy))
+		{
+			if (mouse.x >= x && mouse.x < x + sx && mouse.y >= y && mouse.y < y + sy)
+			{
+				return i->first;
+			}
+		}
+	}
+	
+	return "";
+}
+
+void Ui::process()
+{
+	// make sure the names are good..
+	
+	for (UiCacheElem::Map::iterator i = m_ui->map.begin(); i != m_ui->map.end(); ++i)
+	{
+		Dictionary & d = i->second;
+		
+		d.setString("name", i->first.c_str());
+	}
+	
+	// update mouse over
+	
+	std::string over = findMouseOver();
+	
+	m_over = over;
+	
+	// update mouse down
+	
+	if (mouse.wentDown(BUTTON_LEFT))
+	{
+		m_down = m_over;
+	}
+	else if (mouse.wentUp(BUTTON_LEFT))
+	{
+		if (!m_down.empty())
+		{
+			if (m_down == m_over)
+			{
+				// trigger action, if set
+				Dictionary & d = m_ui->map[m_down];
+				const std::string action = d.getString("action", "");
+				if (!action.empty())
+					framework.processAction(action, d);
+			}
+			m_down.clear();
+		}
+	}
+}
+
+void Ui::draw()
+{
+	for (UiCacheElem::Map::iterator i = m_ui->map.begin(); i != m_ui->map.end(); ++i)
+	{
+		Dictionary & d = i->second;
+		
+		const bool isVisible = d.getBool("visible", true);
+		
+		if (isVisible)
+		{
+			const std::string type = d.getString("type", "");
+			
+			if (type == "image" || type == "button")
+			{
+				Sprite(getImage(d).c_str()).drawEx(
+					d.getInt("x", 0),
+					d.getInt("y", 0),
+					0,
+					d.getInt("scale", 1));
+			}
+		}
+	}
+}
+
+Dictionary & Ui::operator[](const char * name)
+{
+	return m_ui->map[name];
 }
 
 // -----

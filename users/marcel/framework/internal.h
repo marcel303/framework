@@ -22,6 +22,10 @@ static int fopen_s(FILE ** file, const char * filename, const char * mode)
 #define vsprintf_s(s, ss, f, a) vsprintf(s, f, a)
 #endif
 
+void splitString(const std::string & str, std::vector<std::string> & result);
+
+//
+
 class Globals
 {
 public:
@@ -36,7 +40,8 @@ public:
 	BLEND_MODE g_blendMode;
 	Color g_color;
 	FontCacheElem * g_font;
-	bool g_mouseDown[2];
+	bool g_mouseDown[BUTTON_MAX];
+	bool g_mouseChange[BUTTON_MAX];
 	bool g_keyDown[SDLK_LAST];
 	bool g_keyChange[SDLK_LAST];
 };
@@ -243,6 +248,31 @@ public:
 
 //
 
+class UiCacheElem
+{
+public:
+	typedef std::map<std::string, Dictionary> Map;
+	
+	Map map;
+	
+	void free();
+	void load(const char * filename);
+};
+
+class UiCache
+{
+public:
+	typedef std::map<std::string, UiCacheElem> Map;
+	
+	Map m_map;
+	
+	void clear();
+	void reload();
+	UiCacheElem & findOrCreate(const char * filename);
+};
+
+//
+
 class FileReader
 {
 public:
@@ -311,3 +341,4 @@ extern AnimCache g_animCache;
 extern SoundCache g_soundCache;
 extern FontCache g_fontCache;
 extern GlyphCache g_glyphCache;
+extern UiCache g_uiCache;

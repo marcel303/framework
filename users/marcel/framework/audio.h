@@ -2,6 +2,7 @@
 
 #include <OpenAL/al.h>
 #include <OpenAL/alc.h>
+#include <SDL/SDL_thread.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -57,9 +58,23 @@ class SoundPlayer
 	
 	int m_playId;
 	
+	SDL_Thread * m_musicThread;
+	SDL_mutex * m_musicMutex;
+	bool m_quitMusicThread;
+	
+	class MutexScope
+	{
+		SDL_mutex * m_mutex;
+	public:
+		MutexScope(SDL_mutex * mutex) { m_mutex = mutex; SDL_LockMutex(m_mutex); }
+		~MutexScope() { SDL_UnlockMutex(m_mutex); }
+	};
+	
 	ALuint createSource();
 	void destroySource(ALuint & source);
 	Source * allocSource();
+	static int executeMusicThreadProc(void * obj);
+	void executeMusicThread();
 	void checkError();
 	
 public:

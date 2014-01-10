@@ -1,6 +1,9 @@
 #include <algorithm>
 #include "framework.h"
 
+const int sx = 1920;
+const int sy = 1080;
+
 static Sprite * createRandomSprite()
 {
 	const int index = rand() % 4;
@@ -16,8 +19,8 @@ static Sprite * createRandomSprite()
 	sprintf(anim, "%d%c", guy, dirName[dir]);
 	
 	sprite->startAnim(anim);
-	sprite->x = rand() % 1920;
-	sprite->y = rand() % 1080;
+	sprite->x = rand() % sx;
+	sprite->y = rand() % sy;
 	sprite->scale = 4;
 	sprite->animSpeed = 1.f + (rand() % 100) / 100.f;
 	
@@ -36,15 +39,16 @@ static void sortSprites(Sprite ** sprites, int numSprites)
 
 int main(int argc, char * argv[])
 {
-	framework.setMinification(2);
-	framework.init(argc, argv, 1920, 1080);
+	framework.minification = 2;
+	framework.fullscreen = true;
+	if (!framework.init(argc, argv, sx, sy))
+		exit(-1);
 	
 	bool down = false;
-	int x = 1920/2;
-	int y = 1080/4;
+	int x = sx/2;
+	int y = sy/4;
 	
 	Music bgm("bgm.ogg");
-	bgm.play();
 	
 	Sprite background("background.png");
 	background.startAnim("default");
@@ -58,11 +62,24 @@ int main(int argc, char * argv[])
 	for (int i = 0; i < numSprites; ++i)
 		sprites[i] = createRandomSprite();
 	
+	ui.load("ui.txt");
+	for (int i = 0; i < 7; ++i)
+	{
+		char name[32];
+		sprintf(name, "button_%d", i);
+		Dictionary & button = ui[name];
+		button.parse("type:image image:button.png _image_over:button-over.png _image_down:button-down.png action:sound sound:test.wav");
+		button.setInt("x", 10);
+		button.setInt("y", 200 + i * 70);
+	}
+	
 	while (!keyboard.isDown(SDLK_ESCAPE))
 	{
 		framework.process();
 		
 		stage.process(framework.timeStep);
+		
+		ui.process();
 		
 		if (keyboard.isDown(SDLK_a))
 		{
@@ -71,6 +88,13 @@ int main(int argc, char * argv[])
 				delete sprites[i];
 				sprites[i] = createRandomSprite();
 			}
+		}
+		
+		if (keyboard.wentDown(SDLK_d))
+		{
+			static int uiId = 0;
+			uiId = (uiId + 1) % 2;
+			ui.load(uiId == 0 ? "ui.txt" : "ui2.txt");
 		}
 		
 		bool newDown = keyboard.isDown(SDLK_SPACE);
@@ -146,8 +170,8 @@ int main(int argc, char * argv[])
 			for (int i = 0; i < 10; ++i)
 			{
 				StageObject * obj = new StageObject_SpriteAnim(name, anim);
-				obj->sprite->x = rand() % 1920;
-				obj->sprite->y = rand() % 1080;
+				obj->sprite->x = rand() % sx;
+				obj->sprite->y = rand() % sy;
 				obj->sprite->scale = 3;
 				
 				const int objectId = stage.addObject(obj);
@@ -162,7 +186,7 @@ int main(int argc, char * argv[])
 			setBlend(BLEND_ALPHA);
 			
 			setColor(255, 255, 255);
-			background.drawEx(1920 - 132, 132, 0, 2);
+			background.drawEx(sx - 132, 132, 0, 2);
 			
 			stage.draw();
 			
@@ -208,16 +232,18 @@ int main(int argc, char * argv[])
 				drawText(5, 5 + i * 40, 35, 0, 0, "gamepad[%d]: %s", i, gamepad[i].isConnected ? "connected" : "not connected");
 			}
 
-			Font font("test.ttf");
+			setColor(255, 255, 255, 255);
+			ui.draw();
+			
+			Font font("calibri.ttf");
 			setFont(font);
 
 			setColor(255, 255, 255, 255);
-			drawText(mouse.x, mouse.y, 35, 0, 0, "PROTO[%d]TYPE", rand() % 10);
-			drawText(mouse.x, mouse.y + 40, 20, 0, 0, "(demo only)", rand() % 10);
+			drawText(mouse.x, mouse.y, 35, 0, 0, "(%d, %d)", mouse.x, mouse.y);
 			
 			setColor(255, 0, 0, 255);
-			//drawLine(0, 0, 1920, 1080);
-			//drawLine(1920, 0, 0, 1080);
+			//drawLine(0, 0, sx, sy);
+			//drawLine(sx, 0, 0, sy);
 		}
 		framework.endDraw();
 	}
