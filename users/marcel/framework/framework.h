@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 
+#define ENABLE_LOGGING 0
+
 static const int MAX_GAMEPAD = 4;
 
 enum BLEND_MODE
@@ -77,6 +79,7 @@ public:
 	void process();
 	void processAction(const std::string & action, const Dictionary & args);
 	void reloadCaches();
+	void fillCachesWithPath(const char * path);
 	
 	void beginDraw(int r, int g, int b, int a);
 	void endDraw();
@@ -345,10 +348,19 @@ void drawLine(float x1, float y1, float x2, float y2);
 void drawRect(float x1, float y1, float x2, float y2);
 void drawText(float x, float y, int size, int alignX, int alignY, const char * format, ...);
 
-void logDebug(const char * format, ...);
-void log(const char * format, ...);
-void logWarning(const char * format, ...);
-void logError(const char * format, ...);
+//
+
+#if ENABLE_LOGGING
+	void logDebug(const char * format, ...);
+	void log(const char * format, ...);
+	void logWarning(const char * format, ...);
+	void logError(const char * format, ...);
+#else
+	#define logDebug(...) do { } while (false)
+	#define log(...) do { } while (false)
+	#define logWarning(...) do { } while (false)
+	#define logError(...) do { } while (false)
+#endif
 
 //
 

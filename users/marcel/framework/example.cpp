@@ -43,6 +43,7 @@ int main(int argc, char * argv[])
 	framework.fullscreen = true;
 	if (!framework.init(argc, argv, sx, sy))
 		exit(-1);
+	framework.fillCachesWithPath(".");
 	
 	bool down = false;
 	int x = sx/2;

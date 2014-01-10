@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <assert.h>
 #include <cmath>
+#include <dirent.h>
 #include <map>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -330,6 +331,47 @@ void Framework::reloadCaches()
 	for (SpriteSet::iterator i = m_sprites.begin(); i != m_sprites.end(); ++i)
 	{
 		(*i)->updateAnimationSegment();
+	}
+}
+
+void Framework::fillCachesWithPath(const char * path)
+{
+	DIR * dir = opendir(path);
+	if (dir)
+	{
+		dirent * ent;
+		
+		while ((ent = readdir(dir)) != 0)
+		{
+			const char * f = ent->d_name;
+			
+			if (strstr(f, ".png") || strstr(f, ".bmp"))
+				Sprite(f, 0.f, 0.f);
+			if (strstr(f, ".wav"))
+				g_soundCache.findOrCreate(f);
+			if (strstr(f, ".ogg"))
+			{
+				FILE * file = fopen(f, "rb");
+				if (file)
+				{
+					fseek(file, 0, SEEK_END);
+					const int size = ftell(file);
+					fclose(file);
+					if (size <= 512*1024)
+						g_soundCache.findOrCreate(f);
+				}
+			}
+			if (strstr(f, ".ttf"))
+				g_fontCache.findOrCreate(f);
+			if (strstr(f, ".txt"))
+			{
+				FileReader r;
+				std::string line;
+				if (r.open(f, true) && r.read(line) && strstr(line.c_str(), "#ui"))
+					g_uiCache.findOrCreate(f);
+			}
+		}
+		closedir(dir);
 	}
 }
 
@@ -1378,6 +1420,8 @@ void drawText(float x, float y, int size, int alignX, int alignY, const char * f
 	glPopMatrix();
 }
 
+#if ENABLE_LOGGING
+
 void logDebug(const char * format, ...)
 {
 	char text[1024];
@@ -1421,3 +1465,5 @@ void logError(const char * format, ...)
 	
 	fprintf(stderr, "[EE] %s\n", text);
 }
+
+#endif

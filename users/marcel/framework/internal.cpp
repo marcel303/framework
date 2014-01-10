@@ -44,7 +44,7 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 	
 	if (!imageData)
 	{
-		logError("failed to load %s", filename);
+		logError("failed to load %s (%dx%d)", filename, gridSx, gridSy);
 	}
 	else
 	{
@@ -127,7 +127,7 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 				this->gridSy = gridSy;
 			}
 			
-			log("loaded %s", filename);
+			log("loaded %s (%dx%d)", filename, gridSx, gridSy);
 		}
 		
 		delete imageData;
@@ -489,7 +489,7 @@ void SoundCacheElem::load(const char * filename)
 				ALuint bufferSize = soundData->sampleCount * soundData->channelCount * soundData->channelSize;
 				ALuint bufferSampleRate = soundData->sampleRate;
 				
-				log("%s: buffer=%u, bufferFormat=%d, samleData=%p, bufferSize=%d, sampleRate=%d",
+				logDebug("%s: buffer=%u, bufferFormat=%d, samleData=%p, bufferSize=%d, sampleRate=%d",
 					filename,
 					buffer,
 					bufferFormat,
@@ -778,6 +778,8 @@ void UiCacheElem::load(const char * filename)
 				map[name] = d;
 			}
 		}
+		
+		log("loaded %s", filename);
 	}
 }
 

@@ -1,3 +1,5 @@
+#ui
+
 type:button x:1500 y:250 scale:2 image:button.png image_over:button-over.png image_down:button-down.png action:sound sound:test.wav
 type:button x:1500 y:380 scale:2 image:button.png image_over:button-over.png image_down:button-down.png action:sound sound:test.wav
 type:button x:1500 y:510 scale:2 image:button.png image_over:button-over.png image_down:button-down.png action:sound sound:test.wav
