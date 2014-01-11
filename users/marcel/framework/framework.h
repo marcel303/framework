@@ -3,6 +3,7 @@
 #include <SDL/SDL.h>
 #include <SDL/SDL_opengl.h>
 
+#include <algorithm>
 #include <map>
 #include <set>
 #include <string>
@@ -347,6 +348,20 @@ void setFont(Font & font);
 void drawLine(float x1, float y1, float x2, float y2);
 void drawRect(float x1, float y1, float x2, float y2);
 void drawText(float x, float y, int size, int alignX, int alignY, const char * format, ...);
+
+//
+
+template <typename T>
+static T clamp(T v, T vmin, T vmax)
+{
+	return std::min(std::max(v, vmin), vmax);
+}
+
+template <typename T>
+static T saturate(T v)
+{
+	return clamp<T>(v, (T)0, (T)1);
+}
 
 //
 

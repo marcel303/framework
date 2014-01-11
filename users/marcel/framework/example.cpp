@@ -46,10 +46,11 @@ int main(int argc, char * argv[])
 	framework.fillCachesWithPath(".");
 	
 	bool down = false;
-	int x = sx/2;
-	int y = sy/4;
+	float x = sx/2.f;
+	float y = sy/4.f;
 	
 	Music bgm("bgm.ogg");
+	bgm.play();
 	
 	Sprite background("background.png");
 	background.startAnim("default");
@@ -119,17 +120,40 @@ int main(int argc, char * argv[])
 		if (keyboard.wentDown(SDLK_p))
 			bgm.play();
 		
-		int dx = 0;
-		int dy = 0;
+		float dx = 0;
+		float dy = 0;
 		
 		if (keyboard.isDown(SDLK_LEFT))
-			dx--;
+			dx -= 1.f;
 		if (keyboard.isDown(SDLK_RIGHT))
-			dx++;
+			dx += 1.f;
 		if (keyboard.isDown(SDLK_UP))
-			dy--;
+			dy -= 1.f;
 		if (keyboard.isDown(SDLK_DOWN))
-			dy++;
+			dy += 1.f;
+		
+		for (int i = 0; i < MAX_GAMEPAD; ++i)
+		{
+			if (gamepad[i].isConnected)
+			{
+				if (gamepad[i].isDown[DPAD_LEFT])
+					dx -= 1.f;
+				if (gamepad[i].isDown[DPAD_RIGHT])
+					dx += 1.f;
+				if (gamepad[i].isDown[DPAD_UP])
+					dy -= 1.f;
+				if (gamepad[i].isDown[DPAD_DOWN])
+					dy += 1.f;
+				
+				dx += gamepad[i].getAnalog(0, ANALOG_X);
+				dy += gamepad[i].getAnalog(0, ANALOG_Y);
+				dx += gamepad[i].getAnalog(1, ANALOG_X);
+				dy += gamepad[i].getAnalog(1, ANALOG_Y);
+			}
+		}
+		
+		dx = clamp(dx, -1.f, +1.f);
+		dy = clamp(dy, -1.f, +1.f);
 		
 		const char * wantAnim = 0;
 		
@@ -141,7 +165,7 @@ int main(int argc, char * argv[])
 			wantAnim = "walk-u";
 		if (dy > 0)
 			wantAnim = "walk-d";
-			
+		
 		if (!wantAnim)
 			sprite.pauseAnim();
 		else if (sprite.getAnim() == wantAnim)
@@ -152,17 +176,6 @@ int main(int argc, char * argv[])
 		x += dx;
 		y += dy;
 
-		for (int i = 0; i < 4; ++i)
-		{
-			if (gamepad[i].isConnected)
-			{
-				if (gamepad[i].isDown[DPAD_LEFT])
-					x--;
-				if (gamepad[i].isDown[DPAD_RIGHT])
-					x--;
-			}
-		}
-		
 		if (keyboard.isDown(SDLK_s))
 		{
 			const char * name = "sprite.png";
@@ -191,7 +204,10 @@ int main(int argc, char * argv[])
 			
 			stage.draw();
 			
-			sortSprites(sprites, numSprites);
+			sprite.x = x;
+			sprite.y = y;
+			sprite.scale = 4;
+			
 			for (int i = 0; i < numSprites; ++i)
 			{
 				const char dirName = sprites[i]->getAnim()[1];
@@ -211,9 +227,6 @@ int main(int argc, char * argv[])
 				if ((rand() % 300) == 0)
 					sprites[i]->scale = ((rand() % 200) + 50) / 100.f * 4.f;
 				
-				setColor(255, 191, 127, 2048 * sprites[i]->animSpeed);
-				sprites[i]->draw();
-				
 				if (sprites[i]->animSpeed == 0.f)
 				{
 					delete sprites[i];
@@ -221,9 +234,20 @@ int main(int argc, char * argv[])
 				}
 			}
 			
-			setColor(255, 255, 255, 255);
-			sprite.drawEx(x, y, 0, 4, BLEND_ALPHA);
-			
+			const int numSortedSprites = numSprites + 1;
+			Sprite * sortedSprites[numSortedSprites];
+			Sprite ** sortedSprite = sortedSprites;
+			for (int i = 0; i < numSprites; ++i)
+				*sortedSprite++ = sprites[i];
+			*sortedSprite++ = &sprite;
+			sortSprites(sortedSprites, numSortedSprites);
+
+			for (int i = 0; i < numSortedSprites; ++i)
+			{
+				setColor(255, 191, 127, 2048 * sortedSprites[i]->animSpeed);
+				sortedSprites[i]->draw();
+			}
+					
 			for (int i = 0; i < MAX_GAMEPAD; ++i)
 			{
 				Font font("calibri.ttf");

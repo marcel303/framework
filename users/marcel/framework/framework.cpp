@@ -1,6 +1,5 @@
 #define NOMINMAX
 
-#include <algorithm>
 #include <assert.h>
 #include <cmath>
 #include <dirent.h>
@@ -37,14 +36,6 @@ Keyboard keyboard;
 Gamepad gamepad[MAX_GAMEPAD];
 Stage stage;
 Ui ui;
-
-// -----
-
-template <typename T>
-static T clamp(T v, T vmin, T vmax)
-{
-	return std::min(std::max(v, vmin), vmax);
-}
 
 // -----
 
