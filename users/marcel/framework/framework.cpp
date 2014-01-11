@@ -2,7 +2,6 @@
 
 #include <assert.h>
 #include <cmath>
-#include <dirent.h>
 #include <map>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -14,6 +13,8 @@
 	#include <Windows.h>
 	#include <Xinput.h>
 	static PFNGLBLENDEQUATIONPROC glBlendEquation = 0;
+#else
+	#include <dirent.h>
 #endif
 
 #include "audio.h"
@@ -325,44 +326,69 @@ void Framework::reloadCaches()
 	}
 }
 
-void Framework::fillCachesWithPath(const char * path)
+std::vector<std::string> listFiles(const char * path)
 {
+#ifdef WIN32
+	std::vector<std::string> result;
+	WIN32_FIND_DATAA ffd;
+	char wildcard[MAX_PATH];
+	sprintf_s(wildcard, sizeof(wildcard), "%s\\*", path);
+	HANDLE find = FindFirstFileA(wildcard, &ffd);
+	if (find != INVALID_HANDLE_VALUE)
+	{
+		do
+		{
+			result.push_back(ffd.cFileName);
+		} while (FindNextFileA(find, &ffd) != 0);
+
+		FindClose(find);
+	}
+	return result;
+#else
+	std::vector<std::string> result;
 	DIR * dir = opendir(path);
+	dirent * ent;
 	if (dir)
 	{
-		dirent * ent;
-		
 		while ((ent = readdir(dir)) != 0)
+			result.push_back(ent->d_name);
+		closedir(dir);
+	}
+	return result;
+#endif
+}
+
+void Framework::fillCachesWithPath(const char * path)
+{
+	std::vector<std::string> files = listFiles(path);
+	for (size_t i = 0; i < files.size(); ++i)
+	{
+		const char * f = files[i].c_str();
+		if (strstr(f, ".png") || strstr(f, ".bmp"))
+			Sprite(f, 0.f, 0.f);
+		if (strstr(f, ".wav"))
+			g_soundCache.findOrCreate(f);
+		if (strstr(f, ".ogg"))
 		{
-			const char * f = ent->d_name;
-			
-			if (strstr(f, ".png") || strstr(f, ".bmp"))
-				Sprite(f, 0.f, 0.f);
-			if (strstr(f, ".wav"))
-				g_soundCache.findOrCreate(f);
-			if (strstr(f, ".ogg"))
+			FILE * file = fopen(f, "rb");
+			if (file)
 			{
-				FILE * file = fopen(f, "rb");
-				if (file)
-				{
-					fseek(file, 0, SEEK_END);
-					const int size = ftell(file);
-					fclose(file);
-					if (size <= 512*1024)
-						g_soundCache.findOrCreate(f);
-				}
-			}
-			if (strstr(f, ".ttf"))
-				g_fontCache.findOrCreate(f);
-			if (strstr(f, ".txt"))
-			{
-				FileReader r;
-				std::string line;
-				if (r.open(f, true) && r.read(line) && strstr(line.c_str(), "#ui"))
-					g_uiCache.findOrCreate(f);
+				fseek(file, 0, SEEK_END);
+				const int size = ftell(file);
+				fclose(file);
+				if (size <= 512*1024)
+					g_soundCache.findOrCreate(f);
 			}
 		}
-		closedir(dir);
+		if (strstr(f, ".ttf"))
+			g_fontCache.findOrCreate(f);
+		if (strstr(f, ".txt"))
+		{
+			FileReader r;
+			std::string line;
+			if (r.open(f, true) && r.read(line) && strstr(line.c_str(), "#ui"))
+				g_uiCache.findOrCreate(f);
+		}
 	}
 }
 

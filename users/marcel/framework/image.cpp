@@ -1,3 +1,6 @@
+
+// Copyright (C) 2013 Grannies Games - All rights reserved
+
 #ifdef WIN32
 	#include <Windows.h>
 #endif

@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#define ENABLE_LOGGING 0
+#define ENABLE_LOGGING 1
 
 static const int MAX_GAMEPAD = 4;
 

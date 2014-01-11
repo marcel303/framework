@@ -69,7 +69,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\win32\include;.\win32\include\freetype</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;.\audiostream;.\win32\include;.\win32\include\freetype</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -81,6 +81,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="audio.cpp" />
+    <ClCompile Include="audiostream\AudioMixer.cpp" />
+    <ClCompile Include="audiostream\AudioOutput.cpp" />
+    <ClCompile Include="audiostream\AudioStreamVorbis.cpp" />
+    <ClCompile Include="audiostream\oggvorbis.c" />
     <ClCompile Include="example.cpp" />
     <ClCompile Include="framework.cpp" />
     <ClCompile Include="image.cpp" />
@@ -88,6 +92,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="audio.h" />
+    <ClInclude Include="audiostream\AudioMixer.h" />
+    <ClInclude Include="audiostream\AudioOutput.h" />
+    <ClInclude Include="audiostream\AudioStream.h" />
+    <ClInclude Include="audiostream\AudioStreamVorbis.h" />
+    <ClInclude Include="audiostream\oggvorbis.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="image.h" />
     <ClInclude Include="internal.h" />
@@ -96,6 +105,8 @@
     <Text Include="background.txt" />
     <Text Include="rpg.txt" />
     <Text Include="sprite.txt" />
+    <Text Include="ui.txt" />
+    <Text Include="ui2.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

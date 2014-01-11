@@ -19,8 +19,8 @@ static Sprite * createRandomSprite()
 	sprintf(anim, "%d%c", guy, dirName[dir]);
 	
 	sprite->startAnim(anim);
-	sprite->x = rand() % sx;
-	sprite->y = rand() % sy;
+	sprite->x = float(rand() % sx);
+	sprite->y = float(rand() % sy);
 	sprite->scale = 4;
 	sprite->animSpeed = 1.f + (rand() % 100) / 100.f;
 	
@@ -184,9 +184,9 @@ int main(int argc, char * argv[])
 			for (int i = 0; i < 10; ++i)
 			{
 				StageObject * obj = new StageObject_SpriteAnim(name, anim);
-				obj->sprite->x = rand() % sx;
-				obj->sprite->y = rand() % sy;
-				obj->sprite->scale = 3;
+				obj->sprite->x = float(rand() % sx);
+				obj->sprite->y = float(rand() % sy);
+				obj->sprite->scale = 3.f;
 				
 				const int objectId = stage.addObject(obj);
 			
@@ -223,7 +223,7 @@ int main(int argc, char * argv[])
 				sprites[i]->animSpeed = std::max(0.f, sprites[i]->animSpeed - framework.timeStep * 0.1f);
 				
 				if ((rand() % 100) == 0)
-					sprites[i]->angle = (rand() % 40) - 20;
+					sprites[i]->angle = (rand() % 40) - 20.f;
 				if ((rand() % 300) == 0)
 					sprites[i]->scale = ((rand() % 200) + 50) / 100.f * 4.f;
 				
@@ -244,7 +244,7 @@ int main(int argc, char * argv[])
 
 			for (int i = 0; i < numSortedSprites; ++i)
 			{
-				setColor(255, 191, 127, 2048 * sortedSprites[i]->animSpeed);
+				setColor(255, 191, 127, int(2048 * sortedSprites[i]->animSpeed));
 				sortedSprites[i]->draw();
 			}
 					

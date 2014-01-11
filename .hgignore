@@ -11,7 +11,12 @@ tools/svntool/svntool
 tools/tgatool/tgatool
 tools/veccompiler/veccompiler-vc
 users/marcel/framework/Debug
+users/marcel/framework/exe
 users/marcel/framework/Release
+users/marcel/framework/framework.opensdf
+users/marcel/framework/framework.sdf
+users/marcel/framework/framework.v11.suo
+users/marcel/framework/framework.vcxproj.filters
 usg/build.txt
 usg/makebuild
 usg/IOSDATA*

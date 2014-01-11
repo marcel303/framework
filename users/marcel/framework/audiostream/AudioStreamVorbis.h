@@ -1,5 +1,7 @@
 #pragma once
 
+// Copyright (C) 2013 Grannies Games - All rights reserved
+
 #include <string>
 #include "AudioMixer.h"
 
