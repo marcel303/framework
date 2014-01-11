@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <direct.h>
 #include "framework.h"
 
 const int sx = 1920;
@@ -39,6 +40,8 @@ static void sortSprites(Sprite ** sprites, int numSprites)
 
 int main(int argc, char * argv[])
 {
+	_chdir("data");
+
 	framework.minification = 2;
 	framework.fullscreen = true;
 	if (!framework.init(argc, argv, sx, sy))
@@ -254,7 +257,7 @@ int main(int argc, char * argv[])
 				setFont(font);
 
 				setColor(255, 255, 0, 255);
-				drawText(5, 5 + i * 40, 35, 0, 0, "gamepad[%d]: %s", i, gamepad[i].isConnected ? "connected" : "not connected");
+				drawText(5.f, 5.f + i * 40.f, 35, 0, 0, "gamepad[%d]: %s", i, gamepad[i].isConnected ? "connected" : "not connected");
 			}
 
 			setColor(255, 255, 255, 255);
@@ -264,7 +267,7 @@ int main(int argc, char * argv[])
 			setFont(font);
 
 			setColor(255, 255, 255, 255);
-			drawText(mouse.x, mouse.y, 35, 0, 0, "(%d, %d)", mouse.x, mouse.y);
+			drawText(float(mouse.x), float(mouse.y), 35, 0, 0, "(%d, %d)", mouse.x, mouse.y);
 			
 			setColor(255, 0, 0, 255);
 			//drawLine(0, 0, sx, sy);

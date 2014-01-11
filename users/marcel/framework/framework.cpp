@@ -370,7 +370,8 @@ void Framework::fillCachesWithPath(const char * path)
 			g_soundCache.findOrCreate(f);
 		if (strstr(f, ".ogg"))
 		{
-			FILE * file = fopen(f, "rb");
+			FILE * file;
+			fopen_s(&file, f, "rb");
 			if (file)
 			{
 				fseek(file, 0, SEEK_END);
@@ -1286,10 +1287,10 @@ void Ui::draw()
 			if (type == "image" || type == "button")
 			{
 				Sprite(getImage(d).c_str()).drawEx(
-					d.getInt("x", 0),
-					d.getInt("y", 0),
-					0,
-					d.getInt("scale", 1));
+					float(d.getInt("x", 0)),
+					float(d.getInt("y", 0)),
+					0.f,
+					float(d.getInt("scale", 1)));
 			}
 		}
 	}
@@ -1444,7 +1445,7 @@ void logDebug(const char * format, ...)
 	char text[1024];
 	va_list args;
 	va_start(args, format);
-	vsprintf(text, format, args); // todo: safer version
+	vsprintf_s(text, format, args); // todo: safer version
 	va_end(args);
 	
 	fprintf(stderr, "[DD] %s\n", text);
