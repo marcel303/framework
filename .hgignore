@@ -10,6 +10,7 @@ tools/rescompiler/rescompiler
 tools/svntool/svntool
 tools/tgatool/tgatool
 tools/veccompiler/veccompiler-vc
+users/marcel/boxfilter/boxfilter
 users/marcel/framework/Debug
 users/marcel/framework/exe
 users/marcel/framework/Release
