@@ -1,5 +1,10 @@
 #include <algorithm>
-#include <direct.h>
+#ifdef WIN32
+	#include <direct.h>
+#else
+	#include <unistd.h>
+	#define _chdir chdir
+#endif
 #include "framework.h"
 
 #define SCOPED(_enabled, entry, exit) \
@@ -84,7 +89,7 @@ int main(int argc, char * argv[])
 	sprite.startAnim("walk-l");
 	sprite.pauseAnim();
 	
-	Sprite sprite2("data2/hawk.png");
+	Sprite sprite2("hawk.png");
 	sprite2.scale = 1.5f;
 	sprite2.x = sx - (sprite2.getWidth() / 2) * sprite2.scale;
 	sprite2.y = sy - (sprite2.getHeight() / 2) * sprite2.scale;
