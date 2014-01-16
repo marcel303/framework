@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <direct.h>
 #include "framework.h"
 
 #define SCOPED(_enabled, entry, exit) \
@@ -41,8 +42,8 @@ static Sprite * createRandomSprite()
 	sprintf(anim, "%d%c", guy, dirName[dir]);
 	
 	sprite->startAnim(anim);
-	sprite->x = rand() % sx;
-	sprite->y = rand() % sy;
+	sprite->x = float(rand() % sx);
+	sprite->y = float(rand() % sy);
 	sprite->scale = 4;
 	sprite->animSpeed = 1.f + (rand() % 100) / 100.f;
 	
@@ -61,6 +62,8 @@ static void sortSprites(Sprite ** sprites, int numSprites)
 
 int main(int argc, char * argv[])
 {
+	_chdir("data");
+
 	framework.minification = 2;
 	framework.fullscreen = true;
 	if (!framework.init(argc, argv, sx, sy))
@@ -213,9 +216,9 @@ int main(int argc, char * argv[])
 			for (int i = 0; i < 10; ++i)
 			{
 				StageObject * obj = new StageObject_SpriteAnim(name, anim);
-				obj->sprite->x = rand() % sx;
-				obj->sprite->y = rand() % sy;
-				obj->sprite->scale = 3;
+				obj->sprite->x = float(rand() % sx);
+				obj->sprite->y = float(rand() % sy);
+				obj->sprite->scale = 3.f;
 				
 				const int objectId = stage.addObject(obj);
 			
@@ -290,7 +293,7 @@ int main(int argc, char * argv[])
 				sprites[i]->animSpeed = std::max(0.f, sprites[i]->animSpeed - framework.timeStep * 0.1f);
 				
 				if ((rand() % 100) == 0)
-					sprites[i]->angle = (rand() % 40) - 20;
+					sprites[i]->angle = (rand() % 40) - 20.f;
 				if ((rand() % 300) == 0)
 					sprites[i]->scale = ((rand() % 200) + 50) / 100.f * 4.f;
 				
@@ -315,7 +318,7 @@ int main(int argc, char * argv[])
 				if (sortedSprites[i] == &sprite)
 					setColor(255, 191, 127, 255, sine<int>(0, 255, framework.time));
 				else
-					setColor(255, 191, 127, 2048 * sortedSprites[i]->animSpeed);
+					setColor(255, 191, 127, int(2048 * sortedSprites[i]->animSpeed));
 				
 				sortedSprites[i]->draw();
 			}
@@ -331,7 +334,7 @@ int main(int argc, char * argv[])
 				setFont(font);
 
 				setColor(255, 255, 0, 255);
-				drawText(5, 5 + i * 40, 35, 1, 1, "gamepad[%d]: %s", i, gamepad[i].isConnected ? "connected" : "not connected");
+				drawText(5.f, 5.f + i * 40.f, 35, 0, 0, "gamepad[%d]: %s", i, gamepad[i].isConnected ? "connected" : "not connected");
 			}
 
 			setColor(255, 255, 255, 255);
@@ -341,7 +344,7 @@ int main(int argc, char * argv[])
 			setFont(font);
 
 			setColor(255, 255, 255, 255);
-			drawText(mouse.x, mouse.y, 35, 1, -1, "(%d, %d)", mouse.x, mouse.y);
+			drawText(float(mouse.x), float(mouse.y), 35, 0, 0, "(%d, %d)", mouse.x, mouse.y);
 			
 			setColor(255, 0, 0, 255);
 			//drawLine(0, 0, sx, sy);

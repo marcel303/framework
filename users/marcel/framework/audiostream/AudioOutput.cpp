@@ -1,3 +1,6 @@
+
+// Copyright (C) 2013 Grannies Games - All rights reserved
+
 #include <string.h>
 #include "AudioOutput.h"
 #include "AudioMixer.h"

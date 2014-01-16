@@ -10,10 +10,14 @@ tools/rescompiler/rescompiler
 tools/svntool/svntool
 tools/tgatool/tgatool
 tools/veccompiler/veccompiler-vc
-users/marcel/boxfilter/boxfilter
 users/marcel/framework/Debug
+users/marcel/framework/exe
 users/marcel/framework/Release
 users/marcel/framework/framework
+users/marcel/framework/framework.opensdf
+users/marcel/framework/framework.sdf
+users/marcel/framework/framework.v11.suo
+users/marcel/framework/framework.vcxproj.filters
 users/marcel/sRGB/srgb
 users/marcel/ttf1/ttf
 usg/build.txt

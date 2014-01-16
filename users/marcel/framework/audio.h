@@ -1,5 +1,7 @@
 #pragma once
 
+// Copyright (C) 2013 Grannies Games - All rights reserved
+
 #include <OpenAL/al.h>
 #include <OpenAL/alc.h>
 #include <SDL/SDL_thread.h>

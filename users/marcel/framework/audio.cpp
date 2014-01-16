@@ -1,3 +1,6 @@
+
+// Copyright (C) 2013 Grannies Games - All rights reserved
+
 #include "audio.h"
 #include "audiostream/AudioOutput.h"
 #include "audiostream/AudioStreamVorbis.h"

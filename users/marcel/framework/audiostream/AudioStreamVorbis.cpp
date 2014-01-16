@@ -1,3 +1,6 @@
+
+// Copyright (C) 2013 Grannies Games - All rights reserved
+
 #include <stdio.h>
 #include "AudioStreamVorbis.h"
 #include "internal.h"
@@ -108,7 +111,7 @@ void AudioStream_Vorbis::Open(const char* fileName, bool loop)
 	mFileName = fileName;
 	mLoop = loop;
 	
-	mFile = fopen(mFileName.c_str(), "rb");
+	fopen_s(&mFile, mFileName.c_str(), "rb");
 	
 	if (mFile == 0)
 	{
