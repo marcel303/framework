@@ -4,6 +4,7 @@
 #include <SDL/SDL_opengl.h>
 
 #include <algorithm>
+#include <cmath>
 #include <map>
 #include <set>
 #include <string>
@@ -19,6 +20,13 @@ enum BLEND_MODE
 	BLEND_ALPHA,
 	BLEND_ADD,
 	BLEND_SUBTRACT
+};
+
+enum COLOR_MODE
+{
+	COLOR_MUL,
+	COLOR_ADD,
+	COLOR_SUB
 };
 
 enum BUTTON
@@ -85,6 +93,7 @@ public:
 	void beginDraw(int r, int g, int b, int a);
 	void endDraw();
 	
+	float time;
 	float timeStep;
 	
 	bool fullscreen;
@@ -109,7 +118,26 @@ public:
 	explicit Color(int r, int g, int b, int a = 255);
 	explicit Color(float r, float g, float b, float a = 1.f);
 	
+	Color interp(const Color & other, float t) const;
+	
 	float r, g, b, a;
+};
+
+class Gradient
+{
+public:
+	float x1;
+	float y1;
+	Color color1;
+	float x2;
+	float y2;
+	Color color2;
+	
+	Gradient();
+	Gradient(float x1, float y1, const Color & color1, float x2, float y2, const Color & color2);
+	
+	void set(float x1, float y1, const Color & color1, float x2, float y2, const Color & color2);
+	Color eval(float x, float y) const;
 };
 
 class Dictionary
@@ -339,14 +367,21 @@ public:
 
 //
 
+void setDrawRect(int x, int y, int sx, int sy);
+void clearDrawRect();
+
 void setBlend(BLEND_MODE blendMode);
+void setColorMode(COLOR_MODE colorMode);
 void setColor(const Color & color);
-void setColor(int r, int g, int b, int a = 255);
-void setColorf(float r, float g, float b, float a = 1.f);
+void setColor(int r, int g, int b, int a = 255, int rgbMul = 255);
+void setColorf(float r, float g, float b, float a = 1.f, float rgbMul = 1.f);
+void setGradientf(float x1, float y1, const Color & color1, float x2, float y2, const Color & color2);
+void setGradientf(float x1, float y1, float r1, float g1, float b1, float a1, float x2, float y2, float r2, float g2, float b2, float a2);
 void setFont(Font & font);
 
 void drawLine(float x1, float y1, float x2, float y2);
 void drawRect(float x1, float y1, float x2, float y2);
+void drawRectGradient(float x1, float y1, float x2, float y2);
 void drawText(float x, float y, int size, int alignX, int alignY, const char * format, ...);
 
 //
@@ -361,6 +396,12 @@ template <typename T>
 static T saturate(T v)
 {
 	return clamp<T>(v, (T)0, (T)1);
+}
+
+template <typename T>
+static T sine(T min, T max, float t)
+{
+	return static_cast<T>(min + (max - min) * (std::sin(t) + 1.f) / 2.f);
 }
 
 //

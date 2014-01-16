@@ -1,6 +1,28 @@
 #include <algorithm>
 #include "framework.h"
 
+#define SCOPED(_enabled, entry, exit) \
+	class scoped ## LINE \
+	{ \
+	public: \
+		bool m_enabled; \
+		scoped ## LINE (bool enabled) \
+		{ \
+			m_enabled = enabled; \
+			if (m_enabled) \
+			{ \
+				entry ; \
+			} \
+		} \
+		~scoped ## LINE () \
+		{ \
+			if (m_enabled) \
+			{ \
+				exit ; \
+			} \
+		} \
+	} _ ## LINE (_enabled)
+	
 const int sx = 1920;
 const int sy = 1080;
 
@@ -42,7 +64,7 @@ int main(int argc, char * argv[])
 	framework.minification = 2;
 	framework.fullscreen = true;
 	if (!framework.init(argc, argv, sx, sy))
-		exit(-1);
+		return -1;
 	framework.fillCachesWithPath(".");
 	
 	bool down = false;
@@ -58,6 +80,13 @@ int main(int argc, char * argv[])
 	Sprite sprite("sprite.png");
 	sprite.startAnim("walk-l");
 	sprite.pauseAnim();
+	
+	Sprite sprite2("data2/hawk.png");
+	sprite2.scale = 1.5f;
+	sprite2.x = sx - (sprite2.getWidth() / 2) * sprite2.scale;
+	sprite2.y = sy - (sprite2.getHeight() / 2) * sprite2.scale;
+	sprite2.pivotX = sprite2.getWidth() / 2.f;
+	sprite2.pivotY = sprite2.getHeight() / 2.f;
 	
 	const int numSprites = 100;
 	Sprite * sprites[numSprites];
@@ -199,6 +228,44 @@ int main(int argc, char * argv[])
 		{
 			setBlend(BLEND_ALPHA);
 			
+			{
+				static float gradX1 = sx;
+				static float gradY1 = sy;
+				static float gradX2 = -sx/3;
+				static float gradY2 = -sy/3;
+				bool showLine = false;
+				if (mouse.isDown(BUTTON_LEFT))
+				{
+					gradX1 = mouse.x;
+					gradY1 = mouse.y;
+					showLine = true;
+				}
+				if (mouse.isDown(BUTTON_RIGHT))
+				{
+					gradX2 = mouse.x;
+					gradY2 = mouse.y;
+					showLine = true;
+				}
+				setGradientf(gradX1, gradY1, Color(1.f, 0.f, 0.f, 0.f), gradX2, gradY2, Color(1.f, 1.f, 1.f, 1.f));
+				const int border = 0;
+				const int x1 = border;
+				const int x2 = sx - border * 2;
+				const int y = sy / 2;
+				const int dy = sine<int>(0, sy, framework.time * 3.f);
+				int y1 = y - dy / 2;
+				int y2 = y + dy / 2;
+				if (y1 > y2)
+					std::swap(y1, y2);
+				setDrawRect(x1, y1, x2 - x1, y2 - y1);
+				drawRectGradient(0.f, 0.f, sx, sy);
+				clearDrawRect();
+				if (showLine)
+				{
+					setColor(0, 255, 0, 127);
+					drawLine(gradX1, gradY1, gradX2, gradY2);
+				}
+			}
+			
 			setColor(255, 255, 255);
 			background.drawEx(sx - 132, 132, 0, 2);
 			
@@ -244,17 +311,27 @@ int main(int argc, char * argv[])
 
 			for (int i = 0; i < numSortedSprites; ++i)
 			{
-				setColor(255, 191, 127, 2048 * sortedSprites[i]->animSpeed);
+				SCOPED(sortedSprites[i] == &sprite || sortedSprites[i] == &sprite2, setColorMode(COLOR_ADD), setColorMode(COLOR_MUL));
+				if (sortedSprites[i] == &sprite)
+					setColor(255, 191, 127, 255, sine<int>(0, 255, framework.time));
+				else
+					setColor(255, 191, 127, 2048 * sortedSprites[i]->animSpeed);
+				
 				sortedSprites[i]->draw();
 			}
-					
+			
+			setColorMode(COLOR_ADD);
+			setColor(255, 191, 127, 255, sine<int>(0, 255, framework.time));
+			sprite2.draw();
+			setColorMode(COLOR_MUL);
+			
 			for (int i = 0; i < MAX_GAMEPAD; ++i)
 			{
 				Font font("calibri.ttf");
 				setFont(font);
 
 				setColor(255, 255, 0, 255);
-				drawText(5, 5 + i * 40, 35, 0, 0, "gamepad[%d]: %s", i, gamepad[i].isConnected ? "connected" : "not connected");
+				drawText(5, 5 + i * 40, 35, 1, 1, "gamepad[%d]: %s", i, gamepad[i].isConnected ? "connected" : "not connected");
 			}
 
 			setColor(255, 255, 255, 255);
@@ -264,7 +341,7 @@ int main(int argc, char * argv[])
 			setFont(font);
 
 			setColor(255, 255, 255, 255);
-			drawText(mouse.x, mouse.y, 35, 0, 0, "(%d, %d)", mouse.x, mouse.y);
+			drawText(mouse.x, mouse.y, 35, 1, -1, "(%d, %d)", mouse.x, mouse.y);
 			
 			setColor(255, 0, 0, 255);
 			//drawLine(0, 0, sx, sy);
