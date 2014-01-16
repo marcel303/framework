@@ -157,8 +157,8 @@ int main(int argc, char * argv[])
 		if (keyboard.wentDown(SDLK_p))
 			bgm.play();
 		
-		float dx = 0;
-		float dy = 0;
+		float dx = 0.f;
+		float dy = 0.f;
 		
 		if (keyboard.isDown(SDLK_LEFT))
 			dx -= 1.f;
