@@ -32,13 +32,15 @@ public:
 	Globals()
 	{
 		memset(this, 0, sizeof(Globals));
+		g_colorMode = COLOR_MUL;
 	}
 	
 	int g_displaySize[2];
 	FT_Library g_freeType;
 	int g_resourceVersion;
-	BLEND_MODE g_blendMode;
+	COLOR_MODE g_colorMode;
 	Color g_color;
+	Gradient g_gradient;
 	FontCacheElem * g_font;
 	bool g_mouseDown[BUTTON_MAX];
 	bool g_mouseChange[BUTTON_MAX];
