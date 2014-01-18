@@ -10,9 +10,13 @@
 #include <string>
 #include <vector>
 
+// configuration
+
 #define ENABLE_LOGGING 1
 
 static const int MAX_GAMEPAD = 4;
+
+// enumerations
 
 enum BLEND_MODE
 {
@@ -68,12 +72,33 @@ enum TEXTURE_FILTER
 	FILTER_LINEAR
 };
 
-//
+// forward declations
 
+class Color;
 class Dictionary;
+class Font;
+class Framework;
+class Gamepad;
+class Gradient;
+class Keyboard;
+class Mouse;
+class Music;
+class Sound;
 class Sprite;
+class Stage;
+class StageObject;
+class Ui;
 
-//
+// globals
+
+extern Framework framework;
+extern Mouse mouse;
+extern Keyboard keyboard;
+extern Gamepad gamepad[MAX_GAMEPAD];
+extern Stage stage;
+extern Ui ui;
+
+// event handlers
 
 typedef void (*ActionHandler)(const std::string & action, const Dictionary & args);
 	
@@ -117,6 +142,8 @@ private:
 	void unregisterSprite(Sprite * sprite);
 };
 
+//
+
 class Color
 {
 public:
@@ -128,6 +155,8 @@ public:
 	
 	float r, g, b, a;
 };
+
+//
 
 class Gradient
 {
@@ -145,6 +174,8 @@ public:
 	void set(float x1, float y1, const Color & color1, float x2, float y2, const Color & color2);
 	Color eval(float x, float y) const;
 };
+
+//
 
 class Dictionary
 {
@@ -166,6 +197,8 @@ public:
 	
 	std::string & operator[](const char * name);
 };
+
+//
 
 class Sprite
 {
@@ -227,6 +260,8 @@ private:
 	void processAnimationTriggersForFrame(int frame, int event);
 };
 
+//
+
 class Sound
 {
 public:
@@ -246,6 +281,8 @@ private:
 	int m_speed;
 };
 
+//
+
 class Music
 {
 	std::string m_filename;
@@ -257,6 +294,8 @@ public:
 	void stop();
 	void setVolume(int volume);
 };
+
+//
 
 class Font
 {
@@ -271,6 +310,8 @@ public:
 private:
 	class FontCacheElem * m_font;
 };
+
+//
 
 class Mouse
 {
@@ -308,6 +349,8 @@ public:
 	bool isDown[GAMEPAD_MAX];
 	float getAnalog(int stick, ANALOG analog, float scale = 1.f) const;
 };
+
+//
 
 class StageObject
 {	
@@ -372,7 +415,7 @@ public:
 	Dictionary & operator[](const char * name);
 };
 
-//
+// drawing
 
 void setDrawRect(int x, int y, int sx, int sy);
 void clearDrawRect();
@@ -391,7 +434,11 @@ void drawRect(float x1, float y1, float x2, float y2);
 void drawRectGradient(float x1, float y1, float x2, float y2);
 void drawText(float x, float y, int size, int alignX, int alignY, const char * format, ...);
 
-//
+// utility
+
+void changeDirectory(const char * path);
+
+// math
 
 template <typename T>
 static T clamp(T v, T vmin, T vmax)
@@ -411,7 +458,7 @@ static T sine(T min, T max, float t)
 	return static_cast<T>(min + (max - min) * (std::sin(t) + 1.f) / 2.f);
 }
 
-//
+// logging
 
 #if ENABLE_LOGGING
 	void logDebug(const char * format, ...);
@@ -425,19 +472,10 @@ static T sine(T min, T max, float t)
 	#define logError(...) do { } while (false)
 #endif
 
-//
+// constants
 
 extern Color colorBlack;
 extern Color colorWhite;
 extern Color colorRed;
 extern Color colorGreen;
 extern Color colorBlue;
-
-//
-
-extern Framework framework;
-extern Mouse mouse;
-extern Keyboard keyboard;
-extern Gamepad gamepad[MAX_GAMEPAD];
-extern Stage stage;
-extern Ui ui;

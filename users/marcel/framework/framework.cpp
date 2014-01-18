@@ -12,11 +12,14 @@
 #include <vector>
 
 #ifdef WIN32
+	#include <direct.h>
 	#include <SDL/SDL_opengl.h>
 	#include <Windows.h>
 	#include <Xinput.h>
 #else
 	#include <dirent.h>
+	#include <unistd.h>
+	#define _chdir chdir
 #endif
 
 #include "audio.h"
@@ -1651,6 +1654,11 @@ void drawText(float x, float y, int size, int alignX, int alignY, const char * f
 		drawTextInternal(g_globals.g_font->face, size, text);
 	}
 	glPopMatrix();
+}
+
+void changeDirectory(const char * path)
+{
+	_chdir(path);
 }
 
 #if ENABLE_LOGGING
