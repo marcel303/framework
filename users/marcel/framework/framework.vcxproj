@@ -51,8 +51,8 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\win32\include;.\win32\include\freetype</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NO_SDL_GLEXT;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>.;.\audiostream;.\win32\include;.\win32\include\freetype</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -90,6 +90,7 @@
     <ClCompile Include="audiostream\AudioStreamVorbis.cpp" />
     <ClCompile Include="audiostream\oggvorbis.c">
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">TurnOffAllWarnings</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">TurnOffAllWarnings</WarningLevel>
     </ClCompile>
     <ClCompile Include="framework.cpp" />
     <ClCompile Include="image.cpp" />

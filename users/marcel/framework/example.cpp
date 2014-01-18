@@ -19,8 +19,8 @@ static Sprite * createRandomSprite()
 	sprintf(anim, "%d%c", guy, dirName[dir]);
 	
 	sprite->startAnim(anim);
-	sprite->x = float(rand() % sx);
-	sprite->y = float(rand() % sy);
+	sprite->x = rand() % sx;
+	sprite->y = rand() % sy;
 	sprite->scale = 4;
 	sprite->animSpeed = 1.f + (rand() % 100) / 100.f;
 	
@@ -194,8 +194,8 @@ int main(int argc, char * argv[])
 			for (int i = 0; i < 10; ++i)
 			{
 				StageObject * obj = new StageObject_SpriteAnim(name, anim);
-				obj->sprite->x = float(rand() % sx);
-				obj->sprite->y = float(rand() % sy);
+				obj->sprite->x = rand() % sx;
+				obj->sprite->y = rand() % sy;
 				obj->sprite->scale = 3.f;
 				
 				const int objectId = stage.addObject(obj);
@@ -298,7 +298,7 @@ int main(int argc, char * argv[])
 				if (sortedSprites[i] == &sprite)
 					setColor(255, 191, 127, 255, sine<int>(0, 255, framework.time));
 				else
-					setColor(255, 191, 127, int(2048 * sortedSprites[i]->animSpeed));
+					setColor(255, 191, 127, 2048 * sortedSprites[i]->animSpeed);
 				
 				sortedSprites[i]->draw();
 				
@@ -327,7 +327,7 @@ int main(int argc, char * argv[])
 			setFont(font);
 
 			setColor(255, 255, 255, 255);
-			drawText(float(mouse.x), float(mouse.y), 35, 0, 0, "(%d, %d)", mouse.x, mouse.y);
+			drawText(mouse.x, mouse.y, 35, 0, 0, "(%d, %d)", mouse.x, mouse.y);
 			
 			setColor(255, 0, 0, 255);
 			//drawLine(0, 0, sx, sy);
