@@ -1,3 +1,4 @@
+#include <GL/glew.h>
 #include "audio.h"
 #include "image.h"
 #include "internal.h"

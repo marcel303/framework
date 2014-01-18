@@ -15,7 +15,6 @@
 	#include <SDL/SDL_opengl.h>
 	#include <Windows.h>
 	#include <Xinput.h>
-	static PFNGLBLENDEQUATIONPROC glBlendEquation = 0;
 #else
 	#include <dirent.h>
 #endif
@@ -654,6 +653,7 @@ Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * s
 	flipX = false;
 	flipY = false;
 	pixelpos = true;
+	filter = FILTER_POINT;
 	
 	// animation
 	std::string sheetFilename;
@@ -692,10 +692,10 @@ Sprite::~Sprite()
 
 void Sprite::draw()
 {
-	drawEx(x, y, angle, scale, blend, pixelpos);
+	drawEx(x, y, angle, scale, blend, pixelpos, filter);
 }
 
-void Sprite::drawEx(float x, float y, float angle, float scale, BLEND_MODE blendMode, bool pixelpos)
+void Sprite::drawEx(float x, float y, float angle, float scale, BLEND_MODE blendMode, bool pixelpos, TEXTURE_FILTER filter)
 {
 	if (m_texture->textures)
 	{
@@ -737,6 +737,17 @@ void Sprite::drawEx(float x, float y, float angle, float scale, BLEND_MODE blend
 			
 			glBindTexture(GL_TEXTURE_2D, m_texture->textures[cellIndex]);
 			glEnable(GL_TEXTURE_2D);
+
+			if (filter == FILTER_POINT)
+			{
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			}
+			if (filter == FILTER_LINEAR)
+			{
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			}
 			
 			const float rsx = float(m_texture->sx / m_anim->m_gridSize[0]);
 			const float rsy = float(m_texture->sy / m_anim->m_gridSize[1]);

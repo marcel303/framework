@@ -68,7 +68,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NO_SDL_GLEXT;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>.;.\audiostream;.\win32\include;.\win32\include\freetype</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -78,6 +78,10 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>win32\lib\FreeImage.lib;win32\lib\freetype252.lib;win32\lib\OpenAL32.lib;win32\lib\SDL.lib;win32\lib\SDLmain.lib;OpenGL32.lib;XInput9_1_0.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <Lib>
+      <AdditionalDependencies>
+      </AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="audio.cpp" />

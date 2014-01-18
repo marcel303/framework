@@ -90,11 +90,12 @@ int main(int argc, char * argv[])
 	sprite.pauseAnim();
 	
 	Sprite sprite2("hawk.png");
-	sprite2.scale = 1.5f;
+	sprite2.scale = 1.f;
 	sprite2.x = sx - (sprite2.getWidth() / 2) * sprite2.scale;
 	sprite2.y = sy - (sprite2.getHeight() / 2) * sprite2.scale;
 	sprite2.pivotX = sprite2.getWidth() / 2.f;
 	sprite2.pivotY = sprite2.getHeight() / 2.f;
+	sprite2.filter = FILTER_LINEAR;
 	
 	const int numSprites = 100;
 	Sprite * sprites[numSprites];

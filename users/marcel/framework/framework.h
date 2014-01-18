@@ -62,6 +62,12 @@ enum GAMEPAD
 	GAMEPAD_MAX
 };
 
+enum TEXTURE_FILTER
+{
+	FILTER_POINT,
+	FILTER_LINEAR
+};
+
 //
 
 class Dictionary;
@@ -170,7 +176,7 @@ public:
 	~Sprite();
 	
 	void draw();
-	void drawEx(float x, float y, float angle = 0.f, float scale = 1.f, BLEND_MODE blendMode = BLEND_ALPHA, bool pixelpos = true);
+	void drawEx(float x, float y, float angle = 0.f, float scale = 1.f, BLEND_MODE blendMode = BLEND_ALPHA, bool pixelpos = true, TEXTURE_FILTER filter = FILTER_POINT);
 	
 	// animation
 	void startAnim(const char * anim, int frame = 0);
@@ -192,6 +198,7 @@ public:
 	bool flipX;
 	bool flipY;
 	bool pixelpos;
+	TEXTURE_FILTER filter;
 	
 	int getWidth() const;
 	int getHeight() const;
