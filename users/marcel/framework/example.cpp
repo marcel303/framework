@@ -1,34 +1,6 @@
 #include <algorithm>
-#ifdef WIN32
-	#include <direct.h>
-#else
-	#include <unistd.h>
-	#define _chdir chdir
-#endif
 #include "framework.h"
 
-#define SCOPED(_enabled, entry, exit) \
-	class scoped ## LINE \
-	{ \
-	public: \
-		bool m_enabled; \
-		scoped ## LINE (bool enabled) \
-		{ \
-			m_enabled = enabled; \
-			if (m_enabled) \
-			{ \
-				entry ; \
-			} \
-		} \
-		~scoped ## LINE () \
-		{ \
-			if (m_enabled) \
-			{ \
-				exit ; \
-			} \
-		} \
-	} _ ## LINE (_enabled)
-	
 const int sx = 1920;
 const int sy = 1080;
 
@@ -67,7 +39,7 @@ static void sortSprites(Sprite ** sprites, int numSprites)
 
 int main(int argc, char * argv[])
 {
-	_chdir("data");
+	changeDirectory("data");
 
 	framework.minification = 2;
 	framework.fullscreen = true;
@@ -319,13 +291,18 @@ int main(int argc, char * argv[])
 
 			for (int i = 0; i < numSortedSprites; ++i)
 			{
-				SCOPED(sortedSprites[i] == &sprite || sortedSprites[i] == &sprite2, setColorMode(COLOR_ADD), setColorMode(COLOR_MUL));
+				if (sortedSprites[i] == &sprite || sortedSprites[i] == &sprite2)
+					setColorMode(COLOR_ADD);
+					
 				if (sortedSprites[i] == &sprite)
 					setColor(255, 191, 127, 255, sine<int>(0, 255, framework.time));
 				else
 					setColor(255, 191, 127, int(2048 * sortedSprites[i]->animSpeed));
 				
 				sortedSprites[i]->draw();
+				
+				if (sortedSprites[i] == &sprite || sortedSprites[i] == &sprite2)
+					setColorMode(COLOR_MUL);
 			}
 			
 			setColorMode(COLOR_ADD);
