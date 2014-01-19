@@ -1,5 +1,6 @@
 #pragma once
 
+#include <GL/glew.h>
 #include <SDL/SDL.h>
 #include <SDL/SDL_opengl.h>
 
@@ -12,7 +13,11 @@
 
 // configuration
 
-#define ENABLE_LOGGING 1
+#ifdef DEBUG
+	#define ENABLE_LOGGING 1
+#else
+	#define ENABLE_LOGGING 0 // do not alter
+#endif
 
 static const int MAX_GAMEPAD = 4;
 

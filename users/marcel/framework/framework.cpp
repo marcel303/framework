@@ -1,7 +1,5 @@
 #define NOMINMAX
 
-#include <GL/glew.h>
-
 #include <assert.h>
 #include <cmath>
 #include <limits>
@@ -13,6 +11,7 @@
 
 #ifdef WIN32
 	#include <direct.h>
+	#include <GL/glew.h>
 	#include <SDL/SDL_opengl.h>
 	#include <Windows.h>
 	#include <Xinput.h>
@@ -116,11 +115,17 @@ bool Framework::init(int argc, char * argv[], int sx, int sy)
 		return false;
 	}
 	
-	if (glewInit() != GLEW_OK)
+	glewExperimental = GL_TRUE; // force GLEW to resolve all supported extension methods
+
+	const int glewStatus = glewInit();
+
+	if (glewStatus != GLEW_OK)
 	{
-		logError("failed to initialize GLEW");
+		logError("failed to initialize GLEW: %s", glewGetErrorString(glewStatus));
 		return false;
 	}
+
+	log("using GLEW %s", glewGetString(GLEW_VERSION));
 	
 	if (!GLEW_VERSION_3_0)
 	{
@@ -141,20 +146,20 @@ bool Framework::init(int argc, char * argv[], int sx, int sy)
 	
 	// resolve OpenGL extensions
 	
+	/*
 	if (glFramebufferTexture == 0)
 		glFramebufferTexture = (PFNGLFRAMEBUFFERTEXTUREPROC)SDL_GL_GetProcAddress("glFramebufferTexture");
 	if (glBlendEquation == 0)
 		glBlendEquation = (PFNGLBLENDEQUATIONPROC)SDL_GL_GetProcAddress("glBlendEquation");
 	if (glClampColor == 0)
 		glClampColor = (PFNGLCLAMPCOLORPROC)SDL_GL_GetProcAddress("glClampColor");
-	if (!glProgramParameteri)
-		glProgramParameteri = (PFNGLPROGRAMPARAMETERIPROC)SDL_GL_GetProcAddress("glProgramParameteri");
 
-	if (glFramebufferTexture == 0 || glBlendEquation == 0 || glClampColor == 0 || glProgramParameteri == 0)
+	if (glFramebufferTexture == 0 || glBlendEquation == 0 || glClampColor == 0)
 	{
 		logError("unable to find required OpenGL extension(s)");
 		return false;
 	}
+	*/
 	
 	glClampColor(GL_CLAMP_VERTEX_COLOR, GL_FALSE);
 	

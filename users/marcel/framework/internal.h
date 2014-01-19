@@ -5,6 +5,7 @@
 #include FT_FREETYPE_H
 #include <map>
 #include <OpenAL/al.h>
+#include <GL/glew.h>
 #include <SDL/SDL.h>
 #include <SDL/SDL_opengl.h>
 #include <string>
