@@ -7,7 +7,7 @@ CFLAGS += `freetype-config --cflags` -DNO_SDL_GLEXT
 LFLAGS = `freetype-config --libs` `sdl-config --static-libs` -framework OpenAL -lFreeImage -lstdc++ -lGLEW
 
 all : $(EXE)
-	./framework
+	./framework devmode
 
 $(EXE) : example.o $(OBJS)
 	gcc -o $(EXE) example.o $(OBJS) $(LFLAGS)

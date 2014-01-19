@@ -42,9 +42,15 @@ static void sortSprites(Sprite ** sprites, int numSprites)
 int main(int argc, char * argv[])
 {
 	changeDirectory("data");
-
-	framework.reloadCachesOnActivate = true;
-	framework.minification = 2;
+	
+	for (int i = 1; i < argc; ++i)
+	{
+		if (std::string(argv[i]) =="devmode")
+		{
+			framework.reloadCachesOnActivate = true;
+			framework.minification = 2;
+		}
+	}
 	framework.fullscreen = true;
 	if (!framework.init(argc, argv, sx, sy))
 		return -1;
