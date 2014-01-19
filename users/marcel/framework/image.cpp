@@ -34,7 +34,7 @@ ImageData * loadImage(const char * filename)
 	
 	for (int y = 0; y < sy; ++y)
 	{
-		uint32_t * source = (uint32_t*)FreeImage_GetScanLine(bmp32, sy - 1 - y);
+		uint32_t * source = (uint32_t*)FreeImage_GetScanLine(bmp32, y);
 		
 		for (int x = 0; x < sx; ++x)
 		{

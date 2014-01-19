@@ -1,0 +1,16 @@
+uniform sampler2D texture;
+
+void main()
+{
+	vec2 delta = gl_FragCoord.xy - vec2(400, 250);
+	float alphaMul = 1.0 - length(delta) / 300.0;
+	alphaMul = alphaMul <= 0.0 ? 0.0 : 1.0 - pow(1.0 - alphaMul, 6.0);
+	
+	vec2 offset;
+	offset.x = sin(gl_FragCoord.x / 20.0) / 200.0;
+	offset.y = sin(gl_FragCoord.y / 10.0) / 200.0;
+	vec4 result = texture2D(texture, gl_TexCoord[0].xy + offset);
+	result = vec4(result.xyz, result.w * alphaMul);
+	
+	gl_FragColor = result;
+}

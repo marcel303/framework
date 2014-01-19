@@ -5,11 +5,24 @@
 
 Globals g_globals;
 TextureCache g_textureCache;
+ShaderCache g_shaderCache;
 AnimCache g_animCache;
 SoundCache g_soundCache;
 FontCache g_fontCache;
 GlyphCache g_glyphCache;
 UiCache g_uiCache;
+
+// -----
+
+void checkErrorGL_internal(const char * function, int line)
+{
+	const GLenum error = glGetError();
+	
+	if (error != GL_NO_ERROR)
+	{
+		logError("%s: %d: OpenGL error: %x", function, line, error);
+	}
+}
 
 // -----
 	
@@ -74,7 +87,8 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 					const int cellY = i / gridSx;
 					const int sourceX = cellX * cellSx;
 					const int sourceY = cellY * cellSy;
-					const int sourceOffset = sourceX + sourceY * imageData->sx;
+					//const int sourceOffset = sourceX + sourceY * imageData->sx;
+					const int sourceOffset = sourceX + (imageData->sy - (sourceY + cellSy)) * imageData->sx;
 					
 					// capture current OpenGL states before we change them
 					
@@ -86,7 +100,7 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 					glGetIntegerv(GL_UNPACK_ROW_LENGTH, &restoreUnpackRowLength);
 					
 					// copy image data
-					
+									
 					const void * source = ((int*)imageData->imageData) + sourceOffset;
 					
 					glBindTexture(GL_TEXTURE_2D, textures[i]);
@@ -103,17 +117,10 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 						GL_UNSIGNED_BYTE,
 						source);
 					
-				#if 1
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-				#else
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-				#endif
 					
 					// restore previous OpenGL states
 					
@@ -173,6 +180,282 @@ TextureCacheElem & TextureCache::findOrCreate(const char * name, int gridSx, int
 		elem.load(name, gridSx, gridSy);
 		
 		i = m_map.insert(Map::value_type(key, elem)).first;
+		
+		return i->second;
+	}
+}
+
+// -----
+
+ShaderCacheElem::ShaderCacheElem()
+{
+	program = 0;
+}
+
+void ShaderCacheElem::free()
+{
+	if (program)
+	{
+		glDeleteProgram(program);
+		program = 0;
+	}
+}
+
+static void showShaderInfoLog(GLuint shader)
+{
+	GLint logSize = 0;
+	
+	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logSize);
+	
+	char * log = new char[logSize];
+	
+	glGetShaderInfoLog(shader, logSize, &logSize, log);
+	
+	logError("OpenGL shader compile failed:\n%s", log);
+	
+	delete [] log;
+	log = 0;
+}
+
+static void showProgramInfoLog(GLuint program)
+{
+	GLint logSize = 0;
+	
+	glGetProgramiv(program, GL_INFO_LOG_LENGTH, &logSize);
+	
+	char * log = new char[logSize];
+	
+	glGetProgramInfoLog(program, logSize, &logSize, log);
+	
+	logError("OpenGL program link failed:\n%s", log);
+	
+	delete [] log;
+	log = 0;
+}
+
+static bool fileExists(const char * filename)
+{
+	FILE * file;
+	
+	if (fopen_s(&file, filename, "rb") == 0)
+	{
+		fclose(file);
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+static bool loadFileContents(const char * filename, char *& bytes, int & numBytes)
+{
+	bool result = true;
+	
+	bytes = 0;
+	numBytes = 0;
+	
+	FILE * file = 0;
+	
+	if (fopen_s(&file, filename, "rb") != 0)
+	{
+		result = false;
+	}
+	else
+	{
+		// load source from file
+		
+		fseek(file, 0, SEEK_END);
+		numBytes = ftell(file);
+		fseek(file, 0, SEEK_SET);
+		
+		bytes = new char[numBytes];
+		
+		if (fread(bytes, 1, numBytes, file) != (size_t)numBytes)
+		{
+			result = false;
+		}
+	}
+	
+	if (!result)
+	{
+		if (bytes)
+		{
+			delete [] bytes;
+			bytes = 0;
+		}
+		
+		numBytes = 0;
+	}
+	
+	return result;
+}
+
+static bool loadShader(const char * filename, GLuint & shader, GLuint type)
+{
+	bool result = true;
+	
+	char * bytes;
+	int numBytes;
+	
+	if (!loadFileContents(filename, bytes, numBytes))
+	{
+		result = false;
+	}
+	else
+	{
+		shader = glCreateShader(GL_FRAGMENT_SHADER);
+		
+		glShaderSource(shader, 1, (const GLchar**)&bytes, &numBytes);
+		checkErrorGL();
+		
+		delete [] bytes;
+		bytes = 0;
+		numBytes = 0;
+		
+		glCompileShader(shader);
+		checkErrorGL();
+		
+		GLint success = GL_FALSE;
+		
+		glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+		
+		if (success != GL_TRUE)
+		{
+			result = false;
+			
+			showShaderInfoLog(shader);
+		}
+	}
+	
+	if (result)
+	{
+		log("loaded shader %s", filename);
+	}
+	
+	return result;
+}
+
+void ShaderCacheElem::load(const char * filename)
+{
+	bool result = true;
+	
+	std::string vs = std::string(filename) + ".vs";
+	std::string ps = std::string(filename) + ".ps";
+	
+	bool hasVs = fileExists(vs.c_str());
+	bool hasPs = fileExists(ps.c_str());
+	
+	GLuint shaderVs = 0;
+	GLuint shaderPs = 0;
+	
+	if (hasVs)
+		result &= loadShader(vs.c_str(), shaderVs, GL_VERTEX_SHADER);
+	if (hasPs)
+		result &= loadShader(ps.c_str(), shaderPs, GL_FRAGMENT_SHADER);
+	
+	if (result)
+	{
+		program = glCreateProgram();
+		
+		if (hasVs)
+		{
+			glAttachShader(program, shaderVs);
+			checkErrorGL();
+		}
+		if (hasPs)
+		{
+			glAttachShader(program, shaderPs);
+			checkErrorGL();
+		}
+		
+		glLinkProgram(program);
+		checkErrorGL();
+		
+		if (hasVs)
+		{
+			glDetachShader(program, shaderVs);
+			checkErrorGL();
+		}
+		if (hasPs)
+		{
+			glDetachShader(program, shaderPs);
+			checkErrorGL();
+		}
+		
+		GLint success = GL_FALSE;
+		
+		glGetProgramiv(program, GL_LINK_STATUS, &success);
+		
+		if (success != GL_TRUE)
+		{
+			result = false;
+			
+			showProgramInfoLog(program);
+		}
+		else
+		{
+			// yay!
+		}
+	}
+	
+	if (shaderVs)
+	{
+		glDeleteShader(shaderVs);
+		shaderVs = 0;
+	}
+	
+	if (shaderPs)
+	{
+		glDeleteShader(shaderPs);
+		shaderPs = 0;
+	}
+	
+	if (result)
+	{
+		log("loaded shader program %s", filename);
+	}
+	else
+	{
+		logError("failed to load shader program %s", filename);
+		
+		free();
+	}
+}
+
+void ShaderCache::clear()
+{
+	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
+	{
+		i->second.free();
+	}
+	
+	m_map.clear();
+}
+
+void ShaderCache::reload()
+{
+	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
+	{
+		i->second.load(i->first.c_str());
+	}
+}
+
+ShaderCacheElem & ShaderCache::findOrCreate(const char * name)
+{
+	Map::iterator i = m_map.find(name);
+	
+	if (i != m_map.end())
+	{
+		return i->second;
+	}
+	else
+	{
+		ShaderCacheElem elem;
+		
+		elem.load(name);
+		
+		i = m_map.insert(Map::value_type(name, elem)).first;
 		
 		return i->second;
 	}

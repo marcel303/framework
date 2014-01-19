@@ -1,0 +1,35 @@
+uniform sampler2D texture;
+
+void main()
+{
+	vec4 source = texture2D(texture, gl_TexCoord[0].xy);
+	
+	float r = 0.0;
+	float a = 0.0;
+	
+	const float sizeMul = 1.0 / 100.0;
+	
+	const int kernelSize = 3;
+	const int numSamples = (kernelSize * 2 + 1) * (kernelSize * 2 + 1);
+	
+	for (int i = -kernelSize; i <= +kernelSize; ++i)
+	{
+		for (int j = -kernelSize; j <= +kernelSize; ++j)
+		{
+			vec4 near = texture2D(texture, gl_TexCoord[0].xy + vec2(i, j) * sizeMul);
+			
+			float c = (near.r + near.g + near.b) / 3.0;
+			
+			r += c;
+			a += near.a;
+		}
+	}
+	
+	r *= 3.0;
+	a *= 3.0;
+	
+	r /= float(numSamples);
+	a /= float(numSamples);
+	
+	gl_FragColor = mix(vec4(r, r, r, a), source, source.a);
+}

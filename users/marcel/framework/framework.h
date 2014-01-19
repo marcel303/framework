@@ -23,14 +23,17 @@ enum BLEND_MODE
 	BLEND_OPAQUE,
 	BLEND_ALPHA,
 	BLEND_ADD,
-	BLEND_SUBTRACT
+	BLEND_SUBTRACT,
+	BLEND_INVERT,
+	BLEND_MUL
 };
 
 enum COLOR_MODE
 {
 	COLOR_MUL,
 	COLOR_ADD,
-	COLOR_SUB
+	COLOR_SUB,
+	COLOR_IGNORE
 };
 
 enum BUTTON
@@ -83,10 +86,12 @@ class Gradient;
 class Keyboard;
 class Mouse;
 class Music;
+class Shader;
 class Sound;
 class Sprite;
 class Stage;
 class StageObject;
+class Surface;
 class Ui;
 
 // globals
@@ -140,6 +145,59 @@ private:
 	
 	void registerSprite(Sprite * sprite);
 	void unregisterSprite(Sprite * sprite);
+};
+
+//
+
+class Surface
+{
+	int m_size[2];	
+	int m_bufferId;
+	GLuint m_buffer[2];
+	GLuint m_texture[2];
+	
+	void construct();
+	void destruct();
+	void swapBuffers();
+	
+public:
+	Surface();
+	Surface(int sx, int sy);
+	~Surface();
+	
+	bool init(int sx, int sy);
+	GLuint getFramebuffer() const;
+	GLuint getTexture() const;
+	int getWidth() const;
+	int getHeight() const;
+	
+	void clear(int r = 0, int g = 0, int b = 0, int a = 0);
+	void clearf(float r = 0.f, float g = 0.f, float b = 0.f, float a = 0.f);
+	void clearAlpha();
+	void setAlpha(int a);
+	void setAlphaf(float a);
+	void mulf(float r, float g, float b, float a = 1.f);
+	
+	void postprocess(Shader & shader);
+	
+	void invert();
+	void invertColor();
+	void invertAlpha();
+	void blitTo(Surface * surface);
+};
+
+//
+
+class Shader
+{
+	class ShaderCacheElem * m_shader;
+
+public:
+	Shader();
+	Shader(const char * filename);
+	
+	void load(const char * filename);
+	GLuint getProgram() const;
 };
 
 //
@@ -326,6 +384,7 @@ public:
 	bool isDown(BUTTON button) const;
 	bool wentDown(BUTTON button) const;
 	bool wentUp(BUTTON button) const;
+	void showCursor(bool enabled);
 };
 
 class Keyboard
@@ -417,6 +476,8 @@ public:
 
 // drawing
 
+void pushSurface(Surface * surface);
+void popSurface();
 void setDrawRect(int x, int y, int sx, int sy);
 void clearDrawRect();
 
@@ -428,11 +489,13 @@ void setColorf(float r, float g, float b, float a = 1.f, float rgbMul = 1.f);
 void setGradientf(float x1, float y1, const Color & color1, float x2, float y2, const Color & color2);
 void setGradientf(float x1, float y1, float r1, float g1, float b1, float a1, float x2, float y2, float r2, float g2, float b2, float a2);
 void setFont(Font & font);
+void setShader(Shader & shader);
+void clearShader();
 
 void drawLine(float x1, float y1, float x2, float y2);
 void drawRect(float x1, float y1, float x2, float y2);
 void drawRectGradient(float x1, float y1, float x2, float y2);
-void drawText(float x, float y, int size, int alignX, int alignY, const char * format, ...);
+void drawText(float x, float y, int size, float alignX, float alignY, const char * format, ...);
 
 // utility
 

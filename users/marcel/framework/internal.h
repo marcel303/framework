@@ -23,6 +23,8 @@ static int fopen_s(FILE ** file, const char * filename, const char * mode)
 #endif
 
 void splitString(const std::string & str, std::vector<std::string> & result);
+void checkErrorGL_internal(const char * function, int line);
+#define checkErrorGL() checkErrorGL_internal(__FUNCTION__, __LINE__)
 
 //
 
@@ -93,6 +95,30 @@ public:
 	void clear();
 	void reload();
 	TextureCacheElem & findOrCreate(const char * name, int gridSx, int gridSy);
+};
+
+//
+
+class ShaderCacheElem
+{
+public:
+	GLuint program;
+	
+	ShaderCacheElem();
+	void free();
+	void load(const char * filename);
+};
+
+class ShaderCache
+{
+public:
+	typedef std::map<std::string, ShaderCacheElem> Map;
+	
+	Map m_map;
+	
+	void clear();
+	void reload();
+	ShaderCacheElem & findOrCreate(const char * name);
 };
 
 //
@@ -339,6 +365,7 @@ public:
 
 extern Globals g_globals;
 extern TextureCache g_textureCache;
+extern ShaderCache g_shaderCache;
 extern AnimCache g_animCache;
 extern SoundCache g_soundCache;
 extern FontCache g_fontCache;

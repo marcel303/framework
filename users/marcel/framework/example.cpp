@@ -1,6 +1,8 @@
 #include <algorithm>
 #include "framework.h"
 
+#define TEST_SURFACE 1
+
 const int sx = 1920;
 const int sy = 1080;
 
@@ -47,12 +49,19 @@ int main(int argc, char * argv[])
 		return -1;
 	framework.fillCachesWithPath(".");
 	
+	mouse.showCursor(false);
+	
+	Surface surface(sx, sy);
+	
 	bool down = false;
 	float x = sx/2.f;
 	float y = sy/4.f;
 	
 	Music bgm("bgm.ogg");
 	bgm.play();
+
+	Shader shader("shader1");
+	Shader postprocess("shader2");
 	
 	Sprite background("background.png");
 	background.startAnim("default");
@@ -207,6 +216,15 @@ int main(int argc, char * argv[])
 		
 		framework.beginDraw(165, 125, 65, 0);
 		{
+			#if TEST_SURFACE
+			if (keyboard.isDown(SDLK_e))
+			{
+				pushSurface(&surface);
+				surface.clear();
+				//surface.mulf(1.f, 1.f, 1.f, .9f);
+			}
+			#endif
+			
 			setBlend(BLEND_ALPHA);
 			
 			{
@@ -323,15 +341,57 @@ int main(int argc, char * argv[])
 			setColor(255, 255, 255, 255);
 			ui.draw();
 			
-			Font font("calibri.ttf");
-			setFont(font);
-
-			setColor(255, 255, 255, 255);
-			drawText(mouse.x, mouse.y, 35, 0, 0, "(%d, %d)", mouse.x, mouse.y);
-			
 			setColor(255, 0, 0, 255);
 			//drawLine(0, 0, sx, sy);
 			//drawLine(sx, 0, 0, sy);
+			
+			#if TEST_SURFACE
+			if (keyboard.isDown(SDLK_e))
+			{
+				popSurface();
+				
+				surface.postprocess(postprocess);
+				
+				setShader(shader);
+				setBlend(BLEND_ALPHA);
+				setColorMode(COLOR_MUL);
+				glBindTexture(GL_TEXTURE_2D, surface.getTexture());
+				glEnable(GL_TEXTURE_2D);
+				const int numSteps = keyboard.isDown(SDLK_w) ? 15 : 1;
+				for (int i = 0; i < numSteps; ++i)
+				{
+					setColor(
+						sine<int>(127, 255, framework.time * 1.234f),
+						sine<int>(127, 255, framework.time * 2.345f),
+						sine<int>(127, 255, framework.time * 3.456f), i == (numSteps - 1) ? 255 : 15);
+					
+					glPushMatrix();
+					glTranslatef(+sx/2.f, +sy/2.f, 0.f);
+					if (keyboard.isDown(SDLK_w))
+					{
+						const float scale = sine<float>(1.f, 2.f, framework.time * 2.321f);
+						glScalef(scale, scale, 1.f);
+						glRotatef(sine<float>(-25.f, +25.f, framework.time / 4.567f) + i / 2.f, 0.f, 0.f, 1.f);
+					}
+					glTranslatef(-sx/2.f, -sy/2.f, 0.f);
+					drawRect(0.f, 0.f, sx, sy);
+					glPopMatrix();
+				}
+				glBindTexture(GL_TEXTURE_2D, 0);
+				glDisable(GL_TEXTURE_2D);
+				
+				clearShader();
+			}
+			#endif
+			
+			Font font("calibri.ttf");
+			setFont(font);
+
+			setBlend(BLEND_ALPHA);
+			setColor(255, 255, 255, 255);
+			drawText(mouse.x, mouse.y, 35, 0, -2, "(%d, %d)", mouse.x, mouse.y);
+			
+			Sprite("cursor.png", 12, 15).drawEx(mouse.x, mouse.y);
 		}
 		framework.endDraw();
 	}

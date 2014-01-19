@@ -140,12 +140,16 @@ bool Framework::init(int argc, char * argv[], int sx, int sy)
 	
 	// resolve OpenGL extensions
 	
+	if (glFramebufferTexture == 0)
+		glFramebufferTexture = (PFNGLFRAMEBUFFERTEXTUREPROC)SDL_GL_GetProcAddress("glFramebufferTexture");
 	if (glBlendEquation == 0)
 		glBlendEquation = (PFNGLBLENDEQUATIONPROC)SDL_GL_GetProcAddress("glBlendEquation");
 	if (glClampColor == 0)
 		glClampColor = (PFNGLCLAMPCOLORPROC)SDL_GL_GetProcAddress("glClampColor");
+	if (!glProgramParameteri)
+		glProgramParameteri = (PFNGLPROGRAMPARAMETERIPROC)SDL_GL_GetProcAddress("glProgramParameteri");
 
-	if (glBlendEquation == 0 || glClampColor == 0)
+	if (glFramebufferTexture == 0 || glBlendEquation == 0 || glClampColor == 0 || glProgramParameteri == 0)
 	{
 		logError("unable to find required OpenGL extension(s)");
 		return false;
@@ -191,6 +195,7 @@ bool Framework::shutdown()
 	// free resources
 	
 	g_textureCache.clear();
+	g_shaderCache.clear();
 	g_animCache.clear();
 	g_soundCache.clear();
 	g_fontCache.clear();
@@ -344,6 +349,7 @@ void Framework::processAction(const std::string & action, const Dictionary & arg
 void Framework::reloadCaches()
 {
 	g_textureCache.reload();
+	g_shaderCache.reload();
 	g_animCache.reload();
 	g_soundCache.reload();
 	g_fontCache.reload();
@@ -435,6 +441,7 @@ void Framework::beginDraw(int r, int g, int b, int a)
 	// initialize viewport and OpenGL matrices
 	
 	glViewport(0, 0, g_globals.g_displaySize[0] / minification, g_globals.g_displaySize[1] / minification);
+
 	glMatrixMode(GL_PROJECTION);
 	{
 		glLoadIdentity();
@@ -458,11 +465,8 @@ void Framework::endDraw()
 {
 	// check for errors
 	
-	GLenum error = glGetError();
-	
-	if (error != GL_NO_ERROR)
-		logError("OpenGL error: %x", error);
-		
+	checkErrorGL();
+			
 	// flip back buffers
 	
 	SDL_GL_SwapBuffers();
@@ -476,6 +480,299 @@ void Framework::registerSprite(Sprite * sprite)
 void Framework::unregisterSprite(Sprite * sprite)
 {
 	m_sprites.erase(m_sprites.find(sprite));
+}
+
+// -----
+
+void Surface::construct()
+{
+	m_size[0] = 0;
+	m_size[1] = 0;
+	
+	m_bufferId = 0;
+	
+	m_buffer[0] = 0;
+	m_buffer[1] = 0;
+	m_texture[0] = 0;
+	m_texture[1] = 0;
+}
+
+void Surface::destruct()
+{
+	m_size[0] = 0;
+	m_size[1] = 0;
+	
+	m_bufferId = 0;
+	
+	for (int i = 0; i < 2; ++i)
+	{
+		if (m_buffer[i])
+		{
+			glDeleteFramebuffers(1, &m_buffer[i]);
+			m_buffer[i] = 0;
+		}
+		
+		if (m_texture[i])
+		{
+			glDeleteTextures(1, &m_texture[i]);
+			m_texture[i] = 0;
+		}
+	}
+}
+
+void Surface::swapBuffers()
+{
+	m_bufferId = (m_bufferId + 1) % 2;
+}
+
+Surface::Surface()
+{
+	construct();
+}
+
+Surface::Surface(int sx, int sy)
+{
+	construct();
+	
+	init(sx, sy);
+}
+
+Surface::~Surface()
+{
+	destruct();
+}
+
+bool Surface::init(int sx, int sy)
+{
+	fassert(m_buffer[0] == 0);
+	
+	sx /= framework.minification;
+	sy /= framework.minification;
+	
+	GLuint oldBuffer = 0;
+	GLuint oldTexture = 0;
+	
+	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
+	glGetIntegerv(GL_TEXTURE_BINDING_2D, (GLint*)&oldTexture);
+	
+	//
+	
+	bool result = true;
+	
+	m_size[0] = sx * framework.minification;
+	m_size[1] = sy * framework.minification;
+	
+	for (int i = 0; i < 2; ++i)
+	{
+		// allocate storage
+		
+		glGenTextures(1, &m_texture[i]);
+		result &= m_texture[i] != 0;
+		checkErrorGL();
+		
+		glBindTexture(GL_TEXTURE_2D, m_texture[i]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sx, sy, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+		checkErrorGL();
+		
+		// set filtering
+		
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		checkErrorGL();
+		
+		// create attachment
+		
+		glGenFramebuffers(1, &m_buffer[i]);
+		result &= m_buffer[i] != 0;
+		checkErrorGL();
+		
+		glBindFramebuffer(GL_FRAMEBUFFER, m_buffer[i]);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_texture[i], 0);
+		checkErrorGL();
+		
+		// check if all went well
+		
+		const int status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+		
+		if (status != GL_FRAMEBUFFER_COMPLETE)
+		{
+			logError("failed to init surface. status: %d", status);
+			
+			result = false;
+		}
+	}
+	
+	if (!result)
+	{
+		logError("failed to init surface. calling destruct()");
+		
+		destruct();
+	}
+	
+	// restore the old framebuffer and texture bindings
+	
+	glBindFramebuffer(GL_FRAMEBUFFER, oldBuffer);
+	checkErrorGL();
+	glBindTexture(GL_TEXTURE_2D, oldTexture);
+	checkErrorGL();
+	
+	return result;
+}
+
+GLuint Surface::getFramebuffer() const
+{
+	return m_buffer[m_bufferId];
+}
+
+GLuint Surface::getTexture() const
+{
+	return m_texture[m_bufferId];
+}
+
+int Surface::getWidth() const
+{
+	return m_size[0];
+}
+
+int Surface::getHeight() const
+{
+	return m_size[1];
+}
+
+void Surface::clear(int r, int g, int b, int a)
+{
+	clearf(r/255.f, g/255.f, b/255.f, a/255.f);
+}
+
+void Surface::clearf(float r, float g, float b, float a)
+{
+	pushSurface(this);
+	{
+		glClearColor(r, g, b, a);
+		glClear(GL_COLOR_BUFFER_BIT);
+	}
+	popSurface();
+}
+
+void Surface::clearAlpha()
+{
+	setAlphaf(0.f);
+}
+
+void Surface::setAlpha(int a)
+{
+	setAlphaf(a/255.f);
+}
+
+void Surface::setAlphaf(float a)
+{
+	pushSurface(this);
+	{
+		setBlend(BLEND_OPAQUE);
+		setColorf(1.f, 1.f, 1.f, a);
+		glColorMask(0, 0, 0, 1);
+		{
+			drawRect(0, 0, m_size[0], m_size[1]);
+		}
+		glColorMask(1, 1, 1, 1);
+	}
+	popSurface();
+}
+
+void Surface::mulf(float r, float g, float b, float a)
+{
+	pushSurface(this);
+	{
+		setBlend(BLEND_MUL);
+		setColorf(r, g, b, a);
+		drawRect(0, 0, m_size[0], m_size[1]);
+	}
+	popSurface();
+}
+
+void Surface::postprocess(Shader & shader)
+{
+	swapBuffers();
+	
+	pushSurface(this);
+	{
+		setShader(shader);
+		{
+			const int bufferId = (m_bufferId + 1) % 2;
+			glBindTexture(GL_TEXTURE_2D, m_texture[bufferId]);
+			glEnable(GL_TEXTURE_2D);
+			{
+				drawRect(0, 0, m_size[0], m_size[1]);
+			}
+			glDisable(GL_TEXTURE_2D);
+		}
+		clearShader();
+	}
+	popSurface();
+}
+
+void Surface::invert()
+{
+	pushSurface(this);
+	{
+		setBlend(BLEND_INVERT);
+		setColorf(1.f, 1.f, 1.f, 1.f);
+		drawRect(0, 0, m_size[0], m_size[1]);
+	}
+	popSurface();
+}
+
+void Surface::invertColor()
+{
+	glColorMask(1, 1, 1, 0);
+	{
+		invert();
+	}
+	glColorMask(1, 1, 1, 1);
+}
+
+void Surface::invertAlpha()
+{
+	glColorMask(0, 0, 0, 1);
+	{
+		invert();
+	}
+	glColorMask(1, 1, 1, 1);
+}
+
+void Surface::blitTo(Surface * surface)
+{
+	pushSurface(surface);
+	{
+		// todo: draw fullscreen rect using our own texture
+	}
+	popSurface();
+}
+
+// -----
+
+Shader::Shader()
+{
+	m_shader = 0;
+}
+
+Shader::Shader(const char * filename)
+{
+	m_shader = 0;
+	
+	load(filename);
+}
+
+void Shader::load(const char * filename)
+{
+	m_shader = &g_shaderCache.findOrCreate(filename);
+}
+
+GLuint Shader::getProgram() const
+{
+	return m_shader ? m_shader->program : 0;
 }
 
 // -----
@@ -766,10 +1063,10 @@ void Sprite::drawEx(float x, float y, float angle, float scale, BLEND_MODE blend
 			
 			static const float texs[8] =
 			{
-				0.f, 0.f,
-				1.f, 0.f,
+				0.f, 1.f,
 				1.f, 1.f,
-				0.f, 1.f
+				1.f, 0.f,
+				0.f, 0.f
 			};
 			
 			glEnableClientState(GL_VERTEX_ARRAY);
@@ -782,15 +1079,15 @@ void Sprite::drawEx(float x, float y, float angle, float scale, BLEND_MODE blend
 		#else
 			glBegin(GL_QUADS);
 			{
-		 		glTexCoord2f(0.f, 0.f); glVertex2f(0.f, 0.f);
-		 		glTexCoord2f(1.f, 0.f); glVertex2f(rsx, 0.f);
-		 		glTexCoord2f(1.f, 1.f); glVertex2f(rsx, rsy);
-		 		glTexCoord2f(0.f, 1.f); glVertex2f(0.f, rsy);
+		 		glTexCoord2f(0.f, 1.f); glVertex2f(0.f, 0.f);
+		 		glTexCoord2f(1.f, 1.f); glVertex2f(rsx, 0.f);
+		 		glTexCoord2f(1.f, 0.f); glVertex2f(rsx, rsy);
+		 		glTexCoord2f(0.f, 0.f); glVertex2f(0.f, rsy);
 			}
 			glEnd();
 		#endif
 			
-			//glDisable(GL_TEXTURE_2D);
+			glDisable(GL_TEXTURE_2D);
 		}
 		glPopMatrix();
 	}
@@ -1103,6 +1400,11 @@ bool Mouse::wentUp(BUTTON button) const
 	return !isDown(button) && g_globals.g_mouseChange[index];
 }
 
+void Mouse::showCursor(bool enabled)
+{
+	SDL_ShowCursor(enabled ? 1 : 0);
+}
+
 // -----
 
 bool Keyboard::isDown(SDLKey key) const
@@ -1392,6 +1694,40 @@ Dictionary & Ui::operator[](const char * name)
 
 // -----
 
+static const int maxStackSize = 32;
+static Surface * stack[maxStackSize];
+static int stackSize = 0;
+
+static void setSurface(Surface * surface)
+{
+	const GLuint buffer = surface ? surface->getFramebuffer() : 0;
+	const int sx = surface ? surface->getWidth() / framework.minification : g_globals.g_displaySize[0] / framework.minification;
+	const int sy = surface ? surface->getHeight() / framework.minification : g_globals.g_displaySize[1] / framework.minification;
+	
+	glBindFramebuffer(GL_FRAMEBUFFER, buffer);
+	glViewport(0, 0, sx, sy);
+	
+	//GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT0 };
+	//glDrawBuffers(1, drawBuffers);
+}
+
+void pushSurface(Surface * surface)
+{
+	fassert(stackSize < maxStackSize);
+	stack[stackSize++] = surface;
+	setSurface(surface);
+	checkErrorGL();
+}
+
+void popSurface()
+{
+	fassert(stackSize > 0);
+	stack[--stackSize] = 0;
+	Surface * surface = stackSize ? stack[stackSize - 1] : 0;
+	setSurface(surface);
+	checkErrorGL();
+}
+
 void setDrawRect(int x, int y, int sx, int sy)
 {
 	y = g_globals.g_displaySize[1] - y - sy;
@@ -1432,6 +1768,16 @@ void setBlend(BLEND_MODE blendMode)
 		glBlendEquation(GL_FUNC_SUBTRACT);
 		glBlendFunc(GL_ONE, GL_ONE);
 		break;
+	case BLEND_INVERT:
+		glEnable(GL_BLEND);
+		glBlendEquation(GL_FUNC_ADD);
+		glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ZERO);
+		break;
+	case BLEND_MUL:
+		glEnable(GL_BLEND);
+		glBlendEquation(GL_FUNC_ADD);
+		glBlendFunc(GL_ZERO, GL_SRC_COLOR);
+		break;
 	default:
 		fassert(false);
 		break;
@@ -1452,6 +1798,9 @@ void setColorMode(COLOR_MODE colorMode)
 		break;
 	case COLOR_SUB:
 		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_SUBTRACT);
+		break;
+	case COLOR_IGNORE:
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 		break;
 	default:
 		fassert(false);
@@ -1498,6 +1847,16 @@ void setFont(Font & font)
 	g_globals.g_font = font.getFont();
 }
 
+void setShader(Shader & shader)
+{
+	glUseProgram(shader.getProgram());
+}
+
+void clearShader()
+{
+	glUseProgram(0);
+}
+
 void drawLine(float x1, float y1, float x2, float y2)
 {
 	glBegin(GL_LINES);
@@ -1512,10 +1871,10 @@ void drawRect(float x1, float y1, float x2, float y2)
 {
 	glBegin(GL_QUADS);
 	{
-		glVertex2f(x1, y1);
-		glVertex2f(x2, y1);
-		glVertex2f(x2, y2);
-		glVertex2f(x1, y2);
+		glTexCoord2f(0.f, 1.f); glVertex2f(x1, y1);
+		glTexCoord2f(1.f, 1.f); glVertex2f(x2, y1);
+		glTexCoord2f(1.f, 0.f); glVertex2f(x2, y2);
+		glTexCoord2f(0.f, 0.f); glVertex2f(x1, y2);
 	}
 	glEnd();
 }
@@ -1633,7 +1992,7 @@ static void drawTextInternal(FT_Face face, int size, const char * text)
 	}
 }
 
-void drawText(float x, float y, int size, int alignX, int alignY, const char * format, ...)
+void drawText(float x, float y, int size, float alignX, float alignY, const char * format, ...)
 {
 	char text[1024];
 	va_list args;
@@ -1646,8 +2005,8 @@ void drawText(float x, float y, int size, int alignX, int alignY, const char * f
 		float sx, sy;
 		measureText(g_globals.g_font->face, size, text, sx, sy);
 		
-		x += sx * (alignX - 1) / 2.f;
-		y += sy * (alignY - 1) / 2.f;
+		x += sx * (alignX - 1.f) / 2.f;
+		y += sy * (alignY - 1.f) / 2.f;
 		
 		glTranslatef(x, y, 0.f);
 		
