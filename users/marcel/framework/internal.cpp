@@ -275,6 +275,8 @@ static bool loadFileContents(const char * filename, char *& bytes, int & numByte
 		{
 			result = false;
 		}
+		
+		fclose(file);
 	}
 	
 	if (!result)
@@ -338,6 +340,8 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type)
 
 void ShaderCacheElem::load(const char * filename)
 {
+	free();
+	
 	bool result = true;
 	
 	std::string vs = std::string(filename) + ".vs";
