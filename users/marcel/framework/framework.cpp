@@ -225,7 +225,9 @@ bool Framework::shutdown()
 	
 	// reset self
 	
+	fullscreen = false;
 	minification = 1;
+	reloadCachesOnActivate = false;
 	numSoundSources = 32;
 	actionHandler = 0;
 	
@@ -238,7 +240,9 @@ void Framework::process()
 	
 	g_soundPlayer.process();
 	
-	bool doReload = !keyboard.isDown(SDLK_r);
+	bool doReload = false;
+	
+	bool reloadKey = keyboard.isDown(SDLK_r);
 	
 	// poll SDL event queue
 	
@@ -273,11 +277,8 @@ void Framework::process()
 		}
 		else if (e.type == SDL_ACTIVEEVENT)
 		{
-			if (e.active.gain)
-			{
-				logDebug("reloading caches due to application activation");
-				reloadCaches();
-			}
+			if (reloadCachesOnActivate)
+				doReload |= (e.active.state & SDL_APPINPUTFOCUS) && e.active.gain;
 		}
 	}
 	
@@ -329,7 +330,7 @@ void Framework::process()
 	}
 #endif
 	
-	doReload &= keyboard.isDown(SDLK_r);
+	doReload |= keyboard.isDown(SDLK_r) && !reloadKey;
 	
 	if (doReload)
 	{
@@ -418,8 +419,7 @@ void Framework::fillCachesWithPath(const char * path)
 		if (strstr(f, ".ogg"))
 		{
 			FILE * file;
-			fopen_s(&file, f, "rb");
-			if (file)
+			if (fopen_s(&file, f, "rb") == 0)
 			{
 				fseek(file, 0, SEEK_END);
 				const int size = ftell(file);
