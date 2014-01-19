@@ -43,6 +43,7 @@ int main(int argc, char * argv[])
 {
 	changeDirectory("data");
 
+	framework.reloadCachesOnActivate = true;
 	framework.minification = 2;
 	framework.fullscreen = true;
 	if (!framework.init(argc, argv, sx, sy))

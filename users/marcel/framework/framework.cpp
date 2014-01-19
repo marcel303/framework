@@ -49,6 +49,7 @@ Framework::Framework()
 {
 	fullscreen = false;
 	minification = 1;
+	reloadCachesOnActivate = false;
 	windowTitle = "GGJ 2014 - Unknown Project";
 	numSoundSources = 32;
 	actionHandler = 0;
@@ -269,6 +270,14 @@ void Framework::process()
 		{
 			mouse.x = e.motion.x * minification;
 			mouse.y = e.motion.y * minification;
+		}
+		else if (e.type == SDL_ACTIVEEVENT)
+		{
+			if (e.active.gain)
+			{
+				logDebug("reloading caches due to application activation");
+				reloadCaches();
+			}
 		}
 	}
 	

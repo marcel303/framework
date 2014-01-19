@@ -134,6 +134,7 @@ public:
 	
 	bool fullscreen;
 	int minification;
+	bool reloadCachesOnActivate;
 	int numSoundSources;
 	std::string windowTitle;
 	ActionHandler actionHandler;
