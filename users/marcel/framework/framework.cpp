@@ -303,10 +303,10 @@ void Framework::process()
 			
 		#define APPLY_DEADZONE(v, t) (std::abs(v) <= t ? 0.f : clamp((std::abs(v) - t) * (v < 0.f ? -1.f : +1.f) / float(32767 - t), -1.f, +1.f))
 
-			gamepad[i].m_analog[0][ANALOG_X] = APPLY_DEADZONE(g.sThumbLX, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
-			gamepad[i].m_analog[0][ANALOG_Y] = APPLY_DEADZONE(g.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
-			gamepad[i].m_analog[1][ANALOG_X] = APPLY_DEADZONE(g.sThumbRX, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
-			gamepad[i].m_analog[1][ANALOG_Y] = APPLY_DEADZONE(g.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
+			gamepad[i].m_analog[0][ANALOG_X] = APPLY_DEADZONE(+g.sThumbLX, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
+			gamepad[i].m_analog[0][ANALOG_Y] = APPLY_DEADZONE(-g.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
+			gamepad[i].m_analog[1][ANALOG_X] = APPLY_DEADZONE(+g.sThumbRX, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
+			gamepad[i].m_analog[1][ANALOG_Y] = APPLY_DEADZONE(-g.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
 			
 		#undef APPLY_DEADZONE
 			
