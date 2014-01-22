@@ -1,0 +1,169 @@
+------------------------------
+
+Features:
+
+- OpenGL with extensions.
+- TTF fonts.
+- Sounds and music playback (WAV and OGG).
+- Keyboard & mouse.
+- Up to four Gamepads using XInput.
+- Sprite rendering with animation support.
+- Basic UI with images and buttons.
+- OpenGL render targets.
+- OpenGL vertex and pixel shaders.
+- Logging.
+- Resource caching and automatic reloading.
+
+
+------------------------------
+Basic application
+------------------------------
+
+A basic applications initializes the framework and enters a loop until a certain exit condition is met. Inside the game loop the application performs game logic and drawing.
+
+	framework.init(800, 600);
+
+	while (!keyboard.wentDown(SDLK_ESCAPE))
+	{
+		framework.process();
+		
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			setColor(255, 255, 255);
+			drawRect(0, 0, 400, 300);
+		}
+		framework.endDraw();
+	}
+
+------------------------------
+Sound and music
+------------------------------
+
+Sounds may be loaded from WAV and OGG files. Streaming music only supports OGG files. Both mono and stereo are supported.
+
+Playing a sound using one line of code:
+
+	Sound("sound.wav").play();
+
+Playing a sound, and stopping it later:
+
+	Sound sound("sound.wav");
+	
+	sound.play();
+	
+	... (some time later) ...
+	
+	sound.stop();
+
+The volume of a sound can be specified when calling play:
+
+	Sound("sound.wav").play(50); // play a sound at 50% volume
+
+Or later, using a handle:
+
+	sound.setVolume(50);
+
+Music playback is equally simple:
+
+	Music("music.ogg").play();
+
+Only one music stream can be active at any one time.
+
+------------------------------
+Keyboard and mouse
+------------------------------
+
+The framework uses SDL key codes. See here for the list of key codes:
+
+	http://www.libsdl.org/release/SDL-1.2.15/docs/html/sdlkey.html
+
+Checking if a key is down, or went up or down during the last call to framework.process:
+
+	if (keyboard.isDown(SDLK_a))
+		...
+	if (keyboard.wentDown(SDLK_ESCAPE))
+		...
+	if (keyboard.wentUp(SDLK_SPACE))
+		...
+
+Checking the current mouse position:
+
+	drawText(mouse.x, mouse.y, ...)
+
+Checking if a mouse button is down, or went up or down during the last call to framework.process:
+
+	if (mouse.isDown(BUTTON_LEFT))
+		..
+	if (mouse.wentUp(..))
+		..
+	if (mouse.wentDown(..))
+		..
+
+------------------------------
+Drawing text
+------------------------------
+
+Set a font, using setFont:
+
+	Font font("calibri.ttf");
+	setFont(font);
+
+Drawing a red line of text:
+
+	setColor(255, 0, 0);
+	drawText(mouse.x, mouse.y, size, alignX, alignY, "hello %s", "world");
+
+	If alignX and alignY are 0, the text is centered around (x, y).
+
+	If alignX is +1, the text starts at x. If alignX is -1, the text ends at x.
+
+
+------------------------------
+Gamepads
+------------------------------
+
+Use gamepad[x].isConnected to check if the gamepad is connect.
+
+Analog values can be retrieved using gamepad[x].getAnalog. The dead zone has already been applied, so there's no need to apply it manually.
+
+	if (gamepad[i].isConnected)
+	{
+		if (gamepad[i].isDown[DPAD_LEFT])
+			..
+		
+		// polling the left analog stick
+		player.x += gamepad[i].getAnalog(0, ANALOG_X, 100.f * framework.timeStep);
+		player.y += gamepad[i].getAnalog(0, ANALOG_Y, 100.f * framework.timeStep);
+		
+		// polling the right analog stick
+		aimDirection.x = gamepad[i].getAnalog(1, ANALOG_X, 100.f * framework.timeStep);
+		aimDireciton.y = gamepad[i].getAnalog(1, ANALOG_Y, 100.f * framework.timeStep);
+	}
+
+------------------------------
+Adding UI
+------------------------------
+
+A global UI object exists. But UI objects may freely be added and used. UI objects must be manually processed and drawn.
+
+	Ui ui;
+	
+	ui.load("main_menu.txt");
+	
+	while (!keyboard.wentDown(SDLK_ESCAPE))
+	{
+		framework.process();
+		
+		ui.process();
+		
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			... (draw something behind the UI) ...
+			
+			ui.draw();
+			
+			... (draw something in front of the UI, like a mouse cursor for instance) ...
+		}
+		framework.endDraw();
+	}
+
