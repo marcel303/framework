@@ -6,6 +6,9 @@
 const int sx = 1920;
 const int sy = 1080;
 
+//const int sx = 1920/2;
+//const int sy = 1080/2;
+
 static Sprite * createRandomSprite()
 {
 	const int index = rand() % 4;
@@ -23,7 +26,7 @@ static Sprite * createRandomSprite()
 	sprite->startAnim(anim);
 	sprite->x = rand() % sx;
 	sprite->y = rand() % sy;
-	sprite->scale = 4;
+	sprite->scale = 8;
 	sprite->animSpeed = 1.f + (rand() % 100) / 100.f;
 	
 	return sprite;
@@ -43,15 +46,16 @@ int main(int argc, char * argv[])
 {
 	changeDirectory("data");
 	
+	framework.fullscreen = true;
 	for (int i = 1; i < argc; ++i)
 	{
 		if (std::string(argv[i]) =="devmode")
 		{
 			framework.reloadCachesOnActivate = true;
 			framework.minification = 2;
+			framework.fullscreen = false;
 		}
 	}
-	framework.fullscreen = true;
 	if (!framework.init(argc, argv, sx, sy))
 		return -1;
 	framework.fillCachesWithPath(".");
@@ -85,7 +89,7 @@ int main(int argc, char * argv[])
 	sprite2.pivotY = sprite2.getHeight() / 2.f;
 	sprite2.filter = FILTER_LINEAR;
 	
-	const int numSprites = 100;
+	const int numSprites = 50;
 	Sprite * sprites[numSprites];
 	for (int i = 0; i < numSprites; ++i)
 		sprites[i] = createRandomSprite();
@@ -279,7 +283,7 @@ int main(int argc, char * argv[])
 			
 			sprite.x = x;
 			sprite.y = y;
-			sprite.scale = 4;
+			sprite.scale = 8;
 			
 			for (int i = 0; i < numSprites; ++i)
 			{
@@ -298,7 +302,7 @@ int main(int argc, char * argv[])
 				if ((rand() % 100) == 0)
 					sprites[i]->angle = (rand() % 40) - 20.f;
 				if ((rand() % 300) == 0)
-					sprites[i]->scale = ((rand() % 200) + 50) / 100.f * 4.f;
+					sprites[i]->scale = ((rand() % 200) + 50) / 100.f * 6.f;
 				
 				if (sprites[i]->animSpeed == 0.f)
 				{
@@ -395,6 +399,11 @@ int main(int argc, char * argv[])
 			setFont(font);
 
 			setBlend(BLEND_ALPHA);
+			setColor(0, 31, 63, 255);
+			const int borderSize = 2;
+			for (int i = -borderSize; i <= +borderSize; ++i)
+				for (int j = -borderSize; j <= +borderSize; ++j)
+				drawText(mouse.x + i, mouse.y + j, 35, 0, -2, "(%d, %d)", mouse.x, mouse.y);
 			setColor(255, 255, 255, 255);
 			drawText(mouse.x, mouse.y, 35, 0, -2, "(%d, %d)", mouse.x, mouse.y);
 			

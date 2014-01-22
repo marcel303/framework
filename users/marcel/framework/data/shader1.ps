@@ -4,7 +4,7 @@ void main()
 {
 	vec2 delta = gl_FragCoord.xy - vec2(400, 250);
 	float alphaMul = 1.0 - length(delta) / 300.0;
-	alphaMul = alphaMul <= 0.0 ? 0.0 : 1.0 - pow(1.0 - alphaMul, 6.0);
+	alphaMul = alphaMul <= 0.0 ? 0.0 : 1.0 - pow(1.0 - alphaMul, 0.5);
 	
 	vec2 offset;
 	offset.x = sin(gl_FragCoord.x / 20.0) / 200.0;
