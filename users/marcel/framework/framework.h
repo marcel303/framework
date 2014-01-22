@@ -23,7 +23,7 @@ static const int MAX_GAMEPAD = 4;
 
 // enumerations
 
-enum BLEND_MODE
+enum BLEND_MODE // setBlend
 {
 	BLEND_OPAQUE,
 	BLEND_ALPHA,
@@ -33,7 +33,7 @@ enum BLEND_MODE
 	BLEND_MUL
 };
 
-enum COLOR_MODE
+enum COLOR_MODE // setColorMode
 {
 	COLOR_MUL,
 	COLOR_ADD,
@@ -247,7 +247,7 @@ class Dictionary
 	Map m_map;
 	
 public:
-	bool parse(const std::string & line);
+	bool parse(const std::string & line); // line = key1:value1 key2:value2 key3:value3 ..
 	
 	bool contains(const char * name) const;
 	
