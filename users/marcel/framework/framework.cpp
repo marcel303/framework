@@ -789,6 +789,48 @@ GLuint Shader::getProgram() const
 	return m_shader ? m_shader->program : 0;
 }
 
+#define SET_UNIFORM(name, op) \
+	const GLint index = glGetUniformLocation(getProgram(), name); \
+	if (index != -1) \
+	{ \
+		op; \
+	}
+		
+void Shader::setImmediate(const char * name, float x)
+{
+	SET_UNIFORM(name, glUniform1f(index, x));
+}
+
+void Shader::setImmediate(const char * name, float x, float y)
+{
+	SET_UNIFORM(name, glUniform2f(index, x, y));
+}
+
+void Shader::setImmediate(const char * name, float x, float y, float z)
+{
+	SET_UNIFORM(name, glUniform3f(index, x, y, z));
+}
+
+void Shader::setImmediate(const char * name, float x, float y, float z, float w)
+{
+	SET_UNIFORM(name, glUniform4f(index, x, y, z, w));
+}
+
+void Shader::setTextureUnit(const char * name, int unit)
+{
+	SET_UNIFORM(name, glUniform1i(index, unit));
+}
+
+
+void Shader::setTexture(const char * name, int unit, GLuint texture)
+{
+	SET_UNIFORM(name, glUniform1i(index, unit));
+	glActiveTexture(GL_TEXTURE0 + unit);
+	glBindTexture(GL_TEXTURE_2D, texture);
+}
+
+#undef SET_UNIFORM
+
 // -----
 
 Color::Color()

@@ -2,6 +2,7 @@
 #include "framework.h"
 
 #define TEST_SURFACE 1
+#define SPRITE_SCALE 1
 
 const int sx = 1920;
 const int sy = 1080;
@@ -26,7 +27,7 @@ static Sprite * createRandomSprite()
 	sprite->startAnim(anim);
 	sprite->x = rand() % sx;
 	sprite->y = rand() % sy;
-	sprite->scale = 8;
+	sprite->scale = 4 * SPRITE_SCALE;
 	sprite->animSpeed = 1.f + (rand() % 100) / 100.f;
 	
 	return sprite;
@@ -89,7 +90,7 @@ int main(int argc, char * argv[])
 	sprite2.pivotY = sprite2.getHeight() / 2.f;
 	sprite2.filter = FILTER_LINEAR;
 	
-	const int numSprites = 50;
+	const int numSprites = 100;
 	Sprite * sprites[numSprites];
 	for (int i = 0; i < numSprites; ++i)
 		sprites[i] = createRandomSprite();
@@ -216,7 +217,7 @@ int main(int argc, char * argv[])
 				StageObject * obj = new StageObject_SpriteAnim(name, anim);
 				obj->sprite->x = rand() % sx;
 				obj->sprite->y = rand() % sy;
-				obj->sprite->scale = 3.f;
+				obj->sprite->scale = 1.5f * SPRITE_SCALE;
 				
 				const int objectId = stage.addObject(obj);
 			
@@ -283,7 +284,7 @@ int main(int argc, char * argv[])
 			
 			sprite.x = x;
 			sprite.y = y;
-			sprite.scale = 8;
+			sprite.scale = 4 * SPRITE_SCALE;
 			
 			for (int i = 0; i < numSprites; ++i)
 			{
@@ -302,7 +303,7 @@ int main(int argc, char * argv[])
 				if ((rand() % 100) == 0)
 					sprites[i]->angle = (rand() % 40) - 20.f;
 				if ((rand() % 300) == 0)
-					sprites[i]->scale = ((rand() % 200) + 50) / 100.f * 6.f;
+					sprites[i]->scale = ((rand() % 200) + 50) / 100.f * 3.f * SPRITE_SCALE;
 				
 				if (sprites[i]->animSpeed == 0.f)
 				{
@@ -364,9 +365,11 @@ int main(int argc, char * argv[])
 				surface.postprocess(postprocess);
 				
 				setShader(shader);
+				shader.setTexture("texture", 0, surface.getTexture());
+				shader.setImmediate("modifier", sine<float>(-.5f, +.5f, framework.time));
+				
 				setBlend(BLEND_ALPHA);
 				setColorMode(COLOR_MUL);
-				glBindTexture(GL_TEXTURE_2D, surface.getTexture());
 				glEnable(GL_TEXTURE_2D);
 				const int numSteps = keyboard.isDown(SDLK_w) ? 15 : 1;
 				for (int i = 0; i < numSteps; ++i)
@@ -388,7 +391,6 @@ int main(int argc, char * argv[])
 					drawRect(0.f, 0.f, sx, sy);
 					glPopMatrix();
 				}
-				glBindTexture(GL_TEXTURE_2D, 0);
 				glDisable(GL_TEXTURE_2D);
 				
 				clearShader();

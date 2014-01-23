@@ -204,6 +204,13 @@ public:
 	
 	void load(const char * filename);
 	GLuint getProgram() const;
+
+	void setImmediate(const char * name, float x);	
+	void setImmediate(const char * name, float x, float y);
+	void setImmediate(const char * name, float x, float y, float z);
+	void setImmediate(const char * name, float x, float y, float z, float w);
+	void setTextureUnit(const char * name, int unit); // GL_TEXTURE0 + unit
+	void setTexture(const char * name, int unit, GLuint texture);
 };
 
 //
