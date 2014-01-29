@@ -7,9 +7,50 @@
 
 // FBX file reader
 
+enum PROPTYPE
+{
+	PROP_BOOL,
+	PROP_BOOL_ARRAY,
+	PROP_INT,
+	PROP_INT_ARRAY,
+	PROP_FLOAT,
+	PROP_FLOAT_ARRAY,
+	PROP_STRING,
+	PROP_RAW
+};
+
+struct FbxRecord
+{
+	int32_t endOffset;
+	int32_t numProperties;
+	int32_t propertyListLen;
+	int8_t nameLen;
+	
+	std::string name;
+	
+	bool isNULL() const
+	{
+		const char * bytes = (const char*)this;
+		for (int i = 0; i < 13; ++i)
+			if (bytes[i])
+				return false;
+		return true;
+	}
+};
+
+class FbxReceiver
+{
+public:
+	virtual void recordBegin(const FbxRecord & record) = 0;
+	virtual void recordEnd() = 0;
+	virtual void property(int index, PROPTYPE type, const void * value) = 0;
+};
+
 static int tab = 0;
 
 static void * start = 0;
+
+static FbxReceiver * receiver = 0;
 
 template <typename T> T read(void *& p, T & t)
 {
@@ -67,7 +108,6 @@ template <typename T> void readArray(void *& p)
 		arrayLength,
 		encoding,
 		compressedLength);
-	//assert(false);
 	
 	int length;
 	
@@ -86,26 +126,7 @@ template <typename T> void readArray(void *& p)
 	skip(p, length);
 }
 
-struct Record
-{
-	int32_t endOffset;
-	int32_t numProperties;
-	int32_t propertyListLen;
-	int8_t nameLen;
-	
-	std::string name;
-	
-	bool isNULL() const
-	{
-		const char * bytes = (const char*)this;
-		for (int i = 0; i < 13; ++i)
-			if (bytes[i])
-				return false;
-		return true;
-	}
-};
-
-void readRecord(void *& p, Record & r)
+void readRecord(void *& p, FbxRecord & r)
 {
 	read(p, r.endOffset);
 	read(p, r.numProperties);
@@ -124,11 +145,9 @@ int distance(void * p1, void * p2)
 	return reinterpret_cast<uintptr_t>(p2) - reinterpret_cast<uintptr_t>(p1);
 }
 
-bool parseNode(void *& p)
+bool parseNode(void *& p, const FbxRecord & r)
 {
-	Record r;
-	
-	readRecord(p, r);
+	receiver->recordBegin(r);
 	
 	log("node: endOffset=%d, numProperties=%d, propertyListLen=%d, nameLen=%d, name=%s\n",
 		r.endOffset,
@@ -156,6 +175,8 @@ bool parseNode(void *& p)
 				int16_t v;
 				read(p, v);
 				log("int16: %d\n", (int)v);
+				int t = v;
+				receiver->property(i, PROP_INT, &t);
 				break;
 			}
 			case 'C':
@@ -163,6 +184,8 @@ bool parseNode(void *& p)
 				int8_t v;
 				read(p, v);
 				log("bool: %d\n", (int)v);
+				bool t = v != 0;
+				receiver->property(i, PROP_BOOL, &t);
 				break;
 			}
 			case 'I':
@@ -170,6 +193,8 @@ bool parseNode(void *& p)
 				int32_t v;
 				read(p, v);
 				log("int32: %d\n", v);
+				int t = v;
+				receiver->property(i, PROP_INT, &t);
 				break;
 			}
 			case 'F':
@@ -177,6 +202,8 @@ bool parseNode(void *& p)
 				float v;
 				read(p, v);
 				log("single: %f\n", v);
+				float t = v;
+				receiver->property(i, PROP_INT, &t);
 				break;
 			}
 			case 'D':
@@ -184,13 +211,17 @@ bool parseNode(void *& p)
 				double v;
 				read(p, v);
 				log("double: %f\n", (float)v);
+				float t = (float)v;
+				receiver->property(i, PROP_INT, &t);
 				break;
 			}
 			case 'L':
 			{
 				int64_t v;
 				read(p, v);
-				log("int64: %d\n", (int)v);
+				log("int64: %lld\n", v);
+				int t = (int)v;
+				receiver->property(i, PROP_INT, &t);
 				break;
 			}
 			
@@ -232,6 +263,7 @@ bool parseNode(void *& p)
 				read(p, str[0], length);
 				str[length] = 0;
 				log("string: %s\n", str);
+				receiver->property(i, PROP_STRING, str);
 				break;
 			}
 			
@@ -241,17 +273,18 @@ bool parseNode(void *& p)
 				int32_t length;
 				read(p, length);
 				
-				#if 1
 				uint8_t * raw = (uint8_t*)alloca(length);
 				read(p, raw[0], length);
+				
+				#if 1
 				char * temp = (char*)alloca(length * 2 + 1);
 				for (int i = 0; i < length; ++i)
 					sprintf(temp + i * 2, "%0x", raw[i]);
 				temp[length * 2] = 0;
 				log("%s\n", temp);
-				#else
-				skip(p, length);
 				#endif
+				
+				receiver->property(i, PROP_RAW, raw);
 				break;
 			}
 			
@@ -273,7 +306,7 @@ bool parseNode(void *& p)
 		
 		void * t = p;
 		
-		Record temp;
+		FbxRecord temp;
 		
 		readRecord(p, temp);
 		
@@ -281,19 +314,21 @@ bool parseNode(void *& p)
 		{
 			log("EOR\n");
 			
+			assert(distance(start, p) == r.endOffset);
+			
 			break;
 		}
 		else
 		{
-			p = t;
-			
 			tab++;
 	
-			parseNode(p);
+			parseNode(p, temp);
 			
 			tab--;
 		}
 	}
+	
+	receiver->recordEnd();
 }
 
 void parseFbx(void * p, int length)
@@ -319,17 +354,13 @@ void parseFbx(void * p, int length)
 		log("version: %d\n", version);
 	}
 	
-	//skip(p, 6);
-	
 	while (distance(start, p) != length)
 	{
 		void * t = p;
 		
-		Record temp;
+		FbxRecord temp;
 		
 		readRecord(p, temp);
-		
-		p = t;
 		
 		if (temp.isNULL())
 		{
@@ -341,28 +372,160 @@ void parseFbx(void * p, int length)
 		{
 			log("startDistance: %d/%d\n", distance(start, p), length);
 		
-			parseNode(p);
+			parseNode(p, temp);
 			
 			log("endDistance: %d/%d\n", distance(start, p), length);
 		}
 	}
 }
 
+//
+
+class MyReceiver : public FbxReceiver
+{
+	static const int maxDepth = 128;
+	
+	enum STATE
+	{
+		STATE_ROOT,
+		STATE_OBJECTS,
+		STATE_MODEL_MAYBE,
+		STATE_MODEL,
+		STATE_VERTS,
+		STATE_POLYS,
+		STATE_UNKNOWN
+	};
+	
+	STATE state[maxDepth];
+	int depth;
+	
+public:
+	MyReceiver()
+	{
+		depth = 0;
+		state[depth] = STATE_ROOT;
+	}
+	
+	virtual void recordBegin(const FbxRecord & record)
+	{
+		STATE oldState = state[depth];
+		
+		depth++;
+		
+		STATE newState = STATE_UNKNOWN;
+		
+		switch (oldState)
+		{
+			case STATE_ROOT:
+			{
+				if (record.name == "Objects")
+				{
+					newState = STATE_OBJECTS;
+				}
+				break;
+			}
+			
+			case STATE_OBJECTS:
+			{
+				if (record.name == "Model")
+				{
+					newState = STATE_MODEL_MAYBE;
+				}
+				break;
+			}
+			
+			case STATE_MODEL_MAYBE:
+			{
+				break;
+			}
+			
+			case STATE_MODEL:
+			{
+				if (record.name == "Vertices")
+				{
+					newState = STATE_VERTS;
+				}
+				if (record.name == "PolygonVertexIndex")
+				{
+					newState = STATE_POLYS;
+				}
+				break;
+			}
+			
+			case STATE_VERTS:
+			{
+				break;
+			}
+
+			case STATE_UNKNOWN:
+			{
+				break;
+			}
+			
+			default:
+			{
+				assert(false);
+				break;
+			}
+		}
+		
+		state[depth] = newState;
+		
+		log("state change %d -> %d\n", oldState, newState);
+	}
+	
+	virtual void recordEnd()
+	{
+		depth--;
+	}
+	
+	virtual void property(int index, PROPTYPE type, const void * value)
+	{
+		STATE oldState = state[depth];
+		
+		STATE newState = oldState;
+		
+		switch (oldState)
+		{
+			case STATE_MODEL_MAYBE:
+			{
+				if (index == 1 && type == PROP_STRING)
+				{
+					const char * str = (const char*)value;
+					
+					if (!strcmp(str, "Mesh"))
+					{
+						log("STATE_MODEL_MAYBE -> STATE_MODEL !!\n");
+						
+						newState = STATE_MODEL;
+					}
+				}
+			}
+		}
+		
+		state[depth] = newState;
+	}
+};
+
 int main(int argc, const char * argv[])
 {
+	MyReceiver r;
+	
+	receiver = &r;
+	
+	// read file contents
+	
 	FILE * file = fopen("test.fbx", "rb");
 	const int p1 = ftell(file);
 	fseek(file, 0, SEEK_END);
 	const int p2 = ftell(file);
 	fseek(file, 0, SEEK_SET);
-	
 	const int size = p2 - p1;
-	
 	void * bytes = malloc(size);
-	
 	fread(bytes, size, 1, file);
-	
 	fclose(file);
+	
+	// parse
 	
 	parseFbx(bytes, size);
 	
