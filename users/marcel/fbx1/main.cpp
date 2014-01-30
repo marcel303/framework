@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <string>
+#include <vector>
 
 // FBX file reader
 
@@ -203,7 +204,7 @@ bool parseNode(void *& p, const FbxRecord & r)
 				read(p, v);
 				log("single: %f\n", v);
 				float t = v;
-				receiver->property(i, PROP_INT, &t);
+				receiver->property(i, PROP_FLOAT, &t);
 				break;
 			}
 			case 'D':
@@ -212,7 +213,7 @@ bool parseNode(void *& p, const FbxRecord & r)
 				read(p, v);
 				log("double: %f\n", (float)v);
 				float t = (float)v;
-				receiver->property(i, PROP_INT, &t);
+				receiver->property(i, PROP_FLOAT, &t);
 				break;
 			}
 			case 'L':
@@ -278,8 +279,8 @@ bool parseNode(void *& p, const FbxRecord & r)
 				
 				#if 1
 				char * temp = (char*)alloca(length * 2 + 1);
-				for (int i = 0; i < length; ++i)
-					sprintf(temp + i * 2, "%0x", raw[i]);
+				for (int j = 0; j < length; ++j)
+					sprintf(temp + j * 2, "%0x", raw[j]);
 				temp[length * 2] = 0;
 				log("%s\n", temp);
 				#endif
@@ -381,6 +382,31 @@ void parseFbx(void * p, int length)
 
 //
 
+class MyMesh
+{
+public:
+	int numVertices;
+	float * vertices;
+	
+	int numIndices;
+	int * indices;
+	
+	MyMesh()
+	{
+		numVertices = 0;
+		vertices = 0;
+		
+		numIndices = 0;
+		indices = 0;
+	}
+	
+	~MyMesh()
+	{
+		delete [] vertices;
+		delete [] indices;
+	}
+};
+
 class MyReceiver : public FbxReceiver
 {
 	static const int maxDepth = 128;
@@ -399,11 +425,17 @@ class MyReceiver : public FbxReceiver
 	STATE state[maxDepth];
 	int depth;
 	
+	MyMesh * currentMesh;
+	
 public:
+	std::vector<MyMesh*> meshes;
+	
 	MyReceiver()
 	{
 		depth = 0;
 		state[depth] = STATE_ROOT;
+		
+		currentMesh = 0;
 	}
 	
 	virtual void recordBegin(const FbxRecord & record)
@@ -444,15 +476,26 @@ public:
 				if (record.name == "Vertices")
 				{
 					newState = STATE_VERTS;
+					
+					currentMesh->numVertices = record.numProperties;
+					currentMesh->vertices = new float[record.numProperties * 3];
 				}
 				if (record.name == "PolygonVertexIndex")
 				{
 					newState = STATE_POLYS;
+					
+					currentMesh->numIndices = record.numProperties;
+					currentMesh->indices = new int[record.numProperties];
 				}
 				break;
 			}
 			
 			case STATE_VERTS:
+			{
+				break;
+			}
+			
+			case STATE_POLYS:
 			{
 				break;
 			}
@@ -476,6 +519,18 @@ public:
 	
 	virtual void recordEnd()
 	{
+		STATE oldState = state[depth];
+		
+		switch (oldState)
+		{
+			case STATE_MODEL:
+			{
+				meshes.push_back(currentMesh);
+				currentMesh = 0;
+				break;
+			}
+		}
+		
 		depth--;
 	}
 	
@@ -498,8 +553,26 @@ public:
 						log("STATE_MODEL_MAYBE -> STATE_MODEL !!\n");
 						
 						newState = STATE_MODEL;
+						
+						currentMesh = new MyMesh();
 					}
 				}
+				
+				break;
+			}
+			
+			case STATE_VERTS:
+			{
+				if (type == PROP_FLOAT)
+					currentMesh->vertices[index] = *(float*)value;
+				break;
+			}
+			
+			case STATE_POLYS:
+			{
+				if (type == PROP_INT)
+					currentMesh->indices[index] = *(int*)value;
+				break;
 			}
 		}
 		
@@ -530,6 +603,36 @@ int main(int argc, const char * argv[])
 	parseFbx(bytes, size);
 	
 	free(bytes);
+	
+	// show result
+	
+	for (int i = 0; i < r.meshes.size(); ++i)
+	{
+		MyMesh * mesh = r.meshes[i];
+		
+		log("mesh: numVertices=%d, numIndices=%d\n", mesh->numVertices, mesh->numIndices);
+		
+		for (int i = 0; i < mesh->numIndices; ++i)
+		{
+			int index = mesh->indices[i];
+			bool end = false;
+			
+			if (index < 0)
+			{
+				index = ~index;
+				end = true;
+			}
+			
+			log("[%d] (%+4.2f %+4.2f %+4.2f) ",
+				index,
+				mesh->vertices[index*3+0],
+				mesh->vertices[index*3+1],
+				mesh->vertices[index*3+2]);
+			
+			if (end)
+				log("\n");
+		}
+	}
 	
 	return 0;
 }
