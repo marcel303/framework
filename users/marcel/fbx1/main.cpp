@@ -1,24 +1,13 @@
 #include <assert.h>
 #include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <string>
-#include <vector>
 
 // FBX file reader
 
-enum PROPTYPE
-{
-	PROP_BOOL,
-	PROP_BOOL_ARRAY,
-	PROP_INT,
-	PROP_INT_ARRAY,
-	PROP_FLOAT,
-	PROP_FLOAT_ARRAY,
-	PROP_STRING,
-	PROP_RAW
-};
+class FbxNext;
+class FbxReceiver;
+class FbxRecord;
+class FbxParser;
 
 struct FbxRecord
 {
@@ -31,141 +20,204 @@ struct FbxRecord
 	
 	bool isNULL() const
 	{
-		const char * bytes = (const char*)this;
-		for (int i = 0; i < 13; ++i)
-			if (bytes[i])
-				return false;
-		return true;
+		return endOffset == 0;
+	}
+};
+
+class FbxValue
+{
+	union
+	{
+		bool Bool;
+		int64_t Int;
+		double Real;
+	};
+	
+	std::string String;
+	
+	static std::string kEmptyString;
+	
+public:
+	enum TYPE
+	{
+		TYPE_NULL,
+		TYPE_BOOL,
+		TYPE_INT,
+		TYPE_REAL,
+		TYPE_STRING
+	};
+	
+	TYPE type;
+	
+	explicit FbxValue()
+	{
+		type = TYPE_NULL;
+	}
+	explicit FbxValue(bool value)
+	{
+		type = TYPE_BOOL;
+		Bool = value;
+	}
+	explicit FbxValue(int64_t value)
+	{
+		type = TYPE_INT;
+		Int = value;
+	}
+	explicit FbxValue(double value)
+	{
+		type = TYPE_REAL;
+		Real = value;
+	}
+	explicit FbxValue(const char * value)
+	{
+		type = TYPE_STRING;
+		String = value;
+	}
+	
+	//
+	
+	bool isNULL() const
+	{
+		return type == TYPE_NULL;
+	}
+	
+	bool getBool() const
+	{
+		if (type == TYPE_BOOL)
+			return Bool;
+		if (type == TYPE_INT)
+			return bool(Int);
+		return false;
+	}
+	
+	int64_t getInt() const
+	{
+		if (type == TYPE_BOOL)
+			return int64_t(Bool);
+		if (type == TYPE_INT)
+			return Int;
+		if (type == TYPE_REAL)
+			return int64_t(Real);
+		return 0;
+	}
+	
+	double getDouble() const
+	{
+		if (type == TYPE_BOOL)
+			return double(Bool);
+		if (type == TYPE_INT)
+			return double(Int);
+		if (type == TYPE_REAL)
+			return Real;
+		return 0.0;
+	}
+	
+	const std::string & getString() const
+	{
+		if (type == TYPE_STRING)
+			return String;
+		return kEmptyString;
+	}
+};
+
+std::string FbxValue::kEmptyString;
+
+template <typename T> T get(const FbxValue & value);
+template <> bool get(const FbxValue & value) { return value.getBool(); }
+template <> int get(const FbxValue & value) { return int(value.getInt()); }
+template <> int64_t get(const FbxValue & value) { return value.getInt(); }
+template <> float get(const FbxValue & value) { return float(value.getDouble()); }
+template <> double get(const FbxValue & value) { return value.getDouble(); }
+template <> const std::string & get(const FbxValue & value) { return value.getString(); }
+
+struct FbxNext
+{
+	bool recurse;
+	bool properties;
+	
+	FbxNext()
+	{
+		recurse = true;
+		properties = false;
 	}
 };
 
 class FbxReceiver
 {
 public:
-	virtual void recordBegin(const FbxRecord & record) = 0;
+	virtual void recordBegin(const FbxRecord & record, FbxNext & next) = 0;
 	virtual void recordEnd() = 0;
-	virtual void property(int index, PROPTYPE type, const void * value) = 0;
+	virtual void property(int index, const FbxValue & value) = 0;
 };
 
-static int tab = 0;
-
-static void * start = 0;
-
-static FbxReceiver * receiver = 0;
-
-template <typename T> T read(void *& p, T & t)
+class FbxParser
 {
-	T * v = (T*)p;
-	t = *v++;
-	p = v;
-}
-
-template <typename T> void read(void *& p, T & t, int n)
-{
-	char * v = (char*)p;
-	memcpy(&t, v, n);
-	v += n;
-	p = v;
-}
-
-void skip(void *& p, int n)
-{
-	char * v = (char*)p;
-	v += n;
-	p = v;
-}
-
-void log(const char * fmt, ...)
-{
-	va_list va;
-	va_start(va, fmt);
+	const uint8_t * m_bytes;
+	const uint8_t * m_bytePtr;
+	int m_numBytes;
+	FbxReceiver * m_receiver;
 	
-	char tabs[128];
+	bool parseRecord(const FbxRecord & record);
 	
-	for (int i = 0; i < tab; ++i)
-		tabs[i] = '\t';
-	tabs[tab] = 0;
-	
-	char temp[1024];
-	
-	vsprintf(temp, fmt, va);
-	
-	printf("%s%s", tabs, temp);
-	
-	va_end(va);
-}
-
-template <typename T> void readArray(void *& p)
-{
-	int32_t arrayLength;
-	int32_t encoding;
-	int32_t compressedLength;
-	
-	read(p, arrayLength);
-	read(p, encoding);
-	read(p, compressedLength);
-	
-	log("arrayLength=%d, encoding=%d, compressedLength=%d\n",
-		arrayLength,
-		encoding,
-		compressedLength);
-	
-	int length;
-	
-	if (encoding == 0)
+	template <typename T> T read(T & result)
 	{
-		length = sizeof(T) * arrayLength;
+		result = *(T*)m_bytePtr;
+		m_bytePtr += sizeof(T);
 	}
 	
-	if (encoding == 1)
+	template <typename T> void read(T & result, int numBytes)
 	{
-		// todo: run deflate
+		memcpy(&result, m_bytePtr, numBytes);
+		m_bytePtr += numBytes;
+	}
+	
+	void skip(int numBytes)
+	{
+		m_bytePtr += numBytes;
+	}
+	
+	template <typename T> void skipArray()
+	{
+		// array description
 		
-		length = compressedLength;
+		int32_t arrayLength;
+		int32_t encoding;
+		int32_t compressedLength;
+		
+		read(arrayLength);
+		read(encoding);
+		read(compressedLength);
+		
+		// calculate length
+		
+		int length;
+		if (encoding == 0) // raw
+			length = sizeof(T) * arrayLength;
+		if (encoding == 1) // deflate
+			length = compressedLength;
+		
+		skip(length);
 	}
 	
-	skip(p, length);
-}
-
-void readRecord(void *& p, FbxRecord & r)
-{
-	read(p, r.endOffset);
-	read(p, r.numProperties);
-	read(p, r.propertyListLen);
-	read(p, r.nameLen);
-	
-	char * name = (char*)alloca(r.nameLen + 1);
-	read(p, name[0], r.nameLen);
-	name[r.nameLen] = 0;
-	
-	r.name = name;
-}
-
-int distance(void * p1, void * p2)
-{
-	return reinterpret_cast<uintptr_t>(p2) - reinterpret_cast<uintptr_t>(p1);
-}
-
-bool parseNode(void *& p, const FbxRecord & r)
-{
-	receiver->recordBegin(r);
-	
-	log("node: endOffset=%d, numProperties=%d, propertyListLen=%d, nameLen=%d, name=%s\n",
-		r.endOffset,
-		r.numProperties,
-		r.propertyListLen,
-		(int32_t)r.nameLen,
-		r.name.c_str());
-	
-	tab++;
-	
-	// properties
-	
-	for (int i = 0; i < r.numProperties; ++i)
+	void readRecord(FbxRecord & record)
 	{
+		read(record.endOffset);
+		read(record.numProperties);
+		read(record.propertyListLen);
+		read(record.nameLen);
+		
+		char * name = (char*)alloca(record.nameLen + 1);
+		read(name[0], record.nameLen);
+		name[record.nameLen] = 0;
+		record.name = name;
+	}
+	
+	void readValue(FbxValue & value)
+	{
+		// property type
+		
 		char type;
-		
-		read(p, type);
+		read(type);
 		
 		switch (type)
 		{
@@ -174,55 +226,43 @@ bool parseNode(void *& p, const FbxRecord & r)
 			case 'Y':
 			{
 				int16_t v;
-				read(p, v);
-				log("int16: %d\n", (int)v);
-				int t = v;
-				receiver->property(i, PROP_INT, &t);
+				read(v);
+				value = FbxValue(int64_t(v));
 				break;
 			}
 			case 'C':
 			{
 				int8_t v;
-				read(p, v);
-				log("bool: %d\n", (int)v);
-				bool t = v != 0;
-				receiver->property(i, PROP_BOOL, &t);
+				read(v);
+				value = FbxValue(bool(v));
 				break;
 			}
 			case 'I':
 			{
 				int32_t v;
-				read(p, v);
-				log("int32: %d\n", v);
-				int t = v;
-				receiver->property(i, PROP_INT, &t);
+				read(v);
+				value = FbxValue(int64_t(v));
 				break;
 			}
 			case 'F':
 			{
 				float v;
-				read(p, v);
-				log("single: %f\n", v);
-				float t = v;
-				receiver->property(i, PROP_FLOAT, &t);
+				read(v);
+				value = FbxValue(double(v));
 				break;
 			}
 			case 'D':
 			{
 				double v;
-				read(p, v);
-				log("double: %f\n", (float)v);
-				float t = (float)v;
-				receiver->property(i, PROP_FLOAT, &t);
+				read(v);
+				value = FbxValue(double(v));
 				break;
 			}
 			case 'L':
 			{
 				int64_t v;
-				read(p, v);
-				log("int64: %lld\n", v);
-				int t = (int)v;
-				receiver->property(i, PROP_INT, &t);
+				read(v);
+				value = FbxValue(int64_t(v));
 				break;
 			}
 			
@@ -230,27 +270,27 @@ bool parseNode(void *& p, const FbxRecord & r)
 			
 			case 'f':
 			{
-				readArray<float>(p);
+				skipArray<float>();
 				break;
 			}
 			case 'd':
 			{
-				readArray<double>(p);
+				skipArray<double>();
 				break;
 			}
 			case 'l':
 			{
-				readArray<int64_t>(p);
+				skipArray<int64_t>();
 				break;
 			}
 			case 'i':
 			{
-				readArray<int32_t>(p);
+				skipArray<int32_t>();
 				break;
 			}
 			case 'b':
 			{
-				readArray<int8_t>(p);
+				skipArray<int8_t>();
 				break;
 			}
 			
@@ -259,33 +299,25 @@ bool parseNode(void *& p, const FbxRecord & r)
 			case 'S':
 			{
 				int32_t length;
-				read(p, length);
+				read(length);
 				char * str = (char*)alloca(length + 1);
-				read(p, str[0], length);
+				read(str[0], length);
 				str[length] = 0;
-				log("string: %s\n", str);
-				receiver->property(i, PROP_STRING, str);
+				value = FbxValue(str);
 				break;
 			}
 			
 			case 'R':
 			{
-				log("raw\n");
 				int32_t length;
-				read(p, length);
+				read(length);
 				
+			#if 1
+				skip(length);
+			#else
 				uint8_t * raw = (uint8_t*)alloca(length);
-				read(p, raw[0], length);
-				
-				#if 1
-				char * temp = (char*)alloca(length * 2 + 1);
-				for (int j = 0; j < length; ++j)
-					sprintf(temp + j * 2, "%0x", raw[j]);
-				temp[length * 2] = 0;
-				log("%s\n", temp);
-				#endif
-				
-				receiver->property(i, PROP_RAW, raw);
+				read(raw[0], length);
+			#endif
 				break;
 			}
 			
@@ -297,90 +329,162 @@ bool parseNode(void *& p, const FbxRecord & r)
 		}
 	}
 	
-	tab--;
-	
-	// nested records
-	
-	while (distance(start, p) != r.endOffset)
-	{		
-		assert(distance(start, p) < r.endOffset);
-		
-		void * t = p;
-		
-		FbxRecord temp;
-		
-		readRecord(p, temp);
-		
-		if (temp.isNULL())
-		{
-			log("EOR\n");
-			
-			assert(distance(start, p) == r.endOffset);
-			
-			break;
-		}
-		else
-		{
-			tab++;
-	
-			parseNode(p, temp);
-			
-			tab--;
-		}
+	int distance() const
+	{
+		return m_bytePtr - m_bytes;
 	}
 	
-	receiver->recordEnd();
-}
+public:
+	enum PARSE
+	{
+		PARSE_PROPERTIES = 0x1,
+		PARSE_RECURSE    = 0x2
+	};
+	
+	FbxParser()
+	{
+		m_bytes = 0;
+		m_bytePtr = 0;
+		m_numBytes = 0;
+		m_receiver = 0;
+	}
+	
+	void parse(const void * bytes, int numBytes, FbxReceiver & receiver);
+	template <typename T> void capture(const FbxRecord & record, T * buffer);
+};
 
-void parseFbx(void * p, int length)
+bool FbxParser::parseRecord(const FbxRecord & record)
 {
-	start = p;
+	FbxNext next;
 	
-	// parse header
+	m_receiver->recordBegin(record, next);
 	
+	if (next.properties)
 	{
-		const char magic[21] = "Kaydara FBX Binary  ";
-		const char * bytes = (const char*)p;
-		for (int i = 0; i < sizeof(magic); ++i)
-			if (bytes[i] != magic[i])
-				log("magic doesn't match\n");
-		skip(p, sizeof(magic));
+		// properties
 		
-		const char * special = (const char*)p;
-		log("special bytes: %x, %x\n", special[0], special[1]);
-		skip(p, 2);
-		
-		uint32_t version;
-		read(p, version);
-		log("version: %d\n", version);
+		for (int i = 0; i < record.numProperties; ++i)
+		{
+			FbxValue value;
+			
+			readValue(value);
+			
+			m_receiver->property(i, value);
+		}
+	}
+	else
+	{
+		skip(record.propertyListLen);
 	}
 	
-	while (distance(start, p) != length)
+	if (next.recurse)
 	{
-		void * t = p;
+		// nested records
 		
-		FbxRecord temp;
-		
-		readRecord(p, temp);
-		
-		if (temp.isNULL())
+		while (distance() != record.endOffset)
+		{		
+			assert(distance() < record.endOffset);
+			
+			FbxRecord childRecord;
+			readRecord(childRecord);
+			
+			if (childRecord.isNULL())
+			{
+				// end of record
+				
+				assert(distance() == record.endOffset);
+				
+				break;
+			}
+			else
+			{
+				parseRecord(childRecord);
+			}
+		}
+	}
+	else
+	{
+		skip(m_bytes + record.endOffset - m_bytePtr);
+	}
+	
+	m_receiver->recordEnd();
+}
+
+void FbxParser::parse(const void * bytes, int numBytes, FbxReceiver & receiver)
+{
+	m_bytes = (uint8_t*)bytes;
+	m_numBytes = numBytes;
+	m_bytePtr = (uint8_t*)bytes;
+	m_receiver = &receiver;
+	
+	// header: identifier
+	
+	const char kMagic[21] = "Kaydara FBX Binary  ";
+	char magic[sizeof(kMagic)];
+	read(magic[0], sizeof(kMagic));
+	for (int i = 0; i < sizeof(kMagic); ++i)
+	{
+		if (magic[i] != kMagic[i])
 		{
-			log("EOF\n");
+			// not a binary FBX file
+			
+			return;
+		}
+	}
+	
+	// header: unknown
+	
+	char special[2];
+	read(special[0], 2); // should be 0x1a 0x00
+	
+	// header: version
+	
+	int32_t version;
+	read(version);
+	
+	// top level records
+	
+	while (distance() != m_numBytes)
+	{
+		FbxRecord record;
+		
+		readRecord(record);
+		
+		if (record.isNULL())
+		{
+			// end of file
 			
 			break;
 		}
 		else
 		{
-			log("startDistance: %d/%d\n", distance(start, p), length);
-		
-			parseNode(p, temp);
-			
-			log("endDistance: %d/%d\n", distance(start, p), length);
+			parseRecord(record);
 		}
 	}
 }
 
-//
+template <typename T>
+void FbxParser::capture(const FbxRecord & record, T * buffer)
+{
+	const uint8_t * oldBytePtr = m_bytePtr;
+	{
+		for (int i = 0; i < record.numProperties; ++i)
+		{
+			FbxValue value;
+			
+			readValue(value);
+			
+			buffer[i] = get<T>(value);
+		}
+	}
+	m_bytePtr = oldBytePtr;
+}
+
+// usage example
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <vector>
 
 class MyMesh
 {
@@ -417,32 +521,60 @@ class MyReceiver : public FbxReceiver
 		STATE_OBJECTS,
 		STATE_MODEL_MAYBE,
 		STATE_MODEL,
-		STATE_VERTS,
-		STATE_POLYS,
+		/*
+		STATE_MODEL_VERTICES,
+		STATE_MODEL_POLYGON_INDICES,
+		STATE_MODEL_NORMALS,
+		STATE_MODEL_NORMALS_DATA,
+		STATE_MODEL_UVS,
+		STATE_MODEL_UVS_DATA,
+		STATE_MODEL_UVS_INDICES,
+		STATE_MODEL_MATERIALS,
+		STATE_MODEL_MATERIALS_INDICES,
+		STATE_MODEL_TEXTURES,
+		STATE_MODEL_TEXTURES_INDICES,
+		*/
 		STATE_UNKNOWN
 	};
+		
+	int m_logIndent;
 	
-	STATE state[maxDepth];
-	int depth;
+	FbxParser * m_parser;
 	
-	MyMesh * currentMesh;
+	STATE m_state[maxDepth];
+	int m_depth;
+	
+	MyMesh * m_currentMesh;
 	
 public:
 	std::vector<MyMesh*> meshes;
 	
-	MyReceiver()
+	MyReceiver(FbxParser & parser)
 	{
-		depth = 0;
-		state[depth] = STATE_ROOT;
+		m_logIndent = 0;
 		
-		currentMesh = 0;
+		m_parser = &parser;
+		
+		m_depth = 0;
+		m_state[0] = STATE_ROOT;
+		
+		m_currentMesh = 0;
 	}
 	
-	virtual void recordBegin(const FbxRecord & record)
+	virtual void recordBegin(const FbxRecord & record, FbxNext & next)
 	{
-		STATE oldState = state[depth];
+		log("node: endOffset=%d, numProperties=%d, propertyListLen=%d, nameLen=%d, name=%s\n",
+			record.endOffset,
+			record.numProperties,
+			record.propertyListLen,
+			(int32_t)record.nameLen,
+			record.name.c_str());
 		
-		depth++;
+		m_logIndent++;
+		
+		STATE oldState = m_state[m_depth];
+		
+		m_depth++;
 		
 		STATE newState = STATE_UNKNOWN;
 		
@@ -462,12 +594,20 @@ public:
 				if (record.name == "Model")
 				{
 					newState = STATE_MODEL_MAYBE;
+					next.properties = true;
 				}
-				break;
-			}
-			
-			case STATE_MODEL_MAYBE:
-			{
+				if (record.name == "Pose")
+				{
+					//
+				}
+				if (record.name == "Material")
+				{
+					//
+				}
+				if (record.name == "Texture")
+				{
+					//
+				}
 				break;
 			}
 			
@@ -475,68 +615,144 @@ public:
 			{
 				if (record.name == "Vertices")
 				{
-					newState = STATE_VERTS;
-					
-					currentMesh->numVertices = record.numProperties;
-					currentMesh->vertices = new float[record.numProperties * 3];
+					delete [] m_currentMesh->vertices;
+					m_currentMesh->numVertices = record.numProperties;
+					m_currentMesh->vertices = new float[record.numProperties];
+					m_parser->capture<float>(record, m_currentMesh->vertices);
+					next.recurse = false;
 				}
 				if (record.name == "PolygonVertexIndex")
 				{
-					newState = STATE_POLYS;
-					
-					currentMesh->numIndices = record.numProperties;
-					currentMesh->indices = new int[record.numProperties];
+					delete [] m_currentMesh->indices;
+					m_currentMesh->numIndices = record.numProperties;
+					m_currentMesh->indices = new int[record.numProperties];
+					m_parser->capture<int>(record, m_currentMesh->indices);
+					next.recurse = false;
+				}
+				/*
+				if (record.name == "LayerElementNormal")
+				{
+					newState = STATE_MODEL_NORMALS;
+				}
+				if (record.name == "LayerElementUV")
+				{
+					newState = STATE_MODEL_UVS;
+				}
+				if (record.name == "LayerElementMaterial")
+				{
+					newState = STATE_MODEL_MATERIALS;
+				}
+				if (record.name == "LayerElementTexture")
+				{
+					newState = STATE_MODEL_TEXTURES;
+				}
+				*/
+				break;
+			}
+			
+			/*
+			case STATE_MODEL_NORMALS:
+			{
+				if (record.name == "Normals")
+				{
+					next.recurse = false;
 				}
 				break;
 			}
 			
-			case STATE_VERTS:
+			case STATE_MODEL_UVS:
 			{
+				if (record.name == "UV")
+				{
+					next.recurse = false;
+				}
+				if (record.name == "UVIndex")
+				{
+					next.recurse = false;
+				}
 				break;
 			}
 			
-			case STATE_POLYS:
+			case STATE_MODEL_MATERIALS:
 			{
-				break;
-			}
-
-			case STATE_UNKNOWN:
-			{
+				if (record.name == "Materials")
+				{
+					next.recurse = false;
+				}
 				break;
 			}
 			
-			default:
+			case STATE_MODEL_TEXTURES:
 			{
-				assert(false);
+				if (record.name == "TextureId")
+				{
+					next.recurse = false;
+				}
 				break;
 			}
+			*/
 		}
 		
-		state[depth] = newState;
+		m_state[m_depth] = newState;
 		
 		log("state change %d -> %d\n", oldState, newState);
+		
+		if (newState == STATE_UNKNOWN)
+		{
+			#if 0
+			// speed up: skip unknown record types
+			next.recurse = false;
+			next.properties = false;
+			#else
+			// traverse the entire file for logging purposes
+			next.recurse = true;
+			next.properties = true;
+			#endif
+		}
 	}
 	
 	virtual void recordEnd()
 	{
-		STATE oldState = state[depth];
+		m_logIndent--;
+		
+		STATE oldState = m_state[m_depth];
 		
 		switch (oldState)
 		{
 			case STATE_MODEL:
 			{
-				meshes.push_back(currentMesh);
-				currentMesh = 0;
+				meshes.push_back(m_currentMesh);
+				m_currentMesh = 0;
 				break;
 			}
 		}
 		
-		depth--;
+		m_depth--;
 	}
 	
-	virtual void property(int index, PROPTYPE type, const void * value)
+	virtual void property(int index, const FbxValue & value)
 	{
-		STATE oldState = state[depth];
+		// log the property value
+		
+		switch (value.type)
+		{
+			case FbxValue::TYPE_BOOL:
+				log("bool: %d\n", get<bool>(value));
+				break;
+			case FbxValue::TYPE_INT:
+				log("int: %lld\n", get<int64_t>(value));
+				break;
+			case FbxValue::TYPE_REAL:
+				log("float: %f\n", get<float>(value));
+				break;
+			case FbxValue::TYPE_STRING:
+				log("string: %s\n", value.getString().c_str());
+				break;
+		}
+		
+		// process
+		
+		STATE oldState = m_state[m_depth];
 		
 		STATE newState = oldState;
 		
@@ -544,48 +760,42 @@ public:
 		{
 			case STATE_MODEL_MAYBE:
 			{
-				if (index == 1 && type == PROP_STRING)
+				if (index == 1 && value.getString() == "Mesh")
 				{
-					const char * str = (const char*)value;
+					log("STATE_MODEL_MAYBE -> STATE_MODEL\n");
 					
-					if (!strcmp(str, "Mesh"))
-					{
-						log("STATE_MODEL_MAYBE -> STATE_MODEL !!\n");
-						
-						newState = STATE_MODEL;
-						
-						currentMesh = new MyMesh();
-					}
+					newState = STATE_MODEL;
+					
+					m_currentMesh = new MyMesh();
 				}
 				
 				break;
 			}
-			
-			case STATE_VERTS:
-			{
-				if (type == PROP_FLOAT)
-					currentMesh->vertices[index] = *(float*)value;
-				break;
-			}
-			
-			case STATE_POLYS:
-			{
-				if (type == PROP_INT)
-					currentMesh->indices[index] = *(int*)value;
-				break;
-			}
 		}
 		
-		state[depth] = newState;
+		m_state[m_depth] = newState;
+	}
+	
+	void log(const char * fmt, ...)
+	{
+		va_list va;
+		va_start(va, fmt);
+		
+		char tabs[128];
+		for (int i = 0; i < m_logIndent; ++i)
+			tabs[i] = '\t';
+		tabs[m_logIndent] = 0;
+		
+		char temp[1024];
+		vsprintf(temp, fmt, va);
+		va_end(va);
+		
+		printf("%s%s", tabs, temp);
 	}
 };
 
 int main(int argc, const char * argv[])
 {
-	MyReceiver r;
-	
-	receiver = &r;
-	
 	// read file contents
 	
 	FILE * file = fopen("test.fbx", "rb");
@@ -593,28 +803,31 @@ int main(int argc, const char * argv[])
 	fseek(file, 0, SEEK_END);
 	const int p2 = ftell(file);
 	fseek(file, 0, SEEK_SET);
-	const int size = p2 - p1;
-	void * bytes = malloc(size);
-	fread(bytes, size, 1, file);
+	const int numBytes = p2 - p1;
+	void * bytes = malloc(numBytes);
+	fread(bytes, numBytes, 1, file);
 	fclose(file);
 	
 	// parse
 	
-	parseFbx(bytes, size);
+	FbxParser parser;
+	MyReceiver receiver(parser);
+	parser.parse(bytes, numBytes, receiver);
 	
 	free(bytes);
 	
 	// show result
 	
-	for (int i = 0; i < r.meshes.size(); ++i)
+	for (int i = 0; i < receiver.meshes.size(); ++i)
 	{
-		MyMesh * mesh = r.meshes[i];
+		const MyMesh * mesh = receiver.meshes[i];
 		
-		log("mesh: numVertices=%d, numIndices=%d\n", mesh->numVertices, mesh->numIndices);
+		receiver.log("mesh: numVertices=%d, numIndices=%d\n", mesh->numVertices, mesh->numIndices);
 		
 		for (int i = 0; i < mesh->numIndices; ++i)
 		{
 			int index = mesh->indices[i];
+			
 			bool end = false;
 			
 			if (index < 0)
@@ -623,14 +836,14 @@ int main(int argc, const char * argv[])
 				end = true;
 			}
 			
-			log("[%d] (%+4.2f %+4.2f %+4.2f) ",
+			receiver.log("[%d] (%+4.2f %+4.2f %+4.2f) ",
 				index,
 				mesh->vertices[index*3+0],
 				mesh->vertices[index*3+1],
 				mesh->vertices[index*3+2]);
 			
 			if (end)
-				log("\n");
+				receiver.log("\n");
 		}
 	}
 	
