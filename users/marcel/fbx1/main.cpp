@@ -35,7 +35,7 @@ class FbxValue
 	
 	std::string String;
 	
-	static std::string kEmptyString;
+	static const std::string kEmptyString;
 	
 public:
 	enum TYPE
@@ -120,14 +120,14 @@ public:
 	}
 };
 
-std::string FbxValue::kEmptyString;
+const std::string FbxValue::kEmptyString;
 
-template <typename T> T get(const FbxValue & value);
-template <> bool get(const FbxValue & value) { return value.getBool(); }
-template <> int get(const FbxValue & value) { return int(value.getInt()); }
-template <> int64_t get(const FbxValue & value) { return value.getInt(); }
-template <> float get(const FbxValue & value) { return float(value.getDouble()); }
-template <> double get(const FbxValue & value) { return value.getDouble(); }
+template <typename T> T         get(const FbxValue & value);
+template <> bool                get(const FbxValue & value) { return value.getBool(); }
+template <> int                 get(const FbxValue & value) { return int(value.getInt()); }
+template <> int64_t             get(const FbxValue & value) { return value.getInt(); }
+template <> float               get(const FbxValue & value) { return float(value.getDouble()); }
+template <> double              get(const FbxValue & value) { return value.getDouble(); }
 template <> const std::string & get(const FbxValue & value) { return value.getString(); }
 
 struct FbxNext
@@ -157,9 +157,9 @@ class FbxParser
 	int m_numBytes;
 	FbxReceiver * m_receiver;
 	
-	bool parseRecord(const FbxRecord & record);
+	void parseRecord(const FbxRecord & record);
 	
-	template <typename T> T read(T & result)
+	template <typename T> void read(T & result)
 	{
 		result = *(T*)m_bytePtr;
 		m_bytePtr += sizeof(T);
@@ -221,78 +221,30 @@ class FbxParser
 		
 		switch (type)
 		{
-			// single value
+			// scalars
 			
-			case 'Y':
-			{
-				int16_t v;
-				read(v);
-				value = FbxValue(int64_t(v));
-				break;
-			}
-			case 'C':
-			{
-				int8_t v;
-				read(v);
-				value = FbxValue(bool(v));
-				break;
-			}
-			case 'I':
-			{
-				int32_t v;
-				read(v);
-				value = FbxValue(int64_t(v));
-				break;
-			}
-			case 'F':
-			{
-				float v;
-				read(v);
-				value = FbxValue(double(v));
-				break;
-			}
-			case 'D':
-			{
-				double v;
-				read(v);
-				value = FbxValue(double(v));
-				break;
-			}
-			case 'L':
-			{
-				int64_t v;
-				read(v);
-				value = FbxValue(int64_t(v));
-				break;
-			}
+		#define READ_SCALAR(code, type, valueType) case code: { type v; read(v); value = FbxValue(valueType(v)); break; }
+			
+			READ_SCALAR('C', int8_t, bool)
+			READ_SCALAR('Y', int16_t, int64_t)
+			READ_SCALAR('I', int32_t, int64_t)
+			READ_SCALAR('L', int64_t, int64_t)
+			READ_SCALAR('F', float, double)
+			READ_SCALAR('D', double, double)
+			
+		#undef READ_SINGLE
 			
 			// arrays
 			
-			case 'f':
-			{
-				skipArray<float>();
-				break;
-			}
-			case 'd':
-			{
-				skipArray<double>();
-				break;
-			}
-			case 'l':
-			{
-				skipArray<int64_t>();
-				break;
-			}
-			case 'i':
-			{
-				skipArray<int32_t>();
-				break;
-			}
-			case 'b':
-			{
-				skipArray<int8_t>();
-				break;
-			}
+		#define SKIP_ARRAY(code, type) case code: { skipArray<type>(); break; }
+			
+			SKIP_ARRAY('b', int8_t)
+			SKIP_ARRAY('i', int32_t)
+			SKIP_ARRAY('l', int64_t)
+			SKIP_ARRAY('f', float)
+			SKIP_ARRAY('d', double)
+			
+		#undef SKIP_ARRAY
 			
 			// special
 			
@@ -320,12 +272,6 @@ class FbxParser
 			#endif
 				break;
 			}
-			
-			default:
-			{
-				assert(false);
-				break;
-			}
 		}
 	}
 	
@@ -335,12 +281,6 @@ class FbxParser
 	}
 	
 public:
-	enum PARSE
-	{
-		PARSE_PROPERTIES = 0x1,
-		PARSE_RECURSE    = 0x2
-	};
-	
 	FbxParser()
 	{
 		m_bytes = 0;
@@ -353,7 +293,7 @@ public:
 	template <typename T> void capture(const FbxRecord & record, T * buffer);
 };
 
-bool FbxParser::parseRecord(const FbxRecord & record)
+void FbxParser::parseRecord(const FbxRecord & record)
 {
 	FbxNext next;
 	
@@ -422,7 +362,7 @@ void FbxParser::parse(const void * bytes, int numBytes, FbxReceiver & receiver)
 	const char kMagic[21] = "Kaydara FBX Binary  ";
 	char magic[sizeof(kMagic)];
 	read(magic[0], sizeof(kMagic));
-	for (int i = 0; i < sizeof(kMagic); ++i)
+	for (size_t i = 0; i < sizeof(kMagic); ++i)
 	{
 		if (magic[i] != kMagic[i])
 		{
@@ -519,20 +459,13 @@ class MyReceiver : public FbxReceiver
 	{
 		STATE_ROOT,
 		STATE_OBJECTS,
-		STATE_MODEL_MAYBE,
 		STATE_MODEL,
+		STATE_MODEL_MESH,
 		/*
-		STATE_MODEL_VERTICES,
-		STATE_MODEL_POLYGON_INDICES,
 		STATE_MODEL_NORMALS,
-		STATE_MODEL_NORMALS_DATA,
 		STATE_MODEL_UVS,
-		STATE_MODEL_UVS_DATA,
-		STATE_MODEL_UVS_INDICES,
 		STATE_MODEL_MATERIALS,
-		STATE_MODEL_MATERIALS_INDICES,
 		STATE_MODEL_TEXTURES,
-		STATE_MODEL_TEXTURES_INDICES,
 		*/
 		STATE_UNKNOWN
 	};
@@ -593,7 +526,7 @@ public:
 			{
 				if (record.name == "Model")
 				{
-					newState = STATE_MODEL_MAYBE;
+					newState = STATE_MODEL;
 					next.properties = true;
 				}
 				if (record.name == "Pose")
@@ -611,7 +544,7 @@ public:
 				break;
 			}
 			
-			case STATE_MODEL:
+			case STATE_MODEL_MESH:
 			{
 				if (record.name == "Vertices")
 				{
@@ -655,6 +588,7 @@ public:
 			{
 				if (record.name == "Normals")
 				{
+					m_parser->capture<float>(..);
 					next.recurse = false;
 				}
 				break;
@@ -664,10 +598,12 @@ public:
 			{
 				if (record.name == "UV")
 				{
+					m_parser->capture<float>(..);
 					next.recurse = false;
 				}
 				if (record.name == "UVIndex")
 				{
+					m_parser->capture<int>(..);
 					next.recurse = false;
 				}
 				break;
@@ -691,6 +627,11 @@ public:
 				break;
 			}
 			*/
+			
+			default:
+			{
+				break;
+			}
 		}
 		
 		m_state[m_depth] = newState;
@@ -719,10 +660,15 @@ public:
 		
 		switch (oldState)
 		{
-			case STATE_MODEL:
+			case STATE_MODEL_MESH:
 			{
 				meshes.push_back(m_currentMesh);
 				m_currentMesh = 0;
+				break;
+			}
+			
+			default:
+			{
 				break;
 			}
 		}
@@ -748,6 +694,10 @@ public:
 			case FbxValue::TYPE_STRING:
 				log("string: %s\n", value.getString().c_str());
 				break;
+			
+			case FbxValue::TYPE_NULL:
+				log("(NULL)\n");
+				break;
 		}
 		
 		// process
@@ -758,17 +708,22 @@ public:
 		
 		switch (oldState)
 		{
-			case STATE_MODEL_MAYBE:
+			case STATE_MODEL:
 			{
 				if (index == 1 && value.getString() == "Mesh")
 				{
-					log("STATE_MODEL_MAYBE -> STATE_MODEL\n");
+					log("STATE_MODEL -> STATE_MODEL_MESH\n");
 					
-					newState = STATE_MODEL;
+					newState = STATE_MODEL_MESH;
 					
 					m_currentMesh = new MyMesh();
 				}
 				
+				break;
+			}
+			
+			default:
+			{
 				break;
 			}
 		}
@@ -794,7 +749,7 @@ public:
 	}
 };
 
-int main(int argc, const char * argv[])
+int main()
 {
 	// read file contents
 	
@@ -818,7 +773,7 @@ int main(int argc, const char * argv[])
 	
 	// show result
 	
-	for (int i = 0; i < receiver.meshes.size(); ++i)
+	for (size_t i = 0; i < receiver.meshes.size(); ++i)
 	{
 		const MyMesh * mesh = receiver.meshes[i];
 		

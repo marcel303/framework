@@ -1,6 +1,6 @@
 EXE = bfx
 OBJS = main.o
-#CFLAGS = -Wall -ffast-math -g -DDEBUG
+CFLAGS = -Wall -Wextra -Werror -ansi -pedantic
 LFLAGS = -lstdc++
 
 all : $(EXE)
