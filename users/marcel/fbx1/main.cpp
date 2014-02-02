@@ -232,7 +232,7 @@ class FbxParser
 			READ_SCALAR('F', float, double)
 			READ_SCALAR('D', double, double)
 			
-		#undef READ_SINGLE
+		#undef READ_SCALAR
 			
 			// arrays
 			
