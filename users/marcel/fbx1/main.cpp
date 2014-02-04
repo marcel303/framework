@@ -1,31 +1,85 @@
 #include <assert.h>
 #include <stdint.h>
 #include <string>
+#include <vector>
 
 // FBX file reader
 
-class FbxNext;
-class FbxReceiver;
 class FbxRecord;
-class FbxParser;
+class FbxReader;
 
-struct FbxRecord
+/* --------------------------------------------------------------------------------
+// FbxRecord
+// --------------------------------------------------------------------------------
+
+FbxRecord is similar to an XML element node. firstChild and nextSibling provide access to neighboring records.
+Each record may have zero or more unnamed properties. Each property has a distinct type (int, string, etc), but easy access
+is provided through the varying type FbxValue, and implicit conversion through captureProperties.
+
+Example:
+	FbxReader reader;
+	reader.openFromMemory(bytes, numBytes);
+	
+	for (FbxRecord record = reader.firstRecord("Objects"); record.isValid(); record = record.nextSibling("Objects"))
+	{
+		std::vector<float> propertiesAsFloat = record.captureProperties<float>();
+		
+		std::vector<FbxValue> propertiesAsVarying = record.captureProperties<FbxValue>();
+	}
+*/
+
+class FbxRecord
 {
+	friend class FbxReader;
+	
+	const FbxReader * m_reader;
+	
+	int32_t m_startOffset;
+	int32_t m_propertyListOffset;
+	int32_t m_parentEndOffset;
+	
+	explicit FbxRecord();
+	explicit FbxRecord(const FbxReader & reader, int32_t startOffset, int32_t parentEndOffset);
+	
+	void read();
+	
+public:
+
+	// header values
 	int32_t endOffset;
 	int32_t numProperties;
 	int32_t propertyListLen;
 	int8_t nameLen;
-	
 	std::string name;
 	
-	bool isNULL() const
-	{
-		return endOffset == 0;
-	}
+	bool isValid() const;
+	FbxRecord firstChild(const char * name = 0) const;	
+	FbxRecord nextSibling(const char * name = 0) const;
+	template <typename T> std::vector<T> captureProperties() const;
 };
+
+/* --------------------------------------------------------------------------------
+// FbxValue
+// --------------------------------------------------------------------------------
+
+FbxValue is used to capture property values. FbxValue is a varying type, which means it may be a string,
+int, float, etc. FbxValue::type specifies the type. Conversion is provided through get<T>(value).
+
+Example:
+	std::vector<FbxValue> properties = record.captureProperties<FbxValue>();
+	
+	for (size_t i = 0; i < properties.size(); ++i)
+	{
+		const float v = get<float>(properties[i]);
+		
+		printf("value: %g\n", v);
+	}
+*/
 
 class FbxValue
 {
+	static const std::string kEmptyString;
+	
 	union
 	{
 		bool Bool;
@@ -35,12 +89,10 @@ class FbxValue
 	
 	std::string String;
 	
-	static const std::string kEmptyString;
-	
 public:
 	enum TYPE
 	{
-		TYPE_NULL,
+		TYPE_INVALID,
 		TYPE_BOOL,
 		TYPE_INT,
 		TYPE_REAL,
@@ -51,7 +103,7 @@ public:
 	
 	explicit FbxValue()
 	{
-		type = TYPE_NULL;
+		type = TYPE_INVALID;
 	}
 	explicit FbxValue(bool value)
 	{
@@ -76,9 +128,9 @@ public:
 	
 	//
 	
-	bool isNULL() const
+	bool isValid() const
 	{
-		return type == TYPE_NULL;
+		return type != TYPE_INVALID;
 	}
 	
 	bool getBool() const
@@ -122,61 +174,68 @@ public:
 
 const std::string FbxValue::kEmptyString;
 
-template <typename T> T         get(const FbxValue & value);
-template <> bool                get(const FbxValue & value) { return value.getBool(); }
-template <> int                 get(const FbxValue & value) { return int(value.getInt()); }
-template <> int64_t             get(const FbxValue & value) { return value.getInt(); }
-template <> float               get(const FbxValue & value) { return float(value.getDouble()); }
-template <> double              get(const FbxValue & value) { return value.getDouble(); }
-template <> const std::string & get(const FbxValue & value) { return value.getString(); }
+template <typename T> T get(const FbxValue & value);
+template <> FbxValue    get(const FbxValue & value) { return value; }
+template <> bool        get(const FbxValue & value) { return value.getBool(); }
+template <> int         get(const FbxValue & value) { return int(value.getInt()); }
+template <> int64_t     get(const FbxValue & value) { return value.getInt(); }
+template <> float       get(const FbxValue & value) { return float(value.getDouble()); }
+template <> double      get(const FbxValue & value) { return value.getDouble(); }
+template <> std::string get(const FbxValue & value) { return value.getString(); }
 
-struct FbxNext
+/* --------------------------------------------------------------------------------
+// FbxReader
+// --------------------------------------------------------------------------------
+
+FbxReader is used to access FBX file contents. It provides methods for opening FBX files, access to the first top-level
+FBX record, and helper functions for reading file contents.
+
+*/
+
+class FbxReader
 {
-	bool recurse;
-	bool properties;
+	friend class FbxRecord;
 	
-	FbxNext()
-	{
-		recurse = true;
-		properties = false;
-	}
-};
-
-class FbxReceiver
-{
-public:
-	virtual void recordBegin(const FbxRecord & record, FbxNext & next) = 0;
-	virtual void recordEnd() = 0;
-	virtual void property(int index, const FbxValue & value) = 0;
-};
-
-class FbxParser
-{
 	const uint8_t * m_bytes;
-	const uint8_t * m_bytePtr;
 	int m_numBytes;
-	FbxReceiver * m_receiver;
+	int32_t m_firstRecordOffset;
 	
-	void parseRecord(const FbxRecord & record);
-	
-	template <typename T> void read(T & result)
+	void throwException() const
 	{
-		result = *(T*)m_bytePtr;
-		m_bytePtr += sizeof(T);
+		throw std::exception();
 	}
 	
-	template <typename T> void read(T & result, int numBytes)
+	template <typename T> void read(int & offset, T & result) const
 	{
-		memcpy(&result, m_bytePtr, numBytes);
-		m_bytePtr += numBytes;
+		if (offset + int(sizeof(T)) > m_numBytes)
+			throwException();
+		result = *(T*)&m_bytes[offset];
+		offset += sizeof(T);
 	}
 	
-	void skip(int numBytes)
+	template <typename T> void read(int & offset, T & result, int numBytes) const
 	{
-		m_bytePtr += numBytes;
+		if (offset + numBytes > m_numBytes)
+			throwException();
+		memcpy(&result, &m_bytes[offset], numBytes);
+		offset += numBytes;
 	}
 	
-	template <typename T> void skipArray()
+	void skip(int & offset, int numBytes) const
+	{
+		if (offset + numBytes > m_numBytes)
+			throwException();
+		offset += numBytes;
+	}
+	
+	void seek(int & offset, int newOffset) const
+	{
+		if (newOffset < 0 || newOffset > m_numBytes)
+			throwException();
+		offset = newOffset;
+	}
+	
+	template <typename T> void skipArray(int & offset) const
 	{
 		// array description
 		
@@ -184,9 +243,9 @@ class FbxParser
 		int32_t encoding;
 		int32_t compressedLength;
 		
-		read(arrayLength);
-		read(encoding);
-		read(compressedLength);
+		read(offset, arrayLength);
+		read(offset, encoding);
+		read(offset, compressedLength);
 		
 		// calculate length
 		
@@ -196,34 +255,21 @@ class FbxParser
 		if (encoding == 1) // deflate
 			length = compressedLength;
 		
-		skip(length);
+		skip(offset, length);
 	}
 	
-	void readRecord(FbxRecord & record)
-	{
-		read(record.endOffset);
-		read(record.numProperties);
-		read(record.propertyListLen);
-		read(record.nameLen);
-		
-		char * name = (char*)alloca(record.nameLen + 1);
-		read(name[0], record.nameLen);
-		name[record.nameLen] = 0;
-		record.name = name;
-	}
-	
-	void readValue(FbxValue & value)
+	void readValue(int & offset, FbxValue & value) const
 	{
 		// property type
 		
 		char type;
-		read(type);
+		read(offset, type);
 		
 		switch (type)
 		{
 			// scalars
 			
-		#define READ_SCALAR(code, type, valueType) case code: { type v; read(v); value = FbxValue(valueType(v)); break; }
+		#define READ_SCALAR(code, type, valueType) case code: { type v; read(offset, v); value = FbxValue(valueType(v)); break; }
 			
 			READ_SCALAR('C', int8_t, bool)
 			READ_SCALAR('Y', int16_t, int64_t)
@@ -236,7 +282,7 @@ class FbxParser
 			
 			// arrays
 			
-		#define SKIP_ARRAY(code, type) case code: { skipArray<type>(); break; }
+		#define SKIP_ARRAY(code, type) case code: { skipArray<type>(offset); break; }
 			
 			SKIP_ARRAY('b', int8_t)
 			SKIP_ARRAY('i', int32_t)
@@ -251,9 +297,9 @@ class FbxParser
 			case 'S':
 			{
 				int32_t length;
-				read(length);
+				read(offset, length);
 				char * str = (char*)alloca(length + 1);
-				read(str[0], length);
+				read(offset, str[0], length);
 				str[length] = 0;
 				value = FbxValue(str);
 				break;
@@ -262,239 +308,231 @@ class FbxParser
 			case 'R':
 			{
 				int32_t length;
-				read(length);
+				read(offset, length);
 				
 			#if 1
-				skip(length);
+				skip(offset, length);
 			#else
 				uint8_t * raw = (uint8_t*)alloca(length);
-				read(raw[0], length);
+				read(offset, raw[0], length);
 			#endif
 				break;
 			}
 		}
 	}
 	
-	int distance() const
-	{
-		return m_bytePtr - m_bytes;
-	}
-	
 public:
-	FbxParser()
+	FbxReader()
 	{
 		m_bytes = 0;
-		m_bytePtr = 0;
 		m_numBytes = 0;
-		m_receiver = 0;
+		m_firstRecordOffset = 0;
 	}
 	
-	void parse(const void * bytes, int numBytes, FbxReceiver & receiver);
-	template <typename T> void capture(const FbxRecord & record, T * buffer);
+	void openFromMemory(const void * bytes, int numBytes);
+	FbxRecord firstRecord(const char * name = 0) const;
 };
 
-void FbxParser::parseRecord(const FbxRecord & record)
+//
+
+FbxRecord::FbxRecord()
+	: m_reader(0)
+	, endOffset(0)
 {
-	FbxNext next;
-	
-	m_receiver->recordBegin(record, next);
-	
-	if (next.properties)
-	{
-		// properties
-		
-		for (int i = 0; i < record.numProperties; ++i)
-		{
-			FbxValue value;
-			
-			readValue(value);
-			
-			m_receiver->property(i, value);
-		}
-	}
-	else
-	{
-		skip(record.propertyListLen);
-	}
-	
-	if (next.recurse)
-	{
-		// nested records
-		
-		while (distance() != record.endOffset)
-		{		
-			assert(distance() < record.endOffset);
-			
-			FbxRecord childRecord;
-			readRecord(childRecord);
-			
-			if (childRecord.isNULL())
-			{
-				// end of record
-				
-				assert(distance() == record.endOffset);
-				
-				break;
-			}
-			else
-			{
-				parseRecord(childRecord);
-			}
-		}
-	}
-	else
-	{
-		skip(m_bytes + record.endOffset - m_bytePtr);
-	}
-	
-	m_receiver->recordEnd();
 }
 
-void FbxParser::parse(const void * bytes, int numBytes, FbxReceiver & receiver)
+FbxRecord::FbxRecord(const FbxReader & reader, int32_t startOffset, int32_t parentEndOffset)
+	: m_reader(&reader)
+	, m_startOffset(startOffset)
+	, m_parentEndOffset(parentEndOffset)
 {
-	m_bytes = (uint8_t*)bytes;
-	m_numBytes = numBytes;
-	m_bytePtr = (uint8_t*)bytes;
-	m_receiver = &receiver;
+	read();
+}
+
+void FbxRecord::read()
+{
+	int offset = 0;
 	
-	// header: identifier
+	m_reader->seek(offset, m_startOffset);
 	
-	const char kMagic[21] = "Kaydara FBX Binary  ";
-	char magic[sizeof(kMagic)];
-	read(magic[0], sizeof(kMagic));
-	for (size_t i = 0; i < sizeof(kMagic); ++i)
+	m_reader->read(offset, endOffset);
+	m_reader->read(offset, numProperties);
+	m_reader->read(offset, propertyListLen);
+	m_reader->read(offset, nameLen);
+	
+	char * name = (char*)alloca(nameLen + 1);
+	m_reader->read(offset, name[0], nameLen);
+	name[nameLen] = 0;
+	this->name = name;
+	
+	m_propertyListOffset = offset;
+}
+
+bool FbxRecord::isValid() const
+{
+	return endOffset != 0;
+}
+
+FbxRecord FbxRecord::firstChild(const char * name) const
+{
+	assert(isValid());
+	
+	int offset = m_propertyListOffset + propertyListLen;
+	
+	while (offset != endOffset)
 	{
-		if (magic[i] != kMagic[i])
-		{
-			// not a binary FBX file
+		assert(offset < endOffset);
 			
-			return;
-		}
-	}
-	
-	// header: unknown
-	
-	char special[2];
-	read(special[0], 2); // should be 0x1a 0x00
-	
-	// header: version
-	
-	int32_t version;
-	read(version);
-	
-	// top level records
-	
-	while (distance() != m_numBytes)
-	{
-		FbxRecord record;
+		FbxRecord childRecord(*m_reader, offset, endOffset);
 		
-		readRecord(record);
-		
-		if (record.isNULL())
+		if (!childRecord.isValid())
 		{
-			// end of file
-			
 			break;
 		}
 		else
 		{
-			parseRecord(record);
+			if (name == 0 || childRecord.name == name)
+			{
+				return childRecord;
+			}
+			
+			offset = childRecord.endOffset;
 		}
 	}
+	
+	return FbxRecord();
+}
+
+FbxRecord FbxRecord::nextSibling(const char * name) const
+{
+	assert(isValid());
+	
+	int offset = endOffset;
+	
+	while (offset != m_parentEndOffset)
+	{
+		assert(offset < m_parentEndOffset);
+		
+		FbxRecord childRecord(*m_reader, offset, m_parentEndOffset);
+		
+		if (!childRecord.isValid())
+		{
+			break;
+		}
+		else
+		{
+			if (name == 0 || childRecord.name == name)
+			{
+				return childRecord;
+			}
+			
+			offset = childRecord.endOffset;
+		}
+	}
+	
+	return FbxRecord();
 }
 
 template <typename T>
-void FbxParser::capture(const FbxRecord & record, T * buffer)
+std::vector<T> FbxRecord::captureProperties() const
 {
-	const uint8_t * oldBytePtr = m_bytePtr;
+	assert(isValid());
+	
+	std::vector<T> result;
+	
+	if (isValid())
 	{
-		for (int i = 0; i < record.numProperties; ++i)
+		result.resize(numProperties);
+		
+		int offset = m_propertyListOffset;
+		
+		for (int i = 0; i < numProperties; ++i)
 		{
 			FbxValue value;
 			
-			readValue(value);
+			m_reader->readValue(offset, value);
 			
-			buffer[i] = get<T>(value);
+			result[i] = get<T>(value);
 		}
 	}
-	m_bytePtr = oldBytePtr;
+	
+	return result;
+}
+
+//
+
+void FbxReader::openFromMemory(const void * bytes, int numBytes)
+{
+	m_bytes = (uint8_t*)bytes;
+	m_numBytes = numBytes;
+	
+	int offset = 0;
+	
+	// identifier string
+	
+	static const char kMagic[21] = "Kaydara FBX Binary  ";
+	char magic[sizeof(kMagic)];
+	read(offset, magic[0], sizeof(kMagic));
+	if (strcmp(magic, kMagic))
+		return; // not a binary FBX file
+	
+	// unknown bytes. should be (0x1a, 0x00)
+	
+	char unknown[2];
+	read(offset, unknown[0], 2);
+	
+	// version number
+	
+	int32_t version;
+	read(offset, version);
+	
+	// remember the offset of the first top-level record
+	
+	m_firstRecordOffset = offset;
+}
+
+FbxRecord FbxReader::firstRecord(const char * name) const
+{
+	FbxRecord record(*this, m_firstRecordOffset, m_numBytes);
+	
+	if (name != 0 && record.name != name)
+	{
+		record = record.nextSibling(name);
+	}
+	
+	return record;
 }
 
 // usage example
 
+#include <list>
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
 
-class MyMesh
+class FbxFileLogger
 {
-public:
-	int numVertices;
-	float * vertices;
-	
-	int numIndices;
-	int * indices;
-	
-	MyMesh()
-	{
-		numVertices = 0;
-		vertices = 0;
-		
-		numIndices = 0;
-		indices = 0;
-	}
-	
-	~MyMesh()
-	{
-		delete [] vertices;
-		delete [] indices;
-	}
-};
-
-class MyReceiver : public FbxReceiver
-{
-	static const int maxDepth = 128;
-	
-	enum STATE
-	{
-		STATE_ROOT,
-		STATE_OBJECTS,
-		STATE_MODEL,
-		STATE_MODEL_MESH,
-		/*
-		STATE_MODEL_NORMALS,
-		STATE_MODEL_UVS,
-		STATE_MODEL_MATERIALS,
-		STATE_MODEL_TEXTURES,
-		*/
-		STATE_UNKNOWN
-	};
-		
 	int m_logIndent;
 	
-	FbxParser * m_parser;
-	
-	STATE m_state[maxDepth];
-	int m_depth;
-	
-	MyMesh * m_currentMesh;
+	const FbxReader * m_reader;
 	
 public:
-	std::vector<MyMesh*> meshes;
-	
-	MyReceiver(FbxParser & parser)
+	FbxFileLogger(const FbxReader & reader)
 	{
 		m_logIndent = 0;
 		
-		m_parser = &parser;
-		
-		m_depth = 0;
-		m_state[0] = STATE_ROOT;
-		
-		m_currentMesh = 0;
+		m_reader = &reader;
 	}
 	
-	virtual void recordBegin(const FbxRecord & record, FbxNext & next)
+	void dumpFileContents()
+	{
+		for (FbxRecord record = m_reader->firstRecord(); record.isValid(); record = record.nextSibling())
+		{
+			dumpRecord(record);
+		}
+	}
+	
+	void dumpRecord(const FbxRecord & record)
 	{
 		log("node: endOffset=%d, numProperties=%d, propertyListLen=%d, nameLen=%d, name=%s\n",
 			record.endOffset,
@@ -505,181 +543,23 @@ public:
 		
 		m_logIndent++;
 		
-		STATE oldState = m_state[m_depth];
+		std::vector<FbxValue> properties = record.captureProperties<FbxValue>();
 		
-		m_depth++;
-		
-		STATE newState = STATE_UNKNOWN;
-		
-		switch (oldState)
+		for (size_t i = 0; i < properties.size(); ++i)
 		{
-			case STATE_ROOT:
-			{
-				if (record.name == "Objects")
-				{
-					newState = STATE_OBJECTS;
-				}
-				break;
-			}
-			
-			case STATE_OBJECTS:
-			{
-				if (record.name == "Model")
-				{
-					newState = STATE_MODEL;
-					next.properties = true;
-				}
-				if (record.name == "Pose")
-				{
-					//
-				}
-				if (record.name == "Material")
-				{
-					//
-				}
-				if (record.name == "Texture")
-				{
-					//
-				}
-				break;
-			}
-			
-			case STATE_MODEL_MESH:
-			{
-				if (record.name == "Vertices")
-				{
-					delete [] m_currentMesh->vertices;
-					m_currentMesh->numVertices = record.numProperties;
-					m_currentMesh->vertices = new float[record.numProperties];
-					m_parser->capture<float>(record, m_currentMesh->vertices);
-					next.recurse = false;
-				}
-				if (record.name == "PolygonVertexIndex")
-				{
-					delete [] m_currentMesh->indices;
-					m_currentMesh->numIndices = record.numProperties;
-					m_currentMesh->indices = new int[record.numProperties];
-					m_parser->capture<int>(record, m_currentMesh->indices);
-					next.recurse = false;
-				}
-				/*
-				if (record.name == "LayerElementNormal")
-				{
-					newState = STATE_MODEL_NORMALS;
-				}
-				if (record.name == "LayerElementUV")
-				{
-					newState = STATE_MODEL_UVS;
-				}
-				if (record.name == "LayerElementMaterial")
-				{
-					newState = STATE_MODEL_MATERIALS;
-				}
-				if (record.name == "LayerElementTexture")
-				{
-					newState = STATE_MODEL_TEXTURES;
-				}
-				*/
-				break;
-			}
-			
-			/*
-			case STATE_MODEL_NORMALS:
-			{
-				if (record.name == "Normals")
-				{
-					m_parser->capture<float>(..);
-					next.recurse = false;
-				}
-				break;
-			}
-			
-			case STATE_MODEL_UVS:
-			{
-				if (record.name == "UV")
-				{
-					m_parser->capture<float>(..);
-					next.recurse = false;
-				}
-				if (record.name == "UVIndex")
-				{
-					m_parser->capture<int>(..);
-					next.recurse = false;
-				}
-				break;
-			}
-			
-			case STATE_MODEL_MATERIALS:
-			{
-				if (record.name == "Materials")
-				{
-					next.recurse = false;
-				}
-				break;
-			}
-			
-			case STATE_MODEL_TEXTURES:
-			{
-				if (record.name == "TextureId")
-				{
-					next.recurse = false;
-				}
-				break;
-			}
-			*/
-			
-			default:
-			{
-				break;
-			}
+			dumpProperty(properties[i]);
 		}
 		
-		m_state[m_depth] = newState;
-		
-		log("state change %d -> %d\n", oldState, newState);
-		
-		if (newState == STATE_UNKNOWN)
+		for (FbxRecord childRecord = record.firstChild(); childRecord.isValid(); childRecord = childRecord.nextSibling())
 		{
-			#if 0
-			// speed up: skip unknown record types
-			next.recurse = false;
-			next.properties = false;
-			#else
-			// traverse the entire file for logging purposes
-			next.recurse = true;
-			next.properties = true;
-			#endif
+			dumpRecord(childRecord);
 		}
-	}
-	
-	virtual void recordEnd()
-	{
+		
 		m_logIndent--;
-		
-		STATE oldState = m_state[m_depth];
-		
-		switch (oldState)
-		{
-			case STATE_MODEL_MESH:
-			{
-				meshes.push_back(m_currentMesh);
-				m_currentMesh = 0;
-				break;
-			}
-			
-			default:
-			{
-				break;
-			}
-		}
-		
-		m_depth--;
 	}
 	
-	virtual void property(int index, const FbxValue & value)
+	void dumpProperty(const FbxValue & value)
 	{
-		// log the property value
-		
 		switch (value.type)
 		{
 			case FbxValue::TYPE_BOOL:
@@ -695,40 +575,10 @@ public:
 				log("string: %s\n", value.getString().c_str());
 				break;
 			
-			case FbxValue::TYPE_NULL:
-				log("(NULL)\n");
+			case FbxValue::TYPE_INVALID:
+				log("(invalid)\n");
 				break;
 		}
-		
-		// process
-		
-		STATE oldState = m_state[m_depth];
-		
-		STATE newState = oldState;
-		
-		switch (oldState)
-		{
-			case STATE_MODEL:
-			{
-				if (index == 1 && value.getString() == "Mesh")
-				{
-					log("STATE_MODEL -> STATE_MODEL_MESH\n");
-					
-					newState = STATE_MODEL_MESH;
-					
-					m_currentMesh = new MyMesh();
-				}
-				
-				break;
-			}
-			
-			default:
-			{
-				break;
-			}
-		}
-		
-		m_state[m_depth] = newState;
 	}
 	
 	void log(const char * fmt, ...)
@@ -749,6 +599,13 @@ public:
 	}
 };
 
+class Mesh
+{
+public:
+	std::vector<float> vertices;
+	std::vector<int> indices;
+};
+
 int main()
 {
 	// read file contents
@@ -765,23 +622,60 @@ int main()
 	
 	// parse
 	
-	FbxParser parser;
-	MyReceiver receiver(parser);
-	parser.parse(bytes, numBytes, receiver);
+	FbxReader reader;
+	reader.openFromMemory(bytes, numBytes);
+	
+	FbxFileLogger logger(reader);
+	logger.dumpFileContents();
+	
+	std::list<Mesh> meshes;
+	
+	for (FbxRecord objects = reader.firstRecord("Objects"); objects.isValid(); objects = objects.nextSibling("Objects"))
+	{
+		// Model, Pose, Material, Texture, ..
+		
+		for (FbxRecord model = objects.firstChild("Model"); model.isValid(); model = model.nextSibling("Model"))
+		{
+			std::vector<std::string> modelProps = model.captureProperties<std::string>();
+			
+			if (modelProps.size() >= 2 && modelProps[1] == "Mesh")
+			{
+				printf("Mesh!\n");
+				
+				meshes.push_back(Mesh());
+				
+				Mesh & mesh = meshes.back();
+				
+				const FbxRecord vertices = model.firstChild("Vertices");
+				const FbxRecord indices = model.firstChild("PolygonVertexIndex");
+				
+				if (vertices.isValid())
+					mesh.vertices = vertices.captureProperties<float>();
+				
+				if (indices.isValid())
+					mesh.indices = indices.captureProperties<int>();
+				
+				// LayerElementNormal.Normals
+				// LayerElementUV.UV
+				// LayerElementMaterial.Materials
+				// LayerElementTexture.TextureId
+			}
+		}
+	}
 	
 	free(bytes);
 	
 	// show result
 	
-	for (size_t i = 0; i < receiver.meshes.size(); ++i)
+	for (std::list<Mesh>::iterator i = meshes.begin(); i != meshes.end(); ++i)
 	{
-		const MyMesh * mesh = receiver.meshes[i];
+		const Mesh & mesh = *i;
 		
-		receiver.log("mesh: numVertices=%d, numIndices=%d\n", mesh->numVertices, mesh->numIndices);
+		logger.log("mesh: numVertices=%d, numIndices=%d\n", int(mesh.vertices.size()), int(mesh.indices.size()));
 		
-		for (int i = 0; i < mesh->numIndices; ++i)
+		for (size_t i = 0; i < mesh.indices.size(); ++i)
 		{
-			int index = mesh->indices[i];
+			int index = mesh.indices[i];
 			
 			bool end = false;
 			
@@ -791,14 +685,14 @@ int main()
 				end = true;
 			}
 			
-			receiver.log("[%d] (%+4.2f %+4.2f %+4.2f) ",
+			logger.log("[%d] (%+4.2f %+4.2f %+4.2f) ",
 				index,
-				mesh->vertices[index*3+0],
-				mesh->vertices[index*3+1],
-				mesh->vertices[index*3+2]);
+				mesh.vertices[index*3+0],
+				mesh.vertices[index*3+1],
+				mesh.vertices[index*3+2]);
 			
 			if (end)
-				receiver.log("\n");
+				logger.log("\n");
 		}
 	}
 	
