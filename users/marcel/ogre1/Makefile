@@ -1,6 +1,6 @@
 EXE = ogre
-OBJS = main.o tinyxml2.o
-CFLAGS = -Wall -Wextra -Werror -ansi -pedantic -O2
+OBJS = main.o tinyxml2.o Quaternion.o
+CFLAGS = -Wall -Wextra -O2
 LFLAGS = `sdl-config --static-libs` -lstdc++
 
 all : $(EXE)

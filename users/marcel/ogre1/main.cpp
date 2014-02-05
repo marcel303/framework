@@ -4,9 +4,11 @@
 #include <string>
 #include <vector>
 #include "tinyxml2.h"
+#include "Quaternion.h"
 
 #include <SDL/SDL.h>
 #include <SDL/SDL_opengl.h>
+#include <string.h>
 
 using namespace tinyxml2;
 
@@ -21,44 +23,6 @@ class MeshSet;
 class Model;
 class Skeleton;
 class Vertex;
-
-// todo: 4x4 matrix class
-
-class Matrix
-{
-public:
-	float values[16];
-	
-	Matrix()
-	{
-		memset(values, 0, sizeof(values)); // fixme, undesirable
-	}
-	
-	void buildIdentity()
-	{
-		// todo
-		
-		values[0] = values[1] = values[2] = 0.f;
-	}
-	
-	void buildTranslation(float x, float y, float z)
-	{
-		// todo
-		
-		values[0] = x;
-		values[1] = y;
-		values[2] = z;
-	}
-};
-
-Matrix operator*(const Matrix & m1, const Matrix & m2)
-{
-	Matrix r;
-	r.values[0] = m1.values[0] + m2.values[0];
-	r.values[1] = m1.values[1] + m2.values[1];
-	r.values[2] = m1.values[2] + m2.values[2];
-	return r;
-}
 
 //
 
@@ -179,44 +143,29 @@ public:
 class BoneTransform
 {
 public:
-	union
-	{
-		struct
-		{
-			float translation[3];
-			float scale;
-			float rotation[4];
-		} data;
-		
-		float values[8];
-	};
+	Vec3 translation;
+	Quaternion rotation;
+	float scale;
 	
 	void clear()
 	{
-		memset(values, 0, sizeof(values));
+		translation.SetZero();
+		rotation.makeIdentity();
 	}
 	
 	static void add(BoneTransform & result, const BoneTransform & transform)
 	{
-		const int numValues = sizeof(transform.values) / sizeof(transform.values[0]);
-		
-		for (int i = 0; i < numValues; ++i)
-		{
-			result.values[i] += transform.values[i];
-		}
+		result.translation += transform.translation;
+		result.rotation *= transform.rotation;
 	}
 	
 	static void interpolate(BoneTransform & result, const BoneTransform & transform1, const BoneTransform & transform2, float time)
 	{
-		const int numValues = sizeof(transform1.values) / sizeof(transform1.values[0]);
-		
 		const float t1 = 1.f - time;
 		const float t2 = time;
 		
-		for (int i = 0; i < numValues; ++i)
-		{
-			result.values[i] += transform1.values[i] * t1 + transform2.values[i] * t2;
-		}
+		result.translation += (transform1.translation * t1) + (transform2.translation * t2);
+		result.rotation *= transform1.rotation.slerp(transform2.rotation, time);
 	}
 };
 
@@ -228,8 +177,8 @@ public:
 		parent = -1;
 	}
 	
-	BoneTransform m_transform;
-	
+	BoneTransform transform;
+	Mat4x4 poseMatrix;
 	int parent;
 };
 
@@ -263,6 +212,32 @@ public:
 		{
 			m_bones = new Bone[numBones];
 			m_numBones = numBones;
+		}
+	}
+	
+	void calculatePoseMatrices()
+	{
+		for (int i = 0; i < m_numBones; ++i)
+		{
+			Mat4x4 & poseMatrix = m_bones[i].poseMatrix;
+			
+			poseMatrix.MakeIdentity();
+			
+			int boneIndex = i;
+			
+			while (boneIndex != -1)
+			{
+				Mat4x4 matrix;
+				
+				matrix = m_bones[boneIndex].transform.rotation.toMatrix();
+				matrix.SetTranslation(m_bones[boneIndex].transform.translation);
+				
+				poseMatrix = poseMatrix * matrix;
+				
+				boneIndex = m_bones[boneIndex].parent;
+			}
+			
+			poseMatrix = poseMatrix.CalcInv();
 		}
 	}
 };
@@ -312,8 +287,10 @@ public:
 		}
 	}
 	
-	void evaluate(float time, BoneTransform * transforms)
+	bool evaluate(float time, BoneTransform * transforms)
 	{
+		bool isDone = true;
+		
 		const AnimKey * firstKey = m_keys;
 		
 		for (int i = 0; i < m_numBones; ++i)
@@ -332,6 +309,8 @@ public:
 				
 				if (key != lastKey && time >= key->time)
 				{
+					isDone = false;
+					
 					const AnimKey & key1 = key[0];
 					const AnimKey & key2 = key[1];
 					
@@ -341,7 +320,23 @@ public:
 					
 					assert(t >= 0.f && t <= 1.f);
 					
-					//printf("found key. time=%f, key1=%f, key2=%f, t=%f!\n", time, key1.time, key2.time, t);
+					/*
+					if (i == 0)
+					{
+						printf("found key. time=%f, key1=%f, key2=%f, t=%f!\n", time, key1.time, key2.time, t);
+						printf("=> %f %f %f -> %f %f %f [%f %f %f %f]!\n",
+							key1.transform.translation[0],
+							key1.transform.translation[1],
+							key1.transform.translation[2],
+							key2.transform.translation[0],
+							key2.transform.translation[1],
+							key2.transform.translation[2],
+							key1.transform.rotation[0],
+							key1.transform.rotation[1],
+							key1.transform.rotation[2],
+							key1.transform.rotation[3]);
+					}
+					*/
 					
 					BoneTransform::interpolate(transforms[i], key1.transform, key2.transform, t);
 				}
@@ -357,6 +352,8 @@ public:
 				firstKey += numKeys;
 			}
 		}
+		
+		return isDone;
 	}
 };
 
@@ -385,21 +382,29 @@ public:
 class Model
 {
 	Anim * m_currentAnim;
-	float m_animTime;
 	
 public:
 	MeshSet * m_meshes;
 	Skeleton * m_skeleton;
 	AnimSet * m_animations;
 	
+	bool animIsDone;
+	float animTime;
+	int animLoop;
+	float animSpeed;
+	
 	Model(MeshSet * meshes, Skeleton * skeleton, AnimSet * animations)
 	{
 		m_currentAnim = 0;
-		m_animTime = 0;
 		
 		m_meshes = meshes;
 		m_skeleton = skeleton;
 		m_animations = animations;
+		
+		animIsDone = true;
+		animTime = 0.f;
+		animLoop = 0;
+		animSpeed = 1.f;
 	}
 	
 	~Model()
@@ -414,8 +419,10 @@ public:
 		m_animations = 0;
 	}
 	
-	void startAnim(const char * name)
+	void startAnim(const char * name, int loop = 1)
 	{
+		assert(loop != 0);
+		
 		std::map<std::string, Anim*>::iterator i = m_animations->m_animations.find(name);
 		
 		if (i != m_animations->m_animations.end())
@@ -427,26 +434,31 @@ public:
 			m_currentAnim = 0;
 		}
 		
-		m_animTime = 0.f;
+		animIsDone = false;
+		animTime = 0.f;
+		animLoop = loop;
+		
+		if (animLoop > 0)
+			animLoop--;
 	}
 	
 	void process(float timeStep)
 	{
-		m_animTime += timeStep;
+		animTime += animSpeed * timeStep;
 	}
 	
 	void draw()
 	{
 		// todo: build matrix
 		
-		Matrix matrix;
+		Mat4x4 matrix;
 		
-		matrix.buildTranslation(0.f, 0.f, 0.f);
+		matrix.MakeTranslation(0.f, 0.f, 0.f);
 		
 		drawEx(matrix, true, false);
 	}
 	
-	void drawEx(const Matrix & matrix, bool drawMesh, bool drawBones)
+	void drawEx(const Mat4x4 & matrix, bool drawMesh, bool drawBones)
 	{
 		// calculate transforms in local bone space
 		
@@ -454,63 +466,77 @@ public:
 		
 		for (int i = 0; i < m_skeleton->m_numBones; ++i)
 		{
-			transforms[i] = m_skeleton->m_bones[i].m_transform;
+			transforms[i] = m_skeleton->m_bones[i].transform;
 		}
+		
+		// apply animations
 		
 		if (m_currentAnim)
 		{
-			m_currentAnim->evaluate(m_animTime, transforms);
+			animIsDone = m_currentAnim->evaluate(animTime, transforms);
+			
+			if (animIsDone && (animLoop > 0 || animLoop < 0))
+			{
+				animIsDone = false;
+				animTime = 0.f;
+				if (animLoop > 0)
+					animLoop--;
+			}
 		}
 		
 		/*
-		for (int i = 0; i < m_skeleton->m_numBones; ++i)
+		if (m_currentAnim)
 		{
-			printf("(%+07.2f, %+07.2f, %+07.2f), %g, %+07.2f @ (%+05.2f, %+05.2f, %+05.2f)\n",
-				transforms[i].data.translation[0],
-				transforms[i].data.translation[1],
-				transforms[i].data.translation[2],
-				transforms[i].data.scale,
-				transforms[i].data.rotation[0],
-				transforms[i].data.rotation[1],
-				transforms[i].data.rotation[2],
-				transforms[i].data.rotation[3]);
+			for (int i = 0; i < m_skeleton->m_numBones; ++i)
+			{
+				printf("[numKeys=%02d] (%+07.2f, %+07.2f, %+07.2f), %g, %+07.2f @ (%+05.2f, %+05.2f, %+05.2f)\n",
+					m_currentAnim->m_numKeys[i],
+					transforms[i].translation[0],
+					transforms[i].translation[1],
+					transforms[i].translation[2],
+					transforms[i].scale,
+					transforms[i].rotation[0],
+					transforms[i].rotation[1],
+					transforms[i].rotation[2],
+					transforms[i].rotation[3]);
+			}
 		}
 		*/
 		
-		// todo: convert translation / rotation pairs into matrices
+		// convert translation / rotation pairs into matrices
 		
-		Matrix * localMatrices = (Matrix*)alloca(sizeof(Matrix) * m_skeleton->m_numBones);
+		Mat4x4 * localMatrices = (Mat4x4*)alloca(sizeof(Mat4x4) * m_skeleton->m_numBones);
 		
 		for (int i = 0; i < m_skeleton->m_numBones; ++i)
 		{
-			//const BoneTransform & transform = m_skeleton->m_bones[i].m_transform;
 			const BoneTransform & transform = transforms[i];
 			
-			localMatrices[i].buildTranslation(
-				transform.data.translation[0],
-				transform.data.translation[1],
-				transform.data.translation[2]);
+			localMatrices[i] = transform.rotation.toMatrix();			
+			localMatrices[i].SetTranslation(transform.translation);
 		}
 		
-		// todo: calculate the bone hierarchy in world space
+		// calculate the bone hierarchy in world space
 		
-		Matrix * worldMatrices = (Matrix*)alloca(sizeof(Matrix) * m_skeleton->m_numBones);
+		Mat4x4 * worldMatrices = (Mat4x4*)alloca(sizeof(Mat4x4) * m_skeleton->m_numBones);
 		
 		for (int i = 0; i < m_skeleton->m_numBones; ++i)
 		{
-			Matrix finalMatrix;
-			finalMatrix.buildIdentity();
+			// todo: calculate matrices for a given bone only once
 			
 			int boneIndex = i;
 			
+			Mat4x4 finalMatrix = localMatrices[boneIndex];
+			
+			boneIndex = m_skeleton->m_bones[boneIndex].parent;
+			
 			while (boneIndex != -1)
 			{
-				finalMatrix = finalMatrix * localMatrices[boneIndex];
+				finalMatrix = localMatrices[boneIndex] * finalMatrix;
 				
 				boneIndex = m_skeleton->m_bones[boneIndex].parent;
 			}
 			
-			worldMatrices[i] = finalMatrix * matrix;
+			worldMatrices[i] = matrix * finalMatrix;
 		}
 		
 		// draw
@@ -529,12 +555,19 @@ public:
 						
 						const Vertex & vertex = mesh->m_vertices[vertexIndex];
 						
+						// todo: apply vertex transformation using a shader
+						
+						// -- software vertex blend (hard skinned) --
+						const int boneIndex = vertex.boneIndices[0];
+						const Mat4x4 & boneToWorld = worldMatrices[boneIndex];
+						const Mat4x4 & worldToBone = m_skeleton->m_bones[boneIndex].poseMatrix;
+						const Vec3 p = boneToWorld * worldToBone * Vec3(vertex.px, vertex.py, vertex.pz);
+						// -- software vertex blend (hard skinned) --
+						
 						glColor3f(vertex.boneIndices[0] / 30.f, 1.f, 1.f);
 						glTexCoord2f(vertex.tx, vertex.ty);
 						glNormal3f(vertex.nx, vertex.ny, vertex.nz);
-						glVertex3f(vertex.px, vertex.py, vertex.pz);
-						
-						//printf("%g, %g, %g\n", vertex.px, vertex.py, vertex.pz);
+						glVertex3f(p[0], p[1], p[2]);
 					}
 				}
 				glEnd();
@@ -548,15 +581,18 @@ public:
 				const int boneIndex1 = i;
 				const int boneIndex2 = m_skeleton->m_bones[i].parent;
 				
-				if (boneIndex2 != -1)
+				if (boneIndex1 != -1)
 				{
-					const Matrix & worldMatrix1 = worldMatrices[boneIndex1];
-					const Matrix & worldMatrix2 = worldMatrices[boneIndex2];
+					const Mat4x4 & worldMatrix1 =                             worldMatrices[boneIndex1];
+					const Mat4x4 & worldMatrix2 = boneIndex2 == -1 ? matrix : worldMatrices[boneIndex2];
 					
 					glBegin(GL_LINES);
 					{
-						glVertex3fv(&worldMatrix1.values[0]);
-						glVertex3fv(&worldMatrix2.values[0]);
+						const Vec3 p1 = worldMatrix1 * Vec3(0.f, 0.f, 0.f);
+						const Vec3 p2 = worldMatrix2 * Vec3(0.f, 0.f, 0.f);
+						
+						glVertex3f(p1[0], p1[1], p1[2]);
+						glVertex3f(p2[0], p2[1], p2[2]);
 					}
 					glEnd();
 				}
@@ -838,7 +874,8 @@ Model * loadModel(const char * meshFileName, const char * skeletonFileName)
 	{
 		printf("skeleton!\n");
 		
-		std::map<std::string, int> boneNameToBoneIndex;
+		typedef std::map<std::string, int> BoneNameToBoneIndexMap;
+		BoneNameToBoneIndexMap boneNameToBoneIndex;
 		
 		XMLElement * xmlBones = xmlSkeleton->FirstChildElement(XML_BONES);
 		
@@ -862,7 +899,7 @@ Model * loadModel(const char * meshFileName, const char * skeletonFileName)
 				
 				boneNameToBoneIndex[name] = boneIndex;
 				
-				BoneTransform & transform = skeleton->m_bones[boneIndex].m_transform;
+				BoneTransform & transform = skeleton->m_bones[boneIndex].transform;
 				
 				float px = 0.f;
 				float py = 0.f;
@@ -882,11 +919,9 @@ Model * loadModel(const char * meshFileName, const char * skeletonFileName)
 					pz = xmlPosition->FloatAttribute("z");
 				}
 				
-				transform.data.translation[0] = px;
-				transform.data.translation[1] = py;
-				transform.data.translation[2] = pz;
-				
-				transform.data.scale = 1.f;
+				transform.translation[0] = px;
+				transform.translation[1] = py;
+				transform.translation[2] = pz;
 				
 				XMLElement * xmlRotation = xmlBone->FirstChildElement("rotation");
 				
@@ -906,16 +941,11 @@ Model * loadModel(const char * meshFileName, const char * skeletonFileName)
 				
 				// todo: convert to quat-log
 				
-				transform.data.rotation[0] = ra;
-				transform.data.rotation[1] = rx;
-				transform.data.rotation[2] = ry;
-				transform.data.rotation[3] = rz;
+				transform.rotation.fromAxisAngle(Vec3(rx, ry, rz), ra);
+				transform.scale = 1.f;
 				
 				//printf("position: %g %g %g\n", px, py, pz);
 				//printf("rotation: %g @ %g %g %g\n", ra, rx, ry, rz);
-				
-				// todo: calculate transform (position, quat rotation)
-				//skeleton->m_bones[boneIndex].m_transform;
 				
 				xmlBone = xmlBone->NextSiblingElement(XML_BONE);
 			}
@@ -976,7 +1006,8 @@ Model * loadModel(const char * meshFileName, const char * skeletonFileName)
 				{
 					//printf("tracks!\n");
 					
-					std::map< int, std::vector<AnimKey> > animKeysByBoneIndex;
+					typedef std::map< int, std::vector<AnimKey> > AnimKeysByBoneIndexMap;
+					AnimKeysByBoneIndexMap animKeysByBoneIndex;
 					
 					XMLElement * xmlTrack = xmlTracks->FirstChildElement(XML_TRACK);
 					
@@ -991,7 +1022,11 @@ Model * loadModel(const char * meshFileName, const char * skeletonFileName)
 						if (!boneName)
 							boneName = "";
 						
-						const int boneIndex = boneNameToBoneIndex[boneName];
+						BoneNameToBoneIndexMap::iterator i = boneNameToBoneIndex.find(boneName);
+						
+						assert(i != boneNameToBoneIndex.end());
+						
+						const int boneIndex = i->second;
 						
 						assert(boneIndex + 1 <= skeleton->m_numBones);
 				
@@ -1046,21 +1081,11 @@ Model * loadModel(const char * meshFileName, const char * skeletonFileName)
 								AnimKey key;
 								
 								key.time = time;
-								key.transform.data.translation[0] = px;
-								key.transform.data.translation[1] = py;
-								key.transform.data.translation[2] = pz;
-								key.transform.data.scale = 0.f;
-								key.transform.data.rotation[0] = ra;
-								key.transform.data.rotation[1] = rx;
-								key.transform.data.rotation[2] = ry;
-								key.transform.data.rotation[3] = rz;
-								
-								/*
-								printf("keyframe! time=%g, translation=%g, %g, %g, rotation = %g @ %g, %g, %g\n",
-									time,
-									px, py, pz,
-									ra, rx, ry, rz);
-								*/
+								key.transform.translation[0] = px;
+								key.transform.translation[1] = py;
+								key.transform.translation[2] = pz;
+								key.transform.rotation.fromAxisAngle(Vec3(rx, ry, rz), ra);
+								key.transform.scale = 0.f;
 								
 								animKeys.push_back(key);
 								
@@ -1077,9 +1102,9 @@ Model * loadModel(const char * meshFileName, const char * skeletonFileName)
 					
 					int numAnimKeys = 0;
 					
-					for (std::map< int, std::vector<AnimKey> >::iterator i = animKeysByBoneIndex.begin(); i != animKeysByBoneIndex.end(); ++i)
+					for (int i = 0; i < skeleton->m_numBones; ++i)
 					{
-						const std::vector<AnimKey> & animKeys = i->second;
+						const std::vector<AnimKey> & animKeys = animKeysByBoneIndex[i];
 						
 						numAnimKeys += int(animKeys.size());
 					}
@@ -1090,7 +1115,7 @@ Model * loadModel(const char * meshFileName, const char * skeletonFileName)
 					
 					AnimKey * finalAnimKey = animation->m_keys;
 					
-					for (int i = 0; i < animation->m_numBones; ++i)
+					for (int i = 0; i < skeleton->m_numBones; ++i)
 					{
 						const std::vector<AnimKey> & animKeys = animKeysByBoneIndex[i];
 						
@@ -1115,6 +1140,8 @@ Model * loadModel(const char * meshFileName, const char * skeletonFileName)
 	for (size_t i = 0; i < meshes.size(); ++i)
 		meshSet->m_meshes[i] = meshes[i];
 	
+	skeleton->calculatePoseMatrices();
+	
 	AnimSet * animSet = new AnimSet();
 	animSet->m_animations = animations;
 	
@@ -1132,6 +1159,11 @@ int main(int argc, char * argv[])
 	SDL_SetVideoMode(640, 480, 32, SDL_OPENGL);
 	
 	float angle = 0.f;
+	bool wireframe = true;
+	bool rotate = false;
+	bool drawBones = true;
+	bool loop = false;
+	bool autoPlay = false;
 	
 	for (int i = 0; i < 1; ++i)
 	{
@@ -1143,29 +1175,101 @@ int main(int argc, char * argv[])
 		
 		while (!stop)
 		{
+			bool startRandomAnimation = false;
+			
 			SDL_Event e;
 			
 			while (SDL_PollEvent(&e))
 			{
 				if (e.type == SDL_KEYDOWN)
 				{
-					if (e.key.keysym.sym == SDLK_SPACE)
+					if (e.key.keysym.sym == SDLK_a)
 					{
-						const int index = 1 + (rand() % 3);
-						char name[32];
-						sprintf(name, "Attack%d", index);
-						model->startAnim(name);
+						model->startAnim("Backflip");
 					}
-					else
+					else if (e.key.keysym.sym == SDLK_w)
+					{
+						wireframe = !wireframe;
+					}
+					else if (e.key.keysym.sym == SDLK_r)
+					{
+						rotate = !rotate;
+					}
+					else if (e.key.keysym.sym == SDLK_b)
+					{
+						drawBones = !drawBones;
+					}
+					else if (e.key.keysym.sym == SDLK_l)
+					{
+						loop = !loop;
+					}
+					else if (e.key.keysym.sym == SDLK_p)
+					{
+						autoPlay = !autoPlay;
+					}
+					else if (e.key.keysym.sym == SDLK_SPACE)
+					{
+						startRandomAnimation = true;
+					}
+					else if (e.key.keysym.sym == SDLK_UP)
+					{
+						model->animSpeed *= 2.f;
+					}
+					else if (e.key.keysym.sym == SDLK_DOWN)
+					{
+						model->animSpeed /= 2.f;
+					}
+					else if (e.key.keysym.sym == SDLK_ESCAPE)
 					{
 						stop = true;
 					}
 				}
 			}
 			
-			const float timeStep = 1.f / 60.f;
+			if (autoPlay && model->animIsDone)
+			{
+				startRandomAnimation = true;
+			}
 			
-			angle += 45.f * timeStep;
+			if (startRandomAnimation)
+			{
+				const char * names[] =
+				{
+					"Attack1",
+					"Attack2",
+					"Attack3",
+					"Backflip",
+					"Block",
+					"Climb",
+					"Crouch",
+					"Death1",
+					"Death2",
+					"HighJump",
+					"Idle1",
+					"Idle2",
+					"Idle3",
+					"Jump",
+					"JumpNoHeight",
+					"Kick",
+					"SideKick",
+					"Spin",
+					"Stealth",
+					"Walk"
+				};
+				
+				const int index = rand() % (sizeof(names) / sizeof(names[0]));
+				const char * name = names[index];
+				
+				printf("anim: %s\n", name);					
+				model->startAnim(name, loop ? -1 : 1);
+			}
+			
+			const float timeStep = 1.f / 60.f / 1.f;
+			
+			if (rotate)
+			{
+				angle += 45.f * timeStep;
+			}
 			
 			model->process(timeStep);
 			
@@ -1180,21 +1284,22 @@ int main(int argc, char * argv[])
 			glLoadIdentity();
 			glMatrixMode(GL_MODELVIEW);
 			glLoadIdentity();
-			glScalef(0.01f, 0.01f, 0.01f);
+			const float scale = 1.f / 200.f;
+			glScalef(scale, scale, scale);
 			
 			glEnable(GL_LIGHTING);
 			glEnable(GL_LIGHT0);
 			GLfloat light_position[] = { 1.0, 1.0, 1.0, 0.0 };
 			glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 			glEnable(GL_NORMALIZE);
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			glPolygonMode(GL_FRONT_AND_BACK, wireframe ? GL_LINE : GL_FILL);
 			
 			glTranslatef(0.f, -100.f, 0.f);
 			glRotatef(angle, 0.f, 1.f, 0.f);
 			glRotatef(90, 0.f, 1.f, 0.f);
 			
-			Matrix matrix;
-			matrix.buildIdentity();
+			Mat4x4 matrix;
+			matrix.MakeIdentity();
 			
 			glColor3ub(255, 255, 255);
 			model->drawEx(matrix, true, false);
@@ -1202,8 +1307,13 @@ int main(int argc, char * argv[])
 			glDisable(GL_LIGHTING);
 			glDisable(GL_DEPTH_TEST);
 			
-			glColor3ub(0, 255, 0);
-			model->drawEx(matrix, false, true);
+			if (drawBones)
+			{
+				glColor3ub(0, 255, 0);
+				model->drawEx(matrix, false, true);
+			}
+			
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 			
 			SDL_GL_SwapBuffers();
 		}
