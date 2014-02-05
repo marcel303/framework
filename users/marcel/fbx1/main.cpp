@@ -3,13 +3,30 @@
 #include <vector>
 #include "fbx.h"
 
+static void log(int logIndent, const char * fmt, ...)
+{
+	va_list va;
+	va_start(va, fmt);
+	
+	char tabs[128];
+	for (int i = 0; i < logIndent; ++i)
+		tabs[i] = '\t';
+	tabs[logIndent] = 0;
+	
+	char temp[1024];
+	vsprintf(temp, fmt, va);
+	va_end(va);
+	
+	printf("%s%s", tabs, temp);
+}
+
 class FbxFileLogger
 {
-	int m_logIndent;
-	
 	const FbxReader * m_reader;
 	
 public:
+	int m_logIndent;
+	
 	FbxFileLogger(const FbxReader & reader)
 	{
 		m_logIndent = 0;
@@ -29,7 +46,7 @@ public:
 	
 	void dumpRecord(const FbxRecord & record)
 	{
-		log("node: endOffset=%d, numProperties=%d, name=%s\n",
+		log(m_logIndent, "node: endOffset=%d, numProperties=%d, name=%s\n",
 			(int)record.getEndOffset(),
 			(int)record.getNumProperties(),
 			record.name.c_str());
@@ -56,39 +73,22 @@ public:
 		switch (value.type)
 		{
 			case FbxValue::TYPE_BOOL:
-				log("bool: %d\n", get<bool>(value));
+				log(m_logIndent, "bool: %d\n", get<bool>(value));
 				break;
 			case FbxValue::TYPE_INT:
-				log("int: %lld\n", get<int64_t>(value));
+				log(m_logIndent, "int: %lld\n", get<int64_t>(value));
 				break;
 			case FbxValue::TYPE_REAL:
-				log("float: %f\n", get<float>(value));
+				log(m_logIndent, "float: %f\n", get<float>(value));
 				break;
 			case FbxValue::TYPE_STRING:
-				log("string: %s\n", value.getString().c_str());
+				log(m_logIndent, "string: %s\n", value.getString().c_str());
 				break;
 			
 			case FbxValue::TYPE_INVALID:
-				log("(invalid)\n");
+				log(m_logIndent, "(invalid)\n");
 				break;
 		}
-	}
-	
-	void log(const char * fmt, ...)
-	{
-		va_list va;
-		va_start(va, fmt);
-		
-		char tabs[128];
-		for (int i = 0; i < m_logIndent; ++i)
-			tabs[i] = '\t';
-		tabs[m_logIndent] = 0;
-		
-		char temp[1024];
-		vsprintf(temp, fmt, va);
-		va_end(va);
-		
-		printf("%s%s", tabs, temp);
 	}
 };
 
@@ -98,6 +98,8 @@ class Mesh
 {
 public:
 	std::vector<float> vertices;
+	std::vector<float> normals;
+	std::vector<float> uvs;
 	std::vector<int> indices;
 };
 
@@ -123,6 +125,8 @@ bool readFile(const char * filename, std::vector<uint8_t> & bytes)
 
 int main(int argc, const char * argv[])
 {
+	int logIndent = 0;
+	
 	// parse command line
 	
 	bool verbose = false;
@@ -145,7 +149,7 @@ int main(int argc, const char * argv[])
 		printf("failed to open %s\n", filename);
 		return -1;
 	}
-
+	
 	// open FBX file
 	
 	FbxReader reader;
@@ -163,6 +167,8 @@ int main(int argc, const char * argv[])
 	
 	// extract meshes
 	
+	log(logIndent, "-- extracting mesh data --\n");
+	
 	std::list<Mesh> meshes;
 	
 	for (FbxRecord objects = reader.firstRecord("Objects"); objects.isValid(); objects = objects.nextSibling("Objects"))
@@ -175,36 +181,58 @@ int main(int argc, const char * argv[])
 			
 			if (modelProps.size() >= 2 && modelProps[1] == "Mesh")
 			{
-				printf("Mesh!\n");
-				
 				meshes.push_back(Mesh());
-				
 				Mesh & mesh = meshes.back();
 				
 				const FbxRecord vertices = model.firstChild("Vertices");
 				const FbxRecord indices = model.firstChild("PolygonVertexIndex");
 				
-				if (vertices.isValid())
-					mesh.vertices = vertices.captureProperties<float>();
+				const FbxRecord normalsLayer = model.firstChild("LayerElementNormal");
+				const FbxRecord normals = normalsLayer.firstChild("Normals");
 				
-				if (indices.isValid())
-					mesh.indices = indices.captureProperties<int>();
+				const FbxRecord uvsLayer = model.firstChild("LayerElementUV");
+				const FbxRecord uvs = uvsLayer.firstChild("UV");
+				
+				log(logIndent, "found a mesh! hasVertices: %d, hasNormals: %d, hasUVs: %d\n",
+					vertices.isValid(),
+					normals.isValid(),
+					uvs.isValid());
+				
+				mesh.vertices = vertices.captureProperties<float>();			
+				mesh.indices = indices.captureProperties<int>();
+				mesh.normals = normals.captureProperties<float>();
+				mesh.uvs = uvs.captureProperties<float>();
 				
 				// LayerElementNormal.Normals
 				// LayerElementUV.UV
 				// LayerElementMaterial.Materials
 				// LayerElementTexture.TextureId
+				
+				// make sure our normals and uvs arrays are at least as large as our vertex array.
+				// we don't want out of bounds accessed if some of the layer data is missing or incorrect
+				
+				const size_t numVertices = mesh.vertices.size() / 3;
+				if (mesh.normals.size() < numVertices * 3)
+					mesh.normals.resize(numVertices * 3);
+				if (mesh.uvs.size() < numVertices * 2)
+					mesh.uvs.resize(numVertices * 2);
 			}
 		}
 	}
 	
 	// dump mesh data
 	
+	log(logIndent, "-- dumping mesh data --\n");
+	
 	for (std::list<Mesh>::iterator i = meshes.begin(); i != meshes.end(); ++i)
 	{
 		const Mesh & mesh = *i;
 		
-		logger.log("mesh: numVertices=%d, numIndices=%d\n", int(mesh.vertices.size()), int(mesh.indices.size()));
+		log(logIndent, "mesh: numVertices=%d, numIndices=%d\n", int(mesh.vertices.size()), int(mesh.indices.size()));
+		
+		logIndent++;
+		
+		int polygonIndex = ~0;
 		
 		for (size_t i = 0; i < mesh.indices.size(); ++i)
 		{
@@ -221,17 +249,36 @@ int main(int argc, const char * argv[])
 				end = true;
 			}
 			
-			logger.log("[%d] (%+4.2f %+4.2f %+4.2f) ",
+			if (polygonIndex < 0)
+			{
+				polygonIndex = ~polygonIndex;
+				log(logIndent, "polygon [%d]:\n", polygonIndex);
+			}
+			
+			logIndent++;
+			
+			log(logIndent, "position = (%+7.2f %+7.2f %+7.2f), normal = (%+5.2f %+5.2f %+5.2f), uv = (%+5.2f %+5.2f)\n",
 				index,
 				mesh.vertices[index*3+0],
 				mesh.vertices[index*3+1],
-				mesh.vertices[index*3+2]);
+				mesh.vertices[index*3+2],
+				mesh.normals[index*3+0],
+				mesh.normals[index*3+1],
+				mesh.normals[index*3+2],
+				mesh.uvs[index*2+0],
+				mesh.uvs[index*2+1]);
+			
+			logIndent--;
 			
 			if (end)
 			{
-				logger.log("\n");
+				log(logIndent, "\n");
+				
+				polygonIndex = ~(polygonIndex + 1);
 			}
 		}
+		
+		logIndent--;
 	}
 	
 	return 0;

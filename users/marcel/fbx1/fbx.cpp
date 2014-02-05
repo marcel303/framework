@@ -58,6 +58,8 @@ void FbxRecord::read()
 
 void FbxRecord::findFirstSibling(const char * name)
 {
+	assert(m_startOffset != 0);
+	
 	// seek to the first node (within the same level) with the given name. if the record
 	// cannot be found, the record will be marked as invalid (isValid() will return false)
 	
@@ -98,28 +100,38 @@ bool FbxRecord::isValid() const
 
 FbxRecord FbxRecord::firstChild(const char * name) const
 {
-	assert(isValid());
-	
-	// start at the end of the property list, which marks the start of the first child record
-	
-	FbxRecord result(*m_reader, m_propertyListOffset + m_propertyListLen, m_endOffset);
-	
-	result.findFirstSibling(name);
-	
-	return result;
+	if (!isValid())
+	{
+		return *this;
+	}
+	else
+	{
+		// start at the end of the property list, which marks the start of the first child record
+		
+		FbxRecord result(*m_reader, m_propertyListOffset + m_propertyListLen, m_endOffset);
+		
+		result.findFirstSibling(name);
+		
+		return result;
+	}
 }
 
 FbxRecord FbxRecord::nextSibling(const char * name) const
 {
-	assert(isValid());
-	
-	// start at our own end offset
-	
-	FbxRecord result(*m_reader, m_endOffset, m_parentEndOffset);
-	
-	result.findFirstSibling(name);
-	
-	return result;
+	if (!isValid())
+	{
+		return *this;
+	}
+	else
+	{
+		// start at our own end offset
+		
+		FbxRecord result(*m_reader, m_endOffset, m_parentEndOffset);
+		
+		result.findFirstSibling(name);
+		
+		return result;
+	}
 }
 
 // --------------------------------------------------------------------------------
