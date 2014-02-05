@@ -1,10 +1,10 @@
-EXE = bfx
-OBJS = main.o
-CFLAGS = -Wall -Wextra -Werror -ansi -pedantic
+EXE = fbx
+OBJS = fbx.o main.o
+CFLAGS = -Wall -Wextra -Werror -ansi -pedantic -O2
 LFLAGS = -lstdc++
 
 all : $(EXE)
-	./bfx
+	./fbx
 
 $(EXE) : $(OBJS)
 	gcc -o $(EXE) $(OBJS) $(LFLAGS)

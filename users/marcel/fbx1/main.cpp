@@ -1,514 +1,7 @@
-#include <assert.h>
-#include <stdint.h>
-#include <string>
-#include <vector>
-
-// FBX file reader
-
-class FbxRecord;
-class FbxReader;
-
-/* --------------------------------------------------------------------------------
-// FbxRecord
-// --------------------------------------------------------------------------------
-
-FbxRecord is similar to an XML element node. firstChild and nextSibling provide access to neighboring records.
-Each record may have zero or more unnamed properties. Each property has a distinct type (int, string, etc), but easy access
-is provided through the varying type FbxValue, and implicit conversion through captureProperties.
-
-Example:
-	FbxReader reader;
-	reader.openFromMemory(bytes, numBytes);
-	
-	for (FbxRecord record = reader.firstRecord("Objects"); record.isValid(); record = record.nextSibling("Objects"))
-	{
-		std::vector<float> propertiesAsFloat = record.captureProperties<float>();
-		
-		std::vector<FbxValue> propertiesAsVarying = record.captureProperties<FbxValue>();
-	}
-*/
-
-class FbxRecord
-{
-	friend class FbxReader;
-	
-	const FbxReader * m_reader;
-	
-	int32_t m_startOffset;
-	int32_t m_propertyListOffset;
-	int32_t m_parentEndOffset;
-	
-	explicit FbxRecord();
-	explicit FbxRecord(const FbxReader & reader, int32_t startOffset, int32_t parentEndOffset);
-	
-	void read();
-	
-public:
-
-	// header values
-	int32_t endOffset;
-	int32_t numProperties;
-	int32_t propertyListLen;
-	int8_t nameLen;
-	std::string name;
-	
-	bool isValid() const;
-	FbxRecord firstChild(const char * name = 0) const;	
-	FbxRecord nextSibling(const char * name = 0) const;
-	template <typename T> std::vector<T> captureProperties() const;
-};
-
-/* --------------------------------------------------------------------------------
-// FbxValue
-// --------------------------------------------------------------------------------
-
-FbxValue is used to capture property values. FbxValue is a varying type, which means it may be a string,
-int, float, etc. FbxValue::type specifies the type. Conversion is provided through get<T>(value).
-
-Example:
-	std::vector<FbxValue> properties = record.captureProperties<FbxValue>();
-	
-	for (size_t i = 0; i < properties.size(); ++i)
-	{
-		const float v = get<float>(properties[i]);
-		
-		printf("value: %g\n", v);
-	}
-*/
-
-class FbxValue
-{
-	static const std::string kEmptyString;
-	
-	union
-	{
-		bool Bool;
-		int64_t Int;
-		double Real;
-	};
-	
-	std::string String;
-	
-public:
-	enum TYPE
-	{
-		TYPE_INVALID,
-		TYPE_BOOL,
-		TYPE_INT,
-		TYPE_REAL,
-		TYPE_STRING
-	};
-	
-	TYPE type;
-	
-	explicit FbxValue()
-	{
-		type = TYPE_INVALID;
-	}
-	explicit FbxValue(bool value)
-	{
-		type = TYPE_BOOL;
-		Bool = value;
-	}
-	explicit FbxValue(int64_t value)
-	{
-		type = TYPE_INT;
-		Int = value;
-	}
-	explicit FbxValue(double value)
-	{
-		type = TYPE_REAL;
-		Real = value;
-	}
-	explicit FbxValue(const char * value)
-	{
-		type = TYPE_STRING;
-		String = value;
-	}
-	
-	//
-	
-	bool isValid() const
-	{
-		return type != TYPE_INVALID;
-	}
-	
-	bool getBool() const
-	{
-		if (type == TYPE_BOOL)
-			return Bool;
-		if (type == TYPE_INT)
-			return bool(Int);
-		return false;
-	}
-	
-	int64_t getInt() const
-	{
-		if (type == TYPE_BOOL)
-			return int64_t(Bool);
-		if (type == TYPE_INT)
-			return Int;
-		if (type == TYPE_REAL)
-			return int64_t(Real);
-		return 0;
-	}
-	
-	double getDouble() const
-	{
-		if (type == TYPE_BOOL)
-			return double(Bool);
-		if (type == TYPE_INT)
-			return double(Int);
-		if (type == TYPE_REAL)
-			return Real;
-		return 0.0;
-	}
-	
-	const std::string & getString() const
-	{
-		if (type == TYPE_STRING)
-			return String;
-		return kEmptyString;
-	}
-};
-
-const std::string FbxValue::kEmptyString;
-
-template <typename T> T get(const FbxValue & value);
-template <> FbxValue    get(const FbxValue & value) { return value; }
-template <> bool        get(const FbxValue & value) { return value.getBool(); }
-template <> int         get(const FbxValue & value) { return int(value.getInt()); }
-template <> int64_t     get(const FbxValue & value) { return value.getInt(); }
-template <> float       get(const FbxValue & value) { return float(value.getDouble()); }
-template <> double      get(const FbxValue & value) { return value.getDouble(); }
-template <> std::string get(const FbxValue & value) { return value.getString(); }
-
-/* --------------------------------------------------------------------------------
-// FbxReader
-// --------------------------------------------------------------------------------
-
-FbxReader is used to access FBX file contents. It provides methods for opening FBX files, access to the first top-level
-FBX record, and helper functions for reading file contents.
-
-*/
-
-class FbxReader
-{
-	friend class FbxRecord;
-	
-	const uint8_t * m_bytes;
-	int m_numBytes;
-	int32_t m_firstRecordOffset;
-	
-	void throwException() const
-	{
-		throw std::exception();
-	}
-	
-	template <typename T> void read(int & offset, T & result) const
-	{
-		if (offset + int(sizeof(T)) > m_numBytes)
-			throwException();
-		result = *(T*)&m_bytes[offset];
-		offset += sizeof(T);
-	}
-	
-	template <typename T> void read(int & offset, T & result, int numBytes) const
-	{
-		if (offset + numBytes > m_numBytes)
-			throwException();
-		memcpy(&result, &m_bytes[offset], numBytes);
-		offset += numBytes;
-	}
-	
-	void skip(int & offset, int numBytes) const
-	{
-		if (offset + numBytes > m_numBytes)
-			throwException();
-		offset += numBytes;
-	}
-	
-	void seek(int & offset, int newOffset) const
-	{
-		if (newOffset < 0 || newOffset > m_numBytes)
-			throwException();
-		offset = newOffset;
-	}
-	
-	template <typename T> void skipArray(int & offset) const
-	{
-		// array description
-		
-		int32_t arrayLength;
-		int32_t encoding;
-		int32_t compressedLength;
-		
-		read(offset, arrayLength);
-		read(offset, encoding);
-		read(offset, compressedLength);
-		
-		// calculate length
-		
-		int length;
-		if (encoding == 0) // raw
-			length = sizeof(T) * arrayLength;
-		if (encoding == 1) // deflate
-			length = compressedLength;
-		
-		skip(offset, length);
-	}
-	
-	void readValue(int & offset, FbxValue & value) const
-	{
-		// property type
-		
-		char type;
-		read(offset, type);
-		
-		switch (type)
-		{
-			// scalars
-			
-		#define READ_SCALAR(code, type, valueType) case code: { type v; read(offset, v); value = FbxValue(valueType(v)); break; }
-			
-			READ_SCALAR('C', int8_t, bool)
-			READ_SCALAR('Y', int16_t, int64_t)
-			READ_SCALAR('I', int32_t, int64_t)
-			READ_SCALAR('L', int64_t, int64_t)
-			READ_SCALAR('F', float, double)
-			READ_SCALAR('D', double, double)
-			
-		#undef READ_SCALAR
-			
-			// arrays
-			
-		#define SKIP_ARRAY(code, type) case code: { skipArray<type>(offset); break; }
-			
-			SKIP_ARRAY('b', int8_t)
-			SKIP_ARRAY('i', int32_t)
-			SKIP_ARRAY('l', int64_t)
-			SKIP_ARRAY('f', float)
-			SKIP_ARRAY('d', double)
-			
-		#undef SKIP_ARRAY
-			
-			// special
-			
-			case 'S':
-			{
-				int32_t length;
-				read(offset, length);
-				char * str = (char*)alloca(length + 1);
-				read(offset, str[0], length);
-				str[length] = 0;
-				value = FbxValue(str);
-				break;
-			}
-			
-			case 'R':
-			{
-				int32_t length;
-				read(offset, length);
-				
-			#if 1
-				skip(offset, length);
-			#else
-				uint8_t * raw = (uint8_t*)alloca(length);
-				read(offset, raw[0], length);
-			#endif
-				break;
-			}
-		}
-	}
-	
-public:
-	FbxReader()
-	{
-		m_bytes = 0;
-		m_numBytes = 0;
-		m_firstRecordOffset = 0;
-	}
-	
-	void openFromMemory(const void * bytes, int numBytes);
-	FbxRecord firstRecord(const char * name = 0) const;
-};
-
-//
-
-FbxRecord::FbxRecord()
-	: m_reader(0)
-	, endOffset(0)
-{
-}
-
-FbxRecord::FbxRecord(const FbxReader & reader, int32_t startOffset, int32_t parentEndOffset)
-	: m_reader(&reader)
-	, m_startOffset(startOffset)
-	, m_parentEndOffset(parentEndOffset)
-{
-	read();
-}
-
-void FbxRecord::read()
-{
-	int offset = 0;
-	
-	m_reader->seek(offset, m_startOffset);
-	
-	m_reader->read(offset, endOffset);
-	m_reader->read(offset, numProperties);
-	m_reader->read(offset, propertyListLen);
-	m_reader->read(offset, nameLen);
-	
-	char * name = (char*)alloca(nameLen + 1);
-	m_reader->read(offset, name[0], nameLen);
-	name[nameLen] = 0;
-	this->name = name;
-	
-	m_propertyListOffset = offset;
-}
-
-bool FbxRecord::isValid() const
-{
-	return endOffset != 0;
-}
-
-FbxRecord FbxRecord::firstChild(const char * name) const
-{
-	assert(isValid());
-	
-	int offset = m_propertyListOffset + propertyListLen;
-	
-	while (offset != endOffset)
-	{
-		assert(offset < endOffset);
-			
-		FbxRecord childRecord(*m_reader, offset, endOffset);
-		
-		if (!childRecord.isValid())
-		{
-			break;
-		}
-		else
-		{
-			if (name == 0 || childRecord.name == name)
-			{
-				return childRecord;
-			}
-			
-			offset = childRecord.endOffset;
-		}
-	}
-	
-	return FbxRecord();
-}
-
-FbxRecord FbxRecord::nextSibling(const char * name) const
-{
-	assert(isValid());
-	
-	int offset = endOffset;
-	
-	while (offset != m_parentEndOffset)
-	{
-		assert(offset < m_parentEndOffset);
-		
-		FbxRecord childRecord(*m_reader, offset, m_parentEndOffset);
-		
-		if (!childRecord.isValid())
-		{
-			break;
-		}
-		else
-		{
-			if (name == 0 || childRecord.name == name)
-			{
-				return childRecord;
-			}
-			
-			offset = childRecord.endOffset;
-		}
-	}
-	
-	return FbxRecord();
-}
-
-template <typename T>
-std::vector<T> FbxRecord::captureProperties() const
-{
-	assert(isValid());
-	
-	std::vector<T> result;
-	
-	if (isValid())
-	{
-		result.resize(numProperties);
-		
-		int offset = m_propertyListOffset;
-		
-		for (int i = 0; i < numProperties; ++i)
-		{
-			FbxValue value;
-			
-			m_reader->readValue(offset, value);
-			
-			result[i] = get<T>(value);
-		}
-	}
-	
-	return result;
-}
-
-//
-
-void FbxReader::openFromMemory(const void * bytes, int numBytes)
-{
-	m_bytes = (uint8_t*)bytes;
-	m_numBytes = numBytes;
-	
-	int offset = 0;
-	
-	// identifier string
-	
-	static const char kMagic[21] = "Kaydara FBX Binary  ";
-	char magic[sizeof(kMagic)];
-	read(offset, magic[0], sizeof(kMagic));
-	if (strcmp(magic, kMagic))
-		return; // not a binary FBX file
-	
-	// unknown bytes. should be (0x1a, 0x00)
-	
-	char unknown[2];
-	read(offset, unknown[0], 2);
-	
-	// version number
-	
-	int32_t version;
-	read(offset, version);
-	
-	// remember the offset of the first top-level record
-	
-	m_firstRecordOffset = offset;
-}
-
-FbxRecord FbxReader::firstRecord(const char * name) const
-{
-	FbxRecord record(*this, m_firstRecordOffset, m_numBytes);
-	
-	if (name != 0 && record.name != name)
-	{
-		record = record.nextSibling(name);
-	}
-	
-	return record;
-}
-
-// usage example
-
 #include <list>
-#include <stdio.h>
 #include <stdlib.h>
 #include <vector>
+#include "fbx.h"
 
 class FbxFileLogger
 {
@@ -524,6 +17,8 @@ public:
 		m_reader = &reader;
 	}
 	
+	// dumpFileContents iterates over the entire file contents and dumps every record and property
+	
 	void dumpFileContents()
 	{
 		for (FbxRecord record = m_reader->firstRecord(); record.isValid(); record = record.nextSibling())
@@ -534,11 +29,9 @@ public:
 	
 	void dumpRecord(const FbxRecord & record)
 	{
-		log("node: endOffset=%d, numProperties=%d, propertyListLen=%d, nameLen=%d, name=%s\n",
-			record.endOffset,
-			record.numProperties,
-			record.propertyListLen,
-			(int32_t)record.nameLen,
+		log("node: endOffset=%d, numProperties=%d, name=%s\n",
+			(int)record.getEndOffset(),
+			(int)record.getNumProperties(),
 			record.name.c_str());
 		
 		m_logIndent++;
@@ -599,6 +92,8 @@ public:
 	}
 };
 
+//
+
 class Mesh
 {
 public:
@@ -606,27 +101,67 @@ public:
 	std::vector<int> indices;
 };
 
-int main()
+bool readFile(const char * filename, std::vector<uint8_t> & bytes)
 {
-	// read file contents
+	FILE * file = fopen(filename, "rb");
+	if (!file)
+		return false;
 	
-	FILE * file = fopen("test.fbx", "rb");
-	const int p1 = ftell(file);
+	const size_t p1 = ftell(file);
 	fseek(file, 0, SEEK_END);
-	const int p2 = ftell(file);
+	const size_t p2 = ftell(file);
 	fseek(file, 0, SEEK_SET);
-	const int numBytes = p2 - p1;
-	void * bytes = malloc(numBytes);
-	fread(bytes, numBytes, 1, file);
+	
+	const size_t numBytes = p2 - p1;
+	bytes.resize(numBytes);
+	
+	fread(&bytes[0], numBytes, 1, file);
 	fclose(file);
 	
-	// parse
+	return true;
+}
+
+int main(int argc, const char * argv[])
+{
+	// parse command line
+	
+	bool verbose = false;
+	const char * filename = "test.fbx";
+	
+	for (int i = 1; i < argc; ++i)
+	{
+		if (!strcmp(argv[i], "-v"))
+			verbose = true;
+		else
+			filename = argv[i];
+	}
+	
+	// read file contents
+	
+	std::vector<uint8_t> bytes;
+	
+	if (!readFile(filename, bytes))
+	{
+		printf("failed to open %s\n", filename);
+		return -1;
+	}
+
+	// open FBX file
 	
 	FbxReader reader;
-	reader.openFromMemory(bytes, numBytes);
+	
+	reader.openFromMemory(&bytes[0], bytes.size());
+	
+	// dump FBX contents
 	
 	FbxFileLogger logger(reader);
-	logger.dumpFileContents();
+	
+	if (verbose)
+	{
+		logger.dumpFileContents();
+	}
+	
+	// extract meshes
 	
 	std::list<Mesh> meshes;
 	
@@ -663,9 +198,7 @@ int main()
 		}
 	}
 	
-	free(bytes);
-	
-	// show result
+	// dump mesh data
 	
 	for (std::list<Mesh>::iterator i = meshes.begin(); i != meshes.end(); ++i)
 	{
@@ -681,7 +214,10 @@ int main()
 			
 			if (index < 0)
 			{
+				// negative indices mark the end of a polygon
+				
 				index = ~index;
+				
 				end = true;
 			}
 			
@@ -692,7 +228,9 @@ int main()
 				mesh.vertices[index*3+2]);
 			
 			if (end)
+			{
 				logger.log("\n");
+			}
 		}
 	}
 	
