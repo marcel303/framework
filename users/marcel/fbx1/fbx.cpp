@@ -222,7 +222,11 @@ void FbxReader::throwException() const
 template <typename T> void FbxReader::read(size_t & offset, T & result) const
 {
 	if (offset + sizeof(T) > m_numBytes)
+	{
+		memset(&result, 0, sizeof(result));
 		throwException();
+		return;
+	}
 	result = *(T*)&m_bytes[offset];
 	offset += sizeof(T);
 }
@@ -230,7 +234,11 @@ template <typename T> void FbxReader::read(size_t & offset, T & result) const
 template <typename T> void FbxReader::read(size_t & offset, T & result, size_t numBytes) const
 {
 	if (offset + numBytes > m_numBytes)
+	{
+		memset(&result, 0, numBytes);
 		throwException();
+		return;
+	}
 	memcpy(&result, &m_bytes[offset], numBytes);
 	offset += numBytes;
 }
@@ -356,7 +364,10 @@ void FbxReader::openFromMemory(const void * bytes, size_t numBytes)
 	char magic[sizeof(kMagic)];
 	read(offset, magic[0], sizeof(kMagic));
 	if (strcmp(magic, kMagic))
-		return; // not a binary FBX file
+	{
+		throwException(); // not a binary FBX file
+		return;
+	}
 	
 	// unknown bytes. should be (0x1a, 0x00)
 	
