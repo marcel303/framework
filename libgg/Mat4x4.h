@@ -1,5 +1,6 @@
 #pragma once
 
+#include <math.h>
 #include "Vec3.h"
 #include "Vec4.h"
 
@@ -164,6 +165,18 @@ public:
                 MakeTranslation(-position);
 
                 *this = orient * (*this);
+        }
+        
+        void SetTranslation(float x, float y, float z)
+        {
+        	SetTranslation(Vec3(x, y, z));
+        }
+        
+        void SetTranslation(const Vec3 & v)
+        {
+			m_v[INDEX(3, 0)] = v[0];
+			m_v[INDEX(3, 1)] = v[1];
+			m_v[INDEX(3, 2)] = v[2];
         }
 
         inline Mat4x4 CalcTranspose() const

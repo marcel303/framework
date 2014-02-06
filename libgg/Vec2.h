@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Calc.h"
+#include <cmath>
 
 class Vec2
 {
@@ -22,7 +22,7 @@ public:
 			m_v[0] * m_v[0] +
 			m_v[1] * m_v[1];
 		
-		return Calc::Sqrt(sq);
+		return std::sqrt(sq);
 	}
 
 	inline float CalcSizeSq() const
@@ -58,7 +58,7 @@ public:
 		*this = CalcNormalized();
 	}
 
-	inline Vec2 operator+(const Vec2& v) const
+	inline Vec2 operator+(const Vec2 & v) const
 	{
 		Vec2 r;
 
@@ -68,7 +68,7 @@ public:
 		return r;
 	}
 
-	inline Vec2 operator-(const Vec2& v) const
+	inline Vec2 operator-(const Vec2 & v) const
 	{
 		Vec2 r;
 
@@ -84,22 +84,6 @@ public:
 			m_v[0] * v[0] +
 			m_v[1] * v[1];
 	}
-
-	/*
-	inline Vec2 operator%(const Vec2& v) const
-	{
-			Vec2 r;
-
-			r[0] =
-					m_v[1] * v[2] -
-					m_v[2] * v[1];
-			r[1] =
-					m_v[2] * v[0] -
-					m_v[0] * v[2];
-
-			return r;
-	}
-	*/
 
 	inline Vec2 operator*(float s) const
 	{
@@ -121,13 +105,13 @@ public:
 		return r;
 	}
 
-	inline void operator+=(const Vec2& v)
+	inline void operator+=(const Vec2 & v)
 	{
 		m_v[0] += v.m_v[0];
 		m_v[1] += v.m_v[1];
 	}
 
-	inline void operator-=(const Vec2& v)
+	inline void operator-=(const Vec2 & v)
 	{
 		m_v[0] -= v.m_v[0];
 		m_v[1] -= v.m_v[1];
@@ -155,12 +139,12 @@ public:
 		return r;
 	}
 
-	inline float& operator[](int index)
+	inline float & operator[](int index)
 	{
 		return m_v[index];
 	}
 
-	inline const float& operator[](int index) const
+	inline const float & operator[](int index) const
 	{
 		return m_v[index];
 	}
