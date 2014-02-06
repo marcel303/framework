@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 #include "tinyxml2.h"
-#include "Quaternion.h"
+#include "Quat.h"
 
 #include <SDL/SDL.h>
 #include <SDL/SDL_opengl.h>
@@ -144,7 +144,7 @@ class BoneTransform
 {
 public:
 	Vec3 translation;
-	Quaternion rotation;
+	Quat rotation;
 	float scale;
 	
 	void clear()
@@ -232,7 +232,7 @@ public:
 				matrix = m_bones[boneIndex].transform.rotation.toMatrix();
 				matrix.SetTranslation(m_bones[boneIndex].transform.translation);
 				
-				poseMatrix = poseMatrix * matrix;
+				poseMatrix = matrix * poseMatrix;
 				
 				boneIndex = m_bones[boneIndex].parent;
 			}
@@ -309,8 +309,6 @@ public:
 				
 				if (key != lastKey && time >= key->time)
 				{
-					isDone = false;
-					
 					const AnimKey & key1 = key[0];
 					const AnimKey & key2 = key[1];
 					
@@ -319,24 +317,6 @@ public:
 					const float t = (time - key1.time) / (key2.time - key1.time);
 					
 					assert(t >= 0.f && t <= 1.f);
-					
-					/*
-					if (i == 0)
-					{
-						printf("found key. time=%f, key1=%f, key2=%f, t=%f!\n", time, key1.time, key2.time, t);
-						printf("=> %f %f %f -> %f %f %f [%f %f %f %f]!\n",
-							key1.transform.translation[0],
-							key1.transform.translation[1],
-							key1.transform.translation[2],
-							key2.transform.translation[0],
-							key2.transform.translation[1],
-							key2.transform.translation[2],
-							key1.transform.rotation[0],
-							key1.transform.rotation[1],
-							key1.transform.rotation[2],
-							key1.transform.rotation[3]);
-					}
-					*/
 					
 					BoneTransform::interpolate(transforms[i], key1.transform, key2.transform, t);
 				}
@@ -347,6 +327,11 @@ public:
 					assert(key == firstKey || key == lastKey);
 					
 					BoneTransform::add(transforms[i], key->transform);
+				}
+				
+				if (key != lastKey)
+				{
+					isDone = false;
 				}
 				
 				firstKey += numKeys;
@@ -381,13 +366,12 @@ public:
 
 class Model
 {
-	Anim * m_currentAnim;
-	
 public:
 	MeshSet * m_meshes;
 	Skeleton * m_skeleton;
 	AnimSet * m_animations;
 	
+	Anim * currentAnim;
 	bool animIsDone;
 	float animTime;
 	int animLoop;
@@ -395,12 +379,11 @@ public:
 	
 	Model(MeshSet * meshes, Skeleton * skeleton, AnimSet * animations)
 	{
-		m_currentAnim = 0;
-		
 		m_meshes = meshes;
 		m_skeleton = skeleton;
 		m_animations = animations;
 		
+		currentAnim = 0;
 		animIsDone = true;
 		animTime = 0.f;
 		animLoop = 0;
@@ -427,11 +410,11 @@ public:
 		
 		if (i != m_animations->m_animations.end())
 		{
-			m_currentAnim = i->second;
+			currentAnim = i->second;
 		}
 		else
 		{
-			m_currentAnim = 0;
+			currentAnim = 0;
 		}
 		
 		animIsDone = false;
@@ -471,9 +454,9 @@ public:
 		
 		// apply animations
 		
-		if (m_currentAnim)
+		if (currentAnim)
 		{
-			animIsDone = m_currentAnim->evaluate(animTime, transforms);
+			animIsDone = currentAnim->evaluate(animTime, transforms);
 			
 			if (animIsDone && (animLoop > 0 || animLoop < 0))
 			{
@@ -483,25 +466,6 @@ public:
 					animLoop--;
 			}
 		}
-		
-		/*
-		if (m_currentAnim)
-		{
-			for (int i = 0; i < m_skeleton->m_numBones; ++i)
-			{
-				printf("[numKeys=%02d] (%+07.2f, %+07.2f, %+07.2f), %g, %+07.2f @ (%+05.2f, %+05.2f, %+05.2f)\n",
-					m_currentAnim->m_numKeys[i],
-					transforms[i].translation[0],
-					transforms[i].translation[1],
-					transforms[i].translation[2],
-					transforms[i].scale,
-					transforms[i].rotation[0],
-					transforms[i].rotation[1],
-					transforms[i].rotation[2],
-					transforms[i].rotation[3]);
-			}
-		}
-		*/
 		
 		// convert translation / rotation pairs into matrices
 		
@@ -549,22 +513,26 @@ public:
 				
 				glBegin(GL_TRIANGLES);
 				{
-					for (int i = 0; i < mesh->m_numIndices; ++i)
+					for (int j = 0; j < mesh->m_numIndices; ++j)
 					{
-						const int vertexIndex = mesh->m_indices[i];
+						const int vertexIndex = mesh->m_indices[j];
 						
 						const Vertex & vertex = mesh->m_vertices[vertexIndex];
 						
 						// todo: apply vertex transformation using a shader
 						
 						// -- software vertex blend (hard skinned) --
-						const int boneIndex = vertex.boneIndices[0];
-						const Mat4x4 & boneToWorld = worldMatrices[boneIndex];
-						const Mat4x4 & worldToBone = m_skeleton->m_bones[boneIndex].poseMatrix;
-						const Vec3 p = boneToWorld * worldToBone * Vec3(vertex.px, vertex.py, vertex.pz);
+						Vec3 p(0.f, 0.f, 0.f);
+						for (int b = 0; b < 4; ++b)
+						{
+							const int boneIndex = vertex.boneIndices[b];
+							const Mat4x4 & boneToWorld = worldMatrices[boneIndex];
+							const Mat4x4 & worldToBone = m_skeleton->m_bones[boneIndex].poseMatrix;
+							p += boneToWorld * worldToBone * Vec3(vertex.px, vertex.py, vertex.pz) * (vertex.boneWeights[b]/255.f);
+						}
 						// -- software vertex blend (hard skinned) --
 						
-						glColor3f(vertex.boneIndices[0] / 30.f, 1.f, 1.f);
+						glColor3ub(vertex.boneIndices[0] * 4, vertex.boneIndices[1] * 4, vertex.boneIndices[2] * 4);
 						glTexCoord2f(vertex.tx, vertex.ty);
 						glNormal3f(vertex.nx, vertex.ny, vertex.nz);
 						glVertex3f(p[0], p[1], p[2]);
@@ -631,209 +599,7 @@ public:
 
 Model * loadModel(const char * meshFileName, const char * skeletonFileName)
 {
-	std::vector<Mesh*> meshes;
-	
-	XMLDocument xmlModelDoc;
-	
-	xmlModelDoc.LoadFile(meshFileName);
-	
-	XMLElement * xmlModel = xmlModelDoc.FirstChildElement(XML_MODEL);
-	
 	int maxBoneIndex = -1;
-	
-	if (xmlModel)
-	{
-		printf("model!\n");
-		
-		//Model * model = new Model();
-		
-		XMLElement * xmlMeshes = xmlModel->FirstChildElement(XML_MESHES);
-		
-		if (xmlMeshes)
-		{
-			printf("meshes!\n");
-			
-			XMLElement * xmlMesh = xmlMeshes->FirstChildElement(XML_MESH);
-			
-			while (xmlMesh)
-			{
-				printf("mesh!\n");
-				
-				Mesh * mesh = new Mesh();
-				
-				std::vector<int> numBones;
-				
-				// mesh (material, operationtype=triangle_list)
-				
-				XMLElement * xmlGeometry = xmlMesh->FirstChildElement(XML_GEOMETRY);
-				
-				if (xmlGeometry)
-				{
-					// geometry (vertexcount)
-					
-					const int vertexCount = xmlGeometry->IntAttribute("vertexcount");
-					
-					mesh->allocateVB(vertexCount);
-					
-					numBones.resize(vertexCount, 0);
-					
-					printf("geometry (vertexCount=%d)!\n", vertexCount);
-					
-					XMLElement * xmlVertexStream = xmlGeometry->FirstChildElement(XML_VERTEX_STREAM);
-					
-					while (xmlVertexStream)
-					{
-						// vertexbuffer (positions, normals, texture_coord=N)
-						
-						const bool positions = xmlVertexStream->BoolAttribute("positions");
-						const bool normals = xmlVertexStream->BoolAttribute("normals");
-						const int texcoords = xmlVertexStream->IntAttribute("texture_coords");
-						
-						printf("vertex stream: position=%d, normal=%d, texcoords=%d!\n", (int)positions, (int)normals, texcoords);
-						
-						XMLElement * xmlVertex = xmlVertexStream->FirstChildElement(XML_VERTEX);
-						
-						int vertexIndex = 0;
-						
-						while (xmlVertex)
-						{
-							assert(vertexIndex + 1 <= mesh->m_numVertices);
-							
-							if (positions)
-							{
-								// position (x, y, z)
-								
-								XMLElement * xmlPosition = xmlVertex->FirstChildElement("position");
-								
-								if (xmlPosition)
-								{
-									const float x = xmlPosition->FloatAttribute("x");
-									const float y = xmlPosition->FloatAttribute("y");
-									const float z = xmlPosition->FloatAttribute("z");
-									
-									//printf("position: %d: %g %g %g\n", vertexIndex, x, y, z);
-									
-									mesh->m_vertices[vertexIndex].px = x;
-									mesh->m_vertices[vertexIndex].py = y;
-									mesh->m_vertices[vertexIndex].pz = z;
-								}
-							}
-							
-							if (normals)
-							{
-								// normal (x, y, z)
-								
-								XMLElement * xmlNormal = xmlVertex->FirstChildElement("normal");
-								
-								if (xmlNormal)
-								{
-									const float x = xmlNormal->FloatAttribute("x");
-									const float y = xmlNormal->FloatAttribute("y");
-									const float z = xmlNormal->FloatAttribute("z");
-									
-									printf("normal: %g %g %g\n", x, y, z);
-									
-									mesh->m_vertices[vertexIndex].nx = x;
-									mesh->m_vertices[vertexIndex].ny = y;
-									mesh->m_vertices[vertexIndex].nz = z;
-								}
-							}
-							
-							if (texcoords)
-							{
-								// texcoord (u, v)
-							}
-							
-							vertexIndex++;
-							
-							xmlVertex = xmlVertex->NextSiblingElement(XML_VERTEX);
-						}
-						
-						xmlVertexStream = xmlVertexStream->NextSiblingElement(XML_VERTEX_STREAM);
-					}
-				}
-				
-				XMLElement * xmlFaces = xmlMesh->FirstChildElement(XML_FACES);
-				
-				if (xmlFaces)
-				{
-					// faces (count)
-					
-					const int numFaces = xmlFaces->IntAttribute("count");
-					
-					mesh->allocateIB(numFaces * 3);
-					
-					printf("faces (count=%d)!\n", numFaces);
-					
-					XMLElement * xmlFace = xmlFaces->FirstChildElement(XML_FACE);
-					
-					int indexIndex = 0;
-					
-					while (xmlFace)
-					{
-						assert(indexIndex + 3 <= mesh->m_numIndices);
-						
-						//printf("face!\n");
-						
-						// v1, v2, v3
-						
-						const int index1 = xmlFace->IntAttribute("v1");
-						const int index2 = xmlFace->IntAttribute("v2");
-						const int index3 = xmlFace->IntAttribute("v3");
-						
-						//printf("indices: %d, %d, %d\n", index1, index2, index3);
-						
-						mesh->m_indices[indexIndex + 0] = index1;
-						mesh->m_indices[indexIndex + 1] = index2;
-						mesh->m_indices[indexIndex + 2] = index3;
-						
-						indexIndex += 3;
-						
-						xmlFace = xmlFace->NextSiblingElement(XML_FACE);
-					}
-				}
-								
-				XMLElement * xmlBoneMappings = xmlMesh->FirstChildElement(XML_BONE_MAPPINGS);
-				
-				if (xmlBoneMappings)
-				{
-					XMLElement * xmlBoneMapping = xmlBoneMappings->FirstChildElement(XML_BONE_MAPPING);
-					
-					while (xmlBoneMapping)
-					{
-						// vertexindex, boneindex, weight
-						
-						const int vertexIndex = xmlBoneMapping->IntAttribute("vertexindex");
-						const int boneIndex = xmlBoneMapping->IntAttribute("boneindex");
-						const float weight = xmlBoneMapping->FloatAttribute("weight");
-						
-						assert(vertexIndex + 1 <= mesh->m_numVertices);
-				
-						//printf("vertexIndex=%d, boneIndex=%d, weight=%g\n", vertexIndex, boneIndex, weight);
-						
-						if (boneIndex > maxBoneIndex)
-							maxBoneIndex = boneIndex;
-						
-						if (numBones[vertexIndex] < 4)
-						{
-							const int boneIndex2 = numBones[vertexIndex]++;
-							
-							//printf("added: boneIndex2=%d\n", boneIndex2);
-							
-							mesh->m_vertices[vertexIndex].boneIndices[boneIndex2] = boneIndex;
-							mesh->m_vertices[vertexIndex].boneWeights[boneIndex2] = weight * 255.f;
-						}
-						
-						xmlBoneMapping = xmlBoneMapping->NextSiblingElement(XML_BONE_MAPPING);
-					}
-				}
-				
-				meshes.push_back(mesh);
-				
-				xmlMesh = xmlMesh->NextSiblingElement(XML_MESH);
-			}
-		}
-	}
 	
 	XMLDocument xmlSkeletonDoc;
 	
@@ -944,9 +710,6 @@ Model * loadModel(const char * meshFileName, const char * skeletonFileName)
 				transform.rotation.fromAxisAngle(Vec3(rx, ry, rz), ra);
 				transform.scale = 1.f;
 				
-				//printf("position: %g %g %g\n", px, py, pz);
-				//printf("rotation: %g @ %g %g %g\n", ra, rx, ry, rz);
-				
 				xmlBone = xmlBone->NextSiblingElement(XML_BONE);
 			}
 		}
@@ -985,8 +748,6 @@ Model * loadModel(const char * meshFileName, const char * skeletonFileName)
 		
 		if (xmlAnimations)
 		{
-			//printf("animations!\n");
-			
 			XMLElement * xmlAnimation = xmlAnimations->FirstChildElement(XML_ANIMATION);
 			
 			while (xmlAnimation)
@@ -1004,8 +765,6 @@ Model * loadModel(const char * meshFileName, const char * skeletonFileName)
 				
 				if (xmlTracks)
 				{
-					//printf("tracks!\n");
-					
 					typedef std::map< int, std::vector<AnimKey> > AnimKeysByBoneIndexMap;
 					AnimKeysByBoneIndexMap animKeysByBoneIndex;
 					
@@ -1013,8 +772,6 @@ Model * loadModel(const char * meshFileName, const char * skeletonFileName)
 					
 					while (xmlTrack)
 					{
-						//printf("track!\n");
-						
 						// track (bone)
 						
 						const char * boneName = xmlTrack->Attribute("bone");
@@ -1048,11 +805,6 @@ Model * loadModel(const char * meshFileName, const char * skeletonFileName)
 								float py = 0.f;
 								float pz = 0.f;
 								
-								float ra = 0.f;
-								float rx = 0.f;
-								float ry = 0.f;
-								float rz = 0.f;
-								
 								XMLElement * translation = xmlKeyFrame->FirstChildElement(XML_KEYFRAME_TRANSLATION);
 								
 								if (translation)
@@ -1061,6 +813,11 @@ Model * loadModel(const char * meshFileName, const char * skeletonFileName)
 									py = translation->FloatAttribute("y");
 									pz = translation->FloatAttribute("z");
 								}
+								
+								float ra = 0.f;
+								float rx = 0.f;
+								float ry = 0.f;
+								float rz = 0.f;
 								
 								XMLElement * rotation = xmlKeyFrame->FirstChildElement(XML_KEYFRAME_ROTATION);
 								
@@ -1109,8 +866,6 @@ Model * loadModel(const char * meshFileName, const char * skeletonFileName)
 						numAnimKeys += int(animKeys.size());
 					}
 					
-					//printf("animation allocate: %d, %d\n", skeleton->m_numBones, numAnimKeys);
-					
 					animation->allocate(skeleton->m_numBones, numAnimKeys);
 					
 					AnimKey * finalAnimKey = animation->m_keys;
@@ -1131,6 +886,201 @@ Model * loadModel(const char * meshFileName, const char * skeletonFileName)
 				}
 				
 				xmlAnimation = xmlAnimation->NextSiblingElement(XML_ANIMATION);
+			}
+		}
+	}
+	
+	std::vector<Mesh*> meshes;
+	
+	XMLDocument xmlModelDoc;
+	
+	xmlModelDoc.LoadFile(meshFileName);
+	
+	XMLElement * xmlModel = xmlModelDoc.FirstChildElement(XML_MODEL);
+	
+	if (xmlModel)
+	{
+		XMLElement * xmlMeshes = xmlModel->FirstChildElement(XML_MESHES);
+		
+		if (xmlMeshes)
+		{
+			XMLElement * xmlMesh = xmlMeshes->FirstChildElement(XML_MESH);
+			
+			while (xmlMesh)
+			{
+				Mesh * mesh = new Mesh();
+				
+				std::vector<int> numVertexBones;
+				
+				// mesh (material, operationtype=triangle_list)
+				
+				XMLElement * xmlGeometry = xmlMesh->FirstChildElement(XML_GEOMETRY);
+				
+				if (xmlGeometry)
+				{
+					// geometry (vertexcount)
+					
+					const int vertexCount = xmlGeometry->IntAttribute("vertexcount");
+					
+					mesh->allocateVB(vertexCount);
+					
+					numVertexBones.resize(vertexCount, 0);
+					
+					XMLElement * xmlVertexStream = xmlGeometry->FirstChildElement(XML_VERTEX_STREAM);
+					
+					while (xmlVertexStream)
+					{
+						// vertexbuffer (positions, normals, texture_coord=N)
+						
+						const bool positions = xmlVertexStream->BoolAttribute("positions");
+						const bool normals = xmlVertexStream->BoolAttribute("normals");
+						const int texcoords = xmlVertexStream->IntAttribute("texture_coords");
+						
+						printf("vertex stream: position=%d, normal=%d, texcoords=%d!\n", (int)positions, (int)normals, texcoords);
+						
+						XMLElement * xmlVertex = xmlVertexStream->FirstChildElement(XML_VERTEX);
+						
+						int vertexIndex = 0;
+						
+						while (xmlVertex)
+						{
+							assert(vertexIndex + 1 <= mesh->m_numVertices);
+							
+							if (positions)
+							{
+								// position (x, y, z)
+								
+								XMLElement * xmlPosition = xmlVertex->FirstChildElement("position");
+								
+								if (xmlPosition)
+								{
+									mesh->m_vertices[vertexIndex].px = xmlPosition->FloatAttribute("x");
+									mesh->m_vertices[vertexIndex].py = xmlPosition->FloatAttribute("y");
+									mesh->m_vertices[vertexIndex].pz = xmlPosition->FloatAttribute("z");
+								}
+							}
+							
+							if (normals)
+							{
+								// normal (x, y, z)
+								
+								XMLElement * xmlNormal = xmlVertex->FirstChildElement("normal");
+								
+								if (xmlNormal)
+								{
+									mesh->m_vertices[vertexIndex].nx = xmlNormal->FloatAttribute("x");
+									mesh->m_vertices[vertexIndex].ny = xmlNormal->FloatAttribute("y");
+									mesh->m_vertices[vertexIndex].nz = xmlNormal->FloatAttribute("z");
+								}
+							}
+							
+							if (texcoords)
+							{
+								// texcoord (u, v)
+							}
+							
+							vertexIndex++;
+							
+							xmlVertex = xmlVertex->NextSiblingElement(XML_VERTEX);
+						}
+						
+						xmlVertexStream = xmlVertexStream->NextSiblingElement(XML_VERTEX_STREAM);
+					}
+				}
+				
+				XMLElement * xmlFaces = xmlMesh->FirstChildElement(XML_FACES);
+				
+				if (xmlFaces)
+				{
+					// faces (count)
+					
+					const int numFaces = xmlFaces->IntAttribute("count");
+					
+					mesh->allocateIB(numFaces * 3);
+					
+					printf("faces! count=%d\n", numFaces);
+					
+					XMLElement * xmlFace = xmlFaces->FirstChildElement(XML_FACE);
+					
+					int indexIndex = 0;
+					
+					while (xmlFace)
+					{
+						assert(indexIndex + 3 <= mesh->m_numIndices);
+						
+						// v1, v2, v3
+						
+						mesh->m_indices[indexIndex + 0] = xmlFace->IntAttribute("v1");
+						mesh->m_indices[indexIndex + 1] = xmlFace->IntAttribute("v2");
+						mesh->m_indices[indexIndex + 2] = xmlFace->IntAttribute("v3");
+						
+						indexIndex += 3;
+						
+						xmlFace = xmlFace->NextSiblingElement(XML_FACE);
+					}
+				}
+								
+				XMLElement * xmlBoneMappings = xmlMesh->FirstChildElement(XML_BONE_MAPPINGS);
+				
+				if (xmlBoneMappings)
+				{
+					XMLElement * xmlBoneMapping = xmlBoneMappings->FirstChildElement(XML_BONE_MAPPING);
+					
+					while (xmlBoneMapping)
+					{
+						// vertexindex, boneindex, weight
+						
+						const int vertexIndex = xmlBoneMapping->IntAttribute("vertexindex");
+						const int boneIndex = xmlBoneMapping->IntAttribute("boneindex");
+						const float weight = xmlBoneMapping->FloatAttribute("weight");
+						
+						assert(vertexIndex + 1 <= mesh->m_numVertices);
+						assert(boneIndex <= maxBoneIndex);
+						
+						//printf("vertexIndex=%d, boneIndex=%d, weight=%g\n", vertexIndex, boneIndex, weight);
+						
+						if (numVertexBones[vertexIndex] < 4)
+						{
+							const int vertexBoneIndex = numVertexBones[vertexIndex]++;
+							
+							mesh->m_vertices[vertexIndex].boneIndices[vertexBoneIndex] = boneIndex;
+							mesh->m_vertices[vertexIndex].boneWeights[vertexBoneIndex] = weight * 255.f;
+						}
+						
+						xmlBoneMapping = xmlBoneMapping->NextSiblingElement(XML_BONE_MAPPING);
+					}
+				}
+				
+				// todo: improve weighting, so it always adds up to 255
+				
+				for (int i = 0; i < mesh->m_numVertices; ++i)
+				{
+					Vertex & vertex = mesh->m_vertices[i];
+					
+					const float totalWeight =
+						(
+							vertex.boneWeights[0] +
+							vertex.boneWeights[1] +
+							vertex.boneWeights[2] +
+							vertex.boneWeights[3]
+						) / 255.f;
+					
+					if (totalWeight == 0.f)
+					{
+						vertex.boneWeights[0] = 255;
+					}
+					else
+					{
+						for (int j = 0; j < 4; ++j)
+						{
+							vertex.boneWeights[j] /= totalWeight;
+						}
+					}
+				}
+				
+				meshes.push_back(mesh);
+				
+				xmlMesh = xmlMesh->NextSiblingElement(XML_MESH);
 			}
 		}
 	}
@@ -1164,12 +1114,18 @@ int main(int argc, char * argv[])
 	bool drawBones = true;
 	bool loop = false;
 	bool autoPlay = false;
+	bool light = true;
+	
+	const int modelId = 0;
 	
 	for (int i = 0; i < 1; ++i)
 	{
-		Model * model = loadModel("mesh.xml", "skeleton.xml");
+		Model * model = 0;
 		
-		//model->startAnim("Death2");
+		if (modelId == 0)
+			model = loadModel("mesh.xml", "skeleton.xml");
+		else
+			model = loadModel("men_alrike_mesh.xml", "men_alrike_skeleton.xml");
 		
 		bool stop = false;
 		
@@ -1183,11 +1139,7 @@ int main(int argc, char * argv[])
 			{
 				if (e.type == SDL_KEYDOWN)
 				{
-					if (e.key.keysym.sym == SDLK_a)
-					{
-						model->startAnim("Backflip");
-					}
-					else if (e.key.keysym.sym == SDLK_w)
+					if (e.key.keysym.sym == SDLK_w)
 					{
 						wireframe = !wireframe;
 					}
@@ -1206,6 +1158,10 @@ int main(int argc, char * argv[])
 					else if (e.key.keysym.sym == SDLK_p)
 					{
 						autoPlay = !autoPlay;
+					}
+					else if (e.key.keysym.sym == SDLK_i)
+					{
+						light = !light;
 					}
 					else if (e.key.keysym.sym == SDLK_SPACE)
 					{
@@ -1233,35 +1189,31 @@ int main(int argc, char * argv[])
 			
 			if (startRandomAnimation)
 			{
-				const char * names[] =
-				{
-					"Attack1",
-					"Attack2",
-					"Attack3",
-					"Backflip",
-					"Block",
-					"Climb",
-					"Crouch",
-					"Death1",
-					"Death2",
-					"HighJump",
-					"Idle1",
-					"Idle2",
-					"Idle3",
-					"Jump",
-					"JumpNoHeight",
-					"Kick",
-					"SideKick",
-					"Spin",
-					"Stealth",
-					"Walk"
-				};
+				std::vector<std::string> names;
 				
-				const int index = rand() % (sizeof(names) / sizeof(names[0]));
-				const char * name = names[index];
+				for (std::map<std::string, Anim*>::iterator i = model->m_animations->m_animations.begin(); i != model->m_animations->m_animations.end(); ++i)
+					names.push_back(i->first);
+				
+				const size_t index = rand() % names.size();
+				const char * name = names[index].c_str();
 				
 				printf("anim: %s\n", name);					
 				model->startAnim(name, loop ? -1 : 1);
+				
+				if (model->currentAnim)
+				{
+					int currentKey = 0;
+					
+					for (int i = 0; i < model->m_skeleton->m_numBones; ++i)
+					{
+						const int numKeys = model->currentAnim->m_numKeys[i];
+						
+						printf("bone %3d: numKeys: %5d endTime:%6.2f\n",
+							i, numKeys, numKeys ? model->currentAnim->m_keys[currentKey + numKeys - 1].time : 0.f);
+						
+						currentKey += numKeys;
+					}
+				}
 			}
 			
 			const float timeStep = 1.f / 60.f / 1.f;
@@ -1277,40 +1229,59 @@ int main(int argc, char * argv[])
 			glClearDepth(0);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			
-			glEnable(GL_DEPTH_TEST);
-			glDepthFunc(GL_GREATER);
-			
 			glMatrixMode(GL_PROJECTION);
 			glLoadIdentity();
 			glMatrixMode(GL_MODELVIEW);
 			glLoadIdentity();
-			const float scale = 1.f / 200.f;
+			float scale = 1.f;
+			if (modelId == 0)
+				scale = 1.f / 200.f;
+			else
+				scale = 1.f;
 			glScalef(scale, scale, scale);
 			
-			glEnable(GL_LIGHTING);
 			glEnable(GL_LIGHT0);
 			GLfloat light_position[] = { 1.0, 1.0, 1.0, 0.0 };
 			glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 			glEnable(GL_NORMALIZE);
 			glPolygonMode(GL_FRONT_AND_BACK, wireframe ? GL_LINE : GL_FILL);
 			
-			glTranslatef(0.f, -100.f, 0.f);
+			float ty = 0.f;
+			if (modelId == 0)
+				ty = -100.f;
+			else
+				ty = -1.f;
+			glTranslatef(0.f, ty, 0.f);
 			glRotatef(angle, 0.f, 1.f, 0.f);
 			glRotatef(90, 0.f, 1.f, 0.f);
 			
-			Mat4x4 matrix;
-			matrix.MakeIdentity();
+			const int num = 0;
 			
-			glColor3ub(255, 255, 255);
-			model->drawEx(matrix, true, false);
-			
-			glDisable(GL_LIGHTING);
-			glDisable(GL_DEPTH_TEST);
-			
-			if (drawBones)
+			for (int x = -num; x <= +num; ++x)
 			{
-				glColor3ub(0, 255, 0);
-				model->drawEx(matrix, false, true);
+				for (int y = -num; y <= +num; ++y)
+				{
+					Mat4x4 matrix;
+					matrix.MakeTranslation(x / scale, 0.f, y / scale);
+					
+					glEnable(GL_DEPTH_TEST);
+					glDepthFunc(GL_GREATER);
+					if (light)
+						glEnable(GL_LIGHTING);
+			
+					glColor3ub(255, 255, 255);
+					model->drawEx(matrix, true, false);
+					
+					if (light)
+						glDisable(GL_LIGHTING);
+					glDisable(GL_DEPTH_TEST);
+					
+					if (drawBones)
+					{
+						glColor3ub(0, 255, 0);
+						model->drawEx(matrix, false, true);
+					}
+				}
 			}
 			
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
