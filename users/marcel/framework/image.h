@@ -25,7 +25,13 @@ public:
 	
 	int sx;
 	int sy;
-	void * imageData; // R8G8B8A8
+
+	struct Pixel
+	{
+		unsigned char r, g, b, a;
+	};
+
+	Pixel * imageData; // R8G8B8A8
 };
 
 ImageData * loadImage(const char * filename);

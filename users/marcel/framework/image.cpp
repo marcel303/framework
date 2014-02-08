@@ -58,7 +58,7 @@ ImageData * loadImage(const char * filename)
 	ImageData * imageData = new ImageData;
 	imageData->sx = sx;
 	imageData->sy = sy;
-	imageData->imageData = data;
+	imageData->imageData = (ImageData::Pixel*)data;
 	
 	return imageData;
 }

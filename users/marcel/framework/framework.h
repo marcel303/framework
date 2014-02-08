@@ -5,15 +5,18 @@
 #include <SDL/SDL_opengl.h>
 
 #include <algorithm>
+#include <assert.h>
 #include <cmath>
 #include <map>
 #include <set>
 #include <string>
 #include <vector>
 
+#define fassert assert
+
 // configuration
 
-#ifdef DEBUG
+#if defined(DEBUG) || 1
 	#define ENABLE_LOGGING 1
 #else
 	#define ENABLE_LOGGING 0 // do not alter
@@ -102,6 +105,7 @@ class Ui;
 // globals
 
 extern Framework framework;
+extern Dictionary settings;
 extern Mouse mouse;
 extern Keyboard keyboard;
 extern Gamepad gamepad[MAX_GAMEPAD];
@@ -128,6 +132,7 @@ public:
 	bool shutdown();
 	void process();
 	void processAction(const std::string & action, const Dictionary & args);
+	void processActions(const std::string & actions, const Dictionary & args);
 	void reloadCaches();
 	void fillCachesWithPath(const char * path);
 	
@@ -141,6 +146,8 @@ public:
 	int minification;
 	bool reloadCachesOnActivate;
 	int numSoundSources;
+	int windowX;
+	int windowY;
 	std::string windowTitle;
 	ActionHandler actionHandler;
 	
@@ -164,13 +171,14 @@ class Surface
 	
 	void construct();
 	void destruct();
-	void swapBuffers();
 	
 public:
 	Surface();
 	Surface(int sx, int sy);
 	~Surface();
 	
+	void swapBuffers();
+
 	bool init(int sx, int sy);
 	GLuint getFramebuffer() const;
 	GLuint getTexture() const;
@@ -209,7 +217,8 @@ public:
 	void setImmediate(const char * name, float x, float y);
 	void setImmediate(const char * name, float x, float y, float z);
 	void setImmediate(const char * name, float x, float y, float z, float w);
-	void setTextureUnit(const char * name, int unit); // GL_TEXTURE0 + unit
+	void setImmediateMatrix4x4(const char * name, const float * matrix);
+	void setTextureUnit(const char * name, int unit); // bind <name> to GL_TEXTURE0 + unit
 	void setTexture(const char * name, int unit, GLuint texture);
 };
 
@@ -254,7 +263,8 @@ class Dictionary
 	Map m_map;
 	
 public:
-	bool parse(const std::string & line); // line = key1:value1 key2:value2 key3:value3 ..
+	bool load(const char * filename);
+	bool parse(const std::string & line, bool clear = true); // line = key1:value1 key2:value2 key3:value3 ..
 	
 	bool contains(const char * name) const;
 	
@@ -265,6 +275,7 @@ public:
 	std::string getString(const char * name, const char * _default) const;	
 	int getInt(const char * name, int _default) const;
 	bool getBool(const char * name, bool _default) const;
+	float getFloat(const char * name, float _default) const;
 	
 	std::string & operator[](const char * name);
 };
@@ -280,7 +291,7 @@ public:
 	~Sprite();
 	
 	void draw();
-	void drawEx(float x, float y, float angle = 0.f, float scale = 1.f, BLEND_MODE blendMode = BLEND_ALPHA, bool pixelpos = true, TEXTURE_FILTER filter = FILTER_POINT);
+	void drawEx(float x, float y, float angle = 0.f, float scale = 1.f, bool pixelpos = true, TEXTURE_FILTER filter = FILTER_POINT);
 	
 	// animation
 	void startAnim(const char * anim, int frame = 0);
@@ -298,7 +309,6 @@ public:
 	float y;
 	float angle;
 	float scale;
-	BLEND_MODE blend;
 	bool flipX;
 	bool flipY;
 	bool pixelpos;
@@ -419,6 +429,8 @@ public:
 	
 	bool isConnected;
 	bool isDown[GAMEPAD_MAX];
+	bool wentDown[GAMEPAD_MAX];
+	bool wentUp[GAMEPAD_MAX];
 	float getAnalog(int stick, ANALOG analog, float scale = 1.f) const;
 };
 
@@ -507,6 +519,7 @@ void clearShader();
 
 void drawLine(float x1, float y1, float x2, float y2);
 void drawRect(float x1, float y1, float x2, float y2);
+void drawRectLine(float x1, float y1, float x2, float y2);
 void drawRectGradient(float x1, float y1, float x2, float y2);
 void drawText(float x, float y, int size, float alignX, float alignY, const char * format, ...);
 
@@ -531,7 +544,27 @@ static T saturate(T v)
 template <typename T>
 static T sine(T min, T max, float t)
 {
+	t = t * M_PI / 180.f;
 	return static_cast<T>(min + (max - min) * (std::sin(t) + 1.f) / 2.f);
+}
+
+template <typename T>
+static T cosine(T min, T max, float t)
+{
+	t = t * M_PI / 180.f;
+	return static_cast<T>(min + (max - min) * (std::cos(t) + 1.f) / 2.f);
+}
+
+template <typename T>
+static T getAngle(T dx, T dy)
+{
+	return static_cast<T>(atan2f(dy, dx) / M_PI * 180.f + 90.f);
+}
+
+template <typename T>
+static T random(T min, T max)
+{
+	return static_cast<T>(min + (max - min) * ((rand() % 1000) / 999.f));
 }
 
 // logging

@@ -11,8 +11,6 @@
 #include <string>
 #include "framework.h"
 
-#define fassert assert
-
 #ifndef WIN32
 static int fopen_s(FILE ** file, const char * filename, const char * mode)
 {
@@ -24,6 +22,7 @@ static int fopen_s(FILE ** file, const char * filename, const char * mode)
 #endif
 
 void splitString(const std::string & str, std::vector<std::string> & result);
+void splitString(const std::string & str, std::vector<std::string> & result, char c);
 void checkErrorGL_internal(const char * function, int line);
 #define checkErrorGL() checkErrorGL_internal(__FUNCTION__, __LINE__)
 
@@ -165,8 +164,10 @@ public:
 	
 	typedef std::map<std::string, Anim> AnimMap;
 	
+	bool m_hasSheet;
 	int m_gridSize[2];
 	int m_pivot[2];
+	float m_scale;
 	AnimMap m_animMap;
 	
 	AnimCacheElem();

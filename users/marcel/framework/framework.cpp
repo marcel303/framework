@@ -15,6 +15,7 @@
 	#include <SDL/SDL_opengl.h>
 	#include <Windows.h>
 	#include <Xinput.h>
+	DWORD timeGetTime(void);
 #else
 	#include <dirent.h>
 	#include <unistd.h>
@@ -36,6 +37,7 @@ Color colorBlue(0, 0, 255, 255);
 //
 
 Framework framework;
+Dictionary settings;
 Mouse mouse;
 Keyboard keyboard;
 Gamepad gamepad[MAX_GAMEPAD];
@@ -49,6 +51,8 @@ Framework::Framework()
 	fullscreen = false;
 	minification = 1;
 	reloadCachesOnActivate = false;
+	windowX = -1;
+	windowY = -1;
 	windowTitle = "GGJ 2014 - Unknown Project";
 	numSoundSources = 32;
 	actionHandler = 0;
@@ -64,8 +68,16 @@ Framework::~Framework()
 bool Framework::init(int argc, char * argv[], int sx, int sy)
 {
 #ifdef WIN32
-	_putenv("SDL_VIDEO_WINDOW_POS");
-	_putenv("SDL_VIDEO_CENTERED=1");
+	if (windowX != -1 && windowY != -1)
+	{
+		char windowPos[32];
+		sprintf_s(windowPos, sizeof(windowPos), "SDL_VIDEO_WINDOW_POS=%d,%d", windowX, windowY);
+		_putenv(windowPos);
+	}
+	else
+	{
+		_putenv("SDL_VIDEO_CENTERED=1");
+	}
 #endif
 
 	// initialize SDL
@@ -144,23 +156,6 @@ bool Framework::init(int argc, char * argv[], int sx, int sy)
 	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 #endif
 	
-	// resolve OpenGL extensions
-	
-	/*
-	if (glFramebufferTexture == 0)
-		glFramebufferTexture = (PFNGLFRAMEBUFFERTEXTUREPROC)SDL_GL_GetProcAddress("glFramebufferTexture");
-	if (glBlendEquation == 0)
-		glBlendEquation = (PFNGLBLENDEQUATIONPROC)SDL_GL_GetProcAddress("glBlendEquation");
-	if (glClampColor == 0)
-		glClampColor = (PFNGLCLAMPCOLORPROC)SDL_GL_GetProcAddress("glClampColor");
-
-	if (glFramebufferTexture == 0 || glBlendEquation == 0 || glClampColor == 0)
-	{
-		logError("unable to find required OpenGL extension(s)");
-		return false;
-	}
-	*/
-	
 	glClampColor(GL_CLAMP_VERTEX_COLOR, GL_FALSE);
 	
 	// initialize FreeType
@@ -178,6 +173,10 @@ bool Framework::init(int argc, char * argv[], int sx, int sy)
 		logError("failed to initialize sound player");
 		return false;
 	}
+
+	// load settings
+
+	settings.load("settings.txt");
 	
 	// initialize UI
 	
@@ -241,6 +240,14 @@ bool Framework::shutdown()
 
 void Framework::process()
 {
+	static int tstamp1 = SDL_GetTicks();
+	const int tstamp2 = SDL_GetTicks();
+	int delta = tstamp2 - tstamp1;
+	tstamp1 = tstamp2;
+	if (delta == 0)
+		delta = 1;
+	timeStep = delta / 1000.f;
+
 	time += timeStep;
 	
 	g_soundPlayer.process();
@@ -286,7 +293,6 @@ void Framework::process()
 				doReload |= (e.active.state & SDL_APPINPUTFOCUS) && e.active.gain;
 		}
 	}
-	
 #ifdef __WIN32__
 	// use XInput to poll gamepad state
 	for (int i = 0; i < MAX_GAMEPAD; ++i)
@@ -299,6 +305,9 @@ void Framework::process()
 		{
 			gamepad[i].isConnected = true;
 			
+			memset(gamepad[i].wentDown, 0, sizeof(gamepad[i].wentDown));
+			memset(gamepad[i].wentUp, 0, sizeof(gamepad[i].wentUp));
+
 			const XINPUT_GAMEPAD & g = state.Gamepad;
 			
 		#define APPLY_DEADZONE(v, t) (std::abs(v) <= t ? 0.f : clamp((std::abs(v) - t) * (v < 0.f ? -1.f : +1.f) / float(32767 - t), -1.f, +1.f))
@@ -311,7 +320,11 @@ void Framework::process()
 		#undef APPLY_DEADZONE
 			
 			const int buttons = g.wButtons;
+
 			bool * isDown = gamepad[i].isDown;
+
+			bool wasDown[GAMEPAD_MAX];
+			memcpy(wasDown, isDown, sizeof(wasDown));
 			
 			isDown[DPAD_LEFT]     = 0 != (buttons & XINPUT_GAMEPAD_DPAD_LEFT);
 			isDown[DPAD_RIGHT]    = 0 != (buttons & XINPUT_GAMEPAD_DPAD_RIGHT);
@@ -327,6 +340,17 @@ void Framework::process()
 			isDown[GAMEPAD_R2]    = g.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
 			isDown[GAMEPAD_START] = 0 != (buttons & XINPUT_GAMEPAD_START);
 			isDown[GAMEPAD_BACK]  = 0 != (buttons & XINPUT_GAMEPAD_BACK);
+
+			bool * wentDown = gamepad[i].wentDown;
+			bool * wentUp = gamepad[i].wentUp;
+
+			for (int j = 0; j < GAMEPAD_MAX; ++j)
+			{
+				if (!wasDown[j] && isDown[j])
+					wentDown[j] = true;
+				if (wasDown[j] && !isDown[j])
+					wentUp[j] = true;
+			}
 		}
 		else
 		{
@@ -361,8 +385,18 @@ void Framework::processAction(const std::string & action, const Dictionary & arg
 	}
 }
 
+void Framework::processActions(const std::string & actions, const Dictionary & args)
+{
+	std::vector<std::string> vec;
+	splitString(actions, vec, ',');
+	for (size_t i = 0; i < vec.size(); ++i)
+		processAction(vec[i], args);
+}
+
 void Framework::reloadCaches()
 {
+	settings.load("settings.txt");
+
 	g_textureCache.reload();
 	g_shaderCache.reload();
 	g_animCache.reload();
@@ -790,6 +824,7 @@ GLuint Shader::getProgram() const
 }
 
 #define SET_UNIFORM(name, op) \
+	setShader(*this); \
 	const GLint index = glGetUniformLocation(getProgram(), name); \
 	if (index != -1) \
 	{ \
@@ -799,34 +834,49 @@ GLuint Shader::getProgram() const
 void Shader::setImmediate(const char * name, float x)
 {
 	SET_UNIFORM(name, glUniform1f(index, x));
+	checkErrorGL();
 }
 
 void Shader::setImmediate(const char * name, float x, float y)
 {
 	SET_UNIFORM(name, glUniform2f(index, x, y));
+	checkErrorGL();
 }
 
 void Shader::setImmediate(const char * name, float x, float y, float z)
 {
 	SET_UNIFORM(name, glUniform3f(index, x, y, z));
+	checkErrorGL();
 }
 
 void Shader::setImmediate(const char * name, float x, float y, float z, float w)
 {
 	SET_UNIFORM(name, glUniform4f(index, x, y, z, w));
+	checkErrorGL();
+}
+
+void Shader::setImmediateMatrix4x4(const char * name, const float * matrix)
+{
+	SET_UNIFORM(name, glUniformMatrix4fv(index, 1, GL_FALSE, matrix));
+	checkErrorGL();
 }
 
 void Shader::setTextureUnit(const char * name, int unit)
 {
 	SET_UNIFORM(name, glUniform1i(index, unit));
+	checkErrorGL();
 }
-
 
 void Shader::setTexture(const char * name, int unit, GLuint texture)
 {
 	SET_UNIFORM(name, glUniform1i(index, unit));
+	checkErrorGL();
 	glActiveTexture(GL_TEXTURE0 + unit);
 	glBindTexture(GL_TEXTURE_2D, texture);
+	glEnable(GL_TEXTURE_2D);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	checkErrorGL();
 }
 
 #undef SET_UNIFORM
@@ -901,11 +951,42 @@ Color Gradient::eval(float x, float y) const
 
 // -----
 
-bool Dictionary::parse(const std::string & line)
+bool Dictionary::load(const char * filename)
+{
+	bool result = true;
+
+	m_map.clear();
+
+	FileReader reader;
+
+	if (!reader.open(filename, true))
+	{
+		result = false;
+	}
+	else
+	{
+		std::string line;
+
+		while (reader.read(line))
+		{
+			if (!parse(line, false))
+			{
+				result = false;
+			}
+		}
+	}
+
+	return result;
+}
+
+bool Dictionary::parse(const std::string & line, bool clear)
 {
 	bool result = true;
 	
-	m_map.clear();
+	if (clear)
+	{
+		m_map.clear();
+	}
 	
 	std::vector<std::string> parts;
 	splitString(line, parts);
@@ -989,6 +1070,15 @@ bool Dictionary::getBool(const char * name, bool _default) const
 	return getInt(name, _default) != 0;
 }
 
+float Dictionary::getFloat(const char * name, float _default) const
+{
+	Map::const_iterator i = m_map.find(name);
+	if (i != m_map.end())
+		return atof(i->second.c_str());
+	else
+		return _default;
+}
+
 std::string & Dictionary::operator[](const char * name)
 {
 	return m_map[name];
@@ -1005,7 +1095,6 @@ Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * s
 	y = 0.f;
 	angle = 0.f;
 	scale = 1.f;
-	blend = BLEND_ALPHA;
 	flipX = false;
 	flipY = false;
 	pixelpos = true;
@@ -1034,6 +1123,13 @@ Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * s
 	m_animFramef = 0.f;
 	m_animFrame = 0;
 	animSpeed = 1.f;
+
+	if (m_anim->m_hasSheet)
+	{
+		this->pivotX = (float)m_anim->m_pivot[0];
+		this->pivotY = (float)m_anim->m_pivot[1];
+		this->scale = (float)m_anim->m_scale;
+	}
 	
 	// texture
 	m_texture = &g_textureCache.findOrCreate(filename, m_anim->m_gridSize[0], m_anim->m_gridSize[1]);
@@ -1048,15 +1144,13 @@ Sprite::~Sprite()
 
 void Sprite::draw()
 {
-	drawEx(x, y, angle, scale, blend, pixelpos, filter);
+	drawEx(x, y, angle, scale, pixelpos, filter);
 }
 
-void Sprite::drawEx(float x, float y, float angle, float scale, BLEND_MODE blendMode, bool pixelpos, TEXTURE_FILTER filter)
+void Sprite::drawEx(float x, float y, float angle, float scale, bool pixelpos, TEXTURE_FILTER filter)
 {
 	if (m_texture->textures)
 	{
-		setBlend(blendMode);
-		
 		glPushMatrix();
 		{
 			if (pixelpos)
@@ -1310,7 +1404,7 @@ void Sprite::processAnimationTriggersForFrame(int frame, int event)
 			args.setInt("x", args.getInt("x", 0) + (int)this->x);
 			args.setInt("y", args.getInt("y", 0) + (int)this->y);
 			
-			framework.processAction(trigger.action, args);
+			framework.processActions(trigger.action, args);
 		}
 	}
 }
@@ -1712,7 +1806,7 @@ void Ui::process()
 				Dictionary & d = m_ui->map[m_down];
 				const std::string action = d.getString("action", "");
 				if (!action.empty())
-					framework.processAction(action, d);
+					framework.processActions(action, d);
 			}
 			m_down.clear();
 		}
@@ -1756,13 +1850,50 @@ static int stackSize = 0;
 
 static void setSurface(Surface * surface)
 {
-	const GLuint buffer = surface ? surface->getFramebuffer() : 0;
-	const int sx = surface ? surface->getWidth() / framework.minification : g_globals.g_displaySize[0] / framework.minification;
-	const int sy = surface ? surface->getHeight() / framework.minification : g_globals.g_displaySize[1] / framework.minification;
+	if (surface)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, surface->getFramebuffer());
+		glViewport(0, 0, surface->getWidth() / framework.minification, surface->getHeight() / framework.minification);
 	
-	glBindFramebuffer(GL_FRAMEBUFFER, buffer);
-	glViewport(0, 0, sx, sy);
+		glMatrixMode(GL_PROJECTION);
+		{
+			glLoadIdentity();
+		
+			// flip Y axis so the vertical axis runs top to bottom
+			glScalef(1.f, -1.f, 1.f);
+		
+			// convert from (0,0),(1,1) to (-1,-1),(+1+1)
+			glTranslatef(-1.f, -1.f, 0.f);
+			glScalef(2.f, 2.f, 1.f);
+			
+			// convert from (0,0),(sx,sy) to (0,0),(1,1)
+			glScalef(1.f / surface->getWidth(), 1.f / surface->getHeight(), 1.f);
+		}
+	}
+	else
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glViewport(0, 0, g_globals.g_displaySize[0] / framework.minification, g_globals.g_displaySize[1] / framework.minification);
 	
+		glMatrixMode(GL_PROJECTION);
+		{
+			glLoadIdentity();
+		
+			// flip Y axis so the vertical axis runs top to bottom
+			glScalef(1.f, -1.f, 1.f);
+		
+			// convert from (0,0),(1,1) to (-1,-1),(+1+1)
+			glTranslatef(-1.f, -1.f, 0.f);
+			glScalef(2.f, 2.f, 1.f);
+			
+			// convert from (0,0),(sx,sy) to (0,0),(1,1)
+			glScalef(1.f / g_globals.g_displaySize[0], 1.f / g_globals.g_displaySize[1], 1.f);
+		}
+	}
+	
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
 	//GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT0 };
 	//glDrawBuffers(1, drawBuffers);
 }
@@ -1817,12 +1948,12 @@ void setBlend(BLEND_MODE blendMode)
 	case BLEND_ADD:
 		glEnable(GL_BLEND);
 		glBlendEquation(GL_FUNC_ADD);
-		glBlendFunc(GL_ONE, GL_ONE);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 		break;
 	case BLEND_SUBTRACT:
 		glEnable(GL_BLEND);
-		glBlendEquation(GL_FUNC_SUBTRACT);
-		glBlendFunc(GL_ONE, GL_ONE);
+		glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 		break;
 	case BLEND_INVERT:
 		glEnable(GL_BLEND);
@@ -1926,6 +2057,18 @@ void drawLine(float x1, float y1, float x2, float y2)
 void drawRect(float x1, float y1, float x2, float y2)
 {
 	glBegin(GL_QUADS);
+	{
+		glTexCoord2f(0.f, 1.f); glVertex2f(x1, y1);
+		glTexCoord2f(1.f, 1.f); glVertex2f(x2, y1);
+		glTexCoord2f(1.f, 0.f); glVertex2f(x2, y2);
+		glTexCoord2f(0.f, 0.f); glVertex2f(x1, y2);
+	}
+	glEnd();
+}
+
+void drawRectLine(float x1, float y1, float x2, float y2)
+{
+	glBegin(GL_LINE_LOOP);
 	{
 		glTexCoord2f(0.f, 1.f); glVertex2f(x1, y1);
 		glTexCoord2f(1.f, 1.f); glVertex2f(x2, y1);
@@ -2056,6 +2199,7 @@ void drawText(float x, float y, int size, float alignX, float alignY, const char
 	vsprintf_s(text, sizeof(text), format, args);
 	va_end(args);
 	
+	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
 	{
 		float sx, sy;
@@ -2078,8 +2222,13 @@ void changeDirectory(const char * path)
 
 #if ENABLE_LOGGING
 
+static int logLevel = 0;
+
 void logDebug(const char * format, ...)
 {
+	if (logLevel > 0)
+		return;
+
 	char text[1024];
 	va_list args;
 	va_start(args, format);
@@ -2091,6 +2240,9 @@ void logDebug(const char * format, ...)
 
 void log(const char * format, ...)
 {
+	if (logLevel > 1)
+		return;
+
 	char text[1024];
 	va_list args;
 	va_start(args, format);
@@ -2102,6 +2254,9 @@ void log(const char * format, ...)
 
 void logWarning(const char * format, ...)
 {
+	if (logLevel > 2)
+		return;
+
 	char text[1024];
 	va_list args;
 	va_start(args, format);
@@ -2113,6 +2268,9 @@ void logWarning(const char * format, ...)
 
 void logError(const char * format, ...)
 {
+	if (logLevel > 3)
+		return;
+
 	char text[1024];
 	va_list args;
 	va_start(args, format);

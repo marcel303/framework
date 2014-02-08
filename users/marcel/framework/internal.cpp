@@ -306,7 +306,7 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type)
 	}
 	else
 	{
-		shader = glCreateShader(GL_FRAGMENT_SHADER);
+		shader = glCreateShader(type);
 		
 		glShaderSource(shader, 1, (const GLchar**)&bytes, &numBytes);
 		checkErrorGL();
@@ -474,8 +474,10 @@ AnimCacheElem::AnimCacheElem()
 
 void AnimCacheElem::free()
 {
+	m_hasSheet = false;
 	m_gridSize[0] = m_gridSize[1] = 1;
 	m_pivot[0] = m_pivot[1] = 0;
+	m_scale = 1.f;
 	m_animMap.clear();
 }
 
@@ -507,6 +509,15 @@ void splitString(const std::string & str, std::vector<std::string> & result)
 	}
 }
 
+void splitString(const std::string & str, std::vector<std::string> & result, char c)
+{
+	std::string s = str;
+	for (size_t i = 0; i < s.size(); ++i)
+		if (s[i] == c)
+			s[i] = ' ';
+	splitString(s, result);
+}
+
 void AnimCacheElem::load(const char * filename)
 {
 	free();
@@ -518,9 +529,9 @@ void AnimCacheElem::load(const char * filename)
 		//logError("%s: failed to open file!", filename);
 	}
 	else
-	{	
+	{
 		Anim * currentAnim = 0;
-		
+
 		std::string line;
 		
 		while (r.read(line))
@@ -586,10 +597,12 @@ void AnimCacheElem::load(const char * filename)
 					logError("%s: grid size must be > 0: %s", filename, line.c_str());
 					continue;
 				}
+				m_hasSheet = true;
 				m_gridSize[0] = gridSx;
 				m_gridSize[1] = gridSy;
 				m_pivot[0] = args.getInt("pivot_x", 0);
 				m_pivot[1] = args.getInt("pivot_y", 0);
+				m_scale = args.getFloat("scale", 1.f);
 			}
 			else if (section == "animation")
 			{
