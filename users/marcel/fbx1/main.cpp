@@ -13,6 +13,10 @@
 
 static bool logEnabled = false;
 
+static Mat4x4 MatrixTranslation(const Vec3 & v);
+static Mat4x4 MatrixRotation(const Vec3 & v);
+static Mat4x4 MatrixScaling(const Vec3 & v);
+
 static int getTimeMS()
 {
 	return clock() * 1000 / CLOCKS_PER_SEC;
@@ -134,18 +138,6 @@ public:
 class FbxMesh : public FbxObject
 {
 public:
-	Mat4x4 transform;
-	
-	std::vector<float> vertices;
-	std::vector<int> vertexIndices;
-	std::vector<float> normals;
-	std::vector<float> uvs;
-	std::vector<int> uvIndices;
-	std::vector<float> colors;
-	std::vector<int> colorIndices;
-	
-	// deformers
-	
 	struct Deformer
 	{
 		static const int kMaxEntries = 4;
@@ -179,11 +171,34 @@ public:
 			}
 			else
 			{
-				// todo: replace lowest weight < weight (if any)
+				// replace a lower weight entry (if one exists)
+				
+				int minWeightIndex = 0;
+				
+				for (int i = 1; i < numEntries; ++i)
+				{
+					if (entries[i].weight < entries[minWeightIndex].weight)
+						minWeightIndex = i;
+				}
+				
+				if (weight > entries[minWeightIndex].weight)
+				{
+					entries[minWeightIndex].index = index;
+					entries[minWeightIndex].weight = weight;
+				}
 			}
 		}
 	};
 	
+	Mat4x4 transform;
+	
+	std::vector<float> vertices;
+	std::vector<int> vertexIndices;
+	std::vector<float> normals;
+	std::vector<float> uvs;
+	std::vector<int> uvIndices;
+	std::vector<float> colors;
+	std::vector<int> colorIndices;
 	std::vector<Deformer> deformers;
 	
 	FbxMesh(const std::string & type, const std::string & name)
@@ -303,39 +318,46 @@ public:
 		{
 			const std::string name = channel.captureProperty<std::string>(0);
 			
-			if (name == "T")
+			logIndent++;
 			{
-				//log(logIndent, "translation\n");
-				
-				logIndent++;
-				{
+				if (name == "T")
 					T.read(logIndent, channel);
-				}
-				logIndent--;
-				
-			}
-			else if (name == "R")
-			{
-				//log(logIndent, "rotation\n");
-				
-				logIndent++;
-				{
+				if (name == "R")
 					R.read(logIndent, channel);
-				}
-				logIndent--;
-			}
-			else if (name == "S")
-			{
-				//log(logIndent, "scale\n");
-				
-				logIndent++;
-				{
+				if (name == "S")
 					S.read(logIndent, channel);
-				}
-				logIndent--;
 			}
+			logIndent--;
 		}
 	}
+	
+	bool evaluate(int64_t timeStamp, Mat4x4 & result)
+	{
+		Vec3 translation(0.f, 0.f, 0.f);
+		Vec3 rotation(0.f, 0.f, 0.f);
+		Vec3 scale(1.f, 1.f, 1.f);
+		
+		if (T.X.keys.size() != 0) translation[0] = T.X.keys[0].value;
+		if (T.Y.keys.size() != 0) translation[1] = T.Y.keys[0].value;
+		if (T.Z.keys.size() != 0) translation[2] = T.Z.keys[0].value;
+		if (R.X.keys.size() != 0) rotation[0] = R.X.keys[0].value;
+		if (R.Y.keys.size() != 0) rotation[1] = R.Y.keys[0].value;
+		if (R.Z.keys.size() != 0) rotation[2] = R.Z.keys[0].value;
+		if (S.X.keys.size() != 0) scale[0] = S.X.keys[0].value;
+		if (S.Y.keys.size() != 0) scale[1] = S.Y.keys[0].value;
+		if (S.Z.keys.size() != 0) scale[2] = S.Z.keys[0].value;
+		
+		result = MatrixTranslation(translation) * MatrixRotation(rotation) * MatrixScaling(scale);
+		
+		return true;
+	}
+};
+
+class FbxAnim
+{
+public:
+	std::string name;
+	std::map<std::string, FbxTransformChannel> transforms;
 };
 
 //
@@ -564,6 +586,7 @@ public:
 				v.bi[j] = 0;
 				v.bw[j] = 0;
 			}
+			v.bw[0] = 255;
 		}
 		m_indices = vertexIndices;
 		return;
@@ -823,7 +846,6 @@ int main(int argc, char * argv[])
 	logEnabled = true;
 	
 	typedef std::vector<FbxObject*> ObjectList;
-	ObjectList objectList;
 	typedef std::map<std::string, FbxObject*> ObjectsByName;
 	ObjectsByName objectsByName;
 	
@@ -1082,15 +1104,8 @@ int main(int argc, char * argv[])
 				FbxDeformer * fbxDeformer = new FbxDeformer(objectName);
 				fbxObject = fbxDeformer;
 				
-				// deformer = bone with vertex indices + weights
-				
-				// todo: reference the connections table to determine which mesh to deform
-				
-				// string: <name>
-				// string: <type>
-				
-				std::string name = deformer.captureProperty<std::string>(0);
-				std::string type = deformer.captureProperty<std::string>(1);
+				//std::string name = deformer.captureProperty<std::string>(0);
+				//std::string type = deformer.captureProperty<std::string>(1);
 				
 				// type = Cluster, Skin
 				
@@ -1113,7 +1128,6 @@ int main(int argc, char * argv[])
 				if (objectsByName.count(fbxObject->name) == 0)
 				{
 					objectsByName[fbxObject->name] = fbxObject;
-					objectList.push_back(fbxObject);
 				}
 				else
 				{
@@ -1121,31 +1135,6 @@ int main(int argc, char * argv[])
 					delete fbxObject;
 				}
 			}
-		}
-	}
-	
-	// relations
-	
-	FbxRecord relations = reader.firstRecord("Relations");
-	
-	for (FbxRecord relation = relations.firstChild(); relation.isValid(); relation = relation.nextSibling())
-	{
-		std::vector<std::string> properties = relation.captureProperties<std::string>();
-		
-		if (properties.size() >= 2)
-		{
-			const std::string & object = properties[0];
-			const std::string & type = properties[1];
-			
-			(void)object;
-			(void)type;
-			
-			/*
-			log(logIndent, "relation record=%s, object=%s, type=%s\n",
-				relation.name.c_str(),
-				object.c_str(),
-				type.c_str());
-			*/
 		}
 	}
 	
@@ -1191,11 +1180,18 @@ int main(int argc, char * argv[])
 	
 	FbxRecord takes = reader.firstRecord("Takes");
 	
+	std::list<FbxAnim> anims;
+	
 	logIndent++;
 	
 	for (FbxRecord take = takes.firstChild("Take"); take.isValid(); take = take.nextSibling("Take"))
 	{
 		const std::string name = take.captureProperty<std::string>(0);
+		
+		anims.push_back(FbxAnim());
+		FbxAnim & anim = anims.back();
+		
+		anim.name = name;
 		
 		log(logIndent, "take: %s\n", name.c_str());
 		
@@ -1209,7 +1205,7 @@ int main(int argc, char * argv[])
 		{
 			std::string modelName = model.captureProperty<std::string>(0);
 			
-			//log(logIndent, "model: %s\n", modelName.c_str());
+			log(logIndent, "model: %s\n", modelName.c_str());
 			
 			logIndent++;
 			
@@ -1221,10 +1217,10 @@ int main(int argc, char * argv[])
 				
 				if (channelName == "Transform")
 				{
-					FbxTransformChannel transformChannel;
-					
 					logIndent++;
 					{
+						FbxTransformChannel & transformChannel = anim.transforms[modelName];
+						
 						transformChannel.read(logIndent, channel);
 					}
 					logIndent--;
@@ -1243,9 +1239,9 @@ int main(int argc, char * argv[])
 	
 	ObjectList garbage;
 	
-	for (ObjectList::iterator i = objectList.begin(); i != objectList.end(); ++i)
+	for (ObjectsByName::iterator i = objectsByName.begin(); i != objectsByName.end(); ++i)
 	{
-		FbxObject * object = *i;
+		FbxObject * object = i->second;
 		
 		bool isDead = true;
 		
@@ -1273,7 +1269,6 @@ int main(int argc, char * argv[])
 	}
 	
 	garbage.clear();
-	objectList.clear();
 	
 	// apply deformers to meshes
 	
@@ -1295,18 +1290,6 @@ int main(int argc, char * argv[])
 			
 			FbxMesh * mesh = 0;
 			
-		#if 0
-			for (size_t j = 0; j < deformer->children.size(); ++j)
-			{
-				FbxObject * child = deformer->children[j];
-				
-				if (child->type == "Mesh")
-				{
-					mesh = static_cast<FbxMesh*>(child);
-					break;
-				}
-			}
-		#else
 			for (FbxObject * parent = deformer->parent; parent != 0; parent = parent->parent)
 			{
 				if (parent->type == "Mesh")
@@ -1315,7 +1298,6 @@ int main(int argc, char * argv[])
 					break;
 				}
 			}
-		#endif
 			
 			if (mesh != 0)
 			{
@@ -1347,7 +1329,53 @@ int main(int argc, char * argv[])
 		}
 	}
 	
-	//logEnabled = false;
+	// resolve animation targets
+	
+	for (std::list<FbxAnim>::iterator i = anims.begin(); i != anims.end(); ++i)
+	{
+		FbxAnim & anim = *i;
+		
+		for (std::map<std::string, FbxTransformChannel>::iterator t = anim.transforms.begin(); t != anim.transforms.end(); ++t)
+		{
+			const std::string & modelName = t->first;
+			
+			ObjectsByName::iterator m = objectsByName.find(modelName);
+			
+			if (m == objectsByName.end() || m->second->type != "Mesh")
+			{
+				log(logIndent, "error: model doesn't exist: %s\n", modelName.c_str());
+			}
+			else
+			{
+				// todo: get deformer index based on mesh
+				
+				FbxMesh * mesh = static_cast<FbxMesh*>(m->second);
+				
+				int deformerIndex = 0;
+				
+				if (!mesh->parent || mesh->parent->type != "Deformer")
+				{
+					log(logIndent, "error: deformer doesn't exist for model %s\n", modelName.c_str());
+				}
+				else
+				{
+					//log(logIndent, "found deformer for model %s\n", modelName.c_str());
+					
+					FbxDeformer * deformer = static_cast<FbxDeformer*>(mesh->parent);
+					
+					for (size_t j = 0; j < deformers.size(); ++j)
+					{
+						if (deformers[j] == deformer)
+							deformerIndex = j;
+					}
+				}
+				
+				log(logIndent, "deformer index for %s: %d\n", modelName.c_str(), deformerIndex);
+			}
+		}
+	}
+
+	logEnabled = false;
 	
 	// finalize meshes by invoking the powers of the awesome vertex welding machine
 	
@@ -1401,7 +1429,7 @@ int main(int argc, char * argv[])
 		for (size_t i = 0; i < deformers.size(); ++i)
 		{
 			const FbxDeformer * deformer = deformers[i];
-			const std::string & deformerName = deformer->children[0]->name;
+			const std::string & deformerName = deformer->children.size() >= 1 ? deformer->children[0]->name : "";
 			if (pose->matrices.count(deformerName) != 0)
 				deformerMatrices[i] = pose->matrices[deformerName].CalcInv();
 			else
@@ -1561,13 +1589,15 @@ int main(int argc, char * argv[])
 				{
 					boneToObjectMatrices[boneIndex] = deformerMatrices[boneIndex].CalcInv();
 					
-					Mat4x4 rot;
-					rot.MakeRotationX(r * boneIndex / 200.f);
-					boneToObjectMatrices[boneIndex] = boneToObjectMatrices[boneIndex] * rot;
+					Mat4x4 rotX;
+					Mat4x4 rotY;
+					rotX.MakeRotationX(r * (1.f + boneIndex / 5.f) / 210.f);
+					rotY.MakeRotationY(r * (1.f + boneIndex / 5.f) / 321.f);
+					boneToObjectMatrices[boneIndex] = boneToObjectMatrices[boneIndex] * rotY * rotX;
 					
-					boneToObjectMatrices[boneIndex](3,0) += sin(M_PI * r/180.f * boneIndex / 1.23f) * 10.f;
-					boneToObjectMatrices[boneIndex](3,1) += sin(M_PI * r/180.f * boneIndex / 2.34f) * 10.f;
-					boneToObjectMatrices[boneIndex](3,2) += sin(M_PI * r/180.f * boneIndex / 3.45f) * 10.f;
+					boneToObjectMatrices[boneIndex](3,0) += sin(r/360.f * boneIndex / 1.23f) * 10.f;
+					boneToObjectMatrices[boneIndex](3,1) += sin(r/360.f * boneIndex / 2.34f) * 10.f;
+					boneToObjectMatrices[boneIndex](3,2) += sin(r/360.f * boneIndex / 3.45f) * 10.f;
 				}
 				
 				for (size_t i = 0; i < mesh.m_indices.size(); ++i)
@@ -1595,7 +1625,7 @@ int main(int argc, char * argv[])
 					const Mesh::Vertex & v = mesh.m_vertices[index];
 					
 					Vec3 p(0.f, 0.f, 0.f);
-					
+					Vec3 n(0.f, 0.f, 0.f);
 					for (int j = 0; j < 4; ++j)
 					{
 						const int boneIndex = v.bi[j];
@@ -1609,7 +1639,8 @@ int main(int argc, char * argv[])
 						const Mat4x4 & objectToBone = deformerMatrices[boneIndex];
 						const Mat4x4 & boneToObject = boneToObjectMatrices[boneIndex];
 						
-						p += ((boneToObject * objectToBone) * Vec3(v.px, v.py, v.pz)) * boneWeight;
+						p += (boneToObject * objectToBone).Mul4(Vec3(v.px, v.py, v.pz)) * boneWeight;
+						n += (boneToObject * objectToBone).Mul (Vec3(v.nx, v.ny, v.nz)) * boneWeight;
 					}
 					
 					float r = 1.f;
@@ -1617,16 +1648,20 @@ int main(int argc, char * argv[])
 					float b = 1.f;
 					
 				#if 1
-					r *= (v.nx + 1.f) / 2.f;
-					g *= (v.ny + 1.f) / 2.f;
-					b *= (v.nz + 1.f) / 2.f;
+					r *= (n[0] + 1.f) / 2.f;
+					g *= (n[1] + 1.f) / 2.f;
+					b *= (n[2] + 1.f) / 2.f;
 				#endif
 				#if 0
 					r *= v.bi[0]/25.f;
 					g *= v.bi[1]/25.f;
 					b *= v.bi[2]/25.f;
 				#endif
-				
+				#if 0
+					r *= v.tx;
+					g *= v.ty;
+				#endif
+					
 					glColor3f(r, g, b);
 					glVertex3f(p[0], p[1], p[2]);
 					
