@@ -4,7 +4,7 @@ CFLAGS = -Wall -Wextra -Werror -ansi -pedantic -O2
 LFLAGS = -lstdc++
 
 all : $(EXE)
-	./fbx
+	./fbx test2.fbx
 
 $(EXE) : $(OBJS)
 	gcc -o $(EXE) $(OBJS) $(LFLAGS)

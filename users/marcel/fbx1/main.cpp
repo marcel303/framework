@@ -1,10 +1,15 @@
 #include <assert.h>
 #include <list>
-#include <map>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <time.h>
 #include <vector>
 #include "fbx.h"
+
+static int getTimeMS()
+{
+	return clock() * 1000 / CLOCKS_PER_SEC;
+}
 
 static void log(int logIndent, const char * fmt, ...)
 {
@@ -98,47 +103,187 @@ public:
 
 //
 
+template <typename Key, typename Value, unsigned int PoolSize>
+class HashMap
+{
+	class Node
+	{
+	public:
+		Node * next;
+		unsigned int hash;
+		Key key;
+		Value value;
+	};
+	
+	class Allocator
+	{
+		class Block
+		{
+		public:
+			Block * next;
+			Node * nodes;
+			unsigned int numNodes;
+			
+			Block()
+			{
+				next = 0;
+				nodes = (Node*)malloc(sizeof(Node) * PoolSize);
+				numNodes = 0;
+			}
+			
+			~Block()
+			{
+				free(nodes);
+				nodes = 0;
+			}
+			
+			Node * alloc()
+			{
+				return &nodes[numNodes++];
+			}
+		};
+		
+		void newBlock()
+		{
+			Block * block = new Block();
+			block->next = currentBlock;
+			currentBlock = block;
+		}
+		
+		Block * currentBlock;
+		
+	public:
+		Allocator()
+		{
+			currentBlock = 0;
+		}
+		
+		~Allocator()
+		{
+			Block * block = currentBlock;
+			
+			while (block != 0)
+			{
+				Block * next = block->next;
+				delete block;
+				block = next;
+			}
+		}
+		
+		Node * alloc()
+		{
+			if (!currentBlock)
+			{
+				newBlock();
+			}
+			
+			Node * node = currentBlock->alloc();
+			
+			if (currentBlock->numNodes == PoolSize)
+			{
+				currentBlock = 0;
+			}
+			
+			return node;
+		}
+	};
+	
+	Node ** m_buckets;
+	unsigned int m_bucketCount;
+	
+	Allocator m_nodeAlloc;
+	Node * m_currentAlloc;
+	
+	template <typename T> static unsigned int calcHash(const T & value)
+	{
+		if (sizeof(T) < 4)
+		{
+			const int numBytes = sizeof(T);
+			const uint8_t * bytes = (uint8_t*)&value;
+			
+			unsigned int result = 0;
+			
+			for (int i = 0; i < numBytes; ++i)
+				result = result * 17 + bytes[i];
+			
+			return result;
+		}
+		else
+		{
+			const int numWords = sizeof(T) >> 2;
+			const uint32_t * words = (uint32_t*)&value;
+			
+			unsigned int result = 0;
+			
+			for (int i = 0; i < numWords; ++i)
+				result = result * 982451653 + words[i];
+			
+			return result;
+		}
+	}
+	
+public:
+	HashMap(unsigned int bucketCount)
+	{
+		m_buckets = new Node*[bucketCount];
+		m_bucketCount = bucketCount;
+		for (unsigned int i = 0; i < bucketCount; ++i)
+			m_buckets[i] = 0;
+		
+		m_currentAlloc = 0;
+	}
+	
+	~HashMap()
+	{
+		delete [] m_buckets;
+		m_buckets = 0;
+	}
+	
+	Key & preAllocKey()
+	{
+		if (!m_currentAlloc)
+			m_currentAlloc = m_nodeAlloc.alloc();
+		
+		return m_currentAlloc->key;
+	}
+	
+	bool allocOrFetchValue(Value & value)
+	{
+		const unsigned int hash = calcHash(m_currentAlloc->key);
+		const unsigned int bucketIndex = hash % m_bucketCount;
+		
+		for (const Node * node = m_buckets[bucketIndex]; node != 0; node = node->next)
+		{
+			if (node->hash == hash && node->key == m_currentAlloc->key)
+			{
+				value = node->value;
+				return false;
+			}
+		}
+		
+		Node * node = m_currentAlloc;
+		m_currentAlloc = 0;
+		
+		node->next = m_buckets[bucketIndex];
+		node->hash = hash;
+		node->value = value;
+		m_buckets[bucketIndex] = node;
+		
+		return true;
+	}
+};
+
+//
+
 class Mesh
 {
 public:
 	class Vertex
 	{
 	public:
-		Vertex()
-		{
-			memset(this, 0, sizeof(Vertex));
-		}
-		
-		inline bool operator<(const Vertex & w) const
-		{
-			const float * floats1 = reinterpret_cast<const float*>(this);
-			const float * floats2 = reinterpret_cast<const float*>(&w);
-			
-			const int kNumFloats = sizeof(Vertex) / sizeof(float);
-			
-			for (int i = 0; i < kNumFloats; ++i)
-			{
-				if (floats1[i] != floats2[i])
-					return floats1[i] < floats2[i];
-			}
-			
-			return false;
-		}
-		
 		inline bool operator==(const Vertex & w) const
 		{
-			const float * floats1 = reinterpret_cast<const float*>(this);
-			const float * floats2 = reinterpret_cast<const float*>(&w);
-			
-			const int kNumFloats = sizeof(Vertex) / sizeof(float);
-			
-			for (int i = 0; i < kNumFloats; ++i)
-			{
-				if (floats1[i] != floats2[i])
-					return false;
-			}
-			
-			return true;
+			return !memcmp(this, &w, sizeof(Vertex));
 		}
 		
 		float px, py, pz;     // position
@@ -173,7 +318,13 @@ public:
 			(int)colors.size()/3,
 			(int)colorIndices.size());
 		
-		std::map<Vertex, int> weldVertices;
+		const int time1 = getTimeMS();
+		
+		m_vertices.reserve(vertices.size());
+		m_indices.reserve(vertexIndices.size());
+		
+		typedef HashMap<Vertex, int, 1000> WeldVertices;
+		WeldVertices weldVertices(vertexIndices.size() / 3);
 		
 		for (size_t i = 0; i < vertexIndices.size(); ++i)
 		{
@@ -182,24 +333,32 @@ public:
 			
 			// fill in vertex members with the available data from the various input arrays
 			
-			Vertex vertex;
+			Vertex & vertex = weldVertices.preAllocKey();
 			
 			// position
 			
-			if (vertexIndex * 3 < vertices.size())
+			if (vertexIndex < vertices.size() / 3)
 			{
 				vertex.px = vertices[vertexIndex * 3 + 0];
 				vertex.py = vertices[vertexIndex * 3 + 1];
 				vertex.pz = vertices[vertexIndex * 3 + 2];
 			}
+			else
+			{
+				vertex.px = vertex.py = vertex.pz = 0.f;
+			}
 			
 			// normal
 			
-			if (i * 3 < normals.size())
+			if (i < normals.size() / 3)
 			{
 				vertex.nx = normals[i * 3 + 0];
 				vertex.ny = normals[i * 3 + 1];
 				vertex.nz = normals[i * 3 + 2];
+			}
+			else
+			{
+				vertex.nx = vertex.ny = vertex.nz = 0.f;
 			}
 			
 			// uv
@@ -216,23 +375,27 @@ public:
 					vertex.ty = uvs[uvIndex * 2 + 1];
 				}
 			}
-			else if (uvIndices.size() == 0 && i * 2 < uvs.size())
+			else if (uvIndices.size() == 0 && i < uvs.size() / 2)
 			{
 				// non-indexed UV
 				
 				vertex.tx = uvs[i * 2 + 0];
 				vertex.ty = uvs[i * 2 + 1];
 			}
+			else
+			{
+				vertex.tx = vertex.ty = 0.f;
+			}
 			
 			// color
 			
 			if (colorIndices.size() >= vertexIndices.size())
-			{
+			{	
 				// indexed color
 				
 				const size_t colorIndex = colorIndices[i];
 				
-				if (colorIndex * 4 < colors.size())
+				if (colorIndex < colors.size() / 4)
 				{
 					vertex.cx = colors[colorIndex * 4 + 0];
 					vertex.cy = colors[colorIndex * 4 + 1];
@@ -240,7 +403,7 @@ public:
 					vertex.cw = colors[colorIndex * 4 + 3];
 				}
 			}
-			else if (colorIndices.size() == 0 && i * 4 < colors.size())
+			else if (colorIndices.size() == 0 && i < colors.size() / 4)
 			{
 				// non-indexed color
 				
@@ -249,32 +412,31 @@ public:
 				vertex.cz = colors[i * 4 + 2];
 				vertex.cw = colors[i * 4 + 3];
 			}
+			else
+			{
+				vertex.cx = vertex.cy = vertex.cz = vertex.cw = 1.f;
+			}
 			
 			// add unique vertex if it doesn't exist yet, or add an index for the existing vertex
 			
-			std::map<Vertex, int>::iterator w = weldVertices.find(vertex);
+			int weldIndex = int(m_vertices.size());
 			
-			int weldIndex;
-			
-			if (w == weldVertices.end())
+			if (weldVertices.allocOrFetchValue(weldIndex))
 			{
-				// unique vertex. allocate index and add it to the map
-				
-				weldIndex = int(weldVertices.size());
-				
-				weldVertices[vertex] = weldIndex;
+				// unique vertex. add it
 				
 				m_vertices.push_back(vertex);
 			}
 			else
 			{
-				// duplicate vertex. just take the index
-				
-				weldIndex = w->second;
+				// duplicate vertex
 			}
 			
 			m_indices.push_back(isEnd ? ~weldIndex : weldIndex);
 		}
+		
+		const int time2 = getTimeMS();
+		log(logIndent, "time: %d ms\n", time2-time1);
 		
 		log(logIndent, "output: %d vertices, %d indices\n",
 			(int)m_vertices.size(),
@@ -282,7 +444,6 @@ public:
 		
 		logIndent--;
 	}
-	
 };
 
 bool readFile(const char * filename, std::vector<uint8_t> & bytes)
@@ -354,6 +515,8 @@ int main(int argc, const char * argv[])
 	
 	log(logIndent, "-- extracting mesh data --\n");
 	
+	const int time1 = getTimeMS();
+	
 	std::list<Mesh> meshes;
 	
 	for (FbxRecord objects = reader.firstRecord("Objects"); objects.isValid(); objects = objects.nextSibling("Objects"))
@@ -391,18 +554,33 @@ int main(int argc, const char * argv[])
 				
 				logIndent++;
 				
+				std::vector<float> verticesVec;
+				std::vector<int> vertexIndicesVec;
+				std::vector<float> normalsVec;
+				std::vector<float> uvsVec;
+				std::vector<int> uvIndicesVec;
+				std::vector<float> colorsVec;
+				std::vector<int> colorIndicesVec;
+				
+				vertices.capturePropertiesAsFloat(verticesVec);
+				vertexIndices.capturePropertiesAsInt(vertexIndicesVec);
+				normals.capturePropertiesAsFloat(normalsVec);
+				uvs.capturePropertiesAsFloat(uvsVec);
+				uvIndices.capturePropertiesAsInt(uvIndicesVec);
+				colors.capturePropertiesAsFloat(colorsVec);
+				colorIndices.capturePropertiesAsInt(colorIndicesVec);
+				
 				mesh.construct(
 					logIndent,
-					vertices.captureProperties<float>(),		
-					vertexIndices.captureProperties<int>(),
-					normals.captureProperties<float>(),
-					uvs.captureProperties<float>(),
-					uvIndices.captureProperties<int>(),
-					colors.captureProperties<float>(),
-					colorIndices.captureProperties<int>());
+					verticesVec,
+					vertexIndicesVec,
+					normalsVec,
+					uvsVec,
+					uvIndicesVec,
+					colorsVec,
+					colorIndicesVec);
 				
-				// LayerElementNormal.Normals
-				// LayerElementUV.UV
+				// todo:
 				// LayerElementMaterial.Materials
 				// LayerElementTexture.TextureId
 				
@@ -410,6 +588,10 @@ int main(int argc, const char * argv[])
 			}
 		}
 	}
+	
+	const int time2 = getTimeMS();
+	
+	printf("time: %d ms\n", time2-time1);
 	
 	// dump mesh data
 	

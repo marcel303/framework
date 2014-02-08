@@ -134,6 +134,104 @@ FbxRecord FbxRecord::nextSibling(const char * name) const
 	}
 }
 
+//
+
+void FbxRecord::capturePropertiesAsInt(std::vector<int> & result) const
+{	
+	if (isValid())
+	{
+		result.resize(m_numProperties);
+		
+		size_t offset = m_propertyListOffset;
+		
+		for (size_t i = 0; i < m_numProperties; ++i)
+		{
+			size_t startOffset = offset;
+			
+			// property type
+			
+			char type;
+			m_reader->read(offset, type);
+			
+			if (type == 'Y')
+			{
+				int16_t v;
+				m_reader->read(offset, v);
+				result[i] = int(v);
+			}
+			else if (type == 'I')
+			{
+				m_reader->read(offset, result[i]);
+			}
+			else if (type == 'L')
+			{
+				int64_t v;
+				m_reader->read(offset, v);
+				result[i] = int(v);
+			}
+			else
+			{
+				offset = startOffset;
+				
+				FbxValue value;
+				
+				m_reader->readPropertyValue(offset, value);
+				
+				result[i] = get<float>(value);
+			}
+		}
+	}
+	else
+	{
+		result.clear();
+	}
+}
+
+void FbxRecord::capturePropertiesAsFloat(std::vector<float> & result) const
+{	
+	if (isValid())
+	{
+		result.resize(m_numProperties);
+		
+		size_t offset = m_propertyListOffset;
+		
+		for (size_t i = 0; i < m_numProperties; ++i)
+		{
+			size_t startOffset = offset;
+			
+			// property type
+			
+			char type;
+			m_reader->read(offset, type);
+			
+			if (type == 'F')
+			{
+				m_reader->read(offset, result[i]);
+			}
+			else if (type == 'D')
+			{
+				double v;
+				m_reader->read(offset, v);
+				result[i] = float(v);
+			}
+			else
+			{
+				offset = startOffset;
+				
+				FbxValue value;
+				
+				m_reader->readPropertyValue(offset, value);
+				
+				result[i] = get<float>(value);
+			}
+		}
+	}
+	else
+	{
+		result.clear();
+	}
+}
+
 // --------------------------------------------------------------------------------
 // FbxValue
 // --------------------------------------------------------------------------------

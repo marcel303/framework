@@ -85,6 +85,8 @@ public:
 	FbxRecord firstChild(const char * name = 0) const;
 	FbxRecord nextSibling(const char * name = 0) const;
 	template <typename T> inline std::vector<T> captureProperties() const;
+	void capturePropertiesAsInt(std::vector<int> & result) const;
+	void capturePropertiesAsFloat(std::vector<float> & result) const;
 	
 	inline size_t getStartOffset() const { return m_startOffset; }
 	inline size_t getEndOffset() const { return m_endOffset; }
