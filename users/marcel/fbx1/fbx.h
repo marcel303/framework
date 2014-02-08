@@ -85,6 +85,7 @@ public:
 	FbxRecord firstChild(const char * name = 0) const;
 	FbxRecord nextSibling(const char * name = 0) const;
 	template <typename T> inline std::vector<T> captureProperties() const;
+	template <typename T> inline T captureProperty(int index) const;
 	void capturePropertiesAsInt(std::vector<int> & result) const;
 	void capturePropertiesAsFloat(std::vector<float> & result) const;
 	
@@ -213,4 +214,27 @@ inline std::vector<T> FbxRecord::captureProperties() const
 	}
 	
 	return result;
+}
+
+template <typename T>
+inline T FbxRecord::captureProperty(int index) const
+{
+	if (isValid())
+	{
+		size_t offset = m_propertyListOffset;
+		
+		for (size_t i = 0; i < m_numProperties; ++i)
+		{
+			FbxValue value;
+			
+			m_reader->readPropertyValue(offset, value);
+			
+			if (int(i) == index)
+			{
+				return get<T>(value);
+			}
+		}
+	}
+	
+	return T();
 }

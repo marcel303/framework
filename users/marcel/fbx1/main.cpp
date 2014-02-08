@@ -6,6 +6,13 @@
 #include <vector>
 #include "fbx.h"
 
+#include <map>
+#include <SDL/SDL.h>
+#include <SDL/SDL_opengl.h>
+#include "Mat4x4.h"
+
+static bool logEnabled = false;
+
 static int getTimeMS()
 {
 	return clock() * 1000 / CLOCKS_PER_SEC;
@@ -13,19 +20,22 @@ static int getTimeMS()
 
 static void log(int logIndent, const char * fmt, ...)
 {
-	va_list va;
-	va_start(va, fmt);
-	
-	char tabs[128];
-	for (int i = 0; i < logIndent; ++i)
-		tabs[i] = '\t';
-	tabs[logIndent] = 0;
-	
-	char temp[1024];
-	vsprintf(temp, fmt, va);
-	va_end(va);
-	
-	printf("%s%s", tabs, temp);
+	if (logEnabled)
+	{
+		va_list va;
+		va_start(va, fmt);
+		
+		char tabs[128];
+		for (int i = 0; i < logIndent; ++i)
+			tabs[i] = '\t';
+		tabs[logIndent] = 0;
+		
+		char temp[1024];
+		vsprintf(temp, fmt, va);
+		va_end(va);
+		
+		printf("%s%s", tabs, temp);
+	}
 }
 
 class FbxFileLogger
@@ -97,6 +107,200 @@ public:
 			case FbxValue::TYPE_INVALID:
 				log(m_logIndent, "(invalid)\n");
 				break;
+		}
+	}
+};
+
+//
+
+class FbxObject
+{
+public:
+	FbxObject(const std::string & type, const std::string & name)
+	{
+		this->type = type;
+		this->name = name;
+		parent = 0;
+	}
+	
+	std::string type;
+	std::string name;
+	FbxObject * parent;
+	std::vector<FbxObject*> children;
+};
+
+class FbxMesh : public FbxObject
+{
+public:
+	Mat4x4 transform;
+	
+	std::vector<float> vertices;
+	std::vector<int> vertexIndices;
+	std::vector<float> normals;
+	std::vector<float> uvs;
+	std::vector<int> uvIndices;
+	std::vector<float> colors;
+	std::vector<int> colorIndices;
+	
+	// deformers
+	
+	struct Deformer
+	{
+		struct Entry
+		{
+			int index;
+			float weight;
+		};
+		
+		std::vector<Entry> entries;
+		
+		void add(int index, float weight)
+		{
+			Entry entry;
+			entry.index = index;
+			entry.weight = weight;
+			entries.push_back(entry);
+		}
+	};
+	
+	std::vector<Deformer> deformers;
+	
+	FbxMesh(const std::string & type, const std::string & name)
+		: FbxObject("Mesh", name)
+	{
+	}
+};
+
+class FbxDeformer : public FbxObject
+{
+public:
+	std::vector<int> indices;
+	std::vector<float> weights;
+	
+	FbxDeformer(const std::string & name)
+		: FbxObject("Deformer", name)
+	{
+	}
+};
+
+class FbxTransformChannel
+{
+public:
+	class RegularChannel
+	{
+	public:
+		struct Key
+		{
+			int64_t timeStamp;
+			float value;
+		};
+		
+		struct KeyList
+		{
+			std::vector<Key> keys;
+			
+			void read(int & logIndent, const FbxRecord & record)
+			{
+				const int keyCount = record.firstChild("KeyCount").captureProperty<int>(0);
+				
+				if (keyCount != 0)
+				{
+					const FbxRecord key = record.firstChild("Key");
+					const std::vector<FbxValue> values = key.captureProperties<FbxValue>();
+					const int stride = int(values.size()) / keyCount;
+					
+					//log(logIndent, "keyCount=%d\n", keyCount);
+					
+					for (size_t i = 0; i + stride <= values.size(); i += stride)
+					{
+						Key temp;
+						temp.timeStamp = get<int64_t>(values[i + 0]);
+						temp.value = get<float>(values[i + 1]);
+						
+						// round with a fixed precision so small floating point drift is eliminated from the exported values
+						temp.value = int(temp.value * 1000.f + .5f) / 1000.f;
+						
+						// don't write duplicate values, unless it's the first/last key in the list. exporters sometimes write a fixed number of keys (sampling based), with lots of duplicates
+						const bool isDuplicate = keys.size() >= 1 && keys.back().value == temp.value && i + stride != values.size();
+						
+						if (!isDuplicate)
+						{
+							keys.push_back(temp);
+						
+							//log(logIndent, "%014lld -> %f\n", temp.timeStamp, temp.value);
+						}
+					}
+				}
+			}
+		};
+		
+		KeyList X;
+		KeyList Y;
+		KeyList Z;
+		
+		void read(int & logIndent, const FbxRecord & record)
+		{
+			for (FbxRecord channel = record.firstChild("Channel"); channel.isValid(); channel = channel.nextSibling("Channel"))
+			{
+				const std::string name = channel.captureProperty<std::string>(0);
+				
+				//log(logIndent, "stream: name=%s\n", name.c_str());
+				
+				logIndent++;
+				{
+					if (name == "X")
+						X.read(logIndent, channel);
+					if (name == "Y")
+						Y.read(logIndent, channel);
+					if (name == "Z")
+						Z.read(logIndent, channel);
+				}
+				logIndent--;
+			}
+		}
+	};
+	
+	RegularChannel T;
+	RegularChannel R;
+	RegularChannel S;
+	
+	void read(int & logIndent, const FbxRecord & record)
+	{
+		for (FbxRecord channel = record.firstChild("Channel"); channel.isValid(); channel = channel.nextSibling("Channel"))
+		{
+			const std::string name = channel.captureProperty<std::string>(0);
+			
+			if (name == "T")
+			{
+				//log(logIndent, "translation\n");
+				
+				logIndent++;
+				{
+					T.read(logIndent, channel);
+				}
+				logIndent--;
+				
+			}
+			else if (name == "R")
+			{
+				//log(logIndent, "rotation\n");
+				
+				logIndent++;
+				{
+					R.read(logIndent, channel);
+				}
+				logIndent--;
+			}
+			else if (name == "S")
+			{
+				//log(logIndent, "scale\n");
+				
+				logIndent++;
+				{
+					S.read(logIndent, channel);
+				}
+				logIndent--;
+			}
 		}
 	}
 };
@@ -290,7 +494,12 @@ public:
 		float nx, ny, nz;     // normal
 		float tx, ty;         // texture
 		float cx, cy, cz, cw; // color
+		
+		uint8_t bi[4]; // blend indices
+		uint8_t bw[4]; // blend weights
 	};
+	
+	Mat4x4 m_transform;
 	
 	std::vector<Vertex> m_vertices;
 	std::vector<int> m_indices;
@@ -303,8 +512,25 @@ public:
 		const std::vector<float> & uvs,
 		const std::vector<int> & uvIndices,
 		const std::vector<float> & colors,
-		const std::vector<int> & colorIndices)
+		const std::vector<int> & colorIndices,
+		const std::vector<FbxMesh::Deformer> & deformers)
 	{
+		#if 0
+		m_vertices.resize(vertices.size() / 3);
+		for (size_t i = 0; i < vertices.size() / 3; ++i)
+		{
+			Vertex & v = m_vertices[i];
+			v.px = vertices[i * 3 + 0];
+			v.py = vertices[i * 3 + 1];
+			v.pz = vertices[i * 3 + 2];
+			v.nx = v.ny = v.nz = 0.f;
+			v.tx = v.ty = 0.f;
+			v.cx = v.cy = v.cz = v.cw = 1.f;
+		}
+		m_indices = vertexIndices;
+		return;
+		#endif
+		
 		log(logIndent, "-- running da welding machine! --\n");
 		
 		logIndent++;
@@ -417,6 +643,23 @@ public:
 				vertex.cx = vertex.cy = vertex.cz = vertex.cw = 1.f;
 			}
 			
+			// deformers
+			
+			const int numDeformers = vertexIndex >= deformers.size() ? 0 : deformers[vertexIndex].entries.size() < 4 ? deformers[vertexIndex].entries.size() : 4;
+			
+			for (int d = 0; d < numDeformers; ++d)
+			{
+				vertex.bi[d] = deformers[vertexIndex].entries[d].index;
+				vertex.bw[d] = deformers[vertexIndex].entries[d].weight * 255.f;
+				
+				//printf("added %d, %d\n", vertex.bi[d], vertex.bi[d]);
+			}
+			for (int d = numDeformers; d < 4; ++d)
+			{
+				vertex.bi[d] = 0;
+				vertex.bw[d] = 0;
+			}
+			
 			// add unique vertex if it doesn't exist yet, or add an index for the existing vertex
 			
 			int weldIndex = int(m_vertices.size());
@@ -466,13 +709,37 @@ bool readFile(const char * filename, std::vector<uint8_t> & bytes)
 	return true;
 }
 
-int main(int argc, const char * argv[])
+static Mat4x4 MatrixTranslation(const Vec3 & v)
+{
+	Mat4x4 t;
+	t.MakeTranslation(v);
+	return t;
+}
+
+static Mat4x4 MatrixRotation(const Vec3 & v)
+{
+	Mat4x4 x, y, z;
+	x.MakeRotationX(v[0] * M_PI / 180.f);
+	y.MakeRotationY(v[1] * M_PI / 180.f);
+	z.MakeRotationZ(v[2] * M_PI / 180.f);
+	return x * y * z;
+}
+
+static Mat4x4 MatrixScaling(const Vec3 & v)
+{
+	Mat4x4 s;
+	s.MakeScaling(v);
+	return s;
+}
+
+int main(int argc, char * argv[])
 {
 	int logIndent = 0;
 	
 	// parse command line
 	
 	bool dumpMeshes = false;
+	bool drawMeshes = false;
 	bool verbose = false;
 	const char * filename = "test.fbx";
 	
@@ -482,6 +749,8 @@ int main(int argc, const char * argv[])
 			verbose = true;
 		else if (!strcmp(argv[i], "-m"))
 			dumpMeshes = true;
+		else if (!strcmp(argv[i], "-d"))
+			drawMeshes = true;
 		else
 			filename = argv[i];
 	}
@@ -511,81 +780,558 @@ int main(int argc, const char * argv[])
 		logger.dumpFileContents();
 	}
 	
+	// build FBX object list
+	
+	logEnabled = true;
+	
+	typedef std::vector<FbxObject*> ObjectList;
+	ObjectList objectList;
+	typedef std::map<std::string, FbxObject*> ObjectsByName;
+	ObjectsByName objectsByName;
+	
+	FbxObject * scene = new FbxObject("Scene", "Scene");
+	objectsByName[scene->name] = scene;
+	
 	// extract meshes
 	
 	log(logIndent, "-- extracting mesh data --\n");
 	
 	const int time1 = getTimeMS();
 	
-	std::list<Mesh> meshes;
+	std::vector<FbxMesh*> fbxMeshes;
 	
 	for (FbxRecord objects = reader.firstRecord("Objects"); objects.isValid(); objects = objects.nextSibling("Objects"))
 	{
-		// Model, Pose, Material, Texture, ..
-		
-		for (FbxRecord model = objects.firstChild("Model"); model.isValid(); model = model.nextSibling("Model"))
+		for (FbxRecord object = objects.firstChild(); object.isValid(); object = object.nextSibling())
 		{
-			std::vector<std::string> modelProps = model.captureProperties<std::string>();
-			
-			if (modelProps.size() >= 2 && modelProps[1] == "Mesh")
+			FbxObject * fbxObject = 0;
+		
+			std::vector<std::string> objectProps = object.captureProperties<std::string>();
+			const std::string objectName = objectProps.size() >= 1 ? objectProps[0] : "";
+			const std::string objectType = objectProps.size() >= 2 ? objectProps[1] : "";
+				
+			if (object.name == "Model")
 			{
-				meshes.push_back(Mesh());
-				Mesh & mesh = meshes.back();
+				const FbxRecord & model = object;
 				
-				const FbxRecord vertices = model.firstChild("Vertices");
-				const FbxRecord vertexIndices = model.firstChild("PolygonVertexIndex");
-				
-				const FbxRecord normalsLayer = model.firstChild("LayerElementNormal");
-				const FbxRecord normals = normalsLayer.firstChild("Normals");
-				
-				const FbxRecord uvsLayer = model.firstChild("LayerElementUV");
-				const FbxRecord uvs = uvsLayer.firstChild("UV");
-				const FbxRecord uvIndices = uvsLayer.firstChild("UVIndex");
-				
-				const FbxRecord colorsLayer = model.firstChild("LayerElementColor");
-				const FbxRecord colors = colorsLayer.firstChild("Colors");
-				const FbxRecord colorIndices = colorsLayer.firstChild("ColorIndex");
-				
-				log(logIndent, "found a mesh! name: %s, hasVertices: %d, hasNormals: %d, hasUVs: %d\n",
-					modelProps[0].c_str(),
-					vertices.isValid(),
-					normals.isValid(),
-					uvs.isValid());
-				
-				logIndent++;
-				
-				std::vector<float> verticesVec;
-				std::vector<int> vertexIndicesVec;
-				std::vector<float> normalsVec;
-				std::vector<float> uvsVec;
-				std::vector<int> uvIndicesVec;
-				std::vector<float> colorsVec;
-				std::vector<int> colorIndicesVec;
-				
-				vertices.capturePropertiesAsFloat(verticesVec);
-				vertexIndices.capturePropertiesAsInt(vertexIndicesVec);
-				normals.capturePropertiesAsFloat(normalsVec);
-				uvs.capturePropertiesAsFloat(uvsVec);
-				uvIndices.capturePropertiesAsInt(uvIndicesVec);
-				colors.capturePropertiesAsFloat(colorsVec);
-				colorIndices.capturePropertiesAsInt(colorIndicesVec);
-				
-				mesh.construct(
-					logIndent,
-					verticesVec,
-					vertexIndicesVec,
-					normalsVec,
-					uvsVec,
-					uvIndicesVec,
-					colorsVec,
-					colorIndicesVec);
-				
-				// todo:
-				// LayerElementMaterial.Materials
-				// LayerElementTexture.TextureId
-				
-				logIndent--;
+				if (objectType == "Mesh")
+				{
+					FbxMesh * mesh = new FbxMesh("Mesh", objectName);
+					fbxObject = mesh;
+					fbxMeshes.push_back(mesh); // fixme, remove?
+					
+					FbxRecord properties = model.firstChild("Properties60");
+					
+					class Float3 : public Vec3
+					{
+					public:
+						Float3(float x, float y, float z)
+							: Vec3(x, y, z)
+						{
+						}
+						
+						void load(const std::vector<FbxValue> & values)
+						{
+							if (values.size() >= 4) (*this)[0] = values[3].getDouble();
+							if (values.size() >= 5) (*this)[1] = values[4].getDouble();
+							if (values.size() >= 6) (*this)[2] = values[5].getDouble();
+						}
+					};
+					
+					Float3 translationLocal(0.f, 0.f, 0.f);
+					Float3 rotationOffset(0.f, 0.f, 0.f); // translation offset for rotation pivot
+					Float3 rotationPivot(0.f, 0.f, 0.f); // center of rotation relative to node origin
+					Float3 rotationPre(0.f, 0.f, 0.f); // rotation applied before animation rotation
+					Float3 rotationLocal(0.f, 0.f, 0.f);
+					Float3 rotationPost(0.f, 0.f, 0.f); // rotation applied after animation rotation
+					Float3 scalingLocal(1.f, 1.f, 1.f);
+					Float3 scalingOffset(0.f, 0.f, 0.f); // translation offset for the scaling pivot
+					Float3 scalingPivot(0.f, 0.f, 0.f); // center of scaling relative to node origin
+					
+					bool rotationIsActive = false;
+					bool scalingIsActive = false;
+					int rotationOrder = 0;
+					
+					for (FbxRecord property = properties.firstChild("Property"); property.isValid(); property = property.nextSibling("Property"))
+					{
+						std::vector<FbxValue> values = property.captureProperties<FbxValue>();
+						
+						if (values.size() >= 1)
+						{
+							const std::string & name = values[0].getString();
+							
+							if (name == "Lcl Translation")
+								translationLocal.load(values);
+							else if (name == "Lcl Rotation")
+								rotationLocal.load(values);
+							else if (name == "Lcl Scaling")
+								scalingLocal.load(values);
+							else if (name == "RotationOffset")
+								rotationOffset.load(values);
+							else if (name == "RotationPivot")
+								rotationPivot.load(values);
+							else if (name == "ScalingOffset")
+								scalingOffset.load(values);
+							else if (name == "ScalingPivot")
+								scalingPivot.load(values);
+							else if (name == "PreRotation")
+								rotationPre.load(values);
+							else if (name == "PostRotation")
+								rotationPost.load(values);
+							else if (name == "RotationActive")
+								rotationIsActive = values.size() >= 4 ? values[3].getBool() : false;
+							else if (name == "ScalingActive")
+								scalingIsActive = values.size() >= 4 ? values[3].getBool() : false;
+							
+							// non supported properties ..
+							else if (name == "GeometricTranslation")
+							{
+								Float3 temp(0.f, 0.f, 0.f);
+								temp.load(values);
+								if (temp[0] != 0.f || temp[1] != 0.f || temp[2] != 0.f)
+									log(logIndent, "warning: geometric translation is non zero");
+							}
+							else if (name == "GeometricRotation")
+							{
+								Float3 temp(0.f, 0.f, 0.f);
+								temp.load(values);
+								if (temp[0] != 0.f || temp[1] != 0.f || temp[2] != 0.f)
+									log(logIndent, "warning: geometric rotation is non zero");
+							}
+							else if (name == "GeometricScaling")
+							{
+								Float3 temp(1.f, 1.f, 1.f);
+								temp.load(values);
+								if (temp[0] != 1.f || temp[1] != 1.f || temp[2] != 1.f)
+									log(logIndent, "warning: geometric scaling is not one");
+							}
+							else if (name == "RotationOrder")
+							{
+								if (values.size() >= 4)
+								{
+									rotationOrder = values[3].getInt();
+									if (rotationOrder != 0)
+										log(logIndent, "warning: rotation order is not XYZ");
+								}
+							}
+						}
+					}
+					
+					const FbxRecord vertices = model.firstChild("Vertices");
+					const FbxRecord vertexIndices = model.firstChild("PolygonVertexIndex");
+					
+					const FbxRecord normalsLayer = model.firstChild("LayerElementNormal");
+					const FbxRecord normals = normalsLayer.firstChild("Normals");
+					
+					const FbxRecord uvsLayer = model.firstChild("LayerElementUV");
+					const FbxRecord uvs = uvsLayer.firstChild("UV");
+					const FbxRecord uvIndices = uvsLayer.firstChild("UVIndex");
+					
+					const FbxRecord colorsLayer = model.firstChild("LayerElementColor");
+					const FbxRecord colors = colorsLayer.firstChild("Colors");
+					const FbxRecord colorIndices = colorsLayer.firstChild("ColorIndex");
+					
+					if (!rotationIsActive)
+					{
+						// if RotationActive is false, ignore RotationOrder, PreRotation and PostRotation
+						
+						rotationPre.SetZero();
+						rotationPost.SetZero();
+					}
+					
+					if (!scalingIsActive)
+					{
+						// ???
+					}
+					
+					mesh->transform =
+						MatrixTranslation(translationLocal) *
+						MatrixTranslation(rotationOffset) *
+						MatrixTranslation(rotationPivot) *
+						MatrixRotation(rotationPre) *
+						MatrixRotation(rotationLocal) *
+						MatrixRotation(rotationPost) *
+						MatrixTranslation(-rotationPivot) *
+						MatrixTranslation(scalingOffset) *
+						MatrixTranslation(scalingPivot) *
+						MatrixScaling(scalingLocal) *
+						MatrixTranslation(-scalingPivot);
+					
+					vertices.capturePropertiesAsFloat(mesh->vertices);
+					vertexIndices.capturePropertiesAsInt(mesh->vertexIndices);
+					normals.capturePropertiesAsFloat(mesh->normals);
+					uvs.capturePropertiesAsFloat(mesh->uvs);
+					uvIndices.capturePropertiesAsInt(mesh->uvIndices);
+					colors.capturePropertiesAsFloat(mesh->colors);
+					colorIndices.capturePropertiesAsInt(mesh->colorIndices);
+					
+					log(logIndent, "found a mesh! name: %s, hasVertices: %d (%d), hasNormals: %d, hasUVs: %d\n",
+						objectName.c_str(),
+						vertices.isValid(),
+						int(mesh->vertices.size()),
+						normals.isValid(),
+						uvs.isValid());
+					
+					logIndent++;
+					{
+						log(logIndent+1, "transform:\n");
+						for (int i = 0; i < 4; ++i)
+						{
+							log(logIndent + 2, "%8.2f %8.2f %8.2f %8.2f\n",
+								mesh->transform(i, 0),
+								mesh->transform(i, 1),
+								mesh->transform(i, 2),
+								mesh->transform(i, 3));
+						}
+					}
+					logIndent--;
+					
+					// todo:
+					// LayerElementMaterial.Materials
+					// LayerElementTexture.TextureId
+				}
+				else
+				{
+					log(logIndent, "unknown object type: %s\n", objectType.c_str());
+				}
 			}
+			else if (object.name == "Pose")
+			{
+				const FbxRecord & pose = object;
+				
+				std::vector<std::string> poseProperties = pose.captureProperties<std::string>();
+				
+				std::string poseName;
+				std::string poseType;
+				
+				if (poseProperties.size() >= 1)
+					poseName = poseProperties[0];
+				if (poseProperties.size() >= 2)
+					poseType = poseProperties[1];
+				
+				// type = BindPose
+				
+				log(logIndent, "pose! name=%s, type=%s\n", poseName.c_str(), poseType.c_str());
+				
+				for (FbxRecord poseNode = pose.firstChild("PoseNode"); poseNode.isValid(); poseNode = poseNode.nextSibling("PoseNode"))
+				{
+					std::vector<std::string> nodeProperties = poseNode.firstChild("Node").captureProperties<std::string>();
+					
+					std::string nodeName;
+					
+					if (nodeProperties.size() >= 1)
+						nodeName = nodeProperties[0];
+					
+					std::vector<float> matrix = poseNode.firstChild("Matrix").captureProperties<float>();
+					
+					log(logIndent, "pose node! matrixSize=%d, node=%s\n", int(matrix.size()), nodeName.c_str());
+				}
+			}
+			else if (object.name == "Deformer")
+			{
+				const FbxRecord & deformer = object;
+				
+				FbxDeformer * fbxDeformer = new FbxDeformer(objectName);
+				fbxObject = fbxDeformer;
+				
+				// deformer = bone with vertex indices + weights
+				
+				// todo: reference the connections table to determine which mesh to deform
+				
+				// string: <name>
+				// string: <type>
+				
+				std::string name = deformer.captureProperty<std::string>(0);
+				std::string type = deformer.captureProperty<std::string>(1);
+				
+				// type = Cluster, Skin
+				
+				deformer.firstChild("Indexes").capturePropertiesAsInt(fbxDeformer->indices);
+				deformer.firstChild("Weights").capturePropertiesAsFloat(fbxDeformer->weights);
+				
+				log(logIndent, "deformer! name=%s, type=%s, numIndices=%d, numWeights=%d\n", name.c_str(), type.c_str(), int(fbxDeformer->indices.size()), int(fbxDeformer->weights.size()));
+			}
+			else if (object.name == "Material")
+			{
+				fbxObject = new FbxObject("Material", objectName);
+			}
+			else if (object.name == "Texture")
+			{
+				fbxObject = new FbxObject("Texture", objectName);
+			}
+			
+			if (fbxObject != 0)
+			{
+				if (objectsByName.count(fbxObject->name) == 0)
+				{
+					objectsByName[fbxObject->name] = fbxObject;
+					objectList.push_back(fbxObject);
+				}
+				else
+				{
+					printf("duplicate object name !!!\n");
+					delete fbxObject;
+				}
+			}
+		}
+	}
+	
+	// relations
+	
+	FbxRecord relations = reader.firstRecord("Relations");
+	
+	for (FbxRecord relation = relations.firstChild(); relation.isValid(); relation = relation.nextSibling())
+	{
+		std::vector<std::string> properties = relation.captureProperties<std::string>();
+		
+		if (properties.size() >= 2)
+		{
+			const std::string & object = properties[0];
+			const std::string & type = properties[1];
+			
+			(void)object;
+			(void)type;
+			
+			/*
+			log(logIndent, "relation record=%s, object=%s, type=%s\n",
+				relation.name.c_str(),
+				object.c_str(),
+				type.c_str());
+			*/
+		}
+	}
+	
+	// connections = scene hierarchy, including bones
+	
+	FbxRecord connections = reader.firstRecord("Connections");
+	
+	for (FbxRecord connection = connections.firstChild("Connect"); connection.isValid(); connection = connection.nextSibling("Connect"))
+	{
+		std::vector<std::string> properties = connection.captureProperties<std::string>();
+		
+		if (properties.size() >= 3)
+		{
+			const std::string & fromName = properties[1];
+			const std::string & toName = properties[2];
+			
+			if (fromName == toName)
+			{
+				log(logIndent, "warning: connect to self? %s\n", fromName.c_str());
+			}
+			else
+			{
+				ObjectsByName::iterator from = objectsByName.find(fromName);
+				ObjectsByName::iterator to = objectsByName.find(toName);
+	
+				if (from != objectsByName.end() && to != objectsByName.end())
+				{
+					log(logIndent, "connect %s -> %s\n", fromName.c_str(), toName.c_str());
+					
+					FbxObject * fromObject = from->second;
+					FbxObject * toObject = to->second;
+									
+					toObject->children.push_back(fromObject);
+					fromObject->parent = toObject;
+				}
+				else
+				{
+					log(logIndent, "error: unable to connect %s -> %s\n", fromName.c_str(), toName.c_str());
+				}
+			}
+		}
+	}
+	
+	FbxRecord takes = reader.firstRecord("Takes");
+	
+	logIndent++;
+	
+	for (FbxRecord take = takes.firstChild("Take"); take.isValid(); take = take.nextSibling("Take"))
+	{
+		const std::string name = take.captureProperty<std::string>(0);
+		
+		log(logIndent, "take: %s\n", name.c_str());
+		
+		std::string fileName = take.firstChild("FileName").captureProperty<std::string>(0);
+		
+		// ReferenceTime (int, timestamp?)
+		
+		logIndent++;
+		
+		for (FbxRecord model = take.firstChild("Model"); model.isValid(); model = model.nextSibling("Model"))
+		{
+			std::string modelName = model.captureProperty<std::string>(0);
+			
+			//log(logIndent, "model: %s\n", modelName.c_str());
+			
+			logIndent++;
+			
+			for (FbxRecord channel = model.firstChild("Channel"); channel.isValid(); channel = channel.nextSibling("Channel"))
+			{
+				std::string channelName = channel.captureProperty<std::string>(0);
+				
+				//log(logIndent, "channel: %s\n", channelName.c_str());
+				
+				if (channelName == "Transform")
+				{
+					FbxTransformChannel transformChannel;
+					
+					logIndent++;
+					{
+						transformChannel.read(logIndent, channel);
+					}
+					logIndent--;
+				}
+			}
+			
+			logIndent--;
+		}
+		
+		logIndent--;
+	}
+	
+	logIndent--;
+	
+	// purge objects that aren't connected to the scene
+	
+	ObjectList garbage;
+	
+	for (ObjectList::iterator i = objectList.begin(); i != objectList.end(); ++i)
+	{
+		FbxObject * object = *i;
+		
+		bool isDead = true;
+		
+		for (FbxObject * parent = object->parent; parent != 0; parent = parent->parent)
+		{
+			//printf("[%s]\n", parent->name.c_str());
+			
+			if (parent == scene)
+				isDead = false;
+		}
+		
+		if (isDead)
+		{
+			log(logIndent, "garbage collecting object! %s\n", object->name.c_str());
+			
+			garbage.push_back(object);
+		}
+	}
+	
+	for (ObjectList::iterator i = garbage.begin(); i != garbage.end(); ++i)
+	{
+		FbxObject * object = *i;
+		
+		objectsByName.erase(object->name);
+		
+		delete object;
+	}
+	
+	garbage.clear();
+	objectList.clear();
+	
+	// apply deformers to meshes
+	
+	std::vector<FbxDeformer*> deformers;
+	
+	for (ObjectsByName::iterator i = objectsByName.begin(); i != objectsByName.end(); ++i)
+	{
+		FbxObject * object = i->second;
+		
+		if (object->type == "Deformer")
+		{
+			FbxDeformer * deformer = static_cast<FbxDeformer*>(object);
+			
+			if (deformer->indices.size() != deformer->weights.size())
+			{
+				log(logIndent, "error: deformer indices / weights mismatch");
+				continue;
+			}
+			
+			FbxMesh * mesh = 0;
+			
+		#if 0
+			for (size_t j = 0; j < deformer->children.size(); ++j)
+			{
+				FbxObject * child = deformer->children[j];
+				
+				if (child->type == "Mesh")
+				{
+					mesh = static_cast<FbxMesh*>(child);
+					break;
+				}
+			}
+		#else
+			for (FbxObject * parent = deformer->parent; parent != 0; parent = parent->parent)
+			{
+				if (parent->type == "Mesh")
+				{
+					mesh = static_cast<FbxMesh*>(parent);
+					break;
+				}
+			}
+		#endif
+			
+			if (mesh != 0)
+			{
+				log(logIndent, "found mesh for deformer! %s\n", mesh->name.c_str());
+				
+				const int deformerIndex = int(deformers.size());
+				
+				deformers.push_back(deformer);
+				
+				if (mesh->deformers.empty())
+				{
+				log(logIndent, "%d resize\n", mesh->vertices.size());
+					mesh->deformers.resize(mesh->vertices.size());
+				}
+				
+				for (size_t j = 0; j < deformer->indices.size(); ++j)
+				{
+					const int vertexIndex = deformer->indices[j];
+					
+					if (vertexIndex < int(mesh->deformers.size()))
+					{
+						//log(logIndent, "%d index\n", vertexIndex);
+						mesh->deformers[vertexIndex].add(deformerIndex, deformer->weights[j]);
+					}
+					else
+					{
+						log(logIndent, "%d index\n", vertexIndex);
+					}
+				}
+			}
+		}
+	}
+	
+	logEnabled = false;
+	
+	// finalize meshes by invoking the powers of the awesome vertex welding machine
+	
+	std::list<Mesh> meshes;
+	
+	for (ObjectsByName::iterator i = objectsByName.begin(); i != objectsByName.end(); ++i)
+	{
+		FbxObject * object = i->second;
+		
+		if (object->type == "Mesh")
+		{
+			FbxMesh * fbxMesh = static_cast<FbxMesh*>(object);
+			
+			meshes.push_back(Mesh());
+			Mesh & mesh = meshes.back();
+			
+			mesh.construct(
+				logIndent,
+				fbxMesh->vertices,
+				fbxMesh->vertexIndices,
+				fbxMesh->normals,
+				fbxMesh->uvs,
+				fbxMesh->uvIndices,
+				fbxMesh->colors,
+				fbxMesh->colorIndices,
+				fbxMesh->deformers);
+			
+			mesh.m_transform = fbxMesh->transform;
 		}
 	}
 	
@@ -602,7 +1348,7 @@ int main(int argc, const char * argv[])
 		for (std::list<Mesh>::iterator i = meshes.begin(); i != meshes.end(); ++i)
 		{
 			const Mesh & mesh = *i;
-			
+
 			log(logIndent, "mesh: numVertices=%d, numIndices=%d\n", int(mesh.m_vertices.size()), int(mesh.m_indices.size()));
 			
 			logIndent++;
@@ -659,6 +1405,130 @@ int main(int argc, const char * argv[])
 			
 			logIndent--;
 		}
+	}
+	
+	if (drawMeshes)
+	{
+		// initialize SDL
+		
+		SDL_Init(SDL_INIT_EVERYTHING);
+		if (SDL_SetVideoMode(640, 480, 32, SDL_OPENGL) < 0)
+		{
+			log(0, "failed to intialize SDL");
+			exit(-1);
+		}
+		
+		bool wireframe = false;
+		
+		bool stop = false;
+		
+		while (!stop)
+		{
+			SDL_Event e;
+			
+			while (SDL_PollEvent(&e))
+			{
+				if (e.type == SDL_KEYDOWN)
+				{
+					if (e.key.keysym.sym == SDLK_ESCAPE)
+						stop = true;
+					else if (e.key.keysym.sym == SDLK_w)
+						wireframe = !wireframe;
+				}
+			}
+			
+			glClearColor(0.f, 0.f, 0.f, 0.f);
+			glClearDepth(1.f);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			
+			glDepthFunc(GL_LESS);
+			glEnable(GL_DEPTH_TEST);
+			
+			glMatrixMode(GL_PROJECTION);
+			glLoadIdentity();
+			glMatrixMode(GL_MODELVIEW);
+			glLoadIdentity();
+			glColor3ub(255, 255, 255);
+			
+			glPolygonMode(GL_FRONT_AND_BACK, wireframe ? GL_LINE : GL_FILL);
+			
+			static float r = 0.f;
+			r += 1.f;
+			
+			for (std::list<Mesh>::iterator i = meshes.begin(); i != meshes.end(); ++i)
+			{
+				const Mesh & mesh = *i;
+				
+				glPushMatrix();
+				
+				glTranslatef(0.f, -.5f, 0.f);
+				
+				glRotatef(r, 0.f, 1.f, 0.f);
+				//glRotatef(r/10.f, 1.f, 0.f, 0.f);
+				
+				glMultMatrixf(mesh.m_transform.m_v);
+				glRotatef(-90.f, 1.f, 0.f, 0.f);
+				const float scale = 0.005f;
+				glScalef(scale, scale, scale);
+			
+				int vertexCount = 0;
+				
+				for (size_t i = 0; i < mesh.m_indices.size(); ++i)
+				{
+					bool begin = vertexCount == 0;
+					
+					if (begin)
+					{
+						glBegin(GL_POLYGON);
+					}
+					
+					int index = mesh.m_indices[i];
+					
+					bool end = false;
+					
+					if (index < 0)
+					{
+						// negative indices mark the end of a polygon
+						
+						index = ~index;
+						
+						end = true;
+					}
+					
+					const Mesh::Vertex & v = mesh.m_vertices[index];
+					
+					glColor3f(
+						(v.nx + 1.f) / 2.f,
+						(v.ny + 1.f) / 2.f,
+						(v.nz + 1.f) / 2.f);
+					glVertex3f(v.px, v.py, v.pz);
+					
+					vertexCount++;
+					
+					if (end)
+					{
+						glEnd();
+						
+						vertexCount = 0;
+					}
+				}
+				
+				if (vertexCount != 0)
+				{
+					assert(false);
+					
+					glEnd();
+				}
+				
+				glPopMatrix();
+			}
+			
+			SDL_GL_SwapBuffers();
+		}
+
+		
+		
+		SDL_Quit();
 	}
 	
 	return 0;
