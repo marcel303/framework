@@ -1347,7 +1347,7 @@ int main(int argc, char * argv[])
 		}
 	}
 	
-	logEnabled = false;
+	//logEnabled = false;
 	
 	// finalize meshes by invoking the powers of the awesome vertex welding machine
 	
@@ -1391,6 +1391,30 @@ int main(int argc, char * argv[])
 		{
 			pose = static_cast<FbxPose*>(object);
 		}
+	}
+	
+	std::vector<Mat4x4> deformerMatrices;
+	deformerMatrices.resize(deformers.size());
+	
+	if (pose)
+	{
+		for (size_t i = 0; i < deformers.size(); ++i)
+		{
+			const FbxDeformer * deformer = deformers[i];
+			const std::string & deformerName = deformer->children[0]->name;
+			if (pose->matrices.count(deformerName) != 0)
+				deformerMatrices[i] = pose->matrices[deformerName].CalcInv();
+			else
+			{
+				printf("warning: no pose matrix for deformer %s\n", deformerName.c_str());
+				deformerMatrices[i].MakeIdentity();
+			}
+		}
+	}
+	else
+	{
+		for (size_t i = 0; i < deformers.size(); ++i)
+			deformerMatrices[i].MakeIdentity();
 	}
 	
 	const int time2 = getTimeMS();
@@ -1531,6 +1555,21 @@ int main(int argc, char * argv[])
 			
 				int vertexCount = 0;
 				
+				std::vector<Mat4x4> boneToObjectMatrices;
+				boneToObjectMatrices.resize(deformerMatrices.size());
+				for (size_t boneIndex = 0; boneIndex < deformerMatrices.size(); ++boneIndex)
+				{
+					boneToObjectMatrices[boneIndex] = deformerMatrices[boneIndex].CalcInv();
+					
+					Mat4x4 rot;
+					rot.MakeRotationX(r * boneIndex / 200.f);
+					boneToObjectMatrices[boneIndex] = boneToObjectMatrices[boneIndex] * rot;
+					
+					boneToObjectMatrices[boneIndex](3,0) += sin(M_PI * r/180.f * boneIndex / 1.23f) * 10.f;
+					boneToObjectMatrices[boneIndex](3,1) += sin(M_PI * r/180.f * boneIndex / 2.34f) * 10.f;
+					boneToObjectMatrices[boneIndex](3,2) += sin(M_PI * r/180.f * boneIndex / 3.45f) * 10.f;
+				}
+				
 				for (size_t i = 0; i < mesh.m_indices.size(); ++i)
 				{
 					bool begin = vertexCount == 0;
@@ -1567,16 +1606,8 @@ int main(int argc, char * argv[])
 						
 						// todo: pose + bone matrix
 						
-						const FbxDeformer * deformer = deformers[boneIndex];
-						const std::string & deformerName = deformer->children[0]->name;
-						assert(pose->matrices.count(deformerName) != 0);
-						Mat4x4 poseMatrix = pose->matrices[deformerName];
-						Mat4x4 boneToObject = poseMatrix;
-						Mat4x4 objectToBone = poseMatrix.CalcInv();
-						
-						boneToObject(3,0) += sin(M_PI * r/180.f * boneIndex / 1.23f) * 10.f;
-						boneToObject(3,1) += sin(M_PI * r/180.f * boneIndex / 2.34f) * 10.f;
-						boneToObject(3,2) += sin(M_PI * r/180.f * boneIndex / 3.45f) * 10.f;
+						const Mat4x4 & objectToBone = deformerMatrices[boneIndex];
+						const Mat4x4 & boneToObject = boneToObjectMatrices[boneIndex];
 						
 						p += ((boneToObject * objectToBone) * Vec3(v.px, v.py, v.pz)) * boneWeight;
 					}
