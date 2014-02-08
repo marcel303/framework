@@ -116,15 +116,17 @@ public:
 class FbxObject
 {
 public:
-	FbxObject(const std::string & type, const std::string & name)
+	FbxObject(const std::string & type, const std::string & name, bool persistent = false)
 	{
 		this->type = type;
 		this->name = name;
+		this->persistent = persistent;
 		parent = 0;
 	}
 	
 	std::string type;
 	std::string name;
+	bool persistent;
 	FbxObject * parent;
 	std::vector<FbxObject*> children;
 };
@@ -146,20 +148,39 @@ public:
 	
 	struct Deformer
 	{
+		static const int kMaxEntries = 4;
+		
 		struct Entry
 		{
 			int index;
 			float weight;
 		};
 		
-		std::vector<Entry> entries;
+		Entry entries[kMaxEntries];
+		int numEntries;
+		
+		Deformer()
+		{
+			numEntries = 0;
+		}
+		
+		int size() const
+		{
+			return numEntries;
+		}
 		
 		void add(int index, float weight)
 		{
-			Entry entry;
-			entry.index = index;
-			entry.weight = weight;
-			entries.push_back(entry);
+			if (numEntries < 4)
+			{
+				entries[numEntries].index = index;
+				entries[numEntries].weight = weight;
+				numEntries++;
+			}
+			else
+			{
+				// todo: replace lowest weight < weight (if any)
+			}
 		}
 	};
 	
@@ -167,6 +188,17 @@ public:
 	
 	FbxMesh(const std::string & type, const std::string & name)
 		: FbxObject("Mesh", name)
+	{
+	}
+};
+
+class FbxPose : public FbxObject
+{
+public:
+	std::map<std::string, Mat4x4> matrices;
+	
+	FbxPose(const std::string & name)
+		: FbxObject("Pose", name, true)
 	{
 	}
 };
@@ -213,18 +245,19 @@ public:
 					
 					for (size_t i = 0; i + stride <= values.size(); i += stride)
 					{
-						Key temp;
-						temp.timeStamp = get<int64_t>(values[i + 0]);
-						temp.value = get<float>(values[i + 1]);
+						float value = get<float>(values[i + 1]);
 						
 						// round with a fixed precision so small floating point drift is eliminated from the exported values
-						temp.value = int(temp.value * 1000.f + .5f) / 1000.f;
+						value = int(value * 1000.f + .5f) / 1000.f;
 						
 						// don't write duplicate values, unless it's the first/last key in the list. exporters sometimes write a fixed number of keys (sampling based), with lots of duplicates
-						const bool isDuplicate = keys.size() >= 1 && keys.back().value == temp.value && i + stride != values.size();
+						const bool isDuplicate = keys.size() >= 1 && keys.back().value == value && i + stride != values.size();
 						
 						if (!isDuplicate)
 						{
+							Key temp;
+							temp.timeStamp = get<int64_t>(values[i + 0]);
+							temp.value = value;
 							keys.push_back(temp);
 						
 							//log(logIndent, "%014lld -> %f\n", temp.timeStamp, temp.value);
@@ -526,6 +559,11 @@ public:
 			v.nx = v.ny = v.nz = 0.f;
 			v.tx = v.ty = 0.f;
 			v.cx = v.cy = v.cz = v.cw = 1.f;
+			for (int j = 0; j < 4; ++j)
+			{
+				v.bi[j] = 0;
+				v.bw[j] = 0;
+			}
 		}
 		m_indices = vertexIndices;
 		return;
@@ -645,14 +683,14 @@ public:
 			
 			// deformers
 			
-			const int numDeformers = vertexIndex >= deformers.size() ? 0 : deformers[vertexIndex].entries.size() < 4 ? deformers[vertexIndex].entries.size() : 4;
+			const int numDeformers = vertexIndex >= deformers.size() ? 0 : deformers[vertexIndex].numEntries < 4 ? deformers[vertexIndex].numEntries : 4;
 			
 			for (int d = 0; d < numDeformers; ++d)
 			{
 				vertex.bi[d] = deformers[vertexIndex].entries[d].index;
 				vertex.bw[d] = deformers[vertexIndex].entries[d].weight * 255.f;
 				
-				//printf("added %d, %d\n", vertex.bi[d], vertex.bi[d]);
+				//printf("added %d, %d\n", vertex.bi[d], vertex.bw[d]);
 			}
 			for (int d = numDeformers; d < 4; ++d)
 			{
@@ -789,7 +827,7 @@ int main(int argc, char * argv[])
 	typedef std::map<std::string, FbxObject*> ObjectsByName;
 	ObjectsByName objectsByName;
 	
-	FbxObject * scene = new FbxObject("Scene", "Scene");
+	FbxObject * scene = new FbxObject("Scene", "Scene", true);
 	objectsByName[scene->name] = scene;
 	
 	// extract meshes
@@ -999,6 +1037,9 @@ int main(int argc, char * argv[])
 			{
 				const FbxRecord & pose = object;
 				
+				FbxPose * fbxPose = new FbxPose(objectName);
+				fbxObject = fbxPose;
+				
 				std::vector<std::string> poseProperties = pose.captureProperties<std::string>();
 				
 				std::string poseName;
@@ -1022,9 +1063,16 @@ int main(int argc, char * argv[])
 					if (nodeProperties.size() >= 1)
 						nodeName = nodeProperties[0];
 					
-					std::vector<float> matrix = poseNode.firstChild("Matrix").captureProperties<float>();
+					const std::vector<float> matrix = poseNode.firstChild("Matrix").captureProperties<float>();
 					
-					log(logIndent, "pose node! matrixSize=%d, node=%s\n", int(matrix.size()), nodeName.c_str());
+					if (matrix.size() == 16)
+					{
+						Mat4x4 & fbxMatrix = fbxPose->matrices[nodeName];
+						
+						memcpy(fbxMatrix.m_v, &matrix[0], sizeof(float) * 16);
+					}
+					
+					//log(logIndent, "pose node! matrixSize=%d, node=%s\n", int(matrix.size()), nodeName.c_str());
 				}
 			}
 			else if (object.name == "Deformer")
@@ -1049,7 +1097,7 @@ int main(int argc, char * argv[])
 				deformer.firstChild("Indexes").capturePropertiesAsInt(fbxDeformer->indices);
 				deformer.firstChild("Weights").capturePropertiesAsFloat(fbxDeformer->weights);
 				
-				log(logIndent, "deformer! name=%s, type=%s, numIndices=%d, numWeights=%d\n", name.c_str(), type.c_str(), int(fbxDeformer->indices.size()), int(fbxDeformer->weights.size()));
+				//log(logIndent, "deformer! name=%s, type=%s, numIndices=%d, numWeights=%d\n", name.c_str(), type.c_str(), int(fbxDeformer->indices.size()), int(fbxDeformer->weights.size()));
 			}
 			else if (object.name == "Material")
 			{
@@ -1125,7 +1173,7 @@ int main(int argc, char * argv[])
 	
 				if (from != objectsByName.end() && to != objectsByName.end())
 				{
-					log(logIndent, "connect %s -> %s\n", fromName.c_str(), toName.c_str());
+					//log(logIndent, "connect %s -> %s\n", fromName.c_str(), toName.c_str());
 					
 					FbxObject * fromObject = from->second;
 					FbxObject * toObject = to->second;
@@ -1201,11 +1249,9 @@ int main(int argc, char * argv[])
 		
 		bool isDead = true;
 		
-		for (FbxObject * parent = object->parent; parent != 0; parent = parent->parent)
+		for (FbxObject * parent = object; parent != 0; parent = parent->parent)
 		{
-			//printf("[%s]\n", parent->name.c_str());
-			
-			if (parent == scene)
+			if (parent->persistent)
 				isDead = false;
 		}
 		
@@ -1273,7 +1319,7 @@ int main(int argc, char * argv[])
 			
 			if (mesh != 0)
 			{
-				log(logIndent, "found mesh for deformer! %s\n", mesh->name.c_str());
+				//log(logIndent, "found mesh for deformer! %s\n", mesh->name.c_str());
 				
 				const int deformerIndex = int(deformers.size());
 				
@@ -1281,7 +1327,6 @@ int main(int argc, char * argv[])
 				
 				if (mesh->deformers.empty())
 				{
-				log(logIndent, "%d resize\n", mesh->vertices.size());
 					mesh->deformers.resize(mesh->vertices.size());
 				}
 				
@@ -1291,12 +1336,11 @@ int main(int argc, char * argv[])
 					
 					if (vertexIndex < int(mesh->deformers.size()))
 					{
-						//log(logIndent, "%d index\n", vertexIndex);
 						mesh->deformers[vertexIndex].add(deformerIndex, deformer->weights[j]);
 					}
 					else
 					{
-						log(logIndent, "%d index\n", vertexIndex);
+						log(logIndent, "error: deformer index %d is out of range\n", vertexIndex);
 					}
 				}
 			}
@@ -1332,6 +1376,20 @@ int main(int argc, char * argv[])
 				fbxMesh->deformers);
 			
 			mesh.m_transform = fbxMesh->transform;
+		}
+	}
+	
+	// find the pose object
+	
+	FbxPose * pose = 0;
+	
+	for (ObjectsByName::iterator j = objectsByName.begin(); j != objectsByName.end(); ++j)
+	{
+		FbxObject * object = j->second;
+		
+		if (object->type == "Pose")
+		{
+			pose = static_cast<FbxPose*>(object);
 		}
 	}
 	
@@ -1497,11 +1555,49 @@ int main(int argc, char * argv[])
 					
 					const Mesh::Vertex & v = mesh.m_vertices[index];
 					
-					glColor3f(
-						(v.nx + 1.f) / 2.f,
-						(v.ny + 1.f) / 2.f,
-						(v.nz + 1.f) / 2.f);
-					glVertex3f(v.px, v.py, v.pz);
+					Vec3 p(0.f, 0.f, 0.f);
+					
+					for (int j = 0; j < 4; ++j)
+					{
+						const int boneIndex = v.bi[j];
+						const float boneWeight = v.bw[j] / 255.f;
+						
+						if (boneWeight == 0.f)
+							continue;
+						
+						// todo: pose + bone matrix
+						
+						const FbxDeformer * deformer = deformers[boneIndex];
+						const std::string & deformerName = deformer->children[0]->name;
+						assert(pose->matrices.count(deformerName) != 0);
+						Mat4x4 poseMatrix = pose->matrices[deformerName];
+						Mat4x4 boneToObject = poseMatrix;
+						Mat4x4 objectToBone = poseMatrix.CalcInv();
+						
+						boneToObject(3,0) += sin(M_PI * r/180.f * boneIndex / 1.23f) * 10.f;
+						boneToObject(3,1) += sin(M_PI * r/180.f * boneIndex / 2.34f) * 10.f;
+						boneToObject(3,2) += sin(M_PI * r/180.f * boneIndex / 3.45f) * 10.f;
+						
+						p += ((boneToObject * objectToBone) * Vec3(v.px, v.py, v.pz)) * boneWeight;
+					}
+					
+					float r = 1.f;
+					float g = 1.f;
+					float b = 1.f;
+					
+				#if 1
+					r *= (v.nx + 1.f) / 2.f;
+					g *= (v.ny + 1.f) / 2.f;
+					b *= (v.nz + 1.f) / 2.f;
+				#endif
+				#if 0
+					r *= v.bi[0]/25.f;
+					g *= v.bi[1]/25.f;
+					b *= v.bi[2]/25.f;
+				#endif
+				
+					glColor3f(r, g, b);
+					glVertex3f(p[0], p[1], p[2]);
 					
 					vertexCount++;
 					
@@ -1519,6 +1615,31 @@ int main(int argc, char * argv[])
 					
 					glEnd();
 				}
+				
+			#if 0
+				glDisable(GL_DEPTH_TEST);
+				for (ObjectsByName::iterator j = objectsByName.begin(); j != objectsByName.end(); ++j)
+				{
+					FbxObject * object = j->second;
+					
+					if (object->type == "Pose")
+					{
+						FbxPose * pose = static_cast<FbxPose*>(object);
+						
+						glBegin(GL_POINTS);
+						{
+							for (std::map<std::string, Mat4x4>::iterator i = pose->matrices.begin(); i != pose->matrices.end(); ++i)
+							{
+								const Mat4x4 & m = i->second;
+								glColor3ub(255, 255, 255);
+								glVertex3f(m(3, 0), m(3, 1), m(3, 2));
+							}
+						}
+						glEnd();
+					}
+				}
+				glEnable(GL_DEPTH_TEST);
+			#endif
 				
 				glPopMatrix();
 			}
