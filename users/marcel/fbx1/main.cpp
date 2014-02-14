@@ -11,7 +11,7 @@
 #include <SDL/SDL_opengl.h>
 #include "Mat4x4.h"
 
-static bool logEnabled = false;
+static bool logEnabled = true;
 
 static Mat4x4 MatrixTranslation(const Vec3 & v);
 static Mat4x4 MatrixRotation(const Vec3 & v);
@@ -105,7 +105,7 @@ public:
 				log(m_logIndent, "float: %f\n", get<float>(value));
 				break;
 			case FbxValue::TYPE_STRING:
-				log(m_logIndent, "string: %s\n", value.getString().c_str());
+				log(m_logIndent, "string: %s\n", value.getString());
 				break;
 			
 			case FbxValue::TYPE_INVALID:
@@ -114,6 +114,12 @@ public:
 		}
 	}
 };
+
+//
+
+class FbxDeformer;
+class FbxMesh;
+class FbxObject;
 
 //
 
@@ -127,6 +133,8 @@ public:
 		this->persistent = persistent;
 		parent = 0;
 	}
+
+	virtual void helpMeDebugWithVTables() { }
 	
 	std::string type;
 	std::string name;
@@ -189,8 +197,11 @@ public:
 			}
 		}
 	};
-	
+
 	Mat4x4 transform;
+	Mat4x4 localTransform;
+	Mat4x4 globalTransform;
+	Mat4x4 animTransform;
 	
 	std::vector<float> vertices;
 	std::vector<int> vertexIndices;
@@ -201,8 +212,11 @@ public:
 	std::vector<int> colorIndices;
 	std::vector<Deformer> deformers;
 	
+	FbxDeformer * deformer;
+
 	FbxMesh(const std::string & type, const std::string & name)
 		: FbxObject("Mesh", name)
+		, deformer(0)
 	{
 	}
 };
@@ -223,9 +237,14 @@ class FbxDeformer : public FbxObject
 public:
 	std::vector<int> indices;
 	std::vector<float> weights;
+	Mat4x4 transform;
+	Mat4x4 transformLink;
+
+	FbxMesh * mesh;
 	
 	FbxDeformer(const std::string & name)
 		: FbxObject("Deformer", name)
+		, mesh(0)
 	{
 	}
 };
@@ -331,12 +350,14 @@ public:
 		}
 	}
 	
-	bool evaluate(int64_t timeStamp, Mat4x4 & result)
+	bool evaluate(int64_t timeStamp, Mat4x4 & result) const
 	{
 		Vec3 translation(0.f, 0.f, 0.f);
 		Vec3 rotation(0.f, 0.f, 0.f);
 		Vec3 scale(1.f, 1.f, 1.f);
 		
+		assert(T.X.keys.size() != 0);
+
 		if (T.X.keys.size() != 0) translation[0] = T.X.keys[0].value;
 		if (T.Y.keys.size() != 0) translation[1] = T.Y.keys[0].value;
 		if (T.Z.keys.size() != 0) translation[2] = T.Z.keys[0].value;
@@ -346,7 +367,7 @@ public:
 		if (S.X.keys.size() != 0) scale[0] = S.X.keys[0].value;
 		if (S.Y.keys.size() != 0) scale[1] = S.Y.keys[0].value;
 		if (S.Z.keys.size() != 0) scale[2] = S.Z.keys[0].value;
-		
+
 		result = MatrixTranslation(translation) * MatrixRotation(rotation) * MatrixScaling(scale);
 		
 		return true;
@@ -711,7 +732,7 @@ public:
 			for (int d = 0; d < numDeformers; ++d)
 			{
 				vertex.bi[d] = deformers[vertexIndex].entries[d].index;
-				vertex.bw[d] = deformers[vertexIndex].entries[d].weight * 255.f;
+				vertex.bw[d] = int8_t(deformers[vertexIndex].entries[d].weight * 255.f);
 				
 				//printf("added %d, %d\n", vertex.bi[d], vertex.bw[d]);
 			}
@@ -780,9 +801,10 @@ static Mat4x4 MatrixTranslation(const Vec3 & v)
 static Mat4x4 MatrixRotation(const Vec3 & v)
 {
 	Mat4x4 x, y, z;
-	x.MakeRotationX(v[0] * M_PI / 180.f);
-	y.MakeRotationY(v[1] * M_PI / 180.f);
-	z.MakeRotationZ(v[2] * M_PI / 180.f);
+	Vec3 temp = v * M_PI / 180.f;
+	x.MakeRotationX(temp[0]);
+	y.MakeRotationY(temp[1]);
+	z.MakeRotationZ(temp[2]);
 	return x * y * z;
 }
 
@@ -1016,7 +1038,9 @@ int main(int argc, char * argv[])
 						MatrixTranslation(scalingPivot) *
 						MatrixScaling(scalingLocal) *
 						MatrixTranslation(-scalingPivot);
-					
+					mesh->localTransform = mesh->transform;
+					mesh->animTransform = mesh->localTransform;
+
 					vertices.capturePropertiesAsFloat(mesh->vertices);
 					vertexIndices.capturePropertiesAsInt(mesh->vertexIndices);
 					normals.capturePropertiesAsFloat(mesh->normals);
@@ -1111,6 +1135,21 @@ int main(int argc, char * argv[])
 				
 				deformer.firstChild("Indexes").capturePropertiesAsInt(fbxDeformer->indices);
 				deformer.firstChild("Weights").capturePropertiesAsFloat(fbxDeformer->weights);
+
+				std::vector<float> transform;
+				std::vector<float> transformLink;
+
+				deformer.firstChild("Transform").capturePropertiesAsFloat(transform);
+				deformer.firstChild("TransformLink").capturePropertiesAsFloat(transformLink);
+
+				if (transform.size() == 16)
+					memcpy(fbxDeformer->transform.m_v, &transform[0], sizeof(float) * 16);
+				else
+					fbxDeformer->transform.MakeIdentity();
+				if (transformLink.size() == 16)
+					memcpy(fbxDeformer->transformLink.m_v, &transformLink[0], sizeof(float) * 16);
+				else
+					fbxDeformer->transformLink.MakeIdentity();
 				
 				//log(logIndent, "deformer! name=%s, type=%s, numIndices=%d, numWeights=%d\n", name.c_str(), type.c_str(), int(fbxDeformer->indices.size()), int(fbxDeformer->weights.size()));
 			}
@@ -1166,9 +1205,28 @@ int main(int argc, char * argv[])
 					
 					FbxObject * fromObject = from->second;
 					FbxObject * toObject = to->second;
-									
-					toObject->children.push_back(fromObject);
-					fromObject->parent = toObject;
+					
+					// todo: figure out a better way to deal with object to object connections
+					//       the current implementation breaks if another type of node object
+					//       is present in the scene
+					if (toObject->type == "Deformer" && fromObject->type == "Mesh")
+					{
+						FbxDeformer * deformer = static_cast<FbxDeformer*>(toObject);
+						FbxMesh * mesh = static_cast<FbxMesh*>(fromObject);
+						
+						deformer->mesh = mesh;
+						mesh->deformer = deformer;
+					}
+					else if (toObject->type == "Mesh" && fromObject->type == "Mesh")
+					{
+						toObject->children.push_back(fromObject);
+						fromObject->parent = toObject;
+					}
+					else
+					{
+						toObject->children.push_back(fromObject);
+						fromObject->parent = toObject;
+					}
 				}
 				else
 				{
@@ -1288,6 +1346,8 @@ int main(int argc, char * argv[])
 				continue;
 			}
 			
+			// todo: track deformer -> deformer connections and find skin deformer object (which has a reference to the mesh)
+
 			FbxMesh * mesh = 0;
 			
 			for (FbxObject * parent = deformer->parent; parent != 0; parent = parent->parent)
@@ -1295,7 +1355,7 @@ int main(int argc, char * argv[])
 				if (parent->type == "Mesh")
 				{
 					mesh = static_cast<FbxMesh*>(parent);
-					break;
+					//break;
 				}
 			}
 			
@@ -1353,7 +1413,7 @@ int main(int argc, char * argv[])
 				
 				int deformerIndex = 0;
 				
-				if (!mesh->parent || mesh->parent->type != "Deformer")
+				if (!mesh->deformer)
 				{
 					log(logIndent, "error: deformer doesn't exist for model %s\n", modelName.c_str());
 				}
@@ -1361,7 +1421,7 @@ int main(int argc, char * argv[])
 				{
 					//log(logIndent, "found deformer for model %s\n", modelName.c_str());
 					
-					FbxDeformer * deformer = static_cast<FbxDeformer*>(mesh->parent);
+					FbxDeformer * deformer = mesh->deformer;
 					
 					for (size_t j = 0; j < deformers.size(); ++j)
 					{
@@ -1375,7 +1435,7 @@ int main(int argc, char * argv[])
 		}
 	}
 
-	logEnabled = false;
+	//logEnabled = false;
 	
 	// finalize meshes by invoking the powers of the awesome vertex welding machine
 	
@@ -1421,28 +1481,35 @@ int main(int argc, char * argv[])
 		}
 	}
 	
-	std::vector<Mat4x4> deformerMatrices;
-	deformerMatrices.resize(deformers.size());
-	
+	std::vector<Mat4x4> objectToBoneMatrices;
+	objectToBoneMatrices.resize(deformers.size());
+	std::vector<Mat4x4> boneToObjectMatrices;
+	boneToObjectMatrices.resize(deformers.size());
+
 	if (pose)
 	{
 		for (size_t i = 0; i < deformers.size(); ++i)
 		{
 			const FbxDeformer * deformer = deformers[i];
-			const std::string & deformerName = deformer->children.size() >= 1 ? deformer->children[0]->name : "";
-			if (pose->matrices.count(deformerName) != 0)
-				deformerMatrices[i] = pose->matrices[deformerName].CalcInv();
+			const std::string & modelName = deformer->mesh ? deformer->mesh->name : "";
+
+			if (pose->matrices.count(modelName) != 0)
+			{
+				objectToBoneMatrices[i] = pose->matrices[modelName].CalcInv();
+			}
 			else
 			{
-				printf("warning: no pose matrix for deformer %s\n", deformerName.c_str());
-				deformerMatrices[i].MakeIdentity();
+				printf("warning: no pose matrix for deformer %s\n", modelName.c_str());
+				objectToBoneMatrices[i].MakeIdentity();
 			}
 		}
 	}
 	else
 	{
 		for (size_t i = 0; i < deformers.size(); ++i)
-			deformerMatrices[i].MakeIdentity();
+		{
+			objectToBoneMatrices[i].MakeIdentity();
+		}
 	}
 	
 	const int time2 = getTimeMS();
@@ -1522,7 +1589,8 @@ int main(int argc, char * argv[])
 		// initialize SDL
 		
 		SDL_Init(SDL_INIT_EVERYTHING);
-		if (SDL_SetVideoMode(640, 480, 32, SDL_OPENGL) < 0)
+		//if (SDL_SetVideoMode(640, 480, 32, SDL_OPENGL) < 0)
+		if (SDL_SetVideoMode(1600, 900, 32, SDL_OPENGL) < 0)
 		{
 			log(0, "failed to intialize SDL");
 			exit(-1);
@@ -1534,6 +1602,8 @@ int main(int argc, char * argv[])
 		
 		while (!stop)
 		{
+			// process input
+
 			SDL_Event e;
 			
 			while (SDL_PollEvent(&e))
@@ -1546,6 +1616,65 @@ int main(int argc, char * argv[])
 						wireframe = !wireframe;
 				}
 			}
+
+			// process animation
+
+			if (anims.size() >= 1)
+			{
+				const FbxAnim & anim = anims.front();
+
+				for (std::map<std::string, FbxTransformChannel>::const_iterator i = anim.transforms.cbegin(); i != anim.transforms.cend(); ++i)
+				{
+					const std::string & modelName = i->first;
+					const FbxTransformChannel & transformChannel = i->second;
+
+					ObjectsByName::iterator j = objectsByName.find(modelName);
+
+					if (j != objectsByName.end() && j->second->type == "Mesh")
+					{
+						FbxMesh * mesh = static_cast<FbxMesh*>(j->second);
+
+						Mat4x4 animTransform;
+
+						transformChannel.evaluate(0, animTransform);
+
+						mesh->animTransform = animTransform;
+					}
+					else
+					{
+						log(logIndent, "warning: no model found for anim channel: %s", modelName.c_str());
+					}
+				}
+			}
+
+			for (size_t i = 0; i < deformers.size(); ++i)
+			{
+				FbxDeformer * deformer = deformers[i];
+
+				Mat4x4 globalTransform;
+				globalTransform.MakeIdentity();
+
+				Mat4x4 identity;
+				identity.MakeIdentity();
+				for (FbxObject * parent = deformer->mesh; parent != 0; parent = parent->parent)
+				{
+					if (parent->type == "Mesh")
+					{
+						FbxMesh * currentMesh = static_cast<FbxMesh*>(parent);
+
+						//const Mat4x4 & transform = currentMesh->deformer ? currentMesh->deformer->transform : identity;
+						//const Mat4x4 & transformLink = currentMesh->deformer ? currentMesh->deformer->transformLink : identity;
+
+						globalTransform =
+							currentMesh->animTransform *
+							globalTransform;
+					}
+				}
+
+				boneToObjectMatrices[i] = globalTransform;
+			}
+
+			// draw
 			
 			glClearColor(0.f, 0.f, 0.f, 0.f);
 			glClearDepth(1.f);
@@ -1574,32 +1703,39 @@ int main(int argc, char * argv[])
 				glTranslatef(0.f, -.5f, 0.f);
 				
 				glRotatef(r, 0.f, 1.f, 0.f);
-				//glRotatef(r/10.f, 1.f, 0.f, 0.f);
 				
-				glMultMatrixf(mesh.m_transform.m_v);
+			#if 1
 				glRotatef(-90.f, 1.f, 0.f, 0.f);
+			#else
+				glTranslatef(0.f, .5f, 0.f);
+				glRotatef(-90.f, 0.f, 0.f, 1.f);
+			#endif
 				const float scale = 0.005f;
 				glScalef(scale, scale, scale);
-			
+
 				int vertexCount = 0;
 				
-				std::vector<Mat4x4> boneToObjectMatrices;
-				boneToObjectMatrices.resize(deformerMatrices.size());
-				for (size_t boneIndex = 0; boneIndex < deformerMatrices.size(); ++boneIndex)
+				for (size_t boneIndex = 0; boneIndex < objectToBoneMatrices.size(); ++boneIndex)
 				{
-					boneToObjectMatrices[boneIndex] = deformerMatrices[boneIndex].CalcInv();
-					
+					//boneToObjectMatrices[boneIndex] = boneToObjectMatrices[boneIndex];
+					//boneToObjectMatrices[boneIndex] = objectToBoneMatrices[boneIndex].CalcInv();
+
+				#if 0
 					Mat4x4 rotX;
 					Mat4x4 rotY;
 					rotX.MakeRotationX(r * (1.f + boneIndex / 5.f) / 210.f);
 					rotY.MakeRotationY(r * (1.f + boneIndex / 5.f) / 321.f);
 					boneToObjectMatrices[boneIndex] = boneToObjectMatrices[boneIndex] * rotY * rotX;
 					
+					/*
 					boneToObjectMatrices[boneIndex](3,0) += sin(r/360.f * boneIndex / 1.23f) * 10.f;
 					boneToObjectMatrices[boneIndex](3,1) += sin(r/360.f * boneIndex / 2.34f) * 10.f;
 					boneToObjectMatrices[boneIndex](3,2) += sin(r/360.f * boneIndex / 3.45f) * 10.f;
+					*/
+				#endif
 				}
 				
+			#if 1
 				for (size_t i = 0; i < mesh.m_indices.size(); ++i)
 				{
 					bool begin = vertexCount == 0;
@@ -1634,9 +1770,7 @@ int main(int argc, char * argv[])
 						if (boneWeight == 0.f)
 							continue;
 						
-						// todo: pose + bone matrix
-						
-						const Mat4x4 & objectToBone = deformerMatrices[boneIndex];
+						const Mat4x4 & objectToBone = objectToBoneMatrices[boneIndex];
 						const Mat4x4 & boneToObject = boneToObjectMatrices[boneIndex];
 						
 						p += (boneToObject * objectToBone).Mul4(Vec3(v.px, v.py, v.pz)) * boneWeight;
@@ -1681,8 +1815,10 @@ int main(int argc, char * argv[])
 					
 					glEnd();
 				}
+			#endif
 				
 			#if 0
+				// Pose matrix translation
 				glDisable(GL_DEPTH_TEST);
 				for (ObjectsByName::iterator j = objectsByName.begin(); j != objectsByName.end(); ++j)
 				{
@@ -1692,12 +1828,13 @@ int main(int argc, char * argv[])
 					{
 						FbxPose * pose = static_cast<FbxPose*>(object);
 						
+						glPointSize(5.f);
 						glBegin(GL_POINTS);
 						{
 							for (std::map<std::string, Mat4x4>::iterator i = pose->matrices.begin(); i != pose->matrices.end(); ++i)
 							{
 								const Mat4x4 & m = i->second;
-								glColor3ub(255, 255, 255);
+								glColor3ub(255, 0, 0);
 								glVertex3f(m(3, 0), m(3, 1), m(3, 2));
 							}
 						}
@@ -1706,7 +1843,39 @@ int main(int argc, char * argv[])
 				}
 				glEnable(GL_DEPTH_TEST);
 			#endif
-				
+
+			#if 1
+				glDisable(GL_DEPTH_TEST);
+
+				// object to bone matrix translation
+				glColor3ub(255, 0, 0);
+				glPointSize(7.f);
+				glBegin(GL_POINTS);
+				{
+					for (size_t j = 0; j < deformers.size(); ++j)
+					{
+						const Mat4x4 m = objectToBoneMatrices[j].CalcInv();
+						glVertex3f(m(3, 0), m(3, 1), m(3, 2));
+					}
+				}
+				glEnd();
+
+				// bone to object matrix translation
+				glColor3ub(0, 255, 0);
+				glPointSize(5.f);
+				glBegin(GL_POINTS);
+				{
+					for (size_t j = 0; j < deformers.size(); ++j)
+					{
+						const Mat4x4 m = boneToObjectMatrices[j];
+						glVertex3f(m(3, 0), m(3, 1), m(3, 2));
+					}
+				}
+				glEnd();
+
+				glEnable(GL_DEPTH_TEST);
+			#endif
+
 				glPopMatrix();
 			}
 			

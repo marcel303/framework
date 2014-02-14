@@ -119,9 +119,8 @@ class FbxValue
 		bool Bool;
 		int64_t Int;
 		double Real;
+		char * String;
 	};
-	
-	std::string String;
 	
 public:
 	enum TYPE
@@ -136,26 +135,31 @@ public:
 	TYPE type;
 	
 	explicit FbxValue();
+	FbxValue(const FbxValue & value);
 	explicit FbxValue(bool value);
 	explicit FbxValue(int64_t value);
 	explicit FbxValue(double value);
 	explicit FbxValue(const char * value);
+	~FbxValue();
 	
+	FbxValue & operator=(const FbxValue & value);
+
 	bool isValid() const;
 	bool getBool() const;
 	int64_t getInt() const;
 	double getDouble() const;
-	const std::string & getString() const;
+	const char * getString() const;
 };
 
-template <typename T> T inline get(const FbxValue & value);
-template <> FbxValue    inline get(const FbxValue & value) { return value; }
-template <> bool        inline get(const FbxValue & value) { return value.getBool(); }
-template <> int         inline get(const FbxValue & value) { return int(value.getInt()); }
-template <> int64_t     inline get(const FbxValue & value) { return value.getInt(); }
-template <> float       inline get(const FbxValue & value) { return float(value.getDouble()); }
-template <> double      inline get(const FbxValue & value) { return value.getDouble(); }
-template <> std::string inline get(const FbxValue & value) { return value.getString(); }
+template <typename T> T  inline get(const FbxValue & value);
+template <> FbxValue     inline get(const FbxValue & value) { return value; }
+template <> bool         inline get(const FbxValue & value) { return value.getBool(); }
+template <> int          inline get(const FbxValue & value) { return int(value.getInt()); }
+template <> int64_t      inline get(const FbxValue & value) { return value.getInt(); }
+template <> float        inline get(const FbxValue & value) { return float(value.getDouble()); }
+template <> double       inline get(const FbxValue & value) { return value.getDouble(); }
+template <> inline const char * get(const FbxValue & value) { return value.getString(); }
+template <> inline std::string  get(const FbxValue & value) { return std::string(value.getString()); }
 
 /* --------------------------------------------------------------------------------
 // FbxReader

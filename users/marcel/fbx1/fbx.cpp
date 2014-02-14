@@ -2,10 +2,6 @@
 #include "fbx.h"
 
 // --------------------------------------------------------------------------------
-
-static const std::string kEmptyString;
-
-// --------------------------------------------------------------------------------
 // FbxRecord
 // --------------------------------------------------------------------------------
 
@@ -241,6 +237,12 @@ FbxValue::FbxValue()
 	type = TYPE_INVALID;
 }
 
+FbxValue::FbxValue(const FbxValue & value)
+{
+	type = TYPE_INVALID;
+	*this = value;
+}
+
 FbxValue::FbxValue(bool value)
 {
 	type = TYPE_BOOL;
@@ -262,7 +264,34 @@ FbxValue::FbxValue(double value)
 FbxValue::FbxValue(const char * value)
 {
 	type = TYPE_STRING;
-	String = value;
+
+	const int length = strlen(value) + 1;
+	String = new char[length];
+	memcpy(String, value, length);
+}
+
+FbxValue::~FbxValue()
+{
+	if (type == TYPE_STRING)
+		delete [] String;
+}
+
+FbxValue & FbxValue::operator=(const FbxValue & value)
+{
+	if (type == TYPE_STRING)
+		delete [] String;
+
+	type = value.type;
+	Int = value.Int;
+
+	if (type == TYPE_STRING)
+	{
+		const int length = strlen(value.String) + 1;
+		String = new char[length];
+		memcpy(String, value.String, length);
+	}
+
+	return *this;
 }
 
 bool FbxValue::isValid() const
@@ -301,11 +330,11 @@ double FbxValue::getDouble() const
 	return 0.0;
 }
 
-const std::string & FbxValue::getString() const
+const const char * FbxValue::getString() const
 {
 	if (type == TYPE_STRING)
 		return String;
-	return kEmptyString;
+	return "";
 }
 
 // --------------------------------------------------------------------------------
