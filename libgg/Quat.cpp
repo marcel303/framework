@@ -13,8 +13,10 @@ Quat::Quat(const Quat & quat)
 	m_w = quat.m_w;
 }
 
-Quat::~Quat()
+Quat::Quat(float x, float y, float z, float w)
 {
+	m_xyz = Vec3(x, y, z);
+	m_w = w;
 }
 
 float Quat::calcSize() const
@@ -63,7 +65,7 @@ void Quat::fromAxisAngle(Vec3 axis, float angle)
 
 void Quat::fromMatrix(const Mat4x4 & matrix)
 {
-	const float eps = 0.000001f;
+	const float eps = 0.001f;
 
 	// we need four cases, 1 special (and preferred) and 3 backups, to extract
 	// the axis angle pair. We need the backups in case the rotation is aligned
@@ -79,33 +81,33 @@ void Quat::fromMatrix(const Mat4x4 & matrix)
 
 		m_w = 0.25f / s;
 	}
-	else if (matrix(0, 0) > matrix(1, 1) && matrix(0, 0) > matrix(2, 2))
-	{ 
-		const float s = 2.0f * sqrt(1.0f + matrix(0, 0) - matrix(1, 1) - matrix(2, 2));
-
-		m_xyz[0] = 0.25f * s;		
-		m_xyz[1] = (matrix(1, 0) + matrix(0, 1)) / s;
-		m_xyz[2] = (matrix(2, 0) + matrix(0, 2)) / s;
-		m_w = (matrix(2, 1) - matrix(1, 2)) / s;
-	}
-	else if (matrix(1, 1) > matrix(2, 2))
-	{
-		const float s = 2.0f * sqrt(1.0f + matrix(1, 1) - matrix(0, 0) - matrix(2, 2)); 
-		
-		m_xyz[0] = (matrix(1, 0) + matrix(0, 1) ) / s;
-		m_xyz[1] = 0.25f * s;
-		m_xyz[2] = (matrix(2, 1) + matrix(1, 2) ) / s;
-		m_w = (matrix(2, 0) - matrix(0, 2) ) / s;
-	} 
 	else
-	{
-		const float s = 2.0f * sqrt(1.0f + matrix(2, 2) - matrix(0, 0) - matrix(1, 1)); 
+	{ 
+		int max = 0;
 		
-		m_xyz[0] = (matrix(2, 0) + matrix(0, 2) ) / s;
-		m_xyz[1] = (matrix(2, 1) + matrix(1, 2) ) / s;
-		m_xyz[2] = 0.25f * s;
-		m_w = (matrix(1, 0) - matrix(0, 1) ) / s;
-	} 
+		for (int i = 1; i < 3; ++i)
+			if (matrix(i, i) > matrix(max, max))
+				max = i;
+		
+		int a0 = max;
+		int a1 = a0 == 2 ? 0 : a0 + 1;
+		int a2 = a1 == 2 ? 0 : a1 + 1;
+		
+		// have to reverse these -_-
+		
+		a0 = 2 - a0;
+		a1 = 2 - a1;
+		a2 = 2 - a2;
+		
+		const float s = sqrt(1.0f + matrix(a0, a0) - matrix(a1, a1) - matrix(a2, a2));
+		
+		m_xyz[a0] = s / 2.f;		
+		m_xyz[a1] = (matrix(a1, a0) + matrix(a0, a1)) / s / 2.f;
+		m_xyz[a2] = (matrix(a2, a0) + matrix(a0, a2)) / s / 2.f;
+		m_w       = (matrix(a2, a1) - matrix(a1, a2)) / s / 2.f;
+	}
+	
+	normalize();
 }
 
 Mat4x4 Quat::toMatrix() const

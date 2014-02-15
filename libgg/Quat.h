@@ -11,7 +11,7 @@ class Quat
 public:
 	Quat();
 	Quat(const Quat & quat);
-	~Quat();
+	Quat(float x, float y, float z, float w);
 
 	float calcSize() const;
 	void normalize();
