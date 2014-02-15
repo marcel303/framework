@@ -330,7 +330,7 @@ double FbxValue::getDouble() const
 	return 0.0;
 }
 
-const const char * FbxValue::getString() const
+const char * FbxValue::getString() const
 {
 	if (type == TYPE_STRING)
 		return String;

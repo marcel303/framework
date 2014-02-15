@@ -257,13 +257,70 @@ public:
 	public:
 		struct Key
 		{
-			int64_t timeStamp;
+			int64_t time;
 			float value;
 		};
 		
 		struct KeyList
 		{
 			std::vector<Key> keys;
+			
+			bool evaluate(float frame, float & value) const
+			{
+				if (keys.empty())
+				{
+					return true;
+				}
+				else
+				{
+					const int64_t time = int64_t(frame * 1000000000.0);
+					
+					const Key * firstKey = &keys[0];
+					const Key * key = firstKey;
+					const Key * lastKey = firstKey + keys.size() - 1;
+					
+					while (key != lastKey && time >= key[1].time)
+					{
+						key++;
+					}
+					
+					if (key != lastKey && time >= key->time)
+					{
+						const Key & key1 = key[0];
+						const Key & key2 = key[1];
+						
+						assert(time >= key1.time && time <= key2.time);
+						
+						const float frame1 = float(key1.time / 1000000000.0);
+						const float frame2 = float(key2.time / 1000000000.0);
+						
+						const float t = (frame - frame1) / (frame2 - frame1);
+						
+						assert(t >= 0.f && t <= 1.f);
+						
+						value = key1.value * (1.f - t) + key2.value * t;
+						
+						return false;
+					}
+					else
+					{
+						// either the first or last key in the animation. copy value
+						
+						assert(key == firstKey || key == lastKey);
+						
+						value = key->value;
+					}
+					
+					if (key == lastKey)
+					{
+						return true;
+					}
+					else
+					{
+						return false;
+					}
+				}
+			}
 			
 			void read(int & logIndent, const FbxRecord & record)
 			{
@@ -281,20 +338,24 @@ public:
 					{
 						float value = get<float>(values[i + 1]);
 						
+					#if 1 // todo: enable duplicate removal
 						// round with a fixed precision so small floating point drift is eliminated from the exported values
 						value = int(value * 1000.f + .5f) / 1000.f;
 						
 						// don't write duplicate values, unless it's the first/last key in the list. exporters sometimes write a fixed number of keys (sampling based), with lots of duplicates
 						const bool isDuplicate = keys.size() >= 1 && keys.back().value == value && i + stride != values.size();
+					#else
+						const bool isDuplicate = false;
+					#endif
 						
 						if (!isDuplicate)
 						{
 							Key temp;
-							temp.timeStamp = get<int64_t>(values[i + 0]);
+							temp.time = get<int64_t>(values[i + 0]);
 							temp.value = value;
 							keys.push_back(temp);
-						
-							//log(logIndent, "%014lld -> %f\n", temp.timeStamp, temp.value);
+							
+							//log(logIndent, "%014lld -> %f\n", temp.time, temp.value);
 						}
 					}
 				}
@@ -350,27 +411,27 @@ public:
 		}
 	}
 	
-	bool evaluate(int64_t timeStamp, Mat4x4 & result) const
+	bool evaluate(float frame, Mat4x4 & result) const
 	{
 		Vec3 translation(0.f, 0.f, 0.f);
 		Vec3 rotation(0.f, 0.f, 0.f);
 		Vec3 scale(1.f, 1.f, 1.f);
 		
-		assert(T.X.keys.size() != 0);
-
-		if (T.X.keys.size() != 0) translation[0] = T.X.keys[0].value;
-		if (T.Y.keys.size() != 0) translation[1] = T.Y.keys[0].value;
-		if (T.Z.keys.size() != 0) translation[2] = T.Z.keys[0].value;
-		if (R.X.keys.size() != 0) rotation[0] = R.X.keys[0].value;
-		if (R.Y.keys.size() != 0) rotation[1] = R.Y.keys[0].value;
-		if (R.Z.keys.size() != 0) rotation[2] = R.Z.keys[0].value;
-		if (S.X.keys.size() != 0) scale[0] = S.X.keys[0].value;
-		if (S.Y.keys.size() != 0) scale[1] = S.Y.keys[0].value;
-		if (S.Z.keys.size() != 0) scale[2] = S.Z.keys[0].value;
-
+		bool isDone = true;
+		
+		isDone &= T.X.evaluate(frame, translation[0]);
+		isDone &= T.Y.evaluate(frame, translation[1]);
+		isDone &= T.Z.evaluate(frame, translation[2]);
+		isDone &= R.X.evaluate(frame, rotation[0]);
+		isDone &= R.Y.evaluate(frame, rotation[1]);
+		isDone &= R.Z.evaluate(frame, rotation[2]);
+		isDone &= S.X.evaluate(frame, scale[0]);
+		isDone &= S.Y.evaluate(frame, scale[1]);
+		isDone &= S.Z.evaluate(frame, scale[2]);
+		
 		result = MatrixTranslation(translation) * MatrixRotation(rotation) * MatrixScaling(scale);
 		
-		return true;
+		return isDone;
 	}
 };
 
@@ -800,12 +861,12 @@ static Mat4x4 MatrixTranslation(const Vec3 & v)
 
 static Mat4x4 MatrixRotation(const Vec3 & v)
 {
+	const Vec3 temp = v * M_PI / 180.f;
 	Mat4x4 x, y, z;
-	Vec3 temp = v * M_PI / 180.f;
-	x.MakeRotationX(temp[0]);
-	y.MakeRotationY(temp[1]);
-	z.MakeRotationZ(temp[2]);
-	return x * y * z;
+	x.MakeRotationX(temp[0], false);
+	y.MakeRotationY(temp[1], false);
+	z.MakeRotationZ(temp[2], false);
+	return z * y * x;
 }
 
 static Mat4x4 MatrixScaling(const Vec3 & v)
@@ -887,11 +948,11 @@ int main(int argc, char * argv[])
 		for (FbxRecord object = objects.firstChild(); object.isValid(); object = object.nextSibling())
 		{
 			FbxObject * fbxObject = 0;
-		
+			
 			std::vector<std::string> objectProps = object.captureProperties<std::string>();
 			const std::string objectName = objectProps.size() >= 1 ? objectProps[0] : "";
 			const std::string objectType = objectProps.size() >= 2 ? objectProps[1] : "";
-				
+			
 			if (object.name == "Model")
 			{
 				const FbxRecord & model = object;
@@ -1040,7 +1101,7 @@ int main(int argc, char * argv[])
 						MatrixTranslation(-scalingPivot);
 					mesh->localTransform = mesh->transform;
 					mesh->animTransform = mesh->localTransform;
-
+					
 					vertices.capturePropertiesAsFloat(mesh->vertices);
 					vertexIndices.capturePropertiesAsInt(mesh->vertexIndices);
 					normals.capturePropertiesAsFloat(mesh->normals);
@@ -1117,6 +1178,10 @@ int main(int argc, char * argv[])
 						
 						memcpy(fbxMatrix.m_v, &matrix[0], sizeof(float) * 16);
 					}
+					else
+					{
+						log(logIndent, "warning: pose matrix doesn't contain 16 elements\n");
+					}
 					
 					//log(logIndent, "pose node! matrixSize=%d, node=%s\n", int(matrix.size()), nodeName.c_str());
 				}
@@ -1135,13 +1200,13 @@ int main(int argc, char * argv[])
 				
 				deformer.firstChild("Indexes").capturePropertiesAsInt(fbxDeformer->indices);
 				deformer.firstChild("Weights").capturePropertiesAsFloat(fbxDeformer->weights);
-
+				
 				std::vector<float> transform;
 				std::vector<float> transformLink;
-
+				
 				deformer.firstChild("Transform").capturePropertiesAsFloat(transform);
 				deformer.firstChild("TransformLink").capturePropertiesAsFloat(transformLink);
-
+				
 				if (transform.size() == 16)
 					memcpy(fbxDeformer->transform.m_v, &transform[0], sizeof(float) * 16);
 				else
@@ -1198,7 +1263,7 @@ int main(int argc, char * argv[])
 			{
 				ObjectsByName::iterator from = objectsByName.find(fromName);
 				ObjectsByName::iterator to = objectsByName.find(toName);
-	
+				
 				if (from != objectsByName.end() && to != objectsByName.end())
 				{
 					//log(logIndent, "connect %s -> %s\n", fromName.c_str(), toName.c_str());
@@ -1347,7 +1412,7 @@ int main(int argc, char * argv[])
 			}
 			
 			// todo: track deformer -> deformer connections and find skin deformer object (which has a reference to the mesh)
-
+			
 			FbxMesh * mesh = 0;
 			
 			for (FbxObject * parent = deformer->parent; parent != 0; parent = parent->parent)
@@ -1389,6 +1454,7 @@ int main(int argc, char * argv[])
 		}
 	}
 	
+#if 0 // todo: eventually we'll want to map animations efficiently to bones
 	// resolve animation targets
 	
 	for (std::list<FbxAnim>::iterator i = anims.begin(); i != anims.end(); ++i)
@@ -1434,7 +1500,8 @@ int main(int argc, char * argv[])
 			}
 		}
 	}
-
+#endif
+	
 	//logEnabled = false;
 	
 	// finalize meshes by invoking the powers of the awesome vertex welding machine
@@ -1589,8 +1656,8 @@ int main(int argc, char * argv[])
 		// initialize SDL
 		
 		SDL_Init(SDL_INIT_EVERYTHING);
-		//if (SDL_SetVideoMode(640, 480, 32, SDL_OPENGL) < 0)
-		if (SDL_SetVideoMode(1600, 900, 32, SDL_OPENGL) < 0)
+		if (SDL_SetVideoMode(640, 480, 32, SDL_OPENGL) < 0)
+		//if (SDL_SetVideoMode(1600, 900, 32, SDL_OPENGL) < 0)
 		{
 			log(0, "failed to intialize SDL");
 			exit(-1);
@@ -1603,7 +1670,7 @@ int main(int argc, char * argv[])
 		while (!stop)
 		{
 			// process input
-
+			
 			SDL_Event e;
 			
 			while (SDL_PollEvent(&e))
@@ -1616,28 +1683,33 @@ int main(int argc, char * argv[])
 						wireframe = !wireframe;
 				}
 			}
-
+			
 			// process animation
-
+			
+			static float frame = 0.f;
+			frame += 1.f / 2.f; // todo: convert frame time / frame rate -> time (seconds)
+			
+			bool isDone = true;
+			
 			if (anims.size() >= 1)
 			{
 				const FbxAnim & anim = anims.front();
-
-				for (std::map<std::string, FbxTransformChannel>::const_iterator i = anim.transforms.cbegin(); i != anim.transforms.cend(); ++i)
+				
+				for (std::map<std::string, FbxTransformChannel>::const_iterator i = anim.transforms.begin(); i != anim.transforms.end(); ++i)
 				{
 					const std::string & modelName = i->first;
 					const FbxTransformChannel & transformChannel = i->second;
-
+					
 					ObjectsByName::iterator j = objectsByName.find(modelName);
-
+					
 					if (j != objectsByName.end() && j->second->type == "Mesh")
 					{
 						FbxMesh * mesh = static_cast<FbxMesh*>(j->second);
-
+						
 						Mat4x4 animTransform;
-
-						transformChannel.evaluate(0, animTransform);
-
+						
+						isDone &= transformChannel.evaluate(frame, animTransform);
+						
 						mesh->animTransform = animTransform;
 					}
 					else
@@ -1646,6 +1718,13 @@ int main(int argc, char * argv[])
 					}
 				}
 			}
+			
+			if (isDone)
+			{
+				log(logIndent, "animation is done. restart");
+				
+				frame = 0.f;
+			}
 
 			for (size_t i = 0; i < deformers.size(); ++i)
 			{
@@ -1653,24 +1732,19 @@ int main(int argc, char * argv[])
 
 				Mat4x4 globalTransform;
 				globalTransform.MakeIdentity();
-
-				Mat4x4 identity;
-				identity.MakeIdentity();
+				
 				for (FbxObject * parent = deformer->mesh; parent != 0; parent = parent->parent)
 				{
 					if (parent->type == "Mesh")
 					{
 						FbxMesh * currentMesh = static_cast<FbxMesh*>(parent);
-
-						//const Mat4x4 & transform = currentMesh->deformer ? currentMesh->deformer->transform : identity;
-						//const Mat4x4 & transformLink = currentMesh->deformer ? currentMesh->deformer->transformLink : identity;
-
+						
 						globalTransform =
 							currentMesh->animTransform *
 							globalTransform;
 					}
 				}
-
+				
 				boneToObjectMatrices[i] = globalTransform;
 			}
 
@@ -1692,7 +1766,7 @@ int main(int argc, char * argv[])
 			glPolygonMode(GL_FRONT_AND_BACK, wireframe ? GL_LINE : GL_FILL);
 			
 			static float r = 0.f;
-			r += 1.f;
+			r += 1.f / 10.f;
 			
 			for (std::list<Mesh>::iterator i = meshes.begin(); i != meshes.end(); ++i)
 			{
@@ -1714,26 +1788,6 @@ int main(int argc, char * argv[])
 				glScalef(scale, scale, scale);
 
 				int vertexCount = 0;
-				
-				for (size_t boneIndex = 0; boneIndex < objectToBoneMatrices.size(); ++boneIndex)
-				{
-					//boneToObjectMatrices[boneIndex] = boneToObjectMatrices[boneIndex];
-					//boneToObjectMatrices[boneIndex] = objectToBoneMatrices[boneIndex].CalcInv();
-
-				#if 0
-					Mat4x4 rotX;
-					Mat4x4 rotY;
-					rotX.MakeRotationX(r * (1.f + boneIndex / 5.f) / 210.f);
-					rotY.MakeRotationY(r * (1.f + boneIndex / 5.f) / 321.f);
-					boneToObjectMatrices[boneIndex] = boneToObjectMatrices[boneIndex] * rotY * rotX;
-					
-					/*
-					boneToObjectMatrices[boneIndex](3,0) += sin(r/360.f * boneIndex / 1.23f) * 10.f;
-					boneToObjectMatrices[boneIndex](3,1) += sin(r/360.f * boneIndex / 2.34f) * 10.f;
-					boneToObjectMatrices[boneIndex](3,2) += sin(r/360.f * boneIndex / 3.45f) * 10.f;
-					*/
-				#endif
-				}
 				
 			#if 1
 				for (size_t i = 0; i < mesh.m_indices.size(); ++i)
@@ -1844,7 +1898,7 @@ int main(int argc, char * argv[])
 				glEnable(GL_DEPTH_TEST);
 			#endif
 
-			#if 1
+			#if 0
 				glDisable(GL_DEPTH_TEST);
 
 				// object to bone matrix translation
