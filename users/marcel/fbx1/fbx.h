@@ -84,6 +84,7 @@ public:
 	bool isValid() const;
 	FbxRecord firstChild(const char * name = 0) const;
 	FbxRecord nextSibling(const char * name = 0) const;
+	template <typename T> inline void captureProperties(std::vector<T> & result) const;
 	template <typename T> inline std::vector<T> captureProperties() const;
 	template <typename T> inline T captureProperty(int index) const;
 	void capturePropertiesAsInt(std::vector<int> & result) const;
@@ -197,10 +198,8 @@ public:
 // --------------------------------------------------------------------------------
 
 template <typename T>
-inline std::vector<T> FbxRecord::captureProperties() const
+inline void FbxRecord::captureProperties(std::vector<T> & result) const
 {	
-	std::vector<T> result;
-	
 	if (isValid())
 	{
 		result.resize(m_numProperties);
@@ -216,6 +215,18 @@ inline std::vector<T> FbxRecord::captureProperties() const
 			result[i] = get<T>(value);
 		}
 	}
+	else
+	{
+		result.clear();
+	}
+}
+
+template <typename T>
+inline std::vector<T> FbxRecord::captureProperties() const
+{	
+	std::vector<T> result;
+	
+	captureProperties<T>(result);
 	
 	return result;
 }

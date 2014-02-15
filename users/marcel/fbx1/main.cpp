@@ -11,6 +11,10 @@
 #include <SDL/SDL_opengl.h>
 #include "Mat4x4.h"
 
+#include "../framework/model.h"
+
+using namespace Model;
+
 static bool logEnabled = true;
 
 static Mat4x4 MatrixTranslation(const Vec3 & v);
@@ -120,6 +124,7 @@ public:
 class FbxDeformer;
 class FbxMesh;
 class FbxObject;
+class FbxPose;
 
 //
 
@@ -140,7 +145,6 @@ public:
 	std::string name;
 	bool persistent;
 	FbxObject * parent;
-	std::vector<FbxObject*> children;
 };
 
 class FbxMesh : public FbxObject
@@ -197,11 +201,8 @@ public:
 			}
 		}
 	};
-
+	
 	Mat4x4 transform;
-	Mat4x4 localTransform;
-	Mat4x4 globalTransform;
-	Mat4x4 animTransform;
 	
 	std::vector<float> vertices;
 	std::vector<int> vertexIndices;
@@ -212,11 +213,8 @@ public:
 	std::vector<int> colorIndices;
 	std::vector<Deformer> deformers;
 	
-	FbxDeformer * deformer;
-
 	FbxMesh(const std::string & type, const std::string & name)
 		: FbxObject("Mesh", name)
-		, deformer(0)
 	{
 	}
 };
@@ -249,15 +247,15 @@ public:
 	}
 };
 
-class FbxTransformChannel
+class FbxAnimTransform
 {
 public:
-	class RegularChannel
+	class Channel
 	{
 	public:
 		struct Key
 		{
-			int64_t time;
+			float time;
 			float value;
 		};
 		
@@ -265,7 +263,7 @@ public:
 		{
 			std::vector<Key> keys;
 			
-			bool evaluate(float frame, float & value) const
+			bool evaluate(float time, float & value) const
 			{
 				if (keys.empty())
 				{
@@ -273,8 +271,6 @@ public:
 				}
 				else
 				{
-					const int64_t time = int64_t(frame * 1000000000.0);
-					
 					const Key * firstKey = &keys[0];
 					const Key * key = firstKey;
 					const Key * lastKey = firstKey + keys.size() - 1;
@@ -291,16 +287,11 @@ public:
 						
 						assert(time >= key1.time && time <= key2.time);
 						
-						const float frame1 = float(key1.time / 1000000000.0);
-						const float frame2 = float(key2.time / 1000000000.0);
-						
-						const float t = (frame - frame1) / (frame2 - frame1);
+						const float t = (time - key1.time) / (key2.time - key1.time);
 						
 						assert(t >= 0.f && t <= 1.f);
 						
 						value = key1.value * (1.f - t) + key2.value * t;
-						
-						return false;
 					}
 					else
 					{
@@ -311,14 +302,7 @@ public:
 						value = key->value;
 					}
 					
-					if (key == lastKey)
-					{
-						return true;
-					}
-					else
-					{
-						return false;
-					}
+					return (key == lastKey);
 				}
 			}
 			
@@ -329,7 +313,8 @@ public:
 				if (keyCount != 0)
 				{
 					const FbxRecord key = record.firstChild("Key");
-					const std::vector<FbxValue> values = key.captureProperties<FbxValue>();
+					std::vector<FbxValue> values;
+					key.captureProperties<FbxValue>(values);
 					const int stride = int(values.size()) / keyCount;
 					
 					//log(logIndent, "keyCount=%d\n", keyCount);
@@ -350,10 +335,10 @@ public:
 						
 						if (!isDuplicate)
 						{
-							Key temp;
-							temp.time = get<int64_t>(values[i + 0]);
-							temp.value = value;
-							keys.push_back(temp);
+							Key key;
+							key.time = float((get<int64_t>(values[i + 0]) / 1000000) / 1000.0 / 60.0);
+							key.value = value;
+							keys.push_back(key);
 							
 							//log(logIndent, "%014lld -> %f\n", temp.time, temp.value);
 						}
@@ -388,9 +373,11 @@ public:
 		}
 	};
 	
-	RegularChannel T;
-	RegularChannel R;
-	RegularChannel S;
+	Channel T;
+	Channel R;
+	Channel S;
+	
+	std::vector<AnimKey> animKeys;
 	
 	void read(int & logIndent, const FbxRecord & record)
 	{
@@ -400,18 +387,88 @@ public:
 			
 			logIndent++;
 			{
-				if (name == "T")
-					T.read(logIndent, channel);
-				if (name == "R")
-					R.read(logIndent, channel);
-				if (name == "S")
-					S.read(logIndent, channel);
+				if (name == "T") T.read(logIndent, channel);
+				if (name == "R") R.read(logIndent, channel);
+				if (name == "S") S.read(logIndent, channel);
 			}
 			logIndent--;
 		}
+		
+		buildAnimKeyFrames(T, R, S);
 	}
 	
-	bool evaluate(float frame, Mat4x4 & result) const
+	void buildAnimKeyFrames(const Channel & t, const Channel & r, const Channel & s)
+	{
+		// extract key frames times from all channels
+		
+		std::vector<float> times;
+		
+	#define ADD_TIMES(keyList) \
+		for (size_t i = 0; i < keyList.keys.size(); ++i) \
+			times.push_back(keyList.keys[i].time)
+		
+		ADD_TIMES(T.X);
+		ADD_TIMES(T.Y);
+		ADD_TIMES(T.Z);
+		ADD_TIMES(R.X);
+		ADD_TIMES(R.Y);
+		ADD_TIMES(R.Z);
+		ADD_TIMES(S.X);
+		ADD_TIMES(S.Y);
+		ADD_TIMES(S.Z);
+		
+	#undef ADD_TIMES
+		
+		// remove duplicate key frame times
+		
+		std::sort(times.begin(), times.end());
+		
+		std::vector<float> uniqueTimes;
+		uniqueTimes.reserve(times.size());
+		
+		if (times.size() >= 1)
+		{
+			uniqueTimes.push_back(times[0]);
+			for (size_t i = 1; i < times.size(); ++i)
+			{
+				if (times[i] != uniqueTimes.back())
+					uniqueTimes.push_back(times[i]);
+			}
+		}
+		
+		// sample key frames and produce a merged set of key frames containing data for all channels
+		
+		animKeys.resize(uniqueTimes.size());
+		
+		for (size_t i = 0; i < uniqueTimes.size(); ++i)
+		{
+			const float time = uniqueTimes[i];
+			
+			// sample the separate key frame channels
+			
+			Mat4x4 m;
+			evaluateRaw(t, r, s, time, m);
+			
+			// extract translation and rotation
+			
+			Vec3 translation = m.GetTranslation();
+			Quat quat;
+			quat.fromMatrix(m);
+			
+			// add the new key frame
+			
+			AnimKey & animKey = animKeys[i];
+			animKey.time = time;
+			animKey.translation = translation;
+			animKey.rotation[0] = quat[0];
+			animKey.rotation[1] = quat[1];
+			animKey.rotation[2] = quat[2];
+			animKey.rotation[3] = quat[3];
+			animKey.scale = Vec3(0.f, 0.f, 0.f);
+		}
+	}
+	
+	bool evaluateRaw(const Channel & t, const Channel & r, const Channel & s, float time, Mat4x4 & result) const
 	{
 		Vec3 translation(0.f, 0.f, 0.f);
 		Vec3 rotation(0.f, 0.f, 0.f);
@@ -419,19 +476,89 @@ public:
 		
 		bool isDone = true;
 		
-		isDone &= T.X.evaluate(frame, translation[0]);
-		isDone &= T.Y.evaluate(frame, translation[1]);
-		isDone &= T.Z.evaluate(frame, translation[2]);
-		isDone &= R.X.evaluate(frame, rotation[0]);
-		isDone &= R.Y.evaluate(frame, rotation[1]);
-		isDone &= R.Z.evaluate(frame, rotation[2]);
-		isDone &= S.X.evaluate(frame, scale[0]);
-		isDone &= S.Y.evaluate(frame, scale[1]);
-		isDone &= S.Z.evaluate(frame, scale[2]);
+		isDone &= t.X.evaluate(time, translation[0]);
+		isDone &= t.Y.evaluate(time, translation[1]);
+		isDone &= t.Z.evaluate(time, translation[2]);
+		isDone &= r.X.evaluate(time, rotation[0]);
+		isDone &= r.Y.evaluate(time, rotation[1]);
+		isDone &= r.Z.evaluate(time, rotation[2]);
+		isDone &= s.X.evaluate(time, scale[0]);
+		isDone &= s.Y.evaluate(time, scale[1]);
+		isDone &= s.Z.evaluate(time, scale[2]);
 		
 		result = MatrixTranslation(translation) * MatrixRotation(rotation) * MatrixScaling(scale);
 		
 		return isDone;
+	}
+	
+	bool evaluate(float time, Mat4x4 & result) const
+	{
+		//if (rand() % 4)
+		//	return evaluateRaw(T, R, S, time, result);
+		
+		bool done = false;
+		
+		Quat quat;
+		Vec3 translation;
+		
+		if (animKeys.empty())
+		{
+			quat.makeIdentity();
+			translation.SetZero();
+			
+			done = true;
+		}
+		else
+		{
+			const AnimKey * firstKey = &animKeys[0];
+			const AnimKey * key = firstKey;
+			const AnimKey * lastKey = firstKey + animKeys.size() - 1;
+			
+			while (key != lastKey && time >= key[1].time)
+			{
+				key++;
+			}
+			
+			if (key != lastKey && time >= key->time)
+			{
+				const AnimKey & key1 = key[0];
+				const AnimKey & key2 = key[1];
+				
+				assert(time >= key1.time && time <= key2.time);
+				
+				const float t = (time - key1.time) / (key2.time - key1.time);
+				
+				assert(t >= 0.f && t <= 1.f);
+				
+				const float t1 = 1.f - t;
+				const float t2 = t;
+				
+				Quat quat1(key1.rotation[0], key1.rotation[1], key1.rotation[2], key1.rotation[3]);
+				Quat quat2(key2.rotation[0], key2.rotation[1], key2.rotation[2], key2.rotation[3]);
+				
+				quat = quat1.slerp(quat2, t);
+				translation = key1.translation * t1 + key2.translation * t2;
+			}
+			else
+			{
+				// either the first or last key in the animation. copy value
+				
+				assert(key == firstKey || key == lastKey);
+				
+				quat = Quat(key->rotation[0], key->rotation[1], key->rotation[2], key->rotation[3]);
+				translation = key->translation;
+			}
+			
+			if (key == lastKey)
+				done = true;
+		}
+		
+		Mat4x4 t = MatrixTranslation(translation);
+		Mat4x4 r = quat.toMatrix();
+		
+		result = t * r;
+		
+		return done;
 	}
 };
 
@@ -439,7 +566,7 @@ class FbxAnim
 {
 public:
 	std::string name;
-	std::map<std::string, FbxTransformChannel> transforms;
+	std::map<std::string, FbxAnimTransform> transforms;
 };
 
 //
@@ -616,7 +743,7 @@ public:
 
 //
 
-class Mesh
+class MyMesh
 {
 public:
 	class Vertex
@@ -652,28 +779,6 @@ public:
 		const std::vector<int> & colorIndices,
 		const std::vector<FbxMesh::Deformer> & deformers)
 	{
-		#if 0
-		m_vertices.resize(vertices.size() / 3);
-		for (size_t i = 0; i < vertices.size() / 3; ++i)
-		{
-			Vertex & v = m_vertices[i];
-			v.px = vertices[i * 3 + 0];
-			v.py = vertices[i * 3 + 1];
-			v.pz = vertices[i * 3 + 2];
-			v.nx = v.ny = v.nz = 0.f;
-			v.tx = v.ty = 0.f;
-			v.cx = v.cy = v.cz = v.cw = 1.f;
-			for (int j = 0; j < 4; ++j)
-			{
-				v.bi[j] = 0;
-				v.bw[j] = 0;
-			}
-			v.bw[0] = 255;
-		}
-		m_indices = vertexIndices;
-		return;
-		#endif
-		
 		log(logIndent, "-- running da welding machine! --\n");
 		
 		logIndent++;
@@ -861,6 +966,7 @@ static Mat4x4 MatrixTranslation(const Vec3 & v)
 
 static Mat4x4 MatrixRotation(const Vec3 & v)
 {
+	// todo: create quaternion(s) instead of matrices
 	const Vec3 temp = v * M_PI / 180.f;
 	Mat4x4 x, y, z;
 	x.MakeRotationX(temp[0], false);
@@ -940,9 +1046,7 @@ int main(int argc, char * argv[])
 	log(logIndent, "-- extracting mesh data --\n");
 	
 	const int time1 = getTimeMS();
-	
-	std::vector<FbxMesh*> fbxMeshes;
-	
+		
 	for (FbxRecord objects = reader.firstRecord("Objects"); objects.isValid(); objects = objects.nextSibling("Objects"))
 	{
 		for (FbxRecord object = objects.firstChild(); object.isValid(); object = object.nextSibling())
@@ -961,7 +1065,6 @@ int main(int argc, char * argv[])
 				{
 					FbxMesh * mesh = new FbxMesh("Mesh", objectName);
 					fbxObject = mesh;
-					fbxMeshes.push_back(mesh); // fixme, remove?
 					
 					FbxRecord properties = model.firstChild("Properties60");
 					
@@ -1099,8 +1202,6 @@ int main(int argc, char * argv[])
 						MatrixTranslation(scalingPivot) *
 						MatrixScaling(scalingLocal) *
 						MatrixTranslation(-scalingPivot);
-					mesh->localTransform = mesh->transform;
-					mesh->animTransform = mesh->localTransform;
 					
 					vertices.capturePropertiesAsFloat(mesh->vertices);
 					vertexIndices.capturePropertiesAsInt(mesh->vertexIndices);
@@ -1274,22 +1375,19 @@ int main(int argc, char * argv[])
 					// todo: figure out a better way to deal with object to object connections
 					//       the current implementation breaks if another type of node object
 					//       is present in the scene
-					if (toObject->type == "Deformer" && fromObject->type == "Mesh")
+					if (fromObject->type == "Mesh" && toObject->type == "Deformer")
 					{
-						FbxDeformer * deformer = static_cast<FbxDeformer*>(toObject);
 						FbxMesh * mesh = static_cast<FbxMesh*>(fromObject);
+						FbxDeformer * deformer = static_cast<FbxDeformer*>(toObject);
 						
 						deformer->mesh = mesh;
-						mesh->deformer = deformer;
 					}
 					else if (toObject->type == "Mesh" && fromObject->type == "Mesh")
 					{
-						toObject->children.push_back(fromObject);
 						fromObject->parent = toObject;
 					}
 					else
 					{
-						toObject->children.push_back(fromObject);
 						fromObject->parent = toObject;
 					}
 				}
@@ -1342,9 +1440,9 @@ int main(int argc, char * argv[])
 				{
 					logIndent++;
 					{
-						FbxTransformChannel & transformChannel = anim.transforms[modelName];
+						FbxAnimTransform & animTransform = anim.transforms[modelName];
 						
-						transformChannel.read(logIndent, channel);
+						animTransform.read(logIndent, channel);
 					}
 					logIndent--;
 				}
@@ -1393,9 +1491,74 @@ int main(int argc, char * argv[])
 	
 	garbage.clear();
 	
+	// generate indices for meshes
+	
+	typedef std::map<std::string, int> ModelNameToBoneIndex;
+	ModelNameToBoneIndex modelNameToBoneIndex;
+	
+	for (ObjectsByName::iterator i = objectsByName.begin(); i != objectsByName.end(); ++i)
+	{
+		FbxObject * object = i->second;
+		
+		if (object->type == "Mesh")
+		{
+			if (modelNameToBoneIndex.count(object->name) == 0)
+			{
+				const int index = int(modelNameToBoneIndex.size());
+				modelNameToBoneIndex[object->name] = index;
+			}
+			else
+			{
+				printf("warning: duplicate object name: %s\n", object->name.c_str());
+			}
+		}
+	}
+	
+	// allocate bone matrix for each mesh
+	
+	std::vector<Mat4x4> objectToBoneMatrices;
+	std::vector<Mat4x4> boneToObjectMatrices;
+	std::vector<int> boneParentIndices;
+	
+	objectToBoneMatrices.resize(modelNameToBoneIndex.size());
+	boneToObjectMatrices.resize(modelNameToBoneIndex.size());
+	boneParentIndices.resize(modelNameToBoneIndex.size(), -1);
+	
+	// setup mesh hierarchy
+	
+	for (ObjectsByName::iterator i = objectsByName.begin(); i != objectsByName.end(); ++i)
+	{
+		FbxObject * object = i->second;
+		
+		if (object->type == "Mesh")
+		{
+			assert(modelNameToBoneIndex.count(object->name) != 0);
+			const int index = modelNameToBoneIndex[object->name];
+			
+			FbxObject * parent = object->parent;
+			
+			while (parent)
+			{
+				if (parent->type == "Mesh")
+					break;
+				parent = parent->parent;
+			}
+			
+			if (parent)
+			{
+				assert(modelNameToBoneIndex.count(parent->name) != 0 && boneParentIndices[index] == -1);
+				boneParentIndices[index] = modelNameToBoneIndex[parent->name];
+			}
+			else
+			{
+				boneParentIndices[index] = -1;
+			}
+		}
+	}
+	
 	// apply deformers to meshes
 	
-	std::vector<FbxDeformer*> deformers;
+	std::vector<FbxDeformer*> deformers; // debug only?
 	
 	for (ObjectsByName::iterator i = objectsByName.begin(); i != objectsByName.end(); ++i)
 	{
@@ -1420,15 +1583,27 @@ int main(int argc, char * argv[])
 				if (parent->type == "Mesh")
 				{
 					mesh = static_cast<FbxMesh*>(parent);
-					//break;
+					break;
 				}
 			}
 			
-			if (mesh != 0)
+			FbxMesh * boneMesh = 0;
+			
+			for (FbxObject * parent = deformer->mesh; parent != 0; parent = parent->parent)
+			{
+				if (parent->type == "Mesh")
+				{
+					boneMesh = static_cast<FbxMesh*>(parent);
+					break;
+				}
+			}
+			
+			if (mesh != 0 && boneMesh != 0)
 			{
 				//log(logIndent, "found mesh for deformer! %s\n", mesh->name.c_str());
 				
-				const int deformerIndex = int(deformers.size());
+				const std::string & modelName = boneMesh->name;
+				const int boneIndex = modelNameToBoneIndex[modelName];
 				
 				deformers.push_back(deformer);
 				
@@ -1443,70 +1618,26 @@ int main(int argc, char * argv[])
 					
 					if (vertexIndex < int(mesh->deformers.size()))
 					{
-						mesh->deformers[vertexIndex].add(deformerIndex, deformer->weights[j]);
+						mesh->deformers[vertexIndex].add(boneIndex, deformer->weights[j]);
 					}
 					else
 					{
-						log(logIndent, "error: deformer index %d is out of range\n", vertexIndex);
+						log(logIndent, "error: deformer index %d is out of range [max=%d]\n", vertexIndex, int(mesh->deformers.size()));
 					}
 				}
-			}
-		}
-	}
-	
-#if 0 // todo: eventually we'll want to map animations efficiently to bones
-	// resolve animation targets
-	
-	for (std::list<FbxAnim>::iterator i = anims.begin(); i != anims.end(); ++i)
-	{
-		FbxAnim & anim = *i;
-		
-		for (std::map<std::string, FbxTransformChannel>::iterator t = anim.transforms.begin(); t != anim.transforms.end(); ++t)
-		{
-			const std::string & modelName = t->first;
-			
-			ObjectsByName::iterator m = objectsByName.find(modelName);
-			
-			if (m == objectsByName.end() || m->second->type != "Mesh")
-			{
-				log(logIndent, "error: model doesn't exist: %s\n", modelName.c_str());
 			}
 			else
 			{
-				// todo: get deformer index based on mesh
-				
-				FbxMesh * mesh = static_cast<FbxMesh*>(m->second);
-				
-				int deformerIndex = 0;
-				
-				if (!mesh->deformer)
-				{
-					log(logIndent, "error: deformer doesn't exist for model %s\n", modelName.c_str());
-				}
-				else
-				{
-					//log(logIndent, "found deformer for model %s\n", modelName.c_str());
-					
-					FbxDeformer * deformer = mesh->deformer;
-					
-					for (size_t j = 0; j < deformers.size(); ++j)
-					{
-						if (deformers[j] == deformer)
-							deformerIndex = j;
-					}
-				}
-				
-				log(logIndent, "deformer index for %s: %d\n", modelName.c_str(), deformerIndex);
+				log(logIndent, "error: deformer %s: mesh=%p, boneMesh=%p\n", deformer->name.c_str(), mesh, boneMesh);
 			}
 		}
 	}
-#endif
 	
 	//logEnabled = false;
 	
 	// finalize meshes by invoking the powers of the awesome vertex welding machine
 	
-	std::list<Mesh> meshes;
+	std::list<MyMesh> meshes;
 	
 	for (ObjectsByName::iterator i = objectsByName.begin(); i != objectsByName.end(); ++i)
 	{
@@ -1516,8 +1647,8 @@ int main(int argc, char * argv[])
 		{
 			FbxMesh * fbxMesh = static_cast<FbxMesh*>(object);
 			
-			meshes.push_back(Mesh());
-			Mesh & mesh = meshes.back();
+			meshes.push_back(MyMesh());
+			MyMesh & mesh = meshes.back();
 			
 			mesh.construct(
 				logIndent,
@@ -1548,34 +1679,30 @@ int main(int argc, char * argv[])
 		}
 	}
 	
-	std::vector<Mat4x4> objectToBoneMatrices;
-	objectToBoneMatrices.resize(deformers.size());
-	std::vector<Mat4x4> boneToObjectMatrices;
-	boneToObjectMatrices.resize(deformers.size());
-
 	if (pose)
 	{
-		for (size_t i = 0; i < deformers.size(); ++i)
+		for (ModelNameToBoneIndex::iterator i = modelNameToBoneIndex.begin(); i != modelNameToBoneIndex.end(); ++i)
 		{
-			const FbxDeformer * deformer = deformers[i];
-			const std::string & modelName = deformer->mesh ? deformer->mesh->name : "";
-
+			const std::string & modelName = i->first;
+			const int boneIndex = i->second;
+			
 			if (pose->matrices.count(modelName) != 0)
 			{
-				objectToBoneMatrices[i] = pose->matrices[modelName].CalcInv();
+				objectToBoneMatrices[boneIndex] = pose->matrices[modelName].CalcInv();
 			}
 			else
 			{
 				printf("warning: no pose matrix for deformer %s\n", modelName.c_str());
-				objectToBoneMatrices[i].MakeIdentity();
+				objectToBoneMatrices[boneIndex].MakeIdentity();
 			}
 		}
 	}
 	else
 	{
-		for (size_t i = 0; i < deformers.size(); ++i)
+		for (ModelNameToBoneIndex::iterator i = modelNameToBoneIndex.begin(); i != modelNameToBoneIndex.end(); ++i)
 		{
-			objectToBoneMatrices[i].MakeIdentity();
+			const int boneIndex = i->second;
+			objectToBoneMatrices[boneIndex].MakeIdentity();
 		}
 	}
 	
@@ -1589,9 +1716,9 @@ int main(int argc, char * argv[])
 	{
 		log(logIndent, "-- dumping mesh data --\n");
 		
-		for (std::list<Mesh>::iterator i = meshes.begin(); i != meshes.end(); ++i)
+		for (std::list<MyMesh>::iterator i = meshes.begin(); i != meshes.end(); ++i)
 		{
-			const Mesh & mesh = *i;
+			const MyMesh & mesh = *i;
 
 			log(logIndent, "mesh: numVertices=%d, numIndices=%d\n", int(mesh.m_vertices.size()), int(mesh.m_indices.size()));
 			
@@ -1656,14 +1783,21 @@ int main(int argc, char * argv[])
 		// initialize SDL
 		
 		SDL_Init(SDL_INIT_EVERYTHING);
-		if (SDL_SetVideoMode(640, 480, 32, SDL_OPENGL) < 0)
-		//if (SDL_SetVideoMode(1600, 900, 32, SDL_OPENGL) < 0)
+		//if (SDL_SetVideoMode(640, 480, 32, SDL_OPENGL) < 0)
+		if (SDL_SetVideoMode(1200, 900, 32, SDL_OPENGL) < 0)
 		{
 			log(0, "failed to intialize SDL");
 			exit(-1);
 		}
 		
 		bool wireframe = false;
+		bool drawBones = false;
+		bool drawPose = false;
+		bool lightEnabled = false;
+		bool drawBlendWeights = false;
+		bool drawBlendIndices = false;
+		bool drawTexcoords = false;
+		bool drawNormalColors = true;
 		
 		bool stop = false;
 		
@@ -1681,68 +1815,91 @@ int main(int argc, char * argv[])
 						stop = true;
 					else if (e.key.keysym.sym == SDLK_w)
 						wireframe = !wireframe;
+					else if (e.key.keysym.sym == SDLK_b)
+						drawBones = !drawBones;
+					else if (e.key.keysym.sym == SDLK_p)
+						drawPose = !drawPose;
+					else if (e.key.keysym.sym == SDLK_l)
+						lightEnabled = !lightEnabled;						
+					else if (e.key.keysym.sym == SDLK_F1)
+						drawBlendWeights = !drawBlendWeights;
+					else if (e.key.keysym.sym == SDLK_F2)
+						drawBlendIndices = !drawBlendIndices;
+					else if (e.key.keysym.sym == SDLK_F3)
+						drawTexcoords = !drawTexcoords;
+					else if (e.key.keysym.sym == SDLK_F4)
+						drawNormalColors = !drawNormalColors;
 				}
 			}
 			
 			// process animation
 			
-			static float frame = 0.f;
-			frame += 1.f / 2.f; // todo: convert frame time / frame rate -> time (seconds)
+			static float time = 0.f;
+			time += 1.f / 60.f;
 			
 			bool isDone = true;
 			
+			std::vector<Mat4x4> boneMatrices;
+			boneMatrices.resize(modelNameToBoneIndex.size());
+			
+			for (ModelNameToBoneIndex::iterator i = modelNameToBoneIndex.begin(); i != modelNameToBoneIndex.end(); ++i)
+			{
+				const std::string & modelName = i->first;
+				const int boneIndex = i->second;
+				
+				FbxMesh * mesh = static_cast<FbxMesh*>(objectsByName[modelName]);
+				assert(mesh && mesh->type == "Mesh" && mesh->name == modelName);
+				
+				boneMatrices[boneIndex] = mesh->transform;
+			}
+			
+		#if 1
 			if (anims.size() >= 1)
 			{
 				const FbxAnim & anim = anims.front();
 				
-				for (std::map<std::string, FbxTransformChannel>::const_iterator i = anim.transforms.begin(); i != anim.transforms.end(); ++i)
+				for (std::map<std::string, FbxAnimTransform>::const_iterator i = anim.transforms.begin(); i != anim.transforms.end(); ++i)
 				{
 					const std::string & modelName = i->first;
-					const FbxTransformChannel & transformChannel = i->second;
+					const FbxAnimTransform & animTransform = i->second;
 					
-					ObjectsByName::iterator j = objectsByName.find(modelName);
+					std::map<std::string, int>::iterator j = modelNameToBoneIndex.find(modelName);
 					
-					if (j != objectsByName.end() && j->second->type == "Mesh")
+					if (j != modelNameToBoneIndex.end())
 					{
-						FbxMesh * mesh = static_cast<FbxMesh*>(j->second);
+						const int boneIndex = j->second;
 						
-						Mat4x4 animTransform;
-						
-						isDone &= transformChannel.evaluate(frame, animTransform);
-						
-						mesh->animTransform = animTransform;
+						isDone &= animTransform.evaluate(time, boneMatrices[boneIndex]);
 					}
 					else
 					{
-						log(logIndent, "warning: no model found for anim channel: %s", modelName.c_str());
+						log(logIndent, "warning: no model found for anim channel: %s\n", modelName.c_str());
 					}
 				}
 			}
 			
 			if (isDone)
 			{
-				log(logIndent, "animation is done. restart");
+				log(logIndent, "animation is done. restart\n");
 				
-				frame = 0.f;
+				time = 0.f;
 			}
-
-			for (size_t i = 0; i < deformers.size(); ++i)
+		#endif
+			
+			for (size_t i = 0; i < boneToObjectMatrices.size(); ++i)
 			{
-				FbxDeformer * deformer = deformers[i];
-
 				Mat4x4 globalTransform;
 				globalTransform.MakeIdentity();
 				
-				for (FbxObject * parent = deformer->mesh; parent != 0; parent = parent->parent)
+				int boneIndex = i;
+				
+				while (boneIndex != -1)
 				{
-					if (parent->type == "Mesh")
-					{
-						FbxMesh * currentMesh = static_cast<FbxMesh*>(parent);
-						
-						globalTransform =
-							currentMesh->animTransform *
-							globalTransform;
-					}
+					globalTransform =
+						boneMatrices[boneIndex] *
+						globalTransform;
+					
+					boneIndex = boneParentIndices[boneIndex];
 				}
 				
 				boneToObjectMatrices[i] = globalTransform;
@@ -1765,12 +1922,21 @@ int main(int argc, char * argv[])
 			
 			glPolygonMode(GL_FRONT_AND_BACK, wireframe ? GL_LINE : GL_FILL);
 			
-			static float r = 0.f;
+			static float r = 130.f;
 			r += 1.f / 10.f;
 			
-			for (std::list<Mesh>::iterator i = meshes.begin(); i != meshes.end(); ++i)
+			const float light[4] = { 1.f, 1.f, 1.f, 0.f };
+			glLightfv(GL_LIGHT0, GL_POSITION, light);
+			glEnable(GL_LIGHT0);
+			if (lightEnabled)
+				glEnable(GL_LIGHTING);
+			else
+				glDisable(GL_LIGHTING);
+			glEnable(GL_NORMALIZE);
+			
+			for (std::list<MyMesh>::iterator i = meshes.begin(); i != meshes.end(); ++i)
 			{
-				const Mesh & mesh = *i;
+				const MyMesh & mesh = *i;
 				
 				glPushMatrix();
 				
@@ -1789,7 +1955,6 @@ int main(int argc, char * argv[])
 
 				int vertexCount = 0;
 				
-			#if 1
 				for (size_t i = 0; i < mesh.m_indices.size(); ++i)
 				{
 					bool begin = vertexCount == 0;
@@ -1812,7 +1977,7 @@ int main(int argc, char * argv[])
 						end = true;
 					}
 					
-					const Mesh::Vertex & v = mesh.m_vertices[index];
+					const MyMesh::Vertex & v = mesh.m_vertices[index];
 					
 					Vec3 p(0.f, 0.f, 0.f);
 					Vec3 n(0.f, 0.f, 0.f);
@@ -1835,22 +2000,32 @@ int main(int argc, char * argv[])
 					float g = 1.f;
 					float b = 1.f;
 					
-				#if 1
-					r *= (n[0] + 1.f) / 2.f;
-					g *= (n[1] + 1.f) / 2.f;
-					b *= (n[2] + 1.f) / 2.f;
-				#endif
-				#if 0
-					r *= v.bi[0]/25.f;
-					g *= v.bi[1]/25.f;
-					b *= v.bi[2]/25.f;
-				#endif
-				#if 0
-					r *= v.tx;
-					g *= v.ty;
-				#endif
+					if (drawNormalColors)
+					{
+						r *= (n[0] + 1.f) / 2.f;
+						g *= (n[1] + 1.f) / 2.f;
+						b *= (n[2] + 1.f) / 2.f;
+					}
+					if (drawBlendIndices)
+					{
+						r *= v.bi[0] / float(modelNameToBoneIndex.size());
+						g *= v.bi[1] / float(modelNameToBoneIndex.size());
+						b *= v.bi[2] / float(modelNameToBoneIndex.size());
+					}
+					if (drawBlendWeights)
+					{
+						r *= (1.f + v.bw[0] / 255.f) / 2.f;
+						g *= (1.f + v.bw[1] / 255.f) / 2.f;
+						b *= (1.f + v.bw[2] / 255.f) / 2.f;
+					}
+					if (drawTexcoords)
+					{
+						r *= v.tx;
+						g *= v.ty;
+					}
 					
 					glColor3f(r, g, b);
+					glNormal3f(n[0], n[1], n[2]);
 					glVertex3f(p[0], p[1], p[2]);
 					
 					vertexCount++;
@@ -1869,66 +2044,42 @@ int main(int argc, char * argv[])
 					
 					glEnd();
 				}
-			#endif
-				
-			#if 0
-				// Pose matrix translation
-				glDisable(GL_DEPTH_TEST);
-				for (ObjectsByName::iterator j = objectsByName.begin(); j != objectsByName.end(); ++j)
+
+				if (drawPose)
 				{
-					FbxObject * object = j->second;
-					
-					if (object->type == "Pose")
+					// object to bone matrix translation
+					glDisable(GL_DEPTH_TEST);
+					glColor3ub(255, 0, 0);
+					glPointSize(7.f);
+					glBegin(GL_POINTS);
 					{
-						FbxPose * pose = static_cast<FbxPose*>(object);
-						
-						glPointSize(5.f);
-						glBegin(GL_POINTS);
+						for (size_t j = 0; j < deformers.size(); ++j)
 						{
-							for (std::map<std::string, Mat4x4>::iterator i = pose->matrices.begin(); i != pose->matrices.end(); ++i)
-							{
-								const Mat4x4 & m = i->second;
-								glColor3ub(255, 0, 0);
-								glVertex3f(m(3, 0), m(3, 1), m(3, 2));
-							}
+							const Mat4x4 m = objectToBoneMatrices[j].CalcInv();
+							glVertex3f(m(3, 0), m(3, 1), m(3, 2));
 						}
-						glEnd();
 					}
+					glEnd();
+					glEnable(GL_DEPTH_TEST);
 				}
-				glEnable(GL_DEPTH_TEST);
-			#endif
 
-			#if 0
-				glDisable(GL_DEPTH_TEST);
-
-				// object to bone matrix translation
-				glColor3ub(255, 0, 0);
-				glPointSize(7.f);
-				glBegin(GL_POINTS);
+				if (drawBones)
 				{
-					for (size_t j = 0; j < deformers.size(); ++j)
+					// bone to object matrix translation
+					glDisable(GL_DEPTH_TEST);
+					glColor3ub(0, 255, 0);
+					glPointSize(5.f);
+					glBegin(GL_POINTS);
 					{
-						const Mat4x4 m = objectToBoneMatrices[j].CalcInv();
-						glVertex3f(m(3, 0), m(3, 1), m(3, 2));
+						for (size_t j = 0; j < deformers.size(); ++j)
+						{
+							const Mat4x4 m = boneToObjectMatrices[j];
+							glVertex3f(m(3, 0), m(3, 1), m(3, 2));
+						}
 					}
+					glEnd();
+					glEnable(GL_DEPTH_TEST);
 				}
-				glEnd();
-
-				// bone to object matrix translation
-				glColor3ub(0, 255, 0);
-				glPointSize(5.f);
-				glBegin(GL_POINTS);
-				{
-					for (size_t j = 0; j < deformers.size(); ++j)
-					{
-						const Mat4x4 m = boneToObjectMatrices[j];
-						glVertex3f(m(3, 0), m(3, 1), m(3, 2));
-					}
-				}
-				glEnd();
-
-				glEnable(GL_DEPTH_TEST);
-			#endif
 
 				glPopMatrix();
 			}

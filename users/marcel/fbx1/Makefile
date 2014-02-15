@@ -1,5 +1,5 @@
 EXE = fbx
-OBJS = fbx.o main.o
+OBJS = fbx.o main.o ../../../libgg/Quat.o
 CFLAGS = -Wall -Wextra -Wno-unused -Werror -ansi -pedantic -O2 -I../../../libgg
 LFLAGS = `sdl-config --static-libs` -lstdc++
 
