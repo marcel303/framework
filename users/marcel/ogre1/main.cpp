@@ -6,365 +6,24 @@
 #include "tinyxml2.h"
 #include "Quat.h"
 
+#include "../framework/image.h"
+#include "../framework/model.h"
+
+#include <GL/glew.h>
 #include <SDL/SDL.h>
 #include <SDL/SDL_opengl.h>
 #include <string.h>
 
+using namespace Model;
 using namespace tinyxml2;
 
 // forward declarations
 
-class Anim;
-class AnimKey;
-class Bone;
-class BoneTransform;
-class Mesh;
-class MeshSet;
-class Model;
-class Skeleton;
-class Vertex;
+class AnimModel;
 
 //
 
-class Vertex
-{
-public:
-	float px, py, pz;
-	float nx, ny, nz;
-	float tx, ty;
-	
-	unsigned char boneIndices[4];
-	unsigned char boneWeights[4];
-};
-
-class Mesh
-{
-public:
-	Vertex * m_vertices;
-	int m_numVertices;
-	
-	int * m_indices;
-	int m_numIndices;
-	
-	Mesh()
-	{
-		m_vertices = 0;
-		m_numVertices = 0;
-		
-		m_indices = 0;
-		m_numIndices = 0;
-	}
-	
-	~Mesh()
-	{
-		allocateVB(0);
-		allocateIB(0);
-	}
-	
-	void allocateVB(int numVertices)
-	{
-		if (m_numVertices)
-		{
-			delete [] m_vertices;
-			m_vertices = 0;
-			m_numVertices = 0;
-		}
-		
-		if (numVertices)
-		{
-			m_vertices = new Vertex[numVertices];
-			m_numVertices = numVertices;
-			
-			memset(m_vertices, 0, sizeof(m_vertices[0]) * numVertices);
-		}
-	}
-	
-	void allocateIB(int numIndices)
-	{
-		if (m_numIndices)
-		{
-			delete [] m_indices;
-			m_indices = 0;
-			m_numIndices = 0;
-		}
-		
-		if (numIndices)
-		{
-			m_indices = new int[numIndices];
-			m_numIndices = numIndices;
-			
-			memset(m_indices, 0, sizeof(m_indices[0]) * numIndices);
-		}
-	}
-};
-
-class MeshSet
-{
-public:
-	Mesh ** m_meshes;
-	int m_numMeshes;
-	
-	MeshSet()
-	{
-		m_meshes = 0;
-		m_numMeshes = 0;
-	}
-	
-	~MeshSet()
-	{
-		allocate(0);
-	}
-	
-	void allocate(int numMeshes)
-	{
-		if (m_numMeshes)
-		{
-			for (int i = 0; i < m_numMeshes; ++i)
-			{
-				delete m_meshes[i];
-				m_meshes[i] = 0;
-			}
-			delete [] m_meshes;
-			m_meshes = 0;
-			m_numMeshes = 0;
-		}
-		
-		if (numMeshes)
-		{
-			m_meshes = new Mesh*[numMeshes];
-			m_numMeshes = numMeshes;
-			
-			for (int i = 0; i < numMeshes; ++i)
-				m_meshes[i] = 0;
-		}
-	}
-};
-
-class BoneTransform
-{
-public:
-	Vec3 translation;
-	Quat rotation;
-	float scale;
-	
-	void clear()
-	{
-		translation.SetZero();
-		rotation.makeIdentity();
-	}
-	
-	static void add(BoneTransform & result, const BoneTransform & transform)
-	{
-		result.translation += transform.translation;
-		result.rotation *= transform.rotation;
-	}
-	
-	static void interpolate(BoneTransform & result, const BoneTransform & transform1, const BoneTransform & transform2, float time)
-	{
-		const float t1 = 1.f - time;
-		const float t2 = time;
-		
-		result.translation += (transform1.translation * t1) + (transform2.translation * t2);
-		result.rotation *= transform1.rotation.slerp(transform2.rotation, time);
-	}
-};
-
-class Bone
-{
-public:
-	Bone()
-	{
-		parent = -1;
-	}
-	
-	BoneTransform transform;
-	Mat4x4 poseMatrix;
-	int parent;
-};
-
-class Skeleton
-{
-public:
-	Bone * m_bones;
-	int m_numBones;
-	
-	Skeleton()
-	{
-		m_bones = 0;
-		m_numBones = 0;
-	}
-	
-	~Skeleton()
-	{
-		allocate(0);
-	}
-	
-	void allocate(int numBones)
-	{
-		if (m_numBones)
-		{
-			delete [] m_bones;
-			m_bones = 0;
-			m_numBones = 0;
-		}
-		
-		if (numBones)
-		{
-			m_bones = new Bone[numBones];
-			m_numBones = numBones;
-		}
-	}
-	
-	void calculatePoseMatrices()
-	{
-		for (int i = 0; i < m_numBones; ++i)
-		{
-			Mat4x4 & poseMatrix = m_bones[i].poseMatrix;
-			
-			poseMatrix.MakeIdentity();
-			
-			int boneIndex = i;
-			
-			while (boneIndex != -1)
-			{
-				Mat4x4 matrix;
-				
-				matrix = m_bones[boneIndex].transform.rotation.toMatrix();
-				matrix.SetTranslation(m_bones[boneIndex].transform.translation);
-				
-				poseMatrix = matrix * poseMatrix;
-				
-				boneIndex = m_bones[boneIndex].parent;
-			}
-			
-			poseMatrix = poseMatrix.CalcInv();
-		}
-	}
-};
-
-struct AnimKey
-{
-	float time;
-	
-	BoneTransform transform;
-};
-
-class Anim
-{
-public:
-	int m_numBones;
-	int * m_numKeys;
-	AnimKey * m_keys;
-	
-	Anim()
-	{
-		m_numBones = 0;
-		m_numKeys = 0;
-		m_keys = 0;
-	}
-	
-	~Anim()
-	{
-		allocate(0, 0);
-	}
-	
-	void allocate(int numBones, int numKeys)
-	{
-		if (m_numBones)
-		{
-			m_numBones = 0;
-			delete [] m_numKeys;
-			m_numKeys = 0;
-			delete [] m_keys;
-			m_keys = 0;
-		}
-		
-		if (numBones)
-		{
-			m_numBones = numBones;
-			m_numKeys = new int[numBones];
-			m_keys = new AnimKey[numKeys];
-		}
-	}
-	
-	bool evaluate(float time, BoneTransform * transforms)
-	{
-		bool isDone = true;
-		
-		const AnimKey * firstKey = m_keys;
-		
-		for (int i = 0; i < m_numBones; ++i)
-		{
-			const int numKeys = m_numKeys[i];
-			
-			if (numKeys)
-			{
-				const AnimKey * key = firstKey;
-				const AnimKey * lastKey = firstKey + numKeys - 1;
-				
-				while (key != lastKey && time >= key[1].time)
-				{
-					key++;
-				}
-				
-				if (key != lastKey && time >= key->time)
-				{
-					const AnimKey & key1 = key[0];
-					const AnimKey & key2 = key[1];
-					
-					assert(time >= key1.time && time <= key2.time);
-					
-					const float t = (time - key1.time) / (key2.time - key1.time);
-					
-					assert(t >= 0.f && t <= 1.f);
-					
-					BoneTransform::interpolate(transforms[i], key1.transform, key2.transform, t);
-				}
-				else
-				{
-					// either the first or last key in the animation. copy value
-					
-					assert(key == firstKey || key == lastKey);
-					
-					BoneTransform::add(transforms[i], key->transform);
-				}
-				
-				if (key != lastKey)
-				{
-					isDone = false;
-				}
-				
-				firstKey += numKeys;
-			}
-		}
-		
-		return isDone;
-	}
-};
-
-class AnimSet
-{
-public:
-	AnimSet()
-	{
-	}
-	
-	~AnimSet()
-	{
-		for (std::map<std::string, Anim*>::iterator i = m_animations.begin(); i != m_animations.end(); ++i)
-		{
-			Anim * anim = i->second;
-			
-			delete anim;
-		}
-		
-		m_animations.clear();
-	}
-	
-	std::map<std::string, Anim*> m_animations;
-};
-
-class Model
+class AnimModel
 {
 public:
 	MeshSet * m_meshes;
@@ -377,7 +36,7 @@ public:
 	int animLoop;
 	float animSpeed;
 	
-	Model(MeshSet * meshes, Skeleton * skeleton, AnimSet * animations)
+	AnimModel(MeshSet * meshes, Skeleton * skeleton, AnimSet * animations)
 	{
 		m_meshes = meshes;
 		m_skeleton = skeleton;
@@ -390,7 +49,7 @@ public:
 		animSpeed = 1.f;
 	}
 	
-	~Model()
+	~AnimModel()
 	{
 		delete m_meshes;
 		m_meshes = 0;
@@ -438,10 +97,10 @@ public:
 		
 		matrix.MakeTranslation(0.f, 0.f, 0.f);
 		
-		drawEx(matrix, true, false);
+		drawEx(matrix, true, false, false);
 	}
 	
-	void drawEx(const Mat4x4 & matrix, bool drawMesh, bool drawBones)
+	void drawEx(const Mat4x4 & matrix, bool drawMesh, bool drawBones, bool drawNormals)
 	{
 		// calculate transforms in local bone space
 		
@@ -475,7 +134,11 @@ public:
 		{
 			const BoneTransform & transform = transforms[i];
 			
-			localMatrices[i] = transform.rotation.toMatrix();			
+			//Mat4x4 scale;
+			//scale.MakeScaling(transform.scale);
+			
+			localMatrices[i] = transform.rotation.toMatrix();
+			//localMatrices[i] *= scale;
 			localMatrices[i].SetTranslation(transform.translation);
 		}
 		
@@ -511,6 +174,8 @@ public:
 			{
 				const Mesh * mesh = m_meshes->m_meshes[i];
 				
+				std::vector<Vec3> normals;
+				
 				glBegin(GL_TRIANGLES);
 				{
 					for (int j = 0; j < mesh->m_numIndices; ++j)
@@ -523,19 +188,40 @@ public:
 						
 						// -- software vertex blend (hard skinned) --
 						Vec3 p(0.f, 0.f, 0.f);
+						Vec3 n(0.f, 0.f, 0.f);
 						for (int b = 0; b < 4; ++b)
 						{
 							const int boneIndex = vertex.boneIndices[b];
 							const Mat4x4 & boneToWorld = worldMatrices[boneIndex];
 							const Mat4x4 & worldToBone = m_skeleton->m_bones[boneIndex].poseMatrix;
-							p += boneToWorld * worldToBone * Vec3(vertex.px, vertex.py, vertex.pz) * (vertex.boneWeights[b]/255.f);
+							p += (boneToWorld * worldToBone).Mul4(Vec3(vertex.px, vertex.py, vertex.pz)) * (vertex.boneWeights[b]/255.f);
+							n += (boneToWorld * worldToBone).Mul (Vec3(vertex.nx, vertex.ny, vertex.nz)) * (vertex.boneWeights[b]/255.f);
 						}
 						// -- software vertex blend (hard skinned) --
 						
 						glColor3ub(vertex.boneIndices[0] * 4, vertex.boneIndices[1] * 4, vertex.boneIndices[2] * 4);
-						glTexCoord2f(vertex.tx, vertex.ty);
-						glNormal3f(vertex.nx, vertex.ny, vertex.nz);
+						glTexCoord2f(vertex.tx, 1.f - vertex.ty);
+						glNormal3f(n[0], n[1], n[2]);
 						glVertex3f(p[0], p[1], p[2]);
+						
+						if (drawNormals)
+						{
+							normals.push_back(Vec3(p[0], p[1], p[2]));
+							normals.push_back(Vec3(n[0], n[1], n[2]));
+						}
+					}
+				}
+				glEnd();
+				
+				glBegin(GL_LINES);
+				{
+					for (size_t j = 0; j < normals.size() / 2; ++j)
+					{
+						Vec3 p = normals[j * 2 + 0];
+						Vec3 n = normals[j * 2 + 1] * 5.f;
+						
+						glVertex3f(p[0],        p[1],        p[2]       );
+						glVertex3f(p[0] + n[0], p[1] + n[1], p[2] + n[2]);
 					}
 				}
 				glEnd();
@@ -597,7 +283,7 @@ public:
 #define XML_KEYFRAME_ROTATION "rotate"
 #define XML_KEYFRAME_ROTATION_AXIS "axis"
 
-Model * loadModel(const char * meshFileName, const char * skeletonFileName)
+AnimModel * loadModel(const char * meshFileName, const char * skeletonFileName)
 {
 	int maxBoneIndex = -1;
 	
@@ -708,7 +394,7 @@ Model * loadModel(const char * meshFileName, const char * skeletonFileName)
 				// todo: convert to quat-log
 				
 				transform.rotation.fromAxisAngle(Vec3(rx, ry, rz), ra);
-				transform.scale = 1.f;
+				transform.scale = Vec3(1.f, 1.f, 1.f);
 				
 				xmlBone = xmlBone->NextSiblingElement(XML_BONE);
 			}
@@ -838,11 +524,18 @@ Model * loadModel(const char * meshFileName, const char * skeletonFileName)
 								AnimKey key;
 								
 								key.time = time;
-								key.transform.translation[0] = px;
-								key.transform.translation[1] = py;
-								key.transform.translation[2] = pz;
-								key.transform.rotation.fromAxisAngle(Vec3(rx, ry, rz), ra);
-								key.transform.scale = 0.f;
+								key.translation[0] = px;
+								key.translation[1] = py;
+								key.translation[2] = pz;
+								Quat quat;
+								quat.fromAxisAngle(Vec3(rx, ry, rz), ra);
+								key.rotation[0] = quat[0];
+								key.rotation[1] = quat[1];
+								key.rotation[2] = quat[2];
+								key.rotation[3] = quat[3];
+								key.scale[0] = 0.f;
+								key.scale[1] = 0.f;
+								key.scale[2] = 0.f;
 								
 								animKeys.push_back(key);
 								
@@ -866,7 +559,7 @@ Model * loadModel(const char * meshFileName, const char * skeletonFileName)
 						numAnimKeys += int(animKeys.size());
 					}
 					
-					animation->allocate(skeleton->m_numBones, numAnimKeys);
+					animation->allocate(skeleton->m_numBones, numAnimKeys, RotationType_Quat);
 					
 					AnimKey * finalAnimKey = animation->m_keys;
 					
@@ -977,6 +670,14 @@ Model * loadModel(const char * meshFileName, const char * skeletonFileName)
 							if (texcoords)
 							{
 								// texcoord (u, v)
+								
+								XMLElement * xmlTexcoord = xmlVertex->FirstChildElement("texcoord");
+								
+								if (xmlTexcoord)
+								{
+									mesh->m_vertices[vertexIndex].tx = xmlTexcoord->FloatAttribute("u");
+									mesh->m_vertices[vertexIndex].ty = xmlTexcoord->FloatAttribute("v");
+								}
 							}
 							
 							vertexIndex++;
@@ -1095,7 +796,7 @@ Model * loadModel(const char * meshFileName, const char * skeletonFileName)
 	AnimSet * animSet = new AnimSet();
 	animSet->m_animations = animations;
 	
-	Model * model = new Model(meshSet, skeleton, animSet);
+	AnimModel * model = new AnimModel(meshSet, skeleton, animSet);
 	
 	return model;
 }
@@ -1109,18 +810,36 @@ int main(int argc, char * argv[])
 	SDL_SetVideoMode(640, 480, 32, SDL_OPENGL);
 	
 	float angle = 0.f;
-	bool wireframe = true;
+	bool wireframe = false;
 	bool rotate = false;
-	bool drawBones = true;
+	bool drawBones = false;
+	bool drawNormals = false;
 	bool loop = false;
 	bool autoPlay = false;
 	bool light = true;
 	
 	const int modelId = 0;
 	
+	ImageData * imageData = loadImage("ninja.png");
+	if (imageData)
+	{
+		GLuint texture = 0;
+		glGenTextures(1, &texture);
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+		glPixelStorei(GL_UNPACK_ROW_LENGTH, imageData->sx);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imageData->sx, imageData->sy, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData->imageData);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glEnable(GL_TEXTURE_2D);
+		delete imageData;
+	}
+	
 	for (int i = 0; i < 1; ++i)
 	{
-		Model * model = 0;
+		AnimModel * model = 0;
 		
 		if (modelId == 0)
 			model = loadModel("mesh.xml", "skeleton.xml");
@@ -1150,6 +869,10 @@ int main(int argc, char * argv[])
 					else if (e.key.keysym.sym == SDLK_b)
 					{
 						drawBones = !drawBones;
+					}
+					else if (e.key.keysym.sym == SDLK_n)
+					{
+						drawNormals = !drawNormals;
 					}
 					else if (e.key.keysym.sym == SDLK_l)
 					{
@@ -1235,7 +958,7 @@ int main(int argc, char * argv[])
 			glLoadIdentity();
 			float scale = 1.f;
 			if (modelId == 0)
-				scale = 1.f / 200.f;
+				scale = 1.f / 150.f;
 			else
 				scale = 1.f;
 			glScalef(scale, scale, scale);
@@ -1268,9 +991,9 @@ int main(int argc, char * argv[])
 					glDepthFunc(GL_GREATER);
 					if (light)
 						glEnable(GL_LIGHTING);
-			
+					
 					glColor3ub(255, 255, 255);
-					model->drawEx(matrix, true, false);
+					model->drawEx(matrix, true, false, drawNormals);
 					
 					if (light)
 						glDisable(GL_LIGHTING);
@@ -1279,7 +1002,7 @@ int main(int argc, char * argv[])
 					if (drawBones)
 					{
 						glColor3ub(0, 255, 0);
-						model->drawEx(matrix, false, true);
+						model->drawEx(matrix, false, drawBones, false);
 					}
 				}
 			}
