@@ -150,6 +150,8 @@ public:
 	int64_t getInt() const;
 	double getDouble() const;
 	const char * getString() const;
+	
+	bool operator==(const char * str) const;
 };
 
 template <typename T> T  inline get(const FbxValue & value);

@@ -337,6 +337,14 @@ const char * FbxValue::getString() const
 	return "";
 }
 
+bool FbxValue::operator==(const char * str) const
+{
+	if (type == TYPE_STRING)
+		return !strcmp(String, str);
+	else
+		return false;
+}
+
 // --------------------------------------------------------------------------------
 // FbxReader
 // --------------------------------------------------------------------------------
