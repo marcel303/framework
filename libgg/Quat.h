@@ -19,6 +19,7 @@ public:
 	void fromAxisAngle(Vec3 axis, float angle);
 	void fromMatrix(const Mat4x4 & matrix);
 	Mat4x4 toMatrix() const;
+	void toMatrix3x3(Mat4x4 & matrix) const; // fill only the 3x3 rotation part
 	void toAxisAngle(Vec3 & out_axis, float & out_angle) const;
 	float calcDot(const Quat & quat) const;
 	void makeIdentity();

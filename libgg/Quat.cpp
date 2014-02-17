@@ -8,15 +8,15 @@ Quat::Quat()
 }
 
 Quat::Quat(const Quat & quat)
+	: m_xyz(quat.m_xyz)
+	, m_w(quat.m_w)
 {
-	m_xyz = quat.m_xyz;
-	m_w = quat.m_w;
 }
 
 Quat::Quat(float x, float y, float z, float w)
+	: m_xyz(x, y, z)
+	, m_w(w)
 {
-	m_xyz = Vec3(x, y, z);
-	m_w = w;
 }
 
 float Quat::calcSize() const
@@ -54,10 +54,12 @@ void Quat::fromAxisAngle(Vec3 axis, float angle)
 	
 	// setup 'axis'
 
-	m_xyz[0] = axis[0] * std::sin(angle / 2.0f);
-	m_xyz[1] = axis[1] * std::sin(angle / 2.0f);
-	m_xyz[2] = axis[2] * std::sin(angle / 2.0f);
+	const float sinAngle = std::sin(angle / 2.f);
 	
+	m_xyz[0] = axis[0] * sinAngle;
+	m_xyz[1] = axis[1] * sinAngle;
+	m_xyz[2] = axis[2] * sinAngle;
+		
 	// setup 'angle'
 
 	m_w = std::cos(angle / 2.0f);
@@ -114,25 +116,47 @@ Mat4x4 Quat::toMatrix() const
 {
 	Mat4x4 matrix;
 	
-	// create identity, so we don't have to bother to fill in the rest of the values besides the 3x3 rotation part
+	toMatrix3x3(matrix);
 	
-	matrix.MakeIdentity();
+	matrix(0, 3) = 0.f;
+	matrix(1, 3) = 0.f;
+	matrix(2, 3) = 0.f;
 	
-	// calculate 3x3 rotation part
-	
-	matrix(0, 0) = 1.0f - 2.0f * m_xyz[1] * m_xyz[1] - 2.0f * m_xyz[2] * m_xyz[2];
-	matrix(1, 0) = 2.0f * m_xyz[0] * m_xyz[1] - 2.0f * m_w * m_xyz[2];
-	matrix(2, 0) = 2.0f * m_xyz[0] * m_xyz[2] + 2.0f * m_w * m_xyz[1];
-	
-	matrix(0, 1) = 2.0f * m_xyz[0] * m_xyz[1] + 2.0f * m_w * m_xyz[2];
-	matrix(1, 1) = 1.0f - 2.0f * m_xyz[0] * m_xyz[0] - 2.0f * m_xyz[2] * m_xyz[2];
-	matrix(2, 1) = 2.0f * m_xyz[1] * m_xyz[2] - 2.0f * m_w * m_xyz[0];
-	
-	matrix(0, 2) = 2.0f * m_xyz[0] * m_xyz[2] - 2.0f * m_w * m_xyz[1];
-	matrix(1, 2) = 2.0f * m_xyz[1] * m_xyz[2] + 2.0f * m_w * m_xyz[0];
-	matrix(2, 2) = 1.0f - 2.0f * m_xyz[0] * m_xyz[0] - 2.0f * m_xyz[1] * m_xyz[1];
+	matrix(3, 0) = 0.f;
+	matrix(3, 1) = 0.f;
+	matrix(3, 2) = 0.f;
+	matrix(3, 3) = 1.f;
 	
 	return matrix;
+}
+
+void Quat::toMatrix3x3(Mat4x4 & matrix) const
+{
+	// calculate 3x3 rotation part
+	
+	const float xx = m_xyz[0] * m_xyz[0];
+	const float yy = m_xyz[1] * m_xyz[1];
+	const float zz = m_xyz[2] * m_xyz[2];
+	
+	const float xy = m_xyz[0] * m_xyz[1];
+	const float yz = m_xyz[1] * m_xyz[2];
+	const float zx = m_xyz[0] * m_xyz[2];
+	
+	const float xw = m_xyz[0] * m_w;
+	const float yw = m_xyz[1] * m_w;
+	const float zw = m_xyz[2] * m_w;
+	
+	matrix(0, 0) = 1.0f + 2.f * (- yy - zz);
+	matrix(1, 0) =        2.f * (+ xy - zw);
+	matrix(2, 0) =        2.f * (+ zx + yw);
+	
+	matrix(0, 1) =       2.f * (+ xy + zw);
+	matrix(1, 1) = 1.f + 2.f * (- xx - zz);
+	matrix(2, 1) =       2.f * (+ yz - xw);
+	
+	matrix(0, 2) =       2.f * (+ zx - yw);
+	matrix(1, 2) =       2.f * (+ yz + xw);
+	matrix(2, 2) = 1.f + 2.f * (- xx - yy);
 }
 
 void Quat::toAxisAngle(Vec3 & out_axis, float & out_angle) const
@@ -378,12 +402,12 @@ Quat Quat::operator*(const Quat & quat) const
 	Quat result;
 	
 	// perform multiplication using extra-special quaternion maths!
-
+	
 	result.m_xyz[0] = m_w * quat.m_xyz[0] + m_xyz[0] * quat.m_w + m_xyz[1] * quat.m_xyz[2] - m_xyz[2] * quat.m_xyz[1];
 	result.m_xyz[1] = m_w * quat.m_xyz[1] + m_xyz[1] * quat.m_w + m_xyz[2] * quat.m_xyz[0] - m_xyz[0] * quat.m_xyz[2];
 	result.m_xyz[2] = m_w * quat.m_xyz[2] + m_xyz[2] * quat.m_w + m_xyz[0] * quat.m_xyz[1] - m_xyz[1] * quat.m_xyz[0];
 	result.m_w = m_w * quat.m_w - m_xyz * quat.m_xyz;
-
+	
 	return result;
 }
 
