@@ -16,7 +16,7 @@
 
 // configuration
 
-#if defined(DEBUG) || 1
+#if defined(DEBUG) || 0
 	#define ENABLE_LOGGING 1
 #else
 	#define ENABLE_LOGGING 0 // do not alter

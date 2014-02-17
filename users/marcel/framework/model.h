@@ -35,6 +35,7 @@ namespace Model
 		float px, py, pz;
 		float nx, ny, nz;
 		float tx, ty;
+		float cx, cy, cz, cw;
 		
 		unsigned char boneIndices[4];
 		unsigned char boneWeights[4];
@@ -104,7 +105,8 @@ namespace Model
 		~Skeleton();
 		
 		void allocate(int numBones);
-		void calculatePoseMatrices();
+		void calculatePoseMatrices(); // calculate pose matrices given the current set of bone transforms
+		void calculateBoneMatrices(); // calculate bone transforms given the current set of pose matrices
 	};
 	
 	struct AnimKey
@@ -156,3 +158,46 @@ namespace Model
 		AnimSet * findOrCreateAnimSet(const std::vector<std::string> & filenames);
 	};
 }
+
+//
+
+enum ModelDrawFlags
+{
+	DrawMesh    = 0x1,
+	DrawBones   = 0x2,
+	DrawNormals = 0x4
+};
+
+class AnimModel
+{
+	Model::MeshSet * m_meshes;
+	Model::Skeleton * m_skeleton;
+	Model::AnimSet * m_animations;
+	
+	Model::Anim * currentAnim;
+	
+public:
+	float x;
+	float y;
+	float z;
+	Vec3 axis;
+	float angle;
+	float scale;
+	
+	bool animIsDone;
+	float animTime;
+	int animLoop;
+	float animSpeed;
+	
+	AnimModel(const char * filename);
+	AnimModel(Model::MeshSet * meshes, Model::Skeleton * skeleton, Model::AnimSet * animations);
+	~AnimModel();
+	
+	void startAnim(const char * name, int loop = 1);
+	
+	void process(float timeStep);
+	
+	void draw();
+	void drawEx(Vec3 position, Vec3 axis, float angle = 0.f, float scale = 1.f, int drawFlags = DrawMesh);
+	void drawEx(const Mat4x4 & matrix, int drawFlags = DrawMesh);
+};

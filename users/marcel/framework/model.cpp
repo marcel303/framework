@@ -1,4 +1,7 @@
 #include <assert.h>
+#include <GL/glew.h>
+#include <SDL/SDL.h>
+#include <SDL/SDL_opengl.h>
 #include "Mat4x4.h"
 #include "model.h"
 
@@ -103,9 +106,15 @@ namespace Model
 	
 	void BoneTransform::add(BoneTransform & result, const BoneTransform & transform)
 	{
+		#if 0 // todo: normalize FBX animation data and actually use addition again
 		result.translation += transform.translation;
 		result.rotation *= transform.rotation;
 		result.scale += transform.scale;
+		#else
+		result.translation = transform.translation;
+		result.rotation = transform.rotation;
+		result.scale = transform.scale;
+		#endif
 	}
 	
 	//
@@ -163,6 +172,87 @@ namespace Model
 		}
 	}
 	
+#if 1
+	static void dumpMatrix(const Mat4x4 & m)
+	{
+		for (int i = 0; i < 4; ++i)
+		{
+			printf("\t%+6.2f %+6.2f %+6.2f %+6.2f\n",
+				m(i, 0), m(i, 1), m(i, 2), m(i, 3));
+		}
+	}
+#endif
+	
+	void Skeleton::calculateBoneMatrices()
+	{
+		for (int i = 0; i < m_numBones; ++i)
+		{
+			Mat4x4 boneMatrix;
+			
+			if (m_bones[i].parent != -1)
+			{
+				const Mat4x4 & poseMatrix1 = m_bones[m_bones[i].parent].poseMatrix;
+				const Mat4x4 & poseMatrix2 = m_bones[i].poseMatrix;
+				
+				boneMatrix = poseMatrix1 * poseMatrix2.CalcInv();
+			}
+			else
+			{
+				boneMatrix = m_bones[i].poseMatrix.CalcInv();
+			}
+			
+			Vec3 translation = boneMatrix.GetTranslation();
+			
+			Quat rotation;
+			rotation.fromMatrix(boneMatrix);
+			
+			// todo: calculate scale
+			Vec3 scale = Vec3(1.f, 1.f, 1.f);
+			
+			m_bones[i].transform.translation = translation;
+			m_bones[i].transform.rotation = rotation;
+			m_bones[i].transform.scale = scale;
+		}
+		
+	#if 1
+		for (int i = 0; i < m_numBones; ++i)
+		{
+			Mat4x4 m;
+			m.MakeIdentity();
+			
+			int index = i;
+			
+			while (index != -1)
+			{
+				const BoneTransform & transform = m_bones[index].transform;
+				
+				Mat4x4 t;
+				Mat4x4 r;
+				Mat4x4 s;
+				
+				t.MakeTranslation(transform.translation);
+				r = transform.rotation.toMatrix();
+				s.MakeScaling(transform.scale);
+				
+				const Mat4x4 trs = t * r * s;
+				
+				m = trs * m;
+				
+				index = m_bones[index].parent;
+			}
+			
+			Mat4x4 p = m_bones[i].poseMatrix.CalcInv();
+			
+			printf("trs:\n");
+			dumpMatrix(m);
+			dumpMatrix(p);
+			
+			Mat4x4 f = m * m_bones[i].poseMatrix;
+			dumpMatrix(f);
+		}
+	#endif
+	}
+	
 	//
 	
 	void AnimKey::interpolate(BoneTransform & result, const AnimKey & key1, const AnimKey & key2, float t, RotationType rotationType)
@@ -183,35 +273,33 @@ namespace Model
 		{
 			const float rotation[3] =
 			{
-				key1.rotation[0] * t1 + key2.rotation[0],
-				key1.rotation[1] * t1 + key2.rotation[1],
-				key1.rotation[2] * t1 + key2.rotation[2]
+				key1.rotation[0] * t1 + key2.rotation[0] * t2,
+				key1.rotation[1] * t1 + key2.rotation[1] * t2,
+				key1.rotation[2] * t1 + key2.rotation[2] * t2
 			};
 			
-			Mat4x4 rx, ry, rz;
+			Quat quatX;
+			Quat quatY;
+			Quat quatZ;
 			
-			rx.MakeRotationX(rotation[0], false);
-			ry.MakeRotationY(rotation[1], false);
-			rz.MakeRotationZ(rotation[2], false);
-			
-			Mat4x4 r;
+			quatX.fromAxisAngle(Vec3(1.f, 0.f, 0.f), rotation[0]);
+			quatY.fromAxisAngle(Vec3(0.f, 1.f, 0.f), rotation[1]);
+			quatZ.fromAxisAngle(Vec3(0.f, 0.f, 1.f), rotation[2]);
 			
 			if (rotationType == RotationType_EulerXYZ)
 			{
-				r = rz * ry * rx;
+				quat = quatZ * quatY * quatX;
 			}
 			else
 			{
 				assert(false);
-				r.MakeIdentity();
+				quat.makeIdentity();
 			}
-			
-			quat.fromMatrix(r);
 		}
 		
-		result.translation += (key1.translation * t1) + (key2.translation * t2);
-		result.rotation *= quat;
-		result.scale += (key1.scale * t1) + (key2.scale * t2);
+		result.translation = (key1.translation * t1) + (key2.translation * t2);
+		result.rotation = quat;
+		result.scale = (key1.scale * t1) + (key2.scale * t2);
 	}
 	
 	//
@@ -341,5 +429,289 @@ namespace Model
 	AnimSet * Cache::findOrCreateAnimSet(const std::vector<std::string> & filenames)
 	{
 		return 0;
+	}
+}
+
+//
+
+using namespace Model;
+
+AnimModel::AnimModel(const char * filename)
+{
+	// todo: fetch stuff from caches
+}
+
+AnimModel::AnimModel(MeshSet * meshes, Skeleton * skeleton, AnimSet * animations)
+{
+	m_meshes = meshes;
+	m_skeleton = skeleton;
+	m_animations = animations;
+	
+	currentAnim = 0;
+	
+	x = y = z = 0.f;
+	axis = Vec3(1.f, 0.f, 0.f);
+	angle = 0.f;
+	scale = 1.f;
+	
+	animIsDone = true;
+	animTime = 0.f;
+	animLoop = 0;
+	animSpeed = 1.f;
+}
+
+AnimModel::~AnimModel()
+{
+	// todo: move resource ownership to cache mgr
+	
+	delete m_meshes;
+	m_meshes = 0;
+	
+	delete m_skeleton;
+	m_skeleton = 0;
+	
+	delete m_animations;
+	m_animations = 0;
+}
+
+void AnimModel::startAnim(const char * name, int loop)
+{
+	assert(loop != 0);
+	
+	std::map<std::string, Anim*>::iterator i = m_animations->m_animations.find(name);
+	
+	if (i != m_animations->m_animations.end())
+	{
+		currentAnim = i->second;
+	}
+	else
+	{
+		printf("animation not found: %s\n", name); // todo: logWarning
+		
+		currentAnim = 0;
+	}
+	
+	animIsDone = false;
+	animTime = 0.f;
+	animLoop = loop;
+	
+	if (animLoop > 0)
+		animLoop--;
+}
+
+void AnimModel::process(float timeStep)
+{
+	animTime += animSpeed * timeStep;
+}
+
+void AnimModel::draw()
+{
+	drawEx(Vec3(x, y, z), axis, angle, scale);
+}
+
+void AnimModel::drawEx(Vec3 position, Vec3 axis, float angle, float scale, int drawFlags)
+{
+	// build transformation matrix
+	 
+	Quat rotation;
+	rotation.fromAxisAngle(axis, angle);
+	
+	Mat4x4 matrix;
+	rotation.toMatrix3x3(matrix);
+	
+	matrix(0, 3) = 0.f;
+	matrix(1, 3) = 0.f;
+	matrix(2, 3) = 0.f;
+	
+	matrix(3, 0) = x;
+	matrix(3, 1) = y;
+	matrix(3, 2) = z;
+	matrix(3, 3) = 1.f;
+	
+	for (int i = 0; i < 3; ++i)
+		for (int j = 0; j < 3; ++j)
+			matrix(i, j) *= scale;
+	
+	drawEx(matrix, drawFlags);
+}
+
+void AnimModel::drawEx(const Mat4x4 & matrix, int drawFlags)
+{
+	// calculate transforms in local bone space
+	
+	BoneTransform * transforms = (BoneTransform*)alloca(sizeof(BoneTransform) * m_skeleton->m_numBones);
+	
+	for (int i = 0; i < m_skeleton->m_numBones; ++i)
+	{
+		transforms[i] = m_skeleton->m_bones[i].transform;
+	}
+	
+	// apply animations
+	
+	if (currentAnim)
+	{
+		animIsDone = currentAnim->evaluate(animTime, transforms);
+		
+		if (animIsDone && (animLoop > 0 || animLoop < 0))
+		{
+			animIsDone = false;
+			animTime = 0.f;
+			if (animLoop > 0)
+				animLoop--;
+		}
+	}
+	
+	// convert translation / rotation pairs into matrices
+	
+	Mat4x4 * localMatrices = (Mat4x4*)alloca(sizeof(Mat4x4) * m_skeleton->m_numBones);
+	
+	for (int i = 0; i < m_skeleton->m_numBones; ++i)
+	{
+		// todo: scale?
+		
+		const BoneTransform & transform = transforms[i];
+		
+		transform.rotation.toMatrix3x3(localMatrices[i]);
+		
+		localMatrices[i](0, 3) = 0.f;
+		localMatrices[i](1, 3) = 0.f;
+		localMatrices[i](2, 3) = 0.f;
+		
+		localMatrices[i](3, 0) = transform.translation[0];
+		localMatrices[i](3, 1) = transform.translation[1];
+		localMatrices[i](3, 2) = transform.translation[2];
+		localMatrices[i](3, 3) = 1.f;
+	}
+	
+	// calculate the bone hierarchy in world space
+	
+	Mat4x4 * worldMatrices = (Mat4x4*)alloca(sizeof(Mat4x4) * m_skeleton->m_numBones);
+	
+	for (int i = 0; i < m_skeleton->m_numBones; ++i)
+	{
+		// todo: calculate matrices for a given bone only once
+		//       will need to sort bones by their distance from parent
+		
+		int boneIndex = i;
+		
+		Mat4x4 finalMatrix = localMatrices[boneIndex];
+		
+		boneIndex = m_skeleton->m_bones[boneIndex].parent;
+		
+		while (boneIndex != -1)
+		{
+			finalMatrix = localMatrices[boneIndex] * finalMatrix;
+			
+			boneIndex = m_skeleton->m_bones[boneIndex].parent;
+		}
+		
+		worldMatrices[i] = matrix * finalMatrix;
+	}
+	
+	// draw
+	
+	if (drawFlags & DrawMesh)
+	{
+		for (int i = 0; i < m_meshes->m_numMeshes; ++i)
+		{
+			const Mesh * mesh = m_meshes->m_meshes[i];
+			
+			std::vector<Vec3> normals;
+			
+			glBegin(GL_TRIANGLES);
+			{
+				for (int j = 0; j < mesh->m_numIndices; ++j)
+				{
+					const int vertexIndex = mesh->m_indices[j];
+					
+					const Vertex & vertex = mesh->m_vertices[vertexIndex];
+					
+					// todo: apply vertex transformation using a shader
+					
+					// -- software vertex blend (soft skinned) --
+					Vec3 p(0.f, 0.f, 0.f);
+					Vec3 n(0.f, 0.f, 0.f);
+					for (int b = 0; b < 4; ++b)
+					{
+						if (vertex.boneWeights[b] == 0)
+							continue;
+						const int boneIndex = vertex.boneIndices[b];
+						const float boneWeight = vertex.boneWeights[b] / 255.f;						
+						const Mat4x4 & boneToWorld = worldMatrices[boneIndex];
+						const Mat4x4 & worldToBone = m_skeleton->m_bones[boneIndex].poseMatrix;
+						p += (boneToWorld * worldToBone).Mul4(Vec3(vertex.px, vertex.py, vertex.pz)) * boneWeight;
+						n += (boneToWorld * worldToBone).Mul (Vec3(vertex.nx, vertex.ny, vertex.nz)) * boneWeight;
+					}
+					// -- software vertex blend (soft skinned) --
+					
+				#if 1
+					float r = 1.f;
+					float g = 1.f;
+					float b = 1.f;
+					
+					if (1)
+					{
+						r *= (n[0] + 1.f) / 2.f;
+						g *= (n[1] + 1.f) / 2.f;
+						b *= (n[2] + 1.f) / 2.f;
+					}
+					
+					glColor3f(r, g, b);
+				#endif
+					
+					glTexCoord2f(vertex.tx, 1.f - vertex.ty);
+					glNormal3f(n[0], n[1], n[2]);
+					glVertex3f(p[0], p[1], p[2]);
+					
+					if (drawFlags & DrawNormals)
+					{
+						normals.push_back(Vec3(p[0], p[1], p[2]));
+						normals.push_back(Vec3(n[0], n[1], n[2]));
+					}
+				}
+			}
+			glEnd();
+			
+			if (drawFlags & DrawNormals)
+			{
+				glBegin(GL_LINES);
+				{
+					for (size_t j = 0; j < normals.size() / 2; ++j)
+					{
+						Vec3 p = normals[j * 2 + 0];
+						Vec3 n = normals[j * 2 + 1] * 5.f;
+						
+						glVertex3f(p[0],        p[1],        p[2]       );
+						glVertex3f(p[0] + n[0], p[1] + n[1], p[2] + n[2]);
+					}
+				}
+				glEnd();
+			}
+		}
+	}
+	
+	if (drawFlags & DrawBones)
+	{
+		for (int i = 0; i < m_skeleton->m_numBones; ++i)
+		{
+			const int boneIndex1 = i;
+			const int boneIndex2 = m_skeleton->m_bones[i].parent;
+			
+			if (boneIndex1 != -1)
+			{
+				const Mat4x4 & worldMatrix1 =                             worldMatrices[boneIndex1];
+				const Mat4x4 & worldMatrix2 = boneIndex2 == -1 ? matrix : worldMatrices[boneIndex2];
+				
+				glBegin(GL_LINES);
+				{
+					const Vec3 p1 = worldMatrix1 * Vec3(0.f, 0.f, 0.f);
+					const Vec3 p2 = worldMatrix2 * Vec3(0.f, 0.f, 0.f);
+					
+					glVertex3f(p1[0], p1[1], p1[2]);
+					glVertex3f(p2[0], p2[1], p2[2]);
+				}
+				glEnd();
+			}
+		}
 	}
 }
