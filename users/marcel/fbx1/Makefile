@@ -1,6 +1,6 @@
 EXE = fbx
-OBJS = fbx.o main.o ../../../libgg/Quat.o
-CFLAGS = -Wall -Wextra -Wno-unused -Werror -ansi -pedantic -O2 -I../../../libgg
+OBJS = fbx.o main.o ../../../libgg/Quat.o ../framework/model.o
+CFLAGS = -Wall -Wextra -Wno-unused -Werror -ansi -pedantic -O2 -I../../../libgg -DNO_SDL_GLEXT
 LFLAGS = `sdl-config --static-libs` -lstdc++
 
 all : $(EXE)

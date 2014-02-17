@@ -17,9 +17,28 @@ using namespace Model;
 
 static bool logEnabled = true;
 
-static Mat4x4 MatrixTranslation(const Vec3 & v);
-static Mat4x4 MatrixRotation(const Vec3 & v);
-static Mat4x4 MatrixScaling(const Vec3 & v);
+static bool treatAsMesh(const std::string & name)
+{
+	// todo: create separate object for non meshes
+	//return name == "Mesh" || name == "LimbNode" || name == "Null" || name == "Root";
+	return true;
+}
+
+static RotationType convertRotationOrder(int order)
+{
+	switch (order)
+	{
+	case 0:
+		return RotationType_EulerXYZ;
+	default:
+		assert(false);
+		return RotationType_EulerXYZ;
+	}
+}
+
+static Mat4x4 matrixTranslation(const Vec3 & v);
+static Mat4x4 matrixRotation(const Vec3 & v, RotationType rotationType);
+static Mat4x4 matrixScaling(const Vec3 & v);
 
 static int getTimeMS()
 {
@@ -263,13 +282,9 @@ public:
 		{
 			std::vector<Key> keys;
 			
-			bool evaluate(float time, float & value) const
+			void evaluate(float time, float & value) const
 			{
-				if (keys.empty())
-				{
-					return true;
-				}
-				else
+				if (!keys.empty())
 				{
 					const Key * firstKey = &keys[0];
 					const Key * key = firstKey;
@@ -301,12 +316,10 @@ public:
 						
 						value = key->value;
 					}
-					
-					return (key == lastKey);
 				}
 			}
 			
-			void read(int & logIndent, const FbxRecord & record)
+			void read(int & logIndent, const FbxRecord & record, float & endTime)
 			{
 				const int keyCount = record.firstChild("KeyCount").captureProperty<int>(0);
 				
@@ -328,21 +341,30 @@ public:
 						value = int(value * 1000.f + .5f) / 1000.f;
 						
 						// don't write duplicate values, unless it's the first/last key in the list. exporters sometimes write a fixed number of keys (sampling based), with lots of duplicates
-						const bool isDuplicate = keys.size() >= 1 && keys.back().value == value && i + stride != values.size();
+						const bool isDuplicate = keys.size() >= 1 && keys.back().value == value;// && i + stride != values.size();
 					#else
 						const bool isDuplicate = false;
 					#endif
 						
+						const float time = float((get<int64_t>(values[i + 0]) / 1000000) / 1000.0 / 60.0);
+						
 						if (!isDuplicate)
 						{
 							Key key;
-							key.time = float((get<int64_t>(values[i + 0]) / 1000000) / 1000.0 / 60.0);
+							key.time = time;
 							key.value = value;
 							keys.push_back(key);
 							
 							//log(logIndent, "%014lld -> %f\n", temp.time, temp.value);
 						}
+						
+						if (time > endTime)
+						{
+							endTime = time;
+						}
 					}
+					
+					//log(logIndent, "got %d unique keys\n", keys.size());
 				}
 			}
 		};
@@ -351,7 +373,7 @@ public:
 		KeyList Y;
 		KeyList Z;
 		
-		void read(int & logIndent, const FbxRecord & record)
+		void read(int & logIndent, const FbxRecord & record, float & endTime)
 		{
 			for (FbxRecord channel = record.firstChild("Channel"); channel.isValid(); channel = channel.nextSibling("Channel"))
 			{
@@ -362,11 +384,11 @@ public:
 				logIndent++;
 				{
 					if (name == "X")
-						X.read(logIndent, channel);
+						X.read(logIndent, channel, endTime);
 					if (name == "Y")
-						Y.read(logIndent, channel);
+						Y.read(logIndent, channel, endTime);
 					if (name == "Z")
-						Z.read(logIndent, channel);
+						Z.read(logIndent, channel, endTime);
 				}
 				logIndent--;
 			}
@@ -379,17 +401,26 @@ public:
 	
 	std::vector<AnimKey> animKeys;
 	
+	float m_endTime;
+	
+	FbxAnimTransform()
+	{
+		m_endTime = 0.f;
+	}
+	
 	void read(int & logIndent, const FbxRecord & record)
 	{
+		m_endTime = 0.f;
+		
 		for (FbxRecord channel = record.firstChild("Channel"); channel.isValid(); channel = channel.nextSibling("Channel"))
 		{
 			const std::string name = channel.captureProperty<std::string>(0);
 			
 			logIndent++;
 			{
-				if (name == "T") T.read(logIndent, channel);
-				if (name == "R") R.read(logIndent, channel);
-				if (name == "S") S.read(logIndent, channel);
+				if (name == "T") T.read(logIndent, channel, m_endTime);
+				if (name == "R") R.read(logIndent, channel, m_endTime);
+				if (name == "S") S.read(logIndent, channel, m_endTime);
 			}
 			logIndent--;
 		}
@@ -446,20 +477,12 @@ public:
 			
 			// sample the separate key frame channels
 			
-			Mat4x4 m;
-			evaluateRaw(t, r, s, time, m);
-			
-			// extract translation and rotation
-			
-			Vec3 translation = m.GetTranslation();
-			Quat quat;
-			quat.fromMatrix(m);
-			
-			// add the new key frame
-			
 			AnimKey & animKey = animKeys[i];
+			
+			Quat quat;
+			evaluateRaw(t, r, s, time, animKey.translation, quat, animKey.scale);
+			
 			animKey.time = time;
-			animKey.translation = translation;
 			animKey.rotation[0] = quat[0];
 			animKey.rotation[1] = quat[1];
 			animKey.rotation[2] = quat[2];
@@ -468,35 +491,57 @@ public:
 		}
 	}
 	
+	void evaluateRaw(const Channel & t, const Channel & r, const Channel & s, float time, Vec3 & translation, Vec3 & rotation, Vec3 & scale) const
+	{
+		t.X.evaluate(time, translation[0]);
+		t.Y.evaluate(time, translation[1]);
+		t.Z.evaluate(time, translation[2]);
+		r.X.evaluate(time, rotation[0]);
+		r.Y.evaluate(time, rotation[1]);
+		r.Z.evaluate(time, rotation[2]);
+		s.X.evaluate(time, scale[0]);
+		s.Y.evaluate(time, scale[1]);
+		s.Z.evaluate(time, scale[2]);
+	}
+	
+	void evaluateRaw(const Channel & t, const Channel & r, const Channel & s, float time, Vec3 & translation, Quat & rotation, Vec3 & scale) const
+	{
+		Vec3 rotationVec;
+		
+		evaluateRaw(t, r, s, time, translation, rotationVec, scale);
+		
+		rotationVec *= M_PI / 180.f;
+		
+		Quat quatX;
+		Quat quatY;
+		Quat quatZ;
+		
+		quatX.fromAxisAngle(Vec3(1.f, 0.f, 0.f), rotationVec[0]);
+		quatY.fromAxisAngle(Vec3(0.f, 1.f, 0.f), rotationVec[1]);
+		quatZ.fromAxisAngle(Vec3(0.f, 0.f, 1.f), rotationVec[2]);
+		
+		rotation = quatZ * quatY * quatX;
+	}
+	
 	bool evaluateRaw(const Channel & t, const Channel & r, const Channel & s, float time, Mat4x4 & result) const
 	{
-		Vec3 translation(0.f, 0.f, 0.f);
-		Vec3 rotation(0.f, 0.f, 0.f);
+		Vec3 translation;
+		Vec3 rotation;
 		Vec3 scale(1.f, 1.f, 1.f);
 		
-		bool isDone = true;
+		evaluateRaw(t, r, s, time, translation, rotation, scale);
 		
-		isDone &= t.X.evaluate(time, translation[0]);
-		isDone &= t.Y.evaluate(time, translation[1]);
-		isDone &= t.Z.evaluate(time, translation[2]);
-		isDone &= r.X.evaluate(time, rotation[0]);
-		isDone &= r.Y.evaluate(time, rotation[1]);
-		isDone &= r.Z.evaluate(time, rotation[2]);
-		isDone &= s.X.evaluate(time, scale[0]);
-		isDone &= s.Y.evaluate(time, scale[1]);
-		isDone &= s.Z.evaluate(time, scale[2]);
+		result = matrixTranslation(translation) * matrixRotation(rotation, RotationType_EulerXYZ) * matrixScaling(scale);
 		
-		result = MatrixTranslation(translation) * MatrixRotation(rotation) * MatrixScaling(scale);
-		
-		return isDone;
+		return time >= m_endTime;
 	}
 	
 	bool evaluate(float time, Mat4x4 & result) const
 	{
+		// 21 ms to 11 ms
+		
 		//if (rand() % 4)
 		//	return evaluateRaw(T, R, S, time, result);
-		
-		bool done = false;
 		
 		Quat quat;
 		Vec3 translation;
@@ -504,9 +549,6 @@ public:
 		if (animKeys.empty())
 		{
 			quat.makeIdentity();
-			translation.SetZero();
-			
-			done = true;
 		}
 		else
 		{
@@ -548,17 +590,20 @@ public:
 				quat = Quat(key->rotation[0], key->rotation[1], key->rotation[2], key->rotation[3]);
 				translation = key->translation;
 			}
-			
-			if (key == lastKey)
-				done = true;
 		}
 		
-		Mat4x4 t = MatrixTranslation(translation);
-		Mat4x4 r = quat.toMatrix();
+		quat.toMatrix3x3(result);
 		
-		result = t * r;
+		result(0, 3) = 0.f;
+		result(1, 3) = 0.f;
+		result(2, 3) = 0.f;
 		
-		return done;
+		result(3, 0) = translation[0];
+		result(3, 1) = translation[1];
+		result(3, 2) = translation[2];
+		result(3, 3) = 1.f;
+		
+		return time >= m_endTime;
 	}
 };
 
@@ -743,10 +788,10 @@ public:
 
 //
 
-class MyMesh
+class MeshBuilder
 {
 public:
-	class Vertex
+	class Vertex : public Model::Vertex
 	{
 	public:
 		inline bool operator==(const Vertex & w) const
@@ -754,16 +799,16 @@ public:
 			return !memcmp(this, &w, sizeof(Vertex));
 		}
 		
+		/*
 		float px, py, pz;     // position
 		float nx, ny, nz;     // normal
 		float tx, ty;         // texture
 		float cx, cy, cz, cw; // color
 		
-		uint8_t bi[4]; // blend indices
-		uint8_t bw[4]; // blend weights
+		uint8_t boneIndices[4]; // blend indices
+		uint8_t boneWeights[4]; // blend weights
+		*/
 	};
-	
-	Mat4x4 m_transform;
 	
 	std::vector<Vertex> m_vertices;
 	std::vector<int> m_indices;
@@ -897,15 +942,15 @@ public:
 			
 			for (int d = 0; d < numDeformers; ++d)
 			{
-				vertex.bi[d] = deformers[vertexIndex].entries[d].index;
-				vertex.bw[d] = int8_t(deformers[vertexIndex].entries[d].weight * 255.f);
+				vertex.boneIndices[d] = deformers[vertexIndex].entries[d].index;
+				vertex.boneWeights[d] = int8_t(deformers[vertexIndex].entries[d].weight * 255.f);
 				
-				//printf("added %d, %d\n", vertex.bi[d], vertex.bw[d]);
+				//log(logIndent, "added %d, %d\n", vertex.blendIndices[d], vertex.boneWeights[d]);
 			}
 			for (int d = numDeformers; d < 4; ++d)
 			{
-				vertex.bi[d] = 0;
-				vertex.bw[d] = 0;
+				vertex.boneIndices[d] = 0;
+				vertex.boneWeights[d] = 0;
 			}
 			
 			// add unique vertex if it doesn't exist yet, or add an index for the existing vertex
@@ -957,25 +1002,43 @@ bool readFile(const char * filename, std::vector<uint8_t> & bytes)
 	return true;
 }
 
-static Mat4x4 MatrixTranslation(const Vec3 & v)
+static Mat4x4 matrixTranslation(const Vec3 & v)
 {
 	Mat4x4 t;
 	t.MakeTranslation(v);
 	return t;
 }
 
-static Mat4x4 MatrixRotation(const Vec3 & v)
+static Mat4x4 matrixRotation(const Vec3 & v, RotationType rotationType)
 {
-	// todo: create quaternion(s) instead of matrices
 	const Vec3 temp = v * M_PI / 180.f;
-	Mat4x4 x, y, z;
-	x.MakeRotationX(temp[0], false);
-	y.MakeRotationY(temp[1], false);
-	z.MakeRotationZ(temp[2], false);
-	return z * y * x;
+	
+	Quat quatX;
+	Quat quatY;
+	Quat quatZ;
+	
+	quatX.fromAxisAngle(Vec3(1.f, 0.f, 0.f), temp[0]);
+	quatY.fromAxisAngle(Vec3(0.f, 1.f, 0.f), temp[1]);
+	quatZ.fromAxisAngle(Vec3(0.f, 0.f, 1.f), temp[2]);
+	
+	Quat quat;
+	
+	switch (rotationType)
+	{
+	case RotationType_EulerXYZ:
+		quat = quatZ * quatY * quatX;
+		break;
+		
+	default:
+		assert(false);
+		quat.makeIdentity();
+		break;
+	}
+	
+	return quat.toMatrix();
 }
 
-static Mat4x4 MatrixScaling(const Vec3 & v)
+static Mat4x4 matrixScaling(const Vec3 & v)
 {
 	Mat4x4 s;
 	s.MakeScaling(v);
@@ -1011,7 +1074,7 @@ int main(int argc, char * argv[])
 	
 	if (!readFile(filename, bytes))
 	{
-		printf("failed to open %s\n", filename);
+		log(logIndent, "failed to open %s\n", filename);
 		return -1;
 	}
 	
@@ -1032,8 +1095,6 @@ int main(int argc, char * argv[])
 	
 	// build FBX object list
 	
-	logEnabled = true;
-	
 	typedef std::vector<FbxObject*> ObjectList;
 	typedef std::map<std::string, FbxObject*> ObjectsByName;
 	ObjectsByName objectsByName;
@@ -1046,7 +1107,7 @@ int main(int argc, char * argv[])
 	log(logIndent, "-- extracting mesh data --\n");
 	
 	const int time1 = getTimeMS();
-		
+	
 	for (FbxRecord objects = reader.firstRecord("Objects"); objects.isValid(); objects = objects.nextSibling("Objects"))
 	{
 		for (FbxRecord object = objects.firstChild(); object.isValid(); object = object.nextSibling())
@@ -1061,7 +1122,9 @@ int main(int argc, char * argv[])
 			{
 				const FbxRecord & model = object;
 				
-				if (objectType == "Mesh")
+				// todo: allocate generic node object for non mesh
+				
+				if (treatAsMesh(objectType))
 				{
 					FbxMesh * mesh = new FbxMesh("Mesh", objectName);
 					fbxObject = mesh;
@@ -1190,18 +1253,20 @@ int main(int argc, char * argv[])
 						// ???
 					}
 					
+					RotationType rotationType = convertRotationOrder(rotationOrder);
+					
 					mesh->transform =
-						MatrixTranslation(translationLocal) *
-						MatrixTranslation(rotationOffset) *
-						MatrixTranslation(rotationPivot) *
-						MatrixRotation(rotationPre) *
-						MatrixRotation(rotationLocal) *
-						MatrixRotation(rotationPost) *
-						MatrixTranslation(-rotationPivot) *
-						MatrixTranslation(scalingOffset) *
-						MatrixTranslation(scalingPivot) *
-						MatrixScaling(scalingLocal) *
-						MatrixTranslation(-scalingPivot);
+						matrixTranslation(translationLocal) *
+						matrixTranslation(rotationOffset) *
+						matrixTranslation(rotationPivot) *
+						matrixRotation(rotationPre, rotationType) *
+						matrixRotation(rotationLocal, rotationType) *
+						matrixRotation(rotationPost, rotationType) *
+						matrixTranslation(-rotationPivot) *
+						matrixTranslation(scalingOffset) *
+						matrixTranslation(scalingPivot) *
+						matrixScaling(scalingLocal) *
+						matrixTranslation(-scalingPivot);
 					
 					vertices.capturePropertiesAsFloat(mesh->vertices);
 					vertexIndices.capturePropertiesAsInt(mesh->vertexIndices);
@@ -1238,7 +1303,7 @@ int main(int argc, char * argv[])
 				}
 				else
 				{
-					log(logIndent, "unknown object type: %s\n", objectType.c_str());
+					log(logIndent, "unknown object type: %s (name=%s)\n", objectType.c_str(), objectName.c_str());
 				}
 			}
 			else if (object.name == "Pose")
@@ -1336,7 +1401,7 @@ int main(int argc, char * argv[])
 				}
 				else
 				{
-					printf("duplicate object name !!!\n");
+					log(logIndent, "duplicate object name !!!\n");
 					delete fbxObject;
 				}
 			}
@@ -1401,7 +1466,8 @@ int main(int argc, char * argv[])
 	
 	FbxRecord takes = reader.firstRecord("Takes");
 	
-	std::list<FbxAnim> anims;
+	typedef std::list<FbxAnim> AnimList;
+	AnimList anims;
 	
 	logIndent++;
 	
@@ -1509,12 +1575,14 @@ int main(int argc, char * argv[])
 			}
 			else
 			{
-				printf("warning: duplicate object name: %s\n", object->name.c_str());
+				log(logIndent, "warning: duplicate object name: %s\n", object->name.c_str());
 			}
 		}
 	}
 	
 	// allocate bone matrix for each mesh
+	
+	log(logIndent, "allocating %d bones\n", int(modelNameToBoneIndex.size()));
 	
 	std::vector<Mat4x4> objectToBoneMatrices;
 	std::vector<Mat4x4> boneToObjectMatrices;
@@ -1633,11 +1701,9 @@ int main(int argc, char * argv[])
 		}
 	}
 	
-	//logEnabled = false;
-	
 	// finalize meshes by invoking the powers of the awesome vertex welding machine
 	
-	std::list<MyMesh> meshes;
+	std::list<MeshBuilder> meshes; // todo: deprecate and use framework classes
 	
 	for (ObjectsByName::iterator i = objectsByName.begin(); i != objectsByName.end(); ++i)
 	{
@@ -1647,10 +1713,12 @@ int main(int argc, char * argv[])
 		{
 			FbxMesh * fbxMesh = static_cast<FbxMesh*>(object);
 			
-			meshes.push_back(MyMesh());
-			MyMesh & mesh = meshes.back();
+			meshes.push_back(MeshBuilder());
+			MeshBuilder & meshBuilder = meshes.back();
 			
-			mesh.construct(
+			// todo: triangulate mesh
+			
+			meshBuilder.construct(
 				logIndent,
 				fbxMesh->vertices,
 				fbxMesh->vertexIndices,
@@ -1660,8 +1728,6 @@ int main(int argc, char * argv[])
 				fbxMesh->colors,
 				fbxMesh->colorIndices,
 				fbxMesh->deformers);
-			
-			mesh.m_transform = fbxMesh->transform;
 		}
 	}
 	
@@ -1692,7 +1758,7 @@ int main(int argc, char * argv[])
 			}
 			else
 			{
-				printf("warning: no pose matrix for deformer %s\n", modelName.c_str());
+				log(logIndent, "warning: no pose matrix for deformer %s\n", modelName.c_str());
 				objectToBoneMatrices[boneIndex].MakeIdentity();
 			}
 		}
@@ -1716,15 +1782,16 @@ int main(int argc, char * argv[])
 	{
 		log(logIndent, "-- dumping mesh data --\n");
 		
-		for (std::list<MyMesh>::iterator i = meshes.begin(); i != meshes.end(); ++i)
+		for (std::list<MeshBuilder>::iterator i = meshes.begin(); i != meshes.end(); ++i)
 		{
-			const MyMesh & mesh = *i;
+			const MeshBuilder & mesh = *i;
 
 			log(logIndent, "mesh: numVertices=%d, numIndices=%d\n", int(mesh.m_vertices.size()), int(mesh.m_indices.size()));
 			
 			logIndent++;
 			
 			int polygonIndex = ~0;
+			int vertexIndex = 0;
 			
 			for (size_t i = 0; i < mesh.m_indices.size(); ++i)
 			{
@@ -1747,6 +1814,8 @@ int main(int argc, char * argv[])
 					log(logIndent, "polygon [%d]:\n", polygonIndex);
 				}
 				
+				vertexIndex++;
+				
 				logIndent++;
 				
 				log(logIndent, "[%05d] position = (%+7.2f %+7.2f %+7.2f), normal = (%+5.2f %+5.2f %+5.2f), color = (%4.2f %4.2f %4.2f %4.2f), uv = (%+5.2f %+5.2f)\n",
@@ -1768,9 +1837,13 @@ int main(int argc, char * argv[])
 				
 				if (end)
 				{
-					log(logIndent, "\n");
+					if (vertexIndex != 3)
+						exit(-1); // fixme
+					
+					log(logIndent + 1, "[%d vertices]\n", vertexIndex);
 					
 					polygonIndex = ~(polygonIndex + 1);
+					vertexIndex = 0;
 				}
 			}
 			
@@ -1778,13 +1851,141 @@ int main(int argc, char * argv[])
 		}
 	}
 	
+	// >>> framework code begin
+	
+	// create meshes
+	
+	std::vector<Mesh*> meshes2;
+	
+	for (std::list<MeshBuilder>::iterator i = meshes.begin(); i != meshes.end(); ++i)
+	{
+		const MeshBuilder & meshBuilder = *i;
+		
+		Mesh * mesh = new Mesh();
+		
+		mesh->allocateVB(meshBuilder.m_vertices.size());
+		
+		memcpy(mesh->m_vertices, &meshBuilder.m_vertices[0], sizeof(mesh->m_vertices[0]) * mesh->m_numVertices);
+		
+		mesh->allocateIB(meshBuilder.m_indices.size());
+		
+		for (size_t j = 0; j < meshBuilder.m_indices.size(); ++j)
+		{
+			int index = meshBuilder.m_indices[j];
+			
+			if (index < 0)
+				index = ~index;
+			
+			mesh->m_indices[j] = index;
+		}
+		
+		meshes2.push_back(mesh);
+	}
+	
+	// create mesh set
+	
+	MeshSet * meshSet = new MeshSet();
+	meshSet->allocate(meshes2.size());
+	for (size_t i = 0; i < meshes2.size(); ++i)
+		meshSet->m_meshes[i] = meshes2[i];
+	
+	// create skeleton
+	
+	Skeleton * skeleton = new Skeleton();
+	
+	skeleton->allocate(modelNameToBoneIndex.size());
+	
+	for (size_t i = 0; i < modelNameToBoneIndex.size(); ++i)
+	{
+		skeleton->m_bones[i].poseMatrix = objectToBoneMatrices[i];
+		skeleton->m_bones[i].parent = boneParentIndices[i];
+	}
+	
+	skeleton->calculateBoneMatrices();
+	
+	// create animations
+	
+	std::map<std::string, Anim*> animations;
+	
+	for (AnimList::iterator i = anims.begin(); i != anims.end(); ++i)
+	{
+		const FbxAnim & anim = *i;
+		
+		int numAnimKeys = 0;
+		
+		for (std::map<std::string, FbxAnimTransform>::const_iterator i = anim.transforms.begin(); i != anim.transforms.end(); ++i)
+		{
+			const FbxAnimTransform & animTransform = i->second;
+			
+			numAnimKeys += animTransform.animKeys.size();
+		}
+		
+		Anim * animation = new Anim();
+		
+		animation->allocate(anim.transforms.size(), numAnimKeys, RotationType_Quat);
+		
+		AnimKey * finalAnimKey = animation->m_keys;
+		
+		std::map<int, const FbxAnimTransform*> boneIndexToAnimTransform;
+		
+		for (std::map<std::string, FbxAnimTransform>::const_iterator i = anim.transforms.begin(); i != anim.transforms.end(); ++i)
+		{
+			const std::string & modelName = i->first;
+			const FbxAnimTransform & animTransform = i->second;
+			const int boneIndex = modelNameToBoneIndex[modelName];
+			boneIndexToAnimTransform[boneIndex] = &animTransform;
+		}
+		
+		for (size_t boneIndex = 0; boneIndex < modelNameToBoneIndex.size(); ++boneIndex)
+		{
+			std::map<int, const FbxAnimTransform*>::iterator i = boneIndexToAnimTransform.find(boneIndex);
+			
+			if (i != boneIndexToAnimTransform.end())
+			{
+				const FbxAnimTransform & animTransform = *i->second;
+				const std::vector<AnimKey> & animKeys = animTransform.animKeys;
+				
+				for (size_t j = 0; j < animKeys.size(); ++j)
+				{
+					*finalAnimKey++ = animKeys[j];
+				}
+				
+				animation->m_numKeys[boneIndex] = animKeys.size();
+			}
+			else
+			{
+				animation->m_numKeys[boneIndex] = 0;
+			}
+		}
+		
+		printf("added animation: %s\n", anim.name.c_str());
+		
+		animations[anim.name] = animation;
+	}
+	
+	// create anim set
+	
+	AnimSet * animSet = new AnimSet();
+	animSet->m_animations = animations;
+	
+	// create model
+	
+	AnimModel * model = new AnimModel(meshSet, skeleton, animSet);
+	
+	model->startAnim("Take 001", -1);
+	
+	//delete model;
+	//model = 0;
+	
+	// <<< framework code end
+	
 	if (drawMeshes)
 	{
 		// initialize SDL
 		
 		SDL_Init(SDL_INIT_EVERYTHING);
-		//if (SDL_SetVideoMode(640, 480, 32, SDL_OPENGL) < 0)
-		if (SDL_SetVideoMode(1200, 900, 32, SDL_OPENGL) < 0)
+		if (SDL_SetVideoMode(640, 480, 32, SDL_OPENGL) < 0)
+		//if (SDL_SetVideoMode(1200, 900, 32, SDL_OPENGL) < 0)
 		{
 			log(0, "failed to intialize SDL");
 			exit(-1);
@@ -1854,6 +2055,9 @@ int main(int argc, char * argv[])
 			}
 			
 		#if 1
+			const int evalTime1 = getTimeMS();
+			
+			//for (int l = 0; l < 100; ++l) // fixme, remove
 			if (anims.size() >= 1)
 			{
 				const FbxAnim & anim = anims.front();
@@ -1884,6 +2088,10 @@ int main(int argc, char * argv[])
 				
 				time = 0.f;
 			}
+			
+			const int evalTime2 = getTimeMS();
+			
+			//printf("anim eval time: %d ms\n", evalTime2 - evalTime1);
 		#endif
 			
 			for (size_t i = 0; i < boneToObjectMatrices.size(); ++i)
@@ -1925,8 +2133,9 @@ int main(int argc, char * argv[])
 			static float r = 130.f;
 			r += 1.f / 10.f;
 			
-			const float light[4] = { 1.f, 1.f, 1.f, 0.f };
-			glLightfv(GL_LIGHT0, GL_POSITION, light);
+			Vec4 light(1.f, 1.f, 1.f, 0.f);
+			light.Normalize();
+			glLightfv(GL_LIGHT0, GL_POSITION, &light[0]);
 			glEnable(GL_LIGHT0);
 			if (lightEnabled)
 				glEnable(GL_LIGHTING);
@@ -1934,25 +2143,29 @@ int main(int argc, char * argv[])
 				glDisable(GL_LIGHTING);
 			glEnable(GL_NORMALIZE);
 			
-			for (std::list<MyMesh>::iterator i = meshes.begin(); i != meshes.end(); ++i)
+			glPushMatrix();
+			
+			glTranslatef(0.f, -.5f, 0.f);
+			
+			glRotatef(r, 0.f, 1.f, 0.f);
+			
+		#if 1
+			glRotatef(-90.f, 1.f, 0.f, 0.f);
+		#else
+			glTranslatef(0.f, .5f, 0.f);
+			glRotatef(-90.f, 0.f, 0.f, 1.f);
+		#endif
+			const float scale = 0.005f;
+			glScalef(scale, scale, scale);
+			
+			model->process(1.f / 60.f);
+			model->draw();
+			
+		#if 1
+			for (std::list<MeshBuilder>::iterator i = meshes.begin(); i != meshes.end(); ++i)
 			{
-				const MyMesh & mesh = *i;
+				const MeshBuilder & mesh = *i;
 				
-				glPushMatrix();
-				
-				glTranslatef(0.f, -.5f, 0.f);
-				
-				glRotatef(r, 0.f, 1.f, 0.f);
-				
-			#if 1
-				glRotatef(-90.f, 1.f, 0.f, 0.f);
-			#else
-				glTranslatef(0.f, .5f, 0.f);
-				glRotatef(-90.f, 0.f, 0.f, 1.f);
-			#endif
-				const float scale = 0.005f;
-				glScalef(scale, scale, scale);
-
 				int vertexCount = 0;
 				
 				for (size_t i = 0; i < mesh.m_indices.size(); ++i)
@@ -1977,24 +2190,25 @@ int main(int argc, char * argv[])
 						end = true;
 					}
 					
-					const MyMesh::Vertex & v = mesh.m_vertices[index];
+					const MeshBuilder::Vertex & v = mesh.m_vertices[index];
 					
+					// -- software vertex blend (soft skinned) --
 					Vec3 p(0.f, 0.f, 0.f);
 					Vec3 n(0.f, 0.f, 0.f);
 					for (int j = 0; j < 4; ++j)
 					{
-						const int boneIndex = v.bi[j];
-						const float boneWeight = v.bw[j] / 255.f;
-						
-						if (boneWeight == 0.f)
+						if (v.boneWeights[j] == 0)
 							continue;
-						
+						const int boneIndex = v.boneIndices[j];
+						const float boneWeight = v.boneWeights[j] / 255.f;
 						const Mat4x4 & objectToBone = objectToBoneMatrices[boneIndex];
 						const Mat4x4 & boneToObject = boneToObjectMatrices[boneIndex];
-						
 						p += (boneToObject * objectToBone).Mul4(Vec3(v.px, v.py, v.pz)) * boneWeight;
 						n += (boneToObject * objectToBone).Mul (Vec3(v.nx, v.ny, v.nz)) * boneWeight;
 					}
+					// -- software vertex blend (soft skinned) --
+					
+					//n.Normalize();
 					
 					float r = 1.f;
 					float g = 1.f;
@@ -2008,15 +2222,15 @@ int main(int argc, char * argv[])
 					}
 					if (drawBlendIndices)
 					{
-						r *= v.bi[0] / float(modelNameToBoneIndex.size());
-						g *= v.bi[1] / float(modelNameToBoneIndex.size());
-						b *= v.bi[2] / float(modelNameToBoneIndex.size());
+						r *= v.boneIndices[0] / float(modelNameToBoneIndex.size());
+						g *= v.boneIndices[1] / float(modelNameToBoneIndex.size());
+						b *= v.boneIndices[2] / float(modelNameToBoneIndex.size());
 					}
 					if (drawBlendWeights)
 					{
-						r *= (1.f + v.bw[0] / 255.f) / 2.f;
-						g *= (1.f + v.bw[1] / 255.f) / 2.f;
-						b *= (1.f + v.bw[2] / 255.f) / 2.f;
+						r *= (1.f + v.boneWeights[0] / 255.f) / 2.f;
+						g *= (1.f + v.boneWeights[1] / 255.f) / 2.f;
+						b *= (1.f + v.boneWeights[2] / 255.f) / 2.f;
 					}
 					if (drawTexcoords)
 					{
@@ -2049,13 +2263,28 @@ int main(int argc, char * argv[])
 				{
 					// object to bone matrix translation
 					glDisable(GL_DEPTH_TEST);
+					glColor3ub(127, 127, 127);
+					glBegin(GL_LINES);
+					{
+						for (size_t j = 0; j < objectToBoneMatrices.size(); ++j)
+						{
+							if (boneParentIndices[j] != -1)
+							{
+								const Mat4x4 m1 = objectToBoneMatrices[j].CalcInv();
+								const Mat4x4 m2 = objectToBoneMatrices[boneParentIndices[j]].CalcInv();
+								glVertex3f(m1(3, 0), m1(3, 1), m1(3, 2));
+								glVertex3f(m2(3, 0), m2(3, 1), m2(3, 2));
+							}
+						}
+					}
+					glEnd();
 					glColor3ub(255, 0, 0);
 					glPointSize(7.f);
 					glBegin(GL_POINTS);
 					{
-						for (size_t j = 0; j < deformers.size(); ++j)
+						for (size_t j = 0; j < objectToBoneMatrices.size(); ++j)
 						{
-							const Mat4x4 m = objectToBoneMatrices[j].CalcInv();
+							const Mat4x4 & m = objectToBoneMatrices[j].CalcInv();
 							glVertex3f(m(3, 0), m(3, 1), m(3, 2));
 						}
 					}
@@ -2067,22 +2296,39 @@ int main(int argc, char * argv[])
 				{
 					// bone to object matrix translation
 					glDisable(GL_DEPTH_TEST);
+					glColor3ub(127, 127, 127);
+					glBegin(GL_LINES);
+					{
+						for (size_t j = 0; j < boneToObjectMatrices.size(); ++j)
+						{
+							if (boneParentIndices[j] != -1)
+							{
+								const Mat4x4 & m1 = boneToObjectMatrices[j];
+								const Mat4x4 & m2 = boneToObjectMatrices[boneParentIndices[j]];
+								glVertex3f(m1(3, 0), m1(3, 1), m1(3, 2));
+								glVertex3f(m2(3, 0), m2(3, 1), m2(3, 2));
+							}
+						}
+					}
+					glEnd();
 					glColor3ub(0, 255, 0);
 					glPointSize(5.f);
 					glBegin(GL_POINTS);
 					{
-						for (size_t j = 0; j < deformers.size(); ++j)
+						for (size_t j = 0; j < boneToObjectMatrices.size(); ++j)
 						{
 							const Mat4x4 m = boneToObjectMatrices[j];
 							glVertex3f(m(3, 0), m(3, 1), m(3, 2));
+							//printf("%f %f %f\n", m(3, 0), m(3, 1), m(3, 2));
 						}
 					}
 					glEnd();
 					glEnable(GL_DEPTH_TEST);
 				}
-
-				glPopMatrix();
 			}
+		#endif
+			
+			glPopMatrix();
 			
 			SDL_GL_SwapBuffers();
 		}
