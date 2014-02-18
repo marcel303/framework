@@ -971,6 +971,67 @@ public:
 			m_indices.push_back(isEnd ? ~weldIndex : weldIndex);
 		}
 		
+		// triangulate
+		
+		std::vector<int> temp;
+		temp.reserve(m_indices.size());
+		
+		if (m_indices.size() >= 3)
+		{
+			for (size_t i = 0; i < m_indices.size(); )
+			{
+				int index1 = m_indices[i + 0];
+				int index2 = m_indices[i + 1];
+				int index3 = m_indices[i + 2];
+				
+				if (index1 < 0)
+				{
+					// single point?!
+					i += 1;
+					continue;
+				}
+				
+				if (index2 < 0)
+				{
+					// line segment?!
+					i += 2;
+					continue;
+				}
+				
+				// at the very least it's a triangle
+				temp.push_back(index1);
+				temp.push_back(index2);
+				temp.push_back(index3);
+				i += 3;
+				
+				if (index3 < 0)
+				{
+					// we're done
+					continue;
+				}
+				
+				// generate additional triangles
+				
+				while (i < m_indices.size())
+				{
+					index2 = index3;
+					index3 = m_indices[i];
+					i += 1;
+					
+					temp.push_back(index1);
+					temp.push_back(index2);
+					temp.push_back(index3);
+					
+					if (index3 < 0)
+						break;
+				}
+			}
+			
+			log(logIndent, "triangulation result: %d -> %d indices\n", int(m_indices.size()), int(temp.size()));
+			
+			m_indices = temp;
+		}
+		
 		const int time2 = getTimeMS();
 		log(logIndent, "time: %d ms\n", time2-time1);
 		
@@ -1889,19 +1950,19 @@ int main(int argc, char * argv[])
 	for (size_t i = 0; i < meshes2.size(); ++i)
 		meshSet->m_meshes[i] = meshes2[i];
 	
-	// create skeleton
+	// create bone set
 	
-	Skeleton * skeleton = new Skeleton();
+	BoneSet * boneSet = new BoneSet();
 	
-	skeleton->allocate(modelNameToBoneIndex.size());
+	boneSet->allocate(modelNameToBoneIndex.size());
 	
 	for (size_t i = 0; i < modelNameToBoneIndex.size(); ++i)
 	{
-		skeleton->m_bones[i].poseMatrix = objectToBoneMatrices[i];
-		skeleton->m_bones[i].parent = boneParentIndices[i];
+		boneSet->m_bones[i].poseMatrix = objectToBoneMatrices[i];
+		boneSet->m_bones[i].parent = boneParentIndices[i];
 	}
 	
-	skeleton->calculateBoneMatrices();
+	boneSet->calculateBoneMatrices();
 	
 	// create animations
 	
@@ -1920,12 +1981,6 @@ int main(int argc, char * argv[])
 			numAnimKeys += animTransform.animKeys.size();
 		}
 		
-		Anim * animation = new Anim();
-		
-		animation->allocate(anim.transforms.size(), numAnimKeys, RotationType_Quat);
-		
-		AnimKey * finalAnimKey = animation->m_keys;
-		
 		std::map<int, const FbxAnimTransform*> boneIndexToAnimTransform;
 		
 		for (std::map<std::string, FbxAnimTransform>::const_iterator i = anim.transforms.begin(); i != anim.transforms.end(); ++i)
@@ -1935,6 +1990,12 @@ int main(int argc, char * argv[])
 			const int boneIndex = modelNameToBoneIndex[modelName];
 			boneIndexToAnimTransform[boneIndex] = &animTransform;
 		}
+		
+		Anim * animation = new Anim();
+		
+		animation->allocate(modelNameToBoneIndex.size(), numAnimKeys, RotationType_Quat);
+		
+		AnimKey * finalAnimKey = animation->m_keys;
 		
 		for (size_t boneIndex = 0; boneIndex < modelNameToBoneIndex.size(); ++boneIndex)
 		{
@@ -1970,7 +2031,7 @@ int main(int argc, char * argv[])
 	
 	// create model
 	
-	AnimModel * model = new AnimModel(meshSet, skeleton, animSet);
+	AnimModel * model = new AnimModel(meshSet, boneSet, animSet);
 	
 	model->startAnim("Take 001", -1);
 	
@@ -1984,21 +2045,21 @@ int main(int argc, char * argv[])
 		// initialize SDL
 		
 		SDL_Init(SDL_INIT_EVERYTHING);
-		if (SDL_SetVideoMode(640, 480, 32, SDL_OPENGL) < 0)
-		//if (SDL_SetVideoMode(1200, 900, 32, SDL_OPENGL) < 0)
+		//if (SDL_SetVideoMode(640, 480, 32, SDL_OPENGL) < 0)
+		if (SDL_SetVideoMode(1200, 900, 32, SDL_OPENGL) < 0)
 		{
 			log(0, "failed to intialize SDL");
 			exit(-1);
 		}
 		
 		bool wireframe = false;
-		bool drawBones = false;
-		bool drawPose = false;
 		bool lightEnabled = false;
 		bool drawBlendWeights = false;
 		bool drawBlendIndices = false;
 		bool drawTexcoords = false;
 		bool drawNormalColors = true;
+		
+		int drawFlags = DrawMesh;
 		
 		bool stop = false;
 		
@@ -2017,9 +2078,11 @@ int main(int argc, char * argv[])
 					else if (e.key.keysym.sym == SDLK_w)
 						wireframe = !wireframe;
 					else if (e.key.keysym.sym == SDLK_b)
-						drawBones = !drawBones;
+						drawFlags ^= DrawBones;
 					else if (e.key.keysym.sym == SDLK_p)
-						drawPose = !drawPose;
+						drawFlags = drawFlags ^ DrawPoseMatrices;
+					else if (e.key.keysym.sym == SDLK_n)
+						drawFlags = drawFlags ^ DrawNormals;
 					else if (e.key.keysym.sym == SDLK_l)
 						lightEnabled = !lightEnabled;						
 					else if (e.key.keysym.sym == SDLK_F1)
@@ -2159,8 +2222,11 @@ int main(int argc, char * argv[])
 			glScalef(scale, scale, scale);
 			
 			model->process(1.f / 60.f);
-			model->draw();
+			model->draw(drawFlags);
 			
+			glTranslatef(150.f, 0.f, 0.f);
+			
+			/*
 		#if 1
 			for (std::list<MeshBuilder>::iterator i = meshes.begin(); i != meshes.end(); ++i)
 			{
@@ -2207,8 +2273,6 @@ int main(int argc, char * argv[])
 						n += (boneToObject * objectToBone).Mul (Vec3(v.nx, v.ny, v.nz)) * boneWeight;
 					}
 					// -- software vertex blend (soft skinned) --
-					
-					//n.Normalize();
 					
 					float r = 1.f;
 					float g = 1.f;
@@ -2258,75 +2322,9 @@ int main(int argc, char * argv[])
 					
 					glEnd();
 				}
-
-				if (drawPose)
-				{
-					// object to bone matrix translation
-					glDisable(GL_DEPTH_TEST);
-					glColor3ub(127, 127, 127);
-					glBegin(GL_LINES);
-					{
-						for (size_t j = 0; j < objectToBoneMatrices.size(); ++j)
-						{
-							if (boneParentIndices[j] != -1)
-							{
-								const Mat4x4 m1 = objectToBoneMatrices[j].CalcInv();
-								const Mat4x4 m2 = objectToBoneMatrices[boneParentIndices[j]].CalcInv();
-								glVertex3f(m1(3, 0), m1(3, 1), m1(3, 2));
-								glVertex3f(m2(3, 0), m2(3, 1), m2(3, 2));
-							}
-						}
-					}
-					glEnd();
-					glColor3ub(255, 0, 0);
-					glPointSize(7.f);
-					glBegin(GL_POINTS);
-					{
-						for (size_t j = 0; j < objectToBoneMatrices.size(); ++j)
-						{
-							const Mat4x4 & m = objectToBoneMatrices[j].CalcInv();
-							glVertex3f(m(3, 0), m(3, 1), m(3, 2));
-						}
-					}
-					glEnd();
-					glEnable(GL_DEPTH_TEST);
-				}
-
-				if (drawBones)
-				{
-					// bone to object matrix translation
-					glDisable(GL_DEPTH_TEST);
-					glColor3ub(127, 127, 127);
-					glBegin(GL_LINES);
-					{
-						for (size_t j = 0; j < boneToObjectMatrices.size(); ++j)
-						{
-							if (boneParentIndices[j] != -1)
-							{
-								const Mat4x4 & m1 = boneToObjectMatrices[j];
-								const Mat4x4 & m2 = boneToObjectMatrices[boneParentIndices[j]];
-								glVertex3f(m1(3, 0), m1(3, 1), m1(3, 2));
-								glVertex3f(m2(3, 0), m2(3, 1), m2(3, 2));
-							}
-						}
-					}
-					glEnd();
-					glColor3ub(0, 255, 0);
-					glPointSize(5.f);
-					glBegin(GL_POINTS);
-					{
-						for (size_t j = 0; j < boneToObjectMatrices.size(); ++j)
-						{
-							const Mat4x4 m = boneToObjectMatrices[j];
-							glVertex3f(m(3, 0), m(3, 1), m(3, 2));
-							//printf("%f %f %f\n", m(3, 0), m(3, 1), m(3, 2));
-						}
-					}
-					glEnd();
-					glEnable(GL_DEPTH_TEST);
-				}
 			}
 		#endif
+			*/
 			
 			glPopMatrix();
 			
