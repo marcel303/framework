@@ -13,10 +13,10 @@ namespace Model
 	class Anim;
 	class AnimKey;
 	class Bone;
+	class BoneSet;
 	class BoneTransform;
 	class Mesh;
 	class MeshSet;
-	class Skeleton;
 	class Vertex;
 	
 	//
@@ -90,19 +90,20 @@ namespace Model
 			parent = -1;
 		}
 		
+		std::string name;
 		BoneTransform transform;
 		Mat4x4 poseMatrix;
 		int parent;
 	};
 	
-	class Skeleton
+	class BoneSet
 	{
 	public:
 		Bone * m_bones;
 		int m_numBones;
 		
-		Skeleton();
-		~Skeleton();
+		BoneSet();
+		~BoneSet();
 		
 		void allocate(int numBones);
 		void calculatePoseMatrices(); // calculate pose matrices given the current set of bone transforms
@@ -146,15 +147,25 @@ namespace Model
 	
 	//
 	
+	class Loader
+	{
+	public:
+		virtual MeshSet * loadMeshSet(const char * filename) = 0;
+		virtual BoneSet * loadBoneSet(const char * filename) = 0;
+		virtual AnimSet * loadAnimSet(const char * filename, const BoneSet * boneSet) = 0;
+	};
+	
+	//
+	
 	class Cache
 	{
-		std::map<std::string, Mesh*> m_meshes;
-		std::map<std::string, Skeleton*> m_skeletons;
+		std::map<std::string, MeshSet*> m_meshes;
+		std::map<std::string, BoneSet*> m_bones;
 		std::map<std::string, AnimSet*> m_animSets;
 	
 	public:
-		Mesh * findOrCreateMesh(const char * filename);
-		Skeleton * findOrCreateBody(const char * filename);
+		MeshSet * findOrCreateMeshSet(const char * filename);
+		BoneSet * findOrCreateBoneSet(const char * filename);
 		AnimSet * findOrCreateAnimSet(const std::vector<std::string> & filenames);
 	};
 }
@@ -163,15 +174,17 @@ namespace Model
 
 enum ModelDrawFlags
 {
-	DrawMesh    = 0x1,
-	DrawBones   = 0x2,
-	DrawNormals = 0x4
+	DrawMesh         = 0x1,
+	DrawBones        = 0x2,
+	DrawNormals      = 0x4,
+	DrawPoseMatrices = 0x8
 };
 
 class AnimModel
 {
+public:
 	Model::MeshSet * m_meshes;
-	Model::Skeleton * m_skeleton;
+	Model::BoneSet * m_bones;
 	Model::AnimSet * m_animations;
 	
 	Model::Anim * currentAnim;
@@ -190,14 +203,14 @@ public:
 	float animSpeed;
 	
 	AnimModel(const char * filename);
-	AnimModel(Model::MeshSet * meshes, Model::Skeleton * skeleton, Model::AnimSet * animations);
+	AnimModel(Model::MeshSet * meshes, Model::BoneSet * bones, Model::AnimSet * animations);
 	~AnimModel();
 	
 	void startAnim(const char * name, int loop = 1);
 	
 	void process(float timeStep);
 	
-	void draw();
+	void draw(int drawFlags = DrawMesh);
 	void drawEx(Vec3 position, Vec3 axis, float angle = 0.f, float scale = 1.f, int drawFlags = DrawMesh);
 	void drawEx(const Mat4x4 & matrix, int drawFlags = DrawMesh);
 };
