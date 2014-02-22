@@ -108,15 +108,9 @@ namespace Model
 	
 	void BoneTransform::add(BoneTransform & result, const BoneTransform & transform)
 	{
-		#if 1 // todo: normalize FBX animation data and actually use addition again
 		result.translation += transform.translation;
 		result.rotation *= transform.rotation;
 		result.scale += transform.scale;
-		#else
-		result.translation = transform.translation;
-		result.rotation = transform.rotation;
-		result.scale = transform.scale;
-		#endif
 	}
 	
 	//
@@ -312,14 +306,15 @@ namespace Model
 		m_numKeys = 0;
 		m_keys = 0;
 		m_rotationType = RotationType_Quat;
+		m_isAdditive = false;
 	}
 	
 	Anim::~Anim()
 	{
-		allocate(0, 0, m_rotationType);
+		allocate(0, 0, m_rotationType, false);
 	}
 	
-	void Anim::allocate(int numBones, int numKeys, RotationType rotationType)
+	void Anim::allocate(int numBones, int numKeys, RotationType rotationType, bool isAdditive)
 	{
 		if (m_numBones)
 		{
@@ -338,6 +333,7 @@ namespace Model
 		}
 		
 		m_rotationType = rotationType;
+		m_isAdditive = isAdditive;
 	}
 	
 	bool Anim::evaluate(float time, BoneTransform * transforms)
@@ -384,7 +380,10 @@ namespace Model
 					AnimKey::interpolate(transform, *key, *key, 0.f, m_rotationType);
 				}
 				
-				BoneTransform::add(transforms[i], transform);
+				if (m_isAdditive)
+					BoneTransform::add(transforms[i], transform);
+				else
+					transforms[i] = transform;
 				
 				if (key != lastKey)
 				{
@@ -503,6 +502,10 @@ void AnimModel::startAnim(const char * name, int loop)
 
 void AnimModel::process(float timeStep)
 {
+	// todo: evaluate bone transforms, and update root motion
+	
+	animRootMotion.SetZero();
+	
 	animTime += animSpeed * timeStep;
 }
 

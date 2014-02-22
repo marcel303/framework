@@ -32,7 +32,7 @@ using namespace tinyxml2;
 
 namespace Model
 {
-	MeshSet * LoaderOgreXML::loadMeshSet(const char * filename)
+	MeshSet * LoaderOgreXML::loadMeshSet(const char * filename, const BoneSet * boneSet)
 	{
 		std::vector<Mesh*> meshes;
 		
@@ -568,7 +568,7 @@ namespace Model
 							numAnimKeys += int(animKeys.size());
 						}
 						
-						animation->allocate(boneSet->m_numBones, numAnimKeys, RotationType_Quat);
+						animation->allocate(boneSet->m_numBones, numAnimKeys, RotationType_Quat, true);
 						
 						AnimKey * finalAnimKey = animation->m_keys;
 						

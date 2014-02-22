@@ -128,11 +128,12 @@ namespace Model
 		int * m_numKeys;
 		AnimKey * m_keys;
 		RotationType m_rotationType;
+		bool m_isAdditive;
 		
 		Anim();
 		~Anim();
 		
-		void allocate(int numBones, int numKeys, RotationType rotationType);
+		void allocate(int numBones, int numKeys, RotationType rotationType, bool isAdditive);
 		bool evaluate(float time, BoneTransform * transforms);
 	};
 	

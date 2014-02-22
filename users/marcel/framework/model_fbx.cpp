@@ -2035,7 +2035,7 @@ namespace Model
 			
 			Anim * animation = new Anim();
 			
-			animation->allocate(boneNameToBoneIndex.size(), numAnimKeys, RotationType_Quat);
+			animation->allocate(boneNameToBoneIndex.size(), numAnimKeys, RotationType_Quat, false);
 			
 			AnimKey * finalAnimKey = animation->m_keys;
 			
