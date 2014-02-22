@@ -150,7 +150,7 @@ namespace Model
 	class Loader
 	{
 	public:
-		virtual MeshSet * loadMeshSet(const char * filename) = 0;
+		virtual MeshSet * loadMeshSet(const char * filename, const BoneSet * boneSet) = 0;
 		virtual BoneSet * loadBoneSet(const char * filename) = 0;
 		virtual AnimSet * loadAnimSet(const char * filename, const BoneSet * boneSet) = 0;
 	};
@@ -201,6 +201,7 @@ public:
 	float animTime;
 	int animLoop;
 	float animSpeed;
+	Vec3 animRootMotion;
 	
 	AnimModel(const char * filename);
 	AnimModel(Model::MeshSet * meshes, Model::BoneSet * bones, Model::AnimSet * animations);
