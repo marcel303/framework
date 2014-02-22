@@ -18,8 +18,8 @@ AnimModel * loadModel(const char * meshFileName, const char * skeletonFileName)
 {
 	LoaderOgreXML loader;
 	
-	MeshSet * meshSet = loader.loadMeshSet(meshFileName);
 	BoneSet * boneSet = loader.loadBoneSet(skeletonFileName);
+	MeshSet * meshSet = loader.loadMeshSet(meshFileName, boneSet);
 	AnimSet * animSet = loader.loadAnimSet(skeletonFileName, boneSet);
 	
 	AnimModel * model = new AnimModel(meshSet, boneSet, animSet);
