@@ -40,7 +40,7 @@ static FbxObject * readFbxDeformer(int & logIndent, const FbxRecord & deformer, 
 
 //
 
-static bool logEnabled = false;
+static bool logEnabled = true;
 
 static void fbxLog(int logIndent, const char * fmt, ...)
 {
@@ -1581,24 +1581,17 @@ namespace Model
 		{
 			for (ObjectsByName::iterator i = objectsByName.begin(); i != objectsByName.end(); ++i)
 			{
-				const std::string & modelName = i->first;
 				FbxObject * object = i->second;
 				
 				if (object->type == "Mesh")
 				{
-					fbxLog(logIndent, "transforming vertices for %s into global object space\n", modelName.c_str());
-					
 					FbxMesh * mesh = static_cast<FbxMesh*>(object);
+					
+					fbxLog(logIndent, "transforming vertices for %s into global object space\n", mesh->name.c_str());
 					
 					// todo: include geometric transform as well
 					
-					const std::string & boneName = mesh->name;
-					fassert(boneNameToBoneIndex.count(boneName) != 0);
-					const int boneIndex = boneNameToBoneIndex[boneName];
-					fassert(boneIndex < boneSet->m_numBones);
-					
-					const Mat4x4 & objectToBone = boneSet->m_bones[boneIndex].poseMatrix;
-					const Mat4x4 globalTransform = objectToBone.CalcInv();
+					const Mat4x4 & globalTransform = pose->matrices[mesh->name];
 					
 					for (size_t k = 0; k + 3 <= mesh->vertices.size(); k += 3)
 					{
@@ -1914,6 +1907,7 @@ namespace Model
 		}
 		
 		boneSet->calculateBoneMatrices();
+		boneSet->sortBoneIndices();
 		
 		return boneSet;
 	}

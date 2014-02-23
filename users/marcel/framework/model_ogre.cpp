@@ -34,6 +34,12 @@ namespace Model
 {
 	MeshSet * LoaderOgreXML::loadMeshSet(const char * filename, const BoneSet * boneSet)
 	{
+		std::map<int, int> boneIndexRemappingTable;
+		for (int i = 0; i < boneSet->m_numBones; ++i)
+			boneIndexRemappingTable[boneSet->m_bones[i].originalIndex] = i;
+		
+		//
+		
 		std::vector<Mesh*> meshes;
 		
 		XMLDocument xmlModelDoc;
@@ -189,7 +195,7 @@ namespace Model
 							// vertexindex, boneindex, weight
 							
 							const int vertexIndex = xmlBoneMapping->IntAttribute("vertexindex");
-							const int boneIndex = xmlBoneMapping->IntAttribute("boneindex");
+							const int boneIndex = boneIndexRemappingTable[xmlBoneMapping->IntAttribute("boneindex")];
 							const float weight = xmlBoneMapping->FloatAttribute("weight");
 							
 							//printf("vertexIndex=%d, boneIndex=%d, weight=%g\n", vertexIndex, boneIndex, weight);
@@ -411,6 +417,7 @@ namespace Model
 		}
 		
 		boneSet->calculatePoseMatrices();
+		boneSet->sortBoneIndices();
 		
 		return boneSet;
 	}

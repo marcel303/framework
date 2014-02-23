@@ -94,6 +94,7 @@ namespace Model
 		BoneTransform transform;
 		Mat4x4 poseMatrix;
 		int parent;
+		int originalIndex;
 	};
 	
 	class BoneSet
@@ -101,6 +102,7 @@ namespace Model
 	public:
 		Bone * m_bones;
 		int m_numBones;
+		bool m_bonesAreSorted;
 		
 		BoneSet();
 		~BoneSet();
@@ -108,6 +110,7 @@ namespace Model
 		void allocate(int numBones);
 		void calculatePoseMatrices(); // calculate pose matrices given the current set of bone transforms
 		void calculateBoneMatrices(); // calculate bone transforms given the current set of pose matrices
+		void sortBoneIndices();
 	};
 	
 	struct AnimKey
@@ -175,10 +178,14 @@ namespace Model
 
 enum ModelDrawFlags
 {
-	DrawMesh         = 0x1,
-	DrawBones        = 0x2,
-	DrawNormals      = 0x4,
-	DrawPoseMatrices = 0x8
+	DrawMesh               = 0x01,
+	DrawBones              = 0x02,
+	DrawNormals            = 0x04,
+	DrawPoseMatrices       = 0x08,
+	DrawColorNormals       = 0x10,
+	DrawColorBlendIndices  = 0x20,
+	DrawColorBlendWeights  = 0x40,
+	DrawColorTexCoords     = 0x80
 };
 
 class AnimModel

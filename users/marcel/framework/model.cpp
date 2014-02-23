@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <assert.h>
 #include <GL/glew.h>
 #include <SDL/SDL.h>
@@ -119,6 +120,7 @@ namespace Model
 	{
 		m_bones = 0;
 		m_numBones = 0;
+		m_bonesAreSorted = false;
 	}
 	
 	BoneSet::~BoneSet()
@@ -247,6 +249,69 @@ namespace Model
 			dumpMatrix(f);
 		}
 	#endif
+	}
+	
+	static bool sortByDistance(const std::pair<int, int> & v1, const std::pair<int, int> & v2)
+	{
+		if (v1.second != v2.second)
+			return v1.second < v2.second;
+		return v1.first < v2.first;
+	}
+	
+	void BoneSet::sortBoneIndices()
+	{
+		// sort the bones in such a way that the bones with the smallest distance to the root are sorted first.
+		// this makes it possible to quickly calculate the global bone transforms, by simply iterating the list
+		// of bones once, instead of using some sort of recursive algoritm. since the sorted state ensures the
+		// parent bone for any bone has already been processed, we know that the parent transform has already
+		// been calculated, so we can directly access it instead of having to recurse
+		
+		m_bonesAreSorted = true;
+		
+		// compute distances to the root node
+		
+		std::vector< std::pair<int, int> > boneIndexToDistance;
+		boneIndexToDistance.resize(m_numBones);
+		
+		for (int i = 0; i < m_numBones; ++i)
+		{
+			int distance = 0;
+			int index = i;
+			
+			while (index != -1)
+			{
+				distance++;
+				index = m_bones[index].parent;
+			}
+			
+			boneIndexToDistance[i] = std::pair<int, int>(i, distance);
+		}
+		
+		// sort by distance to the root node. nodes with a smaller distance are sorted first
+		
+		std::sort(boneIndexToDistance.begin(), boneIndexToDistance.end(), sortByDistance);
+		
+		// remap bones and parent indices
+		
+		std::vector<Bone> newBones;
+		newBones.resize(m_numBones);
+		
+		for (int i = 0; i < m_numBones; ++i)
+		{
+			newBones[i] = m_bones[boneIndexToDistance[i].first];
+			newBones[i].originalIndex = boneIndexToDistance[i].first;
+			for (int j = 0; j < m_numBones; ++j)
+			{
+				if (boneIndexToDistance[j].first == newBones[i].parent)
+				{
+					newBones[i].parent = j;
+					break;
+				}
+			}
+		}
+		
+		for (int i = 0; i < m_numBones; ++i)
+			m_bones[i] = newBones[i];
 	}
 	
 	//
@@ -594,25 +659,37 @@ void AnimModel::drawEx(const Mat4x4 & matrix, int drawFlags)
 	
 	Mat4x4 * worldMatrices = (Mat4x4*)alloca(sizeof(Mat4x4) * m_bones->m_numBones);
 	
-	for (int i = 0; i < m_bones->m_numBones; ++i)
+	if (m_bones->m_bonesAreSorted)
 	{
-		// todo: calculate matrices for a given bone only once
-		//       will need to sort bones by their distance from parent
-		
-		int boneIndex = i;
-		
-		Mat4x4 finalMatrix = localMatrices[boneIndex];
-		
-		boneIndex = m_bones->m_bones[boneIndex].parent;
-		
-		while (boneIndex != -1)
+		for (int i = 0; i < m_bones->m_numBones; ++i)
 		{
-			finalMatrix = localMatrices[boneIndex] * finalMatrix;
+			const int parent = m_bones->m_bones[i].parent;
+			
+			if (parent == -1)
+				worldMatrices[i] = localMatrices[i];
+			else
+				worldMatrices[i] = worldMatrices[parent] * localMatrices[i];
+		}
+	}
+	else
+	{
+		for (int i = 0; i < m_bones->m_numBones; ++i)
+		{
+			int boneIndex = i;
+			
+			Mat4x4 finalMatrix = localMatrices[boneIndex];
 			
 			boneIndex = m_bones->m_bones[boneIndex].parent;
+			
+			while (boneIndex != -1)
+			{
+				finalMatrix = localMatrices[boneIndex] * finalMatrix;
+				
+				boneIndex = m_bones->m_bones[boneIndex].parent;
+			}
+			
+			worldMatrices[i] = matrix * finalMatrix;
 		}
-		
-		worldMatrices[i] = matrix * finalMatrix;
 	}
 	
 	// draw
@@ -651,16 +728,33 @@ void AnimModel::drawEx(const Mat4x4 & matrix, int drawFlags)
 					}
 					// -- software vertex blend (soft skinned) --
 					
-				#if 1
+				#if 1 // todo: debug only
 					float r = 1.f;
 					float g = 1.f;
 					float b = 1.f;
 					
-					if (1)
+					if (drawFlags & DrawColorNormals)
 					{
 						r *= (n[0] + 1.f) / 2.f;
 						g *= (n[1] + 1.f) / 2.f;
 						b *= (n[2] + 1.f) / 2.f;
+					}
+					if (drawFlags & DrawColorBlendIndices)
+					{
+						r *= vertex.boneIndices[0] / float(m_bones->m_numBones);
+						g *= vertex.boneIndices[1] / float(m_bones->m_numBones);
+						b *= vertex.boneIndices[2] / float(m_bones->m_numBones);
+					}
+					if (drawFlags & DrawColorBlendWeights)
+					{
+						r *= (1.f + vertex.boneWeights[0] / 255.f) / 2.f;
+						g *= (1.f + vertex.boneWeights[1] / 255.f) / 2.f;
+						b *= (1.f + vertex.boneWeights[2] / 255.f) / 2.f;
+					}
+					if (drawFlags & DrawColorTexCoords)
+					{
+						r *= vertex.tx;
+						g *= vertex.ty;
 					}
 					
 					glColor3f(r, g, b);
