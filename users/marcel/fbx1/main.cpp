@@ -180,20 +180,6 @@ int main(int argc, char * argv[])
 	if (dumpAllButDoItSilently)
 		dumpAll = true;
 	
-	{
-		int x = 0;
-		x -= getTimeMS();
-		std::vector<unsigned char> bytes;
-		
-		if (!LoaderFbxBinary::readFile(filename, bytes))
-		{
-			log(logIndent, "failed to open %s\n", filename);
-			return -1;
-		}
-		x += getTimeMS();
-		printf("load took %d ms\n", x);
-	}
-	
 	if (dumpAll || dumpHierarchy)
 	{
 		// read file contents
@@ -301,21 +287,17 @@ int main(int argc, char * argv[])
 		// initialize SDL
 		
 		SDL_Init(SDL_INIT_EVERYTHING);
-		//if (SDL_SetVideoMode(640, 480, 32, SDL_OPENGL) < 0)
+		
 		if (SDL_SetVideoMode(1200, 900, 32, SDL_OPENGL) < 0)
 		{
-			log(0, "failed to intialize SDL");
+			log(logIndent, "failed to intialize SDL");
 			exit(-1);
 		}
 		
 		bool wireframe = false;
-		bool lightEnabled = false;
-		bool drawBlendWeights = false;
-		bool drawBlendIndices = false;
-		bool drawTexcoords = false;
-		bool drawNormalColors = true;
+		int drawFlags = DrawMesh | DrawColorNormals;
 		
-		int drawFlags = DrawMesh;
+		float time = 0.f;
 		
 		bool stop = false;
 		
@@ -339,23 +321,24 @@ int main(int argc, char * argv[])
 						drawFlags = drawFlags ^ DrawPoseMatrices;
 					else if (e.key.keysym.sym == SDLK_n)
 						drawFlags = drawFlags ^ DrawNormals;
-					else if (e.key.keysym.sym == SDLK_l)
-						lightEnabled = !lightEnabled;						
 					else if (e.key.keysym.sym == SDLK_F1)
-						drawBlendWeights = !drawBlendWeights;
+						drawFlags ^= DrawColorBlendWeights;
 					else if (e.key.keysym.sym == SDLK_F2)
-						drawBlendIndices = !drawBlendIndices;
+						drawFlags ^= DrawColorBlendIndices;
 					else if (e.key.keysym.sym == SDLK_F3)
-						drawTexcoords = !drawTexcoords;
+						drawFlags ^= DrawColorTexCoords;
 					else if (e.key.keysym.sym == SDLK_F4)
-						drawNormalColors = !drawNormalColors;
+						drawFlags ^= DrawColorNormals;
 				}
 			}
 			
 			// process animation
 			
-			static float time = 0.f;
-			time += 1.f / 60.f;
+			const float timeStep = 1.f / 60.f;
+			
+			time += timeStep;
+			
+			model->process(timeStep);
 			
 			// draw
 			
@@ -363,156 +346,31 @@ int main(int argc, char * argv[])
 			glClearDepth(1.f);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			
-			glDepthFunc(GL_LESS);
-			glEnable(GL_DEPTH_TEST);
-			
 			glMatrixMode(GL_PROJECTION);
 			glLoadIdentity();
 			glMatrixMode(GL_MODELVIEW);
 			glLoadIdentity();
+			
+			glDepthFunc(GL_LESS);
+			glEnable(GL_DEPTH_TEST);
+			glPolygonMode(GL_FRONT_AND_BACK, wireframe ? GL_LINE : GL_FILL);
 			glColor3ub(255, 255, 255);
 			
-			glPolygonMode(GL_FRONT_AND_BACK, wireframe ? GL_LINE : GL_FILL);
-			
-			static float r = 130.f;
-			r += 1.f / 10.f;
-			
-			Vec4 light(1.f, 1.f, 1.f, 0.f);
-			light.Normalize();
-			glLightfv(GL_LIGHT0, GL_POSITION, &light[0]);
-			glEnable(GL_LIGHT0);
-			if (lightEnabled)
-				glEnable(GL_LIGHTING);
-			else
-				glDisable(GL_LIGHTING);
-			glEnable(GL_NORMALIZE);
-			
 			glPushMatrix();
-			
-			glTranslatef(0.f, -.5f, 0.f);
-			
-			glRotatef(r, 0.f, 1.f, 0.f);
-			
-		#if 1
-			glRotatef(-90.f, 1.f, 0.f, 0.f);
-		#else
-			glTranslatef(0.f, .5f, 0.f);
-			glRotatef(-90.f, 0.f, 0.f, 1.f);
-		#endif
-			const float scale = 0.005f;
-			glScalef(scale, scale, scale);
-			
-			model->process(1.f / 60.f);
-			model->draw(drawFlags);
-			
-//			glTranslatef(150.f, 0.f, 0.f);
-			
-		#if 0
-			for (std::list<MeshBuilder>::iterator m = meshes.begin(); m != meshes.end(); ++m)
 			{
-				const MeshBuilder & mesh = *m;
+				glTranslatef(0.f, -.5f, 0.f);
+				glRotatef(time * 30.f, 0.f, 1.f, 0.f);
 				
-				int vertexCount = 0;
+				glRotatef(-90.f, 1.f, 0.f, 0.f); // fix up vector
+				const float scale = 0.005f;
+				glScalef(scale, scale, scale);
 				
-				for (size_t i = 0; i < mesh.m_indices.size(); ++i)
-//				for (size_t i = 0; i < mesh.m_indices.size(); i = ((i + 1) % 3) == 0 ? i + 27 + 1 : i + 1)
-//				for (size_t i = 0; i < mesh.m_indices.size(); i = ((i + 1) % 3) == 0 ? i + 6 + 1 : i + 1)
-				{
-					bool begin = vertexCount == 0;
-					
-					if (begin)
-					{
-						glBegin(GL_POLYGON);
-					}
-					
-					int index = mesh.m_indices[i];
-					
-					bool end = false;
-					
-					if (index < 0)
-					{
-						// negative indices mark the end of a polygon
-						
-						index = ~index;
-						
-						end = true;
-					}
-					
-					const MeshBuilder::Vertex & v = mesh.m_vertices[index];
-					
-					// -- software vertex blend (soft skinned) --
-					Vec3 p(0.f, 0.f, 0.f);
-					Vec3 n(0.f, 0.f, 0.f);
-					for (int j = 0; j < 4; ++j)
-					{
-						if (v.boneWeights[j] == 0)
-							continue;
-						const int boneIndex = v.boneIndices[j];
-						const float boneWeight = v.boneWeights[j] / 255.f;
-						const Mat4x4 & objectToBone = objectToBoneMatrices[boneIndex];
-						const Mat4x4 & boneToObject = boneToObjectMatrices[boneIndex];
-						p += (boneToObject * objectToBone).Mul4(Vec3(v.px, v.py, v.pz)) * boneWeight;
-						n += (boneToObject * objectToBone).Mul (Vec3(v.nx, v.ny, v.nz)) * boneWeight;
-					}
-					// -- software vertex blend (soft skinned) --
-					
-					float r = 1.f;
-					float g = 1.f;
-					float b = 1.f;
-					
-					if (drawNormalColors)
-					{
-						r *= (n[0] + 1.f) / 2.f;
-						g *= (n[1] + 1.f) / 2.f;
-						b *= (n[2] + 1.f) / 2.f;
-					}
-					if (drawBlendIndices)
-					{
-						r *= v.boneIndices[0] / float(modelNameToBoneIndex.size());
-						g *= v.boneIndices[1] / float(modelNameToBoneIndex.size());
-						b *= v.boneIndices[2] / float(modelNameToBoneIndex.size());
-					}
-					if (drawBlendWeights)
-					{
-						r *= (1.f + v.boneWeights[0] / 255.f) / 2.f;
-						g *= (1.f + v.boneWeights[1] / 255.f) / 2.f;
-						b *= (1.f + v.boneWeights[2] / 255.f) / 2.f;
-					}
-					if (drawTexcoords)
-					{
-						r *= v.tx;
-						g *= v.ty;
-					}
-					
-					glColor3f(r, g, b);
-					glNormal3f(n[0], n[1], n[2]);
-					glVertex3f(p[0], p[1], p[2]);
-					
-					vertexCount++;
-					
-					if (end)
-					{
-						glEnd();
-						
-						vertexCount = 0;
-					}
-				}
-				
-				if (vertexCount != 0)
-				{
-					assert(false);
-					
-					glEnd();
-				}
+				model->draw(drawFlags);
 			}
-		#endif
-			
 			glPopMatrix();
 			
 			SDL_GL_SwapBuffers();
 		}
-
-		
 		
 		SDL_Quit();
 	}
