@@ -2,7 +2,7 @@
 
 #include "model.h"
 
-namespace Model
+namespace AnimModel
 {
 	class LoaderOgreXML : public Loader
 	{

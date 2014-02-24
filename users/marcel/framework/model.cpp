@@ -3,12 +3,18 @@
 #include <GL/glew.h>
 #include <SDL/SDL.h>
 #include <SDL/SDL_opengl.h>
+#include "framework.h"
+#include "internal.h"
 #include "Mat4x4.h"
 #include "model.h"
+#include "model_fbx.h"
+#include "model_ogre.h"
 
 #define DEBUG_TRS 0
 
-namespace Model
+ModelCache g_modelCache;
+
+namespace AnimModel
 {
 	Mesh::Mesh()
 	{
@@ -462,6 +468,19 @@ namespace Model
 		return isDone;
 	}
 	
+	void Anim::triggerActions(float oldTime, float newTime)
+	{
+		for (size_t i = 0; i < m_triggers.size(); ++i)
+		{
+			const AnimTrigger & trigger = m_triggers[i];
+			
+			if (oldTime <= trigger.time && newTime > trigger.time)
+			{
+				framework.processActions(trigger.actions, trigger.args);
+			}
+		}
+	}
+	
 	//
 	
 	AnimSet::AnimSet()
@@ -480,106 +499,136 @@ namespace Model
 		m_animations.clear();
 	}
 	
-	//
-	
-	MeshSet * Cache::findOrCreateMeshSet(const char * filename)
+	void AnimSet::rename(const std::string & name)
 	{
-		return 0;
+		std::map<std::string, Anim*> newAnimations;
+		
+		for (std::map<std::string, Anim*>::iterator i = m_animations.begin(); i != m_animations.end(); ++i)
+		{
+			const std::string newName = name;
+			
+			Anim * anim = i->second;
+			
+			if (newAnimations.count(newName) == 0)
+				newAnimations[newName] = anim;
+			else
+			{
+				logWarning("duplicate animation name: %s", newName.c_str());
+				delete anim;
+			}
+		}
+		
+		m_animations = newAnimations;
 	}
 	
-	BoneSet * Cache::findOrCreateBoneSet(const char * filename)
+	void AnimSet::mergeFromAndFree(AnimSet * animSet)
 	{
-		return 0;
-	}
-	
-	AnimSet * Cache::findOrCreateAnimSet(const std::vector<std::string> & filenames)
-	{
-		return 0;
+		for (std::map<std::string, Anim*>::iterator i = animSet->m_animations.begin(); i != animSet->m_animations.end(); ++i)
+		{
+			const std::string & name = i->first;
+			Anim * anim = i->second;
+			
+			if (m_animations.count(name) == 0)
+				m_animations[name] = anim;
+			else
+			{
+				logWarning("duplicate animation name: %s", name.c_str());
+				delete anim;
+			}
+		}
+		
+		animSet->m_animations.clear();
+		
+		delete animSet;
 	}
 }
 
 //
 
-using namespace Model;
+using namespace AnimModel;
 
-AnimModel::AnimModel(const char * filename)
+Model::Model(const char * filename)
 {
-	// todo: fetch stuff from caches
+	ctor();
+	
+	m_model = &g_modelCache.findOrCreate(filename);
 }
 
-AnimModel::AnimModel(MeshSet * meshes, BoneSet * bones, AnimSet * animations)
+Model::Model(ModelCacheElem & cacheElem)
 {
-	m_meshes = meshes;
-	m_bones = bones;
-	m_animations = animations;
+	ctor();
 	
-	currentAnim = 0;
-	
+	m_model = &cacheElem;
+}
+
+void Model::ctor()
+{
+	// drawing
 	x = y = z = 0.f;
 	axis = Vec3(1.f, 0.f, 0.f);
 	angle = 0.f;
 	scale = 1.f;
 	
-	animIsDone = true;
+	// animation
+	m_animSegment = 0;
+	animIsActive = false;
+	animIsPaused = false;
+	m_isAnimStarted = false;
 	animTime = 0.f;
 	animLoop = 0;
 	animSpeed = 1.f;
+	
+	framework.registerModel(this);
 }
 
-AnimModel::~AnimModel()
+Model::~Model()
 {
-	// todo: move resource ownership to cache mgr
-	
-	delete m_meshes;
-	m_meshes = 0;
-	
-	delete m_bones;
-	m_bones = 0;
-	
-	delete m_animations;
-	m_animations = 0;
+	framework.unregisterModel(this);
 }
 
-void AnimModel::startAnim(const char * name, int loop)
+void Model::startAnim(const char * name, int loop)
 {
-	assert(loop != 0);
+	fassert(loop != 0);
 	
-	std::map<std::string, Anim*>::iterator i = m_animations->m_animations.find(name);
-	
-	if (i != m_animations->m_animations.end())
-	{
-		currentAnim = i->second;
-	}
-	else
-	{
-		printf("animation not found: %s\n", name); // todo: logWarning
-		
-		currentAnim = 0;
-	}
-	
-	animIsDone = false;
+	animIsPaused = false;
+	m_animSegmentName = name;
+	m_isAnimStarted = true;
 	animTime = 0.f;
 	animLoop = loop;
-	
 	if (animLoop > 0)
 		animLoop--;
+	
+	updateAnimationSegment();
 }
 
-void AnimModel::process(float timeStep)
+void Model::stopAnim()
 {
-	// todo: evaluate bone transforms, and update root motion
-	
-	animRootMotion.SetZero();
-	
-	animTime += animSpeed * timeStep;
+	animIsActive = false;
+	m_isAnimStarted = false;
 }
 
-void AnimModel::draw(int drawFlags)
+std::vector<std::string> Model::getAnimList() const
+{
+	std::vector<std::string> result;
+	
+	const std::map<std::string, Anim*> & anims = m_model->animSet->m_animations;
+	
+	for (std::map<std::string, Anim*>::const_iterator i = anims.begin(); i != anims.end(); ++i)
+	{
+		const std::string & name = i->first;
+		
+		result.push_back(name);
+	}
+	
+	return result;
+}
+
+void Model::draw(int drawFlags)
 {
 	drawEx(Vec3(x, y, z), axis, angle, scale, drawFlags);
 }
 
-void AnimModel::drawEx(Vec3 position, Vec3 axis, float angle, float scale, int drawFlags)
+void Model::drawEx(Vec3 position, Vec3 axis, float angle, float scale, int drawFlags)
 {
 	// build transformation matrix
 	 
@@ -605,37 +654,46 @@ void AnimModel::drawEx(Vec3 position, Vec3 axis, float angle, float scale, int d
 	drawEx(matrix, drawFlags);
 }
 
-void AnimModel::drawEx(const Mat4x4 & matrix, int drawFlags)
+void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 {
 	// calculate transforms in local bone space
 	
-	BoneTransform * transforms = (BoneTransform*)alloca(sizeof(BoneTransform) * m_bones->m_numBones);
+	BoneTransform * transforms = (BoneTransform*)alloca(sizeof(BoneTransform) * m_model->boneSet->m_numBones);
 	
-	for (int i = 0; i < m_bones->m_numBones; ++i)
+	for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
 	{
-		transforms[i] = m_bones->m_bones[i].transform;
+		transforms[i] = m_model->boneSet->m_bones[i].transform;
 	}
 	
 	// apply animations
 	
-	if (currentAnim)
+	// todo: move to updateAnimation
+	if (m_isAnimStarted && m_animSegment && !animIsPaused)
 	{
-		animIsDone = currentAnim->evaluate(animTime, transforms);
+		Anim * anim = reinterpret_cast<Anim*>(m_animSegment);
 		
-		if (animIsDone && (animLoop > 0 || animLoop < 0))
+		const bool isDone = anim->evaluate(animTime, transforms);
+		
+		if (isDone)
 		{
-			animIsDone = false;
-			animTime = 0.f;
-			if (animLoop > 0)
-				animLoop--;
+			if (animLoop > 0 || animLoop < 0)
+			{
+				animTime = 0.f;
+				if (animLoop > 0)
+					animLoop--;
+			}
+			else
+			{
+				animIsActive = false;
+			}
 		}
 	}
 	
 	// convert translation / rotation pairs into matrices
 	
-	Mat4x4 * localMatrices = (Mat4x4*)alloca(sizeof(Mat4x4) * m_bones->m_numBones);
+	Mat4x4 * localMatrices = (Mat4x4*)alloca(sizeof(Mat4x4) * m_model->boneSet->m_numBones);
 	
-	for (int i = 0; i < m_bones->m_numBones; ++i)
+	for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
 	{
 		// todo: scale?
 		
@@ -657,13 +715,13 @@ void AnimModel::drawEx(const Mat4x4 & matrix, int drawFlags)
 	
 	// calculate the bone hierarchy in world space
 	
-	Mat4x4 * worldMatrices = (Mat4x4*)alloca(sizeof(Mat4x4) * m_bones->m_numBones);
+	Mat4x4 * worldMatrices = (Mat4x4*)alloca(sizeof(Mat4x4) * m_model->boneSet->m_numBones);
 	
-	if (m_bones->m_bonesAreSorted)
+	if (m_model->boneSet->m_bonesAreSorted)
 	{
-		for (int i = 0; i < m_bones->m_numBones; ++i)
+		for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
 		{
-			const int parent = m_bones->m_bones[i].parent;
+			const int parent = m_model->boneSet->m_bones[i].parent;
 			
 			if (parent == -1)
 				worldMatrices[i] = localMatrices[i];
@@ -673,19 +731,19 @@ void AnimModel::drawEx(const Mat4x4 & matrix, int drawFlags)
 	}
 	else
 	{
-		for (int i = 0; i < m_bones->m_numBones; ++i)
+		for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
 		{
 			int boneIndex = i;
 			
 			Mat4x4 finalMatrix = localMatrices[boneIndex];
 			
-			boneIndex = m_bones->m_bones[boneIndex].parent;
+			boneIndex = m_model->boneSet->m_bones[boneIndex].parent;
 			
 			while (boneIndex != -1)
 			{
 				finalMatrix = localMatrices[boneIndex] * finalMatrix;
 				
-				boneIndex = m_bones->m_bones[boneIndex].parent;
+				boneIndex = m_model->boneSet->m_bones[boneIndex].parent;
 			}
 			
 			worldMatrices[i] = matrix * finalMatrix;
@@ -696,9 +754,9 @@ void AnimModel::drawEx(const Mat4x4 & matrix, int drawFlags)
 	
 	if (drawFlags & DrawMesh)
 	{
-		for (int i = 0; i < m_meshes->m_numMeshes; ++i)
+		for (int i = 0; i < m_model->meshSet->m_numMeshes; ++i)
 		{
-			const Mesh * mesh = m_meshes->m_meshes[i];
+			const Mesh * mesh = m_model->meshSet->m_meshes[i];
 			
 			std::vector<Vec3> normals;
 			
@@ -722,7 +780,7 @@ void AnimModel::drawEx(const Mat4x4 & matrix, int drawFlags)
 						const int boneIndex = vertex.boneIndices[b];
 						const float boneWeight = vertex.boneWeights[b] / 255.f;						
 						const Mat4x4 & boneToWorld = worldMatrices[boneIndex];
-						const Mat4x4 & worldToBone = m_bones->m_bones[boneIndex].poseMatrix;
+						const Mat4x4 & worldToBone = m_model->boneSet->m_bones[boneIndex].poseMatrix;
 						p += boneToWorld.Mul4(worldToBone.Mul4(Vec3(vertex.px, vertex.py, vertex.pz))) * boneWeight;
 						n += boneToWorld.Mul3(worldToBone.Mul3(Vec3(vertex.nx, vertex.ny, vertex.nz))) * boneWeight;
 					}
@@ -741,9 +799,9 @@ void AnimModel::drawEx(const Mat4x4 & matrix, int drawFlags)
 					}
 					if (drawFlags & DrawColorBlendIndices)
 					{
-						r *= vertex.boneIndices[0] / float(m_bones->m_numBones);
-						g *= vertex.boneIndices[1] / float(m_bones->m_numBones);
-						b *= vertex.boneIndices[2] / float(m_bones->m_numBones);
+						r *= vertex.boneIndices[0] / float(m_model->boneSet->m_numBones);
+						g *= vertex.boneIndices[1] / float(m_model->boneSet->m_numBones);
+						b *= vertex.boneIndices[2] / float(m_model->boneSet->m_numBones);
 					}
 					if (drawFlags & DrawColorBlendWeights)
 					{
@@ -800,9 +858,9 @@ void AnimModel::drawEx(const Mat4x4 & matrix, int drawFlags)
 		glColor3ub(127, 127, 127);
 		glBegin(GL_LINES);
 		{
-			for (int boneIndex = 0; boneIndex < m_bones->m_numBones; ++boneIndex)
+			for (int boneIndex = 0; boneIndex < m_model->boneSet->m_numBones; ++boneIndex)
 			{
-				const int parentBoneIndex = m_bones->m_bones[boneIndex].parent;
+				const int parentBoneIndex = m_model->boneSet->m_bones[boneIndex].parent;
 				if (parentBoneIndex != -1)
 				{
 					const Mat4x4 & m1 = worldMatrices[boneIndex];
@@ -817,7 +875,7 @@ void AnimModel::drawEx(const Mat4x4 & matrix, int drawFlags)
 		glPointSize(5.f);
 		glBegin(GL_POINTS);
 		{
-			for (int boneIndex = 0; boneIndex < m_bones->m_numBones; ++boneIndex)
+			for (int boneIndex = 0; boneIndex < m_model->boneSet->m_numBones; ++boneIndex)
 			{
 				const Mat4x4 & m = worldMatrices[boneIndex];
 				glVertex3f(m(3, 0), m(3, 1), m(3, 2));
@@ -834,13 +892,13 @@ void AnimModel::drawEx(const Mat4x4 & matrix, int drawFlags)
 		glColor3ub(127, 127, 127);
 		glBegin(GL_LINES);
 		{
-			for (int boneIndex = 0; boneIndex < m_bones->m_numBones; ++boneIndex)
+			for (int boneIndex = 0; boneIndex < m_model->boneSet->m_numBones; ++boneIndex)
 			{
-				const int parentBoneIndex = m_bones->m_bones[boneIndex].parent;
+				const int parentBoneIndex = m_model->boneSet->m_bones[boneIndex].parent;
 				if (parentBoneIndex != -1)
 				{
-					const Mat4x4 m1 = m_bones->m_bones[boneIndex].poseMatrix.CalcInv();
-					const Mat4x4 m2 = m_bones->m_bones[parentBoneIndex].poseMatrix.CalcInv();
+					const Mat4x4 m1 = m_model->boneSet->m_bones[boneIndex].poseMatrix.CalcInv();
+					const Mat4x4 m2 = m_model->boneSet->m_bones[parentBoneIndex].poseMatrix.CalcInv();
 					glVertex3f(m1(3, 0), m1(3, 1), m1(3, 2));
 					glVertex3f(m2(3, 0), m2(3, 1), m2(3, 2));
 				}
@@ -851,13 +909,424 @@ void AnimModel::drawEx(const Mat4x4 & matrix, int drawFlags)
 		glPointSize(7.f);
 		glBegin(GL_POINTS);
 		{
-			for (int boneIndex = 0; boneIndex < m_bones->m_numBones; ++boneIndex)
+			for (int boneIndex = 0; boneIndex < m_model->boneSet->m_numBones; ++boneIndex)
 			{
-				const Mat4x4 m = m_bones->m_bones[boneIndex].poseMatrix.CalcInv();
+				const Mat4x4 m = m_model->boneSet->m_bones[boneIndex].poseMatrix.CalcInv();
 				glVertex3f(m(3, 0), m(3, 1), m(3, 2));
 			}
 		}
 		glEnd();
 		glEnable(GL_DEPTH_TEST);
+	}
+}
+
+void Model::updateAnimationSegment()
+{
+	if (m_isAnimStarted && !m_animSegmentName.empty())
+	{
+		std::map<std::string, Anim*>::iterator i = m_model->animSet->m_animations.find(m_animSegmentName);
+		
+		if (i != m_model->animSet->m_animations.end())
+			m_animSegment = i->second;
+		else
+			m_animSegment = 0;
+		
+		if (!m_animSegment)
+		{
+			log("unable to find animation: %s", m_animSegmentName.c_str());
+			animIsActive = false;
+			animTime = 0.f;
+		}
+		else
+		{
+			animIsActive = true;
+		}
+	}
+}
+
+void Model::updateAnimation(float timeStep)
+{
+	// todo: evaluate bone transforms, and update root motion
+	
+	animRootMotion.SetZero();
+	
+	const float oldTime = animTime;
+	animTime += animSpeed * timeStep;
+	const float newTime = animTime;
+	
+	Anim * anim = static_cast<Anim*>(m_animSegment);
+	
+	if (anim)
+	{
+		anim->triggerActions(oldTime, newTime);
+	}
+}
+
+//
+
+static Loader * createLoader(const char * filename)
+{
+	if (strstr(filename, ".fbx") != 0)
+		return new LoaderFbxBinary();
+	if (strstr(filename, ".xml") != 0)
+		return new LoaderOgreXML();
+	return 0;
+}
+
+ModelCacheElem::ModelCacheElem()
+{
+	meshSet = 0;
+	boneSet = 0;
+	animSet = 0;
+}
+
+void ModelCacheElem::free()
+{
+	delete meshSet;
+	meshSet = 0;
+	
+	delete boneSet;
+	boneSet = 0;
+	
+	delete animSet;
+	animSet = 0;
+}
+
+struct SectionRecord
+{
+	SectionRecord()
+	{
+		consumed = false;
+	}
+	
+	std::string line;
+	std::string name;
+	Dictionary args;
+	bool consumed;
+};
+
+static bool parseSectionRecord(const char * filename, const std::string & line, SectionRecord & record)
+{
+	// format: <name> <key>:<value> <key:value> <key..
+	
+	std::vector<std::string> parts;
+	splitString(line, parts);
+	
+	if (parts.size() == 0 || parts[0][0] == '#')
+	{
+		// empty line or comment
+		return false;
+	}
+	
+	if (parts.size() == 1)
+	{
+		logError("%s: missing parameters: %s (%s)", filename, line.c_str(), parts[0].c_str());
+		return false;
+	}
+	
+	record.line = line;
+	record.name = parts[0];
+	
+	for (size_t i = 1; i < parts.size(); ++i)
+	{
+		const size_t separator = parts[i].find(':');
+		
+		if (separator == std::string::npos)
+		{
+			logError("%s: incorrect key:value syntax: %s (%s)", filename, line.c_str(), parts[i].c_str());
+			continue;
+		}
+		
+		const std::string key = parts[i].substr(0, separator);
+		const std::string value = parts[i].substr(separator + 1, parts[i].size() - separator - 1);
+		
+		if (key.size() == 0 || value.size() == 0)
+		{
+			logError("%s: incorrect key:value syntax: %s (%s)", filename, line.c_str(), parts[i].c_str());
+			continue;
+		}
+		
+		if (record.args.contains(key.c_str()))
+		{
+			logError("%s: duplicate key: %s (%s)", filename, line.c_str(), key.c_str());
+			continue;
+		}
+		
+		record.args.setString(key.c_str(), value.c_str());
+	}
+	
+	return true;
+}
+
+void ModelCacheElem::load(const char * filename)
+{
+	free();
+	
+	// meshset file:<filename>
+	// boneset file:<filename>
+	// animset file:<filename> name:<override-name>
+	// model tnode:<tnode> tmotion:<enabled>
+	// animation name:walk loop:<loopcount> rootmotion:<enabled>
+	//     trigger time:<second> loop:<loop> action:<action> [params]
+	
+	// 1) read file contents
+	std::vector<SectionRecord> records;
+	
+	{
+		FileReader r;
+		
+		if (r.open(filename, true))
+		{
+			std::string line;
+			
+			while (r.read(line))
+			{
+				SectionRecord record;
+				
+				if (parseSectionRecord(filename, line, record))
+					records.push_back(record);
+			}
+		}
+	}
+	
+	// 2) load the bone set
+	
+	for (size_t i = 0; i < records.size(); ++i)
+	{
+		SectionRecord & record = records[i];
+		
+		if (record.name == "boneset")
+		{
+			record.consumed = true;
+			
+			if (boneSet)
+				logError("%s: more than one bone set specified: %s (%s)", filename, record.line.c_str(), record.name.c_str());
+			else
+			{
+				const std::string file = record.args.getString("file", "");
+				
+				if (file.empty())
+					logError("%s: mandatory property 'file' not specified: %s (%s)", filename, record.line.c_str(), record.name.c_str());
+				else
+				{
+					logDebug("using bone set from %s", file.c_str());
+					
+					Loader * loader = createLoader(file.c_str());
+					
+					if (loader)
+					{
+						boneSet = loader->loadBoneSet(file.c_str());
+						delete loader;
+					}
+				}
+			}
+		}
+	}
+	
+	if (boneSet == 0)
+	{
+		boneSet = new BoneSet();
+	}
+	
+	// 3) load mesh set and anim sets
+	
+	for (size_t i = 0; i < records.size(); ++i)
+	{
+		SectionRecord & record = records[i];
+		
+		if (record.name == "meshset")
+		{
+			record.consumed = true;
+			
+			if (meshSet)
+				logError("%s: more than one mesh set specified: %s (%s)", filename, record.line.c_str(), record.name.c_str());
+			else
+			{
+				const std::string file = record.args.getString("file", "");
+				
+				if (file.empty())
+					logError("%s: mandatory property 'file' not specified: %s (%s)", filename, record.line.c_str(), record.name.c_str());
+				else
+				{
+					logDebug("using mesh set from %s", file.c_str());
+					
+					Loader * loader = createLoader(file.c_str());
+					
+					if (loader)
+					{
+						meshSet = loader->loadMeshSet(file.c_str(), boneSet);
+						delete loader;
+					}
+				}
+			}
+		}
+		
+		if (record.name == "animset")
+		{
+			record.consumed = true;
+			
+			const std::string file = record.args.getString("file", "");
+			
+			if (file.empty())
+				logError("%s: mandatory property 'file' not specified: %s (%s)", filename, record.line.c_str(), record.name.c_str());
+			else
+			{
+				logDebug("using anim set from %s", file.c_str());
+				
+				Loader * loader = createLoader(file.c_str());
+				
+				if (loader)
+				{
+					AnimSet * temp = loader->loadAnimSet(file.c_str(), boneSet);
+					
+					// todo: apply name when not merging
+					
+					const std::string name = record.args.getString("name", "");
+					
+					if (!name.empty())
+						temp->rename(name);
+					
+					if (!animSet)
+						animSet = temp;
+					else
+						animSet->mergeFromAndFree(temp);
+						
+					delete loader;
+				}
+			}
+		}
+	}
+	
+	if (meshSet == 0)
+	{
+		meshSet = new MeshSet();
+	}
+	
+	if (!animSet)
+	{
+		animSet = new AnimSet();
+	}
+	
+	// 4) load model info and animations & triggers
+	
+	Anim * currentAnim = 0;
+	
+	for (size_t i = 0; i < records.size(); ++i)
+	{
+		SectionRecord & record = records[i];
+		
+		if (record.name == "model")
+		{
+			record.consumed = true;
+			
+			// todo
+		}
+		
+		if (record.name == "animation")
+		{
+			record.consumed = true;
+			
+			const std::string name = record.args.getString("name", "");
+			
+			if (name.empty())
+				logError("%s: mandatory property 'name' not specified: %s (%s)", filename, record.line.c_str(), record.name.c_str());
+			else
+			{
+				std::map<std::string, Anim*>::iterator a = animSet->m_animations.find(name);
+				
+				if (a == animSet->m_animations.end())
+					logError("%s: animation '%s' does not exist: %s (%s)", filename, name.c_str(), record.line.c_str(), record.name.c_str());
+				else
+				{
+					currentAnim = a->second;
+				
+					// todo: tmotion, loop
+				}
+			}
+		}
+		
+		if (record.name == "trigger")
+		{
+			record.consumed = true;
+			
+			if (!currentAnim)
+			{
+				logError("%s: must first define an animation before adding triggers to it! %s", filename, record.line.c_str());
+				continue;
+			}
+			
+			const float time = record.args.getFloat("time", 0.f);
+			
+			// todo: calculate end time for animations
+			
+			if (time < 0.f/* || time > currentAnim->endTime*/)
+			{
+				logWarning("%s: time is not an interval within the animation: %s", filename, record.line.c_str());
+				continue;
+			}
+			
+			const std::string actions = record.args.getString("actions", "");
+			
+			log("added anim trigger. time=%g, actions=%s", time, actions.c_str());
+			
+			AnimTrigger trigger;
+			trigger.time = time;
+			trigger.actions = actions;
+			trigger.args = record.args;
+			currentAnim->m_triggers.push_back(trigger);
+		}
+		
+		if (!record.consumed)
+		{
+			logError("%s: unknown section: %s (%s)", filename, record.line.c_str(), record.name.c_str());
+		}
+	}
+	
+	logDebug("bone set: %d bones", boneSet->m_numBones);
+	for (int i = 0; i < boneSet->m_numBones; ++i)
+		logDebug("bone %d: %s", i, boneSet->m_bones[i].name.c_str());
+			
+	// todo: assign triggers to animations
+}
+
+//
+
+void ModelCache::clear()
+{
+	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
+	{
+		i->second.free();
+	}
+	
+	m_map.clear();
+}
+
+void ModelCache::reload()
+{
+	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
+	{
+		i->second.load(i->first.c_str());
+	}
+}
+
+ModelCacheElem & ModelCache::findOrCreate(const char * name)
+{
+	Key key = name;
+	
+	Map::iterator i = m_map.find(key);
+	
+	if (i != m_map.end())
+	{
+		return i->second;
+	}
+	else
+	{
+		ModelCacheElem elem;
+		
+		elem.load(name);
+		
+		i = m_map.insert(Map::value_type(key, elem)).first;
+		
+		return i->second;
 	}
 }

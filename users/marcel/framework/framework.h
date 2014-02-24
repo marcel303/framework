@@ -11,12 +11,15 @@
 #include <set>
 #include <string>
 #include <vector>
+#include "Mat4x4.h"
+#include "Vec3.h"
 
-#define fassert assert
+//#define fassert assert
+#define fassert(x) do { } while (false)
 
 // configuration
 
-#if defined(DEBUG) || 0
+#if defined(DEBUG) || 1
 	#define ENABLE_LOGGING 1
 #else
 	#define ENABLE_LOGGING 0 // do not alter
@@ -92,6 +95,7 @@ class Framework;
 class Gamepad;
 class Gradient;
 class Keyboard;
+class Model;
 class Mouse;
 class Music;
 class Shader;
@@ -122,6 +126,7 @@ class Framework
 {
 public:
 	friend class Sprite;
+	friend class Model;
 	
 	Framework();
 	~Framework();
@@ -153,11 +158,16 @@ public:
 	
 private:
 	typedef std::set<Sprite*> SpriteSet;
+	typedef std::set<Model*> ModelSet;
 	
 	SpriteSet m_sprites;
+	ModelSet m_models;
 	
 	void registerSprite(Sprite * sprite);
 	void unregisterSprite(Sprite * sprite);
+	
+	void registerModel(Model * model);
+	void unregisterModel(Model * model);
 };
 
 //
@@ -339,6 +349,70 @@ private:
 	void updateAnimation(float timeStep);
 	void processAnimationFrameChange(int frame1, int frame2);
 	void processAnimationTriggersForFrame(int frame, int event);
+};
+
+//
+
+enum ModelDrawFlags
+{
+	DrawMesh               = 0x0001,
+	DrawBones              = 0x0002,
+	DrawNormals            = 0x0004,
+	DrawPoseMatrices       = 0x0008,
+	DrawColorNormals       = 0x0010,
+	DrawColorBlendIndices  = 0x0020,
+	DrawColorBlendWeights  = 0x0040,
+	DrawColorTexCoords     = 0x0080,
+	DrawBoundingBox        = 0x0100
+};
+
+class Model
+{
+public:
+	friend class Framework;
+	
+	float x;
+	float y;
+	float z;
+	Vec3 axis;
+	float angle;
+	float scale;
+	
+	bool animIsActive;
+	bool animIsPaused;
+	float animTime;
+	int animLoop;
+	float animSpeed;
+	Vec3 animRootMotion;
+	
+	Model(const char * filename);
+	Model(class ModelCacheElem & cacheElem);
+	~Model();
+	
+	void startAnim(const char * name, int loop = 1);
+	void stopAnim();
+	void pauseAnim() { animIsPaused = true; }
+	void resumeAnim() { animIsPaused = false; }
+	std::vector<std::string> getAnimList() const;
+	
+	void draw(int drawFlags = DrawMesh);
+	void drawEx(Vec3 position, Vec3 axis, float angle = 0.f, float scale = 1.f, int drawFlags = DrawMesh);
+	void drawEx(const Mat4x4 & matrix, int drawFlags = DrawMesh);
+	
+//private:
+	void ctor();
+
+	// drawing
+	class ModelCacheElem * m_model;
+	
+	// animation
+	std::string m_animSegmentName;
+	void * m_currentAnim;
+	void * m_animSegment;
+	bool m_isAnimStarted;
+
+	void updateAnimationSegment();
+	void updateAnimation(float timeStep);
 };
 
 //

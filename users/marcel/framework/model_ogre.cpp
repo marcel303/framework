@@ -30,7 +30,7 @@ using namespace tinyxml2;
 #define XML_KEYFRAME_ROTATION "rotate"
 #define XML_KEYFRAME_ROTATION_AXIS "axis"
 
-namespace Model
+namespace AnimModel
 {
 	MeshSet * LoaderOgreXML::loadMeshSet(const char * filename, const BoneSet * boneSet)
 	{

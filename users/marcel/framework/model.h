@@ -3,10 +3,11 @@
 #include <map>
 #include <string>
 #include <vector>
+#include "framework.h"
 #include "Quat.h"
 #include "Vec3.h"
 
-namespace Model
+namespace AnimModel
 {
 	// forward declarations
 	
@@ -124,6 +125,13 @@ namespace Model
 		static void interpolate(BoneTransform & result, const AnimKey & key1, const AnimKey & key2, float t, RotationType rotationType);
 	};
 	
+	struct AnimTrigger
+	{
+		float time;
+		std::string actions;
+		Dictionary args;
+	};
+	
 	class Anim
 	{
 	public:
@@ -132,12 +140,14 @@ namespace Model
 		AnimKey * m_keys;
 		RotationType m_rotationType;
 		bool m_isAdditive;
+		std::vector<AnimTrigger> m_triggers;
 		
 		Anim();
 		~Anim();
 		
 		void allocate(int numBones, int numKeys, RotationType rotationType, bool isAdditive);
 		bool evaluate(float time, BoneTransform * transforms);
+		void triggerActions(float oldTime, float newTime);
 	};
 	
 	class AnimSet
@@ -147,6 +157,9 @@ namespace Model
 		
 		AnimSet();
 		~AnimSet();
+		
+		void rename(const std::string & name);
+		void mergeFromAndFree(AnimSet * animSet);
 	};
 	
 	//
@@ -158,68 +171,31 @@ namespace Model
 		virtual BoneSet * loadBoneSet(const char * filename) = 0;
 		virtual AnimSet * loadAnimSet(const char * filename, const BoneSet * boneSet) = 0;
 	};
-	
-	//
-	
-	class Cache
-	{
-		std::map<std::string, MeshSet*> m_meshes;
-		std::map<std::string, BoneSet*> m_bones;
-		std::map<std::string, AnimSet*> m_animSets;
-	
-	public:
-		MeshSet * findOrCreateMeshSet(const char * filename);
-		BoneSet * findOrCreateBoneSet(const char * filename);
-		AnimSet * findOrCreateAnimSet(const std::vector<std::string> & filenames);
-	};
 }
 
-//
-
-enum ModelDrawFlags
-{
-	DrawMesh               = 0x01,
-	DrawBones              = 0x02,
-	DrawNormals            = 0x04,
-	DrawPoseMatrices       = 0x08,
-	DrawColorNormals       = 0x10,
-	DrawColorBlendIndices  = 0x20,
-	DrawColorBlendWeights  = 0x40,
-	DrawColorTexCoords     = 0x80
-};
-
-class AnimModel
+class ModelCacheElem
 {
 public:
-	Model::MeshSet * m_meshes;
-	Model::BoneSet * m_bones;
-	Model::AnimSet * m_animations;
+	AnimModel::MeshSet * meshSet;
+	AnimModel::BoneSet * boneSet;
+	AnimModel::AnimSet * animSet;
 	
-	Model::Anim * currentAnim;
-	
-public:
-	float x;
-	float y;
-	float z;
-	Vec3 axis;
-	float angle;
-	float scale;
-	
-	bool animIsDone;
-	float animTime;
-	int animLoop;
-	float animSpeed;
-	Vec3 animRootMotion;
-	
-	AnimModel(const char * filename);
-	AnimModel(Model::MeshSet * meshes, Model::BoneSet * bones, Model::AnimSet * animations);
-	~AnimModel();
-	
-	void startAnim(const char * name, int loop = 1);
-	
-	void process(float timeStep);
-	
-	void draw(int drawFlags = DrawMesh);
-	void drawEx(Vec3 position, Vec3 axis, float angle = 0.f, float scale = 1.f, int drawFlags = DrawMesh);
-	void drawEx(const Mat4x4 & matrix, int drawFlags = DrawMesh);
+	ModelCacheElem();
+	void free();
+	void load(const char * filename);
 };
+
+class ModelCache
+{
+public:
+	typedef std::string Key;
+	typedef std::map<Key, ModelCacheElem> Map;
+	
+	Map m_map;
+	
+	void clear();
+	void reload();
+	ModelCacheElem & findOrCreate(const char * name);
+};
+
+extern ModelCache g_modelCache;

@@ -15,7 +15,11 @@ TODO:
 
 */
 
-using namespace Model;
+static bool logEnabled = false;
+
+//
+
+using namespace AnimModel;
 
 // forward declarations
 
@@ -35,12 +39,10 @@ static Mat4x4 matrixRotation(const Vec3 & v, RotationType rotationType);
 static Mat4x4 matrixScaling(const Vec3 & v);
 
 static FbxObject * readFbxModel(int & logIndent, const FbxRecord & model, const std::string & objectType, const std::string & objectName);
-static FbxPose * readFbxPose(int & logIndent, const FbxReader & reader, const std::string & objectType, const std::string & objectName);
+static FbxPose * readFbxPose(int & logIndent, const FbxRecord & pose, const std::string & objectType, const std::string & objectName);
 static FbxObject * readFbxDeformer(int & logIndent, const FbxRecord & deformer, const std::string & objectType, const std::string & objectName);
 
 //
-
-static bool logEnabled = true;
 
 static void fbxLog(int logIndent, const char * fmt, ...)
 {
@@ -58,7 +60,7 @@ static void fbxLog(int logIndent, const char * fmt, ...)
 		vsprintf(temp, fmt, va);
 		va_end(va);
 		
-		printf("%s%s", tabs, temp);
+		log("%s%s", tabs, temp);
 	}
 }
 
@@ -1007,7 +1009,7 @@ public:
 class MeshBuilder
 {
 public:
-	class Vertex : public Model::Vertex
+	class Vertex : public AnimModel::Vertex
 	{
 	public:
 		inline bool operator==(const Vertex & w) const
@@ -1249,7 +1251,7 @@ public:
 	}
 };
 
-namespace Model
+namespace AnimModel
 {
 	bool LoaderFbxBinary::readFile(const char * filename, std::vector<unsigned char> & bytes)
 	{

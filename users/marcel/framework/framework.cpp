@@ -25,6 +25,7 @@
 #include "audio.h"
 #include "framework.h"
 #include "internal.h"
+#include "model.h"
 
 // -----
 
@@ -104,7 +105,7 @@ bool Framework::init(int argc, char * argv[], int sx, int sy)
 #endif
 
 #if 1
-	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 32);
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
 #endif
 
@@ -202,6 +203,7 @@ bool Framework::shutdown()
 	g_textureCache.clear();
 	g_shaderCache.clear();
 	g_animCache.clear();
+	g_modelCache.clear();
 	g_soundCache.clear();
 	g_fontCache.clear();
 	g_glyphCache.clear();
@@ -370,6 +372,11 @@ void Framework::process()
 	{
 		(*i)->updateAnimation(timeStep);
 	}
+	
+	for (ModelSet::iterator i = m_models.begin(); i != m_models.end(); ++i)
+	{
+		(*i)->updateAnimation(timeStep);
+	}
 }
 
 void Framework::processAction(const std::string & action, const Dictionary & args)
@@ -400,6 +407,7 @@ void Framework::reloadCaches()
 	g_textureCache.reload();
 	g_shaderCache.reload();
 	g_animCache.reload();
+	g_modelCache.reload();
 	g_soundCache.reload();
 	g_fontCache.reload();
 	g_glyphCache.clear();
@@ -408,6 +416,11 @@ void Framework::reloadCaches()
 	g_globals.g_resourceVersion++;
 	
 	for (SpriteSet::iterator i = m_sprites.begin(); i != m_sprites.end(); ++i)
+	{
+		(*i)->updateAnimationSegment();
+	}
+	
+	for (ModelSet::iterator i = m_models.begin(); i != m_models.end(); ++i)
 	{
 		(*i)->updateAnimationSegment();
 	}
@@ -528,6 +541,16 @@ void Framework::registerSprite(Sprite * sprite)
 void Framework::unregisterSprite(Sprite * sprite)
 {
 	m_sprites.erase(m_sprites.find(sprite));
+}
+
+void Framework::registerModel(Model * model)
+{
+	m_models.insert(model);
+}
+
+void Framework::unregisterModel(Model * model)
+{
+	m_models.erase(m_models.find(model));
 }
 
 // -----
