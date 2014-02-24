@@ -1,10 +1,10 @@
 EXE = fbx
-OBJS = fbx.o main.o ../../../libgg/Quat.o ../framework/model.o ../framework/model_fbx.o
-CFLAGS = -Wall -Wextra -Wno-unused -Werror -O2 -I../../../libgg -DNO_SDL_GLEXT
-LFLAGS = `sdl-config --static-libs` -lstdc++
+OBJS = fbx.o main.o
+CFLAGS = -Wall -Wextra -ansi -pedantic -Wno-unused -Werror -O2
+LFLAGS = -lstdc++
 
 all : $(EXE)
-	./fbx test3.fbx -d
+	./fbx test3.fbx -vs
 
 $(EXE) : $(OBJS)
 	gcc -o $(EXE) $(OBJS) $(LFLAGS)
