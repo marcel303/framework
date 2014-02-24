@@ -1,0 +1,44 @@
+# resources
+
+boneset file:model01.fbx
+meshset file:model01.fbx
+animset file:model01.fbx name:anim01
+animset file:model02.fbx name:anim02
+animset file:model03.fbx name:anim03
+animset file:model04.fbx name:anim04
+animset file:model05.fbx name:anim05
+animset file:model06.fbx name:anim06
+animset file:model07.fbx name:anim07
+animset file:model08.fbx name:anim08
+animset file:model09.fbx name:anim09
+animset file:model10.fbx name:anim10
+animset file:model11.fbx name:anim11
+
+# model properties
+
+model tnode:b_MF_Pelvis
+
+# animations
+
+animation name:anim01 tmotion:1 loop:-1
+	trigger time:0.0 loop:0 actions:sound sound:modelsfx01.ogg
+animation name:anim02 tmotion:1 loop:-1
+	trigger time:0.0 loop:0 actions:sound sound:modelsfx01.ogg
+animation name:anim03 tmotion:1 loop:-1
+	trigger time:0.0 loop:0 actions:sound sound:modelsfx01.ogg
+animation name:anim04 tmotion:1 loop:-1
+	trigger time:0.0 loop:0 actions:sound sound:modelsfx01.ogg
+animation name:anim05 tmotion:1 loop:-1
+	trigger time:0.0 loop:0 actions:sound sound:modelsfx01.ogg
+animation name:anim06 tmotion:1 loop:-1
+	trigger time:0.0 loop:0 actions:sound sound:modelsfx01.ogg
+animation name:anim07 tmotion:1 loop:-1
+	trigger time:0.0 loop:0 actions:sound sound:modelsfx01.ogg
+animation name:anim08 tmotion:1 loop:-1
+	trigger time:0.0 loop:0 actions:sound sound:modelsfx01.ogg
+animation name:anim09 tmotion:1 loop:-1
+	trigger time:0.0 loop:0 actions:sound sound:modelsfx01.ogg
+animation name:anim10 tmotion:1 loop:-1
+	trigger time:0.0 loop:0 actions:sound sound:modelsfx01.ogg
+animation name:anim11 tmotion:1 loop:-1
+	trigger time:0.0 loop:0 actions:sound sound:modelsfx01.ogg
