@@ -11,7 +11,6 @@
 #include "model_ogre.h"
 
 #define DEBUG_TRS 0
-#define ENABLE_HW_SKINNING 1
 
 ModelCache g_modelCache;
 
@@ -809,32 +808,40 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 		globalMatrices[i] = worldMatrices[i] * worldToBone;
 	}
 	
-#if ENABLE_HW_SKINNING
-	// set uniform constants for skinning matrices
-	
-	Shader shader("engine/BasicSkinned"); // fixme!
-	setShader(shader);
-	
-	const GLint boneMatrices = shader.getImmediate("skinningMatrices");
-	
-	if (boneMatrices != -1)
-	{
-		glUniformMatrix4fv(boneMatrices, m_model->boneSet->m_numBones, GL_FALSE, (GLfloat*)globalMatrices);
-		checkErrorGL();
-	}
-#endif
-	
 	// draw
 	
 	if (drawFlags & DrawMesh)
 	{
+		// set uniform constants for skinning matrices
+		
+		Shader shader("engine/BasicSkinned"); // fixme!
+		setShader(shader);
+		
+		const GLint boneMatrices = shader.getImmediate("skinningMatrices");
+		
+		if (boneMatrices != -1)
+		{
+			glUniformMatrix4fv(boneMatrices, m_model->boneSet->m_numBones, GL_FALSE, (GLfloat*)globalMatrices);
+			checkErrorGL();
+		}
+		
+		const GLint drawColor = shader.getImmediate("drawColor");
+		
+		if (drawColor != -1)
+		{
+			glUniform4f(drawColor,
+				drawFlags & DrawColorTexCoords,
+				drawFlags & DrawColorNormals,
+				drawFlags & DrawColorBlendIndices,
+				drawFlags & DrawColorBlendWeights);
+		}
+		
 		for (int i = 0; i < m_model->meshSet->m_numMeshes; ++i)
 		{
 			const Mesh * mesh = m_model->meshSet->m_meshes[i];
 			
-		#if ENABLE_HW_SKINNING
-			
 			const GLint position = shader.getAttribute("in_position");
+			const GLint normal = shader.getAttribute("in_normal");
 			const GLint color = shader.getAttribute("in_color");
 			const GLint texcoord = shader.getAttribute("in_texcoord");
 			const GLint boneIndices = shader.getAttribute("in_skinningBlendIndices");
@@ -842,7 +849,6 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 			
 			// bind vertex arrays
 			
-		#if 1
 			fassert(mesh->m_vertexArray);
 			fassert(mesh->m_indexArray);
 			glBindBuffer(GL_ARRAY_BUFFER, mesh->m_vertexArray);
@@ -855,6 +861,13 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 			{
 				glVertexAttribPointer(position, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, px));
 				glEnableVertexAttribArray(position);
+				checkErrorGL();
+			}
+			
+			if (normal != -1)
+			{
+				glVertexAttribPointer(normal, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, nx));
+				glEnableVertexAttribArray(normal);
 				checkErrorGL();
 			}
 			
@@ -892,6 +905,8 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 			
 			if (position != -1)
 				glDisableVertexAttribArray(position);
+			if (normal != -1)
+				glDisableVertexAttribArray(normal);
 			if (color != -1)
 				glDisableVertexAttribArray(color);
 			if (texcoord != -1)
@@ -907,131 +922,70 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 			
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 			checkErrorGL();
-		#else
-			if (position != -1)
-			{
-				glVertexAttribPointer(position, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), &mesh->m_vertices[0].px);
-				glEnableVertexAttribArray(position);
-			}
+		}
+	}
+	
+	if (drawFlags & DrawNormals)
+	{
+		clearShader();
+		
+		for (int i = 0; i < m_model->meshSet->m_numMeshes; ++i)
+		{
+			const Mesh * mesh = m_model->meshSet->m_meshes[i];
 			
-			if (boneIndices != -1)
-			{
-				glVertexAttribPointer(boneIndices, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(Vertex), mesh->m_vertices[0].boneIndices);
-				glEnableVertexAttribArray(boneIndices);
-			}
-			
-			if (boneWeights != -1)
-			{
-				glVertexAttribPointer(boneWeights, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), mesh->m_vertices[0].boneWeights);
-				glEnableVertexAttribArray(boneWeights);
-			}
-			
-			glDrawElements(GL_TRIANGLES, mesh->m_numIndices, GL_UNSIGNED_INT, mesh->m_indices);
-			
-			glDisableVertexAttribArray(position);
-			glDisableVertexAttribArray(boneIndices);
-			glDisableVertexAttribArray(boneWeights);
-		#endif
-		#else
+			std::vector<Vec3> positions;
 			std::vector<Vec3> normals;
 			
-			glBegin(GL_TRIANGLES);
+			positions.resize(mesh->m_numVertices);
+			normals.resize(mesh->m_numVertices);
+			
+			for (int j = 0; j < mesh->m_numVertices; ++j)
 			{
-				for (int j = 0; j < mesh->m_numIndices; ++j)
+				const Vertex & vertex = mesh->m_vertices[j];
+				
+				// -- software vertex blend (soft skinned) --
+				Vec3 p(0.f, 0.f, 0.f);
+				Vec3 n(0.f, 0.f, 0.f);
+				for (int b = 0; b < 4; ++b)
 				{
-					const int vertexIndex = mesh->m_indices[j];
+					if (vertex.boneWeights[b] == 0)
+						continue;
+					const int boneIndex = vertex.boneIndices[b];
+					const float boneWeight = vertex.boneWeights[b] / 255.f;						
+					const Mat4x4 & globalMatrix = globalMatrices[boneIndex];
+					p += globalMatrix.Mul4(Vec3(vertex.px, vertex.py, vertex.pz)) * boneWeight;
+					n += globalMatrix.Mul3(Vec3(vertex.nx, vertex.ny, vertex.nz)) * boneWeight;
+				}
+				// -- software vertex blend (soft skinned) --
+				
+				positions[j] = p;
+				normals[j] = n;
+			}
+			
+			glBegin(GL_LINES);
+			{
+				for (int j = 0; j < mesh->m_numVertices; ++j)
+				{
+					const float scale = 3.f;
 					
-					const Vertex & vertex = mesh->m_vertices[vertexIndex];
+					const Vec3 & n  = normals[j];
+					const Vec3 & p1 = positions[j];
+					const Vec3   p2 = positions[j] + n * scale;
 					
-					// todo: apply vertex transformation using a shader
-					
-					// -- software vertex blend (soft skinned) --
-					Vec3 p(0.f, 0.f, 0.f);
-					Vec3 n(0.f, 0.f, 0.f);
-					for (int b = 0; b < 4; ++b)
-					{
-						if (vertex.boneWeights[b] == 0)
-							continue;
-						const int boneIndex = vertex.boneIndices[b];
-						const float boneWeight = vertex.boneWeights[b] / 255.f;						
-						const Mat4x4 & globalMatrix = globalMatrices[boneIndex];
-						p += globalMatrix.Mul4(Vec3(vertex.px, vertex.py, vertex.pz)) * boneWeight;
-						n += globalMatrix.Mul3(Vec3(vertex.nx, vertex.ny, vertex.nz)) * boneWeight;
-					}
-					// -- software vertex blend (soft skinned) --
-					
-				#if 1 // todo: debug only
-					float r = 1.f;
-					float g = 1.f;
-					float b = 1.f;
-					
-					if (drawFlags & DrawColorNormals)
-					{
-						n.Normalize();
-						
-						r *= (n[0] + 1.f) / 2.f;
-						g *= (n[1] + 1.f) / 2.f;
-						b *= (n[2] + 1.f) / 2.f;
-					}
-					if (drawFlags & DrawColorBlendIndices)
-					{
-						r *= vertex.boneIndices[0] / float(m_model->boneSet->m_numBones);
-						g *= vertex.boneIndices[1] / float(m_model->boneSet->m_numBones);
-						b *= vertex.boneIndices[2] / float(m_model->boneSet->m_numBones);
-					}
-					if (drawFlags & DrawColorBlendWeights)
-					{
-						r *= (1.f + vertex.boneWeights[0] / 255.f) / 2.f;
-						g *= (1.f + vertex.boneWeights[1] / 255.f) / 2.f;
-						b *= (1.f + vertex.boneWeights[2] / 255.f) / 2.f;
-					}
-					if (drawFlags & DrawColorTexCoords)
-					{
-						r *= vertex.tx;
-						g *= vertex.ty;
-					}
-					
-					glColor3f(r, g, b);
-				#endif
-					
-					glTexCoord2f(vertex.tx, 1.f - vertex.ty);
-					glNormal3fv(&n[0]);
-					glVertex3fv(&p[0]);
-					
-					if (drawFlags & DrawNormals)
-					{
-						normals.push_back(Vec3(p[0], p[1], p[2]));
-						normals.push_back(Vec3(n[0], n[1], n[2]));
-					}
+					glColor3ub(127, 127, 127);
+					glNormal3f(n[0], n[1], n[2]);
+					glVertex3f(p1[0], p1[1], p1[2]);
+					glVertex3f(p2[0], p2[1], p2[2]);
 				}
 			}
 			glEnd();
-			
-			if (drawFlags & DrawNormals)
-			{
-				glBegin(GL_LINES);
-				{
-					for (size_t j = 0; j < normals.size() / 2; ++j)
-					{
-						const float scale = 3.f;
-						
-						Vec3 p = normals[j * 2 + 0];
-						Vec3 n = normals[j * 2 + 1] * scale;
-						
-						glColor3ub(127, 127, 127);
-						glNormal3f(n[0], n[1], n[2]);
-						glVertex3f(p[0],        p[1],        p[2]       );
-						glVertex3f(p[0] + n[0], p[1] + n[1], p[2] + n[2]);
-					}
-				}
-				glEnd();
-			}
-		#endif
 		}
 	}
 	
 	if (drawFlags & DrawBones)
 	{
+		clearShader();
+		
 		// bone to object matrix translation
 		glDisable(GL_DEPTH_TEST);
 		glColor3ub(127, 127, 127);
@@ -1066,6 +1020,8 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 	
 	if (drawFlags & DrawPoseMatrices)
 	{
+		clearShader();
+		
 		// object to bone matrix translation
 		glDisable(GL_DEPTH_TEST);
 		glColor3ub(127, 127, 127);
@@ -1076,8 +1032,8 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 				const int parentBoneIndex = m_model->boneSet->m_bones[boneIndex].parent;
 				if (parentBoneIndex != -1)
 				{
-					const Mat4x4 m1 = m_model->boneSet->m_bones[boneIndex].poseMatrix.CalcInv();
-					const Mat4x4 m2 = m_model->boneSet->m_bones[parentBoneIndex].poseMatrix.CalcInv();
+					const Mat4x4 m1 = matrix * m_model->meshToObject * m_model->boneSet->m_bones[boneIndex].poseMatrix.CalcInv();
+					const Mat4x4 m2 = matrix * m_model->meshToObject * m_model->boneSet->m_bones[parentBoneIndex].poseMatrix.CalcInv();
 					glVertex3f(m1(3, 0), m1(3, 1), m1(3, 2));
 					glVertex3f(m2(3, 0), m2(3, 1), m2(3, 2));
 				}
@@ -1090,7 +1046,7 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 		{
 			for (int boneIndex = 0; boneIndex < m_model->boneSet->m_numBones; ++boneIndex)
 			{
-				const Mat4x4 m = m_model->boneSet->m_bones[boneIndex].poseMatrix.CalcInv();
+				const Mat4x4 m = matrix * m_model->meshToObject * m_model->boneSet->m_bones[boneIndex].poseMatrix.CalcInv();
 				glVertex3f(m(3, 0), m(3, 1), m(3, 2));
 			}
 		}
@@ -1518,10 +1474,6 @@ void ModelCacheElem::load(const char * filename)
 	meshToObject(3, 3) = 1.f;
 	
 	//dumpMatrix(meshToObject);
-	
-	//logDebug("bone set: %d bones", boneSet->m_numBones);
-	//for (int i = 0; i < boneSet->m_numBones; ++i)
-	//	logDebug("bone %d: %s", i, boneSet->m_bones[i].name.c_str());
 }
 
 //
