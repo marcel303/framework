@@ -68,6 +68,7 @@ int main(int argc, char * argv[])
 	bool rotate = false;
 	bool loop = false;
 	bool autoPlay = false;
+	float animSpeed = 1.f;
 	
 	float angle = 0.f;
 	
@@ -102,9 +103,9 @@ int main(int argc, char * argv[])
 		if (keyboard.wentDown(SDLK_p))
 			autoPlay = !autoPlay;
 		if (keyboard.wentDown(SDLK_UP))
-			models[CoordKey(0, 0, 0)]->animSpeed *= 2.f;
+			animSpeed *= 2.f;
 		if (keyboard.wentDown(SDLK_DOWN))
-			models[CoordKey(0, 0, 0)]->animSpeed /= 2.f;
+			animSpeed /= 2.f;
 		
 		for (int x = X1; x <= X2; ++x)
 		{
@@ -130,6 +131,7 @@ int main(int argc, char * argv[])
 									const std::string & name = animList[rand() % animList.size()];
 									
 									model->startAnim(name.c_str(), loop ? -1 : 1);
+									model->animSpeed = animSpeed;
 								}
 							}
 						}
