@@ -16,29 +16,29 @@ animset file:model11.fbx name:anim11
 
 # model properties
 
-model tnode:b_MF_Pelvis
+model rootnode:b_MF_Pelvis scale:1 right:-x up:+z forward:+y
 
 # animations
 
-animation name:anim01 tmotion:1 loop:-1
-	trigger time:0.0 loop:0 actions:sound sound:modelsfx01.ogg
-animation name:anim02 tmotion:1 loop:-1
-	trigger time:0.0 loop:0 actions:sound sound:modelsfx01.ogg
-animation name:anim03 tmotion:1 loop:-1
-	trigger time:0.0 loop:0 actions:sound sound:modelsfx01.ogg
-animation name:anim04 tmotion:1 loop:-1
-	trigger time:0.0 loop:0 actions:sound sound:modelsfx01.ogg
-animation name:anim05 tmotion:1 loop:-1
-	trigger time:0.0 loop:0 actions:sound sound:modelsfx01.ogg
-animation name:anim06 tmotion:1 loop:-1
-	trigger time:0.0 loop:0 actions:sound sound:modelsfx01.ogg
-animation name:anim07 tmotion:1 loop:-1
-	trigger time:0.0 loop:0 actions:sound sound:modelsfx01.ogg
-animation name:anim08 tmotion:1 loop:-1
-	trigger time:0.0 loop:0 actions:sound sound:modelsfx01.ogg
-animation name:anim09 tmotion:1 loop:-1
-	trigger time:0.0 loop:0 actions:sound sound:modelsfx01.ogg
-animation name:anim10 tmotion:1 loop:-1
-	trigger time:0.0 loop:0 actions:sound sound:modelsfx01.ogg
-animation name:anim11 tmotion:1 loop:-1
-	trigger time:0.0 loop:0 actions:sound sound:modelsfx01.ogg
+animation name:anim01 rootmotion:1 loop:-1
+	trigger time:0.2 loop:0 actions:sound sound:modelsfx01.ogg volume:30
+animation name:anim02 rootmotion:1 loop:-1
+	trigger time:0.2 loop:0 actions:sound sound:modelsfx01.ogg volume:30
+animation name:anim03 rootmotion:1 loop:-1
+	trigger time:0.2 loop:0 actions:sound sound:modelsfx01.ogg volume:30
+animation name:anim04 rootmotion:1 loop:-1
+	trigger time:0.2 loop:0 actions:sound sound:modelsfx01.ogg volume:20
+animation name:anim05 rootmotion:1 loop:-1
+	trigger time:0.1 loop:0 actions:sound sound:modelsfx01.ogg volume:20
+animation name:anim06 rootmotion:1 loop:-1
+	trigger time:0.1 loop:0 actions:sound sound:modelsfx01.ogg volume:20
+animation name:anim07 rootmotion:1 loop:-1
+	trigger time:0.1 loop:0 actions:sound sound:modelsfx01.ogg volume:20
+animation name:anim08 rootmotion:1 loop:-1
+	trigger time:0.1 loop:0 actions:sound sound:modelsfx01.ogg volume:10
+animation name:anim09 rootmotion:1 loop:-1
+	trigger time:0.0 loop:0 actions:sound sound:modelsfx01.ogg volume:10
+animation name:anim10 rootmotion:1 loop:-1
+	trigger time:0.0 loop:0 actions:sound sound:modelsfx01.ogg volume:10
+animation name:anim11 rootmotion:1 loop:-1
+	trigger time:0.0 loop:0 actions:sound sound:modelsfx01.ogg volume:10
