@@ -140,10 +140,27 @@ public:
 	
 	void MakePerspectiveLH(float fov, float aspect, float nearCP, float farCP)
 	{
+		// left handed perspective matrix with clip space Z = (0, +1)
+		
 		const float scaleY = 1.0f / tanf(fov / 2.0f);
 		const float scaleX = aspect * scaleY;
 		const float l_33 = farCP / ( farCP - nearCP );
 		const float l_43 = -nearCP * farCP / ( farCP - nearCP );
+		
+		m00 = scaleX; m01 = 0.0f;   m02 = 0.0f; m03 = 0.0f;
+		m10 = 0.0f;   m11 = scaleY; m12 = 0.0f; m13 = 0.0f;
+		m20 = 0.0f;   m21 = 0.0f;   m22 = l_33; m23 =+1.0f;
+		m30 = 0.0f;   m31 = 0.0f;   m32 = l_43; m33 = 0.0f;
+	}
+	
+	void MakePerspectiveGL(float fov, float aspect, float nearCP, float farCP)
+	{
+		// right handed perspective matrix with clip space Z = (-1, +1)
+		
+		const float scaleY = 1.0f / tanf(fov / 2.0f);
+		const float scaleX = aspect * scaleY;
+		const float l_33 = - (farCP + nearCP) / (nearCP - farCP);
+		const float l_43 = 2.f * (farCP * nearCP) / (nearCP - farCP);
 		
 		m00 = scaleX; m01 = 0.0f;   m02 = 0.0f; m03 = 0.0f;
 		m10 = 0.0f;   m11 = scaleY; m12 = 0.0f; m13 = 0.0f;
