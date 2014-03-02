@@ -1,7 +1,7 @@
 include engine/ShaderVS.txt
 
-varying vec4 color;
-varying vec2 texcoord0;
+varying vec4 v_color;
+varying vec2 v_texcoord0;
 
 void main()
 {
@@ -17,13 +17,33 @@ void main()
 	
 	position = objectToProjection(position);
 	
+	vec3 normal = objectToWorld_Skinned(
+		skinningBlendIndices,
+		skinningBlendWeights,
+		unpackNormal()).xyz;
+	
+	normal = normalize(normal);
+	
+	vec2 texcoord = unpackTexcoord(0);
+	
+	// debug color
+	
+	vec4 color = vec4(1.0);
+	
+	if (drawColorTexcoords())
+		color.rg *= texcoord.xy;
+	if (drawColorNormals())
+		color.rgb *= (normal + vec3(1.0)) / 2.0;
+	if (drawColorBlendIndices())
+		color.rgb *= skinningBlendIndices.xyz / 32.0;
+	if (drawColorBlendWeights())
+		color.rgb *= skinningBlendWeights.xyz;
+	
 	//
 	
 	gl_Position = position;
 	
-	color = vec4(in_texcoord.xy, 1.0, 1.0);
-	//color = vec4(skinningBlendWeights.xyz, 1.0);
-	//color = vec4(vec3(skinningBlendIndices.xyz)/30.0, 1.0);
+	v_texcoord0 = texcoord;
 	
-	texcoord0 = unpackTexcoord(0);
+	v_color = color;
 }
