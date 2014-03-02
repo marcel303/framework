@@ -34,20 +34,47 @@ public:
 	Globals()
 	{
 		memset(this, 0, sizeof(Globals));
-		g_colorMode = COLOR_MUL;
+		colorMode = COLOR_MUL;
+		transform = TRANSFORM_SCREEN;
+		transformScreen.MakeIdentity();
+		transform2d.MakeIdentity();
+		transform3d.MakeIdentity();
 	}
 	
-	int g_displaySize[2];
-	FT_Library g_freeType;
-	int g_resourceVersion;
-	COLOR_MODE g_colorMode;
-	Color g_color;
-	Gradient g_gradient;
-	FontCacheElem * g_font;
-	bool g_mouseDown[BUTTON_MAX];
-	bool g_mouseChange[BUTTON_MAX];
-	bool g_keyDown[SDLK_LAST];
-	bool g_keyChange[SDLK_LAST];
+	int displaySize[2];
+	FT_Library freeType;
+	int resourceVersion;
+	COLOR_MODE colorMode;
+	Color color;
+	Gradient gradient;
+	FontCacheElem * font;
+	bool mouseDown[BUTTON_MAX];
+	bool mouseChange[BUTTON_MAX];
+	bool keyDown[SDLK_LAST];
+	bool keyChange[SDLK_LAST];
+	TRANSFORM transform;
+	Mat4x4 transformScreen;
+	Mat4x4 transform2d;
+	Mat4x4 transform3d;
+	
+	struct
+	{
+		static const int kMaxLines = 32;
+		static const int kMaxLineSize = 128;
+		
+		struct
+		{
+			FontCacheElem * font;
+			Color color;
+			float x;
+			float y;
+			int size;
+			float alignX;
+			float alignY;
+			char text[kMaxLineSize];
+		} lines[kMaxLines];
+		int numLines;
+	} debugDraw;
 };
 
 //
@@ -365,7 +392,8 @@ public:
 
 //
 
-extern Globals g_globals;
+extern Globals globals;
+
 extern TextureCache g_textureCache;
 extern ShaderCache g_shaderCache;
 extern AnimCache g_animCache;

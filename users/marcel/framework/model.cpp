@@ -11,6 +11,7 @@
 #include "model_ogre.h"
 
 #define DEBUG_TRS 0
+#define ENABLE_HW_SKINNING 1
 
 ModelCache g_modelCache;
 
@@ -23,12 +24,27 @@ namespace AnimModel
 		
 		m_indices = 0;
 		m_numIndices = 0;
+		
+		m_vertexArray = 0;
+		m_indexArray = 0;
 	}
 	
 	Mesh::~Mesh()
 	{
 		allocateVB(0);
 		allocateIB(0);
+		
+		if (m_vertexArray)
+		{
+			glDeleteBuffers(1, &m_vertexArray);
+			m_vertexArray = 0;
+		}
+		
+		if (m_indexArray)
+		{
+			glDeleteBuffers(1, &m_indexArray);
+			m_indexArray = 0;
+		}
 	}
 	
 	void Mesh::allocateVB(int numVertices)
@@ -65,6 +81,32 @@ namespace AnimModel
 			
 			memset(m_indices, 0, sizeof(m_indices[0]) * numIndices);
 		}
+	}
+	
+	void Mesh::finalize()
+	{
+		fassert(!m_vertexArray && !m_indexArray);
+		
+		glGenBuffers(1, &m_vertexArray);
+		glBindBuffer(GL_ARRAY_BUFFER, m_vertexArray);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * m_numVertices, m_vertices, GL_STATIC_DRAW);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		
+		glGenBuffers(1, &m_indexArray);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexArray);
+		if (m_numVertices < 65536)
+		{
+			unsigned short * indices = new unsigned short[m_numIndices];
+			for (int i = 0; i < m_numIndices; ++i)
+				indices[i] = m_indices[i];
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(short) * m_numIndices, indices, GL_STATIC_DRAW);
+			delete [] indices;
+		}
+		else
+		{
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(int) * m_numIndices, m_indices, GL_STATIC_DRAW);
+		}
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	}
 	
 	//
@@ -378,6 +420,9 @@ namespace AnimModel
 		m_keys = 0;
 		m_rotationType = RotationType_Quat;
 		m_isAdditive = false;
+		
+		m_rootMotion = false;
+		m_loop = 1;
 	}
 	
 	Anim::~Anim()
@@ -468,13 +513,13 @@ namespace AnimModel
 		return isDone;
 	}
 	
-	void Anim::triggerActions(float oldTime, float newTime)
+	void Anim::triggerActions(float oldTime, float newTime, int loop)
 	{
 		for (size_t i = 0; i < m_triggers.size(); ++i)
 		{
 			const AnimTrigger & trigger = m_triggers[i];
 			
-			if (oldTime <= trigger.time && newTime > trigger.time)
+			if (oldTime <= trigger.time && newTime > trigger.time && (loop == trigger.loop || (trigger.loop == -1)))
 			{
 				framework.processActions(trigger.actions, trigger.args);
 			}
@@ -576,6 +621,7 @@ void Model::ctor()
 	m_isAnimStarted = false;
 	animTime = 0.f;
 	animLoop = 0;
+	animLoopCount = 0;
 	animSpeed = 1.f;
 	
 	framework.registerModel(this);
@@ -590,11 +636,14 @@ void Model::startAnim(const char * name, int loop)
 {
 	fassert(loop != 0);
 	
+	// todo: apply loop count from animation
+	
 	animIsPaused = false;
 	m_animSegmentName = name;
 	m_isAnimStarted = true;
 	animTime = 0.f;
 	animLoop = loop;
+	animLoopCount = 0;
 	if (animLoop > 0)
 		animLoop--;
 	
@@ -679,6 +728,7 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 			if (animLoop > 0 || animLoop < 0)
 			{
 				animTime = 0.f;
+				animLoopCount++;
 				if (animLoop > 0)
 					animLoop--;
 			}
@@ -724,7 +774,7 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 			const int parent = m_model->boneSet->m_bones[i].parent;
 			
 			if (parent == -1)
-				worldMatrices[i] = localMatrices[i];
+				worldMatrices[i] = matrix * m_model->meshToObject * localMatrices[i];
 			else
 				worldMatrices[i] = worldMatrices[parent] * localMatrices[i];
 		}
@@ -746,9 +796,33 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 				boneIndex = m_model->boneSet->m_bones[boneIndex].parent;
 			}
 			
-			worldMatrices[i] = matrix * finalMatrix;
+			worldMatrices[i] = matrix * m_model->meshToObject * finalMatrix;
 		}
 	}
+	
+	Mat4x4 * globalMatrices = (Mat4x4*)alloca(sizeof(Mat4x4) * m_model->boneSet->m_numBones);
+	
+	for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
+	{
+		const Mat4x4 & worldToBone = m_model->boneSet->m_bones[i].poseMatrix;
+		
+		globalMatrices[i] = worldMatrices[i] * worldToBone;
+	}
+	
+#if ENABLE_HW_SKINNING
+	// set uniform constants for skinning matrices
+	
+	Shader shader("engine/BasicSkinned"); // fixme!
+	setShader(shader);
+	
+	const GLint boneMatrices = shader.getImmediate("skinningMatrices");
+	
+	if (boneMatrices != -1)
+	{
+		glUniformMatrix4fv(boneMatrices, m_model->boneSet->m_numBones, GL_FALSE, (GLfloat*)globalMatrices);
+		checkErrorGL();
+	}
+#endif
 	
 	// draw
 	
@@ -758,6 +832,107 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 		{
 			const Mesh * mesh = m_model->meshSet->m_meshes[i];
 			
+		#if ENABLE_HW_SKINNING
+			
+			const GLint position = shader.getAttribute("in_position");
+			const GLint color = shader.getAttribute("in_color");
+			const GLint texcoord = shader.getAttribute("in_texcoord");
+			const GLint boneIndices = shader.getAttribute("in_skinningBlendIndices");
+			const GLint boneWeights = shader.getAttribute("in_skinningBlendWeights");
+			
+			// bind vertex arrays
+			
+		#if 1
+			fassert(mesh->m_vertexArray);
+			fassert(mesh->m_indexArray);
+			glBindBuffer(GL_ARRAY_BUFFER, mesh->m_vertexArray);
+			checkErrorGL();
+			
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->m_indexArray);
+			checkErrorGL();
+			
+			if (position != -1)
+			{
+				glVertexAttribPointer(position, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, px));
+				glEnableVertexAttribArray(position);
+				checkErrorGL();
+			}
+			
+			if (color != -1)
+			{
+				glVertexAttribPointer(color, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, cx));
+				glEnableVertexAttribArray(color);
+				checkErrorGL();
+			}
+			
+			if (texcoord != -1)
+			{
+				glVertexAttribPointer(texcoord, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, tx));
+				glEnableVertexAttribArray(texcoord);
+				checkErrorGL();
+			}
+			
+			if (boneIndices != -1)
+			{
+				glVertexAttribPointer(boneIndices, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, boneIndices));
+				glEnableVertexAttribArray(boneIndices);
+				checkErrorGL();
+			}
+			
+			if (boneWeights != -1)
+			{
+				glVertexAttribPointer(boneWeights, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), (void*)offsetof(Vertex, boneWeights));
+				glEnableVertexAttribArray(boneWeights);
+				checkErrorGL();
+			}
+			
+			GLenum indexType = mesh->m_numVertices < 65536 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
+			glDrawElements(GL_TRIANGLES, mesh->m_numIndices, indexType, 0);
+			checkErrorGL();
+			
+			if (position != -1)
+				glDisableVertexAttribArray(position);
+			if (color != -1)
+				glDisableVertexAttribArray(color);
+			if (texcoord != -1)
+				glDisableVertexAttribArray(texcoord);
+			if (boneIndices != -1)
+				glDisableVertexAttribArray(boneIndices);
+			if (boneWeights != -1)
+				glDisableVertexAttribArray(boneWeights);
+			checkErrorGL();
+			
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+			checkErrorGL();
+			
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+			checkErrorGL();
+		#else
+			if (position != -1)
+			{
+				glVertexAttribPointer(position, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), &mesh->m_vertices[0].px);
+				glEnableVertexAttribArray(position);
+			}
+			
+			if (boneIndices != -1)
+			{
+				glVertexAttribPointer(boneIndices, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(Vertex), mesh->m_vertices[0].boneIndices);
+				glEnableVertexAttribArray(boneIndices);
+			}
+			
+			if (boneWeights != -1)
+			{
+				glVertexAttribPointer(boneWeights, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), mesh->m_vertices[0].boneWeights);
+				glEnableVertexAttribArray(boneWeights);
+			}
+			
+			glDrawElements(GL_TRIANGLES, mesh->m_numIndices, GL_UNSIGNED_INT, mesh->m_indices);
+			
+			glDisableVertexAttribArray(position);
+			glDisableVertexAttribArray(boneIndices);
+			glDisableVertexAttribArray(boneWeights);
+		#endif
+		#else
 			std::vector<Vec3> normals;
 			
 			glBegin(GL_TRIANGLES);
@@ -779,10 +954,9 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 							continue;
 						const int boneIndex = vertex.boneIndices[b];
 						const float boneWeight = vertex.boneWeights[b] / 255.f;						
-						const Mat4x4 & boneToWorld = worldMatrices[boneIndex];
-						const Mat4x4 & worldToBone = m_model->boneSet->m_bones[boneIndex].poseMatrix;
-						p += boneToWorld.Mul4(worldToBone.Mul4(Vec3(vertex.px, vertex.py, vertex.pz))) * boneWeight;
-						n += boneToWorld.Mul3(worldToBone.Mul3(Vec3(vertex.nx, vertex.ny, vertex.nz))) * boneWeight;
+						const Mat4x4 & globalMatrix = globalMatrices[boneIndex];
+						p += globalMatrix.Mul4(Vec3(vertex.px, vertex.py, vertex.pz)) * boneWeight;
+						n += globalMatrix.Mul3(Vec3(vertex.nx, vertex.ny, vertex.nz)) * boneWeight;
 					}
 					// -- software vertex blend (soft skinned) --
 					
@@ -793,6 +967,8 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 					
 					if (drawFlags & DrawColorNormals)
 					{
+						n.Normalize();
+						
 						r *= (n[0] + 1.f) / 2.f;
 						g *= (n[1] + 1.f) / 2.f;
 						b *= (n[2] + 1.f) / 2.f;
@@ -819,8 +995,8 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 				#endif
 					
 					glTexCoord2f(vertex.tx, 1.f - vertex.ty);
-					glNormal3f(n[0], n[1], n[2]);
-					glVertex3f(p[0], p[1], p[2]);
+					glNormal3fv(&n[0]);
+					glVertex3fv(&p[0]);
 					
 					if (drawFlags & DrawNormals)
 					{
@@ -837,8 +1013,10 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 				{
 					for (size_t j = 0; j < normals.size() / 2; ++j)
 					{
+						const float scale = 3.f;
+						
 						Vec3 p = normals[j * 2 + 0];
-						Vec3 n = normals[j * 2 + 1] * 5.f;
+						Vec3 n = normals[j * 2 + 1] * scale;
 						
 						glColor3ub(127, 127, 127);
 						glNormal3f(n[0], n[1], n[2]);
@@ -848,6 +1026,7 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 				}
 				glEnd();
 			}
+		#endif
 		}
 	}
 	
@@ -958,7 +1137,7 @@ void Model::updateAnimation(float timeStep)
 	
 	if (anim)
 	{
-		anim->triggerActions(oldTime, newTime);
+		anim->triggerActions(oldTime, newTime, animLoopCount);
 	}
 }
 
@@ -990,6 +1169,10 @@ void ModelCacheElem::free()
 	
 	delete animSet;
 	animSet = 0;
+	
+	meshToObject.MakeIdentity();
+	
+	rootNode.clear();
 }
 
 struct SectionRecord
@@ -1065,9 +1248,15 @@ void ModelCacheElem::load(const char * filename)
 	// meshset file:<filename>
 	// boneset file:<filename>
 	// animset file:<filename> name:<override-name>
-	// model tnode:<tnode> tmotion:<enabled>
+	// model rootnode:<tnode>
 	// animation name:walk loop:<loopcount> rootmotion:<enabled>
-	//     trigger time:<second> loop:<loop> action:<action> [params]
+	//     trigger time:<second> loop:<loop> actions:<action,action,..> [params]
+	
+	float scale = 1.f;
+	
+	int right   = +1;
+	int up      = +2;
+	int forward = +3;
 	
 	// 1) read file contents
 	std::vector<SectionRecord> records;
@@ -1219,7 +1408,42 @@ void ModelCacheElem::load(const char * filename)
 		{
 			record.consumed = true;
 			
-			// todo
+			// rootnode, scale, up, right, forward
+			
+			rootNode = record.args.getString("rootnode", "");
+			
+			scale = record.args.getFloat("scale", 1.f);
+			
+			const std::string directionStr[3] =
+			{
+				record.args.getString("right",   "+x"),
+				record.args.getString("up",      "+y"),
+				record.args.getString("forward", "+z")
+			};
+			
+			int * directionInt[3] = { &right, &up, &forward };
+			
+			for (int j = 0; j < 3; ++j)
+			{
+				const std::string & str = directionStr[j];
+				
+				if (str.size() != 2 || (str[0] != '+' && str[0] != '-') || (str[1] != 'x' && str[1] != 'y' && str[1] != 'z'))
+					logError("%s: invalid right, up, or forward string: %s (%d): %s (%s)", filename, str.c_str(), (int)str.size(), record.line.c_str(), record.name.c_str());
+				else
+				{
+					const char directionChr[3] = { 'x', 'y', 'z' };
+					const int sign = str[0] == '+' ? +1 : -1;
+					
+					for (int k = 0; k < 3; ++k)
+					{
+						if (str[1] == directionChr[k])
+						{
+							*directionInt[j] = sign * (k + 1);
+							logDebug("mapping %c to %+d", directionChr[k], *directionInt[j]);
+						}
+					}
+				}
+			}
 		}
 		
 		if (record.name == "animation")
@@ -1239,8 +1463,9 @@ void ModelCacheElem::load(const char * filename)
 				else
 				{
 					currentAnim = a->second;
-				
-					// todo: tmotion, loop
+					
+					currentAnim->m_rootMotion = record.args.getBool("rootmotion", currentAnim->m_rootMotion);
+					currentAnim->m_loop = record.args.getInt("loop", currentAnim->m_loop);
 				}
 			}
 		}
@@ -1256,6 +1481,7 @@ void ModelCacheElem::load(const char * filename)
 			}
 			
 			const float time = record.args.getFloat("time", 0.f);
+			const int loop = record.args.getInt("loop", -1);
 			
 			// todo: calculate end time for animations
 			
@@ -1267,10 +1493,11 @@ void ModelCacheElem::load(const char * filename)
 			
 			const std::string actions = record.args.getString("actions", "");
 			
-			log("added anim trigger. time=%g, actions=%s", time, actions.c_str());
+			//log("added anim trigger. time=%g, actions=%s", time, actions.c_str());
 			
 			AnimTrigger trigger;
 			trigger.time = time;
+			trigger.loop = loop;
 			trigger.actions = actions;
 			trigger.args = record.args;
 			currentAnim->m_triggers.push_back(trigger);
@@ -1282,11 +1509,19 @@ void ModelCacheElem::load(const char * filename)
 		}
 	}
 	
-	logDebug("bone set: %d bones", boneSet->m_numBones);
-	for (int i = 0; i < boneSet->m_numBones; ++i)
-		logDebug("bone %d: %s", i, boneSet->m_bones[i].name.c_str());
-			
-	// todo: assign triggers to animations
+	// set to 'object' space transform
+	
+	memset(&meshToObject, 0, sizeof(meshToObject));
+	meshToObject(std::abs(right  ) - 1, 0) = right   < 0 ? -scale : +scale;
+	meshToObject(std::abs(up     ) - 1, 1) = up      < 0 ? -scale : +scale;
+	meshToObject(std::abs(forward) - 1, 2) = forward < 0 ? -scale : +scale;
+	meshToObject(3, 3) = 1.f;
+	
+	//dumpMatrix(meshToObject);
+	
+	//logDebug("bone set: %d bones", boneSet->m_numBones);
+	//for (int i = 0; i < boneSet->m_numBones; ++i)
+	//	logDebug("bone %d: %s", i, boneSet->m_bones[i].name.c_str());
 }
 
 //

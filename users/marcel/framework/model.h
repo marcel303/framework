@@ -51,11 +51,15 @@ namespace AnimModel
 		int * m_indices;
 		int m_numIndices;
 		
+		GLuint m_vertexArray;
+		GLuint m_indexArray;
+		
 		Mesh();
 		~Mesh();
 		
 		void allocateVB(int numVertices);
 		void allocateIB(int numIndices);
+		void finalize();
 	};
 	
 	class MeshSet
@@ -128,6 +132,7 @@ namespace AnimModel
 	struct AnimTrigger
 	{
 		float time;
+		int loop;
 		std::string actions;
 		Dictionary args;
 	};
@@ -140,6 +145,9 @@ namespace AnimModel
 		AnimKey * m_keys;
 		RotationType m_rotationType;
 		bool m_isAdditive;
+		
+		bool m_rootMotion;
+		int m_loop;
 		std::vector<AnimTrigger> m_triggers;
 		
 		Anim();
@@ -147,7 +155,7 @@ namespace AnimModel
 		
 		void allocate(int numBones, int numKeys, RotationType rotationType, bool isAdditive);
 		bool evaluate(float time, BoneTransform * transforms);
-		void triggerActions(float oldTime, float newTime);
+		void triggerActions(float oldTime, float newTime, int loop);
 	};
 	
 	class AnimSet
@@ -179,6 +187,10 @@ public:
 	AnimModel::MeshSet * meshSet;
 	AnimModel::BoneSet * boneSet;
 	AnimModel::AnimSet * animSet;
+	
+	Mat4x4 meshToObject;
+	
+	std::string rootNode;
 	
 	ModelCacheElem();
 	void free();

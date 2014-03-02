@@ -3,7 +3,8 @@
 #include "image.h"
 #include "internal.h"
 
-Globals g_globals;
+Globals globals;
+
 TextureCache g_textureCache;
 ShaderCache g_shaderCache;
 AnimCache g_animCache;
@@ -293,6 +294,56 @@ static bool loadFileContents(const char * filename, char *& bytes, int & numByte
 	return result;
 }
 
+static bool preprocessShader(const std::string & source, std::string & destination)
+{
+	bool result = true;
+	
+	std::vector<std::string> lines;
+	
+	splitString(source, lines, '\n');
+	
+	for (size_t i = 0; i < lines.size(); ++i)
+	{
+		const std::string & line = lines[i];
+		
+		const char * includeStr = "include ";
+		
+		if (strstr(line.c_str(), includeStr) == line.c_str())
+		{
+			const char * filename = line.c_str() + strlen(includeStr);
+			
+			char * bytes;
+			int numBytes;
+			
+			if (!loadFileContents(filename, bytes, numBytes))
+			{
+				logError("failed to load include file %s", filename);
+				result = false;
+			}
+			else
+			{
+				std::string temp(bytes, numBytes);
+				
+				if (!preprocessShader(temp, destination))
+				{
+					result = false;
+				}
+				
+				delete [] bytes;
+				bytes = 0;
+				numBytes = 0;
+			}
+		}
+		else
+		{
+			destination.append(line);
+			destination.append("\n");
+		}
+	}
+	
+	return result;
+}
+
 static bool loadShader(const char * filename, GLuint & shader, GLuint type)
 {
 	bool result = true;
@@ -306,27 +357,43 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type)
 	}
 	else
 	{
-		shader = glCreateShader(type);
+		std::string source;
+		std::string temp(bytes, numBytes);
 		
-		glShaderSource(shader, 1, (const GLchar**)&bytes, &numBytes);
-		checkErrorGL();
-		
-		delete [] bytes;
-		bytes = 0;
-		numBytes = 0;
-		
-		glCompileShader(shader);
-		checkErrorGL();
-		
-		GLint success = GL_FALSE;
-		
-		glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-		
-		if (success != GL_TRUE)
+		if (!preprocessShader(temp, source))
 		{
 			result = false;
+		}
+		else
+		{
+			//logDebug("shader source: %s", source.c_str());
 			
-			showShaderInfoLog(shader);
+			shader = glCreateShader(type);
+			
+			const GLchar * version = "#version 120\n#define __SHADER__ 1\n";
+			const GLchar * sourceData = (const GLchar*)source.c_str();
+			const GLchar * sources[] = { version, sourceData };
+			
+			glShaderSource(shader, 2, sources, 0);
+			checkErrorGL();
+			
+			delete [] bytes;
+			bytes = 0;
+			numBytes = 0;
+			
+			glCompileShader(shader);
+			checkErrorGL();
+			
+			GLint success = GL_FALSE;
+			
+			glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+			
+			if (success != GL_TRUE)
+			{
+				result = false;
+				
+				showShaderInfoLog(shader);
+			}
 		}
 	}
 	
@@ -481,26 +548,22 @@ void AnimCacheElem::free()
 	m_animMap.clear();
 }
 
-static bool isWhite(char c)
-{
-	return c == '\t' || c == ' ' || c == '\r' || c == '\n';
-}
-
-void splitString(const std::string & str, std::vector<std::string> & result)
+template <typename Policy>
+void splitString(const std::string & str, std::vector<std::string> & result, Policy policy)
 {
 	int start = -1;
 	
 	for (size_t i = 0; i <= str.size(); ++i)
 	{
-		const char c = i < str.size() ? str[i] : ' ';
+		const char c = i < str.size() ? str[i] : policy.getBreakChar();
 		
 		if (start == -1)
 		{
 			// found start
-			if (!isWhite(c))
+			if (!policy.isBreak(c))
 				start = i;
 		}
-		else if (isWhite(c))
+		else if (policy.isBreak(c))
 		{
 			// found end
 			result.push_back(str.substr(start, i - start));
@@ -509,13 +572,49 @@ void splitString(const std::string & str, std::vector<std::string> & result)
 	}
 }
 
+class WhiteSpacePolicy
+{
+public:
+	bool isBreak(char c)
+	{
+		return c == '\t' || c == ' ' || c == '\r' || c == '\n';
+	}
+	char getBreakChar()
+	{
+		return ' ';
+	}
+};
+
+void splitString(const std::string & str, std::vector<std::string> & result)
+{
+	WhiteSpacePolicy policy;
+	
+	splitString<WhiteSpacePolicy>(str, result, policy);
+}
+
+class CharPolicy
+{
+	char C;
+public:
+	CharPolicy(char c)
+	{
+		C = c;
+	}
+	bool isBreak(char c)
+	{
+		return c == C;
+	}
+	char getBreakChar()
+	{
+		return C;
+	}
+};
+
 void splitString(const std::string & str, std::vector<std::string> & result, char c)
 {
-	std::string s = str;
-	for (size_t i = 0; i < s.size(); ++i)
-		if (s[i] == c)
-			s[i] = ' ';
-	splitString(s, result);
+	CharPolicy policy(c);
+	
+	splitString<CharPolicy>(str, result, policy);
 }
 
 void AnimCacheElem::load(const char * filename)
@@ -693,7 +792,7 @@ void AnimCacheElem::load(const char * filename)
 
 int AnimCacheElem::getVersion() const
 {
-	return g_globals.g_resourceVersion;
+	return globals.resourceVersion;
 }
 
 void AnimCache::clear()
@@ -888,7 +987,7 @@ void FontCacheElem::load(const char * filename)
 {
 	free();
 	
-	if (FT_New_Face(g_globals.g_freeType, filename, 0, &face) != 0)
+	if (FT_New_Face(globals.freeType, filename, 0, &face) != 0)
 	{
 		logError("%s: unable to open font", filename);
 		face = 0;

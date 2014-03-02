@@ -147,8 +147,8 @@ bool Framework::init(int argc, char * argv[], int sx, int sy)
 	
 	SDL_WM_SetCaption(windowTitle.c_str(), 0);
 	
-	g_globals.g_displaySize[0] = sx;
-	g_globals.g_displaySize[1] = sy;
+	globals.displaySize[0] = sx;
+	globals.displaySize[1] = sy;
 
 	// enable optional OpenGL debugging
 	
@@ -161,7 +161,7 @@ bool Framework::init(int argc, char * argv[], int sx, int sy)
 	
 	// initialize FreeType
 	
-	if (FT_Init_FreeType(&g_globals.g_freeType) != 0)
+	if (FT_Init_FreeType(&globals.freeType) != 0)
 	{
 		logError("failed to initialize FreeType");
 		return false;
@@ -211,12 +211,12 @@ bool Framework::shutdown()
 	
 	// shut down FreeType
 	
-	if (FT_Done_FreeType(g_globals.g_freeType) != 0)
+	if (FT_Done_FreeType(globals.freeType) != 0)
 	{
 		logError("failed to shut down FreeType");
 		result = false;
 	}
-	g_globals.g_freeType = 0;
+	globals.freeType = 0;
 	
 	glBlendEquation = 0;
 	glClampColor = 0;
@@ -227,7 +227,7 @@ bool Framework::shutdown()
 	
 	// clear globals
 	
-	g_globals = Globals();
+	globals = Globals();
 	
 	// reset self
 	
@@ -260,8 +260,8 @@ void Framework::process()
 	
 	// poll SDL event queue
 	
-	memset(g_globals.g_keyChange, 0, sizeof(g_globals.g_keyChange));
-	memset(g_globals.g_mouseChange, 0, sizeof(g_globals.g_mouseChange));
+	memset(globals.keyChange, 0, sizeof(globals.keyChange));
+	memset(globals.mouseChange, 0, sizeof(globals.mouseChange));
 	
 	SDL_Event e;
 	
@@ -271,8 +271,8 @@ void Framework::process()
 		{
 			if (e.key.keysym.sym >= 0 && e.key.keysym.sym < SDLK_LAST)
 			{
-				g_globals.g_keyDown[e.key.keysym.sym] = e.key.state == SDL_PRESSED;
-				g_globals.g_keyChange[e.key.keysym.sym] = true;
+				globals.keyDown[e.key.keysym.sym] = e.key.state == SDL_PRESSED;
+				globals.keyChange[e.key.keysym.sym] = true;
 			}
 		}
 		else if (e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP)
@@ -280,8 +280,8 @@ void Framework::process()
 			const int index = e.button.button == SDL_BUTTON_LEFT ? 0 : e.button.button == SDL_BUTTON_RIGHT ? 1 : -1;
 			if (index >= 0)
 			{
-				g_globals.g_mouseDown[index] = e.button.state == SDL_PRESSED;
-				g_globals.g_mouseChange[index] = true;
+				globals.mouseDown[index] = e.button.state == SDL_PRESSED;
+				globals.mouseChange[index] = true;
 			}
 		}
 		else if (e.type == SDL_MOUSEMOTION)
@@ -413,7 +413,7 @@ void Framework::reloadCaches()
 	g_glyphCache.clear();
 	g_uiCache.reload();
 	
-	g_globals.g_resourceVersion++;
+	globals.resourceVersion++;
 	
 	for (SpriteSet::iterator i = m_sprites.begin(); i != m_sprites.end(); ++i)
 	{
@@ -501,29 +501,34 @@ void Framework::beginDraw(int r, int g, int b, int a)
 	
 	// initialize viewport and OpenGL matrices
 	
-	glViewport(0, 0, g_globals.g_displaySize[0] / minification, g_globals.g_displaySize[1] / minification);
-
-	glMatrixMode(GL_PROJECTION);
-	{
-		glLoadIdentity();
-		
-		// flip Y axis so the vertical axis runs top to bottom
-		glScalef(1.f, -1.f, 1.f);
-		
-		// convert from (0,0),(1,1) to (-1,-1),(+1+1)
-		glTranslatef(-1.f, -1.f, 0.f);
-		glScalef(2.f, 2.f, 1.f);
-		
-		// convert from (0,0),(sx,sy) to (0,0),(1,1)
-		glScalef(1.f/g_globals.g_displaySize[0], 1.f/g_globals.g_displaySize[1], 1.f);
-	}
+	glViewport(0, 0, globals.displaySize[0] / minification, globals.displaySize[1] / minification);
 	
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
+	applyTransform();
 }
 
 void Framework::endDraw()
 {
+	// process debug draw
+	
+	setTransform(TRANSFORM_SCREEN);
+	setBlend(BLEND_ALPHA);
+	
+	for (int i = 0; i < globals.debugDraw.numLines; ++i)
+	{
+		globals.font = globals.debugDraw.lines[i].font;
+		setColor(globals.debugDraw.lines[i].color);
+		
+		drawText(
+			globals.debugDraw.lines[i].x,
+			globals.debugDraw.lines[i].y,
+			globals.debugDraw.lines[i].size,
+			globals.debugDraw.lines[i].alignX,
+			globals.debugDraw.lines[i].alignY,
+			globals.debugDraw.lines[i].text);
+	}
+	
+	globals.debugDraw.numLines = 0;
+	
 	// check for errors
 	
 	checkErrorGL();
@@ -844,6 +849,16 @@ void Shader::load(const char * filename)
 GLuint Shader::getProgram() const
 {
 	return m_shader ? m_shader->program : 0;
+}
+
+GLint Shader::getImmediate(const char * name)
+{
+	return glGetUniformLocation(getProgram(), name);
+}
+
+GLint Shader::getAttribute(const char * name)
+{
+	return glGetAttribLocation(getProgram(), name);
 }
 
 #define SET_UNIFORM(name, op) \
@@ -1554,7 +1569,7 @@ bool Mouse::isDown(BUTTON button) const
 	const int index = getButtonIndex(button);
 	if (index < 0)
 		return false;
-	return g_globals.g_mouseDown[index];
+	return globals.mouseDown[index];
 }
 
 bool Mouse::wentDown(BUTTON button) const
@@ -1562,7 +1577,7 @@ bool Mouse::wentDown(BUTTON button) const
 	const int index = getButtonIndex(button);
 	if (index < 0)
 		return false;
-	return isDown(button) && g_globals.g_mouseChange[index];
+	return isDown(button) && globals.mouseChange[index];
 }
 
 bool Mouse::wentUp(BUTTON button) const
@@ -1570,7 +1585,7 @@ bool Mouse::wentUp(BUTTON button) const
 	const int index = getButtonIndex(button);
 	if (index < 0)
 		return false;
-	return !isDown(button) && g_globals.g_mouseChange[index];
+	return !isDown(button) && globals.mouseChange[index];
 }
 
 void Mouse::showCursor(bool enabled)
@@ -1582,17 +1597,17 @@ void Mouse::showCursor(bool enabled)
 
 bool Keyboard::isDown(SDLKey key) const
 {
-	return g_globals.g_keyDown[key];
+	return globals.keyDown[key];
 }
 
 bool Keyboard::wentDown(SDLKey key) const
 {
-	return isDown(key) && g_globals.g_keyChange[key];
+	return isDown(key) && globals.keyChange[key];
 }
 
 bool Keyboard::wentUp(SDLKey key) const
 {
-	return !isDown(key) && g_globals.g_keyChange[key];
+	return !isDown(key) && globals.keyChange[key];
 }
 
 // -----
@@ -1867,21 +1882,31 @@ Dictionary & Ui::operator[](const char * name)
 
 // -----
 
-static const int maxStackSize = 32;
-static Surface * stack[maxStackSize];
-static int stackSize = 0;
+static const int kMaxSurfaceStackSize = 32;
+static Surface * surfaceStack[kMaxSurfaceStackSize];
+static int surfaceStackSize = 0;
 
-static void setSurface(Surface * surface)
+void setTransform(TRANSFORM transform)
 {
-	if (surface)
-	{
-		glBindFramebuffer(GL_FRAMEBUFFER, surface->getFramebuffer());
-		glViewport(0, 0, surface->getWidth() / framework.minification, surface->getHeight() / framework.minification);
+	globals.transform = transform;
 	
+	applyTransform();
+}
+
+void applyTransform()
+{
+	// calculate screen matrix (we need it to transform vertices to screen space)
+	{
 		glMatrixMode(GL_PROJECTION);
+		
+		Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : 0;
+		const float sx = surface ? surface->getWidth() : globals.displaySize[0];
+		const float sy = surface ? surface->getHeight() : globals.displaySize[1];
+		
+		glPushMatrix();
 		{
 			glLoadIdentity();
-		
+			
 			// flip Y axis so the vertical axis runs top to bottom
 			glScalef(1.f, -1.f, 1.f);
 		
@@ -1890,57 +1915,117 @@ static void setSurface(Surface * surface)
 			glScalef(2.f, 2.f, 1.f);
 			
 			// convert from (0,0),(sx,sy) to (0,0),(1,1)
-			glScalef(1.f / surface->getWidth(), 1.f / surface->getHeight(), 1.f);
+			glScalef(1.f / sx, 1.f / sy, 1.f);
+			
+			// capture transform
+			glGetFloatv(GL_PROJECTION_MATRIX, globals.transformScreen.m_v);
+			checkErrorGL();
 		}
+		glPopMatrix();
 	}
-	else
-	{
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glViewport(0, 0, g_globals.g_displaySize[0] / framework.minification, g_globals.g_displaySize[1] / framework.minification);
 	
-		glMatrixMode(GL_PROJECTION);
+	// apply current transform
+	
+	glMatrixMode(GL_PROJECTION);
+	
+	switch (globals.transform)
+	{
+		case TRANSFORM_SCREEN:
 		{
+			glLoadMatrixf(globals.transformScreen.m_v);
+			break;
+		}
+		case TRANSFORM_2D:
+		{
+			glLoadMatrixf(globals.transform2d.m_v);
+			break;
+		}
+		case TRANSFORM_3D:
+		{
+			glLoadMatrixf(globals.transform3d.m_v);
+			break;
+		}
+		default:
+		{
+			assert(false);
 			glLoadIdentity();
-		
-			// flip Y axis so the vertical axis runs top to bottom
-			glScalef(1.f, -1.f, 1.f);
-		
-			// convert from (0,0),(1,1) to (-1,-1),(+1+1)
-			glTranslatef(-1.f, -1.f, 0.f);
-			glScalef(2.f, 2.f, 1.f);
-			
-			// convert from (0,0),(sx,sy) to (0,0),(1,1)
-			glScalef(1.f / g_globals.g_displaySize[0], 1.f / g_globals.g_displaySize[1], 1.f);
+			break;
 		}
 	}
 	
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
+}
 
-	//GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT0 };
-	//glDrawBuffers(1, drawBuffers);
+void setTransform2d(const Mat4x4 & transform)
+{
+	globals.transform2d = transform;
+}
+
+void setTransform3d(const Mat4x4 & transform)
+{
+	globals.transform3d = transform;
+}
+
+Vec2 transformToScreen(const Vec3 & v)
+{
+	Mat4x4 matP;
+	Mat4x4 matM;
+	
+	glGetFloatv(GL_PROJECTION_MATRIX, matP.m_v);
+	glGetFloatv(GL_MODELVIEW_MATRIX, matM.m_v);
+	checkErrorGL();
+	
+	// from current transfor to view
+	
+	Vec4 t = matP * matM * Vec4(v[0], v[1], v[2], 1.f);
+	
+	// perspective divide
+	
+	if (t[3] != 0.f)
+		t /= t[3];
+	
+	// and back to screen coordinates
+	
+	Mat4x4 viewToScreen = globals.transformScreen.CalcInv();
+	
+	Vec3 s = viewToScreen * Vec3(t[0], t[1], t[2]);
+	
+	return Vec2(s[0], s[1]);
+}
+
+static void setSurface(Surface * surface)
+{
+	const GLuint framebuffer = surface ? surface->getFramebuffer() : 0;
+	const float sx = surface ? surface->getWidth() : globals.displaySize[0];
+	const float sy = surface ? surface->getHeight() : globals.displaySize[1];
+	
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+	glViewport(0, 0, sx / framework.minification, sy / framework.minification);
+	
+	applyTransform();
 }
 
 void pushSurface(Surface * surface)
 {
-	fassert(stackSize < maxStackSize);
-	stack[stackSize++] = surface;
+	fassert(surfaceStackSize < kMaxSurfaceStackSize);
+	surfaceStack[surfaceStackSize++] = surface;
 	setSurface(surface);
 	checkErrorGL();
 }
 
 void popSurface()
 {
-	fassert(stackSize > 0);
-	stack[--stackSize] = 0;
-	Surface * surface = stackSize ? stack[stackSize - 1] : 0;
+	fassert(surfaceStackSize > 0);
+	surfaceStack[--surfaceStackSize] = 0;
+	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : 0;
 	setSurface(surface);
 	checkErrorGL();
 }
 
 void setDrawRect(int x, int y, int sx, int sy)
 {
-	y = g_globals.g_displaySize[1] - y - sy;
+	y = globals.displaySize[1] - y - sy;
 	
 	x /= framework.minification;
 	y /= framework.minification;
@@ -1996,7 +2081,7 @@ void setBlend(BLEND_MODE blendMode)
 
 void setColorMode(COLOR_MODE colorMode)
 {
-	g_globals.g_colorMode = colorMode;
+	globals.colorMode = colorMode;
 	
 	switch (colorMode)
 	{
@@ -2039,12 +2124,17 @@ void setColorf(float r, float g, float b, float a, float rgbMul)
 	b = clamp(b, 0.f, 1.f);
 	a = clamp(a, 0.f, 1.f);
 	
+	globals.color.r = r;
+	globals.color.g = g;
+	globals.color.b = b;
+	globals.color.a = a;
+	
 	glColor4f(r, g, b, a);
 }
 
 void setGradientf(float x1, float y1, const Color & color1, float x2, float y2, const Color & color2)
 {
-	g_globals.g_gradient.set(x1, y1, color1, x2, y2, color2);
+	globals.gradient.set(x1, y1, color1, x2, y2, color2);
 }
 
 void setGradientf(float x1, float y1, float r1, float g1, float b1, float a1, float x2, float y2, float r2, float g2, float b2, float a2)
@@ -2054,7 +2144,7 @@ void setGradientf(float x1, float y1, float r1, float g1, float b1, float a1, fl
 
 void setFont(Font & font)
 {
-	g_globals.g_font = font.getFont();
+	globals.font = font.getFont();
 }
 
 void setShader(Shader & shader)
@@ -2108,10 +2198,10 @@ void drawRectGradient(float x1, float y1, float x2, float y2)
 
 	const Color color[4] =
 	{
-		g_globals.g_gradient.eval(x1, y1),
-		g_globals.g_gradient.eval(x2, y1),
-		g_globals.g_gradient.eval(x2, y2),
-		g_globals.g_gradient.eval(x1, y2)
+		globals.gradient.eval(x1, y1),
+		globals.gradient.eval(x2, y1),
+		globals.gradient.eval(x2, y2),
+		globals.gradient.eval(x1, y2)
 	};
 	
 	glBegin(GL_QUADS);
@@ -2226,16 +2316,41 @@ void drawText(float x, float y, int size, float alignX, float alignY, const char
 	glPushMatrix();
 	{
 		float sx, sy;
-		measureText(g_globals.g_font->face, size, text, sx, sy);
+		measureText(globals.font->face, size, text, sx, sy);
 		
 		x += sx * (alignX - 1.f) / 2.f;
 		y += sy * (alignY - 1.f) / 2.f;
 		
 		glTranslatef(x, y, 0.f);
 		
-		drawTextInternal(g_globals.g_font->face, size, text);
+		drawTextInternal(globals.font->face, size, text);
 	}
 	glPopMatrix();
+}
+
+void debugDrawText(float x, float y, int size, float alignX, float alignY, const char * format, ...)
+{
+	if (globals.debugDraw.numLines < globals.debugDraw.kMaxLines)
+	{
+		globals.debugDraw.lines[globals.debugDraw.numLines].font = globals.font;
+		globals.debugDraw.lines[globals.debugDraw.numLines].color = globals.color;
+		
+		globals.debugDraw.lines[globals.debugDraw.numLines].x = x;
+		globals.debugDraw.lines[globals.debugDraw.numLines].y = y;
+		globals.debugDraw.lines[globals.debugDraw.numLines].size = size;
+		globals.debugDraw.lines[globals.debugDraw.numLines].alignX = alignX;
+		globals.debugDraw.lines[globals.debugDraw.numLines].alignY = alignY;
+		
+		va_list args;
+		va_start(args, format);
+		vsprintf_s(
+			globals.debugDraw.lines[globals.debugDraw.numLines].text,
+			globals.debugDraw.kMaxLineSize,
+			format, args);
+		va_end(args);
+		
+		globals.debugDraw.numLines++;
+	}
 }
 
 void changeDirectory(const char * path)

@@ -1692,7 +1692,11 @@ namespace AnimModel
 		MeshSet * meshSet = new MeshSet();
 		meshSet->allocate(meshes2.size());
 		for (size_t i = 0; i < meshes2.size(); ++i)
+		{
+			meshes2[i]->finalize();
+			
 			meshSet->m_meshes[i] = meshes2[i];
+		}
 		
 		return meshSet;
 	}

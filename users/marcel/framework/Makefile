@@ -5,10 +5,12 @@ CFLAGS = -Wall -ffast-math -O3 -msse3
 CFLAGS += -I./ -I./AudioStream/
 CFLAGS += `freetype-config --cflags` -DNO_SDL_GLEXT -I../../../libgg
 LFLAGS = `freetype-config --libs` `sdl-config --static-libs` -framework OpenAL -lFreeImage -lstdc++ -lGLEW
-SAMPLES = examples/gui.exe examples/model.exe examples/sounds.exe examples/sprites.exe
+#SAMPLES = examples/gui.exe examples/model.exe examples/sounds.exe examples/sprites.exe
+SAMPLES = examples/model.exe
 
-all : $(EXE)
-	./framework devmode
+all : $(EXE) samples
+	#./framework devmode
+	./examples/model.exe
 
 $(EXE) : example.o $(OBJS)
 	gcc -o $(EXE) example.o $(OBJS) $(LFLAGS)

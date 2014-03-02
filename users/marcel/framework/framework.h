@@ -86,6 +86,13 @@ enum TEXTURE_FILTER
 	FILTER_LINEAR
 };
 
+enum TRANSFORM
+{
+	TRANSFORM_SCREEN, // pixel based coordinate syste
+	TRANSFORM_2D,     // use transform set through setTransform2d
+	TRANSFORM_3D      // use transform set through setTransform3d
+};
+
 // forward declations
 
 class Color;
@@ -222,7 +229,10 @@ public:
 	
 	void load(const char * filename);
 	GLuint getProgram() const;
-
+	
+	GLint getImmediate(const char * name);
+	GLint getAttribute(const char * name);
+	
 	void setImmediate(const char * name, float x);	
 	void setImmediate(const char * name, float x, float y);
 	void setImmediate(const char * name, float x, float y, float z);
@@ -382,6 +392,7 @@ public:
 	bool animIsPaused;
 	float animTime;
 	int animLoop;
+	int animLoopCount;
 	float animSpeed;
 	Vec3 animRootMotion;
 	
@@ -575,6 +586,12 @@ public:
 
 // drawing
 
+void setTransform(TRANSFORM transform);
+void applyTransform();
+void setTransform2d(const Mat4x4 & transform);
+void setTransform3d(const Mat4x4 & transform);
+Vec2 transformToScreen(const Vec3 & v);
+
 void pushSurface(Surface * surface);
 void popSurface();
 void setDrawRect(int x, int y, int sx, int sy);
@@ -596,6 +613,8 @@ void drawRect(float x1, float y1, float x2, float y2);
 void drawRectLine(float x1, float y1, float x2, float y2);
 void drawRectGradient(float x1, float y1, float x2, float y2);
 void drawText(float x, float y, int size, float alignX, float alignY, const char * format, ...);
+
+void debugDrawText(float x, float y, int size, float alignX, float alignY, const char * format, ...);
 
 // utility
 
