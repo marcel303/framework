@@ -12,9 +12,9 @@
 #include "../framework/model.h"
 #include "../framework/model_ogre.h"
 
-using namespace Model;
+using namespace AnimModel;
 
-AnimModel * loadModel(const char * meshFileName, const char * skeletonFileName)
+Model * loadModel(const char * meshFileName, const char * skeletonFileName)
 {
 	LoaderOgreXML loader;
 	
@@ -22,7 +22,7 @@ AnimModel * loadModel(const char * meshFileName, const char * skeletonFileName)
 	MeshSet * meshSet = loader.loadMeshSet(meshFileName, boneSet);
 	AnimSet * animSet = loader.loadAnimSet(skeletonFileName, boneSet);
 	
-	AnimModel * model = new AnimModel(meshSet, boneSet, animSet);
+	Model * model = new Model(meshSet, boneSet, animSet);
 	
 	return model;
 }
@@ -65,7 +65,7 @@ int main(int argc, char * argv[])
 	
 	for (int i = 0; i < 1; ++i)
 	{
-		AnimModel * model = 0;
+		Model * model = 0;
 		
 		if (modelId == 0)
 			model = loadModel("mesh.xml", "skeleton.xml");
@@ -85,63 +85,36 @@ int main(int argc, char * argv[])
 				if (e.type == SDL_KEYDOWN)
 				{
 					if (e.key.keysym.sym == SDLK_w)
-					{
 						wireframe = !wireframe;
-					}
 					else if (e.key.keysym.sym == SDLK_r)
-					{
 						rotate = !rotate;
-					}
 					else if (e.key.keysym.sym == SDLK_b)
-					{
 						drawBones = !drawBones;
-					}
 					else if (e.key.keysym.sym == SDLK_n)
-					{
 						drawNormals = !drawNormals;
-					}
 					else if (e.key.keysym.sym == SDLK_l)
-					{
 						loop = !loop;
-					}
 					else if (e.key.keysym.sym == SDLK_p)
-					{
 						autoPlay = !autoPlay;
-					}
 					else if (e.key.keysym.sym == SDLK_i)
-					{
 						light = !light;
-					}
 					else if (e.key.keysym.sym == SDLK_SPACE)
-					{
 						startRandomAnimation = true;
-					}
 					else if (e.key.keysym.sym == SDLK_UP)
-					{
 						model->animSpeed *= 2.f;
-					}
 					else if (e.key.keysym.sym == SDLK_DOWN)
-					{
 						model->animSpeed /= 2.f;
-					}
 					else if (e.key.keysym.sym == SDLK_ESCAPE)
-					{
 						stop = true;
-					}
 				}
 			}
 			
-			if (autoPlay && model->animIsDone)
-			{
+			if (autoPlay && !model->animIsActive)
 				startRandomAnimation = true;
-			}
 			
 			if (startRandomAnimation)
 			{
-				std::vector<std::string> names;
-				
-				for (std::map<std::string, Anim*>::iterator i = model->m_animations->m_animations.begin(); i != model->m_animations->m_animations.end(); ++i)
-					names.push_back(i->first);
+				std::vector<std::string> names = model->getAnimList();
 				
 				const size_t index = rand() % names.size();
 				const char * name = names[index].c_str();
@@ -153,7 +126,7 @@ int main(int argc, char * argv[])
 				{
 					int currentKey = 0;
 					
-					for (int i = 0; i < model->m_bones->m_numBones; ++i)
+					for (int i = 0; i < model->m_model->boneSet->m_numBones; ++i)
 					{
 						const int numKeys = model->currentAnim->m_numKeys[i];
 						
@@ -172,7 +145,7 @@ int main(int argc, char * argv[])
 				angle += 45.f * timeStep;
 			}
 			
-			model->process(timeStep);
+			model->updateAnimation(timeStep);
 			
 			glClearColor(0, 0, 0, 0);
 			glClearDepth(0);
