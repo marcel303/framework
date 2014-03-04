@@ -53,6 +53,7 @@ namespace AnimModel
 		
 		GLuint m_vertexArray;
 		GLuint m_indexArray;
+		GLuint m_vertexArrayObject;
 		
 		Mesh();
 		~Mesh();

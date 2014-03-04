@@ -3,6 +3,7 @@
 #include <GL/glew.h>
 #include <SDL/SDL.h>
 #include <SDL/SDL_opengl.h>
+#include "data/engine/ShaderCommon.txt"
 #include "framework.h"
 #include "internal.h"
 #include "Mat4x4.h"
@@ -12,10 +13,40 @@
 
 #define DEBUG_TRS 0
 
+template <typename T>
+static inline T pad(T value, int align)
+{
+	return (value + align - 1) & (~(align - 1));
+}
+
+#define ALIGNED_ALLOCA(size, align) reinterpret_cast<void*>(pad(reinterpret_cast<uintptr_t>(alloca(size + align - 1)), align))
+
 ModelCache g_modelCache;
 
 namespace AnimModel
 {
+	struct VsInput
+	{
+		int id;
+		int components;
+		int type;
+		bool normalize;
+		int offset;
+	};
+	
+	static const VsInput vsInputs[] =
+	{
+		{ VS_POSITION,      3, GL_FLOAT,         0, offsetof(Vertex, px)          },
+		{ VS_NORMAL,        3, GL_FLOAT,         0, offsetof(Vertex, nx)          },
+		{ VS_COLOR,         4, GL_FLOAT,         0, offsetof(Vertex, cx)          },
+		{ VS_TEXCOORD,      2, GL_FLOAT,         0, offsetof(Vertex, tx)          },
+		{ VS_BLEND_INDICES, 4, GL_UNSIGNED_BYTE, 0, offsetof(Vertex, boneIndices) },
+		{ VS_BLEND_WEIGHTS, 4, GL_UNSIGNED_BYTE, 1, offsetof(Vertex, boneWeights) }
+	};
+	const int numVsInputs = sizeof(vsInputs) / sizeof(vsInputs[0]);
+	
+	//
+	
 	Mesh::Mesh()
 	{
 		m_vertices = 0;
@@ -26,12 +57,17 @@ namespace AnimModel
 		
 		m_vertexArray = 0;
 		m_indexArray = 0;
+		
+		m_vertexArrayObject = 0;
 	}
 	
 	Mesh::~Mesh()
 	{
-		allocateVB(0);
-		allocateIB(0);
+		if (m_vertexArrayObject)
+		{
+			glDeleteVertexArrays(1, &m_vertexArrayObject);
+			m_vertexArrayObject = 0;
+		}
 		
 		if (m_vertexArray)
 		{
@@ -44,6 +80,9 @@ namespace AnimModel
 			glDeleteBuffers(1, &m_indexArray);
 			m_indexArray = 0;
 		}
+		
+		allocateVB(0);
+		allocateIB(0);
 	}
 	
 	void Mesh::allocateVB(int numVertices)
@@ -90,22 +129,57 @@ namespace AnimModel
 		glBindBuffer(GL_ARRAY_BUFFER, m_vertexArray);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * m_numVertices, m_vertices, GL_STATIC_DRAW);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		checkErrorGL();
 		
 		glGenBuffers(1, &m_indexArray);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexArray);
+		checkErrorGL();
 		if (m_numVertices < 65536)
 		{
 			unsigned short * indices = new unsigned short[m_numIndices];
 			for (int i = 0; i < m_numIndices; ++i)
 				indices[i] = m_indices[i];
 			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(short) * m_numIndices, indices, GL_STATIC_DRAW);
+			checkErrorGL();
 			delete [] indices;
 		}
 		else
 		{
 			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(int) * m_numIndices, m_indices, GL_STATIC_DRAW);
+			checkErrorGL();
 		}
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+		checkErrorGL();
+		
+	/*
+		glGenVertexArrays(1, &m_vertexArrayObject);
+		checkErrorGL();
+		
+		glBindVertexArray(m_vertexArrayObject);
+		checkErrorGL();
+		{
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexArray);
+			checkErrorGL();
+			
+			glBindBuffer(GL_ARRAY_BUFFER, m_vertexArray);
+			checkErrorGL();
+			
+			for (int i = 0; i < numVsInputs; ++i)
+			{
+				glVertexAttribPointer(vsInputs[i].id, vsInputs[i].components, vsInputs[i].type, vsInputs[i].normalize, sizeof(Vertex), (void*)vsInputs[i].offset);
+				glEnableVertexAttribArray(vsInputs[i].id);
+				checkErrorGL();
+			}
+		}
+		glBindVertexArray(0);
+		checkErrorGL();
+	*/
+	
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+		checkErrorGL();
+		
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		checkErrorGL();
 	}
 	
 	//
@@ -695,9 +769,12 @@ void Model::drawEx(Vec3 position, Vec3 axis, float angle, float scale, int drawF
 	matrix(3, 2) = z;
 	matrix(3, 3) = 1.f;
 	
-	for (int i = 0; i < 3; ++i)
-		for (int j = 0; j < 3; ++j)
-			matrix(i, j) *= scale;
+	if (scale != 1.f)
+	{
+		for (int i = 0; i < 3; ++i)
+			for (int j = 0; j < 3; ++j)
+				matrix(i, j) *= scale;
+	}
 	
 	drawEx(matrix, drawFlags);
 }
@@ -706,7 +783,7 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 {
 	// calculate transforms in local bone space
 	
-	BoneTransform * transforms = (BoneTransform*)alloca(sizeof(BoneTransform) * m_model->boneSet->m_numBones);
+	BoneTransform * transforms = (BoneTransform*)ALIGNED_ALLOCA(sizeof(BoneTransform) * m_model->boneSet->m_numBones, 16);
 	
 	for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
 	{
@@ -740,7 +817,7 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 	
 	// convert translation / rotation pairs into matrices
 	
-	Mat4x4 * localMatrices = (Mat4x4*)alloca(sizeof(Mat4x4) * m_model->boneSet->m_numBones);
+	Mat4x4 * localMatrices = (Mat4x4*)ALIGNED_ALLOCA(sizeof(Mat4x4) * m_model->boneSet->m_numBones, 16);
 	
 	for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
 	{
@@ -764,7 +841,7 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 	
 	// calculate the bone hierarchy in world space
 	
-	Mat4x4 * worldMatrices = (Mat4x4*)alloca(sizeof(Mat4x4) * m_model->boneSet->m_numBones);
+	Mat4x4 * worldMatrices = (Mat4x4*)ALIGNED_ALLOCA(sizeof(Mat4x4) * m_model->boneSet->m_numBones, 16);
 	
 	if (m_model->boneSet->m_bonesAreSorted)
 	{
@@ -799,7 +876,7 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 		}
 	}
 	
-	Mat4x4 * globalMatrices = (Mat4x4*)alloca(sizeof(Mat4x4) * m_model->boneSet->m_numBones);
+	Mat4x4 * globalMatrices = (Mat4x4*)ALIGNED_ALLOCA(sizeof(Mat4x4) * m_model->boneSet->m_numBones, 16);
 	
 	for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
 	{
@@ -838,14 +915,11 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 		
 		for (int i = 0; i < m_model->meshSet->m_numMeshes; ++i)
 		{
-			const Mesh * mesh = m_model->meshSet->m_meshes[i];
+			// todo: hide meshes that shouldn't render
+			//if (i != 0)
+			//	continue;
 			
-			const GLint position = shader.getAttribute("in_position");
-			const GLint normal = shader.getAttribute("in_normal");
-			const GLint color = shader.getAttribute("in_color");
-			const GLint texcoord = shader.getAttribute("in_texcoord");
-			const GLint boneIndices = shader.getAttribute("in_skinningBlendIndices");
-			const GLint boneWeights = shader.getAttribute("in_skinningBlendWeights");
+			const Mesh * mesh = m_model->meshSet->m_meshes[i];
 			
 			// bind vertex arrays
 			
@@ -857,64 +931,15 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->m_indexArray);
 			checkErrorGL();
 			
-			if (position != -1)
+			for (int i = 0; i < numVsInputs; ++i)
 			{
-				glVertexAttribPointer(position, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, px));
-				glEnableVertexAttribArray(position);
-				checkErrorGL();
-			}
-			
-			if (normal != -1)
-			{
-				glVertexAttribPointer(normal, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, nx));
-				glEnableVertexAttribArray(normal);
-				checkErrorGL();
-			}
-			
-			if (color != -1)
-			{
-				glVertexAttribPointer(color, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, cx));
-				glEnableVertexAttribArray(color);
-				checkErrorGL();
-			}
-			
-			if (texcoord != -1)
-			{
-				glVertexAttribPointer(texcoord, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, tx));
-				glEnableVertexAttribArray(texcoord);
-				checkErrorGL();
-			}
-			
-			if (boneIndices != -1)
-			{
-				glVertexAttribPointer(boneIndices, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, boneIndices));
-				glEnableVertexAttribArray(boneIndices);
-				checkErrorGL();
-			}
-			
-			if (boneWeights != -1)
-			{
-				glVertexAttribPointer(boneWeights, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), (void*)offsetof(Vertex, boneWeights));
-				glEnableVertexAttribArray(boneWeights);
+				glVertexAttribPointer(vsInputs[i].id, vsInputs[i].components, vsInputs[i].type, vsInputs[i].normalize, sizeof(Vertex), (void*)vsInputs[i].offset);
+				glEnableVertexAttribArray(vsInputs[i].id);
 				checkErrorGL();
 			}
 			
 			GLenum indexType = mesh->m_numVertices < 65536 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
 			glDrawElements(GL_TRIANGLES, mesh->m_numIndices, indexType, 0);
-			checkErrorGL();
-			
-			if (position != -1)
-				glDisableVertexAttribArray(position);
-			if (normal != -1)
-				glDisableVertexAttribArray(normal);
-			if (color != -1)
-				glDisableVertexAttribArray(color);
-			if (texcoord != -1)
-				glDisableVertexAttribArray(texcoord);
-			if (boneIndices != -1)
-				glDisableVertexAttribArray(boneIndices);
-			if (boneWeights != -1)
-				glDisableVertexAttribArray(boneWeights);
 			checkErrorGL();
 			
 			glBindBuffer(GL_ARRAY_BUFFER, 0);

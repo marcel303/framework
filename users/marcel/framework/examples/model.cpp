@@ -151,7 +151,7 @@ int main(int argc, char * argv[])
 		const float aspect = 1.f;
 		
 		Mat4x4 transform3d;
-		transform3d.MakePerspectiveGL(fov, aspect, .1f, +1000.f);
+		transform3d.MakePerspectiveGL(fov, aspect, .1f, +2000.f);
 		setTransform3d(transform3d);
 		
 		framework.beginDraw(31, 0, 0, 0);
@@ -170,7 +170,7 @@ int main(int argc, char * argv[])
 			
 			glPushMatrix();
 			{
-				glTranslatef(0.f, -100.f, 200.f);
+				glTranslatef(0.f, -100.f, 600.f);
 				glRotatef(angle, 0.f, 1.f, 0.f);
 				
 				setBlend(BLEND_OPAQUE);
@@ -188,7 +188,7 @@ int main(int argc, char * argv[])
 							Model * model = models[CoordKey(x, y, z)];
 							model->x = x * 200.f;
 							model->y = y * 200.f;
-							model->z = 300.f;
+							model->z = 0.f;
 							model->draw(drawFlags);
 						}
 					}

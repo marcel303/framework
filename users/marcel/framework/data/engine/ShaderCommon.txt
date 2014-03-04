@@ -15,7 +15,7 @@ class vec3
 public:
 	vec3() { }
 	vec3(float _x, float _y, float _z) : x(_x), y(_y), z(_z) { }
-	float x, y, z, __unused;
+	float x, y, z, _;
 };
 
 class vec4
@@ -33,3 +33,10 @@ public:
 };
 
 #endif
+
+#define VS_POSITION      0
+#define VS_NORMAL        1
+#define VS_COLOR         2
+#define VS_TEXCOORD      3
+#define VS_BLEND_INDICES 4
+#define VS_BLEND_WEIGHTS 5

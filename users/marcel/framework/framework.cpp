@@ -138,7 +138,7 @@ bool Framework::init(int argc, char * argv[], int sx, int sy)
 		return false;
 	}
 
-	log("using GLEW %s", glewGetString(GLEW_VERSION));
+	log("using OpenGL %s, GLEW %s", glGetString(GL_VERSION), glewGetString(GLEW_VERSION));
 	
 	if (!GLEW_VERSION_3_0)
 	{
