@@ -956,10 +956,10 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 		}
 	}
 	
+	clearShader();
+	
 	if (drawFlags & DrawNormals)
 	{
-		clearShader();
-		
 		for (int i = 0; i < m_model->meshSet->m_numMeshes; ++i)
 		{
 			const Mesh * mesh = m_model->meshSet->m_meshes[i];
@@ -1002,8 +1002,6 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 	
 	if (drawFlags & DrawBones)
 	{
-		clearShader();
-		
 		// bone to object matrix translation
 		glDisable(GL_DEPTH_TEST);
 		glColor3ub(127, 127, 127);
@@ -1038,8 +1036,6 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 	
 	if (drawFlags & DrawPoseMatrices)
 	{
-		clearShader();
-		
 		// object to bone matrix translation
 		glDisable(GL_DEPTH_TEST);
 		glColor3ub(127, 127, 127);
