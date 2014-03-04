@@ -180,6 +180,11 @@ namespace AnimModel
 		
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		checkErrorGL();
+		
+		if (!m_material.shader.isValid())
+		{
+			m_material.shader = Shader("engine/BasicSkinned");
+		}
 	}
 	
 	//
@@ -889,37 +894,38 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 	
 	if (drawFlags & DrawMesh)
 	{
-		// set uniform constants for skinning matrices
-		
-		Shader shader("engine/BasicSkinned"); // fixme!
-		setShader(shader);
-		
-		const GLint boneMatrices = shader.getImmediate("skinningMatrices");
-		
-		if (boneMatrices != -1)
-		{
-			glUniformMatrix4fv(boneMatrices, m_model->boneSet->m_numBones, GL_FALSE, (GLfloat*)globalMatrices);
-			checkErrorGL();
-		}
-		
-		const GLint drawColor = shader.getImmediate("drawColor");
-		
-		if (drawColor != -1)
-		{
-			glUniform4f(drawColor,
-				drawFlags & DrawColorTexCoords,
-				drawFlags & DrawColorNormals,
-				drawFlags & DrawColorBlendIndices,
-				drawFlags & DrawColorBlendWeights);
-		}
-		
 		for (int i = 0; i < m_model->meshSet->m_numMeshes; ++i)
 		{
 			// todo: hide meshes that shouldn't render
-			//if (i != 0)
-			//	continue;
+			if (i != 0)
+				continue;
 			
-			const Mesh * mesh = m_model->meshSet->m_meshes[i];
+			Mesh * mesh = m_model->meshSet->m_meshes[i];
+			Shader & shader = mesh->m_material.shader;
+			
+			setShader(shader);
+			
+			// todo: use constant locations for skinningMatrices and drawColor, and move this setting to outside of the loop
+			// set uniform constants for skinning matrices
+			
+			const GLint boneMatrices = shader.getImmediate("skinningMatrices");
+			
+			if (boneMatrices != -1)
+			{
+				glUniformMatrix4fv(boneMatrices, m_model->boneSet->m_numBones, GL_FALSE, (GLfloat*)globalMatrices);
+				checkErrorGL();
+			}
+			
+			const GLint drawColor = shader.getImmediate("drawColor");
+			
+			if (drawColor != -1)
+			{
+				glUniform4f(drawColor,
+					drawFlags & DrawColorTexCoords,
+					drawFlags & DrawColorNormals,
+					drawFlags & DrawColorBlendIndices,
+					drawFlags & DrawColorBlendWeights);
+			}
 			
 			// bind vertex arrays
 			
@@ -958,44 +964,31 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 		{
 			const Mesh * mesh = m_model->meshSet->m_meshes[i];
 			
-			std::vector<Vec3> positions;
-			std::vector<Vec3> normals;
-			
-			positions.resize(mesh->m_numVertices);
-			normals.resize(mesh->m_numVertices);
-			
-			for (int j = 0; j < mesh->m_numVertices; ++j)
-			{
-				const Vertex & vertex = mesh->m_vertices[j];
-				
-				// -- software vertex blend (soft skinned) --
-				Vec3 p(0.f, 0.f, 0.f);
-				Vec3 n(0.f, 0.f, 0.f);
-				for (int b = 0; b < 4; ++b)
-				{
-					if (vertex.boneWeights[b] == 0)
-						continue;
-					const int boneIndex = vertex.boneIndices[b];
-					const float boneWeight = vertex.boneWeights[b] / 255.f;						
-					const Mat4x4 & globalMatrix = globalMatrices[boneIndex];
-					p += globalMatrix.Mul4(Vec3(vertex.px, vertex.py, vertex.pz)) * boneWeight;
-					n += globalMatrix.Mul3(Vec3(vertex.nx, vertex.ny, vertex.nz)) * boneWeight;
-				}
-				// -- software vertex blend (soft skinned) --
-				
-				positions[j] = p;
-				normals[j] = n;
-			}
-			
 			glBegin(GL_LINES);
 			{
 				for (int j = 0; j < mesh->m_numVertices; ++j)
 				{
+					const Vertex & vertex = mesh->m_vertices[j];
+					
+					// -- software vertex blend (soft skinned) --
+					Vec3 p(0.f, 0.f, 0.f);
+					Vec3 n(0.f, 0.f, 0.f);
+					for (int b = 0; b < 4; ++b)
+					{
+						if (vertex.boneWeights[b] == 0)
+							continue;
+						const int boneIndex = vertex.boneIndices[b];
+						const float boneWeight = vertex.boneWeights[b] / 255.f;						
+						const Mat4x4 & globalMatrix = globalMatrices[boneIndex];
+						p += globalMatrix.Mul4(Vec3(vertex.px, vertex.py, vertex.pz)) * boneWeight;
+						n += globalMatrix.Mul3(Vec3(vertex.nx, vertex.ny, vertex.nz)) * boneWeight;
+					}
+					// -- software vertex blend (soft skinned) --
+					
 					const float scale = 3.f;
 					
-					const Vec3 & n  = normals[j];
-					const Vec3 & p1 = positions[j];
-					const Vec3   p2 = positions[j] + n * scale;
+					const Vec3 & p1 = p;
+					const Vec3   p2 = p + n * scale;
 					
 					glColor3ub(127, 127, 127);
 					glNormal3f(n[0], n[1], n[2]);

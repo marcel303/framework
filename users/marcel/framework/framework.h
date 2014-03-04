@@ -228,6 +228,7 @@ public:
 	Shader(const char * filename);
 	
 	void load(const char * filename);
+	bool isValid() const { return m_shader != 0; }
 	GLuint getProgram() const;
 	
 	GLint getImmediate(const char * name);
@@ -605,7 +606,7 @@ void setColorf(float r, float g, float b, float a = 1.f, float rgbMul = 1.f);
 void setGradientf(float x1, float y1, const Color & color1, float x2, float y2, const Color & color2);
 void setGradientf(float x1, float y1, float r1, float g1, float b1, float a1, float x2, float y2, float r2, float g2, float b2, float a2);
 void setFont(Font & font);
-void setShader(Shader & shader);
+void setShader(const Shader & shader);
 void clearShader();
 
 void drawLine(float x1, float y1, float x2, float y2);

@@ -42,6 +42,12 @@ namespace AnimModel
 		unsigned char boneWeights[4];
 	};
 	
+	class Material
+	{
+	public:
+		Shader shader;
+	};
+	
 	class Mesh
 	{
 	public:
@@ -54,6 +60,8 @@ namespace AnimModel
 		GLuint m_vertexArray;
 		GLuint m_indexArray;
 		GLuint m_vertexArrayObject;
+		
+		Material m_material;
 		
 		Mesh();
 		~Mesh();

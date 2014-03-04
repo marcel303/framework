@@ -2147,7 +2147,7 @@ void setFont(Font & font)
 	globals.font = font.getFont();
 }
 
-void setShader(Shader & shader)
+void setShader(const Shader & shader)
 {
 	glUseProgram(shader.getProgram());
 }
