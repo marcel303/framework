@@ -1,13 +1,13 @@
 #ui
 
-type:button x:1400 y:250 scale:2 image:button.png image_over:button-over.png image_down:button-down.png action:sound sound:button1.ogg
-type:button x:1400 y:380 scale:2 image:button.png image_over:button-over.png image_down:button-down.png action:sound sound:button2.ogg
-type:button x:1400 y:510 scale:2 image:button.png image_over:button-over.png image_down:button-down.png action:sound sound:button3.ogg
+type:button x:1400 y:250 scale:2 image:button.png image_over:button-over.png image_down:button-down.png action:sound sound:button1.ogg volume:10
+type:button x:1400 y:380 scale:2 image:button.png image_over:button-over.png image_down:button-down.png action:sound sound:button2.ogg volume:10
+type:button x:1400 y:510 scale:2 image:button.png image_over:button-over.png image_down:button-down.png action:sound sound:button3.ogg volume:10
 
-type:button x:900 y:250 scale:2 image:button.png image_over:button-over.png image_down:button-down.png action:sound sound:button1.ogg
-type:button x:900 y:380 scale:2 image:button.png image_over:button-over.png image_down:button-down.png action:sound sound:button2.ogg
-type:button x:900 y:510 scale:2 image:button.png image_over:button-over.png image_down:button-down.png action:sound sound:button3.ogg
+type:button x:900 y:250 scale:2 image:button.png image_over:button-over.png image_down:button-down.png action:sound sound:button1.ogg volume:40
+type:button x:900 y:380 scale:2 image:button.png image_over:button-over.png image_down:button-down.png action:sound sound:button2.ogg volume:40
+type:button x:900 y:510 scale:2 image:button.png image_over:button-over.png image_down:button-down.png action:sound sound:button3.ogg volume:40
 
-type:button x:400 y:250 scale:2 image:button.png image_over:button-over.png image_down:button-down.png action:sound sound:button1.ogg
-type:button x:400 y:380 scale:2 image:button.png image_over:button-over.png image_down:button-down.png action:sound sound:button2.ogg
-type:button x:400 y:510 scale:2 image:button.png image_over:button-over.png image_down:button-down.png action:sound sound:button3.ogg
+type:button x:400 y:250 scale:2 image:button.png image_over:button-over.png image_down:button-down.png action:sound sound:button1.ogg volume:100
+type:button x:400 y:380 scale:2 image:button.png image_over:button-over.png image_down:button-down.png action:sound sound:button2.ogg volume:100
+type:button x:400 y:510 scale:2 image:button.png image_over:button-over.png image_down:button-down.png action:sound sound:button3.ogg volume:100

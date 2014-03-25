@@ -96,8 +96,8 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 #endif
 	
 #if 1
-	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 32);
-	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 #endif
 	
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
@@ -154,8 +154,8 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	if (glewIsSupported("GL_ARB_debug_output"))
 	{
 		log("using OpenGL debug output");
-	    glDebugMessageCallback(debugOutputGL, stderr);
-	    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+		glDebugMessageCallback(debugOutputGL, stderr);
+		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 	}
 	
 	globals.displaySize[0] = sx;
@@ -793,7 +793,7 @@ void Surface::setAlphaf(float a)
 		setColorf(1.f, 1.f, 1.f, a);
 		glColorMask(0, 0, 0, 1);
 		{
-			drawRect(0, 0, m_size[0], m_size[1]);
+			drawRect(0.f, 0.f, m_size[0], m_size[1]);
 		}
 		glColorMask(1, 1, 1, 1);
 	}
@@ -806,7 +806,7 @@ void Surface::mulf(float r, float g, float b, float a)
 	{
 		setBlend(BLEND_MUL);
 		setColorf(r, g, b, a);
-		drawRect(0, 0, m_size[0], m_size[1]);
+		drawRect(0.f, 0.f, m_size[0], m_size[1]);
 	}
 	popSurface();
 }
@@ -823,7 +823,7 @@ void Surface::postprocess(Shader & shader)
 			glBindTexture(GL_TEXTURE_2D, m_texture[bufferId]);
 			glEnable(GL_TEXTURE_2D);
 			{
-				drawRect(0, 0, m_size[0], m_size[1]);
+				drawRect(0.f, 0.f, m_size[0], m_size[1]);
 			}
 			glDisable(GL_TEXTURE_2D);
 		}
@@ -838,7 +838,7 @@ void Surface::invert()
 	{
 		setBlend(BLEND_INVERT);
 		setColorf(1.f, 1.f, 1.f, 1.f);
-		drawRect(0, 0, m_size[0], m_size[1]);
+		drawRect(0.f, 0.f, m_size[0], m_size[1]);
 	}
 	popSurface();
 }

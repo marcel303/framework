@@ -173,7 +173,7 @@ void FbxRecord::capturePropertiesAsInt(std::vector<int> & result) const
 				
 				m_reader->readPropertyValue(offset, value);
 				
-				result[i] = get<float>(value);
+				result[i] = get<int>(value);
 			}
 		}
 	}
@@ -304,7 +304,7 @@ bool FbxValue::getBool() const
 	if (type == TYPE_BOOL)
 		return Bool;
 	if (type == TYPE_INT)
-		return bool(Int);
+		return bool(Int != 0);
 	return false;
 }
 

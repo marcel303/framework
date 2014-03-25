@@ -73,8 +73,8 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>NO_SDL_GLEXT;_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\win32\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NO_SDL_GLEXT;_CRT_SECURE_NO_WARNINGS;_USE_MATH_DEFINES;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>.\win32\include;..\..\..\libgg</AdditionalIncludeDirectories>
       <AdditionalOptions>/wd4244 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -82,11 +82,13 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>win32\lib\FreeImage.lib;win32\lib\freetype252.lib;win32\lib\glew32.lib;win32\lib\OpenAL32.lib;win32\lib\SDL.lib;win32\lib\SDLmain.lib;win32\lib\XInput9_1_0.lib;OpenGL32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>win32\lib\FreeImage.lib;win32\lib\freetype252.lib;win32\lib\glew32.lib;win32\lib\OpenAL32.lib;win32\lib\SDL2.lib;win32\lib\SDL2main.lib;win32\lib\XInput9_1_0.lib;OpenGL32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="example.cpp" />
+    <ClCompile Include="example.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExcludedFromBuild>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="framework.vcxproj">

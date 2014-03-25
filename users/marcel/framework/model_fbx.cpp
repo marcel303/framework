@@ -57,7 +57,7 @@ static void fbxLog(int logIndent, const char * fmt, ...)
 		tabs[logIndent] = 0;
 		
 		char temp[1024];
-		vsprintf(temp, fmt, va);
+		vsprintf_s(temp, fmt, va);
 		va_end(va);
 		
 		log("%s%s", tabs, temp);

@@ -34,49 +34,46 @@ void checkErrorGL_internal(const char * function, int line)
 
 void formatDebugOutputGL(char * outStr, size_t outStrSize, GLenum source, GLenum type, GLuint id, GLenum severity, const char * msg)
 {
-    char sourceStr[32];
-    const char *sourceFmt = "UNDEFINED(0x%04X)";
-    switch(source)
-    {
-    case GL_DEBUG_SOURCE_API_ARB:             sourceFmt = "API"; break;
-    case GL_DEBUG_SOURCE_WINDOW_SYSTEM_ARB:   sourceFmt = "WINDOW_SYSTEM"; break;
-    case GL_DEBUG_SOURCE_SHADER_COMPILER_ARB: sourceFmt = "SHADER_COMPILER"; break;
-    case GL_DEBUG_SOURCE_THIRD_PARTY_ARB:     sourceFmt = "THIRD_PARTY"; break;
-    case GL_DEBUG_SOURCE_APPLICATION_ARB:     sourceFmt = "APPLICATION"; break;
-    case GL_DEBUG_SOURCE_OTHER_ARB:           sourceFmt = "OTHER"; break;
-    }
+	char sourceStr[32];
+	const char *sourceFmt = "UNDEFINED(0x%04X)";
+	switch(source)
+	{
+	case GL_DEBUG_SOURCE_API_ARB:             sourceFmt = "API"; break;
+	case GL_DEBUG_SOURCE_WINDOW_SYSTEM_ARB:   sourceFmt = "WINDOW_SYSTEM"; break;
+	case GL_DEBUG_SOURCE_SHADER_COMPILER_ARB: sourceFmt = "SHADER_COMPILER"; break;
+	case GL_DEBUG_SOURCE_THIRD_PARTY_ARB:     sourceFmt = "THIRD_PARTY"; break;
+	case GL_DEBUG_SOURCE_APPLICATION_ARB:     sourceFmt = "APPLICATION"; break;
+	case GL_DEBUG_SOURCE_OTHER_ARB:           sourceFmt = "OTHER"; break;
+	}
+	sprintf_s(sourceStr, 32, sourceFmt, source);
 
-    sprintf_s(sourceStr, 32, sourceFmt, source);
- 
-    char typeStr[32];
-    const char *typeFmt = "UNDEFINED(0x%04X)";
-    switch(type)
-    {
-    case GL_DEBUG_TYPE_ERROR_ARB:               typeFmt = "ERROR"; break;
-    case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_ARB: typeFmt = "DEPRECATED_BEHAVIOR"; break;
-    case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_ARB:  typeFmt = "UNDEFINED_BEHAVIOR"; break;
-    case GL_DEBUG_TYPE_PORTABILITY_ARB:         typeFmt = "PORTABILITY"; break;
-    case GL_DEBUG_TYPE_PERFORMANCE_ARB:         typeFmt = "PERFORMANCE"; break;
-    case GL_DEBUG_TYPE_OTHER_ARB:               typeFmt = "OTHER"; break;
-    }
+	char typeStr[32];
+	const char *typeFmt = "UNDEFINED(0x%04X)";
+	switch(type)
+	{
+	case GL_DEBUG_TYPE_ERROR_ARB:               typeFmt = "ERROR"; break;
+	case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_ARB: typeFmt = "DEPRECATED_BEHAVIOR"; break;
+	case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_ARB:  typeFmt = "UNDEFINED_BEHAVIOR"; break;
+	case GL_DEBUG_TYPE_PORTABILITY_ARB:         typeFmt = "PORTABILITY"; break;
+	case GL_DEBUG_TYPE_PERFORMANCE_ARB:         typeFmt = "PERFORMANCE"; break;
+	case GL_DEBUG_TYPE_OTHER_ARB:               typeFmt = "OTHER"; break;
+	}
+	sprintf_s(typeStr, 32, typeFmt, type);
 
-    sprintf_s(typeStr, 32, typeFmt, type);
+	char severityStr[32];
+	const char *severityFmt = "UNDEFINED";
+	switch(severity)
+	{
+	case GL_DEBUG_SEVERITY_HIGH_ARB:   severityFmt = "HIGH";   break;
+	case GL_DEBUG_SEVERITY_MEDIUM_ARB: severityFmt = "MEDIUM"; break;
+	case GL_DEBUG_SEVERITY_LOW_ARB:    severityFmt = "LOW"; break;
+	}
+	sprintf_s(severityStr, 32, severityFmt, severity);
 
-    char severityStr[32];
-    const char *severityFmt = "UNDEFINED";
-    switch(severity)
-    {
-    case GL_DEBUG_SEVERITY_HIGH_ARB:   severityFmt = "HIGH";   break;
-    case GL_DEBUG_SEVERITY_MEDIUM_ARB: severityFmt = "MEDIUM"; break;
-    case GL_DEBUG_SEVERITY_LOW_ARB:    severityFmt = "LOW"; break;
-    }
-
-    sprintf_s(severityStr, 32, severityFmt, severity);
- 
-    sprintf_s(outStr, outStrSize, "OpenGL: %s [source=%s type=%s severity=%s id=%d]", msg, sourceStr, typeStr, severityStr, id);
+	sprintf_s(outStr, outStrSize, "OpenGL: %s [source=%s type=%s severity=%s id=%d]", msg, sourceStr, typeStr, severityStr, id);
 }
 
-void debugOutputGL(
+void __stdcall debugOutputGL(
 	GLenum source,
 	GLenum type,
 	GLuint id,
@@ -85,10 +82,10 @@ void debugOutputGL(
 	const GLchar * message,
 	GLvoid * userParam)
 {
-    FILE * file = (FILE*)userParam;
-    char formattedMessage[256];
-    formatDebugOutputGL(formattedMessage, 256, source, type, id, severity, message);
-    fprintf(file, "%s\n", formattedMessage);
+	FILE * file = (FILE*)userParam;
+	char formattedMessage[256];
+	formatDebugOutputGL(formattedMessage, 256, source, type, id, severity, message);
+	fprintf(file, "%s\n", formattedMessage);
 }
 
 //

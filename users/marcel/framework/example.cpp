@@ -4,11 +4,11 @@
 #define TEST_SURFACE 1
 #define SPRITE_SCALE 1
 
-const int sx = 1920;
-const int sy = 1080;
+//const int sx = 1920;
+//const int sy = 1080;
 
-//const int sx = 1920/2;
-//const int sy = 1080/2;
+const int sx = 1920/2;
+const int sy = 1080/2;
 
 static Sprite * createRandomSprite()
 {
@@ -43,7 +43,7 @@ static void sortSprites(Sprite ** sprites, int numSprites)
 	std::sort(sprites, sprites + numSprites, compareSprites);
 }
 
-int main(int argc, const char * argv[])
+int main(int argc, char * argv[])
 {
 	changeDirectory("data");
 	
@@ -57,7 +57,7 @@ int main(int argc, const char * argv[])
 			framework.fullscreen = false;
 		}
 	}
-	if (!framework.init(argc, argv, sx, sy))
+	if (!framework.init(argc, (const char **)argv, sx, sy))
 		return -1;
 	framework.fillCachesWithPath(".");
 	

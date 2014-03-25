@@ -24,7 +24,7 @@ void splitString(const std::string & str, std::vector<std::string> & result);
 void splitString(const std::string & str, std::vector<std::string> & result, char c);
 void checkErrorGL_internal(const char * function, int line);
 #define checkErrorGL() checkErrorGL_internal(__FUNCTION__, __LINE__)
-void debugOutputGL(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar*, GLvoid*);
+void __stdcall debugOutputGL(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar*, GLvoid*);
 
 //
 

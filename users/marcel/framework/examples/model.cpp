@@ -44,12 +44,12 @@ public:
 	}
 };
 
-int main(int argc, const char * argv[])
+int main(int argc, char * argv[])
 {
 	changeDirectory("data");
 	
 	framework.fullscreen = false;
-	if (!framework.init(argc, argv, VIEW_SX, VIEW_SY))
+	if (!framework.init(argc, (const char **)argv, VIEW_SX, VIEW_SY))
 		return -1;
 	
 	std::map<CoordKey, Model*> models;
