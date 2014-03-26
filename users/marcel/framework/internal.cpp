@@ -451,8 +451,8 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type)
 			
 			shader = glCreateShader(type);
 			
-			const GLchar * version = "#version 120\n#define __SHADER__ 1\n";
-//			const GLchar * version = "#version 150\n#define __SHADER__ 1\n";
+//			const GLchar * version = "#version 120\n#define __SHADER__ 1\n";
+			const GLchar * version = "#version 150\n#define __SHADER__ 1\n";
 //			const GLchar * version = "#version 320\n#define __SHADER__ 1\n";
 			const GLchar * sourceData = (const GLchar*)source.c_str();
 			const GLchar * sources[] = { version, sourceData };
@@ -1184,13 +1184,16 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, char c)
 			glTexImage2D(
 				GL_TEXTURE_2D,
 				0,
-				GL_ALPHA,
+				GL_RED,
 				elem.g.bitmap.width,
 				elem.g.bitmap.rows,
 				0,
-				GL_ALPHA,
+				GL_RED,
 				GL_UNSIGNED_BYTE,
 				elem.g.bitmap.buffer);
+
+			GLint swizzleMask[4] = { GL_ONE, GL_ONE, GL_ONE, GL_RED };
+			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
 			
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);

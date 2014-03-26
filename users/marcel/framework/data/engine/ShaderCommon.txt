@@ -1,6 +1,6 @@
 #if __SHADER__
 
-#if 1
+#if 0
 	#define shader_attrib attribute
 	#define shader_in varying
 	#define shader_out varying

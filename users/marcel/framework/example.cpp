@@ -370,7 +370,6 @@ int main(int argc, char * argv[])
 				
 				setBlend(BLEND_ALPHA);
 				setColorMode(COLOR_MUL);
-				glEnable(GL_TEXTURE_2D);
 				const int numSteps = keyboard.isDown(SDLK_w) ? 15 : 1;
 				for (int i = 0; i < numSteps; ++i)
 				{
@@ -391,7 +390,6 @@ int main(int argc, char * argv[])
 					drawRect(0.f, 0.f, sx, sy);
 					gxPopMatrix();
 				}
-				glDisable(GL_TEXTURE_2D);
 				
 				clearShader();
 			}

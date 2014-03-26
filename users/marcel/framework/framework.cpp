@@ -79,12 +79,12 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 		return false;
 	}
 	
-#if 1
+#if 0
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
 #else
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
 #endif
 	
 #if 1
@@ -103,7 +103,8 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-	//SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
 	
 	// todo: ensure VSYNC is enabled
 	
@@ -151,22 +152,15 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 		logWarning("OpenGL 3.0 not supported");
 	}
 	
-	if (glewIsSupported("GL_ARB_debug_output"))
+	if (GLEW_ARB_debug_output)
 	{
 		log("using OpenGL debug output");
-		glDebugMessageCallback(debugOutputGL, stderr);
-		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+		glDebugMessageCallbackARB(debugOutputGL, stderr);
+		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
 	}
 	
 	globals.displaySize[0] = sx;
 	globals.displaySize[1] = sy;
-
-	// enable optional OpenGL debugging
-	
-#if 0
-	glEnable(GL_DEBUG_OUTPUT);
-	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-#endif
 	
 #if 0 // invalid using non-legacy mode
 	glClampColor(GL_CLAMP_VERTEX_COLOR, GL_FALSE);
@@ -820,12 +814,11 @@ void Surface::postprocess(Shader & shader)
 		setShader(shader);
 		{
 			const int bufferId = (m_bufferId + 1) % 2;
-			glBindTexture(GL_TEXTURE_2D, m_texture[bufferId]);
-			glEnable(GL_TEXTURE_2D);
+			gxSetTexture(m_texture[bufferId]);
 			{
 				drawRect(0.f, 0.f, m_size[0], m_size[1]);
 			}
-			glDisable(GL_TEXTURE_2D);
+			gxSetTexture(0);
 		}
 		clearShader();
 	}
@@ -960,7 +953,7 @@ void Shader::setTexture(const char * name, int unit, GLuint texture)
 	checkErrorGL();
 	glActiveTexture(GL_TEXTURE0 + unit);
 	glBindTexture(GL_TEXTURE_2D, texture);
-	glEnable(GL_TEXTURE_2D);
+	//glEnable(GL_TEXTURE_2D);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	checkErrorGL();
@@ -1272,8 +1265,7 @@ void Sprite::drawEx(float x, float y, float angle, float scale, bool pixelpos, T
 			
 			fassert(cellIndex >= 0 && cellIndex < (m_anim->m_gridSize[0] * m_anim->m_gridSize[1]));
 			
-			glBindTexture(GL_TEXTURE_2D, m_texture->textures[cellIndex]);
-			glEnable(GL_TEXTURE_2D);
+			gxSetTexture(m_texture->textures[cellIndex]);
 
 			if (filter == FILTER_POINT)
 			{
@@ -1324,7 +1316,7 @@ void Sprite::drawEx(float x, float y, float angle, float scale, bool pixelpos, T
 			gxEnd();
 		#endif
 			
-			glDisable(GL_TEXTURE_2D);
+			gxSetTexture(0);
 		}
 		gxPopMatrix();
 	}
@@ -2345,8 +2337,7 @@ static void drawTextInternal(FT_Face face, int size, const char * text)
 		
 		if (elem.texture != 0)
 		{
-			glBindTexture(GL_TEXTURE_2D, elem.texture);
-			glEnable(GL_TEXTURE_2D);
+			gxSetTexture(elem.texture);
 			
 			gxBegin(GL_QUADS);
 			{
@@ -2364,8 +2355,8 @@ static void drawTextInternal(FT_Face face, int size, const char * text)
 			}
 			gxEnd();
 			
-			glDisable(GL_TEXTURE_2D);
-	 		
+			gxSetTexture(0);
+			
 			x += (elem.g.advance.x / float(1 << 6));
 			y += (elem.g.advance.y / float(1 << 6));
 		}
@@ -2570,6 +2561,7 @@ static int s_gxVertexCount = 0;
 static int s_gxMaxVertexCount = 0;
 static int s_gxPrimitiveSize = 0;
 static GxVertex s_gxVertex;
+static bool s_gxTextureEnabled = false;
 
 static const VsInput vsInputs[] =
 {
@@ -2580,12 +2572,49 @@ static const VsInput vsInputs[] =
 };
 const int numVsInputs = sizeof(vsInputs) / sizeof(vsInputs[0]);
 
+void gxEmitVertex();
+
 static void gxFlush(bool endOfBatch)
 {
+	if (s_gxPrimitiveType == GL_QUADS)
+	{
+		if (!endOfBatch)
+		{
+			gxEnd();
+			gxBegin(GL_QUADS);
+		}
+		else
+		{
+			GxVertex * temp = (GxVertex*)alloca(sizeof(GxVertex) * s_gxVertexCount);
+			memcpy(temp, s_gxVertices, sizeof(GxVertex) * s_gxVertexCount);
+			const int numQuads = s_gxVertexCount / 4;
+
+			s_gxVertices = 0;
+			s_gxVertexCount = 0;
+
+			gxBegin(GL_TRIANGLES);
+			{
+				for (int i = 0; i < numQuads; ++i)
+				{
+					s_gxVertex = temp[i * 4 + 0]; gxEmitVertex();
+					s_gxVertex = temp[i * 4 + 1]; gxEmitVertex();
+					s_gxVertex = temp[i * 4 + 2]; gxEmitVertex();
+
+					s_gxVertex = temp[i * 4 + 0]; gxEmitVertex();
+					s_gxVertex = temp[i * 4 + 2]; gxEmitVertex();
+					s_gxVertex = temp[i * 4 + 3]; gxEmitVertex();
+				}
+			}
+			gxEnd();
+		}
+
+		return;
+	}
+
 	// todo: unmap, set arrays, draw
 	
 	if (s_gxVertexCount)
-	{	
+	{
 		#if 1
 		
 		Shader shader("engine/Generic");
@@ -2607,9 +2636,9 @@ static void gxFlush(bool endOfBatch)
 		
 		shader.setImmediate(
 			"params",
-			glIsEnabled(GL_TEXTURE_2D) ? 1 : 0,
+			s_gxTextureEnabled ? 1 : 0,
 			globals.colorMode,
-			1,
+			0,
 			0);
 		
 		shader.setTextureUnit("texture", 0);
@@ -2726,12 +2755,38 @@ void gxVertex3f(float x, float y, float z)
 	s_gxVertex.pz = z;
 	s_gxVertex.pw = 1.f;
 	
+	gxEmitVertex();
+}
+
+void gxEmitVertex()
+{
 	s_gxVertices[s_gxVertexCount++] = s_gxVertex;
 	
 	if (s_gxVertexCount % s_gxPrimitiveSize == 0)
 	{
 		if (s_gxVertexCount + s_gxPrimitiveSize > s_gxMaxVertexCount)
 			gxFlush(false);
+	}
+}
+
+void gxSetTexture(GLuint texture)
+{
+	glActiveTexture(GL_TEXTURE0);
+
+	if (texture)
+	{
+		//glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, texture);
+		checkErrorGL();
+
+		s_gxTextureEnabled = true;
+	}
+	else
+	{
+		//glDisable(GL_TEXTURE_2D);
+		checkErrorGL();
+
+		s_gxTextureEnabled = false;
 	}
 }
 

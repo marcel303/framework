@@ -638,6 +638,7 @@ void gxTexCoord2f(float u, float v);
 void gxNormal3f(float x, float y, float z);
 void gxVertex2f(float x, float y);
 void gxVertex3f(float x, float y, float z);
+void gxSetTexture(GLuint texture);
 
 // utility
 
