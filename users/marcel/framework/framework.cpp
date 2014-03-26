@@ -2584,6 +2584,7 @@ struct GxVertex
 };
 
 static GLuint s_gxVertexBufferObject = 0;
+static GLuint s_gxIndexBufferObject = 0;
 static GxVertex s_gxVertexBuffer[1024];
 
 static int s_gxPrimitiveType = -1;
@@ -2608,7 +2609,9 @@ void gxEmitVertex();
 void gxInitialize()
 {
 	fassert(s_gxVertexBufferObject == 0);
+	fassert(s_gxIndexBufferObject == 0);
 	glGenBuffers(1, &s_gxVertexBufferObject);
+	glGenBuffers(1, &s_gxIndexBufferObject);
 }
 
 void gxShutdown()
@@ -2618,45 +2621,16 @@ void gxShutdown()
 		glDeleteBuffers(1, &s_gxVertexBufferObject);
 		s_gxVertexBufferObject = 0;
 	}
+
+	if (s_gxIndexBufferObject != 0)
+	{
+		glDeleteBuffers(1, &s_gxIndexBufferObject);
+		s_gxIndexBufferObject = 0;
+	}
 }
 
 static void gxFlush(bool endOfBatch)
 {
-	if (s_gxPrimitiveType == GL_QUADS)
-	{
-		if (!endOfBatch)
-		{
-			gxEnd();
-			gxBegin(GL_QUADS);
-		}
-		else
-		{
-			GxVertex * temp = (GxVertex*)alloca(sizeof(GxVertex) * s_gxVertexCount);
-			memcpy(temp, s_gxVertices, sizeof(GxVertex) * s_gxVertexCount);
-			const int numQuads = s_gxVertexCount / 4;
-
-			s_gxVertices = 0;
-			s_gxVertexCount = 0;
-
-			gxBegin(GL_TRIANGLES);
-			{
-				for (int i = 0; i < numQuads; ++i)
-				{
-					s_gxVertex = temp[i * 4 + 0]; gxEmitVertex();
-					s_gxVertex = temp[i * 4 + 1]; gxEmitVertex();
-					s_gxVertex = temp[i * 4 + 2]; gxEmitVertex();
-
-					s_gxVertex = temp[i * 4 + 0]; gxEmitVertex();
-					s_gxVertex = temp[i * 4 + 2]; gxEmitVertex();
-					s_gxVertex = temp[i * 4 + 3]; gxEmitVertex();
-				}
-			}
-			gxEnd();
-		}
-
-		return;
-	}
-
 	if (s_gxVertexCount)
 	{
 		Shader shader("engine/Generic");
@@ -2669,6 +2643,38 @@ static void gxFlush(bool endOfBatch)
 		glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(GxVertex) * s_gxVertexCount, s_gxVertices, GL_DYNAMIC_DRAW);
 		checkErrorGL();
+
+		bool indexed = false;
+
+		if (s_gxPrimitiveType == GL_QUADS)
+		{
+			fassert(s_gxVertexCount < 65536);
+
+			const int numQuads = s_gxVertexCount / 4;
+			const int numIndices = numQuads * 6;
+
+			unsigned short * indices = (unsigned short*)alloca(sizeof(unsigned short) * numIndices);
+
+			for (int i = 0; i < numQuads; ++i)
+			{
+				indices[i * 6 + 0] = i * 4 + 0;
+				indices[i * 6 + 1] = i * 4 + 1;
+				indices[i * 6 + 2] = i * 4 + 2;
+
+				indices[i * 6 + 3] = i * 4 + 0;
+				indices[i * 6 + 4] = i * 4 + 2;
+				indices[i * 6 + 5] = i * 4 + 3;
+			}
+
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned short) * numIndices, indices, GL_DYNAMIC_DRAW);
+			checkErrorGL();
+
+			s_gxPrimitiveType = GL_TRIANGLES;
+			s_gxVertexCount = numIndices;
+
+			indexed = true;
+		}
 		
 		bindVsInputs(vsInputs, numVsInputs, sizeof(GxVertex));
 		checkErrorGL();
@@ -2682,10 +2688,16 @@ static void gxFlush(bool endOfBatch)
 		
 		shader.setTextureUnit(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0);
 		
-		glDrawArrays(s_gxPrimitiveType, 0, s_gxVertexCount);
+		if (indexed)
+			glDrawElements(s_gxPrimitiveType, s_gxVertexCount, GL_UNSIGNED_SHORT, 0);
+		else
+			glDrawArrays(s_gxPrimitiveType, 0, s_gxVertexCount);
 		checkErrorGL();
 		
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		checkErrorGL();
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 		checkErrorGL();
 	}
 	
