@@ -4,11 +4,11 @@
 #define TEST_SURFACE 1
 #define SPRITE_SCALE 1
 
-//const int sx = 1920;
-//const int sy = 1080;
+const int sx = 1920;
+const int sy = 1080;
 
-const int sx = 1920/2;
-const int sy = 1080/2;
+//const int sx = 1920/2;
+//const int sy = 1080/2;
 
 static Sprite * createRandomSprite()
 {

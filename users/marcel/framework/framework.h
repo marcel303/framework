@@ -238,9 +238,14 @@ public:
 	void setImmediate(const char * name, float x, float y);
 	void setImmediate(const char * name, float x, float y, float z);
 	void setImmediate(const char * name, float x, float y, float z, float w);
+	void setImmediate(GLint index, float x, float y, float z, float w);
 	void setImmediateMatrix4x4(const char * name, const float * matrix);
+	void setImmediateMatrix4x4(GLint index, const float * matrix);
 	void setTextureUnit(const char * name, int unit); // bind <name> to GL_TEXTURE0 + unit
+	void setTextureUnit(GLint index, int unit); // bind <name> to GL_TEXTURE0 + unit
 	void setTexture(const char * name, int unit, GLuint texture);
+
+	const ShaderCacheElem & getCacheElem() const { return *m_shader; }
 };
 
 //
@@ -630,6 +635,8 @@ void gxRotatef(float angle, float x, float y, float z);
 void gxScalef(float x, float y, float z);
 void gxValidateMatrices();
 
+void gxInitialize();
+void gxShutdown();
 void gxBegin(int primitiveType);
 void gxEnd();
 void gxColor4f(float r, float g, float b, float a);

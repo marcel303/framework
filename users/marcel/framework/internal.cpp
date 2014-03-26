@@ -18,6 +18,7 @@ UiCache g_uiCache;
 
 void checkErrorGL_internal(const char * function, int line)
 {
+#if FRAMEWORK_ENABLE_GL_ERROR_LOG
 	const GLenum error = glGetError();
 	
 	if (error != GL_NO_ERROR)
@@ -30,9 +31,11 @@ void checkErrorGL_internal(const char * function, int line)
 			fassert(false);
 		#endif
 	}
+#endif
 }
 
-void formatDebugOutputGL(char * outStr, size_t outStrSize, GLenum source, GLenum type, GLuint id, GLenum severity, const char * msg)
+#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
+static void formatDebugOutputGL(char * outStr, size_t outStrSize, GLenum source, GLenum type, GLuint id, GLenum severity, const char * msg)
 {
 	char sourceStr[32];
 	const char *sourceFmt = "UNDEFINED(0x%04X)";
@@ -87,6 +90,7 @@ void __stdcall debugOutputGL(
 	formatDebugOutputGL(formattedMessage, 256, source, type, id, severity, message);
 	fprintf(file, "%s\n", formattedMessage);
 }
+#endif
 
 //
 
@@ -272,6 +276,8 @@ TextureCacheElem & TextureCache::findOrCreate(const char * name, int gridSx, int
 ShaderCacheElem::ShaderCacheElem()
 {
 	program = 0;
+
+	memset(params, -1, sizeof(params));
 }
 
 void ShaderCacheElem::free()
@@ -281,6 +287,8 @@ void ShaderCacheElem::free()
 		glDeleteProgram(program);
 		program = 0;
 	}
+
+	memset(params, -1, sizeof(params));
 }
 
 static void showShaderInfoLog(GLuint shader)
@@ -557,6 +565,12 @@ void ShaderCacheElem::load(const char * filename)
 		}
 		else
 		{
+			params[kSp_ModelViewMatrix].set(glGetUniformLocation(program, "ModelViewMatrix"));
+			params[kSp_ModelViewProjectionMatrix].set(glGetUniformLocation(program, "ModelViewProjectionMatrix"));
+			params[kSp_ProjectionMatrix].set(glGetUniformLocation(program, "ProjectionMatrix"));
+			params[kSp_Texture].set(glGetUniformLocation(program, "texture"));
+			params[kSp_Params].set(glGetUniformLocation(program, "params"));
+
 			// yay!
 		}
 	}

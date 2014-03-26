@@ -968,8 +968,6 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 		}
 	}
 	
-	clearShader();
-	
 	if (drawFlags & DrawNormals)
 	{
 		for (int i = 0; i < m_model->meshSet->m_numMeshes; ++i)

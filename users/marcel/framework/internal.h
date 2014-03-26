@@ -10,6 +10,9 @@
 #include <string>
 #include "framework.h"
 
+#define FRAMEWORK_ENABLE_GL_ERROR_LOG 0
+#define FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT 0
+
 #ifndef WIN32
 static int fopen_s(FILE ** file, const char * filename, const char * mode)
 {
@@ -22,9 +25,17 @@ static int fopen_s(FILE ** file, const char * filename, const char * mode)
 
 void splitString(const std::string & str, std::vector<std::string> & result);
 void splitString(const std::string & str, std::vector<std::string> & result, char c);
-void checkErrorGL_internal(const char * function, int line);
-#define checkErrorGL() checkErrorGL_internal(__FUNCTION__, __LINE__)
-void __stdcall debugOutputGL(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar*, GLvoid*);
+
+#if FRAMEWORK_ENABLE_GL_ERROR_LOG
+	void checkErrorGL_internal(const char * function, int line);
+	#define checkErrorGL() checkErrorGL_internal(__FUNCTION__, __LINE__)
+#else
+	#define checkErrorGL() do { } while (false)
+#endif
+
+#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
+	void __stdcall debugOutputGL(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar*, GLvoid*);
+#endif
 
 //
 
@@ -147,8 +158,28 @@ public:
 class ShaderCacheElem
 {
 public:
+	enum ShaderParam
+	{
+		kSp_ModelViewMatrix,
+		kSp_ModelViewProjectionMatrix,
+		kSp_ProjectionMatrix,
+		kSp_Texture,
+		kSp_Params,
+		kSp_MAX
+	};
+
 	GLuint program;
-	
+
+	struct
+	{
+		GLint index;
+
+		void set(GLint index)
+		{
+			this->index = index;
+		}
+	} params[kSp_MAX];
+
 	ShaderCacheElem();
 	void free();
 	void load(const char * filename);

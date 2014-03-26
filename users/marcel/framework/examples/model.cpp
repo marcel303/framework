@@ -207,9 +207,6 @@ int main(int argc, char * argv[])
 					}
 				}
 				
-				//Shader shaderGeneric("engine/Generic");
-				//setShader(shaderGeneric);
-				
 				time += getTimeUS();
 				log("draw took %.2fms", time / 1000.f);
 				
@@ -219,8 +216,6 @@ int main(int argc, char * argv[])
 				const Vec2 s = transformToScreen(Vec3(0.f, 0.f, 0.f));
 				debugDrawText(s[0], s[1], 18, 0, 0, "root");
 				setColor(255, 255, 255);
-				
-				clearShader();
 			}
 			gxPopMatrix();
 			glDisable(GL_DEPTH_TEST);
@@ -231,12 +226,14 @@ int main(int argc, char * argv[])
 			
 			gxColor4f(1.f, 1.f, 1.f, 1.f);
 			gxBegin(GL_TRIANGLES);
-			gxVertex2f(0.f, 0.f);
-			gxVertex2f(100.f, 100.f);
-			gxVertex2f(0.f, 100.f);
-			gxVertex2f(200.f, 0.f);
-			gxVertex2f(200.f, 100.f);
-			gxVertex2f(100.f, 100.f);
+			{
+				gxVertex2f(0.f, 0.f);
+				gxVertex2f(100.f, 100.f);
+				gxVertex2f(0.f, 100.f);
+				gxVertex2f(200.f, 0.f);
+				gxVertex2f(200.f, 100.f);
+				gxVertex2f(100.f, 100.f);
+			}
 			gxEnd();
 		}
 		framework.endDraw();

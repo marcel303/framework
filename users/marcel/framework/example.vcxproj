@@ -56,13 +56,13 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>DEBUG;NO_SDL_GLEXT;_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\win32\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\win32\include;..\..\..\libgg</AdditionalIncludeDirectories>
       <AdditionalOptions>/wd4244 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>win32\lib\FreeImage.lib;win32\lib\freetype252.lib;win32\lib\glew32.lib;win32\lib\OpenAL32.lib;win32\lib\SDL.lib;win32\lib\SDLmain.lib;win32\lib\XInput9_1_0.lib;OpenGL32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>win32\lib\FreeImage.lib;win32\lib\freetype252.lib;win32\lib\glew32.lib;win32\lib\OpenAL32.lib;win32\lib\SDL2.lib;win32\lib\SDL2main.lib;win32\lib\XInput9_1_0.lib;OpenGL32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">

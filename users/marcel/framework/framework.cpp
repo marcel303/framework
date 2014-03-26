@@ -104,7 +104,9 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
+#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
+#endif
 	
 	// todo: ensure VSYNC is enabled
 	
@@ -152,12 +154,14 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 		logWarning("OpenGL 3.0 not supported");
 	}
 	
+#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
 	if (GLEW_ARB_debug_output)
 	{
 		log("using OpenGL debug output");
 		glDebugMessageCallbackARB(debugOutputGL, stderr);
 		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
 	}
+#endif
 	
 	globals.displaySize[0] = sx;
 	globals.displaySize[1] = sy;
@@ -166,6 +170,8 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	glClampColor(GL_CLAMP_VERTEX_COLOR, GL_FALSE);
 	checkErrorGL();
 #endif
+
+	gxInitialize();
 
 	// initialize FreeType
 	
@@ -226,6 +232,8 @@ bool Framework::shutdown()
 	}
 	globals.freeType = 0;
 	
+	gxShutdown();
+
 	glBlendEquation = 0;
 	glClampColor = 0;
 	
@@ -935,15 +943,33 @@ void Shader::setImmediate(const char * name, float x, float y, float z, float w)
 	checkErrorGL();
 }
 
+void Shader::setImmediate(GLint index, float x, float y, float z, float w)
+{
+	fassert(index != -1);
+	fassert(globals.shader == this);
+	glUniform4f(index, x, y, z, w);
+	checkErrorGL();
+}
+
 void Shader::setImmediateMatrix4x4(const char * name, const float * matrix)
 {
 	SET_UNIFORM(name, glUniformMatrix4fv(index, 1, GL_FALSE, matrix));
 	checkErrorGL();
 }
 
-void Shader::setTextureUnit(const char * name, int unit)
+void Shader::setImmediateMatrix4x4(GLint index, const float * matrix)
 {
-	SET_UNIFORM(name, glUniform1i(index, unit));
+	fassert(index != -1);
+	fassert(globals.shader == this);
+	glUniformMatrix4fv(index, 1, GL_FALSE, matrix);
+	checkErrorGL();
+}
+
+void Shader::setTextureUnit(GLint index, int unit)
+{
+	fassert(index != -1);
+	fassert(globals.shader == this);
+	glUniform1i(index, unit);
 	checkErrorGL();
 }
 
@@ -953,10 +979,6 @@ void Shader::setTexture(const char * name, int unit, GLuint texture)
 	checkErrorGL();
 	glActiveTexture(GL_TEXTURE0 + unit);
 	glBindTexture(GL_TEXTURE_2D, texture);
-	//glEnable(GL_TEXTURE_2D);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	checkErrorGL();
 }
 
 #undef SET_UNIFORM
@@ -1308,10 +1330,10 @@ void Sprite::drawEx(float x, float y, float angle, float scale, bool pixelpos, T
 		#else
 			gxBegin(GL_QUADS);
 			{
-		 		gxTexCoord2f(0.f, 1.f); gxVertex2f(0.f, 0.f);
-		 		gxTexCoord2f(1.f, 1.f); gxVertex2f(rsx, 0.f);
-		 		gxTexCoord2f(1.f, 0.f); gxVertex2f(rsx, rsy);
-		 		gxTexCoord2f(0.f, 0.f); gxVertex2f(0.f, rsy);
+				gxTexCoord2f(0.f, 1.f); gxVertex2f(0.f, 0.f);
+				gxTexCoord2f(1.f, 1.f); gxVertex2f(rsx, 0.f);
+				gxTexCoord2f(1.f, 0.f); gxVertex2f(rsx, rsy);
+				gxTexCoord2f(0.f, 0.f); gxVertex2f(0.f, rsy);
 			}
 			gxEnd();
 		#endif
@@ -2205,9 +2227,12 @@ void setFont(Font & font)
 
 void setShader(const Shader & shader)
 {
-	globals.shader = const_cast<Shader*>(&shader);
+	if (&shader != globals.shader)
+	{
+		globals.shader = const_cast<Shader*>(&shader);
 	
-	glUseProgram(shader.getProgram());
+		glUseProgram(shader.getProgram());
+	}
 }
 
 void clearShader()
@@ -2538,9 +2563,14 @@ void gxValidateMatrices()
 #else
 	if (globals.shader)
 	{
-		globals.shader->setImmediateMatrix4x4("ModelViewMatrix", s_gxModelView.get().m_v);
-		globals.shader->setImmediateMatrix4x4("ModelViewProjectionMatrix", (s_gxProjection.get() * s_gxModelView.get()).m_v);
-		globals.shader->setImmediateMatrix4x4("ProjectionMatrix", s_gxProjection.get().m_v);
+		const ShaderCacheElem & shaderElem = globals.shader->getCacheElem();
+
+		if (shaderElem.params[ShaderCacheElem::kSp_ModelViewMatrix].index >= 0)
+			globals.shader->setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_ModelViewMatrix].index, s_gxModelView.get().m_v);
+		if (shaderElem.params[ShaderCacheElem::kSp_ModelViewProjectionMatrix].index >= 0)
+			globals.shader->setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_ModelViewProjectionMatrix].index, (s_gxProjection.get() * s_gxModelView.get()).m_v);
+		if (shaderElem.params[ShaderCacheElem::kSp_ProjectionMatrix].index >= 0)
+			globals.shader->setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_ProjectionMatrix].index, s_gxProjection.get().m_v);
 	}
 #endif
 }
@@ -2553,7 +2583,8 @@ struct GxVertex
 	float tx, ty;
 };
 
-static GxVertex s_gxVertexBuffer[1024]; // todo: lock/unlock
+static GLuint s_gxVertexBufferObject = 0;
+static GxVertex s_gxVertexBuffer[1024];
 
 static int s_gxPrimitiveType = -1;
 static GxVertex * s_gxVertices = 0;
@@ -2573,6 +2604,21 @@ static const VsInput vsInputs[] =
 const int numVsInputs = sizeof(vsInputs) / sizeof(vsInputs[0]);
 
 void gxEmitVertex();
+
+void gxInitialize()
+{
+	fassert(s_gxVertexBufferObject == 0);
+	glGenBuffers(1, &s_gxVertexBufferObject);
+}
+
+void gxShutdown()
+{
+	if (s_gxVertexBufferObject != 0)
+	{
+		glDeleteBuffers(1, &s_gxVertexBufferObject);
+		s_gxVertexBufferObject = 0;
+	}
+}
 
 static void gxFlush(bool endOfBatch)
 {
@@ -2611,66 +2657,36 @@ static void gxFlush(bool endOfBatch)
 		return;
 	}
 
-	// todo: unmap, set arrays, draw
-	
 	if (s_gxVertexCount)
 	{
-		#if 1
-		
 		Shader shader("engine/Generic");
 		setShader(shader);
+
+		const ShaderCacheElem & shaderElem = shader.getCacheElem();
 		
 		gxValidateMatrices();
 		
-		GLuint vertexBuffer = 0;
-		glGenBuffers(1, &vertexBuffer);
-		glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+		glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(GxVertex) * s_gxVertexCount, s_gxVertices, GL_DYNAMIC_DRAW);
 		checkErrorGL();
 		
 		bindVsInputs(vsInputs, numVsInputs, sizeof(GxVertex));
 		checkErrorGL();
 		
-		glActiveTexture(GL_TEXTURE0);
-		checkErrorGL();
-		
 		shader.setImmediate(
-			"params",
+			shaderElem.params[ShaderCacheElem::kSp_Params].index,
 			s_gxTextureEnabled ? 1 : 0,
 			globals.colorMode,
 			0,
 			0);
 		
-		shader.setTextureUnit("texture", 0);
+		shader.setTextureUnit(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0);
 		
 		glDrawArrays(s_gxPrimitiveType, 0, s_gxVertexCount);
 		checkErrorGL();
 		
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glDeleteBuffers(1, &vertexBuffer);
 		checkErrorGL();
-		
-		clearShader();
-		
-		#else
-		
-		gxValidateMatrices();
-		
-		glBegin(s_gxPrimitiveType);
-		{
-			for (int i = 0; i < s_gxVertexCount; ++i)
-			{
-				const GxVertex & v = s_gxVertices[i];
-				
-				glNormal3f(v.nx, v.ny, v.nz);
-				glColor4f(v.cx, v.cy, v.cz, v.cw);
-				glTexCoord2f(v.tx, v.ty);
-				glVertex4f(v.px, v.py, v.pz, v.pw);
-			}
-		}
-		glEnd();
-		
-		#endif
 	}
 	
 	if (endOfBatch)
@@ -2775,7 +2791,6 @@ void gxSetTexture(GLuint texture)
 
 	if (texture)
 	{
-		//glEnable(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D, texture);
 		checkErrorGL();
 
