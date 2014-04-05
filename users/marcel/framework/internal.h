@@ -6,8 +6,7 @@
 #include <map>
 #include <OpenAL/al.h>
 #include <GL/glew.h>
-#include <SDL/SDL.h>
-#include <SDL/SDL_opengl.h>
+#include <SDL2/SDL.h>
 #include <string>
 #include "framework.h"
 
@@ -25,6 +24,7 @@ void splitString(const std::string & str, std::vector<std::string> & result);
 void splitString(const std::string & str, std::vector<std::string> & result, char c);
 void checkErrorGL_internal(const char * function, int line);
 #define checkErrorGL() checkErrorGL_internal(__FUNCTION__, __LINE__)
+void debugOutputGL(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar*, GLvoid*);
 
 //
 
@@ -41,6 +41,8 @@ public:
 		transform3d.MakeIdentity();
 	}
 	
+	SDL_Window * window;
+	SDL_GLContext glContext;
 	int displaySize[2];
 	FT_Library freeType;
 	int resourceVersion;
@@ -50,14 +52,17 @@ public:
 	FontCacheElem * font;
 	bool mouseDown[BUTTON_MAX];
 	bool mouseChange[BUTTON_MAX];
-	bool keyDown[SDLK_LAST];
-	bool keyChange[SDLK_LAST];
+	int keyDown[256];
+	int keyDownCount;
+	int keyChange[256];
+	int keyChangeCount;
+	Shader * shader;
 	TRANSFORM transform;
 	Mat4x4 transformScreen;
 	Mat4x4 transform2d;
 	Mat4x4 transform3d;
 	
-	struct
+	struct DebugDraw
 	{
 		static const int kMaxLines = 32;
 		static const int kMaxLineSize = 128;
@@ -76,6 +81,19 @@ public:
 		int numLines;
 	} debugDraw;
 };
+
+//
+
+struct VsInput
+{
+	int id;
+	int components;
+	int type;
+	bool normalize;
+	int offset;
+};
+
+void bindVsInputs(const VsInput * vsInputs, int numVsInputs, int stride);
 
 //
 

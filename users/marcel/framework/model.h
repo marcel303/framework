@@ -12,7 +12,7 @@ namespace AnimModel
 	// forward declarations
 	
 	class Anim;
-	class AnimKey;
+	struct AnimKey;
 	class Bone;
 	class BoneSet;
 	class BoneTransform;
@@ -125,6 +125,8 @@ namespace AnimModel
 		void calculatePoseMatrices(); // calculate pose matrices given the current set of bone transforms
 		void calculateBoneMatrices(); // calculate bone transforms given the current set of pose matrices
 		void sortBoneIndices();
+		
+		int findBone(const std::string & name);
 	};
 	
 	struct AnimKey
@@ -163,7 +165,7 @@ namespace AnimModel
 		~Anim();
 		
 		void allocate(int numBones, int numKeys, RotationType rotationType, bool isAdditive);
-		bool evaluate(float time, BoneTransform * transforms);
+		bool evaluate(float time, BoneTransform * transforms, int boneIndex = -1);
 		void triggerActions(float oldTime, float newTime, int loop);
 	};
 	
@@ -184,6 +186,8 @@ namespace AnimModel
 	class Loader
 	{
 	public:
+		virtual ~Loader() { }
+		
 		virtual MeshSet * loadMeshSet(const char * filename, const BoneSet * boneSet) = 0;
 		virtual BoneSet * loadBoneSet(const char * filename) = 0;
 		virtual AnimSet * loadAnimSet(const char * filename, const BoneSet * boneSet) = 0;

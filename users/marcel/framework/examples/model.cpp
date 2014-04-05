@@ -1,4 +1,5 @@
 #include "framework.h"
+#include "internal.h"
 
 #include <time.h>
 static int getTimeUS() { return clock() * 1000000 / CLOCKS_PER_SEC; }
@@ -43,7 +44,7 @@ public:
 	}
 };
 
-int main(int argc, char * argv[])
+int main(int argc, const char * argv[])
 {
 	changeDirectory("data");
 	
@@ -54,9 +55,20 @@ int main(int argc, char * argv[])
 	std::map<CoordKey, Model*> models;
 	
 	for (int x = X1; x <= X2; ++x)
+	{
 		for (int y = Y1; y <= Y2; ++y)
+		{
 			for (int z = Z1; z <= Z2; ++z)
-				models[CoordKey(x, y, z)] = new Model("model.txt");
+			{
+				Model * model = new Model("model.txt");
+				model->x = x * 200.f;
+				model->y = y * 200.f;
+				model->z = 0.f;
+				
+				models[CoordKey(x, y, z)] = model;
+			}
+		}
+	}
 	
 	const std::vector<std::string> animList = models[CoordKey(0, 0, 0)]->getAnimList();
 	
@@ -167,14 +179,17 @@ int main(int argc, char * argv[])
 			glEnable(GL_DEPTH_TEST);
 			
 			glPolygonMode(GL_FRONT_AND_BACK, wireframe ? GL_LINE : GL_FILL);
+			checkErrorGL();
 			
-			glPushMatrix();
+			gxPushMatrix();
 			{
-				glTranslatef(0.f, -100.f, 600.f);
-				glRotatef(angle, 0.f, 1.f, 0.f);
+				gxTranslatef(0.f, -100.f, 600.f);
+				gxRotatef(angle, 0.f, 1.f, 0.f);
+				checkErrorGL();
 				
 				setBlend(BLEND_OPAQUE);
 				setColor(255, 255, 255);
+				checkErrorGL();
 				
 				int time = 0;
 				time -= getTimeUS();
@@ -186,13 +201,14 @@ int main(int argc, char * argv[])
 						for (int z = Z1; z <= Z2; ++z)
 						{
 							Model * model = models[CoordKey(x, y, z)];
-							model->x = x * 200.f;
-							model->y = y * 200.f;
-							model->z = 0.f;
+							
 							model->draw(drawFlags);
 						}
 					}
 				}
+				
+				//Shader shaderGeneric("engine/Generic");
+				//setShader(shaderGeneric);
 				
 				time += getTimeUS();
 				log("draw took %.2fms", time / 1000.f);
@@ -203,9 +219,25 @@ int main(int argc, char * argv[])
 				const Vec2 s = transformToScreen(Vec3(0.f, 0.f, 0.f));
 				debugDrawText(s[0], s[1], 18, 0, 0, "root");
 				setColor(255, 255, 255);
+				
+				clearShader();
 			}
-			glPopMatrix();
+			gxPopMatrix();
 			glDisable(GL_DEPTH_TEST);
+			
+			// OpenGX (tm)
+			
+			setTransform(TRANSFORM_SCREEN);
+			
+			gxColor4f(1.f, 1.f, 1.f, 1.f);
+			gxBegin(GL_TRIANGLES);
+			gxVertex2f(0.f, 0.f);
+			gxVertex2f(100.f, 100.f);
+			gxVertex2f(0.f, 100.f);
+			gxVertex2f(200.f, 0.f);
+			gxVertex2f(200.f, 100.f);
+			gxVertex2f(100.f, 100.f);
+			gxEnd();
 		}
 		framework.endDraw();
 	}

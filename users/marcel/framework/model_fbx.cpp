@@ -140,7 +140,8 @@ public:
 		this->persistent = persistent;
 		parent = 0;
 	}
-
+	
+	virtual ~FbxObject() { }
 	virtual void helpMeDebugWithVTables() { }
 	
 	std::string type;

@@ -1,0 +1,53 @@
+include engine/ShaderPS.txt
+
+uniform vec4 params;
+uniform sampler2D texture;
+
+shader_in vec3 v_normal;
+shader_in vec4 v_color;
+shader_in vec2 v_texcoord0;
+
+void main()
+{
+	vec4 result = v_color;
+	
+	if (params.x != 0)
+	{
+		vec4 texColor = texture2D(texture, v_texcoord0);
+		
+		if (params.z != 0)
+		{
+			texColor.rgb = vec3(1.0);
+		}
+		
+		/*
+		COLOR_MUL,
+		COLOR_ADD,
+		COLOR_SUB,
+		COLOR_IGNORE
+		*/
+		
+		if (params.y == 0)
+		{
+			result.rgb = result.rgb * texColor.rgb;
+			result.a   = result.a   * texColor.a;
+		}
+		else if (params.y == 1)
+		{
+			result.rgb = result.rgb + texColor.rgb;
+			result.a   = result.a   * texColor.a;
+		}
+		else if (params.y == 2)
+		{
+			result.rgb = result.rgb - texColor.rgb;
+			result.a   = result.a   * texColor.a;
+		}
+		else if (params.y == 3)
+		{
+			result.rgb = texColor.rgb;
+			result.a   = texColor.a;
+		}
+	}
+	
+	shader_fragColor = result;
+}

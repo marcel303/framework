@@ -2,12 +2,24 @@ include engine/ShaderCommon.txt
 
 // vertex streams
 
-attribute vec3 in_position;
-attribute vec3 in_normal;
-attribute vec4 in_color;
-attribute vec2 in_texcoord;
-attribute vec4 in_skinningBlendIndices;
-attribute vec4 in_skinningBlendWeights;
+shader_attrib vec3 in_position;
+shader_attrib vec3 in_normal;
+shader_attrib vec4 in_color;
+shader_attrib vec2 in_texcoord;
+shader_attrib vec4 in_skinningBlendIndices;
+shader_attrib vec4 in_skinningBlendWeights;
+
+// OpenGL constants
+
+#if VS_USE_LEGACY_MATRICES
+	#define ModelViewMatrix           gl_ModelViewMatrix
+	#define ModelViewProjectionMatrix gl_ModelViewProjectionMatrix
+	#define ProjectionMatrix          gl_ProjectionMatrix
+#else
+	uniform mat4 ModelViewMatrix;
+	uniform mat4 ModelViewProjectionMatrix;
+	uniform mat4 ProjectionMatrix;
+#endif
 
 // vertex shader constants
 
@@ -18,17 +30,17 @@ uniform mat4 skinningMatrices[32];
 
 vec4 objectToWorld(vec4 v)
 {
-	return gl_ModelViewMatrix * v;
+	return ModelViewMatrix * v;
 }
 
 vec4 objectToProjection(vec4 v)
 {
-	return gl_ModelViewProjectionMatrix * v;
+	return ModelViewProjectionMatrix * v;
 }
 
 vec4 worldToProjection(vec4 v)
 {
-	return gl_ProjectionMatrix * v;
+	return ProjectionMatrix * v;
 }
 
 vec4 objectToWorld_Skinned(ivec4 indices, vec4 weights, vec4 v)
@@ -68,9 +80,6 @@ vec4 unpackColor()
 vec2 unpackTexcoord(int index)
 {
 	if (index == 0) return in_texcoord;
-	if (index == 1) return gl_MultiTexCoord1.xy;
-	if (index == 2) return gl_MultiTexCoord2.xy;
-	if (index == 3) return gl_MultiTexCoord3.xy;
 	return vec2(0.0, 0.0);
 }
 

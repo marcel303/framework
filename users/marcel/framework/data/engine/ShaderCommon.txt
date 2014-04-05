@@ -1,5 +1,15 @@
 #if __SHADER__
 
+#if 1
+	#define shader_attrib attribute
+	#define shader_in varying
+	#define shader_out varying
+#else
+	#define shader_attrib in
+	#define shader_in in
+	#define shader_out out
+#endif
+
 #else
 
 class vec2
@@ -33,6 +43,8 @@ public:
 };
 
 #endif
+
+#define VS_USE_LEGACY_MATRICES 0
 
 #define VS_POSITION      0
 #define VS_NORMAL        1

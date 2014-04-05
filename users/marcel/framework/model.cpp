@@ -1,8 +1,7 @@
 #include <algorithm>
 #include <assert.h>
 #include <GL/glew.h>
-#include <SDL/SDL.h>
-#include <SDL/SDL_opengl.h>
+#include <SDL2/SDL.h>
 #include "data/engine/ShaderCommon.txt"
 #include "framework.h"
 #include "internal.h"
@@ -25,15 +24,6 @@ ModelCache g_modelCache;
 
 namespace AnimModel
 {
-	struct VsInput
-	{
-		int id;
-		int components;
-		int type;
-		bool normalize;
-		int offset;
-	};
-	
 	static const VsInput vsInputs[] =
 	{
 		{ VS_POSITION,      3, GL_FLOAT,         0, offsetof(Vertex, px)          },
@@ -440,6 +430,15 @@ namespace AnimModel
 			m_bones[i] = newBones[i];
 	}
 	
+	int BoneSet::findBone(const std::string & name)
+	{
+		for (int i = 0; i < m_numBones; ++i)
+			if (m_bones[i].name == name)
+				return i;
+		
+		return -1;
+	}
+	
 	//
 	
 	void AnimKey::interpolate(BoneTransform & result, const AnimKey & key1, const AnimKey & key2, float t, RotationType rotationType)
@@ -530,7 +529,7 @@ namespace AnimModel
 		m_isAdditive = isAdditive;
 	}
 	
-	bool Anim::evaluate(float time, BoneTransform * transforms)
+	bool Anim::evaluate(float time, BoneTransform * transforms, int boneIndex)
 	{
 		bool isDone = true;
 		
@@ -550,42 +549,48 @@ namespace AnimModel
 					key++;
 				}
 				
-				BoneTransform transform;
-				
-				if (key != lastKey && time >= key->time)
+				if (i == boneIndex || boneIndex == -1)
 				{
-					const AnimKey & key1 = key[0];
-					const AnimKey & key2 = key[1];
+					BoneTransform transform;
 					
-					assert(time >= key1.time && time <= key2.time);
+					if (key != lastKey && time >= key->time)
+					{
+						const AnimKey & key1 = key[0];
+						const AnimKey & key2 = key[1];
+						
+						assert(time >= key1.time && time <= key2.time);
+						
+						const float t = (time - key1.time) / (key2.time - key1.time);
+						
+						assert(t >= 0.f && t <= 1.f);
+						
+						AnimKey::interpolate(transform, key1, key2, t, m_rotationType);
+					}
+					else
+					{
+						// either the first or last key in the animation. copy value
+						
+						assert(key == firstKey || key == lastKey);
+						
+						AnimKey::interpolate(transform, *key, *key, 0.f, m_rotationType);
+					}
 					
-					const float t = (time - key1.time) / (key2.time - key1.time);
+					if (m_isAdditive)
+						BoneTransform::add(*transforms, transform);
+					else
+						*transforms = transform;
 					
-					assert(t >= 0.f && t <= 1.f);
-					
-					AnimKey::interpolate(transform, key1, key2, t, m_rotationType);
-				}
-				else
-				{
-					// either the first or last key in the animation. copy value
-					
-					assert(key == firstKey || key == lastKey);
-					
-					AnimKey::interpolate(transform, *key, *key, 0.f, m_rotationType);
-				}
-				
-				if (m_isAdditive)
-					BoneTransform::add(transforms[i], transform);
-				else
-					transforms[i] = transform;
-				
-				if (key != lastKey)
-				{
-					isDone = false;
+					if (key != lastKey)
+					{
+						isDone = false;
+					}
 				}
 				
 				firstKey += numKeys;
 			}
+			
+			if (i == boneIndex || boneIndex == -1)
+				transforms++;
 		}
 		
 		return isDone;
@@ -769,9 +774,9 @@ void Model::drawEx(Vec3 position, Vec3 axis, float angle, float scale, int drawF
 	matrix(1, 3) = 0.f;
 	matrix(2, 3) = 0.f;
 	
-	matrix(3, 0) = x;
-	matrix(3, 1) = y;
-	matrix(3, 2) = z;
+	matrix(3, 0) = position[0];
+	matrix(3, 1) = position[1];
+	matrix(3, 2) = position[2];
 	matrix(3, 3) = 1.f;
 	
 	if (scale != 1.f)
@@ -803,6 +808,16 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 		Anim * anim = reinterpret_cast<Anim*>(m_animSegment);
 		
 		const bool isDone = anim->evaluate(animTime, transforms);
+		
+		if (anim->m_rootMotion)
+		{
+			int boneIndex = m_model->boneSet->findBone(m_model->rootNode);
+			
+			if (boneIndex != -1)
+			{
+				transforms[boneIndex].translation = m_model->boneSet->m_bones[boneIndex].transform.translation;
+			}
+		}
 		
 		if (isDone)
 		{
@@ -905,6 +920,8 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 			
 			setShader(shader);
 			
+			gxValidateMatrices();
+			
 			// todo: use constant locations for skinningMatrices and drawColor, and move this setting to outside of the loop
 			// set uniform constants for skinning matrices
 			
@@ -937,12 +954,7 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->m_indexArray);
 			checkErrorGL();
 			
-			for (int i = 0; i < numVsInputs; ++i)
-			{
-				glVertexAttribPointer(vsInputs[i].id, vsInputs[i].components, vsInputs[i].type, vsInputs[i].normalize, sizeof(Vertex), (void*)vsInputs[i].offset);
-				glEnableVertexAttribArray(vsInputs[i].id);
-				checkErrorGL();
-			}
+			bindVsInputs(vsInputs, numVsInputs, sizeof(Vertex));
 			
 			GLenum indexType = mesh->m_numVertices < 65536 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
 			glDrawElements(GL_TRIANGLES, mesh->m_numIndices, indexType, 0);
@@ -964,7 +976,7 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 		{
 			const Mesh * mesh = m_model->meshSet->m_meshes[i];
 			
-			glBegin(GL_LINES);
+			gxBegin(GL_LINES);
 			{
 				for (int j = 0; j < mesh->m_numVertices; ++j)
 				{
@@ -990,13 +1002,13 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 					const Vec3 & p1 = p;
 					const Vec3   p2 = p + n * scale;
 					
-					glColor3ub(127, 127, 127);
-					glNormal3f(n[0], n[1], n[2]);
-					glVertex3f(p1[0], p1[1], p1[2]);
-					glVertex3f(p2[0], p2[1], p2[2]);
+					gxColor3ub(127, 127, 127);
+					gxNormal3f(n[0], n[1], n[2]);
+					gxVertex3f(p1[0], p1[1], p1[2]);
+					gxVertex3f(p2[0], p2[1], p2[2]);
 				}
 			}
-			glEnd();
+			gxEnd();
 		}
 	}
 	
@@ -1004,8 +1016,8 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 	{
 		// bone to object matrix translation
 		glDisable(GL_DEPTH_TEST);
-		glColor3ub(127, 127, 127);
-		glBegin(GL_LINES);
+		gxColor3ub(127, 127, 127);
+		gxBegin(GL_LINES);
 		{
 			for (int boneIndex = 0; boneIndex < m_model->boneSet->m_numBones; ++boneIndex)
 			{
@@ -1014,23 +1026,23 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 				{
 					const Mat4x4 & m1 = worldMatrices[boneIndex];
 					const Mat4x4 & m2 = worldMatrices[parentBoneIndex];
-					glVertex3f(m1(3, 0), m1(3, 1), m1(3, 2));
-					glVertex3f(m2(3, 0), m2(3, 1), m2(3, 2));
+					gxVertex3f(m1(3, 0), m1(3, 1), m1(3, 2));
+					gxVertex3f(m2(3, 0), m2(3, 1), m2(3, 2));
 				}
 			}
 		}
-		glEnd();
-		glColor3ub(0, 255, 0);
+		gxEnd();
+		gxColor3ub(0, 255, 0);
 		glPointSize(5.f);
-		glBegin(GL_POINTS);
+		gxBegin(GL_POINTS);
 		{
 			for (int boneIndex = 0; boneIndex < m_model->boneSet->m_numBones; ++boneIndex)
 			{
 				const Mat4x4 & m = worldMatrices[boneIndex];
-				glVertex3f(m(3, 0), m(3, 1), m(3, 2));
+				gxVertex3f(m(3, 0), m(3, 1), m(3, 2));
 			}
 		}
-		glEnd();
+		gxEnd();
 		glEnable(GL_DEPTH_TEST);
 	}
 	
@@ -1038,8 +1050,8 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 	{
 		// object to bone matrix translation
 		glDisable(GL_DEPTH_TEST);
-		glColor3ub(127, 127, 127);
-		glBegin(GL_LINES);
+		gxColor3ub(127, 127, 127);
+		gxBegin(GL_LINES);
 		{
 			for (int boneIndex = 0; boneIndex < m_model->boneSet->m_numBones; ++boneIndex)
 			{
@@ -1048,23 +1060,23 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 				{
 					const Mat4x4 m1 = matrix * m_model->meshToObject * m_model->boneSet->m_bones[boneIndex].poseMatrix.CalcInv();
 					const Mat4x4 m2 = matrix * m_model->meshToObject * m_model->boneSet->m_bones[parentBoneIndex].poseMatrix.CalcInv();
-					glVertex3f(m1(3, 0), m1(3, 1), m1(3, 2));
-					glVertex3f(m2(3, 0), m2(3, 1), m2(3, 2));
+					gxVertex3f(m1(3, 0), m1(3, 1), m1(3, 2));
+					gxVertex3f(m2(3, 0), m2(3, 1), m2(3, 2));
 				}
 			}
 		}
-		glEnd();
-		glColor3ub(255, 0, 0);
+		gxEnd();
+		gxColor3ub(255, 0, 0);
 		glPointSize(7.f);
-		glBegin(GL_POINTS);
+		gxBegin(GL_POINTS);
 		{
 			for (int boneIndex = 0; boneIndex < m_model->boneSet->m_numBones; ++boneIndex)
 			{
 				const Mat4x4 m = matrix * m_model->meshToObject * m_model->boneSet->m_bones[boneIndex].poseMatrix.CalcInv();
-				glVertex3f(m(3, 0), m(3, 1), m(3, 2));
+				gxVertex3f(m(3, 0), m(3, 1), m(3, 2));
 			}
 		}
-		glEnd();
+		gxEnd();
 		glEnable(GL_DEPTH_TEST);
 	}
 }
@@ -1107,6 +1119,26 @@ void Model::updateAnimation(float timeStep)
 	
 	if (anim)
 	{
+		if (anim->m_rootMotion)
+		{
+			int boneIndex = m_model->boneSet->findBone(m_model->rootNode);
+			
+			if (boneIndex != -1)
+			{
+				BoneTransform oldTransform;
+				BoneTransform newTransform;
+				
+				anim->evaluate(oldTime, &oldTransform, boneIndex);
+				anim->evaluate(newTime, &newTransform, boneIndex);
+				
+				animRootMotion = m_model->meshToObject * (newTransform.translation - oldTransform.translation);
+				
+				x += animRootMotion[0];
+				y += animRootMotion[1];
+				z += animRootMotion[2];
+			}
+		}
+		
 		anim->triggerActions(oldTime, newTime, animLoopCount);
 	}
 }
@@ -1482,9 +1514,9 @@ void ModelCacheElem::load(const char * filename)
 	// set to 'object' space transform
 	
 	memset(&meshToObject, 0, sizeof(meshToObject));
-	meshToObject(std::abs(right  ) - 1, 0) = right   < 0 ? -scale : +scale;
-	meshToObject(std::abs(up     ) - 1, 1) = up      < 0 ? -scale : +scale;
-	meshToObject(std::abs(forward) - 1, 2) = forward < 0 ? -scale : +scale;
+	meshToObject((right   < 0 ? -right   : +right  ) - 1, 0) = right   < 0 ? -scale : +scale;
+	meshToObject((up      < 0 ? -up      : +up     ) - 1, 1) = up      < 0 ? -scale : +scale;
+	meshToObject((forward < 0 ? -forward : +forward) - 1, 2) = forward < 0 ? -scale : +scale;
 	meshToObject(3, 3) = 1.f;
 	
 	//dumpMatrix(meshToObject);

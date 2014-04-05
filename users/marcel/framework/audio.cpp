@@ -455,7 +455,7 @@ bool SoundPlayer::init(int numSources)
 	// create music thread
 	
 	m_musicMutex = SDL_CreateMutex();
-	m_musicThread = SDL_CreateThread(executeMusicThreadProc, this);
+	m_musicThread = SDL_CreateThread(executeMusicThreadProc, "MusicThread", this);
 	m_quitMusicThread = false;
 	
 	return true;

@@ -1,7 +1,7 @@
 include engine/ShaderVS.txt
 
-varying vec4 v_color;
-varying vec2 v_texcoord0;
+shader_out vec4 v_color;
+shader_out vec2 v_texcoord0;
 
 void main()
 {
@@ -43,7 +43,6 @@ void main()
 	
 	gl_Position = position;
 	
-	v_texcoord0 = texcoord;
-	
 	v_color = color;
+	v_texcoord0 = texcoord;
 }

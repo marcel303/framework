@@ -3,6 +3,7 @@
 // Copyright (C) 2013 Grannies Games - All rights reserved
 
 #include <algorithm>
+#include <alloca.h>
 #include <string.h>
 #include "AudioStream.h"
 

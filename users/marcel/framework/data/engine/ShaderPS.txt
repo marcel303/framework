@@ -1,0 +1,7 @@
+include engine/ShaderCommon.txt
+
+#if 1
+	#define shader_fragColor gl_FragColor
+#else
+	out vec4 shader_fragColor;
+#endif

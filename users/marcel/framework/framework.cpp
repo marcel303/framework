@@ -23,6 +23,7 @@
 #endif
 
 #include "audio.h"
+#include "data/engine/ShaderCommon.txt"
 #include "framework.h"
 #include "internal.h"
 #include "model.h"
@@ -66,21 +67,8 @@ Framework::~Framework()
 {
 }
 
-bool Framework::init(int argc, char * argv[], int sx, int sy)
+bool Framework::init(int argc, const char * argv[], int sx, int sy)
 {
-#ifdef WIN32
-	if (windowX != -1 && windowY != -1)
-	{
-		char windowPos[32];
-		sprintf_s(windowPos, sizeof(windowPos), "SDL_VIDEO_WINDOW_POS=%d,%d", windowX, windowY);
-		_putenv(windowPos);
-	}
-	else
-	{
-		_putenv("SDL_VIDEO_CENTERED=1");
-	}
-#endif
-
 	// initialize SDL
 	
 	const int initFlags = SDL_INIT_NOPARACHUTE | SDL_INIT_TIMER | SDL_INIT_VIDEO;
@@ -91,11 +79,14 @@ bool Framework::init(int argc, char * argv[], int sx, int sy)
 		return false;
 	}
 	
-#if 0
+#if 1
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+#else
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 #endif
-
+	
 #if 1
 	SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE, 32);
 	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
@@ -103,34 +94,49 @@ bool Framework::init(int argc, char * argv[], int sx, int sy)
 	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
 #endif
-
+	
 #if 1
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 32);
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
 #endif
-
-#if 1
-	SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 1); // make sure we have vsync enabled
+	
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-#endif
-
-	int flags = SDL_OPENGL;
+	
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+	//SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+	
+	// todo: ensure VSYNC is enabled
+	
+	int flags = SDL_WINDOW_OPENGL;
 	
 	if (fullscreen && minification == 1)
 	{
-		flags |= SDL_DOUBLEBUF;
-		flags |= SDL_FULLSCREEN;
+		flags |= SDL_WINDOW_FULLSCREEN;
+		
+		SDL_GL_SetSwapInterval(1);
 	}
 	
-	if (SDL_SetVideoMode(sx / minification, sy / minification, 32, flags) == 0)
+	globals.window = SDL_CreateWindow(
+		windowTitle.c_str(),
+		windowX == -1 ? SDL_WINDOWPOS_CENTERED : windowX,
+		windowY == -1 ? SDL_WINDOWPOS_CENTERED : windowY,
+		sx / minification,
+		sy / minification,
+		flags);
+	
+	if (!globals.window)
 	{
 		logError("failed to set video mode (%dx%d @ %dbpp): %s", sx / minification, sy / minification, 32, SDL_GetError());
 		return false;
 	}
 	
+	globals.glContext = SDL_GL_CreateContext(globals.window);
+	checkErrorGL();
+	
 	glewExperimental = GL_TRUE; // force GLEW to resolve all supported extension methods
-
+	
 	const int glewStatus = glewInit();
+	checkErrorGL();
 
 	if (glewStatus != GLEW_OK)
 	{
@@ -145,7 +151,12 @@ bool Framework::init(int argc, char * argv[], int sx, int sy)
 		logWarning("OpenGL 3.0 not supported");
 	}
 	
-	SDL_WM_SetCaption(windowTitle.c_str(), 0);
+	if (glewIsSupported("GL_ARB_debug_output"))
+	{
+		log("using OpenGL debug output");
+	    glDebugMessageCallback(debugOutputGL, stderr);
+	    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+	}
 	
 	globals.displaySize[0] = sx;
 	globals.displaySize[1] = sy;
@@ -157,8 +168,11 @@ bool Framework::init(int argc, char * argv[], int sx, int sy)
 	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 #endif
 	
+#if 0 // invalid using non-legacy mode
 	glClampColor(GL_CLAMP_VERTEX_COLOR, GL_FALSE);
-	
+	checkErrorGL();
+#endif
+
 	// initialize FreeType
 	
 	if (FT_Init_FreeType(&globals.freeType) != 0)
@@ -221,6 +235,16 @@ bool Framework::shutdown()
 	glBlendEquation = 0;
 	glClampColor = 0;
 	
+	// destroy SDL OpenGL context
+	
+	SDL_GL_DeleteContext(globals.glContext);
+	globals.glContext = 0;
+	
+	// destroy SDL window
+	
+	SDL_DestroyWindow(globals.window);
+	globals.window = 0;
+	
 	// shut down SDL
 	
 	SDL_Quit();
@@ -260,20 +284,37 @@ void Framework::process()
 	
 	// poll SDL event queue
 	
-	memset(globals.keyChange, 0, sizeof(globals.keyChange));
+	globals.keyChangeCount = 0;
 	memset(globals.mouseChange, 0, sizeof(globals.mouseChange));
 	
 	SDL_Event e;
 	
 	while (SDL_PollEvent(&e))
 	{
-		if (e.type == SDL_KEYDOWN || e.type == SDL_KEYUP)
+		if (e.type == SDL_KEYDOWN)
 		{
-			if (e.key.keysym.sym >= 0 && e.key.keysym.sym < SDLK_LAST)
+			bool isRepeat = false;
+			for (int i = 0; i < globals.keyDownCount; ++i)
+				if (globals.keyDown[i] == e.key.keysym.sym)
+					isRepeat = true;
+			if (!isRepeat)
 			{
-				globals.keyDown[e.key.keysym.sym] = e.key.state == SDL_PRESSED;
-				globals.keyChange[e.key.keysym.sym] = true;
+				globals.keyDown[globals.keyDownCount++] = e.key.keysym.sym;
+				globals.keyChange[globals.keyChangeCount++] = e.key.keysym.sym;
 			}
+		}
+		else if (e.type == SDL_KEYUP)
+		{
+			for (int i = 0; i < globals.keyDownCount; ++i)
+			{
+				if (globals.keyDown[i] == e.key.keysym.sym)
+				{
+					for (int j = i + 1; j < globals.keyDownCount; ++j)
+						globals.keyDown[j - 1] = globals.keyDown[j];
+					globals.keyDownCount--;
+				}
+			}
+			globals.keyChange[globals.keyChangeCount++] = e.key.keysym.sym;
 		}
 		else if (e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP)
 		{
@@ -289,11 +330,13 @@ void Framework::process()
 			mouse.x = e.motion.x * minification;
 			mouse.y = e.motion.y * minification;
 		}
+	#if 0 // fixme: no 'active' member ..
 		else if (e.type == SDL_ACTIVEEVENT)
 		{
 			if (reloadCachesOnActivate)
 				doReload |= (e.active.state & SDL_APPINPUTFOCUS) && e.active.gain;
 		}
+	#endif
 	}
 #ifdef __WIN32__
 	// use XInput to poll gamepad state
@@ -535,7 +578,7 @@ void Framework::endDraw()
 			
 	// flip back buffers
 	
-	SDL_GL_SwapBuffers();
+	SDL_GL_SwapWindow(globals.window);
 }
 
 void Framework::registerSprite(Sprite * sprite)
@@ -839,6 +882,12 @@ Shader::Shader(const char * filename)
 	m_shader = 0;
 	
 	load(filename);
+}
+
+Shader::~Shader()
+{
+	if (globals.shader == this)
+		clearShader();
 }
 
 void Shader::load(const char * filename)
@@ -1189,7 +1238,7 @@ void Sprite::drawEx(float x, float y, float angle, float scale, bool pixelpos, T
 {
 	if (m_texture->textures)
 	{
-		glPushMatrix();
+		gxPushMatrix();
 		{
 			if (pixelpos)
 			{
@@ -1197,16 +1246,16 @@ void Sprite::drawEx(float x, float y, float angle, float scale, bool pixelpos, T
 				y = std::floor(y / framework.minification) * framework.minification;
 			}
 			
-			glTranslatef(x, y, 0.f);
+			gxTranslatef(x, y, 0.f);
 			
 			if (scale != 1.f)
-				glScalef(scale, scale, 1.f);
+				gxScalef(scale, scale, 1.f);
 			if (angle != 0.f)
-				glRotatef(angle, 0.f, 0.f, 1.f);
+				gxRotatef(angle, 0.f, 0.f, 1.f);
 			if (flipX || flipY)
-				glScalef(flipX ? -1.f : +1.f, flipY ? -1.f : +1.f, 1.f);
+				gxScalef(flipX ? -1.f : +1.f, flipY ? -1.f : +1.f, 1.f);
 			if (pivotX != 0.f || pivotY != 0.f)
-				glTranslatef(-pivotX, -pivotY, 0.f);
+				gxTranslatef(-pivotX, -pivotY, 0.f);
 			
 			int cellIndex;
 			
@@ -1240,7 +1289,7 @@ void Sprite::drawEx(float x, float y, float angle, float scale, bool pixelpos, T
 			const float rsx = float(m_texture->sx / m_anim->m_gridSize[0]);
 			const float rsy = float(m_texture->sy / m_anim->m_gridSize[1]);
 			
-		#if 1
+		#if 0
 			const float verts[16] =
 			{
 				0.f, 0.f, 0.f, 1.f,
@@ -1265,19 +1314,19 @@ void Sprite::drawEx(float x, float y, float angle, float scale, bool pixelpos, T
 			glDisableClientState(GL_VERTEX_ARRAY);
 			glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 		#else
-			glBegin(GL_QUADS);
+			gxBegin(GL_QUADS);
 			{
-		 		glTexCoord2f(0.f, 1.f); glVertex2f(0.f, 0.f);
-		 		glTexCoord2f(1.f, 1.f); glVertex2f(rsx, 0.f);
-		 		glTexCoord2f(1.f, 0.f); glVertex2f(rsx, rsy);
-		 		glTexCoord2f(0.f, 0.f); glVertex2f(0.f, rsy);
+		 		gxTexCoord2f(0.f, 1.f); gxVertex2f(0.f, 0.f);
+		 		gxTexCoord2f(1.f, 1.f); gxVertex2f(rsx, 0.f);
+		 		gxTexCoord2f(1.f, 0.f); gxVertex2f(rsx, rsy);
+		 		gxTexCoord2f(0.f, 0.f); gxVertex2f(0.f, rsy);
 			}
-			glEnd();
+			gxEnd();
 		#endif
 			
 			glDisable(GL_TEXTURE_2D);
 		}
-		glPopMatrix();
+		gxPopMatrix();
 	}
 }
 
@@ -1597,17 +1646,28 @@ void Mouse::showCursor(bool enabled)
 
 bool Keyboard::isDown(SDLKey key) const
 {
-	return globals.keyDown[key];
+	for (int i = 0; i < globals.keyDownCount; ++i)
+		if (globals.keyDown[i] == key)
+			return true;
+	return false;
+}
+
+static bool keyChange(SDLKey key)
+{
+	for (int i = 0; i < globals.keyChangeCount; ++i)
+		if (globals.keyChange[i] == key)
+			return true;
+	return false;
 }
 
 bool Keyboard::wentDown(SDLKey key) const
 {
-	return isDown(key) && globals.keyChange[key];
+	return isDown(key) && keyChange(key);
 }
 
 bool Keyboard::wentUp(SDLKey key) const
 {
-	return !isDown(key) && globals.keyChange[key];
+	return !isDown(key) && keyChange(key);
 }
 
 // -----
@@ -1897,64 +1957,64 @@ void applyTransform()
 {
 	// calculate screen matrix (we need it to transform vertices to screen space)
 	{
-		glMatrixMode(GL_PROJECTION);
+		gxMatrixMode(GL_PROJECTION);
 		
 		Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : 0;
 		const float sx = surface ? surface->getWidth() : globals.displaySize[0];
 		const float sy = surface ? surface->getHeight() : globals.displaySize[1];
 		
-		glPushMatrix();
+		gxPushMatrix();
 		{
-			glLoadIdentity();
+			gxLoadIdentity();
 			
 			// flip Y axis so the vertical axis runs top to bottom
-			glScalef(1.f, -1.f, 1.f);
+			gxScalef(1.f, -1.f, 1.f);
 		
 			// convert from (0,0),(1,1) to (-1,-1),(+1+1)
-			glTranslatef(-1.f, -1.f, 0.f);
-			glScalef(2.f, 2.f, 1.f);
+			gxTranslatef(-1.f, -1.f, 0.f);
+			gxScalef(2.f, 2.f, 1.f);
 			
 			// convert from (0,0),(sx,sy) to (0,0),(1,1)
-			glScalef(1.f / sx, 1.f / sy, 1.f);
+			gxScalef(1.f / sx, 1.f / sy, 1.f);
 			
 			// capture transform
-			glGetFloatv(GL_PROJECTION_MATRIX, globals.transformScreen.m_v);
+			gxGetMatrixf(GL_PROJECTION, globals.transformScreen.m_v);
 			checkErrorGL();
 		}
-		glPopMatrix();
+		gxPopMatrix();
 	}
 	
 	// apply current transform
 	
-	glMatrixMode(GL_PROJECTION);
+	gxMatrixMode(GL_PROJECTION);
 	
 	switch (globals.transform)
 	{
 		case TRANSFORM_SCREEN:
 		{
-			glLoadMatrixf(globals.transformScreen.m_v);
+			gxLoadMatrixf(globals.transformScreen.m_v);
 			break;
 		}
 		case TRANSFORM_2D:
 		{
-			glLoadMatrixf(globals.transform2d.m_v);
+			gxLoadMatrixf(globals.transform2d.m_v);
 			break;
 		}
 		case TRANSFORM_3D:
 		{
-			glLoadMatrixf(globals.transform3d.m_v);
+			gxLoadMatrixf(globals.transform3d.m_v);
 			break;
 		}
 		default:
 		{
 			assert(false);
-			glLoadIdentity();
+			gxLoadIdentity();
 			break;
 		}
 	}
 	
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
+	gxMatrixMode(GL_MODELVIEW);
+	gxLoadIdentity();
 }
 
 void setTransform2d(const Mat4x4 & transform)
@@ -1972,8 +2032,8 @@ Vec2 transformToScreen(const Vec3 & v)
 	Mat4x4 matP;
 	Mat4x4 matM;
 	
-	glGetFloatv(GL_PROJECTION_MATRIX, matP.m_v);
-	glGetFloatv(GL_MODELVIEW_MATRIX, matM.m_v);
+	gxGetMatrixf(GL_PROJECTION, matP.m_v);
+	gxGetMatrixf(GL_MODELVIEW, matM.m_v);
 	checkErrorGL();
 	
 	// from current transfor to view
@@ -2129,7 +2189,11 @@ void setColorf(float r, float g, float b, float a, float rgbMul)
 	globals.color.b = b;
 	globals.color.a = a;
 	
+	#if 0
 	glColor4f(r, g, b, a);
+	#else
+	gxColor4f(r, g, b, a);
+	#endif
 }
 
 void setGradientf(float x1, float y1, const Color & color1, float x2, float y2, const Color & color2)
@@ -2149,46 +2213,50 @@ void setFont(Font & font)
 
 void setShader(const Shader & shader)
 {
+	globals.shader = const_cast<Shader*>(&shader);
+	
 	glUseProgram(shader.getProgram());
 }
 
 void clearShader()
 {
+	globals.shader = 0;
+	
 	glUseProgram(0);
 }
 
 void drawLine(float x1, float y1, float x2, float y2)
 {
-	glBegin(GL_LINES);
+	gxBegin(GL_LINES);
 	{
-		glVertex2f(x1, y1);
-		glVertex2f(x2, y2);
+		gxVertex2f(x1, y1);
+		gxVertex2f(x2, y2);
 	}
-	glEnd();
+	gxEnd();
 }
 
 void drawRect(float x1, float y1, float x2, float y2)
 {
-	glBegin(GL_QUADS);
+	gxBegin(GL_QUADS);
 	{
-		glTexCoord2f(0.f, 1.f); glVertex2f(x1, y1);
-		glTexCoord2f(1.f, 1.f); glVertex2f(x2, y1);
-		glTexCoord2f(1.f, 0.f); glVertex2f(x2, y2);
-		glTexCoord2f(0.f, 0.f); glVertex2f(x1, y2);
+		gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y1);
+		gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y1);
+		gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y2);
+		gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y2);
 	}
-	glEnd();
+	gxEnd();
 }
 
 void drawRectLine(float x1, float y1, float x2, float y2)
 {
-	glBegin(GL_LINE_LOOP);
+	gxBegin(GL_LINE_LOOP);
 	{
-		glTexCoord2f(0.f, 1.f); glVertex2f(x1, y1);
-		glTexCoord2f(1.f, 1.f); glVertex2f(x2, y1);
-		glTexCoord2f(1.f, 0.f); glVertex2f(x2, y2);
-		glTexCoord2f(0.f, 0.f); glVertex2f(x1, y2);
+		gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y1);
+		gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y1);
+		gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y2);
+		gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y2);
 	}
-	glEnd();
+	gxEnd();
 }
 
 void drawRectGradient(float x1, float y1, float x2, float y2)
@@ -2204,20 +2272,20 @@ void drawRectGradient(float x1, float y1, float x2, float y2)
 		globals.gradient.eval(x1, y2)
 	};
 	
-	glBegin(GL_QUADS);
+	gxBegin(GL_QUADS);
 	{
-		glColor4f(color[0].r, color[0].g, color[0].b, color[0].a);
-		glVertex2f(x1, y1);
-		glColor4f(color[1].r, color[1].g, color[1].b, color[1].a);
-		glVertex2f(x2, y1);
-		glColor4f(color[2].r, color[2].g, color[2].b, color[2].a);
-		glVertex2f(x2, y2);
-		glColor4f(color[3].r, color[3].g, color[3].b, color[3].a);
-		glVertex2f(x1, y2);
+		gxColor4f(color[0].r, color[0].g, color[0].b, color[0].a);
+		gxVertex2f(x1, y1);
+		gxColor4f(color[1].r, color[1].g, color[1].b, color[1].a);
+		gxVertex2f(x2, y1);
+		gxColor4f(color[2].r, color[2].g, color[2].b, color[2].a);
+		gxVertex2f(x2, y2);
+		gxColor4f(color[3].r, color[3].g, color[3].b, color[3].a);
+		gxVertex2f(x1, y2);
 	}
-	glEnd();
+	gxEnd();
 	
-	glColor4fv(oldColor);
+	setColorf(oldColor[0], oldColor[1], oldColor[2], oldColor[3]);
 }
 
 static void measureText(FT_Face face, int size, const char * text, float & sx, float & sy)
@@ -2280,7 +2348,7 @@ static void drawTextInternal(FT_Face face, int size, const char * text)
 			glBindTexture(GL_TEXTURE_2D, elem.texture);
 			glEnable(GL_TEXTURE_2D);
 			
-			glBegin(GL_QUADS);
+			gxBegin(GL_QUADS);
 			{
 				const float sx = float(elem.g.bitmap.width);
 				const float sy = float(elem.g.bitmap.rows);
@@ -2289,12 +2357,12 @@ static void drawTextInternal(FT_Face face, int size, const char * text)
 				const float x2 = x1 + sx;
 				const float y2 = y1 + sy;
 				
-		 		glTexCoord2f(0.f, 0.f); glVertex2f(x1, y1);
-		 		glTexCoord2f(1.f, 0.f); glVertex2f(x2, y1);
-		 		glTexCoord2f(1.f, 1.f); glVertex2f(x2, y2);
-		 		glTexCoord2f(0.f, 1.f); glVertex2f(x1, y2);
+		 		gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
+		 		gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
+		 		gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y2);
+		 		gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y2);
 			}
-			glEnd();
+			gxEnd();
 			
 			glDisable(GL_TEXTURE_2D);
 	 		
@@ -2312,8 +2380,8 @@ void drawText(float x, float y, int size, float alignX, float alignY, const char
 	vsprintf_s(text, sizeof(text), format, args);
 	va_end(args);
 	
-	glMatrixMode(GL_MODELVIEW);
-	glPushMatrix();
+	gxMatrixMode(GL_MODELVIEW);
+	gxPushMatrix();
 	{
 		float sx, sy;
 		measureText(globals.font->face, size, text, sx, sy);
@@ -2321,11 +2389,11 @@ void drawText(float x, float y, int size, float alignX, float alignY, const char
 		x += sx * (alignX - 1.f) / 2.f;
 		y += sy * (alignY - 1.f) / 2.f;
 		
-		glTranslatef(x, y, 0.f);
+		gxTranslatef(x, y, 0.f);
 		
 		drawTextInternal(globals.font->face, size, text);
 	}
-	glPopMatrix();
+	gxPopMatrix();
 }
 
 void debugDrawText(float x, float y, int size, float alignX, float alignY, const char * format, ...)
@@ -2352,6 +2420,322 @@ void debugDrawText(float x, float y, int size, float alignX, float alignY, const
 		globals.debugDraw.numLines++;
 	}
 }
+
+//
+
+class GxMatrixStack
+{
+public:
+	static const int kSize = 32;
+	Mat4x4 stack[kSize];
+	int stackDepth;
+	
+	GxMatrixStack()
+	{
+		stackDepth = 0;
+		stack[0].MakeIdentity();
+	}
+	
+	void push()
+	{
+		assert(stackDepth + 1 < kSize);
+		stackDepth++;
+		stack[stackDepth] = stack[stackDepth - 1];
+	}
+	
+	void pop()
+	{
+		assert(stackDepth > 0);
+		stackDepth--;
+	}
+	
+	Mat4x4 & get()
+	{
+		return stack[stackDepth];
+	}
+};
+
+static GxMatrixStack s_gxModelView;
+static GxMatrixStack s_gxProjection;
+static GxMatrixStack * s_gxMatrixStack = &s_gxModelView;
+
+void gxMatrixMode(GLenum mode)
+{
+	switch (mode)
+	{
+		case GL_MODELVIEW:
+			s_gxMatrixStack = &s_gxModelView;
+			break;
+		case GL_PROJECTION:
+			s_gxMatrixStack = &s_gxProjection;
+			break;
+		default:
+			assert(false);
+			break;
+	}
+}
+
+void gxPopMatrix()
+{
+	s_gxMatrixStack->pop();
+}
+
+void gxPushMatrix()
+{
+	s_gxMatrixStack->push();
+}
+
+void gxLoadIdentity()
+{
+	s_gxMatrixStack->get().MakeIdentity();
+}
+
+void gxLoadMatrixf(const float * m)
+{
+	memcpy(s_gxMatrixStack->get().m_v, m, sizeof(float) * 16);
+}
+
+void gxGetMatrixf(GLenum mode, float * m)
+{
+	switch (mode)
+	{
+		case GL_PROJECTION:
+			memcpy(m, s_gxProjection.get().m_v, sizeof(float) * 16);
+			break;
+		case GL_MODELVIEW:
+			memcpy(m, s_gxModelView.get().m_v, sizeof(float) * 16);
+			break;
+		default:
+			assert(false);
+			break;
+	}
+}
+
+void gxTranslatef(float x, float y, float z)
+{
+	Mat4x4 m;
+	m.MakeTranslation(x, y, z);
+	
+	s_gxMatrixStack->get() = s_gxMatrixStack->get() * m;
+}
+
+void gxRotatef(float angle, float x, float y, float z)
+{
+	Quat q;
+	q.fromAxisAngle(Vec3(x, y, z), angle * M_PI / 180.f);
+	
+	s_gxMatrixStack->get() = s_gxMatrixStack->get() * q.toMatrix();
+}
+
+void gxScalef(float x, float y, float z)
+{
+	Mat4x4 m;
+	m.MakeScaling(x, y, z);
+	
+	s_gxMatrixStack->get() = s_gxMatrixStack->get() * m;
+}
+
+void gxValidateMatrices()
+{
+	// todo: check if matrices are dirty
+	
+#if VS_USE_LEGACY_MATRICES
+	glMatrixMode(GL_PROJECTION);
+	glLoadMatrixf(s_gxProjection.get().m_v);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadMatrixf(s_gxModelView.get().m_v);
+#else
+	if (globals.shader)
+	{
+		globals.shader->setImmediateMatrix4x4("ModelViewMatrix", s_gxModelView.get().m_v);
+		globals.shader->setImmediateMatrix4x4("ModelViewProjectionMatrix", (s_gxProjection.get() * s_gxModelView.get()).m_v);
+		globals.shader->setImmediateMatrix4x4("ProjectionMatrix", s_gxProjection.get().m_v);
+	}
+#endif
+}
+
+struct GxVertex
+{
+	float px, py, pz, pw;
+	float nx, ny, nz;
+	float cx, cy, cz, cw;
+	float tx, ty;
+};
+
+static GxVertex s_gxVertexBuffer[1024]; // todo: lock/unlock
+
+static int s_gxPrimitiveType = -1;
+static GxVertex * s_gxVertices = 0;
+static int s_gxVertexCount = 0;
+static int s_gxMaxVertexCount = 0;
+static int s_gxPrimitiveSize = 0;
+static GxVertex s_gxVertex;
+
+static const VsInput vsInputs[] =
+{
+	{ VS_POSITION, 4, GL_FLOAT, 0, offsetof(GxVertex, px) },
+	{ VS_NORMAL,   3, GL_FLOAT, 0, offsetof(GxVertex, nx) },
+	{ VS_COLOR,    4, GL_FLOAT, 0, offsetof(GxVertex, cx) },
+	{ VS_TEXCOORD, 2, GL_FLOAT, 0, offsetof(GxVertex, tx) }
+};
+const int numVsInputs = sizeof(vsInputs) / sizeof(vsInputs[0]);
+
+static void gxFlush(bool endOfBatch)
+{
+	// todo: unmap, set arrays, draw
+	
+	if (s_gxVertexCount)
+	{	
+		#if 1
+		
+		Shader shader("engine/Generic");
+		setShader(shader);
+		
+		gxValidateMatrices();
+		
+		GLuint vertexBuffer = 0;
+		glGenBuffers(1, &vertexBuffer);
+		glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(GxVertex) * s_gxVertexCount, s_gxVertices, GL_DYNAMIC_DRAW);
+		checkErrorGL();
+		
+		bindVsInputs(vsInputs, numVsInputs, sizeof(GxVertex));
+		checkErrorGL();
+		
+		glActiveTexture(GL_TEXTURE0);
+		checkErrorGL();
+		
+		shader.setImmediate(
+			"params",
+			glIsEnabled(GL_TEXTURE_2D) ? 1 : 0,
+			globals.colorMode,
+			1,
+			0);
+		
+		shader.setTextureUnit("texture", 0);
+		
+		glDrawArrays(s_gxPrimitiveType, 0, s_gxVertexCount);
+		checkErrorGL();
+		
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glDeleteBuffers(1, &vertexBuffer);
+		checkErrorGL();
+		
+		clearShader();
+		
+		#else
+		
+		gxValidateMatrices();
+		
+		glBegin(s_gxPrimitiveType);
+		{
+			for (int i = 0; i < s_gxVertexCount; ++i)
+			{
+				const GxVertex & v = s_gxVertices[i];
+				
+				glNormal3f(v.nx, v.ny, v.nz);
+				glColor4f(v.cx, v.cy, v.cz, v.cw);
+				glTexCoord2f(v.tx, v.ty);
+				glVertex4f(v.px, v.py, v.pz, v.pw);
+			}
+		}
+		glEnd();
+		
+		#endif
+	}
+	
+	if (endOfBatch)
+		s_gxVertices = 0;
+	s_gxVertexCount = 0;
+}
+
+void gxBegin(int primitiveType)
+{
+	s_gxPrimitiveType = primitiveType;
+	s_gxVertices = s_gxVertexBuffer;
+	s_gxMaxVertexCount = sizeof(s_gxVertexBuffer) / sizeof(s_gxVertexBuffer[0]);
+	
+	switch (primitiveType)
+	{
+		case GL_TRIANGLES:
+			s_gxPrimitiveSize = 3;
+			break;
+		case GL_QUADS:
+			s_gxPrimitiveSize = 4;
+			break;
+		case GL_LINES:
+			s_gxPrimitiveSize = 2;
+			break;
+		case GL_LINE_LOOP:
+			s_gxPrimitiveSize = 1;
+			break;
+		case GL_POINTS:
+			s_gxPrimitiveSize = 1;
+			break;
+		default:
+			fassert(false);
+	}
+	
+	fassert(s_gxVertexCount == 0);
+}
+
+void gxEnd()
+{
+	gxFlush(true);
+}
+
+void gxColor4f(float r, float g, float b, float a)
+{
+	s_gxVertex.cx = r;
+	s_gxVertex.cy = g;
+	s_gxVertex.cz = b;
+	s_gxVertex.cw = a;
+}
+
+void gxColor3ub(int r, int g, int b)
+{
+	gxColor4f(
+		r / 255.f,
+		g / 255.f,
+		b / 255.f,
+		1.f);
+}
+
+void gxTexCoord2f(float u, float v)
+{
+	s_gxVertex.tx = u;
+	s_gxVertex.ty = v;
+}
+
+void gxNormal3f(float x, float y, float z)
+{
+	s_gxVertex.nx = x;
+	s_gxVertex.ny = y;
+	s_gxVertex.nz = z;
+}
+
+void gxVertex2f(float x, float y)
+{
+	gxVertex3f(x, y, 0.f);
+}
+
+void gxVertex3f(float x, float y, float z)
+{
+	s_gxVertex.px = x;
+	s_gxVertex.py = y;
+	s_gxVertex.pz = z;
+	s_gxVertex.pw = 1.f;
+	
+	s_gxVertices[s_gxVertexCount++] = s_gxVertex;
+	
+	if (s_gxVertexCount % s_gxPrimitiveSize == 0)
+	{
+		if (s_gxVertexCount + s_gxPrimitiveSize > s_gxMaxVertexCount)
+			gxFlush(false);
+	}
+}
+
+//
 
 void changeDirectory(const char * path)
 {

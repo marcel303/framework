@@ -43,7 +43,7 @@ static void sortSprites(Sprite ** sprites, int numSprites)
 	std::sort(sprites, sprites + numSprites, compareSprites);
 }
 
-int main(int argc, char * argv[])
+int main(int argc, const char * argv[])
 {
 	changeDirectory("data");
 	
@@ -379,17 +379,17 @@ int main(int argc, char * argv[])
 						sine<int>(127, 255, framework.time * 2.345f),
 						sine<int>(127, 255, framework.time * 3.456f), i == (numSteps - 1) ? 255 : 15);
 					
-					glPushMatrix();
-					glTranslatef(+sx/2.f, +sy/2.f, 0.f);
+					gxPushMatrix();
+					gxTranslatef(+sx/2.f, +sy/2.f, 0.f);
 					if (keyboard.isDown(SDLK_w))
 					{
 						const float scale = sine<float>(1.f, 2.f, framework.time * 2.321f);
-						glScalef(scale, scale, 1.f);
-						glRotatef(sine<float>(-25.f, +25.f, framework.time / 4.567f) + i / 2.f, 0.f, 0.f, 1.f);
+						gxScalef(scale, scale, 1.f);
+						gxRotatef(sine<float>(-25.f, +25.f, framework.time / 4.567f) + i / 2.f, 0.f, 0.f, 1.f);
 					}
-					glTranslatef(-sx/2.f, -sy/2.f, 0.f);
+					gxTranslatef(-sx/2.f, -sy/2.f, 0.f);
 					drawRect(0.f, 0.f, sx, sy);
-					glPopMatrix();
+					gxPopMatrix();
 				}
 				glDisable(GL_TEXTURE_2D);
 				

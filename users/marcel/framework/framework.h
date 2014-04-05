@@ -1,8 +1,7 @@
 #pragma once
 
 #include <GL/glew.h>
-#include <SDL/SDL.h>
-#include <SDL/SDL_opengl.h>
+#include <SDL2/SDL.h>
 
 #include <algorithm>
 #include <assert.h>
@@ -14,8 +13,8 @@
 #include "Mat4x4.h"
 #include "Vec3.h"
 
-//#define fassert assert
-#define fassert(x) do { } while (false)
+#define fassert assert
+//#define fassert(x) do { } while (false)
 
 // configuration
 
@@ -140,7 +139,7 @@ public:
 	
 	void setActionHandler(ActionHandler actionHandler);
 	
-	bool init(int argc, char * argv[], int sx, int sy);
+	bool init(int argc, const char * argv[], int sx, int sy);
 	bool shutdown();
 	void process();
 	void processAction(const std::string & action, const Dictionary & args);
@@ -226,6 +225,7 @@ class Shader
 public:
 	Shader();
 	Shader(const char * filename);
+	~Shader();
 	
 	void load(const char * filename);
 	bool isValid() const { return m_shader != 0; }
@@ -526,7 +526,7 @@ class StageObject
 {	
 public:
 	StageObject();
-	~StageObject();
+	virtual ~StageObject();
 	
 	virtual void process(float timeStep);
 	virtual void draw();
@@ -616,6 +616,28 @@ void drawRectGradient(float x1, float y1, float x2, float y2);
 void drawText(float x, float y, int size, float alignX, float alignY, const char * format, ...);
 
 void debugDrawText(float x, float y, int size, float alignX, float alignY, const char * format, ...);
+
+// OpenGL legacy mode drawing
+
+void gxMatrixMode(GLenum mode);
+void gxPopMatrix();
+void gxPushMatrix();
+void gxLoadIdentity();
+void gxLoadMatrixf(const float * m);
+void gxGetMatrixf(GLenum mode, float * m);
+void gxTranslatef(float x, float y, float z);
+void gxRotatef(float angle, float x, float y, float z);
+void gxScalef(float x, float y, float z);
+void gxValidateMatrices();
+
+void gxBegin(int primitiveType);
+void gxEnd();
+void gxColor4f(float r, float g, float b, float a);
+void gxColor3ub(int r, int g, int b);
+void gxTexCoord2f(float u, float v);
+void gxNormal3f(float x, float y, float z);
+void gxVertex2f(float x, float y);
+void gxVertex3f(float x, float y, float z);
 
 // utility
 
