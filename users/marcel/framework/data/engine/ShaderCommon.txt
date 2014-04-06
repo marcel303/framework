@@ -10,6 +10,8 @@
 	#define shader_out out
 #endif
 
+#define tex2D texture
+
 #else
 
 class vec2

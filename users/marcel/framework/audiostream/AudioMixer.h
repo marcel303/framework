@@ -3,9 +3,14 @@
 // Copyright (C) 2013 Grannies Games - All rights reserved
 
 #include <algorithm>
-#include <malloc.h>
 #include <string.h>
 #include "AudioStream.h"
+
+#ifdef WIN32
+	#include <malloc.h>
+#else
+	#include <alloca.h>
+#endif
 
 const static int kAudioMixerMaxStreams = 4;
 

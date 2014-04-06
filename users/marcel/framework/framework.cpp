@@ -84,7 +84,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
 #else
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 #endif
 	
 #if 1
@@ -135,6 +135,12 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	
 	globals.glContext = SDL_GL_CreateContext(globals.window);
 	checkErrorGL();
+	
+	if (!globals.glContext)
+	{
+		logError("failed to create OpenGL context: %s", SDL_GetError());
+		return false;
+	}
 	
 	glewExperimental = GL_TRUE; // force GLEW to resolve all supported extension methods
 	
@@ -2583,6 +2589,7 @@ struct GxVertex
 	float tx, ty;
 };
 
+static GLuint s_gxVertexArrayObject = 0;
 static GLuint s_gxVertexBufferObject = 0;
 static GLuint s_gxIndexBufferObject = 0;
 static GxVertex s_gxVertexBuffer[1024];
@@ -2592,7 +2599,7 @@ static GxVertex * s_gxVertices = 0;
 static int s_gxVertexCount = 0;
 static int s_gxMaxVertexCount = 0;
 static int s_gxPrimitiveSize = 0;
-static GxVertex s_gxVertex;
+static GxVertex s_gxVertex = { };
 static bool s_gxTextureEnabled = false;
 
 static const VsInput vsInputs[] =
@@ -2609,13 +2616,36 @@ void gxEmitVertex();
 void gxInitialize()
 {
 	fassert(s_gxVertexBufferObject == 0);
-	fassert(s_gxIndexBufferObject == 0);
 	glGenBuffers(1, &s_gxVertexBufferObject);
+	
+	fassert(s_gxIndexBufferObject == 0);
 	glGenBuffers(1, &s_gxIndexBufferObject);
+	
+	// create vertex array
+	fassert(s_gxVertexArrayObject == 0);
+	glGenVertexArrays(1, &s_gxVertexArrayObject);
+	checkErrorGL();
+	glBindVertexArray(s_gxVertexArrayObject);
+	checkErrorGL();
+	{
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject);
+		checkErrorGL();
+		glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject);
+		checkErrorGL();
+		bindVsInputs(vsInputs, numVsInputs, sizeof(GxVertex));
+	}
+	glBindVertexArray(0);
+	checkErrorGL();
 }
 
 void gxShutdown()
 {
+	if (s_gxVertexArrayObject != 0)
+	{
+		glDeleteVertexArrays(1, &s_gxVertexArrayObject);
+		s_gxVertexArrayObject = 0;
+	}
+	
 	if (s_gxVertexBufferObject != 0)
 	{
 		glDeleteBuffers(1, &s_gxVertexBufferObject);
@@ -2643,7 +2673,7 @@ static void gxFlush(bool endOfBatch)
 		glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(GxVertex) * s_gxVertexCount, s_gxVertices, GL_DYNAMIC_DRAW);
 		checkErrorGL();
-
+		
 		bool indexed = false;
 
 		if (s_gxPrimitiveType == GL_QUADS)
@@ -2665,7 +2695,7 @@ static void gxFlush(bool endOfBatch)
 				indices[i * 6 + 4] = i * 4 + 2;
 				indices[i * 6 + 5] = i * 4 + 3;
 			}
-
+			
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject);
 			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned short) * numIndices, indices, GL_DYNAMIC_DRAW);
 			checkErrorGL();
@@ -2676,8 +2706,7 @@ static void gxFlush(bool endOfBatch)
 			indexed = true;
 		}
 		
-		bindVsInputs(vsInputs, numVsInputs, sizeof(GxVertex));
-		checkErrorGL();
+		glBindVertexArray(s_gxVertexArrayObject);
 		
 		shader.setImmediate(
 			shaderElem.params[ShaderCacheElem::kSp_Params].index,
@@ -2694,16 +2723,31 @@ static void gxFlush(bool endOfBatch)
 			glDrawArrays(s_gxPrimitiveType, 0, s_gxVertexCount);
 		checkErrorGL();
 		
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		checkErrorGL();
+		glBindVertexArray(0);
 
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 		checkErrorGL();
+		
+		if (endOfBatch)
+		{
+			s_gxVertexCount = 0;
+		}
+		else
+		{
+			switch (s_gxPrimitiveType)
+			{
+				case GL_LINE_LOOP:
+					s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 1];
+					s_gxVertexCount = 1;
+					break;
+				default:
+					s_gxVertexCount = 0;
+			}
+		}
 	}
 	
 	if (endOfBatch)
 		s_gxVertices = 0;
-	s_gxVertexCount = 0;
 }
 
 void gxBegin(int primitiveType)

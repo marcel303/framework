@@ -115,12 +115,14 @@ namespace AnimModel
 	{
 		fassert(!m_vertexArray && !m_indexArray);
 		
+		// create vertex buffer
 		glGenBuffers(1, &m_vertexArray);
 		glBindBuffer(GL_ARRAY_BUFFER, m_vertexArray);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * m_numVertices, m_vertices, GL_STATIC_DRAW);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		checkErrorGL();
 		
+		// create index buffer
 		glGenBuffers(1, &m_indexArray);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexArray);
 		checkErrorGL();
@@ -141,34 +143,19 @@ namespace AnimModel
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 		checkErrorGL();
 		
-	/*
+		// create vertex array object
 		glGenVertexArrays(1, &m_vertexArrayObject);
 		checkErrorGL();
-		
 		glBindVertexArray(m_vertexArrayObject);
 		checkErrorGL();
 		{
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexArray);
 			checkErrorGL();
-			
 			glBindBuffer(GL_ARRAY_BUFFER, m_vertexArray);
 			checkErrorGL();
-			
-			for (int i = 0; i < numVsInputs; ++i)
-			{
-				glVertexAttribPointer(vsInputs[i].id, vsInputs[i].components, vsInputs[i].type, vsInputs[i].normalize, sizeof(Vertex), (void*)vsInputs[i].offset);
-				glEnableVertexAttribArray(vsInputs[i].id);
-				checkErrorGL();
-			}
+			bindVsInputs(vsInputs, numVsInputs, sizeof(Vertex));
 		}
 		glBindVertexArray(0);
-		checkErrorGL();
-	*/
-	
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-		checkErrorGL();
-		
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		checkErrorGL();
 		
 		if (!m_material.shader.isValid())
@@ -948,23 +935,13 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 			
 			fassert(mesh->m_vertexArray);
 			fassert(mesh->m_indexArray);
-			glBindBuffer(GL_ARRAY_BUFFER, mesh->m_vertexArray);
-			checkErrorGL();
-			
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->m_indexArray);
-			checkErrorGL();
-			
-			bindVsInputs(vsInputs, numVsInputs, sizeof(Vertex));
+			glBindVertexArray(mesh->m_vertexArrayObject);
 			
 			GLenum indexType = mesh->m_numVertices < 65536 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
 			glDrawElements(GL_TRIANGLES, mesh->m_numIndices, indexType, 0);
 			checkErrorGL();
 			
-			glBindBuffer(GL_ARRAY_BUFFER, 0);
-			checkErrorGL();
-			
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-			checkErrorGL();
+			glBindVertexArray(0);
 		}
 	}
 	

@@ -102,10 +102,10 @@ void bindVsInputs(const VsInput * vsInputs, int numVsInputs, int stride)
 	{
 		//logDebug("i=%d, id=%d, num=%d, type=%d, norm=%d, stride=%d, offset=%p\n", i, vsInputs[i].id, vsInputs[i].components, vsInputs[i].type, vsInputs[i].normalize, stride, (void*)vsInputs[i].offset);
 		
-		glVertexAttribPointer(vsInputs[i].id, vsInputs[i].components, vsInputs[i].type, vsInputs[i].normalize, stride, (void*)vsInputs[i].offset);
+		glEnableVertexAttribArray(vsInputs[i].id);
 		checkErrorGL();
 		
-		glEnableVertexAttribArray(vsInputs[i].id);
+		glVertexAttribPointer(vsInputs[i].id, vsInputs[i].components, vsInputs[i].type, vsInputs[i].normalize, stride, (void*)vsInputs[i].offset);
 		checkErrorGL();
 	}
 }
@@ -568,7 +568,7 @@ void ShaderCacheElem::load(const char * filename)
 			params[kSp_ModelViewMatrix].set(glGetUniformLocation(program, "ModelViewMatrix"));
 			params[kSp_ModelViewProjectionMatrix].set(glGetUniformLocation(program, "ModelViewProjectionMatrix"));
 			params[kSp_ProjectionMatrix].set(glGetUniformLocation(program, "ProjectionMatrix"));
-			params[kSp_Texture].set(glGetUniformLocation(program, "texture"));
+			params[kSp_Texture].set(glGetUniformLocation(program, "texture0"));
 			params[kSp_Params].set(glGetUniformLocation(program, "params"));
 
 			// yay!
