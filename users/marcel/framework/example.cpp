@@ -268,11 +268,13 @@ int main(int argc, char * argv[])
 				if (y1 > y2)
 					std::swap(y1, y2);
 				setDrawRect(x1, y1, x2 - x1, y2 - y1);
+				gxSetTexture(0);
 				drawRectGradient(0.f, 0.f, sx, sy);
 				clearDrawRect();
 				if (showLine)
 				{
 					setColor(0, 255, 0, 127);
+					gxSetTexture(0);
 					drawLine(gradX1, gradY1, gradX2, gradY2);
 				}
 			}
