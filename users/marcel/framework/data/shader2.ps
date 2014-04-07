@@ -2,9 +2,11 @@ include engine/ShaderPS.txt
 
 uniform sampler2D texture0;
 
+shader_in vec2 v_texcoord0;
+
 void main()
 {
-	vec4 source = tex2D(texture0, gl_TexCoord[0].xy);
+	vec4 source = tex2D(texture0, v_texcoord0.xy);
 	
 	float r = 0.0;
 	float a = 0.0;
@@ -18,7 +20,7 @@ void main()
 	{
 		for (int j = -kernelSize; j <= +kernelSize; ++j)
 		{
-			vec4 near = texture2D(texture, gl_TexCoord[0].xy + vec2(i, j) * sizeMul);
+			vec4 near = tex2D(texture0, v_texcoord0.xy + vec2(i, j) * sizeMul);
 			
 			float c = (near.r + near.g + near.b) / 3.0;
 			
@@ -33,5 +35,5 @@ void main()
 	r /= float(numSamples);
 	a /= float(numSamples);
 	
-	gl_FragColor = mix(vec4(r, r, r, a), source, source.a);
+	shader_fragColor = mix(vec4(r, r, r, a), source, source.a);
 }

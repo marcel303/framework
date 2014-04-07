@@ -3,6 +3,8 @@ include engine/ShaderPS.txt
 uniform sampler2D texture0;
 uniform float modifier;
 
+shader_in vec2 v_texcoord0;
+
 void main()
 {
 	vec2 delta = gl_FragCoord.xy - vec2(400, 250);
@@ -12,8 +14,8 @@ void main()
 	vec2 offset;
 	offset.x = sin(gl_FragCoord.x / 20.0) / 200.0;
 	offset.y = sin(gl_FragCoord.y / 10.0) / 200.0;
-	vec4 result = tex2D(texture0, gl_TexCoord[0].xy + offset);
+	vec4 result = tex2D(texture0, v_texcoord0.xy + offset);
 	result = vec4(result.xyz + modifier, result.w * alphaMul);
 	
-	gl_FragColor = result;
+	shader_fragColor = result;
 }
