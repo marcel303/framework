@@ -1294,7 +1294,7 @@ void Sprite::drawEx(float x, float y, float angle, float scale, bool pixelpos, T
 			fassert(cellIndex >= 0 && cellIndex < (m_anim->m_gridSize[0] * m_anim->m_gridSize[1]));
 			
 			gxSetTexture(m_texture->textures[cellIndex]);
-
+			
 			if (filter == FILTER_POINT)
 			{
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -1343,8 +1343,6 @@ void Sprite::drawEx(float x, float y, float angle, float scale, bool pixelpos, T
 			}
 			gxEnd();
 		#endif
-			
-			gxSetTexture(0);
 		}
 		gxPopMatrix();
 	}
@@ -2238,6 +2236,8 @@ void setShader(const Shader & shader)
 		globals.shader = const_cast<Shader*>(&shader);
 	
 		glUseProgram(shader.getProgram());
+		
+		globals.gxShaderIsDirty = true;
 	}
 }
 
@@ -2386,8 +2386,6 @@ static void drawTextInternal(FT_Face face, int size, const char * text)
 			}
 			gxEnd();
 			
-			gxSetTexture(0);
-			
 			x += (elem.g.advance.x / float(1 << 6));
 			y += (elem.g.advance.y / float(1 << 6));
 		}
@@ -2451,11 +2449,14 @@ public:
 	static const int kSize = 32;
 	Mat4x4 stack[kSize];
 	int stackDepth;
+	bool isDirty;
 	
 	GxMatrixStack()
 	{
 		stackDepth = 0;
 		stack[0].MakeIdentity();
+		
+		isDirty = true;
 	}
 	
 	void push()
@@ -2469,11 +2470,25 @@ public:
 	{
 		assert(stackDepth > 0);
 		stackDepth--;
+		
+		isDirty = true;
 	}
 	
-	Mat4x4 & get()
+	const Mat4x4 & get() const
 	{
 		return stack[stackDepth];
+	}
+	
+	Mat4x4 & getRw()
+	{
+		isDirty = true;
+		
+		return stack[stackDepth];
+	}
+	
+	void makeDirty()
+	{
+		isDirty = true;
 	}
 };
 
@@ -2509,12 +2524,12 @@ void gxPushMatrix()
 
 void gxLoadIdentity()
 {
-	s_gxMatrixStack->get().MakeIdentity();
+	s_gxMatrixStack->getRw().MakeIdentity();
 }
 
 void gxLoadMatrixf(const float * m)
 {
-	memcpy(s_gxMatrixStack->get().m_v, m, sizeof(float) * 16);
+	memcpy(s_gxMatrixStack->getRw().m_v, m, sizeof(float) * 16);
 }
 
 void gxGetMatrixf(GLenum mode, float * m)
@@ -2538,7 +2553,7 @@ void gxTranslatef(float x, float y, float z)
 	Mat4x4 m;
 	m.MakeTranslation(x, y, z);
 	
-	s_gxMatrixStack->get() = s_gxMatrixStack->get() * m;
+	s_gxMatrixStack->getRw() = s_gxMatrixStack->get() * m;
 }
 
 void gxRotatef(float angle, float x, float y, float z)
@@ -2546,7 +2561,7 @@ void gxRotatef(float angle, float x, float y, float z)
 	Quat q;
 	q.fromAxisAngle(Vec3(x, y, z), angle * M_PI / 180.f);
 	
-	s_gxMatrixStack->get() = s_gxMatrixStack->get() * q.toMatrix();
+	s_gxMatrixStack->getRw() = s_gxMatrixStack->get() * q.toMatrix();
 }
 
 void gxScalef(float x, float y, float z)
@@ -2554,12 +2569,14 @@ void gxScalef(float x, float y, float z)
 	Mat4x4 m;
 	m.MakeScaling(x, y, z);
 	
-	s_gxMatrixStack->get() = s_gxMatrixStack->get() * m;
+	s_gxMatrixStack->getRw() = s_gxMatrixStack->get() * m;
 }
 
 void gxValidateMatrices()
 {
 	// todo: check if matrices are dirty
+	
+	//printf("validate1\n");
 	
 #if VS_USE_LEGACY_MATRICES
 	glMatrixMode(GL_PROJECTION);
@@ -2570,15 +2587,27 @@ void gxValidateMatrices()
 	if (globals.shader)
 	{
 		const ShaderCacheElem & shaderElem = globals.shader->getCacheElem();
-
-		if (shaderElem.params[ShaderCacheElem::kSp_ModelViewMatrix].index >= 0)
+		
+		if ((globals.gxShaderIsDirty || s_gxModelView.isDirty) && shaderElem.params[ShaderCacheElem::kSp_ModelViewMatrix].index >= 0)
+		{
 			globals.shader->setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_ModelViewMatrix].index, s_gxModelView.get().m_v);
-		if (shaderElem.params[ShaderCacheElem::kSp_ModelViewProjectionMatrix].index >= 0)
+			//printf("validate2\n");
+		}
+		if ((globals.gxShaderIsDirty || s_gxModelView.isDirty || s_gxProjection.isDirty) && shaderElem.params[ShaderCacheElem::kSp_ModelViewProjectionMatrix].index >= 0)
+		{
 			globals.shader->setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_ModelViewProjectionMatrix].index, (s_gxProjection.get() * s_gxModelView.get()).m_v);
-		if (shaderElem.params[ShaderCacheElem::kSp_ProjectionMatrix].index >= 0)
+			//printf("validate3\n");
+		}
+		if ((globals.gxShaderIsDirty || s_gxProjection.isDirty) && shaderElem.params[ShaderCacheElem::kSp_ProjectionMatrix].index >= 0)
+		{
 			globals.shader->setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_ProjectionMatrix].index, s_gxProjection.get().m_v);
+			//printf("validate4\n");
+		}
 	}
 #endif
+	
+	s_gxModelView.isDirty = false;
+	s_gxProjection.isDirty = false;
 }
 
 struct GxVertex
@@ -2589,6 +2618,7 @@ struct GxVertex
 	float tx, ty;
 };
 
+static Shader s_gxShader;
 static GLuint s_gxVertexArrayObject = 0;
 static GLuint s_gxVertexBufferObject = 0;
 static GLuint s_gxIndexBufferObject = 0;
@@ -2615,6 +2645,8 @@ void gxEmitVertex();
 
 void gxInitialize()
 {
+	s_gxShader.load("engine/Generic");
+	
 	fassert(s_gxVertexBufferObject == 0);
 	glGenBuffers(1, &s_gxVertexBufferObject);
 	
@@ -2663,10 +2695,7 @@ static void gxFlush(bool endOfBatch)
 {
 	if (s_gxVertexCount)
 	{
-		Shader shader("engine/Generic");
-		setShader(shader);
-
-		const ShaderCacheElem & shaderElem = shader.getCacheElem();
+		setShader(s_gxShader);
 		
 		gxValidateMatrices();
 		
@@ -2675,47 +2704,51 @@ static void gxFlush(bool endOfBatch)
 		checkErrorGL();
 		
 		bool indexed = false;
-
+		
 		if (s_gxPrimitiveType == GL_QUADS)
 		{
 			fassert(s_gxVertexCount < 65536);
-
+			
 			const int numQuads = s_gxVertexCount / 4;
 			const int numIndices = numQuads * 6;
-
+			
 			unsigned short * indices = (unsigned short*)alloca(sizeof(unsigned short) * numIndices);
-
+			unsigned short * indexPtr = indices;
+			
 			for (int i = 0; i < numQuads; ++i)
 			{
-				indices[i * 6 + 0] = i * 4 + 0;
-				indices[i * 6 + 1] = i * 4 + 1;
-				indices[i * 6 + 2] = i * 4 + 2;
+				*indexPtr++ = i * 4 + 0;
+				*indexPtr++ = i * 4 + 1;
+				*indexPtr++ = i * 4 + 2;
 
-				indices[i * 6 + 3] = i * 4 + 0;
-				indices[i * 6 + 4] = i * 4 + 2;
-				indices[i * 6 + 5] = i * 4 + 3;
+				*indexPtr++ = i * 4 + 0;
+				*indexPtr++ = i * 4 + 2;
+				*indexPtr++ = i * 4 + 3;
 			}
 			
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject);
 			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned short) * numIndices, indices, GL_DYNAMIC_DRAW);
 			checkErrorGL();
-
+			
 			s_gxPrimitiveType = GL_TRIANGLES;
 			s_gxVertexCount = numIndices;
-
+			
 			indexed = true;
 		}
 		
 		glBindVertexArray(s_gxVertexArrayObject);
 		
-		shader.setImmediate(
+		const ShaderCacheElem & shaderElem = s_gxShader.getCacheElem();
+		
+		s_gxShader.setImmediate(
 			shaderElem.params[ShaderCacheElem::kSp_Params].index,
 			s_gxTextureEnabled ? 1 : 0,
 			globals.colorMode,
 			0,
 			0);
 		
-		shader.setTextureUnit(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0);
+		if (globals.gxShaderIsDirty)
+			s_gxShader.setTextureUnit(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0);
 		
 		if (indexed)
 			glDrawElements(s_gxPrimitiveType, s_gxVertexCount, GL_UNSIGNED_SHORT, 0);
@@ -2724,9 +2757,6 @@ static void gxFlush(bool endOfBatch)
 		checkErrorGL();
 		
 		glBindVertexArray(0);
-
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-		checkErrorGL();
 		
 		if (endOfBatch)
 		{
@@ -2744,6 +2774,8 @@ static void gxFlush(bool endOfBatch)
 					s_gxVertexCount = 0;
 			}
 		}
+		
+		globals.gxShaderIsDirty = false;
 	}
 	
 	if (endOfBatch)
@@ -2844,19 +2876,16 @@ void gxEmitVertex()
 void gxSetTexture(GLuint texture)
 {
 	glActiveTexture(GL_TEXTURE0);
-
+	
 	if (texture)
 	{
 		glBindTexture(GL_TEXTURE_2D, texture);
 		checkErrorGL();
-
+		
 		s_gxTextureEnabled = true;
 	}
 	else
 	{
-		//glDisable(GL_TEXTURE_2D);
-		checkErrorGL();
-
 		s_gxTextureEnabled = false;
 	}
 }

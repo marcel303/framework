@@ -10,8 +10,8 @@
 #include <string>
 #include "framework.h"
 
-#define FRAMEWORK_ENABLE_GL_ERROR_LOG 1
-#define FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT 1
+#define FRAMEWORK_ENABLE_GL_ERROR_LOG 0
+#define FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT 0
 
 #ifndef WIN32
 static int fopen_s(FILE ** file, const char * filename, const char * mode)
@@ -50,6 +50,7 @@ public:
 		transformScreen.MakeIdentity();
 		transform2d.MakeIdentity();
 		transform3d.MakeIdentity();
+		gxShaderIsDirty = true;
 	}
 	
 	SDL_Window * window;
@@ -72,6 +73,7 @@ public:
 	Mat4x4 transformScreen;
 	Mat4x4 transform2d;
 	Mat4x4 transform3d;
+	bool gxShaderIsDirty;
 	
 	struct DebugDraw
 	{

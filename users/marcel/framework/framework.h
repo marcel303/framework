@@ -13,8 +13,8 @@
 #include "Mat4x4.h"
 #include "Vec3.h"
 
-//#define fassert assert
-#define fassert(x) do { } while (false)
+#define fassert assert
+//#define fassert(x) do { } while (false)
 
 // configuration
 
