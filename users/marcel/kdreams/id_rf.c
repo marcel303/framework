@@ -1029,6 +1029,9 @@ void	RFL_OldRow (unsigned short updatespot, unsigned short count, unsigned short
 	unsigned short * foreground = mapsegs[1];
 	unsigned short * background = mapsegs[0];
 
+	updatespot >>= 1;
+	step >>= 1;
+
 	for (i = 0; i < count; ++i, updatespot += step)
 	{
 		unsigned short  foregroundTile = foreground[updatespot];

@@ -1073,6 +1073,8 @@ boolean
 US_LineInput(int x,int y,char *buf,char *def,boolean escok,
 				int maxchars,int maxwidth)
 {
+	strcpy_s(buf, maxchars, def ? def : "text");
+	return true;
 	return false; // mstodo US_LineInput. reads line of text..
 	/* mstodo
 	boolean		redraw,
