@@ -73,15 +73,31 @@ static unsigned int palette[16] =
 
 static SDL_Surface * screen = 0;
 static SDL_Thread * timeThread = 0;
+static SDL_AudioSpec audioSpec;
+static const struct SampledSound * soundSample = 0;
 
 static int __cdecl TimeThread(void * userData)
 {
 	while (true)
 	{
-		SDL_Delay(10);
+		SDL_Delay(1000/70); // increment at 70Hz, based on this loc: "if (TimeCount - time > 35)	// Half-second delays"
 		TimeCount++;
 	}
 	return 0;
+}
+
+static void SoundThread(void * userData, Uint8 * stream, int length)
+{
+	// mstodo : need mutex (only around get sound ptr / offset)
+
+	if (soundSample)
+	{
+		memset(stream, 0, length);
+	}
+	else
+	{
+		memset(stream, 0, length);
+	}
 }
 
 void SYS_Init()
@@ -104,6 +120,18 @@ void SYS_Init()
 	#endif
 		memset(g0xA000[plane], 0, DISPLAY_BUFFER_SIZE);
 	}
+
+	memset(&audioSpec, 0, sizeof(audioSpec));
+	audioSpec.freq = 11025;
+	audioSpec.format = AUDIO_S8;
+	audioSpec.channels = 1;
+	audioSpec.samples = 4096; // mstodo : lower ?
+	audioSpec.callback = SoundThread;
+	if (SDL_OpenAudio(&audioSpec, 0) < 0) {
+		//Quit("Failed to init sound playback!");
+	}
+	else
+		SDL_PauseAudio(false);
 }
 
 void SYS_Present()
@@ -201,4 +229,18 @@ void SYS_Update()
 	}
 
 	//SDL_Delay(100);
+}
+
+void SYS_PlaySound(const struct SampledSound * sample)
+{
+	// mstodo : need mutex
+
+	soundSample = sample;
+}
+
+void SYS_StopSound()
+{
+	// mstodo : need mutex
+
+	//soundSample = 0;
 }

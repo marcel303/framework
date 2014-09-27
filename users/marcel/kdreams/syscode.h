@@ -13,3 +13,5 @@
 void SYS_Init();
 void SYS_Present();
 void SYS_Update();
+void SYS_PlaySound(const struct SampledSound *sample);
+void SYS_StopSound();

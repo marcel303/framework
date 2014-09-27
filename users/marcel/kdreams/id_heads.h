@@ -21,7 +21,6 @@
 #pragma once
 
 #include <ctype.h>
-#include <DOS.H>
 #include <ERRNO.H>
 #include <FCNTL.H>
 #include <IO.H>

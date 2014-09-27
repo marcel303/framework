@@ -48,7 +48,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <dos.h>
 
 #include "id_heads.h"
 #include "lzhuff.h"

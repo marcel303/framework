@@ -14,15 +14,3 @@ void MM_Startup (void)
 
 	MM_GetPtr (&bufferseg,BUFFERSIZE);
 }
-
-// SD_*
-
-boolean		LeaveDriveOn;
-boolean		SoundSourcePresent,SoundBlasterPresent,AdLibPresent,
-					NeedsDigitized,NeedsMusic;	// For Caching Mgr
-SDMode		SoundMode;
-SMMode		MusicMode;
-longword	TimeCount = 0;
-
-boolean		ssIsTandy = false;
-word		ssPort = 0;

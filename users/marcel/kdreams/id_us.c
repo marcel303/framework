@@ -3303,15 +3303,10 @@ USL_SetUpCtlPanel(void)
 	// Set up Sounds
 	USL_TurnOff(CtlSPanels);
 	CtlSPanels[sdm_AdLib].sel = AdLibPresent? ui_Normal : ui_Disabled;
-#if 0	// DEBUG - hack because no space for digitized sounds on Keen Dreams
 	CtlSPanels[sdm_SoundBlaster].sel =
 		SoundBlasterPresent? ui_Normal : ui_Disabled;
 	CtlSPanels[sdm_SoundSource].sel =
 		SoundSourcePresent? ui_Normal : ui_Disabled;
-#else
-	CtlSPanels[sdm_SoundBlaster].sel = ui_Disabled;
-	CtlSPanels[sdm_SoundSource].sel = ui_Disabled;
-#endif
 	CtlSPanels[SoundMode].sel |= ui_Selected;
 
 	// Set up SoundSource

@@ -21,11 +21,9 @@
 #include <string.h>
 #include <ctype.h>
 #include <fcntl.h>
-#include <dos.h>
 #include <io.h>
 
 #include "kd_def.h"
-//#include "gelib.h"
 #include "soft.h"
 #include "lzw.h"
 #include "lzhuff.h"
