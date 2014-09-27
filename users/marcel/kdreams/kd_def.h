@@ -19,7 +19,6 @@
 // KD_DEF.H
 
 #include "ID_HEADS.H"
-#include <BIOS.H>
 #include "SOFT.H"
 #include "SL_FILE.H"
 
@@ -74,14 +73,14 @@ typedef	enum	{nothing,keenobj,powerobj,doorobj,
 
 typedef struct
 {
-  int 		leftshapenum,rightshapenum;
+  short int	leftshapenum,rightshapenum;
   enum		{step,slide,think,stepthink,slidethink} progress;
   boolean	skippable;
 
   boolean	pushtofloor;
-  int tictime;
-  int xmove;
-  int ymove;
+  short int tictime;
+  short int xmove;
+  short int ymove;
   void (*think) ();
   void (*contact) ();
   void (*react) ();
@@ -91,15 +90,15 @@ typedef struct
 
 typedef	struct
 {
-	unsigned	worldx,worldy;
+	unsigned short	worldx,worldy;
 	boolean	leveldone[GAMELEVELS];
 	long	score,nextextra;
-	int		flowerpowers;
-	int		boobusbombs,bombsthislevel;
-	int		keys;
-	int		mapon;
-	int		lives;
-	int		difficulty;
+	short int		flowerpowers;
+	short int		boobusbombs,bombsthislevel;
+	short int		keys;
+	short int		mapon;
+	short int		lives;
+	short int		difficulty;
 } gametype;
 
 
@@ -108,50 +107,54 @@ typedef struct	objstruct
 	classtype	obclass;
 	enum		{no,yes,allways,removable} active;
 	boolean		needtoreact,needtoclip;
-	unsigned	nothink;
-	unsigned	x,y;
+	unsigned short	nothink;
+	unsigned short	x,y;
 
-	int			xdir,ydir;
-	int			xmove,ymove;
-	int			xspeed,yspeed;
+	short int		xdir,ydir;
+	short int		xmove,ymove;
+	short int		xspeed,yspeed;
 
-	int			ticcount,ticadjust;
-	statetype	*state;
+	short int		ticcount,ticadjust;
+	statetype		*state;
 
-	unsigned	shapenum;
+	unsigned short	shapenum;
 
-	unsigned	left,top,right,bottom;	// hit rectangle
-	unsigned	midx;
-	unsigned	tileleft,tiletop,tileright,tilebottom;	// hit rect in tiles
-	unsigned	tilemidx;
+	unsigned short	left,top,right,bottom;	// hit rectangle
+	unsigned short	midx;
+	unsigned short	tileleft,tiletop,tileright,tilebottom;	// hit rect in tiles
+	unsigned short	tilemidx;
 
-	int			hitnorth,hiteast,hitsouth,hitwest;	// wall numbers contacted
+	short int		hitnorth,hiteast,hitsouth,hitwest;	// wall numbers contacted
 
-	int			temp1,temp2,temp3,temp4;
+	intptr_t		temp1,temp2,temp3,temp4;
 
-	void		*sprite;
+	void			*sprite;
 
 	struct	objstruct	*next,*prev;
 } objtype;
 
+#pragma pack(push) // mstodo : needed?
+#pragma pack(2)
 
 struct BitMapHeader {
-	unsigned int	w,h,x,y;
+	unsigned short	w,h,x,y;
 	unsigned char	d,trans,comp,pad;
 };
 
 struct BitMap {
-	unsigned int Width;
-	unsigned int Height;
-	unsigned int Depth;
-	unsigned int BytesPerRow;
+	unsigned short Width;
+	unsigned short Height;
+	unsigned short Depth;
+	unsigned short BytesPerRow;
 	char far *Planes[8];
 };
+
+#pragma pack(pop)
 
 struct Shape {
 	memptr Data;
 	long size;
-	unsigned int BPR;
+	unsigned short BPR;
 	struct BitMapHeader bmHdr;
 };
 
@@ -161,7 +164,6 @@ typedef struct {
 	word offset;		// offset into buffer
 	word status;		// read/write status
 } BufferedIO;
-
 
 
 /*
@@ -174,16 +176,15 @@ typedef struct {
 
 extern	char	str[80],str2[20];
 extern	boolean	singlestep,jumpcheat,godmode,tedlevel;
-extern	unsigned	tedlevelnum;
+extern	word	tedlevelnum;
 
 void	DebugMemory (void);
 void	TestSprites(void);
-int		DebugKeys (void);
+short	DebugKeys (void);
 void	StartupId (void);
 void	ShutdownId (void);
 void	Quit (char *error);
 void	InitGame (void);
-void	main (void);
 
 
 /*
@@ -213,11 +214,11 @@ void	ResetGame (void);
 =============================================================================
 */
 
-extern	gametype	gamestate;
-extern	exittype	playstate;
-extern	boolean		button0held,button1held;
-extern	unsigned	originxtilemax,originytilemax;
-extern	objtype		*new,*check,*player,*scoreobj;
+extern	gametype		gamestate;
+extern	exittype		playstate;
+extern	boolean			button0held,button1held;
+extern	unsigned short	originxtilemax,originytilemax;
+extern	objtype			*new,*check,*player,*scoreobj;
 
 extern	ControlInfo	c;
 
@@ -236,16 +237,16 @@ void 	MarkTileGraphics (void);
 void 	FadeAndUnhook (void);
 void 	SetupGameLevel (boolean loadnow);
 void 	ScrollScreen (void);
-void 	MoveObjVert (objtype *ob, int ymove);
-void 	MoveObjHoriz (objtype *ob, int xmove);
-void 	GivePoints (unsigned points);
+void 	MoveObjVert (objtype *ob, short ymove);
+void 	MoveObjHoriz (objtype *ob, short xmove);
+void 	GivePoints (unsigned short points);
 void 	ClipToEnds (objtype *ob);
 void 	ClipToEastWalls (objtype *ob);
 void 	ClipToWestWalls (objtype *ob);
 void 	ClipToWalls (objtype *ob);
 void	ClipToSprite (objtype *push, objtype *solid, boolean squish);
 void	ClipToSpriteSide (objtype *push, objtype *solid);
-int 	DoActor (objtype *ob,int tics);
+short 	DoActor (objtype *ob,short tics);
 void 	StateMachine (objtype *ob);
 void 	NewState (objtype *ob,statetype *state);
 void 	PlayLoop (void);
@@ -267,13 +268,13 @@ void	DrawReact			(objtype *ob);
 
 void	SpawnScore (void);
 void	FixScoreBox (void);
-void	SpawnWorldKeen (int tilex, int tiley);
-void	SpawnKeen (int tilex, int tiley, int dir);
+void	SpawnWorldKeen (short tilex, short tiley);
+void	SpawnKeen (short tilex, short tiley, short dir);
 
 void 	KillKeen (void);
 
-extern	int	singlegravity;
-extern	unsigned	bounceangle[8][8];
+extern	short			singlegravity;
+extern	unsigned short	bounceangle[8][8];
 
 extern	statetype s_keendie1;
 
@@ -288,7 +289,7 @@ extern	statetype s_keendie1;
 void WalkReact (objtype *ob);
 
 void 	DoGravity (objtype *ob);
-void	AccelerateX (objtype *ob,int dir,int max);
+void	AccelerateX (objtype *ob,short dir,short max);
 void 	FrictionX (objtype *ob);
 
 void	ProjectileThink		(objtype *ob);
@@ -300,13 +301,13 @@ void	ChangeState (objtype *ob, statetype *state);
 
 void	ChangeToFlower (objtype *ob);
 
-void	SpawnBonus (int tilex, int tiley, int type);
-void	SpawnDoor (int tilex, int tiley);
-void 	SpawnBrocco (int tilex, int tiley);
-void 	SpawnTomat (int tilex, int tiley);
-void 	SpawnCarrot (int tilex, int tiley);
-void 	SpawnAspar (int tilex, int tiley);
-void 	SpawnGrape (int tilex, int tiley);
+void	SpawnBonus (short tilex, short tiley, short type);
+void	SpawnDoor (short tilex, short tiley);
+void 	SpawnBrocco (short tilex, short tiley);
+void 	SpawnTomat (short tilex, short tiley);
+void 	SpawnCarrot (short tilex, short tiley);
+void 	SpawnAspar (short tilex, short tiley);
+void 	SpawnGrape (short tilex, short tiley);
 
 extern	statetype s_doorraise;
 
@@ -326,15 +327,15 @@ extern	statetype s_grapefall;
 =============================================================================
 */
 
-void SpawnTater (int tilex, int tiley);
-void SpawnCart (int tilex, int tiley);
-void SpawnFrenchy (int tilex, int tiley);
-void SpawnMelon (int tilex, int tiley,int dir);
-void SpawnSquasher (int tilex, int tiley);
-void SpawnApel (int tilex, int tiley);
-void SpawnPeaPod (int tilex, int tiley);
-void SpawnPeaBrain (int tilex, int tiley);
-void SpawnBoobus (int tilex, int tiley);
+void SpawnTater (short tilex, short tiley);
+void SpawnCart (short tilex, short tiley);
+void SpawnFrenchy (short tilex, short tiley);
+void SpawnMelon (short tilex, short tiley,short dir);
+void SpawnSquasher (short tilex, short tiley);
+void SpawnApel (short tilex, short tiley);
+void SpawnPeaPod (short tilex, short tiley);
+void SpawnPeaBrain (short tilex, short tiley);
+void SpawnBoobus (short tilex, short tiley);
 
 extern	statetype s_taterattack2;
 extern	statetype s_squasherjump2;
@@ -354,7 +355,7 @@ extern	statetype s_deathboom2;
 /////////////////////////////////////////////////////////////////////////////
 
 void FreeShape(struct Shape *shape);
-int UnpackEGAShapeToScreen(struct Shape *SHP,int startx,int starty);
+short UnpackEGAShapeToScreen(struct Shape *SHP, short startx, short starty);
 
 long Verify(char *filename);
 memptr InitBufferedIO(int handle, BufferedIO *bio);
@@ -362,5 +363,5 @@ void FreeBufferedIO(BufferedIO *bio);
 byte bio_readch(BufferedIO *bio);
 void bio_fillbuffer(BufferedIO *bio);
 void SwapLong(long far *Var);
-void SwapWord(unsigned int far *Var);
+void SwapWord(unsigned short far *Var);
 void MoveGfxDst(short x, short y);

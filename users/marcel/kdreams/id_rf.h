@@ -76,22 +76,22 @@ typedef enum {spritedraw,maskdraw} drawtype;
 */
 
 
-extern	boolean		compatability;			// crippled refresh for wierdo SVGAs
+extern	boolean			compatability;			// crippled refresh for wierdo SVGAs
 
-extern	unsigned	tics;
-extern	long		lasttimecount;
+extern	unsigned short	tics;
+extern	long			lasttimecount;
 
-extern	unsigned	originxglobal,originyglobal;
-extern	unsigned	originxtile,originytile;
-extern	unsigned	originxscreen,originyscreen;
+extern	unsigned short	originxglobal,originyglobal;
+extern	unsigned short	originxtile,originytile;
+extern	unsigned short	originxscreen,originyscreen;
 
-extern	unsigned	mapwidth,mapheight,mapbyteswide,mapwordswide
-					,mapbytesextra,mapwordsextra;
-extern	unsigned	mapbwidthtable[MAXMAPHEIGHT];
+extern	unsigned short	mapwidth,mapheight,mapbyteswide,mapwordswide
+						,mapbytesextra,mapwordsextra;
+extern	unsigned short	mapbwidthtable[MAXMAPHEIGHT];
 
-extern	unsigned	originxmin,originxmax,originymin,originymax;
+extern	unsigned short	originxmin,originxmax,originymin,originymax;
 
-extern	unsigned	masterofs;
+extern	unsigned short	masterofs;
 
 //
 // the floating update window is also used by the view manager for
@@ -104,9 +104,9 @@ extern	byte		*updateptr;				// current start of update window
 extern	byte		*baseupdateptr;
 #endif
 
-extern unsigned	blockstarts[UPDATEWIDE*UPDATEHIGH];
-extern unsigned	updatemapofs[UPDATEWIDE*UPDATEHIGH];
-extern unsigned	uwidthtable[UPDATEHIGH];		// lookup instead of multiple
+extern unsigned	short blockstarts[UPDATEWIDE*UPDATEHIGH];
+extern unsigned	short updatemapofs[UPDATEWIDE*UPDATEHIGH];
+extern unsigned	short uwidthtable[UPDATEHIGH];		// lookup instead of multiple
 
 #define	UPDATETERMINATE	0x0301
 
@@ -123,11 +123,10 @@ void RF_Shutdown (void);
 
 void RF_NewMap (void);
 void RF_MarkTileGraphics (void);
-void RF_NewPosition (unsigned x, unsigned y);
-void RF_Scroll (int x, int y);
+void RF_NewPosition (unsigned short x, unsigned short y);
+void RF_Scroll (short int x, short int y);
 
-void RF_PlaceSprite (void **user,unsigned globalx,unsigned globaly,
-	unsigned spritenumber, drawtype draw, int priority);
+void RF_PlaceSprite (void **user,unsigned short globalx, unsigned short globaly, unsigned short spritenumber, drawtype draw, short int priority);
 void RF_RemoveSprite (void **user);
 
 void RF_Refresh (void);

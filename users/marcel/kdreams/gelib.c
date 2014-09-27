@@ -17,6 +17,7 @@
  */
 
 #include "KD_DEF.H"
+#include "syscode.h"
 
 #define BIO_BUFFER_LEN	(512)
 
@@ -36,12 +37,12 @@ void FreeShape(struct Shape *shape)
 //
 // UnpackEGAShapeToScreen()
 //
-int UnpackEGAShapeToScreen(struct Shape *SHP,int startx,int starty)
+short UnpackEGAShapeToScreen(struct Shape *SHP, short startx, short starty)
 {
-	int currenty;
+	short currenty;
 	signed char n, Rep, far *Src, far *Dst[8], loop, Plane;
-	unsigned int BPR, Height;
-	int NotWordAligned;
+	unsigned short BPR, Height;
+	short NotWordAligned;
 
 	NotWordAligned = SHP->BPR & 1;
 	startx>>=3;
@@ -51,17 +52,15 @@ int UnpackEGAShapeToScreen(struct Shape *SHP,int startx,int starty)
 	Height = SHP->bmHdr.h;
 	while (Height--)
 	{
-		Dst[0] = (MK_FP(0xA000,displayofs));
-		Dst[0] += ylookup[currenty];
-		Dst[0] += startx;
-		for (loop=1; loop<SHP->bmHdr.d; loop++)
-			Dst[loop] = Dst[0];
-
+		for (loop=0; loop<SHP->bmHdr.d; loop++)
+		{
+			Dst[loop] = &g0xA000[loop][displayofs];
+			Dst[loop] += ylookup[currenty];
+			Dst[loop] += startx;
+		}
 
 		for (Plane=0; Plane<SHP->bmHdr.d; Plane++)
 		{
-			outport(0x3c4,((1<<Plane)<<8)|2);
-
 			BPR = ((SHP->BPR+1) >> 1) << 1;               // IGNORE WORD ALIGN
 			while (BPR)
 			{
@@ -116,10 +115,10 @@ long Verify(char *filename)
 	int handle;
 	long size;
 
-	if ((handle=open(filename,O_BINARY))==-1)
+	if ((handle=_open(filename,O_BINARY))==-1)
 		return (0);
-	size=filelength(handle);
-	close(handle);
+	size=_filelength(handle);
+	_close(handle);
 	return(size);
 }
 
@@ -191,8 +190,8 @@ void bio_fillbuffer(BufferedIO *bio)
 		else
 			bytes_requested = bio_length;
 
-		read(bio->handle,near_buffer,bytes_requested);
-		_fmemcpy(MK_FP(bio->buffer,bytes_read),near_buffer,bytes_requested);
+		_read(bio->handle,near_buffer,bytes_requested);
+		memcpy(MK_FP(bio->buffer,bytes_read),near_buffer,bytes_requested);
 
 		bio_length -= bytes_requested;
 		bytes_read += bytes_requested;
@@ -205,24 +204,27 @@ void bio_fillbuffer(BufferedIO *bio)
 //
 void SwapLong(long far *Var)
 {
-	asm		les	bx,Var
-	asm		mov	ax,[es:bx]
-	asm		xchg	ah,al
-	asm		xchg	ax,[es:bx+2]
-	asm		xchg	ah,al
-	asm 		mov	[es:bx],ax
+	char temp;
+	char * bytes = (char*)Var;
+	temp = bytes[0];
+	bytes[0] = bytes[3];
+	bytes[3] = temp;
+	temp = bytes[2];
+	bytes[2] = bytes[1];
+	bytes[1] = temp;
 }
 
 ///////////////////////////////////////////////////////////////////////////
 //
 // SwapWord()
 //
-void SwapWord(unsigned int far *Var)
+void SwapWord(unsigned short far *Var)
 {
-	asm		les	bx,Var
-	asm		mov	ax,[es:bx]
-	asm		xchg	ah,al
-	asm		mov	[es:bx],ax
+	char temp;
+	char * bytes = (char*)Var;
+	temp = bytes[0];
+	bytes[0] = bytes[1];
+	bytes[1] = temp;
 }
 
 ////////////////////////////////////////////////////////////////////////////

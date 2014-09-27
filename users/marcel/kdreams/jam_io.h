@@ -101,7 +101,7 @@ struct CMP1Header
 //
 //---------------------------------------------------------------------------
 
-char WritePtr(long outfile, unsigned char data, unsigned PtrType);
-int ReadPtr(long infile, unsigned PtrType);
+char WritePtr(uintptr_t outfile, unsigned char data, unsigned short PtrType);
+int ReadPtr(uintptr_t infile, unsigned short PtrType);
 
 

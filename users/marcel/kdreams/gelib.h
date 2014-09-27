@@ -24,25 +24,30 @@
 // Defines
 //
 
+#pragma pack(push)
+#pragma pack(2)
+
 struct BitMapHeader {
-	unsigned int	w,h,x,y;
+	unsigned short	w,h,x,y;
 	unsigned char	d,trans,comp,pad;
 };
 
 struct BitMap {
-	unsigned int Width;
-	unsigned int Height;
-	unsigned int Depth;
-	unsigned int BytesPerRow;
+	unsigned short Width;
+	unsigned short Height;
+	unsigned short Depth;
+	unsigned short BytesPerRow;
 	char far *Planes[8];
 };
 
 struct Shape {
 	memptr Data;
 	long size;
-	unsigned int BPR;
+	unsigned short BPR;
 	struct BitMapHeader bmHdr;
 };
 
+#pragma pack(pop)
+
 void FreeShape(struct Shape *shape);
-int UnpackEGAShapeToScreen(struct Shape *SHP,int startx,int starty);
+short UnpackEGAShapeToScreen(struct Shape *SHP, short startx, short starty);

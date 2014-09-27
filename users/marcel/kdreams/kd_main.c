@@ -27,10 +27,10 @@
 =============================================================================
 */
 
-#include "mem.h"
 #include "string.h"
 
 #include "KD_DEF.H"
+#include "syscode.h"
 #pragma hdrstop
 
 /*
@@ -51,7 +51,7 @@
 
 char		str[80],str2[20];
 boolean		singlestep,jumpcheat,godmode,tedlevel;
-unsigned	tedlevelnum;
+word		tedlevelnum;
 
 /*
 =============================================================================
@@ -63,11 +63,10 @@ unsigned	tedlevelnum;
 
 void	DebugMemory (void);
 void	TestSprites(void);
-int		DebugKeys (void);
+short	DebugKeys (void);
 void	ShutdownId (void);
 void	Quit (char *error);
 void	InitGame (void);
-void	main (void);
 
 //===========================================================================
 
@@ -231,7 +230,7 @@ void TestSprites(void)
 =
 ================
 */
-int DebugKeys (void)
+short DebugKeys (void)
 {
 	boolean esc;
 	int level;
@@ -374,7 +373,7 @@ void Quit (char *error)
   ShutdownId ();
   if (error && *error)
   {
-	clrscr();
+	//clrscr(); // mstodo : clear screen
 	puts(error);
 	puts("\n");
 	exit(1);
@@ -416,23 +415,24 @@ void InitGame (void)
 #if GRMODE == EGAGR
 	if (mminfo.mainmem < 335l*1024)
 	{
-#pragma	warn	-pro
-#pragma	warn	-nod
-		clrscr();			// we can't include CONIO because of a name conflict
-#pragma	warn	+nod
-#pragma	warn	+pro
+		// mstodo : clear screen
+		//clrscr();			// we can't include CONIO because of a name conflict
 		puts ("There is not enough memory available to play the game reliably.  You can");
 		puts ("play anyway, but an out of memory condition will eventually pop up.  The");
 		puts ("correct solution is to unload some TSRs or rename your CONFIG.SYS and");
 		puts ("AUTOEXEC.BAT to free up more memory.\n");
 		puts ("Do you want to (Q)uit, or (C)ontinue?");
-		i = bioskey (0);
+		// mstodo : bioskey
+		i = 0;
+		//i = bioskey (0);
 		if ( (i>>8) != sc_C)
 			Quit ("");
 	}
 #endif
 
 	US_TextScreen();
+
+	SYS_Init ();
 
 	VW_Startup ();
 	RF_Startup ();
@@ -489,11 +489,15 @@ void InitGame (void)
 ==========================
 */
 
-void main (void)
-{
-	short i;
+int _argc;
+char ** _argv;
 
-	if (stricmp(_argv[1], "/VER") == 0)
+int main (int argc, char ** argv)
+{
+	_argc = argc;
+	_argv = argv;
+	
+	if (_argc >= 2 && _stricmp(_argv[1], "/VER") == 0)
 	{
 		printf("\nKeen Dreams version 1.93 (Rev 1)\n");
 		printf("developed for use with 100%% IBM compatibles\n");
@@ -504,7 +508,7 @@ void main (void)
 		exit(0);
 	}
 
-	if (stricmp(_argv[1], "/?") == 0)
+	if (_argc >= 2 && _stricmp(_argv[1], "/?") == 0)
 	{
 		printf("\nKeen Dreams version 1.93\n");
 		printf("Copyright 1991-1993 Softdisk Publishing.\n\n");
@@ -521,8 +525,8 @@ void main (void)
 		exit(0);
 	}
 
-	textcolor(7);
-	textbackground(0);
+	//textcolor(7); // mstodo
+	//textbackground(0);
 
 	InitGame();
 

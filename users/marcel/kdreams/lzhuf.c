@@ -48,9 +48,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <alloc.h>
 #include <dos.h>
 
+#include "id_heads.h"
 #include "lzhuff.h"
 #include "jam_io.h"
 
@@ -114,16 +114,16 @@ static void update(int c);
 static void DeleteNode(int p);  /* Deleting node from the tree */
 static void InsertNode(int r);  /* Inserting node to the tree */
 static void InitTree(void);  /* Initializing tree */
-static void Putcode(long outfile_ptr, int l, unsigned c,unsigned PtrTypes);		/* output c bits */
-static void EncodeChar(long outfile_ptr, unsigned c, unsigned PtrTypes);
-static void EncodePosition(long outfile_ptr, unsigned c, unsigned PtrTypes);
-static void EncodeEnd(long outfile_ptr,unsigned PtrTypes);
+static void Putcode(uintptr_t outfile_ptr, int l, unsigned c,unsigned PtrTypes);		/* output c bits */
+static void EncodeChar(uintptr_t outfile_ptr, unsigned c, unsigned PtrTypes);
+static void EncodePosition(uintptr_t outfile_ptr, unsigned c, unsigned PtrTypes);
+static void EncodeEnd(uintptr_t outfile_ptr,unsigned PtrTypes);
 
 
-static int GetByte(long infile_ptr, unsigned long *CompressLength, unsigned PtrTypes);
-static int GetBit(long infile_ptr, unsigned long *CompressLength, unsigned PtrTypes);	/* get one bit */
-static int DecodeChar(long infile_ptr, unsigned long *CompressLength, unsigned PtrTypes);
-static int DecodePosition(long infile_ptr,unsigned long *CompressLength, unsigned PtrTypes);
+static int GetByte(uintptr_t infile_ptr, unsigned long *CompressLength, unsigned PtrTypes);
+static int GetBit(uintptr_t infile_ptr, unsigned long *CompressLength, unsigned PtrTypes);	/* get one bit */
+static int DecodeChar(uintptr_t infile_ptr, unsigned long *CompressLength, unsigned PtrTypes);
+static int DecodePosition(uintptr_t infile_ptr,unsigned long *CompressLength, unsigned PtrTypes);
 
 
 
@@ -313,7 +313,7 @@ unsigned char far d_len[256] = {
 	0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08,
 };
 
-unsigned getbuf = 0;
+unsigned short getbuf = 0;
 unsigned char getlen = 0;
 
 #endif
@@ -759,9 +759,9 @@ static void EncodeEnd(long outfile_ptr,unsigned PtrTypes)
 //---------------------------------------------------------------------------
 // GetByte
 //---------------------------------------------------------------------------
-static int GetByte(long infile_ptr, unsigned long *CompressLength, unsigned PtrTypes)
+static int GetByte(uintptr_t infile_ptr, unsigned long *CompressLength, unsigned PtrTypes)
 {
-	unsigned i;
+	unsigned short i;
 
 	while (getlen <= 8)
 	{
@@ -791,9 +791,9 @@ static int GetByte(long infile_ptr, unsigned long *CompressLength, unsigned PtrT
 //---------------------------------------------------------------------------
 // GetBit
 //---------------------------------------------------------------------------
-static int GetBit(long infile_ptr, unsigned long *CompressLength, unsigned PtrTypes)	/* get one bit */
+static int GetBit(uintptr_t infile_ptr, unsigned long *CompressLength, unsigned PtrTypes)	/* get one bit */
 {
-	int i;
+	short int i;
 
 	while (getlen <= 8)
 	{
@@ -822,7 +822,7 @@ static int GetBit(long infile_ptr, unsigned long *CompressLength, unsigned PtrTy
 //---------------------------------------------------------------------------
 // DecodeChar
 //---------------------------------------------------------------------------
-static int DecodeChar(long infile_ptr, unsigned long *CompressLength, unsigned PtrTypes)
+static int DecodeChar(uintptr_t infile_ptr, unsigned long *CompressLength, unsigned PtrTypes)
 {
 	unsigned c;
 
@@ -852,16 +852,16 @@ static int DecodeChar(long infile_ptr, unsigned long *CompressLength, unsigned P
 //---------------------------------------------------------------------------
 // DecodePosition
 //---------------------------------------------------------------------------
-static int DecodePosition(long infile_ptr,unsigned long *CompressLength, unsigned PtrTypes)
+static int DecodePosition(uintptr_t infile_ptr,unsigned long *CompressLength, unsigned PtrTypes)
 {
-	unsigned i, j, c;
+	unsigned short i, j, c;
 
 	//
 	// decode upper 6 bits from given table
 	//
 
 	i = GetByte(infile_ptr, CompressLength, PtrTypes);
-	c = (unsigned)d_code[i] << 6;
+	c = (unsigned short)d_code[i] << 6;
 	j = d_len[i];
 
 	//
@@ -909,7 +909,7 @@ long lzhDecompress(void far *infile, void far *outfile, unsigned long OrginalLen
 	getlen = 0;
 
 	if (textsize == 0)
-		return;
+		return 0;
 
 	StartHuff();
 	for (i = 0; i < N - F; i++)
@@ -919,11 +919,11 @@ long lzhDecompress(void far *infile, void far *outfile, unsigned long OrginalLen
 
 	for (count = 0; count < textsize; )
 	{
-		c = DecodeChar((long)&infile,&CompressLength,PtrTypes);
+		c = DecodeChar((uintptr_t)&infile,&CompressLength,PtrTypes);
 
 		if (c < 256)
 		{
-			WritePtr((long)&outfile,c,PtrTypes);
+			WritePtr((uintptr_t)&outfile,c,PtrTypes);
 			datasize--;								// Dec # of bytes to write
 
 			text_buf[r++] = c;
@@ -932,14 +932,14 @@ long lzhDecompress(void far *infile, void far *outfile, unsigned long OrginalLen
 		}
 		else
 		{
-			i = (r - DecodePosition((long)&infile,&CompressLength,PtrTypes) - 1) & (N - 1);
+			i = (r - DecodePosition((uintptr_t)&infile,&CompressLength,PtrTypes) - 1) & (N - 1);
 			j = c - 255 + THRESHOLD;
 
 			for (k = 0; k < j; k++)
 			{
 				c = text_buf[(i + k) & (N - 1)];
 
-				WritePtr((long)&outfile,c,PtrTypes);
+				WritePtr((uintptr_t)&outfile,c,PtrTypes);
 				datasize--;							// dec count of bytes to write
 
 				text_buf[r++] = c;

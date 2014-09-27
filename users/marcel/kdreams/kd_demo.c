@@ -18,12 +18,12 @@
 
 // KD_DEMO.C
 
-#include <dir.h>
 #include "KD_DEF.H"
+#include "syscode.h"
 
 #pragma	hdrstop
 
-#define RLETAG	0xABCD
+#define RLETAG	((unsigned short)0xABCD)
 
 /*
 =============================================================================
@@ -213,10 +213,10 @@ SaveGame(int file)
 //
 // leave a word at start of compressed data for compressed length
 //
-		compressed = CA_RLEWCompress ((unsigned huge *)mapsegs[i]
-			,expanded,((unsigned huge *)bigbuffer)+1,RLETAG);
+		compressed = (word)CA_RLEWCompress ((unsigned short huge *)mapsegs[i]
+			,expanded,((unsigned short huge *)bigbuffer)+1,RLETAG);
 
-		*(unsigned huge *)bigbuffer = compressed;
+		*(unsigned short huge *)bigbuffer = compressed;
 
 		if (!CA_FarWrite(file,(void far *)bigbuffer,compressed+2) )
 		{
@@ -240,12 +240,12 @@ SaveGame(int file)
 boolean
 LoadGame(int file)
 {
-	word	i,j,size;
-	objtype	*o;
-	int orgx,orgy;
-	objtype		*prev,*next,*followed;
-	unsigned	compressed,expanded;
-	memptr	bigbuffer;
+	word			i,j,size;
+	objtype			*o;
+	short int		orgx,orgy;
+	objtype			*prev,*next,*followed;
+	unsigned short	compressed,expanded;
+	memptr			bigbuffer;
 
 	if (!CA_FarRead(file,(void far *)&gamestate,sizeof(gamestate)))
 		return(false);
@@ -279,8 +279,8 @@ LoadGame(int file)
 			return(false);
 		}
 
-		CA_RLEWexpand ((unsigned huge *)bigbuffer,
-			(unsigned huge *)mapsegs[i],compressed,RLETAG);
+		CA_RLEWexpand ((unsigned short huge *)bigbuffer,
+			(unsigned short huge *)mapsegs[i],compressed,RLETAG);
 	}
 
 	MM_FreePtr (&bigbuffer);
@@ -437,7 +437,7 @@ DemoLoop (void)
 	char *FileName2;
 	struct Shape FileShape2;
 #endif
-	struct ffblk ffblk;
+	//struct ffblk ffblk; // msfixme : file search
 	WindowRec	mywin;
 	int bufsave	= bufferofs;
 	int dissave	= displayofs;
@@ -462,8 +462,8 @@ DemoLoop (void)
 	US_SetLoadSaveHooks(LoadGame,SaveGame,ResetGame);
 	restartgame = gd_Continue;
 
-	if (findfirst("KDREAMS.CMP", &ffblk, 0) == -1)
-		Quit("Couldn't find KDREAMS.CMP");
+	//if (findfirst("KDREAMS.CMP", &ffblk, 0) == -1) // mstodo
+	//	Quit("Couldn't find KDREAMS.CMP");
 
 	while (true)
 	{
@@ -487,11 +487,11 @@ DemoLoop (void)
 
 			while (true)
 			{
-
 				VW_SetScreen(0, 0);
 				MoveGfxDst(0, 200);
 				UnpackEGAShapeToScreen(&FileShape1, 0, 0);
 				VW_ScreenToScreen (64*200,0,40,200);
+				SYS_Present();
 
 #if CREDITS
 				if (IN_UserInput(TickBase * 8, false))
@@ -512,6 +512,7 @@ DemoLoop (void)
 				MoveGfxDst(0, 200);
 				UnpackEGAShapeToScreen(&FileShape1, 0, 0);
 				VW_ScreenToScreen (64*200,0,40,200);
+				SYS_Present();
 
 				if (IN_UserInput(TickBase * 3, false))
 					break;
@@ -520,10 +521,10 @@ DemoLoop (void)
 				displayofs = 0;
 				VWB_Bar(0,0,320,200,FIRSTCOLOR);
 				US_DisplayHighScores(-1);
+				SYS_Present();
 
 				if (IN_UserInput(TickBase * 6, false))
 					break;
-
 			}
 
 			bufferofs = bufsave;

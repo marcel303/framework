@@ -171,23 +171,26 @@ extern	ControlType	Controls[MaxPlayers];
 							if (code == LastScan) LastScan = sc_None;}
 
 // DEBUG - put names in prototypes
-extern	void		IN_Startup(void),IN_Shutdown(void),
-					IN_Default(boolean gotit,ControlType in),
-					IN_SetKeyHook(void (*)()),
-					IN_ClearKeysDown(void),
-					IN_ReadCursor(CursorInfo *),
-					IN_ReadControl(int,ControlInfo *),
-					IN_SetControlType(int,ControlType),
-					IN_GetJoyAbs(word joy,word *xp,word *yp),
-					IN_SetupJoy(word joy,word minx,word maxx,
-								word miny,word maxy),
-					IN_StartDemoPlayback(byte _seg *buffer,word bufsize),
-					IN_StopDemo(void),IN_FreeDemoBuffer(void),
-					IN_Ack(void),IN_AckBack(void);
+extern	void		IN_Startup(void);
+extern	void		IN_Shutdown(void);
+extern	void		IN_Default(boolean gotit,ControlType in);
+extern	void		IN_SetKeyHook(void (*h)(void));
+extern	void		IN_ClearKeysDown(void);
+extern	void		IN_ReadCursor(CursorInfo * ci);
+extern	void		IN_ReadControl(int player,ControlInfo * ci);
+extern	void		IN_SetControlType(int player,ControlType ct);
+extern	void		IN_GetJoyAbs(word joy,word *xp,word *yp);
+extern	void		IN_SetupJoy(word joy,word minx,word maxx,
+								word miny,word maxy);
+extern	void		IN_StartDemoPlayback(byte _seg *buffer,word bufsize);
+extern	void		IN_StopDemo(void);
+extern	void		IN_FreeDemoBuffer(void);
+extern	void		IN_Ack(void);
+extern	void		IN_AckBack(void);
 extern	boolean		IN_UserInput(longword delay,boolean clear),
 					IN_IsUserInput(void),
 					IN_StartDemoRecord(word bufsize);
-extern	byte		*IN_GetScanName(ScanCode);
+extern	byte		*IN_GetScanName(ScanCode s);
 extern	char		IN_WaitForASCII(void);
 extern	ScanCode	IN_WaitForKey(void);
 extern	word		IN_GetJoyButtonsDB(word joy);

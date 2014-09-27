@@ -67,8 +67,8 @@ typedef enum LibFileTypes
 
 typedef struct SoftLibHdr
 {
-	unsigned Version;									// Library Version Num
-	unsigned FileCount;
+	unsigned short Version;									// Library Version Num
+	unsigned short FileCount;
 } SoftlibHdr;
 
 
@@ -82,6 +82,9 @@ typedef struct SoftLibHdr
 
 #define SL_FILENAMESIZE		16
 
+#pragma pack(push)
+#pragma pack(2)
+
 typedef struct FileEntryHdr
 {
 	char FileName[SL_FILENAMESIZE];		  	// NOTE : May not be null terminated!
@@ -91,11 +94,15 @@ typedef struct FileEntryHdr
 	short Compression;							// ct_TYPES
 } FileEntryHdr;
 
+#pragma pack(pop)
 
 
 //--------------------------------------------------------------------------
 //							   SOFTLIB Entry Chunk Header
 //--------------------------------------------------------------------------
+
+#pragma pack(push)
+#pragma pack(2)
 
 typedef struct ChunkHeader
 {
@@ -104,6 +111,7 @@ typedef struct ChunkHeader
 	short Compression;								// ct_TYPES
 } ChunkHeader;
 
+#pragma pack(pop)
 
 
 #endif

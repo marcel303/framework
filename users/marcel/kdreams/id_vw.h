@@ -18,6 +18,8 @@
 
 // ID_VW.H
 
+#pragma once
+
 #ifndef __TYPES__
 #include "ID_TYPES.H"
 #endif
@@ -143,9 +145,12 @@
 typedef enum {NOcard,MDAcard,CGAcard,EGAcard,MCGAcard,VGAcard,
 		  HGCcard=0x80,HGCPcard,HICcard} cardtype;
 
+#pragma pack(push)
+#pragma pack(2)
+
 typedef struct
 {
-  int	width,
+  short int	width,
 	height,
 	orgx,orgy,
 	xl,yl,xh,yh,
@@ -154,25 +159,26 @@ typedef struct
 
 typedef	struct
 {
-	unsigned	sourceoffset[MAXSHIFTS];
-	unsigned	planesize[MAXSHIFTS];
-	unsigned	width[MAXSHIFTS];
+	unsigned short	sourceoffset[MAXSHIFTS];
+	unsigned short	planesize[MAXSHIFTS];
+	unsigned short	width[MAXSHIFTS];
 	byte		data[];
 } spritetype;		// the memptr for each sprite points to this
 
 typedef struct
 {
-	int width,height;
+	short int width,height;
 } pictabletype;
 
 
 typedef struct
 {
-	int height;
-	int location[256];
+	short int height;
+	short int location[256];
 	char width[256];
 } fontstruct;
 
+#pragma pack(pop)
 
 typedef enum {CGAgr,EGAgr,VGAgr} grtype;
 
@@ -181,16 +187,16 @@ typedef enum {CGAgr,EGAgr,VGAgr} grtype;
 extern	cardtype	videocard;		// set by VW_Startup
 extern	grtype		grmode;			// CGAgr, EGAgr, VGAgr
 
-extern	unsigned	bufferofs;		// hidden port to draw to before displaying
-extern	unsigned	displayofs;		// origin of port on visable screen
-extern	unsigned	panx,pany;		// panning adjustments inside port in pixels
-extern	unsigned	pansx,pansy;
-extern	unsigned	panadjust;		// panx/pany adjusted by screen resolution
+extern	unsigned short	bufferofs;		// hidden port to draw to before displaying
+extern	unsigned short	displayofs;		// origin of port on visable screen
+extern	unsigned short	panx,pany;		// panning adjustments inside port in pixels
+extern	unsigned short	pansx,pansy;
+extern	unsigned short	panadjust;		// panx/pany adjusted by screen resolution
 
-extern	unsigned	screenseg;		// normally 0xa000 or buffer segment
+//extern	unsigned	screenseg;		// normally 0xa000 or buffer segment // mstodo : remove
 
-extern	unsigned	linewidth;
-extern	unsigned	ylookup[VIRTUALHEIGHT];
+extern	unsigned short	linewidth;
+extern	unsigned short	ylookup[VIRTUALHEIGHT];
 
 extern	boolean		screenfaded;
 
@@ -198,14 +204,14 @@ extern	pictabletype	_seg *pictable;
 extern	pictabletype	_seg *picmtable;
 extern	spritetabletype _seg *spritetable;
 
-extern	int			px,py;
+extern	short		px,py;
 extern	byte		pdrawmode,fontcolor;
 
 //
 // asm globals
 //
 
-extern	unsigned	**shifttabletable;
+extern	const unsigned short * shifttabletable[8];
 
 
 //===========================================================================
@@ -220,18 +226,23 @@ cardtype	VW_VideoID (void);
 // EGA hardware routines
 //
 
+/* mstodo : EGA macros
 #define EGAWRITEMODE(x) asm{cli;mov dx,GC_INDEX;mov ax,GC_MODE+256*x;out dx,ax;sti;}
 #define EGABITMASK(x) asm{mov dx,GC_INDEX;mov ax,GC_BITMASK+256*x;out dx,ax;sti;}
 #define EGAMAPMASK(x) asm{cli;mov dx,SC_INDEX;mov ax,SC_MAPMASK+x*256;out dx,ax;sti;}
+*/
+#define EGAWRITEMODE(x)
+#define EGABITMASK(x)
+#define EGAMAPMASK(x)
 
-void 	VW_SetLineWidth(int width);
-void 	VW_SetScreen (unsigned CRTC, unsigned pelpan);
+void 	VW_SetLineWidth(short width);
+void 	VW_SetScreen (unsigned short CRTC, unsigned short pelpan);
 
-void	VW_SetScreenMode (int grmode);
-void	VW_ClearVideo (int color);
-void	VW_WaitVBL (int number);
+void	VW_SetScreenMode (short grmode);
+void	VW_ClearVideo (short color);
+void	VW_WaitVBL (short number);
 
-void	VW_ColorBorder (int color);
+void	VW_ColorBorder (short color);
 void	VW_SetDefaultColors(void);
 void	VW_FadeOut(void);
 void	VW_FadeIn(void);
@@ -242,18 +253,17 @@ void	VW_FadeDown(void);
 // block primitives
 //
 
-void VW_MaskBlock(memptr segm,unsigned ofs,unsigned dest,
-	unsigned wide,unsigned height,unsigned planesize);
-void VW_MemToScreen(memptr source,unsigned dest,unsigned width,unsigned height);
-void VW_ScreenToMem(unsigned source,memptr dest,unsigned width,unsigned height);
-void VW_ScreenToScreen(unsigned source,unsigned dest,unsigned width,unsigned height);
+void VW_MaskBlock(memptr segment, unsigned short ofs, unsigned short dest, unsigned short wide, unsigned short height, unsigned short planesize);
+void VW_MemToScreen(memptr source, unsigned short dest, unsigned short width, unsigned short height);
+void VW_ScreenToMem(unsigned short source, memptr dest, unsigned short width, unsigned short height);
+void VW_ScreenToScreen(unsigned short source, unsigned short dest, unsigned short width, unsigned short height);
 
 
 //
 // block addressable routines
 //
 
-void VW_DrawTile8(unsigned x, unsigned y, unsigned tile);
+void VW_DrawTile8(unsigned short x, unsigned short y, unsigned short tile);
 
 #if GRMODE == EGAGR
 
@@ -277,8 +287,8 @@ void VW_DrawTile8(unsigned x, unsigned y, unsigned tile);
 
 #endif
 
-void VW_DrawPic(unsigned x, unsigned y, unsigned chunknum);
-void VW_DrawMPic(unsigned x, unsigned y, unsigned chunknum);
+void VW_DrawPic(unsigned short x, unsigned short y, unsigned short chunknum);
+void VW_DrawMPic(unsigned short x, unsigned short y, unsigned short chunknum);
 
 //
 // pixel addressable routines
@@ -288,12 +298,11 @@ void	VW_MeasureMPropString  (char far *string, word *width, word *height);
 
 void VW_DrawPropString (char far *string);
 void VW_DrawMPropString (char far *string);
-void VW_DrawSprite(int x, int y, unsigned sprite);
-void VW_Plot(unsigned x, unsigned y, unsigned color);
-void VW_Hlin(unsigned xl, unsigned xh, unsigned y, unsigned color);
-void VW_Vlin(unsigned yl, unsigned yh, unsigned x, unsigned color);
-void VW_Bar (unsigned x, unsigned y, unsigned width, unsigned height,
-	unsigned color);
+void VW_DrawSprite(short x, short y, unsigned short sprite);
+void VW_Plot(unsigned short x, unsigned short y, unsigned short color);
+void VW_Hlin(unsigned short xl, unsigned short xh, unsigned short y, unsigned short color);
+void VW_Vlin(unsigned short yl, unsigned short yh, unsigned short x, unsigned short color);
+void VW_Bar (unsigned short x, unsigned short y, unsigned short width, unsigned short height, unsigned short color);
 
 //===========================================================================
 
@@ -303,7 +312,7 @@ void VW_Bar (unsigned x, unsigned y, unsigned width, unsigned height,
 
 void VW_InitDoubleBuffer (void);
 void VW_FixRefreshBuffer (void);
-int	 VW_MarkUpdateBlock (int x1, int y1, int x2, int y2);
+int	 VW_MarkUpdateBlock (short x1, short y1, short x2, short y2);
 void VW_UpdateScreen (void);
 void VW_CGAFullUpdate (void);
 
@@ -313,8 +322,8 @@ void VW_CGAFullUpdate (void);
 
 void VW_ShowCursor (void);
 void VW_HideCursor (void);
-void VW_MoveCursor (int x, int y);
-void VW_SetCursor (int spritenum);
+void VW_MoveCursor (short x, short y);
+void VW_SetCursor (short spritenum);
 
 //
 // mode independant routines
@@ -322,19 +331,19 @@ void VW_SetCursor (int spritenum);
 // regions marked in double buffer
 //
 
-void VWB_DrawTile8 (int x, int y, int tile);
-void VWB_DrawTile8M (int x, int y, int tile);
-void VWB_DrawTile16 (int x, int y, int tile);
-void VWB_DrawTile16M (int x, int y, int tile);
-void VWB_DrawPic (int x, int y, int chunknum);
-void VWB_DrawMPic(int x, int y, int chunknum);
-void VWB_Bar (int x, int y, int width, int height, int color);
+void VWB_DrawTile8 (short x, short y, short tile);
+void VWB_DrawTile8M (short x, short y, short tile);
+void VWB_DrawTile16 (short x, short y, short tile);
+void VWB_DrawTile16M (short x, short y, short tile);
+void VWB_DrawPic (short x, short y, short chunknum);
+void VWB_DrawMPic(short x, short y, short chunknum);
+void VWB_Bar (short x, short y, short width, short height, short color);
 
 void VWB_DrawPropString	 (char far *string);
 void VWB_DrawMPropString (char far *string);
-void VWB_DrawSprite (int x, int y, int chunknum);
-void VWB_Plot (int x, int y, int color);
-void VWB_Hlin (int x1, int x2, int y, int color);
-void VWB_Vlin (int y1, int y2, int x, int color);
+void VWB_DrawSprite (short x, short y, short chunknum);
+void VWB_Plot (short x, short y, short color);
+void VWB_Hlin (short x1, short x2, short y, short color);
+void VWB_Vlin (short y1, short y2, short x, short color);
 
 //===========================================================================

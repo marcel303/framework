@@ -18,19 +18,28 @@
 
 // ID_GLOB.H
 
+#pragma once
 
-#include <ALLOC.H>
 #include <ctype.h>
 #include <DOS.H>
 #include <ERRNO.H>
 #include <FCNTL.H>
 #include <IO.H>
-#include <MEM.H>
 #include <process.h>
 #include <STDIO.H>
 #include <STDLIB.H>
 #include <STRING.H>
 #include <SYS\STAT.H>
+
+#define _seg
+#define far
+#define near
+#define huge
+#define MK_FP(x, y) (((byte*)x) + (y)) // mstodo : remove MK_FP calls, clean up these defines
+#define FP_SEG(x) (x)
+
+extern int _argc;
+extern char ** _argv;
 
 #define __ID_GLOB__
 
@@ -66,7 +75,7 @@
 
 typedef	enum	{false,true}	boolean;
 typedef	unsigned	char		byte;
-typedef	unsigned	int			word;
+typedef	unsigned	short		word;
 typedef	unsigned	long		longword;
 typedef	byte *					Ptr;
 

@@ -36,6 +36,7 @@
 //
 
 #include "ID_HEADS.H"
+#include "syscode.h"
 #pragma	hdrstop
 
 #define	KeyInt	9	// The keyboard ISR number
@@ -68,7 +69,7 @@
 //	Internal variables
 static	boolean		IN_Started;
 static	boolean		CapsLock;
-static	ScanCode	CurCode,LastCode;
+		ScanCode	CurCode,LastCode;
 static	byte        ASCIINames[] =		// Unshifted ASCII for scan codes
 					{
 //	 0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
@@ -142,7 +143,7 @@ static	byte _seg	*DemoBuffer;
 static	word		DemoOffset,DemoSize;
 
 static	void			(*INL_KeyHook)(void);
-static	void interrupt	(*OldKeyVect)(void);
+//static	void interrupt	(*OldKeyVect)(void);
 
 static	char			*ParmStrings[] = {"nojoys","nomouse",nil};
 
@@ -153,6 +154,7 @@ static	char			*ParmStrings[] = {"nojoys","nomouse",nil};
 //	INL_KeyService() - Handles a keyboard interrupt (key up/down)
 //
 ///////////////////////////////////////////////////////////////////////////
+/*
 static void interrupt
 INL_KeyService(void)
 {
@@ -220,6 +222,7 @@ static	boolean	special;
 		INL_KeyHook();
 	outportb(0x20,0x20);
 }
+*/
 
 ///////////////////////////////////////////////////////////////////////////
 //
@@ -230,9 +233,12 @@ static	boolean	special;
 static void
 INL_GetMouseDelta(int *x,int *y)
 {
+	/*
 	Mouse(MDelta);
 	*x = _CX;
-	*y = _DX;
+	*y = _DX;*/
+	*x = 0;
+	*y = 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -244,11 +250,14 @@ INL_GetMouseDelta(int *x,int *y)
 static word
 INL_GetMouseButtons(void)
 {
+	/*
 	word	buttons;
 
 	Mouse(MButtons);
 	buttons = _BX;
 	return(buttons);
+	*/
+	return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -259,6 +268,7 @@ INL_GetMouseButtons(void)
 void
 IN_GetJoyAbs(word joy,word *xp,word *yp)
 {
+	/*
 	byte	xb,yb,
 			xs,ys;
 	word	x,y;
@@ -326,6 +336,9 @@ asm		popf				// Restore the registers
 
 	*xp = x;
 	*yp = y;
+	*/
+	*xp = 0;
+	*yp = 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -337,6 +350,7 @@ asm		popf				// Restore the registers
 static void
 INL_GetJoyDelta(word joy,int *dx,int *dy,boolean adaptive)
 {
+	/*
 	word		x,y;
 	longword	time;
 	JoystickDef	*def;
@@ -403,6 +417,9 @@ static	longword	lasttime;
 		}
 	}
 	lasttime = TimeCount;
+	*/
+	*dx = 0;
+	*dy = 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -414,13 +431,16 @@ static	longword	lasttime;
 static word
 INL_GetJoyButtons(word joy)
 {
-register	word	result;
+	/*
+	register	word	result;
 
 	result = inportb(0x201);	// Get all the joystick buttons
 	result >>= joy? 6 : 4;	// Shift into bits 0-1
 	result &= 3;				// Mask off the useless bits
 	result ^= 3;
 	return(result);
+	*/
+	return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -432,6 +452,7 @@ register	word	result;
 word
 IN_GetJoyButtonsDB(word joy)
 {
+	/*
 	longword	lasttime;
 	word		result1,result2;
 
@@ -444,6 +465,8 @@ IN_GetJoyButtonsDB(word joy)
 		result2 = INL_GetJoyButtons(joy);
 	} while (result1 != result2);
 	return(result1);
+	*/
+	return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -456,8 +479,8 @@ INL_StartKbd(void)
 {
 	IN_ClearKeysDown();
 
-	OldKeyVect = getvect(KeyInt);
-	setvect(KeyInt,INL_KeyService);
+	//OldKeyVect = getvect(KeyInt);
+	//setvect(KeyInt,INL_KeyService);
 
 	INL_KeyHook = 0;	// Clear key hook
 }
@@ -470,36 +493,9 @@ INL_StartKbd(void)
 static void
 INL_ShutKbd(void)
 {
-	poke(0x40,0x17,peek(0x40,0x17) & 0xfaf0);	// Clear ctrl/alt/shift flags
+	//poke(0x40,0x17,peek(0x40,0x17) & 0xfaf0);	// Clear ctrl/alt/shift flags
 
-	setvect(KeyInt,OldKeyVect);
-}
-
-///////////////////////////////////////////////////////////////////////////
-//
-//	INL_StartMouse() - Detects and sets up the mouse
-//
-///////////////////////////////////////////////////////////////////////////
-static boolean
-INL_StartMouse(void)
-{
-	if (getvect(MouseInt))
-	{
-		Mouse(MReset);
-		if (_AX == 0xffff)
-			return(true);
-	}
-	return(false);
-}
-
-///////////////////////////////////////////////////////////////////////////
-//
-//	INL_ShutMouse() - Cleans up after the mouse
-//
-///////////////////////////////////////////////////////////////////////////
-static void
-INL_ShutMouse(void)
-{
+	//setvect(KeyInt,OldKeyVect);
 }
 
 //
@@ -526,6 +522,7 @@ INL_SetJoyScale(word joy)
 void
 IN_SetupJoy(word joy,word minx,word maxx,word miny,word maxy)
 {
+	/*
 	word		d,r;
 	JoystickDef	*def;
 
@@ -546,6 +543,7 @@ IN_SetupJoy(word joy,word minx,word maxx,word miny,word maxy)
 	def->threshMaxY = ((r / 2) + d) + miny;
 
 	INL_SetJoyScale(joy);
+	*/
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -557,6 +555,7 @@ IN_SetupJoy(word joy,word minx,word maxx,word miny,word maxy)
 static boolean
 INL_StartJoy(word joy)
 {
+	/*
 	word x,y;
 
 	IN_GetJoyAbs(joy, &x, &y);
@@ -569,6 +568,8 @@ INL_StartJoy(word joy)
 		IN_SetupJoy(joy, 0, x*2, 0, y*2);
 		return(true);
 	}
+	*/
+	return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -614,7 +615,7 @@ IN_Startup(void)
 	}
 
 	INL_StartKbd();
-	MousePresent = checkmouse? INL_StartMouse() : false;
+	MousePresent = true;
 
 	for (i = 0;i < MaxJoys;i++)
 		JoysPresent[i] = checkjoys? INL_StartJoy(i) : false;
@@ -652,7 +653,6 @@ IN_Shutdown(void)
 	if (!IN_Started)
 		return;
 
-	INL_ShutMouse();
 	INL_ShutKbd();
 
 	IN_Started = false;
@@ -665,7 +665,7 @@ IN_Shutdown(void)
 //
 ///////////////////////////////////////////////////////////////////////////
 void
-IN_SetKeyHook(void (*hook)())
+IN_SetKeyHook(void (*hook)(void))
 {
 	INL_KeyHook = hook;
 }
@@ -722,8 +722,8 @@ IN_ReadCursor(CursorInfo *info)
 	if (MousePresent)
 	{
 		buttons = INL_GetMouseButtons();
-		dx /= 2;
-		dy /= 2;
+		//dx /= 2;
+		//dy /= 2;
 		INL_GetMouseDelta(&dx,&dy);
 		INL_AdjustCursor(info,buttons,dx,dy);
 	}
@@ -1027,6 +1027,8 @@ IN_AckBack(void)
 				}
 			}
 		}
+
+		SYS_Update();
 	}
 
 	IN_ClearKey(LastScan);
@@ -1105,6 +1107,7 @@ IN_UserInput(longword delay,boolean clear)
 				IN_AckBack();
 			return(true);
 		}
+		SYS_Update();
 	} while (TimeCount - lasttime < delay);
 	return(false);
 }

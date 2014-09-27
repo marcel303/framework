@@ -19,6 +19,7 @@
 // KD_PLAY.C
 
 #include "KD_DEF.H"
+#include "syscode.h"
 #pragma	hdrstop
 
 /*
@@ -67,7 +68,7 @@ gametype	gamestate;
 boolean		button0held,button1held;
 objtype		*new,*check,*player,*scoreobj;
 
-unsigned	originxtilemax,originytilemax;
+unsigned short	originxtilemax,originytilemax;
 
 ControlInfo	c;
 
@@ -106,28 +107,28 @@ char		*levelnames[21] =
 */
 
 // for asm scaning of map planes
-unsigned	mapx,mapy,mapxcount,mapycount,maptile,mapspot;
+unsigned short	mapx,mapy,mapxcount,mapycount,maptile,mapspot;
 
-int			plummet;
+short int			plummet;
 
-int			objectcount;
+short int			objectcount;
 
 objtype		objarray[MAXACTORS],*lastobj,*objfreelist;
 
-int			oldtileleft,oldtiletop,oldtileright,oldtilebottom,oldtilemidx;
-int			oldleft,oldtop,oldright,oldbottom,oldmidx;
-int			leftmoved,topmoved,rightmoved,bottommoved,midxmoved;
+short int			oldtileleft,oldtiletop,oldtileright,oldtilebottom,oldtilemidx;
+short int			oldleft,oldtop,oldright,oldbottom,oldmidx;
+short int			leftmoved,topmoved,rightmoved,bottommoved,midxmoved;
 
-int			topmove,bottommove,midxmove;
+short int			topmove,bottommove,midxmove;
 
-int			inactivateleft,inactivateright,inactivatetop,inactivatebottom;
+short int			inactivateleft,inactivateright,inactivatetop,inactivatebottom;
 
-int			fadecount;
+short int			fadecount;
 
 boolean		bombspresent;
 
 boolean		lumpneeded[NUMLUMPS];
-int			lumpstart[NUMLUMPS] =
+short int	lumpstart[NUMLUMPS] =
 {
 CONTROLS_LUMP_START,
 KEEN_LUMP_START,
@@ -147,7 +148,7 @@ PEAS_LUMP_START,
 BOOBUS_LUMP_START,
 };
 
-int			lumpend[NUMLUMPS] =
+short int lumpend[NUMLUMPS] =
 {
 CONTROLS_LUMP_END,
 KEEN_LUMP_END,
@@ -179,16 +180,16 @@ void 	MarkTileGraphics (void);
 void 	FadeAndUnhook (void);
 void 	SetupGameLevel (boolean loadnow);
 void 	ScrollScreen (void);
-void 	MoveObjVert (objtype *ob, int ymove);
-void 	MoveObjHoriz (objtype *ob, int xmove);
-void 	GivePoints (unsigned points);
+void 	MoveObjVert (objtype *ob, short ymove);
+void 	MoveObjHoriz (objtype *ob, short xmove);
+void 	GivePoints (unsigned short points);
 void 	ClipToEnds (objtype *ob);
 void 	ClipToEastWalls (objtype *ob);
 void 	ClipToWestWalls (objtype *ob);
 void 	ClipToWalls (objtype *ob);
 void 	ClipToSpriteSide (objtype *push, objtype *solid);
 void 	ClipToSprite (objtype *push, objtype *solid, boolean squish);
-int 	DoActor (objtype *ob,int tics);
+short 	DoActor (objtype *ob,short tics);
 void 	StateMachine (objtype *ob);
 void 	NewState (objtype *ob,statetype *state);
 void 	PlayLoop (void);
@@ -565,54 +566,21 @@ void near HandleInfo (void)
 
 void ScanInfoPlane (void)
 {
-	unsigned	x,y,i,j;
-	int			tile;
-	unsigned	far	*start;
+	unsigned short	i,j;
+	unsigned short	far	*start;
 
 	InitObjArray();			// start spawning things with a clean slate
 
 	memset (lumpneeded,0,sizeof(lumpneeded));
 
-#if 0
 	start = mapsegs[2];
-	for (y=0;y<mapheight;y++)
-		for (x=0;x<mapwidth;x++)
+	for (mapy=0;mapy<mapheight;mapy++)
+		for (mapx=0;mapx<mapwidth;mapx++)
 		{
-			tile = *start++;
-			if (!tile)
-				continue;
+			maptile = *start++;
+			if (maptile)
+				HandleInfo ();
 		}
-#endif
-
-//
-// This doesn't really need to be in asm.  I thought it was a bottleneck,
-// but I was wrong...
-//
-
-	asm	mov	es,[WORD PTR mapsegs+4]
-	asm	xor	si,si
-	asm	mov	[mapy],0
-	asm	mov	ax,[mapheight]
-	asm	mov	[mapycount],ax
-yloop:
-	asm	mov	[mapx],0
-	asm	mov	ax,[mapwidth]
-	asm	mov	[mapxcount],ax
-xloop:
-	asm	mov	ax,[es:si]
-	asm	or	ax,ax
-	asm	jz	nothing
-	asm	mov	[maptile],ax
-	HandleInfo ();						// si is saved
-	asm	mov	es,[WORD PTR mapsegs+4]
-nothing:
-	asm	inc	[mapx]
-	asm	add	si,2
-	asm	dec	[mapxcount]
-	asm	jnz	xloop
-	asm	inc	[mapy]
-	asm	dec	[mapycount]
-	asm	jnz	yloop
 
 	for (i=0;i<NUMLUMPS;i++)
 		if (lumpneeded[i])
@@ -635,7 +603,7 @@ nothing:
 
 void PatchWorldMap (void)
 {
-	unsigned	size,spot,info,foreground;
+	unsigned short	size,spot,info,foreground;
 
 	size = mapwidth*mapheight;
 	spot = 0;
@@ -769,7 +737,7 @@ void 	SetupGameLevel (boolean loadnow)
 		if (orgy<0)
 			orgy=0;
 
-		RF_NewPosition (orgx,orgy);
+		RF_NewPosition ((short)orgx,(short)orgy);
 		CalcInactivate ();
 	}
 
@@ -791,7 +759,7 @@ void 	SetupGameLevel (boolean loadnow)
 
 void ScrollScreen (void)
 {
-	int	xscroll,yscroll;
+	short int	xscroll,yscroll;
 
 //
 // walked off edge of map?
@@ -847,7 +815,7 @@ void ScrollScreen (void)
 ====================
 */
 
-void GivePoints (unsigned points)
+void GivePoints (unsigned short points)
 {
 	gamestate.score += points;
 	if (gamestate.score >= gamestate.nextextra)
@@ -869,7 +837,7 @@ void GivePoints (unsigned points)
 ====================
 */
 
-void MoveObjVert (objtype *ob, int ymove)
+void MoveObjVert (objtype *ob, short ymove)
 {
 	ob->y += ymove;
 	ob->top += ymove;
@@ -887,7 +855,7 @@ void MoveObjVert (objtype *ob, int ymove)
 ====================
 */
 
-void MoveObjHoriz (objtype *ob, int xmove)
+void MoveObjHoriz (objtype *ob, short xmove)
 {
 	ob->x += xmove;
 	ob->left += xmove;
@@ -907,7 +875,7 @@ void MoveObjHoriz (objtype *ob, int xmove)
 
 // walltype / x coordinate (0-15)
 
-int	wallclip[8][16] = {			// the height of a given point in a tile
+short	wallclip[8][16] = {			// the height of a given point in a tile
 { 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256},
 {   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0},
 {   0,0x08,0x10,0x18,0x20,0x28,0x30,0x38,0x40,0x48,0x50,0x58,0x60,0x68,0x70,0x78},
@@ -917,9 +885,6 @@ int	wallclip[8][16] = {			// the height of a given point in a tile
 {0xf8,0xf0,0xe8,0xe0,0xd8,0xd0,0xc8,0xc0,0xb8,0xb0,0xa8,0xa0,0x98,0x90,0x88,0x80},
 {0xf0,0xe0,0xd0,0xc0,0xb0,0xa0,0x90,0x80,0x70,0x60,0x50,0x40,0x30,0x20,0x10,   0}
 };
-
-// assignment within ifs are used heavily here, so turn off the warning
-#pragma warn -pia
 
 /*
 ===========================
@@ -931,14 +896,14 @@ int	wallclip[8][16] = {			// the height of a given point in a tile
 
 void ClipToEnds (objtype *ob)
 {
-	unsigned	far *map,tile,facetile,info,wall;
-	int	leftpix,rightpix,midtiles,toppix,bottompix;
-	int	x,y,clip,move,totalmove,maxmove,midxpix;
+	unsigned short	far *map,tile,facetile,info,wall;
+	short int	leftpix,rightpix,midtiles,toppix,bottompix;
+	short int	x,y,clip,move,totalmove,maxmove,midxpix;
 
 	midxpix = (ob->midx&0xf0) >> 4;
 
 	maxmove = -abs(midxmoved) - bottommoved - 16;
-	map = (unsigned far *)mapsegs[1] +
+	map = (unsigned short far *)mapsegs[1] +
 		mapbwidthtable[oldtilebottom-1]/2 + ob->tilemidx;
 	for (y=oldtilebottom-1 ; y<=ob->tilebottom ; y++,map+=mapwidth)
 	{
@@ -956,7 +921,7 @@ void ClipToEnds (objtype *ob)
 	}
 
 	maxmove = abs(midxmoved) - topmoved + 16;
-	map = (unsigned far *)mapsegs[1] +
+	map = (unsigned short far *)mapsegs[1] +
 		mapbwidthtable[oldtiletop+1]/2 + ob->tilemidx;
 	for (y=oldtiletop+1 ; y>=ob->tiletop ; y--,map-=mapwidth)
 	{
@@ -988,8 +953,8 @@ void ClipToEnds (objtype *ob)
 
 void ClipToEastWalls (objtype *ob)
 {
-	int			y,move,top,bottom;
-	unsigned	far *map,tile,info,wall;
+	short			y,move,top,bottom;
+	unsigned short	far *map,tile,info,wall;
 
 	// clip to east walls if moving west
 
@@ -1002,7 +967,7 @@ void ClipToEastWalls (objtype *ob)
 
 	for (y=top;y<=bottom;y++)
 	{
-		map = (unsigned far *)mapsegs[1] +
+		map = (unsigned short far *)mapsegs[1] +
 			mapbwidthtable[y]/2 + ob->tileleft;
 
 		if (ob->hiteast = tinf[EASTWALL+*map])
@@ -1017,8 +982,8 @@ void ClipToEastWalls (objtype *ob)
 
 void ClipToWestWalls (objtype *ob)
 {
-	int			y,move,top,bottom;
-	unsigned	far *map,tile,info,wall;
+	short int		y,move,top,bottom;
+	unsigned short	far *map,tile,info,wall;
 
 	// check west walls if moving east
 
@@ -1031,7 +996,7 @@ void ClipToWestWalls (objtype *ob)
 
 	for (y=top;y<=bottom;y++)
 	{
-		map = (unsigned far *)mapsegs[1] +
+		map = (unsigned short far *)mapsegs[1] +
 			mapbwidthtable[y]/2 + ob->tileright;
 
 		if (ob->hitwest = tinf[WESTWALL+*map])
@@ -1042,10 +1007,6 @@ void ClipToWestWalls (objtype *ob)
 		}
 	}
 }
-
-// turn 'possibly incorrect assignment' warnings back on
-#pragma warn +pia
-
 
 //==========================================================================
 
@@ -1061,7 +1022,7 @@ void ClipToWestWalls (objtype *ob)
 
 void ClipToWalls (objtype *ob)
 {
-	unsigned	x,y,tile;
+	unsigned short	x,y,tile;
 	spritetabletype	far *shape;
 	boolean	endfirst;
 
@@ -1161,7 +1122,7 @@ void ClipToWalls (objtype *ob)
 
 void ClipToSpriteSide (objtype *push, objtype *solid)
 {
-	int xmove,leftinto,rightinto;
+	short xmove,leftinto,rightinto;
 
 	//
 	// amount the push shape can be pushed
@@ -1212,7 +1173,7 @@ void ClipToSpriteSide (objtype *push, objtype *solid)
 void ClipToSprite (objtype *push, objtype *solid, boolean squish)
 {
 	boolean temp;
-	int walltemp,xmove,leftinto,rightinto,topinto,bottominto;
+	short walltemp,xmove,leftinto,rightinto,topinto,bottominto;
 
 	xmove = solid->xmove - push->xmove;
 
@@ -1291,10 +1252,10 @@ void ClipToSprite (objtype *push, objtype *solid, boolean squish)
 ==================
 */
 
-int DoActor (objtype *ob,int tics)
+short DoActor (objtype *ob,short tics)
 {
-	int	newtics,movetics,excesstics;
-	statetype *state;
+	short int	newtics,movetics,excesstics;
+	statetype	*state;
 
 	state = ob->state;
 
@@ -1305,9 +1266,7 @@ int DoActor (objtype *ob,int tics)
 			if (ob->nothink)
 				ob->nothink--;
 			else
-#pragma warn -pro
 				state->think(ob);
-#pragma warn +pro
 		}
 		return 0;
 	}
@@ -1333,9 +1292,7 @@ int DoActor (objtype *ob,int tics)
 				if (ob->nothink)
 					ob->nothink--;
 				else
-#pragma warn -pro
 					state->think(ob);
-#pragma warn +pro
 			}
 		}
 		return 0;
@@ -1367,9 +1324,7 @@ int DoActor (objtype *ob,int tics)
 			if (ob->nothink)
 				ob->nothink--;
 			else
-#pragma warn -pro
 				state->think(ob);
-#pragma warn +pro
 		}
 
 		if (ob->state == state)
@@ -1395,7 +1350,7 @@ int DoActor (objtype *ob,int tics)
 
 void StateMachine (objtype *ob)
 {
-	int excesstics,oldshapenum;
+	short int excesstics,oldshapenum;
 	statetype *state;
 
 	ob->xmove = ob->ymove = 0;
@@ -1444,7 +1399,7 @@ void StateMachine (objtype *ob)
 		else
 			ob->shapenum = state->leftshapenum;
 	}
-	if (ob->shapenum == (unsigned)-1)
+	if (ob->shapenum == (unsigned short)-1)
 		ob->shapenum = 0;		// make it invisable this time
 
 	if (ob->xmove || ob->ymove || ob->shapenum != oldshapenum)
@@ -1508,7 +1463,6 @@ void NewState (objtype *ob,statetype *state)
 void PlayLoop (void)
 {
 	objtype	*obj, *check;
-	long	newtime;
 
 	button0held = button1held = false;
 
@@ -1584,12 +1538,10 @@ void PlayLoop (void)
 					&& obj->top < check->bottom
 					&& obj->bottom > check->top)
 					{
-#pragma warn -pro
 						if (obj->state->contact)
 							obj->state->contact(obj,check);
 						if (check->state->contact)
 							check->state->contact(check,obj);
-#pragma warn +pro
 						if (!obj->obclass)
 							break;				// contact removed object
 					}
@@ -1611,9 +1563,7 @@ void PlayLoop (void)
 			if (obj->needtoreact && obj->state->react)
 			{
 				obj->needtoreact = false;
-#pragma warn -pro
 				obj->state->react(obj);
-#pragma warn +pro
 			}
 			obj = (objtype *)obj->next;
 		} while (obj);
@@ -1653,8 +1603,6 @@ void PlayLoop (void)
 
 void GameFinale (void)
 {
-struct date d;
-
 	VW_FixRefreshBuffer ();
 
 /* screen 1 of finale text (16 lines) */
@@ -1833,8 +1781,8 @@ void HandleDeath (void)
 
 void GameLoop (void)
 {
-	unsigned	cities,i;
-	long	orgx,orgy;
+	unsigned short	cities,i;
+	long			orgx,orgy;
 
 	gamestate.difficulty = restartgame;
 	restartgame = gd_Continue;
@@ -1858,7 +1806,7 @@ startlevel:
 			VW_FadeOut ();
 			fadecount = 0;
 			RF_SetRefreshHook (&FadeAndUnhook);
-			RF_NewPosition (orgx,orgy);
+			RF_NewPosition ((short)orgx,(short)orgy);
 			CalcInactivate ();
 		}
 		else

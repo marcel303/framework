@@ -167,19 +167,19 @@ extern	boolean		ssIsTandy;					// For config file
 extern	word		ssPort;
 
 // Function prototypes
-extern	void	SD_Startup(void),
-				SD_Shutdown(void),
-				SD_Default(boolean gotit,SDMode sd,SMMode sm),
-				SD_PlaySound(word sound),
-				SD_StopSound(void),
-				SD_WaitSoundDone(void),
-				SD_StartMusic(Ptr music),	// DEBUG - this shouldn't be a Ptr
-				SD_FadeOutMusic(void),
-				SD_SetUserHook(void (*hook)(void));
-extern	boolean	SD_MusicPlaying(void),
-				SD_SetSoundMode(SDMode mode),
-				SD_SetMusicMode(SMMode mode);
-extern	word	SD_SoundPlaying(void);
+static	void	SD_Startup(void) { } // mstodo
+static	void	SD_Shutdown(void) { } // mstodo
+static	void	SD_Default(boolean gotit,SDMode sd,SMMode sm) { } // mstodo
+static	void	SD_PlaySound(word sound) { } // mstodo
+static	void	SD_StopSound(void) { } // mstodo
+static	void	SD_WaitSoundDone(void) { } // mstodo
+static	void	SD_StartMusic(Ptr music) { } // mstodo	// DEBUG - this shouldn't be a Ptr
+static	void	SD_FadeOutMusic(void) { } // mstodo
+static	void	SD_SetUserHook(void (*hook)(void));
+static	boolean	SD_MusicPlaying(void) { return false; } // mstodo
+static	boolean	SD_SetSoundMode(SDMode mode) { return true; } // mstodo
+static	boolean	SD_SetMusicMode(SMMode mode) { return true; } // mstodo
+static	word	SD_SoundPlaying(void) { } // mstodo
 
 #ifdef	_MUSE_	// MUSE Goes directly to the lower level routines
 extern	void	SDL_PCPlaySound(PCSound far *sound),

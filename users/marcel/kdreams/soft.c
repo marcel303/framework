@@ -20,7 +20,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <alloc.h>
 #include <fcntl.h>
 #include <dos.h>
 #include <io.h>
@@ -71,8 +70,6 @@ unsigned long BLoad(char *SourceFile, memptr *DstPtr)
 	int handle;
 
 	memptr SrcPtr;
-	unsigned long i, j, k, r, c;
-	word flags;
 	byte Buffer[8];
 	unsigned long SrcLen,DstLen;
 	struct CMP1Header CompHeader;
@@ -85,14 +82,14 @@ unsigned long BLoad(char *SourceFile, memptr *DstPtr)
 	// Open file to load....
 	//
 
-	if ((handle = open(SourceFile, O_RDONLY|O_BINARY)) == -1)
+	if ((handle = _open(SourceFile, O_RDONLY|O_BINARY)) == -1)
 		return(0);
 
 	//
 	// Look for JAMPAK headers
 	//
 
-	read(handle,Buffer,4);
+	_read(handle,Buffer,4);
 
 	if (!strncmp(Buffer,COMP,4))
 	{
@@ -103,7 +100,7 @@ unsigned long BLoad(char *SourceFile, memptr *DstPtr)
 		Compressed = true;
 		SrcLen = Verify(SourceFile);
 
-		read(handle,(void *)&CompHeader.OrginalLen,4);
+		_read(handle,(void *)&CompHeader.OrginalLen,4);
 		CompHeader.CompType = ct_LZW;
 		MM_GetPtr(DstPtr,CompHeader.OrginalLen);
 		if (!*DstPtr)
@@ -119,7 +116,7 @@ unsigned long BLoad(char *SourceFile, memptr *DstPtr)
 		Compressed = true;
 		SrcLen = Verify(SourceFile);
 
-		read(handle,(void *)&CompHeader,sizeof(struct CMP1Header));
+		_read(handle,(void *)&CompHeader,sizeof(struct CMP1Header));
 		MM_GetPtr(DstPtr,CompHeader.OrginalLen);
 		if (!*DstPtr)
 			return(0);
@@ -189,7 +186,7 @@ unsigned long BLoad(char *SourceFile, memptr *DstPtr)
 	else
 		CA_LoadFile(SourceFile,DstPtr);
 
-	close(handle);
+	_close(handle);
 	return(DstLen);
 }
 
@@ -202,14 +199,13 @@ unsigned long BLoad(char *SourceFile, memptr *DstPtr)
 //
 int LoadLIBShape(char *SLIB_Filename, char *Filename,struct Shape *SHP)
 {
-	#define CHUNK(Name)	(*ptr == *Name) &&			\
+	#define CHUNK(Name)	((*ptr == *Name) &&			\
 								(*(ptr+1) == *(Name+1)) &&	\
 								(*(ptr+2) == *(Name+2)) &&	\
-								(*(ptr+3) == *(Name+3))
+								(*(ptr+3) == *(Name+3)))
 
 
 	int RT_CODE;
-	FILE *fp;
 	char CHUNK[5];
 	char far *ptr;
 	memptr IFFfile = NULL;
@@ -275,7 +271,7 @@ int LoadLIBShape(char *SLIB_Filename, char *Filename,struct Shape *SHP)
 			MM_GetPtr(&SHP->Data,size);
 			if (!SHP->Data)
 				goto EXIT_FUNC;
-			movedata(FP_SEG(ptr),FP_OFF(ptr),FP_SEG(SHP->Data),0,size);
+			memcpy(SHP->Data,ptr,size);
 			ptr += ChunkLen;
 
 			break;
@@ -340,7 +336,7 @@ memptr LoadLIBFile(char *LibName,char *FileName,memptr *MemPtr)
 	// OPEN SOFTLIB FILE
 	//
 
-	if ((handle = open(LibName,O_RDONLY|O_BINARY, S_IREAD)) == -1)
+	if ((handle = _open(LibName,O_RDONLY|O_BINARY, S_IREAD)) == -1)
 		return(NULL);
 
 
@@ -348,15 +344,15 @@ memptr LoadLIBFile(char *LibName,char *FileName,memptr *MemPtr)
 	//	VERIFY it is a SOFTLIB (SLIB) file
 	//
 
-	if (read(handle,&header,4) == -1)
+	if (_read(handle,&header,4) == -1)
 	{
-		close(handle);
+		_close(handle);
 		return(NULL);
 	}
 
 	if (header != id_slib)
 	{
-		close(handle);
+		_close(handle);
 		return(NULL);
 	}
 
@@ -365,7 +361,7 @@ memptr LoadLIBFile(char *LibName,char *FileName,memptr *MemPtr)
 	// CHECK LIBRARY HEADER VERSION NUMBER
 	//
 
-	if (read(handle, &LibraryHeader,sizeof(struct SoftLibHdr)) == -1)
+	if (_read(handle, &LibraryHeader,sizeof(struct SoftLibHdr)) == -1)
 		Quit("read error in LoadSLIBFile()\n");
 
 	if (LibraryHeader.Version > SOFTLIB_VER)
@@ -378,13 +374,13 @@ memptr LoadLIBFile(char *LibName,char *FileName,memptr *MemPtr)
 
 	for (x = 1;x<=LibraryHeader.FileCount;x++)
 	{
-		if (read(handle, &FileEntryHeader,sizeof(struct FileEntryHdr)) == -1)
+		if (_read(handle, &FileEntryHeader,sizeof(struct FileEntryHdr)) == -1)
 		{
-			close(handle);
+			_close(handle);
 			return(NULL);
 		}
 
-		if (!stricmp(FileEntryHeader.FileName,FileName))
+		if (!_stricmp(FileEntryHeader.FileName,FileName))
 		{
 			FileEntry = FileEntryHeader;
 			FileFound = true;
@@ -398,9 +394,9 @@ memptr LoadLIBFile(char *LibName,char *FileName,memptr *MemPtr)
 
 	if (FileFound)
 	{
-		if (lseek(handle,FileEntry.Offset,SEEK_CUR) == -1)
+		if (_lseek(handle,FileEntry.Offset,SEEK_CUR) == -1)
 		{
-			close(handle);
+			_close(handle);
 			return(NULL);
 		}
 
@@ -408,7 +404,7 @@ memptr LoadLIBFile(char *LibName,char *FileName,memptr *MemPtr)
 		// READ CHUNK HEADER - Verify we are at the beginning of a chunk..
 		//
 
-		if (read(handle,(char *)&Header,sizeof(struct ChunkHeader)) == -1)
+		if (_read(handle,(char *)&Header,sizeof(struct ChunkHeader)) == -1)
 			Quit("LIB File - Unable to read Header!");
 
 		if (Header.HeaderID != id_chunk)
@@ -457,13 +453,13 @@ memptr LoadLIBFile(char *LibName,char *FileName,memptr *MemPtr)
 			case ct_NONE:
 				if (!CA_FarRead(handle,MK_FP(*MemPtr,0),ChunkLen))
 				{
-//					close(handle);
+//					_close(handle);
 					*MemPtr = NULL;
 				}
 				break;
 
 			default:
-				close(handle);
+				_close(handle);
 				Quit("Unknown Chunk.Compression Type!");
 				break;
 		}
@@ -471,7 +467,7 @@ memptr LoadLIBFile(char *LibName,char *FileName,memptr *MemPtr)
 	else
 		*MemPtr = NULL;
 
-	close(handle);
+	_close(handle);
 	return(*MemPtr);
 }
 
