@@ -284,6 +284,7 @@ public:
 		assert(&rResult != this);
 		assert(&rResult != &mat);
 
+	#if 0
 		for (int x = 0; x < 4; ++x)
 		{
 			for (int y = 0; y < 4; ++y)
@@ -296,6 +297,29 @@ public:
 				rResult(x, y) = v;
 			}
 		}
+	#else
+		// todo : test
+		const SimdVec row1 = mat.m_rows[0];
+		const SimdVec row2 = mat.m_rows[1];
+		const SimdVec row3 = mat.m_rows[2];
+		const SimdVec row4 = mat.m_rows[3];
+
+		for (int i = 0; i < 4; ++i)
+		{
+			const SimdVec brod1 = m_rows[i].ReplicateX();
+			const SimdVec brod2 = m_rows[i].ReplicateY();
+			const SimdVec brod3 = m_rows[i].ReplicateZ();
+			const SimdVec brod4 = m_rows[i].ReplicateW();
+
+			rResult.m_rows[i] =
+				(
+					brod1.Mul(row1).Add(brod2.Mul(row2))
+				).Add
+				(
+					brod3.Mul(row3).Add(brod4.Mul(row4))
+				);
+		}
+	#endif
 	}
 
 	inline SimdMat4x4 operator*(const SimdMat4x4 & mat) const

@@ -72,7 +72,7 @@ bool NetSocket::Send(const void * data, uint32_t size, NetAddress * address)
 		return false;
 	}
 
-	if (size2 < size)
+	if (size2 < (int)size)
 	{
 		LOG_ERR("not all data was sent", 0);
 		return false;
