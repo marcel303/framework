@@ -787,10 +787,10 @@ void CAL_ShiftSprite (void * segment, unsigned short source, unsigned short dest
 		for (x = 0; x < width; ++x)
 		{
 			// fetch unshifted source byte
-			unsigned char value = *src;
+			unsigned char value = ~(*src);
 
 			// table shift into two bytes
-			unsigned short shifted = ~shifttable[~value];
+			unsigned short shifted = ~shifttable[value];
 
 			dst[0] &= (shifted >> 0) & 0xff; // and with first byte
 			dst[1]  = (shifted >> 8) & 0xff; // replace next byte

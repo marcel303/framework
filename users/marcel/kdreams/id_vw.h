@@ -173,8 +173,6 @@ extern	unsigned short	panx,pany;		// panning adjustments inside port in pixels
 extern	unsigned short	pansx,pansy;
 extern	unsigned short	panadjust;		// panx/pany adjusted by screen resolution
 
-//extern	unsigned	screenseg;		// normally 0xa000 or buffer segment // mstodo : remove
-
 extern	unsigned short	linewidth;
 extern	unsigned short	ylookup[VIRTUALHEIGHT];
 

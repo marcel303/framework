@@ -62,12 +62,15 @@
 
 #define	MaxHighName	57
 #define	MaxScores	10
+#pragma pack(push)
+#pragma pack(2)
 typedef	struct
 		{
 			char	name[MaxHighName + 1];
 			long	score;
 			word	completed;
 		} HighScore;
+#pragma pack(pop)
 
 #define	MaxGameName		32
 #define	MaxSaveGames	7
@@ -278,10 +281,12 @@ USL_ReadConfig(void)
 
 	if ((file = _open("KDREAMS.CFG",O_BINARY | O_RDONLY)) != -1)
 	{
+		short temp;
+
 		_read(file,Scores,sizeof(HighScore) * MaxScores);
-		_read(file,&sd,sizeof(sd));
-		_read(file,&sm,sizeof(sm));
-		_read(file,&ctl,sizeof(ctl));
+		_read(file,&temp,sizeof(temp)); sd = temp;
+		_read(file,&temp,sizeof(temp)); sm = temp;
+		_read(file,&temp,sizeof(temp)); ctl = temp;
 		_read(file,&(KbdDefs[0]),sizeof(KbdDefs[0]));
 		_close(file);
 

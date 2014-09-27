@@ -70,7 +70,8 @@ extern char ** _argv;
 #ifndef	__TYPES__
 #define	__TYPES__
 
-typedef	enum	{false,true}	boolean;
+typedef	enum {false,true}		booleanValues;
+typedef	unsigned	char		boolean;
 typedef	unsigned	char		byte;
 typedef	unsigned	short		word;
 typedef	unsigned	long		longword;

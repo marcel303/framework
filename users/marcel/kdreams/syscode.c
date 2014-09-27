@@ -1,4 +1,5 @@
 #include <SDL/SDL.h>
+#include <Windows.h>
 #include "syscode.h"
 #include "id_heads.h"
 
@@ -6,6 +7,12 @@
 
 extern void Quit (char *error);
 extern ScanCode	CurCode,LastCode;
+
+#if PROTECT_DISPLAY_BUFFER
+	unsigned char * g0xA000[4];
+#else
+	unsigned char g0xA000[4][DISPLAY_BUFFER_SIZE];
+#endif
 
 static unsigned short _CRTC = 0;
 static unsigned short _pelpan = 0;
@@ -19,8 +26,6 @@ void VW_SetScreen (unsigned short CRTC, unsigned short pelpan)
 
 	SYS_Present();
 }
-
-unsigned char g0xA000[4][DISPLAY_BUFFER_SIZE];
 
 static unsigned int gather32(int offset)
 {
@@ -81,6 +86,8 @@ static int __cdecl TimeThread(void * userData)
 
 void SYS_Init()
 {
+	int plane;
+
 	if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
 		Quit("Failed to initialize SDL");
 
@@ -90,7 +97,13 @@ void SYS_Init()
 	if ((timeThread = SDL_CreateThread(TimeThread, 0)) == 0)
 		Quit("Failed to create timer thread");
 
-	memset(g0xA000, 0, sizeof(g0xA000));
+	for (plane = 0; plane < 4; ++plane)
+	{
+	#if PROTECT_DISPLAY_BUFFER
+		g0xA000[plane] = VirtualAlloc(NULL, DISPLAY_BUFFER_SIZE, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+	#endif
+		memset(g0xA000[plane], 0, DISPLAY_BUFFER_SIZE);
+	}
 }
 
 void SYS_Present()
@@ -186,4 +199,6 @@ void SYS_Update()
 			}
 		}
 	}
+
+	//SDL_Delay(100);
 }

@@ -57,7 +57,6 @@ unsigned short	pansx,pansy;	// panning adjustments inside port in screen
 								// block limited pixel values (ie 0/8 for ega x)
 unsigned short	panadjust;		// panx/pany adjusted by screen resolution
 
-//unsigned	screenseg;		// normally 0xa000 / 0xb800 // mstodo : remove
 unsigned short	linewidth;
 unsigned short	ylookup[VIRTUALHEIGHT];
 
