@@ -322,10 +322,12 @@ USL_WriteConfig(void)
 				S_IREAD | S_IWRITE | S_IFREG);
 	if (file != -1)
 	{
+		short temp;
+
 		_write(file,Scores,sizeof(HighScore) * MaxScores);
-		_write(file,&SoundMode,sizeof(SoundMode));
-		_write(file,&MusicMode,sizeof(MusicMode));
-		_write(file,&(Controls[0]),sizeof(Controls[0]));
+		temp = SoundMode;   _write(file,&temp,sizeof(temp));
+		temp = MusicMode;   _write(file,&temp,sizeof(temp));
+		temp = Controls[0]; _write(file,&temp,sizeof(temp));
 		_write(file,&(KbdDefs[0]),sizeof(KbdDefs[0]));
 		_close(file);
 	}
