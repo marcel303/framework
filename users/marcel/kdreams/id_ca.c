@@ -400,10 +400,6 @@ void CAL_SetupGrFile (void)
 	grhuffman = (huffnode *)EGAdict;
 	grstarts = (long _seg *)FP_SEG(EGAhead);
 #endif
-#if GRMODE == CGAGR
-	grhuffman = (huffnode *)CGAdict;
-	grstarts = (long _seg *)FP_SEG(CGAhead);
-#endif
 
 #else
 
@@ -855,26 +851,6 @@ void CAL_CacheSprite (short chunk, char far *compressed)
 	spritetabletype far *spr;
 	spritetype _seg *dest;
 
-#if GRMODE == CGAGR
-//
-// CGA has no pel panning, so shifts are never needed
-//
-	spr = &spritetable[chunk-STARTSPRITES];
-	smallplane = spr->width*spr->height;
-	MM_GetPtr (&grsegs[chunk],smallplane*2+MAXSHIFTS*6);
-	dest = (spritetype _seg *)grsegs[chunk];
-	dest->sourceoffset[0] = MAXSHIFTS*6;	// start data after 3 unsigned tables
-	dest->planesize[0] = smallplane;
-	dest->width[0] = spr->width;
-
-//
-// expand the unshifted shape
-//
-	CAL_HuffExpand (compressed, &dest->data[0],smallplane*2,grhuffman);
-
-#endif
-
-
 #if GRMODE == EGAGR
 
 //
@@ -991,11 +967,6 @@ void CAL_ExpandGrChunk (short chunk, byte far *source)
 #if GRMODE == EGAGR
 #define BLOCK		32
 #define MASKBLOCK	40
-#endif
-
-#if GRMODE == CGAGR
-#define BLOCK		16
-#define MASKBLOCK	32
 #endif
 
 		if (chunk<STARTTILE8M)			// tile 8s are all in one chunk!
@@ -1465,9 +1436,6 @@ void CA_CacheMarks (char *title, boolean cachedownlevel)
 #if GRMODE == EGAGR
 						VWB_Vlin (thy,thy+13,x,14);
 #endif
-#if GRMODE == CGAGR
-						VWB_Vlin (thy,thy+13,x,SECONDCOLOR);
-#endif
 					lastx = xh;
 					VW_UpdateScreen();
 				}
@@ -1547,9 +1515,6 @@ void CA_CacheMarks (char *title, boolean cachedownlevel)
 			for (x=lastx;x<=xh;x++)
 #if GRMODE == EGAGR
 				VWB_Vlin (thy,thy+13,x,14);
-#endif
-#if GRMODE == CGAGR
-				VWB_Vlin (thy,thy+13,x,SECONDCOLOR);
 #endif
 			VW_UpdateScreen();
 		}

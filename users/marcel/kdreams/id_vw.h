@@ -43,30 +43,10 @@
 #define CHARWIDTH		1
 #define TILEWIDTH		2
 #endif
-#if GRMODE == CGAGR
-#define	SCREENWIDTH		128
-#define CHARWIDTH		2
-#define TILEWIDTH		4
-#endif
 
 #define VIRTUALHEIGHT	300
 #define	VIRTUALWIDTH	512
 
-
-#if GRMODE == CGAGR
-
-#define	MAXSHIFTS		1
-
-#define WHITE			3			// graphics mode independant colors
-#define BLACK			0
-#define FIRSTCOLOR		1
-#define SECONDCOLOR		2
-#define F_WHITE			0			// for XOR font drawing
-#define F_BLACK			3
-#define F_FIRSTCOLOR	2
-#define F_SECONDCOLOR	1
-
-#endif
 
 #if GRMODE == EGAGR
 
@@ -276,17 +256,6 @@ void VW_DrawTile8(unsigned short x, unsigned short y, unsigned short tile);
 
 #endif
 
-#if GRMODE == CGAGR
-
-#define VW_DrawTile8M(x,y,t) \
-	VW_MaskBlock(grsegs[STARTTILE8M],(t)*32,bufferofs+ylookup[y]+(x),2,8,16)
-#define VW_DrawTile16(x,y,t) \
-	VW_MemToScreen(grsegs[STARTTILE16+t],bufferofs+ylookup[y]+(x),4,16)
-#define VW_DrawTile16M(x,y,t) \
-	VW_MaskBlock(grsegs[STARTTILE16M],(t)*128,bufferofs+ylookup[y]+(x),4,16,64)
-
-#endif
-
 void VW_DrawPic(unsigned short x, unsigned short y, unsigned short chunknum);
 void VW_DrawMPic(unsigned short x, unsigned short y, unsigned short chunknum);
 
@@ -314,7 +283,6 @@ void VW_InitDoubleBuffer (void);
 void VW_FixRefreshBuffer (void);
 int	 VW_MarkUpdateBlock (short x1, short y1, short x2, short y2);
 void VW_UpdateScreen (void);
-void VW_CGAFullUpdate (void);
 
 //
 // cursor

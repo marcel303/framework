@@ -58,9 +58,6 @@ extern char ** _argv;
 #if GRMODE == EGAGR
 #define GREXT	"EGA"
 #endif
-#if GRMODE == CGAGR
-#define GREXT	"CGA"
-#endif
 
 //#define PROFILE
 
