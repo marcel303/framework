@@ -620,8 +620,11 @@ void CA_Shutdown (void)
 	}
 #endif
 
-	// mstodo : audiohandle not closed?
-
+	if (audiohandle >= 0)
+	{
+		_close (audiohandle);
+		audiohandle = -1;
+	}
 	if (maphandle >= 0)
 	{
 		_close (maphandle);

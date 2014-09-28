@@ -390,9 +390,6 @@ US_Startup(void)
 	if (US_Started)
 		return;
 
-	// mstodo : error handler
-	//harderr(USL_HardError);	// Install the fatal error handler
-
 	US_InitRndT(true);		// Initialize the random number generator
 
 	USL_ReadConfig();		// Read config file
@@ -1078,13 +1075,9 @@ USL_XORICursor(int x,int y,char *s,word cursor)
 //
 ///////////////////////////////////////////////////////////////////////////
 boolean
-US_LineInput(int x,int y,char *buf,char *def,boolean escok,
-				int maxchars,int maxwidth)
+US_LineInput(short x,short y,char *buf,char *def,boolean escok,
+				short maxchars,short maxwidth)
 {
-	strcpy_s(buf, maxchars, def ? def : "text");
-	return true;
-	return false; // mstodo US_LineInput. reads line of text..
-	/* mstodo
 	boolean		redraw,
 				cursorvis,cursormoved,
 				done,result;
@@ -1117,15 +1110,10 @@ US_LineInput(int x,int y,char *buf,char *def,boolean escok,
 		if (cursorvis)
 			USL_XORICursor(x,y,s,cursor);
 
-	asm	pushf
-	asm	cli
-
 		sc = LastScan;
 		LastScan = sc_None;
 		c = LastASCII;
 		LastASCII = key_None;
-
-	asm	popf
 
 		switch (sc)
 		{
@@ -1263,7 +1251,6 @@ US_LineInput(int x,int y,char *buf,char *def,boolean escok,
 
 	IN_ClearKeysDown();
 	return(result);
-	*/
 }
 
 //	Control panel routines
@@ -3622,7 +3609,7 @@ US_ControlPanel(void)
 //
 ///////////////////////////////////////////////////////////////////////////
 void
-US_DisplayHighScores(int which)
+US_DisplayHighScores(short which)
 {
 	char		buffer[16],*str;
 	word		i,

@@ -1460,7 +1460,7 @@ void RFL_EraseBlocks (void)
 		for (y=ytl;y<=yth;y++)
 		{
 			for (x=xtl;x<=xth;x++)
-				*updatespot++ = 2; // mstodo : we never scan for 2s?
+				*updatespot++ = 2;
 			updatespot += updatedelta;		// down to next line
 		}
 #ifdef PROFILE

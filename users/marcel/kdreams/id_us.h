@@ -92,10 +92,10 @@ extern	void	US_SetLoadSaveHooks(boolean (*load)(int),
 				US_ShutCursor(void),
 				US_ControlPanel(void),
 				US_CheckHighScore(long score,word other),
-				US_DisplayHighScores(int which);
+				US_DisplayHighScores(short which);
 extern	boolean	US_UpdateCursor(void),
-				US_LineInput(int x,int y,char *buf,char *def,boolean escok,
-								int maxchars,int maxwidth);
+				US_LineInput(short x,short y,char *buf,char *def,boolean escok,
+								short maxchars,short maxwidth);
 extern	int		US_CheckParm(char *parm,char **strings);
 
 #include <stdlib.h> // mstodo : remove

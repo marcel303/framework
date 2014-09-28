@@ -68,9 +68,9 @@
 
 //	Internal variables
 static	boolean		IN_Started;
-static	boolean		CapsLock;
+		boolean		CapsLock;
 		ScanCode	CurCode,LastCode;
-static	byte        ASCIINames[] =		// Unshifted ASCII for scan codes
+		byte        ASCIINames[] =		// Unshifted ASCII for scan codes
 					{
 //	 0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
 	0  ,27 ,'1','2','3','4','5','6','7','8','9','0','-','=',8  ,9  ,	// 0

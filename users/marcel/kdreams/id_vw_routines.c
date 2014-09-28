@@ -197,9 +197,10 @@ void VW_DrawPropString (char far *string)
 		unsigned char * __restrict src = databuffer;
 		unsigned char * __restrict dst = g0xA000[plane] + bufferofs + ylookup[py] + panadjust + (px >> 3);
 		unsigned char * __restrict fontdata = (unsigned char *)grsegs[STARTFONT];
-		unsigned short bufferwidth = bufferbyte + (bufferbit ? 1 : 0); // so the partial byte also gets drawn
-		unsigned short bufferheight = fontdata[pcharheight];
 		unsigned short y;
+
+		bufferwidth = bufferbyte + (bufferbit ? 1 : 0); // so the partial byte also gets drawn
+		bufferheight = fontdata[pcharheight];
 
 		for (y = 0; y < bufferheight; ++y)
 		{

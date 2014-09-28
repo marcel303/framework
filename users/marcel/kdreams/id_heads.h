@@ -34,7 +34,7 @@
 #define far
 #define near
 #define huge
-#define MK_FP(x, y) (((byte*)x) + (y)) // mstodo : remove MK_FP calls, clean up these defines
+#define MK_FP(x, y) (((byte*)x) + (y))
 #define FP_SEG(x) (x)
 
 extern int _argc;

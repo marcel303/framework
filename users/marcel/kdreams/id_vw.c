@@ -965,32 +965,11 @@ void VW_UpdateScreen (void)
 #if GRMODE == EGAGR
 	VWL_UpdateScreenBlocks();
 
-	/* mstodo : video
-
-asm	cli
-asm	mov	cx,[displayofs]
-asm	add	cx,[panadjust]
-asm	mov	dx,CRTC_INDEX
-asm	mov	al,0ch		// start address high register
-asm	out	dx,al
-asm	inc	dx
-asm	mov	al,ch
-asm	out	dx,al
-asm	dec	dx
-asm	mov	al,0dh		// start address low register
-asm	out	dx,al
-asm	mov	al,cl
-asm	inc	dx
-asm	out	dx,al
-asm	sti
-*/
-
+	VW_SetScreen(displayofs+panadjust,0);
 #endif
 
 	if (cursorvisible>0)
 		VWL_EraseCursor();
-
-	SYS_Present(); // mstodo : keep it here?
 }
 
 
