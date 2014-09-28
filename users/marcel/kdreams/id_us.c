@@ -49,6 +49,7 @@
 #include "static/CONTEXT.h"
 #include "static/GAMETEXT.h"
 #include "static/STORY.h"
+#include "syscode.h"
 
 #define CTL_M_ADLIBUPPIC	CTL_S_ADLIBUPPIC
 #define CTL_M_ADLIBDNPIC	CTL_S_ADLIBDNPIC
@@ -2417,6 +2418,8 @@ USL_DoHelp(memptr text,long len)
 	waitkey = sc_None;
 	while (!done)
 	{
+		SYS_Update();
+
 		if (moved)
 		{
 			while (TimeCount - lasttime < 5)
@@ -2441,6 +2444,7 @@ USL_DoHelp(memptr text,long len)
 				num = (page < lines)? page : lines;
 				loc = 0;
 			}
+
 			if (scroll)
 			{
 				if (grmode == CGAGR)
@@ -2493,6 +2497,8 @@ USL_DoHelp(memptr text,long len)
 					VW_ScreenToScreen(base + bufferofs,base + displayofs,
 										WindowW / pixdiv,h);
 				}
+
+				SYS_Present();
 			}
 			else
 			{
@@ -2506,8 +2512,10 @@ USL_DoHelp(memptr text,long len)
 		}
 
 		if (waitkey)
+		{
 			while (IN_KeyDown(waitkey))
-				;
+				SYS_Update();
+		}
 		waitkey = sc_None;
 
 		IN_ReadCursor(&info);

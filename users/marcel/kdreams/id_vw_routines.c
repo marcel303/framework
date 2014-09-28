@@ -165,6 +165,11 @@ static void ShiftPropChar(char c)
 	}
 }
 
+/*
+VW_DrawPropString
+
+Draws a C string of characters at px/py and advances px
+*/
 void VW_DrawPropString (char far *string)
 {
 	// msnote : verification ok!
