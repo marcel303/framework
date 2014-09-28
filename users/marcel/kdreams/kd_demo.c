@@ -310,6 +310,8 @@ LoadGame(int file)
 		new->needtoreact = true;
 		new->sprite = NULL;
 
+		// mstodo : need to safely restore state ptr. ASLR and different binaries will currently generate different save games..
+
 		if (followed)
 			GetNewObj (false);
 		else

@@ -115,6 +115,7 @@ SD_SetSoundMode(SDMode mode)
 	switch (mode)
 	{
 	case sdm_Off:
+		tableoffset = 0;
 		NeedsDigitized = false;
 		result = true;
 		break;

@@ -107,9 +107,114 @@ void VW_Vlin(unsigned short yl, unsigned short yh, unsigned short x, unsigned sh
 	// mstodo : VW_Vline
 }
 
+// font drawing
+#define BUFFWIDTH	50
+#define BUFFHEIGHT	32 //must be twice as high as font for masked fonts
+
+static unsigned char databuffer[BUFFWIDTH*BUFFHEIGHT];
+static unsigned short bufferbyte;
+static unsigned short bufferbit;
+
+// offsets in font structure
+static const unsigned short pcharheight	=	0		; // lines high
+static const unsigned short charloc		=	2		; // pointers to every character
+static const unsigned short charwidth		=	514		; // every character's width in pixels
+
+#define SHIFTNOXOR \
+	{ \
+		const unsigned char value = *src; \
+		const unsigned short shifted = shifttable[value]; \
+		dst[0] |= (shifted >> 0) & 0xff; \
+		dst[1]  = (shifted >> 8) & 0xff; \
+		src++; \
+		dst++; \
+	}
+
+static void ShiftPropChar(char c)
+{
+	// find character location, width, and height
+	const unsigned char * __restrict fontdata = (unsigned char *)grsegs[STARTFONT];
+	const unsigned short srcpos = *(unsigned short *)&fontdata[charloc + c * 2];
+	const unsigned char * __restrict src = &fontdata[srcpos];
+	unsigned char width  = fontdata[charwidth + c];
+	unsigned char height = fontdata[pcharheight];
+
+	// write position in databuffer
+	unsigned char * __restrict dst = &databuffer[bufferbyte];
+
+	// look up which shift table to use, based on bufferbit
+	const unsigned short * shifttable = shifttabletable[bufferbit];
+
+	// advance position by character width
+	const unsigned short nextbitposition = bufferbit + width;
+	bufferbit = nextbitposition & 7;
+	bufferbyte += nextbitposition >> 3;
+
+	width = (width + 7) >> 3;
+
+	while (height--)
+	{
+		unsigned char i;
+
+		for (i = 0; i < width; ++i)
+		{
+			SHIFTNOXOR
+		}
+
+		dst += BUFFWIDTH - width;
+	}
+}
+
 void VW_DrawPropString (char far *string)
 {
-	// mstodo : VW_DrawPropString
+	// msnote : verification ok!
+
+	unsigned short y;
+	unsigned char plane;
+
+	for (y = 0; y < BUFFHEIGHT; ++y)
+		databuffer[y * BUFFWIDTH] = 0;
+
+	// shift the characters into the buffer
+
+	bufferbit = px & 7;
+	bufferbyte = 0;
+
+	while (*string)
+	{
+		ShiftPropChar(*string++);
+	}
+
+	// draw it
+
+	for (plane = 0; plane < 4; ++plane)
+	{
+		unsigned char * __restrict src = databuffer;
+		unsigned char * __restrict dst = g0xA000[plane] + bufferofs + ylookup[py] + panadjust + (px >> 3);
+		unsigned char * __restrict fontdata = (unsigned char *)grsegs[STARTFONT];
+		unsigned short bufferwidth = bufferbyte + (bufferbit ? 1 : 0); // so the partial byte also gets drawn
+		unsigned short bufferheight = fontdata[pcharheight];
+		unsigned short y;
+
+		for (y = 0; y < bufferheight; ++y)
+		{
+			unsigned short x;
+
+			for (x = 0; x < bufferwidth; ++x)
+			{
+				// XOR based drawing
+
+				dst[x] ^= src[x] & ((fontcolor & (1 << plane)) ? 0xff : 0x00);
+			}
+
+			src += BUFFWIDTH;
+			dst += linewidth;
+		}
+	}
+
+	// advance px
+
+	px += (bufferbyte << 3) | bufferbit;
 }
 
 /*
