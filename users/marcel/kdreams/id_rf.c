@@ -296,6 +296,7 @@ void RF_Startup (void)
 			for (x=0;x<UPDATEWIDE;x++)
 				*blockstart++ = SCREENWIDTH*16*y+x*TILEWIDTH;
 
+		// mstodo : smoother scrolling?
 		xpanmask = 6;	// dont pan to odd pixels
 	}
 

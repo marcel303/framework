@@ -130,7 +130,7 @@ static const unsigned short charwidth		=	514		; // every character's width in pi
 		dst++; \
 	}
 
-static void ShiftPropChar(char c)
+static void ShiftPropChar(unsigned char c)
 {
 	// find character location, width, and height
 	const unsigned char * __restrict fontdata = (unsigned char *)grsegs[STARTFONT];
@@ -187,7 +187,7 @@ void VW_DrawPropString (char far *string)
 
 	while (*string)
 	{
-		ShiftPropChar(*string++);
+		ShiftPropChar((unsigned char)*string++);
 	}
 
 	// draw it

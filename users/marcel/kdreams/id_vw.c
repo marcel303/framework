@@ -551,7 +551,7 @@ VWL_MeasureString (char far *string, word *width, word *height, fontstruct _seg 
 {
 	*height = font->height;
 	for (*width = 0;*string;string++)
-		*width += font->width[*string];		// proportional width
+		*width += font->width[(unsigned char)(*string)];		// proportional width
 }
 
 void	VW_MeasurePropString (char far *string, word *width, word *height)

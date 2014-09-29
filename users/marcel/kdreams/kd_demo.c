@@ -529,6 +529,10 @@ DemoLoop (void)
 					break;
 			}
 
+			// msnote : added IN_ClearKeysDown call here so we don't accidentally select things in the control panel
+			//          after for instance pressing enter on the title screen
+			IN_ClearKeysDown();
+
 			bufferofs = bufsave;
 			displayofs = dissave;
 

@@ -161,7 +161,7 @@ extern	boolean		SoundSourcePresent,SoundBlasterPresent,AdLibPresent,
 					NeedsDigitized,NeedsMusic;	// For Caching Mgr
 extern	SDMode		SoundMode;
 extern	SMMode		MusicMode;
-extern	longword	TimeCount;					// Global time in ticks
+extern	volatile longword	TimeCount;					// Global time in ticks
 
 extern	boolean		ssIsTandy;					// For config file
 extern	word		ssPort;

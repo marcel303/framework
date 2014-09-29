@@ -2565,6 +2565,7 @@ USL_DoHelp(memptr text,long len)
 	IN_ClearKeysDown();
 	do
 	{
+		SYS_Update();
 		IN_ReadCursor(&info);
 	} while (info.button0 || info.button1);
 

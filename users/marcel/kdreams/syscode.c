@@ -3,7 +3,7 @@
 #include "syscode.h"
 #include "id_heads.h"
 
-#define BLOWUP 1
+#define BLOWUP 4
 
 extern void Quit (char *error);
 extern boolean	CapsLock;
@@ -21,8 +21,6 @@ static unsigned short _pelpan = 0;
 
 void VW_SetScreen (unsigned short CRTC, unsigned short pelpan)
 {
-	// mstodo : move location. check CRTC/pelpan here
-
 	_CRTC = CRTC;
 	_pelpan = pelpan;
 
@@ -113,9 +111,16 @@ void SYS_Init()
 	if ((screen = SDL_SetVideoMode(320 * BLOWUP, 200 * BLOWUP, 32, SDL_SWSURFACE | SDL_DOUBLEBUF)) == 0)
 		Quit("Failed to set video mode");
 
-	if ((surface = SDL_CreateRGBSurface(SDL_SWSURFACE, 320 + 8 /*max pelpan*/, 200, 32, 0xff << 0, 0xff << 8, 0xff << 16, 0x00 << 24)) == 0)
+	if ((surface = SDL_CreateRGBSurface(SDL_SWSURFACE, 320 + 8 /*max pelpan*/, 200, 32,
+		0xff << screen->format->Rshift,
+		0xff << screen->format->Gshift,
+		0xff << screen->format->Bshift,
+		0x00 << screen->format->Ashift)) == 0)
 		Quit("Failed to create surface");
 
+	SDL_ShowCursor(false);
+	SDL_WM_GrabInput(SDL_GRAB_ON);
+	
 	if ((timeThread = SDL_CreateThread(TimeThread, 0)) == 0)
 		Quit("Failed to create timer thread");
 
@@ -147,16 +152,13 @@ void SYS_SetPalette(char * palette)
 
 void SYS_Present()
 {
-	int x, y, p, i;
-	unsigned int *dst;
-
-	//printf("CRTC=%d, pelpan=%d\n", _CRTC, _pelpan);
 
 	if (SDL_LockSurface(surface) == 0)
 	{
 		// convert palette to surface compatible palette
 
 		unsigned int palette2[16];
+		unsigned short x, y, i;
 
 		for (i = 0; i < 16; ++i)
 		{
@@ -172,22 +174,11 @@ void SYS_Present()
 
 		for (y = 0; y < surface->h; ++y)
 		{
-			dst = (unsigned int*)(((unsigned char*)surface->pixels) + surface->pitch * y);
+			unsigned int * __restrict dst = (unsigned int*)(((unsigned char*)surface->pixels) + surface->pitch * y);
 
 			for (x = 0; x < surface->w; x += 8)
 			{
-				unsigned int src;
-				unsigned int sampx, sampy;
-
-			#if BLOWUP == 1
-				sampx = x;
-				sampy = y;
-			#else
-				sampx = x / BLOWUP;
-				sampy = y / BLOWUP;
-			#endif
-
-				src = gather32(_CRTC * 8 + sampy * 512 + sampx);
+				unsigned int src = gather32(_CRTC * 8 + y * 512 + x);
 
 				for (i = 0; i < 8; ++i)
 				{
@@ -208,6 +199,36 @@ void SYS_Present()
 		SDL_UnlockSurface(surface);
 	}
 
+#if BLOWUP > 1
+	if (SDL_LockSurface(surface) == 0)
+	{
+		if (SDL_LockSurface(screen) == 0)
+		{
+			unsigned int x, y;
+
+			// do a scaled blit. use 10.22 fixed point for sampling the source in the horizontal direction
+
+			for (y = 0; y < screen->h; ++y)
+			{
+				unsigned char * srcbytes = (unsigned char*)surface->pixels + surface->pitch * (y / BLOWUP);
+				unsigned char * dstbytes = (unsigned char*)screen->pixels + screen->pitch * y;
+				unsigned int * __restrict src = (unsigned int*)srcbytes + _pelpan;
+				unsigned int * __restrict dst = (unsigned int*)dstbytes;
+				unsigned int step = (1 << 22) / BLOWUP;
+				unsigned int pos = 0;
+
+				for (x = 0; x < screen->w; ++x, pos += step)
+				{
+					dst[x] = src[pos >> 22];
+				}
+			}
+
+			SDL_UnlockSurface(screen);
+		}
+
+		SDL_UnlockSurface(surface);
+	}
+#else
 	{
 		SDL_Rect srcrect;
 		SDL_Rect dstrect;
@@ -219,16 +240,24 @@ void SYS_Present()
 
 		dstrect.x = -_pelpan;
 		dstrect.y = 0;
-		dstrect.w = 0;
-		dstrect.h = 0;
+		dstrect.w = 320;
+		dstrect.h = 200;
 
 		SDL_BlitSurface(surface, &srcrect, screen, &dstrect);
 	}
+#endif
 
 	SDL_Flip(screen); // mstodo : we need to guarantee we do the page flip with vsync. does SDL guarantee this?
 
 	SYS_Update(); // called here, for convenient in draw loops, so we don't have to add it separately
 }
+
+extern void INL_HandleKey(byte k);
+
+int MouseX, MouseY;
+int MouseDXf, MouseDYf;
+int MouseDX, MouseDY;
+int MouseButtons = 0;
 
 void SYS_Update()
 {
@@ -238,81 +267,36 @@ void SYS_Update()
 	{
 		if (e.type == SDL_KEYDOWN || e.type == SDL_KEYUP)
 		{
-			int code = e.key.keysym.scancode;
+			int key = e.key.keysym.scancode;
 
-			if (code < NumCodes)
+			if (key < NumCodes)
 			{
-#if 0
-				Keyboard[code] = (boolean)(e.key.state == SDL_PRESSED);
+				if (e.type == SDL_KEYUP)
+					key |= 0x80;
 
-				if (Keyboard[code])
-				{
-					LastCode = CurCode;
-					CurCode = LastScan = code;
-				}
-#else
-				// from INL_KeyService
-
-				static	boolean	special;
-						byte	k,c,
-								temp;
-
-				k = code;
-
-				if (k == 0xe0)		// Special key prefix
-					special = true;
-				else if (k == 0xe1)	// Handle Pause key
-					Paused = true;
-				else
-				{
-					//if (k & 0x80)	// Break code
-					if (e.type == SDL_KEYUP)
-					{
-						//k &= 0x7f;
-
-			// DEBUG - handle special keys: ctl-alt-delete, print scrn
-
-						Keyboard[k] = false;
-					}
-					else			// Make code
-					{
-						LastCode = CurCode;
-						CurCode = LastScan = k;
-						Keyboard[k] = true;
-
-						if (special)
-							c = SpecialNames[k];
-						else
-						{
-							if (k == sc_CapsLock)
-							{
-								CapsLock ^= true;
-								// DEBUG - make caps lock light work
-							}
-
-							if (Keyboard[sc_LShift] || Keyboard[sc_RShift])	// If shifted
-							{
-								c = ShiftNames[k];
-								if ((c >= 'A') && (c <= 'Z') && CapsLock)
-									c += 'a' - 'A';
-							}
-							else
-							{
-								c = ASCIINames[k];
-								if ((c >= 'a') && (c <= 'z') && CapsLock)
-									c -= 'a' - 'A';
-							}
-						}
-						if (c)
-							LastASCII = c;
-					}
-
-					special = false;
-				}
-#endif
+				INL_HandleKey(key);
 			}
 		}
+
+		if (e.type == SDL_MOUSEMOTION)
+		{
+			MouseX = e.motion.x / BLOWUP;
+			MouseY = e.motion.y / BLOWUP;
+
+			MouseDXf += e.motion.xrel;
+			MouseDYf += e.motion.yrel;
+		}
+
+		if (e.type == SDL_MOUSEBUTTONDOWN)
+			MouseButtons |= 1 << e.button.button;
+		if (e.type == SDL_MOUSEBUTTONUP)
+			MouseButtons &= ~(1 << e.button.button);
 	}
+
+	MouseDX = MouseDXf / BLOWUP;
+	MouseDY = MouseDYf / BLOWUP;
+	MouseDXf -= MouseDX * BLOWUP;
+	MouseDYf -= MouseDY * BLOWUP;
 
 	//SDL_Delay(100);
 }

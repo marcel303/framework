@@ -61,7 +61,7 @@
 				NeedsDigitized,NeedsMusic;
 	SDMode		SoundMode;
 	SMMode		MusicMode;
-	longword	TimeCount;
+	volatile longword	TimeCount;
 	byte		**SoundTable;
 	boolean		ssIsTandy;
 	word		ssPort = 2;
