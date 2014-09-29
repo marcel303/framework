@@ -399,7 +399,7 @@ void Quit (char *error)
 
 void InitGame (void)
 {
-	int i;
+	short i;
 
 	MM_Startup ();
 
@@ -422,10 +422,8 @@ void InitGame (void)
 		puts ("correct solution is to unload some TSRs or rename your CONFIG.SYS and");
 		puts ("AUTOEXEC.BAT to free up more memory.\n");
 		puts ("Do you want to (Q)uit, or (C)ontinue?");
-		// mstodo : bioskey
-		i = 0;
-		//i = bioskey (0);
-		if ( (i>>8) != sc_C)
+		i = getc (stdin); // mstodo : waits for enter..
+		if ( i != 'c' )
 			Quit ("");
 	}
 #endif

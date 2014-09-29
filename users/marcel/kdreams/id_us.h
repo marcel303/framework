@@ -67,7 +67,7 @@ extern	word		WindowX,WindowY,// Current location of window
 extern	void	US_Startup(void),
 				US_Setup(void),
 				US_Shutdown(void);
-static	void	US_InitRndT(boolean randomize) { } // mstodo : rand255. should match orig impl
+extern	void	US_InitRndT(boolean randomize);
 extern	void	US_SetLoadSaveHooks(boolean (*load)(int),
 									boolean (*save)(int),
 									void (*reset)(void)),
@@ -97,8 +97,6 @@ extern	boolean	US_UpdateCursor(void),
 				US_LineInput(short x,short y,char *buf,char *def,boolean escok,
 								short maxchars,short maxwidth);
 extern	int		US_CheckParm(char *parm,char **strings);
-
-#include <stdlib.h> // mstodo : remove
-static	int		US_RndT(void) { return rand() & 255; } // mstodo : rand255. should match orig impl
+extern	short	US_RndT(void);
 
 #endif

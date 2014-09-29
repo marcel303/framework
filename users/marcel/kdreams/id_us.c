@@ -1522,10 +1522,8 @@ USL_HandleError(int num)
 		strcat(buf,"Unknown");
 	else if (num == ENOMEM)
 		strcat(buf,"Disk is Full");
-	//else if (num == EINVFMT) // mstodo : EINVFMT?
-	//	strcat(buf,"File is Incomplete");
-	else
-		strcat(buf,sys_errlist[num]);
+	else if (strerror(num))
+		strcat(buf,strerror(num));
 
 	VW_HideCursor();
 
@@ -2102,8 +2100,6 @@ USL_CtlButtonCustom(UserCall call,word i,word n)
 static boolean
 USL_CtlCKbdButtonCustom(UserCall call,word i,word n)
 {
-	return false; // mstodo
-	/* mstodo : USL_CtlCKbdButtonCustom
 	boolean		state;
 	word		j;
 	ScanCode	scan;
@@ -2142,11 +2138,9 @@ USL_CtlCKbdButtonCustom(UserCall call,word i,word n)
 			break;
 		}
 
-		asm	pushf
-		asm	cli
+		SYS_Update();
 		if (LastScan == sc_LShift)
 			LastScan = sc_None;
-		asm	popf
 	} while (!(scan = LastScan));
 	IN_ClearKey(scan);
 	if (scan != sc_Escape)
@@ -2180,7 +2174,6 @@ USL_CtlCKbdButtonCustom(UserCall call,word i,word n)
 	VW_UpdateScreen();
 
 	return(true);
-	*/
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -2456,7 +2449,6 @@ USL_DoHelp(memptr text,long len)
 					destbase = base + ylookup[WindowY];
 					if (grmode == EGAGR)
 					{
-						EGAWRITEMODE(1);
 						VW_WaitVBL(1);
 					}
 					VW_ScreenToScreen(srcbase,destbase,WindowW / pixdiv,

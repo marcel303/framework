@@ -60,7 +60,7 @@ void VWL_UpdateScreenBlocks()
 
 	for (;;)
 	{
-		while (*p++ != 1 && p != pend) // mstodo : update array doesn't seem to be terminated with UPDATETERMINATE?
+		while (*p++ != 1 && p != pend) // mstodo : update array doesn't seem to be terminated with UPDATETERMINATE? at least not the first time we get here..
 		{
 			// loop
 		}

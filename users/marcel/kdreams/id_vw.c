@@ -110,9 +110,8 @@ void	VW_Startup (void)
 #if GRMODE == EGAGR
 	grmode = EGAGR;
 	if (videocard != EGAcard && videocard != VGAcard)
-Quit ("Improper video card!  If you really have an EGA/VGA card that I am not \n"
-	  "detecting, use the -HIDDENCARD command line parameter!");
-	EGAWRITEMODE(0);
+		Quit ("Improper video card!  If you really have an EGA/VGA card that I am not \n"
+			"detecting, use the -HIDDENCARD command line parameter!");
 #endif
 
 	cursorvisible = 0;
@@ -184,12 +183,7 @@ void VW_SetDefaultColors(void)
 {
 #if GRMODE == EGAGR
 	colors[3][16] = (char)bordercolor;
-	/* mstodo : video : VW_SetDefaultColors
-	_ES=FP_SEG(&colors[3]);
-	_DX=FP_OFF(&colors[3]);
-	_AX=0x1002;
-	geninterrupt(0x10);
-		*/
+	SYS_SetPalette(colors[3]);
 #endif
 	screenfaded = false;
 }
@@ -203,12 +197,7 @@ void VW_FadeOut(void)
 	for (i=3;i>=0;i--)
 	{
 	  colors[i][16] = (char)bordercolor;
-	  /* mstodo : video : VW_FadeOut
-	  _ES=FP_SEG(&colors[i]);
-	  _DX=FP_OFF(&colors[i]);
-	  _AX=0x1002;
-	  geninterrupt(0x10);
-	  */
+	  SYS_SetPalette(colors[i]);
 	  VW_WaitVBL(6);
 	}
 #endif
@@ -224,12 +213,7 @@ void VW_FadeIn(void)
 	for (i=0;i<4;i++)
 	{
 	  colors[i][16] = (char)bordercolor;
-	  /* mstodo : video : VW_FadeIn
-	  _ES=FP_SEG(&colors[i]);
-	  _DX=FP_OFF(&colors[i]);
-	  _AX=0x1002;
-	  geninterrupt(0x10);
-	  */
+      SYS_SetPalette(colors[i]);
 	  VW_WaitVBL(6);
 	}
 #endif
@@ -244,12 +228,7 @@ void VW_FadeUp(void)
 	for (i=3;i<6;i++)
 	{
 	  colors[i][16] = (char)bordercolor;
-	  /* mstodo : video : VW_FadeUp
-	  _ES=FP_SEG(&colors[i]);
-	  _DX=FP_OFF(&colors[i]);
-	  _AX=0x1002;
-	  geninterrupt(0x10);
-	  */
+      SYS_SetPalette(colors[i]);
 	  VW_WaitVBL(6);
 	}
 #endif
@@ -264,12 +243,7 @@ void VW_FadeDown(void)
 	for (i=5;i>2;i--)
 	{
 	  colors[i][16] = (char)bordercolor;
-	  /* mstodo : video : VW_FadeDown
-	  _ES=FP_SEG(&colors[i]);
-	  _DX=FP_OFF(&colors[i]);
-	  _AX=0x1002;
-	  geninterrupt(0x10);
-	  */
+	  SYS_SetPalette(colors[i]);
 	  VW_WaitVBL(6);
 	}
 #endif
@@ -322,21 +296,16 @@ void	VW_ClearVideo (short color)
 {
 	unsigned char plane;
 
-#if GRMODE == EGAGR
-	EGAWRITEMODE(2);
-	EGAMAPMASK(15);
-#endif
-
 	for (plane = 0; plane < 4; ++plane)
 		memset(g0xA000[plane], color & (1 << plane) ? 0xff : 0x00, 0xffff); // sizeof(g0xA000[0])
-
-#if GRMODE == EGAGR
-	EGAWRITEMODE(0);
-#endif
 }
 
 void VW_WaitVBL (short number)
 {
+	while (number--)
+	{
+		SYS_Present();
+	}
 }
 
 //===========================================================================
@@ -460,14 +429,10 @@ unsigned char rightmask[8] = {0x80,0xc0,0xe0,0xf0,0xf8,0xfc,0xfe,0xff};
 
 void VW_Hlin(unsigned short xl, unsigned short xh, unsigned short y, unsigned short color)
 {
-	/* mstodo : video : VW_Hlin
-  unsigned dest,xlb,xhb,maskleft,maskright,mid;
+	unsigned short dest,xlb,xhb,maskleft,maskright,mid,plane,i;
 
 	xlb=xl/8;
 	xhb=xh/8;
-
-	EGAWRITEMODE(2);
-	EGAMAPMASK(15);
 
 	maskleft = leftmask[xl&7];
 	maskright = rightmask[xh&7];
@@ -475,67 +440,38 @@ void VW_Hlin(unsigned short xl, unsigned short xh, unsigned short y, unsigned sh
 	mid = xhb-xlb-1;
 	dest = bufferofs+ylookup[y]+xlb;
 
-  if (xlb==xhb)
-  {
-  //
-  // entire line is in one byte
-  //
+	if (xlb==xhb)
+	{
+		//
+		// entire line is in one byte
+		//
 
-	maskleft&=maskright;
+		maskleft&=maskright;
 
-	asm	mov	es,[screenseg]
-	asm	mov	di,[dest]
+		for (plane = 0; plane < 4; ++plane)
+		{
+			unsigned char * __restrict dst = g0xA000[plane] + dest;
+			dst[0] = (dst[0] & ~maskleft) | (color & maskleft);
+		}
+	}
+	else
+	{
+		for (plane = 0; plane < 4; ++plane)
+		{
+			unsigned char * __restrict dst = g0xA000[plane] + dest;
+			unsigned char pcolor = (color & (1 << plane)) ? 0xff : 0x00;
 
-	asm	mov	dx,GC_INDEX
-	asm	mov	al,GC_BITMASK
-	asm	mov	ah,[BYTE PTR maskleft]
-	asm	out	dx,ax		// mask off pixels
+			// draw left side
+			*dst++ = (*dst & ~maskleft) | (pcolor & maskleft);
 
-	asm	mov	al,[BYTE PTR color]
-	asm	xchg	al,[es:di]	// load latches and write pixels
+			// draw middle
+			for (i = 0; i < mid; ++i)
+				*dst++ = pcolor;
 
-	goto	done;
-  }
-
-asm	mov	es,[screenseg]
-asm	mov	di,[dest]
-asm	mov	dx,GC_INDEX
-asm	mov	bh,[BYTE PTR color]
-
-//
-// draw left side
-//
-asm	mov	al,GC_BITMASK
-asm	mov	ah,[BYTE PTR maskleft]
-asm	out	dx,ax		// mask off pixels
-
-asm	mov	al,bh
-asm	mov	bl,[es:di]	// load latches
-asm	stosb
-
-//
-// draw middle
-//
-asm	mov	ax,GC_BITMASK + 255*256
-asm	out	dx,ax		// no masking
-
-asm	mov	al,bh
-asm	mov	cx,[mid]
-asm	rep	stosb
-
-//
-// draw right side
-//
-asm	mov	al,GC_BITMASK
-asm	mov	ah,[BYTE PTR maskright]
-asm	out	dx,ax		// mask off pixels
-
-asm	xchg	bh,[es:di]	// load latches and write pixels
-
-done:
-	EGABITMASK(255);
-	EGAWRITEMODE(0);
-	*/
+			// draw right side
+			*dst++ = (*dst & ~maskright) | (pcolor & maskright);
+		}
+	}
 }
 #endif
 
@@ -555,119 +491,46 @@ done:
 
 void VW_Bar (unsigned short x, unsigned short y, unsigned short width, unsigned short height, unsigned short color)
 {
-	unsigned short plane;
-
-	// mstodo : VW_Bar : draw left and right sides, if non aligned
-
-	for (plane = 0; plane < 4; ++plane)
-	{
-		unsigned char c = (color & (1 << plane)) ? 0xff : 0x00;
-		unsigned short iy;
-
-		for (iy = 0; iy < height; ++iy)
-		{
-			unsigned char * dest = &g0xA000[plane][bufferofs + ylookup[y + iy] + x / 8];
-			unsigned short ix;
-
-			for (ix = 0; ix < width / 8; ++ix)
-			{
-				*dest++ = c;
-			}
-		}
-	}
-
-	/* mstodo : video : VW_Bar
-	unsigned dest,xh,xlb,xhb,maskleft,maskright,mid;
+	unsigned short maskleft,maskright,xh,xlb,xhb,mid,plane,i;
 
 	xh = x+width-1;
 	xlb=x/8;
 	xhb=xh/8;
 
-	EGAWRITEMODE(2);
-	EGAMAPMASK(15);
-
 	maskleft = leftmask[x&7];
 	maskright = rightmask[xh&7];
 
 	mid = xhb-xlb-1;
-	dest = bufferofs+ylookup[y]+xlb;
 
-	if (xlb==xhb)
+	for (plane = 0; plane < 4; ++plane)
 	{
-	//
-	// entire line is in one byte
-	//
+		unsigned char pcolor = (color & (1 << plane)) ? 0xff : 0x00;
+		unsigned short iy;
 
-		maskleft&=maskright;
+		for (iy = 0; iy < height; ++iy)
+		{
+			unsigned char * dst = &g0xA000[plane][bufferofs + ylookup[y + iy] + x / 8];
 
-	asm	mov	es,[screenseg]
-	asm	mov	di,[dest]
+			if (xlb == xhb)
+			{
+				maskleft &= maskright;
 
-	asm	mov	dx,GC_INDEX
-	asm	mov	al,GC_BITMASK
-	asm	mov	ah,[BYTE PTR maskleft]
-	asm	out	dx,ax		// mask off pixels
+				*dst++ = (*dst & ~maskleft) | (pcolor & maskleft);
+			}
+			else
+			{
+				// draw left side
+				*dst++ = (*dst & ~maskleft) | (pcolor & maskleft);
 
-	asm	mov	ah,[BYTE PTR color]
-	asm	mov	dx,[linewidth]
-yloop1:
-	asm	mov	al,ah
-	asm	xchg	al,[es:di]	// load latches and write pixels
-	asm	add	di,dx			// down to next line
-	asm	dec	[height]
-	asm	jnz	yloop1
+				// draw middle
+				for (i = 0; i < mid; ++i)
+					*dst++ = pcolor;
 
-		goto	done;
+				// draw right side
+				*dst++ = (*dst & ~maskright) | (pcolor & maskright);
+			}
+		}
 	}
-
-asm	mov	es,[screenseg]
-asm	mov	di,[dest]
-asm	mov	bh,[BYTE PTR color]
-asm	mov	dx,GC_INDEX
-asm	mov	si,[linewidth]
-asm	sub	si,[mid]			// add to di at end of line to get to next scan
-asm	dec	si
-
-//
-// draw left side
-//
-yloop2:
-asm	mov	al,GC_BITMASK
-asm	mov	ah,[BYTE PTR maskleft]
-asm	out	dx,ax		// mask off pixels
-
-asm	mov	al,bh
-asm	mov	bl,[es:di]	// load latches
-asm	stosb
-
-//
-// draw middle
-//
-asm	mov	ax,GC_BITMASK + 255*256
-asm	out	dx,ax		// no masking
-
-asm	mov	al,bh
-asm	mov	cx,[mid]
-asm	rep	stosb
-
-//
-// draw right side
-//
-asm	mov	al,GC_BITMASK
-asm	mov	ah,[BYTE PTR maskright]
-asm	out	dx,ax		// mask off pixels
-
-asm	mov	al,bh
-asm	xchg	al,[es:di]	// load latches and write pixels
-
-asm	add	di,si		// move to start of next line
-asm	dec	[height]
-asm	jnz	yloop2
-
-done:
-	EGABITMASK(255);
-	EGAWRITEMODE(0);
-	*/
 }
 
 #endif

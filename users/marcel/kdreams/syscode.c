@@ -74,6 +74,7 @@ static unsigned int palette[16] =
 };
 
 static SDL_Surface * screen = 0;
+static SDL_Surface * surface = 0;
 static SDL_Thread * timeThread = 0;
 static SDL_AudioSpec audioSpec;
 static const struct SampledSound * soundSample = 0;
@@ -109,8 +110,11 @@ void SYS_Init()
 	if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
 		Quit("Failed to initialize SDL");
 
-	if ((screen = SDL_SetVideoMode(320 * BLOWUP, 200 * BLOWUP, 32, SDL_SWSURFACE)) == 0)
+	if ((screen = SDL_SetVideoMode(320 * BLOWUP, 200 * BLOWUP, 32, SDL_SWSURFACE | SDL_DOUBLEBUF)) == 0)
 		Quit("Failed to set video mode");
+
+	if ((surface = SDL_CreateRGBSurface(SDL_SWSURFACE, 320 + 8 /*max pelpan*/, 200, 32, 0xff << 0, 0xff << 8, 0xff << 16, 0x00 << 24)) == 0)
+		Quit("Failed to create surface");
 
 	if ((timeThread = SDL_CreateThread(TimeThread, 0)) == 0)
 		Quit("Failed to create timer thread");
@@ -136,6 +140,11 @@ void SYS_Init()
 		SDL_PauseAudio(false);
 }
 
+void SYS_SetPalette(char * palette)
+{
+	// mstodo : SYS_SetPalette
+}
+
 void SYS_Present()
 {
 	int x, y, p, i;
@@ -143,7 +152,7 @@ void SYS_Present()
 
 	//printf("CRTC=%d, pelpan=%d\n", _CRTC, _pelpan);
 
-	if (SDL_LockSurface(screen) == 0)
+	if (SDL_LockSurface(surface) == 0)
 	{
 		// convert palette to surface compatible palette
 
@@ -156,16 +165,16 @@ void SYS_Present()
 			const unsigned int g = (c >> 8 ) & 0xff;
 			const unsigned int b = (c >> 0 ) & 0xff;
 			palette2[i] =
-				(r << screen->format->Rshift) |
-				(g << screen->format->Gshift) |
-				(b << screen->format->Bshift);
+				(r << surface->format->Rshift) |
+				(g << surface->format->Gshift) |
+				(b << surface->format->Bshift);
 		}
 
-		for (y = 0; y < screen->h; ++y)
+		for (y = 0; y < surface->h; ++y)
 		{
-			dst = (unsigned int*)(((unsigned char*)screen->pixels) + screen->pitch * y);
+			dst = (unsigned int*)(((unsigned char*)surface->pixels) + surface->pitch * y);
 
-			for (x = 0; x < screen->w; x += 8)
+			for (x = 0; x < surface->w; x += 8)
 			{
 				unsigned int src;
 				unsigned int sampx, sampy;
@@ -179,9 +188,6 @@ void SYS_Present()
 			#endif
 
 				src = gather32(_CRTC * 8 + sampy * 512 + sampx);
-				//unsigned int src = gather32((displayofs + panadjust) * 8 + y * 512 + x);
-				//unsigned int src = gather32(masterofs * 8 + y * 512 + x);
-				//unsigned int src = gather32(bufferofs * 8 + y * 512 + x);
 
 				for (i = 0; i < 8; ++i)
 				{
@@ -199,12 +205,29 @@ void SYS_Present()
 			}
 		}
 
-		SDL_UnlockSurface(screen);
+		SDL_UnlockSurface(surface);
 	}
 
-	SDL_Flip(screen);
+	{
+		SDL_Rect srcrect;
+		SDL_Rect dstrect;
 
-	SYS_Update();
+		srcrect.x = 0;
+		srcrect.y = 0;
+		srcrect.w = 328;
+		srcrect.h = 200;
+
+		dstrect.x = -_pelpan;
+		dstrect.y = 0;
+		dstrect.w = 0;
+		dstrect.h = 0;
+
+		SDL_BlitSurface(surface, &srcrect, screen, &dstrect);
+	}
+
+	SDL_Flip(screen); // mstodo : we need to guarantee we do the page flip with vsync. does SDL guarantee this?
+
+	SYS_Update(); // called here, for convenient in draw loops, so we don't have to add it separately
 }
 
 void SYS_Update()

@@ -200,19 +200,6 @@ void	VW_Shutdown (void);
 
 cardtype	VW_VideoID (void);
 
-//
-// EGA hardware routines
-//
-
-/* mstodo : EGA macros
-#define EGAWRITEMODE(x) asm{cli;mov dx,GC_INDEX;mov ax,GC_MODE+256*x;out dx,ax;sti;}
-#define EGABITMASK(x) asm{mov dx,GC_INDEX;mov ax,GC_BITMASK+256*x;out dx,ax;sti;}
-#define EGAMAPMASK(x) asm{cli;mov dx,SC_INDEX;mov ax,SC_MAPMASK+x*256;out dx,ax;sti;}
-*/
-#define EGAWRITEMODE(x)
-#define EGABITMASK(x)
-#define EGAMAPMASK(x)
-
 void 	VW_SetLineWidth(short width);
 void 	VW_SetScreen (unsigned short CRTC, unsigned short pelpan);
 

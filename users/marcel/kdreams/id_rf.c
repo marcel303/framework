@@ -1643,8 +1643,6 @@ void RF_Refresh (void)
 //
 // update newly scrolled on tiles and animated tiles from the master screen
 //
-	EGAWRITEMODE(1);
-	EGAMAPMASK(15);
 	RFL_UpdateTiles ();
 	RFL_EraseBlocks ();
 
@@ -1653,7 +1651,6 @@ void RF_Refresh (void)
 // been scrolled on.  Go through all sprites and update the ones that cover
 // a non 0 update tile
 //
-	EGAWRITEMODE(0);
 	RFL_UpdateSprites ();
 
 //
