@@ -296,8 +296,12 @@ void RF_Startup (void)
 			for (x=0;x<UPDATEWIDE;x++)
 				*blockstart++ = SCREENWIDTH*16*y+x*TILEWIDTH;
 
-		// mstodo : smoother scrolling?
+#if SUPER_SMOOTH_SCROLLING
+		xpanmask = 7;
+#else
 		xpanmask = 6;	// dont pan to odd pixels
+#endif
+		
 	}
 
 	else if (grmode == CGAGR)
@@ -1289,7 +1293,11 @@ linknewspot:
 	globalx+=spr->orgx;
 
 	pixx = globalx >> G_SY_SHIFT;
+#if SUPER_SMOOTH_SCROLLING
+	shift = (pixx&7);
+#else
 	shift = (pixx&7)/2;
+#endif
 
 	sprite->screenx = pixx >> (G_EGASX_SHIFT-G_SY_SHIFT);
 	sprite->screeny = globaly >> G_SY_SHIFT;
@@ -1691,7 +1699,7 @@ void RF_Refresh (void)
 	{
 		newtime = TimeCount;
 		tics = (unsigned short)(newtime-lasttimecount);
-	} while (tics<MINTICS);
+	} while (tics<MINTICS && 0); // mstodo : this makes the framerate suck. need a better way to deal with refresh
 	lasttimecount = newtime;
 
 #ifdef PROFILE

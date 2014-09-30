@@ -140,6 +140,9 @@ extern int MouseY;
 extern int MouseDX;
 extern int MouseDY;
 extern int MouseButtons;
+extern int JoyAbsX;
+extern int JoyAbsY;
+extern int JoyButtons;
 
 //	Internal routines
 
@@ -242,8 +245,8 @@ void
 IN_GetJoyAbs(word joy,word *xp,word *yp)
 {
 	// MaxJoyValue
-	*xp = 0;
-	*yp = 0;
+	*xp = JoyAbsX;
+	*yp = JoyAbsY;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -329,10 +332,9 @@ static	longword	lasttime;
 //		joystick
 //
 ///////////////////////////////////////////////////////////////////////////
-static word
-INL_GetJoyButtons(word joy)
+static word INL_GetJoyButtons(word joy)
 {
-	return 0;
+	return JoyButtons;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -341,8 +343,7 @@ INL_GetJoyButtons(word joy)
 //		specified joystick
 //
 ///////////////////////////////////////////////////////////////////////////
-word
-IN_GetJoyButtonsDB(word joy)
+word IN_GetJoyButtonsDB(word joy)
 {
 	longword	lasttime;
 	word		result1,result2;
@@ -352,7 +353,7 @@ IN_GetJoyButtonsDB(word joy)
 		result1 = INL_GetJoyButtons(joy);
 		lasttime = TimeCount;
 		while (TimeCount == lasttime)
-			;
+			SYS_Update();
 		result2 = INL_GetJoyButtons(joy);
 	} while (result1 != result2);
 	return(result1);

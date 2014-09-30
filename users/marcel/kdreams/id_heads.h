@@ -30,6 +30,8 @@
 #include <STRING.H>
 #include <SYS\STAT.H>
 
+#define SUPER_SMOOTH_SCROLLING 0
+
 #define _seg
 #define far
 #define near

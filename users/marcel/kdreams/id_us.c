@@ -2212,11 +2212,13 @@ USL_CtlCJoyButtonCustom(UserCall call,word i,word n)
 		if (LastScan != sc_Escape)
 		{
 			IN_GetJoyAbs(joy,&minx,&miny);
-			while (IN_GetJoyButtonsDB(joy));
+			while (IN_GetJoyButtonsDB(joy))
+				SYS_Update();
 
 			USL_ShowHelp("Move Joystick to the Lower-Right");
 			VW_UpdateScreen();
-			while ((LastScan != sc_Escape) && !IN_GetJoyButtonsDB(joy));
+			while ((LastScan != sc_Escape) && !IN_GetJoyButtonsDB(joy))
+				SYS_Update();
 
 			if (LastScan != sc_Escape)
 			{
@@ -2228,7 +2230,8 @@ USL_CtlCJoyButtonCustom(UserCall call,word i,word n)
 					IN_SetupJoy(joy,minx,maxx,miny,maxy);
 				}
 				else
-					while (IN_GetJoyButtonsDB(joy));
+					while (IN_GetJoyButtonsDB(joy))
+						SYS_Update();
 			}
 			else
 				Done = true;
@@ -2240,7 +2243,7 @@ USL_CtlCJoyButtonCustom(UserCall call,word i,word n)
 
 	if (LastScan != sc_Escape)
 		while (IN_GetJoyButtonsDB(joy))
-			;
+			SYS_Update();
 
 	if (LastScan)
 		IN_ClearKeysDown();

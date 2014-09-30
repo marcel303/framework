@@ -849,7 +849,7 @@ void CAL_ShiftSprite (void * segment, unsigned short source, unsigned short dest
 void CAL_CacheSprite (short chunk, char far *compressed)
 {
 	short int i;
-	unsigned short shiftstarts[5];
+	unsigned short shiftstarts[9]; // msnote : expanded from 5 to 9
 	unsigned short smallplane,bigplane,expanded;
 	spritetabletype far *spr;
 	spritetype _seg *dest;
@@ -867,7 +867,15 @@ void CAL_CacheSprite (short chunk, char far *compressed)
 	shiftstarts[1] = shiftstarts[0] + smallplane*5;	// 5 planes in a sprite
 	shiftstarts[2] = shiftstarts[1] + bigplane*5;
 	shiftstarts[3] = shiftstarts[2] + bigplane*5;
-	shiftstarts[4] = shiftstarts[3] + bigplane*5;	// nothing ever put here
+	shiftstarts[4] = shiftstarts[3] + bigplane*5;
+	shiftstarts[5] = shiftstarts[4] + bigplane*5;
+	shiftstarts[6] = shiftstarts[5] + bigplane*5;
+	shiftstarts[7] = shiftstarts[6] + bigplane*5;
+	shiftstarts[8] = shiftstarts[7] + bigplane*5;	// nothing ever put here
+
+#if SUPER_SMOOTH_SCROLLING
+	spr->shifts = 8;
+#endif
 
 	expanded = shiftstarts[spr->shifts];
 	MM_GetPtr (&grsegs[chunk],expanded);
@@ -933,6 +941,24 @@ void CAL_CacheSprite (short chunk, char far *compressed)
 			dest->sourceoffset[3],spr->width,spr->height,6);
 
 		break;
+
+#if SUPER_SMOOTH_SCROLLING
+	case	8:
+		dest->sourceoffset[0] = shiftstarts[0];
+		dest->planesize[0] = smallplane;
+		dest->width[0] = spr->width;
+
+		for (i = 1; i < 8; ++i)
+		{
+			dest->sourceoffset[i] = shiftstarts[i];
+			dest->planesize[i] = bigplane;
+			dest->width[i] = spr->width+1;
+			CAL_ShiftSprite (grsegs[chunk],dest->sourceoffset[0],
+				dest->sourceoffset[i],spr->width,spr->height,i);
+		}
+
+		break;
+#endif
 
 	default:
 		Quit ("CAL_CacheSprite: Bad shifts number!");

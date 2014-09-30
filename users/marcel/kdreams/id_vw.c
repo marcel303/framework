@@ -397,7 +397,11 @@ void VW_DrawSprite(short x, short y, unsigned short chunknum)
 	x+=spr->orgx>>G_P_SHIFT;
 
 #if GRMODE == EGAGR
+#if SUPER_SMOOTH_SCROLLING
+	shift = (x&7)
+#else
 	shift = (x&7)/2;
+#endif
 #endif
 
 	dest = bufferofs + ylookup[y];
@@ -971,7 +975,11 @@ void VWB_DrawSprite(short x, short y, short chunknum)
 
 
 #if GRMODE == EGAGR
+#if SUPER_SMOOTH_SCROLLING
+	shift = (x&7);
+#else
 	shift = (x&7)/2;
+#endif
 #endif
 
 	dest = bufferofs + ylookup[y];

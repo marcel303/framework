@@ -1,9 +1,12 @@
 #include <SDL/SDL.h>
 #include <Windows.h>
 #include "syscode.h"
+#include "syscode_xinput.h"
 #include "id_heads.h"
 
-#define BLOWUP 4
+#define BLOWUP 4 // mstodo : remove this define. make sure mouse is adjusted based on screen scale
+
+static void SYS_PollJoy();
 
 extern void Quit (char *error);
 extern boolean	CapsLock;
@@ -71,8 +74,14 @@ static unsigned int palette[16] =
 	0xFFFFFF
 };
 
+static unsigned char palettemap[16] =
+{
+	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+};
+
 static SDL_Surface * screen = 0;
 static SDL_Surface * surface = 0;
+static SDL_Joystick * joy = 0;
 static SDL_Thread * timeThread = 0;
 static SDL_AudioSpec audioSpec;
 static const struct SampledSound * soundSample = 0;
@@ -108,7 +117,9 @@ void SYS_Init()
 	if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
 		Quit("Failed to initialize SDL");
 
-	if ((screen = SDL_SetVideoMode(320 * BLOWUP, 200 * BLOWUP, 32, SDL_SWSURFACE | SDL_DOUBLEBUF)) == 0)
+	//if ((screen = SDL_SetVideoMode(320 * BLOWUP, 200 * BLOWUP, 32, SDL_SWSURFACE | SDL_DOUBLEBUF)) == 0)
+	if ((screen = SDL_SetVideoMode(640, 400, 32, SDL_SWSURFACE | SDL_DOUBLEBUF)) == 0)
+	//if ((screen = SDL_SetVideoMode(1680, 1050, 32, SDL_SWSURFACE | SDL_DOUBLEBUF | SDL_FULLSCREEN)) == 0)
 		Quit("Failed to set video mode");
 
 	if ((surface = SDL_CreateRGBSurface(SDL_SWSURFACE, 320 + 8 /*max pelpan*/, 200, 32,
@@ -118,9 +129,9 @@ void SYS_Init()
 		0x00 << screen->format->Ashift)) == 0)
 		Quit("Failed to create surface");
 
-	SDL_ShowCursor(false);
-	SDL_WM_GrabInput(SDL_GRAB_ON);
-	
+	if (SDL_NumJoysticks() > 0)
+		joy = SDL_JoystickOpen(0);
+
 	if ((timeThread = SDL_CreateThread(TimeThread, 0)) == 0)
 		Quit("Failed to create timer thread");
 
@@ -143,16 +154,23 @@ void SYS_Init()
 	}
 	else
 		SDL_PauseAudio(false);
+
+	SDL_ShowCursor(false);
+	SDL_WM_GrabInput(SDL_GRAB_ON);
+
+	SYS_PollJoy();
 }
 
 void SYS_SetPalette(char * palette)
 {
-	// mstodo : SYS_SetPalette
+	unsigned int i;
+
+	for (i = 0; i < 16; ++i)
+		palettemap[i] = palette[i] & 0xf; // mstodo : sometimes the 5th bit is set. need 64 entry palette?
 }
 
 void SYS_Present()
 {
-
 	if (SDL_LockSurface(surface) == 0)
 	{
 		// convert palette to surface compatible palette
@@ -162,7 +180,7 @@ void SYS_Present()
 
 		for (i = 0; i < 16; ++i)
 		{
-			const unsigned int c = palette[i];
+			const unsigned int c = palette[palettemap[i]];
 			const unsigned int r = (c >> 16) & 0xff;
 			const unsigned int g = (c >> 8 ) & 0xff;
 			const unsigned int b = (c >> 0 ) & 0xff;
@@ -210,11 +228,11 @@ void SYS_Present()
 
 			for (y = 0; y < screen->h; ++y)
 			{
-				unsigned char * srcbytes = (unsigned char*)surface->pixels + surface->pitch * (y / BLOWUP);
+				unsigned char * srcbytes = (unsigned char*)surface->pixels + surface->pitch * (y * (surface->h - 1) / (screen->h - 1));
 				unsigned char * dstbytes = (unsigned char*)screen->pixels + screen->pitch * y;
 				unsigned int * __restrict src = (unsigned int*)srcbytes + _pelpan;
 				unsigned int * __restrict dst = (unsigned int*)dstbytes;
-				unsigned int step = (1 << 22) / BLOWUP;
+				unsigned int step = ((surface->w - 1 - 8) << 22) / (screen->w - 1);
 				unsigned int pos = 0;
 
 				for (x = 0; x < screen->w; ++x, pos += step)
@@ -257,7 +275,10 @@ extern void INL_HandleKey(byte k);
 int MouseX, MouseY;
 int MouseDXf, MouseDYf;
 int MouseDX, MouseDY;
-int MouseButtons = 0;
+int MouseButtons;
+int JoyAbsX;
+int JoyAbsY;
+int JoyButtons;
 
 void SYS_Update()
 {
@@ -293,12 +314,74 @@ void SYS_Update()
 			MouseButtons &= ~(1 << e.button.button);
 	}
 
+	// export mouse values to game
+
 	MouseDX = MouseDXf / BLOWUP;
 	MouseDY = MouseDYf / BLOWUP;
 	MouseDXf -= MouseDX * BLOWUP;
 	MouseDYf -= MouseDY * BLOWUP;
 
+	SYS_PollJoy();
+
 	//SDL_Delay(100);
+}
+
+static void SYS_PollJoy()
+{
+	// joystick/gamepad support
+
+	boolean hasjoy = false;
+	float x = 0.f, y = 0.f;
+	unsigned short buttons = 0;
+
+	// try to poll XInput first. if that fails, use SDL fallback
+
+	if (SYS_PollXInput(0, &x, &y, &buttons))
+	{
+		hasjoy = true;
+	}
+	else if (joy)
+	{
+		unsigned int i;
+		unsigned char axismap[2] = { 0, 1 }; // mstodo : axis and button mapping should be in a config file
+
+		hasjoy = true;
+
+		SDL_JoystickUpdate();
+
+		for (i = 0; i < 2; ++i)
+		{
+			float v = 0.f;
+
+			if (axismap[i] < SDL_JoystickNumAxes(joy))
+			{
+				v = SDL_JoystickGetAxis(joy, axismap[i]) / 32768.f;
+			}
+
+			if (i == 0)
+				x = v;
+			else
+				y = v;
+		}
+
+		for (i = 0; i < SDL_JoystickNumButtons(joy); ++i)
+			buttons |= (SDL_JoystickGetButton(joy, i) == 0 ? 0 : 1) << i;
+	}
+
+	// export joystick/gamepad values to game
+
+	if (hasjoy)
+	{
+		JoyAbsX = (int)((x + 1.f) / 2.f * 4095);
+		JoyAbsY = (int)((y + 1.f) / 2.f * 4095);
+		JoyButtons = buttons;
+	}
+	else
+	{
+		JoyAbsX = 0;
+		JoyAbsY = 0;
+		JoyButtons = 0;
+	}
 }
 
 void SYS_PlaySound(const struct SampledSound * sample)
