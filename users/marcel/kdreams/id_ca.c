@@ -1467,6 +1467,8 @@ void CA_CacheMarks (char *title, boolean cachedownlevel)
 #endif
 					lastx = xh;
 					VW_UpdateScreen();
+
+					SDL_Delay(10); // msfixme
 				}
 
 			}

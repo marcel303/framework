@@ -998,6 +998,7 @@ void VWB_DrawSprite(short x, short y, short chunknum)
 }
 #endif
 
+/*
 void VWB_Plot (short x, short y, short color)
 {
 	x+=pansx;
@@ -1005,6 +1006,7 @@ void VWB_Plot (short x, short y, short color)
 	if (VW_MarkUpdateBlock (x,y,x,y))
 		VW_Plot(x,y,color);
 }
+*/
 
 void VWB_Hlin (short x1, short x2, short y, short color)
 {

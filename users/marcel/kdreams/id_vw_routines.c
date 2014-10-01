@@ -97,14 +97,35 @@ void VWL_UpdateScreenBlocks()
 	memset(updateptr, 0, UPDATEWIDE*UPDATEHIGH);
 }
 
+/*
 void VW_Plot(unsigned short x, unsigned short y, unsigned short color)
 {
-	// mstodo : VW_Plot
 }
+*/
+
+static const unsigned char plotpixels[] = {
+	128, 64, 32, 16, 8, 4, 2, 1
+};
 
 void VW_Vlin(unsigned short yl, unsigned short yh, unsigned short x, unsigned short color)
 {
-	// mstodo : VW_Vline
+	unsigned char plane;
+
+	for (plane = 0; plane < 4; ++plane)
+	{
+		unsigned char * __restrict dst = &g0xA000[plane][bufferofs + ylookup[yl] + (x >> 3)];
+		unsigned char shift = x & 7;
+		unsigned char mask = plotpixels[shift];
+		unsigned char c = (color & (1 << plane)) ? 0xff : 0x00;
+		unsigned short y;
+
+		for (y = yl; y <= yh; ++y)
+		{
+			dst[0] = (dst[0] & ~mask) | (mask & c);
+
+			dst += linewidth;
+		}
+	}
 }
 
 // font drawing
