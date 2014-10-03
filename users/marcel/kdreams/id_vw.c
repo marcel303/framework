@@ -398,7 +398,7 @@ void VW_DrawSprite(short x, short y, unsigned short chunknum)
 
 #if GRMODE == EGAGR
 #if SUPER_SMOOTH_SCROLLING
-	shift = (x&7)
+	shift = (x&7);
 #else
 	shift = (x&7)/2;
 #endif
@@ -833,6 +833,7 @@ void VW_UpdateScreen (void)
 	VWL_UpdateScreenBlocks();
 
 	VW_SetScreen(displayofs+panadjust,0);
+	//VW_SetScreen(displayofs+panadjust, panx & 6); // mstodo : depends on whether UI is shown in-game or fullscreen
 #endif
 
 	if (cursorvisible>0)

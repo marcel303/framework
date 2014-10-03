@@ -1693,14 +1693,28 @@ void RF_Refresh (void)
 //
 // calculate tics since last refresh for adaptive timing
 //
+#if 1 // mstodo : adaptive timing?
+	{
+		static unsigned int prevtime = -1;
+		if (prevtime == -1)
+			prevtime = SDL_GetTicks();
+		while (SDL_GetTicks() - prevtime < 16) { // hard coded to 60 Hz
+			; // wait
+		}
+		prevtime = SDL_GetTicks();
+	}
+	lasttimecount++;
+	tics = 1;
+#else
 	if (lasttimecount > TimeCount)
 		lasttimecount = TimeCount;		// if the game was paused a LONG time
 	do
 	{
 		newtime = TimeCount;
 		tics = (unsigned short)(newtime-lasttimecount);
-	} while (tics<MINTICS && 0); // mstodo : this makes the framerate suck. need a better way to deal with refresh
+	} while (tics<MINTICS); // mstodo : this makes the framerate suck. need a better way to deal with refresh
 	lasttimecount = newtime;
+#endif
 
 #ifdef PROFILE
 	strcpy (scratch,"\tTics:");

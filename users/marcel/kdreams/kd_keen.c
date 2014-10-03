@@ -219,10 +219,18 @@ void ShiftScore (void)
 {
 	spritetabletype far *spr;
 	spritetype _seg *dest;
+	unsigned short i;
 
 	spr = &spritetable[SCOREBOXSPR-STARTSPRITES];
 	dest = (spritetype _seg *)grsegs[SCOREBOXSPR];
 
+#if SUPER_SMOOTH_SCROLLING
+	for (i = 1; i < 8; ++i)
+	{
+		CAL_ShiftSprite (dest,dest->sourceoffset[0],
+		dest->sourceoffset[i],spr->width,spr->height,i);
+	}
+#else
 	CAL_ShiftSprite (dest,dest->sourceoffset[0],
 		dest->sourceoffset[1],spr->width,spr->height,2);
 
@@ -231,6 +239,7 @@ void ShiftScore (void)
 
 	CAL_ShiftSprite (dest,dest->sourceoffset[0],
 		dest->sourceoffset[3],spr->width,spr->height,6);
+#endif
 }
 #endif
 

@@ -32,7 +32,8 @@
 =============================================================================
 */
 
-#define	MINTICS				2
+//#define	MINTICS				2
+#define	MINTICS				1 // mstodo : double?
 #define	MAXTICS				6
 
 #define	MAPBORDER			2		// map border must be at least 1

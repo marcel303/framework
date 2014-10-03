@@ -5,6 +5,7 @@
 #include "id_heads.h"
 
 #define BLOWUP 4 // mstodo : remove this define. make sure mouse is adjusted based on screen scale
+#define MAX_SOUNDS 64
 
 static void SYS_PollJoy();
 
@@ -96,17 +97,37 @@ static int __cdecl TimeThread(void * userData)
 	return 0;
 }
 
+static struct
+{
+	boolean cached;
+	short * buffer;
+	short * bufferEnd;
+} s_sounds[MAX_SOUNDS];
+static short * s_soundPtr = 0;
+static short * s_soundEnd = 0;
+
+extern word SoundNumber;
+extern word SoundPriority;
+
 static void SoundThread(void * userData, Uint8 * stream, int length)
 {
 	// mstodo : need mutex (only around get sound ptr / offset)
 
-	if (soundSample)
+	short * __restrict dest = (short*)stream;
+	short * __restrict destEnd = (short*)(stream + length);
+
+	while (dest < destEnd && s_soundPtr != s_soundEnd)
 	{
-		memset(stream, 0, length);
+		*dest++ = *s_soundPtr++;
 	}
-	else
+	while (dest < destEnd)
 	{
-		memset(stream, 0, length);
+		*dest++ = 0;
+	}
+
+	if (s_soundPtr == s_soundEnd)
+	{
+		SoundNumber = SoundPriority = 0;
 	}
 }
 
@@ -118,8 +139,8 @@ void SYS_Init()
 		Quit("Failed to initialize SDL");
 
 	//if ((screen = SDL_SetVideoMode(320 * BLOWUP, 200 * BLOWUP, 32, SDL_SWSURFACE | SDL_DOUBLEBUF)) == 0)
-	if ((screen = SDL_SetVideoMode(640, 400, 32, SDL_SWSURFACE | SDL_DOUBLEBUF)) == 0)
-	//if ((screen = SDL_SetVideoMode(1680, 1050, 32, SDL_SWSURFACE | SDL_DOUBLEBUF | SDL_FULLSCREEN)) == 0)
+	if ((screen = SDL_SetVideoMode(640, 400, 32, SDL_HWSURFACE | SDL_DOUBLEBUF)) == 0)
+	//if ((screen = SDL_SetVideoMode(1680, 1050, 32, SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_FULLSCREEN)) == 0)
 		Quit("Failed to set video mode");
 
 	if ((surface = SDL_CreateRGBSurface(SDL_SWSURFACE, 320 + 8 /*max pelpan*/, 200, 32,
@@ -144,10 +165,10 @@ void SYS_Init()
 	}
 
 	memset(&audioSpec, 0, sizeof(audioSpec));
-	audioSpec.freq = 11025;
-	audioSpec.format = AUDIO_S8;
+	audioSpec.freq = 44100;
+	audioSpec.format = AUDIO_S16;
 	audioSpec.channels = 1;
-	audioSpec.samples = 4096; // mstodo : lower ?
+	audioSpec.samples = 1024; // mstodo : lower ?
 	audioSpec.callback = SoundThread;
 	if (SDL_OpenAudio(&audioSpec, 0) < 0) {
 		//Quit("Failed to init sound playback!");
@@ -384,11 +405,35 @@ static void SYS_PollJoy()
 	}
 }
 
-void SYS_PlaySound(const struct SampledSound * sample)
+void SYS_PlaySound(const struct SampledSound * sample, unsigned short sound)
 {
+	if (sound >= MAX_SOUNDS)
+		return;
+
+	if (!s_sounds[sound].cached)
+	{
+		char filename[64];
+		SDL_AudioSpec spec;
+		Uint8 * buffer;
+		Uint32 bufferSize;
+
+		s_sounds[sound].cached = true;
+
+		sprintf_s(filename, sizeof(filename), "sfx_%02d.wav", sound);
+
+		if (SDL_LoadWAV(filename, &spec, &buffer, &bufferSize))
+		{
+			s_sounds[sound].buffer = (short*)buffer;
+			s_sounds[sound].bufferEnd = (short*)(buffer + bufferSize);
+		}
+	}
+
 	// mstodo : need mutex
 
 	soundSample = sample;
+
+	s_soundPtr = s_sounds[sound].buffer;
+	s_soundEnd = s_sounds[sound].bufferEnd;
 }
 
 void SYS_StopSound()

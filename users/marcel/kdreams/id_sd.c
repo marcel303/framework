@@ -69,7 +69,7 @@
 //	Internal variables
 static	boolean			SD_Started;
 static	void			(*SoundUserHook)(void);
-static	word			SoundNumber,SoundPriority;
+/*static*/	word			SoundNumber,SoundPriority;
 
 //	Internal routines
 
@@ -346,8 +346,10 @@ SD_PlaySound(word sound)
 
 	switch (SoundMode)
 	{
+	case sdm_AdLib:
 	case sdm_SoundBlaster:
-		SYS_PlaySound((struct SampledSound*)s);
+	case sdm_SoundSource:
+		SYS_PlaySound((struct SampledSound*)s, sound);
 		break;
 	}
 

@@ -428,7 +428,7 @@ void InitGame (void)
 	}
 #endif
 
-	US_TextScreen();
+	//US_TextScreen();
 
 	SYS_Init ();
 
@@ -438,7 +438,7 @@ void InitGame (void)
 	SD_Startup ();
 	US_Startup ();
 
-//	US_UpdateTextScreen();
+	//US_UpdateTextScreen();
 
 	CA_Startup ();
 	US_Setup ();
@@ -469,7 +469,7 @@ void InitGame (void)
 
 	fontcolor = WHITE;
 
-	US_FinishTextScreen();
+	//US_FinishTextScreen();
 
 	VW_SetScreenMode (GRMODE);
 	VW_ClearVideo (BLACK);
