@@ -1693,8 +1693,13 @@ void RF_Refresh (void)
 //
 // calculate tics since last refresh for adaptive timing
 //
-#if 1 // mstodo : adaptive timing?
+#if 0
+	// smooth refresh at whatever your display runs at
+	lasttimecount+=1;
+	tics = 1;
+#elif 0 // mstodo : adaptive timing?
 	{
+		// smooth refresh in the absence of vsync
 		static unsigned int prevtime = -1;
 		if (prevtime == -1)
 			prevtime = SDL_GetTicks();
@@ -1706,13 +1711,16 @@ void RF_Refresh (void)
 	lasttimecount++;
 	tics = 1;
 #else
+	// mstodo : the game runs at 70 Hz. if you're using a 60 Hz display, the game won't look as smooth
+	//          i can't really think of a solution right now, except changing your display settings..
+
 	if (lasttimecount > TimeCount)
 		lasttimecount = TimeCount;		// if the game was paused a LONG time
 	do
 	{
 		newtime = TimeCount;
 		tics = (unsigned short)(newtime-lasttimecount);
-	} while (tics<MINTICS); // mstodo : this makes the framerate suck. need a better way to deal with refresh
+	} while (tics<MINTICS);
 	lasttimecount = newtime;
 #endif
 

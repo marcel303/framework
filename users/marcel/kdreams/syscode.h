@@ -14,5 +14,5 @@ void SYS_Init();
 void SYS_SetPalette(char * palette);
 void SYS_Present();
 void SYS_Update();
-void SYS_PlaySound(const struct SampledSound *sample, unsigned short sound);
+void SYS_PlaySound(unsigned short sound);
 void SYS_StopSound();

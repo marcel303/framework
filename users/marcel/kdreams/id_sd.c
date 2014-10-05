@@ -67,9 +67,9 @@
 	word		ssPort = 2;
 
 //	Internal variables
-static	boolean			SD_Started;
-static	void			(*SoundUserHook)(void);
-/*static*/	word			SoundNumber,SoundPriority;
+static		boolean		SD_Started;
+static		void		(*SoundUserHook)(void);
+volatile	word		SoundNumber,SoundPriority;
 
 //	Internal routines
 
@@ -346,10 +346,9 @@ SD_PlaySound(word sound)
 
 	switch (SoundMode)
 	{
-	case sdm_AdLib:
 	case sdm_SoundBlaster:
-	case sdm_SoundSource:
-		SYS_PlaySound((struct SampledSound*)s, sound);
+	default:
+		SYS_PlaySound(sound);
 		break;
 	}
 
@@ -370,7 +369,9 @@ SD_SoundPlaying(void)
 	switch (SoundMode)
 	{
 	case sdm_SoundBlaster:
-		result = false; // mstodo : check if still playing
+	default:
+		if (SoundNumber == 0 && SoundPriority == 0)
+			result = true; // mstodo : check if still playing
 		break;
 	}
 
@@ -391,6 +392,7 @@ SD_StopSound(void)
 	switch (SoundMode)
 	{
 	case sdm_SoundBlaster:
+	default:
 		SYS_StopSound();
 		break;
 	}

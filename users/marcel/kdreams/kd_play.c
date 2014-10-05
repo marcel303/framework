@@ -1329,7 +1329,7 @@ short DoActor (objtype *ob,short tics)
 
 		if (ob->state == state)
 			ob->state = state->nextstate;	// go to next state
-		else if (!ob->state)
+		if (!ob->state)
 			return 0;			// object removed itself
 		return excesstics;
 	}

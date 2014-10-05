@@ -1,4 +1,5 @@
 #include <SDL/SDL.h>
+#include <SDL/SDL_opengl.h>
 #include <Windows.h>
 #include "syscode.h"
 #include "syscode_xinput.h"
@@ -6,6 +7,7 @@
 
 #define BLOWUP 4 // mstodo : remove this define. make sure mouse is adjusted based on screen scale
 #define MAX_SOUNDS 64
+#define USE_OPENGL 1
 
 static void SYS_PollJoy();
 
@@ -49,7 +51,8 @@ static unsigned int gather32(int offset)
 		int planeb = g0xA000[plane][poffset];
 		int bit = (planeb >> boffset) & 1;
 
-		result |= bit << (31 - i);
+		result <<= 1;
+		result |= bit;
 	}
 
 	return result;
@@ -80,12 +83,14 @@ static unsigned char palettemap[16] =
 	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
 };
 
+static SDL_mutex * mutex = 0;
 static SDL_Surface * screen = 0;
+#if !USE_OPENGL
 static SDL_Surface * surface = 0;
+#endif
 static SDL_Joystick * joy = 0;
 static SDL_Thread * timeThread = 0;
 static SDL_AudioSpec audioSpec;
-static const struct SampledSound * soundSample = 0;
 
 static int __cdecl TimeThread(void * userData)
 {
@@ -106,29 +111,31 @@ static struct
 static short * s_soundPtr = 0;
 static short * s_soundEnd = 0;
 
-extern word SoundNumber;
-extern word SoundPriority;
+extern volatile word SoundNumber;
+extern volatile word SoundPriority;
 
 static void SoundThread(void * userData, Uint8 * stream, int length)
 {
-	// mstodo : need mutex (only around get sound ptr / offset)
-
-	short * __restrict dest = (short*)stream;
-	short * __restrict destEnd = (short*)(stream + length);
-
-	while (dest < destEnd && s_soundPtr != s_soundEnd)
+	SDL_LockMutex(mutex);
 	{
-		*dest++ = *s_soundPtr++;
-	}
-	while (dest < destEnd)
-	{
-		*dest++ = 0;
-	}
+		short * __restrict dest = (short*)stream;
+		short * __restrict destEnd = (short*)(stream + length);
 
-	if (s_soundPtr == s_soundEnd)
-	{
-		SoundNumber = SoundPriority = 0;
+		while (dest < destEnd && s_soundPtr != s_soundEnd)
+		{
+			*dest++ = *s_soundPtr++;
+		}
+		while (dest < destEnd)
+		{
+			*dest++ = 0;
+		}
+
+		if (s_soundPtr == s_soundEnd)
+		{
+			SoundNumber = SoundPriority = 0;
+		}
 	}
+	SDL_UnlockMutex(mutex);
 }
 
 void SYS_Init()
@@ -138,6 +145,16 @@ void SYS_Init()
 	if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
 		Quit("Failed to initialize SDL");
 
+	mutex = SDL_CreateMutex();
+
+#if USE_OPENGL
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	//SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 1);
+
+	//if ((screen = SDL_SetVideoMode(640, 400, 32, SDL_OPENGL)) == 0)
+	if ((screen = SDL_SetVideoMode(1680, 1050, 32, SDL_OPENGL | SDL_FULLSCREEN)) == 0)
+		Quit("Failed to set video mode");
+#else
 	//if ((screen = SDL_SetVideoMode(320 * BLOWUP, 200 * BLOWUP, 32, SDL_SWSURFACE | SDL_DOUBLEBUF)) == 0)
 	if ((screen = SDL_SetVideoMode(640, 400, 32, SDL_HWSURFACE | SDL_DOUBLEBUF)) == 0)
 	//if ((screen = SDL_SetVideoMode(1680, 1050, 32, SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_FULLSCREEN)) == 0)
@@ -149,6 +166,7 @@ void SYS_Init()
 		0xff << screen->format->Bshift,
 		0x00 << screen->format->Ashift)) == 0)
 		Quit("Failed to create surface");
+#endif
 
 	if (SDL_NumJoysticks() > 0)
 		joy = SDL_JoystickOpen(0);
@@ -190,8 +208,17 @@ void SYS_SetPalette(char * palette)
 		palettemap[i] = palette[i] & 0xf; // mstodo : sometimes the 5th bit is set. need 64 entry palette?
 }
 
+#if USE_OPENGL
+static void CheckGL()
+{
+	GLenum error = glGetError();
+	printf("GL error: %x\n", error);
+}
+#endif
+
 void SYS_Present()
 {
+#if !USE_OPENGL
 	if (SDL_LockSurface(surface) == 0)
 	{
 		// convert palette to surface compatible palette
@@ -222,7 +249,6 @@ void SYS_Present()
 				for (i = 0; i < 8; ++i)
 				{
 					unsigned char c = (src >> (i << 2)) & 15;
-					unsigned char b1, b2;
 					
 					c =
 						((c & 1) >> 0) << 3 |
@@ -287,6 +313,100 @@ void SYS_Present()
 #endif
 
 	SDL_Flip(screen); // mstodo : we need to guarantee we do the page flip with vsync. does SDL guarantee this?
+#else
+	static unsigned int __declspec(align(16)) buffer[200][328];
+	static GLuint texture = 0;
+	struct
+	{
+		union
+		{
+			unsigned int asInt;
+			unsigned char rgba[4];
+		};
+	} palette2[16];
+	unsigned short x, y, i;
+
+	// convert palette to surface compatible palette
+
+	for (i = 0; i < 16; ++i)
+	{
+		const unsigned int c = palette[palettemap[i]];
+		const unsigned char r = (c >> 16) & 0xff;
+		const unsigned char g = (c >> 8 ) & 0xff;
+		const unsigned char b = (c >> 0 ) & 0xff;
+		palette2[i].rgba[0] = r;
+		palette2[i].rgba[1] = g;
+		palette2[i].rgba[2] = b;
+		palette2[i].rgba[3] = 0xff;
+	}
+
+	for (y = 0; y < 200; ++y)
+	{
+		unsigned int * __restrict dst = buffer[y];
+
+		for (x = 0; x < 328; x += 8)
+		{
+			unsigned int src = gather32(_CRTC * 8 + y * 512 + x);
+
+			for (i = 0; i < 8; ++i)
+			{
+				unsigned char c = (src >> (i << 2)) & 15;
+				
+				// mstodo : instead of swapping bits here, swap them in the palette
+				//          or better yet, change gather32 to return them in the right order
+
+				c =
+					((c & 1) >> 0) << 3 |
+					((c & 2) >> 1) << 2 |
+					((c & 4) >> 2) << 1 |
+					((c & 8) >> 3) << 0;
+
+				*dst++ = palette2[c].asInt;
+			}
+		}
+	}
+
+	// setup viewport
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0.0, 320.0, 200.0, 0.0, -1.0, +1.0);
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	// create texture
+
+	if (texture == 0)
+	{
+		glGenTextures(1, &texture);
+		glBindTexture(GL_TEXTURE_2D, texture);
+	}
+
+	// update texture contents
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 328, 200, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	//CheckGL();
+
+	// draw a textured quad, taking the current pixel panning into account
+
+	glBindTexture(GL_TEXTURE_2D, texture);
+	glEnable(GL_TEXTURE_2D);
+	glBegin(GL_QUADS);
+	{
+		glTexCoord2f(0.f, 0.f); glVertex3f(  0.f - _pelpan, 0.f,   0.f);
+		glTexCoord2f(1.f, 0.f); glVertex3f(328.f - _pelpan, 0.f,   0.f);
+		glTexCoord2f(1.f, 1.f); glVertex3f(328.f - _pelpan, 200.f, 0.f);
+		glTexCoord2f(0.f, 1.f); glVertex3f(  0.f - _pelpan, 200.f, 0.f);
+	}
+	glEnd();
+
+	// present!
+
+	SDL_GL_SwapBuffers();
+#endif
 
 	SYS_Update(); // called here, for convenient in draw loops, so we don't have to add it separately
 }
@@ -405,7 +525,7 @@ static void SYS_PollJoy()
 	}
 }
 
-void SYS_PlaySound(const struct SampledSound * sample, unsigned short sound)
+void SYS_PlaySound(unsigned short sound)
 {
 	if (sound >= MAX_SOUNDS)
 		return;
@@ -413,7 +533,7 @@ void SYS_PlaySound(const struct SampledSound * sample, unsigned short sound)
 	if (!s_sounds[sound].cached)
 	{
 		char filename[64];
-		SDL_AudioSpec spec;
+		SDL_AudioSpec waveSpec;
 		Uint8 * buffer;
 		Uint32 bufferSize;
 
@@ -421,24 +541,46 @@ void SYS_PlaySound(const struct SampledSound * sample, unsigned short sound)
 
 		sprintf_s(filename, sizeof(filename), "sfx_%02d.wav", sound);
 
-		if (SDL_LoadWAV(filename, &spec, &buffer, &bufferSize))
+		if (SDL_LoadWAV(filename, &waveSpec, &buffer, &bufferSize))
 		{
-			s_sounds[sound].buffer = (short*)buffer;
-			s_sounds[sound].bufferEnd = (short*)(buffer + bufferSize);
+			SDL_AudioCVT cvt;
+
+			if (SDL_BuildAudioCVT(
+				&cvt,
+				waveSpec.format, waveSpec.channels, waveSpec.freq,
+				audioSpec.format, audioSpec.channels, audioSpec.freq) == 1)
+			{
+				cvt.buf = malloc(bufferSize * cvt.len_mult);
+				cvt.len = bufferSize;
+				memcpy(cvt.buf, buffer, bufferSize);
+
+				SDL_ConvertAudio(&cvt);
+
+				s_sounds[sound].buffer = (short*)cvt.buf;
+				s_sounds[sound].bufferEnd = (short*)(cvt.buf + cvt.len * cvt.len_mult);
+			}
+
+			SDL_FreeWAV(buffer);
+		}
+		else
+		{
+			printf("PlaySound: failed to find %s\n", filename);
 		}
 	}
 
-	// mstodo : need mutex
-
-	soundSample = sample;
-
-	s_soundPtr = s_sounds[sound].buffer;
-	s_soundEnd = s_sounds[sound].bufferEnd;
+	SDL_LockMutex(mutex);
+	{
+		s_soundPtr = s_sounds[sound].buffer;
+		s_soundEnd = s_sounds[sound].bufferEnd;
+	}
+	SDL_UnlockMutex(mutex);
 }
 
 void SYS_StopSound()
 {
-	// mstodo : need mutex
-
-	//soundSample = 0;
+	SDL_LockMutex(mutex);
+	{
+		s_soundPtr = s_soundEnd = 0;
+	}
+	SDL_UnlockMutex(mutex);
 }
