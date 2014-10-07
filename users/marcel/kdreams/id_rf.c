@@ -131,6 +131,7 @@ unsigned short	tics;
 long			lasttimecount;
 
 boolean			compatability;			// crippled refresh for wierdo SVGAs
+boolean			tickfps = false;
 
 unsigned short	mapwidth,mapheight,mapbyteswide,mapwordswide
 				,mapbytesextra,mapwordsextra;
@@ -1693,36 +1694,26 @@ void RF_Refresh (void)
 //
 // calculate tics since last refresh for adaptive timing
 //
-#if 0
-	// smooth refresh at whatever your display runs at
-	lasttimecount+=1;
-	tics = 1;
-#elif 0 // mstodo : adaptive timing?
+	if (tickfps)
 	{
-		// smooth refresh in the absence of vsync
-		static unsigned int prevtime = -1;
-		if (prevtime == -1)
-			prevtime = SDL_GetTicks();
-		while (SDL_GetTicks() - prevtime < 16) { // hard coded to 60 Hz
-			; // wait
-		}
-		prevtime = SDL_GetTicks();
+		// smooth refresh at whatever your display runs at
+		lasttimecount+=1;
+		tics = 1;
 	}
-	lasttimecount++;
-	tics = 1;
-#else
-	// mstodo : the game runs at 70 Hz. if you're using a 60 Hz display, the game won't look as smooth
-	//          i can't really think of a solution right now, except changing your display settings..
-
-	if (lasttimecount > TimeCount)
-		lasttimecount = TimeCount;		// if the game was paused a LONG time
-	do
+	else
 	{
-		newtime = TimeCount;
-		tics = (unsigned short)(newtime-lasttimecount);
-	} while (tics<MINTICS);
-	lasttimecount = newtime;
-#endif
+		// mstodo : the game runs at 70 Hz. if you're using a 60 Hz display, the game won't look as smooth
+		//          i can't really think of a solution right now, except changing your display settings..
+
+		if (lasttimecount > TimeCount)
+			lasttimecount = TimeCount;		// if the game was paused a LONG time
+		do
+		{
+			newtime = TimeCount;
+			tics = (unsigned short)(newtime-lasttimecount);
+		} while (tics<MINTICS);
+		lasttimecount = newtime;
+	}
 
 #ifdef PROFILE
 	strcpy (scratch,"\tTics:");

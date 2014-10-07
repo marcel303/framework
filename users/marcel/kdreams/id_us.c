@@ -439,7 +439,7 @@ US_CheckParm(char *parm,char **strings)
 			*p,*s;
 	int		i;
 
-	while (!isalpha(*parm))	// Skip non-alphas
+	while (!isalpha(*parm) && *parm)	// Skip non-alphas
 		parm++;
 
 	for (i = 0;*strings && **strings;i++)

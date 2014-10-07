@@ -52,6 +52,9 @@
 char		str[80],str2[20];
 boolean		singlestep,jumpcheat,godmode,tedlevel;
 word		tedlevelnum;
+int			tickrate = 70;
+boolean		fullscreen = false;
+int			displaySx,displaySy;
 
 /*
 =============================================================================
@@ -430,7 +433,7 @@ void InitGame (void)
 
 	//US_TextScreen();
 
-	SYS_Init ();
+	SYS_Init (tickrate, displaySx, displaySy, fullscreen);
 
 	VW_Startup ();
 	RF_Startup ();
@@ -492,6 +495,15 @@ char ** _argv;
 
 int main (int argc, char ** argv)
 {
+	char * ParmStrings[] = {
+		"NOMAPDICT", "MAPDICT", "MAPHEAD", "MAPDATA",
+		"NOEGADICT", "EGADICT", "EGAHEAD", "EGADATA",
+		"TICKRATE", "TICKFPS",
+		"FULLSCREEN", "DISPLAY",
+		NULL
+	};
+	int i;
+
 	_argc = argc;
 	_argv = argv;
 	
@@ -506,21 +518,77 @@ int main (int argc, char ** argv)
 		exit(0);
 	}
 
-	if (_argc >= 2 && _stricmp(_argv[1], "/?") == 0)
+	//if (_argc >= 2 && _stricmp(_argv[1], "/?") == 0)
 	{
 		printf("\nKeen Dreams version 1.93\n");
 		printf("Copyright 1991-1993 Softdisk Publishing.\n\n");
 		printf("Type KDREAMS from the DOS prompt to run.\n\n");
-		printf("KDREAMS /COMP for SVGA compatibility mode\n");
-		printf("KDREAMS /NODR stops program hang with the drive still on\n");
-		printf("KDREAMS /NOAL disables AdLib and Sound Blaster detection\n");
-		printf("KDREAMS /NOSB disables Sound Blaster detection\n");
+		//printf("KDREAMS /COMP for SVGA compatibility mode\n");
+		//printf("KDREAMS /NODR stops program hang with the drive still on\n");
+		//printf("KDREAMS /NOAL disables AdLib and Sound Blaster detection\n");
+		//printf("KDREAMS /NOSB disables Sound Blaster detection\n");
 		printf("KDREAMS /NOJOYS ignores joystick\n");
 		printf("KDREAMS /NOMOUSE ignores mouse\n");
-		printf("KDREAMS /HIDDENCARD overrides video card detection\n");
+		//printf("KDREAMS /HIDDENCARD overrides video card detection\n");
+		printf("KDREAMS /%s use zero-compression EGADICT\n", ParmStrings[4]);
+		printf("KDREAMS /%s <file> override EGADICT. Default is %s\n", ParmStrings[5], fn_egadict);
+		printf("KDREAMS /%s <file> override EGAHEAD. Default is %s\n", ParmStrings[6], fn_egahead);
+		printf("KDREAMS /%s <file> override EGADATA. Default is %s\n", ParmStrings[7], fn_egadata);
+		printf("KDREAMS /%s use zero-compression MAPDICT\n", ParmStrings[0]);
+		printf("KDREAMS /%s <file> override MAPDICT. Default is %s\n", ParmStrings[1], fn_mapdict);
+		printf("KDREAMS /%s <file> override MAPHEAD. Default is %s\n", ParmStrings[2], fn_maphead);
+		printf("KDREAMS /%s <file> override MAPDATA. Default is %s\n", ParmStrings[3], fn_mapdata);
+		printf("KDREAMS /%s sets the logic tick rate. Default is %d\n", ParmStrings[8], tickrate);
+		printf("KDREAMS /%s sync logic tick rate to FPS. Increases smoothness.\n", ParmStrings[9]);
+		printf("KDREAMS /%s use a fullscreen video mode.\n", ParmStrings[10]);
+		printf("KDREAMS /%s <width> <height> sets display resolution.\n", ParmStrings[11]);
 		printf("KDREAMS /VER  for version and compatibility information\n");
 		printf("KDREAMS /? for this help information\n");
-		exit(0);
+		//exit(0);
+	}
+
+	for (i = 1; i < _argc; ++i)
+	{
+		int p = US_CheckParm(_argv[i], ParmStrings);
+
+		// map
+
+		if (p == 0)
+			fn_mapdict = (char*)-1;
+		if (p == 1)
+			fn_mapdict = _argv[++i];
+		if (p == 2)
+			fn_maphead = _argv[++i];
+		if (p == 3)
+			fn_mapdata = _argv[++i];
+
+		// ega
+
+		if (p == 4)
+			fn_egadict = (char*)-1;
+		if (p == 5)
+			fn_egadict = _argv[++i];
+		if (p == 6)
+			fn_egahead = _argv[++i];
+		if (p == 7)
+			fn_egadata = _argv[++i];
+
+		// tickrate
+
+		if (p == 8)
+			tickrate = atoi(_argv[++i]);
+		if (p == 9)
+			tickfps = true;
+
+		// graphics
+
+		if (p == 10)
+			fullscreen = true;
+		if (p == 11)
+		{
+			displaySx = atoi(_argv[++i]);
+			displaySy = atoi(_argv[++i]);
+		}
 	}
 
 	//textcolor(7); // mstodo

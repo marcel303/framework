@@ -74,6 +74,13 @@ typedef struct
 =============================================================================
 */
 
+const char	*fn_egahead = "EGAHEAD.KDR";
+const char	*fn_egadict = "EGADICT.KDR";
+const char	*fn_egadata = "KDREAMS.EGA";
+const char	*fn_maphead = "MAPHEAD.KDR";
+const char	*fn_mapdict = "MAPDICT.KDR";
+const char	*fn_mapdata = "KDREAMS.MAP";
+
 byte 		_seg	*tinf;
 short		mapon;
 
@@ -100,17 +107,8 @@ int			profilehandle = -1;
 long		_seg *grstarts;	// array of offsets in egagraph, -1 for sparse
 long		_seg *audiostarts;	// array of offsets in audio / audiot
 
-#ifdef GRHEADERLINKED
 huffnode	*grhuffman;
-#else
-huffnode	grhuffman[255];
-#endif
-
-#ifdef MAPHEADERLINKED
 huffnode	*maphuffman;
-#else
-huffnode	maphuffman[255];
-#endif
 
 #ifdef AUDIOHEADERLINKED
 huffnode	*audiohuffman;
@@ -166,8 +164,8 @@ void CAL_GetGrChunkLength (short chunk)
 
 boolean CA_FarRead (int handle, byte far *dest, long length)
 {
-	if (length>0xffffl)
-		Quit ("CA_FarRead doesn't support 64K reads yet!");
+	//if (length>0xffffl)
+	//	Quit ("CA_FarRead doesn't support 64K reads yet!");
 
 	return _read(handle, dest, length) == length;
 }
@@ -377,6 +375,56 @@ void CA_RLEWexpand (unsigned short huge *source, unsigned short huge *dest, long
 =============================================================================
 */
 
+static void CreateIdentityHuffmanDict(huffnode *nodes)
+{
+	// written for size, so the code would be smaller than storing the actual table. but MSVC likes to unroll things,
+	// bloating code size :P still, it's smaller than the actual table though
+
+	{
+		huffnode * node = nodes + 128;
+		int i;
+		for (i = 0x100; i < 510; node++)
+		{
+			node->bit0 = i++;
+			node->bit1 = i++;
+		}
+	}
+
+	{
+		int i;
+		for (i = 0; i < 128; i += 1)
+		{
+			huffnode * node = nodes + 254;
+			int j, m;
+			for (j = 0, m = 1; j < 7; ++j, m <<= 1)
+			{
+				unsigned char o;
+				if (i & m)
+					o = (unsigned char)node->bit1;
+				else
+					o = (unsigned char)node->bit0;
+				node = nodes + o;
+			}
+			node->bit0 = i;
+			node->bit1 = i | 0x80;
+		}
+	}
+
+#if 0
+	{
+		unsigned char src, dst;
+		src = -1;
+		do
+		{
+			src++;
+			CAL_HuffExpand(&src, &dst, 1, nodes);
+			assert(src == dst);
+			if (src != dst)
+				*(char*)0 = 0;
+		} while (src != 255);
+	}
+#endif
+}
 
 /*
 ======================
@@ -392,50 +440,44 @@ void CAL_SetupGrFile (void)
 	long headersize,length;
 	memptr compseg;
 
-#ifdef GRHEADERLINKED
+//
+// load the huffman dictionary for graphics files
+//
+	if (fn_egadict == (char*)-1)
+	{
+		grhuffman = (huffnode *)malloc(sizeof(huffnode)*255);
+		CreateIdentityHuffmanDict(grhuffman);
+	}
+	else if ((handle = _open(fn_egadict, O_RDONLY | O_BINARY, S_IREAD)) != -1)
+	{
+		grhuffman = (huffnode *)malloc(sizeof(huffnode)*255);
+		_read(handle, grhuffman, sizeof(huffnode)*255);
+		_close(handle);
+	}
+	else
+	{
+		// use the built in dictionary
 
-	huffnode *grdict;
-
-#if GRMODE == EGAGR
-	grhuffman = (huffnode *)EGAdict;
-	grstarts = (long _seg *)FP_SEG(EGAhead);
-#endif
-
-#else
+		grhuffman = (huffnode *)EGAdict;
+	}
 
 //
-// load ???dict.ext (huffman dictionary for graphics files)
+// load the data offsets
 //
+	if ((handle = _open(fn_egahead, O_RDONLY | O_BINARY, S_IREAD)) != -1)
+	{
+		MM_GetPtr (&(memptr)grstarts,(NUMCHUNKS+1)*4);
 
-//	if ((handle = _open(GREXT"DICT.",
-	if ((handle = _open("KDREAMS.EGA",
-		 O_RDONLY | O_BINARY, S_IREAD)) == -1)
-		Quit ("Can't open KDREAMS.EGA!");
+		CA_FarRead(handle, (memptr)grstarts, (NUMCHUNKS+1)*4);
+		_close(handle);
+	}
+	else
+	{
+		grstarts = (long _seg *)FP_SEG(EGAhead);
+	}
 
-	_read(handle, &grhuffman, sizeof(grhuffman));
-	_close(handle);
-	CAL_OptimizeNodes (grhuffman);
-//
-// load the data offsets from ???head.ext
-//
-	MM_GetPtr (&(memptr)grstarts,(NUMCHUNKS+1)*4);
-
-	if ((handle = _open(GREXT"HEAD."EXTENSION,
-		 O_RDONLY | O_BINARY, S_IREAD)) == -1)
-		Quit ("Can't open "GREXT"HEAD."EXTENSION"!");
-
-	CA_FarRead(handle, (memptr)grstarts, (NUMCHUNKS+1)*4);
-
-	_close(handle);
-
-
-#endif
-
-//
-// Open the graphics file, leaving it open until the game is finished
-//
-//	grhandle = _open(GREXT"GRAPH."EXTENSION, O_RDONLY | O_BINARY); NOLAN
-	grhandle = _open("KDREAMS.EGA", O_RDONLY | O_BINARY);
+	// open the graphics file, leaving it open until the game is finished
+	grhandle = _open(fn_egadata, O_RDONLY | O_BINARY);
 	if (grhandle == -1)
 		Quit ("Cannot open KDREAMS.EGA!");
 
@@ -489,36 +531,44 @@ void CAL_SetupMapFile (void)
 	long length;
 
 //
-// load maphead.ext (offsets and tileinfo for map file)
+// load MAPDICT.KDR
 //
-#ifndef MAPHEADERLINKED
-//	if ((handle = _open("MAPHEAD."EXTENSION,
-	if ((handle = _open("KDREAMS.MAP",
-		 O_RDONLY | O_BINARY, S_IREAD)) == -1)
-		Quit ("Can't open KDREAMS.MAP!");
-	length = _filelength(handle);
-	MM_GetPtr (&(memptr)tinf,length);
-	CA_FarRead(handle, tinf, length);
-	_close(handle);
-#else
+	if (fn_mapdict == (char*)-1)
+	{
+		maphuffman = (huffnode *)malloc(sizeof(huffnode)*255);
+		CreateIdentityHuffmanDict(maphuffman);
+	}
+	else if ((handle = _open(fn_mapdict, O_RDONLY | O_BINARY, S_IREAD)) != -1)
+	{
+		maphuffman = (huffnode *)malloc(sizeof(huffnode)*255);
+		_read(handle, maphuffman, sizeof(huffnode)*255);
+		_close(handle);
+	}
+	else
+	{
+		maphuffman = (huffnode *)mapdict;
+	}
 
-	maphuffman = (huffnode *)mapdict;
-	tinf = (byte _seg *)FP_SEG(maphead);
-
-#endif
+//
+// load MAPHEAD.KDR (offsets and tileinfo for map file)
+//
+	if ((handle = _open(fn_maphead, O_RDONLY | O_BINARY, S_IREAD)) != -1)
+	{
+		length = _filelength(handle);
+		MM_GetPtr (&(memptr)tinf,length);
+		CA_FarRead(handle, tinf, length);
+		_close(handle);
+	}
+	else
+	{
+		tinf = (byte _seg *)FP_SEG(maphead);
+	}
 
 //
 // open the data file
 //
-#ifdef MAPHEADERLINKED
-	if ((maphandle = _open("KDREAMS.MAP",
-		 O_RDONLY | O_BINARY, S_IREAD)) == -1)
+	if ((maphandle = _open(fn_mapdata, O_RDONLY | O_BINARY, S_IREAD)) == -1)
 		Quit ("Can't open KDREAMS.MAP!");
-#else
-	if ((maphandle = _open("MAPTEMP."EXTENSION,
-		 O_RDONLY | O_BINARY, S_IREAD)) == -1)
-		Quit ("Can't open MAPTEMP."EXTENSION"!");
-#endif
 }
 
 //==========================================================================
@@ -1188,16 +1238,12 @@ void CA_CacheMap (short mapnum)
 		MM_GetPtr(&(memptr)mapheaderseg[mapnum],sizeof(maptype));
 		_lseek(maphandle,pos,SEEK_SET);
 
-#ifdef MAPHEADERLINKED
 		//
 		// load in, then unhuffman to the destination
 		//
 		CA_FarRead (maphandle,bufferseg,((mapfiletype	_seg *)tinf)->headersize[mapnum]);
 		CAL_HuffExpand ((byte huge *)bufferseg,
 			(byte huge *)mapheaderseg[mapnum],sizeof(maptype),maphuffman);
-#else
-		CA_FarRead (maphandle,(memptr)mapheaderseg[mapnum],sizeof(maptype));
-#endif
 	}
 	else
 		MM_SetPurge (&(memptr)mapheaderseg[mapnum],0);
@@ -1227,7 +1273,7 @@ void CA_CacheMap (short mapnum)
 		}
 
 		CA_FarRead(maphandle,(byte far *)source,compressed);
-#ifdef MAPHEADERLINKED
+
 		//
 		// unhuffman, then unRLEW
 		// The huffman'd chunk has a two byte expanded length first
@@ -1240,14 +1286,6 @@ void CA_CacheMap (short mapnum)
 		CAL_HuffExpand ((byte huge *)source, buffer2seg,expanded,maphuffman);
 		CA_RLEWexpand (((unsigned short far *)buffer2seg)+1,*dest,size, ((mapfiletype _seg *)tinf)->RLEWtag);
 		MM_FreePtr (&buffer2seg);
-
-#else
-		//
-		// unRLEW, skipping expanded length
-		//
-		CA_RLEWexpand (source+1, *dest,size,
-		((mapfiletype _seg *)tinf)->RLEWtag);
-#endif
 
 		if (compressed>BUFFERSIZE)
 			MM_FreePtr(&bigbufferseg);

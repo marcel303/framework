@@ -10,7 +10,7 @@
 	extern unsigned char g0xA000[4][DISPLAY_BUFFER_SIZE];
 #endif
 
-void SYS_Init();
+void SYS_Init(int tickrate, int displaySx, int displaySy, int fullscreen);
 void SYS_SetPalette(char * palette);
 void SYS_Present();
 void SYS_Update();

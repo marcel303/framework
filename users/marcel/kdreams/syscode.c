@@ -91,12 +91,13 @@ static SDL_Surface * surface = 0;
 static SDL_Joystick * joy = 0;
 static SDL_Thread * timeThread = 0;
 static SDL_AudioSpec audioSpec;
+static int s_tickrate = 0;
 
 static int __cdecl TimeThread(void * userData)
 {
 	while (true)
 	{
-		SDL_Delay(1000/70); // increment at 70Hz, based on this loc: "if (TimeCount - time > 35)	// Half-second delays"
+		SDL_Delay(1000/s_tickrate); // increment at 70Hz, based on this loc: "if (TimeCount - time > 35)	// Half-second delays"
 		TimeCount++;
 	}
 	return 0;
@@ -138,26 +139,36 @@ static void SoundThread(void * userData, Uint8 * stream, int length)
 	SDL_UnlockMutex(mutex);
 }
 
-void SYS_Init()
+void SYS_Init(int tickrate, int displaySx, int displaySy, int fullscreen)
 {
-	int plane;
+	int i, plane;
 
 	if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
 		Quit("Failed to initialize SDL");
+
+	SDL_WM_SetCaption("Keen Dreams", NULL);
+#ifndef _DEBUG
+	SDL_ShowCursor(false);
+	SDL_WM_GrabInput(SDL_GRAB_ON);
+#endif
 
 	mutex = SDL_CreateMutex();
 
 #if USE_OPENGL
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-	//SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 1);
 
-	//if ((screen = SDL_SetVideoMode(640, 400, 32, SDL_OPENGL)) == 0)
-	if ((screen = SDL_SetVideoMode(1680, 1050, 32, SDL_OPENGL | SDL_FULLSCREEN)) == 0)
+	if (!fullscreen)
+	{
+		if (displaySx == 0) displaySx = 320*3;
+		if (displaySy == 0) displaySy = 200*3;
+	}
+
+	_putenv("SDL_VIDEO_CENTERED=1");
+
+	if ((screen = SDL_SetVideoMode(displaySx, displaySy, 32, SDL_OPENGL | (fullscreen ? SDL_FULLSCREEN : 0))) == 0)
 		Quit("Failed to set video mode");
 #else
-	//if ((screen = SDL_SetVideoMode(320 * BLOWUP, 200 * BLOWUP, 32, SDL_SWSURFACE | SDL_DOUBLEBUF)) == 0)
 	if ((screen = SDL_SetVideoMode(640, 400, 32, SDL_HWSURFACE | SDL_DOUBLEBUF)) == 0)
-	//if ((screen = SDL_SetVideoMode(1680, 1050, 32, SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_FULLSCREEN)) == 0)
 		Quit("Failed to set video mode");
 
 	if ((surface = SDL_CreateRGBSurface(SDL_SWSURFACE, 320 + 8 /*max pelpan*/, 200, 32,
@@ -170,6 +181,8 @@ void SYS_Init()
 
 	if (SDL_NumJoysticks() > 0)
 		joy = SDL_JoystickOpen(0);
+
+	s_tickrate = tickrate;
 
 	if ((timeThread = SDL_CreateThread(TimeThread, 0)) == 0)
 		Quit("Failed to create timer thread");
@@ -194,10 +207,10 @@ void SYS_Init()
 	else
 		SDL_PauseAudio(false);
 
-	SDL_ShowCursor(false);
-	SDL_WM_GrabInput(SDL_GRAB_ON);
-
 	SYS_PollJoy();
+
+	for (i = 0; i < 3; ++i)
+		SYS_Present();
 }
 
 void SYS_SetPalette(char * palette)
@@ -539,7 +552,7 @@ void SYS_PlaySound(unsigned short sound)
 
 		s_sounds[sound].cached = true;
 
-		sprintf_s(filename, sizeof(filename), "sfx_%02d.wav", sound);
+		sprintf_s(filename, sizeof(filename), "SFX%03d.WAV", sound);
 
 		if (SDL_LoadWAV(filename, &waveSpec, &buffer, &bufferSize))
 		{
@@ -564,7 +577,7 @@ void SYS_PlaySound(unsigned short sound)
 		}
 		else
 		{
-			printf("PlaySound: failed to find %s\n", filename);
+			printf("PlaySound: failed to open %s\n", filename);
 		}
 	}
 

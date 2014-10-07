@@ -78,6 +78,7 @@ typedef enum {spritedraw,maskdraw} drawtype;
 
 
 extern	boolean			compatability;			// crippled refresh for wierdo SVGAs
+extern	boolean			tickfps;
 
 extern	unsigned short	tics;
 extern	long			lasttimecount;

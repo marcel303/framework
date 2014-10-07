@@ -34,8 +34,6 @@
 
 //===========================================================================
 
-#define MAPHEADERLINKED
-#define GRHEADERLINKED
 #define AUDIOHEADERLINKED
 
 #define NUMMAPS	30
@@ -72,6 +70,13 @@ typedef	struct
 #pragma pack(pop)
 
 //===========================================================================
+
+extern	const char	*fn_egahead;
+extern	const char	*fn_egadict;
+extern	const char	*fn_egadata;
+extern	const char	*fn_maphead;
+extern	const char	*fn_mapdict;
+extern	const char	*fn_mapdata;
 
 extern	byte 		_seg	*tinf;
 extern	short		mapon;
