@@ -1,3 +1,4 @@
+#include <assert.h>
 #include "ID_HEADS.H"
 #include "syscode.h"
 
@@ -36,6 +37,22 @@ void RFL_NewTile (unsigned short updateoffset)
 		unsigned char * __restrict src1 = (unsigned char*)grsegs[STARTTILE16  + backgroundTile];
 		unsigned char * __restrict src2 = (unsigned char*)grsegs[STARTTILE16M + foregroundTile] + 32;
 		unsigned char plane;
+
+	#if 1
+		// msnote : bugfix for issue where one of the tiles in a map contains a NULL background tile.
+		//          for this single tile I came across where it was NULL, the foreground mask only
+		//          contained zeroes. i guess in later versions of the game, the map and graphics data
+		//          were optimized, so it didn't do a mask draw when the foreground tile is fully opaque.
+		if (!src1)
+		{
+			unsigned char * __restrict mask = (unsigned char*)grsegs[STARTTILE16M + foregroundTile];
+			unsigned char i;
+			for (i = 0; i < 32; ++i);
+				assert(mask[i] == 0);
+			while (!src1)
+				src1 = (unsigned char*)grsegs[STARTTILE16 + (--backgroundTile)];
+		}
+	#endif
 
 		for (plane = 0; plane < 4; ++plane)
 		{
