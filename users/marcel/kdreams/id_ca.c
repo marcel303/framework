@@ -771,9 +771,10 @@ void CA_LoadAllSounds (void)
 		start = STARTPCSOUNDS;
 		break;
 	case sdm_AdLib:
+	case sdm_SoundBlaster: // mstodo : this is a hack! the digitized sound table is empty, so we use the adlib one for sound priorities!
 		start = STARTADLIBSOUNDS;
 		break;
-	case sdm_SoundBlaster:
+	//case sdm_SoundBlaster: // mstodo : this is a hack! the digitized sound table is empty, so we use the adlib one for sound priorities!
 	case sdm_SoundSource:
 		start = STARTDIGISOUNDS;
 		break;
@@ -793,9 +794,10 @@ cachein:
 		start = STARTPCSOUNDS;
 		break;
 	case sdm_AdLib:
+	case sdm_SoundBlaster: // mstodo : this is a hack! the digitized sound table is empty, so we use the adlib one for sound priorities!
 		start = STARTADLIBSOUNDS;
 		break;
-	case sdm_SoundBlaster:
+	//case sdm_SoundBlaster: // mstodo : this is a hack! the digitized sound table is empty, so we use the adlib one for sound priorities!
 	case sdm_SoundSource:
 		start = STARTDIGISOUNDS;
 		break;

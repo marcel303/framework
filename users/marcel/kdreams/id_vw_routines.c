@@ -139,7 +139,7 @@ static unsigned short bufferbit;
 // offsets in font structure
 static const unsigned short pcharheight	=	0		; // lines high
 static const unsigned short charloc		=	2		; // pointers to every character
-static const unsigned short charwidth		=	514		; // every character's width in pixels
+static const unsigned short charwidth	=	514		; // every character's width in pixels
 
 #define SHIFTNOXOR \
 	{ \

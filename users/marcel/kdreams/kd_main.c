@@ -503,6 +503,7 @@ int main (int argc, char ** argv)
 		NULL
 	};
 	int i;
+	boolean help = false;
 
 	_argc = argc;
 	_argv = argv;
@@ -518,7 +519,9 @@ int main (int argc, char ** argv)
 		exit(0);
 	}
 
-	//if (_argc >= 2 && _stricmp(_argv[1], "/?") == 0)
+	if (_argc >= 2 && _stricmp(_argv[1], "/?") == 0)
+		help = true;
+
 	{
 		printf("\nKeen Dreams version 1.93\n");
 		printf("Copyright 1991-1993 Softdisk Publishing.\n\n");
@@ -544,7 +547,8 @@ int main (int argc, char ** argv)
 		printf("KDREAMS /%s <width> <height> sets display resolution.\n", ParmStrings[11]);
 		printf("KDREAMS /VER  for version and compatibility information\n");
 		printf("KDREAMS /? for this help information\n");
-		//exit(0);
+		if (help)
+			exit(0);
 	}
 
 	for (i = 1; i < _argc; ++i)

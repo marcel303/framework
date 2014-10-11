@@ -45,11 +45,16 @@ typedef	enum	{
 					smm_Off,smm_AdLib
 				}	SMMode;
 
+#pragma pack(push)
+#pragma pack(2)
+
 typedef	struct
 		{
 			longword	length;
 			word		priority;
 		} SoundCommon;
+
+#pragma pack(pop)
 
 //	PC Sound stuff
 #define	pcTimer		0x42
@@ -58,11 +63,16 @@ typedef	struct
 
 #define	pcSpkBits	3
 
+#pragma pack(push)
+#pragma pack(2)
+
 typedef	struct
 		{
 			SoundCommon	common;
 			byte		data[1];
 		} PCSound;
+
+#pragma pack(pop)
 
 // 	Registers for the Sound Blaster card - needs to be offset by n0
 #define	sbReset		0x206
@@ -72,6 +82,9 @@ typedef	struct
 #define	sbWriteStat	0x20c
 #define	sbDataAvail	0x20e
 
+#pragma pack(push)
+#pragma pack(2)
+
 typedef	struct
 		{
 			SoundCommon	common;
@@ -80,6 +93,8 @@ typedef	struct
 						reference,
 						data[1];
 		} SampledSound;
+
+#pragma pack(pop)
 
 // 	Registers for the AdLib card
 // Operator stuff
@@ -94,6 +109,9 @@ typedef	struct
 #define	alFeedCon	0xc0
 // Global stuff
 #define	alEffects	0xbd
+
+#pragma pack(push)
+#pragma pack(2)
 
 typedef	struct
 		{
@@ -114,6 +132,8 @@ typedef	struct
 						data[1];
 		} AdLibSound;
 
+#pragma pack(pop)
+
 //
 //	Sequencing stuff
 //
@@ -129,6 +149,9 @@ typedef	struct
 #define	sev_PercOn		6	// Turns a percussive note on
 #define	sev_PercOff		7	// Turns a percussive note off
 #define	sev_SeqEnd		-1	// Terminates a sequence
+
+#pragma pack(push)
+#pragma pack(2)
 
 typedef	struct
 		{
@@ -147,6 +170,8 @@ typedef	struct
 			word		*seq;
 			longword	nextevent;
 		} ActiveTrack;
+
+#pragma pack(pop)
 
 #define	sqmode_Normal		0
 #define	sqmode_FadeIn		1

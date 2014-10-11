@@ -53,8 +53,6 @@
 #include "syscode.h"
 #pragma	hdrstop
 
-#define	SDL_SoundFinished()	{SoundNumber = SoundPriority = 0;}
-
 //	Global variables
 	boolean		LeaveDriveOn,
 				SoundSourcePresent,SoundBlasterPresent,AdLibPresent,
@@ -72,6 +70,8 @@ static		void		(*SoundUserHook)(void);
 volatile	word		SoundNumber,SoundPriority;
 
 //	Internal routines
+
+void SDL_SoundFinished() { SoundNumber = SoundPriority = 0; }
 
 ///////////////////////////////////////////////////////////////////////////
 //
@@ -125,6 +125,7 @@ SD_SetSoundMode(SDMode mode)
 		result = true;
 		break;
 	case sdm_AdLib:
+	case sdm_SoundBlaster: // mstodo : this is a hack! the digitized sound table is empty, so we use the adlib one for sound priorities!
 		if (AdLibPresent)
 		{
 			tableoffset = STARTADLIBSOUNDS;
@@ -132,6 +133,7 @@ SD_SetSoundMode(SDMode mode)
 			result = true;
 		}
 		break;
+		/*  mstodo : this is a hack! the digitized sound table is empty, so we use the adlib one for sound priorities!
 	case sdm_SoundBlaster:
 		if (SoundBlasterPresent)
 		{
@@ -140,6 +142,7 @@ SD_SetSoundMode(SDMode mode)
 			result = true;
 		}
 		break;
+		*/
 	case sdm_SoundSource:
 		tableoffset = STARTDIGISOUNDS;
 		NeedsDigitized = true;
@@ -263,11 +266,11 @@ SD_Default(boolean gotit,SDMode sd,SMMode sm)
 	if (!gotsd)
 	{
 		// Use the best sound hardware available
-		if (SoundBlasterPresent)
+		/*if (SoundBlasterPresent)
 			sd = sdm_SoundBlaster;
 		else if (SoundSourcePresent)
-			sd = sdm_SoundSource;
-		else if (AdLibPresent)
+			sd = sdm_SoundSource; // msfixme : hack so it defaults to adlib sound effects
+		else */if (AdLibPresent)
 			sd = sdm_AdLib;
 		else
 			sd = sdm_PC;
@@ -344,13 +347,7 @@ SD_PlaySound(word sound)
 	if (s->priority < SoundPriority)
 		return;
 
-	switch (SoundMode)
-	{
-	case sdm_SoundBlaster:
-	default:
-		SYS_PlaySound(sound);
-		break;
-	}
+	SYS_PlaySound(sound);
 
 	SoundNumber = sound;
 	SoundPriority = s->priority;
