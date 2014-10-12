@@ -7,7 +7,6 @@
 #include "opl/opl.h"
 
 #define MAX_SOUNDS 64
-#define USE_OPENGL 1
 #define PROFILING 0
 
 extern void SDL_SoundFinished();
@@ -94,6 +93,8 @@ static SDL_Thread * s_timeThread = 0;
 static SDL_AudioSpec s_audioSpec;
 static int s_tickrate = 0;
 static GLuint s_texture = 0;
+static int s_fixedAspect = 0; // maintain 4:3 aspect ratio. assumes screen pixels are 1:1 for now
+static int s_useOpengl = 0;
 
 //
 
@@ -293,7 +294,7 @@ static void SoundThread(void * userData, Uint8 * stream, int length)
 
 //
 
-void SYS_Init(int tickrate, int displaySx, int displaySy, int fullscreen)
+void SYS_Init(int tickrate, int displaySx, int displaySy, int fullscreen, int fixedAspect, int useOpengl)
 {
 	int i, plane;
 
@@ -316,21 +317,27 @@ void SYS_Init(int tickrate, int displaySx, int displaySy, int fullscreen)
 
 	_putenv("SDL_VIDEO_CENTERED=1");
 
-#if USE_OPENGL
-	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	s_useOpengl = useOpengl;
+	s_fixedAspect = fixedAspect;
 
-	if ((s_screen = SDL_SetVideoMode(displaySx, displaySy, 32, SDL_OPENGL | (fullscreen ? SDL_FULLSCREEN : 0))) == 0)
-		Quit("Failed to set video mode");
+	if (useOpengl)
+	{
+		SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
-	// create texture
-	glGenTextures(1, &s_texture);
-	glBindTexture(GL_TEXTURE_2D, s_texture);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-#else
-	if ((s_screen = SDL_SetVideoMode(displaySx, displaySy, 32, SDL_HWSURFACE | SDL_DOUBLEBUF | (fullscreen ? SDL_FULLSCREEN : 0))) == 0)
-		Quit("Failed to set video mode");
-#endif
+		if ((s_screen = SDL_SetVideoMode(displaySx, displaySy, 32, SDL_OPENGL | (fullscreen ? SDL_FULLSCREEN : 0))) == 0)
+			Quit("Failed to set video mode");
+
+		// create texture
+		glGenTextures(1, &s_texture);
+		glBindTexture(GL_TEXTURE_2D, s_texture);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	}
+	else
+	{
+		if ((s_screen = SDL_SetVideoMode(displaySx, displaySy, 32, SDL_HWSURFACE | SDL_DOUBLEBUF | (fullscreen ? SDL_FULLSCREEN : 0))) == 0)
+			Quit("Failed to set video mode");
+	}
 
 	if (SDL_NumJoysticks() > 0)
 		s_joy = SDL_JoystickOpen(0);
@@ -374,6 +381,42 @@ void SYS_SetPalette(char * palette)
 
 	for (i = 0; i < 16; ++i)
 		s_palettemap[i] = palette[i] & 0xf; // mstodo : sometimes the 5th bit is set. need 64 entry palette?
+}
+
+static void CalculatePresentRect(unsigned int * sx, unsigned int * sy, unsigned int * ox, unsigned int * oy)
+{
+	// calculate size of destination rect taking into account aspect ratio and setting
+
+	if (s_fixedAspect)
+	{
+	#if 1
+		const float ax = 320.f;
+		const float ay = 200.f;
+	#else
+		// emulate non-square pixels
+		const float ax = 4.f;
+		const float ay = 3.f;
+	#endif
+
+		if (s_screen->w / ax < s_screen->h / ay)
+		{
+			*sx = s_screen->w;
+			*sy = (int)(s_screen->w / ax * ay);
+		}
+		else
+		{
+			*sx = (int)(s_screen->h / ay * ax);
+			*sy = s_screen->h;
+		}
+	}
+	else
+	{
+		*sx = s_screen->w;
+		*sy = s_screen->h;
+	}
+
+	*ox = (s_screen->w - *sx) / 2;
+	*oy = (s_screen->h - *sy) / 2;
 }
 
 static void SYS_Present_Software()
@@ -435,19 +478,35 @@ static void SYS_Present_Software()
 	if (SDL_LockSurface(s_screen) == 0)
 	{
 		unsigned int x, y;
+		unsigned int dsx, dsy;
+		unsigned int dox, doy;
+
+		CalculatePresentRect(&dsx, &dsy, &dox, &doy);
+
+		// clear the borders (unless we're filling the entire screen)
+
+		if (dsx != s_screen->w || dsy != s_screen->h)
+		{
+			#define ClearRect(_x, _y, _sx, _sy) { SDL_Rect r; r.x = _x; r.y = _y; r.w = _sx; r.h = _sy; SDL_FillRect(s_screen, &r, 0x10101010); /*SDL_FillRect(s_screen, &r, 0xff00ff00); r.x += 1; r.y += 1; r.w -= 2; r.h -= 2; SDL_FillRect(s_screen, &r, 0xffffffff);*/ }
+			ClearRect(        0,           0,             s_screen->w,                     doy); // top
+			ClearRect(        0,   doy + dsy,             s_screen->w, s_screen->h - doy - dsy); // bottom
+			ClearRect(        0,         doy,                     dox,                     dsy); // left
+			ClearRect(dox + dsx,         doy, s_screen->w - dox - dsx,                     dsy); // right
+			#undef ClearRect
+		}
 
 		// do a scaled blit. use 10.22 fixed point for sampling the source in the horizontal direction
 
-		for (y = 0; y < s_screen->h; ++y)
+		for (y = 0; y < dsy; ++y)
 		{
-			unsigned char * srcbytes = (unsigned char*)buffer[y * 200 / s_screen->h];
-			unsigned char * dstbytes = (unsigned char*)s_screen->pixels + s_screen->pitch * y;
+			unsigned char * srcbytes = (unsigned char*)buffer[y * 200 / dsy];
+			unsigned char * dstbytes = (unsigned char*)s_screen->pixels + s_screen->pitch * (y + doy) + dox * 4;
 			unsigned int * __restrict src = (unsigned int*)srcbytes + _pelpan;
 			unsigned int * __restrict dst = (unsigned int*)dstbytes;
-			unsigned int step = (320 << 22) / s_screen->w;
+			unsigned int step = (320 << 22) / dsx;
 			unsigned int pos = 0;
 
-			for (x = 0; x < s_screen->w; ++x, pos += step)
+			for (x = 0; x < dsx; ++x, pos += step)
 			{
 				*dst++ = src[pos >> 22];
 			}
@@ -488,7 +547,7 @@ static void SYS_Present_OpenGL()
 	QueryPerformanceCounter(&t1);
 #endif
 
-	// convert palette to surface compatible palette
+	// convert palette to OpenGL compatible palette
 
 	for (i = 0; i < 16; ++i)
 	{
@@ -525,7 +584,21 @@ static void SYS_Present_OpenGL()
 	printf("conversion time: %g ms\n", 1000.f * (t2.QuadPart - t1.QuadPart) / freq.QuadPart);
 #endif
 
+	// clear screen
+
+	glViewport(0, 0, s_screen->w, s_screen->h);
+	glClearColor(1.f/16.f, 1.f/16.f, 1.f/16.f, 0.f);
+	glClear(GL_COLOR_BUFFER_BIT);
+
 	// setup viewport
+
+	{
+		unsigned int dsx, dsy;
+		unsigned int dox, doy;
+
+		CalculatePresentRect(&dsx, &dsy, &dox, &doy);
+		glViewport(dox, doy, dsx, dsy);
+	}
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
@@ -560,11 +633,10 @@ static void SYS_Present_OpenGL()
 
 void SYS_Present()
 {
-#if !USE_OPENGL
-	SYS_Present_Software();
-#else
-	SYS_Present_OpenGL();
-#endif
+	if (s_useOpengl)
+		SYS_Present_OpenGL();
+	else
+		SYS_Present_Software();
 
 	SYS_Update(); // called here, for convenient in draw loops, so we don't have to add it separately
 }

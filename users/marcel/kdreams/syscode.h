@@ -15,7 +15,7 @@
 
 #define AUDIO_SAMPLE_RATE 44100
 
-void SYS_Init(int tickrate, int displaySx, int displaySy, int fullscreen);
+void SYS_Init(int tickrate, int displaySx, int displaySy, int fullscreen, int fixedAspect, int useOpengl);
 void SYS_SetPalette(char * palette);
 void SYS_Present();
 void SYS_Update();

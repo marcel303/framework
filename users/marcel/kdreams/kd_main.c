@@ -54,6 +54,8 @@ boolean		singlestep,jumpcheat,godmode,tedlevel;
 word		tedlevelnum;
 int			tickrate = 70;
 boolean		fullscreen = false;
+boolean		fixedAspectRatio = true;
+boolean		useOpengl = true;
 int			displaySx,displaySy;
 
 /*
@@ -433,7 +435,7 @@ void InitGame (void)
 
 	//US_TextScreen();
 
-	SYS_Init (tickrate, displaySx, displaySy, fullscreen);
+	SYS_Init (tickrate, displaySx, displaySy, fullscreen, fixedAspectRatio, useOpengl);
 
 	VW_Startup ();
 	RF_Startup ();
@@ -500,6 +502,7 @@ int main (int argc, char ** argv)
 		"NOEGADICT", "EGADICT", "EGAHEAD", "EGADATA",
 		"TICKRATE", "TICKFPS",
 		"FULLSCREEN", "DISPLAY",
+		"STRETCH", "NOGL",
 		NULL
 	};
 	int i;
@@ -545,6 +548,8 @@ int main (int argc, char ** argv)
 		printf("KDREAMS /%s sync logic tick rate to FPS. Increases smoothness.\n", ParmStrings[9]);
 		printf("KDREAMS /%s use a fullscreen video mode.\n", ParmStrings[10]);
 		printf("KDREAMS /%s <width> <height> sets display resolution.\n", ParmStrings[11]);
+		printf("KDREAMS /%s stretch image. don't maintain original 4:3 aspect ratio.\n", ParmStrings[12]);
+		printf("KDREAMS /%s use software renderer instead of OpenGL.\n", ParmStrings[13]);
 		printf("KDREAMS /VER  for version and compatibility information\n");
 		printf("KDREAMS /? for this help information\n");
 		if (help)
@@ -593,6 +598,10 @@ int main (int argc, char ** argv)
 			displaySx = atoi(_argv[++i]);
 			displaySy = atoi(_argv[++i]);
 		}
+		if (p == 12)
+			fixedAspectRatio = false;
+		if (p == 13)
+			useOpengl = false;
 	}
 
 	//textcolor(7); // mstodo
