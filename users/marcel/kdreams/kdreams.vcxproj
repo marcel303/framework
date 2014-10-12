@@ -104,6 +104,7 @@
     <ClCompile Include="kd_main.c" />
     <ClCompile Include="kd_play.c" />
     <ClCompile Include="lzhuf.c" />
+    <ClCompile Include="opl\fmopl.c" />
     <ClCompile Include="opl\opl.c" />
     <ClCompile Include="shifttable.c" />
     <ClCompile Include="soft.c" />
@@ -135,6 +136,7 @@
     <ClInclude Include="kd_def.h" />
     <ClInclude Include="lzhuff.h" />
     <ClInclude Include="lzw.h" />
+    <ClInclude Include="opl\fmopl.h" />
     <ClInclude Include="opl\opl.h" />
     <ClInclude Include="sl_file.h" />
     <ClInclude Include="soft.h" />

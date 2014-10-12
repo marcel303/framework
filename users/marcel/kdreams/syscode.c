@@ -4,7 +4,13 @@
 #include "syscode.h"
 #include "syscode_xinput.h"
 #include "id_heads.h"
-#include "opl/opl.h"
+
+#if ADLIB_EMU == k_ADLIB_EMU_DOSBOX_OPL
+	#include "opl/opl.h"
+#endif
+#if ADLIB_EMU == k_ADLIB_EMU_MAME
+	#include "opl/fmopl.h"
+#endif
 
 #define MAX_SOUNDS 64
 #define PROFILING 0
@@ -91,6 +97,7 @@ static SDL_Surface * s_screen = 0;
 static SDL_Joystick * s_joy = 0;
 static SDL_Thread * s_timeThread = 0;
 static SDL_AudioSpec s_audioSpec;
+static void * s_adlibChip = 0;
 static int s_tickrate = 0;
 static GLuint s_texture = 0;
 static int s_fixedAspect = 0; // maintain 4:3 aspect ratio. assumes screen pixels are 1:1 for now
@@ -110,7 +117,12 @@ static int __cdecl TimeThread(void * userData)
 
 // 	AdLib Code
 
-#define alOut adlib_write
+#if ADLIB_EMU == k_ADLIB_EMU_DOSBOX_OPL
+	#define alOut adlib_write
+#endif
+#if ADLIB_EMU == k_ADLIB_EMU_MAME
+	#define alOut(a, v) do { ym3812_write(s_adlibChip, 0x388, a); ym3812_write(s_adlibChip, 0x389, v); } while (0)
+#endif
 
 // This table maps channel numbers to carrier and modulator op cells
 static	byte			carriers[9] =  { 3, 4, 5,11,12,13,19,20,21},
@@ -233,7 +245,7 @@ static void SoundThread(void * userData, Uint8 * stream, int length)
 			// keep fetching samples from the adlib core until we're done. meanwhile, make sure we're
 			// updating the adlib sound code 140 times per second
 			const int numSamples = length / 2;
-			Bit16s * __restrict samplePtr = ((Bit16s*)stream);
+			short * __restrict samplePtr = ((short*)stream);
 			int todo = numSamples;
 			do
 			{
@@ -242,8 +254,13 @@ static void SoundThread(void * userData, Uint8 * stream, int length)
 				if (num > todo)
 					num = todo;
 
+			#if ADLIB_EMU == k_ADLIB_EMU_DOSBOX_OPL
 				// fetch samples from the adlib core
 				adlib_getsample(samplePtr, num);
+			#endif
+			#if ADLIB_EMU == k_ADLIB_EMU_MAME
+				ym3812_update_one(s_adlibChip, samplePtr, num);
+			#endif
 
 				adlibCount += num;
 				samplePtr += num;
@@ -367,7 +384,12 @@ void SYS_Init(int tickrate, int displaySx, int displaySy, int fullscreen, int fi
 	else
 		SDL_PauseAudio(false);
 
+#if ADLIB_EMU == k_ADLIB_EMU_DOSBOX_OPL
 	adlib_init(44100);
+#endif
+#if ADLIB_EMU == k_ADLIB_EMU_MAME
+	s_adlibChip = ym3812_init(NULL, 49716 * 72, AUDIO_SAMPLE_RATE);
+#endif
 
 	SYS_PollJoy();
 
@@ -654,6 +676,8 @@ int JoyButtons;
 void SYS_Update()
 {
 	SDL_Event e;
+
+	SDL_ShowCursor(false);
 
 	while (SDL_PollEvent(&e))
 	{

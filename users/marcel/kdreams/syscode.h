@@ -13,7 +13,11 @@
 	extern unsigned char g0xA000[4][DISPLAY_BUFFER_SIZE];
 #endif
 
-#define AUDIO_SAMPLE_RATE 44100
+#define AUDIO_SAMPLE_RATE 48000 // Adlib OPL = 49716 Hz
+
+#define k_ADLIB_EMU_DOSBOX_OPL	0
+#define k_ADLIB_EMU_MAME		1
+#define ADLIB_EMU k_ADLIB_EMU_DOSBOX_OPL
 
 void SYS_Init(int tickrate, int displaySx, int displaySy, int fullscreen, int fixedAspect, int useOpengl);
 void SYS_SetPalette(char * palette);
