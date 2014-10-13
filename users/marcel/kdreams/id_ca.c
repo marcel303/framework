@@ -936,7 +936,7 @@ void CAL_CacheSprite (short chunk, char far *compressed)
 //
 // expand the unshifted shape
 //
-	CAL_HuffExpand (compressed, &dest->data[0],smallplane*5,grhuffman);
+	CAL_HuffExpand ((byte*)compressed, &dest->data[0],smallplane*5,grhuffman);
 
 //
 // make the shifts!
@@ -1077,7 +1077,7 @@ void CAL_ExpandGrChunk (short chunk, byte far *source)
 // Sprites need to have shifts made and various other junk
 //
 	if (chunk>=STARTSPRITES && chunk< STARTTILE8)
-		CAL_CacheSprite(chunk,source);
+		CAL_CacheSprite(chunk,(char*)source);
 	else
 	{
 		MM_GetPtr (&grsegs[chunk],expanded);
@@ -1508,6 +1508,7 @@ void CA_CacheMarks (char *title, boolean cachedownlevel)
 					lastx = xh;
 					VW_UpdateScreen();
 
+					extern void SDL_Delay(int delay);
 					SDL_Delay(10); // msfixme
 				}
 

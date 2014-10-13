@@ -525,7 +525,9 @@ US_TextScreen(void)
 
 #define	scr_rowcol(y,x)	{sx = (x) - 1;sy = (y) - 1;}
 #define	scr_aputs(s,a)	USL_ScreenDraw(sx,sy,(s),(a))
-#include "ID_US_S.c"
+#ifdef WIN32
+	#include "ID_US_S.c"
+#endif
 #undef	scr_rowcol
 #undef	scr_aputs
 
@@ -1677,6 +1679,8 @@ USL_DoHit(word hiti,word hitn)
 			break;
 		case uii_KeyCap:
 			break;
+		default:
+			break;
 		}
 	}
 }
@@ -2016,6 +2020,8 @@ USL_FindRect(Rect r,Motion xd,Motion yd)
 		case motion_Right:
 			i1 = 5,i2 = 8,i3 = 2;
 			break;
+		default:
+			break;
 		}
 		break;
 	case motion_Down:
@@ -2163,7 +2169,7 @@ USL_CtlCKbdButtonCustom(UserCall call,word i,word n)
 		}
 		else
 		{
-			ip->text = IN_GetScanName(scan);
+			ip->text = (char*)IN_GetScanName(scan);
 			*(KeyMaps[n]) = scan;
 			FlushHelp = true;
 		}
@@ -3148,7 +3154,7 @@ USL_HitHotKey(int i,int n)
 {
 	UserItem	*ip;
 
-	if (ip = TheItems[++i])
+	if ((ip = TheItems[++i]))
 	{
 		if ((n = USL_FindDown(TheItems[i])) == -1)
 			n = 0;
@@ -3289,7 +3295,7 @@ USL_SetUpCtlPanel(void)
 
 	// Set up Keyboard
 	for (i = 0;i < 10;i++)
-		CtlCKbdPanels[i].text = IN_GetScanName(*(KeyMaps[i]));
+		CtlCKbdPanels[i].text = (char*)IN_GetScanName(*(KeyMaps[i]));
 
 	// Set up Sounds
 	USL_TurnOff(CtlSPanels);

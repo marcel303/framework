@@ -47,7 +47,7 @@ void RFL_NewTile (unsigned short updateoffset)
 		{
 			unsigned char * __restrict mask = (unsigned char*)grsegs[STARTTILE16M + foregroundTile];
 			unsigned char i;
-			for (i = 0; i < 32; ++i);
+			for (i = 0; i < 32; ++i)
 				assert(mask[i] == 0);
 			while (!src1)
 				src1 = (unsigned char*)grsegs[STARTTILE16 + (--backgroundTile)];

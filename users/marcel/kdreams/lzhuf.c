@@ -43,7 +43,7 @@
 
 
 #include <fcntl.h>
-#include <io.h>
+//#include <io.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -873,7 +873,7 @@ static int DecodePosition(uintptr_t infile_ptr,unsigned long *CompressLength, un
 		i = (i << 1) + GetBit(infile_ptr, CompressLength, PtrTypes);
 	}
 
-	return c | i & 0x3f;
+	return c | (i & 0x3f);
 }
 
 #endif

@@ -63,7 +63,11 @@ char WritePtr(uintptr_t outfile, unsigned char data, unsigned short PtrType)
 		break;
 
 		case DEST_MEM:
-			*((char far *)*(char far **)outfile)++ = data;
+		{
+			char ** pp = (char **)outfile;
+			**pp = data;
+			*pp = *pp + 1;
+		}
 		break;
 	}
 
@@ -106,7 +110,11 @@ int ReadPtr(uintptr_t infile, unsigned short PtrType)
 //		break;
 
 		case SRC_MEM:
-			returnval = (unsigned char)*((char far *)*(char far **)infile)++;
+		{
+			char ** pp = (char **)infile;
+			returnval = **pp;
+			*pp = *pp + 1;
+		}
 		break;
 	}
 

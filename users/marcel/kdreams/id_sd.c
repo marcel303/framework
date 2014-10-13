@@ -261,6 +261,8 @@ SD_Default(boolean gotit,SDMode sd,SMMode sm)
 		case sdm_SoundSource:
 			gotsd = SoundSourcePresent;
 			break;
+		default:
+			break;
 		}
 	}
 	if (!gotsd)
@@ -283,8 +285,10 @@ SD_Default(boolean gotit,SDMode sd,SMMode sm)
 	{
 		switch (sm)
 		{
-		case sdm_AdLib:
+		case smm_AdLib:
 			gotsm = AdLibPresent;
+			break;
+		default:
 			break;
 		}
 	}
@@ -423,6 +427,8 @@ SD_StartMusic(Ptr music)	// DEBUG - this shouldn't be a Ptr...
 		music = music;
 		// DEBUG - not written
 		break;
+	default:
+		break;
 	}
 }
 
@@ -439,6 +445,8 @@ SD_FadeOutMusic(void)
 	{
 	case smm_AdLib:
 		// DEBUG - not written
+		break;
+	default:
 		break;
 	}
 }

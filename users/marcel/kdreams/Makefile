@@ -11,6 +11,7 @@ SRC = \
 	id_rf.c \
 	id_sd.c \
 	id_us_routines.c \
+	id_us.c \
 	id_vw_routines.c \
 	id_vw.c \
 	jam_io.c \
@@ -19,9 +20,10 @@ SRC = \
 	kd_demo.c \
 	kd_main.c \
 	kd_play.c \
-	lzhuff.c \
+	lzhuf.c \
 	soft.c \
-	stubs.c
+	stubs.c \
+	syscode.c \
 
 OBJ = $(SRC:.c=.o)
 
