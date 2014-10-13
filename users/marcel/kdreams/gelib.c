@@ -40,13 +40,14 @@ void FreeShape(struct Shape *shape)
 short UnpackEGAShapeToScreen(struct Shape *SHP, short startx, short starty)
 {
 	short currenty;
-	signed char n, Rep, far *Src, far *Dst[8], loop, Plane;
+	signed char n, Rep;
+	unsigned char far *Src, far *Dst[8], loop, Plane;
 	unsigned short BPR, Height;
 	short NotWordAligned;
 
 	NotWordAligned = SHP->BPR & 1;
 	startx>>=3;
-	Src = MK_FP(SHP->Data,0);
+	Src = SHP->Data;
 	currenty = starty;
 	Plane = 0;
 	Height = SHP->bmHdr.h;

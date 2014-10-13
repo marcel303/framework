@@ -1,6 +1,8 @@
 #include <SDL/SDL.h>
 #include <SDL/SDL_opengl.h>
-#include <Windows.h>
+#ifdef WIN32
+	#include <Windows.h>
+#endif
 #include "syscode.h"
 #include "syscode_xinput.h"
 #include "id_heads.h"

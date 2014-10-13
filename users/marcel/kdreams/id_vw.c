@@ -466,14 +466,14 @@ void VW_Hlin(unsigned short xl, unsigned short xh, unsigned short y, unsigned sh
 			unsigned char pcolor = (color & (1 << plane)) ? 0xff : 0x00;
 
 			// draw left side
-			*dst++ = (*dst & ~maskleft) | (pcolor & maskleft);
+			*dst = (*dst & ~maskleft) | (pcolor & maskleft); dst++;
 
 			// draw middle
 			for (i = 0; i < mid; ++i)
 				*dst++ = pcolor;
 
 			// draw right side
-			*dst++ = (*dst & ~maskright) | (pcolor & maskright);
+			*dst = (*dst & ~maskright) | (pcolor & maskright); dst++;
 		}
 	}
 }
@@ -519,19 +519,19 @@ void VW_Bar (unsigned short x, unsigned short y, unsigned short width, unsigned 
 			{
 				maskleft &= maskright;
 
-				*dst++ = (*dst & ~maskleft) | (pcolor & maskleft);
+				*dst = (*dst & ~maskleft) | (pcolor & maskleft); dst++;
 			}
 			else
 			{
 				// draw left side
-				*dst++ = (*dst & ~maskleft) | (pcolor & maskleft);
+				*dst = (*dst & ~maskleft) | (pcolor & maskleft); dst++;
 
 				// draw middle
 				for (i = 0; i < mid; ++i)
 					*dst++ = pcolor;
 
 				// draw right side
-				*dst++ = (*dst & ~maskright) | (pcolor & maskright);
+				*dst = (*dst & ~maskright) | (pcolor & maskright); dst++;
 			}
 		}
 	}

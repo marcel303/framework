@@ -21,7 +21,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <fcntl.h>
-#include <io.h>
+//#include <io.h>
 
 #include "kd_def.h"
 #include "jam_io.h"
