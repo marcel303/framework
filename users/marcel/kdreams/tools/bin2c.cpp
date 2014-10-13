@@ -1,5 +1,9 @@
 #include <stdio.h>
 
+#ifndef WIN32
+	#define sprintf_s(dst, dstSize, fmt, ...) sprintf(dst, fmt, __VA_ARGS__)
+#endif
+
 int main(int argc, const char * argv[])
 {
 	if (argc < 4)

@@ -95,9 +95,9 @@ static	boolean		IN_Started;
 	0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,	// 5
 	0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,	// 6
 	0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0  ,0   	// 7
-					},
+					};
 
-					*ScanNames[] =		// Scan code names with single chars
+const	char		*ScanNames[] =		// Scan code names with single chars
 					{
 	"?","?","1","2","3","4","5","6","7","8","9","0","-","+","?","?",
 	"Q","W","E","R","T","Y","U","I","O","P","[","]","|","?","A","S",
@@ -107,15 +107,15 @@ static	boolean		IN_Started;
 	"\x13","?","?","?","?","?","?","?","?","?","?","?","?","?","?","?",
 	"?","?","?","?","?","?","?","?","?","?","?","?","?","?","?","?",
 	"?","?","?","?","?","?","?","?","?","?","?","?","?","?","?","?"
-					},	// DEBUG - consolidate these
-					ExtScanCodes[] =	// Scan codes with >1 char names
+					};	// DEBUG - consolidate these
+const	ScanCode	ExtScanCodes[] =	// Scan codes with >1 char names
 					{
 	1,0xe,0xf,0x1d,0x2a,0x39,0x3a,0x3b,0x3c,0x3d,0x3e,
 	0x3f,0x40,0x41,0x42,0x43,0x44,0x57,0x59,0x46,0x1c,0x36,
 	0x37,0x38,0x47,0x49,0x4f,0x51,0x52,0x53,0x45,0x48,
 	0x50,0x4b,0x4d,0x00
-					},
-					*ExtScanNames[] =	// Names corresponding to ExtScanCodes
+					};
+const	char		*ExtScanNames[] =	// Names corresponding to ExtScanCodes
 					{
 	"Esc","BkSp","Tab","Ctrl","LShft","Space","CapsLk","F1","F2","F3","F4",
 	"F5","F6","F7","F8","F9","F10","F11","F12","ScrlLk","Enter","RShft",
@@ -808,14 +808,14 @@ void IN_FreeDemoBuffer(void)
 ///////////////////////////////////////////////////////////////////////////
 byte * IN_GetScanName(ScanCode scan)
 {
-	byte		**p;
-	ScanCode	*s;
+	const char		**p;
+	const ScanCode	*s;
 
 	for (s = ExtScanCodes,p = ExtScanNames;*s;p++,s++)
 		if (*s == scan)
-			return(*p);
+			return (byte*)(*p);
 
-	return(ScanNames[scan]);
+	return (byte*)(ScanNames[scan]);
 }
 
 ///////////////////////////////////////////////////////////////////////////

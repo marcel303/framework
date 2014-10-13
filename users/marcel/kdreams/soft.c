@@ -21,7 +21,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <fcntl.h>
-#include <io.h>
+//#include <io.h>
 
 #include "kd_def.h"
 #include "soft.h"
@@ -89,7 +89,7 @@ unsigned long BLoad(char *SourceFile, memptr *DstPtr)
 
 	_read(handle,Buffer,4);
 
-	if (!strncmp(Buffer,COMP,4))
+	if (!strncmp((char*)Buffer,COMP,4))
 	{
 		//
 		// Compressed under OLD file format
@@ -105,7 +105,7 @@ unsigned long BLoad(char *SourceFile, memptr *DstPtr)
 			return(0);
 	}
 	else
-	if (!strncmp(Buffer,CMP1,4))
+	if (!strncmp((char*)Buffer,CMP1,4))
 	{
 		//
 		// Compressed under new file format...
@@ -221,7 +221,7 @@ int LoadLIBShape(char *SLIB_Filename, char *Filename,struct Shape *SHP)
 
 	// Evaluate the file
 	//
-	ptr = MK_FP(IFFfile,0);
+	ptr = IFFfile;
 	if (!CHUNK("FORM"))
 		goto EXIT_FUNC;
 	ptr += 4;

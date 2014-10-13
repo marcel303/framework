@@ -23,12 +23,13 @@
 #include <ctype.h>
 #include <ERRNO.H>
 #include <FCNTL.H>
-#include <IO.H>
-#include <process.h>
+//#include <IO.H>
+//#include <process.h>
 #include <STDIO.H>
 #include <STDLIB.H>
 #include <STRING.H>
-#include <SYS\STAT.H>
+#include <SYS/STAT.H>
+#include <unistd.h>
 
 #define SUPER_SMOOTH_SCROLLING 1
 
@@ -38,6 +39,30 @@
 #define huge
 #define MK_FP(x, y) (((byte*)x) + (y))
 #define FP_SEG(x) (x)
+#ifndef WIN32
+	#include <assert.h>
+	#define O_BINARY 0
+	#define _open open
+	#define _close close
+	#define _read read
+	#define _write write
+	#define _lseek lseek
+	static int _filelength(int file)
+	{
+		struct stat s;
+		fstat(file, &s);
+		return s.st_size;
+	}
+	#define _stricmp strcasecmp
+	#define strcpy_s(dst, dstSize, src) strcpy(dst, src)
+	static char * _ltoa(long v, char * s, int radix)
+	{
+		assert(radix == 10);
+		sprintf(s, "%d", (int)v);
+		return s;
+	}
+	#define _ultoa(v, s, radix) _ltoa((long)v, s, radix)
+#endif
 
 extern int _argc;
 extern char ** _argv;

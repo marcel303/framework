@@ -1365,14 +1365,14 @@ void FinishThink (objtype *ob)
 void BoobusThink (objtype *ob)
 {
 	unsigned short	move;
-	boolean	inline = false;
+	boolean	_inline = false;
 
 	if (ob->left > player->right)
 		ob->xdir = -1;
 	else if (ob->right < player->left)
 		ob->xdir = 1;
 	else
-		inline = true;
+		_inline = true;
 
 	if (player->top < ob->bottom && player->bottom > ob->top)
 	{
@@ -1382,7 +1382,7 @@ void BoobusThink (objtype *ob)
 	else
 	{
 	// above or below player, so get directly in line and jump
-		if (inline)
+		if (_inline)
 		{
 			if (ob->y < player->y)
 			{
