@@ -155,9 +155,9 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 
 	log("using OpenGL %s, GLEW %s", glGetString(GL_VERSION), glewGetString(GLEW_VERSION));
 	
-	if (!GLEW_VERSION_3_0)
+	if (!GLEW_VERSION_3_2)
 	{
-		logWarning("OpenGL 3.0 not supported");
+		logWarning("OpenGL 3.2 not supported");
 	}
 	
 #if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
@@ -2619,7 +2619,8 @@ struct GxVertex
 };
 
 #define GX_USE_RINGBUFFER 0
-#define GX_USE_UBERBUFFER 1
+#define GX_USE_UBERBUFFER 0
+#define GX_USE_BUFFER_RENAMING 1
 
 static Shader s_gxShader;
 static GLuint s_gxVertexArrayObject = 0;
@@ -2665,14 +2666,14 @@ void gxInitialize()
 	glGenBuffers(1, &s_gxVertexBufferObject);
 #if GX_USE_UBERBUFFER
 	glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject);
-	glBufferData(GL_ARRAY_BUFFER, kUberVertexBufferSize * sizeof(GxVertex), 0, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, kUberVertexBufferSize * sizeof(GxVertex), 0, GL_STREAM_DRAW);
 #endif
 	
 	fassert(s_gxIndexBufferObject == 0);
 	glGenBuffers(1, &s_gxIndexBufferObject);
 #if GX_USE_UBERBUFFER
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, kUberIndexBufferSize * sizeof(unsigned short), 0, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, kUberIndexBufferSize * sizeof(unsigned short), 0, GL_STREAM_DRAW);
 #endif
 	
 	// create vertex array
@@ -2739,14 +2740,17 @@ static void gxFlush(bool endOfBatch)
 		glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject);
 		if (s_gxUberVertexBufferPosition + s_gxVertexCount > kUberVertexBufferSize)
 		{
-			glBufferData(GL_ARRAY_BUFFER, kUberVertexBufferSize * sizeof(GxVertex), 0, GL_DYNAMIC_DRAW);
+			glBufferData(GL_ARRAY_BUFFER, kUberVertexBufferSize * sizeof(GxVertex), 0, GL_STREAM_DRAW);
 			s_gxUberVertexBufferPosition = 0;
 		}
 		glBufferSubData(GL_ARRAY_BUFFER, s_gxUberVertexBufferPosition * sizeof(GxVertex), s_gxVertexCount * sizeof(GxVertex), s_gxVertices);
 		checkErrorGL();
 	#else
 		glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(GxVertex) * s_gxVertexCount, s_gxVertices, GL_DYNAMIC_DRAW);
+		#if GX_USE_BUFFER_RENAMING
+		glBufferData(GL_ARRAY_BUFFER, sizeof(GxVertex) * s_gxVertexCount, 0, GL_STREAM_DRAW);
+		#endif
+		glBufferData(GL_ARRAY_BUFFER, sizeof(GxVertex) * s_gxVertexCount, s_gxVertices, GL_STREAM_DRAW);
 		checkErrorGL();
 	#endif
 		
@@ -2758,35 +2762,43 @@ static void gxFlush(bool endOfBatch)
 		{
 			fassert(s_gxVertexCount < 65536);
 			
+			// todo: use triangle strip + compute index buffer once at init time
+			
 			const int numQuads = s_gxVertexCount / 4;
 			numIndices = numQuads * 6;
 			
 			unsigned short * indices = (unsigned short*)alloca(sizeof(unsigned short) * numIndices);
 			unsigned short * indexPtr = indices;
+			unsigned short baseIndex = 0;
 			
 			for (int i = 0; i < numQuads; ++i)
 			{
-				*indexPtr++ = i * 4 + 0;
-				*indexPtr++ = i * 4 + 1;
-				*indexPtr++ = i * 4 + 2;
-
-				*indexPtr++ = i * 4 + 0;
-				*indexPtr++ = i * 4 + 2;
-				*indexPtr++ = i * 4 + 3;
+				*indexPtr++ = baseIndex + 0;
+				*indexPtr++ = baseIndex + 1;
+				*indexPtr++ = baseIndex + 2;
+				
+				*indexPtr++ = baseIndex + 0;
+				*indexPtr++ = baseIndex + 2;
+				*indexPtr++ = baseIndex + 3;
+				
+				baseIndex += 4;
 			}
 			
 		#if GX_USE_UBERBUFFER
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject);
 			if (s_gxUberIndexBufferPosition + numIndices > kUberIndexBufferSize)
 			{
-				glBufferData(GL_ELEMENT_ARRAY_BUFFER, kUberIndexBufferSize * sizeof(unsigned short), 0, GL_DYNAMIC_DRAW);
+				glBufferData(GL_ELEMENT_ARRAY_BUFFER, kUberIndexBufferSize * sizeof(unsigned short), 0, GL_STREAM_DRAW);
 				s_gxUberIndexBufferPosition = 0;
 			}
 			glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, s_gxUberIndexBufferPosition * sizeof(unsigned short), numIndices * sizeof(unsigned short), indices);
 			checkErrorGL();
 		#else
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject);
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned short) * numIndices, indices, GL_DYNAMIC_DRAW);
+			#if GX_USE_BUFFER_RENAMING
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned short) * numIndices, 0, GL_STREAM_DRAW);
+			#endif
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned short) * numIndices, indices, GL_STREAM_DRAW);
 			checkErrorGL();
 		#endif
 			
@@ -2813,22 +2825,33 @@ static void gxFlush(bool endOfBatch)
 		
 		if (indexed)
 		{
+			#if GX_USE_UBERBUFFER
 			glDrawElementsBaseVertex(s_gxPrimitiveType, numElements, GL_UNSIGNED_SHORT, (void*)(s_gxUberIndexBufferPosition * sizeof(unsigned short)), s_gxUberVertexBufferPosition);
+			#else
+			glDrawElements(s_gxPrimitiveType, numElements, GL_UNSIGNED_SHORT, 0);
+			#endif
 			checkErrorGL();
 		}
 		else
 		{
+			#if GX_USE_UBERBUFFER
 			glDrawArrays(s_gxPrimitiveType, s_gxUberVertexBufferPosition, numElements);
+			#else
+			glDrawArrays(s_gxPrimitiveType, 0, numElements);
+			#endif
 			checkErrorGL();
 		}
+		
+		static int x = 0;
+		x++;
+		if ((x % 1000) == 0)
+			printf("x: %d\n", x);
 		
 	#if GX_USE_UBERBUFFER
 		//logDebug("uber offsets: %d, %d", s_gxUberVertexBufferPosition, s_gxUberIndexBufferPosition);
 		s_gxUberVertexBufferPosition += s_gxVertexCount;
 		s_gxUberIndexBufferPosition += numIndices;
 	#endif
-		
-		glBindVertexArray(0);
 		
 		if (endOfBatch)
 		{
