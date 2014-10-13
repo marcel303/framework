@@ -7,7 +7,7 @@
 #include "PacketDispatcher.h"
 
 ChannelManager::ChannelManager()
-	: m_socket(new NetSocket())
+	: m_socket(0)
 	, m_handler(0)
 	, m_listenChannel(0)
 {
@@ -24,6 +24,8 @@ ChannelManager::~ChannelManager()
 bool ChannelManager::Initialize(ChannelHandler * handler, uint16_t serverPort, bool enableServer)
 {
 	m_handler = handler;
+
+	m_socket = new NetSocket();
 
 	if (serverPort != 0)
 	{

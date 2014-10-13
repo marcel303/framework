@@ -55,21 +55,12 @@
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(Configuration)\</IntDir>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Distro|Win32'">$(SolutionDir)$(Configuration)\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Distro|Win32'">$(Configuration)\</IntDir>
-    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
-    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
-    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
-    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Distro|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
-    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Distro|Win32'" />
-    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Distro|Win32'" />
-    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
-    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
-    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>.;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>DEBUG;WIN32;_DEBUG;_LIB;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DEBUG;WIN32;_DEBUG;_LIB;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -120,54 +111,141 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AnimTimer.cpp" />
+    <ClCompile Include="Base64.cpp" />
+    <ClCompile Include="Benchmark.cpp" />
+    <ClCompile Include="BezierPath.cpp" />
+    <ClCompile Include="BinaryDiff.cpp" />
     <ClCompile Include="ByteString.cpp" />
-    <ClCompile Include="..\..\usg\Classes\Calc.cpp" />
-    <ClCompile Include="Directory.cpp" />
+    <ClCompile Include="Calc.cpp" />
+    <ClCompile Include="CallBack.cpp" />
+    <ClCompile Include="ColHashMap.cpp" />
+    <ClCompile Include="ColList.cpp" />
+    <ClCompile Include="DdsLoader.cpp" />
+    <ClCompile Include="DeltaTimer.cpp" />
     <ClCompile Include="Exception.cpp" />
     <ClCompile Include="FileStream.cpp" />
+    <ClCompile Include="FileStreamExtends.cpp" />
     <ClCompile Include="Hash.cpp" />
     <ClCompile Include="IImageLoader.cpp" />
     <ClCompile Include="Image.cpp" />
     <ClCompile Include="ImageLoader_FreeImage.cpp" />
     <ClCompile Include="ImageLoader_Photoshop.cpp" />
     <ClCompile Include="ImageLoader_Tga.cpp" />
+    <ClCompile Include="ImageLoader_Tiff.cpp" />
+    <ClCompile Include="Log.cpp" />
+    <ClCompile Include="Mat3x2.cpp" />
+    <ClCompile Include="MatrixStack.cpp" />
+    <ClCompile Include="MemAllocators.cpp" />
     <ClCompile Include="MemoryStream.cpp" />
     <ClCompile Include="Parse.cpp" />
     <ClCompile Include="Path.cpp" />
-    <ClCompile Include="..\..\usg\Classes\Random.cpp" />
+    <ClCompile Include="PolledTimer.cpp" />
+    <ClCompile Include="PsdChannel.cpp" />
+    <ClCompile Include="PsdColorModeData.cpp" />
+    <ClCompile Include="PsdCompression.cpp" />
+    <ClCompile Include="PsdForward.cpp" />
+    <ClCompile Include="PsdHeaderInfo.cpp" />
+    <ClCompile Include="PsdImageData.cpp" />
+    <ClCompile Include="PsdInfo.cpp" />
+    <ClCompile Include="PsdLayer.cpp" />
+    <ClCompile Include="PsdLayerAndMaskInfo.cpp" />
+    <ClCompile Include="PsdRect.cpp" />
+    <ClCompile Include="PsdResource.cpp" />
+    <ClCompile Include="PsdResource_ChannelNames.cpp" />
+    <ClCompile Include="PsdResource_DisplayInfo.cpp" />
+    <ClCompile Include="PsdResource_ResolutionInfo.cpp" />
+    <ClCompile Include="PsdResourceList.cpp" />
+    <ClCompile Include="PsdTypes.cpp" />
+    <ClCompile Include="Random.cpp" />
     <ClCompile Include="Stream.cpp" />
     <ClCompile Include="StreamReader.cpp" />
     <ClCompile Include="StreamWriter.cpp" />
     <ClCompile Include="StringEx.cpp" />
-    <ClCompile Include="test_tga.cpp" />
+    <ClCompile Include="SubStream.cpp" />
+    <ClCompile Include="TexturePVR.cpp" />
+    <ClCompile Include="TextureRGBA.cpp" />
+    <ClCompile Include="Timer.cpp" />
+    <ClCompile Include="TimeTracker.cpp" />
+    <ClCompile Include="Traveller.cpp" />
+    <ClCompile Include="TriggerTimer.cpp" />
     <ClCompile Include="Types.cpp" />
     <ClCompile Include="TypesBase.cpp" />
+    <ClCompile Include="Util_Angle.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AnimTimer.h" />
     <ClInclude Include="Arguments.h" />
+    <ClInclude Include="Base64.h" />
+    <ClInclude Include="Benchmark.h" />
+    <ClInclude Include="BezierPath.h" />
+    <ClInclude Include="BinaryDiff.h" />
     <ClInclude Include="ByteString.h" />
-    <ClInclude Include="..\..\usg\Classes\Calc.h" />
-    <ClInclude Include="Directory.h" />
+    <ClInclude Include="Calc.h" />
+    <ClInclude Include="CallBack.h" />
+    <ClInclude Include="ColHashMap.h" />
+    <ClInclude Include="ColList.h" />
+    <ClInclude Include="DdsLoader.h" />
+    <ClInclude Include="DeltaTimer.h" />
     <ClInclude Include="Endianness.h" />
     <ClInclude Include="Exception.h" />
     <ClInclude Include="FileStream.h" />
+    <ClInclude Include="FileStreamExtends.h" />
     <ClInclude Include="Hash.h" />
     <ClInclude Include="IImageLoader.h" />
     <ClInclude Include="Image.h" />
     <ClInclude Include="ImageLoader_FreeImage.h" />
     <ClInclude Include="ImageLoader_Photoshop.h" />
     <ClInclude Include="ImageLoader_Tga.h" />
+    <ClInclude Include="ImageLoader_Tiff.h" />
+    <ClInclude Include="Log.h" />
+    <ClInclude Include="Mat3x2.h" />
+    <ClInclude Include="Mat4x4.h" />
+    <ClInclude Include="MatrixStack.h" />
+    <ClInclude Include="MemAllocators.h" />
     <ClInclude Include="MemoryStream.h" />
     <ClInclude Include="Parse.h" />
     <ClInclude Include="Path.h" />
+    <ClInclude Include="PolledTimer.h" />
     <ClInclude Include="Precompiled.h" />
-    <ClInclude Include="..\..\usg\Classes\Random.h" />
+    <ClInclude Include="PsdChannel.h" />
+    <ClInclude Include="PsdColorModeData.h" />
+    <ClInclude Include="PsdCompression.h" />
+    <ClInclude Include="PsdForward.h" />
+    <ClInclude Include="PsdHeaderInfo.h" />
+    <ClInclude Include="PsdImageData.h" />
+    <ClInclude Include="PsdInfo.h" />
+    <ClInclude Include="PsdLayer.h" />
+    <ClInclude Include="PsdLayerAndMaskInfo.h" />
+    <ClInclude Include="PsdLog.h" />
+    <ClInclude Include="PsdRect.h" />
+    <ClInclude Include="PsdResource.h" />
+    <ClInclude Include="PsdResource_ChannelNames.h" />
+    <ClInclude Include="PsdResource_DisplayInfo.h" />
+    <ClInclude Include="PsdResource_ResolutionInfo.h" />
+    <ClInclude Include="PsdResourceList.h" />
+    <ClInclude Include="PsdTypes.h" />
+    <ClInclude Include="Random.h" />
+    <ClInclude Include="SharedPtr.h" />
+    <ClInclude Include="SIMD.h" />
+    <ClInclude Include="SimdMat4x4.h" />
     <ClInclude Include="Stream.h" />
     <ClInclude Include="StreamReader.h" />
     <ClInclude Include="StreamWriter.h" />
     <ClInclude Include="StringEx.h" />
+    <ClInclude Include="SubStream.h" />
+    <ClInclude Include="TexturePVR.h" />
+    <ClInclude Include="TextureRGBA.h" />
+    <ClInclude Include="Timer.h" />
+    <ClInclude Include="TimeTracker.h" />
+    <ClInclude Include="Traveller.h" />
+    <ClInclude Include="TriggerTimer.h" />
     <ClInclude Include="Types.h" />
     <ClInclude Include="TypesBase.h" />
+    <ClInclude Include="Util_Angle.h" />
+    <ClInclude Include="Vec2.h" />
+    <ClInclude Include="Vec3.h" />
+    <ClInclude Include="Vec4.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

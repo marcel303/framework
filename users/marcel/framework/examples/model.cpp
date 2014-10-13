@@ -15,12 +15,12 @@ static int getTimeUS() { return clock() * 1000000 / CLOCKS_PER_SEC; }
 	#define Z1 0
 	#define Z2 0
 #else
-	#define X1 -2
-	#define X2 +2
-	#define Y1 -1
-	#define Y2 +1
-	#define Z1 0
-	#define Z2 0
+	#define X1 -3
+	#define X2 +3
+	#define Y1 -3
+	#define Y2 +3
+	#define Z1 -3
+	#define Z2 +3
 #endif
 
 class CoordKey

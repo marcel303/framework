@@ -1,8 +1,8 @@
 #pragma once
 
-#include <boost/shared_ptr.hpp>
 #include <stdint.h>
 #include "NetAddress.h"
+#include "SharedPtr.h"
 
 #if defined(WINDOWS)
 	#ifndef WIN32_LEAN_AND_MEAN
@@ -42,4 +42,4 @@ private:
 	NetAddress m_peerAddress;
 };
 
-typedef boost::shared_ptr<NetSocket> SharedNetSocket;
+typedef SharedPtr<NetSocket> SharedNetSocket;

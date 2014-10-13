@@ -1,0 +1,156 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{BC0159B2-4976-4ED2-A451-2731CC3E0629}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>kdreams</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_DEPRECATE;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/wd4101 /wd4018 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>win32\lib\Xinput9_1_0.lib;SDL.lib;SDLmain.lib;OpenGL32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <OutputFile>$(OutDir)KDREAMS.EXE</OutputFile>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>false</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_DEPRECATE;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/wd4101 /wd4018 %(AdditionalOptions)</AdditionalOptions>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <ExceptionHandling>false</ExceptionHandling>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>win32\lib\Xinput9_1_0.lib;SDL.lib;SDLmain.lib;OpenGL32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)KDREAMS.EXE</OutputFile>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="gelib.c" />
+    <ClCompile Include="id_ca.c" />
+    <ClCompile Include="id_in.c" />
+    <ClCompile Include="id_rf.c" />
+    <ClCompile Include="id_rf_routines.c" />
+    <ClCompile Include="id_sd.c" />
+    <ClCompile Include="id_us.c" />
+    <ClCompile Include="id_us_routines.c" />
+    <ClCompile Include="id_vw.c" />
+    <ClCompile Include="id_vw_routines.c" />
+    <ClCompile Include="jam_io.c" />
+    <ClCompile Include="kd_act1.c" />
+    <ClCompile Include="kd_act2.c" />
+    <ClCompile Include="kd_demo.c" />
+    <ClCompile Include="kd_keen.c" />
+    <ClCompile Include="kd_main.c" />
+    <ClCompile Include="kd_play.c" />
+    <ClCompile Include="lzhuf.c" />
+    <ClCompile Include="opl\opl.c" />
+    <ClCompile Include="shifttable.c" />
+    <ClCompile Include="soft.c" />
+    <ClCompile Include="static\AUDIODCT.c" />
+    <ClCompile Include="static\AUDIOHHD.c" />
+    <ClCompile Include="static\CONTEXT.c" />
+    <ClCompile Include="static\EGADICT.c" />
+    <ClCompile Include="static\EGAHEAD.c" />
+    <ClCompile Include="static\GAMETEXT.c" />
+    <ClCompile Include="static\MAPDICT.c" />
+    <ClCompile Include="static\MAPHEAD.c" />
+    <ClCompile Include="static\STORY.c" />
+    <ClCompile Include="stubs.c" />
+    <ClCompile Include="syscode.c" />
+    <ClCompile Include="syscode_xinput.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="audiokdr.h" />
+    <ClInclude Include="gelib.h" />
+    <ClInclude Include="graphkdr.h" />
+    <ClInclude Include="id_ca.h" />
+    <ClInclude Include="id_heads.h" />
+    <ClInclude Include="id_mm.h" />
+    <ClInclude Include="id_rf.h" />
+    <ClInclude Include="id_sd.h" />
+    <ClInclude Include="id_us.h" />
+    <ClInclude Include="id_vw.h" />
+    <ClInclude Include="jam_io.h" />
+    <ClInclude Include="kd_def.h" />
+    <ClInclude Include="lzhuff.h" />
+    <ClInclude Include="lzw.h" />
+    <ClInclude Include="opl\opl.h" />
+    <ClInclude Include="sl_file.h" />
+    <ClInclude Include="soft.h" />
+    <ClInclude Include="static\AUDIODCT.h" />
+    <ClInclude Include="static\AUDIOHHD.h" />
+    <ClInclude Include="static\CONTEXT.h" />
+    <ClInclude Include="static\EGADICT.h" />
+    <ClInclude Include="static\EGAHEAD.h" />
+    <ClInclude Include="static\GAMETEXT.h" />
+    <ClInclude Include="static\MAPDICT.h" />
+    <ClInclude Include="static\MAPHEAD.h" />
+    <ClInclude Include="static\STORY.h" />
+    <ClInclude Include="syscode.h" />
+    <ClInclude Include="syscode_xinput.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

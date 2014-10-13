@@ -250,7 +250,7 @@ bool Channel::Send(const Packet & packet, bool priority)
 	{
 		const uint32_t packetSize = packet.GetSize();
 
-		bool autoTx = m_txBegun == false;
+		bool autoTx = (m_txBegun == false);
 
 		if (autoTx)
 			SendBegin(packetSize);
