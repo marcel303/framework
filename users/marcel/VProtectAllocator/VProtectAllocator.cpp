@@ -1,7 +1,16 @@
-#include <assert.h>
-#include <stdint.h>
-#include <stdio.h>
+#pragma once
+
 #include <Windows.h>
+
+#define VPROTECTALLOCATOR_DEBUG 0
+#define VPROTECTALLOCATOR_UNITTEST 1
+
+#if VPROTECTALLOCATOR_DEBUG
+	#include <assert.h>
+	#define vp_assert assert
+#else
+	#define vp_assert
+#endif
 
 /*
 [msmit@nixxes.com] the VProtectAllocator makes it easier to hunt for memory corruption due to memory
@@ -21,9 +30,9 @@ class VProtectAllocator
 	char * m_allocPages;     // page array. points to the start of the allocated address space
 	size_t m_allocPageIndex; // index where to start looking for free space in the array of pages
 
-	void verify(BOOL result)
+	inline void verify(BOOL result) const
 	{
-		assert(result);
+		vp_assert(result);
 	}
 
 public:
@@ -96,7 +105,7 @@ public:
 
 			for (size_t i = begin; i < begin + numPages && free; ++i)
 			{
-				assert(i < m_numPages);
+				vp_assert(i < m_numPages);
 
 				if (m_allocSizes[i] != -1)
 				{
@@ -121,7 +130,7 @@ public:
 
 				result = (char*)VirtualAlloc(result, (numPages - 1) * kPageSize, MEM_COMMIT, PAGE_READWRITE);
 
-				assert(result != nullptr);
+				vp_assert(result != nullptr);
 
 				// shift the result to the end of the page boundary
 
@@ -146,7 +155,7 @@ public:
 
 		// uh-oh.. the allocation failed!
 
-		assert(begin != end);
+		vp_assert(begin != end);
 
 		return nullptr;
 	}
@@ -157,13 +166,13 @@ public:
 
 		size_t begin = ((char*)p - m_allocPages) / kPageSize;
 		size_t numPages = m_allocSizes[begin];
-		assert(numPages != -1);
+		vp_assert(numPages != -1);
 
 		// mark the pages as free
 
 		for (size_t i = begin; i < begin + numPages; ++i)
 		{
-			assert(m_allocSizes[i] == numPages);
+			vp_assert(m_allocSizes[i] == numPages);
 			m_allocSizes[i] = -1;
 		}
 
@@ -201,7 +210,7 @@ public:
 
 		size_t begin = ((char*)p - m_allocPages) / kPageSize;
 		size_t numPages = m_allocSizes[begin];
-		assert(numPages != -1);
+		vp_assert(numPages != -1);
 
 		size_t shift = ((char*)p - m_allocPages) & (kPageSize - 1);
 		size_t result = (numPages - 1) * kPageSize - shift;
@@ -229,7 +238,7 @@ public:
 			}
 		}
 
-		assert(CalcTotalAllocSize() == 0);
+		vp_assert(CalcTotalAllocSize() == 0);
 	}
 
 	size_t CalcTotalAllocSize() const
@@ -254,6 +263,12 @@ public:
 		return numPages * kPageSize;
 	}
 };
+
+#if VPROTECTALLOCATOR_UNITTEST
+
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
 
 static void test()
 {
@@ -307,3 +322,5 @@ int main(int argc, char * argv[])
 
 	return 0;
 }
+
+#endif
