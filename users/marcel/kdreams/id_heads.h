@@ -23,13 +23,17 @@
 #include <ctype.h>
 #include <ERRNO.H>
 #include <FCNTL.H>
-//#include <IO.H>
-//#include <process.h>
 #include <STDIO.H>
 #include <STDLIB.H>
 #include <STRING.H>
 #include <SYS/STAT.H>
-#include <unistd.h>
+
+#ifdef WIN32
+	#include <IO.H>
+	//#include <process.h>
+#else
+	#include <unistd.h>
+#endif
 
 #define SUPER_SMOOTH_SCROLLING 1
 

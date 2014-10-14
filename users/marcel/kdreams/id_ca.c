@@ -40,6 +40,8 @@ loaded into the data segment
 
 #pragma hdrstop
 
+extern void SDL_Delay(int delay); // msfixme
+
 /*
 =============================================================================
 
@@ -1508,7 +1510,6 @@ void CA_CacheMarks (char *title, boolean cachedownlevel)
 					lastx = xh;
 					VW_UpdateScreen();
 
-					extern void SDL_Delay(int delay);
 					SDL_Delay(10); // msfixme
 				}
 
