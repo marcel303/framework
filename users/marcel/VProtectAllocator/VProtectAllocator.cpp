@@ -309,6 +309,8 @@ public:
 
 #include <algorithm>
 #include <assert.h>
+#include <deque>
+#include <list>
 #include <map>
 #include <stdint.h>
 #include <stdio.h>
@@ -421,6 +423,8 @@ int main(int argc, char * argv[])
 	{
 		std::map<int, int> m;
 		std::vector<int> v;
+		std::deque<int> d;
+		std::list<int> l;
 
 		for (int j = 0; j < 1024; ++j)
 		{
@@ -430,6 +434,28 @@ int main(int argc, char * argv[])
 
 			v.push_back(m[r]);
 			v.push_back(r);
+
+			if (j & 1)
+				d.push_front(r);
+			else
+				d.push_back(j);
+
+			l.push_front(j);
+		}
+
+		std::map<int, int> t = m;
+
+		while (!l.empty())
+		{
+			l.pop_back();
+		}
+
+		while (!d.empty())
+		{
+			if (d.size() & 1)
+				d.pop_back();
+			else
+				d.pop_front();
 		}
 
 		std::sort(v.begin(), v.end());
@@ -453,19 +479,25 @@ int main(int argc, char * argv[])
 
 		a.Init(1024*1024);
 
-		size_t initialSize = 4096 * 128;
+		size_t pageSize = 4096; // we assume here the page size is 4096. this is fine for this unit test, but it's subject to change!
 
-		void * p = a.Alloc(initialSize, 4096);
+		size_t initialSize = pageSize * 128;
 
-		for (int i = a.GetAllocSize(p) / 4096; i > 0; i /= 2)
+		void * p = a.Alloc(initialSize, pageSize);
+
+		for (int i = a.GetAllocSize(p) / pageSize; i > 0; i /= 2)
 		{
-			a.ShrinkAllocSize(p, 4096 * i);
+			a.ShrinkAllocSize(p, pageSize * i);
 
-			assert(a.GetAllocSize(p) == 4096 * i);
+			assert(a.GetAllocSize(p) == pageSize * i);
+			assert(a.CalcTotalAllocSize() == pageSize * (i + 1));
 
-			memset(p, 0, 4096 * i);
+			memset(p, 0, pageSize * i);
 
-			//memset(p, 0, 4096 * i + 1); // will cause an access violation
+			if (i <= 8)
+			{
+				//memset(p, 0, pageSize * i + 1); // will cause an access violation
+			}
 		}
 
 		a.Free(p);
