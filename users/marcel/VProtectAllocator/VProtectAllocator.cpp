@@ -2,7 +2,7 @@
 
 #include <Windows.h>
 
-#define VPROTECTALLOCATOR_DEBUG 0
+#define VPROTECTALLOCATOR_DEBUG 1
 #define VPROTECTALLOCATOR_UNITTEST 1
 
 #if VPROTECTALLOCATOR_DEBUG
@@ -24,6 +24,7 @@ this adjacent page serves as a guard area, and memory writes to this page will c
 class VProtectAllocator
 {
 	static const size_t kPageSize = 4096;
+	static const size_t kMinAlign = 16;
 
 	size_t m_numPages;       // total number of allocated pages (non committed initially)
 	size_t * m_allocSizes;   // array which maintains the size of each allocation. used for book keeping
@@ -81,8 +82,17 @@ public:
 		m_allocPageIndex = 0;
 	}
 
-	void * Alloc(size_t size)
+	void * Alloc(size_t size, size_t align)
 	{
+		assert(size != 0);
+
+		// align the requested size
+
+		if (align < kMinAlign)
+			align = kMinAlign;
+
+		size = (size + align - 1) & ~(align - 1);
+
 		// determine the number of pages to allocate
 
 		size_t numPages = (size + kPageSize - (size ? 1 : 0)) / kPageSize + 1;
@@ -204,6 +214,37 @@ public:
 		return true;
 	}
 
+	void ShrinkAllocSize(void * p, size_t newSize)
+	{
+		// calculate which page the allocation belongs to, and get the allocation size
+
+		size_t begin = ((char*)p - m_allocPages) / kPageSize;
+		size_t oldNumPages = m_allocSizes[begin];
+		vp_assert(oldNumPages != -1);
+
+		// calculate new page count
+
+		size_t newNumPages = newSize / kPageSize + 1;
+
+		assert(newNumPages <= oldNumPages);
+
+		if (newNumPages == oldNumPages)
+			return;
+
+		// update book keeping
+
+		for (size_t i = 0; i < newNumPages; ++i)
+			m_allocSizes[begin + i] = newNumPages;
+		for (size_t i = newNumPages; i < oldNumPages; ++i)
+			m_allocSizes[begin + i] = -1;
+
+		// protect and decommit the freed pages
+
+		DWORD oldProtect;
+		verify(VirtualProtect(m_allocPages + (newNumPages - 1) * kPageSize, (oldNumPages - newNumPages) * kPageSize, PAGE_NOACCESS, &oldProtect));
+		verify(VirtualFree(m_allocPages + (newNumPages - 1) * kPageSize, (oldNumPages - newNumPages) * kPageSize, MEM_DECOMMIT));
+	}
+
 	size_t GetAllocSize(void * p)
 	{
 		// calculate which page the allocation belongs to, and get the allocation size
@@ -266,9 +307,58 @@ public:
 
 #if VPROTECTALLOCATOR_UNITTEST
 
+#include <algorithm>
 #include <assert.h>
+#include <map>
 #include <stdint.h>
 #include <stdio.h>
+#include <vector>
+
+static VProtectAllocator * s_alloc = nullptr;
+
+static void VInit()
+{
+	if (s_alloc == nullptr)
+	{
+		s_alloc = (VProtectAllocator*)VirtualAlloc(NULL, sizeof(VProtectAllocator), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+
+		s_alloc->Init(1024*1024*32);
+	}
+}
+
+static void * VAlloc(size_t size)
+{
+	VInit();
+
+	return s_alloc->Alloc(size, 16);
+}
+
+static void VFree(void * p)
+{
+	VInit();
+
+	s_alloc->Free(p);
+}
+
+void * operator new(size_t size)
+{
+	return VAlloc(size);
+}
+
+void * operator new[](size_t size)
+{
+	return VAlloc(size);
+}
+
+void operator delete(void * p)
+{
+	VFree(p);
+}
+
+void operator delete[](void * p)
+{
+	VFree(p);
+}
 
 static void test()
 {
@@ -276,20 +366,21 @@ static void test()
 
 	a.Init(1024*1024*256);
 
-	for (size_t j = 0; j < 8; ++j)
+	for (size_t j = 0; j < 4; ++j)
 	{
 		uint64_t bytesAllocated = 0;
 
 		for (size_t i = 0; i < 1024*64; ++i)
 		{
+			size_t align = 16;
 			size_t s = 1 + (rand() % 1024) * 32;
 
 			bytesAllocated += s;
 
-			void * p = a.Alloc(s);
+			void * p = a.Alloc(s, align);
 
 			assert(a.IsAlloc(p));
-			assert(a.GetAllocSize(p) == s);
+			assert(a.GetAllocSize(p) >= s && a.GetAllocSize(p) < s + align);
 
 			memset(p, 0, s);
 
@@ -315,10 +406,78 @@ static void test()
 
 int main(int argc, char * argv[])
 {
-	for (int i = 0; i < 8; ++i)
+	printf("testing interface and stress testing the allocator..\n");
+
+	//for (int i = 0; i < 8; ++i)
 	{
 		test();
 	}
+
+	printf("done\n");
+
+	printf("testing STL containers.. ");
+
+	for (int i = 0; i < 2; ++i)
+	{
+		std::map<int, int> m;
+		std::vector<int> v;
+
+		for (int j = 0; j < 1024; ++j)
+		{
+			int r = rand();
+
+			m[r] = j;
+
+			v.push_back(m[r]);
+			v.push_back(r);
+		}
+
+		std::sort(v.begin(), v.end());
+
+		std::reverse(v.begin(), v.end());
+
+		while (!v.empty())
+		{
+			v.pop_back();
+
+			v.shrink_to_fit();
+		}
+	}
+
+	printf("done\n");
+
+	printf("testing reallocation.. ");
+
+	{
+		VProtectAllocator a;
+
+		a.Init(1024*1024);
+
+		size_t initialSize = 4096 * 128;
+
+		void * p = a.Alloc(initialSize, 4096);
+
+		for (int i = a.GetAllocSize(p) / 4096; i > 0; i /= 2)
+		{
+			a.ShrinkAllocSize(p, 4096 * i);
+
+			assert(a.GetAllocSize(p) == 4096 * i);
+
+			memset(p, 0, 4096 * i);
+
+			//memset(p, 0, 4096 * i + 1); // will cause an access violation
+		}
+
+		a.Free(p);
+
+		assert(a.CalcTotalAllocSize() == 0);
+	}
+
+	printf("done\n");
+
+	printf("(press any key to continue)\n");
+
+	getchar();
 
 	return 0;
 }
