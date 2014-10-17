@@ -119,10 +119,10 @@ static void EncodePosition(uintptr_t outfile_ptr, unsigned c, unsigned PtrTypes)
 static void EncodeEnd(uintptr_t outfile_ptr,unsigned PtrTypes);
 
 
-static int GetByte(uintptr_t infile_ptr, unsigned long *CompressLength, unsigned PtrTypes);
-static int GetBit(uintptr_t infile_ptr, unsigned long *CompressLength, unsigned PtrTypes);	/* get one bit */
-static int DecodeChar(uintptr_t infile_ptr, unsigned long *CompressLength, unsigned PtrTypes);
-static int DecodePosition(uintptr_t infile_ptr,unsigned long *CompressLength, unsigned PtrTypes);
+static int GetByte(uintptr_t infile_ptr, uint32_t *CompressLength, unsigned PtrTypes);
+static int GetBit(uintptr_t infile_ptr, uint32_t *CompressLength, unsigned PtrTypes);	/* get one bit */
+static int DecodeChar(uintptr_t infile_ptr, uint32_t *CompressLength, unsigned PtrTypes);
+static int DecodePosition(uintptr_t infile_ptr,uint32_t *CompressLength, unsigned PtrTypes);
 
 
 
@@ -183,7 +183,7 @@ int far prnt[T + N_CHAR];
 
 unsigned far freq[T + 1];	/* cumulative freq table */
 
-unsigned long textsize = 0, codesize = 0, printcount = 0,datasize;
+uint32_t textsize = 0, codesize = 0, printcount = 0,datasize;
 unsigned char far text_buf[N + F - 1];
 
 
@@ -637,7 +637,7 @@ static void InitTree(void)  /* Initializing tree */
 //---------------------------------------------------------------------------
 //  Putcode
 //---------------------------------------------------------------------------
-static void Putcode(long outfile_ptr, int l, unsigned c,unsigned PtrTypes)		/* output c bits */
+static void Putcode(uintptr_t outfile_ptr, int l, unsigned c,unsigned PtrTypes)		/* output c bits */
 {
 	putbuf |= c >> putlen;
 
@@ -669,7 +669,7 @@ static void Putcode(long outfile_ptr, int l, unsigned c,unsigned PtrTypes)		/* o
 //---------------------------------------------------------------------------
 //  EncodeChar
 //---------------------------------------------------------------------------
-static void EncodeChar(long outfile_ptr, unsigned c, unsigned PtrTypes)
+static void EncodeChar(uintptr_t outfile_ptr, unsigned c, unsigned PtrTypes)
 {
 	unsigned i;
 	int j, k;
@@ -706,7 +706,7 @@ static void EncodeChar(long outfile_ptr, unsigned c, unsigned PtrTypes)
 //---------------------------------------------------------------------------
 // EncodePosition
 //---------------------------------------------------------------------------
-static void EncodePosition(long outfile_ptr, unsigned c, unsigned PtrTypes)
+static void EncodePosition(uintptr_t outfile_ptr, unsigned c, unsigned PtrTypes)
 {
 	unsigned i;
 
@@ -730,7 +730,7 @@ static void EncodePosition(long outfile_ptr, unsigned c, unsigned PtrTypes)
 //---------------------------------------------------------------------------
 // EncodeEnd
 //---------------------------------------------------------------------------
-static void EncodeEnd(long outfile_ptr,unsigned PtrTypes)
+static void EncodeEnd(uintptr_t outfile_ptr,unsigned PtrTypes)
 {
 	if (putlen)
 	{
@@ -758,7 +758,7 @@ static void EncodeEnd(long outfile_ptr,unsigned PtrTypes)
 //---------------------------------------------------------------------------
 // GetByte
 //---------------------------------------------------------------------------
-static int GetByte(uintptr_t infile_ptr, unsigned long *CompressLength, unsigned PtrTypes)
+static int GetByte(uintptr_t infile_ptr, uint32_t *CompressLength, unsigned PtrTypes)
 {
 	unsigned short i;
 
@@ -790,7 +790,7 @@ static int GetByte(uintptr_t infile_ptr, unsigned long *CompressLength, unsigned
 //---------------------------------------------------------------------------
 // GetBit
 //---------------------------------------------------------------------------
-static int GetBit(uintptr_t infile_ptr, unsigned long *CompressLength, unsigned PtrTypes)	/* get one bit */
+static int GetBit(uintptr_t infile_ptr, uint32_t *CompressLength, unsigned PtrTypes)	/* get one bit */
 {
 	short int i;
 
@@ -821,7 +821,7 @@ static int GetBit(uintptr_t infile_ptr, unsigned long *CompressLength, unsigned 
 //---------------------------------------------------------------------------
 // DecodeChar
 //---------------------------------------------------------------------------
-static int DecodeChar(uintptr_t infile_ptr, unsigned long *CompressLength, unsigned PtrTypes)
+static int DecodeChar(uintptr_t infile_ptr, uint32_t *CompressLength, unsigned PtrTypes)
 {
 	unsigned c;
 
@@ -851,7 +851,7 @@ static int DecodeChar(uintptr_t infile_ptr, unsigned long *CompressLength, unsig
 //---------------------------------------------------------------------------
 // DecodePosition
 //---------------------------------------------------------------------------
-static int DecodePosition(uintptr_t infile_ptr,unsigned long *CompressLength, unsigned PtrTypes)
+static int DecodePosition(uintptr_t infile_ptr,uint32_t *CompressLength, unsigned PtrTypes)
 {
 	unsigned short i, j, c;
 
@@ -898,10 +898,10 @@ static int DecodePosition(uintptr_t infile_ptr,unsigned long *CompressLength, un
 //---------------------------------------------------------------------------
 // lzhDecompress()
 //---------------------------------------------------------------------------
-long lzhDecompress(void far *infile, void far *outfile, unsigned long OrginalLength, unsigned long CompressLength, unsigned PtrTypes)
+int32_t lzhDecompress(void far *infile, void far *outfile, uint32_t OrginalLength, uint32_t CompressLength, unsigned PtrTypes)
 {
 	int  i, j, k, r, c;
-	long count;
+	int32_t count;
 
 	datasize = textsize = OrginalLength;
 	getbuf = 0;
@@ -970,7 +970,7 @@ long lzhDecompress(void far *infile, void far *outfile, unsigned long OrginalLen
 //---------------------------------------------------------------------------
 // lzhCompress()
 //---------------------------------------------------------------------------
-long lzhCompress(void far *infile, void far *outfile,unsigned long DataLength,unsigned PtrTypes)
+int32_t lzhCompress(void far *infile, void far *outfile,uint32_t DataLength,unsigned PtrTypes)
 {
 	int  i, c, len, r, s, last_match_length;
 
@@ -995,7 +995,7 @@ long lzhCompress(void far *infile, void far *outfile,unsigned long DataLength,un
 
 	for (len = 0; len < F && (DataLength > datasize); len++)
 	{
-		c = ReadPtr((long)&infile,PtrTypes);
+		c = ReadPtr((uintptr_t)&infile,PtrTypes);
 		datasize++;							// Dec num of bytes to compress
 		text_buf[r + len] = c;
 	}
@@ -1014,19 +1014,19 @@ long lzhCompress(void far *infile, void far *outfile,unsigned long DataLength,un
 		if (match_length <= THRESHOLD)
 		{
 			match_length = 1;
-			EncodeChar((long)&outfile,text_buf[r],PtrTypes);
+			EncodeChar((uintptr_t)&outfile,text_buf[r],PtrTypes);
 		}
 		else
 		{
-			EncodeChar((long)&outfile, 255 - THRESHOLD + match_length,PtrTypes);
-			EncodePosition((long)&outfile, match_position,PtrTypes);
+			EncodeChar((uintptr_t)&outfile, 255 - THRESHOLD + match_length,PtrTypes);
+			EncodePosition((uintptr_t)&outfile, match_position,PtrTypes);
 		}
 
 		last_match_length = match_length;
 
 		for (i = 0; i < last_match_length && (DataLength > datasize); i++)
 		{
-			c = ReadPtr((long)&infile,PtrTypes);
+			c = ReadPtr((uintptr_t)&infile,PtrTypes);
 			datasize++;
 
 			DeleteNode(s);
@@ -1058,7 +1058,7 @@ long lzhCompress(void far *infile, void far *outfile,unsigned long DataLength,un
 
 	} while (len > 0);
 
-	EncodeEnd((long)&outfile,PtrTypes);
+	EncodeEnd((uintptr_t)&outfile,PtrTypes);
 
 	return(codesize);
 

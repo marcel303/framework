@@ -61,10 +61,10 @@
 
 typedef	struct
 {
-	long			planestart[3];
-	unsigned short	planelength[3];
-	unsigned short	width,height;
-	char			name[16];
+	int32_t		planestart[3];
+	uint16_t	planelength[3];
+	uint16_t	width,height;
+	char		name[16];
 } maptype;
 
 #pragma pack(pop)
@@ -101,13 +101,13 @@ void CAL_ShiftSprite (void * segment, unsigned short source, unsigned short dest
 
 //===========================================================================
 
-boolean CA_FarRead (int handle, byte far *dest, long length);
-boolean CA_FarWrite (int handle, byte far *source, long length);
+boolean CA_FarRead (int handle, byte far *dest, int32_t length);
+boolean CA_FarWrite (int handle, byte far *source, int32_t length);
 boolean CA_LoadFile (char *filename, memptr *ptr);
 
-long CA_RLEWCompress (unsigned short huge *source, long length, unsigned short huge *dest, unsigned short rlewtag);
+int32_t CA_RLEWCompress (unsigned short huge *source, int32_t length, unsigned short huge *dest, unsigned short rlewtag);
 
-void CA_RLEWexpand (unsigned short huge *source, unsigned short huge *dest, long length, unsigned short rlewtag);
+void CA_RLEWexpand (unsigned short huge *source, unsigned short huge *dest, int32_t length, unsigned short rlewtag);
 
 void CA_Startup (void);
 void CA_Shutdown (void);

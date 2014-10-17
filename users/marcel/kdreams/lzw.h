@@ -35,6 +35,6 @@ extern void (*LZW_DecompressDisplayVector)();
 
 
 
-unsigned long lzwCompress(void far *infile, void far *outfile,unsigned long DataLength,unsigned PtrTypes);
-void lzwDecompress(void far *infile, void far *outfile,unsigned long DataLength,unsigned PtrTypes);
+uint32_t lzwCompress(void far *infile, void far *outfile,uint32_t DataLength,unsigned PtrTypes);
+void lzwDecompress(void far *infile, void far *outfile,uint32_t DataLength,unsigned PtrTypes);
 

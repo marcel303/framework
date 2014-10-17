@@ -27,7 +27,7 @@
 //==========================================================================
 
 #ifndef MakeID
-#define MakeID(a,b,c,d)			(((long)(d)<<24L)|((long)(c)<<16L)|((long)(b)<<8L)|(long)(a))
+#define MakeID(a,b,c,d)			(((int32_t)(d)<<24L)|((int32_t)(c)<<16L)|((int32_t)(b)<<8L)|(int32_t)(a))
 #endif
 
 
@@ -88,9 +88,9 @@ typedef struct SoftLibHdr
 typedef struct FileEntryHdr
 {
 	char FileName[SL_FILENAMESIZE];		  	// NOTE : May not be null terminated!
-	unsigned long Offset;
-	unsigned long ChunkLen;
-	unsigned long OrginalLength;
+	uint32_t Offset;
+	uint32_t ChunkLen;
+	uint32_t OrginalLength;
 	short Compression;							// ct_TYPES
 } FileEntryHdr;
 
@@ -106,8 +106,8 @@ typedef struct FileEntryHdr
 
 typedef struct ChunkHeader
 {
-	unsigned long HeaderID;
-	unsigned long OrginalLength;
+	uint32_t HeaderID;
+	uint32_t OrginalLength;
 	short Compression;								// ct_TYPES
 } ChunkHeader;
 

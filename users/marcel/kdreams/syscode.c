@@ -2,6 +2,8 @@
 #include <SDL/SDL_opengl.h>
 #ifdef WIN32
 	#include <Windows.h>
+#else
+	#define _putenv putenv
 #endif
 #include "syscode.h"
 #include "syscode_xinput.h"
@@ -15,7 +17,12 @@
 #endif
 
 #define MAX_SOUNDS 64
-#define PROFILING 0
+
+#ifdef WIN32
+	#define PROFILING 0
+#else
+	#define PROFILING 0 // not supported
+#endif
 
 extern void SDL_SoundFinished();
 static void SYS_PollJoy();
@@ -213,7 +220,7 @@ static void SDL_ALSoundService(void)
 
 		if (!(--alLengthLeft))
 		{
-			(long)alSound = 0;
+			alSound = 0;
 			alOut(alFreqH + 0,0);
 			SDL_SoundFinished();
 		}
@@ -448,7 +455,9 @@ static void SYS_Present_Software()
 	// convert data in EGA memory to RGBA buffer
 
 	unsigned int __declspec(align(16)) buffer[200][328];
+#if PROFILING
 	LARGE_INTEGER freq, t1, t2, t3;
+#endif
 
 #if PROFILING
 	QueryPerformanceFrequency(&freq);
@@ -553,7 +562,9 @@ static void SYS_Present_OpenGL()
 	// blit/convert EGA memory to OpenGL texture
 
 	unsigned int __declspec(align(16)) buffer[200][328];
+#if PROFILING
 	LARGE_INTEGER freq, t1, t2;
+#endif
 
 	struct
 	{

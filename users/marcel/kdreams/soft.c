@@ -63,13 +63,13 @@ BufferedIO lzwBIO;
 // NOTICE : This version of BLOAD is compatable with JAMPak V3.0 and the
 //				new fileformat...
 //--------------------------------------------------------------------------
-unsigned long BLoad(char *SourceFile, memptr *DstPtr)
+uint32_t BLoad(char *SourceFile, memptr *DstPtr)
 {
 	int handle;
 
 	memptr SrcPtr;
 	byte Buffer[8];
-	unsigned long SrcLen,DstLen;
+	uint32_t SrcLen,DstLen;
 	struct CMP1Header CompHeader;
 	boolean Compressed = false;
 
@@ -207,7 +207,7 @@ int LoadLIBShape(char *SLIB_Filename, char *Filename,struct Shape *SHP)
 	char CHUNK[5];
 	char far *ptr;
 	memptr IFFfile = NULL;
-	unsigned long FileLen, size, ChunkLen;
+	uint32_t FileLen, size, ChunkLen;
 	int loop;
 
 
@@ -226,8 +226,8 @@ int LoadLIBShape(char *SLIB_Filename, char *Filename,struct Shape *SHP)
 		goto EXIT_FUNC;
 	ptr += 4;
 
-	FileLen = *(long far *)ptr;
-	SwapLong((long far *)&FileLen);
+	FileLen = *(int32_t far *)ptr;
+	SwapLong((int32_t far *)&FileLen);
 	ptr += 4;
 
 	if (!CHUNK("ILBM"))
@@ -237,8 +237,8 @@ int LoadLIBShape(char *SLIB_Filename, char *Filename,struct Shape *SHP)
 	FileLen += 4;
 	while (FileLen)
 	{
-		ChunkLen = *(long far *)(ptr+4);
-		SwapLong((long far *)&ChunkLen);
+		ChunkLen = *(int32_t far *)(ptr+4);
+		SwapLong((int32_t far *)&ChunkLen);
 		ChunkLen = (ChunkLen+1) & 0xFFFFFFFE;
 
 		if (CHUNK("BMHD"))
@@ -262,9 +262,9 @@ int LoadLIBShape(char *SLIB_Filename, char *Filename,struct Shape *SHP)
 		if (CHUNK("BODY"))
 		{
 			ptr += 4;
-			size = *((long far *)ptr);
+			size = *((int32_t far *)ptr);
 			ptr += 4;
-			SwapLong((long far *)&size);
+			SwapLong((int32_t far *)&size);
 			SHP->BPR = (SHP->bmHdr.w+7) >> 3;
 			MM_GetPtr(&SHP->Data,size);
 			if (!SHP->Data)
@@ -318,16 +318,16 @@ EXIT_FUNC:;
 memptr LoadLIBFile(char *LibName,char *FileName,memptr *MemPtr)
 {
 	int handle;
-	unsigned long header;
+	uint32_t header;
 	struct ChunkHeader Header;
-	unsigned long ChunkLen;
+	uint32_t ChunkLen;
 	short x;
 	struct FileEntryHdr FileEntry;     			// Storage for file once found
 	struct FileEntryHdr FileEntryHeader;		// Header used durring searching
 	struct SoftLibHdr LibraryHeader;				// Library header - Version Checking
 	boolean FileFound = false;
-	unsigned long id_slib = ID_SLIB;
-	unsigned long id_chunk = ID_CHUNK;
+	uint32_t id_slib = ID_SLIB;
+	uint32_t id_chunk = ID_CHUNK;
 
 
 	//

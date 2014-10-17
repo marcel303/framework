@@ -92,7 +92,7 @@ typedef	struct
 {
 	unsigned short	worldx,worldy;
 	boolean	leveldone[GAMELEVELS];
-	long	score,nextextra;
+	int32_t	score,nextextra;
 	short int		flowerpowers;
 	short int		boobusbombs,bombsthislevel;
 	short int		keys;
@@ -153,7 +153,7 @@ struct BitMap {
 
 struct Shape {
 	memptr Data;
-	long size;
+	int32_t size;
 	unsigned short BPR;
 	struct BitMapHeader bmHdr;
 };
@@ -357,11 +357,11 @@ extern	statetype s_deathboom2;
 void FreeShape(struct Shape *shape);
 short UnpackEGAShapeToScreen(struct Shape *SHP, short startx, short starty);
 
-long Verify(char *filename);
+int32_t Verify(char *filename);
 memptr InitBufferedIO(int handle, BufferedIO *bio);
 void FreeBufferedIO(BufferedIO *bio);
 byte bio_readch(BufferedIO *bio);
 void bio_fillbuffer(BufferedIO *bio);
-void SwapLong(long far *Var);
+void SwapLong(int32_t far *Var);
 void SwapWord(unsigned short far *Var);
 void MoveGfxDst(short x, short y);

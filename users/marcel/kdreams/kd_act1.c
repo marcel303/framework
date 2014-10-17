@@ -73,7 +73,7 @@ short	flowertime[4] = {700,700,350,175};
 
 void DoGravity (objtype *ob)
 {
-	long	i;
+	int32_t	i;
 //
 // only accelerate on odd tics, because of limited precision
 //
@@ -107,7 +107,7 @@ void DoGravity (objtype *ob)
 
 void AccelerateX (objtype *ob, short dir, short max)
 {
-	long			i;
+	int32_t			i;
 	unsigned short	olddir;
 
 	olddir = ob->xspeed & 0x8000;
@@ -144,7 +144,7 @@ void AccelerateX (objtype *ob, short dir, short max)
 
 void FrictionX (objtype *ob)
 {
-	long			i;
+	int32_t			i;
 	short			dir;
 	unsigned short	olddir;
 
@@ -430,7 +430,7 @@ void ChangeToFlower (objtype *ob)
 {
 	SD_PlaySound (FLOWERPOWERSND);
 	ob->y = ob->bottom-TILEGLOBAL*2;
-	ob->temp1 = (int)ob->obclass;
+	ob->temp1 = (intptr_t)ob->obclass;
 	ob->temp2 = (intptr_t)ob->state;
 	ob->temp3 = 0;
 	ob->needtoclip = true;

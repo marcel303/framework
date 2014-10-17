@@ -27,6 +27,7 @@
 =============================================================================
 */
 
+#include <SDL/SDL.h> // crashes on Mac if we don't include this file here..
 #include "string.h"
 
 #include "KD_DEF.H"
@@ -611,5 +612,7 @@ int main (int argc, char ** argv)
 
 	DemoLoop();					// DemoLoop calls Quit when everything is done
 	Quit("Demo loop exited???");
+	
+	return -1;
 }
 

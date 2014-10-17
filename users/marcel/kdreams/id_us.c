@@ -68,7 +68,7 @@
 typedef	struct
 		{
 			char	name[MaxHighName + 1];
-			long	score;
+			int32_t	score;
 			word	completed;
 		} HighScore;
 #pragma pack(pop)
@@ -576,7 +576,7 @@ USL_Show(word x,word y,word w,boolean show,boolean hilight)
 //
 ///////////////////////////////////////////////////////////////////////////
 static void
-USL_ShowMem(word x,word y,long mem)
+USL_ShowMem(word x,word y,int32_t mem)
 {
 	char	buf[16];
 	word	i;
@@ -745,7 +745,7 @@ US_PrintUnsigned(longword n)
 //
 ///////////////////////////////////////////////////////////////////////////
 void
-US_PrintSigned(long n)
+US_PrintSigned(int32_t n)
 {
 	char	buffer[32];
 
@@ -1830,10 +1830,10 @@ USL_TrackItem(word hiti,word hitn)
 //
 ///////////////////////////////////////////////////////////////////////////
 static void
-USL_GlideCursor(long newx,long newy)
+USL_GlideCursor(int32_t newx,int32_t newy)
 {
 	word	steps;
-	long	x,y,
+	int32_t	x,y,
 			dx,dy;
 
 	if (grmode == CGAGR)
@@ -1841,10 +1841,10 @@ USL_GlideCursor(long newx,long newy)
 	else
 		steps = 8;
 
-	x = (long)CursorX << 16;
-	dx = ((newx << 16) - x) / (long)steps;
-	y = (long)CursorY << 16;
-	dy = ((newy << 16) - y) / (long)steps;
+	x = (int32_t)CursorX << 16;
+	dx = ((newx << 16) - x) / (int32_t)steps;
+	y = (int32_t)CursorY << 16;
+	dy = ((newy << 16) - y) / (int32_t)steps;
 
 	while ((CursorX != newx) || (CursorY != newy))
 	{
@@ -2286,7 +2286,7 @@ USL_ClearBottom(void)
 //
 ///////////////////////////////////////////////////////////////////////////
 static word
-USL_FormatHelp(char far *text,long len)
+USL_FormatHelp(char far *text,int32_t len)
 {
 	word	line,
 			w,h,
@@ -2366,7 +2366,7 @@ USL_DrawHelp(char far *text,word start,word end,word line,word h,word far *lp)
 //
 ///////////////////////////////////////////////////////////////////////////
 static void
-USL_DoHelp(memptr text,long len)
+USL_DoHelp(memptr text,int32_t len)
 {
 	boolean		done,
 				moved;
@@ -2642,7 +2642,7 @@ USL_CtlHButtonCustom(UserCall call,word i,word n)
 	{
 		char	*name;
 		int		file;
-		long	len;
+		int32_t	len;
 		memptr	buf;
 
 		switch (n)
@@ -3689,7 +3689,7 @@ US_DisplayHighScores(short which)
 //
 ///////////////////////////////////////////////////////////////////////////
 void
-US_CheckHighScore(long score,word other)
+US_CheckHighScore(int32_t score,word other)
 {
 	word		i,j,
 				n;

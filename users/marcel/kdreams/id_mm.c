@@ -252,7 +252,7 @@ void MML_ShutdownXMS (void)
 void MM_Startup (void)
 {
 	int i;
-	unsigned 	long length;
+	uint32_t	 length;
 	void far 	*start;
 	unsigned 	segstart,seglength,endfree;
 
@@ -398,7 +398,7 @@ void MM_Shutdown (void)
 ====================
 */
 
-void MM_GetPtr (memptr *baseptr,unsigned long size)
+void MM_GetPtr (memptr *baseptr,uint32_t size)
 {
 	mmblocktype far *scan,far *lastscan,far *endscan
 				,far *purge,far *next;
@@ -690,7 +690,7 @@ void MM_ShowMemory (void)
 {
 	mmblocktype far *scan;
 	unsigned color,temp;
-	long	end;
+	int32_t	end;
 
 	VW_SetLineWidth(40);
 	temp = bufferofs;
@@ -737,7 +737,7 @@ void MM_ShowMemory (void)
 ======================
 */
 
-long MM_UnusedMemory (void)
+int32_t MM_UnusedMemory (void)
 {
 	unsigned free;
 	mmblocktype far *scan;
@@ -767,7 +767,7 @@ long MM_UnusedMemory (void)
 ======================
 */
 
-long MM_TotalFree (void)
+int32_t MM_TotalFree (void)
 {
 	unsigned free;
 	mmblocktype far *scan;

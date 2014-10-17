@@ -1,9 +1,19 @@
-CFLAGS = -I/usr/local/include -DNO_SDL_GLEXT
+CFLAGS = -I/usr/local/include -DNO_SDL_GLEXT -g
 
-LFLAGS += ../framework/macos/SDL/SDL
-LFLAGS += -framework OpenGL
+LFLAGS += `sdl-config --static-libs`
+LFLAGS += -framework OpenGL -lc++
 
 SRC = \
+	static/AUDIODCT.c \
+	static/AUDIOHHD.c \
+	static/CONTEXT.c \
+	static/EGADICT.c \
+	static/EGAHEAD.c \
+	static/GAMETEXT.c \
+	static/MAPDICT.c \
+	static/MAPHEAD.c \
+	static/STORY.c \
+	opl/opl.c \
 	gelib.c \
 	id_ca.c \
 	id_in.c \
@@ -18,12 +28,14 @@ SRC = \
 	kd_act1.c \
 	kd_act2.c \
 	kd_demo.c \
+	kd_keen.c \
 	kd_main.c \
 	kd_play.c \
 	lzhuf.c \
+	shifttable.c \
 	soft.c \
 	stubs.c \
-	syscode.c \
+	syscode.c
 
 OBJ = $(SRC:.c=.o)
 
@@ -51,10 +63,11 @@ STATIC : $(BIN2C) dummy
 	$(BIN2C) static/STORY.KDR static/STORY story
 
 $(KDREAMS) : STATIC $(OBJ)
-	gcc -o KDREAMS syscode.o $(LFLAGS)
+	gcc -o KDREAMS $(OBJ) $(LFLAGS)
+	cd game && lldb ../KDREAMS
 
 %.o : %.c
-	gcc -c $< -o $@ $(CFLAGS)
+	gcc $(CFLAGS) -c $< -o $@
 
 %.o : %.cpp
-	gcc -c $< -o $@ $(CFLAGS)
+	gcc $(CFLAGS) -c $< -o $@

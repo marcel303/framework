@@ -567,7 +567,7 @@ void MelonSpitThink (objtype *ob)
 void	ProjectileReact (objtype *ob)
 {
 	unsigned short wall,absx,absy,angle,newangle;
-	unsigned long speed;
+	uint32_t speed;
 
 	PLACESPRITE;
 	if (ob->hiteast || ob->hitwest)

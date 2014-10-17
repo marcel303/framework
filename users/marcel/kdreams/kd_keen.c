@@ -95,7 +95,7 @@ unsigned short	bounceangle[8][8] =
 */
 
 int	jumptime;
-long	leavepoletime;		// TimeCount when jumped off pole
+int32_t	leavepoletime;		// TimeCount when jumped off pole
 
 /*
 =============================================================================
@@ -128,7 +128,7 @@ void	SpawnScore (void)
 	scoreobj->obclass = inertobj;
 	scoreobj->active = allways;
 	scoreobj->needtoclip = false;
-	*((long *)&(scoreobj->temp1)) = -1;		// force score to be updated
+	*((int32_t *)&(scoreobj->temp1)) = -1;		// force score to be updated
 	scoreobj->temp3 = -1;			// and flower power
 	scoreobj->temp4 = -1;			// and lives
 	NewState (scoreobj,&s_score);
@@ -560,7 +560,7 @@ void	PowerCount (objtype *ob)
 void	CalcSingleGravity (void)
 {
 	unsigned short	speed;
-	long			i;
+	int32_t			i;
 //
 // only accelerate on odd tics, because of limited precision
 //
@@ -622,6 +622,8 @@ void	PowerContact (objtype *ob, objtype *hit)
 		SD_PlaySound (BOMBBOOMSND);
 		ChangeState (ob,&s_bombexplode);
 		break;
+	default:
+		break;
 	}
 }
 
@@ -637,7 +639,7 @@ void	PowerContact (objtype *ob, objtype *hit)
 void	PowerReact (objtype *ob)
 {
 	unsigned short wall,absx,absy,angle,newangle;
-	unsigned long speed;
+	uint32_t speed;
 
 	PLACESPRITE;
 	if (ob->hiteast || ob->hitwest)
@@ -1888,6 +1890,9 @@ void	KeenPoleThink		(objtype *ob)
 		ob->ydir = 1;
 		KeenDropThink (ob);
 		return;
+
+	default:
+		break;
 	}
 
 	if (c.xaxis)
@@ -1947,6 +1952,9 @@ void	KeenClimbThink		(objtype *ob)
 		ob->ydir = 1;
 		KeenDropThink (ob);
 		break;
+
+	default:
+		break;
 	}
 
 	PoleActions (ob);
@@ -1990,6 +1998,9 @@ void	KeenDropThink		(objtype *ob)
 	case 0:
 		ob->state = &s_keenpole;
 		ob->ydir = 0;
+		break;
+
+	default:
 		break;
 	}
 
@@ -2263,6 +2274,8 @@ void	KeenContact (objtype *ob, objtype *hit)
 			KillKeen ();
 		break;
 
+	default:
+		break;
 	}
 }
 

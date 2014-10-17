@@ -318,7 +318,7 @@ LoadGame(int file)
 			break;
 	}
 
-	*((long *)&(scoreobj->temp1)) = -1;		// force score to be updated
+	*((int32_t *)&(scoreobj->temp1)) = -1;		// force score to be updated
 	scoreobj->temp3 = -1;			// and flower power
 	scoreobj->temp4 = -1;			// and lives
 

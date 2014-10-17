@@ -60,8 +60,8 @@ typedef struct
 
 typedef struct
 {
-	unsigned short	RLEWtag;
-	long			headeroffsets[100];
+	uint16_t		RLEWtag;
+	int32_t			headeroffsets[100];
 	byte			headersize[100];		// headers are very small
 	//byte			tileinfo[];
 } mapfiletype;
@@ -106,8 +106,8 @@ int			profilehandle = -1;
 =============================================================================
 */
 
-long		_seg *grstarts;	// array of offsets in egagraph, -1 for sparse
-long		_seg *audiostarts;	// array of offsets in audio / audiot
+int32_t		_seg *grstarts;	// array of offsets in egagraph, -1 for sparse
+int32_t		_seg *audiostarts;	// array of offsets in audio / audiot
 
 huffnode	*grhuffman;
 huffnode	*maphuffman;
@@ -123,7 +123,7 @@ int			grhandle = -1;		// handle to EGAGRAPH
 int			maphandle = -1;		// handle to MAPTEMP / GAMEMAPS
 int			audiohandle = -1;	// handle to AUDIOT / AUDIO
 
-long		chunkcomplen,chunkexplen;
+int32_t		chunkcomplen,chunkexplen;
 
 SDMode		oldsoundmode;
 
@@ -164,7 +164,7 @@ void CAL_GetGrChunkLength (short chunk)
 ==========================
 */
 
-boolean CA_FarRead (int handle, byte far *dest, long length)
+boolean CA_FarRead (int handle, byte far *dest, int32_t length)
 {
 	//if (length>0xffffl)
 	//	Quit ("CA_FarRead doesn't support 64K reads yet!");
@@ -183,7 +183,7 @@ boolean CA_FarRead (int handle, byte far *dest, long length)
 ==========================
 */
 
-boolean CA_FarWrite (int handle, byte far *source, long length)
+boolean CA_FarWrite (int handle, byte far *source, int32_t length)
 {
 	if (length>0xffffl)
 		Quit ("CA_FarWrite doesn't support 64K reads yet!");
@@ -205,7 +205,7 @@ boolean CA_FarWrite (int handle, byte far *source, long length)
 boolean CA_LoadFile (char *filename, memptr *ptr)
 {
 	int handle;
-	long size;
+	int32_t size;
 
 	if ((handle = _open(filename,O_RDONLY | O_BINARY, S_IREAD)) == -1)
 		return false;
@@ -231,7 +231,7 @@ boolean CA_LoadFile (char *filename, memptr *ptr)
 ======================
 */
 
-void CAL_HuffExpand(byte * __restrict source, byte * __restrict dest, long length, huffnode * __restrict hufftable)
+void CAL_HuffExpand(byte * __restrict source, byte * __restrict dest, int32_t length, huffnode * __restrict hufftable)
 {
 	unsigned char * end = dest + length;
 	short b;
@@ -279,9 +279,9 @@ void CAL_HuffExpand(byte * __restrict source, byte * __restrict dest, long lengt
 ======================
 */
 
-long CA_RLEWCompress (unsigned short huge *source, long length, unsigned short huge *dest, unsigned short rlewtag)
+int32_t CA_RLEWCompress (unsigned short huge *source, int32_t length, unsigned short huge *dest, unsigned short rlewtag)
 {
-  long complength;
+  int32_t complength;
   unsigned short value,count,i;
   unsigned short huge *start,huge *end;
 
@@ -335,7 +335,7 @@ long CA_RLEWCompress (unsigned short huge *source, long length, unsigned short h
 ======================
 */
 
-void CA_RLEWexpand (unsigned short huge *source, unsigned short huge *dest, long length, unsigned short rlewtag)
+void CA_RLEWexpand (unsigned short huge *source, unsigned short huge *dest, int32_t length, unsigned short rlewtag)
 {
   unsigned short value,count,i;
   unsigned short huge *end;
@@ -439,7 +439,7 @@ static void CreateIdentityHuffmanDict(huffnode *nodes)
 void CAL_SetupGrFile (void)
 {
 	int handle;
-	long headersize,length;
+	int32_t headersize,length;
 	memptr compseg;
 
 //
@@ -475,7 +475,7 @@ void CAL_SetupGrFile (void)
 	}
 	else
 	{
-		grstarts = (long _seg *)FP_SEG(EGAhead);
+		grstarts = (int32_t _seg *)FP_SEG(EGAhead);
 	}
 
 	// open the graphics file, leaving it open until the game is finished
@@ -530,7 +530,7 @@ void CAL_SetupGrFile (void)
 void CAL_SetupMapFile (void)
 {
 	int handle,i;
-	long length;
+	int32_t length;
 
 //
 // load MAPDICT.KDR
@@ -587,7 +587,7 @@ void CAL_SetupMapFile (void)
 void CAL_SetupAudioFile (void)
 {
 	int handle,i;
-	long length;
+	int32_t length;
 
 //
 // load maphead.ext (offsets and tileinfo for map file)
@@ -602,7 +602,7 @@ void CAL_SetupAudioFile (void)
 	_close(handle);
 #else
 	audiohuffman = (huffnode *)audiodict;
-	audiostarts = (long _seg *)FP_SEG(audiohead);
+	audiostarts = (int32_t _seg *)FP_SEG(audiohead);
 #endif
 
 //
@@ -701,7 +701,7 @@ void CA_Shutdown (void)
 
 void CA_CacheAudioChunk (short chunk)
 {
-	long	pos,compressed,expanded;
+	int32_t	pos,compressed,expanded;
 	memptr	bigbufferseg;
 	byte	far *source;
 
@@ -739,7 +739,7 @@ void CA_CacheAudioChunk (short chunk)
 		source = bigbufferseg;
 	}
 
-	expanded = *(long far *)source;
+	expanded = *(int32_t far *)source;
 	source += 4;			// skip over length
 	MM_GetPtr ((memptr*)&audiosegs[chunk],expanded);
 	CAL_HuffExpand (source,audiosegs[chunk],expanded,audiohuffman);
@@ -1036,7 +1036,7 @@ void CAL_CacheSprite (short chunk, char far *compressed)
 
 void CAL_ExpandGrChunk (short chunk, byte far *source)
 {
-	long	pos,expanded;
+	int32_t	pos,expanded;
 	short	next;
 	spritetabletype	*spr;
 
@@ -1070,7 +1070,7 @@ void CAL_ExpandGrChunk (short chunk, byte far *source)
 	//
 	// everything else has an explicit size longword
 	//
-		expanded = *(long far *)source;
+		expanded = *(int32_t far *)source;
 		source += 4;			// skip over length
 	}
 
@@ -1100,7 +1100,7 @@ void CAL_ExpandGrChunk (short chunk, byte far *source)
 
 void CAL_ReadGrChunk (short chunk)
 {
-	long	pos,compressed;
+	int32_t	pos,compressed;
 	memptr	bigbufferseg;
 	byte	far *source;
 	short	next;
@@ -1153,7 +1153,7 @@ void CAL_ReadGrChunk (short chunk)
 
 void CA_CacheGrChunk (short chunk)
 {
-	long	pos,compressed;
+	int32_t	pos,compressed;
 	memptr	bigbufferseg;
 	byte	far *source;
 	short	next;
@@ -1210,7 +1210,7 @@ void CA_CacheGrChunk (short chunk)
 
 void CA_CacheMap (short mapnum)
 {
-	long			pos,compressed,expanded;
+	int32_t			pos,compressed,expanded;
 	short int		plane;
 	memptr			*dest,bigbufferseg,buffer2seg;
 	unsigned short	size;
@@ -1400,9 +1400,9 @@ void CA_CacheMarks (char *title, boolean cachedownlevel)
 {
 	boolean dialog;
 	short 	i,next,homex,homey,x,y,thx,thy,numcache,lastx,xl,xh;
-	long	barx,barstep;
-	long	pos,endpos,nextpos,nextendpos,compressed;
-	long	bufferstart,bufferend;	// file position of general buffer
+	int32_t	barx,barstep;
+	int32_t	pos,endpos,nextpos,nextendpos,compressed;
+	int32_t	bufferstart,bufferend;	// file position of general buffer
 	byte	far *source;
 	memptr	bigbufferseg;
 
@@ -1480,7 +1480,7 @@ void CA_CacheMarks (char *title, boolean cachedownlevel)
 
 		thx += 4;		// first line location
 		thy += 5;
-		barx = (long)thx<<16;
+		barx = (int32_t)thx<<16;
 		lastx = thx;
 		VW_UpdateScreen();
 	}

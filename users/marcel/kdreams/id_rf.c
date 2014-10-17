@@ -128,7 +128,7 @@ typedef struct animtilestruct
 */
 
 unsigned short	tics;
-long			lasttimecount;
+int32_t			lasttimecount;
 
 boolean			compatability;			// crippled refresh for wierdo SVGAs
 boolean			tickfps = false;
@@ -222,7 +222,7 @@ void RFL_NewTile (unsigned short updateoffset);
 void RFL_MaskForegroundTiles (void);
 void RFL_UpdateTiles (void);
 
-void RFL_CalcOriginStuff (long x, long y);
+void RFL_CalcOriginStuff (int32_t x, int32_t y);
 void RFL_InitSpriteList (void);
 void RFL_InitAnimList (void);
 void RFL_CheckForAnimTile (unsigned short x, unsigned short y);
@@ -816,7 +816,7 @@ void RFL_InitSpriteList (void)
 =================
 */
 
-void RFL_CalcOriginStuff (long x, long y)
+void RFL_CalcOriginStuff (int32_t x, int32_t y)
 {
 	if (x<originxmin)
 	  x=originxmin;
@@ -1072,7 +1072,7 @@ void	RFL_OldRow (unsigned short updatespot, unsigned short count, unsigned short
 
 void RF_Scroll (short int x, short int y)
 {
-	long			neworgx,neworgy;
+	int32_t			neworgx,neworgy;
 	short int		i,deltax,deltay,absdx,absdy;
 	short int		oldxt,oldyt,move,yy;
 	unsigned short	updatespot;
@@ -1086,7 +1086,7 @@ void RF_Scroll (short int x, short int y)
 	oldpanadjust = panadjust;
 	oldpanx = panx;
 
-	RFL_CalcOriginStuff ((long)originxglobal + x,(long)originyglobal + y);
+	RFL_CalcOriginStuff ((int32_t)originxglobal + x,(int32_t)originyglobal + y);
 
 	deltax = originxtile - oldxt;
 	absdx = abs(deltax);
@@ -1644,7 +1644,7 @@ redraw:
 void RF_Refresh (void)
 {
 	byte	*newupdate;
-	long	newtime;
+	int32_t	newtime;
 
 	updateptr = updatestart[otherpage];
 

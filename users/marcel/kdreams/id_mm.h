@@ -44,7 +44,7 @@ typedef void _seg * memptr;
 
 typedef struct
 {
-	long	nearheap,farheap,EMSmem,XMSmem,mainmem;
+	int32_t	nearheap,farheap,EMSmem,XMSmem,mainmem;
 } mminfotype;
 
 //==========================================================================
@@ -62,7 +62,7 @@ void MM_Startup (void);
 static void MM_Shutdown (void) { }
 static void MM_MapEMS (void) { }
 
-static void MM_GetPtr (memptr *baseptr,unsigned long size)
+static void MM_GetPtr (memptr *baseptr,uint32_t size)
 {
 	*baseptr = malloc(size);
 }
@@ -78,7 +78,7 @@ static void MM_SortMem (void) { }
 
 static void MM_ShowMemory (void) { }
 
-static long MM_UnusedMemory (void) { return 1024*640; }
-static long MM_TotalFree (void) { return 1024*640; }
+static int32_t MM_UnusedMemory (void) { return 1024*640; }
+static int32_t MM_TotalFree (void) { return 1024*640; }
 
 #endif

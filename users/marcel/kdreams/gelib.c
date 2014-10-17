@@ -111,10 +111,10 @@ short UnpackEGAShapeToScreen(struct Shape *SHP, short startx, short starty)
 //
 // Verify()
 //
-long Verify(char *filename)
+int32_t Verify(char *filename)
 {
 	int handle;
-	long size;
+	int32_t size;
 
 	if ((handle=_open(filename,O_BINARY))==-1)
 		return (0);
@@ -203,7 +203,7 @@ void bio_fillbuffer(BufferedIO *bio)
 //
 // SwapLong()
 //
-void SwapLong(long far *Var)
+void SwapLong(int32_t far *Var)
 {
 	char temp;
 	char * bytes = (char*)Var;
@@ -219,7 +219,7 @@ void SwapLong(long far *Var)
 //
 // SwapWord()
 //
-void SwapWord(unsigned short far *Var)
+void SwapWord(uint16_t far *Var)
 {
 	char temp;
 	char * bytes = (char*)Var;

@@ -28,22 +28,22 @@
 #pragma pack(2)
 
 struct BitMapHeader {
-	unsigned short	w,h,x,y;
-	unsigned char	d,trans,comp,pad;
+	uint16_t	w,h,x,y;
+	uint8_t		d,trans,comp,pad;
 };
 
 struct BitMap {
-	unsigned short Width;
-	unsigned short Height;
-	unsigned short Depth;
-	unsigned short BytesPerRow;
+	uint16_t Width;
+	uint16_t Height;
+	uint16_t Depth;
+	uint16_t BytesPerRow;
 	char far *Planes[8];
 };
 
 struct Shape {
 	memptr Data;
-	long size;
-	unsigned short BPR;
+	int32_t size;
+	uint16_t BPR;
 	struct BitMapHeader bmHdr;
 };
 

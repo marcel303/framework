@@ -2,7 +2,11 @@
 
 // when set to 1, use VirtualAlloc to allocate the EGA memory, making it
 // easier to detect out of range memory accesses and memory corruption
-#define PROTECT_DISPLAY_BUFFER 1
+#ifdef WIN32
+	#define PROTECT_DISPLAY_BUFFER 1
+#else
+	#define PROTECT_DISPLAY_BUFFER 0
+#endif
 
 // size of a single EGA bit plane (in bytes)
 #define DISPLAY_BUFFER_SIZE (64*1024)

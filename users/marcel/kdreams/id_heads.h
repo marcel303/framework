@@ -30,10 +30,11 @@
 
 #ifdef WIN32
 	#include <IO.H>
-	//#include <process.h>
 #else
 	#include <unistd.h>
 #endif
+
+#include <stdint.h>
 
 #define SUPER_SMOOTH_SCROLLING 1
 
@@ -59,6 +60,7 @@
 	}
 	#define _stricmp strcasecmp
 	#define strcpy_s(dst, dstSize, src) strcpy(dst, src)
+	#define sprintf_s(dst, dstSize, fmt, ...) sprintf(dst, fmt, __VA_ARGS__)
 	static char * _ltoa(long v, char * s, int radix)
 	{
 		assert(radix == 10);
@@ -103,8 +105,8 @@ extern char ** _argv;
 typedef	enum {false,true}		booleanValues;
 typedef	unsigned	char		boolean;
 typedef	unsigned	char		byte;
-typedef	unsigned	short		word;
-typedef	unsigned	long		longword;
+typedef	uint16_t				word;
+typedef	uint32_t				longword;
 typedef	byte *					Ptr;
 
 typedef	struct

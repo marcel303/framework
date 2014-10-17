@@ -669,7 +669,7 @@ void FadeAndUnhook (void)
 
 void 	SetupGameLevel (boolean loadnow)
 {
-	long	orgx,orgy;
+	int32_t	orgx,orgy;
 
 	bombspresent = false;
 //
@@ -730,8 +730,8 @@ void 	SetupGameLevel (boolean loadnow)
 //
 // start the initial view position to center the player
 //
-		orgx = (long)player->x - (150<<G_P_SHIFT);
-		orgy = (long)player->y-(84<<G_P_SHIFT);
+		orgx = (int32_t)player->x - (150<<G_P_SHIFT);
+		orgy = (int32_t)player->y-(84<<G_P_SHIFT);
 		if (orgx<0)
 			orgx=0;
 		if (orgy<0)
@@ -1782,7 +1782,7 @@ void HandleDeath (void)
 void GameLoop (void)
 {
 	unsigned short	cities,i;
-	long			orgx,orgy;
+	int32_t			orgx,orgy;
 
 	gamestate.difficulty = restartgame;
 	restartgame = gd_Continue;
@@ -1796,8 +1796,8 @@ startlevel:
 			//
 			// start the initial view position to center the player
 			//
-			orgx = (long)player->x - (150<<G_P_SHIFT);
-			orgy = (long)player->y-(84<<G_P_SHIFT);
+			orgx = (int32_t)player->x - (150<<G_P_SHIFT);
+			orgy = (int32_t)player->y-(84<<G_P_SHIFT);
 			if (orgx<0)
 				orgx=0;
 			if (orgy<0)

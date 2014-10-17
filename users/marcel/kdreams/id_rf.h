@@ -81,7 +81,7 @@ extern	boolean			compatability;			// crippled refresh for wierdo SVGAs
 extern	boolean			tickfps;
 
 extern	unsigned short	tics;
-extern	long			lasttimecount;
+extern	int32_t			lasttimecount;
 
 extern	unsigned short	originxglobal,originyglobal;
 extern	unsigned short	originxtile,originytile;
