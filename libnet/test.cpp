@@ -1,6 +1,7 @@
 #include <exception>
 #include <map>
 #include <SDL/SDL.h>
+#include "BitStream.h"
 #include "BinaryDiff.h"
 #include "ChannelHandler.h"
 #include "ChannelManager.h"
@@ -13,6 +14,9 @@
 #include "PolledTimer.h"
 #include "SDL_Bitmap.h"
 #include "Timer.h"
+
+static void TestBitStream();
+static void TestGameUpdate();
 
 enum TestProtocol
 {
@@ -501,7 +505,7 @@ public:
 	std::map<uint32_t, ClientState *> m_clientStates;
 };
 
-void TestGameUpdate()
+static void TestGameUpdate()
 {
 #if 0
 	for (uint32_t i = 0; i < 8; ++i)
@@ -563,10 +567,68 @@ void TestGameUpdate()
 	}
 }
 
+static void TestBitStream()
+{
+	BitStream bs1;
+
+	uint8_t v1 = 0x11;
+	uint16_t v2 = 0x2233;
+	uint32_t v3 = 0x44556677;
+
+	bs1.Write(v1);
+	bs1.Write(v2);
+	bs1.Write(v3);
+
+	bs1.WriteBit(true);
+	bs1.WriteBit(false);
+	bs1.WriteBit(true);
+
+	uint32_t v4 = 0x8899aabb;
+	uint8_t v5 = 0xcc;
+	bs1.Write(v4);
+	bs1.WriteAlign();
+	bs1.Write(v5);
+
+	bs1.WriteString("Hello World!");
+
+	uint8_t v[4] = { 0x44, 0x33, 0x22, 0x11 };
+	bs1.WriteAlignedBytes(v, 4);
+
+	{
+		uint8_t r1;
+		uint16_t r2;
+		uint32_t r3;
+
+		BitStream bs2(bs1.GetData(), bs1.GetDataSize());
+
+		bs2.Read(r1);
+		bs2.Read(r2);
+		bs2.Read(r3);
+
+		bool b1 = bs2.ReadBit();
+		bool b2 = bs2.ReadBit();
+		bool b3 = bs2.ReadBit();
+
+		uint32_t r4;
+		uint8_t r5;
+
+		bs2.Read(r4);
+		bs2.ReadAlign();
+		bs2.Read(r5);
+
+		std::string s = bs2.ReadString();
+
+		uint8_t r[4];
+		bs2.ReadAlignedBytes(r, 4);
+	}
+}
+
 int main(int argc, char * argv[])
 {
 	try
 	{
+		TestBitStream();
+
 		const uint32_t displaySx = 256;
 		const uint32_t displaySy = 256;
 
