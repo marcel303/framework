@@ -687,6 +687,22 @@ int JoyAbsX;
 int JoyAbsY;
 int JoyButtons;
 
+struct
+{
+	int dst;
+	SDLKey src;
+} s_keyTranslations[] =
+{
+	{ 1, SDLK_ESCAPE },
+	{ 28, SDLK_RETURN },
+	{ 29, SDLK_LCTRL },
+	{ 56, SDLK_LALT },
+	{ 72, SDLK_UP },
+	{ 75, SDLK_LEFT },
+	{ 77, SDLK_RIGHT },
+	{ 80, SDLK_DOWN }
+};
+
 void SYS_Update()
 {
 	SDL_Event e;
@@ -698,6 +714,13 @@ void SYS_Update()
 		if (e.type == SDL_KEYDOWN || e.type == SDL_KEYUP)
 		{
 			int key = e.key.keysym.scancode;
+			int i;
+			
+		#if 1
+			for (i = 0; i < sizeof(s_keyTranslations) / sizeof(s_keyTranslations[0]); ++i)
+				if (s_keyTranslations[i].src == e.key.keysym.sym)
+					key = s_keyTranslations[i].dst;
+		#endif
 
 			if (key < NumCodes)
 			{

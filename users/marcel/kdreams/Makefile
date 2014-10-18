@@ -51,20 +51,23 @@ $(BIN2C) : tools/bin2c.o
 
 .PHONY : dummy
 
-STATIC : $(BIN2C) dummy
+data : $(BIN2C)
 	$(BIN2C) static/AUDIODCT.KDR static/AUDIODCT audiodict
 	$(BIN2C) static/AUDIOHHD.KDR static/AUDIOHHD audiohead
 	$(BIN2C) static/CONTEXT.KDR static/CONTEXT context
 	$(BIN2C) static/EGADICT.KDR static/EGADICT EGAdict
 	$(BIN2C) static/EGAHEAD.KDR static/EGAHEAD EGAhead
 	$(BIN2C) static/GAMETEXT.KDR static/GAMETEXT gametext
-	$(BIN2C) static/MAPDICT.KDR static/MAPDICT mapdict
-	$(BIN2C) static/MAPHEAD.KDR static/MAPHEAD maphead
+	$(BIN2C) static/extr-1.13/MAPDICT.KDR static/MAPDICT mapdict
+	$(BIN2C) static/extr-1.13/MAPHEAD.KDR static/MAPHEAD maphead
 	$(BIN2C) static/STORY.KDR static/STORY story
 
-$(KDREAMS) : STATIC $(OBJ)
+$(KDREAMS) : $(OBJ) dummy
 	gcc -o KDREAMS $(OBJ) $(LFLAGS)
-	cd game && lldb ../KDREAMS
+	cd game && lldb ../KDREAMS /FULLSCREEN
+
+clean : dummy
+	rm *.o
 
 %.o : %.c
 	gcc $(CFLAGS) -c $< -o $@
