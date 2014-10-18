@@ -507,27 +507,6 @@ public:
 
 static void TestGameUpdate()
 {
-#if 0
-	for (uint32_t i = 0; i < 8; ++i)
-	{
-		const BinaryDiffResult result = gameData.GetDiff(i);
-		const uint32_t overhead = 4;
-		const uint32_t byteCount = result.m_diffCount * overhead + result.m_diffBytes;
-		LOG_INF("byteCount @ treshold %u: %u", i, byteCount);
-		for (const BinaryDiffEntry * entry = result.m_diffs; entry; entry = entry->m_next)
-			LOG_INF("entry: offset: %09u, size: %09u", entry->m_offset, entry->m_size);
-		if (!BinaryDiffValidate(
-			gameData.m_stateVectors[0].m_bytes,
-			gameData.m_stateVectors[1].m_bytes,
-			StateVector::kSize,
-			result.m_diffs))
-		{
-			LOG_ERR("binary diff validation failed", 0);
-			NetAssert(false);
-		}
-	}
-#endif
-
 	GameStateData gameData;
 	int moveX1 = 0;
 	int moveY1 = 0;
@@ -562,6 +541,27 @@ static void TestGameUpdate()
 		
 		const BinaryDiffResult result = gameData.GetDiff(4);
 		LOG_INF("diff bytes: %u bytes", result.m_diffBytes);
+
+	#if 0
+		for (uint32_t i = 0; i < 8; ++i)
+		{
+			const BinaryDiffResult result = gameData.GetDiff(i);
+			const uint32_t overhead = 4;
+			const uint32_t byteCount = result.m_diffCount * overhead + result.m_diffBytes;
+			LOG_INF("byteCount @ treshold %u: %u", i, byteCount);
+			for (const BinaryDiffEntry * entry = result.m_diffs; entry; entry = entry->m_next)
+				LOG_INF("entry: offset: %09u, size: %09u", entry->m_offset, entry->m_size);
+			if (!BinaryDiffValidate(
+				gameData.m_stateVectors[0].m_bytes,
+				gameData.m_stateVectors[1].m_bytes,
+				StateVector::kSize,
+				result.m_diffs))
+			{
+				LOG_ERR("binary diff validation failed", 0);
+				NetAssert(false);
+			}
+		}
+	#endif
 
 		gameData.NextFrame();
 	}

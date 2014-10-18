@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "SharedPtr.h"
 
 class BinaryDiffEntry;
 class BinaryDiffResult;
@@ -38,7 +39,7 @@ public:
 	{
 	}
 
-	BinaryDiffEntry * m_diffs;
+	SharedPtr<BinaryDiffEntry> m_diffs;
 	uint32_t m_diffCount;
 	uint32_t m_diffBytes;
 };
