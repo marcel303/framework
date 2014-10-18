@@ -832,8 +832,7 @@ void VW_UpdateScreen (void)
 #if GRMODE == EGAGR
 	VWL_UpdateScreenBlocks();
 
-	VW_SetScreen(displayofs+panadjust,0);
-	//VW_SetScreen(displayofs+panadjust, panx & 6); // mstodo : depends on whether UI is shown in-game or fullscreen
+	VW_SetScreen(displayofs+panadjust,-1);
 #endif
 
 	if (cursorvisible>0)

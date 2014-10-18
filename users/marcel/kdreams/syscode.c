@@ -54,7 +54,8 @@ static unsigned short _pelpan = 0;
 void VW_SetScreen (unsigned short CRTC, unsigned short pelpan)
 {
 	_CRTC = CRTC;
-	_pelpan = pelpan;
+	if (pelpan != (unsigned short)-1)
+		_pelpan = pelpan;
 
 	SYS_Present();
 }

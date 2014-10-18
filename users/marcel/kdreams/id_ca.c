@@ -50,13 +50,13 @@ extern void SDL_Delay(int delay); // msfixme
 =============================================================================
 */
 
+#pragma pack(push)
+#pragma pack(2)
+
 typedef struct
 {
   unsigned short bit0,bit1;	// 0-255 is a character, > is a pointer to a node
 } huffnode;
-
-#pragma pack(push)
-#pragma pack(2)
 
 typedef struct
 {
