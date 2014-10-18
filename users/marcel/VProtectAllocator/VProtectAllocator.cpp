@@ -7,6 +7,7 @@
 
 #if VPROTECTALLOCATOR_DEBUG
 	#include <assert.h>
+	#include <stdio.h>
 	#define vp_assert assert
 #else
 	#define vp_assert
@@ -24,7 +25,7 @@ this adjacent page serves as a guard area, and memory writes to this page will c
 class VProtectAllocator
 {
 	static const size_t kPageSize = 4096;
-	static const size_t kMinAlign = 16;
+	static const size_t kMinAlign = 1;
 
 	size_t m_numPages;       // total number of allocated pages (non committed initially)
 	size_t * m_allocSizes;   // array which maintains the size of each allocation. used for book keeping
@@ -33,6 +34,14 @@ class VProtectAllocator
 
 	inline void verify(BOOL result) const
 	{
+	#if VPROTECTALLOCATOR_DEBUG
+		if (!result)
+		{
+			DWORD error = GetLastError();
+			printf("VProtectAllocator: error: %x\n", error);
+		}
+	#endif
+
 		vp_assert(result);
 	}
 
@@ -84,7 +93,7 @@ public:
 
 	void * Alloc(size_t size, size_t align)
 	{
-		assert(size != 0);
+		vp_assert(size != 0);
 
 		// align the requested size
 
@@ -121,7 +130,7 @@ public:
 				{
 					free = false;
 
-					begin = i + 1; // next search will start at i + 1
+					begin = i + m_allocSizes[i]; // next search will start at i + m_allocSizes[i]
 				}
 			}
 
@@ -129,8 +138,10 @@ public:
 			{
 				// mark pages as used
 
-				for (size_t i = begin; i < begin + numPages; ++i)
-					m_allocSizes[i] = numPages;
+				m_allocSizes[begin] = numPages;
+
+				for (size_t i = begin + 1; i < begin + numPages; ++i)
+					vp_assert(m_allocSizes[i] == -1);
 
 				// memory for this allocation starts here
 
@@ -150,7 +161,7 @@ public:
 
 				// next alloc starts here
 
-				m_allocPageIndex += numPages;
+				m_allocPageIndex = begin + numPages;
 
 				return result;
 			}
@@ -170,21 +181,21 @@ public:
 		return nullptr;
 	}
 
-	void Free(void * p)
+	void Free(const void * p)
 	{
 		// calculate which page the allocation belongs to, and get the allocation size
 
 		size_t begin = ((char*)p - m_allocPages) / kPageSize;
 		size_t numPages = m_allocSizes[begin];
 		vp_assert(numPages != -1);
+		vp_assert(numPages >= 2);
 
 		// mark the pages as free
 
-		for (size_t i = begin; i < begin + numPages; ++i)
-		{
-			vp_assert(m_allocSizes[i] == numPages);
-			m_allocSizes[i] = -1;
-		}
+		m_allocSizes[begin] = -1;
+
+		for (size_t i = begin + 1; i < begin + numPages; ++i)
+			vp_assert(m_allocSizes[i] == -1);
 
 		// protect and decommit the pages
 
@@ -193,7 +204,7 @@ public:
 		verify(VirtualFree(m_allocPages + begin * kPageSize, (numPages - 1) * kPageSize, MEM_DECOMMIT));
 	}
 
-	bool IsAlloc(void * p)
+	bool IsAlloc(const void * p)
 	{
 		// calculate which page the allocation belongs to, if it were an actual allocation
 
@@ -214,7 +225,7 @@ public:
 		return true;
 	}
 
-	void ShrinkAllocSize(void * p, size_t newSize)
+	void ShrinkAllocSize(const void * p, size_t newSize)
 	{
 		// calculate which page the allocation belongs to, and get the allocation size
 
@@ -224,28 +235,39 @@ public:
 
 		// calculate new page count
 
-		size_t newNumPages = newSize / kPageSize + 1;
+		size_t newNumPages = (newSize + kPageSize - (newSize ? 1 : 0)) / kPageSize + 1;
 
-		assert(newNumPages <= oldNumPages);
+		vp_assert(newNumPages >= 2);
+		vp_assert(newNumPages <= oldNumPages);
 
 		if (newNumPages == oldNumPages)
 			return;
 
 		// update book keeping
 
-		for (size_t i = 0; i < newNumPages; ++i)
-			m_allocSizes[begin + i] = newNumPages;
-		for (size_t i = newNumPages; i < oldNumPages; ++i)
-			m_allocSizes[begin + i] = -1;
+		m_allocSizes[begin] = newNumPages;
+
+		for (size_t i = 1; i < oldNumPages; ++i)
+			vp_assert(m_allocSizes[begin + i] == -1);
+
+		// add new guard page
+
+		DWORD oldProtect;
+		size_t newEnd = begin + newNumPages;
+
+		verify(VirtualProtect(m_allocPages + (newEnd - 1) * kPageSize, kPageSize, PAGE_NOACCESS, &oldProtect));
+		verify(VirtualFree(m_allocPages + (newEnd - 1) * kPageSize, kPageSize, MEM_DECOMMIT));
 
 		// protect and decommit the freed pages
 
-		DWORD oldProtect;
-		verify(VirtualProtect(m_allocPages + (newNumPages - 1) * kPageSize, (oldNumPages - newNumPages) * kPageSize, PAGE_NOACCESS, &oldProtect));
-		verify(VirtualFree(m_allocPages + (newNumPages - 1) * kPageSize, (oldNumPages - newNumPages) * kPageSize, MEM_DECOMMIT));
+		if (oldNumPages - newNumPages - 1 > 0)
+		{
+			verify(VirtualProtect(m_allocPages + newEnd * kPageSize, (oldNumPages - newNumPages - 1) * kPageSize, PAGE_NOACCESS, &oldProtect));
+			verify(VirtualFree(m_allocPages + newEnd * kPageSize, (oldNumPages - newNumPages - 1) * kPageSize, MEM_DECOMMIT));
+		}
 	}
 
-	size_t GetAllocSize(void * p)
+	size_t GetAllocSize(const void * p)
 	{
 		// calculate which page the allocation belongs to, and get the allocation size
 
@@ -362,6 +384,23 @@ void operator delete[](void * p)
 	VFree(p);
 }
 
+class VOverride
+{
+	VProtectAllocator * m_oldAlloc;
+
+public:
+	VOverride(VProtectAllocator * alloc)
+	{
+		m_oldAlloc = s_alloc;
+		s_alloc = alloc;
+	}
+
+	~VOverride()
+	{
+		s_alloc = m_oldAlloc;
+	}
+};
+
 static void test()
 {
 	VProtectAllocator a;
@@ -381,8 +420,8 @@ static void test()
 
 			void * p = a.Alloc(s, align);
 
-			assert(a.IsAlloc(p));
-			assert(a.GetAllocSize(p) >= s && a.GetAllocSize(p) < s + align);
+			vp_assert(a.IsAlloc(p));
+			vp_assert(a.GetAllocSize(p) >= s && a.GetAllocSize(p) < s + align);
 
 			memset(p, 0, s);
 
@@ -394,7 +433,7 @@ static void test()
 
 				//memset(p, 0, s); // will cause an access violation
 
-				assert(!a.IsAlloc(p));
+				vp_assert(!a.IsAlloc(p));
 			}
 		}
 
@@ -476,8 +515,9 @@ int main(int argc, char * argv[])
 
 	{
 		VProtectAllocator a;
+		VOverride o(&a);
 
-		a.Init(1024*1024);
+		a.Init(1024*1024*128);
 
 		size_t pageSize = 4096; // we assume here the page size is 4096. this is fine for this unit test, but it's subject to change!
 
@@ -485,24 +525,61 @@ int main(int argc, char * argv[])
 
 		void * p = a.Alloc(initialSize, pageSize);
 
-		for (int i = a.GetAllocSize(p) / pageSize; i > 0; i /= 2)
 		{
-			a.ShrinkAllocSize(p, pageSize * i);
+		std::map<int, int> m;
+		std::vector<int> v;
 
-			assert(a.GetAllocSize(p) == pageSize * i);
-			assert(a.CalcTotalAllocSize() == pageSize * (i + 1));
+		for (size_t i = a.GetAllocSize(p); i > 0; --i)
+		{
+			a.ShrinkAllocSize(p, i);
 
-			memset(p, 0, pageSize * i);
+			if ((i % pageSize) == 0)
+			{
+				vp_assert(a.GetAllocSize(p) == i);
+				//vp_assert(a.CalcTotalAllocSize() == i + pageSize);
+			}
+			else
+			{
+				vp_assert(a.GetAllocSize(p) >= i && a.GetAllocSize(p) < i + pageSize);
+				//vp_assert(a.CalcTotalAllocSize() == pageSize * (i + 1));
+			}
+
+			memset(p, 0, i);
 
 			if (i <= 8)
 			{
-				//memset(p, 0, pageSize * i + 1); // will cause an access violation
+				//memset(p, 0, i + 1); // will cause an access violation
 			}
+
+			if ((i % 32) == 0)
+			{
+				size_t size = a.GetAllocSize(p);
+
+				a.Free(p);
+
+				p = a.Alloc(size, pageSize);
+			}
+
+			// throw a few other allocation in the mix
+
+			if ((i % 1024) == 0)
+			{
+				m.clear();
+				v.clear();
+			}
+
+			int r = rand();
+
+			m[r] = i;
+
+			v.push_back(m[r]);
+			v.push_back(r);
+		}
 		}
 
 		a.Free(p);
 
-		assert(a.CalcTotalAllocSize() == 0);
+		vp_assert(a.CalcTotalAllocSize() == 0);
 	}
 
 	printf("done\n");
