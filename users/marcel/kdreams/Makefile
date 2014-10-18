@@ -64,7 +64,7 @@ data : $(BIN2C)
 
 $(KDREAMS) : $(OBJ) dummy
 	gcc -o KDREAMS $(OBJ) $(LFLAGS)
-	cd game && lldb ../KDREAMS /FULLSCREEN
+	cd game && lldb ../KDREAMS
 
 clean : dummy
 	rm *.o

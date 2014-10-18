@@ -695,8 +695,8 @@ struct
 {
 	{ 1, SDLK_ESCAPE },
 	{ 28, SDLK_RETURN },
-	{ 29, SDLK_LCTRL },
-	{ 56, SDLK_LALT },
+	{ 29, SDLK_z },
+	{ 56, SDLK_x },
 	{ 72, SDLK_UP },
 	{ 75, SDLK_LEFT },
 	{ 77, SDLK_RIGHT },
@@ -715,6 +715,8 @@ void SYS_Update()
 		{
 			int key = e.key.keysym.scancode;
 			int i;
+			
+			printf("sym: %d\n", (int)e.key.keysym.sym);
 			
 		#if 1
 			for (i = 0; i < sizeof(s_keyTranslations) / sizeof(s_keyTranslations[0]); ++i)
