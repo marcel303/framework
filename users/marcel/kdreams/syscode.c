@@ -716,9 +716,7 @@ void SYS_Update()
 			int key = e.key.keysym.scancode;
 			int i;
 			
-			printf("sym: %d\n", (int)e.key.keysym.sym);
-			
-		#if 1
+		#ifndef WIN32
 			for (i = 0; i < sizeof(s_keyTranslations) / sizeof(s_keyTranslations[0]); ++i)
 				if (s_keyTranslations[i].src == e.key.keysym.sym)
 					key = s_keyTranslations[i].dst;
