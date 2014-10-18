@@ -22,14 +22,14 @@ class BitStream
 		{
 			if (m_data)
 			{
-				const uint32_t newDataSize = m_dataSize * 2;
-				m_data = static_cast<uint8_t*>(realloc(m_data, (newDataSize + 7) >> 3));
+				const uint32_t newDataSize = (((m_dataSize + size) * 2 + 7) >> 3) << 3;
+				m_data = static_cast<uint8_t*>(realloc(m_data, newDataSize >> 3));
 				m_dataSize = newDataSize;
 			}
 			else
 			{
-				const uint32_t newDataSize = 1024;
-				m_data = static_cast<uint8_t*>(malloc((newDataSize + 7) >> 3));
+				const uint32_t newDataSize = ((size + 7) >> 3) << 3;
+				m_data = static_cast<uint8_t*>(malloc(newDataSize >> 3));
 				m_dataSize = newDataSize;
 			}
 		}
@@ -162,16 +162,18 @@ public:
 	{
 		ReadAlign();
 
-		CheckReadCursor(s);
+		CheckReadCursor(s << 3);
 		memcpy(v, &m_data[m_cursor >> 3], s);
+		m_cursor += s << 3;
 	}
 
 	void WriteAlignedBytes(const void * v, const size_t s)
 	{
 		WriteAlign();
 
-		CheckWriteCursor(s);
+		CheckWriteCursor(s << 3);
 		memcpy(&m_data[m_cursor >> 3], v, s);
+		m_cursor += s << 3;
 	}
 
 	std::string ReadString()
@@ -179,7 +181,7 @@ public:
 		ReadAlign();
 
 		uint16_t size;
-		CheckReadCursor(sizeof(size));
+		CheckReadCursor(sizeof(size) << 3);
 		Read(size);
 
 		std::string s;
@@ -196,7 +198,7 @@ public:
 		Assert(s.length() <= 65535);
 		const uint16_t size = s.length();
 
-		CheckWriteCursor(sizeof(size));
+		CheckWriteCursor(sizeof(size) << 3);
 		Write(size);
 
 		WriteAlignedBytes(&s[0], size);
