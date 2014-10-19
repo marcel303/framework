@@ -12,10 +12,12 @@
 #include "Packet.h"
 #include "PacketDispatcher.h"
 #include "PolledTimer.h"
+#include "RpcManager.h"
 #include "SDL_Bitmap.h"
 #include "Timer.h"
 
 static void TestBitStream();
+static void TestRpc();
 static void TestGameUpdate();
 
 enum TestProtocol
@@ -226,7 +228,7 @@ public:
 		uint32_t v = m_value;
 		uint32_t x = v % s;
 		uint32_t y = (v / s) % s;
-		bitmap.RectFill(x, y, 2, 2, foreColor);
+		bitmap.RectFill(x, y, 1, 1, foreColor);
 	}
 
 	uint32_t m_clientIdx;
@@ -247,6 +249,33 @@ public:
 
 	virtual ~MyChannelHandler()
 	{
+	}
+
+	void CreateClientState(Channel * channel)
+	{
+		ClientState * clientState = new ClientState(channel, m_clientIdx);
+		m_clientStates[channel->m_id] = clientState;
+		m_clientIdx++;
+	}
+
+	void DestroyClientState(Channel * channel)
+	{
+		std::map<uint32_t, ClientState *>::iterator j = m_clientStates.find(channel->m_id);
+
+		if (j != m_clientStates.end())
+		{
+			ClientState * clientState = j->second;
+
+			delete clientState;
+			clientState = 0;
+
+			m_clientStates.erase(j);
+		}
+
+		if (m_clientStates.empty())
+		{
+			m_clientIdx = 0;
+		}
 	}
 
 	virtual void OnReceive(Packet & packet, Channel * channel)
@@ -288,9 +317,7 @@ public:
 
 		//
 
-		ClientState * clientState = new ClientState(channel, m_clientIdx);
-		m_clientStates[channel->m_id] = clientState;
-		m_clientIdx++;
+		CreateClientState(channel);
 	}
 	
 	virtual void SV_OnChannelDisconnect(Channel * channel)
@@ -310,17 +337,7 @@ public:
 
 		//
 
-		std::map<uint32_t, ClientState *>::iterator j = m_clientStates.find(channel->m_id);
-
-		if (j != m_clientStates.end())
-		{
-			ClientState * clientState = j->second;
-
-			delete clientState;
-			clientState = 0;
-
-			m_clientStates.erase(j);
-		}
+		DestroyClientState(channel);
 	}
 
 	virtual void CL_OnChannelConnect(Channel * channel)
@@ -330,6 +347,10 @@ public:
 		NetAssert(m_clChannels.find(channel->m_id) == m_clChannels.end());
 
 		m_clChannels[channel->m_id] = channel;
+
+		//
+
+		CreateClientState(channel);
 	}
 	
 	virtual void CL_OnChannelDisconnect(Channel * channel)
@@ -346,6 +367,10 @@ public:
 		{
 			LOG_WRN("channel disconnect: channel does not exist: %u", channel->m_id);
 		}
+
+		//
+
+		DestroyClientState(channel);
 	}
 
 	Channel * PickRandomChannel(ChannelMap & channels)
@@ -456,6 +481,17 @@ public:
 			const Packet packet = packetBuilder.ToPacket();
 
 			channel->Send(packet);
+
+			//
+
+			std::map<uint32_t, ClientState *>::iterator j = m_clientStates.find(channel->m_id);
+
+			if (j != m_clientStates.end())
+			{
+				ClientState * clientState = j->second;
+
+				clientState->m_value = value;
+			}
 		}
 	}
 
@@ -486,6 +522,17 @@ public:
 			const Packet packet = packetBuilder.ToPacket();
 
 			channel->SendReliable(packet);
+
+			//
+
+			std::map<uint32_t, ClientState *>::iterator j = m_clientStates.find(channel->m_id);
+
+			if (j != m_clientStates.end())
+			{
+				ClientState * clientState = j->second;
+
+				clientState->m_value = value;
+			}
 		}
 	}
 
@@ -507,6 +554,9 @@ public:
 
 static void TestGameUpdate()
 {
+	printf("LEFT/RIGHT/UP/DOWN: move player\n");
+	printf("               ESC: end test\n");
+
 	GameStateData gameData;
 	int moveX1 = 0;
 	int moveY1 = 0;
@@ -530,7 +580,7 @@ static void TestGameUpdate()
 					moveY1 = e.key.state ? -1 : 0;
 				if (e.key.keysym.sym == SDLK_DOWN)
 					moveY2 = e.key.state ? +1 : 0;
-				if (e.key.keysym.sym == SDLK_ESCAPE)
+				if (e.key.keysym.sym == SDLK_ESCAPE && e.key.state)
 					stop = true;
 			}
 		}
@@ -632,6 +682,71 @@ static void TestBitStream()
 	}
 }
 
+static void TestRpcCall(BitStream & bs)
+{
+	printf("TestRpcCall!\n");
+}
+
+static void TestRpc()
+{
+	Timer timer;
+	ChannelManager channelMgr;
+	RpcManager rpcMgr(&channelMgr);
+
+	uint32_t testRpcCall = rpcMgr.Register("TestRpcCall", TestRpcCall);
+
+	channelMgr.Initialize(nullptr, 12345, true);
+
+	PacketDispatcher::RegisterProtocol(PROTOCOL_CHANNEL, &channelMgr);
+	PacketDispatcher::RegisterProtocol(PROTOCOL_RPC, &rpcMgr);
+
+	NetAddress loopback;
+	loopback.Set(127, 0, 0, 1, 12345);
+
+	printf("  C: do RPC call\n");
+	printf("  A: add client loopback channel\n");
+	printf("ESC: end test\n");
+
+	bool stop = false;
+
+	while (stop == false)
+	{
+		SDL_Delay(100);
+
+		SDL_Event e;
+		while (SDL_PollEvent(&e))
+		{
+			if (e.type == SDL_KEYDOWN)
+			{
+				if (e.key.keysym.sym == SDLK_c)
+				{
+					BitStream bs;
+
+					rpcMgr.Call(testRpcCall, bs, ChannelSide_Client, nullptr, true, true);
+				}
+				if (e.key.keysym.sym == SDLK_a)
+				{
+					Channel * channel = channelMgr.CL_CreateChannel();
+					channel->Connect(loopback);
+				}
+				if (e.key.keysym.sym == SDLK_ESCAPE)
+				{
+					stop = true;
+				}
+			}
+		}
+
+		const uint32_t time = static_cast<uint32_t>(timer.TimeMS_get());
+
+		channelMgr.Update(time);
+	}
+
+	PacketDispatcher::UnregisterProtocol(PROTOCOL_CHANNEL, &channelMgr);
+	PacketDispatcher::UnregisterProtocol(PROTOCOL_RPC, &rpcMgr);
+
+	channelMgr.Shutdown(false);
+}
+
 int main(int argc, char * argv[])
 {
 	try
@@ -645,6 +760,8 @@ int main(int argc, char * argv[])
 			throw std::exception();//"failed to initialize SDL");
 
 		SDL_Surface * surface = SDL_SetVideoMode(displaySx, displaySy, 32, 0);
+
+		TestRpc();
 
 		TestGameUpdate();
 
@@ -674,7 +791,7 @@ int main(int argc, char * argv[])
 
 		printf("mode = %c\n", mode);
 
-		printf("     ESC/Q: quit\n");
+		printf("       ESC: quit\n");
 		printf("         A: add client channel\n");
 		printf("LSHIFT + A: add 100 client channels\n");
 		printf("         D: remove client channel\n");
@@ -719,7 +836,7 @@ int main(int argc, char * argv[])
 			{
 				if (e.type == SDL_KEYDOWN)
 				{
-					if (e.key.keysym.sym == SDLK_ESCAPE || e.key.keysym.sym == SDLK_q)
+					if (e.key.keysym.sym == SDLK_ESCAPE)
 						stop = true;
 					if (isClient && e.key.keysym.sym == SDLK_a)
 					{

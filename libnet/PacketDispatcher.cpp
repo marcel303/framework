@@ -43,13 +43,32 @@ void PacketDispatcher::Dispatch(Packet & packet, Channel * channel)
 
 bool PacketDispatcher::RegisterProtocol(uint32_t protocolId, PacketListener * listener)
 {
+	NetAssert(protocolId < LIBNET_DISPATCHER_MAX_PROTOCOLS);
 	if (protocolId >= LIBNET_DISPATCHER_MAX_PROTOCOLS)
 	{
-		NetAssert(false);
 		return false;
 	}
 
 	s_protocolListeners[protocolId] = listener;
+
+	return true;
+}
+
+bool PacketDispatcher::UnregisterProtocol(uint32_t protocolId, PacketListener * listener)
+{
+	NetAssert(protocolId < LIBNET_DISPATCHER_MAX_PROTOCOLS);
+	if (protocolId >= LIBNET_DISPATCHER_MAX_PROTOCOLS)
+	{
+		return false;
+	}
+
+	NetAssert(s_protocolListeners[protocolId] == listener);
+	if (s_protocolListeners[protocolId] != listener)
+	{
+		return false;
+	}
+
+	s_protocolListeners[protocolId] = nullptr;
 
 	return true;
 }

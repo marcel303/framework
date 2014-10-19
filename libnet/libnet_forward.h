@@ -1,5 +1,6 @@
 #pragma once
 
+class BitStream;
 class Channel;
 class ChannelHandler;
 class ChannelManager;

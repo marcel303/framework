@@ -4,7 +4,7 @@
  * are purged. During debugging it is often desirable to have this feature
  * disabled so you can safely step through code without your channels expiring.
  */
-#define LIBNET_CHANNEL_ENABLE_TIMEOUTS 1
+#define LIBNET_CHANNEL_ENABLE_TIMEOUTS 0 // fixme
 
 /* Packing batches multiple packets into one datagram to improve throughput.
  * When packing is enabled, low priority packets will be batched and sent only

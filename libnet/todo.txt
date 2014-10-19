@@ -1,2 +1,13 @@
+- Only let one side of the channel (channel side) send ping messages?
+- Rework sending of packets. Merge packets into datagrams. Allow different "datagram channels" for packing.
+	Or maybe RT vs non-RT suffices?
+- Design and document order of sending events
+	Manual packet submission, RPC calls, pings, channel messages
+- Remove client/server distinction to enable peer to peer meshes.
+	Create notion of 'instances'. You could have a server and a client instance, or just
+	a collection of peer instances. On channel create, specify instance. On channel callbacks,
+	pass instance ID. it's up to the game to define a server and client instance in a
+	server-client model.
+
 - Decouple packet bytes from interface. Allow extraction without copying bytes.
 - Add callbacks to ChannelHandler for client channel. Make client channels fully managed.
