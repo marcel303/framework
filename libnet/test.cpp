@@ -58,11 +58,11 @@ public:
 class Player
 {
 public:
-	Player(StateVector & stv)
-		: m_posX(stv.AllocSint16())
-		, m_posY(stv.AllocSint16())
-		, m_velX(stv.AllocSint16())
-		, m_velY(stv.AllocSint16())
+	Player(StateVector & stateVector)
+		: m_posX(stateVector.AllocSint16())
+		, m_posY(stateVector.AllocSint16())
+		, m_velX(stateVector.AllocSint16())
+		, m_velY(stateVector.AllocSint16())
 	{
 		m_posX = 0;
 		m_posY = 0;
@@ -94,11 +94,11 @@ public:
 class Block
 {
 public:
-	inline Block(StateVector & stv)
-		: m_posX(stv.AllocUint16())
-		, m_posY(stv.AllocUint16())
-		, m_extX(stv.AllocUint16())
-		, m_extY(stv.AllocUint16())
+	inline Block(StateVector & stateVector)
+		: m_posX(stateVector.AllocUint16())
+		, m_posY(stateVector.AllocUint16())
+		, m_extX(stateVector.AllocUint16())
+		, m_extY(stateVector.AllocUint16())
 	{
 	}
 
@@ -111,12 +111,12 @@ public:
 class Map
 {
 public:
-	Map(StateVector & stv)
+	Map(StateVector & stateVector)
 	{
 		m_blocks = new Block*[kMaxBlocks];
 
 		for (uint32_t i = 0; i < kMaxBlocks; ++i)
-			m_blocks[i] = new Block(stv);
+			m_blocks[i] = new Block(stateVector);
 	}
 
 	~Map()
@@ -139,10 +139,10 @@ public:
 class GameState
 {
 public:
-	GameState(StateVector & stv)
+	GameState(StateVector & stateVector)
 	{
-		m_map = new Map(stv);
-		m_player = new Player(stv);
+		m_map = new Map(stateVector);
+		m_player = new Player(stateVector);
 	}
 
 	~GameState()
@@ -542,20 +542,20 @@ static void TestGameUpdate()
 		const BinaryDiffResult result = gameData.GetDiff(4);
 		LOG_INF("diff bytes: %u bytes", result.m_diffBytes);
 
-	#if 0
+	#if 1
 		for (uint32_t i = 0; i < 8; ++i)
 		{
 			const BinaryDiffResult result = gameData.GetDiff(i);
 			const uint32_t overhead = 4;
 			const uint32_t byteCount = result.m_diffCount * overhead + result.m_diffBytes;
 			LOG_INF("byteCount @ treshold %u: %u", i, byteCount);
-			for (const BinaryDiffEntry * entry = result.m_diffs; entry; entry = entry->m_next)
+			for (const BinaryDiffEntry * entry = result.m_diffs.get(); entry; entry = entry->m_next)
 				LOG_INF("entry: offset: %09u, size: %09u", entry->m_offset, entry->m_size);
 			if (!BinaryDiffValidate(
 				gameData.m_stateVectors[0].m_bytes,
 				gameData.m_stateVectors[1].m_bytes,
 				StateVector::kSize,
-				result.m_diffs))
+				result.m_diffs.get()))
 			{
 				LOG_ERR("binary diff validation failed", 0);
 				NetAssert(false);
@@ -591,8 +591,13 @@ static void TestBitStream()
 
 	bs1.WriteString("Hello World!");
 
-	uint8_t v[4] = { 0x44, 0x33, 0x22, 0x11 };
-	bs1.WriteAlignedBytes(v, 4);
+	uint8_t a1[4] = { 0x44, 0x33, 0x22, 0x11 };
+	bs1.WriteAlignedBytes(a1, 4);
+
+	uint8_t a2[4] = { 0x44, 0xff, 0x22, 0xff };
+	BinaryDiffResult diff = BinaryDiff(a1, a2, sizeof(a1), 0);
+
+	WriteDiff(bs1, diff, a1);
 
 	{
 		uint8_t r1;
@@ -620,6 +625,10 @@ static void TestBitStream()
 
 		uint8_t r[4];
 		bs2.ReadAlignedBytes(r, 4);
+
+		ReadDiff(bs2, a2);
+
+		Assert(!memcpy(a1, a2, sizeof(a1)));
 	}
 }
 

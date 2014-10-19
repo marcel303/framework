@@ -2,6 +2,7 @@
 
 #include <malloc.h>
 #include <stdint.h>
+#include <string>
 #include "Debugging.h"
 
 class BitStream
@@ -214,3 +215,8 @@ public:
 		return m_cursor;
 	}
 };
+
+//
+
+void WriteDiff(BitStream & bs, class BinaryDiffResult & diff, const void * v);
+void ReadDiff(BitStream & bs, void * v);
