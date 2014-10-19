@@ -7,6 +7,8 @@
 #include "NetTimer.h"
 #include "PacketDispatcher.h"
 
+#define LOG_CHANNEL_DBG(fmt, ...) LOG_DBG("channel [%09u]: " ## fmt, static_cast<uint32_t>(m_id), __VA_ARGS__)
+
 Channel::Channel(ChannelType channelType, ChannelSide channelSide, uint32_t protocolMask)
 	: m_id(0)
 	, m_destinationId(0)
@@ -15,6 +17,7 @@ Channel::Channel(ChannelType channelType, ChannelSide channelSide, uint32_t prot
 	, m_channelType(channelType)
 	, m_channelSide(channelSide)
 	, m_protocolMask(protocolMask)
+	, m_queueForDestroy(false)
 	, m_rtSndId(0)
 	, m_rtRcvId(0)
 	, m_rtAckId(0)
@@ -147,8 +150,7 @@ void Channel::Update(uint32_t time)
 				SendEnd();
 
 #if LIBNET_CHANNEL_LOG_RT == 1
-				LOG_DBG("channel %09u: RT UPD sent: %u",
-					static_cast<uint32_t>(m_id),
+				LOG_CHANNEL_DBG("RT UPD sent: %u",
 					static_cast<uint32_t>(packetId));
 #endif
 			}
@@ -172,7 +174,7 @@ void Channel::Update(uint32_t time)
 			Send(packet, false);
 
 #if LIBNET_CHANNEL_LOG_PINGPONG == 1
-			LOG_DBG("channel: sent ping message", 0);
+			LOG_CHANNEL_DBG("sent ping message", 0);
 #endif
 		}
 
@@ -184,7 +186,7 @@ void Channel::Update(uint32_t time)
 
 			m_channelMgr->DestroyChannelQueued(this);
 
-			LOG_DBG("channel [%09u]: timeout", m_id);
+			LOG_CHANNEL_DBG("timeout", 0);
 		}
 #endif
 	}
@@ -318,8 +320,7 @@ void Channel::SendReliable(const Packet & packet)
 	m_rtQueue.push_back(temp);
 
 #if LIBNET_CHANNEL_LOG_RT == 1
-	LOG_DBG("channel %09u: RT ENQ: %u",
-		static_cast<uint32_t>(m_id),
+	LOG_CHANNEL_DBG("RT ENQ: %u",
 		static_cast<uint32_t>(temp.m_id));
 #endif
 }
@@ -385,7 +386,7 @@ bool Channel::Receive(ReceiveData & rcvData)
 void Channel::HandlePing(Packet & packet)
 {
 #if LIBNET_CHANNEL_LOG_PINGPONG == 1
-	LOG_DBG("channel: received ping message", 0);
+	LOG_CHANNEL_DBG("received ping message", 0);
 #endif
 
 	uint32_t time;
@@ -408,7 +409,7 @@ void Channel::HandlePing(Packet & packet)
 	Send(reply.ToPacket());
 
 #if LIBNET_CHANNEL_LOG_PINGPONG == 1
-	LOG_DBG("channel: sent pong message", 0);
+	LOG_CHANNEL_DBG("sent pong message", 0);
 #endif
 }
 
@@ -427,7 +428,7 @@ void Channel::HandlePong(Packet & packet)
 	m_rtt = time2 - time;
 
 #if LIBNET_CHANNEL_LOG_PINGPONG == 1
-	LOG_DBG("channel: received pong message. rtt = %gms", m_rtt / 1000.0f);
+	LOG_CHANNEL_DBG("received pong message. rtt = %gms", m_rtt / 1000.0f);
 #endif
 
 #if LIBNET_CHANNEL_ENABLE_TIMEOUTS == 1
@@ -446,10 +447,9 @@ void Channel::HandleRTUpdate(Packet & packet)
 	}
 
 #if LIBNET_CHANNEL_LOG_RT == 1
-	LOG_DBG("channel %09u: RT UPD rcvd: %u (time=%u)",
-		static_cast<uint32_t>(m_id),
+	LOG_CHANNEL_DBG("RT UPD rcvd: %u (time=%llu)",
 		static_cast<uint32_t>(packetId),
-		g_netTimer.TimeMS_get());
+		static_cast<uint64_t>(g_netTimer.TimeMS_get()));
 #endif
 
 	if (packetId == m_rtRcvId)
@@ -466,9 +466,8 @@ void Channel::HandleRTUpdate(Packet & packet)
 		Send(reply.ToPacket());
 
 #if LIBNET_CHANNEL_LOG_RT == 1
-			LOG_DBG("channel %09u: RT ACK sent: %u",
-				static_cast<uint32_t>(m_id),
-				static_cast<uint32_t>(packetId));
+		LOG_CHANNEL_DBG("RT ACK sent: %u",
+			static_cast<uint32_t>(packetId));
 #endif
 
 		m_rtRcvId++;
@@ -480,8 +479,7 @@ void Channel::HandleRTUpdate(Packet & packet)
 			PacketDispatcher::Dispatch(packet2, this);
 
 #if LIBNET_CHANNEL_LOG_RT == 1
-			LOG_DBG("channel %09u: RT UPD rcvd: %u handled",
-				static_cast<uint32_t>(m_id),
+			LOG_CHANNEL_DBG("RT UPD rcvd: %u handled",
 				static_cast<uint32_t>(packetId));
 #endif
 		}
@@ -495,9 +493,9 @@ void Channel::HandleRTUpdate(Packet & packet)
 	{
 #if LIBNET_CHANNEL_LOG_RT == 1
 		if (packetId > m_rtRcvId)
-			LOG_DBG("channel %09u: RT UPD rcvd: ID > receive ID", m_id);
+			LOG_CHANNEL_DBG("RT UPD rcvd: ID > receive ID", 0);
 		else
-			LOG_DBG("channel %09u: RT UPD rcvd: ID < receive ID", m_id);
+			LOG_CHANNEL_DBG("RT UPD rcvd: ID < receive ID", 0);
 #endif
 	}
 }
@@ -513,8 +511,7 @@ void Channel::HandleRTAck(Packet & packet)
 	}
 
 #if LIBNET_CHANNEL_LOG_RT == 1
-	LOG_DBG("channel %09u: RT ACK rcvd: %u", 
-		static_cast<uint32_t>(m_id),
+	LOG_CHANNEL_DBG("RT ACK rcvd: %u", 
 		static_cast<uint32_t>(packetId));
 #endif
 
@@ -523,8 +520,7 @@ void Channel::HandleRTAck(Packet & packet)
 #if LIBNET_CHANNEL_LOG_RT == 1
 		if (packetId > m_rtSndId)
 		{
-			LOG_DBG("channel %09u: received ack for unsent message",
-				static_cast<uint32_t>(m_id));
+			LOG_CHANNEL_DBG("received ack for unsent message", 0);
 		}
 #endif
 
@@ -532,9 +528,8 @@ void Channel::HandleRTAck(Packet & packet)
 		while (m_rtQueue.size() > 0 && m_rtQueue[0].m_id <= packetId)
 		{
 #if LIBNET_CHANNEL_LOG_RT == 1
-			LOG_DBG("channel %09u: RT ACK rcvd: %u handled",
-				static_cast<uint32_t>(m_id),
-				m_rtQueue[0].m_id);
+			LOG_CHANNEL_DBG("RT ACK rcvd: %u handled",
+				static_cast<uint32_t>(m_rtQueue[0].m_id));
 #endif
 
 			m_rtQueue.pop_front();
@@ -545,8 +540,7 @@ void Channel::HandleRTAck(Packet & packet)
 	else
 	{
 #if LIBNET_CHANNEL_LOG_RT == 1
-		LOG_DBG("channel %09u: RT ACK rcvd: ID < ack ID",
-			static_cast<uint32_t>(m_id));
+		LOG_CHANNEL_DBG("RT ACK rcvd: ID < ack ID", 0);
 #endif
 	}
 }

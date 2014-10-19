@@ -11,7 +11,7 @@ static inline void NetAssertImpl(const char * function, const uint32_t line, con
 	if (result == false)
 	{
 		LOG_ERR("assertion failed: %s:%u: %s\n", function, line, expr);
-		assert(false);
+		//assert(false);
 	}
 }
 

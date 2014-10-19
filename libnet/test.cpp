@@ -674,10 +674,14 @@ int main(int argc, char * argv[])
 
 		printf("mode = %c\n", mode);
 
+		printf("     ESC/Q: quit\n");
 		printf("         A: add client channel\n");
 		printf("LSHIFT + A: add 100 client channels\n");
 		printf("         D: remove client channel\n");
 		printf("LSHIFT + D: remove all client channels\n");
+		printf("         L: list channels\n");
+		printf("         R: randomize data, send reliably\n");
+		printf("         T: randomize data, send unreliably\n");
 
 		bool isServer = mode == 'S' || mode == 'B';
 		bool isClient = mode == 'C' || mode == 'B';
@@ -823,7 +827,7 @@ int main(int argc, char * argv[])
 			SDL_Flip(surface);
 		}
 		
-		channelMgr.Shutdown();
+		channelMgr.Shutdown(true);
 
 		SDL_FreeSurface(surface);
 		

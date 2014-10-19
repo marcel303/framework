@@ -41,11 +41,16 @@ bool ChannelManager::Initialize(ChannelHandler * handler, uint16_t serverPort, b
 	return true;
 }
 
-void ChannelManager::Shutdown()
+void ChannelManager::Shutdown(bool sendDisconnectNotification)
 {
 	while (m_channels.size())
 	{
 		Channel * channel = m_channels.begin()->second;
+
+		if (sendDisconnectNotification)
+		{
+			channel->Disconnect();
+		}
 
 		DestroyChannel(channel);
 	}
@@ -100,9 +105,12 @@ void ChannelManager::DestroyChannel(Channel * channel)
 
 void ChannelManager::DestroyChannelQueued(Channel * channel)
 {
-	NetAssert(std::find(m_destroyedChannels.begin(), m_destroyedChannels.end(), channel) == m_destroyedChannels.end());
-
-	m_destroyedChannels.push_back(channel);
+	if (!channel->m_queueForDestroy)
+	{
+		NetAssert(std::find(m_destroyedChannels.begin(), m_destroyedChannels.end(), channel) == m_destroyedChannels.end());
+		m_destroyedChannels.push_back(channel);
+		channel->m_queueForDestroy = true;
+	}
 }
 
 void ChannelManager::Update(uint32_t time)

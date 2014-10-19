@@ -108,6 +108,7 @@ public:
 	ChannelType m_channelType;
 	ChannelSide m_channelSide;
 	uint32_t m_protocolMask;
+	bool m_queueForDestroy;
 
 	// Reliable transport stuff.
 	class RTPacket

@@ -16,7 +16,7 @@ public:
 	~ChannelManager();
 
 	bool Initialize(ChannelHandler * handler, uint16_t serverPort, bool enableServer);
-	void Shutdown();
+	void Shutdown(bool sendDisconnectNotification);
 
 	Channel * SV_CreateChannel();
 	Channel * CL_CreateChannel();
