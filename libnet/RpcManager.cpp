@@ -37,7 +37,7 @@ uint32_t RpcManager::Register(const char * name, RpcHandler handler)
 void RpcManager::Unregister(uint32_t method, RpcHandler handler)
 {
 	RegistrationMap::const_iterator i = m_registrations.find(method);
-	NetAssert(i != m_registrations.end());
+	NetAssert(i != m_registrations.end() && i->second == handler);
 
 	if (i != m_registrations.end())
 	{

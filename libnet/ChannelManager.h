@@ -18,6 +18,8 @@ public:
 	bool Initialize(ChannelHandler * handler, uint16_t serverPort, bool enableServer);
 	void Shutdown(bool sendDisconnectNotification);
 
+	void SetChannelTimeoutMS(uint32_t timeout);
+
 	Channel * SV_CreateChannel();
 	Channel * CL_CreateChannel();
 	Channel * CreateChannelEx(ChannelType type, ChannelSide side);
@@ -44,6 +46,8 @@ public:
 	SharedNetSocket m_socket;
 	Channel * m_listenChannel;
 	
+	uint32_t m_channelTimeout;
+
 	ChannelMap m_channels;
 	HandlePool<uint16_t> m_channelIds;
 

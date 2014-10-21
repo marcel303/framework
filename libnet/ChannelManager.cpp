@@ -9,6 +9,7 @@
 ChannelManager::ChannelManager()
 	: m_socket(0)
 	, m_listenChannel(0)
+	, m_channelTimeout(LIBNET_CHANNEL_TIMEOUT_INTERVAL)
 	, m_channels()
 	, m_channelIds()
 	, m_handler(0)
@@ -50,9 +51,12 @@ void ChannelManager::Shutdown(bool sendDisconnectNotification)
 	{
 		Channel * channel = m_channels.begin()->second;
 
-		if (sendDisconnectNotification)
+		if (channel->m_channelType == ChannelType_Client)
 		{
-			channel->Disconnect();
+			if (sendDisconnectNotification)
+			{
+				channel->Disconnect();
+			}
 		}
 
 		DestroyChannel(channel);
@@ -64,6 +68,11 @@ void ChannelManager::Shutdown(bool sendDisconnectNotification)
 
 	SharedNetSocket nullSocket(0);
 	m_socket = nullSocket;
+}
+
+void ChannelManager::SetChannelTimeoutMS(uint32_t timeout)
+{
+	m_channelTimeout = timeout;
 }
 
 Channel * ChannelManager::SV_CreateChannel()

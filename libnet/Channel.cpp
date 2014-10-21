@@ -39,11 +39,6 @@ Channel::Channel(ChannelType channelType, ChannelSide channelSide, uint32_t prot
 	m_pingTimer.Initialize(&g_netTimer);
 	m_pingTimer.SetIntervalMS(LIBNET_CHANNEL_PING_INTERVAL);
 	m_pingTimer.Start();
-
-#if LIBNET_CHANNEL_ENABLE_TIMEOUTS == 1
-	m_timeoutTimer.Initialize(&g_netTimer);
-	m_timeoutTimer.SetIntervalMS(LIBNET_CHANNEL_TIMEOUT_INTERVAL);
-#endif
 }
 
 Channel::~Channel()
@@ -54,12 +49,18 @@ void Channel::Initialize(ChannelManager * channelMgr, SharedNetSocket socket)
 {
 	m_channelMgr = channelMgr;
 	m_socket = socket;
+
+#if LIBNET_CHANNEL_ENABLE_TIMEOUTS == 1
+	m_timeoutTimer.Initialize(&g_netTimer);
+	m_timeoutTimer.SetIntervalMS(m_channelMgr->m_channelTimeout);
+#endif
 }
 
 bool Channel::Connect(const NetAddress & address)
 {
 #if LIBNET_CHANNEL_ENABLE_TIMEOUTS == 1
-	m_timeoutTimer.Start();
+	if (m_timeoutTimer.Interval_get() != 0.f)
+		m_timeoutTimer.Start();
 #endif
 
 	m_address = address;
@@ -101,7 +102,8 @@ void Channel::Disconnect()
 	//m_address = NetAddress(0, 0, 0, 0, 0);
 
 #if LIBNET_CHANNEL_ENABLE_TIMEOUTS == 1
-	m_timeoutTimer.Stop();
+	if (m_timeoutTimer.Interval_get() != 0.f)
+		m_timeoutTimer.Stop();
 #endif
 }
 
@@ -444,7 +446,8 @@ void Channel::HandlePong(Packet & packet)
 #endif
 
 #if LIBNET_CHANNEL_ENABLE_TIMEOUTS == 1
-	m_timeoutTimer.Restart();
+	if (m_timeoutTimer.Interval_get() != 0.f)
+		m_timeoutTimer.Restart();
 #endif
 }
 

@@ -35,36 +35,31 @@ public:
 		memset(m_bytes, 0, sizeof(m_bytes));
 	}
 
-	uint16_t & AllocUint16()
+	template <typename T>
+	T & Alloc(T & x)
 	{
-		NetAssert(m_allocIdx + 2 <= kSize);
-		uint16_t & v = reinterpret_cast<uint16_t &>(m_bytes[m_allocIdx]);
-		m_allocIdx += 2;
+		NetAssert(m_allocIdx + sizeof(T) <= kSize);
+		T & v = reinterpret_cast<T &>(m_bytes[m_allocIdx]);
+		m_allocIdx += sizeof(T);
 		return v;
 	}
 
-	int16_t & AllocSint16()
-	{
-		NetAssert(m_allocIdx + 2 <= kSize);
-		int16_t & v = reinterpret_cast<int16_t &>(m_bytes[m_allocIdx]);
-		m_allocIdx += 2;
-		return v;
-	}
-
-	const static uint32_t kSize = 1024;
+	const static uint32_t kSize = 2048;
 
 	uint32_t m_allocIdx;
 	uint8_t m_bytes[kSize];
 };
 
+const static int kWorldSize = 256;
+
 class Player
 {
 public:
 	Player(StateVector & stateVector)
-		: m_posX(stateVector.AllocSint16())
-		, m_posY(stateVector.AllocSint16())
-		, m_velX(stateVector.AllocSint16())
-		, m_velY(stateVector.AllocSint16())
+		: m_posX(stateVector.Alloc(m_posX))
+		, m_posY(stateVector.Alloc(m_posY))
+		, m_velX(stateVector.Alloc(m_velX))
+		, m_velY(stateVector.Alloc(m_velY))
 	{
 		m_posX = 0;
 		m_posY = 0;
@@ -81,11 +76,27 @@ public:
 			m_posX = 0;
 		if (m_posY < 0)
 			m_posY = 0;
-		if (m_posX > 256 - 1)
-			m_posX = 256 - 1;
-		if (m_posY > 256 - 1)
-			m_posY = 256 - 1;
+		if (m_posX + kSize > kWorldSize)
+			m_posX = kWorldSize - kSize;
+		if (m_posY + kSize > kWorldSize)
+			m_posY = kWorldSize - kSize;
 	}
+
+	void Draw(SDL_Surface * surface)
+	{
+		SDL_Bitmap bitmap(
+			surface,
+			m_posX,
+			m_posY,
+			kSize,
+			kSize);
+
+		const uint32_t color = bitmap.Color(1.f, 0.f, 0.f);
+
+		bitmap.Clear(color);
+	}
+
+	const static int kSize = 16;
 
 	int16_t & m_posX;
 	int16_t & m_posY;
@@ -97,17 +108,31 @@ class Block
 {
 public:
 	inline Block(StateVector & stateVector)
-		: m_posX(stateVector.AllocUint16())
-		, m_posY(stateVector.AllocUint16())
-		, m_extX(stateVector.AllocUint16())
-		, m_extY(stateVector.AllocUint16())
+		: m_posX(stateVector.Alloc(m_posX))
+		, m_posY(stateVector.Alloc(m_posY))
+		, m_extX(stateVector.Alloc(m_extX))
+		, m_extY(stateVector.Alloc(m_extY))
+		, m_type(stateVector.Alloc(m_type))
 	{
+		Randomize();
 	}
+
+	void Randomize()
+	{
+		m_posX = rand() % (kWorldSize - kSize);
+		m_posY = rand() % (kWorldSize - kSize);
+		m_extX = kSize;
+		m_extY = kSize;
+		m_type = rand() % 256;
+	}
+
+	const static int kSize = 16;
 
 	uint16_t & m_posX;
 	uint16_t & m_posY;
 	uint16_t & m_extX;
 	uint16_t & m_extY;
+	uint8_t  & m_type;
 };
 
 class Map
@@ -133,7 +158,29 @@ public:
 		m_blocks = 0;
 	}
 
-	const static uint32_t kMaxBlocks = 32;
+	void Draw(SDL_Surface * surface)
+	{
+		SDL_Bitmap bitmap(
+			surface,
+			0,
+			0,
+			kWorldSize,
+			kWorldSize);
+
+		for (int i = 0; i < kMaxBlocks; ++i)
+		{
+			const uint32_t color = bitmap.Color(1.f, 1.f, m_blocks[i]->m_type / 255.f);
+
+			bitmap.RectFill(
+				m_blocks[i]->m_posX,
+				m_blocks[i]->m_posY,
+				m_blocks[i]->m_extX,
+				m_blocks[i]->m_extY,
+				color);
+		}
+	}
+
+	const static uint32_t kMaxBlocks = 128;
 
 	Block * * m_blocks;
 };
@@ -280,13 +327,13 @@ public:
 
 	virtual void OnReceive(Packet & packet, Channel * channel)
 	{
-		LOG_DBG("received packet", 0);
+		//LOG_DBG("received packet", 0);
 
 		uint16_t value;
 
 		if (packet.Read16(&value))
 		{
-			LOG_DBG("value: %05u", value);
+			//LOG_DBG("value: %05u", value);
 
 			std::map<uint32_t, ClientState *>::iterator i = m_clientStates.find(channel->m_id);
 
@@ -552,7 +599,7 @@ public:
 	std::map<uint32_t, ClientState *> m_clientStates;
 };
 
-static void TestGameUpdate()
+static void TestGameUpdate(SDL_Surface * surface)
 {
 	printf("LEFT/RIGHT/UP/DOWN: move player\n");
 	printf("               ESC: end test\n");
@@ -565,7 +612,7 @@ static void TestGameUpdate()
 	bool stop = false;
 	while (stop == false)
 	{
-		SDL_Delay(50);
+		SDL_Delay(25);
 
 		SDL_Event e;
 		while (SDL_PollEvent(&e))
@@ -585,14 +632,31 @@ static void TestGameUpdate()
 			}
 		}
 
-		gameData.m_gameState->m_player->m_velX = moveX1 + moveX2;
-		gameData.m_gameState->m_player->m_velY = moveY1 + moveY2;
-		gameData.m_gameState->m_player->Update();
+		Player * player = gameData.m_gameState->m_player;
+		player->m_velX = moveX1 + moveX2;
+		player->m_velY = moveY1 + moveY2;
+		player->Update();
 		
+		for (int i = 0; i < gameData.m_gameState->m_map->kMaxBlocks; ++i)
+		{
+			Block * block = gameData.m_gameState->m_map->m_blocks[i];
+
+			bool collision =
+				player->m_posX + Player::kSize > block->m_posX &&
+				player->m_posY + Player::kSize > block->m_posY &&
+				player->m_posX < block->m_posX + block->m_extX &&
+				player->m_posY < block->m_posY + block->m_extY;
+
+			if (collision)
+			{
+				block->Randomize();
+			}
+		}
+
 		const BinaryDiffResult result = gameData.GetDiff(4);
 		LOG_INF("diff bytes: %u bytes", result.m_diffBytes);
 
-	#if 1
+	#if 0
 		for (uint32_t i = 0; i < 8; ++i)
 		{
 			const BinaryDiffResult result = gameData.GetDiff(i);
@@ -614,6 +678,20 @@ static void TestGameUpdate()
 	#endif
 
 		gameData.NextFrame();
+
+		SDL_Bitmap bitmap(
+			surface,
+			0,
+			0,
+			surface->w,
+			surface->h);
+
+		bitmap.Clear(0);
+
+		gameData.m_gameState->m_map->Draw(surface);
+		gameData.m_gameState->m_player->Draw(surface);
+
+		SDL_Flip(surface);
 	}
 }
 
@@ -678,7 +756,7 @@ static void TestBitStream()
 
 		ReadDiff(bs2, a2);
 
-		Assert(!memcmp(a1, a2, sizeof(a1)));
+		NetAssert(!memcmp(a1, a2, sizeof(a1)));
 	}
 }
 
@@ -741,6 +819,8 @@ static void TestRpc()
 		channelMgr.Update(time);
 	}
 
+	rpcMgr.Unregister(testRpcCall, TestRpcCall);
+
 	PacketDispatcher::UnregisterProtocol(PROTOCOL_CHANNEL, &channelMgr);
 	PacketDispatcher::UnregisterProtocol(PROTOCOL_RPC, &rpcMgr);
 
@@ -751,8 +831,6 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		TestBitStream();
-
 		const uint32_t displaySx = 256;
 		const uint32_t displaySy = 256;
 
@@ -761,9 +839,9 @@ int main(int argc, char * argv[])
 
 		SDL_Surface * surface = SDL_SetVideoMode(displaySx, displaySy, 32, 0);
 
-		TestRpc();
-
-		TestGameUpdate();
+		//TestBitStream();
+		//TestRpc();
+		TestGameUpdate(surface);
 
 		printf("select mode:\n");
 		printf("S = server\n");
