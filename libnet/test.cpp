@@ -280,7 +280,7 @@ public:
 
 	virtual void OnReceive(Packet & packet, Channel * channel)
 	{
-		LOG_DBG("received packet");
+		LOG_DBG("received packet", 0);
 
 		uint16_t value;
 
@@ -443,7 +443,7 @@ public:
 		LOG_INF("%s:", name);
 		if (channels.empty())
 		{
-			LOG_INF("(empty list)");
+			LOG_INF("(empty list)", 0);
 		}
 		else
 		{
@@ -678,7 +678,7 @@ static void TestBitStream()
 
 		ReadDiff(bs2, a2);
 
-		Assert(!memcpy(a1, a2, sizeof(a1)));
+		Assert(!memcmp(a1, a2, sizeof(a1)));
 	}
 }
 
