@@ -4,14 +4,16 @@
 #include "Packet.h"
 
 inline Packet::Packet()
-	: m_data(0)
+	: m_rcvAddress()
+	, m_data(0)
 	, m_size(0)
 	, m_cursor(0)
 {
 }
 
 inline Packet::Packet(const void * data, uint32_t size)
-	: m_data(reinterpret_cast<const uint8_t *>(data))
+	: m_rcvAddress()
+	, m_data(reinterpret_cast<const uint8_t *>(data))
 	, m_size(size)
 	, m_cursor(0)
 {
@@ -19,10 +21,10 @@ inline Packet::Packet(const void * data, uint32_t size)
 }
 
 inline Packet::Packet(const void * data, uint32_t size, const NetAddress & rcvAddress)
-	: m_data(reinterpret_cast<const uint8_t *>(data))
+	: m_rcvAddress(rcvAddress)
+	, m_data(reinterpret_cast<const uint8_t *>(data))
 	, m_size(size)
 	, m_cursor(0)
-	, m_rcvAddress(rcvAddress)
 {
 	NetAssert(m_data != 0);
 }

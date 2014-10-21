@@ -7,20 +7,32 @@
 #include "NetTimer.h"
 #include "PacketDispatcher.h"
 
-#define LOG_CHANNEL_DBG(fmt, ...) LOG_DBG("channel [%09u]: " ## fmt, static_cast<uint32_t>(m_id), __VA_ARGS__)
+#define LOG_CHANNEL_DBG(fmt, ...) LOG_DBG("channel [%09u]: " # fmt, static_cast<uint32_t>(m_id), __VA_ARGS__)
 
 Channel::Channel(ChannelType channelType, ChannelSide channelSide, uint32_t protocolMask)
-	: m_id(0)
+	: m_channelMgr(0)
+	, m_socket()
+	, m_address()
+	, m_id(0)
 	, m_destinationId(0)
+	, m_sendQueue()
+	, m_pingTimer()
+#if LIBNET_CHANNEL_ENABLE_TIMEOUTS == 1
+	, m_timeoutTimer()
+#endif
 	, m_rtt(0)
-	, m_txBegun(false)
+	, m_delayTimer()
+	, m_delayedReceivePackets()
 	, m_channelType(channelType)
 	, m_channelSide(channelSide)
 	, m_protocolMask(protocolMask)
 	, m_queueForDestroy(false)
+	, m_rtQueue()
 	, m_rtSndId(0)
 	, m_rtRcvId(0)
 	, m_rtAckId(0)
+	, m_txBegun(false)
+	, m_txSize(0)
 {
 	InitSendQueue();
 

@@ -8,8 +8,11 @@
 
 ChannelManager::ChannelManager()
 	: m_socket(0)
-	, m_handler(0)
 	, m_listenChannel(0)
+	, m_channels()
+	, m_channelIds()
+	, m_handler(0)
+	, m_destroyedChannels()
 {
 }
 
@@ -59,7 +62,8 @@ void ChannelManager::Shutdown(bool sendDisconnectNotification)
 
 	m_handler = 0;
 
-	m_socket = SharedNetSocket();
+	SharedNetSocket nullSocket(0);
+	m_socket = nullSocket;
 }
 
 Channel * ChannelManager::SV_CreateChannel()

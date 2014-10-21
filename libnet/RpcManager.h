@@ -9,8 +9,10 @@ typedef void (*RpcHandler)(BitStream & bs);
 
 class RpcManager : public PacketListener
 {
+	typedef std::map<uint32_t, RpcHandler> RegistrationMap;
+	
 	ChannelManager * m_channelMgr;
-	std::map<uint32_t, RpcHandler> m_registrations;
+	RegistrationMap m_registrations;
 
 public:
 	RpcManager(ChannelManager * channelMgr);

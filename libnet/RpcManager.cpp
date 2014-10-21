@@ -21,7 +21,7 @@ uint32_t RpcManager::Register(const char * name, RpcHandler handler)
 	const uint32_t method = HashFunc::Hash_FNV1a(name, strlen(name));
 	NetAssert(method != 0);
 
-	std::map<uint32_t, RpcHandler>::const_iterator i = m_registrations.find(method);
+	RegistrationMap::const_iterator i = m_registrations.find(method);
 	NetAssert(i == m_registrations.end());
 
 	if (i == m_registrations.end())
@@ -36,7 +36,7 @@ uint32_t RpcManager::Register(const char * name, RpcHandler handler)
 
 void RpcManager::Unregister(uint32_t method, RpcHandler handler)
 {
-	std::map<uint32_t, RpcHandler>::const_iterator i = m_registrations.find(method);
+	RegistrationMap::const_iterator i = m_registrations.find(method);
 	NetAssert(i != m_registrations.end());
 
 	if (i != m_registrations.end())
@@ -62,7 +62,7 @@ void RpcManager::Call(uint32_t method, const BitStream & bs, ChannelSide channel
 
 	if (broadcast)
 	{
-		for (auto i = m_channelMgr->m_channels.begin(); i != m_channelMgr->m_channels.end(); ++i)
+		for (ChannelManager::ChannelMap::iterator i = m_channelMgr->m_channels.begin(); i != m_channelMgr->m_channels.end(); ++i)
 		{
 			Channel * channel = i->second;
 
@@ -101,7 +101,7 @@ void RpcManager::OnReceive(Packet & packet, Channel * channel)
 
 void RpcManager::CallInternal(uint32_t method, BitStream & bs)
 {
-	std::map<uint32_t, RpcHandler>::const_iterator i = m_registrations.find(method);
+	RegistrationMap::const_iterator i = m_registrations.find(method);
 	NetAssert(i != m_registrations.end());
 
 	if (i != m_registrations.end())

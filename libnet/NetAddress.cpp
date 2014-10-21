@@ -1,3 +1,4 @@
+#include <string.h>
 #include "NetAddress.h"
 
 void NetAddress::Set(uint32_t address, uint16_t port)
