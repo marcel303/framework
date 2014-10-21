@@ -63,7 +63,7 @@ public:
 	{
 	}
 
-	SharedPtr(SharedPtr & other)
+	SharedPtr(const SharedPtr & other)
 		: m_storage(0)
 	{
 		SetStorage(other.m_storage);
@@ -89,7 +89,7 @@ public:
 			SetStorage(0);
 	}
 
-	void operator=(SharedPtr & ptr)
+	void operator=(const SharedPtr & ptr)
 	{
 		SetStorage(ptr.m_storage);
 	}

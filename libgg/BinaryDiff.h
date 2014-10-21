@@ -29,6 +29,8 @@ class BinaryDiffResult
 {
 public:
 	inline BinaryDiffResult()
+		: m_diffCount(0)
+		, m_diffBytes(0)
 	{
 	}
 
