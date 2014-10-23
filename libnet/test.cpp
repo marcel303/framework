@@ -191,20 +191,27 @@ public:
 	GameState(StateVector & stateVector)
 	{
 		m_map = new Map(stateVector);
-		m_player = new Player(stateVector);
+
+		for (int i = 0; i < kMaxPlayers; ++i)
+			m_players[i] = new Player(stateVector);
 	}
 
 	~GameState()
 	{
-		delete m_player;
-		m_player = 0;
+		for (int i = 0; i < kMaxPlayers; ++i)
+		{
+			delete m_players[i];
+			m_players[i] = 0;
+		}
 
 		delete m_map;
 		m_map = 0;
 	}
 
+	const static int kMaxPlayers = 4;
+
 	Map * m_map;
-	Player * m_player;
+	Player * m_players[kMaxPlayers];
 };
 
 class GameStateData
@@ -597,13 +604,20 @@ static void TestGameUpdate(SDL_Surface * surface)
 	printf("               ESC: end test\n");
 
 	GameStateData gameDataSV;  // server side game state
-	StateVector clientState;   // server side view of client state
-	GameStateData gameDataCL;  // client side game state
+	StateVector clientState;   // server side view of the client state
 
+	GameStateData gameDataCL;  // client side game state
+	StateVector serverState;   // client side view of the server state
+
+	BinaryDiffPackage server2clientPackage;
+	BinaryDiffPackage client2serverPackage;
+	
 	// initial 'send' of the game state vector to the client
 
 	clientState = gameDataSV.m_stateVector;
+
 	gameDataCL.m_stateVector = gameDataSV.m_stateVector;
+	serverState = gameDataSV.m_stateVector;
 
 	//
 
@@ -614,17 +628,15 @@ static void TestGameUpdate(SDL_Surface * surface)
 	bool stop = false;
 	while (stop == false)
 	{
-		SDL_Delay(25);
+		//SDL_Delay(25);
 
-		/*
+		// apply incoming deltas from client (server should be in sync with the client, since we're running in lock-step)
 
-		// todo : process incoming deltas from client
+		ApplyBinaryDiffPackage(clientState.m_bytes, StateVector::kSize, client2serverPackage);
+		NetAssert(!memcmp(clientState.m_bytes, gameDataCL.m_stateVector.m_bytes, StateVector::kSize));
 
-		BinaryDiffResult diff = ReceiveDiffFromClient();
-
-		ApplyBinaryDiff(gameDataSV.m_stateVector.m_bytes, StateVector::kSize, diff.m_diffs.get());
-
-		*/
+		ApplyBinaryDiffPackage(gameDataSV.m_stateVector.m_bytes, StateVector::kSize, client2serverPackage);
+		NetAssert(!memcmp(gameDataSV.m_stateVector.m_bytes, gameDataCL.m_stateVector.m_bytes, StateVector::kSize));
 
 		// update server
 
@@ -646,41 +658,93 @@ static void TestGameUpdate(SDL_Surface * surface)
 			}
 		}
 
-		Player * player = gameDataSV.m_gameState->m_player;
-		player->m_velX = moveX1 + moveX2;
-		player->m_velY = moveY1 + moveY2;
-		player->Update();
-		
-		for (int i = 0; i < gameDataSV.m_gameState->m_map->kMaxBlocks; ++i)
 		{
-			Block * block = gameDataSV.m_gameState->m_map->m_blocks[i];
+			Player * player = gameDataSV.m_gameState->m_players[0];
+			player->m_velX = moveX1 + moveX2;
+			player->m_velY = moveY1 + moveY2;
+			player->Update();
+		}
 
-			bool collision =
-				player->m_posX + Player::kSize > block->m_posX &&
-				player->m_posY + Player::kSize > block->m_posY &&
-				player->m_posX < block->m_posX + block->m_extX &&
-				player->m_posY < block->m_posY + block->m_extY;
+		for (int p = 0; p < GameState::kMaxPlayers; ++p)
+		{
+			Player * player = gameDataSV.m_gameState->m_players[p];
 
-			if (collision)
+			for (int i = 0; i < gameDataSV.m_gameState->m_map->kMaxBlocks; ++i)
 			{
-				block->Randomize();
+				Block * block = gameDataSV.m_gameState->m_map->m_blocks[i];
+
+				bool collision =
+					player->m_posX + Player::kSize > block->m_posX &&
+					player->m_posY + Player::kSize > block->m_posY &&
+					player->m_posX < block->m_posX + block->m_extX &&
+					player->m_posY < block->m_posY + block->m_extY;
+
+				if (collision)
+				{
+					block->Randomize();
+				}
 			}
 		}
 
 		// calculate diff to send to client
 
-		const BinaryDiffResult result = gameDataSV.GetDiff(gameDataCL.m_stateVector, 4);
-		LOG_INF("diff bytes: %u bytes", result.m_diffBytes);
+		{
+			const BinaryDiffResult server2client = gameDataSV.GetDiff(clientState, 4);
+			server2clientPackage = MakeBinaryDiffPackage(gameDataSV.m_stateVector.m_bytes, StateVector::kSize, server2client);
 
-		const BinaryDiffPackage package = MakeBinaryDiffPackage(gameDataSV.m_stateVector.m_bytes, StateVector::kSize, result);
+			if (server2client.m_diffBytes != 0)
+				LOG_INF("SV diff bytes: %u bytes", server2client.m_diffBytes);
+		}
 
-		ApplyBinaryDiffPackage(clientState.m_bytes, StateVector::kSize, package);
-		NetAssert(!memcmp(gameDataSV.m_stateVector.m_bytes, clientState.m_bytes, StateVector::kSize));
+		ApplyBinaryDiffPackage(clientState.m_bytes, StateVector::kSize, server2clientPackage);
+		NetAssert(!memcmp(clientState.m_bytes, gameDataSV.m_stateVector.m_bytes, StateVector::kSize));
 
-		// apply incoming deltas from server
+		// apply incoming deltas from server (client should be in sync with the server, since we're running in lock-step)
 
-		ApplyBinaryDiffPackage(gameDataCL.m_stateVector.m_bytes, StateVector::kSize, package);
-		NetAssert(!memcmp(gameDataSV.m_stateVector.m_bytes, gameDataCL.m_stateVector.m_bytes, StateVector::kSize));
+		ApplyBinaryDiffPackage(serverState.m_bytes, StateVector::kSize, server2clientPackage);
+		NetAssert(!memcmp(serverState.m_bytes, gameDataSV.m_stateVector.m_bytes, StateVector::kSize));
+
+		ApplyBinaryDiffPackage(gameDataCL.m_stateVector.m_bytes, StateVector::kSize, server2clientPackage);
+		NetAssert(!memcmp(gameDataCL.m_stateVector.m_bytes, gameDataSV.m_stateVector.m_bytes, StateVector::kSize));
+
+		// update client
+
+		{
+			Player * player = gameDataCL.m_gameState->m_players[1];
+
+			player->m_velX = - moveX1 - moveX2;
+			player->m_velY = - moveY1 - moveY2;
+			player->Update();
+		}
+
+		{
+			Player * player = gameDataCL.m_gameState->m_players[2];
+
+			player->m_velX = + moveX1 + moveX2;
+			player->m_velY = - moveY1 - moveY2;
+			player->Update();
+		}
+
+		{
+			Player * player = gameDataCL.m_gameState->m_players[3];
+
+			player->m_velX = - moveX1 - moveX2;
+			player->m_velY = + moveY1 + moveY2;
+			player->Update();
+		}
+
+		// calculate diff to send to server
+
+		{
+			const BinaryDiffResult client2server = gameDataCL.GetDiff(serverState, 4);
+			client2serverPackage = MakeBinaryDiffPackage(gameDataCL.m_stateVector.m_bytes, StateVector::kSize, client2server);
+
+			if (client2server.m_diffBytes != 0)
+				LOG_INF("CL diff bytes: %u bytes", client2server.m_diffBytes);
+		}
+
+		ApplyBinaryDiffPackage(serverState.m_bytes, StateVector::kSize, client2serverPackage);
+		NetAssert(!memcmp(serverState.m_bytes, gameDataCL.m_stateVector.m_bytes, StateVector::kSize));
 
 	#if 0
 		for (uint32_t i = 0; i < 8; ++i)
@@ -713,7 +777,8 @@ static void TestGameUpdate(SDL_Surface * surface)
 		bitmap.Clear(0);
 
 		gameDataCL.m_gameState->m_map->Draw(surface);
-		gameDataCL.m_gameState->m_player->Draw(surface);
+		for (int p = 0; p < GameState::kMaxPlayers; ++p)
+			gameDataCL.m_gameState->m_players[p]->Draw(surface);
 
 		SDL_Flip(surface);
 	}
@@ -866,6 +931,8 @@ int main(int argc, char * argv[])
 		//TestBitStream();
 		//TestRpc();
 		TestGameUpdate(surface);
+		printf("skipping libnet test!\n");
+		return -1;
 
 		printf("select mode:\n");
 		printf("S = server\n");
