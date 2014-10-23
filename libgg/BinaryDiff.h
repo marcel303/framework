@@ -72,7 +72,7 @@ void ApplyBinaryDiff(const void * sourceBytes, void * destBytes, uint32_t byteCo
 
 /* Generates a binary diff package, that contains both the binary diff result, and the data needed to apply the diff.
  */
-BinaryDiffPackage MakeBinaryDiffPackage(const void * bytes, uint32_t byteCount, const BinaryDiffResult diff);
+BinaryDiffPackage MakeBinaryDiffPackage(const void * bytes, uint32_t byteCount, const BinaryDiffResult & diff);
 
 /* Applies a binary diff package.
  */

@@ -145,7 +145,7 @@ void ApplyBinaryDiff(const void * sourceBytes, void * destBytes, uint32_t byteCo
 	}
 }
 
-BinaryDiffPackage MakeBinaryDiffPackage(const void * bytes, uint32_t byteCount, const BinaryDiffResult diff)
+BinaryDiffPackage MakeBinaryDiffPackage(const void * bytes, uint32_t byteCount, const BinaryDiffResult & diff)
 {
 	size_t size = 0;
 
@@ -164,7 +164,10 @@ BinaryDiffPackage MakeBinaryDiffPackage(const void * bytes, uint32_t byteCount, 
 
 	for (const BinaryDiffEntry * entry = diff.m_diffs.get(); entry; entry = entry->m_next)
 	{
-		memcpy(dst, src + entry->m_offset, entry->m_size);
+		Assert(entry->m_offset + entry->m_size <= byteCount);
+
+		if (entry->m_offset + entry->m_size <= byteCount)
+			memcpy(dst, src + entry->m_offset, entry->m_size);
 
 		dst += entry->m_size;
 	}
@@ -179,7 +182,10 @@ void ApplyBinaryDiffPackage(void * destBytes, uint32_t byteCount, const BinaryDi
 
 	for (const BinaryDiffEntry * entry = package.m_diff.m_diffs.get(); entry; entry = entry->m_next)
 	{
-		memcpy(dst + entry->m_offset, src, entry->m_size);
+		Assert(entry->m_offset + entry->m_size <= byteCount);
+
+		if (entry->m_offset + entry->m_size <= byteCount)
+			memcpy(dst + entry->m_offset, src, entry->m_size);
 
 		src += entry->m_size;
 	}
