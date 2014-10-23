@@ -212,7 +212,7 @@ class GameStateData
 public:
 	GameStateData()
 	{
-		m_gameState = new GameState(m_stateVectors[0]);
+		m_gameState = new GameState(m_stateVector);
 	}
 
 	~GameStateData()
@@ -221,25 +221,17 @@ public:
 		m_gameState = 0;
 	}
 
-	void NextFrame()
-	{
-		memcpy(
-			m_stateVectors[1].m_bytes,
-			m_stateVectors[0].m_bytes,
-			StateVector::kSize);
-	}
-
-	BinaryDiffResult GetDiff(uint32_t skipTreshold)
+	BinaryDiffResult GetDiff(const StateVector & other, uint32_t skipTreshold)
 	{
 		return BinaryDiff(
-			m_stateVectors[0].m_bytes,
-			m_stateVectors[1].m_bytes,
+			m_stateVector.m_bytes,
+			other.m_bytes,
 			StateVector::kSize,
 			skipTreshold);
 	}
 
 	GameState * m_gameState;
-	StateVector m_stateVectors[2];
+	StateVector m_stateVector;
 };
 
 //
@@ -604,7 +596,17 @@ static void TestGameUpdate(SDL_Surface * surface)
 	printf("LEFT/RIGHT/UP/DOWN: move player\n");
 	printf("               ESC: end test\n");
 
-	GameStateData gameData;
+	GameStateData gameDataSV;  // server side game state
+	StateVector clientState;   // server side view of client state
+	GameStateData gameDataCL;  // client side game state
+
+	// initial 'send' of the game state vector to the client
+
+	clientState = gameDataSV.m_stateVector;
+	gameDataCL.m_stateVector = gameDataSV.m_stateVector;
+
+	//
+
 	int moveX1 = 0;
 	int moveY1 = 0;
 	int moveX2 = 0;
@@ -613,6 +615,18 @@ static void TestGameUpdate(SDL_Surface * surface)
 	while (stop == false)
 	{
 		SDL_Delay(25);
+
+		/*
+
+		// todo : process incoming deltas from client
+
+		BinaryDiffResult diff = ReceiveDiffFromClient();
+
+		ApplyBinaryDiff(gameDataSV.m_stateVector.m_bytes, StateVector::kSize, diff.m_diffs.get());
+
+		*/
+
+		// update server
 
 		SDL_Event e;
 		while (SDL_PollEvent(&e))
@@ -632,14 +646,14 @@ static void TestGameUpdate(SDL_Surface * surface)
 			}
 		}
 
-		Player * player = gameData.m_gameState->m_player;
+		Player * player = gameDataSV.m_gameState->m_player;
 		player->m_velX = moveX1 + moveX2;
 		player->m_velY = moveY1 + moveY2;
 		player->Update();
 		
-		for (int i = 0; i < gameData.m_gameState->m_map->kMaxBlocks; ++i)
+		for (int i = 0; i < gameDataSV.m_gameState->m_map->kMaxBlocks; ++i)
 		{
-			Block * block = gameData.m_gameState->m_map->m_blocks[i];
+			Block * block = gameDataSV.m_gameState->m_map->m_blocks[i];
 
 			bool collision =
 				player->m_posX + Player::kSize > block->m_posX &&
@@ -653,8 +667,20 @@ static void TestGameUpdate(SDL_Surface * surface)
 			}
 		}
 
-		const BinaryDiffResult result = gameData.GetDiff(4);
+		// calculate diff to send to client
+
+		const BinaryDiffResult result = gameDataSV.GetDiff(gameDataCL.m_stateVector, 4);
 		LOG_INF("diff bytes: %u bytes", result.m_diffBytes);
+
+		const BinaryDiffPackage package = MakeBinaryDiffPackage(gameDataSV.m_stateVector.m_bytes, StateVector::kSize, result);
+
+		ApplyBinaryDiffPackage(clientState.m_bytes, StateVector::kSize, package);
+		NetAssert(!memcmp(gameDataSV.m_stateVector.m_bytes, clientState.m_bytes, StateVector::kSize));
+
+		// apply incoming deltas from server
+
+		ApplyBinaryDiffPackage(gameDataCL.m_stateVector.m_bytes, StateVector::kSize, package);
+		NetAssert(!memcmp(gameDataSV.m_stateVector.m_bytes, gameDataCL.m_stateVector.m_bytes, StateVector::kSize));
 
 	#if 0
 		for (uint32_t i = 0; i < 8; ++i)
@@ -677,8 +703,6 @@ static void TestGameUpdate(SDL_Surface * surface)
 		}
 	#endif
 
-		gameData.NextFrame();
-
 		SDL_Bitmap bitmap(
 			surface,
 			0,
@@ -688,8 +712,8 @@ static void TestGameUpdate(SDL_Surface * surface)
 
 		bitmap.Clear(0);
 
-		gameData.m_gameState->m_map->Draw(surface);
-		gameData.m_gameState->m_player->Draw(surface);
+		gameDataCL.m_gameState->m_map->Draw(surface);
+		gameDataCL.m_gameState->m_player->Draw(surface);
 
 		SDL_Flip(surface);
 	}

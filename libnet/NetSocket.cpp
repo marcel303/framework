@@ -1,6 +1,9 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
+#if !defined(WINDOWS)
+	#include <unistd.h>
+#endif
 #include "Log.h"
 #include "NetSocket.h"
 
