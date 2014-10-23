@@ -1,3 +1,4 @@
+#include <string.h>
 #include "BinaryDiff.h"
 #include "Log.h"
 
@@ -129,4 +130,57 @@ bool BinaryDiffValidate(const void * bytes1, const void * bytes2, uint32_t byteC
 	temp = 0;
 	
 	return result;
+}
+
+void ApplyBinaryDiff(const void * sourceBytes, void * destBytes, uint32_t byteCount, const BinaryDiffEntry * entries)
+{
+	const uint8_t * src = reinterpret_cast<const uint8_t *>(sourceBytes);
+	      uint8_t * dst = reinterpret_cast<      uint8_t *>(destBytes);
+
+	for (const BinaryDiffEntry * entry = entries; entry; entry = entry->m_next)
+	{
+		// todo : ensure binary diff entries do not write outside of destBytes
+
+		memcpy(dst + entry->m_offset, src + entry->m_offset, entry->m_size);
+	}
+}
+
+BinaryDiffPackage MakeBinaryDiffPackage(const void * bytes, uint32_t byteCount, const BinaryDiffResult diff)
+{
+	size_t size = 0;
+
+	for (const BinaryDiffEntry * entry = diff.m_diffs.get(); entry; entry = entry->m_next)
+	{
+		size += entry->m_size;
+	}
+
+	BinaryDiffPackage result;
+
+	result.m_diff = diff;
+	result.m_data.resize(size);
+
+	const uint8_t * src = reinterpret_cast<const uint8_t *>(bytes);
+	      uint8_t * dst = reinterpret_cast<      uint8_t *>(&result.m_data[0]);
+
+	for (const BinaryDiffEntry * entry = diff.m_diffs.get(); entry; entry = entry->m_next)
+	{
+		memcpy(dst, src + entry->m_offset, entry->m_size);
+
+		dst += entry->m_size;
+	}
+
+	return result;
+}
+
+void ApplyBinaryDiffPackage(void * destBytes, uint32_t byteCount, const BinaryDiffPackage & package)
+{
+	const uint8_t * src = reinterpret_cast<const uint8_t *>(&package.m_data[0]);
+	      uint8_t * dst = reinterpret_cast<      uint8_t *>(destBytes);
+
+	for (const BinaryDiffEntry * entry = package.m_diff.m_diffs.get(); entry; entry = entry->m_next)
+	{
+		memcpy(dst + entry->m_offset, src, entry->m_size);
+
+		src += entry->m_size;
+	}
 }
