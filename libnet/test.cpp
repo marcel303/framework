@@ -422,27 +422,12 @@ static void UpdatePlayerCollision(Map * map, Player * player, bool isAuthorative
 			}
 			else if (isAuthorative)
 			{
-				int max = 0;
-
-				int dx1 = block->m_posX - (player->m_posX + Player::kSize);
-				int dx2 = (block->m_posX + block->m_extX) - player->m_posX;
-
-				int dx;
-
-				if (abs(dx1) < abs(dx2))
-					dx = dx1;
-				else
-					dx = dx2;
-
-				int dy1 = block->m_posY - (player->m_posY + Player::kSize);
-				int dy2 = (block->m_posY + block->m_extY) - player->m_posY;
-
-				int dy;
-
-				if (abs(dy1) < abs(dy2))
-					dy = dy1;
-				else
-					dy = dy2;
+				const int dx1 = block->m_posX - (player->m_posX + Player::kSize);
+				const int dy1 = block->m_posY - (player->m_posY + Player::kSize);
+				const int dx2 = (block->m_posX + block->m_extX) - player->m_posX;
+				const int dy2 = (block->m_posY + block->m_extY) - player->m_posY;
+				const int dx = abs(dx1) < abs(dx2) ? dx1 : dx2;
+				const int dy = abs(dy1) < abs(dy2) ? dy1 : dy2;
 
 				if (abs(dx) < abs(dy))
 					player->m_posX += dx;
