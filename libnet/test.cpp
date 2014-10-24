@@ -36,7 +36,7 @@ public:
 	}
 
 	template <typename T>
-	T & Alloc(T & x)
+	T & Alloc()
 	{
 		NetAssert(m_allocIdx + sizeof(T) <= kSize);
 		T & v = reinterpret_cast<T &>(m_bytes[m_allocIdx]);
@@ -50,16 +50,83 @@ public:
 	uint8_t m_bytes[kSize];
 };
 
+template <typename T>
+class svValue
+{
+	T & m_storage;
+
+public:
+	svValue(StateVector & v, const T & init = T())
+		: m_storage(v.Alloc<T>())
+	{
+		m_storage = init;
+	}
+
+	operator T()
+	{
+		return m_storage;
+	}
+
+	operator T() const
+	{
+		return m_storage;
+	}
+
+	T & operator=(const T & other)
+	{
+		m_storage = other;
+		
+		return m_storage;
+	}
+
+	void operator+=(const T & other)
+	{
+		m_storage += other;
+	}
+
+	void operator-=(const T & other)
+	{
+		m_storage -= other;
+	}
+
+	void operator*=(const T & other)
+	{
+		m_storage *= other;
+	}
+
+	void operator/=(const T & other)
+	{
+		m_storage /= other;
+	}
+
+	void operator&=(const T & other)
+	{
+		m_storage &= other;
+	}
+
+	void operator^=(const T & other)
+	{
+		m_storage ^= other;
+	}
+};
+
+typedef svValue<int8_t>   svInt8;
+typedef svValue<uint8_t>  svUint8;
+typedef svValue<int16_t>  svInt16;
+typedef svValue<uint16_t> svUint16;
+typedef svValue<int32_t>  svInt32;
+typedef svValue<uint32_t> svUint32;
+
 const static int kWorldSize = 256;
 
 class Player
 {
 public:
 	Player(StateVector & stateVector)
-		: m_posX(stateVector.Alloc(m_posX))
-		, m_posY(stateVector.Alloc(m_posY))
-		, m_velX(stateVector.Alloc(m_velX))
-		, m_velY(stateVector.Alloc(m_velY))
+		: m_posX(stateVector)
+		, m_posY(stateVector)
+		, m_velX(stateVector)
+		, m_velY(stateVector)
 	{
 		m_posX = 0;
 		m_posY = 0;
@@ -67,7 +134,7 @@ public:
 		m_velY = 0;
 	}
 
-	void Update()
+	void Update(float dt)
 	{
 		m_posX += m_velX;
 		m_posY += m_velY;
@@ -91,28 +158,28 @@ public:
 			kSize,
 			kSize);
 
-		const uint32_t color = bitmap.Color(1.f, 0.f, 0.f);
+		const uint32_t color = bitmap.Color(0.f, 0.f, 1.f);
 
 		bitmap.Clear(color);
 	}
 
 	const static int kSize = 16;
 
-	int16_t & m_posX;
-	int16_t & m_posY;
-	int16_t & m_velX;
-	int16_t & m_velY;
+	svInt16 m_posX;
+	svInt16 m_posY;
+	svInt16 m_velX;
+	svInt16 m_velY;
 };
 
 class Block
 {
 public:
-	inline Block(StateVector & stateVector)
-		: m_posX(stateVector.Alloc(m_posX))
-		, m_posY(stateVector.Alloc(m_posY))
-		, m_extX(stateVector.Alloc(m_extX))
-		, m_extY(stateVector.Alloc(m_extY))
-		, m_type(stateVector.Alloc(m_type))
+	Block(StateVector & stateVector)
+		: m_posX(stateVector)
+		, m_posY(stateVector)
+		, m_extX(stateVector)
+		, m_extY(stateVector)
+		, m_type(stateVector)
 	{
 		Randomize();
 	}
@@ -128,11 +195,114 @@ public:
 
 	const static int kSize = 16;
 
-	uint16_t & m_posX;
-	uint16_t & m_posY;
-	uint16_t & m_extX;
-	uint16_t & m_extY;
-	uint8_t  & m_type;
+	svUint16 m_posX;
+	svUint16 m_posY;
+	svUint16 m_extX;
+	svUint16 m_extY;
+	svUint8  m_type;
+};
+
+class Door
+{
+public:
+	Door(StateVector & stateVector)
+		: m_posX(stateVector)
+		, m_posY(stateVector)
+		, m_state(stateVector, State_Closed)
+		, m_oldState(State_Closed)
+		, m_animProgress(1.f)
+	{
+		m_posX = rand() % kWorldSize;
+		m_posY = rand() % kWorldSize;
+	}
+
+	void Update(float dt)
+	{
+		if (m_state != m_oldState)
+		{
+			m_oldState = m_state;
+			m_animProgress = 0.f;
+		}
+		else
+		{
+			m_animProgress += dt;
+
+			if (m_animProgress > 1.f)
+				m_animProgress = 1.f;
+		}
+	}
+
+	void Draw(SDL_Surface * surface)
+	{
+		SDL_Bitmap bitmap(
+			surface,
+			m_posX,
+			m_posY,
+			kSize,
+			kSize);
+
+		const float colorOpen[3] = { 0.f, 1.f, 0.f };
+		const float colorClosed[3] = { 1.f, 0.f, 0.f };
+
+		const float * color1;
+		const float * color2;
+
+		if (m_state == State_Open)
+		{
+			color1 = colorClosed;
+			color2 = colorOpen;
+		}
+		else
+		{
+			color1 = colorOpen;
+			color2 = colorClosed;
+		}
+
+		const float r = color1[0] * (1.f - m_animProgress) + color2[0] * m_animProgress;
+		const float g = color1[1] * (1.f - m_animProgress) + color2[1] * m_animProgress;
+		const float b = color1[2] * (1.f - m_animProgress) + color2[2] * m_animProgress;
+
+		const uint32_t color = bitmap.Color(r, g, b);
+
+		bitmap.RectFill(
+			0,
+			0,
+			Door::kSize,
+			Door::kSize,
+			color);
+	}
+
+	void Interact()
+	{
+		if (m_animProgress == 1.f)
+		{
+			m_animProgress = 0.f;
+
+			if (m_state == State_Open)
+			{
+				m_state = State_Closed;
+			}
+			else
+			{
+				m_state = State_Open;
+			}
+		}
+	}
+
+	enum State
+	{
+		State_Closed,
+		State_Open
+	};
+
+	const static int kSize = 16;
+
+	svUint16       m_posX;
+	svUint16       m_posY;
+	svValue<State> m_state;
+
+	State m_oldState;
+	float m_animProgress;
 };
 
 class Map
@@ -140,10 +310,11 @@ class Map
 public:
 	Map(StateVector & stateVector)
 	{
-		m_blocks = new Block*[kMaxBlocks];
-
 		for (uint32_t i = 0; i < kMaxBlocks; ++i)
 			m_blocks[i] = new Block(stateVector);
+
+		for (uint32_t i = 0; i < kMaxDoors; ++i)
+			m_doors[i] = new Door(stateVector);
 	}
 
 	~Map()
@@ -154,8 +325,11 @@ public:
 			m_blocks[i] = 0;
 		}
 
-		delete[] m_blocks;
-		m_blocks = 0;
+		for (uint32_t i = 0; i < kMaxDoors; ++i)
+		{
+			delete m_doors[i];
+			m_doors[i] = 0;
+		}
 	}
 
 	void Draw(SDL_Surface * surface)
@@ -169,20 +343,31 @@ public:
 
 		for (int i = 0; i < kMaxBlocks; ++i)
 		{
-			const uint32_t color = bitmap.Color(1.f, 1.f, m_blocks[i]->m_type / 255.f);
+			Block * block = m_blocks[i];
+			
+			const uint32_t color = bitmap.Color(1.f, 1.f, block->m_type / 255.f);
 
 			bitmap.RectFill(
-				m_blocks[i]->m_posX,
-				m_blocks[i]->m_posY,
-				m_blocks[i]->m_extX,
-				m_blocks[i]->m_extY,
+				block->m_posX,
+				block->m_posY,
+				block->m_extX,
+				block->m_extY,
 				color);
+		}
+
+		for (int i = 0; i < kMaxDoors; ++i)
+		{
+			Door * door = m_doors[i];
+
+			door->Draw(surface);
 		}
 	}
 
 	const static uint32_t kMaxBlocks = 128;
+	const static uint32_t kMaxDoors = 32;
 
-	Block * * m_blocks;
+	Block * m_blocks[kMaxBlocks];
+	Door * m_doors[kMaxDoors];
 };
 
 class GameState
@@ -625,6 +810,7 @@ static void TestGameUpdate(SDL_Surface * surface)
 	int moveY1 = 0;
 	int moveX2 = 0;
 	int moveY2 = 0;
+	bool interact = false;
 	bool stop = false;
 	while (stop == false)
 	{
@@ -653,23 +839,27 @@ static void TestGameUpdate(SDL_Surface * surface)
 					moveY1 = e.key.state ? -1 : 0;
 				if (e.key.keysym.sym == SDLK_DOWN)
 					moveY2 = e.key.state ? +1 : 0;
+				if (e.key.keysym.sym == SDLK_SPACE)
+					interact = e.key.state ? true : false;
 				if (e.key.keysym.sym == SDLK_ESCAPE && e.key.state)
 					stop = true;
 			}
 		}
 
+		const float dt = 1.f / 60.f;
+
 		{
 			Player * player = gameDataSV.m_gameState->m_players[0];
 			player->m_velX = moveX1 + moveX2;
 			player->m_velY = moveY1 + moveY2;
-			player->Update();
+			player->Update(dt);
 		}
 
 		for (int p = 0; p < GameState::kMaxPlayers; ++p)
 		{
 			Player * player = gameDataSV.m_gameState->m_players[p];
 
-			for (int i = 0; i < gameDataSV.m_gameState->m_map->kMaxBlocks; ++i)
+			for (int i = 0; i < Map::kMaxBlocks; ++i)
 			{
 				Block * block = gameDataSV.m_gameState->m_map->m_blocks[i];
 
@@ -682,6 +872,34 @@ static void TestGameUpdate(SDL_Surface * surface)
 				if (collision)
 				{
 					block->Randomize();
+				}
+			}
+		}
+
+		for (int i = 0; i < Map::kMaxDoors; ++i)
+		{
+			Door * door = gameDataSV.m_gameState->m_map->m_doors[i];
+
+			door->Update(dt);
+		}
+
+		for (int p = 0; p < GameState::kMaxPlayers; ++p)
+		{
+			Player * player = gameDataSV.m_gameState->m_players[p];
+
+			for (int i = 0; i < Map::kMaxDoors; ++i)
+			{
+				Door * door = gameDataSV.m_gameState->m_map->m_doors[i];
+
+				bool collision =
+					player->m_posX + Player::kSize > door->m_posX &&
+					player->m_posY + Player::kSize > door->m_posY &&
+					player->m_posX < door->m_posX + Door::kSize &&
+					player->m_posY < door->m_posY + Door::kSize;
+
+				if (collision && interact)
+				{
+					door->Interact();
 				}
 			}
 		}
@@ -714,7 +932,7 @@ static void TestGameUpdate(SDL_Surface * surface)
 
 			player->m_velX = - moveX1 - moveX2;
 			player->m_velY = - moveY1 - moveY2;
-			player->Update();
+			player->Update(dt);
 		}
 
 		{
@@ -722,7 +940,7 @@ static void TestGameUpdate(SDL_Surface * surface)
 
 			player->m_velX = + moveX1 + moveX2;
 			player->m_velY = - moveY1 - moveY2;
-			player->Update();
+			player->Update(dt);
 		}
 
 		{
@@ -730,7 +948,14 @@ static void TestGameUpdate(SDL_Surface * surface)
 
 			player->m_velX = - moveX1 - moveX2;
 			player->m_velY = + moveY1 + moveY2;
-			player->Update();
+			player->Update(dt);
+		}
+
+		for (int i = 0; i < Map::kMaxDoors; ++i)
+		{
+			Door * door = gameDataCL.m_gameState->m_map->m_doors[i];
+
+			door->Update(dt);
 		}
 
 		// calculate diff to send to server
@@ -817,19 +1042,27 @@ static void TestBitStream()
 	WriteDiff(bs1, diff, a1);
 
 	{
+		BitStream bs2(bs1.GetData(), bs1.GetDataSize());
+
 		uint8_t r1;
 		uint16_t r2;
 		uint32_t r3;
-
-		BitStream bs2(bs1.GetData(), bs1.GetDataSize());
 
 		bs2.Read(r1);
 		bs2.Read(r2);
 		bs2.Read(r3);
 
+		Assert(r1 == 0x11);
+		Assert(r2 == 0x2233);
+		Assert(r3 == 0x44556677);
+
 		bool b1 = bs2.ReadBit();
 		bool b2 = bs2.ReadBit();
 		bool b3 = bs2.ReadBit();
+
+		Assert(b1 == true);
+		Assert(b2 == false);
+		Assert(b3 == true);
 
 		uint32_t r4;
 		uint8_t r5;
@@ -838,7 +1071,12 @@ static void TestBitStream()
 		bs2.ReadAlign();
 		bs2.Read(r5);
 
+		Assert(r4 == 0x8899aabb);
+		Assert(r5 == 0xcc);
+
 		std::string s = bs2.ReadString();
+
+		Assert(s == "Hello World!");
 
 		uint8_t r[4];
 		bs2.ReadAlignedBytes(r, 4);
