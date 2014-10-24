@@ -363,8 +363,8 @@ public:
 		}
 	}
 
-	const static uint32_t kMaxBlocks = 128;
-	const static uint32_t kMaxDoors = 32;
+	const static uint32_t kMaxBlocks = 64;
+	const static uint32_t kMaxDoors = 8;
 
 	Block * m_blocks[kMaxBlocks];
 	Door * m_doors[kMaxDoors];
@@ -398,6 +398,60 @@ public:
 	Map * m_map;
 	Player * m_players[kMaxPlayers];
 };
+
+static void UpdatePlayerCollision(Map * map, Player * player, bool isAuthorative, bool isHost)
+{
+	for (int i = 0; i < Map::kMaxBlocks; ++i)
+	{
+		Block * block = map->m_blocks[i];
+
+		bool collision =
+			(player->m_posX + Player::kSize) > block->m_posX &&
+			(player->m_posY + Player::kSize) > block->m_posY &&
+			player->m_posX < (block->m_posX + block->m_extX) &&
+			player->m_posY < (block->m_posY + block->m_extY);
+
+		if (collision)
+		{
+			if (block->m_type < 128)
+			{
+				if (isHost)
+				{
+					block->Randomize();
+				}
+			}
+			else if (isAuthorative)
+			{
+				int max = 0;
+
+				int dx1 = block->m_posX - (player->m_posX + Player::kSize);
+				int dx2 = (block->m_posX + block->m_extX) - player->m_posX;
+
+				int dx;
+
+				if (abs(dx1) < abs(dx2))
+					dx = dx1;
+				else
+					dx = dx2;
+
+				int dy1 = block->m_posY - (player->m_posY + Player::kSize);
+				int dy2 = (block->m_posY + block->m_extY) - player->m_posY;
+
+				int dy;
+
+				if (abs(dy1) < abs(dy2))
+					dy = dy1;
+				else
+					dy = dy2;
+
+				if (abs(dx) < abs(dy))
+					player->m_posX += dx;
+				else
+					player->m_posY += dy;
+			}
+		}
+	}	
+}
 
 class GameStateData
 {
@@ -859,21 +913,7 @@ static void TestGameUpdate(SDL_Surface * surface)
 		{
 			Player * player = gameDataSV.m_gameState->m_players[p];
 
-			for (int i = 0; i < Map::kMaxBlocks; ++i)
-			{
-				Block * block = gameDataSV.m_gameState->m_map->m_blocks[i];
-
-				bool collision =
-					player->m_posX + Player::kSize > block->m_posX &&
-					player->m_posY + Player::kSize > block->m_posY &&
-					player->m_posX < block->m_posX + block->m_extX &&
-					player->m_posY < block->m_posY + block->m_extY;
-
-				if (collision)
-				{
-					block->Randomize();
-				}
-			}
+			UpdatePlayerCollision(gameDataSV.m_gameState->m_map, player, (p == 0), true);
 		}
 
 		for (int i = 0; i < Map::kMaxDoors; ++i)
@@ -892,10 +932,10 @@ static void TestGameUpdate(SDL_Surface * surface)
 				Door * door = gameDataSV.m_gameState->m_map->m_doors[i];
 
 				bool collision =
-					player->m_posX + Player::kSize > door->m_posX &&
-					player->m_posY + Player::kSize > door->m_posY &&
-					player->m_posX < door->m_posX + Door::kSize &&
-					player->m_posY < door->m_posY + Door::kSize;
+					(player->m_posX + Player::kSize) > door->m_posX &&
+					(player->m_posY + Player::kSize) > door->m_posY &&
+					player->m_posX < (door->m_posX + Door::kSize) &&
+					player->m_posY < (door->m_posY + Door::kSize);
 
 				if (collision && interact)
 				{
@@ -949,6 +989,13 @@ static void TestGameUpdate(SDL_Surface * surface)
 			player->m_velX = - moveX1 - moveX2;
 			player->m_velY = + moveY1 + moveY2;
 			player->Update(dt);
+		}
+
+		for (int p = 1; p < GameState::kMaxPlayers; ++p)
+		{
+			Player * player = gameDataCL.m_gameState->m_players[p];
+
+			UpdatePlayerCollision(gameDataCL.m_gameState->m_map, player, true, false);
 		}
 
 		for (int i = 0; i < Map::kMaxDoors; ++i)
