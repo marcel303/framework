@@ -159,17 +159,20 @@ BinaryDiffPackage MakeBinaryDiffPackage(const void * bytes, uint32_t byteCount, 
 	result.m_diff = diff;
 	result.m_data.resize(size);
 
-	const uint8_t * src = reinterpret_cast<const uint8_t *>(bytes);
-	      uint8_t * dst = reinterpret_cast<      uint8_t *>(&result.m_data[0]);
-
-	for (const BinaryDiffEntry * entry = diff.m_diffs.get(); entry; entry = entry->m_next)
+	if (!result.m_data.empty())
 	{
-		Assert(entry->m_offset + entry->m_size <= byteCount);
+		const uint8_t * src = reinterpret_cast<const uint8_t *>(bytes);
+			  uint8_t * dst = reinterpret_cast<      uint8_t *>(&result.m_data[0]);
 
-		if (entry->m_offset + entry->m_size <= byteCount)
-			memcpy(dst, src + entry->m_offset, entry->m_size);
+		for (const BinaryDiffEntry * entry = diff.m_diffs.get(); entry; entry = entry->m_next)
+		{
+			Assert(entry->m_offset + entry->m_size <= byteCount);
 
-		dst += entry->m_size;
+			if (entry->m_offset + entry->m_size <= byteCount)
+				memcpy(dst, src + entry->m_offset, entry->m_size);
+
+			dst += entry->m_size;
+		}
 	}
 
 	return result;
@@ -177,16 +180,19 @@ BinaryDiffPackage MakeBinaryDiffPackage(const void * bytes, uint32_t byteCount, 
 
 void ApplyBinaryDiffPackage(void * destBytes, uint32_t byteCount, const BinaryDiffPackage & package)
 {
-	const uint8_t * src = reinterpret_cast<const uint8_t *>(&package.m_data[0]);
-	      uint8_t * dst = reinterpret_cast<      uint8_t *>(destBytes);
-
-	for (const BinaryDiffEntry * entry = package.m_diff.m_diffs.get(); entry; entry = entry->m_next)
+	if (!package.m_data.empty())
 	{
-		Assert(entry->m_offset + entry->m_size <= byteCount);
+		const uint8_t * src = reinterpret_cast<const uint8_t *>(&package.m_data[0]);
+			  uint8_t * dst = reinterpret_cast<      uint8_t *>(destBytes);
 
-		if (entry->m_offset + entry->m_size <= byteCount)
-			memcpy(dst + entry->m_offset, src, entry->m_size);
+		for (const BinaryDiffEntry * entry = package.m_diff.m_diffs.get(); entry; entry = entry->m_next)
+		{
+			Assert(entry->m_offset + entry->m_size <= byteCount);
 
-		src += entry->m_size;
+			if (entry->m_offset + entry->m_size <= byteCount)
+				memcpy(dst + entry->m_offset, src, entry->m_size);
+
+			src += entry->m_size;
+		}
 	}
 }

@@ -6,8 +6,10 @@
 #include "ChannelHandler.h"
 #include "ChannelManager.h"
 #include "Log.h"
+#include "NetArray.h"
 #include "NetDiag.h"
 #include "NetProtocols.h"
+#include "NetSerializable.h"
 #include "NetStats.h"
 #include "Packet.h"
 #include "PacketDispatcher.h"
@@ -18,7 +20,9 @@
 
 static void TestBitStream();
 static void TestRpc();
+static void TestSerializableObject();
 static void TestGameUpdate();
+static void TestNetArray();
 
 enum TestProtocol
 {
@@ -853,7 +857,7 @@ static void TestGameUpdate(SDL_Surface * surface)
 	bool stop = false;
 	while (stop == false)
 	{
-		//SDL_Delay(25);
+		SDL_Delay(10);
 
 		// apply incoming deltas from client (server should be in sync with the client, since we're running in lock-step)
 
@@ -1141,7 +1145,7 @@ static void TestRpc()
 	loopback.Set(127, 0, 0, 1, 12345);
 
 	printf("  C: do RPC call\n");
-	printf("  A: add client loopback channel\n");
+	printf("  A: add client channel\n");
 	printf("ESC: end test\n");
 
 	bool stop = false;
@@ -1159,11 +1163,11 @@ static void TestRpc()
 				{
 					BitStream bs;
 
-					rpcMgr.Call(testRpcCall, bs, ChannelSide_Client, nullptr, true, true);
+					rpcMgr.Call(testRpcCall, bs, ChannelPool_Client, nullptr, true, true);
 				}
 				if (e.key.keysym.sym == SDLK_a)
 				{
-					Channel * channel = channelMgr.CL_CreateChannel();
+					Channel * channel = channelMgr.CreateChannel(ChannelPool_Client);
 					channel->Connect(loopback);
 				}
 				if (e.key.keysym.sym == SDLK_ESCAPE)
@@ -1186,6 +1190,136 @@ static void TestRpc()
 	channelMgr.Shutdown(false);
 }
 
+//
+
+class MySerializable : public NetSerializable
+{
+	virtual void SerializeStruct()
+	{
+		bool b = false;
+		int v = 0;
+		std::string s;
+
+		if (IsSend())
+		{
+			b = true;
+			v = 0x11223344;
+			s = "Hello World!";
+		}
+
+		Serialize(b);
+		Align();
+		Serialize(v);
+		Serialize(s);
+	}
+};
+
+static void TestSerializableObject()
+{
+	NetSerializableObject object;
+	NetSerializable * serializable1 = new MySerializable();
+	NetSerializable * serializable2 = new MySerializable();
+	NetSerializable * serializable3 = new MySerializable();
+	object.Register(serializable1);
+	object.Register(serializable2);
+	object.Register(serializable3);
+
+	{
+		BitStream b1;
+		if (object.Serialize(false, true, b1))
+		{
+			BitStream b2(b1.GetData(), b1.GetDataSize());
+			object.Serialize(false, false, b2);
+		}
+	}
+
+	{
+		serializable2->SetDirty();
+
+		BitStream b1;
+		if (object.Serialize(false, true, b1))
+		{
+			BitStream b2(b1.GetData(), b1.GetDataSize());
+			object.Serialize(false, false, b2);
+		}
+	}
+
+	delete serializable1;
+	delete serializable2;
+	delete serializable3;
+}
+
+//
+
+template <typename T>
+static bool IsEqual(const NetArray<T> & a1, const NetArray<T> & a2)
+{
+	if (a1.size() != a2.size())
+		return false;
+	if (a1.capacity() != a2.capacity())
+		return false;
+	for (size_t i = 0; i < a1.size(); ++i)
+	{
+		if (a1[i] != a2[i])
+			return false;
+	}
+	return true;
+}
+
+static void TestNetArray()
+{
+	NetArray<int> a;
+
+	a.push_back(0);
+	a.push_back(1);
+	a.push_back(2);
+
+	a.clear();
+	a.reserve(100);
+	a.resize(50);
+
+	a.push_back(0);
+	a.push_back(1);
+	a.push_back(2);
+	a.erase(1);
+	a.set(2, -2);
+
+	{
+		BitStream b1;
+		NetSerializationContext context;
+		context.Set(false, true, b1);
+		a.Serialize(context);
+
+		//
+
+		NetArray<int> b;
+		BitStream b2(b1.GetData(), b1.GetDataSize());
+		context.Set(false, false, b2);
+		b.Serialize(context);
+
+		NetAssert(IsEqual(a, b));
+	}
+
+	a.clear();
+	
+	for (size_t i = 0; i < 100; ++i)
+		a.push_back(i);
+
+	{
+		BitStream b3;
+		NetSerializationContext context;
+		context.Set(false, true, b3);
+		a.Serialize(context);
+
+		NetArray<int> b;
+		BitStream b4(b3.GetData(), b3.GetDataSize());
+		context.Set(false, false, b4);
+		b.Serialize(context);
+
+		NetAssert(IsEqual(a, b));
+	}
+}
+
 int main(int argc, char * argv[])
 {
 	try
@@ -1200,9 +1334,11 @@ int main(int argc, char * argv[])
 
 		//TestBitStream();
 		//TestRpc();
+		TestSerializableObject();
+		TestNetArray();
 		TestGameUpdate(surface);
 		printf("skipping libnet test!\n");
-		return -1;
+		//return -1;
 
 		printf("select mode:\n");
 		printf("S = server\n");
@@ -1283,7 +1419,7 @@ int main(int argc, char * argv[])
 
 						for (uint32_t i = 0; i < count; ++i)
 						{
-							Channel * clientChannel = channelMgr.CL_CreateChannel();
+							Channel * clientChannel = channelMgr.CreateChannel(ChannelPool_Client);
 							NetAssert(clientChannel != 0);
 							LOG_INF("created client channel %09u", clientChannel->m_id);
 							

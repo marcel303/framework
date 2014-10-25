@@ -9,7 +9,7 @@
 
 #define LOG_CHANNEL_DBG(fmt, ...) LOG_DBG("channel [%09u]: " # fmt, static_cast<uint32_t>(m_id), __VA_ARGS__)
 
-Channel::Channel(ChannelType channelType, ChannelSide channelSide, uint32_t protocolMask)
+Channel::Channel(ChannelType channelType, ChannelPool channelPool, uint32_t protocolMask)
 	: m_channelMgr(0)
 	, m_socket()
 	, m_address()
@@ -24,7 +24,7 @@ Channel::Channel(ChannelType channelType, ChannelSide channelSide, uint32_t prot
 	, m_delayTimer()
 	, m_delayedReceivePackets()
 	, m_channelType(channelType)
-	, m_channelSide(channelSide)
+	, m_channelPool(channelPool)
 	, m_protocolMask(protocolMask)
 	, m_queueForDestroy(false)
 	, m_rtQueue()
@@ -111,7 +111,7 @@ void Channel::Update(uint32_t time)
 {
 	// Read messages.
 	{
-		static ReceiveData receiveData;
+		ReceiveData receiveData;
 
 		while (Receive(receiveData))
 		{
@@ -131,7 +131,7 @@ void Channel::Update(uint32_t time)
 		}
 	}
 
-	if (m_channelType == ChannelType_Client)
+	if (m_channelType == ChannelType_Connection)
 	{
 		// Handle reliable communications.
 		for (size_t i = 0; i < m_rtQueue.size(); ++i)
@@ -141,7 +141,7 @@ void Channel::Update(uint32_t time)
 			if (time >= packet.m_nextSend)
 			{
 				packet.m_lastSend = time;
-				packet.m_nextSend = time + 500;
+				packet.m_nextSend = time + 500; // todo : use RTT * 2, or make it configurable
 
 				PacketBuilder<6> headerBuilder;
 
@@ -171,8 +171,10 @@ void Channel::Update(uint32_t time)
 		}
 
 		// Send ping at regular interval.
-		while (m_pingTimer.ReadTick())
+		if (m_pingTimer.ReadTick())
 		{
+			m_pingTimer.ClearTick();
+
 			PacketBuilder<6> packetBuilder;
 
 			const uint8_t protocolId = PROTOCOL_CHANNEL;
@@ -285,6 +287,8 @@ bool Channel::Send(const Packet & packet, bool priority)
 
 bool Channel::SendBegin(uint32_t size)
 {
+	NetAssert(m_txBegun == false && m_txSize == 0);
+
 	const uint32_t OVERHEAD = 2;
 	const uint32_t newSize1 = OVERHEAD + size;
 	const uint32_t newSize2 = m_sendQueue.GetSize() + newSize1;
@@ -313,9 +317,10 @@ bool Channel::SendBegin(uint32_t size)
 
 void Channel::SendEnd()
 {
-	NetAssert(m_txSize == 0);
+	NetAssert(m_txBegun == true && m_txSize == 0);
 
 	m_txBegun = false;
+	m_txSize = 0;
 }
 
 void Channel::SendReliable(const Packet & packet)
@@ -362,19 +367,19 @@ bool Channel::Receive(ReceiveData & rcvData)
 		// NOTE: Delay reduced packets by a few MS to ensure packets sent to self receive before updates from server.
 		//const uint32_t time1 = static_cast<uint32_t>(m_delayTimer.TimeMS_get());
 		const uint32_t time1 = static_cast<uint32_t>(m_delayTimer.TimeMS_get()) + 5;
-		const uint32_t time2 = m_delayedReceivePackets[0].m_time + m_delayedReceivePackets[0].m_delay;
+		const uint32_t time2 = m_delayedReceivePackets.front().m_time + m_delayedReceivePackets.front().m_delay;
 
 		if (time1 >= time2)
 		{
-			const DelayedPacket & delayedPacket = m_delayedReceivePackets[0];
+			const DelayedPacket & delayedPacket = m_delayedReceivePackets.front();
+
 			memcpy(rcvData.m_data, delayedPacket.m_data, delayedPacket.m_dataSize);
 			rcvData.Set(delayedPacket.m_dataSize, delayedPacket.m_address);
 
-			NetStats::Inc(NetStat_PacketsReceived);
-			NetStats::Inc(NetStat_BytesReceived, rcvData.m_size);
-
 			m_delayedReceivePackets.pop_front();
 
+			NetStats::Inc(NetStat_PacketsReceived);
+			NetStats::Inc(NetStat_BytesReceived, rcvData.m_size);
 			return true;
 		}
 	}

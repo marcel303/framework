@@ -34,7 +34,7 @@ public:
 class Channel
 {
 public:
-	Channel(ChannelType channelType, ChannelSide channelSide, uint32_t protocolMask);
+	Channel(ChannelType channelType, ChannelPool channelPool, uint32_t protocolMask);
 	~Channel();
 
 	void Initialize(ChannelManager * channelMgr, SharedNetSocket socket);
@@ -106,7 +106,7 @@ public:
 	PolledTimer m_delayTimer;
 	DelayedPacketList m_delayedReceivePackets;
 	ChannelType m_channelType;
-	ChannelSide m_channelSide;
+	ChannelPool m_channelPool;
 	uint32_t m_protocolMask;
 	bool m_queueForDestroy;
 

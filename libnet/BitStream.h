@@ -114,7 +114,7 @@ public:
 	template <typename T>
 	T ReadBits(const uint32_t numBits)
 	{
-		T v = 0;
+		T v = (T)0;
 		for (uint32_t i = 0; i < numBits; ++i)
 			v |= ReadBit() << i;
 		return v;

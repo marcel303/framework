@@ -39,7 +39,7 @@ bool ChannelManager::Initialize(ChannelHandler * handler, uint16_t serverPort, b
 
 	if (enableServer)
 	{
-		m_listenChannel = SV_CreateChannel();
+		m_listenChannel = CreateListenChannel(ChannelPool_Server);
 	}
 
 	return true;
@@ -51,7 +51,7 @@ void ChannelManager::Shutdown(bool sendDisconnectNotification)
 	{
 		Channel * channel = m_channels.begin()->second;
 
-		if (channel->m_channelType == ChannelType_Client)
+		if (channel->m_channelType == ChannelType_Connection)
 		{
 			if (sendDisconnectNotification)
 			{
@@ -75,19 +75,19 @@ void ChannelManager::SetChannelTimeoutMS(uint32_t timeout)
 	m_channelTimeout = timeout;
 }
 
-Channel * ChannelManager::SV_CreateChannel()
+Channel * ChannelManager::CreateListenChannel(ChannelPool channelPool)
 {
-	return CreateChannelEx(ChannelType_Server, ChannelSide_Server);
+	return CreateChannelEx(ChannelType_Listen, channelPool);
 }
 
-Channel * ChannelManager::CL_CreateChannel()
+Channel * ChannelManager::CreateChannel(ChannelPool channelPool)
 {
-	return CreateChannelEx(ChannelType_Client, ChannelSide_Client);
+	return CreateChannelEx(ChannelType_Connection, channelPool);
 }
 
-Channel * ChannelManager::CreateChannelEx(ChannelType channelType, ChannelSide channelSide)
+Channel * ChannelManager::CreateChannelEx(ChannelType channelType, ChannelPool channelPool)
 {
-	Channel * channel = new Channel(channelType, channelSide, (1 << PROTOCOL_CHANNEL));
+	Channel * channel = new Channel(channelType, channelPool, (1 << PROTOCOL_CHANNEL));
 
 	channel->Initialize(this, m_socket);
 	channel->m_id = m_channelIds.Allocate();
@@ -99,11 +99,11 @@ Channel * ChannelManager::CreateChannelEx(ChannelType channelType, ChannelSide c
 
 void ChannelManager::DestroyChannel(Channel * channel)
 {
-	if (m_handler && channel->m_channelType == ChannelType_Client)
+	if (m_handler && channel->m_channelType == ChannelType_Connection)
 	{
-		/**/ if (channel->m_channelSide == ChannelSide_Client)
+		/**/ if (channel->m_channelPool == ChannelPool_Client)
 			m_handler->CL_OnChannelDisconnect(channel);
-		else if (channel->m_channelSide == ChannelSide_Server)
+		else if (channel->m_channelPool == ChannelPool_Server)
 			m_handler->SV_OnChannelDisconnect(channel);
 		else
 			NetAssert(false);
@@ -250,7 +250,7 @@ void ChannelManager::HandleConnect(Packet & packet, Channel * channel)
 			packet.m_rcvAddress.GetSockAddr()->sin_port);
 #endif
 
-		Channel * newChannel = CreateChannelEx(ChannelType_Client, ChannelSide_Server);
+		Channel * newChannel = CreateChannelEx(ChannelType_Connection, ChannelPool_Server);
 		newChannel->m_destinationId = channelId;
 		newChannel->m_address = packet.m_rcvAddress;
 
@@ -428,17 +428,31 @@ void ChannelManager::HandleUnpack(Packet & packet, Channel * channel)
 
 			if (packet.Read16(&size2))
 			{
-				size -= 2;
+				if (size >= 2)
+					size -= 2;
+				else
+				{
+					LOG_ERR("chanmgr: unpack: invalid packet size", 0);
+					NetAssert(false);
+					break;
+				}
 
 				Packet extracted;
 
 				if (packet.Extract(extracted, size2))
 				{
+					if (size >= size2)
+						size -= size2;
+					else
+					{
+						LOG_ERR("chanmgr: unpack: invalid packet size", 0);
+						NetAssert(false);
+						break;
+					}
+
 					packet.Skip(size2);
 
 					PacketDispatcher::Dispatch(extracted, channel);
-
-					size -= size2;
 				}
 				else
 				{

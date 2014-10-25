@@ -10,4 +10,3 @@ public:
 	static bool RegisterProtocol(uint32_t protocolId, PacketListener * listener);
 	static bool UnregisterProtocol(uint32_t protocolId, PacketListener * listener);
 };
-

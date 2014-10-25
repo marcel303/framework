@@ -45,7 +45,7 @@ void RpcManager::Unregister(uint32_t method, RpcHandler handler)
 	}
 }
 
-void RpcManager::Call(uint32_t method, const BitStream & bs, ChannelSide channelSide, uint32_t * channelId, bool broadcast, bool invokeLocal)
+void RpcManager::Call(uint32_t method, const BitStream & bs, ChannelPool channelPool, uint32_t * channelId, bool broadcast, bool invokeLocal)
 {
 	NetAssert(channelId == nullptr); // not yet implemented!
 
@@ -66,7 +66,7 @@ void RpcManager::Call(uint32_t method, const BitStream & bs, ChannelSide channel
 		{
 			Channel * channel = i->second;
 
-			if (channel->m_channelSide == channelSide && channel->m_channelType == ChannelType_Client)
+			if (channel->m_channelPool == channelPool && channel->m_channelType == ChannelType_Connection)
 			{
 				channel->SendReliable(p);
 			}

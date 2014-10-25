@@ -20,9 +20,9 @@ public:
 
 	void SetChannelTimeoutMS(uint32_t timeout);
 
-	Channel * SV_CreateChannel();
-	Channel * CL_CreateChannel();
-	Channel * CreateChannelEx(ChannelType type, ChannelSide side);
+	Channel * CreateListenChannel(ChannelPool pool);
+	Channel * CreateChannel(ChannelPool pool);
+	Channel * CreateChannelEx(ChannelType type, ChannelPool pool);
 	void DestroyChannel(Channel * channel);
 	void DestroyChannelQueued(Channel * channel);
 
