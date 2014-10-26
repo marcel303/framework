@@ -50,9 +50,21 @@ void NetSerializationContext::Serialize(std::string & s)
 
 //
 
-NetSerializable::NetSerializable()
-	: m_isDirty(false)
+NetSerializable::NetSerializable(NetSerializableObject * owner)
+	: m_owner(0)
+	, m_isDirty(false)
 {
+	if (owner)
+	{
+		owner->Register(this);
+	}
+}
+
+void NetSerializable::SetOwner(NetSerializableObject * owner)
+{
+	NetAssert(m_owner == 0);
+
+	m_owner = owner;
 }
 
 bool NetSerializable::IsDirty() const
@@ -90,6 +102,8 @@ void NetSerializableObject::Register(NetSerializable* serializable)
 	NetAssert(std::find(m_serializables.begin(), m_serializables.end(), serializable) == m_serializables.end());
 
 	m_serializables.push_back(serializable);
+
+	serializable->SetOwner(this);
 }
 
 bool NetSerializableObject::Serialize(bool init, bool send, BitStream & bitStream)
@@ -118,6 +132,8 @@ bool NetSerializableObject::Serialize(bool init, bool send, BitStream & bitStrea
 			result = true;
 
 			serialiable->SerializeStruct(init, send, bitStream);
+
+			serialiable->ResetDirty();
 		}
 	}
 

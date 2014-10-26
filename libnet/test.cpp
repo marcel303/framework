@@ -1194,6 +1194,12 @@ static void TestRpc()
 
 class MySerializable : public NetSerializable
 {
+public:
+	MySerializable(NetSerializableObject * owner)
+		: NetSerializable(owner)
+	{
+	}
+
 	virtual void SerializeStruct()
 	{
 		bool b = false;
@@ -1211,18 +1217,19 @@ class MySerializable : public NetSerializable
 		Align();
 		Serialize(v);
 		Serialize(s);
+
+		NetAssert(b == true);
+		NetAssert(v == 0x11223344);
+		NetAssert(s == "Hello World!");
 	}
 };
 
 static void TestSerializableObject()
 {
 	NetSerializableObject object;
-	NetSerializable * serializable1 = new MySerializable();
-	NetSerializable * serializable2 = new MySerializable();
-	NetSerializable * serializable3 = new MySerializable();
-	object.Register(serializable1);
-	object.Register(serializable2);
-	object.Register(serializable3);
+	MySerializable serializable1(&object);
+	MySerializable serializable2(&object);
+	MySerializable serializable3(&object);
 
 	{
 		BitStream b1;
@@ -1234,7 +1241,7 @@ static void TestSerializableObject()
 	}
 
 	{
-		serializable2->SetDirty();
+		serializable2.SetDirty();
 
 		BitStream b1;
 		if (object.Serialize(false, true, b1))
@@ -1242,11 +1249,9 @@ static void TestSerializableObject()
 			BitStream b2(b1.GetData(), b1.GetDataSize());
 			object.Serialize(false, false, b2);
 		}
-	}
 
-	delete serializable1;
-	delete serializable2;
-	delete serializable3;
+		NetAssert(!object.Serialize(false, true, b1));
+	}
 }
 
 //
@@ -1434,9 +1439,9 @@ int main(int argc, char * argv[])
 		//TestRpc();
 		TestSerializableObject();
 		TestNetArray();
-		TestGameUpdate(surface);
+		//TestGameUpdate(surface);
 		printf("skipping libnet test!\n");
-		//return -1;
+		return -1;
 
 		printf("select mode:\n");
 		printf("S = server\n");

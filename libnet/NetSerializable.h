@@ -39,10 +39,13 @@ public:
 
 class NetSerializable : public NetSerializationContext
 {
+	NetSerializableObject * m_owner;
 	bool m_isDirty;
 
 public:
-	NetSerializable();
+	NetSerializable(NetSerializableObject * owner);
+
+	void SetOwner(NetSerializableObject * owner);
 
 	bool IsDirty() const;
 	void SetDirty();
