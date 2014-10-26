@@ -29,7 +29,11 @@ class NetArray
 		{
 		}
 
-		uint8_t type;
+		union
+		{
+			uint8_t type;
+			ActionType type_ : 8;
+		};
 		uint16_t index;
 		uint16_t size;
 		T value;
@@ -96,6 +100,11 @@ public:
 		return m_data.size();
 	}
 
+	bool empty() const
+	{
+		return m_data.empty();
+	}
+
 	void reserve(size_t size)
 	{
 		NetAssert(size <= kMaxSize);
@@ -140,16 +149,23 @@ public:
 	{
 		NetAssert(index < m_data.size());
 
-		if (!m_fullSync)
+		if (m_data.size() == 1)
 		{
-			Action action;
-			action.type = ActionType_Erase;
-			action.index = index;
-			m_actions.push_back(action);
-			m_actionsSize += sizeof(action.type) + sizeof(action.index);
+			clear();
 		}
+		else
+		{
+			if (!m_fullSync)
+			{
+				Action action;
+				action.type = ActionType_Erase;
+				action.index = index;
+				m_actions.push_back(action);
+				m_actionsSize += sizeof(action.type) + sizeof(action.index);
+			}
 
-		m_data.erase(m_data.begin() + index);
+			m_data.erase(m_data.begin() + index);
+		}
 	}
 
 	void set(size_t index, const T & value)
@@ -165,7 +181,7 @@ public:
 				action.index = index;
 				action.value = value;
 				m_actions.push_back(action);
-				m_actionsSize += sizeof(action.type) + sizeof(action.size) + sizeof(action.value);
+				m_actionsSize += sizeof(action.type) + sizeof(action.index) + sizeof(action.value);
 			}
 
 			m_data[index] = value;
@@ -194,20 +210,25 @@ public:
 
 			if (isDirty)
 			{
+				const size_t actionsSize = sizeof(uint16_t) + m_actionsSize;
+				const size_t fullSize = sizeof(uint16_t) + sizeof(uint16_t) + (m_data.size() * sizeof(T));
+
 				if (!fullSync)
 				{
 					// check if it's more efficient to do a full sync
 
-					size_t actionsSize = sizeof(uint16_t) + m_actionsSize;
-					size_t fullSize = sizeof(uint16_t) + sizeof(uint16_t) + (m_data.size() * sizeof(T));
-
 					if (actionsSize >= fullSize)
-						m_fullSync = true;
+						fullSync = true;
 				}
 
 				// serialize!
 
 				context.Serialize(fullSync);
+
+			#ifdef DEBUG
+				const size_t expectedSize = context.GetBitStream().GetDataSize() + (fullSync ? fullSize : actionsSize) * 8;
+				//printf("%u vs %u\n", fullSize, actionsSize);
+			#endif
 
 				if (fullSync)
 				{
@@ -262,6 +283,10 @@ public:
 							NetAssert(false);
 						}
 					}
+
+				#ifdef DEBUG
+					NetAssert(context.GetBitStream().GetDataSize() == expectedSize);
+				#endif
 				}
 			}
 		}

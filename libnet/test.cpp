@@ -1331,6 +1331,91 @@ static void TestNetArray()
 
 		NetAssert(IsEqual(a1, a2));
 	}
+
+	for (size_t i = 0; i < 100; ++i)
+	{
+		NetArray<int> a1;
+		NetArray<int> a2;
+
+		struct
+		{
+			char c;
+			size_t chance;
+		} actions[] =
+		{
+			{ 'c', 1  }, // clear
+			{ 'e', 5  }, // erase
+			{ 'p', 20 }, // push_back
+			{ 'r', 2  }, // resize
+			{ 's', 10 }  // set element
+		};
+
+		size_t totalChance = 0;
+
+		for (size_t j = 0; j < sizeof(actions) / sizeof(actions[0]); ++j)
+		{
+			totalChance += actions[j].chance;
+			actions[j].chance = totalChance;
+		}
+
+		for (size_t j = 0; j < 100; ++j)
+		{
+			size_t dice = rand() % totalChance;
+
+			for (size_t k = 0, c = 0; k < sizeof(actions) / sizeof(actions[0]); ++k)
+			{
+				c += actions[k].chance;
+				
+				if (dice < actions[k].chance)
+				{
+					switch (actions[k].c)
+					{
+					case 'c':
+						a1.clear();
+						break;
+					case 'e':
+						if (!a1.empty())
+						{
+							size_t index = rand() % a1.size();
+							a1.erase(index);
+						}
+						break;
+					case 'p':
+						a1.push_back(rand());
+						break;
+					case 'r':
+						if (a1.empty())
+							a1.resize(rand() % 10);
+						else
+							a1.resize(rand() % (a1.size() * 2));
+						break;
+					case 's':
+						if (!a1.empty())
+						{
+							size_t index = rand() % a1.size();
+							a1.set(index, rand());
+						}
+						break;
+					}
+					break;
+				}
+			}
+
+			if ((rand() % 10) == 0)
+			{
+				BitStream b1;
+				NetSerializationContext context;
+				context.Set(false, true, b1);
+				a1.Serialize(context);
+
+				BitStream b2(b1.GetData(), b1.GetDataSize());
+				context.Set(false, false, b2);
+				a2.Serialize(context);
+
+				NetAssert(IsEqual(a1, a2));
+			}
+		}
+	}
 }
 
 int main(int argc, char * argv[])

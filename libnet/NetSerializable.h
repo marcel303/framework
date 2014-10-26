@@ -15,6 +15,8 @@ public:
 	void Set(bool init, bool send, BitStream & bitStream);
 	void Reset();
 
+	const BitStream & GetBitStream() const { return *m_bitStream; }
+
 	inline bool IsInit() const { return m_init; }
 	inline bool IsSend() const { return m_send; }
 	inline bool IsRecv() const { return !m_send; }
