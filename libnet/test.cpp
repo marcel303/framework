@@ -515,10 +515,10 @@ class MyChannelHandler : public ChannelHandler, public PacketListener
 public:
 	typedef std::map<uint32_t, Channel*> ChannelMap;
 
-	MyChannelHandler()
+	MyChannelHandler(PacketDispatcher * packetDispatcher)
 		: m_clientIdx(0)
 	{
-		PacketDispatcher::RegisterProtocol(TestProtocol_RT, this);
+		packetDispatcher->RegisterProtocol(TestProtocol_RT, this);
 	}
 
 	virtual ~MyChannelHandler()
@@ -1131,15 +1131,16 @@ static void TestRpcCall(BitStream & bs)
 static void TestRpc()
 {
 	Timer timer;
+	PacketDispatcher packetDispatcher;
 	ChannelManager channelMgr;
 	RpcManager rpcMgr(&channelMgr);
 
 	uint32_t testRpcCall = rpcMgr.Register("TestRpcCall", TestRpcCall);
 
-	channelMgr.Initialize(nullptr, 12345, true);
+	channelMgr.Initialize(&packetDispatcher, nullptr, 12345, true);
 
-	PacketDispatcher::RegisterProtocol(PROTOCOL_CHANNEL, &channelMgr);
-	PacketDispatcher::RegisterProtocol(PROTOCOL_RPC, &rpcMgr);
+	packetDispatcher.RegisterProtocol(PROTOCOL_CHANNEL, &channelMgr);
+	packetDispatcher.RegisterProtocol(PROTOCOL_RPC, &rpcMgr);
 
 	NetAddress loopback;
 	loopback.Set(127, 0, 0, 1, 12345);
@@ -1184,8 +1185,8 @@ static void TestRpc()
 
 	rpcMgr.Unregister(testRpcCall, TestRpcCall);
 
-	PacketDispatcher::UnregisterProtocol(PROTOCOL_CHANNEL, &channelMgr);
-	PacketDispatcher::UnregisterProtocol(PROTOCOL_RPC, &rpcMgr);
+	packetDispatcher.UnregisterProtocol(PROTOCOL_CHANNEL, &channelMgr);
+	packetDispatcher.UnregisterProtocol(PROTOCOL_RPC, &rpcMgr);
 
 	channelMgr.Shutdown(false);
 }
@@ -1491,12 +1492,14 @@ int main(int argc, char * argv[])
 		polledTimer.Initialize(&timer);
 		polledTimer.Start();
 		
-		MyChannelHandler channelHandler;
+		PacketDispatcher packetDispatcher;
+
+		MyChannelHandler channelHandler(&packetDispatcher);
 		
 		ChannelManager channelMgr;
-		channelMgr.Initialize(&channelHandler, listenPort, isServer);
+		channelMgr.Initialize(&packetDispatcher, &channelHandler, listenPort, isServer);
 
-		PacketDispatcher::RegisterProtocol(PROTOCOL_CHANNEL, &channelMgr);
+		packetDispatcher.RegisterProtocol(PROTOCOL_CHANNEL, &channelMgr);
 
 		bool stop = false;
 		bool randomize1 = false;

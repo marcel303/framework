@@ -5,7 +5,10 @@
 #include "PacketDispatcher.h"
 #include "PacketListener.h"
 
-static PacketListener * s_protocolListeners[LIBNET_DISPATCHER_MAX_PROTOCOLS] = { 0 };
+PacketDispatcher::PacketDispatcher()
+{
+	memset(m_protocolListeners, 0, sizeof(m_protocolListeners));
+}
 
 void PacketDispatcher::Dispatch(Packet & packet, Channel * channel)
 {
@@ -13,7 +16,7 @@ void PacketDispatcher::Dispatch(Packet & packet, Channel * channel)
 	
 	if (packet.Read8(&protocolId))
 	{
-		if (protocolId >= LIBNET_DISPATCHER_MAX_PROTOCOLS || s_protocolListeners[protocolId] == 0)
+		if (protocolId >= LIBNET_DISPATCHER_MAX_PROTOCOLS || m_protocolListeners[protocolId] == 0)
 		{
 			LOG_ERR("dispatcher: dispatch: invalid protocol", 0);
 			NetStats::Inc(NetStat_ProtocolInvalid);
@@ -23,7 +26,7 @@ void PacketDispatcher::Dispatch(Packet & packet, Channel * channel)
 		{
 			if (channel->m_protocolMask & (1 << protocolId))
 			{
-				s_protocolListeners[protocolId]->OnReceive(packet, channel);
+				m_protocolListeners[protocolId]->OnReceive(packet, channel);
 			}
 			else
 			{
@@ -49,7 +52,7 @@ bool PacketDispatcher::RegisterProtocol(uint32_t protocolId, PacketListener * li
 		return false;
 	}
 
-	s_protocolListeners[protocolId] = listener;
+	m_protocolListeners[protocolId] = listener;
 
 	return true;
 }
@@ -62,13 +65,13 @@ bool PacketDispatcher::UnregisterProtocol(uint32_t protocolId, PacketListener * 
 		return false;
 	}
 
-	NetAssert(s_protocolListeners[protocolId] == listener);
-	if (s_protocolListeners[protocolId] != listener)
+	NetAssert(m_protocolListeners[protocolId] == listener);
+	if (m_protocolListeners[protocolId] != listener)
 	{
 		return false;
 	}
 
-	s_protocolListeners[protocolId] = nullptr;
+	m_protocolListeners[protocolId] = nullptr;
 
 	return true;
 }

@@ -12,6 +12,7 @@ ChannelManager::ChannelManager()
 	, m_channelTimeout(LIBNET_CHANNEL_TIMEOUT_INTERVAL)
 	, m_channels()
 	, m_channelIds()
+	, m_packetDispatcher(0)
 	, m_handler(0)
 	, m_destroyedChannels()
 {
@@ -21,12 +22,14 @@ ChannelManager::~ChannelManager()
 {
 	NetAssert(m_socket.get() == 0);
 	NetAssert(m_channels.empty());
+	NetAssert(m_packetDispatcher == 0);
 	NetAssert(m_handler == 0);
 	NetAssert(m_listenChannel == 0);
 }
 
-bool ChannelManager::Initialize(ChannelHandler * handler, uint16_t serverPort, bool enableServer)
+bool ChannelManager::Initialize(PacketDispatcher * packetDispatcher, ChannelHandler * handler, uint16_t serverPort, bool enableServer)
 {
+	m_packetDispatcher = packetDispatcher;
 	m_handler = handler;
 
 	m_socket = new NetSocket();
@@ -64,6 +67,7 @@ void ChannelManager::Shutdown(bool sendDisconnectNotification)
 
 	m_listenChannel = 0;
 
+	m_packetDispatcher = 0;
 	m_handler = 0;
 
 	SharedNetSocket nullSocket(0);
@@ -210,7 +214,7 @@ void ChannelManager::HandleTrunk(Packet & packet, Channel * channel)
 
 			if (packet.ExtractTillEnd(packet2))
 			{
-				PacketDispatcher::Dispatch(packet2, channel2);
+				m_packetDispatcher->Dispatch(packet2, channel2);
 			}
 			else
 			{
@@ -452,7 +456,7 @@ void ChannelManager::HandleUnpack(Packet & packet, Channel * channel)
 
 					packet.Skip(size2);
 
-					PacketDispatcher::Dispatch(extracted, channel);
+					m_packetDispatcher->Dispatch(extracted, channel);
 				}
 				else
 				{

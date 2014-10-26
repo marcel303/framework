@@ -127,7 +127,7 @@ void Channel::Update(uint32_t time)
 
 			Packet packet(data, size, address);
 
-			PacketDispatcher::Dispatch(packet, this);
+			m_channelMgr->m_packetDispatcher->Dispatch(packet, this);
 		}
 	}
 
@@ -496,7 +496,7 @@ void Channel::HandleRTUpdate(Packet & packet)
 		
 		if (packet.ExtractTillEnd(packet2))
 		{
-			PacketDispatcher::Dispatch(packet2, this);
+			m_channelMgr->m_packetDispatcher->Dispatch(packet2, this);
 
 #if LIBNET_CHANNEL_LOG_RT == 1
 			LOG_CHANNEL_DBG("RT UPD rcvd: %u handled",

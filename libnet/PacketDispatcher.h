@@ -5,8 +5,12 @@
 
 class PacketDispatcher
 {
+	PacketListener * m_protocolListeners[LIBNET_DISPATCHER_MAX_PROTOCOLS];
+
 public:
-	static void Dispatch(Packet & packet, Channel * channel);
-	static bool RegisterProtocol(uint32_t protocolId, PacketListener * listener);
-	static bool UnregisterProtocol(uint32_t protocolId, PacketListener * listener);
+	PacketDispatcher();
+
+	void Dispatch(Packet & packet, Channel * channel);
+	bool RegisterProtocol(uint32_t protocolId, PacketListener * listener);
+	bool UnregisterProtocol(uint32_t protocolId, PacketListener * listener);
 };

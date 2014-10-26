@@ -15,7 +15,7 @@ public:
 	ChannelManager();
 	~ChannelManager();
 
-	bool Initialize(ChannelHandler * handler, uint16_t serverPort, bool enableServer);
+	bool Initialize(PacketDispatcher * packetDispatcher, ChannelHandler * handler, uint16_t serverPort, bool enableServer);
 	void Shutdown(bool sendDisconnectNotification);
 
 	void SetChannelTimeoutMS(uint32_t timeout);
@@ -50,6 +50,8 @@ public:
 
 	ChannelMap m_channels;
 	HandlePool<uint16_t> m_channelIds;
+
+	PacketDispatcher * m_packetDispatcher;
 
 	ChannelHandler * m_handler;
 
