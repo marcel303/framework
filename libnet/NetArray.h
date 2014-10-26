@@ -186,25 +186,30 @@ public:
 	{
 		if (context.IsSend())
 		{
-			bool isDirty = m_fullSync || !m_actions.empty();
+			bool fullSync = context.IsInit() || m_fullSync;
+
+			bool isDirty = fullSync || !m_actions.empty();
 
 			context.Serialize(isDirty);
 
 			if (isDirty)
 			{
-				// check if it's more efficient to do a full sync
+				if (!fullSync)
+				{
+					// check if it's more efficient to do a full sync
 
-				size_t actionsSize = sizeof(uint16_t) + m_actionsSize;
-				size_t fullSize = sizeof(uint16_t) + sizeof(uint16_t) + (m_data.size() * sizeof(T));
+					size_t actionsSize = sizeof(uint16_t) + m_actionsSize;
+					size_t fullSize = sizeof(uint16_t) + sizeof(uint16_t) + (m_data.size() * sizeof(T));
 
-				if (actionsSize >= fullSize)
-					m_fullSync = true;
+					if (actionsSize >= fullSize)
+						m_fullSync = true;
+				}
 
 				// serialize!
 
-				context.Serialize(m_fullSync);
+				context.Serialize(fullSync);
 
-				if (m_fullSync)
+				if (fullSync)
 				{
 					NetAssert(m_data.size() < (1 << 16));
 					NetAssert(m_data.capacity() < (1 << 16));
@@ -262,15 +267,23 @@ public:
 		}
 		else
 		{
+			NetAssert(m_actions.empty());
+
 			bool isDirty;
 
 			context.Serialize(isDirty);
 
+			NetAssert(!context.IsInit() || isDirty);
+
 			if (isDirty)
 			{
-				context.Serialize(m_fullSync);
+				bool fullSync;
 
-				if (m_fullSync)
+				context.Serialize(fullSync);
+
+				NetAssert(!context.IsInit() || fullSync);
+
+				if (fullSync)
 				{
 					uint16_t size;
 					uint16_t capacity;
@@ -333,8 +346,11 @@ public:
 			}
 		}
 		
-		m_actions.clear();
-		m_actionsSize = 0;
-		m_fullSync = false;
+		if (!context.IsInit())
+		{
+			m_actions.clear();
+			m_actionsSize = 0;
+			m_fullSync = false;
+		}
 	}
 };

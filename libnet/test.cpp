@@ -1268,55 +1268,68 @@ static bool IsEqual(const NetArray<T> & a1, const NetArray<T> & a2)
 
 static void TestNetArray()
 {
-	NetArray<int> a;
+	NetArray<int> a1;
 
-	a.push_back(0);
-	a.push_back(1);
-	a.push_back(2);
+	a1.push_back(0);
+	a1.push_back(1);
+	a1.push_back(2);
 
-	a.clear();
-	a.reserve(100);
-	a.resize(50);
+	a1.clear();
+	a1.reserve(100);
+	a1.resize(50);
 
-	a.push_back(0);
-	a.push_back(1);
-	a.push_back(2);
-	a.erase(1);
-	a.set(2, -2);
+	a1.push_back(0);
+	a1.push_back(1);
+	a1.push_back(2);
+	a1.erase(1);
+	a1.set(2, -2);
 
 	{
 		BitStream b1;
 		NetSerializationContext context;
 		context.Set(false, true, b1);
-		a.Serialize(context);
+		a1.Serialize(context);
 
 		//
 
-		NetArray<int> b;
+		NetArray<int> a2;
 		BitStream b2(b1.GetData(), b1.GetDataSize());
 		context.Set(false, false, b2);
-		b.Serialize(context);
+		a2.Serialize(context);
 
-		NetAssert(IsEqual(a, b));
+		NetAssert(IsEqual(a1, a2));
+
+		//
+
+		BitStream b3;
+		context.Set(true, true, b3);
+		a1.Serialize(context);
+
+		NetArray<int> a3;
+		BitStream b4(b3.GetData(), b3.GetDataSize());
+		context.Set(true, false, b4);
+		a3.Serialize(context);
+
+		NetAssert(IsEqual(a1, a3));
 	}
 
-	a.clear();
+	a1.clear();
 	
 	for (size_t i = 0; i < 100; ++i)
-		a.push_back(i);
+		a1.push_back(i);
 
 	{
-		BitStream b3;
+		BitStream b1;
 		NetSerializationContext context;
-		context.Set(false, true, b3);
-		a.Serialize(context);
+		context.Set(false, true, b1);
+		a1.Serialize(context);
 
-		NetArray<int> b;
-		BitStream b4(b3.GetData(), b3.GetDataSize());
-		context.Set(false, false, b4);
-		b.Serialize(context);
+		NetArray<int> a2;
+		BitStream b2(b1.GetData(), b1.GetDataSize());
+		context.Set(false, false, b2);
+		a2.Serialize(context);
 
-		NetAssert(IsEqual(a, b));
+		NetAssert(IsEqual(a1, a2));
 	}
 }
 
