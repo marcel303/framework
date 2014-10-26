@@ -38,9 +38,10 @@ public:
 	~Channel();
 
 	void Initialize(ChannelManager * channelMgr, SharedNetSocket socket);
+	void SetConnected(bool connected);
 
 	bool Connect(const NetAddress & address);
-	void Disconnect();
+	void Disconnect(bool sendDisconnectNotification = true, bool waitForAck = false);
 	void Update(uint32_t time);
 	void Flush();
 
@@ -58,6 +59,7 @@ public:
 	void HandleRTAck(Packet & packet);
 
 	void InitSendQueue();
+	void OnReceive();
 
 //private: //FIXME
 	class DelayedPacket

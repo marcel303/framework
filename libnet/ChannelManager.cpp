@@ -56,10 +56,7 @@ void ChannelManager::Shutdown(bool sendDisconnectNotification)
 
 		if (channel->m_channelType == ChannelType_Connection)
 		{
-			if (sendDisconnectNotification)
-			{
-				channel->Disconnect();
-			}
+			channel->Disconnect(sendDisconnectNotification, false);
 		}
 
 		DestroyChannel(channel);
@@ -95,6 +92,8 @@ Channel * ChannelManager::CreateChannelEx(ChannelType channelType, ChannelPool c
 
 	channel->Initialize(this, m_socket);
 	channel->m_id = m_channelIds.Allocate();
+
+	channel->SetConnected(true);
 
 	m_channels[channel->m_id] = channel;
 
@@ -167,6 +166,9 @@ void ChannelManager::OnReceive(Packet & packet, Channel * channel)
 			break;
 		case CHANNELMSG_DISCONNECT:
 			HandleDisconnect(packet, channel);
+			break;
+		case CHANNELMSG_DISCONNECT_ACK:
+			HandleDisconnectAck(packet, channel);
 			break;
 		case CHANNELMSG_PING:
 			channel->HandlePing(packet);
@@ -394,14 +396,35 @@ void ChannelManager::HandleConnectAck(Packet & packet, Channel * channel)
 void ChannelManager::HandleDisconnect(Packet & packet, Channel * channel)
 {
 	uint16_t channelId;
+	uint8_t expectAck;
 
-	if (packet.Read16(&channelId))
+	if (packet.Read16(&channelId) && packet.Read8(&expectAck))
 	{
 		if (channel->m_destinationId == channelId)
 		{
-			LOG_INF("chanmgr: disconnect: received disconnect for server channel %u from client channel %u",
+			LOG_INF("chanmgr: disconnect: received disconnect for server channel %u from client channel %u, expecting ack? %s",
 				channel->m_id,
-				channel->m_destinationId);
+				channel->m_destinationId,
+				expectAck ? "yes" : "no");
+
+			if (expectAck)
+			{
+				PacketBuilder<4> replyBuilder;
+
+				const uint8_t protocolId = PROTOCOL_CHANNEL;
+				const uint8_t messageId = CHANNELMSG_DISCONNECT_ACK;
+				const uint16_t destinationId = channel->m_destinationId;
+
+				replyBuilder.Write8(&protocolId);
+				replyBuilder.Write8(&messageId);
+				replyBuilder.Write16(&destinationId);
+
+				Packet reply = replyBuilder.ToPacket();
+
+				channel->Send(reply);
+
+				LOG_INF("chanmgr: disconnect-ok: sent ACK to client channel %u", channel->m_destinationId);
+			}
 
 			DestroyChannelQueued(channel);
 		}
@@ -416,6 +439,35 @@ void ChannelManager::HandleDisconnect(Packet & packet, Channel * channel)
 	else
 	{
 		LOG_ERR("chanmgr: disconnect: failed to read from packet", 0);
+		NetAssert(false);
+	}
+}
+
+void ChannelManager::HandleDisconnectAck(Packet & packet, Channel * channel)
+{
+	uint16_t channelId;
+
+	if (packet.Read16(&channelId))
+	{
+		if (channel->m_id == channelId)
+		{
+			LOG_INF("chanmgr: disconnect-ack: received ACK for server channel %09u from client channel %09u",
+				static_cast<uint32_t>(channelId),
+				static_cast<uint32_t>(channel->m_destinationId));
+
+			DestroyChannelQueued(channel);
+		}
+		else
+		{
+			LOG_ERR("chanmgr: disconnect-ack: channel mismatch %09u, expected %09u",
+				static_cast<uint32_t>(channelId),
+				static_cast<uint32_t>(channel->m_id));
+			NetAssert(false);
+		}
+	}
+	else
+	{
+		LOG_ERR("chanmgr: disconnect-ack: failed to read from packet", 0);
 		NetAssert(false);
 	}
 }

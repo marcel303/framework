@@ -669,8 +669,7 @@ public:
 		}
 		else
 		{
-			channel->Disconnect();
-			channelMgr->DestroyChannel(channel);
+			channel->Disconnect(true, false);
 		}
 	}
 
@@ -682,9 +681,9 @@ public:
 		}
 		else
 		{
-			while (channels.size() != 0)
+			for (ChannelMap::iterator i = channels.begin(); i != channels.end(); ++i)
 			{
-				Channel * channel = channels.begin()->second;
+				Channel * channel = i->second;
 				Disconnect(channelMgr, channel);
 			}
 		}
@@ -1442,7 +1441,7 @@ int main(int argc, char * argv[])
 		TestNetArray();
 		//TestGameUpdate(surface);
 		printf("skipping libnet test!\n");
-		return -1;
+		//return -1;
 
 		printf("select mode:\n");
 		printf("S = server\n");

@@ -1,5 +1,5 @@
 #pragma once
-#include <map>
+#include <set>
 
 /**
  * HandlePool
@@ -18,7 +18,7 @@ public:
 	inline void Free(T handle);
 
 private:
-	std::map<T, bool> m_handles;
+	std::set<T> m_handles;
 };
 
 #include "NetHandlePool.inl"

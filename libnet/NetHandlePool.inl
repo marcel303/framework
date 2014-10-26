@@ -10,9 +10,9 @@ inline T HandlePool<T>::Allocate()
 	do
 	{
 		result = static_cast<T>(rand());
-	} while (result == 0 || m_handles.find(result) != m_handles.end());
+	} while (result == 0 || m_handles.count(result) != 0);
 
-	m_handles[result] = true;
+	m_handles.insert(result);
 
 	return result;
 }

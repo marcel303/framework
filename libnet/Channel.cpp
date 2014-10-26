@@ -56,6 +56,23 @@ void Channel::Initialize(ChannelManager * channelMgr, SharedNetSocket socket)
 #endif
 }
 
+void Channel::SetConnected(bool connected)
+{
+	if (connected)
+	{
+	#if LIBNET_CHANNEL_ENABLE_TIMEOUTS == 1
+		if (m_timeoutTimer.Interval_get() != 0.f)
+			m_timeoutTimer.Start();
+	#endif
+	}
+	else
+	{
+	#if LIBNET_CHANNEL_ENABLE_TIMEOUTS == 1
+		m_timeoutTimer.Stop();
+	#endif
+	}
+}
+
 bool Channel::Connect(const NetAddress & address)
 {
 #if LIBNET_CHANNEL_ENABLE_TIMEOUTS == 1
@@ -83,28 +100,43 @@ bool Channel::Connect(const NetAddress & address)
 	return m_socket->Send(packet.GetData(), packet.GetSize(), &m_address);
 }
 
-void Channel::Disconnect()
+void Channel::Disconnect(bool sendDisconnectNotification, bool waitForAck)
 {
+	// todo : remember we're disconnected. make sure timeout kicks in while waiting for ack
+
+	NetAssert(!waitForAck || sendDisconnectNotification);
+
 	Flush();
-
-	PacketBuilder<4> packetBuilder;
-
-	const uint8_t protocolId = PROTOCOL_CHANNEL;
-	const uint8_t messageId = CHANNELMSG_DISCONNECT;
-	const uint16_t channelId = m_id;
-
-	packetBuilder.Write8(&protocolId);
-	packetBuilder.Write8(&messageId);
-	packetBuilder.Write16(&channelId);
-
-	Send(packetBuilder.ToPacket(), true);
 
 	//m_address = NetAddress(0, 0, 0, 0, 0);
 
-#if LIBNET_CHANNEL_ENABLE_TIMEOUTS == 1
-	if (m_timeoutTimer.Interval_get() != 0.f)
-		m_timeoutTimer.Stop();
-#endif
+	SetConnected(false);
+
+	if (sendDisconnectNotification)
+	{
+		PacketBuilder<5> packetBuilder;
+
+		const uint8_t protocolId = PROTOCOL_CHANNEL;
+		const uint8_t messageId = CHANNELMSG_DISCONNECT;
+		const uint16_t channelId = m_id;
+		const uint8_t expectAck = waitForAck ? 1 : 0;
+
+		packetBuilder.Write8(&protocolId);
+		packetBuilder.Write8(&messageId);
+		packetBuilder.Write16(&channelId);
+		packetBuilder.Write8(&expectAck);
+
+		Send(packetBuilder.ToPacket(), true);
+
+		if (!waitForAck)
+		{
+			m_channelMgr->DestroyChannelQueued(this);
+		}
+	}
+	else
+	{
+		m_channelMgr->DestroyChannelQueued(this);
+	}
 }
 
 void Channel::Update(uint32_t time)
@@ -198,7 +230,7 @@ void Channel::Update(uint32_t time)
 		// Check for connection time out.
 		if (m_timeoutTimer.ReadTick())
 		{
-			Disconnect();
+			Disconnect(true, false);
 
 			m_channelMgr->DestroyChannelQueued(this);
 
@@ -212,7 +244,7 @@ void Channel::Update(uint32_t time)
 
 void Channel::Flush()
 {
-	if (m_sendQueue.GetSize() > 4)
+	if (m_sendQueue.GetSize() > 4) // todo : why check > 4 ?
 	{
 		// write header
 		const uint8_t protocolId = PROTOCOL_CHANNEL;
@@ -378,6 +410,8 @@ bool Channel::Receive(ReceiveData & rcvData)
 
 			m_delayedReceivePackets.pop_front();
 
+			OnReceive();
+
 			NetStats::Inc(NetStat_PacketsReceived);
 			NetStats::Inc(NetStat_BytesReceived, rcvData.m_size);
 			return true;
@@ -393,6 +427,8 @@ bool Channel::Receive(ReceiveData & rcvData)
 		}
 		else
 		{
+			OnReceive();
+
 			NetStats::Inc(NetStat_PacketsReceived);
 			NetStats::Inc(NetStat_BytesReceived, rcvData.m_size);
 			return true;
@@ -450,10 +486,7 @@ void Channel::HandlePong(Packet & packet)
 	LOG_CHANNEL_DBG("received pong message. rtt = %gms", m_rtt / 1000.0f);
 #endif
 
-#if LIBNET_CHANNEL_ENABLE_TIMEOUTS == 1
-	if (m_timeoutTimer.Interval_get() != 0.f)
-		m_timeoutTimer.Restart();
-#endif
+	OnReceive();
 }
 
 void Channel::HandleRTUpdate(Packet & packet)
@@ -572,4 +605,12 @@ void Channel::InitSendQueue()
 	// write dummy header. will be filled in when the queue is eventually flushed
 	uint32_t sendQueueHdr = 0;
 	m_sendQueue.Write32(&sendQueueHdr);
+}
+
+void Channel::OnReceive()
+{
+#if LIBNET_CHANNEL_ENABLE_TIMEOUTS == 1
+	if (m_timeoutTimer.Interval_get() != 0.f)
+		m_timeoutTimer.Restart();
+#endif
 }

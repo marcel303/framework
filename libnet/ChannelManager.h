@@ -36,6 +36,7 @@ public:
 	void HandleConnectError(Packet & packet, Channel * channel);
 	void HandleConnectAck(Packet & packet, Channel * channel);
 	void HandleDisconnect(Packet & packet, Channel * channel);
+	void HandleDisconnectAck(Packet & packet, Channel * channel);
 	void HandleUnpack(Packet & packet, Channel * channel);
 
 	Channel* FindChannel(uint32_t id);
