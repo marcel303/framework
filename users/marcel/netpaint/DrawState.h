@@ -13,6 +13,17 @@ public:
 		size = 0;
 	}
 
+	bool operator==(const blur_desc_t& desc)
+	{
+		return
+			size == desc.size;
+	}
+
+	bool operator!=(blur_desc_t& desc)
+	{
+		return !((*this) == desc);
+	}
+
 	int32_t size;
 };
 

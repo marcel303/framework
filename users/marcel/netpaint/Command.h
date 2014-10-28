@@ -55,6 +55,8 @@ public:
 		{
 			context.Serialize(client_id);
 			context.Serialize(type);
+
+			this->type = (COMMAND_TYPE)type;
 		}
 
 		int ser = 0;
@@ -165,16 +167,32 @@ public:
 
 		if (ser & SER_BLUR)
 		{
-			context.Serialize(draw_state.blur_desc.size);
+			bool serializeBlur = (draw_state.blur_desc != lastCommand.draw_state.blur_desc);
+			context.Serialize(serializeBlur);
+			if (serializeBlur)
+			{
+				context.Serialize(draw_state.blur_desc.size);
+			}
 		}
 
 		if (ser & SER_SMUDGE)
 		{
-			//bitStream..Write(draw_state.smudge_desc.size);
-			context.Serialize(draw_state.smudge_desc.strength);
-
-			context.Serialize(draw_state.direction.p[0]);
-			context.Serialize(draw_state.direction.p[1]);
+			bool serializeSmudge = (draw_state.smudge_desc != lastCommand.draw_state.smudge_desc);
+			context.Serialize(serializeSmudge);
+			if (serializeSmudge)
+			{
+				//bitStream..Write(draw_state.smudge_desc.size);
+				context.Serialize(draw_state.smudge_desc.strength);
+			}
+			bool serializeDirection =
+				(draw_state.direction.p[0] != lastCommand.draw_state.direction.p[0]) ||
+				(draw_state.direction.p[1] != lastCommand.draw_state.direction.p[1]);
+			context.Serialize(serializeDirection);
+			if (serializeDirection)
+			{
+				context.Serialize(draw_state.direction.p[0]);
+				context.Serialize(draw_state.direction.p[1]);
+			}
 		}
 	}
 

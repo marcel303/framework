@@ -712,8 +712,6 @@ public:
 
 				command_t command;
 
-				command.client_id = channel->m_id;
-
 				if (command_type == CMD_BRUSH)
 					command.CreateBrush(draw_state);
 				if (command_type == CMD_BLUR)
@@ -749,7 +747,10 @@ public:
 
 					const Packet packet = packetBuilder.ToPacket();
 
-					channel->Send(packet);
+					if (channel)
+					{
+						channel->Send(packet);
+					}
 
 				#ifdef DEBUG
 					sendSize += packet.GetSize();
@@ -997,6 +998,11 @@ public:
 
 	virtual void CL_OnChannelDisconnect(Channel * channel)
 	{
+		NetAssert(channel == cl_state->channel);
+		if (channel == cl_state->channel)
+		{
+			cl_state->channel = 0;
+		}
 	}
 };
 
@@ -1428,7 +1434,10 @@ int main(int argc, char* argv[])
 
 	delete gk_ctx;
 
-	cl_state->channel->Disconnect();
+	if (cl_state->channel != 0)
+	{
+		cl_state->channel->Disconnect();
+	}
 
 	delete cl_state;
 
