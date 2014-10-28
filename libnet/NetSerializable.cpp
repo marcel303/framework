@@ -40,6 +40,15 @@ void NetSerializationContext::Serialize(bool & v)
 		v = m_bitStream->ReadBit();
 }
 
+void NetSerializationContext::Serialize(float & v)
+{
+	if (IsSend())
+		m_bitStream->Write(v);
+	else
+		m_bitStream->Read(v);
+}
+
+
 void NetSerializationContext::Serialize(std::string & s)
 {
 	if (IsSend())

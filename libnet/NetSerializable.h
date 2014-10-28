@@ -23,6 +23,7 @@ public:
 
 	void Align();
 	void Serialize(bool & v);
+	void Serialize(float & v);
 	void Serialize(std::string & s);
 
 	template <typename T>
@@ -32,6 +33,15 @@ public:
 			m_bitStream->Write<T>(v);
 		else
 			m_bitStream->Read<T>(v);
+	}
+
+	template <typename T>
+	inline void SerializeBits(T & v, uint32_t numBits)
+	{
+		if (IsSend())
+			m_bitStream->WriteBits<T>(v, numBits);
+		else
+			v = m_bitStream->ReadBits<T>(numBits);
 	}
 };
 
