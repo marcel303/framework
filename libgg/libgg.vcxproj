@@ -186,6 +186,7 @@
     <ClInclude Include="ColHashMap.h" />
     <ClInclude Include="ColList.h" />
     <ClInclude Include="DdsLoader.h" />
+    <ClInclude Include="Debugging.h" />
     <ClInclude Include="DeltaTimer.h" />
     <ClInclude Include="Endianness.h" />
     <ClInclude Include="Exception.h" />

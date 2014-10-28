@@ -94,8 +94,6 @@ bool TexturePVR::Load(const char* fileName)
 {
 	bool result = true;
 	
-// fixme: path changed: update USG!
-	//FileStream* stream = new FileStream(g_System.GetResourcePath(fileName).c_str(), OpenMode_Read);
 	FileStream* stream = new FileStream(fileName, OpenMode_Read);
 	StreamReader* reader = new StreamReader(stream, false);
 	
