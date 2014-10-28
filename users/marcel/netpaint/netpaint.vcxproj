@@ -107,8 +107,6 @@
     <ClInclude Include="Event.h" />
     <ClInclude Include="EventGen.h" />
     <ClInclude Include="EventMgr.h" />
-    <ClInclude Include="FileWriter.h" />
-    <ClInclude Include="GkButton.h" />
     <ClInclude Include="GkContext.h" />
     <ClInclude Include="GkWidget.h" />
     <ClInclude Include="Image.h" />
