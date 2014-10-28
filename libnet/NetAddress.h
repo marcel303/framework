@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <string>
 
 #if defined(WINDOWS)
 	#ifndef WIN32_LEAN_AND_MEAN
@@ -43,6 +44,8 @@ public:
 	{
 		return m_port != 0;
 	}
+
+	std::string ToString(bool includePortNumber) const;
 
 private:
 	uint32_t m_address;

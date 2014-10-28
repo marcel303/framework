@@ -159,6 +159,20 @@ public:
 		}
 	}
 
+	void Read(float & v)
+	{
+		uint32_t * p = reinterpret_cast<uint32_t*>(&v);
+
+		Read<uint32_t>(*p);
+	}
+
+	void Write(float & v)
+	{
+		uint32_t * p = reinterpret_cast<uint32_t*>(&v);
+
+		Write<uint32_t>(*p);
+	}
+
 	void ReadAlignedBytes(void * v, const size_t s)
 	{
 		ReadAlign();

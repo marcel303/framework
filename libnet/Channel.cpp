@@ -244,7 +244,7 @@ void Channel::Update(uint32_t time)
 
 void Channel::Flush()
 {
-	if (m_sendQueue.GetSize() > 4) // todo : why check > 4 ?
+	if (m_sendQueue.GetSize() > 4) // header is 4 bytes. a size > 4 bytes means we've got something to send
 	{
 		// write header
 		const uint8_t protocolId = PROTOCOL_CHANNEL;

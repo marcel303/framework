@@ -38,7 +38,7 @@ NetSocket::~NetSocket()
 #endif
 }
 
-bool NetSocket::Bind(uint16_t port)
+bool NetSocket::Bind(uint16_t port, bool broadcast)
 {
 	m_serverPort = port;
 
@@ -58,8 +58,11 @@ bool NetSocket::Bind(uint16_t port)
 	}
 
 	// Set 'reuse address' option.
-	int value = 0xffffffff;
-	setsockopt(m_socket, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char *>(&value), sizeof(int));
+	char value = 1;
+	setsockopt(m_socket, SOL_SOCKET, SO_REUSEADDR, &value, sizeof(char));
+
+	if (broadcast)
+		setsockopt(m_socket, SOL_SOCKET, SO_BROADCAST, &value, sizeof(char));
 
 	return true;
 }

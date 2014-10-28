@@ -1,6 +1,13 @@
 #include <string.h>
 #include "NetAddress.h"
 
+static int GetOctet(int address, int i)
+{
+	return (address >> (24 - i * 8)) & 0xff;
+}
+
+//
+
 void NetAddress::Set(uint32_t address, uint16_t port)
 {
 	// Assign address / port number.
@@ -19,4 +26,27 @@ void NetAddress::Set(uint8_t a, uint8_t b, uint8_t c, uint8_t d, uint16_t port)
 	uint32_t address = (a << 24) | (b << 16) | (c << 8) | (d << 0);
 
 	Set(address, port);
+}
+
+std::string NetAddress::ToString(bool includePortNumber) const
+{
+	char temp[64];
+	if (includePortNumber)
+	{
+		sprintf(temp, "%d.%d.%d.%d:%d",
+			GetOctet(m_address, 0),
+			GetOctet(m_address, 1),
+			GetOctet(m_address, 2),
+			GetOctet(m_address, 3),
+			m_port);
+	}
+	else
+	{
+		sprintf(temp, "%d.%d.%d.%d",
+			GetOctet(m_address, 0),
+			GetOctet(m_address, 1),
+			GetOctet(m_address, 2),
+			GetOctet(m_address, 3));
+	}
+	return temp;
 }
