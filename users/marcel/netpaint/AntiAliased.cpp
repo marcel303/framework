@@ -1,5 +1,5 @@
 #include <allegro.h>
-#include "aa.h"
+#include "AntiAliased.h"
 
 #define	_getpixel8(bmp,	x, y) _getpixel(bmp, x,	y)
 #define	_putpixel8(bmp,	x, y, c) _putpixel(bmp,	x, y, c)

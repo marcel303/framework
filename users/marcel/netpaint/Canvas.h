@@ -53,11 +53,6 @@ public:
 
 		float temp[MAX_CHANNELS];
 
-#ifdef DEBUG // FIXME: Remove once all blend modes implemented.
-		for (int i = 0; i < MAX_CHANNELS; ++i)
-			temp[i] = i % 2;
-#endif
-
 		Blend(color, dst, opacity * value, temp);
 
 		for (int i = 0; i < channels; ++i)

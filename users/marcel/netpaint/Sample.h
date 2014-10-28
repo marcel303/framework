@@ -1,6 +1,5 @@
 #pragma once
 
-#define CHANNELS 3
 #define MAX_CHANNELS 4
 
 //const static int i255 = 1.0f / 255.0f;

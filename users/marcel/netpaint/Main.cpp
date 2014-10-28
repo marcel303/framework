@@ -5,7 +5,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include "aa.h"
+#include "AntiAliased.h"
 #include "Brush.h"
 #include "Canvas.h"
 #include "ChannelManager.h"
@@ -400,10 +400,8 @@ public:
 
 		BitStream bitStream;
 
-		for (size_t i = 0; i < hist_commands.size(); ++i)
-		{
-			hist_commands[i].Serialize(bitStream);
-		}
+		size_t startIndex = 0;
+		command_t::SerializeVector(bitStream, hist_commands, startIndex, -1);
 		
 #if 0
 		File file;
@@ -714,6 +712,8 @@ public:
 
 				command_t command;
 
+				command.client_id = channel->m_id;
+
 				if (command_type == CMD_BRUSH)
 					command.CreateBrush(draw_state);
 				if (command_type == CMD_BLUR)
@@ -724,25 +724,41 @@ public:
 				commands.push_back(command);
 			}
 
-			for (size_t i = 0; i < commands.size(); ++i)
+			if (!commands.empty())
 			{
-				command_t& command = commands[i];
-				command.client_id = channel->m_id;
+			#ifdef DEBUG
+				size_t sendSize = 0;
+			#endif
 
-				BitStream bitStream;
-				command.Serialize(bitStream);
+				size_t startIndex = 0;
 
-				const uint8_t protocolID = PROTOCOL_DRAW;
-				const uint16_t size = bitStream.GetDataSize();
+				while (startIndex != commands.size())
+				{
+					BitStream bitStream;
 
-				PacketBuilder<256> packetBuilder;
-				packetBuilder.Write8(&protocolID);
-				packetBuilder.Write16(&size);
-				packetBuilder.Write(bitStream.GetData(), (bitStream.GetDataSize() + 7) >> 3);
+					const uint32_t count = command_t::SerializeVector(bitStream, commands, startIndex, 1024*8);
 
-				const Packet packet = packetBuilder.ToPacket();
+					const uint8_t protocolID = PROTOCOL_DRAW;
+					const uint16_t size = bitStream.GetDataSize();
 
-				channel->Send(packet);
+					PacketBuilder<2048> packetBuilder;
+					packetBuilder.Write8(&protocolID);
+					packetBuilder.Write16(&size);
+					packetBuilder.Write16(&count);
+					packetBuilder.Write(bitStream.GetData(), (bitStream.GetDataSize() + 7) >> 3);
+
+					const Packet packet = packetBuilder.ToPacket();
+
+					channel->Send(packet);
+
+				#ifdef DEBUG
+					sendSize += packet.GetSize();
+				#endif
+				}
+
+			#ifdef DEBUG
+				printf("send size: %u bytes, %u commands, %g bytes/command\n", (uint32_t)sendSize, (uint32_t)commands.size(), (float)sendSize / commands.size());
+			#endif
 			}
 		}
 
@@ -996,7 +1012,9 @@ public:
 			//printf("client command.\n");
 
 			uint16_t size;
+			uint16_t count;
 			packet.Read16(&size);
+			packet.Read16(&count);
 
 			Packet commandPacket;
 			packet.Extract(commandPacket, (size + 7) >> 3);
@@ -1004,21 +1022,23 @@ public:
 
 			BitStream bitStream(commandPacket.GetData(), size);
 
-			command_t command;
+			std::vector<command_t> commands;
 
-			command.DeSerialize(bitStream);
+			command_t::DeserializeVector(bitStream, commands, count);
 
-			recv_commands.push_back(command);
+			recv_commands.insert(recv_commands.end(), commands.begin(), commands.end());
 		}
 		else
 		{
 			//printf("server command.\n");
 
-			command_t command;
+			std::vector<command_t> commands;
 
 			{
 				uint16_t size;
+				uint16_t count;
 				packet.Read16(&size);
+				packet.Read16(&count);
 
 				Packet commandPacket;
 				packet.Extract(commandPacket, (size + 7) >> 3);
@@ -1026,23 +1046,29 @@ public:
 
 				BitStream bitStream(commandPacket.GetData(), size);
 
-				command.DeSerialize(bitStream);
+				command_t::DeserializeVector(bitStream, commands, count);
 
-				command.client_id = channel->m_id;
+				for (size_t i = 0; i < commands.size(); ++i)
+					commands[i].client_id = channel->m_id;
 			}
 
 			// broadcast packet to all clients
 
+			size_t startIndex = 0;
+
+			while (startIndex != commands.size())
 			{
 				BitStream bitStream;
-				command.Serialize(bitStream);
+
+				const uint16_t count = command_t::SerializeVector(bitStream, commands, startIndex, 1024*8);
 
 				const uint8_t protocolID = PROTOCOL_DRAW;
 				const uint16_t size = bitStream.GetDataSize();
 
-				PacketBuilder<256> packetBuilder;
+				PacketBuilder<2048> packetBuilder;
 				packetBuilder.Write8(&protocolID);
 				packetBuilder.Write16(&size);
+				packetBuilder.Write16(&count);
 				packetBuilder.Write(bitStream.GetData(), (bitStream.GetDataSize() + 7) >> 3);
 
 				const Packet broadcastPacket = packetBuilder.ToPacket();

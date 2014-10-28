@@ -3,6 +3,7 @@
 #include "BitStream.h"
 #include "DrawState.h"
 #include "Packet.h"
+#include "NetSerializable.h"
 
 enum COMMAND_TYPE
 {
@@ -44,12 +45,17 @@ public:
 	const static int ser_blur = SER_COORD | SER_BRUSH | SER_BLUR;
 	const static int ser_smudge = SER_COORD | SER_BRUSH | SER_SMUDGE;
 
-	void Serialize(BitStream& bitStream)
+	void Serialize(NetSerializationContext& context, command_t& lastCommand)
 	{
 		uint8_t type = this->type;
 
-		bitStream.Write(client_id);
-		bitStream.Write(type);
+		bool serializeHeader = (client_id != lastCommand.client_id) || (type != lastCommand.type);
+		context.Serialize(serializeHeader);
+		if (serializeHeader)
+		{
+			context.Serialize(client_id);
+			context.Serialize(type);
+		}
 
 		int ser = 0;
 
@@ -62,130 +68,155 @@ public:
 
 		if (ser & SER_COORD)
 		{
-			short coord[2] = { draw_state.coord.p[0], draw_state.coord.p[1] };
+			for (int i = 0; i < 2; ++i)
+			{
+				uint16_t coord = draw_state.coord.p[i];
+				uint16_t lastCoord = lastCommand.draw_state.coord.p[i];
 
-			bitStream.Write(coord[0]);
-			bitStream.Write(coord[1]);
+				bool bits4 = (coord & 0xfff0) == (lastCoord & 0xfff0);
+				context.Serialize(bits4);
+				if (bits4)
+				{
+					uint16_t bits = coord & 0x000f;
+					context.SerializeBits(bits, 4);
+					coord = (coord & 0xfff0) | bits;
+				}
+				else
+				{
+					bool bits8 = (coord & 0xff00) == (lastCoord & 0xff00);
+					context.Serialize(bits8);
+					if (bits8)
+					{
+						uint16_t bits = coord & 0x00ff;
+						context.SerializeBits(bits, 8);
+						coord = (coord & 0xff00) | bits;
+					}
+					else
+					{
+						context.Serialize(coord);
+					}
+				}
+
+				if (context.IsRecv())
+				{
+					draw_state.coord.p[i] = (int16_t)coord;
+				}
+			}
 		}
 
 		if (ser & SER_BRUSH)
 		{
-			bitStream.Write(draw_state.brush_desc.size);
-			bitStream.Write(draw_state.brush_desc.hardness);
-			bitStream.Write(draw_state.brush_desc.cos_freq[0]);
-			bitStream.Write(draw_state.brush_desc.cos_freq[1]);
+			bool serializeBrush = (draw_state.brush_desc != lastCommand.draw_state.brush_desc);
+			context.Serialize(serializeBrush);
+			if (serializeBrush)
+			{
+				context.Serialize(draw_state.brush_desc.size);
+				context.Serialize(draw_state.brush_desc.hardness);
+				context.Serialize(draw_state.brush_desc.cos_freq[0]);
+				context.Serialize(draw_state.brush_desc.cos_freq[1]);
+			}
 		}
 
 		if (ser & SER_COLOR)
 		{
-			uint8_t color[4];
+			bool serializeColor =
+				(draw_state.color[0] != lastCommand.draw_state.color[0]) ||
+				(draw_state.color[1] != lastCommand.draw_state.color[1]) ||
+				(draw_state.color[2] != lastCommand.draw_state.color[2]) ||
+				(draw_state.opacity != lastCommand.draw_state.opacity);
+			context.Serialize(serializeColor);
+			if (serializeColor)
+			{
+				uint8_t color[4];
 
-			color[0] = FTOI(draw_state.color[0]);
-			color[1] = FTOI(draw_state.color[1]);
-			color[2] = FTOI(draw_state.color[2]);
-			color[3] = FTOI(draw_state.opacity);
+				color[0] = FTOI(draw_state.color[0]);
+				color[1] = FTOI(draw_state.color[1]);
+				color[2] = FTOI(draw_state.color[2]);
+				color[3] = FTOI(draw_state.opacity);
 
-			bitStream.Write(color[0]);
-			bitStream.Write(color[1]);
-			bitStream.Write(color[2]);
-			bitStream.Write(color[3]);
+				context.Serialize(color[0]);
+				context.Serialize(color[1]);
+				context.Serialize(color[2]);
+				context.Serialize(color[3]);
+
+				if (context.IsRecv())
+				{
+					draw_state.color[0] = ITOF(color[0]);
+					draw_state.color[1] = ITOF(color[1]);
+					draw_state.color[2] = ITOF(color[2]);
+					draw_state.opacity = ITOF(color[3]);
+				}
+			}
 		}
 
 		if (ser & SER_BLEND)
 		{
-			uint8_t blend_mode = draw_state.blend_mode;
+			bool serializeBlendMode = (draw_state.blend_mode != lastCommand.draw_state.blend_mode);
+			context.Serialize(serializeBlendMode);
+			if (serializeBlendMode)
+			{
+				uint8_t blend_mode = draw_state.blend_mode;
 
-			bitStream.Write(blend_mode);
+				context.Serialize(blend_mode);
+
+				draw_state.blend_mode = blend_mode;
+			}
 		}
 
 		if (ser & SER_BLUR)
 		{
-			bitStream.Write(draw_state.blur_desc.size);
+			context.Serialize(draw_state.blur_desc.size);
 		}
 
 		if (ser & SER_SMUDGE)
 		{
 			//bitStream..Write(draw_state.smudge_desc.size);
-			bitStream.Write(draw_state.smudge_desc.strength);
+			context.Serialize(draw_state.smudge_desc.strength);
 
-			bitStream.Write(draw_state.direction.p[0]);
-			bitStream.Write(draw_state.direction.p[1]);
+			context.Serialize(draw_state.direction.p[0]);
+			context.Serialize(draw_state.direction.p[1]);
 		}
 	}
 
-	void DeSerialize(BitStream& bitStream)
+	static uint32_t SerializeVector(BitStream& bitStream, std::vector<command_t>& commands, uint32_t& startIndex, uint32_t stopSize)
 	{
-		uint8_t type;
+		uint32_t count = 0;
 
-		bitStream.Read(client_id);
-		bitStream.Read(type);
+		command_t lastCommand;
+		memset(&lastCommand, 0, sizeof(lastCommand));
 
-		this->type = (COMMAND_TYPE)type;
+		NetSerializationContext context;
+		context.Set(true, true, bitStream);
 
-		int ser;
+#if 0
+		commands[startIndex++].Serialize(context, lastCommand);
 
-		if (this->type == CMD_BRUSH)
-			ser = ser_brush;
-		if (this->type == CMD_BLUR)
-			ser = ser_blur;
-		if (this->type == CMD_SMUDGE)
-			ser = ser_smudge;
-
-		if (ser & SER_COORD)
+		++count;
+#else
+		for (size_t& i(startIndex); i < commands.size() && bitStream.GetDataSize() < stopSize; ++i, ++count)
 		{
-			short coord[2];
+			commands[i].Serialize(context, lastCommand);
 
-			bitStream.Read(coord[0]);
-			bitStream.Read(coord[1]);
-
-			draw_state.coord.p[0] = coord[0];
-			draw_state.coord.p[1] = coord[1];
+			lastCommand = commands[i];
 		}
+#endif
 
-		if (ser & SER_BRUSH)
+		return count;
+	}
+
+	static void DeserializeVector(BitStream& bitStream, std::vector<command_t>& commands, uint32_t count)
+	{
+		command_t command;
+		memset(&command, 0, sizeof(command));
+
+		NetSerializationContext context;
+		context.Set(true, false, bitStream);
+		
+		for (size_t i = 0; i < count; ++i)
 		{
-			bitStream.Read(draw_state.brush_desc.size);
-			bitStream.Read(draw_state.brush_desc.hardness);
-			bitStream.Read(draw_state.brush_desc.cos_freq[0]);
-			bitStream.Read(draw_state.brush_desc.cos_freq[1]);
-		}
+			command.Serialize(context, command);
 
-		if (ser & SER_COLOR)
-		{
-			uint8_t color[4];
-
-			bitStream.Read(color[0]);
-			bitStream.Read(color[1]);
-			bitStream.Read(color[2]);
-			bitStream.Read(color[3]);
-
-			draw_state.color[0] = ITOF(color[0]);
-			draw_state.color[1] = ITOF(color[1]);
-			draw_state.color[2] = ITOF(color[2]);
-			draw_state.opacity = ITOF(color[3]);
-		}
-
-		if (ser & SER_BLEND)
-		{
-			uint8_t blend_mode;
-
-			bitStream.Read(blend_mode);
-
-			draw_state.blend_mode = blend_mode;
-		}
-
-		if (ser & SER_BLUR)
-		{
-			bitStream.Read(draw_state.blur_desc.size);
-		}
-
-		if (ser & SER_SMUDGE)
-		{
-			//bitStream.Read(draw_state.smudge_desc.size);
-			bitStream.Read(draw_state.smudge_desc.strength);
-
-			bitStream.Read(draw_state.direction.p[0]);
-			bitStream.Read(draw_state.direction.p[1]);
+			commands.push_back(command);
 		}
 	}
 

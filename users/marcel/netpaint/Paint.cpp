@@ -19,7 +19,7 @@ void PaintBrush(Validatable* val, Canvas* canvas, coord_t* coord, Brush* brush, 
 	{
 		for (int x = 0; x < brush->desc.size; ++x)
 		{
-			canvas->Paint(minf[0] + x, minf[1] + y, *brush->GetPix(x, y), color, opacity);
+			canvas->Paint((int)(minf[0] + x), (int)(minf[1] + y), *brush->GetPix(x, y), color, opacity);
 		}
 	}
 
