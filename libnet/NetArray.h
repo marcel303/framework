@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <vector>
 #include "libnet_forward.h"
+#include "NetSerializable.h"
 
 template <typename T>
 class NetArray

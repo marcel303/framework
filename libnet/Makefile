@@ -4,13 +4,15 @@ INCLUDE = -I"../libgg/"
 INCLUDE += -I/usr/local/include
 INCLUDE += -I"./test/"
 
-CFLAGS += -g
+#CFLAGS += -g
+CFLAGS += -O2
 
 LIBNET_SRC = \
 	BitStream.cpp \
 	Channel.cpp \
 	ChannelManager.cpp \
 	NetAddress.cpp \
+	NetSerializable.cpp \
 	NetSocket.cpp \
 	NetStats.cpp \
 	NetTimer.cpp \

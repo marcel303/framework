@@ -21,7 +21,7 @@
 static void TestBitStream();
 static void TestRpc();
 static void TestSerializableObject();
-static void TestGameUpdate();
+static void TestGameUpdate(SDL_Surface * surface);
 static void TestNetArray();
 
 enum TestProtocol
@@ -1435,11 +1435,11 @@ int main(int argc, char * argv[])
 
 		SDL_Surface * surface = SDL_SetVideoMode(displaySx, displaySy, 32, 0);
 
-		//TestBitStream();
-		//TestRpc();
+		TestBitStream();
+		TestRpc();
 		TestSerializableObject();
 		TestNetArray();
-		//TestGameUpdate(surface);
+		TestGameUpdate(surface);
 		printf("skipping libnet test!\n");
 		//return -1;
 
