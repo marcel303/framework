@@ -7,10 +7,15 @@
 #include "MemOps.h"
 
 class IMemAllocator;
-class MemAllocatorGeneric;
-class MemAllocatorArray;
-class MemAllocatorTransient;
-class IMemAllocationReporter;
+class MemAllocatorGeneric;      // layers on top of standard library functions to provide 16 byte aligned allocations
+class MemAllocatorArray;        // allocates ascending addresses from a custom provided array of data
+class MemAllocatorTransient;    // layers on top of MemAllocatorArray. manages allocation of the array data
+class MemAllocatorStack;        // layers on top of MemAllocatorArray. provides a basic Free implementation. the freed data must always live at the end
+class MemAllocatorManualStack;  // layers on top of MemAllocatorArray. the current allocation cursor can be pushed and popped manually
+template <uint32_t N, uint32_t POW2>
+class MemAllocatorFixed;        // fixed block allocator using a free list
+
+class IMemAllocationReporter;   // debugging layer
 class MemAllocInfo;
 class MemAllocInfoListIterator;
 
@@ -474,9 +479,9 @@ public:
 
 #ifdef _DEBUG
 		pAllocInfo->Init(size, tag, 0);
-#endif
 
 		m_usedList.push_tail(pAllocInfo);
+#endif
 
 		uint32_t index = pAllocInfo - m_pAllocInfos;
 
@@ -489,7 +494,10 @@ public:
 
 		MemAllocInfo * pAllocInfo = m_pAllocInfos + index;
 
+	#ifdef _DEBUG
 		m_usedList.erase(pAllocInfo);
+	#endif
+
 		m_freeList.push_tail(pAllocInfo);
 	}
 
@@ -539,3 +547,6 @@ inline void operator delete[](void * p, IMemAllocator * pAllocator)
 	return pAllocator->Free(p);
 }
 
+//
+
+extern MemAllocatorGeneric g_alloc;

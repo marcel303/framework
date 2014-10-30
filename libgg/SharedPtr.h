@@ -2,116 +2,233 @@
 
 #include "Debugging.h"
 
-template <typename T>
-class SharedPtr
+template <typename T> class SharedPtr;
+                      class SharedPtrRefCount;
+template <typename T> class WeakPtr;
+
+class SharedPtrRefCounter
 {
-	class Storage
+public:
+	int m_refCount;
+	int m_refCountWeak;
+
+	SharedPtrRefCounter()
+		: m_refCount(0)
+		, m_refCountWeak(0)
 	{
-	public:
-		T * m_object;
-		int m_refCount;
+	}
 
-		Storage(T * object)
-			: m_object(object)
-			, m_refCount(0)
-		{
-			Assert(object);
-		}
+	~SharedPtrRefCounter()
+	{
+		Assert(m_refCount == 0);
+		Assert(m_refCountWeak == 0);
+	}
 
-		~Storage()
-		{
-			Assert(m_refCount == 0);
+	bool IsExpired() const
+	{
+		return (m_refCount == 0);
+	}
 
-			delete m_object;
-		}
+	void Acquire()
+	{
+		m_refCount++;
 
-		void Acquire()
-		{
-			m_refCount++;
-		}
+		AcquireWeak();
+	}
 		
-		void Release()
-		{
-			Assert(m_refCount > 0);
-
-			m_refCount--;
-
-			if (m_refCount == 0)
-				delete this;
-		}
-	};
-
-	Storage * m_storage;
-
-	void SetStorage(Storage * storage)
+	bool Release()
 	{
-		Assert(!storage || !m_storage || storage->m_object != m_storage->m_object);
+		Assert(m_refCount > 0);
 
-		if (storage != m_storage)
+		m_refCount--;
+
+		bool result = IsExpired();
+
+		ReleaseWeak();
+
+		return result;
+	}
+
+	void AcquireWeak()
+	{
+		m_refCountWeak++;
+	}
+
+	void ReleaseWeak()
+	{
+		Assert(m_refCountWeak > 0);
+
+		m_refCountWeak--;
+
+		if (m_refCountWeak == 0)
+			delete this;
+	}
+};
+
+template <typename T> class SharedPtr
+{
+	template <typename S> friend class SharedPtr;
+	template <typename S> friend class WeakPtr;
+
+	SharedPtrRefCounter * m_refCounter;
+	T * m_value;
+
+	void Set(SharedPtrRefCounter * refCounter, T * value)
+	{
+		Assert(!refCounter || !m_refCounter || value != m_value);
+
+		if (refCounter != m_refCounter)
 		{
-			if (m_storage)
-				m_storage->Release();
-			m_storage = storage;
-			if (m_storage)
-				m_storage->Acquire();
+			if (m_refCounter)
+				if (m_refCounter->Release())
+					delete m_value;
+
+			m_refCounter = refCounter;
+
+			if (m_refCounter)
+				m_refCounter->Acquire();
 		}
+
+		m_value = value;
+	}
+
+	explicit SharedPtr(SharedPtrRefCounter * refCounter, T * value)
+		: m_refCounter(0)
+		, m_value(0)
+	{
+		Set(refCounter, value);
 	}
 
 public:
 	SharedPtr()
-		: m_storage(0)
+		: m_refCounter(0)
+		, m_value(0)
 	{
 	}
 
-	SharedPtr(const SharedPtr & other)
-		: m_storage(0)
+	template <typename S> SharedPtr(const SharedPtr<S> & other)
+		: m_refCounter(0)
+		, m_value(0)
 	{
-		SetStorage(other.m_storage);
+		*this = other;
 	}
 
-	SharedPtr(T * object)
-		: m_storage(0)
+	template <typename S> explicit SharedPtr(S * object)
+		: m_refCounter(0)
+		, m_value(0)
 	{
 		*this = object;
 	}
 
 	~SharedPtr()
 	{
-		if (m_storage)
-			m_storage->Release();
+		Set(0, 0);
 	}
 
-	void operator=(T * object)
+	template <typename S> void operator=(S * object)
 	{
 		if (object)
-			SetStorage(new Storage(object));
+			Set(new SharedPtrRefCounter, object);
 		else
-			SetStorage(0);
+			Set(0, 0);
 	}
 
-	void operator=(const SharedPtr & ptr)
+	template <typename S> void operator=(const SharedPtr<S> & ptr)
 	{
-		SetStorage(ptr.m_storage);
+		Set(ptr.m_refCounter, ptr.m_value);
 	}
 
-	T * get()
+	T * get() const
 	{
-		if (m_storage)
-			return m_storage->m_object;
-		else
-			return 0;
-	}
-
-	const T * get() const
-	{
-		if (m_storage)
-			return m_storage->m_object;
+		if (m_refCounter && !m_refCounter->IsExpired())
+			return m_value;
 		else
 			return 0;
 	}
 
-	T * operator->()
+	T * operator->() const
 	{
 		return get();
+	}
+
+	//
+
+	template <typename S> bool operator<(const SharedPtr<S> & other) const
+	{
+		return m_refCounter < other.m_refCounter;
+	}
+};
+
+template <typename T> class WeakPtr
+{
+	SharedPtrRefCounter * m_refCounter;
+	T * m_value;
+
+	void Set(SharedPtrRefCounter * refCounter, T * value)
+	{
+		Assert(!refCounter || !m_refCounter || value != m_value);
+
+		if (refCounter != m_refCounter)
+		{
+			if (m_refCounter)
+				m_refCounter->ReleaseWeak();
+
+			m_refCounter = refCounter;
+
+			if (m_refCounter)
+				m_refCounter->AcquireWeak();
+		}
+
+		m_value = value;
+	}
+
+public:
+	WeakPtr()
+		: m_refCounter(0)
+		, m_value(0)
+	{
+	}
+
+	template <typename S> WeakPtr(SharedPtr<S> & ptr)
+		: m_refCounter(0)
+		, m_value(0)
+	{
+		*this = ptr;
+	}
+
+	~WeakPtr()
+	{
+		Set(0, 0);
+	}
+
+	template <typename S> WeakPtr<T> & operator=(SharedPtr<S> & ptr)
+	{
+		Set(ptr.m_refCounter, ptr.m_value);
+
+		return *this;
+	}
+
+	bool expired() const
+	{
+		return m_refCounter->IsExpired();
+	}
+
+	SharedPtr<T> lock()
+	{
+		Assert(!expired());
+
+		return SharedPtr<T>(m_refCounter, m_value);
+	}
+
+	template <typename S> void operator=(const SharedPtr<S> & ptr)
+	{
+		Set(ptr.m_refCounter, ptr.m_value);
+	}
+
+	//
+
+	template <typename S> bool operator<(const WeakPtr<S> & other) const
+	{
+		return m_refCounter < other.m_refCounter;
 	}
 };
