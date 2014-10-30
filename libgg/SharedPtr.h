@@ -106,6 +106,13 @@ public:
 	{
 	}
 
+	SharedPtr(const SharedPtr & other)
+		: m_refCounter(0)
+		, m_value(0)
+	{
+		*this = other;
+	}
+
 	template <typename S> SharedPtr(const SharedPtr<S> & other)
 		: m_refCounter(0)
 		, m_value(0)
@@ -131,6 +138,11 @@ public:
 			Set(new SharedPtrRefCounter, object);
 		else
 			Set(0, 0);
+	}
+
+	void operator=(const SharedPtr & ptr)
+	{
+		Set(ptr.m_refCounter, ptr.m_value);
 	}
 
 	template <typename S> void operator=(const SharedPtr<S> & ptr)
