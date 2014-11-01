@@ -1,0 +1,27 @@
+<solution name="libgg" mainProject="test" />
+
+<project type="library" name="libgg">
+	<preprocessor>
+		<define value="WINDOWS" platform="win32" />
+		<define value="DEBUG" config="debug" />
+	</preprocessor>
+	<files>
+		<file path="test1.cpp" />
+		<file path="test2.cpp" />
+		<file path="test3.cpp" />
+		<file path="test4.cpp" />
+		<file path="test5.cpp" build="false" />
+	</files>
+</project>
+
+<project type="application" name="test">
+	<preprocessor>
+		<define value="WINDOWS" platform="win32" />
+		<define value="DEBUG" config="debug" />
+	</preprocessor>
+	<files>
+		<file path="test.cpp" />
+		<file path="test.h" />
+	</files>
+	<reference name="libgg" />
+</project>
