@@ -201,6 +201,13 @@ public:
 	{
 	}
 
+	WeakPtr(const WeakPtr & ptr)
+		: m_refCounter(0)
+		, m_value(0)
+	{
+		*this = ptr;
+	}
+
 	template <typename S> WeakPtr(SharedPtr<S> & ptr)
 		: m_refCounter(0)
 		, m_value(0)
@@ -213,16 +220,9 @@ public:
 		Set(0, 0);
 	}
 
-	template <typename S> WeakPtr<T> & operator=(SharedPtr<S> & ptr)
-	{
-		Set(ptr.m_refCounter, ptr.m_value);
-
-		return *this;
-	}
-
 	bool expired() const
 	{
-		return m_refCounter->IsExpired();
+		return (m_refCounter == nullptr) || m_refCounter->IsExpired();
 	}
 
 	SharedPtr<T> lock()
@@ -232,9 +232,16 @@ public:
 		return SharedPtr<T>(m_refCounter, m_value);
 	}
 
-	template <typename S> void operator=(const SharedPtr<S> & ptr)
+	void operator=(const WeakPtr & ptr)
 	{
 		Set(ptr.m_refCounter, ptr.m_value);
+	}
+
+	template <typename S> WeakPtr & operator=(const SharedPtr<S> & ptr)
+	{
+		Set(ptr.m_refCounter, ptr.m_value);
+
+		return *this;
 	}
 
 	//

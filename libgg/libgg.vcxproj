@@ -137,6 +137,7 @@
     <ClCompile Include="Mat3x2.cpp" />
     <ClCompile Include="MatrixStack.cpp" />
     <ClCompile Include="MemAllocators.cpp" />
+    <ClCompile Include="MemAllocators2.cpp" />
     <ClCompile Include="MemoryStream.cpp" />
     <ClCompile Include="Parse.cpp" />
     <ClCompile Include="Path.cpp" />
@@ -204,6 +205,7 @@
     <ClInclude Include="Mat4x4.h" />
     <ClInclude Include="MatrixStack.h" />
     <ClInclude Include="MemAllocators.h" />
+    <ClInclude Include="MemAllocators2.h" />
     <ClInclude Include="MemoryStream.h" />
     <ClInclude Include="Parse.h" />
     <ClInclude Include="Path.h" />

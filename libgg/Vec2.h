@@ -152,3 +152,5 @@ public:
 private:
 	float m_v[2];
 };
+
+typedef Vec2 & Vec2Arg;
