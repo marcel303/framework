@@ -5,6 +5,19 @@
 #include <string>
 #include "Debugging.h"
 
+namespace Net
+{
+	inline size_t BitsToBytes(size_t bits)
+	{
+		return (bits + 7) >> 3;
+	}
+
+	inline size_t BytesToBits(size_t bytes)
+	{
+		return bytes << 3;
+	}
+}
+
 class BitStream
 {
 	uint8_t * m_data;
@@ -217,6 +230,12 @@ public:
 		Write(size);
 
 		WriteAlignedBytes(&s[0], size);
+	}
+
+	void ReadSkip(const size_t s)
+	{
+		CheckReadCursor(s);
+		m_cursor += s;
 	}
 
 	const void * GetData() const

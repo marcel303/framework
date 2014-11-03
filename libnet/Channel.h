@@ -42,7 +42,7 @@ public:
 
 	bool Connect(const NetAddress & address);
 	void Disconnect(bool sendDisconnectNotification = true, bool waitForAck = false);
-	void Update(uint32_t time);
+	void Update(uint64_t time);
 	void Flush();
 
 	bool Send(const Packet & packet, bool priority = false);
@@ -104,7 +104,7 @@ public:
 #if LIBNET_CHANNEL_ENABLE_TIMEOUTS == 1
 	PolledTimer m_timeoutTimer;
 #endif
-	uint32_t m_rtt;
+	uint32_t m_rtt; // round trip time, in microseconds
 	PolledTimer m_delayTimer;
 	DelayedPacketList m_delayedReceivePackets;
 	ChannelType m_channelType;

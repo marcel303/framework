@@ -7,7 +7,7 @@
 #include "PacketDispatcher.h"
 
 ChannelManager::ChannelManager()
-	: m_socket(0)
+	: m_socket()
 	, m_listenChannel(0)
 	, m_channelTimeout(LIBNET_CHANNEL_TIMEOUT_INTERVAL)
 	, m_channels()
@@ -67,7 +67,7 @@ void ChannelManager::Shutdown(bool sendDisconnectNotification)
 	m_packetDispatcher = 0;
 	m_handler = 0;
 
-	SharedNetSocket nullSocket(0);
+	SharedNetSocket nullSocket;
 	m_socket = nullSocket;
 }
 
@@ -129,7 +129,7 @@ void ChannelManager::DestroyChannelQueued(Channel * channel)
 	}
 }
 
-void ChannelManager::Update(uint32_t time)
+void ChannelManager::Update(uint64_t time)
 {
 	for (ChannelMapItr i = m_channels.begin(); i != m_channels.end(); ++i)
 		i->second->Update(time);
@@ -495,7 +495,7 @@ void ChannelManager::HandleUnpack(Packet & packet, Channel * channel)
 
 				Packet extracted;
 
-				if (packet.Extract(extracted, size2))
+				if (packet.Extract(extracted, size2, true))
 				{
 					if (size >= size2)
 						size -= size2;
@@ -505,8 +505,6 @@ void ChannelManager::HandleUnpack(Packet & packet, Channel * channel)
 						NetAssert(false);
 						break;
 					}
-
-					packet.Skip(size2);
 
 					m_packetDispatcher->Dispatch(extracted, channel);
 				}

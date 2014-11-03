@@ -90,10 +90,8 @@ void RpcManager::OnReceive(Packet & packet, Channel * channel)
 	{
 		Packet payload;
 
-		if (packet.Extract(payload, (payloadSize + 7) >> 3))
+		if (packet.Extract(payload, (payloadSize + 7) >> 3, true))
 		{
-			packet.Skip((payloadSize + 7) >> 3);
-
 			BitStream bs(payload.GetData(), payloadSize);
 
 			CallInternal(method, bs);

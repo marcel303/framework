@@ -26,7 +26,7 @@ public:
 	void DestroyChannel(Channel * channel);
 	void DestroyChannelQueued(Channel * channel);
 
-	void Update(uint32_t time);
+	void Update(uint64_t time);
 
 	virtual void OnReceive(Packet & packet, Channel * channel);
 

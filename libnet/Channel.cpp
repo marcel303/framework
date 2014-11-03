@@ -39,6 +39,8 @@ Channel::Channel(ChannelType channelType, ChannelPool channelPool, uint32_t prot
 	m_pingTimer.Initialize(&g_netTimer);
 	m_pingTimer.SetIntervalMS(LIBNET_CHANNEL_PING_INTERVAL);
 	m_pingTimer.Start();
+
+	m_delayTimer.Initialize(&g_netTimer);
 }
 
 Channel::~Channel()
@@ -139,7 +141,7 @@ void Channel::Disconnect(bool sendDisconnectNotification, bool waitForAck)
 	}
 }
 
-void Channel::Update(uint32_t time)
+void Channel::Update(uint64_t time)
 {
 	// Read messages.
 	{
@@ -396,9 +398,7 @@ bool Channel::Receive(ReceiveData & rcvData)
 {
 	if (m_delayedReceivePackets.size() > 0)
 	{
-		// NOTE: Delay reduced packets by a few MS to ensure packets sent to self receive before updates from server.
-		//const uint32_t time1 = static_cast<uint32_t>(m_delayTimer.TimeMS_get());
-		const uint32_t time1 = static_cast<uint32_t>(m_delayTimer.TimeMS_get()) + 5;
+		const uint32_t time1 = static_cast<uint32_t>(m_delayTimer.TimeMS_get());
 		const uint32_t time2 = m_delayedReceivePackets.front().m_time + m_delayedReceivePackets.front().m_delay;
 
 		if (time1 >= time2)

@@ -72,7 +72,7 @@ inline bool Packet::Skip(uint32_t bytes)
 	return Seek(m_cursor + bytes);
 }
 
-inline bool Packet::Extract(Packet & out_packet, uint32_t size)
+inline bool Packet::Extract(Packet & out_packet, uint32_t size, bool incrementCursor)
 {
 	if (m_cursor + size > m_size)
 	{
@@ -82,6 +82,9 @@ inline bool Packet::Extract(Packet & out_packet, uint32_t size)
 
 	out_packet = Packet(m_data + m_cursor, size, m_rcvAddress);
 
+	if (incrementCursor)
+		m_cursor += size;
+
 	return true;
 }
 
@@ -89,7 +92,7 @@ inline bool Packet::ExtractTillEnd(Packet & out_packet)
 {
 	uint32_t size = m_size - m_cursor;
 
-	return Extract(out_packet, size);
+	return Extract(out_packet, size, false);
 }
 
 inline bool Packet::CopyTo(void * dst, uint32_t dstSize) const

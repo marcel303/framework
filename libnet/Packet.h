@@ -19,7 +19,7 @@ public:
 
 	inline bool Seek(uint32_t cursor);
 	inline bool Skip(uint32_t bytes);
-	inline bool Extract(Packet & out_packet, uint32_t size);
+	inline bool Extract(Packet & out_packet, uint32_t size, bool incrementCursor);
 	inline bool ExtractTillEnd(Packet & out_packet);
 	inline bool CopyTo(void * dst, uint32_t dstSize) const;
 
