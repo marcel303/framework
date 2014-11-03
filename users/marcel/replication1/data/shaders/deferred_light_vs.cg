@@ -1,0 +1,28 @@
+<shader>
+	<struct name="INPUT">
+		<param type="float4x4" source="register(c0)" name="wvp" />
+		<param type="float4" source="POSITION" name="position" />
+		<param type="float2" source="TEXCOORD0" name="texcoord" />
+	</struct>
+<code>
+<![CDATA[
+
+typedef struct
+{
+	float4 position : POSITION;
+	float2 texcoord : TEXCOORD0;
+} OUTPUT;
+
+OUTPUT main(INPUT input)
+{
+	OUTPUT result;
+
+	result.position = mul(INPUT_wvp, input.position);
+	result.texcoord = input.texcoord;
+
+	return result;
+}
+
+]]>
+</code>
+</shader>

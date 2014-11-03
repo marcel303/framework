@@ -1,0 +1,4 @@
+void main(out float4 out_position : POSITION)
+{
+	out_position = float4(0.0f, 0.0f, 0.0f, 1.0f);
+}

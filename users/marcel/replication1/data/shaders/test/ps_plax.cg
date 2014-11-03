@@ -1,0 +1,22 @@
+struct IN
+{
+	float2 texCoord : TEXCOORD0;
+};
+
+struct OUT
+{
+	float4 color : COLOR;
+};
+
+OUT main(IN i, const uniform sampler2D tex, const uniform sampler2D dmap, const uniform float t)
+{
+	OUT o;
+
+	const float2 tt = float2(t, t);
+
+	const float2 disp = tex2D(dmap, i.texCoord.xy + tt).xy;
+
+	o.color = tex2D(tex, i.texCoord.xy + disp);
+
+	return o;
+}

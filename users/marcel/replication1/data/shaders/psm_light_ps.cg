@@ -1,0 +1,12 @@
+void main(in float1 z1 : TEXCOORD0, in uniform sampler2D lt_tex, out float4 out_color)
+{
+	// TODO: PSM coords.
+	float4 coord = float4(0.0f, 0.0f, 0.0f, 1.0f);
+
+	float z2 = tex2Dproj(lt_tex, coord).x;
+
+	if (z1.x < z2)
+		out_color = float4(1.0f, 1.0f, 1.0f, 1.0f);
+	else
+		out_color = float4(0.0f, 0.0f, 0.0f, 1.0f);
+}

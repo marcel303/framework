@@ -1,0 +1,12 @@
+
+bump_norm(in float3 surf_norm, in float3 surf_tan, in float3 surf_binorm, in sampler2D bump_tex, in float2 bump_coord)
+{
+	const float3x3 surf_mat = float3x3(
+		surf_norm,
+		surf_tan,
+		surf_binorm);
+
+	const float3 bump_norm = tex2D(bump_tex, bump_coord);
+
+	return mul(surf_mat, bump_norm);
+}

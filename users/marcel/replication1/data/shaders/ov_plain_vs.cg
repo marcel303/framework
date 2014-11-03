@@ -1,0 +1,9 @@
+// Override shader for plain rendering.
+
+void main(
+	in float4 position : POSITION,
+	in uniform float4x4 wvp,
+	out float4 out_position : POSITION)
+{
+	out_position = mul(position, wvp);
+}

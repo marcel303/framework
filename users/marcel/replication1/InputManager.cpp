@@ -1,0 +1,224 @@
+#include "Debug.h"
+#include "EntityPlayer.h" // fixme, revise
+#include "InputManager.h"
+#include "MyProtocols.h"
+
+InputManager::InputManager()
+{
+}
+
+InputManager::~InputManager()
+{
+}
+
+void InputManager::SV_Update()
+{
+	// TODO: Poll devices.
+}
+
+void InputManager::SV_AddClient(Client* client)
+{
+	FASSERT(client);
+
+	m_serverClients[client->m_channel] = client;
+}
+
+void InputManager::CL_AddClient(Client* client)
+{
+	FASSERT(client);
+
+	m_clientClients[client->m_channel] = client;
+}
+
+void InputManager::SV_RemoveClient(Client* client)
+{
+	FASSERT(client);
+
+	m_serverClients.erase(client->m_channel);
+}
+
+void InputManager::CL_RemoveClient(Client* client)
+{
+	FASSERT(client);
+
+	m_clientClients.erase(client->m_channel);
+}
+
+void InputManager::OnReceive(Packet& packet, Channel* channel)
+{
+	uint8_t messageID;
+
+	if (!packet.Read8(&messageID))
+	{
+		DB_ERR("WTFHAX?\n");
+		FASSERT(0);
+		return;
+	}
+
+	switch (messageID)
+	{
+	case INPUTMSG_ACTION:
+		HandleAction(packet, channel);
+		break;
+	case INPUTMSG_ACTION_LOCAL:
+		HandleActionLocal(packet, channel);
+		break;
+		/*
+	case INPUTMSG_SETCONTROLLER:
+		HandleSetController(packet, channel);
+		break;*/
+	}
+}
+
+void InputManager::CL_AddInputHandler(InputHandler* handler)
+{
+	FASSERT(handler);
+
+	m_clientInputHandlers.push_back(handler);
+}
+
+void InputManager::OnEvent(Event& event)
+{
+	bool captured = false;
+
+	// TODO: Process GUI controller.
+	for (InputHandlerCollectionItr i = m_clientInputHandlers.begin(); i != m_clientInputHandlers.end(); ++i)
+	{
+		if (captured == false)
+		{
+			if ((*i)->OnEvent(event))
+				captured = true;
+		}
+	}
+
+	for (ClientCollectionItr i = m_clientClients.begin(); i != m_clientClients.end(); ++i)
+	{
+		if (captured == false)
+		{
+			EntityPlayer* player = (EntityPlayer*)i->second->m_clientScene->m_activeEntity.lock().get();
+
+			if (player && player->m_controller)
+			{
+				if (player->m_controller->OnEvent(event))
+					captured = true;
+			}
+		}
+	}
+}
+
+void InputManager::HandleAction(Packet& packet, Channel* channel)
+{
+	Client* client = SV_FindClient(channel);
+
+	if (client)
+	{
+		uint16_t actionID;
+		float value;
+
+		if (!packet.Read16(&actionID))
+		{
+			DB_ERR("WTFHAX?\n");
+			FASSERT(0);
+			return;
+		}
+		if (!packet.Read32(&value))
+		{
+			DB_ERR("WTFHAX?\n");
+			FASSERT(0);
+			return;
+		}
+
+		if (client->m_actionHandler)
+			client->m_actionHandler->OnAction(actionID, value);
+	}
+	else
+	{
+		DB_ERR("Received input message for non-existing client.\n");
+	}
+}
+
+void InputManager::HandleActionLocal(Packet& packet, Channel* channel)
+{
+	Client* client = CL_FindClient(channel);
+
+	if (client)
+	{
+		uint16_t actionID;
+		float value;
+
+		if (!packet.Read16(&actionID))
+		{
+			DB_ERR("WTFHAX?\n");
+			FASSERT(0);
+			return;
+		}
+		if (!packet.Read32(&value))
+		{
+			DB_ERR("WTFHAX?\n");
+			FASSERT(0);
+			return;
+		}
+
+		if (client->m_actionHandler)
+			client->m_actionHandler->OnAction(actionID, value);
+	}
+	else
+	{
+		DB_ERR("Received input message for non-existing client.\n");
+	}
+}
+
+/*
+void InputManager::HandleSetController(Packet& packet, Channel* channel)
+{
+	Client* client = CL_FindClient(channel);
+
+	if (client)
+	{
+		uint32_t controllerID;
+
+		if (!packet.Read32(&controllerID))
+			return;
+
+		Controller* controller = 0;
+
+		for (int i = 0; i < client->m_controllers.size(); ++i)
+			if (client->m_controllers[i]->m_id == controllerID)
+				controller = client->m_controllers[i];
+
+		client->m_controller = controller;
+	}
+	else
+	{
+		DB_ERR("Received input message for non-existing client.\n");
+	}
+}
+*/
+
+Client* InputManager::SV_FindClient(Channel* channel)
+{
+	FASSERT(channel);
+
+	ClientCollectionItr i;
+
+	i = m_serverClients.find(channel);
+
+	if (i == m_serverClients.end())
+		return 0;
+	else
+		return i->second;
+}
+
+Client* InputManager::CL_FindClient(Channel* channel)
+{
+	FASSERT(channel);
+
+	ClientCollectionItr i;
+
+	i = m_clientClients.find(channel);
+
+	if (i == m_clientClients.end())
+		return 0;
+	else
+		return i->second;
+}

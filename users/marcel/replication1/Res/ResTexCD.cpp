@@ -1,0 +1,1 @@
+#include "ResTexCD.h"

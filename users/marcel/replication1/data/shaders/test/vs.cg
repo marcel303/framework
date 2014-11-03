@@ -1,0 +1,27 @@
+struct IN
+{
+	float4 position : POSITION;
+	float3 normal   : NORMAL;
+	float2 texCoord : TEXCOORD0;
+};
+
+struct OUT
+{
+	float4 position : POSITION;
+	float3 color    : TEXCOORD1;
+	float2 texCoord : TEXCOORD0;
+};
+
+OUT main(
+	in IN i,
+	const uniform float4 col,
+	const uniform float4x4 wvp)
+{
+	OUT o;
+	
+	o.position = mul(i.position, wvp);
+	o.color    = i.normal.xyzz;
+	o.texCoord = i.texCoord;
+
+	return o;
+}

@@ -1,0 +1,35 @@
+<shader>
+	<struct name="INPUT">
+		<param type="sampler2D" source="register(s0)" name="normalTex" />
+		<param type="sampler2D" source="register(s1)" name="paramsTex" />
+		<param type="float2" source="TEXCOORD0" name="texcoord" />
+	</struct>
+<code>
+<![CDATA[
+
+typedef struct
+{
+	float4 color : COLOR;
+} OUTPUT;
+
+OUTPUT main(INPUT input)
+{
+	OUTPUT result;
+
+	float4 normal = tex2D(INPUT_normalTex, input.texcoord);
+	float4 params = tex2D(INPUT_paramsTex, input.texcoord);
+
+	float4 lightDir = float4(1.0f, 1.0f, 0.0f, 0.0f);
+	lightDir = normalize(lightDir);
+
+	//float intensity = dot(lightDir, normal);
+	float intensity = 1.0f;
+
+	result.color = input.texcoord.xyxy * intensity;
+
+	return result;
+}
+
+]]>
+</code>
+</shader>

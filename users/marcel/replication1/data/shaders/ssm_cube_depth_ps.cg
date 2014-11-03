@@ -1,0 +1,14 @@
+void main(
+	in float4 position : TEXCOORD0,
+	//in float3 normal : TEXCOORD1,
+	const uniform float3 lt_pos,
+
+	out float4 out_color : COLOR)
+{
+	const float3 delta = position.xyz - lt_pos;
+	//const float3 delta = position.xyz;
+
+	//out_color = float4(length(delta) + 0.1f);
+	//out_color = float4(length(delta));
+	out_color = float4(dot(delta, delta));
+}

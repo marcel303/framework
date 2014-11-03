@@ -1,0 +1,29 @@
+<shader>
+	<struct name="INPUT">
+		<param type="sampler2D" source="register(s0)" name="albedoTex" />
+		<param type="sampler2D" source="register(s1)" name="lightTex" />
+		<param type="float2" source="TEXCOORD0" name="texcoord" />
+	</struct>
+<code>
+<![CDATA[
+
+typedef struct
+{
+	float4 color : COLOR;
+} OUTPUT;
+
+OUTPUT main(INPUT input)
+{
+	OUTPUT result;
+
+	float4 albedo = tex2D(INPUT_albedoTex, input.texcoord);
+	float4 lightValue = tex2D(INPUT_lightTex, input.texcoord);
+	
+	result.color = albedo * lightValue;
+	
+	return result;
+}
+
+]]>
+</code>
+</shader>
