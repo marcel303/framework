@@ -123,8 +123,7 @@ public:
 
 				solution.name = node.GetString("name", "");
 			}
-
-			if (!strcmp(elem->Value(), "project"))
+			else if (!strcmp(elem->Value(), "project"))
 			{
 				NodeWrapper node(elem);
 
@@ -148,8 +147,7 @@ public:
 
 						reference.name = node.GetString("name", "");
 					}
-
-					if (!strcmp(elem2->Value(), "preprocessor"))
+					else if (!strcmp(elem2->Value(), "preprocessor"))
 					{
 						Project::Preprocessor & preprocessor = project.preprocessor;
 
@@ -170,10 +168,13 @@ public:
 								define.platform = node.GetString("platform", "");
 								define.config = node.GetString("config", "");
 							}
+							else
+							{
+								printf("warning: unknown element: %s\n", elem3->Value());
+							}
 						}
 					}
-
-					if (!strcmp(elem2->Value(), "files"))
+					else if (!strcmp(elem2->Value(), "files"))
 					{
 						for (XMLNode * elem3 = elem2->FirstChildElement(); elem3 != nullptr; elem3 = elem3->NextSiblingElement())
 						{
@@ -189,9 +190,21 @@ public:
 								source.path = node.GetString("path", "");
 								source.build = node.GetBool("build", true);
 							}
+							else
+							{
+								printf("warning: unknown element: %s\n", elem3->Value());
+							}
 						}
 					}
+					else
+					{
+						printf("warning: unknown element: %s\n", elem2->Value());
+					}
 				}
+			}
+			else
+			{
+				printf("warning: unknown element: %s\n", elem->Value());
 			}
 		}
 	}

@@ -281,7 +281,17 @@ public:
 					{
 						PushTextAttributeFmt("WarningLevel", "Level3");
 						PushTextAttributeFmt("Optimization", "Disabled");
-						PushTextAttributeFmt("PreprocessorDefinitions", "a;b;c");
+
+						// preprocessor defines
+
+						std::string definesString;
+						for (size_t i = 0; i < project.preprocessor.defines.size(); ++i)
+						{
+							if (i != 0)
+								definesString += ";";
+							definesString += project.preprocessor.defines[i].value; // todo : platform / config filter
+						}
+						PushTextAttributeFmt("PreprocessorDefinitions", definesString.c_str());
 					}
 					printer.CloseElement();
 
@@ -289,6 +299,8 @@ public:
 					{
 						PushTextAttributeFmt("SubSystem", "Console");
 						PushTextAttributeFmt("GenerateDebugInformation", "true");
+
+						// todo : additional link libraries
 					}
 					printer.CloseElement();
 				}

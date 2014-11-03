@@ -10,14 +10,28 @@ int main(int argc, char * argv[])
 	{
 		if (!strcmp(argv[i], "-c"))
 		{
-			src = argv[i + 1];
-			i += 2;
+			if (i + 1 < argc)
+			{
+				src = argv[i + 1];
+				i += 2;
+			}
+			else
+			{
+				printf("error: expected input file\n");
+				exit(-1);
+			}
 		}
 		else
 		{
 			printf("error: unknown command line option: %s\n", argv[i]);
 			exit(-1);
 		}
+	}
+
+	if (src == nullptr)
+	{
+		printf("usage: makeproject -c <input-file>\n");
+		exit(0);
 	}
 
 	std::string basePath = src;
@@ -33,7 +47,7 @@ int main(int argc, char * argv[])
 
 	if (document.LoadFile(src) != XML_NO_ERROR)
 	{
-		printf("failed to load settings file\n");
+		printf("failed to load input file\n");
 		exit(-1);
 	}
 
