@@ -5,6 +5,7 @@ enum OpenMode
 	OpenMode_Read = 0x01,
 	OpenMode_Write = 0x02,
 	OpenMode_Append = 0x04,
+	OpenMode_Text = 0x08,
 	OpenMode_ReadWrite = OpenMode_Read | OpenMode_Write
 };
 

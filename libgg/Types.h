@@ -812,17 +812,17 @@ public:
 		m_Size = size;
 	}
 
-	XBOOL IsInside(const BaseVec<T>& p) const
+	bool IsInside(const BaseVec<T>& p) const
 	{
 		for (int i = 0; i < 2; ++i)
 		{
 			if (p[i] < m_Position[i])
-				return XFALSE;
+				return false;
 			if (p[i] > m_Position[i] + m_Size[i])
-				return XFALSE;
+				return false;
 		}
 
-		return XTRUE;
+		return true;
 	}
 
 	inline T Width_get() const

@@ -13,17 +13,17 @@ public:
 	void Start(float interval);
 	void Stop();
 	
-	inline XBOOL Read()
+	inline bool Read()
 	{
 		if (!IsRunning_get() || m_TimeTracker->Time_get() < m_NextTime)
-			return XFALSE;
+			return false;
 		
 		Stop();
 		
-		return XTRUE;
+		return true;
 	}
 	
-	inline XBOOL IsRunning_get() const
+	inline bool IsRunning_get() const
 	{
 		return m_NextTime >= 0.0f;
 	}

@@ -1,3 +1,5 @@
+#ifndef TEST_TGA
+
 #include <stdlib.h>
 #include "Image.h"
 #include "ImageLoader_FreeImage.h"
@@ -22,3 +24,4 @@ int main(int argc, const char* argv[])
 	return 0;
 }
 
+#endif

@@ -1,4 +1,3 @@
-#include "Precompiled.h"
 #include "Exception.h"
 #include "Image.h"
 

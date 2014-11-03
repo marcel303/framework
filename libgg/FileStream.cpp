@@ -1,4 +1,3 @@
-#include "Precompiled.h"
 #include <cstdio>
 #include <stdio.h>
 #include <sys/stat.h>
@@ -90,7 +89,10 @@ void FileStream::Open(const char* fileName, OpenMode mode)
 		modeStr += "r+";
 	}
 
-	modeStr += "b";
+	if (mode & OpenMode_Text)
+		modeStr += "t";
+	else
+		modeStr += "b";
 
 	m_File = fopen(fileName, modeStr.c_str());
 	

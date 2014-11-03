@@ -10,8 +10,8 @@ void PolledTimer::Initialize(ITimer* timer)
 {
 	m_intervalMS = 1000;
 	m_lastReadMS = 0;
-	m_IsActive = XFALSE;
-	m_FireImmediately = XFALSE;
+	m_IsActive = false;
+	m_FireImmediately = false;
 	m_timer = timer;
 }
 
@@ -19,12 +19,12 @@ void PolledTimer::Start()
 {
 	ClearTick();
 	
-	m_IsActive = XTRUE;
+	m_IsActive = true;
 }
 
 void PolledTimer::Stop()
 {
-	m_IsActive = XFALSE;
+	m_IsActive = false;
 }
 
 void PolledTimer::Restart()
@@ -51,27 +51,27 @@ void PolledTimer::SetFrequency(float frequency)
 	SetInterval(1.0f / frequency);
 }
 
-XBOOL PolledTimer::PeekTick() const
+bool PolledTimer::PeekTick() const
 {
 	if (!m_IsActive)
-		return XFALSE;
+		return false;
 	
 	int timeMS = TimeMS_get();
 	
 	if (timeMS >= m_lastReadMS + m_intervalMS)
-		return XTRUE;
+		return true;
 	else
-		return XFALSE;
+		return false;
 }
 
-XBOOL PolledTimer::ReadTick()
+bool PolledTimer::ReadTick()
 {
 	if (!PeekTick())
-		return XFALSE;
+		return false;
 
 	m_lastReadMS += m_intervalMS;
 
-	return XTRUE;
+	return true;
 }
 
 void PolledTimer::ClearTick()

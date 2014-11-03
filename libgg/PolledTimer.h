@@ -38,8 +38,8 @@ public:
 	void SetIntervalMS(int miliseconds);
 	void SetFrequency(float frequency);
 	
-	XBOOL PeekTick() const;
-	XBOOL ReadTick();
+	bool PeekTick() const;
+	bool ReadTick();
 	void ClearTick();
 	
 	int TickCount_get() const;
@@ -47,17 +47,17 @@ public:
 	uint32_t TimeMS_get() const;
 	uint64_t TimeUS_get() const;
 	
-	inline XBOOL IsActive_get() const
+	inline bool IsActive_get() const
 	{
 		return m_IsActive;
 	}
 	
-	inline XBOOL FireImmediately_get() const
+	inline bool FireImmediately_get() const
 	{
 		return m_FireImmediately;
 	}
 	
-	inline void FireImmediately_set(XBOOL value)
+	inline void FireImmediately_set(bool value)
 	{
 		m_FireImmediately = value;
 	}
@@ -73,6 +73,6 @@ private:
 	int m_intervalMS;
 	int m_lastReadMS;
 	
-	XBOOL m_IsActive;
-	XBOOL m_FireImmediately;
+	bool m_IsActive;
+	bool m_FireImmediately;
 };

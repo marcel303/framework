@@ -1,4 +1,3 @@
-#include "Precompiled.h"
 #include <string.h>
 #include "Exception.h"
 #include "Stream.h"
