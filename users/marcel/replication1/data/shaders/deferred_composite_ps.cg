@@ -7,10 +7,10 @@
 <code>
 <![CDATA[
 
-typedef struct
+struct OUTPUT
 {
 	float4 color : COLOR;
-} OUTPUT;
+};
 
 OUTPUT main(INPUT input)
 {

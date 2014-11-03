@@ -7,11 +7,11 @@
 <code>
 <![CDATA[
 
-typedef struct
+struct OUTPUT
 {
 	float4 position : POSITION;
 	float2 texcoord : TEXCOORD0;
-} OUTPUT;
+};
 
 OUTPUT main(INPUT input)
 {

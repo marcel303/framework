@@ -10,21 +10,21 @@
 <code>
 <![CDATA[
 
-typedef struct
+struct OUTPUT
 {
 	float4 position : POSITION;
 	float4 color : TEXCOORD0;
 	float4 normal : TEXCOORD1;
 	float2 texcoord : TEXCOORD2;
-} OUTPUT;
+};
 
 OUTPUT main(INPUT input)
 {
 	OUTPUT result;
 
 	result.position = mul(input.position, INPUT_wvp);
-	result.color = input.color;
-	//result.color = float4(1.0f, 1.0f, 1.0f, 1.0f);
+	//result.color = input.color;
+	result.color = float4(1.0f, 1.0f, 1.0f, 1.0f);
 	result.normal = float4(mul(input.normal, (float3x3)INPUT_w), 1.0f);
 	result.texcoord = input.texcoord;
 

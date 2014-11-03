@@ -8,12 +8,12 @@
 <code>
 <![CDATA[
 
-typedef struct
+struct OUTPUT
 {
 	float4 normal : COLOR0;
 	float4 albedo : COLOR1;
 	float4 params : COLOR2;
-} OUTPUT;
+};
 
 OUTPUT main(INPUT input)
 {

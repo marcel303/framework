@@ -5,6 +5,8 @@ Res::Res()
 {
 	SetType(RES_NONE);
 
+	memset(m_users, 0, sizeof(m_users)); // todo : debug only ?
+
 	m_version = 0;
 }
 

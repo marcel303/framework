@@ -116,10 +116,11 @@ void RenderStatValue(StatValue<T>& value, const std::string& name, int x, int y,
 
 int main(int argc, char* argv[])
 {
+	Calc::Initialize();
+
 	//TestGraphics();
-	TestArchive();
-	//for (int i = 0; i < 40; ++i)
-		TestEngine2();
+	//TestArchive();
+	TestEngine2();
 	//TestGraphics2();
 	//TestGraphics3();
 	//TestShaders();
@@ -827,8 +828,8 @@ void TestGraphics2()
 		glEnable(GL_LIGHTING);
 		glEnable(GL_LIGHT0);
 		const float position[4] = { ltPos1[0], ltPos1[1], ltPos1[2], 1.0f };
-		const float ambient[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-		const float specular[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+		const float ambient[4] = { 0.1f, 0.1f, 0.1f, 0.0f };
+		const float specular[4] = { 0.0f, 0.1f, 0.0f, 0.0f };
 		glLightfv(GL_LIGHT0, GL_POSITION, position);
 		glLightfv(GL_LIGHT0, GL_AMBIENT, ambient);
 		glLightfv(GL_LIGHT0, GL_SPECULAR, specular);
@@ -1850,12 +1851,16 @@ void TestShapeBuilder_Patches()
 
 void TestShadowCube()
 {
+	SystemDefault system;
+	system.RegisterFileSystems();
+
 	GFX_DEVICE gfx;
 
 	gfx.InitializeV1(1024, 768, false);
 	gfx.RS(RS_DEPTHTEST, 1);
 	gfx.RS(RS_DEPTHTEST_FUNC, CMP_LE);
 
+	Renderer::I().Initialize();
 	Renderer::I().SetGraphicsDevice(&gfx);
 
 	ShTexCR cube(new ResTexCR());
@@ -1865,10 +1870,10 @@ void TestShadowCube()
 	cube->SetSize(512, 512);
 	//cube->SetSize(1024, 1024);
 
-	ShVS shVS(new ResVS()); FVERIFY(shVS->Load("sh_vs.cg"));
-	ShPS shPS(new ResPS()); FVERIFY(shPS->Load("sh_ps.cg"));
-	ShVS shcVS(new ResVS()); FVERIFY(shcVS->Load("shc_vs.cg"));
-	ShPS shcPS(new ResPS()); FVERIFY(shcPS->Load("shc_ps.cg"));
+	ShVS shVS(new ResVS()); FVERIFY(shVS->Load("shaders/ssm_depth_vs.cg"));
+	ShPS shPS(new ResPS()); FVERIFY(shPS->Load("shaders/ssm_depth_ps.cg"));
+	ShVS shcVS(new ResVS()); FVERIFY(shcVS->Load("shaders/ssm_light_vs.cg"));
+	ShPS shcPS(new ResPS()); FVERIFY(shcPS->Load("shaders/ssm_light_ps.cg"));
 
 	Mesh mesh;
 	Mesh mesh2;
@@ -2027,7 +2032,7 @@ void TestShadowCube()
 		glVertex3f(ltPos[0], ltPos[1] + 10.0f, ltPos[2]);
 		glEnd();
 
-		Renderer::I().MatW().Pop();
+		//Renderer::I().MatW().Pop();
 		Renderer::I().MatV().Pop();
 		Renderer::I().MatP().Pop();
 
