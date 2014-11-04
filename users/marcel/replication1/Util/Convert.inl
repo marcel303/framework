@@ -2,29 +2,29 @@
 #define CONVERT_INL
 #pragma once
 
-#include <math.h>
+#include "Calc.h"
 #include "Convert.h"
 
 namespace Convert
 {
 	inline uint8_t ToRotUInt8(float angle)
 	{
-		return uint8_t((angle + M_PI) / (2.0f * M_PI) * 256.0f);
+		return uint8_t((angle + Calc::mPI) / (2.0f * Calc::mPI) * 256.0f);
 	}
 
 	inline uint16_t ToRotUInt16(float angle)
 	{
-		return uint16_t((angle + M_PI) / (2.0f * M_PI) * 65536.0f);
+		return uint16_t((angle + Calc::mPI) / (2.0f * Calc::mPI) * 65536.0f);
 	}
 
 	inline float ToRotFloat(uint8_t angle)
 	{
-		return angle / 256.0f * (2.0f * M_PI) - M_PI;
+		return angle / 256.0f * (2.0f * Calc::mPI) - Calc::mPI;
 	}
 
 	inline float ToRotFloat(uint16_t angle)
 	{
-		return angle / 65536.0f * (2.0f * M_PI) - M_PI;
+		return angle / 65536.0f * (2.0f * Calc::mPI) - Calc::mPI;
 	}
 
 	inline uint8_t ToTweenUInt8(float tween)
