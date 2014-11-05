@@ -1,0 +1,113 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="BitStream.cpp" />
+    <ClCompile Include="Channel.cpp" />
+    <ClCompile Include="ChannelManager.cpp" />
+    <ClCompile Include="NetAddress.cpp" />
+    <ClCompile Include="NetSerializable.cpp" />
+    <ClCompile Include="NetSocket.cpp" />
+    <ClCompile Include="NetStats.cpp" />
+    <ClCompile Include="NetTimer.cpp" />
+    <ClCompile Include="Packet.cpp" />
+    <ClCompile Include="PacketDispatcher.cpp" />
+    <ClCompile Include="PacketListener.cpp" />
+    <ClCompile Include="RpcManager.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="BitStream.h" />
+    <ClInclude Include="Channel.h" />
+    <ClInclude Include="ChannelHandler.h" />
+    <ClInclude Include="ChannelManager.h" />
+    <ClInclude Include="ChannelTypes.h" />
+    <ClInclude Include="libnet_config.h" />
+    <ClInclude Include="libnet_forward.h" />
+    <ClInclude Include="NetAddress.h" />
+    <ClInclude Include="NetArray.h" />
+    <ClInclude Include="NetDiag.h" />
+    <ClInclude Include="NetHandlePool.h" />
+    <ClInclude Include="NetProtocols.h" />
+    <ClInclude Include="NetSerializable.h" />
+    <ClInclude Include="NetSocket.h" />
+    <ClInclude Include="NetStats.h" />
+    <ClInclude Include="NetTimer.h" />
+    <ClInclude Include="Packet.h" />
+    <ClInclude Include="PacketDispatcher.h" />
+    <ClInclude Include="PacketListener.h" />
+    <ClInclude Include="RpcManager.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="NetHandlePool.inl" />
+    <None Include="Packet.inl" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{13850981-551A-436A-88C6-B30F94A30C57}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>libnet</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>DEBUG;WIN32;_DEBUG;_CONSOLE;_LIB;WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../libgg</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../libgg</AdditionalIncludeDirectories>
+      <WarningLevel>Level3</WarningLevel>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
