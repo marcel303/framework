@@ -1,0 +1,26 @@
+void main(
+	in const uniform float4x4 wvp,
+	in const uniform float4x4 w,
+	in const uniform float4 eye_pos,
+	in const uniform float4 lt_pos,
+
+	in float4 in_vert_pos : POSITION,
+	in float3 in_vert_norm : NORMAL,
+	in float4 in_texcoord : TEXCOORD0,
+
+	out float4 out_position : POSITION,
+	out float3 out_surf_pos : TEXCOORD2,
+	out float3 out_eye_dir : TEXCOORD3,
+	out float3 out_lt_dir : TEXCOORD4,
+	out float3 out_surf_norm : TEXCOORD1,
+	out float4 out_texcoord : TEXCOORD0)
+{
+	out_position = mul(in_vert_pos, wvp);
+
+	out_surf_pos = mul(in_vert_pos, w);
+	out_surf_norm = mul(in_vert_norm, float3x3(w));
+	out_texcoord = in_texcoord;
+
+	out_eye_dir = eye_pos.xyz - out_surf_pos;
+	out_lt_dir = lt_pos.xyz - (out_surf_pos * lt_pos.w);
+}

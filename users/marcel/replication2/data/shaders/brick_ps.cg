@@ -1,0 +1,48 @@
+#include "data/shaders/ut_light.cg"
+
+void main(
+	in float2 in_texcoord : TEXCOORD0,
+	in half3 in_eye_dir : TEXCOORD1,
+	in half3 in_lt_dir : TEXCOORD2,
+
+	in const uniform half4 color,
+	in const uniform float t,
+	in const uniform float hp,
+	in const uniform sampler2D tex,
+	in const uniform sampler2D nmap,
+	in const uniform sampler2D hmap,
+
+	out half4 out_color : COLOR)
+{
+#if 1
+	const half3 eye_dir = normalize(in_eye_dir);
+	const half3 lt_dir = normalize(in_lt_dir);
+
+	const float height_scale = 0.1f;
+	float height = 0.0f;
+	float2 height_offset = float2(0.0f, 0.0f);
+
+	#define N 3
+	//#define N 10
+	
+	for (int i = 0; i < N; ++i)
+	{
+		height = (height + tex2D(hmap, in_texcoord + height_offset).x) * 0.5f;
+		height_offset = eye_dir.xy * height * height_scale;
+	}
+
+	in_texcoord += height_offset;
+
+	const half3 surf_norm = normalize(unpack_norm_rgb(tex2D(nmap, in_texcoord).xyz));
+
+	//const half3 lt1_color = lt_ex(eye_dir, lt_dir, surf_norm, half3(1.0f, 1.0f, 1.0f), half3(0.75f, 1.0f, 0.75f));
+	const half3 lt1_color = lt_ex(eye_dir, lt_dir, surf_norm, half3(1.0f, 0.5f, 0.0f), half3(0.75f, 0.75f, 0.75f));
+
+	const half4 diffuse = tex2D(tex, in_texcoord) + color;
+#else
+	const half3 lt1_color = half3(1.0f, 1.0f, 1.0f);
+	const half4 diffuse = half4(1.0f, 1.0f, 1.0f, 1.0f);
+#endif
+
+	out_color = diffuse * half4(lt1_color * hp, 1.0f);
+}
