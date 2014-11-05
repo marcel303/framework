@@ -36,9 +36,8 @@ namespace Replication
 		void* m_up;
 
 	public: // fixme
-		ObjectStateColl m_created;   // Waiting for ACK.
-		ObjectStateColl m_destroyed; // Waiting for ACK.
-		ObjectStateColl m_active;    // Active objects.
+		ObjectStateColl m_createdOrDestroyed;
+		ObjectStateColl m_active;
 
 	//private: // fixme
 		typedef std::map<int, Object*> ObjectColl;

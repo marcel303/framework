@@ -18,7 +18,7 @@ namespace Replication
 
 	void Client::Initialize(::Client* client, void* up)
 	{
-		FASSERT(client);
+		Assert(client);
 
 		m_client = client;
 		m_up = up;
@@ -26,23 +26,25 @@ namespace Replication
 
 	void Client::SV_AddObject(Object* object)
 	{
-		FASSERT(object);
+		Assert(object);
+
+		// todo : assert object isn't created yet
 
 		ObjectState state(object);
 
-		m_created.push_back(state);
+		m_createdOrDestroyed.push_back(state);
 	}
 
 	void Client::CL_AddObject(Object* object)
 	{
-		FASSERT(object);
+		Assert(object);
 
 		m_clientObjects[object->m_objectID] = object;
 	}
 
 	void Client::CL_RemoveObject(Object* object)
 	{
-		FASSERT(object);
+		Assert(object);
 
 		m_clientObjects.erase(object->m_objectID);
 	}

@@ -4,10 +4,11 @@
 namespace Replication
 {
 	ObjectState::ObjectState(Object* object)
+		: m_object(object)
+		, m_existsOnClient(false)
+		, m_isDestroyed(false)
 	{
-		FASSERT(object);
-
-		m_object = object;
+		Assert(object);
 
 		if (m_object)
 		{

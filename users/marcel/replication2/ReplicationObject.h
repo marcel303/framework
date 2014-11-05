@@ -10,28 +10,19 @@
 
 namespace Replication
 {
-	class ObjectState;
-
 	class Object
 	{
 	public:
-		enum SERIALIZATION_MODE
-		{
-			SM_CREATE,
-			SM_UPDATE
-		};
-
 		Object();
 
 		void SV_Initialize(int objectID, const std::string& className, NetSerializableObject* serializableObject);
 		void CL_Initialize1(int objectID, const std::string& className);
 		void CL_Initialize2(NetSerializableObject* serializableObject);
 
-		bool Serialize(BitStream& bitStream, SERIALIZATION_MODE mode, bool send);
+		bool Serialize(BitStream& bitStream, bool init, bool send);
 
 	private:
 		bool RequireUpdating() const;
-		bool RequireVersionedUpdating() const;
 
 		// FIXME: private
 	public:

@@ -17,7 +17,7 @@ namespace Replication
 
 	void Object::SV_Initialize(int objectID, const std::string& className, NetSerializableObject* serializableObject)
 	{
-		FASSERT(serializableObject);
+		Assert(serializableObject);
 
 		m_objectID = objectID;
 		m_className = className;
@@ -36,15 +36,14 @@ namespace Replication
 		m_clientSerializableObject = serializableObject;
 	}
 
-	bool Object::Serialize(BitStream& bitStream, SERIALIZATION_MODE mode, bool send)
+	bool Object::Serialize(BitStream& bitStream, bool init, bool send)
 	{
-		// todo : don't send packet if not updated
+		NetSerializableObject * serializableObject =
+			send
+			? m_serverSerializableObject
+			: m_clientSerializableObject;
 
-		NetSerializableObject * serializableObject = send ? m_serverSerializableObject : m_clientSerializableObject;
-
-		serializableObject->Serialize((mode == SM_CREATE), send, bitStream);
-
-		return true;
+		return serializableObject->Serialize(init, send, bitStream);
 	}
 
 	bool Object::RequireUpdating() const
