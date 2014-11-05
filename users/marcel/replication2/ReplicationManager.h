@@ -22,15 +22,15 @@ namespace Replication
 		Manager();
 		~Manager();
 
-		int SV_CreateClient(::Client* client, void* up);
-		int CL_CreateClient(::Client* client, void* up);
+		int SV_CreateClient(::Client * client, void * up);
+		int CL_CreateClient(::Client * client, void * up);
 		void SV_DestroyClient(int clientID);
 		void CL_DestroyClient(int clientID);
 
-		int SV_CreateObject(const std::string& className, NetSerializableObject* serializableObject);
+		int SV_CreateObject(const std::string & className, NetSerializableObject * serializableObject);
 		void SV_DestroyObject(int objectID);
 
-		bool CL_DestroyObject(Client* client, int objectID);
+		bool CL_DestroyObject(Client * client, int objectID);
 		void CL_Shutdown();
 
 		void SV_Update();
@@ -38,17 +38,16 @@ namespace Replication
 
 		void CL_RegisterHandler(Handler* handler);
 
-		bool OnObjectCreate(Client* client, Object* object);
-		void OnObjectDestroy(Client* client, Object* object);
+		bool OnObjectCreate(Client * client, Object * object);
+		void OnObjectDestroy(Client * client, Object * object);
 
-		virtual void OnReceive(Packet& packet, Channel* channel);
+		virtual void OnReceive(Packet & packet, Channel * channel);
 
-		void HandleCreate(BitStream& bitStream, Channel* channel);
-		void HandleCreateAck(BitStream& bitStream, Channel* channel);
-		void HandleDestroy(BitStream& bitStream, Channel* channel);
-		void HandleDestroyAck(BitStream& bitStream, Channel* channel);
-		void HandleUpdate(BitStream& bitStream, Channel* channel);
-		void HandleVersion(BitStream& bitStream, Channel* channel);
+		void HandleCreate(BitStream & bitStream, Channel * channel);
+		void HandleCreateAck(BitStream & bitStream, Channel * channel);
+		void HandleDestroy(BitStream & bitStream, Channel * channel);
+		void HandleDestroyAck(BitStream & bitStream, Channel * channel);
+		void HandleUpdate(BitStream & bitStream, Channel * channel);
 
 	private:
 		typedef std::map<int, Client*> ClientColl;
@@ -62,19 +61,19 @@ namespace Replication
 	private:
 		typedef PacketBuilder<2048> RepMgrPacketBuilder;
 
-		int CreateClientEx(::Client* client, bool serverSide, void* up);
+		int CreateClientEx(::Client * client, bool serverSide, void * up);
 
-		void SyncClient(Client* client);
-		void SyncClientObject(Client* client, Object* object);
+		void SyncClient(Client * client);
+		void SyncClientObject(Client * client, Object * object);
 
-		bool SendCreateAck(int objectID, Channel* channel);
-		bool SendDestroyAck(int objectID, Channel* channel);
+		bool SendCreateAck(int objectID, Channel * channel);
+		bool SendDestroyAck(int objectID, Channel * channel);
 
-		Client* SV_FindClient(Channel* channel);
-		Client* CL_FindClient(Channel* channel);
-		Object* SV_FindObject(int objectID);
+		Client * SV_FindClient(Channel * channel);
+		Client * CL_FindClient(Channel * channel);
+		Object * SV_FindObject(int objectID);
 
-		Packet MakePacket(uint8_t messageID, RepMgrPacketBuilder& packetBuilder, BitStream& bitStream) const;
+		Packet MakePacket(uint8_t messageID, RepMgrPacketBuilder & packetBuilder, BitStream & bitStream) const;
 
 		ClientColl m_serverClients;
 		ObjectColl m_serverObjects;
@@ -86,7 +85,7 @@ namespace Replication
 		HandlePool<uint32_t> m_clientIDs;
 		HandlePool<uint16_t> m_objectIDs;
 
-		Handler* m_handler;
+		Handler * m_handler;
 		int m_tick;
 	};
 }

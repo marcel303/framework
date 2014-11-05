@@ -16,7 +16,7 @@ namespace Replication
 			CL_RemoveObject(m_clientObjects.begin()->second);
 	}
 
-	void Client::Initialize(::Client* client, void* up)
+	void Client::Initialize(::Client * client, void * up)
 	{
 		Assert(client);
 
@@ -24,7 +24,7 @@ namespace Replication
 		m_up = up;
 	}
 
-	void Client::SV_AddObject(Object* object)
+	void Client::SV_AddObject(Object * object)
 	{
 		Assert(object);
 
@@ -35,21 +35,21 @@ namespace Replication
 		m_createdOrDestroyed.push_back(state);
 	}
 
-	void Client::CL_AddObject(Object* object)
+	void Client::CL_AddObject(Object * object)
 	{
 		Assert(object);
 
 		m_clientObjects[object->m_objectID] = object;
 	}
 
-	void Client::CL_RemoveObject(Object* object)
+	void Client::CL_RemoveObject(Object * object)
 	{
 		Assert(object);
 
 		m_clientObjects.erase(object->m_objectID);
 	}
 
-	Object* Client::CL_FindObject(int objectID)
+	Object * Client::CL_FindObject(int objectID)
 	{
 		ObjectCollItr i = m_clientObjects.find(objectID);
 
@@ -59,7 +59,7 @@ namespace Replication
 			return i->second;
 	}
 
-	ObjectStateCollItr Client::SV_Find(ObjectStateColl& collection, int objectID)
+	ObjectStateCollItr Client::SV_Find(ObjectStateColl & collection, int objectID)
 	{
 		// FIXME: Speedup.
 		for (ObjectStateCollItr j = collection.begin(); j != collection.end(); ++j)
@@ -69,7 +69,7 @@ namespace Replication
 		return collection.end();
 	}
 
-	void Client::SV_Move(int objectID, ObjectStateColl& src, ObjectStateColl& dst)
+	void Client::SV_Move(int objectID, ObjectStateColl & src, ObjectStateColl & dst)
 	{
 		ObjectStateCollItr i = SV_Find(src, objectID);
 

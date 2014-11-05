@@ -15,11 +15,11 @@ namespace Replication
 	public:
 		Object();
 
-		void SV_Initialize(int objectID, const std::string& className, NetSerializableObject* serializableObject);
-		void CL_Initialize1(int objectID, const std::string& className);
-		void CL_Initialize2(NetSerializableObject* serializableObject);
+		void SV_Initialize(int objectID, const std::string & className, NetSerializableObject * serializableObject);
+		void CL_Initialize1(int objectID, const std::string & className);
+		void CL_Initialize2(NetSerializableObject * serializableObject);
 
-		bool Serialize(BitStream& bitStream, bool init, bool send);
+		bool Serialize(BitStream & bitStream, bool init, bool send);
 
 	private:
 		bool RequireUpdating() const;
@@ -28,10 +28,10 @@ namespace Replication
 	public:
 		uint16_t m_objectID;
 		std::string m_className;
-		void* m_up;
+		void * m_up;
 
-		NetSerializableObject* m_serverSerializableObject;
-		NetSerializableObject* m_clientSerializableObject;
+		NetSerializableObject * m_serverSerializableObject;
+		NetSerializableObject * m_clientSerializableObject;
 
 		std::vector<int> m_clientIndicesCreate;
 		std::vector<int> m_clientIndicesUpdate;

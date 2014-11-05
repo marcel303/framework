@@ -15,7 +15,7 @@ namespace Replication
 		m_serverNeedUpdate = false;
 	}
 
-	void Object::SV_Initialize(int objectID, const std::string& className, NetSerializableObject* serializableObject)
+	void Object::SV_Initialize(int objectID, const std::string & className, NetSerializableObject * serializableObject)
 	{
 		Assert(serializableObject);
 
@@ -25,18 +25,18 @@ namespace Replication
 		m_serverNeedUpdate = RequireUpdating();
 	}
 
-	void Object::CL_Initialize1(int objectID, const std::string& className)
+	void Object::CL_Initialize1(int objectID, const std::string & className)
 	{
 		m_objectID = objectID;
 		m_className = className;
 	}
 
-	void Object::CL_Initialize2(NetSerializableObject* serializableObject)
+	void Object::CL_Initialize2(NetSerializableObject * serializableObject)
 	{
 		m_clientSerializableObject = serializableObject;
 	}
 
-	bool Object::Serialize(BitStream& bitStream, bool init, bool send)
+	bool Object::Serialize(BitStream & bitStream, bool init, bool send)
 	{
 		NetSerializableObject * serializableObject =
 			send

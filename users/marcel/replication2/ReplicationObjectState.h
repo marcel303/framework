@@ -10,9 +10,9 @@ namespace Replication
 	class ObjectState
 	{
 	public:
-		ObjectState(Object* object);
+		ObjectState(Object * object);
 
-		Object* m_object;
+		Object * m_object;
 		int m_objectID; // Must be cached instead of derived from m_object, because it must exist when object deleted for destroy messages to clients to be repeated.
 		bool m_existsOnClient;
 		bool m_isDestroyed;

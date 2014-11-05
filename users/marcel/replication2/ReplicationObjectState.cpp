@@ -3,7 +3,7 @@
 
 namespace Replication
 {
-	ObjectState::ObjectState(Object* object)
+	ObjectState::ObjectState(Object * object)
 		: m_object(object)
 		, m_existsOnClient(false)
 		, m_isDestroyed(false)

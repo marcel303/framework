@@ -26,12 +26,12 @@ namespace Replication
 			CL_DestroyClient(m_clientClients.begin()->first);
 	}
 
-	int Manager::SV_CreateClient(::Client* client, void* up)
+	int Manager::SV_CreateClient(::Client * client, void * up)
 	{
 		return CreateClientEx(client, true, up);
 	}
 
-	int Manager::CL_CreateClient(::Client* client, void* up)
+	int Manager::CL_CreateClient(::Client * client, void * up)
 	{
 		return CreateClientEx(client, false, up);
 	}
@@ -70,7 +70,7 @@ namespace Replication
 		}
 	}
 
-	int Manager::SV_CreateObject(const std::string& className, NetSerializableObject* serializableObject)
+	int Manager::SV_CreateObject(const std::string & className, NetSerializableObject * serializableObject)
 	{
 		Assert(serializableObject);
 
@@ -78,7 +78,7 @@ namespace Replication
 		// Free objectID's only when all clients synced?
 		int objectID = m_objectIDs.Allocate();
 
-		Object* object = new Object();
+		Object * object = new Object();
 		object->SV_Initialize(objectID, className, serializableObject);
 
 		m_serverObjects[objectID] = object;
@@ -97,7 +97,7 @@ namespace Replication
 
 		for (ClientCollItr i = m_serverClients.begin(); i != m_serverClients.end(); ++i)
 		{
-			Client* client = i->second;
+			Client * client = i->second;
 
 			ObjectStateColl createdOrDestroyed;
 			ObjectStateColl active;
@@ -154,11 +154,11 @@ namespace Replication
 		}
 	}
 
-	bool Manager::CL_DestroyObject(Client* client, int objectID)
+	bool Manager::CL_DestroyObject(Client * client, int objectID)
 	{
 		Assert(client);
 
-		Object* object = client->CL_FindObject(objectID);
+		Object * object = client->CL_FindObject(objectID);
 
 		if (object)
 		{
@@ -175,11 +175,11 @@ namespace Replication
 	{
 		for (ClientCollItr i = m_clientClients.begin(); i != m_clientClients.end(); ++i)
 		{
-			Client* client = i->second;
+			Client * client = i->second;
 
 			while (client->m_clientObjects.size() > 0)
 			{
-				Object* object = client->m_clientObjects.begin()->second;
+				Object * object = client->m_clientObjects.begin()->second;
 				CL_DestroyObject(client, object->m_objectID);
 			}
 
@@ -191,7 +191,7 @@ namespace Replication
 	{
 		for (ClientCollItr i = m_serverClients.begin(); i != m_serverClients.end(); ++i)
 		{
-			Client* client = i->second;
+			Client * client = i->second;
 
 			// handle object creation and destruction
 
@@ -218,7 +218,7 @@ namespace Replication
 					BitStream bitStream;
 
 					const uint16_t objectID = j->m_objectID;
-					const std::string& className = j->m_object->m_className;
+					const std::string & className = j->m_object->m_className;
 
 					bitStream.Write(objectID);
 					bitStream.WriteString(className);
@@ -264,21 +264,21 @@ namespace Replication
 	{
 	}
 
-	void Manager::CL_RegisterHandler(Handler* handler)
+	void Manager::CL_RegisterHandler(Handler * handler)
 	{
 		Assert(handler);
 
 		m_handler = handler;
 	}
 
-	bool Manager::OnObjectCreate(Client* client, Object* object)
+	bool Manager::OnObjectCreate(Client * client, Object * object)
 	{
 		Assert(client);
 		Assert(object);
 
 		Assert(m_handler);
 
-		NetSerializableObject* serializableObject;
+		NetSerializableObject * serializableObject;
 
 		// Retrieve parameters through callback.
 		if (m_handler->OnReplicationObjectCreate1(client, object->m_className, &serializableObject, &object->m_up))
@@ -293,7 +293,7 @@ namespace Replication
 		}
 	}
 
-	void Manager::OnObjectDestroy(Client* client, Object* object)
+	void Manager::OnObjectDestroy(Client * client, Object * object)
 	{
 		Assert(client);
 		Assert(object);
@@ -303,7 +303,7 @@ namespace Replication
 		m_handler->OnReplicationObjectDestroy(client, object->m_up);
 	}
 
-	void Manager::OnReceive(Packet& packet, Channel* channel)
+	void Manager::OnReceive(Packet & packet, Channel * channel)
 	{
 		Stats::I().m_rep.m_bytesReceived.Inc(packet.GetSize());
 
@@ -360,9 +360,9 @@ namespace Replication
 		// As client, respond to create, destroy.
 	}
 
-	void Manager::HandleCreate(BitStream& bitStream, Channel* channel)
+	void Manager::HandleCreate(BitStream & bitStream, Channel * channel)
 	{
-		Client* client = CL_FindClient(channel);
+		Client * client = CL_FindClient(channel);
 
 		if (!client)
 		{
@@ -387,7 +387,7 @@ namespace Replication
 
 		className = bitStream.ReadString();
 
-		Object* object = new Object();
+		Object * object = new Object();
 		object->CL_Initialize1(objectID, className);
 
 		if (!OnObjectCreate(client, object))
@@ -407,7 +407,7 @@ namespace Replication
 		SendCreateAck(objectID, channel);
 	}
 
-	void Manager::HandleCreateAck(BitStream& bitStream, Channel* channel)
+	void Manager::HandleCreateAck(BitStream & bitStream, Channel * channel)
 	{
 		// TODO: Check if server.
 
@@ -415,7 +415,7 @@ namespace Replication
 
 		bitStream.Read(objectID);
 
-		Client* client = SV_FindClient(channel);
+		Client * client = SV_FindClient(channel);
 
 		if (client)
 		{
@@ -444,9 +444,9 @@ namespace Replication
 		}
 	}
 
-	void Manager::HandleDestroy(BitStream& bitStream, Channel* channel)
+	void Manager::HandleDestroy(BitStream & bitStream, Channel * channel)
 	{
-		Client* client = CL_FindClient(channel);
+		Client * client = CL_FindClient(channel);
 
 		if (!client)
 		{
@@ -471,11 +471,11 @@ namespace Replication
 		}
 	}
 
-	void Manager::HandleDestroyAck(BitStream& bitStream, Channel* channel)
+	void Manager::HandleDestroyAck(BitStream & bitStream, Channel * channel)
 	{
 		// TODO: Check if server.
 
-		Client* client = SV_FindClient(channel);
+		Client * client = SV_FindClient(channel);
 
 		if (!client)
 		{
@@ -510,11 +510,11 @@ namespace Replication
 	*/
 	}
 
-	void Manager::HandleUpdate(BitStream& bitStream, Channel* channel)
+	void Manager::HandleUpdate(BitStream & bitStream, Channel * channel)
 	{
 		Stats::I().m_rep.m_objectsUpdated.Inc(1);
 
-		Client* client = CL_FindClient(channel);
+		Client * client = CL_FindClient(channel);
 
 		if (!client)
 		{
@@ -526,7 +526,7 @@ namespace Replication
 
 		bitStream.Read(objectID);
 
-		Object* object = client->CL_FindObject(objectID);
+		Object * object = client->CL_FindObject(objectID);
 
 		if (object)
 		{
@@ -539,13 +539,13 @@ namespace Replication
 		}
 	}
 
-	int Manager::CreateClientEx(::Client* client, bool serverSide, void* up)
+	int Manager::CreateClientEx(::Client * client, bool serverSide, void * up)
 	{
 		Assert(client);
 
 		int clientID = m_clientIDs.Allocate();
 
-		Client* repClient = new Client();
+		Client * repClient = new Client();
 		repClient->Initialize(client, up);
 
 		if (serverSide)
@@ -564,18 +564,18 @@ namespace Replication
 		return clientID;
 	}
 
-	void Manager::SyncClient(Client* client)
+	void Manager::SyncClient(Client * client)
 	{
 		for (ObjectCollItr i = m_serverObjects.begin(); i != m_serverObjects.end(); ++i)
 			SyncClientObject(client, i->second);
 	}
 
-	void Manager::SyncClientObject(Client* client, Object* object)
+	void Manager::SyncClientObject(Client * client, Object * object)
 	{
 		client->SV_AddObject(object);
 	}
 
-	bool Manager::SendCreateAck(int _objectID, Channel* channel)
+	bool Manager::SendCreateAck(int _objectID, Channel * channel)
 	{
 		BitStream bitStream;
 
@@ -588,7 +588,7 @@ namespace Replication
 		return channel->Send(packet);
 	}
 
-	bool Manager::SendDestroyAck(int _objectID, Channel* channel)
+	bool Manager::SendDestroyAck(int _objectID, Channel * channel)
 	{
 		BitStream bitStream;
 
@@ -601,7 +601,7 @@ namespace Replication
 		return channel->Send(packet);
 	}
 
-	Client* Manager::SV_FindClient(Channel* channel)
+	Client * Manager::SV_FindClient(Channel * channel)
 	{
 		ClientCacheItr i = m_serverClientsCache.find(channel);
 
@@ -611,7 +611,7 @@ namespace Replication
 			return i->second;
 	}
 
-	Client* Manager::CL_FindClient(Channel* channel)
+	Client * Manager::CL_FindClient(Channel * channel)
 	{
 		ClientCacheItr i = m_clientClientsCache.find(channel);
 
@@ -621,7 +621,7 @@ namespace Replication
 			return i->second;
 	}
 
-	Object* Manager::SV_FindObject(int objectID)
+	Object * Manager::SV_FindObject(int objectID)
 	{
 		ObjectCollItr i = m_serverObjects.find(objectID);
 
@@ -631,7 +631,7 @@ namespace Replication
 			return i->second;
 	}
 
-	Packet Manager::MakePacket(uint8_t messageID, RepMgrPacketBuilder& packetBuilder, BitStream& bitStream) const
+	Packet Manager::MakePacket(uint8_t messageID, RepMgrPacketBuilder & packetBuilder, BitStream & bitStream) const
 	{
 		uint8_t protocolID = PROTOCOL_REPLICATION;
 		packetBuilder.Write8(&protocolID);
