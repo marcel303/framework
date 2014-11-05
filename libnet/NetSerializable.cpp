@@ -125,7 +125,11 @@ bool NetSerializableObject::Serialize(bool init, bool send, BitStream & bitStrea
 
 		bool isDirty;
 
-		if (send)
+		if (init)
+		{
+			isDirty = true;
+		}
+		else if (send)
 		{
 			isDirty = serialiable->IsDirty();
 

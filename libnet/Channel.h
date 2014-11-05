@@ -117,8 +117,8 @@ public:
 	{
 	public:
 		uint32_t m_id;
-		uint32_t m_lastSend;
-		uint32_t m_nextSend; // Derived.
+		uint64_t m_lastSend;
+		uint64_t m_nextSend; // Derived.
 		bool m_acknowledged;
 		uint32_t m_dataSize;
 		uint8_t m_data[kMaxDatagramSize]; // fixme.. use allocator

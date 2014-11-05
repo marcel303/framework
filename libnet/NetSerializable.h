@@ -1,7 +1,9 @@
 #pragma once
 
+#include <stdint.h>
 #include <vector>
 #include "libnet_forward.h"
+#include "BitStream.h"
 
 class NetSerializationContext
 {
@@ -56,6 +58,7 @@ public:
 	NetSerializable(NetSerializableObject * owner);
 
 	void SetOwner(NetSerializableObject * owner);
+	NetSerializableObject * GetOwner() const { return m_owner; }
 
 	bool IsDirty() const;
 	void SetDirty();
