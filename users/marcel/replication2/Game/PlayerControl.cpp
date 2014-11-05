@@ -34,7 +34,7 @@ PlayerControl::PlayerControl(Player * player)
 
 void PlayerControl::Animate(Phy::Object* phyObject, float dt)
 {
-	FASSERT(phyObject);
+	Assert(phyObject);
 
 	SetDirty();
 

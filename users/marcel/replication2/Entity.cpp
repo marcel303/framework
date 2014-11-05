@@ -29,7 +29,7 @@ Entity::Entity()
 
 Entity::~Entity()
 {
-	FASSERT(m_scene == 0);
+	Assert(m_scene == 0);
 
 	delete m_entity_NS;
 	m_entity_NS = 0;
@@ -41,7 +41,7 @@ void Entity::PostCreate()
 
 ShEntity Entity::Self()
 {
-	FASSERT(m_scene);
+	Assert(m_scene);
 
 	return m_scene->FindEntity(m_id);
 }

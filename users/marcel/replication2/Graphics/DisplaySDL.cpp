@@ -11,7 +11,7 @@ DisplaySDL::DisplaySDL(int x, int y, int width, int height, bool fullscreen, boo
 {
 	int ret = SDL_Init(SDL_INIT_EVERYTHING);
 
-	FASSERT(ret >= 0);
+	Assert(ret >= 0);
 
 	CreateDisplay(x, y, width, height, fullscreen, openGL);
 
@@ -166,7 +166,7 @@ void DisplaySDL::CreateDisplay(int x, int y, int width, int height, bool fullscr
 
 	m_surface = SDL_SetVideoMode(width, height, 32, flags);
 
-	FASSERT(m_surface);
+	Assert(m_surface);
 }
 
 void DisplaySDL::DestroyDisplay()

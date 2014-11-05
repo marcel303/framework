@@ -50,8 +50,8 @@ EntityLink<T>::EntityLink(const std::string& name, Entity* owner)
 	: NetSerializable(owner)
 	, m_id(this)
 {
-	FASSERT(name != "");
-	FASSERT(owner);
+	Assert(name != "");
+	Assert(owner);
 
 	m_owner = owner;
 }

@@ -323,7 +323,7 @@ void TestReplication()
 	bool localConnect = false;
 
 	if (!cfg_server && !cfg_client)
-		FASSERT(0);
+		Assert(0);
 	if (cfg_server && !cfg_client)
 		role = Engine::ROLE_SERVER;
 	if (!cfg_server && cfg_client)
@@ -487,10 +487,10 @@ public:
 
 		const float dot1 = n * tan1;
 		const float dot2 = n * tan2;
-		FASSERT(fabsf(dot1) < 0.01f);
-		FASSERT(fabsf(dot2) < 0.01f);
-		FASSERT(tan1.CalcSizeSq() != 0.0f);
-		FASSERT(tan2.CalcSizeSq() != 0.0f);
+		Assert(fabsf(dot1) < 0.01f);
+		Assert(fabsf(dot2) < 0.01f);
+		Assert(tan1.CalcSizeSq() != 0.0f);
+		Assert(tan2.CalcSizeSq() != 0.0f);
 
 		const Vec3 p = plane.m_normal * plane.m_distance;
 		

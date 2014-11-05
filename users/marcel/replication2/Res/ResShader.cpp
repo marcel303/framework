@@ -97,7 +97,7 @@ void ResShader::InitWriteDepth(bool write)
 
 void ResShader::Apply(GraphicsDevice* gfx, bool setPrograms) const
 {
-	FASSERT(gfx);
+	Assert(gfx);
 
 	if (m_states & ST_DEPTHTEST)
 	{

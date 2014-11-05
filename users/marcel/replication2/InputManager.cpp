@@ -18,28 +18,28 @@ void InputManager::SV_Update()
 
 void InputManager::SV_AddClient(Client* client)
 {
-	FASSERT(client);
+	Assert(client);
 
 	m_serverClients[client->m_channel] = client;
 }
 
 void InputManager::CL_AddClient(Client* client)
 {
-	FASSERT(client);
+	Assert(client);
 
 	m_clientClients[client->m_channel] = client;
 }
 
 void InputManager::SV_RemoveClient(Client* client)
 {
-	FASSERT(client);
+	Assert(client);
 
 	m_serverClients.erase(client->m_channel);
 }
 
 void InputManager::CL_RemoveClient(Client* client)
 {
-	FASSERT(client);
+	Assert(client);
 
 	m_clientClients.erase(client->m_channel);
 }
@@ -51,7 +51,7 @@ void InputManager::OnReceive(Packet& packet, Channel* channel)
 	if (!packet.Read8(&messageID))
 	{
 		DB_ERR("WTFHAX?\n");
-		FASSERT(0);
+		Assert(0);
 		return;
 	}
 
@@ -72,7 +72,7 @@ void InputManager::OnReceive(Packet& packet, Channel* channel)
 
 void InputManager::CL_AddInputHandler(InputHandler* handler)
 {
-	FASSERT(handler);
+	Assert(handler);
 
 	m_clientInputHandlers.push_back(handler);
 }
@@ -118,13 +118,13 @@ void InputManager::HandleAction(Packet& packet, Channel* channel)
 		if (!packet.Read16(&actionID))
 		{
 			DB_ERR("WTFHAX?\n");
-			FASSERT(0);
+			Assert(0);
 			return;
 		}
 		if (!packet.Read32(&value))
 		{
 			DB_ERR("WTFHAX?\n");
-			FASSERT(0);
+			Assert(0);
 			return;
 		}
 
@@ -149,13 +149,13 @@ void InputManager::HandleActionLocal(Packet& packet, Channel* channel)
 		if (!packet.Read16(&actionID))
 		{
 			DB_ERR("WTFHAX?\n");
-			FASSERT(0);
+			Assert(0);
 			return;
 		}
 		if (!packet.Read32(&value))
 		{
 			DB_ERR("WTFHAX?\n");
-			FASSERT(0);
+			Assert(0);
 			return;
 		}
 
@@ -197,7 +197,7 @@ void InputManager::HandleSetController(Packet& packet, Channel* channel)
 
 Client* InputManager::SV_FindClient(Channel* channel)
 {
-	FASSERT(channel);
+	Assert(channel);
 
 	ClientCollectionItr i;
 
@@ -211,7 +211,7 @@ Client* InputManager::SV_FindClient(Channel* channel)
 
 Client* InputManager::CL_FindClient(Channel* channel)
 {
-	FASSERT(channel);
+	Assert(channel);
 
 	ClientCollectionItr i;
 

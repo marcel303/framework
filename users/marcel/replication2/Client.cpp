@@ -3,7 +3,7 @@
 
 Client::Client(Engine* engine)
 {
-	FASSERT(engine);
+	Assert(engine);
 
 	m_channel = 0;
 	m_clientScene = new Scene(engine, 0);// FIXME. server/client side flag
@@ -18,7 +18,7 @@ Client::~Client()
 
 void Client::Initialize(Channel* channel, bool clientSide)
 {
-	FASSERT(channel);
+	Assert(channel);
 
 	m_channel = channel;
 	m_clientSide = clientSide;

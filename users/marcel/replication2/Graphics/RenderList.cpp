@@ -11,19 +11,19 @@ RenderList::RenderList()
 
 RenderList::~RenderList()
 {
-	FASSERT(m_entities.size() == 0);
+	Assert(m_entities.size() == 0);
 }
 
 void RenderList::Add(Entity* entity)
 {
-	FASSERT(entity);
+	Assert(entity);
 
 	m_entities.push_back(entity);
 }
 
 void RenderList::Remove(Entity* entity)
 {
-	FASSERT(entity);
+	Assert(entity);
 
 	m_entities.erase(Find(entity));
 }

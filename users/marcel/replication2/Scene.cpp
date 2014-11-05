@@ -11,7 +11,7 @@
 
 Scene::Scene(Engine* engine, Replication::Manager* repMgr)
 {
-	FASSERT(engine);
+	Assert(engine);
 
 	m_engine = engine;
 	m_repMgr = repMgr;
@@ -37,7 +37,7 @@ Scene::~Scene()
 
 void Scene::AddEntity(ShEntity entity, int id)
 {
-	FASSERT(entity.get());
+	Assert(entity.get());
 
 	if (id == 0)
 		entity->m_id = m_entityIDs.Allocate();
@@ -62,7 +62,7 @@ void Scene::AddEntity(ShEntity entity, int id)
 
 void Scene::AddEntityQueued(ShEntity entity, int id)
 {
-	FASSERT(entity.get());
+	Assert(entity.get());
 
 	if (id == 0)
 		entity->m_id = m_entityIDs.Allocate();
@@ -74,7 +74,7 @@ void Scene::AddEntityQueued(ShEntity entity, int id)
 
 void Scene::RemoveEntity(ShEntity entity)
 {
-	FASSERT(entity.get());
+	Assert(entity.get());
 
 	if (!m_repMgr)
 	{
@@ -109,7 +109,9 @@ void Scene::RemoveEntity(int entityID)
 
 void Scene::RemoveEntityQueued(ShEntity entity)
 {
-	FASSERT(entity.get());
+	Assert(entity.get());
+
+	// todo : check if not queued already
 
 	m_destroyedEntities.push_back(entity);
 }
@@ -223,7 +225,7 @@ void Scene::Render()
 
 void Scene::Activate(Client* client, int entityID)
 {
-	FASSERT(client);
+	Assert(client);
 
 	PacketBuilder<4> packetBuilder;
 
@@ -241,7 +243,7 @@ void Scene::Activate(Client* client, int entityID)
 
 void Scene::SetController(Client* client, int controllerID)
 {
-	FASSERT(client);
+	Assert(client);
 
 	PacketBuilder<4> packetBuilder;
 
@@ -266,18 +268,18 @@ ShEntity Scene::CastRay(Entity* source, const Vec3& position, const Vec3& direct
 
 	Entity* entityPtr = (Entity*)object->GetUP();
 
-	FASSERT(entityPtr);
+	Assert(entityPtr);
 
 	ShEntity entity = entityPtr->Self();
 
-	FASSERT(entity.get());
+	Assert(entity.get());
 
 	return entity;
 }
 
 void Scene::MessageEntity(Client* client, int in_entityID, int in_message, int in_value)
 {
-	FASSERT(client);
+	Assert(client);
 
 	PacketBuilder<10> packetBuilder;
 

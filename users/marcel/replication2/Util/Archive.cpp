@@ -155,7 +155,7 @@ bool Ar::WriteToString(std::string& out_text) const
 
 void Ar::Begin(const std::string& name, int index)
 {
-	FASSERT(m_currRecord);
+	Assert(m_currRecord);
 	
 	ArRecordID id(name, index);
 	
@@ -175,8 +175,8 @@ void Ar::Begin(const std::string& name, int index)
 
 void Ar::End()
 {
-	FASSERT(m_currRecord);
-	FASSERT(m_currRecord->m_parent);
+	Assert(m_currRecord);
+	Assert(m_currRecord->m_parent);
 	
 	m_currRecord = m_currRecord->m_parent;
 }
@@ -517,7 +517,7 @@ Mat4x4 Ar::operator()(const std::string& key, const Mat4x4& _default) const
 
 Ar& Ar::operator=(int v)
 {
-	FASSERT(m_currKey);
+	Assert(m_currKey);
 	
 	char temp[100];
 	sprintf(temp, "%d", v);
@@ -530,7 +530,7 @@ Ar& Ar::operator=(int v)
 
 Ar& Ar::operator=(uint32_t v)
 {
-	FASSERT(m_currKey);
+	Assert(m_currKey);
 	
 	char temp[100];
 	sprintf(temp, "%d", (int)v);
@@ -543,7 +543,7 @@ Ar& Ar::operator=(uint32_t v)
 
 Ar& Ar::operator=(float v)
 {
-	FASSERT(m_currKey);
+	Assert(m_currKey);
 	
 	char temp[100];
 	sprintf(temp, "%f", v);
@@ -556,7 +556,7 @@ Ar& Ar::operator=(float v)
 
 Ar& Ar::operator=(const std::string& v)
 {
-	FASSERT(m_currKey);
+	Assert(m_currKey);
 	
 	Key_Set(m_currKey->m_name, v);
 	
@@ -566,7 +566,7 @@ Ar& Ar::operator=(const std::string& v)
 
 Ar& Ar::operator=(const Vec4& vector)
 {
-	FASSERT(m_currKey);
+	Assert(m_currKey);
 	
 	char temp[256];
 	sprintf(temp, "%f %f %f %f",
@@ -583,7 +583,7 @@ Ar& Ar::operator=(const Vec4& vector)
 
 Ar& Ar::operator=(const Mat4x4& matrix)
 {
-	FASSERT(m_currKey);
+	Assert(m_currKey);
 	
 	char temp[1024];
 	sprintf(temp, "%f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f",
@@ -821,7 +821,7 @@ bool Ar::Merge(ArRecord* record)
 
 void Ar::Key_Begin(const std::string& name)
 {
-	FASSERT(m_currRecord);
+	Assert(m_currRecord);
 
 	ArRecord::KeyItr i = m_currRecord->FindKey(name);
 
@@ -839,7 +839,7 @@ void Ar::Key_Begin(const std::string& name)
 
 bool Ar::Key_IsSet(const std::string& key) const
 {
-	FASSERT(m_currRecord);
+	Assert(m_currRecord);
 	
 	Ar* _this = const_cast<Ar*>(this);
 

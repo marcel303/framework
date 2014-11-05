@@ -38,7 +38,7 @@ namespace CD
 
 			out_distance = - d1 / dd;
 
-			FASSERT(out_distance >= 0.0f);
+			Assert(out_distance >= 0.0f);
 
 			return true;
 		}

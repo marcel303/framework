@@ -7,7 +7,7 @@
 
 Controller::Controller(int id, Client* client) : InputHandler(INPUT_PRIO_CONTROLLER)
 {
-	FASSERT(client);
+	Assert(client);
 
 	m_id = id;
 	m_client = client;
@@ -98,7 +98,7 @@ bool Controller::OnEvent(Event& event)
 
 void Controller::SendAction(Channel* channel, int in_actionID, float in_value) const
 {
-	FASSERT(channel);
+	Assert(channel);
 
 	// Send change to self (client).
 	if (0)

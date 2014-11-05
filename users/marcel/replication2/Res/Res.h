@@ -85,7 +85,7 @@ public:
 
 	inline ResPtr(Res* res)
 	{
-		FASSERT(res);
+		Assert(res);
 
 		ResPtrGeneric* ptr = new ResPtrGeneric();
 
@@ -97,7 +97,7 @@ public:
 	// FIXME: Remove. Required for backward compat & testing only..
 	inline ResPtr(const ShBaseResPtr& ptr)
 	{
-		FASSERT(ptr.get());
+		Assert(ptr.get());
 
 		m_ptr = ptr;
 	}

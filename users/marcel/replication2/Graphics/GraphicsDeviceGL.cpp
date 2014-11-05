@@ -130,18 +130,18 @@ void GraphicsDeviceGL::Shutdown()
 	SetPS(0);
 #endif
 
-	FASSERT(m_rt == 0);
+	Assert(m_rt == 0);
 	for (int i = 0; i < 4; ++i)
-		FASSERT(m_rts[i] == 0);
-	FASSERT(m_rtd == 0);
-	FASSERT(m_ib == 0);
-	FASSERT(m_vb == 0);
+		Assert(m_rts[i] == 0);
+	Assert(m_rtd == 0);
+	Assert(m_ib == 0);
+	Assert(m_vb == 0);
 	for (int i = 0; i < MAX_TEX; ++i)
-		FASSERT(m_tex[i] == 0);
-	FASSERT(m_vs == 0);
-	FASSERT(m_ps == 0);
+		Assert(m_tex[i] == 0);
+	Assert(m_vs == 0);
+	Assert(m_ps == 0);
 
-	FASSERT(m_cache.size() == 0);
+	Assert(m_cache.size() == 0);
 
 	glDeleteFramebuffers(1, &m_fboId);
 	m_fboId = 0;
@@ -269,7 +269,7 @@ void GraphicsDeviceGL::Resolve(ResTexR* rt)
 
 void GraphicsDeviceGL::Copy(ResBaseTex* out_tex)
 {
-	FASSERT(out_tex);
+	Assert(out_tex);
 
 	switch (out_tex->m_type)
 	{
@@ -292,7 +292,7 @@ void GraphicsDeviceGL::Copy(ResBaseTex* out_tex)
 		}
 		break;
 	default:
-		FASSERT(0);
+		Assert(0);
 	}
 }
 
@@ -330,7 +330,7 @@ void GraphicsDeviceGL::RS(int state, int value)
 			else if (value == CULL_CCW)
 				cullFace = GL_FRONT;
 			else
-				FASSERT(0);
+				Assert(0);
 
 			glCullFace(cullFace);
 		}
@@ -392,7 +392,7 @@ void GraphicsDeviceGL::RS(int state, int value)
 		glColorMask(value, value, value, value);
 		break;
 	default:
-		FASSERT(0);
+		Assert(0);
 		break;
 	}
 
@@ -407,7 +407,7 @@ void GraphicsDeviceGL::SS(int sampler, int state, int value)
 		// TODO: Implement.
 		break;
 	default:
-		FASSERT(0);
+		Assert(0);
 		break;
 	}
 
@@ -555,7 +555,7 @@ void GraphicsDeviceGL::SetRT(ResTexR* rt)
 
 			GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER_EXT);
 	
-			FASSERT(status == GL_FRAMEBUFFER_COMPLETE_EXT);
+			Assert(status == GL_FRAMEBUFFER_COMPLETE_EXT);
 
 			glViewport(0, 0, texCR->GetW(), texCR->GetH());
 			CheckError();
@@ -567,7 +567,7 @@ void GraphicsDeviceGL::SetRT(ResTexR* rt)
 
 void GraphicsDeviceGL::SetRTM(ResTexR* rt1, ResTexR* rt2, ResTexR* rt3, ResTexR* rt4, int numRenderTargets, ResTexD* rtd)
 {
-	FASSERT(numRenderTargets <= 4);
+	Assert(numRenderTargets <= 4);
 
 	ResTexR* rts[4] = { rt1, rt2, rt3, rt4 };
 	GLenum mrt[4] = { GL_COLOR_ATTACHMENT0_EXT, GL_COLOR_ATTACHMENT1_EXT, GL_COLOR_ATTACHMENT2_EXT, GL_COLOR_ATTACHMENT3_EXT };
@@ -614,8 +614,8 @@ void GraphicsDeviceGL::SetRTM(ResTexR* rt1, ResTexR* rt2, ResTexR* rt3, ResTexR*
 			}
 			else
 			{
-				FASSERT(sx == rts[i]->GetW());
-				FASSERT(sy == rts[i]->GetH());
+				Assert(sx == rts[i]->GetW());
+				Assert(sy == rts[i]->GetH());
 			}
 		}
 
@@ -632,7 +632,7 @@ void GraphicsDeviceGL::SetRTM(ResTexR* rt1, ResTexR* rt2, ResTexR* rt3, ResTexR*
 
 			if (rt->m_type == RES_TEXCF) // FIXME: RES_TEXCRF
 			{
-				FASSERT(false); // Untested
+				Assert(false); // Untested
 
 				ResTexCF* texCF = (ResTexCF*)rt;
 				ResTexCR* texCR = texCF->m_cube;
@@ -656,7 +656,7 @@ void GraphicsDeviceGL::SetRTM(ResTexR* rt1, ResTexR* rt2, ResTexR* rt3, ResTexR*
 			}
 			else
 			{
-				FASSERT(false);
+				Assert(false);
 			}
 		}
 		else
@@ -675,8 +675,8 @@ void GraphicsDeviceGL::SetRTM(ResTexR* rt1, ResTexR* rt2, ResTexR* rt3, ResTexR*
 		}
 		else
 		{
-			FASSERT(sx == rtd->GetW());
-			FASSERT(sy == rtd->GetH());
+			Assert(sx == rtd->GetW());
+			Assert(sy == rtd->GetH());
 		}
 	}
 
@@ -718,9 +718,9 @@ void GraphicsDeviceGL::SetRTM(ResTexR* rt1, ResTexR* rt2, ResTexR* rt3, ResTexR*
 	GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER_EXT);
 
 	if (numRenderTargets == 0 && rtd == 0)
-		FASSERT(status == GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT_EXT);
+		Assert(status == GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT_EXT);
 	else
-		FASSERT(status == GL_FRAMEBUFFER_COMPLETE_EXT);
+		Assert(status == GL_FRAMEBUFFER_COMPLETE_EXT);
 
 	if (sx < 0)
 	{
@@ -919,7 +919,7 @@ void GraphicsDeviceGL::SetTex(int sampler, ResBaseTex* tex)
 				CheckError();
 				break;
 			default:
-				FASSERT(0);
+				Assert(0);
 				break;
 			}
 		}
@@ -1071,7 +1071,7 @@ void GraphicsDeviceGL::SetTex(int sampler, ResBaseTex* tex)
 			}
 			break;
 		default:
-			FASSERT(0);
+			Assert(0);
 			break;
 		}
 	}
@@ -1123,7 +1123,7 @@ void GraphicsDeviceGL::SetVS(ResVS* vs)
 				case SHPARAM_VEC3:   cgGLSetParameter3fv(p, param.m_v);      break;
 				case SHPARAM_VEC4:   cgGLSetParameter4fv(p, param.m_v);      break;
 				case SHPARAM_MAT4X4: cgGLSetMatrixParameterfr(p, param.m_v); break;
-				case SHPARAM_TEX:    FASSERT(0);                             break; // Not supporter ATM..
+				case SHPARAM_TEX:    Assert(0);                             break; // Not supporter ATM..
 				}
 			}
 
@@ -1193,7 +1193,7 @@ void GraphicsDeviceGL::SetPS(ResPS* ps)
 
 					if (r >= 0 && r < 8)
 					{
-						//FASSERT(r == CG_TEXUNIT0);
+						//Assert(r == CG_TEXUNIT0);
 						SetTex(r, (ResTex*)param.m_p);
 					}
 				}
@@ -1208,14 +1208,14 @@ void GraphicsDeviceGL::SetPS(ResPS* ps)
 
 void GraphicsDeviceGL::OnResInvalidate(Res* res)
 {
-	FASSERT(res);
+	Assert(res);
 
 	UnLoad(res);
 }
 
 void GraphicsDeviceGL::OnResDestroy(Res* res)
 {
-	FASSERT(res);
+	Assert(res);
 
 	if (res == m_rt)
 		SetRT(0);
@@ -1236,7 +1236,7 @@ void GraphicsDeviceGL::OnResDestroy(Res* res)
 
 int GraphicsDeviceGL::Validate(Res* res)
 {
-	FASSERT(res);
+	Assert(res);
 
 	if (m_cache.count(res) == 0)
 	{
@@ -1251,8 +1251,8 @@ void GraphicsDeviceGL::UpLoad(Res* res)
 {
 	INITCHECK(true);
 
-	FASSERT(res);
-	FASSERT(m_cache.count(res) == 0);
+	Assert(res);
+	Assert(m_cache.count(res) == 0);
 
 	void* data = 0;
 
@@ -1299,7 +1299,7 @@ void GraphicsDeviceGL::UpLoad(Res* res)
 		data = UpLoadPS((ResPS*)res);
 		break;
 	default:
-		FASSERT(0);
+		Assert(0);
 		break;
 	}
 
@@ -1314,8 +1314,8 @@ void GraphicsDeviceGL::UnLoad(Res* res)
 {
 	INITCHECK(true);
 
-	FASSERT(res);
-	FASSERT(m_cache.count(res) != 0);
+	Assert(res);
+	Assert(m_cache.count(res) != 0);
 
 	switch (res->m_type)
 	{
@@ -1350,7 +1350,7 @@ void GraphicsDeviceGL::UnLoad(Res* res)
 		UnLoadPS((ResPS*)res);
 		break;
 	default:
-		FASSERT(0);
+		Assert(0);
 		break;
 	}
 
@@ -1456,7 +1456,7 @@ void* GraphicsDeviceGL::UpLoadTexR(ResTexR* tex, bool texColor, bool texDepth, b
 {
 	if (TRUE_RT)
 	{
-		FASSERT(!(texColor && texDepth));
+		Assert(!(texColor && texDepth));
 
 		DataTexR* data = new DataTexR();
 
@@ -1676,7 +1676,7 @@ void* GraphicsDeviceGL::UpLoadTexR(ResTexR* tex, bool texColor, bool texDepth, b
 
 		GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER_EXT);
 		
-		FASSERT(status == GL_FRAMEBUFFER_COMPLETE_EXT);
+		Assert(status == GL_FRAMEBUFFER_COMPLETE_EXT);
 
 		glBindFramebuffer(GL_FRAMEBUFFER_EXT, 0);
 		CheckError();
@@ -1922,7 +1922,7 @@ void GraphicsDeviceGL::CheckError()
 	if (error)
 	{
 		printf("OpenGL error 0x%08x.\n", error);
-		//FASSERT(0); // fixme
+		//Assert(0); // fixme
 	}
 
 	CGerror cgError = cgGetError();
@@ -1935,7 +1935,7 @@ void GraphicsDeviceGL::CheckError()
 		const char* listing = cgGetLastListing(m_cgContext);
 		if (listing)
 			printf("Cg listing: %s.\n", listing);
-		//FASSERT(0); // fixme
+		//Assert(0); // fixme
 	}
 }
 #endif
@@ -1949,7 +1949,7 @@ static GLenum ConvPrimitiveType(PRIMITIVE_TYPE pt)
 	case PT_TRIANGLE_STRIP: return GL_TRIANGLE_STRIP;
 	case PT_LINE_LIST: return GL_LINES;
 	case PT_LINE_STRIP: return GL_LINE_STRIP;
-	default: FASSERT(0); return 0;
+	default: Assert(0); return 0;
 	}
 }
 
@@ -1962,7 +1962,7 @@ static GLenum ConvFunc(int func)
 	case CMP_LE: return GL_LEQUAL;
 	case CMP_G:  return GL_GREATER;
 	case CMP_GE: return GL_GEQUAL;
-	default: FASSERT(0); return 0;
+	default: Assert(0); return 0;
 	}
 }
 
@@ -1980,7 +1980,7 @@ static GLenum ConvBlendOp(int op)
 	case BLEND_INV_DST:       return GL_ONE_MINUS_DST_ALPHA;
 	case BLEND_INV_SRC_COLOR: return GL_ONE_MINUS_SRC_COLOR;
 	case BLEND_INV_DST_COLOR: return GL_ONE_MINUS_DST_COLOR;
-	default: FASSERT(0); return 0;
+	default: Assert(0); return 0;
 	}
 }
 
@@ -1994,7 +1994,7 @@ static GLenum ConvCubeFace(int face)
 	case CUBE_X_NEG: return GL_TEXTURE_CUBE_MAP_NEGATIVE_X;
 	case CUBE_Y_NEG: return GL_TEXTURE_CUBE_MAP_NEGATIVE_Y;
 	case CUBE_Z_NEG: return GL_TEXTURE_CUBE_MAP_NEGATIVE_Z;
-	default: FASSERT(0); return 0;
+	default: Assert(0); return 0;
 	}
 }
 

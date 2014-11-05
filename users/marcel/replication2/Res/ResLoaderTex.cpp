@@ -10,7 +10,7 @@ static void CheckError()
 	if (error)
 	{
 		printf("Error %d.\n", error);
-		FASSERT(0);
+		Assert(0);
 	}
 }
 

@@ -20,7 +20,7 @@ Res* ResLoaderShader::Load(const std::string& name)
 	Ar ar;
 
 	if (!ar.Read(name))
-		FASSERT(0);
+		Assert(0);
 
 	ResShader* shader = new ResShader();
 

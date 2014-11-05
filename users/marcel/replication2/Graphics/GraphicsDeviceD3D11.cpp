@@ -16,7 +16,7 @@ static uint32_t ConvertFVF(int fvf, int texCnt);
 static inline void D3DVERIFY(HRESULT result)
 {
 	D3DResult r(result);
-	FASSERT(!r.GetError());
+	Assert(!r.GetError());
 }
 #else
 #define D3DVERIFY(x) do { x; } while (false)
@@ -177,7 +177,7 @@ void GraphicsDeviceD3D11::Initialize(const GraphicsOptions& options)
 	HWND hWnd = (HWND)m_display->Get("hWnd");
 
 	if (!hWnd)
-		FASSERT(0);
+		Assert(0);
 
 	DXGI_SWAP_CHAIN_DESC sd;
 	ZeroMemory(&sd, sizeof(sd));
@@ -220,9 +220,9 @@ void GraphicsDeviceD3D11::Initialize(const GraphicsOptions& options)
 	CheckError();
 
 	if (!m_swapChain || !m_device || !m_deviceCtx)
-		FASSERT(0);
+		Assert(0);
 	if (featureLevelSupported != featureLevelRequested)
-		FASSERT(0);
+		Assert(0);
 
 	if (options.CreateRenderTarget)
 	{
@@ -265,13 +265,13 @@ void GraphicsDeviceD3D11::Shutdown()
 {
 	INITCHECK(true);
 
-	FASSERT(m_rt == 0);
-	FASSERT(m_ib == 0);
-	FASSERT(m_vb == 0);
+	Assert(m_rt == 0);
+	Assert(m_ib == 0);
+	Assert(m_vb == 0);
 	for (int i = 0; i < MAX_TEX; ++i)
-		FASSERT(m_tex[i] == 0);
-	FASSERT(m_vs == 0);
-	FASSERT(m_ps == 0);
+		Assert(m_tex[i] == 0);
+	Assert(m_vs == 0);
+	Assert(m_ps == 0);
 
 	// TODO: Reset stuff.
 	/*
@@ -282,7 +282,7 @@ void GraphicsDeviceD3D11::Shutdown()
 	SetVS(0);
 	SetPS(0);*/
 
-	FASSERT(m_cache.size() == 0);
+	Assert(m_cache.size() == 0);
 
 	m_result = m_deviceCtx->Release();
 	CheckError();
@@ -439,7 +439,7 @@ void GraphicsDeviceD3D11::SS(int sampler, int state, int value)
 #endif
 		break;
 	default:
-		FASSERT(0);
+		Assert(0);
 		break;
 	}
 
@@ -499,7 +499,7 @@ int GraphicsDeviceD3D11::GetRTH()
 
 void GraphicsDeviceD3D11::SetRT(ResTexR* rt)
 {
-	FASSERT(false);
+	Assert(false);
 }
 
 void GraphicsDeviceD3D11::SetRTM(ResTexR* rt1, ResTexR* rt2, ResTexR* rt3, ResTexR* rt4, int numRenderTargets, ResTexD* rtd)
@@ -559,8 +559,8 @@ void GraphicsDeviceD3D11::SetRTM(ResTexR* rt1, ResTexR* rt2, ResTexR* rt3, ResTe
 				}
 				else
 				{
-					FASSERT(data->m_sx == sx);
-					FASSERT(data->m_sy == sy);
+					Assert(data->m_sx == sx);
+					Assert(data->m_sy == sy);
 				}
 
 				m_result = surface->Release();
@@ -568,7 +568,7 @@ void GraphicsDeviceD3D11::SetRTM(ResTexR* rt1, ResTexR* rt2, ResTexR* rt3, ResTe
 			}
 			else
 			{
-				FASSERT(false);
+				Assert(false);
 			}
 		}
 		else
@@ -604,8 +604,8 @@ void GraphicsDeviceD3D11::SetRTM(ResTexR* rt1, ResTexR* rt2, ResTexR* rt3, ResTe
 			}
 			else
 			{
-				FASSERT(data->m_sx == sx);
-				FASSERT(data->m_sy == sy);
+				Assert(data->m_sx == sx);
+				Assert(data->m_sy == sy);
 			}
 		}
 		else
@@ -617,7 +617,7 @@ void GraphicsDeviceD3D11::SetRTM(ResTexR* rt1, ResTexR* rt2, ResTexR* rt3, ResTe
 
 	if (numRenderTargets > 0 || rtd)
 	{
-		FASSERT(sx >= 0 && sy >= 0);
+		Assert(sx >= 0 && sy >= 0);
 
 		D3DVIEWPORT9 viewport;
 		viewport.X      = 0;
@@ -747,7 +747,7 @@ void GraphicsDeviceD3D11::SetTex(int sampler, ResBaseTex* tex)
 				CheckError();
 				break;
 			default:
-				FASSERT(0);
+				Assert(0);
 				break;
 			}
 		}
@@ -803,7 +803,7 @@ void GraphicsDeviceD3D11::SetTex(int sampler, ResBaseTex* tex)
 			CheckError();
 			break;
 		default:
-			FASSERT(0);
+			Assert(0);
 			break;
 		}
 	}
@@ -813,7 +813,7 @@ void GraphicsDeviceD3D11::SetTex(int sampler, ResBaseTex* tex)
 
 void GraphicsDeviceD3D11::SetVS(ResVS* vs)
 {
-	FASSERT(cgD3D9GetDevice() == m_device);
+	Assert(cgD3D9GetDevice() == m_device);
 
 	if (vs == 0)
 	{
@@ -854,7 +854,7 @@ void GraphicsDeviceD3D11::SetVS(ResVS* vs)
 				case SHPARAM_VEC3:   m_result = data->m_constantTable->SetFloatArray(m_device, p, param.m_v, 3);       break;
 				case SHPARAM_VEC4:   m_result = data->m_constantTable->SetFloatArray(m_device, p, param.m_v, 4);       break;
 				case SHPARAM_MAT4X4: m_result = data->m_constantTable->SetMatrix(m_device, p, (D3DXMATRIX*)param.m_v); break;
-				case SHPARAM_TEX:    FASSERT(0);                                                                       break; // Not supporter ATM..
+				case SHPARAM_TEX:    Assert(0);                                                                       break; // Not supporter ATM..
 				}
 			}
 
@@ -867,7 +867,7 @@ void GraphicsDeviceD3D11::SetVS(ResVS* vs)
 
 void GraphicsDeviceD3D11::SetPS(ResPS* ps)
 {
-	FASSERT(cgD3D9GetDevice() == m_device);
+	Assert(cgD3D9GetDevice() == m_device);
 
 	if (ps == 0)
 	{
@@ -927,14 +927,14 @@ void GraphicsDeviceD3D11::SetPS(ResPS* ps)
 
 void GraphicsDeviceD3D11::OnResInvalidate(Res* res)
 {
-	FASSERT(res);
+	Assert(res);
 
 	UnLoad(res);
 }
 
 void GraphicsDeviceD3D11::OnResDestroy(Res* res)
 {
-	FASSERT(res);
+	Assert(res);
 
 	if (res == m_rt)
 		SetRT(0);
@@ -955,7 +955,7 @@ void GraphicsDeviceD3D11::OnResDestroy(Res* res)
 
 int GraphicsDeviceD3D11::Validate(Res* res)
 {
-	FASSERT(res);
+	Assert(res);
 
 	if (m_cache.count(res) == 0)
 	{
@@ -970,8 +970,8 @@ void GraphicsDeviceD3D11::UpLoad(Res* res)
 {
 	INITCHECK(true);
 
-	FASSERT(res);
-	FASSERT(m_cache.count(res) == 0);
+	Assert(res);
+	Assert(m_cache.count(res) == 0);
 
 	void* data = 0;
 
@@ -1018,7 +1018,7 @@ void GraphicsDeviceD3D11::UpLoad(Res* res)
 		data = UpLoadPS((ResPS*)res);
 		break;
 	default:
-		FASSERT(0);
+		Assert(0);
 		break;
 	}
 
@@ -1033,8 +1033,8 @@ void GraphicsDeviceD3D11::UnLoad(Res* res)
 {
 	INITCHECK(true);
 
-	FASSERT(res);
-	FASSERT(m_cache.count(res) != 0);
+	Assert(res);
+	Assert(m_cache.count(res) != 0);
 
 	switch (res->m_type)
 	{
@@ -1069,7 +1069,7 @@ void GraphicsDeviceD3D11::UnLoad(Res* res)
 		UnLoadPS((ResPS*)res);
 		break;
 	default:
-		FASSERT(0);
+		Assert(0);
 		break;
 	}
 
@@ -1259,8 +1259,8 @@ void* GraphicsDeviceD3D11::UpLoadTex(ResTex* tex)
 
 void* GraphicsDeviceD3D11::UpLoadTexR(ResTexR* tex, bool texColor, bool texDepth, bool rect)
 {
-	FASSERT(!(texColor && texDepth));
-	FASSERT(texColor || texDepth);
+	Assert(!(texColor && texDepth));
+	Assert(texColor || texDepth);
 
 	DataTexR* data = new DataTexR();
 
@@ -1322,7 +1322,7 @@ void* GraphicsDeviceD3D11::UpLoadTexCR(ResTexCR* tex)
 
 	// TODO: Upload renderable cube texture..
 
-	FASSERT(false);
+	Assert(false);
 
 	return data;
 }
@@ -1331,7 +1331,7 @@ void* GraphicsDeviceD3D11::UpLoadTexCF(ResTexCF* tex)
 {
 	DataTexCF* data = new DataTexCF();
 
-	FASSERT(false);
+	Assert(false);
 
 	return data;
 }
@@ -1478,7 +1478,7 @@ void GraphicsDeviceD3D11::UnLoadTexCF(ResTexCF* tex)
 
 	// NOP.
 
-	FASSERT(false);
+	Assert(false);
 
 	delete data;
 }
@@ -1512,7 +1512,7 @@ void GraphicsDeviceD3D11::CheckError()
 {
 	// TODO.
 	if (m_result.GetError())
-		FASSERT(0);
+		Assert(0);
 }
 #endif
 
@@ -1525,7 +1525,7 @@ static D3D11_PRIMITIVE_TOPOLOGY ConvPrimitiveType(PRIMITIVE_TYPE pt)
 	case PT_TRIANGLE_STRIP: return D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 	case PT_LINE_LIST: return D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
 	case PT_LINE_STRIP: return D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP;
-	default: FASSERT(0); return (D3D11_PRIMITIVE_TOPOLOGY)0;
+	default: Assert(0); return (D3D11_PRIMITIVE_TOPOLOGY)0;
 	}
 }
 
@@ -1563,7 +1563,7 @@ static int CalcPrimitiveCount(PRIMITIVE_TYPE pt, int vertexCnt, int indexCnt)
 		break;
 	default:
 		primitiveCount = 0;
-		FASSERT(0);
+		Assert(0);
 		break;
 	}
 
@@ -1580,7 +1580,7 @@ static D3D11_COMPARISON_FUNC ConvFunc(int func)
 	case CMP_LE:     return D3D11_COMPARISON_LESS_EQUAL;
 	case CMP_G:      return D3D11_COMPARISON_GREATER;
 	case CMP_GE:     return D3D11_COMPARISON_GREATER;
-	default: FASSERT(0); return D3D11_COMPARISON_ALWAYS;
+	default: Assert(0); return D3D11_COMPARISON_ALWAYS;
 	}
 }
 
@@ -1591,7 +1591,7 @@ static D3D11_CULL_MODE ConvCull(int cull)
 	case CULL_NONE: return D3D11_CULL_NONE;
 	case CULL_CW:   return D3D11_CULL_FRONT;
 	case CULL_CCW:  return D3D11_CULL_BACK;
-	default: FASSERT(0); return D3D11_CULL_NONE;
+	default: Assert(0); return D3D11_CULL_NONE;
 	}
 }
 
@@ -1609,7 +1609,7 @@ static D3D11_BLEND ConvBlendOp(int op)
 	case BLEND_INV_DST:       return D3D11_BLEND_INV_DEST_ALPHA;
 	case BLEND_INV_SRC_COLOR: return D3D11_BLEND_INV_SRC_COLOR;
 	case BLEND_INV_DST_COLOR: return D3D11_BLEND_INV_DEST_COLOR;
-	default: FASSERT(0); return D3D11_BLEND_ONE;
+	default: Assert(0); return D3D11_BLEND_ONE;
 	}
 }
 
@@ -1620,7 +1620,7 @@ static D3D11_STENCIL_OP ConvStencilOp(int op)
 	case INC:  return D3D11_STENCIL_OP_INCR;
 	case DEC:  return D3D11_STENCIL_OP_DECR;
 	case ZERO: return D3D11_STENCIL_OP_ZERO;
-	default: FASSERT(0); return D3D11_STENCIL_OP_ZERO;
+	default: Assert(0); return D3D11_STENCIL_OP_ZERO;
 	}
 }
 

@@ -18,11 +18,11 @@ inline void SAFE_FREE(T*& ptr)
 #define COPY_PROTECT(T) \
 	T(const T& other) \
 	{ \
-		FASSERT(0); \
+		Assert(0); \
 	} \
 	void operator=(const T& other) \
 	{ \
-		FASSERT(0); \
+		Assert(0); \
 	}
 
 #define foreach(item, collection) for (collection::iterator item = collection.begin, item != collection.end(); ++item)

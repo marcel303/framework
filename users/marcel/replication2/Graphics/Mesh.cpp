@@ -85,7 +85,7 @@ uint32_t Mesh::GetPrimitiveCount() const
 		break;
 	default:
 		primitiveCount = 0;
-		FASSERT(0);
+		Assert(0);
 		break;
 	}
 

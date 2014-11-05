@@ -558,7 +558,7 @@ public:
 		const uint32_t fvf = other.m_mesh->GetVB()->GetFVF();
 
 		if (other.m_mesh->GetVB()->GetFVF() != fvf)
-			FASSERT(0);
+			Assert(0);
 
 		ResVB & vb1 = *m_mesh->GetVB();
 		ResVB & vb2 = *other.m_mesh->GetVB();

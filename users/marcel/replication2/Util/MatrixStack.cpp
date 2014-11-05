@@ -78,7 +78,7 @@ void MatrixStack::PushScaling(float x, float y, float z)
 
 void MatrixStack::Pop()
 {
-	FASSERT(m_depth > 0);
+	Assert(m_depth > 0);
 
 	m_depth--;
 

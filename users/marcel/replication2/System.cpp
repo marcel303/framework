@@ -16,7 +16,7 @@ System::System()
 
 System::~System()
 {
-	FASSERT(m_gfx == 0);
+	Assert(m_gfx == 0);
 }
 
 void System::Initialize(Game* game, int width, int height, bool fullscreen)

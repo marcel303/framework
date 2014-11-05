@@ -19,7 +19,7 @@ namespace Phy
 
 	void Scene::AddObject(Object* object)
 	{
-		FASSERT(object);
+		Assert(object);
 
 		m_objects[object] = 1;
 
@@ -30,7 +30,7 @@ namespace Phy
 
 	void Scene::RemoveObject(Object* object)
 	{
-		FASSERT(object);
+		Assert(object);
 
 		// Remove CD objects.
 		for (size_t i = 0; i < object->GetGeometry().size(); ++i)

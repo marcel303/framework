@@ -60,7 +60,7 @@ ShBaseResPtr ResMgr::Get(RES_TYPE type, const std::string& name, bool immediate)
 
 	if (!loader)
 	{
-		FASSERT(0);
+		Assert(0);
 	}
 
 	r->m_res = ShBaseRes(CreateStub(type));
@@ -114,16 +114,16 @@ void ResMgr::Shutdown()
 
 	Update(); // Make sure newly loaded/allocated resources are copied.
 
-	FASSERT(m_tasks.size() == 0);
-	FASSERT(m_completedTasks.size() == 0);
-	// todo: not zero at exit? FASSERT(m_cache.size() == 0);
+	Assert(m_tasks.size() == 0);
+	Assert(m_completedTasks.size() == 0);
+	// todo: not zero at exit? Assert(m_cache.size() == 0);
 
 	INITSET(false);
 }
 
 void ResMgr::RegisterLoader(RES_TYPE type, ResLoader* loader)
 {
-	FASSERT(loader);
+	Assert(loader);
 
 	m_loaders[type] = loader;
 }
@@ -249,7 +249,7 @@ void ResMgr::ThreadExec()
 		{
 #if 0 // fixme, remove
 			if (m_tasks.size() > 100 || m_completedTasks.size() > 100)
-				FASSERT(0);
+				Assert(0);
 #endif
 
 			Load();
@@ -305,6 +305,6 @@ Res* ResMgr::CreateStub(RES_TYPE type)
 	case RES_SHADER: return new ResShader(); break;
 	case RES_SND: return new ResSnd(); break;
 	case RES_VS: { ResVS* r = new ResVS(); r->Load("shaders/default_vs.cg"); return r; } break;
-	default: DB_ERR("Unknown resource type"); FASSERT(0); return 0; break;
+	default: DB_ERR("Unknown resource type"); Assert(0); return 0; break;
 	}
 }

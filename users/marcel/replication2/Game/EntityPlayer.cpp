@@ -6,8 +6,8 @@
 
 EntityPlayer::EntityPlayer(Client* client, InputManager* inputMgr) : Entity()
 {
-	FASSERT(client);
-	FASSERT(inputMgr);
+	Assert(client);
+	Assert(inputMgr);
 
 	SetClassName("PlayerBase");
 

@@ -5,7 +5,7 @@
 
 SceneRenderer::SceneRenderer(Scene* scene)
 {
-	FASSERT(scene);
+	Assert(scene);
 
 	m_scene = scene;
 
@@ -18,11 +18,11 @@ SceneRenderer::~SceneRenderer()
 
 void SceneRenderer::Render()
 {
-	FASSERT(m_scene);
+	Assert(m_scene);
 
 	GraphicsDevice* gfx = Renderer::I().GetGraphicsDevice();
 
-	FASSERT(gfx);
+	Assert(gfx);
 
 	// Render color.
 	gfx->Clear(BUFFER_ALL, 0.0f, 0.5f, 0.0f, 0.0f, 1.0f);
@@ -34,7 +34,7 @@ void SceneRenderer::RenderSolid()
 {
 	GraphicsDevice* gfx = Renderer::I().GetGraphicsDevice();
 
-	FASSERT(gfx);
+	Assert(gfx);
 
 	gfx->RS(RS_DEPTHTEST, 1);
 	gfx->RS(RS_DEPTHTEST_FUNC, CMP_LE);

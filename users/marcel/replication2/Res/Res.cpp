@@ -15,7 +15,7 @@ Res::~Res()
 	for (uint32_t i = 0; i < m_userCount; ++i)
 		m_users[i]->OnResDestroy(this);
 
-	FASSERT(m_userCount == 0);
+	Assert(m_userCount == 0);
 }
 
 void Res::Invalidate()
@@ -28,7 +28,7 @@ void Res::Invalidate()
 
 void Res::AddUser(ResUser* user)
 {
-	FASSERT(m_userCount < 4);
+	Assert(m_userCount < 4);
 
 	if (m_userCount == 4)
 		return;

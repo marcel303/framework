@@ -24,7 +24,7 @@ namespace Phy
 
 	void Object::Initialize(int group, const Vec3& position, const Vec3& velocity, bool dynamic, bool gravity, void* up)
 	{
-		FASSERT(up);
+		Assert(up);
 
 		m_group = group;
 		m_velocity = velocity;
@@ -39,8 +39,8 @@ namespace Phy
 
 	void Object::AddGeometry(CD::ShObject object)
 	{
-		FASSERT(object.get());
-		FASSERT(m_up);
+		Assert(object.get());
+		Assert(m_up);
 
 		object->SetUP(m_up);
 		object->SetPosition(m_position);

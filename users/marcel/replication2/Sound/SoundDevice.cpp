@@ -88,6 +88,8 @@ void SoundDevice::Update()
 
 void SoundDevice::PlaySound(ResSndSrc* src, ResSnd* snd, bool loop)
 {
+	return; // fixme
+
 	if (!snd)
 		return;
 
@@ -176,7 +178,7 @@ void SoundDevice::OnResInvalidate(Res* res)
 		break;
 	default:
 		DB_ERR("Unknown resource type");
-		FASSERT(0);
+		Assert(0);
 		break;
 	}
 }
@@ -199,7 +201,7 @@ void SoundDevice::InvalidateSrc(ResSndSrc* src)
 
 void SoundDevice::UpLoad(Res* res)
 {
-	FASSERT(m_cache.count(res) == 0);
+	Assert(m_cache.count(res) == 0);
 
 	void* data = 0;
 
@@ -213,7 +215,7 @@ void SoundDevice::UpLoad(Res* res)
 		break;
 	default:
 		DB_ERR("Unknown resource type");
-		FASSERT(0);
+		Assert(0);
 		break;
 	}
 
@@ -224,7 +226,7 @@ void SoundDevice::UpLoad(Res* res)
 
 void SoundDevice::UnLoad(Res* res)
 {
-	FASSERT(m_cache.count(res) != 0);
+	Assert(m_cache.count(res) != 0);
 
 	switch (res->m_type)
 	{
@@ -236,7 +238,7 @@ void SoundDevice::UnLoad(Res* res)
 		break;
 	default:
 		DB_ERR("Unknown resource type");
-		FASSERT(0);
+		Assert(0);
 		break;
 	}
 
@@ -316,6 +318,6 @@ void SoundDevice::CheckError()
 	if (error)
 	{
 		DB_ERR("OpenAL error %d.\n", error);
-		FASSERT(0);
+		Assert(0);
 	}
 }

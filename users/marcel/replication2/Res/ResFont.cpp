@@ -79,7 +79,7 @@ void ResFont::SetSpacing(int spacing)
 
 void ResFont::AddGlyph(char character, const Glyph& glyph)
 {
-	FASSERT(m_glyphs.find(character) == m_glyphs.end());
+	Assert(m_glyphs.find(character) == m_glyphs.end());
 
 	Glyph* temp = new Glyph();
 

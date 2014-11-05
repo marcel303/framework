@@ -5,15 +5,9 @@
 #include <assert.h>
 #include <stdio.h>
 
-#define FASSERT(expr) assert(expr)
-static inline void FVERIFY(bool expr)
-{
-	FASSERT(expr);
-}
-
 #define INITSTATE        bool m_initialized
 #define INITINIT         m_initialized = false
-#define INITCHECK(state) FASSERT(m_initialized == state)
+#define INITCHECK(state) Assert(m_initialized == state)
 #define INITSET(state)   m_initialized = state
 
 // TODO: Use OutputDebugString..

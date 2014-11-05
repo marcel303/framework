@@ -14,15 +14,15 @@ namespace CD
 
 	void Scene::AddObject(int group, Object* object)
 	{
-		FASSERT(object);
-		FASSERT(object->GetUP());
+		Assert(object);
+		Assert(object->GetUP());
 
 		m_objects[object] = new ObjectItem(object, group);
 	}
 
 	void Scene::RemoveObject(Object* object)
 	{
-		FASSERT(object);
+		Assert(object);
 
 		ObjectCollItr i = m_objects.find(object);
 		delete i->second;

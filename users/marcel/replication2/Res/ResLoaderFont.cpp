@@ -10,7 +10,7 @@ Res* ResLoaderFont::Load(const std::string& name)
 
 	if (!registry.Read(name))
 	{
-		FASSERT(0);
+		Assert(0);
 		return 0;
 	}
 
@@ -26,7 +26,7 @@ Res* ResLoaderFont::Load(const std::string& name)
 
 	if (in_texture == "")
 	{
-		FASSERT(0);
+		Assert(0);
 		return 0;
 	}
 
@@ -36,7 +36,7 @@ Res* ResLoaderFont::Load(const std::string& name)
 
 	if (!GenerateGlyphs(in_type, texture, glyphs))
 	{
-		FASSERT(0);
+		Assert(0);
 		delete font;
 		return 0;
 	}
@@ -45,7 +45,7 @@ Res* ResLoaderFont::Load(const std::string& name)
 	{
 		if (!AutoFitGlyphs(texture, glyphs))
 		{
-			FASSERT(0);
+			Assert(0);
 			delete font;
 			return 0;
 		}
