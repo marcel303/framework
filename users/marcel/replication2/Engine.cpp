@@ -283,6 +283,8 @@ void Engine::UpdateServer()
 {
 	m_inputMgr->SV_Update();
 
+	while (m_serverTimerUpdateLogic.TickCount_get() > 5)
+		m_serverTimerUpdateLogic.ReadTick();
 	while (m_serverTimerUpdateLogic.ReadTick())
 	{
 		const float dt = m_serverTimerUpdateLogic.Interval_get();
@@ -293,14 +295,18 @@ void Engine::UpdateServer()
 			m_game->HandleUpdateServer(dt);
 	}
 
-	while (m_serverTimerUpdateNetReplication.ReadTick())
+	if (m_serverTimerUpdateNetReplication.ReadTick())
 	{
+		m_serverTimerUpdateNetReplication.ClearTick();
+
 		m_repMgr->SV_Update();
 	}
 }
 
 void Engine::UpdateClient()
 {
+	while (m_clientTimerUpdateAnimation.TickCount_get() > 5)
+		m_clientTimerUpdateAnimation.ReadTick();
 	while (m_clientTimerUpdateAnimation.ReadTick())
 	{
 		Stats::I().NextScene();
@@ -337,8 +343,10 @@ void Engine::Render()
 
 	++m_clientFpsFrame;
 
-	while (m_clientTimerFps.ReadTick())
+	if (m_clientTimerFps.ReadTick())
 	{
+		m_clientTimerFps.ClearTick();
+
 		m_clientFps = m_clientFpsFrame;
 		m_clientFpsFrame = 0;
 		Stats::I().m_gfx.NextFps(m_clientFps);
