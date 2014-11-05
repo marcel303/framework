@@ -44,7 +44,7 @@ void WeaponDefault::HandleFire()
 	Vec3 orientation = GetOwner()->GetCameraOrientation();
 
 	if (GetOwner()->m_className == "Player")
-		((Player*)GetOwner())->m_control->m_rotationX += 0.025f + Calc::Random(0.0f, 0.025f);
+		static_cast<Player*>(GetOwner())->m_control->m_rotationX += 0.025f + Calc::Random(0.0f, 0.025f);
 
 	float distance;
 	ShEntity hit = GetOwner()->m_scene->CastRay(GetOwner(), position, orientation, 1000.0f, &distance);

@@ -47,7 +47,7 @@ class EntityBrick : public Entity
 
 		void ChangeHP(int amount)
 		{
-			const int newHP = Calc::Clamp(m_hp + amount, 0, MAX_HP);
+			const int newHP = Calc::Clamp(m_hp - amount, 0, MAX_HP);
 			if (newHP != m_hp)
 			{
 				m_hp = newHP;

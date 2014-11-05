@@ -18,9 +18,9 @@ EntityBrickSpawn::~EntityBrickSpawn()
 
 void EntityBrickSpawn::UpdateLogic(float dt)
 {
-	int todo = 10 - GetScene()->FindEntitiesByClassName("Brick").size();
+	int todo = 50 - GetScene()->FindEntitiesByClassName("Brick").size();
 
-	while (m_timer.ReadTick() && todo > 0)
+	while (m_timer.ReadTick() && todo > 0) // todo : should updated timer based on dt. create game timer?
 	{
 		todo--;
 

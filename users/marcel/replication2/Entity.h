@@ -15,7 +15,7 @@
 
 #undef GetClassName
 
-template <typename T>
+template <typename T> // todo : remove this class
 class NetValue
 {
 	T m_value;
@@ -80,10 +80,12 @@ class Entity : public NetSerializableObject
 				Serialize(entity->m_phyObject.m_velocity[1]);
 				Serialize(entity->m_phyObject.m_velocity[2]);
 
-				/*printf("x/y/z: %g, %g, %g\n",
+			#if 0
+				printf("x/y/z: %g, %g, %g\n",
 					entity->m_phyObject.m_position[0],
 					entity->m_phyObject.m_position[1],
-					entity->m_phyObject.m_position[2]);*/
+					entity->m_phyObject.m_position[2]);
+			#endif
 			}
 		}
 	};

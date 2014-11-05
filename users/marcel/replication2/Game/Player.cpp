@@ -88,7 +88,7 @@ void Player::UpdateLogic(float dt)
 		if (hit.get() && hit.get()->m_className == "Brick")
 			SetFort(hit);
 		else
-			SetFort(ShEntity((Entity*)0));
+			SetFort(ShEntity());
 	}
 }
 

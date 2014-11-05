@@ -15,24 +15,29 @@ class Player : public EntityPlayer
 {
 	class Player_NS : public NetSerializable
 	{
-		Player * m_owner;
+		uint32_t m_color;
 
 	public:
 		Player_NS(Player * owner)
 			: NetSerializable(owner)
-			, m_owner(owner)
-			, m_color(this)
+			, m_color(0)
 		{
 		}
 
 		virtual void SerializeStruct()
 		{
-			if (IsInit())
-			{
-			}
+			Serialize(m_color);
 		}
 
-		NetValue<uint32_t> m_color;
+		uint32_t GetColor() const
+		{
+			return m_color;
+		}
+
+		void SetColor(uint32_t color)
+		{
+			m_color = color;
+		}
 	};
 
 public:
