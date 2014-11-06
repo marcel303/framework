@@ -27,6 +27,19 @@
 
 //
 
+#ifdef DEBUG
+
+void HandleAssert(const char * func, int line, const char * expr, ...)
+{
+	// todo : varargs
+	LOG_ERR("assertion failed: %s: %d: %s", func, line, expr);
+}
+
+#endif
+
+
+//
+
 static LogCtx g_Log("dbg");
 
 static AllocState gAllocState;
@@ -181,6 +194,8 @@ static void Free(void* _p)
 #endif
 }
 
+#if DEBUG_MEM
+
 void* operator new(size_t size) throw(std::bad_alloc)
 {
 	return Alloc(size);
@@ -200,6 +215,8 @@ void operator delete[](void* p) throw()
 {
 	Free(p);
 }
+
+#endif
 
 AllocState GetAllocState()
 {

@@ -108,6 +108,7 @@
     <ClCompile Include="ColHashMap.cpp" />
     <ClCompile Include="ColList.cpp" />
     <ClCompile Include="DdsLoader.cpp" />
+    <ClCompile Include="Debugging.cpp" />
     <ClCompile Include="DeltaTimer.cpp" />
     <ClCompile Include="Exception.cpp" />
     <ClCompile Include="FileStream.cpp" />

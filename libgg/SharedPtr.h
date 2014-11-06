@@ -178,10 +178,10 @@ template <typename T> class WeakPtr
 
 	void Set(SharedPtrRefCounter * refCounter, T * value)
 	{
-		Assert(!refCounter || !m_refCounter || value != m_value);
-
 		if (refCounter != m_refCounter)
 		{
+			Assert(!refCounter || !m_refCounter || value != m_value);
+
 			if (m_refCounter)
 				m_refCounter->ReleaseWeak();
 
@@ -189,9 +189,9 @@ template <typename T> class WeakPtr
 
 			if (m_refCounter)
 				m_refCounter->AcquireWeak();
-		}
 
-		m_value = value;
+			m_value = value;
+		}
 	}
 
 public:
