@@ -13,9 +13,10 @@ namespace Replication
 		m_serverSerializableObject = 0;
 		m_clientSerializableObject = 0;
 		m_serverNeedUpdate = false;
+		m_serverObjectCreationId = 0;
 	}
 
-	void Object::SV_Initialize(int objectID, const std::string & className, NetSerializableObject * serializableObject)
+	void Object::SV_Initialize(int objectID, int creationID, const std::string & className, NetSerializableObject * serializableObject)
 	{
 		Assert(serializableObject);
 
@@ -23,6 +24,7 @@ namespace Replication
 		m_className = className;
 		m_serverSerializableObject = serializableObject;
 		m_serverNeedUpdate = RequireUpdating();
+		m_serverObjectCreationId = creationID;
 	}
 
 	void Object::CL_Initialize1(int objectID, const std::string & className)

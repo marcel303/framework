@@ -13,7 +13,7 @@
 // TODO: Use OutputDebugString..
 
 // FIXME: VA list: first expand str arg/list, then printf..
-#if FDEBUG
+#if DEBUG
 	#define DB_LOG printf
 	#define DB_ERR(str, ...) DB_LOG("%s: Error: " ## str ## "\n", __FUNCTION__, __VA_ARGS__)
 	#define DB_TRACE(str, ...) DB_LOG("%s: " ## str ## "\n", __FUNCTION__, __VA_ARGS__)

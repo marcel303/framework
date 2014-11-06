@@ -12,7 +12,7 @@ static D3D11_BLEND ConvBlendOp(int op);
 static D3D11_STENCIL_OP ConvStencilOp(int op);
 static uint32_t ConvertFVF(int fvf, int texCnt);
 
-#ifdef FDEBUG
+#ifdef DEBUG
 static inline void D3DVERIFY(HRESULT result)
 {
 	D3DResult r(result);
@@ -200,7 +200,7 @@ void GraphicsDeviceD3D11::Initialize(const GraphicsOptions& options)
 
 	UINT flags = 0;
 	flags |= D3D11_CREATE_DEVICE_SINGLETHREADED;
-#if FDEBUG
+#if DEBUG
 	flags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 
@@ -1507,7 +1507,7 @@ void GraphicsDeviceD3D11::UnLoadPS(ResPS* ps)
 	delete data;
 }
 
-#ifdef FDEBUG
+#ifdef DEBUG
 void GraphicsDeviceD3D11::CheckError()
 {
 	// TODO.

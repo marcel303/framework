@@ -103,16 +103,6 @@ class Packet;
 class PacketDispatcher;
 class PacketListener;
 
-// Engine: Replication
-namespace Replication
-{
-	class Client;
-	class Handler;
-	class Manager;
-	class Object;
-	class ObjectState;
-}
-
 // Engine: Resource
 class Res;
 class ResBaseTex;
@@ -148,3 +138,5 @@ class Game;
 class Groups;
 class PlayerControl;
 class Weapon;
+
+#include "libreplication_forward.h"

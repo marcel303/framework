@@ -351,7 +351,7 @@ void Engine::Render()
 		m_clientFpsFrame = 0;
 		Stats::I().m_gfx.NextFps(m_clientFps);
 
-		#if defined(FDEBUG)
+		#if defined(DEBUG) && 0
 		printf("Gfx: Frames per second: %d.\n", m_clientFps);
 
 		if (m_clientClient)
@@ -380,12 +380,14 @@ void Engine::BindClientToEntity(Client* client, ShEntity entity)
 
 	m_serverScene->AddEntity(entity);
 
+	LOG_DBG("Engine::BindClientToEntity. clientSideChannelId=%d, entityId=%d", client->m_channel->m_destinationId, entity->GetID());
+
 	m_serverScene->Activate(client, entity->m_id);
 }
 
 Entity* Engine::CreateEntity(Client* client, std::string className)
 {
-	DB_TRACE("creating entity");
+	//LOG_DBG("creating entity");
 
 	Entity* entity = 0;
 
@@ -408,12 +410,11 @@ Entity* Engine::CreateEntity(Client* client, std::string className)
 
 	//
 
+	AssertMsg(entity, "cannot create entity. unknown type. className=%s", className.c_str());
 	if (entity)
 		entity->PostCreate();
-	else
-		DB_LOG("Cannot create entity. Unknown class.\n");
 
-	DB_TRACE("done creating entity");
+	//LOG_DBG("done creating entity");
 
 	return entity;
 }
@@ -474,8 +475,6 @@ void Engine::SV_OnChannelDisconnect(Channel* channel)
 
 bool Engine::OnReplicationObjectCreate1(Replication::Client* client, const std::string& className, NetSerializableObject** out_serializableObject, void** out_up)
 {
-	DB_TRACE("");
-
 	// TODO: build list.
 	Entity* entity = CreateEntity(client->GetClient(), className);
 
@@ -487,17 +486,16 @@ bool Engine::OnReplicationObjectCreate1(Replication::Client* client, const std::
 	}
 	else
 	{
-		DB_ERR("Unknown class name (%s).\n", className.c_str());
 		return false;
 	}
 }
 
 void Engine::OnReplicationObjectCreate2(Replication::Client* client, void* up)
 {
-	DB_TRACE("");
-
 	Entity* entity1 = (Entity*)up;
 	ShEntity entity2 = ShEntity(entity1);
+
+	LOG_DBG("OnReplicationObjectCreate2: adding entity of type '%s' to scene", entity1->GetClassName().c_str());
 
 	m_clientClient->m_clientScene->AddEntity(entity2, entity2->m_id);
 }

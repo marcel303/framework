@@ -87,6 +87,7 @@ namespace Replication
 
 		Handler * m_handler;
 		int m_tick;
+		int m_serverObjectCreationId;
 	};
 }
 

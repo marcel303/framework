@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "BitStream.h"
 #include "Debug.h"
 #include "MyProtocols.h"
@@ -12,6 +13,7 @@ namespace Replication
 	{
 		m_handler = 0;
 		m_tick = 0;
+		m_serverObjectCreationId = 0;
 	}
 
 	Manager::~Manager()
@@ -40,6 +42,7 @@ namespace Replication
 	{
 		ClientCollItr i = m_serverClients.find(clientID);
 
+		AssertMsg(i != m_serverClients.end(), "client does not exist. clientId=%d", clientID);
 		if (i != m_serverClients.end())
 		{
 			m_serverClientsCache.erase(i->second->GetClient()->m_channel);
@@ -47,26 +50,18 @@ namespace Replication
 			m_clientIDs.Free(clientID);
 			m_serverClients.erase(i);
 		}
-		else
-		{
-			DB_ERR("Client not found");
-			Assert(0);
-		}
 	}
 
 	void Manager::CL_DestroyClient(int clientID)
 	{
 		ClientCollItr i = m_clientClients.find(clientID);
 
+		AssertMsg(i != m_clientClients.end(), "client does not exist. clientId=%d", clientID);
 		if (i != m_clientClients.end())
 		{
 			m_clientClientsCache.erase(i->second->GetClient()->m_channel);
 			delete i->second;
 			m_clientClients.erase(i);
-		}
-		else
-		{
-			DB_ERR("Client not found");
 		}
 	}
 
@@ -77,9 +72,10 @@ namespace Replication
 		// FIXME: May cause errors when object with objectID already exists on client and has not been deleted (yet).
 		// Free objectID's only when all clients synced?
 		int objectID = m_objectIDs.Allocate();
+		int creationID = m_serverObjectCreationId++;
 
 		Object * object = new Object();
-		object->SV_Initialize(objectID, className, serializableObject);
+		object->SV_Initialize(objectID, creationID, className, serializableObject);
 
 		m_serverObjects[objectID] = object;
 
@@ -106,7 +102,7 @@ namespace Replication
 			client->SV_Move(objectID, client->m_active, active);
 
 			Assert((createdOrDestroyed.size() + active.size()) <= 1);
-			Assert(createdOrDestroyed.empty() || !createdOrDestroyed.front().IsDestroyed());
+			Assert(createdOrDestroyed.empty() || !createdOrDestroyed.front().m_isDestroyed);
 
 			for (ObjectStateCollItr j = createdOrDestroyed.begin(); j != createdOrDestroyed.end(); ++j)
 			{
@@ -127,30 +123,22 @@ namespace Replication
 			{
 				// add object to the destroyed object list
 
-				Assert(!j->IsDestroyed());
+				Assert(!j->m_isDestroyed);
 				j->m_isDestroyed = true;
 				client->m_createdOrDestroyed.push_back(*j);
 			}
 			
-			if (createdOrDestroyed.empty() && active.empty())
-			{
-				DB_ERR("Could not find object in server client");
-				return;
-			}
+			AssertMsg(!(createdOrDestroyed.empty() && active.empty()), "could not find object in server client. objectId=%d", objectID);
 		}
 
 		ObjectCollItr j = m_serverObjects.find(objectID);
 
+		AssertMsg(j != m_serverObjects.end(), "object does not exist. objectId=%d", objectID);
 		if (j != m_serverObjects.end())
 		{
 			delete j->second;
 			m_serverObjects.erase(j);
 			m_objectIDs.Free(objectID);
-		}
-		else
-		{
-			DB_ERR("Could not find object");
-			return;
 		}
 	}
 
@@ -209,7 +197,7 @@ namespace Replication
 
 					RepMgrPacketBuilder packetBuilder;
 					Packet packet = MakePacket(REPMSG_DESTROY, packetBuilder, bitStream);
-					client->GetClient()->m_channel->Send(packet);
+					client->GetClient()->m_channel->Send(packet, 0);
 				}
 				else
 				{
@@ -227,34 +215,48 @@ namespace Replication
 
 					RepMgrPacketBuilder packetBuilder;
 					Packet packet = MakePacket(REPMSG_CREATE, packetBuilder, bitStream);
-					client->GetClient()->m_channel->Send(packet);
+					client->GetClient()->m_channel->Send(packet, 0);
 
 					client->m_active.push_back(*j);
 				}
 			}
 
 			client->m_createdOrDestroyed.clear();
+		}
 
-			for (ObjectStateCollItr j = client->m_active.begin(); j != client->m_active.end(); ++j)
+		// all clients should share the same view now with regard to the set of active objects
+
+		if (!m_serverClients.empty())
+		{
+			Client* clientForActiveObjects = m_serverClients.begin()->second; // fixme : make this nicer..
+
+		for (ObjectStateCollItr j = clientForActiveObjects->m_active.begin(); j != clientForActiveObjects->m_active.end(); ++j)
+		{
+			//if (j->m_object->m_serverNeedUpdate)
 			{
-				//if (j->m_object->m_serverNeedUpdate)
+				// Go through server objects & replicate.
+
+				BitStream bitStream;
+
+				const uint16_t objectID = j->m_objectID;
+
+				bitStream.Write(objectID);
+
+				if (j->m_object->Serialize(bitStream, false, true))
 				{
-					// Go through server objects & replicate.
+					RepMgrPacketBuilder packetBuilder;
+					Packet packet = MakePacket(REPMSG_UPDATE, packetBuilder, bitStream);
 
-					BitStream bitStream;
-
-					const uint16_t objectID = j->m_objectID;
-
-					bitStream.Write(objectID);
-
-					if (j->m_object->Serialize(bitStream, false, true))
+					for (ClientCollItr i = m_serverClients.begin(); i != m_serverClients.end(); ++i)
 					{
-						RepMgrPacketBuilder packetBuilder;
-						Packet packet = MakePacket(REPMSG_UPDATE, packetBuilder, bitStream);
-						client->GetClient()->m_channel->Send(packet);
+						Client* client = i->second;
+
+						client->GetClient()->m_channel->Send(packet, 0);
 					}
 				}
 			}
+		}
+
 		}
 
 		m_tick++;
@@ -351,8 +353,7 @@ namespace Replication
 			HandleUpdate(bitStream, channel);
 			break;
 		default:
-			DB_ERR("Unknown message ID");
-			Assert(0);
+			AssertMsg(false, "unknown message. messageId=%d", messageID);
 			break;
 		}
 
@@ -366,7 +367,7 @@ namespace Replication
 
 		if (!client)
 		{
-			DB_ERR("Received create from unknown channel (%d)", channel->m_id);
+			AssertMsg(false, "received create from unknown channel. channelId=%d", channel->m_id);
 			return;
 		}
 
@@ -379,7 +380,7 @@ namespace Replication
 		if (client->CL_FindObject(objectID) != 0)
 		{
 			SendCreateAck(objectID, channel);
-			DB_ERR("\tObject already created (%d)", objectID);
+			AssertMsg(false, "object already created. objectId=%d", objectID);
 			return;
 		}
 
@@ -392,8 +393,7 @@ namespace Replication
 
 		if (!OnObjectCreate(client, object))
 		{
-			DB_ERR("\tUnable to create object");
-			Assert(0);
+			AssertMsg(false, "unable to create object. className=%s", className.c_str());
 			delete object;
 			return;
 		}
@@ -417,6 +417,7 @@ namespace Replication
 
 		Client * client = SV_FindClient(channel);
 
+		Assert(client);
 		if (client)
 		{
 			// TODO: speedup~
@@ -427,20 +428,11 @@ namespace Replication
 				if (i->m_objectID == objectID)
 					state = i;
 
+			AssertMsg(state != client->m_active.end(), "received ACK for already created/destroyed/unknown object");
 			if (state != client->m_active.end())
 			{
 				state->m_existsOnClient = true;
 			}
-			else
-			{
-				DB_ERR("Received ACK for already created/destroyed/unknown object");
-				return;
-			}
-		}
-		else
-		{
-			Assert(0);
-			return;
 		}
 	}
 
@@ -566,8 +558,15 @@ namespace Replication
 
 	void Manager::SyncClient(Client * client)
 	{
+		std::vector<Object*> objects;
+
 		for (ObjectCollItr i = m_serverObjects.begin(); i != m_serverObjects.end(); ++i)
-			SyncClientObject(client, i->second);
+			objects.push_back(i->second);
+
+		std::sort(objects.begin(), objects.end(), [] (Object* o1, Object* o2) { return o1->m_serverObjectCreationId < o2->m_serverObjectCreationId; });
+
+		for (std::vector<Object*>::iterator i = objects.begin(); i != objects.end(); ++i)
+			SyncClientObject(client, *i);
 	}
 
 	void Manager::SyncClientObject(Client * client, Object * object)
@@ -585,7 +584,7 @@ namespace Replication
 
 		RepMgrPacketBuilder packetBuilder;
 		Packet packet = MakePacket(REPMSG_CREATE_ACK, packetBuilder, bitStream);
-		return channel->Send(packet);
+		return channel->Send(packet, 0);
 	}
 
 	bool Manager::SendDestroyAck(int _objectID, Channel * channel)
@@ -598,7 +597,7 @@ namespace Replication
 
 		RepMgrPacketBuilder packetBuilder;
 		Packet packet = MakePacket(REPMSG_DESTROY_ACK, packetBuilder, bitStream);
-		return channel->Send(packet);
+		return channel->Send(packet, 0);
 	}
 
 	Client * Manager::SV_FindClient(Channel * channel)

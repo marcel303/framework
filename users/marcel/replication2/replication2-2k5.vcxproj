@@ -46,7 +46,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <AdditionalIncludeDirectories>./;Core;Game;Graphics;Event;Util;Sound;ParticleSys;Res;Gui;../../../libgg;../../../libnet;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>FDEBUG;WIN32;_DEBUG;_CONSOLE;SYSTEM_WINDOWS;WINDOWS;_CRT_SECURE_NO_DEPRECATE;_USE_MATH_DEFINES;_FDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DEBUG;WIN32;_DEBUG;_CONSOLE;SYSTEM_WINDOWS;WINDOWS;_CRT_SECURE_NO_DEPRECATE;_USE_MATH_DEFINES;_FDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -56,6 +56,7 @@
       <SubSystem>Console</SubSystem>
       <DataExecutionPrevention>
       </DataExecutionPrevention>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -182,6 +183,8 @@
     <ClInclude Include="InputCodes.h" />
     <ClInclude Include="InputHandler.h" />
     <ClInclude Include="InputManager.h" />
+    <ClInclude Include="libreplication_config.h" />
+    <ClInclude Include="libreplication_forward.h" />
     <ClInclude Include="PhyObject.h" />
     <ClInclude Include="PhyScene.h" />
     <ClInclude Include="Scene.h" />

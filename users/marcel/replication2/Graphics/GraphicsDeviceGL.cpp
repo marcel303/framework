@@ -105,7 +105,7 @@ void GraphicsDeviceGL::Initialize(const GraphicsOptions& options)
 	glGenFramebuffers(1, &m_fboId);
 	CheckError();
 
-	#if !defined(FDEBUG) && 0
+	#if !defined(DEBUG) && 0
 	cgGLSetDebugMode(CG_FALSE);
 	CheckError();
 	#endif
@@ -1915,7 +1915,7 @@ void GraphicsDeviceGL::UnLoadPS(ResPS* ps)
 	delete data;
 }
 
-#ifdef FDEBUG
+#ifdef DEBUG
 void GraphicsDeviceGL::CheckError()
 {
 	int error = glGetError();

@@ -1,6 +1,6 @@
-#if defined(FDEBUG)
-#define GFX_W 800
-#define GFX_H 600
+#if defined(DEBUG)
+#define GFX_W 320
+#define GFX_H 240
 #define GFX_FS false
 #else
 #define GFX_W 640
@@ -379,7 +379,10 @@ void TestReplication()
 					Player* player = 0;
 
 					if (engine->m_clientClient)
-						player = (Player*)engine->m_clientClient->m_clientScene->m_activeEntity.lock().get();
+					{
+						if (!engine->m_clientClient->m_clientScene->m_activeEntity.expired())
+							player = static_cast<Player*>(engine->m_clientClient->m_clientScene->m_activeEntity.lock().get());
+					}
 
 					Mat4x4 matW;
 					Mat4x4 matV;

@@ -136,6 +136,6 @@ void Controller::SendAction(Channel* channel, int in_actionID, float in_value) c
 		packetBuilder.Write32(&value);
 
 		Packet packet = packetBuilder.ToPacket();
-		channel->Send(packet);
+		channel->Send(packet, 0);
 	}
 }

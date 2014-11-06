@@ -238,7 +238,7 @@ void Scene::Activate(Client* client, int entityID)
 	packetBuilder.Write16(&id);
 
 	Packet packet = packetBuilder.ToPacket();
-	client->m_channel->SendReliable(packet);
+	client->m_channel->Send(packet, 0);
 }
 
 void Scene::SetController(Client* client, int controllerID)
@@ -256,7 +256,7 @@ void Scene::SetController(Client* client, int controllerID)
 	packetBuilder.Write16(&id);
 
 	Packet packet = packetBuilder.ToPacket();
-	client->m_channel->SendReliable(packet);
+	client->m_channel->Send(packet, 0);
 }
 
 ShEntity Scene::CastRay(Entity* source, const Vec3& position, const Vec3& direction, float maxDistance, float* out_distance)
@@ -296,7 +296,7 @@ void Scene::MessageEntity(Client* client, int in_entityID, int in_message, int i
 	packetBuilder.Write32(&value);
 
 	Packet packet = packetBuilder.ToPacket();
-	client->m_channel->Send(packet);
+	client->m_channel->Send(packet, 0);
 }
 
 void Scene::OnReceive(Packet& packet, Channel* channel)
@@ -330,6 +330,8 @@ void Scene::HandleActivate(Packet& packet, Channel* channel)
 	if (!packet.Read16(&entityID))
 		return;
 
+	LOG_DBG("Scene::HandleActivate: entityID=%d", entityID);
+
 	m_activeEntityID = entityID;
 }
 
@@ -339,6 +341,8 @@ void Scene::HandleSetController(Packet& packet, Channel* channel)
 
 	if (!packet.Read16(&controllerID))
 		return;
+
+	LOG_DBG("Scene::HandleSetController: controllerId=%d", controllerID);
 
 	m_activeControllerID = controllerID;
 }
@@ -358,11 +362,11 @@ void Scene::HandleEntityMessage(Packet& packet, Channel* channel)
 
 	ShEntity entity = FindEntity(entityID);
 
-	if (entity.get() == 0)
+	AssertMsg(entity.get(), "received message for non-existing entity. entityId=%d", (int)entityID);
+	if (entity.get())
 	{
-		DB_ERR("Received message for non-existing entity (%d).\n", (int)entityID);
-		return;
-	}
+		LOG_DBG("Scene::HandleEntityMessage: entityId=%d", entityID);
 
-	entity->OnMessage(message, value);
+		entity->OnMessage(message, value);
+	}
 }

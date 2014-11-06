@@ -36,8 +36,6 @@ void PlayerControl::Animate(Phy::Object* phyObject, float dt)
 {
 	Assert(phyObject);
 
-	SetDirty();
-
 	Vec3 forward = GetOrientation();
 	Vec3 up = Vec3(0.0f, 1.0f, 0.0f);
 	Vec3 strafe = (up % forward).CalcNormalized();
@@ -163,6 +161,8 @@ void PlayerControl::RotateV(float angle)
 
 void PlayerControl::Apply()
 {
+	SetDirty();
+
 	m_controls.m_fAccel = 0.0f;
 
 	if (m_controls.m_moveForward)

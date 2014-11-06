@@ -15,7 +15,7 @@ namespace Replication
 	public:
 		Object();
 
-		void SV_Initialize(int objectID, const std::string & className, NetSerializableObject * serializableObject);
+		void SV_Initialize(int objectID, int creationID, const std::string & className, NetSerializableObject * serializableObject);
 		void CL_Initialize1(int objectID, const std::string & className);
 		void CL_Initialize2(NetSerializableObject * serializableObject);
 
@@ -38,6 +38,7 @@ namespace Replication
 		std::vector<int> m_clientIndicesVersioned;
 
 		bool m_serverNeedUpdate;
+		int m_serverObjectCreationId;
 	};
 }
 

@@ -49,11 +49,7 @@ void InputManager::OnReceive(Packet& packet, Channel* channel)
 	uint8_t messageID;
 
 	if (!packet.Read8(&messageID))
-	{
-		DB_ERR("WTFHAX?\n");
-		Assert(0);
 		return;
-	}
 
 	switch (messageID)
 	{
@@ -95,12 +91,15 @@ void InputManager::OnEvent(Event& event)
 	{
 		if (captured == false)
 		{
-			EntityPlayer* player = (EntityPlayer*)i->second->m_clientScene->m_activeEntity.lock().get();
-
-			if (player && player->m_controller)
+			if (!i->second->m_clientScene->m_activeEntity.expired())
 			{
-				if (player->m_controller->OnEvent(event))
-					captured = true;
+				EntityPlayer* player = static_cast<EntityPlayer*>(i->second->m_clientScene->m_activeEntity.lock().get());
+
+				if (player->m_controller)
+				{
+					if (player->m_controller->OnEvent(event))
+						captured = true;
+				}
 			}
 		}
 	}
@@ -116,17 +115,9 @@ void InputManager::HandleAction(Packet& packet, Channel* channel)
 		float value;
 
 		if (!packet.Read16(&actionID))
-		{
-			DB_ERR("WTFHAX?\n");
-			Assert(0);
 			return;
-		}
 		if (!packet.Read32(&value))
-		{
-			DB_ERR("WTFHAX?\n");
-			Assert(0);
 			return;
-		}
 
 		if (client->m_actionHandler)
 			client->m_actionHandler->OnAction(actionID, value);
@@ -147,17 +138,9 @@ void InputManager::HandleActionLocal(Packet& packet, Channel* channel)
 		float value;
 
 		if (!packet.Read16(&actionID))
-		{
-			DB_ERR("WTFHAX?\n");
-			Assert(0);
 			return;
-		}
 		if (!packet.Read32(&value))
-		{
-			DB_ERR("WTFHAX?\n");
-			Assert(0);
 			return;
-		}
 
 		if (client->m_actionHandler)
 			client->m_actionHandler->OnAction(actionID, value);

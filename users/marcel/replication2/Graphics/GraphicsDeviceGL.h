@@ -217,7 +217,7 @@ public:
 	void UnLoadVS(ResVS* vs);
 	void UnLoadPS(ResPS* ps);
 
-#ifdef FDEBUG
+#ifdef DEBUG
 	void CheckError();
 #else
 	inline void CheckError() { }
