@@ -128,7 +128,7 @@ void Channel::Disconnect(bool sendDisconnectNotification, bool waitForAck)
 		packetBuilder.Write16(&channelId);
 		packetBuilder.Write8(&expectAck);
 
-		Send(packetBuilder.ToPacket(), true);
+		SendUnreliable(packetBuilder.ToPacket(), true);
 
 		if (!waitForAck)
 		{
@@ -193,8 +193,8 @@ void Channel::Update(uint64_t time)
 				const uint32_t packetSize = packet.m_dataSize;
 
 				SendBegin(headerSize + packetSize);
-				Send(header);
-				Send(Packet(packet.m_data, packet.m_dataSize));
+				SendUnreliable(header, false);
+				SendUnreliable(Packet(packet.m_data, packet.m_dataSize), false);
 				SendEnd();
 
 #if LIBNET_CHANNEL_LOG_RT == 1
@@ -221,7 +221,7 @@ void Channel::Update(uint64_t time)
 
 			const Packet packet = packetBuilder.ToPacket();
 
-			Send(packet, false);
+			SendUnreliable(packet, false);
 
 #if LIBNET_CHANNEL_LOG_PINGPONG == 1
 			LOG_CHANNEL_DBG("sent ping message", 0);
@@ -258,13 +258,13 @@ void Channel::Flush()
 		m_sendQueue.Write8(&messageId);
 		m_sendQueue.Write16(&size);
 
-		Send(m_sendQueue.ToPacket(), true);
+		SendUnreliable(m_sendQueue.ToPacket(), true);
 
 		InitSendQueue();
 	}
 }
 
-bool Channel::Send(const Packet & packet, bool priority)
+bool Channel::Send(const Packet & packet, int channelSendFlags)
 {
 	NetAssert(m_address.IsValid());
 
@@ -272,7 +272,62 @@ bool Channel::Send(const Packet & packet, bool priority)
 	priority = true; // Disable packing
 #endif
 
-	if (priority)
+	bool unreliable = (channelSendFlags & ChannelSendFlag_Unreliable) != 0;
+	bool sendImmediately = (channelSendFlags & ChannelSendFlag_SendImmediately) != 0;
+
+	if (channelSendFlags & ChannelSendFlag_Unreliable)
+	{
+		return SendUnreliable(packet, sendImmediately);
+	}
+	else
+	{
+		Assert(!sendImmediately);
+
+		return SendReliable(packet);
+	}
+}
+
+bool Channel::SendBegin(uint32_t size)
+{
+	NetAssert(m_txBegun == false && m_txSize == 0);
+
+	const uint32_t OVERHEAD = 2;
+	const uint32_t newSize1 = OVERHEAD + size;
+	const uint32_t newSize2 = m_sendQueue.GetSize() + newSize1;
+
+	if (newSize1 > kMaxDatagramSize)
+	{
+		NetAssert(false);
+		return false;
+	}
+
+	if (newSize2 > kMaxDatagramSize)
+		Flush();
+
+	m_txBegun = true;
+	m_txSize = newSize1;
+
+	// write header
+	const uint32_t headerSize = 2;
+	NetAssert(headerSize <= m_txSize);
+	m_txSize -= headerSize;
+	const uint16_t packetSize = static_cast<uint16_t>(size);
+	m_sendQueue.Write16(&packetSize);
+
+	return true;
+}
+
+void Channel::SendEnd()
+{
+	NetAssert(m_txBegun == true && m_txSize == 0);
+
+	m_txBegun = false;
+	m_txSize = 0;
+}
+
+bool Channel::SendUnreliable(const Packet & packet, bool sendImmediately)
+{
+	if (sendImmediately)
 	{
 		PacketBuilder<4> headerBuilder;
 
@@ -319,45 +374,7 @@ bool Channel::Send(const Packet & packet, bool priority)
 	}
 }
 
-bool Channel::SendBegin(uint32_t size)
-{
-	NetAssert(m_txBegun == false && m_txSize == 0);
-
-	const uint32_t OVERHEAD = 2;
-	const uint32_t newSize1 = OVERHEAD + size;
-	const uint32_t newSize2 = m_sendQueue.GetSize() + newSize1;
-
-	if (newSize1 > kMaxDatagramSize)
-	{
-		NetAssert(false);
-		return false;
-	}
-
-	if (newSize2 > kMaxDatagramSize)
-		Flush();
-
-	m_txBegun = true;
-	m_txSize = newSize1;
-
-	// write header
-	const uint32_t headerSize = 2;
-	NetAssert(headerSize <= m_txSize);
-	m_txSize -= headerSize;
-	const uint16_t packetSize = static_cast<uint16_t>(size);
-	m_sendQueue.Write16(&packetSize);
-
-	return true;
-}
-
-void Channel::SendEnd()
-{
-	NetAssert(m_txBegun == true && m_txSize == 0);
-
-	m_txBegun = false;
-	m_txSize = 0;
-}
-
-void Channel::SendReliable(const Packet & packet)
+bool Channel::SendReliable(const Packet & packet)
 {
 	RTPacket temp;
 
@@ -376,9 +393,11 @@ void Channel::SendReliable(const Packet & packet)
 	LOG_CHANNEL_DBG("RT ENQ: %u",
 		static_cast<uint32_t>(temp.m_id));
 #endif
+
+	return true;
 }
 
-void Channel::SendSelf(const Packet & packet, uint32_t delay, NetAddress * address)
+bool Channel::SendSelf(const Packet & packet, uint32_t delay, NetAddress * address)
 {
 	if (address == 0)
 		address = &m_address;
@@ -392,6 +411,8 @@ void Channel::SendSelf(const Packet & packet, uint32_t delay, NetAddress * addre
 	m_delayedReceivePackets.push_front(temp);
 	
 	std::sort(m_delayedReceivePackets.begin(), m_delayedReceivePackets.end());
+
+	return true;
 }
 
 bool Channel::Receive(ReceiveData & rcvData)
@@ -461,7 +482,7 @@ void Channel::HandlePing(Packet & packet)
 	reply.Write8(&messageId);
 	reply.Write32(&time);
 
-	Send(reply.ToPacket());
+	SendUnreliable(reply.ToPacket(), false);
 
 #if LIBNET_CHANNEL_LOG_PINGPONG == 1
 	LOG_CHANNEL_DBG("sent pong message", 0);
@@ -516,7 +537,7 @@ void Channel::HandleRTUpdate(Packet & packet)
 		reply.Write8(&messageId);
 		reply.Write32(&packetId);
 
-		Send(reply.ToPacket());
+		SendUnreliable(reply.ToPacket(), false);
 
 #if LIBNET_CHANNEL_LOG_RT == 1
 		LOG_CHANNEL_DBG("RT ACK sent: %u",

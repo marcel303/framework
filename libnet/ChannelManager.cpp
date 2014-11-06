@@ -277,7 +277,7 @@ void ChannelManager::HandleConnect(Packet & packet, Channel * channel)
 
 		Packet reply = replyBuilder.ToPacket();
 
-		newChannel->Send(reply);
+		newChannel->SendUnreliable(reply, false);
 
 		LOG_INF("chanmgr: connect: sent ConnectOK to client channel %09u with request to change destination ID to %09u",
 			static_cast<uint32_t>(newChannel->m_destinationId),
@@ -323,7 +323,7 @@ void ChannelManager::HandleConnectOK(Packet & packet, Channel * channel)
 
 			Packet reply = replyBuilder.ToPacket();
 
-			channel2->Send(reply);
+			channel2->SendUnreliable(reply, false);
 
 			LOG_INF("chanmgr: connect-ok: sent ACK to server channel %u", channel2->m_destinationId);
 
@@ -421,7 +421,7 @@ void ChannelManager::HandleDisconnect(Packet & packet, Channel * channel)
 
 				Packet reply = replyBuilder.ToPacket();
 
-				channel->Send(reply);
+				channel->SendUnreliable(reply, false);
 
 				LOG_INF("chanmgr: disconnect-ok: sent ACK to client channel %u", channel->m_destinationId);
 			}

@@ -15,4 +15,10 @@ enum ChannelPool_
 	ChannelPool_CUSTOM = 8
 };
 
+enum ChannelSendFlag
+{
+	ChannelSendFlag_Unreliable = 0x1,
+	ChannelSendFlag_SendImmediately = 0x2
+};
+
 typedef int ChannelPool;

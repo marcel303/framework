@@ -68,7 +68,7 @@ void RpcManager::Call(uint32_t method, const BitStream & bs, ChannelPool channel
 
 			if (channel->m_channelPool == channelPool && channel->m_channelType == ChannelType_Connection)
 			{
-				channel->SendReliable(p);
+				channel->Send(p, 0);
 			}
 		}
 	}

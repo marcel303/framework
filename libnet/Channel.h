@@ -45,13 +45,14 @@ public:
 	void Update(uint64_t time);
 	void Flush();
 
-	bool Send(const Packet & packet, bool priority = false);
+	bool Send(const Packet & packet, int channelSendFlags);
 	bool SendBegin(uint32_t size);
 	void SendEnd();
 	bool Receive(ReceiveData & rcvData);
 
-	void SendReliable(const Packet & packet);
-	void SendSelf(const Packet & packet, uint32_t delay, NetAddress * address = 0);
+	bool SendUnreliable(const Packet & packet, bool sendImmediately);
+	bool SendReliable(const Packet & packet);
+	bool SendSelf(const Packet & packet, uint32_t delay, NetAddress * address = 0);
 
 	void HandlePing(Packet & packet);
 	void HandlePong(Packet & packet);
