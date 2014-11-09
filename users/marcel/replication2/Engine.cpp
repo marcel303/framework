@@ -18,7 +18,8 @@
 class InputListenerLL : public InputHandler
 {
 public:
-	InputListenerLL() : InputHandler(INPUT_PRIO_LOWLEVEL)
+	InputListenerLL()
+		: InputHandler(INPUT_PRIO_LOWLEVEL)
 	{
 	}
 

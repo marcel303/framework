@@ -11,7 +11,8 @@ static int ConvCull(int cull);
 static int ConvBlendOp(int op);
 static uint32_t ConvertFVF(int fvf, int texCnt);
 
-GraphicsDeviceD3D9::GraphicsDeviceD3D9() : GraphicsDevice()
+GraphicsDeviceD3D9::GraphicsDeviceD3D9()
+	: GraphicsDevice()
 {
 	INITINIT;
 

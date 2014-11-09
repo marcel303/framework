@@ -1,7 +1,8 @@
 #include "Client.h"
 #include "ControllerExample.h"
 
-ControllerExample::ControllerExample(Client* client) : Controller(CONTROLLER_EXAMPLE, client)
+ControllerExample::ControllerExample(Client* client)
+	: Controller(CONTROLLER_EXAMPLE, client)
 {
 	BindKey(IK_UP,       ACTION_MOVE_FORWARD);
 	BindKey(IK_DOWN,     ACTION_MOVE_BACK   );

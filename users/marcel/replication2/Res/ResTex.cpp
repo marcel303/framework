@@ -1,6 +1,7 @@
 #include "ResTex.h"
 
-ResTex::ResTex() : ResBaseTex()
+ResTex::ResTex()
+	: ResBaseTex()
 {
 	SetType(RES_TEX);
 

@@ -7,7 +7,8 @@
 
 DEFINE_ENTITY(WeaponDefault, WeaponDefault);
 
-WeaponDefault::WeaponDefault(Player* owner) : Weapon(owner)
+WeaponDefault::WeaponDefault(Player* owner)
+	: Weapon(owner)
 {
 	SetClassName("WeaponDefault");
 	

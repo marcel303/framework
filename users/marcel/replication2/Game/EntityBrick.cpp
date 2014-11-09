@@ -10,7 +10,8 @@
 
 DEFINE_ENTITY(EntityBrick, Brick);
 
-EntityBrick::EntityBrick() : Entity()
+EntityBrick::EntityBrick()
+	: Entity()
 {
 	SetClassName("Brick");
 	EnableCaps(CAP_STATIC_PHYSICS);

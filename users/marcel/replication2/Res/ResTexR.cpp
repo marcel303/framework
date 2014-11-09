@@ -1,12 +1,14 @@
 #include "ResTexR.h"
 
-ResTexR::ResTexR() : ResTexV()
+ResTexR::ResTexR()
+	: ResTexV()
 {
 	SetType(RES_TEXR);
 	SetTarget(TEXR_COLOR);
 }
 
-ResTexR::ResTexR(int sx, int sy, TEXR_TARGET target) : ResTexV()
+ResTexR::ResTexR(int sx, int sy, TEXR_TARGET target)
+	: ResTexV()
 {
 	SetType(RES_TEXR);
 	SetSize(sx, sy);

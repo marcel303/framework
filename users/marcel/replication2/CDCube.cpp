@@ -6,12 +6,14 @@
 
 namespace CD
 {
-	Cube::Cube() : Object(TYPE_CUBE)
+	Cube::Cube()
+		: Object(TYPE_CUBE)
 	{
 		Setup(Vec3(0.0f, 0.0f, 0.0f), Vec3(0.0f, 0.0f, 0.0f));
 	}
 
-	Cube::Cube(const Vec3& min, const Vec3& max) : Object(TYPE_CUBE)
+	Cube::Cube(const Vec3& min, const Vec3& max)
+		: Object(TYPE_CUBE)
 	{
 		Setup(min, max);
 	}

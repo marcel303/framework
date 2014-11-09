@@ -7,7 +7,8 @@
 // Translate key code from SDL to engine.
 static int TranslateKey(int key);
 
-DisplaySDL::DisplaySDL(int x, int y, int width, int height, bool fullscreen, bool openGL) : Display(x, y, width, height, fullscreen)
+DisplaySDL::DisplaySDL(int x, int y, int width, int height, bool fullscreen, bool openGL)
+	: Display(x, y, width, height, fullscreen)
 {
 	int ret = SDL_Init(SDL_INIT_EVERYTHING);
 

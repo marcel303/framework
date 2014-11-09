@@ -9,7 +9,8 @@
 
 DEFINE_ENTITY(EntityFloor, Floor);
 
-EntityFloor::EntityFloor() : Entity()
+EntityFloor::EntityFloor()
+	: Entity()
 {
 	SetClassName("Floor");
 	EnableCaps(CAP_STATIC_PHYSICS);

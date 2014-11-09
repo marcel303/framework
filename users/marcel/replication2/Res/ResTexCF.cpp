@@ -1,6 +1,7 @@
 #include "ResTexCF.h"
 
-ResTexCF::ResTexCF(ResTexCR* cube, CUBE_FACE face) : ResTexR()
+ResTexCF::ResTexCF(ResTexCR* cube, CUBE_FACE face)
+	: ResTexR()
 {
 	SetType(RES_TEXCF);
 

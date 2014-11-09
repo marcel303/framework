@@ -5,7 +5,8 @@
 #include "MyProtocols.h"
 #include "Types.h"
 
-Controller::Controller(int id, Client* client) : InputHandler(INPUT_PRIO_CONTROLLER)
+Controller::Controller(int id, Client* client)
+	: InputHandler(INPUT_PRIO_CONTROLLER)
 {
 	m_id = id;
 	m_client = client;

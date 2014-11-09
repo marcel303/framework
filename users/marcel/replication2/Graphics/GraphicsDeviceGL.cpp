@@ -8,7 +8,8 @@ static GLenum ConvFunc(int func);
 static GLenum ConvBlendOp(int op);
 static GLenum ConvCubeFace(int face);
 
-GraphicsDeviceGL::GraphicsDeviceGL() : GraphicsDevice()
+GraphicsDeviceGL::GraphicsDeviceGL()
+	: GraphicsDevice()
 {
 	INITINIT;
 

@@ -24,7 +24,8 @@ int ResFont::Glyph::GetWidth() const
 	return width;
 }
 
-ResFont::ResFont() : Res()
+ResFont::ResFont()
+	: Res()
 {
 	SetType(RES_FONT);
 }

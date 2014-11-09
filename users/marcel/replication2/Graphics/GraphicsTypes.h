@@ -115,8 +115,11 @@ class GraphicsOptions
 {
 public:
 	GraphicsOptions() { }
-	GraphicsOptions(int sx, int sy, bool fullscreen, bool createRenderTarget) :
-		Sx(sx), Sy(sy), Fullscreen(fullscreen), CreateRenderTarget(createRenderTarget)
+	GraphicsOptions(int sx, int sy, bool fullscreen, bool createRenderTarget)
+		: Sx(sx)
+		, Sy(sy)
+		, Fullscreen(fullscreen)
+		, CreateRenderTarget(createRenderTarget)
 	{
 	}
 

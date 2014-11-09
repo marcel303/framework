@@ -117,7 +117,8 @@ public:
 
 static Material s_material;
 
-GraphicsDeviceD3D11::GraphicsDeviceD3D11() : GraphicsDevice()
+GraphicsDeviceD3D11::GraphicsDeviceD3D11()
+	: GraphicsDevice()
 {
 	INITINIT;
 

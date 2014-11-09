@@ -338,7 +338,8 @@ private:
 	class VertexIterator
 	{
 	public:
-		inline VertexIterator(Mesh & mesh) : m_mesh(mesh)
+		inline VertexIterator(Mesh & mesh)
+			: m_mesh(mesh)
 		{
 			Rewind();
 		}

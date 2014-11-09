@@ -9,7 +9,8 @@
 
 DEFINE_ENTITY(EntityPlayer, EntityPlayer);
 
-EntityPlayer::EntityPlayer() : Entity()
+EntityPlayer::EntityPlayer()
+	: Entity()
 {
 	SetClassName("EntityPlayer");
 

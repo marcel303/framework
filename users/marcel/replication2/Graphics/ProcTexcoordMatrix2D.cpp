@@ -1,6 +1,7 @@
 #include "ProcTexcoordMatrix2D.h"
 
-ProcTexcoordMatrix2D::ProcTexcoordMatrix2D() : ProcTexcoordMatrix()
+ProcTexcoordMatrix2D::ProcTexcoordMatrix2D()
+	: ProcTexcoordMatrix()
 {
 	m_axis = ShapeBuilder::AXIS_X;
 

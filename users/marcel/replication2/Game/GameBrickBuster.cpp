@@ -5,7 +5,8 @@
 #include "EntityFloor.h"
 #include "Player.h"
 
-GameBrickBuster::GameBrickBuster() : Game()
+GameBrickBuster::GameBrickBuster()
+	: Game()
 {
 }
 

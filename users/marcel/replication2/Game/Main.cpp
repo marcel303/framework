@@ -108,7 +108,8 @@ void ThreadSome(int delay)
 class TestEventHandler : public EventHandler
 {
 public:
-	TestEventHandler() : EventHandler()
+	TestEventHandler()
+		: EventHandler()
 	{
 		m_stop = false;
 	}

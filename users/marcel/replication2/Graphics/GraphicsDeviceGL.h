@@ -132,7 +132,8 @@ public:
 	class DataTexR : public DataTex
 	{
 	public:
-		inline DataTexR() : DataTex()
+		inline DataTexR()
+			: DataTex()
 		{
 			m_fboID = 0;
 			m_rbColorID = 0;
@@ -147,7 +148,8 @@ public:
 	class DataTexCR : public DataTex
 	{
 	public:
-		inline DataTexCR() : DataTex()
+		inline DataTexCR()
+			: DataTex()
 		{
 			m_fboID = 0;
 			m_rbDepthID = 0;

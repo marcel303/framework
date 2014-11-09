@@ -4,7 +4,8 @@
 
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
-DisplayWindows::DisplayWindows(int x, int y, int width, int height, bool fullscreen) : Display(x, y, width, height, fullscreen)
+DisplayWindows::DisplayWindows(int x, int y, int width, int height, bool fullscreen)
+	: Display(x, y, width, height, fullscreen)
 {
 	m_hWnd = 0;
 

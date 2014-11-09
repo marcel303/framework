@@ -5,7 +5,8 @@
 
 DEFINE_ENTITY(EntityBrickSpawn, BrickSpawn);
 
-EntityBrickSpawn::EntityBrickSpawn() : Entity()
+EntityBrickSpawn::EntityBrickSpawn()
+	: Entity()
 {
 	SetClassName("BrickSpawn");
 

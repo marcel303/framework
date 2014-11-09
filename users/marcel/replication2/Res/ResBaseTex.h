@@ -7,7 +7,8 @@
 class ResBaseTex : public Res
 {
 public:
-	inline ResBaseTex() : Res()
+	inline ResBaseTex()
+		: Res()
 	{
 		SetType(RES_BASE_TEX);
 	}

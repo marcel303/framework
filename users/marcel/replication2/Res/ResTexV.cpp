@@ -1,6 +1,7 @@
 #include "ResTexV.h"
 
-ResTexV::ResTexV() : ResBaseTex()
+ResTexV::ResTexV()
+	: ResBaseTex()
 {
 	m_w = 0;
 	m_h = 0;

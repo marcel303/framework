@@ -1,6 +1,7 @@
 #include "ResTexCR.h"
 
-ResTexCR::ResTexCR() : ResTexV()
+ResTexCR::ResTexCR()
+	: ResTexV()
 {
 	SetType(RES_TEXCR);
 

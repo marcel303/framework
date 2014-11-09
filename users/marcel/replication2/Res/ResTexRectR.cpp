@@ -1,6 +1,7 @@
 #include "ResTexRectR.h"
 
-ResTexRectR::ResTexRectR() : ResTexR()
+ResTexRectR::ResTexRectR()
+	: ResTexR()
 {
 	SetType(RES_TEXRECTR);
 }

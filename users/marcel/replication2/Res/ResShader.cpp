@@ -1,7 +1,8 @@
 #include "GraphicsDevice.h"
 #include "ResShader.h"
 
-ResShader::ResShader() : Res()
+ResShader::ResShader()
+	: Res()
 {
 	SetType(RES_SHADER);
 

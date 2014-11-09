@@ -82,7 +82,8 @@ public:
 	class DataTexR : public DataTex
 	{
 	public:
-		inline DataTexR() : DataTex()
+		inline DataTexR()
+			: DataTex()
 		{
 			m_colorRT = 0;
 			m_depthRT = 0;
@@ -95,7 +96,8 @@ public:
 	class DataTexCR : public DataTex
 	{
 	public:
-		inline DataTexCR() : DataTex()
+		inline DataTexCR()
+			: DataTex()
 		{
 			m_cube = 0;
 		}
