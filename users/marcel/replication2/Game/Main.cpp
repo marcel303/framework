@@ -9,7 +9,6 @@
 #endif
 
 #define GFX_DEVICE GraphicsDeviceGL
-//#define GFX_DEVICE GraphicsDeviceD3D9
 
 #include <iostream>
 #include <stdio.h>
@@ -21,7 +20,6 @@
 #include "EventManager.h"
 #include "GameBrickBuster.h"
 #include "GraphicsDevice.h"
-//#include "GraphicsDeviceD3D9.h"
 #include "GraphicsDeviceGL.h"
 #include "Mesh.h"
 #include "Frustum.h"
@@ -41,7 +39,6 @@
 #include "SystemDefault.h"
 
 static void ThreadSome(int delay);
-
 static void TestReplication();
 
 template <class T>
@@ -103,188 +100,10 @@ void RenderStatValue(StatValue<T>& value, const std::string& name, int x, int y,
 	Renderer::I().MatP().Pop();
 }
 
-int main(int argc, char* argv[])
-{
-	Calc::Initialize();
-
-	TestReplication();
-
-	char c[2];
-	gets(c);
-
-	return 0;
-}
-
 void ThreadSome(int delay)
 {
 	Sleep(delay);
 }
-
-class BrickInfo
-{
-public:
-	float px, py, pz;
-	float sx, sy, sz;
-};
-
-class ButtonState
-{
-public:
-	int m_state1;
-	int m_state2;
-};
-
-class Edit
-{
-public:
-	Edit()
-	{
-		m_stop = false;
-	}
-
-	void Draw()
-	{
-		for (size_t i = 0; i < m_bricks.size(); ++i)
-		{
-			int x1, y1, x2, y2;
-
-			x1 = (int)(m_bricks[i].px - m_bricks[i].sx / 2.0f);
-			y1 = (int)(m_bricks[i].pz - m_bricks[i].sz / 2.0f);
-			x2 = (int)(m_bricks[i].px + m_bricks[i].sx / 2.0f);
-			y2 = (int)(m_bricks[i].pz + m_bricks[i].sz / 2.0f);
-
-			//fixme rect(screen, x1, y1, x2, y2, makecol(255, 0, 0));
-		}
-	}
-
-	bool m_stop;
-
-	std::vector<BrickInfo> m_bricks;
-};
-
-class EditorEventHandler : public EventHandler
-{
-public:
-	EditorEventHandler(Edit& editor) : m_editor(editor)
-	{
-	}
-
-	virtual void OnEvent(Event& event)
-	{
-		if (event.type == EVT_QUIT)
-		{
-			m_editor.m_stop = true;
-		}
-
-		if (event.type == EVT_KEY)
-		{
-			if (event.key.key == IK_q && event.key.state == BUTTON_DOWN)
-				EventManager::I().AddEvent(Event(EVT_QUIT));
-		}
-
-		if (event.type == EVT_MOUSEBUTTON)
-		{
-			if (event.mouse_button.button == INPUT_BUTTON1 && event.mouse_button.state == BUTTON_DOWN)
-			{
-				float px = static_cast<float>(event.mouse_button.x);
-				float py = 0.0f;
-				float pz = static_cast<float>(event.mouse_button.y);
-
-				float s = 10.0f;
-
-				float sx = s;
-				float sy = s;
-				float sz = s;
-
-				BrickInfo brick;
-
-				brick.px = px;
-				brick.py = py;
-				brick.pz = pz;
-				brick.sx = sx;
-				brick.sy = sy;
-				brick.sz = sz;
-
-				m_editor.m_bricks.push_back(brick);
-			}
-		}
-	}
-
-private:
-	Edit& m_editor;
-};
-
-#if 0
-static std::vector<BrickInfo> draw_map()
-{
-	SysInitialize();
-
-	Edit editor;
-
-	EditorEventHandler eventHandler(editor);
-
-	EventManager::I().AddEventHandler(&eventHandler);
-
-	ButtonState buttons[26 + 3] = { 0 };
-
-	bool stop = false;
-
-	while (!editor.m_stop)
-	{
-		// TODO: Move code below to DisplayAL.
-		for (int i = KEY_A; i <= KEY_Z; ++i)
-		{
-			int index = i - KEY_A;
-
-			if (key[i])
-				buttons[index].m_state2 = 1;
-			else
-				buttons[index].m_state2 = 0;
-
-			if (buttons[index].m_state1 != buttons[index].m_state2)
-			{
-				EventManager::I().AddEvent(Event(EVT_KEY, IK_a + index, buttons[index].m_state2));
-
-				buttons[index].m_state1 = buttons[index].m_state2;
-			}
-		}
-
-		int mouseX = mouse_x;
-		int mouseY = mouse_y;
-
-		for (int i = 0; i < 3; ++i)
-		{
-			int index = i + 26;
-
-			if (mouse_b & (1 << i))
-				buttons[index].m_state2 = 1;
-			else
-				buttons[index].m_state2 = 0;
-
-			if (buttons[index].m_state1 != buttons[index].m_state2)
-			{
-				EventManager::I().AddEvent(Event(EVT_MOUSEBUTTON, i, buttons[index].m_state2, mouseX, mouseY));
-
-				buttons[index].m_state1 = buttons[index].m_state2;
-			}
-		}
-
-		EventManager::I().Purge();
-
-		acquire_bitmap(screen);
-
-		clear(screen);
-
-		editor.Draw();
-
-		release_bitmap(screen);
-	}
-
-	SysShutdown();
-
-	return editor.m_bricks;
-}
-#endif
 
 class TestEventHandler : public EventHandler
 {
@@ -369,8 +188,6 @@ void TestReplication()
 				engine->Update();
 
 				sfx.Update();
-
-				// FIXME: GraphicsDevice/Display relationship is.. awkward..
 
 				Renderer::I().SetGraphicsDevice(&gfx);
 
@@ -458,108 +275,6 @@ void TestReplication()
 	}
 }
 
-
-static float eps = 1e-3f;
-
-class ClipPoly
-{
-public:
-	const static int MAX_VERT = 64;
-
-	Vec3 m_vertices[MAX_VERT];
-	int m_vertexCount;
-
-	ClipPoly()
-		: m_vertexCount(0)
-	{
-	}
-
-	void Add(const Vec3&  v)
-	{
-		m_vertices[m_vertexCount++] = v;
-	}
-
-	void SetupFromPlane(const Mx::Plane& plane)
-	{
-		const Vec3& n = plane.m_normal;
-
-		Vec3 tan1(n[1], n[2], n[0]);
-		tan1 -= n * (tan1 * n);
-		tan1.Normalize();
-		Vec3 tan2 = tan1 % n;
-
-		const float dot1 = n * tan1;
-		const float dot2 = n * tan2;
-		Assert(fabsf(dot1) < 0.01f);
-		Assert(fabsf(dot2) < 0.01f);
-		Assert(tan1.CalcSizeSq() != 0.0f);
-		Assert(tan2.CalcSizeSq() != 0.0f);
-
-		const Vec3 p = plane.m_normal * plane.m_distance;
-		
-		const float s = 1000.0f;
-
-		Add(p - tan1 * s - tan2 * s);
-		Add(p + tan1 * s - tan2 * s);
-		Add(p + tan1 * s + tan2 * s);
-		Add(p - tan1 * s + tan2 * s);
-	}
-
-	void ClipByPlane_KeepFront(const Mx::Plane& plane)
-	{
-		bool keepAll = true;
-
-		for (int i = 0; i < m_vertexCount; ++i)
-		{
-			if (plane * m_vertices[i] < -eps)
-			{
-				keepAll = false;
-				break;
-			}
-		}
-
-		if (keepAll)
-		{
-			return;
-		}
-
-		ClipPoly temp;
-
-		for (int i = 0; i < m_vertexCount; ++i)
-		{
-			const int index1 = (i + 0) % m_vertexCount;
-			const int index2 = (i + 1) % m_vertexCount;
-
-			const Vec3& v1 = m_vertices[index1];
-			const Vec3& v2 = m_vertices[index2];
-
-			const float d1 = plane * v1;
-			const float d2 = plane * v2;
-
-			if (d1 >= 0.0f)
-			{
-				temp.Add(v1);
-
-				if (d2 < 0.0f)
-				{
-					const float t = - d1 / (d2 - d1);
-					temp.Add(v1 + (v2 - v1) * t);
-				}
-			}
-			else
-			{
-				if (d2 > 0.0f)
-				{
-					const float t = - d1 / (d2 - d1);
-					temp.Add(v1 + (v2 - v1) * t);
-				}
-			}
-		}
-
-		*this = temp;
-	}
-};
-
 class DebugRender
 {
 public:
@@ -593,6 +308,7 @@ public:
 
 	void DrawPolyLine(const Vec3* v, int vertexCount, float r, float g, float b, float a)
 	{
+		Assert(vertexCount >= 2);
 		if (vertexCount >= 2)
 		{
 			ResVB vb;
@@ -609,11 +325,19 @@ public:
 			gfx->SetIB(0);
 			gfx->Draw(PT_LINE_STRIP);
 		}
-		else
-		{
-			printf("??\n");
-		}
 	}
 };
 
 DebugRender sDebugRender;
+
+int main(int argc, char* argv[])
+{
+	Calc::Initialize();
+
+	TestReplication();
+
+	char c[2];
+	gets(c);
+
+	return 0;
+}

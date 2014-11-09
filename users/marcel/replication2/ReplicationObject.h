@@ -33,10 +33,6 @@ namespace Replication
 		NetSerializableObject * m_serverSerializableObject;
 		NetSerializableObject * m_clientSerializableObject;
 
-		std::vector<int> m_clientIndicesCreate;
-		std::vector<int> m_clientIndicesUpdate;
-		std::vector<int> m_clientIndicesVersioned;
-
 		bool m_serverNeedUpdate;
 		int m_serverObjectCreationId;
 	};

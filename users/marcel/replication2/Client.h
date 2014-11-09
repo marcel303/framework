@@ -28,7 +28,7 @@ public:
 	int m_repID;
 	ActionHandler* m_actionHandler;
 
-	// fixme/todo: make controllers, active controller property of client?
+	// fixme/todo: make active controller property of client?
 };
 
 #endif

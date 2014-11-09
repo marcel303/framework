@@ -56,7 +56,7 @@ private:
 
 	IMemAllocator* m_allocator;
 
-public: // FIXME
+//public: // FIXME
 	uint32_t m_vCnt;
 	uint32_t m_fvf;
 	uint32_t m_texCnt; // Derived from m_fvf.

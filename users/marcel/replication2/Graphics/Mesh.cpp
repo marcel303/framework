@@ -18,7 +18,7 @@ Mesh::~Mesh()
 	}
 }
 
-void Mesh::Initialize(IMemAllocator * allocator, PRIMITIVE_TYPE type, int vCnt, int fvf, int iCnt)
+void Mesh::Initialize(IMemAllocator * allocator, PRIMITIVE_TYPE type, bool dynamic, int vCnt, int fvf, int iCnt)
 {
 	if (m_allocator)
 	{
@@ -35,11 +35,6 @@ void Mesh::Initialize(IMemAllocator * allocator, PRIMITIVE_TYPE type, int vCnt, 
 
 	m_ib = m_allocator->New<ResIB>();
 	m_ib->Initialize(m_allocator, iCnt);
-}
-
-void Mesh::Initialize(IMemAllocator * allocator, PRIMITIVE_TYPE type, bool dynamic, int vCnt, int fvf, int iCnt)
-{
-	Initialize(allocator, type, vCnt, fvf, iCnt);
 }
 
 bool Mesh::IsIndexed() const

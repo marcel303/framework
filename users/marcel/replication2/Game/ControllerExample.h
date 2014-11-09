@@ -4,6 +4,8 @@
 
 #include "Controller.h"
 
+#define CONTROLLER_EXAMPLE 1
+
 // Example controller.
 class ControllerExample : public Controller
 {

@@ -4,7 +4,7 @@
 
 #include "Res.h"
 
-#define WITH_SDL_MIXER 1 // fixme
+#define WITH_SDL_MIXER 1
 
 struct Mix_Chunk;
 
@@ -15,7 +15,6 @@ public:
 
 	void operator=(Mix_Chunk* data);
 
-//FIXME private:
 	Mix_Chunk* m_data;
 };
 

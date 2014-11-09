@@ -3,7 +3,7 @@
 #pragma once
 
 #include "ResTexCF.h"
-#include "ResTexR.h" // FIXME, TEXR_TARGET..
+#include "ResTexR.h"
 #include "ResTexV.h"
 
 class ResTexCR : public ResTexV

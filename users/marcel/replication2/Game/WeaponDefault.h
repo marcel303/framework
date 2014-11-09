@@ -38,7 +38,7 @@ class WeaponDefault : public Weapon
 	};
 
 public:
-	WeaponDefault(Player* owner);
+	WeaponDefault(Player* owner = 0);
 	virtual ~WeaponDefault();
 
 	virtual float GetFOV() const;

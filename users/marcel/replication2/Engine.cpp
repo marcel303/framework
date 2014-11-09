@@ -374,6 +374,8 @@ void Engine::BindClientToEntity(Client* client, ShEntity entity)
 {
 	// TODO: Revise~
 
+	entity->m_client = client;
+
 	client->m_entities.push_back(entity);
 
 	m_inputMgr->SV_AddClient(client);
@@ -389,30 +391,11 @@ Entity* Engine::CreateEntity(Client* client, std::string className)
 {
 	//LOG_DBG("creating entity");
 
-	Entity* entity = 0;
-
-	// Generic.
-	if (className == "Entity")
-		entity = new Entity();
-	else if (className == "Weapon")
-		entity = new Weapon(!client->m_clientSide ? (Player*)client->m_entities[0].lock().get() : 0); // FIXME: Ugly as fuck.
-	// BrickBuster.
-	else if (className == "Brick")
-		entity = new EntityBrick(Vec3(0.0f, 0.0f, 0.0f), Vec3(0.0f, 0.0f, 0.0f), false);
-	else if (className == "BrickSpawn")
-		entity = new EntityBrickSpawn();
-	else if (className == "Floor")
-		entity = new EntityFloor(Vec3(0.0f, 0.0f, 0.0f), Vec3(0.0f, 0.0f, 0.0f), +1);
-	else if (className == "Player")
-		entity = new Player(client, m_inputMgr);
-	else if (className == "WeaponDefault")
-		entity = new WeaponDefault(0);
-
-	//
+	Entity* entity = g_entityFactory.CreateEntity(className.c_str());
 
 	AssertMsg(entity, "cannot create entity. unknown type. className=%s", className.c_str());
 	if (entity)
-		entity->PostCreate();
+		entity->m_client = client;
 
 	//LOG_DBG("done creating entity");
 

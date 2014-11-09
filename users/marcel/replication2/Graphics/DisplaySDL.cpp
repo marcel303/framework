@@ -69,15 +69,6 @@ bool DisplaySDL::Update()
 					EventManager::I().AddEvent(Event(EVT_KEY, key, state == SDL_PRESSED ? 1 : 0, e.key.keysym.unicode));
 				}
 
-				// FIXME: Create event ID's, update Main to register EXIT event.
-				/*
-				if (key == SDLK_F6 && state == SDL_PRESSED)
-					renderStats = !renderStats;
-				if (key == SDLK_q && state == SDL_PRESSED)
-					stop = true;
-					*/
-
-
 				// FIXME: Move to Main.
 			#if 1
 				if (key == IK_F12 && state == SDL_PRESSED)

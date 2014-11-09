@@ -48,8 +48,6 @@ public:
 		float m_sAccel; // Strafe speed.
 		float m_vAccel; // Vertical speed.
 
-		float m_rotationAngleH; // For calculating delta only.
-		float m_rotationAngleV;
 		float m_rotationImpulseH;
 		float m_rotationImpulseV;
 	} m_controls;
@@ -61,10 +59,9 @@ public:
 		Serialize(m_controls.m_vAccel);
 		Serialize(m_rotationX); // todo : u16-ish compression
 		Serialize(m_rotationY);
-		Serialize(m_controls.m_fire); // todo : on change only
 	}
 
-private:
+//private:
 	void Apply();
 };
 

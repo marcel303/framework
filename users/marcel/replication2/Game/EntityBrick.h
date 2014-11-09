@@ -2,14 +2,13 @@
 #define ENTITYBRICK_H
 #pragma once
 
+#include "Calc.h"
 #include "CDCube.h"
 #include "Entity.h"
 #include "Mesh.h"
 #include "ResPS.h"
 #include "ResVS.h"
 #include "Vec3.h"
-
-#include "Calc.h" // fixme, cpp
 
 class EntityBrick : public Entity
 {
@@ -89,11 +88,10 @@ class EntityBrick : public Entity
 	};
 
 public:
-	EntityBrick(Vec3 position, Vec3 size, bool indestructible);
+	EntityBrick();
 	virtual ~EntityBrick();
-	virtual void PostCreate();
 
-	void Initialize();
+	void Initialize(Vec3 position, Vec3 size, bool indestructible);
 
 	virtual Mat4x4 GetTransform() const;
 
@@ -112,10 +110,9 @@ public:
 	void Damage(int amount);
 	void Fort(int amount);
 
-//private: //FIXME
+private:
 	const static int MAX_HP = 100;
 	const static int MAX_LIFE = 5;
-	Vec3 m_position;
 	Vec3 m_size;
 	CD::ShObject m_cdCube; // Derived.
 

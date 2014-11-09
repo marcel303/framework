@@ -95,9 +95,9 @@ void InputManager::OnEvent(Event& event)
 			{
 				EntityPlayer* player = static_cast<EntityPlayer*>(i->second->m_clientScene->m_activeEntity.lock().get());
 
-				if (player->m_controller)
+				if (player->GetController())
 				{
-					if (player->m_controller->OnEvent(event))
+					if (player->GetController()->OnEvent(event))
 						captured = true;
 				}
 			}

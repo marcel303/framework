@@ -4,12 +4,15 @@
 #include "PhyScene.h"
 #include "Scene.h"
 
+EntityFactory g_entityFactory;
+
 Entity::Entity()
 {
 	SetClassName("Entity");
 
 	m_entity_NS = new Entity_NS(this);
 
+	m_client = 0;
 	m_scene = 0;
 	m_id = 0;
 	m_active = false;
@@ -33,10 +36,6 @@ Entity::~Entity()
 
 	delete m_entity_NS;
 	m_entity_NS = 0;
-}
-
-void Entity::PostCreate()
-{
 }
 
 ShEntity Entity::Self()

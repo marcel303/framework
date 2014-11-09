@@ -69,8 +69,9 @@ namespace Replication
 	{
 		Assert(serializableObject);
 
-		// FIXME: May cause errors when object with objectID already exists on client and has not been deleted (yet).
-		// Free objectID's only when all clients synced?
+		// fixme : may cause errors when object with objectID already exists on client and has not been
+		// deleted (yet). free objectID's only when all clients are synced?
+
 		int objectID = m_objectIDs.Allocate();
 		int creationID = m_serverObjectCreationId++;
 
@@ -420,8 +421,6 @@ namespace Replication
 		Assert(client);
 		if (client)
 		{
-			// TODO: speedup~
-			// FIXME: make method of repclient.
 			ObjectStateCollItr state = client->m_active.end();
 
 			for (ObjectStateCollItr i = client->m_active.begin(); i != client->m_active.end(); ++i)

@@ -21,7 +21,7 @@ public:
 
 	virtual bool OnEvent(Event& event) = 0;
 
-// private: // FIXME
+ private:
 	INPUT_PRIO m_prio;
 };
 

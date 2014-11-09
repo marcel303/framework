@@ -2,6 +2,8 @@
 #include "Player.h"
 #include "Weapon.h"
 
+DEFINE_ENTITY(Weapon, Weapon);
+
 Weapon::Weapon(Player* owner)
 	: Entity()
 	, m_ownerLink("owner", this)

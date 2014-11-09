@@ -4,7 +4,7 @@
 
 #include <string>
 #include <vector>
-#include "Debug.h" // FIXME, cpp
+#include "Debug.h"
 #include "ResUser.h"
 #include "SharedPtr.h"
 #include "Types.h"
@@ -94,7 +94,6 @@ public:
 		m_ptr = ShBaseResPtr(ptr);
 	}
 
-	// FIXME: Remove. Required for backward compat & testing only..
 	inline ResPtr(const ShBaseResPtr& ptr)
 	{
 		Assert(ptr.get());

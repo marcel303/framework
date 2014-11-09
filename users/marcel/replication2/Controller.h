@@ -29,15 +29,15 @@ public:
 	void BindKey(int key, int actionID);
 	void BindMouseAxis(INPUT_AXIS axis, int actionID);
 	void BindMouseButton(INPUT_BUTTON button, int actionID);
-	void Update(Channel* channel);
-
-//FIXME private:
-	int m_id;
-	int m_priority;
 
 	virtual bool OnEvent(Event& event);
 
+	int GetID() const { return m_id; }
+
 private:
+	int m_id;
+	int m_priority;
+
 	void SendAction(Channel* channel, int in_actionID, float in_value) const;
 
 	std::map<int, Bind> m_keyBinds;

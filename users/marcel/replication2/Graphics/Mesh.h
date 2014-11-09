@@ -25,8 +25,6 @@ public:
 	virtual AABB CalcAABB() const;
 
 private:
-	// FIXME, public? remove?
-	void Initialize(IMemAllocator * allocator, PRIMITIVE_TYPE type, int vCnt, int fvf, int iCnt);
 	COPY_PROTECT(Mesh);
 
 	IMemAllocator* m_allocator;

@@ -1,5 +1,6 @@
 #include "Calc.h"
 #include "EntityBrick.h"
+#include "Groups.h"
 #include "Player.h"
 #include "ProcTexcoordMatrix2DAutoAlign.h"
 #include "Renderer.h"
@@ -7,61 +8,61 @@
 #include "ResMgr.h"
 #include "WeaponDefault.h"
 
-Player::Player(Client* client, InputManager* inputMgr) : EntityPlayer(client, inputMgr), m_controllerExample(client),
-	m_weaponLink("weapon", this), m_fort("fort", this)
+DEFINE_ENTITY(Player, Player);
+
+Player::Player()
+	: EntityPlayer()
+	, m_weaponLink("weapon", this)
+	, m_fort("fort", this)
+	, m_controllerExample(0)
 {
 	SetClassName("Player");
-	EnableCaps(CAP_DYNAMIC_PHYSICS);
+	EnableCaps(CAP_DYNAMIC_PHYSICS | CAP_SYNC_POS | CAP_SYNC_ROT);
 
 	m_player_NS = new Player_NS(this);
 
 	m_control = new PlayerControl(this);
+
+	// shape
+	m_phyObject.Initialize(GRP_PLAYER, Vec3(), Vec3(), true, true, this);
+	m_phyObject.AddGeometry(CD::ShObject(new CD::Cube(Vec3(-3.0f, 0.0f, -3.0f), Vec3(+3.0f, +8.0f, +3.0f))));
+
+	// visuals
+	ShapeBuilder sb;
+	sb.PushTranslation(Vec3(0.0f, 2.0f, 0.0f));
+	{
+		sb.PushScaling(Vec3(3.0f, 4.0f, 3.0f));
+		{
+			Mesh temp;
+			sb.CreateCilinder(&g_alloc, 10, true, ShapeBuilder::AXIS_Y, temp, FVF_XYZ | FVF_TEX1 | FVF_NORMAL);
+			ProcTexcoordMatrix2DAutoAlign procTex;
+			Mat4x4 mat;
+			mat.MakeScaling(0.1f, 0.1f, 0.1f);
+			procTex.SetMatrix(mat);
+			sb.CalculateNormals(temp);
+			sb.CalculateTexcoords(temp, 0, &procTex);
+			sb.ConvertToIndexed(&g_alloc, temp, m_mesh);
+		}
+		sb.Pop();
+	}
+	sb.Pop();
+
+	// sounds
+	m_sndSrc = ShSndSrc(new ResSndSrc());
+
+	m_sndJump = RESMGR.GetSnd("data/sounds/jump.ogg");
+	m_sndHurt = RESMGR.GetSnd("data/sounds/hurt.ogg");
 }
 
 Player::~Player()
 {
+	Assert(m_controllerExample == 0);
+
 	delete m_player_NS;
 	m_player_NS = 0;
 
 	delete m_control;
 	m_control = 0;
-}
-
-void Player::PostCreate()
-{
-	EntityPlayer::PostCreate();
-
-	// Shape.
-	m_phyObject.Initialize(0, Vec3(0.0f, 0.0f, 0.0f), Vec3(0.0f, 0.0f, 0.0f), true, true, this);
-	//m_phyObject.m_velocityDamp = Vec3(0.001f, 0.1f, 0.001f);
-	m_phyObject.AddGeometry(CD::ShObject(new CD::Cube(Vec3(-3.0f, 0.0f, -3.0f), Vec3(+3.0f, +8.0f, +3.0f))));
-
-	//m_color = makecol(255, 255, 255);
-
-	// Visuals.
-	ShapeBuilder sb;
-	sb.PushTranslation(Vec3(0.0f, 2.0f, 0.0f));
-	sb.PushScaling(Vec3(3.0f, 4.0f, 3.0f));
-	Mesh temp;
-	sb.CreateCilinder(&g_alloc, 10, true, ShapeBuilder::AXIS_Y, temp, FVF_XYZ | FVF_TEX1 | FVF_NORMAL);
-	ProcTexcoordMatrix2DAutoAlign procTex;
-	Mat4x4 mat;
-	mat.MakeScaling(0.1f, 0.1f, 0.1f);
-	procTex.SetMatrix(mat);
-	sb.CalculateNormals(temp);
-	sb.CalculateTexcoords(temp, 0, &procTex);
-	sb.ConvertToIndexed(&g_alloc, temp, m_mesh);
-	sb.Pop();
-	sb.Pop();
-
-	// Sounds.
-	m_sndSrc = ShSndSrc(new ResSndSrc());
-
-	m_sndJump = RESMGR.GetSnd("data/sounds/jump.ogg");
-	m_sndHurt = RESMGR.GetSnd("data/sounds/hurt.ogg");
-
-	// Controllers.
-	m_controllers.push_back(&m_controllerExample);
 }
 
 Mat4x4 Player::GetTransform() const
@@ -72,6 +73,8 @@ Mat4x4 Player::GetTransform() const
 void Player::UpdateLogic(float dt)
 {
 	Entity::UpdateLogic(dt);
+
+	m_control->Apply();
 
 	if (m_control->m_controls.m_fire)
 		m_weapon->FirePrimary();
@@ -95,9 +98,6 @@ void Player::UpdateLogic(float dt)
 void Player::UpdateAnimation(float dt)
 {
 	Entity::UpdateAnimation(dt);
-
-	if (m_controller)
-		m_controller->Update(m_client->m_channel);
 
 	m_control->Animate(&m_phyObject, dt);
 }
@@ -137,11 +137,22 @@ void Player::OnSceneAdd(Scene* scene)
 
 		m_weaponLink = m_weapon;
 	}
+
+	Assert(m_controllerExample == 0);
+	m_controllerExample = new ControllerExample(m_client);
+	m_controllers.push_back(m_controllerExample);
 }
 
 void Player::OnSceneRemove(Scene* scene)
 {
 	EntityPlayer::OnSceneRemove(scene);
+
+	auto i = std::find(m_controllers.begin(), m_controllers.end(), m_controllerExample);
+	Assert(i != m_controllers.end());
+	if (i != m_controllers.end())
+		m_controllers.erase(i);
+	delete m_controllerExample;
+	m_controllerExample = 0;
 
 	if (!m_client->m_clientSide)
 	{
@@ -166,7 +177,6 @@ void Player::OnAction(int actionID, float value)
 		m_control->StrafeRight(value != 0.0f);
 		break;
 	case ControllerExample::ACTION_JUMP:
-		// FIXME.
 		m_control->m_controls.m_jump = value != 0.0f;
 		if (m_control->m_controls.m_jump)
 		{
@@ -188,7 +198,6 @@ void Player::OnAction(int actionID, float value)
 		break;
 	case ControllerExample::ACTION_FIRE:
 		m_control->m_controls.m_fire = value != 0.0f;
-		//m_parameters["firing"]->Invalidate(); // todo
 		break;
 	case ControllerExample::ACTION_ZOOM:
 		if (!m_client->m_clientSide)

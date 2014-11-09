@@ -1,5 +1,6 @@
 #include "Calc.h"
 #include "EntityBrick.h"
+#include "Groups.h"
 #include "Mesh.h"
 #include "Renderer.h"
 #include "ResMgr.h"
@@ -7,33 +8,20 @@
 
 #include "ProcTexcoordMatrix2DAutoAlign.h"
 
-EntityBrick::EntityBrick(Vec3 position, Vec3 size, bool indestructible) : Entity()
+DEFINE_ENTITY(EntityBrick, Brick);
+
+EntityBrick::EntityBrick() : Entity()
 {
 	SetClassName("Brick");
 	EnableCaps(CAP_STATIC_PHYSICS);
 
 	m_brick_NS = new Brick_NS(this, 0, MAX_HP, 1.f);
 
-	m_size = size;
-	m_position = position;
-	m_indestructible = indestructible;
-}
+	m_indestructible = false;
 
-EntityBrick::~EntityBrick()
-{
-	delete m_brick_NS;
-	m_brick_NS = 0;
-}
-
-void EntityBrick::PostCreate()
-{
-	Entity::PostCreate();
-
-	m_phyObject.Initialize(2, m_position, Vec3(0.0f, 0.0f, 0.0f), false, false, this);
+	m_phyObject.Initialize(GRP_BRICK, Vec3(), Vec3(), false, false, this);
 	m_cdCube = CD::ShObject(new CD::Cube());
 	m_phyObject.AddGeometry(m_cdCube);
-
-	Initialize();
 
 	//m_shader->InitDepthTest(true, CMP_LE);
 	//m_shader->InitCull(CULL_CW);
@@ -48,11 +36,19 @@ void EntityBrick::PostCreate()
 	AddAABBObject(&m_mesh);
 }
 
-void EntityBrick::Initialize()
+EntityBrick::~EntityBrick()
 {
-	m_phyObject.Initialize(2, m_position, Vec3(0.0f, 0.0f, 0.0f), false, false, this);
+	delete m_brick_NS;
+	m_brick_NS = 0;
+}
 
-	static_cast<CD::Cube*>(m_cdCube.get())->Setup(- m_size / 2.0f, m_size / 2.0f);
+void EntityBrick::Initialize(Vec3 position, Vec3 size, bool indestructible)
+{
+	m_phyObject.SetPosition(position);
+	static_cast<CD::Cube*>(m_cdCube.get())->Setup(-size / 2.0f, size / 2.0f);
+
+	m_size = size;
+	m_indestructible = indestructible;
 }
 
 Mat4x4 EntityBrick::GetTransform() const
@@ -120,9 +116,7 @@ void EntityBrick::Render()
 // FIXME: Require Initialize or smt to create collision shape.
 void EntityBrick::OnSceneAdd(Scene* scene)
 {
-	m_position = m_phyObject.m_position;
-	Initialize();
-	static_cast<CD::Cube*>(m_cdCube.get())->Setup(- m_size / 2.0f, m_size / 2.0f);
+	Initialize(m_phyObject.m_position, m_size, m_indestructible);
 
 	ShapeBuilder sb;
 	sb.PushScaling(m_size / 2.0f);

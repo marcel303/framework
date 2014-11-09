@@ -2,12 +2,13 @@
 #define RESSHADER_H
 #pragma once
 
+#include "GraphicsTypes.h"
 #include "Res.h"
 #include "ResPS.h"
 #include "ResVS.h"
 #include "Types.h"
 
-#include "GraphicsDevice.h" // FIXME, cpp
+class GraphicsDevice;
 
 class ResShader : public Res
 {

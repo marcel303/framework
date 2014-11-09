@@ -5,7 +5,8 @@
 enum GROUPS
 {
 	GRP_PLAYER,
-	GRP_WORLD_STATIC
+	GRP_WORLD_STATIC,
+	GRP_BRICK
 };
 
 #endif

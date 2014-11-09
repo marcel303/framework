@@ -10,7 +10,7 @@ class Player;
 class Weapon : public Entity
 {
 public:
-	Weapon(Player* owner);
+	Weapon(Player* owner = 0);
 	virtual ~Weapon();
 
 	Player* GetOwner();

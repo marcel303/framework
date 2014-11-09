@@ -5,7 +5,7 @@
 #include "ControllerExample.h"
 #include "EntityBrick.h"
 #include "EntityPlayer.h"
-#include "Mesh.h" //fixme
+#include "Mesh.h"
 #include "PlayerControl.h"
 #include "ResSnd.h"
 #include "ResSndSrc.h"
@@ -41,9 +41,8 @@ class Player : public EntityPlayer
 	};
 
 public:
-	Player(Client* client, InputManager* inputMgr);
+	Player();
 	virtual ~Player();
-	virtual void PostCreate();
 
 	virtual Mat4x4 GetTransform() const;
 
@@ -51,7 +50,7 @@ public:
 	virtual void UpdateAnimation(float dt);
 	virtual void Render();
 
-	void SetFort(ShEntity brick);  // fixme, remove forwarddecl
+	void SetFort(ShEntity brick);
 
 	virtual void OnSceneAdd(Scene* scene);
 	virtual void OnSceneRemove(Scene* scene);
@@ -66,7 +65,7 @@ public:
 	const static int SND_JUMP = 0;
 	const static int SND_HURT = 1;
 
-	ControllerExample m_controllerExample;
+	ControllerExample* m_controllerExample;
 
 	// State.
 	Player_NS * m_player_NS;

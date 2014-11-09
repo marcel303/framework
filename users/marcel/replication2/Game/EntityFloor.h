@@ -27,9 +27,6 @@ class EntityFloor : public Entity
 		{
 			if (IsInit())
 			{
-				Serialize(m_owner->m_position[0]);
-				Serialize(m_owner->m_position[1]);
-				Serialize(m_owner->m_position[2]);
 				Serialize(m_owner->m_size[0]);
 				Serialize(m_owner->m_size[1]);
 				Serialize(m_owner->m_size[2]);
@@ -39,9 +36,8 @@ class EntityFloor : public Entity
 	};
 
 public:
-	EntityFloor(Vec3 position, Vec3 size, int orientation);
+	EntityFloor();
 	virtual ~EntityFloor();
-	virtual void PostCreate();
 
 	void Initialize(Vec3 position, Vec3 size, int orientation);
 
@@ -55,13 +51,11 @@ public:
 	virtual void OnSceneAdd(Scene* scene);
 	virtual void OnSceneRemove(Scene* scene);
 
-//private: //FIXME
+private:
 	Floor_NS * m_floor_NS;
-	Vec3 m_position;
 	Vec3 m_size;
 	int8_t m_orientation;
 	CD::ShObject m_cdCube; // Derived.
-	//Phy::Object m_phyObject; // Derived.
 
 	Mesh m_mesh;
 	ShTex m_tex;

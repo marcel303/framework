@@ -80,8 +80,8 @@ public:
 	float m_time;
 	RenderList m_renderList;
 
-	Replication::Manager* m_repMgr;
 	Engine* m_engine;
+	Replication::Manager* m_repMgr;
 	Phy::Scene* m_phyScene;
 
 	SceneRenderer* m_renderer;

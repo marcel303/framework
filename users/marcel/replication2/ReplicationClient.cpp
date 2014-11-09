@@ -61,7 +61,6 @@ namespace Replication
 
 	ObjectStateCollItr Client::SV_Find(ObjectStateColl & collection, int objectID)
 	{
-		// FIXME: Speedup.
 		for (ObjectStateCollItr j = collection.begin(); j != collection.end(); ++j)
 			if (j->m_objectID == objectID)
 				return j;

@@ -7,8 +7,6 @@
 
 Controller::Controller(int id, Client* client) : InputHandler(INPUT_PRIO_CONTROLLER)
 {
-	Assert(client);
-
 	m_id = id;
 	m_client = client;
 }
@@ -40,10 +38,6 @@ void Controller::BindMouseButton(INPUT_BUTTON button, int actionID)
 	m_mouseButtonBinds[button] = bind;
 }
 
-void Controller::Update(Channel* channel)
-{
-}
-
 bool Controller::OnEvent(Event& event)
 {
 	bool sent = false;
@@ -63,7 +57,7 @@ bool Controller::OnEvent(Event& event)
 		}
 	}
 
-	if (event.type == EVT_MOUSEMOVE_ABS)
+	if (event.type == EVT_MOUSEMOVE)
 	{
 		int axis = event.mouse_move.axis;
 

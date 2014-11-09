@@ -195,7 +195,7 @@ void GraphicsDeviceGL::Draw(PRIMITIVE_TYPE type)
 
 	if (m_ib == 0)
 	{
-		glDrawArrays(glType, 0, m_vb->m_vCnt);
+		glDrawArrays(glType, 0, m_vb->GetVertexCnt());
 	}
 	else
 	{
@@ -208,13 +208,13 @@ void GraphicsDeviceGL::Draw(PRIMITIVE_TYPE type)
 	if (0)
 	{
 		int mode = 1;
-		//if (m_vb->m_fvf & FVF_XYZ && m_vb->m_fvf & FVF_NORMAL)
-		if (mode == 1 && (m_vb->m_fvf & FVF_XYZ) && (m_vb->m_fvf & FVF_TEX1))
-		if (mode == 2 && (m_vb->m_fvf & FVF_XYZ) && (m_vb->m_fvf & FVF_TEX4))
+		//if (m_vb->GetFVF() & FVF_XYZ && m_vb->GetFVF() & FVF_NORMAL)
+		if (mode == 1 && (m_vb->GetFVF() & FVF_XYZ) && (m_vb->GetFVF() & FVF_TEX1))
+		if (mode == 2 && (m_vb->GetFVF() & FVF_XYZ) && (m_vb->GetFVF() & FVF_TEX4))
 		{
 			glBegin(GL_LINES);
 			{
-				for (uint32_t i = 0; i < m_vb->m_vCnt; ++i)
+				for (uint32_t i = 0; i < m_vb->GetVertexCnt(); ++i)
 				{
 					Vec3 p1 = m_vb->position[i];
 					//Vec3 n1 = m_vb->tex[0][i].XYZ();
@@ -298,7 +298,8 @@ void GraphicsDeviceGL::Copy(ResBaseTex* out_tex)
 
 void GraphicsDeviceGL::SetScissorRect(int x1, int y1, int x2, int y2)
 {
-	// FIXME, TODO.
+	// todo : implement SetScissorRect
+	Assert(false);
 }
 
 void GraphicsDeviceGL::RS(int state, int value)
@@ -383,7 +384,8 @@ void GraphicsDeviceGL::RS(int state, int value)
 		glBlendFunc(m_stBlendSrc, m_stBlendDst);
 		break;
 	case RS_SCISSORTEST:
-		// FIXME TODO.
+		// todo : implement SetScissorRect
+		Assert(false);
 		break;
 	case RS_WRITE_DEPTH:
 		glDepthMask(value);
@@ -793,7 +795,7 @@ void GraphicsDeviceGL::SetVB(ResVB* vb)
 			// Set offsets into VBO.
 			int stream = 0;
 
-			if (vb->m_fvf & FVF_XYZ)
+			if (vb->GetFVF() & FVF_XYZ)
 			{
 				glEnableClientState(GL_VERTEX_ARRAY);
 				glVertexPointer(3, GL_FLOAT, 0, (GLvoid*)data->m_streamOffsets[stream]);
@@ -801,7 +803,7 @@ void GraphicsDeviceGL::SetVB(ResVB* vb)
 				CheckError();
 			}
 
-			if (vb->m_fvf & FVF_NORMAL)
+			if (vb->GetFVF() & FVF_NORMAL)
 			{
 				glEnableClientState(GL_NORMAL_ARRAY);
 				glNormalPointer(GL_FLOAT, 0, (GLvoid*)data->m_streamOffsets[stream]);
@@ -809,7 +811,7 @@ void GraphicsDeviceGL::SetVB(ResVB* vb)
 				CheckError();
 			}
 
-			if (vb->m_fvf & FVF_COLOR)
+			if (vb->GetFVF() & FVF_COLOR)
 			{
 				glEnableClientState(GL_COLOR_ARRAY);
 				//glColorPointer(4, GL_UNSIGNED_BYTE, 0, (GLvoid*)data->m_streamOffsets[stream]);
@@ -818,7 +820,7 @@ void GraphicsDeviceGL::SetVB(ResVB* vb)
 				CheckError();
 			}
 
-			for (uint32_t i = 0; i < vb->m_texCnt; ++i)
+			for (uint32_t i = 0; i < vb->GetTexCnt(); ++i)
 			{
 				glClientActiveTexture(GL_TEXTURE0 + i);
 				glEnableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -829,28 +831,28 @@ void GraphicsDeviceGL::SetVB(ResVB* vb)
 		}
 		else
 		{
-			if (vb->m_fvf & FVF_XYZ)
+			if (vb->GetFVF() & FVF_XYZ)
 			{
 				glEnableClientState(GL_VERTEX_ARRAY);
 				glVertexPointer(3, GL_FLOAT, 0, vb->position);
 				CheckError();
 			}
 
-			if (vb->m_fvf & FVF_NORMAL)
+			if (vb->GetFVF() & FVF_NORMAL)
 			{
 				glEnableClientState(GL_NORMAL_ARRAY);
 				glNormalPointer(GL_FLOAT, 0, vb->normal);
 				CheckError();
 			}
 
-			if (vb->m_fvf & FVF_COLOR)
+			if (vb->GetFVF() & FVF_COLOR)
 			{
 				glEnableClientState(GL_COLOR_ARRAY);
 				glColorPointer(4, GL_FLOAT, 0, vb->color);
 				CheckError();
 			}
 
-			for (uint32_t i = 0; i < vb->m_texCnt; ++i)
+			for (uint32_t i = 0; i < vb->GetTexCnt(); ++i)
 			{
 				glClientActiveTexture(GL_TEXTURE0 + i);
 				glEnableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -1394,14 +1396,14 @@ void* GraphicsDeviceGL::UpLoadVB(ResVB* vb)
 
 		int size = 0;
 
-		if (vb->m_fvf & FVF_XYZ)      size += 3 * sizeof(float);
-		if (vb->m_fvf & FVF_NORMAL)   size += 3 * sizeof(float);
-		//if (vb->m_fvf & FVF_COLOR)    size += 4 * sizeof(uint8);
-		if (vb->m_fvf & FVF_COLOR)    size += 4 * sizeof(float);
+		if (vb->GetFVF() & FVF_XYZ)      size += 3 * sizeof(float);
+		if (vb->GetFVF() & FVF_NORMAL)   size += 3 * sizeof(float);
+		//if (vb->GetFVF() & FVF_COLOR)    size += 4 * sizeof(uint8);
+		if (vb->GetFVF() & FVF_COLOR)    size += 4 * sizeof(float);
 
-		size += 4 * sizeof(float) * vb->m_texCnt;
+		size += 4 * sizeof(float) * vb->GetTexCnt();
 
-		size *= vb->m_vCnt;
+		size *= vb->GetVertexCnt();
 
 		glBufferData(GL_ARRAY_BUFFER, size, 0, GL_STATIC_DRAW);
 		CheckError();
@@ -1410,14 +1412,14 @@ void* GraphicsDeviceGL::UpLoadVB(ResVB* vb)
 
 		#define ADD_STREAM(offset, size, ptr) { glBufferSubData(GL_ARRAY_BUFFER, offset, size, ptr); CheckError(); data->m_streamOffsets[data->m_streamCnt] = offset; data->m_streamCnt++; offset += size; }
 
-		if (vb->m_fvf & FVF_XYZ)
-			ADD_STREAM(offset, 3 * sizeof(float) * vb->m_vCnt, vb->position)
-		if (vb->m_fvf & FVF_NORMAL)
-			ADD_STREAM(offset, 3 * sizeof(float) * vb->m_vCnt, vb->normal)
-		if (vb->m_fvf & FVF_COLOR)
-			ADD_STREAM(offset, 4 * sizeof(float) * vb->m_vCnt, vb->color)
-		for (uint32_t i = 0; i < vb->m_texCnt; ++i)
-			ADD_STREAM(offset, 4 * sizeof(float) * vb->m_vCnt, vb->tex[i])
+		if (vb->GetFVF() & FVF_XYZ)
+			ADD_STREAM(offset, 3 * sizeof(float) * vb->GetVertexCnt(), vb->position)
+		if (vb->GetFVF() & FVF_NORMAL)
+			ADD_STREAM(offset, 3 * sizeof(float) * vb->GetVertexCnt(), vb->normal)
+		if (vb->GetFVF() & FVF_COLOR)
+			ADD_STREAM(offset, 4 * sizeof(float) * vb->GetVertexCnt(), vb->color)
+		for (uint32_t i = 0; i < vb->GetTexCnt(); ++i)
+			ADD_STREAM(offset, 4 * sizeof(float) * vb->GetVertexCnt(), vb->tex[i])
 	}
 
 	return data;

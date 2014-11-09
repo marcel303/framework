@@ -7,27 +7,18 @@
 
 #include "ProcTexcoordMatrix2DAutoAlign.h"
 
-EntityFloor::EntityFloor(Vec3 position, Vec3 size, int orientation) : Entity()
+DEFINE_ENTITY(EntityFloor, Floor);
+
+EntityFloor::EntityFloor() : Entity()
 {
 	SetClassName("Floor");
 	EnableCaps(CAP_STATIC_PHYSICS);
 
 	m_floor_NS = new Floor_NS(this);
 
-	m_position = position;
-	m_size = size;
-	m_orientation = orientation;
-}
+	m_orientation = +1;
 
-EntityFloor::~EntityFloor()
-{
-	delete m_floor_NS;
-	m_floor_NS = 0;
-}
-
-void EntityFloor::PostCreate()
-{
-	Initialize(m_position, m_size, m_orientation);
+	m_phyObject.Initialize(GRP_WORLD_STATIC, Vec3(), Vec3(), false, false, this);
 	m_cdCube = CD::ShObject(new CD::Cube());
 	m_phyObject.AddGeometry(m_cdCube);
 
@@ -39,13 +30,19 @@ void EntityFloor::PostCreate()
 	m_tex = RESMGR.GetTex("data/textures/floor.png");
 }
 
+EntityFloor::~EntityFloor()
+{
+	delete m_floor_NS;
+	m_floor_NS = 0;
+}
+
 void EntityFloor::Initialize(Vec3 position, Vec3 size, int orientation)
 {
-	m_position = position;
 	m_size = size;
 	m_orientation = orientation;
 
-	m_phyObject.Initialize(GRP_WORLD_STATIC, m_position, Vec3(0.0f, 0.0f, 0.0f), false, false, this);
+	m_phyObject.SetPosition(position);
+	static_cast<CD::Cube*>(m_cdCube.get())->Setup(-size / 2.0f, size / 2.0f);
 }
 
 Mat4x4 EntityFloor::GetTransform() const
@@ -86,7 +83,6 @@ void EntityFloor::Render()
 void EntityFloor::OnSceneAdd(Scene* scene)
 {
 	Initialize(m_phyObject.m_position, m_size, m_orientation);
-	static_cast<CD::Cube*>(m_cdCube.get())->Setup(- m_size / 2.0f, m_size / 2.0f);
 
 	ShapeBuilder sb;
 
@@ -97,7 +93,6 @@ void EntityFloor::OnSceneAdd(Scene* scene)
 			Mesh temp;
 
 			sb.CreateCube(&g_alloc, temp, FVF_XYZ | FVF_TEX1 | FVF_NORMAL);
-			//sb.CreateGridCube(20, 20, temp, FVF_XYZ | FVF_TEX1 | FVF_NORMAL); // FIXME, not needed with per pixel lighting.
 			
 			sb.CalculateNormals(temp);
 

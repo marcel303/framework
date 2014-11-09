@@ -5,6 +5,8 @@
 #include "ResMgr.h"
 #include "WeaponDefault.h"
 
+DEFINE_ENTITY(WeaponDefault, WeaponDefault);
+
 WeaponDefault::WeaponDefault(Player* owner) : Weapon(owner)
 {
 	SetClassName("WeaponDefault");
@@ -23,7 +25,7 @@ WeaponDefault::WeaponDefault(Player* owner) : Weapon(owner)
 	m_cabinet1.OnFire.Assign(this, HandleFireCB);
 	m_cabinet1.OnReload.Assign(this, HandleReloadCB);
 
-	m_currZoom = m_weapon_NS->GetZoom();
+	m_currZoom = (float)m_weapon_NS->GetZoom();
 }
 
 WeaponDefault::~WeaponDefault()
@@ -43,8 +45,13 @@ void WeaponDefault::HandleFire()
 	Vec3 position = GetOwner()->GetCameraPosition();
 	Vec3 orientation = GetOwner()->GetCameraOrientation();
 
+#if 1
 	if (GetOwner()->m_className == "Player")
-		static_cast<Player*>(GetOwner())->m_control->m_rotationX += 0.025f + Calc::Random(0.0f, 0.025f);
+	{
+		float angle = 0.025f + Calc::Random(0.0f, 0.025f);
+		GetOwner()->m_control->RotateV(angle);
+	}
+#endif
 
 	float distance;
 	ShEntity hit = GetOwner()->m_scene->CastRay(GetOwner(), position, orientation, 1000.0f, &distance);
@@ -52,12 +59,11 @@ void WeaponDefault::HandleFire()
 	{
 		Vec3 hitpos = position + orientation * distance;
 
-		if (hit->m_className == "Player")  // fixme: Or any other?
+		if (hit->m_className == "Player")
 		{
 			Player* player = (Player*)hit.get();
 
-			player->m_control->m_rotationY = 0.0f;
-			player->m_phyObject.m_force += player->GetCameraOrientation() * 100.0f;
+			player->m_phyObject.m_force += orientation * 100.0f;
 
 			ReplicatedMessage(MSG_PLAYSOUND, SND_HIT);
 		}

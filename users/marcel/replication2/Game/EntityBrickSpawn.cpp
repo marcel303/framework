@@ -3,6 +3,8 @@
 #include "EntityBrickSpawn.h"
 #include "Timer.h"
 
+DEFINE_ENTITY(EntityBrickSpawn, BrickSpawn);
+
 EntityBrickSpawn::EntityBrickSpawn() : Entity()
 {
 	SetClassName("BrickSpawn");
@@ -18,7 +20,8 @@ EntityBrickSpawn::~EntityBrickSpawn()
 
 void EntityBrickSpawn::UpdateLogic(float dt)
 {
-	int todo = 50 - GetScene()->FindEntitiesByClassName("Brick").size();
+	//int todo = 50 - GetScene()->FindEntitiesByClassName("Brick").size();
+	int todo = 5 - GetScene()->FindEntitiesByClassName("Brick").size();
 
 	while (m_timer.ReadTick() && todo > 0) // todo : should updated timer based on dt. create game timer?
 	{
@@ -28,8 +31,8 @@ void EntityBrickSpawn::UpdateLogic(float dt)
 		float z = Calc::Random(-150.0f, +150.0f);
 		float size = 5.0f + Calc::Random(0.0f, 20.0f);
 
-		EntityBrick* brick = new EntityBrick(Vec3(x, 0.0f, z), Vec3(15.0f, size, 15.0f), false);
-		brick->PostCreate(); // fixme, use factory.
+		EntityBrick* brick = new EntityBrick();
+		brick->Initialize(Vec3(x, 0.0f, z), Vec3(15.0f, size, 15.0f), false);
 		GetScene()->AddEntityQueued(ShEntity(brick));
 	}
 }

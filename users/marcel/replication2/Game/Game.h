@@ -16,7 +16,6 @@ public:
 	GameConfig();
 	void Initialize(GRAPHICS_DEVICE gfx, int logicHz, int fpsLimit);
 
-public: // FIXME.
 	GRAPHICS_DEVICE m_gfx;
 	int m_logicHz;
 	int m_fpsLimit;

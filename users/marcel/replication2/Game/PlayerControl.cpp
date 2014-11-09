@@ -18,16 +18,14 @@ PlayerControl::PlayerControl(Player * player)
 	m_controls.m_jump        = false;
 	m_controls.m_fire        = false;
 
-	m_controls.m_rotationAngleH = FLT_MAX;
-	m_controls.m_rotationAngleV = FLT_MAX;
 	m_controls.m_rotationImpulseH = 0.0f;
 	m_controls.m_rotationImpulseV = 0.0f;
 
+	// State.
 	m_controls.m_fAccel = 0.0f;
 	m_controls.m_vAccel = 0.0f;
 	m_controls.m_sAccel = 0.0f;
 
-	// State.
 	m_rotationX = 0.0f;
 	m_rotationY = 0.0f;
 }
@@ -112,51 +110,31 @@ Mat4x4 PlayerControl::GetTransform(const Vec3& position) const
 void PlayerControl::MoveForward(bool enabled)
 {
 	m_controls.m_moveForward = enabled;
-
-	Apply();
 }
 
 void PlayerControl::MoveBack(bool enabled)
 {
 	m_controls.m_moveBack = enabled;
-
-	Apply();
 }
 
 void PlayerControl::StrafeLeft(bool enabled)
 {
 	m_controls.m_strafeLeft = enabled;
-
-	Apply();
 }
 
 void PlayerControl::StrafeRight(bool enabled)
 {
 	m_controls.m_strafeRight = enabled;
-
-	Apply();
 }
 
 void PlayerControl::RotateH(float angle)
 {
-	if (m_controls.m_rotationAngleH == FLT_MAX)
-		m_controls.m_rotationAngleH = angle;
-
-	m_controls.m_rotationImpulseH += (angle - m_controls.m_rotationAngleH);
-	m_controls.m_rotationAngleH = angle;
-
-	Apply();
+	m_controls.m_rotationImpulseH += angle;
 }
 
 void PlayerControl::RotateV(float angle)
 {
-	if (m_controls.m_rotationAngleV == FLT_MAX)
-		m_controls.m_rotationAngleV = angle;
-
-	m_controls.m_rotationImpulseV += (angle - m_controls.m_rotationAngleV);
-	m_controls.m_rotationAngleV = angle;
-
-	Apply();
+	m_controls.m_rotationImpulseV += angle;
 }
 
 void PlayerControl::Apply()

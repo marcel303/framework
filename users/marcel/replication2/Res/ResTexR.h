@@ -19,7 +19,6 @@ public:
 
 	void SetTarget(TEXR_TARGET target);
 
-//private: // fixme
 	TEXR_TARGET m_target;
 };
 

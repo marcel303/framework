@@ -256,8 +256,6 @@ void ResMgr::ThreadExec()
 		}
 		DeMux();
 
-		//printf("ResMgr.\n");
-
 		// TODO: Use reset.
 		SDL_Delay(10);
 	}

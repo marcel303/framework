@@ -11,8 +11,10 @@
 class EntityPlayer : public Entity, public ActionHandler
 {
 public:
-	EntityPlayer(Client* client, InputManager* inputMgr);
+	EntityPlayer();
 	virtual ~EntityPlayer();
+
+	void Initialize(Client* client, InputManager* inputMgr);
 
 	virtual void UpdateLogic(float dt);
 	virtual void UpdateAnimation(float dt);
@@ -35,9 +37,9 @@ public:
 	Vec3 GetCameraOrientation() const;
 
 	virtual void SetController(int id);
+	Controller * GetController() { return m_controller; }
 
-public: // FIXME
-	Client* m_client;
+protected:
 	bool m_activated;
 	InputManager* m_inputMgr;
 	Controller* m_controller;
