@@ -16,9 +16,10 @@ EntityBrick::EntityBrick()
 	SetClassName("Brick");
 	EnableCaps(CAP_STATIC_PHYSICS);
 
-	m_brick_NS = new Brick_NS(this, 0, MAX_HP, 1.f);
+	m_brick_NS = new Brick_NS(this, 0, MAX_HP);
 
 	m_indestructible = false;
+	m_life = 1.0f;
 
 	m_phyObject.Initialize(GRP_BRICK, Vec3(), Vec3(), false, false, this);
 	m_cdCube = CD::ShObject(new CD::Cube());
@@ -70,11 +71,11 @@ void EntityBrick::UpdateAnimation(float dt)
 {
 	if (!IsIndestructible())
 	{
-		m_brick_NS->ChangeLife(- dt / MAX_LIFE);
+		m_life = Calc::Clamp(m_life - dt / MAX_LIFE, 0.f, 1.f);
 
 		Vec3 position = m_phyObject.m_position;
 
-		position[1] = cos(m_brick_NS->GetLife() * Calc::mPI / 2.0f) * m_size[1] - m_size[1] * 0.5f;
+		position[1] = cos(m_life * Calc::mPI / 2.0f) * m_size[1] - m_size[1] * 0.5f;
 
 		m_phyObject.SetPosition(position);
 	}

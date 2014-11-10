@@ -64,7 +64,7 @@ public:
 	PolledTimer m_clientTimerFps;
 	int m_clientFpsFrame;
 	int m_clientFps;
-	const static int m_serverNetFps = 20;
+	const static int m_serverNetFps = 60; // fixme
 	//const static int m_serverNetFps = 10;
 	//const static int m_serverNetFps = 5;
 	PacketDispatcher m_packetDispatcher;

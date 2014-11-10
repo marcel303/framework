@@ -22,12 +22,12 @@ PlayerControl::PlayerControl(Player * player)
 	m_controls.m_rotationImpulseV = 0.0f;
 
 	// State.
-	m_controls.m_fAccel = 0.0f;
-	m_controls.m_vAccel = 0.0f;
-	m_controls.m_sAccel = 0.0f;
+	m_currentValues.m_fAccel = 0.0f;
+	m_currentValues.m_vAccel = 0.0f;
+	m_currentValues.m_sAccel = 0.0f;
 
-	m_rotationX = 0.0f;
-	m_rotationY = 0.0f;
+	m_currentValues.m_rotationX = 0.0f;
+	m_currentValues.m_rotationY = 0.0f;
 }
 
 void PlayerControl::Animate(Phy::Object* phyObject, float dt)
@@ -39,9 +39,9 @@ void PlayerControl::Animate(Phy::Object* phyObject, float dt)
 	Vec3 strafe = (up % forward).CalcNormalized();
 	
 	Vec3 delta(0.f, 0.f, 0.f);
-	delta += forward * m_controls.m_fAccel;
-	delta += strafe  * m_controls.m_sAccel;
-	delta += up      * m_controls.m_vAccel;
+	delta += forward * m_currentValues.m_fAccel;
+	delta += strafe  * m_currentValues.m_sAccel;
+	delta += up      * m_currentValues.m_vAccel;
 
 #if 0
 	// direct manipulation of velocity requires change in PhyScene. it needs to clip *after* integration
@@ -61,17 +61,6 @@ void PlayerControl::Animate(Phy::Object* phyObject, float dt)
 		phyObject->m_velocity[0] *= maxSpeed / speed;
 		phyObject->m_velocity[2] *= maxSpeed / speed;
 	}
-
-	if (m_controls.m_rotationImpulseV)
-	{
-		m_rotationX += m_controls.m_rotationImpulseV; m_controls.m_rotationImpulseV = 0.0f;
-	}
-	if (m_controls.m_rotationImpulseH)
-	{
-		m_rotationY += m_controls.m_rotationImpulseH; m_controls.m_rotationImpulseH = 0.0f;
-	}
-
-	m_rotationX = Calc::Clamp(m_rotationX, -Calc::mPI / 2.1f, +Calc::mPI / 2.1f);
 }
 
 Mat4x4 PlayerControl::GetOrientationMat() const
@@ -80,8 +69,8 @@ Mat4x4 PlayerControl::GetOrientationMat() const
 	Mat4x4 matX;
 	Mat4x4 matY;
 
-	matX.MakeRotationX(+m_rotationX);
-	matY.MakeRotationY(-m_rotationY);
+	matX.MakeRotationX(+m_currentValues.m_rotationX);
+	matY.MakeRotationY(-m_currentValues.m_rotationY);
 
 	mat = matY * matX;
 
@@ -139,19 +128,41 @@ void PlayerControl::RotateV(float angle)
 
 void PlayerControl::Apply()
 {
-	SetDirty();
-
-	m_controls.m_fAccel = 0.0f;
+	m_currentValues.m_fAccel = 0.0f;
 
 	if (m_controls.m_moveForward)
-		m_controls.m_fAccel += ACCEL;
+		m_currentValues.m_fAccel += ACCEL;
 	if (m_controls.m_moveBack)
-		m_controls.m_fAccel -= ACCEL;
+		m_currentValues.m_fAccel -= ACCEL;
 
-	m_controls.m_sAccel = 0.0f;
+	//
+
+	m_currentValues.m_sAccel = 0.0f;
 
 	if (m_controls.m_strafeLeft)
-		m_controls.m_sAccel -= ACCEL;
+		m_currentValues.m_sAccel -= ACCEL;
 	if (m_controls.m_strafeRight)
-		m_controls.m_sAccel += ACCEL;
+		m_currentValues.m_sAccel += ACCEL;
+
+	//
+
+	if (m_controls.m_rotationImpulseV)
+	{
+		m_currentValues.m_rotationX += m_controls.m_rotationImpulseV;
+		m_controls.m_rotationImpulseV = 0.0f;
+	}
+	if (m_controls.m_rotationImpulseH)
+	{
+		m_currentValues.m_rotationY += m_controls.m_rotationImpulseH;
+		m_controls.m_rotationImpulseH = 0.0f;
+	}
+
+	m_currentValues.m_rotationX = Calc::Clamp(m_currentValues.m_rotationX, -Calc::mPI / 2.1f, +Calc::mPI / 2.1f);
+
+	//
+
+	if (memcmp(&m_currentValues, &m_serializedValues, sizeof(m_currentValues)) != 0)
+	{
+		SetDirty();
+	}
 }

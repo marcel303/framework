@@ -308,7 +308,7 @@ namespace Replication
 
 	void Manager::OnReceive(Packet & packet, Channel * channel)
 	{
-		Stats::I().m_rep.m_bytesReceived.Inc(packet.GetSize());
+		NET_STAT_ADD(Replication_BytesReceived, packet.GetSize());
 
 		uint8_t messageID;
 
@@ -341,14 +341,8 @@ namespace Replication
 		case REPMSG_CREATE:
 			HandleCreate(bitStream, channel);
 			break;
-		case REPMSG_CREATE_ACK:
-			HandleCreateAck(bitStream, channel);
-			break;
 		case REPMSG_DESTROY:
 			HandleDestroy(bitStream, channel);
-			break;
-		case REPMSG_DESTROY_ACK:
-			HandleDestroyAck(bitStream, channel);
 			break;
 		case REPMSG_UPDATE:
 			HandleUpdate(bitStream, channel);
@@ -357,9 +351,6 @@ namespace Replication
 			AssertMsg(false, "unknown message. messageId=%d", messageID);
 			break;
 		}
-
-		// TODO: As server, respond to ACK's.
-		// As client, respond to create, destroy.
 	}
 
 	void Manager::HandleCreate(BitStream & bitStream, Channel * channel)
@@ -380,12 +371,11 @@ namespace Replication
 		// Check if object already created. If so, ack.
 		if (client->CL_FindObject(objectID) != 0)
 		{
-			SendCreateAck(objectID, channel);
 			AssertMsg(false, "object already created. objectId=%d", objectID);
 			return;
 		}
 
-		Stats::I().m_rep.m_objectsCreated.Inc(1);
+		NET_STAT_INC(Replication_ObjectsCreated);
 
 		className = bitStream.ReadString();
 
@@ -404,35 +394,6 @@ namespace Replication
 		m_handler->OnReplicationObjectCreate2(client, object->m_up);
 
 		client->CL_AddObject(object);
-
-		SendCreateAck(objectID, channel);
-	}
-
-	void Manager::HandleCreateAck(BitStream & bitStream, Channel * channel)
-	{
-		// TODO: Check if server.
-
-		uint16_t objectID;
-
-		bitStream.Read(objectID);
-
-		Client * client = SV_FindClient(channel);
-
-		Assert(client);
-		if (client)
-		{
-			ObjectStateCollItr state = client->m_active.end();
-
-			for (ObjectStateCollItr i = client->m_active.begin(); i != client->m_active.end(); ++i)
-				if (i->m_objectID == objectID)
-					state = i;
-
-			AssertMsg(state != client->m_active.end(), "received ACK for already created/destroyed/unknown object");
-			if (state != client->m_active.end())
-			{
-				state->m_existsOnClient = true;
-			}
-		}
 	}
 
 	void Manager::HandleDestroy(BitStream & bitStream, Channel * channel)
@@ -451,59 +412,18 @@ namespace Replication
 
 		if (CL_DestroyObject(client, objectID))
 		{
-			Stats::I().m_rep.m_objectsDestroyed.Inc(1);
-			SendDestroyAck(objectID, channel);
+			NET_STAT_INC(Replication_ObjectsDestroyed);
 		}
 		else
 		{
-			SendDestroyAck(objectID, channel);
 			DB_ERR("Received destroy request for non-existing object (%d)", objectID);
 			return;
 		}
 	}
 
-	void Manager::HandleDestroyAck(BitStream & bitStream, Channel * channel)
-	{
-		// TODO: Check if server.
-
-		Client * client = SV_FindClient(channel);
-
-		if (!client)
-		{
-			DB_ERR("Received destroy ACK from unknown channel (%d)", channel->m_id);
-			return;
-		}
-
-		uint16_t objectID;
-
-		bitStream.Read(objectID);
-
-	/*
-		bool found = false;
-
-		for (ObjectStateCollItr i = client->m_destroyed.begin(); i != client->m_destroyed.end();)
-		{
-			if (i->m_objectID == objectID)
-			{
-				i = client->m_destroyed.erase(i);
-				found = true;
-			}
-			else
-				++i;
-		}
-
-		if (!found)
-		{
-			SendDestroyAck(objectID, channel);
-			DB_ERR("Received destroy ACK for non-existing object (%d)", objectID);
-			return;
-		}
-	*/
-	}
-
 	void Manager::HandleUpdate(BitStream & bitStream, Channel * channel)
 	{
-		Stats::I().m_rep.m_objectsUpdated.Inc(1);
+		NET_STAT_INC(Replication_ObjectsUpdated);
 
 		Client * client = CL_FindClient(channel);
 
@@ -571,32 +491,6 @@ namespace Replication
 	void Manager::SyncClientObject(Client * client, Object * object)
 	{
 		client->SV_AddObject(object);
-	}
-
-	bool Manager::SendCreateAck(int _objectID, Channel * channel)
-	{
-		BitStream bitStream;
-
-		const uint16_t objectID = _objectID;
-
-		bitStream.Write(objectID);
-
-		RepMgrPacketBuilder packetBuilder;
-		Packet packet = MakePacket(REPMSG_CREATE_ACK, packetBuilder, bitStream);
-		return channel->Send(packet, 0);
-	}
-
-	bool Manager::SendDestroyAck(int _objectID, Channel * channel)
-	{
-		BitStream bitStream;
-
-		const uint16_t objectID = _objectID;
-
-		bitStream.Write(objectID);
-
-		RepMgrPacketBuilder packetBuilder;
-		Packet packet = MakePacket(REPMSG_DESTROY_ACK, packetBuilder, bitStream);
-		return channel->Send(packet, 0);
 	}
 
 	Client * Manager::SV_FindClient(Channel * channel)

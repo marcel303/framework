@@ -2,124 +2,43 @@
 #define STATS_H
 #pragma once
 
-#include "StatValue.h"
+#include "NetStats.h"
 #include "Timer.h"
 
-class StatsNet
-{
-public:
-	inline void Next()
-	{
-		uint64_t time = g_TimerRT.TimeUS_get();
+NET_STAT_EXTERN(Replication_BytesReceived);
+NET_STAT_EXTERN(Replication_ObjectsCreated);
+NET_STAT_EXTERN(Replication_ObjectsDestroyed);
+NET_STAT_EXTERN(Replication_ObjectsUpdated);
 
-		m_packetsSent.Add(time, 0);
-		m_packetsReceived.Add(time, 0);
-		m_bytesSent.Add(time, 0);
-		m_bytesSentOverhead.Add(time, 0);
-		m_bytesReceived.Add(time, 0);
-		m_invalidPacketCount.Add(time, 0);
-		m_invalidProtocolCount.Add(time, 0);
-	}
+NET_STAT_EXTERN(Scene_ObjectCount);
 
-	StatInt m_packetsSent;
-	StatInt m_packetsReceived;
-	StatInt m_bytesSent;
-	StatInt m_bytesSentOverhead;
-	StatInt m_bytesReceived;
-	StatInt m_rtt;
-	StatInt m_invalidPacketCount;
-	StatInt m_invalidProtocolCount;
-};
-
-class StatsRep
-{
-public:
-	inline void Next()
-	{
-		uint64_t time = g_TimerRT.TimeUS_get();
-
-		m_bytesReceived.Add(time, 0);
-		m_objectsCreated.Add(time, 0);
-		m_objectsDestroyed.Add(time, 0);
-		m_objectsUpdated.Add(time, 0);
-		m_objectsVersioned.Add(time, 0);
-	}
-
-	StatInt m_bytesReceived;
-	StatInt m_objectsCreated;
-	StatInt m_objectsDestroyed;
-	StatInt m_objectsUpdated;
-	StatInt m_objectsVersioned;
-};
-
-class StatsScene
-{
-public:
-	inline void Next()
-	{
-		uint64_t time = g_TimerRT.TimeUS_get();
-
-		m_objectCount.Add(time, 0);
-	}
-
-	StatInt m_objectCount;
-};
-
-class StatsGfx
-{
-public:
-	inline StatsGfx()
-	{
-		m_fps.SetHistorySize(20);
-	}
-
-	inline void Next()
-	{
-	}
-
-	inline void NextFps(int fps)
-	{
-		uint64_t time = g_TimerRT.TimeUS_get();
-
-		m_fps.Add(time, fps);
-	}
-
-	StatInt m_fps;
-};
+NET_STAT_EXTERN(Gfx_Fps);
 
 class Stats
 {
 public:
-	static Stats& I()
+	static Stats & I()
 	{
 		static Stats stats;
 		return stats;
 	}
 
-	inline void NextNet()
+	void CommitReplication()
 	{
-		m_net.Next();
+		const uint64_t time = g_TimerRT.TimeUS_get();
+
+		NET_STAT_COMMIT(Replication_BytesReceived, time);
+		NET_STAT_COMMIT(Replication_ObjectsCreated, time);
+		NET_STAT_COMMIT(Replication_ObjectsDestroyed, time);
+		NET_STAT_COMMIT(Replication_ObjectsUpdated, time);
 	}
 
-	inline void NextRep()
+	void CommitScene()
 	{
-		m_rep.Next();
-	}
+		const uint64_t time = g_TimerRT.TimeUS_get();
 
-	inline void NextScene()
-	{
-		m_scene.Next();
+		NET_STAT_COMMIT(Scene_ObjectCount, time);
 	}
-
-	inline void NextGfx()
-	{
-		m_gfx.Next();
-	}
-
-	StatsNet m_net;
-	StatsRep m_rep;
-	StatsScene m_scene;
-	StatsGfx m_gfx;
 
 private:
 	inline Stats()

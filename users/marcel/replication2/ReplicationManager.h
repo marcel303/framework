@@ -44,9 +44,7 @@ namespace Replication
 		virtual void OnReceive(Packet & packet, Channel * channel);
 
 		void HandleCreate(BitStream & bitStream, Channel * channel);
-		void HandleCreateAck(BitStream & bitStream, Channel * channel);
 		void HandleDestroy(BitStream & bitStream, Channel * channel);
-		void HandleDestroyAck(BitStream & bitStream, Channel * channel);
 		void HandleUpdate(BitStream & bitStream, Channel * channel);
 
 	private:
@@ -65,9 +63,6 @@ namespace Replication
 
 		void SyncClient(Client * client);
 		void SyncClientObject(Client * client, Object * object);
-
-		bool SendCreateAck(int objectID, Channel * channel);
-		bool SendDestroyAck(int objectID, Channel * channel);
 
 		Client * SV_FindClient(Channel * channel);
 		Client * CL_FindClient(Channel * channel);

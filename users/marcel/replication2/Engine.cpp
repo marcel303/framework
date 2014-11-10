@@ -273,11 +273,6 @@ void Engine::Update()
 	if (m_role & ROLE_CLIENT)
 		UpdateClient();
 	ThreadSome();
-
-	//
-
-	Stats::I().NextNet();
-	Stats::I().NextRep(); // FIXME: @ rep.
 }
 
 void Engine::UpdateServer()
@@ -301,6 +296,8 @@ void Engine::UpdateServer()
 		m_serverTimerUpdateNetReplication.ClearTick();
 
 		m_repMgr->SV_Update();
+
+		Stats::I().CommitReplication();
 	}
 }
 
@@ -310,7 +307,7 @@ void Engine::UpdateClient()
 		m_clientTimerUpdateAnimation.ReadTick();
 	while (m_clientTimerUpdateAnimation.ReadTick())
 	{
-		Stats::I().NextScene();
+		Stats::I().CommitScene();
 
 		if (m_clientClient)
 		{
@@ -344,15 +341,17 @@ void Engine::Render()
 
 	++m_clientFpsFrame;
 
+	CommitNetStats();
+
 	if (m_clientTimerFps.ReadTick())
 	{
 		m_clientTimerFps.ClearTick();
 
 		m_clientFps = m_clientFpsFrame;
 		m_clientFpsFrame = 0;
-		Stats::I().m_gfx.NextFps(m_clientFps);
+		NET_STAT_COMMIT(Gfx_Fps, m_clientTimerFps.TimeUS_get());
 
-		#if defined(DEBUG) && 0
+		#if defined(DEBUG) && 1
 		printf("Gfx: Frames per second: %d.\n", m_clientFps);
 
 		if (m_clientClient)
@@ -363,10 +362,7 @@ void Engine::Render()
 		for (ChannelManager::ChannelMapItr i = m_channelMgr->m_channels.begin(); i != m_channelMgr->m_channels.end(); ++i)
 			printf("Net: Channel %d -> %d: RTT: %d. RPQ: %d.\n", i->second->m_id, i->second->m_destinationId, i->second->m_rtt, i->second->m_rtQueue.size());
 
-		printf("Net: [AVERAGE/second] Packets sent: %.3f.\n",     Stats::I().m_net.m_packetsSent.CalcAverageFS());
-		printf("Net: [AVERAGE/second] Packets received: %.3f.\n", Stats::I().m_net.m_packetsReceived.CalcAverageFS());
-		printf("Net: [AVERAGE/second] Bytes sent: %.3f.\n",       Stats::I().m_net.m_bytesSent.CalcAverageFS());
-		printf("Net: [AVERAGE/second] Bytes received: %.3f.\n",   Stats::I().m_net.m_bytesReceived.CalcAverageFS());
+		PrintNetStats();
 		#endif
 	}
 }

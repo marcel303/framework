@@ -16,14 +16,12 @@ class EntityBrick : public Entity
 	{
 		int8_t m_fort;
 		int8_t m_hp;
-		float m_life;
 
 	public:
-		Brick_NS(EntityBrick * owner, int8_t fort, int8_t hp, float life)
+		Brick_NS(EntityBrick * owner, int8_t fort, int8_t hp)
 			: NetSerializable(owner)
 			, m_fort(fort)
 			, m_hp(hp)
-			, m_life(life)
 		{
 		}
 
@@ -37,11 +35,11 @@ class EntityBrick : public Entity
 				Serialize(brick->m_size[1]);
 				Serialize(brick->m_size[2]);
 				Serialize(brick->m_indestructible);
+				Serialize(brick->m_life);
 			}
 
 			Serialize(m_fort);
 			Serialize(m_hp);
-			Serialize(m_life);
 		}
 
 		void ChangeHP(int amount)
@@ -68,22 +66,6 @@ class EntityBrick : public Entity
 		int GetFort() const
 		{
 			return m_fort;
-		}
-
-		void ChangeLife(float amount)
-		{
-			const float newLife = Calc::Clamp(m_life + amount, 0.f, 1.f);
-
-			if (newLife != m_life)
-			{
-				m_life = newLife;
-				SetDirty();
-			}
-		}
-
-		float GetLife() const
-		{
-			return m_life;
 		}
 	};
 
@@ -118,6 +100,7 @@ private:
 
 	Brick_NS * m_brick_NS;
 	bool m_indestructible;
+	float m_life;
 
 	Mesh m_mesh;
 	ShTex m_tex;

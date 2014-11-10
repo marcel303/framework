@@ -70,24 +70,30 @@ class Entity : public NetSerializableObject
 
 			// todo : add special net sync flags for pos/vel + rot/vel
 
-
 			if (IsInit() || (entity->m_caps & (CAP_SYNC_POS | CAP_SYNC_ROT)) != 0)
 			{
 				// todo : compression, and only send if changed
 
-				if (IsInit() || ((entity->m_caps & CAP_SYNC_POS_X) != 0))
-					Serialize(entity->m_phyObject.m_position[0]);
-				if (IsInit() || ((entity->m_caps & CAP_SYNC_POS_Y) != 0))
-					Serialize(entity->m_phyObject.m_position[1]);
-				if (IsInit() || ((entity->m_caps & CAP_SYNC_POS_Z) != 0))
-					Serialize(entity->m_phyObject.m_position[2]);
+				const int posMask[3] = { CAP_SYNC_POS_X, CAP_SYNC_POS_Y, CAP_SYNC_POS_Z };
+				for (int i = 0; i < 3; ++i)
+				{
+					if (IsInit() || ((entity->m_caps & posMask[i]) != 0))
+						Serialize(entity->m_phyObject.m_position[i]);
+				}
 
-				if (IsInit() || ((entity->m_caps & CAP_SYNC_ROT_X) != 0))
-					Serialize(entity->m_phyObject.m_velocity[0]);
-				if (IsInit() || ((entity->m_caps & CAP_SYNC_ROT_Y) != 0))
-					Serialize(entity->m_phyObject.m_velocity[1]);
-				if (IsInit() || ((entity->m_caps & CAP_SYNC_ROT_Z) != 0))
-					Serialize(entity->m_phyObject.m_velocity[2]);
+				const int rotMask[3] = { CAP_SYNC_ROT_X, CAP_SYNC_ROT_Y, CAP_SYNC_ROT_Z };
+				for (int i = 0; i < 3; ++i)
+				{
+					if (IsInit() || ((entity->m_caps & rotMask[i]) != 0))
+					{
+						bool isZero = (entity->m_phyObject.m_velocity[i] == 0.0f);
+						Serialize(isZero);
+						if (!isZero)
+							Serialize(entity->m_phyObject.m_velocity[i]);
+						else
+							entity->m_phyObject.m_velocity[i] = 0.0f;
+					}
+				}
 
 			#if 0
 				printf("x/y/z: %g, %g, %g\n",
@@ -165,15 +171,15 @@ public:
 //private: // FIXME
 	Client* m_client;
 	Scene* m_scene;
-	int m_id;
+	uint16_t m_id;
 	bool m_active;
-	int m_caps;
+	uint32_t m_caps;
 
 	std::string m_className;
 
 	std::vector<AABBObject*> m_aabbObjects;
 
-	int m_repObjectID;
+	uint16_t m_repObjectID;
 	Entity_NS * m_entity_NS;
 
 	// CD & Physics.

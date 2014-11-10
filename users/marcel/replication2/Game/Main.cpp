@@ -1,4 +1,4 @@
-#if defined(DEBUG)
+#if defined(DEBUG) && 0
 #define GFX_W 320
 #define GFX_H 240
 #define GFX_FS false
@@ -42,7 +42,7 @@ static void ThreadSome(int delay);
 static void TestReplication();
 
 template <class T>
-void RenderStatValue(StatValue<T>& value, const std::string& name, int x, int y, int w, int h)
+void RenderStatValue(NetStatsValue<T> & value, const std::string & name, int x, int y, int w, int h)
 {
 	static ShShader shader(new ResShader());
 	shader->InitDepthTest(false, CMP_EQ);
@@ -63,32 +63,30 @@ void RenderStatValue(StatValue<T>& value, const std::string& name, int x, int y,
 	Renderer::I().MatV().PushI();
 	Renderer::I().MatP().PushI(ortho);
 
-	const T min = value.CalcMin();
-	const T max = value.CalcMax();
+	const T min = (T)0;
+	const T max = value.CalculateMax();
 
 	T diff = max - min;
 
 	if (diff == 0) diff = 1;
 
-	//const T last = value.m_values[value.Loop(value.m_position - 1)].m_value;
-
 	glBegin(GL_LINES);
 	{
-		for (int i = 0; i < value.m_size - 1; ++i)
+		for (int i = 0; i < value.GetSize() - 1; ++i)
 		{
-			const int position1 = value.Loop(value.m_position - value.m_size + i + 0);
-			const int position2 = value.Loop(value.m_position - value.m_size + i + 1);
+			const int offset1 = i + 0;
+			const int offset2 = i + 1;
 
-			const int x1 = (i + 0) * w / (value.m_size - 1);
-			const int x2 = (i + 1) * w / (value.m_size - 1);
+			const int x1 = (i + 0) * w / (value.GetSize() - 1);
+			const int x2 = (i + 1) * w / (value.GetSize() - 1);
 
-			const T value1 = (diff - (value.m_values[position1].m_value - min)) * h / diff;
-			const T value2 = (diff - (value.m_values[position2].m_value - min)) * h / diff;
+			const T value1 = (diff - (value.GetValue(offset1) - min)) * h / diff;
+			const T value2 = (diff - (value.GetValue(offset2) - min)) * h / diff;
 
 			glColor3f(0.0f, 1.0f, 0.0f);
-			glVertex3f(static_cast<float>(x + x1), static_cast<float>(y + value1), 1.0f);
+			glVertex3f(static_cast<float>(x + x1), static_cast<float>(y + value1 + 0.01f), 1.0f);
 			glColor3f(0.0f, 1.0f, 0.0f);
-			glVertex3f(static_cast<float>(x + x2), static_cast<float>(y + value2), 1.0f);
+			glVertex3f(static_cast<float>(x + x2), static_cast<float>(y + value2 + 0.01f), 1.0f);
 		}
 	}
 	glEnd();
@@ -240,16 +238,15 @@ void TestReplication()
 
 					if (renderStats)
 					{
-						RenderStatValue<int>(Stats::I().m_net.m_packetsSent,      "NET: Packets sent",      0,   0,   295, 45);
-						RenderStatValue<int>(Stats::I().m_net.m_packetsReceived,  "NET: Packets received",  300, 0,   295, 45);
-						RenderStatValue<int>(Stats::I().m_net.m_bytesSent,        "NET: Bytes sent",        0,   50,  295, 45);
-						RenderStatValue<int>(Stats::I().m_net.m_bytesReceived,    "NET: Bytes received",    300, 50,  295, 45);
-						RenderStatValue<int>(Stats::I().m_rep.m_bytesReceived,    "REP: Bytes received",    0,   100, 295, 45);
-						RenderStatValue<int>(Stats::I().m_rep.m_objectsCreated,   "REP: Objects created",   300, 100, 295, 45);
-						RenderStatValue<int>(Stats::I().m_rep.m_objectsDestroyed, "REP: Objects destroyed", 0,   150, 295, 45);
-						RenderStatValue<int>(Stats::I().m_rep.m_objectsUpdated,   "REP: Objects updated",   300, 150, 295, 45);
-						RenderStatValue<int>(Stats::I().m_rep.m_objectsVersioned, "REP: Objects versioned", 0,   200, 295, 45);
-						RenderStatValue<int>(Stats::I().m_gfx.m_fps,              "GFX: FPS",               0,   250, 295, 45);
+						RenderStatValue<int>(NetStat_PacketsSent,          "NET: Packets sent",      0,   0,   295, 45);
+						RenderStatValue<int>(NetStat_PacketsReceived,      "NET: Packets received",  300, 0,   295, 45);
+						RenderStatValue<int>(NetStat_BytesSent,            "NET: Bytes sent",        0,   50,  295, 45);
+						RenderStatValue<int>(NetStat_BytesReceived,        "NET: Bytes received",    300, 50,  295, 45);
+						RenderStatValue<int>(Replication_BytesReceived,    "REP: Bytes received",    0,   100, 295, 45);
+						RenderStatValue<int>(Replication_ObjectsCreated,   "REP: Objects created",   300, 100, 295, 45);
+						RenderStatValue<int>(Replication_ObjectsDestroyed, "REP: Objects destroyed", 0,   150, 295, 45);
+						RenderStatValue<int>(Replication_ObjectsUpdated,   "REP: Objects updated",   300, 150, 295, 45);
+						RenderStatValue<int>(Gfx_Fps,                      "GFX: FPS",               0,   250, 295, 45);
 					}
 
 					////////////

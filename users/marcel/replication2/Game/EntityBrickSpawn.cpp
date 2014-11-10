@@ -19,10 +19,12 @@ EntityBrickSpawn::~EntityBrickSpawn()
 {
 }
 
+//todo : limit reliable transmission bandwidth on retry
+
 void EntityBrickSpawn::UpdateLogic(float dt)
 {
-	//int todo = 50 - GetScene()->FindEntitiesByClassName("Brick").size();
-	int todo = 5 - GetScene()->FindEntitiesByClassName("Brick").size();
+	int todo = 50 - GetScene()->FindEntitiesByClassName("Brick").size();
+	//int todo = 5 - GetScene()->FindEntitiesByClassName("Brick").size();
 
 	while (m_timer.ReadTick() && todo > 0) // todo : should updated timer based on dt. create game timer?
 	{
@@ -36,4 +38,7 @@ void EntityBrickSpawn::UpdateLogic(float dt)
 		brick->Initialize(Vec3(x, 0.0f, z), Vec3(15.0f, size, 15.0f), false);
 		GetScene()->AddEntityQueued(ShEntity(brick));
 	}
+
+	if (todo == 0)
+		m_timer.ClearTick();
 }

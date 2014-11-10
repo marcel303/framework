@@ -28,9 +28,6 @@ public:
 	void RotateH(float angle);
 	void RotateV(float angle);
 
-	float m_rotationX;
-	float m_rotationY;
-
 	// Controls.
 	struct
 	{
@@ -43,22 +40,47 @@ public:
 		bool m_jump;
 		bool m_fire;
 
+		float m_rotationImpulseH;
+		float m_rotationImpulseV;
+
+	} m_controls;
+
+	struct
+	{
+		float m_rotationX;
+		float m_rotationY;
+
 		// Accelerations.
 		float m_fAccel; // Forward speed.
 		float m_sAccel; // Strafe speed.
 		float m_vAccel; // Vertical speed.
-
-		float m_rotationImpulseH;
-		float m_rotationImpulseV;
-	} m_controls;
+	} m_currentValues, m_serializedValues;
 
 	virtual void SerializeStruct()
 	{
-		Serialize(m_controls.m_fAccel); // todo : 8.8-ish compression
-		Serialize(m_controls.m_sAccel);
-		Serialize(m_controls.m_vAccel);
-		Serialize(m_rotationX); // todo : u16-ish compression
-		Serialize(m_rotationY);
+		bool rotationChanged =
+			m_currentValues.m_rotationX != m_serializedValues.m_rotationX ||
+			m_currentValues.m_rotationY != m_serializedValues.m_rotationY;
+		Serialize(rotationChanged);
+		if (rotationChanged)
+		{
+			Serialize(m_currentValues.m_rotationX); // todo : u16-ish compression
+			Serialize(m_currentValues.m_rotationY);
+		}
+
+		bool accelChanged =
+			m_currentValues.m_fAccel != m_serializedValues.m_fAccel ||
+			m_currentValues.m_sAccel != m_serializedValues.m_sAccel ||
+			m_currentValues.m_vAccel != m_serializedValues.m_vAccel;
+		Serialize(accelChanged);
+		if (accelChanged)
+		{
+			Serialize(m_currentValues.m_fAccel); // todo : 8.8-ish compression
+			Serialize(m_currentValues.m_sAccel);
+			Serialize(m_currentValues.m_vAccel);
+		}
+
+		m_serializedValues = m_currentValues;
 	}
 
 //private:

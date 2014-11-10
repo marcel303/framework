@@ -90,6 +90,7 @@
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="SceneRenderer.cpp" />
     <ClCompile Include="Engine.cpp" />
+    <ClCompile Include="Stats.cpp" />
     <ClCompile Include="System.cpp" />
     <ClCompile Include="SystemDefault.cpp" />
     <ClCompile Include="Event\EventManager.cpp" />
@@ -190,7 +191,6 @@
     <ClInclude Include="Scene.h" />
     <ClInclude Include="SceneRenderer.h" />
     <ClInclude Include="Stats.h" />
-    <ClInclude Include="StatValue.h" />
     <ClInclude Include="Types.h" />
     <ClInclude Include="Vec3.h" />
     <ClInclude Include="Engine.h" />
