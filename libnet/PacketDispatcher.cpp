@@ -19,7 +19,7 @@ void PacketDispatcher::Dispatch(Packet & packet, Channel * channel)
 		if (protocolId >= LIBNET_DISPATCHER_MAX_PROTOCOLS || m_protocolListeners[protocolId] == 0)
 		{
 			LOG_ERR("dispatcher: dispatch: invalid protocol", 0);
-			NetStats::Inc(NetStat_ProtocolInvalid);
+			NET_STAT_INC(NetStat_ProtocolInvalid);
 			NetAssert(false);
 		}
 		else
@@ -31,7 +31,7 @@ void PacketDispatcher::Dispatch(Packet & packet, Channel * channel)
 			else
 			{
 				LOG_ERR("dispatcher: dispatch: protocol is masked by channel", 0);
-				NetStats::Inc(NetStat_ProtocolMasked);
+				NET_STAT_INC(NetStat_ProtocolMasked);
 				return;
 			}
 		}

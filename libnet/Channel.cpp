@@ -96,8 +96,8 @@ bool Channel::Connect(const NetAddress & address)
 
 	const Packet packet = packetBuilder.ToPacket();
 
-	NetStats::Inc(NetStat_PacketsSent);
-	NetStats::Inc(NetStat_BytesSent, packet.GetSize());
+	NET_STAT_INC(NetStat_PacketsSent);
+	NET_STAT_ADD(NetStat_BytesSent, packet.GetSize());
 
 	return m_socket->Send(packet.GetData(), packet.GetSize(), &m_address);
 }
@@ -348,8 +348,8 @@ bool Channel::SendUnreliable(const Packet & packet, bool sendImmediately)
 		headerBuilder.CopyTo(buffer, headerSize);
 		packet.CopyTo(buffer + headerSize, packetSize);
 
-		NetStats::Inc(NetStat_PacketsSent);
-		NetStats::Inc(NetStat_BytesSent, bufferSize);
+		NET_STAT_INC(NetStat_PacketsSent);
+		NET_STAT_ADD(NetStat_BytesSent, bufferSize);
 
 		return m_socket->Send(buffer, bufferSize, &m_address);
 	}
@@ -433,8 +433,8 @@ bool Channel::Receive(ReceiveData & rcvData)
 
 			OnReceive();
 
-			NetStats::Inc(NetStat_PacketsReceived);
-			NetStats::Inc(NetStat_BytesReceived, rcvData.m_size);
+			NET_STAT_INC(NetStat_PacketsReceived);
+			NET_STAT_ADD(NetStat_BytesReceived, rcvData.m_size);
 			return true;
 		}
 	}
@@ -450,8 +450,8 @@ bool Channel::Receive(ReceiveData & rcvData)
 		{
 			OnReceive();
 
-			NetStats::Inc(NetStat_PacketsReceived);
-			NetStats::Inc(NetStat_BytesReceived, rcvData.m_size);
+			NET_STAT_INC(NetStat_PacketsReceived);
+			NET_STAT_ADD(NetStat_BytesReceived, rcvData.m_size);
 			return true;
 		}
 	}

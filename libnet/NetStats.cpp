@@ -1,40 +1,51 @@
-#include <string.h>
 #include "Log.h"
 #include "NetStats.h"
+#include "Timer.h"
 
-const static uint32_t kMaxNetStats = 32;
+NET_STAT_DEFINE(NetStat_BytesSent);
+NET_STAT_DEFINE(NetStat_BytesReceived);
+NET_STAT_DEFINE(NetStat_PacketsSent);
+NET_STAT_DEFINE(NetStat_PacketsReceived);
+NET_STAT_DEFINE(NetStat_ProtocolInvalid);
+NET_STAT_DEFINE(NetStat_ProtocolMasked);
 
-struct NetStatsData
+#if LIBNET_ENABLE_NET_STATS
+
+static void PrintNetStat(const char * name, const NetStatsValue<int> & stat)
 {
-	NetStatsData()
-	{
-		memset(m_values, 0, sizeof(m_values));
-	}
-
-	uint32_t m_values[kMaxNetStats];
-} s_netStats;
-
-void NetStats::Inc(NetStat stat)
-{
-	s_netStats.m_values[stat] += 1;
+	LOG_INF("%s: min=%08u, max=%08u, total=%08u, average=%08.2f",
+		name,
+		stat.CalculateMin(),
+		stat.CalculateMax(),
+		stat.GetTotalValue(),
+		stat.CalculateAveragePerSecond());
 }
 
-void NetStats::Inc(NetStat stat, uint32_t count)
+void PrintNetStats()
 {
-	s_netStats.m_values[stat] += count;
+	PrintNetStat("bytes sent      ", NetStat_BytesSent);
+	PrintNetStat("bytes received  ", NetStat_BytesReceived);
+	PrintNetStat("packets sent    ", NetStat_PacketsSent);
+	PrintNetStat("packets received", NetStat_PacketsReceived);
+	PrintNetStat("invalid protocol", NetStat_ProtocolInvalid);
+	PrintNetStat("masked protocol ", NetStat_ProtocolMasked);
 }
 
-void NetStats::Show()
+void CommitNetStats()
 {
-#define SHOW(stat) LOG_INF("%s: %u", #stat, s_netStats.m_values[stat])
+	const uint64_t time = g_TimerRT.TimeUS_get();
 
-	SHOW(NetStat_BytesSent);
-	SHOW(NetStat_BytesReceived);
-	SHOW(NetStat_PacketsSent);
-	SHOW(NetStat_PacketsReceived);
-	SHOW(NetStat_ProtocolInvalid);
-	SHOW(NetStat_ProtocolMasked);
-
-#undef SHOW
+	NET_STAT_COMMIT(NetStat_BytesSent, time);
+	NET_STAT_COMMIT(NetStat_BytesReceived, time);
+	NET_STAT_COMMIT(NetStat_PacketsSent, time);
+	NET_STAT_COMMIT(NetStat_PacketsReceived, time);
+	NET_STAT_COMMIT(NetStat_ProtocolInvalid, time);
+	NET_STAT_COMMIT(NetStat_ProtocolMasked, time);
 }
 
+#else
+
+void PrintNetStats() { }
+void CommitNetStats() { }
+
+#endif

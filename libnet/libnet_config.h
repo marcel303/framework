@@ -5,7 +5,7 @@
  * disabled so you can safely step through code without your channels expiring.
  */
 #ifndef LIBNET_CHANNEL_ENABLE_TIMEOUTS
-	#define LIBNET_CHANNEL_ENABLE_TIMEOUTS 1
+	#define LIBNET_CHANNEL_ENABLE_TIMEOUTS 0
 #endif
 
 /* Packing batches multiple packets into one datagram to improve throughput.
@@ -33,7 +33,7 @@
 /* aaAdd a similated latency (MS) to packet delivery.
  */
 #ifndef LIBNET_CHANNEL_SIMULATED_PING
-	//#define LIBNET_CHANNEL_SIMULATED_PING 250
+	//#define LIBNET_CHANNEL_SIMULATED_PING 50
 	#define LIBNET_CHANNEL_SIMULATED_PING 0
 #endif
 
@@ -68,4 +68,10 @@
  */
 #ifndef LIBNET_DISPATCHER_MAX_PROTOCOLS
 	#define LIBNET_DISPATCHER_MAX_PROTOCOLS 32
+#endif
+
+/* If set to 1, net stats will be available. Otherwise, they're compiled out.
+ */
+#ifndef LIBNET_ENABLE_NET_STATS
+	#define LIBNET_ENABLE_NET_STATS 1
 #endif
