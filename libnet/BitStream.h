@@ -206,11 +206,13 @@ public:
 
 	std::string ReadString()
 	{
-		ReadAlign();
+		bool smallSize = ReadBit();
 
 		uint16_t size;
-		CheckReadCursor(sizeof(size) << 3);
-		Read(size);
+		if (smallSize)
+			size = ReadBits<uint16_t>(5);
+		else
+			Read(size);
 
 		std::string s;
 		s.resize(size);
@@ -221,13 +223,15 @@ public:
 
 	void WriteString(const std::string & s)
 	{
-		WriteAlign();
-
 		Assert(s.length() <= 65535);
 		const uint16_t size = s.length();
 
-		CheckWriteCursor(sizeof(size) << 3);
-		Write(size);
+		const bool smallSize = size < 32;
+		WriteBit(smallSize);
+		if (smallSize)
+			WriteBits(size, 5);
+		else
+			Write(size);
 
 		WriteAlignedBytes(&s[0], size);
 	}
