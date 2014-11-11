@@ -8,12 +8,21 @@ namespace CD
 	}
 
 	// GroupFltACL
+	GroupFltACL::GroupFltACL()
+		: m_deny(0)
+		, m_permit(0)
+		, m_default(true)
+	{
+	}
+
 	bool GroupFltACL::Accept(Group group, Object* object)
 	{
-		if (m_deny.count(group) != 0)
+		Assert(group < kMaxGroups);
+
+		if ((m_deny & (1 << group)) != 0)
 			return false;
 
-		if (m_permit.count(group) != 0)
+		if ((m_permit & (1 << group)) != 0)
 			return true;
 
 		return m_default;
@@ -21,12 +30,16 @@ namespace CD
 
 	void GroupFltACL::Permit(Group group)
 	{
-		m_permit[group] = 1;
+		Assert(group < kMaxGroups);
+
+		m_permit |= (1 << group);
 	}
 
 	void GroupFltACL::Deny(Group group)
 	{
-		m_deny[group] = 1;
+		Assert(group < kMaxGroups);
+
+		m_deny |= (1 << group);
 	}
 
 	void GroupFltACL::Default(bool permit)

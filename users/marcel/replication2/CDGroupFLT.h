@@ -3,6 +3,7 @@
 #pragma once
 
 #include <map>
+#include <stdint.h>
 #include "CDObject.h"
 
 namespace CD
@@ -19,6 +20,8 @@ namespace CD
 	class GroupFltACL : public GroupFlt
 	{
 	public:
+		GroupFltACL();
+
 		virtual bool Accept(Group group, Object* object);
 
 		void Permit(Group group);
@@ -26,8 +29,10 @@ namespace CD
 		void Default(bool permit);
 
 	private:
-		std::map<Group, int> m_permit;
-		std::map<Group, int> m_deny;
+		const static int kMaxGroups = 32;
+
+		uint32_t m_permit;
+		uint32_t m_deny;
 		bool m_default;
 	};
 
