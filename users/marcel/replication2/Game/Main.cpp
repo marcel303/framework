@@ -41,6 +41,7 @@
 static void ThreadSome(int delay);
 static void TestReplication();
 
+#if LIBNET_ENABLE_NET_STATS
 template <class T>
 void RenderStatValue(NetStatsValue<T> & value, const std::string & name, int x, int y, int w, int h)
 {
@@ -97,6 +98,7 @@ void RenderStatValue(NetStatsValue<T> & value, const std::string & name, int x, 
 	Renderer::I().MatV().Pop();
 	Renderer::I().MatP().Pop();
 }
+#endif
 
 void ThreadSome(int delay)
 {
@@ -106,18 +108,44 @@ void ThreadSome(int delay)
 class TestEventHandler : public EventHandler
 {
 public:
-	TestEventHandler()
+	TestEventHandler(Engine * engine)
 		: EventHandler()
+		, m_engine(engine)
+		, m_stop(false)
 	{
-		m_stop = false;
 	}
 
 	virtual void OnEvent(Event& event)
 	{
 		if (event.type == EVT_QUIT)
 			m_stop = true;
+		if (event.type == EVT_KEY && event.key.key == IK_g && event.key.state)
+		{
+			Scene * scene = m_engine->m_serverScene;
+
+			std::vector<ShEntity> players = scene->FindEntitiesByClassName("Player");
+
+			for (size_t i = 0; i < players.size(); ++i)
+			{
+				Entity * player = players[i].get();
+				
+				for (int j = 0; j < 10; ++j)
+				{
+					Vec3 position = player->GetPosition();
+					float a = Calc::Random(Calc::m2PI);
+					float x = position[0] + std::sin(a) * 10.0f;
+					float z = position[2] + std::cos(a) * 10.0f;
+					float size = 10.0f + Calc::Random(0.0f, 10.0f);
+
+					EntityBrick* brick = new EntityBrick();
+					brick->Initialize(Vec3(x, 0.0f, z), Vec3(5.0f, size, 5.0f), false);
+					scene->AddEntityQueued(ShEntity(brick));
+				}
+			}
+		}
 	}
 
+	Engine * m_engine;
 	bool m_stop;
 };
 
@@ -167,7 +195,7 @@ void TestReplication()
 
 			engine->Initialize(role, localConnect);
 
-			TestEventHandler eventHandler;
+			TestEventHandler eventHandler(engine);
 
 			EventManager::I().AddEventHandler(&eventHandler);
 
@@ -236,6 +264,7 @@ void TestReplication()
 
 					engine->Render();
 
+				#if LIBNET_ENABLE_NET_STATS
 					if (renderStats)
 					{
 						RenderStatValue<int>(NetStat_PacketsSent,          "NET: Packets sent",      0,   0,   295, 45);
@@ -248,6 +277,7 @@ void TestReplication()
 						RenderStatValue<int>(Replication_ObjectsUpdated,   "REP: Objects updated",   300, 150, 295, 45);
 						RenderStatValue<int>(Gfx_Fps,                      "GFX: FPS",               0,   250, 295, 45);
 					}
+				#endif
 
 					////////////
 					Renderer::I().MatW().Pop();
