@@ -183,8 +183,11 @@ void Entity::OnSceneAdd(Scene* scene)
 
 		m_scene->GetPhyScene()->AddObject(object);
 
-		for (size_t j = 0; j < object->GetGeometry().size(); ++j)
-			m_cdFlt.DenyObject(object->GetGeometry()[j].get());
+		if (m_caps & CAP_DYNAMIC_PHYSICS)
+		{
+			for (size_t j = 0; j < object->GetGeometry().size(); ++j)
+				m_cdFlt.DenyObject(object->GetGeometry()[j].get());
+		}
 	}
 
 	if (m_aabbObjects.size() > 0)
