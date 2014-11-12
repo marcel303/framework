@@ -27,8 +27,8 @@ namespace Replication
 		void SV_DestroyClient(int clientID);
 		void CL_DestroyClient(int clientID);
 
-		int SV_CreateObject(const std::string & className, NetSerializableObject * serializableObject);
-		void SV_DestroyObject(int objectID);
+		int SV_AddObject(const std::string & className, IObject * object);
+		void SV_RemoveObject(int objectID);
 
 		bool CL_DestroyObject(Client * client, int objectID);
 		void CL_Shutdown();

@@ -7,6 +7,7 @@
 
 namespace Replication
 {
+	// todo : remove ObjectState class / refactor so it's only used for the create/destroy list
 	class ObjectState
 	{
 	public:
@@ -14,7 +15,6 @@ namespace Replication
 
 		Object * m_object;
 		int m_objectID; // Must be cached instead of derived from m_object, because it must exist when object deleted for destroy messages to clients to be repeated.
-		bool m_existsOnClient;
 		bool m_isDestroyed;
 	};
 

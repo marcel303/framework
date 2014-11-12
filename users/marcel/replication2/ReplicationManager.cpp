@@ -19,7 +19,7 @@ namespace Replication
 	Manager::~Manager()
 	{
 		while (m_serverObjects.size() > 0)
-			SV_DestroyObject(m_serverObjects.begin()->first);
+			SV_RemoveObject(m_serverObjects.begin()->first);
 
 		while (m_serverClients.size() > 0)
 			SV_DestroyClient(m_serverClients.begin()->first);
@@ -65,7 +65,7 @@ namespace Replication
 		}
 	}
 
-	int Manager::SV_CreateObject(const std::string & className, NetSerializableObject * serializableObject)
+	int Manager::SV_AddObject(const std::string & className, IObject * object)
 	{
 		Assert(serializableObject);
 
@@ -75,18 +75,18 @@ namespace Replication
 		int objectID = m_objectIDs.Allocate();
 		int creationID = m_serverObjectCreationId++;
 
-		Object * object = new Object();
-		object->SV_Initialize(objectID, creationID, className, serializableObject);
+		Object * _object = new Object();
+		_object->SV_Initialize(objectID, creationID, className, object);
 
-		m_serverObjects[objectID] = object;
+		m_serverObjects[objectID] = _object;
 
 		for (ClientCollItr i = m_serverClients.begin(); i != m_serverClients.end(); ++i)
-			SyncClientObject(i->second, object);
+			SyncClientObject(i->second, _object);
 
 		return objectID;
 	}
 
-	void Manager::SV_DestroyObject(int objectID)
+	void Manager::SV_RemoveObject(int objectID)
 	{
 		// todo : we should probably mark the object destroyed, and *really* destroy it once the
 		//        last update serialization has taken place, to ensure any critical updates
@@ -125,6 +125,7 @@ namespace Replication
 				// add object to the destroyed object list
 
 				Assert(!j->m_isDestroyed);
+				j->m_object = 0;
 				j->m_isDestroyed = true;
 				client->m_createdOrDestroyed.push_back(*j);
 			}
@@ -169,7 +170,7 @@ namespace Replication
 			while (client->m_clientObjects.size() > 0)
 			{
 				Object * object = client->m_clientObjects.begin()->second;
-				CL_DestroyObject(client, object->m_objectID);
+				CL_DestroyObject(client, object->GetObjectID());
 			}
 
 			//CL_DestroyClient(m_clientClients.begin()->first);
@@ -206,7 +207,7 @@ namespace Replication
 
 					BitStream bitStream;
 
-					const uint16_t objectID = j->m_objectID;
+					const uint16_t objectID = j->m_object->GetObjectID();
 					const std::string & className = j->m_object->m_className;
 
 					bitStream.Write(objectID);
@@ -239,7 +240,7 @@ namespace Replication
 
 				BitStream bitStream;
 
-				const uint16_t objectID = j->m_objectID;
+				const uint16_t objectID = j->m_object->GetObjectID();
 
 				bitStream.Write(objectID);
 
@@ -274,19 +275,19 @@ namespace Replication
 		m_handler = handler;
 	}
 
-	bool Manager::OnObjectCreate(Client * client, Object * object)
+	bool Manager::OnObjectCreate(Client * client, Object * _object)
 	{
 		Assert(client);
-		Assert(object);
+		Assert(_object);
 
 		Assert(m_handler);
 
-		NetSerializableObject * serializableObject;
+		IObject * object;
 
 		// Retrieve parameters through callback.
-		if (m_handler->OnReplicationObjectCreate1(client, object->m_className, &serializableObject, &object->m_up))
+		if (m_handler->OnReplicationObjectCreate1(client, _object->m_className, &object, &_object->m_up))
 		{
-			object->CL_Initialize2(serializableObject);
+			_object->CL_Initialize2(object);
 			return true;
 		}
 		else

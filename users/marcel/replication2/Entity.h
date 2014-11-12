@@ -11,10 +11,9 @@
 #include "Mat4x4.h"
 #include "NetSerializable.h"
 #include "PhyObject.h"
+#include "ReplicationObject.h"
 #include "ResShader.h"
 #include "Scene.h"
-
-#undef GetClassName
 
 template <typename T> // todo : remove this class
 class NetValue
@@ -49,7 +48,7 @@ public:
 	}
 };
 
-class Entity : public NetSerializableObject
+class Entity : public NetSerializableObject, public Replication::IObject
 {
 	class Entity_NS : public NetSerializable
 	{
@@ -105,6 +104,16 @@ class Entity : public NetSerializableObject
 		}
 	};
 
+	virtual uint16_t GetClassID() const { return kClassIDInvalid; }
+	virtual const char * ClassName() const { return m_className.c_str(); }
+	virtual bool RequiresUpdating() const { return true; }
+	virtual bool RequiresUpdate() const { return true; }
+
+	virtual bool Serialize(BitStream & bitStream, bool init, bool send)
+	{
+		return NetSerializableObject::Serialize(init, send, bitStream);
+	}
+
 public:
 	enum CAPS
 	{
@@ -138,7 +147,6 @@ public:
 	virtual Mat4x4 GetTransform() const;
 	Vec3 GetPosition() const;
 	Vec3 GetOrientation() const;
-	const std::string& GetClassName() const;
 
 	void SetClassName(const std::string& className);
 	void SetScene(Scene* scene);

@@ -39,14 +39,14 @@ namespace Replication
 	{
 		Assert(object);
 
-		m_clientObjects[object->m_objectID] = object;
+		m_clientObjects[object->GetObjectID()] = object;
 	}
 
 	void Client::CL_RemoveObject(Object * object)
 	{
 		Assert(object);
 
-		m_clientObjects.erase(object->m_objectID);
+		m_clientObjects.erase(object->GetObjectID());
 	}
 
 	Object * Client::CL_FindObject(int objectID)

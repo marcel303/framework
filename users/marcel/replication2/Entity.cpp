@@ -89,11 +89,6 @@ Vec3 Entity::GetOrientation() const
 	return GetTransform().Mul(Vec4(0.0f, 0.0f, 1.0f, 0.0f)).XYZ();
 }
 
-const std::string& Entity::GetClassName() const
-{
-	return m_className;
-}
-
 void Entity::SetClassName(const std::string& className)
 {
 	m_className = className;

@@ -7,45 +7,45 @@
 namespace Replication
 {
 	Object::Object()
+		: IObject()
 	{
-		m_objectID = 0;
 		m_up = 0;
-		m_serverSerializableObject = 0;
-		m_clientSerializableObject = 0;
+		m_serverObject = 0;
+		m_clientObject = 0;
 		m_serverNeedUpdate = false;
 		m_serverObjectCreationId = 0;
 	}
 
-	void Object::SV_Initialize(int objectID, int creationID, const std::string & className, NetSerializableObject * serializableObject)
+	void Object::SV_Initialize(int objectID, int creationID, const std::string & className, IObject * object)
 	{
-		Assert(serializableObject);
+		Assert(object);
 
-		m_objectID = objectID;
+		SetObjectID(objectID);
 		m_className = className;
-		m_serverSerializableObject = serializableObject;
+		m_serverObject = object;
 		m_serverNeedUpdate = RequireUpdating();
 		m_serverObjectCreationId = creationID;
 	}
 
 	void Object::CL_Initialize1(int objectID, const std::string & className)
 	{
-		m_objectID = objectID;
+		SetObjectID(objectID);
 		m_className = className;
 	}
 
-	void Object::CL_Initialize2(NetSerializableObject * serializableObject)
+	void Object::CL_Initialize2(IObject * object)
 	{
-		m_clientSerializableObject = serializableObject;
+		m_clientObject = object;
 	}
 
 	bool Object::Serialize(BitStream & bitStream, bool init, bool send)
 	{
-		NetSerializableObject * serializableObject =
+		IObject * object =
 			send
-			? m_serverSerializableObject
-			: m_clientSerializableObject;
+			? m_serverObject
+			: m_clientObject;
 
-		return serializableObject->Serialize(init, send, bitStream);
+		return object->Serialize(bitStream, init, send);
 	}
 
 	bool Object::RequireUpdating() const

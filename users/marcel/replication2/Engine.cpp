@@ -351,7 +351,8 @@ void Engine::Render()
 		m_clientFpsFrame = 0;
 		NET_STAT_COMMIT(Gfx_Fps, m_clientTimerFps.TimeUS_get());
 
-		#if defined(DEBUG) && 1
+		//#if defined(DEBUG) && 1
+		#if 1
 		printf("Gfx: Frames per second: %d.\n", m_clientFps);
 
 		if (m_clientClient)
@@ -453,14 +454,14 @@ void Engine::SV_OnChannelDisconnect(Channel* channel)
 	}
 }
 
-bool Engine::OnReplicationObjectCreate1(Replication::Client* client, const std::string& className, NetSerializableObject** out_serializableObject, void** out_up)
+bool Engine::OnReplicationObjectCreate1(Replication::Client* client, const std::string& className, Replication::IObject** out_object, void** out_up)
 {
 	// TODO: build list.
 	Entity* entity = CreateEntity(client->GetClient(), className);
 
 	if (entity)
 	{
-		*out_serializableObject = entity;
+		*out_object = entity;
 		*out_up = entity;
 		return true;
 	}
@@ -475,7 +476,8 @@ void Engine::OnReplicationObjectCreate2(Replication::Client* client, void* up)
 	Entity* entity1 = (Entity*)up;
 	ShEntity entity2 = ShEntity(entity1);
 
-	LOG_DBG("OnReplicationObjectCreate2: adding entity of type '%s' to scene", entity1->GetClassName().c_str());
+	LOG_DBG("OnReplicationObjectCreate2: adding entity of type '%s' to scene",
+		static_cast<Replication::IObject*>(entity1)->ClassName());
 
 	m_clientClient->m_clientScene->AddEntity(entity2, entity2->m_id);
 }

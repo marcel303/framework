@@ -51,7 +51,7 @@ public:
 	virtual void SV_OnChannelDisconnect(Channel* channel);
 	virtual void CL_OnChannelConnect(Channel* channel) { }
 	virtual void CL_OnChannelDisconnect(Channel* channel) { }
-	virtual bool OnReplicationObjectCreate1(Replication::Client* client, const std::string& className, NetSerializableObject** out_serializableObject, void** out_up);
+	virtual bool OnReplicationObjectCreate1(Replication::Client* client, const std::string& className, Replication::IObject** out_object, void** out_up);
 	virtual void OnReplicationObjectCreate2(Replication::Client* client, void* up);
 	virtual void OnReplicationObjectDestroy(Replication::Client* client, void* up);
 
