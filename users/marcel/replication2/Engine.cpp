@@ -181,7 +181,7 @@ bool Engine::Shutdown()
 	{
 		DB_TRACE("removing client side client");
 
-		m_channelMgr->DestroyChannel(m_clientClient->m_channel);
+		m_clientClient->m_channel->Disconnect(true, false);
 		SAFE_FREE(m_clientClient);
 	}
 
