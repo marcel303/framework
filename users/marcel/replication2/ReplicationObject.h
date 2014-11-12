@@ -13,19 +13,21 @@ namespace Replication
 	// todo : add replication object interface. game must inherit. add objects to replication mgr that are already an object.
 	//        removes the additional overhead of creating separate objects. move away from storing NetSerializableObject here
 
-	class IObject // todo : rename, once Object itself has been renamed
+	class Object // todo : rename, once Object itself has been renamed
 	{
 		uint16_t m_objectID;
+		uint32_t m_creationID;
 
 	public:
 		static const uint16_t kClassIDInvalid = -1;
 
-		IObject()
+		Object()
 			: m_objectID(-1)
+			, m_creationID(-1)
 		{
 		}
 
-		virtual ~IObject()
+		virtual ~Object()
 		{
 		}
 
@@ -36,47 +38,13 @@ namespace Replication
 
 		virtual bool Serialize(BitStream & bitStream, bool init, bool send) = 0;
 
+		//
+
+		void SetCreationID(uint32_t id) { m_creationID = id; }
+		uint32_t GetCreationID() const { return m_creationID; }
+
 		void SetObjectID(uint16_t id) { m_objectID = id; }
 		uint16_t GetObjectID() const { return m_objectID; }
-	};
-
-	class Object : public IObject // todo : remove Object class eventually
-	{
-	public:
-		Object();
-
-		void Initialize(int objectID, int creationID, IObject * object);
-
-		virtual uint16_t GetClassID() const
-		{
-			return m_object->GetClassID();
-		}
-
-		virtual const char * ClassName() const
-		{
-			return m_object->ClassName();
-		}
-
-		virtual bool RequiresUpdating() const
-		{
-			return m_object->RequiresUpdating();
-		}
-
-		virtual bool RequiresUpdate() const
-		{
-			return m_object->RequiresUpdate();
-		}
-
-		virtual bool Serialize(BitStream & bitStream, bool init, bool send)
-		{
-			return m_object->Serialize(bitStream, init, send);
-		}
-
-		// FIXME: private
-	public:
-		IObject * m_object;
-
-		int m_serverObjectCreationId;
 	};
 }
 

@@ -10,9 +10,9 @@ namespace Replication
 	class Handler
 	{
 	public:
-		virtual bool OnReplicationObjectCreate1(Client * client, const std::string & className, IObject ** out_object) = 0;
-		virtual void OnReplicationObjectCreate2(Client * client, Replication::IObject* object) = 0;
-		virtual void OnReplicationObjectDestroy(Client * client, Replication::IObject* object) = 0;
+		virtual bool OnReplicationObjectCreate1(Client * client, const std::string & className, Object ** out_object) = 0;
+		virtual void OnReplicationObjectCreate2(Client * client, Replication::Object* object) = 0;
+		virtual void OnReplicationObjectDestroy(Client * client, Replication::Object* object) = 0;
 	};
 }
 

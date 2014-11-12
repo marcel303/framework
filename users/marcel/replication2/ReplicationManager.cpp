@@ -65,23 +65,23 @@ namespace Replication
 		}
 	}
 
-	int Manager::SV_AddObject(const std::string & className, IObject * object)
+	int Manager::SV_AddObject(const std::string & className, Object * object)
 	{
-		Assert(serializableObject);
+		Assert(object);
 
 		// fixme : may cause errors when object with objectID already exists on client and has not been
 		// deleted (yet). free objectID's only when all clients are synced?
 
-		int objectID = m_objectIDs.Allocate();
-		int creationID = m_serverObjectCreationId++;
+		uint16_t objectID = m_objectIDs.Allocate();
+		uint32_t creationID = m_serverObjectCreationId++;
 
-		Object * _object = new Object();
-		_object->Initialize(objectID, creationID, object);
+		object->SetObjectID(objectID);
+		object->SetCreationID(creationID);
 
-		m_serverObjects[objectID] = _object;
+		m_serverObjects[objectID] = object;
 
 		for (ClientCollItr i = m_serverClients.begin(); i != m_serverClients.end(); ++i)
-			SyncClientObject(i->second, _object);
+			SyncClientObject(i->second, object);
 
 		return objectID;
 	}
@@ -138,7 +138,6 @@ namespace Replication
 		AssertMsg(j != m_serverObjects.end(), "object does not exist. objectId=%d", objectID);
 		if (j != m_serverObjects.end())
 		{
-			delete j->second;
 			m_serverObjects.erase(j);
 			m_objectIDs.Free(objectID);
 		}
@@ -154,7 +153,6 @@ namespace Replication
 		{
 			client->CL_RemoveObject(object);
 			OnObjectDestroy(client, object);
-			delete object;
 			return true;
 		}
 
@@ -282,7 +280,7 @@ namespace Replication
 
 		Assert(m_handler);
 
-		m_handler->OnReplicationObjectDestroy(client, object->m_object);
+		m_handler->OnReplicationObjectDestroy(client, object);
 	}
 
 	void Manager::OnReceive(Packet & packet, Channel * channel)
@@ -355,10 +353,10 @@ namespace Replication
 		std::string className;
 		className = bitStream.ReadString();
 
-		IObject * _object;
+		Object * object;
 
 		// Retrieve parameters through callback.
-		if (!m_handler->OnReplicationObjectCreate1(client, className, &_object))
+		if (!m_handler->OnReplicationObjectCreate1(client, className, &object))
 		{
 			AssertMsg(false, "unable to create object. className=%s", className.c_str());
 			return;
@@ -366,12 +364,10 @@ namespace Replication
 
 		NET_STAT_INC(Replication_ObjectsCreated);
 
-		Object * object = new Object();
-		object->Initialize(objectID, -1, _object);
-
+		object->SetObjectID(objectID);
 		object->Serialize(bitStream, true, false);
 
-		m_handler->OnReplicationObjectCreate2(client, object->m_object);
+		m_handler->OnReplicationObjectCreate2(client, object);
 
 		client->CL_AddObject(object);
 	}
@@ -462,7 +458,7 @@ namespace Replication
 		for (ObjectCollItr i = m_serverObjects.begin(); i != m_serverObjects.end(); ++i)
 			objects.push_back(i->second);
 
-		std::sort(objects.begin(), objects.end(), [] (Object* o1, Object* o2) { return o1->m_serverObjectCreationId < o2->m_serverObjectCreationId; });
+		std::sort(objects.begin(), objects.end(), [] (Object* o1, Object* o2) { return o1->GetCreationID() < o2->GetCreationID(); });
 
 		for (std::vector<Object*>::iterator i = objects.begin(); i != objects.end(); ++i)
 			SyncClientObject(client, *i);

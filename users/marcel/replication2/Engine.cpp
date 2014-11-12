@@ -454,7 +454,7 @@ void Engine::SV_OnChannelDisconnect(Channel* channel)
 	}
 }
 
-bool Engine::OnReplicationObjectCreate1(Replication::Client* client, const std::string& className, Replication::IObject** out_object)
+bool Engine::OnReplicationObjectCreate1(Replication::Client* client, const std::string& className, Replication::Object** out_object)
 {
 	// TODO: build list.
 	Entity* entity = CreateEntity(client->GetClient(), className);
@@ -470,7 +470,7 @@ bool Engine::OnReplicationObjectCreate1(Replication::Client* client, const std::
 	}
 }
 
-void Engine::OnReplicationObjectCreate2(Replication::Client* client, Replication::IObject* object)
+void Engine::OnReplicationObjectCreate2(Replication::Client* client, Replication::Object* object)
 {
 	Entity* entity1 = static_cast<Entity*>(object);
 	ShEntity entity2 = ShEntity(entity1);
@@ -481,7 +481,7 @@ void Engine::OnReplicationObjectCreate2(Replication::Client* client, Replication
 	m_clientClient->m_clientScene->AddEntity(entity2, entity2->m_id);
 }
 
-void Engine::OnReplicationObjectDestroy(Replication::Client* client, Replication::IObject* object)
+void Engine::OnReplicationObjectDestroy(Replication::Client* client, Replication::Object* object)
 {
 	DB_TRACE("");
 

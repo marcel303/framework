@@ -48,7 +48,7 @@ public:
 	}
 };
 
-class Entity : public NetSerializableObject, public Replication::IObject
+class Entity : public NetSerializableObject, public Replication::Object
 {
 	class Entity_NS : public NetSerializable
 	{
