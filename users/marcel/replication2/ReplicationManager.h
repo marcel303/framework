@@ -38,7 +38,7 @@ namespace Replication
 
 		void CL_RegisterHandler(Handler* handler);
 
-		bool OnObjectCreate(Client * client, Object * object);
+		bool OnObjectCreate(Client * client, Object * object, const std::string & className);
 		void OnObjectDestroy(Client * client, Object * object);
 
 		virtual void OnReceive(Packet & packet, Channel * channel);

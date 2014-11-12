@@ -51,9 +51,9 @@ public:
 	virtual void SV_OnChannelDisconnect(Channel* channel);
 	virtual void CL_OnChannelConnect(Channel* channel) { }
 	virtual void CL_OnChannelDisconnect(Channel* channel) { }
-	virtual bool OnReplicationObjectCreate1(Replication::Client* client, const std::string& className, Replication::IObject** out_object, void** out_up);
-	virtual void OnReplicationObjectCreate2(Replication::Client* client, void* up);
-	virtual void OnReplicationObjectDestroy(Replication::Client* client, void* up);
+	virtual bool OnReplicationObjectCreate1(Replication::Client* client, const std::string& className, Replication::IObject** out_object);
+	virtual void OnReplicationObjectCreate2(Replication::Client* client, Replication::IObject* object);
+	virtual void OnReplicationObjectDestroy(Replication::Client* client, Replication::IObject* object);
 
 //private: // FIXME
 	Game* m_game;

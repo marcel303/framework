@@ -45,44 +45,39 @@ namespace Replication
 	public:
 		Object();
 
-		void SV_Initialize(int objectID, int creationID, const std::string & className, IObject * object);
-		void CL_Initialize1(int objectID, const std::string & className);
+		void SV_Initialize(int objectID, int creationID, IObject * object);
+		void CL_Initialize1(int objectID);
 		void CL_Initialize2(IObject * object);
 
 		virtual uint16_t GetClassID() const
 		{
-			return kClassIDInvalid;
+			return m_object->GetClassID();
 		}
 
 		virtual const char * ClassName() const
 		{
-			return m_className.c_str();
+			return m_object->ClassName();
 		}
 
 		virtual bool RequiresUpdating() const
 		{
-			return m_serverNeedUpdate;
+			return m_object->RequiresUpdating();
 		}
 
 		virtual bool RequiresUpdate() const
 		{
-			return true;
+			return m_object->RequiresUpdate();
 		}
 
-		virtual bool Serialize(BitStream & bitStream, bool init, bool send);
-
-	private:
-		bool RequireUpdating() const;
+		virtual bool Serialize(BitStream & bitStream, bool init, bool send)
+		{
+			return m_object->Serialize(bitStream, init, send);
+		}
 
 		// FIXME: private
 	public:
-		std::string m_className;
-		void * m_up;
+		IObject * m_object;
 
-		IObject * m_serverObject;
-		IObject * m_clientObject;
-
-		bool m_serverNeedUpdate;
 		int m_serverObjectCreationId;
 	};
 }

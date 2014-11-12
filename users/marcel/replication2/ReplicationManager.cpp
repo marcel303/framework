@@ -76,7 +76,7 @@ namespace Replication
 		int creationID = m_serverObjectCreationId++;
 
 		Object * _object = new Object();
-		_object->SV_Initialize(objectID, creationID, className, object);
+		_object->SV_Initialize(objectID, creationID, object);
 
 		m_serverObjects[objectID] = _object;
 
@@ -208,7 +208,7 @@ namespace Replication
 					BitStream bitStream;
 
 					const uint16_t objectID = j->m_object->GetObjectID();
-					const std::string & className = j->m_object->m_className;
+					const std::string & className = j->m_object->ClassName();
 
 					bitStream.Write(objectID);
 					bitStream.WriteString(className);
@@ -275,7 +275,7 @@ namespace Replication
 		m_handler = handler;
 	}
 
-	bool Manager::OnObjectCreate(Client * client, Object * _object)
+	bool Manager::OnObjectCreate(Client * client, Object * _object, const std::string & className)
 	{
 		Assert(client);
 		Assert(_object);
@@ -285,7 +285,7 @@ namespace Replication
 		IObject * object;
 
 		// Retrieve parameters through callback.
-		if (m_handler->OnReplicationObjectCreate1(client, _object->m_className, &object, &_object->m_up))
+		if (m_handler->OnReplicationObjectCreate1(client, className, &object))
 		{
 			_object->CL_Initialize2(object);
 			return true;
@@ -304,7 +304,7 @@ namespace Replication
 
 		Assert(m_handler);
 
-		m_handler->OnReplicationObjectDestroy(client, object->m_up);
+		m_handler->OnReplicationObjectDestroy(client, object->m_object);
 	}
 
 	void Manager::OnReceive(Packet & packet, Channel * channel)
@@ -381,9 +381,9 @@ namespace Replication
 		className = bitStream.ReadString();
 
 		Object * object = new Object();
-		object->CL_Initialize1(objectID, className);
+		object->CL_Initialize1(objectID);
 
-		if (!OnObjectCreate(client, object))
+		if (!OnObjectCreate(client, object, className))
 		{
 			AssertMsg(false, "unable to create object. className=%s", className.c_str());
 			delete object;
@@ -392,7 +392,7 @@ namespace Replication
 
 		object->Serialize(bitStream, true, false);
 
-		m_handler->OnReplicationObjectCreate2(client, object->m_up);
+		m_handler->OnReplicationObjectCreate2(client, object->m_object);
 
 		client->CL_AddObject(object);
 	}
