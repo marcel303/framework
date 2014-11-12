@@ -62,6 +62,8 @@ void ChannelManager::Shutdown(bool sendDisconnectNotification)
 		DestroyChannel(channel);
 	}
 
+	m_destroyedChannels.clear();
+
 	m_listenChannel = 0;
 
 	m_packetDispatcher = 0;

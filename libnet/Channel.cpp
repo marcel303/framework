@@ -408,9 +408,8 @@ bool Channel::SendSelf(const Packet & packet, uint32_t delay, NetAddress * addre
 	temp.m_delay = delay;
 	temp.Set(packet.GetData(), packet.GetSize(), *address);
 
-	m_delayedReceivePackets.push_front(temp);
-	
-	std::sort(m_delayedReceivePackets.begin(), m_delayedReceivePackets.end());
+	m_delayedReceivePackets.push_back(temp); // todo : locate insertion point
+	m_delayedReceivePackets.sort();
 
 	return true;
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <deque>
+#include <list>
 #include "ChannelTypes.h"
 #include "libnet_config.h"
 #include "NetSocket.h"
@@ -92,7 +93,7 @@ public:
 		}
 	};
 
-	typedef std::deque<DelayedPacket> DelayedPacketList;
+	typedef std::list<DelayedPacket> DelayedPacketList;
 	typedef DelayedPacketList::iterator DelayedPacketListItr;
 
 	ChannelManager * m_channelMgr;
