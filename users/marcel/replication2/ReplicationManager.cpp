@@ -76,7 +76,7 @@ namespace Replication
 		int creationID = m_serverObjectCreationId++;
 
 		Object * _object = new Object();
-		_object->SV_Initialize(objectID, creationID, object);
+		_object->Initialize(objectID, creationID, object);
 
 		m_serverObjects[objectID] = _object;
 
@@ -275,28 +275,6 @@ namespace Replication
 		m_handler = handler;
 	}
 
-	bool Manager::OnObjectCreate(Client * client, Object * _object, const std::string & className)
-	{
-		Assert(client);
-		Assert(_object);
-
-		Assert(m_handler);
-
-		IObject * object;
-
-		// Retrieve parameters through callback.
-		if (m_handler->OnReplicationObjectCreate1(client, className, &object))
-		{
-			_object->CL_Initialize2(object);
-			return true;
-		}
-		else
-		{
-			DB_ERR("\tCannot instantiate object");
-			return false;
-		}
-	}
-
 	void Manager::OnObjectDestroy(Client * client, Object * object)
 	{
 		Assert(client);
@@ -365,8 +343,6 @@ namespace Replication
 		}
 
 		uint16_t objectID;
-		std::string className;
-
 		bitStream.Read(objectID);
 
 		// Check if object already created. If so, ack.
@@ -376,19 +352,22 @@ namespace Replication
 			return;
 		}
 
-		NET_STAT_INC(Replication_ObjectsCreated);
-
+		std::string className;
 		className = bitStream.ReadString();
 
-		Object * object = new Object();
-		object->CL_Initialize1(objectID);
+		IObject * _object;
 
-		if (!OnObjectCreate(client, object, className))
+		// Retrieve parameters through callback.
+		if (!m_handler->OnReplicationObjectCreate1(client, className, &_object))
 		{
 			AssertMsg(false, "unable to create object. className=%s", className.c_str());
-			delete object;
 			return;
 		}
+
+		NET_STAT_INC(Replication_ObjectsCreated);
+
+		Object * object = new Object();
+		object->Initialize(objectID, -1, _object);
 
 		object->Serialize(bitStream, true, false);
 

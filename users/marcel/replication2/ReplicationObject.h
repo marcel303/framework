@@ -45,9 +45,7 @@ namespace Replication
 	public:
 		Object();
 
-		void SV_Initialize(int objectID, int creationID, IObject * object);
-		void CL_Initialize1(int objectID);
-		void CL_Initialize2(IObject * object);
+		void Initialize(int objectID, int creationID, IObject * object);
 
 		virtual uint16_t GetClassID() const
 		{
