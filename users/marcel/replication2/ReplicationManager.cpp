@@ -28,14 +28,14 @@ namespace Replication
 			CL_DestroyClient(m_clientClients.begin()->first);
 	}
 
-	int Manager::SV_CreateClient(::Client * client, void * up)
+	int Manager::SV_CreateClient(Channel * channel, void * up)
 	{
-		return CreateClientEx(client, true, up);
+		return CreateClientEx(channel, true, up);
 	}
 
-	int Manager::CL_CreateClient(::Client * client, void * up)
+	int Manager::CL_CreateClient(Channel * channel, void * up)
 	{
-		return CreateClientEx(client, false, up);
+		return CreateClientEx(channel, false, up);
 	}
 
 	void Manager::SV_DestroyClient(int clientID)
@@ -45,7 +45,8 @@ namespace Replication
 		AssertMsg(i != m_serverClients.end(), "client does not exist. clientId=%d", clientID);
 		if (i != m_serverClients.end())
 		{
-			m_serverClientsCache.erase(i->second->GetClient()->m_channel);
+			Client * client = i->second;
+			m_serverClientsCache.erase(client->m_channel);
 			delete i->second;
 			m_clientIDs.Free(clientID);
 			m_serverClients.erase(i);
@@ -59,7 +60,8 @@ namespace Replication
 		AssertMsg(i != m_clientClients.end(), "client does not exist. clientId=%d", clientID);
 		if (i != m_clientClients.end())
 		{
-			m_clientClientsCache.erase(i->second->GetClient()->m_channel);
+			Client * client = i->second;
+			m_clientClientsCache.erase(client->m_channel);
 			delete i->second;
 			m_clientClients.erase(i);
 		}
@@ -143,20 +145,8 @@ namespace Replication
 		}
 	}
 
-	bool Manager::CL_DestroyObject(Client * client, int objectID)
+	void Manager::SV_Shutdown()
 	{
-		Assert(client);
-
-		Object * object = client->CL_FindObject(objectID);
-
-		if (object)
-		{
-			client->CL_RemoveObject(object);
-			OnObjectDestroy(client, object);
-			return true;
-		}
-
-		return false;
 	}
 
 	void Manager::CL_Shutdown()
@@ -197,7 +187,7 @@ namespace Replication
 
 					RepMgrPacketBuilder packetBuilder;
 					Packet packet = MakePacket(REPMSG_DESTROY, packetBuilder, bitStream);
-					client->GetClient()->m_channel->Send(packet, 0);
+					client->m_channel->Send(packet, 0);
 				}
 				else
 				{
@@ -215,7 +205,7 @@ namespace Replication
 
 					RepMgrPacketBuilder packetBuilder;
 					Packet packet = MakePacket(REPMSG_CREATE, packetBuilder, bitStream);
-					client->GetClient()->m_channel->Send(packet, 0);
+					client->m_channel->Send(packet, 0);
 
 					client->m_active.push_back(*j);
 				}
@@ -230,33 +220,32 @@ namespace Replication
 		{
 			Client* clientForActiveObjects = m_serverClients.begin()->second; // fixme : make this nicer..
 
-		for (ObjectStateCollItr j = clientForActiveObjects->m_active.begin(); j != clientForActiveObjects->m_active.end(); ++j)
-		{
-			//if (j->m_object->m_serverNeedUpdate)
+			for (ObjectStateCollItr j = clientForActiveObjects->m_active.begin(); j != clientForActiveObjects->m_active.end(); ++j)
 			{
-				// Go through server objects & replicate.
-
-				BitStream bitStream;
-
-				const uint16_t objectID = j->m_object->GetObjectID();
-
-				bitStream.Write(objectID);
-
-				if (j->m_object->Serialize(bitStream, false, true))
+				if (j->m_object->RequiresUpdating() && j->m_object->RequiresUpdate())
 				{
-					RepMgrPacketBuilder packetBuilder;
-					Packet packet = MakePacket(REPMSG_UPDATE, packetBuilder, bitStream);
+					// Go through server objects & replicate.
 
-					for (ClientCollItr i = m_serverClients.begin(); i != m_serverClients.end(); ++i)
+					BitStream bitStream;
+
+					const uint16_t objectID = j->m_object->GetObjectID();
+
+					bitStream.Write(objectID);
+
+					if (j->m_object->Serialize(bitStream, false, true))
 					{
-						Client* client = i->second;
+						RepMgrPacketBuilder packetBuilder;
+						Packet packet = MakePacket(REPMSG_UPDATE, packetBuilder, bitStream);
 
-						client->GetClient()->m_channel->Send(packet, 0);
+						for (ClientCollItr i = m_serverClients.begin(); i != m_serverClients.end(); ++i)
+						{
+							Client* client = i->second;
+
+							client->m_channel->Send(packet, 0);
+						}
 					}
 				}
 			}
-		}
-
 		}
 
 		m_tick++;
@@ -271,16 +260,6 @@ namespace Replication
 		Assert(handler);
 
 		m_handler = handler;
-	}
-
-	void Manager::OnObjectDestroy(Client * client, Object * object)
-	{
-		Assert(client);
-		Assert(object);
-
-		Assert(m_handler);
-
-		m_handler->OnReplicationObjectDestroy(client, object);
 	}
 
 	void Manager::OnReceive(Packet & packet, Channel * channel)
@@ -426,26 +405,26 @@ namespace Replication
 		}
 	}
 
-	int Manager::CreateClientEx(::Client * client, bool serverSide, void * up)
+	int Manager::CreateClientEx(Channel * channel, bool serverSide, void * up)
 	{
-		Assert(client);
+		Assert(channel);
 
 		int clientID = m_clientIDs.Allocate();
 
 		Client * repClient = new Client();
-		repClient->Initialize(client, up);
+		repClient->Initialize(channel, up);
 
 		if (serverSide)
 		{
 			m_serverClients[clientID] = repClient;
-			m_serverClientsCache[client->m_channel] = repClient;
+			m_serverClientsCache[repClient->m_channel] = repClient;
 
 			SyncClient(repClient);
 		}
 		else
 		{
 			m_clientClients[clientID] = repClient;
-			m_clientClientsCache[client->m_channel] = repClient;
+			m_clientClientsCache[repClient->m_channel] = repClient;
 		}
 
 		return clientID;
@@ -497,6 +476,24 @@ namespace Replication
 			return 0;
 		else
 			return i->second;
+	}
+
+	bool Manager::CL_DestroyObject(Client * client, int objectID)
+	{
+		Assert(client);
+
+		Object * object = client->CL_FindObject(objectID);
+
+		if (object)
+		{
+			client->CL_RemoveObject(object);
+
+			m_handler->OnReplicationObjectDestroy(client, object);
+
+			return true;
+		}
+
+		return false;
 	}
 
 	Packet Manager::MakePacket(uint8_t messageID, RepMgrPacketBuilder & packetBuilder, BitStream & bitStream) const

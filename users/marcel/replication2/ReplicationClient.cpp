@@ -6,7 +6,6 @@ namespace Replication
 {
 	Client::Client()
 	{
-		m_client = 0;
 		m_up = 0;
 	}
 
@@ -16,11 +15,11 @@ namespace Replication
 			CL_RemoveObject(m_clientObjects.begin()->second);
 	}
 
-	void Client::Initialize(::Client * client, void * up)
+	void Client::Initialize(Channel * channel, void * up)
 	{
-		Assert(client);
+		Assert(channel);
 
-		m_client = client;
+		m_channel = channel;
 		m_up = up;
 	}
 

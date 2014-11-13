@@ -22,15 +22,16 @@ namespace Replication
 		Manager();
 		~Manager();
 
-		int SV_CreateClient(::Client * client, void * up);
-		int CL_CreateClient(::Client * client, void * up);
+		int SV_CreateClient(Channel * channel, void * up);
+		int CL_CreateClient(Channel * channel, void * up);
+
 		void SV_DestroyClient(int clientID);
 		void CL_DestroyClient(int clientID);
 
 		int SV_AddObject(const std::string & className, Object * object);
 		void SV_RemoveObject(int objectID);
 
-		bool CL_DestroyObject(Client * client, int objectID);
+		void SV_Shutdown();
 		void CL_Shutdown();
 
 		void SV_Update();
@@ -38,8 +39,7 @@ namespace Replication
 
 		void CL_RegisterHandler(Handler* handler);
 
-		void OnObjectDestroy(Client * client, Object * object);
-
+	private:
 		virtual void OnReceive(Packet & packet, Channel * channel);
 
 		void HandleCreate(BitStream & bitStream, Channel * channel);
@@ -58,7 +58,7 @@ namespace Replication
 	private:
 		typedef PacketBuilder<2048> RepMgrPacketBuilder;
 
-		int CreateClientEx(::Client * client, bool serverSide, void * up);
+		int CreateClientEx(Channel * channel, bool serverSide, void * up);
 
 		void SyncClient(Client * client);
 		void SyncClientObject(Client * client, Object * object);
@@ -66,6 +66,8 @@ namespace Replication
 		Client * SV_FindClient(Channel * channel);
 		Client * CL_FindClient(Channel * channel);
 		Object * SV_FindObject(int objectID);
+
+		bool CL_DestroyObject(Client * client, int objectID);
 
 		Packet MakePacket(uint8_t messageID, RepMgrPacketBuilder & packetBuilder, BitStream & bitStream) const;
 

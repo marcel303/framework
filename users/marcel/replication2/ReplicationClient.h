@@ -16,7 +16,7 @@ namespace Replication
 		Client();
 		~Client();
 
-		void Initialize(::Client * client, void * up);
+		void Initialize(Channel * channel, void * up);
 
 		void SV_AddObject(Object * object);
 		void CL_AddObject(Object * object);
@@ -26,13 +26,7 @@ namespace Replication
 		ObjectStateCollItr SV_Find(ObjectStateColl & collection, int objectID);
 		void SV_Move(int objectID, ObjectStateColl & src, ObjectStateColl & dst);
 
-		inline ::Client * GetClient()
-		{
-			return m_client;
-		}
-
-	private:
-		::Client * m_client;
+		Channel * m_channel;
 		void* m_up;
 
 	public: // fixme

@@ -28,8 +28,6 @@ void SoundDevice::SetWorldScale(float scale)
 
 void SoundDevice::Initialize()
 {
-	DB_TRACE("");
-
 	INITCHECK(false);
 
 #if WITH_SDL_MIXER
@@ -50,14 +48,10 @@ void SoundDevice::Initialize()
 	alSpeedOfSound(344.0f * m_worldScale);
 
 	INITSET(true);
-
-	DB_TRACE("OK");
 }
 
 void SoundDevice::Shutdown()
 {
-	DB_TRACE("");
-
 	INITCHECK(true);
 
 	alcDestroyContext(m_alContext);
@@ -69,8 +63,6 @@ void SoundDevice::Shutdown()
 	//Mix_CloseAudio();
 
 	INITSET(false);
-
-	DB_TRACE("OK");
 }
 
 void SoundDevice::Update()
@@ -249,8 +241,6 @@ void SoundDevice::UnLoad(Res* res)
 
 void* SoundDevice::UpLoadSnd(ResSnd* snd)
 {
-	DB_TRACE("");
-
 	DataSnd* data = new DataSnd();
 
 	alGenBuffers(1, &data->m_id);
@@ -262,29 +252,21 @@ void* SoundDevice::UpLoadSnd(ResSnd* snd)
 		CheckError();
 	}
 
-	DB_TRACE("OK");
-
 	return data;
 }
 
 void* SoundDevice::UpLoadSrc(ResSndSrc* src)
 {
-	DB_TRACE("");
-
 	DataSrc* data = new DataSrc();
 
 	alGenSources(1, &data->m_id);
 	CheckError();
-
-	DB_TRACE("OK");
 
 	return data;
 }
 
 void SoundDevice::UnLoadSnd(ResSnd* snd)
 {
-	DB_TRACE("");
-
 	DataSnd* data = (DataSnd*)m_cache[snd];
 
 	m_cache.erase(snd);
@@ -292,14 +274,10 @@ void SoundDevice::UnLoadSnd(ResSnd* snd)
 	// TODO: Free.
 
 	delete data;
-
-	DB_TRACE("OK");
 }
 
 void SoundDevice::UnLoadSrc(ResSndSrc* src)
 {
-	DB_TRACE("");
-
 	DataSrc* data = (DataSrc*)m_cache[src];
 
 	m_cache.erase(src);
@@ -307,8 +285,6 @@ void SoundDevice::UnLoadSrc(ResSndSrc* src)
 	// TODO: Free.
 
 	delete data;
-
-	DB_TRACE("OK");
 }
 
 void SoundDevice::CheckError()

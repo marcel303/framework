@@ -60,7 +60,7 @@ void EntityPlayer::OnSceneRemove(Scene* scene)
 
 void EntityPlayer::OnActivate()
 {
-	DB_TRACE("EntityPlayer: OnActivate\n");
+	DB_TRACE("");
 
 	m_activated = true;
 

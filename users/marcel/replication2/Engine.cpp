@@ -54,8 +54,6 @@ Engine::~Engine()
 
 bool Engine::Initialize(ROLE role, bool localConnect)
 {
-	DB_TRACE("");
-
 	Calc::Initialize();
 
 	if (m_game)
@@ -99,13 +97,15 @@ bool Engine::Initialize(ROLE role, bool localConnect)
 
 		DB_TRACE("creating client channel");
 
-		m_clientClient->m_channel = m_channelMgr->CreateChannel(ChannelPool_Client);
-		if (localConnect)
-			m_clientClient->m_channel->Connect(NetAddress(127, 0, 0, 1, 6000));
-		else
-			m_clientClient->m_channel->Connect(NetAddress(127, 0, 0, 1, 6000));
+		Channel * channel = m_channelMgr->CreateChannel(ChannelPool_Client);
 
-		m_clientClient->m_repID = m_repMgr->CL_CreateClient(m_clientClient, 0);
+		if (localConnect)
+			channel->Connect(NetAddress(127, 0, 0, 1, 6000));
+		else
+			channel->Connect(NetAddress(127, 0, 0, 1, 6000));
+
+		m_clientClient->Initialize(channel, true);
+		m_clientClient->m_repID = m_repMgr->CL_CreateClient(m_clientClient->m_channel, m_clientClient);
 
 		m_inputMgr->CL_AddClient(m_clientClient);
 	}
@@ -161,13 +161,11 @@ bool Engine::Shutdown()
 
 	DB_TRACE("shutting down replication manager");
 
-	m_repMgr->CL_Shutdown();
-
-	//m_serverScene->Clear();
-
 	if (m_role & ROLE_SERVER)
 	{
 		DB_TRACE("removing server side clients");
+
+		m_repMgr->SV_Shutdown();
 
 		while (!m_serverClients.empty())
 		{
@@ -180,6 +178,8 @@ bool Engine::Shutdown()
 	if (m_role & ROLE_CLIENT)
 	{
 		DB_TRACE("removing client side client");
+
+		m_repMgr->CL_Shutdown();
 
 		m_clientClient->m_channel->Disconnect(true, false);
 		SAFE_FREE(m_clientClient);
@@ -303,6 +303,8 @@ void Engine::UpdateServer()
 
 void Engine::UpdateClient()
 {
+	m_repMgr->CL_Update();
+
 	while (m_clientTimerUpdateAnimation.TickCount_get() > 5)
 		m_clientTimerUpdateAnimation.ReadTick();
 	while (m_clientTimerUpdateAnimation.ReadTick())
@@ -408,14 +410,14 @@ void Engine::SV_OnChannelConnect(Channel* channel)
 	{
 		Client* client = new Client(this);
 		client->Initialize(channel, false);
-		client->m_repID = m_repMgr->SV_CreateClient(client, 0);
+		client->m_repID = m_repMgr->SV_CreateClient(client->m_channel, client);
 
 		m_serverClients.push_back(client);
 
 		if (m_game)
 			m_game->HandlePlayerConnect(client);
 
-		DB_TRACE("Created new player.\n");
+		DB_TRACE("created new player");
 	}
 }
 
@@ -450,14 +452,17 @@ void Engine::SV_OnChannelDisconnect(Channel* channel)
 			delete client;
 		}
 		else
-			DB_TRACE("Received disconnect from unknown channel.\n");
+			DB_TRACE("received disconnect from unknown channel");
 	}
 }
 
 bool Engine::OnReplicationObjectCreate1(Replication::Client* client, const std::string& className, Replication::Object** out_object)
 {
 	// TODO: build list.
-	Entity* entity = CreateEntity(client->GetClient(), className);
+
+	Client * engineClient = static_cast<Client*>(client->m_up);
+
+	Entity* entity = CreateEntity(engineClient, className);
 
 	if (entity)
 	{
@@ -483,8 +488,6 @@ void Engine::OnReplicationObjectCreate2(Replication::Client* client, Replication
 
 void Engine::OnReplicationObjectDestroy(Replication::Client* client, Replication::Object* object)
 {
-	DB_TRACE("");
-
 	Entity* entity = static_cast<Entity*>(object);
 
 	m_clientClient->m_clientScene->RemoveEntity(entity->m_id);
