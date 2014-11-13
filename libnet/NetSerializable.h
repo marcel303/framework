@@ -73,14 +73,12 @@ public:
 
 class NetSerializableObject
 {
-	typedef std::vector<NetSerializable*> SerializableArray;
-	typedef SerializableArray::iterator SerializableArrayItr;
-
-	SerializableArray m_serializables;
+	std::vector<NetSerializable*> m_serializables;
 
 public:
 	NetSerializableObject();
 
-	void Register(NetSerializable* serializable);
+	void Register(NetSerializable * serializable);
 	bool Serialize(bool init, bool send, BitStream & bitStream);
+	bool IsDirty() const;
 };

@@ -119,7 +119,7 @@ bool NetSerializableObject::Serialize(bool init, bool send, BitStream & bitStrea
 {
 	bool result = false;
 
-	for (SerializableArrayItr i = m_serializables.begin(); i != m_serializables.end(); ++i)
+	for (auto i = m_serializables.begin(); i != m_serializables.end(); ++i)
 	{
 		NetSerializable * serialiable = *i;
 
@@ -151,4 +151,17 @@ bool NetSerializableObject::Serialize(bool init, bool send, BitStream & bitStrea
 	}
 
 	return result;
+}
+
+bool NetSerializableObject::IsDirty() const
+{
+	for (auto i = m_serializables.begin(); i != m_serializables.end(); ++i)
+	{
+		NetSerializable * serialiable = *i;
+
+		if (serialiable->IsDirty())
+			return true;
+	}
+
+	return false;
 }
