@@ -29,7 +29,6 @@ public:
 
 public: // fixme
 	ReplicationObjectStateColl m_createdOrDestroyed;
-	ReplicationObjectStateColl m_active;
 
 //private: // fixme
 	typedef std::map<int, ReplicationObject*> ReplicationObjectColl;

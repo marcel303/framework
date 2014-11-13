@@ -92,54 +92,40 @@ void ReplicationManager::SV_RemoveObject(int objectID)
 	//        last update serialization has taken place, to ensure any critical updates
 	//        are received by the client too
 
-	for (auto i = m_serverClients.begin(); i != m_serverClients.end(); ++i)
+	auto objectItr = m_serverObjects.find(objectID);
+
+	AssertMsg(objectItr != m_serverObjects.end(), "object does not exist. objectId=%d", objectID);
+
+	if (objectItr != m_serverObjects.end())
 	{
-		ReplicationClient * client = i->second;
+		ReplicationObject * object = objectItr->second;
 
-		ReplicationObjectStateColl createdOrDestroyed;
-		ReplicationObjectStateColl active;
-
-		client->SV_Move(objectID, client->m_createdOrDestroyed, createdOrDestroyed);
-		client->SV_Move(objectID, client->m_active, active);
-
-		Assert((createdOrDestroyed.size() + active.size()) <= 1);
-		Assert(createdOrDestroyed.empty() || !createdOrDestroyed.front().m_isDestroyed);
-
-		for (auto j = createdOrDestroyed.begin(); j != createdOrDestroyed.end(); ++j)
-		{
-			// object shouldn't be destroyed twice
-			Assert(!j->m_isDestroyed);
-			if (j->m_isDestroyed)
-			{
-				// but if it is, make sure that the client at least gets the message
-				client->m_createdOrDestroyed.push_back(*j);
-			}
-			else
-			{
-				// object creation message wasn't sent yet. keep it off the list
-			}
-		}
-
-		for (auto j = active.begin(); j != active.end(); ++j)
-		{
-			// add object to the destroyed object list
-
-			Assert(!j->m_isDestroyed);
-			j->m_object = 0;
-			j->m_isDestroyed = true;
-			client->m_createdOrDestroyed.push_back(*j);
-		}
-			
-		AssertMsg(!(createdOrDestroyed.empty() && active.empty()), "could not find object in server client. objectId=%d", objectID);
-	}
-
-	auto j = m_serverObjects.find(objectID);
-
-	AssertMsg(j != m_serverObjects.end(), "object does not exist. objectId=%d", objectID);
-	if (j != m_serverObjects.end())
-	{
-		m_serverObjects.erase(j);
+		// fixme : freeing the ID here is potentially dangerous. should ensure it doesn't get
+		//         recycled?
+		m_serverObjects.erase(objectItr);
 		m_objectIDs.Free(objectID);
+
+		for (auto i = m_serverClients.begin(); i != m_serverClients.end(); ++i)
+		{
+			ReplicationClient * client = i->second;
+
+			ReplicationObjectStateColl createdOrDestroyed;
+
+			client->SV_Move(objectID, client->m_createdOrDestroyed, createdOrDestroyed);
+
+			Assert(createdOrDestroyed.size() <= 1);
+			Assert(createdOrDestroyed.empty() || !createdOrDestroyed.front().m_isDestroyed);
+
+			if (createdOrDestroyed.empty())
+			{
+				ReplicationObjectState objectState(object);
+
+				objectState.m_object = 0;
+				objectState.m_isDestroyed = true;
+
+				client->m_createdOrDestroyed.push_back(objectState);
+			}
+		}
 	}
 }
 
@@ -204,8 +190,6 @@ void ReplicationManager::SV_Update()
 				RepMgrPacketBuilder packetBuilder;
 				Packet packet = MakePacket(REPMSG_CREATE, packetBuilder, bitStream);
 				client->m_channel->Send(packet, 0);
-
-				client->m_active.push_back(*j);
 			}
 		}
 
@@ -214,33 +198,30 @@ void ReplicationManager::SV_Update()
 
 	// all clients should share the same view now with regard to the set of active objects
 
-	if (!m_serverClients.empty())
+	for (auto i = m_serverObjects.begin(); i != m_serverObjects.end(); ++i)
 	{
-		ReplicationClient* clientForActiveObjects = m_serverClients.begin()->second; // fixme : make this nicer..
+		ReplicationObject * object = i->second;
 
-		for (auto j = clientForActiveObjects->m_active.begin(); j != clientForActiveObjects->m_active.end(); ++j)
+		if (object->RequiresUpdating() && object->RequiresUpdate())
 		{
-			if (j->m_object->RequiresUpdating() && j->m_object->RequiresUpdate())
+			// Go through server objects & replicate.
+
+			BitStream bitStream;
+
+			const uint16_t objectID = object->GetObjectID();
+
+			bitStream.Write(objectID);
+
+			if (object->Serialize(bitStream, false, true))
 			{
-				// Go through server objects & replicate.
+				RepMgrPacketBuilder packetBuilder;
+				Packet packet = MakePacket(REPMSG_UPDATE, packetBuilder, bitStream);
 
-				BitStream bitStream;
-
-				const uint16_t objectID = j->m_object->GetObjectID();
-
-				bitStream.Write(objectID);
-
-				if (j->m_object->Serialize(bitStream, false, true))
+				for (auto j = m_serverClients.begin(); j != m_serverClients.end(); ++j)
 				{
-					RepMgrPacketBuilder packetBuilder;
-					Packet packet = MakePacket(REPMSG_UPDATE, packetBuilder, bitStream);
+					ReplicationClient* client = j->second;
 
-					for (auto i = m_serverClients.begin(); i != m_serverClients.end(); ++i)
-					{
-						ReplicationClient* client = i->second;
-
-						client->m_channel->Send(packet, 0);
-					}
+					client->m_channel->Send(packet, 0);
 				}
 			}
 		}
