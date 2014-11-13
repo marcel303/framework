@@ -12,6 +12,7 @@
 class Client;
 class Engine;
 class Entity;
+class ReplicationManager;
 class SceneRenderer;
 
 namespace Phy
@@ -19,15 +20,10 @@ namespace Phy
 	class Scene;
 }
 
-namespace Replication
-{
-	class Manager;
-}
-
 class Scene : public PacketListener
 {
 public:
-	Scene(Engine* engine, Replication::Manager* repMgr);
+	Scene(Engine* engine, ReplicationManager* repMgr);
 	~Scene();
 
 	void AddEntity(ShEntity entity, int id = 0);
@@ -81,7 +77,7 @@ public:
 	RenderList m_renderList;
 
 	Engine* m_engine;
-	Replication::Manager* m_repMgr;
+	ReplicationManager* m_repMgr;
 	Phy::Scene* m_phyScene;
 
 	SceneRenderer* m_renderer;

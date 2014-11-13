@@ -15,7 +15,7 @@
 
 class Game;
 
-class Engine : public ChannelHandler, public Replication::Handler
+class Engine : public ChannelHandler, public ReplicationHandler
 {
 public:
 	enum ROLE
@@ -51,9 +51,9 @@ public:
 	virtual void SV_OnChannelDisconnect(Channel* channel);
 	virtual void CL_OnChannelConnect(Channel* channel) { }
 	virtual void CL_OnChannelDisconnect(Channel* channel) { }
-	virtual bool OnReplicationObjectCreate1(Replication::Client* client, const std::string& className, Replication::Object** out_object);
-	virtual void OnReplicationObjectCreate2(Replication::Client* client, Replication::Object* object);
-	virtual void OnReplicationObjectDestroy(Replication::Client* client, Replication::Object* object);
+	virtual bool OnReplicationObjectCreate1(ReplicationClient* client, const std::string& className, ReplicationObject** out_object);
+	virtual void OnReplicationObjectCreate2(ReplicationClient* client, ReplicationObject* object);
+	virtual void OnReplicationObjectDestroy(ReplicationClient* client, ReplicationObject* object);
 
 //private: // FIXME
 	Game* m_game;
@@ -70,7 +70,7 @@ public:
 	PacketDispatcher m_packetDispatcher;
 	std::vector<Client*> m_serverClients;
 	ChannelManager* m_channelMgr;
-	Replication::Manager* m_repMgr;
+	ReplicationManager* m_repMgr;
 	InputManager* m_inputMgr;
 	Scene* m_serverScene;
 	Client* m_clientClient;

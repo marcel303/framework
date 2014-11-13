@@ -1,17 +1,14 @@
 #include "Debug.h"
 #include "ReplicationObjectState.h"
 
-namespace Replication
+ReplicationObjectState::ReplicationObjectState(ReplicationObject * object)
+	: m_object(object)
+	, m_isDestroyed(false)
 {
-	ObjectState::ObjectState(Object * object)
-		: m_object(object)
-		, m_isDestroyed(false)
-	{
-		Assert(object);
+	Assert(object);
 
-		if (m_object)
-		{
-			m_objectID = m_object->GetObjectID();
-		}
+	if (m_object)
+	{
+		m_objectID = m_object->GetObjectID();
 	}
 }

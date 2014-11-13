@@ -8,44 +8,38 @@
 #include "NetSerializable.h"
 #include "Packet.h"
 
-namespace Replication
+class ReplicationObject
 {
-	// todo : add replication object interface. game must inherit. add objects to replication mgr that are already an object.
-	//        removes the additional overhead of creating separate objects. move away from storing NetSerializableObject here
+	uint16_t m_objectID;
+	uint32_t m_creationID;
 
-	class Object // todo : rename, once Object itself has been renamed
+public:
+	static const uint16_t kClassIDInvalid = -1;
+
+	ReplicationObject()
+		: m_objectID(-1)
+		, m_creationID(-1)
 	{
-		uint16_t m_objectID;
-		uint32_t m_creationID;
+	}
 
-	public:
-		static const uint16_t kClassIDInvalid = -1;
+	virtual ~ReplicationObject()
+	{
+	}
 
-		Object()
-			: m_objectID(-1)
-			, m_creationID(-1)
-		{
-		}
+	virtual uint16_t GetClassID() const = 0;
+	virtual const char * ClassName() const = 0; // GetClassName collides with a define on Window
+	virtual bool RequiresUpdating() const = 0;
+	virtual bool RequiresUpdate() const { return true; }
 
-		virtual ~Object()
-		{
-		}
+	virtual bool Serialize(BitStream & bitStream, bool init, bool send) = 0;
 
-		virtual uint16_t GetClassID() const = 0;
-		virtual const char * ClassName() const = 0; // GetClassName collides with a define on Window
-		virtual bool RequiresUpdating() const = 0;
-		virtual bool RequiresUpdate() const { return true; }
+	//
 
-		virtual bool Serialize(BitStream & bitStream, bool init, bool send) = 0;
+	void SetCreationID(uint32_t id) { m_creationID = id; }
+	uint32_t GetCreationID() const { return m_creationID; }
 
-		//
-
-		void SetCreationID(uint32_t id) { m_creationID = id; }
-		uint32_t GetCreationID() const { return m_creationID; }
-
-		void SetObjectID(uint16_t id) { m_objectID = id; }
-		uint16_t GetObjectID() const { return m_objectID; }
-	};
-}
+	void SetObjectID(uint16_t id) { m_objectID = id; }
+	uint16_t GetObjectID() const { return m_objectID; }
+};
 
 #endif

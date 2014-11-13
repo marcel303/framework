@@ -8,37 +8,34 @@
 #include "ReplicationObject.h"
 #include "ReplicationObjectState.h"
 
-namespace Replication
+class ReplicationClient
 {
-	class Client
-	{
-	public:
-		Client();
-		~Client();
+public:
+	ReplicationClient();
+	~ReplicationClient();
 
-		void Initialize(Channel * channel, void * up);
+	void Initialize(Channel * channel, void * up);
 
-		void SV_AddObject(Object * object);
-		void CL_AddObject(Object * object);
-		void CL_RemoveObject(Object * object);
-		Object * CL_FindObject(int objectID);
+	void SV_AddObject(ReplicationObject * object);
+	void CL_AddObject(ReplicationObject * object);
+	void CL_RemoveObject(ReplicationObject * object);
+	ReplicationObject * CL_FindObject(int objectID);
 
-		ObjectStateCollItr SV_Find(ObjectStateColl & collection, int objectID);
-		void SV_Move(int objectID, ObjectStateColl & src, ObjectStateColl & dst);
+	ReplicationObjectStateCollItr SV_Find(ReplicationObjectStateColl & collection, int objectID);
+	void SV_Move(int objectID, ReplicationObjectStateColl & src, ReplicationObjectStateColl & dst);
 
-		Channel * m_channel;
-		void* m_up;
+	Channel * m_channel;
+	void* m_up;
 
-	public: // fixme
-		ObjectStateColl m_createdOrDestroyed;
-		ObjectStateColl m_active;
+public: // fixme
+	ReplicationObjectStateColl m_createdOrDestroyed;
+	ReplicationObjectStateColl m_active;
 
-	//private: // fixme
-		typedef std::map<int, Object*> ObjectColl;
-		typedef ObjectColl::iterator ObjectCollItr;
+//private: // fixme
+	typedef std::map<int, ReplicationObject*> ReplicationObjectColl;
+	typedef ReplicationObjectColl::iterator ReplicationObjectCollItr;
 
-		ObjectColl m_clientObjects;
-	};
-}
+	ReplicationObjectColl m_clientObjects;
+};
 
 #endif

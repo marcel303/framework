@@ -9,7 +9,7 @@
 #include "Scene.h"
 #include "SceneRenderer.h"
 
-Scene::Scene(Engine* engine, Replication::Manager* repMgr)
+Scene::Scene(Engine* engine, ReplicationManager* repMgr)
 {
 	Assert(engine);
 

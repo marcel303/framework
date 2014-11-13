@@ -62,7 +62,7 @@ bool Engine::Initialize(ROLE role, bool localConnect)
 	m_role = role;
 
 	m_channelMgr = new ChannelManager();
-	m_repMgr = new Replication::Manager();
+	m_repMgr = new ReplicationManager();
 	m_inputMgr = new InputManager();
 	m_serverScene = new Scene(this, m_repMgr);
 	m_clientClient = 0;
@@ -456,7 +456,7 @@ void Engine::SV_OnChannelDisconnect(Channel* channel)
 	}
 }
 
-bool Engine::OnReplicationObjectCreate1(Replication::Client* client, const std::string& className, Replication::Object** out_object)
+bool Engine::OnReplicationObjectCreate1(ReplicationClient* client, const std::string& className, ReplicationObject** out_object)
 {
 	// TODO: build list.
 
@@ -475,7 +475,7 @@ bool Engine::OnReplicationObjectCreate1(Replication::Client* client, const std::
 	}
 }
 
-void Engine::OnReplicationObjectCreate2(Replication::Client* client, Replication::Object* object)
+void Engine::OnReplicationObjectCreate2(ReplicationClient* client, ReplicationObject* object)
 {
 	Entity* entity1 = static_cast<Entity*>(object);
 	ShEntity entity2 = ShEntity(entity1);
@@ -486,7 +486,7 @@ void Engine::OnReplicationObjectCreate2(Replication::Client* client, Replication
 	m_clientClient->m_clientScene->AddEntity(entity2, entity2->m_id);
 }
 
-void Engine::OnReplicationObjectDestroy(Replication::Client* client, Replication::Object* object)
+void Engine::OnReplicationObjectDestroy(ReplicationClient* client, ReplicationObject* object)
 {
 	Entity* entity = static_cast<Entity*>(object);
 

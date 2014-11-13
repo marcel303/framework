@@ -3,7 +3,3 @@
 #include "ReplicationObject.h"
 #include "ReplicationObjectState.h"
 #include "Types.h"
-
-namespace Replication
-{
-}

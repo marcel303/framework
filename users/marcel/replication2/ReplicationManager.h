@@ -14,77 +14,74 @@
 #include "ReplicationObject.h"
 #include "ReplicationObjectState.h"
 
-namespace Replication
+class ReplicationManager : public PacketListener
 {
-	class Manager : public PacketListener
-	{
-	public:
-		Manager();
-		~Manager();
+public:
+	ReplicationManager();
+	~ReplicationManager();
 
-		int SV_CreateClient(Channel * channel, void * up);
-		int CL_CreateClient(Channel * channel, void * up);
+	int SV_CreateClient(Channel * channel, void * up);
+	int CL_CreateClient(Channel * channel, void * up);
 
-		void SV_DestroyClient(int clientID);
-		void CL_DestroyClient(int clientID);
+	void SV_DestroyClient(int clientID);
+	void CL_DestroyClient(int clientID);
 
-		int SV_AddObject(const std::string & className, Object * object);
-		void SV_RemoveObject(int objectID);
+	int SV_AddObject(const std::string & className, ReplicationObject * object);
+	void SV_RemoveObject(int objectID);
 
-		void SV_Shutdown();
-		void CL_Shutdown();
+	void SV_Shutdown();
+	void CL_Shutdown();
 
-		void SV_Update();
-		void CL_Update();
+	void SV_Update();
+	void CL_Update();
 
-		void CL_RegisterHandler(Handler* handler);
+	void CL_RegisterHandler(ReplicationHandler* handler);
 
-	private:
-		virtual void OnReceive(Packet & packet, Channel * channel);
+private:
+	virtual void OnReceive(Packet & packet, Channel * channel);
 
-		void HandleCreate(BitStream & bitStream, Channel * channel);
-		void HandleDestroy(BitStream & bitStream, Channel * channel);
-		void HandleUpdate(BitStream & bitStream, Channel * channel);
+	void HandleCreate(BitStream & bitStream, Channel * channel);
+	void HandleDestroy(BitStream & bitStream, Channel * channel);
+	void HandleUpdate(BitStream & bitStream, Channel * channel);
 
-	private:
-		typedef std::map<int, Client*> ClientColl;
-		typedef ClientColl::iterator ClientCollItr;
-		typedef std::map<Channel*, Client*> ClientCache;
-		typedef ClientCache::iterator ClientCacheItr;
+private:
+	typedef std::map<int, ReplicationClient*> ReplicationClientColl;
+	typedef ReplicationClientColl::iterator ReplicationClientCollItr;
+	typedef std::map<Channel*, ReplicationClient*> ReplicationClientCache;
+	typedef ReplicationClientCache::iterator ReplicationClientCacheItr;
 
-		typedef std::map<int, Object*> ObjectColl;
-		typedef ObjectColl::iterator ObjectCollItr;
+	typedef std::map<int, ReplicationObject*> ReplicationObjectColl;
+	typedef ReplicationObjectColl::iterator ReplicationObjectCollItr;
 
-	private:
-		typedef PacketBuilder<2048> RepMgrPacketBuilder;
+private:
+	typedef PacketBuilder<2048> RepMgrPacketBuilder;
 
-		int CreateClientEx(Channel * channel, bool serverSide, void * up);
+	int CreateClientEx(Channel * channel, bool serverSide, void * up);
 
-		void SyncClient(Client * client);
-		void SyncClientObject(Client * client, Object * object);
+	void SyncClient(ReplicationClient * client);
+	void SyncClientObject(ReplicationClient * client, ReplicationObject * object);
 
-		Client * SV_FindClient(Channel * channel);
-		Client * CL_FindClient(Channel * channel);
-		Object * SV_FindObject(int objectID);
+	ReplicationClient * SV_FindClient(Channel * channel);
+	ReplicationClient * CL_FindClient(Channel * channel);
+	ReplicationObject * SV_FindObject(int objectID);
 
-		bool CL_DestroyObject(Client * client, int objectID);
+	bool CL_DestroyObject(ReplicationClient * client, int objectID);
 
-		Packet MakePacket(uint8_t messageID, RepMgrPacketBuilder & packetBuilder, BitStream & bitStream) const;
+	Packet MakePacket(uint8_t messageID, RepMgrPacketBuilder & packetBuilder, BitStream & bitStream) const;
 
-		ClientColl m_serverClients;
-		ObjectColl m_serverObjects;
-		ClientColl m_clientClients;
+	ReplicationClientColl m_serverClients;
+	ReplicationObjectColl m_serverObjects;
+	ReplicationClientColl m_clientClients;
 
-		ClientCache m_serverClientsCache; // channel -> client.
-		ClientCache m_clientClientsCache; // channel -> client.
+	ReplicationClientCache m_serverClientsCache; // channel -> client.
+	ReplicationClientCache m_clientClientsCache; // channel -> client.
 
-		HandlePool<uint32_t> m_clientIDs;
-		HandlePool<uint16_t> m_objectIDs;
+	HandlePool<uint32_t> m_clientIDs;
+	HandlePool<uint16_t> m_objectIDs;
 
-		Handler * m_handler;
-		int m_tick;
-		int m_serverObjectCreationId;
-	};
-}
+	ReplicationHandler * m_handler;
+	int m_tick;
+	int m_serverObjectCreationId;
+};
 
 #endif

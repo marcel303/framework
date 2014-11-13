@@ -1,10 +1,7 @@
 #pragma once
 
-namespace Replication
-{
-	class Client;
-	class Handler;
-	class Manager;
-	class Object;
-	class ObjectState;
-}
+class ReplicationClient;
+class ReplicationHandler;
+class ReplicationManager;
+class ReplicationObject;
+class ReplicationObjectState;

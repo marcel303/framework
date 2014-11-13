@@ -5,15 +5,12 @@
 #include <string>
 #include "ReplicationClient.h"
 
-namespace Replication
+class ReplicationHandler
 {
-	class Handler
-	{
-	public:
-		virtual bool OnReplicationObjectCreate1(Client * client, const std::string & className, Object ** out_object) = 0;
-		virtual void OnReplicationObjectCreate2(Client * client, Replication::Object* object) = 0;
-		virtual void OnReplicationObjectDestroy(Client * client, Replication::Object* object) = 0;
-	};
-}
+public:
+	virtual bool OnReplicationObjectCreate1(ReplicationClient * client, const std::string & className, ReplicationObject ** out_object) = 0;
+	virtual void OnReplicationObjectCreate2(ReplicationClient * client, ReplicationObject * object) = 0;
+	virtual void OnReplicationObjectDestroy(ReplicationClient * client, ReplicationObject * object) = 0;
+};
 
 #endif
