@@ -15,18 +15,26 @@ class Player : public EntityPlayer
 {
 	class Player_NS : public NetSerializable
 	{
+		uint16_t m_owningChannelID;
 		uint32_t m_color;
 
 	public:
-		Player_NS(Player * owner)
+		Player_NS(Player * owner, uint16_t owningChannelID)
 			: NetSerializable(owner)
+			, m_owningChannelID(owningChannelID)
 			, m_color(0)
 		{
 		}
 
 		virtual void SerializeStruct()
 		{
+			Serialize(m_owningChannelID);
 			Serialize(m_color);
+		}
+
+		uint16_t GetOwningChannelID() const
+		{
+			return m_owningChannelID;
 		}
 
 		uint32_t GetColor() const
@@ -41,7 +49,7 @@ class Player : public EntityPlayer
 	};
 
 public:
-	Player();
+	Player(uint16_t owningChannelID = 0);
 	virtual ~Player();
 
 	virtual Mat4x4 GetTransform() const;

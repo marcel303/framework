@@ -48,7 +48,7 @@ bool HLSLProgram::Load(const std::string& filename)
 				else
 					return false;
 
-				p[name].Setup(registerType, registerIndex);
+				p[name.c_str()].Setup(registerType, registerIndex);
 			}
 
 			int textLength;

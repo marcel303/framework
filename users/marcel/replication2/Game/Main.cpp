@@ -3,8 +3,8 @@
 #define GFX_H 240
 #define GFX_FS false
 #else
-#define GFX_W 640
-#define GFX_H 480
+#define GFX_W 800
+#define GFX_H 600
 #define GFX_FS false
 #endif
 
@@ -38,7 +38,6 @@
 #include "Stats.h"
 #include "SystemDefault.h"
 
-static void ThreadSome(int delay);
 static void TestReplication();
 
 #if LIBNET_ENABLE_NET_STATS
@@ -100,11 +99,6 @@ void RenderStatValue(NetStatsValue<T> & value, const std::string & name, int x, 
 }
 #endif
 
-void ThreadSome(int delay)
-{
-	Sleep(delay);
-}
-
 class TestEventHandler : public EventHandler
 {
 public:
@@ -129,7 +123,9 @@ public:
 			{
 				Entity * player = players[i].get();
 				
-				for (int j = 0; j < 10; ++j)
+				const int numBricks = 10 / (1 + players.size()/2);
+
+				for (int j = 0; j < numBricks; ++j)
 				{
 					Vec3 position = player->GetPosition();
 					float a = Calc::Random(Calc::m2PI);
@@ -149,17 +145,30 @@ public:
 	bool m_stop;
 };
 
-void TestReplication()
+int main(int argc, char* argv[])
 {
+	Calc::Initialize();
+
 	bool cfg_fullscreen;
 	bool cfg_server;
 	bool cfg_client;
 
-	printf("S: server\n");
-	printf("C: client\n");
-	printf("B: client + server\n");
+	char c;
 
-	char c = getc(stdin);
+	if (argc > 1)
+	{
+		c = argv[1][0];
+	}
+	else
+	{
+		printf("S: server\n");
+		printf("C: client\n");
+		printf("B: client + server\n");
+
+		c = getc(stdin);
+	}
+
+	c = tolower(c);
 
 	cfg_fullscreen = false;
 	cfg_server = c == 's' || c == 'b';
@@ -199,6 +208,17 @@ void TestReplication()
 
 			EventManager::I().AddEventHandler(&eventHandler);
 
+			ShShader blitShader = new ResShader();
+			blitShader->m_vs = RESMGR.GetVS("data/shaders/blit_vs.cg");
+			blitShader->m_ps = RESMGR.GetPS("data/shaders/blit_ps.cg");
+
+			const size_t numClients = engine->m_clientClients.size();
+			const size_t numDividesX = (int)std::ceil(std::sqrt((float)numClients));
+			const size_t numDividesY = (int)std::ceil((float)numClients / numDividesX);
+
+			ResTexR rtc(GFX_W / numDividesX, GFX_H / numDividesY);
+			ResTexD rtd(GFX_W / numDividesX, GFX_H / numDividesY);
+
 			bool captured = false;
 			bool renderStats = true;
 
@@ -220,75 +240,112 @@ void TestReplication()
 
 				gfx.SceneBegin();
 				{
-					Player* player = 0;
-
-					// fixme .. deal with multiple clients
-					if (!engine->m_clientClients.empty())
-					{
-						if (!engine->m_clientClients[0]->m_clientScene->m_activeEntity.expired())
-							player = static_cast<Player*>(engine->m_clientClients[0]->m_clientScene->m_activeEntity.lock().get());
-					}
-
-					Mat4x4 matW;
-					Mat4x4 matV;
-					Mat4x4 matP;
-
-					if (player)
-					{
-						//Mat4x4 temp;
-						//temp.MakeTranslation(player->GetEyePosition());
-
-						matW.MakeIdentity();
-						//matV = (temp * player->GetOrientationMat()).CalcInv();
-						matV = player->GetCamera().CalcInv();
-						//matP.MakePerspectiveLH(player->GetFOV(), player->m_scene->GetRenderer()->GetAspect(), player->m_scene->GetRenderer()->m_camNear, player->m_scene->GetRenderer()->m_camFar);
-						matP = player->GetPerspective();
-
-						sfx.SetHeadPosition(player->GetCameraPosition());
-						sfx.SetHeadVelocity(player->m_phyObject.m_velocity);
-						sfx.SetHeadOrientation(-player->GetCameraOrientation(), -Vec3(0.0f, 1.0f, 0.0f)); // fixme, y mirrored?
-					}
-					else
-					{
-						matW.MakeIdentity();
-						matV.MakeIdentity();
-						matP.MakePerspectiveLH(Calc::mPI / 2.0f, gfx.GetRTH() / float(gfx.GetRTW()), 1.0f, 1000.0f);
-					}
-
-					Renderer::I().MatW().Push(matW);
-					Renderer::I().MatV().Push(matV);
-					Renderer::I().MatP().Push(matP);
-
 					gfx.Clear(BUFFER_ALL, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f);
 
-					//////
+					for (size_t i = 0; i < engine->m_clientClients.size(); ++i)
+					{
+						Client * client = engine->m_clientClients.at(i);
+
+						gfx.SetRTM(&rtc, 0, 0, 0, 1, &rtd);
+
+						Player * player = 0;
+
+						if (!client->m_clientScene->m_activeEntity.expired())
+						{
+							player = static_cast<Player*>(client->m_clientScene->m_activeEntity.lock().get());
+						}
+
+						Mat4x4 matW;
+						Mat4x4 matV;
+						Mat4x4 matP;
+
+						if (player)
+						{
+							matW.MakeIdentity();
+							matV = player->GetCamera().CalcInv();
+							matP = player->GetPerspective();
+
+							sfx.SetHeadPosition(player->GetCameraPosition());
+							sfx.SetHeadVelocity(player->m_phyObject.m_velocity);
+							sfx.SetHeadOrientation(-player->GetCameraOrientation(), -Vec3(0.0f, 1.0f, 0.0f)); // fixme, y mirrored?
+						}
+						else
+						{
+							matW.MakeIdentity();
+							matV.MakeIdentity();
+							matP.MakePerspectiveLH(Calc::mPI / 2.0f, gfx.GetRTH() / float(gfx.GetRTW()), 1.0f, 1000.0f);
+						}
+
+						Renderer::I().MatW().Push(matW);
+						Renderer::I().MatV().Push(matV);
+						Renderer::I().MatP().Push(matP);
+
+						gfx.Clear(BUFFER_ALL, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f);
+
+						//
+
+						client->m_clientScene->Render();
+
+						Renderer::I().GetGraphicsDevice()->SetVS(0);
+						Renderer::I().GetGraphicsDevice()->SetPS(0);
+
+					#if LIBNET_ENABLE_NET_STATS
+						if (renderStats)
+						{
+							RenderStatValue<int>(NetStat_PacketsSent,          "NET: Packets sent",      0,   0,   295, 45);
+							RenderStatValue<int>(NetStat_PacketsReceived,      "NET: Packets received",  300, 0,   295, 45);
+							RenderStatValue<int>(NetStat_BytesSent,            "NET: Bytes sent",        0,   50,  295, 45);
+							RenderStatValue<int>(NetStat_BytesReceived,        "NET: Bytes received",    300, 50,  295, 45);
+							RenderStatValue<int>(Replication_BytesReceived,    "REP: Bytes received",    0,   100, 295, 45);
+							RenderStatValue<int>(Replication_ObjectsCreated,   "REP: Objects created",   300, 100, 295, 45);
+							RenderStatValue<int>(Replication_ObjectsDestroyed, "REP: Objects destroyed", 0,   150, 295, 45);
+							RenderStatValue<int>(Replication_ObjectsUpdated,   "REP: Objects updated",   300, 150, 295, 45);
+							RenderStatValue<int>(Gfx_Fps,                      "GFX: FPS",               0,   250, 295, 45);
+						}
+					#endif
+
+						//
+
+						Renderer::I().MatW().Pop();
+						Renderer::I().MatV().Pop();
+						Renderer::I().MatP().Pop();
+
+						gfx.SetRTM(0, 0, 0, 0, 0, 0);
+
+						gfx.SetRT(0);
+
+						size_t x = i % numDividesX;
+						size_t y = i / numDividesX;
+
+						matP.MakeOrthoLH(0.f, 1.f, 0.f, 1.f, -1.f, +1.f);
+						Renderer::I().MatP().Push(matP);
+						Renderer::I().MatP().PushTranslation((float)x / numDividesX, (float)y / numDividesY, 0.f);
+						Renderer::I().MatP().PushScaling(1.f / numDividesX, 1.f / numDividesY, 1.f);
+						Renderer::I().MatP().PushScaling(.5f, .5f, 1.f);
+						Renderer::I().MatP().PushTranslation(1.f, 1.f, 0.f);
+						Renderer::I().MatP().PushScaling(1.f, -1.f, 1.f);
+						{
+							blitShader->m_vs->p["wvp"] =
+								Renderer::I().MatP().Top() *
+								Renderer::I().MatV().Top() *
+								Renderer::I().MatW().Top();
+							blitShader->m_ps->p["tex"] = &rtc;
+							blitShader->Apply(&gfx);
+							Renderer::I().RenderQuad();
+						}
+						Renderer::I().MatP().Pop();
+						Renderer::I().MatP().Pop();
+						Renderer::I().MatP().Pop();
+						Renderer::I().MatP().Pop();
+						Renderer::I().MatP().Pop();
+						Renderer::I().MatP().Pop();
+					}
 
 					engine->Render();
-
-				#if LIBNET_ENABLE_NET_STATS
-					if (renderStats)
-					{
-						RenderStatValue<int>(NetStat_PacketsSent,          "NET: Packets sent",      0,   0,   295, 45);
-						RenderStatValue<int>(NetStat_PacketsReceived,      "NET: Packets received",  300, 0,   295, 45);
-						RenderStatValue<int>(NetStat_BytesSent,            "NET: Bytes sent",        0,   50,  295, 45);
-						RenderStatValue<int>(NetStat_BytesReceived,        "NET: Bytes received",    300, 50,  295, 45);
-						RenderStatValue<int>(Replication_BytesReceived,    "REP: Bytes received",    0,   100, 295, 45);
-						RenderStatValue<int>(Replication_ObjectsCreated,   "REP: Objects created",   300, 100, 295, 45);
-						RenderStatValue<int>(Replication_ObjectsDestroyed, "REP: Objects destroyed", 0,   150, 295, 45);
-						RenderStatValue<int>(Replication_ObjectsUpdated,   "REP: Objects updated",   300, 150, 295, 45);
-						RenderStatValue<int>(Gfx_Fps,                      "GFX: FPS",               0,   250, 295, 45);
-					}
-				#endif
-
-					////////////
-					Renderer::I().MatW().Pop();
-					Renderer::I().MatV().Pop();
-					Renderer::I().MatP().Pop();
 				}
 				gfx.SceneEnd();
 
 				gfx.Present();
-				////////////
 			}
 
 			EventManager::I().RemoveEventHandler(&eventHandler);
@@ -302,6 +359,12 @@ void TestReplication()
 
 		delete game;
 	}
+
+	printf("done! press ENTER to quit\n");
+	char temp[2];
+	gets(temp);
+
+	return 0;
 }
 
 class DebugRender
@@ -358,15 +421,3 @@ public:
 };
 
 DebugRender sDebugRender;
-
-int main(int argc, char* argv[])
-{
-	Calc::Initialize();
-
-	TestReplication();
-
-	char c[2];
-	gets(c);
-
-	return 0;
-}

@@ -37,9 +37,9 @@ void RenderList::Render(int renderMask)
 		m_shader->Apply(gfx);
 	}
 
-	Mat4x4 matP = Renderer::I().MatP().Top();
-	Mat4x4 matV = Renderer::I().MatV().Top();
-	Mat4x4 matW = Renderer::I().MatW().Top();
+	const Mat4x4 & matP = Renderer::I().MatP().Top();
+	const Mat4x4 & matV = Renderer::I().MatV().Top();
+	const Mat4x4 & matW = Renderer::I().MatW().Top();
 	Mat4x4 matWVP = matP * matV * matW;
 	Mat4x4 matWV = matV * matW;
 

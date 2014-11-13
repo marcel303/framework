@@ -483,17 +483,13 @@ int GraphicsDeviceGL::GetRTH()
 
 void GraphicsDeviceGL::SetRT(ResTexR* rt)
 {
-	if (rt == m_rt)
-	{
-		return;
-	}
-
 	if (rt == 0)
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER_EXT, 0);
 		CheckError();
 
 		glReadBuffer(GL_BACK);
+		CheckError();
 		glDrawBuffer(GL_BACK);
 		CheckError();
 
@@ -507,6 +503,9 @@ void GraphicsDeviceGL::SetRT(ResTexR* rt)
 	}
 	else
 	{
+		Assert(false);
+
+	#if 0
 		Validate(rt);
 
 		if (rt->m_type == RES_TEXR || rt->m_type == RES_TEXD || rt->m_type == RES_TEXRECTR)
@@ -563,6 +562,7 @@ void GraphicsDeviceGL::SetRT(ResTexR* rt)
 			glViewport(0, 0, texCR->GetW(), texCR->GetH());
 			CheckError();
 		}
+	#endif
 	}
 
 	m_rt = rt;
@@ -1112,8 +1112,8 @@ void GraphicsDeviceGL::SetVS(ResVS* vs)
 		// Apply parameters.
 		for (ShaderParamList::ParamCollItr i = vs->p.m_parameters.begin(); i != vs->p.m_parameters.end(); ++i)
 		{
-			const std::string& name = i->first;
-			const ShaderParam& param = i->second;
+			const std::string& name = i->name;
+			const ShaderParam& param = i->param;
 
 			const CGparameter p = data->GetParameter(name);
 			CheckError();
@@ -1126,7 +1126,7 @@ void GraphicsDeviceGL::SetVS(ResVS* vs)
 				case SHPARAM_VEC3:   cgGLSetParameter3fv(p, param.m_v);      break;
 				case SHPARAM_VEC4:   cgGLSetParameter4fv(p, param.m_v);      break;
 				case SHPARAM_MAT4X4: cgGLSetMatrixParameterfr(p, param.m_v); break;
-				case SHPARAM_TEX:    Assert(0);                             break; // Not supporter ATM..
+				case SHPARAM_TEX:    Assert(0);                              break; // Not supporter ATM..
 				}
 			}
 
@@ -1170,8 +1170,8 @@ void GraphicsDeviceGL::SetPS(ResPS* ps)
 		// Apply parameters.
 		for (ShaderParamList::ParamCollItr i = ps->p.m_parameters.begin(); i != ps->p.m_parameters.end(); ++i)
 		{
-			const std::string& name = i->first;
-			const ShaderParam& param = i->second;
+			const std::string& name = i->name;
+			const ShaderParam& param = i->param;
 
 			const CGparameter p = data->GetParameter(name);
 			CheckError();

@@ -39,6 +39,7 @@ public:
 static InputListenerLL s_inputLL;
 
 Engine::Engine(Game* game)
+	: m_scenePacketListener(this)
 {
 	m_game = game;
 
@@ -71,6 +72,7 @@ bool Engine::Initialize(ROLE role, bool localConnect)
 	m_packetDispatcher.RegisterProtocol(PROTOCOL_CHANNEL, m_channelMgr);
 	m_packetDispatcher.RegisterProtocol(PROTOCOL_REPLICATION, m_repMgr);
 	m_packetDispatcher.RegisterProtocol(PROTOCOL_INPUT, m_inputMgr);
+	m_packetDispatcher.RegisterProtocol(PROTOCOL_SCENE, &m_scenePacketListener);
 
 	DB_TRACE("initializing channel manager");
 
@@ -88,27 +90,30 @@ bool Engine::Initialize(ROLE role, bool localConnect)
 
 		m_repMgr->CL_RegisterHandler(this);
 
-		Client * client = new Client(this);
+		for (int i = 0; i < 4; ++i)
+		//for (int i = 0; i < 2; ++i)
+		//for (int i = 0; i < 1; ++i)
+		{
+			Client * client = new Client(this);
 
-		DB_TRACE("registering scene protocol");
+			DB_TRACE("registering scene protocol");
 
-		m_packetDispatcher.RegisterProtocol(PROTOCOL_SCENE, client->m_clientScene);
+			DB_TRACE("creating client channel");
 
-		DB_TRACE("creating client channel");
+			Channel * channel = m_channelMgr->CreateChannel(ChannelPool_Client);
 
-		Channel * channel = m_channelMgr->CreateChannel(ChannelPool_Client);
+			if (localConnect)
+				channel->Connect(NetAddress(127, 0, 0, 1, 6000));
+			else
+				channel->Connect(NetAddress(127, 0, 0, 1, 6000));
 
-		if (localConnect)
-			channel->Connect(NetAddress(127, 0, 0, 1, 6000));
-		else
-			channel->Connect(NetAddress(127, 0, 0, 1, 6000));
+			client->Initialize(channel, true);
+			client->m_repID = m_repMgr->CL_CreateClient(client->m_channel, client);
 
-		client->Initialize(channel, true);
-		client->m_repID = m_repMgr->CL_CreateClient(client->m_channel, client);
+			m_inputMgr->CL_AddClient(client);
 
-		m_inputMgr->CL_AddClient(client);
-
-		m_clientClients.push_back(client);
+			m_clientClients.push_back(client);
+		}
 	}
 
 	if (role & ROLE_CLIENT)
@@ -336,18 +341,8 @@ void Engine::UpdateClient()
 
 void Engine::Render()
 {
-	// Scene.
 	if (m_role & ROLE_CLIENT)
 	{
-		// fixme : iterate over all clients
-
-		Client * client = m_clientClients.front();
-
-		client->m_clientScene->Render();
-
-		Renderer::I().GetGraphicsDevice()->SetVS(0);
-		Renderer::I().GetGraphicsDevice()->SetPS(0);
-
 		if (m_game)
 			m_game->HandleRender();
 	}

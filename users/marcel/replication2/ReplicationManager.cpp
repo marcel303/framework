@@ -462,6 +462,7 @@ bool ReplicationManager::CL_DestroyObject(ReplicationClient * client, int object
 	Assert(client);
 
 	ReplicationObject * object = client->CL_FindObject(objectID);
+	Assert(object);
 
 	if (object)
 	{

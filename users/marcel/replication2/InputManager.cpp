@@ -3,6 +3,8 @@
 #include "InputManager.h"
 #include "MyProtocols.h"
 
+static volatile int s_activeController = 0; // fixme
+
 InputManager::InputManager()
 {
 }
@@ -75,6 +77,15 @@ void InputManager::CL_AddInputHandler(InputHandler* handler)
 
 void InputManager::OnEvent(Event& event)
 {
+	// fixme! hack to select controller index
+	if (event.type == EVT_KEY && event.key.state)
+	{
+		if (event.key.key == IK_1) s_activeController = 0;
+		if (event.key.key == IK_2) s_activeController = 1;
+		if (event.key.key == IK_3) s_activeController = 2;
+		if (event.key.key == IK_4) s_activeController = 3;
+	}
+
 	bool captured = false;
 
 	// TODO: Process GUI controller.
@@ -95,7 +106,7 @@ void InputManager::OnEvent(Event& event)
 			{
 				EntityPlayer* player = static_cast<EntityPlayer*>(i->second->m_clientScene->m_activeEntity.lock().get());
 
-				if (player->GetController())
+				if (player->GetController() && player->GetController()->GetControllerIndex() == s_activeController)
 				{
 					if (player->GetController()->OnEvent(event))
 						captured = true;

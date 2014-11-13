@@ -9,6 +9,7 @@ Controller::Controller(int id, Client* client)
 	: InputHandler(INPUT_PRIO_CONTROLLER)
 {
 	m_id = id;
+	m_controllerIndex = -1;
 	m_client = client;
 }
 
@@ -89,6 +90,16 @@ bool Controller::OnEvent(Event& event)
 	}
 
 	return sent;
+}
+
+void Controller::SetControllerIndex(int controllerIndex)
+{
+	m_controllerIndex = controllerIndex;
+}
+
+int Controller::GetControllerIndex() const
+{
+	return m_controllerIndex;
 }
 
 void Controller::SendAction(Channel* channel, int in_actionID, float in_value) const

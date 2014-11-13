@@ -8,9 +8,11 @@
 #include "ResMgr.h"
 #include "WeaponDefault.h"
 
+static int s_controllerIndexAlloc = 0; // fixme, this ain't nice!
+
 DEFINE_ENTITY(Player, Player);
 
-Player::Player()
+Player::Player(uint16_t owningChannelID)
 	: EntityPlayer()
 	, m_weaponLink("weapon", this)
 	, m_fort("fort", this)
@@ -19,7 +21,7 @@ Player::Player()
 	SetClassName("Player");
 	EnableCaps(CAP_DYNAMIC_PHYSICS | CAP_SYNC_POS | CAP_SYNC_ROT);
 
-	m_player_NS = new Player_NS(this);
+	m_player_NS = new Player_NS(this, owningChannelID);
 
 	m_control = new PlayerControl(this);
 
@@ -129,6 +131,16 @@ void Player::OnSceneAdd(Scene* scene)
 {
 	EntityPlayer::OnSceneAdd(scene);
 
+	//
+
+	Assert(m_controllerExample == 0);
+	m_controllerExample = new ControllerExample(m_client);
+	if (m_client->m_channel->m_id == m_player_NS->GetOwningChannelID())
+		m_controllerExample->SetControllerIndex(s_controllerIndexAlloc++); // fixme : not nice!
+	m_controllers.push_back(m_controllerExample);
+
+	//
+
 	if (!m_client->m_clientSide)
 	{
 		m_weapon = ShWeapon(new WeaponDefault(this));
@@ -137,15 +149,18 @@ void Player::OnSceneAdd(Scene* scene)
 
 		m_weaponLink = m_weapon;
 	}
-
-	Assert(m_controllerExample == 0);
-	m_controllerExample = new ControllerExample(m_client);
-	m_controllers.push_back(m_controllerExample);
 }
 
 void Player::OnSceneRemove(Scene* scene)
 {
-	EntityPlayer::OnSceneRemove(scene);
+	if (!m_client->m_clientSide)
+	{
+		scene->RemoveEntity(m_weapon);
+	}
+
+	//
+
+	SetFort(ShEntity());
 
 	auto i = std::find(m_controllers.begin(), m_controllers.end(), m_controllerExample);
 	Assert(i != m_controllers.end());
@@ -154,10 +169,9 @@ void Player::OnSceneRemove(Scene* scene)
 	delete m_controllerExample;
 	m_controllerExample = 0;
 
-	if (!m_client->m_clientSide)
-	{
-		scene->RemoveEntity(m_weapon);
-	}
+	//
+
+	EntityPlayer::OnSceneRemove(scene);
 }
 
 void Player::OnAction(int actionID, float value)

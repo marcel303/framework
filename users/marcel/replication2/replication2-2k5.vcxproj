@@ -84,6 +84,10 @@
     <ClCompile Include="Convert.cpp" />
     <ClCompile Include="Entity.cpp" />
     <ClCompile Include="EntityLink.cpp" />
+    <ClCompile Include="Graphics\GraphicsDeviceD3D9.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="InputManager.cpp" />
     <ClCompile Include="PhyObject.cpp" />
     <ClCompile Include="PhyScene.cpp" />
@@ -104,10 +108,6 @@
     <ClCompile Include="Graphics\DisplaySDL.cpp" />
     <ClCompile Include="Graphics\DisplayWindows.cpp" />
     <ClCompile Include="Graphics\GraphicsDevice.cpp" />
-    <ClCompile Include="Graphics\GraphicsDeviceD3D.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="Graphics\GraphicsDeviceD3D11.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -181,6 +181,7 @@
     <ClInclude Include="Entity.h" />
     <ClInclude Include="EntityLink.h" />
     <ClInclude Include="EntityPtr.h" />
+    <ClInclude Include="Graphics\GraphicsDeviceD3D9.h" />
     <ClInclude Include="InputCodes.h" />
     <ClInclude Include="InputHandler.h" />
     <ClInclude Include="InputManager.h" />
@@ -211,7 +212,6 @@
     <ClInclude Include="Graphics\DisplaySDL.h" />
     <ClInclude Include="Graphics\DisplayWindows.h" />
     <ClInclude Include="Graphics\GraphicsDevice.h" />
-    <ClInclude Include="Graphics\GraphicsDeviceD3D.h" />
     <ClInclude Include="Graphics\GraphicsDeviceD3D11.h" />
     <ClInclude Include="Graphics\GraphicsDeviceGL.h" />
     <ClInclude Include="Graphics\GraphicsTypes.h" />

@@ -56,6 +56,28 @@ public:
 	virtual void OnReplicationObjectDestroy(ReplicationClient* client, ReplicationObject* object);
 
 //private: // FIXME
+	class ScenePacketListener : public PacketListener
+	{
+		Engine * m_engine;
+
+	public:
+		ScenePacketListener(Engine * engine)
+			: m_engine(engine)
+		{
+		}
+
+		virtual void OnReceive(Packet & packet, Channel * channel)
+		{
+			for (auto i = m_engine->m_clientClients.begin(); i != m_engine->m_clientClients.end(); ++i)
+			{
+				Client * client = *i;
+
+				if (client->m_channel == channel)
+					client->m_clientScene->OnReceive(packet, channel);
+			}
+		}
+	};
+
 	Game* m_game;
 	ROLE m_role;
 	PolledTimer m_serverTimerUpdateLogic;
@@ -68,6 +90,7 @@ public:
 	//const static int m_serverNetFps = 10;
 	//const static int m_serverNetFps = 5;
 	PacketDispatcher m_packetDispatcher;
+	ScenePacketListener m_scenePacketListener;
 	std::vector<Client*> m_serverClients;
 	ChannelManager* m_channelMgr;
 	ReplicationManager* m_repMgr;

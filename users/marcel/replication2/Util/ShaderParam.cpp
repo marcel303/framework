@@ -1,14 +1,17 @@
 #include "ShaderParam.h"
 
-ShaderParam& ShaderParamList::operator[](const std::string& name)
+ShaderParam& ShaderParamList::operator[](const char * name)
 {
-	ParamCollItr i = m_parameters.find(name);
-
-	if (i == m_parameters.end())
+	for (ParamCollItr i = m_parameters.begin(); i != m_parameters.end(); ++i)
 	{
-		m_parameters[name] = ShaderParam();
-		i = m_parameters.find(name);
+		NamedParam & namedParam = *i;
+
+		if (!strcmp(namedParam.name.c_str(), name))
+			return namedParam.param;
 	}
 
-	return i->second;
+	NamedParam namedParam;
+	namedParam.name = name;
+	m_parameters.push_back(namedParam);
+	return m_parameters.back().param;
 }

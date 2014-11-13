@@ -55,7 +55,7 @@ namespace CD
 		if (!HitAABB(min, max))
 		{
 			//printf("%s: Early out: Ray AABB.\n", __FUNCTION__);
-			//return false;
+			return false;
 		}
 
 		if (IsInside(position, 0.0f))

@@ -71,7 +71,7 @@ void GameBrickBuster::HandleSceneLoadBegin()
 void GameBrickBuster::HandlePlayerConnect(Client* client)
 {
 	// TODO: Callback for new player creation.
-	Player * player = new Player();
+	Player * player = new Player(client->m_channel->m_destinationId);
 	player->Initialize(client, GetEngine()->m_inputMgr);
 
 	GetEngine()->BindClientToEntity(client, ShEntity(player));

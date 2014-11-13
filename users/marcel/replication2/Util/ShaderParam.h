@@ -88,13 +88,24 @@ public:
 class ShaderParamList
 {
 public:
-	ShaderParam& operator[](const std::string& name);
+	ShaderParamList()
+	{
+		m_parameters.reserve(8);
+	}
+
+	ShaderParam& operator[](const char * name);
 
 //private:
-	typedef std::map<std::string, ShaderParam> ParamColl;
+	struct NamedParam
+	{
+		std::string name;
+		ShaderParam param;
+	};
+
+	typedef std::vector<NamedParam> ParamColl;
 	typedef ParamColl::iterator ParamCollItr;
 
-	std::map<std::string, ShaderParam> m_parameters;
+	ParamColl m_parameters;
 };
 
 #endif

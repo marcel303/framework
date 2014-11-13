@@ -34,9 +34,12 @@ public:
 
 	int GetID() const { return m_id; }
 
+	void SetControllerIndex(int controllerIndex);
+	int GetControllerIndex() const;
+
 private:
 	int m_id;
-	int m_priority;
+	int m_controllerIndex;
 
 	void SendAction(Channel* channel, int in_actionID, float in_value) const;
 

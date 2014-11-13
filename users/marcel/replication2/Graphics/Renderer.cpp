@@ -110,17 +110,7 @@ void Renderer::RenderQuad()
 {
 	INITCHECK(true);
 
-	Mat4x4 matV;
-
-	m_matW.PushI();
-	m_matV.PushI();
-	m_matP.PushI();
-
 	RenderMesh(*m_quad);
-
-	m_matW.Pop();
-	m_matV.Pop();
-	m_matP.Pop();
 }
 
 void Renderer::OnMatrixUpdate(MatrixStack* stack, const Mat4x4& mat)
