@@ -73,7 +73,7 @@ public:
 	ReplicationManager* m_repMgr;
 	InputManager* m_inputMgr;
 	Scene* m_serverScene;
-	Client* m_clientClient;
+	std::vector<Client*> m_clientClients;
 	// TODO: Keep sep list of client channels?
 };
 

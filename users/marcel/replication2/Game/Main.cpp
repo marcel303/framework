@@ -222,10 +222,11 @@ void TestReplication()
 				{
 					Player* player = 0;
 
-					if (engine->m_clientClient)
+					// fixme .. deal with multiple clients
+					if (!engine->m_clientClients.empty())
 					{
-						if (!engine->m_clientClient->m_clientScene->m_activeEntity.expired())
-							player = static_cast<Player*>(engine->m_clientClient->m_clientScene->m_activeEntity.lock().get());
+						if (!engine->m_clientClients[0]->m_clientScene->m_activeEntity.expired())
+							player = static_cast<Player*>(engine->m_clientClients[0]->m_clientScene->m_activeEntity.lock().get());
 					}
 
 					Mat4x4 matW;

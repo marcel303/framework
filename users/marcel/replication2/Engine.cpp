@@ -65,7 +65,6 @@ bool Engine::Initialize(ROLE role, bool localConnect)
 	m_repMgr = new ReplicationManager();
 	m_inputMgr = new InputManager();
 	m_serverScene = new Scene(this, m_repMgr);
-	m_clientClient = 0;
 
 	DB_TRACE("registering protocols");
 
@@ -89,11 +88,11 @@ bool Engine::Initialize(ROLE role, bool localConnect)
 
 		m_repMgr->CL_RegisterHandler(this);
 
-		m_clientClient = new Client(this);
+		Client * client = new Client(this);
 
 		DB_TRACE("registering scene protocol");
 
-		m_packetDispatcher.RegisterProtocol(PROTOCOL_SCENE, m_clientClient->m_clientScene);
+		m_packetDispatcher.RegisterProtocol(PROTOCOL_SCENE, client->m_clientScene);
 
 		DB_TRACE("creating client channel");
 
@@ -104,10 +103,12 @@ bool Engine::Initialize(ROLE role, bool localConnect)
 		else
 			channel->Connect(NetAddress(127, 0, 0, 1, 6000));
 
-		m_clientClient->Initialize(channel, true);
-		m_clientClient->m_repID = m_repMgr->CL_CreateClient(m_clientClient->m_channel, m_clientClient);
+		client->Initialize(channel, true);
+		client->m_repID = m_repMgr->CL_CreateClient(client->m_channel, client);
 
-		m_inputMgr->CL_AddClient(m_clientClient);
+		m_inputMgr->CL_AddClient(client);
+
+		m_clientClients.push_back(client);
 	}
 
 	if (role & ROLE_CLIENT)
@@ -175,15 +176,23 @@ bool Engine::Shutdown()
 		m_serverClients.clear();
 	}
 
-	if (m_role & ROLE_CLIENT)
+	for (auto i = m_clientClients.begin(); i != m_clientClients.end(); ++i)
 	{
+		Assert(m_role & ROLE_CLIENT);
+
 		DB_TRACE("removing client side client");
 
-		m_repMgr->CL_Shutdown();
+		Client * client = *i;
 
-		m_clientClient->m_channel->Disconnect(true, false);
-		SAFE_FREE(m_clientClient);
+		m_repMgr->CL_DestroyClient(client->m_repID);
+
+		client->m_channel->Disconnect(true, false);
+		SAFE_FREE(client);
 	}
+
+	m_clientClients.clear();
+
+	m_repMgr->CL_Shutdown();
 
 	DB_TRACE("shutting down event manager");
 
@@ -311,15 +320,17 @@ void Engine::UpdateClient()
 	{
 		Stats::I().CommitScene();
 
-		if (m_clientClient)
+		const float dt = m_clientTimerUpdateAnimation.Interval_get();
+
+		for (auto i = m_clientClients.begin(); i != m_clientClients.end(); ++i)
 		{
-			const float dt = m_clientTimerUpdateAnimation.Interval_get();
+			Client * client = *i;
 
-			m_clientClient->m_clientScene->UpdateClient(dt);
-
-			if (m_game)
-				m_game->HandleUpdateClient(dt);
+			client->m_clientScene->UpdateClient(dt);
 		}
+
+		if (m_game)
+			m_game->HandleUpdateClient(dt);
 	}
 }
 
@@ -328,7 +339,11 @@ void Engine::Render()
 	// Scene.
 	if (m_role & ROLE_CLIENT)
 	{
-		m_clientClient->m_clientScene->Render();
+		// fixme : iterate over all clients
+
+		Client * client = m_clientClients.front();
+
+		client->m_clientScene->Render();
 
 		Renderer::I().GetGraphicsDevice()->SetVS(0);
 		Renderer::I().GetGraphicsDevice()->SetPS(0);
@@ -357,8 +372,12 @@ void Engine::Render()
 		#if 1
 		printf("Gfx: Frames per second: %d.\n", m_clientFps);
 
-		if (m_clientClient)
-			printf("Scene: Object count: %d.\n", m_clientClient->m_clientScene->m_entities.size());
+		for (auto i = m_clientClients.begin(); i != m_clientClients.end(); ++i)
+		{
+			Client * client = *i;
+
+			printf("Scene: Object count: %d.\n", client->m_clientScene->m_entities.size());
+		}
 
 		printf("Net: Channel count: %d.\n", m_channelMgr->m_channels.size());
 
@@ -456,13 +475,10 @@ void Engine::SV_OnChannelDisconnect(Channel* channel)
 	}
 }
 
-bool Engine::OnReplicationObjectCreate1(ReplicationClient* client, const std::string& className, ReplicationObject** out_object)
+bool Engine::OnReplicationObjectCreate1(ReplicationClient * client, const std::string & className, ReplicationObject ** out_object)
 {
-	// TODO: build list.
-
 	Client * engineClient = static_cast<Client*>(client->m_up);
-
-	Entity* entity = CreateEntity(engineClient, className);
+	Entity * entity = CreateEntity(engineClient, className);
 
 	if (entity)
 	{
@@ -475,20 +491,21 @@ bool Engine::OnReplicationObjectCreate1(ReplicationClient* client, const std::st
 	}
 }
 
-void Engine::OnReplicationObjectCreate2(ReplicationClient* client, ReplicationObject* object)
+void Engine::OnReplicationObjectCreate2(ReplicationClient * client, ReplicationObject * object)
 {
-	Entity* entity1 = static_cast<Entity*>(object);
-	ShEntity entity2 = ShEntity(entity1);
+	Client * engineClient = static_cast<Client*>(client->m_up);
+	Entity * entity = static_cast<Entity*>(object);
 
 	LOG_DBG("OnReplicationObjectCreate2: adding entity of type '%s' to scene",
 		object->ClassName());
 
-	m_clientClient->m_clientScene->AddEntity(entity2, entity2->m_id);
+	engineClient->m_clientScene->AddEntity(ShEntity(entity), entity->m_id);
 }
 
-void Engine::OnReplicationObjectDestroy(ReplicationClient* client, ReplicationObject* object)
+void Engine::OnReplicationObjectDestroy(ReplicationClient * client, ReplicationObject * object)
 {
-	Entity* entity = static_cast<Entity*>(object);
+	Client * engineClient = static_cast<Client*>(client->m_up);
+	Entity * entity = static_cast<Entity*>(object);
 
-	m_clientClient->m_clientScene->RemoveEntity(entity->m_id);
+	engineClient->m_clientScene->RemoveEntity(entity->m_id);
 }
