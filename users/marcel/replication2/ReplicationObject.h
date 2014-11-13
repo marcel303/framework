@@ -16,30 +16,23 @@ class ReplicationObject
 public:
 	static const uint16_t kClassIDInvalid = -1;
 
-	ReplicationObject()
-		: m_objectID(-1)
-		, m_creationID(-1)
-	{
-	}
-
-	virtual ~ReplicationObject()
-	{
-	}
+	ReplicationObject();
+	virtual ~ReplicationObject();
 
 	virtual uint16_t GetClassID() const = 0;
 	virtual const char * ClassName() const = 0; // GetClassName collides with a define on Window
 	virtual bool RequiresUpdating() const = 0;
-	virtual bool RequiresUpdate() const { return true; }
+	virtual bool RequiresUpdate() const;
 
 	virtual bool Serialize(BitStream & bitStream, bool init, bool send) = 0;
 
 	//
 
-	void SetCreationID(uint32_t id) { m_creationID = id; }
-	uint32_t GetCreationID() const { return m_creationID; }
+	void SetCreationID(uint32_t id);
+	uint32_t GetCreationID() const;
 
-	void SetObjectID(uint16_t id) { m_objectID = id; }
-	uint16_t GetObjectID() const { return m_objectID; }
+	void SetObjectID(uint16_t id);
+	uint16_t GetObjectID() const;
 };
 
 #endif

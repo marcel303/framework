@@ -46,12 +46,8 @@ private:
 
 private:
 	typedef std::map<int, ReplicationClient*> ReplicationClientColl;
-	typedef ReplicationClientColl::iterator ReplicationClientCollItr;
 	typedef std::map<Channel*, ReplicationClient*> ReplicationClientCache;
-	typedef ReplicationClientCache::iterator ReplicationClientCacheItr;
-
 	typedef std::map<int, ReplicationObject*> ReplicationObjectColl;
-	typedef ReplicationObjectColl::iterator ReplicationObjectCollItr;
 
 private:
 	typedef PacketBuilder<2048> RepMgrPacketBuilder;

@@ -21,7 +21,7 @@ public:
 	void CL_RemoveObject(ReplicationObject * object);
 	ReplicationObject * CL_FindObject(int objectID);
 
-	ReplicationObjectStateCollItr SV_Find(ReplicationObjectStateColl & collection, int objectID);
+	ReplicationObjectStateColl::iterator SV_Find(ReplicationObjectStateColl & collection, int objectID);
 	void SV_Move(int objectID, ReplicationObjectStateColl & src, ReplicationObjectStateColl & dst);
 
 	Channel * m_channel;
@@ -33,7 +33,6 @@ public: // fixme
 
 //private: // fixme
 	typedef std::map<int, ReplicationObject*> ReplicationObjectColl;
-	typedef ReplicationObjectColl::iterator ReplicationObjectCollItr;
 
 	ReplicationObjectColl m_clientObjects;
 };

@@ -17,6 +17,5 @@ public:
 };
 
 typedef std::list<ReplicationObjectState> ReplicationObjectStateColl;
-typedef ReplicationObjectStateColl::iterator ReplicationObjectStateCollItr;
 
 #endif

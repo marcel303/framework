@@ -38,7 +38,7 @@ int ReplicationManager::CL_CreateClient(Channel * channel, void * up)
 
 void ReplicationManager::SV_DestroyClient(int clientID)
 {
-	ReplicationClientCollItr i = m_serverClients.find(clientID);
+	auto i = m_serverClients.find(clientID);
 
 	AssertMsg(i != m_serverClients.end(), "client does not exist. clientId=%d", clientID);
 	if (i != m_serverClients.end())
@@ -53,7 +53,7 @@ void ReplicationManager::SV_DestroyClient(int clientID)
 
 void ReplicationManager::CL_DestroyClient(int clientID)
 {
-	ReplicationClientCollItr i = m_clientClients.find(clientID);
+	auto i = m_clientClients.find(clientID);
 
 	AssertMsg(i != m_clientClients.end(), "client does not exist. clientId=%d", clientID);
 	if (i != m_clientClients.end())
@@ -80,7 +80,7 @@ int ReplicationManager::SV_AddObject(const std::string & className, ReplicationO
 
 	m_serverObjects[objectID] = object;
 
-	for (ReplicationClientCollItr i = m_serverClients.begin(); i != m_serverClients.end(); ++i)
+	for (auto i = m_serverClients.begin(); i != m_serverClients.end(); ++i)
 		SyncClientObject(i->second, object);
 
 	return objectID;
@@ -92,7 +92,7 @@ void ReplicationManager::SV_RemoveObject(int objectID)
 	//        last update serialization has taken place, to ensure any critical updates
 	//        are received by the client too
 
-	for (ReplicationClientCollItr i = m_serverClients.begin(); i != m_serverClients.end(); ++i)
+	for (auto i = m_serverClients.begin(); i != m_serverClients.end(); ++i)
 	{
 		ReplicationClient * client = i->second;
 
@@ -105,7 +105,7 @@ void ReplicationManager::SV_RemoveObject(int objectID)
 		Assert((createdOrDestroyed.size() + active.size()) <= 1);
 		Assert(createdOrDestroyed.empty() || !createdOrDestroyed.front().m_isDestroyed);
 
-		for (ReplicationObjectStateCollItr j = createdOrDestroyed.begin(); j != createdOrDestroyed.end(); ++j)
+		for (auto j = createdOrDestroyed.begin(); j != createdOrDestroyed.end(); ++j)
 		{
 			// object shouldn't be destroyed twice
 			Assert(!j->m_isDestroyed);
@@ -120,7 +120,7 @@ void ReplicationManager::SV_RemoveObject(int objectID)
 			}
 		}
 
-		for (ReplicationObjectStateCollItr j = active.begin(); j != active.end(); ++j)
+		for (auto j = active.begin(); j != active.end(); ++j)
 		{
 			// add object to the destroyed object list
 
@@ -133,7 +133,7 @@ void ReplicationManager::SV_RemoveObject(int objectID)
 		AssertMsg(!(createdOrDestroyed.empty() && active.empty()), "could not find object in server client. objectId=%d", objectID);
 	}
 
-	ReplicationObjectCollItr j = m_serverObjects.find(objectID);
+	auto j = m_serverObjects.find(objectID);
 
 	AssertMsg(j != m_serverObjects.end(), "object does not exist. objectId=%d", objectID);
 	if (j != m_serverObjects.end())
@@ -149,7 +149,7 @@ void ReplicationManager::SV_Shutdown()
 
 void ReplicationManager::CL_Shutdown()
 {
-	for (ReplicationClientCollItr i = m_clientClients.begin(); i != m_clientClients.end(); ++i)
+	for (auto i = m_clientClients.begin(); i != m_clientClients.end(); ++i)
 	{
 		ReplicationClient * client = i->second;
 
@@ -165,13 +165,13 @@ void ReplicationManager::CL_Shutdown()
 
 void ReplicationManager::SV_Update()
 {
-	for (ReplicationClientCollItr i = m_serverClients.begin(); i != m_serverClients.end(); ++i)
+	for (auto i = m_serverClients.begin(); i != m_serverClients.end(); ++i)
 	{
 		ReplicationClient * client = i->second;
 
 		// handle object creation and destruction
 
-		for (ReplicationObjectStateCollItr j = client->m_createdOrDestroyed.begin(); j != client->m_createdOrDestroyed.end(); ++j)
+		for (auto j = client->m_createdOrDestroyed.begin(); j != client->m_createdOrDestroyed.end(); ++j)
 		{
 			if (j->m_isDestroyed)
 			{
@@ -218,7 +218,7 @@ void ReplicationManager::SV_Update()
 	{
 		ReplicationClient* clientForActiveObjects = m_serverClients.begin()->second; // fixme : make this nicer..
 
-		for (ReplicationObjectStateCollItr j = clientForActiveObjects->m_active.begin(); j != clientForActiveObjects->m_active.end(); ++j)
+		for (auto j = clientForActiveObjects->m_active.begin(); j != clientForActiveObjects->m_active.end(); ++j)
 		{
 			if (j->m_object->RequiresUpdating() && j->m_object->RequiresUpdate())
 			{
@@ -235,7 +235,7 @@ void ReplicationManager::SV_Update()
 					RepMgrPacketBuilder packetBuilder;
 					Packet packet = MakePacket(REPMSG_UPDATE, packetBuilder, bitStream);
 
-					for (ReplicationClientCollItr i = m_serverClients.begin(); i != m_serverClients.end(); ++i)
+					for (auto i = m_serverClients.begin(); i != m_serverClients.end(); ++i)
 					{
 						ReplicationClient* client = i->second;
 
@@ -432,12 +432,12 @@ void ReplicationManager::SyncClient(ReplicationClient * client)
 {
 	std::vector<ReplicationObject*> objects;
 
-	for (ReplicationObjectCollItr i = m_serverObjects.begin(); i != m_serverObjects.end(); ++i)
+	for (auto i = m_serverObjects.begin(); i != m_serverObjects.end(); ++i)
 		objects.push_back(i->second);
 
 	std::sort(objects.begin(), objects.end(), [] (ReplicationObject* o1, ReplicationObject* o2) { return o1->GetCreationID() < o2->GetCreationID(); });
 
-	for (std::vector<ReplicationObject*>::iterator i = objects.begin(); i != objects.end(); ++i)
+	for (auto i = objects.begin(); i != objects.end(); ++i)
 		SyncClientObject(client, *i);
 }
 
@@ -448,7 +448,7 @@ void ReplicationManager::SyncClientObject(ReplicationClient * client, Replicatio
 
 ReplicationClient * ReplicationManager::SV_FindClient(Channel * channel)
 {
-	ReplicationClientCacheItr i = m_serverClientsCache.find(channel);
+	auto i = m_serverClientsCache.find(channel);
 
 	if (i == m_serverClientsCache.end())
 		return 0;
@@ -458,7 +458,7 @@ ReplicationClient * ReplicationManager::SV_FindClient(Channel * channel)
 
 ReplicationClient * ReplicationManager::CL_FindClient(Channel * channel)
 {
-	ReplicationClientCacheItr i = m_clientClientsCache.find(channel);
+	auto i = m_clientClientsCache.find(channel);
 
 	if (i == m_clientClientsCache.end())
 		return 0;
@@ -468,7 +468,7 @@ ReplicationClient * ReplicationManager::CL_FindClient(Channel * channel)
 
 ReplicationObject * ReplicationManager::SV_FindObject(int objectID)
 {
-	ReplicationObjectCollItr i = m_serverObjects.find(objectID);
+	auto i = m_serverObjects.find(objectID);
 
 	if (i == m_serverObjects.end())
 		return 0;

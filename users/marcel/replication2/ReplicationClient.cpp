@@ -48,7 +48,7 @@ void ReplicationClient::CL_RemoveObject(ReplicationObject * object)
 
 ReplicationObject * ReplicationClient::CL_FindObject(int objectID)
 {
-	ReplicationObjectCollItr i = m_clientObjects.find(objectID);
+	auto i = m_clientObjects.find(objectID);
 
 	if (i == m_clientObjects.end())
 		return 0;
@@ -56,18 +56,18 @@ ReplicationObject * ReplicationClient::CL_FindObject(int objectID)
 		return i->second;
 }
 
-ReplicationObjectStateCollItr ReplicationClient::SV_Find(ReplicationObjectStateColl & collection, int objectID)
+ReplicationObjectStateColl::iterator ReplicationClient::SV_Find(ReplicationObjectStateColl & collection, int objectID)
 {
-	for (ReplicationObjectStateCollItr j = collection.begin(); j != collection.end(); ++j)
-		if (j->m_objectID == objectID)
-			return j;
+	for (auto i = collection.begin(); i != collection.end(); ++i)
+		if (i->m_objectID == objectID)
+			return i;
 
 	return collection.end();
 }
 
 void ReplicationClient::SV_Move(int objectID, ReplicationObjectStateColl & src, ReplicationObjectStateColl & dst)
 {
-	ReplicationObjectStateCollItr i = SV_Find(src, objectID);
+	auto i = SV_Find(src, objectID);
 
 	if (i != src.end())
 	{
