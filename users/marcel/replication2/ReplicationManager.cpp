@@ -357,7 +357,7 @@ namespace Replication
 
 		if (!client)
 		{
-			DB_ERR("Received destroy request from unknown channel (%d)", channel->m_id);
+			DB_ERR("received destroy request from unknown channel (%d)", channel->m_id);
 			return;
 		}
 
@@ -371,7 +371,7 @@ namespace Replication
 		}
 		else
 		{
-			DB_ERR("Received destroy request for non-existing object (%d)", objectID);
+			DB_ERR("received destroy request for non-existing object (%d)", objectID);
 			return;
 		}
 	}
@@ -384,7 +384,7 @@ namespace Replication
 
 		if (!client)
 		{
-			DB_ERR("Received update from unknown channel (%d)", channel->m_id);
+			DB_ERR("received update from unknown channel (%d)", channel->m_id);
 			return;
 		}
 
@@ -400,7 +400,7 @@ namespace Replication
 		}
 		else
 		{
-			DB_ERR("\tReceived update for non-existing object (%d)", objectID);
+			DB_ERR("received update for non-existing object (%d)", objectID);
 			return;
 		}
 	}

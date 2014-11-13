@@ -124,7 +124,7 @@ void InputManager::HandleAction(Packet& packet, Channel* channel)
 	}
 	else
 	{
-		DB_ERR("Received input message for non-existing client.\n");
+		DB_ERR("received input message for non-existing client");
 	}
 }
 
@@ -147,7 +147,7 @@ void InputManager::HandleActionLocal(Packet& packet, Channel* channel)
 	}
 	else
 	{
-		DB_ERR("Received input message for non-existing client.\n");
+		DB_ERR("received input message for non-existing client");
 	}
 }
 
@@ -173,7 +173,7 @@ void InputManager::HandleSetController(Packet& packet, Channel* channel)
 	}
 	else
 	{
-		DB_ERR("Received input message for non-existing client.\n");
+		DB_ERR("received input message for non-existing client");
 	}
 }
 */

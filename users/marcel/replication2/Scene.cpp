@@ -318,7 +318,7 @@ void Scene::OnReceive(Packet& packet, Channel* channel)
 		HandleEntityMessage(packet, channel);
 		break;
 	default:
-		DB_ERR("Received unknown message.\n");
+		DB_ERR("received unknown message");
 		break;
 	}
 }

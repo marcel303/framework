@@ -138,6 +138,6 @@ Res* ResMgr::CreateStub(RES_TYPE type)
 	case RES_SHADER: return new ResShader(); break;
 	case RES_SND: return new ResSnd(); break;
 	case RES_VS: { ResVS* r = new ResVS(); r->Load("shaders/default_vs.cg"); return r; } break;
-	default: DB_ERR("Unknown resource type"); Assert(0); return 0; break;
+	default: DB_ERR("unknown resource type"); Assert(0); return 0; break;
 	}
 }

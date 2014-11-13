@@ -1411,7 +1411,7 @@ void* GraphicsDeviceD3D9::UpLoadTexCF(ResTexCF* tex)
 
 void* GraphicsDeviceD3D9::UpLoadVS(ResVS* vs)
 {
-	DB_LOG("uploading %s\n", vs->m_filename.c_str());
+	DB_TRACE("uploading %s", vs->m_filename.c_str());
 
 	DataVS* data = new DataVS();
 
@@ -1446,7 +1446,7 @@ void* GraphicsDeviceD3D9::UpLoadVS(ResVS* vs)
 
 void* GraphicsDeviceD3D9::UpLoadPS(ResPS* ps)
 {
-	DB_LOG("uploading %s\n", ps->m_filename.c_str());
+	DB_TRACE("uploading %s", ps->m_filename.c_str());
 
 	DataPS* data = new DataPS();
 
