@@ -9,6 +9,7 @@ Weapon::Weapon(Player* owner)
 	, m_ownerLink("owner", this)
 {
 	SetClassName("Weapon");
+	EnableCaps(CAP_NET_UPDATABLE);
 
 	if (owner)
 	{

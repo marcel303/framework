@@ -35,7 +35,7 @@ public:
 	void SV_Update();
 	void CL_Update();
 
-	void CL_RegisterHandler(ReplicationHandler* handler);
+	void CL_RegisterHandler(ReplicationHandler * handler);
 
 private:
 	virtual void OnReceive(Packet & packet, Channel * channel);

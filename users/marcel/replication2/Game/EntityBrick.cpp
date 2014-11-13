@@ -14,7 +14,7 @@ EntityBrick::EntityBrick()
 	: Entity()
 {
 	SetClassName("Brick");
-	EnableCaps(CAP_STATIC_PHYSICS);
+	EnableCaps(CAP_STATIC_PHYSICS | CAP_NET_UPDATABLE);
 
 	m_brick_NS = new Brick_NS(this, 0, MAX_HP);
 

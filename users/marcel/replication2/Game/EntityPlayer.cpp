@@ -13,6 +13,7 @@ EntityPlayer::EntityPlayer()
 	: Entity()
 {
 	SetClassName("EntityPlayer");
+	EnableCaps(CAP_NET_UPDATABLE);
 
 	m_activated = false;
 

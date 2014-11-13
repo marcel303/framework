@@ -106,8 +106,8 @@ class Entity : public NetSerializableObject, public ReplicationObject
 
 	virtual uint16_t GetClassID() const { return kClassIDInvalid; }
 	virtual const char * ClassName() const { return m_className.c_str(); }
-	virtual bool RequiresUpdating() const { return true; }
-	virtual bool RequiresUpdate() const { return true; }
+	virtual bool RequiresUpdating() const { return (m_caps & CAP_NET_UPDATABLE) != 0; }
+	virtual bool RequiresUpdate() const { return NetSerializableObject::IsDirty(); }
 
 	virtual bool Serialize(BitStream & bitStream, bool init, bool send)
 	{
@@ -131,7 +131,9 @@ public:
 		CAP_SYNC_ROT_X = 1 << 5,
 		CAP_SYNC_ROT_Y = 1 << 6,
 		CAP_SYNC_ROT_Z = 1 << 7,
-		CAP_SYNC_ROT = CAP_SYNC_ROT_X | CAP_SYNC_ROT_Y | CAP_SYNC_ROT_Z
+		CAP_SYNC_ROT = CAP_SYNC_ROT_X | CAP_SYNC_ROT_Y | CAP_SYNC_ROT_Z,
+
+		CAP_NET_UPDATABLE = 1 << 8
 	};
 
 	Entity();
