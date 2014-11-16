@@ -12,6 +12,8 @@ class Player;
 
 class PlayerControl : public NetSerializable
 {
+	const static int ACCEL = 100;
+
 public:
 	PlayerControl(Player * owner);
 
@@ -64,8 +66,13 @@ public:
 		Serialize(rotationChanged);
 		if (rotationChanged)
 		{
-			Serialize(m_currentValues.m_rotationX); // todo : u16-ish compression
-			Serialize(m_currentValues.m_rotationY);
+			while (m_currentValues.m_rotationY < 0.f)
+				m_currentValues.m_rotationY += Calc::m2PI;
+			while (m_currentValues.m_rotationY >= Calc::m2PI)
+				m_currentValues.m_rotationY -= Calc::m2PI;
+
+			SerializeFloatRange(m_currentValues.m_rotationX, -Calc::mPI2, +Calc::mPI2, 16);
+			SerializeFloatRange(m_currentValues.m_rotationY,         0.f,  Calc::m2PI, 16);
 		}
 
 		bool accelChanged =
@@ -75,9 +82,23 @@ public:
 		Serialize(accelChanged);
 		if (accelChanged)
 		{
-			Serialize(m_currentValues.m_fAccel); // todo : 8.8-ish compression
-			Serialize(m_currentValues.m_sAccel);
-			Serialize(m_currentValues.m_vAccel);
+			float * vp[3] =
+			{
+				&m_currentValues.m_fAccel,
+				&m_currentValues.m_sAccel,
+				&m_currentValues.m_vAccel
+			};
+
+			for (int i = 0; i < 3; ++i)
+			{
+				float & v = *vp[i];
+				bool isZero = (v == 0.f);
+				Serialize(isZero);
+				if (!isZero)
+					SerializeFloatRange(v, -ACCEL, +ACCEL, 1);
+				else
+					v = 0.f;
+			}
 		}
 
 		m_serializedValues = m_currentValues;

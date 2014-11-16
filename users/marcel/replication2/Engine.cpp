@@ -377,7 +377,14 @@ void Engine::Render()
 		printf("Net: Channel count: %d.\n", m_channelMgr->m_channels.size());
 
 		for (ChannelManager::ChannelMapItr i = m_channelMgr->m_channels.begin(); i != m_channelMgr->m_channels.end(); ++i)
-			printf("Net: Channel %d -> %d: RTT: %d. RPQ: %d.\n", i->second->m_id, i->second->m_destinationId, i->second->m_rtt, i->second->m_rtQueue.size());
+		{
+			int numRtSent = 0;
+			for (auto p = i->second->m_rtQueue.begin(); p != i->second->m_rtQueue.end(); ++p)
+				if (p->m_nextSend != 0)
+					numRtSent++;
+
+			printf("Net: Channel %d -> %d: RTT: %d. RPQ: %d (%d sent).\n", i->second->m_id, i->second->m_destinationId, i->second->m_rtt, i->second->m_rtQueue.size(), numRtSent);
+		}
 
 		PrintNetStats();
 		#endif

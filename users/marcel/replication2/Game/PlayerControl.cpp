@@ -5,8 +5,6 @@
 #include "Player.h"
 #include "PlayerControl.h"
 
-#define ACCEL 100.0f
-
 PlayerControl::PlayerControl(Player * player)
 	: NetSerializable(player)
 {

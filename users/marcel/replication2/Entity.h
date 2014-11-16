@@ -50,6 +50,11 @@ public:
 
 class Entity : public NetSerializableObject, public ReplicationObject
 {
+	const static int kNetPosRange = 256;
+	const static int kNetPosBits = 16;
+	const static int kNetVelRange = 256;
+	const static int kNetVelBits = 16;
+
 	class Entity_NS : public NetSerializable
 	{
 	public:
@@ -77,7 +82,8 @@ class Entity : public NetSerializableObject, public ReplicationObject
 				for (int i = 0; i < 3; ++i)
 				{
 					if (IsInit() || ((entity->m_caps & posMask[i]) != 0))
-						Serialize(entity->m_phyObject.m_position[i]);
+						SerializeFloatRange(entity->m_phyObject.m_position[i], -kNetPosRange, +kNetPosRange, kNetPosBits);
+						//Serialize(entity->m_phyObject.m_position[i]);
 				}
 
 				const int rotMask[3] = { CAP_SYNC_ROT_X, CAP_SYNC_ROT_Y, CAP_SYNC_ROT_Z };
@@ -88,7 +94,8 @@ class Entity : public NetSerializableObject, public ReplicationObject
 						bool isZero = (entity->m_phyObject.m_velocity[i] == 0.0f);
 						Serialize(isZero);
 						if (!isZero)
-							Serialize(entity->m_phyObject.m_velocity[i]);
+							SerializeFloatRange(entity->m_phyObject.m_velocity[i], -kNetVelRange, +kNetVelRange, kNetVelBits);
+							//Serialize(entity->m_phyObject.m_velocity[i]);
 						else
 							entity->m_phyObject.m_velocity[i] = 0.0f;
 					}
