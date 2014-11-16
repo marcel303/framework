@@ -52,6 +52,7 @@ bool PacketDispatcher::RegisterProtocol(uint32_t protocolId, PacketListener * li
 		return false;
 	}
 
+	NetAssert(m_protocolListeners[protocolId] == 0);
 	m_protocolListeners[protocolId] = listener;
 
 	return true;

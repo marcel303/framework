@@ -143,6 +143,8 @@ void Channel::Disconnect(bool sendDisconnectNotification, bool waitForAck)
 
 void Channel::Update(uint64_t time)
 {
+	Assert(time != 0);
+
 	// Read messages.
 	{
 		ReceiveData receiveData;
@@ -168,14 +170,33 @@ void Channel::Update(uint64_t time)
 	if (m_channelType == ChannelType_Connection)
 	{
 		// Handle reliable communications.
+
+		const uint32_t kMaxSendBytes = 1024*1024 / 60;
+		uint32_t sendBytes = 0;
+
+		bool isResending = false;
+
 		for (size_t i = 0; i < m_rtQueue.size(); ++i)
 		{
 			RTPacket & packet = m_rtQueue[i];
 
 			if (time >= packet.m_nextSend)
 			{
+				// todo : limit traffic to some average speed. otherwise we get ever increasing bandwidth
+				//        due to more and more resends if the peer is congested
+
+				// todo : continue sending where we left off
+
+				if (!isResending)
+				{
+					isResending = true;
+
+					for (size_t j = i + 1; j < m_rtQueue.size(); ++j)
+						m_rtQueue[j].m_nextSend = 0;
+				}
+
 				packet.m_lastSend = time;
-				packet.m_nextSend = time + 500; // todo : use RTT * 2, or make it configurable
+				packet.m_nextSend = time + 1000; // todo : use RTT * 2, or make it configurable
 
 				PacketBuilder<6> headerBuilder;
 
@@ -201,6 +222,15 @@ void Channel::Update(uint64_t time)
 				LOG_CHANNEL_DBG("RT UPD sent: %u",
 					static_cast<uint32_t>(packetId));
 #endif
+
+				sendBytes += headerSize + packetSize;
+
+				if (sendBytes >= kMaxSendBytes)
+					break;
+			}
+			else if (isResending)
+			{
+				break;
 			}
 		}
 

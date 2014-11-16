@@ -11,7 +11,7 @@
 class ChannelManager;
 
 //const static uint32_t kMaxDatagramSize = 32 * 1024;
-const static uint32_t kMaxDatagramSize = 2048;
+const static uint32_t kMaxDatagramSize = 1400;
 
 class ReceiveData
 {

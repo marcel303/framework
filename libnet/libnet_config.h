@@ -20,24 +20,22 @@
 /* Ping interval (MS).
  */
 #ifndef LIBNET_CHANNEL_PING_INTERVAL
-	#define LIBNET_CHANNEL_PING_INTERVAL 5000
+	#define LIBNET_CHANNEL_PING_INTERVAL 3000
 #endif
 
 /* Time-out interval (MS).
  */
 #ifndef LIBNET_CHANNEL_TIMEOUT_INTERVAL
-	#define LIBNET_CHANNEL_TIMEOUT_INTERVAL 12000
-	//#define LIBNET_CHANNEL_TIMEOUT_INTERVAL 1000
+	#define LIBNET_CHANNEL_TIMEOUT_INTERVAL 10000
 #endif
 
-/* aaAdd a similated latency (MS) to packet delivery.
+/* Add a similated latency (MS) to packet delivery.
  */
 #ifndef LIBNET_CHANNEL_SIMULATED_PING
-	//#define LIBNET_CHANNEL_SIMULATED_PING 50
 	#define LIBNET_CHANNEL_SIMULATED_PING 0
 #endif
 
-/* Simulated packet loss allow debugging of the reliable transport
+/* Simulated packet loss allows debugging of the reliable transport
  * protocol as well as profiling how well the game behaves in the
  * event of lost packets.
  * The value is between 0 and 1000
