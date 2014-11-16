@@ -232,5 +232,17 @@ NET_STAT_EXTERN(NetStat_PacketsReceived);
 NET_STAT_EXTERN(NetStat_ProtocolInvalid); // message received with an invalid protocol ID
 NET_STAT_EXTERN(NetStat_ProtocolMasked); // protocol is disabled by channel mask
 
+NET_STAT_EXTERN(NetStat_ReliableTransportUpdatesSent);
+NET_STAT_EXTERN(NetStat_ReliableTransportUpdateResends);
+NET_STAT_EXTERN(NetStat_ReliableTransportUpdateLimitReached);
+NET_STAT_EXTERN(NetStat_ReliableTransportAcksSent);
+NET_STAT_EXTERN(NetStat_ReliableTransportAcksReceived);
+NET_STAT_EXTERN(NetStat_ReliableTransportAcksIgnored);
+NET_STAT_EXTERN(NetStat_ReliableTransportNacksSent);
+NET_STAT_EXTERN(NetStat_ReliableTransportNacksReceived);
+NET_STAT_EXTERN(NetStat_ReliableTransportNacksIgnored);
+NET_STAT_EXTERN(NetStat_ReliableTransportReceives);
+NET_STAT_EXTERN(NetStat_ReliableTransportReceivesIgnored);
+
 void PrintNetStats();
 void CommitNetStats();

@@ -8,6 +8,8 @@
 #include "PacketDispatcher.h"
 
 #define LOG_CHANNEL_DBG(fmt, ...) LOG_DBG("channel [%09u]: " # fmt, static_cast<uint32_t>(m_id), __VA_ARGS__)
+//#define LOG_CHANNEL_DBG(fmt, ...) LOG_INF("channel [%09u]: " # fmt, static_cast<uint32_t>(m_id), __VA_ARGS__)
+//#define LOG_CHANNEL_DBG(fmt, ...) do { } while (false)
 
 Channel::Channel(ChannelType channelType, ChannelPool channelPool, uint32_t protocolMask)
 	: m_channelMgr(0)
@@ -171,7 +173,7 @@ void Channel::Update(uint64_t time)
 	{
 		// Handle reliable communications.
 
-		const uint32_t kMaxSendBytes = 1024*1024 / 60;
+		const uint32_t kMaxSendBytes = 64*1024 / 60;
 		uint32_t sendBytes = 0;
 
 		bool isResending = false;
@@ -189,10 +191,13 @@ void Channel::Update(uint64_t time)
 
 				if (!isResending)
 				{
-					isResending = true;
+					if (m_rtQueue[i].m_nextSend != 0)
+					{
+						isResending = true;
 
-					for (size_t j = i + 1; j < m_rtQueue.size(); ++j)
-						m_rtQueue[j].m_nextSend = 0;
+						for (size_t j = i + 1; j < m_rtQueue.size(); ++j)
+							m_rtQueue[j].m_nextSend = 0;
+					}
 				}
 
 				packet.m_lastSend = time;
@@ -218,6 +223,10 @@ void Channel::Update(uint64_t time)
 				SendUnreliable(Packet(packet.m_data, packet.m_dataSize), false);
 				SendEnd();
 
+				NET_STAT_INC(NetStat_ReliableTransportUpdatesSent);
+				if (isResending)
+					NET_STAT_INC(NetStat_ReliableTransportUpdateResends);
+
 			#if LIBNET_CHANNEL_LOG_RT == 1
 				LOG_CHANNEL_DBG("RT UPD sent: %u",
 					static_cast<uint32_t>(packetId));
@@ -226,10 +235,14 @@ void Channel::Update(uint64_t time)
 				sendBytes += headerSize + packetSize;
 
 				if (sendBytes >= kMaxSendBytes)
+				{
+					NET_STAT_INC(NetStat_ReliableTransportUpdateLimitReached);
 					break;
+				}
 			}
 			else if (isResending)
 			{
+				Assert(false);
 				break;
 			}
 		}
@@ -549,6 +562,8 @@ void Channel::HandleRTUpdate(Packet & packet)
 		return;
 	}
 
+	NET_STAT_INC(NetStat_ReliableTransportReceives);
+
 #if LIBNET_CHANNEL_LOG_RT == 1
 	LOG_CHANNEL_DBG("RT UPD rcvd: %u (time=%llu)",
 		static_cast<uint32_t>(packetId),
@@ -567,6 +582,8 @@ void Channel::HandleRTUpdate(Packet & packet)
 		reply.Write32(&packetId);
 
 		SendUnreliable(reply.ToPacket(), false);
+
+		NET_STAT_INC(NetStat_ReliableTransportAcksSent);
 
 	#if LIBNET_CHANNEL_LOG_RT == 1
 		LOG_CHANNEL_DBG("RT ACK sent: %u",
@@ -594,12 +611,33 @@ void Channel::HandleRTUpdate(Packet & packet)
 	}
 	else
 	{
+		NET_STAT_INC(NetStat_ReliableTransportReceivesIgnored);
+
 	#if LIBNET_CHANNEL_LOG_RT == 1
 		if (packetId > m_rtRcvId)
 			LOG_CHANNEL_DBG("RT UPD rcvd: ID > receive ID", 0);
 		else
 			LOG_CHANNEL_DBG("RT UPD rcvd: ID < receive ID", 0);
 	#endif
+
+		if (packetId > m_rtRcvId)
+		{
+			// todo : send NACK with m_rtRcvId
+
+			PacketBuilder<6> reply;
+
+			const uint8_t protocolId = PROTOCOL_CHANNEL;
+			const uint8_t messageId = CHANNELMSG_RT_NACK;
+			const uint32_t packetId = m_rtRcvId;
+
+			reply.Write8(&protocolId);
+			reply.Write8(&messageId);
+			reply.Write32(&packetId);
+
+			SendUnreliable(reply.ToPacket(), false);
+
+			NET_STAT_INC(NetStat_ReliableTransportNacksSent);
+		}
 	}
 }
 
@@ -613,6 +651,8 @@ void Channel::HandleRTAck(Packet & packet)
 		return;
 	}
 
+	NET_STAT_INC(NetStat_ReliableTransportAcksReceived);
+
 #if LIBNET_CHANNEL_LOG_RT == 1
 	LOG_CHANNEL_DBG("RT ACK rcvd: %u", 
 		static_cast<uint32_t>(packetId));
@@ -621,7 +661,7 @@ void Channel::HandleRTAck(Packet & packet)
 	if (packetId >= m_rtAckId)
 	{
 	#if LIBNET_CHANNEL_LOG_RT == 1
-		if (packetId > m_rtSndId)
+		if (packetId >= m_rtSndId)
 		{
 			LOG_CHANNEL_DBG("received ack for unsent message", 0);
 		}
@@ -642,8 +682,57 @@ void Channel::HandleRTAck(Packet & packet)
 	}
 	else
 	{
+		NET_STAT_INC(NetStat_ReliableTransportAcksIgnored);
+
 	#if LIBNET_CHANNEL_LOG_RT == 1
 		LOG_CHANNEL_DBG("RT ACK rcvd: ID < ack ID", 0);
+	#endif
+	}
+}
+
+void Channel::HandleRTNack(Packet & packet)
+{
+	uint32_t packetId;
+
+	if (!packet.Read32(&packetId))
+	{
+		NetAssert(false);
+		return;
+	}
+
+	NET_STAT_INC(NetStat_ReliableTransportNacksReceived);
+
+#if LIBNET_CHANNEL_LOG_RT == 1
+	LOG_CHANNEL_DBG("RT ACK rcvd: %u", 
+		static_cast<uint32_t>(packetId));
+#endif
+
+	if (packetId < m_rtSndId)
+	{
+		bool found = false;
+
+		for (auto i = m_rtQueue.begin(); i != m_rtQueue.end() && !found; ++i)
+		{
+			if (i->m_id == packetId)
+			{
+				i->m_nextSend = 0;
+
+				found = true;
+			}
+		}
+
+
+	#if LIBNET_CHANNEL_LOG_RT
+		if (!found)
+			LOG_CHANNEL_DBG("received nack for already acked message", 0);
+	#endif
+	}
+	else
+	{
+		NET_STAT_INC(NetStat_ReliableTransportNacksIgnored);
+
+	#if LIBNET_CHANNEL_LOG_RT == 1
+		LOG_CHANNEL_DBG("received ack for unsent message", 0);
 	#endif
 	}
 }

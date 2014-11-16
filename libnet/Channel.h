@@ -59,6 +59,7 @@ public:
 	void HandlePong(Packet & packet);
 	void HandleRTUpdate(Packet & packet);
 	void HandleRTAck(Packet & packet);
+	void HandleRTNack(Packet & packet);
 
 	void InitSendQueue();
 	void OnReceive();

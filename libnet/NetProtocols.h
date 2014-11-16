@@ -18,4 +18,5 @@ enum PROTOCOLS
 #define CHANNELMSG_PONG           9
 #define CHANNELMSG_RT_UPDATE      10
 #define CHANNELMSG_RT_ACK         11
-#define CHANNELMSG_UNPACK         12
+#define CHANNELMSG_RT_NACK        12
+#define CHANNELMSG_UNPACK         13

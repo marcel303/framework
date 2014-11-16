@@ -184,6 +184,9 @@ void ChannelManager::OnReceive(Packet & packet, Channel * channel)
 		case CHANNELMSG_RT_ACK:
 			channel->HandleRTAck(packet);
 			break;
+		case CHANNELMSG_RT_NACK:
+			channel->HandleRTNack(packet);
+			break;
 		case CHANNELMSG_UNPACK:
 			HandleUnpack(packet, channel);
 			break;
