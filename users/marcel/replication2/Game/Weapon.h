@@ -9,6 +9,8 @@ class Player;
 
 class Weapon : public Entity
 {
+	IMPLEMENT_ENTITY(Weapon);
+
 public:
 	Weapon(Player* owner = 0);
 	virtual ~Weapon();

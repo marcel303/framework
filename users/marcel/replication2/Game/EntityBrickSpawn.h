@@ -9,6 +9,8 @@
 
 class EntityBrickSpawn : public Entity
 {
+	IMPLEMENT_ENTITY(BrickSpawn);
+
 public:
 	EntityBrickSpawn();
 	virtual ~EntityBrickSpawn();

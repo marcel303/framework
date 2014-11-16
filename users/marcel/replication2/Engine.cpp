@@ -479,7 +479,9 @@ void Engine::SV_OnChannelDisconnect(Channel* channel)
 
 bool Engine::OnReplicationObjectSerializeType(ReplicationClient * client, ReplicationObject * object, BitStream & bitStream)
 {
-	bitStream.WriteString(object->ClassName());
+	Entity * entity = static_cast<Entity*>(object);
+
+	bitStream.WriteString(entity->ClassName());
 
 	return true;
 }
@@ -509,7 +511,7 @@ void Engine::OnReplicationObjectCreated(ReplicationClient * client, ReplicationO
 	Client * engineClient = static_cast<Client*>(client->m_up);
 	Entity * entity = static_cast<Entity*>(object);
 
-	LOG_DBG("OnReplicationObjectCreated: adding entity of type '%s' to scene", object->ClassName());
+	LOG_DBG("OnReplicationObjectCreated: adding entity of type '%s' to scene", entity->ClassName());
 
 	engineClient->m_clientScene->AddEntity(ShEntity(entity), entity->m_id);
 }

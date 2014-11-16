@@ -12,6 +12,8 @@
 
 class EntityBrick : public Entity
 {
+	IMPLEMENT_ENTITY(Brick);
+
 	class Brick_NS : public NetSerializable
 	{
 		int8_t m_fort;

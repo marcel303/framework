@@ -13,6 +13,8 @@
 
 class Player : public EntityPlayer
 {
+	IMPLEMENT_ENTITY(Player);
+
 	class Player_NS : public NetSerializable
 	{
 		uint16_t m_owningChannelID;

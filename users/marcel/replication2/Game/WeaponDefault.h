@@ -9,6 +9,8 @@
 // Fires ammo with anti brick damage~
 class WeaponDefault : public Weapon
 {
+	IMPLEMENT_ENTITY(WeaponDefault);
+
 	class Weapon_NS : public NetSerializable
 	{
 		int8_t m_zoom;

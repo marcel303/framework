@@ -111,8 +111,6 @@ class Entity : public NetSerializableObject, public ReplicationObject
 		}
 	};
 
-	virtual uint16_t GetClassID() const { return kClassIDInvalid; }
-	virtual const char * ClassName() const { return m_className.c_str(); }
 	virtual bool RequiresUpdating() const { return (m_caps & CAP_NET_UPDATABLE) != 0; }
 	virtual bool RequiresUpdate() const { return NetSerializableObject::IsDirty(); }
 
@@ -151,6 +149,8 @@ public:
 	void EnableCaps(int caps);
 	void DisableCaps(int caps);
 
+	virtual uint8_t GetClassID() const = 0;
+	const char * ClassName() const { return m_className.c_str(); }
 	Scene* GetScene() const;
 	int GetID() const;
 	virtual Mat4x4 GetTransform() const;
@@ -275,5 +275,22 @@ class Register ## name                                      \
 		}                                                   \
 	};                                                      \
 	volatile Register ## name g_register_ ## name
+
+#define IMPLEMENT_ENTITY(name)         \
+	virtual uint8_t GetClassID() const \
+	{                                  \
+		return kClassID_ ## name;      \
+	}
+
+enum ClassID
+{
+	kClassID_Brick,
+	kClassID_BrickSpawn,
+	kClassID_EntityPlayer,
+	kClassID_Floor,
+	kClassID_Player,
+	kClassID_Weapon,
+	kClassID_WeaponDefault
+};
 
 #endif

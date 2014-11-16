@@ -10,6 +10,8 @@
 
 class EntityPlayer : public Entity, public ActionHandler
 {
+	IMPLEMENT_ENTITY(EntityPlayer);
+
 public:
 	EntityPlayer();
 	virtual ~EntityPlayer();

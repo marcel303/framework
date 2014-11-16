@@ -14,13 +14,9 @@ class ReplicationObject
 	uint32_t m_creationID;
 
 public:
-	static const uint16_t kClassIDInvalid = -1;
-
 	ReplicationObject();
 	virtual ~ReplicationObject();
 
-	virtual uint16_t GetClassID() const = 0;
-	virtual const char * ClassName() const = 0; // GetClassName collides with a define on Window
 	virtual bool RequiresUpdating() const = 0;
 	virtual bool RequiresUpdate() const;
 

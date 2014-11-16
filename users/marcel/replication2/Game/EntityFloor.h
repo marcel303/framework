@@ -12,6 +12,8 @@
 
 class EntityFloor : public Entity
 {
+	IMPLEMENT_ENTITY(Floor);
+
 	class Floor_NS : public NetSerializable
 	{
 		EntityFloor * m_owner;
