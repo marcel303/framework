@@ -1122,9 +1122,14 @@ static void TestBitStream()
 	}
 }
 
-static void TestRpcCall(BitStream & bs)
+static void TestRpcCall1(BitStream & bs)
 {
-	printf("TestRpcCall!\n");
+	printf("TestRpcCall 1!\n");
+}
+
+static void TestRpcCall2(BitStream & bs)
+{
+	printf("TestRpcCall 2!\n");
 }
 
 static void TestRpc()
@@ -1134,7 +1139,8 @@ static void TestRpc()
 	ChannelManager channelMgr;
 	RpcManager rpcMgr(&channelMgr);
 
-	uint32_t testRpcCall = rpcMgr.Register("TestRpcCall", TestRpcCall);
+	uint32_t testRpcCall1 = rpcMgr.Register("TestRpcCall1", TestRpcCall1);
+	uint32_t testRpcCall2 = rpcMgr.Register("TestRpcCall2", TestRpcCall2);
 
 	channelMgr.Initialize(&packetDispatcher, nullptr, 12345, true);
 
@@ -1163,7 +1169,8 @@ static void TestRpc()
 				{
 					BitStream bs;
 
-					rpcMgr.Call(testRpcCall, bs, ChannelPool_Client, nullptr, true, true);
+					rpcMgr.Call(testRpcCall1, bs, ChannelPool_Client, nullptr, true, true);
+					rpcMgr.Call(testRpcCall2, bs, ChannelPool_Client, nullptr, true, true);
 				}
 				if (e.key.keysym.sym == SDLK_a)
 				{
@@ -1182,7 +1189,8 @@ static void TestRpc()
 		channelMgr.Update(time);
 	}
 
-	rpcMgr.Unregister(testRpcCall, TestRpcCall);
+	rpcMgr.Unregister(testRpcCall1, TestRpcCall1);
+	rpcMgr.Unregister(testRpcCall2, TestRpcCall2);
 
 	packetDispatcher.UnregisterProtocol(PROTOCOL_CHANNEL, &channelMgr);
 	packetDispatcher.UnregisterProtocol(PROTOCOL_RPC, &rpcMgr);
