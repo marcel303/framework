@@ -64,6 +64,10 @@ bool NetSocket::Bind(uint16_t port, bool broadcast)
 	if (broadcast)
 		setsockopt(m_socket, SOL_SOCKET, SO_BROADCAST, &value, sizeof(char));
 
+	int receiveBufferSize = 1024*1024;
+	setsockopt(m_socket, SOL_SOCKET, SO_RCVBUF, (char*)&receiveBufferSize, sizeof(int));
+	setsockopt(m_socket, SOL_SOCKET, SO_SNDBUF, (char*)&receiveBufferSize, sizeof(int));
+
 	return true;
 }
 
@@ -71,7 +75,12 @@ bool NetSocket::Send(const void * data, uint32_t size, NetAddress * address)
 {
 	NetAddress * dst = address ? address : &m_peerAddress;
 
-	int size2 = sendto(m_socket, reinterpret_cast<const char *>(data), size, 0, reinterpret_cast<sockaddr *>(dst->GetSockAddr()), sizeof(sockaddr_in));
+	int size2 = sendto(
+		m_socket,
+		reinterpret_cast<const char *>(data),
+		size, 0,
+		reinterpret_cast<sockaddr *>(dst->GetSockAddr()),
+		sizeof(sockaddr_in));
 
 	if (size2 == SOCKET_ERROR)
 	{
