@@ -26,6 +26,7 @@ public:
 	void Align();
 	void Serialize(bool & v);
 	void Serialize(float & v);
+	void SerializeFloatRange(float & v, float min, float max, uint32_t numBits);
 	void Serialize(std::string & s);
 
 	template <typename T>

@@ -48,6 +48,28 @@ void NetSerializationContext::Serialize(float & v)
 		m_bitStream->Read(v);
 }
 
+void NetSerializationContext::SerializeFloatRange(float & v, float min, float max, uint32_t numBits)
+{
+	Assert(min < max);
+
+	const uint32_t scalar = (1 << numBits) - 1;
+
+	if (IsSend())
+	{
+		uint32_t value = static_cast<uint32_t>((v - min) / (max - min) * scalar);
+		Assert(value <= scalar);
+
+		SerializeBits<uint32_t>(value, numBits);
+	}
+	else
+	{
+		uint32_t value;
+		SerializeBits<uint32_t>(value, numBits);
+
+		v = value / float(scalar) * (max - min) + min;
+		Assert(v >= min && v <= max);
+	}
+}
 
 void NetSerializationContext::Serialize(std::string & s)
 {
