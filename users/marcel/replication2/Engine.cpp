@@ -90,8 +90,8 @@ bool Engine::Initialize(ROLE role, bool localConnect)
 
 		m_repMgr->CL_RegisterHandler(this);
 
-		for (int i = 0; i < 4; ++i)
-		//for (int i = 0; i < 2; ++i)
+		//for (int i = 0; i < 4; ++i)
+		for (int i = 0; i < 2; ++i)
 		//for (int i = 0; i < 1; ++i)
 		{
 			Client * client = new Client(this);
@@ -477,9 +477,20 @@ void Engine::SV_OnChannelDisconnect(Channel* channel)
 	}
 }
 
-bool Engine::OnReplicationObjectCreate1(ReplicationClient * client, const std::string & className, ReplicationObject ** out_object)
+bool Engine::OnReplicationObjectSerializeType(ReplicationClient * client, ReplicationObject * object, BitStream & bitStream)
+{
+	bitStream.WriteString(object->ClassName());
+
+	return true;
+}
+
+bool Engine::OnReplicationObjectCreateType(ReplicationClient * client, BitStream & bitStream, ReplicationObject ** out_object)
 {
 	Client * engineClient = static_cast<Client*>(client->m_up);
+
+	std::string className;
+	className = bitStream.ReadString();
+
 	Entity * entity = CreateEntity(engineClient, className);
 
 	if (entity)
@@ -493,18 +504,17 @@ bool Engine::OnReplicationObjectCreate1(ReplicationClient * client, const std::s
 	}
 }
 
-void Engine::OnReplicationObjectCreate2(ReplicationClient * client, ReplicationObject * object)
+void Engine::OnReplicationObjectCreated(ReplicationClient * client, ReplicationObject * object)
 {
 	Client * engineClient = static_cast<Client*>(client->m_up);
 	Entity * entity = static_cast<Entity*>(object);
 
-	LOG_DBG("OnReplicationObjectCreate2: adding entity of type '%s' to scene",
-		object->ClassName());
+	LOG_DBG("OnReplicationObjectCreated: adding entity of type '%s' to scene", object->ClassName());
 
 	engineClient->m_clientScene->AddEntity(ShEntity(entity), entity->m_id);
 }
 
-void Engine::OnReplicationObjectDestroy(ReplicationClient * client, ReplicationObject * object)
+void Engine::OnReplicationObjectDestroyed(ReplicationClient * client, ReplicationObject * object)
 {
 	Client * engineClient = static_cast<Client*>(client->m_up);
 	Entity * entity = static_cast<Entity*>(object);

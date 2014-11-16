@@ -51,9 +51,10 @@ public:
 	virtual void SV_OnChannelDisconnect(Channel* channel);
 	virtual void CL_OnChannelConnect(Channel* channel) { }
 	virtual void CL_OnChannelDisconnect(Channel* channel) { }
-	virtual bool OnReplicationObjectCreate1(ReplicationClient* client, const std::string& className, ReplicationObject** out_object);
-	virtual void OnReplicationObjectCreate2(ReplicationClient* client, ReplicationObject* object);
-	virtual void OnReplicationObjectDestroy(ReplicationClient* client, ReplicationObject* object);
+	virtual bool OnReplicationObjectSerializeType(ReplicationClient * client, ReplicationObject * object, BitStream & bitStream);
+	virtual bool OnReplicationObjectCreateType(ReplicationClient* client, BitStream& bitStream, ReplicationObject** out_object);
+	virtual void OnReplicationObjectCreated(ReplicationClient* client, ReplicationObject* object);
+	virtual void OnReplicationObjectDestroyed(ReplicationClient* client, ReplicationObject* object);
 
 //private: // FIXME
 	class ScenePacketListener : public PacketListener

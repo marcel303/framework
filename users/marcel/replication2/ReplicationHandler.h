@@ -8,9 +8,10 @@
 class ReplicationHandler
 {
 public:
-	virtual bool OnReplicationObjectCreate1(ReplicationClient * client, const std::string & className, ReplicationObject ** out_object) = 0;
-	virtual void OnReplicationObjectCreate2(ReplicationClient * client, ReplicationObject * object) = 0;
-	virtual void OnReplicationObjectDestroy(ReplicationClient * client, ReplicationObject * object) = 0;
+	virtual bool OnReplicationObjectSerializeType(ReplicationClient * client, ReplicationObject * object, BitStream & bitStream) = 0;
+	virtual bool OnReplicationObjectCreateType(ReplicationClient * client, BitStream & className, ReplicationObject ** out_object) = 0;
+	virtual void OnReplicationObjectCreated(ReplicationClient * client, ReplicationObject * object) = 0;
+	virtual void OnReplicationObjectDestroyed(ReplicationClient * client, ReplicationObject * object) = 0;
 };
 
 #endif

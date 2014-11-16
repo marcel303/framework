@@ -180,16 +180,16 @@ void ReplicationManager::SV_Update()
 				BitStream bitStream;
 
 				const uint16_t objectID = j->m_object->GetObjectID();
-				const std::string & className = j->m_object->ClassName();
-
 				bitStream.Write(objectID);
-				bitStream.WriteString(className);
 
-				j->m_object->Serialize(bitStream, true, true);
+				if (m_handler->OnReplicationObjectSerializeType(client, j->m_object, bitStream))
+				{
+					j->m_object->Serialize(bitStream, true, true);
 
-				RepMgrPacketBuilder packetBuilder;
-				Packet packet = MakePacket(REPMSG_CREATE, packetBuilder, bitStream);
-				client->m_channel->Send(packet, 0);
+					RepMgrPacketBuilder packetBuilder;
+					Packet packet = MakePacket(REPMSG_CREATE, packetBuilder, bitStream);
+					client->m_channel->Send(packet, 0);
+				}
 			}
 		}
 
@@ -308,13 +308,10 @@ void ReplicationManager::HandleCreate(BitStream & bitStream, Channel * channel)
 		return;
 	}
 
-	std::string className;
-	className = bitStream.ReadString();
-
 	ReplicationObject * object;
 
 	// Retrieve parameters through callback.
-	if (!m_handler->OnReplicationObjectCreate1(client, className, &object))
+	if (!m_handler->OnReplicationObjectCreateType(client, bitStream, &object))
 	{
 		AssertMsg(false, "unable to create object. className=%s", className.c_str());
 		return;
@@ -325,7 +322,7 @@ void ReplicationManager::HandleCreate(BitStream & bitStream, Channel * channel)
 	object->SetObjectID(objectID);
 	object->Serialize(bitStream, true, false);
 
-	m_handler->OnReplicationObjectCreate2(client, object);
+	m_handler->OnReplicationObjectCreated(client, object);
 
 	client->CL_AddObject(object);
 }
@@ -468,7 +465,7 @@ bool ReplicationManager::CL_DestroyObject(ReplicationClient * client, int object
 	{
 		client->CL_RemoveObject(object);
 
-		m_handler->OnReplicationObjectDestroy(client, object);
+		m_handler->OnReplicationObjectDestroyed(client, object);
 
 		return true;
 	}
