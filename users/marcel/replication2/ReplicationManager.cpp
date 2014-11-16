@@ -59,6 +59,13 @@ void ReplicationManager::CL_DestroyClient(int clientID)
 	if (i != m_clientClients.end())
 	{
 		ReplicationClient * client = i->second;
+
+		while (client->m_clientObjects.size() > 0)
+		{
+			ReplicationObject * object = client->m_clientObjects.begin()->second;
+			CL_DestroyObject(client, object->GetObjectID());
+		}
+
 		m_clientClientsCache.erase(client->m_channel);
 		delete i->second;
 		m_clientClients.erase(i);
@@ -109,21 +116,22 @@ void ReplicationManager::SV_RemoveObject(int objectID)
 		{
 			ReplicationClient * client = i->second;
 
-			ReplicationObjectStateColl createdOrDestroyed;
+			ReplicationClient::CreateOrDestroyList createdOrDestroyed;
 
 			client->SV_Move(objectID, client->m_createdOrDestroyed, createdOrDestroyed);
 
 			Assert(createdOrDestroyed.size() <= 1);
-			Assert(createdOrDestroyed.empty() || !createdOrDestroyed.front().m_isDestroyed);
+			Assert(createdOrDestroyed.empty() || createdOrDestroyed.front().m_type != ReplicationClient::CreateOrDestroy::kType_Destroy);
 
 			if (createdOrDestroyed.empty())
 			{
-				ReplicationObjectState objectState(object);
+				ReplicationClient::CreateOrDestroy destroy(
+					object,
+					ReplicationClient::CreateOrDestroy::kType_Destroy);
 
-				objectState.m_object = 0;
-				objectState.m_isDestroyed = true;
+				destroy.m_object = 0;
 
-				client->m_createdOrDestroyed.push_back(objectState);
+				client->m_createdOrDestroyed.push_back(destroy);
 			}
 		}
 	}
@@ -139,13 +147,7 @@ void ReplicationManager::CL_Shutdown()
 	{
 		ReplicationClient * client = i->second;
 
-		while (client->m_clientObjects.size() > 0)
-		{
-			ReplicationObject * object = client->m_clientObjects.begin()->second;
-			CL_DestroyObject(client, object->GetObjectID());
-		}
-
-		//CL_DestroyClient(m_clientClients.begin()->first);
+		CL_DestroyClient(m_clientClients.begin()->first);
 	}
 }
 
@@ -159,7 +161,7 @@ void ReplicationManager::SV_Update()
 
 		for (auto j = client->m_createdOrDestroyed.begin(); j != client->m_createdOrDestroyed.end(); ++j)
 		{
-			if (j->m_isDestroyed)
+			if (j->m_type == ReplicationClient::CreateOrDestroy::kType_Destroy)
 			{
 				// object has been destroyed. send destruction message to client
 
@@ -175,6 +177,8 @@ void ReplicationManager::SV_Update()
 			}
 			else
 			{
+				Assert(j->m_type == ReplicationClient::CreateOrDestroy::kType_Create);
+
 				// object has been created. send creation message to client
 
 				BitStream bitStream;
@@ -313,7 +317,7 @@ void ReplicationManager::HandleCreate(BitStream & bitStream, Channel * channel)
 	// Retrieve parameters through callback.
 	if (!m_handler->OnReplicationObjectCreateType(client, bitStream, &object))
 	{
-		AssertMsg(false, "unable to create object. className=%s", className.c_str());
+		AssertMsg(false, "unable to create object. objectID=%d", (int)objectID);
 		return;
 	}
 

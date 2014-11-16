@@ -12,7 +12,6 @@
 #include "ReplicationClient.h"
 #include "ReplicationHandler.h"
 #include "ReplicationObject.h"
-#include "ReplicationObjectState.h"
 
 class ReplicationManager : public PacketListener
 {

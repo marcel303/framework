@@ -162,7 +162,6 @@
     <ClCompile Include="ReplicationClient.cpp" />
     <ClCompile Include="ReplicationManager.cpp" />
     <ClCompile Include="ReplicationObject.cpp" />
-    <ClCompile Include="ReplicationObjectState.cpp" />
     <ClCompile Include="Game\ControllerExample.cpp" />
     <ClCompile Include="Game\EntityBrick.cpp" />
     <ClCompile Include="Game\EntityBrickSpawn.cpp" />
@@ -276,7 +275,6 @@
     <ClInclude Include="ReplicationHandler.h" />
     <ClInclude Include="ReplicationManager.h" />
     <ClInclude Include="ReplicationObject.h" />
-    <ClInclude Include="ReplicationObjectState.h" />
     <ClInclude Include="Game\ControllerExample.h" />
     <ClInclude Include="Game\EntityBrick.h" />
     <ClInclude Include="Game\EntityBrickSpawn.h" />

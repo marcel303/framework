@@ -27,9 +27,9 @@ void ReplicationClient::SV_AddObject(ReplicationObject * object)
 
 	// todo : assert object isn't created yet
 
-	ReplicationObjectState state(object);
+	CreateOrDestroy create(object, CreateOrDestroy::kType_Create);
 
-	m_createdOrDestroyed.push_back(state);
+	m_createdOrDestroyed.push_back(create);
 }
 
 void ReplicationClient::CL_AddObject(ReplicationObject * object)
@@ -46,7 +46,7 @@ void ReplicationClient::CL_RemoveObject(ReplicationObject * object)
 	m_clientObjects.erase(object->GetObjectID());
 }
 
-ReplicationObject * ReplicationClient::CL_FindObject(int objectID)
+ReplicationObject * ReplicationClient::CL_FindObject(uint16_t objectID)
 {
 	auto i = m_clientObjects.find(objectID);
 
@@ -56,7 +56,7 @@ ReplicationObject * ReplicationClient::CL_FindObject(int objectID)
 		return i->second;
 }
 
-ReplicationObjectStateColl::iterator ReplicationClient::SV_Find(ReplicationObjectStateColl & collection, int objectID)
+ReplicationClient::CreateOrDestroyList::iterator ReplicationClient::SV_Find(CreateOrDestroyList & collection, int objectID)
 {
 	for (auto i = collection.begin(); i != collection.end(); ++i)
 		if (i->m_objectID == objectID)
@@ -65,14 +65,14 @@ ReplicationObjectStateColl::iterator ReplicationClient::SV_Find(ReplicationObjec
 	return collection.end();
 }
 
-void ReplicationClient::SV_Move(int objectID, ReplicationObjectStateColl & src, ReplicationObjectStateColl & dst)
+void ReplicationClient::SV_Move(uint16_t objectID, CreateOrDestroyList & src, CreateOrDestroyList & dst)
 {
 	auto i = SV_Find(src, objectID);
 
 	if (i != src.end())
 	{
-		ReplicationObjectState state = *i;
+		CreateOrDestroy createOrDestroy = *i;
 		src.erase(i);
-		dst.push_back(state);
+		dst.push_back(createOrDestroy);
 	}
 }
