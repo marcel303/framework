@@ -502,6 +502,8 @@ bool Engine::OnReplicationObjectCreateType(ReplicationClient * client, BitStream
 	}
 	else
 	{
+		AssertMsg(false, "unable to create object. className=%s", className.c_str());
+
 		return false;
 	}
 }

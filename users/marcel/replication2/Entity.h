@@ -59,8 +59,9 @@ class Entity : public NetSerializableObject, public ReplicationObject
 	{
 	public:
 		Entity_NS(Entity * owner)
-			: NetSerializable(owner)
+			: NetSerializable(owner, (1 << REPLICATION_CHANNEL_RELIABLE) | (1 << REPLICATION_CHANNEL_UNRELIABLE), REPLICATION_CHANNEL_UNRELIABLE)
 		{
+			//SetChannel(REPLICATION_CHANNEL_RELIABLE);
 		}
 
 		virtual void SerializeStruct()
@@ -114,9 +115,9 @@ class Entity : public NetSerializableObject, public ReplicationObject
 	virtual bool RequiresUpdating() const { return (m_caps & CAP_NET_UPDATABLE) != 0; }
 	virtual bool RequiresUpdate() const { return NetSerializableObject::IsDirty(); }
 
-	virtual bool Serialize(BitStream & bitStream, bool init, bool send)
+	virtual bool Serialize(BitStream & bitStream, bool init, bool send, int channel)
 	{
-		return NetSerializableObject::Serialize(init, send, bitStream);
+		return NetSerializableObject::Serialize(init, send, channel, bitStream);
 	}
 
 public:
