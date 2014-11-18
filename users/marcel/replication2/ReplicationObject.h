@@ -8,6 +8,12 @@
 #include "NetSerializable.h"
 #include "Packet.h"
 
+enum ReplicationChannel
+{
+	REPLICATION_CHANNEL_RELIABLE = 0,
+	REPLICATION_CHANNEL_UNRELIABLE = 1
+};
+
 class ReplicationObject
 {
 	uint16_t m_objectID;
@@ -20,7 +26,7 @@ public:
 	virtual bool RequiresUpdating() const = 0;
 	virtual bool RequiresUpdate() const;
 
-	virtual bool Serialize(BitStream & bitStream, bool init, bool send) = 0;
+	virtual bool Serialize(BitStream & bitStream, bool init, bool send, int channel) = 0;
 
 	//
 

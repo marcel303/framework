@@ -188,7 +188,7 @@ void ReplicationManager::SV_Update()
 
 				if (m_handler->OnReplicationObjectSerializeType(client, j->m_object, bitStream))
 				{
-					j->m_object->Serialize(bitStream, true, true);
+					j->m_object->Serialize(bitStream, true, true, 0);
 
 					RepMgrPacketBuilder packetBuilder;
 					Packet packet = MakePacket(REPMSG_CREATE, packetBuilder, bitStream);
@@ -210,22 +210,31 @@ void ReplicationManager::SV_Update()
 		{
 			// Go through server objects & replicate.
 
-			BitStream bitStream;
-
-			const uint16_t objectID = object->GetObjectID();
-
-			bitStream.Write(objectID);
-
-			if (object->Serialize(bitStream, false, true))
+			for (uint8_t channel = 0; channel < 2; ++channel)
 			{
-				RepMgrPacketBuilder packetBuilder;
-				Packet packet = MakePacket(REPMSG_UPDATE, packetBuilder, bitStream);
+				BitStream bitStream;
 
-				for (auto j = m_serverClients.begin(); j != m_serverClients.end(); ++j)
+				const uint16_t objectID = object->GetObjectID();
+
+				bitStream.Write(objectID);
+				bitStream.WriteBit(channel == 0 ? false : true);
+
+				if (object->Serialize(bitStream, false, true, channel))
 				{
-					ReplicationClient* client = j->second;
+					RepMgrPacketBuilder packetBuilder;
+					Packet packet = MakePacket(REPMSG_UPDATE, packetBuilder, bitStream);
 
-					client->m_channel->Send(packet, 0);
+					for (auto j = m_serverClients.begin(); j != m_serverClients.end(); ++j)
+					{
+						ReplicationClient* client = j->second;
+
+						int sendFlags = 0;
+
+						if (channel == REPLICATION_CHANNEL_UNRELIABLE)
+							sendFlags |= ChannelSendFlag_Unreliable;
+
+						client->m_channel->Send(packet, sendFlags);
+					}
 				}
 			}
 		}
@@ -324,7 +333,7 @@ void ReplicationManager::HandleCreate(BitStream & bitStream, Channel * channel)
 	NET_STAT_INC(Replication_ObjectsCreated);
 
 	object->SetObjectID(objectID);
-	object->Serialize(bitStream, true, false);
+	object->Serialize(bitStream, true, false, -1);
 
 	m_handler->OnReplicationObjectCreated(client, object);
 
@@ -369,14 +378,17 @@ void ReplicationManager::HandleUpdate(BitStream & bitStream, Channel * channel)
 	}
 
 	uint16_t objectID;
+	uint8_t channelIndex;
 
 	bitStream.Read(objectID);
+
+	channelIndex = bitStream.ReadBit() ? 1 : 0;
 
 	ReplicationObject * object = client->CL_FindObject(objectID);
 
 	if (object)
 	{
-		object->Serialize(bitStream, false, false);
+		object->Serialize(bitStream, false, false, channelIndex);
 	}
 	else
 	{
