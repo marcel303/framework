@@ -81,10 +81,14 @@ void NetSerializationContext::Serialize(std::string & s)
 
 //
 
-NetSerializable::NetSerializable(NetSerializableObject * owner)
+NetSerializable::NetSerializable(NetSerializableObject * owner, uint8_t channelMask, uint8_t channel)
 	: m_owner(0)
+	, m_channel(channel)
+	, m_channelMask(channelMask)
 	, m_isDirty(false)
 {
+	Assert(m_channelMask & (1 << m_channel));
+
 	if (owner)
 	{
 		owner->Register(this);
@@ -137,7 +141,7 @@ void NetSerializableObject::Register(NetSerializable* serializable)
 	serializable->SetOwner(this);
 }
 
-bool NetSerializableObject::Serialize(bool init, bool send, BitStream & bitStream)
+bool NetSerializableObject::Serialize(bool init, bool send, int channel, BitStream & bitStream)
 {
 	bool result = false;
 
@@ -145,30 +149,40 @@ bool NetSerializableObject::Serialize(bool init, bool send, BitStream & bitStrea
 	{
 		NetSerializable * serialiable = *i;
 
-		bool isDirty;
-
-		if (init)
+		if (init || ((serialiable->GetChannelMask() & (1 << channel)) != 0))
 		{
-			isDirty = true;
-		}
-		else if (send)
-		{
-			isDirty = serialiable->IsDirty();
+			bool isDirty;
 
-			bitStream.WriteBit(isDirty);
-		}
-		else
-		{
-			isDirty = bitStream.ReadBit();
-		}
+			if (init)
+			{
+				isDirty = true;
+			}
+			else if (send)
+			{
+				if (serialiable->GetChannel() == channel)
+				{
+					isDirty = serialiable->IsDirty();
+				}
+				else
+				{
+					isDirty = false;
+				}
 
-		if (isDirty)
-		{
-			result = true;
+				bitStream.WriteBit(isDirty);
+			}
+			else
+			{
+				isDirty = bitStream.ReadBit();
+			}
 
-			serialiable->SerializeStruct(init, send, bitStream);
+			if (isDirty)
+			{
+				result = true;
 
-			serialiable->ResetDirty();
+				serialiable->SerializeStruct(init, send, bitStream);
+
+				serialiable->ResetDirty();
+			}
 		}
 	}
 

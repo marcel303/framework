@@ -53,13 +53,21 @@ public:
 class NetSerializable : public NetSerializationContext
 {
 	NetSerializableObject * m_owner;
+	uint8_t m_channel;
+	uint8_t m_channelMask;
 	bool m_isDirty;
 
+protected:
+	void SetChannel(uint8_t channel) { Assert(m_channelMask & (1 << channel)); m_channel = channel; }
+
 public:
-	NetSerializable(NetSerializableObject * owner);
+	NetSerializable(NetSerializableObject * owner, uint8_t channelMask = 0x1, uint8_t channel = 0);
 
 	void SetOwner(NetSerializableObject * owner);
 	NetSerializableObject * GetOwner() const { return m_owner; }
+
+	uint8_t GetChannel() const { return m_channel; }
+	uint8_t GetChannelMask() const { return m_channelMask; }
 
 	bool IsDirty() const;
 	void SetDirty();
@@ -80,6 +88,6 @@ public:
 	NetSerializableObject();
 
 	void Register(NetSerializable * serializable);
-	bool Serialize(bool init, bool send, BitStream & bitStream);
+	bool Serialize(bool init, bool send, int channel, BitStream & bitStream);
 	bool IsDirty() const;
 };
