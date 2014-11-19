@@ -20,7 +20,10 @@ public:
 protected:
 	void CreateDisplay(int x, int y, int width, int height, bool fullscreen, bool openGL);
 	void DestroyDisplay();
+
+#if defined(SYSTEM_WINDOWS)
 	HWND GetHWnd();
+#endif
 
 	SDL_Surface* m_surface;
 };

@@ -9,8 +9,8 @@ namespace CD
 
 	// GroupFltACL
 	GroupFltACL::GroupFltACL()
-		: m_deny(0)
-		, m_permit(0)
+		: m_permit(0)
+		, m_deny(0)
 		, m_default(true)
 	{
 	}

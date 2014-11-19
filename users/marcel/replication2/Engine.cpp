@@ -217,8 +217,10 @@ bool Engine::Shutdown()
 
 void Engine::ThreadSome()
 {
+#ifdef WIN32
 	for (int i = 0; i < 1; ++i)
 		Sleep(0);
+#endif
 }
 
 void Engine::SceneLoad()
@@ -371,10 +373,10 @@ void Engine::Render()
 		{
 			Client * client = *i;
 
-			printf("Scene: Object count: %d.\n", client->m_clientScene->m_entities.size());
+			printf("Scene: Object count: %d.\n", (int)client->m_clientScene->m_entities.size());
 		}
 
-		printf("Net: Channel count: %d.\n", m_channelMgr->m_channels.size());
+		printf("Net: Channel count: %d.\n", (int)m_channelMgr->m_channels.size());
 
 		for (ChannelManager::ChannelMapItr i = m_channelMgr->m_channels.begin(); i != m_channelMgr->m_channels.end(); ++i)
 		{
@@ -383,7 +385,12 @@ void Engine::Render()
 				if (p->m_nextSend != 0)
 					numRtSent++;
 
-			printf("Net: Channel %d -> %d: RTT: %d. RPQ: %d (%d sent).\n", i->second->m_id, i->second->m_destinationId, i->second->m_rtt, i->second->m_rtQueue.size(), numRtSent);
+			printf("Net: Channel %d -> %d: RTT: %d. RPQ: %d (%d sent).\n",
+				i->second->m_id,
+				i->second->m_destinationId,
+				i->second->m_rtt,
+				(int)i->second->m_rtQueue.size(),
+				numRtSent);
 		}
 
 		PrintNetStats();

@@ -386,6 +386,9 @@ private:
 				m_vertexIndex = m_primitiveCnt + m_primitiveIndex;
 
 				break;
+
+			default:
+				Assert(false);
 			}
 
 			if (m_vertexIndex >= GetRealVertexCnt())

@@ -14,9 +14,15 @@
 
 // FIXME: VA list: first expand str arg/list, then printf..
 #if DEBUG
-	#define DB_LOG printf
-	#define DB_ERR(str, ...) DB_LOG("%s: error: " ## str ## "\n", __FUNCTION__, __VA_ARGS__)
-	#define DB_TRACE(str, ...) DB_LOG("%s: " ## str ## "\n", __FUNCTION__, __VA_ARGS__)
+	#ifdef __GNUC__
+		#define DB_LOG printf
+		#define DB_ERR(str, ...) DB_LOG("%s: error: " # str "\n", __FUNCTION__, ##__VA_ARGS__)
+		#define DB_TRACE(str, ...) DB_LOG("%s: " # str "\n", __FUNCTION__, ##__VA_ARGS__)
+	#else
+		#define DB_LOG printf
+		#define DB_ERR(str, ...) DB_LOG("%s: error: " ## str ## "\n", __FUNCTION__, __VA_ARGS__)
+		#define DB_TRACE(str, ...) DB_LOG("%s: " ## str ## "\n", __FUNCTION__, __VA_ARGS__)
+	#endif
 #else
 	#define DB_LOG(str, ...) do { } while (false)
 	#define DB_ERR(str, ...) do { } while (false)
