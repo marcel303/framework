@@ -1,5 +1,15 @@
 #pragma once
 
+/* The MTU size specifies the maximum size for a packet sent over the network. Typically this
+ * should be less than the MTU size for 100 Mbit Ethernet LAN (1500 bytes). When sending data
+ * through Channel::Send, the channel will try to batch as many packets into one datagram as
+ * it possibly can. This reduces the total number of packets sent significantly. Once a batch
+ * reaches the MTU size, it will flush out the packet and start a new batch.
+ */
+#ifndef LIBNET_SOCKET_MTU_SIZE
+	#define LIBNET_SOCKET_MTU_SIZE 1400
+#endif
+
 /* Channel timeouts use a ping/pong mechanism to ensure lingering channels
  * are purged. During debugging it is often desirable to have this feature
  * disabled so you can safely step through code without your channels expiring.

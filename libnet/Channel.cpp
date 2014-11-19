@@ -338,13 +338,13 @@ bool Channel::SendBegin(uint32_t size)
 	const uint32_t newSize1 = OVERHEAD + size;
 	const uint32_t newSize2 = m_sendQueue.GetSize() + newSize1;
 
-	if (newSize1 > kMaxDatagramSize)
+	if (newSize1 > LIBNET_SOCKET_MTU_SIZE)
 	{
 		NetAssert(false);
 		return false;
 	}
 
-	if (newSize2 > kMaxDatagramSize)
+	if (newSize2 > LIBNET_SOCKET_MTU_SIZE)
 		Flush();
 
 	m_txBegun = true;
@@ -426,7 +426,7 @@ bool Channel::SendReliable(const Packet & packet)
 	temp.m_lastSend = 0;
 	temp.m_nextSend = 0;
 	temp.m_dataSize = packet.GetSize();
-	packet.CopyTo(temp.m_data, kMaxDatagramSize);
+	packet.CopyTo(temp.m_data, LIBNET_SOCKET_MTU_SIZE);
 
 	m_rtSndId++;
 
@@ -481,7 +481,7 @@ bool Channel::Receive(ReceiveData & rcvData)
 		}
 	}
 
-	if (m_socket->Receive(rcvData.m_data, kMaxDatagramSize, &rcvData.m_size, &rcvData.m_address))
+	if (m_socket->Receive(rcvData.m_data, LIBNET_SOCKET_MTU_SIZE, &rcvData.m_size, &rcvData.m_address))
 	{
 		if (LIBNET_CHANNEL_SIMULATED_PING != 0)
 		{
@@ -597,11 +597,6 @@ void Channel::HandleRTUpdate(Packet & packet)
 		if (packet.ExtractTillEnd(packet2))
 		{
 			m_channelMgr->m_packetDispatcher->Dispatch(packet2, this);
-
-		#if LIBNET_CHANNEL_LOG_RT == 1
-			LOG_CHANNEL_DBG("RT UPD rcvd: %u handled",
-				static_cast<uint32_t>(packetId));
-		#endif
 		}
 		else
 		{
@@ -670,11 +665,6 @@ void Channel::HandleRTAck(Packet & packet)
 		// Remove queued packets.
 		while (m_rtQueue.size() > 0 && m_rtQueue[0].m_id <= packetId)
 		{
-		#if LIBNET_CHANNEL_LOG_RT == 1
-			LOG_CHANNEL_DBG("RT ACK rcvd: %u handled",
-				static_cast<uint32_t>(m_rtQueue[0].m_id));
-		#endif
-
 			m_rtQueue.pop_front();
 		}
 

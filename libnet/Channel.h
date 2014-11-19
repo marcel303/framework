@@ -10,9 +10,6 @@
 
 class ChannelManager;
 
-//const static uint32_t kMaxDatagramSize = 32 * 1024;
-const static uint32_t kMaxDatagramSize = 1400;
-
 class ReceiveData
 {
 public:
@@ -29,7 +26,7 @@ public:
 
 	uint32_t m_size;
 	NetAddress m_address;
-	uint8_t m_data[kMaxDatagramSize];
+	uint8_t m_data[LIBNET_SOCKET_MTU_SIZE];
 };
 
 class Channel
@@ -72,12 +69,12 @@ public:
 		uint32_t m_delay;
 		NetAddress m_address;
 		uint32_t m_dataSize;
-		uint8_t m_data[kMaxDatagramSize];
+		uint8_t m_data[LIBNET_SOCKET_MTU_SIZE];
 
 		inline bool Set(const void * data, uint32_t size, const NetAddress & address)
 		{
-			NetAssert(size <= kMaxDatagramSize);
-			if (size > kMaxDatagramSize)
+			NetAssert(size <= LIBNET_SOCKET_MTU_SIZE);
+			if (size > LIBNET_SOCKET_MTU_SIZE)
 				return false;
 			m_address = address;
 			m_dataSize = size;
@@ -102,7 +99,7 @@ public:
 	NetAddress m_address;
 	uint16_t m_id;
 	uint16_t m_destinationId;
-	PacketBuilder<kMaxDatagramSize> m_sendQueue;
+	PacketBuilder<LIBNET_SOCKET_MTU_SIZE> m_sendQueue;
 	PolledTimer m_pingTimer;
 #if LIBNET_CHANNEL_ENABLE_TIMEOUTS == 1
 	PolledTimer m_timeoutTimer;
@@ -124,7 +121,7 @@ public:
 		uint64_t m_nextSend; // Derived.
 		bool m_acknowledged;
 		uint32_t m_dataSize;
-		uint8_t m_data[kMaxDatagramSize]; // fixme.. use allocator
+		uint8_t m_data[LIBNET_SOCKET_MTU_SIZE];
 	};
 	std::deque<RTPacket> m_rtQueue;
 	uint32_t m_rtSndId; // ID of next send packet.
