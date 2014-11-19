@@ -145,7 +145,7 @@ public:
 	bool m_stop;
 };
 
-int main(int argc, char* argv[])
+int main(int argc, char * argv[])
 {
 	Calc::Initialize();
 

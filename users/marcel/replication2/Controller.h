@@ -25,6 +25,7 @@ class Controller : public InputHandler
 {
 public:
 	Controller(int id, Client* client);
+	virtual ~Controller();
 
 	void BindKey(int key, int actionID);
 	void BindMouseAxis(INPUT_AXIS axis, int actionID);

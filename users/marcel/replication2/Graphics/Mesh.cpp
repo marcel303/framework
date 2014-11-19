@@ -3,8 +3,8 @@
 Mesh::Mesh()
 	: m_allocator(0)
 	, m_type(PT_TRIANGLE_LIST)
-	, m_vb(0)
 	, m_ib(0)
+	, m_vb(0)
 {
 }
 

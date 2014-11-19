@@ -3,8 +3,8 @@
 ResIB::ResIB()
 	: Res()
 	, index(0)
-	, m_indexCnt(0)
 	, m_allocator(0)
+	, m_indexCnt(0)
 {
 	SetType(RES_IB);
 }

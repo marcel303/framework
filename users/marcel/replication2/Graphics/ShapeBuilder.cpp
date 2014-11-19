@@ -817,7 +817,7 @@ bool ShapeBuilder::RemoveTJunctions(IMemAllocator * allocator, Mesh & mesh, Mesh
 		}
 	}
 
-	printf("T-Junction removal requires %d splits, generating %d new vertices.\n", ops.size(), ops.size());
+	printf("T-Junction removal requires %d splits, generating %d new vertices.\n", (int)ops.size(), (int)ops.size());
 
 	CONV_END();
 
