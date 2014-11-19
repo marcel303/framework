@@ -91,6 +91,10 @@ NetSerializable::NetSerializable(NetSerializableObject * owner)
 	}
 }
 
+NetSerializable::~NetSerializable()
+{
+}
+
 void NetSerializable::SetOwner(NetSerializableObject * owner)
 {
 	NetAssert(m_owner == 0);

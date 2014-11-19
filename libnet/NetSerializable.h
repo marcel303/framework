@@ -57,6 +57,7 @@ class NetSerializable : public NetSerializationContext
 
 public:
 	NetSerializable(NetSerializableObject * owner);
+	virtual ~NetSerializable();
 
 	void SetOwner(NetSerializableObject * owner);
 	NetSerializableObject * GetOwner() const { return m_owner; }
