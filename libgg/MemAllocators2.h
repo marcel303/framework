@@ -172,7 +172,7 @@ public:
 	virtual void * Alloc(size_t size, uint32_t tag = 0)
 	{
 #ifdef _DEBUG
-		void * p = _mm_malloc(size + sizeof(MemAllocInfo), 16);
+		void * p = _mm_malloc(size + sizeof(MemAllocInfo), m_alignment);
 
 		MemAllocInfo * pAllocInfo = reinterpret_cast<MemAllocInfo *>(p);
 		pAllocInfo->Init(size, tag, 0);
@@ -181,7 +181,7 @@ public:
 
 		return pAllocInfo + 1;
 #else
-		return _mm_malloc(size, 16);
+		return _mm_malloc(size, m_alignment);
 #endif
 	}
 
@@ -359,7 +359,7 @@ public:
 		m_pStack = 0;
 	}
 
-	virtual void * Alloc(uint32_t size, uint32_t tag = 0)
+	virtual void * Alloc(size_t size, uint32_t tag = 0)
 	{
 		assert(m_stackSize <= m_maxStackSize);
 #ifdef _DEBUG
@@ -408,7 +408,7 @@ public:
 		m_pStack = 0;
 	}
 
-	virtual void * Alloc(uint32_t size, uint32_t tag = 0)
+	virtual void * Alloc(size_t size, uint32_t tag = 0)
 	{
 		return MemAllocatorArray::Alloc(size, tag);
 	}
@@ -511,13 +511,13 @@ public:
 private:
 	inline uint32_t PointerToIndex(void * p)
 	{
-		uint32_t offset =
-			reinterpret_cast<uint32_t>(p) -
-			reinterpret_cast<uint32_t>(m_pBytes);
+		uintptr_t offset =
+			reinterpret_cast<uintptr_t>(p) -
+			reinterpret_cast<uintptr_t>(m_pBytes);
 
 		assert((offset & ((1 << POW2) - 1)) == 0);
 
-		return offset >> POW2;
+		return static_cast<uint32_t>(offset >> POW2);
 	}
 
 	uint8_t * m_pBytes;
