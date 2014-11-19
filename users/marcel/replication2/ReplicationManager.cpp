@@ -326,7 +326,7 @@ void ReplicationManager::HandleCreate(BitStream & bitStream, Channel * channel)
 	// Retrieve parameters through callback.
 	if (!m_handler->OnReplicationObjectCreateType(client, bitStream, &object))
 	{
-		AssertMsg(false, "unable to create object. objectID=%d", (int)objectID);
+		AssertMsg(false, "unable to create object. objectId=%d", objectID);
 		return;
 	}
 

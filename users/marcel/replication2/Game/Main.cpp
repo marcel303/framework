@@ -1,6 +1,6 @@
-#if defined(DEBUG) && 0
-#define GFX_W 320
-#define GFX_H 240
+#if defined(DEBUG)
+#define GFX_W 256
+#define GFX_H 256
 #define GFX_FS false
 #else
 #define GFX_W 800
@@ -145,7 +145,7 @@ public:
 	bool m_stop;
 };
 
-int main(int argc, char* argv[])
+int main(int argc, char * argv[])
 {
 	Calc::Initialize();
 

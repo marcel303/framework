@@ -58,7 +58,7 @@ void WeaponDefault::HandleFire()
 	ShEntity hit = GetOwner()->m_scene->CastRay(GetOwner(), position, orientation, 1000.0f, &distance);
 	if (hit.get())
 	{
-		Vec3 hitpos = position + orientation * distance;
+		//Vec3 hitpos = position + orientation * distance;
 
 		if (hit->m_className == "Player")
 		{

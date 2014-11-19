@@ -154,7 +154,6 @@ static MemAllocatorGeneric s_sbAllocs(1);
 class ShapeBuilder
 {
 private:
-	IMemAllocator * m_allocator;
 	IMemAllocator * m_scratchAllocator;
 
 public:
@@ -166,14 +165,12 @@ public:
 	};
 
 	ShapeBuilder()
-		: m_allocator(&s_sbAllocs)
-		, m_scratchAllocator(&s_sbAllocs)
+		: m_scratchAllocator(&s_sbAllocs)
 	{
 	}
 
-	ShapeBuilder(IMemAllocator * allocator, IMemAllocator * scratchAllocator)
-		: m_allocator(allocator)
-		, m_scratchAllocator(scratchAllocator)
+	ShapeBuilder(IMemAllocator * scratchAllocator)
+		: m_scratchAllocator(scratchAllocator)
 	{
 	}
 
@@ -386,6 +383,9 @@ private:
 				m_vertexIndex = m_primitiveCnt + m_primitiveIndex;
 
 				break;
+
+			default:
+				Assert(false);
 			}
 
 			if (m_vertexIndex >= GetRealVertexCnt())

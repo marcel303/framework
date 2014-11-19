@@ -63,7 +63,7 @@ int main(int argc, char * argv[])
 				Model * model = new Model("model.txt");
 				model->x = x * 200.f;
 				model->y = y * 200.f;
-				model->z = 0.f;
+				model->z = z * 100.f;
 				
 				models[CoordKey(x, y, z)] = model;
 			}

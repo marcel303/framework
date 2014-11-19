@@ -95,6 +95,10 @@ NetSerializable::NetSerializable(NetSerializableObject * owner, uint8_t channelM
 	}
 }
 
+NetSerializable::~NetSerializable()
+{
+}
+
 void NetSerializable::SetOwner(NetSerializableObject * owner)
 {
 	NetAssert(m_owner == 0);

@@ -13,6 +13,10 @@ Controller::Controller(int id, Client* client)
 	m_client = client;
 }
 
+Controller::~Controller()
+{
+}
+
 void Controller::BindKey(int key, int actionID)
 {
 	Bind bind;

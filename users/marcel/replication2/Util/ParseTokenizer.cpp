@@ -430,7 +430,7 @@ namespace Parse
 		return 0;
 	}
 
-	void Tokenizer::SetError(char* errorMessage)
+	void Tokenizer::SetError(const char* errorMessage)
 	{
 		if (errorMessage)
 		{
@@ -445,7 +445,7 @@ namespace Parse
 		
 		if (optionVerboseErrors)
 		{
-			printf(this->errorMessage);
+			printf("%s", this->errorMessage);
 		}
 	}
 

@@ -14,9 +14,9 @@ DEFINE_ENTITY(Player, Player);
 
 Player::Player(uint16_t owningChannelID)
 	: EntityPlayer()
+	, m_controllerExample(0)
 	, m_weaponLink("weapon", this)
 	, m_fort("fort", this)
-	, m_controllerExample(0)
 {
 	SetClassName("Player");
 	EnableCaps(CAP_DYNAMIC_PHYSICS | CAP_SYNC_POS | CAP_SYNC_ROT);

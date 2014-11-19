@@ -62,6 +62,7 @@ protected:
 
 public:
 	NetSerializable(NetSerializableObject * owner, uint8_t channelMask = 0x1, uint8_t channel = 0);
+	virtual ~NetSerializable();
 
 	void SetOwner(NetSerializableObject * owner);
 	NetSerializableObject * GetOwner() const { return m_owner; }

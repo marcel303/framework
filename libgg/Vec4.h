@@ -222,4 +222,4 @@ private:
 	float m_v[4];
 };
 
-typedef Vec4 & Vec4Arg;
+typedef const Vec4 & Vec4Arg;

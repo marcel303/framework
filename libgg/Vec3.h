@@ -189,4 +189,4 @@ private:
 	float m_v[3];
 };
 
-typedef Vec3 & Vec3Arg;
+typedef const Vec3 & Vec3Arg;

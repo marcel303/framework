@@ -85,7 +85,7 @@ namespace Parse
 		int ParseBinaryString(const String& string, Token* token, int* charactersRead) const;     ///< Parse binary string. Return 1 on success. 0 otherwise.
 		int ParseNumber(const String& string, Token* token, int* charactersRead) const;           ///< Parse number. Return 1 on success. 0 otherwise.
 
- 		void SetError(char* errorMessage); ///< Set error message.
+ 		void SetError(const char* errorMessage); ///< Set error message.
 
 		Token tokenZero;                ///< Zero token, returned if token index out of bounds.
 		std::vector<Token*> tokenArray; ///< Array of generated tokens.

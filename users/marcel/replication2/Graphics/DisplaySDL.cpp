@@ -1,4 +1,6 @@
-#include <SDL/SDL_syswm.h>
+#ifdef WIN32
+	#include <SDL/SDL_syswm.h>
+#endif
 #include "Debug.h"
 #include "DisplaySDL.h"
 #include "EventManager.h"
@@ -42,8 +44,10 @@ int DisplaySDL::GetHeight() const
 
 void* DisplaySDL::Get(const std::string& name)
 {
+#if defined(SYSTEM_WINDOWS)
 	if (name == "hWnd")
 		return GetHWnd();
+#endif
 
 	return 0;
 }
@@ -167,9 +171,9 @@ void DisplaySDL::DestroyDisplay()
 	m_surface = 0;
 }
 
+#if defined(SYSTEM_WINDOWS)
 HWND DisplaySDL::GetHWnd()
 {
-#if defined(SYSTEM_WINDOWS)
 	SDL_SysWMinfo wminfo;
 	SDL_VERSION(&wminfo.version);
 
@@ -177,10 +181,8 @@ HWND DisplaySDL::GetHWnd()
 		return 0;
 
 	return wminfo.window;
-#else
-	return 0;
-#endif
 }
+#endif
 
 static int TranslateKey(int key)
 {

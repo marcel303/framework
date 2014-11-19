@@ -18,8 +18,8 @@
 template <typename T> // todo : remove this class
 class NetValue
 {
-	T m_value;
 	NetSerializable * m_owner;
+	T m_value;
 
 public:
 	NetValue(NetSerializable * owner, const T & value = T())
