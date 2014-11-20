@@ -4,6 +4,7 @@
 #include "Engine.h"
 #include "Entity.h"
 #include "EntityPtr.h"
+#include "MyProtocols.h"
 #include "PhyScene.h"
 #include "ReplicationManager.h"
 #include "Scene.h"
@@ -51,7 +52,7 @@ void Scene::AddEntity(ShEntity entity, int id)
 
 	if (m_repMgr) // FIXME: m_serverSide?
 	{
-		entity->m_repObjectID = m_repMgr->SV_AddObject(entity->m_className, entity.get());
+		entity->m_repObjectID = m_repMgr->SV_AddObject(entity.get());
 	}
 
 	if (!m_repMgr)

@@ -292,15 +292,15 @@ int main(int argc, char * argv[])
 					#if LIBNET_ENABLE_NET_STATS
 						if (renderStats)
 						{
-							RenderStatValue<int>(NetStat_PacketsSent,          "NET: Packets sent",      0,   0,   295, 45);
-							RenderStatValue<int>(NetStat_PacketsReceived,      "NET: Packets received",  300, 0,   295, 45);
-							RenderStatValue<int>(NetStat_BytesSent,            "NET: Bytes sent",        0,   50,  295, 45);
-							RenderStatValue<int>(NetStat_BytesReceived,        "NET: Bytes received",    300, 50,  295, 45);
-							RenderStatValue<int>(Replication_BytesReceived,    "REP: Bytes received",    0,   100, 295, 45);
-							RenderStatValue<int>(Replication_ObjectsCreated,   "REP: Objects created",   300, 100, 295, 45);
-							RenderStatValue<int>(Replication_ObjectsDestroyed, "REP: Objects destroyed", 0,   150, 295, 45);
-							RenderStatValue<int>(Replication_ObjectsUpdated,   "REP: Objects updated",   300, 150, 295, 45);
-							RenderStatValue<int>(Gfx_Fps,                      "GFX: FPS",               0,   250, 295, 45);
+							RenderStatValue<int>(NetStat_PacketsSent,                 "NET: Packets sent",      0,   0,   295, 45);
+							RenderStatValue<int>(NetStat_PacketsReceived,             "NET: Packets received",  300, 0,   295, 45);
+							RenderStatValue<int>(NetStat_BytesSent,                   "NET: Bytes sent",        0,   50,  295, 45);
+							RenderStatValue<int>(NetStat_BytesReceived,               "NET: Bytes received",    300, 50,  295, 45);
+							RenderStatValue<int>(NetStat_ReplicationBytesReceived,    "REP: Bytes received",    0,   100, 295, 45);
+							RenderStatValue<int>(NetStat_ReplicationObjectsCreated,   "REP: Objects created",   300, 100, 295, 45);
+							RenderStatValue<int>(NetStat_ReplicationObjectsDestroyed, "REP: Objects destroyed", 0,   150, 295, 45);
+							RenderStatValue<int>(NetStat_ReplicationObjectsUpdated,   "REP: Objects updated",   300, 150, 295, 45);
+							RenderStatValue<int>(Gfx_Fps,                             "GFX: FPS",               0,   250, 295, 45);
 						}
 					#endif
 

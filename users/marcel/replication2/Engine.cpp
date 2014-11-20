@@ -3,6 +3,7 @@
 #include "Engine.h"
 #include "EventManager.h"
 #include "Game.h"
+#include "MyProtocols.h"
 #include "PacketDispatcher.h"
 #include "Player.h"
 #include "Renderer.h"

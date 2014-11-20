@@ -159,9 +159,6 @@
     <ClCompile Include="CDGroupFLT.cpp" />
     <ClCompile Include="CDObject.cpp" />
     <ClCompile Include="CDScene.cpp" />
-    <ClCompile Include="ReplicationClient.cpp" />
-    <ClCompile Include="ReplicationManager.cpp" />
-    <ClCompile Include="ReplicationObject.cpp" />
     <ClCompile Include="Game\ControllerExample.cpp" />
     <ClCompile Include="Game\EntityBrick.cpp" />
     <ClCompile Include="Game\EntityBrickSpawn.cpp" />
@@ -184,8 +181,6 @@
     <ClInclude Include="InputCodes.h" />
     <ClInclude Include="InputHandler.h" />
     <ClInclude Include="InputManager.h" />
-    <ClInclude Include="libreplication_config.h" />
-    <ClInclude Include="libreplication_forward.h" />
     <ClInclude Include="PhyObject.h" />
     <ClInclude Include="PhyScene.h" />
     <ClInclude Include="Scene.h" />
@@ -271,10 +266,6 @@
     <ClInclude Include="CDGroupFLT.h" />
     <ClInclude Include="CDObject.h" />
     <ClInclude Include="CDScene.h" />
-    <ClInclude Include="ReplicationClient.h" />
-    <ClInclude Include="ReplicationHandler.h" />
-    <ClInclude Include="ReplicationManager.h" />
-    <ClInclude Include="ReplicationObject.h" />
     <ClInclude Include="Game\ControllerExample.h" />
     <ClInclude Include="Game\EntityBrick.h" />
     <ClInclude Include="Game\EntityBrickSpawn.h" />

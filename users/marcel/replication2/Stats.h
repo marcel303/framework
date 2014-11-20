@@ -5,11 +5,6 @@
 #include "NetStats.h"
 #include "Timer.h"
 
-NET_STAT_EXTERN(Replication_BytesReceived);
-NET_STAT_EXTERN(Replication_ObjectsCreated);
-NET_STAT_EXTERN(Replication_ObjectsDestroyed);
-NET_STAT_EXTERN(Replication_ObjectsUpdated);
-
 NET_STAT_EXTERN(Scene_ObjectCount);
 
 NET_STAT_EXTERN(Gfx_Fps);
@@ -27,10 +22,10 @@ public:
 	{
 		const uint64_t time = g_TimerRT.TimeUS_get();
 
-		NET_STAT_COMMIT(Replication_BytesReceived, time);
-		NET_STAT_COMMIT(Replication_ObjectsCreated, time);
-		NET_STAT_COMMIT(Replication_ObjectsDestroyed, time);
-		NET_STAT_COMMIT(Replication_ObjectsUpdated, time);
+		NET_STAT_COMMIT(NetStat_ReplicationBytesReceived, time);
+		NET_STAT_COMMIT(NetStat_ReplicationObjectsCreated, time);
+		NET_STAT_COMMIT(NetStat_ReplicationObjectsDestroyed, time);
+		NET_STAT_COMMIT(NetStat_ReplicationObjectsUpdated, time);
 	}
 
 	void CommitScene()
