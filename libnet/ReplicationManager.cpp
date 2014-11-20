@@ -1,10 +1,11 @@
 #include <algorithm>
 #include "BitStream.h"
-#include "Debug.h"
-#include "MyProtocols.h"
+#include "Channel.h"
+#include "Log.h"
+#include "NetProtocols.h"
+#include "NetStats.h"
 #include "PacketDispatcher.h"
 #include "ReplicationManager.h"
-#include "Stats.h"
 #include "Types.h"
 
 ReplicationManager::ReplicationManager()
@@ -72,7 +73,7 @@ void ReplicationManager::CL_DestroyClient(int clientID)
 	}
 }
 
-int ReplicationManager::SV_AddObject(const std::string & className, ReplicationObject * object)
+int ReplicationManager::SV_AddObject(ReplicationObject * object)
 {
 	Assert(object);
 
@@ -256,7 +257,7 @@ void ReplicationManager::CL_RegisterHandler(ReplicationHandler * handler)
 
 void ReplicationManager::OnReceive(Packet & packet, Channel * channel)
 {
-	NET_STAT_ADD(Replication_BytesReceived, packet.GetSize());
+	NET_STAT_ADD(NetStat_ReplicationBytesReceived, packet.GetSize());
 
 	uint8_t messageID;
 
@@ -330,7 +331,7 @@ void ReplicationManager::HandleCreate(BitStream & bitStream, Channel * channel)
 		return;
 	}
 
-	NET_STAT_INC(Replication_ObjectsCreated);
+	NET_STAT_INC(NetStat_ReplicationObjectsCreated);
 
 	object->SetObjectID(objectID);
 	object->Serialize(bitStream, true, false, -1);
@@ -346,7 +347,7 @@ void ReplicationManager::HandleDestroy(BitStream & bitStream, Channel * channel)
 
 	if (!client)
 	{
-		DB_ERR("received destroy request from unknown channel (%d)", channel->m_id);
+		LOG_ERR("received destroy request from unknown channel (%d)", channel->m_id);
 		return;
 	}
 
@@ -356,24 +357,24 @@ void ReplicationManager::HandleDestroy(BitStream & bitStream, Channel * channel)
 
 	if (CL_DestroyObject(client, objectID))
 	{
-		NET_STAT_INC(Replication_ObjectsDestroyed);
+		NET_STAT_INC(NetStat_ReplicationObjectsDestroyed);
 	}
 	else
 	{
-		DB_ERR("received destroy request for non-existing object (%d)", objectID);
+		LOG_ERR("received destroy request for non-existing object (%d)", objectID);
 		return;
 	}
 }
 
 void ReplicationManager::HandleUpdate(BitStream & bitStream, Channel * channel)
 {
-	NET_STAT_INC(Replication_ObjectsUpdated);
+	NET_STAT_INC(NetStat_ReplicationObjectsUpdated);
 
 	ReplicationClient * client = CL_FindClient(channel);
 
 	if (!client)
 	{
-		DB_ERR("received update from unknown channel (%d)", channel->m_id);
+		LOG_ERR("received update from unknown channel (%d)", channel->m_id);
 		return;
 	}
 
@@ -392,7 +393,7 @@ void ReplicationManager::HandleUpdate(BitStream & bitStream, Channel * channel)
 	}
 	else
 	{
-		DB_ERR("received update for non-existing object (%d)", objectID);
+		LOG_ERR("received update for non-existing object (%d)", objectID);
 		return;
 	}
 }

@@ -244,5 +244,10 @@ NET_STAT_EXTERN(NetStat_ReliableTransportNacksIgnored);
 NET_STAT_EXTERN(NetStat_ReliableTransportReceives);
 NET_STAT_EXTERN(NetStat_ReliableTransportReceivesIgnored);
 
+NET_STAT_EXTERN(NetStat_ReplicationBytesReceived);
+NET_STAT_EXTERN(NetStat_ReplicationObjectsCreated);
+NET_STAT_EXTERN(NetStat_ReplicationObjectsDestroyed);
+NET_STAT_EXTERN(NetStat_ReplicationObjectsUpdated);
+
 void PrintNetStats();
 void CommitNetStats();

@@ -22,6 +22,9 @@
     <ClCompile Include="Packet.cpp" />
     <ClCompile Include="PacketDispatcher.cpp" />
     <ClCompile Include="PacketListener.cpp" />
+    <ClCompile Include="ReplicationClient.cpp" />
+    <ClCompile Include="ReplicationManager.cpp" />
+    <ClCompile Include="ReplicationObject.cpp" />
     <ClCompile Include="RpcManager.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -32,6 +35,8 @@
     <ClInclude Include="ChannelTypes.h" />
     <ClInclude Include="libnet_config.h" />
     <ClInclude Include="libnet_forward.h" />
+    <ClInclude Include="libreplication_config.h" />
+    <ClInclude Include="libreplication_forward.h" />
     <ClInclude Include="NetAddress.h" />
     <ClInclude Include="NetArray.h" />
     <ClInclude Include="NetDiag.h" />
@@ -44,6 +49,10 @@
     <ClInclude Include="Packet.h" />
     <ClInclude Include="PacketDispatcher.h" />
     <ClInclude Include="PacketListener.h" />
+    <ClInclude Include="ReplicationClient.h" />
+    <ClInclude Include="ReplicationHandler.h" />
+    <ClInclude Include="ReplicationManager.h" />
+    <ClInclude Include="ReplicationObject.h" />
     <ClInclude Include="RpcManager.h" />
   </ItemGroup>
   <ItemGroup>

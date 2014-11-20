@@ -1,7 +1,4 @@
-#include "BitStream.h"
-#include "Debug.h"
 #include "ReplicationObject.h"
-#include "Types.h"
 
 ReplicationObject::ReplicationObject()
 	: m_objectID(-1)

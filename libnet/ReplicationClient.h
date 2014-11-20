@@ -4,7 +4,6 @@
 
 #include <list>
 #include <map>
-#include "Client.h"
 #include "ReplicationObject.h"
 
 class ReplicationClient

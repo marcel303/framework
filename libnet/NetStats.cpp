@@ -21,6 +21,11 @@ NET_STAT_DEFINE(NetStat_ReliableTransportNacksIgnored);
 NET_STAT_DEFINE(NetStat_ReliableTransportReceives);
 NET_STAT_DEFINE(NetStat_ReliableTransportReceivesIgnored);
 
+NET_STAT_DEFINE(NetStat_ReplicationBytesReceived);
+NET_STAT_DEFINE(NetStat_ReplicationObjectsCreated);
+NET_STAT_DEFINE(NetStat_ReplicationObjectsDestroyed);
+NET_STAT_DEFINE(NetStat_ReplicationObjectsUpdated);
+
 #if LIBNET_ENABLE_NET_STATS
 
 static void PrintNetStat(const char * name, const NetStatsValue<int> & stat)

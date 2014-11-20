@@ -2,8 +2,11 @@
 #define REPLICATIONHANDLER_H
 #pragma once
 
-#include <string>
-#include "ReplicationClient.h"
+//#include "libnet_forward.h"
+
+class BitStream;
+class ReplicationClient;
+class ReplicationObject;
 
 class ReplicationHandler
 {

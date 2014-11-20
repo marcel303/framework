@@ -3,9 +3,6 @@
 #pragma once
 
 #include <map>
-#include <string>
-#include "Client.h"
-#include "MyProtocols.h"
 #include "NetHandlePool.h"
 #include "NetSerializable.h"
 #include "PacketListener.h"
@@ -25,7 +22,7 @@ public:
 	void SV_DestroyClient(int clientID);
 	void CL_DestroyClient(int clientID);
 
-	int SV_AddObject(const std::string & className, ReplicationObject * object);
+	int SV_AddObject(ReplicationObject * object);
 	void SV_RemoveObject(int objectID);
 
 	void SV_Shutdown();

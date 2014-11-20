@@ -4,6 +4,7 @@ enum PROTOCOLS
 {
 	PROTOCOL_CHANNEL = 1,
 	PROTOCOL_RPC = 2,
+	PROTOCOL_REPLICATION = 3,
 	PROTOCOL_CUSTOM = 8
 };
 
@@ -20,3 +21,7 @@ enum PROTOCOLS
 #define CHANNELMSG_RT_ACK         11
 #define CHANNELMSG_RT_NACK        12
 #define CHANNELMSG_UNPACK         13
+
+#define REPMSG_CREATE      1
+#define REPMSG_DESTROY     2
+#define REPMSG_UPDATE      3
