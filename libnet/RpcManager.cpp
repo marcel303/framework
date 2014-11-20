@@ -108,6 +108,6 @@ void RpcManager::CallInternal(uint32_t method, BitStream & bs)
 	{
 		RpcHandler handler = i->second;
 
-		handler(bs);
+		handler(method, bs);
 	}
 }

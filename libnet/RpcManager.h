@@ -5,7 +5,7 @@
 #include "libnet_forward.h"
 #include "PacketListener.h"
 
-typedef void (*RpcHandler)(BitStream & bs);
+typedef void (*RpcHandler)(uint32_t method, BitStream & bs);
 
 class RpcManager : public PacketListener
 {

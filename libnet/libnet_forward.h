@@ -13,3 +13,4 @@ class NetSerializationContext;
 class Packet;
 class PacketDispatcher;
 class PacketListener;
+class RpcManager;

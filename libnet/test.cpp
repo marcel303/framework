@@ -734,7 +734,7 @@ public:
 	{
 		ShowChannelList(m_svChannels, "server channels");
 		ShowChannelList(m_clChannels, "client channels");
-		NetStats::Show();
+		PrintNetStats();
 	}
 
 	void Send(ChannelMap & channels)
@@ -753,7 +753,7 @@ public:
 
 			const Packet packet = packetBuilder.ToPacket();
 
-			channel->Send(packet);
+			channel->Send(packet, ChannelSendFlag_Unreliable);
 
 			//
 
@@ -1122,12 +1122,12 @@ static void TestBitStream()
 	}
 }
 
-static void TestRpcCall1(BitStream & bs)
+static void TestRpcCall1(uint32_t method, BitStream & bs)
 {
 	printf("TestRpcCall 1!\n");
 }
 
-static void TestRpcCall2(BitStream & bs)
+static void TestRpcCall2(uint32_t method, BitStream & bs)
 {
 	printf("TestRpcCall 2!\n");
 }
@@ -1241,10 +1241,10 @@ static void TestSerializableObject()
 
 	{
 		BitStream b1;
-		if (object.Serialize(false, true, b1))
+		if (object.Serialize(false, true, 0, b1))
 		{
 			BitStream b2(b1.GetData(), b1.GetDataSize());
-			object.Serialize(false, false, b2);
+			object.Serialize(false, false, 0, b2);
 		}
 	}
 
@@ -1252,13 +1252,13 @@ static void TestSerializableObject()
 		serializable2.SetDirty();
 
 		BitStream b1;
-		if (object.Serialize(false, true, b1))
+		if (object.Serialize(false, true, 0, b1))
 		{
 			BitStream b2(b1.GetData(), b1.GetDataSize());
-			object.Serialize(false, false, b2);
+			object.Serialize(false, false, 0, b2);
 		}
 
-		NetAssert(!object.Serialize(false, true, b1));
+		NetAssert(!object.Serialize(false, true, 0, b1));
 	}
 }
 
