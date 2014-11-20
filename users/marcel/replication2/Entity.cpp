@@ -167,7 +167,7 @@ void Entity::Render()
 void Entity::ReplicatedMessage(int message, int value)
 {
 	for (size_t i = 0; i < m_scene->m_engine->m_serverClients.size(); ++i)
-		m_scene->MessageEntity(m_scene->m_engine->m_serverClients[i], m_id, message, value);
+		m_scene->MessageEntity(m_scene->m_engine->m_serverClients[i]->m_channel, m_id, message, value);
 }
 
 void Entity::OnSceneAdd(Scene* scene)

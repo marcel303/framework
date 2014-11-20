@@ -412,7 +412,7 @@ void Engine::BindClientToEntity(Client* client, ShEntity entity)
 
 	LOG_DBG("Engine::BindClientToEntity. clientSideChannelId=%d, entityId=%d", client->m_channel->m_destinationId, entity->GetID());
 
-	m_serverScene->Activate(client, entity->m_id);
+	m_serverScene->Activate(client->m_channel, entity->m_id);
 }
 
 Entity* Engine::CreateEntity(Client* client, std::string className)

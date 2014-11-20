@@ -223,9 +223,9 @@ void Scene::Render()
 	m_renderer->Render();
 }
 
-void Scene::Activate(Client* client, int entityID)
+void Scene::Activate(Channel* clientChannel, int entityID)
 {
-	Assert(client);
+	Assert(clientChannel);
 
 	PacketBuilder<4> packetBuilder;
 
@@ -238,7 +238,7 @@ void Scene::Activate(Client* client, int entityID)
 	packetBuilder.Write16(&id);
 
 	Packet packet = packetBuilder.ToPacket();
-	client->m_channel->Send(packet, 0);
+	clientChannel->Send(packet, 0);
 }
 
 void Scene::SetController(Client* client, int controllerID)
@@ -277,9 +277,9 @@ ShEntity Scene::CastRay(Entity* source, const Vec3& position, const Vec3& direct
 	return entity;
 }
 
-void Scene::MessageEntity(Client* client, int in_entityID, int in_message, int in_value)
+void Scene::MessageEntity(Channel* clientChannel, int in_entityID, int in_message, int in_value)
 {
-	Assert(client);
+	Assert(clientChannel);
 
 	PacketBuilder<10> packetBuilder;
 
@@ -296,7 +296,7 @@ void Scene::MessageEntity(Client* client, int in_entityID, int in_message, int i
 	packetBuilder.Write32(&value);
 
 	Packet packet = packetBuilder.ToPacket();
-	client->m_channel->Send(packet, 0);
+	clientChannel->Send(packet, 0);
 }
 
 void Scene::OnReceive(Packet& packet, Channel* channel)

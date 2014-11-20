@@ -54,7 +54,7 @@ public:
 	virtual void CL_OnChannelDisconnect(Channel* channel) { }
 
 	// ReplicationHandler
-	virtual bool OnReplicationObjectSerializeType(ReplicationClient * client, ReplicationObject * object, BitStream & bitStream);
+	virtual bool OnReplicationObjectSerializeType(ReplicationClient* client, ReplicationObject* object, BitStream& bitStream);
 	virtual bool OnReplicationObjectCreateType(ReplicationClient* client, BitStream& bitStream, ReplicationObject** out_object);
 	virtual void OnReplicationObjectCreated(ReplicationClient* client, ReplicationObject* object);
 	virtual void OnReplicationObjectDestroyed(ReplicationClient* client, ReplicationObject* object);

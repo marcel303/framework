@@ -46,12 +46,12 @@ public:
 
 	void Render();
 
-	void Activate(Client* client, int entityID);
+	void Activate(Channel* clientChannel, int entityID);
 	void SetController(Client* client, int controllerID);
 
 	ShEntity CastRay(Entity* source, const Vec3& position, const Vec3& direction, float maxDistance, float* out_distance);
 
-	void MessageEntity(Client* client, int entityID, int message, int value);
+	void MessageEntity(Channel* clientChannel, int entityID, int message, int value);
 
 	virtual void OnReceive(Packet& packet, Channel* channel);
 
