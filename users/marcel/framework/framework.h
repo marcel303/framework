@@ -24,6 +24,8 @@
 	#define ENABLE_LOGGING 0 // do not alter
 #endif
 
+#define USE_LEGACY_OPENGL 1
+
 static const int MAX_GAMEPAD = 4;
 
 // enumerations
@@ -624,6 +626,8 @@ void debugDrawText(float x, float y, int size, float alignX, float alignY, const
 
 // OpenGL legacy mode drawing
 
+#if !USE_LEGACY_OPENGL
+
 void gxMatrixMode(GLenum mode);
 void gxPopMatrix();
 void gxPushMatrix();
@@ -646,6 +650,33 @@ void gxNormal3f(float x, float y, float z);
 void gxVertex2f(float x, float y);
 void gxVertex3f(float x, float y, float z);
 void gxSetTexture(GLuint texture);
+
+#else
+
+#define gxMatrixMode glMatrixMode
+#define gxPopMatrix glPopMatrix
+#define gxPushMatrix glPushMatrix
+#define gxLoadIdentity glLoadIdentity
+#define gxLoadMatrixf glLoadMatrixf
+void gxGetMatrixf(GLenum mode, float * m);
+#define gxTranslatef glTranslatef
+#define gxRotatef glRotatef
+#define gxScalef glScalef
+static inline void gxValidateMatrices() { }
+
+static inline void gxInitialize() { }
+static inline void gxShutdown() { }
+void gxBegin(int primitiveType);
+#define gxEnd glEnd
+#define gxColor4f glColor4f
+#define gxColor3ub glColor3ub
+#define gxTexCoord2f glTexCoord2f
+#define gxNormal3f glNormal3f
+#define gxVertex2f glVertex2f
+#define gxVertex3f glVertex3f
+void gxSetTexture(GLuint texture);
+
+#endif
 
 // utility
 

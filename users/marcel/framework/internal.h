@@ -10,8 +10,10 @@
 #include <string>
 #include "framework.h"
 
-#define FRAMEWORK_ENABLE_GL_ERROR_LOG 0
-#define FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT 0
+#ifdef DEBUG
+	#define FRAMEWORK_ENABLE_GL_ERROR_LOG 1
+	#define FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT 1
+#endif
 
 #ifndef WIN32
 static int fopen_s(FILE ** file, const char * filename, const char * mode)

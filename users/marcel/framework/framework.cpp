@@ -79,7 +79,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 		return false;
 	}
 	
-#if 0
+#if USE_LEGACY_OPENGL
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
 #else
@@ -2075,8 +2075,8 @@ Vec2 transformToScreen(const Vec3 & v)
 static void setSurface(Surface * surface)
 {
 	const GLuint framebuffer = surface ? surface->getFramebuffer() : 0;
-	const float sx = surface ? surface->getWidth() : globals.displaySize[0];
-	const float sy = surface ? surface->getHeight() : globals.displaySize[1];
+	const GLsizei sx = surface ? surface->getWidth() : globals.displaySize[0];
+	const GLsizei sy = surface ? surface->getHeight() : globals.displaySize[1];
 	
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 	glViewport(0, 0, sx / framework.minification, sy / framework.minification);
@@ -2243,9 +2243,12 @@ void setShader(const Shader & shader)
 
 void clearShader()
 {
-	globals.shader = 0;
+	if (globals.shader)
+	{
+		globals.shader = 0;
 	
-	glUseProgram(0);
+		glUseProgram(0);
+	}
 }
 
 void drawLine(float x1, float y1, float x2, float y2)
@@ -2441,7 +2444,7 @@ void debugDrawText(float x, float y, int size, float alignX, float alignY, const
 	}
 }
 
-//
+#if !USE_LEGACY_OPENGL
 
 class GxMatrixStack
 {
@@ -2620,12 +2623,16 @@ struct GxVertex
 
 #define GX_USE_RINGBUFFER 0
 #define GX_USE_UBERBUFFER 0
-#define GX_USE_BUFFER_RENAMING 1
+#define GX_USE_BUFFER_RENAMING 0
+#define GX_BUFFER_DRAW_MODE GL_DYNAMIC_DRAW
+//#define GX_BUFFER_DRAW_MODE GL_STREAM_DRAW
+#define GX_USE_ELEMENT_ARRAY_BUFFER 1
+#define GX_VAO_COUNT 1
 
 static Shader s_gxShader;
-static GLuint s_gxVertexArrayObject = 0;
-static GLuint s_gxVertexBufferObject = 0;
-static GLuint s_gxIndexBufferObject = 0;
+static GLuint s_gxVertexArrayObject[GX_VAO_COUNT] = { };
+static GLuint s_gxVertexBufferObject[GX_VAO_COUNT] = { };
+static GLuint s_gxIndexBufferObject[GX_VAO_COUNT] = { };
 static GxVertex s_gxVertexBuffer[1024];
 
 #if GX_USE_RINGBUFFER
@@ -2662,33 +2669,40 @@ void gxInitialize()
 {
 	s_gxShader.load("engine/Generic");
 	
-	fassert(s_gxVertexBufferObject == 0);
-	glGenBuffers(1, &s_gxVertexBufferObject);
+	fassert(s_gxVertexBufferObject[0] == 0);
+	glGenBuffers(GX_VAO_COUNT, s_gxVertexBufferObject);
 #if GX_USE_UBERBUFFER
 	glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject);
 	glBufferData(GL_ARRAY_BUFFER, kUberVertexBufferSize * sizeof(GxVertex), 0, GL_STREAM_DRAW);
 #endif
 	
-	fassert(s_gxIndexBufferObject == 0);
-	glGenBuffers(1, &s_gxIndexBufferObject);
+	fassert(s_gxIndexBufferObject[0] == 0);
+	glGenBuffers(GX_VAO_COUNT, s_gxIndexBufferObject);
 #if GX_USE_UBERBUFFER
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, kUberIndexBufferSize * sizeof(unsigned short), 0, GL_STREAM_DRAW);
 #endif
 	
 	// create vertex array
-	fassert(s_gxVertexArrayObject == 0);
-	glGenVertexArrays(1, &s_gxVertexArrayObject);
+	fassert(s_gxVertexArrayObject[0] == 0);
+	glGenVertexArrays(GX_VAO_COUNT, s_gxVertexArrayObject);
 	checkErrorGL();
-	glBindVertexArray(s_gxVertexArrayObject);
-	checkErrorGL();
+
+	for (int i = 0; i < GX_VAO_COUNT; ++i)
 	{
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject);
+		glBindVertexArray(s_gxVertexArrayObject[i]);
 		checkErrorGL();
-		glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject);
-		checkErrorGL();
-		bindVsInputs(vsInputs, numVsInputs, sizeof(GxVertex));
+		{
+			#if GX_USE_ELEMENT_ARRAY_BUFFER
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject[i]);
+			checkErrorGL();
+			#endif
+			glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject[i]);
+			checkErrorGL();
+			bindVsInputs(vsInputs, numVsInputs, sizeof(GxVertex));
+		}
 	}
+
 	glBindVertexArray(0);
 	checkErrorGL();
 	
@@ -2709,22 +2723,22 @@ void gxInitialize()
 
 void gxShutdown()
 {
-	if (s_gxVertexArrayObject != 0)
+	if (s_gxVertexArrayObject[0] != 0)
 	{
-		glDeleteVertexArrays(1, &s_gxVertexArrayObject);
-		s_gxVertexArrayObject = 0;
+		glDeleteVertexArrays(GX_VAO_COUNT, s_gxVertexArrayObject);
+		memset(s_gxVertexArrayObject, 0, sizeof(s_gxVertexArrayObject));
 	}
 	
-	if (s_gxVertexBufferObject != 0)
+	if (s_gxVertexBufferObject[0] != 0)
 	{
-		glDeleteBuffers(1, &s_gxVertexBufferObject);
-		s_gxVertexBufferObject = 0;
+		glDeleteBuffers(GX_VAO_COUNT, s_gxVertexBufferObject);
+		memset(s_gxVertexBufferObject, 0, sizeof(s_gxVertexBufferObject));
 	}
 
-	if (s_gxIndexBufferObject != 0)
+	if (s_gxIndexBufferObject[0] != 0)
 	{
-		glDeleteBuffers(1, &s_gxIndexBufferObject);
-		s_gxIndexBufferObject = 0;
+		glDeleteBuffers(GX_VAO_COUNT, s_gxIndexBufferObject);
+		memset(s_gxIndexBufferObject, 0, sizeof(s_gxIndexBufferObject));
 	}
 }
 
@@ -2736,28 +2750,49 @@ static void gxFlush(bool endOfBatch)
 		
 		gxValidateMatrices();
 		
+		static int vaoIndex = 0;
+		vaoIndex = (vaoIndex + 1) % GX_VAO_COUNT;
+
 	#if GX_USE_UBERBUFFER
 		glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject);
 		if (s_gxUberVertexBufferPosition + s_gxVertexCount > kUberVertexBufferSize)
 		{
-			glBufferData(GL_ARRAY_BUFFER, kUberVertexBufferSize * sizeof(GxVertex), 0, GL_STREAM_DRAW);
+			glBufferData(GL_ARRAY_BUFFER, kUberVertexBufferSize * sizeof(GxVertex), 0, GX_BUFFER_DRAW_MODE);
 			s_gxUberVertexBufferPosition = 0;
 		}
 		glBufferSubData(GL_ARRAY_BUFFER, s_gxUberVertexBufferPosition * sizeof(GxVertex), s_gxVertexCount * sizeof(GxVertex), s_gxVertices);
 		checkErrorGL();
 	#else
-		glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject);
+		glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject[vaoIndex]);
 		#if GX_USE_BUFFER_RENAMING
-		glBufferData(GL_ARRAY_BUFFER, sizeof(GxVertex) * s_gxVertexCount, 0, GL_STREAM_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(GxVertex) * s_gxVertexCount, 0, GX_BUFFER_DRAW_MODE);
 		#endif
-		glBufferData(GL_ARRAY_BUFFER, sizeof(GxVertex) * s_gxVertexCount, s_gxVertices, GL_STREAM_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(GxVertex) * s_gxVertexCount, s_gxVertices, GX_BUFFER_DRAW_MODE);
 		checkErrorGL();
 	#endif
 		
 		bool indexed = false;
+		unsigned short * indices = 0;
 		int numElements = s_gxVertexCount;
 		int numIndices = 0;
 		
+		static int lastPrimitiveType = -1;
+		static int lastVertexCount = -1;
+
+	#if !GX_USE_ELEMENT_ARRAY_BUFFER || GX_VAO_COUNT > 1
+		bool needToRegenerateIndexBuffer = true;
+	#else
+		bool needToRegenerateIndexBuffer = false;
+
+		if (s_gxPrimitiveType != lastPrimitiveType && s_gxVertexCount != lastVertexCount)
+		{
+			lastPrimitiveType = s_gxPrimitiveType;
+			lastVertexCount = s_gxVertexCount;
+
+			needToRegenerateIndexBuffer = true;
+		}
+	#endif
+
 		if (s_gxPrimitiveType == GL_QUADS)
 		{
 			fassert(s_gxVertexCount < 65536);
@@ -2766,41 +2801,47 @@ static void gxFlush(bool endOfBatch)
 			
 			const int numQuads = s_gxVertexCount / 4;
 			numIndices = numQuads * 6;
-			
-			unsigned short * indices = (unsigned short*)alloca(sizeof(unsigned short) * numIndices);
-			unsigned short * indexPtr = indices;
-			unsigned short baseIndex = 0;
-			
-			for (int i = 0; i < numQuads; ++i)
+
+			if (needToRegenerateIndexBuffer)
 			{
-				*indexPtr++ = baseIndex + 0;
-				*indexPtr++ = baseIndex + 1;
-				*indexPtr++ = baseIndex + 2;
-				
-				*indexPtr++ = baseIndex + 0;
-				*indexPtr++ = baseIndex + 2;
-				*indexPtr++ = baseIndex + 3;
-				
-				baseIndex += 4;
-			}
+				indices = (unsigned short*)alloca(sizeof(unsigned short) * numIndices);
+
+				unsigned short * __restrict indexPtr = indices;
+				unsigned short baseIndex = 0;
 			
-		#if GX_USE_UBERBUFFER
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject);
-			if (s_gxUberIndexBufferPosition + numIndices > kUberIndexBufferSize)
-			{
-				glBufferData(GL_ELEMENT_ARRAY_BUFFER, kUberIndexBufferSize * sizeof(unsigned short), 0, GL_STREAM_DRAW);
-				s_gxUberIndexBufferPosition = 0;
-			}
-			glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, s_gxUberIndexBufferPosition * sizeof(unsigned short), numIndices * sizeof(unsigned short), indices);
-			checkErrorGL();
-		#else
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject);
-			#if GX_USE_BUFFER_RENAMING
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned short) * numIndices, 0, GL_STREAM_DRAW);
+				for (int i = 0; i < numQuads; ++i)
+				{
+					*indexPtr++ = baseIndex + 0;
+					*indexPtr++ = baseIndex + 1;
+					*indexPtr++ = baseIndex + 2;
+				
+					*indexPtr++ = baseIndex + 0;
+					*indexPtr++ = baseIndex + 2;
+					*indexPtr++ = baseIndex + 3;
+				
+					baseIndex += 4;
+				}
+			
+			#if GX_USE_ELEMENT_ARRAY_BUFFER
+			#if GX_USE_UBERBUFFER
+				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject);
+				if (s_gxUberIndexBufferPosition + numIndices > kUberIndexBufferSize)
+				{
+					glBufferData(GL_ELEMENT_ARRAY_BUFFER, kUberIndexBufferSize * sizeof(unsigned short), 0, GX_BUFFER_DRAW_MODE);
+					s_gxUberIndexBufferPosition = 0;
+				}
+				glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, s_gxUberIndexBufferPosition * sizeof(unsigned short), numIndices * sizeof(unsigned short), indices);
+				checkErrorGL();
+			#else
+				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject[vaoIndex]);
+				#if GX_USE_BUFFER_RENAMING
+				glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned short) * numIndices, 0, GX_BUFFER_DRAW_MODE);
+				#endif
+				glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned short) * numIndices, indices, GX_BUFFER_DRAW_MODE);
+				checkErrorGL();
 			#endif
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned short) * numIndices, indices, GL_STREAM_DRAW);
-			checkErrorGL();
-		#endif
+			#endif
+			}
 			
 			s_gxPrimitiveType = GL_TRIANGLES;
 			numElements = numIndices;
@@ -2808,7 +2849,7 @@ static void gxFlush(bool endOfBatch)
 			indexed = true;
 		}
 		
-		glBindVertexArray(s_gxVertexArrayObject);
+		glBindVertexArray(s_gxVertexArrayObject[vaoIndex]);
 		checkErrorGL();
 		
 		const ShaderCacheElem & shaderElem = s_gxShader.getCacheElem();
@@ -2827,8 +2868,10 @@ static void gxFlush(bool endOfBatch)
 		{
 			#if GX_USE_UBERBUFFER
 			glDrawElementsBaseVertex(s_gxPrimitiveType, numElements, GL_UNSIGNED_SHORT, (void*)(s_gxUberIndexBufferPosition * sizeof(unsigned short)), s_gxUberVertexBufferPosition);
-			#else
+			#elif GX_USE_ELEMENT_ARRAY_BUFFER
 			glDrawElements(s_gxPrimitiveType, numElements, GL_UNSIGNED_SHORT, 0);
+			#else
+			glDrawElements(s_gxPrimitiveType, numElements, GL_UNSIGNED_SHORT, indices);
 			#endif
 			checkErrorGL();
 		}
@@ -2841,11 +2884,6 @@ static void gxFlush(bool endOfBatch)
 			#endif
 			checkErrorGL();
 		}
-		
-		static int x = 0;
-		x++;
-		if ((x % 1000) == 0)
-			printf("x: %d\n", x);
 		
 	#if GX_USE_UBERBUFFER
 		//logDebug("uber offsets: %d, %d", s_gxUberVertexBufferPosition, s_gxUberIndexBufferPosition);
@@ -2984,6 +3022,54 @@ void gxSetTexture(GLuint texture)
 		s_gxTextureEnabled = false;
 	}
 }
+
+#else
+
+void gxBegin(int primitiveType)
+{
+	clearShader();
+
+	glBegin(primitiveType);
+}
+
+void gxGetMatrixf(GLenum mode, float * m)
+{
+	switch (mode)
+	{
+	case GL_PROJECTION:
+		glGetFloatv(GL_PROJECTION_MATRIX, m);
+		checkErrorGL();
+		break;
+
+	case GL_MODELVIEW:
+		glGetFloatv(GL_MODELVIEW_MATRIX, m);
+		checkErrorGL();
+		break;
+
+	default:
+		fassert(false);
+		break;
+	}
+}
+
+void gxSetTexture(GLuint texture)
+{
+	if (texture)
+	{
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, texture);
+		checkErrorGL();
+	}
+	else
+	{
+	#if USE_LEGACY_OPENGL
+		glDisable(GL_TEXTURE_2D);
+		checkErrorGL();
+	#endif
+	}
+}
+
+#endif
 
 //
 
