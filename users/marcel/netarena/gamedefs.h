@@ -20,3 +20,5 @@
 #define INPUT_BUTTON_B     (1 << 5)
 #define INPUT_BUTTON_X     (1 << 6)
 #define INPUT_BUTTON_Y     (1 << 7)
+
+#define GRAVITY 6000.f

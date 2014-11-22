@@ -45,7 +45,7 @@ static void HandleRpc(uint32_t method, BitStream & bitStream)
 		Assert(player);
 		if (player)
 		{
-			player->m_buttons = buttons;
+			player->m_input.m_currButtons = buttons;
 		}
 	}
 	else
@@ -309,6 +309,8 @@ void App::shutdown()
 
 bool App::tick()
 {
+	const float dt = 1.f / 60.f; // todo : calculate time step
+
 	// update host
 
 	m_channelMgr->Update(g_TimerRT.TimeUS_get());
@@ -317,7 +319,7 @@ bool App::tick()
 
 	framework.process();
 
-	m_host->tick(0.f);
+	m_host->tick(dt);
 
 	m_channelMgr->Update(g_TimerRT.TimeUS_get());
 
@@ -331,7 +333,7 @@ bool App::tick()
 	{
 		Client * client = m_clients[i];
 
-		client->tick(0.f);
+		client->tick(dt);
 	}
 
 	m_channelMgr->Update(g_TimerRT.TimeUS_get());
@@ -341,7 +343,7 @@ bool App::tick()
 
 void App::draw()
 {
-	framework.beginDraw(127, 0, 0, 0);
+	framework.beginDraw(155, 205, 255, 0);
 	{
 		for (size_t i = 0; i < m_clients.size(); ++i)
 		{
