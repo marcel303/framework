@@ -1187,12 +1187,28 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, char c)
 			glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
 			GLint restoreUnpack;
 			glGetIntegerv(GL_UNPACK_ALIGNMENT, &restoreUnpack);
+			checkErrorGL();
 			
 			// create texture and copy image data
 			
 			elem.g = *face->glyph;
 			glGenTextures(1, &elem.texture);
 			
+		#if USE_LEGACY_OPENGL
+			glBindTexture(GL_TEXTURE_2D, elem.texture);
+			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+			glTexImage2D(
+				GL_TEXTURE_2D,
+				0,
+				GL_ALPHA,
+				elem.g.bitmap.width,
+				elem.g.bitmap.rows,
+				0,
+				GL_ALPHA,
+				GL_UNSIGNED_BYTE,
+				elem.g.bitmap.buffer);
+			checkErrorGL();
+		#else
 			glBindTexture(GL_TEXTURE_2D, elem.texture);
 			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 			glTexImage2D(
@@ -1205,19 +1221,24 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, char c)
 				GL_RED,
 				GL_UNSIGNED_BYTE,
 				elem.g.bitmap.buffer);
+			checkErrorGL();
 
 			GLint swizzleMask[4] = { GL_ONE, GL_ONE, GL_ONE, GL_RED };
 			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+			checkErrorGL();
+		#endif
 			
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			checkErrorGL();
 			
 			// restore previous OpenGL states
 			
 			glBindTexture(GL_TEXTURE_2D, restoreTexture);
 			glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpack);
+			checkErrorGL();
 		}
 		else
 		{

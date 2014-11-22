@@ -925,10 +925,10 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 			if (drawColor != -1)
 			{
 				glUniform4f(drawColor,
-					drawFlags & DrawColorTexCoords,
-					drawFlags & DrawColorNormals,
-					drawFlags & DrawColorBlendIndices,
-					drawFlags & DrawColorBlendWeights);
+					(drawFlags & DrawColorTexCoords)    ? 1.f : 0.f,
+					(drawFlags & DrawColorNormals)      ? 1.f : 0.f,
+					(drawFlags & DrawColorBlendIndices) ? 1.f : 0.f,
+					(drawFlags & DrawColorBlendWeights) ? 1.f : 0.f);
 			}
 			
 			// bind vertex arrays
