@@ -28,6 +28,7 @@ public:
 	void Serialize(float & v);
 	void SerializeFloatRange(float & v, float min, float max, uint32_t numBits);
 	void Serialize(std::string & s);
+	void SerializeBytes(void * bytes, uint32_t numBytes);
 
 	template <typename T>
 	inline void Serialize(T & v)

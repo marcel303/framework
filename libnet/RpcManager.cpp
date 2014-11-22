@@ -45,10 +45,8 @@ void RpcManager::Unregister(uint32_t method, RpcHandler handler)
 	}
 }
 
-void RpcManager::Call(uint32_t method, const BitStream & bs, ChannelPool channelPool, uint32_t * channelId, bool broadcast, bool invokeLocal)
+void RpcManager::Call(uint32_t method, const BitStream & bs, ChannelPool channelPool, uint16_t * channelId, bool broadcast, bool invokeLocal)
 {
-	NetAssert(channelId == nullptr); // not yet implemented!
-
 	const uint8_t protocolId = PROTOCOL_RPC;
 	const uint16_t payloadSize = bs.GetDataSize();
 	
@@ -62,6 +60,8 @@ void RpcManager::Call(uint32_t method, const BitStream & bs, ChannelPool channel
 
 	if (broadcast)
 	{
+		Assert(!channelId);
+
 		for (ChannelManager::ChannelMap::iterator i = m_channelMgr->m_channels.begin(); i != m_channelMgr->m_channels.end(); ++i)
 		{
 			Channel * channel = i->second;
@@ -70,6 +70,19 @@ void RpcManager::Call(uint32_t method, const BitStream & bs, ChannelPool channel
 			{
 				channel->Send(p, 0);
 			}
+		}
+	}
+	else
+	{
+		Assert(channelId);
+
+		Channel * channel = m_channelMgr->FindChannel(*channelId);
+
+		Assert(channel);
+
+		if (channel)
+		{
+			channel->Send(p, 0);
 		}
 	}
 

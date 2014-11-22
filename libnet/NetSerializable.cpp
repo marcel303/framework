@@ -79,6 +79,14 @@ void NetSerializationContext::Serialize(std::string & s)
 		s = m_bitStream->ReadString();
 }
 
+void NetSerializationContext::SerializeBytes(void * bytes, uint32_t numBytes)
+{
+	if (IsSend())
+		m_bitStream->WriteAlignedBytes(bytes, numBytes);
+	else
+		m_bitStream->ReadAlignedBytes(bytes, numBytes);
+}
+
 //
 
 NetSerializable::NetSerializable(NetSerializableObject * owner, uint8_t channelMask, uint8_t channel)

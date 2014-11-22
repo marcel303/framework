@@ -1,9 +1,5 @@
 cmake_minimum_required(VERSION 2.6)
 
-# --- dependencies ---
-
-add_subdirectory(../libgg libgg)
-
 project(libnet)
 
 # --- libnet ---
@@ -18,8 +14,7 @@ target_compile_definitions(libnet PRIVATE _USE_MATH_DEFINES _CRT_SECURE_NO_WARNI
 
 target_include_directories(libnet PUBLIC "${PROJECT_SOURCE_DIR}")
 target_include_directories(libnet PRIVATE "${PROJECT_SOURCE_DIR}/test")
-
-target_link_libraries(libnet PRIVATE libgg)
+target_include_directories(libnet PUBLIC "${PROJECT_SOURCE_DIR}/../libgg")
 
 # --- test application ---
 
@@ -29,4 +24,5 @@ add_executable(libnet_test ${source})
 
 target_include_directories(libnet_test PRIVATE "${PROJECT_SOURCE_DIR}/test")
 target_link_libraries(libnet_test PRIVATE libnet)
+target_link_libraries(libnet_test PRIVATE libgg)
 target_link_libraries(libnet_test PRIVATE SDL.lib SDLmain.lib WSock32.lib)
