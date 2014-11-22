@@ -4,7 +4,7 @@ project(libnet)
 
 # --- libnet ---
 
-file(GLOB source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
+file(GLOB source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "*.cpp" "*.h")
 list(REMOVE_ITEM source test.cpp)
 
 add_library(libnet ${source})
