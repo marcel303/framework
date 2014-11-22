@@ -25,12 +25,15 @@ void Arena::generate()
 
 	// add some random stuff
 
-	for (int i = 0; i < 20; ++i)
+	for (int i = 0; i < 30; ++i)
 	{
 		const int x = rand() % ARENA_SX;
 		const int y = rand() % ARENA_SY;
 
 		m_blocks[x][y].type = (BlockType)(rand() % kBlockType_COUNT);
+
+		if (x == 0 || x == ARENA_SX - 1)
+			m_blocks[ARENA_SX - 1 - x][y].type = m_blocks[x][y].type;
 	}
 }
 

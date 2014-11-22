@@ -108,6 +108,8 @@ public:
 	void tick(float dt);
 	void draw();
 
+	uint32_t getIntersectingBlocksMask(float x, float y) const;
+
 	struct InputState
 	{
 		InputState()

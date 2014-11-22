@@ -38,7 +38,23 @@ void Player::tick(float dt)
 
 		//
 
-		m_vel[1] += GRAVITY * (1.f / 60.f);
+		if (getIntersectingBlocksMask(m_pos[0], m_pos[1] - 1.f) & (1 << kBlockType_Sticky))
+		{
+			// sticky ceiling
+
+			if (m_input.wentDown(INPUT_BUTTON_A))
+			{
+				m_vel[1] = +2000.f / 2.f; // todo : jump speed constant
+			}
+			else if (m_input.wentDown(INPUT_BUTTON_DOWN))
+			{
+				m_vel[1] += GRAVITY * dt;
+			}
+		}
+		else
+		{
+			m_vel[1] += GRAVITY * dt;
+		}
 
 		for (int i = 0; i < 2; ++i)
 		{
@@ -59,11 +75,7 @@ void Player::tick(float dt)
 
 				newPos[i] += delta;
 
-				const uint32_t newBlockMask = g_hostArena->getIntersectingBlocksMask(
-					newPos[0] + m_collision.x1,
-					newPos[1] + m_collision.y1,
-					newPos[0] + m_collision.x2,
-					newPos[1] + m_collision.y2);
+				const uint32_t newBlockMask = getIntersectingBlocksMask(newPos[0], newPos[1]);
 
 				if (newBlockMask & kBlockMask_Solid)
 				{
@@ -111,6 +123,13 @@ void Player::tick(float dt)
 		}
 	}
 
+	// wrapping
+
+	if (m_pos[0] < 0)
+		m_pos[0] = ARENA_SX * BLOCK_SX;
+	if (m_pos[0] > ARENA_SX * BLOCK_SX)
+		m_pos[0] = 0;
+
 	m_input.next();
 
 	//printf("x: %g\n", m_pos[0]);
@@ -132,4 +151,13 @@ void Player::draw()
 		m_pos.y + m_collision.y2 + 1);
 
 	setColor(colorWhite);
+}
+
+uint32_t Player::getIntersectingBlocksMask(float x, float y) const
+{
+	return g_hostArena->getIntersectingBlocksMask(
+		x + m_collision.x1,
+		y + m_collision.y1,
+		x + m_collision.x2,
+		y + m_collision.y2);
 }
