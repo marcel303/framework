@@ -1,0 +1,47 @@
+cmake_minimum_required(VERSION 2.6)
+
+# --- dependencies ---
+
+#add_subdirectory(../../../libgg libgg)
+
+project(framework)
+
+# --- framework ---
+
+file(GLOB source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+	"${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/audiostream/*.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/audiostream/*.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../fbx1/*.cpp")
+list(REMOVE_ITEM source example.cpp)
+list(REMOVE_ITEM source ../fbx1/main.cpp)
+
+add_library(framework ${source})
+
+target_compile_definitions(framework PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS)
+
+target_include_directories(framework PUBLIC "${PROJECT_SOURCE_DIR}")
+target_include_directories(framework PRIVATE "${PROJECT_SOURCE_DIR}/audiostream")
+target_include_directories(framework PUBLIC "${PROJECT_SOURCE_DIR}/win32/include")
+target_include_directories(framework PRIVATE "${PROJECT_SOURCE_DIR}/win32/include/freetype")
+target_include_directories(framework PRIVATE "${PROJECT_SOURCE_DIR}/../../../libgg")
+
+target_link_libraries(framework PRIVATE libgg)
+
+# --- test application ---
+
+file(GLOB source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/example.cpp")
+
+add_executable(framework_test ${source})
+
+target_include_directories(framework_test PRIVATE "${PROJECT_SOURCE_DIR}/win32/include")
+
+target_link_libraries(framework_test PRIVATE framework)
+target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/FreeImage.lib)
+target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/freetype252.lib)
+target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/glew32.lib)
+target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/OpenAL32.lib)
+target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/SDL2.lib)
+target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/SDL2main.lib)
+target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/XInput9_1_0.lib)
+target_link_libraries(framework_test PRIVATE OpenGL32.lib)
