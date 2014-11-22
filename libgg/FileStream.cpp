@@ -127,10 +127,6 @@ void FileStream::Close()
 
 void FileStream::Write(const void* bytes, int byteCount)
 {
-#if 0
-	printf("==W==: %d x %d\n", Position_get(), byteCount);
-#endif
-
 	if (byteCount == 0)
 		return;
 	
