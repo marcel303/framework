@@ -3,6 +3,8 @@
 #include "netobject.h"
 #include "Vec2.h"
 
+class Sprite;
+
 class PlayerPos_NS : public NetSerializable
 {
 	virtual void SerializeStruct()
@@ -64,15 +66,7 @@ public:
 
 class PlayerAnim_NS : public NetSerializable
 {
-	virtual void SerializeStruct()
-	{
-		Serialize(anim);
-
-		if (IsRecv())
-		{
-			// todo : trigger animation
-		}
-	}
+	virtual void SerializeStruct();
 
 public:
 	PlayerAnim_NS(NetSerializableObject * owner)
@@ -85,6 +79,8 @@ public:
 
 class Player : public NetObject
 {
+	friend class PlayerAnim_NS;
+
 	PlayerPos_NS m_pos;
 	Vec2 m_vel;
 	PlayerState_NS m_state;
@@ -113,6 +109,8 @@ class Player : public NetObject
 	bool m_isGrounded;
 	bool m_isAttachedToSticky;
 
+	Sprite * m_sprite;
+
 	// ReplicationObject
 	virtual bool RequiresUpdating() const { return true; }
 
@@ -120,24 +118,8 @@ class Player : public NetObject
 	virtual NetObjectType getType() const { return kNetObjectType_Player; }
 
 public:
-	Player(uint16_t owningChannelId = 0)
-		: m_pos(this)
-		, m_state(this)
-		, m_anim(this)
-		, m_isGrounded(false)
-		, m_isAttachedToSticky(false)
-	{
-		setOwningChannelId(owningChannelId);
-
-		m_collision.x1 = -PLAYER_SX / 2.f;
-		m_collision.x2 = +PLAYER_SX / 2.f;
-		m_collision.y1 = -PLAYER_SY;
-		m_collision.y2 = 0.f;
-	}
-
-	~Player()
-	{
-	}
+	Player(uint16_t owningChannelId = 0);
+	~Player();
 
 	void tick(float dt);
 	void draw();

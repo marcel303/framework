@@ -5,6 +5,21 @@
 #include "main.h"
 #include "player.h"
 
+void PlayerAnim_NS::SerializeStruct()
+{
+	Serialize(anim);
+
+	if (IsRecv())
+	{
+		Player * player = static_cast<Player*>(GetOwner());
+
+		if (anim.empty())
+			player->m_sprite->stopAnim();
+		else
+			player->m_sprite->startAnim(anim.c_str());
+	}
+}
+
 enum PlayerEvent
 {
 	kPlayerEvent_Spawn,
@@ -19,6 +34,29 @@ enum PlayerEvent
 	kPlayerEvent_SpikeHit,
 	kPlayerEvent_ArenaWrap
 };
+
+Player::Player(uint16_t owningChannelId)
+	: m_pos(this)
+	, m_state(this)
+	, m_anim(this)
+	, m_isGrounded(false)
+	, m_isAttachedToSticky(false)
+{
+	setOwningChannelId(owningChannelId);
+
+	m_collision.x1 = -PLAYER_SX / 2.f;
+	m_collision.x2 = +PLAYER_SX / 2.f;
+	m_collision.y1 = -PLAYER_SY;
+	m_collision.y2 = 0.f;
+
+	m_sprite = new Sprite("player-walk.png");
+}
+
+Player::~Player()
+{
+	delete m_sprite;
+	m_sprite = 0;
+}
 
 static void PlaySecondaryEffects(PlayerEvent e)
 {
@@ -134,7 +172,21 @@ void Player::tick(float dt)
 			steeringSpeed += 1.f;
 
 		if (playerControl && steeringSpeed != 0.f)
-			m_pos.xFacing = steeringSpeed < 0.f ? -1 : +1;
+		{
+			if (m_anim.anim.empty())
+			{
+				m_anim.anim = "walk";
+				m_anim.SetDirty();
+			}
+		}
+		else
+		{
+			if (!m_anim.anim.empty())
+			{
+				m_anim.anim.clear();
+				m_anim.SetDirty();
+			}
+		}
 
 		if (getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f) & kBlockMask_Solid)
 		{
@@ -312,6 +364,12 @@ void Player::tick(float dt)
 			m_vel[0] *= powf(1.f - surfaceFriction, dt * 60.f);
 		}
 
+		// facing
+
+		if (playerControl && steeringSpeed != 0.f)
+			m_pos.xFacing = steeringSpeed < 0.f ? -1 : +1;
+		m_pos.yFacing = m_isAttachedToSticky ? -1 : +1;
+
 		// wrapping
 
 		if (m_pos[0] < 0)
@@ -329,11 +387,8 @@ void Player::tick(float dt)
 
 void Player::draw()
 {
-	setColor(m_pos.xFacing < 0 ? 255 : 127, 0, rand() & 255);
 	gxSetTexture(0);
-
-	// todo : player rect. base should be at ground level
-
+	setColor(0, 255, 127, 127);
 	drawRect(
 		m_pos.x + m_collision.x1,
 		m_pos.y + m_collision.y1,
@@ -341,6 +396,9 @@ void Player::draw()
 		m_pos.y + m_collision.y2 + 1);
 
 	setColor(colorWhite);
+	m_sprite->flipX = m_pos.xFacing < 0 ? false: true;
+	m_sprite->flipY = m_pos.yFacing < 0 ? true : false;
+	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_SY : 0), 0.f, 3.f);
 }
 
 uint32_t Player::getIntersectingBlocksMask(float x, float y) const
