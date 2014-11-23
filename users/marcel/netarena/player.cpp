@@ -1,10 +1,64 @@
 #include "arena.h"
+#include "Calc.h"
 #include "framework.h"
 #include "host.h"
+#include "main.h"
 #include "player.h"
 
-static const float STEERING_SPEED_ON_GROUND = 800.f;
-static const float STEERING_SPEED_IN_AIR = STEERING_SPEED_ON_GROUND * 0.8f;
+enum PlayerEvent
+{
+	kPlayerEvent_Spawn,
+	kPlayerEvent_Die,
+	kPlayerEvent_Jump,
+	kPlayerEvent_WallJump,
+	kPlayerEvent_LandOnGround,
+	kPlayerEvent_StickyAttach,
+	kPlayerEvent_StickyRelease,
+	kPlayerEvent_StickyJump,
+	kPlayerEvent_SpringJump,
+	kPlayerEvent_SpikeHit,
+	kPlayerEvent_ArenaWrap
+};
+
+static void PlaySecondaryEffects(PlayerEvent e)
+{
+	switch (e)
+	{
+	case kPlayerEvent_Spawn:
+		g_app->netPlaySound("player-spawn.ogg");
+		break;
+	case kPlayerEvent_Die:
+		g_app->netPlaySound("player-death.ogg");
+		break;
+	case kPlayerEvent_Jump:
+		g_app->netPlaySound("player-jump.ogg");
+		break;
+	case kPlayerEvent_WallJump:
+		g_app->netPlaySound("player-wall-jump.ogg");
+		break;
+	case kPlayerEvent_LandOnGround:
+		g_app->netPlaySound("player-land-ground.ogg", 25);
+		break;
+	case kPlayerEvent_StickyAttach:
+		g_app->netPlaySound("player-sticky-attach.ogg");
+		break;
+	case kPlayerEvent_StickyRelease:
+		g_app->netPlaySound("player-sticky-release.ogg");
+		break;
+	case kPlayerEvent_StickyJump:
+		g_app->netPlaySound("player-sticky-jump.ogg");
+		break;
+	case kPlayerEvent_SpringJump:
+		g_app->netPlaySound("player-spring-jump.ogg");
+		break;
+	case kPlayerEvent_SpikeHit:
+		g_app->netPlaySound("player-spike-hit.ogg");
+		break;
+	case kPlayerEvent_ArenaWrap:
+		g_app->netPlaySound("player-arena-wrap.ogg");
+		break;
+	}
+}
 
 void Player::tick(float dt)
 {
@@ -22,19 +76,89 @@ void Player::tick(float dt)
 
 			m_vel[0] = 0.f;
 			m_vel[1] = 0.f;
+
+			m_attack = AttackInfo();
+
+			m_isAttachedToSticky = false;
+
+			PlaySecondaryEffects(kPlayerEvent_Spawn);
 		}
 	}
 
 	if (m_state.isAlive)
 	{
-		float steeringSpeed = 0.f;
+		float surfaceFriction = 0.f;
 
-		if (m_input.isDown(INPUT_BUTTON_LEFT))
+		// attack
+
+		if (m_attack.attacking)
+		{
+			m_attack.framesLeft--;
+
+			if (m_attack.framesLeft == 0)
+			{
+				m_attack.attacking = false;
+			}
+			else
+			{
+			}
+		}
+		else
+		{
+			if (m_input.wentDown(INPUT_BUTTON_Y))
+			{
+				m_attack.attacking = true;
+				m_attack.framesLeft = 60;
+
+				g_app->netPlaySound("player-attack-sword-0.ogg"); // todo : weapon selection, etc
+			}
+		}
+
+		//
+
+		bool playerControl = true;
+
+		if (m_attack.attacking)
+		{
+			playerControl = false;
+		}
+
+		// steering
+
+		float steeringSpeed = 0.f;
+		int numSteeringFrame = 1;
+
+		if (playerControl && m_input.isDown(INPUT_BUTTON_LEFT))
 			steeringSpeed -= 1.f;
-		if (m_input.isDown(INPUT_BUTTON_RIGHT))
+		if (playerControl && m_input.isDown(INPUT_BUTTON_RIGHT))
 			steeringSpeed += 1.f;
 
-		steeringSpeed *= STEERING_SPEED_ON_GROUND;
+		if (playerControl && steeringSpeed != 0.f)
+			m_pos.xFacing = steeringSpeed < 0.f ? -1 : +1;
+
+		if (getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f) & kBlockMask_Solid)
+		{
+			steeringSpeed *= STEERING_SPEED_ON_GROUND;
+			numSteeringFrame = 10;
+		}
+		else
+		{
+			steeringSpeed *= STEERING_SPEED_IN_AIR;
+			numSteeringFrame = 10;
+		}
+
+		if (steeringSpeed != 0.f)
+		{
+			float maxSteeringDelta;
+
+			if (steeringSpeed > 0)
+				maxSteeringDelta = steeringSpeed - m_vel[0];
+			if (steeringSpeed < 0)
+				maxSteeringDelta = steeringSpeed - m_vel[0];
+
+			if (Calc::Sign(steeringSpeed) == Calc::Sign(maxSteeringDelta))
+				m_vel[0] += maxSteeringDelta * dt * 60.f / numSteeringFrame;
+		}
 
 		//
 
@@ -42,34 +166,48 @@ void Player::tick(float dt)
 		{
 			// sticky ceiling
 
-			if (m_input.wentDown(INPUT_BUTTON_A))
+			if (playerControl && m_input.wentDown(INPUT_BUTTON_A))
 			{
 				m_vel[1] = +2000.f / 2.f; // todo : jump speed constant
+
+				PlaySecondaryEffects(kPlayerEvent_StickyJump);
 			}
-			else if (m_input.wentDown(INPUT_BUTTON_DOWN))
+			else if (playerControl && m_input.wentDown(INPUT_BUTTON_DOWN))
 			{
 				m_vel[1] += GRAVITY * dt;
+
+				PlaySecondaryEffects(kPlayerEvent_StickyRelease);
+			}
+			else
+			{
+				surfaceFriction = 0.5f;
+
+				if (!m_isAttachedToSticky)
+				{
+					m_isAttachedToSticky = true;
+
+					PlaySecondaryEffects(kPlayerEvent_StickyAttach);
+				}
 			}
 		}
 		else
 		{
+			m_isAttachedToSticky = false;
+
 			m_vel[1] += GRAVITY * dt;
 		}
 
+		// collision
+
 		for (int i = 0; i < 2; ++i)
 		{
-			float vel = m_vel[i];
+			float totalDelta = m_vel[i] * dt;
 
-			if (i == 0)
-				vel += steeringSpeed;
+			const float deltaSign = totalDelta < 0.f ? -1.f : +1.f;
 
-			vel *= dt;
-
-			float velSign = vel < 0.f ? -1.f : +1.f;
-
-			while (vel != 0.f)
+			while (totalDelta != 0.f)
 			{
-				const float delta = (std::abs(vel) < 1.f) ? vel : velSign;
+				const float delta = (std::abs(totalDelta) < 1.f) ? totalDelta : deltaSign;
 
 				Vec2 newPos(m_pos.x, m_pos.y);
 
@@ -79,13 +217,48 @@ void Player::tick(float dt)
 
 				if (newBlockMask & kBlockMask_Solid)
 				{
+					if (i == 0)
+					{
+						// colliding with solid object left/right of player
+
+						if (!m_isGrounded && playerControl && m_input.wentDown(INPUT_BUTTON_A))
+						{
+							// wall jump
+
+							m_vel[0] = -500.f * deltaSign; // todo : walljump push speed
+							m_vel[1] = -1500.f; // todo : walljump speed
+
+							PlaySecondaryEffects(kPlayerEvent_WallJump);
+						}
+						else
+						{
+							m_vel[0] = 0.f;
+						}
+					}
+
 					if (i == 1)
 					{
-						if (m_vel[i] > 0.f)
+						// grounded
+
+						surfaceFriction = 0.5f; // todo : damping constant
+
+						if (m_vel[i] >= 0.f)
 						{
-							if (m_input.wentDown(INPUT_BUTTON_A))
+							if (playerControl && m_input.wentDown(INPUT_BUTTON_A))
 							{
+								// jumping
+
 								m_vel[i] = -2000.f; // todo : jump speed constant
+
+								PlaySecondaryEffects(kPlayerEvent_Jump);
+							}
+							else if (playerControl && newBlockMask & (1 << kBlockType_Spring))
+							{
+								// spring
+
+								m_vel[i] = -2000.f; // todo : auto jump speed constant)
+
+								PlaySecondaryEffects(kPlayerEvent_SpringJump);
 							}
 							else
 							{
@@ -98,37 +271,54 @@ void Player::tick(float dt)
 						}
 					}
 
-					vel = 0.f;
+					totalDelta = 0.f;
 				}
 				else
 				{
 					m_pos[i] = newPos[i];
 
-					vel -= delta;
+					totalDelta -= delta;
 				}
 
 				if (newBlockMask & (1 << kBlockType_Spike))
 				{
 					// todo : die
-				}
 
-				if (newBlockMask & (1 << kBlockType_Spring))
-				{
-					if (i == 1)
-					{
-						m_vel[i] = -2000.f; // todo : auto jump speed constant
-					}
+					PlaySecondaryEffects(kPlayerEvent_SpikeHit);
 				}
 			}
 		}
+
+		// grounded?
+
+		if (getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f) & kBlockMask_Solid)
+		{
+			if (!m_isGrounded)
+			{
+				m_isGrounded = true;
+
+				PlaySecondaryEffects(kPlayerEvent_LandOnGround);
+			}
+		}
+		else
+		{
+			m_isGrounded = false;
+		}
+
+		// breaking
+
+		if (steeringSpeed == 0.f)
+		{
+			m_vel[0] *= powf(1.f - surfaceFriction, dt * 60.f);
+		}
+
+		// wrapping
+
+		if (m_pos[0] < 0)
+			m_pos[0] = ARENA_SX * BLOCK_SX;
+		if (m_pos[0] > ARENA_SX * BLOCK_SX)
+			m_pos[0] = 0;
 	}
-
-	// wrapping
-
-	if (m_pos[0] < 0)
-		m_pos[0] = ARENA_SX * BLOCK_SX;
-	if (m_pos[0] > ARENA_SX * BLOCK_SX)
-		m_pos[0] = 0;
 
 	m_input.next();
 
@@ -139,7 +329,7 @@ void Player::tick(float dt)
 
 void Player::draw()
 {
-	setColor(rand() & 255, 0, 0);
+	setColor(m_pos.xFacing < 0 ? 255 : 127, 0, rand() & 255);
 	gxSetTexture(0);
 
 	// todo : player rect. base should be at ground level

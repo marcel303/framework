@@ -9,14 +9,28 @@ class PlayerPos_NS : public NetSerializable
 	{
 		Serialize(x);
 		Serialize(y);
+
+		//
+
+		bool facing;
+		
+		facing = xFacing < 0 ? true : false;
+		Serialize(facing);
+		xFacing = facing ? -1 : +1;
+
+		facing = yFacing < 0 ? true : false;
+		Serialize(facing);
+		yFacing = facing ? -1 : +1;
 	}
 
 public:
 	PlayerPos_NS(NetSerializableObject * owner)
 		: NetSerializable(owner)
+		, x(0.f)
+		, y(0.f)
+		, xFacing(+1)
+		, yFacing(+1)
 	{
-		x = 0.f;
-		y = 0.f;
 	}
 
 	float & operator[](int index)
@@ -26,6 +40,9 @@ public:
 
 	float x;
 	float y;
+
+	int xFacing;
+	int yFacing;
 };
 
 class PlayerState_NS : public NetSerializable
@@ -73,6 +90,18 @@ class Player : public NetObject
 	PlayerState_NS m_state;
 	PlayerAnim_NS m_anim;
 
+	struct AttackInfo
+	{
+		AttackInfo()
+			: attacking(false)
+			, framesLeft(0)
+		{
+		}
+
+		bool attacking;
+		int framesLeft;
+	} m_attack;
+
 	struct
 	{
 		float x1;
@@ -80,6 +109,9 @@ class Player : public NetObject
 		float x2;
 		float y2;
 	} m_collision;
+
+	bool m_isGrounded;
+	bool m_isAttachedToSticky;
 
 	// ReplicationObject
 	virtual bool RequiresUpdating() const { return true; }
@@ -92,6 +124,8 @@ public:
 		: m_pos(this)
 		, m_state(this)
 		, m_anim(this)
+		, m_isGrounded(false)
+		, m_isAttachedToSticky(false)
 	{
 		setOwningChannelId(owningChannelId);
 

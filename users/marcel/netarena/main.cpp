@@ -29,8 +29,10 @@ static void HandleRpc(uint32_t method, BitStream & bitStream)
 	if (method == s_rpcPlaySound)
 	{
 		const std::string filename = bitStream.ReadString();
+		uint8_t volume;
+		bitStream.Read(volume);
 
-		Sound(filename.c_str()).play();
+		Sound(filename.c_str()).play(volume);
 	}
 	else if (method == s_rpcSetPlayerInputs)
 	{
@@ -355,13 +357,14 @@ void App::draw()
 	framework.endDraw();
 }
 
-void App::netPlaySound(const char * filename)
+void App::netPlaySound(const char * filename, uint8_t volume)
 {
 	BitStream bs;
 
 	bs.WriteString(filename);
+	bs.Write(volume);
 
-	m_rpcMgr->Call(s_rpcPlaySound, bs, ChannelPool_Server, 0, true, true);
+	m_rpcMgr->Call(s_rpcPlaySound, bs, ChannelPool_Server, 0, true, false);
 }
 
 void App::netSetPlayerInputs(uint16_t channelId, uint16_t buttons)

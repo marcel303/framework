@@ -35,6 +35,8 @@ void Arena::generate()
 		if (x == 0 || x == ARENA_SX - 1)
 			m_blocks[ARENA_SX - 1 - x][y].type = m_blocks[x][y].type;
 	}
+
+	m_serializer.SetDirty();
 }
 
 void Arena::drawBlocks()

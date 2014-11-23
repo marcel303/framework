@@ -57,7 +57,7 @@ public:
 	bool tick();
 	void draw();
 
-	void netPlaySound(const char * filename);
+	void netPlaySound(const char * filename, uint8_t volume = 100);
 	void netSetPlayerInputs(uint16_t channelId, uint16_t buttons);
 
 	ReplicationManager * getReplicationMgr() { return m_replicationMgr; }

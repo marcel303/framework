@@ -1,5 +1,6 @@
 #include "arena.h"
 #include "Debugging.h"
+#include "framework.h"
 #include "host.h"
 #include "main.h"
 #include "player.h"
@@ -50,6 +51,13 @@ void Host::tick(float dt)
 		Player * player = *i;
 
 		player->tick(dt);
+	}
+
+	// debug
+
+	if (keyboard.wentDown(SDLK_w))
+	{
+		m_arena->generate();
 	}
 }
 
