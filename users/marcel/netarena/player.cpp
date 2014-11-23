@@ -168,7 +168,7 @@ void Player::tick(float dt)
 
 			if (playerControl && m_input.wentDown(INPUT_BUTTON_A))
 			{
-				m_vel[1] = +2000.f / 2.f; // todo : jump speed constant
+				m_vel[1] = PLAYER_JUMP_SPEED / 2.f;
 
 				PlaySecondaryEffects(kPlayerEvent_StickyJump);
 			}
@@ -180,7 +180,7 @@ void Player::tick(float dt)
 			}
 			else
 			{
-				surfaceFriction = 0.5f;
+				surfaceFriction = FRICTION_GROUNDED;
 
 				if (!m_isAttachedToSticky)
 				{
@@ -225,8 +225,8 @@ void Player::tick(float dt)
 						{
 							// wall jump
 
-							m_vel[0] = -500.f * deltaSign; // todo : walljump push speed
-							m_vel[1] = -1500.f; // todo : walljump speed
+							m_vel[0] = -PLAYER_WALLJUMP_RECOIL_SPEED * deltaSign;
+							m_vel[1] = -PLAYER_WALLJUMP_SPEED;
 
 							PlaySecondaryEffects(kPlayerEvent_WallJump);
 						}
@@ -240,7 +240,7 @@ void Player::tick(float dt)
 					{
 						// grounded
 
-						surfaceFriction = 0.5f; // todo : damping constant
+						surfaceFriction = FRICTION_GROUNDED;
 
 						if (m_vel[i] >= 0.f)
 						{
@@ -248,7 +248,7 @@ void Player::tick(float dt)
 							{
 								// jumping
 
-								m_vel[i] = -2000.f; // todo : jump speed constant
+								m_vel[i] = -PLAYER_JUMP_SPEED;
 
 								PlaySecondaryEffects(kPlayerEvent_Jump);
 							}
@@ -256,7 +256,7 @@ void Player::tick(float dt)
 							{
 								// spring
 
-								m_vel[i] = -2000.f; // todo : auto jump speed constant)
+								m_vel[i] = -PLAYER_JUMP_SPEED;
 
 								PlaySecondaryEffects(kPlayerEvent_SpringJump);
 							}
