@@ -53,15 +53,22 @@ void Arena::drawBlocks()
 		"block-spring.png"
 	};
 
+	static Sprite * sprites[kBlockType_COUNT] = { };
+
 	for (int x = 0; x < ARENA_SX; ++x)
 	{
 		for (int y = 0; y < ARENA_SY; ++y)
 		{
 			const Block & block = m_blocks[x][y];
 
-			const char * filename = filenames[block.type];
+			if (!sprites[block.type])
+			{
+				const char * filename = filenames[block.type];
 
-			Sprite(filename).drawEx(x * 128, y * 128);
+				sprites[block.type] = new Sprite(filename);
+			}
+
+			sprites[block.type]->drawEx(x * 128, y * 128);
 		}
 	}
 }
