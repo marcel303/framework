@@ -44,9 +44,9 @@ Player::Player(uint16_t owningChannelId)
 {
 	setOwningChannelId(owningChannelId);
 
-	m_collision.x1 = -PLAYER_SX / 2.f;
-	m_collision.x2 = +PLAYER_SX / 2.f;
-	m_collision.y1 = -PLAYER_SY;
+	m_collision.x1 = -PLAYER_COLLISION_SX / 2.f;
+	m_collision.x2 = +PLAYER_COLLISION_SX / 2.f;
+	m_collision.y1 = -PLAYER_COLLISION_SY;
 	m_collision.y2 = 0.f;
 
 	m_sprite = new Sprite("player-walk.png");
@@ -398,7 +398,7 @@ void Player::draw()
 	setColor(colorWhite);
 	m_sprite->flipX = m_pos.xFacing < 0 ? false: true;
 	m_sprite->flipY = m_pos.yFacing < 0 ? true : false;
-	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_SY : 0), 0.f, 3.f);
+	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, 3.f);
 }
 
 uint32_t Player::getIntersectingBlocksMask(float x, float y) const
