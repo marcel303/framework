@@ -44,11 +44,6 @@ Player::Player(uint16_t owningChannelId)
 {
 	setOwningChannelId(owningChannelId);
 
-	m_collision.x1 = -PLAYER_COLLISION_SX / 2.f;
-	m_collision.x2 = +PLAYER_COLLISION_SX / 2.f;
-	m_collision.y1 = -PLAYER_COLLISION_SY;
-	m_collision.y2 = 0.f;
-
 	m_sprite = new Sprite("player-walk.png");
 }
 
@@ -100,6 +95,11 @@ static void PlaySecondaryEffects(PlayerEvent e)
 
 void Player::tick(float dt)
 {
+	m_collision.x1 = -PLAYER_COLLISION_SX / 2.f;
+	m_collision.x2 = +PLAYER_COLLISION_SX / 2.f;
+	m_collision.y1 = -PLAYER_COLLISION_SY;
+	m_collision.y2 = 0.f;
+
 	if (!m_state.isAlive || m_input.wentDown(INPUT_BUTTON_X))
 	{
 		int x, y;

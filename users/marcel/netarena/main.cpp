@@ -198,6 +198,8 @@ bool App::init(bool isHost)
 {
 	Calc::Initialize();
 
+	g_optionManager.Load("settings.txt");
+
 	framework.minification = 2;
 
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
@@ -339,6 +341,18 @@ bool App::tick()
 	}
 
 	m_channelMgr->Update(g_TimerRT.TimeUS_get());
+
+	// debug
+
+	if (keyboard.wentDown(SDLK_t))
+	{
+		g_optionManager.Load("settings.txt");
+	}
+
+	if (keyboard.wentDown(SDLK_ESCAPE))
+	{
+		exit(0);
+	}
 
 	return true;
 }
