@@ -1,10 +1,25 @@
 cmake_minimum_required(VERSION 2.6)
 
+set(HAS_LIBGG 0)
+set(HAS_LIBNET 0)
+set(HAS_FRAMEWORK 0)
+
 # --- dependencies ---
 
-add_subdirectory(../../../libgg libgg)
-add_subdirectory(../../../libnet libnet)
-add_subdirectory(../framework framework)
+if (NOT HAS_LIBGG)
+	message("including libgg")
+	add_subdirectory(../../../libgg libgg)
+endif (NOT HAS_LIBGG)
+if (NOT HAS_LIBNET)
+	message("including libnet")
+	add_subdirectory(../../../libnet libnet)
+endif (NOT HAS_LIBNET)
+if (NOT HAS_FRAMEWORK)
+	message("including framework")
+	add_subdirectory(../framework framework)
+endif (NOT HAS_FRAMEWORK)
+
+#
 
 project(netarena)
 

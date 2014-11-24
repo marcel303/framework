@@ -1,8 +1,16 @@
 cmake_minimum_required(VERSION 2.6)
 
+set(HAS_FRAMEWORK 1 PARENT_SCOPE)
+message("setting HAS_FRAMEWORK")
+
 # --- dependencies ---
 
-#add_subdirectory(../../../libgg libgg)
+if (NOT HAS_LIBGG)
+	message("including libgg")
+	add_subdirectory(../../../libgg libgg)
+endif (NOT HAS_LIBGG)
+
+#
 
 project(framework)
 
@@ -24,9 +32,9 @@ target_include_directories(framework PUBLIC "${PROJECT_SOURCE_DIR}")
 target_include_directories(framework PRIVATE "${PROJECT_SOURCE_DIR}/audiostream")
 target_include_directories(framework PUBLIC "${PROJECT_SOURCE_DIR}/win32/include")
 target_include_directories(framework PRIVATE "${PROJECT_SOURCE_DIR}/win32/include/freetype")
-target_include_directories(framework PRIVATE "${PROJECT_SOURCE_DIR}/../../../libgg")
+target_include_directories(framework PUBLIC "${PROJECT_SOURCE_DIR}/../../../libgg") # because CMake sucks and only imports the PUBLIC include directories if you're DIRECTLY linking against a library
 
-target_link_libraries(framework PRIVATE libgg)
+add_dependencies(framework libgg)
 
 # --- test application ---
 
@@ -37,6 +45,7 @@ add_executable(framework_test ${source})
 target_include_directories(framework_test PRIVATE "${PROJECT_SOURCE_DIR}/win32/include")
 
 target_link_libraries(framework_test PRIVATE framework)
+target_link_libraries(framework_test PRIVATE libgg)
 target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/FreeImage.lib)
 target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/freetype252.lib)
 target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/glew32.lib)

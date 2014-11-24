@@ -1,5 +1,17 @@
 cmake_minimum_required(VERSION 2.6)
 
+set(HAS_LIBNET 1 PARENT_SCOPE)
+message("setting HAS_LIBNET")
+
+# --- dependencies ---
+
+if (NOT HAS_LIBGG)
+	message("including libgg")
+	add_subdirectory(../libgg libgg)
+endif (NOT HAS_LIBGG)
+
+#
+
 project(libnet)
 
 # --- libnet ---
@@ -13,8 +25,9 @@ target_compile_definitions(libnet PUBLIC WINDOWS)
 target_compile_definitions(libnet PRIVATE _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS)
 
 target_include_directories(libnet PUBLIC "${PROJECT_SOURCE_DIR}")
-target_include_directories(libnet PRIVATE "${PROJECT_SOURCE_DIR}/test")
-target_include_directories(libnet PUBLIC "${PROJECT_SOURCE_DIR}/../libgg")
+target_include_directories(libnet PUBLIC "${PROJECT_SOURCE_DIR}/../libgg") # because CMake sucks and only imports the PUBLIC include directories if you're DIRECTLY linking against a library
+
+add_dependencies(libnet libgg)
 
 # --- test application ---
 

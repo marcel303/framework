@@ -1,5 +1,12 @@
 cmake_minimum_required(VERSION 2.6)
 
+set(HAS_LIBGG 1 PARENT_SCOPE)
+message("setting HAS_LIBGG")
+
+# --- dependencies ---
+
+#
+
 project(libgg)
 
 # --- libgg ---
