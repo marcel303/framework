@@ -9,6 +9,7 @@
 
 class Client;
 class Host;
+class OptionMenu;
 class Player;
 
 class App : public ChannelHandler, public ReplicationHandler
@@ -30,6 +31,9 @@ class App : public ChannelHandler, public ReplicationHandler
 	std::map<Channel*, ClientInfo> m_hostClients;
 
 	std::vector<Client*> m_clients;
+
+	OptionMenu * m_optionMenu;
+	bool m_optionsMenuIsOpen;
 
 	//
 

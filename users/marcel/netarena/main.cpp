@@ -8,6 +8,7 @@
 #include "main.h"
 #include "netobject.h"
 #include "NetProtocols.h"
+#include "OptionMenu.h"
 #include "PacketDispatcher.h"
 #include "player.h"
 #include "ReplicationClient.h"
@@ -177,6 +178,8 @@ App::App()
 	, m_channelMgr(0)
 	, m_rpcMgr(0)
 	, m_replicationMgr(0)
+	, m_optionMenu(0)
+	, m_optionsMenuIsOpen(false)
 {
 }
 
@@ -259,6 +262,9 @@ bool App::init(bool isHost)
 			m_clients.push_back(client);
 		}
 
+		m_optionMenu = new OptionMenu();
+		m_optionsMenuIsOpen = false;
+
 		return true;
 	}
 
@@ -267,6 +273,9 @@ bool App::init(bool isHost)
 
 void App::shutdown()
 {
+	delete m_optionMenu;
+	m_optionMenu = 0;
+
 	for (size_t i = 0; i < m_clients.size(); ++i)
 	{
 		delete m_clients[i];
@@ -323,7 +332,10 @@ bool App::tick()
 
 	framework.process();
 
-	m_host->tick(dt);
+	if (!m_optionsMenuIsOpen)
+	{
+		m_host->tick(dt);
+	}
 
 	m_channelMgr->Update(g_TimerRT.TimeUS_get());
 
@@ -343,6 +355,31 @@ bool App::tick()
 	m_channelMgr->Update(g_TimerRT.TimeUS_get());
 
 	// debug
+
+	if (keyboard.wentDown(SDLK_F5))
+	{
+		m_optionsMenuIsOpen = !m_optionsMenuIsOpen;
+	}
+
+	if (m_optionsMenuIsOpen)
+	{
+		if (keyboard.wentDown(SDLK_UP))
+			m_optionMenu->HandleAction(OptionMenu::Action_NavigateUp);
+		if (keyboard.wentDown(SDLK_DOWN))
+			m_optionMenu->HandleAction(OptionMenu::Action_NavigateDown);
+		if (keyboard.wentDown(SDLK_RETURN))
+			m_optionMenu->HandleAction(OptionMenu::Action_NavigateSelect);
+		if (keyboard.wentDown(SDLK_BACKSPACE))
+		{
+			m_optionMenu->HandleAction(OptionMenu::Action_NavigateBack);
+			if (!m_optionMenu->HasNavParent())
+				m_optionsMenuIsOpen = false;
+		}
+		if (keyboard.isDown(SDLK_LEFT))
+			m_optionMenu->HandleAction(OptionMenu::Action_ValueDecrement);
+		if (keyboard.isDown(SDLK_RIGHT))
+			m_optionMenu->HandleAction(OptionMenu::Action_ValueIncrement);
+	}
 
 	if (keyboard.wentDown(SDLK_t))
 	{
@@ -366,6 +403,16 @@ void App::draw()
 			Client * client = m_clients[i];
 
 			client->draw();
+		}
+
+		if (m_optionsMenuIsOpen)
+		{
+			const int sx = 400;
+			const int sy = GFX_SY / 3;
+			const int x = (GFX_SX - sx) / 2;
+			const int y = (GFX_SY - sy) / 2;
+
+			m_optionMenu->Draw(x, y, sx, sy);
 		}
 	}
 	framework.endDraw();
