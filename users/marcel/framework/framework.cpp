@@ -1280,7 +1280,7 @@ void Sprite::drawEx(float x, float y, float angle, float scale, bool pixelpos, T
 			
 			int cellIndex;
 			
-			if (m_animSegment)
+			if (m_isAnimStarted && m_animSegment)
 			{
 				AnimCacheElem::Anim * anim = reinterpret_cast<AnimCacheElem::Anim*>(m_animSegment);
 				
@@ -1343,6 +1343,10 @@ void Sprite::drawEx(float x, float y, float angle, float scale, bool pixelpos, T
 			}
 			gxEnd();
 		#endif
+
+		#if USE_LEGACY_OPENGL
+			gxSetTexture(0);
+		#endif
 		}
 		gxPopMatrix();
 	}
@@ -1369,6 +1373,7 @@ void Sprite::stopAnim()
 {
 	animIsActive = false;
 	m_isAnimStarted = false;
+	m_animSegment = 0;
 }
 
 const std::string & Sprite::getAnim() const
@@ -2382,10 +2387,10 @@ static void drawTextInternal(FT_Face face, int size, const char * text)
 				const float x2 = x1 + sx;
 				const float y2 = y1 + sy;
 				
-		 		gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
-		 		gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
-		 		gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y2);
-		 		gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y2);
+				gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
+				gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
+				gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y2);
+				gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y2);
 			}
 			gxEnd();
 			
@@ -2393,6 +2398,10 @@ static void drawTextInternal(FT_Face face, int size, const char * text)
 			y += (elem.g.advance.y / float(1 << 6));
 		}
 	}
+
+#if USE_LEGACY_OPENGL
+	gxSetTexture(0);
+#endif
 }
 
 void drawText(float x, float y, int size, float alignX, float alignY, const char * format, ...)
