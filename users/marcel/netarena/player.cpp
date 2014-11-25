@@ -44,6 +44,11 @@ Player::Player(uint16_t owningChannelId)
 {
 	setOwningChannelId(owningChannelId);
 
+	m_collision.x1 = -PLAYER_COLLISION_SX / 2.f;
+	m_collision.x2 = +PLAYER_COLLISION_SX / 2.f;
+	m_collision.y1 = -PLAYER_COLLISION_SY;
+	m_collision.y2 = 0.f;
+
 	m_sprite = new Sprite("player-walk.png");
 }
 
@@ -387,8 +392,7 @@ void Player::tick(float dt)
 
 void Player::draw()
 {
-	gxSetTexture(0);
-	setColor(0, 255, 127, 127);
+	setColor(0, 31, 63, 63);
 	drawRect(
 		m_pos.x + m_collision.x1,
 		m_pos.y + m_collision.y1,
