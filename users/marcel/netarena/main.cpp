@@ -363,22 +363,25 @@ bool App::tick()
 
 	if (m_optionsMenuIsOpen)
 	{
-		if (keyboard.wentDown(SDLK_UP))
-			m_optionMenu->HandleAction(OptionMenu::Action_NavigateUp);
-		if (keyboard.wentDown(SDLK_DOWN))
-			m_optionMenu->HandleAction(OptionMenu::Action_NavigateDown);
+		m_optionMenu->Update();
+
+		if (keyboard.isDown(SDLK_UP))
+			m_optionMenu->HandleAction(OptionMenu::Action_NavigateUp, dt);
+		if (keyboard.isDown(SDLK_DOWN))
+			m_optionMenu->HandleAction(OptionMenu::Action_NavigateDown, dt);
 		if (keyboard.wentDown(SDLK_RETURN))
 			m_optionMenu->HandleAction(OptionMenu::Action_NavigateSelect);
 		if (keyboard.wentDown(SDLK_BACKSPACE))
 		{
-			m_optionMenu->HandleAction(OptionMenu::Action_NavigateBack);
-			if (!m_optionMenu->HasNavParent())
+			if (m_optionMenu->HasNavParent())
+				m_optionMenu->HandleAction(OptionMenu::Action_NavigateBack);
+			else
 				m_optionsMenuIsOpen = false;
 		}
 		if (keyboard.isDown(SDLK_LEFT))
-			m_optionMenu->HandleAction(OptionMenu::Action_ValueDecrement);
+			m_optionMenu->HandleAction(OptionMenu::Action_ValueDecrement, dt);
 		if (keyboard.isDown(SDLK_RIGHT))
-			m_optionMenu->HandleAction(OptionMenu::Action_ValueIncrement);
+			m_optionMenu->HandleAction(OptionMenu::Action_ValueIncrement, dt);
 	}
 
 	if (keyboard.wentDown(SDLK_t))

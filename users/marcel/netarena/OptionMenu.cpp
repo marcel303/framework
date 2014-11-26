@@ -7,7 +7,9 @@ OptionMenu::Node::Node()
 	, m_prevSibling(0)
 	, m_nextSibling(0)
 	, m_firstChild(0)
+	, m_currentSelection(0)
 	, m_option(0)
+	, m_timeValue(0.f)
 {
 }
 
@@ -58,6 +60,7 @@ void OptionMenu::Create()
 						child->m_nextSibling = node->m_firstChild;
 					}
 					node->m_firstChild = child;
+					node->m_currentSelection = child;
 				}
 
 				node = child;
@@ -78,6 +81,7 @@ void OptionMenu::Create()
 					leaf->m_nextSibling = node->m_firstChild;
 				}
 				node->m_firstChild = leaf;
+				node->m_currentSelection = leaf;
 
 				break;
 			}
@@ -102,6 +106,8 @@ void OptionMenu::Destroy(Node * node)
 OptionMenu::OptionMenu()
 	: m_root(0)
 	, m_currentNode(0)
+	, m_hasActionsPrevUpdate(false)
+	, m_hasActionsCurrUpdate(false)
 {
 	Create();
 
@@ -121,54 +127,95 @@ bool OptionMenu::HasNavParent() const
 	return (m_currentNode->m_parent != 0);
 }
 
-void OptionMenu::HandleAction(Action action)
+void OptionMenu::HandleAction(Action action, float dt)
 {
+	Node *& currentSelection = m_currentNode->m_currentSelection;
+
+	if (currentSelection == 0)
+		return; // empty tree
+
+	// make sure the action triggers if it isn't a repeat
+	if (!m_hasActionsPrevUpdate && !m_hasActionsCurrUpdate)
+		dt = 1000.f;
+
+	const float kMoveSpeed = 6.f;
+	const float kChangeSpeed = 6.f;
+
 	switch (action)
 	{
 	case Action_NavigateUp:
-		if (m_currentNode->m_prevSibling)
-			m_currentNode = m_currentNode->m_prevSibling;
+		currentSelection->m_timeValue += dt * kMoveSpeed;
+		if (currentSelection->m_timeValue >= 1.f)
+		{
+			currentSelection->m_timeValue = 0.f;
+			if (currentSelection->m_prevSibling)
+				currentSelection = currentSelection->m_prevSibling;
+		}
 		break;
 	case Action_NavigateDown:
-		if (m_currentNode->m_nextSibling)
-			m_currentNode = m_currentNode->m_nextSibling;
+		currentSelection->m_timeValue += dt * kMoveSpeed;
+		if (currentSelection->m_timeValue >= 1.f)
+		{
+			currentSelection->m_timeValue = 0.f;
+			if (currentSelection->m_nextSibling)
+				currentSelection = currentSelection->m_nextSibling;
+		}
 		break;
 	case Action_NavigateSelect:
-		if (m_currentNode->m_firstChild)
-			m_currentNode = m_currentNode->m_firstChild;
+		if (currentSelection->m_option == 0)
+			m_currentNode = currentSelection;
 		break;
 	case Action_NavigateBack:
 		if (m_currentNode->m_parent)
 			m_currentNode = m_currentNode->m_parent;
 		break;
 	case Action_ValueIncrement:
-		if (m_currentNode->m_option)
-			m_currentNode->m_option->Increment();
+		currentSelection->m_timeValue += dt * kChangeSpeed;
+		if (currentSelection->m_timeValue >= 1.f)
+		{
+			currentSelection->m_timeValue = 0.f;
+			if (currentSelection->m_option)
+				currentSelection->m_option->Increment();
+		}
 		break;
 	case Action_ValueDecrement:
-		if (m_currentNode->m_option)
-			m_currentNode->m_option->Decrement();
+		currentSelection->m_timeValue += dt * kChangeSpeed;
+		if (currentSelection->m_timeValue >= 1.f)
+		{
+			currentSelection->m_timeValue = 0.f;
+			if (currentSelection->m_option)
+				currentSelection->m_option->Decrement();
+		}
 		break;
 	}
+
+	if (!m_hasActionsPrevUpdate && !m_hasActionsCurrUpdate)
+	{
+		if (m_currentNode->m_currentSelection)
+			m_currentNode->m_currentSelection->m_timeValue = 0.f;
+	}
+
+	m_hasActionsCurrUpdate = true;
+}
+
+void OptionMenu::Update()
+{
+	m_hasActionsPrevUpdate = m_hasActionsCurrUpdate;
+	m_hasActionsCurrUpdate = false;
 }
 
 void OptionMenu::Draw(int x, int y, int sx, int sy)
 {
+	if (m_currentNode->m_currentSelection == 0)
+		return; // empty tree
+
 	const int fontSize = 30;
 	const int lineSize = 40;
 
 	int numNodes = 0;
-	int selectedIndex = -1;
-	Node * parentNode = m_currentNode->m_parent ? m_currentNode->m_parent : m_currentNode;
-	for (Node * node = parentNode->m_firstChild; node != 0; node = node->m_nextSibling)
-	{
-		if (node == m_currentNode)
-			selectedIndex = numNodes;
-		numNodes++;
-	}
 
-	if (selectedIndex == -1 && parentNode->m_firstChild)
-		m_currentNode = parentNode->m_firstChild;
+	for (Node * node = m_currentNode->m_firstChild; node != 0; node = node->m_nextSibling)
+		numNodes++;
 
 	setColor(0, 0, 0, 127);
 	drawRect(x, y, x + sx, y + numNodes * lineSize);
@@ -177,12 +224,12 @@ void OptionMenu::Draw(int x, int y, int sx, int sy)
 	setFont(font);
 
 	int index = 0;
-	for (Node * node = parentNode->m_firstChild; node != 0; node = node->m_nextSibling, index++)
+	for (Node * node = m_currentNode->m_firstChild; node != 0; node = node->m_nextSibling, index++)
 	{
-		if (node == m_currentNode)
+		if (node == m_currentNode->m_currentSelection)
 		{
 			setColor(127, 227, 255, 127);
-			drawRect(x, y + selectedIndex * lineSize, x + sx, y + (selectedIndex + 1) * lineSize);
+			drawRect(x, y + index * lineSize, x + sx, y + (index + 1) * lineSize);
 			setColor(0, 0, 0);
 		}
 		else

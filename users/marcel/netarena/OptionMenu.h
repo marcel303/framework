@@ -16,7 +16,9 @@ class OptionMenu
 		Node * m_prevSibling;
 		Node * m_nextSibling;
 		Node * m_firstChild;
+		Node * m_currentSelection;
 		OptionBase * m_option;
+		float m_timeValue; // used for 'key repeat'
 
 		Node * FindChild(const std::string & name) const;
 	};
@@ -26,6 +28,9 @@ class OptionMenu
 
 	Node * m_root;
 	Node * m_currentNode;
+
+	bool m_hasActionsPrevUpdate;
+	bool m_hasActionsCurrUpdate;
 
 public:
 	enum Action
@@ -42,7 +47,8 @@ public:
 	~OptionMenu();
 
 	bool HasNavParent() const;
-	void HandleAction(Action action);
+	void HandleAction(Action action, float dt = 1.f);
 
+	void Update();
 	void Draw(int x, int y, int sx, int sy);
 };
