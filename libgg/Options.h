@@ -6,6 +6,7 @@
 
 class OptionBase
 {
+	friend class OptionLimits;
 	friend class OptionManager;
 
 	OptionBase * m_next;
@@ -13,6 +14,10 @@ class OptionBase
 	const char * m_name;
 
 protected:
+	float m_min;
+	float m_max;
+	float m_step;
+
 	OptionBase(const char * path, const char * name);
 
 public:
@@ -29,6 +34,17 @@ template <typename T>
 class Option : public OptionBase
 {
 	T m_value;
+
+protected:
+	void ApplyLimits()
+	{
+		if (m_min == 0.f && m_max == 0.f)
+			return;
+		if (m_value < (T)m_min)
+			m_value = (T)m_min;
+		if (m_value > (T)m_max)
+			m_value = (T)m_max;
+	}
 
 public:
 	typedef T Type;
@@ -57,6 +73,17 @@ public:
 	}
 };
 
+class OptionLimits
+{
+public:
+	OptionLimits(OptionBase * option, float min, float max, float step)
+	{
+		option->m_min = min;
+		option->m_max = max;
+		option->m_step = step;
+	}
+};
+
 class OptionManager
 {
 public:
@@ -71,11 +98,13 @@ extern OptionManager g_optionManager;
 #define OPTION_EXTERN(type, name) extern Option<type> name
 #define OPTION_DECLARE(type, name, defaultValue) OPTION_EXTERN(type, name); static const type name ## _defaultValue = defaultValue
 #define OPTION_DEFINE(type, name, path) Option<type> name(name ## _defaultValue, path, # name)
+#define OPTION_STEP(name, min, max, step) static OptionLimits name ## _limits(&name, min, max, step)
 
 #else
 
 #define OPTION_EXTERN(type, name) extern type name
 #define OPTION_DECLARE(type, name, defaultValue) OPTION_EXTERN(type, name); static const type name ## _defaultValue = defaultValue
 #define OPTION_DEFINE(type, name, path) type name(name ## _defaultValue)
+#define OPTION_STEP(name, min, max, step)
 
 #endif

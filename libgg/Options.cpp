@@ -50,6 +50,9 @@ OptionBase::OptionBase(const char * path, const char * name)
 	: m_next(0)
 	, m_path(path)
 	, m_name(name)
+	, m_min(0.f)
+	, m_max(0.f)
+	, m_step(1.f)
 {
 	g_optionManager.Register(this);
 }
@@ -90,12 +93,16 @@ void Option<bool>::FromString(const char * buffer)
 
 void Option<int>::Increment()
 {
-	m_value++;
+	m_value += (int)m_step;
+
+	ApplyLimits();
 }
 
 void Option<int>::Decrement()
 {
-	m_value--;
+	m_value -= (int)m_step;
+
+	ApplyLimits();
 }
 
 void Option<int>::ToString(char * buffer, int bufferSize)
@@ -112,12 +119,16 @@ void Option<int>::FromString(const char * buffer)
 
 void Option<float>::Increment()
 {
-	m_value += 1.f;
+	m_value += m_step;
+
+	ApplyLimits();
 }
 
 void Option<float>::Decrement()
 {
-	m_value -= 1.f;
+	m_value -= m_step;
+
+	ApplyLimits();
 }
 
 void Option<float>::ToString(char * buffer, int bufferSize)
