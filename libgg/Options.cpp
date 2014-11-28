@@ -135,7 +135,7 @@ void Option<float>::Decrement()
 
 void Option<float>::ToString(char * buffer, int bufferSize)
 {
-	sprintf_s(buffer, bufferSize, "%f", m_value);
+	sprintf_s(buffer, bufferSize, "%.3f", m_value);
 }
 
 void Option<float>::FromString(const char * buffer)
