@@ -201,7 +201,7 @@ bool App::init(bool isHost)
 {
 	Calc::Initialize();
 
-	g_optionManager.Load("settings.txt");
+	g_optionManager.Load("options.txt");
 
 	framework.minification = 2;
 
@@ -386,7 +386,7 @@ bool App::tick()
 
 	if (keyboard.wentDown(SDLK_t))
 	{
-		g_optionManager.Load("settings.txt");
+		g_optionManager.Load("options.txt");
 	}
 
 	if (keyboard.wentDown(SDLK_ESCAPE))

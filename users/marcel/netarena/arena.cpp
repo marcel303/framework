@@ -50,7 +50,12 @@ void Arena::drawBlocks()
 		"block-sticky.png",
 		"block-spike.png",
 		"block-spawn.png",
-		"block-spring.png"
+		"block-spring.png",
+		"block-gravity-reverse.png",
+		"block-gravity-disable.png",
+		"block-gravity-strong.png",
+		"block-conveyorbelt-left.png",
+		"block-conveyorbelt-right.png"
 	};
 
 	static Sprite * sprites[kBlockType_COUNT] = { };

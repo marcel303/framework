@@ -13,6 +13,11 @@ enum BlockType : unsigned char
 	kBlockType_Spike,
 	kBlockType_Spawn,
 	kBlockType_Spring,
+	kBlockType_GravityReverse,
+	kBlockType_GravityDisable,
+	kBlockType_GravityStrong,
+	kBlockType_ConveyorBeltLeft,
+	kBlockType_ConveyorBeltRight,
 	kBlockType_COUNT
 };
 
@@ -20,7 +25,9 @@ static const int kBlockMask_Solid =
 	(1 << kBlockType_Destructible) |
 	(1 << kBlockType_Indestructible) |
 	(1 << kBlockType_Sticky) |
-	(1 << kBlockType_Spring);
+	(1 << kBlockType_Spring) |
+	(1 << kBlockType_ConveyorBeltLeft) |
+	(1 << kBlockType_ConveyorBeltRight);
 
 #pragma pack(push)
 #pragma pack(1)

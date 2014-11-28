@@ -219,7 +219,11 @@ void Player::tick(float dt)
 
 		//
 
-		if (getIntersectingBlocksMask(m_pos[0], m_pos[1] - 1.f) & (1 << kBlockType_Sticky))
+		const uint32_t currentBlockMask = getIntersectingBlocksMask(m_pos[0], m_pos[1]);
+		const uint32_t currentBlockMaskFloor = getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f);
+		const uint32_t currentBlockMaskCeil = getIntersectingBlocksMask(m_pos[0], m_pos[1] - 1.f);
+
+		if (currentBlockMaskCeil & (1 << kBlockType_Sticky))
 		{
 			// sticky ceiling
 
@@ -250,15 +254,44 @@ void Player::tick(float dt)
 		else
 		{
 			m_isAttachedToSticky = false;
-
-			m_vel[1] += GRAVITY * dt;
 		}
+
+		// gravity
+
+		float gravity;
+
+		if (m_isAttachedToSticky)
+			gravity = 0.f;
+		else
+		{
+			if (currentBlockMask & (1 << kBlockType_GravityDisable))
+				gravity = 0.f;
+			else if (currentBlockMask & (1 << kBlockType_GravityReverse))
+				gravity = GRAVITY * BLOCKTYPE_GRAVITY_REVERSE_MULTIPLIER;
+			else if (currentBlockMask & (1 << kBlockType_GravityStrong))
+				gravity = GRAVITY * BLOCKTYPE_GRAVITY_STRONG_MULTIPLIER;
+			else
+				gravity = GRAVITY;
+		}
+
+		m_vel[1] += gravity * dt;
+
+		// converyor belt
+
+		Vec2 fixedSpeed(0.f, 0.f);
+
+		if (currentBlockMaskFloor & (1 << kBlockType_ConveyorBeltLeft))
+			fixedSpeed[0] = -BLOCKTYPE_CONVEYOR_SPEED;
+		if (currentBlockMaskFloor & (1 << kBlockType_ConveyorBeltRight))
+			fixedSpeed[0] = +BLOCKTYPE_CONVEYOR_SPEED;
 
 		// collision
 
 		for (int i = 0; i < 2; ++i)
 		{
 			float totalDelta = m_vel[i] * dt;
+
+			totalDelta += fixedSpeed[i] * dt;
 
 			const float deltaSign = totalDelta < 0.f ? -1.f : +1.f;
 
