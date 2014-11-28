@@ -1,14 +1,17 @@
 #include <tuple>
 #include "arena.h"
+#include "FileStream.h"
 #include "framework.h"
+#include "StreamReader.h"
 
 Arena::Arena()
 	: NetObject()
 	, m_serializer(this)
 {
+	reset();
 }
 
-void Arena::generate()
+void Arena::reset()
 {
 	// clear the arena
 
@@ -16,12 +19,23 @@ void Arena::generate()
 	{
 		for (int y = 0; y < ARENA_SY; ++y)
 		{
-			if (x == 0 || x == ARENA_SX - 1 || y == 0 || y == ARENA_SY - 1)
-				m_blocks[x][y].type = kBlockType_Indestructible;
-			else
-				m_blocks[x][y].type = kBlockType_Empty;
+			m_blocks[x][y].type = kBlockType_Empty;
 		}
 	}
+}
+
+void Arena::generate()
+{
+	// clear the arena
+
+	reset();
+
+	// generate a border
+
+	for (int x = 0; x < ARENA_SX; ++x)
+		for (int y = 0; y < ARENA_SY; ++y)
+			if (x == 0 || x == ARENA_SX - 1 || y == 0 || y == ARENA_SY - 1)
+				m_blocks[x][y].type = kBlockType_Indestructible;
 
 	// add some random stuff
 
@@ -34,6 +48,74 @@ void Arena::generate()
 
 		if (x == 0 || x == ARENA_SX - 1)
 			m_blocks[ARENA_SX - 1 - x][y].type = m_blocks[x][y].type;
+	}
+
+	m_serializer.SetDirty();
+}
+
+void Arena::load(const char * filename)
+{
+	reset();
+
+	try
+	{
+		FileStream stream;
+		stream.Open(filename, (OpenMode)(OpenMode_Read | OpenMode_Text));
+		StreamReader reader(&stream, false);
+		std::vector<std::string> lines = reader.ReadAllLines();
+
+		const int sy = lines.size() < ARENA_SY ? lines.size() : ARENA_SY;
+
+		for (int y = 0; y < sy; ++y)
+		{
+			const std::string & line = lines[y];
+
+			const int sx = line.size() < ARENA_SX ? line.size() : ARENA_SX;
+
+			for (int x = 0; x < sx; ++x)
+			{
+				/*
+				  = kBlockType_Empty,
+				c = kBlockType_Destructible,
+				x = kBlockType_Indestructible,
+				    kBlockType_Moving,
+				s = kBlockType_Sticky,
+				    kBlockType_Spike,
+				p = kBlockType_Spawn,
+				j = kBlockType_Spring,
+				u = kBlockType_GravityReverse,
+				- = kBlockType_GravityDisable,
+				d = kBlockType_GravityStrong,
+				< = kBlockType_ConveyorBeltLeft,
+				> = kBlockType_ConveyorBeltRight,
+				*/
+
+				BlockType type = kBlockType_Empty;
+
+				switch (line[x])
+				{
+				case ' ': type = kBlockType_Empty; break;
+				case 'c': type = kBlockType_Destructible; break;
+				case 'x': type = kBlockType_Indestructible; break;
+				case 's': type = kBlockType_Sticky; break;
+				case 'p': type = kBlockType_Spawn; break;
+				case 'j': type = kBlockType_Spring; break;
+				case 'u': type = kBlockType_GravityReverse; break;
+				case '-': type = kBlockType_GravityDisable; break;
+				case 'd': type = kBlockType_GravityStrong; break;
+				case '<': type = kBlockType_ConveyorBeltLeft; break;
+				case '>': type = kBlockType_ConveyorBeltRight; break;
+				default:
+					LOG_WRN("invalid block type: '%c'", line[x]);
+				}
+
+				m_blocks[x][y].type = type;
+			}
+		}
+	}
+	catch (std::exception & e)
+	{
+		LOG_ERR("failed to open %s: %s", filename, e.what());
 	}
 
 	m_serializer.SetDirty();

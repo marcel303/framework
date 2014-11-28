@@ -193,7 +193,20 @@ void Player::tick(float dt)
 			}
 		}
 
-		if (getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f) & kBlockMask_Solid)
+		const uint32_t currentBlockMask = getIntersectingBlocksMask(m_pos[0], m_pos[1]);
+		const uint32_t currentBlockMaskFloor = getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f);
+		const uint32_t currentBlockMaskCeil = getIntersectingBlocksMask(m_pos[0], m_pos[1] - 1.f);
+
+		//
+
+		bool isWalkingOnSolidGround = false;
+
+		if (m_isAttachedToSticky)
+			isWalkingOnSolidGround = currentBlockMaskCeil & kBlockMask_Solid;
+		else
+			isWalkingOnSolidGround = currentBlockMaskFloor & kBlockMask_Solid;
+
+		if (isWalkingOnSolidGround)
 		{
 			steeringSpeed *= STEERING_SPEED_ON_GROUND;
 			numSteeringFrame = 10;
@@ -218,10 +231,6 @@ void Player::tick(float dt)
 		}
 
 		//
-
-		const uint32_t currentBlockMask = getIntersectingBlocksMask(m_pos[0], m_pos[1]);
-		const uint32_t currentBlockMaskFloor = getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f);
-		const uint32_t currentBlockMaskCeil = getIntersectingBlocksMask(m_pos[0], m_pos[1] - 1.f);
 
 		if (currentBlockMaskCeil & (1 << kBlockType_Sticky))
 		{

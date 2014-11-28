@@ -61,6 +61,8 @@ class Arena : public NetObject
 
 	Block m_blocks[ARENA_SX][ARENA_SY];
 
+	void reset();
+
 	// ReplicationObject
 	virtual bool RequiresUpdating() const { return true; }
 
@@ -71,6 +73,7 @@ public:
 	Arena();
 
 	void generate();
+	void load(const char * filename);
 
 	void drawBlocks();
 

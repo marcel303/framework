@@ -59,6 +59,10 @@ void Host::tick(float dt)
 	{
 		m_arena->generate();
 	}
+	else if (keyboard.wentDown(SDLK_l))
+	{
+		m_arena->load("arena.txt");
+	}
 }
 
 void Host::addPlayer(Player * player)
