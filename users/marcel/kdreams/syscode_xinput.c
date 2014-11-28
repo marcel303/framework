@@ -5,9 +5,9 @@
 #include <Windows.h>
 #include <Xinput.h>
 
-static float APPLY_DEADZONE(SHORT v, SHORT t)
+static float APPLY_DEADZONE(int v, int t)
 {
-	SHORT va = v < 0 ? -v : +v;
+	int va = v < 0 ? -v : +v;
 	if (va <= t)
 		return 0.f;
 	else
