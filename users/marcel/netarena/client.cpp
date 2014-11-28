@@ -28,21 +28,21 @@ void Client::tick(float dt)
 	{
 		uint16_t buttons = 0;
 
-		if (keyboard.isDown(SDLK_LEFT))
+		if (keyboard.isDown(SDLK_LEFT) || gamepad[0].isDown[DPAD_LEFT] || gamepad[0].getAnalog(0, ANALOG_X) < -0.5f)
 			buttons |= INPUT_BUTTON_LEFT;
-		if (keyboard.isDown(SDLK_RIGHT))
+		if (keyboard.isDown(SDLK_RIGHT) || gamepad[0].isDown[DPAD_RIGHT] || gamepad[0].getAnalog(0, ANALOG_X) > +0.5f)
 			buttons |= INPUT_BUTTON_RIGHT;
-		if (keyboard.isDown(SDLK_UP))
+		if (keyboard.isDown(SDLK_UP) || gamepad[0].isDown[DPAD_UP] || gamepad[0].getAnalog(0, ANALOG_Y) < -0.5f)
 			buttons |= INPUT_BUTTON_UP;
-		if (keyboard.isDown(SDLK_DOWN))
+		if (keyboard.isDown(SDLK_DOWN) || gamepad[0].isDown[DPAD_DOWN] || gamepad[0].getAnalog(0, ANALOG_Y) > +0.5f)
 			buttons |= INPUT_BUTTON_DOWN;
-		if (keyboard.isDown(SDLK_a))
+		if (keyboard.isDown(SDLK_a) || gamepad[0].isDown[GAMEPAD_A])
 			buttons |= INPUT_BUTTON_A;
-		if (keyboard.isDown(SDLK_s))
+		if (keyboard.isDown(SDLK_s) || gamepad[0].isDown[GAMEPAD_B])
 			buttons |= INPUT_BUTTON_B;
-		if (keyboard.isDown(SDLK_z))
+		if (keyboard.isDown(SDLK_z) || gamepad[0].isDown[GAMEPAD_X])
 			buttons |= INPUT_BUTTON_X;
-		if (keyboard.isDown(SDLK_x))
+		if (keyboard.isDown(SDLK_x) || gamepad[0].isDown[GAMEPAD_Y])
 			buttons |= INPUT_BUTTON_Y;
 
 		g_app->netSetPlayerInputs(m_channel->m_id, buttons);

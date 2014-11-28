@@ -2,14 +2,14 @@
 
 #include "Options.h"
 
-#define BLOCK_SX 128
-#define BLOCK_SY 128
+#define BLOCK_SX 64
+#define BLOCK_SY 64
 
 #define GFX_SX 1920
 #define GFX_SY 1280
 
-#define ARENA_SX (GFX_SX / BLOCK_SX) // 15
-#define ARENA_SY (GFX_SY / BLOCK_SY) // 10
+#define ARENA_SX (GFX_SX / BLOCK_SX) // 30
+#define ARENA_SY (GFX_SY / BLOCK_SY) // 20
 
 OPTION_DECLARE(int, PLAYER_COLLISION_SX, 70);
 OPTION_DECLARE(int, PLAYER_COLLISION_SY, 100);

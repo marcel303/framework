@@ -155,7 +155,7 @@ void Arena::drawBlocks()
 				sprites[block.type] = new Sprite(filename);
 			}
 
-			sprites[block.type]->drawEx(x * 128, y * 128);
+			sprites[block.type]->drawEx(x * BLOCK_SX, y * BLOCK_SY);
 		}
 	}
 }
