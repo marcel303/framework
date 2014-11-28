@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "framework.h"
 #include "OptionMenu.h"
 #include "Options.h"
@@ -31,8 +32,31 @@ void OptionMenu::Create()
 	Destroy(m_root);
 	m_root = new Node();
 
+	struct OptionSortable
+	{
+		OptionBase * option;
+
+		bool operator<(const OptionSortable & other) const
+		{
+			return strcmp(option->GetPath(), other.option->GetPath()) > 0;
+		}
+	};
+
+	std::vector<OptionSortable> options;
+
 	for (OptionBase * option = g_optionManager.m_head; option != 0; option = option->GetNext())
 	{
+		OptionSortable sortable;
+		sortable.option = option;
+		options.push_back(sortable);
+	}
+
+	std::sort(options.begin(), options.end());
+
+	for (auto & i : options)
+	{
+		OptionBase * option = i.option;
+
 		Node * node = m_root;
 
 		std::string path = option->GetPath();
@@ -139,7 +163,7 @@ void OptionMenu::HandleAction(Action action, float dt)
 		dt = 1000.f;
 
 	const float kMoveSpeed = 6.f;
-	const float kChangeSpeed = 6.f;
+	const float kChangeSpeed = 60.f / 4.f;
 
 	switch (action)
 	{
@@ -192,7 +216,7 @@ void OptionMenu::HandleAction(Action action, float dt)
 	if (!m_hasActionsPrevUpdate && !m_hasActionsCurrUpdate)
 	{
 		if (m_currentNode->m_currentSelection)
-			m_currentNode->m_currentSelection->m_timeValue = 0.f;
+			m_currentNode->m_currentSelection->m_timeValue = -1.f;
 	}
 
 	m_hasActionsCurrUpdate = true;
