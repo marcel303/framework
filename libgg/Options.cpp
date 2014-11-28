@@ -24,8 +24,10 @@ void OptionManager::Load(const char * filename)
 	stream.Open(filename, (OpenMode)(OpenMode_Read | OpenMode_Text));
 	StreamReader reader(&stream, false);
 	std::vector<std::string> lines = reader.ReadAllLines();
-	for (auto & line : lines)
+	for (auto l = lines.begin(); l != lines.end(); ++l)
 	{
+		std::string & line = *l;
+
 		size_t i = line.find('=');
 
 		if (i != line.npos)

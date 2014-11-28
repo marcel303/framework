@@ -126,6 +126,7 @@
     <ClCompile Include="MemAllocators.cpp" />
     <ClCompile Include="MemAllocators2.cpp" />
     <ClCompile Include="MemoryStream.cpp" />
+    <ClCompile Include="Options.cpp" />
     <ClCompile Include="Parse.cpp" />
     <ClCompile Include="Path.cpp" />
     <ClCompile Include="PolledTimer.cpp" />
@@ -194,6 +195,7 @@
     <ClInclude Include="MemAllocators.h" />
     <ClInclude Include="MemAllocators2.h" />
     <ClInclude Include="MemoryStream.h" />
+    <ClInclude Include="Options.h" />
     <ClInclude Include="Parse.h" />
     <ClInclude Include="Path.h" />
     <ClInclude Include="PolledTimer.h" />
