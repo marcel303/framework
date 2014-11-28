@@ -4,7 +4,7 @@ xsssssssssssssx
 x   p jj<<<   x
 x  <<<ssssxx  x
                
-xxx   x     xxx
-x   jjxu >>   x
-xp    xu   p  x
-xxxj  xxxxxxxxx
+>>>   x     xxx
+x     xu >>   x
+ p  jjxu   p   
+xxx   xxxxxxxxx
