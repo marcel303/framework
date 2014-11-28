@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "FileStream.h"
+#include "Log.h"
 #include "Options.h"
 #include "Parse.h"
 #include "StreamReader.h"
@@ -20,29 +21,36 @@ void OptionManager::Register(OptionBase * option)
 
 void OptionManager::Load(const char * filename)
 {
-	FileStream stream;
-	stream.Open(filename, (OpenMode)(OpenMode_Read | OpenMode_Text));
-	StreamReader reader(&stream, false);
-	std::vector<std::string> lines = reader.ReadAllLines();
-	for (auto l = lines.begin(); l != lines.end(); ++l)
+	try
 	{
-		std::string & line = *l;
-
-		size_t i = line.find('=');
-
-		if (i != line.npos)
+		FileStream stream;
+		stream.Open(filename, (OpenMode)(OpenMode_Read | OpenMode_Text));
+		StreamReader reader(&stream, false);
+		std::vector<std::string> lines = reader.ReadAllLines();
+		for (auto l = lines.begin(); l != lines.end(); ++l)
 		{
-			std::string name = line.substr(0, i);
-			std::string value = line.substr(i + 1);
+			std::string & line = *l;
 
-			for (OptionBase * option = m_head; option != 0; option = option->m_next)
+			size_t i = line.find('=');
+
+			if (i != line.npos)
 			{
-				if (!strcmp(option->m_name, name.c_str()) || !strcmp(option->m_path, name.c_str()))
+				std::string name = line.substr(0, i);
+				std::string value = line.substr(i + 1);
+
+				for (OptionBase * option = m_head; option != 0; option = option->m_next)
 				{
-					option->FromString(value.c_str());
+					if (!strcmp(option->m_name, name.c_str()) || !strcmp(option->m_path, name.c_str()))
+					{
+						option->FromString(value.c_str());
+					}
 				}
 			}
 		}
+	}
+	catch (std::exception & e)
+	{
+		LOG_ERR("failed to load options from %s: %s", filename, e.what());
 	}
 }
 
