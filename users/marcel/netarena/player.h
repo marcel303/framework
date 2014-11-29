@@ -1,8 +1,10 @@
 #pragma once
 
+#include <string>
 #include "netobject.h"
 #include "Vec2.h"
 
+class Dictionary;
 class Sprite;
 
 class PlayerPos_NS : public NetSerializable
@@ -71,10 +73,23 @@ class PlayerAnim_NS : public NetSerializable
 public:
 	PlayerAnim_NS(NetSerializableObject * owner)
 		: NetSerializable(owner)
+		, m_anim(0)
+		, m_play(false)
 	{
 	}
 
-	std::string anim;
+	void SetAnim(int anim, bool play)
+	{
+		if (anim != m_anim || play != m_play)
+		{
+			m_anim = anim;
+			m_play = play;
+			SetDirty();
+		}
+	}
+
+	int m_anim;
+	bool m_play;
 };
 
 class Player : public NetObject
@@ -86,16 +101,20 @@ class Player : public NetObject
 	PlayerState_NS m_state;
 	PlayerAnim_NS m_anim;
 
+	bool m_isAuthorative;
+
 	struct AttackInfo
 	{
 		AttackInfo()
 			: attacking(false)
-			, framesLeft(0)
+			, timeLeft(0.f)
+			, attackVel()
 		{
 		}
 
 		bool attacking;
-		int framesLeft;
+		float timeLeft;
+		Vec2 attackVel;
 	} m_attack;
 
 	struct
@@ -110,6 +129,8 @@ class Player : public NetObject
 	bool m_isAttachedToSticky;
 
 	Sprite * m_sprite;
+
+	static void handleAnimationAction(const std::string & action, const Dictionary & args);
 
 	// ReplicationObject
 	virtual bool RequiresUpdating() const { return true; }

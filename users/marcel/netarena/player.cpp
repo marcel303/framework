@@ -5,18 +5,45 @@
 #include "main.h"
 #include "player.h"
 
+enum PlayerAnim
+{
+	kPlayerAnim_NULL,
+	kPlayerAnim_Walk,
+	kPlayerAnim_Jump,
+	kPlayerAnim_Attack
+};
+
+static const char * s_animFiles[] =
+{
+	nullptr,
+	"zero-x3-walk.png",
+	"zero-x3-jump.png",
+	"zero-x3-attack.png"
+};
+
 void PlayerAnim_NS::SerializeStruct()
 {
-	Serialize(anim);
+	Serialize(m_anim);
+	Serialize(m_play);
 
-	if (IsRecv())
+	//if (IsRecv())
 	{
 		Player * player = static_cast<Player*>(GetOwner());
 
-		if (anim.empty())
-			player->m_sprite->stopAnim();
+		if (m_anim != kPlayerAnim_NULL)
+		{
+			delete player->m_sprite;
+			player->m_sprite = 0;
+
+			player->m_sprite = new Sprite(s_animFiles[m_anim]);
+			player->m_sprite->animActionHandler = Player::handleAnimationAction;
+			player->m_sprite->animActionHandlerObj = player;
+		}
+
+		if (m_play)
+			player->m_sprite->startAnim("anim");
 		else
-			player->m_sprite->startAnim(anim.c_str());
+			player->m_sprite->stopAnim();
 	}
 }
 
@@ -35,21 +62,46 @@ enum PlayerEvent
 	kPlayerEvent_ArenaWrap
 };
 
+void Player::handleAnimationAction(const std::string & action, const Dictionary & args)
+{
+	Player * player = args.getPtrType<Player>("obj", 0);
+	if (player && player->m_isAuthorative)
+	{
+		log("action: %s", action.c_str());
+
+		if (action == "set_attack_vel")
+		{
+			player->m_attack.attackVel[0] = args.getInt("x", player->m_attack.attackVel[0]);
+			player->m_attack.attackVel[1] = args.getInt("y", player->m_attack.attackVel[1]);
+		}
+		else if (action == "sound")
+		{
+			g_app->netPlaySound(args.getString("file", "").c_str(), args.getInt("volume", 100));
+		}
+	}
+}
+
 Player::Player(uint16_t owningChannelId)
 	: m_pos(this)
 	, m_state(this)
 	, m_anim(this)
+	, m_isAuthorative(false)
 	, m_isGrounded(false)
 	, m_isAttachedToSticky(false)
 {
 	setOwningChannelId(owningChannelId);
+
+	if (owningChannelId != 0)
+	{
+		m_isAuthorative = true;
+	}
 
 	m_collision.x1 = -PLAYER_COLLISION_SX / 2.f;
 	m_collision.x2 = +PLAYER_COLLISION_SX / 2.f;
 	m_collision.y1 = -PLAYER_COLLISION_SY;
 	m_collision.y2 = 0.f;
 
-	m_sprite = new Sprite("player-walk.png");
+	m_sprite = new Sprite("zero-x3-walk.png");
 }
 
 Player::~Player()
@@ -130,30 +182,39 @@ void Player::tick(float dt)
 
 	if (m_state.isAlive)
 	{
+		const uint32_t currentBlockMask = getIntersectingBlocksMask(m_pos[0], m_pos[1]);
+		const uint32_t currentBlockMaskFloor = getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f);
+		const uint32_t currentBlockMaskCeil = getIntersectingBlocksMask(m_pos[0], m_pos[1] - 1.f);
+
 		float surfaceFriction = 0.f;
+		Vec2 animVel(0.f, 0.f);
 
 		// attack
 
 		if (m_attack.attacking)
 		{
-			m_attack.framesLeft--;
+			m_attack.timeLeft -= dt;
 
-			if (m_attack.framesLeft == 0)
+			if (m_attack.timeLeft <= 0.f)
 			{
 				m_attack.attacking = false;
+				m_attack.timeLeft = 0.f;
 			}
 			else
 			{
+				animVel[0] += m_attack.attackVel[0] * m_pos.xFacing;
+				animVel[1] += m_attack.attackVel[1] * m_pos.yFacing;
 			}
 		}
 		else
 		{
 			if (m_input.wentDown(INPUT_BUTTON_Y))
 			{
+				m_attack = AttackInfo();
 				m_attack.attacking = true;
-				m_attack.framesLeft = 60;
+				m_attack.timeLeft = 0.7f;
 
-				g_app->netPlaySound("player-attack-sword-0.ogg"); // todo : weapon selection, etc
+				m_anim.SetAnim(kPlayerAnim_Attack, true);
 			}
 		}
 
@@ -169,65 +230,53 @@ void Player::tick(float dt)
 		// steering
 
 		float steeringSpeed = 0.f;
-		int numSteeringFrame = 1;
 
-		if (playerControl && m_input.isDown(INPUT_BUTTON_LEFT))
-			steeringSpeed -= 1.f;
-		if (playerControl && m_input.isDown(INPUT_BUTTON_RIGHT))
-			steeringSpeed += 1.f;
-
-		if (playerControl && steeringSpeed != 0.f)
+		if (playerControl)
 		{
-			if (m_anim.anim.empty())
+			int numSteeringFrame = 1;
+
+			if (m_input.isDown(INPUT_BUTTON_LEFT))
+				steeringSpeed -= 1.f;
+			if (m_input.isDown(INPUT_BUTTON_RIGHT))
+				steeringSpeed += 1.f;
+
+			if (steeringSpeed != 0.f)
+				m_anim.SetAnim(kPlayerAnim_Walk, true);
+			else
+				m_anim.SetAnim(kPlayerAnim_Walk, false);
+
+			//
+
+			bool isWalkingOnSolidGround = false;
+
+			if (m_isAttachedToSticky)
+				isWalkingOnSolidGround = (currentBlockMaskCeil & kBlockMask_Solid) != 0;
+			else
+				isWalkingOnSolidGround = (currentBlockMaskFloor & kBlockMask_Solid) != 0;
+
+			if (isWalkingOnSolidGround)
 			{
-				m_anim.anim = "walk";
-				m_anim.SetDirty();
+				steeringSpeed *= STEERING_SPEED_ON_GROUND;
+				numSteeringFrame = 10;
 			}
-		}
-		else
-		{
-			if (!m_anim.anim.empty())
+			else
 			{
-				m_anim.anim.clear();
-				m_anim.SetDirty();
+				steeringSpeed *= STEERING_SPEED_IN_AIR;
+				numSteeringFrame = 10;
 			}
-		}
 
-		const uint32_t currentBlockMask = getIntersectingBlocksMask(m_pos[0], m_pos[1]);
-		const uint32_t currentBlockMaskFloor = getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f);
-		const uint32_t currentBlockMaskCeil = getIntersectingBlocksMask(m_pos[0], m_pos[1] - 1.f);
+			if (steeringSpeed != 0.f)
+			{
+				float maxSteeringDelta;
 
-		//
+				if (steeringSpeed > 0)
+					maxSteeringDelta = steeringSpeed - m_vel[0];
+				if (steeringSpeed < 0)
+					maxSteeringDelta = steeringSpeed - m_vel[0];
 
-		bool isWalkingOnSolidGround = false;
-
-		if (m_isAttachedToSticky)
-			isWalkingOnSolidGround = currentBlockMaskCeil & kBlockMask_Solid;
-		else
-			isWalkingOnSolidGround = currentBlockMaskFloor & kBlockMask_Solid;
-
-		if (isWalkingOnSolidGround)
-		{
-			steeringSpeed *= STEERING_SPEED_ON_GROUND;
-			numSteeringFrame = 10;
-		}
-		else
-		{
-			steeringSpeed *= STEERING_SPEED_IN_AIR;
-			numSteeringFrame = 10;
-		}
-
-		if (steeringSpeed != 0.f)
-		{
-			float maxSteeringDelta;
-
-			if (steeringSpeed > 0)
-				maxSteeringDelta = steeringSpeed - m_vel[0];
-			if (steeringSpeed < 0)
-				maxSteeringDelta = steeringSpeed - m_vel[0];
-
-			if (Calc::Sign(steeringSpeed) == Calc::Sign(maxSteeringDelta))
-				m_vel[0] += maxSteeringDelta * dt * 60.f / numSteeringFrame;
+				if (Calc::Sign(steeringSpeed) == Calc::Sign(maxSteeringDelta))
+					m_vel[0] += maxSteeringDelta * dt * 60.f / numSteeringFrame;
+			}
 		}
 
 		//
@@ -287,20 +336,16 @@ void Player::tick(float dt)
 
 		// converyor belt
 
-		Vec2 fixedSpeed(0.f, 0.f);
-
 		if (currentBlockMaskFloor & (1 << kBlockType_ConveyorBeltLeft))
-			fixedSpeed[0] = -BLOCKTYPE_CONVEYOR_SPEED;
+			animVel[0] += -BLOCKTYPE_CONVEYOR_SPEED;
 		if (currentBlockMaskFloor & (1 << kBlockType_ConveyorBeltRight))
-			fixedSpeed[0] = +BLOCKTYPE_CONVEYOR_SPEED;
+			animVel[0] += +BLOCKTYPE_CONVEYOR_SPEED;
 
 		// collision
 
 		for (int i = 0; i < 2; ++i)
 		{
-			float totalDelta = m_vel[i] * dt;
-
-			totalDelta += fixedSpeed[i] * dt;
+			float totalDelta = (m_vel[i] + animVel[i]) * dt;
 
 			const float deltaSign = totalDelta < 0.f ? -1.f : +1.f;
 
@@ -351,7 +396,7 @@ void Player::tick(float dt)
 
 								PlaySecondaryEffects(kPlayerEvent_Jump);
 							}
-							else if (playerControl && newBlockMask & (1 << kBlockType_Spring))
+							else if (newBlockMask & (1 << kBlockType_Spring))
 							{
 								// spring
 
@@ -442,7 +487,7 @@ void Player::draw()
 		m_pos.y + m_collision.y2 + 1);
 
 	setColor(colorWhite);
-	m_sprite->flipX = m_pos.xFacing < 0 ? false: true;
+	m_sprite->flipX = m_pos.xFacing < 0 ? true : false;
 	m_sprite->flipY = m_pos.yFacing < 0 ? true : false;
 	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, 3.f);
 }
