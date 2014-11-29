@@ -31,26 +31,41 @@ void OptionManager::Load(const char * filename)
 		{
 			std::string & line = *l;
 
-			size_t i = line.find('=');
-
-			if (i != line.npos)
-			{
-				std::string name = line.substr(0, i);
-				std::string value = line.substr(i + 1);
-
-				for (OptionBase * option = m_head; option != 0; option = option->m_next)
-				{
-					if (!strcmp(option->m_name, name.c_str()) || !strcmp(option->m_path, name.c_str()))
-					{
-						option->FromString(value.c_str());
-					}
-				}
-			}
+			LoadFromString(line.c_str());
 		}
 	}
 	catch (std::exception & e)
 	{
 		LOG_ERR("failed to load options from %s: %s", filename, e.what());
+	}
+}
+
+void OptionManager::LoadFromString(const char * _line)
+{
+	std::string line = _line;
+
+	size_t i = line.find('=');
+
+	if (i != line.npos)
+	{
+		std::string name = line.substr(0, i);
+		std::string value = line.substr(i + 1);
+
+		for (OptionBase * option = m_head; option != 0; option = option->m_next)
+		{
+			if (!strcmp(option->m_name, name.c_str()) || (option->m_alias && !strcmp(option->m_alias, name.c_str())) || !strcmp(option->m_path, name.c_str()))
+			{
+				option->FromString(value.c_str());
+			}
+		}
+	}
+}
+
+void OptionManager::LoadFromCommandLine(int argc, char * argv[])
+{
+	for (int i = 1; i < argc; ++i)
+	{
+		LoadFromString(argv[i]);
 	}
 }
 
@@ -60,6 +75,7 @@ OptionBase::OptionBase(const char * path, const char * name)
 	: m_next(0)
 	, m_path(path)
 	, m_name(name)
+	, m_alias(0)
 	, m_min(0.f)
 	, m_max(0.f)
 	, m_step(1.f)

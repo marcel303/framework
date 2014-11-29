@@ -6,12 +6,14 @@
 
 class OptionBase
 {
+	friend class OptionAlias;
 	friend class OptionLimits;
 	friend class OptionManager;
 
 	OptionBase * m_next;
 	const char * m_path;
 	const char * m_name;
+	const char * m_alias;
 
 protected:
 	float m_min;
@@ -76,11 +78,20 @@ public:
 class OptionLimits
 {
 public:
-	OptionLimits(OptionBase * option, float min, float max, float step)
+	OptionLimits(OptionBase & option, float min, float max, float step)
 	{
-		option->m_min = min;
-		option->m_max = max;
-		option->m_step = step;
+		option.m_min = min;
+		option.m_max = max;
+		option.m_step = step;
+	}
+};
+
+class OptionAlias
+{
+public:
+	OptionAlias(OptionBase & option, const char * alias)
+	{
+		option.m_alias = alias;
 	}
 };
 
@@ -91,6 +102,8 @@ public:
 
 	void Register(OptionBase * option);
 	void Load(const char * filename);
+	void LoadFromString(const char * line);
+	void LoadFromCommandLine(int argc, char * argv[]);
 };
 
 extern OptionManager g_optionManager;
@@ -98,7 +111,8 @@ extern OptionManager g_optionManager;
 #define OPTION_EXTERN(type, name) extern Option<type> name
 #define OPTION_DECLARE(type, name, defaultValue) OPTION_EXTERN(type, name); static const type name ## _defaultValue = defaultValue
 #define OPTION_DEFINE(type, name, path) Option<type> name(name ## _defaultValue, path, # name)
-#define OPTION_STEP(name, min, max, step) static OptionLimits name ## _limits(&name, min, max, step)
+#define OPTION_STEP(name, min, max, step) static OptionLimits name ## _limits(name, min, max, step)
+#define OPTION_ALIAS(name, alias) static OptionAlias name ## _alias(name, alias)
 
 #else
 
