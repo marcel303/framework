@@ -18,6 +18,12 @@
 
 //
 
+OPTION_DECLARE(bool, g_devMode, false);
+OPTION_DEFINE(bool, g_devMode, "App/Developer Mode");
+OPTION_ALIAS(g_devMode, "devmode");
+
+//
+
 App * g_app = 0;
 
 //
@@ -37,13 +43,13 @@ static void HandleRpc(uint32_t method, BitStream & bitStream)
 	}
 	else if (method == s_rpcSetPlayerInputs)
 	{
-		uint16_t channelId;
+		uint32_t netId;
 		uint16_t buttons;
 
-		bitStream.Read(channelId);
+		bitStream.Read(netId);
 		bitStream.Read(buttons);
 
-		Player * player = g_host->findPlayerByChannelId(channelId);
+		Player * player = g_host->findPlayerByNetId(netId);
 
 		Assert(player);
 		if (player)
@@ -61,11 +67,14 @@ static void HandleRpc(uint32_t method, BitStream & bitStream)
 
 void App::SV_OnChannelConnect(Channel * channel)
 {
+	for (int i = 0; i < 2; ++i)
+	{ // hack!
+
 	ClientInfo clientInfo;
 
 	clientInfo.replicationId = m_replicationMgr->SV_CreateClient(channel, 0);
 
-	clientInfo.player = new Player(channel->m_destinationId);
+	clientInfo.player = new Player(m_host->allocNetId());
 
 	m_replicationMgr->SV_AddObject(clientInfo.player);
 
@@ -74,6 +83,8 @@ void App::SV_OnChannelConnect(Channel * channel)
 	//
 
 	m_host->addPlayer(clientInfo.player);
+
+	} // hack!
 }
 
 void App::SV_OnChannelDisconnect(Channel * channel)
@@ -203,7 +214,16 @@ bool App::init(bool isHost)
 
 	g_optionManager.Load("options.txt");
 
-	framework.minification = 2;
+	if (g_devMode)
+	{
+		framework.minification = 2;
+		framework.fullscreen = false;
+		framework.reloadCachesOnActivate = true;
+	}
+	else
+	{
+		framework.fullscreen = true;
+	}
 
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
@@ -431,11 +451,11 @@ void App::netPlaySound(const char * filename, uint8_t volume)
 	m_rpcMgr->Call(s_rpcPlaySound, bs, ChannelPool_Server, 0, true, false);
 }
 
-void App::netSetPlayerInputs(uint16_t channelId, uint16_t buttons)
+void App::netSetPlayerInputs(uint16_t channelId, uint32_t netId, uint16_t buttons)
 {
 	BitStream bs;
 
-	bs.Write(channelId);
+	bs.Write(netId);
 	bs.Write(buttons);
 
 	m_rpcMgr->Call(s_rpcSetPlayerInputs, bs, ChannelPool_Client, &channelId, false, false);
@@ -446,6 +466,8 @@ void App::netSetPlayerInputs(uint16_t channelId, uint16_t buttons)
 int main(int argc, char * argv[])
 {
 	changeDirectory("data");
+
+	g_optionManager.LoadFromCommandLine(argc, argv);
 
 	g_app = new App();
 

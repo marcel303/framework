@@ -62,7 +62,7 @@ public:
 	void draw();
 
 	void netPlaySound(const char * filename, uint8_t volume = 100);
-	void netSetPlayerInputs(uint16_t channelId, uint16_t buttons);
+	void netSetPlayerInputs(uint16_t channelId, uint32_t netId, uint16_t buttons);
 
 	ReplicationManager * getReplicationMgr() { return m_replicationMgr; }
 };

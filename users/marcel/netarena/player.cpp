@@ -30,6 +30,12 @@ void PlayerAnim_NS::SerializeStruct()
 	{
 		Player * player = static_cast<Player*>(GetOwner());
 
+		bool animChanged = (m_anim != m_lastAnim);
+		bool playChanged = (m_play != m_lastPlay);
+
+		m_lastAnim = m_anim;
+		m_lastPlay = m_play;
+
 		if (m_anim != kPlayerAnim_NULL)
 		{
 			delete player->m_sprite;
@@ -71,8 +77,8 @@ void Player::handleAnimationAction(const std::string & action, const Dictionary 
 
 		if (action == "set_attack_vel")
 		{
-			player->m_attack.attackVel[0] = args.getInt("x", player->m_attack.attackVel[0]);
-			player->m_attack.attackVel[1] = args.getInt("y", player->m_attack.attackVel[1]);
+			player->m_attack.attackVel[0] = args.getFloat("x", player->m_attack.attackVel[0]);
+			player->m_attack.attackVel[1] = args.getFloat("y", player->m_attack.attackVel[1]);
 		}
 		else if (action == "sound")
 		{
@@ -81,7 +87,7 @@ void Player::handleAnimationAction(const std::string & action, const Dictionary 
 	}
 }
 
-Player::Player(uint16_t owningChannelId)
+Player::Player(uint32_t netId)
 	: m_pos(this)
 	, m_state(this)
 	, m_anim(this)
@@ -89,16 +95,16 @@ Player::Player(uint16_t owningChannelId)
 	, m_isGrounded(false)
 	, m_isAttachedToSticky(false)
 {
-	setOwningChannelId(owningChannelId);
+	setNetId(netId);
 
-	if (owningChannelId != 0)
+	if (netId != 0)
 	{
 		m_isAuthorative = true;
 	}
 
 	m_collision.x1 = -PLAYER_COLLISION_SX / 2.f;
 	m_collision.x2 = +PLAYER_COLLISION_SX / 2.f;
-	m_collision.y1 = -PLAYER_COLLISION_SY;
+	m_collision.y1 = -PLAYER_COLLISION_SY / 1.f;
 	m_collision.y2 = 0.f;
 
 	m_sprite = new Sprite("zero-x3-walk.png");
@@ -154,7 +160,7 @@ void Player::tick(float dt)
 {
 	m_collision.x1 = -PLAYER_COLLISION_SX / 2.f;
 	m_collision.x2 = +PLAYER_COLLISION_SX / 2.f;
-	m_collision.y1 = -PLAYER_COLLISION_SY;
+	m_collision.y1 = -PLAYER_COLLISION_SY / 1.f;
 	m_collision.y2 = 0.f;
 
 	if (!m_state.isAlive || m_input.wentDown(INPUT_BUTTON_X))
@@ -166,8 +172,8 @@ void Player::tick(float dt)
 			m_state.isAlive = true;
 			m_state.SetDirty();
 
-			m_pos[0] = x;
-			m_pos[1] = y;
+			m_pos[0] = (float)x;
+			m_pos[1] = (float)y;
 
 			m_vel[0] = 0.f;
 			m_vel[1] = 0.f;
@@ -208,13 +214,13 @@ void Player::tick(float dt)
 		}
 		else
 		{
-			if (m_input.wentDown(INPUT_BUTTON_Y))
+			if (m_input.wentDown(INPUT_BUTTON_B))
 			{
 				m_attack = AttackInfo();
 				m_attack.attacking = true;
 				m_attack.timeLeft = 0.7f;
 
-				m_anim.SetAnim(kPlayerAnim_Attack, true);
+				m_anim.SetAnim(kPlayerAnim_Attack, true, true);
 			}
 		}
 
@@ -240,10 +246,13 @@ void Player::tick(float dt)
 			if (m_input.isDown(INPUT_BUTTON_RIGHT))
 				steeringSpeed += 1.f;
 
-			if (steeringSpeed != 0.f)
-				m_anim.SetAnim(kPlayerAnim_Walk, true);
-			else
-				m_anim.SetAnim(kPlayerAnim_Walk, false);
+			if (m_isGrounded || m_isAttachedToSticky)
+			{
+				if (steeringSpeed != 0.f)
+					m_anim.SetAnim(kPlayerAnim_Walk, true, false);
+				else
+					m_anim.SetAnim(kPlayerAnim_Walk, false, false);
+			}
 
 			//
 
@@ -289,11 +298,17 @@ void Player::tick(float dt)
 			{
 				m_vel[1] = PLAYER_JUMP_SPEED / 2.f;
 
+				m_isAttachedToSticky = false;
+
+				m_anim.SetAnim(kPlayerAnim_Jump, true, true);
+
 				PlaySecondaryEffects(kPlayerEvent_StickyJump);
 			}
 			else if (playerControl && m_input.wentDown(INPUT_BUTTON_DOWN))
 			{
 				m_vel[1] += GRAVITY * dt;
+
+				m_isAttachedToSticky = false;
 
 				PlaySecondaryEffects(kPlayerEvent_StickyRelease);
 			}
@@ -372,6 +387,8 @@ void Player::tick(float dt)
 							m_vel[0] = -PLAYER_WALLJUMP_RECOIL_SPEED * deltaSign;
 							m_vel[1] = -PLAYER_WALLJUMP_SPEED;
 
+							m_anim.SetAnim(kPlayerAnim_Jump, true, true);
+
 							PlaySecondaryEffects(kPlayerEvent_WallJump);
 						}
 						else
@@ -393,6 +410,8 @@ void Player::tick(float dt)
 								// jumping
 
 								m_vel[i] = -PLAYER_JUMP_SPEED;
+
+								m_anim.SetAnim(kPlayerAnim_Jump, true, true);
 
 								PlaySecondaryEffects(kPlayerEvent_Jump);
 							}
@@ -435,7 +454,7 @@ void Player::tick(float dt)
 
 		// grounded?
 
-		if (getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f) & kBlockMask_Solid)
+		if (m_vel[1] >= 0.f && (getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f) & kBlockMask_Solid) != 0)
 		{
 			if (!m_isGrounded)
 			{
@@ -455,6 +474,8 @@ void Player::tick(float dt)
 		{
 			m_vel[0] *= powf(1.f - surfaceFriction, dt * 60.f);
 		}
+
+		// todo : should look at state here and determine which animation to play
 
 		// facing
 
@@ -495,8 +516,8 @@ void Player::draw()
 uint32_t Player::getIntersectingBlocksMask(float x, float y) const
 {
 	return g_hostArena->getIntersectingBlocksMask(
-		x + m_collision.x1,
-		y + m_collision.y1,
-		x + m_collision.x2,
-		y + m_collision.y2);
+		int(x + m_collision.x1),
+		int(y + m_collision.y1),
+		int(x + m_collision.x2),
+		int(y + m_collision.y2));
 }

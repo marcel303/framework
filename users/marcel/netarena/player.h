@@ -70,19 +70,33 @@ class PlayerAnim_NS : public NetSerializable
 {
 	virtual void SerializeStruct();
 
+	int m_lastAnim;
+	bool m_lastPlay;
+
 public:
 	PlayerAnim_NS(NetSerializableObject * owner)
 		: NetSerializable(owner)
+		, m_lastAnim(0)
+		, m_lastPlay(false)
 		, m_anim(0)
 		, m_play(false)
 	{
 	}
 
-	void SetAnim(int anim, bool play)
+	void SetAnim(int anim, bool play, bool restart)
 	{
-		if (anim != m_anim || play != m_play)
+		if (anim != m_anim || play != m_play || restart)
 		{
 			m_anim = anim;
+			m_play = play;
+			SetDirty();
+		}
+	}
+
+	void SetPlay(bool play)
+	{
+		if (play != m_play)
+		{
 			m_play = play;
 			SetDirty();
 		}
@@ -139,7 +153,7 @@ class Player : public NetObject
 	virtual NetObjectType getType() const { return kNetObjectType_Player; }
 
 public:
-	Player(uint16_t owningChannelId = 0);
+	Player(uint32_t netId = 0);
 	~Player();
 
 	void tick(float dt);

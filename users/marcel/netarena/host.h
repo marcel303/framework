@@ -9,6 +9,7 @@ class Host
 {
 	Arena * m_arena;
 	std::vector<Player*> m_players;
+	uint32_t m_nextNetId;
 
 public:
 	Host();
@@ -19,9 +20,11 @@ public:
 
 	void tick(float dt);
 
+	uint32_t allocNetId();
+
 	void addPlayer(Player * player);
 	void removePlayer(Player * player);
-	Player * findPlayerByChannelId(uint16_t channelId);
+	Player * findPlayerByNetId(uint32_t netId);
 };
 
 extern Host * g_host;

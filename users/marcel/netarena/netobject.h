@@ -13,20 +13,20 @@ class NetObject_NS : public NetSerializable
 {
 	virtual void SerializeStruct()
 	{
-		bool hasOwningChannelId = (owningChannelId != 0);
-		Serialize(hasOwningChannelId);
-		if (hasOwningChannelId)
-			Serialize(owningChannelId);
+		bool hasNetId = (netId != 0);
+		Serialize(hasNetId);
+		if (hasNetId)
+			Serialize(netId);
 	}
 
 public:
 	NetObject_NS(NetSerializableObject * owner)
 		: NetSerializable(owner)
-		, owningChannelId(0)
+		, netId(0)
 	{
 	}
 
-	uint16_t owningChannelId;
+	uint32_t netId;
 };
 
 class NetObject : public NetSerializableObject, public ReplicationObject
@@ -46,6 +46,6 @@ public:
 
 	virtual NetObjectType getType() const = 0;
 
-	uint16_t getOwningChannelId() const { return m_netObject_NS.owningChannelId; }
-	void setOwningChannelId(uint16_t channelId) { m_netObject_NS.owningChannelId = channelId; }
+	uint32_t getNetId() const { return m_netObject_NS.netId; }
+	void setNetId(uint32_t netId) { m_netObject_NS.netId = netId; }
 };

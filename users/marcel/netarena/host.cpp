@@ -11,6 +11,7 @@ Arena * g_hostArena = 0;
 
 Host::Host()
 	: m_arena(0)
+	, m_nextNetId(1) // 0 = unassigned
 {
 }
 
@@ -65,6 +66,11 @@ void Host::tick(float dt)
 	}
 }
 
+uint32_t Host::allocNetId()
+{
+	return m_nextNetId++;
+}
+
 void Host::addPlayer(Player * player)
 {
 	m_players.push_back(player);
@@ -78,13 +84,13 @@ void Host::removePlayer(Player * player)
 		m_players.erase(i);
 }
 
-Player * Host::findPlayerByChannelId(uint16_t channelId)
+Player * Host::findPlayerByNetId(uint32_t netId)
 {
 	for (auto i = m_players.begin(); i != m_players.end(); ++i)
 	{
 		Player * player = *i;
 
-		if (player->getOwningChannelId() == channelId)
+		if (player->getNetId() == netId)
 			return player;
 	}
 
