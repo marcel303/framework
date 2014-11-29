@@ -5,7 +5,10 @@
 #include "ChannelHandler.h"
 #include "libnet_forward.h"
 #include "libreplication_forward.h"
+#include "Options.h"
 #include "ReplicationHandler.h"
+
+OPTION_EXTERN(bool, g_devMode);
 
 class Client;
 class Host;

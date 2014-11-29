@@ -428,6 +428,11 @@ void App::draw()
 			client->draw();
 		}
 
+		if (g_devMode && g_host)
+		{
+			g_host->debugDraw();
+		}
+
 		if (m_optionsMenuIsOpen)
 		{
 			const int sx = 400;

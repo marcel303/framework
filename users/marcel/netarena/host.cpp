@@ -66,6 +66,16 @@ void Host::tick(float dt)
 	}
 }
 
+void Host::debugDraw()
+{
+	for (auto i = m_players.begin(); i != m_players.end(); ++i)
+	{
+		Player * player = *i;
+
+		player->debugDraw();
+	}
+}
+
 uint32_t Host::allocNetId()
 {
 	return m_nextNetId++;

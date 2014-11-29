@@ -117,6 +117,23 @@ class Player : public NetObject
 
 	bool m_isAuthorative;
 
+	struct CollisionInfo
+	{
+		bool intersects(const CollisionInfo & other) const
+		{
+			return
+				x2 >= other.x1 &&
+				y2 >= other.y1 &&
+				x1 <= other.x2 &&
+				y1 <= other.y2;
+		}
+
+		float x1;
+		float y1;
+		float x2;
+		float y2;
+	} m_collision;
+
 	struct AttackInfo
 	{
 		AttackInfo()
@@ -129,15 +146,8 @@ class Player : public NetObject
 		bool attacking;
 		float timeLeft;
 		Vec2 attackVel;
+		CollisionInfo collision;
 	} m_attack;
-
-	struct
-	{
-		float x1;
-		float y1;
-		float x2;
-		float y2;
-	} m_collision;
 
 	bool m_isGrounded;
 	bool m_isAttachedToSticky;
@@ -145,6 +155,10 @@ class Player : public NetObject
 	Sprite * m_sprite;
 
 	static void handleAnimationAction(const std::string & action, const Dictionary & args);
+
+	void getPlayerCollision(CollisionInfo & collision);
+	void getAttackCollision(CollisionInfo & collision);
+	float getAttackDamage(Player * other);
 
 	// ReplicationObject
 	virtual bool RequiresUpdating() const { return true; }
@@ -158,8 +172,11 @@ public:
 
 	void tick(float dt);
 	void draw();
+	void debugDraw();
 
 	uint32_t getIntersectingBlocksMask(float x, float y) const;
+
+	void handleDamage(float amount, Vec2Arg velocity);
 
 	struct InputState
 	{

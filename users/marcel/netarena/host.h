@@ -7,6 +7,8 @@ class Player;
 
 class Host
 {
+	friend class Player; // fixme, for m_players array
+
 	Arena * m_arena;
 	std::vector<Player*> m_players;
 	uint32_t m_nextNetId;
@@ -19,6 +21,7 @@ public:
 	void shutdown();
 
 	void tick(float dt);
+	void debugDraw();
 
 	uint32_t allocNetId();
 

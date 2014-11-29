@@ -87,6 +87,59 @@ void Player::handleAnimationAction(const std::string & action, const Dictionary 
 	}
 }
 
+void Player::getPlayerCollision(CollisionInfo & collision)
+{
+	collision.x1 = m_pos[0] + m_collision.x1;
+	collision.y1 = m_pos[1] + m_collision.y1;
+	collision.x2 = m_pos[0] + m_collision.x2;
+	collision.y2 = m_pos[1] + m_collision.y2;
+}
+
+void Player::getAttackCollision(CollisionInfo & collision)
+{
+	float x1 = m_attack.collision.x1 * m_pos.xFacing;
+	float y1 = m_attack.collision.y1;
+	float x2 = m_attack.collision.x2 * m_pos.xFacing;
+	float y2 = m_attack.collision.y2;
+
+	if (m_pos.yFacing < 0)
+	{
+		y1 = -PLAYER_COLLISION_SY - y1;
+		y2 = -PLAYER_COLLISION_SY - y2;
+	}
+
+	if (x1 > x2)
+		std::swap(x1, x2);
+	if (y1 > y2)
+		std::swap(y1, y2);
+
+	collision.x1 = m_pos[0] + x1;
+	collision.y1 = m_pos[1] + y1;
+	collision.x2 = m_pos[0] + x2;
+	collision.y2 = m_pos[1] + y2;
+}
+
+float Player::getAttackDamage(Player * other)
+{
+	float result = 0.f;
+
+	if (m_attack.attacking)
+	{
+		CollisionInfo attackCollision;
+		CollisionInfo otherCollision;
+
+		getAttackCollision(attackCollision);
+		other->getPlayerCollision(otherCollision);
+
+		if (attackCollision.intersects(otherCollision))
+		{
+			result = 1.f;
+		}
+	}
+
+	return result;
+}
+
 Player::Player(uint32_t netId)
 	: m_pos(this)
 	, m_state(this)
@@ -210,6 +263,40 @@ void Player::tick(float dt)
 			{
 				animVel[0] += m_attack.attackVel[0] * m_pos.xFacing;
 				animVel[1] += m_attack.attackVel[1] * m_pos.yFacing;
+
+				// see if we hit anyone
+
+				for (auto i = g_host->m_players.begin(); i != g_host->m_players.end(); ++i)
+				{
+					Player * other = *i;
+
+					if (other == this)
+						continue;
+
+					float damage1 = getAttackDamage(other);
+					float damage2 = other->getAttackDamage(this);
+
+					if (damage1 != 0.f)
+					{
+						if (damage2 != 0.f)
+						{
+							//log("-> attack cancel");
+
+							Player * players[2] = { this, other };
+
+							for (int i = 0; i < 2; ++i)
+							{
+								players[i]->m_attack.attacking = false;
+							}
+						}
+						else
+						{
+							//log("-> attack damage");
+
+							other->handleDamage(1.f, Vec2(m_pos.xFacing * PLAYER_SWORD_PUSH_SPEED, 0.f));
+						}
+					}
+				}
 			}
 		}
 		else
@@ -219,6 +306,11 @@ void Player::tick(float dt)
 				m_attack = AttackInfo();
 				m_attack.attacking = true;
 				m_attack.timeLeft = 0.7f;
+
+				m_attack.collision.x1 = PLAYER_SWORD_COLLISION_X1;
+				m_attack.collision.y1 = PLAYER_SWORD_COLLISION_Y1;
+				m_attack.collision.x2 = PLAYER_SWORD_COLLISION_X2;
+				m_attack.collision.y2 = PLAYER_SWORD_COLLISION_Y2;
 
 				m_anim.SetAnim(kPlayerAnim_Attack, true, true);
 			}
@@ -500,6 +592,14 @@ void Player::tick(float dt)
 
 void Player::draw()
 {
+	setColor(colorWhite);
+	m_sprite->flipX = m_pos.xFacing < 0 ? true : false;
+	m_sprite->flipY = m_pos.yFacing < 0 ? true : false;
+	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, 3.f);
+}
+
+void Player::debugDraw()
+{
 	setColor(0, 31, 63, 63);
 	drawRect(
 		m_pos.x + m_collision.x1,
@@ -507,10 +607,29 @@ void Player::draw()
 		m_pos.x + m_collision.x2 + 1,
 		m_pos.y + m_collision.y2 + 1);
 
+	if (m_isAuthorative)
+	{
+		if (m_attack.attacking)
+		{
+			CollisionInfo attackCollision;
+			getAttackCollision(attackCollision);
+
+			Font font("calibri.ttf");
+			setFont(font);
+
+			setColor(colorWhite);
+			drawText(m_pos[0], m_pos[1], 14, 0.f, 0.f, "attacking");
+
+			setColor(255, 0, 0, 63);
+			drawRect(
+				attackCollision.x1,
+				attackCollision.y1,
+				attackCollision.x2,
+				attackCollision.y2);
+		}
+	}
+
 	setColor(colorWhite);
-	m_sprite->flipX = m_pos.xFacing < 0 ? true : false;
-	m_sprite->flipY = m_pos.yFacing < 0 ? true : false;
-	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, 3.f);
 }
 
 uint32_t Player::getIntersectingBlocksMask(float x, float y) const
@@ -520,4 +639,15 @@ uint32_t Player::getIntersectingBlocksMask(float x, float y) const
 		int(y + m_collision.y1),
 		int(x + m_collision.x2),
 		int(y + m_collision.y2));
+}
+
+void Player::handleDamage(float amount, Vec2Arg velocity)
+{
+	Vec2 velDelta = velocity - m_vel;
+
+	for (int i = 0; i < 2; ++i)
+	{
+		if (Calc::Sign(velDelta[i]) == Calc::Sign(velocity[i]))
+			m_vel[i] += velDelta[i];
+	}
 }
