@@ -1167,6 +1167,13 @@ void Dictionary::setBool(const char * name, bool value)
 	setInt(name, value ? 1 : 0);
 }
 
+void Dictionary::setPtr(const char * name, void * value)
+{
+	// fixme : right now this only works with 32 bit pointers
+
+	setInt(name, reinterpret_cast<intptr_t>(value));
+}
+
 std::string Dictionary::getString(const char * name, const char * _default) const
 {
 	Map::const_iterator i = m_map.find(name);
@@ -1197,6 +1204,13 @@ float Dictionary::getFloat(const char * name, float _default) const
 		return atof(i->second.c_str());
 	else
 		return _default;
+}
+
+void * Dictionary::getPtr(const char * name, void * _default) const
+{
+	// fixme : right now this only works with 32 bit pointers
+
+	return reinterpret_cast<void*>(getInt(name, reinterpret_cast<int>(_default)));
 }
 
 std::string & Dictionary::operator[](const char * name)
@@ -1243,6 +1257,8 @@ Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * s
 	m_animFramef = 0.f;
 	m_animFrame = 0;
 	animSpeed = 1.f;
+	animActionHandler = 0;
+	animActionHandlerObj = 0;
 
 	if (m_anim->m_hasSheet)
 	{
@@ -1534,10 +1550,14 @@ void Sprite::processAnimationTriggersForFrame(int frame, int event)
 			//log("event == this->event");
 			
 			Dictionary args = trigger.args;
+			args.setPtr("obj", animActionHandlerObj);
 			args.setInt("x", args.getInt("x", 0) + (int)this->x);
 			args.setInt("y", args.getInt("y", 0) + (int)this->y);
 			
-			framework.processActions(trigger.action, args);
+			if (animActionHandler)
+				animActionHandler(trigger.action, args);
+			else
+				framework.processActions(trigger.action, args);
 		}
 	}
 }

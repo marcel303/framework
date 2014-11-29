@@ -300,14 +300,17 @@ public:
 	
 	bool contains(const char * name) const;
 	
-	void setString(const char * name, const char * value);	
+	void setString(const char * name, const char * value);
 	void setInt(const char * name, int value);
 	void setBool(const char * name, bool value);
+	void setPtr(const char * name, void * value);
 	
-	std::string getString(const char * name, const char * _default) const;	
+	std::string getString(const char * name, const char * _default) const;
 	int getInt(const char * name, int _default) const;
 	bool getBool(const char * name, bool _default) const;
 	float getFloat(const char * name, float _default) const;
+	void * getPtr(const char * name, void * _default) const;
+	template <typename T> T * getPtrType(const char * name, T * _default) const { return (T*)getPtr(name, _default); }
 	
 	std::string & operator[](const char * name);
 };
@@ -354,6 +357,8 @@ public:
 	float animSpeed;
 	bool animIsActive;
 	bool animIsPaused;
+	ActionHandler animActionHandler;
+	void * animActionHandlerObj;
 	
 private:
 	// drawing
