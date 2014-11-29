@@ -18,9 +18,12 @@ project(framework)
 
 file(GLOB source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
 	"${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/*.h"
 	"${CMAKE_CURRENT_SOURCE_DIR}/audiostream/*.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/audiostream/*.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/audiostream/*.h"
 	"${CMAKE_CURRENT_SOURCE_DIR}/../fbx1/*.cpp")
+list(REMOVE_ITEM source aniplay.cpp)
 list(REMOVE_ITEM source example.cpp)
 list(REMOVE_ITEM source ../fbx1/main.cpp)
 
@@ -54,3 +57,22 @@ target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/l
 target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/SDL2main.lib)
 target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/XInput9_1_0.lib)
 target_link_libraries(framework_test PRIVATE OpenGL32.lib)
+
+# --- animation player ---
+
+file(GLOB source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/aniplay.cpp")
+
+add_executable(aniplay ${source})
+
+target_include_directories(framework_test PRIVATE "${PROJECT_SOURCE_DIR}/win32/include")
+
+target_link_libraries(aniplay PRIVATE framework)
+target_link_libraries(aniplay PRIVATE libgg)
+target_link_libraries(aniplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/FreeImage.lib)
+target_link_libraries(aniplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/freetype252.lib)
+target_link_libraries(aniplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/glew32.lib)
+target_link_libraries(aniplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/OpenAL32.lib)
+target_link_libraries(aniplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/SDL2.lib)
+target_link_libraries(aniplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/SDL2main.lib)
+target_link_libraries(aniplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/XInput9_1_0.lib)
+target_link_libraries(aniplay PRIVATE OpenGL32.lib)
