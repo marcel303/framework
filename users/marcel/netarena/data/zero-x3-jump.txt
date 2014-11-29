@@ -1,3 +1,3 @@
-sheet pivot_x:30 pivot_y:70 grid_sx:7 grid_sy:1
+sheet pivot_x:30 pivot_y:67 grid_sx:7 grid_sy:1
 
-animation name:anim grid_x:0 grid_y:0 frames:7 rate:20 loop:1 loop_start:5
+animation name:anim grid_x:0 grid_y:0 frames:7 rate:16 loop:1 loop_start:5
