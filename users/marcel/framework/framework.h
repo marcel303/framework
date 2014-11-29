@@ -13,8 +13,11 @@
 #include "Mat4x4.h"
 #include "Vec3.h"
 
-#define fassert assert
-//#define fassert(x) do { } while (false)
+#if defined(DEBUG)
+	#define fassert assert
+#else
+	#define fassert(x) do { } while (false)
+#endif
 
 // configuration
 
@@ -158,6 +161,7 @@ public:
 	bool fullscreen;
 	int minification;
 	bool reloadCachesOnActivate;
+	bool filedrop;
 	int numSoundSources;
 	int windowX;
 	int windowY;
@@ -329,6 +333,7 @@ public:
 	const std::string & getAnim() const;
 	void setAnimFrame(int frame);
 	int getAnimFrame() const;
+	std::vector<std::string> getAnimList() const;
 	
 	// drawing
 	float pivotX;
@@ -367,6 +372,7 @@ private:
 	void updateAnimation(float timeStep);
 	void processAnimationFrameChange(int frame1, int frame2);
 	void processAnimationTriggersForFrame(int frame, int event);
+	int calculateLoopedFrameIndex(int frame) const;
 };
 
 //

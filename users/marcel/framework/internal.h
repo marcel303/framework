@@ -229,6 +229,7 @@ public:
 		float frameRate;
 		int pivot[2];
 		bool loop;
+		int loopStart;
 		
 		std::vector< std::vector<AnimTrigger> > frameTriggers;
 		
@@ -239,6 +240,7 @@ public:
 			frameRate = 0.f;
 			pivot[0] = pivot[1] = 0;
 			loop = false;
+			loopStart = 0;
 		}
 	};
 	

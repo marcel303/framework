@@ -843,6 +843,12 @@ void AnimCacheElem::load(const char * filename)
 				anim.pivot[0] = args.getInt("pivot_x", m_pivot[0]);
 				anim.pivot[1] = args.getInt("pivot_y", m_pivot[1]);
 				anim.loop = args.getInt("loop", 1) != 0;
+				anim.loopStart = args.getInt("loop_start", 0);
+				if (anim.loopStart >= anim.numFrames)
+				{
+					logError("%s: loop start must be < 'frames': %s", filename, line.c_str());
+					continue;
+				}
 				anim.frameTriggers.resize(anim.numFrames);
 				
 				currentAnim = &m_animMap.insert(AnimMap::value_type(anim.name, anim)).first->second;
@@ -994,7 +1000,7 @@ void SoundCacheElem::load(const char * filename)
 				ALuint bufferSize = soundData->sampleCount * soundData->channelCount * soundData->channelSize;
 				ALuint bufferSampleRate = soundData->sampleRate;
 				
-				logDebug("%s: buffer=%u, bufferFormat=%d, samleData=%p, bufferSize=%d, sampleRate=%d",
+				logDebug("%s: buffer=%x, bufferFormat=%x, samleData=%p, bufferSize=%d, sampleRate=%d",
 					filename,
 					buffer,
 					bufferFormat,

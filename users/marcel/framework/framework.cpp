@@ -53,6 +53,7 @@ Framework::Framework()
 	fullscreen = false;
 	minification = 1;
 	reloadCachesOnActivate = false;
+	filedrop = false;
 	windowX = -1;
 	windowY = -1;
 	windowTitle = "GGJ 2014 - Unknown Project";
@@ -77,6 +78,11 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	{
 		logError("failed to initialize SDL: %s", SDL_GetError());
 		return false;
+	}
+
+	if (filedrop)
+	{
+		SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
 	}
 	
 #if USE_LEGACY_OPENGL
@@ -345,6 +351,12 @@ void Framework::process()
 				doReload |= (e.active.state & SDL_APPINPUTFOCUS) && e.active.gain;
 		}
 	#endif
+		else if (e.type == SDL_DROPFILE)
+		{
+			Dictionary args;
+			args.setString("file", e.drop.file);
+			processAction("filedrop", args);
+		}
 	}
 #ifdef __WIN32__
 	// use XInput to poll gamepad state
@@ -1391,15 +1403,12 @@ void Sprite::setAnimFrame(int frame)
 		
 		const int frame1 = m_animFrame;
 		{
-			m_animFramef = (float)frame;
-			
-			if (anim->loop)
-				m_animFrame = frame % anim->numFrames;
-			else
-				m_animFrame = std::min(frame, anim->numFrames - 1);
+			m_animFrame = calculateLoopedFrameIndex(frame);
 		}
 		const int frame2 = m_animFrame;
 		
+		m_animFramef = (float)m_animFrame;
+
 		processAnimationFrameChange(frame1, frame2);
 	}
 }
@@ -1407,6 +1416,19 @@ void Sprite::setAnimFrame(int frame)
 int Sprite::getAnimFrame() const
 {
 	return m_animFrame;
+}
+
+std::vector<std::string> Sprite::getAnimList() const
+{
+	std::vector<std::string> result;
+
+	if (m_anim)
+	{
+		for (auto i = m_anim->m_animMap.begin(); i != m_anim->m_animMap.end(); ++i)
+			result.push_back(i->first);
+	}
+
+	return result;
 }
 
 void Sprite::updateAnimationSegment()
@@ -1455,7 +1477,7 @@ void Sprite::updateAnimation(float timeStep)
 			m_animFramef += step;
 			
 			if (!anim->loop)
-				m_animFrame = std::min((int)m_animFramef, anim->numFrames - 1);
+				m_animFrame = std::min<int>((int)m_animFramef, anim->numFrames - 1);
 			else
 				m_animFrame = (int)m_animFramef;
 		}
@@ -1463,14 +1485,15 @@ void Sprite::updateAnimation(float timeStep)
 		
 		for (int frame = frame1; frame < frame2; frame++)
 		{
-			const int oldFrame = (frame + 0) % anim->numFrames;
-			const int newFrame = (frame + 1) % anim->numFrames;
+			const int oldFrame = calculateLoopedFrameIndex(frame + 0);
+			const int newFrame = calculateLoopedFrameIndex(frame + 1);
 			processAnimationFrameChange(oldFrame, newFrame);
 		}
 		
 		if (anim->loop)
 		{
-			m_animFramef = std::fmod(m_animFramef, (float)anim->numFrames);
+			while (m_animFramef >= anim->numFrames)
+				m_animFramef -= anim->numFrames - anim->loopStart;
 			m_animFrame = (int)m_animFramef;
 		}
 		else
@@ -1517,6 +1540,23 @@ void Sprite::processAnimationTriggersForFrame(int frame, int event)
 			framework.processActions(trigger.action, args);
 		}
 	}
+}
+
+int Sprite::calculateLoopedFrameIndex(int frame) const
+{
+	AnimCacheElem::Anim * anim = reinterpret_cast<AnimCacheElem::Anim*>(m_animSegment);
+
+	if (!anim->loop)
+		frame = std::max<int>(0, std::min<int>(anim->numFrames - 1, frame));
+	else
+	{
+		while (frame < 0)
+			frame += anim->numFrames;
+		while (frame >= anim->numFrames)
+			frame -= anim->numFrames - anim->loopStart;
+	}
+
+	return frame;
 }
 
 int Sprite::getWidth() const
