@@ -138,19 +138,18 @@ class Player : public NetObject
 	{
 		AttackInfo()
 			: attacking(false)
-			, timeLeft(0.f)
 			, attackVel()
 		{
 		}
 
 		bool attacking;
-		float timeLeft;
 		Vec2 attackVel;
 		CollisionInfo collision;
 	} m_attack;
 
 	bool m_isGrounded;
 	bool m_isAttachedToSticky;
+	bool m_isAnimDriven;
 
 	Sprite * m_sprite;
 

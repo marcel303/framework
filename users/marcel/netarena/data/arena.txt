@@ -3,18 +3,14 @@ xxssssssssssssssssssssssssssxx
                               
                           p   
 >>>>>>                  xxxxxx
->>>>>>                       x
-x           jjjjxx<<<<       x
-x       p   xxxxxxxxxx       x
-x     <<<<<<xxxxxxxxxxxx     x
-x     xsssssssssssssxxxx     x
+x                            x
+x           j<<<<<<<<<       x
+x       p                    x
+x     <<<<<<ssssssssssss     x
+x                            x
                               
-                              
->>>>>>      xx          xxxxxx
             xx                
+xxxx>>>     xxuu  >>>   xxxxxx
             xxuu              
-            xxuu  >>>>        
-        jjjjxxuu              
-   p         xuu      p       
-xxxxxx       xxxxxxxxxxxxxxxxx
-xxxxxxxx              xxxxxxxx
+   p      jjxxuu      p       
+xxxxxxxx  xxxxxxxxxxxxxxxxxxxx

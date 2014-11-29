@@ -39,7 +39,7 @@ void Arena::generate()
 
 	// add some random stuff
 
-	for (int i = 0; i < 30; ++i)
+	for (int i = 0; i < 60; ++i)
 	{
 		const int x = rand() % ARENA_SX;
 		const int y = rand() % ARENA_SY;

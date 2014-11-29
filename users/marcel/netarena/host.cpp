@@ -26,7 +26,8 @@ Host::~Host()
 void Host::init()
 {
 	m_arena = new Arena();
-	m_arena->generate();
+	//m_arena->generate();
+	m_arena->load("arena.txt");
 
 	g_app->getReplicationMgr()->SV_AddObject(m_arena);
 

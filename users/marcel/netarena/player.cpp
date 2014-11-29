@@ -10,7 +10,9 @@ enum PlayerAnim
 	kPlayerAnim_NULL,
 	kPlayerAnim_Walk,
 	kPlayerAnim_Jump,
-	kPlayerAnim_Attack
+	kPlayerAnim_Attack,
+	kPlayerAnim_Spawn,
+	kPlayerAnim_Die,
 };
 
 static const char * s_animFiles[] =
@@ -18,7 +20,9 @@ static const char * s_animFiles[] =
 	nullptr,
 	"zero-x3-walk.png",
 	"zero-x3-jump.png",
-	"zero-x3-attack.png"
+	"zero-x3-attack.png",
+	"zero-x3-spawn.png",
+	"zero-x3-die.png"
 };
 
 void PlayerAnim_NS::SerializeStruct()
@@ -73,7 +77,10 @@ void Player::handleAnimationAction(const std::string & action, const Dictionary 
 	Player * player = args.getPtrType<Player>("obj", 0);
 	if (player && player->m_isAuthorative)
 	{
-		log("action: %s", action.c_str());
+		if (g_devMode)
+		{
+			log("action: %s", action.c_str());
+		}
 
 		if (action == "set_attack_vel")
 		{
@@ -147,6 +154,7 @@ Player::Player(uint32_t netId)
 	, m_isAuthorative(false)
 	, m_isGrounded(false)
 	, m_isAttachedToSticky(false)
+	, m_isAnimDriven(false)
 {
 	setNetId(netId);
 
@@ -252,49 +260,39 @@ void Player::tick(float dt)
 
 		if (m_attack.attacking)
 		{
-			m_attack.timeLeft -= dt;
+			animVel[0] += m_attack.attackVel[0] * m_pos.xFacing;
+			animVel[1] += m_attack.attackVel[1] * m_pos.yFacing;
 
-			if (m_attack.timeLeft <= 0.f)
+			// see if we hit anyone
+
+			for (auto i = g_host->m_players.begin(); i != g_host->m_players.end(); ++i)
 			{
-				m_attack.attacking = false;
-				m_attack.timeLeft = 0.f;
-			}
-			else
-			{
-				animVel[0] += m_attack.attackVel[0] * m_pos.xFacing;
-				animVel[1] += m_attack.attackVel[1] * m_pos.yFacing;
+				Player * other = *i;
 
-				// see if we hit anyone
+				if (other == this)
+					continue;
 
-				for (auto i = g_host->m_players.begin(); i != g_host->m_players.end(); ++i)
+				float damage1 = getAttackDamage(other);
+				float damage2 = other->getAttackDamage(this);
+
+				if (damage1 != 0.f)
 				{
-					Player * other = *i;
-
-					if (other == this)
-						continue;
-
-					float damage1 = getAttackDamage(other);
-					float damage2 = other->getAttackDamage(this);
-
-					if (damage1 != 0.f)
+					if (damage2 != 0.f)
 					{
-						if (damage2 != 0.f)
+						//log("-> attack cancel");
+
+						Player * players[2] = { this, other };
+
+						for (int i = 0; i < 2; ++i)
 						{
-							//log("-> attack cancel");
-
-							Player * players[2] = { this, other };
-
-							for (int i = 0; i < 2; ++i)
-							{
-								players[i]->m_attack.attacking = false;
-							}
+							players[i]->m_attack.attacking = false;
 						}
-						else
-						{
-							//log("-> attack damage");
+					}
+					else
+					{
+						//log("-> attack damage");
 
-							other->handleDamage(1.f, Vec2(m_pos.xFacing * PLAYER_SWORD_PUSH_SPEED, 0.f));
-						}
+						other->handleDamage(1.f, Vec2(m_pos.xFacing * PLAYER_SWORD_PUSH_SPEED, 0.f));
 					}
 				}
 			}
@@ -305,7 +303,6 @@ void Player::tick(float dt)
 			{
 				m_attack = AttackInfo();
 				m_attack.attacking = true;
-				m_attack.timeLeft = 0.7f;
 
 				m_attack.collision.x1 = PLAYER_SWORD_COLLISION_X1;
 				m_attack.collision.y1 = PLAYER_SWORD_COLLISION_Y1;
@@ -313,6 +310,7 @@ void Player::tick(float dt)
 				m_attack.collision.y2 = PLAYER_SWORD_COLLISION_Y2;
 
 				m_anim.SetAnim(kPlayerAnim_Attack, true, true);
+				m_isAnimDriven = true;
 			}
 		}
 
@@ -321,6 +319,11 @@ void Player::tick(float dt)
 		bool playerControl = true;
 
 		if (m_attack.attacking)
+		{
+			playerControl = false;
+		}
+
+		if (m_isAnimDriven)
 		{
 			playerControl = false;
 		}
@@ -377,6 +380,31 @@ void Player::tick(float dt)
 
 				if (Calc::Sign(steeringSpeed) == Calc::Sign(maxSteeringDelta))
 					m_vel[0] += maxSteeringDelta * dt * 60.f / numSteeringFrame;
+			}
+		}
+
+		if (m_isAnimDriven)
+		{
+			if (!m_anim.IsDirty() && !m_sprite->animIsActive)
+			{
+				m_isAnimDriven = false;
+
+				switch (m_anim.m_anim)
+				{
+				case kPlayerAnim_Attack:
+					m_attack.attacking = false;
+					break;
+				case kPlayerAnim_Jump:
+					break;
+				case kPlayerAnim_Spawn:
+					m_state.isAlive = true;
+					m_state.SetDirty();
+					break;
+				case kPlayerAnim_Die:
+					m_state.isAlive = false;
+					m_state.SetDirty();
+					break;
+				}
 			}
 		}
 
@@ -595,7 +623,7 @@ void Player::draw()
 	setColor(colorWhite);
 	m_sprite->flipX = m_pos.xFacing < 0 ? true : false;
 	m_sprite->flipY = m_pos.yFacing < 0 ? true : false;
-	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, 3.f);
+	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, 2.f);
 }
 
 void Player::debugDraw()
@@ -643,11 +671,20 @@ uint32_t Player::getIntersectingBlocksMask(float x, float y) const
 
 void Player::handleDamage(float amount, Vec2Arg velocity)
 {
-	Vec2 velDelta = velocity - m_vel;
-
-	for (int i = 0; i < 2; ++i)
+	if (m_state.isAlive)
 	{
-		if (Calc::Sign(velDelta[i]) == Calc::Sign(velocity[i]))
-			m_vel[i] += velDelta[i];
+		if (!m_isAnimDriven)
+		{
+			Vec2 velDelta = velocity - m_vel;
+
+			for (int i = 0; i < 2; ++i)
+			{
+				if (Calc::Sign(velDelta[i]) == Calc::Sign(velocity[i]))
+					m_vel[i] += velDelta[i];
+			}
+
+			m_anim.SetAnim(kPlayerAnim_Die, true, true);
+			m_isAnimDriven = true;
+		}
 	}
 }

@@ -421,6 +421,8 @@ void App::draw()
 {
 	framework.beginDraw(155, 205, 255, 0);
 	{
+		Sprite("back.png").draw();
+
 		for (size_t i = 0; i < m_clients.size(); ++i)
 		{
 			Client * client = m_clients[i];
