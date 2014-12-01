@@ -82,4 +82,11 @@ public:
 	uint32_t getIntersectingBlocksMask(int x1, int y1, int x2, int y2);
 
 	bool getBlockRectFromPixels(int x1, int y1, int x2, int y2, int & out_x1, int & out_y1, int & out_x2, int & out_y2);
+	Block & getBlock(int x, int y) { return m_blocks[x][y]; }
+
+	// todo : optimized way for making small changes
+	void setDirty()
+	{
+		m_serializer.SetDirty();
+	}
 };

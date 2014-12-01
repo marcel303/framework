@@ -39,12 +39,15 @@ void Arena::generate()
 
 	// add some random stuff
 
-	for (int i = 0; i < 60; ++i)
+	for (int i = 0; i < 100; ++i)
 	{
 		const int x = rand() % ARENA_SX;
 		const int y = rand() % ARENA_SY;
 
-		m_blocks[x][y].type = (BlockType)(rand() % kBlockType_COUNT);
+		if ((rand() % 3) != 0)
+			m_blocks[x][y].type = kBlockType_Indestructible;
+		else
+			m_blocks[x][y].type = (BlockType)(rand() % kBlockType_COUNT);
 
 		if (x == 0 || x == ARENA_SX - 1)
 			m_blocks[ARENA_SX - 1 - x][y].type = m_blocks[x][y].type;

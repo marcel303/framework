@@ -159,6 +159,8 @@ class Player : public NetObject
 	void getAttackCollision(CollisionInfo & collision);
 	float getAttackDamage(Player * other);
 
+	bool isAnimOverrideAllowed(int anim) const;
+
 	// ReplicationObject
 	virtual bool RequiresUpdating() const { return true; }
 

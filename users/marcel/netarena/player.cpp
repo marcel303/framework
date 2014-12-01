@@ -147,6 +147,11 @@ float Player::getAttackDamage(Player * other)
 	return result;
 }
 
+bool Player::isAnimOverrideAllowed(int anim) const
+{
+	return !m_isAnimDriven || anim > m_anim.m_anim;
+}
+
 Player::Player(uint32_t netId)
 	: m_pos(this)
 	, m_state(this)
@@ -224,6 +229,35 @@ void Player::tick(float dt)
 	m_collision.y1 = -PLAYER_COLLISION_SY / 1.f;
 	m_collision.y2 = 0.f;
 
+	//
+
+	if (m_isAnimDriven)
+	{
+		if (!m_anim.IsDirty() && !m_sprite->animIsActive)
+		{
+			m_isAnimDriven = false;
+
+			switch (m_anim.m_anim)
+			{
+			case kPlayerAnim_Attack:
+				m_attack.attacking = false;
+				break;
+			case kPlayerAnim_Jump:
+				break;
+			case kPlayerAnim_Spawn:
+				m_state.isAlive = true;
+				m_state.SetDirty();
+				break;
+			case kPlayerAnim_Die:
+				m_state.isAlive = false;
+				m_state.SetDirty();
+				break;
+			}
+		}
+	}
+
+	//
+
 	if (!m_state.isAlive || m_input.wentDown(INPUT_BUTTON_X))
 	{
 		int x, y;
@@ -296,25 +330,78 @@ void Player::tick(float dt)
 					}
 				}
 			}
+
+			// see if we've hit a block
+
+			int x1, y1, x2, y2;
+
+			CollisionInfo attackCollision;
+			getAttackCollision(attackCollision);
+
+			if (g_hostArena->getBlockRectFromPixels(
+				attackCollision.x1,
+				attackCollision.y1,
+				attackCollision.x2,
+				attackCollision.y2,
+				x1, y1, x2, y2))
+			{
+				bool updated = false;
+
+				for (int x = x1; x <= x2; ++x)
+				{
+					for (int y = y1; y <= y2; ++y)
+					{
+						Block & block = g_hostArena->getBlock(x, y);
+
+						if (block.type == kBlockType_Destructible)
+						{
+							block.type = kBlockType_Empty;
+
+							// todo : play secondary effects
+
+							updated = true; // todo : more optimized way of making small changes to map
+						}
+					}
+				}
+
+				if (updated)
+				{
+					g_hostArena->setDirty();
+				}
+			}
 		}
 		else
 		{
 			if (m_input.wentDown(INPUT_BUTTON_B))
 			{
-				m_attack = AttackInfo();
-				m_attack.attacking = true;
+				if (isAnimOverrideAllowed(kPlayerAnim_Attack))
+				{
+					m_attack = AttackInfo();
+					m_attack.attacking = true;
 
-				m_attack.collision.x1 = PLAYER_SWORD_COLLISION_X1;
-				m_attack.collision.y1 = PLAYER_SWORD_COLLISION_Y1;
-				m_attack.collision.x2 = PLAYER_SWORD_COLLISION_X2;
-				m_attack.collision.y2 = PLAYER_SWORD_COLLISION_Y2;
+					m_attack.collision.x1 = PLAYER_SWORD_COLLISION_X1;
+					m_attack.collision.y1 = PLAYER_SWORD_COLLISION_Y1;
+					m_attack.collision.x2 = PLAYER_SWORD_COLLISION_X2;
+					m_attack.collision.y2 = PLAYER_SWORD_COLLISION_Y2;
 
-				m_anim.SetAnim(kPlayerAnim_Attack, true, true);
-				m_isAnimDriven = true;
+					m_anim.SetAnim(kPlayerAnim_Attack, true, true);
+					m_isAnimDriven = true;
+				}
 			}
 		}
 
-		//
+		// death by spike
+
+		if (currentBlockMask & (1 << kBlockType_Spike))
+		{
+			if (isAnimOverrideAllowed(kPlayerAnim_Die))
+			{
+				m_anim.SetAnim(kPlayerAnim_Die, true, true);
+				m_isAnimDriven = true;
+
+				PlaySecondaryEffects(kPlayerEvent_SpikeHit);
+			}
+		}
 
 		bool playerControl = true;
 
@@ -383,31 +470,6 @@ void Player::tick(float dt)
 			}
 		}
 
-		if (m_isAnimDriven)
-		{
-			if (!m_anim.IsDirty() && !m_sprite->animIsActive)
-			{
-				m_isAnimDriven = false;
-
-				switch (m_anim.m_anim)
-				{
-				case kPlayerAnim_Attack:
-					m_attack.attacking = false;
-					break;
-				case kPlayerAnim_Jump:
-					break;
-				case kPlayerAnim_Spawn:
-					m_state.isAlive = true;
-					m_state.SetDirty();
-					break;
-				case kPlayerAnim_Die:
-					m_state.isAlive = false;
-					m_state.SetDirty();
-					break;
-				}
-			}
-		}
-
 		//
 
 		if (currentBlockMaskCeil & (1 << kBlockType_Sticky))
@@ -460,7 +522,10 @@ void Player::tick(float dt)
 			if (currentBlockMask & (1 << kBlockType_GravityDisable))
 				gravity = 0.f;
 			else if (currentBlockMask & (1 << kBlockType_GravityReverse))
+			{
 				gravity = GRAVITY * BLOCKTYPE_GRAVITY_REVERSE_MULTIPLIER;
+				m_anim.SetAnim(kPlayerAnim_Jump, true, false);
+			}
 			else if (currentBlockMask & (1 << kBlockType_GravityStrong))
 				gravity = GRAVITY * BLOCKTYPE_GRAVITY_STRONG_MULTIPLIER;
 			else
@@ -541,6 +606,8 @@ void Player::tick(float dt)
 
 								m_vel[i] = -PLAYER_JUMP_SPEED;
 
+								m_anim.SetAnim(kPlayerAnim_Jump, true, true);
+
 								PlaySecondaryEffects(kPlayerEvent_SpringJump);
 							}
 							else
@@ -561,13 +628,6 @@ void Player::tick(float dt)
 					m_pos[i] = newPos[i];
 
 					totalDelta -= delta;
-				}
-
-				if (newBlockMask & (1 << kBlockType_Spike))
-				{
-					// todo : die
-
-					PlaySecondaryEffects(kPlayerEvent_SpikeHit);
 				}
 			}
 		}
@@ -596,6 +656,17 @@ void Player::tick(float dt)
 		}
 
 		// todo : should look at state here and determine which animation to play
+
+		// death by fall
+
+		if (m_pos[1] > ARENA_SY * BLOCK_SY)
+		{
+			if (isAnimOverrideAllowed(kPlayerAnim_Die))
+			{
+				m_anim.SetAnim(kPlayerAnim_Die, true, true);
+				m_isAnimDriven = true;
+			}
+		}
 
 		// facing
 
@@ -673,7 +744,7 @@ void Player::handleDamage(float amount, Vec2Arg velocity)
 {
 	if (m_state.isAlive)
 	{
-		if (!m_isAnimDriven)
+		if (isAnimOverrideAllowed(kPlayerAnim_Die))
 		{
 			Vec2 velDelta = velocity - m_vel;
 
