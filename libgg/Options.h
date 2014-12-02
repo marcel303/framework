@@ -23,11 +23,19 @@ protected:
 	OptionBase(const char * path, const char * name);
 
 public:
+	enum OptionType
+	{
+		kType_Value,
+		kType_Command
+	};
+
 	OptionBase * GetNext() const;
 	const char * GetPath() const;
 
+	virtual OptionType GetType() = 0;
 	virtual void Increment() = 0;
 	virtual void Decrement() = 0;
+	virtual void Select() = 0;
 	virtual void ToString(char * buffer, int bufferSize) = 0;
 	virtual void FromString(const char * buffer) = 0;
 };
@@ -57,8 +65,10 @@ public:
 	{
 	}
 
+	virtual OptionType GetType() { return kType_Value; }
 	virtual void Increment();
 	virtual void Decrement();
+	virtual void Select() { }
 	virtual void ToString(char * buffer, int bufferSize);
 	virtual void FromString(const char * buffer);
 
@@ -73,6 +83,25 @@ public:
 	{
 		m_value = value;
 	}
+};
+
+//
+
+typedef void (*OptionCommandHandler)();
+
+class OptionCommand : public OptionBase
+{
+	OptionCommandHandler m_handler;
+
+public:
+	OptionCommand(const char * path, OptionCommandHandler handler);
+
+	virtual OptionType GetType() { return kType_Command; }
+	virtual void Increment() { }
+	virtual void Decrement() { }
+	virtual void Select();
+	virtual void ToString(char * buffer, int bufferSize) { buffer[0] = 0; }
+	virtual void FromString(const char * buffer) { }
 };
 
 class OptionLimits
@@ -113,6 +142,7 @@ extern OptionManager g_optionManager;
 #define OPTION_DEFINE(type, name, path) Option<type> name(name ## _defaultValue, path, # name)
 #define OPTION_STEP(name, min, max, step) static OptionLimits name ## _limits(name, min, max, step)
 #define OPTION_ALIAS(name, alias) static OptionAlias name ## _alias(name, alias)
+#define COMMAND_OPTION(name, path, command) static OptionCommand name(path, command)
 
 #else
 
@@ -120,5 +150,7 @@ extern OptionManager g_optionManager;
 #define OPTION_DECLARE(type, name, defaultValue) OPTION_EXTERN(type, name); static const type name ## _defaultValue = defaultValue
 #define OPTION_DEFINE(type, name, path) type name(name ## _defaultValue)
 #define OPTION_STEP(name, min, max, step)
+#define OPTION_ALIAS(name, alias)
+#define COMMAND_OPTION(name, command, path)
 
 #endif

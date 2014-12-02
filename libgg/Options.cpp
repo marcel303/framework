@@ -93,6 +93,19 @@ const char * OptionBase::GetPath() const
 	return m_path;
 }
 
+//
+
+OptionCommand::OptionCommand(const char * path, OptionCommandHandler handler)
+	: OptionBase(path, path)
+	, m_handler(handler)
+{
+}
+
+void OptionCommand::Select()
+{
+	m_handler();
+}
+
 // Option<bool>
 
 void Option<bool>::Increment()
