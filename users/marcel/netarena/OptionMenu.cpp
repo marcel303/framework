@@ -188,6 +188,8 @@ void OptionMenu::HandleAction(Action action, float dt)
 	case Action_NavigateSelect:
 		if (currentSelection->m_option == 0)
 			m_currentNode = currentSelection;
+		else
+			currentSelection->m_option->Select();
 		break;
 	case Action_NavigateBack:
 		if (m_currentNode->m_parent)
@@ -241,7 +243,7 @@ void OptionMenu::Draw(int x, int y, int sx, int sy)
 	for (Node * node = m_currentNode->m_firstChild; node != 0; node = node->m_nextSibling)
 		numNodes++;
 
-	setColor(0, 0, 0, 127);
+	setColor(0, 0, 0, 191);
 	drawRect(x, y, x + sx, y + numNodes * lineSize);
 
 	Font font("calibri.ttf");
@@ -252,13 +254,21 @@ void OptionMenu::Draw(int x, int y, int sx, int sy)
 	{
 		if (node == m_currentNode->m_currentSelection)
 		{
-			setColor(127, 227, 255, 127);
+			if (node->m_option && node->m_option->GetType() == OptionBase::kType_Command)
+				setColor(255, 227, 127, 191);
+			else
+				setColor(127, 227, 255, 191);
 			drawRect(x, y + index * lineSize, x + sx, y + (index + 1) * lineSize);
 			setColor(0, 0, 0);
 		}
 		else
-			setColor(127, 227, 255);
-		drawText(x + 2, y + index * lineSize, fontSize, +1.f, +1.f, node->m_name.c_str());
+		{
+			if (node->m_option && node->m_option->GetType() == OptionBase::kType_Command)
+				setColor(255, 227, 127);
+			else
+				setColor(127, 227, 255);
+		}
+		drawText(x + 2, y + index * lineSize, fontSize, +1.f, +1.f, node->m_option ? "%s" : "[ %s ]", node->m_name.c_str());
 		if (node->m_option)
 		{
 			const int bufferSize = 64;

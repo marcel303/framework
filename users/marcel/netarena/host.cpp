@@ -6,6 +6,11 @@
 #include "player.h"
 #include "ReplicationManager.h"
 
+#if GG_ENABLE_OPTIONS
+COMMAND_OPTION(g_randomizeArena, "Arena/Randomize", [] { if (g_hostArena) { g_hostArena->generate(); } });
+COMMAND_OPTION(g_loadArena, "Arena/Load (arena.txt)", [] { if (g_hostArena) { g_hostArena->load("arena.txt"); } });
+#endif
+
 Host * g_host = 0;
 Arena * g_hostArena = 0;
 
@@ -26,7 +31,6 @@ Host::~Host()
 void Host::init()
 {
 	m_arena = new Arena();
-	//m_arena->generate();
 	m_arena->load("arena.txt");
 
 	g_app->getReplicationMgr()->SV_AddObject(m_arena);
@@ -53,17 +57,6 @@ void Host::tick(float dt)
 		Player * player = *i;
 
 		player->tick(dt);
-	}
-
-	// debug
-
-	if (keyboard.wentDown(SDLK_w))
-	{
-		m_arena->generate();
-	}
-	else if (keyboard.wentDown(SDLK_l))
-	{
-		m_arena->load("arena.txt");
 	}
 }
 
