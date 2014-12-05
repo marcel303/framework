@@ -567,6 +567,7 @@ void Framework::beginDraw(int r, int g, int b, int a)
 	glViewport(0, 0, globals.displaySize[0] / minification, globals.displaySize[1] / minification);
 	
 	applyTransform();
+	setBlend(BLEND_ALPHA);
 }
 
 void Framework::endDraw()
@@ -1882,19 +1883,41 @@ void Stage::removeObject(int objectId)
 // -----
 
 Ui::Ui()
+	: m_ui(0)
+	, m_ownsUi(false)
 {
-	m_ui = 0;
+	m_ui = new UiCacheElem();
+	m_ownsUi = true;
 }
 
 Ui::Ui(const char * filename)
+	: m_ui(0)
+	, m_ownsUi(false)
 {
-	m_ui = 0;
-	
 	load(filename);
+}
+
+Ui::~Ui()
+{
+	if (m_ownsUi)
+	{
+		m_ownsUi = false;
+
+		delete m_ui;
+		m_ui = 0;
+	}
 }
 
 void Ui::load(const char * filename)
 {
+	if (m_ownsUi)
+	{
+		m_ownsUi = false;
+
+		delete m_ui;
+		m_ui = 0;
+	}
+
 	m_ui = &g_uiCache.findOrCreate(filename);
 
 	m_over.clear();
@@ -1921,11 +1944,11 @@ bool Ui::getArea(Dictionary & d, int & x, int & y, int & sx, int & sy)
 	if (type == "image" || type == "button")
 	{
 		const Sprite sprite(getImage(d).c_str());
-		const int scale = d.getInt("scale", 1);
+		const float scale = d.getFloat("scale", 1.f);
 		x = d.getInt("x", 0);
 		y = d.getInt("y", 0);
-		sx = d.getInt("w", sprite.getWidth()) * scale;
-		sy = d.getInt("h", sprite.getHeight()) * scale;
+		sx = int(d.getInt("w", sprite.getWidth()) * scale);
+		sy = int(d.getInt("h", sprite.getHeight()) * scale);
 		return true;
 	}
 	else
@@ -2012,7 +2035,24 @@ void Ui::draw()
 					float(d.getInt("x", 0)),
 					float(d.getInt("y", 0)),
 					0.f,
-					float(d.getInt("scale", 1)));
+					d.getFloat("scale", 1.f));
+
+				const std::string text = d.getString("text", "");
+
+				if (!text.empty())
+				{
+					int x, y, sx, sy;
+
+					if (getArea(d, x, y, sx, sy))
+					{
+						Font font(d.getString("font", "" ).c_str());
+						setFont(font);
+
+						// todo : set text color
+
+						drawText(x + sx/2.f, y + sy/2.f, d.getInt("font_size", 10), 0.f, 0.f, "%s", text.c_str());
+					}
+				}
 			}
 		}
 	}
@@ -2020,6 +2060,8 @@ void Ui::draw()
 
 Dictionary & Ui::operator[](const char * name)
 {
+	// fixme : set name immediately, if not found, to ensure mouse over works correctly
+
 	return m_ui->map[name];
 }
 
@@ -2408,12 +2450,12 @@ static void measureText(FT_Face face, int size, const char * text, float & sx, f
 			minY = std::min(minY, std::min(y1, y2));
 			maxX = std::max(maxX, std::max(x1, x2));
 			maxY = std::max(maxY, std::max(y1, y2));
-	 		
+
 			x += (elem.g.advance.x / float(1 << 6));
 			y += (elem.g.advance.y / float(1 << 6));
 		}
 	}
-	
+
 	sx = maxX - minX;
 	sy = maxY - minY;
 }
@@ -2480,7 +2522,7 @@ void drawText(float x, float y, int size, float alignX, float alignY, const char
 		
 		x += sx * (alignX - 1.f) / 2.f;
 		y += sy * (alignY - 1.f) / 2.f;
-		
+
 		gxTranslatef(x, y, 0.f);
 		
 		drawTextInternal(globals.font->face, size, text);

@@ -584,6 +584,7 @@ public:
 class Ui
 {
 	class UiCacheElem * m_ui;
+	bool m_ownsUi;
 	
 	std::string m_over;
 	std::string m_down;
@@ -595,6 +596,7 @@ class Ui
 public:
 	Ui();
 	Ui(const char * filename);
+	~Ui();
 	
 	void load(const char * filename);
 	void process();
