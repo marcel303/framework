@@ -17,7 +17,7 @@ void NetAddress::Set(uint32_t address, uint16_t port)
 	// Setup sockaddr_in structure.
 	memset(&m_socketAddress, 0, sizeof(m_socketAddress));
 	m_socketAddress.sin_family = AF_INET;
-	m_socketAddress.sin_addr.s_addr = htonl(m_address);
+	m_socketAddress.sin_addr.s_addr = htonl(address != 0 ? m_address : INADDR_BROADCAST);
 	m_socketAddress.sin_port = htons(m_port);
 }
 

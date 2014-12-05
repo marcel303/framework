@@ -58,15 +58,23 @@ bool NetSocket::Bind(uint16_t port, bool broadcast)
 	}
 
 	// Set 'reuse address' option.
-	char value = 1;
-	setsockopt(m_socket, SOL_SOCKET, SO_REUSEADDR, &value, sizeof(char));
+	{
+		char value = 1;
+		setsockopt(m_socket, SOL_SOCKET, SO_REUSEADDR, &value, sizeof(char));
+	}
 
 	if (broadcast)
+	{
+		char value = 1;
 		setsockopt(m_socket, SOL_SOCKET, SO_BROADCAST, &value, sizeof(char));
+	}
 
-	int receiveBufferSize = 1024*1024;
-	setsockopt(m_socket, SOL_SOCKET, SO_RCVBUF, (char*)&receiveBufferSize, sizeof(int));
-	setsockopt(m_socket, SOL_SOCKET, SO_SNDBUF, (char*)&receiveBufferSize, sizeof(int));
+	if (false)
+	{
+		int receiveBufferSize = 1024*1024;
+		setsockopt(m_socket, SOL_SOCKET, SO_RCVBUF, (char*)&receiveBufferSize, sizeof(int));
+		setsockopt(m_socket, SOL_SOCKET, SO_SNDBUF, (char*)&receiveBufferSize, sizeof(int));
+	}
 
 	return true;
 }
@@ -79,7 +87,7 @@ bool NetSocket::Send(const void * data, uint32_t size, NetAddress * address)
 		m_socket,
 		reinterpret_cast<const char *>(data),
 		size, 0,
-		reinterpret_cast<sockaddr *>(dst->GetSockAddr()),
+		reinterpret_cast<const sockaddr *>(dst->GetSockAddr()),
 		sizeof(sockaddr_in));
 
 	if (size2 == SOCKET_ERROR)

@@ -32,7 +32,7 @@ public:
 		Set(a, b, c, d, port);
 	}
 
-	inline sockaddr_in * GetSockAddr()
+	inline const sockaddr_in * GetSockAddr() const
 	{
 		return &m_socketAddress;
 	}
