@@ -734,7 +734,7 @@ public:
 	{
 		ShowChannelList(m_svChannels, "server channels");
 		ShowChannelList(m_clChannels, "client channels");
-		PrintNetStats();
+		//PrintNetStats();
 	}
 
 	void Send(ChannelMap & channels)
