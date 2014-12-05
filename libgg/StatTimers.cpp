@@ -105,8 +105,16 @@ void StatTimer::Commit(bool isAutoCommit)
 
 	if (m_nextHistoryIndex > m_historySize)
 		m_historySize = m_nextHistoryIndex;
-	if (m_nextHistoryIndex == kHistorySize)
+
+	if (GetUpdateMode() == StatTimer::PerSecond)
+	{
 		m_nextHistoryIndex = 0;
+	}
+	else
+	{
+		if (m_nextHistoryIndex == kHistorySize)
+			m_nextHistoryIndex = 0;
+	}
 }
 
 void StatTimer::Start()
