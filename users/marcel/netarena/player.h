@@ -11,8 +11,25 @@ class PlayerPos_NS : public NetSerializable
 {
 	virtual void SerializeStruct()
 	{
-		Serialize(x);
-		Serialize(y);
+		if (IsSend())
+		{
+			int16_t xCompressed = static_cast<int16_t>(x);
+			int16_t yCompressed = static_cast<int16_t>(y);
+
+			Serialize(xCompressed);
+			Serialize(yCompressed);
+		}
+		else
+		{
+			int16_t xCompressed;
+			int16_t yCompressed;
+
+			Serialize(xCompressed);
+			Serialize(yCompressed);
+
+			x = static_cast<float>(xCompressed);
+			y = static_cast<float>(yCompressed);
+		}
 
 		//
 
@@ -29,12 +46,13 @@ class PlayerPos_NS : public NetSerializable
 
 public:
 	PlayerPos_NS(NetSerializableObject * owner)
-		: NetSerializable(owner)
+		: NetSerializable(owner, (1 << REPLICATION_CHANNEL_UNRELIABLE))
 		, x(0.f)
 		, y(0.f)
 		, xFacing(+1)
 		, yFacing(+1)
 	{
+		SetChannel(REPLICATION_CHANNEL_UNRELIABLE);
 	}
 
 	float & operator[](int index)
