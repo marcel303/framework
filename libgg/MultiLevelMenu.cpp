@@ -55,9 +55,9 @@ void MultiLevelMenuBase::Create()
 
 	std::sort(sortables.begin(), sortables.end());
 
-	for (auto & i : sortables)
+	for (auto i = sortables.begin(); i != sortables.end(); ++i)
 	{
-		void * menuItem = i.menuItem;
+		void * menuItem = i->menuItem;
 
 		Node * node = m_root;
 
