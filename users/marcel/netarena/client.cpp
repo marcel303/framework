@@ -75,7 +75,12 @@ void Client::tick(float dt)
 					buttons |= INPUT_BUTTON_Y;
 			}
 
-			g_app->netSetPlayerInputs(m_channel->m_id, player->getNetId(), buttons);
+			if (buttons != player->m_input.m_currButtons)
+			{
+				player->m_input.m_currButtons = buttons;
+
+				g_app->netSetPlayerInputs(m_channel->m_id, player->getNetId(), buttons);
+			}
 		}
 	}
 }
