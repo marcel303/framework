@@ -20,7 +20,7 @@ public:
 	{
 		if (sampleData != 0)
 		{
-			free(sampleData);
+			delete [] (char*)sampleData;
 			sampleData = 0;
 		}
 	}
