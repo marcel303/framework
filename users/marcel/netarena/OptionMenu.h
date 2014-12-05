@@ -15,7 +15,6 @@ class OptionMenu : public MultiLevelMenuBase
 
 public:
 	OptionMenu();
-	virtual ~OptionMenu();
 
 	void Draw(int x, int y, int sx, int sy);
 };

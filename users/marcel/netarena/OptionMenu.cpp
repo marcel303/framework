@@ -8,10 +8,6 @@ OptionMenu::OptionMenu()
 	Create();
 }
 
-OptionMenu::~OptionMenu()
-{
-}
-
 //
 
 std::vector<void*> OptionMenu::GetMenuItems()
