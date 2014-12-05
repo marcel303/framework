@@ -562,7 +562,7 @@ void Channel::HandleRTUpdate(Packet & packet)
 		return;
 	}
 
-	NET_STAT_INC(NetStat_ReliableTransportReceives);
+	NET_STAT_INC(NetStat_ReliableTransportUpdatesReceived);
 
 #if LIBNET_CHANNEL_LOG_RT == 1
 	LOG_CHANNEL_DBG("RT UPD rcvd: %u (time=%llu)",
@@ -606,7 +606,7 @@ void Channel::HandleRTUpdate(Packet & packet)
 	}
 	else
 	{
-		NET_STAT_INC(NetStat_ReliableTransportReceivesIgnored);
+		NET_STAT_INC(NetStat_ReliableTransportUpdatesIgnored);
 
 	#if LIBNET_CHANNEL_LOG_RT == 1
 		if (packetId > m_rtRcvId)
