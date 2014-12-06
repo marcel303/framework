@@ -154,6 +154,8 @@ void ReplicationManager::CL_Shutdown()
 
 void ReplicationManager::SV_Update()
 {
+	NET_STAT_SCOPE(NetStat_ReplicationUpdateTime);
+
 	for (auto i = m_serverClients.begin(); i != m_serverClients.end(); ++i)
 	{
 		ReplicationClient * client = i->second;
@@ -258,6 +260,7 @@ void ReplicationManager::CL_RegisterHandler(ReplicationHandler * handler)
 void ReplicationManager::OnReceive(Packet & packet, Channel * channel)
 {
 	NET_STAT_ADD(NetStat_ReplicationBytesReceived, packet.GetSize());
+	NET_STAT_SCOPE(NetStat_ReplicationReceiveTime);
 
 	uint8_t messageID;
 

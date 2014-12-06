@@ -8,8 +8,10 @@
 
 #define NET_STAT_EXTERN(name) TIMER_EXTERN(name)
 #define NET_STAT_DEFINE(name, path) TIMER_DEFINE(name, PerSecond, path)
+#define NET_STAT_DEFINE_TIMER(name, path) TIMER_DEFINE(name, PerFrame, path)
 #define NET_STAT_INC(name) TIMER_INC(name)
 #define NET_STAT_ADD(name, count) TIMER_ADD(name, count)
+#define NET_STAT_SCOPE(name) TIMER_SCOPE(name)
 
 #else
 
@@ -17,6 +19,7 @@
 #define NET_STAT_DEFINE(name, path)
 #define NET_STAT_INC(name) do { } while (false)
 #define NET_STAT_ADD(name, count) do { } while (false)
+#define NET_STAT_SCOPE(name) do { } while (false)
 
 #endif
 
@@ -43,3 +46,5 @@ NET_STAT_EXTERN(NetStat_ReplicationBytesReceived);
 NET_STAT_EXTERN(NetStat_ReplicationObjectsCreated);
 NET_STAT_EXTERN(NetStat_ReplicationObjectsDestroyed);
 NET_STAT_EXTERN(NetStat_ReplicationObjectsUpdated);
+NET_STAT_EXTERN(NetStat_ReplicationUpdateTime);
+NET_STAT_EXTERN(NetStat_ReplicationReceiveTime);

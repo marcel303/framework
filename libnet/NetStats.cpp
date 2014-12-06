@@ -21,7 +21,9 @@ NET_STAT_DEFINE(NetStat_ReliableTransportNacksSent,          "Net/Reliable Trans
 NET_STAT_DEFINE(NetStat_ReliableTransportNacksReceived,      "Net/Reliable Transport/Nacks Received");
 NET_STAT_DEFINE(NetStat_ReliableTransportNacksIgnored,       "Net/Reliable Transport/Nacks Ignored");
 
-NET_STAT_DEFINE(NetStat_ReplicationBytesReceived,    "Net/Replication/Bytes Received");
-NET_STAT_DEFINE(NetStat_ReplicationObjectsCreated,   "Net/Replication/Objects Created");
-NET_STAT_DEFINE(NetStat_ReplicationObjectsDestroyed, "Net/Replication/Objects Destroyed");
-NET_STAT_DEFINE(NetStat_ReplicationObjectsUpdated,   "Net/Replication/Objects Updated");
+NET_STAT_DEFINE(NetStat_ReplicationBytesReceived,     "Net/Replication/Bytes Received");
+NET_STAT_DEFINE(NetStat_ReplicationObjectsCreated,    "Net/Replication/Objects Created");
+NET_STAT_DEFINE(NetStat_ReplicationObjectsDestroyed,  "Net/Replication/Objects Destroyed");
+NET_STAT_DEFINE(NetStat_ReplicationObjectsUpdated,    "Net/Replication/Objects Updated");
+NET_STAT_DEFINE_TIMER(NetStat_ReplicationUpdateTime,  "Net/Replication/Update Time");
+NET_STAT_DEFINE_TIMER(NetStat_ReplicationReceiveTime, "Net/Replication/Receive Time");
