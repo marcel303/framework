@@ -649,7 +649,9 @@ void App::draw()
 
 		m_discoveryUi->draw();
 	}
+	TIMER_STOP(g_appDrawTime);
 	framework.endDraw();
+	TIMER_START(g_appDrawTime);
 }
 
 void App::netPlaySound(const char * filename, uint8_t volume)
