@@ -91,7 +91,7 @@ static Mat4x4 matrixTranslation(const Vec3 & v)
 
 static Mat4x4 matrixRotation(const Vec3 & v, RotationType rotationType)
 {
-	const Vec3 temp = v * M_PI / 180.f;
+	const Vec3 temp = v * float(M_PI / 180.f);
 	
 	Quat quatX;
 	Quat quatY;
@@ -507,7 +507,7 @@ public:
 		
 		evaluateRaw(t, r, s, time, translation, rotationVec, scale);
 		
-		rotationVec *= M_PI / 180.f;
+		rotationVec *= float(M_PI / 180.f);
 		
 		Quat quatX;
 		Quat quatY;
