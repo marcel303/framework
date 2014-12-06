@@ -28,6 +28,17 @@ void NetAddress::Set(uint8_t a, uint8_t b, uint8_t c, uint8_t d, uint16_t port)
 	Set(address, port);
 }
 
+void NetAddress::SetFromString(const char * address, uint16_t port)
+{
+	const uint32_t abcd = ntohl(inet_addr(address));
+	const uint8_t a = (abcd >> 24) & 0xff;
+	const uint8_t b = (abcd >> 16) & 0xff;
+	const uint8_t c = (abcd >>  8) & 0xff;
+	const uint8_t d = (abcd >>  0) & 0xff;
+
+	Set(a, b, c, d, port);
+}
+
 std::string NetAddress::ToString(bool includePortNumber) const
 {
 	char temp[64];

@@ -32,6 +32,11 @@ public:
 		Set(a, b, c, d, port);
 	}
 
+	inline NetAddress(const char * address, uint16_t port)
+	{
+		SetFromString(address, port);
+	}
+
 	inline const sockaddr_in * GetSockAddr() const
 	{
 		return &m_socketAddress;
@@ -39,6 +44,7 @@ public:
 
 	void Set(uint32_t address, uint16_t port);
 	void Set(uint8_t a, uint8_t b, uint8_t c, uint8_t d, uint16_t port);
+	void SetFromString(const char * address, uint16_t port);
 
 	inline bool IsValid() const
 	{
