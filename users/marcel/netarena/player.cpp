@@ -522,7 +522,10 @@ void Player::tick(float dt)
 			else if (currentBlockMask & (1 << kBlockType_GravityReverse))
 			{
 				gravity = GRAVITY * BLOCKTYPE_GRAVITY_REVERSE_MULTIPLIER;
-				m_anim.SetAnim(kPlayerAnim_Jump, true, false);
+				if (isAnimOverrideAllowed(kPlayerAnim_Jump))
+				{
+					m_anim.SetAnim(kPlayerAnim_Jump, true, false);
+				}
 			}
 			else if (currentBlockMask & (1 << kBlockType_GravityStrong))
 				gravity = GRAVITY * BLOCKTYPE_GRAVITY_STRONG_MULTIPLIER;
@@ -604,7 +607,10 @@ void Player::tick(float dt)
 
 								m_vel[i] = -PLAYER_JUMP_SPEED;
 
-								m_anim.SetAnim(kPlayerAnim_Jump, true, true);
+								if (isAnimOverrideAllowed(kPlayerAnim_Jump))
+								{
+									m_anim.SetAnim(kPlayerAnim_Jump, true, true);
+								}
 
 								PlaySecondaryEffects(kPlayerEvent_SpringJump);
 							}
