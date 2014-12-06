@@ -415,7 +415,7 @@ void App::connect(const char * address)
 {
 	Channel * channel = m_channelMgr->CreateChannel(ChannelPool_Client);
 
-	channel->Connect(NetAddress(127, 0, 0, 1, 6000));
+	channel->Connect(NetAddress(address, 6000));
 
 	Client * client = new Client(m_clients.size());
 
@@ -427,7 +427,7 @@ void App::connect(const char * address)
 
 void App::disconnectClient(int index)
 {
-	if (index >= 0 && index < m_clients.size())
+	if (index >= 0 && index < (int)m_clients.size())
 	{
 		Client * client = m_clients[index];
 
@@ -564,7 +564,7 @@ void App::draw()
 		Sprite("back.png").draw();
 		setBlend(BLEND_ALPHA);
 
-		if (m_selectedClient >= 0 && m_selectedClient < m_clients.size())
+		if (m_selectedClient >= 0 && m_selectedClient < (int)m_clients.size())
 		{
 			Client * client = m_clients[m_selectedClient];
 
