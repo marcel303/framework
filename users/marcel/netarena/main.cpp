@@ -513,13 +513,13 @@ bool App::tick()
 
 		menu->Update();
 
-		if (keyboard.isDown(SDLK_UP))
+		if (keyboard.isDown(SDLK_UP) || gamepad[0].isDown[DPAD_UP])
 			menu->HandleAction(OptionMenu::Action_NavigateUp, dt);
-		if (keyboard.isDown(SDLK_DOWN))
+		if (keyboard.isDown(SDLK_DOWN) || gamepad[0].isDown[DPAD_DOWN])
 			menu->HandleAction(OptionMenu::Action_NavigateDown, dt);
-		if (keyboard.wentDown(SDLK_RETURN))
+		if (keyboard.wentDown(SDLK_RETURN) || gamepad[0].wentDown[GAMEPAD_A])
 			menu->HandleAction(OptionMenu::Action_NavigateSelect);
-		if (keyboard.wentDown(SDLK_BACKSPACE))
+		if (keyboard.wentDown(SDLK_BACKSPACE) || gamepad[0].wentDown[GAMEPAD_B])
 		{
 			if (menu->HasNavParent())
 				menu->HandleAction(OptionMenu::Action_NavigateBack);
@@ -529,9 +529,9 @@ bool App::tick()
 				m_statTimerMenuIsOpen = false;
 			}
 		}
-		if (keyboard.isDown(SDLK_LEFT))
+		if (keyboard.isDown(SDLK_LEFT) || gamepad[0].isDown[DPAD_LEFT])
 			menu->HandleAction(OptionMenu::Action_ValueDecrement, dt);
-		if (keyboard.isDown(SDLK_RIGHT))
+		if (keyboard.isDown(SDLK_RIGHT) || gamepad[0].isDown[DPAD_RIGHT])
 			menu->HandleAction(OptionMenu::Action_ValueIncrement, dt);
 	}
 
@@ -558,14 +558,16 @@ void App::draw()
 {
 	TIMER_SCOPE(g_appDrawTime);
 
-	framework.beginDraw(155, 205, 255, 0);
+	framework.beginDraw(10, 15, 10, 0);
 	{
-		setBlend(BLEND_OPAQUE);
-		Sprite("back.png").draw();
-		setBlend(BLEND_ALPHA);
-
 		if (m_selectedClient >= 0 && m_selectedClient < (int)m_clients.size())
 		{
+			setDrawRect(0, 0, ARENA_SX * BLOCK_SX, ARENA_SY * BLOCK_SY);
+
+			setBlend(BLEND_OPAQUE);
+			Sprite("back.png").draw();
+			setBlend(BLEND_ALPHA);
+
 			Client * client = m_clients[m_selectedClient];
 
 			client->draw();
@@ -574,6 +576,8 @@ void App::draw()
 			Font font("calibri.ttf");
 			setFont(font);
 			drawText(5, GFX_SY - 25, 20, +1.f, -1.f, "viewing client %d", m_selectedClient);
+
+			clearDrawRect();
 		}
 
 		if (g_devMode && g_host)
@@ -613,11 +617,13 @@ void App::draw()
 			sprintf(name, "connect_%d", i);
 			Dictionary & button = (*m_discoveryUi)[name];
 			char props[1024];
-			sprintf(props, "type:button name:%s x:%d y:0 action:connect address:%s image:button.png image_over:button-over.png image_down:button-down.png text:%s text_color:000000 font:calibri.ttf font_size:24",
-				name, i * 300,
+			sprintf(props, "type:button name:%s x:%d y:0 action:connect address:%s image:button.png image_over:button-over.png image_down:button-down.png text_color:000000 font:calibri.ttf font_size:24",
+				name,
+				i * 300,
 				serverInfo.m_address.ToString(false).c_str(),
 				name);
 			button.parse(props);
+			button.setString("text", serverInfo.m_address.ToString(false).c_str());
 		}
 
 		for (size_t i = 0; i < m_clients.size(); ++i)

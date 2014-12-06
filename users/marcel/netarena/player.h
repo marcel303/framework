@@ -88,14 +88,9 @@ class PlayerAnim_NS : public NetSerializable
 {
 	virtual void SerializeStruct();
 
-	int m_lastAnim;
-	bool m_lastPlay;
-
 public:
 	PlayerAnim_NS(NetSerializableObject * owner)
 		: NetSerializable(owner)
-		, m_lastAnim(0)
-		, m_lastPlay(false)
 		, m_anim(0)
 		, m_play(false)
 	{
@@ -168,6 +163,9 @@ class Player : public NetObject
 	bool m_isGrounded;
 	bool m_isAttachedToSticky;
 	bool m_isAnimDriven;
+
+	float m_animVelIsAbsolute;
+	Vec2 m_animVel;
 
 	Sprite * m_sprite;
 

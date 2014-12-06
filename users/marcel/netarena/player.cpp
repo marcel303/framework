@@ -5,12 +5,16 @@
 #include "main.h"
 #include "player.h"
 
+#define WRAP_AROUND_TOP_AND_BOTTOM 1
+
 enum PlayerAnim
 {
 	kPlayerAnim_NULL,
+	kPlayerAnim_WallSlide,
 	kPlayerAnim_Walk,
 	kPlayerAnim_Jump,
 	kPlayerAnim_Attack,
+	kPlayerAnim_AirDash,
 	kPlayerAnim_Spawn,
 	kPlayerAnim_Die,
 };
@@ -18,9 +22,11 @@ enum PlayerAnim
 static const char * s_animFiles[] =
 {
 	nullptr,
+	"zero-x3-wall-slide.png",
 	"zero-x3-walk.png",
 	"zero-x3-jump.png",
 	"zero-x3-attack.png",
+	"zero-x3-dash-air.png",
 	"zero-x3-spawn.png",
 	"zero-x3-die.png"
 };
@@ -30,31 +36,24 @@ void PlayerAnim_NS::SerializeStruct()
 	SerializeBits(m_anim, 4);
 	Serialize(m_play);
 
-	//if (IsRecv())
+	//
+
+	Player * player = static_cast<Player*>(GetOwner());
+
+	if (m_anim != kPlayerAnim_NULL)
 	{
-		Player * player = static_cast<Player*>(GetOwner());
+		delete player->m_sprite;
+		player->m_sprite = 0;
 
-		bool animChanged = (m_anim != m_lastAnim);
-		bool playChanged = (m_play != m_lastPlay);
-
-		m_lastAnim = m_anim;
-		m_lastPlay = m_play;
-
-		if (m_anim != kPlayerAnim_NULL)
-		{
-			delete player->m_sprite;
-			player->m_sprite = 0;
-
-			player->m_sprite = new Sprite(s_animFiles[m_anim]);
-			player->m_sprite->animActionHandler = Player::handleAnimationAction;
-			player->m_sprite->animActionHandlerObj = player;
-		}
-
-		if (m_play)
-			player->m_sprite->startAnim("anim");
-		else
-			player->m_sprite->stopAnim();
+		player->m_sprite = new Sprite(s_animFiles[m_anim]);
+		player->m_sprite->animActionHandler = Player::handleAnimationAction;
+		player->m_sprite->animActionHandlerObj = player;
 	}
+
+	if (m_play)
+		player->m_sprite->startAnim("anim");
+	else
+		player->m_sprite->stopAnim();
 }
 
 enum PlayerEvent
@@ -69,7 +68,8 @@ enum PlayerEvent
 	kPlayerEvent_StickyJump,
 	kPlayerEvent_SpringJump,
 	kPlayerEvent_SpikeHit,
-	kPlayerEvent_ArenaWrap
+	kPlayerEvent_ArenaWrap,
+	kPlayerEvent_DashAir
 };
 
 void Player::handleAnimationAction(const std::string & action, const Dictionary & args)
@@ -82,7 +82,17 @@ void Player::handleAnimationAction(const std::string & action, const Dictionary 
 			log("action: %s", action.c_str());
 		}
 
-		if (action == "set_attack_vel")
+		if (action == "set_anim_vel")
+		{
+			player->m_animVel[0] = args.getFloat("x", player->m_animVel[0]);
+			player->m_animVel[1] = args.getFloat("y", player->m_animVel[1]);
+		}
+		else if (action == "set_anim_vel_abs")
+		{
+			player->m_animVelIsAbsolute = args.getBool("abs", player->m_animVelIsAbsolute);
+			player->m_vel = Vec2();
+		}
+		else if (action == "set_attack_vel")
 		{
 			player->m_attack.attackVel[0] = args.getFloat("x", player->m_attack.attackVel[0]);
 			player->m_attack.attackVel[1] = args.getFloat("y", player->m_attack.attackVel[1]);
@@ -160,6 +170,7 @@ Player::Player(uint32_t netId)
 	, m_isGrounded(false)
 	, m_isAttachedToSticky(false)
 	, m_isAnimDriven(false)
+	, m_animVelIsAbsolute(false)
 {
 	setNetId(netId);
 
@@ -219,6 +230,8 @@ static void PlaySecondaryEffects(PlayerEvent e)
 	case kPlayerEvent_ArenaWrap:
 		g_app->netPlaySound("player-arena-wrap.ogg");
 		break;
+	case kPlayerEvent_DashAir:
+		break;
 	}
 }
 
@@ -236,11 +249,16 @@ void Player::tick(float dt)
 		if (!m_anim.IsDirty() && !m_sprite->animIsActive)
 		{
 			m_isAnimDriven = false;
+			m_animVel = Vec2();
+			m_animVelIsAbsolute = false;
 
 			switch (m_anim.m_anim)
 			{
 			case kPlayerAnim_Attack:
 				m_attack.attacking = false;
+				break;
+			case kPlayerAnim_AirDash:
+				m_anim.SetAnim(kPlayerAnim_Jump, true, true); // fixme : which anim to play should be determined during tick. if air borne, play jump anim, etc..
 				break;
 			case kPlayerAnim_Jump:
 				break;
@@ -258,7 +276,7 @@ void Player::tick(float dt)
 
 	//
 
-	if (!m_state.isAlive || m_input.wentDown(INPUT_BUTTON_X))
+	if (!m_state.isAlive || m_input.wentDown(INPUT_BUTTON_Y))
 	{
 		int x, y;
 
@@ -289,6 +307,9 @@ void Player::tick(float dt)
 
 		float surfaceFriction = 0.f;
 		Vec2 animVel(0.f, 0.f);
+
+		animVel[0] += m_animVel[0] * m_pos.xFacing;
+		animVel[1] += m_animVel[1] * m_pos.yFacing;
 
 		// attack
 
@@ -376,6 +397,12 @@ void Player::tick(float dt)
 			{
 				if (isAnimOverrideAllowed(kPlayerAnim_Attack))
 				{
+					if ((getIntersectingBlocksMask(m_pos[0] + m_pos.xFacing, m_pos[1]) & kBlockMask_Solid) != 0)
+					{
+						m_pos.xFacing *= -1;
+						m_pos.SetDirty();
+					}
+
 					m_attack = AttackInfo();
 					m_attack.attacking = true;
 
@@ -385,6 +412,18 @@ void Player::tick(float dt)
 					m_attack.collision.y2 = PLAYER_SWORD_COLLISION_Y2;
 
 					m_anim.SetAnim(kPlayerAnim_Attack, true, true);
+					m_isAnimDriven = true;
+				}
+			}
+		}
+
+		if (!m_isGrounded && !m_isAttachedToSticky && m_input.wentDown(INPUT_BUTTON_A))
+		{
+			if (isAnimOverrideAllowed(kPlayerAnim_AirDash))
+			{
+				if ((getIntersectingBlocksMask(m_pos[0] + m_pos.xFacing, m_pos[1]) & kBlockMask_Solid) == 0)
+				{
+					m_anim.SetAnim(kPlayerAnim_AsirDash, true, true);
 					m_isAnimDriven = true;
 				}
 			}
@@ -515,6 +554,8 @@ void Player::tick(float dt)
 
 		if (m_isAttachedToSticky)
 			gravity = 0.f;
+		else if (m_animVelIsAbsolute)
+			gravity = 0.f;
 		else
 		{
 			if (currentBlockMask & (1 << kBlockType_GravityDisable))
@@ -531,6 +572,19 @@ void Player::tick(float dt)
 				gravity = GRAVITY * BLOCKTYPE_GRAVITY_STRONG_MULTIPLIER;
 			else
 				gravity = GRAVITY;
+
+			// wall slide
+
+			if (!m_isGrounded &&
+				isAnimOverrideAllowed(kPlayerAnim_WallSlide) &&
+				m_vel[0] != 0.f && Calc::Sign(m_pos.xFacing) == Calc::Sign(m_vel[0]) &&
+				(getIntersectingBlocksMask(m_pos[0] + m_pos.xFacing, m_pos[1]) & kBlockMask_Solid) != 0)
+			{
+				m_anim.SetAnim(kPlayerAnim_WallSlide, true, false);
+				//gravity *= .5f; // todo : make option
+				if (m_vel[1] > STEERING_SPEED_ON_GROUND / 3.f && Calc::Sign(m_vel[1]) == Calc::Sign(gravity))
+					m_vel[1] = STEERING_SPEED_ON_GROUND / 3.f;
+			}
 		}
 
 		m_vel[1] += gravity * dt;
@@ -546,7 +600,11 @@ void Player::tick(float dt)
 
 		for (int i = 0; i < 2; ++i)
 		{
-			float totalDelta = (m_vel[i] + animVel[i]) * dt;
+			float totalDelta =
+				(
+					(m_animVelIsAbsolute ? 0.f : m_vel[i]) +
+					animVel[i]
+				) * dt;
 
 			const float deltaSign = totalDelta < 0.f ? -1.f : +1.f;
 
@@ -661,6 +719,7 @@ void Player::tick(float dt)
 
 		// todo : should look at state here and determine which animation to play
 
+	#if !WRAP_AROUND_TOP_AND_BOTTOM
 		// death by fall
 
 		if (m_pos[1] > ARENA_SY * BLOCK_SY)
@@ -671,6 +730,7 @@ void Player::tick(float dt)
 				m_isAnimDriven = true;
 			}
 		}
+	#endif
 
 		// facing
 
@@ -681,9 +741,29 @@ void Player::tick(float dt)
 		// wrapping
 
 		if (m_pos[0] < 0)
+		{
 			m_pos[0] = ARENA_SX * BLOCK_SX;
+			PlaySecondaryEffects(kPlayerEvent_ArenaWrap);
+		}
 		if (m_pos[0] > ARENA_SX * BLOCK_SX)
+		{
 			m_pos[0] = 0;
+			PlaySecondaryEffects(kPlayerEvent_ArenaWrap);
+		}
+
+	#if WRAP_AROUND_TOP_AND_BOTTOM
+		if (m_pos[1] > ARENA_SY * BLOCK_SY)
+		{
+			m_pos[1] = 0;
+			PlaySecondaryEffects(kPlayerEvent_ArenaWrap);
+		}
+
+		if (m_pos[1] < 0)
+		{
+			m_pos[1] = ARENA_SY * BLOCK_SY;
+			PlaySecondaryEffects(kPlayerEvent_ArenaWrap);
+		}
+	#endif
 	}
 
 	m_input.next();
@@ -699,6 +779,12 @@ void Player::draw()
 	m_sprite->flipX = m_pos.xFacing < 0 ? true : false;
 	m_sprite->flipY = m_pos.yFacing < 0 ? true : false;
 	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, 2.f);
+
+	// render additional sprites for wrap around
+	m_sprite->drawEx(m_pos.x + (ARENA_SX * BLOCK_SX), m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, 2.f);
+	m_sprite->drawEx(m_pos.x - (ARENA_SX * BLOCK_SX), m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, 2.f);
+	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0) + (ARENA_SY * BLOCK_SY), 0.f, 2.f);
+	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0) - (ARENA_SY * BLOCK_SY), 0.f, 2.f);
 }
 
 void Player::debugDraw()
