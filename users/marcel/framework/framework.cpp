@@ -2058,11 +2058,29 @@ void Ui::draw()
 	}
 }
 
+void Ui::remove(const char * name)
+{
+	m_ui->map.erase(name);
+}
+
+void Ui::clear()
+{
+	m_ui->map.clear();
+}
+
 Dictionary & Ui::operator[](const char * name)
 {
-	// fixme : set name immediately, if not found, to ensure mouse over works correctly
+	UiCacheElem::Map::iterator i = m_ui->map.find(name);
 
-	return m_ui->map[name];
+	if (i == m_ui->map.end())
+	{
+		Dictionary d;
+		d.setString("name", name);
+
+		i = m_ui->map.insert(UiCacheElem::Map::value_type(name, d)).first;
+	}
+
+	return i->second;
 }
 
 // -----
@@ -2331,9 +2349,9 @@ void setGradientf(float x1, float y1, float r1, float g1, float b1, float a1, fl
 	setGradientf(x1, y1, Color(r1, g1, b1, a1), x2, y2, Color(r2, g2, b2, a2));
 }
 
-void setFont(Font & font)
+void setFont(const Font & font)
 {
-	globals.font = font.getFont();
+	globals.font = const_cast<Font&>(font).getFont();
 }
 
 void setShader(const Shader & shader)

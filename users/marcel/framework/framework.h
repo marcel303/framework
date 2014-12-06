@@ -602,6 +602,9 @@ public:
 	void process();
 	void draw();
 	
+	void remove(const char * name);
+	void clear();
+
 	Dictionary & operator[](const char * name);
 };
 
@@ -625,7 +628,7 @@ void setColor(int r, int g, int b, int a = 255, int rgbMul = 255);
 void setColorf(float r, float g, float b, float a = 1.f, float rgbMul = 1.f);
 void setGradientf(float x1, float y1, const Color & color1, float x2, float y2, const Color & color2);
 void setGradientf(float x1, float y1, float r1, float g1, float b1, float a1, float x2, float y2, float r2, float g2, float b2, float a2);
-void setFont(Font & font);
+void setFont(const Font & font);
 void setShader(const Shader & shader);
 void clearShader();
 
