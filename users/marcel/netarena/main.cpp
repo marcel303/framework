@@ -3,6 +3,7 @@
 #include "Calc.h"
 #include "ChannelManager.h"
 #include "client.h"
+#include "discover.h"
 #include "framework.h"
 #include "host.h"
 #include "main.h"
@@ -14,6 +15,8 @@
 #include "ReplicationClient.h"
 #include "ReplicationManager.h"
 #include "RpcManager.h"
+#include "StatTimerMenu.h"
+#include "StatTimers.h"
 #include "Timer.h"
 
 //
@@ -24,7 +27,47 @@ OPTION_ALIAS(g_devMode, "devmode");
 
 //
 
+TIMER_DEFINE(g_appTickTime, PerFrame, "App/Tick");
+TIMER_DEFINE(g_appDrawTime, PerFrame, "App/Draw");
+
+//
+
 App * g_app = 0;
+
+//
+
+static void HandleAction(const std::string & action, const Dictionary & args)
+{
+	if (action == "connect")
+	{
+		const std::string address = args.getString("address", "");
+
+		if (!address.empty())
+		{
+			g_app->connect(address.c_str());
+		}
+	}
+
+	if (action == "disconnect")
+	{
+		const int index = args.getInt("client", -1);
+
+		if (index != -1)
+		{
+			g_app->disconnectClient(index);
+		}
+	}
+
+	if (action == "select")
+	{
+		const int index = args.getInt("client", -1);
+
+		if (index != -1)
+		{
+			g_app->selectClient(index);
+		}
+	}
+}
 
 //
 
@@ -67,9 +110,6 @@ static void HandleRpc(uint32_t method, BitStream & bitStream)
 
 void App::SV_OnChannelConnect(Channel * channel)
 {
-	for (int i = 0; i < 2; ++i)
-	{ // hack!
-
 	ClientInfo clientInfo;
 
 	clientInfo.replicationId = m_replicationMgr->SV_CreateClient(channel, 0);
@@ -83,8 +123,6 @@ void App::SV_OnChannelConnect(Channel * channel)
 	//
 
 	m_host->addPlayer(clientInfo.player);
-
-	} // hack!
 }
 
 void App::SV_OnChannelDisconnect(Channel * channel)
@@ -98,6 +136,8 @@ void App::SV_OnChannelDisconnect(Channel * channel)
 		// remove player created for this channel
 
 		m_replicationMgr->SV_RemoveObject(clientInfo.player->GetObjectID());
+
+		m_host->removePlayer(clientInfo.player);
 
 		delete clientInfo.player;
 		clientInfo.player = 0;
@@ -162,6 +202,10 @@ void App::OnReplicationObjectCreated(ReplicationClient * client, ReplicationObje
 	case kNetObjectType_Player:
 		gameClient->m_players.push_back(static_cast<Player*>(object));
 		break;
+
+	default:
+		Assert(false);
+		break;
 	}
 }
 
@@ -170,10 +214,24 @@ void App::OnReplicationObjectDestroyed(ReplicationClient * client, ReplicationOb
 	Client * gameClient = static_cast<Client*>(client->m_up);
 	NetObject * netObject = static_cast<NetObject*>(object);
 
-	// todo : remove object from game client
-
 	switch (netObject->getType())
 	{
+	case kNetObjectType_Player:
+		{
+			auto i = std::find(gameClient->m_players.begin(), gameClient->m_players.end(), static_cast<Player*>(netObject));
+			Assert(i != gameClient->m_players.end());
+			if (i != gameClient->m_players.end())
+				gameClient->m_players.erase(i);
+		}
+		break;
+
+	case kNetObjectType_Arena:
+		{
+			delete gameClient->m_arena;
+			gameClient->m_arena = 0;
+		}
+		break;
+
 	default:
 		Assert(false);
 		break;
@@ -189,8 +247,13 @@ App::App()
 	, m_channelMgr(0)
 	, m_rpcMgr(0)
 	, m_replicationMgr(0)
+	, m_discoveryService(0)
+	, m_discoveryUi(0)
+	, m_selectedClient(0)
 	, m_optionMenu(0)
-	, m_optionsMenuIsOpen(false)
+	, m_optionMenuIsOpen(false)
+	, m_statTimerMenu(0)
+	, m_statTimerMenuIsOpen(false)
 {
 }
 
@@ -202,6 +265,9 @@ App::~App()
 	Assert(m_channelMgr == 0);
 	Assert(m_rpcMgr == 0);
 	Assert(m_replicationMgr == 0);
+
+	Assert(m_discoveryService == 0);
+	Assert(m_discoveryUi == 0);
 
 	Assert(m_host == 0);
 
@@ -225,6 +291,8 @@ bool App::init(bool isHost)
 		framework.fullscreen = true;
 	}
 
+	framework.actionHandler = HandleAction;
+
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
 		m_isHost = isHost;
@@ -235,6 +303,11 @@ bool App::init(bool isHost)
 		m_channelMgr = new ChannelManager();
 		m_rpcMgr = new RpcManager(m_channelMgr);
 		m_replicationMgr = new ReplicationManager();
+
+		m_discoveryService = new NetSessionDiscovery::Service();
+		m_discoveryService->init(2, 10);
+
+		m_discoveryUi = new Ui();
 
 		//
 
@@ -266,24 +339,13 @@ bool App::init(bool isHost)
 			m_host->init();
 		}
 
-		// add clients
-
-		for (int i = 0; i < 1; ++i)
-		{
-			Channel * channel = m_channelMgr->CreateChannel(ChannelPool_Client);
-
-			channel->Connect(NetAddress(127, 0, 0, 1, 6000));
-
-			Client * client = new Client(i);
-
-			client->initialize(channel);
-			client->m_replicationId = m_replicationMgr->CL_CreateClient(client->m_channel, client);
-
-			m_clients.push_back(client);
-		}
+		//
 
 		m_optionMenu = new OptionMenu();
-		m_optionsMenuIsOpen = false;
+		m_optionMenuIsOpen = false;
+
+		m_statTimerMenu = new StatTimerMenu();
+		m_statTimerMenuIsOpen = false;
 
 		return true;
 	}
@@ -293,6 +355,9 @@ bool App::init(bool isHost)
 
 void App::shutdown()
 {
+	delete m_statTimerMenu;
+	m_statTimerMenu = 0;
+
 	delete m_optionMenu;
 	m_optionMenu = 0;
 
@@ -313,6 +378,12 @@ void App::shutdown()
 	}
 
 	//
+
+	delete m_discoveryUi;
+	m_discoveryUi = 0;
+
+	delete m_discoveryService;
+	m_discoveryService = 0;
 
 	m_replicationMgr->SV_Shutdown();
 
@@ -340,9 +411,54 @@ void App::shutdown()
 	framework.shutdown();
 }
 
+void App::connect(const char * address)
+{
+	Channel * channel = m_channelMgr->CreateChannel(ChannelPool_Client);
+
+	channel->Connect(NetAddress(127, 0, 0, 1, 6000));
+
+	Client * client = new Client(m_clients.size());
+
+	client->initialize(channel);
+	client->m_replicationId = m_replicationMgr->CL_CreateClient(client->m_channel, client);
+
+	m_clients.push_back(client);
+}
+
+void App::disconnectClient(int index)
+{
+	if (index >= 0 && index < m_clients.size())
+	{
+		Client * client = m_clients[index];
+
+		m_replicationMgr->CL_DestroyClient(client->m_replicationId);
+
+		m_clients[index]->m_channel->Disconnect();
+
+		delete client;
+
+		m_clients.erase(m_clients.begin() + index);
+	}
+}
+
+void App::selectClient(int index)
+{
+	m_selectedClient = index;
+}
+
 bool App::tick()
 {
+	TIMER_SCOPE(g_appTickTime);
+
 	const float dt = 1.f / 60.f; // todo : calculate time step
+
+	// shared update
+
+	framework.process();
+
+	m_discoveryService->update(m_isHost);
+	
+	m_discoveryUi->process();
 
 	// update host
 
@@ -350,9 +466,7 @@ bool App::tick()
 
 	m_replicationMgr->SV_Update();
 
-	framework.process();
-
-	if (!m_optionsMenuIsOpen)
+	if (!m_optionMenuIsOpen)
 	{
 		m_host->tick(dt);
 	}
@@ -378,36 +492,59 @@ bool App::tick()
 
 	if (keyboard.wentDown(SDLK_F5))
 	{
-		m_optionsMenuIsOpen = !m_optionsMenuIsOpen;
+		m_optionMenuIsOpen = !m_optionMenuIsOpen;
+		m_statTimerMenuIsOpen = false;
 	}
 
-	if (m_optionsMenuIsOpen)
+	if (keyboard.wentDown(SDLK_F6))
 	{
-		m_optionMenu->Update();
+		m_optionMenuIsOpen = false;
+		m_statTimerMenuIsOpen = !m_statTimerMenuIsOpen;
+	}
+
+	if (m_optionMenuIsOpen || m_statTimerMenuIsOpen)
+	{
+		MultiLevelMenuBase * menu = 0;
+
+		if (m_optionMenuIsOpen)
+			menu = m_optionMenu;
+		else if (m_statTimerMenuIsOpen)
+			menu = m_statTimerMenu;
+
+		menu->Update();
 
 		if (keyboard.isDown(SDLK_UP))
-			m_optionMenu->HandleAction(OptionMenu::Action_NavigateUp, dt);
+			menu->HandleAction(OptionMenu::Action_NavigateUp, dt);
 		if (keyboard.isDown(SDLK_DOWN))
-			m_optionMenu->HandleAction(OptionMenu::Action_NavigateDown, dt);
+			menu->HandleAction(OptionMenu::Action_NavigateDown, dt);
 		if (keyboard.wentDown(SDLK_RETURN))
-			m_optionMenu->HandleAction(OptionMenu::Action_NavigateSelect);
+			menu->HandleAction(OptionMenu::Action_NavigateSelect);
 		if (keyboard.wentDown(SDLK_BACKSPACE))
 		{
-			if (m_optionMenu->HasNavParent())
-				m_optionMenu->HandleAction(OptionMenu::Action_NavigateBack);
+			if (menu->HasNavParent())
+				menu->HandleAction(OptionMenu::Action_NavigateBack);
 			else
-				m_optionsMenuIsOpen = false;
+			{
+				m_optionMenuIsOpen = false;
+				m_statTimerMenuIsOpen = false;
+			}
 		}
 		if (keyboard.isDown(SDLK_LEFT))
-			m_optionMenu->HandleAction(OptionMenu::Action_ValueDecrement, dt);
+			menu->HandleAction(OptionMenu::Action_ValueDecrement, dt);
 		if (keyboard.isDown(SDLK_RIGHT))
-			m_optionMenu->HandleAction(OptionMenu::Action_ValueIncrement, dt);
+			menu->HandleAction(OptionMenu::Action_ValueIncrement, dt);
 	}
 
 	if (keyboard.wentDown(SDLK_t))
 	{
 		g_optionManager.Load("options.txt");
 	}
+
+#if GG_ENABLE_TIMERS
+	TIMER_STOP(g_appTickTime);
+	g_statTimerManager.Update();
+	TIMER_START(g_appTickTime);
+#endif
 
 	if (keyboard.wentDown(SDLK_ESCAPE))
 	{
@@ -419,15 +556,24 @@ bool App::tick()
 
 void App::draw()
 {
+	TIMER_SCOPE(g_appDrawTime);
+
 	framework.beginDraw(155, 205, 255, 0);
 	{
+		setBlend(BLEND_OPAQUE);
 		Sprite("back.png").draw();
+		setBlend(BLEND_ALPHA);
 
-		for (size_t i = 0; i < m_clients.size(); ++i)
+		if (m_selectedClient >= 0 && m_selectedClient < m_clients.size())
 		{
-			Client * client = m_clients[i];
+			Client * client = m_clients[m_selectedClient];
 
 			client->draw();
+
+			setColor(255, 255, 255);
+			Font font("calibri.ttf");
+			setFont(font);
+			drawText(5, GFX_SY - 25, 20, +1.f, -1.f, "viewing client %d", m_selectedClient);
 		}
 
 		if (g_devMode && g_host)
@@ -435,7 +581,7 @@ void App::draw()
 			g_host->debugDraw();
 		}
 
-		if (m_optionsMenuIsOpen)
+		if (m_optionMenuIsOpen)
 		{
 			const int sx = 400;
 			const int sy = GFX_SY / 3;
@@ -444,6 +590,64 @@ void App::draw()
 
 			m_optionMenu->Draw(x, y, sx, sy);
 		}
+
+		if (m_statTimerMenuIsOpen)
+		{
+			const int sx = 400;
+			const int sy = GFX_SY / 3;
+			const int x = (GFX_SX - sx) / 2;
+			const int y = (GFX_SY - sy) / 2;
+
+			m_statTimerMenu->Draw(x, y, sx, sy);
+		}
+
+		m_discoveryUi->clear();
+
+		const auto serverList = m_discoveryService->getServerList();
+
+		for (size_t i = 0; i < serverList.size(); ++i)
+		{
+			const auto & serverInfo = serverList[i];
+
+			char name[32];
+			sprintf(name, "connect_%d", i);
+			Dictionary & button = (*m_discoveryUi)[name];
+			char props[1024];
+			sprintf(props, "type:button name:%s x:%d y:0 action:connect address:%s image:button.png image_over:button-over.png image_down:button-down.png text:%s text_color:000000 font:calibri.ttf font_size:24",
+				name, i * 300,
+				serverInfo.m_address.ToString(false).c_str(),
+				name);
+			button.parse(props);
+		}
+
+		for (size_t i = 0; i < m_clients.size(); ++i)
+		{
+			Client * client = m_clients[i];
+
+			{
+				char name[32];
+				sprintf(name, "disconnect_%d", i);
+				Dictionary & button = (*m_discoveryUi)[name];
+				char props[1024];
+				sprintf(props, "type:button name:%s x:%d y:70 scale:0.65 action:disconnect client:%d image:button.png image_over:button-over.png image_down:button-down.png text:disconnect text_color:000000 font:calibri.ttf font_size:24",
+					name, i * 150,
+					i);
+				button.parse(props);
+			}
+
+			{
+				char name[32];
+				sprintf(name, "view_%d", i);
+				Dictionary & button = (*m_discoveryUi)[name];
+				char props[1024];
+				sprintf(props, "type:button name:%s x:%d y:120 scale:0.65 action:select client:%d image:button.png image_over:button-over.png image_down:button-down.png text:view text_color:000000 font:calibri.ttf font_size:24",
+					name, i * 150,
+					i);
+				button.parse(props);
+			}
+		}
+
+		m_discoveryUi->draw();
 	}
 	framework.endDraw();
 }

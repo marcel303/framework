@@ -14,6 +14,12 @@ class Client;
 class Host;
 class OptionMenu;
 class Player;
+class StatTimerMenu;
+
+namespace NetSessionDiscovery
+{
+	class Service;
+}
 
 class App : public ChannelHandler, public ReplicationHandler
 {
@@ -30,13 +36,20 @@ class App : public ChannelHandler, public ReplicationHandler
 	RpcManager * m_rpcMgr;
 	ReplicationManager * m_replicationMgr;
 
+	NetSessionDiscovery::Service * m_discoveryService;
+	Ui * m_discoveryUi;
+
 	Host * m_host;
 	std::map<Channel*, ClientInfo> m_hostClients;
 
 	std::vector<Client*> m_clients;
+	int m_selectedClient;
 
 	OptionMenu * m_optionMenu;
-	bool m_optionsMenuIsOpen;
+	bool m_optionMenuIsOpen;
+
+	StatTimerMenu * m_statTimerMenu;
+	bool m_statTimerMenuIsOpen;
 
 	//
 
@@ -60,6 +73,10 @@ public:
 
 	bool init(bool isHost);
 	void shutdown();
+
+	void connect(const char * address);
+	void disconnectClient(int index);
+	void selectClient(int index);
 
 	bool tick();
 	void draw();

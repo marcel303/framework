@@ -212,7 +212,7 @@ std::vector<Block*> Arena::getIntersectingBlocks(int x1, int y1, int x2, int y2)
 			}
 		}
 
-		Assert(result.size() == numBlock);
+		Assert(result.size() == numBlocks);
 	}
 
 	return result;

@@ -84,6 +84,7 @@ void Host::removePlayer(Player * player)
 {
 	auto i = std::find(m_players.begin(), m_players.end(), player);
 
+	Assert(i != m_players.end());
 	if (i != m_players.end())
 		m_players.erase(i);
 }

@@ -415,6 +415,45 @@ void Player::tick(float dt)
 			playerControl = false;
 		}
 
+		// sticky ceiling
+
+		if (currentBlockMaskCeil & (1 << kBlockType_Sticky))
+		{
+			if (playerControl && m_input.wentDown(INPUT_BUTTON_A))
+			{
+				m_vel[1] = PLAYER_JUMP_SPEED / 2.f;
+
+				m_isAttachedToSticky = false;
+
+				m_anim.SetAnim(kPlayerAnim_Jump, true, true);
+
+				PlaySecondaryEffects(kPlayerEvent_StickyJump);
+			}
+			else if (playerControl && m_input.wentDown(INPUT_BUTTON_DOWN))
+			{
+				m_vel[1] += GRAVITY * dt;
+
+				m_isAttachedToSticky = false;
+
+				PlaySecondaryEffects(kPlayerEvent_StickyRelease);
+			}
+			else
+			{
+				surfaceFriction = FRICTION_GROUNDED;
+
+				if (!m_isAttachedToSticky)
+				{
+					m_isAttachedToSticky = true;
+
+					PlaySecondaryEffects(kPlayerEvent_StickyAttach);
+				}
+			}
+		}
+		else
+		{
+			m_isAttachedToSticky = false;
+		}
+
 		// steering
 
 		float steeringSpeed = 0.f;
@@ -468,47 +507,6 @@ void Player::tick(float dt)
 				if (Calc::Sign(steeringSpeed) == Calc::Sign(maxSteeringDelta))
 					m_vel[0] += maxSteeringDelta * dt * 60.f / numSteeringFrame;
 			}
-		}
-
-		//
-
-		if (currentBlockMaskCeil & (1 << kBlockType_Sticky))
-		{
-			// sticky ceiling
-
-			if (playerControl && m_input.wentDown(INPUT_BUTTON_A))
-			{
-				m_vel[1] = PLAYER_JUMP_SPEED / 2.f;
-
-				m_isAttachedToSticky = false;
-
-				m_anim.SetAnim(kPlayerAnim_Jump, true, true);
-
-				PlaySecondaryEffects(kPlayerEvent_StickyJump);
-			}
-			else if (playerControl && m_input.wentDown(INPUT_BUTTON_DOWN))
-			{
-				m_vel[1] += GRAVITY * dt;
-
-				m_isAttachedToSticky = false;
-
-				PlaySecondaryEffects(kPlayerEvent_StickyRelease);
-			}
-			else
-			{
-				surfaceFriction = FRICTION_GROUNDED;
-
-				if (!m_isAttachedToSticky)
-				{
-					m_isAttachedToSticky = true;
-
-					PlaySecondaryEffects(kPlayerEvent_StickyAttach);
-				}
-			}
-		}
-		else
-		{
-			m_isAttachedToSticky = false;
 		}
 
 		// gravity
