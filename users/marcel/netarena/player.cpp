@@ -27,7 +27,7 @@ static const char * s_animFiles[] =
 
 void PlayerAnim_NS::SerializeStruct()
 {
-	Serialize(m_anim);
+	SerializeBits(m_anim, 4);
 	Serialize(m_play);
 
 	//if (IsRecv())
