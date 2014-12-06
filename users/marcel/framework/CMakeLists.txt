@@ -39,6 +39,11 @@ target_include_directories(framework PUBLIC "${PROJECT_SOURCE_DIR}/../../../libg
 
 add_dependencies(framework libgg)
 
+if (MSVC)
+	set_property(TARGET framework APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
+endif (MSVC)
+
+
 # --- test application ---
 
 file(GLOB source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/example.cpp")

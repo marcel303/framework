@@ -29,7 +29,7 @@ file(GLOB source "*.cpp" "*.h")
 
 add_executable(netarena ${source})
 
-target_compile_definitions(netarena PRIVATE _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS _CRT_SECURE_NO_DEPRECATE)
+target_compile_definitions(netarena PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS)
 
 target_include_directories(netarena PRIVATE "${PROJECT_SOURCE_DIR}")
 
@@ -45,3 +45,7 @@ target_link_libraries(netarena PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/
 target_link_libraries(netarena PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/SDL2main.lib)
 target_link_libraries(netarena PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/XInput9_1_0.lib)
 target_link_libraries(netarena PRIVATE OpenGL32.lib WSock32.lib)
+
+if (MSVC)
+	set_property(TARGET netarena APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
+endif (MSVC)
