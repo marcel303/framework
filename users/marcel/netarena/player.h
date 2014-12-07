@@ -166,7 +166,7 @@ class Player : public NetObject
 
 	bool m_isAirDashCharged;
 
-	float m_animVelIsAbsolute;
+	bool m_animVelIsAbsolute;
 	Vec2 m_animVel;
 
 	Sprite * m_sprite;
