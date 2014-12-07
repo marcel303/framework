@@ -174,6 +174,7 @@ Player::Player(uint32_t netId)
 	, m_isAttachedToSticky(false)
 	, m_isAnimDriven(false)
 	, m_animVelIsAbsolute(false)
+	, m_isAirDashCharged(false)
 {
 	setNetId(netId);
 
@@ -424,12 +425,14 @@ void Player::tick(float dt)
 			}
 		}
 
-		if (!m_isGrounded && !m_isAttachedToSticky && m_input.wentDown(INPUT_BUTTON_A))
+		if (m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && m_input.wentDown(INPUT_BUTTON_A))
 		{
 			if (isAnimOverrideAllowed(kPlayerAnim_AirDash))
 			{
 				if ((getIntersectingBlocksMask(m_pos[0] + m_pos.xFacing, m_pos[1]) & kBlockMask_Solid) == 0)
 				{
+					m_isAirDashCharged = false;
+
 					m_anim.SetAnim(kPlayerAnim_AirDash, true, true);
 					m_isAnimDriven = true;
 				}
@@ -709,6 +712,13 @@ void Player::tick(float dt)
 		if (steeringSpeed == 0.f)
 		{
 			m_vel[0] *= powf(1.f - surfaceFriction, dt * 60.f);
+		}
+
+		// air dash
+
+		if (m_isGrounded || m_isAttachedToSticky || isWallSliding)
+		{
+			m_isAirDashCharged = true;
 		}
 
 		// animation

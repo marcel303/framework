@@ -164,6 +164,8 @@ class Player : public NetObject
 	bool m_isAttachedToSticky;
 	bool m_isAnimDriven;
 
+	bool m_isAirDashCharged;
+
 	float m_animVelIsAbsolute;
 	Vec2 m_animVel;
 
