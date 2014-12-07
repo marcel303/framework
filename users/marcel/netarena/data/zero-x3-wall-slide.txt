@@ -1,1 +1,3 @@
 sheet pivot_x:21 pivot_y:44 grid_sx:1 grid_sy:1
+
+animation name:anim grid_x:0 grid_y:0 frames:1 rate:1 loop:0

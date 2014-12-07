@@ -17,6 +17,8 @@ OPTION_STEP(PLAYER_SWORD_PUSH_SPEED, 0, 0, 50);
 OPTION_DEFINE(int, STEERING_SPEED_ON_GROUND, "Player/Steering/Speed On Ground");
 OPTION_DEFINE(int, STEERING_SPEED_IN_AIR, "Player/Steering/Speed In Air");
 
+OPTION_DEFINE(int, PLAYER_WALLSLIDE_SPEED, "Player/Wall Slide/Speed");
+
 OPTION_DEFINE(float, FRICTION_GROUNDED, "Physics/Friction/On Ground");
 
 OPTION_DEFINE(float, GRAVITY, "Physics/Gravity");

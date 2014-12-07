@@ -7,12 +7,14 @@
 
 #define WRAP_AROUND_TOP_AND_BOTTOM 1
 
+// todo : m_isGrounded should be true when stickied too. review code and make change!
+
 enum PlayerAnim
 {
 	kPlayerAnim_NULL,
+	kPlayerAnim_Jump,
 	kPlayerAnim_WallSlide,
 	kPlayerAnim_Walk,
-	kPlayerAnim_Jump,
 	kPlayerAnim_Attack,
 	kPlayerAnim_AirDash,
 	kPlayerAnim_Spawn,
@@ -22,9 +24,9 @@ enum PlayerAnim
 static const char * s_animFiles[] =
 {
 	nullptr,
+	"zero-x3-jump.png",
 	"zero-x3-wall-slide.png",
 	"zero-x3-walk.png",
-	"zero-x3-jump.png",
 	"zero-x3-attack.png",
 	"zero-x3-dash-air.png",
 	"zero-x3-spawn.png",
@@ -69,7 +71,8 @@ enum PlayerEvent
 	kPlayerEvent_SpringJump,
 	kPlayerEvent_SpikeHit,
 	kPlayerEvent_ArenaWrap,
-	kPlayerEvent_DashAir
+	kPlayerEvent_DashAir,
+	kPlayerEvent_DestructibleDestroy
 };
 
 void Player::handleAnimationAction(const std::string & action, const Dictionary & args)
@@ -232,6 +235,9 @@ static void PlaySecondaryEffects(PlayerEvent e)
 		break;
 	case kPlayerEvent_DashAir:
 		break;
+	case kPlayerEvent_DestructibleDestroy:
+		g_app->netPlaySound("player-arena-wrap.ogg");
+		break;
 	}
 }
 
@@ -258,7 +264,6 @@ void Player::tick(float dt)
 				m_attack.attacking = false;
 				break;
 			case kPlayerAnim_AirDash:
-				m_anim.SetAnim(kPlayerAnim_Jump, true, true); // fixme : which anim to play should be determined during tick. if air borne, play jump anim, etc..
 				break;
 			case kPlayerAnim_Jump:
 				break;
@@ -301,6 +306,8 @@ void Player::tick(float dt)
 
 	if (m_state.isAlive)
 	{
+		bool isWallSliding = false;
+
 		const uint32_t currentBlockMask = getIntersectingBlocksMask(m_pos[0], m_pos[1]);
 		const uint32_t currentBlockMaskFloor = getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f);
 		const uint32_t currentBlockMaskCeil = getIntersectingBlocksMask(m_pos[0], m_pos[1] - 1.f);
@@ -378,7 +385,7 @@ void Player::tick(float dt)
 						{
 							block.type = kBlockType_Empty;
 
-							// todo : play secondary effects
+							PlaySecondaryEffects(kPlayerEvent_DestructibleDestroy);
 
 							updated = true; // todo : more optimized way of making small changes to map
 						}
@@ -423,7 +430,7 @@ void Player::tick(float dt)
 			{
 				if ((getIntersectingBlocksMask(m_pos[0] + m_pos.xFacing, m_pos[1]) & kBlockMask_Solid) == 0)
 				{
-					m_anim.SetAnim(kPlayerAnim_AsirDash, true, true);
+					m_anim.SetAnim(kPlayerAnim_AirDash, true, true);
 					m_isAnimDriven = true;
 				}
 			}
@@ -463,8 +470,6 @@ void Player::tick(float dt)
 				m_vel[1] = PLAYER_JUMP_SPEED / 2.f;
 
 				m_isAttachedToSticky = false;
-
-				m_anim.SetAnim(kPlayerAnim_Jump, true, true);
 
 				PlaySecondaryEffects(kPlayerEvent_StickyJump);
 			}
@@ -561,13 +566,7 @@ void Player::tick(float dt)
 			if (currentBlockMask & (1 << kBlockType_GravityDisable))
 				gravity = 0.f;
 			else if (currentBlockMask & (1 << kBlockType_GravityReverse))
-			{
 				gravity = GRAVITY * BLOCKTYPE_GRAVITY_REVERSE_MULTIPLIER;
-				if (isAnimOverrideAllowed(kPlayerAnim_Jump))
-				{
-					m_anim.SetAnim(kPlayerAnim_Jump, true, false);
-				}
-			}
 			else if (currentBlockMask & (1 << kBlockType_GravityStrong))
 				gravity = GRAVITY * BLOCKTYPE_GRAVITY_STRONG_MULTIPLIER;
 			else
@@ -576,14 +575,18 @@ void Player::tick(float dt)
 			// wall slide
 
 			if (!m_isGrounded &&
+				!m_isAttachedToSticky &&
 				isAnimOverrideAllowed(kPlayerAnim_WallSlide) &&
 				m_vel[0] != 0.f && Calc::Sign(m_pos.xFacing) == Calc::Sign(m_vel[0]) &&
+				//Calc::Sign(m_vel[1]) == Calc::Sign(gravity) &&
 				(getIntersectingBlocksMask(m_pos[0] + m_pos.xFacing, m_pos[1]) & kBlockMask_Solid) != 0)
 			{
+				isWallSliding = true;
+
 				m_anim.SetAnim(kPlayerAnim_WallSlide, true, false);
-				//gravity *= .5f; // todo : make option
-				if (m_vel[1] > STEERING_SPEED_ON_GROUND / 3.f && Calc::Sign(m_vel[1]) == Calc::Sign(gravity))
-					m_vel[1] = STEERING_SPEED_ON_GROUND / 3.f;
+
+				if (m_vel[1] > PLAYER_WALLSLIDE_SPEED && Calc::Sign(m_vel[1]) == Calc::Sign(gravity))
+					m_vel[1] = PLAYER_WALLSLIDE_SPEED;
 			}
 		}
 
@@ -631,8 +634,6 @@ void Player::tick(float dt)
 							m_vel[0] = -PLAYER_WALLJUMP_RECOIL_SPEED * deltaSign;
 							m_vel[1] = -PLAYER_WALLJUMP_SPEED;
 
-							m_anim.SetAnim(kPlayerAnim_Jump, true, true);
-
 							PlaySecondaryEffects(kPlayerEvent_WallJump);
 						}
 						else
@@ -655,8 +656,6 @@ void Player::tick(float dt)
 
 								m_vel[i] = -PLAYER_JUMP_SPEED;
 
-								m_anim.SetAnim(kPlayerAnim_Jump, true, true);
-
 								PlaySecondaryEffects(kPlayerEvent_Jump);
 							}
 							else if (newBlockMask & (1 << kBlockType_Spring))
@@ -664,11 +663,6 @@ void Player::tick(float dt)
 								// spring
 
 								m_vel[i] = -PLAYER_JUMP_SPEED;
-
-								if (isAnimOverrideAllowed(kPlayerAnim_Jump))
-								{
-									m_anim.SetAnim(kPlayerAnim_Jump, true, true);
-								}
 
 								PlaySecondaryEffects(kPlayerEvent_SpringJump);
 							}
@@ -717,7 +711,12 @@ void Player::tick(float dt)
 			m_vel[0] *= powf(1.f - surfaceFriction, dt * 60.f);
 		}
 
-		// todo : should look at state here and determine which animation to play
+		// animation
+
+		if (!m_isGrounded && !m_isAttachedToSticky && !isWallSliding && isAnimOverrideAllowed(kPlayerAnim_Jump))
+		{
+			m_anim.SetAnim(kPlayerAnim_Jump, true, false);
+		}
 
 	#if !WRAP_AROUND_TOP_AND_BOTTOM
 		// death by fall
