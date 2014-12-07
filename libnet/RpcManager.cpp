@@ -16,10 +16,9 @@ RpcManager::~RpcManager()
 	NetAssert(m_registrations.empty());
 }
 
-uint32_t RpcManager::Register(const char * name, RpcHandler handler)
+bool RpcManager::RegisterWithID(uint32_t method, RpcHandler handler)
 {
-	const uint32_t method = HashFunc::Hash_FNV1a(name, strlen(name));
-	NetAssert(method != 0);
+	NetAssert(method != -1);
 
 	RegistrationMap::const_iterator i = m_registrations.find(method);
 	NetAssert(i == m_registrations.end());
@@ -28,10 +27,21 @@ uint32_t RpcManager::Register(const char * name, RpcHandler handler)
 	{
 		m_registrations[method] = handler;
 
-		return method;
+		return true;
 	}
 
-	return 0;
+	return false;
+}
+
+uint32_t RpcManager::Register(const char * name, RpcHandler handler)
+{
+	const uint32_t method = HashFunc::Hash_FNV1a(name, strlen(name));
+	NetAssert(method != -1 && method >= 128);
+
+	if (RegisterWithID(method, handler))
+		return method;
+	else
+		return -1;
 }
 
 void RpcManager::Unregister(uint32_t method, RpcHandler handler)
@@ -50,13 +60,19 @@ void RpcManager::Call(uint32_t method, const BitStream & bs, ChannelPool channel
 	const uint8_t protocolId = PROTOCOL_RPC;
 	const uint16_t payloadSize = bs.GetDataSize();
 	
-	PacketBuilder<1024> b;
-	b.Write8(&protocolId);
-	b.Write32(&method);
-	b.Write16(&payloadSize);
-	b.Write(bs.GetData(), (bs.GetDataSize() + 7) >> 3);
+	BitStream bs2;
+	bs2.WriteBits(PROTOCOL_RPC, 8);
 
-	Packet p = b.ToPacket();
+	const bool shortMethod = (method < 128);
+	bs2.WriteBit(shortMethod);
+	if (shortMethod)
+		bs2.WriteBits(method, 7);
+	else
+		bs2.Write(method);
+
+	bs2.WriteAlignedBytes(bs.GetData(), Net::BitsToBytes(bs.GetDataSize()));
+
+	Packet p(bs2.GetData(), Net::BitsToBytes(bs2.GetDataSize()));
 
 	if (broadcast)
 	{
@@ -88,31 +104,31 @@ void RpcManager::Call(uint32_t method, const BitStream & bs, ChannelPool channel
 
 	if (invokeLocal)
 	{
-		BitStream bs2(bs.GetData(), bs.GetDataSize());
+		BitStream bs3(bs.GetData(), bs.GetDataSize());
 
-		CallInternal(method, bs2);
+		CallInternal(0, method, bs3);
 	}
 }
 
 void RpcManager::OnReceive(Packet & packet, Channel * channel)
 {
+	Packet bsPacket;
+	packet.ExtractTillEnd(bsPacket);
+	BitStream bs(bsPacket.GetData(), Net::BytesToBits(bsPacket.GetSize()));
+
 	uint32_t method;
-	uint16_t payloadSize;
-	
-	if (packet.Read32(&method) && packet.Read16(&payloadSize))
-	{
-		Packet payload;
+	const bool shortMethod = bs.ReadBit();
+	if (shortMethod)
+		method = bs.ReadBits<uint32_t>(7);
+	else
+		bs.Read(method);
 
-		if (packet.Extract(payload, (payloadSize + 7) >> 3, true))
-		{
-			BitStream bs(payload.GetData(), payloadSize);
+	bs.ReadAlign();
 
-			CallInternal(method, bs);
-		}
-	}
+	CallInternal(channel, method, bs);
 }
 
-void RpcManager::CallInternal(uint32_t method, BitStream & bs)
+void RpcManager::CallInternal(Channel * channel, uint32_t method, BitStream & bs)
 {
 	RegistrationMap::const_iterator i = m_registrations.find(method);
 	NetAssert(i != m_registrations.end());
@@ -121,6 +137,6 @@ void RpcManager::CallInternal(uint32_t method, BitStream & bs)
 	{
 		RpcHandler handler = i->second;
 
-		handler(method, bs);
+		handler(channel, method, bs);
 	}
 }

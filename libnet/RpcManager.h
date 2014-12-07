@@ -5,7 +5,35 @@
 #include "libnet_forward.h"
 #include "PacketListener.h"
 
-typedef void (*RpcHandler)(uint32_t method, BitStream & bs);
+/*
+
+NOTE: RPC method IDs < 128 do not need to be registered and can be used by the application without first registering RPC calls
+
+example:
+
+enum MyRpcIDs // define up to 127 RPC calls
+{
+	kMyRpcID_MethodA,
+	kMyRpcID_MethodB
+};
+
+static uint32_t s_methodC = 0;
+
+void main()
+{
+	g_rpcManager.RegisterWithID(kMyRpcID_MethodA, MethodA);
+	g_rpcManager.RegisterWithID(kMyRpcID_MethodB, MethodB);
+
+	s_methodC = g_rpcManager.Register("MethodC", MethodC);
+
+	BitStream bs;
+	g_rpcManager.Call(kMyRpcID_MethodA, bs, ..);
+	g_rpcManager.Call(s_methodC,        bs, ..);
+}
+
+*/
+
+typedef void (*RpcHandler)(Channel * channel, uint32_t method, BitStream & bs);
 
 class RpcManager : public PacketListener
 {
@@ -18,6 +46,7 @@ public:
 	RpcManager(ChannelManager * channelMgr);
 	~RpcManager();
 
+	bool RegisterWithID(uint32_t method, RpcHandler handler);
 	uint32_t Register(const char * name, RpcHandler handler);
 	void Unregister(uint32_t method, RpcHandler handler);
 
@@ -26,5 +55,5 @@ public:
 private:
 	virtual void OnReceive(Packet & packet, Channel * channel);
 
-	void CallInternal(uint32_t method, BitStream & bs);
+	void CallInternal(Channel * channel, uint32_t method, BitStream & bs);
 };

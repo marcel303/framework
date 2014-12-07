@@ -1122,12 +1122,12 @@ static void TestBitStream()
 	}
 }
 
-static void TestRpcCall1(uint32_t method, BitStream & bs)
+static void TestRpcCall1(Channel * channel, uint32_t method, BitStream & bs)
 {
 	printf("TestRpcCall 1!\n");
 }
 
-static void TestRpcCall2(uint32_t method, BitStream & bs)
+static void TestRpcCall2(Channel * channel, uint32_t method, BitStream & bs)
 {
 	printf("TestRpcCall 2!\n");
 }

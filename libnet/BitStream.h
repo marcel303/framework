@@ -16,6 +16,18 @@ namespace Net
 	{
 		return bytes << 3;
 	}
+
+	inline size_t BitsNeeded(size_t value)
+	{
+		// todo : use bit scan CPU instructions
+		size_t result = 1;
+		for (int i = 0; i < 64; ++i)
+		{
+			if (value & (1ull << i))
+				result = i + 1;
+		}
+		return result;
+	}
 }
 
 class BitStream
