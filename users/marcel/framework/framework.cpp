@@ -462,7 +462,7 @@ void Framework::processAction(const std::string & action, const Dictionary & arg
 {
 	if (action == "sound")
 	{
-		Sound(args.getString("sound", "").c_str()).play(args.getInt("volume", 100));
+		Sound(args.getString("file", "").c_str()).play(args.getInt("volume", 100));
 	}
 	
 	if (actionHandler)

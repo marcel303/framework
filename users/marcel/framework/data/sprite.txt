@@ -2,12 +2,12 @@ sheet pivot_x:24 pivot_y:53 grid_sx:6 grid_sy:4
 
 # movement
 animation name:walk-u grid_x:3 grid_y:0 frames:3 rate:6 loop:1
-	trigger frame:0 on:enter action:sound sound:sprite-walk.wav volume:10
+	trigger frame:0 on:enter action:sound file:sprite-walk.wav volume:10
 animation name:walk-r grid_x:3 grid_y:1 frames:3 rate:6 loop:1
-	trigger frame:0 on:enter action:sound sound:sprite-walk.wav volume:20
+	trigger frame:0 on:enter action:sound file:sprite-walk.wav volume:20
 animation name:walk-d grid_x:3 grid_y:2 frames:3 rate:6 loop:1
-	trigger frame:0 on:enter action:sound sound:sprite-walk.wav volume:30
+	trigger frame:0 on:enter action:sound file:sprite-walk.wav volume:30
 animation name:walk-l grid_x:3 grid_y:3 frames:3 rate:6 loop:1
-	trigger frame:0 on:enter action:sound sound:sprite-walk.wav volume:40
+	trigger frame:0 on:enter action:sound file:sprite-walk.wav volume:40
 
 animation name:walk-once grid_x:0 grid_y:0 frames:24 rate:6 loop:0

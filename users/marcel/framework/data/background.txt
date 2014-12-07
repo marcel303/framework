@@ -1,3 +1,3 @@
 sheet pivot_x:64 pivot_y:64 grid_sx:16 grid_sy:16
 animation name:default grid_x:0 grid_y:0 frames:256 rate:30 loop:0
-	#trigger frame:0 on:enter action:sound sound:test.wav
+	#trigger frame:0 on:enter action:sound file:test.wav

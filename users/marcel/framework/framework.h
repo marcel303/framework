@@ -735,14 +735,14 @@ static T saturate(T v)
 template <typename T>
 static T sine(T min, T max, float t)
 {
-	t = t * M_PI / 180.f;
+	t = t * float(M_PI) / 180.f;
 	return static_cast<T>(min + (max - min) * (std::sin(t) + 1.f) / 2.f);
 }
 
 template <typename T>
 static T cosine(T min, T max, float t)
 {
-	t = t * M_PI / 180.f;
+	t = t * float(M_PI) / 180.f;
 	return static_cast<T>(min + (max - min) * (std::cos(t) + 1.f) / 2.f);
 }
 

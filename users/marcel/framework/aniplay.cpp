@@ -5,17 +5,33 @@ static int GFX_SY = 480;
 static std::string s_filename;
 static Sprite * s_sprite = 0;
 
+static std::string getBasePath(const char * path)
+{
+	int term = -1;
+	for (int i = 0; path[i] != 0; ++i)
+		if (path[i] == '/' || path[i] == '\\')
+			term = i;
+	if (term != -1)
+		return std::string(path, path + term);
+	else
+		return "";
+}
+
 static void loadSprite(const char * filename)
 {
-		s_filename = filename;
+	std::string path = getBasePath(filename);
+	logDebug("changing directory to %s", path.c_str());
+	changeDirectory(path.c_str());
 
-		if (!s_filename.empty())
-		{
-			delete s_sprite;
-			s_sprite = 0;
+	s_filename = filename;
 
-			s_sprite = new Sprite(s_filename.c_str());
-		}
+	if (!s_filename.empty())
+	{
+		delete s_sprite;
+		s_sprite = 0;
+
+		s_sprite = new Sprite(s_filename.c_str());
+	}
 }
 
 static void handleAction(const std::string & action, const Dictionary & args)
@@ -53,6 +69,9 @@ int main(int argc, char ** argv)
 		size_t selectedAnimIndex = 0;
 		bool mustRestartAnim = true;
 
+		changeDirectory(getBasePath(argv[0]).c_str());
+		Font font("calibri.ttf");
+
 		if (argc >= 2)
 		{
 			loadSprite(argv[1]);
@@ -62,6 +81,11 @@ int main(int argc, char ** argv)
 
 		while (!keyboard.isDown(SDLK_ESCAPE))
 		{
+			if (!framework.windowIsActive)
+			{
+				SDL_Delay(100);
+			}
+
 			framework.process();
 
 			framework.beginDraw(20, 20, 20, 0);
@@ -127,9 +151,8 @@ int main(int argc, char ** argv)
 					if (selectedAnimIndex >= animList.size())
 						selectedAnimIndex = 0;
 
-					Font font("calibri.ttf");
 					setFont(font);
-					
+
 					float y = 5.f;
 
 					setColor(127, 127, 127);
