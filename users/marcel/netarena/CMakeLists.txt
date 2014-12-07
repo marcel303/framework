@@ -44,7 +44,7 @@ target_link_libraries(netarena PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/
 target_link_libraries(netarena PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/SDL2.lib)
 target_link_libraries(netarena PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/SDL2main.lib)
 target_link_libraries(netarena PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/XInput9_1_0.lib)
-target_link_libraries(netarena PRIVATE OpenGL32.lib WSock32.lib)
+target_link_libraries(netarena PRIVATE Winmm.lib OpenGL32.lib WSock32.lib)
 
 if (MSVC)
 	set_property(TARGET netarena APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)

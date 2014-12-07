@@ -513,13 +513,13 @@ bool App::tick()
 
 		menu->Update();
 
-		if (keyboard.isDown(SDLK_UP) || gamepad[0].isDown[DPAD_UP])
+		if (keyboard.isDown(SDLK_UP) || gamepad[0].isDown(DPAD_UP))
 			menu->HandleAction(OptionMenu::Action_NavigateUp, dt);
-		if (keyboard.isDown(SDLK_DOWN) || gamepad[0].isDown[DPAD_DOWN])
+		if (keyboard.isDown(SDLK_DOWN) || gamepad[0].isDown(DPAD_DOWN))
 			menu->HandleAction(OptionMenu::Action_NavigateDown, dt);
-		if (keyboard.wentDown(SDLK_RETURN) || gamepad[0].wentDown[GAMEPAD_A])
+		if (keyboard.wentDown(SDLK_RETURN) || gamepad[0].wentDown(GAMEPAD_A))
 			menu->HandleAction(OptionMenu::Action_NavigateSelect);
-		if (keyboard.wentDown(SDLK_BACKSPACE) || gamepad[0].wentDown[GAMEPAD_B])
+		if (keyboard.wentDown(SDLK_BACKSPACE) || gamepad[0].wentDown(GAMEPAD_B))
 		{
 			if (menu->HasNavParent())
 				menu->HandleAction(OptionMenu::Action_NavigateBack);
@@ -529,9 +529,9 @@ bool App::tick()
 				m_statTimerMenuIsOpen = false;
 			}
 		}
-		if (keyboard.isDown(SDLK_LEFT) || gamepad[0].isDown[DPAD_LEFT])
+		if (keyboard.isDown(SDLK_LEFT) || gamepad[0].isDown(DPAD_LEFT))
 			menu->HandleAction(OptionMenu::Action_ValueDecrement, dt);
-		if (keyboard.isDown(SDLK_RIGHT) || gamepad[0].isDown[DPAD_RIGHT])
+		if (keyboard.isDown(SDLK_RIGHT) || gamepad[0].isDown(DPAD_RIGHT))
 			menu->HandleAction(OptionMenu::Action_ValueIncrement, dt);
 	}
 
