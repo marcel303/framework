@@ -92,7 +92,7 @@ enum TEXTURE_FILTER
 
 enum TRANSFORM
 {
-	TRANSFORM_SCREEN, // pixel based coordinate syste
+	TRANSFORM_SCREEN, // pixel based coordinate system
 	TRANSFORM_2D,     // use transform set through setTransform2d
 	TRANSFORM_3D      // use transform set through setTransform3d
 };
@@ -106,6 +106,7 @@ class Framework;
 class Gamepad;
 class Gradient;
 class Keyboard;
+class Midi;
 class Model;
 class Mouse;
 class Music;
@@ -124,13 +125,14 @@ extern Dictionary settings;
 extern Mouse mouse;
 extern Keyboard keyboard;
 extern Gamepad gamepad[MAX_GAMEPAD];
+extern Midi midi;
 extern Stage stage;
 extern Ui ui;
 
 // event handlers
 
 typedef void (*ActionHandler)(const std::string & action, const Dictionary & args);
-	
+
 //
 
 class Framework
@@ -166,6 +168,7 @@ public:
 	int windowX;
 	int windowY;
 	std::string windowTitle;
+	bool windowIsActive;
 	ActionHandler actionHandler;
 	
 private:
@@ -186,7 +189,7 @@ private:
 
 class Surface
 {
-	int m_size[2];	
+	int m_size[2];
 	int m_bufferId;
 	GLuint m_buffer[2];
 	GLuint m_texture[2];
@@ -429,7 +432,7 @@ public:
 	void drawEx(Vec3 position, Vec3 axis, float angle = 0.f, float scale = 1.f, int drawFlags = DrawMesh);
 	void drawEx(const Mat4x4 & matrix, int drawFlags = DrawMesh);
 	
-//private:
+private:
 	void ctor();
 
 	// drawing
@@ -526,22 +529,39 @@ class Gamepad
 {
 	friend class Framework;
 
+	bool m_isDown[GAMEPAD_MAX];
+	bool m_wentDown[GAMEPAD_MAX];
+	bool m_wentUp[GAMEPAD_MAX];
 	float m_analog[2][ANALOG_MAX];
 
 public:
 	Gamepad();
 	
 	bool isConnected;
-	bool isDown[GAMEPAD_MAX];
-	bool wentDown[GAMEPAD_MAX];
-	bool wentUp[GAMEPAD_MAX];
+	bool isDown(GAMEPAD button) const;
+	bool wentDown(GAMEPAD button) const;
+	bool wentUp(GAMEPAD button) const;
 	float getAnalog(int stick, ANALOG analog, float scale = 1.f) const;
+};
+
+class Midi
+{
+	friend class Framework;
+
+public:
+	Midi();
+
+	bool isConnected;
+	bool isDown(int key) const;
+	bool wentDown(int key) const;
+	bool wentUp(int key) const;
+	float getValue(int key) const;
 };
 
 //
 
 class StageObject
-{	
+{
 public:
 	StageObject();
 	virtual ~StageObject();

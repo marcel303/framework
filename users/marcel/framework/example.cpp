@@ -167,13 +167,13 @@ int main(int argc, char * argv[])
 		{
 			if (gamepad[i].isConnected)
 			{
-				if (gamepad[i].isDown[DPAD_LEFT])
+				if (gamepad[i].isDown(DPAD_LEFT))
 					dx -= 1.f;
-				if (gamepad[i].isDown[DPAD_RIGHT])
+				if (gamepad[i].isDown(DPAD_RIGHT))
 					dx += 1.f;
-				if (gamepad[i].isDown[DPAD_UP])
+				if (gamepad[i].isDown(DPAD_UP))
 					dy -= 1.f;
-				if (gamepad[i].isDown[DPAD_DOWN])
+				if (gamepad[i].isDown(DPAD_DOWN))
 					dy += 1.f;
 				
 				dx += gamepad[i].getAnalog(0, ANALOG_X);

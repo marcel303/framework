@@ -61,7 +61,7 @@ target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/l
 target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/SDL2.lib)
 target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/SDL2main.lib)
 target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/XInput9_1_0.lib)
-target_link_libraries(framework_test PRIVATE OpenGL32.lib)
+target_link_libraries(framework_test PRIVATE OpenGL32.lib Winmm.lib)
 
 # --- animation player ---
 
@@ -80,4 +80,4 @@ target_link_libraries(aniplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/Open
 target_link_libraries(aniplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/SDL2.lib)
 target_link_libraries(aniplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/SDL2main.lib)
 target_link_libraries(aniplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/XInput9_1_0.lib)
-target_link_libraries(aniplay PRIVATE OpenGL32.lib)
+target_link_libraries(aniplay PRIVATE OpenGL32.lib Winmm.lib)

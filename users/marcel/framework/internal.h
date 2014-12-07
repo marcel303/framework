@@ -70,6 +70,9 @@ public:
 	int keyDownCount;
 	int keyChange[256];
 	int keyChangeCount;
+	bool midiDown[256];
+	bool midiChange[256];
+	float midiValue[256];
 	Shader * shader;
 	TRANSFORM transform;
 	Mat4x4 transformScreen;

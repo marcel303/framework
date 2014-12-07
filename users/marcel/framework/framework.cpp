@@ -30,6 +30,11 @@
 
 // -----
 
+extern void initMidi();
+extern void shutMidi();
+
+// -----
+
 Color colorBlack(0, 0, 0, 255);
 Color colorWhite(255, 255, 255, 255);
 Color colorRed(255, 0, 0, 255);
@@ -43,6 +48,7 @@ Dictionary settings;
 Mouse mouse;
 Keyboard keyboard;
 Gamepad gamepad[MAX_GAMEPAD];
+Midi midi;
 Stage stage;
 Ui ui;
 
@@ -57,6 +63,7 @@ Framework::Framework()
 	windowX = -1;
 	windowY = -1;
 	windowTitle = "GGJ 2014 - Unknown Project";
+	windowIsActive = false;
 	numSoundSources = 32;
 	actionHandler = 0;
 	
@@ -185,6 +192,8 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 
 	gxInitialize();
 
+	initMidi();
+
 	// initialize FreeType
 	
 	if (FT_Init_FreeType(&globals.freeType) != 0)
@@ -244,6 +253,8 @@ bool Framework::shutdown()
 	}
 	globals.freeType = 0;
 	
+	shutMidi();
+
 	gxShutdown();
 
 	glBlendEquation = 0;
@@ -300,6 +311,7 @@ void Framework::process()
 	
 	globals.keyChangeCount = 0;
 	memset(globals.mouseChange, 0, sizeof(globals.mouseChange));
+	memset(globals.midiChange, 0, sizeof(globals.midiChange));
 	
 	SDL_Event e;
 	
@@ -344,13 +356,16 @@ void Framework::process()
 			mouse.x = e.motion.x * minification;
 			mouse.y = e.motion.y * minification;
 		}
-	#if 0 // fixme: no 'active' member ..
-		else if (e.type == SDL_ACTIVEEVENT)
+		else if (e.type == SDL_WINDOWEVENT)
 		{
-			if (reloadCachesOnActivate)
-				doReload |= (e.active.state & SDL_APPINPUTFOCUS) && e.active.gain;
+			if (e.window.event == SDL_WINDOWEVENT_FOCUS_GAINED)
+				windowIsActive = true;
+			else if (e.window.event == SDL_WINDOWEVENT_FOCUS_LOST)
+				windowIsActive = false;
+
+			if (reloadCachesOnActivate && e.window.event == SDL_WINDOWEVENT_FOCUS_GAINED)
+				doReload |= true;
 		}
-	#endif
 		else if (e.type == SDL_DROPFILE)
 		{
 			Dictionary args;
@@ -358,6 +373,7 @@ void Framework::process()
 			processAction("filedrop", args);
 		}
 	}
+
 #ifdef __WIN32__
 	// use XInput to poll gamepad state
 	for (int i = 0; i < MAX_GAMEPAD; ++i)
@@ -370,8 +386,8 @@ void Framework::process()
 		{
 			gamepad[i].isConnected = true;
 			
-			memset(gamepad[i].wentDown, 0, sizeof(gamepad[i].wentDown));
-			memset(gamepad[i].wentUp, 0, sizeof(gamepad[i].wentUp));
+			memset(gamepad[i].m_wentDown, 0, sizeof(gamepad[i].m_wentDown));
+			memset(gamepad[i].m_wentUp, 0, sizeof(gamepad[i].m_wentUp));
 
 			const XINPUT_GAMEPAD & g = state.Gamepad;
 			
@@ -386,7 +402,7 @@ void Framework::process()
 			
 			const int buttons = g.wButtons;
 
-			bool * isDown = gamepad[i].isDown;
+			bool * isDown = gamepad[i].m_isDown;
 
 			bool wasDown[GAMEPAD_MAX];
 			memcpy(wasDown, isDown, sizeof(wasDown));
@@ -406,8 +422,8 @@ void Framework::process()
 			isDown[GAMEPAD_START] = 0 != (buttons & XINPUT_GAMEPAD_START);
 			isDown[GAMEPAD_BACK]  = 0 != (buttons & XINPUT_GAMEPAD_BACK);
 
-			bool * wentDown = gamepad[i].wentDown;
-			bool * wentUp = gamepad[i].wentUp;
+			bool * wentDown = gamepad[i].m_wentDown;
+			bool * wentUp = gamepad[i].m_wentUp;
 
 			for (int j = 0; j < GAMEPAD_MAX; ++j)
 			{
@@ -1761,11 +1777,65 @@ Gamepad::Gamepad()
 	memset(this, 0, sizeof(Gamepad));
 }
 
+bool Gamepad::isDown(GAMEPAD button) const
+{
+	return m_isDown[button];
+}
+
+bool Gamepad::wentDown(GAMEPAD button) const
+{
+	return m_wentDown[button];
+}
+
+bool Gamepad::wentUp(GAMEPAD button) const
+{
+	return m_wentUp[button];
+}
+
 float Gamepad::getAnalog(int stick, ANALOG analog, float scale) const
 {
 	fassert(stick >= 0 && stick <= 1);
 	if (stick >= 0 && stick <= 1)
 		return m_analog[stick][analog] * scale;
+	else
+		return 0.f;
+}
+
+// -----
+
+Midi::Midi()
+	: isConnected(false)
+{
+}
+
+bool Midi::isDown(int key) const
+{
+	if (key >= 0 && key < 256)
+		return globals.midiDown[key];
+	else
+		return false;
+}
+
+bool Midi::wentDown(int key) const
+{
+	if (key >= 0 && key < 256)
+		return globals.midiDown[key] && globals.midiChange[key];
+	else
+		return false;
+}
+
+bool Midi::wentUp(int key) const
+{
+	if (key >= 0 && key < 256)
+		return !globals.midiDown[key] && globals.midiChange[key];
+	else
+		return false;
+}
+
+float Midi::getValue(int key) const
+{
+	if (isDown(key))
+		return globals.midiValue[key];
 	else
 		return 0.f;
 }
