@@ -32,6 +32,7 @@ int main(int argc, char ** argv)
 
 	framework.fullscreen = false;
 	framework.reloadCachesOnActivate = true;
+	framework.windowTitle = "aniplay";
 	framework.filedrop = true;
 	framework.actionHandler = handleAction;
 
@@ -56,6 +57,8 @@ int main(int argc, char ** argv)
 		{
 			loadSprite(argv[1]);
 		}
+
+		float scale = 1.f;
 
 		while (!keyboard.isDown(SDLK_ESCAPE))
 		{
@@ -109,15 +112,17 @@ int main(int argc, char ** argv)
 					if (keyboard.wentDown(SDLK_v))
 						s_sprite->flipY = !s_sprite->flipY;
 					if (keyboard.wentDown(SDLK_1))
-						s_sprite->scale = 1.f;
+						scale = 1.f;
 					if (keyboard.wentDown(SDLK_2))
-						s_sprite->scale = 2.f;
+						scale = 2.f;
 					if (keyboard.wentDown(SDLK_3))
-						s_sprite->scale = 3.f;
+						scale = 3.f;
 					if (keyboard.wentDown(SDLK_LEFT))
 						s_sprite->setAnimFrame(s_sprite->getAnimFrame() - 1);
 					if (keyboard.wentDown(SDLK_RIGHT))
 						s_sprite->setAnimFrame(s_sprite->getAnimFrame() + 1);
+
+					s_sprite->scale = scale;
 
 					if (selectedAnimIndex >= animList.size())
 						selectedAnimIndex = 0;
@@ -128,10 +133,11 @@ int main(int argc, char ** argv)
 					float y = 5.f;
 
 					setColor(127, 127, 127);
-					drawText(5.f, y, 14, +1.f, +1.f, "width:%d height:%d frame:%d <%s>",
+					drawText(5.f, y, 14, +1.f, +1.f, "width:%d height:%d frame:%d speed:%d%% <%s>",
 						s_sprite->getWidth(),
 						s_sprite->getHeight(),
 						s_sprite->getAnimFrame(),
+						int(s_sprite->animSpeed * 100.f),
 						s_filename.c_str());
 					y += 20.f;
 
