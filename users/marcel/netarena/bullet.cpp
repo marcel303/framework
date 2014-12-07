@@ -10,9 +10,12 @@
 #include <stdlib.h> // fixme
 
 BulletPool::BulletPool()
-	: m_nextAllocIndex(0)
+	: m_numFree(MAX_BULLETS)
 {
 	memset(m_bullets, 0, sizeof(m_bullets));
+
+	for (int i = 0; i < MAX_BULLETS; ++i)
+		m_freeList[i] = i;
 }
 
 void BulletPool::tick(float dt)
@@ -55,7 +58,7 @@ void BulletPool::draw()
 {
 	for (int i = 0; i < MAX_BULLETS; ++i)
 	{
-		Bullet & b = m_bullets[i];
+		const Bullet & b = m_bullets[i];
 
 		if (b.isAlive)
 		{
@@ -71,23 +74,17 @@ void BulletPool::draw()
 
 uint16_t BulletPool::alloc()
 {
-	const uint16_t start = m_nextAllocIndex;
-
-	do
-	{
-		const uint16_t index = m_nextAllocIndex;
-		m_nextAllocIndex = (m_nextAllocIndex + 1) % MAX_BULLETS;
-		
-		if (!m_bullets[index].isAlive)
-			return index;
-
-	} while (m_nextAllocIndex != start);
-
-	return -1;
+	if (m_numFree == 0)
+		return INVALID_BULLET_ID;
+	return m_freeList[--m_numFree];
 }
 
 void BulletPool::free(uint16_t id)
 {
-	Assert(id != -1 && m_bullets[id].isAlive);
-	m_bullets[id].isAlive = false;
+	Assert(id != INVALID_BULLET_ID && m_bullets[id].isAlive);
+	if (m_bullets[id].isAlive)
+	{
+		m_bullets[id].isAlive = false;
+		m_freeList[m_numFree++] = id;
+	}
 }

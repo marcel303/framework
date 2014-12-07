@@ -764,7 +764,7 @@ uint16_t App::netSpawnBullet(int16_t x, int16_t y, uint8_t angle, int16_t veloci
 {
 	const uint16_t id = g_hostBulletPool->alloc();
 
-	if (id != -1)
+	if (id != INVALID_BULLET_ID)
 	{
 		BitStream bs;
 

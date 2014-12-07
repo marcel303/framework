@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #define MAX_BULLETS 1000
+#define INVALID_BULLET_ID 0xffff
 
 enum BulletType
 {
@@ -24,7 +25,8 @@ public:
 
 class BulletPool
 {
-	uint16_t m_nextAllocIndex;
+	uint16_t m_freeList[MAX_BULLETS];
+	uint16_t m_numFree;
 
 public:
 	Bullet m_bullets[MAX_BULLETS];
