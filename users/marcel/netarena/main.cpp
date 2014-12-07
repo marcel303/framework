@@ -1,5 +1,6 @@
 #include "arena.h"
 #include "BitStream.h"
+#include "bullet.h"
 #include "Calc.h"
 #include "ChannelManager.h"
 #include "client.h"
@@ -71,10 +72,15 @@ static void HandleAction(const std::string & action, const Dictionary & args)
 
 //
 
-static uint32_t s_rpcPlaySound = 0;
-static uint32_t s_rpcSetPlayerInputs = 0;
+enum RpcMethod
+{
+	s_rpcPlaySound,
+	s_rpcSetPlayerInputs,
+	s_rpcSpawnBullet,
+	s_rpcKillBullet
+};
 
-static void HandleRpc(uint32_t method, BitStream & bitStream)
+void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 {
 	if (method == s_rpcPlaySound)
 	{
@@ -100,10 +106,80 @@ static void HandleRpc(uint32_t method, BitStream & bitStream)
 			player->m_input.m_currButtons = buttons;
 		}
 	}
+	else if (method == s_rpcSpawnBullet)
+	{
+		BulletPool * bulletPool = 0;
+
+		if (channel)
+		{
+			Client * client = g_app->findClientByChannel(channel);
+			Assert(client);
+			if (client)
+				bulletPool = client->m_bulletPool;
+		}
+		else
+		{
+			bulletPool = g_hostBulletPool;
+		}
+
+		Assert(bulletPool);
+		if (bulletPool)
+		{
+			uint16_t id;
+			uint8_t type;
+			int16_t x;
+			int16_t y;
+			uint8_t angle;
+			int16_t velocity;
+
+			bitStream.Read(id);
+			bitStream.Read(type);
+			bitStream.Read(x);
+			bitStream.Read(y);
+			bitStream.Read(angle);
+			bitStream.Read(velocity);
+
+			Bullet & b = bulletPool->m_bullets[id];
+			Assert(!b.isAlive);
+
+			memset(&b, 0, sizeof(b));
+			b.isAlive = true;
+			b.type = static_cast<BulletType>(type);
+			b.x = x;
+			b.y = y;
+			b.angle = angle / 128.f * float(M_PI);
+			b.velocity = velocity;
+		}
+	}
+	else if (method == s_rpcKillBullet)
+	{
+		Client * client = g_app->findClientByChannel(channel);
+
+		Assert(client);
+		if (client)
+		{
+			uint16_t id;
+
+			bitStream.Read(id);
+
+			Bullet & b = client->m_bulletPool->m_bullets[id];
+			Assert(b.isAlive);
+			
+			b.isAlive = false;
+		}
+	}
 	else
 	{
 		AssertMsg(false, "unknown RPC call: %u", method);
 	}
+}
+
+Client * App::findClientByChannel(Channel * channel)
+{
+	for (size_t i = 0; i < m_clients.size(); ++i)
+		if (m_clients[i]->m_channel == channel)
+			return m_clients[i];
+	return 0;
 }
 
 //
@@ -327,8 +403,10 @@ bool App::init(bool isHost)
 
 		//
 
-		s_rpcPlaySound = m_rpcMgr->Register("PlaySound", HandleRpc);
-		s_rpcSetPlayerInputs = m_rpcMgr->Register("SetPlayerInputs", HandleRpc);
+		m_rpcMgr->RegisterWithID(s_rpcPlaySound, handleRpc);
+		m_rpcMgr->RegisterWithID(s_rpcSetPlayerInputs, handleRpc);
+		m_rpcMgr->RegisterWithID(s_rpcSpawnBullet, handleRpc);
+		m_rpcMgr->RegisterWithID(s_rpcKillBullet, handleRpc);
 
 		//
 
@@ -389,8 +467,10 @@ void App::shutdown()
 
 	m_replicationMgr->CL_Shutdown();
 
-	m_rpcMgr->Unregister(s_rpcPlaySound, HandleRpc);
-	m_rpcMgr->Unregister(s_rpcSetPlayerInputs, HandleRpc);
+	m_rpcMgr->Unregister(s_rpcPlaySound, handleRpc);
+	m_rpcMgr->Unregister(s_rpcSetPlayerInputs, handleRpc);
+	m_rpcMgr->Unregister(s_rpcSpawnBullet, handleRpc);
+	m_rpcMgr->Unregister(s_rpcKillBullet, handleRpc);
 
 	m_channelMgr->Shutdown(true);
 
@@ -678,6 +758,40 @@ void App::netSetPlayerInputs(uint16_t channelId, uint32_t netId, uint16_t button
 	bs.Write(buttons);
 
 	m_rpcMgr->Call(s_rpcSetPlayerInputs, bs, ChannelPool_Client, &channelId, false, false);
+}
+
+uint16_t App::netSpawnBullet(int16_t x, int16_t y, uint8_t angle, int16_t velocity, uint8_t type)
+{
+	const uint16_t id = g_hostBulletPool->alloc();
+
+	if (id != -1)
+	{
+		BitStream bs;
+
+		bs.Write(id);
+		bs.Write(type);
+		bs.Write(x);
+		bs.Write(y);
+		bs.Write(angle);
+		bs.Write(velocity);
+
+		m_rpcMgr->Call(s_rpcSpawnBullet, bs, ChannelPool_Server, 0, true, true);
+
+		// todo : do extra initialization here, after the basic setup has been completed
+
+		Bullet & b = g_hostBulletPool->m_bullets[id];
+	}
+
+	return id;
+}
+
+void App::netKillBullet(uint16_t id)
+{
+	BitStream bs;
+
+	bs.Write(id);
+
+	m_rpcMgr->Call(s_rpcKillBullet, bs, ChannelPool_Server, 0, true, false);
 }
 
 //

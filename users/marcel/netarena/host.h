@@ -3,6 +3,7 @@
 #include <vector>
 
 class Arena;
+class BulletPool;
 class Player;
 
 class Host
@@ -12,6 +13,8 @@ class Host
 	Arena * m_arena;
 	std::vector<Player*> m_players;
 	uint32_t m_nextNetId;
+
+	BulletPool * m_bulletPool;
 
 public:
 	Host();
@@ -32,3 +35,4 @@ public:
 
 extern Host * g_host;
 extern Arena * g_hostArena;
+extern BulletPool * g_hostBulletPool;

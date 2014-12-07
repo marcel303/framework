@@ -1,4 +1,5 @@
 #include "arena.h"
+#include "bullet.h"
 #include "Channel.h"
 #include "client.h"
 #include "framework.h"
@@ -9,12 +10,16 @@ Client::Client(uint8_t controllerIndex)
 	: m_channel(0)
 	, m_replicationId(0)
 	, m_arena(0)
+	, m_bulletPool(0)
 	, m_controllerIndex(controllerIndex)
 {
+	m_bulletPool = new BulletPool();
 }
 
 Client::~Client()
 {
+	delete m_bulletPool;
+	m_bulletPool = 0;
 }
 
 void Client::initialize(Channel * channel)
@@ -83,6 +88,8 @@ void Client::tick(float dt)
 			}
 		}
 	}
+
+	m_bulletPool->anim(dt);
 }
 
 void Client::draw()
@@ -98,4 +105,6 @@ void Client::draw()
 
 		player->draw();
 	}
+
+	m_bulletPool->draw();
 }

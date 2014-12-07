@@ -67,6 +67,9 @@ class App : public ChannelHandler, public ReplicationHandler
 	virtual void OnReplicationObjectCreated(ReplicationClient * client, ReplicationObject * object);
 	virtual void OnReplicationObjectDestroyed(ReplicationClient * client, ReplicationObject * object);
 
+	// RpcHandler
+	static void handleRpc(Channel * channel, uint32_t method, BitStream & bitStream);
+
 public:
 	App();
 	~App();
@@ -83,6 +86,8 @@ public:
 
 	void netPlaySound(const char * filename, uint8_t volume = 100);
 	void netSetPlayerInputs(uint16_t channelId, uint32_t netId, uint16_t buttons);
+	uint16_t netSpawnBullet(int16_t x, int16_t y, uint8_t angle, int16_t velocity, uint8_t type);
+	void netKillBullet(uint16_t id);
 
 	ReplicationManager * getReplicationMgr() { return m_replicationMgr; }
 };

@@ -1,4 +1,5 @@
 #include "arena.h"
+#include "bullet.h"
 #include "Calc.h"
 #include "framework.h"
 #include "host.h"
@@ -773,6 +774,10 @@ void Player::tick(float dt)
 			PlaySecondaryEffects(kPlayerEvent_ArenaWrap);
 		}
 	#endif
+
+		// fixme : spawn bullet on fire
+		if (!m_isGrounded && !m_isAttachedToSticky && !isWallSliding)
+			g_app->netSpawnBullet(m_pos[0], m_pos[1], rand(), 500, kBulletType_A);
 	}
 
 	m_input.next();

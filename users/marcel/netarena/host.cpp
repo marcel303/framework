@@ -1,4 +1,5 @@
 #include "arena.h"
+#include "bullet.h"
 #include "Debugging.h"
 #include "framework.h"
 #include "host.h"
@@ -13,10 +14,12 @@ COMMAND_OPTION(g_loadArena, "Arena/Load (arena.txt)", [] { if (g_hostArena) { g_
 
 Host * g_host = 0;
 Arena * g_hostArena = 0;
+BulletPool * g_hostBulletPool = 0;
 
 Host::Host()
 	: m_arena(0)
 	, m_nextNetId(1) // 0 = unassigned
+	, m_bulletPool(0)
 {
 }
 
@@ -24,6 +27,7 @@ Host::~Host()
 {
 	Assert(g_host == 0);
 	Assert(g_hostArena == 0);
+	Assert(g_hostBulletPool == 0);
 
 	Assert(m_arena == 0);
 }
@@ -35,14 +39,21 @@ void Host::init()
 
 	g_app->getReplicationMgr()->SV_AddObject(m_arena);
 
+	m_bulletPool = new BulletPool();
+
 	g_host = this;
 	g_hostArena = m_arena;
+	g_hostBulletPool = m_bulletPool;
 }
 
 void Host::shutdown()
 {
+	g_hostBulletPool = 0;
 	g_hostArena = 0;
 	g_host = 0;
+
+	delete m_bulletPool;
+	m_bulletPool = 0;
 
 	g_app->getReplicationMgr()->SV_RemoveObject(m_arena->GetObjectID());
 
@@ -58,6 +69,8 @@ void Host::tick(float dt)
 
 		player->tick(dt);
 	}
+
+	m_bulletPool->tick(dt);
 }
 
 void Host::debugDraw()

@@ -5,6 +5,7 @@
 #include "libnet_forward.h"
 
 class Arena;
+class BulletPool;
 class Player;
 
 class Client
@@ -15,6 +16,8 @@ public:
 
 	Arena * m_arena;
 	std::vector<Player*> m_players;
+
+	BulletPool * m_bulletPool;
 
 	uint8_t m_controllerIndex;
 
