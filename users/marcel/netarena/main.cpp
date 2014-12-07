@@ -587,7 +587,7 @@ void App::draw()
 
 		if (m_optionMenuIsOpen)
 		{
-			const int sx = 400;
+			const int sx = 500;
 			const int sy = GFX_SY / 3;
 			const int x = (GFX_SX - sx) / 2;
 			const int y = (GFX_SY - sy) / 2;
@@ -597,7 +597,7 @@ void App::draw()
 
 		if (m_statTimerMenuIsOpen)
 		{
-			const int sx = 400;
+			const int sx = 500;
 			const int sy = GFX_SY / 3;
 			const int x = (GFX_SX - sx) / 2;
 			const int y = (GFX_SY - sy) / 2;

@@ -30,6 +30,7 @@ void StatTimerMenu::Draw(int x, int y, int sx, int sy)
 
 	const int fontSize = 30;
 	const int lineSize = 40;
+	const int captionSize = 100;
 
 	int numNodes = 0;
 
@@ -37,10 +38,18 @@ void StatTimerMenu::Draw(int x, int y, int sx, int sy)
 		numNodes++;
 
 	setColor(0, 0, 0, 191);
-	drawRect(x, y, x + sx, y + numNodes * lineSize);
+	drawRect(x, y, x + sx, y + (numNodes + 1) * lineSize);
 
 	Font font("calibri.ttf");
 	setFont(font);
+
+	int currentY = y;
+
+	setColor(127, 227, 255);
+	drawText(x + sx - 2 - captionSize, currentY, fontSize, -1.f, +1.f, "time");
+	drawText(x + sx - 2              , currentY, fontSize, -1.f, +1.f, "count");
+
+	currentY += lineSize;
 
 	int index = 0;
 	for (Node * node = m_currentNode->m_firstChild; node != 0; node = node->m_nextSibling, index++)
@@ -50,23 +59,24 @@ void StatTimerMenu::Draw(int x, int y, int sx, int sy)
 		if (node == m_currentNode->m_currentSelection)
 		{
 			setColor(127, 227, 255, 191);
-			drawRect(x, y + index * lineSize, x + sx, y + (index + 1) * lineSize);
+			drawRect(x, currentY, x + sx, currentY + lineSize);
 			setColor(0, 0, 0);
 		}
 		else
 		{
 			setColor(127, 227, 255);
 		}
-		drawText(x + 2, y + index * lineSize, fontSize, +1.f, +1.f, timer ? "%s" : "[ %s ]", node->m_name.c_str());
+		drawText(x + 2, currentY, fontSize, +1.f, +1.f, timer ? "%s" : "[ %s ]", node->m_name.c_str());
 		if (timer)
 		{
-			const int bufferSize = 64;
-			char buffer[bufferSize];
-			sprintf_s(buffer, bufferSize, "%.2f ms - %u",
-				timer->GetAverageTime() / 1000.f,
-				timer->GetAverageCount());
-			drawText(x + sx - 1 - 2, y + index * lineSize, fontSize, -1.f, +1.f, buffer);
+			const uint32_t time = timer->GetAverageTime();
+			const uint32_t count = timer->GetAverageCount();
+			if (time != 0)
+				drawText(x + sx - 2 - captionSize, currentY, fontSize, -1.f, +1.f, "%.2f ms", time / 1000.f);
+			drawText(x + sx - 1 - 2, currentY, fontSize, -1.f, +1.f, "%u", count);
 		}
+
+		currentY += lineSize;
 	}
 
 	setColor(colorWhite);
