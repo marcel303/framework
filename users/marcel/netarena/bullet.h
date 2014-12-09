@@ -21,6 +21,8 @@ public:
 	float angle;
 	float velocity;
 	BulletType type;
+
+	uint32_t ownerNetId;
 };
 
 class BulletPool

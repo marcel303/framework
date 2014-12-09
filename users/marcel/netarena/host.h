@@ -8,6 +8,7 @@ class Player;
 
 class Host
 {
+	friend class BulletPool;
 	friend class Player; // fixme, for m_players array
 
 	Arena * m_arena;

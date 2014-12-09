@@ -119,6 +119,32 @@ public:
 	bool m_play;
 };
 
+struct CollisionInfo
+{
+	bool intersects(const CollisionInfo & other) const
+	{
+		return
+			x2 >= other.x1 &&
+			y2 >= other.y1 &&
+			x1 <= other.x2 &&
+			y1 <= other.y2;
+	}
+
+	bool intersects(float x, float y) const
+	{
+		return
+			x2 >= x &&
+			y2 >= y &&
+			x1 <= x &&
+			y1 <= y;
+	}
+
+	float x1;
+	float y1;
+	float x2;
+	float y2;
+};
+
 class Player : public NetObject
 {
 	friend class PlayerAnim_NS;
@@ -130,22 +156,7 @@ class Player : public NetObject
 
 	bool m_isAuthorative;
 
-	struct CollisionInfo
-	{
-		bool intersects(const CollisionInfo & other) const
-		{
-			return
-				x2 >= other.x1 &&
-				y2 >= other.y1 &&
-				x1 <= other.x2 &&
-				y1 <= other.y2;
-		}
-
-		float x1;
-		float y1;
-		float x2;
-		float y2;
-	} m_collision;
+	CollisionInfo m_collision;
 
 	struct AttackInfo
 	{
@@ -173,11 +184,14 @@ class Player : public NetObject
 
 	static void handleAnimationAction(const std::string & action, const Dictionary & args);
 
+public:
 	void getPlayerCollision(CollisionInfo & collision);
 	void getAttackCollision(CollisionInfo & collision);
 	float getAttackDamage(Player * other);
 
 	bool isAnimOverrideAllowed(int anim) const;
+	float mirrorX(float x) const;
+	float mirrorY(float y) const;
 
 	// ReplicationObject
 	virtual bool RequiresUpdating() const { return true; }

@@ -5,10 +5,10 @@
 #define BLOCK_SX 64
 #define BLOCK_SY 64
 
-#define GFX_SX 1920
-#define GFX_SY 1080
+#define GFX_SX 1680
+#define GFX_SY 1050
 
-#define ARENA_SX (GFX_SX / BLOCK_SX) // 30
+#define ARENA_SX (GFX_SX / BLOCK_SX) // 26
 #define ARENA_SY (GFX_SY / BLOCK_SY) // 16
 
 OPTION_DECLARE(int, PLAYER_COLLISION_SX, 46);

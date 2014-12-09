@@ -18,6 +18,7 @@
 #include "RpcManager.h"
 #include "StatTimerMenu.h"
 #include "StatTimers.h"
+#include "StringBuilder.h"
 #include "Timer.h"
 
 //
@@ -25,6 +26,10 @@
 OPTION_DECLARE(bool, g_devMode, false);
 OPTION_DEFINE(bool, g_devMode, "App/Developer Mode");
 OPTION_ALIAS(g_devMode, "devmode");
+
+OPTION_DECLARE(std::string, g_mapList, "arena.txt");
+OPTION_DEFINE(std::string, g_mapList, "App/Map List");
+OPTION_ALIAS(g_mapList, "maps");
 
 //
 
@@ -355,6 +360,45 @@ bool App::init(bool isHost)
 	Calc::Initialize();
 
 	g_optionManager.Load("options.txt");
+	g_optionManager.Load("gameoptions.txt");
+
+	std::string mapList = g_mapList;
+
+	do
+	{
+		const size_t pos = mapList.find(',');
+
+		std::string file;
+
+		if (pos == mapList.npos)
+		{
+			file = mapList;
+			mapList.clear();
+		}
+		else
+		{
+			file = mapList.substr(0, pos);
+			mapList = mapList.substr(pos + 1);
+		}
+
+		if (!file.empty())
+		{
+			StringBuilder<64> sb;
+			sb.AppendFormat("Arena/Load %s", file.c_str());
+			std::string name = sb.ToString();
+			char * nameCopy = new char[name.size() + 1];
+			char * fileCopy = new char[file.size() + 1];
+			strcpy_s(nameCopy, name.size() + 1, name.c_str());
+			strcpy_s(fileCopy, file.size() + 1, file.c_str());
+			g_optionManager.AddCommandOption(nameCopy,
+				[](void * param)
+				{
+					if (g_hostArena)
+						g_hostArena->load((char*)param);
+				}, fileCopy
+			);
+		}
+	} while (!mapList.empty());
 
 	if (g_devMode)
 	{
@@ -760,7 +804,7 @@ void App::netSetPlayerInputs(uint16_t channelId, uint32_t netId, uint16_t button
 	m_rpcMgr->Call(s_rpcSetPlayerInputs, bs, ChannelPool_Client, &channelId, false, false);
 }
 
-uint16_t App::netSpawnBullet(int16_t x, int16_t y, uint8_t angle, int16_t velocity, uint8_t type)
+uint16_t App::netSpawnBullet(int16_t x, int16_t y, uint8_t angle, int16_t velocity, uint8_t type, uint32_t ownerNetId)
 {
 	const uint16_t id = g_hostBulletPool->alloc();
 
@@ -780,6 +824,8 @@ uint16_t App::netSpawnBullet(int16_t x, int16_t y, uint8_t angle, int16_t veloci
 		// todo : do extra initialization here, after the basic setup has been completed
 
 		Bullet & b = g_hostBulletPool->m_bullets[id];
+
+		b.ownerNetId = ownerNetId;
 	}
 
 	return id;

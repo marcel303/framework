@@ -17,21 +17,34 @@ enum PlayerAnim
 	kPlayerAnim_WallSlide,
 	kPlayerAnim_Walk,
 	kPlayerAnim_Attack,
+	kPlayerAnim_Fire,
 	kPlayerAnim_AirDash,
 	kPlayerAnim_Spawn,
 	kPlayerAnim_Die,
+	kPlayerAnim_COUNT
 };
 
-static const char * s_animFiles[] =
+struct PlayerAnimInfo
 {
-	nullptr,
-	"zero-x3-jump.png",
-	"zero-x3-wall-slide.png",
-	"zero-x3-walk.png",
-	"zero-x3-attack.png",
-	"zero-x3-dash-air.png",
-	"zero-x3-spawn.png",
-	"zero-x3-die.png"
+	const char * file;
+	int prio;
+} s_animInfos[kPlayerAnim_COUNT] =
+{
+	{ nullptr,                  0 },
+	{ "zero-x3-jump.png",       1 },
+	{ "zero-x3-wall-slide.png", 2 },
+	{ "zero-x3-walk.png",       3 },
+	{ "zero-x3-attack.png",     4 },
+	{ "zero-x3-fire.png",       4 },
+	{ "zero-x3-dash-air.png",   4 },
+	{ "zero-x3-spawn.png",      5 },
+	{ "zero-x3-die.png",        6 }
+};
+
+enum PlayerAttackType
+{
+	kPlayerAttackType_Sword,
+	kPlayerAttackType_Fire
 };
 
 void PlayerAnim_NS::SerializeStruct()
@@ -48,7 +61,7 @@ void PlayerAnim_NS::SerializeStruct()
 		delete player->m_sprite;
 		player->m_sprite = 0;
 
-		player->m_sprite = new Sprite(s_animFiles[m_anim]);
+		player->m_sprite = new Sprite(s_animInfos[m_anim].file);
 		player->m_sprite->animActionHandler = Player::handleAnimationAction;
 		player->m_sprite->animActionHandlerObj = player;
 	}
@@ -163,7 +176,17 @@ float Player::getAttackDamage(Player * other)
 
 bool Player::isAnimOverrideAllowed(int anim) const
 {
-	return !m_isAnimDriven || anim > m_anim.m_anim;
+	return !m_isAnimDriven || (s_animInfos[anim].prio > s_animInfos[m_anim.m_anim].prio);
+}
+
+float Player::mirrorX(float x) const
+{
+	return m_pos.xFacing > 0 ? x : -x;
+}
+
+float Player::mirrorY(float y) const
+{
+	return m_pos.yFacing > 0 ? y : PLAYER_COLLISION_SY - y;
 }
 
 Player::Player(uint32_t netId)
@@ -263,6 +286,9 @@ void Player::tick(float dt)
 			switch (m_anim.m_anim)
 			{
 			case kPlayerAnim_Attack:
+				m_attack.attacking = false;
+				break;
+			case kPlayerAnim_Fire:
 				m_attack.attacking = false;
 				break;
 			case kPlayerAnim_AirDash:
@@ -404,7 +430,10 @@ void Player::tick(float dt)
 		{
 			if (m_input.wentDown(INPUT_BUTTON_B))
 			{
-				if (isAnimOverrideAllowed(kPlayerAnim_Attack))
+				const int attackAnim = kPlayerAnim_Fire;
+				//const int attackAnim = kPlayerAnim_Attack;
+
+				if (isAnimOverrideAllowed(attackAnim))
 				{
 					if ((getIntersectingBlocksMask(m_pos[0] + m_pos.xFacing, m_pos[1]) & kBlockMask_Solid) != 0)
 					{
@@ -420,7 +449,16 @@ void Player::tick(float dt)
 					m_attack.collision.x2 = PLAYER_SWORD_COLLISION_X2;
 					m_attack.collision.y2 = PLAYER_SWORD_COLLISION_Y2;
 
-					m_anim.SetAnim(kPlayerAnim_Attack, true, true);
+					if (attackAnim == kPlayerAnim_Fire)
+					{
+						g_app->netSpawnBullet(
+							m_pos[0] + mirrorX(0.f),
+							m_pos[1] - mirrorY(44.f),
+							m_pos.xFacing < 0 ? 128 : 0,
+							800, 0, getNetId());
+					}
+
+					m_anim.SetAnim(attackAnim, true, true);
 					m_isAnimDriven = true;
 				}
 			}
@@ -776,8 +814,8 @@ void Player::tick(float dt)
 	#endif
 
 		// fixme : spawn bullet on fire
-		if (!m_isGrounded && !m_isAttachedToSticky && !isWallSliding)
-			g_app->netSpawnBullet(m_pos[0], m_pos[1], rand(), 500, kBulletType_A);
+		//if (!m_isGrounded && !m_isAttachedToSticky && !isWallSliding)
+		//	g_app->netSpawnBullet(m_pos[0], m_pos[1], rand(), 500, kBulletType_A);
 	}
 
 	m_input.next();

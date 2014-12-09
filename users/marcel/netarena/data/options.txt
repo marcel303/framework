@@ -1,0 +1,1 @@
+maps=arena.txt,arena2.txt

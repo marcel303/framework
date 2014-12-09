@@ -86,7 +86,7 @@ public:
 
 	void netPlaySound(const char * filename, uint8_t volume = 100);
 	void netSetPlayerInputs(uint16_t channelId, uint32_t netId, uint16_t buttons);
-	uint16_t netSpawnBullet(int16_t x, int16_t y, uint8_t angle, int16_t velocity, uint8_t type);
+	uint16_t netSpawnBullet(int16_t x, int16_t y, uint8_t angle, int16_t velocity, uint8_t type, uint32_t ownerNetId);
 	void netKillBullet(uint16_t id);
 
 	ReplicationManager * getReplicationMgr() { return m_replicationMgr; }
