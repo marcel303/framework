@@ -20,6 +20,13 @@ void OptionManager::Register(OptionBase * option)
 	m_head = option;
 }
 
+void OptionManager::AddCommandOption(const char * path, OptionCommandHandlerWithParam handler, void * param)
+{
+	// fixme : currently leaks
+
+	OptionCommandWithParam * option = new OptionCommandWithParam(path, handler, param);
+}
+
 void OptionManager::Load(const char * filename)
 {
 	try
@@ -107,6 +114,20 @@ void OptionCommand::Select()
 	m_handler();
 }
 
+//
+
+OptionCommandWithParam::OptionCommandWithParam(const char * path, OptionCommandHandlerWithParam handler, void * param)
+	: OptionBase(path, path)
+	, m_handler(handler)
+	, m_param(param)
+{
+}
+
+void OptionCommandWithParam::Select()
+{
+	m_handler(m_param);
+}
+
 // Option<bool>
 
 void Option<bool>::Increment()
@@ -179,6 +200,26 @@ void Option<float>::ToString(char * buffer, int bufferSize)
 void Option<float>::FromString(const char * buffer)
 {
 	m_value = Parse::Float(buffer);
+}
+
+// Option<std::string>
+
+void Option<std::string>::Increment()
+{
+}
+
+void Option<std::string>::Decrement()
+{
+}
+
+void Option<std::string>::ToString(char * buffer, int bufferSize)
+{
+	strcpy_s(buffer, bufferSize, m_value.c_str());
+}
+
+void Option<std::string>::FromString(const char * buffer)
+{
+	m_value = buffer;
 }
 
 #endif

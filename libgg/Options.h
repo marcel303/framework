@@ -88,6 +88,7 @@ public:
 //
 
 typedef void (*OptionCommandHandler)();
+typedef void (*OptionCommandHandlerWithParam)(void * param);
 
 class OptionCommand : public OptionBase
 {
@@ -95,6 +96,22 @@ class OptionCommand : public OptionBase
 
 public:
 	OptionCommand(const char * path, OptionCommandHandler handler);
+
+	virtual OptionType GetType() { return kType_Command; }
+	virtual void Increment() { }
+	virtual void Decrement() { }
+	virtual void Select();
+	virtual void ToString(char * buffer, int bufferSize) { buffer[0] = 0; }
+	virtual void FromString(const char * buffer) { }
+};
+
+class OptionCommandWithParam : public OptionBase
+{
+	OptionCommandHandlerWithParam m_handler;
+	void * m_param;
+
+public:
+	OptionCommandWithParam(const char * path, OptionCommandHandlerWithParam handler, void * param);
 
 	virtual OptionType GetType() { return kType_Command; }
 	virtual void Increment() { }
@@ -130,6 +147,9 @@ public:
 	static OptionBase * m_head;
 
 	void Register(OptionBase * option);
+
+	void AddCommandOption(const char * path, OptionCommandHandlerWithParam handler, void * param);
+
 	void Load(const char * filename);
 	void LoadFromString(const char * line);
 	void LoadFromCommandLine(int argc, char * argv[]);
