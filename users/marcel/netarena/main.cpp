@@ -82,7 +82,8 @@ enum RpcMethod
 	s_rpcPlaySound,
 	s_rpcSetPlayerInputs,
 	s_rpcSpawnBullet,
-	s_rpcKillBullet
+	s_rpcKillBullet,
+	s_rpcUpdateBullet
 };
 
 void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
@@ -135,14 +136,12 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			int16_t x;
 			int16_t y;
 			uint8_t angle;
-			int16_t velocity;
 
 			bitStream.Read(id);
 			bitStream.Read(type);
 			bitStream.Read(x);
 			bitStream.Read(y);
 			bitStream.Read(angle);
-			bitStream.Read(velocity);
 
 			Bullet & b = bulletPool->m_bullets[id];
 			Assert(!b.isAlive);
@@ -153,7 +152,19 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			b.x = x;
 			b.y = y;
 			b.angle = angle / 128.f * float(M_PI);
-			b.velocity = velocity;
+			
+			switch (type)
+			{
+			case kBulletType_A:
+				b.velocity = BULLET_TYPE0_SPEED;
+				b.maxWrapCount = BULLET_TYPE0_MAX_WRAP_COUNT;
+				b.maxReflectCount = BULLET_TYPE0_MAX_REFLECT_COUNT;
+				b.maxDistanceTravelled = BULLET_TYPE0_MAX_DISTANCE_TRAVELLED;
+				break;
+			default:
+				Assert(false);
+				break;
+			}
 		}
 	}
 	else if (method == s_rpcKillBullet)
@@ -171,6 +182,23 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			Assert(b.isAlive);
 			
 			b.isAlive = false;
+		}
+	}
+	else if (method == s_rpcUpdateBullet)
+	{
+		Client * client = g_app->findClientByChannel(channel);
+
+		Assert(client);
+		if (client)
+		{
+			uint16_t id;
+
+			bitStream.Read(id);
+
+			Bullet & b = client->m_bulletPool->m_bullets[id];
+			Assert(b.isAlive);
+			
+			bitStream.ReadAlignedBytes(&b, sizeof(b));
 		}
 	}
 	else
@@ -451,6 +479,7 @@ bool App::init(bool isHost)
 		m_rpcMgr->RegisterWithID(s_rpcSetPlayerInputs, handleRpc);
 		m_rpcMgr->RegisterWithID(s_rpcSpawnBullet, handleRpc);
 		m_rpcMgr->RegisterWithID(s_rpcKillBullet, handleRpc);
+		m_rpcMgr->RegisterWithID(s_rpcUpdateBullet, handleRpc);
 
 		//
 
@@ -515,6 +544,7 @@ void App::shutdown()
 	m_rpcMgr->Unregister(s_rpcSetPlayerInputs, handleRpc);
 	m_rpcMgr->Unregister(s_rpcSpawnBullet, handleRpc);
 	m_rpcMgr->Unregister(s_rpcKillBullet, handleRpc);
+	m_rpcMgr->Unregister(s_rpcUpdateBullet, handleRpc);
 
 	m_channelMgr->Shutdown(true);
 
@@ -804,7 +834,7 @@ void App::netSetPlayerInputs(uint16_t channelId, uint32_t netId, uint16_t button
 	m_rpcMgr->Call(s_rpcSetPlayerInputs, bs, ChannelPool_Client, &channelId, false, false);
 }
 
-uint16_t App::netSpawnBullet(int16_t x, int16_t y, uint8_t angle, int16_t velocity, uint8_t type, uint32_t ownerNetId)
+uint16_t App::netSpawnBullet(int16_t x, int16_t y, uint8_t angle, uint8_t type, uint32_t ownerNetId)
 {
 	const uint16_t id = g_hostBulletPool->alloc();
 
@@ -817,7 +847,6 @@ uint16_t App::netSpawnBullet(int16_t x, int16_t y, uint8_t angle, int16_t veloci
 		bs.Write(x);
 		bs.Write(y);
 		bs.Write(angle);
-		bs.Write(velocity);
 
 		m_rpcMgr->Call(s_rpcSpawnBullet, bs, ChannelPool_Server, 0, true, true);
 
@@ -838,6 +867,18 @@ void App::netKillBullet(uint16_t id)
 	bs.Write(id);
 
 	m_rpcMgr->Call(s_rpcKillBullet, bs, ChannelPool_Server, 0, true, false);
+}
+
+void App::netUpdateBullet(uint16_t id)
+{
+	Bullet & b = g_hostBulletPool->m_bullets[id];
+
+	BitStream bs;
+
+	bs.Write(id);
+	bs.WriteAlignedBytes(&b, sizeof(b));
+
+	m_rpcMgr->Call(s_rpcUpdateBullet, bs, ChannelPool_Server, 0, true, false);
 }
 
 //

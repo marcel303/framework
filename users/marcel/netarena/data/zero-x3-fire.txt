@@ -1,4 +1,4 @@
 sheet pivot_x:23 pivot_y:46 grid_sx:4 grid_sy:1
 
 animation name:anim grid_x:0 grid_y:0 frames:4 rate:20 loop:0
-	trigger frame:0 action:sound file:player-attack-sword-0.ogg volume:30
+	trigger frame:0 action:sound file:player-attack-fire-0.ogg volume:50

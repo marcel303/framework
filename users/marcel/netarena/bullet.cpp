@@ -45,13 +45,37 @@ void BulletPool::tick(float dt)
 
 			const uint32_t blockMask = g_hostArena->getIntersectingBlocksMask(b.x, b.y, b.x, b.y);
 
+			// reflection
+
 			if (blockMask & kBlockMask_Solid)
+			{
+				if (b.maxReflectCount != 0)
+				{
+					b.reflectCount++;
+
+					if (b.reflectCount > b.maxReflectCount)
+						kill = true;
+					else
+					{
+						b.angle = b.angle + Calc::mPI;
+						g_app->netUpdateBullet(i);
+					}
+				}
+				else
+					kill = true;
+			}
+
+			// wrap around
+
+			if (b.wrapCount > b.maxWrapCount)
 				kill = true;
-		#if !WRAP_AROUND
-			else if (b.x < 0.f || b.y < 0.f || b.x > ARENA_SX * BLOCK_SX || b.y > ARENA_SY * BLOCK_SY)
+
+			// max distance travelled
+
+			if (b.maxDistanceTravelled != 0.f && b.distanceTravelled > b.maxDistanceTravelled)
 				kill = true;
-		#endif
-			else
+			
+			if (!kill)
 			{
 				// collide with players
 
@@ -102,7 +126,15 @@ void BulletPool::anim(float dt)
 			b.x += dx;
 			b.y += dy;
 
-		#if WRAP_AROUND
+			// distance travelled
+
+			b.distanceTravelled += std::sqrt(dx * dx + dy * dy);
+
+			// wrap
+
+			float x = b.x;
+			float y = b.y;
+
 			if (b.x < 0.f)
 				b.x += ARENA_SX * BLOCK_SX;
 			if (b.x > ARENA_SX * BLOCK_SX)
@@ -112,7 +144,17 @@ void BulletPool::anim(float dt)
 				b.y += ARENA_SY * BLOCK_SY;
 			if (b.y > ARENA_SY * BLOCK_SY)
 				b.y -= ARENA_SY * BLOCK_SY;
-		#endif
+
+			if (x != b.x || y != b.y)
+			{
+				b.wrapCount++;
+
+				if (b.wrapCount > b.maxWrapCount)
+				{
+					b.x = x;
+					b.y = y;
+				}
+			}
 		}
 	}
 }

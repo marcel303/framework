@@ -21,6 +21,15 @@ public:
 	float angle;
 	float velocity;
 	BulletType type;
+	
+	uint8_t reflectCount;
+	uint8_t maxReflectCount;
+
+	uint8_t wrapCount;
+	uint8_t maxWrapCount;
+
+	float distanceTravelled;
+	float maxDistanceTravelled;
 
 	uint32_t ownerNetId;
 };

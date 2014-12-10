@@ -435,12 +435,6 @@ void Player::tick(float dt)
 
 				if (isAnimOverrideAllowed(attackAnim))
 				{
-					if ((getIntersectingBlocksMask(m_pos[0] + m_pos.xFacing, m_pos[1]) & kBlockMask_Solid) != 0)
-					{
-						m_pos.xFacing *= -1;
-						m_pos.SetDirty();
-					}
-
 					m_attack = AttackInfo();
 					m_attack.attacking = true;
 
@@ -449,17 +443,26 @@ void Player::tick(float dt)
 					m_attack.collision.x2 = PLAYER_SWORD_COLLISION_X2;
 					m_attack.collision.y2 = PLAYER_SWORD_COLLISION_Y2;
 
+					m_anim.SetAnim(attackAnim, true, true);
+					m_isAnimDriven = true;
+
+					if (attackAnim == kPlayerAnim_Attack)
+					{
+						if ((getIntersectingBlocksMask(m_pos[0] + m_pos.xFacing, m_pos[1]) & kBlockMask_Solid) != 0)
+						{
+							m_pos.xFacing *= -1;
+							m_pos.SetDirty();
+						}
+					}
+
 					if (attackAnim == kPlayerAnim_Fire)
 					{
 						g_app->netSpawnBullet(
 							m_pos[0] + mirrorX(0.f),
 							m_pos[1] - mirrorY(44.f),
 							m_pos.xFacing < 0 ? 128 : 0,
-							800, 0, getNetId());
+							kBulletType_A, getNetId());
 					}
-
-					m_anim.SetAnim(attackAnim, true, true);
-					m_isAnimDriven = true;
 				}
 			}
 		}
