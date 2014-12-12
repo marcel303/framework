@@ -364,20 +364,23 @@ uint32_t Arena::getIntersectingBlocksMask(int x, int y)
 {
 	uint32_t result = 0;
 
-	const int blockX = x / BLOCK_SX;
-	const int blockY = y / BLOCK_SY;
-
-	if (blockX >= 0 && blockX < BLOCK_SX && blockY >= 0 && blockY <= BLOCK_SY)
+	if (x >= 0 && y >= 0)
 	{
-		const int maskX = x % BLOCK_SX;
-		const int maskY = y % BLOCK_SY;
+		const int blockX = x / BLOCK_SX;
+		const int blockY = y / BLOCK_SY;
 
-		const Block & block = m_blocks[blockX][blockY];
-		const BlockMask & mask = s_blockMasks[block.shape];
-
-		if (mask.test(maskX, maskY))
+		if (blockX < ARENA_SX && blockY < ARENA_SY)
 		{
-			result |= 1 << block.type;
+			const int maskX = x % BLOCK_SX;
+			const int maskY = y % BLOCK_SY;
+
+			const Block & block = m_blocks[blockX][blockY];
+			const BlockMask & mask = s_blockMasks[block.shape];
+
+			if (mask.test(maskX, maskY))
+			{
+				result |= 1 << block.type;
+			}
 		}
 	}
 
