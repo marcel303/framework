@@ -10,6 +10,14 @@ enum BlockShape : unsigned char
 	kBlockShape_TR,
 	kBlockShape_BL,
 	kBlockShape_BR,
+	kBlockShape_TL2a,
+	kBlockShape_TL2b,
+	kBlockShape_TR2a,
+	kBlockShape_TR2b,
+	kBlockShape_BL2a,
+	kBlockShape_BL2b,
+	kBlockShape_BR2a,
+	kBlockShape_BR2b,
 	kBlockShape_COUNT
 };
 

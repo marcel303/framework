@@ -130,7 +130,7 @@ struct CollisionInfo
 			y1 <= other.y2;
 	}
 
-	bool intersects(float x, float y) const
+	bool intersects(int x, int y) const
 	{
 		return
 			x2 >= x &&
@@ -139,10 +139,10 @@ struct CollisionInfo
 			y1 <= y;
 	}
 
-	float x1;
-	float y1;
-	float x2;
-	float y2;
+	int x1;
+	int y1;
+	int x2;
+	int y2;
 };
 
 class Player : public NetObject
@@ -176,6 +176,7 @@ class Player : public NetObject
 	bool m_isAnimDriven;
 
 	bool m_isAirDashCharged;
+	bool m_isWallSliding;
 
 	bool m_animVelIsAbsolute;
 	Vec2 m_animVel;

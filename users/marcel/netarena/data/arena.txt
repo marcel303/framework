@@ -4,8 +4,8 @@ xxxxxxxxxxxxxxxxxxxxxxxxxx
                        p  
 >>>>                  xxxx
 x                        x
-x         j<<<<<<<<<     x
-x     p                  x
+x         j<<<<<xx       x
+x     p         xxxx     x
 x   <<<<<<ssssssssssss   x
 x                        x
                           

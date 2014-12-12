@@ -11,6 +11,11 @@ class BlockMask
 public:
 	uint8_t data[BLOCK_SY][(BLOCK_SX + 7) / 8];
 
+	void set(int x, int y)
+	{
+		data[y][x >> 3] |= 1 << (x & 7);
+	}
+
 	bool test(int x, int y) const
 	{
 		const int idx = x >> 3;
@@ -24,21 +29,11 @@ static BlockMask s_blockMasks[kBlockShape_COUNT];
 static void createBlockMask(BlockShape shape, bool (*proc)(int x, int y))
 {
 	BlockMask & mask = s_blockMasks[shape];
-
 	memset(&mask, 0, sizeof(mask));
-
 	for (int y = 0; y < BLOCK_SY; ++y)
-	{
-		uint8_t * line = mask.data[y];
-
 		for (int x = 0; x < BLOCK_SX; ++x)
-		{
 			if (proc(x, y))
-			{
-				line[x >> 3] |= 1 << (x & 7);
-			}
-		}
-	}
+				mask.set(x, y);
 }
 
 static void initializeBlockMasks()
@@ -50,10 +45,20 @@ static void initializeBlockMasks()
 		init = true;
 
 		createBlockMask(kBlockShape_Opaque, [](int x, int y) { return true; });
-		createBlockMask(kBlockShape_TL, [](int x, int y) { return + x + y < BLOCK_SX; });
-		createBlockMask(kBlockShape_TR, [](int x, int y) { return s_blockMasks[kBlockShape_TL].test(BLOCK_SX - 1 - x,                y); });
-		createBlockMask(kBlockShape_BL, [](int x, int y) { return s_blockMasks[kBlockShape_TL].test(               x, BLOCK_SY - 1 - y); });
-		createBlockMask(kBlockShape_BR, [](int x, int y) { return s_blockMasks[kBlockShape_TL].test(BLOCK_SX - 1 - x, BLOCK_SY - 1 - y); });
+
+		createBlockMask(kBlockShape_TL,     [](int x, int y) { return x + y < BLOCK_SX; });
+		createBlockMask(kBlockShape_TR,     [](int x, int y) { return s_blockMasks[kBlockShape_TL].test(BLOCK_SX - 1 - x,                y); });
+		createBlockMask(kBlockShape_BL,     [](int x, int y) { return s_blockMasks[kBlockShape_TL].test(               x, BLOCK_SY - 1 - y); });
+		createBlockMask(kBlockShape_BR,     [](int x, int y) { return s_blockMasks[kBlockShape_TL].test(BLOCK_SX - 1 - x, BLOCK_SY - 1 - y); });
+
+		createBlockMask(kBlockShape_TL2a,   [](int x, int y) { return x + y * 2 < BLOCK_SX; });
+		createBlockMask(kBlockShape_TL2b,   [](int x, int y) { return x + y * 2 < BLOCK_SX * 2; });
+		createBlockMask(kBlockShape_TR2a,   [](int x, int y) { return s_blockMasks[kBlockShape_TL2a].test(BLOCK_SX - 1 - x,                y); });
+		createBlockMask(kBlockShape_TR2b,   [](int x, int y) { return s_blockMasks[kBlockShape_TL2b].test(BLOCK_SX - 1 - x,                y); });
+		createBlockMask(kBlockShape_BL2a,   [](int x, int y) { return s_blockMasks[kBlockShape_TL2a].test(               x, BLOCK_SY - 1 - y); });
+		createBlockMask(kBlockShape_BL2b,   [](int x, int y) { return s_blockMasks[kBlockShape_TL2b].test(               x, BLOCK_SY - 1 - y); });
+		createBlockMask(kBlockShape_BR2a,   [](int x, int y) { return s_blockMasks[kBlockShape_TL2a].test(BLOCK_SX - 1 - x, BLOCK_SY - 1 - y); });
+		createBlockMask(kBlockShape_BR2b,   [](int x, int y) { return s_blockMasks[kBlockShape_TL2b].test(BLOCK_SX - 1 - x, BLOCK_SY - 1 - y); });
 	}
 }
 
@@ -184,6 +189,7 @@ void Arena::load(const char * filename)
 				case '>': type = kBlockType_ConveyorBeltRight; break;
 				default:
 					LOG_WRN("invalid block type: '%c'", line[x]);
+					break;
 				}
 
 				m_blocks[x][y].type = type;
@@ -218,6 +224,14 @@ void Arena::load(const char * filename)
 					w = kBlockShape_TR,
 					a = kBlockShape_BL,
 					s = kBlockShape_BR,
+					e = kBlockShape_TL2a,
+					r = kBlockShape_TL2b,
+					t = kBlockShape_TR2a,
+					y = kBlockShape_TR2b,
+					d = kBlockShape_BL2a,
+					f = kBlockShape_BL2b,
+					g = kBlockShape_BR2a,
+					h = kBlockShape_BR2b,
 				*/
 
 				BlockShape shape = kBlockShape_Opaque;
@@ -229,8 +243,20 @@ void Arena::load(const char * filename)
 				case 'w': shape = kBlockShape_TR; break;
 				case 'a': shape = kBlockShape_BL; break;
 				case 's': shape = kBlockShape_BR; break;
+				case 'e': shape = kBlockShape_TL2a; break;
+				case 'r': shape = kBlockShape_TL2b; break;
+				case 't': shape = kBlockShape_TR2a; break;
+				case 'y': shape = kBlockShape_TR2b; break;
+				case 'd': shape = kBlockShape_BL2a; break;
+				case 'f': shape = kBlockShape_BL2b; break;
+				case 'g': shape = kBlockShape_BR2a; break;
+				case 'h': shape = kBlockShape_BR2b; break;
+
+				case '.':
+					break;
 				default:
 					LOG_WRN("invalid shape type: '%c'", line[x]);
+					break;
 				}
 
 				m_blocks[x][y].shape = shape;

@@ -199,6 +199,7 @@ Player::Player(uint32_t netId)
 	, m_isAnimDriven(false)
 	, m_animVelIsAbsolute(false)
 	, m_isAirDashCharged(false)
+	, m_isWallSliding(false)
 {
 	setNetId(netId);
 
@@ -334,8 +335,6 @@ void Player::tick(float dt)
 
 	if (m_state.isAlive)
 	{
-		bool isWallSliding = false;
-
 		const uint32_t currentBlockMask = getIntersectingBlocksMask(m_pos[0], m_pos[1]);
 		const uint32_t currentBlockMaskFloor = getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f);
 		const uint32_t currentBlockMaskCeil = getIntersectingBlocksMask(m_pos[0], m_pos[1] - 1.f);
@@ -430,8 +429,8 @@ void Player::tick(float dt)
 		{
 			if (m_input.wentDown(INPUT_BUTTON_B))
 			{
-				const int attackAnim = kPlayerAnim_Fire;
-				//const int attackAnim = kPlayerAnim_Attack;
+				//const int attackAnim = kPlayerAnim_Fire;
+				const int attackAnim = kPlayerAnim_Attack;
 
 				if (isAnimOverrideAllowed(attackAnim))
 				{
@@ -448,7 +447,7 @@ void Player::tick(float dt)
 
 					if (attackAnim == kPlayerAnim_Attack)
 					{
-						if ((getIntersectingBlocksMask(m_pos[0] + m_pos.xFacing, m_pos[1]) & kBlockMask_Solid) != 0)
+						if (m_isWallSliding)
 						{
 							m_pos.xFacing *= -1;
 							m_pos.SetDirty();
@@ -600,6 +599,8 @@ void Player::tick(float dt)
 
 		float gravity;
 
+		m_isWallSliding = false;
+
 		if (m_isAttachedToSticky)
 			gravity = 0.f;
 		else if (m_animVelIsAbsolute)
@@ -626,7 +627,7 @@ void Player::tick(float dt)
 				//Calc::Sign(m_vel[1]) == Calc::Sign(gravity) &&
 				(getIntersectingBlocksMask(m_pos[0] + m_pos.xFacing, m_pos[1]) & kBlockMask_Solid) != 0)
 			{
-				isWallSliding = true;
+				m_isWallSliding = true;
 
 				m_anim.SetAnim(kPlayerAnim_WallSlide, true, false);
 
@@ -798,14 +799,14 @@ void Player::tick(float dt)
 
 		// air dash
 
-		if (m_isGrounded || m_isAttachedToSticky || isWallSliding)
+		if (m_isGrounded || m_isAttachedToSticky || m_isWallSliding)
 		{
 			m_isAirDashCharged = true;
 		}
 
 		// animation
 
-		if (!m_isGrounded && !m_isAttachedToSticky && !isWallSliding && isAnimOverrideAllowed(kPlayerAnim_Jump))
+		if (!m_isGrounded && !m_isAttachedToSticky && !m_isWallSliding && isAnimOverrideAllowed(kPlayerAnim_Jump))
 		{
 			m_anim.SetAnim(kPlayerAnim_Jump, true, false);
 		}
@@ -813,7 +814,7 @@ void Player::tick(float dt)
 	#if !WRAP_AROUND_TOP_AND_BOTTOM
 		// death by fall
 
-		if (m_pos[1] > ARENA_SY * BLOCK_SY)
+		if (m_pos[1] > ARENA_SY_PIXELS)
 		{
 			if (isAnimOverrideAllowed(kPlayerAnim_Die))
 			{
@@ -833,17 +834,17 @@ void Player::tick(float dt)
 
 		if (m_pos[0] < 0)
 		{
-			m_pos[0] = ARENA_SX * BLOCK_SX;
+			m_pos[0] = ARENA_SX_PIXELS;
 			PlaySecondaryEffects(kPlayerEvent_ArenaWrap);
 		}
-		if (m_pos[0] > ARENA_SX * BLOCK_SX)
+		if (m_pos[0] > ARENA_SX_PIXELS)
 		{
 			m_pos[0] = 0;
 			PlaySecondaryEffects(kPlayerEvent_ArenaWrap);
 		}
 
 	#if WRAP_AROUND_TOP_AND_BOTTOM
-		if (m_pos[1] > ARENA_SY * BLOCK_SY)
+		if (m_pos[1] > ARENA_SY_PIXELS)
 		{
 			m_pos[1] = 0;
 			PlaySecondaryEffects(kPlayerEvent_ArenaWrap);
@@ -851,13 +852,13 @@ void Player::tick(float dt)
 
 		if (m_pos[1] < 0)
 		{
-			m_pos[1] = ARENA_SY * BLOCK_SY;
+			m_pos[1] = ARENA_SY_PIXELS;
 			PlaySecondaryEffects(kPlayerEvent_ArenaWrap);
 		}
 	#endif
 
 		// fixme : spawn bullet on fire
-		//if (!m_isGrounded && !m_isAttachedToSticky && !isWallSliding)
+		//if (!m_isGrounded && !m_isAttachedToSticky && !m_isWallSliding)
 		//	g_app->netSpawnBullet(m_pos[0], m_pos[1], rand(), 500, kBulletType_A);
 	}
 
@@ -876,10 +877,10 @@ void Player::draw()
 	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, 2.f);
 
 	// render additional sprites for wrap around
-	m_sprite->drawEx(m_pos.x + (ARENA_SX * BLOCK_SX), m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, 2.f);
-	m_sprite->drawEx(m_pos.x - (ARENA_SX * BLOCK_SX), m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, 2.f);
-	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0) + (ARENA_SY * BLOCK_SY), 0.f, 2.f);
-	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0) - (ARENA_SY * BLOCK_SY), 0.f, 2.f);
+	m_sprite->drawEx(m_pos.x + ARENA_SX_PIXELS, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, 2.f);
+	m_sprite->drawEx(m_pos.x - ARENA_SX_PIXELS, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, 2.f);
+	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0) + ARENA_SY_PIXELS, 0.f, 2.f);
+	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0) - ARENA_SY_PIXELS, 0.f, 2.f);
 }
 
 void Player::debugDraw()
@@ -918,10 +919,17 @@ void Player::debugDraw()
 
 uint32_t Player::getIntersectingBlocksMaskInternal(int x, int y, bool doWrap) const
 {
+#if 1
+	const int x1 = (x + (int)m_collision.x1) % ARENA_SX_PIXELS;
+	const int y1 = (y + (int)m_collision.y1) % ARENA_SY_PIXELS;
+	const int x2 = (x + (int)m_collision.x2) % ARENA_SX_PIXELS;
+	const int y2 = (y + (int)m_collision.y2) % ARENA_SY_PIXELS;
+#else
 	const int x1 = x + m_collision.x1;
 	const int y1 = y + m_collision.y1;
 	const int x2 = x + m_collision.x2;
 	const int y2 = y + m_collision.y2;
+#endif
 
 	uint32_t result = 0;
 	
@@ -930,10 +938,11 @@ uint32_t Player::getIntersectingBlocksMaskInternal(int x, int y, bool doWrap) co
 	result |= g_hostArena->getIntersectingBlocksMask(x2, y2);
 	result |= g_hostArena->getIntersectingBlocksMask(x1, y2);
 
+#if 0
 	if (doWrap)
 	{
-		const int dx = x1 < 0 ? +(ARENA_SX * BLOCK_SX) : x2 >= ARENA_SX * BLOCK_SX ? -(ARENA_SX * BLOCK_SX) : 0;
-		const int dy = y1 < 0 ? +(ARENA_SY * BLOCK_SY) : y2 >= ARENA_SY * BLOCK_SY ? -(ARENA_SY * BLOCK_SY) : 0;
+		const int dx = x1 < 0 ? +ARENA_SX_PIXELS : x2 >= ARENA_SX_PIXELS ? -ARENA_SX_PIXELS : 0;
+		const int dy = y1 < 0 ? +ARENA_SY_PIXELS : y2 >= ARENA_SY_PIXELS ? -ARENA_SY_PIXELS : 0;
 
 		if ((dx | dy) != 0)
 		{
@@ -942,6 +951,7 @@ uint32_t Player::getIntersectingBlocksMaskInternal(int x, int y, bool doWrap) co
 			result |= getIntersectingBlocksMaskInternal(x + dx, y + dy, false);
 		}
 	}
+#endif
 
 	return result;
 }

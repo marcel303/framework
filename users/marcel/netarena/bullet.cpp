@@ -136,14 +136,14 @@ void BulletPool::anim(float dt)
 			float y = b.y;
 
 			if (b.x < 0.f)
-				b.x += ARENA_SX * BLOCK_SX;
-			if (b.x > ARENA_SX * BLOCK_SX)
-				b.x -= ARENA_SX * BLOCK_SX;
+				b.x += ARENA_SX_PIXELS;
+			if (b.x > ARENA_SX_PIXELS)
+				b.x -= ARENA_SX_PIXELS;
 
 			if (b.y < 0.f)
-				b.y += ARENA_SY * BLOCK_SY;
-			if (b.y > ARENA_SY * BLOCK_SY)
-				b.y -= ARENA_SY * BLOCK_SY;
+				b.y += ARENA_SY_PIXELS;
+			if (b.y > ARENA_SY_PIXELS)
+				b.y -= ARENA_SY_PIXELS;
 
 			if (x != b.x || y != b.y)
 			{

@@ -716,7 +716,7 @@ void App::draw()
 	{
 		if (m_selectedClient >= 0 && m_selectedClient < (int)m_clients.size())
 		{
-			setDrawRect(0, 0, ARENA_SX * BLOCK_SX, ARENA_SY * BLOCK_SY);
+			setDrawRect(0, 0, ARENA_SX_PIXELS, ARENA_SY_PIXELS);
 
 			setBlend(BLEND_OPAQUE);
 			Sprite("back.png").draw();
