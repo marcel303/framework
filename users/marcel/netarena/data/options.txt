@@ -1,1 +1,1 @@
-maps=arena.txt,arena2.txt
+maps=arena.txt,arena2.txt,arena3.txt

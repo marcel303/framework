@@ -520,8 +520,6 @@ void Player::tick(float dt)
 			}
 			else if (playerControl && m_input.wentDown(INPUT_BUTTON_DOWN))
 			{
-				m_vel[1] += GRAVITY * dt;
-
 				m_isAttachedToSticky = false;
 
 				PlaySecondaryEffects(kPlayerEvent_StickyRelease);
@@ -614,6 +612,8 @@ void Player::tick(float dt)
 				gravity = GRAVITY * BLOCKTYPE_GRAVITY_REVERSE_MULTIPLIER;
 			else if (currentBlockMask & (1 << kBlockType_GravityStrong))
 				gravity = GRAVITY * BLOCKTYPE_GRAVITY_STRONG_MULTIPLIER;
+			else if (currentBlockMask & ((1 << kBlockType_GravityLeft) | (1 << kBlockType_GravityRight)))
+				gravity = 0.f;
 			else
 				gravity = GRAVITY;
 
@@ -636,6 +636,11 @@ void Player::tick(float dt)
 		}
 
 		m_vel[1] += gravity * dt;
+
+		if (currentBlockMask & (1 << kBlockType_GravityLeft))
+			m_vel[0] -= GRAVITY * dt;
+		if (currentBlockMask & (1 << kBlockType_GravityRight))
+			m_vel[0] += GRAVITY * dt;
 
 		// converyor belt
 
@@ -664,7 +669,42 @@ void Player::tick(float dt)
 
 				newPos[i] += delta;
 
-				const uint32_t newBlockMask = getIntersectingBlocksMask(newPos[0], newPos[1]);
+				uint32_t newBlockMask = getIntersectingBlocksMask(newPos[0], newPos[1]);
+
+				// make sure we stay grounded, within reason. allows the player to walk up/down slopes
+				if (i == 0 && m_isGrounded)
+				{
+					if (newBlockMask & kBlockMask_Solid)
+					{
+						for (int dy = 1; dy <= 2; ++dy)
+						{
+							const uint32_t blockMask = getIntersectingBlocksMask(newPos[0], newPos[1] - dy);
+
+							if ((blockMask & kBlockMask_Solid) == 0)
+							{
+								m_pos[1] -= dy;
+								newPos[1] -= dy;
+								newBlockMask = blockMask;
+								break;
+							}
+						}
+					}
+					else
+					{
+						for (int dy = 1; dy <= 1; ++dy)
+						{
+							const uint32_t blockMask = getIntersectingBlocksMask(newPos[0], newPos[1] + 1.f);
+
+							if ((blockMask & kBlockMask_Solid) == 0)
+							{
+								m_pos[1] += 1.f;
+								newPos[1] += 1.f;
+								newBlockMask = blockMask;
+								break;
+							}
+						}
+					}
+				}
 
 				if (newBlockMask & kBlockMask_Solid)
 				{
@@ -876,13 +916,39 @@ void Player::debugDraw()
 	setColor(colorWhite);
 }
 
-uint32_t Player::getIntersectingBlocksMask(float x, float y) const
+uint32_t Player::getIntersectingBlocksMaskInternal(int x, int y, bool doWrap) const
 {
-	return g_hostArena->getIntersectingBlocksMask(
-		int(x + m_collision.x1),
-		int(y + m_collision.y1),
-		int(x + m_collision.x2),
-		int(y + m_collision.y2));
+	const int x1 = x + m_collision.x1;
+	const int y1 = y + m_collision.y1;
+	const int x2 = x + m_collision.x2;
+	const int y2 = y + m_collision.y2;
+
+	uint32_t result = 0;
+	
+	result |= g_hostArena->getIntersectingBlocksMask(x1, y1);
+	result |= g_hostArena->getIntersectingBlocksMask(x2, y1);
+	result |= g_hostArena->getIntersectingBlocksMask(x2, y2);
+	result |= g_hostArena->getIntersectingBlocksMask(x1, y2);
+
+	if (doWrap)
+	{
+		const int dx = x1 < 0 ? +(ARENA_SX * BLOCK_SX) : x2 >= ARENA_SX * BLOCK_SX ? -(ARENA_SX * BLOCK_SX) : 0;
+		const int dy = y1 < 0 ? +(ARENA_SY * BLOCK_SY) : y2 >= ARENA_SY * BLOCK_SY ? -(ARENA_SY * BLOCK_SY) : 0;
+
+		if ((dx | dy) != 0)
+		{
+			result |= getIntersectingBlocksMaskInternal(x + dx, y,      false);
+			result |= getIntersectingBlocksMaskInternal(x,      y + dy, false);
+			result |= getIntersectingBlocksMaskInternal(x + dx, y + dy, false);
+		}
+	}
+
+	return result;
+}
+
+uint32_t Player::getIntersectingBlocksMask(int x, int y) const
+{
+	return getIntersectingBlocksMaskInternal(x, y, true);
 }
 
 void Player::handleDamage(float amount, Vec2Arg velocity)

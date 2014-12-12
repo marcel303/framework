@@ -726,12 +726,12 @@ void App::draw()
 
 			client->draw();
 
+			clearDrawRect();
+
 			setColor(255, 255, 255);
 			Font font("calibri.ttf");
 			setFont(font);
 			drawText(5, GFX_SY - 25, 20, +1.f, -1.f, "viewing client %d", m_selectedClient);
-
-			clearDrawRect();
 		}
 
 		if (g_devMode && g_host)

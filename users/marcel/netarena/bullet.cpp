@@ -43,7 +43,7 @@ void BulletPool::tick(float dt)
 
 			bool kill = false;
 
-			const uint32_t blockMask = g_hostArena->getIntersectingBlocksMask(b.x, b.y, b.x, b.y);
+			const uint32_t blockMask = g_hostArena->getIntersectingBlocksMask(b.x, b.y);
 
 			// reflection
 

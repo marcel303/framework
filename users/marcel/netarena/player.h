@@ -207,7 +207,8 @@ public:
 	void draw();
 	void debugDraw();
 
-	uint32_t getIntersectingBlocksMask(float x, float y) const;
+	uint32_t getIntersectingBlocksMaskInternal(int x, int y, bool doWrap) const;
+	uint32_t getIntersectingBlocksMask(int x, int y) const;
 
 	void handleDamage(float amount, Vec2Arg velocity);
 

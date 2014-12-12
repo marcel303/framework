@@ -3,6 +3,16 @@
 #include "gamedefs.h"
 #include "netobject.h"
 
+enum BlockShape : unsigned char
+{
+	kBlockShape_Opaque,
+	kBlockShape_TL,
+	kBlockShape_TR,
+	kBlockShape_BL,
+	kBlockShape_BR,
+	kBlockShape_COUNT
+};
+
 enum BlockType : unsigned char
 {
 	kBlockType_Empty,
@@ -16,6 +26,8 @@ enum BlockType : unsigned char
 	kBlockType_GravityReverse,
 	kBlockType_GravityDisable,
 	kBlockType_GravityStrong,
+	kBlockType_GravityLeft,
+	kBlockType_GravityRight,
 	kBlockType_ConveyorBeltLeft,
 	kBlockType_ConveyorBeltRight,
 	kBlockType_COUNT
@@ -35,6 +47,7 @@ static const int kBlockMask_Solid =
 struct Block
 {
 	BlockType type : 4;
+	BlockShape shape : 4; // fixme : doesn't need to be serialized
 };
 
 #pragma pack(pop)
@@ -78,8 +91,8 @@ public:
 	void drawBlocks();
 
 	bool getRandomSpawnPoint(int & out_x, int & out_y);
-	std::vector<Block*> getIntersectingBlocks(int x1, int y1, int x2, int y2);
 	uint32_t getIntersectingBlocksMask(int x1, int y1, int x2, int y2);
+	uint32_t getIntersectingBlocksMask(int x, int y);
 
 	bool getBlockRectFromPixels(int x1, int y1, int x2, int y2, int & out_x1, int & out_y1, int & out_x2, int & out_y2);
 	Block & getBlock(int x, int y) { return m_blocks[x][y]; }

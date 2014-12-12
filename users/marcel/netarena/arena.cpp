@@ -2,12 +2,72 @@
 #include "arena.h"
 #include "FileStream.h"
 #include "framework.h"
+#include "image.h"
+#include "Path.h"
 #include "StreamReader.h"
+
+class BlockMask
+{
+public:
+	uint8_t data[BLOCK_SY][(BLOCK_SX + 7) / 8];
+
+	bool test(int x, int y) const
+	{
+		const int idx = x >> 3;
+		const int bit = x & 7;
+		return (data[y][idx] & (1 << bit)) != 0;
+	}
+};
+
+static BlockMask s_blockMasks[kBlockShape_COUNT];
+
+static void createBlockMask(BlockShape shape, bool (*proc)(int x, int y))
+{
+	BlockMask & mask = s_blockMasks[shape];
+
+	memset(&mask, 0, sizeof(mask));
+
+	for (int y = 0; y < BLOCK_SY; ++y)
+	{
+		uint8_t * line = mask.data[y];
+
+		for (int x = 0; x < BLOCK_SX; ++x)
+		{
+			if (proc(x, y))
+			{
+				line[x >> 3] |= 1 << (x & 7);
+			}
+		}
+	}
+}
+
+static void initializeBlockMasks()
+{
+	static bool init = false;
+
+	if (!init)
+	{
+		init = true;
+
+		createBlockMask(kBlockShape_Opaque, [](int x, int y) { return true; });
+		createBlockMask(kBlockShape_TL, [](int x, int y) { return + x + y < BLOCK_SX; });
+		createBlockMask(kBlockShape_TR, [](int x, int y) { return s_blockMasks[kBlockShape_TL].test(BLOCK_SX - 1 - x,                y); });
+		createBlockMask(kBlockShape_BL, [](int x, int y) { return s_blockMasks[kBlockShape_TL].test(               x, BLOCK_SY - 1 - y); });
+		createBlockMask(kBlockShape_BR, [](int x, int y) { return s_blockMasks[kBlockShape_TL].test(BLOCK_SX - 1 - x, BLOCK_SY - 1 - y); });
+	}
+}
+
+OPTION_DECLARE(int, s_drawBlockMask, -1);
+OPTION_DEFINE(int, s_drawBlockMask, "Arena/Debug/Draw Block Mask");
+
+//
 
 Arena::Arena()
 	: NetObject()
 	, m_serializer(this)
 {
+	initializeBlockMasks();
+
 	reset();
 }
 
@@ -19,6 +79,7 @@ void Arena::reset()
 	{
 		for (int y = 0; y < ARENA_SY; ++y)
 		{
+			m_blocks[x][y].shape = kBlockShape_Opaque;
 			m_blocks[x][y].type = kBlockType_Empty;
 		}
 	}
@@ -63,6 +124,12 @@ void Arena::load(const char * filename)
 {
 	reset();
 
+	//
+
+	std::string baseName = Path::GetBaseName(filename);
+
+	std::string maskFilename = baseName + "-mask.txt";
+
 	try
 	{
 		FileStream stream;
@@ -92,6 +159,8 @@ void Arena::load(const char * filename)
 				u = kBlockType_GravityReverse,
 				- = kBlockType_GravityDisable,
 				d = kBlockType_GravityStrong,
+				[ = kBlockType_GravityLeft,
+				] = kBlockType_GravityRight,
 				< = kBlockType_ConveyorBeltLeft,
 				> = kBlockType_ConveyorBeltRight,
 				*/
@@ -109,6 +178,8 @@ void Arena::load(const char * filename)
 				case 'u': type = kBlockType_GravityReverse; break;
 				case '-': type = kBlockType_GravityDisable; break;
 				case 'd': type = kBlockType_GravityStrong; break;
+				case '[': type = kBlockType_GravityLeft; break;
+				case ']': type = kBlockType_GravityRight; break;
 				case '<': type = kBlockType_ConveyorBeltLeft; break;
 				case '>': type = kBlockType_ConveyorBeltRight; break;
 				default:
@@ -122,6 +193,53 @@ void Arena::load(const char * filename)
 	catch (std::exception & e)
 	{
 		LOG_ERR("failed to open %s: %s", filename, e.what());
+	}
+
+	try
+	{
+		FileStream stream;
+		stream.Open(maskFilename.c_str(), (OpenMode)(OpenMode_Read | OpenMode_Text));
+		StreamReader reader(&stream, false);
+		std::vector<std::string> lines = reader.ReadAllLines();
+
+		const int sy = lines.size() < ARENA_SY ? lines.size() : ARENA_SY;
+
+		for (int y = 0; y < sy; ++y)
+		{
+			const std::string & line = lines[y];
+
+			const int sx = line.size() < ARENA_SX ? line.size() : ARENA_SX;
+
+			for (int x = 0; x < sx; ++x)
+			{
+				/*
+					  = kBlockShape_Opaque,
+					q = kBlockShape_TL,
+					w = kBlockShape_TR,
+					a = kBlockShape_BL,
+					s = kBlockShape_BR,
+				*/
+
+				BlockShape shape = kBlockShape_Opaque;
+
+				switch (line[x])
+				{
+				case ' ': shape = kBlockShape_Opaque; break;
+				case 'q': shape = kBlockShape_TL; break;
+				case 'w': shape = kBlockShape_TR; break;
+				case 'a': shape = kBlockShape_BL; break;
+				case 's': shape = kBlockShape_BR; break;
+				default:
+					LOG_WRN("invalid shape type: '%c'", line[x]);
+				}
+
+				m_blocks[x][y].shape = shape;
+			}
+		}
+	}
+	catch (std::exception & e)
+	{
+		LOG_ERR("failed to open %s: %s", maskFilename.c_str(), e.what());
 	}
 
 	m_serializer.SetDirty();
@@ -142,6 +260,8 @@ void Arena::drawBlocks()
 		"block-gravity-reverse.png",
 		"block-gravity-disable.png",
 		"block-gravity-strong.png",
+		"block-gravity-left.png",
+		"block-gravity-right.png",
 		"block-conveyorbelt-left.png",
 		"block-conveyorbelt-right.png"
 	};
@@ -162,6 +282,28 @@ void Arena::drawBlocks()
 			}
 
 			sprites[block.type]->drawEx(x * BLOCK_SX, y * BLOCK_SY);
+		}
+	}
+
+	if (s_drawBlockMask >= 0 && s_drawBlockMask < kBlockShape_COUNT)
+	{
+		const BlockMask & mask = s_blockMasks[s_drawBlockMask];
+		const int scale = 8;
+
+		setColor(255, 255, 255);
+		for (int x = 0; x < BLOCK_SX; ++x)
+		{
+			for (int y = 0; y < BLOCK_SY; ++y)
+			{
+				if (mask.test(x, y))
+				{
+					drawRect(
+						(x + 0) * scale,
+						(y + 0) * scale,
+						(x + 1) * scale,
+						(y + 1) * scale);
+				}
+			}
 		}
 	}
 }
@@ -197,30 +339,6 @@ bool Arena::getRandomSpawnPoint(int & out_x, int & out_y)
 	}
 }
 
-std::vector<Block*> Arena::getIntersectingBlocks(int x1, int y1, int x2, int y2)
-{
-	std::vector<Block*> result;
-
-	if (getBlockRectFromPixels(x1, y1, x2, y2, x1, y1, x2, y2))
-	{
-		int numBlocks = (x2 - x1 + 1) * (y2 - y1 + 1);
-
-		result.reserve(numBlocks);
-
-		for (int x = x1; x <= x2; ++x)
-		{
-			for (int y = y1; y <= y2; ++y)
-			{
-				result.push_back(&m_blocks[x][y]);
-			}
-		}
-
-		Assert(result.size() == numBlocks);
-	}
-
-	return result;
-}
-
 uint32_t Arena::getIntersectingBlocksMask(int x1, int y1, int x2, int y2)
 {
 	uint32_t result = 0;
@@ -231,8 +349,35 @@ uint32_t Arena::getIntersectingBlocksMask(int x1, int y1, int x2, int y2)
 		{
 			for (int y = y1; y <= y2; ++y)
 			{
-				result |= (1 << m_blocks[x][y].type);
+				if (m_blocks[x][y].shape == kBlockShape_Opaque)
+				{
+					result |= (1 << m_blocks[x][y].type);
+				}
 			}
+		}
+	}
+
+	return result;
+}
+
+uint32_t Arena::getIntersectingBlocksMask(int x, int y)
+{
+	uint32_t result = 0;
+
+	const int blockX = x / BLOCK_SX;
+	const int blockY = y / BLOCK_SY;
+
+	if (blockX >= 0 && blockX < BLOCK_SX && blockY >= 0 && blockY <= BLOCK_SY)
+	{
+		const int maskX = x % BLOCK_SX;
+		const int maskY = y % BLOCK_SY;
+
+		const Block & block = m_blocks[blockX][blockY];
+		const BlockMask & mask = s_blockMasks[block.shape];
+
+		if (mask.test(maskX, maskY))
+		{
+			result |= 1 << block.type;
 		}
 	}
 
