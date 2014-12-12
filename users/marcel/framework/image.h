@@ -32,6 +32,13 @@ public:
 	};
 
 	Pixel * imageData; // R8G8B8A8
+
+	//
+
+	Pixel * getLine(int y)
+	{
+		return &imageData[y * sx];
+	}
 };
 
 ImageData * loadImage(const char * filename);
