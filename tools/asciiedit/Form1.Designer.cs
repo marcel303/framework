@@ -44,6 +44,7 @@
 			this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
 			this.statusStrip1 = new System.Windows.Forms.StatusStrip();
 			this.toolStripStatusLabel1 = new System.Windows.Forms.ToolStripStatusLabel();
+			this.listBox1 = new System.Windows.Forms.ListBox();
 			this.textGrid1 = new ASCIIedit.TextGrid();
 			this.menuStrip1.SuspendLayout();
 			this.statusStrip1.SuspendLayout();
@@ -57,7 +58,7 @@
             this.settingsToolStripMenuItem});
 			this.menuStrip1.Location = new System.Drawing.Point(0, 0);
 			this.menuStrip1.Name = "menuStrip1";
-			this.menuStrip1.Size = new System.Drawing.Size(520, 28);
+			this.menuStrip1.Size = new System.Drawing.Size(867, 28);
 			this.menuStrip1.TabIndex = 0;
 			this.menuStrip1.Text = "menuStrip1";
 			// 
@@ -150,6 +151,7 @@
 			// openFileDialog1
 			// 
 			this.openFileDialog1.FileName = "openFileDialog1";
+			this.openFileDialog1.Multiselect = true;
 			// 
 			// statusStrip1
 			// 
@@ -157,7 +159,7 @@
             this.toolStripStatusLabel1});
 			this.statusStrip1.Location = new System.Drawing.Point(0, 302);
 			this.statusStrip1.Name = "statusStrip1";
-			this.statusStrip1.Size = new System.Drawing.Size(520, 22);
+			this.statusStrip1.Size = new System.Drawing.Size(867, 22);
 			this.statusStrip1.TabIndex = 2;
 			this.statusStrip1.Text = "statusStrip1";
 			// 
@@ -165,6 +167,18 @@
 			// 
 			this.toolStripStatusLabel1.Name = "toolStripStatusLabel1";
 			this.toolStripStatusLabel1.Size = new System.Drawing.Size(0, 17);
+			// 
+			// listBox1
+			// 
+			this.listBox1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.listBox1.FormattingEnabled = true;
+			this.listBox1.ItemHeight = 16;
+			this.listBox1.Location = new System.Drawing.Point(648, 31);
+			this.listBox1.Name = "listBox1";
+			this.listBox1.Size = new System.Drawing.Size(207, 260);
+			this.listBox1.TabIndex = 3;
+			this.listBox1.SelectedIndexChanged += new System.EventHandler(this.listBox1_SelectedIndexChanged);
 			// 
 			// textGrid1
 			// 
@@ -174,14 +188,15 @@
 			this.textGrid1.Cursor = System.Windows.Forms.Cursors.Default;
 			this.textGrid1.Location = new System.Drawing.Point(12, 31);
 			this.textGrid1.Name = "textGrid1";
-			this.textGrid1.Size = new System.Drawing.Size(496, 268);
+			this.textGrid1.Size = new System.Drawing.Size(630, 260);
 			this.textGrid1.TabIndex = 1;
 			// 
 			// Form1
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(520, 324);
+			this.ClientSize = new System.Drawing.Size(867, 324);
+			this.Controls.Add(this.listBox1);
 			this.Controls.Add(this.statusStrip1);
 			this.Controls.Add(this.textGrid1);
 			this.Controls.Add(this.menuStrip1);
@@ -217,6 +232,7 @@
 		private System.Windows.Forms.ToolStripMenuItem sizeToolStripMenuItem;
 		private System.Windows.Forms.StatusStrip statusStrip1;
 		private System.Windows.Forms.ToolStripStatusLabel toolStripStatusLabel1;
+		private System.Windows.Forms.ListBox listBox1;
     }
 }
 

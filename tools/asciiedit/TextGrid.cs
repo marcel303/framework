@@ -13,16 +13,26 @@ namespace ASCIIedit
 {
 	public partial class TextGrid : UserControl
 	{
+		class Coord : Tuple<int, int>
+		{
+			public Coord(int x, int y)
+				: base(x, y)
+			{
+			}
+		}
+
 		private const int CSX = 32;
 		private const int CSY = 32;
 
 		private int m_sx = 15;
 		private int m_sy = 10;
 
-		Dictionary<Point, char> m_values = new Dictionary<Point, char>();
+		Dictionary<Coord, char> m_values = new Dictionary<Coord, char>();
 
 		private int m_selectionX = 0;
 		private int m_selectionY = 0;
+
+		//
 
 		private int SelectionX
 		{
@@ -91,9 +101,9 @@ namespace ASCIIedit
 
 			g.Clear(Color.Black);
 
-			Brush selectionBrush = new SolidBrush(Color.Yellow);
+			Brush selectionBrush = new SolidBrush(Color.FromArgb(40, 40, 40));
 
-			Pen rectPen = new Pen(Color.Green, 1.0f);
+			Pen rectPen = new Pen(Color.FromArgb(100, 100, 100), 1.0f);
 
 			Font textFont = new Font(FontFamily.GenericSansSerif, 16.0f, FontStyle.Regular, GraphicsUnit.Pixel);
 			Brush textBrush = new SolidBrush(Color.White);
@@ -114,7 +124,7 @@ namespace ASCIIedit
 				{
 					char c;
 
-					if (m_values.TryGetValue(new Point(x, y), out c))
+					if (m_values.TryGetValue(new Coord(x, y), out c))
 					{
 						g.DrawString(c.ToString(), textFont, textBrush, new RectangleF(x * CSX, y * CSY, CSX, CSY), textFormat);
 					}
@@ -149,13 +159,15 @@ namespace ASCIIedit
 			{
 				SelectionX--;
 
-				m_values.Remove(new Point(SelectionX, SelectionY));
+				m_values.Remove(new Coord(SelectionX, SelectionY));
 				Invalidate();
 			}
 			else if (key == Keys.Delete)
 			{
-				m_values.Remove(new Point(SelectionX, SelectionY));
+				m_values.Remove(new Coord(SelectionX, SelectionY));
 				Invalidate();
+
+				SelectionX++;
 			}
 
 			return base.ProcessCmdKey(ref msg, keyData);
@@ -167,7 +179,7 @@ namespace ASCIIedit
 
 			if (!char.IsWhiteSpace(c) && !char.IsControl(c))
 			{
-				m_values[new Point(SelectionX, SelectionY)] = c;
+				m_values[new Coord(SelectionX, SelectionY)] = c;
 				Invalidate();
 
 				SelectionX++;
@@ -201,16 +213,32 @@ namespace ASCIIedit
 
 					string line;
 
-					int y = 0;
+					List<string> lines = new List<string>();
 
 					while ((line = reader.ReadLine()) != null)
 					{
-						for (int x = 0; x < line.Length; ++x)
-						{
-							m_values[new Point(x, y)] = line[x];
-						}
+						lines.Add(line);
+					}
 
-						++y;
+					int sx = 0;
+					int sy = 0;
+
+					for (int i = 0; i < lines.Count; ++i)
+					{
+						if (lines[i].Length > sx)
+							sx = lines[i].Length;
+						if (lines[i].Length > 0)
+							sy = i + 1;
+					}
+
+					SetSize(sx, sy);
+
+					for (int y = 0; y < sy; ++y)
+					{
+						for (int x = 0; x < lines[y].Length; ++x)
+						{
+							m_values[new Coord(x, y)] = lines[y][x];
+						}
 					}
 
 					Invalidate();
@@ -236,7 +264,7 @@ namespace ASCIIedit
 						{
 							char c;
 
-							if (m_values.TryGetValue(new Point(x, y), out c))
+							if (m_values.TryGetValue(new Coord(x, y), out c))
 							{
 								sb.Append(c);
 							}

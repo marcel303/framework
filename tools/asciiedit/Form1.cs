@@ -11,6 +11,16 @@ namespace ASCIIedit
 	{
 		private string m_filename = null;
 
+		class FilenameItem
+		{
+			public string m_filename;
+
+			public override string ToString()
+			{
+				return Path.GetFileName(m_filename);
+			}
+		}
+
 		public Form1()
 		{
 			InitializeComponent();
@@ -70,7 +80,17 @@ namespace ASCIIedit
 
 			if (openFileDialog1.ShowDialog() == System.Windows.Forms.DialogResult.OK)
 			{
-				Load(openFileDialog1.FileName);
+				listBox1.Items.Clear();
+
+				foreach (string filename in openFileDialog1.FileNames)
+				{
+					FilenameItem item = new FilenameItem();
+					item.m_filename = filename;
+
+					listBox1.Items.Add(item);
+				}
+
+				Load(openFileDialog1.FileNames[0]);
 			}
 		}
 
@@ -96,6 +116,19 @@ namespace ASCIIedit
 				{
 					textGrid1.SetSize(setSize.SX, setSize.SY);
 				}
+			}
+		}
+
+		private void listBox1_SelectedIndexChanged(object sender, EventArgs e)
+		{
+			FilenameItem item = listBox1.SelectedItem as FilenameItem;
+
+			if (item != null)
+			{
+				if (m_filename != null)
+					Save(m_filename);
+
+				Load(item.m_filename);
 			}
 		}
 	}
