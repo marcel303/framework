@@ -31,6 +31,10 @@ OPTION_DECLARE(std::string, g_mapList, "arena.txt");
 OPTION_DEFINE(std::string, g_mapList, "App/Map List");
 OPTION_ALIAS(g_mapList, "maps");
 
+OPTION_DECLARE(bool, g_hosting, true);
+OPTION_DEFINE(bool, g_hosting, "App/Enable Hosting");
+OPTION_ALIAS(g_hosting, "hosting");
+
 //
 
 TIMER_DEFINE(g_appTickTime, PerFrame, "App/Tick");
@@ -616,16 +620,19 @@ bool App::tick()
 
 	// update host
 
-	m_channelMgr->Update(g_TimerRT.TimeUS_get());
-
-	m_replicationMgr->SV_Update();
-
-	if (!m_optionMenuIsOpen)
+	if (m_isHost)
 	{
-		m_host->tick(dt);
-	}
+		m_channelMgr->Update(g_TimerRT.TimeUS_get());
 
-	m_channelMgr->Update(g_TimerRT.TimeUS_get());
+		m_replicationMgr->SV_Update();
+
+		if (!m_optionMenuIsOpen)
+		{
+			m_host->tick(dt);
+		}
+
+		m_channelMgr->Update(g_TimerRT.TimeUS_get());
+	}
 
 	// update client
 
@@ -891,7 +898,9 @@ int main(int argc, char * argv[])
 
 	g_app = new App();
 
-	if (!g_app->init(true))
+	bool isHost = g_hosting;
+
+	if (!g_app->init(isHost))
 	{
 		//
 	}
