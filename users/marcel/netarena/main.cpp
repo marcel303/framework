@@ -433,7 +433,7 @@ bool App::init(bool isHost)
 	{
 		framework.minification = 2;
 		framework.fullscreen = false;
-		framework.reloadCachesOnActivate = true;
+		//framework.reloadCachesOnActivate = true;
 	}
 	else
 	{
