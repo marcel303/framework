@@ -156,6 +156,7 @@ void Arena::load(const char * filename)
 				  = kBlockType_Empty,
 				c = kBlockType_Destructible,
 				x = kBlockType_Indestructible,
+				v = kBlockType_Slide,
 				    kBlockType_Moving,
 				s = kBlockType_Sticky,
 				    kBlockType_Spike,
@@ -168,6 +169,7 @@ void Arena::load(const char * filename)
 				] = kBlockType_GravityRight,
 				< = kBlockType_ConveyorBeltLeft,
 				> = kBlockType_ConveyorBeltRight,
+				i = kBlockType_Passthrough,
 				*/
 
 				BlockType type = kBlockType_Empty;
@@ -177,6 +179,7 @@ void Arena::load(const char * filename)
 				case ' ': type = kBlockType_Empty; break;
 				case 'c': type = kBlockType_Destructible; break;
 				case 'x': type = kBlockType_Indestructible; break;
+				case 'v': type = kBlockType_Slide; break;
 				case 's': type = kBlockType_Sticky; break;
 				case 'p': type = kBlockType_Spawn; break;
 				case 'j': type = kBlockType_Spring; break;
@@ -187,6 +190,7 @@ void Arena::load(const char * filename)
 				case ']': type = kBlockType_GravityRight; break;
 				case '<': type = kBlockType_ConveyorBeltLeft; break;
 				case '>': type = kBlockType_ConveyorBeltRight; break;
+				case 'i': type = kBlockType_Passthrough; break;
 				default:
 					LOG_WRN("invalid block type: '%c'", line[x]);
 					break;
@@ -278,6 +282,7 @@ void Arena::drawBlocks()
 		"block-empty.png",
 		"block-destructible.png",
 		"block-indestructible.png",
+		"block-indestructible.png", // slide
 		"block-moving.png",
 		"block-sticky.png",
 		"block-spike.png",
@@ -289,7 +294,8 @@ void Arena::drawBlocks()
 		"block-gravity-left.png",
 		"block-gravity-right.png",
 		"block-conveyorbelt-left.png",
-		"block-conveyorbelt-right.png"
+		"block-conveyorbelt-right.png",
+		"block-indestructible.png" // passthrough
 	};
 
 	static Sprite * sprites[kBlockType_COUNT] = { };

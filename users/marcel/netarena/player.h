@@ -157,6 +157,7 @@ class Player : public NetObject
 	bool m_isAuthorative;
 
 	CollisionInfo m_collision;
+	uint32_t m_blockMask;
 
 	struct AttackInfo
 	{

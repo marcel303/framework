@@ -194,6 +194,7 @@ Player::Player(uint32_t netId)
 	, m_state(this)
 	, m_anim(this)
 	, m_isAuthorative(false)
+	, m_blockMask(0)
 	, m_isGrounded(false)
 	, m_isAttachedToSticky(false)
 	, m_isAnimDriven(false)
@@ -335,7 +336,13 @@ void Player::tick(float dt)
 
 	if (m_state.isAlive)
 	{
+		m_blockMask = ~0;
+
 		const uint32_t currentBlockMask = getIntersectingBlocksMask(m_pos[0], m_pos[1]);
+		
+		if ((currentBlockMask & kBlockMask_Passthrough) || m_input.isDown(INPUT_BUTTON_DOWN))
+			m_blockMask = ~kBlockMask_Passthrough;
+
 		const uint32_t currentBlockMaskFloor = getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f);
 		const uint32_t currentBlockMaskCeil = getIntersectingBlocksMask(m_pos[0], m_pos[1] - 1.f);
 
@@ -662,6 +669,14 @@ void Player::tick(float dt)
 
 			const float deltaSign = totalDelta < 0.f ? -1.f : +1.f;
 
+			if (i == 1)
+			{
+				// update passthrough mode
+				m_blockMask = ~0;
+				if ((getIntersectingBlocksMask(m_pos[0], m_pos[1]) & kBlockMask_Passthrough) || m_input.isDown(INPUT_BUTTON_DOWN))
+					m_blockMask = ~kBlockMask_Passthrough;
+			}
+
 			while (totalDelta != 0.f)
 			{
 				const float delta = (std::abs(totalDelta) < 1.f) ? totalDelta : deltaSign;
@@ -671,6 +686,10 @@ void Player::tick(float dt)
 				newPos[i] += delta;
 
 				uint32_t newBlockMask = getIntersectingBlocksMask(newPos[0], newPos[1]);
+
+				// ignore passthough blocks if we're moving horizontally or upwards
+				if (i != 1 || delta <= 0.f)
+					newBlockMask &= ~kBlockMask_Passthrough;
 
 				// make sure we stay grounded, within reason. allows the player to walk up/down slopes
 				if (i == 0 && m_isGrounded)
@@ -732,7 +751,10 @@ void Player::tick(float dt)
 					{
 						// grounded
 
-						surfaceFriction = FRICTION_GROUNDED;
+						if (newBlockMask & (1 << kBlockType_Slide))
+							surfaceFriction = 0.f;
+						else
+							surfaceFriction = FRICTION_GROUNDED;
 
 						if (m_vel[i] >= 0.f)
 						{
@@ -958,7 +980,7 @@ uint32_t Player::getIntersectingBlocksMaskInternal(int x, int y, bool doWrap) co
 
 uint32_t Player::getIntersectingBlocksMask(int x, int y) const
 {
-	return getIntersectingBlocksMaskInternal(x, y, true);
+	return (getIntersectingBlocksMaskInternal(x, y, true) & m_blockMask);
 }
 
 void Player::handleDamage(float amount, Vec2Arg velocity)

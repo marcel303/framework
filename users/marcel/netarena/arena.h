@@ -26,6 +26,7 @@ enum BlockType : unsigned char
 	kBlockType_Empty,
 	kBlockType_Destructible,
 	kBlockType_Indestructible,
+	kBlockType_Slide,
 	kBlockType_Moving,
 	kBlockType_Sticky,
 	kBlockType_Spike,
@@ -38,24 +39,30 @@ enum BlockType : unsigned char
 	kBlockType_GravityRight,
 	kBlockType_ConveyorBeltLeft,
 	kBlockType_ConveyorBeltRight,
+	kBlockType_Passthrough,
 	kBlockType_COUNT
 };
 
 static const int kBlockMask_Solid =
 	(1 << kBlockType_Destructible) |
 	(1 << kBlockType_Indestructible) |
+	(1 << kBlockType_Slide) |
 	(1 << kBlockType_Sticky) |
 	(1 << kBlockType_Spring) |
 	(1 << kBlockType_ConveyorBeltLeft) |
-	(1 << kBlockType_ConveyorBeltRight);
+	(1 << kBlockType_ConveyorBeltRight) |
+	(1 << kBlockType_Passthrough);
+
+static const int kBlockMask_Passthrough =
+	(1 << kBlockType_Passthrough);
 
 #pragma pack(push)
 #pragma pack(1)
 
 struct Block
 {
-	BlockType type : 4;
-	BlockShape shape : 4; // fixme : doesn't need to be serialized
+	BlockType type : 8;
+	BlockShape shape : 8; // fixme : doesn't need to be serialized
 };
 
 #pragma pack(pop)
