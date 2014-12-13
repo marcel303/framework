@@ -48,6 +48,13 @@ bool NetSocket::Bind(uint16_t port, bool broadcast)
 	socketAddress.sin_addr.s_addr = htonl(INADDR_ANY);
 	socketAddress.sin_port = htons(m_serverPort);
 
+	// Set 'reuse address' option, which allows multiple sockets to bind to the same port.
+	if (broadcast)
+	{
+		char value = 1;
+		setsockopt(m_socket, SOL_SOCKET, SO_REUSEADDR, &value, sizeof(char));
+	}
+
 	// Bind.
 	int error = bind(m_socket, reinterpret_cast<sockaddr*>(&socketAddress), sizeof(socketAddress));
 		
@@ -55,12 +62,6 @@ bool NetSocket::Bind(uint16_t port, bool broadcast)
 	{
 		LOG_ERR("socket bind failed", 0);
 		return false;
-	}
-
-	// Set 'reuse address' option.
-	{
-		char value = 1;
-		setsockopt(m_socket, SOL_SOCKET, SO_REUSEADDR, &value, sizeof(char));
 	}
 
 	if (broadcast)
