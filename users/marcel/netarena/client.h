@@ -19,13 +19,14 @@ public:
 
 	BulletPool * m_bulletPool;
 
-	uint8_t m_controllerIndex;
-
-	Client(uint8_t controllerIndex);
+	Client();
 	~Client();
 
 	void initialize(Channel * channel);
 
 	void tick(float dt);
 	void draw();
+
+	void addPlayer(Player * player);
+	void removePlayer(Player * player);
 };

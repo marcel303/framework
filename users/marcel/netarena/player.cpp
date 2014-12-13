@@ -189,7 +189,7 @@ float Player::mirrorY(float y) const
 	return m_pos.yFacing > 0 ? y : PLAYER_COLLISION_SY - y;
 }
 
-Player::Player(uint32_t netId)
+Player::Player(uint32_t netId, uint16_t owningChannelId)
 	: m_pos(this)
 	, m_state(this)
 	, m_anim(this)
@@ -203,6 +203,7 @@ Player::Player(uint32_t netId)
 	, m_isWallSliding(false)
 {
 	setNetId(netId);
+	setOwningChannelId(owningChannelId);
 
 	if (netId != 0)
 	{

@@ -202,7 +202,7 @@ public:
 	virtual NetObjectType getType() const { return kNetObjectType_Player; }
 
 public:
-	Player(uint32_t netId = 0);
+	Player(uint32_t netId = 0, uint16_t owningChannelId = 0);
 	~Player();
 
 	void tick(float dt);
@@ -217,10 +217,13 @@ public:
 	struct InputState
 	{
 		InputState()
-			: m_prevButtons(0)
+			: m_controllerIndex(-1)
+			, m_prevButtons(0)
 			, m_currButtons(0)
 		{
 		}
+
+		int m_controllerIndex;
 
 		uint16_t m_prevButtons;
 		uint16_t m_currButtons;

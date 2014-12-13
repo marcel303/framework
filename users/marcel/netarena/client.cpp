@@ -1,17 +1,18 @@
+#include <algorithm>
 #include "arena.h"
 #include "bullet.h"
 #include "Channel.h"
 #include "client.h"
+#include "Debugging.h"
 #include "framework.h"
 #include "main.h"
 #include "player.h"
 
-Client::Client(uint8_t controllerIndex)
+Client::Client()
 	: m_channel(0)
 	, m_replicationId(0)
 	, m_arena(0)
 	, m_bulletPool(0)
-	, m_controllerIndex(controllerIndex)
 {
 	m_bulletPool = new BulletPool();
 }
@@ -35,10 +36,13 @@ void Client::tick(float dt)
 		{
 			Player * player = *i;
 
+			if (player->getOwningChannelId() != m_channel->m_id)
+				continue;
+
 			uint16_t buttons = 0;
 
-			bool useKeyboard = (i == m_players.begin());
-			bool useGamepad = (i != m_players.begin()) || (m_players.size() == 1);
+			bool useKeyboard = (player->m_input.m_controllerIndex == 0) || (g_app->getControllerAllocationCount() == 1);
+			bool useGamepad = (player->m_input.m_controllerIndex != 0) || (g_app->getControllerAllocationCount() == 1);
 
 			if (useKeyboard)
 			{
@@ -62,22 +66,32 @@ void Client::tick(float dt)
 
 			if (useGamepad)
 			{
-				if (gamepad[0].isDown(DPAD_LEFT) || gamepad[0].getAnalog(0, ANALOG_X) < -0.5f)
-					buttons |= INPUT_BUTTON_LEFT;
-				if (gamepad[0].isDown(DPAD_RIGHT) || gamepad[0].getAnalog(0, ANALOG_X) > +0.5f)
-					buttons |= INPUT_BUTTON_RIGHT;
-				if (gamepad[0].isDown(DPAD_UP) || gamepad[0].getAnalog(0, ANALOG_Y) < -0.5f)
-					buttons |= INPUT_BUTTON_UP;
-				if (gamepad[0].isDown(DPAD_DOWN) || gamepad[0].getAnalog(0, ANALOG_Y) > +0.5f)
-					buttons |= INPUT_BUTTON_DOWN;
-				if (gamepad[0].isDown(GAMEPAD_A))
-					buttons |= INPUT_BUTTON_A;
-				if (gamepad[0].isDown(GAMEPAD_B))
-					buttons |= INPUT_BUTTON_B;
-				if (gamepad[0].isDown(GAMEPAD_X))
-					buttons |= INPUT_BUTTON_X;
-				if (gamepad[0].isDown(GAMEPAD_Y))
-					buttons |= INPUT_BUTTON_Y;
+				const int gamepadIndex =
+					(g_app->getControllerAllocationCount() == 1)
+					? 0
+					: (player->m_input.m_controllerIndex - 1);
+
+				if (gamepadIndex >= 0 && gamepadIndex < GAMEPAD_MAX && gamepad[gamepadIndex].isConnected)
+				{
+					const Gamepad & g = gamepad[gamepadIndex];
+
+					if (g.isDown(DPAD_LEFT) || g.getAnalog(0, ANALOG_X) < -0.5f)
+						buttons |= INPUT_BUTTON_LEFT;
+					if (g.isDown(DPAD_RIGHT) || g.getAnalog(0, ANALOG_X) > +0.5f)
+						buttons |= INPUT_BUTTON_RIGHT;
+					if (g.isDown(DPAD_UP) || g.getAnalog(0, ANALOG_Y) < -0.5f)
+						buttons |= INPUT_BUTTON_UP;
+					if (g.isDown(DPAD_DOWN) || g.getAnalog(0, ANALOG_Y) > +0.5f)
+						buttons |= INPUT_BUTTON_DOWN;
+					if (g.isDown(GAMEPAD_A))
+						buttons |= INPUT_BUTTON_A;
+					if (g.isDown(GAMEPAD_B))
+						buttons |= INPUT_BUTTON_B;
+					if (g.isDown(GAMEPAD_X))
+						buttons |= INPUT_BUTTON_X;
+					if (g.isDown(GAMEPAD_Y))
+						buttons |= INPUT_BUTTON_Y;
+				}
 			}
 
 			if (buttons != player->m_input.m_currButtons)
@@ -107,4 +121,32 @@ void Client::draw()
 	}
 
 	m_bulletPool->draw();
+}
+
+void Client::addPlayer(Player * player)
+{
+	m_players.push_back(player);
+
+	if (player->getOwningChannelId() == m_channel->m_id)
+	{
+		Assert(player->m_input.m_controllerIndex == -1);
+		player->m_input.m_controllerIndex = g_app->allocControllerIndex();
+	}
+}
+
+void Client::removePlayer(Player * player)
+{
+	auto i = std::find(m_players.begin(), m_players.end(), player);
+	Assert(i != m_players.end());
+	if (i != m_players.end())
+	{
+		if (player->getOwningChannelId() == m_channel->m_id)
+		{
+			Assert(player->m_input.m_controllerIndex != -1);
+			g_app->freeControllerIndex(player->m_input.m_controllerIndex);
+			player->m_input.m_controllerIndex = -1;
+		}
+
+		m_players.erase(i);
+	}
 }

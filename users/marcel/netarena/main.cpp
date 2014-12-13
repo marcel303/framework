@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <functional>
 #include "arena.h"
 #include "BitStream.h"
 #include "bullet.h"
@@ -227,7 +229,7 @@ void App::SV_OnChannelConnect(Channel * channel)
 
 	clientInfo.replicationId = m_replicationMgr->SV_CreateClient(channel, 0);
 
-	clientInfo.player = new Player(m_host->allocNetId());
+	clientInfo.player = new Player(m_host->allocNetId(), channel->m_destinationId);
 
 	m_replicationMgr->SV_AddObject(clientInfo.player);
 
@@ -313,7 +315,7 @@ void App::OnReplicationObjectCreated(ReplicationClient * client, ReplicationObje
 		break;
 
 	case kNetObjectType_Player:
-		gameClient->m_players.push_back(static_cast<Player*>(object));
+		gameClient->addPlayer(static_cast<Player*>(object));
 		break;
 
 	default:
@@ -330,12 +332,7 @@ void App::OnReplicationObjectDestroyed(ReplicationClient * client, ReplicationOb
 	switch (netObject->getType())
 	{
 	case kNetObjectType_Player:
-		{
-			auto i = std::find(gameClient->m_players.begin(), gameClient->m_players.end(), static_cast<Player*>(netObject));
-			Assert(i != gameClient->m_players.end());
-			if (i != gameClient->m_players.end())
-				gameClient->m_players.erase(i);
-		}
+		gameClient->removePlayer(static_cast<Player*>(netObject));
 		break;
 
 	case kNetObjectType_Arena:
@@ -496,6 +493,13 @@ bool App::init(bool isHost)
 
 		//
 
+		Assert(m_freeControllerList.empty());
+		m_freeControllerList.clear();
+		for (int i = 0; i < GAMEPAD_MAX + 1; ++i)
+			m_freeControllerList.push_back(i);
+
+		//
+
 		m_optionMenu = new OptionMenu();
 		m_optionMenuIsOpen = false;
 
@@ -523,6 +527,8 @@ void App::shutdown()
 	}
 
 	m_clients.clear();
+
+	m_freeControllerList.clear();
 
 	if (m_isHost)
 	{
@@ -575,7 +581,7 @@ void App::connect(const char * address)
 
 	channel->Connect(NetAddress(address, 6000));
 
-	Client * client = new Client(m_clients.size());
+	Client * client = new Client;
 
 	client->initialize(channel);
 	client->m_replicationId = m_replicationMgr->CL_CreateClient(client->m_channel, client);
@@ -886,6 +892,28 @@ void App::netUpdateBullet(uint16_t id)
 	bs.WriteAlignedBytes(&b, sizeof(b));
 
 	m_rpcMgr->Call(s_rpcUpdateBullet, bs, ChannelPool_Server, 0, true, false);
+}
+
+int App::allocControllerIndex()
+{
+	if (m_freeControllerList.empty())
+		return -1;
+	std::sort(m_freeControllerList.begin(), m_freeControllerList.end(), std::greater<int>());
+	const int index = m_freeControllerList.back();
+	m_freeControllerList.pop_back();
+	return index;
+}
+
+void App::freeControllerIndex(int index)
+{
+	Assert(index != -1);
+	if (index != -1)
+		m_freeControllerList.push_back(index);
+}
+
+int App::getControllerAllocationCount() const
+{
+	return (GAMEPAD_MAX + 1) - m_freeControllerList.size();
 }
 
 //

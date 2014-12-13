@@ -51,14 +51,14 @@ static void initializeBlockMasks()
 		createBlockMask(kBlockShape_BL,     [](int x, int y) { return s_blockMasks[kBlockShape_TL].test(               x, BLOCK_SY - 1 - y); });
 		createBlockMask(kBlockShape_BR,     [](int x, int y) { return s_blockMasks[kBlockShape_TL].test(BLOCK_SX - 1 - x, BLOCK_SY - 1 - y); });
 
-		createBlockMask(kBlockShape_TL2a,   [](int x, int y) { return x + y * 2 < BLOCK_SX; });
-		createBlockMask(kBlockShape_TL2b,   [](int x, int y) { return x + y * 2 < BLOCK_SX * 2; });
-		createBlockMask(kBlockShape_TR2a,   [](int x, int y) { return s_blockMasks[kBlockShape_TL2a].test(BLOCK_SX - 1 - x,                y); });
-		createBlockMask(kBlockShape_TR2b,   [](int x, int y) { return s_blockMasks[kBlockShape_TL2b].test(BLOCK_SX - 1 - x,                y); });
+		createBlockMask(kBlockShape_TL2a,   [](int x, int y) { return x + y * 2 < BLOCK_SX * 2; });
+		createBlockMask(kBlockShape_TL2b,   [](int x, int y) { return x + y * 2 < BLOCK_SX * 1; });
+		createBlockMask(kBlockShape_TR2a,   [](int x, int y) { return s_blockMasks[kBlockShape_TL2b].test(BLOCK_SX - 1 - x,                y); });
+		createBlockMask(kBlockShape_TR2b,   [](int x, int y) { return s_blockMasks[kBlockShape_TL2a].test(BLOCK_SX - 1 - x,                y); });
 		createBlockMask(kBlockShape_BL2a,   [](int x, int y) { return s_blockMasks[kBlockShape_TL2a].test(               x, BLOCK_SY - 1 - y); });
 		createBlockMask(kBlockShape_BL2b,   [](int x, int y) { return s_blockMasks[kBlockShape_TL2b].test(               x, BLOCK_SY - 1 - y); });
-		createBlockMask(kBlockShape_BR2a,   [](int x, int y) { return s_blockMasks[kBlockShape_TL2a].test(BLOCK_SX - 1 - x, BLOCK_SY - 1 - y); });
-		createBlockMask(kBlockShape_BR2b,   [](int x, int y) { return s_blockMasks[kBlockShape_TL2b].test(BLOCK_SX - 1 - x, BLOCK_SY - 1 - y); });
+		createBlockMask(kBlockShape_BR2a,   [](int x, int y) { return s_blockMasks[kBlockShape_TL2b].test(BLOCK_SX - 1 - x, BLOCK_SY - 1 - y); });
+		createBlockMask(kBlockShape_BR2b,   [](int x, int y) { return s_blockMasks[kBlockShape_TL2a].test(BLOCK_SX - 1 - x, BLOCK_SY - 1 - y); });
 	}
 }
 

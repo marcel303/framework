@@ -45,6 +45,8 @@ class App : public ChannelHandler, public ReplicationHandler
 	std::vector<Client*> m_clients;
 	int m_selectedClient;
 
+	std::vector<int> m_freeControllerList;
+
 	OptionMenu * m_optionMenu;
 	bool m_optionMenuIsOpen;
 
@@ -89,6 +91,10 @@ public:
 	uint16_t netSpawnBullet(int16_t x, int16_t y, uint8_t angle, uint8_t type, uint32_t ownerNetId);
 	void netKillBullet(uint16_t id);
 	void netUpdateBullet(uint16_t id);
+
+	int allocControllerIndex();
+	void freeControllerIndex(int index);
+	int getControllerAllocationCount() const;
 
 	ReplicationManager * getReplicationMgr() { return m_replicationMgr; }
 };
