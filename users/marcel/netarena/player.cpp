@@ -749,6 +749,11 @@ void Player::tick(float dt)
 						else
 						{
 							m_vel[0] = 0.f;
+
+							if (m_isAnimDriven && m_anim.m_anim == kPlayerAnim_AirDash)
+							{
+								m_sprite->stopAnim();
+							}
 						}
 					}
 
