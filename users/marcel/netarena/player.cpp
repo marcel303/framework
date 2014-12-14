@@ -390,7 +390,7 @@ void Player::tick(float dt)
 					{
 						//log("-> attack damage");
 
-						other->handleDamage(1.f, Vec2(m_pos.xFacing * PLAYER_SWORD_PUSH_SPEED, 0.f));
+						other->handleDamage(1.f, Vec2(m_pos.xFacing * PLAYER_SWORD_PUSH_SPEED, 0.f), this);
 					}
 				}
 			}
@@ -913,6 +913,11 @@ void Player::draw()
 	m_sprite->drawEx(m_pos.x - ARENA_SX_PIXELS, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, 2.f);
 	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0) + ARENA_SY_PIXELS, 0.f, 2.f);
 	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0) - ARENA_SY_PIXELS, 0.f, 2.f);
+
+	// draw score
+	setFont("calibri.ttf");
+	setColor(255, 255, 255);
+	drawText(m_pos[0], m_pos[1] - 100, 20, 0.f, -1.f, "%d", m_state.score);
 }
 
 void Player::debugDraw()
@@ -993,7 +998,7 @@ uint32_t Player::getIntersectingBlocksMask(int x, int y) const
 	return (getIntersectingBlocksMaskInternal(x, y, true) & m_blockMask);
 }
 
-void Player::handleDamage(float amount, Vec2Arg velocity)
+void Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 {
 	if (m_state.isAlive)
 	{
@@ -1009,6 +1014,17 @@ void Player::handleDamage(float amount, Vec2Arg velocity)
 
 			m_anim.SetAnim(kPlayerAnim_Die, true, true);
 			m_isAnimDriven = true;
+
+			if (attacker)
+			{
+				attacker->awardScore(1);
+			}
 		}
 	}
+}
+
+void Player::awardScore(int score)
+{
+	m_state.score += score;
+	m_state.SetDirty();
 }

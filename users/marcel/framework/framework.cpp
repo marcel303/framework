@@ -2424,6 +2424,11 @@ void setFont(const Font & font)
 	globals.font = const_cast<Font&>(font).getFont();
 }
 
+void setFont(const char * font)
+{
+	setFont(Font(font));
+}
+
 void setShader(const Shader & shader)
 {
 	if (&shader != globals.shader)

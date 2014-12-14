@@ -72,16 +72,19 @@ class PlayerState_NS : public NetSerializable
 	virtual void SerializeStruct()
 	{
 		Serialize(isAlive);
+		Serialize(score);
 	}
 
 public:
 	PlayerState_NS(NetSerializableObject * owner)
 		: NetSerializable(owner)
 		, isAlive(false)
+		, score(0)
 	{
 	}
 
 	bool isAlive;
+	uint16_t score;
 };
 
 class PlayerAnim_NS : public NetSerializable
@@ -212,7 +215,8 @@ public:
 	uint32_t getIntersectingBlocksMaskInternal(int x, int y, bool doWrap) const;
 	uint32_t getIntersectingBlocksMask(int x, int y) const;
 
-	void handleDamage(float amount, Vec2Arg velocity);
+	void handleDamage(float amount, Vec2Arg velocity, Player * attacker);
+	void awardScore(int score);
 
 	struct InputState
 	{

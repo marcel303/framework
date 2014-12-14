@@ -74,7 +74,23 @@ void BulletPool::tick(float dt)
 
 			if (b.maxDistanceTravelled != 0.f && b.distanceTravelled > b.maxDistanceTravelled)
 				kill = true;
-			
+
+			Player * owner = 0;
+
+			if (b.ownerNetId != 0)
+			{
+				for (auto p = g_host->m_players.begin(); p != g_host->m_players.end(); ++p)
+				{
+					Player * player = *p;
+
+					if (player->getNetId() == b.ownerNetId)
+						owner = player;
+				}
+
+				if (owner == 0)
+					kill = true;
+			}
+
 			if (!kill)
 			{
 				// collide with players
@@ -95,7 +111,7 @@ void BulletPool::tick(float dt)
 						float vx, vy;
 						getVelocityXY(b.angle, b.velocity, vx, vy);
 
-						player->handleDamage(1.f, Vec2(vx, vy));
+						player->handleDamage(1.f, Vec2(vx, vy), owner);
 
 						kill = true;
 					}
