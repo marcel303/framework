@@ -15,8 +15,10 @@ enum PickupType
 struct Pickup
 {
 	PickupType type;
-	uint8_t blockX;
-	uint8_t blockY;
+	int x1;
+	int y1;
+	int x2;
+	int y2;
 	uint16_t spriteId;
 };
 
@@ -53,7 +55,7 @@ public:
 	Player * findPlayerByNetId(uint32_t netId);
 
 	void spawnPickup(PickupType type, int blockX, int blockY);
-	Pickup * grabPickup(int x, int y);
+	Pickup * grabPickup(int x1, int y1, int x2, int y2);
 };
 
 extern Host * g_host;

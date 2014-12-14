@@ -338,16 +338,22 @@ void Player::tick(float dt)
 
 	if (m_state.isAlive)
 	{
-		Pickup * pickup = g_host->grabPickup(m_pos[0], m_pos[1]);
+		// see if we grabbed any pickup
+
+		Pickup * pickup = g_host->grabPickup(
+			m_pos[0] + m_collision.x1,
+			m_pos[1] + m_collision.y1,
+			m_pos[0] + m_collision.x2,
+			m_pos[1] + m_collision.y2);
 
 		if (pickup)
 		{
-			// grabbed a pickup!
-		}
-
-		if (m_input.wentDown(INPUT_BUTTON_Y))
-		{
-			m_selectedWeapon = static_cast<PlayerWeapon>((m_selectedWeapon + 1) % kPlayerWeapon_COUNT);
+			switch (pickup->type)
+			{
+			case kPickupType_Ammo:
+				m_selectedWeapon = kPlayerWeapon_Fire;
+				break;
+			}
 		}
 
 		m_blockMask = ~0;
@@ -462,6 +468,7 @@ void Player::tick(float dt)
 					break;
 				case kPlayerWeapon_Fire:
 					attackAnim = kPlayerAnim_Fire;
+					m_selectedWeapon = kPlayerWeapon_Sword;
 					break;
 				}
 

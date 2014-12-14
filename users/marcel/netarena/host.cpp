@@ -130,26 +130,23 @@ void Host::spawnPickup(PickupType type, int blockX, int blockY)
 
 	Pickup pickup;
 	pickup.type = type;
-	pickup.blockX = blockX;
-	pickup.blockY = blockY;
+	pickup.x1 = (blockX + 0) * BLOCK_SX;
+	pickup.y1 = (blockY + 0) * BLOCK_SY;
+	pickup.x2 = (blockX + 1) * BLOCK_SX;
+	pickup.y2 = (blockY + 1) * BLOCK_SY;
 	pickup.spriteId = g_app->netAddSprite(filename, blockX * BLOCK_SX, blockY * BLOCK_SY);
 
 	m_pickups.push_back(pickup);
 }
 
-Pickup * Host::grabPickup(int x, int y)
+Pickup * Host::grabPickup(int x1, int y1, int x2, int y2)
 {
-	if (x < 0 || x >= ARENA_SX_PIXELS || y < 0 || y >= ARENA_SY_PIXELS)
-		return 0;
-
-	const int blockX = x / BLOCK_SX;
-	const int blockY = y / BLOCK_SY;
-
 	for (auto i = m_pickups.begin(); i != m_pickups.end(); ++i)
 	{
 		const Pickup & pickup = *i;
 
-		if (pickup.blockX == blockX && pickup.blockY == blockY)
+		if (x2 >= pickup.x1 && x1 < pickup.x2 &&
+			y2 >= pickup.y1 && y1 < pickup.y2)
 		{
 			m_grabbedPickup = pickup;
 			m_pickups.erase(i);
