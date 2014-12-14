@@ -174,14 +174,30 @@ class Player : public NetObject
 	{
 		AttackInfo()
 			: attacking(false)
+			, hitDestructible(false)
 			, attackVel()
 		{
 		}
 
 		bool attacking;
+		bool hitDestructible;
 		Vec2 attackVel;
 		CollisionInfo collision;
 	} m_attack;
+
+	struct TeleportInfo
+	{
+		TeleportInfo()
+			: cooldown(false)
+			, x(0)
+			, y(0)
+		{
+		}
+
+		bool cooldown;
+		int x;
+		int y;
+	} m_teleport;
 
 	bool m_isGrounded;
 	bool m_isAttachedToSticky;

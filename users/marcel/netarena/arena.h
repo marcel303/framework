@@ -32,6 +32,7 @@ enum BlockType : unsigned char
 	kBlockType_Spike,
 	kBlockType_Spawn,
 	kBlockType_Spring,
+	kBlockType_Teleport,
 	kBlockType_GravityReverse,
 	kBlockType_GravityDisable,
 	kBlockType_GravityStrong,

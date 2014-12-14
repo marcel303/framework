@@ -423,11 +423,13 @@ void Player::tick(float dt)
 					{
 						Block & block = g_hostArena->getBlock(x, y);
 
-						if (block.type == kBlockType_Destructible)
+						if (block.type == kBlockType_Destructible && !m_attack.hitDestructible)
 						{
 							block.type = kBlockType_Empty;
 
 							PlaySecondaryEffects(kPlayerEvent_DestructibleDestroy);
+
+							m_attack.hitDestructible = true;
 
 							updated = true; // todo : more optimized way of making small changes to map
 						}
@@ -516,6 +518,57 @@ void Player::tick(float dt)
 				m_isAnimDriven = true;
 
 				PlaySecondaryEffects(kPlayerEvent_SpikeHit);
+			}
+		}
+
+		// teleport
+
+		{
+			int px = int(m_pos[0] + (m_collision.x1 + m_collision.x2) / 2) / BLOCK_SX;
+			int py = int(m_pos[1] + (m_collision.y1 + m_collision.y2) / 2) / BLOCK_SY;
+
+			if (px != m_teleport.x || py != m_teleport.y)
+			{
+				m_teleport.cooldown = false;
+			}
+
+			if (!m_teleport.cooldown && px >= 0 && px < ARENA_SX && py >= 0 && py < ARENA_SY)
+			{
+				const Block & block = g_hostArena->getBlock(px, py);
+
+				if (block.type == kBlockType_Teleport)
+				{
+					// find a teleport destination
+
+					std::vector< std::pair<int, int> > destinations;
+
+					for (int x = 0; x < ARENA_SX; ++x)
+						for (int y = 0; y < ARENA_SY; ++y)
+							if (x != px && y != py && g_hostArena->getBlock(x, y).type == kBlockType_Teleport)
+								destinations.push_back(std::make_pair(x, y));
+
+					if (destinations.empty())
+					{
+						LOG_WRN("unable to find teleport destination");
+					}
+					else
+					{
+						const int idx = rand() % destinations.size();
+
+						const int x = std::get<0>(destinations[idx]);
+						const int y = std::get<1>(destinations[idx]);
+
+						m_pos[0] = x * BLOCK_SX;
+						m_pos[1] = y * BLOCK_SY;
+
+						m_pos[0] += BLOCK_SX / 2;
+						m_pos[1] += BLOCK_SY - 1;
+
+						m_teleport.cooldown = true;
+						m_teleport.x = x;
+						m_teleport.y = y;
+					}
+				}
 			}
 		}
 

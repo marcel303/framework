@@ -162,6 +162,7 @@ void Arena::load(const char * filename)
 				    kBlockType_Spike,
 				p = kBlockType_Spawn,
 				j = kBlockType_Spring,
+				t = kBlockType_Teleport,
 				u = kBlockType_GravityReverse,
 				- = kBlockType_GravityDisable,
 				d = kBlockType_GravityStrong,
@@ -183,6 +184,7 @@ void Arena::load(const char * filename)
 				case 's': type = kBlockType_Sticky; break;
 				case 'p': type = kBlockType_Spawn; break;
 				case 'j': type = kBlockType_Spring; break;
+				case 't': type = kBlockType_Teleport; break;
 				case 'u': type = kBlockType_GravityReverse; break;
 				case '-': type = kBlockType_GravityDisable; break;
 				case 'd': type = kBlockType_GravityStrong; break;
@@ -288,6 +290,7 @@ void Arena::drawBlocks()
 		"block-spike.png",
 		"block-spawn.png",
 		"block-spring.png",
+		"block-teleport.png", // teleport
 		"block-gravity-reverse.png",
 		"block-gravity-disable.png",
 		"block-gravity-strong.png",
