@@ -160,7 +160,7 @@ void Arena::load(const char * filename)
 				v = kBlockType_Slide,
 				    kBlockType_Moving,
 				s = kBlockType_Sticky,
-				    kBlockType_Spike,
+				q   kBlockType_Spike,
 				p = kBlockType_Spawn,
 				j = kBlockType_Spring,
 				t = kBlockType_Teleport,
@@ -183,6 +183,7 @@ void Arena::load(const char * filename)
 				case 'x': type = kBlockType_Indestructible; break;
 				case 'v': type = kBlockType_Slide; break;
 				case 's': type = kBlockType_Sticky; break;
+				case 'q': type = kBlockType_Spike; break;
 				case 'p': type = kBlockType_Spawn; break;
 				case 'j': type = kBlockType_Spring; break;
 				case 't': type = kBlockType_Teleport; break;

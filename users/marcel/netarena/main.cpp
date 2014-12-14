@@ -533,6 +533,11 @@ bool App::init(bool isHost)
 
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
+		if (!g_devMode)
+		{
+			framework.fillCachesWithPath(".");
+		}
+
 		m_isHost = isHost;
 
 		//
