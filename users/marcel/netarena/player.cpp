@@ -7,6 +7,7 @@
 #include "player.h"
 
 #define WRAP_AROUND_TOP_AND_BOTTOM 1
+#define PLAYER_SCALE 1
 
 // todo : m_isGrounded should be true when stickied too. review code and make change!
 
@@ -972,13 +973,13 @@ void Player::draw()
 	setColor(colorWhite);
 	m_sprite->flipX = m_pos.xFacing < 0 ? true : false;
 	m_sprite->flipY = m_pos.yFacing < 0 ? true : false;
-	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, 2.f);
+	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, PLAYER_SCALE);
 
 	// render additional sprites for wrap around
-	m_sprite->drawEx(m_pos.x + ARENA_SX_PIXELS, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, 2.f);
-	m_sprite->drawEx(m_pos.x - ARENA_SX_PIXELS, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, 2.f);
-	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0) + ARENA_SY_PIXELS, 0.f, 2.f);
-	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0) - ARENA_SY_PIXELS, 0.f, 2.f);
+	m_sprite->drawEx(m_pos.x + ARENA_SX_PIXELS, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, PLAYER_SCALE);
+	m_sprite->drawEx(m_pos.x - ARENA_SX_PIXELS, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, PLAYER_SCALE);
+	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0) + ARENA_SY_PIXELS, 0.f, PLAYER_SCALE);
+	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0) - ARENA_SY_PIXELS, 0.f, PLAYER_SCALE);
 
 	// draw score
 	setFont("calibri.ttf");
