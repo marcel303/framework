@@ -193,6 +193,7 @@ Player::Player(uint32_t netId, uint16_t owningChannelId)
 	: m_pos(this)
 	, m_state(this)
 	, m_anim(this)
+	, m_selectedWeapon(kPlayerWeapon_Sword)
 	, m_isAuthorative(false)
 	, m_blockMask(0)
 	, m_isGrounded(false)
@@ -312,7 +313,7 @@ void Player::tick(float dt)
 
 	//
 
-	if (!m_state.isAlive || m_input.wentDown(INPUT_BUTTON_Y))
+	if (!m_state.isAlive || m_input.wentDown(INPUT_BUTTON_START))
 	{
 		int x, y;
 
@@ -337,6 +338,11 @@ void Player::tick(float dt)
 
 	if (m_state.isAlive)
 	{
+		if (m_input.wentDown(INPUT_BUTTON_Y))
+		{
+			m_selectedWeapon = static_cast<PlayerWeapon>((m_selectedWeapon + 1) % kPlayerWeapon_COUNT);
+		}
+
 		m_blockMask = ~0;
 
 		const uint32_t currentBlockMask = getIntersectingBlocksMask(m_pos[0], m_pos[1]);
@@ -438,8 +444,19 @@ void Player::tick(float dt)
 		{
 			if (m_input.wentDown(INPUT_BUTTON_B))
 			{
-				//const int attackAnim = kPlayerAnim_Fire;
-				const int attackAnim = kPlayerAnim_Attack;
+				int attackAnim = -1;
+
+				switch (m_selectedWeapon)
+				{
+				case kPlayerWeapon_Sword:
+					attackAnim = kPlayerAnim_Attack;
+					break;
+				case kPlayerWeapon_Fire:
+					attackAnim = kPlayerAnim_Fire;
+					break;
+				}
+
+				Assert(attackAnim != -1);
 
 				if (isAnimOverrideAllowed(attackAnim))
 				{

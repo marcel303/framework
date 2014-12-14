@@ -71,6 +71,8 @@ void Client::tick(float dt)
 					buttons |= INPUT_BUTTON_X;
 				if (keyboard.isDown(SDLK_x))
 					buttons |= INPUT_BUTTON_Y;
+				if (keyboard.isDown(SDLK_d))
+					buttons |= INPUT_BUTTON_START;
 			}
 
 			if (useGamepad)
@@ -102,6 +104,8 @@ void Client::tick(float dt)
 						buttons |= INPUT_BUTTON_X;
 					if (g.isDown(GAMEPAD_Y))
 						buttons |= INPUT_BUTTON_Y;
+					if (g.isDown(GAMEPAD_START))
+						buttons |= INPUT_BUTTON_START;
 				}
 			}
 

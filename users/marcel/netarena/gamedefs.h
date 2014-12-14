@@ -53,3 +53,4 @@ OPTION_DECLARE(int,  BULLET_TYPE0_SPEED, 800);
 #define INPUT_BUTTON_B     (1 << 5)
 #define INPUT_BUTTON_X     (1 << 6)
 #define INPUT_BUTTON_Y     (1 << 7)
+#define INPUT_BUTTON_START (1 << 8)

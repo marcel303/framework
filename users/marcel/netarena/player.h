@@ -7,6 +7,13 @@
 class Dictionary;
 class Sprite;
 
+enum PlayerWeapon
+{
+	kPlayerWeapon_Sword,
+	kPlayerWeapon_Fire,
+	kPlayerWeapon_COUNT
+};
+
 class PlayerPos_NS : public NetSerializable
 {
 	virtual void SerializeStruct()
@@ -156,6 +163,7 @@ class Player : public NetObject
 	Vec2 m_vel;
 	PlayerState_NS m_state;
 	PlayerAnim_NS m_anim;
+	PlayerWeapon m_selectedWeapon;
 
 	bool m_isAuthorative;
 
