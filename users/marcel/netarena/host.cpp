@@ -16,6 +16,11 @@ Arena * g_hostArena = 0;
 BulletPool * g_hostBulletPool = 0;
 NetSpriteManager * g_hostSpriteManager = 0;
 
+static const char * s_pickupSprites[kPickupType_COUNT] =
+{
+	"pickup-ammo.png"
+};
+
 Host::Host()
 	: m_arena(0)
 	, m_nextNetId(1) // 0 = unassigned
@@ -126,14 +131,16 @@ Player * Host::findPlayerByNetId(uint32_t netId)
 
 void Host::spawnPickup(PickupType type, int blockX, int blockY)
 {
-	const char * filename = "block-spike.png";
+	const char * filename = s_pickupSprites[type];
+
+	Sprite sprite(filename);
 
 	Pickup pickup;
 	pickup.type = type;
-	pickup.x1 = (blockX + 0) * BLOCK_SX;
-	pickup.y1 = (blockY + 0) * BLOCK_SY;
-	pickup.x2 = (blockX + 1) * BLOCK_SX;
-	pickup.y2 = (blockY + 1) * BLOCK_SY;
+	pickup.x1 = blockX * BLOCK_SX + (BLOCK_SX - sprite.getWidth()) / 2;
+	pickup.y1 = blockY * BLOCK_SY + (BLOCK_SX - sprite.getHeight()) / 2;
+	pickup.x2 = pickup.x1 + sprite.getWidth();
+	pickup.y2 = pickup.y1 + sprite.getHeight();
 	pickup.spriteId = g_app->netAddSprite(filename, blockX * BLOCK_SX, blockY * BLOCK_SY);
 
 	m_pickups.push_back(pickup);

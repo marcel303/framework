@@ -9,7 +9,8 @@ class Player;
 
 enum PickupType
 {
-	kPickupType_Ammo
+	kPickupType_Ammo,
+	kPickupType_COUNT
 };
 
 struct Pickup
