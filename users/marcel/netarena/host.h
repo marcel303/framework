@@ -34,6 +34,7 @@ class Host
 
 	std::vector<Pickup> m_pickups;
 	Pickup m_grabbedPickup;
+	uint64_t m_nextPickupSpawnTime;
 
 	BulletPool * m_bulletPool;
 

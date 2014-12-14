@@ -374,6 +374,41 @@ bool Arena::getRandomSpawnPoint(int & out_x, int & out_y)
 	}
 }
 
+bool Arena::getRandomPickupLocation(int & out_x, int & out_y)
+{
+	struct Coord
+	{
+		int x;
+		int y;
+	} candidates[ARENA_SX * ARENA_SY];
+	int numCandidates = 0;
+
+	for (int x = 0; x < ARENA_SX; ++x)
+	{
+		for (int y=  0; y < ARENA_SY - 1; ++y)
+		{
+			const Block & block1 = m_blocks[x][y];
+			const Block & block2 = m_blocks[x][y + 1];
+
+			if ((block1.type == kBlockType_Empty) && ((1 << block2.type) & kBlockMask_Solid))
+			{
+				candidates[numCandidates].x = x;
+				candidates[numCandidates].y = y;
+				numCandidates++;
+			}
+		}
+	}
+
+	if (numCandidates == 0)
+		return false;
+
+	const int index = rand() % numCandidates;
+	out_x = candidates[index].x;
+	out_y = candidates[index].y;
+
+	return true;
+}
+
 uint32_t Arena::getIntersectingBlocksMask(int x1, int y1, int x2, int y2)
 {
 	uint32_t result = 0;
