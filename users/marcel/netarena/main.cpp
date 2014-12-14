@@ -495,7 +495,7 @@ bool App::init(bool isHost)
 
 		Assert(m_freeControllerList.empty());
 		m_freeControllerList.clear();
-		for (int i = 0; i < GAMEPAD_MAX + 1; ++i)
+		for (int i = 0; i < MAX_GAMEPAD + 1; ++i)
 			m_freeControllerList.push_back(i);
 
 		//
@@ -913,7 +913,7 @@ void App::freeControllerIndex(int index)
 
 int App::getControllerAllocationCount() const
 {
-	return (GAMEPAD_MAX + 1) - m_freeControllerList.size();
+	return (MAX_GAMEPAD + 1) - m_freeControllerList.size();
 }
 
 //

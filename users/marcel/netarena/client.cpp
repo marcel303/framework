@@ -32,6 +32,15 @@ void Client::tick(float dt)
 {
 	if (m_channel)
 	{
+		// see if there are more players than gamepads, to decide if we should use keyboard exclusively for one player, or also assign them a gamepad
+
+		int numGamepads = 0;
+		for (int i = 0; i < MAX_GAMEPAD; ++i)
+			if (gamepad[i].isConnected)
+				numGamepads++;
+
+		const bool morePlayersThanControllers = (numGamepads < g_app->getControllerAllocationCount());
+
 		for (auto i = m_players.begin(); i != m_players.end(); ++i)
 		{
 			Player * player = *i;
@@ -42,7 +51,7 @@ void Client::tick(float dt)
 			uint16_t buttons = 0;
 
 			bool useKeyboard = (player->m_input.m_controllerIndex == 0) || (g_app->getControllerAllocationCount() == 1);
-			bool useGamepad = (player->m_input.m_controllerIndex != 0) || (g_app->getControllerAllocationCount() == 1);
+			bool useGamepad = !morePlayersThanControllers || (player->m_input.m_controllerIndex != 0) || (g_app->getControllerAllocationCount() == 1);
 
 			if (useKeyboard)
 			{
@@ -67,11 +76,13 @@ void Client::tick(float dt)
 			if (useGamepad)
 			{
 				const int gamepadIndex =
-					(g_app->getControllerAllocationCount() == 1)
+					!morePlayersThanControllers
+					? player->m_input.m_controllerIndex
+					: (g_app->getControllerAllocationCount() == 1)
 					? 0
 					: (player->m_input.m_controllerIndex - 1);
 
-				if (gamepadIndex >= 0 && gamepadIndex < GAMEPAD_MAX && gamepad[gamepadIndex].isConnected)
+				if (gamepadIndex >= 0 && gamepadIndex < MAX_GAMEPAD && gamepad[gamepadIndex].isConnected)
 				{
 					const Gamepad & g = gamepad[gamepadIndex];
 
