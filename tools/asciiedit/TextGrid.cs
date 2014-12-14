@@ -141,6 +141,8 @@ namespace ASCIIedit
 				SelectionX = (m.X) / CSX;
 				SelectionY = (m.Y) / CSY;
 			}
+
+			Focus();
 		}
 
 		protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
@@ -282,6 +284,15 @@ namespace ASCIIedit
 			{
 				MessageBox.Show(e.Message);
 			}
+		}
+
+		protected override bool IsInputKey(Keys keyData)
+		{
+			return
+				keyData == Keys.Left ||
+				keyData == Keys.Right ||
+				keyData == Keys.Up ||
+				keyData == Keys.Down;
 		}
 	}
 }
