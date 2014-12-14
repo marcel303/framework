@@ -341,7 +341,8 @@ void Player::tick(float dt)
 
 		const uint32_t currentBlockMask = getIntersectingBlocksMask(m_pos[0], m_pos[1]);
 		
-		if ((currentBlockMask & kBlockMask_Passthrough) || m_input.isDown(INPUT_BUTTON_DOWN))
+		const bool isInPassthough = (currentBlockMask & kBlockMask_Passthrough) != 0;
+		if (isInPassthough || m_input.isDown(INPUT_BUTTON_DOWN))
 			m_blockMask = ~kBlockMask_Passthrough;
 
 		const uint32_t currentBlockMaskFloor = getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f);
@@ -689,7 +690,10 @@ void Player::tick(float dt)
 				uint32_t newBlockMask = getIntersectingBlocksMask(newPos[0], newPos[1]);
 
 				// ignore passthough blocks if we're moving horizontally or upwards
-				if (i != 1 || delta <= 0.f)
+				// todo : update block mask each iteration. reset m_blockMask first
+				//if (i != 1 || delta <= 0.f)
+				//if ((!m_isGrounded || isInPassthough) && (i != 0 || delta <= 0.f))
+				if ((i == 0 && isInPassthough) || (i == 1 && delta <= 0.f))
 					newBlockMask &= ~kBlockMask_Passthrough;
 
 				// make sure we stay grounded, within reason. allows the player to walk up/down slopes
