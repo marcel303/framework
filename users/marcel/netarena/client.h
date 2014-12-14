@@ -6,6 +6,7 @@
 
 class Arena;
 class BulletPool;
+class NetSpriteManager;
 class Player;
 
 class Client
@@ -18,6 +19,8 @@ public:
 	std::vector<Player*> m_players;
 
 	BulletPool * m_bulletPool;
+
+	NetSpriteManager * m_spriteManager;
 
 	Client();
 	~Client();

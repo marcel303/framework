@@ -338,6 +338,13 @@ void Player::tick(float dt)
 
 	if (m_state.isAlive)
 	{
+		Pickup * pickup = g_host->grabPickup(m_pos[0], m_pos[1]);
+
+		if (pickup)
+		{
+			// grabbed a pickup!
+		}
+
 		if (m_input.wentDown(INPUT_BUTTON_Y))
 		{
 			m_selectedWeapon = static_cast<PlayerWeapon>((m_selectedWeapon + 1) % kPlayerWeapon_COUNT);

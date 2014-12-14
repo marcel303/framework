@@ -91,6 +91,8 @@ public:
 	uint16_t netSpawnBullet(int16_t x, int16_t y, uint8_t angle, uint8_t type, uint32_t ownerNetId);
 	void netKillBullet(uint16_t id);
 	void netUpdateBullet(uint16_t id);
+	uint16_t netAddSprite(const char * filename, int16_t x, int16_t y);
+	void netRemoveSprite(uint16_t id);
 
 	int allocControllerIndex();
 	void freeControllerIndex(int index);

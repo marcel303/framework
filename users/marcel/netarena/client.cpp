@@ -6,6 +6,7 @@
 #include "Debugging.h"
 #include "framework.h"
 #include "main.h"
+#include "netsprite.h"
 #include "player.h"
 
 Client::Client()
@@ -13,12 +14,18 @@ Client::Client()
 	, m_replicationId(0)
 	, m_arena(0)
 	, m_bulletPool(0)
+	, m_spriteManager(0)
 {
 	m_bulletPool = new BulletPool();
+
+	m_spriteManager = new NetSpriteManager();
 }
 
 Client::~Client()
 {
+	delete m_spriteManager;
+	m_spriteManager = 0;
+
 	delete m_bulletPool;
 	m_bulletPool = 0;
 }
@@ -127,6 +134,8 @@ void Client::draw()
 	{
 		m_arena->drawBlocks();
 	}
+
+	m_spriteManager->draw();
 
 	for (auto i = m_players.begin(); i != m_players.end(); ++i)
 	{
