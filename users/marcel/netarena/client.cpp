@@ -5,6 +5,7 @@
 #include "client.h"
 #include "Debugging.h"
 #include "framework.h"
+#include "host.h"
 #include "main.h"
 #include "netsprite.h"
 #include "player.h"
@@ -130,10 +131,27 @@ void Client::tick(float dt)
 
 void Client::draw()
 {
-	if (m_arena)
+	if (!m_arena)
+		return;
+
+	switch (m_arena->m_gameState.m_gameState)
 	{
-		m_arena->drawBlocks();
+	case kGameState_Lobby:
+		break;
+
+	case kGameState_Play:
+		drawPlay();
+		break;
+
+	case kGameState_RoundComplete:
+		drawRoundComplete();
+		break;
 	}
+}
+
+void Client::drawPlay()
+{
+	m_arena->drawBlocks();
 
 	m_spriteManager->draw();
 
@@ -145,6 +163,37 @@ void Client::draw()
 	}
 
 	m_bulletPool->draw();
+}
+
+void Client::drawRoundComplete()
+{
+	int y = GFX_SY / 4;
+
+	setFont("calibri.ttf");
+	drawText(GFX_SX / 2, y, 60, 0.f, 0.f, "Round Complete!");
+
+	y += 80;
+	int index = 0;
+
+	drawText(GFX_SX/3*1, y, 45, +1.f, +1.f, "PLAYER");
+	drawText(GFX_SX/3*2, y, 45, -1.f, +1.f, "SCORE");
+
+	y += 35;
+
+	drawText(GFX_SX/2, y, 45, 0.f, 0.f, "------------------------------------------");
+
+	y += 70;
+
+	for (auto p = m_players.begin(); p != m_players.end(); ++p)
+	{
+		Player * player = *p;
+
+		drawText(GFX_SX/3*1, y, 40, +1.f, +1.f, "Player %d", index);
+		drawText(GFX_SX/3*2, y, 40, -1.f, +1.f, "%d", player->getScore());
+
+		index++;
+		y += 50;
+	}
 }
 
 void Client::addPlayer(Player * player)

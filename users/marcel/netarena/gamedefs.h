@@ -54,3 +54,17 @@ OPTION_DECLARE(int,  BULLET_TYPE0_SPEED, 800);
 #define INPUT_BUTTON_X     (1 << 6)
 #define INPUT_BUTTON_Y     (1 << 7)
 #define INPUT_BUTTON_START (1 << 8)
+
+enum GameState
+{
+	kGameState_Undefined,
+	kGameState_Lobby,
+	kGameState_Play,
+	kGameState_RoundComplete
+};
+
+enum PickupType
+{
+	kPickupType_Ammo,
+	kPickupType_COUNT
+};

@@ -29,6 +29,8 @@ public:
 
 	void tick(float dt);
 	void draw();
+	void drawPlay();
+	void drawRoundComplete();
 
 	void addPlayer(Player * player);
 	void removePlayer(Player * player);

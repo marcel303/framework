@@ -315,25 +315,7 @@ void Player::tick(float dt)
 
 	if (!m_state.isAlive || m_input.wentDown(INPUT_BUTTON_START))
 	{
-		int x, y;
-
-		if (g_hostArena->getRandomSpawnPoint(x, y))
-		{
-			m_state.isAlive = true;
-			m_state.SetDirty();
-
-			m_pos[0] = (float)x;
-			m_pos[1] = (float)y;
-
-			m_vel[0] = 0.f;
-			m_vel[1] = 0.f;
-
-			m_attack = AttackInfo();
-
-			m_isAttachedToSticky = false;
-
-			PlaySecondaryEffects(kPlayerEvent_Spawn);
-		}
+		respawn();
 	}
 
 	if (m_state.isAlive)
@@ -1080,6 +1062,54 @@ uint32_t Player::getIntersectingBlocksMaskInternal(int x, int y, bool doWrap) co
 uint32_t Player::getIntersectingBlocksMask(int x, int y) const
 {
 	return (getIntersectingBlocksMaskInternal(x, y, true) & m_blockMask);
+}
+
+void Player::handleNewGame()
+{
+	m_state.score = 0;
+	m_state.totalScore = 0;
+	m_state.SetDirty();
+}
+
+void Player::handleNewRound()
+{
+	m_state.totalScore += m_state.score;
+	m_state.score = 0;
+	m_state.SetDirty();
+}
+
+void Player::respawn()
+{
+	int x, y;
+
+	if (g_hostArena->getRandomSpawnPoint(x, y))
+	{
+		m_pos[0] = (float)x;
+		m_pos[1] = (float)y;
+
+		m_vel[0] = 0.f;
+		m_vel[1] = 0.f;
+
+		m_state.isAlive = true;
+		m_state.SetDirty();
+
+		m_anim.SetAnim(kPlayerAnim_Walk, false, true);
+
+		m_attack = AttackInfo();
+
+		m_selectedWeapon = kPlayerWeapon_Sword;
+
+		m_blockMask = 0;
+
+		m_isGrounded = false;
+		m_isAttachedToSticky = false;
+		m_isAnimDriven = false;
+		m_animVelIsAbsolute = false;
+		m_isAirDashCharged = false;
+		m_isWallSliding = false;
+
+		PlaySecondaryEffects(kPlayerEvent_Spawn);
+	}
 }
 
 void Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)

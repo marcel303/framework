@@ -99,6 +99,28 @@ class Arena : public NetObject
 	virtual NetObjectType getType() const { return kNetObjectType_Arena; }
 
 public:
+	// fixme .. should be part of.. well.. something else..
+	class GameState_NS : public NetSerializable
+	{
+	public:
+		GameState_NS(NetSerializableObject * owner)
+			: NetSerializable(owner)
+			, m_gameState(kGameState_Undefined)
+		{
+		}
+
+		virtual void SerializeStruct()
+		{
+			uint8_t gameState = m_gameState;
+			Serialize(gameState);
+			m_gameState = static_cast<GameState>(gameState);
+		}
+
+		GameState m_gameState;
+	};
+
+	GameState_NS m_gameState;
+
 	Arena();
 
 	void generate();

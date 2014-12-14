@@ -9,8 +9,17 @@
 #include "ReplicationManager.h"
 #include "Timer.h"
 
-COMMAND_OPTION(s_addSprite, "Debug/Add Sprite", [] { g_app->netAddSprite("block-spike.png", rand() % ARENA_SX_PIXELS, rand() % ARENA_SY_PIXELS); });
-COMMAND_OPTION(s_addPickup, "Debug/Add Pickup", [] { g_host->spawnPickup(kPickupType_Ammo, rand() % ARENA_SX, rand() % ARENA_SY); });
+COMMAND_OPTION(s_addSprite, "Debug/Add Sprite", [] { if (g_host) g_app->netAddSprite("block-spike.png", rand() % ARENA_SX_PIXELS, rand() % ARENA_SY_PIXELS); });
+COMMAND_OPTION(s_addPickup, "Debug/Add Pickup", [] { if (g_host) g_host->spawnPickup(kPickupType_Ammo, rand() % ARENA_SX, rand() % ARENA_SY); });
+
+COMMAND_OPTION(s_gameStateNewGame, "Game State/New Game", [] { if (g_host) g_host->newGame(); });
+COMMAND_OPTION(s_gameStateNewRound, "Game State/New Round", [] { if (g_host) g_host->newRound(); });
+COMMAND_OPTION(s_gameStateEndRound, "Game State/End Round", [] { if (g_host) g_host->endRound(); });
+
+OPTION_DECLARE(int, g_roundCompleteScore, 10);
+OPTION_DEFINE(int, g_roundCompleteScore, "Game Round/Max Player Score");
+OPTION_DECLARE(int, g_roundCompleteTimer, 6);
+OPTION_DEFINE(int, g_roundCompleteTimer, "Game Round/Game Complete Time");
 
 OPTION_DECLARE(int, g_pickupTimeBase, 10);
 OPTION_DEFINE(int, g_pickupTimeBase, "Pickup/Spawn Interval (Sec)");
@@ -35,6 +44,7 @@ Host::Host()
 	, m_nextPickupSpawnTime(0)
 	, m_bulletPool(0)
 	, m_spriteManager(0)
+	, m_roundCompleteTimer(0)
 {
 }
 
@@ -86,6 +96,23 @@ void Host::shutdown()
 
 void Host::tick(float dt)
 {
+	switch (m_arena->m_gameState.m_gameState)
+	{
+	case kGameState_Lobby:
+		break;
+
+	case kGameState_Play:
+		tickPlay(dt);
+		break;
+
+	case kGameState_RoundComplete:
+		tickRoundComplete(dt);
+		break;
+	}
+}
+
+void Host::tickPlay(float dt)
+{
 	const uint64_t time = g_TimerRT.TimeUS_get();
 
 	if (time >= m_nextPickupSpawnTime)
@@ -104,14 +131,38 @@ void Host::tick(float dt)
 		m_nextPickupSpawnTime = time + (g_pickupTimeBase + (rand() % g_pickupTimeRandom)) * 1000000;
 	}
 
+	bool roundComplete = false;
+
 	for (auto i = m_players.begin(); i != m_players.end(); ++i)
 	{
 		Player * player = *i;
 
 		player->tick(dt);
+
+		if (player->getScore() >= g_roundCompleteScore)
+		{
+			roundComplete = true;
+		}
 	}
 
 	m_bulletPool->tick(dt);
+
+	if (roundComplete)
+	{
+		endRound();
+	}
+}
+
+void Host::tickRoundComplete(float dt)
+{
+	// todo : wait for all players to accept, and go the the next state
+
+	const uint64_t time = g_TimerRT.TimeUS_get();
+
+	if (time >= m_roundCompleteTimer)
+	{
+		newRound();
+	}
 }
 
 void Host::debugDraw()
@@ -127,6 +178,61 @@ void Host::debugDraw()
 uint32_t Host::allocNetId()
 {
 	return m_nextNetId++;
+}
+
+void Host::newGame()
+{
+	// reset players
+
+	for (auto p = m_players.begin(); p != m_players.end(); ++p)
+	{
+		Player * player = *p;
+
+		player->handleNewGame();
+	}
+
+	newRound();
+}
+
+void Host::newRound()
+{
+	// todo : remove bullets
+
+	// remove net sprites
+	
+	for (int i = 0; i < MAX_SPRITES; ++i)
+		if (m_spriteManager->m_sprites[i].enabled)
+			g_app->netRemoveSprite(i);
+
+	m_pickups.clear();
+
+	// load arena
+
+	const char * filename = "arena.txt";
+
+	m_arena->load(filename);
+
+	// respawn players
+
+	for (auto p = m_players.begin(); p != m_players.end(); ++p)
+	{
+		Player * player = *p;
+
+		player->handleNewRound();
+
+		player->respawn();
+	}
+
+	m_arena->m_gameState.m_gameState = kGameState_Play;
+	m_arena->m_gameState.SetDirty();
+}
+
+void Host::endRound()
+{
+	m_arena->m_gameState.m_gameState = kGameState_RoundComplete;
+	m_arena->m_gameState.SetDirty();
+
+	m_roundCompleteTimer = g_TimerRT.TimeUS_get() + g_roundCompleteTimer * 1000000; // fixme, option
 }
 
 void Host::addPlayer(Player * player)

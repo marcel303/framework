@@ -212,10 +212,22 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 	}
 	else if (method == s_rpcAddSprite)
 	{
-		Client * client = g_app->findClientByChannel(channel);
+		NetSpriteManager * spriteManager = 0;
 
-		Assert(client);
-		if (client)
+		if (channel)
+		{
+			Client * client = g_app->findClientByChannel(channel);
+			Assert(client);
+			if (client)
+				spriteManager = client->m_spriteManager;
+		}
+		else
+		{
+			spriteManager = g_hostSpriteManager;
+		}
+
+		Assert(spriteManager);
+		if (spriteManager)
 		{
 			uint16_t id;
 			std::string filename;
@@ -227,23 +239,35 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			bitStream.Read(x);
 			bitStream.Read(y);
 
-			NetSprite & sprite = client->m_spriteManager->m_sprites[id];
+			NetSprite & sprite = spriteManager->m_sprites[id];
 
 			sprite.set(filename.c_str(), x, y);
 		}
 	}
 	else if (method == s_rpcRemoveSprite)
 	{
-		Client * client = g_app->findClientByChannel(channel);
+		NetSpriteManager * spriteManager = 0;
 
-		Assert(client);
-		if (client)
+		if (channel)
+		{
+			Client * client = g_app->findClientByChannel(channel);
+			Assert(client);
+			if (client)
+				spriteManager = client->m_spriteManager;
+		}
+		else
+		{
+			spriteManager = g_hostSpriteManager;
+		}
+
+		Assert(spriteManager);
+		if (spriteManager)
 		{
 			uint16_t id;
 
 			bitStream.Read(id);
 
-			NetSprite & sprite = client->m_spriteManager->m_sprites[id];
+			NetSprite & sprite = spriteManager->m_sprites[id];
 			Assert(sprite.enabled);
 			sprite.enabled = false;
 		}
@@ -548,6 +572,13 @@ bool App::init(bool isHost)
 
 		m_statTimerMenu = new StatTimerMenu();
 		m_statTimerMenuIsOpen = false;
+
+		//
+
+		if (g_host)
+		{
+			g_host->newGame();
+		}
 
 		return true;
 	}
@@ -967,7 +998,7 @@ void App::netRemoveSprite(uint16_t id)
 
 		bs.Write(id);
 
-		m_rpcMgr->Call(s_rpcRemoveSprite, bs, ChannelPool_Server, 0, true, false);
+		m_rpcMgr->Call(s_rpcRemoveSprite, bs, ChannelPool_Server, 0, true, true);
 
 		g_hostSpriteManager->free(id);
 	}

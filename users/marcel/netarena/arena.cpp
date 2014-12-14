@@ -70,6 +70,7 @@ OPTION_DEFINE(int, s_drawBlockMask, "Arena/Debug/Draw Block Mask");
 Arena::Arena()
 	: NetObject()
 	, m_serializer(this)
+	, m_gameState(this)
 {
 	initializeBlockMasks();
 

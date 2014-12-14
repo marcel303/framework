@@ -7,12 +7,6 @@ class BulletPool;
 class NetSpriteManager;
 class Player;
 
-enum PickupType
-{
-	kPickupType_Ammo,
-	kPickupType_COUNT
-};
-
 struct Pickup
 {
 	PickupType type;
@@ -40,6 +34,9 @@ class Host
 
 	NetSpriteManager * m_spriteManager;
 
+	// round complete game state
+	uint64_t m_roundCompleteTimer;
+
 public:
 	Host();
 	~Host();
@@ -48,9 +45,15 @@ public:
 	void shutdown();
 
 	void tick(float dt);
+	void tickPlay(float dt);
+	void tickRoundComplete(float dt);
 	void debugDraw();
 
 	uint32_t allocNetId();
+
+	void newGame();
+	void newRound();
+	void endRound();
 
 	void addPlayer(Player * player);
 	void removePlayer(Player * player);
