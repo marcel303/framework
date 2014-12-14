@@ -93,6 +93,7 @@ public:
 	void netUpdateBullet(uint16_t id);
 	uint16_t netAddSprite(const char * filename, int16_t x, int16_t y);
 	void netRemoveSprite(uint16_t id);
+	void netSpawnParticles(int16_t x, int16_t y, uint8_t type, uint8_t count, uint16_t velocity, uint16_t maxDistance);
 
 	int allocControllerIndex();
 	void freeControllerIndex(int index);

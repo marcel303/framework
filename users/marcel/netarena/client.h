@@ -19,6 +19,7 @@ public:
 	std::vector<Player*> m_players;
 
 	BulletPool * m_bulletPool;
+	BulletPool * m_particlePool;
 
 	NetSpriteManager * m_spriteManager;
 
@@ -34,4 +35,6 @@ public:
 
 	void addPlayer(Player * player);
 	void removePlayer(Player * player);
+
+	void spawnParticles(BulletType type, uint8_t count, int16_t x, int16_t y, uint16_t velocity, uint16_t maxDistance);
 };

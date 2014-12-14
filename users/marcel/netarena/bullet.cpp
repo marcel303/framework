@@ -14,14 +14,23 @@
 
 #define WRAP_AROUND 1
 
+static const char * s_bulletSpriteFiles[kBulletType_COUNT] =
+{
+	"fire-type-0.png",
+	"fire-type-0.png"
+};
+
+static Sprite * s_bulletSprites[kBulletType_COUNT] = { };
+
 static void getVelocityXY(float angle, float velocity, float & x, float & y)
 {
 	x = +std::cos(angle) * velocity;
 	y = -std::sin(angle) * velocity;
 }
 
-BulletPool::BulletPool()
+BulletPool::BulletPool(bool localOnly)
 	: m_numFree(MAX_BULLETS)
+	, m_localOnly(localOnly)
 {
 	memset(m_bullets, 0, sizeof(m_bullets));
 
@@ -39,30 +48,33 @@ void BulletPool::tick(float dt)
 
 		if (b.isAlive)
 		{
-			// todo : evaluate collisions etc
-
 			bool kill = false;
 
-			const uint32_t blockMask = g_hostArena->getIntersectingBlocksMask(b.x, b.y);
+			// evaluate collisions
 
-			// reflection
-
-			if (blockMask & kBlockMask_Solid)
+			if (!b.noCollide)
 			{
-				if (b.maxReflectCount != 0)
-				{
-					b.reflectCount++;
+				const uint32_t blockMask = g_hostArena->getIntersectingBlocksMask(b.x, b.y);
 
-					if (b.reflectCount > b.maxReflectCount)
-						kill = true;
-					else
+				// reflection
+
+				if (blockMask & kBlockMask_Solid)
+				{
+					if (b.maxReflectCount != 0)
 					{
-						b.angle = b.angle + Calc::mPI;
-						g_app->netUpdateBullet(i);
+						b.reflectCount++;
+
+						if (b.reflectCount > b.maxReflectCount)
+							kill = true;
+						else
+						{
+							b.angle = b.angle + Calc::mPI;
+							g_app->netUpdateBullet(i);
+						}
 					}
+					else
+						kill = true;
 				}
-				else
-					kill = true;
 			}
 
 			// wrap around
@@ -91,7 +103,7 @@ void BulletPool::tick(float dt)
 					kill = true;
 			}
 
-			if (!kill)
+			if (!kill && !b.noCollide)
 			{
 				// collide with players
 
@@ -120,7 +132,12 @@ void BulletPool::tick(float dt)
 
 			if (kill)
 			{
-				g_app->netKillBullet(i);
+				if (!m_localOnly)
+				{
+					g_app->netKillBullet(i);
+
+					g_app->netSpawnParticles(b.x, b.y, kBulletType_ParticleA, 16, 100, 50);
+				}
 
 				free(i);
 			}
@@ -177,6 +194,14 @@ void BulletPool::anim(float dt)
 
 void BulletPool::draw()
 {
+	for (int i = 0; i < kBulletType_COUNT; ++i)
+	{
+		if (!s_bulletSprites[i])
+		{
+			s_bulletSprites[i] = new Sprite(s_bulletSpriteFiles[i]);
+		}
+	}
+
 	for (int i = 0; i < MAX_BULLETS; ++i)
 	{
 		const Bullet & b = m_bullets[i];
@@ -187,7 +212,7 @@ void BulletPool::draw()
 			getVelocityXY(b.angle, b.velocity, vx, vy);
 
 			setColor(255, 255, 255);
-			Sprite("fire-type-0.png").drawEx(b.x, b.y, Calc::RadToDeg(b.angle), 2.f);
+			s_bulletSprites[b.type]->drawEx(b.x, b.y, Calc::RadToDeg(b.angle), 2.f);
 		}
 	}
 }

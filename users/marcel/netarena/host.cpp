@@ -65,7 +65,7 @@ void Host::init()
 
 	g_app->getReplicationMgr()->SV_AddObject(m_arena);
 
-	m_bulletPool = new BulletPool();
+	m_bulletPool = new BulletPool(false);
 
 	m_spriteManager = new NetSpriteManager();
 

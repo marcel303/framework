@@ -1,6 +1,7 @@
 #include <algorithm>
 #include "arena.h"
 #include "bullet.h"
+#include "Calc.h"
 #include "Channel.h"
 #include "client.h"
 #include "Debugging.h"
@@ -15,9 +16,11 @@ Client::Client()
 	, m_replicationId(0)
 	, m_arena(0)
 	, m_bulletPool(0)
+	, m_particlePool(0)
 	, m_spriteManager(0)
 {
-	m_bulletPool = new BulletPool();
+	m_bulletPool = new BulletPool(true);
+	m_particlePool = new BulletPool(true);
 
 	m_spriteManager = new NetSpriteManager();
 }
@@ -127,6 +130,8 @@ void Client::tick(float dt)
 	}
 
 	m_bulletPool->anim(dt);
+
+	m_particlePool->tick(dt);
 }
 
 void Client::draw()
@@ -161,6 +166,8 @@ void Client::drawPlay()
 
 		player->draw();
 	}
+
+	m_particlePool->draw();
 
 	m_bulletPool->draw();
 }
@@ -221,5 +228,32 @@ void Client::removePlayer(Player * player)
 		}
 
 		m_players.erase(i);
+	}
+}
+
+void Client::spawnParticles(BulletType type, uint8_t count, int16_t x, int16_t y, uint16_t velocity, uint16_t maxDistance)
+{
+	for (int i = 0; i < count; ++i)
+	{
+		float angle = rand() % 256;
+
+		uint16_t id = m_particlePool->alloc();
+
+		if (id != INVALID_BULLET_ID)
+		{
+			Bullet & b = m_particlePool->m_bullets[id];
+
+			memset(&b, 0, sizeof(b));
+			b.isAlive = true;
+			b.type = type;
+			b.x = x;
+			b.y = y;
+			b.angle = angle / 128.f * float(M_PI);
+			b.velocity = velocity;
+
+			b.noCollide = true;
+			b.maxWrapCount = 1;
+			b.maxDistanceTravelled = maxDistance;
+		}
 	}
 }

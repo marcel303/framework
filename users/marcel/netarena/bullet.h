@@ -8,6 +8,7 @@
 enum BulletType
 {
 	kBulletType_A,
+	kBulletType_ParticleA,
 	kBulletType_COUNT
 };
 
@@ -21,7 +22,8 @@ public:
 	float angle;
 	float velocity;
 	BulletType type;
-	
+	bool noCollide;
+
 	uint8_t reflectCount;
 	uint8_t maxReflectCount;
 
@@ -38,11 +40,12 @@ class BulletPool
 {
 	uint16_t m_freeList[MAX_BULLETS];
 	uint16_t m_numFree;
+	bool m_localOnly;
 
 public:
 	Bullet m_bullets[MAX_BULLETS];
 
-	BulletPool();
+	BulletPool(bool localOnly);
 
 	void tick(float dt);
 	void anim(float dt);

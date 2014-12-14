@@ -92,7 +92,8 @@ enum RpcMethod
 	s_rpcKillBullet,
 	s_rpcUpdateBullet,
 	s_rpcAddSprite,
-	s_rpcRemoveSprite
+	s_rpcRemoveSprite,
+	s_rpcSpawnParticles
 };
 
 void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
@@ -270,6 +271,29 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			NetSprite & sprite = spriteManager->m_sprites[id];
 			Assert(sprite.enabled);
 			sprite.enabled = false;
+		}
+	}
+	else if (method == s_rpcSpawnParticles)
+	{
+		Client * client = g_app->findClientByChannel(channel);
+		Assert(client);
+		if (client)
+		{
+			int16_t x;
+			int16_t y;
+			uint8_t type;
+			uint8_t count;
+			uint16_t velocity;
+			uint16_t maxDistance;
+
+			bitStream.Read(x);
+			bitStream.Read(y);
+			bitStream.Read(type);
+			bitStream.Read(count);
+			bitStream.Read(velocity);
+			bitStream.Read(maxDistance);
+
+			client->spawnParticles((BulletType)type, count, x, y, velocity, maxDistance);
 		}
 	}
 	else
@@ -548,6 +572,7 @@ bool App::init(bool isHost)
 		m_rpcMgr->RegisterWithID(s_rpcUpdateBullet, handleRpc);
 		m_rpcMgr->RegisterWithID(s_rpcAddSprite, handleRpc);
 		m_rpcMgr->RegisterWithID(s_rpcRemoveSprite, handleRpc);
+		m_rpcMgr->RegisterWithID(s_rpcSpawnParticles, handleRpc);
 
 		//
 
@@ -631,6 +656,7 @@ void App::shutdown()
 	m_rpcMgr->Unregister(s_rpcUpdateBullet, handleRpc);
 	m_rpcMgr->Unregister(s_rpcAddSprite, handleRpc);
 	m_rpcMgr->Unregister(s_rpcRemoveSprite, handleRpc);
+	m_rpcMgr->Unregister(s_rpcSpawnParticles, handleRpc);
 
 	m_channelMgr->Shutdown(true);
 
@@ -1002,6 +1028,20 @@ void App::netRemoveSprite(uint16_t id)
 
 		g_hostSpriteManager->free(id);
 	}
+}
+
+void App::netSpawnParticles(int16_t x, int16_t y, uint8_t type, uint8_t count, uint16_t velocity, uint16_t maxDistance)
+{
+	BitStream bs;
+
+	bs.Write(x);
+	bs.Write(y);
+	bs.Write(type);
+	bs.Write(count);
+	bs.Write(velocity);
+	bs.Write(maxDistance);
+
+	m_rpcMgr->Call(s_rpcSpawnParticles, bs, ChannelPool_Server, 0, true, false);
 }
 
 int App::allocControllerIndex()
