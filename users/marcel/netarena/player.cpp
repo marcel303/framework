@@ -6,8 +6,11 @@
 #include "main.h"
 #include "player.h"
 
+OPTION_DECLARE(int, s_playerCharacterIndex, 0);
+OPTION_DEFINE(int, s_playerCharacterIndex, "Player/Character Index (On Create)");
+OPTION_ALIAS(s_playerCharacterIndex, "character");
+
 #define WRAP_AROUND_TOP_AND_BOTTOM 1
-#define PLAYER_SCALE 1
 
 // todo : m_isGrounded should be true when stickied too. review code and make change!
 
@@ -31,15 +34,15 @@ struct PlayerAnimInfo
 	int prio;
 } s_animInfos[kPlayerAnim_COUNT] =
 {
-	{ nullptr,                  0 },
-	{ "zero-x3-jump.png",       1 },
-	{ "zero-x3-wall-slide.png", 2 },
-	{ "zero-x3-walk.png",       3 },
-	{ "zero-x3-attack.png",     4 },
-	{ "zero-x3-fire.png",       4 },
-	{ "zero-x3-dash-air.png",   4 },
-	{ "zero-x3-spawn.png",      5 },
-	{ "zero-x3-die.png",        6 }
+	{ nullptr,                          0 },
+	{ "char%d/jump/jump.png",           1 },
+	{ "char%d/wallslide/wallslide.png", 2 },
+	{ "char%d/walk/walk.png",           3 },
+	{ "char%d/attack/attack.png",       4 },
+	{ "char%d/shoot/shoot.png",         4 },
+	{ "char%d/dash/dash.png",           4 },
+	{ "char%d/spawn/spawn.png",         5 },
+	{ "char%d/die/die.png",             6 }
 };
 
 enum PlayerAttackType
@@ -47,6 +50,36 @@ enum PlayerAttackType
 	kPlayerAttackType_Sword,
 	kPlayerAttackType_Fire
 };
+
+//
+
+void PlayerState_NS::SerializeStruct()
+{
+	uint8_t oldCharacterIndex = characterIndex;
+
+	Serialize(isAlive);
+	Serialize(score);
+	Serialize(totalScore);
+	Serialize(characterIndex);
+
+	if (characterIndex != oldCharacterIndex)
+	{
+		Player * player = static_cast<Player*>(GetOwner());
+
+		player->handleCharacterIndexChange();
+	}
+}
+
+PlayerState_NS::PlayerState_NS(NetSerializableObject * owner)
+	: NetSerializable(owner)
+	, isAlive(false)
+	, score(0)
+	, totalScore(0)
+	, characterIndex(s_playerCharacterIndex)
+{
+}
+
+//
 
 void PlayerAnim_NS::SerializeStruct()
 {
@@ -62,7 +95,10 @@ void PlayerAnim_NS::SerializeStruct()
 		delete player->m_sprite;
 		player->m_sprite = 0;
 
-		player->m_sprite = new Sprite(s_animInfos[m_anim].file);
+		char filename[64];
+		sprintf_s(filename, sizeof(filename), s_animInfos[m_anim].file, player->getCharacterIndex());
+
+		player->m_sprite = new Sprite(filename);
 		player->m_sprite->animActionHandler = Player::handleAnimationAction;
 		player->m_sprite->animActionHandlerObj = player;
 	}
@@ -72,23 +108,6 @@ void PlayerAnim_NS::SerializeStruct()
 	else
 		player->m_sprite->stopAnim();
 }
-
-enum PlayerEvent
-{
-	kPlayerEvent_Spawn,
-	kPlayerEvent_Die,
-	kPlayerEvent_Jump,
-	kPlayerEvent_WallJump,
-	kPlayerEvent_LandOnGround,
-	kPlayerEvent_StickyAttach,
-	kPlayerEvent_StickyRelease,
-	kPlayerEvent_StickyJump,
-	kPlayerEvent_SpringJump,
-	kPlayerEvent_SpikeHit,
-	kPlayerEvent_ArenaWrap,
-	kPlayerEvent_DashAir,
-	kPlayerEvent_DestructibleDestroy
-};
 
 void Player::handleAnimationAction(const std::string & action, const Dictionary & args)
 {
@@ -118,6 +137,14 @@ void Player::handleAnimationAction(const std::string & action, const Dictionary 
 		else if (action == "sound")
 		{
 			g_app->netPlaySound(args.getString("file", "").c_str(), args.getInt("volume", 100));
+		}
+		else if (action == "char_sound")
+		{
+			g_app->netPlaySound(player->makeCharacterFilename(args.getString("file", "").c_str()), args.getInt("volume", 100));
+		}
+		else
+		{
+			logError("unknown action: %s", action.c_str());
 		}
 	}
 }
@@ -217,7 +244,9 @@ Player::Player(uint32_t netId, uint16_t owningChannelId)
 	m_collision.y1 = -PLAYER_COLLISION_SY / 1.f;
 	m_collision.y2 = 0.f;
 
-	m_sprite = new Sprite("zero-x3-walk.png");
+	m_sprite = new Sprite(makeCharacterFilename("walk/walk.png"));
+
+	handleCharacterIndexChange();
 }
 
 Player::~Player()
@@ -226,24 +255,24 @@ Player::~Player()
 	m_sprite = 0;
 }
 
-static void PlaySecondaryEffects(PlayerEvent e)
+void Player::playSecondaryEffects(PlayerEvent e)
 {
 	switch (e)
 	{
 	case kPlayerEvent_Spawn:
-		g_app->netPlaySound("player-spawn.ogg");
+		g_app->netPlaySound(makeCharacterFilename("spawn/spawn.ogg"));
 		break;
 	case kPlayerEvent_Die:
-		g_app->netPlaySound("player-death.ogg");
+		g_app->netPlaySound(makeCharacterFilename("die/die.ogg"));
 		break;
 	case kPlayerEvent_Jump:
-		g_app->netPlaySound("player-jump.ogg");
+		g_app->netPlaySound(makeCharacterFilename("jump/jump.ogg"));
 		break;
 	case kPlayerEvent_WallJump:
-		g_app->netPlaySound("player-wall-jump.ogg");
+		g_app->netPlaySound(makeCharacterFilename("walljump.ogg"));
 		break;
 	case kPlayerEvent_LandOnGround:
-		g_app->netPlaySound("player-land-ground.ogg", 25);
+		g_app->netPlaySound(makeCharacterFilename("land_on_ground.ogg"), 25);
 		break;
 	case kPlayerEvent_StickyAttach:
 		g_app->netPlaySound("player-sticky-attach.ogg");
@@ -423,7 +452,7 @@ void Player::tick(float dt)
 						{
 							block.type = kBlockType_Empty;
 
-							PlaySecondaryEffects(kPlayerEvent_DestructibleDestroy);
+							playSecondaryEffects(kPlayerEvent_DestructibleDestroy);
 
 							m_attack.hitDestructible = true;
 
@@ -514,7 +543,7 @@ void Player::tick(float dt)
 				m_anim.SetAnim(kPlayerAnim_Die, true, true);
 				m_isAnimDriven = true;
 
-				PlaySecondaryEffects(kPlayerEvent_SpikeHit);
+				playSecondaryEffects(kPlayerEvent_SpikeHit);
 			}
 		}
 
@@ -591,13 +620,13 @@ void Player::tick(float dt)
 
 				m_isAttachedToSticky = false;
 
-				PlaySecondaryEffects(kPlayerEvent_StickyJump);
+				playSecondaryEffects(kPlayerEvent_StickyJump);
 			}
 			else if (playerControl && m_input.wentDown(INPUT_BUTTON_DOWN))
 			{
 				m_isAttachedToSticky = false;
 
-				PlaySecondaryEffects(kPlayerEvent_StickyRelease);
+				playSecondaryEffects(kPlayerEvent_StickyRelease);
 			}
 			else
 			{
@@ -607,7 +636,7 @@ void Player::tick(float dt)
 				{
 					m_isAttachedToSticky = true;
 
-					PlaySecondaryEffects(kPlayerEvent_StickyAttach);
+					playSecondaryEffects(kPlayerEvent_StickyAttach);
 				}
 			}
 		}
@@ -811,7 +840,7 @@ void Player::tick(float dt)
 							m_vel[0] = -PLAYER_WALLJUMP_RECOIL_SPEED * deltaSign;
 							m_vel[1] = -PLAYER_WALLJUMP_SPEED;
 
-							PlaySecondaryEffects(kPlayerEvent_WallJump);
+							playSecondaryEffects(kPlayerEvent_WallJump);
 						}
 						else
 						{
@@ -841,7 +870,7 @@ void Player::tick(float dt)
 
 								m_vel[i] = -PLAYER_JUMP_SPEED;
 
-								PlaySecondaryEffects(kPlayerEvent_Jump);
+								playSecondaryEffects(kPlayerEvent_Jump);
 							}
 							else if (newBlockMask & (1 << kBlockType_Spring))
 							{
@@ -849,7 +878,7 @@ void Player::tick(float dt)
 
 								m_vel[i] = -PLAYER_JUMP_SPEED;
 
-								PlaySecondaryEffects(kPlayerEvent_SpringJump);
+								playSecondaryEffects(kPlayerEvent_SpringJump);
 							}
 							else
 							{
@@ -881,7 +910,7 @@ void Player::tick(float dt)
 			{
 				m_isGrounded = true;
 
-				PlaySecondaryEffects(kPlayerEvent_LandOnGround);
+				playSecondaryEffects(kPlayerEvent_LandOnGround);
 			}
 		}
 		else
@@ -934,25 +963,25 @@ void Player::tick(float dt)
 		if (m_pos[0] < 0)
 		{
 			m_pos[0] = ARENA_SX_PIXELS;
-			PlaySecondaryEffects(kPlayerEvent_ArenaWrap);
+			playSecondaryEffects(kPlayerEvent_ArenaWrap);
 		}
 		if (m_pos[0] > ARENA_SX_PIXELS)
 		{
 			m_pos[0] = 0;
-			PlaySecondaryEffects(kPlayerEvent_ArenaWrap);
+			playSecondaryEffects(kPlayerEvent_ArenaWrap);
 		}
 
 	#if WRAP_AROUND_TOP_AND_BOTTOM
 		if (m_pos[1] > ARENA_SY_PIXELS)
 		{
 			m_pos[1] = 0;
-			PlaySecondaryEffects(kPlayerEvent_ArenaWrap);
+			playSecondaryEffects(kPlayerEvent_ArenaWrap);
 		}
 
 		if (m_pos[1] < 0)
 		{
 			m_pos[1] = ARENA_SY_PIXELS;
-			PlaySecondaryEffects(kPlayerEvent_ArenaWrap);
+			playSecondaryEffects(kPlayerEvent_ArenaWrap);
 		}
 	#endif
 
@@ -973,13 +1002,13 @@ void Player::draw()
 	setColor(colorWhite);
 	m_sprite->flipX = m_pos.xFacing < 0 ? true : false;
 	m_sprite->flipY = m_pos.yFacing < 0 ? true : false;
-	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, PLAYER_SCALE);
+	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, m_spriteScale);
 
 	// render additional sprites for wrap around
-	m_sprite->drawEx(m_pos.x + ARENA_SX_PIXELS, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, PLAYER_SCALE);
-	m_sprite->drawEx(m_pos.x - ARENA_SX_PIXELS, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, PLAYER_SCALE);
-	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0) + ARENA_SY_PIXELS, 0.f, PLAYER_SCALE);
-	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0) - ARENA_SY_PIXELS, 0.f, PLAYER_SCALE);
+	m_sprite->drawEx(m_pos.x + ARENA_SX_PIXELS, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, m_spriteScale);
+	m_sprite->drawEx(m_pos.x - ARENA_SX_PIXELS, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, m_spriteScale);
+	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0) + ARENA_SY_PIXELS, 0.f, m_spriteScale);
+	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0) - ARENA_SY_PIXELS, 0.f, m_spriteScale);
 
 	// draw score
 	setFont("calibri.ttf");
@@ -1109,7 +1138,7 @@ void Player::respawn()
 		m_isAirDashCharged = false;
 		m_isWallSliding = false;
 
-		PlaySecondaryEffects(kPlayerEvent_Spawn);
+		playSecondaryEffects(kPlayerEvent_Spawn);
 	}
 }
 
@@ -1142,4 +1171,20 @@ void Player::awardScore(int score)
 {
 	m_state.score += score;
 	m_state.SetDirty();
+}
+
+void Player::handleCharacterIndexChange()
+{
+	// reload character properties
+
+	Dictionary d;
+	d.load(makeCharacterFilename("props.txt"));
+	m_spriteScale = d.getFloat("sprite_scale", 1.f);
+}
+
+char * Player::makeCharacterFilename(const char * filename)
+{
+	static char temp[64];
+	sprintf_s(temp, sizeof(temp), "char%d/%s", m_state.characterIndex, filename);
+	return temp;
 }

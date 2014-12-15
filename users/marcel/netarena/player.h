@@ -14,6 +14,23 @@ enum PlayerWeapon
 	kPlayerWeapon_COUNT
 };
 
+enum PlayerEvent
+{
+	kPlayerEvent_Spawn,
+	kPlayerEvent_Die,
+	kPlayerEvent_Jump,
+	kPlayerEvent_WallJump,
+	kPlayerEvent_LandOnGround,
+	kPlayerEvent_StickyAttach,
+	kPlayerEvent_StickyRelease,
+	kPlayerEvent_StickyJump,
+	kPlayerEvent_SpringJump,
+	kPlayerEvent_SpikeHit,
+	kPlayerEvent_ArenaWrap,
+	kPlayerEvent_DashAir,
+	kPlayerEvent_DestructibleDestroy
+};
+
 class PlayerPos_NS : public NetSerializable
 {
 	virtual void SerializeStruct()
@@ -76,25 +93,15 @@ public:
 
 class PlayerState_NS : public NetSerializable
 {
-	virtual void SerializeStruct()
-	{
-		Serialize(isAlive);
-		Serialize(score);
-		Serialize(totalScore);
-	}
+	virtual void SerializeStruct();
 
 public:
-	PlayerState_NS(NetSerializableObject * owner)
-		: NetSerializable(owner)
-		, isAlive(false)
-		, score(0)
-		, totalScore(0)
-	{
-	}
+	PlayerState_NS(NetSerializableObject * owner);
 
 	bool isAlive;
 	uint16_t score;
 	uint16_t totalScore;
+	uint8_t characterIndex;
 };
 
 class PlayerAnim_NS : public NetSerializable
@@ -213,6 +220,7 @@ class Player : public NetObject
 	Vec2 m_animVel;
 
 	Sprite * m_sprite;
+	float m_spriteScale;
 
 	static void handleAnimationAction(const std::string & action, const Dictionary & args);
 
@@ -235,6 +243,8 @@ public:
 	Player(uint32_t netId = 0, uint16_t owningChannelId = 0);
 	~Player();
 
+	void playSecondaryEffects(PlayerEvent e);
+
 	void tick(float dt);
 	void draw();
 	void debugDraw();
@@ -251,6 +261,10 @@ public:
 
 	int getScore() const { return m_state.score; }
 	int getTotalScore() const { return m_state.totalScore; }
+
+	int getCharacterIndex() const { return m_state.characterIndex; }
+	void handleCharacterIndexChange();
+	char * makeCharacterFilename(const char * filename);
 
 	struct InputState
 	{

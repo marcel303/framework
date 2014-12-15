@@ -1,7 +1,7 @@
 sheet pivot_x:34 pivot_y:71 grid_sx:13 grid_sy:1
 
 animation name:anim grid_x:0 grid_y:0 frames:13 rate:20 loop:0
-	trigger frame:0 action:sound file:player-attack-sword-0.ogg volume:30
+	trigger frame:0 action:char_sound file:attack/sword.ogg volume:30
 	trigger frame:3 action:set_attack_vel x:700
 	trigger frame:6 action:set_attack_vel x:200
 	trigger frame:9 action:set_attack_vel x:0
