@@ -35,9 +35,28 @@ void MultiLevelMenuBase::Create()
 		MultiLevelMenuBase * menu;
 		void * menuItem;
 
+		static bool IsLeaf(const char * str)
+		{
+			while (*str)
+				if (*str++ == '/')
+					return false;
+			return true;
+		}
+
 		bool operator<(const Sortable & other) const
 		{
-			return strcmp(menu->GetPath(menuItem), menu->GetPath(other.menuItem)) > 0;
+			const char * path1 = menu->GetPath(menuItem);
+			const char * path2 = menu->GetPath(other.menuItem);
+			while (*path1 == *path2)
+			{
+				path1++;
+				path2++;
+			}
+			const bool isLeaf1 = IsLeaf(path1);
+			const bool isLeaf2 = IsLeaf(path2);
+			if (isLeaf1 != isLeaf2)
+				return isLeaf1 > isLeaf2;
+			return strcmp(path1, path2) > 0;
 		}
 	};
 
