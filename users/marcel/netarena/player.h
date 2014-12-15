@@ -101,6 +101,7 @@ public:
 	bool isAlive;
 	uint16_t score;
 	uint16_t totalScore;
+	int8_t playerId;
 	uint8_t characterIndex;
 };
 
@@ -261,6 +262,8 @@ public:
 
 	int getScore() const { return m_state.score; }
 	int getTotalScore() const { return m_state.totalScore; }
+
+	void setPlayerId(int id);
 
 	int getCharacterIndex() const { return m_state.characterIndex; }
 	void handleCharacterIndexChange();

@@ -60,6 +60,7 @@ void PlayerState_NS::SerializeStruct()
 	Serialize(isAlive);
 	Serialize(score);
 	Serialize(totalScore);
+	Serialize(playerId);
 	Serialize(characterIndex);
 
 	if (characterIndex != oldCharacterIndex)
@@ -75,6 +76,7 @@ PlayerState_NS::PlayerState_NS(NetSerializableObject * owner)
 	, isAlive(false)
 	, score(0)
 	, totalScore(0)
+	, playerId(-1)
 	, characterIndex(s_playerCharacterIndex)
 {
 }
@@ -1010,10 +1012,39 @@ void Player::draw()
 	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0) + ARENA_SY_PIXELS, 0.f, m_spriteScale);
 	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0) - ARENA_SY_PIXELS, 0.f, m_spriteScale);
 
+	// draw player color
+
+	const int playerId = m_state.playerId;
+	const int alpha = 127;
+
+	if (playerId >= 0 && playerId < 4)
+	{
+		struct color
+		{
+			unsigned char r, g, b;
+		} colors[4] =
+		{
+			{ 255, 0, 0   },
+			{ 255, 255, 0 },
+			{ 0, 0, 255   },
+			{ 0, 255, 0   }
+		};
+		setColor(
+			colors[playerId].r,
+			colors[playerId].g,
+			colors[playerId].b,
+			alpha);
+	}
+	else
+	{
+		setColor(50, 50, 50, alpha);
+	}
+	drawRect(m_pos[0] - 50, m_pos[1] - 110, m_pos[0] + 50, m_pos[1] - 85);
+
 	// draw score
 	setFont("calibri.ttf");
 	setColor(255, 255, 255);
-	drawText(m_pos[0], m_pos[1] - 100, 20, 0.f, -1.f, "%d", m_state.score);
+	drawText(m_pos[0], m_pos[1] - 110, 20, 0.f, +1.f, "%d", m_state.score);
 }
 
 void Player::debugDraw()
@@ -1170,6 +1201,12 @@ void Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 void Player::awardScore(int score)
 {
 	m_state.score += score;
+	m_state.SetDirty();
+}
+
+void Player::setPlayerId(int id)
+{
+	m_state.playerId = id;
 	m_state.SetDirty();
 }
 

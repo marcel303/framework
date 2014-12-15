@@ -25,6 +25,7 @@ class Host
 	Arena * m_arena;
 	std::vector<Player*> m_players;
 	uint32_t m_nextNetId;
+	std::vector<int> m_freePlayerIds;
 
 	std::vector<Pickup> m_pickups;
 	Pickup m_grabbedPickup;

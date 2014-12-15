@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <functional>
 #include "arena.h"
 #include "bullet.h"
 #include "Debugging.h"
@@ -60,6 +62,10 @@ Host::~Host()
 
 void Host::init()
 {
+	m_freePlayerIds.clear();
+	for (int i = 0; i < 4; ++i)
+		m_freePlayerIds.push_back(i);
+
 	m_arena = new Arena();
 	m_arena->load("arena.txt");
 
@@ -250,6 +256,19 @@ void Host::endRound()
 
 void Host::addPlayer(Player * player)
 {
+	// allocate player ID
+
+	int playerId = -1;
+
+	if (!m_freePlayerIds.empty())
+	{
+		std::sort(m_freePlayerIds.begin(), m_freePlayerIds.end(), std::greater<int>());
+		playerId = m_freePlayerIds.back();
+		m_freePlayerIds.pop_back();
+	}
+
+	player->setPlayerId(playerId);
+
 	m_players.push_back(player);
 }
 
