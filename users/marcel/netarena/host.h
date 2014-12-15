@@ -52,6 +52,8 @@ public:
 
 	uint32_t allocNetId();
 
+	void syncNewClient(Channel * channel);
+
 	void newGame();
 	void newRound();
 	void endRound();

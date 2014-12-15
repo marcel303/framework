@@ -92,6 +92,7 @@ enum RpcMethod
 	s_rpcKillBullet,
 	s_rpcUpdateBullet,
 	s_rpcAddSprite,
+	s_rpcSyncSprite,
 	s_rpcRemoveSprite,
 	s_rpcSpawnParticles
 };
@@ -211,7 +212,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			bitStream.ReadAlignedBytes(&b, sizeof(b));
 		}
 	}
-	else if (method == s_rpcAddSprite)
+	else if (method == s_rpcAddSprite || method == s_rpcSyncSprite)
 	{
 		NetSpriteManager * spriteManager = 0;
 
@@ -327,6 +328,8 @@ void App::SV_OnChannelConnect(Channel * channel)
 	//
 
 	m_host->addPlayer(clientInfo.player);
+
+	m_host->syncNewClient(channel);
 }
 
 void App::SV_OnChannelDisconnect(Channel * channel)
@@ -576,6 +579,7 @@ bool App::init(bool isHost)
 		m_rpcMgr->RegisterWithID(s_rpcKillBullet, handleRpc);
 		m_rpcMgr->RegisterWithID(s_rpcUpdateBullet, handleRpc);
 		m_rpcMgr->RegisterWithID(s_rpcAddSprite, handleRpc);
+		m_rpcMgr->RegisterWithID(s_rpcSyncSprite, handleRpc);
 		m_rpcMgr->RegisterWithID(s_rpcRemoveSprite, handleRpc);
 		m_rpcMgr->RegisterWithID(s_rpcSpawnParticles, handleRpc);
 
@@ -660,6 +664,7 @@ void App::shutdown()
 	m_rpcMgr->Unregister(s_rpcKillBullet, handleRpc);
 	m_rpcMgr->Unregister(s_rpcUpdateBullet, handleRpc);
 	m_rpcMgr->Unregister(s_rpcAddSprite, handleRpc);
+	m_rpcMgr->Unregister(s_rpcSyncSprite, handleRpc);
 	m_rpcMgr->Unregister(s_rpcRemoveSprite, handleRpc);
 	m_rpcMgr->Unregister(s_rpcSpawnParticles, handleRpc);
 
@@ -1018,6 +1023,26 @@ uint16_t App::netAddSprite(const char * filename, int16_t x, int16_t y)
 	}
 
 	return id;
+}
+
+void App::netSyncSprite(uint16_t id, Channel * channel)
+{
+	NetSprite & sprite = g_hostSpriteManager->m_sprites[id];
+	Assert(sprite.enabled);
+	if (sprite.enabled)
+	{
+		BitStream bs;
+
+		int16_t x = sprite.sprite->x;
+		int16_t y = sprite.sprite->y;
+
+		bs.Write(id);
+		bs.WriteString(sprite.filename.c_str());
+		bs.Write(x);
+		bs.Write(y);
+
+		m_rpcMgr->Call(s_rpcSyncSprite, bs, ChannelPool_Server, &channel->m_id, false, false);
+	}
 }
 
 void App::netRemoveSprite(uint16_t id)

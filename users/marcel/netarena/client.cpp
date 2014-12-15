@@ -223,7 +223,8 @@ void Client::removePlayer(Player * player)
 		if (player->getOwningChannelId() == m_channel->m_id)
 		{
 			Assert(player->m_input.m_controllerIndex != -1);
-			g_app->freeControllerIndex(player->m_input.m_controllerIndex);
+			if (player->m_input.m_controllerIndex != -1)
+				g_app->freeControllerIndex(player->m_input.m_controllerIndex);
 			player->m_input.m_controllerIndex = -1;
 		}
 

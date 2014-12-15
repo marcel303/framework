@@ -16,6 +16,7 @@ void NetSprite::set(const char * filename, int x, int y)
 	sprite = new Sprite(filename);
 	sprite->x = x;
 	sprite->y = y;
+	this->filename = filename;
 }
 
 //

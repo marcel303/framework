@@ -199,6 +199,17 @@ uint32_t Host::allocNetId()
 	return m_nextNetId++;
 }
 
+void Host::syncNewClient(Channel * channel)
+{
+	// sync bullet list
+
+	// sync net sprites
+
+	for (int i = 0; i < MAX_SPRITES; ++i)
+		if (m_spriteManager->m_sprites[i].enabled)
+			g_app->netSyncSprite(i, channel);
+}
+
 void Host::newGame()
 {
 	// reset players

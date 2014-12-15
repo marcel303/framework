@@ -17,6 +17,7 @@ public:
 
 	bool enabled;
 	Sprite * sprite;
+	std::string filename;
 };
 
 class NetSpriteManager
