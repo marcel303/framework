@@ -264,6 +264,7 @@ public:
 	int getTotalScore() const { return m_state.totalScore; }
 
 	void setPlayerId(int id);
+	int getPlayerId() const { return m_state.playerId; }
 
 	int getCharacterIndex() const { return m_state.characterIndex; }
 	void handleCharacterIndexChange();

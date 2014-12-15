@@ -278,7 +278,11 @@ void Host::removePlayer(Player * player)
 
 	Assert(i != m_players.end());
 	if (i != m_players.end())
+	{
+		if (player->getPlayerId() != -1)
+			m_freePlayerIds.push_back(player->getPlayerId());
 		m_players.erase(i);
+	}
 }
 
 Player * Host::findPlayerByNetId(uint32_t netId)
