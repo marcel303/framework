@@ -85,7 +85,7 @@ void OptionMenu::Draw(int x, int y, int sx, int sy)
 		drawText(x + 2, y + index * lineSize, fontSize, +1.f, +1.f, option ? "%s" : "[ %s ]", node->m_name.c_str());
 		if (option)
 		{
-			const int bufferSize = 64;
+			const int bufferSize = 256;
 			char buffer[bufferSize];
 			option->ToString(buffer, bufferSize);
 			drawText(x + sx - 1 - 2, y + index * lineSize, fontSize, -1.f, +1.f, buffer);

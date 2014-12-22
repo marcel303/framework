@@ -27,6 +27,8 @@ class Host
 	uint32_t m_nextNetId;
 	std::vector<int> m_freePlayerIds;
 
+	int m_nextRoundNumber;
+
 	std::vector<Pickup> m_pickups;
 	Pickup m_grabbedPickup;
 	uint64_t m_nextPickupSpawnTime;

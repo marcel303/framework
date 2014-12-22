@@ -30,6 +30,10 @@ OPTION_DEFINE(int, g_pickupTimeRandom, "Pickup/Spawn Interval Random (Sec)");
 OPTION_DECLARE(int, g_pickupMax, 5);
 OPTION_DEFINE(int, g_pickupMax, "Pickup/Maximum Pickup Count");
 
+OPTION_EXTERN(std::string, g_map);
+
+extern std::vector<std::string> g_mapList;
+
 Host * g_host = 0;
 Arena * g_hostArena = 0;
 BulletPool * g_hostBulletPool = 0;
@@ -43,6 +47,7 @@ static const char * s_pickupSprites[kPickupType_COUNT] =
 Host::Host()
 	: m_arena(0)
 	, m_nextNetId(1) // 0 = unassigned
+	, m_nextRoundNumber(0)
 	, m_nextPickupSpawnTime(0)
 	, m_bulletPool(0)
 	, m_spriteManager(0)
@@ -67,7 +72,6 @@ void Host::init()
 		m_freePlayerIds.push_back(i);
 
 	m_arena = new Arena();
-	m_arena->load("arena.txt");
 
 	g_app->getReplicationMgr()->SV_AddObject(m_arena);
 
@@ -238,9 +242,22 @@ void Host::newRound()
 
 	// load arena
 
-	const char * filename = "arena.txt";
+	std::string map = g_map;
 
-	m_arena->load(filename);
+	if (!map.empty())
+	{
+		m_arena->load(map.c_str());
+	}
+	else if (g_mapList.size() != 0)
+	{
+		const size_t index = m_nextRoundNumber % g_mapList.size();
+
+		m_arena->load(g_mapList[index].c_str());
+	}
+	else
+	{
+		m_arena->load("arena.txt");
+	}
 
 	// respawn players
 
@@ -255,6 +272,8 @@ void Host::newRound()
 
 	m_arena->m_gameState.m_gameState = kGameState_Play;
 	m_arena->m_gameState.SetDirty();
+
+	m_nextRoundNumber++;
 }
 
 void Host::endRound()

@@ -30,9 +30,14 @@ OPTION_DECLARE(bool, g_devMode, false);
 OPTION_DEFINE(bool, g_devMode, "App/Developer Mode");
 OPTION_ALIAS(g_devMode, "devmode");
 
-OPTION_DECLARE(std::string, g_mapList, "arena.txt");
-OPTION_DEFINE(std::string, g_mapList, "App/Map List");
-OPTION_ALIAS(g_mapList, "maps");
+OPTION_DECLARE(std::string, s_mapList, "arena.txt");
+OPTION_DEFINE(std::string, s_mapList, "App/Map List");
+OPTION_ALIAS(s_mapList, "maps");
+std::vector<std::string> g_mapList;
+
+OPTION_DECLARE(std::string, g_map, "");
+OPTION_DEFINE(std::string, g_map, "App/Startup Map");
+OPTION_ALIAS(g_map, "map");
 
 OPTION_DECLARE(bool, g_hosting, true);
 OPTION_DEFINE(bool, g_hosting, "App/Enable Hosting");
@@ -483,7 +488,7 @@ bool App::init(bool isHost)
 	g_optionManager.Load("options.txt");
 	g_optionManager.Load("gameoptions.txt");
 
-	std::string mapList = g_mapList;
+	std::string mapList = s_mapList;
 
 	do
 	{
@@ -504,6 +509,8 @@ bool App::init(bool isHost)
 
 		if (!file.empty())
 		{
+			g_mapList.push_back(file);
+
 			StringBuilder<64> sb;
 			sb.AppendFormat("Arena/Load %s", file.c_str());
 			std::string name = sb.ToString();

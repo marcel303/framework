@@ -5,6 +5,7 @@
 
 enum BlockShape : unsigned char
 {
+	kBlockShape_Empty,
 	kBlockShape_Opaque,
 	kBlockShape_TL,
 	kBlockShape_TR,

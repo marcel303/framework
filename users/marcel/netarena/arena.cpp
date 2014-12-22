@@ -44,6 +44,7 @@ static void initializeBlockMasks()
 	{
 		init = true;
 
+		createBlockMask(kBlockShape_Empty, [](int x, int y) { return true; });
 		createBlockMask(kBlockShape_Opaque, [](int x, int y) { return true; });
 
 		createBlockMask(kBlockShape_TL,     [](int x, int y) { return x + y < BLOCK_SX; });
@@ -227,7 +228,8 @@ void Arena::load(const char * filename)
 			for (int x = 0; x < sx; ++x)
 			{
 				/*
-					  = kBlockShape_Opaque,
+					  = kBlockShape_Empty,
+					x = kBlockShape_Opaque,
 					q = kBlockShape_TL,
 					w = kBlockShape_TR,
 					a = kBlockShape_BL,
@@ -242,11 +244,12 @@ void Arena::load(const char * filename)
 					h = kBlockShape_BR2b,
 				*/
 
-				BlockShape shape = kBlockShape_Opaque;
+				BlockShape shape = kBlockShape_Empty;
 
 				switch (line[x])
 				{
-				case ' ': shape = kBlockShape_Opaque; break;
+				case ' ': shape = kBlockShape_Empty; break;
+				case 'x': shape = kBlockShape_Opaque; break;
 				case 'q': shape = kBlockShape_TL; break;
 				case 'w': shape = kBlockShape_TR; break;
 				case 'a': shape = kBlockShape_BL; break;
