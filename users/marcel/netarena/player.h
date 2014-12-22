@@ -178,6 +178,20 @@ struct CollisionInfo
 	int y2;
 };
 
+class SoundBag
+{
+	std::vector<std::string> m_files;
+	bool m_random;
+	int m_lastIndex;
+
+public:
+	SoundBag();
+
+	void load(const std::string & files, bool random);
+
+	const char * getRandomSound();
+};
+
 class Player : public NetObject
 {
 	friend class PlayerAnim_NS;
@@ -238,6 +252,8 @@ class Player : public NetObject
 
 	Sprite * m_sprite;
 	float m_spriteScale;
+
+	SoundBag m_respawnSounds;
 
 	static void handleAnimationAction(const std::string & action, const Dictionary & args);
 

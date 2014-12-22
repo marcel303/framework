@@ -23,6 +23,8 @@ todo:
 + add pickup sound
 - add direct connect option
 - spring block tweakable
+- more death feedback
+- respawn delay
 
 nice to haves:
 - blood particles
@@ -32,9 +34,15 @@ nice to haves:
 
 */
 
+// from internal.h
+void splitString(const std::string & str, std::vector<std::string> & result, char c);
+
 OPTION_DECLARE(int, s_playerCharacterIndex, 0);
 OPTION_DEFINE(int, s_playerCharacterIndex, "Player/Character Index (On Create)");
 OPTION_ALIAS(s_playerCharacterIndex, "character");
+
+OPTION_DECLARE(bool, s_unlimitedAmmo, false);
+OPTION_DEFINE(bool, s_unlimitedAmmo, "Player/Unlimited Ammo");
 
 #define WRAP_AROUND_TOP_AND_BOTTOM 1
 
@@ -143,6 +151,52 @@ void PlayerAnim_NS::SerializeStruct()
 	else
 		player->m_sprite->stopAnim();
 }
+
+//
+
+SoundBag::SoundBag()
+	: m_lastIndex(-1)
+	, m_random(false)
+{
+}
+
+void SoundBag::load(const std::string & files, bool random)
+{
+	splitString(files, m_files, ',');
+	m_lastIndex = -1;
+	m_random = random;
+}
+
+const char * SoundBag::getRandomSound()
+{
+	if (m_files.empty())
+		return "";
+	else if (m_files.size() == 1)
+		return m_files.front().c_str();
+	else
+	{
+		for (;;)
+		{
+			int index;
+
+			if (m_random)
+				index = rand() % m_files.size();
+			else
+				index = (index + 1) % m_files.size();
+
+			if (index != m_lastIndex)
+			{
+				m_lastIndex = index;
+
+				return m_files[index].c_str();
+			}
+		}
+	}
+
+	return "";
+}
+
+//
 
 void Player::handleAnimationAction(const std::string & action, const Dictionary & args)
 {
@@ -307,7 +361,7 @@ void Player::playSecondaryEffects(PlayerEvent e)
 	switch (e)
 	{
 	case kPlayerEvent_Spawn:
-		g_app->netPlaySound(makeCharacterFilename("spawn/spawn.ogg"));
+		g_app->netPlaySound(makeCharacterFilename(m_respawnSounds.getRandomSound()));
 		break;
 	case kPlayerEvent_Die:
 		g_app->netPlaySound(makeCharacterFilename("die/die.ogg"));
@@ -474,6 +528,8 @@ void Player::tick(float dt)
 						{
 							players[i]->m_attack.attacking = false;
 						}
+
+						g_app->netPlaySound("melee-cancel.ogg");
 					}
 					else
 					{
@@ -500,7 +556,7 @@ void Player::tick(float dt)
 		}
 		else
 		{
-			if (m_input.wentDown(INPUT_BUTTON_B) && m_weaponAmmo > 0 && isAnimOverrideAllowed(kPlayerWeapon_Fire))
+			if (m_input.wentDown(INPUT_BUTTON_B) && (m_weaponAmmo > 0 || s_unlimitedAmmo) && isAnimOverrideAllowed(kPlayerWeapon_Fire))
 			{
 				m_attack = AttackInfo();
 				m_attack.attacking = true;
@@ -508,7 +564,7 @@ void Player::tick(float dt)
 				m_anim.SetAnim(kPlayerAnim_Fire, true, true);
 				m_isAnimDriven = true;
 
-				m_weaponAmmo--;
+				m_weaponAmmo = (m_weaponAmmo > 0) ? (m_weaponAmmo - 1) : 0;
 
 				// determine attack direction based on player input
 
@@ -1205,6 +1261,7 @@ void Player::handleNewRound()
 	m_state.SetDirty();
 
 	m_lastSpawnIndex = -1;
+	m_weaponAmmo = 0;
 }
 
 void Player::respawn()
@@ -1223,6 +1280,8 @@ void Player::respawn()
 		m_state.SetDirty();
 
 		m_anim.SetAnim(kPlayerAnim_Walk, false, true);
+
+		m_weaponAmmo = 0;
 
 		m_attack = AttackInfo();
 
@@ -1283,6 +1342,8 @@ void Player::handleCharacterIndexChange()
 	Dictionary d;
 	d.load(makeCharacterFilename("props.txt"));
 	m_spriteScale = d.getFloat("sprite_scale", 1.f);
+
+	m_respawnSounds.load(d.getString("spawn_sounds", ""), true);
 }
 
 char * Player::makeCharacterFilename(const char * filename)
