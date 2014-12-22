@@ -365,6 +365,8 @@ Pickup * Host::grabPickup(int x1, int y1, int x2, int y2)
 
 			g_app->netRemoveSprite(m_grabbedPickup.spriteId);
 
+			g_app->netPlaySound("gun-pickup.ogg");
+
 			return &m_grabbedPickup;
 		}
 	}

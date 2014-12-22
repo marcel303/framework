@@ -178,17 +178,11 @@ void Player::handleAnimationAction(const std::string & action, const Dictionary 
 		}
 		else if (action == "sound")
 		{
-			if (g_app->isSelectedClient(player->getOwningChannelId()))
-			{
-				g_app->netPlaySound(args.getString("file", "").c_str(), args.getInt("volume", 100));
-			}
+			g_app->netPlaySound(args.getString("file", "").c_str(), args.getInt("volume", 100));
 		}
 		else if (action == "char_sound")
 		{
-			if (g_app->isSelectedClient(player->getOwningChannelId()))
-			{
-				g_app->netPlaySound(player->makeCharacterFilename(args.getString("file", "").c_str()), args.getInt("volume", 100));
-			}
+			g_app->netPlaySound(player->makeCharacterFilename(args.getString("file", "").c_str()), args.getInt("volume", 100));
 		}
 		else
 		{

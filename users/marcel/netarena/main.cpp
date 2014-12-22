@@ -748,13 +748,19 @@ bool App::isSelectedClient(Client * client)
 bool App::isSelectedClient(Channel * channel)
 {
 	Client * client = findClientByChannel(channel);
-	return isSelectedClient(client);
+	if (client)
+		return isSelectedClient(client);
+	else
+		return false;
 }
 
 bool App::isSelectedClient(uint16_t channelId)
 {
 	Channel * channel = m_channelMgr->FindChannel(channelId);
-	return isSelectedClient(channel);
+	if (channel)
+		return isSelectedClient(channel);
+	else
+		return false;
 }
 
 bool App::tick()

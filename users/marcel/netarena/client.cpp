@@ -11,6 +11,10 @@
 #include "netsprite.h"
 #include "player.h"
 
+OPTION_DECLARE(bool, s_noBgm, false);
+OPTION_DEFINE(bool, s_noBgm, "Sound/No BGM");
+OPTION_ALIAS(s_noBgm, "nobgm");
+
 static char s_bgm[64] = { };
 static Music * s_bgmSound = 0;
 
@@ -136,7 +140,19 @@ void Client::tick(float dt)
 
 	m_particlePool->tick(dt);
 
-	if (m_arena && g_app->isSelectedClient(this))
+	if (s_noBgm)
+	{
+		if (s_bgmSound)
+		{
+			s_bgmSound->stop();
+
+			delete s_bgmSound;
+			s_bgmSound = 0;
+
+			memset(s_bgm, 0, sizeof(s_bgm));
+		}
+	}
+	else if (m_arena && g_app->isSelectedClient(this))
 	{
 		char temp[64];
 
