@@ -15,7 +15,8 @@ std::vector<void*> OptionMenu::GetMenuItems()
 	std::vector<void*> result;
 
 	for (OptionBase * option = g_optionManager.m_head; option != 0; option = option->GetNext())
-		result.push_back(option);
+		if (!option->HasFlags(OPTION_FLAG_HIDDEN))
+			result.push_back(option);
 
 	return result;
 }

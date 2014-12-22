@@ -19,8 +19,10 @@ todo:
 + avoid repeating spawn location
 + play sounds for current client only to avoid volume ramp
 + meelee X, pickup B
-- wrapping support attack
++ wrapping support attack
 + add pickup sound
+- add direct connect option
+- spring block tweakable
 
 nice to haves:
 - blood particles
@@ -923,7 +925,7 @@ void Player::tick(float dt)
 							{
 								// spring
 
-								m_vel[i] = -PLAYER_JUMP_SPEED;
+								m_vel[i] = -BLOCKTYPE_SPRING_SPEED;
 
 								playSecondaryEffects(kPlayerEvent_SpringJump);
 							}

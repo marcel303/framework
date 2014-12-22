@@ -33,6 +33,7 @@ OPTION_ALIAS(g_devMode, "devmode");
 OPTION_DECLARE(std::string, s_mapList, "arena.txt");
 OPTION_DEFINE(std::string, s_mapList, "App/Map List");
 OPTION_ALIAS(s_mapList, "maps");
+OPTION_FLAGS(s_mapList, OPTION_FLAG_HIDDEN);
 std::vector<std::string> g_mapList;
 
 OPTION_DECLARE(std::string, g_map, "");
@@ -42,6 +43,14 @@ OPTION_ALIAS(g_map, "map");
 OPTION_DECLARE(bool, g_hosting, true);
 OPTION_DEFINE(bool, g_hosting, "App/Enable Hosting");
 OPTION_ALIAS(g_hosting, "hosting");
+
+OPTION_DECLARE(bool, g_connectLocal, false);
+OPTION_DEFINE(bool, g_connectLocal, "App/Connect Locally");
+OPTION_ALIAS(g_connectLocal, "localconnect");
+
+OPTION_DECLARE(std::string, g_connect, "");
+OPTION_DEFINE(std::string, g_connect, "App/Direct Connect");
+OPTION_ALIAS(g_connect, "connect");
 
 //
 
@@ -622,6 +631,18 @@ bool App::init(bool isHost)
 		if (g_host)
 		{
 			g_host->newGame();
+		}
+
+		if (g_connectLocal)
+		{
+			g_app->connect("127.0.0.1");
+		}
+
+		std::string connect = g_connect;
+
+		if (!connect.empty())
+		{
+			g_app->connect(connect.c_str());
 		}
 
 		return true;

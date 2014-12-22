@@ -84,6 +84,7 @@ OptionBase::OptionBase(const char * path, const char * name)
 	, m_path(path)
 	, m_name(name)
 	, m_alias(0)
+	, m_flags(0)
 	, m_min(0.f)
 	, m_max(0.f)
 	, m_step(1.f)
@@ -99,6 +100,11 @@ OptionBase * OptionBase::GetNext() const
 const char * OptionBase::GetPath() const
 {
 	return m_path;
+}
+
+bool OptionBase::HasFlags(int flags) const
+{
+	return (m_flags & flags) == flags;
 }
 
 //

@@ -7,6 +7,7 @@
 class OptionBase
 {
 	friend class OptionAlias;
+	friend class OptionFlags;
 	friend class OptionLimits;
 	friend class OptionManager;
 
@@ -14,6 +15,7 @@ class OptionBase
 	const char * m_path;
 	const char * m_name;
 	const char * m_alias;
+	int m_flags;
 
 protected:
 	float m_min;
@@ -31,6 +33,7 @@ public:
 
 	OptionBase * GetNext() const;
 	const char * GetPath() const;
+	bool HasFlags(int flag) const;
 
 	virtual OptionType GetType() = 0;
 	virtual void Increment() = 0;
@@ -141,6 +144,15 @@ public:
 	}
 };
 
+class OptionFlags
+{
+public:
+	OptionFlags(OptionBase & option, int flags)
+	{
+		option.m_flags = flags;
+	}
+};
+
 class OptionManager
 {
 public:
@@ -162,7 +174,10 @@ extern OptionManager g_optionManager;
 #define OPTION_DEFINE(type, name, path) Option<type> name(name ## _defaultValue, path, # name)
 #define OPTION_STEP(name, min, max, step) static OptionLimits name ## _limits(name, min, max, step)
 #define OPTION_ALIAS(name, alias) static OptionAlias name ## _alias(name, alias)
+#define OPTION_FLAGS(name, flags) static OptionFlags name ## _flags(name, flags)
 #define COMMAND_OPTION(name, path, command) static OptionCommand name(path, command)
+
+#define OPTION_FLAG_HIDDEN (1 << 0)
 
 #else
 
@@ -171,6 +186,7 @@ extern OptionManager g_optionManager;
 #define OPTION_DEFINE(type, name, path) type name(name ## _defaultValue)
 #define OPTION_STEP(name, min, max, step)
 #define OPTION_ALIAS(name, alias)
+#define OPTION_FLAGS(name, flags)
 #define COMMAND_OPTION(name, command, path)
 
 #endif
