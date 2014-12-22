@@ -535,10 +535,23 @@ void Player::tick(float dt)
 
 				m_weaponAmmo--;
 
+				// determine attack direction based on player input
+
+				int angle;
+
+				if (m_input.isDown(INPUT_BUTTON_UP))
+					angle = 256*1/4;
+				else if (m_input.isDown(INPUT_BUTTON_DOWN))
+					angle = 256*3/4;
+				else if (m_pos.xFacing < 0)
+					angle = 128;
+				else
+					angle = 0;
+
 				g_app->netSpawnBullet(
 					m_pos[0] + mirrorX(0.f),
 					m_pos[1] - mirrorY(44.f),
-					m_pos.xFacing < 0 ? 128 : 0,
+					angle,
 					kBulletType_A, getNetId());
 			}
 
