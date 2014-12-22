@@ -186,7 +186,7 @@ class Player : public NetObject
 	Vec2 m_vel;
 	PlayerState_NS m_state;
 	PlayerAnim_NS m_anim;
-	PlayerWeapon m_selectedWeapon;
+	int m_weaponAmmo;
 
 	bool m_isAuthorative;
 

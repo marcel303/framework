@@ -289,13 +289,13 @@ void Arena::drawBlocks()
 		"block-empty.png",
 		"block-destructible.png",
 		"block-indestructible.png",
-		"block-indestructible.png", // slide
+		"block-slide.png",
 		"block-moving.png",
 		"block-sticky.png",
 		"block-spike.png",
 		"block-spawn.png",
 		"block-spring.png",
-		"block-teleport.png", // teleport
+		"block-teleport.png",
 		"block-gravity-reverse.png",
 		"block-gravity-disable.png",
 		"block-gravity-strong.png",

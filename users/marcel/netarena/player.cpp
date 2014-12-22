@@ -17,10 +17,10 @@ todo:
 - respawn on round begin
 + respawn on level load
 + avoid repeating spawn location
-- play sounds for current client only to avoid volume ramp
-- meelee X, pickup B
++ play sounds for current client only to avoid volume ramp
++ meelee X, pickup B
 - wrapping support attack
-- add pickup sound
++ add pickup sound
 
 nice to haves:
 - blood particles
@@ -263,7 +263,7 @@ Player::Player(uint32_t netId, uint16_t owningChannelId)
 	: m_pos(this)
 	, m_state(this)
 	, m_anim(this)
-	, m_selectedWeapon(kPlayerWeapon_Sword)
+	, m_weaponAmmo(0)
 	, m_isAuthorative(false)
 	, m_blockMask(0)
 	, m_isGrounded(false)
@@ -410,7 +410,7 @@ void Player::tick(float dt)
 			switch (pickup->type)
 			{
 			case kPickupType_Ammo:
-				m_selectedWeapon = kPlayerWeapon_Fire;
+				m_weaponAmmo = 1;
 				break;
 			}
 		}
@@ -525,89 +525,61 @@ void Player::tick(float dt)
 		}
 		else
 		{
-			if (m_input.wentDown(INPUT_BUTTON_B))
+			if (m_input.wentDown(INPUT_BUTTON_B) && m_weaponAmmo > 0 && isAnimOverrideAllowed(kPlayerWeapon_Fire))
 			{
-				int attackAnim = -1;
+				m_attack = AttackInfo();
+				m_attack.attacking = true;
 
-				switch (m_selectedWeapon)
+				m_anim.SetAnim(kPlayerAnim_Fire, true, true);
+				m_isAnimDriven = true;
+
+				m_weaponAmmo--;
+
+				g_app->netSpawnBullet(
+					m_pos[0] + mirrorX(0.f),
+					m_pos[1] - mirrorY(44.f),
+					m_pos.xFacing < 0 ? 128 : 0,
+					kBulletType_A, getNetId());
+			}
+
+			if (m_input.wentDown(INPUT_BUTTON_X) && isAnimOverrideAllowed(kPlayerAnim_Attack))
+			{
+				m_attack = AttackInfo();
+				m_attack.attacking = true;
+
+				m_anim.SetAnim(kPlayerAnim_Attack, true, true);
+				m_isAnimDriven = true;
+
+				// determine attack direction based on player input
+
+				if (m_input.isDown(INPUT_BUTTON_UP))
+					m_anim.SetAttackDirection(0, -1);
+				else if (m_input.isDown(INPUT_BUTTON_DOWN))
+					m_anim.SetAttackDirection(0, +1);
+				else
+					m_anim.SetAttackDirection(m_pos.xFacing, 0);
+
+				// determine attack collision. basically just 3 directions: forward, up and down
+
+				m_attack.collision.x1 = 0.f;
+				m_attack.collision.x2 = (m_anim.m_attackDx == 0) ? 0.f : 50.f; // fordward?
+				m_attack.collision.y1 = -PLAYER_COLLISION_SY/3.f*2;
+				m_attack.collision.y2 = -PLAYER_COLLISION_SY/3.f*2 + m_anim.m_attackDy * 50.f; // up or down
+
+				// make sure the attack collision doesn't have a zero sized area
+
+				if (m_attack.collision.x1 == m_attack.collision.x2)
 				{
-				case kPlayerWeapon_Sword:
-					attackAnim = kPlayerAnim_Attack;
-					break;
-				case kPlayerWeapon_Fire:
-					attackAnim = kPlayerAnim_Fire;
-					m_selectedWeapon = kPlayerWeapon_Sword;
-					break;
+					m_attack.collision.x1 -= 2.f;
+					m_attack.collision.x2 += 2.f;
+				}
+				if (m_attack.collision.y1 == m_attack.collision.y2)
+				{
+					m_attack.collision.y1 -= 2.f;
+					m_attack.collision.y2 += 2.f;
 				}
 
-				Assert(attackAnim != -1);
-
-				if (isAnimOverrideAllowed(attackAnim))
-				{
-					m_attack = AttackInfo();
-					m_attack.attacking = true;
-
-					m_anim.SetAnim(attackAnim, true, true);
-					m_isAnimDriven = true;
-
-					if (attackAnim == kPlayerAnim_Attack)
-					{
-						/*
-						if (m_isWallSliding)
-						{
-							m_pos.xFacing *= -1;
-							m_pos.SetDirty();
-						}
-						*/
-
-						// determine attack direction based on player input
-
-						if (m_input.isDown(INPUT_BUTTON_UP))
-							m_anim.SetAttackDirection(0, -1);
-						else if (m_input.isDown(INPUT_BUTTON_DOWN))
-							m_anim.SetAttackDirection(0, +1);
-						else
-							m_anim.SetAttackDirection(m_pos.xFacing, 0);
-
-						// determine attack collision. basically just 3 directions: forward, up and down
-
-						m_attack.collision.x1 = 0.f;
-						m_attack.collision.x2 = (m_anim.m_attackDx == 0) ? 0.f : 50.f; // fordward?
-						m_attack.collision.y1 = -PLAYER_COLLISION_SY/3.f*2;
-						m_attack.collision.y2 = -PLAYER_COLLISION_SY/3.f*2 + m_anim.m_attackDy * 50.f; // up or down
-
-						// make sure the attack collision doesn't have a zero sized area
-
-						if (m_attack.collision.x1 == m_attack.collision.x2)
-						{
-							m_attack.collision.x1 -= 2.f;
-							m_attack.collision.x2 += 2.f;
-						}
-						if (m_attack.collision.y1 == m_attack.collision.y2)
-						{
-							m_attack.collision.y1 -= 2.f;
-							m_attack.collision.y2 += 2.f;
-						}
-
-						/*
-						m_attack.collision.x1 = PLAYER_SWORD_COLLISION_X1;
-						m_attack.collision.y1 = PLAYER_SWORD_COLLISION_Y1;
-						m_attack.collision.x2 = PLAYER_SWORD_COLLISION_X2;
-						m_attack.collision.y2 = PLAYER_SWORD_COLLISION_Y2;
-						*/
-
-						m_attack.hasCollision = true;
-					}
-
-					if (attackAnim == kPlayerAnim_Fire)
-					{
-						g_app->netSpawnBullet(
-							m_pos[0] + mirrorX(0.f),
-							m_pos[1] - mirrorY(44.f),
-							m_pos.xFacing < 0 ? 128 : 0,
-							kBulletType_A, getNetId());
-					}
-				}
+				m_attack.hasCollision = true;
 			}
 		}
 
@@ -1161,7 +1133,7 @@ void Player::debugDraw()
 
 	if (m_isAuthorative)
 	{
-		if (m_attack.attacking)
+		if (m_attack.attacking && m_attack.hasCollision)
 		{
 			CollisionInfo attackCollision;
 			getAttackCollision(attackCollision);
@@ -1265,8 +1237,6 @@ void Player::respawn()
 		m_anim.SetAnim(kPlayerAnim_Walk, false, true);
 
 		m_attack = AttackInfo();
-
-		m_selectedWeapon = kPlayerWeapon_Sword;
 
 		m_blockMask = 0;
 
