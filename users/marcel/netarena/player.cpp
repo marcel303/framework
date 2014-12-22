@@ -12,8 +12,8 @@ todo:
 
 - clash sound on attack cancel
 - random sound selection on event to avoid repeat sounds
-- fire up/down
-- fire affects destructible blocks
++ fire up/down
++ fire affects destructible blocks
 - respawn on round begin
 + respawn on level load
 + avoid repeating spawn location
@@ -484,44 +484,15 @@ void Player::tick(float dt)
 
 			// see if we've hit a block
 
-			int x1, y1, x2, y2;
-
 			CollisionInfo attackCollision;
 			getAttackCollision(attackCollision);
 
-			if (g_hostArena->getBlockRectFromPixels(
+			m_attack.hitDestructible |= g_hostArena->handleDamageRect(
 				attackCollision.x1,
 				attackCollision.y1,
 				attackCollision.x2,
 				attackCollision.y2,
-				x1, y1, x2, y2))
-			{
-				bool updated = false;
-
-				for (int x = x1; x <= x2; ++x)
-				{
-					for (int y = y1; y <= y2; ++y)
-					{
-						Block & block = g_hostArena->getBlock(x, y);
-
-						if (block.type == kBlockType_Destructible && !m_attack.hitDestructible)
-						{
-							block.type = kBlockType_Empty;
-
-							playSecondaryEffects(kPlayerEvent_DestructibleDestroy);
-
-							m_attack.hitDestructible = true;
-
-							updated = true; // todo : more optimized way of making small changes to map
-						}
-					}
-				}
-
-				if (updated)
-				{
-					g_hostArena->setDirty();
-				}
-			}
+				!m_attack.hitDestructible);
 		}
 		else
 		{

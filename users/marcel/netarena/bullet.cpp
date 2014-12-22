@@ -58,7 +58,7 @@ void BulletPool::tick(float dt)
 
 				// reflection
 
-				if (blockMask & kBlockMask_Solid)
+				if (blockMask & kBlockMask_Solid & (~(1 << kBlockType_Destructible)))
 				{
 					if (b.maxReflectCount != 0)
 					{
@@ -127,6 +127,19 @@ void BulletPool::tick(float dt)
 
 						kill = true;
 					}
+				}
+			}
+
+			if (!kill && !b.noCollide)
+			{
+				// collide with map
+
+				if (g_hostArena->handleDamageRect(
+					b.x, b.y,
+					b.x, b.y,
+					true))
+				{
+					kill = true;
 				}
 			}
 

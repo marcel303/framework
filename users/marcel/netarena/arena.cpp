@@ -508,3 +508,39 @@ bool Arena::getBlockRectFromPixels(int x1, int y1, int x2, int y2, int & out_x1,
 		getBlockStripFromPixels(x1, x2, out_x1, out_x2, ARENA_SX, BLOCK_SX) &&
 		getBlockStripFromPixels(y1, y2, out_y1, out_y2, ARENA_SY, BLOCK_SY);
 }
+
+bool Arena::handleDamageRect(int x1, int y1, int x2, int y2, bool hitDestructible)
+{
+	bool result = false;
+
+	if (getBlockRectFromPixels(
+		x1, y1, x2, y2,
+		x1, y1, x2, y2))
+	{
+		bool updated = false;
+
+		for (int x = x1; x <= x2; ++x)
+		{
+			for (int y = y1; y <= y2; ++y)
+			{
+				Block & block = getBlock(x, y);
+
+				if (block.type == kBlockType_Destructible && hitDestructible)
+				{
+					block.type = kBlockType_Empty;
+
+					result = true;
+
+					updated = true; // todo : more optimized way of making small changes to map
+				}
+			}
+		}
+
+		if (updated)
+		{
+			setDirty();
+		}
+	}
+
+	return result;
+}
