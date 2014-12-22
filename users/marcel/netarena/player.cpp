@@ -14,7 +14,7 @@ todo:
 - random sound selection on event to avoid repeat sounds
 + fire up/down
 + fire affects destructible blocks
-- respawn on round begin
++ respawn on round begin
 + respawn on level load
 + avoid repeating spawn location
 + play sounds for current client only to avoid volume ramp
@@ -488,6 +488,8 @@ void Player::tick(float dt)
 			getAttackCollision(attackCollision);
 
 			m_attack.hitDestructible |= g_hostArena->handleDamageRect(
+				m_pos[0],
+				m_pos[1],
 				attackCollision.x1,
 				attackCollision.y1,
 				attackCollision.x2,

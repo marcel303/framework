@@ -137,6 +137,7 @@ void BulletPool::tick(float dt)
 				if (g_hostArena->handleDamageRect(
 					b.x, b.y,
 					b.x, b.y,
+					b.x, b.y,
 					true))
 				{
 					kill = true;

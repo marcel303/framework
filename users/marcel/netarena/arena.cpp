@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <tuple>
 #include "arena.h"
 #include "FileStream.h"
@@ -509,30 +510,97 @@ bool Arena::getBlockRectFromPixels(int x1, int y1, int x2, int y2, int & out_x1,
 		getBlockStripFromPixels(y1, y2, out_y1, out_y2, ARENA_SY, BLOCK_SY);
 }
 
-bool Arena::handleDamageRect(int x1, int y1, int x2, int y2, bool hitDestructible)
+bool Arena::getBlocksFromPixels(int baseX, int baseY, int x1, int y1, int x2, int y2, bool wrap, BlockAndDistance * out_blocks, int & io_numBlocks)
+{
+	if (io_numBlocks == 0)
+		return false;
+
+	int result = 0;
+
+	if (wrap)
+	{
+		for (int dx = -1; dx <= +1; ++dx)
+		{
+			for (int dy = -1; dy <= +1; ++dy)
+			{
+				int numBlocks = io_numBlocks - result;
+
+				getBlocksFromPixels(
+					baseX + dx * ARENA_SX_PIXELS,
+					baseY + dy * ARENA_SY_PIXELS,
+					x1 + dx * ARENA_SX_PIXELS,
+					y1 + dy * ARENA_SY_PIXELS,
+					x2 + dx * ARENA_SX_PIXELS,
+					y2 + dy * ARENA_SY_PIXELS,
+					false,
+					out_blocks + result,
+					numBlocks);
+
+				result += numBlocks;
+			}
+		}
+	}
+	else
+	{
+		if (getBlockRectFromPixels(x1, y1, x2, y2, x1, y1, x2, y2))
+		{
+			for (int x = x1; x <= x2; ++x)
+			{
+				for (int y = y1; y <= y2; ++y)
+				{
+					if (result < io_numBlocks)
+					{
+						const float blockX = (x + .5f) * BLOCK_SX;
+						const float blockY = (y + .5f) * BLOCK_SY;
+
+						out_blocks[result].block = &getBlock(x, y);
+						out_blocks[result].distanceSq = (baseX - blockX) * (baseX - blockX) + (baseY - blockY) * (baseY - blockY);
+
+						result++;
+					}
+				}
+			}
+		}
+	}
+
+	io_numBlocks = result;
+
+	return result != 0;
+}
+
+bool Arena::handleDamageRect(int baseX, int baseY, int x1, int y1, int x2, int y2, bool hitDestructible)
 {
 	bool result = false;
 
-	if (getBlockRectFromPixels(
+	const int kMaxBlocks = 64;
+
+	BlockAndDistance blocks[kMaxBlocks];
+
+	int numBlocks = kMaxBlocks;
+
+	if (getBlocksFromPixels(
+		baseX, baseY,
 		x1, y1, x2, y2,
-		x1, y1, x2, y2))
+		true,
+		blocks, numBlocks))
 	{
 		bool updated = false;
 
-		for (int x = x1; x <= x2; ++x)
+		std::sort(blocks, blocks + numBlocks, [] (BlockAndDistance & block1, BlockAndDistance & block2) { return block1.distanceSq < block2.distanceSq; });
+
+		for (int i = 0; i < numBlocks; ++i)
 		{
-			for (int y = y1; y <= y2; ++y)
+			Block & block = *blocks[i].block;
+
+			if (block.type == kBlockType_Destructible && hitDestructible)
 			{
-				Block & block = getBlock(x, y);
+				block.type = kBlockType_Empty;
 
-				if (block.type == kBlockType_Destructible && hitDestructible)
-				{
-					block.type = kBlockType_Empty;
+				hitDestructible = false;
 
-					result = true;
+				result = true;
 
-					updated = true; // todo : more optimized way of making small changes to map
-				}
+				updated = true; // todo : more optimized way of making small changes to map
 			}
 		}
 

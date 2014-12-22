@@ -69,6 +69,12 @@ struct Block
 
 #pragma pack(pop)
 
+struct BlockAndDistance
+{
+	Block * block;
+	int distanceSq;
+};
+
 class Arena : public NetObject
 {
 	class Arena_NS : public NetSerializable
@@ -136,9 +142,10 @@ public:
 	uint32_t getIntersectingBlocksMask(int x, int y);
 
 	bool getBlockRectFromPixels(int x1, int y1, int x2, int y2, int & out_x1, int & out_y1, int & out_x2, int & out_y2);
+	bool getBlocksFromPixels(int x, int y, int x1, int y1, int x2, int y2, bool wrap, BlockAndDistance * out_blocks, int & io_numBlocks);
 	Block & getBlock(int x, int y) { return m_blocks[x][y]; }
 
-	bool handleDamageRect(int x1, int y1, int x2, int y2, bool hitDestructible);
+	bool handleDamageRect(int x, int y, int x1, int y1, int x2, int y2, bool hitDestructible);
 
 	// todo : optimized way for making small changes
 	void setDirty()
