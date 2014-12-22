@@ -114,6 +114,8 @@ public:
 		: NetSerializable(owner)
 		, m_anim(0)
 		, m_play(false)
+		, m_attackDx(0)
+		, m_attackDy(0)
 	{
 	}
 
@@ -127,6 +129,13 @@ public:
 		}
 	}
 
+	void SetAttackDirection(int dx, int dy)
+	{
+		m_attackDx = dx;
+		m_attackDy = dy;
+		SetDirty();
+	}
+
 	void SetPlay(bool play)
 	{
 		if (play != m_play)
@@ -138,6 +147,9 @@ public:
 
 	int m_anim;
 	bool m_play;
+
+	int m_attackDx;
+	int m_attackDy;
 };
 
 struct CollisionInfo
@@ -187,6 +199,7 @@ class Player : public NetObject
 			: attacking(false)
 			, hitDestructible(false)
 			, attackVel()
+			, hasCollision(false)
 		{
 		}
 
@@ -194,6 +207,7 @@ class Player : public NetObject
 		bool hitDestructible;
 		Vec2 attackVel;
 		CollisionInfo collision;
+		bool hasCollision;
 	} m_attack;
 
 	struct TeleportInfo
@@ -219,6 +233,8 @@ class Player : public NetObject
 
 	bool m_animVelIsAbsolute;
 	Vec2 m_animVel;
+	bool m_animAllowGravity;
+	bool m_animAllowSteering;
 
 	Sprite * m_sprite;
 	float m_spriteScale;
@@ -248,6 +264,7 @@ public:
 
 	void tick(float dt);
 	void draw();
+	void drawAt(int x, int y);
 	void debugDraw();
 
 	uint32_t getIntersectingBlocksMaskInternal(int x, int y, bool doWrap) const;

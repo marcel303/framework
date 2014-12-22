@@ -88,6 +88,13 @@ void PlayerAnim_NS::SerializeStruct()
 	SerializeBits(m_anim, 4);
 	Serialize(m_play);
 
+	int dx = m_attackDx + 1;
+	int dy = m_attackDy + 1;
+	SerializeBits(dx, 2);
+	SerializeBits(dy, 2);
+	m_attackDx = dx - 1;
+	m_attackDy = dy - 1;
+
 	//
 
 	Player * player = static_cast<Player*>(GetOwner());
@@ -121,7 +128,15 @@ void Player::handleAnimationAction(const std::string & action, const Dictionary 
 			log("action: %s", action.c_str());
 		}
 
-		if (action == "set_anim_vel")
+		if (action == "gravity_enable")
+		{
+			player->m_animAllowGravity = args.getBool("enable", true);
+		}
+		else if (action == "steering_enable")
+		{
+			player->m_animAllowSteering = args.getBool("enable", true);
+		}
+		else if (action == "set_anim_vel")
 		{
 			player->m_animVel[0] = args.getFloat("x", player->m_animVel[0]);
 			player->m_animVel[1] = args.getFloat("y", player->m_animVel[1]);
@@ -129,7 +144,8 @@ void Player::handleAnimationAction(const std::string & action, const Dictionary 
 		else if (action == "set_anim_vel_abs")
 		{
 			player->m_animVelIsAbsolute = args.getBool("abs", player->m_animVelIsAbsolute);
-			player->m_vel = Vec2();
+			if (args.getBool("reset", true))
+				player->m_vel = Vec2();
 		}
 		else if (action == "set_attack_vel")
 		{
@@ -187,7 +203,7 @@ float Player::getAttackDamage(Player * other)
 {
 	float result = 0.f;
 
-	if (m_attack.attacking)
+	if (m_attack.attacking && m_attack.hasCollision)
 	{
 		CollisionInfo attackCollision;
 		CollisionInfo otherCollision;
@@ -230,6 +246,8 @@ Player::Player(uint32_t netId, uint16_t owningChannelId)
 	, m_isAttachedToSticky(false)
 	, m_isAnimDriven(false)
 	, m_animVelIsAbsolute(false)
+	, m_animAllowGravity(true)
+	, m_animAllowSteering(true)
 	, m_isAirDashCharged(false)
 	, m_isWallSliding(false)
 {
@@ -318,6 +336,8 @@ void Player::tick(float dt)
 			m_isAnimDriven = false;
 			m_animVel = Vec2();
 			m_animVelIsAbsolute = false;
+			m_animAllowGravity = true;
+			m_animAllowSteering = true;
 
 			switch (m_anim.m_anim)
 			{
@@ -391,8 +411,17 @@ void Player::tick(float dt)
 
 		if (m_attack.attacking)
 		{
-			animVel[0] += m_attack.attackVel[0] * m_pos.xFacing;
-			animVel[1] += m_attack.attackVel[1] * m_pos.yFacing;
+			if (m_anim.m_anim == kPlayerAnim_Attack)
+			{
+				const float attackVel = std::max<float>(m_attack.attackVel[0], m_attack.attackVel[1]);
+				animVel[0] += attackVel * m_anim.m_attackDx;
+				animVel[1] += attackVel * m_anim.m_attackDy;
+			}
+			else
+			{
+				animVel[0] += m_attack.attackVel[0] * m_pos.xFacing;
+				animVel[1] += m_attack.attackVel[1] * m_pos.yFacing;
+			}
 
 			// see if we hit anyone
 
@@ -493,21 +522,56 @@ void Player::tick(float dt)
 					m_attack = AttackInfo();
 					m_attack.attacking = true;
 
-					m_attack.collision.x1 = PLAYER_SWORD_COLLISION_X1;
-					m_attack.collision.y1 = PLAYER_SWORD_COLLISION_Y1;
-					m_attack.collision.x2 = PLAYER_SWORD_COLLISION_X2;
-					m_attack.collision.y2 = PLAYER_SWORD_COLLISION_Y2;
-
 					m_anim.SetAnim(attackAnim, true, true);
 					m_isAnimDriven = true;
 
 					if (attackAnim == kPlayerAnim_Attack)
 					{
+						/*
 						if (m_isWallSliding)
 						{
 							m_pos.xFacing *= -1;
 							m_pos.SetDirty();
 						}
+						*/
+
+						// determine attack direction based on player input
+
+						if (m_input.isDown(INPUT_BUTTON_UP))
+							m_anim.SetAttackDirection(0, -1);
+						else if (m_input.isDown(INPUT_BUTTON_DOWN))
+							m_anim.SetAttackDirection(0, +1);
+						else
+							m_anim.SetAttackDirection(m_pos.xFacing, 0);
+
+						// determine attack collision. basically just 3 directions: forward, up and down
+
+						m_attack.collision.x1 = 0.f;
+						m_attack.collision.x2 = (m_anim.m_attackDx == 0) ? 0.f : 50.f; // fordward?
+						m_attack.collision.y1 = -PLAYER_COLLISION_SY/3.f*2;
+						m_attack.collision.y2 = -PLAYER_COLLISION_SY/3.f*2 + m_anim.m_attackDy * 50.f; // up or down
+
+						// make sure the attack collision doesn't have a zero sized area
+
+						if (m_attack.collision.x1 == m_attack.collision.x2)
+						{
+							m_attack.collision.x1 -= 2.f;
+							m_attack.collision.x2 += 2.f;
+						}
+						if (m_attack.collision.y1 == m_attack.collision.y2)
+						{
+							m_attack.collision.y1 -= 2.f;
+							m_attack.collision.y2 += 2.f;
+						}
+
+						/*
+						m_attack.collision.x1 = PLAYER_SWORD_COLLISION_X1;
+						m_attack.collision.y1 = PLAYER_SWORD_COLLISION_Y1;
+						m_attack.collision.x2 = PLAYER_SWORD_COLLISION_X2;
+						m_attack.collision.y2 = PLAYER_SWORD_COLLISION_Y2;
+						*/
+
+						m_attack.hasCollision = true;
 					}
 
 					if (attackAnim == kPlayerAnim_Fire)
@@ -602,7 +666,7 @@ void Player::tick(float dt)
 
 		bool playerControl = true;
 
-		if (m_attack.attacking)
+		if (!m_animAllowSteering)
 		{
 			playerControl = false;
 		}
@@ -680,12 +744,12 @@ void Player::tick(float dt)
 			if (isWalkingOnSolidGround)
 			{
 				steeringSpeed *= STEERING_SPEED_ON_GROUND;
-				numSteeringFrame = 10;
+				numSteeringFrame = 1;
 			}
 			else
 			{
 				steeringSpeed *= STEERING_SPEED_IN_AIR;
-				numSteeringFrame = 10;
+				numSteeringFrame = 1;
 			}
 
 			if (steeringSpeed != 0.f)
@@ -708,6 +772,8 @@ void Player::tick(float dt)
 
 		m_isWallSliding = false;
 
+		if (!m_animAllowGravity)
+			gravity = 0.f;
 		if (m_isAttachedToSticky)
 			gravity = 0.f;
 		else if (m_animVelIsAbsolute)
@@ -732,6 +798,7 @@ void Player::tick(float dt)
 				isAnimOverrideAllowed(kPlayerAnim_WallSlide) &&
 				m_vel[0] != 0.f && Calc::Sign(m_pos.xFacing) == Calc::Sign(m_vel[0]) &&
 				//Calc::Sign(m_vel[1]) == Calc::Sign(gravity) &&
+				(Calc::Sign(m_vel[1]) == Calc::Sign(gravity) || Calc::Abs(m_vel[1]) <= PLAYER_JUMP_SPEED / 2.f) &&
 				(getIntersectingBlocksMask(m_pos[0] + m_pos.xFacing, m_pos[1]) & kBlockMask_Solid) != 0)
 			{
 				m_isWallSliding = true;
@@ -1001,16 +1068,16 @@ void Player::tick(float dt)
 
 void Player::draw()
 {
-	setColor(colorWhite);
 	m_sprite->flipX = m_pos.xFacing < 0 ? true : false;
 	m_sprite->flipY = m_pos.yFacing < 0 ? true : false;
-	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, m_spriteScale);
+
+	drawAt(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0));
 
 	// render additional sprites for wrap around
-	m_sprite->drawEx(m_pos.x + ARENA_SX_PIXELS, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, m_spriteScale);
-	m_sprite->drawEx(m_pos.x - ARENA_SX_PIXELS, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0), 0.f, m_spriteScale);
-	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0) + ARENA_SY_PIXELS, 0.f, m_spriteScale);
-	m_sprite->drawEx(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0) - ARENA_SY_PIXELS, 0.f, m_spriteScale);
+	drawAt(m_pos.x + ARENA_SX_PIXELS, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0));
+	drawAt(m_pos.x - ARENA_SX_PIXELS, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0));
+	drawAt(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0) + ARENA_SY_PIXELS);
+	drawAt(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0) - ARENA_SY_PIXELS);
 
 	// draw player color
 
@@ -1045,6 +1112,22 @@ void Player::draw()
 	setFont("calibri.ttf");
 	setColor(255, 255, 255);
 	drawText(m_pos[0], m_pos[1] - 110, 20, 0.f, +1.f, "%d", m_state.score);
+}
+
+void Player::drawAt(int x, int y)
+{
+	setColor(colorWhite);
+	m_sprite->drawEx(x, y, 0.f, m_spriteScale);
+
+	if (m_anim.m_anim == kPlayerAnim_Attack)
+	{
+		CollisionInfo collisionInfo;
+		getAttackCollision(collisionInfo);
+
+		setColor(255, 0, 0);
+		//drawRect(collisionInfo.x1, collisionInfo.y1, collisionInfo.x2, collisionInfo.y2);
+		//drawLine(x, y, x + m_anim.m_attackDx * 50, y + m_anim.m_attackDy * 50);
+	}
 }
 
 void Player::debugDraw()
@@ -1101,6 +1184,9 @@ uint32_t Player::getIntersectingBlocksMaskInternal(int x, int y, bool doWrap) co
 	result |= g_hostArena->getIntersectingBlocksMask(x2, y1);
 	result |= g_hostArena->getIntersectingBlocksMask(x2, y2);
 	result |= g_hostArena->getIntersectingBlocksMask(x1, y2);
+
+	result |= g_hostArena->getIntersectingBlocksMask(x1, (y1 + y2) / 2);
+	result |= g_hostArena->getIntersectingBlocksMask(x2, (y1 + y2) / 2);
 
 #if 0
 	if (doWrap)
