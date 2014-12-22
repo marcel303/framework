@@ -82,6 +82,10 @@ public:
 	void connect(const char * address);
 	void disconnectClient(int index);
 	void selectClient(int index);
+	Client * getSelectedClient();
+	bool isSelectedClient(Client * client);
+	bool isSelectedClient(Channel * channel);
+	bool isSelectedClient(uint16_t channelId);
 
 	bool tick();
 	void draw();

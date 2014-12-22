@@ -6,6 +6,30 @@
 #include "main.h"
 #include "player.h"
 
+/*
+
+todo:
+
+- clash sound on attack cancel
+- random sound selection on event to avoid repeat sounds
+- fire up/down
+- fire affects destructible blocks
+- respawn on round begin
++ respawn on level load
++ avoid repeating spawn location
+- play sounds for current client only to avoid volume ramp
+- meelee X, pickup B
+- wrapping support attack
+- add pickup sound
+
+nice to haves:
+- blood particles
+- real time lighting
+- fill the level lava
+- bee attack
+
+*/
+
 OPTION_DECLARE(int, s_playerCharacterIndex, 0);
 OPTION_DEFINE(int, s_playerCharacterIndex, "Player/Character Index (On Create)");
 OPTION_ALIAS(s_playerCharacterIndex, "character");
@@ -154,11 +178,17 @@ void Player::handleAnimationAction(const std::string & action, const Dictionary 
 		}
 		else if (action == "sound")
 		{
-			g_app->netPlaySound(args.getString("file", "").c_str(), args.getInt("volume", 100));
+			if (g_app->isSelectedClient(player->getOwningChannelId()))
+			{
+				g_app->netPlaySound(args.getString("file", "").c_str(), args.getInt("volume", 100));
+			}
 		}
 		else if (action == "char_sound")
 		{
-			g_app->netPlaySound(player->makeCharacterFilename(args.getString("file", "").c_str()), args.getInt("volume", 100));
+			if (g_app->isSelectedClient(player->getOwningChannelId()))
+			{
+				g_app->netPlaySound(player->makeCharacterFilename(args.getString("file", "").c_str()), args.getInt("volume", 100));
+			}
 		}
 		else
 		{
@@ -250,6 +280,7 @@ Player::Player(uint32_t netId, uint16_t owningChannelId)
 	, m_animAllowSteering(true)
 	, m_isAirDashCharged(false)
 	, m_isWallSliding(false)
+	, m_lastSpawnIndex(-1)
 {
 	setNetId(netId);
 	setOwningChannelId(owningChannelId);
@@ -664,17 +695,9 @@ void Player::tick(float dt)
 			}
 		}
 
-		bool playerControl = true;
-
-		if (!m_animAllowSteering)
-		{
-			playerControl = false;
-		}
-
-		if (m_isAnimDriven)
-		{
-			playerControl = false;
-		}
+		bool playerControl =
+			m_animAllowSteering &&
+			!m_isAnimDriven;
 
 		// sticky ceiling
 
@@ -715,7 +738,7 @@ void Player::tick(float dt)
 
 		float steeringSpeed = 0.f;
 
-		if (playerControl)
+		if (true)
 		{
 			int numSteeringFrame = 1;
 
@@ -726,10 +749,13 @@ void Player::tick(float dt)
 
 			if (m_isGrounded || m_isAttachedToSticky)
 			{
-				if (steeringSpeed != 0.f)
-					m_anim.SetAnim(kPlayerAnim_Walk, true, false);
-				else
-					m_anim.SetAnim(kPlayerAnim_Walk, false, false);
+				if (isAnimOverrideAllowed(kPlayerAnim_Walk))
+				{
+					if (steeringSpeed != 0.f)
+						m_anim.SetAnim(kPlayerAnim_Walk, true, false);
+					else
+						m_anim.SetAnim(kPlayerAnim_Walk, false, false);
+				}
 			}
 
 			//
@@ -744,15 +770,15 @@ void Player::tick(float dt)
 			if (isWalkingOnSolidGround)
 			{
 				steeringSpeed *= STEERING_SPEED_ON_GROUND;
-				numSteeringFrame = 1;
+				numSteeringFrame = 5;
 			}
 			else
 			{
 				steeringSpeed *= STEERING_SPEED_IN_AIR;
-				numSteeringFrame = 1;
+				numSteeringFrame = 5;
 			}
 
-			if (steeringSpeed != 0.f)
+			if (playerControl && steeringSpeed != 0.f)
 			{
 				float maxSteeringDelta;
 
@@ -1223,13 +1249,15 @@ void Player::handleNewRound()
 	m_state.totalScore += m_state.score;
 	m_state.score = 0;
 	m_state.SetDirty();
+
+	m_lastSpawnIndex = -1;
 }
 
 void Player::respawn()
 {
 	int x, y;
 
-	if (g_hostArena->getRandomSpawnPoint(x, y))
+	if (g_hostArena->getRandomSpawnPoint(x, y, m_lastSpawnIndex))
 	{
 		m_pos[0] = (float)x;
 		m_pos[1] = (float)y;

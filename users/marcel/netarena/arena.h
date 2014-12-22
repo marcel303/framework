@@ -129,7 +129,7 @@ public:
 
 	void drawBlocks();
 
-	bool getRandomSpawnPoint(int & out_x, int & out_y);
+	bool getRandomSpawnPoint(int & out_x, int & out_y, int & io_lastSpawnIndex);
 	bool getRandomPickupLocation(int & out_x, int & out_y);
 
 	uint32_t getIntersectingBlocksMask(int x1, int y1, int x2, int y2);

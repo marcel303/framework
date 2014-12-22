@@ -110,7 +110,10 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		uint8_t volume;
 		bitStream.Read(volume);
 
-		Sound(filename.c_str()).play(volume);
+		if (g_app->isSelectedClient(channel))
+		{
+			Sound(filename.c_str()).play(volume);
+		}
 	}
 	else if (method == s_rpcSetPlayerInputs)
 	{
@@ -521,8 +524,8 @@ bool App::init(bool isHost)
 			g_optionManager.AddCommandOption(nameCopy,
 				[](void * param)
 				{
-					if (g_hostArena)
-						g_hostArena->load((char*)param);
+					if (g_host)
+						g_host->newRound((char*)param);
 				}, fileCopy
 			);
 		}
@@ -727,6 +730,31 @@ void App::disconnectClient(int index)
 void App::selectClient(int index)
 {
 	m_selectedClient = index;
+}
+
+Client * App::getSelectedClient()
+{
+	if (m_selectedClient >= 0 && m_selectedClient < m_clients.size())
+		return m_clients[m_selectedClient];
+	else
+		return 0;
+}
+
+bool App::isSelectedClient(Client * client)
+{
+	return client == getSelectedClient();
+}
+
+bool App::isSelectedClient(Channel * channel)
+{
+	Client * client = findClientByChannel(channel);
+	return isSelectedClient(client);
+}
+
+bool App::isSelectedClient(uint16_t channelId)
+{
+	Channel * channel = m_channelMgr->FindChannel(channelId);
+	return isSelectedClient(channel);
 }
 
 bool App::tick()

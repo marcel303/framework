@@ -348,7 +348,7 @@ void Arena::drawBlocks()
 	}
 }
 
-bool Arena::getRandomSpawnPoint(int & out_x, int & out_y)
+bool Arena::getRandomSpawnPoint(int & out_x, int & out_y, int & io_lastSpawnIndex)
 {
 	// find a spawn point
 
@@ -367,16 +367,28 @@ bool Arena::getRandomSpawnPoint(int & out_x, int & out_y)
 		return false;
 	else
 	{
-		const int index = rand() % blocks.size();
+		for (;;)
+		{
+			const int index = rand() % blocks.size();
 
-		out_x = std::get<0>(blocks[index]) * BLOCK_SX;
-		out_y = std::get<1>(blocks[index]) * BLOCK_SY;
+			bool accept = (io_lastSpawnIndex == -1 || blocks.size() == 1 || index != io_lastSpawnIndex);
 
-		out_x += BLOCK_SX / 2;
-		out_y += BLOCK_SY - 1;
+			if (accept)
+			{
+				out_x = std::get<0>(blocks[index]) * BLOCK_SX;
+				out_y = std::get<1>(blocks[index]) * BLOCK_SY;
 
-		return true;
+				out_x += BLOCK_SX / 2;
+				out_y += BLOCK_SY - 1;
+
+				io_lastSpawnIndex = index;
+
+				return true;
+			}
+		}
 	}
+
+	return false;
 }
 
 bool Arena::getRandomPickupLocation(int & out_x, int & out_y)

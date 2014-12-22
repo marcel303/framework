@@ -15,7 +15,7 @@ COMMAND_OPTION(s_addSprite, "Debug/Add Sprite", [] { if (g_host) g_app->netAddSp
 COMMAND_OPTION(s_addPickup, "Debug/Add Pickup", [] { if (g_host) g_host->spawnPickup(kPickupType_Ammo, rand() % ARENA_SX, rand() % ARENA_SY); });
 
 COMMAND_OPTION(s_gameStateNewGame, "Game State/New Game", [] { if (g_host) g_host->newGame(); });
-COMMAND_OPTION(s_gameStateNewRound, "Game State/New Round", [] { if (g_host) g_host->newRound(); });
+COMMAND_OPTION(s_gameStateNewRound, "Game State/New Round", [] { if (g_host) g_host->newRound(0); });
 COMMAND_OPTION(s_gameStateEndRound, "Game State/End Round", [] { if (g_host) g_host->endRound(); });
 
 OPTION_DECLARE(int, g_roundCompleteScore, 10);
@@ -184,7 +184,7 @@ void Host::tickRoundComplete(float dt)
 
 	if (time >= m_roundCompleteTimer)
 	{
-		newRound();
+		newRound(0);
 	}
 }
 
@@ -225,10 +225,10 @@ void Host::newGame()
 		player->handleNewGame();
 	}
 
-	newRound();
+	newRound(0);
 }
 
-void Host::newRound()
+void Host::newRound(const char * mapOverride)
 {
 	// todo : remove bullets
 
@@ -244,7 +244,11 @@ void Host::newRound()
 
 	std::string map = g_map;
 
-	if (!map.empty())
+	if (mapOverride)
+	{
+		m_arena->load(mapOverride);
+	}
+	else if (!map.empty())
 	{
 		m_arena->load(map.c_str());
 	}
@@ -274,6 +278,8 @@ void Host::newRound()
 	m_arena->m_gameState.SetDirty();
 
 	m_nextRoundNumber++;
+
+	g_app->netPlaySound("round-begin.ogg");
 }
 
 void Host::endRound()

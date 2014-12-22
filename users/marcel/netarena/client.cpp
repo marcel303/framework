@@ -11,6 +11,9 @@
 #include "netsprite.h"
 #include "player.h"
 
+static char s_bgm[64] = { };
+static Music * s_bgmSound = 0;
+
 Client::Client()
 	: m_channel(0)
 	, m_replicationId(0)
@@ -132,6 +135,35 @@ void Client::tick(float dt)
 	m_bulletPool->anim(dt);
 
 	m_particlePool->tick(dt);
+
+	if (m_arena && g_app->isSelectedClient(this))
+	{
+		char temp[64];
+
+		switch (m_arena->m_gameState.m_gameState)
+		{
+		case kGameState_Lobby:
+			strcpy_s(temp, sizeof(temp), "bgm-lobby.ogg");
+			break;
+		case kGameState_Play:
+			strcpy_s(temp, sizeof(temp), "bgm-play.ogg");
+			break;
+		case kGameState_RoundComplete:
+			strcpy_s(temp, sizeof(temp), "bgm-round-complete.ogg");
+			break;
+		}
+
+		if (strcmp(temp, s_bgm) != 0)
+		{
+			strcpy_s(s_bgm, sizeof(s_bgm), temp);
+
+			delete s_bgmSound;
+			s_bgmSound = 0;
+
+			s_bgmSound = new Music(s_bgm);
+			s_bgmSound->play();
+		}
+	}
 }
 
 void Client::draw()

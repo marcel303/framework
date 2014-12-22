@@ -57,7 +57,7 @@ public:
 	void syncNewClient(Channel * channel);
 
 	void newGame();
-	void newRound();
+	void newRound(const char * mapOverride);
 	void endRound();
 
 	void addPlayer(Player * player);

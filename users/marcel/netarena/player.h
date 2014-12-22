@@ -307,4 +307,6 @@ public:
 		bool wentUp(int input) { return wasDown(input) && !isDown(input); }
 		void next() { m_prevButtons = m_currButtons; }
 	} m_input;
+
+	int m_lastSpawnIndex;
 };
