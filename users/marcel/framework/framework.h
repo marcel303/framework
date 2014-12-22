@@ -154,6 +154,8 @@ public:
 	void reloadCaches();
 	void fillCachesWithPath(const char * path);
 	
+	void setFullscreen(bool fullscreen);
+
 	void beginDraw(int r, int g, int b, int a);
 	void endDraw();
 	

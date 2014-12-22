@@ -217,7 +217,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	// initialize UI
 	
 	ui.load("default_ui");
-	
+
 	return true;
 }
 
@@ -304,8 +304,6 @@ void Framework::process()
 	g_soundPlayer.process();
 	
 	bool doReload = false;
-	
-	bool reloadKey = keyboard.isDown(SDLK_r);
 	
 	// poll SDL event queue
 	
@@ -440,11 +438,17 @@ void Framework::process()
 	}
 #endif
 	
-	doReload |= keyboard.isDown(SDLK_r) && !reloadKey;
+	doReload |= keyboard.wentDown(SDLK_r);
 	
 	if (doReload)
 	{
 		reloadCaches();
+	}
+
+	if (keyboard.wentDown(SDLK_F12))
+	{
+		fullscreen = !fullscreen;
+		setFullscreen(fullscreen);
 	}
 	
 	for (SpriteSet::iterator i = m_sprites.begin(); i != m_sprites.end(); ++i)
@@ -571,6 +575,14 @@ void Framework::fillCachesWithPath(const char * path)
 	}
 }
 
+void Framework::setFullscreen(bool fullscreen)
+{
+	if (fullscreen)
+		SDL_SetWindowFullscreen(globals.window, SDL_WINDOW_FULLSCREEN);
+	else
+		SDL_SetWindowFullscreen(globals.window, 0);
+}
+
 void Framework::beginDraw(int r, int g, int b, int a)
 {
 	// clear back buffer
@@ -580,7 +592,13 @@ void Framework::beginDraw(int r, int g, int b, int a)
 	
 	// initialize viewport and OpenGL matrices
 	
-	glViewport(0, 0, globals.displaySize[0] / minification, globals.displaySize[1] / minification);
+	int windowSx;
+	int windowSy;
+	SDL_GL_GetDrawableSize(globals.window, &windowSx, &windowSy);
+	globals.drawableOffset[0] = 0;
+	globals.drawableOffset[1] = windowSy - (globals.displaySize[1] / minification);
+	
+	glViewport(globals.drawableOffset[0], globals.drawableOffset[1], globals.displaySize[0] / minification, globals.displaySize[1] / minification);
 	
 	applyTransform();
 	setBlend(BLEND_ALPHA);
@@ -2305,6 +2323,9 @@ void setDrawRect(int x, int y, int sx, int sy)
 	sx /= framework.minification;
 	sy /= framework.minification;
 	
+	x += globals.drawableOffset[0];
+	y += globals.drawableOffset[1];
+
 	glScissor(x, y, sx, sy);
 	glEnable(GL_SCISSOR_TEST);
 }

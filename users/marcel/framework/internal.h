@@ -58,6 +58,7 @@ public:
 	SDL_Window * window;
 	SDL_GLContext glContext;
 	int displaySize[2];
+	int drawableOffset[2];
 	FT_Library freeType;
 	int resourceVersion;
 	COLOR_MODE colorMode;
