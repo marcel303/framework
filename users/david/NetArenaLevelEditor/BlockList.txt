@@ -1,0 +1,11 @@
+data\\
+block-conveyorbelt-left.png = <
+block-conveyorbelt-right.png = >
+block-indestructible.png = x
+block-destructible.png = c
+block-spring.png = j
+block-sticky.png = s
+block-spawn.png = p
+..\\EditorData\\block-empty.png =  
+block-gravity-reverse.png = u
+block-gravity-strong.png = d
