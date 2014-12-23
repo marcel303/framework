@@ -63,8 +63,11 @@ static const int kBlockMask_Passthrough =
 
 struct Block
 {
-	BlockType type : 8;
-	BlockShape shape : 8; // fixme : doesn't need to be serialized
+	BlockType type;
+	uint8_t clientData;
+
+	BlockShape shape;
+	uint16_t serverData;
 };
 
 #pragma pack(pop)
@@ -82,17 +85,9 @@ class Arena : public NetObject
 	class Arena_NS : public NetSerializable
 	{
 	public:
-		Arena_NS(NetSerializableObject * owner)
-			: NetSerializable(owner)
-		{
-		}
+		Arena_NS(NetSerializableObject * owner);
 
-		virtual void SerializeStruct()
-		{
-			Arena * arena = static_cast<Arena*>(GetOwner());
-
-			SerializeBytes(arena->m_blocks, sizeof(arena->m_blocks));
-		}
+		virtual void SerializeStruct();
 	};
 
 	Arena_NS m_serializer;

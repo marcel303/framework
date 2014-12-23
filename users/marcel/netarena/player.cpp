@@ -38,7 +38,7 @@ nice to haves:
 // from internal.h
 void splitString(const std::string & str, std::vector<std::string> & result, char c);
 
-OPTION_DECLARE(int, s_playerCharacterIndex, 0);
+OPTION_DECLARE(int, s_playerCharacterIndex, -1);
 OPTION_DEFINE(int, s_playerCharacterIndex, "Player/Character Index (On Create)");
 OPTION_ALIAS(s_playerCharacterIndex, "character");
 
@@ -350,6 +350,11 @@ Player::Player(uint32_t netId, uint16_t owningChannelId)
 	m_collision.x2 = +PLAYER_COLLISION_SX / 2.f;
 	m_collision.y1 = -PLAYER_COLLISION_SY / 1.f;
 	m_collision.y2 = 0.f;
+
+	if (s_playerCharacterIndex != -1)
+	{
+		g_app->netSetPlayerCharacterIndex(getOwningChannelId(), getNetId(), s_playerCharacterIndex);
+	}
 }
 
 Player::~Player()

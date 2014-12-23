@@ -106,19 +106,6 @@ void Host::shutdown()
 
 void Host::tick(float dt)
 {
-	const uint64_t time = g_TimerRT.TimeMS_get();
-	static uint64_t lastTime = time;
-	if (time == lastTime)
-	{
-		SDL_Delay(1);
-		return;
-	}
-
-	dt = (time - lastTime) / 1000.f;
-	if (dt > 1.f / 60.f)
-		dt = 1.f / 60.f;
-	lastTime = time;
-
 	switch (m_arena->m_gameState.m_gameState)
 	{
 	case kGameState_Lobby:

@@ -70,6 +70,33 @@ OPTION_DEFINE(int, s_drawBlockMask, "Arena/Debug/Draw Block Mask");
 
 //
 
+Arena::Arena_NS::Arena_NS(NetSerializableObject * owner)
+	: NetSerializable(owner)
+{
+}
+
+void Arena::Arena_NS::SerializeStruct()
+{
+	Arena * arena = static_cast<Arena*>(GetOwner());
+
+	for (int x = 0; x < ARENA_SX; ++x)
+	{
+		for (int y = 0; y < ARENA_SY; ++y)
+		{
+			Block & block = arena->m_blocks[x][y];
+
+			uint8_t type = block.type;
+
+			Serialize(type);
+			Serialize(block.clientData);
+
+			block.type = (BlockType)type;
+		}
+	}
+}
+
+//
+
 Arena::Arena()
 	: NetObject()
 	, m_serializer(this)

@@ -110,3 +110,4 @@ public:
 };
 
 extern App * g_app;
+extern int g_updateTicks;

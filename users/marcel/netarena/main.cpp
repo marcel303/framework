@@ -65,6 +65,8 @@ TIMER_DEFINE(g_appDrawTime, PerFrame, "App/Draw");
 
 App * g_app = 0;
 
+int g_updateTicks = 0;
+
 //
 
 static void HandleAction(const std::string & action, const Dictionary & args)
@@ -853,7 +855,27 @@ bool App::tick()
 {
 	TIMER_SCOPE(g_appTickTime);
 
-	const float dt = 1.f / 60.f; // todo : calculate time step
+	// calculate time step
+
+	const uint64_t time = g_TimerRT.TimeMS_get();
+	static uint64_t lastTime = time;
+	if (time == lastTime)
+	{
+		SDL_Delay(1);
+		return true;
+	}
+
+	float dt = (time - lastTime) / 1000.f;
+	if (dt > 1.f / 60.f)
+		dt = 1.f / 60.f;
+	lastTime = time;
+
+	// determine number of update ticks
+
+	static float dtAccum = 0.f;
+	dtAccum += dt;
+	g_updateTicks = (int)(dtAccum * 60.f);
+	dtAccum -= g_updateTicks / 60.f;
 
 	// shared update
 
@@ -867,16 +889,22 @@ bool App::tick()
 
 	if (m_isHost)
 	{
-		m_channelMgr->Update(g_TimerRT.TimeUS_get());
+		if (g_updateTicks)
+		{
+			m_channelMgr->Update(g_TimerRT.TimeUS_get());
 
-		m_replicationMgr->SV_Update();
+			m_replicationMgr->SV_Update();
+		}
 
 		if (!m_optionMenuIsOpen)
 		{
 			m_host->tick(dt);
 		}
 
-		m_channelMgr->Update(g_TimerRT.TimeUS_get());
+		if (g_updateTicks)
+		{
+			m_channelMgr->Update(g_TimerRT.TimeUS_get());
+		}
 	}
 
 	// update client
