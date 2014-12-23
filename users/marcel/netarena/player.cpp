@@ -334,6 +334,7 @@ Player::Player(uint32_t netId, uint16_t owningChannelId)
 	, m_animAllowSteering(true)
 	, m_sprite(0)
 	, m_spriteScale(1.f)
+	, m_isRespawn(false)
 	, m_isAirDashCharged(false)
 	, m_isWallSliding(false)
 	, m_lastSpawnIndex(-1)
@@ -368,6 +369,8 @@ void Player::playSecondaryEffects(PlayerEvent e)
 	switch (e)
 	{
 	case kPlayerEvent_Spawn:
+		break;
+	case kPlayerEvent_Respawn:
 		g_app->netPlaySound(makeCharacterFilename(m_respawnSounds.getRandomSound()));
 		break;
 	case kPlayerEvent_Die:
@@ -656,6 +659,8 @@ void Player::tick(float dt)
 			{
 				m_anim.SetAnim(kPlayerAnim_Die, true, true);
 				m_isAnimDriven = true;
+
+				awardScore(-1);
 
 				playSecondaryEffects(kPlayerEvent_SpikeHit);
 			}
@@ -1060,6 +1065,8 @@ void Player::tick(float dt)
 			{
 				m_anim.SetAnim(kPlayerAnim_Die, true, true);
 				m_isAnimDriven = true;
+
+				awardScore(-1);
 			}
 		}
 	#endif
@@ -1266,11 +1273,14 @@ void Player::handleNewGame()
 
 void Player::handleNewRound()
 {
-	m_state.totalScore += m_state.score;
+	if (m_state.score > 0)
+		m_state.totalScore += m_state.score;
 	m_state.score = 0;
 	m_state.SetDirty();
 
 	m_lastSpawnIndex = -1;
+	m_isRespawn = false;
+
 	m_weaponAmmo = 0;
 }
 
@@ -1307,7 +1317,13 @@ void Player::respawn()
 		m_isAirDashCharged = false;
 		m_isWallSliding = false;
 
-		playSecondaryEffects(kPlayerEvent_Spawn);
+		if (m_isRespawn)
+			playSecondaryEffects(kPlayerEvent_Respawn);
+		else
+		{
+			playSecondaryEffects(kPlayerEvent_Spawn);
+			m_isRespawn = true;
+		}
 	}
 }
 

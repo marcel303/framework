@@ -17,6 +17,7 @@ enum PlayerWeapon
 enum PlayerEvent
 {
 	kPlayerEvent_Spawn,
+	kPlayerEvent_Respawn,
 	kPlayerEvent_Die,
 	kPlayerEvent_Jump,
 	kPlayerEvent_WallJump,
@@ -99,7 +100,7 @@ public:
 	PlayerState_NS(NetSerializableObject * owner);
 
 	bool isAlive;
-	uint16_t score;
+	int16_t score;
 	uint16_t totalScore;
 	int8_t playerId;
 	uint8_t characterIndex;
@@ -253,6 +254,7 @@ class Player : public NetObject
 	Sprite * m_sprite;
 	float m_spriteScale;
 
+	bool m_isRespawn;
 	SoundBag m_respawnSounds;
 
 	static void handleAnimationAction(const std::string & action, const Dictionary & args);
