@@ -389,8 +389,13 @@ void Player::playSecondaryEffects(PlayerEvent e)
 		g_app->netPlaySound(makeCharacterFilename("die/die.ogg"));
 		break;
 	case kPlayerEvent_Jump:
-		g_app->netPlaySound(makeCharacterFilename("jump/jump.ogg"));
-		break;
+		{
+			Dictionary args;
+			args.setPtr("obj", this);
+			args.setString("name", "jump_sounds");
+			handleAnimationAction("char_soundbag", args);
+			break;
+		}
 	case kPlayerEvent_WallJump:
 		g_app->netPlaySound(makeCharacterFilename("walljump.ogg"));
 		break;
