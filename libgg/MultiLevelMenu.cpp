@@ -198,6 +198,11 @@ void MultiLevelMenuBase::HandleAction(Action action, float dt)
 			currentSelection->m_timeValue = 0.f;
 			if (currentSelection->m_prevSibling)
 				currentSelection = currentSelection->m_prevSibling;
+			else
+			{
+				while (currentSelection->m_nextSibling)
+					currentSelection = currentSelection->m_nextSibling;
+			}
 		}
 		break;
 	case Action_NavigateDown:
@@ -207,6 +212,11 @@ void MultiLevelMenuBase::HandleAction(Action action, float dt)
 			currentSelection->m_timeValue = 0.f;
 			if (currentSelection->m_nextSibling)
 				currentSelection = currentSelection->m_nextSibling;
+			else
+			{
+				while (currentSelection->m_prevSibling)
+					currentSelection = currentSelection->m_prevSibling;
+			}
 		}
 		break;
 	case Action_NavigateSelect:
