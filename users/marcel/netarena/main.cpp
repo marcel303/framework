@@ -52,6 +52,10 @@ OPTION_DECLARE(std::string, g_connect, "");
 OPTION_DEFINE(std::string, g_connect, "App/Direct Connect");
 OPTION_ALIAS(g_connect, "connect");
 
+OPTION_DECLARE(bool, g_noSound, false);
+OPTION_DEFINE(bool, g_noSound, "Sound/Disable Sound Effects");
+OPTION_ALIAS(g_noSound, "nosound");
+
 //
 
 TIMER_DEFINE(g_appTickTime, PerFrame, "App/Tick");
@@ -132,7 +136,10 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 
 		if (g_app->isSelectedClient(channel))
 		{
-			Sound(filename.c_str()).play(volume);
+			if (!g_noSound)
+			{
+				Sound(filename.c_str()).play(volume);
+			}
 		}
 	}
 	else if (method == s_rpcSetPlayerInputs)
