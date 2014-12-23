@@ -215,6 +215,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			b.x = x;
 			b.y = y;
 			b.angle = angle / 128.f * float(M_PI);
+			b.color = 0xffffffff;
 			
 			switch (type)
 			{
@@ -332,21 +333,13 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		Assert(client);
 		if (client)
 		{
-			int16_t x;
-			int16_t y;
-			uint8_t type;
-			uint8_t count;
-			uint16_t velocity;
-			uint16_t maxDistance;
+			NetSerializationContext context;
+			context.Set(true, false, bitStream);
 
-			bitStream.Read(x);
-			bitStream.Read(y);
-			bitStream.Read(type);
-			bitStream.Read(count);
-			bitStream.Read(velocity);
-			bitStream.Read(maxDistance);
+			ParticleSpawnInfo spawnInfo;
+			spawnInfo.serialize(context);
 
-			client->spawnParticles((BulletType)type, count, x, y, velocity, maxDistance);
+			client->spawnParticles(spawnInfo);
 		}
 	}
 	else if (method == s_rpcUpdateBlock)
@@ -1263,16 +1256,14 @@ void App::netRemoveSprite(uint16_t id)
 	}
 }
 
-void App::netSpawnParticles(int16_t x, int16_t y, uint8_t type, uint8_t count, uint16_t velocity, uint16_t maxDistance)
+void App::netSpawnParticles(const ParticleSpawnInfo & spawnInfo)
 {
 	BitStream bs;
 
-	bs.Write(x);
-	bs.Write(y);
-	bs.Write(type);
-	bs.Write(count);
-	bs.Write(velocity);
-	bs.Write(maxDistance);
+	NetSerializationContext context;
+	context.Set(true, true, bs);
+
+	const_cast<ParticleSpawnInfo&>(spawnInfo).serialize(context);
 
 	m_rpcMgr->Call(s_rpcSpawnParticles, bs, ChannelPool_Server, 0, true, false);
 }

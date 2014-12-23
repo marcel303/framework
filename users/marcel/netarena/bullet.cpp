@@ -57,7 +57,7 @@ void BulletPool::tick(float dt)
 
 				// evaluate collisions
 
-				if (!b.noCollide)
+				if (!kill && !b.noCollide)
 				{
 					const uint32_t blockMask = g_hostArena->getIntersectingBlocksMask(b.x, b.y);
 
@@ -70,7 +70,9 @@ void BulletPool::tick(float dt)
 							b.reflectCount++;
 
 							if (b.reflectCount > b.maxReflectCount)
+							{
 								kill = true;
+							}
 							else
 							{
 								b.angle = b.angle + Calc::mPI;
@@ -79,6 +81,12 @@ void BulletPool::tick(float dt)
 						}
 						else
 							kill = true;
+					}
+
+					if (kill)
+					{
+						ParticleSpawnInfo spawnInfo(b.x, b.y, kBulletType_ParticleA, 10, 50, 200, 20);
+						g_app->netSpawnParticles(spawnInfo);
 					}
 				}
 
@@ -154,8 +162,6 @@ void BulletPool::tick(float dt)
 					if (!m_localOnly)
 					{
 						g_app->netKillBullet(i);
-
-						g_app->netSpawnParticles(b.x, b.y, kBulletType_ParticleA, 16, 100, 50);
 					}
 
 					free(i);
@@ -241,8 +247,13 @@ void BulletPool::draw()
 			float vx, vy;
 			getVelocityXY(b.angle, b.velocity, vx, vy);
 
-			setColor(255, 255, 255);
-			s_bulletSprites[b.type]->drawEx(b.x, b.y, Calc::RadToDeg(b.angle), 2.f);
+			const int cr = (b.color >> 24) & 0xff;
+			const int cg = (b.color >> 16) & 0xff;
+			const int cb = (b.color >>  8) & 0xff;
+			const int ca = (b.color >>  0) & 0xff;
+
+			setColor(cr, cg, cb, ca);
+			s_bulletSprites[b.type]->drawEx(b.x, b.y, Calc::RadToDeg(b.angle), s_bulletSprites[b.type]->scale);
 		}
 	}
 }

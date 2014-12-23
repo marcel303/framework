@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <tuple>
 #include "arena.h"
+#include "bullet.h"
 #include "FileStream.h"
 #include "framework.h"
 #include "image.h"
@@ -627,6 +628,13 @@ bool Arena::handleDamageRect(int baseX, int baseY, int x1, int y1, int x2, int y
 				block.type = kBlockType_Empty;
 
 				g_app->netUpdateBlock(blockInfo.x, blockInfo.y, block);
+
+				ParticleSpawnInfo spawnInfo(
+					(blockInfo.x + .5f) * BLOCK_SX,
+					(blockInfo.y + .5f) * BLOCK_SY,
+					kBulletType_ParticleA, 10, 50, 200, 20);
+				spawnInfo.color = 0xff8040ff;
+				g_app->netSpawnParticles(spawnInfo);
 
 				hitDestructible = false;
 

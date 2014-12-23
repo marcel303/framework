@@ -280,29 +280,30 @@ void Client::removePlayer(Player * player)
 	}
 }
 
-void Client::spawnParticles(BulletType type, uint8_t count, int16_t x, int16_t y, uint16_t velocity, uint16_t maxDistance)
+void Client::spawnParticles(const ParticleSpawnInfo & spawnInfo)
 {
-	for (int i = 0; i < count; ++i)
+	for (int i = 0; i < spawnInfo.count; ++i)
 	{
-		float angle = rand() % 256;
-
 		uint16_t id = m_particlePool->alloc();
 
 		if (id != INVALID_BULLET_ID)
 		{
 			Bullet & b = m_particlePool->m_bullets[id];
 
+			const float angle = rand() % 256;
+
 			memset(&b, 0, sizeof(b));
 			b.isAlive = true;
-			b.type = type;
-			b.x = x;
-			b.y = y;
+			b.type = (BulletType)spawnInfo.type;
+			b.x = spawnInfo.x;
+			b.y = spawnInfo.y;
 			b.angle = angle / 128.f * float(M_PI);
-			b.velocity = velocity;
+			b.velocity = Calc::Random(spawnInfo.minVelocity, spawnInfo.maxVelocity);
 
 			b.noCollide = true;
 			b.maxWrapCount = 1;
-			b.maxDistanceTravelled = maxDistance;
+			b.maxDistanceTravelled = spawnInfo.maxDistance;
+			b.color = spawnInfo.color;
 		}
 	}
 }

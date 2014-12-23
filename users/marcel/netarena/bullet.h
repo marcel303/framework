@@ -23,6 +23,7 @@ public:
 	float velocity;
 	BulletType type;
 	bool noCollide;
+	uint32_t color;
 
 	float lastX;
 	float lastY;
@@ -38,6 +39,51 @@ public:
 
 	uint32_t ownerNetId;
 };
+
+#pragma pack(push)
+#pragma pack(1)
+
+struct ParticleSpawnInfo
+{
+	ParticleSpawnInfo()
+		: type(kBulletType_ParticleA)
+		, count(0)
+		, x(0)
+		, y(0)
+		, minVelocity(100)
+		, maxVelocity(100)
+		, maxDistance(100)
+		, color(0xffffffff)
+	{
+	}
+
+	ParticleSpawnInfo(int16_t _x, int16_t _y, BulletType _type, uint8_t _count, uint16_t _minVelocity, uint16_t _maxVelocity, uint16_t _maxDistance)
+		: x(_x)
+		, y(_y)
+		, type(_type)
+		, count(_count)
+		, minVelocity(_minVelocity)
+		, maxVelocity(_maxVelocity)
+		, maxDistance(_maxDistance)
+	{
+	}
+
+	void serialize(NetSerializationContext & context)
+	{
+		context.SerializeBytes(this, sizeof(*this));
+	}
+
+	uint8_t type;
+	uint8_t count;
+	int16_t x;
+	int16_t y;
+	uint16_t minVelocity;
+	uint16_t maxVelocity;
+	uint16_t maxDistance;
+	uint32_t color; // 0xrrggbbaa
+};
+
+#pragma pack(pop)
 
 class BulletPool
 {

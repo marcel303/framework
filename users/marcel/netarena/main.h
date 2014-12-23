@@ -13,6 +13,7 @@ OPTION_EXTERN(bool, g_devMode);
 class Client;
 class Host;
 class OptionMenu;
+struct ParticleSpawnInfo;
 class Player;
 class StatTimerMenu;
 
@@ -99,7 +100,7 @@ public:
 	uint16_t netAddSprite(const char * filename, int16_t x, int16_t y);
 	void netSyncSprite(uint16_t id, Channel * channel);
 	void netRemoveSprite(uint16_t id);
-	void netSpawnParticles(int16_t x, int16_t y, uint8_t type, uint8_t count, uint16_t velocity, uint16_t maxDistance);
+	void netSpawnParticles(const ParticleSpawnInfo & spawnInfo);
 	void netUpdateBlock(uint8_t x, uint8_t y, const Block & block);
 
 	int allocControllerIndex();
