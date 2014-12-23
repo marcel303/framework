@@ -300,6 +300,8 @@ public:
 	int getPlayerId() const { return m_state.playerId; }
 
 	int getCharacterIndex() const { return m_state.characterIndex; }
+	void setCharacterIndex(int index);
+	bool hasValidCharacterIndex() const { return m_state.characterIndex != (uint8_t)-1; }
 	void handleCharacterIndexChange();
 	char * makeCharacterFilename(const char * filename);
 

@@ -140,7 +140,7 @@ void Host::tickPlay(float dt)
 
 	if (time >= m_nextPickupSpawnTime)
 	{
-		if (m_pickups.size() < g_pickupMax)
+		if ((int)m_pickups.size() < g_pickupMax)
 		{
 			int x;
 			int y;

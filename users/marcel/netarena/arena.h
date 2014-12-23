@@ -72,6 +72,8 @@ struct Block
 struct BlockAndDistance
 {
 	Block * block;
+	uint8_t x;
+	uint8_t y;
 	int distanceSq;
 };
 

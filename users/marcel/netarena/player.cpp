@@ -10,8 +10,8 @@
 
 todo:
 
-- clash sound on attack cancel
-- random sound selection on event to avoid repeat sounds
++ clash sound on attack cancel
++ random sound selection on event to avoid repeat sounds
 + fire up/down
 + fire affects destructible blocks
 + respawn on round begin
@@ -21,15 +21,16 @@ todo:
 + meelee X, pickup B
 + wrapping support attack
 + add pickup sound
-- add direct connect option
-- spring block tweakable
++ add direct connect option
++ spring block tweakable
 - more death feedback
 - respawn delay
+- character selection
 
 nice to haves:
 - blood particles
 - real time lighting
-- fill the level lava
+- fill the level with lava
 - bee attack
 
 */
@@ -111,7 +112,7 @@ PlayerState_NS::PlayerState_NS(NetSerializableObject * owner)
 	, score(0)
 	, totalScore(0)
 	, playerId(-1)
-	, characterIndex(s_playerCharacterIndex)
+	, characterIndex(-1)
 {
 }
 
@@ -146,10 +147,13 @@ void PlayerAnim_NS::SerializeStruct()
 		player->m_sprite->animActionHandlerObj = player;
 	}
 
-	if (m_play)
-		player->m_sprite->startAnim("anim");
-	else
-		player->m_sprite->stopAnim();
+	if (player->m_sprite)
+	{
+		if (m_play)
+			player->m_sprite->startAnim("anim");
+		else
+			player->m_sprite->stopAnim();
+	}
 }
 
 //
@@ -328,6 +332,8 @@ Player::Player(uint32_t netId, uint16_t owningChannelId)
 	, m_animVelIsAbsolute(false)
 	, m_animAllowGravity(true)
 	, m_animAllowSteering(true)
+	, m_sprite(0)
+	, m_spriteScale(1.f)
 	, m_isAirDashCharged(false)
 	, m_isWallSliding(false)
 	, m_lastSpawnIndex(-1)
@@ -344,10 +350,6 @@ Player::Player(uint32_t netId, uint16_t owningChannelId)
 	m_collision.x2 = +PLAYER_COLLISION_SX / 2.f;
 	m_collision.y1 = -PLAYER_COLLISION_SY / 1.f;
 	m_collision.y2 = 0.f;
-
-	m_sprite = new Sprite(makeCharacterFilename("walk/walk.png"));
-
-	handleCharacterIndexChange();
 }
 
 Player::~Player()
@@ -967,7 +969,7 @@ void Player::tick(float dt)
 						else
 							surfaceFriction = FRICTION_GROUNDED;
 
-						if (m_vel[i] >= 0.f)
+						if (delta >= 0.f)
 						{
 							if (playerControl && m_input.wentDown(INPUT_BUTTON_A))
 							{
@@ -1104,6 +1106,9 @@ void Player::tick(float dt)
 
 void Player::draw()
 {
+	if (!hasValidCharacterIndex())
+		return;
+
 	m_sprite->flipX = m_pos.xFacing < 0 ? true : false;
 	m_sprite->flipY = m_pos.yFacing < 0 ? true : false;
 
@@ -1266,6 +1271,9 @@ void Player::handleNewRound()
 
 void Player::respawn()
 {
+	if (!hasValidCharacterIndex())
+		return;
+
 	int x, y;
 
 	if (g_hostArena->getRandomSpawnPoint(x, y, m_lastSpawnIndex))
@@ -1335,15 +1343,29 @@ void Player::setPlayerId(int id)
 	m_state.SetDirty();
 }
 
+void Player::setCharacterIndex(int index)
+{
+	m_state.characterIndex = index;
+	m_state.SetDirty();
+
+	handleCharacterIndexChange();
+}
+
 void Player::handleCharacterIndexChange()
 {
-	// reload character properties
+	if (hasValidCharacterIndex())
+	{
+		// reload character properties
 
-	Dictionary d;
-	d.load(makeCharacterFilename("props.txt"));
-	m_spriteScale = d.getFloat("sprite_scale", 1.f);
+		delete m_sprite;
+		m_sprite = new Sprite(makeCharacterFilename("walk/walk.png"));
 
-	m_respawnSounds.load(d.getString("spawn_sounds", ""), true);
+		Dictionary d;
+		d.load(makeCharacterFilename("props.txt"));
+		m_spriteScale = d.getFloat("sprite_scale", 1.f);
+
+		m_respawnSounds.load(d.getString("spawn_sounds", ""), true);
+	}
 }
 
 char * Player::makeCharacterFilename(const char * filename)

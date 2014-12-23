@@ -24,6 +24,9 @@ public:
 	BulletType type;
 	bool noCollide;
 
+	float lastX;
+	float lastY;
+
 	uint8_t reflectCount;
 	uint8_t maxReflectCount;
 
@@ -49,6 +52,7 @@ public:
 
 	void tick(float dt);
 	void anim(float dt);
+	void anim(Bullet & b, float dt);
 	void draw();
 
 	uint16_t alloc();

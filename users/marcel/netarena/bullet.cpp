@@ -40,120 +40,126 @@ BulletPool::BulletPool(bool localOnly)
 
 void BulletPool::tick(float dt)
 {
-	anim(dt);
-
 	for (int i = 0; i < MAX_BULLETS; ++i)
 	{
 		Bullet & b = m_bullets[i];
 
 		if (b.isAlive)
 		{
-			bool kill = false;
+			const float distance = b.velocity * dt;
+			const int numSteps = (int)std::ceil(std::abs(distance) / 4.f);
 
-			// evaluate collisions
-
-			if (!b.noCollide)
+			for (int step = 0; step < numSteps && b.isAlive; ++step)
 			{
-				const uint32_t blockMask = g_hostArena->getIntersectingBlocksMask(b.x, b.y);
+				anim(b, dt / numSteps);
 
-				// reflection
+				bool kill = false;
 
-				if (blockMask & kBlockMask_Solid & (~(1 << kBlockType_Destructible)))
+				// evaluate collisions
+
+				if (!b.noCollide)
 				{
-					if (b.maxReflectCount != 0)
-					{
-						b.reflectCount++;
+					const uint32_t blockMask = g_hostArena->getIntersectingBlocksMask(b.x, b.y);
 
-						if (b.reflectCount > b.maxReflectCount)
-							kill = true;
-						else
+					// reflection
+
+					if (blockMask & kBlockMask_Solid & (~(1 << kBlockType_Destructible)))
+					{
+						if (b.maxReflectCount != 0)
 						{
-							b.angle = b.angle + Calc::mPI;
-							g_app->netUpdateBullet(i);
+							b.reflectCount++;
+
+							if (b.reflectCount > b.maxReflectCount)
+								kill = true;
+							else
+							{
+								b.angle = b.angle + Calc::mPI;
+								g_app->netUpdateBullet(i);
+							}
+						}
+						else
+							kill = true;
+					}
+				}
+
+				// wrap around
+
+				if (b.wrapCount > b.maxWrapCount)
+					kill = true;
+
+				// max distance travelled
+
+				if (b.maxDistanceTravelled != 0.f && b.distanceTravelled > b.maxDistanceTravelled)
+					kill = true;
+
+				Player * owner = 0;
+
+				if (b.ownerNetId != 0)
+				{
+					for (auto p = g_host->m_players.begin(); p != g_host->m_players.end(); ++p)
+					{
+						Player * player = *p;
+
+						if (player->getNetId() == b.ownerNetId)
+							owner = player;
+					}
+
+					if (owner == 0)
+						kill = true;
+				}
+
+				if (!kill && !b.noCollide)
+				{
+					// collide with players
+
+					for (auto p = g_host->m_players.begin(); p != g_host->m_players.end(); ++p)
+					{
+						Player * player = *p;
+
+						if (player->getNetId() == b.ownerNetId)
+							continue;
+
+						CollisionInfo collisionInfo;
+
+						player->getPlayerCollision(collisionInfo);
+
+						if (collisionInfo.intersects(b.x, b.y))
+						{
+							float vx, vy;
+							getVelocityXY(b.angle, b.velocity, vx, vy);
+
+							player->handleDamage(1.f, Vec2(vx, vy), owner);
+
+							kill = true;
 						}
 					}
-					else
-						kill = true;
-				}
-			}
-
-			// wrap around
-
-			if (b.wrapCount > b.maxWrapCount)
-				kill = true;
-
-			// max distance travelled
-
-			if (b.maxDistanceTravelled != 0.f && b.distanceTravelled > b.maxDistanceTravelled)
-				kill = true;
-
-			Player * owner = 0;
-
-			if (b.ownerNetId != 0)
-			{
-				for (auto p = g_host->m_players.begin(); p != g_host->m_players.end(); ++p)
-				{
-					Player * player = *p;
-
-					if (player->getNetId() == b.ownerNetId)
-						owner = player;
 				}
 
-				if (owner == 0)
-					kill = true;
-			}
-
-			if (!kill && !b.noCollide)
-			{
-				// collide with players
-
-				for (auto p = g_host->m_players.begin(); p != g_host->m_players.end(); ++p)
+				if (!kill && !b.noCollide)
 				{
-					Player * player = *p;
+					// collide with map
 
-					if (player->getNetId() == b.ownerNetId)
-						continue;
-
-					CollisionInfo collisionInfo;
-
-					player->getPlayerCollision(collisionInfo);
-
-					if (collisionInfo.intersects(b.x, b.y))
+					if (g_hostArena->handleDamageRect(
+						b.x, b.y,
+						b.x, b.y,
+						b.x, b.y,
+						true))
 					{
-						float vx, vy;
-						getVelocityXY(b.angle, b.velocity, vx, vy);
-
-						player->handleDamage(1.f, Vec2(vx, vy), owner);
-
 						kill = true;
 					}
 				}
-			}
 
-			if (!kill && !b.noCollide)
-			{
-				// collide with map
-
-				if (g_hostArena->handleDamageRect(
-					b.x, b.y,
-					b.x, b.y,
-					b.x, b.y,
-					true))
+				if (kill)
 				{
-					kill = true;
+					if (!m_localOnly)
+					{
+						g_app->netKillBullet(i);
+
+						g_app->netSpawnParticles(b.x, b.y, kBulletType_ParticleA, 16, 100, 50);
+					}
+
+					free(i);
 				}
-			}
-
-			if (kill)
-			{
-				if (!m_localOnly)
-				{
-					g_app->netKillBullet(i);
-
-					g_app->netSpawnParticles(b.x, b.y, kBulletType_ParticleA, 16, 100, 50);
-				}
-
-				free(i);
 			}
 		}
 	}
@@ -167,41 +173,51 @@ void BulletPool::anim(float dt)
 
 		if (b.isAlive)
 		{
-			float dx, dy;
-			getVelocityXY(b.angle, b.velocity * dt, dx, dy);
+			anim(b, dt);
+		}
+	}
+}
 
-			b.x += dx;
-			b.y += dy;
+void BulletPool::anim(Bullet & b, float dt)
+{
+	Assert(b.isAlive);
 
-			// distance travelled
+	b.lastX = b.x;
+	b.lastY = b.y;
 
-			b.distanceTravelled += std::sqrt(dx * dx + dy * dy);
+	float dx, dy;
+	getVelocityXY(b.angle, b.velocity * dt, dx, dy);
 
-			// wrap
+	b.x += dx;
+	b.y += dy;
 
-			float x = b.x;
-			float y = b.y;
+	// distance travelled
 
-			if (b.x < 0.f)
-				b.x += ARENA_SX_PIXELS;
-			if (b.x > ARENA_SX_PIXELS)
-				b.x -= ARENA_SX_PIXELS;
+	b.distanceTravelled += std::sqrt(dx * dx + dy * dy);
 
-			if (b.y < 0.f)
-				b.y += ARENA_SY_PIXELS;
-			if (b.y > ARENA_SY_PIXELS)
-				b.y -= ARENA_SY_PIXELS;
+	// wrap
 
-			if (x != b.x || y != b.y)
-			{
-				b.wrapCount++;
+	float x = b.x;
+	float y = b.y;
 
-				if (b.wrapCount > b.maxWrapCount)
-				{
-					b.x = x;
-					b.y = y;
-				}
-			}
+	if (b.x < 0.f)
+		b.x += ARENA_SX_PIXELS;
+	if (b.x > ARENA_SX_PIXELS)
+		b.x -= ARENA_SX_PIXELS;
+
+	if (b.y < 0.f)
+		b.y += ARENA_SY_PIXELS;
+	if (b.y > ARENA_SY_PIXELS)
+		b.y -= ARENA_SY_PIXELS;
+
+	if (x != b.x || y != b.y)
+	{
+		b.wrapCount++;
+
+		if (b.wrapCount > b.maxWrapCount)
+		{
+			b.x = x;
+			b.y = y;
 		}
 	}
 }

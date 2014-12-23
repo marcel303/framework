@@ -92,6 +92,7 @@ public:
 
 	void netPlaySound(const char * filename, uint8_t volume = 100);
 	void netSetPlayerInputs(uint16_t channelId, uint32_t netId, uint16_t buttons);
+	void netSetPlayerCharacterIndex(uint16_t channelId, uint32_t netId, uint8_t characterIndex);
 	uint16_t netSpawnBullet(int16_t x, int16_t y, uint8_t angle, uint8_t type, uint32_t ownerNetId);
 	void netKillBullet(uint16_t id);
 	void netUpdateBullet(uint16_t id);
@@ -99,6 +100,7 @@ public:
 	void netSyncSprite(uint16_t id, Channel * channel);
 	void netRemoveSprite(uint16_t id);
 	void netSpawnParticles(int16_t x, int16_t y, uint8_t type, uint8_t count, uint16_t velocity, uint16_t maxDistance);
+	void netUpdateBlock(uint8_t x, uint8_t y, const Block & block);
 
 	int allocControllerIndex();
 	void freeControllerIndex(int index);

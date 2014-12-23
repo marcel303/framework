@@ -94,6 +94,15 @@ static void HandleAction(const std::string & action, const Dictionary & args)
 			g_app->selectClient(index);
 		}
 	}
+
+	if (action == "char_select")
+	{
+		const int clientChannelId = args.getInt("client_channel", -1);
+		const int playerNetId = args.getInt("player_net_id", -1);
+		const int characterIndex = args.getInt("char", -1);
+
+		g_app->netSetPlayerCharacterIndex(clientChannelId, playerNetId, characterIndex);
+	}
 }
 
 //
@@ -102,13 +111,15 @@ enum RpcMethod
 {
 	s_rpcPlaySound,
 	s_rpcSetPlayerInputs,
+	s_rpcSetPlayerCharacterIndex,
 	s_rpcSpawnBullet,
 	s_rpcKillBullet,
 	s_rpcUpdateBullet,
 	s_rpcAddSprite,
 	s_rpcSyncSprite,
 	s_rpcRemoveSprite,
-	s_rpcSpawnParticles
+	s_rpcSpawnParticles,
+	s_rpcUpdateBlock
 };
 
 void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
@@ -138,6 +149,21 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		if (player)
 		{
 			player->m_input.m_currButtons = buttons;
+		}
+	}
+	else if (method == s_rpcSetPlayerCharacterIndex)
+	{
+		uint32_t netId;
+		uint8_t characterIndex;
+
+		bitStream.Read(netId);
+		bitStream.Read(characterIndex);
+
+		Player * player = g_host->findPlayerByNetId(netId);
+		Assert(player);
+		if (player)
+		{
+			player->setCharacterIndex(characterIndex);
 		}
 	}
 	else if (method == s_rpcSpawnBullet)
@@ -314,6 +340,23 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			client->spawnParticles((BulletType)type, count, x, y, velocity, maxDistance);
 		}
 	}
+	else if (method == s_rpcUpdateBlock)
+	{
+		Client * client = g_app->findClientByChannel(channel);
+		Assert(client);
+		if (client && client->m_arena)
+		{
+			uint8_t x;
+			uint8_t y;
+			
+			bitStream.Read(x);
+			bitStream.Read(y);
+
+			Block & block = client->m_arena->getBlock(x, y);
+
+			bitStream.ReadAlignedBytes(&block, sizeof(block));
+		}
+	}
 	else
 	{
 		AssertMsg(false, "unknown RPC call: %u", method);
@@ -468,7 +511,7 @@ App::App()
 	, m_replicationMgr(0)
 	, m_discoveryService(0)
 	, m_discoveryUi(0)
-	, m_selectedClient(0)
+	, m_selectedClient(-1)
 	, m_optionMenu(0)
 	, m_optionMenuIsOpen(false)
 	, m_statTimerMenu(0)
@@ -594,6 +637,7 @@ bool App::init(bool isHost)
 
 		m_rpcMgr->RegisterWithID(s_rpcPlaySound, handleRpc);
 		m_rpcMgr->RegisterWithID(s_rpcSetPlayerInputs, handleRpc);
+		m_rpcMgr->RegisterWithID(s_rpcSetPlayerCharacterIndex, handleRpc);
 		m_rpcMgr->RegisterWithID(s_rpcSpawnBullet, handleRpc);
 		m_rpcMgr->RegisterWithID(s_rpcKillBullet, handleRpc);
 		m_rpcMgr->RegisterWithID(s_rpcUpdateBullet, handleRpc);
@@ -601,6 +645,7 @@ bool App::init(bool isHost)
 		m_rpcMgr->RegisterWithID(s_rpcSyncSprite, handleRpc);
 		m_rpcMgr->RegisterWithID(s_rpcRemoveSprite, handleRpc);
 		m_rpcMgr->RegisterWithID(s_rpcSpawnParticles, handleRpc);
+		m_rpcMgr->RegisterWithID(s_rpcUpdateBlock, handleRpc);
 
 		//
 
@@ -691,6 +736,7 @@ void App::shutdown()
 
 	m_rpcMgr->Unregister(s_rpcPlaySound, handleRpc);
 	m_rpcMgr->Unregister(s_rpcSetPlayerInputs, handleRpc);
+	m_rpcMgr->Unregister(s_rpcSetPlayerCharacterIndex, handleRpc);
 	m_rpcMgr->Unregister(s_rpcSpawnBullet, handleRpc);
 	m_rpcMgr->Unregister(s_rpcKillBullet, handleRpc);
 	m_rpcMgr->Unregister(s_rpcUpdateBullet, handleRpc);
@@ -698,6 +744,7 @@ void App::shutdown()
 	m_rpcMgr->Unregister(s_rpcSyncSprite, handleRpc);
 	m_rpcMgr->Unregister(s_rpcRemoveSprite, handleRpc);
 	m_rpcMgr->Unregister(s_rpcSpawnParticles, handleRpc);
+	m_rpcMgr->Unregister(s_rpcUpdateBlock, handleRpc);
 
 	m_channelMgr->Shutdown(true);
 
@@ -730,6 +777,10 @@ void App::connect(const char * address)
 	client->m_replicationId = m_replicationMgr->CL_CreateClient(client->m_channel, client);
 
 	m_clients.push_back(client);
+
+	//
+
+	m_selectedClient = (int)m_clients.size() - 1;
 }
 
 void App::disconnectClient(int index)
@@ -745,6 +796,13 @@ void App::disconnectClient(int index)
 		delete client;
 
 		m_clients.erase(m_clients.begin() + index);
+
+		//
+
+		if (m_selectedClient >= (int)m_clients.size())
+		{
+			m_selectedClient = (int)m_clients.size() - 1;
+		}
 	}
 }
 
@@ -755,7 +813,7 @@ void App::selectClient(int index)
 
 Client * App::getSelectedClient()
 {
-	if (m_selectedClient >= 0 && m_selectedClient < m_clients.size())
+	if (m_selectedClient >= 0 && m_selectedClient < (int)m_clients.size())
 		return m_clients[m_selectedClient];
 	else
 		return 0;
@@ -946,6 +1004,7 @@ void App::draw()
 			m_statTimerMenu->Draw(x, y, sx, sy);
 		}
 
+	#if 1
 		m_discoveryUi->clear();
 
 		const auto serverList = m_discoveryService->getServerList();
@@ -994,7 +1053,44 @@ void App::draw()
 			}
 		}
 
+		Client * client = getSelectedClient();
+
+		if (client)
+		{
+			int index = 0;
+
+			for (size_t i = 0; i < client->m_players.size(); ++i)
+			{
+				Player * player = client->m_players[i];
+
+				if (player->getOwningChannelId() != client->m_channel->m_id)
+					continue;
+
+				if (!player->hasValidCharacterIndex())
+				{
+					for (int c = 0; c < 2; ++c)
+					{
+						char name[32];
+						sprintf(name, "select_%d_%d", i, c);
+						Dictionary & button = (*m_discoveryUi)[name];
+						char props[1024];
+						sprintf(props, "type:button name:%s x:%d y:%d scale:0.65 action:char_select client_channel:%d player_net_id:%d char:%d image:button.png image_over:button-over.png image_down:button-down.png text:char text_color:000000 font:calibri.ttf font_size:24",
+							name,
+							index * 150,
+							GFX_SY - 150 + c * 50,
+							client->m_channel->m_id,
+							player->getNetId(),
+							c);
+						button.parse(props);
+					}
+
+					++index;
+				}
+			}
+		}
+
 		m_discoveryUi->draw();
+	#endif
 	}
 	TIMER_STOP(g_appDrawTime);
 	framework.endDraw();
@@ -1019,6 +1115,16 @@ void App::netSetPlayerInputs(uint16_t channelId, uint32_t netId, uint16_t button
 	bs.Write(buttons);
 
 	m_rpcMgr->Call(s_rpcSetPlayerInputs, bs, ChannelPool_Client, &channelId, false, false);
+}
+
+void App::netSetPlayerCharacterIndex(uint16_t channelId, uint32_t netId, uint8_t characterIndex)
+{
+	BitStream bs;
+
+	bs.Write(netId);
+	bs.Write(characterIndex);
+
+	m_rpcMgr->Call(s_rpcSetPlayerCharacterIndex, bs, ChannelPool_Client, &channelId, false, false);
 }
 
 uint16_t App::netSpawnBullet(int16_t x, int16_t y, uint8_t angle, uint8_t type, uint32_t ownerNetId)
@@ -1134,6 +1240,17 @@ void App::netSpawnParticles(int16_t x, int16_t y, uint8_t type, uint8_t count, u
 	bs.Write(maxDistance);
 
 	m_rpcMgr->Call(s_rpcSpawnParticles, bs, ChannelPool_Server, 0, true, false);
+}
+
+void App::netUpdateBlock(uint8_t x, uint8_t y, const Block & block)
+{
+	BitStream bs;
+
+	bs.Write(x);
+	bs.Write(y);
+	bs.WriteAlignedBytes(&block, sizeof(block));
+
+	m_rpcMgr->Call(s_rpcUpdateBlock, bs, ChannelPool_Server, 0, true, false);
 }
 
 int App::allocControllerIndex()

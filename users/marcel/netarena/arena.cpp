@@ -4,6 +4,7 @@
 #include "FileStream.h"
 #include "framework.h"
 #include "image.h"
+#include "main.h"
 #include "Path.h"
 #include "StreamReader.h"
 
@@ -554,6 +555,8 @@ bool Arena::getBlocksFromPixels(int baseX, int baseY, int x1, int y1, int x2, in
 						const float blockY = (y + .5f) * BLOCK_SY;
 
 						out_blocks[result].block = &getBlock(x, y);
+						out_blocks[result].x = x;
+						out_blocks[result].y = y;
 						out_blocks[result].distanceSq = (baseX - blockX) * (baseX - blockX) + (baseY - blockY) * (baseY - blockY);
 
 						result++;
@@ -584,29 +587,24 @@ bool Arena::handleDamageRect(int baseX, int baseY, int x1, int y1, int x2, int y
 		true,
 		blocks, numBlocks))
 	{
-		bool updated = false;
-
 		std::sort(blocks, blocks + numBlocks, [] (BlockAndDistance & block1, BlockAndDistance & block2) { return block1.distanceSq < block2.distanceSq; });
 
 		for (int i = 0; i < numBlocks; ++i)
 		{
-			Block & block = *blocks[i].block;
+			BlockAndDistance & blockInfo = blocks[i];
+
+			Block & block = *blockInfo.block;
 
 			if (block.type == kBlockType_Destructible && hitDestructible)
 			{
 				block.type = kBlockType_Empty;
 
+				g_app->netUpdateBlock(blockInfo.x, blockInfo.y, block);
+
 				hitDestructible = false;
 
 				result = true;
-
-				updated = true; // todo : more optimized way of making small changes to map
 			}
-		}
-
-		if (updated)
-		{
-			setDirty();
 		}
 	}
 
