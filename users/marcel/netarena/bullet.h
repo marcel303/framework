@@ -65,6 +65,7 @@ struct ParticleSpawnInfo
 		, minVelocity(_minVelocity)
 		, maxVelocity(_maxVelocity)
 		, maxDistance(_maxDistance)
+		, color(0xffffffff)
 	{
 	}
 
