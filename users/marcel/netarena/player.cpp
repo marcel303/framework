@@ -244,6 +244,18 @@ void Player::handleAnimationAction(const std::string & action, const Dictionary 
 		{
 			g_app->netPlaySound(player->makeCharacterFilename(args.getString("file", "").c_str()), args.getInt("volume", 100));
 		}
+		else if (action == "char_soundbag")
+		{
+			std::string name = args.getString("name", "");
+
+			if (player->m_sounds.count(name.c_str()) == 0)
+			{
+				if (player->m_props.contains(name.c_str()))
+					player->m_sounds[name].load(player->m_props.getString(name.c_str(), ""), true);
+			}
+
+			g_app->netPlaySound(player->makeCharacterFilename(player->m_sounds[name].getRandomSound()), args.getInt("volume", 100));
+		}
 		else
 		{
 			logError("unknown action: %s", action.c_str());
@@ -371,7 +383,7 @@ void Player::playSecondaryEffects(PlayerEvent e)
 	case kPlayerEvent_Spawn:
 		break;
 	case kPlayerEvent_Respawn:
-		g_app->netPlaySound(makeCharacterFilename(m_respawnSounds.getRandomSound()));
+		g_app->netPlaySound(makeCharacterFilename(m_sounds["respawn"].getRandomSound()));
 		break;
 	case kPlayerEvent_Die:
 		g_app->netPlaySound(makeCharacterFilename("die/die.ogg"));
@@ -1383,14 +1395,14 @@ void Player::handleCharacterIndexChange()
 	{
 		// reload character properties
 
+		m_props.load(makeCharacterFilename("props.txt"));
+
 		delete m_sprite;
 		m_sprite = new Sprite(makeCharacterFilename("walk/walk.png"));
 
-		Dictionary d;
-		d.load(makeCharacterFilename("props.txt"));
-		m_spriteScale = d.getFloat("sprite_scale", 1.f);
+		m_spriteScale = m_props.getFloat("sprite_scale", 1.f);
 
-		m_respawnSounds.load(d.getString("spawn_sounds", ""), true);
+		m_sounds["respawn"].load(m_props.getString("spawn_sounds", ""), true);
 	}
 }
 

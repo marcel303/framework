@@ -251,12 +251,14 @@ class Player : public NetObject
 	bool m_animAllowGravity;
 	bool m_animAllowSteering;
 
+	Dictionary m_props;
+
 	Sprite * m_sprite;
 	float m_spriteScale;
 
 	bool m_isRespawn;
-	SoundBag m_respawnSounds;
-
+	std::map<std::string, SoundBag> m_sounds;
+	
 	static void handleAnimationAction(const std::string & action, const Dictionary & args);
 
 public:
