@@ -241,6 +241,14 @@ class Player : public NetObject
 		int y;
 	} m_teleport;
 
+	struct JumpInfo
+	{
+		bool cancelStarted;
+		bool cancelled;
+		int cancelX;
+		int cancelFacing;
+	} m_jump;
+
 	bool m_isGrounded;
 	bool m_isAttachedToSticky;
 	bool m_isAnimDriven;
