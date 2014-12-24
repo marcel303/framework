@@ -12,7 +12,7 @@
 #include "Timer.h"
 
 COMMAND_OPTION(s_addSprite, "Debug/Add Sprite", [] { if (g_host) g_app->netAddSprite("block-spike.png", rand() % ARENA_SX_PIXELS, rand() % ARENA_SY_PIXELS); });
-COMMAND_OPTION(s_addPickup, "Debug/Add Pickup", [] { if (g_host) g_host->spawnPickup(kPickupType_Ammo, rand() % ARENA_SX, rand() % ARENA_SY); });
+COMMAND_OPTION(s_addPickup, "Debug/Add Pickup", [] { if (g_host) g_host->spawnPickup((PickupType)(rand() % kPickupType_COUNT), rand() % ARENA_SX, rand() % ARENA_SY); });
 
 COMMAND_OPTION(s_gameStateNewGame, "Game State/New Game", [] { if (g_host) g_host->newGame(); });
 COMMAND_OPTION(s_gameStateNewRound, "Game State/New Round", [] { if (g_host) g_host->newRound(0); });
@@ -41,7 +41,8 @@ NetSpriteManager * g_hostSpriteManager = 0;
 
 static const char * s_pickupSprites[kPickupType_COUNT] =
 {
-	"pickup-ammo.png"
+	"pickup-ammo.png",
+	"pickup-nade.png"
 };
 
 Host::Host()
@@ -134,7 +135,29 @@ void Host::tickPlay(float dt)
 
 			if (m_arena->getRandomPickupLocation(x, y))
 			{
-				spawnPickup(kPickupType_Ammo, x, y);
+				int weights[kPickupType_COUNT] =
+				{
+					PICKUP_AMMO_WEIGHT,
+					PICKUP_NADE_WEIGHT
+				};
+
+				int totalWeight = 0;
+
+				for (int i = 0; i < kPickupType_COUNT; ++i)
+				{
+					totalWeight += weights[i];
+					weights[i] = totalWeight;
+				}
+
+				int value = rand() % totalWeight;
+
+				PickupType type = kPickupType_COUNT;
+
+				for (int i = 0; type == kPickupType_COUNT; ++i)
+					if (value < weights[i])
+						type = (PickupType)i;
+
+				spawnPickup(type, x, y);
 			}
 		}
 

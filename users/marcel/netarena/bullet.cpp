@@ -277,7 +277,7 @@ void BulletPool::tick(float _dt)
 						{
 							if (b.type == kBulletType_Grenade)
 							{
-								for (int i = 0; i < 20; ++i)
+								for (int i = 0; i < BULLET_GRENADE_FRAG_COUNT; ++i)
 								{
 									g_app->netSpawnBullet(
 										b.pos[0],
@@ -300,6 +300,11 @@ void BulletPool::tick(float _dt)
 					if (!m_localOnly)
 					{
 						g_app->netKillBullet(i);
+					}
+
+					if (b.type == kBulletType_GrenadeA)
+					{
+						g_app->netPlaySound("grenade-frag.ogg");
 					}
 
 					free(i);

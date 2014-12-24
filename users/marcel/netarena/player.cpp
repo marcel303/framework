@@ -506,6 +506,11 @@ void Player::tick(float dt)
 			{
 			case kPickupType_Ammo:
 				m_weaponAmmo = 1;
+				m_weaponType = kPlayerWeapon_Fire;
+				break;
+			case kPickupType_Nade:
+				m_weaponAmmo = 1;
+				m_weaponType = kPlayerWeapon_Grenade;
 				break;
 			}
 		}
@@ -598,19 +603,27 @@ void Player::tick(float dt)
 			if (m_input.wentDown(INPUT_BUTTON_B) && (m_weaponAmmo > 0 || s_unlimitedAmmo) && isAnimOverrideAllowed(kPlayerWeapon_Fire))
 			{
 				m_attack = AttackInfo();
-				m_attack.attacking = true;
 
 				int anim = -1;
+				BulletType bulletType = kBulletType_COUNT;
 
 				if (m_weaponType == kPlayerWeapon_Fire)
+				{
 					anim = kPlayerAnim_Fire;
+					bulletType = kBulletType_B;
+				}
 				if (m_weaponType == kPlayerWeapon_Grenade)
+				{
+					bulletType = kBulletType_Grenade;
 					g_app->netPlaySound("grenade-throw.ogg");
+				}
 
 				if (anim != -1)
 				{
 					m_anim.SetAnim(anim, true, true);
 					m_isAnimDriven = true;
+
+					m_attack.attacking = true;
 				}
 
 				m_weaponAmmo = (m_weaponAmmo > 0) ? (m_weaponAmmo - 1) : 0;
@@ -628,13 +641,13 @@ void Player::tick(float dt)
 				else
 					angle = 0;
 
+				Assert(bulletType != kBulletType_COUNT);
 				g_app->netSpawnBullet(
 					m_pos[0] + mirrorX(0.f),
 					m_pos[1] - mirrorY(44.f),
 					angle,
-					//kBulletType_A, getNetId());
-					//kBulletType_B, getNetId());
-					kBulletType_Grenade, getNetId());
+					bulletType,
+					getNetId());
 			}
 
 			if (m_input.wentDown(INPUT_BUTTON_X) && isAnimOverrideAllowed(kPlayerAnim_Attack))
