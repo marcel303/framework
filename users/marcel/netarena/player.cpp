@@ -1267,9 +1267,10 @@ uint32_t Player::getIntersectingBlocksMaskInternal(int x, int y, bool doWrap) co
 {
 #if 1
 	const int x1 = (x + (int)m_collision.x1) % ARENA_SX_PIXELS;
-	const int y1 = (y + (int)m_collision.y1) % ARENA_SY_PIXELS;
 	const int x2 = (x + (int)m_collision.x2) % ARENA_SX_PIXELS;
+	const int y1 = (y + (int)m_collision.y1) % ARENA_SY_PIXELS;
 	const int y2 = (y + (int)m_collision.y2) % ARENA_SY_PIXELS;
+	const int y3 = (y + (int)(m_collision.y1 + m_collision.y2) / 2) % ARENA_SY_PIXELS;
 #else
 	const int x1 = x + m_collision.x1;
 	const int y1 = y + m_collision.y1;
@@ -1284,8 +1285,8 @@ uint32_t Player::getIntersectingBlocksMaskInternal(int x, int y, bool doWrap) co
 	result |= g_hostArena->getIntersectingBlocksMask(x2, y2);
 	result |= g_hostArena->getIntersectingBlocksMask(x1, y2);
 
-	result |= g_hostArena->getIntersectingBlocksMask(x1, (y1 + y2) / 2);
-	result |= g_hostArena->getIntersectingBlocksMask(x2, (y1 + y2) / 2);
+	result |= g_hostArena->getIntersectingBlocksMask(x1, y3);
+	result |= g_hostArena->getIntersectingBlocksMask(x2, y3);
 
 #if 0
 	if (doWrap)
