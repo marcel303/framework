@@ -30,10 +30,10 @@ todo:
 - attack cancel
 + bullet teleport
 + separate player hitbox for damage
-- grenades!
++ grenades!
 - ammo drop gravity
-- input lock dash weg
-- jump velocity reset na 10 pixels of richting change
++ input lock dash weg
++ jump velocity reset na 10 pixels of richting change
 - ammo despawn na x seconds + indicator
 
 nice to haves:
@@ -759,8 +759,8 @@ void Player::tick(float dt)
 		}
 
 		bool playerControl =
-			m_animAllowSteering &&
-			!m_isAnimDriven;
+			m_animAllowSteering;// &&
+			//!m_isAnimDriven;
 
 		// sticky ceiling
 
@@ -1028,6 +1028,8 @@ void Player::tick(float dt)
 
 								m_vel[i] = -PLAYER_JUMP_SPEED;
 
+								m_jump.cancelStarted = false;
+
 								playSecondaryEffects(kPlayerEvent_Jump);
 							}
 							else if (newBlockMask & (1 << kBlockType_Spring))
@@ -1045,7 +1047,25 @@ void Player::tick(float dt)
 						}
 						else
 						{
-							m_vel[i] = 0.f;
+							if (!m_jump.cancelStarted)
+							{
+								m_jump.cancelStarted = true;
+								m_jump.cancelled = false;
+								m_jump.cancelX = m_pos[0];
+								m_jump.cancelFacing = m_pos.xFacing;
+							}
+							else
+							{
+								m_jump.cancelled =
+									m_jump.cancelled ||
+									std::abs(m_jump.cancelX - m_pos[0]) > PLAYER_JUMP_GRACE_PIXELS ||
+									m_pos.xFacing != m_jump.cancelFacing;
+
+								if (m_jump.cancelled)
+								{
+									m_vel[i] = 0.f;
+								}
+							}
 						}
 					}
 

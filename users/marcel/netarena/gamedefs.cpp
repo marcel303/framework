@@ -7,6 +7,7 @@ OPTION_DEFINE(int, PLAYER_DAMAGE_HITBOX_SX, "Player/Hit Boxes/Damage Width");
 OPTION_DEFINE(int, PLAYER_DAMAGE_HITBOX_SY, "Player/Hit Boxes/Damage Height");
 
 OPTION_DEFINE(int, PLAYER_JUMP_SPEED, "Player/Jumping/Speed");
+OPTION_DEFINE(int, PLAYER_JUMP_GRACE_PIXELS, "Player/Jumping/Grace Pixels");
 OPTION_DEFINE(int, PLAYER_WALLJUMP_SPEED, "Player/Wall Jump/Speed");
 OPTION_DEFINE(int, PLAYER_WALLJUMP_RECOIL_SPEED, "Player/Wall Jump/Recoil Speed");
 OPTION_STEP(PLAYER_JUMP_SPEED, 0, 0, 10);
