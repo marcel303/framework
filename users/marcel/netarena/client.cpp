@@ -295,10 +295,9 @@ void Client::spawnParticles(const ParticleSpawnInfo & spawnInfo)
 			memset(&b, 0, sizeof(b));
 			b.isAlive = true;
 			b.type = (BulletType)spawnInfo.type;
-			b.x = spawnInfo.x;
-			b.y = spawnInfo.y;
-			b.angle = angle / 128.f * float(M_PI);
-			b.velocity = Calc::Random(spawnInfo.minVelocity, spawnInfo.maxVelocity);
+			b.pos[0] = spawnInfo.x;
+			b.pos[1] = spawnInfo.y;
+			b.setVel(angle / 128.f * float(M_PI), Calc::Random(spawnInfo.minVelocity, spawnInfo.maxVelocity));
 
 			b.noCollide = true;
 			b.maxWrapCount = 1;

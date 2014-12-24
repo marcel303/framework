@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "Vec2.h"
 
 #define MAX_BULLETS 1000
 #define INVALID_BULLET_ID 0xffff
@@ -8,6 +9,9 @@
 enum BulletType
 {
 	kBulletType_A,
+	kBulletType_B,
+	kBulletType_Grenade,
+	kBulletType_GrenadeA,
 	kBulletType_ParticleA,
 	kBulletType_COUNT
 };
@@ -15,18 +19,21 @@ enum BulletType
 class Bullet
 {
 public:
+	void setVel(float angle, float velocity);
+
 	bool isAlive;
 
-	float x;
-	float y;
-	float angle;
-	float velocity;
+	Vec2 pos;
+	Vec2 vel;
 	BulletType type;
 	bool noCollide;
 	uint32_t color;
 
-	float lastX;
-	float lastY;
+	bool doGravity;
+	bool doBounce;
+	bool noDamage;
+
+	Vec2 lastPos;
 
 	uint8_t reflectCount;
 	uint8_t maxReflectCount;
@@ -36,6 +43,14 @@ public:
 
 	float distanceTravelled;
 	float maxDistanceTravelled;
+
+	int blocksDestroyed;
+	int maxDestroyedBlocks;
+
+	float bounceAmount;
+	int bounceCount;
+
+	float life;
 
 	uint32_t ownerNetId;
 };

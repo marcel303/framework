@@ -134,6 +134,7 @@ public:
 
 	bool getRandomSpawnPoint(int & out_x, int & out_y, int & io_lastSpawnIndex);
 	bool getRandomPickupLocation(int & out_x, int & out_y);
+	bool getTeleportDestination(int x, int y, int & out_x, int & out_y);
 
 	uint32_t getIntersectingBlocksMask(int x1, int y1, int x2, int y2);
 	uint32_t getIntersectingBlocksMask(int x, int y);

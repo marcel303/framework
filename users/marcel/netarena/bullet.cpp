@@ -17,6 +17,9 @@
 static const char * s_bulletSpriteFiles[kBulletType_COUNT] =
 {
 	"fire-type-0.png",
+	"fire-type-0.png",
+	"particle-0.png",
+	"particle-0.png",
 	"particle-0.png"
 };
 
@@ -28,6 +31,30 @@ static void getVelocityXY(float angle, float velocity, float & x, float & y)
 	y = -std::sin(angle) * velocity;
 }
 
+static float toAngle(float dx, float dy)
+{
+	return std::atan2f(dy, dx);
+}
+
+static void mirrorAngle(float & angle, float x, float y)
+{
+	float dx;
+	float dy;
+	getVelocityXY(angle, 1.f, dx, dy);
+	dx *= x;
+	dy *= y;
+	angle = toAngle(dx, dy);
+}
+
+//
+
+void Bullet::setVel(float angle, float velocity)
+{
+	getVelocityXY(angle, velocity, vel[0], vel[1]);
+}
+
+//
+
 BulletPool::BulletPool(bool localOnly)
 	: m_numFree(MAX_BULLETS)
 	, m_localOnly(localOnly)
@@ -38,7 +65,7 @@ BulletPool::BulletPool(bool localOnly)
 		m_freeList[i] = i;
 }
 
-void BulletPool::tick(float dt)
+void BulletPool::tick(float _dt)
 {
 	for (int i = 0; i < MAX_BULLETS; ++i)
 	{
@@ -46,47 +73,132 @@ void BulletPool::tick(float dt)
 
 		if (b.isAlive)
 		{
-			const float distance = b.velocity * dt;
-			const int numSteps = (int)std::ceil(std::abs(distance) / 4.f);
+			const float distance = b.vel.CalcSize() * _dt;
+			const int numSteps = std::max<int>(1, (int)std::ceil(std::abs(distance) / 4.f));
+
+			uint32_t oldBlockMask = g_hostArena->getIntersectingBlocksMask(b.pos[0], b.pos[1]);
 
 			for (int step = 0; step < numSteps && b.isAlive; ++step)
 			{
-				anim(b, dt / numSteps);
+				const float dt = _dt / numSteps;
+
+				Vec2 oldPos = b.pos;
+
+				anim(b, dt);
 
 				bool kill = false;
+				bool update = false;
+
+				bool doReflection = true;
+
+				if (b.type == kBulletType_Grenade)
+				{
+					doReflection = false;
+				}
 
 				// evaluate collisions
 
 				if (!kill && !b.noCollide)
 				{
-					const uint32_t blockMask = g_hostArena->getIntersectingBlocksMask(b.x, b.y);
+					const uint32_t blockMask = g_hostArena->getIntersectingBlocksMask(b.pos[0], b.pos[1]);
 
-					// reflection
-
-					if (blockMask & kBlockMask_Solid & (~(1 << kBlockType_Destructible)))
+					if (doReflection)
 					{
-						if (b.maxReflectCount != 0)
-						{
-							b.reflectCount++;
+						// reflection
 
-							if (b.reflectCount > b.maxReflectCount)
+						if (blockMask & kBlockMask_Solid & (~(1 << kBlockType_Destructible)))
+						{
+							if (b.maxReflectCount != 0)
 							{
-								kill = true;
+								b.reflectCount++;
+
+								if (b.reflectCount > b.maxReflectCount)
+								{
+									kill = true;
+								}
+								else
+								{
+									b.vel *= -1.f;
+									update = true;
+								}
 							}
 							else
-							{
-								b.angle = b.angle + Calc::mPI;
-								g_app->netUpdateBullet(i);
-							}
+								kill = true;
 						}
-						else
-							kill = true;
 					}
 
 					if (kill)
 					{
-						ParticleSpawnInfo spawnInfo(b.x, b.y, kBulletType_ParticleA, 10, 50, 200, 20);
+						ParticleSpawnInfo spawnInfo(b.pos[0], b.pos[1], kBulletType_ParticleA, 10, 50, 200, 20);
 						g_app->netSpawnParticles(spawnInfo);
+					}
+
+					if (!kill && b.doBounce)
+					{
+						// eval collision in x direction
+
+						float restitutation = 0.3f;
+
+						uint32_t blockMask;
+
+						blockMask = g_hostArena->getIntersectingBlocksMask(b.pos[0], oldPos[1]);
+
+						if (blockMask & kBlockMask_Solid)
+						{
+							b.vel[0] *= -b.bounceAmount;
+							b.pos[0] = oldPos[0];
+
+							b.bounceCount++;
+
+							update = true;
+						}
+
+						// eval collision in y direction
+
+						blockMask = g_hostArena->getIntersectingBlocksMask(b.pos[0], b.pos[1]);
+
+						if (blockMask & kBlockMask_Solid)
+						{
+							b.vel[1] *= -b.bounceAmount;
+							b.pos[1] = oldPos[1];
+
+							b.bounceCount++;
+
+							update = true;
+						}
+					}
+
+					if (b.bounceCount >= BULLET_GRENADE_NADE_BOUNCE_COUNT)
+					{
+						b.vel = Vec2(0.f, 0.f);
+						b.doGravity = false;
+					}
+
+					// teleport
+
+					const bool oldTeleport = (oldBlockMask & (1 << kBlockType_Teleport)) != 0;
+					const bool newTeleport = (   blockMask & (1 << kBlockType_Teleport)) != 0;
+
+					if (!oldTeleport && newTeleport)
+					{
+						int sourceX = int(b.pos[0]) / BLOCK_SX;
+						int sourceY = int(b.pos[1]) / BLOCK_SY;
+
+						int destX;
+						int destY;
+
+						if (g_hostArena->getTeleportDestination(sourceX, sourceY, destX, destY))
+						{
+							int deltaX = destX - sourceX;
+							int deltaY = destY - sourceY;
+
+							b.pos[0] += deltaX * BLOCK_SX;
+							b.pos[1] += deltaY * BLOCK_SY;
+
+							update = true;
+
+							oldBlockMask = blockMask;
+						}
 					}
 				}
 
@@ -116,7 +228,7 @@ void BulletPool::tick(float dt)
 						kill = true;
 				}
 
-				if (!kill && !b.noCollide)
+				if (!kill && !b.noCollide && !b.noDamage)
 				{
 					// collide with players
 
@@ -131,29 +243,57 @@ void BulletPool::tick(float dt)
 
 						player->getPlayerCollision(collisionInfo);
 
-						if (collisionInfo.intersects(b.x, b.y))
+						if (collisionInfo.intersects(b.pos[0], b.pos[1]))
 						{
-							float vx, vy;
-							getVelocityXY(b.angle, b.velocity, vx, vy);
-
-							player->handleDamage(1.f, Vec2(vx, vy), owner);
+							player->handleDamage(1.f, b.vel, owner);
 
 							kill = true;
 						}
 					}
 				}
 
-				if (!kill && !b.noCollide)
+				if (!kill && !b.noCollide && !b.noDamage)
 				{
 					// collide with map
 
 					if (g_hostArena->handleDamageRect(
-						b.x, b.y,
-						b.x, b.y,
-						b.x, b.y,
+						b.pos[0], b.pos[1],
+						b.pos[0], b.pos[1],
+						b.pos[0], b.pos[1],
 						true))
 					{
-						kill = true;
+						b.blocksDestroyed++;
+
+						if (b.blocksDestroyed == b.maxDestroyedBlocks)
+							kill = true;
+					}
+				}
+
+				if (!kill)
+				{
+					if (b.life != 0.f)
+					{
+						b.life -= dt;
+
+						if (b.life <= 0.f)
+						{
+							if (b.type == kBulletType_Grenade)
+							{
+								for (int i = 0; i < 20; ++i)
+								{
+									g_app->netSpawnBullet(
+										b.pos[0],
+										b.pos[1],
+										rand() % 256,
+										kBulletType_GrenadeA,
+										b.ownerNetId);
+								}
+
+								g_app->netPlaySound("grenade-explode.ogg");
+							}
+
+							kill = true;
+						}
 					}
 				}
 
@@ -165,6 +305,10 @@ void BulletPool::tick(float dt)
 					}
 
 					free(i);
+				}
+				else if (update)
+				{
+					g_app->netUpdateBullet(i);
 				}
 			}
 		}
@@ -188,42 +332,46 @@ void BulletPool::anim(Bullet & b, float dt)
 {
 	Assert(b.isAlive);
 
-	b.lastX = b.x;
-	b.lastY = b.y;
+	b.lastPos = b.pos;
 
-	float dx, dy;
-	getVelocityXY(b.angle, b.velocity * dt, dx, dy);
+	// evaluate gravity
 
-	b.x += dx;
-	b.y += dy;
+	if (b.doGravity)
+	{
+		b.vel[1] += GRAVITY * dt;
+	}
+
+	Vec2 delta = b.vel * dt;
+
+	b.pos += delta;
 
 	// distance travelled
 
-	b.distanceTravelled += std::sqrt(dx * dx + dy * dy);
+	b.distanceTravelled += delta.CalcSize();
 
 	// wrap
 
-	float x = b.x;
-	float y = b.y;
+	float x = b.pos[0];
+	float y = b.pos[1];
 
-	if (b.x < 0.f)
-		b.x += ARENA_SX_PIXELS;
-	if (b.x > ARENA_SX_PIXELS)
-		b.x -= ARENA_SX_PIXELS;
+	if (b.pos[0] < 0.f)
+		b.pos[0] += ARENA_SX_PIXELS;
+	if (b.pos[0] > ARENA_SX_PIXELS)
+		b.pos[0] -= ARENA_SX_PIXELS;
 
-	if (b.y < 0.f)
-		b.y += ARENA_SY_PIXELS;
-	if (b.y > ARENA_SY_PIXELS)
-		b.y -= ARENA_SY_PIXELS;
+	if (b.pos[1] < 0.f)
+		b.pos[1] += ARENA_SY_PIXELS;
+	if (b.pos[1] > ARENA_SY_PIXELS)
+		b.pos[1] -= ARENA_SY_PIXELS;
 
-	if (x != b.x || y != b.y)
+	if (x != b.pos[0] || y != b.pos[1])
 	{
 		b.wrapCount++;
 
 		if (b.wrapCount > b.maxWrapCount)
 		{
-			b.x = x;
-			b.y = y;
+			b.pos[0] = x;
+			b.pos[1] = y;
 		}
 	}
 }
@@ -244,16 +392,13 @@ void BulletPool::draw()
 
 		if (b.isAlive)
 		{
-			float vx, vy;
-			getVelocityXY(b.angle, b.velocity, vx, vy);
-
 			const int cr = (b.color >> 24) & 0xff;
 			const int cg = (b.color >> 16) & 0xff;
 			const int cb = (b.color >>  8) & 0xff;
 			const int ca = (b.color >>  0) & 0xff;
 
 			setColor(cr, cg, cb, ca);
-			s_bulletSprites[b.type]->drawEx(b.x, b.y, Calc::RadToDeg(b.angle), s_bulletSprites[b.type]->scale);
+			s_bulletSprites[b.type]->drawEx(b.pos[0], b.pos[1], Calc::RadToDeg(toAngle(b.vel[0], b.vel[1])), s_bulletSprites[b.type]->scale);
 		}
 	}
 }

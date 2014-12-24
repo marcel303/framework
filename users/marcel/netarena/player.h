@@ -11,6 +11,7 @@ enum PlayerWeapon
 {
 	kPlayerWeapon_Sword,
 	kPlayerWeapon_Fire,
+	kPlayerWeapon_Grenade,
 	kPlayerWeapon_COUNT
 };
 
@@ -202,6 +203,7 @@ class Player : public NetObject
 	PlayerState_NS m_state;
 	PlayerAnim_NS m_anim;
 	int m_weaponAmmo;
+	int m_weaponType;
 
 	bool m_isAuthorative;
 
@@ -263,6 +265,7 @@ class Player : public NetObject
 
 public:
 	void getPlayerCollision(CollisionInfo & collision);
+	void getDamageHitbox(CollisionInfo & collision);
 	void getAttackCollision(CollisionInfo & collision);
 	float getAttackDamage(Player * other);
 

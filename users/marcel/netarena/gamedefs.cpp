@@ -1,7 +1,10 @@
 #include "gamedefs.h"
 
-OPTION_DEFINE(int, PLAYER_COLLISION_SX, "Player/Collision/Width");
-OPTION_DEFINE(int, PLAYER_COLLISION_SY, "Player/Collision/Height");
+OPTION_DEFINE(int, PLAYER_COLLISION_HITBOX_SX, "Player/Hit Boxes/Collision Width");
+OPTION_DEFINE(int, PLAYER_COLLISION_HITBOX_SY, "Player/Hit Boxes/Collision Height");
+
+OPTION_DEFINE(int, PLAYER_DAMAGE_HITBOX_SX, "Player/Hit Boxes/Damage Width");
+OPTION_DEFINE(int, PLAYER_DAMAGE_HITBOX_SY, "Player/Hit Boxes/Damage Height");
 
 OPTION_DEFINE(int, PLAYER_JUMP_SPEED, "Player/Jumping/Speed");
 OPTION_DEFINE(int, PLAYER_WALLJUMP_SPEED, "Player/Wall Jump/Speed");
@@ -53,3 +56,12 @@ OPTION_DEFINE(int,  BULLET_TYPE0_MAX_DISTANCE_TRAVELLED, "Bullets/Type 0/Max Dis
 OPTION_DEFINE(int,  BULLET_TYPE0_SPEED, "Bullets/Type 0/Speed");
 OPTION_STEP(BULLET_TYPE0_MAX_DISTANCE_TRAVELLED, 0.f, 10000.f, 100.f);
 OPTION_STEP(BULLET_TYPE0_SPEED, 0.f, 10000.f, 10.f);
+
+OPTION_DEFINE(int, BULLET_GRENADE_NADE_SPEED, "Bullets/Grenade/Nade Speed");
+OPTION_DEFINE(int, BULLET_GRENADE_NADE_BOUNCE_COUNT, "Bullets/Grenade/Nade Bounce Count");
+OPTION_DEFINE(float, BULLET_GRENADE_NADE_BOUNCE_AMOUNT, "Bullets/Grenade/Nade Bounce Amount");
+OPTION_DEFINE(float, BULLET_GRENADE_NADE_LIFE, "Bullets/Grenade/Nade Bounce Count");
+OPTION_DEFINE(int, BULLET_GRENADE_FRAG_RADIUS_MIN, "Bullets/Grenade/Frag Radius Min");
+OPTION_DEFINE(int, BULLET_GRENADE_FRAG_RADIUS_MAX, "Bullets/Grenade/Frag Radius Max");
+OPTION_DEFINE(int, BULLET_GRENADE_FRAG_SPEED_MIN, "Bullets/Grenade/Frag Speed Min");
+OPTION_DEFINE(int, BULLET_GRENADE_FRAG_SPEED_MAX, "Bullets/Grenade/Frag Speed Max");

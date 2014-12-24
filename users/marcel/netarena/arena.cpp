@@ -456,6 +456,34 @@ bool Arena::getRandomPickupLocation(int & out_x, int & out_y)
 	return true;
 }
 
+bool Arena::getTeleportDestination(int startX, int startY, int & out_x, int & out_y)
+{
+	// find a teleport destination
+
+	std::vector< std::pair<int, int> > destinations;
+
+	for (int x = 0; x < ARENA_SX; ++x)
+		for (int y = 0; y < ARENA_SY; ++y)
+			if (x != startX && y != startY && getBlock(x, y).type == kBlockType_Teleport)
+				destinations.push_back(std::make_pair(x, y));
+
+	if (destinations.empty())
+	{
+		LOG_WRN("unable to find teleport destination");
+
+		return false;
+	}
+	else
+	{
+		const int idx = rand() % destinations.size();
+
+		out_x = std::get<0>(destinations[idx]);
+		out_y = std::get<1>(destinations[idx]);
+
+		return true;
+	}
+}
+
 uint32_t Arena::getIntersectingBlocksMask(int x1, int y1, int x2, int y2)
 {
 	uint32_t result = 0;

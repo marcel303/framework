@@ -27,6 +27,15 @@ todo:
 - respawn delay
 - character selection
 
+- attack cancel
++ bullet teleport
++ separate player hitbox for damage
+- grenades!
+- ammo drop gravity
+- input lock dash weg
+- jump velocity reset na 10 pixels of richting change
+- ammo despawn na x seconds + indicator
+
 nice to haves:
 - blood particles
 - real time lighting
@@ -78,12 +87,6 @@ struct PlayerAnimInfo
 	{ "char%d/dash/dash.png",           4 },
 	{ "char%d/spawn/spawn.png",         5 },
 	{ "char%d/die/die.png",             6 }
-};
-
-enum PlayerAttackType
-{
-	kPlayerAttackType_Sword,
-	kPlayerAttackType_Fire
 };
 
 //
@@ -271,6 +274,14 @@ void Player::getPlayerCollision(CollisionInfo & collision)
 	collision.y2 = m_pos[1] + m_collision.y2;
 }
 
+void Player::getDamageHitbox(CollisionInfo & collision)
+{
+	collision.x1 = m_pos[0] - PLAYER_DAMAGE_HITBOX_SX/2;
+	collision.y1 = m_pos[1] - PLAYER_DAMAGE_HITBOX_SY;
+	collision.x2 = m_pos[0] + PLAYER_DAMAGE_HITBOX_SX/2;
+	collision.y2 = m_pos[1];
+}
+
 void Player::getAttackCollision(CollisionInfo & collision)
 {
 	float x1 = m_attack.collision.x1 * m_pos.xFacing;
@@ -280,8 +291,8 @@ void Player::getAttackCollision(CollisionInfo & collision)
 
 	if (m_pos.yFacing < 0)
 	{
-		y1 = -PLAYER_COLLISION_SY - y1;
-		y2 = -PLAYER_COLLISION_SY - y2;
+		y1 = -PLAYER_COLLISION_HITBOX_SY - y1;
+		y2 = -PLAYER_COLLISION_HITBOX_SY - y2;
 	}
 
 	if (x1 > x2)
@@ -305,7 +316,7 @@ float Player::getAttackDamage(Player * other)
 		CollisionInfo otherCollision;
 
 		getAttackCollision(attackCollision);
-		other->getPlayerCollision(otherCollision);
+		other->getDamageHitbox(otherCollision);
 
 		if (attackCollision.intersects(otherCollision))
 		{
@@ -328,13 +339,14 @@ float Player::mirrorX(float x) const
 
 float Player::mirrorY(float y) const
 {
-	return m_pos.yFacing > 0 ? y : PLAYER_COLLISION_SY - y;
+	return m_pos.yFacing > 0 ? y : PLAYER_COLLISION_HITBOX_SY - y;
 }
 
 Player::Player(uint32_t netId, uint16_t owningChannelId)
 	: m_pos(this)
 	, m_state(this)
 	, m_anim(this)
+	, m_weaponType(kPlayerWeapon_Fire)
 	, m_weaponAmmo(0)
 	, m_isAuthorative(false)
 	, m_blockMask(0)
@@ -359,9 +371,9 @@ Player::Player(uint32_t netId, uint16_t owningChannelId)
 		m_isAuthorative = true;
 	}
 
-	m_collision.x1 = -PLAYER_COLLISION_SX / 2.f;
-	m_collision.x2 = +PLAYER_COLLISION_SX / 2.f;
-	m_collision.y1 = -PLAYER_COLLISION_SY / 1.f;
+	m_collision.x1 = -PLAYER_COLLISION_HITBOX_SX / 2.f;
+	m_collision.x2 = +PLAYER_COLLISION_HITBOX_SX / 2.f;
+	m_collision.y1 = -PLAYER_COLLISION_HITBOX_SY / 1.f;
 	m_collision.y2 = 0.f;
 
 	if (s_playerCharacterIndex != -1)
@@ -430,9 +442,9 @@ void Player::playSecondaryEffects(PlayerEvent e)
 
 void Player::tick(float dt)
 {
-	m_collision.x1 = -PLAYER_COLLISION_SX / 2.f;
-	m_collision.x2 = +PLAYER_COLLISION_SX / 2.f;
-	m_collision.y1 = -PLAYER_COLLISION_SY / 1.f;
+	m_collision.x1 = -PLAYER_COLLISION_HITBOX_SX / 2.f;
+	m_collision.x2 = +PLAYER_COLLISION_HITBOX_SX / 2.f;
+	m_collision.y1 = -PLAYER_COLLISION_HITBOX_SY / 1.f;
 	m_collision.y2 = 0.f;
 
 	//
@@ -588,8 +600,18 @@ void Player::tick(float dt)
 				m_attack = AttackInfo();
 				m_attack.attacking = true;
 
-				m_anim.SetAnim(kPlayerAnim_Fire, true, true);
-				m_isAnimDriven = true;
+				int anim = -1;
+
+				if (m_weaponType == kPlayerWeapon_Fire)
+					anim = kPlayerAnim_Fire;
+				if (m_weaponType == kPlayerWeapon_Grenade)
+					g_app->netPlaySound("grenade-throw.ogg");
+
+				if (anim != -1)
+				{
+					m_anim.SetAnim(anim, true, true);
+					m_isAnimDriven = true;
+				}
 
 				m_weaponAmmo = (m_weaponAmmo > 0) ? (m_weaponAmmo - 1) : 0;
 
@@ -610,7 +632,9 @@ void Player::tick(float dt)
 					m_pos[0] + mirrorX(0.f),
 					m_pos[1] - mirrorY(44.f),
 					angle,
-					kBulletType_A, getNetId());
+					//kBulletType_A, getNetId());
+					//kBulletType_B, getNetId());
+					kBulletType_Grenade, getNetId());
 			}
 
 			if (m_input.wentDown(INPUT_BUTTON_X) && isAnimOverrideAllowed(kPlayerAnim_Attack))
@@ -634,8 +658,8 @@ void Player::tick(float dt)
 
 				m_attack.collision.x1 = 0.f;
 				m_attack.collision.x2 = (m_anim.m_attackDx == 0) ? 0.f : 50.f; // fordward?
-				m_attack.collision.y1 = -PLAYER_COLLISION_SY/3.f*2;
-				m_attack.collision.y2 = -PLAYER_COLLISION_SY/3.f*2 + m_anim.m_attackDy * 50.f; // up or down
+				m_attack.collision.y1 = -PLAYER_COLLISION_HITBOX_SY/3.f*2;
+				m_attack.collision.y2 = -PLAYER_COLLISION_HITBOX_SY/3.f*2 + m_anim.m_attackDy * 50.f; // up or down
 
 				// make sure the attack collision doesn't have a zero sized area
 
@@ -702,33 +726,20 @@ void Player::tick(float dt)
 				{
 					// find a teleport destination
 
-					std::vector< std::pair<int, int> > destinations;
+					int destinationX;
+					int destinationY;
 
-					for (int x = 0; x < ARENA_SX; ++x)
-						for (int y = 0; y < ARENA_SY; ++y)
-							if (x != px && y != py && g_hostArena->getBlock(x, y).type == kBlockType_Teleport)
-								destinations.push_back(std::make_pair(x, y));
-
-					if (destinations.empty())
+					if (g_hostArena->getTeleportDestination(px, py, destinationX, destinationY))
 					{
-						LOG_WRN("unable to find teleport destination");
-					}
-					else
-					{
-						const int idx = rand() % destinations.size();
-
-						const int x = std::get<0>(destinations[idx]);
-						const int y = std::get<1>(destinations[idx]);
-
-						m_pos[0] = x * BLOCK_SX;
-						m_pos[1] = y * BLOCK_SY;
+						m_pos[0] = destinationX * BLOCK_SX;
+						m_pos[1] = destinationY * BLOCK_SY;
 
 						m_pos[0] += BLOCK_SX / 2;
 						m_pos[1] += BLOCK_SY - 1;
 
 						m_teleport.cooldown = true;
-						m_teleport.x = x;
-						m_teleport.y = y;
+						m_teleport.x = destinationX;
+						m_teleport.y = destinationY;
 					}
 				}
 			}
@@ -1120,10 +1131,6 @@ void Player::tick(float dt)
 			playSecondaryEffects(kPlayerEvent_ArenaWrap);
 		}
 	#endif
-
-		// fixme : spawn bullet on fire
-		//if (!m_isGrounded && !m_isAttachedToSticky && !m_isWallSliding)
-		//	g_app->netSpawnBullet(m_pos[0], m_pos[1], rand(), 500, kBulletType_A);
 	}
 
 	m_input.next();
@@ -1141,13 +1148,13 @@ void Player::draw()
 	m_sprite->flipX = m_pos.xFacing < 0 ? true : false;
 	m_sprite->flipY = m_pos.yFacing < 0 ? true : false;
 
-	drawAt(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0));
+	drawAt(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0));
 
 	// render additional sprites for wrap around
-	drawAt(m_pos.x + ARENA_SX_PIXELS, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0));
-	drawAt(m_pos.x - ARENA_SX_PIXELS, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0));
-	drawAt(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0) + ARENA_SY_PIXELS);
-	drawAt(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_SY : 0) - ARENA_SY_PIXELS);
+	drawAt(m_pos.x + ARENA_SX_PIXELS, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0));
+	drawAt(m_pos.x - ARENA_SX_PIXELS, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0));
+	drawAt(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0) + ARENA_SY_PIXELS);
+	drawAt(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0) - ARENA_SY_PIXELS);
 
 	// draw player color
 
@@ -1208,6 +1215,15 @@ void Player::debugDraw()
 		m_pos.y + m_collision.y1,
 		m_pos.x + m_collision.x2 + 1,
 		m_pos.y + m_collision.y2 + 1);
+
+	CollisionInfo damageCollision;
+	getDamageHitbox(damageCollision);
+	setColor(63, 31, 0, 63);
+	drawRect(
+		damageCollision.x1,
+		damageCollision.y1,
+		damageCollision.x2 + 1,
+		damageCollision.y2 + 1);
 
 	if (m_isAuthorative)
 	{
@@ -1367,7 +1383,7 @@ void Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 			}
 
 			// fixme.. mid pos
-			ParticleSpawnInfo spawnInfo(m_pos[0], m_pos[1] + mirrorY(-PLAYER_COLLISION_SY/2.f), kBulletType_ParticleA, 10, 50, 200, 20);
+			ParticleSpawnInfo spawnInfo(m_pos[0], m_pos[1] + mirrorY(-PLAYER_COLLISION_HITBOX_SY/2.f), kBulletType_ParticleA, 10, 50, 200, 20);
 			spawnInfo.color = 0xff0000ff;
 			g_app->netSpawnParticles(spawnInfo);
 		}
