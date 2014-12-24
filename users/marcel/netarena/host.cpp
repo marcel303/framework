@@ -133,7 +133,15 @@ void Host::tickPlay(float dt)
 			int x;
 			int y;
 
-			if (m_arena->getRandomPickupLocation(x, y))
+			if (m_arena->getRandomPickupLocation(x, y, this,
+				[](void * obj, int x, int y) 
+				{
+					Host * self = (Host*)obj;
+					for (auto & p = self->m_pickups.begin(); p != self->m_pickups.end(); ++p)
+						if (p->blockX == x && p->blockY == y)
+							return true;
+					return false;
+				}))
 			{
 				int weights[kPickupType_COUNT] =
 				{
@@ -352,6 +360,8 @@ void Host::spawnPickup(PickupType type, int blockX, int blockY)
 
 	Pickup pickup;
 	pickup.type = type;
+	pickup.blockX = blockX;
+	pickup.blockY = blockY;
 	pickup.x1 = blockX * BLOCK_SX + (BLOCK_SX - sprite.getWidth()) / 2;
 	pickup.y1 = blockY * BLOCK_SY + BLOCK_SY - sprite.getHeight();
 	pickup.x2 = pickup.x1 + sprite.getWidth();

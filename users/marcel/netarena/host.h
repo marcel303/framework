@@ -10,6 +10,8 @@ class Player;
 struct Pickup
 {
 	PickupType type;
+	int blockX;
+	int blockY;
 	int x1;
 	int y1;
 	int x2;

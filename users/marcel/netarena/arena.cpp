@@ -421,7 +421,7 @@ bool Arena::getRandomSpawnPoint(int & out_x, int & out_y, int & io_lastSpawnInde
 	return false;
 }
 
-bool Arena::getRandomPickupLocation(int & out_x, int & out_y)
+bool Arena::getRandomPickupLocation(int & out_x, int & out_y, void * obj, bool (*reject)(void * obj, int x, int y))
 {
 	struct Coord
 	{
@@ -439,9 +439,12 @@ bool Arena::getRandomPickupLocation(int & out_x, int & out_y)
 
 			if ((block1.type == kBlockType_Empty) && ((1 << block2.type) & kBlockMask_Solid))
 			{
-				candidates[numCandidates].x = x;
-				candidates[numCandidates].y = y;
-				numCandidates++;
+				if (!reject || !reject(obj, x, y))
+				{
+					candidates[numCandidates].x = x;
+					candidates[numCandidates].y = y;
+					numCandidates++;
+				}
 			}
 		}
 	}
