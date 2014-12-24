@@ -60,7 +60,7 @@ OPTION_STEP(BULLET_TYPE0_SPEED, 0.f, 10000.f, 10.f);
 OPTION_DEFINE(int, BULLET_GRENADE_NADE_SPEED, "Bullets/Grenade/Nade Speed");
 OPTION_DEFINE(int, BULLET_GRENADE_NADE_BOUNCE_COUNT, "Bullets/Grenade/Nade Bounce Count");
 OPTION_DEFINE(float, BULLET_GRENADE_NADE_BOUNCE_AMOUNT, "Bullets/Grenade/Nade Bounce Amount");
-OPTION_DEFINE(float, BULLET_GRENADE_NADE_LIFE, "Bullets/Grenade/Nade Bounce Count");
+OPTION_DEFINE(float, BULLET_GRENADE_NADE_LIFE, "Bullets/Grenade/Nade Life");
 OPTION_DEFINE(int, BULLET_GRENADE_FRAG_RADIUS_MIN, "Bullets/Grenade/Frag Radius Min");
 OPTION_DEFINE(int, BULLET_GRENADE_FRAG_RADIUS_MAX, "Bullets/Grenade/Frag Radius Max");
 OPTION_DEFINE(int, BULLET_GRENADE_FRAG_SPEED_MIN, "Bullets/Grenade/Frag Speed Min");

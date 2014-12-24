@@ -137,8 +137,6 @@ void BulletPool::tick(float _dt)
 					{
 						// eval collision in x direction
 
-						float restitutation = 0.3f;
-
 						uint32_t blockMask;
 
 						blockMask = g_hostArena->getIntersectingBlocksMask(b.pos[0], oldPos[1]);
