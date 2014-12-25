@@ -14,7 +14,8 @@ class Client;
 class Host;
 class OptionMenu;
 struct ParticleSpawnInfo;
-class Player;
+struct Player;
+class PlayerNetObject;
 class StatTimerMenu;
 
 namespace NetSessionDiscovery
@@ -27,7 +28,7 @@ class App : public ChannelHandler, public ReplicationHandler
 	struct ClientInfo
 	{
 		uint32_t replicationId;
-		Player * player;
+		PlayerNetObject * player;
 	};
 
 	bool m_isHost;

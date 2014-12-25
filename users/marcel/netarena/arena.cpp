@@ -71,38 +71,11 @@ OPTION_DEFINE(int, s_drawBlockMask, "Arena/Debug/Draw Block Mask");
 
 //
 
-Arena::Arena_NS::Arena_NS(NetSerializableObject * owner)
-	: NetSerializable(owner)
+void Arena::init(ArenaNetObject * netObject)
 {
-}
+	m_netObject = netObject;
+	m_netObject->m_arena = this;
 
-void Arena::Arena_NS::SerializeStruct()
-{
-	Arena * arena = static_cast<Arena*>(GetOwner());
-
-	for (int x = 0; x < ARENA_SX; ++x)
-	{
-		for (int y = 0; y < ARENA_SY; ++y)
-		{
-			Block & block = arena->m_blocks[x][y];
-
-			uint8_t type = block.type;
-
-			Serialize(type);
-			Serialize(block.clientData);
-
-			block.type = (BlockType)type;
-		}
-	}
-}
-
-//
-
-Arena::Arena()
-	: NetObject()
-	, m_serializer(this)
-	, m_gameState(this)
-{
 	initializeBlockMasks();
 
 	reset();
@@ -154,7 +127,7 @@ void Arena::generate()
 			m_blocks[x][ARENA_SY - 1 - y].type = m_blocks[x][y].type;
 	}
 
-	m_serializer.SetDirty();
+	m_netObject->m_serializer.SetDirty();
 }
 
 void Arena::load(const char * filename)
@@ -309,7 +282,7 @@ void Arena::load(const char * filename)
 		LOG_ERR("failed to open %s: %s", maskFilename.c_str(), e.what());
 	}
 
-	m_serializer.SetDirty();
+	m_netObject->m_serializer.SetDirty();
 }
 
 void Arena::drawBlocks()
@@ -675,4 +648,47 @@ bool Arena::handleDamageRect(int baseX, int baseY, int x1, int y1, int x2, int y
 	}
 
 	return result;
+}
+
+//
+
+ArenaNetObject::Arena_NS::Arena_NS(NetSerializableObject * owner)
+	: NetSerializable(owner)
+{
+}
+
+void ArenaNetObject::Arena_NS::SerializeStruct()
+{
+	Arena * arena = static_cast<ArenaNetObject*>(GetOwner())->m_arena;
+
+	for (int x = 0; x < ARENA_SX; ++x)
+	{
+		for (int y = 0; y < ARENA_SY; ++y)
+		{
+			Block & block = arena->m_blocks[x][y];
+
+			uint8_t type = block.type;
+
+			Serialize(type);
+			Serialize(block.clientData);
+
+			block.type = (BlockType)type;
+		}
+	}
+}
+
+//
+
+ArenaNetObject::ArenaNetObject(bool ownArena)
+	: NetObject()
+	, m_serializer(this)
+	, m_gameState(this)
+	, m_arena(0)
+	, m_ownArena(ownArena)
+{
+	if (ownArena)
+	{
+		Arena * arena = new Arena();
+		arena->init(this);
+	}
 }

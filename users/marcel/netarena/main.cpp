@@ -152,7 +152,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		bitStream.Read(netId);
 		bitStream.Read(buttons);
 
-		Player * player = g_host->findPlayerByNetId(netId);
+		PlayerNetObject * player = g_host->findPlayerByNetId(netId);
 
 		Assert(player);
 		if (player)
@@ -168,7 +168,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		bitStream.Read(netId);
 		bitStream.Read(characterIndex);
 
-		Player * player = g_host->findPlayerByNetId(netId);
+		PlayerNetObject * player = g_host->findPlayerByNetId(netId);
 		Assert(player);
 		if (player)
 		{
@@ -383,7 +383,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			bitStream.Read(x);
 			bitStream.Read(y);
 
-			Block & block = client->m_arena->getBlock(x, y);
+			Block & block = client->m_arena->m_arena->getBlock(x, y);
 
 			bitStream.ReadAlignedBytes(&block, sizeof(block));
 		}
@@ -410,7 +410,7 @@ void App::SV_OnChannelConnect(Channel * channel)
 
 	clientInfo.replicationId = m_replicationMgr->SV_CreateClient(channel, 0);
 
-	clientInfo.player = new Player(m_host->allocNetId(), channel->m_destinationId);
+	clientInfo.player = new PlayerNetObject(m_host->allocNetId(), channel->m_destinationId);
 
 	m_replicationMgr->SV_AddObject(clientInfo.player);
 
@@ -470,11 +470,14 @@ bool App::OnReplicationObjectCreateType(ReplicationClient * client, BitStream & 
 	switch (type)
 	{
 	case kNetObjectType_Arena:
-		netObject = new Arena();
+		{
+			ArenaNetObject * arenaNetObject = new ArenaNetObject(true);
+			netObject = arenaNetObject;
+		}
 		break;
 
 	case kNetObjectType_Player:
-		netObject = new Player();
+		netObject = new PlayerNetObject();
 		break;
 	}
 
@@ -494,11 +497,11 @@ void App::OnReplicationObjectCreated(ReplicationClient * client, ReplicationObje
 	{
 	case kNetObjectType_Arena:
 		Assert(gameClient->m_arena == 0);
-		gameClient->m_arena = static_cast<Arena*>(object);
+		gameClient->m_arena = static_cast<ArenaNetObject*>(object);
 		break;
 
 	case kNetObjectType_Player:
-		gameClient->addPlayer(static_cast<Player*>(object));
+		gameClient->addPlayer(static_cast<PlayerNetObject*>(object));
 		break;
 
 	default:
@@ -515,7 +518,7 @@ void App::OnReplicationObjectDestroyed(ReplicationClient * client, ReplicationOb
 	switch (netObject->getType())
 	{
 	case kNetObjectType_Player:
-		gameClient->removePlayer(static_cast<Player*>(netObject));
+		gameClient->removePlayer(static_cast<PlayerNetObject*>(netObject));
 		break;
 
 	case kNetObjectType_Arena:
@@ -1118,7 +1121,7 @@ void App::draw()
 
 			for (size_t i = 0; i < client->m_players.size(); ++i)
 			{
-				Player * player = client->m_players[i];
+				PlayerNetObject * player = client->m_players[i];
 
 				if (player->getOwningChannelId() != client->m_channel->m_id)
 					continue;

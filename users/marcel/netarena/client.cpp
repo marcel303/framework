@@ -61,15 +61,15 @@ void Client::tick(float dt)
 
 		for (auto i = m_players.begin(); i != m_players.end(); ++i)
 		{
-			Player * player = *i;
+			PlayerNetObject * playerNetObject = *i;
 
-			if (player->getOwningChannelId() != m_channel->m_id)
+			if (playerNetObject->getOwningChannelId() != m_channel->m_id)
 				continue;
 
 			uint16_t buttons = 0;
 
-			bool useKeyboard = (player->m_input.m_controllerIndex == 0) || (g_app->getControllerAllocationCount() == 1);
-			bool useGamepad = !morePlayersThanControllers || (player->m_input.m_controllerIndex != 0) || (g_app->getControllerAllocationCount() == 1);
+			bool useKeyboard = (playerNetObject->m_input.m_controllerIndex == 0) || (g_app->getControllerAllocationCount() == 1);
+			bool useGamepad = !morePlayersThanControllers || (playerNetObject->m_input.m_controllerIndex != 0) || (g_app->getControllerAllocationCount() == 1);
 
 			if (useKeyboard)
 			{
@@ -97,10 +97,10 @@ void Client::tick(float dt)
 			{
 				const int gamepadIndex =
 					!morePlayersThanControllers
-					? player->m_input.m_controllerIndex
+					? playerNetObject->m_input.m_controllerIndex
 					: (g_app->getControllerAllocationCount() == 1)
 					? 0
-					: (player->m_input.m_controllerIndex - 1);
+					: (playerNetObject->m_input.m_controllerIndex - 1);
 
 				if (gamepadIndex >= 0 && gamepadIndex < MAX_GAMEPAD && gamepad[gamepadIndex].isConnected)
 				{
@@ -127,11 +127,11 @@ void Client::tick(float dt)
 				}
 			}
 
-			if (buttons != player->m_input.m_currButtons)
+			if (buttons != playerNetObject->m_input.m_currButtons)
 			{
-				player->m_input.m_currButtons = buttons;
+				playerNetObject->m_input.m_currButtons = buttons;
 
-				g_app->netSetPlayerInputs(m_channel->m_id, player->getNetId(), buttons);
+				g_app->netSetPlayerInputs(m_channel->m_id, playerNetObject->getNetId(), buttons);
 			}
 		}
 	}
@@ -187,6 +187,8 @@ void Client::draw()
 	if (!m_arena)
 		return;
 
+	//setPlayerPtrs(); // fixme : enable once full simulation runs on clients
+
 	switch (m_arena->m_gameState.m_gameState)
 	{
 	case kGameState_Lobby:
@@ -200,17 +202,20 @@ void Client::draw()
 		drawRoundComplete();
 		break;
 	}
+
+	//clearPlayerPtrs();
 }
 
 void Client::drawPlay()
 {
-	m_arena->drawBlocks();
+	m_arena->m_arena->drawBlocks();
 
 	m_spriteManager->draw();
 
 	for (auto i = m_players.begin(); i != m_players.end(); ++i)
 	{
-		Player * player = *i;
+		PlayerNetObject * playerNetObject = *i;
+		Player * player = playerNetObject->m_player;
 
 		player->draw();
 	}
@@ -241,17 +246,18 @@ void Client::drawRoundComplete()
 
 	for (auto p = m_players.begin(); p != m_players.end(); ++p)
 	{
-		Player * player = *p;
+		PlayerNetObject * playerNetObject = *p;
+		Player * player = playerNetObject->m_player;
 
 		drawText(GFX_SX/3*1, y, 40, +1.f, +1.f, "Player %d", index);
-		drawText(GFX_SX/3*2, y, 40, -1.f, +1.f, "%d", player->getScore());
+		drawText(GFX_SX/3*2, y, 40, -1.f, +1.f, "%d", player->m_score);
 
 		index++;
 		y += 50;
 	}
 }
 
-void Client::addPlayer(Player * player)
+void Client::addPlayer(PlayerNetObject * player)
 {
 	m_players.push_back(player);
 
@@ -262,7 +268,7 @@ void Client::addPlayer(Player * player)
 	}
 }
 
-void Client::removePlayer(Player * player)
+void Client::removePlayer(PlayerNetObject * player)
 {
 	auto i = std::find(m_players.begin(), m_players.end(), player);
 	Assert(i != m_players.end());
@@ -278,6 +284,18 @@ void Client::removePlayer(Player * player)
 
 		m_players.erase(i);
 	}
+}
+
+void Client::setPlayerPtrs()
+{
+	for (auto i = m_players.begin(); i != m_players.end(); ++i)
+		(*i)->m_player->m_netObject = (*i);
+}
+
+void Client::clearPlayerPtrs()
+{
+	for (auto i = m_players.begin(); i != m_players.end(); ++i)
+		(*i)->m_player->m_netObject = 0;
 }
 
 void Client::spawnParticles(const ParticleSpawnInfo & spawnInfo)

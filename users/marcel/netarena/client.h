@@ -7,7 +7,8 @@
 class Arena;
 class BulletPool;
 class NetSpriteManager;
-class Player;
+struct Player;
+class PlayerNetObject;
 
 class Client
 {
@@ -15,8 +16,8 @@ public:
 	Channel * m_channel;
 	uint32_t m_replicationId;
 
-	Arena * m_arena;
-	std::vector<Player*> m_players;
+	ArenaNetObject * m_arena;
+	std::vector<PlayerNetObject*> m_players;
 
 	BulletPool * m_bulletPool;
 	BulletPool * m_particlePool;
@@ -33,8 +34,10 @@ public:
 	void drawPlay();
 	void drawRoundComplete();
 
-	void addPlayer(Player * player);
-	void removePlayer(Player * player);
+	void addPlayer(PlayerNetObject * player);
+	void removePlayer(PlayerNetObject * player);
+	void setPlayerPtrs();
+	void clearPlayerPtrs();
 
 	void spawnParticles(const ParticleSpawnInfo & spawnInfo);
 };

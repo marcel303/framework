@@ -16,6 +16,12 @@ public:
 		m_v[1] = y;
 	}
 
+	inline void Set(float x, float y)
+	{
+		m_v[0] = x;
+		m_v[1] = y;
+	}
+
 	inline float CalcSize() const
 	{
 		const float sq =

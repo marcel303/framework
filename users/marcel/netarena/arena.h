@@ -1,9 +1,13 @@
 #pragma once
 
 #include "gamedefs.h"
+#include "gametypes.h"
 #include "netobject.h"
 
-enum BlockShape : unsigned char
+class Arena;
+class ArenaNetObject;
+
+enum BlockShape
 {
 	kBlockShape_Empty,
 	kBlockShape_Opaque,
@@ -22,7 +26,7 @@ enum BlockShape : unsigned char
 	kBlockShape_COUNT
 };
 
-enum BlockType : unsigned char
+enum BlockType
 {
 	kBlockType_Empty,
 	kBlockType_Destructible,
@@ -80,8 +84,42 @@ struct BlockAndDistance
 	int distanceSq;
 };
 
-class Arena : public NetObject
+class Arena
 {
+	friend class ArenaNetObject;
+
+	Block m_blocks[ARENA_SX][ARENA_SY];
+
+	ArenaNetObject * m_netObject;
+
+	void reset();
+
+public:
+	void init(ArenaNetObject * netObject);
+
+	void generate();
+	void load(const char * filename);
+
+	void drawBlocks();
+
+	bool getRandomSpawnPoint(int & out_x, int & out_y, int & io_lastSpawnIndex);
+	bool getRandomPickupLocation(int & out_x, int & out_y, void * obj, bool (*reject)(void * obj, int x, int y));
+	bool getTeleportDestination(int x, int y, int & out_x, int & out_y);
+
+	uint32_t getIntersectingBlocksMask(int x1, int y1, int x2, int y2);
+	uint32_t getIntersectingBlocksMask(int x, int y);
+
+	bool getBlockRectFromPixels(int x1, int y1, int x2, int y2, int & out_x1, int & out_y1, int & out_x2, int & out_y2);
+	bool getBlocksFromPixels(int x, int y, int x1, int y1, int x2, int y2, bool wrap, BlockAndDistance * out_blocks, int & io_numBlocks);
+	Block & getBlock(int x, int y) { return m_blocks[x][y]; }
+
+	bool handleDamageRect(int x, int y, int x1, int y1, int x2, int y2, bool hitDestructible);
+};
+
+class ArenaNetObject : public NetObject
+{
+	friend class Arena;
+
 	class Arena_NS : public NetSerializable
 	{
 	public:
@@ -91,10 +129,6 @@ class Arena : public NetObject
 	};
 
 	Arena_NS m_serializer;
-
-	Block m_blocks[ARENA_SX][ARENA_SY];
-
-	void reset();
 
 	// ReplicationObject
 	virtual bool RequiresUpdating() const { return true; }
@@ -125,29 +159,8 @@ public:
 
 	GameState_NS m_gameState;
 
-	Arena();
+	Arena * m_arena;
+	bool m_ownArena;
 
-	void generate();
-	void load(const char * filename);
-
-	void drawBlocks();
-
-	bool getRandomSpawnPoint(int & out_x, int & out_y, int & io_lastSpawnIndex);
-	bool getRandomPickupLocation(int & out_x, int & out_y, void * obj, bool (*reject)(void * obj, int x, int y));
-	bool getTeleportDestination(int x, int y, int & out_x, int & out_y);
-
-	uint32_t getIntersectingBlocksMask(int x1, int y1, int x2, int y2);
-	uint32_t getIntersectingBlocksMask(int x, int y);
-
-	bool getBlockRectFromPixels(int x1, int y1, int x2, int y2, int & out_x1, int & out_y1, int & out_x2, int & out_y2);
-	bool getBlocksFromPixels(int x, int y, int x1, int y1, int x2, int y2, bool wrap, BlockAndDistance * out_blocks, int & io_numBlocks);
-	Block & getBlock(int x, int y) { return m_blocks[x][y]; }
-
-	bool handleDamageRect(int x, int y, int x1, int y1, int x2, int y2, bool hitDestructible);
-
-	// todo : optimized way for making small changes
-	void setDirty()
-	{
-		m_serializer.SetDirty();
-	}
+	ArenaNetObject(bool ownArena = false);
 };

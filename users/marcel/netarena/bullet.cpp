@@ -226,10 +226,10 @@ void BulletPool::tick(float _dt)
 				{
 					for (auto p = g_host->m_players.begin(); p != g_host->m_players.end(); ++p)
 					{
-						Player * player = *p;
+						PlayerNetObject * player = *p;
 
 						if (player->getNetId() == b.ownerNetId)
-							owner = player;
+							owner = player->m_player;
 					}
 
 					if (owner == 0)
@@ -242,10 +242,12 @@ void BulletPool::tick(float _dt)
 
 					for (auto p = g_host->m_players.begin(); p != g_host->m_players.end(); ++p)
 					{
-						Player * player = *p;
+						PlayerNetObject * playerNetObject = *p;
 
-						if (player->getNetId() == b.ownerNetId)
+						if (playerNetObject->getNetId() == b.ownerNetId)
 							continue;
+
+						Player * player = playerNetObject->m_player;
 
 						CollisionInfo collisionInfo;
 

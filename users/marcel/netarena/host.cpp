@@ -12,7 +12,7 @@
 #include "Timer.h"
 
 COMMAND_OPTION(s_addSprite, "Debug/Add Sprite", [] { if (g_host) g_app->netAddSprite("block-spike.png", rand() % ARENA_SX_PIXELS, rand() % ARENA_SY_PIXELS); });
-COMMAND_OPTION(s_addPickup, "Debug/Add Pickup", [] { if (g_host) g_host->spawnPickup((PickupType)(rand() % kPickupType_COUNT), rand() % ARENA_SX, rand() % ARENA_SY); });
+COMMAND_OPTION(s_addPickup, "Debug/Add Pickup", [] { if (g_host) g_host->trySpawnPickup((PickupType)(rand() % kPickupType_COUNT)); });
 
 COMMAND_OPTION(s_gameStateNewGame, "Game State/New Game", [] { if (g_host) g_host->newGame(); });
 COMMAND_OPTION(s_gameStateNewRound, "Game State/New Round", [] { if (g_host) g_host->newRound(0); });
@@ -23,13 +23,6 @@ OPTION_DEFINE(int, g_roundCompleteScore, "Game Round/Max Player Score");
 OPTION_DECLARE(int, g_roundCompleteTimer, 6);
 OPTION_DEFINE(int, g_roundCompleteTimer, "Game Round/Game Complete Time");
 
-OPTION_DECLARE(int, g_pickupTimeBase, 10);
-OPTION_DEFINE(int, g_pickupTimeBase, "Pickup/Spawn Interval (Sec)");
-OPTION_DECLARE(int, g_pickupTimeRandom, 5);
-OPTION_DEFINE(int, g_pickupTimeRandom, "Pickup/Spawn Interval Random (Sec)");
-OPTION_DECLARE(int, g_pickupMax, 5);
-OPTION_DEFINE(int, g_pickupMax, "Pickup/Maximum Pickup Count");
-
 OPTION_EXTERN(std::string, g_map);
 
 extern std::vector<std::string> g_mapList;
@@ -39,17 +32,9 @@ Arena * g_hostArena = 0;
 BulletPool * g_hostBulletPool = 0;
 NetSpriteManager * g_hostSpriteManager = 0;
 
-static const char * s_pickupSprites[kPickupType_COUNT] =
-{
-	"pickup-ammo.png",
-	"pickup-nade.png"
-};
-
 Host::Host()
-	: m_arena(0)
-	, m_nextNetId(1) // 0 = unassigned
+	: m_nextNetId(1) // 0 = unassigned
 	, m_nextRoundNumber(0)
-	, m_nextPickupSpawnTime(0)
 	, m_bulletPool(0)
 	, m_spriteManager(0)
 	, m_roundCompleteTimer(0)
@@ -62,8 +47,6 @@ Host::~Host()
 	Assert(g_hostArena == 0);
 	Assert(g_hostBulletPool == 0);
 	Assert(g_hostSpriteManager == 0);
-
-	Assert(m_arena == 0);
 }
 
 void Host::init()
@@ -72,16 +55,14 @@ void Host::init()
 	for (int i = 0; i < 4; ++i)
 		m_freePlayerIds.push_back(i);
 
-	m_arena = new Arena();
-
-	g_app->getReplicationMgr()->SV_AddObject(m_arena);
+	g_app->getReplicationMgr()->SV_AddObject(&m_gameSim.m_arenaNetObject);
 
 	m_bulletPool = new BulletPool(false);
 
 	m_spriteManager = new NetSpriteManager();
 
 	g_host = this;
-	g_hostArena = m_arena;
+	g_hostArena = &m_gameSim.m_state.m_arena;
 	g_hostBulletPool = m_bulletPool;
 	g_hostSpriteManager = m_spriteManager;
 }
@@ -99,15 +80,14 @@ void Host::shutdown()
 	delete m_bulletPool;
 	m_bulletPool = 0;
 
-	g_app->getReplicationMgr()->SV_RemoveObject(m_arena->GetObjectID());
-
-	delete m_arena;
-	m_arena = 0;
+	g_app->getReplicationMgr()->SV_RemoveObject(m_gameSim.m_arenaNetObject.GetObjectID());
 }
 
 void Host::tick(float dt)
 {
-	switch (m_arena->m_gameState.m_gameState)
+	//setPlayerPtrs(); // fixme : enable once full simulation runs on clients
+
+	switch (m_gameSim.m_arenaNetObject.m_gameState.m_gameState)
 	{
 	case kGameState_Lobby:
 		break;
@@ -120,67 +100,24 @@ void Host::tick(float dt)
 		tickRoundComplete(dt);
 		break;
 	}
+
+	//clearPlayerPtrs();
 }
 
 void Host::tickPlay(float dt)
 {
-	const uint64_t time = g_TimerRT.TimeUS_get();
-
-	if (time >= m_nextPickupSpawnTime)
-	{
-		if ((int)m_pickups.size() < g_pickupMax)
-		{
-			int x;
-			int y;
-
-			if (m_arena->getRandomPickupLocation(x, y, this,
-				[](void * obj, int x, int y) 
-				{
-					Host * self = (Host*)obj;
-					for (auto & p = self->m_pickups.begin(); p != self->m_pickups.end(); ++p)
-						if (p->blockX == x && p->blockY == y)
-							return true;
-					return false;
-				}))
-			{
-				int weights[kPickupType_COUNT] =
-				{
-					PICKUP_AMMO_WEIGHT,
-					PICKUP_NADE_WEIGHT
-				};
-
-				int totalWeight = 0;
-
-				for (int i = 0; i < kPickupType_COUNT; ++i)
-				{
-					totalWeight += weights[i];
-					weights[i] = totalWeight;
-				}
-
-				int value = rand() % totalWeight;
-
-				PickupType type = kPickupType_COUNT;
-
-				for (int i = 0; type == kPickupType_COUNT; ++i)
-					if (value < weights[i])
-						type = (PickupType)i;
-
-				spawnPickup(type, x, y);
-			}
-		}
-
-		m_nextPickupSpawnTime = time + (g_pickupTimeBase + (rand() % g_pickupTimeRandom)) * 1000000;
-	}
+	m_gameSim.tick();
 
 	bool roundComplete = false;
 
 	for (auto i = m_players.begin(); i != m_players.end(); ++i)
 	{
-		Player * player = *i;
+		PlayerNetObject * playerNetObject = *i;
+		Player * player = playerNetObject->m_player;
 
 		player->tick(dt);
 
-		if (player->getScore() >= g_roundCompleteScore)
+		if (playerNetObject->getScore() >= g_roundCompleteScore)
 		{
 			roundComplete = true;
 		}
@@ -208,12 +145,17 @@ void Host::tickRoundComplete(float dt)
 
 void Host::debugDraw()
 {
+	//setPlayerPtrs(); // fixme : enable once full simulation runs on clients
+
 	for (auto i = m_players.begin(); i != m_players.end(); ++i)
 	{
-		Player * player = *i;
+		PlayerNetObject * playerNetObject = *i;
+		Player * player = playerNetObject->m_player;
 
 		player->debugDraw();
 	}
+
+	//clearPlayerPtrs();
 }
 
 uint32_t Host::allocNetId()
@@ -238,7 +180,8 @@ void Host::newGame()
 
 	for (auto p = m_players.begin(); p != m_players.end(); ++p)
 	{
-		Player * player = *p;
+		PlayerNetObject * playerNetObject = *p;
+		Player * player = playerNetObject->m_player;
 
 		player->handleNewGame();
 	}
@@ -248,6 +191,8 @@ void Host::newGame()
 
 void Host::newRound(const char * mapOverride)
 {
+	// todo : send RPC call to host/clients
+
 	// todo : remove bullets
 
 	// remove net sprites
@@ -256,7 +201,8 @@ void Host::newRound(const char * mapOverride)
 		if (m_spriteManager->m_sprites[i].enabled)
 			g_app->netRemoveSprite(i);
 
-	m_pickups.clear();
+	for (int i = 0; i < MAX_PICKUPS; ++i)
+		m_gameSim.m_state.m_pickups[i].isAlive = false;
 
 	// load arena
 
@@ -264,36 +210,37 @@ void Host::newRound(const char * mapOverride)
 
 	if (mapOverride)
 	{
-		m_arena->load(mapOverride);
+		m_gameSim.m_state.m_arena.load(mapOverride);
 	}
 	else if (!map.empty())
 	{
-		m_arena->load(map.c_str());
+		m_gameSim.m_state.m_arena.load(map.c_str());
 	}
 	else if (g_mapList.size() != 0)
 	{
 		const size_t index = m_nextRoundNumber % g_mapList.size();
 
-		m_arena->load(g_mapList[index].c_str());
+		m_gameSim.m_state.m_arena.load(g_mapList[index].c_str());
 	}
 	else
 	{
-		m_arena->load("arena.txt");
+		m_gameSim.m_state.m_arena.load("arena.txt");
 	}
 
 	// respawn players
 
 	for (auto p = m_players.begin(); p != m_players.end(); ++p)
 	{
-		Player * player = *p;
+		PlayerNetObject * playerNetObject = *p;
+		Player * player = playerNetObject->m_player;
 
 		player->handleNewRound();
 
 		player->respawn();
 	}
 
-	m_arena->m_gameState.m_gameState = kGameState_Play;
-	m_arena->m_gameState.SetDirty();
+	m_gameSim.m_arenaNetObject.m_gameState.m_gameState = kGameState_Play;
+	m_gameSim.m_arenaNetObject.m_gameState.SetDirty();
 
 	m_nextRoundNumber++;
 
@@ -302,13 +249,13 @@ void Host::newRound(const char * mapOverride)
 
 void Host::endRound()
 {
-	m_arena->m_gameState.m_gameState = kGameState_RoundComplete;
-	m_arena->m_gameState.SetDirty();
+	m_gameSim.m_arenaNetObject.m_gameState.m_gameState = kGameState_RoundComplete;
+	m_gameSim.m_arenaNetObject.m_gameState.SetDirty();
 
 	m_roundCompleteTimer = g_TimerRT.TimeUS_get() + g_roundCompleteTimer * 1000000; // fixme, option
 }
 
-void Host::addPlayer(Player * player)
+void Host::addPlayer(PlayerNetObject * player)
 {
 	// allocate player ID
 
@@ -326,7 +273,7 @@ void Host::addPlayer(Player * player)
 	m_players.push_back(player);
 }
 
-void Host::removePlayer(Player * player)
+void Host::removePlayer(PlayerNetObject * player)
 {
 	auto i = std::find(m_players.begin(), m_players.end(), player);
 
@@ -339,11 +286,11 @@ void Host::removePlayer(Player * player)
 	}
 }
 
-Player * Host::findPlayerByNetId(uint32_t netId)
+PlayerNetObject * Host::findPlayerByNetId(uint32_t netId)
 {
 	for (auto i = m_players.begin(); i != m_players.end(); ++i)
 	{
-		Player * player = *i;
+		PlayerNetObject * player = *i;
 
 		if (player->getNetId() == netId)
 			return player;
@@ -352,44 +299,29 @@ Player * Host::findPlayerByNetId(uint32_t netId)
 	return 0;
 }
 
-void Host::spawnPickup(PickupType type, int blockX, int blockY)
+void Host::setPlayerPtrs()
 {
-	const char * filename = s_pickupSprites[type];
+	for (auto i = m_players.begin(); i != m_players.end(); ++i)
+		(*i)->m_player->m_netObject = (*i);
+}
 
-	Sprite sprite(filename);
+void Host::clearPlayerPtrs()
+{
+	for (auto i = m_players.begin(); i != m_players.end(); ++i)
+		(*i)->m_player->m_netObject = 0;
+}
 
-	Pickup pickup;
-	pickup.type = type;
-	pickup.blockX = blockX;
-	pickup.blockY = blockY;
-	pickup.x1 = blockX * BLOCK_SX + (BLOCK_SX - sprite.getWidth()) / 2;
-	pickup.y1 = blockY * BLOCK_SY + BLOCK_SY - sprite.getHeight();
-	pickup.x2 = pickup.x1 + sprite.getWidth();
-	pickup.y2 = pickup.y1 + sprite.getHeight();
-	pickup.spriteId = g_app->netAddSprite(filename, pickup.x1, pickup.y1);
+void Host::trySpawnPickup(PickupType type)
+{
+	return m_gameSim.trySpawnPickup(type);
+}
 
-	m_pickups.push_back(pickup);
+void Host::spawnPickup(Pickup & pickup, PickupType type, int blockX, int blockY)
+{
+	m_gameSim.spawnPickup(pickup, type, blockX, blockY);
 }
 
 Pickup * Host::grabPickup(int x1, int y1, int x2, int y2)
 {
-	for (auto i = m_pickups.begin(); i != m_pickups.end(); ++i)
-	{
-		const Pickup & pickup = *i;
-
-		if (x2 >= pickup.x1 && x1 < pickup.x2 &&
-			y2 >= pickup.y1 && y1 < pickup.y2)
-		{
-			m_grabbedPickup = pickup;
-			m_pickups.erase(i);
-
-			g_app->netRemoveSprite(m_grabbedPickup.spriteId);
-
-			g_app->netPlaySound("gun-pickup.ogg");
-
-			return &m_grabbedPickup;
-		}
-	}
-
-	return 0;
+	return m_gameSim.grabPickup(x1, y1, x2, y2);
 }

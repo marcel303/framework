@@ -91,31 +91,68 @@ struct PlayerAnimInfo
 
 //
 
+void PlayerPos_NS::SerializeStruct()
+{
+	PlayerNetObject * playerNetObject = static_cast<PlayerNetObject*>(GetOwner());
+	Player * player = playerNetObject->m_player;
+
+	if (IsSend())
+	{
+		int16_t xCompressed = static_cast<int16_t>(player->m_pos[0]);
+		int16_t yCompressed = static_cast<int16_t>(player->m_pos[1]);
+
+		Serialize(xCompressed);
+		Serialize(yCompressed);
+	}
+	else
+	{
+		int16_t xCompressed;
+		int16_t yCompressed;
+
+		Serialize(xCompressed);
+		Serialize(yCompressed);
+
+		player->m_pos[0] = static_cast<float>(xCompressed);
+		player->m_pos[1] = static_cast<float>(yCompressed);
+	}
+
+	//
+
+	bool facing;
+		
+	facing = player->m_facing[0] < 0 ? true : false;
+	Serialize(facing);
+	player->m_facing[0] = facing ? -1 : +1;
+
+	facing = player->m_facing[1] < 0 ? true : false;
+	Serialize(facing);
+	player->m_facing[1] = facing ? -1 : +1;
+}
+
+//
+
 void PlayerState_NS::SerializeStruct()
 {
-	uint8_t oldCharacterIndex = characterIndex;
+	PlayerNetObject * playerNetObject = static_cast<PlayerNetObject*>(GetOwner());
+	Player * player = playerNetObject->m_player;
 
-	Serialize(isAlive);
-	Serialize(score);
-	Serialize(totalScore);
+	uint8_t oldCharacterIndex = player->m_characterIndex;
+
+	Serialize(player->m_isAlive);
+	Serialize(player->m_score);
+	Serialize(player->m_totalScore);
 	Serialize(playerId);
-	Serialize(characterIndex);
+	Serialize(player->m_characterIndex);
 
-	if (characterIndex != oldCharacterIndex)
+	if (player->m_characterIndex != oldCharacterIndex)
 	{
-		Player * player = static_cast<Player*>(GetOwner());
-
-		player->handleCharacterIndexChange();
+		playerNetObject->handleCharacterIndexChange();
 	}
 }
 
 PlayerState_NS::PlayerState_NS(NetSerializableObject * owner)
 	: NetSerializable(owner)
-	, isAlive(false)
-	, score(0)
-	, totalScore(0)
 	, playerId(-1)
-	, characterIndex(-1)
 {
 }
 
@@ -123,39 +160,72 @@ PlayerState_NS::PlayerState_NS(NetSerializableObject * owner)
 
 void PlayerAnim_NS::SerializeStruct()
 {
-	SerializeBits(m_anim, 4);
-	Serialize(m_play);
+	PlayerNetObject * playerNetObject = static_cast<PlayerNetObject*>(GetOwner());
+	Player * player = playerNetObject->m_player;
 
-	int dx = m_attackDx + 1;
-	int dy = m_attackDy + 1;
+	SerializeBits(player->m_anim, 4);
+	Serialize(player->m_animPlay);
+
+	int dx = player->m_attackDirection[0] + 1;
+	int dy = player->m_attackDirection[1] + 1;
 	SerializeBits(dx, 2);
 	SerializeBits(dy, 2);
-	m_attackDx = dx - 1;
-	m_attackDy = dy - 1;
+	player->m_attackDirection[0] = dx - 1;
+	player->m_attackDirection[1] = dy - 1;
 
 	//
 
-	Player * player = static_cast<Player*>(GetOwner());
-
-	if (m_anim != kPlayerAnim_NULL)
+	if (player->m_anim != kPlayerAnim_NULL)
 	{
-		delete player->m_sprite;
-		player->m_sprite = 0;
+		delete playerNetObject->m_sprite;
+		playerNetObject->m_sprite = 0;
 
 		char filename[64];
-		sprintf_s(filename, sizeof(filename), s_animInfos[m_anim].file, player->getCharacterIndex());
+		sprintf_s(filename, sizeof(filename), s_animInfos[player->m_anim].file, playerNetObject->getCharacterIndex());
 
-		player->m_sprite = new Sprite(filename);
-		player->m_sprite->animActionHandler = Player::handleAnimationAction;
-		player->m_sprite->animActionHandlerObj = player;
+		playerNetObject->m_sprite = new Sprite(filename);
+		playerNetObject->m_sprite->animActionHandler = PlayerNetObject::handleAnimationAction;
+		playerNetObject->m_sprite->animActionHandlerObj = player;
 	}
 
-	if (player->m_sprite)
+	if (playerNetObject->m_sprite)
 	{
-		if (m_play)
-			player->m_sprite->startAnim("anim");
+		if (player->m_animPlay)
+			playerNetObject->m_sprite->startAnim("anim");
 		else
-			player->m_sprite->stopAnim();
+			playerNetObject->m_sprite->stopAnim();
+	}
+}
+
+void PlayerAnim_NS::SetAnim(int anim, bool play, bool restart)
+{
+	Player * player = static_cast<PlayerNetObject*>(GetOwner())->m_player;
+
+	if (anim != player->m_anim || play != player->m_animPlay || restart)
+	{
+		player->m_anim = anim;
+		player->m_animPlay = play;
+		SetDirty();
+	}
+}
+
+void PlayerAnim_NS::SetAttackDirection(int dx, int dy)
+{
+	Player * player = static_cast<PlayerNetObject*>(GetOwner())->m_player;
+
+	player->m_attackDirection[0] = dx;
+	player->m_attackDirection[1] = dy;
+	SetDirty();
+}
+
+void PlayerAnim_NS::SetPlay(bool play)
+{
+	Player * player = static_cast<PlayerNetObject*>(GetOwner())->m_player;
+
+	if (play != player->m_animPlay)
+	{
+		player->m_animPlay = play;
+		SetDirty();
 	}
 }
 
@@ -205,15 +275,17 @@ const char * SoundBag::getRandomSound()
 
 //
 
-void Player::handleAnimationAction(const std::string & action, const Dictionary & args)
+void PlayerNetObject::handleAnimationAction(const std::string & action, const Dictionary & args)
 {
-	Player * player = args.getPtrType<Player>("obj", 0);
-	if (player && player->m_isAuthorative)
+	PlayerNetObject * playerNetObject = args.getPtrType<PlayerNetObject>("obj", 0);
+	if (playerNetObject && playerNetObject->m_isAuthorative)
 	{
 		if (g_devMode)
 		{
 			log("action: %s", action.c_str());
 		}
+
+		Player * player = playerNetObject->m_player;
 
 		if (action == "gravity_enable")
 		{
@@ -251,13 +323,13 @@ void Player::handleAnimationAction(const std::string & action, const Dictionary 
 		{
 			std::string name = args.getString("name", "");
 
-			if (player->m_sounds.count(name.c_str()) == 0)
+			if (playerNetObject->m_sounds.count(name.c_str()) == 0)
 			{
-				if (player->m_props.contains(name.c_str()))
-					player->m_sounds[name].load(player->m_props.getString(name.c_str(), ""), true);
+				if (playerNetObject->m_props.contains(name.c_str()))
+					playerNetObject->m_sounds[name].load(playerNetObject->m_props.getString(name.c_str(), ""), true);
 			}
 
-			g_app->netPlaySound(player->makeCharacterFilename(player->m_sounds[name].getRandomSound()), args.getInt("volume", 100));
+			g_app->netPlaySound(player->makeCharacterFilename(playerNetObject->m_sounds[name].getRandomSound()), args.getInt("volume", 100));
 		}
 		else
 		{
@@ -284,12 +356,12 @@ void Player::getDamageHitbox(CollisionInfo & collision)
 
 void Player::getAttackCollision(CollisionInfo & collision)
 {
-	float x1 = m_attack.collision.x1 * m_pos.xFacing;
+	float x1 = m_attack.collision.x1 * m_facing[0];
 	float y1 = m_attack.collision.y1;
-	float x2 = m_attack.collision.x2 * m_pos.xFacing;
+	float x2 = m_attack.collision.x2 * m_facing[0];
 	float y2 = m_attack.collision.y2;
 
-	if (m_pos.yFacing < 0)
+	if (m_facing[1] < 0)
 	{
 		y1 = -PLAYER_COLLISION_HITBOX_SY - y1;
 		y2 = -PLAYER_COLLISION_HITBOX_SY - y2;
@@ -329,38 +401,27 @@ float Player::getAttackDamage(Player * other)
 
 bool Player::isAnimOverrideAllowed(int anim) const
 {
-	return !m_isAnimDriven || (s_animInfos[anim].prio > s_animInfos[m_anim.m_anim].prio);
+	return !m_isAnimDriven || (s_animInfos[anim].prio > s_animInfos[anim].prio);
 }
 
 float Player::mirrorX(float x) const
 {
-	return m_pos.xFacing > 0 ? x : -x;
+	return m_facing[0] > 0 ? x : -x;
 }
 
 float Player::mirrorY(float y) const
 {
-	return m_pos.yFacing > 0 ? y : PLAYER_COLLISION_HITBOX_SY - y;
+	return m_facing[1] > 0 ? y : PLAYER_COLLISION_HITBOX_SY - y;
 }
 
-Player::Player(uint32_t netId, uint16_t owningChannelId)
-	: m_pos(this)
+PlayerNetObject::PlayerNetObject(uint32_t netId, uint16_t owningChannelId, Player * player)
+	: m_player(player)
+	, m_pos(this)
 	, m_state(this)
 	, m_anim(this)
-	, m_weaponType(kPlayerWeapon_Fire)
-	, m_weaponAmmo(0)
 	, m_isAuthorative(false)
-	, m_blockMask(0)
-	, m_isGrounded(false)
-	, m_isAttachedToSticky(false)
-	, m_isAnimDriven(false)
-	, m_animVelIsAbsolute(false)
-	, m_animAllowGravity(true)
-	, m_animAllowSteering(true)
 	, m_sprite(0)
 	, m_spriteScale(1.f)
-	, m_isRespawn(false)
-	, m_isAirDashCharged(false)
-	, m_isWallSliding(false)
 	, m_lastSpawnIndex(-1)
 {
 	setNetId(netId);
@@ -371,10 +432,14 @@ Player::Player(uint32_t netId, uint16_t owningChannelId)
 		m_isAuthorative = true;
 	}
 
-	m_collision.x1 = -PLAYER_COLLISION_HITBOX_SX / 2.f;
-	m_collision.x2 = +PLAYER_COLLISION_HITBOX_SX / 2.f;
-	m_collision.y1 = -PLAYER_COLLISION_HITBOX_SY / 1.f;
-	m_collision.y2 = 0.f;
+	if (m_player == 0)
+		m_player = new Player();
+	m_player->m_netObject = this;
+
+	m_player->m_collision.x1 = -PLAYER_COLLISION_HITBOX_SX / 2.f;
+	m_player->m_collision.x2 = +PLAYER_COLLISION_HITBOX_SX / 2.f;
+	m_player->m_collision.y1 = -PLAYER_COLLISION_HITBOX_SY / 1.f;
+	m_player->m_collision.y2 = 0.f;
 
 	if (s_playerCharacterIndex != -1)
 	{
@@ -382,7 +447,7 @@ Player::Player(uint32_t netId, uint16_t owningChannelId)
 	}
 }
 
-Player::~Player()
+PlayerNetObject::~PlayerNetObject()
 {
 	delete m_sprite;
 	m_sprite = 0;
@@ -395,7 +460,7 @@ void Player::playSecondaryEffects(PlayerEvent e)
 	case kPlayerEvent_Spawn:
 		break;
 	case kPlayerEvent_Respawn:
-		g_app->netPlaySound(makeCharacterFilename(m_sounds["respawn"].getRandomSound()));
+		g_app->netPlaySound(makeCharacterFilename(m_netObject->m_sounds["respawn"].getRandomSound()));
 		break;
 	case kPlayerEvent_Die:
 		g_app->netPlaySound(makeCharacterFilename("die/die.ogg"));
@@ -405,7 +470,7 @@ void Player::playSecondaryEffects(PlayerEvent e)
 			Dictionary args;
 			args.setPtr("obj", this);
 			args.setString("name", "jump_sounds");
-			handleAnimationAction("char_soundbag", args);
+			m_netObject->handleAnimationAction("char_soundbag", args);
 			break;
 		}
 	case kPlayerEvent_WallJump:
@@ -440,6 +505,8 @@ void Player::playSecondaryEffects(PlayerEvent e)
 	}
 }
 
+// todo : move?
+
 void Player::tick(float dt)
 {
 	m_collision.x1 = -PLAYER_COLLISION_HITBOX_SX / 2.f;
@@ -451,7 +518,7 @@ void Player::tick(float dt)
 
 	if (m_isAnimDriven)
 	{
-		if (!m_anim.IsDirty() && !m_sprite->animIsActive)
+		if (!m_netObject->m_anim.IsDirty() && !m_netObject->m_sprite->animIsActive)
 		{
 			m_isAnimDriven = false;
 			m_animVel = Vec2();
@@ -459,7 +526,7 @@ void Player::tick(float dt)
 			m_animAllowGravity = true;
 			m_animAllowSteering = true;
 
-			switch (m_anim.m_anim)
+			switch (m_anim)
 			{
 			case kPlayerAnim_Attack:
 				m_attack.attacking = false;
@@ -472,12 +539,12 @@ void Player::tick(float dt)
 			case kPlayerAnim_Jump:
 				break;
 			case kPlayerAnim_Spawn:
-				m_state.isAlive = true;
-				m_state.SetDirty();
+				m_isAlive = true;
+				m_netObject->m_state.SetDirty();
 				break;
 			case kPlayerAnim_Die:
-				m_state.isAlive = false;
-				m_state.SetDirty();
+				m_isAlive = false;
+				m_netObject->m_state.SetDirty();
 				break;
 			}
 		}
@@ -485,12 +552,12 @@ void Player::tick(float dt)
 
 	//
 
-	if (!m_state.isAlive || m_input.wentDown(INPUT_BUTTON_START))
+	if (!m_isAlive || m_netObject->m_input.wentDown(INPUT_BUTTON_START))
 	{
 		respawn();
 	}
 
-	if (m_state.isAlive)
+	if (m_isAlive)
 	{
 		// see if we grabbed any pickup
 
@@ -520,7 +587,7 @@ void Player::tick(float dt)
 		const uint32_t currentBlockMask = getIntersectingBlocksMask(m_pos[0], m_pos[1]);
 		
 		const bool isInPassthough = (currentBlockMask & kBlockMask_Passthrough) != 0;
-		if (isInPassthough || m_input.isDown(INPUT_BUTTON_DOWN))
+		if (isInPassthough || m_netObject->m_input.isDown(INPUT_BUTTON_DOWN))
 			m_blockMask = ~kBlockMask_Passthrough;
 
 		const uint32_t currentBlockMaskFloor = getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f);
@@ -529,30 +596,30 @@ void Player::tick(float dt)
 		float surfaceFriction = 0.f;
 		Vec2 animVel(0.f, 0.f);
 
-		animVel[0] += m_animVel[0] * m_pos.xFacing;
-		animVel[1] += m_animVel[1] * m_pos.yFacing;
+		animVel[0] += m_animVel[0] * m_facing[0];
+		animVel[1] += m_animVel[1] * m_facing[1];
 
 		// attack
 
 		if (m_attack.attacking)
 		{
-			if (m_anim.m_anim == kPlayerAnim_Attack)
+			if (m_anim == kPlayerAnim_Attack)
 			{
 				const float attackVel = std::max<float>(m_attack.attackVel[0], m_attack.attackVel[1]);
-				animVel[0] += attackVel * m_anim.m_attackDx;
-				animVel[1] += attackVel * m_anim.m_attackDy;
+				animVel[0] += attackVel * m_attackDirection[0];
+				animVel[1] += attackVel * m_attackDirection[1];
 			}
 			else
 			{
-				animVel[0] += m_attack.attackVel[0] * m_pos.xFacing;
-				animVel[1] += m_attack.attackVel[1] * m_pos.yFacing;
+				animVel[0] += m_attack.attackVel[0] * m_facing[0];
+				animVel[1] += m_attack.attackVel[1] * m_facing[1];
 			}
 
 			// see if we hit anyone
 
 			for (auto i = g_host->m_players.begin(); i != g_host->m_players.end(); ++i)
 			{
-				Player * other = *i;
+				Player * other = (*i)->m_player;
 
 				if (other == this)
 					continue;
@@ -579,7 +646,7 @@ void Player::tick(float dt)
 					{
 						//log("-> attack damage");
 
-						other->handleDamage(1.f, Vec2(m_pos.xFacing * PLAYER_SWORD_PUSH_SPEED, 0.f), this);
+						other->handleDamage(1.f, Vec2(m_facing[0] * PLAYER_SWORD_PUSH_SPEED, 0.f), this);
 					}
 				}
 			}
@@ -600,7 +667,7 @@ void Player::tick(float dt)
 		}
 		else
 		{
-			if (m_input.wentDown(INPUT_BUTTON_B) && (m_weaponAmmo > 0 || s_unlimitedAmmo) && isAnimOverrideAllowed(kPlayerWeapon_Fire))
+			if (m_netObject->m_input.wentDown(INPUT_BUTTON_B) && (m_weaponAmmo > 0 || s_unlimitedAmmo) && isAnimOverrideAllowed(kPlayerWeapon_Fire))
 			{
 				m_attack = AttackInfo();
 
@@ -620,7 +687,7 @@ void Player::tick(float dt)
 
 				if (anim != -1)
 				{
-					m_anim.SetAnim(anim, true, true);
+					m_netObject->m_anim.SetAnim(anim, true, true);
 					m_isAnimDriven = true;
 
 					m_attack.attacking = true;
@@ -632,11 +699,11 @@ void Player::tick(float dt)
 
 				int angle;
 
-				if (m_input.isDown(INPUT_BUTTON_UP))
+				if (m_netObject->m_input.isDown(INPUT_BUTTON_UP))
 					angle = 256*1/4;
-				else if (m_input.isDown(INPUT_BUTTON_DOWN))
+				else if (m_netObject->m_input.isDown(INPUT_BUTTON_DOWN))
 					angle = 256*3/4;
-				else if (m_pos.xFacing < 0)
+				else if (m_facing[0] < 0)
 					angle = 128;
 				else
 					angle = 0;
@@ -647,32 +714,32 @@ void Player::tick(float dt)
 					m_pos[1] - mirrorY(44.f),
 					angle,
 					bulletType,
-					getNetId());
+					m_netObject->getNetId());
 			}
 
-			if (m_input.wentDown(INPUT_BUTTON_X) && isAnimOverrideAllowed(kPlayerAnim_Attack))
+			if (m_netObject->m_input.wentDown(INPUT_BUTTON_X) && isAnimOverrideAllowed(kPlayerAnim_Attack))
 			{
 				m_attack = AttackInfo();
 				m_attack.attacking = true;
 
-				m_anim.SetAnim(kPlayerAnim_Attack, true, true);
+				m_netObject->m_anim.SetAnim(kPlayerAnim_Attack, true, true);
 				m_isAnimDriven = true;
 
 				// determine attack direction based on player input
 
-				if (m_input.isDown(INPUT_BUTTON_UP))
-					m_anim.SetAttackDirection(0, -1);
-				else if (m_input.isDown(INPUT_BUTTON_DOWN))
-					m_anim.SetAttackDirection(0, +1);
+				if (m_netObject->m_input.isDown(INPUT_BUTTON_UP))
+					m_netObject->m_anim.SetAttackDirection(0, -1);
+				else if (m_netObject->m_input.isDown(INPUT_BUTTON_DOWN))
+					m_netObject->m_anim.SetAttackDirection(0, +1);
 				else
-					m_anim.SetAttackDirection(m_pos.xFacing, 0);
+					m_netObject->m_anim.SetAttackDirection(m_facing[0], 0);
 
 				// determine attack collision. basically just 3 directions: forward, up and down
 
 				m_attack.collision.x1 = 0.f;
-				m_attack.collision.x2 = (m_anim.m_attackDx == 0) ? 0.f : 50.f; // fordward?
+				m_attack.collision.x2 = (m_attackDirection[0] == 0) ? 0.f : 50.f; // fordward?
 				m_attack.collision.y1 = -PLAYER_COLLISION_HITBOX_SY/3.f*2;
-				m_attack.collision.y2 = -PLAYER_COLLISION_HITBOX_SY/3.f*2 + m_anim.m_attackDy * 50.f; // up or down
+				m_attack.collision.y2 = -PLAYER_COLLISION_HITBOX_SY/3.f*2 + m_attackDirection[1] * 50.f; // up or down
 
 				// make sure the attack collision doesn't have a zero sized area
 
@@ -691,15 +758,15 @@ void Player::tick(float dt)
 			}
 		}
 
-		if (m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && m_input.wentDown(INPUT_BUTTON_A))
+		if (m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && m_netObject->m_input.wentDown(INPUT_BUTTON_A))
 		{
 			if (isAnimOverrideAllowed(kPlayerAnim_AirDash))
 			{
-				if ((getIntersectingBlocksMask(m_pos[0] + m_pos.xFacing, m_pos[1]) & kBlockMask_Solid) == 0)
+				if ((getIntersectingBlocksMask(m_pos[0] + m_facing[0], m_pos[1]) & kBlockMask_Solid) == 0)
 				{
 					m_isAirDashCharged = false;
 
-					m_anim.SetAnim(kPlayerAnim_AirDash, true, true);
+					m_netObject->m_anim.SetAnim(kPlayerAnim_AirDash, true, true);
 					m_isAnimDriven = true;
 				}
 			}
@@ -711,7 +778,7 @@ void Player::tick(float dt)
 		{
 			if (isAnimOverrideAllowed(kPlayerAnim_Die))
 			{
-				m_anim.SetAnim(kPlayerAnim_Die, true, true);
+				m_netObject->m_anim.SetAnim(kPlayerAnim_Die, true, true);
 				m_isAnimDriven = true;
 
 				awardScore(-1);
@@ -766,7 +833,7 @@ void Player::tick(float dt)
 
 		if (currentBlockMaskCeil & (1 << kBlockType_Sticky))
 		{
-			if (playerControl && m_input.wentDown(INPUT_BUTTON_A))
+			if (playerControl && m_netObject->m_input.wentDown(INPUT_BUTTON_A))
 			{
 				m_vel[1] = PLAYER_JUMP_SPEED / 2.f;
 
@@ -774,7 +841,7 @@ void Player::tick(float dt)
 
 				playSecondaryEffects(kPlayerEvent_StickyJump);
 			}
-			else if (playerControl && m_input.wentDown(INPUT_BUTTON_DOWN))
+			else if (playerControl && m_netObject->m_input.wentDown(INPUT_BUTTON_DOWN))
 			{
 				m_isAttachedToSticky = false;
 
@@ -805,9 +872,9 @@ void Player::tick(float dt)
 		{
 			int numSteeringFrame = 1;
 
-			if (m_input.isDown(INPUT_BUTTON_LEFT))
+			if (m_netObject->m_input.isDown(INPUT_BUTTON_LEFT))
 				steeringSpeed -= 1.f;
-			if (m_input.isDown(INPUT_BUTTON_RIGHT))
+			if (m_netObject->m_input.isDown(INPUT_BUTTON_RIGHT))
 				steeringSpeed += 1.f;
 
 			if (m_isGrounded || m_isAttachedToSticky)
@@ -815,9 +882,9 @@ void Player::tick(float dt)
 				if (isAnimOverrideAllowed(kPlayerAnim_Walk))
 				{
 					if (steeringSpeed != 0.f)
-						m_anim.SetAnim(kPlayerAnim_Walk, true, false);
+						m_netObject->m_anim.SetAnim(kPlayerAnim_Walk, true, false);
 					else
-						m_anim.SetAnim(kPlayerAnim_Walk, false, false);
+						m_netObject->m_anim.SetAnim(kPlayerAnim_Walk, false, false);
 				}
 			}
 
@@ -885,14 +952,14 @@ void Player::tick(float dt)
 			if (!m_isGrounded &&
 				!m_isAttachedToSticky &&
 				isAnimOverrideAllowed(kPlayerAnim_WallSlide) &&
-				m_vel[0] != 0.f && Calc::Sign(m_pos.xFacing) == Calc::Sign(m_vel[0]) &&
+				m_vel[0] != 0.f && Calc::Sign(m_facing[0]) == Calc::Sign(m_vel[0]) &&
 				//Calc::Sign(m_vel[1]) == Calc::Sign(gravity) &&
 				(Calc::Sign(m_vel[1]) == Calc::Sign(gravity) || Calc::Abs(m_vel[1]) <= PLAYER_JUMP_SPEED / 2.f) &&
-				(getIntersectingBlocksMask(m_pos[0] + m_pos.xFacing, m_pos[1]) & kBlockMask_Solid) != 0)
+				(getIntersectingBlocksMask(m_pos[0] + m_facing[0], m_pos[1]) & kBlockMask_Solid) != 0)
 			{
 				m_isWallSliding = true;
 
-				m_anim.SetAnim(kPlayerAnim_WallSlide, true, false);
+				m_netObject->m_anim.SetAnim(kPlayerAnim_WallSlide, true, false);
 
 				if (m_vel[1] > PLAYER_WALLSLIDE_SPEED && Calc::Sign(m_vel[1]) == Calc::Sign(gravity))
 					m_vel[1] = PLAYER_WALLSLIDE_SPEED;
@@ -929,7 +996,7 @@ void Player::tick(float dt)
 			{
 				// update passthrough mode
 				m_blockMask = ~0;
-				if ((getIntersectingBlocksMask(m_pos[0], m_pos[1]) & kBlockMask_Passthrough) || m_input.isDown(INPUT_BUTTON_DOWN))
+				if ((getIntersectingBlocksMask(m_pos[0], m_pos[1]) & kBlockMask_Passthrough) || m_netObject->m_input.isDown(INPUT_BUTTON_DOWN))
 					m_blockMask = ~kBlockMask_Passthrough;
 			}
 
@@ -937,7 +1004,7 @@ void Player::tick(float dt)
 			{
 				const float delta = (std::abs(totalDelta) < 1.f) ? totalDelta : deltaSign;
 
-				Vec2 newPos(m_pos.x, m_pos.y);
+				Vec2 newPos = m_pos;
 
 				newPos[i] += delta;
 
@@ -991,7 +1058,7 @@ void Player::tick(float dt)
 					{
 						// colliding with solid object left/right of player
 
-						if (!m_isGrounded && playerControl && m_input.wentDown(INPUT_BUTTON_A))
+						if (!m_isGrounded && playerControl && m_netObject->m_input.wentDown(INPUT_BUTTON_A))
 						{
 							// wall jump
 
@@ -1004,9 +1071,9 @@ void Player::tick(float dt)
 						{
 							m_vel[0] = 0.f;
 
-							if (m_isAnimDriven && m_anim.m_anim == kPlayerAnim_AirDash)
+							if (m_isAnimDriven && m_anim == kPlayerAnim_AirDash)
 							{
-								m_sprite->stopAnim();
+								m_netObject->m_sprite->stopAnim();
 							}
 						}
 					}
@@ -1022,7 +1089,7 @@ void Player::tick(float dt)
 
 						if (delta >= 0.f)
 						{
-							if (playerControl && m_input.wentDown(INPUT_BUTTON_A))
+							if (playerControl && m_netObject->m_input.wentDown(INPUT_BUTTON_A))
 							{
 								// jumping
 
@@ -1052,14 +1119,14 @@ void Player::tick(float dt)
 								m_jump.cancelStarted = true;
 								m_jump.cancelled = false;
 								m_jump.cancelX = m_pos[0];
-								m_jump.cancelFacing = m_pos.xFacing;
+								m_jump.cancelFacing = m_facing[0];
 							}
 							else
 							{
 								m_jump.cancelled =
 									m_jump.cancelled ||
 									std::abs(m_jump.cancelX - m_pos[0]) > PLAYER_JUMP_GRACE_PIXELS ||
-									m_pos.xFacing != m_jump.cancelFacing;
+									m_facing[0] != m_jump.cancelFacing;
 
 								if (m_jump.cancelled)
 								{
@@ -1114,7 +1181,7 @@ void Player::tick(float dt)
 
 		if (!m_isGrounded && !m_isAttachedToSticky && !m_isWallSliding && isAnimOverrideAllowed(kPlayerAnim_Jump))
 		{
-			m_anim.SetAnim(kPlayerAnim_Jump, true, false);
+			m_netObject->m_anim.SetAnim(kPlayerAnim_Jump, true, false);
 		}
 
 	#if !WRAP_AROUND_TOP_AND_BOTTOM
@@ -1135,8 +1202,8 @@ void Player::tick(float dt)
 		// facing
 
 		if (playerControl && steeringSpeed != 0.f)
-			m_pos.xFacing = steeringSpeed < 0.f ? -1 : +1;
-		m_pos.yFacing = m_isAttachedToSticky ? -1 : +1;
+			m_facing[0] = steeringSpeed < 0.f ? -1 : +1;
+		m_facing[1] = m_isAttachedToSticky ? -1 : +1;
 
 		// wrapping
 
@@ -1166,32 +1233,32 @@ void Player::tick(float dt)
 	#endif
 	}
 
-	m_input.next();
+	m_netObject->m_input.next();
 
 	//printf("x: %g\n", m_pos[0]);
 
-	m_pos.SetDirty();
+	m_netObject->m_pos.SetDirty();
 }
 
 void Player::draw()
 {
-	if (!hasValidCharacterIndex())
+	if (!m_netObject->hasValidCharacterIndex())
 		return;
 
-	m_sprite->flipX = m_pos.xFacing < 0 ? true : false;
-	m_sprite->flipY = m_pos.yFacing < 0 ? true : false;
+	m_netObject->m_sprite->flipX = m_facing[0] < 0 ? true : false;
+	m_netObject->m_sprite->flipY = m_facing[1] < 0 ? true : false;
 
-	drawAt(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0));
+	drawAt(m_pos[0], m_pos[1] - (m_netObject->m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0));
 
 	// render additional sprites for wrap around
-	drawAt(m_pos.x + ARENA_SX_PIXELS, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0));
-	drawAt(m_pos.x - ARENA_SX_PIXELS, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0));
-	drawAt(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0) + ARENA_SY_PIXELS);
-	drawAt(m_pos.x, m_pos.y - (m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0) - ARENA_SY_PIXELS);
+	drawAt(m_pos[0] + ARENA_SX_PIXELS, m_pos[1] - (m_netObject->m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0));
+	drawAt(m_pos[0] - ARENA_SX_PIXELS, m_pos[1] - (m_netObject->m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0));
+	drawAt(m_pos[0], m_pos[1] - (m_netObject->m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0) + ARENA_SY_PIXELS);
+	drawAt(m_pos[0], m_pos[1] - (m_netObject->m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0) - ARENA_SY_PIXELS);
 
 	// draw player color
 
-	const int playerId = m_state.playerId;
+	const int playerId = m_netObject->m_state.playerId;
 	const int alpha = 127;
 
 	if (playerId >= 0 && playerId < 4)
@@ -1221,15 +1288,15 @@ void Player::draw()
 	// draw score
 	setFont("calibri.ttf");
 	setColor(255, 255, 255);
-	drawText(m_pos[0], m_pos[1] - 110, 20, 0.f, +1.f, "%d", m_state.score);
+	drawText(m_pos[0], m_pos[1] - 110, 20, 0.f, +1.f, "%d", m_score);
 }
 
 void Player::drawAt(int x, int y)
 {
 	setColor(colorWhite);
-	m_sprite->drawEx(x, y, 0.f, m_spriteScale);
+	m_netObject->m_sprite->drawEx(x, y, 0.f, m_netObject->m_spriteScale);
 
-	if (m_anim.m_anim == kPlayerAnim_Attack)
+	if (m_anim == kPlayerAnim_Attack)
 	{
 		CollisionInfo collisionInfo;
 		getAttackCollision(collisionInfo);
@@ -1244,10 +1311,10 @@ void Player::debugDraw()
 {
 	setColor(0, 31, 63, 63);
 	drawRect(
-		m_pos.x + m_collision.x1,
-		m_pos.y + m_collision.y1,
-		m_pos.x + m_collision.x2 + 1,
-		m_pos.y + m_collision.y2 + 1);
+		m_pos[0] + m_collision.x1,
+		m_pos[1] + m_collision.y1,
+		m_pos[0] + m_collision.x2 + 1,
+		m_pos[1] + m_collision.y2 + 1);
 
 	CollisionInfo damageCollision;
 	getDamageHitbox(damageCollision);
@@ -1258,7 +1325,7 @@ void Player::debugDraw()
 		damageCollision.x2 + 1,
 		damageCollision.y2 + 1);
 
-	if (m_isAuthorative)
+	if (m_netObject->m_isAuthorative)
 	{
 		if (m_attack.attacking && m_attack.hasCollision)
 		{
@@ -1333,19 +1400,19 @@ uint32_t Player::getIntersectingBlocksMask(int x, int y) const
 
 void Player::handleNewGame()
 {
-	m_state.score = 0;
-	m_state.totalScore = 0;
-	m_state.SetDirty();
+	m_score = 0;
+	m_totalScore = 0;
+	m_netObject->m_state.SetDirty();
 }
 
 void Player::handleNewRound()
 {
-	if (m_state.score > 0)
-		m_state.totalScore += m_state.score;
-	m_state.score = 0;
-	m_state.SetDirty();
+	if (m_score > 0)
+		m_totalScore += m_score;
+	m_score = 0;
+	m_netObject->m_state.SetDirty();
 
-	m_lastSpawnIndex = -1;
+	m_netObject->m_lastSpawnIndex = -1;
 	m_isRespawn = false;
 
 	m_weaponAmmo = 0;
@@ -1353,12 +1420,12 @@ void Player::handleNewRound()
 
 void Player::respawn()
 {
-	if (!hasValidCharacterIndex())
+	if (!m_netObject->hasValidCharacterIndex())
 		return;
 
 	int x, y;
 
-	if (g_hostArena->getRandomSpawnPoint(x, y, m_lastSpawnIndex))
+	if (g_hostArena->getRandomSpawnPoint(x, y, m_netObject->m_lastSpawnIndex))
 	{
 		m_pos[0] = (float)x;
 		m_pos[1] = (float)y;
@@ -1366,10 +1433,10 @@ void Player::respawn()
 		m_vel[0] = 0.f;
 		m_vel[1] = 0.f;
 
-		m_state.isAlive = true;
-		m_state.SetDirty();
+		m_isAlive = true;
+		m_netObject->m_state.SetDirty();
 
-		m_anim.SetAnim(kPlayerAnim_Walk, false, true);
+		m_netObject->m_anim.SetAnim(kPlayerAnim_Walk, false, true);
 
 		m_weaponAmmo = 0;
 
@@ -1396,7 +1463,7 @@ void Player::respawn()
 
 void Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 {
-	if (m_state.isAlive)
+	if (m_isAlive)
 	{
 		if (isAnimOverrideAllowed(kPlayerAnim_Die))
 		{
@@ -1408,7 +1475,7 @@ void Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 					m_vel[i] += velDelta[i];
 			}
 
-			m_anim.SetAnim(kPlayerAnim_Die, true, true);
+			m_netObject->m_anim.SetAnim(kPlayerAnim_Die, true, true);
 			m_isAnimDriven = true;
 
 			if (attacker)
@@ -1426,34 +1493,54 @@ void Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 
 void Player::awardScore(int score)
 {
-	m_state.score += score;
-	m_state.SetDirty();
+	m_score += score;
+	m_netObject->m_state.SetDirty();
 }
 
-void Player::setPlayerId(int id)
+int PlayerNetObject::getScore() const
+{
+	return m_player->m_score;
+}
+
+int PlayerNetObject::getTotalScore() const
+{
+	return m_player->m_totalScore;
+}
+
+void PlayerNetObject::setPlayerId(int id)
 {
 	m_state.playerId = id;
 	m_state.SetDirty();
 }
 
-void Player::setCharacterIndex(int index)
+int PlayerNetObject::getCharacterIndex() const
 {
-	m_state.characterIndex = index;
+	return m_player->m_characterIndex;
+}
+
+void PlayerNetObject::setCharacterIndex(int index)
+{
+	m_player->m_characterIndex = index;
 	m_state.SetDirty();
 
 	handleCharacterIndexChange();
 }
 
-void Player::handleCharacterIndexChange()
+bool PlayerNetObject::hasValidCharacterIndex() const
+{
+	return m_player->m_characterIndex != (uint8_t)-1;
+}
+
+void PlayerNetObject::handleCharacterIndexChange()
 {
 	if (hasValidCharacterIndex())
 	{
 		// reload character properties
 
-		m_props.load(makeCharacterFilename("props.txt"));
+		m_props.load(m_player->makeCharacterFilename("props.txt"));
 
 		delete m_sprite;
-		m_sprite = new Sprite(makeCharacterFilename("walk/walk.png"));
+		m_sprite = new Sprite(m_player->makeCharacterFilename("walk/walk.png"));
 
 		m_spriteScale = m_props.getFloat("sprite_scale", 1.f);
 
@@ -1464,6 +1551,6 @@ void Player::handleCharacterIndexChange()
 char * Player::makeCharacterFilename(const char * filename)
 {
 	static char temp[64];
-	sprintf_s(temp, sizeof(temp), "char%d/%s", m_state.characterIndex, filename);
+	sprintf_s(temp, sizeof(temp), "char%d/%s", m_characterIndex, filename);
 	return temp;
 }

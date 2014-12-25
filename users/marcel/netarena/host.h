@@ -1,39 +1,26 @@
 #pragma once
 
 #include <vector>
+#include "gamesim.h"
 
 class Arena;
 class BulletPool;
 class NetSpriteManager;
-class Player;
-
-struct Pickup
-{
-	PickupType type;
-	int blockX;
-	int blockY;
-	int x1;
-	int y1;
-	int x2;
-	int y2;
-	uint16_t spriteId;
-};
+struct Player;
+class PlayerNetObject;
 
 class Host
 {
 	friend class BulletPool;
-	friend class Player; // fixme, for m_players array
+	friend struct Player; // fixme, for m_players array
 
-	Arena * m_arena;
-	std::vector<Player*> m_players;
+	GameSim m_gameSim;
+
+	std::vector<PlayerNetObject*> m_players;
 	uint32_t m_nextNetId;
 	std::vector<int> m_freePlayerIds;
 
 	int m_nextRoundNumber;
-
-	std::vector<Pickup> m_pickups;
-	Pickup m_grabbedPickup;
-	uint64_t m_nextPickupSpawnTime;
 
 	BulletPool * m_bulletPool;
 
@@ -62,11 +49,14 @@ public:
 	void newRound(const char * mapOverride);
 	void endRound();
 
-	void addPlayer(Player * player);
-	void removePlayer(Player * player);
-	Player * findPlayerByNetId(uint32_t netId);
+	void addPlayer(PlayerNetObject * player);
+	void removePlayer(PlayerNetObject * player);
+	PlayerNetObject * findPlayerByNetId(uint32_t netId);
+	void setPlayerPtrs();
+	void clearPlayerPtrs();
 
-	void spawnPickup(PickupType type, int blockX, int blockY);
+	void trySpawnPickup(PickupType type);
+	void spawnPickup(Pickup & pickup, PickupType type, int blockX, int blockY);
 	Pickup * grabPickup(int x1, int y1, int x2, int y2);
 };
 
