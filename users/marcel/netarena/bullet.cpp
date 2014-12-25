@@ -157,6 +157,14 @@ void BulletPool::tick(float _dt)
 
 						if (blockMask & kBlockMask_Solid)
 						{
+							if (b.type == kBulletType_Grenade && b.doGravity && b.vel[1] >= 0.f && b.vel.CalcSizeSq() < 50.f*50.f)
+							{
+								b.vel = Vec2(0.f, 0.f);
+								b.doGravity = false;
+								b.life = BULLET_GRENADE_NADE_LIFE_AFTER_SETTLE;
+							}
+
+							b.vel[0] *= +b.bounceAmount;
 							b.vel[1] *= -b.bounceAmount;
 							b.pos[1] = oldPos[1];
 
@@ -166,11 +174,13 @@ void BulletPool::tick(float _dt)
 						}
 					}
 
+				#if 0
 					if (b.bounceCount >= BULLET_GRENADE_NADE_BOUNCE_COUNT)
 					{
 						b.vel = Vec2(0.f, 0.f);
 						b.doGravity = false;
 					}
+				#endif
 
 					// teleport
 
@@ -341,7 +351,7 @@ void BulletPool::anim(Bullet & b, float dt)
 
 	if (b.doGravity)
 	{
-		b.vel[1] += GRAVITY * dt;
+		b.vel[1] += GRAVITY * (b.gravityModifier == 0.f ? 1.f : b.gravityModifier) * dt;
 	}
 
 	Vec2 delta = b.vel * dt;

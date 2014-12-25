@@ -239,6 +239,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 				velocity = BULLET_GRENADE_NADE_SPEED;
 				b.maxWrapCount = 100;
 				b.doGravity = true;
+				//b.gravityModifier = 0.75f;
 				b.doBounce = true;
 				b.bounceAmount = BULLET_GRENADE_NADE_BOUNCE_AMOUNT;
 				b.noDamage = true;

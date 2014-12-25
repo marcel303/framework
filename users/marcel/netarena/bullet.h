@@ -50,6 +50,8 @@ public:
 	float bounceAmount;
 	int bounceCount;
 
+	float gravityModifier;
+
 	float life;
 
 	uint32_t ownerNetId;
