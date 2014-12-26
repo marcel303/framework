@@ -38,6 +38,7 @@ todo:
 + manual spawn (5 seconds?)
 + taunt button
 + shotgun ammo x3
++ add attack vel to player vel
 
 + attack cancel
 + bullet teleport
@@ -48,7 +49,7 @@ todo:
 + jump velocity reset na 10 pixels of richting change
 - ammo despawn na x seconds + indicator
 
-- attack cooldown
++ attack cooldown
 
 - camera shakes
 
@@ -333,6 +334,13 @@ void PlayerNetObject::handleAnimationAction(const std::string & action, const Di
 			player->m_attack.attackVel[0] = args.getFloat("x", player->m_attack.attackVel[0]);
 			player->m_attack.attackVel[1] = args.getFloat("y", player->m_attack.attackVel[1]);
 		}
+		else if (action == "commit_attack_vel")
+		{
+			player->m_vel[0] += player->m_attack.attackVel[0] * player->m_attackDirection[0];
+			player->m_vel[1] += player->m_attack.attackVel[1] * player->m_attackDirection[1];
+			player->m_attack.attackVel[0] = 0.f;
+			player->m_attack.attackVel[1] = 0.f;
+		}	
 		else if (action == "sound")
 		{
 			g_app->netPlaySound(args.getString("file", "").c_str(), args.getInt("volume", 100));
@@ -611,7 +619,7 @@ void Player::tick(float dt)
 			switch (pickup->type)
 			{
 			case kPickupType_Ammo:
-				m_weaponAmmo = 3;
+				m_weaponAmmo = PICKUP_AMMO_COUNT;
 				m_weaponType = kPlayerWeapon_Fire;
 				break;
 			case kPickupType_Nade:
@@ -644,9 +652,8 @@ void Player::tick(float dt)
 		{
 			if (m_anim == kPlayerAnim_Attack || m_anim == kPlayerAnim_AttackUp || m_anim == kPlayerAnim_AttackDown)
 			{
-				const float attackVel = std::max<float>(m_attack.attackVel[0], m_attack.attackVel[1]);
-				animVel[0] += attackVel * m_attackDirection[0];
-				animVel[1] += attackVel * m_attackDirection[1];
+				animVel[0] += m_attack.attackVel[0] * m_attackDirection[0];
+				animVel[1] += m_attack.attackVel[1] * m_attackDirection[1];
 			}
 			else
 			{
