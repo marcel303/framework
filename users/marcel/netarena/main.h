@@ -9,6 +9,7 @@
 #include "ReplicationHandler.h"
 
 OPTION_EXTERN(bool, g_devMode);
+OPTION_EXTERN(bool, g_clientSim);
 
 class Client;
 class Host;
@@ -95,6 +96,7 @@ public:
 
 	void netSyncGameSim(Channel * channel);
 	void netPlaySound(const char * filename, uint8_t volume = 100);
+	void netScreenShake(float dx, float dy, float stiffness, float life);
 	void netSetPlayerInputs(uint16_t channelId, uint32_t netId, const PlayerInput & input);
 	void netBroadcastPlayerInputs();
 	void netSetPlayerCharacterIndex(uint16_t channelId, uint32_t netId, uint8_t characterIndex);

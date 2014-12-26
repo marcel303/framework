@@ -122,6 +122,7 @@ enum RpcMethod
 {
 	s_rpcSyncGameSim,
 	s_rpcPlaySound,
+	s_rpcScreenShake,
 	s_rpcSetPlayerInputs,
 	s_rpcBroadcastPlayerInputs,
 	s_rpcSetPlayerCharacterIndex,
@@ -160,6 +161,28 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			{
 				Sound(filename.c_str()).play(volume);
 			}
+		}
+	}
+	else if (method == s_rpcScreenShake)
+	{
+		Client * client = g_app->findClientByChannel(channel);
+		Assert(client);
+		if (client)
+		{
+			float dx;
+			float dy;
+			float stiffness;
+			float life;
+
+			bitStream.Read(dx);
+			bitStream.Read(dy);
+			bitStream.Read(stiffness);
+			bitStream.Read(life);
+
+			client->m_gameSim->addScreenShake(
+				Vec2(dx, dy),
+				stiffness,
+				life);
 		}
 	}
 	else if (method == s_rpcSetPlayerInputs)
@@ -740,6 +763,7 @@ bool App::init(bool isHost)
 
 		m_rpcMgr->RegisterWithID(s_rpcSyncGameSim, handleRpc);
 		m_rpcMgr->RegisterWithID(s_rpcPlaySound, handleRpc);
+		m_rpcMgr->RegisterWithID(s_rpcScreenShake, handleRpc);
 		m_rpcMgr->RegisterWithID(s_rpcSetPlayerInputs, handleRpc);
 		m_rpcMgr->RegisterWithID(s_rpcBroadcastPlayerInputs, handleRpc);
 		m_rpcMgr->RegisterWithID(s_rpcSetPlayerCharacterIndex, handleRpc);
@@ -841,6 +865,7 @@ void App::shutdown()
 
 	m_rpcMgr->Unregister(s_rpcSyncGameSim, handleRpc);
 	m_rpcMgr->Unregister(s_rpcPlaySound, handleRpc);
+	m_rpcMgr->Unregister(s_rpcScreenShake, handleRpc);
 	m_rpcMgr->Unregister(s_rpcSetPlayerInputs, handleRpc);
 	m_rpcMgr->Unregister(s_rpcBroadcastPlayerInputs, handleRpc);
 	m_rpcMgr->Unregister(s_rpcSetPlayerCharacterIndex, handleRpc);
@@ -1275,6 +1300,18 @@ void App::netPlaySound(const char * filename, uint8_t volume)
 	bs.Write(volume);
 
 	m_rpcMgr->Call(s_rpcPlaySound, bs, ChannelPool_Server, 0, true, false);
+}
+
+void App::netScreenShake(float dx, float dy, float stiffness, float life)
+{
+	BitStream bs;
+
+	bs.Write(dx);
+	bs.Write(dy);
+	bs.Write(stiffness);
+	bs.Write(life);
+
+	m_rpcMgr->Call(s_rpcScreenShake, bs, ChannelPool_Server, 0, true, false);
 }
 
 void App::netSetPlayerInputs(uint16_t channelId, uint32_t netId, const PlayerInput & input)

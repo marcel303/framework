@@ -1,6 +1,7 @@
 #include "arena.h"
 #include "bullet.h"
 #include "Calc.h"
+#include "client.h"
 #include "framework.h"
 #include "host.h"
 #include "main.h"
@@ -1194,6 +1195,13 @@ void Player::tick(float dt)
 							}
 							else
 							{
+								float strength = (m_vel[i] - PLAYER_JUMP_SPEED) / 25.f;
+
+								if (strength > 6.f)
+									strength = 6.f;
+								if (strength > 0.f)
+									g_app->netScreenShake(0.f, strength, 3000.f, .3f);
+
 								m_vel[i] = 0.f;
 							}
 						}

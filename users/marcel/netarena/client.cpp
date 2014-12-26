@@ -157,6 +157,13 @@ void Client::tick(float dt)
 		}
 	}
 
+	if (g_clientSim)
+	{
+		m_gameSim->tick();
+	}
+
+	m_gameSim->anim(dt);
+
 	m_bulletPool->anim(dt);
 
 	m_particlePool->tick(dt);
@@ -229,6 +236,10 @@ void Client::draw()
 
 void Client::drawPlay()
 {
+	const Vec2 shake = m_gameSim->getScreenShake();
+	gxPushMatrix();
+	gxTranslatef(shake[0], shake[1], 0.f);
+
 #if 0
 	m_gameSim->m_arena.drawBlocks();
 
@@ -256,6 +267,8 @@ void Client::drawPlay()
 	m_particlePool->draw();
 
 	m_bulletPool->draw();
+
+	gxPopMatrix();
 }
 
 void Client::drawRoundComplete()

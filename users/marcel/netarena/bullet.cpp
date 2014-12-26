@@ -304,6 +304,8 @@ void BulletPool::tick(float _dt)
 						}
 
 						g_app->netPlaySound("grenade-explode.ogg");
+
+						g_app->netScreenShake(Calc::Random(-40.f, +40.f), Calc::Random(-20.f, +20.f), 2500.f, .3f);
 					}
 
 					if (!m_localOnly)

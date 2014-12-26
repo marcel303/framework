@@ -9,6 +9,7 @@
 //#define MAX_BULLETS 1000
 //#define MAX_PARTICLES 1000
 #define MAX_PICKUPS 10
+#define MAX_SCREEN_SHAKES 4
 
 #include <string.h> // todo : cpp
 
@@ -161,6 +162,27 @@ struct Player
 	Vec2 m_animVel;
 };
 
+struct ScreenShake
+{
+	bool isActive;
+	Vec2 pos;
+	Vec2 vel;
+	float stiffness;
+	float life;
+
+	void tick(float dt)
+	{
+		Vec2 force = pos * (-stiffness);
+		vel += force * dt;
+		pos += vel * dt;
+
+		life -= dt;
+
+		if (life <= 0.f)
+			isActive = false;
+	}
+};
+
 class GameSim
 {
 public:
@@ -190,6 +212,8 @@ public:
 
 	PlayerNetObject * m_players[MAX_PLAYERS];
 
+	ScreenShake m_screenShakes[MAX_SCREEN_SHAKES];
+
 	GameSim()
 		: m_arenaNetObject()
 		, m_state()
@@ -204,8 +228,12 @@ public:
 	void serialize(NetSerializationContext & context);
 
 	void tick();
+	void anim(float dt);
 
 	void trySpawnPickup(PickupType type);
 	void spawnPickup(Pickup & pickup, PickupType type, int blockX, int blockY);
 	Pickup * grabPickup(int x1, int y1, int x2, int y2);
+
+	void addScreenShake(Vec2 delta, float stiffness, float life);
+	Vec2 getScreenShake() const;
 };

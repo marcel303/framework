@@ -67,6 +67,8 @@ void GameSim::tick()
 {
 	const uint32_t tick = m_state.GetTick();
 
+	// pickup spawning
+
 	if (tick >= m_state.m_nextPickupSpawnTick)
 	{
 		int weights[kPickupType_COUNT] =
@@ -97,6 +99,18 @@ void GameSim::tick()
 	}
 
 	m_state.m_tick++;
+}
+
+void GameSim::anim(float dt)
+{
+	// screen shakes
+
+	for (int i = 0; i < MAX_SCREEN_SHAKES; ++i)
+	{
+		ScreenShake & shake = m_screenShakes[i];
+		if (shake.isActive)
+			shake.tick(dt);
+	}
 }
 
 void GameSim::trySpawnPickup(PickupType type)
@@ -175,4 +189,37 @@ Pickup * GameSim::grabPickup(int x1, int y1, int x2, int y2)
 	}
 
 	return 0;
+}
+
+void GameSim::addScreenShake(Vec2 delta, float stiffness, float life)
+{
+	for (int i = 0; i < MAX_SCREEN_SHAKES; ++i)
+	{
+		ScreenShake & shake = m_screenShakes[i];
+		if (!shake.isActive)
+		{
+			shake.isActive = true;
+			shake.life = life;
+			shake.stiffness = stiffness;
+
+			shake.pos = delta;
+			shake.vel.Set(0.f, 0.f);
+
+			return;
+		}
+	}
+}
+
+Vec2 GameSim::getScreenShake() const
+{
+	Vec2 result;
+
+	for (int i = 0; i < MAX_SCREEN_SHAKES; ++i)
+	{
+		const ScreenShake & shake = m_screenShakes[i];
+		if (shake.isActive)
+			result += shake.pos;
+	}
+
+	return result;
 }
