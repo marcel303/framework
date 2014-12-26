@@ -20,12 +20,17 @@ OPTION_DEFINE(int, PLAYER_SWORD_COLLISION_X1, "Player/Attacks/Sword/Collision X1
 OPTION_DEFINE(int, PLAYER_SWORD_COLLISION_Y1, "Player/Attacks/Sword/Collision Y1");
 OPTION_DEFINE(int, PLAYER_SWORD_COLLISION_X2, "Player/Attacks/Sword/Collision X2");
 OPTION_DEFINE(int, PLAYER_SWORD_COLLISION_Y2, "Player/Attacks/Sword/Collision Y2");
+OPTION_DEFINE(float, PLAYER_SWORD_COOLDOWN, "Player/Attacks/Sword/Cooldown Time");
 OPTION_DEFINE(int, PLAYER_SWORD_PUSH_SPEED, "Player/Attacks/Sword/Push Speed");
 OPTION_DEFINE(int, PLAYER_SWORD_CLING_SPEED, "Player/Attacks/Sword/Cancel Recoil Speed");
 OPTION_DEFINE(float, PLAYER_SWORD_CLING_TIME, "Player/Attacks/Sword/Cancel Recoil Control Time");
+OPTION_STEP(PLAYER_SWORD_COOLDOWN, 0, 0, 0.1f);
 OPTION_STEP(PLAYER_SWORD_PUSH_SPEED, 0, 0, 50);
 OPTION_STEP(PLAYER_SWORD_CLING_SPEED, 0, 0, 10);
 OPTION_STEP(PLAYER_SWORD_CLING_TIME, 0, 0, 0.05f);
+
+OPTION_DEFINE(float, PLAYER_FIRE_COOLDOWN, "Player/Attacks/Fire/Cooldown Time");
+OPTION_STEP(PLAYER_FIRE_COOLDOWN, 0, 0, 0.1f);
 
 OPTION_DEFINE(int, STEERING_SPEED_ON_GROUND, "Player/Steering/Speed On Ground");
 OPTION_DEFINE(int, STEERING_SPEED_IN_AIR, "Player/Steering/Speed In Air");

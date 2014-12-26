@@ -104,6 +104,7 @@ struct Player
 			, hitDestructible(false)
 			, attackVel()
 			, hasCollision(false)
+			, cooldown(0.f)
 		{
 		}
 
@@ -112,6 +113,7 @@ struct Player
 		bool hasCollision : 1;
 		CollisionInfo collision;
 		Vec2 attackVel;
+		float cooldown;
 	} m_attack;
 
 	struct TeleportInfo

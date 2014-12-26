@@ -39,7 +39,7 @@ todo:
 + taunt button
 + shotgun ammo x3
 
-- attack cancel
++ attack cancel
 + bullet teleport
 + separate player hitbox for damage
 + grenades!
@@ -47,6 +47,10 @@ todo:
 + input lock dash weg
 + jump velocity reset na 10 pixels of richting change
 - ammo despawn na x seconds + indicator
+
+- attack cooldown
+
+- camera shakes
 
 nice to haves:
 - blood particles
@@ -714,7 +718,11 @@ void Player::tick(float dt)
 					!m_attack.hitDestructible);
 			}
 		}
-		else
+
+		if (!m_attack.attacking)
+			m_attack.cooldown -= dt;
+
+		if (!m_attack.attacking && m_attack.cooldown <= 0.f)
 		{
 			if (m_netObject->m_input.wentDown(INPUT_BUTTON_B) && (m_weaponAmmo > 0 || s_unlimitedAmmo) && isAnimOverrideAllowed(kPlayerWeapon_Fire))
 			{
@@ -728,6 +736,7 @@ void Player::tick(float dt)
 				{
 					anim = kPlayerAnim_Fire;
 					bulletType = kBulletType_B;
+					m_attack.cooldown = PLAYER_FIRE_COOLDOWN;
 				}
 				if (m_weaponType == kPlayerWeapon_Grenade)
 				{
@@ -771,6 +780,8 @@ void Player::tick(float dt)
 			{
 				m_attack = AttackInfo();
 				m_attack.attacking = true;
+
+				m_attack.cooldown = PLAYER_SWORD_COOLDOWN;
 
 				int anim = -1;
 
