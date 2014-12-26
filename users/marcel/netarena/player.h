@@ -144,7 +144,7 @@ public:
 		bool isDown(int input) { return (m_currState.buttons & input) != 0; }
 		bool wentDown(int input) { return !wasDown(input) && isDown(input); }
 		bool wentUp(int input) { return wasDown(input) && !isDown(input); }
-		void next() { m_prevState.buttons = m_currState.buttons; }
+		void next() { m_prevState = m_currState; }
 	} m_input;
 
 	int m_lastSpawnIndex;

@@ -118,13 +118,13 @@ void Client::tick(float dt)
 				{
 					const Gamepad & g = gamepad[gamepadIndex];
 
-					if (g.isDown(DPAD_LEFT) || g.getAnalog(0, ANALOG_X) < -0.2f)
+					if (g.isDown(DPAD_LEFT) || g.getAnalog(0, ANALOG_X) < -0.4f)
 						input.buttons |= INPUT_BUTTON_LEFT;
-					if (g.isDown(DPAD_RIGHT) || g.getAnalog(0, ANALOG_X) > +0.2f)
+					if (g.isDown(DPAD_RIGHT) || g.getAnalog(0, ANALOG_X) > +0.4f)
 						input.buttons |= INPUT_BUTTON_RIGHT;
-					if (g.isDown(DPAD_UP) || g.getAnalog(0, ANALOG_Y) < -0.2f)
+					if (g.isDown(DPAD_UP) || g.getAnalog(0, ANALOG_Y) < -0.4f)
 						input.buttons |= INPUT_BUTTON_UP;
-					if (g.isDown(DPAD_DOWN) || g.getAnalog(0, ANALOG_Y) > +0.2f)
+					if (g.isDown(DPAD_DOWN) || g.getAnalog(0, ANALOG_Y) > +0.4f)
 						input.buttons |= INPUT_BUTTON_DOWN;
 					if (g.isDown(GAMEPAD_A))
 						input.buttons |= INPUT_BUTTON_A;

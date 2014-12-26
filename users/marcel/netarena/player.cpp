@@ -574,13 +574,17 @@ void Player::tick(float dt)
 		if (!m_canRespawn)
 		{
 			m_canRespawn = true;
+			m_canTaunt = true;
 			m_netObject->m_state.SetDirty();
 
 			m_respawnTimer = m_isRespawn ? 3.f : 0.f;
 		}
 
-		if (m_netObject->m_input.wentDown(INPUT_BUTTON_Y))
+		if (m_canTaunt && m_netObject->m_input.wentDown(INPUT_BUTTON_Y))
+		{
+			m_canTaunt = false;
 			m_netObject->playSoundBag("taunt_sounds", 100);
+		}
 
 		if (m_netObject->m_input.wentDown(INPUT_BUTTON_X) || m_respawnTimer <= 0.f)
 			respawn();
@@ -903,8 +907,10 @@ void Player::tick(float dt)
 				m_isAttachedToSticky = false;
 
 				playSecondaryEffects(kPlayerEvent_StickyRelease);
+
+				m_vel[1] = 0.f;
 			}
-			else
+			else if (m_vel[1] < 0.f)
 			{
 				surfaceFriction = FRICTION_GROUNDED;
 
@@ -1512,9 +1518,6 @@ void Player::respawn()
 
 		m_controlDisableTime = 0.f;
 
-		m_netObject->m_anim.SetAnim(kPlayerAnim_Spawn, true, true);
-		m_isAnimDriven = true;
-
 		m_weaponAmmo = 0;
 
 		m_attack = AttackInfo();
@@ -1527,6 +1530,11 @@ void Player::respawn()
 		m_animVelIsAbsolute = false;
 		m_isAirDashCharged = false;
 		m_isWallSliding = false;
+
+		//
+
+		m_netObject->m_anim.SetAnim(kPlayerAnim_Spawn, true, true);
+		m_isAnimDriven = true;
 
 		if (m_isRespawn)
 			playSecondaryEffects(kPlayerEvent_Respawn);

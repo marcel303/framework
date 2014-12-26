@@ -144,6 +144,7 @@ struct Player
 
 	float m_respawnTimer;
 	bool m_canRespawn;
+	bool m_canTaunt;
 	bool m_isRespawn;
 
 	bool m_isGrounded : 1;
