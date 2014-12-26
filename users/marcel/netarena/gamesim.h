@@ -114,7 +114,7 @@ struct Player
 		bool hasCollision : 1;
 		CollisionInfo collision;
 		Vec2 attackVel;
-		float cooldown;
+		float cooldown; // this timer needs to hit zero before the player can attack again. it's decremented AFTER the attack animation has finished
 	} m_attack;
 
 	struct TeleportInfo
@@ -126,7 +126,7 @@ struct Player
 		{
 		}
 
-		bool cooldown : 1;
+		bool cooldown : 1; // when set, we're waiting for the player to exit (x, y), which is the destination of the previous teleport
 		int16_t x;
 		int16_t y;
 	} m_teleport;
@@ -144,22 +144,24 @@ struct Player
 		int8_t cancelFacing;
 	} m_jump;
 
-	float m_respawnTimer;
-	bool m_canRespawn;
-	bool m_canTaunt;
-	bool m_isRespawn;
+	float m_respawnTimer; // when this timer counts to zero, the player is automatically respawn
+	bool m_canRespawn; // set when the player is allowed to respawn, which is after the death animation is done
+	bool m_canTaunt; // set when the player is allowed to taunt, which is after the death animation is done. it's reset after a taunt
+	bool m_isRespawn; // set after the first respawn. the first spawn is special, as the player doesn't need to press X and isn't allowed to use taunt
 
-	bool m_isGrounded : 1;
+	bool m_isGrounded : 1; // set when the player is walking on ground
 	bool m_isAttachedToSticky : 1;
-	bool m_isAnimDriven : 1;
+	bool m_isAnimDriven : 1; // an animation is active that drives the player using animation actions/triggers
 
-	bool m_isAirDashCharged : 1;
+	bool m_isAirDashCharged : 1; // reset when air dash is used. set when the player hits the ground
 	bool m_isWallSliding : 1;
 
-	bool m_animVelIsAbsolute : 1;
+	bool m_animVelIsAbsolute : 1; // should the animation velocity be added to or replace the regular player velocity?
 	bool m_animAllowGravity : 1;
-	bool m_animAllowSteering : 1;
+	bool m_animAllowSteering : 1; // allow the player to control the character?
 	Vec2 m_animVel;
+
+	bool m_enterPassthrough : 1; // if set, the player will move through passthrough blocks, without having to press DOWN. this mode is set when using the sword-down attack, and reset when the player hits the ground
 };
 
 struct ScreenShake
@@ -237,3 +239,5 @@ public:
 	void addScreenShake(Vec2 delta, float stiffness, float life);
 	Vec2 getScreenShake() const;
 };
+
+extern GameSim * g_gameSim;

@@ -115,6 +115,7 @@ struct PlayerAnimInfo
 
 void PlayerPos_NS::SerializeStruct()
 {
+#if ENABLE_PLAYER_SERIALIZATION
 	PlayerNetObject * playerNetObject = static_cast<PlayerNetObject*>(GetOwner());
 	Player * player = playerNetObject->m_player;
 
@@ -149,12 +150,14 @@ void PlayerPos_NS::SerializeStruct()
 	facing = player->m_facing[1] < 0 ? true : false;
 	Serialize(facing);
 	player->m_facing[1] = facing ? -1 : +1;
+#endif
 }
 
 //
 
 void PlayerState_NS::SerializeStruct()
 {
+#if ENABLE_PLAYER_SERIALIZATION
 	PlayerNetObject * playerNetObject = static_cast<PlayerNetObject*>(GetOwner());
 	Player * player = playerNetObject->m_player;
 
@@ -172,6 +175,7 @@ void PlayerState_NS::SerializeStruct()
 	{
 		playerNetObject->handleCharacterIndexChange();
 	}
+#endif
 }
 
 PlayerState_NS::PlayerState_NS(NetSerializableObject * owner)
@@ -187,6 +191,7 @@ void PlayerAnim_NS::SerializeStruct()
 	PlayerNetObject * playerNetObject = static_cast<PlayerNetObject*>(GetOwner());
 	Player * player = playerNetObject->m_player;
 
+#if ENABLE_PLAYER_SERIALIZATION
 	SerializeBits(player->m_anim, 4);
 	Serialize(player->m_animPlay);
 
@@ -196,6 +201,7 @@ void PlayerAnim_NS::SerializeStruct()
 	SerializeBits(dy, 2);
 	player->m_attackDirection[0] = dx - 1;
 	player->m_attackDirection[1] = dy - 1;
+#endif
 
 	//
 
@@ -207,7 +213,7 @@ void PlayerAnim_NS::SerializeStruct()
 		char filename[64];
 		sprintf_s(filename, sizeof(filename), s_animInfos[player->m_anim].file, playerNetObject->getCharacterIndex());
 
-		playerNetObject->m_sprite = new Sprite(filename);
+		playerNetObject->m_sprite = new Sprite(filename, 0.f, 0.f, 0, false);
 		playerNetObject->m_sprite->animActionHandler = PlayerNetObject::handleAnimationAction;
 		playerNetObject->m_sprite->animActionHandlerObj = playerNetObject;
 	}
@@ -281,7 +287,13 @@ const char * SoundBag::getRandomSound()
 			int index;
 
 			if (m_random)
+			{
+			#if ENABLE_CLIENT_SIMULATION
+				index = g_gameSim->m_state.Random() % m_files.size();
+			#else
 				index = rand() % m_files.size();
+			#endif
+			}
 			else
 				index = (index + 1) % m_files.size();
 
@@ -541,6 +553,11 @@ void Player::tick(float dt)
 
 	//
 
+	if (m_netObject->m_sprite)
+		m_netObject->m_sprite->update(dt);
+
+	//
+
 	if (m_isAnimDriven)
 	{
 		if (!m_netObject->m_anim.IsDirty() && !m_netObject->m_sprite->animIsActive)
@@ -635,7 +652,7 @@ void Player::tick(float dt)
 		const uint32_t currentBlockMask = getIntersectingBlocksMask(m_pos[0], m_pos[1]);
 		
 		const bool isInPassthough = (currentBlockMask & kBlockMask_Passthrough) != 0;
-		if (isInPassthough || m_netObject->m_input.isDown(INPUT_BUTTON_DOWN))
+		if (isInPassthough || m_enterPassthrough)
 			m_blockMask = ~kBlockMask_Passthrough;
 
 		const uint32_t currentBlockMaskFloor = getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f);
@@ -804,6 +821,7 @@ void Player::tick(float dt)
 				{
 					m_netObject->m_anim.SetAttackDirection(0, +1);
 					anim = kPlayerAnim_AttackDown;
+					m_enterPassthrough = true;
 				}
 				else
 				{
@@ -1079,7 +1097,7 @@ void Player::tick(float dt)
 			{
 				// update passthrough mode
 				m_blockMask = ~0;
-				if ((getIntersectingBlocksMask(m_pos[0], m_pos[1]) & kBlockMask_Passthrough) || m_netObject->m_input.isDown(INPUT_BUTTON_DOWN))
+				if ((getIntersectingBlocksMask(m_pos[0], m_pos[1]) & kBlockMask_Passthrough) || m_enterPassthrough)
 					m_blockMask = ~kBlockMask_Passthrough;
 			}
 
@@ -1166,6 +1184,8 @@ void Player::tick(float dt)
 
 					if (i == 1)
 					{
+						m_enterPassthrough = false;
+
 						// grounded
 
 						if (newBlockMask & (1 << kBlockType_Slide))
@@ -1560,6 +1580,7 @@ void Player::respawn()
 		m_animVelIsAbsolute = false;
 		m_isAirDashCharged = false;
 		m_isWallSliding = false;
+		m_enterPassthrough = false;
 
 		//
 
@@ -1667,7 +1688,7 @@ void PlayerNetObject::handleCharacterIndexChange()
 		m_props.load(m_player->makeCharacterFilename("props.txt"));
 
 		delete m_sprite;
-		m_sprite = new Sprite(m_player->makeCharacterFilename("walk/walk.png"));
+		m_sprite = new Sprite(m_player->makeCharacterFilename("walk/walk.png"), 0.f, 0.f, 0, false);
 
 		m_spriteScale = m_props.getFloat("sprite_scale", 1.f);
 

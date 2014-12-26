@@ -304,8 +304,6 @@ void BulletPool::tick(float _dt)
 						}
 
 						g_app->netPlaySound("grenade-explode.ogg");
-
-						g_app->netScreenShake(Calc::Random(-40.f, +40.f), Calc::Random(-20.f, +20.f), 2500.f, .3f);
 					}
 
 					if (!m_localOnly)
@@ -316,6 +314,11 @@ void BulletPool::tick(float _dt)
 					if (b.type == kBulletType_GrenadeA)
 					{
 						g_app->netPlaySound("grenade-frag.ogg");
+
+						const float strength = 5.f;
+						g_app->netScreenShake(
+							Calc::RandomMin0Max1() * strength,
+							Calc::RandomMin0Max1() * strength, 2500.f, .3f);
 					}
 
 					free(i);

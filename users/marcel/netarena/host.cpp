@@ -113,7 +113,9 @@ void Host::tickPlay(float dt)
 		PlayerNetObject * playerNetObject = *i;
 		Player * player = playerNetObject->m_player;
 
+	#if !ENABLE_CLIENT_SIMULATION
 		player->tick(dt);
+	#endif
 
 		if (playerNetObject->getScore() >= g_roundCompleteScore)
 		{

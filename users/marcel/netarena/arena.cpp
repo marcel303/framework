@@ -494,7 +494,11 @@ bool Arena::getTeleportDestination(int startX, int startY, int & out_x, int & ou
 	}
 	else
 	{
+	#if ENABLE_CLIENT_SIMULATION
+		const int idx = g_gameSim->m_state.Random() % destinations.size();
+	#else
 		const int idx = rand() % destinations.size();
+	#endif
 
 		out_x = std::get<0>(destinations[idx]);
 		out_y = std::get<1>(destinations[idx]);

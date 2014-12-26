@@ -8,6 +8,7 @@
 #include "client.h"
 #include "discover.h"
 #include "framework.h"
+#include "gamedefs.h"
 #include "gamesim.h"
 #include "host.h"
 #include "main.h"
@@ -121,11 +122,20 @@ static void HandleAction(const std::string & action, const Dictionary & args)
 enum RpcMethod
 {
 	s_rpcSyncGameSim,
+#if !ENABLE_PLAYER_SERIALIZATION
+	s_rpcAddPlayer,
+	s_rpcAddPlayerBroadcast,
+	s_rpcRemovePlayer,
+	s_rpcRemovePlayerBroadcast,
+#endif
 	s_rpcPlaySound,
 	s_rpcScreenShake,
 	s_rpcSetPlayerInputs,
 	s_rpcBroadcastPlayerInputs,
 	s_rpcSetPlayerCharacterIndex,
+#if !ENABLE_PLAYER_SERIALIZATION
+	s_rpcSetPlayerCharacterIndexBroadcast,
+#endif
 	s_rpcSpawnBullet,
 	s_rpcKillBullet,
 	s_rpcUpdateBullet,
@@ -149,6 +159,34 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			client->m_gameSim->serialize(context);
 		}
 	}
+#if !ENABLE_PLAYER_SERIALIZATION
+	else if (method == s_rpcAddPlayer)
+	{
+		PlayerNetObject * player = g_host->allocPlayer(channel->m_destinationId);
+
+		if (player)
+		{
+			const uint16_t channelId = channel->m_destinationId;
+			// todo : serialize player index
+
+			BitStream bs;
+
+			bs.Write(channelId);
+
+			g_app->m_rpcMgr->Call(s_rpcAddPlayerBroadcast, bs, ChannelPool_Server, 0, true, false);
+		}
+	}
+	else if (method == s_rpcAddPlayerBroadcast)
+	{
+	}
+	else if (method == s_rpcRemovePlayer)
+	{
+		g_app->m_rpcMgr->Call(s_rpcRemovePlayerBroadcast, bitStream, ChannelPool_Server, 0, true, false);
+	}
+	else if (method == s_rpcRemovePlayerBroadcast)
+	{
+	}
+#endif
 	else if (method == s_rpcPlaySound)
 	{
 		const std::string filename = bitStream.ReadString();
@@ -252,13 +290,39 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		bitStream.Read(netId);
 		bitStream.Read(characterIndex);
 
+	#if ENABLE_PLAYER_SERIALIZATION
 		PlayerNetObject * player = g_host->findPlayerByNetId(netId);
 		Assert(player);
 		if (player)
 		{
 			player->setCharacterIndex(characterIndex);
 		}
+	#else
+		g_app->netBroadcastCharacterIndex(netId, characterIndex);
+	#endif
 	}
+#if !ENABLE_PLAYER_SERIALIZATION
+	else if (method == s_rpcSetPlayerCharacterIndexBroadcast)
+	{
+		Client * client = g_app->findClientByChannel(channel);
+		Assert(client);
+		if (client)
+		{
+			uint32_t netId;
+			uint8_t characterIndex;
+
+			bitStream.Read(netId);
+			bitStream.Read(characterIndex);
+
+			PlayerNetObject * player = client->findPlayerByNetId(netId);
+			Assert(player);
+			if (player)
+			{
+				player->setCharacterIndex(characterIndex);
+			}
+		}
+	}
+#endif
 	else if (method == s_rpcSpawnBullet)
 	{
 		BulletPool * bulletPool = 0;
@@ -553,6 +617,8 @@ bool App::OnReplicationObjectSerializeType(ReplicationClient * client, Replicati
 
 bool App::OnReplicationObjectCreateType(ReplicationClient * client, BitStream & bitStream, ReplicationObject ** out_object)
 {
+	Client * gameClient = static_cast<Client*>(client->m_up);
+
 	uint8_t type;
 
 	bitStream.Read(type);
@@ -593,8 +659,14 @@ void App::OnReplicationObjectCreated(ReplicationClient * client, ReplicationObje
 		break;
 
 	case kNetObjectType_Player:
-		gameClient->addPlayer(static_cast<PlayerNetObject*>(object));
-		break;
+		{
+			PlayerNetObject * playerNetObject = static_cast<PlayerNetObject*>(object);
+			delete playerNetObject->m_player;
+			playerNetObject->m_player = &gameClient->m_gameSim->m_state.m_players[playerNetObject->getPlayerId()];
+			playerNetObject->m_player->m_netObject = playerNetObject;
+			gameClient->addPlayer(playerNetObject);
+			break;
+		}
 
 	default:
 		Assert(false);
@@ -761,20 +833,7 @@ bool App::init(bool isHost)
 
 		//
 
-		m_rpcMgr->RegisterWithID(s_rpcSyncGameSim, handleRpc);
-		m_rpcMgr->RegisterWithID(s_rpcPlaySound, handleRpc);
-		m_rpcMgr->RegisterWithID(s_rpcScreenShake, handleRpc);
-		m_rpcMgr->RegisterWithID(s_rpcSetPlayerInputs, handleRpc);
-		m_rpcMgr->RegisterWithID(s_rpcBroadcastPlayerInputs, handleRpc);
-		m_rpcMgr->RegisterWithID(s_rpcSetPlayerCharacterIndex, handleRpc);
-		m_rpcMgr->RegisterWithID(s_rpcSpawnBullet, handleRpc);
-		m_rpcMgr->RegisterWithID(s_rpcKillBullet, handleRpc);
-		m_rpcMgr->RegisterWithID(s_rpcUpdateBullet, handleRpc);
-		m_rpcMgr->RegisterWithID(s_rpcAddSprite, handleRpc);
-		m_rpcMgr->RegisterWithID(s_rpcSyncSprite, handleRpc);
-		m_rpcMgr->RegisterWithID(s_rpcRemoveSprite, handleRpc);
-		m_rpcMgr->RegisterWithID(s_rpcSpawnParticles, handleRpc);
-		m_rpcMgr->RegisterWithID(s_rpcUpdateBlock, handleRpc);
+		m_rpcMgr->SetDefaultHandler(handleRpc);
 
 		//
 
@@ -862,21 +921,6 @@ void App::shutdown()
 	m_replicationMgr->SV_Shutdown();
 
 	m_replicationMgr->CL_Shutdown();
-
-	m_rpcMgr->Unregister(s_rpcSyncGameSim, handleRpc);
-	m_rpcMgr->Unregister(s_rpcPlaySound, handleRpc);
-	m_rpcMgr->Unregister(s_rpcScreenShake, handleRpc);
-	m_rpcMgr->Unregister(s_rpcSetPlayerInputs, handleRpc);
-	m_rpcMgr->Unregister(s_rpcBroadcastPlayerInputs, handleRpc);
-	m_rpcMgr->Unregister(s_rpcSetPlayerCharacterIndex, handleRpc);
-	m_rpcMgr->Unregister(s_rpcSpawnBullet, handleRpc);
-	m_rpcMgr->Unregister(s_rpcKillBullet, handleRpc);
-	m_rpcMgr->Unregister(s_rpcUpdateBullet, handleRpc);
-	m_rpcMgr->Unregister(s_rpcAddSprite, handleRpc);
-	m_rpcMgr->Unregister(s_rpcSyncSprite, handleRpc);
-	m_rpcMgr->Unregister(s_rpcRemoveSprite, handleRpc);
-	m_rpcMgr->Unregister(s_rpcSpawnParticles, handleRpc);
-	m_rpcMgr->Unregister(s_rpcUpdateBlock, handleRpc);
 
 	m_channelMgr->Shutdown(true);
 
@@ -1020,7 +1064,10 @@ bool App::tick()
 		{
 			m_channelMgr->Update(g_TimerRT.TimeUS_get());
 
-			netBroadcastPlayerInputs();
+			if (!m_optionMenuIsOpen)
+			{
+				netBroadcastPlayerInputs();
+			}
 
 			m_replicationMgr->SV_Update();
 		}
@@ -1154,16 +1201,20 @@ void App::draw()
 			{
 				int y = 100;
 				setFont("calibri.ttf");
-				drawText(0, y += 30, 24, +1, +1, "random seek=%u, next pickup tick=%u, crc=%u",
+				drawText(0, y += 30, 24, +1, +1, "random seed=%08x, next pickup tick=%u, crc=%08x, px=%g, py=%g",
 					g_host->m_gameSim.m_state.m_randomSeed,
 					(uint32_t)g_host->m_gameSim.m_state.m_nextPickupSpawnTick,
-					g_host->m_gameSim.calcCRC());
+					g_host->m_gameSim.calcCRC(),
+					g_host->m_gameSim.m_players[0] ? g_host->m_gameSim.m_players[0]->m_player->m_pos[0] : 0.f,
+					g_host->m_gameSim.m_players[0] ? g_host->m_gameSim.m_players[0]->m_player->m_pos[1] : 0.f);
 				for (size_t i = 0; i < m_clients.size(); ++i)
 				{
-					drawText(0, y += 30, 24, +1, +1, "random seek=%u, next pickup tick=%u, crc=%u",
+					drawText(0, y += 30, 24, +1, +1, "random seed=%08x, next pickup tick=%u, crc=%08x, px=%g, py=%g",
 						m_clients[i]->m_gameSim->m_state.m_randomSeed,
 						(uint32_t)m_clients[i]->m_gameSim->m_state.m_nextPickupSpawnTick,
-						m_clients[i]->m_gameSim->calcCRC());
+						m_clients[i]->m_gameSim->calcCRC(),
+						m_clients[i]->m_gameSim->m_players[0] ? m_clients[i]->m_gameSim->m_players[0]->m_player->m_pos[0] : 0.f,
+						m_clients[i]->m_gameSim->m_players[0] ? m_clients[i]->m_gameSim->m_players[0]->m_player->m_pos[1] : 0.f);
 				}
 			}
 		}
@@ -1292,6 +1343,15 @@ void App::netSyncGameSim(Channel * channel)
 	m_rpcMgr->Call(s_rpcSyncGameSim, bs, ChannelPool_Client, &channel->m_id, false, false);
 }
 
+#if !ENABLE_PLAYER_SERIALIZATION
+void App::netAddPlayer(Channel * channel)
+{
+	BitStream bs;
+
+	m_rpcMgr->Call(s_rpcAddPlayer, bs, ChannelPool_Client, &channel->m_id, false, false);
+}
+#endif
+
 void App::netPlaySound(const char * filename, uint8_t volume)
 {
 	BitStream bs;
@@ -1363,6 +1423,8 @@ void App::netBroadcastPlayerInputs()
 
 void App::netSetPlayerCharacterIndex(uint16_t channelId, uint32_t netId, uint8_t characterIndex)
 {
+	// client -> host
+
 	BitStream bs;
 
 	bs.Write(netId);
@@ -1370,6 +1432,20 @@ void App::netSetPlayerCharacterIndex(uint16_t channelId, uint32_t netId, uint8_t
 
 	m_rpcMgr->Call(s_rpcSetPlayerCharacterIndex, bs, ChannelPool_Client, &channelId, false, false);
 }
+
+#if !ENABLE_PLAYER_SERIALIZATION
+void App::netBroadcastCharacterIndex(uint32_t netId, uint8_t characterIndex)
+{
+	// host -> clients
+
+	BitStream bs;
+
+	bs.Write(netId);
+	bs.Write(characterIndex);
+
+	m_rpcMgr->Call(s_rpcSetPlayerCharacterIndexBroadcast, bs, ChannelPool_Server, 0, true, false);
+}
+#endif
 
 uint16_t App::netSpawnBullet(int16_t x, int16_t y, uint8_t angle, uint8_t type, uint32_t ownerNetId)
 {

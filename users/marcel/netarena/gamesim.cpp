@@ -2,6 +2,7 @@
 #include "gamedefs.h"
 #include "gamesim.h"
 #include "main.h"
+#include "player.h"
 
 OPTION_DECLARE(int, g_pickupTimeBase, 10);
 OPTION_DEFINE(int, g_pickupTimeBase, "Pickup/Spawn Interval (Sec)");
@@ -9,6 +10,10 @@ OPTION_DECLARE(int, g_pickupTimeRandom, 5);
 OPTION_DEFINE(int, g_pickupTimeRandom, "Pickup/Spawn Interval Random (Sec)");
 OPTION_DECLARE(int, g_pickupMax, 5);
 OPTION_DEFINE(int, g_pickupMax, "Pickup/Maximum Pickup Count");
+
+//
+
+GameSim * g_gameSim = 0;
 
 //
 
@@ -34,6 +39,10 @@ uint32_t GameSim::GameState::GetTick()
 
 uint32_t GameSim::calcCRC() const
 {
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+		if (m_players[i])
+			m_players[i]->m_player->m_netObject = 0;
+
 	uint32_t result = 0;
 
 	const uint8_t * bytes = (uint8_t*)&m_state;
@@ -41,6 +50,10 @@ uint32_t GameSim::calcCRC() const
 
 	for (uint32_t i = 0; i < numBytes; ++i)
 		result = result * 13 + bytes[i];
+
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+		if (m_players[i])
+			m_players[i]->m_player->m_netObject = m_players[i];
 
 	return result;
 }
@@ -53,7 +66,16 @@ void GameSim::serialize(NetSerializationContext & context)
 		crc = calcCRC();
 
 	context.Serialize(crc);
+
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+		if (m_players[i])
+			m_players[i]->m_player->m_netObject = 0;
+
 	context.SerializeBytes(&m_state, sizeof(m_state));
+
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+		if (m_players[i])
+			m_players[i]->m_player->m_netObject = m_players[i];
 
 	m_arena.serialize(context);
 
@@ -65,7 +87,27 @@ void GameSim::serialize(NetSerializationContext & context)
 
 void GameSim::tick()
 {
+	g_gameSim = this;
+
+	if (g_devMode)
+	{
+		const uint32_t crc = calcCRC();
+		LOG_DBG("gamesim %p: crc=%08x", this, crc);
+	}
+
+	const float dt = 1.f / TICKS_PER_SECOND;
+
 	const uint32_t tick = m_state.GetTick();
+
+#if ENABLE_CLIENT_SIMULATION
+	// player update
+
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+	{
+		if (m_players[i])
+			m_players[i]->m_player->tick(dt);
+	}
+#endif
 
 	// pickup spawning
 
@@ -99,6 +141,8 @@ void GameSim::tick()
 	}
 
 	m_state.m_tick++;
+
+	g_gameSim = 0;
 }
 
 void GameSim::anim(float dt)
@@ -204,10 +248,12 @@ void GameSim::addScreenShake(Vec2 delta, float stiffness, float life)
 
 			shake.pos = delta;
 			shake.vel.Set(0.f, 0.f);
-
 			return;
 		}
 	}
+
+	m_screenShakes[m_state.Random() % MAX_SCREEN_SHAKES].isActive = false;
+	addScreenShake(delta, stiffness, life);
 }
 
 Vec2 GameSim::getScreenShake() const

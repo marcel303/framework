@@ -157,11 +157,6 @@ void Client::tick(float dt)
 		}
 	}
 
-	if (g_clientSim)
-	{
-		m_gameSim->tick();
-	}
-
 	m_gameSim->anim(dt);
 
 	m_bulletPool->anim(dt);
@@ -307,6 +302,8 @@ void Client::addPlayer(PlayerNetObject * player)
 {
 	m_players.push_back(player);
 
+	m_gameSim->m_players[player->getPlayerId()] = player;
+
 	if (player->getOwningChannelId() == m_channel->m_id)
 	{
 		Assert(player->m_input.m_controllerIndex == -1);
@@ -330,6 +327,19 @@ void Client::removePlayer(PlayerNetObject * player)
 
 		m_players.erase(i);
 	}
+
+	m_gameSim->m_players[player->getPlayerId()] = 0;
+}
+
+PlayerNetObject * Client::findPlayerByNetId(uint32_t netId)
+{
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+	{
+		if (m_players[i]->getNetId() == netId)
+			return m_players[i];
+	}
+
+	return 0;
 }
 
 void Client::setPlayerPtrs()
