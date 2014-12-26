@@ -19,6 +19,7 @@ namespace RNG
 	
 	static uint32_t Rand_Trivial()
 	{
+		Rand_Trivial_Seed += 1;
 		Rand_Trivial_Seed *= 16807;
 
 		return Rand_Trivial_Seed;
