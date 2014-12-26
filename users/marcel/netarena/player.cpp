@@ -28,7 +28,7 @@ todo:
 - character selection
 + force feedback cling animation
 + attack anim up and down
-- analog controls
++ analog controls
 - team based game mode
 - token hunt
 + spawn anim
@@ -36,7 +36,7 @@ todo:
 + death input
 + hitbox spikes
 + manual spawn (5 seconds?)
-- taunt button
++ taunt button
 + shotgun ammo x3
 
 - attack cancel
@@ -341,14 +341,7 @@ void PlayerNetObject::handleAnimationAction(const std::string & action, const Di
 		{
 			std::string name = args.getString("name", "");
 
-			LOG_ERR("playerNetObject: %p", playerNetObject);
-			if (playerNetObject->m_sounds.count(name.c_str()) == 0)
-			{
-				if (playerNetObject->m_props.contains(name.c_str()))
-					playerNetObject->m_sounds[name].load(playerNetObject->m_props.getString(name.c_str(), ""), true);
-			}
-
-			g_app->netPlaySound(player->makeCharacterFilename(playerNetObject->m_sounds[name].getRandomSound()), args.getInt("volume", 100));
+			playerNetObject->playSoundBag(name.c_str(), args.getInt("volume", 100));
 		}
 		else
 		{
@@ -585,6 +578,9 @@ void Player::tick(float dt)
 
 			m_respawnTimer = m_isRespawn ? 3.f : 0.f;
 		}
+
+		if (m_netObject->m_input.wentDown(INPUT_BUTTON_Y))
+			m_netObject->playSoundBag("taunt_sounds", 100);
 
 		if (m_netObject->m_input.wentDown(INPUT_BUTTON_X) || m_respawnTimer <= 0.f)
 			respawn();
@@ -1635,6 +1631,17 @@ void PlayerNetObject::handleCharacterIndexChange()
 
 		m_sounds["respawn"].load(m_props.getString("spawn_sounds", ""), true);
 	}
+}
+
+void PlayerNetObject::playSoundBag(const char * name, int volume)
+{
+	if (m_sounds.count(name) == 0)
+	{
+		if (m_props.contains(name))
+			m_sounds[name].load(m_props.getString(name, ""), true);
+	}
+
+	g_app->netPlaySound(m_player->makeCharacterFilename(m_sounds[name].getRandomSound()), volume);
 }
 
 char * Player::makeCharacterFilename(const char * filename)

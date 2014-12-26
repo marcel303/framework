@@ -124,6 +124,8 @@ public:
 	bool hasValidCharacterIndex() const;
 	void handleCharacterIndexChange();
 
+	void playSoundBag(const char * name, int volume);
+
 	Player * m_player;
 
 	struct InputState
