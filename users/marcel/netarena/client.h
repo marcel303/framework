@@ -6,6 +6,7 @@
 
 class Arena;
 class BulletPool;
+class GameSim;
 class NetSpriteManager;
 struct Player;
 class PlayerNetObject;
@@ -15,6 +16,8 @@ class Client
 public:
 	Channel * m_channel;
 	uint32_t m_replicationId;
+
+	GameSim * m_gameSim;
 
 	ArenaNetObject * m_arena;
 	std::vector<PlayerNetObject*> m_players;

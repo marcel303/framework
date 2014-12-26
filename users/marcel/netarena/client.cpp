@@ -21,11 +21,14 @@ static Music * s_bgmSound = 0;
 Client::Client()
 	: m_channel(0)
 	, m_replicationId(0)
+	, m_gameSim(0)
 	, m_arena(0)
 	, m_bulletPool(0)
 	, m_particlePool(0)
 	, m_spriteManager(0)
 {
+	m_gameSim = new GameSim();
+
 	m_bulletPool = new BulletPool(true);
 	m_particlePool = new BulletPool(true);
 
@@ -39,6 +42,9 @@ Client::~Client()
 
 	delete m_bulletPool;
 	m_bulletPool = 0;
+
+	delete m_gameSim;
+	m_gameSim = 0;
 }
 
 void Client::initialize(Channel * channel)
@@ -208,6 +214,18 @@ void Client::draw()
 
 void Client::drawPlay()
 {
+#if 0
+	m_gameSim->m_arena.drawBlocks();
+
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+	{
+		if (m_gameSim->m_state.m_players[i].m_isAlive)
+			m_gameSim->m_state.m_players[i].draw();
+	}
+
+	return;
+#endif
+
 	m_arena->m_arena->drawBlocks();
 
 	m_spriteManager->draw();

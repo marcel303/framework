@@ -22,12 +22,45 @@ static const char * s_pickupSprites[kPickupType_COUNT] =
 
 uint32_t GameSim::GameState::Random()
 {
-	return rand();
+	m_randomSeed += 1;
+	m_randomSeed *= 16807;
+	return m_randomSeed;
 }
 
 uint32_t GameSim::GameState::GetTick()
 {
 	return m_tick;
+}
+
+uint32_t GameSim::calcCRC() const
+{
+	uint32_t result = 0;
+
+	const uint8_t * bytes = (uint8_t*)&m_state;
+	const uint32_t numBytes = sizeof(m_state);
+
+	for (uint32_t i = 0; i < numBytes; ++i)
+		result = result * 13 + bytes[i];
+
+	return result;
+}
+
+void GameSim::serialize(NetSerializationContext & context)
+{
+	uint32_t crc;
+
+	if (context.IsSend())
+		crc = calcCRC();
+
+	context.Serialize(crc);
+	context.SerializeBytes(&m_state, sizeof(m_state));
+
+	m_arena.serialize(context);
+
+	if (context.IsRecv())
+		Assert(crc == calcCRC());
+
+	// todo : serialize player animation state, since it affects game play
 }
 
 void GameSim::tick()
@@ -74,10 +107,12 @@ void GameSim::trySpawnPickup(PickupType type)
 
 		if (!pickup.isAlive)
 		{
-			int x;
-			int y;
+			const int kMaxLocations = ARENA_SX * ARENA_SY;
+			int numLocations = kMaxLocations;
+			int x[kMaxLocations];
+			int y[kMaxLocations];
 
-			if (m_state.m_arena.getRandomPickupLocation(x, y, this,
+			if (m_arena.getRandomPickupLocations(x, y, numLocations, this,
 				[](void * obj, int x, int y) 
 				{
 					GameSim * self = (GameSim*)obj;
@@ -87,7 +122,11 @@ void GameSim::trySpawnPickup(PickupType type)
 					return false;
 				}))
 			{
-				spawnPickup(pickup, type, x, y);
+				const int index = m_state.Random() % numLocations;
+				int spawnX = x[index];
+				int spawnY = y[index];
+
+				spawnPickup(pickup, type, spawnX, spawnY);
 			}
 
 			break;

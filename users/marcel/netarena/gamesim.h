@@ -2,11 +2,12 @@
 
 #include "arena.h"
 #include "gametypes.h"
+#include "Random.h"
 #include "Vec2.h"
 
 #define MAX_PLAYERS 4
-#define MAX_BULLETS 1000
-#define MAX_PARTICLES 1000
+//#define MAX_BULLETS 1000
+//#define MAX_PARTICLES 1000
 #define MAX_PICKUPS 10
 
 #include <string.h> // todo : cpp
@@ -59,12 +60,13 @@ struct Player
 	char * makeCharacterFilename(const char * filename);
 
 	bool m_isAlive;
-	int m_characterIndex;
+	uint8_t m_characterIndex;
+	float m_controlDisableTime;
 
 	//
 
-	int m_score;
-	int m_totalScore;
+	int8_t m_score;
+	int16_t m_totalScore;
 
 	//
 
@@ -75,17 +77,17 @@ struct Player
 
 	//
 
-	int m_anim;
+	uint8_t m_anim;
 	bool m_animPlay;
 
 	//
 
-	int m_attackDirection[2];
+	int8_t m_attackDirection[2];
 
 	//
 
-	int m_weaponAmmo;
-	int m_weaponType;
+	uint8_t m_weaponAmmo;
+	uint8_t m_weaponType;
 
 	//
 
@@ -105,11 +107,11 @@ struct Player
 		{
 		}
 
-		bool attacking;
-		bool hitDestructible;
-		Vec2 attackVel;
+		bool attacking : 1;
+		bool hitDestructible : 1;
+		bool hasCollision : 1;
 		CollisionInfo collision;
-		bool hasCollision;
+		Vec2 attackVel;
 	} m_attack;
 
 	struct TeleportInfo
@@ -121,9 +123,9 @@ struct Player
 		{
 		}
 
-		bool cooldown;
-		int x;
-		int y;
+		bool cooldown : 1;
+		int16_t x;
+		int16_t y;
 	} m_teleport;
 
 	struct JumpInfo
@@ -133,30 +135,28 @@ struct Player
 			memset(this, 0, sizeof(*this));
 		}
 
-		bool cancelStarted;
-		bool cancelled;
-		int cancelX;
-		float cancelFacing;
+		bool cancelStarted : 1;
+		bool cancelled : 1;
+		int16_t cancelX;
+		int8_t cancelFacing;
 	} m_jump;
 
-	bool m_isGrounded;
-	bool m_isAttachedToSticky;
-	bool m_isAnimDriven;
 
-	bool m_isAirDashCharged;
-	bool m_isWallSliding;
-
-	bool m_animVelIsAbsolute;
-	Vec2 m_animVel;
-	bool m_animAllowGravity;
-	bool m_animAllowSteering;
-
-	//Dictionary m_props;
-
-	//Sprite * m_sprite;
-	//float m_spriteScale;
-
+	float m_respawnTimer;
+	bool m_canRespawn;
 	bool m_isRespawn;
+
+	bool m_isGrounded : 1;
+	bool m_isAttachedToSticky : 1;
+	bool m_isAnimDriven : 1;
+
+	bool m_isAirDashCharged : 1;
+	bool m_isWallSliding : 1;
+
+	bool m_animVelIsAbsolute : 1;
+	bool m_animAllowGravity : 1;
+	bool m_animAllowSteering : 1;
+	Vec2 m_animVel;
 };
 
 class GameSim
@@ -166,11 +166,9 @@ public:
 
 	struct GameState
 	{
-		GameState(ArenaNetObject * arenaNetObject)
+		GameState()
 		{
 			memset(this, 0, sizeof(*this));
-
-			m_arena.init(arenaNetObject);
 		}
 
 		uint32_t Random();
@@ -178,8 +176,6 @@ public:
 
 		uint32_t m_tick;
 		uint32_t m_randomSeed;
-
-		Arena m_arena;
 
 		Player m_players[MAX_PLAYERS];
 
@@ -189,17 +185,23 @@ public:
 
 	} m_state;
 
+	Arena m_arena;
+
 	PlayerNetObject * m_players[MAX_PLAYERS];
 
 	GameSim()
 		: m_arenaNetObject()
-		, m_state(&m_arenaNetObject)
+		, m_state()
 	{
+		m_arena.init(&m_arenaNetObject);
+
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+			m_players[i] = 0;
 	}
 
 	uint32_t calcCRC() const;
+	void serialize(NetSerializationContext & context);
 
-	void setPlayerInputs(uint8_t playerId, uint32_t buttons);
 	void tick();
 
 	void trySpawnPickup(PickupType type);

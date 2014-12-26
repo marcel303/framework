@@ -6,6 +6,8 @@
 
 class Arena;
 class ArenaNetObject;
+class BitStream;
+struct Player;
 
 enum BlockShape
 {
@@ -23,6 +25,8 @@ enum BlockShape
 	kBlockShape_BL2b,
 	kBlockShape_BR2a,
 	kBlockShape_BR2b,
+	kBlockShape_HT,
+	kBlockShape_HB,
 	kBlockShape_COUNT
 };
 
@@ -99,11 +103,12 @@ public:
 
 	void generate();
 	void load(const char * filename);
+	void serialize(NetSerializationContext & context);
 
 	void drawBlocks();
 
-	bool getRandomSpawnPoint(int & out_x, int & out_y, int & io_lastSpawnIndex);
-	bool getRandomPickupLocation(int & out_x, int & out_y, void * obj, bool (*reject)(void * obj, int x, int y));
+	bool getRandomSpawnPoint(int & out_x, int & out_y, int & io_lastSpawnIndex, Player * playerToIgnore);
+	bool getRandomPickupLocations(int * out_x, int * out_y, int & numLocations, void * obj, bool (*reject)(void * obj, int x, int y));
 	bool getTeleportDestination(int x, int y, int & out_x, int & out_y);
 
 	uint32_t getIntersectingBlocksMask(int x1, int y1, int x2, int y2);

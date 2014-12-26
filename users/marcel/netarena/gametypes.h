@@ -63,10 +63,10 @@ struct CollisionInfo
 			y1 <= y;
 	}
 
-	int x1;
-	int y1;
-	int x2;
-	int y2;
+	int16_t x1;
+	int16_t y1;
+	int16_t x2;
+	int16_t y2;
 };
 
 struct Pickup
@@ -74,11 +74,11 @@ struct Pickup
 	bool isAlive;
 
 	PickupType type;
-	int blockX;
-	int blockY;
-	int x1;
-	int y1;
-	int x2;
-	int y2;
+	uint8_t blockX;
+	uint8_t blockY;
+	int16_t x1;
+	int16_t y1;
+	int16_t x2;
+	int16_t y2;
 	uint16_t spriteId;
 };

@@ -8,6 +8,7 @@
 #include "client.h"
 #include "discover.h"
 #include "framework.h"
+#include "gamesim.h"
 #include "host.h"
 #include "main.h"
 #include "netobject.h"
@@ -29,6 +30,10 @@
 OPTION_DECLARE(bool, g_devMode, false);
 OPTION_DEFINE(bool, g_devMode, "App/Developer Mode");
 OPTION_ALIAS(g_devMode, "devmode");
+
+OPTION_DECLARE(bool, g_clientSim, false);
+OPTION_DEFINE(bool, g_clientSim, "App/Client Simulation");
+OPTION_ALIAS(g_clientSim, "clientsim");
 
 OPTION_DECLARE(std::string, s_mapList, "arena.txt");
 OPTION_DEFINE(std::string, s_mapList, "App/Map List");
@@ -115,8 +120,10 @@ static void HandleAction(const std::string & action, const Dictionary & args)
 
 enum RpcMethod
 {
+	s_rpcSyncGameSim,
 	s_rpcPlaySound,
 	s_rpcSetPlayerInputs,
+	s_rpcBroadcastPlayerInputs,
 	s_rpcSetPlayerCharacterIndex,
 	s_rpcSpawnBullet,
 	s_rpcKillBullet,
@@ -130,7 +137,18 @@ enum RpcMethod
 
 void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 {
-	if (method == s_rpcPlaySound)
+	if (method == s_rpcSyncGameSim)
+	{
+		Client * client = g_app->findClientByChannel(channel);
+		Assert(client);
+		if (client)
+		{
+			NetSerializationContext context;
+			context.Set(true, false, bitStream);
+			client->m_gameSim->serialize(context);
+		}
+	}
+	else if (method == s_rpcPlaySound)
 	{
 		const std::string filename = bitStream.ReadString();
 		uint8_t volume;
@@ -158,6 +176,41 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		if (player)
 		{
 			player->m_input.m_currButtons = buttons;
+		}
+	}
+	else if (method == s_rpcBroadcastPlayerInputs)
+	{
+		Client * client = g_app->findClientByChannel(channel);
+		Assert(client);
+		if (client)
+		{
+			uint32_t crc;
+
+			bitStream.Read(crc);
+
+			//if (crc != 0)
+			//	Assert(crc == g_app->m_host->m_gameSim.calcCRC());
+
+			for (int i = 0; i < MAX_PLAYERS; ++i)
+			{
+				const bool hasButtons = bitStream.ReadBit();
+
+				if (hasButtons)
+				{
+					uint16_t buttons;
+					bitStream.Read(buttons);
+
+					PlayerNetObject * player = client->m_gameSim->m_players[i];
+
+					if (player)
+						player->m_input.m_currButtons = buttons;
+				}
+			}
+
+			if (g_clientSim)
+			{
+				client->m_gameSim->tick();
+			}
 		}
 	}
 	else if (method == s_rpcSetPlayerCharacterIndex)
@@ -233,13 +286,12 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 				b.maxWrapCount = BULLET_TYPE0_MAX_WRAP_COUNT;
 				b.maxReflectCount = BULLET_TYPE0_MAX_REFLECT_COUNT;
 				b.maxDistanceTravelled = BULLET_TYPE0_MAX_DISTANCE_TRAVELLED;
-				b.maxDestroyedBlocks = 5;
+				b.maxDestroyedBlocks = 1;
 				break;
 			case kBulletType_Grenade:
 				velocity = BULLET_GRENADE_NADE_SPEED;
 				b.maxWrapCount = 100;
 				b.doGravity = true;
-				//b.gravityModifier = 0.75f;
 				b.doBounce = true;
 				b.bounceAmount = BULLET_GRENADE_NADE_BOUNCE_AMOUNT;
 				b.noDamage = true;
@@ -406,21 +458,30 @@ Client * App::findClientByChannel(Channel * channel)
 
 void App::SV_OnChannelConnect(Channel * channel)
 {
-	ClientInfo clientInfo;
+	PlayerNetObject * player = m_host->allocPlayer(channel->m_destinationId);
 
-	clientInfo.replicationId = m_replicationMgr->SV_CreateClient(channel, 0);
+	if (player == 0)
+	{
+		channel->Disconnect();
+	}
+	else
+	{
+		ClientInfo clientInfo;
 
-	clientInfo.player = new PlayerNetObject(m_host->allocNetId(), channel->m_destinationId);
+		clientInfo.replicationId = m_replicationMgr->SV_CreateClient(channel, 0);
 
-	m_replicationMgr->SV_AddObject(clientInfo.player);
+		clientInfo.player = player;
 
-	m_hostClients[channel] = clientInfo;
+		m_replicationMgr->SV_AddObject(clientInfo.player);
 
-	//
+		m_hostClients[channel] = clientInfo;
 
-	m_host->addPlayer(clientInfo.player);
+		//
 
-	m_host->syncNewClient(channel);
+		m_host->addPlayer(clientInfo.player);
+
+		m_host->syncNewClient(channel);
+	}
 }
 
 void App::SV_OnChannelDisconnect(Channel * channel)
@@ -669,8 +730,10 @@ bool App::init(bool isHost)
 
 		//
 
+		m_rpcMgr->RegisterWithID(s_rpcSyncGameSim, handleRpc);
 		m_rpcMgr->RegisterWithID(s_rpcPlaySound, handleRpc);
 		m_rpcMgr->RegisterWithID(s_rpcSetPlayerInputs, handleRpc);
+		m_rpcMgr->RegisterWithID(s_rpcBroadcastPlayerInputs, handleRpc);
 		m_rpcMgr->RegisterWithID(s_rpcSetPlayerCharacterIndex, handleRpc);
 		m_rpcMgr->RegisterWithID(s_rpcSpawnBullet, handleRpc);
 		m_rpcMgr->RegisterWithID(s_rpcKillBullet, handleRpc);
@@ -768,8 +831,10 @@ void App::shutdown()
 
 	m_replicationMgr->CL_Shutdown();
 
+	m_rpcMgr->Unregister(s_rpcSyncGameSim, handleRpc);
 	m_rpcMgr->Unregister(s_rpcPlaySound, handleRpc);
 	m_rpcMgr->Unregister(s_rpcSetPlayerInputs, handleRpc);
+	m_rpcMgr->Unregister(s_rpcBroadcastPlayerInputs, handleRpc);
 	m_rpcMgr->Unregister(s_rpcSetPlayerCharacterIndex, handleRpc);
 	m_rpcMgr->Unregister(s_rpcSpawnBullet, handleRpc);
 	m_rpcMgr->Unregister(s_rpcKillBullet, handleRpc);
@@ -902,6 +967,10 @@ bool App::tick()
 	g_updateTicks = (int)(dtAccum * 60.f);
 	dtAccum -= g_updateTicks / 60.f;
 
+#if 1
+	g_updateTicks = 1;
+#endif
+
 	// shared update
 
 	framework.process();
@@ -918,11 +987,16 @@ bool App::tick()
 		{
 			m_channelMgr->Update(g_TimerRT.TimeUS_get());
 
+			netBroadcastPlayerInputs();
+
 			m_replicationMgr->SV_Update();
 		}
 
 		if (!m_optionMenuIsOpen)
 		{
+			if (g_updateTicks)
+				m_host->m_gameSim.tick();
+
 			m_host->tick(dt);
 		}
 
@@ -1042,6 +1116,23 @@ void App::draw()
 		if (g_devMode && g_host)
 		{
 			g_host->debugDraw();
+
+			if (g_clientSim)
+			{
+				int y = 100;
+				setFont("calibri.ttf");
+				drawText(0, y += 30, 24, +1, +1, "random seek=%u, next pickup tick=%u, crc=%u",
+					g_host->m_gameSim.m_state.m_randomSeed,
+					(uint32_t)g_host->m_gameSim.m_state.m_nextPickupSpawnTick,
+					g_host->m_gameSim.calcCRC());
+				for (size_t i = 0; i < m_clients.size(); ++i)
+				{
+					drawText(0, y += 30, 24, +1, +1, "random seek=%u, next pickup tick=%u, crc=%u",
+						m_clients[i]->m_gameSim->m_state.m_randomSeed,
+						(uint32_t)m_clients[i]->m_gameSim->m_state.m_nextPickupSpawnTick,
+						m_clients[i]->m_gameSim->calcCRC());
+				}
+			}
 		}
 
 		if (m_optionMenuIsOpen)
@@ -1157,6 +1248,17 @@ void App::draw()
 	TIMER_START(g_appDrawTime);
 }
 
+void App::netSyncGameSim(Channel * channel)
+{
+	BitStream bs;
+
+	NetSerializationContext context;
+	context.Set(true, true, bs);
+	m_host->m_gameSim.serialize(context);
+
+	m_rpcMgr->Call(s_rpcSyncGameSim, bs, ChannelPool_Client, &channel->m_id, false, false);
+}
+
 void App::netPlaySound(const char * filename, uint8_t volume)
 {
 	BitStream bs;
@@ -1175,6 +1277,28 @@ void App::netSetPlayerInputs(uint16_t channelId, uint32_t netId, uint16_t button
 	bs.Write(buttons);
 
 	m_rpcMgr->Call(s_rpcSetPlayerInputs, bs, ChannelPool_Client, &channelId, false, false);
+}
+
+void App::netBroadcastPlayerInputs()
+{
+	BitStream bs;
+
+	// todo : if debug, serialize game state CRC
+
+	const uint32_t crc = (g_devMode ? m_host->m_gameSim.calcCRC() : 0);
+	bs.Write(crc);
+
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+	{
+		const PlayerNetObject * player = m_host->m_gameSim.m_players[i];
+		const uint16_t buttons = (player ? player->m_input.m_currButtons : 0);
+		const bool hasButtons = (buttons != 0);
+		bs.WriteBit(hasButtons);
+		if (hasButtons)
+			bs.Write(buttons);
+	}
+
+	m_rpcMgr->Call(s_rpcBroadcastPlayerInputs, bs, ChannelPool_Server, 0, true, false);
 }
 
 void App::netSetPlayerCharacterIndex(uint16_t channelId, uint32_t netId, uint8_t characterIndex)

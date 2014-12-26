@@ -24,8 +24,20 @@ todo:
 + add direct connect option
 + spring block tweakable
 - more death feedback
-- respawn delay
++ respawn delay
 - character selection
++ force feedback cling animation
++ attack anim up and down
+- analog controls
+- team based game mode
+- token hunt
+- spawn anim
+
++ death input
++ hitbox spikes
++ manual spawn (5 seconds?)
+- taunt button
++ shotgun ammo x3
 
 - attack cancel
 + bullet teleport
@@ -65,6 +77,8 @@ enum PlayerAnim
 	kPlayerAnim_WallSlide,
 	kPlayerAnim_Walk,
 	kPlayerAnim_Attack,
+	kPlayerAnim_AttackUp,
+	kPlayerAnim_AttackDown,
 	kPlayerAnim_Fire,
 	kPlayerAnim_AirDash,
 	kPlayerAnim_Spawn,
@@ -78,15 +92,17 @@ struct PlayerAnimInfo
 	int prio;
 } s_animInfos[kPlayerAnim_COUNT] =
 {
-	{ nullptr,                          0 },
-	{ "char%d/jump/jump.png",           1 },
-	{ "char%d/wallslide/wallslide.png", 2 },
-	{ "char%d/walk/walk.png",           3 },
-	{ "char%d/attack/attack.png",       4 },
-	{ "char%d/shoot/shoot.png",         4 },
-	{ "char%d/dash/dash.png",           4 },
-	{ "char%d/spawn/spawn.png",         5 },
-	{ "char%d/die/die.png",             6 }
+	{ nullptr,                            0 },
+	{ "char%d/jump/jump.png",             1 },
+	{ "char%d/wallslide/wallslide.png",   2 },
+	{ "char%d/walk/walk.png",             3 },
+	{ "char%d/attack/attack.png",         4 },
+	{ "char%d/attackup/attackup.png",     4 },
+	{ "char%d/attackdown/attackdown.png", 4 },
+	{ "char%d/shoot/shoot.png",           4 },
+	{ "char%d/dash/dash.png",             4 },
+	{ "char%d/spawn/spawn.png",           5 },
+	{ "char%d/die/die.png",               6 }
 };
 
 //
@@ -119,7 +135,7 @@ void PlayerPos_NS::SerializeStruct()
 	//
 
 	bool facing;
-		
+
 	facing = player->m_facing[0] < 0 ? true : false;
 	Serialize(facing);
 	player->m_facing[0] = facing ? -1 : +1;
@@ -139,6 +155,8 @@ void PlayerState_NS::SerializeStruct()
 	uint8_t oldCharacterIndex = player->m_characterIndex;
 
 	Serialize(player->m_isAlive);
+	Serialize(player->m_canRespawn);
+	Serialize(player->m_isRespawn);
 	Serialize(player->m_score);
 	Serialize(player->m_totalScore);
 	Serialize(playerId);
@@ -185,7 +203,7 @@ void PlayerAnim_NS::SerializeStruct()
 
 		playerNetObject->m_sprite = new Sprite(filename);
 		playerNetObject->m_sprite->animActionHandler = PlayerNetObject::handleAnimationAction;
-		playerNetObject->m_sprite->animActionHandlerObj = player;
+		playerNetObject->m_sprite->animActionHandlerObj = playerNetObject;
 	}
 
 	if (playerNetObject->m_sprite)
@@ -323,6 +341,7 @@ void PlayerNetObject::handleAnimationAction(const std::string & action, const Di
 		{
 			std::string name = args.getString("name", "");
 
+			LOG_ERR("playerNetObject: %p", playerNetObject);
 			if (playerNetObject->m_sounds.count(name.c_str()) == 0)
 			{
 				if (playerNetObject->m_props.contains(name.c_str()))
@@ -401,7 +420,7 @@ float Player::getAttackDamage(Player * other)
 
 bool Player::isAnimOverrideAllowed(int anim) const
 {
-	return !m_isAnimDriven || (s_animInfos[anim].prio > s_animInfos[anim].prio);
+	return !m_isAnimDriven || (s_animInfos[anim].prio > s_animInfos[m_anim].prio);
 }
 
 float Player::mirrorX(float x) const
@@ -468,7 +487,7 @@ void Player::playSecondaryEffects(PlayerEvent e)
 	case kPlayerEvent_Jump:
 		{
 			Dictionary args;
-			args.setPtr("obj", this);
+			args.setPtr("obj", m_netObject);
 			args.setString("name", "jump_sounds");
 			m_netObject->handleAnimationAction("char_soundbag", args);
 			break;
@@ -529,6 +548,8 @@ void Player::tick(float dt)
 			switch (m_anim)
 			{
 			case kPlayerAnim_Attack:
+			case kPlayerAnim_AttackUp:
+			case kPlayerAnim_AttackDown:
 				m_attack.attacking = false;
 				break;
 			case kPlayerAnim_Fire:
@@ -552,9 +573,23 @@ void Player::tick(float dt)
 
 	//
 
-	if (!m_isAlive || m_netObject->m_input.wentDown(INPUT_BUTTON_START))
-	{
+	if (g_devMode && m_netObject->m_input.wentDown(INPUT_BUTTON_START))
 		respawn();
+
+	if (!m_isAlive && !m_isAnimDriven)
+	{
+		if (!m_canRespawn)
+		{
+			m_canRespawn = true;
+			m_netObject->m_state.SetDirty();
+
+			m_respawnTimer = m_isRespawn ? 3.f : 0.f;
+		}
+
+		if (m_netObject->m_input.wentDown(INPUT_BUTTON_X) || m_respawnTimer <= 0.f)
+			respawn();
+
+		m_respawnTimer -= dt;
 	}
 
 	if (m_isAlive)
@@ -572,7 +607,7 @@ void Player::tick(float dt)
 			switch (pickup->type)
 			{
 			case kPickupType_Ammo:
-				m_weaponAmmo = 1;
+				m_weaponAmmo = 3;
 				m_weaponType = kPlayerWeapon_Fire;
 				break;
 			case kPickupType_Nade:
@@ -603,7 +638,7 @@ void Player::tick(float dt)
 
 		if (m_attack.attacking)
 		{
-			if (m_anim == kPlayerAnim_Attack)
+			if (m_anim == kPlayerAnim_Attack || m_anim == kPlayerAnim_AttackUp || m_anim == kPlayerAnim_AttackDown)
 			{
 				const float attackVel = std::max<float>(m_attack.attackVel[0], m_attack.attackVel[1]);
 				animVel[0] += attackVel * m_attackDirection[0];
@@ -635,8 +670,19 @@ void Player::tick(float dt)
 
 						Player * players[2] = { this, other };
 
+						const Vec2 midPoint = (players[0]->m_pos + players[1]->m_pos) / 2.f;
+
 						for (int i = 0; i < 2; ++i)
 						{
+							const Vec2 delta = midPoint - players[i]->m_pos;
+							const Vec2 normal = delta.CalcNormalized();
+							const Vec2 attackDirection = Vec2(players[i]->m_attackDirection[0], players[i]->m_attackDirection[1]).CalcNormalized();
+							const float dot = attackDirection * normal;
+							const Vec2 reflect = attackDirection - normal * dot * 2.f;
+
+							players[i]->m_vel = reflect * PLAYER_SWORD_CLING_SPEED;
+							players[i]->m_controlDisableTime = PLAYER_SWORD_CLING_TIME;
+
 							players[i]->m_attack.attacking = false;
 						}
 
@@ -722,17 +768,30 @@ void Player::tick(float dt)
 				m_attack = AttackInfo();
 				m_attack.attacking = true;
 
-				m_netObject->m_anim.SetAnim(kPlayerAnim_Attack, true, true);
-				m_isAnimDriven = true;
+				int anim = -1;
 
 				// determine attack direction based on player input
 
 				if (m_netObject->m_input.isDown(INPUT_BUTTON_UP))
+				{
 					m_netObject->m_anim.SetAttackDirection(0, -1);
+					anim = kPlayerAnim_AttackUp;
+				}
 				else if (m_netObject->m_input.isDown(INPUT_BUTTON_DOWN))
+				{
 					m_netObject->m_anim.SetAttackDirection(0, +1);
+					anim = kPlayerAnim_AttackDown;
+				}
 				else
+				{
 					m_netObject->m_anim.SetAttackDirection(m_facing[0], 0);
+					anim = kPlayerAnim_Attack;
+				}
+
+				// start anim
+
+				m_netObject->m_anim.SetAnim(anim, true, true);
+				m_isAnimDriven = true;
 
 				// determine attack collision. basically just 3 directions: forward, up and down
 
@@ -778,10 +837,7 @@ void Player::tick(float dt)
 		{
 			if (isAnimOverrideAllowed(kPlayerAnim_Die))
 			{
-				m_netObject->m_anim.SetAnim(kPlayerAnim_Die, true, true);
-				m_isAnimDriven = true;
-
-				awardScore(-1);
+				handleDamage(1.f, Vec2(0.f, 0.f), 0);
 
 				playSecondaryEffects(kPlayerEvent_SpikeHit);
 			}
@@ -826,8 +882,13 @@ void Player::tick(float dt)
 		}
 
 		bool playerControl =
-			m_animAllowSteering;// &&
+			m_controlDisableTime == 0.f &&
+			m_animAllowSteering; //&&
 			//!m_isAnimDriven;
+
+		m_controlDisableTime -= dt;
+		if (m_controlDisableTime < 0.f)
+			m_controlDisableTime = 0.f;
 
 		// sticky ceiling
 
@@ -1289,6 +1350,22 @@ void Player::draw()
 	setFont("calibri.ttf");
 	setColor(255, 255, 255);
 	drawText(m_pos[0], m_pos[1] - 110, 20, 0.f, +1.f, "%d", m_score);
+
+	if (!m_isAlive && m_canRespawn && m_isRespawn)
+	{
+		int sx = 40;
+		int sy = 40;
+
+		// we're dead and we're waiting for respawn
+		setColor(0, 0, 255, 127);
+		drawRect(m_pos[0] - sx / 2, m_pos[1] - sy / 2, m_pos[0] + sx / 2, m_pos[1] + sy / 2);
+		setColor(0, 0, 255);
+		drawRectLine(m_pos[0] - sx / 2, m_pos[1] - sy / 2, m_pos[0] + sx / 2, m_pos[1] + sy / 2);
+
+		setColor(255, 255, 255);
+		setFont("calibri.ttf");
+		drawText(m_pos[0], m_pos[1], 24, 0, 0, "(X)");
+	}
 }
 
 void Player::drawAt(int x, int y)
@@ -1296,7 +1373,7 @@ void Player::drawAt(int x, int y)
 	setColor(colorWhite);
 	m_netObject->m_sprite->drawEx(x, y, 0.f, m_netObject->m_spriteScale);
 
-	if (m_anim == kPlayerAnim_Attack)
+	if (m_anim == kPlayerAnim_Attack || m_anim == kPlayerAnim_AttackUp || m_anim == kPlayerAnim_AttackDown)
 	{
 		CollisionInfo collisionInfo;
 		getAttackCollision(collisionInfo);
@@ -1414,6 +1491,7 @@ void Player::handleNewRound()
 
 	m_netObject->m_lastSpawnIndex = -1;
 	m_isRespawn = false;
+	m_netObject->m_state.SetDirty();
 
 	m_weaponAmmo = 0;
 }
@@ -1425,7 +1503,7 @@ void Player::respawn()
 
 	int x, y;
 
-	if (g_hostArena->getRandomSpawnPoint(x, y, m_netObject->m_lastSpawnIndex))
+	if (g_hostArena->getRandomSpawnPoint(x, y, m_netObject->m_lastSpawnIndex, this))
 	{
 		m_pos[0] = (float)x;
 		m_pos[1] = (float)y;
@@ -1435,6 +1513,8 @@ void Player::respawn()
 
 		m_isAlive = true;
 		m_netObject->m_state.SetDirty();
+
+		m_controlDisableTime = 0.f;
 
 		m_netObject->m_anim.SetAnim(kPlayerAnim_Walk, false, true);
 
@@ -1457,6 +1537,7 @@ void Player::respawn()
 		{
 			playSecondaryEffects(kPlayerEvent_Spawn);
 			m_isRespawn = true;
+			m_netObject->m_state.SetDirty();
 		}
 	}
 }
@@ -1478,9 +1559,16 @@ void Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 			m_netObject->m_anim.SetAnim(kPlayerAnim_Die, true, true);
 			m_isAnimDriven = true;
 
+			m_canRespawn = false;
+			m_netObject->m_state.SetDirty();
+
 			if (attacker)
 			{
 				attacker->awardScore(1);
+			}
+			else
+			{
+				awardScore(-1);
 			}
 
 			// fixme.. mid pos

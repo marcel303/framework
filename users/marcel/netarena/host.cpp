@@ -52,7 +52,7 @@ Host::~Host()
 void Host::init()
 {
 	m_freePlayerIds.clear();
-	for (int i = 0; i < 4; ++i)
+	for (int i = 0; i < MAX_PLAYERS; ++i)
 		m_freePlayerIds.push_back(i);
 
 	g_app->getReplicationMgr()->SV_AddObject(&m_gameSim.m_arenaNetObject);
@@ -62,7 +62,7 @@ void Host::init()
 	m_spriteManager = new NetSpriteManager();
 
 	g_host = this;
-	g_hostArena = &m_gameSim.m_state.m_arena;
+	g_hostArena = &m_gameSim.m_arena;
 	g_hostBulletPool = m_bulletPool;
 	g_hostSpriteManager = m_spriteManager;
 }
@@ -106,8 +106,6 @@ void Host::tick(float dt)
 
 void Host::tickPlay(float dt)
 {
-	m_gameSim.tick();
-
 	bool roundComplete = false;
 
 	for (auto i = m_players.begin(); i != m_players.end(); ++i)
@@ -165,6 +163,8 @@ uint32_t Host::allocNetId()
 
 void Host::syncNewClient(Channel * channel)
 {
+	g_app->netSyncGameSim(channel);
+
 	// sync bullet list
 
 	// sync net sprites
@@ -210,21 +210,21 @@ void Host::newRound(const char * mapOverride)
 
 	if (mapOverride)
 	{
-		m_gameSim.m_state.m_arena.load(mapOverride);
+		m_gameSim.m_arena.load(mapOverride);
 	}
 	else if (!map.empty())
 	{
-		m_gameSim.m_state.m_arena.load(map.c_str());
+		m_gameSim.m_arena.load(map.c_str());
 	}
 	else if (g_mapList.size() != 0)
 	{
 		const size_t index = m_nextRoundNumber % g_mapList.size();
 
-		m_gameSim.m_state.m_arena.load(g_mapList[index].c_str());
+		m_gameSim.m_arena.load(g_mapList[index].c_str());
 	}
 	else
 	{
-		m_gameSim.m_state.m_arena.load("arena.txt");
+		m_gameSim.m_arena.load("arena.txt");
 	}
 
 	// respawn players
@@ -255,21 +255,32 @@ void Host::endRound()
 	m_roundCompleteTimer = g_TimerRT.TimeUS_get() + g_roundCompleteTimer * 1000000; // fixme, option
 }
 
+PlayerNetObject * Host::allocPlayer(uint16_t owningChannelId)
+{
+	if (m_freePlayerIds.empty())
+		return 0;
+	else
+	{
+		// allocate player ID
+
+		std::sort(m_freePlayerIds.begin(), m_freePlayerIds.end(), std::greater<int>());
+		const int playerId = m_freePlayerIds.back();
+		m_freePlayerIds.pop_back();
+
+		Player * player = &m_gameSim.m_state.m_players[playerId];
+		*player = Player();
+
+		PlayerNetObject * netObject = new PlayerNetObject(allocNetId(), owningChannelId, player);
+		netObject->setPlayerId(playerId);
+
+		m_gameSim.m_players[playerId] = netObject;
+
+		return netObject;
+	}
+}
+
 void Host::addPlayer(PlayerNetObject * player)
 {
-	// allocate player ID
-
-	int playerId = -1;
-
-	if (!m_freePlayerIds.empty())
-	{
-		std::sort(m_freePlayerIds.begin(), m_freePlayerIds.end(), std::greater<int>());
-		playerId = m_freePlayerIds.back();
-		m_freePlayerIds.pop_back();
-	}
-
-	player->setPlayerId(playerId);
-
 	m_players.push_back(player);
 }
 
@@ -280,8 +291,14 @@ void Host::removePlayer(PlayerNetObject * player)
 	Assert(i != m_players.end());
 	if (i != m_players.end())
 	{
-		if (player->getPlayerId() != -1)
+		const int playerId = player->getPlayerId();
+		if (playerId != -1)
+		{
+			Assert(m_gameSim.m_players[playerId] != 0);
+			m_gameSim.m_players[playerId] = 0;
+
 			m_freePlayerIds.push_back(player->getPlayerId());
+		}
 		m_players.erase(i);
 	}
 }

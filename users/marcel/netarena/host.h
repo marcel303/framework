@@ -11,6 +11,8 @@ class PlayerNetObject;
 
 class Host
 {
+	friend class App; // fixme, for m_gameSim
+	friend class Arena;
 	friend class BulletPool;
 	friend struct Player; // fixme, for m_players array
 
@@ -49,6 +51,7 @@ public:
 	void newRound(const char * mapOverride);
 	void endRound();
 
+	PlayerNetObject * allocPlayer(uint16_t owningChannelId);
 	void addPlayer(PlayerNetObject * player);
 	void removePlayer(PlayerNetObject * player);
 	PlayerNetObject * findPlayerByNetId(uint32_t netId);

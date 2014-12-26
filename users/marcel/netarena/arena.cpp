@@ -4,9 +4,11 @@
 #include "bullet.h"
 #include "FileStream.h"
 #include "framework.h"
+#include "host.h"
 #include "image.h"
 #include "main.h"
 #include "Path.h"
+#include "player.h"
 #include "StreamReader.h"
 
 class BlockMask
@@ -47,7 +49,7 @@ static void initializeBlockMasks()
 	{
 		init = true;
 
-		createBlockMask(kBlockShape_Empty, [](int x, int y) { return true; });
+		createBlockMask(kBlockShape_Empty,  [](int x, int y) { return true; });
 		createBlockMask(kBlockShape_Opaque, [](int x, int y) { return true; });
 
 		createBlockMask(kBlockShape_TL,     [](int x, int y) { return x + y < BLOCK_SX; });
@@ -63,6 +65,9 @@ static void initializeBlockMasks()
 		createBlockMask(kBlockShape_BL2b,   [](int x, int y) { return s_blockMasks[kBlockShape_TL2b].test(               x, BLOCK_SY - 1 - y); });
 		createBlockMask(kBlockShape_BR2a,   [](int x, int y) { return s_blockMasks[kBlockShape_TL2b].test(BLOCK_SX - 1 - x, BLOCK_SY - 1 - y); });
 		createBlockMask(kBlockShape_BR2b,   [](int x, int y) { return s_blockMasks[kBlockShape_TL2a].test(BLOCK_SX - 1 - x, BLOCK_SY - 1 - y); });
+
+		createBlockMask(kBlockShape_HT,     [](int x, int y) { return y < BLOCK_SY / 2; });
+		createBlockMask(kBlockShape_HB,     [](int x, int y) { return s_blockMasks[kBlockShape_HT].test(x, BLOCK_SY - 1 - y); });
 	}
 }
 
@@ -245,6 +250,8 @@ void Arena::load(const char * filename)
 					f = kBlockShape_BL2b,
 					g = kBlockShape_BR2a,
 					h = kBlockShape_BR2b,
+					c = kBlockShape_HT,
+					v = kBlockShape_HB,
 				*/
 
 				BlockShape shape = kBlockShape_Empty;
@@ -265,6 +272,8 @@ void Arena::load(const char * filename)
 				case 'f': shape = kBlockShape_BL2b; break;
 				case 'g': shape = kBlockShape_BR2a; break;
 				case 'h': shape = kBlockShape_BR2b; break;
+				case 'c': shape = kBlockShape_HT; break;
+				case 'v': shape = kBlockShape_HB; break;
 
 				case '.':
 					break;
@@ -283,6 +292,15 @@ void Arena::load(const char * filename)
 	}
 
 	m_netObject->m_serializer.SetDirty();
+}
+
+void Arena::serialize(NetSerializationContext & context)
+{
+	NetSerializableObject * serializable = m_netObject;
+	serializable->Serialize(
+		context.IsInit(), context.IsSend(),
+		REPLICATION_CHANNEL_RELIABLE,
+		context.GetBitStream());
 }
 
 void Arena::drawBlocks()
@@ -306,7 +324,7 @@ void Arena::drawBlocks()
 		"block-gravity-right.png",
 		"block-conveyorbelt-left.png",
 		"block-conveyorbelt-right.png",
-		"block-indestructible.png" // passthrough
+		"block-passthrough.png"
 	};
 
 	static Sprite * sprites[kBlockType_COUNT] = { };
@@ -351,35 +369,64 @@ void Arena::drawBlocks()
 	}
 }
 
-bool Arena::getRandomSpawnPoint(int & out_x, int & out_y, int & io_lastSpawnIndex)
+bool Arena::getRandomSpawnPoint(int & out_x, int & out_y, int & io_lastSpawnIndex, Player * playerToIgnore)
 {
 	// find a spawn point
 
-	std::vector< std::tuple<int, int> > blocks;
+	const int kMaxCandidates = 8;
+	struct Candidate
+	{
+		int blockX;
+		int blockY;
+		float minDistanceToPlayer;
+	} candidates[kMaxCandidates];
+	int numCandidates = 0;
 
 	for (int x = 0; x < ARENA_SX; ++x)
 	{
 		for (int y = 0; y < ARENA_SY; ++y)
 		{
 			if (m_blocks[x][y].type == kBlockType_Spawn)
-				blocks.push_back(std::tuple<int, int>(x, y));
+			{
+				candidates[numCandidates].blockX = x;
+				candidates[numCandidates].blockY = y;
+				candidates[numCandidates].minDistanceToPlayer = 1000000.f;
+
+				for (auto p = g_host->m_players.begin(); p != g_host->m_players.end(); ++p)
+				{
+					Player * player = (*p)->m_player;
+
+					if (player != playerToIgnore)
+					{
+						const float px = (x + .5f) * BLOCK_SX;
+						const float py = (y + .5f) * BLOCK_SY;
+						const float dx = px - player->m_pos[0];
+						const float dy = py - player->m_pos[1];
+						const float d = std::sqrt(dx * dx + dy * dy);
+						if (d < candidates[numCandidates].minDistanceToPlayer)
+							candidates[numCandidates].minDistanceToPlayer = d;
+					}
+				}
+
+				numCandidates++;
+			}
 		}
 	}
 
-	if (blocks.empty())
+	if (numCandidates == 0)
 		return false;
 	else
 	{
-		for (;;)
-		{
-			const int index = rand() % blocks.size();
+		std::sort(candidates, candidates + numCandidates, [](const Candidate & c1, const Candidate & c2) { return c1.minDistanceToPlayer > c2.minDistanceToPlayer; });
 
-			bool accept = (io_lastSpawnIndex == -1 || blocks.size() == 1 || index != io_lastSpawnIndex);
+		for (int index = 0; index < numCandidates; ++index)
+		{
+			bool accept = (io_lastSpawnIndex == -1 || numCandidates == 1 || index != io_lastSpawnIndex);
 
 			if (accept)
 			{
-				out_x = std::get<0>(blocks[index]) * BLOCK_SX;
-				out_y = std::get<1>(blocks[index]) * BLOCK_SY;
+				out_x = candidates[index].blockX * BLOCK_SX;
+				out_y = candidates[index].blockY * BLOCK_SY;
 
 				out_x += BLOCK_SX / 2;
 				out_y += BLOCK_SY - 1;
@@ -394,13 +441,8 @@ bool Arena::getRandomSpawnPoint(int & out_x, int & out_y, int & io_lastSpawnInde
 	return false;
 }
 
-bool Arena::getRandomPickupLocation(int & out_x, int & out_y, void * obj, bool (*reject)(void * obj, int x, int y))
+bool Arena::getRandomPickupLocations(int * out_x, int * out_y, int & numLocations, void * obj, bool (*reject)(void * obj, int x, int y))
 {
-	struct Coord
-	{
-		int x;
-		int y;
-	} candidates[ARENA_SX * ARENA_SY];
 	int numCandidates = 0;
 
 	for (int x = 0; x < ARENA_SX; ++x)
@@ -414,9 +456,12 @@ bool Arena::getRandomPickupLocation(int & out_x, int & out_y, void * obj, bool (
 			{
 				if (!reject || !reject(obj, x, y))
 				{
-					candidates[numCandidates].x = x;
-					candidates[numCandidates].y = y;
-					numCandidates++;
+					if (numCandidates < numLocations)
+					{
+						out_x[numCandidates] = x;
+						out_y[numCandidates] = y;
+						numCandidates++;
+					}
 				}
 			}
 		}
@@ -425,9 +470,7 @@ bool Arena::getRandomPickupLocation(int & out_x, int & out_y, void * obj, bool (
 	if (numCandidates == 0)
 		return false;
 
-	const int index = rand() % numCandidates;
-	out_x = candidates[index].x;
-	out_y = candidates[index].y;
+	numLocations = numCandidates;
 
 	return true;
 }
@@ -670,7 +713,7 @@ void ArenaNetObject::Arena_NS::SerializeStruct()
 			uint8_t type = block.type;
 
 			Serialize(type);
-			Serialize(block.clientData);
+			//Serialize(block.clientData);
 
 			block.type = (BlockType)type;
 		}
