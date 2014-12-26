@@ -650,66 +650,69 @@ void Player::tick(float dt)
 				animVel[1] += m_attack.attackVel[1] * m_facing[1];
 			}
 
-			// see if we hit anyone
-
-			for (auto i = g_host->m_players.begin(); i != g_host->m_players.end(); ++i)
+			if (m_attack.hasCollision)
 			{
-				Player * other = (*i)->m_player;
+				// see if we hit anyone
 
-				if (other == this)
-					continue;
-
-				float damage1 = getAttackDamage(other);
-				float damage2 = other->getAttackDamage(this);
-
-				if (damage1 != 0.f)
+				for (auto i = g_host->m_players.begin(); i != g_host->m_players.end(); ++i)
 				{
-					if (damage2 != 0.f)
+					Player * other = (*i)->m_player;
+
+					if (other == this)
+						continue;
+
+					float damage1 = getAttackDamage(other);
+					float damage2 = other->getAttackDamage(this);
+
+					if (damage1 != 0.f)
 					{
-						//log("-> attack cancel");
-
-						Player * players[2] = { this, other };
-
-						const Vec2 midPoint = (players[0]->m_pos + players[1]->m_pos) / 2.f;
-
-						for (int i = 0; i < 2; ++i)
+						if (damage2 != 0.f)
 						{
-							const Vec2 delta = midPoint - players[i]->m_pos;
-							const Vec2 normal = delta.CalcNormalized();
-							const Vec2 attackDirection = Vec2(players[i]->m_attackDirection[0], players[i]->m_attackDirection[1]).CalcNormalized();
-							const float dot = attackDirection * normal;
-							const Vec2 reflect = attackDirection - normal * dot * 2.f;
+							//log("-> attack cancel");
 
-							players[i]->m_vel = reflect * PLAYER_SWORD_CLING_SPEED;
-							players[i]->m_controlDisableTime = PLAYER_SWORD_CLING_TIME;
+							Player * players[2] = { this, other };
 
-							players[i]->m_attack.attacking = false;
+							const Vec2 midPoint = (players[0]->m_pos + players[1]->m_pos) / 2.f;
+
+							for (int i = 0; i < 2; ++i)
+							{
+								const Vec2 delta = midPoint - players[i]->m_pos;
+								const Vec2 normal = delta.CalcNormalized();
+								const Vec2 attackDirection = Vec2(players[i]->m_attackDirection[0], players[i]->m_attackDirection[1]).CalcNormalized();
+								const float dot = attackDirection * normal;
+								const Vec2 reflect = attackDirection - normal * dot * 2.f;
+
+								players[i]->m_vel = reflect * PLAYER_SWORD_CLING_SPEED;
+								players[i]->m_controlDisableTime = PLAYER_SWORD_CLING_TIME;
+
+								players[i]->m_attack.attacking = false;
+							}
+
+							g_app->netPlaySound("melee-cancel.ogg");
 						}
+						else
+						{
+							//log("-> attack damage");
 
-						g_app->netPlaySound("melee-cancel.ogg");
-					}
-					else
-					{
-						//log("-> attack damage");
-
-						other->handleDamage(1.f, Vec2(m_facing[0] * PLAYER_SWORD_PUSH_SPEED, 0.f), this);
+							other->handleDamage(1.f, Vec2(m_facing[0] * PLAYER_SWORD_PUSH_SPEED, 0.f), this);
+						}
 					}
 				}
+
+				// see if we've hit a block
+
+				CollisionInfo attackCollision;
+				getAttackCollision(attackCollision);
+
+				m_attack.hitDestructible |= g_hostArena->handleDamageRect(
+					m_pos[0],
+					m_pos[1],
+					attackCollision.x1,
+					attackCollision.y1,
+					attackCollision.x2,
+					attackCollision.y2,
+					!m_attack.hitDestructible);
 			}
-
-			// see if we've hit a block
-
-			CollisionInfo attackCollision;
-			getAttackCollision(attackCollision);
-
-			m_attack.hitDestructible |= g_hostArena->handleDamageRect(
-				m_pos[0],
-				m_pos[1],
-				attackCollision.x1,
-				attackCollision.y1,
-				attackCollision.x2,
-				attackCollision.y2,
-				!m_attack.hitDestructible);
 		}
 		else
 		{
@@ -719,6 +722,7 @@ void Player::tick(float dt)
 
 				int anim = -1;
 				BulletType bulletType = kBulletType_COUNT;
+				bool hasAttackCollision = false;
 
 				if (m_weaponType == kPlayerWeapon_Fire)
 				{
