@@ -54,7 +54,7 @@ struct Player
 	void handleNewRound();
 
 	void respawn();
-	void handleDamage(float amount, Vec2Arg velocity, Player * attacker);
+	bool handleDamage(float amount, Vec2Arg velocity, Player * attacker);
 	void awardScore(int score);
 
 	char * makeCharacterFilename(const char * filename);
@@ -143,7 +143,6 @@ struct Player
 		int8_t cancelFacing;
 	} m_jump;
 
-
 	float m_respawnTimer;
 	bool m_canRespawn;
 	bool m_canTaunt;
@@ -185,7 +184,6 @@ public:
 		Pickup m_pickups[MAX_PICKUPS];
 		Pickup m_grabbedPickup;
 		uint64_t m_nextPickupSpawnTick;
-
 	} m_state;
 
 	Arena m_arena;

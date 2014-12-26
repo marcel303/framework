@@ -31,7 +31,8 @@ public:
 
 	bool doGravity;
 	bool doBounce;
-	bool noDamage;
+	bool noDamagePlayer;
+	bool noDamageMap;
 
 	Vec2 lastPos;
 

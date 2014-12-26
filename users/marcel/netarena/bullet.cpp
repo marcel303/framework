@@ -236,7 +236,7 @@ void BulletPool::tick(float _dt)
 						kill = true;
 				}
 
-				if (!kill && !b.noCollide && !b.noDamage)
+				if (!kill && !b.noCollide && !b.noDamagePlayer)
 				{
 					// collide with players
 
@@ -255,14 +255,13 @@ void BulletPool::tick(float _dt)
 
 						if (collisionInfo.intersects(b.pos[0], b.pos[1]))
 						{
-							player->handleDamage(1.f, b.vel, owner);
-
-							kill = true;
+							if (player->handleDamage(1.f, b.vel, owner))
+								kill = true;
 						}
 					}
 				}
 
-				if (!kill && !b.noCollide && !b.noDamage)
+				if (!kill && !b.noCollide && !b.noDamageMap)
 				{
 					// collide with map
 
@@ -286,29 +285,27 @@ void BulletPool::tick(float _dt)
 						b.life -= dt;
 
 						if (b.life <= 0.f)
-						{
-							if (b.type == kBulletType_Grenade)
-							{
-								for (int i = 0; i < BULLET_GRENADE_FRAG_COUNT; ++i)
-								{
-									g_app->netSpawnBullet(
-										b.pos[0],
-										b.pos[1],
-										rand() % 256,
-										kBulletType_GrenadeA,
-										b.ownerNetId);
-								}
-
-								g_app->netPlaySound("grenade-explode.ogg");
-							}
-
 							kill = true;
-						}
 					}
 				}
 
 				if (kill)
 				{
+					if (b.type == kBulletType_Grenade)
+					{
+						for (int i = 0; i < BULLET_GRENADE_FRAG_COUNT; ++i)
+						{
+							g_app->netSpawnBullet(
+								b.pos[0],
+								b.pos[1],
+								rand() % 256,
+								kBulletType_GrenadeA,
+								b.ownerNetId);
+						}
+
+						g_app->netPlaySound("grenade-explode.ogg");
+					}
+
 					if (!m_localOnly)
 					{
 						g_app->netKillBullet(i);

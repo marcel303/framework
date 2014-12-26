@@ -1569,7 +1569,7 @@ void Player::respawn()
 	}
 }
 
-void Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
+bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 {
 	if (m_isAlive)
 	{
@@ -1602,8 +1602,12 @@ void Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 			ParticleSpawnInfo spawnInfo(m_pos[0], m_pos[1] + mirrorY(-PLAYER_COLLISION_HITBOX_SY/2.f), kBulletType_ParticleA, 10, 50, 200, 20);
 			spawnInfo.color = 0xff0000ff;
 			g_app->netSpawnParticles(spawnInfo);
+
+			return true;
 		}
 	}
+
+	return false;
 }
 
 void Player::awardScore(int score)

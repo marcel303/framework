@@ -302,7 +302,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 				b.doGravity = true;
 				b.doBounce = true;
 				b.bounceAmount = BULLET_GRENADE_NADE_BOUNCE_AMOUNT;
-				b.noDamage = true;
+				b.noDamageMap = true;
 				b.life = BULLET_GRENADE_NADE_LIFE;
 				break;
 			case kBulletType_GrenadeA:
