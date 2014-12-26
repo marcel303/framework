@@ -8,12 +8,19 @@
 
 RpcManager::RpcManager(ChannelManager * channelMgr)
 	: m_channelMgr(channelMgr)
+	, m_handler(0)
 {
 }
 
 RpcManager::~RpcManager()
 {
 	NetAssert(m_registrations.empty());
+	NetAssert(m_handler == 0);
+}
+
+void RpcManager::SetDefaultHandler(RpcHandler handler)
+{
+	m_handler = handler;
 }
 
 bool RpcManager::RegisterWithID(uint32_t method, RpcHandler handler)
@@ -131,12 +138,16 @@ void RpcManager::OnReceive(Packet & packet, Channel * channel)
 void RpcManager::CallInternal(Channel * channel, uint32_t method, BitStream & bs)
 {
 	RegistrationMap::const_iterator i = m_registrations.find(method);
-	NetAssert(i != m_registrations.end());
+	NetAssert(i != m_registrations.end() || (method < 128 && m_handler));
 
 	if (i != m_registrations.end())
 	{
 		RpcHandler handler = i->second;
 
 		handler(channel, method, bs);
+	}
+	else if (method < 128 && m_handler)
+	{
+		m_handler(channel, method, bs);
 	}
 }

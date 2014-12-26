@@ -41,10 +41,13 @@ class RpcManager : public PacketListener
 	
 	ChannelManager * m_channelMgr;
 	RegistrationMap m_registrations;
+	RpcHandler m_handler;
 
 public:
 	RpcManager(ChannelManager * channelMgr);
 	~RpcManager();
+
+	void SetDefaultHandler(RpcHandler handler);
 
 	bool RegisterWithID(uint32_t method, RpcHandler handler);
 	uint32_t Register(const char * name, RpcHandler handler);
