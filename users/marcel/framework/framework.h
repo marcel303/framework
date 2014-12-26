@@ -327,9 +327,10 @@ class Sprite
 public:
 	friend class Framework;
 	
-	Sprite(const char * filename, float pivotX = 0.f, float pivotY = 0.f, const char * spritesheet = 0);
+	Sprite(const char * filename, float pivotX = 0.f, float pivotY = 0.f, const char * spritesheet = 0, bool autoUpdate = true);
 	~Sprite();
 	
+	void update(float dt); // only needs to be called if autoUpdate is false!
 	void draw();
 	void drawEx(float x, float y, float angle = 0.f, float scale = 1.f, bool pixelpos = true, TEXTURE_FILTER filter = FILTER_POINT);
 	
@@ -377,6 +378,8 @@ private:
 	bool m_isAnimStarted;
 	float m_animFramef;
 	int m_animFrame;
+
+	bool m_autoUpdate;
 
 	void updateAnimationSegment();
 	void updateAnimation(float timeStep);

@@ -1255,7 +1255,8 @@ std::string & Dictionary::operator[](const char * name)
 
 // -----
 
-Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * spritesheet)
+Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * spritesheet, bool autoUpdate)
+	: m_autoUpdate(autoUpdate)
 {
 	// drawing
 	this->pivotX = pivotX;
@@ -1305,12 +1306,19 @@ Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * s
 	// texture
 	m_texture = &g_textureCache.findOrCreate(filename, m_anim->m_gridSize[0], m_anim->m_gridSize[1]);
 	
-	framework.registerSprite(this);
+	if (m_autoUpdate)
+		framework.registerSprite(this);
 }
 
 Sprite::~Sprite()
 {
-	framework.unregisterSprite(this);
+	if (m_autoUpdate)
+		framework.unregisterSprite(this);
+}
+
+void Sprite::update(float dt)
+{
+	updateAnimation(dt);
 }
 
 void Sprite::draw()
