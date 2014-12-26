@@ -932,7 +932,7 @@ void Player::tick(float dt)
 
 				m_vel[1] = 0.f;
 			}
-			else if (m_vel[1] < 0.f)
+			else if (m_vel[1] <= 0.f)
 			{
 				surfaceFriction = FRICTION_GROUNDED;
 

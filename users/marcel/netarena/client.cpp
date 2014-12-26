@@ -90,9 +90,15 @@ void Client::tick(float dt)
 					input.analogX += 100;
 				}
 				if (keyboard.isDown(SDLK_UP))
+				{
 					input.buttons |= INPUT_BUTTON_UP;
+					input.analogY -= 100;
+				}
 				if (keyboard.isDown(SDLK_DOWN))
+				{
 					input.buttons |= INPUT_BUTTON_DOWN;
+					input.analogY += 100;
+				}
 				if (keyboard.isDown(SDLK_a))
 					input.buttons |= INPUT_BUTTON_A;
 				if (keyboard.isDown(SDLK_s))
@@ -138,6 +144,7 @@ void Client::tick(float dt)
 						input.buttons |= INPUT_BUTTON_START;
 
 					input.analogX = g.getAnalog(0, ANALOG_X) * 100;
+					input.analogY = g.getAnalog(0, ANALOG_Y) * 100;
 				}
 			}
 

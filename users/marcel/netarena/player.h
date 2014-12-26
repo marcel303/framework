@@ -66,6 +66,7 @@ struct PlayerInput
 	PlayerInput()
 		: buttons(0)
 		, analogX(0)
+		, analogY(0)
 	{
 	}
 
@@ -73,11 +74,13 @@ struct PlayerInput
 	{
 		return
 			buttons != other.buttons ||
-			analogX != other.analogX;
+			analogX != other.analogX ||
+			analogY != other.analogY;
 	}
 
 	uint16_t buttons;
 	int8_t analogX;
+	int8_t analogY;
 };
 
 class PlayerNetObject : public NetObject

@@ -170,6 +170,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		bitStream.Read(netId);
 		bitStream.Read(input.buttons);
 		bitStream.Read(input.analogX);
+		bitStream.Read(input.analogY);
 
 		PlayerNetObject * player = g_host->findPlayerByNetId(netId);
 
@@ -203,6 +204,10 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 				const bool hasAnalogX = bitStream.ReadBit();
 				if (hasAnalogX)
 					bitStream.Read(input.analogX);
+
+				const bool hasAnalogY = bitStream.ReadBit();
+				if (hasAnalogY)
+					bitStream.Read(input.analogY);
 
 				PlayerNetObject * player = client->m_gameSim->m_players[i];
 
@@ -1279,6 +1284,7 @@ void App::netSetPlayerInputs(uint16_t channelId, uint32_t netId, const PlayerInp
 	bs.Write(netId);
 	bs.Write(input.buttons);
 	bs.Write(input.analogX);
+	bs.Write(input.analogY);
 
 	m_rpcMgr->Call(s_rpcSetPlayerInputs, bs, ChannelPool_Client, &channelId, false, false);
 }
@@ -1297,14 +1303,22 @@ void App::netBroadcastPlayerInputs()
 		const PlayerNetObject * player = m_host->m_gameSim.m_players[i];
 		const uint16_t buttons = (player ? player->m_input.m_currState.buttons : 0);
 		const int8_t analogX = (player ? player->m_input.m_currState.analogX : 0);
+		const int8_t analogY = (player ? player->m_input.m_currState.analogY : 0);
+
 		const bool hasButtons = (buttons != 0);
 		bs.WriteBit(hasButtons);
 		if (hasButtons)
 			bs.Write(buttons);
-		const bool hasAnalog = (analogX != 0);
-		bs.WriteBit(hasAnalog);
-		if (hasAnalog)
+
+		const bool hasAnalogX = (analogX != 0);
+		bs.WriteBit(hasAnalogX);
+		if (hasAnalogX)
 			bs.Write(analogX);
+
+		const bool hasAnalogY = (analogY != 0);
+		bs.WriteBit(hasAnalogY);
+		if (hasAnalogY)
+			bs.Write(analogY);
 	}
 
 	m_rpcMgr->Call(s_rpcBroadcastPlayerInputs, bs, ChannelPool_Server, 0, true, false);
