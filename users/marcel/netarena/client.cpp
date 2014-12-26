@@ -72,7 +72,7 @@ void Client::tick(float dt)
 			if (playerNetObject->getOwningChannelId() != m_channel->m_id)
 				continue;
 
-			uint16_t buttons = 0;
+			PlayerInput input;
 
 			bool useKeyboard = (playerNetObject->m_input.m_controllerIndex == 0) || (g_app->getControllerAllocationCount() == 1);
 			bool useGamepad = !morePlayersThanControllers || (playerNetObject->m_input.m_controllerIndex != 0) || (g_app->getControllerAllocationCount() == 1);
@@ -80,23 +80,29 @@ void Client::tick(float dt)
 			if (useKeyboard)
 			{
 				if (keyboard.isDown(SDLK_LEFT))
-					buttons |= INPUT_BUTTON_LEFT;
+				{
+					input.buttons |= INPUT_BUTTON_LEFT;
+					input.analogX -= 100;
+				}
 				if (keyboard.isDown(SDLK_RIGHT))
-					buttons |= INPUT_BUTTON_RIGHT;
+				{
+					input.buttons |= INPUT_BUTTON_RIGHT;
+					input.analogX += 100;
+				}
 				if (keyboard.isDown(SDLK_UP))
-					buttons |= INPUT_BUTTON_UP;
+					input.buttons |= INPUT_BUTTON_UP;
 				if (keyboard.isDown(SDLK_DOWN))
-					buttons |= INPUT_BUTTON_DOWN;
+					input.buttons |= INPUT_BUTTON_DOWN;
 				if (keyboard.isDown(SDLK_a))
-					buttons |= INPUT_BUTTON_A;
+					input.buttons |= INPUT_BUTTON_A;
 				if (keyboard.isDown(SDLK_s))
-					buttons |= INPUT_BUTTON_B;
+					input.buttons |= INPUT_BUTTON_B;
 				if (keyboard.isDown(SDLK_z))
-					buttons |= INPUT_BUTTON_X;
+					input.buttons |= INPUT_BUTTON_X;
 				if (keyboard.isDown(SDLK_x))
-					buttons |= INPUT_BUTTON_Y;
+					input.buttons |= INPUT_BUTTON_Y;
 				if (keyboard.isDown(SDLK_d))
-					buttons |= INPUT_BUTTON_START;
+					input.buttons |= INPUT_BUTTON_START;
 			}
 
 			if (useGamepad)
@@ -112,32 +118,34 @@ void Client::tick(float dt)
 				{
 					const Gamepad & g = gamepad[gamepadIndex];
 
-					if (g.isDown(DPAD_LEFT) || g.getAnalog(0, ANALOG_X) < -0.5f)
-						buttons |= INPUT_BUTTON_LEFT;
-					if (g.isDown(DPAD_RIGHT) || g.getAnalog(0, ANALOG_X) > +0.5f)
-						buttons |= INPUT_BUTTON_RIGHT;
-					if (g.isDown(DPAD_UP) || g.getAnalog(0, ANALOG_Y) < -0.5f)
-						buttons |= INPUT_BUTTON_UP;
-					if (g.isDown(DPAD_DOWN) || g.getAnalog(0, ANALOG_Y) > +0.5f)
-						buttons |= INPUT_BUTTON_DOWN;
+					if (g.isDown(DPAD_LEFT) || g.getAnalog(0, ANALOG_X) < -0.2f)
+						input.buttons |= INPUT_BUTTON_LEFT;
+					if (g.isDown(DPAD_RIGHT) || g.getAnalog(0, ANALOG_X) > +0.2f)
+						input.buttons |= INPUT_BUTTON_RIGHT;
+					if (g.isDown(DPAD_UP) || g.getAnalog(0, ANALOG_Y) < -0.2f)
+						input.buttons |= INPUT_BUTTON_UP;
+					if (g.isDown(DPAD_DOWN) || g.getAnalog(0, ANALOG_Y) > +0.2f)
+						input.buttons |= INPUT_BUTTON_DOWN;
 					if (g.isDown(GAMEPAD_A))
-						buttons |= INPUT_BUTTON_A;
+						input.buttons |= INPUT_BUTTON_A;
 					if (g.isDown(GAMEPAD_B))
-						buttons |= INPUT_BUTTON_B;
+						input.buttons |= INPUT_BUTTON_B;
 					if (g.isDown(GAMEPAD_X))
-						buttons |= INPUT_BUTTON_X;
+						input.buttons |= INPUT_BUTTON_X;
 					if (g.isDown(GAMEPAD_Y))
-						buttons |= INPUT_BUTTON_Y;
+						input.buttons |= INPUT_BUTTON_Y;
 					if (g.isDown(GAMEPAD_START))
-						buttons |= INPUT_BUTTON_START;
+						input.buttons |= INPUT_BUTTON_START;
+
+					input.analogX = g.getAnalog(0, ANALOG_X) * 100;
 				}
 			}
 
-			if (buttons != playerNetObject->m_input.m_currButtons)
+			if (input != playerNetObject->m_input.m_currState)
 			{
-				playerNetObject->m_input.m_currButtons = buttons;
+				playerNetObject->m_input.m_currState = input;
 
-				g_app->netSetPlayerInputs(m_channel->m_id, playerNetObject->getNetId(), buttons);
+				g_app->netSetPlayerInputs(m_channel->m_id, playerNetObject->getNetId(), input);
 			}
 		}
 	}

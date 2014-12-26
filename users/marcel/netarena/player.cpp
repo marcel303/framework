@@ -31,7 +31,7 @@ todo:
 - analog controls
 - team based game mode
 - token hunt
-- spawn anim
++ spawn anim
 
 + death input
 + hitbox spikes
@@ -933,11 +933,8 @@ void Player::tick(float dt)
 		{
 			int numSteeringFrame = 1;
 
-			if (m_netObject->m_input.isDown(INPUT_BUTTON_LEFT))
-				steeringSpeed -= 1.f;
-			if (m_netObject->m_input.isDown(INPUT_BUTTON_RIGHT))
-				steeringSpeed += 1.f;
-
+			steeringSpeed += m_netObject->m_input.m_currState.analogX / 100.f;
+			
 			if (m_isGrounded || m_isAttachedToSticky)
 			{
 				if (isAnimOverrideAllowed(kPlayerAnim_Walk))
@@ -1075,7 +1072,8 @@ void Player::tick(float dt)
 				// todo : update block mask each iteration. reset m_blockMask first
 				//if (i != 1 || delta <= 0.f)
 				//if ((!m_isGrounded || isInPassthough) && (i != 0 || delta <= 0.f))
-				if ((i == 0 && isInPassthough) || (i == 1 && delta <= 0.f))
+				if ((!m_isGrounded || isInPassthough) && (i != 1 || delta <= 0.f))
+				//if ((i == 0 && isInPassthough) || (i == 1 && delta <= 0.f))
 					newBlockMask &= ~kBlockMask_Passthrough;
 
 				// make sure we stay grounded, within reason. allows the player to walk up/down slopes
@@ -1125,6 +1123,8 @@ void Player::tick(float dt)
 
 							m_vel[0] = -PLAYER_WALLJUMP_RECOIL_SPEED * deltaSign;
 							m_vel[1] = -PLAYER_WALLJUMP_SPEED;
+
+							m_controlDisableTime = PLAYER_WALLJUMP_RECOIL_TIME;
 
 							playSecondaryEffects(kPlayerEvent_WallJump);
 						}
@@ -1516,7 +1516,8 @@ void Player::respawn()
 
 		m_controlDisableTime = 0.f;
 
-		m_netObject->m_anim.SetAnim(kPlayerAnim_Walk, false, true);
+		m_netObject->m_anim.SetAnim(kPlayerAnim_Spawn, true, true);
+		m_isAnimDriven = true;
 
 		m_weaponAmmo = 0;
 

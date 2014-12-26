@@ -15,6 +15,7 @@ class Host;
 class OptionMenu;
 struct ParticleSpawnInfo;
 struct Player;
+struct PlayerInput;
 class PlayerNetObject;
 class StatTimerMenu;
 
@@ -94,7 +95,7 @@ public:
 
 	void netSyncGameSim(Channel * channel);
 	void netPlaySound(const char * filename, uint8_t volume = 100);
-	void netSetPlayerInputs(uint16_t channelId, uint32_t netId, uint16_t buttons);
+	void netSetPlayerInputs(uint16_t channelId, uint32_t netId, const PlayerInput & input);
 	void netBroadcastPlayerInputs();
 	void netSetPlayerCharacterIndex(uint16_t channelId, uint32_t netId, uint8_t characterIndex);
 	uint16_t netSpawnBullet(int16_t x, int16_t y, uint8_t angle, uint8_t type, uint32_t ownerNetId);

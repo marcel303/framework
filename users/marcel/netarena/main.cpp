@@ -165,17 +165,18 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 	else if (method == s_rpcSetPlayerInputs)
 	{
 		uint32_t netId;
-		uint16_t buttons;
+		PlayerInput input;
 
 		bitStream.Read(netId);
-		bitStream.Read(buttons);
+		bitStream.Read(input.buttons);
+		bitStream.Read(input.analogX);
 
 		PlayerNetObject * player = g_host->findPlayerByNetId(netId);
 
 		Assert(player);
 		if (player)
 		{
-			player->m_input.m_currButtons = buttons;
+			player->m_input.m_currState = input;
 		}
 	}
 	else if (method == s_rpcBroadcastPlayerInputs)
@@ -193,18 +194,20 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 
 			for (int i = 0; i < MAX_PLAYERS; ++i)
 			{
+				PlayerInput input;
+
 				const bool hasButtons = bitStream.ReadBit();
-
 				if (hasButtons)
-				{
-					uint16_t buttons;
-					bitStream.Read(buttons);
+					bitStream.Read(input.buttons);
 
-					PlayerNetObject * player = client->m_gameSim->m_players[i];
+				const bool hasAnalogX = bitStream.ReadBit();
+				if (hasAnalogX)
+					bitStream.Read(input.analogX);
 
-					if (player)
-						player->m_input.m_currButtons = buttons;
-				}
+				PlayerNetObject * player = client->m_gameSim->m_players[i];
+
+				if (player)
+					player->m_input.m_currState = input;
 			}
 
 			if (g_clientSim)
@@ -1269,12 +1272,13 @@ void App::netPlaySound(const char * filename, uint8_t volume)
 	m_rpcMgr->Call(s_rpcPlaySound, bs, ChannelPool_Server, 0, true, false);
 }
 
-void App::netSetPlayerInputs(uint16_t channelId, uint32_t netId, uint16_t buttons)
+void App::netSetPlayerInputs(uint16_t channelId, uint32_t netId, const PlayerInput & input)
 {
 	BitStream bs;
 
 	bs.Write(netId);
-	bs.Write(buttons);
+	bs.Write(input.buttons);
+	bs.Write(input.analogX);
 
 	m_rpcMgr->Call(s_rpcSetPlayerInputs, bs, ChannelPool_Client, &channelId, false, false);
 }
@@ -1291,11 +1295,16 @@ void App::netBroadcastPlayerInputs()
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
 		const PlayerNetObject * player = m_host->m_gameSim.m_players[i];
-		const uint16_t buttons = (player ? player->m_input.m_currButtons : 0);
+		const uint16_t buttons = (player ? player->m_input.m_currState.buttons : 0);
+		const int8_t analogX = (player ? player->m_input.m_currState.analogX : 0);
 		const bool hasButtons = (buttons != 0);
 		bs.WriteBit(hasButtons);
 		if (hasButtons)
 			bs.Write(buttons);
+		const bool hasAnalog = (analogX != 0);
+		bs.WriteBit(hasAnalog);
+		if (hasAnalog)
+			bs.Write(analogX);
 	}
 
 	m_rpcMgr->Call(s_rpcBroadcastPlayerInputs, bs, ChannelPool_Server, 0, true, false);

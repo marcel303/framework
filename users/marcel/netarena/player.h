@@ -61,6 +61,25 @@ public:
 	const char * getRandomSound();
 };
 
+struct PlayerInput
+{
+	PlayerInput()
+		: buttons(0)
+		, analogX(0)
+	{
+	}
+
+	bool operator!=(const PlayerInput & other)
+	{
+		return
+			buttons != other.buttons ||
+			analogX != other.analogX;
+	}
+
+	uint16_t buttons;
+	int8_t analogX;
+};
+
 class PlayerNetObject : public NetObject
 {
 	friend struct Player;
@@ -111,21 +130,19 @@ public:
 	{
 		InputState()
 			: m_controllerIndex(-1)
-			, m_prevButtons(0)
-			, m_currButtons(0)
 		{
 		}
 
 		int m_controllerIndex;
 
-		uint16_t m_prevButtons;
-		uint16_t m_currButtons;
+		PlayerInput m_prevState;
+		PlayerInput m_currState;
 
-		bool wasDown(int input) { return (m_prevButtons & input) != 0; }
-		bool isDown(int input) { return (m_currButtons & input) != 0; }
+		bool wasDown(int input) { return (m_prevState.buttons & input) != 0; }
+		bool isDown(int input) { return (m_currState.buttons & input) != 0; }
 		bool wentDown(int input) { return !wasDown(input) && isDown(input); }
 		bool wentUp(int input) { return wasDown(input) && !isDown(input); }
-		void next() { m_prevButtons = m_currButtons; }
+		void next() { m_prevState.buttons = m_currState.buttons; }
 	} m_input;
 
 	int m_lastSpawnIndex;
