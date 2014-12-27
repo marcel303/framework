@@ -1197,10 +1197,12 @@ void Player::tick(float dt)
 							{
 								float strength = (m_vel[i] - PLAYER_JUMP_SPEED) / 25.f;
 
-								if (strength > 6.f)
-									strength = 6.f;
-								if (strength > 0.f)
+								
+								if (strength > 14.f)
+								{
+									strength = strength / 4.f;
 									g_app->netScreenShake(0.f, strength, 3000.f, .3f);
+								}
 
 								m_vel[i] = 0.f;
 							}
@@ -1607,7 +1609,7 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 			}
 
 			// fixme.. mid pos
-			ParticleSpawnInfo spawnInfo(m_pos[0], m_pos[1] + mirrorY(-PLAYER_COLLISION_HITBOX_SY/2.f), kBulletType_ParticleA, 10, 50, 200, 20);
+			ParticleSpawnInfo spawnInfo(m_pos[0], m_pos[1] + mirrorY(-PLAYER_COLLISION_HITBOX_SY/2.f), kBulletType_ParticleA, 20, 50, 350, 40);
 			spawnInfo.color = 0xff0000ff;
 			g_app->netSpawnParticles(spawnInfo);
 
