@@ -62,6 +62,8 @@ OPTION_DECLARE(bool, g_noSound, false);
 OPTION_DEFINE(bool, g_noSound, "Sound/Disable Sound Effects");
 OPTION_ALIAS(g_noSound, "nosound");
 
+OPTION_EXTERN(int, g_playerCharacterIndex);
+
 //
 
 TIMER_DEFINE(g_appTickTime, PerFrame, "App/Tick");
@@ -166,18 +168,40 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 
 		if (player)
 		{
-			const uint16_t channelId = channel->m_destinationId;
-			// todo : serialize player index
+			uint16_t channelId = channel->m_destinationId;
+			uint32_t netId = player->getNetId();
+			uint8_t index = player->getPlayerId();
+			uint8_t characterIndex;
 
-			BitStream bs;
+			bitStream.Read(characterIndex);
 
-			bs.Write(channelId);
-
-			g_app->m_rpcMgr->Call(s_rpcAddPlayerBroadcast, bs, ChannelPool_Server, 0, true, false);
+			g_app->netAddPlayerBroadcast(channelId, netId, index, characterIndex);
 		}
 	}
 	else if (method == s_rpcAddPlayerBroadcast)
 	{
+		Client * client = g_app->findClientByChannel(channel);
+		Assert(client);
+		if (client)
+		{
+			uint16_t channelId;
+			uint32_t netId;
+			uint8_t index;
+			uint8_t characterIndex;
+
+			bitStream.Read(channelId);
+			bitStream.Read(netId);
+			bitStream.Read(index);
+			bitStream.Read(characterIndex);
+
+			Player * player = &client->m_gameSim->m_state.m_players[index];
+			PlayerNetObject * netObject = new PlayerNetObject(netId, channelId, player, client->m_gameSim);
+			netObject->setPlayerId(index);
+			player->m_netObject = netObject;
+			netObject->setCharacterIndex(characterIndex);
+
+			client->addPlayer(netObject);
+		}
 	}
 	else if (method == s_rpcRemovePlayer)
 	{
@@ -251,8 +275,8 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 
 			bitStream.Read(crc);
 
-			//if (crc != 0)
-			//	Assert(crc == g_app->m_host->m_gameSim.calcCRC());
+			if (crc != 0)
+				Assert(crc == client->m_gameSim->calcCRC());
 
 			for (int i = 0; i < MAX_PLAYERS; ++i)
 			{
@@ -290,14 +314,13 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		bitStream.Read(netId);
 		bitStream.Read(characterIndex);
 
-	#if ENABLE_PLAYER_SERIALIZATION
 		PlayerNetObject * player = g_host->findPlayerByNetId(netId);
 		Assert(player);
 		if (player)
 		{
 			player->setCharacterIndex(characterIndex);
 		}
-	#else
+	#if ENABLE_CLIENT_SIMULATION
 		g_app->netBroadcastCharacterIndex(netId, characterIndex);
 	#endif
 	}
@@ -567,7 +590,9 @@ void App::SV_OnChannelConnect(Channel * channel)
 
 		clientInfo.player = player;
 
+	#if !ENABLE_CLIENT_SIMULATION
 		m_replicationMgr->SV_AddObject(clientInfo.player);
+	#endif
 
 		m_hostClients[channel] = clientInfo;
 
@@ -575,7 +600,16 @@ void App::SV_OnChannelConnect(Channel * channel)
 
 		m_host->addPlayer(clientInfo.player);
 
+	#if ENABLE_CLIENT_SIMULATION
 		m_host->syncNewClient(channel);
+
+		netAddPlayerBroadcast(channel->m_destinationId, player->getNetId(), player->getPlayerId(), -1);
+
+		if (g_playerCharacterIndex != -1)
+		{
+			netSetPlayerCharacterIndex(channel->m_destinationId, player->getNetId(), g_playerCharacterIndex);
+		}
+	#endif
 	}
 }
 
@@ -661,9 +695,13 @@ void App::OnReplicationObjectCreated(ReplicationClient * client, ReplicationObje
 	case kNetObjectType_Player:
 		{
 			PlayerNetObject * playerNetObject = static_cast<PlayerNetObject*>(object);
+
+		#if 0
 			delete playerNetObject->m_player;
 			playerNetObject->m_player = &gameClient->m_gameSim->m_state.m_players[playerNetObject->getPlayerId()];
 			playerNetObject->m_player->m_netObject = playerNetObject;
+		#endif
+
 			gameClient->addPlayer(playerNetObject);
 			break;
 		}
@@ -1064,10 +1102,12 @@ bool App::tick()
 		{
 			m_channelMgr->Update(g_TimerRT.TimeUS_get());
 
+		#if ENABLE_CLIENT_SIMULATION
 			if (!m_optionMenuIsOpen)
 			{
-				netBroadcastPlayerInputs();
+				netSetPlayerInputsBroadcast();
 			}
+		#endif
 
 			m_replicationMgr->SV_Update();
 		}
@@ -1343,12 +1383,26 @@ void App::netSyncGameSim(Channel * channel)
 	m_rpcMgr->Call(s_rpcSyncGameSim, bs, ChannelPool_Client, &channel->m_id, false, false);
 }
 
-#if !ENABLE_PLAYER_SERIALIZATION
-void App::netAddPlayer(Channel * channel)
+#if ENABLE_CLIENT_SIMULATION
+void App::netAddPlayer(Channel * channel, uint8_t characterIndex)
 {
 	BitStream bs;
 
+	bs.Write(characterIndex);
+
 	m_rpcMgr->Call(s_rpcAddPlayer, bs, ChannelPool_Client, &channel->m_id, false, false);
+}
+
+void App::netAddPlayerBroadcast(uint16_t owningChannelId, uint32_t netId, uint8_t index, uint8_t characterIndex)
+{
+	BitStream bs;
+
+	bs.Write(owningChannelId);
+	bs.Write(netId);
+	bs.Write(index);
+	bs.Write(characterIndex);
+
+	m_rpcMgr->Call(s_rpcAddPlayerBroadcast, bs, ChannelPool_Server, 0, true, false);
 }
 #endif
 
@@ -1386,7 +1440,8 @@ void App::netSetPlayerInputs(uint16_t channelId, uint32_t netId, const PlayerInp
 	m_rpcMgr->Call(s_rpcSetPlayerInputs, bs, ChannelPool_Client, &channelId, false, false);
 }
 
-void App::netBroadcastPlayerInputs()
+#if ENABLE_CLIENT_SIMULATION
+void App::netSetPlayerInputsBroadcast()
 {
 	BitStream bs;
 
@@ -1420,6 +1475,7 @@ void App::netBroadcastPlayerInputs()
 
 	m_rpcMgr->Call(s_rpcBroadcastPlayerInputs, bs, ChannelPool_Server, 0, true, false);
 }
+#endif
 
 void App::netSetPlayerCharacterIndex(uint16_t channelId, uint32_t netId, uint8_t characterIndex)
 {

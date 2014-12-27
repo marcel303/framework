@@ -89,11 +89,13 @@ void GameSim::tick()
 {
 	g_gameSim = this;
 
+#if ENABLE_CLIENT_SIMULATION
 	if (g_devMode)
 	{
 		const uint32_t crc = calcCRC();
 		LOG_DBG("gamesim %p: crc=%08x", this, crc);
 	}
+#endif
 
 	const float dt = 1.f / TICKS_PER_SECOND;
 
@@ -206,7 +208,9 @@ void GameSim::spawnPickup(Pickup & pickup, PickupType type, int blockX, int bloc
 	pickup.y1 = blockY * BLOCK_SY + BLOCK_SY - sprite.getHeight();
 	pickup.x2 = pickup.x1 + sprite.getWidth();
 	pickup.y2 = pickup.y1 + sprite.getHeight();
+#if !ENABLE_CLIENT_SIMULATION
 	pickup.spriteId = g_app->netAddSprite(filename, pickup.x1, pickup.y1);
+#endif
 }
 
 Pickup * GameSim::grabPickup(int x1, int y1, int x2, int y2)
@@ -223,7 +227,9 @@ Pickup * GameSim::grabPickup(int x1, int y1, int x2, int y2)
 				m_state.m_grabbedPickup = pickup;
 				pickup.isAlive = false;
 
+			#if !ENABLE_CLIENT_SIMULATION
 				g_app->netRemoveSprite(m_state.m_grabbedPickup.spriteId);
+			#endif
 
 				g_app->netPlaySound("gun-pickup.ogg");
 

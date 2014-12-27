@@ -272,7 +272,7 @@ PlayerNetObject * Host::allocPlayer(uint16_t owningChannelId)
 		Player * player = &m_gameSim.m_state.m_players[playerId];
 		*player = Player();
 
-		PlayerNetObject * netObject = new PlayerNetObject(allocNetId(), owningChannelId, player);
+		PlayerNetObject * netObject = new PlayerNetObject(allocNetId(), owningChannelId, player, &m_gameSim);
 		netObject->setPlayerId(playerId);
 
 		m_gameSim.m_players[playerId] = netObject;

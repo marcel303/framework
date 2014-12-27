@@ -45,6 +45,7 @@ public:
 	void SetAnim(int anim, bool play, bool restart);
 	void SetAttackDirection(int dx, int dy);
 	void SetPlay(bool play);
+	void ApplyAnim();
 };
 
 class SoundBag
@@ -58,7 +59,7 @@ public:
 
 	void load(const std::string & files, bool random);
 
-	const char * getRandomSound();
+	const char * getRandomSound(GameSim & gameSim);
 };
 
 struct PlayerInput
@@ -113,7 +114,7 @@ class PlayerNetObject : public NetObject
 	virtual NetObjectType getType() const { return kNetObjectType_Player; }
 
 public:
-	PlayerNetObject(uint32_t netId = 0, uint16_t owningChannelId = 0, Player * player = 0);
+	PlayerNetObject(uint32_t netId = 0, uint16_t owningChannelId = 0, Player * player = 0, GameSim * gameSim = 0);
 	~PlayerNetObject();
 
 	int getScore() const;
@@ -130,6 +131,7 @@ public:
 	void playSoundBag(const char * name, int volume);
 
 	Player * m_player;
+	GameSim * m_gameSim;
 
 	struct InputState
 	{

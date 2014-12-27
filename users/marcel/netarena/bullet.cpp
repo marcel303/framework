@@ -195,7 +195,8 @@ void BulletPool::tick(float _dt)
 						int destX;
 						int destY;
 
-						if (g_hostArena->getTeleportDestination(sourceX, sourceY, destX, destY))
+						// fixme -> remove g_hostArena refs
+						if (g_hostArena->getTeleportDestination(*g_gameSim, sourceX, sourceY, destX, destY))
 						{
 							int deltaX = destX - sourceX;
 							int deltaY = destY - sourceY;

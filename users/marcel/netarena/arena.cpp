@@ -4,6 +4,7 @@
 #include "bullet.h"
 #include "FileStream.h"
 #include "framework.h"
+#include "gamesim.h"
 #include "host.h"
 #include "image.h"
 #include "main.h"
@@ -369,7 +370,7 @@ void Arena::drawBlocks()
 	}
 }
 
-bool Arena::getRandomSpawnPoint(int & out_x, int & out_y, int & io_lastSpawnIndex, Player * playerToIgnore)
+bool Arena::getRandomSpawnPoint(GameSim & gameSim, int & out_x, int & out_y, int & io_lastSpawnIndex, Player * playerToIgnore) const
 {
 	// find a spawn point
 
@@ -392,19 +393,22 @@ bool Arena::getRandomSpawnPoint(int & out_x, int & out_y, int & io_lastSpawnInde
 				candidates[numCandidates].blockY = y;
 				candidates[numCandidates].minDistanceToPlayer = 1000000.f;
 
-				for (auto p = g_host->m_players.begin(); p != g_host->m_players.end(); ++p)
+				for (int p = 0; p < MAX_PLAYERS; ++p)
 				{
-					Player * player = (*p)->m_player;
-
-					if (player != playerToIgnore)
+					if (gameSim.m_players[p])
 					{
-						const float px = (x + .5f) * BLOCK_SX;
-						const float py = (y + .5f) * BLOCK_SY;
-						const float dx = px - player->m_pos[0];
-						const float dy = py - player->m_pos[1];
-						const float d = std::sqrt(dx * dx + dy * dy);
-						if (d < candidates[numCandidates].minDistanceToPlayer)
-							candidates[numCandidates].minDistanceToPlayer = d;
+						Player * player = gameSim.m_players[p]->m_player;
+
+						if (player != playerToIgnore)
+						{
+							const float px = (x + .5f) * BLOCK_SX;
+							const float py = (y + .5f) * BLOCK_SY;
+							const float dx = px - player->m_pos[0];
+							const float dy = py - player->m_pos[1];
+							const float d = std::sqrt(dx * dx + dy * dy);
+							if (d < candidates[numCandidates].minDistanceToPlayer)
+								candidates[numCandidates].minDistanceToPlayer = d;
+						}
 					}
 				}
 
@@ -417,7 +421,14 @@ bool Arena::getRandomSpawnPoint(int & out_x, int & out_y, int & io_lastSpawnInde
 		return false;
 	else
 	{
-		std::sort(candidates, candidates + numCandidates, [](const Candidate & c1, const Candidate & c2) { return c1.minDistanceToPlayer > c2.minDistanceToPlayer; });
+		std::sort(candidates, candidates + numCandidates, [](const Candidate & c1, const Candidate & c2)
+		{
+			if (c1.minDistanceToPlayer != c2.minDistanceToPlayer)
+				return c1.minDistanceToPlayer > c2.minDistanceToPlayer;
+			if (c1.blockX != c2.blockX)
+				return c1.blockX < c2.blockX;
+			return c1.blockY > c2.blockY;
+		});
 
 		for (int index = 0; index < numCandidates; ++index)
 		{
@@ -441,7 +452,7 @@ bool Arena::getRandomSpawnPoint(int & out_x, int & out_y, int & io_lastSpawnInde
 	return false;
 }
 
-bool Arena::getRandomPickupLocations(int * out_x, int * out_y, int & numLocations, void * obj, bool (*reject)(void * obj, int x, int y))
+bool Arena::getRandomPickupLocations(int * out_x, int * out_y, int & numLocations, void * obj, bool (*reject)(void * obj, int x, int y)) const
 {
 	int numCandidates = 0;
 
@@ -475,7 +486,7 @@ bool Arena::getRandomPickupLocations(int * out_x, int * out_y, int & numLocation
 	return true;
 }
 
-bool Arena::getTeleportDestination(int startX, int startY, int & out_x, int & out_y)
+bool Arena::getTeleportDestination(GameSim & gameSim, int startX, int startY, int & out_x, int & out_y) const
 {
 	// find a teleport destination
 
@@ -483,7 +494,7 @@ bool Arena::getTeleportDestination(int startX, int startY, int & out_x, int & ou
 
 	for (int x = 0; x < ARENA_SX; ++x)
 		for (int y = 0; y < ARENA_SY; ++y)
-			if (x != startX && y != startY && getBlock(x, y).type == kBlockType_Teleport)
+			if (x != startX && y != startY && m_blocks[x][y].type == kBlockType_Teleport)
 				destinations.push_back(std::make_pair(x, y));
 
 	if (destinations.empty())
@@ -495,7 +506,7 @@ bool Arena::getTeleportDestination(int startX, int startY, int & out_x, int & ou
 	else
 	{
 	#if ENABLE_CLIENT_SIMULATION
-		const int idx = g_gameSim->m_state.Random() % destinations.size();
+		const int idx = gameSim.m_state.Random() % destinations.size();
 	#else
 		const int idx = rand() % destinations.size();
 	#endif
@@ -507,7 +518,7 @@ bool Arena::getTeleportDestination(int startX, int startY, int & out_x, int & ou
 	}
 }
 
-uint32_t Arena::getIntersectingBlocksMask(int x1, int y1, int x2, int y2)
+uint32_t Arena::getIntersectingBlocksMask(int x1, int y1, int x2, int y2) const
 {
 	uint32_t result = 0;
 
@@ -528,7 +539,7 @@ uint32_t Arena::getIntersectingBlocksMask(int x1, int y1, int x2, int y2)
 	return result;
 }
 
-uint32_t Arena::getIntersectingBlocksMask(int x, int y)
+uint32_t Arena::getIntersectingBlocksMask(int x, int y) const
 {
 	uint32_t result = 0;
 
@@ -583,7 +594,7 @@ static bool getBlockStripFromPixels(int v1, int v2, int & out_v1, int & out_v2, 
 	return true;
 }
 
-bool Arena::getBlockRectFromPixels(int x1, int y1, int x2, int y2, int & out_x1, int & out_y1, int & out_x2, int & out_y2)
+bool Arena::getBlockRectFromPixels(int x1, int y1, int x2, int y2, int & out_x1, int & out_y1, int & out_x2, int & out_y2) const
 {
 	return
 		getBlockStripFromPixels(x1, x2, out_x1, out_x2, ARENA_SX, BLOCK_SX) &&
@@ -715,11 +726,14 @@ void ArenaNetObject::Arena_NS::SerializeStruct()
 			Block & block = arena->m_blocks[x][y];
 
 			uint8_t type = block.type;
+			uint8_t shape = block.shape;
 
-			Serialize(type);
+			SerializeBits(type, 5);
+			SerializeBits(shape, 5);
 			//Serialize(block.clientData);
 
 			block.type = (BlockType)type;
+			block.shape = (BlockShape)shape;
 		}
 	}
 }

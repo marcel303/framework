@@ -65,9 +65,9 @@ nice to haves:
 // from internal.h
 void splitString(const std::string & str, std::vector<std::string> & result, char c);
 
-OPTION_DECLARE(int, s_playerCharacterIndex, -1);
-OPTION_DEFINE(int, s_playerCharacterIndex, "Player/Character Index (On Create)");
-OPTION_ALIAS(s_playerCharacterIndex, "character");
+OPTION_DECLARE(int, g_playerCharacterIndex, -1);
+OPTION_DEFINE(int, g_playerCharacterIndex, "Player/Character Index (On Create)");
+OPTION_ALIAS(g_playerCharacterIndex, "character");
 
 OPTION_DECLARE(bool, s_unlimitedAmmo, false);
 OPTION_DEFINE(bool, s_unlimitedAmmo, "Player/Unlimited Ammo");
@@ -203,7 +203,57 @@ void PlayerAnim_NS::SerializeStruct()
 	player->m_attackDirection[1] = dy - 1;
 #endif
 
-	//
+	ApplyAnim();
+}
+
+void PlayerAnim_NS::SetAnim(int anim, bool play, bool restart)
+{
+	Player * player = static_cast<PlayerNetObject*>(GetOwner())->m_player;
+
+	if (anim != player->m_anim || play != player->m_animPlay || restart)
+	{
+		player->m_anim = anim;
+		player->m_animPlay = play;
+		SetDirty();
+
+	#if ENABLE_CLIENT_SIMULATION
+		ApplyAnim();
+	#endif
+	}
+}
+
+void PlayerAnim_NS::SetAttackDirection(int dx, int dy)
+{
+	Player * player = static_cast<PlayerNetObject*>(GetOwner())->m_player;
+
+	player->m_attackDirection[0] = dx;
+	player->m_attackDirection[1] = dy;
+	SetDirty();
+
+#if ENABLE_CLIENT_SIMULATION
+	ApplyAnim();
+#endif
+}
+
+void PlayerAnim_NS::SetPlay(bool play)
+{
+	Player * player = static_cast<PlayerNetObject*>(GetOwner())->m_player;
+
+	if (play != player->m_animPlay)
+	{
+		player->m_animPlay = play;
+		SetDirty();
+
+	#if ENABLE_CLIENT_SIMULATION
+		ApplyAnim();
+	#endif
+	}
+}
+
+void PlayerAnim_NS::ApplyAnim()
+{
+	PlayerNetObject * playerNetObject = static_cast<PlayerNetObject*>(GetOwner());
+	Player * player = playerNetObject->m_player;
 
 	if (player->m_anim != kPlayerAnim_NULL)
 	{
@@ -227,38 +277,6 @@ void PlayerAnim_NS::SerializeStruct()
 	}
 }
 
-void PlayerAnim_NS::SetAnim(int anim, bool play, bool restart)
-{
-	Player * player = static_cast<PlayerNetObject*>(GetOwner())->m_player;
-
-	if (anim != player->m_anim || play != player->m_animPlay || restart)
-	{
-		player->m_anim = anim;
-		player->m_animPlay = play;
-		SetDirty();
-	}
-}
-
-void PlayerAnim_NS::SetAttackDirection(int dx, int dy)
-{
-	Player * player = static_cast<PlayerNetObject*>(GetOwner())->m_player;
-
-	player->m_attackDirection[0] = dx;
-	player->m_attackDirection[1] = dy;
-	SetDirty();
-}
-
-void PlayerAnim_NS::SetPlay(bool play)
-{
-	Player * player = static_cast<PlayerNetObject*>(GetOwner())->m_player;
-
-	if (play != player->m_animPlay)
-	{
-		player->m_animPlay = play;
-		SetDirty();
-	}
-}
-
 //
 
 SoundBag::SoundBag()
@@ -274,7 +292,7 @@ void SoundBag::load(const std::string & files, bool random)
 	m_random = random;
 }
 
-const char * SoundBag::getRandomSound()
+const char * SoundBag::getRandomSound(GameSim & gameSim)
 {
 	if (m_files.empty())
 		return "";
@@ -451,7 +469,7 @@ float Player::mirrorY(float y) const
 	return m_facing[1] > 0 ? y : PLAYER_COLLISION_HITBOX_SY - y;
 }
 
-PlayerNetObject::PlayerNetObject(uint32_t netId, uint16_t owningChannelId, Player * player)
+PlayerNetObject::PlayerNetObject(uint32_t netId, uint16_t owningChannelId, Player * player, GameSim * gameSim)
 	: m_player(player)
 	, m_pos(this)
 	, m_state(this)
@@ -472,16 +490,21 @@ PlayerNetObject::PlayerNetObject(uint32_t netId, uint16_t owningChannelId, Playe
 	if (m_player == 0)
 		m_player = new Player();
 	m_player->m_netObject = this;
+	m_gameSim = gameSim;
+
+	//
 
 	m_player->m_collision.x1 = -PLAYER_COLLISION_HITBOX_SX / 2.f;
 	m_player->m_collision.x2 = +PLAYER_COLLISION_HITBOX_SX / 2.f;
 	m_player->m_collision.y1 = -PLAYER_COLLISION_HITBOX_SY / 1.f;
 	m_player->m_collision.y2 = 0.f;
 
-	if (s_playerCharacterIndex != -1)
+#if !ENABLE_CLIENT_SIMULATION
+	if (g_playerCharacterIndex != -1)
 	{
-		g_app->netSetPlayerCharacterIndex(getOwningChannelId(), getNetId(), s_playerCharacterIndex);
+		g_app->netSetPlayerCharacterIndex(getOwningChannelId(), getNetId(), g_playerCharacterIndex);
 	}
+#endif
 }
 
 PlayerNetObject::~PlayerNetObject()
@@ -497,7 +520,7 @@ void Player::playSecondaryEffects(PlayerEvent e)
 	case kPlayerEvent_Spawn:
 		break;
 	case kPlayerEvent_Respawn:
-		g_app->netPlaySound(makeCharacterFilename(m_netObject->m_sounds["respawn"].getRandomSound()));
+		g_app->netPlaySound(makeCharacterFilename(m_netObject->m_sounds["respawn"].getRandomSound(*m_netObject->m_gameSim)));
 		break;
 	case kPlayerEvent_Die:
 		g_app->netPlaySound(makeCharacterFilename("die/die.ogg"));
@@ -560,7 +583,11 @@ void Player::tick(float dt)
 
 	if (m_isAnimDriven)
 	{
+	#if ENABLE_CLIENT_SIMULATION
+		if (!m_netObject->m_sprite->animIsActive)
+	#else
 		if (!m_netObject->m_anim.IsDirty() && !m_netObject->m_sprite->animIsActive)
+	#endif
 		{
 			m_isAnimDriven = false;
 			m_animVel = Vec2();
@@ -626,7 +653,7 @@ void Player::tick(float dt)
 	{
 		// see if we grabbed any pickup
 
-		Pickup * pickup = g_host->grabPickup(
+		Pickup * pickup = m_netObject->m_gameSim->grabPickup(
 			m_pos[0] + m_collision.x1,
 			m_pos[1] + m_collision.y1,
 			m_pos[0] + m_collision.x2,
@@ -683,47 +710,50 @@ void Player::tick(float dt)
 			{
 				// see if we hit anyone
 
-				for (auto i = g_host->m_players.begin(); i != g_host->m_players.end(); ++i)
+				for (int i = 0; i < MAX_PLAYERS; ++i)
 				{
-					Player * other = (*i)->m_player;
-
-					if (other == this)
-						continue;
-
-					float damage1 = getAttackDamage(other);
-					float damage2 = other->getAttackDamage(this);
-
-					if (damage1 != 0.f)
+					if (m_netObject->m_gameSim->m_players[i])
 					{
-						if (damage2 != 0.f)
+						Player * other = m_netObject->m_gameSim->m_players[i]->m_player;
+
+						if (other == this)
+							continue;
+
+						float damage1 = getAttackDamage(other);
+						float damage2 = other->getAttackDamage(this);
+
+						if (damage1 != 0.f)
 						{
-							//log("-> attack cancel");
-
-							Player * players[2] = { this, other };
-
-							const Vec2 midPoint = (players[0]->m_pos + players[1]->m_pos) / 2.f;
-
-							for (int i = 0; i < 2; ++i)
+							if (damage2 != 0.f)
 							{
-								const Vec2 delta = midPoint - players[i]->m_pos;
-								const Vec2 normal = delta.CalcNormalized();
-								const Vec2 attackDirection = Vec2(players[i]->m_attackDirection[0], players[i]->m_attackDirection[1]).CalcNormalized();
-								const float dot = attackDirection * normal;
-								const Vec2 reflect = attackDirection - normal * dot * 2.f;
+								//log("-> attack cancel");
 
-								players[i]->m_vel = reflect * PLAYER_SWORD_CLING_SPEED;
-								players[i]->m_controlDisableTime = PLAYER_SWORD_CLING_TIME;
+								Player * players[2] = { this, other };
 
-								players[i]->m_attack.attacking = false;
+								const Vec2 midPoint = (players[0]->m_pos + players[1]->m_pos) / 2.f;
+
+								for (int i = 0; i < 2; ++i)
+								{
+									const Vec2 delta = midPoint - players[i]->m_pos;
+									const Vec2 normal = delta.CalcNormalized();
+									const Vec2 attackDirection = Vec2(players[i]->m_attackDirection[0], players[i]->m_attackDirection[1]).CalcNormalized();
+									const float dot = attackDirection * normal;
+									const Vec2 reflect = attackDirection - normal * dot * 2.f;
+
+									players[i]->m_vel = reflect * PLAYER_SWORD_CLING_SPEED;
+									players[i]->m_controlDisableTime = PLAYER_SWORD_CLING_TIME;
+
+									players[i]->m_attack.attacking = false;
+								}
+
+								g_app->netPlaySound("melee-cancel.ogg");
 							}
+							else
+							{
+								//log("-> attack damage");
 
-							g_app->netPlaySound("melee-cancel.ogg");
-						}
-						else
-						{
-							//log("-> attack damage");
-
-							other->handleDamage(1.f, Vec2(m_facing[0] * PLAYER_SWORD_PUSH_SPEED, 0.f), this);
+								other->handleDamage(1.f, Vec2(m_facing[0] * PLAYER_SWORD_PUSH_SPEED, 0.f), this);
+							}
 						}
 					}
 				}
@@ -733,7 +763,7 @@ void Player::tick(float dt)
 				CollisionInfo attackCollision;
 				getAttackCollision(attackCollision);
 
-				m_attack.hitDestructible |= g_hostArena->handleDamageRect(
+				m_attack.hitDestructible |= m_netObject->m_gameSim->m_arena.handleDamageRect(
 					m_pos[0],
 					m_pos[1],
 					attackCollision.x1,
@@ -897,7 +927,7 @@ void Player::tick(float dt)
 
 			if (!m_teleport.cooldown && px >= 0 && px < ARENA_SX && py >= 0 && py < ARENA_SY)
 			{
-				const Block & block = g_hostArena->getBlock(px, py);
+				const Block & block = m_netObject->m_gameSim->m_arena.getBlock(px, py);
 
 				if (block.type == kBlockType_Teleport)
 				{
@@ -906,7 +936,7 @@ void Player::tick(float dt)
 					int destinationX;
 					int destinationY;
 
-					if (g_hostArena->getTeleportDestination(px, py, destinationX, destinationY))
+					if (m_netObject->m_gameSim->m_arena.getTeleportDestination(*m_netObject->m_gameSim, px, py, destinationX, destinationY))
 					{
 						m_pos[0] = destinationX * BLOCK_SX;
 						m_pos[1] = destinationY * BLOCK_SY;
@@ -1482,11 +1512,11 @@ void Player::debugDraw()
 uint32_t Player::getIntersectingBlocksMaskInternal(int x, int y, bool doWrap) const
 {
 #if 1
-	const int x1 = (x + (int)m_collision.x1) % ARENA_SX_PIXELS;
-	const int x2 = (x + (int)m_collision.x2) % ARENA_SX_PIXELS;
-	const int y1 = (y + (int)m_collision.y1) % ARENA_SY_PIXELS;
-	const int y2 = (y + (int)m_collision.y2) % ARENA_SY_PIXELS;
-	const int y3 = (y + (int)(m_collision.y1 + m_collision.y2) / 2) % ARENA_SY_PIXELS;
+	const int x1 = (x + (int)m_collision.x1 + ARENA_SX_PIXELS) % ARENA_SX_PIXELS;
+	const int x2 = (x + (int)m_collision.x2 + ARENA_SX_PIXELS) % ARENA_SX_PIXELS;
+	const int y1 = (y + (int)m_collision.y1 + ARENA_SY_PIXELS) % ARENA_SY_PIXELS;
+	const int y2 = (y + (int)m_collision.y2 + ARENA_SY_PIXELS) % ARENA_SY_PIXELS;
+	const int y3 = (y + (int)(m_collision.y1 + m_collision.y2) / 2 + ARENA_SY_PIXELS) % ARENA_SY_PIXELS;
 #else
 	const int x1 = x + m_collision.x1;
 	const int y1 = y + m_collision.y1;
@@ -1496,13 +1526,15 @@ uint32_t Player::getIntersectingBlocksMaskInternal(int x, int y, bool doWrap) co
 
 	uint32_t result = 0;
 	
-	result |= g_hostArena->getIntersectingBlocksMask(x1, y1);
-	result |= g_hostArena->getIntersectingBlocksMask(x2, y1);
-	result |= g_hostArena->getIntersectingBlocksMask(x2, y2);
-	result |= g_hostArena->getIntersectingBlocksMask(x1, y2);
+	const Arena & arena = m_netObject->m_gameSim->m_arena;
 
-	result |= g_hostArena->getIntersectingBlocksMask(x1, y3);
-	result |= g_hostArena->getIntersectingBlocksMask(x2, y3);
+	result |= arena.getIntersectingBlocksMask(x1, y1);
+	result |= arena.getIntersectingBlocksMask(x2, y1);
+	result |= arena.getIntersectingBlocksMask(x2, y2);
+	result |= arena.getIntersectingBlocksMask(x1, y2);
+
+	result |= arena.getIntersectingBlocksMask(x1, y3);
+	result |= arena.getIntersectingBlocksMask(x2, y3);
 
 #if 0
 	if (doWrap)
@@ -1555,7 +1587,7 @@ void Player::respawn()
 
 	int x, y;
 
-	if (g_hostArena->getRandomSpawnPoint(x, y, m_netObject->m_lastSpawnIndex, this))
+	if (m_netObject->m_gameSim->m_arena.getRandomSpawnPoint(*m_netObject->m_gameSim, x, y, m_netObject->m_lastSpawnIndex, this))
 	{
 		m_pos[0] = (float)x;
 		m_pos[1] = (float)y;
@@ -1704,7 +1736,7 @@ void PlayerNetObject::playSoundBag(const char * name, int volume)
 			m_sounds[name].load(m_props.getString(name, ""), true);
 	}
 
-	g_app->netPlaySound(m_player->makeCharacterFilename(m_sounds[name].getRandomSound()), volume);
+	g_app->netPlaySound(m_player->makeCharacterFilename(m_sounds[name].getRandomSound(*m_gameSim)), volume);
 }
 
 char * Player::makeCharacterFilename(const char * filename)

@@ -333,10 +333,11 @@ void Client::removePlayer(PlayerNetObject * player)
 
 PlayerNetObject * Client::findPlayerByNetId(uint32_t netId)
 {
-	for (int i = 0; i < MAX_PLAYERS; ++i)
+	for (auto p = m_players.begin(); p != m_players.end(); ++p)
 	{
-		if (m_players[i]->getNetId() == netId)
-			return m_players[i];
+		PlayerNetObject * player = *p;
+		if (player->getNetId() == netId)
+			return player;
 	}
 
 	return 0;
