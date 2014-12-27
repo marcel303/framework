@@ -166,19 +166,14 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 	{
 		LOG_DBG("handleRpc: s_rpcAddPlayer");
 
-		PlayerNetObject * player = g_host->allocPlayer(channel->m_destinationId);
+		uint8_t characterIndex;
 
-		if (player)
-		{
-			uint16_t channelId = channel->m_destinationId;
-			uint32_t netId = player->getNetId();
-			uint8_t index = player->getPlayerId();
-			uint8_t characterIndex;
+		bitStream.Read(characterIndex);
 
-			bitStream.Read(characterIndex);
-
-			g_app->netAddPlayerBroadcast(channelId, netId, index, characterIndex);
-		}
+		PlayerToAdd playerToAdd;
+		playerToAdd.channel = channel;
+		playerToAdd.characterIndex = characterIndex;
+		g_app->m_playersToAdd.push_back(playerToAdd);
 	}
 	else if (method == s_rpcAddPlayerBroadcast)
 	{
@@ -199,6 +194,8 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			bitStream.Read(characterIndex);
 
 			Player * player = &client->m_gameSim->m_state.m_players[index];
+			*player = Player();
+
 			PlayerNetObject * netObject = new PlayerNetObject(netId, channelId, player, client->m_gameSim);
 			netObject->setPlayerId(index);
 			player->m_netObject = netObject;
@@ -260,7 +257,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 #endif
 	else if (method == s_rpcSetPlayerInputs)
 	{
-		LOG_DBG("handleRpc: s_rpcSetPlayerInputs");
+		//LOG_DBG("handleRpc: s_rpcSetPlayerInputs");
 
 		uint32_t netId;
 		PlayerInput input;
@@ -280,7 +277,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 	}
 	else if (method == s_rpcBroadcastPlayerInputs)
 	{
-		LOG_DBG("handleRpc: s_rpcBroadcastPlayerInputs");
+		//LOG_DBG("handleRpc: s_rpcBroadcastPlayerInputs");
 
 		Client * client = g_app->findClientByChannel(channel);
 		Assert(client);
@@ -294,7 +291,9 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			{
 				const uint32_t clientCRC = client->m_gameSim->calcCRC();
 
-				if (crc != 0 && crc != clientCRC)
+				Assert(crc == 0 || crc == clientCRC);
+
+				if (ENABLE_GAMESTATE_CRC_LOGGING && crc != 0 && crc != clientCRC)
 				{
 					LOG_ERR("crc mismatch! host=%08x, client=%08x", crc, clientCRC);
 
@@ -308,8 +307,8 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 						{
 							if (hostBytes[i] != clientBytes[i])
 							{
-								LOG_ERR("first byte mismatch @ %d", i);
-								break;
+								LOG_ERR("byte mismatch @ %d", i);
+								//break;
 							}
 						}
 					}
@@ -573,45 +572,40 @@ Client * App::findClientByChannel(Channel * channel)
 
 void App::SV_OnChannelConnect(Channel * channel)
 {
-	PlayerNetObject * player = m_host->allocPlayer(channel->m_destinationId);
+	ClientInfo clientInfo;
 
-	if (player == 0)
+	clientInfo.replicationId = m_replicationMgr->SV_CreateClient(channel, 0);
+
+#if !ENABLE_CLIENT_SIMULATION
+	m_replicationMgr->SV_AddObject(clientInfo.player);
+#endif
+
+	m_hostClients[channel] = clientInfo;
+
+	//
+
+#if ENABLE_CLIENT_SIMULATION
+	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		channel->Disconnect();
+		PlayerNetObject * netObject = m_host->m_gameSim.m_players[i];
+
+		if (netObject)
+			netAddPlayerBroadcast(channel, netObject->getOwningChannelId(), netObject->getNetId(), i, netObject->getCharacterIndex());
 	}
-	else
-	{
-		ClientInfo clientInfo;
 
-		clientInfo.replicationId = m_replicationMgr->SV_CreateClient(channel, 0);
+	m_host->syncNewClient(channel);
+#endif
 
-		clientInfo.player = player;
-
-	#if !ENABLE_CLIENT_SIMULATION
-		m_replicationMgr->SV_AddObject(clientInfo.player);
-	#endif
-
-		m_hostClients[channel] = clientInfo;
-
-		//
-
-		m_host->addPlayer(clientInfo.player);
-
-	#if ENABLE_CLIENT_SIMULATION
-		m_host->syncNewClient(channel);
-
-		netAddPlayerBroadcast(channel->m_destinationId, player->getNetId(), player->getPlayerId(), -1);
-
-		if (g_playerCharacterIndex != -1)
-		{
-			netSetPlayerCharacterIndex(channel->m_destinationId, player->getNetId(), g_playerCharacterIndex);
-		}
-	#endif
-	}
+	PlayerToAdd playerToAdd;
+	playerToAdd.channel = channel;
+	playerToAdd.characterIndex = 0;
+	m_playersToAdd.push_back(playerToAdd);
 }
 
 void App::SV_OnChannelDisconnect(Channel * channel)
 {
+	// todo : remove from m_playersToAdd
+
 	std::map<Channel*, ClientInfo>::iterator i = m_hostClients.find(channel);
 
 	if (i != m_hostClients.end())
@@ -620,12 +614,17 @@ void App::SV_OnChannelDisconnect(Channel * channel)
 
 		// remove player created for this channel
 
-		m_replicationMgr->SV_RemoveObject(clientInfo.player->GetObjectID());
+		if (clientInfo.player)
+		{
+		#if !ENABLE_CLIENT_SIMULATION
+			m_replicationMgr->SV_RemoveObject(clientInfo.player->GetObjectID());
+		#endif
 
-		m_host->removePlayer(clientInfo.player);
+			m_host->removePlayer(clientInfo.player);
 
-		delete clientInfo.player;
-		clientInfo.player = 0;
+			delete clientInfo.player;
+			clientInfo.player = 0;
+		}
 
 		m_replicationMgr->SV_DestroyClient(clientInfo.replicationId);
 
@@ -665,9 +664,11 @@ bool App::OnReplicationObjectCreateType(ReplicationClient * client, BitStream & 
 		}
 		break;
 
+	#if !ENABLE_CLIENT_SIMULATION
 	case kNetObjectType_Player:
 		netObject = new PlayerNetObject();
 		break;
+	#endif
 	}
 
 	Assert(netObject);
@@ -689,19 +690,14 @@ void App::OnReplicationObjectCreated(ReplicationClient * client, ReplicationObje
 		gameClient->m_arena = static_cast<ArenaNetObject*>(object);
 		break;
 
+	#if !ENABLE_CLIENT_SIMULATION
 	case kNetObjectType_Player:
 		{
 			PlayerNetObject * playerNetObject = static_cast<PlayerNetObject*>(object);
-
-		#if 0
-			delete playerNetObject->m_player;
-			playerNetObject->m_player = &gameClient->m_gameSim->m_state.m_players[playerNetObject->getPlayerId()];
-			playerNetObject->m_player->m_netObject = playerNetObject;
-		#endif
-
 			gameClient->addPlayer(playerNetObject);
 			break;
 		}
+	#endif
 
 	default:
 		Assert(false);
@@ -716,16 +712,16 @@ void App::OnReplicationObjectDestroyed(ReplicationClient * client, ReplicationOb
 
 	switch (netObject->getType())
 	{
+	case kNetObjectType_Arena:
+		delete gameClient->m_arena;
+		gameClient->m_arena = 0;
+		break;
+
+	#if !ENABLE_CLIENT_SIMULATION
 	case kNetObjectType_Player:
 		gameClient->removePlayer(static_cast<PlayerNetObject*>(netObject));
 		break;
-
-	case kNetObjectType_Arena:
-		{
-			delete gameClient->m_arena;
-			gameClient->m_arena = 0;
-		}
-		break;
+	#endif
 
 	default:
 		Assert(false);
@@ -1099,6 +1095,29 @@ bool App::tick()
 		for (int i = 0; i < 10; ++i)
 			m_channelMgr->Update(g_TimerRT.TimeUS_get());
 
+		for (size_t i = 0; i < m_playersToAdd.size(); ++i)
+		{
+			// todo : remove from playerToAdd on channel disconnect
+
+			const PlayerToAdd & playerToAdd = m_playersToAdd[i];
+
+			PlayerNetObject * player = m_host->allocPlayer(playerToAdd.channel->m_destinationId);
+
+			if (player)
+			{
+				ClientInfo & clientInfo = m_hostClients[playerToAdd.channel];
+
+				clientInfo.player = player;
+
+				player->setCharacterIndex(playerToAdd.characterIndex);
+
+				m_host->addPlayer(player);
+
+				netAddPlayerBroadcast(0, playerToAdd.channel->m_destinationId, player->getNetId(), player->getPlayerId(), player->getCharacterIndex());
+			}
+		}
+		m_playersToAdd.clear();
+
 		if (g_updateTicks)
 		{
 			m_channelMgr->Update(g_TimerRT.TimeUS_get());
@@ -1108,7 +1127,7 @@ bool App::tick()
 			{
 				netSetPlayerInputsBroadcast();
 
-				if (g_devMode)
+				//if (g_devMode)
 					for (int i = 0; i < 10; ++i)
 						m_channelMgr->Update(g_TimerRT.TimeUS_get());
 			}
@@ -1399,7 +1418,7 @@ void App::netAddPlayer(Channel * channel, uint8_t characterIndex)
 	m_rpcMgr->Call(s_rpcAddPlayer, bs, ChannelPool_Client, &channel->m_id, false, false);
 }
 
-void App::netAddPlayerBroadcast(uint16_t owningChannelId, uint32_t netId, uint8_t index, uint8_t characterIndex)
+void App::netAddPlayerBroadcast(Channel * channel, uint16_t owningChannelId, uint32_t netId, uint8_t index, uint8_t characterIndex)
 {
 	BitStream bs;
 
@@ -1408,7 +1427,10 @@ void App::netAddPlayerBroadcast(uint16_t owningChannelId, uint32_t netId, uint8_
 	bs.Write(index);
 	bs.Write(characterIndex);
 
-	m_rpcMgr->Call(s_rpcAddPlayerBroadcast, bs, ChannelPool_Server, 0, true, false);
+	if (channel)
+		m_rpcMgr->Call(s_rpcAddPlayerBroadcast, bs, ChannelPool_Server, &channel->m_id, false, false);
+	else
+		m_rpcMgr->Call(s_rpcAddPlayerBroadcast, bs, ChannelPool_Server, 0, true, false);
 }
 #endif
 
@@ -1658,6 +1680,7 @@ void App::netRemoveSprite(uint16_t id)
 	}
 }
 
+#if !ENABLE_CLIENT_SIMULATION
 void App::netSpawnParticles(const ParticleSpawnInfo & spawnInfo)
 {
 	BitStream bs;
@@ -1680,6 +1703,7 @@ void App::netUpdateBlock(uint8_t x, uint8_t y, const Block & block)
 
 	m_rpcMgr->Call(s_rpcUpdateBlock, bs, ChannelPool_Server, 0, true, false);
 }
+#endif
 
 int App::allocControllerIndex()
 {

@@ -506,7 +506,8 @@ bool Arena::getTeleportDestination(GameSim & gameSim, int startX, int startY, in
 	else
 	{
 	#if ENABLE_CLIENT_SIMULATION
-		LOG_DBG("Random called from getTeleportDestination");
+		if (DEBUG_RANDOM_CALLSITES)
+			LOG_DBG("Random called from getTeleportDestination");
 		const int idx = gameSim.m_state.Random() % destinations.size();
 	#else
 		const int idx = rand() % destinations.size();
@@ -662,7 +663,7 @@ bool Arena::getBlocksFromPixels(int baseX, int baseY, int x1, int y1, int x2, in
 	return result != 0;
 }
 
-bool Arena::handleDamageRect(int baseX, int baseY, int x1, int y1, int x2, int y2, bool hitDestructible)
+bool Arena::handleDamageRect(GameSim & gameSim, int baseX, int baseY, int x1, int y1, int x2, int y2, bool hitDestructible)
 {
 	bool result = false;
 
@@ -690,14 +691,20 @@ bool Arena::handleDamageRect(int baseX, int baseY, int x1, int y1, int x2, int y
 			{
 				block.type = kBlockType_Empty;
 
+			#if !ENABLE_CLIENT_SIMULATION
 				g_app->netUpdateBlock(blockInfo.x, blockInfo.y, block);
+			#endif
 
 				ParticleSpawnInfo spawnInfo(
 					(blockInfo.x + .5f) * BLOCK_SX,
 					(blockInfo.y + .5f) * BLOCK_SY,
 					kBulletType_ParticleA, 10, 50, 200, 20);
 				spawnInfo.color = 0xff8040ff;
+			#if ENABLE_CLIENT_SIMULATION
+				gameSim.spawnParticles(spawnInfo);
+			#else
 				g_app->netSpawnParticles(spawnInfo);
+			#endif
 
 				hitDestructible = false;
 

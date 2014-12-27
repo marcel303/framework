@@ -232,6 +232,8 @@ public:
 	void spawnPickup(Pickup & pickup, PickupType type, int blockX, int blockY);
 	Pickup * grabPickup(int x1, int y1, int x2, int y2);
 
+	void spawnParticles(const ParticleSpawnInfo & spawnInfo);
+
 	void addScreenShake(Vec2 delta, float stiffness, float life);
 	Vec2 getScreenShake() const;
 

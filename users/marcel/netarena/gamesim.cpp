@@ -112,7 +112,7 @@ void GameSim::tick()
 	g_gameSim = this;
 
 #if ENABLE_CLIENT_SIMULATION
-	if (g_devMode)
+	if (g_devMode && ENABLE_GAMESTATE_CRC_LOGGING)
 	{
 		const uint32_t crc = calcCRC();
 		LOG_DBG("gamesim %p: tick=%u, crc=%08x", this, m_state.m_tick, crc);
@@ -151,7 +151,8 @@ void GameSim::tick()
 			weights[i] = totalWeight;
 		}
 
-		LOG_DBG("Random called from pre trySpawnPickup");
+		if (DEBUG_RANDOM_CALLSITES)
+			LOG_DBG("Random called from pre trySpawnPickup");
 		int value = m_state.Random() % totalWeight;
 
 		PickupType type = kPickupType_COUNT;
@@ -211,7 +212,8 @@ void GameSim::trySpawnPickup(PickupType type)
 					return false;
 				}))
 			{
-				LOG_DBG("Random called from trySpawnPickup");
+				if (DEBUG_RANDOM_CALLSITES)
+					LOG_DBG("Random called from trySpawnPickup");
 				const int index = m_state.Random() % numLocations;
 				const int spawnX = x[index];
 				const int spawnY = y[index];
@@ -271,6 +273,23 @@ Pickup * GameSim::grabPickup(int x1, int y1, int x2, int y2)
 	return 0;
 }
 
+void GameSim::spawnParticles(const ParticleSpawnInfo & spawnInfo)
+{
+#if 0 // todo
+	for (int i = 0; i < spawnInfo.count; ++i)
+	{
+		uint16_t id = m_particlePool->alloc();
+
+		if (id != INVALID_BULLET_ID)
+		{
+			Bullet & b = m_particlePool->m_bullets[id];
+
+			initBullet(*m_gameSim, b, spawnInfo);
+		}
+	}
+#endif
+}
+
 void GameSim::addScreenShake(Vec2 delta, float stiffness, float life)
 {
 	for (int i = 0; i < MAX_SCREEN_SHAKES; ++i)
@@ -288,7 +307,8 @@ void GameSim::addScreenShake(Vec2 delta, float stiffness, float life)
 		}
 	}
 
-	LOG_DBG("Random called from addScreenShake");
+	if (DEBUG_RANDOM_CALLSITES)
+		LOG_DBG("Random called from addScreenShake");
 	m_screenShakes[m_state.Random() % MAX_SCREEN_SHAKES].isActive = false;
 	addScreenShake(delta, stiffness, life);
 }

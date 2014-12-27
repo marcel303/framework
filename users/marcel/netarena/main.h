@@ -28,8 +28,14 @@ class App : public ChannelHandler, public ReplicationHandler
 {
 	struct ClientInfo
 	{
+		ClientInfo()
+			: replicationId(0)
+			, player(0)
+		{
+		}
+
 		uint32_t replicationId;
-		PlayerNetObject * player;
+		PlayerNetObject * player; // todo : should be an array
 	};
 
 	bool m_isHost;
@@ -55,6 +61,13 @@ class App : public ChannelHandler, public ReplicationHandler
 
 	StatTimerMenu * m_statTimerMenu;
 	bool m_statTimerMenuIsOpen;
+
+	struct PlayerToAdd
+	{
+		Channel * channel;
+		uint8_t characterIndex;
+	};
+	std::vector<PlayerToAdd> m_playersToAdd;
 
 	//
 
@@ -97,7 +110,7 @@ public:
 
 #if ENABLE_CLIENT_SIMULATION
 	void netAddPlayer(Channel * channel, uint8_t characterIndex);
-	void netAddPlayerBroadcast(uint16_t owningChannelId, uint32_t netId, uint8_t index, uint8_t characterIndex);
+	void netAddPlayerBroadcast(Channel * channel, uint16_t owningChannelId, uint32_t netId, uint8_t index, uint8_t characterIndex);
 	void netRemovePlayer(uint8_t index);
 	void netRemovePlayerBroadcast(uint8_t index);
 #endif
@@ -121,8 +134,10 @@ public:
 	uint16_t netAddSprite(const char * filename, int16_t x, int16_t y);
 	void netSyncSprite(uint16_t id, Channel * channel);
 	void netRemoveSprite(uint16_t id);
+#if !ENABLE_CLIENT_SIMULATION
 	void netSpawnParticles(const ParticleSpawnInfo & spawnInfo);
 	void netUpdateBlock(uint8_t x, uint8_t y, const Block & block);
+#endif
 
 	int allocControllerIndex();
 	void freeControllerIndex(int index);

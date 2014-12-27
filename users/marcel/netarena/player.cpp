@@ -307,7 +307,8 @@ const char * SoundBag::getRandomSound(GameSim & gameSim)
 			if (m_random)
 			{
 			#if ENABLE_CLIENT_SIMULATION
-				LOG_DBG("Random called from getRandomSound");
+				if (DEBUG_RANDOM_CALLSITES)
+					LOG_DBG("Random called from getRandomSound");
 				index = g_gameSim->m_state.Random() % m_files.size();
 			#else
 				index = rand() % m_files.size();
@@ -483,10 +484,14 @@ PlayerNetObject::PlayerNetObject(uint32_t netId, uint16_t owningChannelId, Playe
 	setNetId(netId);
 	setOwningChannelId(owningChannelId);
 
+#if ENABLE_CLIENT_SIMULATION
+	m_isAuthorative = true;
+#else
 	if (netId != 0)
 	{
 		m_isAuthorative = true;
 	}
+#endif
 
 	if (m_player == 0)
 		m_player = new Player();
@@ -765,6 +770,7 @@ void Player::tick(float dt)
 				getAttackCollision(attackCollision);
 
 				m_attack.hitDestructible |= m_netObject->m_gameSim->m_arena.handleDamageRect(
+					*m_netObject->m_gameSim,
 					m_pos[0],
 					m_pos[1],
 					attackCollision.x1,
@@ -1664,7 +1670,12 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 			// fixme.. mid pos
 			ParticleSpawnInfo spawnInfo(m_pos[0], m_pos[1] + mirrorY(-PLAYER_COLLISION_HITBOX_SY/2.f), kBulletType_ParticleA, 10, 50, 200, 20);
 			spawnInfo.color = 0xff0000ff;
+
+		#if ENABLE_CLIENT_SIMULATION
+			m_netObject->m_gameSim->spawnParticles(spawnInfo);
+		#else
 			g_app->netSpawnParticles(spawnInfo);
+		#endif
 
 			return true;
 		}

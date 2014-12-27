@@ -119,7 +119,7 @@ public:
 	bool getBlocksFromPixels(int x, int y, int x1, int y1, int x2, int y2, bool wrap, BlockAndDistance * out_blocks, int & io_numBlocks);
 	Block & getBlock(int x, int y) { return m_blocks[x][y]; }
 
-	bool handleDamageRect(int x, int y, int x1, int y1, int x2, int y2, bool hitDestructible);
+	bool handleDamageRect(GameSim & gameSim, int x, int y, int x1, int y1, int x2, int y2, bool hitDestructible);
 };
 
 class ArenaNetObject : public NetObject

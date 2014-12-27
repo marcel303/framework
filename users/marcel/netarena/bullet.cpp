@@ -132,7 +132,11 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 					if (kill)
 					{
 						ParticleSpawnInfo spawnInfo(b.pos[0], b.pos[1], kBulletType_ParticleA, 10, 50, 200, 20);
+					#if ENABLE_CLIENT_SIMULATION
+						gameSim.spawnParticles(spawnInfo);
+					#else
 						g_app->netSpawnParticles(spawnInfo);
+					#endif
 					}
 
 					if (!kill && b.doBounce)
@@ -268,6 +272,7 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 					// collide with map
 
 					if (arena.handleDamageRect(
+						gameSim,
 						b.pos[0], b.pos[1],
 						b.pos[0], b.pos[1],
 						b.pos[0], b.pos[1],
@@ -445,7 +450,8 @@ void BulletPool::free(uint16_t id)
 
 void initBullet(GameSim & gameSim, Bullet & b, const ParticleSpawnInfo & spawnInfo)
 {
-	LOG_DBG("Random called from initBullet");
+	if (DEBUG_RANDOM_CALLSITES)
+		LOG_DBG("Random called from initBullet");
 	const float angle = gameSim.Random() % 256;
 	const float velocity = gameSim.RandomFloat(spawnInfo.minVelocity, spawnInfo.maxVelocity);
 
