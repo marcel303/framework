@@ -153,7 +153,9 @@ uint32_t Host::allocNetId()
 
 void Host::syncNewClient(Channel * channel)
 {
+#if ENABLE_CLIENT_SIMULATION
 	g_app->netSyncGameSim(channel);
+#endif
 
 	// sync bullet list
 
@@ -282,6 +284,7 @@ void Host::removePlayer(PlayerNetObject * player)
 	if (i != m_players.end())
 	{
 		const int playerId = player->getPlayerId();
+
 		if (playerId != -1)
 		{
 			Assert(m_gameSim.m_players[playerId] != 0);
@@ -289,6 +292,7 @@ void Host::removePlayer(PlayerNetObject * player)
 
 			m_freePlayerIds.push_back(player->getPlayerId());
 		}
+
 		m_players.erase(i);
 	}
 }

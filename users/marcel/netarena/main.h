@@ -62,12 +62,14 @@ class App : public ChannelHandler, public ReplicationHandler
 	StatTimerMenu * m_statTimerMenu;
 	bool m_statTimerMenuIsOpen;
 
-	struct PlayerToAdd
+	struct PlayerToAddOrRemove
 	{
+		bool add;
 		Channel * channel;
 		uint8_t characterIndex;
+		int playerId;
 	};
-	std::vector<PlayerToAdd> m_playersToAdd;
+	std::vector<PlayerToAddOrRemove> m_playersToAddOrRemove;
 
 	//
 

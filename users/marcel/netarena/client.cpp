@@ -326,6 +326,7 @@ void Client::addPlayer(PlayerNetObject * player)
 void Client::removePlayer(PlayerNetObject * player)
 {
 	auto i = std::find(m_players.begin(), m_players.end(), player);
+
 	Assert(i != m_players.end());
 	if (i != m_players.end())
 	{
@@ -337,10 +338,16 @@ void Client::removePlayer(PlayerNetObject * player)
 			player->m_input.m_controllerIndex = -1;
 		}
 
+		const int playerId = player->getPlayerId();
+
+		if (playerId != -1)
+		{
+			Assert(m_gameSim->m_players[playerId]);
+			m_gameSim->m_players[playerId] = 0;
+		}
+
 		m_players.erase(i);
 	}
-
-	m_gameSim->m_players[player->getPlayerId()] = 0;
 }
 
 PlayerNetObject * Client::findPlayerByNetId(uint32_t netId)
