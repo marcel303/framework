@@ -13,6 +13,7 @@
 
 #include <string.h> // todo : cpp
 
+class BulletPool;
 class PlayerNetObject;
 
 struct Player
@@ -214,17 +215,12 @@ public:
 
 	PlayerNetObject * m_players[MAX_PLAYERS];
 
+	BulletPool * m_bulletPool;
+
 	ScreenShake m_screenShakes[MAX_SCREEN_SHAKES];
 
-	GameSim()
-		: m_arenaNetObject()
-		, m_state()
-	{
-		m_arena.init(&m_arenaNetObject);
-
-		for (int i = 0; i < MAX_PLAYERS; ++i)
-			m_players[i] = 0;
-	}
+	GameSim();
+	~GameSim();
 
 	uint32_t calcCRC() const;
 	void serialize(NetSerializationContext & context);
@@ -238,6 +234,9 @@ public:
 
 	void addScreenShake(Vec2 delta, float stiffness, float life);
 	Vec2 getScreenShake() const;
+
+	uint32_t Random() { return m_state.Random(); }
+	float RandomFloat(float min, float max) { float t = (Random() & 4095) / 4095.f; return t * min + (1.f - t) * max; }
 };
 
 extern GameSim * g_gameSim;

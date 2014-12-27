@@ -23,13 +23,17 @@ Client::Client()
 	, m_replicationId(0)
 	, m_gameSim(0)
 	, m_arena(0)
+#if !ENABLE_CLIENT_SIMULATION
 	, m_bulletPool(0)
+#endif
 	, m_particlePool(0)
 	, m_spriteManager(0)
 {
 	m_gameSim = new GameSim();
 
+#if !ENABLE_CLIENT_SIMULATION
 	m_bulletPool = new BulletPool(true);
+#endif
 	m_particlePool = new BulletPool(true);
 
 	m_spriteManager = new NetSpriteManager();
@@ -40,8 +44,10 @@ Client::~Client()
 	delete m_spriteManager;
 	m_spriteManager = 0;
 
+#if !ENABLE_CLIENT_SIMULATION
 	delete m_bulletPool;
 	m_bulletPool = 0;
+#endif
 
 	delete m_gameSim;
 	m_gameSim = 0;
@@ -157,11 +163,13 @@ void Client::tick(float dt)
 		}
 	}
 
+#if !ENABLE_CLIENT_SIMULATION
 	m_gameSim->anim(dt);
 
-	m_bulletPool->anim(dt);
+	m_bulletPool->anim(*m_gameSim, dt);
+#endif
 
-	m_particlePool->tick(dt);
+	m_particlePool->tick(*m_gameSim, dt);
 
 	if (s_noBgm)
 	{
@@ -261,7 +269,11 @@ void Client::drawPlay()
 
 	m_particlePool->draw();
 
+#if !ENABLE_CLIENT_SIMULATION
 	m_bulletPool->draw();
+#else
+	m_gameSim->m_bulletPool->draw();
+#endif
 
 	gxPopMatrix();
 }
@@ -365,19 +377,7 @@ void Client::spawnParticles(const ParticleSpawnInfo & spawnInfo)
 		{
 			Bullet & b = m_particlePool->m_bullets[id];
 
-			const float angle = rand() % 256;
-
-			memset(&b, 0, sizeof(b));
-			b.isAlive = true;
-			b.type = (BulletType)spawnInfo.type;
-			b.pos[0] = spawnInfo.x;
-			b.pos[1] = spawnInfo.y;
-			b.setVel(angle / 128.f * float(M_PI), Calc::Random(spawnInfo.minVelocity, spawnInfo.maxVelocity));
-
-			b.noCollide = true;
-			b.maxWrapCount = 1;
-			b.maxDistanceTravelled = spawnInfo.maxDistance;
-			b.color = spawnInfo.color;
+			initBullet(*m_gameSim, b, spawnInfo);
 		}
 	}
 }

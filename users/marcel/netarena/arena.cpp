@@ -506,6 +506,7 @@ bool Arena::getTeleportDestination(GameSim & gameSim, int startX, int startY, in
 	else
 	{
 	#if ENABLE_CLIENT_SIMULATION
+		LOG_DBG("Random called from getTeleportDestination");
 		const int idx = gameSim.m_state.Random() % destinations.size();
 	#else
 		const int idx = rand() % destinations.size();

@@ -32,10 +32,6 @@ OPTION_DECLARE(bool, g_devMode, false);
 OPTION_DEFINE(bool, g_devMode, "App/Developer Mode");
 OPTION_ALIAS(g_devMode, "devmode");
 
-OPTION_DECLARE(bool, g_clientSim, false);
-OPTION_DEFINE(bool, g_clientSim, "App/Client Simulation");
-OPTION_ALIAS(g_clientSim, "clientsim");
-
 OPTION_DECLARE(std::string, s_mapList, "arena.txt");
 OPTION_DEFINE(std::string, s_mapList, "App/Map List");
 OPTION_ALIAS(s_mapList, "maps");
@@ -124,18 +120,20 @@ static void HandleAction(const std::string & action, const Dictionary & args)
 enum RpcMethod
 {
 	s_rpcSyncGameSim,
-#if !ENABLE_PLAYER_SERIALIZATION
+#if ENABLE_CLIENT_SIMULATION
 	s_rpcAddPlayer,
 	s_rpcAddPlayerBroadcast,
 	s_rpcRemovePlayer,
 	s_rpcRemovePlayerBroadcast,
 #endif
 	s_rpcPlaySound,
+#if !ENABLE_CLIENT_SIMULATION
 	s_rpcScreenShake,
+#endif
 	s_rpcSetPlayerInputs,
 	s_rpcBroadcastPlayerInputs,
 	s_rpcSetPlayerCharacterIndex,
-#if !ENABLE_PLAYER_SERIALIZATION
+#if ENABLE_CLIENT_SIMULATION
 	s_rpcSetPlayerCharacterIndexBroadcast,
 #endif
 	s_rpcSpawnBullet,
@@ -152,6 +150,8 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 {
 	if (method == s_rpcSyncGameSim)
 	{
+		LOG_DBG("handleRpc: s_rpcSyncGameSim");
+
 		Client * client = g_app->findClientByChannel(channel);
 		Assert(client);
 		if (client)
@@ -161,9 +161,11 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			client->m_gameSim->serialize(context);
 		}
 	}
-#if !ENABLE_PLAYER_SERIALIZATION
+#if ENABLE_CLIENT_SIMULATION
 	else if (method == s_rpcAddPlayer)
 	{
+		LOG_DBG("handleRpc: s_rpcAddPlayer");
+
 		PlayerNetObject * player = g_host->allocPlayer(channel->m_destinationId);
 
 		if (player)
@@ -180,6 +182,8 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 	}
 	else if (method == s_rpcAddPlayerBroadcast)
 	{
+		LOG_DBG("handleRpc: s_rpcAddPlayerBroadcast");
+
 		Client * client = g_app->findClientByChannel(channel);
 		Assert(client);
 		if (client)
@@ -205,10 +209,13 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 	}
 	else if (method == s_rpcRemovePlayer)
 	{
+		LOG_DBG("handleRpc: s_rpcRemovePlayer");
+
 		g_app->m_rpcMgr->Call(s_rpcRemovePlayerBroadcast, bitStream, ChannelPool_Server, 0, true, false);
 	}
 	else if (method == s_rpcRemovePlayerBroadcast)
 	{
+		LOG_DBG("handleRpc: s_rpcRemovePlayerBroadcast");
 	}
 #endif
 	else if (method == s_rpcPlaySound)
@@ -225,8 +232,11 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			}
 		}
 	}
+#if !ENABLE_CLIENT_SIMULATION
 	else if (method == s_rpcScreenShake)
 	{
+		LOG_DBG("handleRpc: s_rpcScreenShake");
+
 		Client * client = g_app->findClientByChannel(channel);
 		Assert(client);
 		if (client)
@@ -247,8 +257,11 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 				life);
 		}
 	}
+#endif
 	else if (method == s_rpcSetPlayerInputs)
 	{
+		LOG_DBG("handleRpc: s_rpcSetPlayerInputs");
+
 		uint32_t netId;
 		PlayerInput input;
 
@@ -267,6 +280,8 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 	}
 	else if (method == s_rpcBroadcastPlayerInputs)
 	{
+		LOG_DBG("handleRpc: s_rpcBroadcastPlayerInputs");
+
 		Client * client = g_app->findClientByChannel(channel);
 		Assert(client);
 		if (client)
@@ -275,8 +290,33 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 
 			bitStream.Read(crc);
 
-			if (crc != 0)
-				Assert(crc == client->m_gameSim->calcCRC());
+			if (g_devMode)
+			{
+				const uint32_t clientCRC = client->m_gameSim->calcCRC();
+
+				if (crc != 0 && crc != clientCRC)
+				{
+					LOG_ERR("crc mismatch! host=%08x, client=%08x", crc, clientCRC);
+
+					if (g_host)
+					{
+						const uint8_t * hostBytes = (uint8_t*)&g_host->m_gameSim.m_state;
+						const uint8_t * clientBytes = (uint8_t*)&client->m_gameSim->m_state;
+						const int numBytes = sizeof(GameSim::GameState);
+
+						for (int i = 0; i < numBytes; ++i)
+						{
+							if (hostBytes[i] != clientBytes[i])
+							{
+								LOG_ERR("first byte mismatch @ %d", i);
+								break;
+							}
+						}
+					}
+				}
+			}
+
+			//
 
 			for (int i = 0; i < MAX_PLAYERS; ++i)
 			{
@@ -300,14 +340,15 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 					player->m_input.m_currState = input;
 			}
 
-			if (g_clientSim)
-			{
-				client->m_gameSim->tick();
-			}
+		#if ENABLE_CLIENT_SIMULATION
+			client->m_gameSim->tick();
+		#endif
 		}
 	}
 	else if (method == s_rpcSetPlayerCharacterIndex)
 	{
+		LOG_DBG("handleRpc: s_rpcSetPlayerCharacterIndex");
+
 		uint32_t netId;
 		uint8_t characterIndex;
 
@@ -324,9 +365,11 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		g_app->netBroadcastCharacterIndex(netId, characterIndex);
 	#endif
 	}
-#if !ENABLE_PLAYER_SERIALIZATION
+#if ENABLE_CLIENT_SIMULATION
 	else if (method == s_rpcSetPlayerCharacterIndexBroadcast)
 	{
+		LOG_DBG("handleRpc: s_rpcSetPlayerCharacterIndexBroadcast");
+
 		Client * client = g_app->findClientByChannel(channel);
 		Assert(client);
 		if (client)
@@ -346,6 +389,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		}
 	}
 #endif
+#if 0
 	else if (method == s_rpcSpawnBullet)
 	{
 		BulletPool * bulletPool = 0;
@@ -377,59 +421,11 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			bitStream.Read(y);
 			bitStream.Read(_angle);
 
-			Bullet & b = bulletPool->m_bullets[id];
-			Assert(!b.isAlive);
-
-			memset(&b, 0, sizeof(b));
-			b.isAlive = true;
-			b.type = static_cast<BulletType>(type);
-			b.pos[0] = x;
-			b.pos[1] = y;
-			b.color = 0xffffffff;
-
-			float angle = _angle / 128.f * float(M_PI);
-			float velocity = 0.f;
 			
-			switch (type)
-			{
-			case kBulletType_A:
-				velocity = BULLET_TYPE0_SPEED;
-				b.maxWrapCount = BULLET_TYPE0_MAX_WRAP_COUNT;
-				b.maxReflectCount = BULLET_TYPE0_MAX_REFLECT_COUNT;
-				b.maxDistanceTravelled = BULLET_TYPE0_MAX_DISTANCE_TRAVELLED;
-				b.maxDestroyedBlocks = 1;
-				break;
-			case kBulletType_B:
-				velocity = BULLET_TYPE0_SPEED;
-				b.maxWrapCount = BULLET_TYPE0_MAX_WRAP_COUNT;
-				b.maxReflectCount = BULLET_TYPE0_MAX_REFLECT_COUNT;
-				b.maxDistanceTravelled = BULLET_TYPE0_MAX_DISTANCE_TRAVELLED;
-				b.maxDestroyedBlocks = 1;
-				break;
-			case kBulletType_Grenade:
-				velocity = BULLET_GRENADE_NADE_SPEED;
-				b.maxWrapCount = 100;
-				b.doGravity = true;
-				b.doBounce = true;
-				b.bounceAmount = BULLET_GRENADE_NADE_BOUNCE_AMOUNT;
-				b.noDamageMap = true;
-				b.life = BULLET_GRENADE_NADE_LIFE;
-				break;
-			case kBulletType_GrenadeA:
-				velocity = Calc::Random(BULLET_GRENADE_FRAG_SPEED_MIN, BULLET_GRENADE_FRAG_SPEED_MAX);
-				b.maxWrapCount = 1;
-				b.maxReflectCount = 0;
-				b.maxDistanceTravelled = Calc::Random(BULLET_GRENADE_FRAG_RADIUS_MIN, BULLET_GRENADE_FRAG_RADIUS_MAX);
-				b.maxDestroyedBlocks = 1;
-				break;
-			default:
-				Assert(false);
-				break;
-			}
-
-			b.setVel(angle, velocity);
 		}
 	}
+#endif
+#if !ENABLE_CLIENT_SIMULATION
 	else if (method == s_rpcKillBullet)
 	{
 		Client * client = g_app->findClientByChannel(channel);
@@ -459,11 +455,12 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			bitStream.Read(id);
 
 			Bullet & b = client->m_bulletPool->m_bullets[id];
-			Assert(b.isAlive);
+			//Assert(b.isAlive);
 			
 			bitStream.ReadAlignedBytes(&b, sizeof(b));
 		}
 	}
+#endif
 	else if (method == s_rpcAddSprite || method == s_rpcSyncSprite)
 	{
 		NetSpriteManager * spriteManager = 0;
@@ -1098,6 +1095,10 @@ bool App::tick()
 
 	if (m_isHost)
 	{
+		// fixme : queue new players
+		for (int i = 0; i < 10; ++i)
+			m_channelMgr->Update(g_TimerRT.TimeUS_get());
+
 		if (g_updateTicks)
 		{
 			m_channelMgr->Update(g_TimerRT.TimeUS_get());
@@ -1106,6 +1107,10 @@ bool App::tick()
 			if (!m_optionMenuIsOpen)
 			{
 				netSetPlayerInputsBroadcast();
+
+				if (g_devMode)
+					for (int i = 0; i < 10; ++i)
+						m_channelMgr->Update(g_TimerRT.TimeUS_get());
 			}
 		#endif
 
@@ -1237,7 +1242,7 @@ void App::draw()
 		{
 			g_host->debugDraw();
 
-			if (g_clientSim)
+		#if ENABLE_CLIENT_SIMULATION
 			{
 				int y = 100;
 				setFont("calibri.ttf");
@@ -1257,6 +1262,7 @@ void App::draw()
 						m_clients[i]->m_gameSim->m_players[0] ? m_clients[i]->m_gameSim->m_players[0]->m_player->m_pos[1] : 0.f);
 				}
 			}
+		#endif
 		}
 
 		if (m_optionMenuIsOpen)
@@ -1416,8 +1422,9 @@ void App::netPlaySound(const char * filename, uint8_t volume)
 	m_rpcMgr->Call(s_rpcPlaySound, bs, ChannelPool_Server, 0, true, false);
 }
 
-void App::netScreenShake(float dx, float dy, float stiffness, float life)
+void App::netScreenShake(GameSim & gameSim, float dx, float dy, float stiffness, float life)
 {
+#if !ENABLE_CLIENT_SIMULATION
 	BitStream bs;
 
 	bs.Write(dx);
@@ -1426,6 +1433,9 @@ void App::netScreenShake(float dx, float dy, float stiffness, float life)
 	bs.Write(life);
 
 	m_rpcMgr->Call(s_rpcScreenShake, bs, ChannelPool_Server, 0, true, false);
+#else
+	gameSim.addScreenShake(Vec2(dx, dy), stiffness, life);
+#endif
 }
 
 void App::netSetPlayerInputs(uint16_t channelId, uint32_t netId, const PlayerInput & input)
@@ -1489,7 +1499,7 @@ void App::netSetPlayerCharacterIndex(uint16_t channelId, uint32_t netId, uint8_t
 	m_rpcMgr->Call(s_rpcSetPlayerCharacterIndex, bs, ChannelPool_Client, &channelId, false, false);
 }
 
-#if !ENABLE_PLAYER_SERIALIZATION
+#if ENABLE_CLIENT_SIMULATION
 void App::netBroadcastCharacterIndex(uint32_t netId, uint8_t characterIndex)
 {
 	// host -> clients
@@ -1503,27 +1513,67 @@ void App::netBroadcastCharacterIndex(uint32_t netId, uint8_t characterIndex)
 }
 #endif
 
-uint16_t App::netSpawnBullet(int16_t x, int16_t y, uint8_t angle, uint8_t type, uint32_t ownerNetId)
+uint16_t App::netSpawnBullet(GameSim & gameSim, int16_t x, int16_t y, uint8_t _angle, uint8_t type, uint32_t ownerNetId)
 {
-	const uint16_t id = g_hostBulletPool->alloc();
+	const uint16_t id = gameSim.m_bulletPool->alloc();
 
 	if (id != INVALID_BULLET_ID)
 	{
-		BitStream bs;
+		Bullet & b = gameSim.m_bulletPool->m_bullets[id];
 
-		bs.Write(id);
-		bs.Write(type);
-		bs.Write(x);
-		bs.Write(y);
-		bs.Write(angle);
+		Assert(!b.isAlive);
+		memset(&b, 0, sizeof(b));
+		b.isAlive = true;
+		b.type = static_cast<BulletType>(type);
+		b.pos[0] = x;
+		b.pos[1] = y;
+		b.color = 0xffffffff;
 
-		m_rpcMgr->Call(s_rpcSpawnBullet, bs, ChannelPool_Server, 0, true, true);
+		float angle = _angle / 128.f * float(M_PI);
+		float velocity = 0.f;
 
-		// todo : do extra initialization here, after the basic setup has been completed
+		switch (type)
+		{
+		case kBulletType_A:
+			velocity = BULLET_TYPE0_SPEED;
+			b.maxWrapCount = BULLET_TYPE0_MAX_WRAP_COUNT;
+			b.maxReflectCount = BULLET_TYPE0_MAX_REFLECT_COUNT;
+			b.maxDistanceTravelled = BULLET_TYPE0_MAX_DISTANCE_TRAVELLED;
+			b.maxDestroyedBlocks = 1;
+			break;
+		case kBulletType_B:
+			velocity = BULLET_TYPE0_SPEED;
+			b.maxWrapCount = BULLET_TYPE0_MAX_WRAP_COUNT;
+			b.maxReflectCount = BULLET_TYPE0_MAX_REFLECT_COUNT;
+			b.maxDistanceTravelled = BULLET_TYPE0_MAX_DISTANCE_TRAVELLED;
+			b.maxDestroyedBlocks = 1;
+			break;
+		case kBulletType_Grenade:
+			velocity = BULLET_GRENADE_NADE_SPEED;
+			b.maxWrapCount = 100;
+			b.doGravity = true;
+			b.doBounce = true;
+			b.bounceAmount = BULLET_GRENADE_NADE_BOUNCE_AMOUNT;
+			b.noDamageMap = true;
+			b.life = BULLET_GRENADE_NADE_LIFE;
+			break;
+		case kBulletType_GrenadeA:
+			velocity = Calc::Random(BULLET_GRENADE_FRAG_SPEED_MIN, BULLET_GRENADE_FRAG_SPEED_MAX);
+			b.maxWrapCount = 1;
+			b.maxReflectCount = 0;
+			b.maxDistanceTravelled = Calc::Random(BULLET_GRENADE_FRAG_RADIUS_MIN, BULLET_GRENADE_FRAG_RADIUS_MAX);
+			b.maxDestroyedBlocks = 1;
+			break;
+		default:
+			Assert(false);
+			break;
+		}
 
-		Bullet & b = g_hostBulletPool->m_bullets[id];
+		b.setVel(angle, velocity);
 
 		b.ownerNetId = ownerNetId;
+
+		netUpdateBullet(gameSim, id);
 	}
 
 	return id;
@@ -1531,16 +1581,19 @@ uint16_t App::netSpawnBullet(int16_t x, int16_t y, uint8_t angle, uint8_t type, 
 
 void App::netKillBullet(uint16_t id)
 {
+#if !ENABLE_CLIENT_SIMULATION
 	BitStream bs;
 
 	bs.Write(id);
 
 	m_rpcMgr->Call(s_rpcKillBullet, bs, ChannelPool_Server, 0, true, false);
+#endif
 }
 
-void App::netUpdateBullet(uint16_t id)
+void App::netUpdateBullet(GameSim & gameSim, uint16_t id)
 {
-	Bullet & b = g_hostBulletPool->m_bullets[id];
+#if !ENABLE_CLIENT_SIMULATION
+	Bullet & b = gameSim.m_bulletPool->m_bullets[id];
 
 	BitStream bs;
 
@@ -1548,6 +1601,7 @@ void App::netUpdateBullet(uint16_t id)
 	bs.WriteAlignedBytes(&b, sizeof(b));
 
 	m_rpcMgr->Call(s_rpcUpdateBullet, bs, ChannelPool_Server, 0, true, false);
+#endif
 }
 
 uint16_t App::netAddSprite(const char * filename, int16_t x, int16_t y)

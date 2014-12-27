@@ -1,10 +1,13 @@
 #pragma once
 
 #include <stdint.h>
+#include "NetSerializable.h"
 #include "Vec2.h"
 
 #define MAX_BULLETS 1000
 #define INVALID_BULLET_ID 0xffff
+
+class GameSim;
 
 enum BulletType
 {
@@ -115,11 +118,13 @@ public:
 
 	BulletPool(bool localOnly);
 
-	void tick(float dt);
-	void anim(float dt);
-	void anim(Bullet & b, float dt);
+	void tick(GameSim & gameSim, float dt);
+	void anim(GameSim & gameSim, float dt);
+	void anim(GameSim & gameSim, Bullet & b, float dt);
 	void draw();
 
 	uint16_t alloc();
 	void free(uint16_t id);
 };
+
+void initBullet(GameSim & gameSim, Bullet & b, const ParticleSpawnInfo & spawnInfo);

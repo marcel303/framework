@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <vector>
+#include "gamedefs.h"
 #include "libnet_forward.h"
 
 class Arena;
@@ -22,7 +23,9 @@ public:
 	ArenaNetObject * m_arena;
 	std::vector<PlayerNetObject*> m_players;
 
+#if !ENABLE_CLIENT_SIMULATION
 	BulletPool * m_bulletPool;
+#endif
 	BulletPool * m_particlePool;
 
 	NetSpriteManager * m_spriteManager;

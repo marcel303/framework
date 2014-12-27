@@ -65,8 +65,10 @@ BulletPool::BulletPool(bool localOnly)
 		m_freeList[i] = i;
 }
 
-void BulletPool::tick(float _dt)
+void BulletPool::tick(GameSim & gameSim, float _dt)
 {
+	Arena & arena = gameSim.m_arena;
+
 	for (int i = 0; i < MAX_BULLETS; ++i)
 	{
 		Bullet & b = m_bullets[i];
@@ -76,7 +78,7 @@ void BulletPool::tick(float _dt)
 			const float distance = b.vel.CalcSize() * _dt;
 			const int numSteps = std::max<int>(1, (int)std::ceil(std::abs(distance) / 4.f));
 
-			uint32_t oldBlockMask = g_hostArena->getIntersectingBlocksMask(b.pos[0], b.pos[1]);
+			uint32_t oldBlockMask = arena.getIntersectingBlocksMask(b.pos[0], b.pos[1]);
 
 			for (int step = 0; step < numSteps && b.isAlive; ++step)
 			{
@@ -84,7 +86,7 @@ void BulletPool::tick(float _dt)
 
 				Vec2 oldPos = b.pos;
 
-				anim(b, dt);
+				anim(gameSim, b, dt);
 
 				bool kill = false;
 				bool update = false;
@@ -100,7 +102,7 @@ void BulletPool::tick(float _dt)
 
 				if (!kill && !b.noCollide)
 				{
-					const uint32_t blockMask = g_hostArena->getIntersectingBlocksMask(b.pos[0], b.pos[1]);
+					const uint32_t blockMask = arena.getIntersectingBlocksMask(b.pos[0], b.pos[1]);
 
 					if (doReflection)
 					{
@@ -139,7 +141,7 @@ void BulletPool::tick(float _dt)
 
 						uint32_t blockMask;
 
-						blockMask = g_hostArena->getIntersectingBlocksMask(b.pos[0], oldPos[1]);
+						blockMask = arena.getIntersectingBlocksMask(b.pos[0], oldPos[1]);
 
 						if (blockMask & kBlockMask_Solid)
 						{
@@ -153,7 +155,7 @@ void BulletPool::tick(float _dt)
 
 						// eval collision in y direction
 
-						blockMask = g_hostArena->getIntersectingBlocksMask(b.pos[0], b.pos[1]);
+						blockMask = arena.getIntersectingBlocksMask(b.pos[0], b.pos[1]);
 
 						if (blockMask & kBlockMask_Solid)
 						{
@@ -195,8 +197,7 @@ void BulletPool::tick(float _dt)
 						int destX;
 						int destY;
 
-						// fixme -> remove g_hostArena refs
-						if (g_hostArena->getTeleportDestination(*g_gameSim, sourceX, sourceY, destX, destY))
+						if (arena.getTeleportDestination(gameSim, sourceX, sourceY, destX, destY))
 						{
 							int deltaX = destX - sourceX;
 							int deltaY = destY - sourceY;
@@ -225,11 +226,11 @@ void BulletPool::tick(float _dt)
 
 				if (b.ownerNetId != 0)
 				{
-					for (auto p = g_host->m_players.begin(); p != g_host->m_players.end(); ++p)
+					for (int p = 0; p < MAX_PLAYERS; ++p)
 					{
-						PlayerNetObject * player = *p;
+						PlayerNetObject * player = gameSim.m_players[p];
 
-						if (player->getNetId() == b.ownerNetId)
+						if (player && player->getNetId() == b.ownerNetId)
 							owner = player->m_player;
 					}
 
@@ -241,11 +242,11 @@ void BulletPool::tick(float _dt)
 				{
 					// collide with players
 
-					for (auto p = g_host->m_players.begin(); p != g_host->m_players.end(); ++p)
+					for (int p = 0; p < MAX_PLAYERS; ++p)
 					{
-						PlayerNetObject * playerNetObject = *p;
+						PlayerNetObject * playerNetObject = gameSim.m_players[p];
 
-						if (playerNetObject->getNetId() == b.ownerNetId)
+						if (!playerNetObject || playerNetObject->getNetId() == b.ownerNetId)
 							continue;
 
 						Player * player = playerNetObject->m_player;
@@ -266,7 +267,7 @@ void BulletPool::tick(float _dt)
 				{
 					// collide with map
 
-					if (g_hostArena->handleDamageRect(
+					if (arena.handleDamageRect(
 						b.pos[0], b.pos[1],
 						b.pos[0], b.pos[1],
 						b.pos[0], b.pos[1],
@@ -297,6 +298,7 @@ void BulletPool::tick(float _dt)
 						for (int i = 0; i < BULLET_GRENADE_FRAG_COUNT; ++i)
 						{
 							g_app->netSpawnBullet(
+								gameSim,
 								b.pos[0],
 								b.pos[1],
 								rand() % 256,
@@ -318,6 +320,7 @@ void BulletPool::tick(float _dt)
 
 						const float strength = 5.f;
 						g_app->netScreenShake(
+							gameSim,
 							Calc::RandomMin0Max1() * strength,
 							Calc::RandomMin0Max1() * strength, 2500.f, .3f);
 					}
@@ -326,14 +329,14 @@ void BulletPool::tick(float _dt)
 				}
 				else if (update)
 				{
-					g_app->netUpdateBullet(i);
+					g_app->netUpdateBullet(gameSim, i);
 				}
 			}
 		}
 	}
 }
 
-void BulletPool::anim(float dt)
+void BulletPool::anim(GameSim & gameSim, float dt)
 {
 	for (int i = 0; i < MAX_BULLETS; ++i)
 	{
@@ -341,12 +344,12 @@ void BulletPool::anim(float dt)
 
 		if (b.isAlive)
 		{
-			anim(b, dt);
+			anim(gameSim, b, dt);
 		}
 	}
 }
 
-void BulletPool::anim(Bullet & b, float dt)
+void BulletPool::anim(GameSim & gameSim, Bullet & b, float dt)
 {
 	Assert(b.isAlive);
 
@@ -436,4 +439,25 @@ void BulletPool::free(uint16_t id)
 		m_bullets[id].isAlive = false;
 		m_freeList[m_numFree++] = id;
 	}
+}
+
+//
+
+void initBullet(GameSim & gameSim, Bullet & b, const ParticleSpawnInfo & spawnInfo)
+{
+	LOG_DBG("Random called from initBullet");
+	const float angle = gameSim.Random() % 256;
+	const float velocity = gameSim.RandomFloat(spawnInfo.minVelocity, spawnInfo.maxVelocity);
+
+	memset(&b, 0, sizeof(b));
+	b.isAlive = true;
+	b.type = (BulletType)spawnInfo.type;
+	b.pos[0] = spawnInfo.x;
+	b.pos[1] = spawnInfo.y;
+	b.setVel(angle / 128.f * float(M_PI), velocity);
+
+	b.noCollide = true;
+	b.maxWrapCount = 1;
+	b.maxDistanceTravelled = spawnInfo.maxDistance;
+	b.color = spawnInfo.color;
 }

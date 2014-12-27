@@ -1,3 +1,4 @@
+#include "bullet.h"
 #include "framework.h"
 #include "gamedefs.h"
 #include "gamesim.h"
@@ -35,6 +36,27 @@ uint32_t GameSim::GameState::Random()
 uint32_t GameSim::GameState::GetTick()
 {
 	return m_tick;
+}
+
+//
+
+GameSim::GameSim()
+	: m_arenaNetObject()
+	, m_state()
+	, m_bulletPool(0)
+{
+	m_arena.init(&m_arenaNetObject);
+
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+		m_players[i] = 0;
+
+	m_bulletPool = new BulletPool(false);
+}
+
+GameSim::~GameSim()
+{
+	delete m_bulletPool;
+	m_bulletPool = 0;
 }
 
 uint32_t GameSim::calcCRC() const
@@ -93,7 +115,7 @@ void GameSim::tick()
 	if (g_devMode)
 	{
 		const uint32_t crc = calcCRC();
-		LOG_DBG("gamesim %p: crc=%08x", this, crc);
+		LOG_DBG("gamesim %p: tick=%u, crc=%08x", this, m_state.m_tick, crc);
 	}
 #endif
 
@@ -129,6 +151,7 @@ void GameSim::tick()
 			weights[i] = totalWeight;
 		}
 
+		LOG_DBG("Random called from pre trySpawnPickup");
 		int value = m_state.Random() % totalWeight;
 
 		PickupType type = kPickupType_COUNT;
@@ -141,6 +164,12 @@ void GameSim::tick()
 
 		m_state.m_nextPickupSpawnTick = tick + (g_pickupTimeBase + (m_state.Random() % g_pickupTimeRandom)) * TICKS_PER_SECOND;
 	}
+
+#if ENABLE_CLIENT_SIMULATION
+	anim(dt);
+
+	m_bulletPool->tick(*this, dt);
+#endif
 
 	m_state.m_tick++;
 
@@ -182,9 +211,10 @@ void GameSim::trySpawnPickup(PickupType type)
 					return false;
 				}))
 			{
+				LOG_DBG("Random called from trySpawnPickup");
 				const int index = m_state.Random() % numLocations;
-				int spawnX = x[index];
-				int spawnY = y[index];
+				const int spawnX = x[index];
+				const int spawnY = y[index];
 
 				spawnPickup(pickup, type, spawnX, spawnY);
 			}
@@ -258,6 +288,7 @@ void GameSim::addScreenShake(Vec2 delta, float stiffness, float life)
 		}
 	}
 
+	LOG_DBG("Random called from addScreenShake");
 	m_screenShakes[m_state.Random() % MAX_SCREEN_SHAKES].isActive = false;
 	addScreenShake(delta, stiffness, life);
 }

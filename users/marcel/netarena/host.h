@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include "gamedefs.h" // for ENABLE_CLIENT_SIMULATION
 #include "gamesim.h"
 
 class Arena;
@@ -23,8 +24,6 @@ class Host
 	std::vector<int> m_freePlayerIds;
 
 	int m_nextRoundNumber;
-
-	BulletPool * m_bulletPool;
 
 	NetSpriteManager * m_spriteManager;
 
@@ -64,6 +63,4 @@ public:
 };
 
 extern Host * g_host;
-extern Arena * g_hostArena;
-extern BulletPool * g_hostBulletPool;
 extern NetSpriteManager * g_hostSpriteManager;

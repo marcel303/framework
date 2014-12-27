@@ -115,7 +115,7 @@ struct PlayerAnimInfo
 
 void PlayerPos_NS::SerializeStruct()
 {
-#if ENABLE_PLAYER_SERIALIZATION
+#if !ENABLE_CLIENT_SIMULATION
 	PlayerNetObject * playerNetObject = static_cast<PlayerNetObject*>(GetOwner());
 	Player * player = playerNetObject->m_player;
 
@@ -157,7 +157,7 @@ void PlayerPos_NS::SerializeStruct()
 
 void PlayerState_NS::SerializeStruct()
 {
-#if ENABLE_PLAYER_SERIALIZATION
+#if !ENABLE_CLIENT_SIMULATION
 	PlayerNetObject * playerNetObject = static_cast<PlayerNetObject*>(GetOwner());
 	Player * player = playerNetObject->m_player;
 
@@ -191,7 +191,7 @@ void PlayerAnim_NS::SerializeStruct()
 	PlayerNetObject * playerNetObject = static_cast<PlayerNetObject*>(GetOwner());
 	Player * player = playerNetObject->m_player;
 
-#if ENABLE_PLAYER_SERIALIZATION
+#if !ENABLE_CLIENT_SIMULATION
 	SerializeBits(player->m_anim, 4);
 	Serialize(player->m_animPlay);
 
@@ -263,7 +263,7 @@ void PlayerAnim_NS::ApplyAnim()
 		char filename[64];
 		sprintf_s(filename, sizeof(filename), s_animInfos[player->m_anim].file, playerNetObject->getCharacterIndex());
 
-		playerNetObject->m_sprite = new Sprite(filename, 0.f, 0.f, 0, false);
+		playerNetObject->m_sprite = new Sprite(filename, 0.f, 0.f, 0, !ENABLE_CLIENT_SIMULATION);
 		playerNetObject->m_sprite->animActionHandler = PlayerNetObject::handleAnimationAction;
 		playerNetObject->m_sprite->animActionHandlerObj = playerNetObject;
 	}
@@ -307,6 +307,7 @@ const char * SoundBag::getRandomSound(GameSim & gameSim)
 			if (m_random)
 			{
 			#if ENABLE_CLIENT_SIMULATION
+				LOG_DBG("Random called from getRandomSound");
 				index = g_gameSim->m_state.Random() % m_files.size();
 			#else
 				index = rand() % m_files.size();
@@ -824,6 +825,7 @@ void Player::tick(float dt)
 
 				Assert(bulletType != kBulletType_COUNT);
 				g_app->netSpawnBullet(
+					*m_netObject->m_gameSim,
 					m_pos[0] + mirrorX(0.f),
 					m_pos[1] - mirrorY(44.f),
 					angle,
@@ -1250,7 +1252,7 @@ void Player::tick(float dt)
 								if (strength > 6.f)
 									strength = 6.f;
 								if (strength > 0.f)
-									g_app->netScreenShake(0.f, strength, 3000.f, .3f);
+									g_app->netScreenShake(*m_netObject->m_gameSim, 0.f, strength, 3000.f, .3f);
 
 								m_vel[i] = 0.f;
 							}
@@ -1720,7 +1722,7 @@ void PlayerNetObject::handleCharacterIndexChange()
 		m_props.load(m_player->makeCharacterFilename("props.txt"));
 
 		delete m_sprite;
-		m_sprite = new Sprite(m_player->makeCharacterFilename("walk/walk.png"), 0.f, 0.f, 0, false);
+		m_sprite = new Sprite(m_player->makeCharacterFilename("walk/walk.png"), 0.f, 0.f, 0, !ENABLE_CLIENT_SIMULATION);
 
 		m_spriteScale = m_props.getFloat("sprite_scale", 1.f);
 

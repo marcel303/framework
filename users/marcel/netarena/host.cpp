@@ -28,14 +28,11 @@ OPTION_EXTERN(std::string, g_map);
 extern std::vector<std::string> g_mapList;
 
 Host * g_host = 0;
-Arena * g_hostArena = 0;
-BulletPool * g_hostBulletPool = 0;
 NetSpriteManager * g_hostSpriteManager = 0;
 
 Host::Host()
 	: m_nextNetId(1) // 0 = unassigned
 	, m_nextRoundNumber(0)
-	, m_bulletPool(0)
 	, m_spriteManager(0)
 	, m_roundCompleteTimer(0)
 {
@@ -44,8 +41,6 @@ Host::Host()
 Host::~Host()
 {
 	Assert(g_host == 0);
-	Assert(g_hostArena == 0);
-	Assert(g_hostBulletPool == 0);
 	Assert(g_hostSpriteManager == 0);
 }
 
@@ -57,28 +52,19 @@ void Host::init()
 
 	g_app->getReplicationMgr()->SV_AddObject(&m_gameSim.m_arenaNetObject);
 
-	m_bulletPool = new BulletPool(false);
-
 	m_spriteManager = new NetSpriteManager();
 
 	g_host = this;
-	g_hostArena = &m_gameSim.m_arena;
-	g_hostBulletPool = m_bulletPool;
 	g_hostSpriteManager = m_spriteManager;
 }
 
 void Host::shutdown()
 {
 	g_hostSpriteManager = 0;
-	g_hostBulletPool = 0;
-	g_hostArena = 0;
 	g_host = 0;
 
 	delete m_spriteManager;
 	m_spriteManager = 0;
-
-	delete m_bulletPool;
-	m_bulletPool = 0;
 
 	g_app->getReplicationMgr()->SV_RemoveObject(m_gameSim.m_arenaNetObject.GetObjectID());
 }
@@ -123,7 +109,9 @@ void Host::tickPlay(float dt)
 		}
 	}
 
-	m_bulletPool->tick(dt);
+#if !ENABLE_CLIENT_SIMULATION
+	m_gameSim.m_bulletPool->tick(m_gameSim, dt);
+#endif
 
 	if (roundComplete)
 	{
