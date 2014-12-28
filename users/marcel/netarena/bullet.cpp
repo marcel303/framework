@@ -300,6 +300,8 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 				{
 					if (b.type == kBulletType_Grenade)
 					{
+						if (DEBUG_RANDOM_CALLSITES)
+							LOG_DBG("Random called from kBulletType_Grenade explode");
 						for (int i = 0; i < BULLET_GRENADE_FRAG_COUNT; ++i)
 						{
 							g_app->netSpawnBullet(
@@ -326,8 +328,8 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 						const float strength = 5.f;
 						g_app->netScreenShake(
 							gameSim,
-							Calc::RandomMin0Max1() * strength,
-							Calc::RandomMin0Max1() * strength, 2500.f, .3f);
+							gameSim.RandomFloat(-strength, +strength),
+							gameSim.RandomFloat(-strength, +strength), 2500.f, .3f);
 					}
 
 					free(i);

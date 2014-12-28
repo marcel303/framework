@@ -142,7 +142,9 @@ enum RpcMethod
 	s_rpcAddSprite,
 	s_rpcSyncSprite,
 	s_rpcRemoveSprite,
+#if !ENABLE_CLIENT_SIMULATION
 	s_rpcSpawnParticles,
+#endif
 	s_rpcUpdateBlock
 };
 
@@ -556,6 +558,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			sprite.enabled = false;
 		}
 	}
+#if !ENABLE_CLIENT_SIMULATION
 	else if (method == s_rpcSpawnParticles)
 	{
 		Client * client = g_app->findClientByChannel(channel);
@@ -571,6 +574,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			client->spawnParticles(spawnInfo);
 		}
 	}
+#endif
 	else if (method == s_rpcUpdateBlock)
 	{
 		Client * client = g_app->findClientByChannel(channel);
