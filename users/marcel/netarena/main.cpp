@@ -1698,10 +1698,10 @@ uint16_t App::netSpawnBullet(GameSim & gameSim, int16_t x, int16_t y, uint8_t _a
 			b.life = BULLET_GRENADE_NADE_LIFE;
 			break;
 		case kBulletType_GrenadeA:
-			velocity = Calc::Random(BULLET_GRENADE_FRAG_SPEED_MIN, BULLET_GRENADE_FRAG_SPEED_MAX);
+			velocity = gameSim.RandomFloat(BULLET_GRENADE_FRAG_SPEED_MIN, BULLET_GRENADE_FRAG_SPEED_MAX);
 			b.maxWrapCount = 1;
 			b.maxReflectCount = 0;
-			b.maxDistanceTravelled = Calc::Random(BULLET_GRENADE_FRAG_RADIUS_MIN, BULLET_GRENADE_FRAG_RADIUS_MAX);
+			b.maxDistanceTravelled = gameSim.RandomFloat(BULLET_GRENADE_FRAG_RADIUS_MIN, BULLET_GRENADE_FRAG_RADIUS_MAX);
 			b.maxDestroyedBlocks = 1;
 			break;
 		default:
