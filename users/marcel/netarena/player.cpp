@@ -1264,11 +1264,10 @@ void Player::tick(float dt)
 							{
 								float strength = (m_vel[i] - PLAYER_JUMP_SPEED) / 25.f;
 
-								
 								if (strength > 14.f)
 								{
 									strength = strength / 4.f;
-									g_app->netScreenShake(0.f, strength, 3000.f, .3f);
+									g_app->netScreenShake(*m_netObject->m_gameSim, 0.f, strength, 3000.f, .3f);
 								}
 
 								m_vel[i] = 0.f;

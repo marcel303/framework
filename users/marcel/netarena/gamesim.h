@@ -223,6 +223,8 @@ public:
 
 	BulletPool * m_bulletPool;
 
+	BulletPool * m_particlePool;
+
 	ScreenShake m_screenShakes[MAX_SCREEN_SHAKES];
 
 	GameSim();

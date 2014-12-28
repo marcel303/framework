@@ -25,16 +25,16 @@ Client::Client()
 	, m_arena(0)
 #if !ENABLE_CLIENT_SIMULATION
 	, m_bulletPool(0)
-#endif
 	, m_particlePool(0)
+#endif
 	, m_spriteManager(0)
 {
 	m_gameSim = new GameSim();
 
 #if !ENABLE_CLIENT_SIMULATION
 	m_bulletPool = new BulletPool(true);
-#endif
 	m_particlePool = new BulletPool(true);
+#endif
 
 	m_spriteManager = new NetSpriteManager();
 }
@@ -174,9 +174,9 @@ void Client::tick(float dt)
 	m_gameSim->anim(dt);
 
 	m_bulletPool->anim(*m_gameSim, dt);
-#endif
 
 	m_particlePool->tick(*m_gameSim, dt);
+#endif
 
 	if (s_noBgm)
 	{
@@ -274,12 +274,14 @@ void Client::drawPlay()
 		player->draw();
 	}
 
-	m_particlePool->draw();
-
 #if !ENABLE_CLIENT_SIMULATION
 	m_bulletPool->draw();
+
+	m_particlePool->draw();
 #else
 	m_gameSim->m_bulletPool->draw();
+
+	m_gameSim->m_particlePool->draw();
 #endif
 
 	gxPopMatrix();
@@ -387,6 +389,7 @@ void Client::clearPlayerPtrs()
 
 void Client::spawnParticles(const ParticleSpawnInfo & spawnInfo)
 {
+#if !ENABLE_CLIENT_SIMULATION
 	for (int i = 0; i < spawnInfo.count; ++i)
 	{
 		uint16_t id = m_particlePool->alloc();
@@ -398,4 +401,7 @@ void Client::spawnParticles(const ParticleSpawnInfo & spawnInfo)
 			initBullet(*m_gameSim, b, spawnInfo);
 		}
 	}
+#else
+	m_gameSim->spawnParticles(spawnInfo);
+#endif
 }

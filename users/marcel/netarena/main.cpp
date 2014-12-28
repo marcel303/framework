@@ -1216,7 +1216,8 @@ bool App::tick()
 				const uint32_t crc3 = m_host->m_gameSim.calcCRC();
 
 			#if ENABLE_CLIENT_SIMULATION
-				LOG_DBG("tick CRCs: %08x, %08x, %08x", crc1, crc2, crc3);
+				if (g_devMode)
+					LOG_DBG("tick CRCs: %08x, %08x, %08x", crc1, crc2, crc3);
 			#endif
 			}
 
@@ -1563,7 +1564,8 @@ void App::netScreenShake(GameSim & gameSim, float dx, float dy, float stiffness,
 
 void App::netSetPlayerInputs(uint16_t channelId, uint32_t netId, const PlayerInput & input)
 {
-	LOG_DBG("netSetPlayerInputs");
+	if (g_devMode)
+		LOG_DBG("netSetPlayerInputs");
 
 	BitStream bs;
 
@@ -1578,7 +1580,8 @@ void App::netSetPlayerInputs(uint16_t channelId, uint32_t netId, const PlayerInp
 #if ENABLE_CLIENT_SIMULATION
 void App::netSetPlayerInputsBroadcast()
 {
-	LOG_DBG("netSetPlayerInputsBroadcast");
+	if (g_devMode)
+		LOG_DBG("netSetPlayerInputsBroadcast");
 
 	BitStream bs;
 

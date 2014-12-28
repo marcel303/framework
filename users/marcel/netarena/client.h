@@ -25,8 +25,9 @@ public:
 
 #if !ENABLE_CLIENT_SIMULATION
 	BulletPool * m_bulletPool;
-#endif
+
 	BulletPool * m_particlePool;
+#endif
 
 	NetSpriteManager * m_spriteManager;
 

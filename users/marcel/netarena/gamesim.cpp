@@ -51,10 +51,14 @@ GameSim::GameSim()
 		m_players[i] = 0;
 
 	m_bulletPool = new BulletPool(false);
+	m_particlePool = new BulletPool(true);
 }
 
 GameSim::~GameSim()
 {
+	delete m_particlePool;
+	m_particlePool = 0;
+
 	delete m_bulletPool;
 	m_bulletPool = 0;
 }
@@ -206,6 +210,8 @@ void GameSim::anim(float dt)
 		if (shake.isActive)
 			shake.tick(dt);
 	}
+
+	m_particlePool->tick(*this, dt);
 }
 
 void GameSim::trySpawnPickup(PickupType type)
@@ -294,7 +300,6 @@ Pickup * GameSim::grabPickup(int x1, int y1, int x2, int y2)
 
 void GameSim::spawnParticles(const ParticleSpawnInfo & spawnInfo)
 {
-#if 0 // todo
 	for (int i = 0; i < spawnInfo.count; ++i)
 	{
 		uint16_t id = m_particlePool->alloc();
@@ -303,10 +308,9 @@ void GameSim::spawnParticles(const ParticleSpawnInfo & spawnInfo)
 		{
 			Bullet & b = m_particlePool->m_bullets[id];
 
-			initBullet(*m_gameSim, b, spawnInfo);
+			initBullet(*this, b, spawnInfo);
 		}
 	}
-#endif
 }
 
 void GameSim::addScreenShake(Vec2 delta, float stiffness, float life)
