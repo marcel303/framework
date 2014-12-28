@@ -10,6 +10,7 @@ class Dictionary;
 struct Player;
 class Sprite;
 
+#if !ENABLE_CLIENT_SIMULATION
 class PlayerPos_NS : public NetSerializable
 {
 	virtual void SerializeStruct();
@@ -31,6 +32,7 @@ public:
 
 	int8_t playerId;
 };
+#endif
 
 class PlayerAnim_NS : public NetSerializable
 {
@@ -92,8 +94,10 @@ class PlayerNetObject : public NetObject
 	friend class PlayerPos_NS;
 	friend class PlayerState_NS;
 
+#if !ENABLE_CLIENT_SIMULATION
 	PlayerPos_NS m_pos;
 	PlayerState_NS m_state;
+#endif
 	PlayerAnim_NS m_anim;
 
 	bool m_isAuthorative;
@@ -120,8 +124,14 @@ public:
 	int getScore() const;
 	int getTotalScore() const;
 
+#if !ENABLE_CLIENT_SIMULATION
 	void setPlayerId(int id);
 	int getPlayerId() const { return m_state.playerId; }
+#else
+	int m_playerId;
+	void setPlayerId(int id) { m_playerId = id; }
+	int getPlayerId() const { return m_playerId; }
+#endif
 
 	int getCharacterIndex() const;
 	void setCharacterIndex(int index);
@@ -151,6 +161,4 @@ public:
 		bool wentUp(int input) { return wasDown(input) && !isDown(input); }
 		void next() { m_prevState = m_currState; }
 	} m_input;
-
-	int m_lastSpawnIndex;
 };

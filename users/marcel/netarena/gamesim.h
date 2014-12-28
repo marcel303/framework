@@ -22,7 +22,7 @@ struct Player
 
 	Player()
 	{
-		memset(this, 0, sizeof(*this));
+		memset(this, 0, sizeof(Player));
 
 		m_characterIndex = -1;
 		m_facing.Set(+1.f, +1.f);
@@ -31,6 +31,8 @@ struct Player
 		m_animAllowSteering = true;
 
 		m_weaponType = kPlayerWeapon_Fire;
+
+		m_lastSpawnIndex = -1;
 	}
 
 	void tick(float dt); // todo : remove dt
@@ -104,15 +106,17 @@ struct Player
 		AttackInfo()
 			: attacking(false)
 			, hitDestructible(false)
-			, attackVel()
 			, hasCollision(false)
+			, collision()
+			, attackVel()
 			, cooldown(0.f)
 		{
+			memset(this, 0, sizeof(AttackInfo));
 		}
 
-		bool attacking : 1;
-		bool hitDestructible : 1;
-		bool hasCollision : 1;
+		bool attacking;
+		bool hitDestructible;
+		bool hasCollision;
 		CollisionInfo collision;
 		Vec2 attackVel;
 		float cooldown; // this timer needs to hit zero before the player can attack again. it's decremented AFTER the attack animation has finished
@@ -125,9 +129,10 @@ struct Player
 			, x(0)
 			, y(0)
 		{
+			memset(this, 0, sizeof(TeleportInfo));
 		}
 
-		bool cooldown : 1; // when set, we're waiting for the player to exit (x, y), which is the destination of the previous teleport
+		bool cooldown; // when set, we're waiting for the player to exit (x, y), which is the destination of the previous teleport
 		int16_t x;
 		int16_t y;
 	} m_teleport;
@@ -136,11 +141,11 @@ struct Player
 	{
 		JumpInfo()
 		{
-			memset(this, 0, sizeof(*this));
+			memset(this, 0, sizeof(JumpInfo));
 		}
 
-		bool cancelStarted : 1;
-		bool cancelled : 1;
+		bool cancelStarted;
+		bool cancelled;
 		int16_t cancelX;
 		int8_t cancelFacing;
 	} m_jump;
@@ -149,20 +154,21 @@ struct Player
 	bool m_canRespawn; // set when the player is allowed to respawn, which is after the death animation is done
 	bool m_canTaunt; // set when the player is allowed to taunt, which is after the death animation is done. it's reset after a taunt
 	bool m_isRespawn; // set after the first respawn. the first spawn is special, as the player doesn't need to press X and isn't allowed to use taunt
+	int m_lastSpawnIndex;
 
-	bool m_isGrounded : 1; // set when the player is walking on ground
-	bool m_isAttachedToSticky : 1;
-	bool m_isAnimDriven : 1; // an animation is active that drives the player using animation actions/triggers
+	bool m_isGrounded; // set when the player is walking on ground
+	bool m_isAttachedToSticky;
+	bool m_isAnimDriven; // an animation is active that drives the player using animation actions/triggers
 
-	bool m_isAirDashCharged : 1; // reset when air dash is used. set when the player hits the ground
-	bool m_isWallSliding : 1;
+	bool m_isAirDashCharged; // reset when air dash is used. set when the player hits the ground
+	bool m_isWallSliding;
 
-	bool m_animVelIsAbsolute : 1; // should the animation velocity be added to or replace the regular player velocity?
-	bool m_animAllowGravity : 1;
-	bool m_animAllowSteering : 1; // allow the player to control the character?
+	bool m_animVelIsAbsolute; // should the animation velocity be added to or replace the regular player velocity?
+	bool m_animAllowGravity;
+	bool m_animAllowSteering; // allow the player to control the character?
 	Vec2 m_animVel;
 
-	bool m_enterPassthrough : 1; // if set, the player will move through passthrough blocks, without having to press DOWN. this mode is set when using the sword-down attack, and reset when the player hits the ground
+	bool m_enterPassthrough; // if set, the player will move through passthrough blocks, without having to press DOWN. this mode is set when using the sword-down attack, and reset when the player hits the ground
 };
 
 struct ScreenShake
@@ -195,7 +201,7 @@ public:
 	{
 		GameState()
 		{
-			memset(this, 0, sizeof(*this));
+			memset(this, 0, sizeof(GameState));
 		}
 
 		uint32_t Random();
@@ -224,6 +230,8 @@ public:
 
 	uint32_t calcCRC() const;
 	void serialize(NetSerializationContext & context);
+	void clearPlayerPtrs() const;
+	void setPlayerPtrs() const;
 
 	void tick();
 	void anim(float dt);

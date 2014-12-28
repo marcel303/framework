@@ -113,9 +113,9 @@ struct PlayerAnimInfo
 
 //
 
+#if !ENABLE_CLIENT_SIMULATION
 void PlayerPos_NS::SerializeStruct()
 {
-#if !ENABLE_CLIENT_SIMULATION
 	PlayerNetObject * playerNetObject = static_cast<PlayerNetObject*>(GetOwner());
 	Player * player = playerNetObject->m_player;
 
@@ -150,14 +150,14 @@ void PlayerPos_NS::SerializeStruct()
 	facing = player->m_facing[1] < 0 ? true : false;
 	Serialize(facing);
 	player->m_facing[1] = facing ? -1 : +1;
-#endif
 }
+#endif
 
 //
 
+#if !ENABLE_CLIENT_SIMULATION
 void PlayerState_NS::SerializeStruct()
 {
-#if !ENABLE_CLIENT_SIMULATION
 	PlayerNetObject * playerNetObject = static_cast<PlayerNetObject*>(GetOwner());
 	Player * player = playerNetObject->m_player;
 
@@ -175,7 +175,6 @@ void PlayerState_NS::SerializeStruct()
 	{
 		playerNetObject->handleCharacterIndexChange();
 	}
-#endif
 }
 
 PlayerState_NS::PlayerState_NS(NetSerializableObject * owner)
@@ -183,6 +182,7 @@ PlayerState_NS::PlayerState_NS(NetSerializableObject * owner)
 	, playerId(-1)
 {
 }
+#endif
 
 //
 
@@ -473,13 +473,16 @@ float Player::mirrorY(float y) const
 
 PlayerNetObject::PlayerNetObject(uint32_t netId, uint16_t owningChannelId, Player * player, GameSim * gameSim)
 	: m_player(player)
+#if ENABLE_CLIENT_SIMULATION
+	, m_playerId(-1)
+#else
 	, m_pos(this)
 	, m_state(this)
+#endif
 	, m_anim(this)
 	, m_isAuthorative(false)
 	, m_sprite(0)
 	, m_spriteScale(1.f)
-	, m_lastSpawnIndex(-1)
 {
 	setNetId(netId);
 	setOwningChannelId(owningChannelId);
@@ -617,11 +620,15 @@ void Player::tick(float dt)
 				break;
 			case kPlayerAnim_Spawn:
 				m_isAlive = true;
+			#if !ENABLE_CLIENT_SIMULATION
 				m_netObject->m_state.SetDirty();
+			#endif
 				break;
 			case kPlayerAnim_Die:
 				m_isAlive = false;
+			#if !ENABLE_CLIENT_SIMULATION
 				m_netObject->m_state.SetDirty();
+			#endif
 				break;
 			}
 		}
@@ -638,7 +645,9 @@ void Player::tick(float dt)
 		{
 			m_canRespawn = true;
 			m_canTaunt = true;
+		#if !ENABLE_CLIENT_SIMULATION
 			m_netObject->m_state.SetDirty();
+		#endif
 
 			m_respawnTimer = m_isRespawn ? 3.f : 0.f;
 		}
@@ -1388,7 +1397,9 @@ void Player::tick(float dt)
 
 	//printf("x: %g\n", m_pos[0]);
 
+#if !ENABLE_CLIENT_SIMULATION
 	m_netObject->m_pos.SetDirty();
+#endif
 }
 
 void Player::draw()
@@ -1409,7 +1420,7 @@ void Player::draw()
 
 	// draw player color
 
-	const int playerId = m_netObject->m_state.playerId;
+	const int playerId = m_netObject->getPlayerId();
 	const int alpha = 127;
 
 	if (playerId >= 0 && playerId < 4)
@@ -1571,7 +1582,9 @@ void Player::handleNewGame()
 {
 	m_score = 0;
 	m_totalScore = 0;
+#if !ENABLE_CLIENT_SIMULATION
 	m_netObject->m_state.SetDirty();
+#endif
 }
 
 void Player::handleNewRound()
@@ -1579,11 +1592,15 @@ void Player::handleNewRound()
 	if (m_score > 0)
 		m_totalScore += m_score;
 	m_score = 0;
+#if !ENABLE_CLIENT_SIMULATION
 	m_netObject->m_state.SetDirty();
+#endif
 
-	m_netObject->m_lastSpawnIndex = -1;
+	m_lastSpawnIndex = -1;
 	m_isRespawn = false;
+#if !ENABLE_CLIENT_SIMULATION
 	m_netObject->m_state.SetDirty();
+#endif
 
 	m_weaponAmmo = 0;
 }
@@ -1595,7 +1612,7 @@ void Player::respawn()
 
 	int x, y;
 
-	if (m_netObject->m_gameSim->m_arena.getRandomSpawnPoint(*m_netObject->m_gameSim, x, y, m_netObject->m_lastSpawnIndex, this))
+	if (m_netObject->m_gameSim->m_arena.getRandomSpawnPoint(*m_netObject->m_gameSim, x, y, m_lastSpawnIndex, this))
 	{
 		m_pos[0] = (float)x;
 		m_pos[1] = (float)y;
@@ -1604,7 +1621,9 @@ void Player::respawn()
 		m_vel[1] = 0.f;
 
 		m_isAlive = true;
+	#if !ENABLE_CLIENT_SIMULATION
 		m_netObject->m_state.SetDirty();
+	#endif
 
 		m_controlDisableTime = 0.f;
 
@@ -1633,7 +1652,9 @@ void Player::respawn()
 		{
 			playSecondaryEffects(kPlayerEvent_Spawn);
 			m_isRespawn = true;
+		#if !ENABLE_CLIENT_SIMULATION
 			m_netObject->m_state.SetDirty();
+		#endif
 		}
 	}
 }
@@ -1656,7 +1677,9 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 			m_isAnimDriven = true;
 
 			m_canRespawn = false;
+		#if !ENABLE_CLIENT_SIMULATION
 			m_netObject->m_state.SetDirty();
+		#endif
 
 			if (attacker)
 			{
@@ -1687,7 +1710,9 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 void Player::awardScore(int score)
 {
 	m_score += score;
+#if !ENABLE_CLIENT_SIMULATION
 	m_netObject->m_state.SetDirty();
+#endif
 }
 
 int PlayerNetObject::getScore() const
@@ -1700,11 +1725,13 @@ int PlayerNetObject::getTotalScore() const
 	return m_player->m_totalScore;
 }
 
+#if !ENABLE_CLIENT_SIMULATION
 void PlayerNetObject::setPlayerId(int id)
 {
 	m_state.playerId = id;
 	m_state.SetDirty();
 }
+#endif
 
 int PlayerNetObject::getCharacterIndex() const
 {
@@ -1714,7 +1741,9 @@ int PlayerNetObject::getCharacterIndex() const
 void PlayerNetObject::setCharacterIndex(int index)
 {
 	m_player->m_characterIndex = index;
+#if !ENABLE_CLIENT_SIMULATION
 	m_state.SetDirty();
+#endif
 
 	handleCharacterIndexChange();
 }

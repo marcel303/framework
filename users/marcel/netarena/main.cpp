@@ -323,12 +323,15 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 
 					if (g_host)
 					{
+						g_host->m_gameSim.clearPlayerPtrs();
+						client->m_gameSim->clearPlayerPtrs();
+
 						const uint8_t * hostBytes = (uint8_t*)&g_host->m_gameSim.m_state;
 						const uint8_t * clientBytes = (uint8_t*)&client->m_gameSim->m_state;
 						const int numBytes = sizeof(GameSim::GameState);
 
-						GameSim::GameState state = g_host->m_gameSim.m_state;
-						state = client->m_gameSim->m_state; // so we can compare using VS watches..
+						uint8_t * temp = (uint8_t*)alloca(numBytes);
+						static GameSim::GameState * state = (GameSim::GameState*)temp;
 
 						for (int i = 0; i < numBytes; ++i)
 						{
@@ -337,7 +340,11 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 								LOG_ERR("byte mismatch @ %d", i);
 								//break;
 							}
+							temp[i] = hostBytes[i] ^ clientBytes[i];
 						}
+
+						g_host->m_gameSim.setPlayerPtrs();
+						client->m_gameSim->setPlayerPtrs();
 					}
 				}
 			}

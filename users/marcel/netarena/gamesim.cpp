@@ -61,9 +61,7 @@ GameSim::~GameSim()
 
 uint32_t GameSim::calcCRC() const
 {
-	for (int i = 0; i < MAX_PLAYERS; ++i)
-		if (m_players[i])
-			m_players[i]->m_player->m_netObject = 0;
+	clearPlayerPtrs();
 
 	uint32_t result = 0;
 
@@ -73,9 +71,7 @@ uint32_t GameSim::calcCRC() const
 	for (uint32_t i = 0; i < numBytes; ++i)
 		result = result * 13 + bytes[i];
 
-	for (int i = 0; i < MAX_PLAYERS; ++i)
-		if (m_players[i])
-			m_players[i]->m_player->m_netObject = m_players[i];
+	setPlayerPtrs();
 
 	return result;
 }
@@ -105,6 +101,20 @@ void GameSim::serialize(NetSerializationContext & context)
 		Assert(crc == calcCRC());
 
 	// todo : serialize player animation state, since it affects game play
+}
+
+void GameSim::clearPlayerPtrs() const
+{
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+		if (m_players[i])
+			m_players[i]->m_player->m_netObject = 0;
+}
+
+void GameSim::setPlayerPtrs() const
+{
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+		if (m_players[i])
+			m_players[i]->m_player->m_netObject = m_players[i];
 }
 
 void GameSim::tick()
