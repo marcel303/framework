@@ -114,8 +114,13 @@ void GameSim::tick()
 #if ENABLE_CLIENT_SIMULATION
 	if (g_devMode && ENABLE_GAMESTATE_CRC_LOGGING)
 	{
+		int numPlayers = 0;
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+			if (m_players[i])
+				numPlayers++;
+
 		const uint32_t crc = calcCRC();
-		LOG_DBG("gamesim %p: tick=%u, crc=%08x", this, m_state.m_tick, crc);
+		LOG_DBG("gamesim %p: tick=%u, crc=%08x, numPlayers=%d", this, m_state.m_tick, crc, numPlayers);
 	}
 #endif
 

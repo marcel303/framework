@@ -223,12 +223,19 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 
 			bitStream.Read(index);
 
+			const uint32_t crc1 = client->m_gameSim->calcCRC();
+
 			PlayerNetObject * player = client->m_gameSim->m_players[index];
 			Assert(player);
 			if (player)
 			{
 				client->removePlayer(player);
+				delete player;
 			}
+
+			const uint32_t crc2 = client->m_gameSim->calcCRC();
+
+			LOG_DBG("remove CRCs: %08x, %08x", crc1, crc2);
 		}
 	}
 #endif
@@ -588,6 +595,84 @@ Client * App::findClientByChannel(Channel * channel)
 	return 0;
 }
 
+void App::processPlayerChanges()
+{
+	for (size_t i = 0; i < m_playersToAddOrRemove.size(); ++i)
+	{
+		// todo : remove from playerToAdd on channel disconnect
+
+		const PlayerToAddOrRemove & playerToAddOrRemove = m_playersToAddOrRemove[i];
+
+		if (playerToAddOrRemove.add)
+		{
+			// todo : add a separate client sync action
+
+			Channel * channel = playerToAddOrRemove.channel;
+
+		#if ENABLE_CLIENT_SIMULATION
+			for (int i = 0; i < MAX_PLAYERS; ++i)
+			{
+				PlayerNetObject * netObject = m_host->m_gameSim.m_players[i];
+
+				if (netObject)
+					netAddPlayerBroadcast(channel, netObject->getOwningChannelId(), netObject->getNetId(), i, netObject->getCharacterIndex());
+			}
+		#endif
+
+			m_host->syncNewClient(channel);
+
+			//
+
+			PlayerNetObject * player = m_host->allocPlayer(playerToAddOrRemove.channel->m_destinationId);
+
+			if (player)
+			{
+				ClientInfo & clientInfo = m_hostClients[playerToAddOrRemove.channel];
+
+				clientInfo.player = player;
+
+				player->setCharacterIndex(playerToAddOrRemove.characterIndex);
+
+				m_host->addPlayer(player);
+
+			#if ENABLE_CLIENT_SIMULATION
+				netAddPlayerBroadcast(0, playerToAddOrRemove.channel->m_destinationId, player->getNetId(), player->getPlayerId(), player->getCharacterIndex());
+			#else
+				m_replicationMgr->SV_AddObject(player);
+			#endif
+			}
+		}
+		else
+		{
+		#if ENABLE_CLIENT_SIMULATION
+			netRemovePlayerBroadcast(playerToAddOrRemove.playerId);
+
+			PlayerNetObject * player = m_host->m_gameSim.m_players[playerToAddOrRemove.playerId];
+
+			m_host->removePlayer(player);
+			delete player;
+			player = 0;
+		#endif
+		}
+	}
+	m_playersToAddOrRemove.clear();
+}
+
+void App::broadcastPlayerInputs()
+{
+#if ENABLE_CLIENT_SIMULATION
+	if (g_devMode)
+		for (int i = 0; i < 10; ++i)
+			m_channelMgr->Update(g_TimerRT.TimeUS_get());
+
+	netSetPlayerInputsBroadcast();
+
+	if (g_devMode)
+		for (int i = 0; i < 10; ++i)
+			m_channelMgr->Update(g_TimerRT.TimeUS_get());
+#endif
+}
+
 //
 
 void App::SV_OnChannelConnect(Channel * channel)
@@ -599,18 +684,6 @@ void App::SV_OnChannelConnect(Channel * channel)
 	m_hostClients[channel] = clientInfo;
 
 	//
-
-#if ENABLE_CLIENT_SIMULATION
-	for (int i = 0; i < MAX_PLAYERS; ++i)
-	{
-		PlayerNetObject * netObject = m_host->m_gameSim.m_players[i];
-
-		if (netObject)
-			netAddPlayerBroadcast(channel, netObject->getOwningChannelId(), netObject->getNetId(), i, netObject->getCharacterIndex());
-	}
-#endif
-
-	m_host->syncNewClient(channel);
 
 	PlayerToAddOrRemove playerToAdd;
 	playerToAdd.add = true;
@@ -642,9 +715,6 @@ void App::SV_OnChannelDisconnect(Channel * channel)
 			playerToRemove.playerId = clientInfo.player->getPlayerId();
 			m_playersToAddOrRemove.push_back(playerToRemove);
 
-			m_host->removePlayer(clientInfo.player);
-
-			delete clientInfo.player;
 			clientInfo.player = 0;
 		}
 
@@ -1115,72 +1185,38 @@ bool App::tick()
 	{
 		m_channelMgr->Update(g_TimerRT.TimeUS_get());
 
-		for (size_t i = 0; i < m_playersToAddOrRemove.size(); ++i)
-		{
-			// todo : remove from playerToAdd on channel disconnect
-
-			const PlayerToAddOrRemove & playerToAddOrRemove = m_playersToAddOrRemove[i];
-
-			if (playerToAddOrRemove.add)
-			{
-				PlayerNetObject * player = m_host->allocPlayer(playerToAddOrRemove.channel->m_destinationId);
-
-				if (player)
-				{
-					ClientInfo & clientInfo = m_hostClients[playerToAddOrRemove.channel];
-
-					clientInfo.player = player;
-
-					player->setCharacterIndex(playerToAddOrRemove.characterIndex);
-
-					m_host->addPlayer(player);
-
-				#if ENABLE_CLIENT_SIMULATION
-					netAddPlayerBroadcast(0, playerToAddOrRemove.channel->m_destinationId, player->getNetId(), player->getPlayerId(), player->getCharacterIndex());
-				#else
-					m_replicationMgr->SV_AddObject(player);
-				#endif
-				}
-			}
-			else
-			{
-			#if ENABLE_CLIENT_SIMULATION
-				netRemovePlayerBroadcast(playerToAddOrRemove.playerId);
-			#endif
-			}
-		}
-		m_playersToAddOrRemove.clear();
-
 		if (g_updateTicks)
 		{
-			for (int i = 0; i < 10; ++i) // hack
-				m_channelMgr->Update(g_TimerRT.TimeUS_get());
-
-		#if ENABLE_CLIENT_SIMULATION
-			if (!m_optionMenuIsOpen)
-			{
-				netSetPlayerInputsBroadcast();
-
-				if (g_devMode)
-					for (int i = 0; i < 10; ++i)
-						m_channelMgr->Update(g_TimerRT.TimeUS_get());
-			}
-		#endif
-
 			m_replicationMgr->SV_Update();
 		}
+
+		m_channelMgr->Update(g_TimerRT.TimeUS_get());
 
 		if (!m_optionMenuIsOpen)
 		{
 			if (g_updateTicks)
+			{
+				const uint32_t crc1 = m_host->m_gameSim.calcCRC();
+
+				processPlayerChanges();
+
+				const uint32_t crc2 = m_host->m_gameSim.calcCRC();
+
+				broadcastPlayerInputs();
+
 				m_host->m_gameSim.tick();
 
-			m_host->tick(dt);
-		}
+				const uint32_t crc3 = m_host->m_gameSim.calcCRC();
 
-		if (g_updateTicks)
-		{
-			m_channelMgr->Update(g_TimerRT.TimeUS_get());
+				LOG_DBG("tick CRCs: %08x, %08x, %08x", crc1, crc2, crc3);
+			}
+
+			m_host->tick(dt);
+
+			if (g_updateTicks)
+			{
+				m_channelMgr->Update(g_TimerRT.TimeUS_get());
+			}
 		}
 	}
 
@@ -1433,6 +1469,8 @@ void App::draw()
 
 void App::netSyncGameSim(Channel * channel)
 {
+	LOG_DBG("netSyncGameSim");
+
 	BitStream bs;
 
 	NetSerializationContext context;
@@ -1445,6 +1483,8 @@ void App::netSyncGameSim(Channel * channel)
 #if ENABLE_CLIENT_SIMULATION
 void App::netAddPlayer(Channel * channel, uint8_t characterIndex)
 {
+	LOG_DBG("netAddPlayer");
+
 	BitStream bs;
 
 	bs.Write(characterIndex);
@@ -1454,6 +1494,8 @@ void App::netAddPlayer(Channel * channel, uint8_t characterIndex)
 
 void App::netAddPlayerBroadcast(Channel * channel, uint16_t owningChannelId, uint32_t netId, uint8_t index, uint8_t characterIndex)
 {
+	LOG_DBG("netAddPlayerBroadcast");
+
 	BitStream bs;
 
 	bs.Write(owningChannelId);
@@ -1469,10 +1511,13 @@ void App::netAddPlayerBroadcast(Channel * channel, uint16_t owningChannelId, uin
 
 void App::netRemovePlayer(uint8_t index)
 {
+	LOG_DBG("netRemovePlayer");
 }
 
 void App::netRemovePlayerBroadcast(uint8_t index)
 {
+	LOG_DBG("netRemovePlayerBroadcast");
+
 	BitStream bs;
 
 	bs.Write(index);
@@ -1509,6 +1554,8 @@ void App::netScreenShake(GameSim & gameSim, float dx, float dy, float stiffness,
 
 void App::netSetPlayerInputs(uint16_t channelId, uint32_t netId, const PlayerInput & input)
 {
+	LOG_DBG("netSetPlayerInputs");
+
 	BitStream bs;
 
 	bs.Write(netId);
@@ -1522,6 +1569,8 @@ void App::netSetPlayerInputs(uint16_t channelId, uint32_t netId, const PlayerInp
 #if ENABLE_CLIENT_SIMULATION
 void App::netSetPlayerInputsBroadcast()
 {
+	LOG_DBG("netSetPlayerInputsBroadcast");
+
 	BitStream bs;
 
 	// todo : if debug, serialize game state CRC
@@ -1558,6 +1607,8 @@ void App::netSetPlayerInputsBroadcast()
 
 void App::netSetPlayerCharacterIndex(uint16_t channelId, uint32_t netId, uint8_t characterIndex)
 {
+	LOG_DBG("netSetPlayerCharacterIndex");
+
 	// client -> host
 
 	BitStream bs;
@@ -1571,6 +1622,8 @@ void App::netSetPlayerCharacterIndex(uint16_t channelId, uint32_t netId, uint8_t
 #if ENABLE_CLIENT_SIMULATION
 void App::netBroadcastCharacterIndex(uint32_t netId, uint8_t characterIndex)
 {
+	LOG_DBG("netBroadcastCharacterIndex");
+
 	// host -> clients
 
 	BitStream bs;
@@ -1584,6 +1637,8 @@ void App::netBroadcastCharacterIndex(uint32_t netId, uint8_t characterIndex)
 
 uint16_t App::netSpawnBullet(GameSim & gameSim, int16_t x, int16_t y, uint8_t _angle, uint8_t type, uint32_t ownerNetId)
 {
+	LOG_DBG("netSpawnBullet");
+
 	const uint16_t id = gameSim.m_bulletPool->alloc();
 
 	if (id != INVALID_BULLET_ID)

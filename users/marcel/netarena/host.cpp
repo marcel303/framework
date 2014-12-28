@@ -288,7 +288,11 @@ void Host::removePlayer(PlayerNetObject * player)
 		if (playerId != -1)
 		{
 			Assert(m_gameSim.m_players[playerId] != 0);
-			m_gameSim.m_players[playerId] = 0;
+			if (m_gameSim.m_players[playerId] != 0)
+			{
+				m_gameSim.m_players[playerId]->m_player->m_netObject = 0;
+				m_gameSim.m_players[playerId] = 0;
+			}
 
 			m_freePlayerIds.push_back(player->getPlayerId());
 		}

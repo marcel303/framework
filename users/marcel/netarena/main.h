@@ -74,6 +74,8 @@ class App : public ChannelHandler, public ReplicationHandler
 	//
 
 	Client * findClientByChannel(Channel * channel);
+	void processPlayerChanges();
+	void broadcastPlayerInputs();
 
 	// ChannelHandler
 	virtual void SV_OnChannelConnect(Channel * channel);

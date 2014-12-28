@@ -41,6 +41,13 @@ Client::Client()
 
 Client::~Client()
 {
+	Assert(m_players.empty());
+	while (!m_players.empty())
+	{
+		PlayerNetObject * player = m_players.front();
+		removePlayer(player);
+	}
+
 	delete m_spriteManager;
 	m_spriteManager = 0;
 
@@ -342,8 +349,12 @@ void Client::removePlayer(PlayerNetObject * player)
 
 		if (playerId != -1)
 		{
-			Assert(m_gameSim->m_players[playerId]);
-			m_gameSim->m_players[playerId] = 0;
+			Assert(m_gameSim->m_players[playerId] != 0);
+			if (m_gameSim->m_players[playerId] != 0)
+			{
+				m_gameSim->m_players[playerId]->m_player->m_netObject = 0;
+				m_gameSim->m_players[playerId] = 0;
+			}
 		}
 
 		m_players.erase(i);
