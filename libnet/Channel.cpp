@@ -17,6 +17,7 @@ Channel::Channel(ChannelType channelType, ChannelPool channelPool, uint32_t prot
 	, m_address()
 	, m_id(0)
 	, m_destinationId(0)
+	, m_isConnected(false)
 	, m_sendQueue()
 	, m_pingTimer()
 #if LIBNET_CHANNEL_ENABLE_TIMEOUTS == 1
@@ -115,6 +116,8 @@ void Channel::Disconnect(bool sendDisconnectNotification, bool waitForAck)
 	//m_address = NetAddress(0, 0, 0, 0, 0);
 
 	SetConnected(false);
+
+	m_isConnected = false;
 
 	if (sendDisconnectNotification)
 	{

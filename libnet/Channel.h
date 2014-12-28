@@ -99,6 +99,7 @@ public:
 	NetAddress m_address;
 	uint16_t m_id;
 	uint16_t m_destinationId;
+	bool m_isConnected;
 	PacketBuilder<LIBNET_SOCKET_MTU_SIZE> m_sendQueue;
 	PolledTimer m_pingTimer;
 #if LIBNET_CHANNEL_ENABLE_TIMEOUTS == 1

@@ -312,6 +312,7 @@ void ChannelManager::HandleConnectOK(Packet & packet, Channel * channel)
 		if (channel2 && channel2 == channel)
 		{
 			channel2->m_destinationId = newDestinationId;
+			channel2->m_isConnected = true;
 
 			LOG_INF("chanmgr: connect-ok: updated destination server channel ID to %09u",
 				static_cast<uint32_t>(channel2->m_destinationId));
@@ -332,10 +333,10 @@ void ChannelManager::HandleConnectOK(Packet & packet, Channel * channel)
 
 			LOG_INF("chanmgr: connect-ok: sent ACK to server channel %u", channel2->m_destinationId);
 
+			channel2->m_protocolMask = 0xffffffff;
+
 			if (m_handler)
 				m_handler->CL_OnChannelConnect(channel);
-
-			channel2->m_protocolMask = 0xffffffff;
 		}
 		else
 		{
@@ -378,10 +379,12 @@ void ChannelManager::HandleConnectAck(Packet & packet, Channel * channel)
 				static_cast<uint32_t>(channelId),
 				static_cast<uint32_t>(channel->m_destinationId));
 
-			if (m_handler)
-				m_handler->SV_OnChannelConnect(channel);
+			channel->m_isConnected = true;
 
 			channel->m_protocolMask = 0xffffffff;
+
+			if (m_handler)
+				m_handler->SV_OnChannelConnect(channel);
 		}
 		else
 		{
