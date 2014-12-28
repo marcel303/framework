@@ -61,6 +61,7 @@ GameSim::~GameSim()
 
 uint32_t GameSim::calcCRC() const
 {
+#if ENABLE_CLIENT_SIMULATION
 	clearPlayerPtrs();
 
 	uint32_t result = 0;
@@ -74,6 +75,9 @@ uint32_t GameSim::calcCRC() const
 	setPlayerPtrs();
 
 	return result;
+#else
+	return 0;
+#endif
 }
 
 void GameSim::serialize(NetSerializationContext & context)

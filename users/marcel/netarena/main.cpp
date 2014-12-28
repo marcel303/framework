@@ -653,13 +653,13 @@ void App::processPlayerChanges()
 		{
 		#if ENABLE_CLIENT_SIMULATION
 			netRemovePlayerBroadcast(playerToAddOrRemove.playerId);
+		#endif
 
 			PlayerNetObject * player = m_host->m_gameSim.m_players[playerToAddOrRemove.playerId];
 
 			m_host->removePlayer(player);
 			delete player;
 			player = 0;
-		#endif
 		}
 	}
 	m_playersToAddOrRemove.clear();
@@ -1215,7 +1215,9 @@ bool App::tick()
 
 				const uint32_t crc3 = m_host->m_gameSim.calcCRC();
 
+			#if ENABLE_CLIENT_SIMULATION
 				LOG_DBG("tick CRCs: %08x, %08x, %08x", crc1, crc2, crc3);
+			#endif
 			}
 
 			m_host->tick(dt);
