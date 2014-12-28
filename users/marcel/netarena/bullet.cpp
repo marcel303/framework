@@ -306,7 +306,7 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 								gameSim,
 								b.pos[0],
 								b.pos[1],
-								rand() % 256,
+								gameSim.Random() % 256,
 								kBulletType_GrenadeA,
 								b.ownerNetId);
 						}
