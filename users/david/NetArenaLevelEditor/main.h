@@ -80,6 +80,10 @@ public slots:
     void SwitchToArt();
     void SwitchToCollission();
 
+    void SetOpacityMech(int s);
+    void SetOpacityArt(int s);
+    void SetOpacityCollission(int s);
+
 
     void SwitchToBigMap();
 };

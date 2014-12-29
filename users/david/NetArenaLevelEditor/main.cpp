@@ -28,13 +28,11 @@ QMap<short, QPixmap*> pixmaps;
 EditorScene* sceneArt;
 QGraphicsScene* sceneArtPallette;
 QMap<short, QPixmap*> pixmapsArt;
-Tile** tilesArt = 0;
 
 
 EditorScene* sceneCollission;
 QGraphicsScene* sceneCollissionPallette;
 QMap<short, QPixmap*> pixmapsCollission;
-Tile** tilesCollission = 0;
 
 
 EditorView* view;
@@ -52,47 +50,128 @@ void SetSelectedTile(char selection)
         palletteTile->SetSelectedBlock(selectedTile);
 }
 
+void AddAllToScene()
+{
+    for(int y = 0; y < MAPY; y++)
+        for (int x = 0; x < MAPX; x++)
+        {
+            sceneMech->m_tiles[y][x].setOpacity(0.7);
+
+            sceneCollission->m_tiles[y][x].setAcceptedMouseButtons(0);
+            sceneCollission->m_tiles[y][x].setAcceptHoverEvents(false);
+            sceneCollission->m_tiles[y][x].setOpacity(0.2);
+
+            sceneArt->m_tiles[y][x].setAcceptedMouseButtons(0);
+            sceneArt->m_tiles[y][x].setAcceptHoverEvents(false);
+            sceneArt->m_tiles[y][x].setOpacity(0.2);
+
+            sceneMech->addItem(&sceneCollission->m_tiles[y][x]);
+            sceneMech->addItem(&sceneArt->m_tiles[y][x]);
+        }
+}
+
+void SetEditMechScene()
+{
+    for(int y = 0; y < MAPY; y++)
+        for (int x = 0; x < MAPX; x++)
+        {
+            sceneMech->m_tiles[y][x].setAcceptedMouseButtons(Qt::AllButtons);
+            sceneMech->m_tiles[y][x].setAcceptHoverEvents(true);
+
+            sceneCollission->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
+            sceneCollission->m_tiles[y][x].setAcceptHoverEvents(false);
+
+            sceneArt->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
+            sceneArt->m_tiles[y][x].setAcceptHoverEvents(false);
+        }
+}
+
+void SetEditArtScene()
+{
+    for(int y = 0; y < MAPY; y++)
+        for (int x = 0; x < MAPX; x++)
+        {
+            sceneMech->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
+            sceneMech->m_tiles[y][x].setAcceptHoverEvents(false);
+
+            sceneCollission->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
+            sceneCollission->m_tiles[y][x].setAcceptHoverEvents(false);
+
+            sceneArt->m_tiles[y][x].setAcceptedMouseButtons(Qt::AllButtons);
+            sceneArt->m_tiles[y][x].setAcceptHoverEvents(true);
+        }
+}
+
+void SetEditCollissionScene()
+{
+    for(int y = 0; y < MAPY; y++)
+        for (int x = 0; x < MAPX; x++)
+        {
+            sceneMech->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
+            sceneMech->m_tiles[y][x].setAcceptHoverEvents(false);
+
+            sceneCollission->m_tiles[y][x].setAcceptedMouseButtons(Qt::AllButtons);
+            sceneCollission->m_tiles[y][x].setAcceptHoverEvents(true);
+
+            sceneArt->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
+            sceneArt->m_tiles[y][x].setAcceptHoverEvents(false);
+        }
+}
+
+
+void SetOpactyForLayer(EditorScene* s, qreal opac)
+{
+    for(int y = 0; y < MAPY; y++)
+        for (int x = 0; x < MAPX; x++)
+            s->m_tiles[y][x].setOpacity(opac);
+}
 
 
 int sceneCounter = 0;
-void SwitchScene()
+void SwitchSceneTo(int s)
 {
-    sceneCounter++;
+    if(s == sceneCounter)
+        return;
+
+    sceneCounter = s;
+
     if(sceneCounter > 2)
         sceneCounter = 0;
 
     switch(sceneCounter)
     {
     case 0:
-        view->setScene(sceneMech);
         viewPallette->setScene(scenePallette);
         SetSelectedTile(pixmaps.begin().key());
         view->setWindowTitle("Mechanical Layout");
+        viewPallette->setWindowTitle("Mechanical Layout");
         scenePallette->addItem(palletteTile);
+        SetEditMechScene();
         break;
     case 1:
-        view->setScene(sceneArt);
         viewPallette->setScene(sceneArtPallette);
         SetSelectedTile(pixmapsArt.begin().key());
         view->setWindowTitle("Art Layout");
+        viewPallette->setWindowTitle("Art Pallette");
         sceneArtPallette->addItem(palletteTile);
+        SetEditArtScene();
         break;
     case 2:
-        view->setScene(sceneCollission);
         viewPallette->setScene(sceneCollissionPallette);
         SetSelectedTile(pixmapsCollission.begin().key());
         view->setWindowTitle("Collission Layout");
+        viewPallette->setWindowTitle("Collission Pallette");
         sceneCollissionPallette->addItem(palletteTile);
+        SetEditCollissionScene();
         break;
     default:
         break;
     }
 }
 
-void SwitchSceneTo(int s)
+void SwitchScene()
 {
-    while(sceneCounter != s)
-        SwitchScene();
+    SwitchSceneTo(sceneCounter+1);
 }
 
 QGraphicsScene* getCurrentScene()
@@ -365,6 +444,9 @@ void SwitchMap(int x, int y)
 
 
 
+#include <QSlider>
+
+#include <QVBoxLayout>
 
 int main(int argc, char *argv[])
 {
@@ -408,15 +490,55 @@ int main(int argc, char *argv[])
 
     viewPallette->show();
 
+    AddAllToScene();
+
+
+    QWidget w;
+
+
+    QVBoxLayout* l = new QVBoxLayout();
+
+    QSlider* slider = new QSlider(Qt::Horizontal);
+    slider->setMinimum(0);
+    slider->setMaximum(100);
+    slider->setTickInterval(1);
+    slider->setValue(50);
+
+    QSlider* slider2 = new QSlider(slider);
+    slider2->setOrientation(Qt::Horizontal);
+    QSlider* slider3 = new QSlider(slider);
+    slider3->setOrientation(Qt::Horizontal);
+
+
+    QObject::connect(slider, SIGNAL(valueChanged(int)),
+            view, SLOT(SetOpacityMech(int)));
+    QObject::connect(slider2, SIGNAL(valueChanged(int)),
+            view, SLOT(SetOpacityArt(int)));
+    QObject::connect(slider3, SIGNAL(valueChanged(int)),
+            view, SLOT(SetOpacityCollission(int)));
+
+    l->addWidget(slider);
+    l->addWidget(slider2);
+    l->addWidget(slider3);
+
+    w.setLayout(l);
+    w.show();
+
     return a.exec();
 }
 
+
+
+
+void LoadImageAndCreateArtTiles()
+{
+}
 
 Tile::Tile()
 {
     SetSelectedBlock(' ');
 
-    this->setOpacity(100);
+    this->setOpacity(1.0);
 
     setAcceptHoverEvents(true);
 }
@@ -649,9 +771,23 @@ void EditorView::SwitchToBigMap()
         SwitchMap(60, 32);
     else
         SwitchMap(30, 16);
-
-
 }
+
+void EditorView::SetOpacityMech(int s)
+{
+   SetOpactyForLayer(sceneMech, s/100.0);
+}
+
+void EditorView::SetOpacityArt(int s)
+{
+   SetOpactyForLayer(sceneArt, s/100.0);
+}
+void EditorView::SetOpacityCollission(int s)
+{
+    SetOpactyForLayer(sceneCollission, s/100.0);
+}
+
+
 
 
 #include <QKeyEvent>
@@ -687,6 +823,9 @@ void EditorViewBasic::keyPressEvent(QKeyEvent *e)
         leftbuttonHeld = true;
         e->accept();
     }
+
+    if(e->key() == Qt::Key_I)
+        AddAllToScene();
 }
 
 void EditorViewBasic::keyReleaseEvent(QKeyEvent *e)
