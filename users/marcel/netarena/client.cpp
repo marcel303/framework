@@ -18,25 +18,19 @@ OPTION_ALIAS(s_noBgm, "nobgm");
 static char s_bgm[64] = { };
 static Music * s_bgmSound = 0;
 
+static const char * s_pickupSprites[kPickupType_COUNT] =
+{
+	"pickup-ammo.png",
+	"pickup-nade.png"
+};
+
 Client::Client()
 	: m_channel(0)
 	, m_replicationId(0)
 	, m_gameSim(0)
 	, m_arena(0)
-#if !ENABLE_CLIENT_SIMULATION
-	, m_bulletPool(0)
-	, m_particlePool(0)
-#endif
-	, m_spriteManager(0)
 {
-	m_gameSim = new GameSim();
-
-#if !ENABLE_CLIENT_SIMULATION
-	m_bulletPool = new BulletPool(true);
-	m_particlePool = new BulletPool(true);
-#endif
-
-	m_spriteManager = new NetSpriteManager();
+	m_gameSim = new GameSim(ENABLE_CLIENT_SIMULATION);
 }
 
 Client::~Client()
@@ -47,14 +41,6 @@ Client::~Client()
 		PlayerNetObject * player = m_players.front();
 		removePlayer(player);
 	}
-
-	delete m_spriteManager;
-	m_spriteManager = 0;
-
-#if !ENABLE_CLIENT_SIMULATION
-	delete m_bulletPool;
-	m_bulletPool = 0;
-#endif
 
 	delete m_gameSim;
 	m_gameSim = 0;
@@ -173,9 +159,9 @@ void Client::tick(float dt)
 #if !ENABLE_CLIENT_SIMULATION
 	m_gameSim->anim(dt);
 
-	m_bulletPool->anim(*m_gameSim, dt);
+	m_gameSim->m_bulletPool->anim(*m_gameSim, dt);
 
-	m_particlePool->tick(*m_gameSim, dt);
+	m_gameSim->m_particlePool->tick(*m_gameSim, dt);
 #endif
 
 	if (s_noBgm)
@@ -264,7 +250,23 @@ void Client::drawPlay()
 
 	m_arena->m_arena->drawBlocks();
 
-	m_spriteManager->draw();
+#if ENABLE_CLIENT_SIMULATION
+	for (int i = 0; i < MAX_PICKUPS; ++i)
+	{
+		const Pickup & pickup = m_gameSim->m_state.m_pickups[i];
+
+		if (pickup.isAlive)
+		{
+			const char * filename = s_pickupSprites[pickup.type];
+
+			Sprite sprite(filename);
+
+			sprite.drawEx(pickup.x1, pickup.y1);
+		}
+	}
+#else
+	m_gameSim->m_spriteManager->draw();
+#endif
 
 	for (auto i = m_players.begin(); i != m_players.end(); ++i)
 	{
@@ -274,15 +276,9 @@ void Client::drawPlay()
 		player->draw();
 	}
 
-#if !ENABLE_CLIENT_SIMULATION
-	m_bulletPool->draw();
-
-	m_particlePool->draw();
-#else
 	m_gameSim->m_bulletPool->draw();
 
 	m_gameSim->m_particlePool->draw();
-#endif
 
 	gxPopMatrix();
 }
@@ -389,19 +385,5 @@ void Client::clearPlayerPtrs()
 
 void Client::spawnParticles(const ParticleSpawnInfo & spawnInfo)
 {
-#if !ENABLE_CLIENT_SIMULATION
-	for (int i = 0; i < spawnInfo.count; ++i)
-	{
-		uint16_t id = m_particlePool->alloc();
-
-		if (id != INVALID_BULLET_ID)
-		{
-			Bullet & b = m_particlePool->m_bullets[id];
-
-			initBullet(*m_gameSim, b, spawnInfo);
-		}
-	}
-#else
 	m_gameSim->spawnParticles(spawnInfo);
-#endif
 }

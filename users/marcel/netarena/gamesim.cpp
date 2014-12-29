@@ -3,6 +3,7 @@
 #include "gamedefs.h"
 #include "gamesim.h"
 #include "main.h"
+#include "netsprite.h"
 #include "player.h"
 
 OPTION_DECLARE(int, g_pickupTimeBase, 10);
@@ -40,8 +41,9 @@ uint32_t GameSim::GameState::GetTick()
 
 //
 
-GameSim::GameSim()
-	: m_arenaNetObject()
+GameSim::GameSim(bool isAuthorative)
+	: m_isAuthorative(isAuthorative)
+	, m_arenaNetObject()
 	, m_state()
 	, m_bulletPool(0)
 {
@@ -50,12 +52,22 @@ GameSim::GameSim()
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 		m_players[i] = 0;
 
-	m_bulletPool = new BulletPool(false);
+	m_bulletPool = new BulletPool(!isAuthorative);
+
 	m_particlePool = new BulletPool(true);
+
+#if !ENABLE_CLIENT_SIMULATION
+	m_spriteManager = new NetSpriteManager();
+#endif
 }
 
 GameSim::~GameSim()
 {
+#if !ENABLE_CLIENT_SIMULATION
+	delete m_spriteManager;
+	m_spriteManager = 0;
+#endif
+
 	delete m_particlePool;
 	m_particlePool = 0;
 

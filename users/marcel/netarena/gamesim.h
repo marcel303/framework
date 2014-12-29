@@ -14,6 +14,7 @@
 #include <string.h> // todo : cpp
 
 class BulletPool;
+class NetSpriteManager;
 class PlayerNetObject;
 
 struct Player
@@ -217,6 +218,8 @@ public:
 		uint64_t m_nextPickupSpawnTick;
 	} m_state;
 
+	bool m_isAuthorative;
+
 	Arena m_arena;
 
 	PlayerNetObject * m_players[MAX_PLAYERS];
@@ -225,9 +228,13 @@ public:
 
 	BulletPool * m_particlePool;
 
+#if !ENABLE_CLIENT_SIMULATION
+	NetSpriteManager * m_spriteManager;
+#endif
+
 	ScreenShake m_screenShakes[MAX_SCREEN_SHAKES];
 
-	GameSim();
+	GameSim(bool isAuthorative);
 	~GameSim();
 
 	uint32_t calcCRC() const;

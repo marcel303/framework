@@ -25,7 +25,9 @@ class Host
 
 	int m_nextRoundNumber;
 
+#if !ENABLE_CLIENT_SIMULATION
 	NetSpriteManager * m_spriteManager;
+#endif
 
 	// round complete game state
 	uint64_t m_roundCompleteTimer;
@@ -63,4 +65,6 @@ public:
 };
 
 extern Host * g_host;
+#if !ENABLE_CLIENT_SIMULATION
 extern NetSpriteManager * g_hostSpriteManager;
+#endif

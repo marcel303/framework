@@ -23,14 +23,6 @@ public:
 	ArenaNetObject * m_arena;
 	std::vector<PlayerNetObject*> m_players;
 
-#if !ENABLE_CLIENT_SIMULATION
-	BulletPool * m_bulletPool;
-
-	BulletPool * m_particlePool;
-#endif
-
-	NetSpriteManager * m_spriteManager;
-
 	Client();
 	~Client();
 

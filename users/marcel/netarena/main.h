@@ -135,10 +135,10 @@ public:
 	uint16_t netSpawnBullet(GameSim & gameSim, int16_t x, int16_t y, uint8_t angle, uint8_t type, uint32_t ownerNetId);
 	void netKillBullet(uint16_t id);
 	void netUpdateBullet(GameSim & gameSim, uint16_t id);
+#if !ENABLE_CLIENT_SIMULATION
 	uint16_t netAddSprite(const char * filename, int16_t x, int16_t y);
 	void netSyncSprite(uint16_t id, Channel * channel);
 	void netRemoveSprite(uint16_t id);
-#if !ENABLE_CLIENT_SIMULATION
 	void netSpawnParticles(const ParticleSpawnInfo & spawnInfo);
 	void netUpdateBlock(uint8_t x, uint8_t y, const Block & block);
 #endif

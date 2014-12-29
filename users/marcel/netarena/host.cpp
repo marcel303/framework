@@ -11,7 +11,9 @@
 #include "ReplicationManager.h"
 #include "Timer.h"
 
+#if !ENABLE_CLIENT_SIMULATION
 COMMAND_OPTION(s_addSprite, "Debug/Add Sprite", [] { if (g_host) g_app->netAddSprite("block-spike.png", rand() % ARENA_SX_PIXELS, rand() % ARENA_SY_PIXELS); });
+#endif
 COMMAND_OPTION(s_addPickup, "Debug/Add Pickup", [] { if (g_host) g_host->trySpawnPickup((PickupType)(rand() % kPickupType_COUNT)); });
 
 COMMAND_OPTION(s_gameStateNewGame, "Game State/New Game", [] { if (g_host) g_host->newGame(); });
@@ -28,12 +30,17 @@ OPTION_EXTERN(std::string, g_map);
 extern std::vector<std::string> g_mapList;
 
 Host * g_host = 0;
+#if !ENABLE_CLIENT_SIMULATION
 NetSpriteManager * g_hostSpriteManager = 0;
+#endif
 
 Host::Host()
-	: m_nextNetId(1) // 0 = unassigned
+	: m_gameSim(true)
+	, m_nextNetId(1) // 0 = unassigned
 	, m_nextRoundNumber(0)
+#if !ENABLE_CLIENT_SIMULATION
 	, m_spriteManager(0)
+#endif
 	, m_roundCompleteTimer(0)
 {
 }
@@ -41,7 +48,9 @@ Host::Host()
 Host::~Host()
 {
 	Assert(g_host == 0);
+#if !ENABLE_CLIENT_SIMULATION
 	Assert(g_hostSpriteManager == 0);
+#endif
 }
 
 void Host::init()
@@ -52,19 +61,27 @@ void Host::init()
 
 	g_app->getReplicationMgr()->SV_AddObject(&m_gameSim.m_arenaNetObject);
 
+#if !ENABLE_CLIENT_SIMULATION
 	m_spriteManager = new NetSpriteManager();
+#endif
 
 	g_host = this;
+#if !ENABLE_CLIENT_SIMULATION
 	g_hostSpriteManager = m_spriteManager;
+#endif
 }
 
 void Host::shutdown()
 {
+#if !ENABLE_CLIENT_SIMULATION
 	g_hostSpriteManager = 0;
+#endif
 	g_host = 0;
 
+#if !ENABLE_CLIENT_SIMULATION
 	delete m_spriteManager;
 	m_spriteManager = 0;
+#endif
 
 	g_app->getReplicationMgr()->SV_RemoveObject(m_gameSim.m_arenaNetObject.GetObjectID());
 }
@@ -159,11 +176,13 @@ void Host::syncNewClient(Channel * channel)
 
 	// sync bullet list
 
+#if !ENABLE_CLIENT_SIMULATION
 	// sync net sprites
 
 	for (int i = 0; i < MAX_SPRITES; ++i)
 		if (m_spriteManager->m_sprites[i].enabled)
 			g_app->netSyncSprite(i, channel);
+#endif
 }
 
 void Host::newGame()
@@ -187,11 +206,13 @@ void Host::newRound(const char * mapOverride)
 
 	// todo : remove bullets
 
+#if !ENABLE_CLIENT_SIMULATION
 	// remove net sprites
 	
 	for (int i = 0; i < MAX_SPRITES; ++i)
 		if (m_spriteManager->m_sprites[i].enabled)
 			g_app->netRemoveSprite(i);
+#endif
 
 	for (int i = 0; i < MAX_PICKUPS; ++i)
 		m_gameSim.m_state.m_pickups[i].isAlive = false;

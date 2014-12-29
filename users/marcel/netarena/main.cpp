@@ -139,10 +139,10 @@ enum RpcMethod
 	s_rpcSpawnBullet,
 	s_rpcKillBullet,
 	s_rpcUpdateBullet,
+#if !ENABLE_CLIENT_SIMULATION
 	s_rpcAddSprite,
 	s_rpcSyncSprite,
 	s_rpcRemoveSprite,
-#if !ENABLE_CLIENT_SIMULATION
 	s_rpcSpawnParticles,
 #endif
 	s_rpcUpdateBlock
@@ -472,7 +472,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 
 			bitStream.Read(id);
 
-			Bullet & b = client->m_bulletPool->m_bullets[id];
+			Bullet & b = client->m_gameSim->m_bulletPool->m_bullets[id];
 			Assert(b.isAlive);
 			
 			b.isAlive = false;
@@ -489,13 +489,12 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 
 			bitStream.Read(id);
 
-			Bullet & b = client->m_bulletPool->m_bullets[id];
+			Bullet & b = client->m_gameSim->m_bulletPool->m_bullets[id];
 			//Assert(b.isAlive);
 			
 			bitStream.ReadAlignedBytes(&b, sizeof(b));
 		}
 	}
-#endif
 	else if (method == s_rpcAddSprite || method == s_rpcSyncSprite)
 	{
 		NetSpriteManager * spriteManager = 0;
@@ -505,7 +504,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			Client * client = g_app->findClientByChannel(channel);
 			Assert(client);
 			if (client)
-				spriteManager = client->m_spriteManager;
+				spriteManager = client->m_gameSim->m_spriteManager;
 		}
 		else
 		{
@@ -539,7 +538,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			Client * client = g_app->findClientByChannel(channel);
 			Assert(client);
 			if (client)
-				spriteManager = client->m_spriteManager;
+				spriteManager = client->m_gameSim->m_spriteManager;
 		}
 		else
 		{
@@ -558,7 +557,6 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			sprite.enabled = false;
 		}
 	}
-#if !ENABLE_CLIENT_SIMULATION
 	else if (method == s_rpcSpawnParticles)
 	{
 		Client * client = g_app->findClientByChannel(channel);
@@ -1568,8 +1566,8 @@ void App::netScreenShake(GameSim & gameSim, float dx, float dy, float stiffness,
 
 void App::netSetPlayerInputs(uint16_t channelId, uint32_t netId, const PlayerInput & input)
 {
-	if (g_devMode)
-		LOG_DBG("netSetPlayerInputs");
+	//if (g_devMode)
+	//	LOG_DBG("netSetPlayerInputs");
 
 	BitStream bs;
 
@@ -1744,6 +1742,7 @@ void App::netUpdateBullet(GameSim & gameSim, uint16_t id)
 #endif
 }
 
+#if !ENABLE_CLIENT_SIMULATION
 uint16_t App::netAddSprite(const char * filename, int16_t x, int16_t y)
 {
 	uint16_t id = g_hostSpriteManager->alloc();
@@ -1798,7 +1797,6 @@ void App::netRemoveSprite(uint16_t id)
 	}
 }
 
-#if !ENABLE_CLIENT_SIMULATION
 void App::netSpawnParticles(const ParticleSpawnInfo & spawnInfo)
 {
 	BitStream bs;
