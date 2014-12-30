@@ -196,13 +196,17 @@ struct ScreenShake
 class GameSim
 {
 public:
+#if !ENABLE_CLIENT_SIMULATION
 	ArenaNetObject m_arenaNetObject;
+#endif
 
 	struct GameState
 	{
 		GameState()
 		{
 			memset(this, 0, sizeof(GameState));
+
+			m_gameState = kGameState_Play;
 		}
 
 		uint32_t Random();
@@ -210,6 +214,8 @@ public:
 
 		uint32_t m_tick;
 		uint32_t m_randomSeed;
+
+		::GameState m_gameState;
 
 		Player m_players[MAX_PLAYERS];
 
@@ -242,7 +248,12 @@ public:
 	void clearPlayerPtrs() const;
 	void setPlayerPtrs() const;
 
+	void setGameState(::GameState gameState);
+
 	void tick();
+	void tickLobby();
+	void tickPlay();
+	void tickRoundComplete();
 	void anim(float dt);
 
 	void trySpawnPickup(PickupType type);

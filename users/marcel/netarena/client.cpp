@@ -28,7 +28,9 @@ Client::Client()
 	: m_channel(0)
 	, m_replicationId(0)
 	, m_gameSim(0)
+#if !ENABLE_CLIENT_SIMULATION
 	, m_arena(0)
+#endif
 {
 	m_gameSim = new GameSim(ENABLE_CLIENT_SIMULATION);
 }
@@ -176,11 +178,11 @@ void Client::tick(float dt)
 			memset(s_bgm, 0, sizeof(s_bgm));
 		}
 	}
-	else if (m_arena && g_app->isSelectedClient(this))
+	else if (g_app->isSelectedClient(this))
 	{
 		char temp[64];
 
-		switch (m_arena->m_gameState.m_gameState)
+		switch (m_gameSim->m_state.m_gameState)
 		{
 		case kGameState_Lobby:
 			strcpy_s(temp, sizeof(temp), "bgm-lobby.ogg");
@@ -208,12 +210,14 @@ void Client::tick(float dt)
 
 void Client::draw()
 {
+#if !ENABLE_CLIENT_SIMULATION
 	if (!m_arena)
 		return;
+#endif
 
 	//setPlayerPtrs(); // fixme : enable once full simulation runs on clients
 
-	switch (m_arena->m_gameState.m_gameState)
+	switch (m_gameSim->m_state.m_gameState)
 	{
 	case kGameState_Lobby:
 		break;
@@ -236,19 +240,11 @@ void Client::drawPlay()
 	gxPushMatrix();
 	gxTranslatef(shake[0], shake[1], 0.f);
 
-#if 0
-	m_gameSim->m_arena.drawBlocks();
-
-	for (int i = 0; i < MAX_PLAYERS; ++i)
-	{
-		if (m_gameSim->m_state.m_players[i].m_isAlive)
-			m_gameSim->m_state.m_players[i].draw();
-	}
-
-	return;
-#endif
-
+#if !ENABLE_CLIENT_SIMULATION
 	m_arena->m_arena->drawBlocks();
+#else
+	m_gameSim->m_arena.drawBlocks();
+#endif
 
 #if ENABLE_CLIENT_SIMULATION
 	for (int i = 0; i < MAX_PICKUPS; ++i)

@@ -79,8 +79,11 @@ OPTION_DEFINE(int, s_drawBlockMask, "Arena/Debug/Draw Block Mask");
 
 void Arena::init(ArenaNetObject * netObject)
 {
+#if !ENABLE_CLIENT_SIMULATION
 	m_netObject = netObject;
 	m_netObject->m_arena = this;
+	m_netObject->m_serializer.m_arena = this;
+#endif
 
 	initializeBlockMasks();
 
@@ -133,7 +136,9 @@ void Arena::generate()
 			m_blocks[x][ARENA_SY - 1 - y].type = m_blocks[x][y].type;
 	}
 
+#if !ENABLE_CLIENT_SIMULATION
 	m_netObject->m_serializer.SetDirty();
+#endif
 }
 
 void Arena::load(const char * filename)
@@ -292,16 +297,26 @@ void Arena::load(const char * filename)
 		LOG_ERR("failed to open %s: %s", maskFilename.c_str(), e.what());
 	}
 
+#if !ENABLE_CLIENT_SIMULATION
 	m_netObject->m_serializer.SetDirty();
+#endif
 }
 
 void Arena::serialize(NetSerializationContext & context)
 {
+#if !ENABLE_CLIENT_SIMULATION
 	NetSerializableObject * serializable = m_netObject;
+
 	serializable->Serialize(
 		context.IsInit(), context.IsSend(),
 		REPLICATION_CHANNEL_RELIABLE,
 		context.GetBitStream());
+#else
+	Arena_NS ns(0);
+	ns.m_arena = this;
+	ns.Set(context.IsInit(), context.IsSend(), context.GetBitStream());
+	ns.SerializeStruct();
+#endif
 }
 
 void Arena::drawBlocks()
@@ -718,20 +733,20 @@ bool Arena::handleDamageRect(GameSim & gameSim, int baseX, int baseY, int x1, in
 
 //
 
-ArenaNetObject::Arena_NS::Arena_NS(NetSerializableObject * owner)
+Arena_NS::Arena_NS(NetSerializableObject * owner)
 	: NetSerializable(owner)
 {
 }
 
-void ArenaNetObject::Arena_NS::SerializeStruct()
+void Arena_NS::SerializeStruct()
 {
-	Arena * arena = static_cast<ArenaNetObject*>(GetOwner())->m_arena;
+	Arena * arena = m_arena;
 
 	for (int x = 0; x < ARENA_SX; ++x)
 	{
 		for (int y = 0; y < ARENA_SY; ++y)
 		{
-			Block & block = arena->m_blocks[x][y];
+			Block & block = arena->getBlock(x, y);
 
 			uint8_t type = block.type;
 			uint8_t shape = block.shape;
@@ -748,10 +763,11 @@ void ArenaNetObject::Arena_NS::SerializeStruct()
 
 //
 
+#if !ENABLE_CLIENT_SIMULATION
+
 ArenaNetObject::ArenaNetObject(bool ownArena)
 	: NetObject()
 	, m_serializer(this)
-	, m_gameState(this)
 	, m_arena(0)
 	, m_ownArena(ownArena)
 {
@@ -761,3 +777,4 @@ ArenaNetObject::ArenaNetObject(bool ownArena)
 		arena->init(this);
 	}
 }
+#endif

@@ -89,7 +89,9 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 				anim(gameSim, b, dt);
 
 				bool kill = false;
+			#if !ENABLE_CLIENT_SIMULATION
 				bool update = false;
+			#endif
 
 				bool doReflection = true;
 
@@ -121,7 +123,9 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 								else
 								{
 									b.vel *= -1.f;
+								#if !ENABLE_CLIENT_SIMULATION
 									update = true;
+								#endif
 								}
 							}
 							else
@@ -154,7 +158,9 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 
 							b.bounceCount++;
 
+						#if !ENABLE_CLIENT_SIMULATION
 							update = true;
+						#endif
 						}
 
 						// eval collision in y direction
@@ -176,7 +182,9 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 
 							b.bounceCount++;
 
+						#if !ENABLE_CLIENT_SIMULATION
 							update = true;
+						#endif
 						}
 					}
 
@@ -209,7 +217,9 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 							b.pos[0] += deltaX * BLOCK_SX;
 							b.pos[1] += deltaY * BLOCK_SY;
 
+						#if !ENABLE_CLIENT_SIMULATION
 							update = true;
+						#endif
 
 							oldBlockMask = blockMask;
 						}
@@ -316,10 +326,12 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 						g_app->netPlaySound("grenade-explode.ogg");
 					}
 
+				#if !ENABLE_CLIENT_SIMULATION
 					if (!m_localOnly)
 					{
 						g_app->netKillBullet(i);
 					}
+				#endif
 
 					if (b.type == kBulletType_GrenadeA)
 					{
@@ -334,10 +346,12 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 
 					free(i);
 				}
+			#if !ENABLE_CLIENT_SIMULATION
 				else if (update)
 				{
 					g_app->netUpdateBullet(gameSim, i);
 				}
+			#endif
 			}
 		}
 	}

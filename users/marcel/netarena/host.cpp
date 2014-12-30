@@ -59,7 +59,9 @@ void Host::init()
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 		m_freePlayerIds.push_back(i);
 
+#if !ENABLE_CLIENT_SIMULATION
 	g_app->getReplicationMgr()->SV_AddObject(&m_gameSim.m_arenaNetObject);
+#endif
 
 #if !ENABLE_CLIENT_SIMULATION
 	m_spriteManager = new NetSpriteManager();
@@ -83,14 +85,16 @@ void Host::shutdown()
 	m_spriteManager = 0;
 #endif
 
+#if !ENABLE_CLIENT_SIMULATION
 	g_app->getReplicationMgr()->SV_RemoveObject(m_gameSim.m_arenaNetObject.GetObjectID());
+#endif
 }
 
 void Host::tick(float dt)
 {
 	//setPlayerPtrs(); // fixme : enable once full simulation runs on clients
 
-	switch (m_gameSim.m_arenaNetObject.m_gameState.m_gameState)
+	switch (m_gameSim.m_state.m_gameState)
 	{
 	case kGameState_Lobby:
 		break;
@@ -214,46 +218,26 @@ void Host::newRound(const char * mapOverride)
 			g_app->netRemoveSprite(i);
 #endif
 
-	for (int i = 0; i < MAX_PICKUPS; ++i)
-		m_gameSim.m_state.m_pickups[i].isAlive = false;
-
 	// load arena
 
-	std::string map = g_map;
+	std::string map;
 
 	if (mapOverride)
-	{
-		m_gameSim.m_arena.load(mapOverride);
-	}
-	else if (!map.empty())
-	{
-		m_gameSim.m_arena.load(map.c_str());
-	}
-	else if (g_mapList.size() != 0)
-	{
-		const size_t index = m_nextRoundNumber % g_mapList.size();
-
-		m_gameSim.m_arena.load(g_mapList[index].c_str());
-	}
+		map = mapOverride;
+	else if (!((std::string)g_map).empty())
+		map = g_map;
+	else if (!g_mapList.empty())
+		map = g_mapList[m_nextRoundNumber % g_mapList.size()];
 	else
-	{
-		m_gameSim.m_arena.load("arena.txt");
-	}
+		map = "arena.txt";
 
-	// respawn players
+#if ENABLE_CLIENT_SIMULATION
+	g_app->netLoadArena(map.c_str());
+#else
+	m_gameSim.m_arena.load(map.c_str());
+#endif
 
-	for (auto p = m_players.begin(); p != m_players.end(); ++p)
-	{
-		PlayerNetObject * playerNetObject = *p;
-		Player * player = playerNetObject->m_player;
-
-		player->handleNewRound();
-
-		player->respawn();
-	}
-
-	m_gameSim.m_arenaNetObject.m_gameState.m_gameState = kGameState_Play;
-	m_gameSim.m_arenaNetObject.m_gameState.SetDirty();
+	g_app->netSetGameState(kGameState_Play);
 
 	m_nextRoundNumber++;
 
@@ -262,8 +246,7 @@ void Host::newRound(const char * mapOverride)
 
 void Host::endRound()
 {
-	m_gameSim.m_arenaNetObject.m_gameState.m_gameState = kGameState_RoundComplete;
-	m_gameSim.m_arenaNetObject.m_gameState.SetDirty();
+	g_app->netSetGameState(m_gameSim.m_state.m_gameState);
 
 	m_roundCompleteTimer = g_TimerRT.TimeUS_get() + g_roundCompleteTimer * 1000000; // fixme, option
 }

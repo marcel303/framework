@@ -5,7 +5,7 @@
 #include "netobject.h"
 
 class Arena;
-class ArenaNetObject;
+class ArenaNetObject; // todo : remove
 class BitStream;
 class GameSim;
 struct Player;
@@ -91,11 +91,13 @@ struct BlockAndDistance
 
 class Arena
 {
-	friend class ArenaNetObject;
+	friend class ArenaNetObject; // todo : remove
 
 	Block m_blocks[ARENA_SX][ARENA_SY];
 
+#if !ENABLE_CLIENT_SIMULATION
 	ArenaNetObject * m_netObject;
+#endif
 
 	void reset();
 
@@ -122,17 +124,21 @@ public:
 	bool handleDamageRect(GameSim & gameSim, int x, int y, int x1, int y1, int x2, int y2, bool hitDestructible);
 };
 
+class Arena_NS : public NetSerializable
+{
+public:
+	Arena_NS(NetSerializableObject * owner);
+
+	Arena * m_arena;
+
+	virtual void SerializeStruct();
+};
+
+#if !ENABLE_CLIENT_SIMULATION
+
 class ArenaNetObject : public NetObject
 {
 	friend class Arena;
-
-	class Arena_NS : public NetSerializable
-	{
-	public:
-		Arena_NS(NetSerializableObject * owner);
-
-		virtual void SerializeStruct();
-	};
 
 	Arena_NS m_serializer;
 
@@ -143,30 +149,10 @@ class ArenaNetObject : public NetObject
 	virtual NetObjectType getType() const { return kNetObjectType_Arena; }
 
 public:
-	// fixme .. should be part of.. well.. something else..
-	class GameState_NS : public NetSerializable
-	{
-	public:
-		GameState_NS(NetSerializableObject * owner)
-			: NetSerializable(owner)
-			, m_gameState(kGameState_Undefined)
-		{
-		}
-
-		virtual void SerializeStruct()
-		{
-			uint8_t gameState = m_gameState;
-			Serialize(gameState);
-			m_gameState = static_cast<GameState>(gameState);
-		}
-
-		GameState m_gameState;
-	};
-
-	GameState_NS m_gameState;
-
 	Arena * m_arena;
 	bool m_ownArena;
 
 	ArenaNetObject(bool ownArena = false);
 };
+
+#endif

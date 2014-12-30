@@ -111,6 +111,8 @@ public:
 	void draw();
 
 	void netSyncGameSim(Channel * channel);
+	void netSetGameState(GameState gameState);
+	void netLoadArena(const char * filename);
 
 #if ENABLE_CLIENT_SIMULATION
 	void netAddPlayer(Channel * channel, uint8_t characterIndex);
@@ -131,11 +133,10 @@ public:
 #if ENABLE_CLIENT_SIMULATION
 	void netBroadcastCharacterIndex(uint32_t netId, uint8_t characterIndex);
 #endif
-
 	uint16_t netSpawnBullet(GameSim & gameSim, int16_t x, int16_t y, uint8_t angle, uint8_t type, uint32_t ownerNetId);
+#if !ENABLE_CLIENT_SIMULATION
 	void netKillBullet(uint16_t id);
 	void netUpdateBullet(GameSim & gameSim, uint16_t id);
-#if !ENABLE_CLIENT_SIMULATION
 	uint16_t netAddSprite(const char * filename, int16_t x, int16_t y);
 	void netSyncSprite(uint16_t id, Channel * channel);
 	void netRemoveSprite(uint16_t id);

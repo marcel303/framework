@@ -43,11 +43,17 @@ uint32_t GameSim::GameState::GetTick()
 
 GameSim::GameSim(bool isAuthorative)
 	: m_isAuthorative(isAuthorative)
+#if !ENABLE_CLIENT_SIMULATION
 	, m_arenaNetObject()
+#endif
 	, m_state()
 	, m_bulletPool(0)
 {
+#if ENABLE_CLIENT_SIMULATION
+	m_arena.init(0);
+#else
 	m_arena.init(&m_arenaNetObject);
+#endif
 
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 		m_players[i] = 0;
@@ -137,7 +143,55 @@ void GameSim::setPlayerPtrs() const
 			m_players[i]->m_player->m_netObject = m_players[i];
 }
 
+void GameSim::setGameState(::GameState gameState)
+{
+	if (gameState == kGameState_Play)
+	{
+		// reset pickups
+
+		for (int i = 0; i < MAX_PICKUPS; ++i)
+			m_state.m_pickups[i].isAlive = false;
+
+		// respawn players
+
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+		{
+			if (m_players[i])
+			{
+				Player * player = m_players[i]->m_player;
+
+				player->handleNewRound();
+
+				player->respawn();
+			}
+		}
+	}
+}
+
 void GameSim::tick()
+{
+	switch (m_state.m_gameState)
+	{
+	case kGameState_Lobby:
+		tickLobby();
+		break;
+
+	case kGameState_Play:
+		tickPlay();
+		break;
+
+	case kGameState_RoundComplete:
+		tickRoundComplete();
+		break;
+	}
+}
+
+void GameSim::tickLobby()
+{
+	// wait for the host to enter the next game state
+}
+
+void GameSim::tickPlay()
 {
 	g_gameSim = this;
 
@@ -210,6 +264,11 @@ void GameSim::tick()
 	m_state.m_tick++;
 
 	g_gameSim = 0;
+}
+
+void GameSim::tickRoundComplete()
+{
+	// wait for the host to enter the next game state
 }
 
 void GameSim::anim(float dt)

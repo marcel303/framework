@@ -120,6 +120,8 @@ static void HandleAction(const std::string & action, const Dictionary & args)
 enum RpcMethod
 {
 	s_rpcSyncGameSim,
+	s_rpcSetGameState,
+	s_rpcLoadArena,
 #if ENABLE_CLIENT_SIMULATION
 	s_rpcAddPlayer,
 	s_rpcAddPlayerBroadcast,
@@ -136,16 +138,16 @@ enum RpcMethod
 #if ENABLE_CLIENT_SIMULATION
 	s_rpcSetPlayerCharacterIndexBroadcast,
 #endif
-	s_rpcSpawnBullet,
+#if !ENABLE_CLIENT_SIMULATION
 	s_rpcKillBullet,
 	s_rpcUpdateBullet,
-#if !ENABLE_CLIENT_SIMULATION
 	s_rpcAddSprite,
 	s_rpcSyncSprite,
 	s_rpcRemoveSprite,
 	s_rpcSpawnParticles,
+	s_rpcUpdateBlock,
 #endif
-	s_rpcUpdateBlock
+	s_rpcCOUNT
 };
 
 void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
@@ -162,6 +164,56 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			context.Set(true, false, bitStream);
 			client->m_gameSim->serialize(context);
 		}
+	}
+	else if (method == s_rpcSetGameState)
+	{
+		LOG_DBG("handleRpc: s_rpcSetGameState");
+
+		uint8_t gameState;
+
+		bitStream.Read(gameState);
+
+		GameSim * gameSim = 0;
+
+		if (!channel)
+			gameSim = &g_host->m_gameSim;
+	#if ENABLE_CLIENT_SIMULATION
+		else
+		{
+			Client * client = g_app->findClientByChannel(channel);
+			Assert(client);
+			if (client)
+				gameSim = client->m_gameSim;
+		}
+	#endif
+
+		if (gameSim)
+		{
+			gameSim->setGameState((GameState)gameState);
+		}
+	}
+	else if (method == s_rpcLoadArena)
+	{
+		LOG_DBG("handleRpc: s_rpcLoadArena");
+
+		std::string filename;
+
+		filename = bitStream.ReadString();
+
+		GameSim * gameSim = 0;
+
+		if (!channel)
+			gameSim = &g_host->m_gameSim;
+		else
+		{
+			Client * client = g_app->findClientByChannel(channel);
+			Assert(client);
+			if (client)
+				gameSim = client->m_gameSim;
+		}
+
+		if (gameSim)
+			gameSim->m_arena.load(filename.c_str());
 	}
 #if ENABLE_CLIENT_SIMULATION
 	else if (method == s_rpcAddPlayer)
@@ -423,44 +475,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			}
 		}
 	}
-#endif
-#if 0
-	else if (method == s_rpcSpawnBullet)
-	{
-		BulletPool * bulletPool = 0;
-
-		if (channel)
-		{
-			Client * client = g_app->findClientByChannel(channel);
-			Assert(client);
-			if (client)
-				bulletPool = client->m_bulletPool;
-		}
-		else
-		{
-			bulletPool = g_hostBulletPool;
-		}
-
-		Assert(bulletPool);
-		if (bulletPool)
-		{
-			uint16_t id;
-			uint8_t type;
-			int16_t x;
-			int16_t y;
-			uint8_t _angle;
-
-			bitStream.Read(id);
-			bitStream.Read(type);
-			bitStream.Read(x);
-			bitStream.Read(y);
-			bitStream.Read(_angle);
-
-			
-		}
-	}
-#endif
-#if !ENABLE_CLIENT_SIMULATION
+#else
 	else if (method == s_rpcKillBullet)
 	{
 		Client * client = g_app->findClientByChannel(channel);
@@ -572,7 +587,6 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			client->spawnParticles(spawnInfo);
 		}
 	}
-#endif
 	else if (method == s_rpcUpdateBlock)
 	{
 		Client * client = g_app->findClientByChannel(channel);
@@ -590,6 +604,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			bitStream.ReadAlignedBytes(&block, sizeof(block));
 		}
 	}
+#endif
 	else
 	{
 		AssertMsg(false, "unknown RPC call: %u", method);
@@ -758,6 +773,7 @@ bool App::OnReplicationObjectCreateType(ReplicationClient * client, BitStream & 
 
 	switch (type)
 	{
+	#if !ENABLE_CLIENT_SIMULATION
 	case kNetObjectType_Arena:
 		{
 			ArenaNetObject * arenaNetObject = new ArenaNetObject(true);
@@ -765,7 +781,6 @@ bool App::OnReplicationObjectCreateType(ReplicationClient * client, BitStream & 
 		}
 		break;
 
-	#if !ENABLE_CLIENT_SIMULATION
 	case kNetObjectType_Player:
 		netObject = new PlayerNetObject();
 		break;
@@ -786,12 +801,12 @@ void App::OnReplicationObjectCreated(ReplicationClient * client, ReplicationObje
 
 	switch (netObject->getType())
 	{
+	#if !ENABLE_CLIENT_SIMULATION
 	case kNetObjectType_Arena:
 		Assert(gameClient->m_arena == 0);
 		gameClient->m_arena = static_cast<ArenaNetObject*>(object);
 		break;
 
-	#if !ENABLE_CLIENT_SIMULATION
 	case kNetObjectType_Player:
 		{
 			PlayerNetObject * playerNetObject = static_cast<PlayerNetObject*>(object);
@@ -813,12 +828,12 @@ void App::OnReplicationObjectDestroyed(ReplicationClient * client, ReplicationOb
 
 	switch (netObject->getType())
 	{
+	#if !ENABLE_CLIENT_SIMULATION
 	case kNetObjectType_Arena:
 		delete gameClient->m_arena;
 		gameClient->m_arena = 0;
 		break;
 
-	#if !ENABLE_CLIENT_SIMULATION
 	case kNetObjectType_Player:
 		gameClient->removePlayer(static_cast<PlayerNetObject*>(netObject));
 		break;
@@ -1492,6 +1507,30 @@ void App::netSyncGameSim(Channel * channel)
 	m_rpcMgr->Call(s_rpcSyncGameSim, bs, ChannelPool_Client, &channel->m_id, false, false);
 }
 
+void App::netSetGameState(GameState _gameState)
+{
+	LOG_DBG("netSetGameState");
+
+	uint8_t gameState = _gameState;
+
+	BitStream bs;
+
+	bs.Write(gameState);
+
+	m_rpcMgr->Call(s_rpcSetGameState, bs, ChannelPool_Server, 0, true, true);
+}
+
+void App::netLoadArena(const char * filename)
+{
+	LOG_DBG("netLoadArena");
+
+	BitStream bs;
+
+	bs.WriteString(filename);
+
+	m_rpcMgr->Call(s_rpcLoadArena, bs, ChannelPool_Server, 0, true, true);
+}
+
 #if ENABLE_CLIENT_SIMULATION
 void App::netAddPlayer(Channel * channel, uint8_t characterIndex)
 {
@@ -1711,26 +1750,26 @@ uint16_t App::netSpawnBullet(GameSim & gameSim, int16_t x, int16_t y, uint8_t _a
 
 		b.ownerNetId = ownerNetId;
 
+	#if !ENABLE_CLIENT_SIMULATION
 		netUpdateBullet(gameSim, id);
+	#endif
 	}
 
 	return id;
 }
 
+#if !ENABLE_CLIENT_SIMULATION
 void App::netKillBullet(uint16_t id)
 {
-#if !ENABLE_CLIENT_SIMULATION
 	BitStream bs;
 
 	bs.Write(id);
 
 	m_rpcMgr->Call(s_rpcKillBullet, bs, ChannelPool_Server, 0, true, false);
-#endif
 }
 
 void App::netUpdateBullet(GameSim & gameSim, uint16_t id)
 {
-#if !ENABLE_CLIENT_SIMULATION
 	Bullet & b = gameSim.m_bulletPool->m_bullets[id];
 
 	BitStream bs;
@@ -1739,10 +1778,8 @@ void App::netUpdateBullet(GameSim & gameSim, uint16_t id)
 	bs.WriteAlignedBytes(&b, sizeof(b));
 
 	m_rpcMgr->Call(s_rpcUpdateBullet, bs, ChannelPool_Server, 0, true, false);
-#endif
 }
 
-#if !ENABLE_CLIENT_SIMULATION
 uint16_t App::netAddSprite(const char * filename, int16_t x, int16_t y)
 {
 	uint16_t id = g_hostSpriteManager->alloc();
