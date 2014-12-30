@@ -246,7 +246,7 @@ void Host::newRound(const char * mapOverride)
 
 void Host::endRound()
 {
-	g_app->netSetGameState(m_gameSim.m_state.m_gameState);
+	g_app->netSetGameState(kGameState_RoundComplete);
 
 	m_roundCompleteTimer = g_TimerRT.TimeUS_get() + g_roundCompleteTimer * 1000000; // fixme, option
 }

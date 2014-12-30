@@ -145,6 +145,8 @@ void GameSim::setPlayerPtrs() const
 
 void GameSim::setGameState(::GameState gameState)
 {
+	m_state.m_gameState = gameState;
+
 	if (gameState == kGameState_Play)
 	{
 		// reset pickups
