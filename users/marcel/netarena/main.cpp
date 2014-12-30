@@ -1690,8 +1690,6 @@ void App::netBroadcastCharacterIndex(uint32_t netId, uint8_t characterIndex)
 
 uint16_t App::netSpawnBullet(GameSim & gameSim, int16_t x, int16_t y, uint8_t _angle, uint8_t type, uint32_t ownerNetId)
 {
-	LOG_DBG("netSpawnBullet");
-
 	const uint16_t id = gameSim.m_bulletPool->alloc();
 
 	if (id != INVALID_BULLET_ID)
@@ -1751,6 +1749,8 @@ uint16_t App::netSpawnBullet(GameSim & gameSim, int16_t x, int16_t y, uint8_t _a
 		b.ownerNetId = ownerNetId;
 
 	#if !ENABLE_CLIENT_SIMULATION
+		LOG_DBG("netSpawnBullet");
+
 		netUpdateBullet(gameSim, id);
 	#endif
 	}

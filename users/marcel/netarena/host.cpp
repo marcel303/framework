@@ -191,15 +191,7 @@ void Host::syncNewClient(Channel * channel)
 
 void Host::newGame()
 {
-	// reset players
-
-	for (auto p = m_players.begin(); p != m_players.end(); ++p)
-	{
-		PlayerNetObject * playerNetObject = *p;
-		Player * player = playerNetObject->m_player;
-
-		player->handleNewGame();
-	}
+	g_app->netSetGameState(kGameState_NewGame);
 
 	newRound(0);
 }

@@ -147,6 +147,21 @@ void GameSim::setGameState(::GameState gameState)
 {
 	m_state.m_gameState = gameState;
 
+	if (gameState == kGameState_NewGame)
+	{
+		// reset players
+
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+		{
+			if (m_players[i])
+			{
+				Player * player = m_players[i]->m_player;
+
+				player->handleNewGame();
+			}
+		}
+	}
+
 	if (gameState == kGameState_Play)
 	{
 		// reset pickups
