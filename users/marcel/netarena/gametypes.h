@@ -81,5 +81,4 @@ struct Pickup
 	int16_t y1;
 	int16_t x2;
 	int16_t y2;
-	uint16_t spriteId;
 };

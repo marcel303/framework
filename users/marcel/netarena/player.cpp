@@ -113,167 +113,56 @@ struct PlayerAnimInfo
 
 //
 
-#if !ENABLE_CLIENT_SIMULATION
-void PlayerPos_NS::SerializeStruct()
-{
-	PlayerNetObject * playerNetObject = static_cast<PlayerNetObject*>(GetOwner());
-	Player * player = playerNetObject->m_player;
-
-	if (IsSend())
-	{
-		int16_t xCompressed = static_cast<int16_t>(player->m_pos[0]);
-		int16_t yCompressed = static_cast<int16_t>(player->m_pos[1]);
-
-		Serialize(xCompressed);
-		Serialize(yCompressed);
-	}
-	else
-	{
-		int16_t xCompressed;
-		int16_t yCompressed;
-
-		Serialize(xCompressed);
-		Serialize(yCompressed);
-
-		player->m_pos[0] = static_cast<float>(xCompressed);
-		player->m_pos[1] = static_cast<float>(yCompressed);
-	}
-
-	//
-
-	bool facing;
-
-	facing = player->m_facing[0] < 0 ? true : false;
-	Serialize(facing);
-	player->m_facing[0] = facing ? -1 : +1;
-
-	facing = player->m_facing[1] < 0 ? true : false;
-	Serialize(facing);
-	player->m_facing[1] = facing ? -1 : +1;
-}
-#endif
-
-//
-
-#if !ENABLE_CLIENT_SIMULATION
-void PlayerState_NS::SerializeStruct()
-{
-	PlayerNetObject * playerNetObject = static_cast<PlayerNetObject*>(GetOwner());
-	Player * player = playerNetObject->m_player;
-
-	uint8_t oldCharacterIndex = player->m_characterIndex;
-
-	Serialize(player->m_isAlive);
-	Serialize(player->m_canRespawn);
-	Serialize(player->m_isRespawn);
-	Serialize(player->m_score);
-	Serialize(player->m_totalScore);
-	Serialize(playerId);
-	Serialize(player->m_characterIndex);
-
-	if (player->m_characterIndex != oldCharacterIndex)
-	{
-		playerNetObject->handleCharacterIndexChange();
-	}
-}
-
-PlayerState_NS::PlayerState_NS(NetSerializableObject * owner)
-	: NetSerializable(owner)
-	, playerId(-1)
-{
-}
-#endif
-
-//
-
-void PlayerAnim_NS::SerializeStruct()
-{
-	PlayerNetObject * playerNetObject = static_cast<PlayerNetObject*>(GetOwner());
-	Player * player = playerNetObject->m_player;
-
-#if !ENABLE_CLIENT_SIMULATION
-	SerializeBits(player->m_anim, 4);
-	Serialize(player->m_animPlay);
-
-	int dx = player->m_attackDirection[0] + 1;
-	int dy = player->m_attackDirection[1] + 1;
-	SerializeBits(dx, 2);
-	SerializeBits(dy, 2);
-	player->m_attackDirection[0] = dx - 1;
-	player->m_attackDirection[1] = dy - 1;
-#endif
-
-	ApplyAnim();
-}
-
 void PlayerAnim_NS::SetAnim(int anim, bool play, bool restart)
 {
-	Player * player = static_cast<PlayerNetObject*>(GetOwner())->m_player;
-
-	if (anim != player->m_anim || play != player->m_animPlay || restart)
+	if (anim != m_player->m_anim || play != m_player->m_animPlay || restart)
 	{
-		player->m_anim = anim;
-		player->m_animPlay = play;
-		SetDirty();
+		m_player->m_anim = anim;
+		m_player->m_animPlay = play;
 
-	#if ENABLE_CLIENT_SIMULATION
 		ApplyAnim();
-	#endif
 	}
 }
 
 void PlayerAnim_NS::SetAttackDirection(int dx, int dy)
 {
-	Player * player = static_cast<PlayerNetObject*>(GetOwner())->m_player;
+	m_player->m_attackDirection[0] = dx;
+	m_player->m_attackDirection[1] = dy;
 
-	player->m_attackDirection[0] = dx;
-	player->m_attackDirection[1] = dy;
-	SetDirty();
-
-#if ENABLE_CLIENT_SIMULATION
 	ApplyAnim();
-#endif
 }
 
 void PlayerAnim_NS::SetPlay(bool play)
 {
-	Player * player = static_cast<PlayerNetObject*>(GetOwner())->m_player;
-
-	if (play != player->m_animPlay)
+	if (play != m_player->m_animPlay)
 	{
-		player->m_animPlay = play;
-		SetDirty();
+		m_player->m_animPlay = play;
 
-	#if ENABLE_CLIENT_SIMULATION
 		ApplyAnim();
-	#endif
 	}
 }
 
 void PlayerAnim_NS::ApplyAnim()
 {
-	PlayerNetObject * playerNetObject = static_cast<PlayerNetObject*>(GetOwner());
-	Player * player = playerNetObject->m_player;
-
-	if (player->m_anim != kPlayerAnim_NULL)
+	if (m_player->m_anim != kPlayerAnim_NULL)
 	{
-		delete playerNetObject->m_sprite;
-		playerNetObject->m_sprite = 0;
+		delete m_player->m_netObject->m_sprite;
+		m_player->m_netObject->m_sprite = 0;
 
 		char filename[64];
-		sprintf_s(filename, sizeof(filename), s_animInfos[player->m_anim].file, playerNetObject->getCharacterIndex());
+		sprintf_s(filename, sizeof(filename), s_animInfos[m_player->m_anim].file, m_player->m_netObject->getCharacterIndex());
 
-		playerNetObject->m_sprite = new Sprite(filename, 0.f, 0.f, 0, !ENABLE_CLIENT_SIMULATION);
-		playerNetObject->m_sprite->animActionHandler = PlayerNetObject::handleAnimationAction;
-		playerNetObject->m_sprite->animActionHandlerObj = playerNetObject;
+		m_player->m_netObject->m_sprite = new Sprite(filename, 0.f, 0.f, 0, false);
+		m_player->m_netObject->m_sprite->animActionHandler = PlayerNetObject::handleAnimationAction;
+		m_player->m_netObject->m_sprite->animActionHandlerObj = m_player->m_netObject;
 	}
 
-	if (playerNetObject->m_sprite)
+	if (m_player->m_netObject->m_sprite)
 	{
-		if (player->m_animPlay)
-			playerNetObject->m_sprite->startAnim("anim");
+		if (m_player->m_animPlay)
+			m_player->m_netObject->m_sprite->startAnim("anim");
 		else
-			playerNetObject->m_sprite->stopAnim();
+			m_player->m_netObject->m_sprite->stopAnim();
 	}
 }
 
@@ -306,13 +195,9 @@ const char * SoundBag::getRandomSound(GameSim & gameSim)
 
 			if (m_random)
 			{
-			#if ENABLE_CLIENT_SIMULATION
 				if (DEBUG_RANDOM_CALLSITES)
 					LOG_DBG("Random called from getRandomSound");
 				index = g_gameSim->m_state.Random() % m_files.size();
-			#else
-				index = rand() % m_files.size();
-			#endif
 			}
 			else
 				index = (index + 1) % m_files.size();
@@ -473,13 +358,8 @@ float Player::mirrorY(float y) const
 
 PlayerNetObject::PlayerNetObject(uint32_t netId, uint16_t owningChannelId, Player * player, GameSim * gameSim)
 	: m_player(player)
-#if ENABLE_CLIENT_SIMULATION
 	, m_playerId(-1)
-#else
-	, m_pos(this)
-	, m_state(this)
-#endif
-	, m_anim(this)
+	, m_anim(player)
 	, m_isAuthorative(false)
 	, m_sprite(0)
 	, m_spriteScale(1.f)
@@ -487,17 +367,8 @@ PlayerNetObject::PlayerNetObject(uint32_t netId, uint16_t owningChannelId, Playe
 	setNetId(netId);
 	setOwningChannelId(owningChannelId);
 
-#if ENABLE_CLIENT_SIMULATION
 	m_isAuthorative = true;
-#else
-	if (netId != 0)
-	{
-		m_isAuthorative = true;
-	}
-#endif
 
-	if (m_player == 0)
-		m_player = new Player();
 	m_player->m_netObject = this;
 	m_gameSim = gameSim;
 
@@ -507,13 +378,6 @@ PlayerNetObject::PlayerNetObject(uint32_t netId, uint16_t owningChannelId, Playe
 	m_player->m_collision.x2 = +PLAYER_COLLISION_HITBOX_SX / 2.f;
 	m_player->m_collision.y1 = -PLAYER_COLLISION_HITBOX_SY / 1.f;
 	m_player->m_collision.y2 = 0.f;
-
-#if !ENABLE_CLIENT_SIMULATION
-	if (g_playerCharacterIndex != -1)
-	{
-		g_app->netSetPlayerCharacterIndex(getOwningChannelId(), getNetId(), g_playerCharacterIndex);
-	}
-#endif
 }
 
 PlayerNetObject::~PlayerNetObject()
@@ -592,11 +456,7 @@ void Player::tick(float dt)
 
 	if (m_isAnimDriven)
 	{
-	#if ENABLE_CLIENT_SIMULATION
 		if (!m_netObject->m_sprite->animIsActive)
-	#else
-		if (!m_netObject->m_anim.IsDirty() && !m_netObject->m_sprite->animIsActive)
-	#endif
 		{
 			m_isAnimDriven = false;
 			m_animVel = Vec2();
@@ -620,15 +480,9 @@ void Player::tick(float dt)
 				break;
 			case kPlayerAnim_Spawn:
 				m_isAlive = true;
-			#if !ENABLE_CLIENT_SIMULATION
-				m_netObject->m_state.SetDirty();
-			#endif
 				break;
 			case kPlayerAnim_Die:
 				m_isAlive = false;
-			#if !ENABLE_CLIENT_SIMULATION
-				m_netObject->m_state.SetDirty();
-			#endif
 				break;
 			}
 		}
@@ -645,10 +499,6 @@ void Player::tick(float dt)
 		{
 			m_canRespawn = true;
 			m_canTaunt = true;
-		#if !ENABLE_CLIENT_SIMULATION
-			m_netObject->m_state.SetDirty();
-		#endif
-
 			m_respawnTimer = m_isRespawn ? 3.f : 0.f;
 		}
 
@@ -1267,7 +1117,7 @@ void Player::tick(float dt)
 								if (strength > 14.f)
 								{
 									strength = strength / 4.f;
-									g_app->netScreenShake(*m_netObject->m_gameSim, 0.f, strength, 3000.f, .3f);
+									m_netObject->m_gameSim->addScreenShake(0.f, strength, 3000.f, .3f);
 								}
 
 								m_vel[i] = 0.f;
@@ -1397,10 +1247,6 @@ void Player::tick(float dt)
 	m_netObject->m_input.next();
 
 	//printf("x: %g\n", m_pos[0]);
-
-#if !ENABLE_CLIENT_SIMULATION
-	m_netObject->m_pos.SetDirty();
-#endif
 }
 
 void Player::draw()
@@ -1583,9 +1429,6 @@ void Player::handleNewGame()
 {
 	m_score = 0;
 	m_totalScore = 0;
-#if !ENABLE_CLIENT_SIMULATION
-	m_netObject->m_state.SetDirty();
-#endif
 }
 
 void Player::handleNewRound()
@@ -1593,15 +1436,9 @@ void Player::handleNewRound()
 	if (m_score > 0)
 		m_totalScore += m_score;
 	m_score = 0;
-#if !ENABLE_CLIENT_SIMULATION
-	m_netObject->m_state.SetDirty();
-#endif
 
 	m_lastSpawnIndex = -1;
 	m_isRespawn = false;
-#if !ENABLE_CLIENT_SIMULATION
-	m_netObject->m_state.SetDirty();
-#endif
 
 	m_weaponAmmo = 0;
 }
@@ -1622,9 +1459,6 @@ void Player::respawn()
 		m_vel[1] = 0.f;
 
 		m_isAlive = true;
-	#if !ENABLE_CLIENT_SIMULATION
-		m_netObject->m_state.SetDirty();
-	#endif
 
 		m_controlDisableTime = 0.f;
 
@@ -1653,9 +1487,6 @@ void Player::respawn()
 		{
 			playSecondaryEffects(kPlayerEvent_Spawn);
 			m_isRespawn = true;
-		#if !ENABLE_CLIENT_SIMULATION
-			m_netObject->m_state.SetDirty();
-		#endif
 		}
 	}
 }
@@ -1678,9 +1509,6 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 			m_isAnimDriven = true;
 
 			m_canRespawn = false;
-		#if !ENABLE_CLIENT_SIMULATION
-			m_netObject->m_state.SetDirty();
-		#endif
 
 			if (attacker)
 			{
@@ -1695,11 +1523,7 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 			ParticleSpawnInfo spawnInfo(m_pos[0], m_pos[1] + mirrorY(-PLAYER_COLLISION_HITBOX_SY/2.f), kBulletType_ParticleA, 20, 50, 350, 40);
 			spawnInfo.color = 0xff0000ff;
 
-		#if ENABLE_CLIENT_SIMULATION
 			m_netObject->m_gameSim->spawnParticles(spawnInfo);
-		#else
-			g_app->netSpawnParticles(spawnInfo);
-		#endif
 
 			return true;
 		}
@@ -1711,9 +1535,6 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 void Player::awardScore(int score)
 {
 	m_score += score;
-#if !ENABLE_CLIENT_SIMULATION
-	m_netObject->m_state.SetDirty();
-#endif
 }
 
 int PlayerNetObject::getScore() const
@@ -1726,14 +1547,6 @@ int PlayerNetObject::getTotalScore() const
 	return m_player->m_totalScore;
 }
 
-#if !ENABLE_CLIENT_SIMULATION
-void PlayerNetObject::setPlayerId(int id)
-{
-	m_state.playerId = id;
-	m_state.SetDirty();
-}
-#endif
-
 int PlayerNetObject::getCharacterIndex() const
 {
 	return m_player->m_characterIndex;
@@ -1742,9 +1555,6 @@ int PlayerNetObject::getCharacterIndex() const
 void PlayerNetObject::setCharacterIndex(int index)
 {
 	m_player->m_characterIndex = index;
-#if !ENABLE_CLIENT_SIMULATION
-	m_state.SetDirty();
-#endif
 
 	handleCharacterIndexChange();
 }
@@ -1763,7 +1573,7 @@ void PlayerNetObject::handleCharacterIndexChange()
 		m_props.load(m_player->makeCharacterFilename("props.txt"));
 
 		delete m_sprite;
-		m_sprite = new Sprite(m_player->makeCharacterFilename("walk/walk.png"), 0.f, 0.f, 0, !ENABLE_CLIENT_SIMULATION);
+		m_sprite = new Sprite(m_player->makeCharacterFilename("walk/walk.png"), 0.f, 0.f, 0, false);
 
 		m_spriteScale = m_props.getFloat("sprite_scale", 1.f);
 

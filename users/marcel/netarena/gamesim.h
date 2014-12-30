@@ -196,10 +196,6 @@ struct ScreenShake
 class GameSim
 {
 public:
-#if !ENABLE_CLIENT_SIMULATION
-	ArenaNetObject m_arenaNetObject;
-#endif
-
 	struct GameState
 	{
 		GameState()
@@ -234,10 +230,6 @@ public:
 
 	BulletPool * m_particlePool;
 
-#if !ENABLE_CLIENT_SIMULATION
-	NetSpriteManager * m_spriteManager;
-#endif
-
 	ScreenShake m_screenShakes[MAX_SCREEN_SHAKES];
 
 	GameSim(bool isAuthorative);
@@ -262,7 +254,7 @@ public:
 
 	void spawnParticles(const ParticleSpawnInfo & spawnInfo);
 
-	void addScreenShake(Vec2 delta, float stiffness, float life);
+	void addScreenShake(float dx, float dy, float stiffness, float life);
 	Vec2 getScreenShake() const;
 
 	uint32_t Random() { return m_state.Random(); }

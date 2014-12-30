@@ -77,14 +77,8 @@ OPTION_DEFINE(int, s_drawBlockMask, "Arena/Debug/Draw Block Mask");
 
 //
 
-void Arena::init(ArenaNetObject * netObject)
+void Arena::init()
 {
-#if !ENABLE_CLIENT_SIMULATION
-	m_netObject = netObject;
-	m_netObject->m_arena = this;
-	m_netObject->m_serializer.m_arena = this;
-#endif
-
 	initializeBlockMasks();
 
 	reset();
@@ -135,10 +129,6 @@ void Arena::generate()
 		if (true && (y == 0 || y == ARENA_SY - 1))
 			m_blocks[x][ARENA_SY - 1 - y].type = m_blocks[x][y].type;
 	}
-
-#if !ENABLE_CLIENT_SIMULATION
-	m_netObject->m_serializer.SetDirty();
-#endif
 }
 
 void Arena::load(const char * filename)
@@ -296,27 +286,27 @@ void Arena::load(const char * filename)
 	{
 		LOG_ERR("failed to open %s: %s", maskFilename.c_str(), e.what());
 	}
-
-#if !ENABLE_CLIENT_SIMULATION
-	m_netObject->m_serializer.SetDirty();
-#endif
 }
 
 void Arena::serialize(NetSerializationContext & context)
 {
-#if !ENABLE_CLIENT_SIMULATION
-	NetSerializableObject * serializable = m_netObject;
+	for (int x = 0; x < ARENA_SX; ++x)
+	{
+		for (int y = 0; y < ARENA_SY; ++y)
+		{
+			Block & block = m_blocks[x][y];
 
-	serializable->Serialize(
-		context.IsInit(), context.IsSend(),
-		REPLICATION_CHANNEL_RELIABLE,
-		context.GetBitStream());
-#else
-	Arena_NS ns(0);
-	ns.m_arena = this;
-	ns.Set(context.IsInit(), context.IsSend(), context.GetBitStream());
-	ns.SerializeStruct();
-#endif
+			uint8_t type = block.type;
+			uint8_t shape = block.shape;
+
+			context.SerializeBits(type, 5);
+			context.SerializeBits(shape, 5);
+			//Serialize(block.clientData);
+
+			block.type = (BlockType)type;
+			block.shape = (BlockShape)shape;
+		}
+	}
 }
 
 void Arena::drawBlocks()
@@ -520,13 +510,9 @@ bool Arena::getTeleportDestination(GameSim & gameSim, int startX, int startY, in
 	}
 	else
 	{
-	#if ENABLE_CLIENT_SIMULATION
 		if (DEBUG_RANDOM_CALLSITES)
 			LOG_DBG("Random called from getTeleportDestination");
 		const int idx = gameSim.m_state.Random() % destinations.size();
-	#else
-		const int idx = rand() % destinations.size();
-	#endif
 
 		out_x = std::get<0>(destinations[idx]);
 		out_y = std::get<1>(destinations[idx]);
@@ -706,20 +692,12 @@ bool Arena::handleDamageRect(GameSim & gameSim, int baseX, int baseY, int x1, in
 			{
 				block.type = kBlockType_Empty;
 
-			#if !ENABLE_CLIENT_SIMULATION
-				g_app->netUpdateBlock(blockInfo.x, blockInfo.y, block);
-			#endif
-
 				ParticleSpawnInfo spawnInfo(
 					(blockInfo.x + .5f) * BLOCK_SX,
 					(blockInfo.y + .5f) * BLOCK_SY,
 					kBulletType_ParticleA, 10, 50, 200, 20);
 				spawnInfo.color = 0xff8040ff;
-			#if ENABLE_CLIENT_SIMULATION
 				gameSim.spawnParticles(spawnInfo);
-			#else
-				g_app->netSpawnParticles(spawnInfo);
-			#endif
 
 				hitDestructible = false;
 
@@ -730,51 +708,3 @@ bool Arena::handleDamageRect(GameSim & gameSim, int baseX, int baseY, int x1, in
 
 	return result;
 }
-
-//
-
-Arena_NS::Arena_NS(NetSerializableObject * owner)
-	: NetSerializable(owner)
-{
-}
-
-void Arena_NS::SerializeStruct()
-{
-	Arena * arena = m_arena;
-
-	for (int x = 0; x < ARENA_SX; ++x)
-	{
-		for (int y = 0; y < ARENA_SY; ++y)
-		{
-			Block & block = arena->getBlock(x, y);
-
-			uint8_t type = block.type;
-			uint8_t shape = block.shape;
-
-			SerializeBits(type, 5);
-			SerializeBits(shape, 5);
-			//Serialize(block.clientData);
-
-			block.type = (BlockType)type;
-			block.shape = (BlockShape)shape;
-		}
-	}
-}
-
-//
-
-#if !ENABLE_CLIENT_SIMULATION
-
-ArenaNetObject::ArenaNetObject(bool ownArena)
-	: NetObject()
-	, m_serializer(this)
-	, m_arena(0)
-	, m_ownArena(ownArena)
-{
-	if (ownArena)
-	{
-		Arena * arena = new Arena();
-		arena->init(this);
-	}
-}
-#endif

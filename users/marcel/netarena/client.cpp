@@ -28,11 +28,8 @@ Client::Client()
 	: m_channel(0)
 	, m_replicationId(0)
 	, m_gameSim(0)
-#if !ENABLE_CLIENT_SIMULATION
-	, m_arena(0)
-#endif
 {
-	m_gameSim = new GameSim(ENABLE_CLIENT_SIMULATION);
+	m_gameSim = new GameSim(true);
 }
 
 Client::~Client()
@@ -158,14 +155,6 @@ void Client::tick(float dt)
 		}
 	}
 
-#if !ENABLE_CLIENT_SIMULATION
-	m_gameSim->anim(dt);
-
-	m_gameSim->m_bulletPool->anim(*m_gameSim, dt);
-
-	m_gameSim->m_particlePool->tick(*m_gameSim, dt);
-#endif
-
 	if (s_noBgm)
 	{
 		if (s_bgmSound)
@@ -210,11 +199,6 @@ void Client::tick(float dt)
 
 void Client::draw()
 {
-#if !ENABLE_CLIENT_SIMULATION
-	if (!m_arena)
-		return;
-#endif
-
 	//setPlayerPtrs(); // fixme : enable once full simulation runs on clients
 
 	switch (m_gameSim->m_state.m_gameState)
@@ -240,13 +224,8 @@ void Client::drawPlay()
 	gxPushMatrix();
 	gxTranslatef(shake[0], shake[1], 0.f);
 
-#if !ENABLE_CLIENT_SIMULATION
-	m_arena->m_arena->drawBlocks();
-#else
 	m_gameSim->m_arena.drawBlocks();
-#endif
 
-#if ENABLE_CLIENT_SIMULATION
 	for (int i = 0; i < MAX_PICKUPS; ++i)
 	{
 		const Pickup & pickup = m_gameSim->m_state.m_pickups[i];
@@ -260,9 +239,6 @@ void Client::drawPlay()
 			sprite.drawEx(pickup.x1, pickup.y1);
 		}
 	}
-#else
-	m_gameSim->m_spriteManager->draw();
-#endif
 
 	for (auto i = m_players.begin(); i != m_players.end(); ++i)
 	{

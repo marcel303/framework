@@ -122,31 +122,15 @@ enum RpcMethod
 	s_rpcSyncGameSim,
 	s_rpcSetGameState,
 	s_rpcLoadArena,
-#if ENABLE_CLIENT_SIMULATION
 	s_rpcAddPlayer,
 	s_rpcAddPlayerBroadcast,
 	s_rpcRemovePlayer,
 	s_rpcRemovePlayerBroadcast,
-#endif
 	s_rpcPlaySound,
-#if !ENABLE_CLIENT_SIMULATION
-	s_rpcScreenShake,
-#endif
 	s_rpcSetPlayerInputs,
 	s_rpcBroadcastPlayerInputs,
 	s_rpcSetPlayerCharacterIndex,
-#if ENABLE_CLIENT_SIMULATION
 	s_rpcSetPlayerCharacterIndexBroadcast,
-#endif
-#if !ENABLE_CLIENT_SIMULATION
-	s_rpcKillBullet,
-	s_rpcUpdateBullet,
-	s_rpcAddSprite,
-	s_rpcSyncSprite,
-	s_rpcRemoveSprite,
-	s_rpcSpawnParticles,
-	s_rpcUpdateBlock,
-#endif
 	s_rpcCOUNT
 };
 
@@ -177,7 +161,6 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 
 		if (!channel)
 			gameSim = &g_host->m_gameSim;
-	#if ENABLE_CLIENT_SIMULATION
 		else
 		{
 			Client * client = g_app->findClientByChannel(channel);
@@ -185,7 +168,6 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			if (client)
 				gameSim = client->m_gameSim;
 		}
-	#endif
 
 		if (gameSim)
 		{
@@ -215,7 +197,6 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		if (gameSim)
 			gameSim->m_arena.load(filename.c_str());
 	}
-#if ENABLE_CLIENT_SIMULATION
 	else if (method == s_rpcAddPlayer)
 	{
 		LOG_DBG("handleRpc: s_rpcAddPlayer");
@@ -292,7 +273,6 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			LOG_DBG("remove CRCs: %08x, %08x", crc1, crc2);
 		}
 	}
-#endif
 	else if (method == s_rpcPlaySound)
 	{
 		const std::string filename = bitStream.ReadString();
@@ -307,32 +287,6 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			}
 		}
 	}
-#if !ENABLE_CLIENT_SIMULATION
-	else if (method == s_rpcScreenShake)
-	{
-		LOG_DBG("handleRpc: s_rpcScreenShake");
-
-		Client * client = g_app->findClientByChannel(channel);
-		Assert(client);
-		if (client)
-		{
-			float dx;
-			float dy;
-			float stiffness;
-			float life;
-
-			bitStream.Read(dx);
-			bitStream.Read(dy);
-			bitStream.Read(stiffness);
-			bitStream.Read(life);
-
-			client->m_gameSim->addScreenShake(
-				Vec2(dx, dy),
-				stiffness,
-				life);
-		}
-	}
-#endif
 	else if (method == s_rpcSetPlayerInputs)
 	{
 		//LOG_DBG("handleRpc: s_rpcSetPlayerInputs");
@@ -427,9 +381,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 					player->m_input.m_currState = input;
 			}
 
-		#if ENABLE_CLIENT_SIMULATION
 			client->m_gameSim->tick();
-		#endif
 		}
 	}
 	else if (method == s_rpcSetPlayerCharacterIndex)
@@ -448,11 +400,8 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		{
 			player->setCharacterIndex(characterIndex);
 		}
-	#if ENABLE_CLIENT_SIMULATION
 		g_app->netBroadcastCharacterIndex(netId, characterIndex);
-	#endif
 	}
-#if ENABLE_CLIENT_SIMULATION
 	else if (method == s_rpcSetPlayerCharacterIndexBroadcast)
 	{
 		LOG_DBG("handleRpc: s_rpcSetPlayerCharacterIndexBroadcast");
@@ -475,136 +424,6 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			}
 		}
 	}
-#else
-	else if (method == s_rpcKillBullet)
-	{
-		Client * client = g_app->findClientByChannel(channel);
-
-		Assert(client);
-		if (client)
-		{
-			uint16_t id;
-
-			bitStream.Read(id);
-
-			Bullet & b = client->m_gameSim->m_bulletPool->m_bullets[id];
-			Assert(b.isAlive);
-			
-			b.isAlive = false;
-		}
-	}
-	else if (method == s_rpcUpdateBullet)
-	{
-		Client * client = g_app->findClientByChannel(channel);
-
-		Assert(client);
-		if (client)
-		{
-			uint16_t id;
-
-			bitStream.Read(id);
-
-			Bullet & b = client->m_gameSim->m_bulletPool->m_bullets[id];
-			//Assert(b.isAlive);
-			
-			bitStream.ReadAlignedBytes(&b, sizeof(b));
-		}
-	}
-	else if (method == s_rpcAddSprite || method == s_rpcSyncSprite)
-	{
-		NetSpriteManager * spriteManager = 0;
-
-		if (channel)
-		{
-			Client * client = g_app->findClientByChannel(channel);
-			Assert(client);
-			if (client)
-				spriteManager = client->m_gameSim->m_spriteManager;
-		}
-		else
-		{
-			spriteManager = g_hostSpriteManager;
-		}
-
-		Assert(spriteManager);
-		if (spriteManager)
-		{
-			uint16_t id;
-			std::string filename;
-			int16_t x;
-			int16_t y;
-
-			bitStream.Read(id);
-			filename = bitStream.ReadString();
-			bitStream.Read(x);
-			bitStream.Read(y);
-
-			NetSprite & sprite = spriteManager->m_sprites[id];
-
-			sprite.set(filename.c_str(), x, y);
-		}
-	}
-	else if (method == s_rpcRemoveSprite)
-	{
-		NetSpriteManager * spriteManager = 0;
-
-		if (channel)
-		{
-			Client * client = g_app->findClientByChannel(channel);
-			Assert(client);
-			if (client)
-				spriteManager = client->m_gameSim->m_spriteManager;
-		}
-		else
-		{
-			spriteManager = g_hostSpriteManager;
-		}
-
-		Assert(spriteManager);
-		if (spriteManager)
-		{
-			uint16_t id;
-
-			bitStream.Read(id);
-
-			NetSprite & sprite = spriteManager->m_sprites[id];
-			Assert(sprite.enabled);
-			sprite.enabled = false;
-		}
-	}
-	else if (method == s_rpcSpawnParticles)
-	{
-		Client * client = g_app->findClientByChannel(channel);
-		Assert(client);
-		if (client)
-		{
-			NetSerializationContext context;
-			context.Set(true, false, bitStream);
-
-			ParticleSpawnInfo spawnInfo;
-			spawnInfo.serialize(context);
-
-			client->spawnParticles(spawnInfo);
-		}
-	}
-	else if (method == s_rpcUpdateBlock)
-	{
-		Client * client = g_app->findClientByChannel(channel);
-		Assert(client);
-		if (client && client->m_arena)
-		{
-			uint8_t x;
-			uint8_t y;
-			
-			bitStream.Read(x);
-			bitStream.Read(y);
-
-			Block & block = client->m_arena->m_arena->getBlock(x, y);
-
-			bitStream.ReadAlignedBytes(&block, sizeof(block));
-		}
-	}
-#endif
 	else
 	{
 		AssertMsg(false, "unknown RPC call: %u", method);
@@ -633,7 +452,6 @@ void App::processPlayerChanges()
 
 			Channel * channel = playerToAddOrRemove.channel;
 
-		#if ENABLE_CLIENT_SIMULATION
 			for (int i = 0; i < MAX_PLAYERS; ++i)
 			{
 				PlayerNetObject * netObject = m_host->m_gameSim.m_players[i];
@@ -641,7 +459,6 @@ void App::processPlayerChanges()
 				if (netObject)
 					netAddPlayerBroadcast(channel, netObject->getOwningChannelId(), netObject->getNetId(), i, netObject->getCharacterIndex());
 			}
-		#endif
 
 			m_host->syncNewClient(channel);
 
@@ -659,18 +476,12 @@ void App::processPlayerChanges()
 
 				m_host->addPlayer(player);
 
-			#if ENABLE_CLIENT_SIMULATION
 				netAddPlayerBroadcast(0, playerToAddOrRemove.channel->m_destinationId, player->getNetId(), player->getPlayerId(), player->getCharacterIndex());
-			#else
-				m_replicationMgr->SV_AddObject(player);
-			#endif
 			}
 		}
 		else
 		{
-		#if ENABLE_CLIENT_SIMULATION
 			netRemovePlayerBroadcast(playerToAddOrRemove.playerId);
-		#endif
 
 			PlayerNetObject * player = m_host->m_gameSim.m_players[playerToAddOrRemove.playerId];
 
@@ -684,7 +495,6 @@ void App::processPlayerChanges()
 
 void App::broadcastPlayerInputs()
 {
-#if ENABLE_CLIENT_SIMULATION
 	if (g_devMode)
 		for (int i = 0; i < 10; ++i)
 			m_channelMgr->Update(g_TimerRT.TimeUS_get());
@@ -694,7 +504,6 @@ void App::broadcastPlayerInputs()
 	if (g_devMode)
 		for (int i = 0; i < 10; ++i)
 			m_channelMgr->Update(g_TimerRT.TimeUS_get());
-#endif
 }
 
 //
@@ -730,10 +539,6 @@ void App::SV_OnChannelDisconnect(Channel * channel)
 
 		if (clientInfo.player)
 		{
-		#if !ENABLE_CLIENT_SIMULATION
-			m_replicationMgr->SV_RemoveObject(clientInfo.player->GetObjectID());
-		#endif
-
 			PlayerToAddOrRemove playerToRemove;
 			playerToRemove.add = false;
 			playerToRemove.playerId = clientInfo.player->getPlayerId();
@@ -773,23 +578,10 @@ bool App::OnReplicationObjectCreateType(ReplicationClient * client, BitStream & 
 
 	switch (type)
 	{
-	#if !ENABLE_CLIENT_SIMULATION
-	case kNetObjectType_Arena:
-		{
-			ArenaNetObject * arenaNetObject = new ArenaNetObject(true);
-			netObject = arenaNetObject;
-		}
+	default:
+		Assert(false);
 		break;
-
-	case kNetObjectType_Player:
-		netObject = new PlayerNetObject();
-		break;
-	#endif
 	}
-
-	Assert(netObject);
-
-	*out_object = netObject;
 
 	return (netObject != 0);
 }
@@ -801,20 +593,6 @@ void App::OnReplicationObjectCreated(ReplicationClient * client, ReplicationObje
 
 	switch (netObject->getType())
 	{
-	#if !ENABLE_CLIENT_SIMULATION
-	case kNetObjectType_Arena:
-		Assert(gameClient->m_arena == 0);
-		gameClient->m_arena = static_cast<ArenaNetObject*>(object);
-		break;
-
-	case kNetObjectType_Player:
-		{
-			PlayerNetObject * playerNetObject = static_cast<PlayerNetObject*>(object);
-			gameClient->addPlayer(playerNetObject);
-			break;
-		}
-	#endif
-
 	default:
 		Assert(false);
 		break;
@@ -828,17 +606,6 @@ void App::OnReplicationObjectDestroyed(ReplicationClient * client, ReplicationOb
 
 	switch (netObject->getType())
 	{
-	#if !ENABLE_CLIENT_SIMULATION
-	case kNetObjectType_Arena:
-		delete gameClient->m_arena;
-		gameClient->m_arena = 0;
-		break;
-
-	case kNetObjectType_Player:
-		gameClient->removePlayer(static_cast<PlayerNetObject*>(netObject));
-		break;
-	#endif
-
 	default:
 		Assert(false);
 		break;
@@ -1232,10 +999,8 @@ bool App::tick()
 
 				const uint32_t crc3 = m_host->m_gameSim.calcCRC();
 
-			#if ENABLE_CLIENT_SIMULATION
 				if (g_devMode)
 					LOG_DBG("tick CRCs: %08x, %08x, %08x", crc1, crc2, crc3);
-			#endif
 			}
 
 			m_host->tick(dt);
@@ -1358,7 +1123,6 @@ void App::draw()
 		{
 			g_host->debugDraw();
 
-		#if ENABLE_CLIENT_SIMULATION
 			{
 				int y = 100;
 				setFont("calibri.ttf");
@@ -1378,7 +1142,6 @@ void App::draw()
 						m_clients[i]->m_gameSim->m_players[0] ? m_clients[i]->m_gameSim->m_players[0]->m_player->m_pos[1] : 0.f);
 				}
 			}
-		#endif
 		}
 
 		if (m_optionMenuIsOpen)
@@ -1531,7 +1294,6 @@ void App::netLoadArena(const char * filename)
 	m_rpcMgr->Call(s_rpcLoadArena, bs, ChannelPool_Server, 0, true, true);
 }
 
-#if ENABLE_CLIENT_SIMULATION
 void App::netAddPlayer(Channel * channel, uint8_t characterIndex)
 {
 	LOG_DBG("netAddPlayer");
@@ -1575,7 +1337,6 @@ void App::netRemovePlayerBroadcast(uint8_t index)
 
 	m_rpcMgr->Call(s_rpcRemovePlayerBroadcast, bs, ChannelPool_Server, 0, true, false);
 }
-#endif
 
 void App::netPlaySound(const char * filename, uint8_t volume)
 {
@@ -1585,22 +1346,6 @@ void App::netPlaySound(const char * filename, uint8_t volume)
 	bs.Write(volume);
 
 	m_rpcMgr->Call(s_rpcPlaySound, bs, ChannelPool_Server, 0, true, false);
-}
-
-void App::netScreenShake(GameSim & gameSim, float dx, float dy, float stiffness, float life)
-{
-#if !ENABLE_CLIENT_SIMULATION
-	BitStream bs;
-
-	bs.Write(dx);
-	bs.Write(dy);
-	bs.Write(stiffness);
-	bs.Write(life);
-
-	m_rpcMgr->Call(s_rpcScreenShake, bs, ChannelPool_Server, 0, true, false);
-#else
-	gameSim.addScreenShake(Vec2(dx, dy), stiffness, life);
-#endif
 }
 
 void App::netSetPlayerInputs(uint16_t channelId, uint32_t netId, const PlayerInput & input)
@@ -1618,7 +1363,6 @@ void App::netSetPlayerInputs(uint16_t channelId, uint32_t netId, const PlayerInp
 	m_rpcMgr->Call(s_rpcSetPlayerInputs, bs, ChannelPool_Client, &channelId, false, false);
 }
 
-#if ENABLE_CLIENT_SIMULATION
 void App::netSetPlayerInputsBroadcast()
 {
 	if (g_devMode)
@@ -1656,7 +1400,6 @@ void App::netSetPlayerInputsBroadcast()
 
 	m_rpcMgr->Call(s_rpcBroadcastPlayerInputs, bs, ChannelPool_Server, 0, true, false);
 }
-#endif
 
 void App::netSetPlayerCharacterIndex(uint16_t channelId, uint32_t netId, uint8_t characterIndex)
 {
@@ -1672,7 +1415,6 @@ void App::netSetPlayerCharacterIndex(uint16_t channelId, uint32_t netId, uint8_t
 	m_rpcMgr->Call(s_rpcSetPlayerCharacterIndex, bs, ChannelPool_Client, &channelId, false, false);
 }
 
-#if ENABLE_CLIENT_SIMULATION
 void App::netBroadcastCharacterIndex(uint32_t netId, uint8_t characterIndex)
 {
 	LOG_DBG("netBroadcastCharacterIndex");
@@ -1686,7 +1428,6 @@ void App::netBroadcastCharacterIndex(uint32_t netId, uint8_t characterIndex)
 
 	m_rpcMgr->Call(s_rpcSetPlayerCharacterIndexBroadcast, bs, ChannelPool_Server, 0, true, false);
 }
-#endif
 
 uint16_t App::netSpawnBullet(GameSim & gameSim, int16_t x, int16_t y, uint8_t _angle, uint8_t type, uint32_t ownerNetId)
 {
@@ -1747,116 +1488,10 @@ uint16_t App::netSpawnBullet(GameSim & gameSim, int16_t x, int16_t y, uint8_t _a
 		b.setVel(angle, velocity);
 
 		b.ownerNetId = ownerNetId;
-
-	#if !ENABLE_CLIENT_SIMULATION
-		LOG_DBG("netSpawnBullet");
-
-		netUpdateBullet(gameSim, id);
-	#endif
 	}
 
 	return id;
 }
-
-#if !ENABLE_CLIENT_SIMULATION
-void App::netKillBullet(uint16_t id)
-{
-	BitStream bs;
-
-	bs.Write(id);
-
-	m_rpcMgr->Call(s_rpcKillBullet, bs, ChannelPool_Server, 0, true, false);
-}
-
-void App::netUpdateBullet(GameSim & gameSim, uint16_t id)
-{
-	Bullet & b = gameSim.m_bulletPool->m_bullets[id];
-
-	BitStream bs;
-
-	bs.Write(id);
-	bs.WriteAlignedBytes(&b, sizeof(b));
-
-	m_rpcMgr->Call(s_rpcUpdateBullet, bs, ChannelPool_Server, 0, true, false);
-}
-
-uint16_t App::netAddSprite(const char * filename, int16_t x, int16_t y)
-{
-	uint16_t id = g_hostSpriteManager->alloc();
-
-	if (id != SPRITE_ID_INVALID)
-	{
-		BitStream bs;
-
-		bs.Write(id);
-		bs.WriteString(filename);
-		bs.Write(x);
-		bs.Write(y);
-
-		m_rpcMgr->Call(s_rpcAddSprite, bs, ChannelPool_Server, 0, true, true);
-	}
-
-	return id;
-}
-
-void App::netSyncSprite(uint16_t id, Channel * channel)
-{
-	NetSprite & sprite = g_hostSpriteManager->m_sprites[id];
-	Assert(sprite.enabled);
-	if (sprite.enabled)
-	{
-		BitStream bs;
-
-		int16_t x = sprite.sprite->x;
-		int16_t y = sprite.sprite->y;
-
-		bs.Write(id);
-		bs.WriteString(sprite.filename.c_str());
-		bs.Write(x);
-		bs.Write(y);
-
-		m_rpcMgr->Call(s_rpcSyncSprite, bs, ChannelPool_Server, &channel->m_id, false, false);
-	}
-}
-
-void App::netRemoveSprite(uint16_t id)
-{
-	Assert(id != SPRITE_ID_INVALID);
-	if (id != SPRITE_ID_INVALID)
-	{
-		BitStream bs;
-
-		bs.Write(id);
-
-		m_rpcMgr->Call(s_rpcRemoveSprite, bs, ChannelPool_Server, 0, true, true);
-
-		g_hostSpriteManager->free(id);
-	}
-}
-
-void App::netSpawnParticles(const ParticleSpawnInfo & spawnInfo)
-{
-	BitStream bs;
-
-	NetSerializationContext context;
-	context.Set(true, true, bs);
-
-	const_cast<ParticleSpawnInfo&>(spawnInfo).serialize(context);
-
-	m_rpcMgr->Call(s_rpcSpawnParticles, bs, ChannelPool_Server, 0, true, false);
-}
-
-void App::netUpdateBlock(uint8_t x, uint8_t y, const Block & block)
-{
-	BitStream bs;
-
-	bs.Write(x);
-	bs.Write(y);
-	bs.WriteAlignedBytes(&block, sizeof(block));
-
-	m_rpcMgr->Call(s_rpcUpdateBlock, bs, ChannelPool_Server, 0, true, false);
-}
-#endif
 
 int App::allocControllerIndex()
 {

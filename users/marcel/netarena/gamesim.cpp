@@ -43,17 +43,10 @@ uint32_t GameSim::GameState::GetTick()
 
 GameSim::GameSim(bool isAuthorative)
 	: m_isAuthorative(isAuthorative)
-#if !ENABLE_CLIENT_SIMULATION
-	, m_arenaNetObject()
-#endif
 	, m_state()
 	, m_bulletPool(0)
 {
-#if ENABLE_CLIENT_SIMULATION
-	m_arena.init(0);
-#else
-	m_arena.init(&m_arenaNetObject);
-#endif
+	m_arena.init();
 
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 		m_players[i] = 0;
@@ -61,19 +54,10 @@ GameSim::GameSim(bool isAuthorative)
 	m_bulletPool = new BulletPool(!isAuthorative);
 
 	m_particlePool = new BulletPool(true);
-
-#if !ENABLE_CLIENT_SIMULATION
-	m_spriteManager = new NetSpriteManager();
-#endif
 }
 
 GameSim::~GameSim()
 {
-#if !ENABLE_CLIENT_SIMULATION
-	delete m_spriteManager;
-	m_spriteManager = 0;
-#endif
-
 	delete m_particlePool;
 	m_particlePool = 0;
 
@@ -83,7 +67,6 @@ GameSim::~GameSim()
 
 uint32_t GameSim::calcCRC() const
 {
-#if ENABLE_CLIENT_SIMULATION
 	clearPlayerPtrs();
 
 	uint32_t result = 0;
@@ -97,9 +80,6 @@ uint32_t GameSim::calcCRC() const
 	setPlayerPtrs();
 
 	return result;
-#else
-	return 0;
-#endif
 }
 
 void GameSim::serialize(NetSerializationContext & context)
@@ -212,7 +192,6 @@ void GameSim::tickPlay()
 {
 	g_gameSim = this;
 
-#if ENABLE_CLIENT_SIMULATION
 	if (g_devMode && ENABLE_GAMESTATE_CRC_LOGGING)
 	{
 		int numPlayers = 0;
@@ -223,13 +202,11 @@ void GameSim::tickPlay()
 		const uint32_t crc = calcCRC();
 		LOG_DBG("gamesim %p: tick=%u, crc=%08x, numPlayers=%d", this, m_state.m_tick, crc, numPlayers);
 	}
-#endif
 
 	const float dt = 1.f / TICKS_PER_SECOND;
 
 	const uint32_t tick = m_state.GetTick();
 
-#if ENABLE_CLIENT_SIMULATION
 	// player update
 
 	for (int i = 0; i < MAX_PLAYERS; ++i)
@@ -237,7 +214,6 @@ void GameSim::tickPlay()
 		if (m_players[i])
 			m_players[i]->m_player->tick(dt);
 	}
-#endif
 
 	// pickup spawning
 
@@ -272,11 +248,9 @@ void GameSim::tickPlay()
 		m_state.m_nextPickupSpawnTick = tick + (g_pickupTimeBase + (m_state.Random() % g_pickupTimeRandom)) * TICKS_PER_SECOND;
 	}
 
-#if ENABLE_CLIENT_SIMULATION
 	anim(dt);
 
 	m_bulletPool->tick(*this, dt);
-#endif
 
 	m_state.m_tick++;
 
@@ -353,9 +327,6 @@ void GameSim::spawnPickup(Pickup & pickup, PickupType type, int blockX, int bloc
 	pickup.y1 = blockY * BLOCK_SY + BLOCK_SY - sprite.getHeight();
 	pickup.x2 = pickup.x1 + sprite.getWidth();
 	pickup.y2 = pickup.y1 + sprite.getHeight();
-#if !ENABLE_CLIENT_SIMULATION
-	pickup.spriteId = g_app->netAddSprite(filename, pickup.x1, pickup.y1);
-#endif
 }
 
 Pickup * GameSim::grabPickup(int x1, int y1, int x2, int y2)
@@ -371,10 +342,6 @@ Pickup * GameSim::grabPickup(int x1, int y1, int x2, int y2)
 			{
 				m_state.m_grabbedPickup = pickup;
 				pickup.isAlive = false;
-
-			#if !ENABLE_CLIENT_SIMULATION
-				g_app->netRemoveSprite(m_state.m_grabbedPickup.spriteId);
-			#endif
 
 				g_app->netPlaySound("gun-pickup.ogg");
 
@@ -401,7 +368,7 @@ void GameSim::spawnParticles(const ParticleSpawnInfo & spawnInfo)
 	}
 }
 
-void GameSim::addScreenShake(Vec2 delta, float stiffness, float life)
+void GameSim::addScreenShake(float dx, float dy, float stiffness, float life)
 {
 	for (int i = 0; i < MAX_SCREEN_SHAKES; ++i)
 	{
@@ -412,7 +379,7 @@ void GameSim::addScreenShake(Vec2 delta, float stiffness, float life)
 			shake.life = life;
 			shake.stiffness = stiffness;
 
-			shake.pos = delta;
+			shake.pos.Set(dx, dy);
 			shake.vel.Set(0.f, 0.f);
 			return;
 		}
@@ -421,7 +388,7 @@ void GameSim::addScreenShake(Vec2 delta, float stiffness, float life)
 	if (DEBUG_RANDOM_CALLSITES)
 		LOG_DBG("Random called from addScreenShake");
 	m_screenShakes[m_state.Random() % MAX_SCREEN_SHAKES].isActive = false;
-	addScreenShake(delta, stiffness, life);
+	addScreenShake(dx, dy, stiffness, life);
 }
 
 Vec2 GameSim::getScreenShake() const

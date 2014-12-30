@@ -89,9 +89,6 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 				anim(gameSim, b, dt);
 
 				bool kill = false;
-			#if !ENABLE_CLIENT_SIMULATION
-				bool update = false;
-			#endif
 
 				bool doReflection = true;
 
@@ -123,9 +120,6 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 								else
 								{
 									b.vel *= -1.f;
-								#if !ENABLE_CLIENT_SIMULATION
-									update = true;
-								#endif
 								}
 							}
 							else
@@ -136,11 +130,7 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 					if (kill)
 					{
 						ParticleSpawnInfo spawnInfo(b.pos[0], b.pos[1], kBulletType_ParticleA, 10, 50, 200, 20);
-					#if ENABLE_CLIENT_SIMULATION
 						gameSim.spawnParticles(spawnInfo);
-					#else
-						g_app->netSpawnParticles(spawnInfo);
-					#endif
 					}
 
 					if (!kill && b.doBounce)
@@ -157,10 +147,6 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 							b.pos[0] = oldPos[0];
 
 							b.bounceCount++;
-
-						#if !ENABLE_CLIENT_SIMULATION
-							update = true;
-						#endif
 						}
 
 						// eval collision in y direction
@@ -181,10 +167,6 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 							b.pos[1] = oldPos[1];
 
 							b.bounceCount++;
-
-						#if !ENABLE_CLIENT_SIMULATION
-							update = true;
-						#endif
 						}
 					}
 
@@ -216,10 +198,6 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 
 							b.pos[0] += deltaX * BLOCK_SX;
 							b.pos[1] += deltaY * BLOCK_SY;
-
-						#if !ENABLE_CLIENT_SIMULATION
-							update = true;
-						#endif
 
 							oldBlockMask = blockMask;
 						}
@@ -326,32 +304,18 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 						g_app->netPlaySound("grenade-explode.ogg");
 					}
 
-				#if !ENABLE_CLIENT_SIMULATION
-					if (!m_localOnly)
-					{
-						g_app->netKillBullet(i);
-					}
-				#endif
-
 					if (b.type == kBulletType_GrenadeA)
 					{
 						g_app->netPlaySound("grenade-frag.ogg");
 
 						const float strength = 5.f;
-						g_app->netScreenShake(
-							gameSim,
+						gameSim.addScreenShake(
 							gameSim.RandomFloat(-strength, +strength),
 							gameSim.RandomFloat(-strength, +strength), 2500.f, .3f);
 					}
 
 					free(i);
 				}
-			#if !ENABLE_CLIENT_SIMULATION
-				else if (update)
-				{
-					g_app->netUpdateBullet(gameSim, i);
-				}
-			#endif
 			}
 		}
 	}

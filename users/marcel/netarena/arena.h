@@ -5,7 +5,6 @@
 #include "netobject.h"
 
 class Arena;
-class ArenaNetObject; // todo : remove
 class BitStream;
 class GameSim;
 struct Player;
@@ -91,18 +90,12 @@ struct BlockAndDistance
 
 class Arena
 {
-	friend class ArenaNetObject; // todo : remove
-
 	Block m_blocks[ARENA_SX][ARENA_SY];
-
-#if !ENABLE_CLIENT_SIMULATION
-	ArenaNetObject * m_netObject;
-#endif
 
 	void reset();
 
 public:
-	void init(ArenaNetObject * netObject);
+	void init();
 
 	void generate();
 	void load(const char * filename);
@@ -123,36 +116,3 @@ public:
 
 	bool handleDamageRect(GameSim & gameSim, int x, int y, int x1, int y1, int x2, int y2, bool hitDestructible);
 };
-
-class Arena_NS : public NetSerializable
-{
-public:
-	Arena_NS(NetSerializableObject * owner);
-
-	Arena * m_arena;
-
-	virtual void SerializeStruct();
-};
-
-#if !ENABLE_CLIENT_SIMULATION
-
-class ArenaNetObject : public NetObject
-{
-	friend class Arena;
-
-	Arena_NS m_serializer;
-
-	// ReplicationObject
-	virtual bool RequiresUpdating() const { return true; }
-
-	// NetObject
-	virtual NetObjectType getType() const { return kNetObjectType_Arena; }
-
-public:
-	Arena * m_arena;
-	bool m_ownArena;
-
-	ArenaNetObject(bool ownArena = false);
-};
-
-#endif

@@ -20,10 +20,6 @@ public:
 
 	GameSim * m_gameSim;
 
-#if !ENABLE_CLIENT_SIMULATION
-	ArenaNetObject * m_arena;
-#endif
-
 	std::vector<PlayerNetObject*> m_players;
 
 	Client();

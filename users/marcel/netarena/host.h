@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vector>
-#include "gamedefs.h" // for ENABLE_CLIENT_SIMULATION
 #include "gamesim.h"
 
 class Arena;
@@ -24,10 +23,6 @@ class Host
 	std::vector<int> m_freePlayerIds;
 
 	int m_nextRoundNumber;
-
-#if !ENABLE_CLIENT_SIMULATION
-	NetSpriteManager * m_spriteManager;
-#endif
 
 	// round complete game state
 	uint64_t m_roundCompleteTimer;
@@ -65,6 +60,3 @@ public:
 };
 
 extern Host * g_host;
-#if !ENABLE_CLIENT_SIMULATION
-extern NetSpriteManager * g_hostSpriteManager;
-#endif
