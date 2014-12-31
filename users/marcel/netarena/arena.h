@@ -2,7 +2,7 @@
 
 #include "gamedefs.h"
 #include "gametypes.h"
-#include "netobject.h"
+#include "NetSerializable.h"
 
 class Arena;
 class BitStream;

@@ -12,7 +12,6 @@
 #include "gamesim.h"
 #include "host.h"
 #include "main.h"
-#include "netobject.h"
 #include "NetProtocols.h"
 #include "netsprite.h"
 #include "OptionMenu.h"

@@ -3,7 +3,6 @@
 #include <string>
 #include "gamesim.h"
 #include "gametypes.h"
-#include "netobject.h"
 #include "Vec2.h"
 
 class Dictionary;
