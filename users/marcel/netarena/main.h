@@ -114,15 +114,15 @@ public:
 	void netSetGameState(GameState gameState);
 	void netLoadArena(const char * filename);
 	void netAddPlayer(Channel * channel, uint8_t characterIndex);
-	void netAddPlayerBroadcast(Channel * channel, uint16_t owningChannelId, uint32_t netId, uint8_t index, uint8_t characterIndex);
+	void netAddPlayerBroadcast(Channel * channel, uint16_t owningChannelId, uint8_t index, uint8_t characterIndex);
 	void netRemovePlayer(uint8_t index);
 	void netRemovePlayerBroadcast(uint8_t index);
 	void netPlaySound(const char * filename, uint8_t volume = 100);
-	void netSetPlayerInputs(uint16_t channelId, uint32_t netId, const PlayerInput & input);
+	void netSetPlayerInputs(uint16_t channelId, uint8_t playerId, const PlayerInput & input);
 	void netSetPlayerInputsBroadcast();
-	void netSetPlayerCharacterIndex(uint16_t channelId, uint32_t netId, uint8_t characterIndex);
-	void netBroadcastCharacterIndex(uint32_t netId, uint8_t characterIndex);
-	uint16_t netSpawnBullet(GameSim & gameSim, int16_t x, int16_t y, uint8_t angle, uint8_t type, uint32_t ownerNetId);
+	void netSetPlayerCharacterIndex(uint16_t channelId, uint8_t playerId, uint8_t characterIndex);
+	void netBroadcastCharacterIndex(uint8_t playerId, uint8_t characterIndex);
+	uint16_t netSpawnBullet(GameSim & gameSim, int16_t x, int16_t y, uint8_t angle, uint8_t type, uint8_t ownerPlayerId);
 
 	int allocControllerIndex();
 	void freeControllerIndex(int index);

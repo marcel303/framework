@@ -58,7 +58,7 @@ public:
 
 	float life;
 
-	uint32_t ownerNetId;
+	uint32_t ownerPlayerId;
 };
 
 #pragma pack(push)

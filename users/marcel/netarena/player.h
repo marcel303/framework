@@ -62,7 +62,7 @@ struct PlayerInput
 	int8_t analogY;
 };
 
-class PlayerNetObject : public NetObject
+class PlayerNetObject
 {
 	friend struct Player;
 
@@ -70,10 +70,9 @@ class PlayerNetObject : public NetObject
 
 	PlayerAnim_NS m_anim;
 
-	bool m_isAuthorative;
-
+	uint16_t m_owningChannelId;
 	int m_playerId;
-
+	
 	Dictionary m_props;
 
 	Sprite * m_sprite;
@@ -86,12 +85,11 @@ class PlayerNetObject : public NetObject
 	// ReplicationObject
 	virtual bool RequiresUpdating() const { return true; }
 
-	// NetObject
-	virtual NetObjectType getType() const { return kNetObjectType_Player; }
-
 public:
-	PlayerNetObject(uint32_t netId = 0, uint16_t owningChannelId = 0, Player * player = 0, GameSim * gameSim = 0);
+	PlayerNetObject(uint16_t owningChannelId = 0, Player * player = 0, GameSim * gameSim = 0);
 	~PlayerNetObject();
+
+	uint16_t getOwningChannelId() const { return m_owningChannelId; }
 
 	int getScore() const;
 	int getTotalScore() const;

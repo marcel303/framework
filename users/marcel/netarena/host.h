@@ -18,9 +18,7 @@ class Host
 
 	GameSim m_gameSim;
 
-	std::vector<PlayerNetObject*> m_players;
 	uint32_t m_nextNetId;
-	std::vector<int> m_freePlayerIds;
 
 	int m_nextRoundNumber;
 
@@ -48,9 +46,8 @@ public:
 	void endRound();
 
 	PlayerNetObject * allocPlayer(uint16_t owningChannelId);
-	void addPlayer(PlayerNetObject * player);
-	void removePlayer(PlayerNetObject * player);
-	PlayerNetObject * findPlayerByNetId(uint32_t netId);
+	void freePlayer(PlayerNetObject * player);
+	PlayerNetObject * findPlayerByPlayerId(uint8_t playerId);
 	void setPlayerPtrs();
 	void clearPlayerPtrs();
 

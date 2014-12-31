@@ -219,7 +219,7 @@ const char * SoundBag::getRandomSound(GameSim & gameSim)
 void PlayerNetObject::handleAnimationAction(const std::string & action, const Dictionary & args)
 {
 	PlayerNetObject * playerNetObject = args.getPtrType<PlayerNetObject>("obj", 0);
-	if (playerNetObject && playerNetObject->m_isAuthorative)
+	if (playerNetObject)
 	{
 		if (g_devMode)
 		{
@@ -356,18 +356,14 @@ float Player::mirrorY(float y) const
 	return m_facing[1] > 0 ? y : PLAYER_COLLISION_HITBOX_SY - y;
 }
 
-PlayerNetObject::PlayerNetObject(uint32_t netId, uint16_t owningChannelId, Player * player, GameSim * gameSim)
+PlayerNetObject::PlayerNetObject(uint16_t owningChannelId, Player * player, GameSim * gameSim)
 	: m_player(player)
 	, m_playerId(-1)
 	, m_anim(player)
-	, m_isAuthorative(false)
 	, m_sprite(0)
 	, m_spriteScale(1.f)
 {
-	setNetId(netId);
-	setOwningChannelId(owningChannelId);
-
-	m_isAuthorative = true;
+	m_owningChannelId = owningChannelId;
 
 	m_player->m_netObject = this;
 	m_gameSim = gameSim;
@@ -695,7 +691,7 @@ void Player::tick(float dt)
 					m_pos[1] - mirrorY(44.f),
 					angle,
 					bulletType,
-					m_netObject->getNetId());
+					m_netObject->getPlayerId());
 			}
 
 			if (m_netObject->m_input.wentDown(INPUT_BUTTON_X) && isAnimOverrideAllowed(kPlayerAnim_Attack))
@@ -1350,26 +1346,23 @@ void Player::debugDraw()
 		damageCollision.x2 + 1,
 		damageCollision.y2 + 1);
 
-	if (m_netObject->m_isAuthorative)
+	if (m_attack.attacking && m_attack.hasCollision)
 	{
-		if (m_attack.attacking && m_attack.hasCollision)
-		{
-			CollisionInfo attackCollision;
-			getAttackCollision(attackCollision);
+		CollisionInfo attackCollision;
+		getAttackCollision(attackCollision);
 
-			Font font("calibri.ttf");
-			setFont(font);
+		Font font("calibri.ttf");
+		setFont(font);
 
-			setColor(colorWhite);
-			drawText(m_pos[0], m_pos[1], 14, 0.f, 0.f, "attacking");
+		setColor(colorWhite);
+		drawText(m_pos[0], m_pos[1], 14, 0.f, 0.f, "attacking");
 
-			setColor(255, 0, 0, 63);
-			drawRect(
-				attackCollision.x1,
-				attackCollision.y1,
-				attackCollision.x2,
-				attackCollision.y2);
-		}
+		setColor(255, 0, 0, 63);
+		drawRect(
+			attackCollision.x1,
+			attackCollision.y1,
+			attackCollision.x2,
+			attackCollision.y2);
 	}
 
 	setColor(colorWhite);

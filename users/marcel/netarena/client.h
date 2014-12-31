@@ -34,7 +34,7 @@ public:
 
 	void addPlayer(PlayerNetObject * player);
 	void removePlayer(PlayerNetObject * player);
-	PlayerNetObject * findPlayerByNetId(uint32_t netId);
+	PlayerNetObject * findPlayerByPlayerId(uint8_t playerId);
 	void setPlayerPtrs();
 	void clearPlayerPtrs();
 

@@ -108,10 +108,10 @@ static void HandleAction(const std::string & action, const Dictionary & args)
 	if (action == "char_select")
 	{
 		const int clientChannelId = args.getInt("client_channel", -1);
-		const int playerNetId = args.getInt("player_net_id", -1);
+		const int playerId = args.getInt("player_id", -1);
 		const int characterIndex = args.getInt("char", -1);
 
-		g_app->netSetPlayerCharacterIndex(clientChannelId, playerNetId, characterIndex);
+		g_app->netSetPlayerCharacterIndex(clientChannelId, playerId, characterIndex);
 	}
 }
 
@@ -220,19 +220,17 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		if (client)
 		{
 			uint16_t channelId;
-			uint32_t netId;
 			uint8_t index;
 			uint8_t characterIndex;
 
 			bitStream.Read(channelId);
-			bitStream.Read(netId);
 			bitStream.Read(index);
 			bitStream.Read(characterIndex);
 
 			Player * player = &client->m_gameSim->m_state.m_players[index];
 			*player = Player();
 
-			PlayerNetObject * netObject = new PlayerNetObject(netId, channelId, player, client->m_gameSim);
+			PlayerNetObject * netObject = new PlayerNetObject(channelId, player, client->m_gameSim);
 			netObject->setPlayerId(index);
 			player->m_netObject = netObject;
 			netObject->setCharacterIndex(characterIndex);
@@ -291,15 +289,15 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 	{
 		//LOG_DBG("handleRpc: s_rpcSetPlayerInputs");
 
-		uint32_t netId;
+		uint8_t playerId;
 		PlayerInput input;
 
-		bitStream.Read(netId);
+		bitStream.Read(playerId);
 		bitStream.Read(input.buttons);
 		bitStream.Read(input.analogX);
 		bitStream.Read(input.analogY);
 
-		PlayerNetObject * player = g_host->findPlayerByNetId(netId);
+		PlayerNetObject * player = g_host->findPlayerByPlayerId(playerId);
 
 		Assert(player);
 		if (player)
@@ -388,19 +386,19 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 	{
 		LOG_DBG("handleRpc: s_rpcSetPlayerCharacterIndex");
 
-		uint32_t netId;
+		uint8_t playerId;
 		uint8_t characterIndex;
 
-		bitStream.Read(netId);
+		bitStream.Read(playerId);
 		bitStream.Read(characterIndex);
 
-		PlayerNetObject * player = g_host->findPlayerByNetId(netId);
+		PlayerNetObject * player = g_host->findPlayerByPlayerId(playerId);
 		Assert(player);
 		if (player)
 		{
 			player->setCharacterIndex(characterIndex);
 		}
-		g_app->netBroadcastCharacterIndex(netId, characterIndex);
+		g_app->netBroadcastCharacterIndex(playerId, characterIndex);
 	}
 	else if (method == s_rpcSetPlayerCharacterIndexBroadcast)
 	{
@@ -410,13 +408,13 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		Assert(client);
 		if (client)
 		{
-			uint32_t netId;
+			uint8_t playerId;
 			uint8_t characterIndex;
 
-			bitStream.Read(netId);
+			bitStream.Read(playerId);
 			bitStream.Read(characterIndex);
 
-			PlayerNetObject * player = client->findPlayerByNetId(netId);
+			PlayerNetObject * player = client->findPlayerByPlayerId(playerId);
 			Assert(player);
 			if (player)
 			{
@@ -457,7 +455,7 @@ void App::processPlayerChanges()
 				PlayerNetObject * netObject = m_host->m_gameSim.m_players[i];
 
 				if (netObject)
-					netAddPlayerBroadcast(channel, netObject->getOwningChannelId(), netObject->getNetId(), i, netObject->getCharacterIndex());
+					netAddPlayerBroadcast(channel, netObject->getOwningChannelId(), i, netObject->getCharacterIndex());
 			}
 
 			m_host->syncNewClient(channel);
@@ -474,9 +472,7 @@ void App::processPlayerChanges()
 
 				player->setCharacterIndex(playerToAddOrRemove.characterIndex);
 
-				m_host->addPlayer(player);
-
-				netAddPlayerBroadcast(0, playerToAddOrRemove.channel->m_destinationId, player->getNetId(), player->getPlayerId(), player->getCharacterIndex());
+				netAddPlayerBroadcast(0, playerToAddOrRemove.channel->m_destinationId, player->getPlayerId(), player->getCharacterIndex());
 			}
 		}
 		else
@@ -485,7 +481,7 @@ void App::processPlayerChanges()
 
 			PlayerNetObject * player = m_host->m_gameSim.m_players[playerToAddOrRemove.playerId];
 
-			m_host->removePlayer(player);
+			m_host->freePlayer(player);
 			delete player;
 			player = 0;
 		}
@@ -557,59 +553,20 @@ void App::SV_OnChannelDisconnect(Channel * channel)
 
 bool App::OnReplicationObjectSerializeType(ReplicationClient * client, ReplicationObject * object, BitStream & bitStream)
 {
-	const NetObject * netObject = static_cast<NetObject*>(object);
-
-	const uint8_t type = netObject->getType();
-
-	bitStream.Write(type);
-
-	return true;
+	return false;
 }
 
 bool App::OnReplicationObjectCreateType(ReplicationClient * client, BitStream & bitStream, ReplicationObject ** out_object)
 {
-	Client * gameClient = static_cast<Client*>(client->m_up);
-
-	uint8_t type;
-
-	bitStream.Read(type);
-
-	NetObject * netObject = 0;
-
-	switch (type)
-	{
-	default:
-		Assert(false);
-		break;
-	}
-
-	return (netObject != 0);
+	return false;
 }
 
 void App::OnReplicationObjectCreated(ReplicationClient * client, ReplicationObject * object)
 {
-	Client * gameClient = static_cast<Client*>(client->m_up);
-	NetObject * netObject = static_cast<NetObject*>(object);
-
-	switch (netObject->getType())
-	{
-	default:
-		Assert(false);
-		break;
-	}
 }
 
 void App::OnReplicationObjectDestroyed(ReplicationClient * client, ReplicationObject * object)
 {
-	Client * gameClient = static_cast<Client*>(client->m_up);
-	NetObject * netObject = static_cast<NetObject*>(object);
-
-	switch (netObject->getType())
-	{
-	default:
-		Assert(false);
-		break;
-	}
 }
 
 //
@@ -1234,12 +1191,12 @@ void App::draw()
 						sprintf(name, "select_%d_%d", i, c);
 						Dictionary & button = (*m_discoveryUi)[name];
 						char props[1024];
-						sprintf(props, "type:button name:%s x:%d y:%d scale:0.65 action:char_select client_channel:%d player_net_id:%d char:%d image:button.png image_over:button-over.png image_down:button-down.png text:char text_color:000000 font:calibri.ttf font_size:24",
+						sprintf(props, "type:button name:%s x:%d y:%d scale:0.65 action:char_select client_channel:%d player_id:%d char:%d image:button.png image_over:button-over.png image_down:button-down.png text:char text_color:000000 font:calibri.ttf font_size:24",
 							name,
 							index * 150,
 							GFX_SY - 150 + c * 50,
 							client->m_channel->m_id,
-							player->getNetId(),
+							player->getPlayerId(),
 							c);
 						button.parse(props);
 					}
@@ -1305,14 +1262,13 @@ void App::netAddPlayer(Channel * channel, uint8_t characterIndex)
 	m_rpcMgr->Call(s_rpcAddPlayer, bs, ChannelPool_Client, &channel->m_id, false, false);
 }
 
-void App::netAddPlayerBroadcast(Channel * channel, uint16_t owningChannelId, uint32_t netId, uint8_t index, uint8_t characterIndex)
+void App::netAddPlayerBroadcast(Channel * channel, uint16_t owningChannelId, uint8_t index, uint8_t characterIndex)
 {
 	LOG_DBG("netAddPlayerBroadcast");
 
 	BitStream bs;
 
 	bs.Write(owningChannelId);
-	bs.Write(netId);
 	bs.Write(index);
 	bs.Write(characterIndex);
 
@@ -1348,14 +1304,14 @@ void App::netPlaySound(const char * filename, uint8_t volume)
 	m_rpcMgr->Call(s_rpcPlaySound, bs, ChannelPool_Server, 0, true, false);
 }
 
-void App::netSetPlayerInputs(uint16_t channelId, uint32_t netId, const PlayerInput & input)
+void App::netSetPlayerInputs(uint16_t channelId, uint8_t playerId, const PlayerInput & input)
 {
 	//if (g_devMode)
 	//	LOG_DBG("netSetPlayerInputs");
 
 	BitStream bs;
 
-	bs.Write(netId);
+	bs.Write(playerId);
 	bs.Write(input.buttons);
 	bs.Write(input.analogX);
 	bs.Write(input.analogY);
@@ -1401,7 +1357,7 @@ void App::netSetPlayerInputsBroadcast()
 	m_rpcMgr->Call(s_rpcBroadcastPlayerInputs, bs, ChannelPool_Server, 0, true, false);
 }
 
-void App::netSetPlayerCharacterIndex(uint16_t channelId, uint32_t netId, uint8_t characterIndex)
+void App::netSetPlayerCharacterIndex(uint16_t channelId, uint8_t playerId, uint8_t characterIndex)
 {
 	LOG_DBG("netSetPlayerCharacterIndex");
 
@@ -1409,13 +1365,13 @@ void App::netSetPlayerCharacterIndex(uint16_t channelId, uint32_t netId, uint8_t
 
 	BitStream bs;
 
-	bs.Write(netId);
+	bs.Write(playerId);
 	bs.Write(characterIndex);
 
 	m_rpcMgr->Call(s_rpcSetPlayerCharacterIndex, bs, ChannelPool_Client, &channelId, false, false);
 }
 
-void App::netBroadcastCharacterIndex(uint32_t netId, uint8_t characterIndex)
+void App::netBroadcastCharacterIndex(uint8_t playerId, uint8_t characterIndex)
 {
 	LOG_DBG("netBroadcastCharacterIndex");
 
@@ -1423,13 +1379,13 @@ void App::netBroadcastCharacterIndex(uint32_t netId, uint8_t characterIndex)
 
 	BitStream bs;
 
-	bs.Write(netId);
+	bs.Write(playerId);
 	bs.Write(characterIndex);
 
 	m_rpcMgr->Call(s_rpcSetPlayerCharacterIndexBroadcast, bs, ChannelPool_Server, 0, true, false);
 }
 
-uint16_t App::netSpawnBullet(GameSim & gameSim, int16_t x, int16_t y, uint8_t _angle, uint8_t type, uint32_t ownerNetId)
+uint16_t App::netSpawnBullet(GameSim & gameSim, int16_t x, int16_t y, uint8_t _angle, uint8_t type, uint8_t ownerPlayerId)
 {
 	const uint16_t id = gameSim.m_bulletPool->alloc();
 
@@ -1487,7 +1443,7 @@ uint16_t App::netSpawnBullet(GameSim & gameSim, int16_t x, int16_t y, uint8_t _a
 
 		b.setVel(angle, velocity);
 
-		b.ownerNetId = ownerNetId;
+		b.ownerPlayerId = ownerPlayerId;
 	}
 
 	return id;

@@ -43,10 +43,6 @@ Host::~Host()
 
 void Host::init()
 {
-	m_freePlayerIds.clear();
-	for (int i = 0; i < MAX_PLAYERS; ++i)
-		m_freePlayerIds.push_back(i);
-
 	g_host = this;
 }
 
@@ -80,12 +76,13 @@ void Host::tickPlay(float dt)
 {
 	bool roundComplete = false;
 
-	for (auto i = m_players.begin(); i != m_players.end(); ++i)
+	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		PlayerNetObject * playerNetObject = *i;
-		Player * player = playerNetObject->m_player;
+		Player & player = m_gameSim.m_state.m_players[i];
+		if (!player.m_isUsed)
+			continue;
 
-		if (playerNetObject->getScore() >= g_roundCompleteScore)
+		if (player.m_score >= g_roundCompleteScore)
 		{
 			roundComplete = true;
 		}
@@ -113,12 +110,13 @@ void Host::debugDraw()
 {
 	//setPlayerPtrs(); // fixme : enable once full simulation runs on clients
 
-	for (auto i = m_players.begin(); i != m_players.end(); ++i)
+	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		PlayerNetObject * playerNetObject = *i;
-		Player * player = playerNetObject->m_player;
+		Player & player = m_gameSim.m_state.m_players[i];
+		if (!player.m_isUsed)
+			continue;
 
-		player->debugDraw();
+		player.debugDraw();
 	}
 
 	//clearPlayerPtrs();
@@ -174,65 +172,48 @@ void Host::endRound()
 
 PlayerNetObject * Host::allocPlayer(uint16_t owningChannelId)
 {
-	if (m_freePlayerIds.empty())
-		return 0;
-	else
+	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		// allocate player ID
+		Player & player = m_gameSim.m_state.m_players[i];
+		if (player.m_isUsed)
+			continue;
 
-		std::sort(m_freePlayerIds.begin(), m_freePlayerIds.end(), std::greater<int>());
-		const int playerId = m_freePlayerIds.back();
-		m_freePlayerIds.pop_back();
+		player = Player();
+		player.m_isUsed = true;
 
-		Player * player = &m_gameSim.m_state.m_players[playerId];
-		*player = Player();
+		PlayerNetObject * netObject = new PlayerNetObject(owningChannelId, &player, &m_gameSim);
+		netObject->setPlayerId(i);
 
-		PlayerNetObject * netObject = new PlayerNetObject(allocNetId(), owningChannelId, player, &m_gameSim);
-		netObject->setPlayerId(playerId);
-
-		m_gameSim.m_players[playerId] = netObject;
+		m_gameSim.m_players[i] = netObject;
 
 		return netObject;
 	}
+
+	return 0;
 }
 
-void Host::addPlayer(PlayerNetObject * player)
+void Host::freePlayer(PlayerNetObject * player)
 {
-	m_players.push_back(player);
-}
+	const int playerId = player->getPlayerId();
 
-void Host::removePlayer(PlayerNetObject * player)
-{
-	auto i = std::find(m_players.begin(), m_players.end(), player);
-
-	Assert(i != m_players.end());
-	if (i != m_players.end())
+	if (playerId != -1)
 	{
-		const int playerId = player->getPlayerId();
-
-		if (playerId != -1)
+		Assert(m_gameSim.m_players[playerId] != 0);
+		if (m_gameSim.m_players[playerId] != 0)
 		{
-			Assert(m_gameSim.m_players[playerId] != 0);
-			if (m_gameSim.m_players[playerId] != 0)
-			{
-				m_gameSim.m_players[playerId]->m_player->m_netObject = 0;
-				m_gameSim.m_players[playerId] = 0;
-			}
-
-			m_freePlayerIds.push_back(player->getPlayerId());
+			m_gameSim.m_players[playerId]->m_player->m_isUsed = false;
+			m_gameSim.m_players[playerId]->m_player->m_netObject = 0;
+			m_gameSim.m_players[playerId] = 0;
 		}
-
-		m_players.erase(i);
 	}
 }
 
-PlayerNetObject * Host::findPlayerByNetId(uint32_t netId)
+PlayerNetObject * Host::findPlayerByPlayerId(uint8_t playerId)
 {
-	for (auto i = m_players.begin(); i != m_players.end(); ++i)
+	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		PlayerNetObject * player = *i;
-
-		if (player->getNetId() == netId)
+		PlayerNetObject * player = m_gameSim.m_players[i];
+		if (player && player->getPlayerId() == playerId)
 			return player;
 	}
 
@@ -241,14 +222,22 @@ PlayerNetObject * Host::findPlayerByNetId(uint32_t netId)
 
 void Host::setPlayerPtrs()
 {
-	for (auto i = m_players.begin(); i != m_players.end(); ++i)
-		(*i)->m_player->m_netObject = (*i);
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+	{
+		PlayerNetObject * player = m_gameSim.m_players[i];
+		if (player)
+			player->m_player->m_netObject = player;
+	}
 }
 
 void Host::clearPlayerPtrs()
 {
-	for (auto i = m_players.begin(); i != m_players.end(); ++i)
-		(*i)->m_player->m_netObject = 0;
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+	{
+		PlayerNetObject * player = m_gameSim.m_players[i];
+		if (player)
+			player->m_player->m_netObject = 0;
+	}
 }
 
 void Host::trySpawnPickup(PickupType type)

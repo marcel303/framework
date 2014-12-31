@@ -150,7 +150,7 @@ void Client::tick(float dt)
 			{
 				playerNetObject->m_input.m_currState = input;
 
-				g_app->netSetPlayerInputs(m_channel->m_id, playerNetObject->getNetId(), input);
+				g_app->netSetPlayerInputs(m_channel->m_id, playerNetObject->getPlayerId(), input);
 			}
 		}
 	}
@@ -289,6 +289,8 @@ void Client::drawRoundComplete()
 
 void Client::addPlayer(PlayerNetObject * player)
 {
+	player->m_player->m_isUsed = true;
+
 	m_players.push_back(player);
 
 	m_gameSim->m_players[player->getPlayerId()] = player;
@@ -322,6 +324,7 @@ void Client::removePlayer(PlayerNetObject * player)
 			Assert(m_gameSim->m_players[playerId] != 0);
 			if (m_gameSim->m_players[playerId] != 0)
 			{
+				m_gameSim->m_players[playerId]->m_player->m_isUsed = false;
 				m_gameSim->m_players[playerId]->m_player->m_netObject = 0;
 				m_gameSim->m_players[playerId] = 0;
 			}
@@ -331,12 +334,12 @@ void Client::removePlayer(PlayerNetObject * player)
 	}
 }
 
-PlayerNetObject * Client::findPlayerByNetId(uint32_t netId)
+PlayerNetObject * Client::findPlayerByPlayerId(uint8_t playerId)
 {
 	for (auto p = m_players.begin(); p != m_players.end(); ++p)
 	{
 		PlayerNetObject * player = *p;
-		if (player->getNetId() == netId)
+		if (player->getPlayerId() == playerId)
 			return player;
 	}
 

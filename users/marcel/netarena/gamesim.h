@@ -64,6 +64,7 @@ struct Player
 
 	char * makeCharacterFilename(const char * filename);
 
+	bool m_isUsed;
 	bool m_isAlive;
 	uint8_t m_characterIndex;
 	float m_controlDisableTime;

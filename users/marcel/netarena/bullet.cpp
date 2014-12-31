@@ -216,14 +216,16 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 
 				Player * owner = 0;
 
-				if (b.ownerNetId != 0)
+				if (b.ownerPlayerId != -1)
 				{
 					for (int p = 0; p < MAX_PLAYERS; ++p)
 					{
-						PlayerNetObject * player = gameSim.m_players[p];
+						Player & player = gameSim.m_state.m_players[p];
+						if (!player.m_isUsed)
+							continue;
 
-						if (player && player->getNetId() == b.ownerNetId)
-							owner = player->m_player;
+						if (p == b.ownerPlayerId)
+							owner = &player;
 					}
 
 					if (owner == 0)
@@ -236,20 +238,19 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 
 					for (int p = 0; p < MAX_PLAYERS; ++p)
 					{
-						PlayerNetObject * playerNetObject = gameSim.m_players[p];
-
-						if (!playerNetObject || playerNetObject->getNetId() == b.ownerNetId)
+						if (p == b.ownerPlayerId)
 							continue;
-
-						Player * player = playerNetObject->m_player;
+						Player & player = gameSim.m_state.m_players[p];
+						if (!player.m_isUsed)
+							continue;
 
 						CollisionInfo collisionInfo;
 
-						player->getPlayerCollision(collisionInfo);
+						player.getPlayerCollision(collisionInfo);
 
 						if (collisionInfo.intersects(b.pos[0], b.pos[1]))
 						{
-							if (player->handleDamage(1.f, b.vel, owner))
+							if (player.handleDamage(1.f, b.vel, owner))
 								kill = true;
 						}
 					}
@@ -298,7 +299,7 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 								b.pos[1],
 								gameSim.Random() % 256,
 								kBulletType_GrenadeA,
-								b.ownerNetId);
+								b.ownerPlayerId);
 						}
 
 						g_app->netPlaySound("grenade-explode.ogg");
