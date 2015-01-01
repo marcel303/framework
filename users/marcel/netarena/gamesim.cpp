@@ -1,4 +1,5 @@
 #include "bullet.h"
+#include "client.h"
 #include "framework.h"
 #include "gamedefs.h"
 #include "gamesim.h"
@@ -148,6 +149,8 @@ void GameSim::setGameState(::GameState gameState)
 
 	if (gameState == kGameState_Play)
 	{
+		playSound("round-begin.ogg");
+
 		// reset pickups
 
 		for (int i = 0; i < MAX_PICKUPS; ++i)
@@ -280,6 +283,14 @@ void GameSim::anim(float dt)
 	m_particlePool->tick(*this, dt);
 }
 
+void GameSim::playSound(const char * filename, int volume)
+{
+	if (!g_app->getSelectedClient() || g_app->getSelectedClient()->m_gameSim != this)
+		return;
+
+	Sound(filename).play(volume);
+}
+
 void GameSim::trySpawnPickup(PickupType type)
 {
 	for (int i = 0; i < MAX_PICKUPS; ++i)
@@ -347,7 +358,7 @@ Pickup * GameSim::grabPickup(int x1, int y1, int x2, int y2)
 				m_grabbedPickup = pickup;
 				pickup.isAlive = false;
 
-				g_app->netPlaySound("gun-pickup.ogg");
+				playSound("gun-pickup.ogg");
 
 				return &m_grabbedPickup;
 			}

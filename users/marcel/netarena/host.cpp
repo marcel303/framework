@@ -158,8 +158,6 @@ void Host::newRound(const char * mapOverride)
 	g_app->netSetGameState(kGameState_Play);
 
 	m_nextRoundNumber++;
-
-	g_app->netPlaySound("round-begin.ogg");
 }
 
 void Host::endRound()

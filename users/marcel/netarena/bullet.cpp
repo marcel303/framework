@@ -302,12 +302,12 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 								b.ownerPlayerId);
 						}
 
-						g_app->netPlaySound("grenade-explode.ogg");
+						gameSim.playSound("grenade-explode.ogg");
 					}
 
 					if (b.type == kBulletType_GrenadeA)
 					{
-						g_app->netPlaySound("grenade-frag.ogg");
+						gameSim.playSound("grenade-frag.ogg");
 
 						const float strength = 5.f;
 						gameSim.addScreenShake(

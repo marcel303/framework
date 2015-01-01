@@ -270,6 +270,8 @@ public:
 	void tickRoundComplete();
 	void anim(float dt);
 
+	void playSound(const char * filename, int volume = 100);
+
 	void trySpawnPickup(PickupType type);
 	void spawnPickup(Pickup & pickup, PickupType type, int blockX, int blockY);
 	Pickup * grabPickup(int x1, int y1, int x2, int y2);

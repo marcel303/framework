@@ -206,11 +206,11 @@ void PlayerNetObject::handleAnimationAction(const std::string & action, const Di
 		}	
 		else if (action == "sound")
 		{
-			g_app->netPlaySound(args.getString("file", "").c_str(), args.getInt("volume", 100));
+			playerNetObject->m_gameSim->playSound(args.getString("file", "").c_str(), args.getInt("volume", 100));
 		}
 		else if (action == "char_sound")
 		{
-			g_app->netPlaySound(player->makeCharacterFilename(args.getString("file", "").c_str()), args.getInt("volume", 100));
+			playerNetObject->m_gameSim->playSound(player->makeCharacterFilename(args.getString("file", "").c_str()), args.getInt("volume", 100));
 		}
 		else if (action == "char_soundbag")
 		{
@@ -380,10 +380,10 @@ void Player::playSecondaryEffects(PlayerEvent e)
 	case kPlayerEvent_Spawn:
 		break;
 	case kPlayerEvent_Respawn:
-		g_app->netPlaySound(makeCharacterFilename(m_netObject->m_sounds["respawn"].getRandomSound(*m_netObject->m_gameSim)));
+		m_netObject->m_gameSim->playSound(makeCharacterFilename(m_netObject->m_sounds["respawn"].getRandomSound(*m_netObject->m_gameSim)));
 		break;
 	case kPlayerEvent_Die:
-		g_app->netPlaySound(makeCharacterFilename("die/die.ogg"));
+		m_netObject->m_gameSim->playSound(makeCharacterFilename("die/die.ogg"));
 		break;
 	case kPlayerEvent_Jump:
 		{
@@ -394,33 +394,33 @@ void Player::playSecondaryEffects(PlayerEvent e)
 			break;
 		}
 	case kPlayerEvent_WallJump:
-		g_app->netPlaySound(makeCharacterFilename("walljump.ogg"));
+		m_netObject->m_gameSim->playSound(makeCharacterFilename("walljump.ogg"));
 		break;
 	case kPlayerEvent_LandOnGround:
-		g_app->netPlaySound(makeCharacterFilename("land_on_ground.ogg"), 25);
+		m_netObject->m_gameSim->playSound(makeCharacterFilename("land_on_ground.ogg"), 25);
 		break;
 	case kPlayerEvent_StickyAttach:
-		g_app->netPlaySound("player-sticky-attach.ogg");
+		m_netObject->m_gameSim->playSound("player-sticky-attach.ogg");
 		break;
 	case kPlayerEvent_StickyRelease:
-		g_app->netPlaySound("player-sticky-release.ogg");
+		m_netObject->m_gameSim->playSound("player-sticky-release.ogg");
 		break;
 	case kPlayerEvent_StickyJump:
-		g_app->netPlaySound("player-sticky-jump.ogg");
+		m_netObject->m_gameSim->playSound("player-sticky-jump.ogg");
 		break;
 	case kPlayerEvent_SpringJump:
-		g_app->netPlaySound("player-spring-jump.ogg");
+		m_netObject->m_gameSim->playSound("player-spring-jump.ogg");
 		break;
 	case kPlayerEvent_SpikeHit:
-		g_app->netPlaySound("player-spike-hit.ogg");
+		m_netObject->m_gameSim->playSound("player-spike-hit.ogg");
 		break;
 	case kPlayerEvent_ArenaWrap:
-		g_app->netPlaySound("player-arena-wrap.ogg");
+		m_netObject->m_gameSim->playSound("player-arena-wrap.ogg");
 		break;
 	case kPlayerEvent_DashAir:
 		break;
 	case kPlayerEvent_DestructibleDestroy:
-		g_app->netPlaySound("player-arena-wrap.ogg");
+		m_netObject->m_gameSim->playSound("player-arena-wrap.ogg");
 		break;
 	}
 }
@@ -595,7 +595,7 @@ void Player::tick(float dt)
 									players[i]->m_attack.attacking = false;
 								}
 
-								g_app->netPlaySound("melee-cancel.ogg");
+								m_netObject->m_gameSim->playSound("melee-cancel.ogg");
 							}
 							else
 							{
@@ -646,7 +646,7 @@ void Player::tick(float dt)
 				if (m_weaponType == kPlayerWeapon_Grenade)
 				{
 					bulletType = kBulletType_Grenade;
-					g_app->netPlaySound("grenade-throw.ogg");
+					m_netObject->m_gameSim->playSound("grenade-throw.ogg");
 				}
 
 				if (anim != -1)
@@ -1549,7 +1549,7 @@ void PlayerNetObject::playSoundBag(const char * name, int volume)
 			m_sounds[name].load(m_props.getString(name, ""), true);
 	}
 
-	g_app->netPlaySound(m_player->makeCharacterFilename(m_sounds[name].getRandomSound(*m_gameSim)), volume);
+	m_gameSim->playSound(m_player->makeCharacterFilename(m_sounds[name].getRandomSound(*m_gameSim)), volume);
 }
 
 char * Player::makeCharacterFilename(const char * filename)

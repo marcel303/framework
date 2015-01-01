@@ -118,7 +118,6 @@ public:
 	void netAddPlayerBroadcast(Channel * channel, uint16_t owningChannelId, uint8_t index, uint8_t characterIndex);
 	void netRemovePlayer(uint8_t index);
 	void netRemovePlayerBroadcast(uint8_t index);
-	void netPlaySound(const char * filename, uint8_t volume = 100);
 	void netSetPlayerInputs(uint16_t channelId, uint8_t playerId, const PlayerInput & input);
 	void netSetPlayerInputsBroadcast();
 	void netSetPlayerCharacterIndex(uint16_t channelId, uint8_t playerId, uint8_t characterIndex);

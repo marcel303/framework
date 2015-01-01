@@ -128,7 +128,6 @@ enum RpcMethod
 	s_rpcAddPlayerBroadcast,
 	s_rpcRemovePlayer,
 	s_rpcRemovePlayerBroadcast,
-	s_rpcPlaySound,
 	s_rpcSetPlayerInputs,
 	s_rpcBroadcastPlayerInputs,
 	s_rpcSetPlayerCharacterIndex,
@@ -271,20 +270,6 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			const uint32_t crc2 = client->m_gameSim->calcCRC();
 
 			LOG_DBG("remove CRCs: %08x, %08x", crc1, crc2);
-		}
-	}
-	else if (method == s_rpcPlaySound)
-	{
-		const std::string filename = bitStream.ReadString();
-		uint8_t volume;
-		bitStream.Read(volume);
-
-		if (g_app->isSelectedClient(channel))
-		{
-			if (!g_noSound)
-			{
-				Sound(filename.c_str()).play(volume);
-			}
 		}
 	}
 	else if (method == s_rpcSetPlayerInputs)
@@ -1305,16 +1290,6 @@ void App::netRemovePlayerBroadcast(uint8_t index)
 	bs.Write(index);
 
 	m_rpcMgr->Call(s_rpcRemovePlayerBroadcast, bs, ChannelPool_Server, 0, true, false);
-}
-
-void App::netPlaySound(const char * filename, uint8_t volume)
-{
-	BitStream bs;
-
-	bs.WriteString(filename);
-	bs.Write(volume);
-
-	m_rpcMgr->Call(s_rpcPlaySound, bs, ChannelPool_Server, 0, true, false);
 }
 
 void App::netSetPlayerInputs(uint16_t channelId, uint8_t playerId, const PlayerInput & input)
