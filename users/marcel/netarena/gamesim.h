@@ -276,6 +276,7 @@ public:
 	void spawnPickup(Pickup & pickup, PickupType type, int blockX, int blockY);
 	Pickup * grabPickup(int x1, int y1, int x2, int y2);
 
+	uint16_t spawnBullet(int16_t x, int16_t y, uint8_t angle, uint8_t type, uint8_t ownerPlayerId);
 	void spawnParticles(const ParticleSpawnInfo & spawnInfo);
 
 	void addScreenShake(float dx, float dy, float stiffness, float life);

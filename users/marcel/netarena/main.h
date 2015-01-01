@@ -122,7 +122,6 @@ public:
 	void netSetPlayerInputsBroadcast();
 	void netSetPlayerCharacterIndex(uint16_t channelId, uint8_t playerId, uint8_t characterIndex);
 	void netBroadcastCharacterIndex(uint8_t playerId, uint8_t characterIndex);
-	uint16_t netSpawnBullet(GameSim & gameSim, int16_t x, int16_t y, uint8_t angle, uint8_t type, uint8_t ownerPlayerId);
 
 	int allocControllerIndex();
 	void freeControllerIndex(int index);

@@ -293,8 +293,7 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 							LOG_DBG("Random called from kBulletType_Grenade explode");
 						for (int i = 0; i < BULLET_GRENADE_FRAG_COUNT; ++i)
 						{
-							g_app->netSpawnBullet(
-								gameSim,
+							gameSim.spawnBullet(
 								b.pos[0],
 								b.pos[1],
 								gameSim.Random() % 256,

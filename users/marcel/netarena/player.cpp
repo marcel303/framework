@@ -673,8 +673,7 @@ void Player::tick(float dt)
 					angle = 0;
 
 				Assert(bulletType != kBulletType_COUNT);
-				g_app->netSpawnBullet(
-					*m_netObject->m_gameSim,
+				m_netObject->m_gameSim->spawnBullet(
 					m_pos[0] + mirrorX(0.f),
 					m_pos[1] - mirrorY(44.f),
 					angle,

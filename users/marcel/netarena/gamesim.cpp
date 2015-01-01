@@ -368,6 +368,70 @@ Pickup * GameSim::grabPickup(int x1, int y1, int x2, int y2)
 	return 0;
 }
 
+uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, uint8_t type, uint8_t ownerPlayerId)
+{
+	const uint16_t id = m_bulletPool->alloc();
+
+	if (id != INVALID_BULLET_ID)
+	{
+		Bullet & b = m_bulletPool->m_bullets[id];
+
+		Assert(!b.isAlive);
+		memset(&b, 0, sizeof(b));
+		b.isAlive = true;
+		b.type = static_cast<BulletType>(type);
+		b.pos[0] = x;
+		b.pos[1] = y;
+		b.color = 0xffffffff;
+
+		float angle = _angle / 128.f * float(M_PI);
+		float velocity = 0.f;
+
+		switch (type)
+		{
+		case kBulletType_A:
+			velocity = BULLET_TYPE0_SPEED;
+			b.maxWrapCount = BULLET_TYPE0_MAX_WRAP_COUNT;
+			b.maxReflectCount = BULLET_TYPE0_MAX_REFLECT_COUNT;
+			b.maxDistanceTravelled = BULLET_TYPE0_MAX_DISTANCE_TRAVELLED;
+			b.maxDestroyedBlocks = 1;
+			break;
+		case kBulletType_B:
+			velocity = BULLET_TYPE0_SPEED;
+			b.maxWrapCount = BULLET_TYPE0_MAX_WRAP_COUNT;
+			b.maxReflectCount = BULLET_TYPE0_MAX_REFLECT_COUNT;
+			b.maxDistanceTravelled = BULLET_TYPE0_MAX_DISTANCE_TRAVELLED;
+			b.maxDestroyedBlocks = 1;
+			break;
+		case kBulletType_Grenade:
+			velocity = BULLET_GRENADE_NADE_SPEED;
+			b.maxWrapCount = 100;
+			b.doGravity = true;
+			b.doBounce = true;
+			b.bounceAmount = BULLET_GRENADE_NADE_BOUNCE_AMOUNT;
+			b.noDamageMap = true;
+			b.life = BULLET_GRENADE_NADE_LIFE;
+			break;
+		case kBulletType_GrenadeA:
+			velocity = RandomFloat(BULLET_GRENADE_FRAG_SPEED_MIN, BULLET_GRENADE_FRAG_SPEED_MAX);
+			b.maxWrapCount = 1;
+			b.maxReflectCount = 0;
+			b.maxDistanceTravelled = RandomFloat(BULLET_GRENADE_FRAG_RADIUS_MIN, BULLET_GRENADE_FRAG_RADIUS_MAX);
+			b.maxDestroyedBlocks = 1;
+			break;
+		default:
+			Assert(false);
+			break;
+		}
+
+		b.setVel(angle, velocity);
+
+		b.ownerPlayerId = ownerPlayerId;
+	}
+
+	return id;
+}
+
 void GameSim::spawnParticles(const ParticleSpawnInfo & spawnInfo)
 {
 	for (int i = 0; i < spawnInfo.count; ++i)
