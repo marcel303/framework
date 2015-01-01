@@ -24,6 +24,14 @@ struct Player
 	Player()
 	{
 		memset(this, 0, sizeof(Player));
+	}
+
+	Player(uint8_t index, uint16_t owningChannelId)
+	{
+		memset(this, 0, sizeof(Player));
+
+		m_index = index;
+		m_owningChannelId = owningChannelId;
 
 		m_characterIndex = -1;
 		m_facing.Set(+1.f, +1.f);
@@ -52,6 +60,12 @@ struct Player
 	float mirrorX(float x) const;
 	float mirrorY(float y) const;
 
+	bool hasValidCharacterIndex() const;
+
+	void setAnim(int anim, bool play, bool restart);
+	void setAttackDirection(int dx, int dy);
+	void applyAnim();
+
 	uint32_t getIntersectingBlocksMaskInternal(int x, int y, bool doWrap) const;
 	uint32_t getIntersectingBlocksMask(int x, int y) const;
 
@@ -65,6 +79,10 @@ struct Player
 	char * makeCharacterFilename(const char * filename);
 
 	bool m_isUsed;
+
+	uint8_t m_index;
+	uint16_t m_owningChannelId;
+
 	bool m_isAlive;
 	uint8_t m_characterIndex;
 	float m_controlDisableTime;
@@ -222,11 +240,9 @@ struct GameStateData
 class GameSim : public GameStateData
 {
 public:
-	bool m_isAuthorative;
+	// serialized
 
 	Arena m_arena;
-
-	PlayerNetObject * m_playerNetObjects[MAX_PLAYERS];
 
 	BulletPool * m_bulletPool;
 
@@ -234,7 +250,11 @@ public:
 
 	ScreenShake m_screenShakes[MAX_SCREEN_SHAKES];
 
-	GameSim(bool isAuthorative);
+	// non-serialized (RPC)
+
+	PlayerNetObject * m_playerNetObjects[MAX_PLAYERS];
+
+	GameSim();
 	~GameSim();
 
 	uint32_t calcCRC() const;

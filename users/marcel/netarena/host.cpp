@@ -28,7 +28,7 @@ extern std::vector<std::string> g_mapList;
 Host * g_host = 0;
 
 Host::Host()
-	: m_gameSim(true)
+	: m_gameSim()
 	, m_nextNetId(1) // 0 = unassigned
 	, m_nextRoundNumber(0)
 	, m_roundCompleteTimer(0)
@@ -177,11 +177,10 @@ PlayerNetObject * Host::allocPlayer(uint16_t owningChannelId)
 		if (player.m_isUsed)
 			continue;
 
-		player = Player();
+		player = Player(i, owningChannelId);
 		player.m_isUsed = true;
 
-		PlayerNetObject * netObject = new PlayerNetObject(owningChannelId, &player, &m_gameSim);
-		netObject->setPlayerId(i);
+		PlayerNetObject * netObject = new PlayerNetObject(&player, &m_gameSim);
 
 		m_gameSim.m_playerNetObjects[i] = netObject;
 
@@ -193,7 +192,7 @@ PlayerNetObject * Host::allocPlayer(uint16_t owningChannelId)
 
 void Host::freePlayer(PlayerNetObject * player)
 {
-	const int playerId = player->getPlayerId();
+	const int playerId = player->m_player->m_index;
 
 	if (playerId != -1)
 	{
@@ -212,7 +211,7 @@ PlayerNetObject * Host::findPlayerByPlayerId(uint8_t playerId)
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
 		PlayerNetObject * player = m_gameSim.m_playerNetObjects[i];
-		if (player && player->getPlayerId() == playerId)
+		if (player && player->m_player->m_index == playerId)
 			return player;
 	}
 

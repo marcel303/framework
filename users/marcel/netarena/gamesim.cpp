@@ -40,9 +40,8 @@ uint32_t GameStateData::GetTick()
 
 //
 
-GameSim::GameSim(bool isAuthorative)
+GameSim::GameSim()
 	: GameStateData()
-	, m_isAuthorative(isAuthorative)
 	, m_bulletPool(0)
 {
 	m_arena.init();
@@ -50,7 +49,7 @@ GameSim::GameSim(bool isAuthorative)
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 		m_playerNetObjects[i] = 0;
 
-	m_bulletPool = new BulletPool(!isAuthorative);
+	m_bulletPool = new BulletPool(false);
 
 	m_particlePool = new BulletPool(true);
 }
@@ -102,7 +101,11 @@ void GameSim::serialize(NetSerializationContext & context)
 		if (m_playerNetObjects[i])
 			m_playerNetObjects[i]->m_player->m_netObject = m_playerNetObjects[i];
 
+	// todo : serialize player animation state
+
 	m_arena.serialize(context);
+
+	m_bulletPool->serialize(context);
 
 	if (context.IsRecv())
 		Assert(crc == calcCRC());

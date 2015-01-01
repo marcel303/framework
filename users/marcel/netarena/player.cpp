@@ -113,61 +113,6 @@ struct PlayerAnimInfo
 
 //
 
-void PlayerAnim_NS::SetAnim(int anim, bool play, bool restart)
-{
-	if (anim != m_player->m_anim || play != m_player->m_animPlay || restart)
-	{
-		m_player->m_anim = anim;
-		m_player->m_animPlay = play;
-
-		ApplyAnim();
-	}
-}
-
-void PlayerAnim_NS::SetAttackDirection(int dx, int dy)
-{
-	m_player->m_attackDirection[0] = dx;
-	m_player->m_attackDirection[1] = dy;
-
-	ApplyAnim();
-}
-
-void PlayerAnim_NS::SetPlay(bool play)
-{
-	if (play != m_player->m_animPlay)
-	{
-		m_player->m_animPlay = play;
-
-		ApplyAnim();
-	}
-}
-
-void PlayerAnim_NS::ApplyAnim()
-{
-	if (m_player->m_anim != kPlayerAnim_NULL)
-	{
-		delete m_player->m_netObject->m_sprite;
-		m_player->m_netObject->m_sprite = 0;
-
-		char filename[64];
-		sprintf_s(filename, sizeof(filename), s_animInfos[m_player->m_anim].file, m_player->m_netObject->getCharacterIndex());
-
-		m_player->m_netObject->m_sprite = new Sprite(filename, 0.f, 0.f, 0, false);
-		m_player->m_netObject->m_sprite->animActionHandler = PlayerNetObject::handleAnimationAction;
-		m_player->m_netObject->m_sprite->animActionHandlerObj = m_player->m_netObject;
-	}
-
-	if (m_player->m_netObject->m_sprite)
-	{
-		if (m_player->m_animPlay)
-			m_player->m_netObject->m_sprite->startAnim("anim");
-		else
-			m_player->m_netObject->m_sprite->stopAnim();
-	}
-}
-
-//
-
 SoundBag::SoundBag()
 	: m_lastIndex(-1)
 	, m_random(false)
@@ -356,17 +301,63 @@ float Player::mirrorY(float y) const
 	return m_facing[1] > 0 ? y : PLAYER_COLLISION_HITBOX_SY - y;
 }
 
-PlayerNetObject::PlayerNetObject(uint16_t owningChannelId, Player * player, GameSim * gameSim)
+bool Player::hasValidCharacterIndex() const
+{
+	return m_characterIndex != (uint8_t)-1;
+}
+
+void Player::setAnim(int anim, bool play, bool restart)
+{
+	if (anim != m_anim || play != m_animPlay || restart)
+	{
+		m_anim = anim;
+		m_animPlay = play;
+
+		applyAnim();
+	}
+}
+
+void Player::setAttackDirection(int dx, int dy)
+{
+	m_attackDirection[0] = dx;
+	m_attackDirection[1] = dy;
+
+	applyAnim();
+}
+
+void Player::applyAnim()
+{
+	if (m_anim != kPlayerAnim_NULL)
+	{
+		delete m_netObject->m_sprite;
+		m_netObject->m_sprite = 0;
+
+		char filename[64];
+		sprintf_s(filename, sizeof(filename), s_animInfos[m_anim].file, m_characterIndex);
+
+		m_netObject->m_sprite = new Sprite(filename, 0.f, 0.f, 0, false);
+		m_netObject->m_sprite->animActionHandler = PlayerNetObject::handleAnimationAction;
+		m_netObject->m_sprite->animActionHandlerObj = m_netObject;
+	}
+
+	if (m_netObject->m_sprite)
+	{
+		if (m_animPlay)
+			m_netObject->m_sprite->startAnim("anim");
+		else
+			m_netObject->m_sprite->stopAnim();
+	}
+}
+
+//
+
+PlayerNetObject::PlayerNetObject(Player * player, GameSim * gameSim)
 	: m_player(player)
-	, m_playerId(-1)
-	, m_anim(player)
+	, m_gameSim(gameSim)
 	, m_sprite(0)
 	, m_spriteScale(1.f)
 {
-	m_owningChannelId = owningChannelId;
-
 	m_player->m_netObject = this;
-	m_gameSim = gameSim;
 
 	//
 
@@ -573,15 +564,12 @@ void Player::tick(float dt)
 
 				for (int i = 0; i < MAX_PLAYERS; ++i)
 				{
-					if (m_netObject->m_gameSim->m_playerNetObjects[i])
+					Player & other = g_gameSim->m_players[i];
+
+					if (other.m_isUsed && &other != this)
 					{
-						Player * other = m_netObject->m_gameSim->m_playerNetObjects[i]->m_player;
-
-						if (other == this)
-							continue;
-
-						float damage1 = getAttackDamage(other);
-						float damage2 = other->getAttackDamage(this);
+						float damage1 = getAttackDamage(&other);
+						float damage2 = other.getAttackDamage(this);
 
 						if (damage1 != 0.f)
 						{
@@ -589,7 +577,7 @@ void Player::tick(float dt)
 							{
 								//log("-> attack cancel");
 
-								Player * players[2] = { this, other };
+								Player * players[2] = { this, &other };
 
 								const Vec2 midPoint = (players[0]->m_pos + players[1]->m_pos) / 2.f;
 
@@ -613,7 +601,7 @@ void Player::tick(float dt)
 							{
 								//log("-> attack damage");
 
-								other->handleDamage(1.f, Vec2(m_facing[0] * PLAYER_SWORD_PUSH_SPEED, 0.f), this);
+								other.handleDamage(1.f, Vec2(m_facing[0] * PLAYER_SWORD_PUSH_SPEED, 0.f), this);
 							}
 						}
 					}
@@ -663,7 +651,7 @@ void Player::tick(float dt)
 
 				if (anim != -1)
 				{
-					m_netObject->m_anim.SetAnim(anim, true, true);
+					setAnim(anim, true, true);
 					m_isAnimDriven = true;
 
 					m_attack.attacking = true;
@@ -691,7 +679,7 @@ void Player::tick(float dt)
 					m_pos[1] - mirrorY(44.f),
 					angle,
 					bulletType,
-					m_netObject->getPlayerId());
+					m_index);
 			}
 
 			if (m_netObject->m_input.wentDown(INPUT_BUTTON_X) && isAnimOverrideAllowed(kPlayerAnim_Attack))
@@ -707,24 +695,24 @@ void Player::tick(float dt)
 
 				if (m_netObject->m_input.isDown(INPUT_BUTTON_UP))
 				{
-					m_netObject->m_anim.SetAttackDirection(0, -1);
+					setAttackDirection(0, -1);
 					anim = kPlayerAnim_AttackUp;
 				}
 				else if (m_netObject->m_input.isDown(INPUT_BUTTON_DOWN))
 				{
-					m_netObject->m_anim.SetAttackDirection(0, +1);
+					setAttackDirection(0, +1);
 					anim = kPlayerAnim_AttackDown;
 					m_enterPassthrough = true;
 				}
 				else
 				{
-					m_netObject->m_anim.SetAttackDirection(m_facing[0], 0);
+					setAttackDirection(m_facing[0], 0);
 					anim = kPlayerAnim_Attack;
 				}
 
 				// start anim
 
-				m_netObject->m_anim.SetAnim(anim, true, true);
+				setAnim(anim, true, true);
 				m_isAnimDriven = true;
 
 				// determine attack collision. basically just 3 directions: forward, up and down
@@ -759,7 +747,7 @@ void Player::tick(float dt)
 				{
 					m_isAirDashCharged = false;
 
-					m_netObject->m_anim.SetAnim(kPlayerAnim_AirDash, true, true);
+					setAnim(kPlayerAnim_AirDash, true, true);
 					m_isAnimDriven = true;
 				}
 			}
@@ -876,9 +864,9 @@ void Player::tick(float dt)
 				if (isAnimOverrideAllowed(kPlayerAnim_Walk))
 				{
 					if (steeringSpeed != 0.f)
-						m_netObject->m_anim.SetAnim(kPlayerAnim_Walk, true, false);
+						setAnim(kPlayerAnim_Walk, true, false);
 					else
-						m_netObject->m_anim.SetAnim(kPlayerAnim_Walk, false, false);
+						setAnim(kPlayerAnim_Walk, false, false);
 				}
 			}
 
@@ -953,7 +941,7 @@ void Player::tick(float dt)
 			{
 				m_isWallSliding = true;
 
-				m_netObject->m_anim.SetAnim(kPlayerAnim_WallSlide, true, false);
+				setAnim(kPlayerAnim_WallSlide, true, false);
 
 				if (m_vel[1] > PLAYER_WALLSLIDE_SPEED && Calc::Sign(m_vel[1]) == Calc::Sign(gravity))
 					m_vel[1] = PLAYER_WALLSLIDE_SPEED;
@@ -1188,7 +1176,7 @@ void Player::tick(float dt)
 
 		if (!m_isGrounded && !m_isAttachedToSticky && !m_isWallSliding && isAnimOverrideAllowed(kPlayerAnim_Jump))
 		{
-			m_netObject->m_anim.SetAnim(kPlayerAnim_Jump, true, false);
+			setAnim(kPlayerAnim_Jump, true, false);
 		}
 
 	#if !WRAP_AROUND_TOP_AND_BOTTOM
@@ -1198,7 +1186,7 @@ void Player::tick(float dt)
 		{
 			if (isAnimOverrideAllowed(kPlayerAnim_Die))
 			{
-				m_anim.SetAnim(kPlayerAnim_Die, true, true);
+				setAnim(kPlayerAnim_Die, true, true);
 				m_isAnimDriven = true;
 
 				awardScore(-1);
@@ -1247,7 +1235,7 @@ void Player::tick(float dt)
 
 void Player::draw()
 {
-	if (!m_netObject->hasValidCharacterIndex())
+	if (!hasValidCharacterIndex())
 		return;
 
 	m_netObject->m_sprite->flipX = m_facing[0] < 0 ? true : false;
@@ -1263,10 +1251,9 @@ void Player::draw()
 
 	// draw player color
 
-	const int playerId = m_netObject->getPlayerId();
 	const int alpha = 127;
 
-	if (playerId >= 0 && playerId < 4)
+	if (m_index >= 0 && m_index < 4)
 	{
 		struct color
 		{
@@ -1279,9 +1266,9 @@ void Player::draw()
 			{ 0, 255, 0   }
 		};
 		setColor(
-			colors[playerId].r,
-			colors[playerId].g,
-			colors[playerId].b,
+			colors[m_index].r,
+			colors[m_index].g,
+			colors[m_index].b,
 			alpha);
 	}
 	else
@@ -1438,7 +1425,7 @@ void Player::handleNewRound()
 
 void Player::respawn()
 {
-	if (!m_netObject->hasValidCharacterIndex())
+	if (!hasValidCharacterIndex())
 		return;
 
 	int x, y;
@@ -1471,7 +1458,7 @@ void Player::respawn()
 
 		//
 
-		m_netObject->m_anim.SetAnim(kPlayerAnim_Spawn, true, true);
+		setAnim(kPlayerAnim_Spawn, true, true);
 		m_isAnimDriven = true;
 
 		if (m_isRespawn)
@@ -1498,7 +1485,7 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 					m_vel[i] += velDelta[i];
 			}
 
-			m_netObject->m_anim.SetAnim(kPlayerAnim_Die, true, true);
+			setAnim(kPlayerAnim_Die, true, true);
 			m_isAnimDriven = true;
 
 			m_canRespawn = false;
@@ -1530,21 +1517,6 @@ void Player::awardScore(int score)
 	m_score += score;
 }
 
-int PlayerNetObject::getScore() const
-{
-	return m_player->m_score;
-}
-
-int PlayerNetObject::getTotalScore() const
-{
-	return m_player->m_totalScore;
-}
-
-int PlayerNetObject::getCharacterIndex() const
-{
-	return m_player->m_characterIndex;
-}
-
 void PlayerNetObject::setCharacterIndex(int index)
 {
 	m_player->m_characterIndex = index;
@@ -1552,14 +1524,9 @@ void PlayerNetObject::setCharacterIndex(int index)
 	handleCharacterIndexChange();
 }
 
-bool PlayerNetObject::hasValidCharacterIndex() const
-{
-	return m_player->m_characterIndex != (uint8_t)-1;
-}
-
 void PlayerNetObject::handleCharacterIndexChange()
 {
-	if (hasValidCharacterIndex())
+	if (m_player->hasValidCharacterIndex())
 	{
 		// reload character properties
 

@@ -229,11 +229,11 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			bitStream.Read(index);
 			bitStream.Read(characterIndex);
 
+			// todo : should allocate here
 			Player * player = &client->m_gameSim->m_players[index];
-			*player = Player();
+			*player = Player(index, channelId);
 
-			PlayerNetObject * netObject = new PlayerNetObject(channelId, player, client->m_gameSim);
-			netObject->setPlayerId(index);
+			PlayerNetObject * netObject = new PlayerNetObject(player, client->m_gameSim);
 			player->m_netObject = netObject;
 			netObject->setCharacterIndex(characterIndex);
 
@@ -454,27 +454,38 @@ void App::processPlayerChanges()
 
 			for (int i = 0; i < MAX_PLAYERS; ++i)
 			{
-				PlayerNetObject * netObject = m_host->m_gameSim.m_playerNetObjects[i];
-
-				if (netObject)
-					netAddPlayerBroadcast(channel, netObject->getOwningChannelId(), i, netObject->getCharacterIndex());
+				Player & player = m_host->m_gameSim.m_players[i];
+				if (player.m_isUsed)
+				{
+					netAddPlayerBroadcast(
+						channel,
+						player.m_owningChannelId,
+						i,
+						player.m_characterIndex);
+				}
 			}
 
 			m_host->syncNewClient(channel);
 
 			//
 
-			PlayerNetObject * player = m_host->allocPlayer(playerToAddOrRemove.channel->m_destinationId);
+			PlayerNetObject * playerNetObject = m_host->allocPlayer(playerToAddOrRemove.channel->m_destinationId);
 
-			if (player)
+			if (playerNetObject)
 			{
+				Player & player = *playerNetObject->m_player;
+
 				ClientInfo & clientInfo = m_hostClients[playerToAddOrRemove.channel];
 
-				clientInfo.player = player;
+				clientInfo.player = playerNetObject;
 
-				player->setCharacterIndex(playerToAddOrRemove.characterIndex);
+				playerNetObject->setCharacterIndex(playerToAddOrRemove.characterIndex);
 
-				netAddPlayerBroadcast(0, playerToAddOrRemove.channel->m_destinationId, player->getPlayerId(), player->getCharacterIndex());
+				netAddPlayerBroadcast(
+					0,
+					playerToAddOrRemove.channel->m_destinationId,
+					player.m_index,
+					player.m_characterIndex);
 			}
 		}
 		else
@@ -539,7 +550,7 @@ void App::SV_OnChannelDisconnect(Channel * channel)
 		{
 			PlayerToAddOrRemove playerToRemove;
 			playerToRemove.add = false;
-			playerToRemove.playerId = clientInfo.player->getPlayerId();
+			playerToRemove.playerId = clientInfo.player->m_player->m_index;
 			m_playersToAddOrRemove.push_back(playerToRemove);
 
 			clientInfo.player = 0;
@@ -1178,14 +1189,14 @@ void App::draw()
 		{
 			int index = 0;
 
-			for (size_t i = 0; i < client->m_players.size(); ++i)
+			for (int i = 0; i < MAX_PLAYERS; ++i)
 			{
-				PlayerNetObject * player = client->m_players[i];
+				Player & player = client->m_gameSim->m_players[i];
 
-				if (player->getOwningChannelId() != client->m_channel->m_id)
+				if (!player.m_isUsed || player.m_owningChannelId != client->m_channel->m_id)
 					continue;
 
-				if (!player->hasValidCharacterIndex())
+				if (!player.hasValidCharacterIndex())
 				{
 					for (int c = 0; c < 2; ++c)
 					{
@@ -1198,7 +1209,7 @@ void App::draw()
 							index * 150,
 							GFX_SY - 150 + c * 50,
 							client->m_channel->m_id,
-							player->getPlayerId(),
+							i,
 							c);
 						button.parse(props);
 					}

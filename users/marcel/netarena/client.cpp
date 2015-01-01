@@ -28,7 +28,7 @@ Client::Client()
 	, m_replicationId(0)
 	, m_gameSim(0)
 {
-	m_gameSim = new GameSim(true);
+	m_gameSim = new GameSim();
 }
 
 Client::~Client()
@@ -62,12 +62,14 @@ void Client::tick(float dt)
 
 		const bool morePlayersThanControllers = (numGamepads < g_app->getControllerAllocationCount());
 
-		for (auto i = m_players.begin(); i != m_players.end(); ++i)
+		for (int i = 0; i < MAX_PLAYERS; ++i)
 		{
-			PlayerNetObject * playerNetObject = *i;
+			Player & player = m_gameSim->m_players[i];
 
-			if (playerNetObject->getOwningChannelId() != m_channel->m_id)
+			if (!player.m_isUsed || player.m_owningChannelId != m_channel->m_id)
 				continue;
+
+			PlayerNetObject * playerNetObject = player.m_netObject;
 
 			PlayerInput input;
 
@@ -183,7 +185,10 @@ void Client::tick(float dt)
 			{
 				playerNetObject->m_input.m_currState = input;
 
-				g_app->netSetPlayerInputs(m_channel->m_id, playerNetObject->getPlayerId(), input);
+				g_app->netSetPlayerInputs(
+					m_channel->m_id,
+					player.m_index,
+					input);
 			}
 		}
 	}
@@ -255,6 +260,23 @@ void Client::drawPlay()
 {
 	const Vec2 shake = m_gameSim->getScreenShake();
 	gxPushMatrix();
+
+#if 0
+	const float asx = ARENA_SX_PIXELS;
+	const float asy = ARENA_SY_PIXELS;
+	const float asx2 = asx / 2.f;
+	const float asy2 = asy / 2.f;
+	const float dx = m_gameSim->m_players[0].m_pos[0] - asx2;
+	const float dy = m_gameSim->m_players[0].m_pos[1] - asy2;
+	const float d = sqrt(dx * dx + dy * dy);
+	const float t = d / sqrt(asx2 * asx2 + asy2 * asy2);
+	const float scale = 1.f * t + 1.2f * (1.f - t);
+	
+	gxTranslatef(+ARENA_SX_PIXELS/2.f, +ARENA_SY_PIXELS/2.f, 0.f);
+	gxScalef(scale, scale, 1.f);
+	gxTranslatef(-ARENA_SX_PIXELS/2.f, -ARENA_SY_PIXELS/2.f, 0.f);
+#endif
+
 	gxTranslatef(shake[0], shake[1], 0.f);
 
 	m_gameSim->m_arena.drawBlocks();
@@ -326,9 +348,9 @@ void Client::addPlayer(PlayerNetObject * player)
 
 	m_players.push_back(player);
 
-	m_gameSim->m_playerNetObjects[player->getPlayerId()] = player;
+	m_gameSim->m_playerNetObjects[player->m_player->m_index] = player;
 
-	if (player->getOwningChannelId() == m_channel->m_id)
+	if (player->m_player->m_owningChannelId == m_channel->m_id)
 	{
 		Assert(player->m_input.m_controllerIndex == -1);
 		player->m_input.m_controllerIndex = g_app->allocControllerIndex();
@@ -342,7 +364,7 @@ void Client::removePlayer(PlayerNetObject * player)
 	Assert(i != m_players.end());
 	if (i != m_players.end())
 	{
-		if (player->getOwningChannelId() == m_channel->m_id)
+		if (player->m_player->m_owningChannelId == m_channel->m_id)
 		{
 			Assert(player->m_input.m_controllerIndex != -1);
 			if (player->m_input.m_controllerIndex != -1)
@@ -350,7 +372,7 @@ void Client::removePlayer(PlayerNetObject * player)
 			player->m_input.m_controllerIndex = -1;
 		}
 
-		const int playerId = player->getPlayerId();
+		const int playerId = player->m_player->m_index;
 
 		if (playerId != -1)
 		{
@@ -372,7 +394,7 @@ PlayerNetObject * Client::findPlayerByPlayerId(uint8_t playerId)
 	for (auto p = m_players.begin(); p != m_players.end(); ++p)
 	{
 		PlayerNetObject * player = *p;
-		if (player->getPlayerId() == playerId)
+		if (player->m_player->m_index == playerId)
 			return player;
 	}
 

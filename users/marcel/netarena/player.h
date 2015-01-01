@@ -9,22 +9,6 @@ class Dictionary;
 struct Player;
 class Sprite;
 
-class PlayerAnim_NS
-{
-	Player * m_player;
-
-public:
-	PlayerAnim_NS(Player * player)
-		: m_player(player)
-	{
-	}
-
-	void SetAnim(int anim, bool play, bool restart);
-	void SetAttackDirection(int dx, int dy);
-	void SetPlay(bool play);
-	void ApplyAnim();
-};
-
 class SoundBag
 {
 	std::vector<std::string> m_files;
@@ -66,11 +50,6 @@ class PlayerNetObject
 	friend struct Player;
 
 	friend class PlayerAnim_NS;
-
-	PlayerAnim_NS m_anim;
-
-	uint16_t m_owningChannelId;
-	int m_playerId;
 	
 	Dictionary m_props;
 
@@ -81,24 +60,11 @@ class PlayerNetObject
 	
 	static void handleAnimationAction(const std::string & action, const Dictionary & args);
 
-	// ReplicationObject
-	virtual bool RequiresUpdating() const { return true; }
-
 public:
-	PlayerNetObject(uint16_t owningChannelId = 0, Player * player = 0, GameSim * gameSim = 0);
+	PlayerNetObject(Player * player, GameSim * gameSim);
 	~PlayerNetObject();
 
-	uint16_t getOwningChannelId() const { return m_owningChannelId; }
-
-	int getScore() const;
-	int getTotalScore() const;
-
-	void setPlayerId(int id) { m_playerId = id; }
-	int getPlayerId() const { return m_playerId; }
-
-	int getCharacterIndex() const;
 	void setCharacterIndex(int index);
-	bool hasValidCharacterIndex() const;
 	void handleCharacterIndexChange();
 
 	void playSoundBag(const char * name, int volume);

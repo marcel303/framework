@@ -125,6 +125,8 @@ public:
 
 	uint16_t alloc();
 	void free(uint16_t id);
+
+	void serialize(NetSerializationContext & context);
 };
 
 void initBullet(GameSim & gameSim, Bullet & b, const ParticleSpawnInfo & spawnInfo);

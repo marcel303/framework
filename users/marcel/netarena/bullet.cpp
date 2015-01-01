@@ -427,6 +427,50 @@ void BulletPool::free(uint16_t id)
 	}
 }
 
+void BulletPool::serialize(NetSerializationContext & context)
+{
+	if (context.IsRecv())
+	{
+		for (int i = 0; i < MAX_BULLETS; ++i)
+			m_bullets[i].isAlive = false;
+
+		uint16_t bulletCount;
+
+		context.Serialize(bulletCount);
+
+		for (int i = 0; i < bulletCount; ++i)
+		{
+			uint16_t id;
+			context.Serialize(id);
+
+			Bullet & b = m_bullets[id];
+			context.SerializeBytes(&b, sizeof(b));
+		}
+	}
+	else
+	{
+		uint16_t numBullets = 0;
+
+		for (int i = 0; i < MAX_BULLETS; ++i)
+			if (m_bullets[i].isAlive)
+				numBullets++;
+
+		context.Serialize(numBullets);
+
+		for (int i = 0; i < MAX_BULLETS; ++i)
+		{
+			Bullet & b = m_bullets[i];
+
+			if (b.isAlive)
+			{
+				uint16_t id = i;
+				context.Serialize(id);
+				context.SerializeBytes(&b, sizeof(b));
+			}
+		}
+	}
+}
+
 //
 
 void initBullet(GameSim & gameSim, Bullet & b, const ParticleSpawnInfo & spawnInfo)
