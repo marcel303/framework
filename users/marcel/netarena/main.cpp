@@ -56,10 +56,6 @@ OPTION_DECLARE(std::string, g_connect, "");
 OPTION_DEFINE(std::string, g_connect, "App/Direct Connect");
 OPTION_ALIAS(g_connect, "connect");
 
-OPTION_DECLARE(bool, g_noSound, false);
-OPTION_DEFINE(bool, g_noSound, "Sound/Disable Sound Effects");
-OPTION_ALIAS(g_noSound, "nosound");
-
 OPTION_EXTERN(int, g_playerCharacterIndex);
 
 //

@@ -6,6 +6,10 @@
 #include "main.h"
 #include "player.h"
 
+OPTION_DECLARE(bool, g_noSound, false);
+OPTION_DEFINE(bool, g_noSound, "Sound/Disable Sound Effects");
+OPTION_ALIAS(g_noSound, "nosound");
+
 OPTION_DECLARE(int, g_pickupTimeBase, 10);
 OPTION_DEFINE(int, g_pickupTimeBase, "Pickup/Spawn Interval (Sec)");
 OPTION_DECLARE(int, g_pickupTimeRandom, 5);
@@ -285,7 +289,7 @@ void GameSim::anim(float dt)
 
 void GameSim::playSound(const char * filename, int volume)
 {
-	if (!g_app->getSelectedClient() || g_app->getSelectedClient()->m_gameSim != this)
+	if (g_noSound || !g_app->getSelectedClient() || g_app->getSelectedClient()->m_gameSim != this)
 		return;
 
 	Sound(filename).play(volume);
