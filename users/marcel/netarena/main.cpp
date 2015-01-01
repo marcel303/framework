@@ -13,7 +13,6 @@
 #include "host.h"
 #include "main.h"
 #include "NetProtocols.h"
-#include "netsprite.h"
 #include "OptionMenu.h"
 #include "PacketDispatcher.h"
 #include "player.h"
@@ -30,6 +29,10 @@
 OPTION_DECLARE(bool, g_devMode, false);
 OPTION_DEFINE(bool, g_devMode, "App/Developer Mode");
 OPTION_ALIAS(g_devMode, "devmode");
+
+OPTION_DECLARE(bool, g_monkeyMode, false);
+OPTION_DEFINE(bool, g_monkeyMode, "App/Monkey Mode");
+OPTION_ALIAS(g_monkeyMode, "monkeymode");
 
 OPTION_DECLARE(std::string, s_mapList, "arena.txt");
 OPTION_DEFINE(std::string, s_mapList, "App/Map List");
@@ -226,7 +229,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			bitStream.Read(index);
 			bitStream.Read(characterIndex);
 
-			Player * player = &client->m_gameSim->m_state.m_players[index];
+			Player * player = &client->m_gameSim->m_players[index];
 			*player = Player();
 
 			PlayerNetObject * netObject = new PlayerNetObject(channelId, player, client->m_gameSim);
@@ -257,7 +260,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 
 			const uint32_t crc1 = client->m_gameSim->calcCRC();
 
-			PlayerNetObject * player = client->m_gameSim->m_players[index];
+			PlayerNetObject * player = client->m_gameSim->m_playerNetObjects[index];
 			Assert(player);
 			if (player)
 			{
@@ -331,12 +334,12 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 						g_host->m_gameSim.clearPlayerPtrs();
 						client->m_gameSim->clearPlayerPtrs();
 
-						const uint8_t * hostBytes = (uint8_t*)&g_host->m_gameSim.m_state;
-						const uint8_t * clientBytes = (uint8_t*)&client->m_gameSim->m_state;
-						const int numBytes = sizeof(GameSim::GameState);
+						const uint8_t * hostBytes = (uint8_t*)&static_cast<GameStateData&>(g_host->m_gameSim);
+						const uint8_t * clientBytes = (uint8_t*)&static_cast<GameStateData&>(*client->m_gameSim);
+						const int numBytes = sizeof(GameStateData);
 
 						uint8_t * temp = (uint8_t*)alloca(numBytes);
-						static GameSim::GameState * state = (GameSim::GameState*)temp;
+						static GameStateData * state = (GameStateData*)temp;
 
 						for (int i = 0; i < numBytes; ++i)
 						{
@@ -372,7 +375,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 				if (hasAnalogY)
 					bitStream.Read(input.analogY);
 
-				PlayerNetObject * player = client->m_gameSim->m_players[i];
+				PlayerNetObject * player = client->m_gameSim->m_playerNetObjects[i];
 
 				if (player)
 					player->m_input.m_currState = input;
@@ -451,7 +454,7 @@ void App::processPlayerChanges()
 
 			for (int i = 0; i < MAX_PLAYERS; ++i)
 			{
-				PlayerNetObject * netObject = m_host->m_gameSim.m_players[i];
+				PlayerNetObject * netObject = m_host->m_gameSim.m_playerNetObjects[i];
 
 				if (netObject)
 					netAddPlayerBroadcast(channel, netObject->getOwningChannelId(), i, netObject->getCharacterIndex());
@@ -478,7 +481,7 @@ void App::processPlayerChanges()
 		{
 			netRemovePlayerBroadcast(playerToAddOrRemove.playerId);
 
-			PlayerNetObject * player = m_host->m_gameSim.m_players[playerToAddOrRemove.playerId];
+			PlayerNetObject * player = m_host->m_gameSim.m_playerNetObjects[playerToAddOrRemove.playerId];
 
 			m_host->freePlayer(player);
 			delete player;
@@ -1083,19 +1086,19 @@ void App::draw()
 				int y = 100;
 				setFont("calibri.ttf");
 				drawText(0, y += 30, 24, +1, +1, "random seed=%08x, next pickup tick=%u, crc=%08x, px=%g, py=%g",
-					g_host->m_gameSim.m_state.m_randomSeed,
-					(uint32_t)g_host->m_gameSim.m_state.m_nextPickupSpawnTick,
+					g_host->m_gameSim.m_randomSeed,
+					(uint32_t)g_host->m_gameSim.m_nextPickupSpawnTick,
 					g_host->m_gameSim.calcCRC(),
-					g_host->m_gameSim.m_players[0] ? g_host->m_gameSim.m_players[0]->m_player->m_pos[0] : 0.f,
-					g_host->m_gameSim.m_players[0] ? g_host->m_gameSim.m_players[0]->m_player->m_pos[1] : 0.f);
+					g_host->m_gameSim.m_playerNetObjects[0] ? g_host->m_gameSim.m_playerNetObjects[0]->m_player->m_pos[0] : 0.f,
+					g_host->m_gameSim.m_playerNetObjects[0] ? g_host->m_gameSim.m_playerNetObjects[0]->m_player->m_pos[1] : 0.f);
 				for (size_t i = 0; i < m_clients.size(); ++i)
 				{
 					drawText(0, y += 30, 24, +1, +1, "random seed=%08x, next pickup tick=%u, crc=%08x, px=%g, py=%g",
-						m_clients[i]->m_gameSim->m_state.m_randomSeed,
-						(uint32_t)m_clients[i]->m_gameSim->m_state.m_nextPickupSpawnTick,
+						m_clients[i]->m_gameSim->m_randomSeed,
+						(uint32_t)m_clients[i]->m_gameSim->m_nextPickupSpawnTick,
 						m_clients[i]->m_gameSim->calcCRC(),
-						m_clients[i]->m_gameSim->m_players[0] ? m_clients[i]->m_gameSim->m_players[0]->m_player->m_pos[0] : 0.f,
-						m_clients[i]->m_gameSim->m_players[0] ? m_clients[i]->m_gameSim->m_players[0]->m_player->m_pos[1] : 0.f);
+						m_clients[i]->m_gameSim->m_playerNetObjects[0] ? m_clients[i]->m_gameSim->m_playerNetObjects[0]->m_player->m_pos[0] : 0.f,
+						m_clients[i]->m_gameSim->m_playerNetObjects[0] ? m_clients[i]->m_gameSim->m_playerNetObjects[0]->m_player->m_pos[1] : 0.f);
 				}
 			}
 		}
@@ -1332,7 +1335,7 @@ void App::netSetPlayerInputsBroadcast()
 
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		const PlayerNetObject * player = m_host->m_gameSim.m_players[i];
+		const PlayerNetObject * player = m_host->m_gameSim.m_playerNetObjects[i];
 		const uint16_t buttons = (player ? player->m_input.m_currState.buttons : 0);
 		const int8_t analogX = (player ? player->m_input.m_currState.analogX : 0);
 		const int8_t analogY = (player ? player->m_input.m_currState.analogY : 0);

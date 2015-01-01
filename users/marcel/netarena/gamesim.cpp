@@ -3,7 +3,6 @@
 #include "gamedefs.h"
 #include "gamesim.h"
 #include "main.h"
-#include "netsprite.h"
 #include "player.h"
 
 OPTION_DECLARE(int, g_pickupTimeBase, 10);
@@ -27,14 +26,14 @@ static const char * s_pickupSprites[kPickupType_COUNT] =
 
 //
 
-uint32_t GameSim::GameState::Random()
+uint32_t GameStateData::Random()
 {
 	m_randomSeed += 1;
 	m_randomSeed *= 16807;
 	return m_randomSeed;
 }
 
-uint32_t GameSim::GameState::GetTick()
+uint32_t GameStateData::GetTick()
 {
 	return m_tick;
 }
@@ -42,14 +41,14 @@ uint32_t GameSim::GameState::GetTick()
 //
 
 GameSim::GameSim(bool isAuthorative)
-	: m_isAuthorative(isAuthorative)
-	, m_state()
+	: GameStateData()
+	, m_isAuthorative(isAuthorative)
 	, m_bulletPool(0)
 {
 	m_arena.init();
 
 	for (int i = 0; i < MAX_PLAYERS; ++i)
-		m_players[i] = 0;
+		m_playerNetObjects[i] = 0;
 
 	m_bulletPool = new BulletPool(!isAuthorative);
 
@@ -71,8 +70,8 @@ uint32_t GameSim::calcCRC() const
 
 	uint32_t result = 0;
 
-	const uint8_t * bytes = (uint8_t*)&m_state;
-	const uint32_t numBytes = sizeof(m_state);
+	const uint8_t * bytes = (const uint8_t*)static_cast<const GameStateData*>(this);
+	const uint32_t numBytes = sizeof(GameStateData);
 
 	for (uint32_t i = 0; i < numBytes; ++i)
 		result = result * 13 + bytes[i];
@@ -92,14 +91,16 @@ void GameSim::serialize(NetSerializationContext & context)
 	context.Serialize(crc);
 
 	for (int i = 0; i < MAX_PLAYERS; ++i)
-		if (m_players[i])
-			m_players[i]->m_player->m_netObject = 0;
+		if (m_playerNetObjects[i])
+			m_playerNetObjects[i]->m_player->m_netObject = 0;
 
-	context.SerializeBytes(&m_state, sizeof(m_state));
+	GameStateData * data = static_cast<GameStateData*>(this);
+
+	context.SerializeBytes(data, sizeof(GameStateData));
 
 	for (int i = 0; i < MAX_PLAYERS; ++i)
-		if (m_players[i])
-			m_players[i]->m_player->m_netObject = m_players[i];
+		if (m_playerNetObjects[i])
+			m_playerNetObjects[i]->m_player->m_netObject = m_playerNetObjects[i];
 
 	m_arena.serialize(context);
 
@@ -112,20 +113,20 @@ void GameSim::serialize(NetSerializationContext & context)
 void GameSim::clearPlayerPtrs() const
 {
 	for (int i = 0; i < MAX_PLAYERS; ++i)
-		if (m_players[i])
-			m_players[i]->m_player->m_netObject = 0;
+		if (m_playerNetObjects[i])
+			m_playerNetObjects[i]->m_player->m_netObject = 0;
 }
 
 void GameSim::setPlayerPtrs() const
 {
 	for (int i = 0; i < MAX_PLAYERS; ++i)
-		if (m_players[i])
-			m_players[i]->m_player->m_netObject = m_players[i];
+		if (m_playerNetObjects[i])
+			m_playerNetObjects[i]->m_player->m_netObject = m_playerNetObjects[i];
 }
 
 void GameSim::setGameState(::GameState gameState)
 {
-	m_state.m_gameState = gameState;
+	m_gameState = gameState;
 
 	if (gameState == kGameState_NewGame)
 	{
@@ -133,9 +134,9 @@ void GameSim::setGameState(::GameState gameState)
 
 		for (int i = 0; i < MAX_PLAYERS; ++i)
 		{
-			if (m_players[i])
+			if (m_playerNetObjects[i])
 			{
-				Player * player = m_players[i]->m_player;
+				Player * player = m_playerNetObjects[i]->m_player;
 
 				player->handleNewGame();
 			}
@@ -147,15 +148,15 @@ void GameSim::setGameState(::GameState gameState)
 		// reset pickups
 
 		for (int i = 0; i < MAX_PICKUPS; ++i)
-			m_state.m_pickups[i].isAlive = false;
+			m_pickups[i].isAlive = false;
 
 		// respawn players
 
 		for (int i = 0; i < MAX_PLAYERS; ++i)
 		{
-			if (m_players[i])
+			if (m_playerNetObjects[i])
 			{
-				Player * player = m_players[i]->m_player;
+				Player * player = m_playerNetObjects[i]->m_player;
 
 				player->handleNewRound();
 
@@ -167,7 +168,7 @@ void GameSim::setGameState(::GameState gameState)
 
 void GameSim::tick()
 {
-	switch (m_state.m_gameState)
+	switch (m_gameState)
 	{
 	case kGameState_Lobby:
 		tickLobby();
@@ -196,28 +197,28 @@ void GameSim::tickPlay()
 	{
 		int numPlayers = 0;
 		for (int i = 0; i < MAX_PLAYERS; ++i)
-			if (m_players[i])
+			if (m_playerNetObjects[i])
 				numPlayers++;
 
 		const uint32_t crc = calcCRC();
-		LOG_DBG("gamesim %p: tick=%u, crc=%08x, numPlayers=%d", this, m_state.m_tick, crc, numPlayers);
+		LOG_DBG("gamesim %p: tick=%u, crc=%08x, numPlayers=%d", this, m_tick, crc, numPlayers);
 	}
 
 	const float dt = 1.f / TICKS_PER_SECOND;
 
-	const uint32_t tick = m_state.GetTick();
+	const uint32_t tick = GetTick();
 
 	// player update
 
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		if (m_players[i])
-			m_players[i]->m_player->tick(dt);
+		if (m_playerNetObjects[i])
+			m_playerNetObjects[i]->m_player->tick(dt);
 	}
 
 	// pickup spawning
 
-	if (tick >= m_state.m_nextPickupSpawnTick)
+	if (tick >= m_nextPickupSpawnTick)
 	{
 		int weights[kPickupType_COUNT] =
 		{
@@ -235,7 +236,7 @@ void GameSim::tickPlay()
 
 		if (DEBUG_RANDOM_CALLSITES)
 			LOG_DBG("Random called from pre trySpawnPickup");
-		int value = m_state.Random() % totalWeight;
+		int value = Random() % totalWeight;
 
 		PickupType type = kPickupType_COUNT;
 
@@ -245,14 +246,14 @@ void GameSim::tickPlay()
 
 		trySpawnPickup(type);
 
-		m_state.m_nextPickupSpawnTick = tick + (g_pickupTimeBase + (m_state.Random() % g_pickupTimeRandom)) * TICKS_PER_SECOND;
+		m_nextPickupSpawnTick = tick + (g_pickupTimeBase + (Random() % g_pickupTimeRandom)) * TICKS_PER_SECOND;
 	}
 
 	anim(dt);
 
 	m_bulletPool->tick(*this, dt);
 
-	m_state.m_tick++;
+	m_tick++;
 
 	g_gameSim = 0;
 }
@@ -280,7 +281,7 @@ void GameSim::trySpawnPickup(PickupType type)
 {
 	for (int i = 0; i < MAX_PICKUPS; ++i)
 	{
-		Pickup & pickup = m_state.m_pickups[i];
+		Pickup & pickup = m_pickups[i];
 
 		if (!pickup.isAlive)
 		{
@@ -294,14 +295,14 @@ void GameSim::trySpawnPickup(PickupType type)
 				{
 					GameSim * self = (GameSim*)obj;
 					for (int i = 0; i < MAX_PICKUPS; ++i)
-						if (self->m_state.m_pickups[i].blockX == x && self->m_state.m_pickups[i].blockY == y)
+						if (self->m_pickups[i].blockX == x && self->m_pickups[i].blockY == y)
 							return true;
 					return false;
 				}))
 			{
 				if (DEBUG_RANDOM_CALLSITES)
 					LOG_DBG("Random called from trySpawnPickup");
-				const int index = m_state.Random() % numLocations;
+				const int index = Random() % numLocations;
 				const int spawnX = x[index];
 				const int spawnY = y[index];
 
@@ -333,19 +334,19 @@ Pickup * GameSim::grabPickup(int x1, int y1, int x2, int y2)
 {
 	for (int i = 0; i < MAX_PICKUPS; ++i)
 	{
-		Pickup & pickup = m_state.m_pickups[i];
+		Pickup & pickup = m_pickups[i];
 
 		if (pickup.isAlive)
 		{
 			if (x2 >= pickup.x1 && x1 < pickup.x2 &&
 				y2 >= pickup.y1 && y1 < pickup.y2)
 			{
-				m_state.m_grabbedPickup = pickup;
+				m_grabbedPickup = pickup;
 				pickup.isAlive = false;
 
 				g_app->netPlaySound("gun-pickup.ogg");
 
-				return &m_state.m_grabbedPickup;
+				return &m_grabbedPickup;
 			}
 		}
 	}
@@ -387,7 +388,7 @@ void GameSim::addScreenShake(float dx, float dy, float stiffness, float life)
 
 	if (DEBUG_RANDOM_CALLSITES)
 		LOG_DBG("Random called from addScreenShake");
-	m_screenShakes[m_state.Random() % MAX_SCREEN_SHAKES].isActive = false;
+	m_screenShakes[Random() % MAX_SCREEN_SHAKES].isActive = false;
 	addScreenShake(dx, dy, stiffness, life);
 }
 

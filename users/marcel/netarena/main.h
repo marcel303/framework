@@ -9,6 +9,7 @@
 #include "ReplicationHandler.h"
 
 OPTION_EXTERN(bool, g_devMode);
+OPTION_EXTERN(bool, g_monkeyMode);
 
 class Client;
 class Host;

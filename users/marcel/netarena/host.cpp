@@ -6,7 +6,6 @@
 #include "framework.h"
 #include "host.h"
 #include "main.h"
-#include "netsprite.h"
 #include "player.h"
 #include "ReplicationManager.h"
 #include "Timer.h"
@@ -55,7 +54,7 @@ void Host::tick(float dt)
 {
 	//setPlayerPtrs(); // fixme : enable once full simulation runs on clients
 
-	switch (m_gameSim.m_state.m_gameState)
+	switch (m_gameSim.m_gameState)
 	{
 	case kGameState_Lobby:
 		break;
@@ -78,7 +77,7 @@ void Host::tickPlay(float dt)
 
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		Player & player = m_gameSim.m_state.m_players[i];
+		Player & player = m_gameSim.m_players[i];
 		if (!player.m_isUsed)
 			continue;
 
@@ -112,7 +111,7 @@ void Host::debugDraw()
 
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		Player & player = m_gameSim.m_state.m_players[i];
+		Player & player = m_gameSim.m_players[i];
 		if (!player.m_isUsed)
 			continue;
 
@@ -174,7 +173,7 @@ PlayerNetObject * Host::allocPlayer(uint16_t owningChannelId)
 {
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		Player & player = m_gameSim.m_state.m_players[i];
+		Player & player = m_gameSim.m_players[i];
 		if (player.m_isUsed)
 			continue;
 
@@ -184,7 +183,7 @@ PlayerNetObject * Host::allocPlayer(uint16_t owningChannelId)
 		PlayerNetObject * netObject = new PlayerNetObject(owningChannelId, &player, &m_gameSim);
 		netObject->setPlayerId(i);
 
-		m_gameSim.m_players[i] = netObject;
+		m_gameSim.m_playerNetObjects[i] = netObject;
 
 		return netObject;
 	}
@@ -198,12 +197,12 @@ void Host::freePlayer(PlayerNetObject * player)
 
 	if (playerId != -1)
 	{
-		Assert(m_gameSim.m_players[playerId] != 0);
-		if (m_gameSim.m_players[playerId] != 0)
+		Assert(m_gameSim.m_playerNetObjects[playerId] != 0);
+		if (m_gameSim.m_playerNetObjects[playerId] != 0)
 		{
-			m_gameSim.m_players[playerId]->m_player->m_isUsed = false;
-			m_gameSim.m_players[playerId]->m_player->m_netObject = 0;
-			m_gameSim.m_players[playerId] = 0;
+			m_gameSim.m_playerNetObjects[playerId]->m_player->m_isUsed = false;
+			m_gameSim.m_playerNetObjects[playerId]->m_player->m_netObject = 0;
+			m_gameSim.m_playerNetObjects[playerId] = 0;
 		}
 	}
 }
@@ -212,7 +211,7 @@ PlayerNetObject * Host::findPlayerByPlayerId(uint8_t playerId)
 {
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		PlayerNetObject * player = m_gameSim.m_players[i];
+		PlayerNetObject * player = m_gameSim.m_playerNetObjects[i];
 		if (player && player->getPlayerId() == playerId)
 			return player;
 	}
@@ -224,7 +223,7 @@ void Host::setPlayerPtrs()
 {
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		PlayerNetObject * player = m_gameSim.m_players[i];
+		PlayerNetObject * player = m_gameSim.m_playerNetObjects[i];
 		if (player)
 			player->m_player->m_netObject = player;
 	}
@@ -234,7 +233,7 @@ void Host::clearPlayerPtrs()
 {
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		PlayerNetObject * player = m_gameSim.m_players[i];
+		PlayerNetObject * player = m_gameSim.m_playerNetObjects[i];
 		if (player)
 			player->m_player->m_netObject = 0;
 	}

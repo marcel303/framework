@@ -220,7 +220,7 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 				{
 					for (int p = 0; p < MAX_PLAYERS; ++p)
 					{
-						Player & player = gameSim.m_state.m_players[p];
+						Player & player = gameSim.m_players[p];
 						if (!player.m_isUsed)
 							continue;
 
@@ -240,7 +240,7 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 					{
 						if (p == b.ownerPlayerId)
 							continue;
-						Player & player = gameSim.m_state.m_players[p];
+						Player & player = gameSim.m_players[p];
 						if (!player.m_isUsed)
 							continue;
 

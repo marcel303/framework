@@ -194,38 +194,39 @@ struct ScreenShake
 	}
 };
 
-class GameSim
+struct GameStateData
+{
+	GameStateData()
+	{
+		memset(this, 0, sizeof(GameStateData));
+
+		m_gameState = kGameState_Play;
+	}
+
+	uint32_t Random();
+	float RandomFloat(float min, float max) { float t = (Random() & 4095) / 4095.f; return t * min + (1.f - t) * max; }
+	uint32_t GetTick();
+
+	uint32_t m_tick;
+	uint32_t m_randomSeed;
+
+	GameState m_gameState;
+
+	Player m_players[MAX_PLAYERS];
+
+	Pickup m_pickups[MAX_PICKUPS];
+	Pickup m_grabbedPickup;
+	uint64_t m_nextPickupSpawnTick;
+};
+
+class GameSim : public GameStateData
 {
 public:
-	struct GameState
-	{
-		GameState()
-		{
-			memset(this, 0, sizeof(GameState));
-
-			m_gameState = kGameState_Play;
-		}
-
-		uint32_t Random();
-		uint32_t GetTick();
-
-		uint32_t m_tick;
-		uint32_t m_randomSeed;
-
-		::GameState m_gameState;
-
-		Player m_players[MAX_PLAYERS];
-
-		Pickup m_pickups[MAX_PICKUPS];
-		Pickup m_grabbedPickup;
-		uint64_t m_nextPickupSpawnTick;
-	} m_state;
-
 	bool m_isAuthorative;
 
 	Arena m_arena;
 
-	PlayerNetObject * m_players[MAX_PLAYERS];
+	PlayerNetObject * m_playerNetObjects[MAX_PLAYERS];
 
 	BulletPool * m_bulletPool;
 
@@ -257,9 +258,6 @@ public:
 
 	void addScreenShake(float dx, float dy, float stiffness, float life);
 	Vec2 getScreenShake() const;
-
-	uint32_t Random() { return m_state.Random(); }
-	float RandomFloat(float min, float max) { float t = (Random() & 4095) / 4095.f; return t * min + (1.f - t) * max; }
 };
 
 extern GameSim * g_gameSim;

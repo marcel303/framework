@@ -197,7 +197,7 @@ const char * SoundBag::getRandomSound(GameSim & gameSim)
 			{
 				if (DEBUG_RANDOM_CALLSITES)
 					LOG_DBG("Random called from getRandomSound");
-				index = g_gameSim->m_state.Random() % m_files.size();
+				index = g_gameSim->Random() % m_files.size();
 			}
 			else
 				index = (index + 1) % m_files.size();
@@ -486,7 +486,7 @@ void Player::tick(float dt)
 
 	//
 
-	if (g_devMode && m_netObject->m_input.wentDown(INPUT_BUTTON_START))
+	if (g_devMode && !g_monkeyMode && m_netObject->m_input.wentDown(INPUT_BUTTON_START))
 		respawn();
 
 	if (!m_isAlive && !m_isAnimDriven)
@@ -573,9 +573,9 @@ void Player::tick(float dt)
 
 				for (int i = 0; i < MAX_PLAYERS; ++i)
 				{
-					if (m_netObject->m_gameSim->m_players[i])
+					if (m_netObject->m_gameSim->m_playerNetObjects[i])
 					{
-						Player * other = m_netObject->m_gameSim->m_players[i]->m_player;
+						Player * other = m_netObject->m_gameSim->m_playerNetObjects[i]->m_player;
 
 						if (other == this)
 							continue;

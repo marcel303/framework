@@ -400,9 +400,9 @@ bool Arena::getRandomSpawnPoint(GameSim & gameSim, int & out_x, int & out_y, int
 
 				for (int p = 0; p < MAX_PLAYERS; ++p)
 				{
-					if (gameSim.m_players[p])
+					if (gameSim.m_playerNetObjects[p])
 					{
-						Player * player = gameSim.m_players[p]->m_player;
+						Player * player = gameSim.m_playerNetObjects[p]->m_player;
 
 						if (player != playerToIgnore)
 						{
@@ -512,7 +512,7 @@ bool Arena::getTeleportDestination(GameSim & gameSim, int startX, int startY, in
 	{
 		if (DEBUG_RANDOM_CALLSITES)
 			LOG_DBG("Random called from getTeleportDestination");
-		const int idx = gameSim.m_state.Random() % destinations.size();
+		const int idx = gameSim.Random() % destinations.size();
 
 		out_x = std::get<0>(destinations[idx]);
 		out_y = std::get<1>(destinations[idx]);

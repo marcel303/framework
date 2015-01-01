@@ -8,7 +8,6 @@
 #include "framework.h"
 #include "host.h"
 #include "main.h"
-#include "netsprite.h"
 #include "player.h"
 
 OPTION_DECLARE(bool, s_noBgm, false);
@@ -146,6 +145,40 @@ void Client::tick(float dt)
 				}
 			}
 
+			if (g_monkeyMode)
+			{
+				if ((rand() % 2) == 0)
+				{
+					input.buttons |= INPUT_BUTTON_LEFT;
+					input.analogX -= 100;
+				}
+				if ((rand() % 10) == 0)
+				{
+					input.buttons |= INPUT_BUTTON_RIGHT;
+					input.analogX += 100;
+				}
+				if ((rand() % 10) == 0)
+				{
+					input.buttons |= INPUT_BUTTON_UP;
+					input.analogY -= 100;
+				}
+				if ((rand() % 10) == 0)
+				{
+					input.buttons |= INPUT_BUTTON_DOWN;
+					input.analogY += 100;
+				}
+				if ((rand() % 60) == 0)
+					input.buttons |= INPUT_BUTTON_A;
+				if ((rand() % 60) == 0)
+					input.buttons |= INPUT_BUTTON_B;
+				if ((rand() % 60) == 0)
+					input.buttons |= INPUT_BUTTON_X;
+				if ((rand() % 60) == 0)
+					input.buttons |= INPUT_BUTTON_Y;
+				if ((rand() % 60) == 0)
+					input.buttons |= INPUT_BUTTON_START;
+			}
+
 			if (input != playerNetObject->m_input.m_currState)
 			{
 				playerNetObject->m_input.m_currState = input;
@@ -171,7 +204,7 @@ void Client::tick(float dt)
 	{
 		char temp[64];
 
-		switch (m_gameSim->m_state.m_gameState)
+		switch (m_gameSim->m_gameState)
 		{
 		case kGameState_Lobby:
 			strcpy_s(temp, sizeof(temp), "bgm-lobby.ogg");
@@ -201,7 +234,7 @@ void Client::draw()
 {
 	//setPlayerPtrs(); // fixme : enable once full simulation runs on clients
 
-	switch (m_gameSim->m_state.m_gameState)
+	switch (m_gameSim->m_gameState)
 	{
 	case kGameState_Lobby:
 		break;
@@ -228,7 +261,7 @@ void Client::drawPlay()
 
 	for (int i = 0; i < MAX_PICKUPS; ++i)
 	{
-		const Pickup & pickup = m_gameSim->m_state.m_pickups[i];
+		const Pickup & pickup = m_gameSim->m_pickups[i];
 
 		if (pickup.isAlive)
 		{
@@ -293,7 +326,7 @@ void Client::addPlayer(PlayerNetObject * player)
 
 	m_players.push_back(player);
 
-	m_gameSim->m_players[player->getPlayerId()] = player;
+	m_gameSim->m_playerNetObjects[player->getPlayerId()] = player;
 
 	if (player->getOwningChannelId() == m_channel->m_id)
 	{
@@ -321,12 +354,12 @@ void Client::removePlayer(PlayerNetObject * player)
 
 		if (playerId != -1)
 		{
-			Assert(m_gameSim->m_players[playerId] != 0);
-			if (m_gameSim->m_players[playerId] != 0)
+			Assert(m_gameSim->m_playerNetObjects[playerId] != 0);
+			if (m_gameSim->m_playerNetObjects[playerId] != 0)
 			{
-				m_gameSim->m_players[playerId]->m_player->m_isUsed = false;
-				m_gameSim->m_players[playerId]->m_player->m_netObject = 0;
-				m_gameSim->m_players[playerId] = 0;
+				m_gameSim->m_playerNetObjects[playerId]->m_player->m_isUsed = false;
+				m_gameSim->m_playerNetObjects[playerId]->m_player->m_netObject = 0;
+				m_gameSim->m_playerNetObjects[playerId] = 0;
 			}
 		}
 
