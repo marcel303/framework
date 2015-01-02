@@ -14,6 +14,16 @@
 
 #include <QMap>
 
+
+#include <QSlider>
+#include <QGridLayout>
+#include <QHBoxLayout>
+#include <QVBoxLayout>
+#include <QCheckBox>
+#include <QLabel>
+
+#include <QButtonGroup>
+
 int MAPX = 30;
 int MAPY = 16;
 
@@ -444,10 +454,7 @@ void SwitchMap(int x, int y)
 
 
 
-#include <QSlider>
-
-#include <QVBoxLayout>
-
+void CreateSettingsWidget();
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
@@ -492,37 +499,7 @@ int main(int argc, char *argv[])
 
     AddAllToScene();
 
-
-    QWidget w;
-
-
-    QVBoxLayout* l = new QVBoxLayout();
-
-    QSlider* slider = new QSlider(Qt::Horizontal);
-    slider->setMinimum(0);
-    slider->setMaximum(100);
-    slider->setTickInterval(1);
-    slider->setValue(50);
-
-    QSlider* slider2 = new QSlider(slider);
-    slider2->setOrientation(Qt::Horizontal);
-    QSlider* slider3 = new QSlider(slider);
-    slider3->setOrientation(Qt::Horizontal);
-
-
-    QObject::connect(slider, SIGNAL(valueChanged(int)),
-            view, SLOT(SetOpacityMech(int)));
-    QObject::connect(slider2, SIGNAL(valueChanged(int)),
-            view, SLOT(SetOpacityArt(int)));
-    QObject::connect(slider3, SIGNAL(valueChanged(int)),
-            view, SLOT(SetOpacityCollission(int)));
-
-    l->addWidget(slider);
-    l->addWidget(slider2);
-    l->addWidget(slider3);
-
-    w.setLayout(l);
-    w.show();
+    CreateSettingsWidget();
 
     return a.exec();
 }
@@ -696,18 +673,6 @@ EditorView::EditorView() : EditorViewBasic()
     newAct3->setStatusTip(tr("Load from file"));
     connect(newAct3, SIGNAL(triggered()), this, SLOT(Load()));
 
-    QAction* newAct4 = new QAction(tr("&Mechanics"), this);
-    newAct4->setStatusTip(tr("Switch to Mechanics screen"));
-    connect(newAct4, SIGNAL(triggered()), this, SLOT(SwitchToMech()));
-
-    QAction* newAct5 = new QAction(tr("&Art"), this);
-    newAct5->setStatusTip(tr("Switch to Art screen"));
-    connect(newAct5, SIGNAL(triggered()), this, SLOT(SwitchToArt()));
-
-    QAction* newAct6 = new QAction(tr("&Collission"), this);
-    newAct6->setStatusTip(tr("Switch to Collissions screen"));
-    connect(newAct6, SIGNAL(triggered()), this, SLOT(SwitchToCollission()));
-
 
     QAction* newAct7 = new QAction(tr("&MapSize"), this);
     newAct7->setStatusTip(tr("Switch to Big Map(tm)"));
@@ -717,9 +682,6 @@ EditorView::EditorView() : EditorViewBasic()
     bar->addAction(newAct1);
     bar->addAction(newAct2);
     bar->addAction(newAct3);
-    bar->addAction(newAct4);
-    bar->addAction(newAct5);
-    bar->addAction(newAct6);
     bar->addAction(newAct7);
 
     bar->showNormal();
@@ -752,17 +714,35 @@ void EditorView::New()
     sceneArt->CreateLevel(MAPX, MAPY);
     sceneCollission->CreateLevel(MAPX, MAPY);
 }
-void EditorView::SwitchToMech()
+void EditorView::SwitchToMech(int s)
 {
-    SwitchSceneTo(0);
+    if(s)
+    {
+        SwitchSceneTo(0);
+        sliderOpacMech->setValue(100);
+        sliderOpacArt->setValue(0);
+        sliderOpacColl->setValue(0);
+    }
 }
-void EditorView::SwitchToArt()
+void EditorView::SwitchToArt(int s)
 {
-    SwitchSceneTo(1);
+    if(s)
+    {
+        SwitchSceneTo(1);
+        sliderOpacMech->setValue(0);
+        sliderOpacArt->setValue(100);
+        sliderOpacColl->setValue(0);
+    }
 }
-void EditorView::SwitchToCollission()
+void EditorView::SwitchToCollission(int s)
 {
-    SwitchSceneTo(2);
+    if(s)
+    {
+        SwitchSceneTo(2);
+        sliderOpacMech->setValue(0);
+        sliderOpacArt->setValue(0);
+        sliderOpacColl->setValue(100);
+    }
 }
 
 void EditorView::SwitchToBigMap()
@@ -835,6 +815,75 @@ void EditorViewBasic::keyReleaseEvent(QKeyEvent *e)
         leftbuttonHeld = false;
         e->accept();
     }
+}
+
+
+
+void CreateSettingsWidget()
+{
+    QWidget* w = new QWidget();
+
+    QGridLayout* grid = new QGridLayout();
+
+    QLabel* label = new QLabel("Edit Layer");
+    grid->addWidget(label, 0, 1);
+
+    label = new QLabel("Mech");
+    grid->addWidget(label, 1, 0);
+    label = new QLabel("Art");
+    grid->addWidget(label, 2, 0);
+    label = new QLabel("Coll");
+    grid->addWidget(label, 3, 0);
+
+
+    QButtonGroup* bgroup = new QButtonGroup();
+    QCheckBox* cb = new QCheckBox();
+    QObject::connect(cb, SIGNAL(stateChanged(int)),
+            view, SLOT(SwitchToMech(int)));
+    grid->addWidget(cb, 1, 1);
+    bgroup->addButton(cb);
+
+    cb = new QCheckBox();
+    QObject::connect(cb, SIGNAL(stateChanged(int)),
+            view, SLOT(SwitchToArt(int)));
+    grid->addWidget(cb, 2, 1);
+    bgroup->addButton(cb);
+
+    cb = new QCheckBox();
+    QObject::connect(cb, SIGNAL(stateChanged(int)),
+            view, SLOT(SwitchToCollission(int)));
+    grid->addWidget(cb, 3, 1);
+    bgroup->addButton(cb);
+
+    bgroup->setExclusive(true);
+
+    label = new QLabel("Transparency");
+    grid->addWidget(label, 0, 2);
+
+    view->sliderOpacMech = new QSlider(Qt::Horizontal);
+    view->sliderOpacMech->setMinimum(0);
+    view->sliderOpacMech->setMaximum(100);
+    view->sliderOpacMech->setTickInterval(1);
+    view->sliderOpacMech->setValue(100);
+
+    view->sliderOpacArt = new QSlider(view->sliderOpacMech);
+    view->sliderOpacArt->setOrientation(Qt::Horizontal);
+    view->sliderOpacColl = new QSlider(view->sliderOpacMech);
+    view->sliderOpacColl->setOrientation(Qt::Horizontal);
+
+    QObject::connect(view->sliderOpacMech, SIGNAL(valueChanged(int)),
+            view, SLOT(SetOpacityMech(int)));
+    QObject::connect(view->sliderOpacArt, SIGNAL(valueChanged(int)),
+            view, SLOT(SetOpacityArt(int)));
+    QObject::connect(view->sliderOpacColl, SIGNAL(valueChanged(int)),
+            view, SLOT(SetOpacityCollission(int)));
+
+    grid->addWidget(view->sliderOpacMech, 1, 2);
+    grid->addWidget(view->sliderOpacArt, 2, 2);
+    grid->addWidget(view->sliderOpacColl, 3, 2);
+
+    w->setLayout(grid);
+    w->show();
 }
 
 
