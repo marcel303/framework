@@ -63,6 +63,7 @@ public:
     virtual void keyReleaseEvent(QKeyEvent *e);
 };
 
+class QSlider;
 class EditorView : public EditorViewBasic
 {
     Q_OBJECT
@@ -71,14 +72,17 @@ public:
     virtual ~EditorView();
 
 
+    QSlider* sliderOpacMech;
+    QSlider* sliderOpacArt;
+    QSlider* sliderOpacColl;
 
 public slots:
     void Save();
     void Load();
     void New();
-    void SwitchToMech();
-    void SwitchToArt();
-    void SwitchToCollission();
+    void SwitchToMech(int s);
+    void SwitchToArt(int s);
+    void SwitchToCollission(int s);
 
     void SetOpacityMech(int s);
     void SetOpacityArt(int s);
@@ -86,4 +90,5 @@ public slots:
 
 
     void SwitchToBigMap();
+
 };
