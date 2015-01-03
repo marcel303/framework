@@ -43,9 +43,12 @@ public:
 
     virtual void CreateLevel(int x, int y);
     virtual void InitializeLevel();
+    void AddGrid();
 
     virtual void DeleteTiles();
     virtual void CreateTiles();
+
+    virtual void CustomMouseEvent ( QGraphicsSceneMouseEvent * e );
 
     Tile** m_tiles;
 
@@ -84,6 +87,8 @@ public slots:
     void SwitchToArt(int s);
     void SwitchToCollission(int s);
 
+    void SwitchToTemplateMode();
+
     void SetOpacityMech(int s);
     void SetOpacityArt(int s);
     void SetOpacityCollission(int s);
@@ -91,4 +96,25 @@ public slots:
 
     void SwitchToBigMap();
 
+};
+
+class EditorTemplate
+{
+public:
+
+    struct TemplateTile
+    {
+        int x;
+        int y;
+
+        short blockMech;
+        short blockArt;
+        short blockColl;
+    };
+
+    QMap<QString, TemplateTile> m_list;
+
+    QString m_name;
+
+    void SaveTemplate();
 };

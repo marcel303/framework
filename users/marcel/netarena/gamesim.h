@@ -304,6 +304,8 @@ struct GameStateData
 	uint32_t m_tick;
 	uint32_t m_randomSeed;
 
+	uint32_t m_freezeTicks;
+
 	GameState m_gameState;
 	GameMode m_gameMode;
 

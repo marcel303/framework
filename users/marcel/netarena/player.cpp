@@ -1515,6 +1515,8 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 
 			m_isAlive = false;
 
+			//m_netObject->m_gameSim->m_freezeTicks = 10;
+
 			if (attacker)
 			{
 				bool canScore = true;
