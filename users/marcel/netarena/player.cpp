@@ -1179,6 +1179,13 @@ void Player::tick(float dt)
 			m_vel[0] *= powf(1.f - surfaceFriction, dt * 60.f);
 		}
 
+		// speed clamp
+
+		if (std::abs(m_vel[1]) > PLAYER_SPEED_MAX)
+		{
+			m_vel[1] = PLAYER_SPEED_MAX * Calc::Sign(m_vel[1]);
+		}
+
 		// air dash
 
 		if (m_isGrounded || m_isAttachedToSticky || m_isWallSliding)
@@ -1552,7 +1559,7 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 					m_tokenHunt.m_hasToken = false;
 
 					Token & token = m_netObject->m_gameSim->m_tokenHunt.m_token;
-					token.setPos(
+					token.setup(
 						int(m_pos[0] / BLOCK_SX),
 						int(m_pos[1] / BLOCK_SY));
 					token.m_vel.Set(velocity[0] * TOKEN_DROP_SPEED_MULTIPLIER, -800.f);

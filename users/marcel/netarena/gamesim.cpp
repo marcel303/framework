@@ -10,13 +10,6 @@ OPTION_DECLARE(bool, g_noSound, false);
 OPTION_DEFINE(bool, g_noSound, "Sound/Disable Sound Effects");
 OPTION_ALIAS(g_noSound, "nosound");
 
-OPTION_DECLARE(int, g_pickupTimeBase, 10);
-OPTION_DEFINE(int, g_pickupTimeBase, "Pickup/Spawn Interval (Sec)");
-OPTION_DECLARE(int, g_pickupTimeRandom, 5);
-OPTION_DEFINE(int, g_pickupTimeRandom, "Pickup/Spawn Interval Random (Sec)");
-OPTION_DECLARE(int, g_pickupMax, 5);
-OPTION_DEFINE(int, g_pickupMax, "Pickup/Maximum Pickup Count");
-
 //
 
 GameSim * g_gameSim = 0;
@@ -30,149 +23,6 @@ static const char * s_pickupSprites[kPickupType_COUNT] =
 };
 
 #define TOKEN_SPRITE "token.png"
-
-//
-
-PhysicsActor::PhysicsActor()
-{
-	memset(this, 0, sizeof(*this));
-}
-
-void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
-{
-	// physics
-
-	if (!m_noGravity)
-	{
-		m_vel[1] += GRAVITY * dt;
-	}
-
-	const uint32_t oldBlockMask = getIntersectingBlockMask(gameSim, Vec2(m_pos[0], m_pos[1]));
-	const bool isInPassthrough = (oldBlockMask & kBlockMask_Passthrough) != 0;
-	const bool passthroughMode = isInPassthrough || (m_vel[1] < 0.f);
-	const uint32_t blockExcludeMask = passthroughMode ? ~kBlockMask_Passthrough : ~0;
-
-	if (m_friction != 0.f)
-	{
-		uint32_t blockMask = getIntersectingBlockMask(gameSim, Vec2(m_pos[0], m_pos[1] + 1.f)) & blockExcludeMask;
-
-		if (blockMask & kBlockMask_Solid)
-		{
-			m_vel[0] *= std::pow(m_friction, dt);
-		}
-	}
-
-	if (m_airFriction)
-	{
-		m_vel *= std::pow(m_airFriction, dt);
-	}
-
-	// collision
-
-	Vec2 delta = m_vel * dt;
-	float deltaLen = delta.CalcSize();
-
-	int numSteps = std::max<int>(1, (int)std::ceil(deltaLen));
-
-	Vec2 step = delta / numSteps;
-
-	const float wrapSizes[2] = { ARENA_SX_PIXELS, ARENA_SY_PIXELS };
-
-	for (int i = 0; i < numSteps; ++i)
-	{
-		Vec2 newPos = m_pos;
-
-		for (int j = 0; j < 2; ++j)
-		{
-			bool collision = false;
-
-			float oldPos = newPos[j];
-
-			newPos[j] += step[j];
-
-			if (newPos[j] < 0.f)
-				newPos[j] = wrapSizes[j];
-			else if (newPos[j] > wrapSizes[j])
-				newPos[j] = 0.f;
-
-			uint32_t blockMask = getIntersectingBlockMask(gameSim, newPos) & blockExcludeMask;
-
-			if (j == 0)
-				blockMask &= ~kBlockMask_Passthrough;
-
-			if (blockMask & kBlockMask_Solid)
-			{
-				collision = true;
-			}
-
-			if (collision)
-			{
-				newPos[j] = oldPos;
-
-				m_vel[j] *= m_bounciness;
-				step[j] *= m_bounciness;
-
-				if (cbs.onBounce)
-					cbs.onBounce(cbs, *this);
-			}
-			else
-			{
-				m_pos[j] = newPos[j];
-			}
-
-			if (cbs.onBlockMask)
-				cbs.onBlockMask(cbs, *this, blockMask);
-		}
-	}
-}
-
-void PhysicsActor::drawBB()
-{
-	Vec2 min = m_pos + m_bbMin;
-	Vec2 max = m_pos + m_bbMax;
-
-	setColor(0, 255, 0, 127);
-	drawRect(min[0], min[1], max[0], max[1]);
-
-	setColor(255, 255, 255);
-}
-
-uint32_t PhysicsActor::getIntersectingBlockMask(GameSim & gameSim, Vec2 pos)
-{
-	Vec2 min = pos + m_bbMin;
-	Vec2 max = pos + m_bbMax;
-
-	const int x1 = (int(min[0]         )     + ARENA_SX_PIXELS) % ARENA_SX_PIXELS;
-	const int x2 = (int(max[0]         )     + ARENA_SX_PIXELS) % ARENA_SX_PIXELS;
-	const int y1 = (int(min[1]         )     + ARENA_SY_PIXELS) % ARENA_SY_PIXELS;
-	const int y2 = (int(max[1]         )     + ARENA_SY_PIXELS) % ARENA_SY_PIXELS;
-	const int y3 = (int(min[1] + max[1]) / 2 + ARENA_SY_PIXELS) % ARENA_SY_PIXELS;
-
-	const Arena & arena = gameSim.m_arena;
-
-	uint32_t result = 0;
-
-	result |= arena.getIntersectingBlocksMask(x1, y1);
-	result |= arena.getIntersectingBlocksMask(x2, y1);
-	result |= arena.getIntersectingBlocksMask(x2, y2);
-	result |= arena.getIntersectingBlocksMask(x1, y2);
-
-	result |= arena.getIntersectingBlocksMask(x1, y3);
-	result |= arena.getIntersectingBlocksMask(x2, y3);
-
-	return result;
-}
-
-void PhysicsActor::getCollisionInfo(CollisionInfo & collisionInfo)
-{
-	Vec2 min = m_pos + m_bbMin;
-	Vec2 max = m_pos + m_bbMax;
-
-	collisionInfo.x1 = min[0];
-	collisionInfo.y1 = min[1];
-	collisionInfo.x2 = max[0];
-	collisionInfo.y2 = max[1];
-}
 
 //
 
@@ -212,6 +62,7 @@ void Pickup::setup(PickupType _type, int _blockX, int _blockY)
 	m_bbMin.Set(-sprite.getWidth() / 2.f, -sprite.getHeight());
 	m_bbMax.Set(+sprite.getWidth() / 2.f, 0.f);
 
+	m_doTeleport = true;
 	m_bounciness = .25f;
 	m_friction = .1f;
 	m_airFriction = .5f;
@@ -242,14 +93,25 @@ void Pickup::drawLight()
 
 //
 
-void Token::setPos(int blockX, int blockY)
+void Token::setup(int blockX, int blockY)
 {
 	Sprite sprite(TOKEN_SPRITE);
+
+	*static_cast<PhysicsActor*>(this) = PhysicsActor();
+
 	m_bbMin.Set(-sprite.getWidth() / 2.f, -sprite.getHeight() / 2.f);
 	m_bbMax.Set(+sprite.getWidth() / 2.f, +sprite.getHeight() / 2.f);
 	m_pos.Set(
 		(blockX + .5f) * BLOCK_SX,
 		(blockY + .5f) * BLOCK_SY);
+	m_vel.Set(0.f, 0.f);
+	m_doTeleport = true;
+	m_bounciness = -TOKEN_BOUNCINESS;
+	m_dropTimer = 0.f;
+	m_isDropped = true;
+	m_noGravity = false;
+	m_friction = 0.1f;
+	m_airFriction = 0.9f;
 }
 
 void Token::tick(GameSim & gameSim, float dt)
@@ -523,33 +385,41 @@ void GameSim::tickPlay()
 
 	if (tick >= m_nextPickupSpawnTick)
 	{
-		int weights[kPickupType_COUNT] =
-		{
-			PICKUP_AMMO_WEIGHT,
-			PICKUP_NADE_WEIGHT
-		};
+		int numPickups = 0;
+		for (int i = 0; i < MAX_PICKUPS; ++i)
+			if (m_pickups[i].isAlive)
+				numPickups++;
 
-		int totalWeight = 0;
-
-		for (int i = 0; i < kPickupType_COUNT; ++i)
+		if (numPickups < MAX_PICKUP_COUNT)
 		{
-			totalWeight += weights[i];
-			weights[i] = totalWeight;
+			int weights[kPickupType_COUNT] =
+			{
+				PICKUP_AMMO_WEIGHT,
+				PICKUP_NADE_WEIGHT
+			};
+
+			int totalWeight = 0;
+
+			for (int i = 0; i < kPickupType_COUNT; ++i)
+			{
+				totalWeight += weights[i];
+				weights[i] = totalWeight;
+			}
+
+			if (DEBUG_RANDOM_CALLSITES)
+				LOG_DBG("Random called from pre trySpawnPickup");
+			int value = Random() % totalWeight;
+
+			PickupType type = kPickupType_COUNT;
+
+			for (int i = 0; type == kPickupType_COUNT; ++i)
+				if (value < weights[i])
+					type = (PickupType)i;
+
+			trySpawnPickup(type);
 		}
 
-		if (DEBUG_RANDOM_CALLSITES)
-			LOG_DBG("Random called from pre trySpawnPickup");
-		int value = Random() % totalWeight;
-
-		PickupType type = kPickupType_COUNT;
-
-		for (int i = 0; type == kPickupType_COUNT; ++i)
-			if (value < weights[i])
-				type = (PickupType)i;
-
-		trySpawnPickup(type);
-
-		m_nextPickupSpawnTick = tick + (g_pickupTimeBase + (Random() % g_pickupTimeRandom)) * TICKS_PER_SECOND;
+		m_nextPickupSpawnTick = tick + (PICKUP_INTERVAL + (Random() % PICKUP_INTERVAL_VARIANCE)) * TICKS_PER_SECOND;
 	}
 
 	// token
@@ -682,15 +552,7 @@ void GameSim::spawnToken()
 		const int spawnX = x[index];
 		const int spawnY = y[index];
 
-		token = Token();
-		token.setPos(spawnX, spawnY);
-		token.m_bounciness = -TOKEN_BOUNCINESS;
-		token.m_dropTimer = 0.f;
-		token.m_isDropped = true;
-		token.m_noGravity = false;
-		token.m_friction = 0.1f;
-		token.m_airFriction = 0.9f;
-		token.m_vel.Set(0.f, 0.f);
+		token.setup(spawnX, spawnY);
 	}
 }
 

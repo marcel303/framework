@@ -2,6 +2,7 @@
 
 #include "arena.h"
 #include "gametypes.h"
+#include "physobj.h"
 #include "Random.h"
 #include "Vec2.h"
 
@@ -15,42 +16,8 @@
 
 class BulletPool;
 class NetSpriteManager;
-struct PhysicsActor;
-struct PhysicsActorCBs;
+struct ParticleSpawnInfo;
 class PlayerNetObject;
-
-struct PhysicsActorCBs
-{
-	PhysicsActorCBs()
-	{
-		memset(this, 0, sizeof(*this));
-	}
-
-	bool (*onBlockMask)(PhysicsActorCBs & cbs, PhysicsActor & actor, uint32_t blockMask);
-	void (*onBounce)(PhysicsActorCBs & cbs, PhysicsActor & actor);
-};
-
-struct PhysicsActor
-{
-	Vec2 m_pos;
-	Vec2 m_vel;
-
-	Vec2 m_bbMin;
-	Vec2 m_bbMax;
-
-	bool m_noGravity;
-	float m_bounciness;
-	float m_friction;
-	float m_airFriction;
-
-	PhysicsActor();
-
-	void tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs);
-	void drawBB();
-
-	uint32_t getIntersectingBlockMask(GameSim & gameSim, Vec2 pos);
-	void getCollisionInfo(CollisionInfo & collisionInfo);
-};
 
 struct Player
 {
@@ -260,7 +227,7 @@ struct Token : PhysicsActor
 	bool m_isDropped;
 	float m_dropTimer;
 
-	void setPos(int blockX, int blockY);
+	void setup(int blockX, int blockY);
 
 	void tick(GameSim & gameSim, float dt);
 	void draw();

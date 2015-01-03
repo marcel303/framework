@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include "NetSerializable.h"
+#include "physobj.h"
 #include "Vec2.h"
 
 #define MAX_BULLETS 1000
