@@ -254,7 +254,8 @@ void Client::draw()
 void Client::drawPlay()
 {
 	const Vec2 shake = m_gameSim->getScreenShake();
-	gxPushMatrix();
+
+	Vec2 camTranslation = shake;
 
 #if 0
 	const float asx = ARENA_SX_PIXELS;
@@ -272,10 +273,11 @@ void Client::drawPlay()
 	gxTranslatef(-ARENA_SX_PIXELS/2.f, -ARENA_SY_PIXELS/2.f, 0.f);
 #endif
 
-	gxTranslatef(shake[0], shake[1], 0.f);
-
 	pushSurface(g_colorMap);
 	{
+		gxPushMatrix();
+		gxTranslatef(camTranslation[0], camTranslation[1], 0.f);
+
 		setBlend(BLEND_OPAQUE);
 		Sprite("back.png").draw();
 		setBlend(BLEND_ALPHA);
@@ -303,11 +305,16 @@ void Client::drawPlay()
 		m_gameSim->m_bulletPool->draw();
 
 		m_gameSim->m_particlePool->draw();
+
+		gxPopMatrix();
 	}
 	popSurface();
 
 	pushSurface(g_lightMap);
 	{
+		gxPushMatrix();
+		gxTranslatef(camTranslation[0], camTranslation[1], 0.f);
+
 		const float v = .1f + (std::sin(g_TimerRT.Time_get() / 5.f) + 1.f) / 2.f * .9f;
 		glClearColor(v, v, v, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -333,10 +340,10 @@ void Client::drawPlay()
 		m_gameSim->m_bulletPool->drawLight();
 
 		m_gameSim->m_particlePool->drawLight();
+
+		gxPopMatrix();
 	}
 	popSurface();
-
-	gxPopMatrix();
 
 	// compose
 
