@@ -119,6 +119,7 @@ enum RpcMethod
 {
 	s_rpcSyncGameSim,
 	s_rpcSetGameState,
+	s_rpcSetGameMode,
 	s_rpcLoadArena,
 	s_rpcAddPlayer,
 	s_rpcAddPlayerBroadcast,
@@ -169,6 +170,31 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		if (gameSim)
 		{
 			gameSim->setGameState((GameState)gameState);
+		}
+	}
+	else if (method == s_rpcSetGameMode)
+	{
+		LOG_DBG("handleRpc: s_rpcSetGameMode");
+
+		uint8_t gameMode;
+
+		bitStream.Read(gameMode);
+
+		GameSim * gameSim = 0;
+
+		if (!channel)
+			gameSim = &g_host->m_gameSim;
+		else
+		{
+			Client * client = g_app->findClientByChannel(channel);
+			Assert(client);
+			if (client)
+				gameSim = client->m_gameSim;
+		}
+
+		if (gameSim)
+		{
+			gameSim->setGameMode((GameMode)gameMode);
 		}
 	}
 	else if (method == s_rpcLoadArena)
@@ -1062,6 +1088,11 @@ void App::draw()
 
 			client->draw();
 
+			if (g_devMode)
+			{
+				client->debugDraw();
+			}
+
 			clearDrawRect();
 
 			setColor(255, 255, 255);
@@ -1232,6 +1263,19 @@ void App::netSetGameState(GameState _gameState)
 	bs.Write(gameState);
 
 	m_rpcMgr->Call(s_rpcSetGameState, bs, ChannelPool_Server, 0, true, true);
+}
+
+void App::netSetGameMode(GameMode _gameMode)
+{
+	LOG_DBG("netSetGameMode");
+
+	uint8_t gameMode = _gameMode;
+
+	BitStream bs;
+
+	bs.Write(gameMode);
+
+	m_rpcMgr->Call(s_rpcSetGameMode, bs, ChannelPool_Server, 0, true, true);
 }
 
 void App::netLoadArena(const char * filename)

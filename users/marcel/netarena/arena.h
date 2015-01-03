@@ -66,6 +66,9 @@ static const int kBlockMask_Solid =
 static const int kBlockMask_Passthrough =
 	(1 << kBlockType_Passthrough);
 
+static const int kBlockMask_Spike =
+	(1 << kBlockType_Spike);
+
 #pragma pack(push)
 #pragma pack(1)
 

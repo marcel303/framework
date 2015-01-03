@@ -1159,7 +1159,7 @@ void Player::tick(float dt)
 
 		// breaking
 
-		if (steeringSpeed == 0.f)
+		if (steeringSpeed == 0.f || std::abs(m_vel[0]) > steeringSpeed)
 		{
 			m_vel[0] *= powf(1.f - surfaceFriction, dt * 60.f);
 		}
@@ -1230,6 +1230,18 @@ void Player::tick(float dt)
 	m_netObject->m_input.next();
 
 	//printf("x: %g\n", m_pos[0]);
+
+	// token hunt game mode
+
+	if (m_isAlive)
+	{
+		CollisionInfo playerCollision;
+		getPlayerCollision(playerCollision);
+		if (m_netObject->m_gameSim->pickupToken(playerCollision))
+		{
+			m_tokenHunt.m_hasToken = true;
+		}
+	}
 }
 
 void Player::draw()
@@ -1356,18 +1368,11 @@ void Player::debugDraw()
 
 uint32_t Player::getIntersectingBlocksMaskInternal(int x, int y, bool doWrap) const
 {
-#if 1
 	const int x1 = (x + (int)m_collision.x1 + ARENA_SX_PIXELS) % ARENA_SX_PIXELS;
 	const int x2 = (x + (int)m_collision.x2 + ARENA_SX_PIXELS) % ARENA_SX_PIXELS;
 	const int y1 = (y + (int)m_collision.y1 + ARENA_SY_PIXELS) % ARENA_SY_PIXELS;
 	const int y2 = (y + (int)m_collision.y2 + ARENA_SY_PIXELS) % ARENA_SY_PIXELS;
 	const int y3 = (y + (int)(m_collision.y1 + m_collision.y2) / 2 + ARENA_SY_PIXELS) % ARENA_SY_PIXELS;
-#else
-	const int x1 = x + m_collision.x1;
-	const int y1 = y + m_collision.y1;
-	const int x2 = x + m_collision.x2;
-	const int y2 = y + m_collision.y2;
-#endif
 
 	uint32_t result = 0;
 	
@@ -1380,21 +1385,6 @@ uint32_t Player::getIntersectingBlocksMaskInternal(int x, int y, bool doWrap) co
 
 	result |= arena.getIntersectingBlocksMask(x1, y3);
 	result |= arena.getIntersectingBlocksMask(x2, y3);
-
-#if 0
-	if (doWrap)
-	{
-		const int dx = x1 < 0 ? +ARENA_SX_PIXELS : x2 >= ARENA_SX_PIXELS ? -ARENA_SX_PIXELS : 0;
-		const int dy = y1 < 0 ? +ARENA_SY_PIXELS : y2 >= ARENA_SY_PIXELS ? -ARENA_SY_PIXELS : 0;
-
-		if ((dx | dy) != 0)
-		{
-			result |= getIntersectingBlocksMaskInternal(x + dx, y,      false);
-			result |= getIntersectingBlocksMaskInternal(x,      y + dy, false);
-			result |= getIntersectingBlocksMaskInternal(x + dx, y + dy, false);
-		}
-	}
-#endif
 
 	return result;
 }
@@ -1420,6 +1410,8 @@ void Player::handleNewRound()
 	m_isRespawn = false;
 
 	m_weaponAmmo = 0;
+
+	m_tokenHunt = TokenHunt();
 }
 
 void Player::respawn()
@@ -1503,6 +1495,21 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 			spawnInfo.color = 0xff0000ff;
 
 			m_netObject->m_gameSim->spawnParticles(spawnInfo);
+
+			// token hunt
+
+			if (m_tokenHunt.m_hasToken)
+			{
+				m_tokenHunt.m_hasToken = false;
+
+				GameStateData::TokenHunt::Token & token = m_netObject->m_gameSim->m_tokenHunt.m_token;
+				token.setPos(
+					int(m_pos[0] / BLOCK_SX),
+					int(m_pos[1] / BLOCK_SY));
+				token.m_vel.Set(g_gameSim->RandomFloat(-500.f, +500.f), -800.f);
+				token.m_isDropped = true;
+				token.m_dropTimer = 0.25f;
+			}
 
 			return true;
 		}

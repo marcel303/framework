@@ -11,6 +11,12 @@ enum GameState
 	kGameState_RoundComplete
 };
 
+enum GameMode
+{
+	kGameMode_DeathMatch,
+	kGameMode_TokenHunt
+};
+
 enum PlayerWeapon
 {
 	kPlayerWeapon_Sword,

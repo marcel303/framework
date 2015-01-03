@@ -29,6 +29,151 @@ static const char * s_pickupSprites[kPickupType_COUNT] =
 	"pickup-nade.png"
 };
 
+#define TOKEN_SPRITE "token.png"
+
+//
+
+PhysicsActor::PhysicsActor()
+{
+	memset(this, 0, sizeof(*this));
+}
+
+void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
+{
+	Arena & arena = gameSim.m_arena;
+
+	if (!m_noGravity)
+	{
+		m_vel[1] += GRAVITY * dt;
+	}
+
+	if (m_friction != 0.f)
+	{
+		uint32_t blockMask = getIntersectingBlockMask(gameSim, Vec2(m_pos[0], m_pos[1] + 1.f));
+
+		if (blockMask & kBlockMask_Solid)
+		{
+			m_vel[0] *= std::pow(m_friction, dt);
+		}
+	}
+
+	if (m_airFriction)
+	{
+		m_vel *= std::pow(m_airFriction, dt);
+	}
+
+	Vec2 delta = m_vel * dt;
+	float deltaLen = delta.CalcSize();
+
+	int numSteps = std::max<int>(1, (int)std::ceil(deltaLen));
+
+	Vec2 step = delta / numSteps;
+
+	const float wrapSizes[2] = { ARENA_SX_PIXELS, ARENA_SY_PIXELS };
+
+	for (int i = 0; i < numSteps; ++i)
+	{
+		Vec2 newPos = m_pos;
+
+		for (int j = 0; j < 2; ++j)
+		{
+			bool collision = false;
+
+			float oldPos = newPos[j];
+
+			newPos[j] += step[j];
+
+			if (newPos[j] < 0.f)
+				newPos[j] = wrapSizes[j];
+			else if (newPos[j] > wrapSizes[j])
+				newPos[j] = 0.f;
+
+			uint32_t blockMask = getIntersectingBlockMask(gameSim, newPos);
+
+			if (blockMask & kBlockMask_Solid)
+			{
+				collision = true;
+			}
+
+			if (collision)
+			{
+				newPos[j] = oldPos;
+
+				m_vel[j] *= m_bounciness;
+				step[j] *= m_bounciness;
+
+				if (cbs.onBounce)
+					cbs.onBounce(cbs, *this);
+			}
+			else
+			{
+				m_pos[j] = newPos[j];
+			}
+
+			if (cbs.onBlockMask)
+				cbs.onBlockMask(cbs, *this, blockMask);
+		}
+	}
+}
+
+void PhysicsActor::drawBB()
+{
+	Vec2 min = m_pos + m_bbMin;
+	Vec2 max = m_pos + m_bbMax;
+
+	setColor(0, 255, 0, 127);
+	drawRect(min[0], min[1], max[0], max[1]);
+
+	setColor(255, 255, 255);
+}
+
+void PhysicsActor::setPos(int blockX, int blockY)
+{
+	Sprite sprite(TOKEN_SPRITE);
+	m_bbMin.Set(-sprite.getWidth() / 2.f, -sprite.getHeight() / 2.f);
+	m_bbMax.Set(+sprite.getWidth() / 2.f, +sprite.getHeight() / 2.f);
+	m_pos.Set(
+		(blockX + .5f) * BLOCK_SX,
+		(blockY + .5f) * BLOCK_SY);
+}
+
+uint32_t PhysicsActor::getIntersectingBlockMask(GameSim & gameSim, Vec2 pos)
+{
+	Vec2 min = pos + m_bbMin;
+	Vec2 max = pos + m_bbMax;
+
+	const int x1 = (int(min[0]         )     + ARENA_SX_PIXELS) % ARENA_SX_PIXELS;
+	const int x2 = (int(max[0]         )     + ARENA_SX_PIXELS) % ARENA_SX_PIXELS;
+	const int y1 = (int(min[1]         )     + ARENA_SY_PIXELS) % ARENA_SY_PIXELS;
+	const int y2 = (int(max[1]         )     + ARENA_SY_PIXELS) % ARENA_SY_PIXELS;
+	const int y3 = (int(min[1] + max[1]) / 2 + ARENA_SY_PIXELS) % ARENA_SY_PIXELS;
+
+	const Arena & arena = gameSim.m_arena;
+
+	uint32_t result = 0;
+
+	result |= arena.getIntersectingBlocksMask(x1, y1);
+	result |= arena.getIntersectingBlocksMask(x2, y1);
+	result |= arena.getIntersectingBlocksMask(x2, y2);
+	result |= arena.getIntersectingBlocksMask(x1, y2);
+
+	result |= arena.getIntersectingBlocksMask(x1, y3);
+	result |= arena.getIntersectingBlocksMask(x2, y3);
+
+	return result;
+}
+
+void PhysicsActor::getCollisionInfo(CollisionInfo & collisionInfo)
+{
+	Vec2 min = m_pos + m_bbMin;
+	Vec2 max = m_pos + m_bbMax;
+
+	collisionInfo.x1 = min[0];
+	collisionInfo.y1 = min[1];
+	collisionInfo.x2 = max[0];
+	collisionInfo.y2 = max[1];
+}
+
 //
 
 uint32_t GameStateData::Random()
@@ -41,6 +186,40 @@ uint32_t GameStateData::Random()
 uint32_t GameStateData::GetTick()
 {
 	return m_tick;
+}
+
+
+void GameStateData::TokenHunt::Token::tick(GameSim & gameSim, float dt)
+{
+	if (m_isDropped)
+	{
+		PhysicsActorCBs cbs;
+		cbs.onBlockMask = [](PhysicsActorCBs & cbs, PhysicsActor & actor, uint32_t blockMask) 
+		{
+			if (blockMask & kBlockMask_Spike)
+			{
+				if (actor.m_vel[1] > 0.f)
+				{
+					actor.m_vel.Set(g_gameSim->RandomFloat(-500.f, +500.f), -800.f);
+					g_gameSim->playSound("token-bounce.ogg");
+				}
+			}
+			return false;
+		};
+		cbs.onBounce = [](PhysicsActorCBs & cbs, PhysicsActor & actor) { g_gameSim->playSound("token-bounce.ogg"); };
+
+		PhysicsActor::tick(gameSim, dt, cbs);
+
+		m_dropTimer -= dt;
+	}
+}
+
+void GameStateData::TokenHunt::Token::draw()
+{
+	if (m_isDropped)
+	{
+		Sprite(TOKEN_SPRITE).drawEx(m_pos[0], m_pos[1]);
+	}
 }
 
 //
@@ -173,7 +352,17 @@ void GameSim::setGameState(::GameState gameState)
 				player->respawn();
 			}
 		}
+
+		if (m_gameMode == kGameMode_TokenHunt)
+		{
+			spawnToken();
+		}
 	}
+}
+
+void GameSim::setGameMode(GameMode gameMode)
+{
+	m_gameMode = gameMode;
 }
 
 void GameSim::tick()
@@ -258,6 +447,10 @@ void GameSim::tickPlay()
 
 		m_nextPickupSpawnTick = tick + (g_pickupTimeBase + (Random() % g_pickupTimeRandom)) * TICKS_PER_SECOND;
 	}
+
+	// token
+
+	m_tokenHunt.m_token.tick(*this, dt);
 
 	anim(dt);
 
@@ -370,6 +563,52 @@ Pickup * GameSim::grabPickup(int x1, int y1, int x2, int y2)
 	}
 
 	return 0;
+}
+
+void GameSim::spawnToken()
+{
+	TokenHunt::Token & token = m_tokenHunt.m_token;
+
+	const int kMaxLocations = ARENA_SX * ARENA_SY;
+	int numLocations = kMaxLocations;
+	int x[kMaxLocations];
+	int y[kMaxLocations];
+
+	if (m_arena.getRandomPickupLocations(x, y, numLocations, this, 0))
+	{
+		const int index = Random() % numLocations;
+		const int spawnX = x[index];
+		const int spawnY = y[index];
+
+		token.setPos(spawnX, spawnY);
+		token.m_bounciness = -0.5f;
+		token.m_dropTimer = 0.f;
+		token.m_isDropped = true;
+		token.m_noGravity = false;
+		token.m_friction = 0.1f;
+		token.m_airFriction = 0.9f;
+		token.m_vel.Set(800.f, 100.f);
+	}
+}
+
+bool GameSim::pickupToken(const CollisionInfo & collisionInfo)
+{
+	TokenHunt::Token & token = m_tokenHunt.m_token;
+
+	if (token.m_isDropped && token.m_dropTimer <= 0.f)
+	{
+		CollisionInfo tokenCollision;
+		token.getCollisionInfo(tokenCollision);
+
+		if (tokenCollision.intersects(collisionInfo))
+		{
+			token.m_isDropped = false;
+
+			return true;
+		}
+	}
+
+	return false;
 }
 
 uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, uint8_t type, uint8_t ownerPlayerId)

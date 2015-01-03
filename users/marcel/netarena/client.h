@@ -31,6 +31,7 @@ public:
 	void draw();
 	void drawPlay();
 	void drawRoundComplete();
+	void debugDraw();
 
 	void addPlayer(PlayerNetObject * player);
 	void removePlayer(PlayerNetObject * player);

@@ -113,6 +113,7 @@ public:
 
 	void netSyncGameSim(Channel * channel);
 	void netSetGameState(GameState gameState);
+	void netSetGameMode(GameMode gameMode);
 	void netLoadArena(const char * filename);
 	void netAddPlayer(Channel * channel, uint8_t characterIndex);
 	void netAddPlayerBroadcast(Channel * channel, uint16_t owningChannelId, uint8_t index, uint8_t characterIndex);

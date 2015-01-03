@@ -295,6 +295,8 @@ void Client::drawPlay()
 		}
 	}
 
+	m_gameSim->m_tokenHunt.m_token.draw();
+
 	for (auto i = m_players.begin(); i != m_players.end(); ++i)
 	{
 		PlayerNetObject * playerNetObject = *i;
@@ -340,6 +342,11 @@ void Client::drawRoundComplete()
 		index++;
 		y += 50;
 	}
+}
+
+void Client::debugDraw()
+{
+	m_gameSim->m_tokenHunt.m_token.drawBB();
 }
 
 void Client::addPlayer(PlayerNetObject * player)

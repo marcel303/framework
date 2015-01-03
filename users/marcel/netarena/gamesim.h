@@ -15,7 +15,44 @@
 
 class BulletPool;
 class NetSpriteManager;
+struct PhysicsActor;
+struct PhysicsActorCBs;
 class PlayerNetObject;
+
+struct PhysicsActorCBs
+{
+	PhysicsActorCBs()
+	{
+		memset(this, 0, sizeof(*this));
+	}
+
+	bool (*onBlockMask)(PhysicsActorCBs & cbs, PhysicsActor & actor, uint32_t blockMask);
+	void (*onBounce)(PhysicsActorCBs & cbs, PhysicsActor & actor);
+};
+
+struct PhysicsActor
+{
+	Vec2 m_pos;
+	Vec2 m_vel;
+
+	Vec2 m_bbMin;
+	Vec2 m_bbMax;
+
+	bool m_noGravity;
+	float m_bounciness;
+	float m_friction;
+	float m_airFriction;
+
+	PhysicsActor();
+
+	void tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs);
+	void drawBB();
+
+	void setPos(int blockX, int blockY);
+
+	uint32_t getIntersectingBlockMask(GameSim & gameSim, Vec2 pos);
+	void getCollisionInfo(CollisionInfo & collisionInfo);
+};
 
 struct Player
 {
@@ -189,6 +226,16 @@ struct Player
 	Vec2 m_animVel;
 
 	bool m_enterPassthrough; // if set, the player will move through passthrough blocks, without having to press DOWN. this mode is set when using the sword-down attack, and reset when the player hits the ground
+
+	struct TokenHunt
+	{
+		TokenHunt()
+		{
+			memset(this, 0, sizeof(*this));
+		}
+
+		bool m_hasToken;
+	} m_tokenHunt;
 };
 
 struct ScreenShake
@@ -229,12 +276,26 @@ struct GameStateData
 	uint32_t m_randomSeed;
 
 	GameState m_gameState;
+	GameMode m_gameMode;
 
 	Player m_players[MAX_PLAYERS];
 
 	Pickup m_pickups[MAX_PICKUPS];
 	Pickup m_grabbedPickup;
 	uint64_t m_nextPickupSpawnTick;
+
+	struct TokenHunt
+	{
+		struct Token : PhysicsActor
+		{
+			bool m_isDropped;
+			float m_dropTimer;
+
+			void tick(GameSim & gameSim, float dt);
+			void draw();
+		} m_token;
+
+	} m_tokenHunt;
 };
 
 class GameSim : public GameStateData
@@ -263,6 +324,7 @@ public:
 	void setPlayerPtrs() const;
 
 	void setGameState(::GameState gameState);
+	void setGameMode(GameMode gameMode);
 
 	void tick();
 	void tickLobby();
@@ -275,6 +337,9 @@ public:
 	void trySpawnPickup(PickupType type);
 	void spawnPickup(Pickup & pickup, PickupType type, int blockX, int blockY);
 	Pickup * grabPickup(int x1, int y1, int x2, int y2);
+
+	void spawnToken();
+	bool pickupToken(const CollisionInfo & collisionInfo);
 
 	uint16_t spawnBullet(int16_t x, int16_t y, uint8_t angle, uint8_t type, uint8_t ownerPlayerId);
 	void spawnParticles(const ParticleSpawnInfo & spawnInfo);
