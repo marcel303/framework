@@ -5,6 +5,8 @@
 #include "physobj.h"
 #include "Vec2.h"
 
+#define BULLET_IS_PHYSOBJ 1
+
 #define MAX_BULLETS 1000
 #define INVALID_BULLET_ID 0xffff
 
@@ -20,26 +22,30 @@ enum BulletType
 	kBulletType_COUNT
 };
 
-class Bullet
+class Bullet : public PhysicsActor
 {
 public:
+	Bullet();
+
 	void setVel(float angle, float velocity);
 
 	bool isAlive;
 
+#if !BULLET_IS_PHYSOBJ
 	Vec2 pos;
 	Vec2 vel;
+#endif
 	BulletType type;
 	bool noCollide;
 	uint32_t color;
 
+#if !BULLET_IS_PHYSOBJ
 	bool doGravity;
+#endif
 	bool doBounce;
 	bool noDamagePlayer;
 	bool noDamageMap;
 	bool doDamageOwner;
-
-	Vec2 lastPos;
 
 	uint8_t reflectCount;
 	uint8_t maxReflectCount;

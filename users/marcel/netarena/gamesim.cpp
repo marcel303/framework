@@ -586,11 +586,11 @@ uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, uint8_t type
 		Bullet & b = m_bulletPool->m_bullets[id];
 
 		Assert(!b.isAlive);
-		memset(&b, 0, sizeof(b));
+		b = Bullet();
 		b.isAlive = true;
 		b.type = static_cast<BulletType>(type);
-		b.pos[0] = x;
-		b.pos[1] = y;
+		b.m_pos[0] = x;
+		b.m_pos[1] = y;
 		b.color = 0xffffffff;
 
 		float angle = _angle / 128.f * float(M_PI);
@@ -615,7 +615,7 @@ uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, uint8_t type
 		case kBulletType_Grenade:
 			velocity = BULLET_GRENADE_NADE_SPEED;
 			b.maxWrapCount = 100;
-			b.doGravity = true;
+			b.m_noGravity = false;
 			b.doBounce = true;
 			b.bounceAmount = BULLET_GRENADE_NADE_BOUNCE_AMOUNT;
 			b.noDamageMap = true;

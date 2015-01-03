@@ -64,9 +64,17 @@ void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 			newPos[j] += step[j];
 
 			if (newPos[j] < 0.f)
+			{
 				newPos[j] = wrapSizes[j];
+				if (cbs.onWrap)
+					cbs.onWrap(cbs, *this);
+			}
 			else if (newPos[j] > wrapSizes[j])
+			{
 				newPos[j] = 0.f;
+				if (cbs.onWrap)
+					cbs.onWrap(cbs, *this);
+			}
 
 			uint32_t blockMask = getIntersectingBlockMask(gameSim, newPos) & blockExcludeMask;
 
@@ -124,6 +132,9 @@ void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 				}
 			}
 		}
+
+		if (cbs.onMove)
+			cbs.onMove(cbs, *this);
 	}
 }
 

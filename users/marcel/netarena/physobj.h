@@ -16,6 +16,8 @@ struct PhysicsActorCBs
 
 	bool (*onBlockMask)(PhysicsActorCBs & cbs, PhysicsActor & actor, uint32_t blockMask);
 	void (*onBounce)(PhysicsActorCBs & cbs, PhysicsActor & actor);
+	void (*onWrap)(PhysicsActorCBs & cbs, PhysicsActor & actor);
+	void (*onMove)(PhysicsActorCBs & cbs, PhysicsActor & actor);
 };
 
 struct PhysicsActor

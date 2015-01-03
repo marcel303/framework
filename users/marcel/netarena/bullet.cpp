@@ -48,9 +48,18 @@ static void mirrorAngle(float & angle, float x, float y)
 
 //
 
+Bullet::Bullet()
+{
+	memset(this, 0, sizeof(*this));
+
+	*static_cast<PhysicsActor*>(this) = PhysicsActor();
+
+	m_noGravity = true;
+}
+
 void Bullet::setVel(float angle, float velocity)
 {
-	getVelocityXY(angle, velocity, vel[0], vel[1]);
+	getVelocityXY(angle, velocity, m_vel[0], m_vel[1]);
 }
 
 //
@@ -75,16 +84,63 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 
 		if (b.isAlive)
 		{
-			const float distance = b.vel.CalcSize() * _dt;
+#if 0
+			PhysicsActorCBs cbs;
+			cbs.onBounce = [](PhysicsActorCBs & cbs, PhysicsActor & actor)
+			{
+				Bullet & b = static_cast<Bullet&>(actor);
+
+				if (b.isAlive)
+				{
+					if (b.maxReflectCount != 0)
+					{
+						b.reflectCount++;
+
+						if (b.reflectCount > b.maxReflectCount)
+						{
+							b.isAlive = false;
+						}
+						else
+						{
+							b.m_vel *= -1.f;
+						}
+					}
+					else
+						b.isAlive = false;
+
+					if (!b.isAlive)
+					{
+						ParticleSpawnInfo spawnInfo(b.m_pos[0], b.m_pos[1], kBulletType_ParticleA, 10, 50, 200, 20);
+						g_gameSim->spawnParticles(spawnInfo);
+					}
+				}
+			};
+			cbs.onWrap = [](PhysicsActorCBs & cbs, PhysicsActor & actor)
+			{
+				Bullet & b = static_cast<Bullet&>(actor);
+
+			};
+			cbs.onMove = [](PhysicsActorCBs & cbs, PhysicsActor & actor)
+			{
+				Bullet & b = static_cast<Bullet&>(actor);
+			};
+
+			b.tick(gameSim, _dt, cbs);
+#else
+			const float distance = b.m_vel.CalcSize() * _dt;
 			const int numSteps = std::max<int>(1, (int)std::ceil(std::abs(distance) / 4.f));
 
-			uint32_t oldBlockMask = arena.getIntersectingBlocksMask(b.pos[0], b.pos[1]);
+			uint32_t oldBlockMask = arena.getIntersectingBlocksMask(b.m_pos[0], b.m_pos[1]);
+
+			const bool isInPassthrough = (oldBlockMask & kBlockMask_Passthrough) != 0;
+			const bool passthroughMode = isInPassthrough || (b.m_vel[1] < 0.f);
+			const uint32_t blockExcludeMask = passthroughMode ? ~kBlockMask_Passthrough : ~0;
 
 			for (int step = 0; step < numSteps && b.isAlive; ++step)
 			{
 				const float dt = _dt / numSteps;
 
-				Vec2 oldPos = b.pos;
+				Vec2 oldPos = b.m_pos;
 
 				anim(gameSim, b, dt);
 
@@ -101,7 +157,7 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 
 				if (!kill && !b.noCollide)
 				{
-					const uint32_t blockMask = arena.getIntersectingBlocksMask(b.pos[0], b.pos[1]);
+					const uint32_t blockMask = arena.getIntersectingBlocksMask(b.m_pos[0], b.m_pos[1]) & blockExcludeMask;
 
 					if (doReflection)
 					{
@@ -119,7 +175,7 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 								}
 								else
 								{
-									b.vel *= -1.f;
+									b.m_vel *= -1.f;
 								}
 							}
 							else
@@ -129,7 +185,7 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 
 					if (kill)
 					{
-						ParticleSpawnInfo spawnInfo(b.pos[0], b.pos[1], kBulletType_ParticleA, 10, 50, 200, 20);
+						ParticleSpawnInfo spawnInfo(b.m_pos[0], b.m_pos[1], kBulletType_ParticleA, 10, 50, 200, 20);
 						gameSim.spawnParticles(spawnInfo);
 					}
 
@@ -139,44 +195,36 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 
 						uint32_t blockMask;
 
-						blockMask = arena.getIntersectingBlocksMask(b.pos[0], oldPos[1]);
+						blockMask = arena.getIntersectingBlocksMask(b.m_pos[0], oldPos[1]) & blockExcludeMask;
 
 						if (blockMask & kBlockMask_Solid)
 						{
-							b.vel[0] *= -b.bounceAmount;
-							b.pos[0] = oldPos[0];
+							b.m_vel[0] *= -b.bounceAmount;
+							b.m_pos[0] = oldPos[0];
 
 							b.bounceCount++;
 						}
 
 						// eval collision in y direction
 
-						blockMask = arena.getIntersectingBlocksMask(b.pos[0], b.pos[1]);
+						blockMask = arena.getIntersectingBlocksMask(b.m_pos[0], b.m_pos[1]) & blockExcludeMask;
 
 						if (blockMask & kBlockMask_Solid)
 						{
-							if (b.type == kBulletType_Grenade && b.doGravity && b.vel[1] >= 0.f && b.vel.CalcSizeSq() < 50.f*50.f)
+							if (b.type == kBulletType_Grenade && !b.m_noGravity && b.m_vel[1] >= 0.f && b.m_vel.CalcSizeSq() < 50.f*50.f)
 							{
-								b.vel = Vec2(0.f, 0.f);
-								b.doGravity = false;
+								b.m_vel = Vec2(0.f, 0.f);
+								b.m_noGravity = true;
 								b.life = BULLET_GRENADE_NADE_LIFE_AFTER_SETTLE;
 							}
 
-							b.vel[0] *= +b.bounceAmount;
-							b.vel[1] *= -b.bounceAmount;
-							b.pos[1] = oldPos[1];
+							b.m_vel[0] *= +b.bounceAmount;
+							b.m_vel[1] *= -b.bounceAmount;
+							b.m_pos[1] = oldPos[1];
 
 							b.bounceCount++;
 						}
 					}
-
-				#if 0
-					if (b.bounceCount >= BULLET_GRENADE_NADE_BOUNCE_COUNT)
-					{
-						b.vel = Vec2(0.f, 0.f);
-						b.doGravity = false;
-					}
-				#endif
 
 					// teleport
 
@@ -185,8 +233,8 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 
 					if (!oldTeleport && newTeleport)
 					{
-						int sourceX = int(b.pos[0]) / BLOCK_SX;
-						int sourceY = int(b.pos[1]) / BLOCK_SY;
+						int sourceX = int(b.m_pos[0]) / BLOCK_SX;
+						int sourceY = int(b.m_pos[1]) / BLOCK_SY;
 
 						int destX;
 						int destY;
@@ -196,8 +244,8 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 							int deltaX = destX - sourceX;
 							int deltaY = destY - sourceY;
 
-							b.pos[0] += deltaX * BLOCK_SX;
-							b.pos[1] += deltaY * BLOCK_SY;
+							b.m_pos[0] += deltaX * BLOCK_SX;
+							b.m_pos[1] += deltaY * BLOCK_SY;
 
 							oldBlockMask = blockMask;
 						}
@@ -248,9 +296,9 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 
 						player.getPlayerCollision(collisionInfo);
 
-						if (collisionInfo.intersects(b.pos[0], b.pos[1]))
+						if (collisionInfo.intersects(b.m_pos[0], b.m_pos[1]))
 						{
-							if (player.handleDamage(1.f, b.vel, owner))
+							if (player.handleDamage(1.f, b.m_vel, owner))
 								kill = true;
 						}
 					}
@@ -262,9 +310,9 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 
 					if (arena.handleDamageRect(
 						gameSim,
-						b.pos[0], b.pos[1],
-						b.pos[0], b.pos[1],
-						b.pos[0], b.pos[1],
+						b.m_pos[0], b.m_pos[1],
+						b.m_pos[0], b.m_pos[1],
+						b.m_pos[0], b.m_pos[1],
 						true))
 					{
 						b.blocksDestroyed++;
@@ -294,8 +342,8 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 						for (int i = 0; i < BULLET_GRENADE_FRAG_COUNT; ++i)
 						{
 							gameSim.spawnBullet(
-								b.pos[0],
-								b.pos[1],
+								b.m_pos[0],
+								b.m_pos[1],
 								gameSim.Random() % 256,
 								kBulletType_GrenadeA,
 								b.ownerPlayerId);
@@ -317,6 +365,7 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 					free(i);
 				}
 			}
+#endif
 		}
 	}
 }
@@ -338,18 +387,16 @@ void BulletPool::anim(GameSim & gameSim, Bullet & b, float dt)
 {
 	Assert(b.isAlive);
 
-	b.lastPos = b.pos;
-
 	// evaluate gravity
 
-	if (b.doGravity)
+	if (!b.m_noGravity)
 	{
-		b.vel[1] += GRAVITY * (b.gravityModifier == 0.f ? 1.f : b.gravityModifier) * dt;
+		b.m_vel[1] += GRAVITY * (b.gravityModifier == 0.f ? 1.f : b.gravityModifier) * dt;
 	}
 
-	Vec2 delta = b.vel * dt;
+	Vec2 delta = b.m_vel * dt;
 
-	b.pos += delta;
+	b.m_pos += delta;
 
 	// distance travelled
 
@@ -357,27 +404,27 @@ void BulletPool::anim(GameSim & gameSim, Bullet & b, float dt)
 
 	// wrap
 
-	float x = b.pos[0];
-	float y = b.pos[1];
+	float x = b.m_pos[0];
+	float y = b.m_pos[1];
 
-	if (b.pos[0] < 0.f)
-		b.pos[0] += ARENA_SX_PIXELS;
-	if (b.pos[0] > ARENA_SX_PIXELS)
-		b.pos[0] -= ARENA_SX_PIXELS;
+	if (b.m_pos[0] < 0.f)
+		b.m_pos[0] += ARENA_SX_PIXELS;
+	if (b.m_pos[0] > ARENA_SX_PIXELS)
+		b.m_pos[0] -= ARENA_SX_PIXELS;
 
-	if (b.pos[1] < 0.f)
-		b.pos[1] += ARENA_SY_PIXELS;
-	if (b.pos[1] > ARENA_SY_PIXELS)
-		b.pos[1] -= ARENA_SY_PIXELS;
+	if (b.m_pos[1] < 0.f)
+		b.m_pos[1] += ARENA_SY_PIXELS;
+	if (b.m_pos[1] > ARENA_SY_PIXELS)
+		b.m_pos[1] -= ARENA_SY_PIXELS;
 
-	if (x != b.pos[0] || y != b.pos[1])
+	if (x != b.m_pos[0] || y != b.m_pos[1])
 	{
 		b.wrapCount++;
 
 		if (b.wrapCount > b.maxWrapCount)
 		{
-			b.pos[0] = x;
-			b.pos[1] = y;
+			b.m_pos[0] = x;
+			b.m_pos[1] = y;
 		}
 	}
 }
@@ -404,7 +451,7 @@ void BulletPool::draw()
 			const int ca = (b.color >>  0) & 0xff;
 
 			setColor(cr, cg, cb, ca);
-			s_bulletSprites[b.type]->drawEx(b.pos[0], b.pos[1], Calc::RadToDeg(toAngle(b.vel[0], b.vel[1])), s_bulletSprites[b.type]->scale);
+			s_bulletSprites[b.type]->drawEx(b.m_pos[0], b.m_pos[1], Calc::RadToDeg(toAngle(b.m_vel[0], b.m_vel[1])), s_bulletSprites[b.type]->scale);
 
 			setColor(255, 255, 255);
 		}
@@ -419,7 +466,7 @@ void BulletPool::drawLight()
 
 		if (b.isAlive)
 		{
-			Sprite("player-light.png").drawEx(b.pos[0], b.pos[1], .5f);
+			Sprite("player-light.png").drawEx(b.m_pos[0], b.m_pos[1], .5f);
 		}
 	}
 }
@@ -497,11 +544,11 @@ void initBullet(GameSim & gameSim, Bullet & b, const ParticleSpawnInfo & spawnIn
 	const float angle = gameSim.Random() % 256;
 	const float velocity = gameSim.RandomFloat(spawnInfo.minVelocity, spawnInfo.maxVelocity);
 
-	memset(&b, 0, sizeof(b));
+	b = Bullet();
 	b.isAlive = true;
 	b.type = (BulletType)spawnInfo.type;
-	b.pos[0] = spawnInfo.x;
-	b.pos[1] = spawnInfo.y;
+	b.m_pos[0] = spawnInfo.x;
+	b.m_pos[1] = spawnInfo.y;
 	b.setVel(angle / 128.f * float(M_PI), velocity);
 
 	b.noCollide = true;
