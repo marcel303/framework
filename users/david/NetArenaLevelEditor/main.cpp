@@ -24,8 +24,11 @@
 
 #include <QButtonGroup>
 
-int MAPX = 26;
-int MAPY = 16;
+#define BASEX 26
+#define BASEY 16
+
+int MAPX = BASEX;
+int MAPY = BASEY;
 
 char selectedTile = ' ';
 
@@ -48,7 +51,13 @@ QMap<short, QPixmap*> pixmapsCollission;
 EditorView* view;
 QGraphicsView* viewPallette;
 
+
+EditorScene* templateScene;
+Tile** m_templateTiles;
+
 bool leftbuttonHeld = false;
+
+bool templateMode = false;
 
 
 
@@ -77,6 +86,28 @@ void AddAllToScene()
 
             sceneMech->addItem(&sceneCollission->m_tiles[y][x]);
             sceneMech->addItem(&sceneArt->m_tiles[y][x]);
+        }
+}
+
+void SetEditNoScene()
+{
+    templateScene->CreateLevel(MAPX, MAPY);
+
+
+    for(int y = 0; y < MAPY; y++)
+        for (int x = 0; x < MAPX; x++)
+        {
+
+            sceneMech->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
+            sceneMech->m_tiles[y][x].setAcceptHoverEvents(false);
+             sceneMech->m_tiles[y][x].setFlag(QGraphicsItem::ItemIsSelectable, true);
+            //sceneMech->m_tiles[y][x].acc
+
+            sceneCollission->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
+            sceneCollission->m_tiles[y][x].setAcceptHoverEvents(false);
+
+            sceneArt->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
+            sceneArt->m_tiles[y][x].setAcceptHoverEvents(false);
         }
 }
 
@@ -498,6 +529,7 @@ int main(int argc, char *argv[])
     viewPallette->show();
 
     AddAllToScene();
+    sceneMech->AddGrid();
 
     CreateSettingsWidget();
 
@@ -528,14 +560,21 @@ void Tile::mousePressEvent ( QGraphicsSceneMouseEvent * e )
 {
     qDebug() << "setting tile to selectedBlock: " << selectedBlock;
 
-    if(e->buttons() == Qt::RightButton)
-        SetSelectedBlock(' ');
-    else if (e->buttons() == Qt::LeftButton)
-        SetSelectedBlock(selectedTile);
-    else if (e->buttons() == Qt::MiddleButton)
-        LoadLevel("save");
+    if(!templateMode)
+    {
+        if(e->buttons() == Qt::RightButton)
+            SetSelectedBlock(' ');
+        else if (e->buttons() == Qt::LeftButton)
+            SetSelectedBlock(selectedTile);
+        else if (e->buttons() == Qt::MiddleButton)
+            LoadLevel("save");
+        else
+            SaveLevel("save");
+
+        e->accept();
+    }
     else
-        SaveLevel("save");
+        sceneMech->CustomMouseEvent(e);
 }
 
 void Tile::mouseReleaseEvent ( QGraphicsSceneMouseEvent * e )
@@ -639,7 +678,10 @@ void EditorScene::InitializeLevel()
             addItem(&m_tiles[y][x]);
             m_tiles[y][x].setPos(x*100, y*100);
         }
+}
 
+void EditorScene::AddGrid()
+{
     for (int x = 0; x <= m_mapx*100; x+=100)
     {
         addLine(x, 0, x, m_mapy*100);
@@ -648,6 +690,35 @@ void EditorScene::InitializeLevel()
     {
         addLine(0, y, m_mapx*100, y);
     }
+}
+
+EditorTemplate templ;
+
+void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e )
+{
+    if(templateMode)
+    {
+
+        int tilex = (int)(e->scenePos().x()/100.0);
+        int tiley = (int)(e->scenePos().y()/100.0);
+
+        EditorTemplate::TemplateTile t;
+        t.x         = tilex;
+        t.y         = tiley;
+        QString n = QString::number(t.x) + "_" + QString::number(t.y);
+        t.blockMech = m_tiles[tiley][tilex].getBlock();
+        t.blockArt  = sceneArt->m_tiles[tiley][tilex].getBlock();
+        t.blockColl = sceneCollission->m_tiles[tiley][tilex].getBlock();
+        if(templ.m_list.contains(n))
+            templ.m_list.remove(n);
+        else
+            templ.m_list[n] = t;
+
+
+        e->accept();
+    }
+    else
+        e->ignore();
 }
 
 
@@ -673,6 +744,9 @@ EditorView::EditorView() : EditorViewBasic()
     newAct3->setStatusTip(tr("Load from file"));
     connect(newAct3, SIGNAL(triggered()), this, SLOT(Load()));
 
+    QAction* newAct4 = new QAction(tr("&TemplateMode"), this);
+    newAct4->setStatusTip(tr("Templaaaaate"));
+    connect(newAct4, SIGNAL(triggered()), this, SLOT(SwitchToTemplateMode()));
 
     QAction* newAct7 = new QAction(tr("&MapSize"), this);
     newAct7->setStatusTip(tr("Switch to Big Map(tm)"));
@@ -682,6 +756,7 @@ EditorView::EditorView() : EditorViewBasic()
     bar->addAction(newAct1);
     bar->addAction(newAct2);
     bar->addAction(newAct3);
+    bar->addAction(newAct4);
     bar->addAction(newAct7);
 
     bar->showNormal();
@@ -747,10 +822,16 @@ void EditorView::SwitchToCollission(int s)
 
 void EditorView::SwitchToBigMap()
 {
-    if(MAPX == 30)
-        SwitchMap(60, 32);
+    if(MAPX == BASEX)
+        SwitchMap(2*BASEX, 2*BASEY);
     else
-        SwitchMap(30, 16);
+        SwitchMap(BASEX, BASEY);
+}
+
+void EditorView::SwitchToTemplateMode()
+{
+    templateMode = !templateMode;
+    //SetEditNoScene();
 }
 
 void EditorView::SetOpacityMech(int s)
@@ -792,7 +873,7 @@ void EditorViewBasic::keyPressEvent(QKeyEvent *e)
     if(e->key() == Qt::Key_P)
     {
         QGraphicsView* v1 = new QGraphicsView();
-        v1->setScene(getCurrentScene());
+        v1->setScene(templateScene);
         v1->showNormal();
         v1->scale((float)MAPY/(float)MAPX,(float)MAPY/(float)MAPX);
         e->accept();
