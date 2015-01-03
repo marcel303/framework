@@ -3260,7 +3260,7 @@ void gxSetTexture(GLuint texture)
 
 void gxBegin(int primitiveType)
 {
-	clearShader();
+	//clearShader();
 
 	glBegin(primitiveType);
 }
