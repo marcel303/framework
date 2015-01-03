@@ -200,13 +200,17 @@ void GameStateData::TokenHunt::Token::tick(GameSim & gameSim, float dt)
 			{
 				if (actor.m_vel[1] > 0.f)
 				{
-					actor.m_vel.Set(g_gameSim->RandomFloat(-500.f, +500.f), -800.f);
+					actor.m_vel.Set(g_gameSim->RandomFloat(-TOKEN_FLEE_SPEED, +TOKEN_FLEE_SPEED), -TOKEN_FLEE_SPEED);
 					g_gameSim->playSound("token-bounce.ogg");
 				}
 			}
 			return false;
 		};
-		cbs.onBounce = [](PhysicsActorCBs & cbs, PhysicsActor & actor) { g_gameSim->playSound("token-bounce.ogg"); };
+		cbs.onBounce = [](PhysicsActorCBs & cbs, PhysicsActor & actor)
+		{
+			if (std::abs(actor.m_vel[1]) >= TOKEN_BOUNCE_SOUND_TRESHOLD)
+				g_gameSim->playSound("token-bounce.ogg");
+		};
 
 		PhysicsActor::tick(gameSim, dt, cbs);
 
@@ -581,13 +585,13 @@ void GameSim::spawnToken()
 		const int spawnY = y[index];
 
 		token.setPos(spawnX, spawnY);
-		token.m_bounciness = -0.5f;
+		token.m_bounciness = -TOKEN_BOUNCINESS;
 		token.m_dropTimer = 0.f;
 		token.m_isDropped = true;
 		token.m_noGravity = false;
 		token.m_friction = 0.1f;
 		token.m_airFriction = 0.9f;
-		token.m_vel.Set(800.f, 100.f);
+		token.m_vel.Set(0.f, 0.f);
 	}
 }
 
@@ -603,6 +607,7 @@ bool GameSim::pickupToken(const CollisionInfo & collisionInfo)
 		if (tokenCollision.intersects(collisionInfo))
 		{
 			token.m_isDropped = false;
+			g_gameSim->playSound("token-pickup.ogg");
 
 			return true;
 		}
@@ -661,6 +666,7 @@ uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, uint8_t type
 			b.maxReflectCount = 0;
 			b.maxDistanceTravelled = RandomFloat(BULLET_GRENADE_FRAG_RADIUS_MIN, BULLET_GRENADE_FRAG_RADIUS_MAX);
 			b.maxDestroyedBlocks = 1;
+			b.doDamageOwner = true;
 			break;
 		default:
 			Assert(false);

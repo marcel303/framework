@@ -6,6 +6,7 @@
 #include "host.h"
 #include "main.h"
 #include "player.h"
+#include "Timer.h"
 
 /*
 
@@ -469,7 +470,6 @@ void Player::tick(float dt)
 				m_isAlive = true;
 				break;
 			case kPlayerAnim_Die:
-				m_isAlive = false;
 				break;
 			}
 		}
@@ -1159,7 +1159,7 @@ void Player::tick(float dt)
 
 		// breaking
 
-		if (steeringSpeed == 0.f || std::abs(m_vel[0]) > steeringSpeed)
+		if (steeringSpeed == 0.f || (std::abs(m_vel[0]) > std::abs(steeringSpeed)))
 		{
 			m_vel[0] *= powf(1.f - surfaceFriction, dt * 60.f);
 		}
@@ -1233,13 +1233,16 @@ void Player::tick(float dt)
 
 	// token hunt game mode
 
-	if (m_isAlive)
+	if (m_netObject->m_gameSim->m_gameMode == kGameMode_TokenHunt)
 	{
-		CollisionInfo playerCollision;
-		getPlayerCollision(playerCollision);
-		if (m_netObject->m_gameSim->pickupToken(playerCollision))
+		if (m_isAlive)
 		{
-			m_tokenHunt.m_hasToken = true;
+			CollisionInfo playerCollision;
+			getPlayerCollision(playerCollision);
+			if (m_netObject->m_gameSim->pickupToken(playerCollision))
+			{
+				m_tokenHunt.m_hasToken = true;
+			}
 		}
 	}
 }
@@ -1287,6 +1290,12 @@ void Player::draw()
 		setColor(50, 50, 50, alpha);
 	}
 	drawRect(m_pos[0] - 50, m_pos[1] - 110, m_pos[0] + 50, m_pos[1] - 85);
+	
+	if (m_netObject->m_gameSim->m_gameMode == kGameMode_TokenHunt && m_tokenHunt.m_hasToken)
+	{
+		setColorf(1.f, 1.f, 1.f, (std::sin(g_TimerRT.Time_get() * 10.f) * .7f + 1.f) / 2.f);
+		drawRect(m_pos[0] - 50, m_pos[1] - 110, m_pos[0] + 50, m_pos[1] - 85);
+	}
 
 	// draw score
 	setFont("calibri.ttf");
@@ -1481,9 +1490,22 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 
 			m_canRespawn = false;
 
+			m_isAlive = false;
+
 			if (attacker)
 			{
-				attacker->awardScore(1);
+				bool canScore = true;
+
+				switch (m_netObject->m_gameSim->m_gameMode)
+				{
+				case kGameMode_DeathMatch:
+					attacker->awardScore(1);
+					break;
+				case kGameMode_TokenHunt:
+					if (attacker->m_tokenHunt.m_hasToken)
+						attacker->awardScore(1);
+					break;
+				}
 			}
 			else
 			{
@@ -1498,17 +1520,21 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 
 			// token hunt
 
-			if (m_tokenHunt.m_hasToken)
+			if (m_netObject->m_gameSim->m_gameMode == kGameMode_TokenHunt)
 			{
-				m_tokenHunt.m_hasToken = false;
+				if (m_tokenHunt.m_hasToken)
+				{
+					m_tokenHunt.m_hasToken = false;
 
-				GameStateData::TokenHunt::Token & token = m_netObject->m_gameSim->m_tokenHunt.m_token;
-				token.setPos(
-					int(m_pos[0] / BLOCK_SX),
-					int(m_pos[1] / BLOCK_SY));
-				token.m_vel.Set(g_gameSim->RandomFloat(-500.f, +500.f), -800.f);
-				token.m_isDropped = true;
-				token.m_dropTimer = 0.25f;
+					GameStateData::TokenHunt::Token & token = m_netObject->m_gameSim->m_tokenHunt.m_token;
+					token.setPos(
+						int(m_pos[0] / BLOCK_SX),
+						int(m_pos[1] / BLOCK_SY));
+					token.m_vel.Set(velocity[0] * TOKEN_DROP_SPEED_MULTIPLIER, -800.f);
+					token.m_isDropped = true;
+					token.m_dropTimer = TOKEN_DROP_TIME;
+					g_gameSim->playSound("token-bounce.ogg");
+				}
 			}
 
 			return true;

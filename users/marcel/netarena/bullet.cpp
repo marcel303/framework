@@ -238,7 +238,7 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 
 					for (int p = 0; p < MAX_PLAYERS; ++p)
 					{
-						if (p == b.ownerPlayerId)
+						if (p == b.ownerPlayerId && !b.doDamageOwner)
 							continue;
 						Player & player = gameSim.m_players[p];
 						if (!player.m_isUsed)

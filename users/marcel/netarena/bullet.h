@@ -36,6 +36,7 @@ public:
 	bool doBounce;
 	bool noDamagePlayer;
 	bool noDamageMap;
+	bool doDamageOwner;
 
 	Vec2 lastPos;
 
