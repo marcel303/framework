@@ -430,6 +430,13 @@ void GameSim::tickPlay()
 
 	const uint32_t tick = GetTick();
 
+	if (m_freezeTicks > 0)
+	{
+		m_freezeTicks--;
+		
+		return;
+	}
+
 	// arena update
 	m_arena.tick(*this);
 
