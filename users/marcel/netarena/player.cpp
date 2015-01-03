@@ -187,6 +187,13 @@ void PlayerNetObject::handleAnimationAction(const std::string & action, const Di
 			player->m_animVel[0] = args.getFloat("x", player->m_animVel[0]);
 			player->m_animVel[1] = args.getFloat("y", player->m_animVel[1]);
 		}
+		else if (action == "set_dash_vel")
+		{
+			Vec2 dir(playerNetObject->m_input.m_currState.analogX, playerNetObject->m_input.m_currState.analogY);
+			dir.Normalize();
+
+			player->m_vel += dir * args.getFloat("x", player->m_animVel[0]);
+		}
 		else if (action == "set_anim_vel_abs")
 		{
 			player->m_animVelIsAbsolute = args.getBool("abs", player->m_animVelIsAbsolute);
