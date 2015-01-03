@@ -127,16 +127,6 @@ void PhysicsActor::drawBB()
 	setColor(255, 255, 255);
 }
 
-void PhysicsActor::setPos(int blockX, int blockY)
-{
-	Sprite sprite(TOKEN_SPRITE);
-	m_bbMin.Set(-sprite.getWidth() / 2.f, -sprite.getHeight() / 2.f);
-	m_bbMax.Set(+sprite.getWidth() / 2.f, +sprite.getHeight() / 2.f);
-	m_pos.Set(
-		(blockX + .5f) * BLOCK_SX,
-		(blockY + .5f) * BLOCK_SY);
-}
-
 uint32_t PhysicsActor::getIntersectingBlockMask(GameSim & gameSim, Vec2 pos)
 {
 	Vec2 min = pos + m_bbMin;
@@ -188,8 +178,71 @@ uint32_t GameStateData::GetTick()
 	return m_tick;
 }
 
+//
 
-void GameStateData::TokenHunt::Token::tick(GameSim & gameSim, float dt)
+void Pickup::setup(PickupType _type, int _blockX, int _blockY)
+{
+	const char * filename = s_pickupSprites[type];
+
+	Sprite sprite(filename);
+
+	type = _type;
+	blockX = _blockX;
+	blockY = _blockY;
+
+	//
+
+	*static_cast<PhysicsActor*>(this) = PhysicsActor();
+
+	m_pos.Set(
+		blockX * BLOCK_SX + BLOCK_SX / 2.f,
+		blockY * BLOCK_SY + BLOCK_SY - sprite.getHeight());
+	m_vel.Set(0.f, 0.f);
+
+	m_bbMin.Set(-sprite.getWidth() / 2.f, -sprite.getHeight());
+	m_bbMax.Set(+sprite.getWidth() / 2.f, 0.f);
+
+	m_bounciness = .25f;
+	m_friction = .1f;
+	m_airFriction = .5f;
+}
+
+void Pickup::tick(GameSim & gameSim, float dt)
+{
+	PhysicsActorCBs cbs;
+	PhysicsActor::tick(gameSim, dt, cbs);
+}
+
+void Pickup::draw()
+{
+	const char * filename = s_pickupSprites[type];
+
+	Sprite sprite(filename);
+
+	sprite.drawEx(m_pos[0] + m_bbMin[0], m_pos[1] + m_bbMin[1]);
+}
+
+void Pickup::drawLight()
+{
+	const float x = m_pos[0];
+	const float y = m_pos[1];
+
+	Sprite("player-light.png").drawEx(x, y, 0.f, 1.f);
+}
+
+//
+
+void Token::setPos(int blockX, int blockY)
+{
+	Sprite sprite(TOKEN_SPRITE);
+	m_bbMin.Set(-sprite.getWidth() / 2.f, -sprite.getHeight() / 2.f);
+	m_bbMax.Set(+sprite.getWidth() / 2.f, +sprite.getHeight() / 2.f);
+	m_pos.Set(
+		(blockX + .5f) * BLOCK_SX,
+		(blockY + .5f) * BLOCK_SY);
+}
+
+void Token::tick(GameSim & gameSim, float dt)
 {
 	if (m_isDropped)
 	{
@@ -218,7 +271,7 @@ void GameStateData::TokenHunt::Token::tick(GameSim & gameSim, float dt)
 	}
 }
 
-void GameStateData::TokenHunt::Token::draw()
+void Token::draw()
 {
 	if (m_isDropped)
 	{
@@ -226,11 +279,11 @@ void GameStateData::TokenHunt::Token::draw()
 	}
 }
 
-void GameStateData::TokenHunt::Token::drawLight()
+void Token::drawLight()
 {
 	if (m_isDropped)
 	{
-		Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.f);
+		Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f);
 	}
 }
 
@@ -441,6 +494,14 @@ void GameSim::tickPlay()
 			m_playerNetObjects[i]->m_player->tick(dt);
 	}
 
+	// picksup
+
+	for (int i = 0; i < MAX_PICKUPS; ++i)
+	{
+		if (m_pickups[i].isAlive)
+			m_pickups[i].tick(*this, dt);
+	}
+
 	// pickup spawning
 
 	if (tick >= m_nextPickupSpawnTick)
@@ -553,30 +614,28 @@ void GameSim::trySpawnPickup(PickupType type)
 
 void GameSim::spawnPickup(Pickup & pickup, PickupType type, int blockX, int blockY)
 {
-	const char * filename = s_pickupSprites[type];
-
-	Sprite sprite(filename);
-
 	pickup.isAlive = true;
-	pickup.type = type;
-	pickup.blockX = blockX;
-	pickup.blockY = blockY;
-	pickup.x1 = blockX * BLOCK_SX + (BLOCK_SX - sprite.getWidth()) / 2;
-	pickup.y1 = blockY * BLOCK_SY + BLOCK_SY - sprite.getHeight();
-	pickup.x2 = pickup.x1 + sprite.getWidth();
-	pickup.y2 = pickup.y1 + sprite.getHeight();
+	pickup.setup(type, blockX, blockY);
 }
 
 Pickup * GameSim::grabPickup(int x1, int y1, int x2, int y2)
 {
+	CollisionInfo collisionInfo;
+	collisionInfo.x1 = x1;
+	collisionInfo.y1 = y1;
+	collisionInfo.x2 = x2;
+	collisionInfo.y2 = y2;
+
 	for (int i = 0; i < MAX_PICKUPS; ++i)
 	{
 		Pickup & pickup = m_pickups[i];
 
 		if (pickup.isAlive)
 		{
-			if (x2 >= pickup.x1 && x1 < pickup.x2 &&
-				y2 >= pickup.y1 && y1 < pickup.y2)
+			CollisionInfo pickupCollision;
+			pickup.getCollisionInfo(pickupCollision);
+
+			if (collisionInfo.intersects(pickupCollision))
 			{
 				m_grabbedPickup = pickup;
 				pickup.isAlive = false;
@@ -593,7 +652,7 @@ Pickup * GameSim::grabPickup(int x1, int y1, int x2, int y2)
 
 void GameSim::spawnToken()
 {
-	TokenHunt::Token & token = m_tokenHunt.m_token;
+	Token & token = m_tokenHunt.m_token;
 
 	const int kMaxLocations = ARENA_SX * ARENA_SY;
 	int numLocations = kMaxLocations;
@@ -606,6 +665,7 @@ void GameSim::spawnToken()
 		const int spawnX = x[index];
 		const int spawnY = y[index];
 
+		token = Token();
 		token.setPos(spawnX, spawnY);
 		token.m_bounciness = -TOKEN_BOUNCINESS;
 		token.m_dropTimer = 0.f;
@@ -619,7 +679,7 @@ void GameSim::spawnToken()
 
 bool GameSim::pickupToken(const CollisionInfo & collisionInfo)
 {
-	TokenHunt::Token & token = m_tokenHunt.m_token;
+	Token & token = m_tokenHunt.m_token;
 
 	if (token.m_isDropped && token.m_dropTimer <= 0.f)
 	{

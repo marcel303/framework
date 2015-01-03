@@ -48,8 +48,6 @@ struct PhysicsActor
 	void tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs);
 	void drawBB();
 
-	void setPos(int blockX, int blockY);
-
 	uint32_t getIntersectingBlockMask(GameSim & gameSim, Vec2 pos);
 	void getCollisionInfo(CollisionInfo & collisionInfo);
 };
@@ -240,6 +238,33 @@ struct Player
 	} m_tokenHunt;
 };
 
+struct Pickup : PhysicsActor
+{
+	bool isAlive;
+
+	PickupType type;
+	uint8_t blockX;
+	uint8_t blockY;
+
+	void setup(PickupType type, int blockX, int blockY);
+
+	void tick(GameSim & gameSim, float dt);
+	void draw();
+	void drawLight();
+};
+
+struct Token : PhysicsActor
+{
+	bool m_isDropped;
+	float m_dropTimer;
+
+	void setPos(int blockX, int blockY);
+
+	void tick(GameSim & gameSim, float dt);
+	void draw();
+	void drawLight();
+};
+
 struct ScreenShake
 {
 	bool isActive;
@@ -288,16 +313,7 @@ struct GameStateData
 
 	struct TokenHunt
 	{
-		struct Token : PhysicsActor
-		{
-			bool m_isDropped;
-			float m_dropTimer;
-
-			void tick(GameSim & gameSim, float dt);
-			void draw();
-			void drawLight();
-		} m_token;
-
+		Token m_token;
 	} m_tokenHunt;
 };
 

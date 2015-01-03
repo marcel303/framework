@@ -75,16 +75,3 @@ struct CollisionInfo
 	int16_t x2;
 	int16_t y2;
 };
-
-struct Pickup
-{
-	bool isAlive;
-
-	PickupType type;
-	uint8_t blockX;
-	uint8_t blockY;
-	int16_t x1;
-	int16_t y1;
-	int16_t x2;
-	int16_t y2;
-};

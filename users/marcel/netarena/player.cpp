@@ -1188,7 +1188,7 @@ void Player::tick(float dt)
 
 		// animation
 
-		if (!m_isGrounded && !m_isAttachedToSticky && !m_isWallSliding && (s_animInfos[kPlayerAnim_Jump].prio > s_animInfos[m_anim].prio))
+		if (!m_isGrounded && !m_isAttachedToSticky && !m_isWallSliding && (!m_netObject->m_sprite->animIsActive || s_animInfos[kPlayerAnim_Jump].prio > s_animInfos[m_anim].prio))
 		{
 			setAnim(kPlayerAnim_Jump, true, false);
 		}
@@ -1549,7 +1549,7 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 				{
 					m_tokenHunt.m_hasToken = false;
 
-					GameStateData::TokenHunt::Token & token = m_netObject->m_gameSim->m_tokenHunt.m_token;
+					Token & token = m_netObject->m_gameSim->m_tokenHunt.m_token;
 					token.setPos(
 						int(m_pos[0] / BLOCK_SX),
 						int(m_pos[1] / BLOCK_SY));

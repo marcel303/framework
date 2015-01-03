@@ -18,12 +18,6 @@ OPTION_ALIAS(s_noBgm, "nobgm");
 static char s_bgm[64] = { };
 static Music * s_bgmSound = 0;
 
-static const char * s_pickupSprites[kPickupType_COUNT] =
-{
-	"pickup-ammo.png",
-	"pickup-nade.png"
-};
-
 Client::Client()
 	: m_channel(0)
 	, m_replicationId(0)
@@ -290,16 +284,10 @@ void Client::drawPlay()
 
 		for (int i = 0; i < MAX_PICKUPS; ++i)
 		{
-			const Pickup & pickup = m_gameSim->m_pickups[i];
+			Pickup & pickup = m_gameSim->m_pickups[i];
 
 			if (pickup.isAlive)
-			{
-				const char * filename = s_pickupSprites[pickup.type];
-
-				Sprite sprite(filename);
-
-				sprite.drawEx(pickup.x1, pickup.y1);
-			}
+				pickup.draw();
 		}
 
 		m_gameSim->m_tokenHunt.m_token.draw();
@@ -320,21 +308,16 @@ void Client::drawPlay()
 
 	pushSurface(g_lightMap);
 	{
-		const float v = .2f + (std::sin(g_TimerRT.Time_get() / 5.f) + 1.f) / 2.f * .8f;
+		const float v = .1f + (std::sin(g_TimerRT.Time_get() / 5.f) + 1.f) / 2.f * .9f;
 		glClearColor(v, v, v, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		for (int i = 0; i < MAX_PICKUPS; ++i)
 		{
-			const Pickup & pickup = m_gameSim->m_pickups[i];
+			Pickup & pickup = m_gameSim->m_pickups[i];
 
 			if (pickup.isAlive)
-			{
-				const float x = (pickup.x1 + pickup.x2) / 2.f;
-				const float y = (pickup.y1 + pickup.y2) / 2.f;
-
-				Sprite("player-light.png").drawEx(x, y, 0.f, 1.f);
-			}
+				pickup.drawLight();
 		}
 
 		m_gameSim->m_tokenHunt.m_token.drawLight();
