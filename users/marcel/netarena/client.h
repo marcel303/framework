@@ -20,6 +20,8 @@ public:
 
 	GameSim * m_gameSim;
 
+	BitStream m_syncStream;
+
 	std::vector<PlayerNetObject*> m_players;
 
 	Client();

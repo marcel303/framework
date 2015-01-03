@@ -142,9 +142,31 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		Assert(client);
 		if (client)
 		{
-			NetSerializationContext context;
-			context.Set(true, false, bitStream);
-			client->m_gameSim->serialize(context);
+			uint8_t isFirst;
+			uint8_t isLast;
+			uint16_t numBits;
+
+			bitStream.Read(isFirst);
+			bitStream.Read(isLast);
+			bitStream.Read(numBits);
+
+			if (isFirst)
+				client->m_syncStream = BitStream();
+
+			const int numBytes = Net::BitsToBytes(numBits);
+			uint8_t * temp = (uint8_t*)alloca(numBytes);
+			bitStream.ReadAlignedBytes(temp, numBytes);
+
+			client->m_syncStream.WriteAlignedBytes(temp, numBytes);
+
+			if (isLast)
+			{
+				BitStream bs2(client->m_syncStream.GetData(), client->m_syncStream.GetDataSize());
+
+				NetSerializationContext context;
+				context.Set(true, false, bs2);
+				client->m_gameSim->serialize(context);
+			}
 		}
 	}
 	else if (method == s_rpcSetGameState)
@@ -1249,7 +1271,27 @@ void App::netSyncGameSim(Channel * channel)
 	context.Set(true, true, bs);
 	m_host->m_gameSim.serialize(context);
 
-	m_rpcMgr->Call(s_rpcSyncGameSim, bs, ChannelPool_Client, &channel->m_id, false, false);
+	const int kChunkSize = 1024 * 8;
+
+	for (int i = 0, remaining = bs.GetDataSize(); remaining != 0; i += kChunkSize)
+	{
+		const uint8_t * bytes = (uint8_t*)bs.GetData() + (i >> 3);
+		uint16_t numBits = remaining;
+		if (numBits > kChunkSize)
+			numBits = kChunkSize;
+		remaining -= numBits;
+		uint8_t isFirst = (i == 0);
+		uint8_t isLast = (remaining == 0);
+
+		BitStream bs2;
+		
+		bs2.Write(isFirst);
+		bs2.Write(isLast);
+		bs2.Write(numBits);
+		bs2.WriteAlignedBytes(bytes, Net::BitsToBytes(numBits));
+
+		m_rpcMgr->Call(s_rpcSyncGameSim, bs2, ChannelPool_Client, &channel->m_id, false, false);
+	}
 }
 
 void App::netSetGameState(GameState _gameState)
