@@ -405,6 +405,21 @@ void BulletPool::draw()
 
 			setColor(cr, cg, cb, ca);
 			s_bulletSprites[b.type]->drawEx(b.pos[0], b.pos[1], Calc::RadToDeg(toAngle(b.vel[0], b.vel[1])), s_bulletSprites[b.type]->scale);
+
+			setColor(255, 255, 255);
+		}
+	}
+}
+
+void BulletPool::drawLight()
+{
+	for (int i = 0; i < MAX_BULLETS; ++i)
+	{
+		const Bullet & b = m_bullets[i];
+
+		if (b.isAlive)
+		{
+			Sprite("player-light.png").drawEx(b.pos[0], b.pos[1], .5f);
 		}
 	}
 }
@@ -431,7 +446,10 @@ void BulletPool::serialize(NetSerializationContext & context)
 	if (context.IsRecv())
 	{
 		for (int i = 0; i < MAX_BULLETS; ++i)
-			m_bullets[i].isAlive = false;
+		{
+			if (m_bullets[i].isAlive )
+				free(i);
+		}
 
 		uint16_t bulletCount;
 

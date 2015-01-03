@@ -9,6 +9,7 @@
 #include "host.h"
 #include "main.h"
 #include "player.h"
+#include "Timer.h"
 
 OPTION_DECLARE(bool, s_noBgm, false);
 OPTION_DEFINE(bool, s_noBgm, "Sound/No BGM");
@@ -279,37 +280,96 @@ void Client::drawPlay()
 
 	gxTranslatef(shake[0], shake[1], 0.f);
 
-	m_gameSim->m_arena.drawBlocks();
-
-	for (int i = 0; i < MAX_PICKUPS; ++i)
+	pushSurface(g_colorMap);
 	{
-		const Pickup & pickup = m_gameSim->m_pickups[i];
+		setBlend(BLEND_OPAQUE);
+		Sprite("back.png").draw();
+		setBlend(BLEND_ALPHA);
 
-		if (pickup.isAlive)
+		m_gameSim->m_arena.drawBlocks();
+
+		for (int i = 0; i < MAX_PICKUPS; ++i)
 		{
-			const char * filename = s_pickupSprites[pickup.type];
+			const Pickup & pickup = m_gameSim->m_pickups[i];
 
-			Sprite sprite(filename);
+			if (pickup.isAlive)
+			{
+				const char * filename = s_pickupSprites[pickup.type];
 
-			sprite.drawEx(pickup.x1, pickup.y1);
+				Sprite sprite(filename);
+
+				sprite.drawEx(pickup.x1, pickup.y1);
+			}
 		}
+
+		m_gameSim->m_tokenHunt.m_token.draw();
+
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+		{
+			Player & player = m_gameSim->m_players[i];
+
+			if (player.m_isUsed)
+				player.draw();
+		}
+
+		m_gameSim->m_bulletPool->draw();
+
+		m_gameSim->m_particlePool->draw();
 	}
+	popSurface();
 
-	m_gameSim->m_tokenHunt.m_token.draw();
-
-	for (auto i = m_players.begin(); i != m_players.end(); ++i)
+	pushSurface(g_lightMap);
 	{
-		PlayerNetObject * playerNetObject = *i;
-		Player * player = playerNetObject->m_player;
+		const float v = .2f + (std::sin(g_TimerRT.Time_get() / 5.f) + 1.f) / 2.f * .8f;
+		glClearColor(v, v, v, 1.f);
+		glClear(GL_COLOR_BUFFER_BIT);
 
-		player->draw();
+		for (int i = 0; i < MAX_PICKUPS; ++i)
+		{
+			const Pickup & pickup = m_gameSim->m_pickups[i];
+
+			if (pickup.isAlive)
+			{
+				const float x = (pickup.x1 + pickup.x2) / 2.f;
+				const float y = (pickup.y1 + pickup.y2) / 2.f;
+
+				Sprite("player-light.png").drawEx(x, y, 0.f, 1.f);
+			}
+		}
+
+		m_gameSim->m_tokenHunt.m_token.drawLight();
+
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+		{
+			Player & player = m_gameSim->m_players[i];
+
+			if (player.m_isUsed)
+				player.drawLight();
+		}
+
+		m_gameSim->m_bulletPool->drawLight();
+
+		m_gameSim->m_particlePool->drawLight();
 	}
-
-	m_gameSim->m_bulletPool->draw();
-
-	m_gameSim->m_particlePool->draw();
+	popSurface();
 
 	gxPopMatrix();
+
+	// compose
+
+	applyLightMap(*g_colorMap, *g_lightMap, *g_finalMap);
+
+	// blit
+
+	setBlend(BLEND_OPAQUE);
+	setColor(255, 255, 255);
+	glEnable(GL_TEXTURE_2D);
+	{
+		glBindTexture(GL_TEXTURE_2D, g_finalMap->getTexture());
+		drawRect(0, 0, g_finalMap->getWidth(), g_finalMap->getHeight());
+	}
+	glDisable(GL_TEXTURE_2D);
+	setBlend(BLEND_ALPHA);
 }
 
 void Client::drawRoundComplete()

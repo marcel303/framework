@@ -69,6 +69,10 @@ App * g_app = 0;
 
 int g_updateTicks = 0;
 
+Surface * g_colorMap = 0;
+Surface * g_lightMap = 0;
+Surface * g_finalMap = 0;
+
 //
 
 static void HandleAction(const std::string & action, const Dictionary & args)
@@ -111,6 +115,38 @@ static void HandleAction(const std::string & action, const Dictionary & args)
 
 		g_app->netSetPlayerCharacterIndex(clientChannelId, playerId, characterIndex);
 	}
+}
+
+//
+
+void applyLightMap(Surface & colormap, Surface & lightmap, Surface & dest)
+{
+	// apply lightmap
+
+	setBlend(BLEND_OPAQUE);
+	pushSurface(&dest);
+	{
+		Shader lightShader("lightmap");
+		setShader(lightShader);
+
+		glActiveTexture(GL_TEXTURE0);
+		lightShader.setTexture("colormap", 0, colormap.getTexture());
+		lightShader.setTexture("lightmap", 1, lightmap.getTexture());
+
+		drawRect(0, 0, colormap.getWidth(), colormap.getHeight());
+
+		lightShader.setTexture("colormap", 0, 0);
+		lightShader.setTexture("lightmap", 1, 0);
+
+		clearShader();
+
+		glActiveTexture(GL_TEXTURE0 + 1);
+		glDisable(GL_TEXTURE_2D);
+		glActiveTexture(GL_TEXTURE0 + 0);
+		glDisable(GL_TEXTURE_2D);
+	}
+	popSurface();
+	setBlend(BLEND_ALPHA);
 }
 
 //
@@ -774,6 +810,13 @@ bool App::init(bool isHost)
 
 		//
 
+		// todo : free these maps at exit
+		g_colorMap = new Surface(ARENA_SX_PIXELS, ARENA_SY_PIXELS);
+		g_lightMap = new Surface(ARENA_SX_PIXELS, ARENA_SY_PIXELS);
+		g_finalMap = new Surface(ARENA_SX_PIXELS, ARENA_SY_PIXELS);
+
+		//
+
 		if (g_host)
 		{
 			g_host->newGame();
@@ -1101,10 +1144,6 @@ void App::draw()
 		if (m_selectedClient >= 0 && m_selectedClient < (int)m_clients.size())
 		{
 			setDrawRect(0, 0, ARENA_SX_PIXELS, ARENA_SY_PIXELS);
-
-			setBlend(BLEND_OPAQUE);
-			Sprite("back.png").draw();
-			setBlend(BLEND_ALPHA);
 
 			Client * client = m_clients[m_selectedClient];
 

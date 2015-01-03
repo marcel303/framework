@@ -133,3 +133,9 @@ public:
 
 extern App * g_app;
 extern int g_updateTicks;
+
+extern Surface * g_colorMap;
+extern Surface * g_lightMap;
+extern Surface * g_finalMap;
+
+void applyLightMap(Surface & colormap, Surface & lightmap, Surface & dest);

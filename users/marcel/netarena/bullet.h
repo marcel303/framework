@@ -123,6 +123,7 @@ public:
 	void anim(GameSim & gameSim, float dt);
 	void anim(GameSim & gameSim, Bullet & b, float dt);
 	void draw();
+	void drawLight();
 
 	uint16_t alloc();
 	void free(uint16_t id);

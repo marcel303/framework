@@ -84,6 +84,7 @@ struct Player
 	void tick(float dt); // todo : remove dt
 	void draw();
 	void drawAt(int x, int y);
+	void drawLight();
 	void debugDraw();
 
 	void playSecondaryEffects(PlayerEvent e);
@@ -293,6 +294,7 @@ struct GameStateData
 
 			void tick(GameSim & gameSim, float dt);
 			void draw();
+			void drawLight();
 		} m_token;
 
 	} m_tokenHunt;

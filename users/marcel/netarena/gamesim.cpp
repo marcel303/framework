@@ -226,6 +226,14 @@ void GameStateData::TokenHunt::Token::draw()
 	}
 }
 
+void GameStateData::TokenHunt::Token::drawLight()
+{
+	if (m_isDropped)
+	{
+		Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.f);
+	}
+}
+
 //
 
 GameSim::GameSim()
@@ -342,6 +350,17 @@ void GameSim::setGameState(::GameState gameState)
 
 		for (int i = 0; i < MAX_PICKUPS; ++i)
 			m_pickups[i].isAlive = false;
+
+		// reset bullets
+
+		for (int i = 0; i < MAX_BULLETS; ++i)
+		{
+			if (m_bulletPool->m_bullets[i].isAlive)
+				m_bulletPool->free(i);
+
+			if (m_particlePool->m_bullets[i].isAlive)
+				m_particlePool->free(i);
+		}
 
 		// respawn players
 

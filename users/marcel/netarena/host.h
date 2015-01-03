@@ -18,8 +18,6 @@ class Host
 
 	GameSim m_gameSim;
 
-	uint32_t m_nextNetId;
-
 	int m_nextRoundNumber;
 
 	// round complete game state
@@ -36,8 +34,6 @@ public:
 	void tickPlay(float dt);
 	void tickRoundComplete(float dt);
 	void debugDraw();
-
-	uint32_t allocNetId();
 
 	void syncNewClient(Channel * channel);
 

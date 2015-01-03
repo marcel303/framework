@@ -29,7 +29,6 @@ Host * g_host = 0;
 
 Host::Host()
 	: m_gameSim()
-	, m_nextNetId(1) // 0 = unassigned
 	, m_nextRoundNumber(0)
 	, m_roundCompleteTimer(0)
 {
@@ -119,11 +118,6 @@ void Host::debugDraw()
 	}
 
 	//clearPlayerPtrs();
-}
-
-uint32_t Host::allocNetId()
-{
-	return m_nextNetId++;
 }
 
 void Host::syncNewClient(Channel * channel)

@@ -143,7 +143,7 @@ const char * SoundBag::getRandomSound(GameSim & gameSim)
 			{
 				if (DEBUG_RANDOM_CALLSITES)
 					LOG_DBG("Random called from getRandomSound");
-				index = g_gameSim->Random() % m_files.size();
+				index = gameSim.Random() % m_files.size();
 			}
 			else
 				index = (index + 1) % m_files.size();
@@ -1333,6 +1333,14 @@ void Player::drawAt(int x, int y)
 		//drawRect(collisionInfo.x1, collisionInfo.y1, collisionInfo.x2, collisionInfo.y2);
 		//drawLine(x, y, x + m_anim.m_attackDx * 50, y + m_anim.m_attackDy * 50);
 	}
+}
+
+void Player::drawLight()
+{
+	float x = m_pos[0] + (m_collision.x1 + m_collision.x2) / 2.f;
+	float y = m_pos[1] + (m_collision.y1 + m_collision.y2) / 2.f;
+
+	Sprite("player-light.png").drawEx(x, y, 0.f, 3.f);
 }
 
 void Player::debugDraw()
