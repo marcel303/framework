@@ -40,16 +40,21 @@ PhysicsActor::PhysicsActor()
 
 void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 {
-	Arena & arena = gameSim.m_arena;
+	// physics
 
 	if (!m_noGravity)
 	{
 		m_vel[1] += GRAVITY * dt;
 	}
 
+	const uint32_t oldBlockMask = getIntersectingBlockMask(gameSim, Vec2(m_pos[0], m_pos[1]));
+	const bool isInPassthrough = (oldBlockMask & kBlockMask_Passthrough) != 0;
+	const bool passthroughMode = isInPassthrough || (m_vel[1] < 0.f);
+	const uint32_t blockExcludeMask = passthroughMode ? ~kBlockMask_Passthrough : ~0;
+
 	if (m_friction != 0.f)
 	{
-		uint32_t blockMask = getIntersectingBlockMask(gameSim, Vec2(m_pos[0], m_pos[1] + 1.f));
+		uint32_t blockMask = getIntersectingBlockMask(gameSim, Vec2(m_pos[0], m_pos[1] + 1.f)) & blockExcludeMask;
 
 		if (blockMask & kBlockMask_Solid)
 		{
@@ -61,6 +66,8 @@ void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 	{
 		m_vel *= std::pow(m_airFriction, dt);
 	}
+
+	// collision
 
 	Vec2 delta = m_vel * dt;
 	float deltaLen = delta.CalcSize();
@@ -88,7 +95,10 @@ void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 			else if (newPos[j] > wrapSizes[j])
 				newPos[j] = 0.f;
 
-			uint32_t blockMask = getIntersectingBlockMask(gameSim, newPos);
+			uint32_t blockMask = getIntersectingBlockMask(gameSim, newPos) & blockExcludeMask;
+
+			if (j == 0)
+				blockMask &= ~kBlockMask_Passthrough;
 
 			if (blockMask & kBlockMask_Solid)
 			{

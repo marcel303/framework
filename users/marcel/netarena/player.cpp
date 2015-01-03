@@ -331,6 +331,7 @@ void Player::clearAnimOverrides()
 	m_animVelIsAbsolute = false;
 	m_animAllowGravity = true;
 	m_animAllowSteering = true;
+	m_enableInAirAnim = true;
 }
 
 void Player::setAttackDirection(int dx, int dy)
@@ -455,12 +456,11 @@ void Player::tick(float dt)
 	//
 
 	if (m_netObject->m_sprite)
+	{
 		m_netObject->m_sprite->update(dt);
 
-	//
+		// check for end of animation events
 
-	if (m_isAnimDriven)
-	{
 		if (!m_netObject->m_sprite->animIsActive)
 		{
 			m_isAnimDriven = false;
@@ -762,7 +762,7 @@ void Player::tick(float dt)
 					m_isAirDashCharged = false;
 
 					setAnim(kPlayerAnim_AirDash, true, true);
-					//m_isAnimDriven = false;
+					m_enableInAirAnim = false;
 				}
 			}
 		}
@@ -1188,7 +1188,7 @@ void Player::tick(float dt)
 
 		// animation
 
-		if (!m_isGrounded && !m_isAttachedToSticky && !m_isWallSliding && (!m_netObject->m_sprite->animIsActive || s_animInfos[kPlayerAnim_Jump].prio > s_animInfos[m_anim].prio))
+		if (!m_isGrounded && !m_isAttachedToSticky && !m_isWallSliding && !m_isAnimDriven && m_enableInAirAnim)
 		{
 			setAnim(kPlayerAnim_Jump, true, false);
 		}

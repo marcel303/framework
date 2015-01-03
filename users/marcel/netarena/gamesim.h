@@ -73,6 +73,7 @@ struct Player
 
 		m_animAllowGravity = true;
 		m_animAllowSteering = true;
+		m_enableInAirAnim = true;
 
 		m_weaponType = kPlayerWeapon_Fire;
 
@@ -216,6 +217,7 @@ struct Player
 	bool m_isGrounded; // set when the player is walking on ground
 	bool m_isAttachedToSticky;
 	bool m_isAnimDriven; // an animation is active that drives the player using animation actions/triggers
+	bool m_enableInAirAnim;
 
 	bool m_isAirDashCharged; // reset when air dash is used. set when the player hits the ground
 	bool m_isWallSliding;

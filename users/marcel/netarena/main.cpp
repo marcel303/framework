@@ -595,7 +595,7 @@ void App::SV_OnChannelConnect(Channel * channel)
 	PlayerToAddOrRemove playerToAdd;
 	playerToAdd.add = true;
 	playerToAdd.channel = channel;
-	playerToAdd.characterIndex = 0;
+	playerToAdd.characterIndex = g_playerCharacterIndex;
 	m_playersToAddOrRemove.push_back(playerToAdd);
 }
 
@@ -1143,8 +1143,6 @@ void App::draw()
 	{
 		if (m_selectedClient >= 0 && m_selectedClient < (int)m_clients.size())
 		{
-			setDrawRect(0, 0, ARENA_SX_PIXELS, ARENA_SY_PIXELS);
-
 			Client * client = m_clients[m_selectedClient];
 
 			client->draw();
@@ -1153,8 +1151,6 @@ void App::draw()
 			{
 				client->debugDraw();
 			}
-
-			clearDrawRect();
 
 			setColor(255, 255, 255);
 			Font font("calibri.ttf");
