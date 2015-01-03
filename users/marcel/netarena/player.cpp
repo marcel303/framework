@@ -187,6 +187,13 @@ void PlayerNetObject::handleAnimationAction(const std::string & action, const Di
 			player->m_animVel[0] = args.getFloat("x", player->m_animVel[0]);
 			player->m_animVel[1] = args.getFloat("y", player->m_animVel[1]);
 		}
+		else if (action == "set_dash_vel")
+		{
+			Vec2 dir(playerNetObject->m_input.m_currState.analogX, playerNetObject->m_input.m_currState.analogY);
+			dir.Normalize();
+
+			player->m_vel += dir * args.getFloat("x", player->m_animVel[0]);
+		}
 		else if (action == "set_anim_vel_abs")
 		{
 			player->m_animVelIsAbsolute = args.getBool("abs", player->m_animVelIsAbsolute);
@@ -318,6 +325,14 @@ void Player::setAnim(int anim, bool play, bool restart)
 	}
 }
 
+void Player::clearAnimOverrides()
+{
+	m_animVel = Vec2();
+	m_animVelIsAbsolute = false;
+	m_animAllowGravity = true;
+	m_animAllowSteering = true;
+}
+
 void Player::setAttackDirection(int dx, int dy)
 {
 	m_attackDirection[0] = dx;
@@ -328,6 +343,8 @@ void Player::setAttackDirection(int dx, int dy)
 
 void Player::applyAnim()
 {
+	clearAnimOverrides();
+
 	if (m_anim != kPlayerAnim_NULL)
 	{
 		delete m_netObject->m_sprite;
@@ -447,10 +464,8 @@ void Player::tick(float dt)
 		if (!m_netObject->m_sprite->animIsActive)
 		{
 			m_isAnimDriven = false;
-			m_animVel = Vec2();
-			m_animVelIsAbsolute = false;
-			m_animAllowGravity = true;
-			m_animAllowSteering = true;
+
+			clearAnimOverrides();
 
 			switch (m_anim)
 			{
@@ -747,7 +762,7 @@ void Player::tick(float dt)
 					m_isAirDashCharged = false;
 
 					setAnim(kPlayerAnim_AirDash, true, true);
-					m_isAnimDriven = true;
+					//m_isAnimDriven = false;
 				}
 			}
 		}
@@ -1097,7 +1112,7 @@ void Player::tick(float dt)
 							{
 								float strength = (m_vel[i] - PLAYER_JUMP_SPEED) / 25.f;
 
-								if (strength > 14.f)
+								if (strength > PLAYER_SCREENSHAKE_STRENGTH_THRESHHOLD)
 								{
 									strength = strength / 4.f;
 									m_netObject->m_gameSim->addScreenShake(0.f, strength, 3000.f, .3f);
@@ -1173,7 +1188,7 @@ void Player::tick(float dt)
 
 		// animation
 
-		if (!m_isGrounded && !m_isAttachedToSticky && !m_isWallSliding && isAnimOverrideAllowed(kPlayerAnim_Jump))
+		if (!m_isGrounded && !m_isAttachedToSticky && !m_isWallSliding && (s_animInfos[kPlayerAnim_Jump].prio > s_animInfos[m_anim].prio))
 		{
 			setAnim(kPlayerAnim_Jump, true, false);
 		}

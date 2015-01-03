@@ -258,7 +258,7 @@ void Arena::load(const char * filename)
 					v = kBlockShape_HB,
 				*/
 
-				BlockShape shape = kBlockShape_Empty;
+				BlockShape shape = kBlockShape_Opaque;
 
 				switch (line[x])
 				{

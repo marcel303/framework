@@ -101,6 +101,7 @@ struct Player
 	bool hasValidCharacterIndex() const;
 
 	void setAnim(int anim, bool play, bool restart);
+	void clearAnimOverrides();
 	void setAttackDirection(int dx, int dy);
 	void applyAnim();
 

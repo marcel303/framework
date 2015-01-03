@@ -719,9 +719,9 @@ void EditorView::SwitchToMech(int s)
     if(s)
     {
         SwitchSceneTo(0);
-        sliderOpacMech->setValue(100);
-        sliderOpacArt->setValue(0);
-        sliderOpacColl->setValue(0);
+        sliderOpacMech->setValue(80);
+        sliderOpacArt->setValue(20);
+        sliderOpacColl->setValue(20);
     }
 }
 void EditorView::SwitchToArt(int s)
@@ -729,9 +729,9 @@ void EditorView::SwitchToArt(int s)
     if(s)
     {
         SwitchSceneTo(1);
-        sliderOpacMech->setValue(0);
-        sliderOpacArt->setValue(100);
-        sliderOpacColl->setValue(0);
+        sliderOpacMech->setValue(20);
+        sliderOpacArt->setValue(80);
+        sliderOpacColl->setValue(20);
     }
 }
 void EditorView::SwitchToCollission(int s)
@@ -739,9 +739,9 @@ void EditorView::SwitchToCollission(int s)
     if(s)
     {
         SwitchSceneTo(2);
-        sliderOpacMech->setValue(0);
-        sliderOpacArt->setValue(0);
-        sliderOpacColl->setValue(100);
+        sliderOpacMech->setValue(20);
+        sliderOpacArt->setValue(20);
+        sliderOpacColl->setValue(80);
     }
 }
 
@@ -884,6 +884,13 @@ void CreateSettingsWidget()
 
     w->setLayout(grid);
     w->show();
+}
+
+void CreateNewLevelWidget()
+{
+    QWidget* w = new QWidget;
+
+
 }
 
 
