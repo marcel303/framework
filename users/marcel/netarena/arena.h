@@ -50,6 +50,7 @@ enum BlockType
 	kBlockType_ConveyorBeltLeft,
 	kBlockType_ConveyorBeltRight,
 	kBlockType_Passthrough,
+	kBlockType_Appear,
 	kBlockType_COUNT
 };
 
@@ -61,9 +62,11 @@ static const int kBlockMask_Solid =
 	(1 << kBlockType_Spring) |
 	(1 << kBlockType_ConveyorBeltLeft) |
 	(1 << kBlockType_ConveyorBeltRight) |
+	(1 << kBlockType_Appear) |
 	(1 << kBlockType_Passthrough);
 
 static const int kBlockMask_Passthrough =
+	(1 << kBlockType_Appear) |
 	(1 << kBlockType_Passthrough);
 
 #pragma pack(push)
@@ -72,10 +75,8 @@ static const int kBlockMask_Passthrough =
 struct Block
 {
 	BlockType type;
-	uint8_t clientData;
-
 	BlockShape shape;
-	uint16_t serverData;
+	uint16_t param;
 };
 
 #pragma pack(pop)
@@ -86,6 +87,13 @@ struct BlockAndDistance
 	uint8_t x;
 	uint8_t y;
 	int distanceSq;
+};
+
+struct AppearBlockData
+{
+	uint16_t isVisible : 1;
+	uint16_t switchTime : 8;
+	uint16_t padding : 7;
 };
 
 class Arena
@@ -102,6 +110,8 @@ public:
 	void serialize(NetSerializationContext & context);
 
 	void drawBlocks();
+
+	void tick(GameSim & gameSim);
 
 	bool getRandomSpawnPoint(GameSim & gameSim, int & out_x, int & out_y, int & io_lastSpawnIndex, Player * playerToIgnore) const;
 	bool getRandomPickupLocations(int * out_x, int * out_y, int & numLocations, void * obj, bool (*reject)(void * obj, int x, int y)) const;

@@ -24,7 +24,7 @@
 
 #include <QButtonGroup>
 
-int MAPX = 30;
+int MAPX = 26;
 int MAPY = 16;
 
 char selectedTile = ' ';

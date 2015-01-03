@@ -211,6 +211,9 @@ void GameSim::tickPlay()
 
 	const uint32_t tick = GetTick();
 
+	// arena update
+	m_arena.tick(*this);
+
 	// player update
 
 	for (int i = 0; i < MAX_PLAYERS; ++i)

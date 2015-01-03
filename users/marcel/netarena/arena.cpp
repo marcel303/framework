@@ -50,7 +50,7 @@ static void initializeBlockMasks()
 	{
 		init = true;
 
-		createBlockMask(kBlockShape_Empty,  [](int x, int y) { return true; });
+		createBlockMask(kBlockShape_Empty,  [](int x, int y) { return false; });
 		createBlockMask(kBlockShape_Opaque, [](int x, int y) { return true; });
 
 		createBlockMask(kBlockShape_TL,     [](int x, int y) { return x + y < BLOCK_SX; });
@@ -177,6 +177,7 @@ void Arena::load(const char * filename)
 				< = kBlockType_ConveyorBeltLeft,
 				> = kBlockType_ConveyorBeltRight,
 				i = kBlockType_Passthrough,
+				a = kBlockType_Appear,
 				*/
 
 				BlockType type = kBlockType_Empty;
@@ -200,12 +201,19 @@ void Arena::load(const char * filename)
 				case '<': type = kBlockType_ConveyorBeltLeft; break;
 				case '>': type = kBlockType_ConveyorBeltRight; break;
 				case 'i': type = kBlockType_Passthrough; break;
+				case 'a': type = kBlockType_Appear; break;
 				default:
 					LOG_WRN("invalid block type: '%c'", line[x]);
 					break;
 				}
 
 				m_blocks[x][y].type = type;
+				if (type == kBlockType_Appear)
+				{
+					AppearBlockData& blockdata = (AppearBlockData&)m_blocks[x][y].param;
+					blockdata.isVisible = true;
+					blockdata.switchTime = 255;
+				}
 			}
 		}
 	}
@@ -232,8 +240,8 @@ void Arena::load(const char * filename)
 			for (int x = 0; x < sx; ++x)
 			{
 				/*
-					  = kBlockShape_Empty,
-					x = kBlockShape_Opaque,
+					x = kBlockShape_Empty,
+					  = kBlockShape_Opaque,
 					q = kBlockShape_TL,
 					w = kBlockShape_TR,
 					a = kBlockShape_BL,
@@ -254,8 +262,8 @@ void Arena::load(const char * filename)
 
 				switch (line[x])
 				{
-				case ' ': shape = kBlockShape_Empty; break;
-				case 'x': shape = kBlockShape_Opaque; break;
+				case 'x': shape = kBlockShape_Empty; break;
+				case ' ': shape = kBlockShape_Opaque; break;
 				case 'q': shape = kBlockShape_TL; break;
 				case 'w': shape = kBlockShape_TR; break;
 				case 'a': shape = kBlockShape_BL; break;
@@ -301,7 +309,7 @@ void Arena::serialize(NetSerializationContext & context)
 
 			context.SerializeBits(type, 5);
 			context.SerializeBits(shape, 5);
-			//Serialize(block.clientData);
+			context.Serialize(block.param);
 
 			block.type = (BlockType)type;
 			block.shape = (BlockShape)shape;
@@ -330,7 +338,8 @@ void Arena::drawBlocks()
 		"block-gravity-right.png",
 		"block-conveyorbelt-left.png",
 		"block-conveyorbelt-right.png",
-		"block-passthrough.png"
+		"block-passthrough.png",
+		"block-appear.png"
 	};
 
 	static Sprite * sprites[kBlockType_COUNT] = { };
@@ -348,7 +357,24 @@ void Arena::drawBlocks()
 				sprites[block.type] = new Sprite(filename);
 			}
 
-			sprites[block.type]->drawEx(x * BLOCK_SX, y * BLOCK_SY);
+			if (block.type == kBlockType_Appear)
+			{
+				const AppearBlockData& data = (AppearBlockData&)block.param;
+
+				if (data.isVisible && data.switchTime < 20)
+					setColor(255, 255, 255, 255 - (255 - data.switchTime * 12.75));
+				else if (!data.isVisible)
+					if (data.switchTime < 20)
+						setColor(255, 255, 255, 2.55 * (100 - data.switchTime * 5));
+					else
+						setColor(255, 255, 255, 0);
+
+					sprites[block.type]->drawEx(x * BLOCK_SX, y * BLOCK_SY);
+
+				setColor(255, 255, 255);
+			}
+			else
+				sprites[block.type]->drawEx(x * BLOCK_SX, y * BLOCK_SY);
 		}
 	}
 
@@ -370,6 +396,41 @@ void Arena::drawBlocks()
 						(x + 1) * scale,
 						(y + 1) * scale);
 				}
+			}
+		}
+	}
+}
+
+void Arena::tick(GameSim & gameSim)
+{
+	for (int x = 0; x < ARENA_SX; ++x)
+	{
+		for (int y = 0; y < ARENA_SY; ++y)
+		{
+			Block & block = m_blocks[x][y];
+
+			if (block.type == kBlockType_Appear)
+			{
+				AppearBlockData& data = (AppearBlockData&)block.param;
+
+				if (data.switchTime == 0)
+				{
+					if (data.isVisible)
+					{
+						data.isVisible = 0;
+						block.shape = kBlockShape_Empty;
+					}
+					else
+					{
+						data.isVisible = 1;
+						block.shape = kBlockShape_Opaque;
+					}
+
+					data.switchTime = 255;
+				}
+				else
+					data.switchTime--;
+				
 			}
 		}
 	}
