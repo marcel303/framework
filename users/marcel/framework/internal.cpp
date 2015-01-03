@@ -459,8 +459,8 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type)
 			
 			shader = glCreateShader(type);
 			
-//			const GLchar * version = "#version 120\n#define __SHADER__ 1\n";
-			const GLchar * version = "#version 150\n#define __SHADER__ 1\n";
+			const GLchar * version = "#version 120\n#define __SHADER__ 1\n";
+//			const GLchar * version = "#version 150\n#define __SHADER__ 1\n";
 //			const GLchar * version = "#version 320\n#define __SHADER__ 1\n";
 			const GLchar * sourceData = (const GLchar*)source.c_str();
 			const GLchar * sources[] = { version, sourceData };
