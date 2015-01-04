@@ -62,6 +62,21 @@ void Bullet::setVel(float angle, float velocity)
 	getVelocityXY(angle, velocity, m_vel[0], m_vel[1]);
 }
 
+float Bullet::calcAge() const
+{
+	float result = 0.f;
+
+	if (maxDistanceTravelled != 0.f)
+		result = distanceTravelled / maxDistanceTravelled;
+
+	if (result < 0.f)
+		result = 0.f;
+	if (result > 1.f)
+		result = 1.f;
+
+	return result;
+}
+
 //
 
 BulletPool::BulletPool(bool localOnly)
@@ -445,12 +460,14 @@ void BulletPool::draw()
 
 		if (b.isAlive)
 		{
-			const int cr = (b.color >> 24) & 0xff;
-			const int cg = (b.color >> 16) & 0xff;
-			const int cb = (b.color >>  8) & 0xff;
-			const int ca = (b.color >>  0) & 0xff;
+			const float ageAlpha = b.doAgeAlpha ? (1.f - b.calcAge()) : 1.f;
 
-			setColor(cr, cg, cb, ca);
+			const float cr = ((b.color >> 24) & 0xff) / 255.f;
+			const float cg = ((b.color >> 16) & 0xff) / 255.f;
+			const float cb = ((b.color >>  8) & 0xff) / 255.f;
+			const float ca = ((b.color >>  0) & 0xff) / 255.f * ageAlpha;
+
+			setColorf(cr, cg, cb, ca);
 			s_bulletSprites[b.type]->drawEx(b.m_pos[0], b.m_pos[1], Calc::RadToDeg(toAngle(b.m_vel[0], b.m_vel[1])), s_bulletSprites[b.type]->scale);
 
 			setColor(255, 255, 255);
@@ -466,9 +483,14 @@ void BulletPool::drawLight()
 
 		if (b.isAlive)
 		{
+			const float age = b.calcAge();
+
+			setColorf(1.f, 1.f, 1.f, 1.f - age);
 			Sprite("player-light.png").drawEx(b.m_pos[0], b.m_pos[1], .5f);
 		}
 	}
+
+	setColorf(1.f, 1.f, 1.f);
 }
 
 uint16_t BulletPool::alloc()

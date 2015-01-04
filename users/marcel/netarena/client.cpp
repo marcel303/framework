@@ -304,7 +304,9 @@ void Client::drawPlay()
 
 		m_gameSim->m_bulletPool->draw();
 
+		setBlend(BLEND_ADD);
 		m_gameSim->m_particlePool->draw();
+		setBlend(BLEND_ALPHA);
 
 		gxPopMatrix();
 	}
@@ -318,6 +320,8 @@ void Client::drawPlay()
 		const float v = .1f + (std::sin(g_TimerRT.Time_get() / 5.f) + 1.f) / 2.f * .9f;
 		glClearColor(v, v, v, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT);
+
+		setBlend(BLEND_ADD);
 
 		for (int i = 0; i < MAX_PICKUPS; ++i)
 		{
@@ -340,6 +344,8 @@ void Client::drawPlay()
 		m_gameSim->m_bulletPool->drawLight();
 
 		m_gameSim->m_particlePool->drawLight();
+
+		setBlend(BLEND_ALPHA);
 
 		gxPopMatrix();
 	}

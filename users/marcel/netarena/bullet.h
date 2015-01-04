@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "framework.h"
 #include "NetSerializable.h"
 #include "physobj.h"
 #include "Vec2.h"
@@ -28,6 +29,7 @@ public:
 	Bullet();
 
 	void setVel(float angle, float velocity);
+	float calcAge() const;
 
 	bool isAlive;
 
@@ -46,6 +48,8 @@ public:
 	bool noDamagePlayer;
 	bool noDamageMap;
 	bool doDamageOwner;
+
+	bool doAgeAlpha;
 
 	uint8_t reflectCount;
 	uint8_t maxReflectCount;
@@ -83,6 +87,7 @@ struct ParticleSpawnInfo
 		, maxVelocity(100)
 		, maxDistance(100)
 		, color(0xffffffff)
+		, blend(BLEND_ADD)
 	{
 	}
 
@@ -95,6 +100,7 @@ struct ParticleSpawnInfo
 		, maxVelocity(_maxVelocity)
 		, maxDistance(_maxDistance)
 		, color(0xffffffff)
+		, blend(BLEND_ADD)
 	{
 	}
 
@@ -111,6 +117,7 @@ struct ParticleSpawnInfo
 	uint16_t maxVelocity;
 	uint16_t maxDistance;
 	uint32_t color; // 0xrrggbbaa
+	BLEND_MODE blend;
 };
 
 #pragma pack(pop)

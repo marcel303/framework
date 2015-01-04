@@ -85,10 +85,9 @@ void Pickup::draw()
 
 void Pickup::drawLight()
 {
-	const float x = m_pos[0];
-	const float y = m_pos[1];
+	Vec2 pos = m_pos + (m_bbMin + m_bbMax) / 2.f;
 
-	Sprite("player-light.png").drawEx(x, y, 0.f, 1.f);
+	Sprite("player-light.png").drawEx(pos[0], pos[1], 0.f, 1.f);
 }
 
 //
@@ -653,6 +652,8 @@ void GameSim::spawnParticles(const ParticleSpawnInfo & spawnInfo)
 			Bullet & b = m_particlePool->m_bullets[id];
 
 			initBullet(*this, b, spawnInfo);
+
+			b.doAgeAlpha = true;
 		}
 	}
 }

@@ -1265,6 +1265,16 @@ void Player::tick(float dt)
 			{
 				m_tokenHunt.m_hasToken = true;
 			}
+
+			if (m_tokenHunt.m_hasToken && (m_netObject->m_gameSim->GetTick() % 4) == 0)
+			{
+				ParticleSpawnInfo spawnInfo(
+					m_pos[0], m_pos[1],
+					kBulletType_ParticleA, 2,
+					50.f, 100.f, 50.f);
+				spawnInfo.color = 0xffffff80;
+				m_netObject->m_gameSim->spawnParticles(spawnInfo);
+			}
 		}
 	}
 }
@@ -1313,11 +1323,13 @@ void Player::draw()
 	}
 	drawRect(m_pos[0] - 50, m_pos[1] - 110, m_pos[0] + 50, m_pos[1] - 85);
 	
+	/*
 	if (m_netObject->m_gameSim->m_gameMode == kGameMode_TokenHunt && m_tokenHunt.m_hasToken)
 	{
 		setColorf(1.f, 1.f, 1.f, (std::sin(g_TimerRT.Time_get() * 10.f) * .7f + 1.f) / 2.f);
 		drawRect(m_pos[0] - 50, m_pos[1] - 110, m_pos[0] + 50, m_pos[1] - 85);
 	}
+	*/
 
 	// draw score
 	setFont("calibri.ttf");
@@ -1343,8 +1355,22 @@ void Player::draw()
 
 void Player::drawAt(int x, int y)
 {
-	setColor(colorWhite);
+	if (m_netObject->m_gameSim->m_gameMode == kGameMode_TokenHunt)
+	{
+		setColorMode(COLOR_ADD);
+		if (m_tokenHunt.m_hasToken)
+			setColorf(1.f, 1.f, 1.f, 1.f, (std::sin(g_TimerRT.Time_get() * 10.f) * .7f + 1.f) / 4.f);
+		else
+			setColorf(0.f, 0.f, 0.f);
+	}
+	else
+	{
+		setColor(colorWhite);
+	}
+
 	m_netObject->m_sprite->drawEx(x, y, 0.f, m_netObject->m_spriteScale);
+
+	setColorMode(COLOR_MUL);
 
 	if (m_anim == kPlayerAnim_Attack || m_anim == kPlayerAnim_AttackUp || m_anim == kPlayerAnim_AttackDown)
 	{
