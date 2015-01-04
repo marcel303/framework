@@ -1524,7 +1524,7 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 
 			//m_netObject->m_gameSim->m_freezeTicks = 10;
 
-			if (attacker)
+			if (attacker && attacker != this)
 			{
 				bool canScore = true;
 
@@ -1534,7 +1534,8 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 					attacker->awardScore(1);
 					break;
 				case kGameMode_TokenHunt:
-					if (attacker->m_tokenHunt.m_hasToken)
+					// if the attacker has the token, or we're the token bearer
+					if (attacker->m_tokenHunt.m_hasToken || m_tokenHunt.m_hasToken)
 						attacker->awardScore(1);
 					break;
 				}
