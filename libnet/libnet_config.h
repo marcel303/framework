@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Options.h"
+
 /* The MTU size specifies the maximum size for a packet sent over the network. Typically this
  * should be less than the MTU size for 100 Mbit Ethernet LAN (1500 bytes). When sending data
  * through Channel::Send, the channel will try to batch as many packets into one datagram as
@@ -14,63 +16,46 @@
  * are purged. During debugging it is often desirable to have this feature
  * disabled so you can safely step through code without your channels expiring.
  */
-#ifndef LIBNET_CHANNEL_ENABLE_TIMEOUTS
-	#define LIBNET_CHANNEL_ENABLE_TIMEOUTS 0
-#endif
+
+OPTION_DECLARE(bool, LIBNET_CHANNEL_ENABLE_TIMEOUTS, true);
 
 /* Packing batches multiple packets into one datagram to improve throughput.
  * When packing is enabled, low priority packets will be batched and sent only
  * when Flush() is called or when to batch buffer is full.
  * During debugging it may be useful to disable packing.
  */
-#ifndef LIBNET_CHANNEL_ENABLE_PACKING
-	#define LIBNET_CHANNEL_ENABLE_PACKING 1
-#endif
+OPTION_DECLARE(bool, LIBNET_CHANNEL_ENABLE_PACKING, true);
 
 /* Ping interval (MS).
  */
-#ifndef LIBNET_CHANNEL_PING_INTERVAL
-	#define LIBNET_CHANNEL_PING_INTERVAL 3000
-#endif
+OPTION_DECLARE(int, LIBNET_CHANNEL_PING_INTERVAL, 3000);
 
 /* Time-out interval (MS).
  */
-#ifndef LIBNET_CHANNEL_TIMEOUT_INTERVAL
-	#define LIBNET_CHANNEL_TIMEOUT_INTERVAL 10000
-#endif
+OPTION_DECLARE(int, LIBNET_CHANNEL_TIMEOUT_INTERVAL, 10000);
 
 /* Add a similated latency (MS) to packet delivery.
  */
-#ifndef LIBNET_CHANNEL_SIMULATED_PING
-	#define LIBNET_CHANNEL_SIMULATED_PING 0
-#endif
+OPTION_DECLARE(int, LIBNET_CHANNEL_SIMULATED_PING, 0);
 
 /* Simulated packet loss allows debugging of the reliable transport
  * protocol as well as profiling how well the game behaves in the
  * event of lost packets.
- * The value is between 0 and 1000
+ * The value is between 0 and 100
  */
-#ifndef LIBNET_CHANNEL_SIMULATED_PACKETLOSS
-	#define LIBNET_CHANNEL_SIMULATED_PACKETLOSS 0
-#endif
+OPTION_DECLARE(int, LIBNET_CHANNEL_SIMULATED_PACKETLOSS, 0);
 
 /* Log ping/pong messages.
  */
-#ifndef LIBNET_CHANNEL_LOG_PINGPONG
-	#define LIBNET_CHANNEL_LOG_PINGPONG 0
-#endif
+OPTION_DECLARE(bool, LIBNET_CHANNEL_LOG_PINGPONG, false);
 
 /* Log trunking activity.
  */
-#ifndef LIBNET_CHANNELMGR_LOG_TRUNK
-	#define LIBNET_CHANNELMGR_LOG_TRUNK 0
-#endif
+OPTION_DECLARE(bool, LIBNET_CHANNELMGR_LOG_TRUNK, false);
 
 /* Log reliable transmission activity.
  */
-#ifndef LIBNET_CHANNEL_LOG_RT
-	#define LIBNET_CHANNEL_LOG_RT 0
-#endif
+OPTION_DECLARE(bool, LIBNET_CHANNEL_LOG_RT, false);
 
 /* Maximum number of protocols supported by the packet dispatcher.
  */

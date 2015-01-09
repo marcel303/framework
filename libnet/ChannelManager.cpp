@@ -209,9 +209,8 @@ void ChannelManager::HandleTrunk(Packet & packet, Channel * channel)
 
 	if (packet.Read16(&channelId))
 	{
-	#if LIBNET_CHANNELMGR_LOG_TRUNK == 1
-		LOG_DBG("chanmgr: trunk: redirecting to channel %u", static_cast<uint32_t>(channelId));
-	#endif
+		if (LIBNET_CHANNELMGR_LOG_TRUNK)
+			LOG_DBG("chanmgr: trunk: redirecting to channel %u", static_cast<uint32_t>(channelId));
 
 		Channel * channel2 = FindChannel(channelId);
 

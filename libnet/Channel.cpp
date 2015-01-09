@@ -20,9 +20,7 @@ Channel::Channel(ChannelType channelType, ChannelPool channelPool, uint32_t prot
 	, m_isConnected(false)
 	, m_sendQueue()
 	, m_pingTimer()
-#if LIBNET_CHANNEL_ENABLE_TIMEOUTS == 1
 	, m_timeoutTimer()
-#endif
 	, m_rtt(0)
 	, m_delayTimer()
 	, m_delayedReceivePackets()
@@ -55,35 +53,27 @@ void Channel::Initialize(ChannelManager * channelMgr, SharedNetSocket socket)
 	m_channelMgr = channelMgr;
 	m_socket = socket;
 
-#if LIBNET_CHANNEL_ENABLE_TIMEOUTS == 1
 	m_timeoutTimer.Initialize(&g_netTimer);
 	m_timeoutTimer.SetIntervalMS(m_channelMgr->m_channelTimeout);
-#endif
 }
 
 void Channel::SetConnected(bool connected)
 {
 	if (connected)
 	{
-	#if LIBNET_CHANNEL_ENABLE_TIMEOUTS == 1
 		if (m_timeoutTimer.Interval_get() != 0.f)
 			m_timeoutTimer.Start();
-	#endif
 	}
 	else
 	{
-	#if LIBNET_CHANNEL_ENABLE_TIMEOUTS == 1
 		m_timeoutTimer.Stop();
-	#endif
 	}
 }
 
 bool Channel::Connect(const NetAddress & address)
 {
-#if LIBNET_CHANNEL_ENABLE_TIMEOUTS == 1
 	if (m_timeoutTimer.Interval_get() != 0.f)
 		m_timeoutTimer.Start();
-#endif
 
 	m_address = address;
 
@@ -156,11 +146,12 @@ void Channel::Update(uint64_t time)
 
 		while (Receive(receiveData))
 		{
-		#if LIBNET_CHANNEL_SIMULATED_PACKETLOSS != 0
-			uint32_t loss = rand() % 1000;
-			if (loss < LIBNET_CHANNEL_SIMULATED_PACKETLOSS)
-				continue;
-		#endif
+			if (LIBNET_CHANNEL_SIMULATED_PACKETLOSS != 0)
+			{
+				const int loss = rand() % 100;
+				if (loss < LIBNET_CHANNEL_SIMULATED_PACKETLOSS)
+					continue;
+			}
 
 			const void * data          = receiveData.m_data;
 			const uint32_t size        = receiveData.m_size;
@@ -230,10 +221,9 @@ void Channel::Update(uint64_t time)
 				if (isResending)
 					NET_STAT_INC(NetStat_ReliableTransportUpdateResends);
 
-			#if LIBNET_CHANNEL_LOG_RT == 1
-				LOG_CHANNEL_DBG("RT UPD sent: %u",
-					static_cast<uint32_t>(packetId));
-			#endif
+				if (LIBNET_CHANNEL_LOG_RT)
+					LOG_CHANNEL_DBG("RT UPD sent: %u",
+						static_cast<uint32_t>(packetId));
 
 				sendBytes += headerSize + packetSize;
 
@@ -269,14 +259,12 @@ void Channel::Update(uint64_t time)
 
 			SendUnreliable(packet, false);
 
-		#if LIBNET_CHANNEL_LOG_PINGPONG == 1
-			LOG_CHANNEL_DBG("sent ping message", 0);
-		#endif
+			if (LIBNET_CHANNEL_LOG_PINGPONG)
+				LOG_CHANNEL_DBG("sent ping message", 0);
 		}
 
-	#if LIBNET_CHANNEL_ENABLE_TIMEOUTS == 1
 		// Check for connection time out.
-		if (m_timeoutTimer.ReadTick())
+		if (LIBNET_CHANNEL_ENABLE_TIMEOUTS && m_timeoutTimer.ReadTick())
 		{
 			Disconnect(true, false);
 
@@ -284,7 +272,6 @@ void Channel::Update(uint64_t time)
 
 			LOG_CHANNEL_DBG("timeout", 0);
 		}
-	#endif
 	}
 
 	Flush();
@@ -313,10 +300,6 @@ void Channel::Flush()
 bool Channel::Send(const Packet & packet, int channelSendFlags)
 {
 	NetAssert(m_address.IsValid());
-
-#if LIBNET_CHANNEL_ENABLE_PACKING == 0
-	priority = true; // Disable packing
-#endif
 
 	bool unreliable = (channelSendFlags & ChannelSendFlag_Unreliable) != 0;
 	bool sendImmediately = (channelSendFlags & ChannelSendFlag_SendImmediately) != 0;
@@ -359,6 +342,9 @@ bool Channel::SendBegin(uint32_t size)
 	m_txSize -= headerSize;
 	const uint16_t packetSize = static_cast<uint16_t>(size);
 	m_sendQueue.Write16(&packetSize);
+
+	if (!LIBNET_CHANNEL_ENABLE_PACKING)
+		Flush();
 
 	return true;
 }
@@ -435,10 +421,9 @@ bool Channel::SendReliable(const Packet & packet)
 
 	m_rtQueue.push_back(temp);
 
-#if LIBNET_CHANNEL_LOG_RT == 1
-	LOG_CHANNEL_DBG("RT ENQ: %u",
-		static_cast<uint32_t>(temp.m_id));
-#endif
+	if (LIBNET_CHANNEL_LOG_RT)
+		LOG_CHANNEL_DBG("RT ENQ: %u",
+			static_cast<uint32_t>(temp.m_id));
 
 	return true;
 }
@@ -506,9 +491,8 @@ bool Channel::Receive(ReceiveData & rcvData)
 
 void Channel::HandlePing(Packet & packet)
 {
-#if LIBNET_CHANNEL_LOG_PINGPONG == 1
-	LOG_CHANNEL_DBG("received ping message", 0);
-#endif
+	if (LIBNET_CHANNEL_LOG_PINGPONG)
+		LOG_CHANNEL_DBG("received ping message", 0);
 
 	uint32_t time;
 
@@ -529,9 +513,8 @@ void Channel::HandlePing(Packet & packet)
 
 	SendUnreliable(reply.ToPacket(), false);
 
-#if LIBNET_CHANNEL_LOG_PINGPONG == 1
-	LOG_CHANNEL_DBG("sent pong message", 0);
-#endif
+	if (LIBNET_CHANNEL_LOG_PINGPONG)
+		LOG_CHANNEL_DBG("sent pong message", 0);
 }
 
 void Channel::HandlePong(Packet & packet)
@@ -548,9 +531,8 @@ void Channel::HandlePong(Packet & packet)
 
 	m_rtt = time2 - time;
 
-#if LIBNET_CHANNEL_LOG_PINGPONG == 1
-	LOG_CHANNEL_DBG("received pong message. rtt = %gms", m_rtt / 1000.0f);
-#endif
+	if (LIBNET_CHANNEL_LOG_PINGPONG)
+		LOG_CHANNEL_DBG("received pong message. rtt = %gms", m_rtt / 1000.0f);
 
 	OnReceive();
 }
@@ -567,11 +549,10 @@ void Channel::HandleRTUpdate(Packet & packet)
 
 	NET_STAT_INC(NetStat_ReliableTransportUpdatesReceived);
 
-#if LIBNET_CHANNEL_LOG_RT == 1
-	LOG_CHANNEL_DBG("RT UPD rcvd: %u (time=%llu)",
-		static_cast<uint32_t>(packetId),
-		static_cast<uint64_t>(g_netTimer.TimeMS_get()));
-#endif
+	if (LIBNET_CHANNEL_LOG_RT)
+		LOG_CHANNEL_DBG("RT UPD rcvd: %u (time=%llu)",
+			static_cast<uint32_t>(packetId),
+			static_cast<uint64_t>(g_netTimer.TimeMS_get()));
 
 	if (packetId == m_rtRcvId)
 	{
@@ -588,10 +569,9 @@ void Channel::HandleRTUpdate(Packet & packet)
 
 		NET_STAT_INC(NetStat_ReliableTransportAcksSent);
 
-	#if LIBNET_CHANNEL_LOG_RT == 1
-		LOG_CHANNEL_DBG("RT ACK sent: %u",
-			static_cast<uint32_t>(packetId));
-	#endif
+		if (LIBNET_CHANNEL_LOG_RT)
+			LOG_CHANNEL_DBG("RT ACK sent: %u",
+				static_cast<uint32_t>(packetId));
 
 		m_rtRcvId++;
 
@@ -611,12 +591,13 @@ void Channel::HandleRTUpdate(Packet & packet)
 	{
 		NET_STAT_INC(NetStat_ReliableTransportUpdatesIgnored);
 
-	#if LIBNET_CHANNEL_LOG_RT == 1
-		if (packetId > m_rtRcvId)
-			LOG_CHANNEL_DBG("RT UPD rcvd: ID > receive ID", 0);
-		else
-			LOG_CHANNEL_DBG("RT UPD rcvd: ID < receive ID", 0);
-	#endif
+		if (LIBNET_CHANNEL_LOG_RT)
+		{
+			if (packetId > m_rtRcvId)
+				LOG_CHANNEL_DBG("RT UPD rcvd: ID > receive ID", 0);
+			else
+				LOG_CHANNEL_DBG("RT UPD rcvd: ID < receive ID", 0);
+		}
 
 		if (packetId > m_rtRcvId)
 		{
@@ -651,19 +632,16 @@ void Channel::HandleRTAck(Packet & packet)
 
 	NET_STAT_INC(NetStat_ReliableTransportAcksReceived);
 
-#if LIBNET_CHANNEL_LOG_RT == 1
-	LOG_CHANNEL_DBG("RT ACK rcvd: %u", 
-		static_cast<uint32_t>(packetId));
-#endif
+	if (LIBNET_CHANNEL_LOG_RT)
+		LOG_CHANNEL_DBG("RT ACK rcvd: %u", 
+			static_cast<uint32_t>(packetId));
 
 	if (packetId >= m_rtAckId)
 	{
-	#if LIBNET_CHANNEL_LOG_RT == 1
-		if (packetId >= m_rtSndId)
+		if (LIBNET_CHANNEL_LOG_RT && packetId >= m_rtSndId)
 		{
 			LOG_CHANNEL_DBG("received ack for unsent message", 0);
 		}
-	#endif
 
 		// Remove queued packets.
 		while (m_rtQueue.size() > 0 && m_rtQueue[0].m_id <= packetId)
@@ -677,9 +655,8 @@ void Channel::HandleRTAck(Packet & packet)
 	{
 		NET_STAT_INC(NetStat_ReliableTransportAcksIgnored);
 
-	#if LIBNET_CHANNEL_LOG_RT == 1
-		LOG_CHANNEL_DBG("RT ACK rcvd: ID < ack ID", 0);
-	#endif
+		if (LIBNET_CHANNEL_LOG_RT)
+			LOG_CHANNEL_DBG("RT ACK rcvd: ID < ack ID", 0);
 	}
 }
 
@@ -695,10 +672,9 @@ void Channel::HandleRTNack(Packet & packet)
 
 	NET_STAT_INC(NetStat_ReliableTransportNacksReceived);
 
-#if LIBNET_CHANNEL_LOG_RT == 1
-	LOG_CHANNEL_DBG("RT ACK rcvd: %u", 
-		static_cast<uint32_t>(packetId));
-#endif
+	if (LIBNET_CHANNEL_LOG_RT)
+		LOG_CHANNEL_DBG("RT ACK rcvd: %u", 
+			static_cast<uint32_t>(packetId));
 
 	if (packetId < m_rtSndId)
 	{
@@ -715,18 +691,15 @@ void Channel::HandleRTNack(Packet & packet)
 		}
 
 
-	#if LIBNET_CHANNEL_LOG_RT
-		if (!found)
+		if (LIBNET_CHANNEL_LOG_RT && !found)
 			LOG_CHANNEL_DBG("received nack for already acked message", 0);
-	#endif
 	}
 	else
 	{
 		NET_STAT_INC(NetStat_ReliableTransportNacksIgnored);
 
-	#if LIBNET_CHANNEL_LOG_RT == 1
-		LOG_CHANNEL_DBG("received ack for unsent message", 0);
-	#endif
+		if (LIBNET_CHANNEL_LOG_RT)
+			LOG_CHANNEL_DBG("received ack for unsent message", 0);
 	}
 }
 
@@ -741,8 +714,6 @@ void Channel::InitSendQueue()
 
 void Channel::OnReceive()
 {
-#if LIBNET_CHANNEL_ENABLE_TIMEOUTS == 1
 	if (m_timeoutTimer.Interval_get() != 0.f)
 		m_timeoutTimer.Restart();
-#endif
 }

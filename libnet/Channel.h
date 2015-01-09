@@ -102,9 +102,7 @@ public:
 	bool m_isConnected;
 	PacketBuilder<LIBNET_SOCKET_MTU_SIZE> m_sendQueue;
 	PolledTimer m_pingTimer;
-#if LIBNET_CHANNEL_ENABLE_TIMEOUTS == 1
 	PolledTimer m_timeoutTimer;
-#endif
 	uint32_t m_rtt; // round trip time, in microseconds
 	PolledTimer m_delayTimer;
 	DelayedPacketList m_delayedReceivePackets;
