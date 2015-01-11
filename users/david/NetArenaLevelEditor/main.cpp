@@ -568,6 +568,11 @@ int main(int argc, char *argv[])
 	ObjectPropertyWindow props;
 	props.CreateObjectPropertyWindow();
 
+
+	GameObject t;
+	t.Load("color:10aabbcc\n");
+
+
     return a.exec();
 }
 
@@ -1129,7 +1134,21 @@ void GameObject::Load(QString data)
 	{
 		QStringList list = line.split(":");
 		map[*list.begin()] = list.back();
+		//map[*list.begin()].chop(1); //chop endline
 	}
+
+	x = map["x"].toInt();
+	y = map["y"].toInt();
+	speed = map["speed"].toInt();
+
+	map["color"].push_front(map["color"][map["color"].size()-1]);
+	map["color"].push_front(map["color"][map["color"].size()-2]);
+	map["color"].push_front("#");
+	map["color"].chop(2);
+
+	q.setNamedColor(map["color"]);
+
+	QString argb = q.name(QColor::HexArgb);
 }
 
 QString GameObject::toText()
