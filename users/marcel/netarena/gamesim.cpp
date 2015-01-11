@@ -1,14 +1,24 @@
 #include "bullet.h"
+#include "Calc.h"
 #include "client.h"
+#include "FileStream.h"
 #include "framework.h"
 #include "gamedefs.h"
 #include "gamesim.h"
 #include "main.h"
+#include "Parse.h"
+#include "Path.h"
 #include "player.h"
+#include "StreamReader.h"
+#include "Timer.h"
 
 OPTION_DECLARE(bool, g_noSound, false);
 OPTION_DEFINE(bool, g_noSound, "Sound/Disable Sound Effects");
 OPTION_ALIAS(g_noSound, "nosound");
+
+//
+
+void splitString(const std::string & str, std::vector<std::string> & result, char c);
 
 //
 
@@ -160,6 +170,42 @@ void Token::drawLight()
 
 //
 
+void Torch::setup(float x, float y, Color color)
+{
+	m_isAlive = true;
+	m_pos.Set(x, y);
+	m_color = color;
+}
+
+void Torch::tick(GameSim & gameSim, float dt)
+{
+}
+
+void Torch::draw()
+{
+	Sprite("torch.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.f);
+}
+
+void Torch::drawLight()
+{
+	float a = 0.f;
+	a += std::sin(g_TimerRT.Time_get() * Calc::m2PI * TORCH_FLICKER_FREQ_A);
+	a += std::sin(g_TimerRT.Time_get() * Calc::m2PI * TORCH_FLICKER_FREQ_B);
+	a += std::sin(g_TimerRT.Time_get() * Calc::m2PI * TORCH_FLICKER_FREQ_C);
+	a = (a + 3.f) / 6.f;
+	a = Calc::Lerp(1.f, a, TORCH_FLICKER_STRENGTH);
+
+	Color color = m_color;
+	color.a = a;
+	setColor(color);
+
+	Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f);
+
+	setColor(colorWhite);
+}
+
+//
+
 GameSim::GameSim()
 	: GameStateData()
 	, m_bulletPool(0)
@@ -270,21 +316,7 @@ void GameSim::setGameState(::GameState gameState)
 	{
 		playSound("round-begin.ogg");
 
-		// reset pickups
-
-		for (int i = 0; i < MAX_PICKUPS; ++i)
-			m_pickups[i].isAlive = false;
-
-		// reset bullets
-
-		for (int i = 0; i < MAX_BULLETS; ++i)
-		{
-			if (m_bulletPool->m_bullets[i].isAlive)
-				m_bulletPool->free(i);
-
-			if (m_particlePool->m_bullets[i].isAlive)
-				m_particlePool->free(i);
-		}
+		//resetGameWorld();
 
 		// respawn players
 
@@ -310,6 +342,156 @@ void GameSim::setGameState(::GameState gameState)
 void GameSim::setGameMode(GameMode gameMode)
 {
 	m_gameMode = gameMode;
+}
+
+static Color parseColor(const char * str)
+{
+	const uint32_t hex = std::stoul(str, 0, 16);
+	const float r = ((hex >> 24) & 0xff) / 255.f;
+	const float g = ((hex >> 16) & 0xff) / 255.f;
+	const float b = ((hex >>  8) & 0xff) / 255.f;
+	const float a = ((hex >>  0) & 0xff) / 255.f;
+	return Color(r, g, b, a);
+}
+
+void GameSim::load(const char * filename)
+{
+	resetGameWorld();
+
+	// load arena
+
+	m_arena.load(filename);
+
+	// load objects
+
+	std::string baseName = Path::GetBaseName(filename);
+
+	std::string objectsFilename = baseName + "-objects.txt";
+
+	try
+	{
+		FileStream stream;
+		stream.Open(objectsFilename.c_str(), (OpenMode)(OpenMode_Read | OpenMode_Text));
+		StreamReader reader(&stream, false);
+		std::vector<std::string> lines = reader.ReadAllLines();
+
+		enum ObjectType
+		{
+			kObjectType_Undefined,
+			kObjectType_Torch,
+			kObjectType_Mover2
+		};
+
+		ObjectType objectType = kObjectType_Undefined;
+		Torch * torch = 0;
+
+		for (size_t i = 0; i < lines.size(); ++i)
+		{
+			if (lines[i].empty() || lines[i][0] == '#')
+				continue;
+
+			std::vector<std::string> fields;
+			splitString(lines[i], fields, ':');
+
+			if (fields.size() != 2)
+			{
+				LOG_WRN("syntax error: %s", lines[i].c_str());
+			}
+			else
+			{
+				if (fields[0] == "object")
+				{
+					objectType = kObjectType_Undefined;
+					torch = 0;
+
+					if (fields[1] == "torch")
+					{
+						objectType = kObjectType_Torch;
+
+						for (int i = 0; i < MAX_TORCHES; ++i)
+						{
+							if (!m_torches[i].m_isAlive)
+							{
+								torch = &m_torches[i];
+								break;
+							}
+						}
+
+						if (torch == 0)
+							LOG_ERR("too many torches!");
+						else
+							torch->m_isAlive = true;
+					}
+					if (fields[1] == "mover2")
+						objectType = kObjectType_Mover2;
+				}
+				else
+				{
+					switch (objectType)
+					{
+					case kObjectType_Undefined:
+						LOG_ERR("properties begin before object type is set!");
+						break;
+
+					case kObjectType_Torch:
+						if (torch)
+						{
+							if (fields[0] == "x")
+								torch->m_pos[0] = Parse::Int32(fields[1]);
+							if (fields[0] == "y")
+								torch->m_pos[1] = Parse::Int32(fields[1]);
+							if (fields[0] == "color")
+							{
+								if (fields[1].length() != 8)
+									LOG_ERR("invalid color format: %s", fields[1].c_str());
+								else
+									torch->m_color = parseColor(fields[1].c_str());
+							}
+						}
+						break;
+					case kObjectType_Mover2:
+						break;
+					}
+				}
+			}
+		}
+	}
+	catch (std::exception & e)
+	{
+		LOG_ERR(e.what());
+	}
+}
+
+void GameSim::resetGameWorld()
+{
+	// reset map
+
+	m_arena.reset();
+
+	// reset pickups
+
+	for (int i = 0; i < MAX_PICKUPS; ++i)
+		m_pickups[i].isAlive = false;
+
+	// reset torches
+
+	for (int i = 0; i < MAX_TORCHES; ++i)
+		m_torches[i].m_isAlive = false;
+
+	// reset bullets
+
+	for (int i = 0; i < MAX_BULLETS; ++i)
+	{
+		if (m_bulletPool->m_bullets[i].isAlive)
+			m_bulletPool->free(i);
+
+		if (m_particlePool->m_bullets[i].isAlive)
+			m_particlePool->free(i);
+	}
+
+	// reset token hunt game mode
+
+	m_tokenHunt.m_token.m_isDropped = false;
 }
 
 void GameSim::tick()
@@ -424,6 +606,14 @@ void GameSim::tickPlay()
 	// token
 
 	m_tokenHunt.m_token.tick(*this, dt);
+
+	// torches
+
+	for (int i = 0; i < MAX_TORCHES; ++i)
+	{
+		if (m_torches[i].m_isAlive)
+			m_torches[i].tick(*this, dt);
+	}
 
 	anim(dt);
 

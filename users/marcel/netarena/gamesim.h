@@ -10,6 +10,7 @@
 //#define MAX_BULLETS 1000
 //#define MAX_PARTICLES 1000
 #define MAX_PICKUPS 10
+#define MAX_TORCHES 10
 #define MAX_SCREEN_SHAKES 4
 
 #include <string.h> // todo : cpp
@@ -234,6 +235,24 @@ struct Token : PhysicsActor
 	void drawLight();
 };
 
+struct Mover2
+{
+
+};
+
+struct Torch
+{
+	bool m_isAlive;
+	Vec2 m_pos;
+	Color m_color;
+
+	void setup(float x, float y, Color color);
+
+	void tick(GameSim & gameSim, float dt);
+	void draw();
+	void drawLight();
+};
+
 struct ScreenShake
 {
 	bool isActive;
@@ -282,6 +301,8 @@ struct GameStateData
 	Pickup m_grabbedPickup;
 	uint64_t m_nextPickupSpawnTick;
 
+	Torch m_torches[MAX_TORCHES];
+
 	struct TokenHunt
 	{
 		Token m_token;
@@ -315,6 +336,9 @@ public:
 
 	void setGameState(::GameState gameState);
 	void setGameMode(GameMode gameMode);
+
+	void load(const char * filename);
+	void resetGameWorld();
 
 	void tick();
 	void tickLobby();

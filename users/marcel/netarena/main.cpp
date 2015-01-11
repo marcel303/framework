@@ -276,7 +276,9 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		}
 
 		if (gameSim)
-			gameSim->m_arena.load(filename.c_str());
+		{
+			gameSim->load(filename.c_str());
+		}
 	}
 	else if (method == s_rpcAddPlayer)
 	{
@@ -569,15 +571,15 @@ void App::processPlayerChanges()
 
 void App::broadcastPlayerInputs()
 {
-	if (g_devMode)
-		for (int i = 0; i < 10; ++i)
-			m_channelMgr->Update(g_TimerRT.TimeUS_get());
+	//if (g_devMode)
+	//	for (int i = 0; i < 10; ++i)
+	//		m_channelMgr->Update(g_TimerRT.TimeUS_get());
 
 	netSetPlayerInputsBroadcast();
 
-	if (g_devMode)
-		for (int i = 0; i < 10; ++i)
-			m_channelMgr->Update(g_TimerRT.TimeUS_get());
+	//if (g_devMode)
+	//	for (int i = 0; i < 10; ++i)
+	//		m_channelMgr->Update(g_TimerRT.TimeUS_get());
 }
 
 //

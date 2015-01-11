@@ -284,6 +284,16 @@ void Client::drawPlay()
 
 		m_gameSim->m_arena.drawBlocks();
 
+		// torches
+
+		for (int i = 0; i < MAX_TORCHES; ++i)
+		{
+			if (m_gameSim->m_torches[i].m_isAlive)
+				m_gameSim->m_torches[i].draw();
+		}
+
+		// pickups
+
 		for (int i = 0; i < MAX_PICKUPS; ++i)
 		{
 			Pickup & pickup = m_gameSim->m_pickups[i];
@@ -292,7 +302,11 @@ void Client::drawPlay()
 				pickup.draw();
 		}
 
+		// token
+
 		m_gameSim->m_tokenHunt.m_token.draw();
+
+		// players
 
 		for (int i = 0; i < MAX_PLAYERS; ++i)
 		{
@@ -302,7 +316,11 @@ void Client::drawPlay()
 				player.draw();
 		}
 
+		// bullets
+
 		m_gameSim->m_bulletPool->draw();
+
+		// particles
 
 		setBlend(BLEND_ADD);
 		m_gameSim->m_particlePool->draw();
@@ -317,11 +335,31 @@ void Client::drawPlay()
 		gxPushMatrix();
 		gxTranslatef(camTranslation[0], camTranslation[1], 0.f);
 
-		const float v = .1f + (std::sin(g_TimerRT.Time_get() / 5.f) + 1.f) / 2.f * .9f;
+		const int lightingDebugMode = LIGHTING_DEBUG_MODE % 4;
+
+		float v = 1.f;
+		if (lightingDebugMode == 0)
+			v = .1f + (std::sin(g_TimerRT.Time_get() / 5.f) + 1.f) / 2.f * .9f;
+		else if (lightingDebugMode == 1)
+			v = 1.f;
+		else if (lightingDebugMode == 2)
+			v = .5f;
+		else if (lightingDebugMode == 3)
+			v = 0.f;
 		glClearColor(v, v, v, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		setBlend(BLEND_ADD);
+
+		// torches
+
+		for (int i = 0; i < MAX_TORCHES; ++i)
+		{
+			if (m_gameSim->m_torches[i].m_isAlive)
+				m_gameSim->m_torches[i].drawLight();
+		}
+
+		// pickups
 
 		for (int i = 0; i < MAX_PICKUPS; ++i)
 		{
@@ -331,7 +369,11 @@ void Client::drawPlay()
 				pickup.drawLight();
 		}
 
+		// token
+
 		m_gameSim->m_tokenHunt.m_token.drawLight();
+
+		// players
 
 		for (int i = 0; i < MAX_PLAYERS; ++i)
 		{
@@ -341,7 +383,11 @@ void Client::drawPlay()
 				player.drawLight();
 		}
 
+		// bullets
+
 		m_gameSim->m_bulletPool->drawLight();
+
+		// particles
 
 		m_gameSim->m_particlePool->drawLight();
 

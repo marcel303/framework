@@ -103,11 +103,10 @@ class Arena
 {
 	Block m_blocks[ARENA_SX][ARENA_SY];
 
-	void reset();
-
 public:
 	void init();
 
+	void reset();
 	void generate();
 	void load(const char * filename);
 	void serialize(NetSerializationContext & context);
