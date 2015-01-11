@@ -21,6 +21,8 @@ enum PlayerWeapon
 {
 	kPlayerWeapon_Sword,
 	kPlayerWeapon_Fire,
+	kPlayerWeapon_Ice,
+	kPlayerWeapon_Bubble,
 	kPlayerWeapon_Grenade,
 	kPlayerWeapon_COUNT
 };
@@ -47,7 +49,27 @@ enum PickupType
 {
 	kPickupType_Ammo,
 	kPickupType_Nade,
+	kPickupType_Shield,
+	kPickupType_Ice,
+	kPickupType_Bubble,
 	kPickupType_COUNT
+};
+
+enum BulletType
+{
+	kBulletType_A,
+	kBulletType_B,
+	kBulletType_Grenade,
+	kBulletType_GrenadeA,
+	kBulletType_ParticleA,
+	kBulletType_COUNT
+};
+
+enum BulletEffect
+{
+	kBulletEffect_Damage,
+	kBulletEffect_Ice,
+	kBulletEffect_Bubble
 };
 
 struct CollisionInfo

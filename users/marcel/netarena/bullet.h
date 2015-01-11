@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include "framework.h"
+#include "gametypes.h"
 #include "NetSerializable.h"
 #include "physobj.h"
 #include "Vec2.h"
@@ -12,16 +13,6 @@
 #define INVALID_BULLET_ID 0xffff
 
 class GameSim;
-
-enum BulletType
-{
-	kBulletType_A,
-	kBulletType_B,
-	kBulletType_Grenade,
-	kBulletType_GrenadeA,
-	kBulletType_ParticleA,
-	kBulletType_COUNT
-};
 
 class Bullet : public PhysicsActor
 {
@@ -38,6 +29,7 @@ public:
 	Vec2 vel;
 #endif
 	BulletType type;
+	BulletEffect effect;
 	bool noCollide;
 	uint32_t color;
 

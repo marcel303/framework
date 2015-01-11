@@ -455,6 +455,22 @@ void Player::tick(float dt)
 
 	//
 
+	if (m_ice.timer > 0.f)
+	{
+		m_ice.timer = Calc::Max(0.f, m_ice.timer - dt);
+		if (m_ice.timer == 0.f)
+			m_isAnimDriven = false;
+	}
+
+	if (m_bubble.timer > 0.f)
+	{
+		m_bubble.timer = Calc::Max(0.f, m_bubble.timer - dt);
+		if (m_bubble.timer == 0.f)
+			m_isAnimDriven = false;
+	}
+
+	//
+
 	if (m_netObject->m_sprite)
 	{
 		m_netObject->m_sprite->update(dt);
@@ -537,6 +553,17 @@ void Player::tick(float dt)
 			case kPickupType_Nade:
 				m_weaponAmmo = 1;
 				m_weaponType = kPlayerWeapon_Grenade;
+				break;
+			case kPickupType_Shield:
+				m_shield.shield = 1;
+				break;
+			case kPickupType_Ice:
+				m_weaponAmmo = PICKUP_AMMO_COUNT;
+				m_weaponType = kPlayerWeapon_Ice;
+				break;
+			case kPickupType_Bubble:
+				m_weaponAmmo = PICKUP_AMMO_COUNT;
+				m_weaponType = kPlayerWeapon_Bubble;
 				break;
 			}
 		}
@@ -650,6 +677,7 @@ void Player::tick(float dt)
 
 				int anim = -1;
 				BulletType bulletType = kBulletType_COUNT;
+				BulletEffect bulletEffect = kBulletEffect_Damage;
 				bool hasAttackCollision = false;
 
 				if (m_weaponType == kPlayerWeapon_Fire)
@@ -658,7 +686,21 @@ void Player::tick(float dt)
 					bulletType = kBulletType_B;
 					m_attack.cooldown = PLAYER_FIRE_COOLDOWN;
 				}
-				if (m_weaponType == kPlayerWeapon_Grenade)
+				else if (m_weaponType == kPlayerWeapon_Ice)
+				{
+					anim = kPlayerAnim_Fire;
+					bulletType = kBulletType_B;
+					bulletEffect = kBulletEffect_Ice;
+					m_attack.cooldown = PLAYER_FIRE_COOLDOWN;
+				}
+				else if (m_weaponType == kPlayerWeapon_Bubble)
+				{
+					anim = kPlayerAnim_Fire;
+					bulletType = kBulletType_B;
+					bulletEffect = kBulletEffect_Bubble;
+					m_attack.cooldown = PLAYER_FIRE_COOLDOWN;
+				}
+				else if (m_weaponType == kPlayerWeapon_Grenade)
 				{
 					bulletType = kBulletType_Grenade;
 					m_netObject->m_gameSim->playSound("grenade-throw.ogg");
@@ -693,6 +735,7 @@ void Player::tick(float dt)
 					m_pos[1] - mirrorY(44.f),
 					angle,
 					bulletType,
+					bulletEffect,
 					m_index);
 			}
 
@@ -819,8 +862,9 @@ void Player::tick(float dt)
 
 		bool playerControl =
 			m_controlDisableTime == 0.f &&
-			m_animAllowSteering; //&&
-			//!m_isAnimDriven;
+			m_animAllowSteering &&
+			m_ice.timer == 0.f &&
+			m_bubble.timer == 0.f;
 
 		m_controlDisableTime -= dt;
 		if (m_controlDisableTime < 0.f)
@@ -929,6 +973,8 @@ void Player::tick(float dt)
 		if (m_isAttachedToSticky)
 			gravity = 0.f;
 		else if (m_animVelIsAbsolute)
+			gravity = 0.f;
+		else if (m_bubble.timer > 0.f)
 			gravity = 0.f;
 		else
 		{
@@ -1049,7 +1095,19 @@ void Player::tick(float dt)
 					}
 				}
 
-				if (newBlockMask & kBlockMask_Solid)
+				if ((newBlockMask & kBlockMask_Solid) && m_ice.timer != 0.f)
+				{
+					m_vel[i] *= -.5f;
+
+					totalDelta = 0.f;
+				}
+				else if ((newBlockMask & kBlockMask_Solid) && m_bubble.timer != 0.f)
+				{
+					m_vel[i] *= -.75f;
+
+					totalDelta = 0.f;
+				}
+				else if (newBlockMask & kBlockMask_Solid)
 				{
 					if (i == 0)
 					{
@@ -1084,6 +1142,8 @@ void Player::tick(float dt)
 						// grounded
 
 						if (newBlockMask & (1 << kBlockType_Slide))
+							surfaceFriction = 0.f;
+						else if (m_ice.timer != 0.f)
 							surfaceFriction = 0.f;
 						else
 							surfaceFriction = FRICTION_GROUNDED;
@@ -1158,7 +1218,9 @@ void Player::tick(float dt)
 
 		// grounded?
 
-		if (m_vel[1] >= 0.f && (getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f) & kBlockMask_Solid) != 0)
+		if (m_bubble.timer != 0.f)
+			m_isGrounded = false;
+		else if (m_vel[1] >= 0.f && (getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f) & kBlockMask_Solid) != 0)
 		{
 			if (!m_isGrounded)
 			{
@@ -1368,9 +1430,27 @@ void Player::drawAt(int x, int y)
 		setColor(colorWhite);
 	}
 
+	if (m_ice.timer > 0.f)
+		setColor(63, 127, 255);
+
 	m_netObject->m_sprite->drawEx(x, y, 0.f, m_netObject->m_spriteScale);
 
 	setColorMode(COLOR_MUL);
+	setColor(255, 255, 255);
+
+	if (m_shield.shield)
+	{
+		const float x = m_pos[0] + (m_collision.x1 + m_collision.x2) / 2.f;
+		const float y = m_pos[1] + (m_collision.y1 + m_collision.y2) / 2.f;
+		Sprite("shield-bubble.png").drawEx(x, y);
+	}
+
+	if (m_bubble.timer > 0.f)
+	{
+		const float x = m_pos[0] + (m_collision.x1 + m_collision.x2) / 2.f;
+		const float y = m_pos[1] + (m_collision.y1 + m_collision.y2) / 2.f;
+		Sprite("shield-bubble.png").drawEx(x, y);
+	}
 
 	if (m_anim == kPlayerAnim_Attack || m_anim == kPlayerAnim_AttackUp || m_anim == kPlayerAnim_AttackDown)
 	{
@@ -1385,9 +1465,8 @@ void Player::drawAt(int x, int y)
 
 void Player::drawLight()
 {
-	float x = m_pos[0] + (m_collision.x1 + m_collision.x2) / 2.f;
-	float y = m_pos[1] + (m_collision.y1 + m_collision.y2) / 2.f;
-
+	const float x = m_pos[0] + (m_collision.x1 + m_collision.x2) / 2.f;
+	const float y = m_pos[1] + (m_collision.y1 + m_collision.y2) / 2.f;
 	Sprite("player-light.png").drawEx(x, y, 0.f, 3.f);
 }
 
@@ -1527,26 +1606,38 @@ void Player::respawn()
 	}
 }
 
+void Player::handleImpact(Vec2Arg velocity)
+{
+	Vec2 velDelta = velocity - m_vel;
+
+	for (int i = 0; i < 2; ++i)
+	{
+		if (Calc::Sign(velDelta[i]) == Calc::Sign(velocity[i]))
+			m_vel[i] += velDelta[i];
+	}
+}
+
 bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 {
-	if (m_isAlive)
+	if (m_isAlive && isAnimOverrideAllowed(kPlayerAnim_Die))
 	{
-		if (isAnimOverrideAllowed(kPlayerAnim_Die))
+		handleImpact(velocity);
+
+		if (m_shield.shield > 0)
 		{
-			Vec2 velDelta = velocity - m_vel;
-
-			for (int i = 0; i < 2; ++i)
-			{
-				if (Calc::Sign(velDelta[i]) == Calc::Sign(velocity[i]))
-					m_vel[i] += velDelta[i];
-			}
-
+			m_shield.shield--;
+		}
+		else
+		{
 			setAnim(kPlayerAnim_Die, true, true);
 			m_isAnimDriven = true;
 
 			m_canRespawn = false;
 
 			m_isAlive = false;
+
+			m_ice = IceInfo();
+			m_bubble = BubbleInfo();
 
 			//m_netObject->m_gameSim->m_freezeTicks = 10;
 
@@ -1595,9 +1686,46 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 					g_gameSim->playSound("token-bounce.ogg");
 				}
 			}
-
-			return true;
 		}
+
+		return true;
+	}
+
+	return false;
+}
+
+bool Player::handleIce(Vec2Arg velocity, Player * attacker)
+{
+	if (m_isAlive && isAnimOverrideAllowed(kPlayerAnim_Walk))
+	{
+		handleImpact(velocity * .1f);
+
+		setAnim(kPlayerAnim_Walk, true, true);
+		m_isAnimDriven = true;
+
+		m_ice.timer = PLAYER_EFFECT_ICE_TIME;
+
+		return true;
+	}
+
+	return false;
+}
+
+bool Player::handleBubble(Vec2Arg velocity, Player * attacker)
+{
+	if (m_isAlive && isAnimOverrideAllowed(kPlayerAnim_Walk))
+	{
+		Vec2 direction = velocity.CalcNormalized();
+		direction += Vec2(0.f, -1.f);
+		direction.Normalize();
+		m_vel = direction * 200.f;
+
+		setAnim(kPlayerAnim_Walk, true, true);
+		m_isAnimDriven = true;
+
+		m_bubble.timer = PLAYER_EFFECT_BUBBLE_TIME;
+
+		return true;
 	}
 
 	return false;

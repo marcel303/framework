@@ -29,6 +29,9 @@ GameSim * g_gameSim = 0;
 static const char * s_pickupSprites[kPickupType_COUNT] =
 {
 	"pickup-ammo.png",
+	"pickup-nade.png",
+	"pickup-nade.png",
+	"pickup-nade.png",
 	"pickup-nade.png"
 };
 
@@ -91,6 +94,13 @@ void Pickup::draw()
 	Sprite sprite(filename);
 
 	sprite.drawEx(m_pos[0] + m_bbMin[0], m_pos[1] + m_bbMin[1]);
+
+	if (true)
+	{
+		// fixme!
+
+		drawText(m_pos[0], m_pos[1], 24.f, 0.f, 0.f, "type: %d", type);
+	}
 }
 
 void Pickup::drawLight()
@@ -576,7 +586,10 @@ void GameSim::tickPlay()
 			int weights[kPickupType_COUNT] =
 			{
 				PICKUP_AMMO_WEIGHT,
-				PICKUP_NADE_WEIGHT
+				PICKUP_NADE_WEIGHT,
+				PICKUP_SHIELD_WEIGHT,
+				PICKUP_ICE_WEIGHT,
+				PICKUP_BUBBLE_WEIGHT
 			};
 
 			int totalWeight = 0;
@@ -766,7 +779,7 @@ bool GameSim::pickupToken(const CollisionInfo & collisionInfo)
 	return false;
 }
 
-uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, uint8_t type, uint8_t ownerPlayerId)
+uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, BulletType type, BulletEffect effect, uint8_t ownerPlayerId)
 {
 	const uint16_t id = m_bulletPool->alloc();
 
@@ -778,6 +791,7 @@ uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, uint8_t type
 		b = Bullet();
 		b.isAlive = true;
 		b.type = static_cast<BulletType>(type);
+		b.effect = static_cast<BulletEffect>(effect);
 		b.m_pos[0] = x;
 		b.m_pos[1] = y;
 		b.color = 0xffffffff;

@@ -313,8 +313,18 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 
 						if (collisionInfo.intersects(b.m_pos[0], b.m_pos[1]))
 						{
-							if (player.handleDamage(1.f, b.m_vel, owner))
-								kill = true;
+							switch (b.effect)
+							{
+							case kBulletEffect_Damage:
+								kill |= player.handleDamage(1.f, b.m_vel, owner);
+								break;
+							case kBulletEffect_Ice:
+								kill |= player.handleIce(b.m_vel, owner);
+								break;
+							case kBulletEffect_Bubble:
+								kill |= player.handleBubble(b.m_vel, owner);
+								break;
+							}
 						}
 					}
 				}
@@ -361,6 +371,7 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 								b.m_pos[1],
 								gameSim.Random() % 256,
 								kBulletType_GrenadeA,
+								kBulletEffect_Damage,
 								b.ownerPlayerId);
 						}
 

@@ -36,6 +36,11 @@ OPTION_DEFINE(float, PLAYER_SCREENSHAKE_STRENGTH_THRESHHOLD, "Player/Effects/Scr
 OPTION_DEFINE(float, PLAYER_FIRE_COOLDOWN, "Player/Attacks/Fire/Cooldown Time");
 OPTION_STEP(PLAYER_FIRE_COOLDOWN, 0, 0, 0.1f);
 
+OPTION_DEFINE(float, PLAYER_EFFECT_ICE_TIME, "Player/Effects/Ice/Duration");
+OPTION_DEFINE(float, PLAYER_EFFECT_BUBBLE_TIME, "Player/Effects/Bubble/Duration");
+OPTION_STEP(PLAYER_EFFECT_ICE_TIME, 0, 0, 0.1f);
+OPTION_STEP(PLAYER_EFFECT_BUBBLE_TIME, 0, 0, 0.1f);
+
 OPTION_DEFINE(int, STEERING_SPEED_ON_GROUND, "Player/Steering/Speed On Ground");
 OPTION_DEFINE(int, STEERING_SPEED_IN_AIR, "Player/Steering/Speed In Air");
 OPTION_STEP(STEERING_SPEED_ON_GROUND, 0, 0, 10);
@@ -99,6 +104,9 @@ OPTION_DEFINE(int, MAX_PICKUP_COUNT, "Pickup/Maximum Pickup Count");
 OPTION_DEFINE(int, PICKUP_AMMO_COUNT, "Pickup/Ammo Count");
 OPTION_DEFINE(int, PICKUP_AMMO_WEIGHT, "Pickup/Spawn Weights/Ammo");
 OPTION_DEFINE(int, PICKUP_NADE_WEIGHT, "Pickup/Spawn Weights/Nade");
+OPTION_DEFINE(int, PICKUP_SHIELD_WEIGHT, "Pickup/Spawn Weights/Shield");
+OPTION_DEFINE(int, PICKUP_ICE_WEIGHT, "Pickup/Spawn Weights/Ice");
+OPTION_DEFINE(int, PICKUP_BUBBLE_WEIGHT, "Pickup/Spawn Weights/Bubble");
 
 OPTION_DEFINE(int, TOKEN_FLEE_SPEED, "Token/Flee Speed");
 OPTION_DEFINE(float, TOKEN_DROP_TIME, "Token/No Pickup Time (Sec)");

@@ -79,7 +79,10 @@ struct Player
 	void handleNewRound();
 
 	void respawn();
+	void handleImpact(Vec2Arg velocity);
 	bool handleDamage(float amount, Vec2Arg velocity, Player * attacker);
+	bool handleIce(Vec2Arg velocity, Player * attacker);
+	bool handleBubble(Vec2Arg velocity, Player * attacker);
 	void awardScore(int score);
 
 	char * makeCharacterFilename(const char * filename);
@@ -175,6 +178,26 @@ struct Player
 		int16_t cancelX;
 		int8_t cancelFacing;
 	} m_jump;
+
+	struct ShieldInfo
+	{
+		ShieldInfo()
+		{
+			memset(this, 0, sizeof(ShieldInfo));
+		}
+
+		int shield;
+	} m_shield;
+
+	struct IceInfo
+	{
+		float timer;
+	} m_ice;
+
+	struct BubbleInfo
+	{
+		float timer;
+	} m_bubble;
 
 	float m_respawnTimer; // when this timer counts to zero, the player is automatically respawn
 	bool m_canRespawn; // set when the player is allowed to respawn, which is after the death animation is done
@@ -355,7 +378,7 @@ public:
 	void spawnToken();
 	bool pickupToken(const CollisionInfo & collisionInfo);
 
-	uint16_t spawnBullet(int16_t x, int16_t y, uint8_t angle, uint8_t type, uint8_t ownerPlayerId);
+	uint16_t spawnBullet(int16_t x, int16_t y, uint8_t angle, BulletType type, BulletEffect effect, uint8_t ownerPlayerId);
 	void spawnParticles(const ParticleSpawnInfo & spawnInfo);
 
 	void addScreenShake(float dx, float dy, float stiffness, float life);
