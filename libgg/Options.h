@@ -82,7 +82,7 @@ public:
 		return m_value;
 	}
 
-	T & operator=(const T & value)
+	void operator=(const T & value)
 	{
 		m_value = value;
 	}
