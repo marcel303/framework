@@ -80,6 +80,7 @@ struct Player
 
 	void respawn();
 	void handleImpact(Vec2Arg velocity);
+	bool shieldAbsorb(float amount);
 	bool handleDamage(float amount, Vec2Arg velocity, Player * attacker);
 	bool handleIce(Vec2Arg velocity, Player * attacker);
 	bool handleBubble(Vec2Arg velocity, Player * attacker);
