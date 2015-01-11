@@ -34,6 +34,39 @@ public:
     virtual void hoverEnterEvent ( QGraphicsSceneHoverEvent * e ){}
 };
 
+class TileProperties
+{
+public:
+   TileProperties();
+   ~TileProperties();
+
+
+};
+
+#include <QPair>
+#include <QList>
+
+class GameObject : public QGraphicsPixmapItem
+{
+public:
+	GameObject();
+	virtual ~GameObject();
+
+	void Load(QString data);
+
+	int x;
+	int y;
+
+	QColor q;
+
+	int speed;
+
+	QString type;
+
+	QString toText();
+
+	QList<QPair<int, int> > path;
+};
 
 class EditorScene : public QGraphicsScene
 {
@@ -51,6 +84,7 @@ public:
     virtual void CustomMouseEvent ( QGraphicsSceneMouseEvent * e );
 
     Tile** m_tiles;
+	TileProperties** m_properties;
 
     int m_mapx;
     int m_mapy;
@@ -78,6 +112,7 @@ public:
     QSlider* sliderOpacMech;
     QSlider* sliderOpacArt;
     QSlider* sliderOpacColl;
+	QSlider* sliderOpacObject;
 
 public slots:
     void Save();
@@ -86,12 +121,14 @@ public slots:
     void SwitchToMech(int s);
     void SwitchToArt(int s);
     void SwitchToCollission(int s);
+	void SwitchToObject(int s);
 
     void SwitchToTemplateMode();
 
     void SetOpacityMech(int s);
     void SetOpacityArt(int s);
     void SetOpacityCollission(int s);
+	void SetOpacityObject(int s);
 
 
     void SwitchToBigMap();
@@ -117,4 +154,25 @@ public:
     QString m_name;
 
     void SaveTemplate();
+};
+
+class QTextEdit;
+class ObjectPropertyWindow
+{
+public:
+	ObjectPropertyWindow(){}
+	virtual ~ObjectPropertyWindow(){}
+
+	void SaveToGameObject();
+
+	void CreateObjectPropertyWindow();
+
+	void SetCurrentGameObject(GameObject* object);
+	GameObject* GetCurrentGameObject();
+
+	QWidget* m_w;
+	QTextEdit* text;
+
+	GameObject* currentObject;
+
 };
