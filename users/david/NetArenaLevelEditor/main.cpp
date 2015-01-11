@@ -55,9 +55,18 @@ QGraphicsView* viewPallette;
 EditorScene* templateScene;
 Tile** m_templateTiles;
 
+
+QList<GameObject*> m_objects;
+//prop window
+
 bool leftbuttonHeld = false;
 
-bool templateMode = false;
+enum EditorMode
+{
+	EM_Level,
+	EM_Object,
+	EM_Template,
+} editorMode;
 
 
 
@@ -159,6 +168,22 @@ void SetEditCollissionScene()
         }
 }
 
+void SetEditObjects()
+{
+	for(int y = 0; y < MAPY; y++)
+		for (int x = 0; x < MAPX; x++)
+		{
+			sceneMech->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
+			sceneMech->m_tiles[y][x].setAcceptHoverEvents(false);
+
+			sceneCollission->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
+			sceneCollission->m_tiles[y][x].setAcceptHoverEvents(false);
+
+			sceneArt->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
+			sceneArt->m_tiles[y][x].setAcceptHoverEvents(false);
+		}
+}
+
 
 void SetOpactyForLayer(EditorScene* s, qreal opac)
 {
@@ -176,8 +201,10 @@ void SwitchSceneTo(int s)
 
     sceneCounter = s;
 
-    if(sceneCounter > 2)
+	if(sceneCounter > 3)
         sceneCounter = 0;
+
+	editorMode = EM_Level;
 
     switch(sceneCounter)
     {
@@ -205,6 +232,14 @@ void SwitchSceneTo(int s)
         sceneCollissionPallette->addItem(palletteTile);
         SetEditCollissionScene();
         break;
+	case 3:
+		editorMode = EM_Object;
+		//viewPallette->setScene(sceneCollissionPallette);
+		//SetSelectedTile(pixmapsCollission.begin().key());
+		view->setWindowTitle("Editing Level Objects");
+		//viewPallette->setWindowTitle("Collission Pallette");
+		//SetEditCollissionScene();
+		break;
     default:
         break;
     }
@@ -213,26 +248,6 @@ void SwitchSceneTo(int s)
 void SwitchScene()
 {
     SwitchSceneTo(sceneCounter+1);
-}
-
-QGraphicsScene* getCurrentScene()
-{
-    switch (sceneCounter)
-    {
-    case 0:
-        return sceneMech;
-        break;
-    case 1:
-        return sceneArt;
-        break;
-    case 2:
-        return sceneCollission;
-        break;
-    default:
-        return 0;
-        break;
-    }
-    return 0;
 }
 
 QMap<short, QPixmap*>& getCurrentPixmap()
@@ -486,9 +501,12 @@ void SwitchMap(int x, int y)
 
 
 void CreateSettingsWidget();
+void CreateObjectPropertyWindow();
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+
+	editorMode = EM_Level;
 
     view = new EditorView();
     sceneMech = new EditorScene();
@@ -533,6 +551,23 @@ int main(int argc, char *argv[])
 
     CreateSettingsWidget();
 
+
+	GameObject o;
+	o.x = 23;
+	o.y = 25;
+	o.speed = 200;
+	o.type = "custom";
+	o.q = QColor(128,128,128,255);
+
+	o.path.push_back(QPair<int, int>(25, 25));
+	o.path.push_back(QPair<int, int>(35, 15));
+	o.path.push_back(QPair<int, int>(45, 5));
+
+	qDebug() << o.toText();
+
+	ObjectPropertyWindow props;
+	props.CreateObjectPropertyWindow();
+
     return a.exec();
 }
 
@@ -560,7 +595,7 @@ void Tile::mousePressEvent ( QGraphicsSceneMouseEvent * e )
 {
     qDebug() << "setting tile to selectedBlock: " << selectedBlock;
 
-    if(!templateMode)
+	if(editorMode == EM_Level)
     {
         if(e->buttons() == Qt::RightButton)
             SetSelectedBlock(' ');
@@ -696,29 +731,40 @@ EditorTemplate templ;
 
 void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e )
 {
-    if(templateMode)
-    {
+	switch(editorMode)
+	{
+		case EM_Level:
+			e->ignore();
+			break;
+		case EM_Object:
 
-        int tilex = (int)(e->scenePos().x()/100.0);
-        int tiley = (int)(e->scenePos().y()/100.0);
+			e->accept();
+			break;
+		case EM_Template:
+		{
+			int tilex = (int)(e->scenePos().x()/100.0);
+			int tiley = (int)(e->scenePos().y()/100.0);
 
-        EditorTemplate::TemplateTile t;
-        t.x         = tilex;
-        t.y         = tiley;
-        QString n = QString::number(t.x) + "_" + QString::number(t.y);
-        t.blockMech = m_tiles[tiley][tilex].getBlock();
-        t.blockArt  = sceneArt->m_tiles[tiley][tilex].getBlock();
-        t.blockColl = sceneCollission->m_tiles[tiley][tilex].getBlock();
-        if(templ.m_list.contains(n))
-            templ.m_list.remove(n);
-        else
-            templ.m_list[n] = t;
+			EditorTemplate::TemplateTile t;
+			t.x         = tilex;
+			t.y         = tiley;
+			QString n = QString::number(t.x) + "_" + QString::number(t.y);
+			t.blockMech = m_tiles[tiley][tilex].getBlock();
+			t.blockArt  = sceneArt->m_tiles[tiley][tilex].getBlock();
+			t.blockColl = sceneCollission->m_tiles[tiley][tilex].getBlock();
+			if(templ.m_list.contains(n))
+				templ.m_list.remove(n);
+			else
+				templ.m_list[n] = t;
 
+			e->accept();
 
-        e->accept();
-    }
-    else
-        e->ignore();
+			break;
+		}
+		default:
+			e->ignore();
+			break;
+	}
 }
 
 
@@ -797,6 +843,7 @@ void EditorView::SwitchToMech(int s)
         sliderOpacMech->setValue(80);
         sliderOpacArt->setValue(20);
         sliderOpacColl->setValue(20);
+		sliderOpacObject->setValue(20);
     }
 }
 void EditorView::SwitchToArt(int s)
@@ -807,6 +854,7 @@ void EditorView::SwitchToArt(int s)
         sliderOpacMech->setValue(20);
         sliderOpacArt->setValue(80);
         sliderOpacColl->setValue(20);
+		sliderOpacObject->setValue(20);
     }
 }
 void EditorView::SwitchToCollission(int s)
@@ -817,7 +865,20 @@ void EditorView::SwitchToCollission(int s)
         sliderOpacMech->setValue(20);
         sliderOpacArt->setValue(20);
         sliderOpacColl->setValue(80);
+		sliderOpacObject->setValue(20);
     }
+}
+
+void EditorView::SwitchToObject(int s)
+{
+	if(s)
+	{
+		SwitchSceneTo(3);
+		sliderOpacMech->setValue(20);
+		sliderOpacArt->setValue(20);
+		sliderOpacColl->setValue(20);
+		sliderOpacObject->setValue(100);
+	}
 }
 
 void EditorView::SwitchToBigMap()
@@ -830,8 +891,10 @@ void EditorView::SwitchToBigMap()
 
 void EditorView::SwitchToTemplateMode()
 {
-    templateMode = !templateMode;
-    //SetEditNoScene();
+	if(editorMode != EM_Template)
+		editorMode = EM_Template;
+	else
+		editorMode = EM_Level;
 }
 
 void EditorView::SetOpacityMech(int s)
@@ -846,6 +909,14 @@ void EditorView::SetOpacityArt(int s)
 void EditorView::SetOpacityCollission(int s)
 {
     SetOpactyForLayer(sceneCollission, s/100.0);
+}
+
+void EditorView::SetOpacityObject(int s)
+{
+	foreach(GameObject* obj, m_objects)
+	{
+		obj->setOpacity(qreal(s) / 100.0);
+	}
 }
 
 
@@ -915,6 +986,8 @@ void CreateSettingsWidget()
     grid->addWidget(label, 2, 0);
     label = new QLabel("Coll");
     grid->addWidget(label, 3, 0);
+	label = new QLabel("Obj");
+	grid->addWidget(label, 4, 0);
 
 
     QButtonGroup* bgroup = new QButtonGroup();
@@ -936,6 +1009,12 @@ void CreateSettingsWidget()
     grid->addWidget(cb, 3, 1);
     bgroup->addButton(cb);
 
+	cb = new QCheckBox();
+	QObject::connect(cb, SIGNAL(stateChanged(int)),
+			view, SLOT(SwitchToObject(int)));
+	grid->addWidget(cb, 4, 1);
+	bgroup->addButton(cb);
+
     bgroup->setExclusive(true);
 
     label = new QLabel("Transparency");
@@ -951,6 +1030,8 @@ void CreateSettingsWidget()
     view->sliderOpacArt->setOrientation(Qt::Horizontal);
     view->sliderOpacColl = new QSlider(view->sliderOpacMech);
     view->sliderOpacColl->setOrientation(Qt::Horizontal);
+	view->sliderOpacObject = new QSlider(view->sliderOpacMech);
+	view->sliderOpacObject->setOrientation(Qt::Horizontal);
 
     QObject::connect(view->sliderOpacMech, SIGNAL(valueChanged(int)),
             view, SLOT(SetOpacityMech(int)));
@@ -958,20 +1039,125 @@ void CreateSettingsWidget()
             view, SLOT(SetOpacityArt(int)));
     QObject::connect(view->sliderOpacColl, SIGNAL(valueChanged(int)),
             view, SLOT(SetOpacityCollission(int)));
+	QObject::connect(view->sliderOpacObject, SIGNAL(valueChanged(int)),
+			view, SLOT(SetOpacityObject(int)));
 
     grid->addWidget(view->sliderOpacMech, 1, 2);
     grid->addWidget(view->sliderOpacArt, 2, 2);
     grid->addWidget(view->sliderOpacColl, 3, 2);
+	grid->addWidget(view->sliderOpacObject, 4, 2);
 
     w->setLayout(grid);
     w->show();
 }
 
-void CreateNewLevelWidget()
+
+#include <QColorDialog>
+#include <QTextEdit>
+
+void ObjectPropertyWindow::CreateObjectPropertyWindow()
 {
-    QWidget* w = new QWidget;
+	currentObject = 0;
 
+	m_w = new QWidget();
 
+	QGridLayout* grid = new QGridLayout();
+
+	text = new QTextEdit();
+	grid->addWidget(text, 0, 0);
+
+	m_w->setLayout(grid);
+
+	m_w->setWindowTitle("Object Properties");
+	m_w->show();
+}
+
+void ObjectPropertyWindow::SetCurrentGameObject(GameObject* object)
+{
+	text->setText(object->toText());
+}
+
+GameObject* ObjectPropertyWindow::GetCurrentGameObject()
+{
+	return currentObject;
+}
+
+void ObjectPropertyWindow::SaveToGameObject()
+{
+	if(currentObject)
+	{
+		currentObject->Load(text->toPlainText());
+	}
 }
 
 
+
+GameObject::GameObject()
+{
+	x = 0;
+	y = 0;
+
+	type = "none";
+	q = Qt::black;
+
+	speed = -1;
+}
+
+GameObject::~GameObject()
+{
+}
+
+
+typedef QPair<int, int> qp; //hack around compiler for foreach not being nice
+
+
+void GameObject::Load(QString data)
+{
+	QList<QString> lines;
+
+	QTextStream stream(&data);
+
+	QList<QString> list;
+	while(!stream.atEnd())
+	{
+		QString line = stream.readLine();
+		list.push_back(line);
+	}
+
+	QMap<QString, QString> map;
+	foreach(QString line, list)
+	{
+		QStringList list = line.split(":");
+		map[*list.begin()] = list.back();
+	}
+}
+
+QString GameObject::toText()
+{
+	QString ret = "";
+	ret += "object:" + type;						ret += "\n";
+	ret += "x:" + QString::number(x);               ret += "\n";
+	ret += "y:" + QString::number(y);               ret += "\n";
+
+	if(q != Qt::black)
+	{
+		ret += "color:";
+		ret +=  QString::number(q.red(), 16);
+		ret +=  QString::number(q.green(), 16);
+		ret +=  QString::number(q.blue(), 16);
+		ret +=  QString::number(q.alpha(), 16);		ret += "\n";
+	}
+
+	int i = 1;
+	foreach(qp coord, path)
+	{
+		ret += "x" + QString::number(i) + ":" + QString::number(coord.first); ret += "\n";
+		ret += "y" + QString::number(i) + ":" + QString::number(coord.second); ret += "\n";
+		i++;
+	}
+
+	if(speed >= 0)
+		ret += "speed:" + QString::number(speed);   ret += "\n";
+
+	return ret;
+}
