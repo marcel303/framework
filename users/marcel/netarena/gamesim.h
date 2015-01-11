@@ -79,6 +79,7 @@ struct Player
 	void handleNewRound();
 
 	void respawn();
+	void cancelAttack();
 	void handleImpact(Vec2Arg velocity);
 	bool shieldAbsorb(float amount);
 	bool handleDamage(float amount, Vec2Arg velocity, Player * attacker);

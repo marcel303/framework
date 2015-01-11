@@ -641,7 +641,7 @@ void Player::tick(float dt)
 										players[j]->m_controlDisableTime = PLAYER_SWORD_CLING_TIME;
 									}
 
-									players[j]->m_attack.attacking = false;
+									players[j]->cancelAttack();
 								}
 
 								m_netObject->m_gameSim->playSound("melee-cancel.ogg");
@@ -1607,6 +1607,16 @@ void Player::respawn()
 	}
 }
 
+void Player::cancelAttack()
+{
+	if (m_attack.attacking)
+	{
+		m_attack.attacking = false;
+
+		setAnim(kPlayerAnim_Walk, false, true);
+	}
+}
+
 void Player::handleImpact(Vec2Arg velocity)
 {
 	Vec2 velDelta = velocity - m_vel;
@@ -1639,7 +1649,7 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 
 		if (shieldAbsorb(amount))
 		{
-			// nop
+			return false;
 		}
 		else
 		{
@@ -1700,9 +1710,9 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 					g_gameSim->playSound("token-bounce.ogg");
 				}
 			}
-		}
 
-		return true;
+			return true;
+		}
 	}
 	else
 	{
@@ -1712,7 +1722,9 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 
 bool Player::handleIce(Vec2Arg velocity, Player * attacker)
 {
-	if (m_isAlive && isAnimOverrideAllowed(kPlayerAnim_Walk))
+	cancelAttack();
+
+	if (m_isAlive && isAnimOverrideAllowed(kPlayerAnim_Die))
 	{
 		if (shieldAbsorb(1.f))
 		{
@@ -1734,7 +1746,9 @@ bool Player::handleIce(Vec2Arg velocity, Player * attacker)
 
 bool Player::handleBubble(Vec2Arg velocity, Player * attacker)
 {
-	if (m_isAlive && isAnimOverrideAllowed(kPlayerAnim_Walk))
+	cancelAttack();
+
+	if (m_isAlive && isAnimOverrideAllowed(kPlayerAnim_Die))
 	{
 		if (shieldAbsorb(1.f))
 		{
