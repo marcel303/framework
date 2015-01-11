@@ -627,21 +627,21 @@ void Player::tick(float dt)
 
 								const Vec2 midPoint = (players[0]->m_pos + players[1]->m_pos) / 2.f;
 
-								for (int i = 0; i < 2; ++i)
+								for (int j = 0; j < 2; ++j)
 								{
-									const Vec2 delta = midPoint - players[i]->m_pos;
+									const Vec2 delta = midPoint - players[j]->m_pos;
 									const Vec2 normal = delta.CalcNormalized();
-									const Vec2 attackDirection = Vec2(players[i]->m_attackDirection[0], players[i]->m_attackDirection[1]).CalcNormalized();
+									const Vec2 attackDirection = Vec2(players[j]->m_attackDirection[0], players[j]->m_attackDirection[1]).CalcNormalized();
 									const float dot = attackDirection * normal;
 									const Vec2 reflect = attackDirection - normal * dot * 2.f;
 
-									if (damage[i])
+									if (damage[j])
 									{
-										players[i]->m_vel = reflect * PLAYER_SWORD_CLING_SPEED;
-										players[i]->m_controlDisableTime = PLAYER_SWORD_CLING_TIME;
+										players[j]->m_vel = reflect * PLAYER_SWORD_CLING_SPEED;
+										players[j]->m_controlDisableTime = PLAYER_SWORD_CLING_TIME;
 									}
 
-									players[i]->m_attack.attacking = false;
+									players[j]->m_attack.attacking = false;
 								}
 
 								m_netObject->m_gameSim->playSound("melee-cancel.ogg");
@@ -1704,8 +1704,10 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 
 		return true;
 	}
-
-	return false;
+	else
+	{
+		return false;
+	}
 }
 
 bool Player::handleIce(Vec2Arg velocity, Player * attacker)
@@ -1725,11 +1727,9 @@ bool Player::handleIce(Vec2Arg velocity, Player * attacker)
 
 			m_ice.timer = PLAYER_EFFECT_ICE_TIME;
 		}
-
-		return true;
 	}
 
-	return false;
+	return m_isAlive;
 }
 
 bool Player::handleBubble(Vec2Arg velocity, Player * attacker)
@@ -1752,11 +1752,9 @@ bool Player::handleBubble(Vec2Arg velocity, Player * attacker)
 
 			m_bubble.timer = PLAYER_EFFECT_BUBBLE_TIME;
 		}
-
-		return true;
 	}
 
-	return false;
+	return m_isAlive;
 }
 
 void Player::awardScore(int score)
