@@ -558,14 +558,14 @@ void Player::tick(float dt)
 				m_weaponType = kPlayerWeapon_Grenade;
 				break;
 			case kPickupType_Shield:
-				m_shield.shield = 1;
+				m_shield.shield = PICKUP_SHIELD_COUNT;
 				break;
 			case kPickupType_Ice:
-				m_weaponAmmo = PICKUP_AMMO_COUNT;
+				m_weaponAmmo = PICKUP_ICE_COUNT;
 				m_weaponType = kPlayerWeapon_Ice;
 				break;
 			case kPickupType_Bubble:
-				m_weaponAmmo = PICKUP_AMMO_COUNT;
+				m_weaponAmmo = PICKUP_BUBBLE_COUNT;
 				m_weaponType = kPlayerWeapon_Bubble;
 				break;
 			}
@@ -1728,14 +1728,16 @@ bool Player::handleIce(Vec2Arg velocity, Player * attacker)
 	{
 		if (shieldAbsorb(1.f))
 		{
-			handleImpact(velocity);
+			handleImpact(velocity * PLAYER_SHIELD_IMPACT_MULTIPLIER);
 		}
 		else
 		{
-			handleImpact(velocity * .1f);
+			handleImpact(velocity * PLAYER_EFFECT_ICE_IMPACT_MULTIPLIER);
 
 			setAnim(kPlayerAnim_Walk, true, true);
 			m_isAnimDriven = true;
+			m_enableInAirAnim = false;
+			m_netObject->m_sprite->animSpeed = 1e-10f;
 
 			m_ice.timer = PLAYER_EFFECT_ICE_TIME;
 		}
@@ -1752,17 +1754,19 @@ bool Player::handleBubble(Vec2Arg velocity, Player * attacker)
 	{
 		if (shieldAbsorb(1.f))
 		{
-			handleImpact(velocity);
+			handleImpact(velocity * PLAYER_SHIELD_IMPACT_MULTIPLIER);
 		}
 		else
 		{
 			Vec2 direction = velocity.CalcNormalized();
 			direction += Vec2(0.f, -1.f);
 			direction.Normalize();
-			m_vel = direction * 200.f;
+			m_vel = direction * PLAYER_EFFECT_BUBBLE_SPEED;
 
 			setAnim(kPlayerAnim_Walk, true, true);
 			m_isAnimDriven = true;
+			m_enableInAirAnim = false;
+			m_netObject->m_sprite->animSpeed = 1e-10f;
 
 			m_bubble.timer = PLAYER_EFFECT_BUBBLE_TIME;
 		}

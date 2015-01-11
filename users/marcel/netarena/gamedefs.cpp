@@ -6,6 +6,8 @@ OPTION_DEFINE(int, PLAYER_COLLISION_HITBOX_SY, "Player/Hit Boxes/Collision Heigh
 OPTION_DEFINE(int, PLAYER_DAMAGE_HITBOX_SX, "Player/Hit Boxes/Damage Width");
 OPTION_DEFINE(int, PLAYER_DAMAGE_HITBOX_SY, "Player/Hit Boxes/Damage Height");
 
+OPTION_DEFINE(float, PLAYER_SHIELD_IMPACT_MULTIPLIER, "Player/Shield/Impact Multiplier");
+
 OPTION_DEFINE(int, PLAYER_SPEED_MAX, "Player/Max Speed");
 OPTION_DEFINE(int, PLAYER_JUMP_SPEED, "Player/Jumping/Speed");
 OPTION_DEFINE(int, PLAYER_JUMP_GRACE_PIXELS, "Player/Jumping/Grace Pixels");
@@ -37,9 +39,13 @@ OPTION_DEFINE(float, PLAYER_FIRE_COOLDOWN, "Player/Attacks/Fire/Cooldown Time");
 OPTION_STEP(PLAYER_FIRE_COOLDOWN, 0, 0, 0.1f);
 
 OPTION_DEFINE(float, PLAYER_EFFECT_ICE_TIME, "Player/Effects/Ice/Duration");
+OPTION_DEFINE(float, PLAYER_EFFECT_ICE_IMPACT_MULTIPLIER, "Player/Effects/Ice/Impact Multiplier");
 OPTION_DEFINE(float, PLAYER_EFFECT_BUBBLE_TIME, "Player/Effects/Bubble/Duration");
+OPTION_DEFINE(float, PLAYER_EFFECT_BUBBLE_SPEED, "Player/Effects/Bubble/Speed");
 OPTION_STEP(PLAYER_EFFECT_ICE_TIME, 0, 0, 0.1f);
+OPTION_STEP(PLAYER_EFFECT_ICE_IMPACT_MULTIPLIER, 0, 0, 0.01f);
 OPTION_STEP(PLAYER_EFFECT_BUBBLE_TIME, 0, 0, 0.1f);
+OPTION_STEP(PLAYER_EFFECT_BUBBLE_SPEED, 0, 0, 10.f);
 
 OPTION_DEFINE(int, STEERING_SPEED_ON_GROUND, "Player/Steering/Speed On Ground");
 OPTION_DEFINE(int, STEERING_SPEED_IN_AIR, "Player/Steering/Speed In Air");
@@ -104,8 +110,11 @@ OPTION_DEFINE(int, MAX_PICKUP_COUNT, "Pickup/Maximum Pickup Count");
 OPTION_DEFINE(int, PICKUP_AMMO_COUNT, "Pickup/Ammo Count");
 OPTION_DEFINE(int, PICKUP_AMMO_WEIGHT, "Pickup/Spawn Weights/Ammo");
 OPTION_DEFINE(int, PICKUP_NADE_WEIGHT, "Pickup/Spawn Weights/Nade");
+OPTION_DEFINE(int, PICKUP_SHIELD_COUNT, "Pickup/Shield Count");
 OPTION_DEFINE(int, PICKUP_SHIELD_WEIGHT, "Pickup/Spawn Weights/Shield");
+OPTION_DEFINE(int, PICKUP_ICE_COUNT, "Pickup/Ice Count");
 OPTION_DEFINE(int, PICKUP_ICE_WEIGHT, "Pickup/Spawn Weights/Ice");
+OPTION_DEFINE(int, PICKUP_BUBBLE_COUNT, "Pickup/Bubble Count");
 OPTION_DEFINE(int, PICKUP_BUBBLE_WEIGHT, "Pickup/Spawn Weights/Bubble");
 
 OPTION_DEFINE(int, TOKEN_FLEE_SPEED, "Token/Flee Speed");
