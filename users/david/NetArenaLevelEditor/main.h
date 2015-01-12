@@ -59,6 +59,8 @@ public:
 
     virtual QVariant itemChange(GraphicsItemChange change, const QVariant &value);
 
+	void SetPos(QPointF pos);
+
     int x;
     int y;
 

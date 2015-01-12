@@ -166,7 +166,7 @@ void SetEditObjects()
 	for(int y = 0; y < MAPY; y++)
 		for (int x = 0; x < MAPX; x++)
 		{
-			sceneMech->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
+			sceneMech->m_tiles[y][x].setAcceptedMouseButtons(Qt::AllButtons);
 			sceneMech->m_tiles[y][x].setAcceptHoverEvents(false);
 
 			sceneCollission->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
@@ -360,6 +360,7 @@ void AddGameObject(GameObject* obj)
     sceneMech->addItem(obj);
 }
 
+
 void LoadObjects(QString filename, bool templates)
 {
     QList<QString> list = GetLinesFromConfigFile(filename);
@@ -367,7 +368,7 @@ void LoadObjects(QString filename, bool templates)
     ObjectPath = list.front();
     list.pop_front();
 
-    QMap<QString, QString> map;
+	QMap<QString, QString> map;
     while(!list.empty())
     {
         QString line = list.front();
@@ -541,6 +542,21 @@ void SaveArtFile(QString filename, EditorScene* s)
     file.close();
 }
 
+void SaveObjects(QString filename)
+{
+	QFile file(filename);
+	file.open(QIODevice::WriteOnly);
+
+	QTextStream in(&file);
+
+	foreach(GameObject* obj, gameObjects)
+	{
+		QString a = obj->toText();
+		in << a;
+	}
+	file.close();
+}
+
 
 void SaveLevel(QString filename)
 {
@@ -549,6 +565,8 @@ void SaveLevel(QString filename)
         SaveGeneric(filename + "Collission.txt", sceneCollission);
     if(sceneArt)
         SaveArtFile(filename + "Art.txt", sceneArt);
+
+	SaveObjects(filename + "Objects.txt");
 }
 
 void SwitchMap(int x, int y)
@@ -600,7 +618,8 @@ int main(int argc, char *argv[])
     SetSelectedTile('x');
 
 
-
+	objectPropWindow = new ObjectPropertyWindow();
+	objectPropWindow->CreateObjectPropertyWindow();
 
     viewPallette = new EditorViewBasic;
     scenePallette = new QGraphicsScene;
@@ -625,8 +644,7 @@ int main(int argc, char *argv[])
 
     CreateSettingsWidget();
 
-	objectPropWindow = new ObjectPropertyWindow();
-	objectPropWindow->CreateObjectPropertyWindow();
+
 
     return a.exec();
 }
@@ -797,9 +815,19 @@ void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e )
 			e->ignore();
 			break;
 		case EM_Object:
+		{
+			GameObject* obj = new GameObject();
+			obj->palletteTile = false;
+			obj->Load(objectPropWindow->GetCurrentGameObject()->toText());
+
+			obj->SetPos(e->scenePos());
+
+
+			AddGameObject(obj);
 
 			e->accept();
 			break;
+		}
 		case EM_Template:
 		{
             int tilex = (int)(e->scenePos().x()/float(BLOCKSIZE));
@@ -1142,6 +1170,7 @@ void ObjectPropertyWindow::CreateObjectPropertyWindow()
 void ObjectPropertyWindow::SetCurrentGameObject(GameObject* object)
 {
 	text->setText(object->toText());
+	currentObject = object;
 }
 
 GameObject* ObjectPropertyWindow::GetCurrentGameObject()
@@ -1183,16 +1212,11 @@ void GameObject::mousePressEvent ( QGraphicsSceneMouseEvent * e )
 	objectPropWindow->SetCurrentGameObject(this);
 }
 
-
-//silly hacks because editor uses BLOCKSIZE as step instead of just 64.. might refactor later
-int ToEditorCoords(int x)
+void GameObject::SetPos(QPointF p)
 {
-    return int((float(x)/64.0)*float(BLOCKSIZE));
-}
-
-int ToGameCoords(int x)
-{
-    return int((float(x)/100.0)*float(BLOCKSIZE));
+	setPos(p);
+	x = pos().x();
+	y = pos().y();
 }
 
 typedef QPair<int, int> qp; //hack around compiler for foreach not being nice
@@ -1229,9 +1253,9 @@ void GameObject::Load(QMap<QString, QString>& map)
     setPixmap(*GetObjectPixmap(texture));
 
     if(map.contains("x"))
-        x = ToEditorCoords(map["x"].toInt());
+		x = map["x"].toInt();
     if(map.contains("y"))
-        y = ToEditorCoords(map["y"].toInt());
+		y = map["y"].toInt();
     //set pixmap position
 
     if(map.contains("speed"))
@@ -1255,9 +1279,12 @@ QString GameObject::toText()
 	if(type != "none")
 	{ret += "object:" + type;						ret += "\n";}
     if(x >= 0)
-    {ret += "x:" + QString::number(x);               ret += "\n";}
+	{ret += "x:" + QString::number(x);               ret += "\n";}
     if(y >= 0)
-    {ret += "y:" + QString::number(y);               ret += "\n";}
+	{ret += "y:" + QString::number(y);               ret += "\n";}
+
+	if(texture != "")
+	{ret += "texture:" + texture; ret += "\n";}
 
 	if(q != Qt::black)
 	{
@@ -1286,8 +1313,8 @@ QVariant GameObject::itemChange(GraphicsItemChange change, const QVariant &value
 {
     if(change == ItemPositionChange)
     {
-        x = ToGameCoords(pos().x());
-        y = ToGameCoords(pos().y());
+		x = pos().x();
+		y = pos().y();
     }
 
     return QGraphicsPixmapItem::itemChange(change, value);
