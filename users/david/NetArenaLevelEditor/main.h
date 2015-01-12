@@ -53,16 +53,19 @@ public:
 	virtual ~GameObject();
 
 	void Load(QString data);
+    void Load(QMap<QString, QString>& data);
 
-	int x;
-	int y;
+    virtual QVariant itemChange(GraphicsItemChange change, const QVariant &value);
+
+    int x;
+    int y;
 
 	QColor q;
 
 	int speed;
 
 	QString type;
-
+    QString texture;
 	QString toText();
 
 	QList<QPair<int, int> > path;

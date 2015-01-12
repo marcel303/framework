@@ -27,6 +27,8 @@
 #define BASEX 26
 #define BASEY 16
 
+#define BLOCKSIZE 64
+
 int MAPX = BASEX;
 int MAPY = BASEY;
 
@@ -47,6 +49,12 @@ EditorScene* sceneCollission;
 QGraphicsScene* sceneCollissionPallette;
 QMap<short, QPixmap*> pixmapsCollission;
 
+QMap<QString, QPixmap*> pixmapObjects;
+QMap<QString, GameObject*> objectPallette;
+QGraphicsScene* sceneObjectPallette;
+QList<GameObject*> gameObjects;
+QString ObjectPath; //the directory for all object textures
+//prop window
 
 EditorView* view;
 QGraphicsView* viewPallette;
@@ -54,10 +62,6 @@ QGraphicsView* viewPallette;
 
 EditorScene* templateScene;
 Tile** m_templateTiles;
-
-
-QList<GameObject*> m_objects;
-//prop window
 
 bool leftbuttonHeld = false;
 
@@ -233,12 +237,8 @@ void SwitchSceneTo(int s)
         SetEditCollissionScene();
         break;
 	case 3:
-		editorMode = EM_Object;
-		//viewPallette->setScene(sceneCollissionPallette);
-		//SetSelectedTile(pixmapsCollission.begin().key());
-		view->setWindowTitle("Editing Level Objects");
-		//viewPallette->setWindowTitle("Collission Pallette");
-		//SetEditCollissionScene();
+        editorMode = EM_Object;
+        view->setWindowTitle("Editing Level Objects");
 		break;
     default:
         break;
@@ -270,13 +270,9 @@ QMap<short, QPixmap*>& getCurrentPixmap()
     return pixmaps;
 }
 
-
-
 #include <QFile>
-void LoadPixmapsGeneric(QString filename, QMap<short, QPixmap*>& map)
+QList<QString> GetLinesFromConfigFile(QString filename)
 {
-    QPixmap* p;
-    QPixmap* p2;
     QFile file(filename);
     file.open(QIODevice::ReadOnly | QIODevice::Text);
 
@@ -287,10 +283,19 @@ void LoadPixmapsGeneric(QString filename, QMap<short, QPixmap*>& map)
     QList<QString> list;
     while(!in.atEnd())
     {
-        QString line = file.readLine();
-        line.chop(1);
+        QString line = in.readLine();
         list.push_back(line);
     }
+
+    return list;
+}
+
+void LoadPixmapsGeneric(QString filename, QMap<short, QPixmap*>& map)
+{
+    QPixmap* p;
+    QPixmap* p2;
+
+    QList<QString> list = GetLinesFromConfigFile(filename);
 
     QString path = list.front();
     list.pop_front();
@@ -303,7 +308,7 @@ void LoadPixmapsGeneric(QString filename, QMap<short, QPixmap*>& map)
         line.chop(4);
 
         p = new QPixmap(path+line);
-        p2 = new QPixmap(p->scaledToWidth(100));
+        p2 = new QPixmap(p->scaledToWidth(BLOCKSIZE));
         delete p;
         map[key2] = p2;
 
@@ -315,38 +320,82 @@ void LoadPixmapsArt(QString filename, QMap<short, QPixmap*>& map)
 {
     QPixmap* p;
     QPixmap* p2;
-    QFile file(filename);
-    file.open(QIODevice::ReadOnly | QIODevice::Text);
 
-    QTextStream in(&file);
-
-    qDebug() << filename << " open = " << file.isOpen();
-
-    QList<QString> list;
-    while(!in.atEnd())
-    {
-        QString line = file.readLine();
-        list.push_back(line);
-    }
+    QList<QString> list = GetLinesFromConfigFile(filename);
 
     QString path = list.front();
-    path.chop(1);
     list.pop_front();
 
     short key = 0;
     while(!list.empty())
     {
         QString line = list.front();
-        line.chop(1); //chop endline
 
         p = new QPixmap(path+line);
-        p2 = new QPixmap(p->scaledToWidth(100));
+        p2 = new QPixmap(p->scaledToWidth(BLOCKSIZE));
         delete p;
         map[key] = p2;
         key++;
 
         list.pop_front();
     }
+}
+
+GameObject* LoadGameObject(QMap<QString, QString>& map)
+{
+    GameObject* obj = new GameObject();
+    obj->Load(map);
+
+    return obj;
+}
+
+QPixmap* GetObjectPixmap(QString texture)
+{
+    if(!pixmapObjects.contains(texture))
+    {
+        QPixmap* p = new QPixmap(ObjectPath + texture);
+        pixmapObjects[texture] = p;
+    }
+    return pixmapObjects[texture];
+}
+
+void AddGameObject(GameObject* obj)
+{
+    gameObjects.push_back(obj);
+    sceneMech->addItem(obj);
+}
+
+void LoadObjects(QString filename, bool templates)
+{
+    QList<QString> list = GetLinesFromConfigFile(filename);
+
+    ObjectPath = list.front();
+    list.pop_front();
+
+    QMap<QString, QString> map;
+    while(!list.empty())
+    {
+        QString line = list.front();
+        QStringList pair = line.split(":");
+
+        if(pair.first() == "object" && !map.isEmpty())
+        {
+            LoadGameObject(map);
+            map.clear();
+        }
+        map[pair.first()] = pair.last();
+
+        list.pop_front();
+    }
+    GameObject* obj;
+    if(!map.isEmpty())
+        obj = LoadGameObject(map);
+
+    if(templates) //fill the object pallette
+        objectPallette[obj->type] = obj;
+    else
+        AddGameObject(obj);
+
 }
 
 void LoadPixmaps()
@@ -357,6 +406,7 @@ void LoadPixmaps()
     sceneCounter =2;
     LoadPixmapsGeneric("CollissionList.txt", pixmapsCollission);
     sceneCounter = 0;
+    LoadObjects("Objects.txt", true);
 }
 
 
@@ -378,7 +428,7 @@ void LoadPalletteGeneric(QGraphicsScene* s, QMap<short, QPixmap*>& map)
         t = new TilePallette();
         t->SetSelectedBlock(i.key());
         s->addItem(t);
-        t->setPos(x*100, y*100);
+        t->setPos(x*BLOCKSIZE, y*BLOCKSIZE);
 
         x++;
     }
@@ -386,6 +436,17 @@ void LoadPalletteGeneric(QGraphicsScene* s, QMap<short, QPixmap*>& map)
     palletteTile->SetSelectedBlock(map.begin().key());
     palletteTile->setPos(200, 000);
     s->addItem(palletteTile);
+}
+
+void LoadObjectsPallette()
+{
+    foreach(GameObject* obj, objectPallette.values())
+    {
+        //obj->set
+        //sceneObjectPallette->addItem(obj);
+    }
+
+
 }
 
 void LoadPallette()
@@ -432,6 +493,7 @@ void LoadLevel(QString filename)
     sceneCounter = 2;
     LoadGeneric(filename + "Collission.txt", sceneCollission);
     sceneCounter = 0;
+    LoadObjects(filename, false);
 }
 
 void SaveGeneric(QString filename, EditorScene* s)
@@ -484,7 +546,7 @@ void SwitchMap(int x, int y)
     MAPY = y;
 
 
-    sceneMech->setSceneRect(0,0,MAPX*100,MAPY*100);
+    sceneMech->setSceneRect(0,0,MAPX*BLOCKSIZE,MAPY*BLOCKSIZE);
 
     LoadPixmaps();
 
@@ -538,9 +600,9 @@ int main(int argc, char *argv[])
     viewPallette->showNormal();
     viewPallette->resize(430, 600);
 
-    scenePallette->setSceneRect(0,0,4*100,10*100);
-    sceneArtPallette->setSceneRect(0,0,4*100,10*100);
-    sceneCollissionPallette->setSceneRect(0,0,4*100,10*100);
+    scenePallette->setSceneRect(0,0,4*BLOCKSIZE,10*BLOCKSIZE);
+    sceneArtPallette->setSceneRect(0,0,4*BLOCKSIZE,10*BLOCKSIZE);
+    sceneCollissionPallette->setSceneRect(0,0,4*BLOCKSIZE,10*BLOCKSIZE);
 
     LoadPallette();
 
@@ -716,19 +778,19 @@ void EditorScene::InitializeLevel()
         {
             m_tiles[y][x].SetSelectedBlock(' ');
             addItem(&m_tiles[y][x]);
-            m_tiles[y][x].setPos(x*100, y*100);
+            m_tiles[y][x].setPos(x*BLOCKSIZE, y*BLOCKSIZE);
         }
 }
 
 void EditorScene::AddGrid()
 {
-    for (int x = 0; x <= m_mapx*100; x+=100)
+    for (int x = 0; x <= m_mapx*BLOCKSIZE; x+=BLOCKSIZE)
     {
-        addLine(x, 0, x, m_mapy*100);
+        addLine(x, 0, x, m_mapy*BLOCKSIZE);
     }
-    for(int y = 0; y <= m_mapy*100; y+= 100)
+    for(int y = 0; y <= m_mapy*BLOCKSIZE; y+= BLOCKSIZE)
     {
-        addLine(0, y, m_mapx*100, y);
+        addLine(0, y, m_mapx*BLOCKSIZE, y);
     }
 }
 
@@ -747,8 +809,8 @@ void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e )
 			break;
 		case EM_Template:
 		{
-			int tilex = (int)(e->scenePos().x()/100.0);
-			int tiley = (int)(e->scenePos().y()/100.0);
+            int tilex = (int)(e->scenePos().x()/float(BLOCKSIZE));
+            int tiley = (int)(e->scenePos().y()/float(BLOCKSIZE));
 
 			EditorTemplate::TemplateTile t;
 			t.x         = tilex;
@@ -918,7 +980,7 @@ void EditorView::SetOpacityCollission(int s)
 
 void EditorView::SetOpacityObject(int s)
 {
-	foreach(GameObject* obj, m_objects)
+    foreach(GameObject* obj, gameObjects)
 	{
 		obj->setOpacity(qreal(s) / 100.0);
 	}
@@ -1099,11 +1161,13 @@ void ObjectPropertyWindow::SaveToGameObject()
 
 GameObject::GameObject()
 {
-	x = 0;
-	y = 0;
+    x = -1;
+    y = -1;
 
 	type = "none";
 	q = Qt::black;
+
+    texture = "";
 
 	speed = -1;
 }
@@ -1113,9 +1177,18 @@ GameObject::~GameObject()
 }
 
 
+//silly hacks because editor uses 100 as step instead of 64.. will refactor later
+int ToEditorCoords(int x)
+{
+    return int((float(x)/64.0)*float(BLOCKSIZE));
+}
+
+int ToGameCoords(int x)
+{
+    return int((float(x)/100.0)*float(BLOCKSIZE));
+}
+
 typedef QPair<int, int> qp; //hack around compiler for foreach not being nice
-
-
 void GameObject::Load(QString data)
 {
 	QList<QString> lines;
@@ -1133,30 +1206,50 @@ void GameObject::Load(QString data)
 	foreach(QString line, list)
 	{
 		QStringList list = line.split(":");
-		map[*list.begin()] = list.back();
-		//map[*list.begin()].chop(1); //chop endline
+        map[*list.begin()] = list.back();
 	}
 
-	x = map["x"].toInt();
-	y = map["y"].toInt();
-	speed = map["speed"].toInt();
+    Load(map);
+}
 
-	map["color"].push_front(map["color"][map["color"].size()-1]);
-	map["color"].push_front(map["color"][map["color"].size()-2]);
-	map["color"].push_front("#");
-	map["color"].chop(2);
+void GameObject::Load(QMap<QString, QString>& map)
+{
+    type = map["object"];
 
-	q.setNamedColor(map["color"]);
+    if(map.contains("texture"))
+        texture = map["texture"];
 
-	QString argb = q.name(QColor::HexArgb);
+    setPixmap(*GetObjectPixmap(texture));
+
+    if(map.contains("x"))
+        x = ToEditorCoords(map["x"].toInt());
+    if(map.contains("y"))
+        y = ToEditorCoords(map["y"].toInt());
+    //set pixmap position
+
+    if(map.contains("speed"))
+        speed = map["speed"].toInt();
+
+
+    if(map.contains("color"))
+    {
+        map["color"].push_front(map["color"][map["color"].size()-1]);
+        map["color"].push_front(map["color"][map["color"].size()-2]);
+        map["color"].push_front("#");
+        map["color"].chop(2);
+
+        q.setNamedColor(map["color"]);
+    }
 }
 
 QString GameObject::toText()
 {
 	QString ret = "";
 	ret += "object:" + type;						ret += "\n";
-	ret += "x:" + QString::number(x);               ret += "\n";
-	ret += "y:" + QString::number(y);               ret += "\n";
+    if(x >= 0)
+    {ret += "x:" + QString::number(x);               ret += "\n";}
+    if(y >= 0)
+    {ret += "y:" + QString::number(y);               ret += "\n";}
 
 	if(q != Qt::black)
 	{
@@ -1179,4 +1272,15 @@ QString GameObject::toText()
 		ret += "speed:" + QString::number(speed);   ret += "\n";
 
 	return ret;
+}
+
+QVariant GameObject::itemChange(GraphicsItemChange change, const QVariant &value)
+{
+    if(change == ItemPositionChange)
+    {
+        x = ToGameCoords(pos().x());
+        y = ToGameCoords(pos().y());
+    }
+
+    return QGraphicsPixmapItem::itemChange(change, value);
 }
