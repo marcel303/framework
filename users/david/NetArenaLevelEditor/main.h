@@ -52,6 +52,8 @@ public:
 	GameObject();
 	virtual ~GameObject();
 
+	virtual void mousePressEvent ( QGraphicsSceneMouseEvent * e );
+
 	void Load(QString data);
     void Load(QMap<QString, QString>& data);
 
@@ -69,6 +71,8 @@ public:
 	QString toText();
 
 	QList<QPair<int, int> > path;
+
+	bool palletteTile; //is this meant for ingame or used for pallette
 };
 
 class EditorScene : public QGraphicsScene
@@ -160,13 +164,12 @@ public:
 };
 
 class QTextEdit;
-class ObjectPropertyWindow
+class ObjectPropertyWindow : public QObject
 {
+	Q_OBJECT
 public:
 	ObjectPropertyWindow(){}
 	virtual ~ObjectPropertyWindow(){}
-
-	void SaveToGameObject();
 
 	void CreateObjectPropertyWindow();
 
@@ -177,5 +180,9 @@ public:
 	QTextEdit* text;
 
 	GameObject* currentObject;
+
+
+public slots:
+	void SaveToGameObject();
 
 };

@@ -54,7 +54,7 @@ QMap<QString, GameObject*> objectPallette;
 QGraphicsScene* sceneObjectPallette;
 QList<GameObject*> gameObjects;
 QString ObjectPath; //the directory for all object textures
-//prop window
+ObjectPropertyWindow* objectPropWindow;
 
 EditorView* view;
 QGraphicsView* viewPallette;
@@ -102,27 +102,7 @@ void AddAllToScene()
         }
 }
 
-void SetEditNoScene()
-{
-    templateScene->CreateLevel(MAPX, MAPY);
 
-
-    for(int y = 0; y < MAPY; y++)
-        for (int x = 0; x < MAPX; x++)
-        {
-
-            sceneMech->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
-            sceneMech->m_tiles[y][x].setAcceptHoverEvents(false);
-             sceneMech->m_tiles[y][x].setFlag(QGraphicsItem::ItemIsSelectable, true);
-            //sceneMech->m_tiles[y][x].acc
-
-            sceneCollission->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
-            sceneCollission->m_tiles[y][x].setAcceptHoverEvents(false);
-
-            sceneArt->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
-            sceneArt->m_tiles[y][x].setAcceptHoverEvents(false);
-        }
-}
 
 void SetEditMechScene()
 {
@@ -138,6 +118,9 @@ void SetEditMechScene()
             sceneArt->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
             sceneArt->m_tiles[y][x].setAcceptHoverEvents(false);
         }
+
+	foreach(GameObject* obj, gameObjects)
+		obj->setAcceptedMouseButtons(Qt::NoButton);
 }
 
 void SetEditArtScene()
@@ -154,6 +137,9 @@ void SetEditArtScene()
             sceneArt->m_tiles[y][x].setAcceptedMouseButtons(Qt::AllButtons);
             sceneArt->m_tiles[y][x].setAcceptHoverEvents(true);
         }
+
+	foreach(GameObject* obj, gameObjects)
+		obj->setAcceptedMouseButtons(Qt::NoButton);
 }
 
 void SetEditCollissionScene()
@@ -170,6 +156,9 @@ void SetEditCollissionScene()
             sceneArt->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
             sceneArt->m_tiles[y][x].setAcceptHoverEvents(false);
         }
+
+	foreach(GameObject* obj, gameObjects)
+		obj->setAcceptedMouseButtons(Qt::NoButton);
 }
 
 void SetEditObjects()
@@ -186,6 +175,9 @@ void SetEditObjects()
 			sceneArt->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
 			sceneArt->m_tiles[y][x].setAcceptHoverEvents(false);
 		}
+
+	foreach(GameObject* obj, gameObjects)
+		obj->setAcceptedMouseButtons(Qt::AllButtons);
 }
 
 
@@ -239,6 +231,9 @@ void SwitchSceneTo(int s)
 	case 3:
         editorMode = EM_Object;
         view->setWindowTitle("Editing Level Objects");
+		viewPallette->setWindowTitle("GameObjects");
+		viewPallette->setScene(sceneObjectPallette);
+		SetEditObjects();
 		break;
     default:
         break;
@@ -392,7 +387,13 @@ void LoadObjects(QString filename, bool templates)
         obj = LoadGameObject(map);
 
     if(templates) //fill the object pallette
+	{
+
+		QPixmap* p = new QPixmap();
+		*p = obj->pixmap().scaled(BLOCKSIZE, BLOCKSIZE);
+		obj->setPixmap(*p);
         objectPallette[obj->type] = obj;
+	}
     else
         AddGameObject(obj);
 
@@ -440,13 +441,21 @@ void LoadPalletteGeneric(QGraphicsScene* s, QMap<short, QPixmap*>& map)
 
 void LoadObjectsPallette()
 {
+	int x = 0;
+	int y = 0;
     foreach(GameObject* obj, objectPallette.values())
     {
-        //obj->set
-        //sceneObjectPallette->addItem(obj);
+		if(x > 3)
+		{
+			y++;
+			x = 0;
+		}
+
+		obj->setPos(x*BLOCKSIZE, y*BLOCKSIZE);
+		sceneObjectPallette->addItem(obj);
+
+		x++;
     }
-
-
 }
 
 void LoadPallette()
@@ -457,6 +466,8 @@ void LoadPallette()
     LoadPalletteGeneric(sceneCollissionPallette, pixmapsCollission);
     sceneCounter =0;
     LoadPalletteGeneric(scenePallette, pixmaps);
+
+	LoadObjectsPallette();
 }
 
 
@@ -573,7 +584,7 @@ int main(int argc, char *argv[])
     view = new EditorView();
     sceneMech = new EditorScene();
     sceneArt = new EditorScene();
-    sceneCollission = new EditorScene();
+	sceneCollission = new EditorScene();
 
     view->setScene(sceneMech);
     view->showMaximized();
@@ -595,6 +606,7 @@ int main(int argc, char *argv[])
     scenePallette = new QGraphicsScene;
     sceneArtPallette = new QGraphicsScene;
     sceneCollissionPallette = new QGraphicsScene;
+	sceneObjectPallette = new QGraphicsScene();
 
     viewPallette->setScene(scenePallette);
     viewPallette->showNormal();
@@ -613,27 +625,8 @@ int main(int argc, char *argv[])
 
     CreateSettingsWidget();
 
-
-	GameObject o;
-	o.x = 23;
-	o.y = 25;
-	o.speed = 200;
-	o.type = "custom";
-	o.q = QColor(128,128,128,255);
-
-	o.path.push_back(QPair<int, int>(25, 25));
-	o.path.push_back(QPair<int, int>(35, 15));
-	o.path.push_back(QPair<int, int>(45, 5));
-
-	qDebug() << o.toText();
-
-	ObjectPropertyWindow props;
-	props.CreateObjectPropertyWindow();
-
-
-	GameObject t;
-	t.Load("color:10aabbcc\n");
-
+	objectPropWindow = new ObjectPropertyWindow();
+	objectPropWindow->CreateObjectPropertyWindow();
 
     return a.exec();
 }
@@ -1121,6 +1114,7 @@ void CreateSettingsWidget()
 
 #include <QColorDialog>
 #include <QTextEdit>
+#include <QPushButton>
 
 void ObjectPropertyWindow::CreateObjectPropertyWindow()
 {
@@ -1132,6 +1126,12 @@ void ObjectPropertyWindow::CreateObjectPropertyWindow()
 
 	text = new QTextEdit();
 	grid->addWidget(text, 0, 0);
+
+	QPushButton* b = new QPushButton;
+	b->setText("Save");
+	connect(b, SIGNAL(triggered()), this, SLOT(SaveToGameObject()));
+
+	grid->addWidget(b, 1, 0);
 
 	m_w->setLayout(grid);
 
@@ -1170,14 +1170,21 @@ GameObject::GameObject()
     texture = "";
 
 	speed = -1;
+
+	palletteTile = false;
 }
 
 GameObject::~GameObject()
 {
 }
 
+void GameObject::mousePressEvent ( QGraphicsSceneMouseEvent * e )
+{
+	objectPropWindow->SetCurrentGameObject(this);
+}
 
-//silly hacks because editor uses 100 as step instead of 64.. will refactor later
+
+//silly hacks because editor uses BLOCKSIZE as step instead of just 64.. might refactor later
 int ToEditorCoords(int x)
 {
     return int((float(x)/64.0)*float(BLOCKSIZE));
@@ -1245,7 +1252,8 @@ void GameObject::Load(QMap<QString, QString>& map)
 QString GameObject::toText()
 {
 	QString ret = "";
-	ret += "object:" + type;						ret += "\n";
+	if(type != "none")
+	{ret += "object:" + type;						ret += "\n";}
     if(x >= 0)
     {ret += "x:" + QString::number(x);               ret += "\n";}
     if(y >= 0)
