@@ -27,6 +27,22 @@ enum PlayerWeapon
 	kPlayerWeapon_COUNT
 };
 
+// special ability that is bound to the Y button
+enum PlayerSpecial
+{
+	kPlayerSpecial_None,
+	kPlayerSpecial_DoubleSidedMelee,
+	kPlayerSpecial_Shield,
+	kPlayerSpecial_Invisibility,
+	kPlayerSpecial_Jetpack,
+	kPlayerSpecial_COUNT
+};
+
+enum PlayerTrait
+{
+	kPlayerTrait_StickyWalk = 0x1,
+};
+
 enum PlayerEvent
 {
 	kPlayerEvent_Spawn,

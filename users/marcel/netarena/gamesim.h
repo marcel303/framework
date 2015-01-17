@@ -126,6 +126,17 @@ struct Player
 
 	//
 
+	struct
+	{
+		PlayerSpecial type;
+		float meleeAnimTimer;
+		int meleeCounter;
+	} m_special;
+
+	int m_traits; // PlayerTrait
+
+	//
+
 	CollisionInfo m_collision;
 
 	uint32_t m_blockMask;
@@ -214,6 +225,8 @@ struct Player
 
 	bool m_isAirDashCharged; // reset when air dash is used. set when the player hits the ground
 	bool m_isWallSliding;
+
+	bool m_isUsingJetpack;
 
 	bool m_animVelIsAbsolute; // should the animation velocity be added to or replace the regular player velocity?
 	bool m_animAllowGravity;

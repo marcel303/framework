@@ -582,6 +582,7 @@ bool Arena::getTeleportDestination(GameSim & gameSim, int startX, int startY, in
 	}
 }
 
+/*
 uint32_t Arena::getIntersectingBlocksMask(int x1, int y1, int x2, int y2) const
 {
 	uint32_t result = 0;
@@ -602,6 +603,7 @@ uint32_t Arena::getIntersectingBlocksMask(int x1, int y1, int x2, int y2) const
 
 	return result;
 }
+*/
 
 uint32_t Arena::getIntersectingBlocksMask(int x, int y) const
 {

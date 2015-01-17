@@ -296,7 +296,7 @@ float Player::getAttackDamage(Player * other)
 
 bool Player::isAnimOverrideAllowed(int anim) const
 {
-	if ((m_ice.timer > 0.f || m_bubble.timer > 0.f) && anim != kPlayerAnim_Die)
+	if ((m_ice.timer > 0.f || m_bubble.timer > 0.f || m_special.meleeCounter != 0) && anim != kPlayerAnim_Die)
 		return false;
 
 	return !m_isAnimDriven || (s_animInfos[anim].prio > s_animInfos[m_anim].prio);
@@ -795,6 +795,56 @@ void Player::tick(float dt)
 
 				m_attack.hasCollision = true;
 			}
+
+			if (m_netObject->m_input.wentDown(INPUT_BUTTON_Y) && isAnimOverrideAllowed(kPlayerAnim_Attack))
+			{
+				if (m_special.type == kPlayerSpecial_DoubleSidedMelee)
+				{
+					m_attack = AttackInfo();
+					m_attack.attacking = true;
+
+					m_attack.cooldown = PLAYER_SWORD_COOLDOWN; // todo : melee
+
+					// start anim
+
+					setAnim(kPlayerAnim_Walk, true, true);
+					m_isAnimDriven = true;
+
+					m_attack.collision.x1 = 0.f;
+					m_attack.collision.x2 = DOUBLEMELEE_ATTACK_RADIUS;
+					m_attack.collision.y1 = -PLAYER_COLLISION_HITBOX_SY/3.f*2;
+					m_attack.collision.y2 = -PLAYER_COLLISION_HITBOX_SY/3.f*2 + 4.f;
+
+					m_attack.hasCollision = true;
+
+					m_special.meleeCounter = DOUBLEMELEE_SPIN_COUNT;
+					m_special.meleeAnimTimer = DOUBLEMELEE_SPIN_TIME;
+				}
+			}
+		}
+
+		// update double melee attack
+
+		if (m_special.type == kPlayerSpecial_DoubleSidedMelee && m_special.meleeCounter != 0)
+		{
+			m_special.meleeAnimTimer -= dt;
+
+			if (m_special.meleeAnimTimer <= 0.f)
+			{
+				if (--m_special.meleeCounter == 0)
+				{
+					m_special.meleeAnimTimer = 0.f;
+					m_attack.attacking = false;
+					m_isAnimDriven = false;
+				}
+				else
+				{
+					// reverse attack and animation direction
+
+					m_facing[0] *= -1.f;
+					m_special.meleeAnimTimer = DOUBLEMELEE_SPIN_TIME;
+				}
+			}
 		}
 
 		if (m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && m_netObject->m_input.wentDown(INPUT_BUTTON_A))
@@ -865,7 +915,8 @@ void Player::tick(float dt)
 			m_controlDisableTime == 0.f &&
 			m_animAllowSteering &&
 			m_ice.timer == 0.f &&
-			m_bubble.timer == 0.f;
+			m_bubble.timer == 0.f &&
+			m_special.meleeCounter == 0;
 
 		m_controlDisableTime -= dt;
 		if (m_controlDisableTime < 0.f)
@@ -943,6 +994,11 @@ void Player::tick(float dt)
 				steeringSpeed *= STEERING_SPEED_ON_GROUND;
 				numSteeringFrame = 5;
 			}
+			else if (m_isUsingJetpack)
+			{
+				steeringSpeed *= STEERING_SPEED_JETPACK;
+				numSteeringFrame = 5;
+			}
 			else
 			{
 				steeringSpeed *= STEERING_SPEED_IN_AIR;
@@ -968,6 +1024,7 @@ void Player::tick(float dt)
 		float gravity;
 
 		m_isWallSliding = false;
+		m_isUsingJetpack = false;
 
 		if (!m_animAllowGravity)
 			gravity = 0.f;
@@ -990,11 +1047,21 @@ void Player::tick(float dt)
 			else
 				gravity = GRAVITY;
 
+			bool canWallSlide = true;
+
+			if (m_special.type == kPlayerSpecial_Jetpack && m_netObject->m_input.isDown(INPUT_BUTTON_Y))
+			{
+				gravity -= JETPACK_ACCEL;
+				m_isUsingJetpack = true;
+			}
+			
 			// wall slide
 
 			if (!m_isGrounded &&
 				!m_isAttachedToSticky &&
 				isAnimOverrideAllowed(kPlayerAnim_WallSlide) &&
+				!m_isUsingJetpack &&
+				m_special.meleeCounter == 0 &&
 				m_vel[0] != 0.f && Calc::Sign(m_facing[0]) == Calc::Sign(m_vel[0]) &&
 				//Calc::Sign(m_vel[1]) == Calc::Sign(gravity) &&
 				(Calc::Sign(m_vel[1]) == Calc::Sign(gravity) || Calc::Abs(m_vel[1]) <= PLAYER_JUMP_SPEED / 2.f) &&
@@ -1007,6 +1074,11 @@ void Player::tick(float dt)
 				if (m_vel[1] > PLAYER_WALLSLIDE_SPEED && Calc::Sign(m_vel[1]) == Calc::Sign(gravity))
 					m_vel[1] = PLAYER_WALLSLIDE_SPEED;
 			}
+		}
+
+		if (m_special.meleeCounter != 0)
+		{
+			gravity *= DOUBLEMELEE_GRAVITY_MULTIPLIER;
 		}
 
 		m_vel[1] += gravity * dt;
@@ -1316,6 +1388,16 @@ void Player::tick(float dt)
 
 	//printf("x: %g\n", m_pos[0]);
 
+	if (m_isUsingJetpack)
+	{
+		ParticleSpawnInfo spawnInfo(
+			m_pos[0], m_pos[1],
+			kBulletType_ParticleA, 2,
+			50.f, 100.f, 50.f);
+		spawnInfo.color = 0xffffff80;
+		m_netObject->m_gameSim->spawnParticles(spawnInfo);
+	}
+
 	// token hunt game mode
 
 	if (m_netObject->m_gameSim->m_gameMode == kGameMode_TokenHunt)
@@ -1438,6 +1520,13 @@ void Player::drawAt(int x, int y)
 
 	setColorMode(COLOR_MUL);
 	setColor(255, 255, 255);
+
+	if (m_special.meleeCounter != 0)
+	{
+		Sprite sprite("doublemelee.png");
+		sprite.flipX = m_facing[0] < 0.f;
+		sprite.drawEx(m_pos[0], m_pos[1] + m_attack.collision.y1);
+	}
 
 	if (m_shield.shield)
 	{
@@ -1759,7 +1848,7 @@ bool Player::handleBubble(Vec2Arg velocity, Player * attacker)
 		else
 		{
 			Vec2 direction = velocity.CalcNormalized();
-			direction += Vec2(0.f, -1.f);
+			direction += Vec2(0.f, -1.5f);
 			direction.Normalize();
 			m_vel = direction * PLAYER_EFFECT_BUBBLE_SPEED;
 
@@ -1801,6 +1890,23 @@ void PlayerNetObject::handleCharacterIndexChange()
 		m_spriteScale = m_props.getFloat("sprite_scale", 1.f);
 
 		m_sounds["respawn"].load(m_props.getString("spawn_sounds", ""), true);
+
+		// special
+
+		PlayerSpecial special = kPlayerSpecial_None;
+
+		const std::string specialStr = m_props.getString("special", "");
+
+		if (specialStr == "double_melee")
+			special = kPlayerSpecial_DoubleSidedMelee;
+		if (specialStr == "shield")
+			special = kPlayerSpecial_Shield;
+		if (specialStr == "invisibility")
+			special = kPlayerSpecial_Invisibility;
+		if (specialStr == "jetpack")
+			special = kPlayerSpecial_Jetpack;
+
+		m_player->m_special.type = special;
 	}
 }
 

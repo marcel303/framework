@@ -1269,7 +1269,7 @@ void App::draw()
 
 				if (!player.hasValidCharacterIndex())
 				{
-					for (int c = 0; c < 2; ++c)
+					for (int c = 0; c < 3; ++c)
 					{
 						char name[32];
 						sprintf(name, "select_%d_%d", i, c);
@@ -1278,7 +1278,7 @@ void App::draw()
 						sprintf(props, "type:button name:%s x:%d y:%d scale:0.65 action:char_select client_channel:%d player_id:%d char:%d image:button.png image_over:button-over.png image_down:button-down.png text:char text_color:000000 font:calibri.ttf font_size:24",
 							name,
 							index * 150,
-							GFX_SY - 150 + c * 50,
+							GFX_SY - 150 + c * 45,
 							client->m_channel->m_id,
 							i,
 							c);

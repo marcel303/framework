@@ -119,7 +119,7 @@ public:
 	bool getRandomPickupLocations(int * out_x, int * out_y, int & numLocations, void * obj, bool (*reject)(void * obj, int x, int y)) const;
 	bool getTeleportDestination(GameSim & gameSim, int x, int y, int & out_x, int & out_y) const;
 
-	uint32_t getIntersectingBlocksMask(int x1, int y1, int x2, int y2) const;
+	//uint32_t getIntersectingBlocksMask(int x1, int y1, int x2, int y2) const;
 	uint32_t getIntersectingBlocksMask(int x, int y) const;
 
 	bool getBlockRectFromPixels(int x1, int y1, int x2, int y2, int & out_x1, int & out_y1, int & out_x2, int & out_y2) const;
