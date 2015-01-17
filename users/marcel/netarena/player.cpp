@@ -808,7 +808,7 @@ void Player::tick(float dt)
 					// start anim
 
 					setAnim(kPlayerAnim_Walk, true, true);
-					m_isAnimDriven = true;
+					//m_isAnimDriven = true;
 
 					m_attack.collision.x1 = 0.f;
 					m_attack.collision.x2 = DOUBLEMELEE_ATTACK_RADIUS;
@@ -999,13 +999,22 @@ void Player::tick(float dt)
 				steeringSpeed *= STEERING_SPEED_JETPACK;
 				numSteeringFrame = 5;
 			}
+			else if (m_special.meleeCounter != 0)
+			{
+				steeringSpeed *= STEERING_SPEED_DOUBLEMELEE;
+				numSteeringFrame = 5;
+			}
 			else
 			{
 				steeringSpeed *= STEERING_SPEED_IN_AIR;
 				numSteeringFrame = 5;
 			}
 
-			if (playerControl && steeringSpeed != 0.f)
+			bool doSteering =
+				playerControl ||
+				m_special.meleeCounter != 0;
+
+			if (doSteering && steeringSpeed != 0.f)
 			{
 				float maxSteeringDelta;
 
@@ -1076,7 +1085,7 @@ void Player::tick(float dt)
 			}
 		}
 
-		if (m_special.meleeCounter != 0)
+		if (m_special.meleeCounter != 0 && Calc::Sign(m_vel[1]) == Calc::Sign(gravity))
 		{
 			gravity *= DOUBLEMELEE_GRAVITY_MULTIPLIER;
 		}
@@ -1217,6 +1226,8 @@ void Player::tick(float dt)
 						if (newBlockMask & (1 << kBlockType_Slide))
 							surfaceFriction = 0.f;
 						else if (m_ice.timer != 0.f)
+							surfaceFriction = 0.f;
+						else if (Calc::Sign(m_vel[1]) != Calc::Sign(gravity))
 							surfaceFriction = 0.f;
 						else
 							surfaceFriction = FRICTION_GROUNDED;
