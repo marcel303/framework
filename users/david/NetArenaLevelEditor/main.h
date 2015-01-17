@@ -52,20 +52,29 @@ public:
 	GameObject();
 	virtual ~GameObject();
 
-	void Load(QString data);
+	virtual void mousePressEvent ( QGraphicsSceneMouseEvent * e );
 
-	int x;
-	int y;
+	void Load(QString data);
+    void Load(QMap<QString, QString>& data);
+
+    virtual QVariant itemChange(GraphicsItemChange change, const QVariant &value);
+
+	void SetPos(QPointF pos);
+
+    int x;
+    int y;
 
 	QColor q;
 
 	int speed;
 
 	QString type;
-
+    QString texture;
 	QString toText();
 
 	QList<QPair<int, int> > path;
+
+	bool palletteTile; //is this meant for ingame or used for pallette
 };
 
 class EditorScene : public QGraphicsScene
@@ -157,22 +166,32 @@ public:
 };
 
 class QTextEdit;
-class ObjectPropertyWindow
+class QColorDialog;
+class ObjectPropertyWindow : public QObject
 {
+	Q_OBJECT
 public:
 	ObjectPropertyWindow(){}
 	virtual ~ObjectPropertyWindow(){}
 
-	void SaveToGameObject();
-
 	void CreateObjectPropertyWindow();
 
 	void SetCurrentGameObject(GameObject* object);
+
+    void UpdateObjectText();
+
+
 	GameObject* GetCurrentGameObject();
 
 	QWidget* m_w;
 	QTextEdit* text;
 
 	GameObject* currentObject;
+    QColorDialog* picker;
+
+
+public slots:
+	void SaveToGameObject();
+    void SetColor();
 
 };
