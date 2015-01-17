@@ -73,6 +73,9 @@ OPTION_ALIAS(g_playerCharacterIndex, "character");
 OPTION_DECLARE(bool, s_unlimitedAmmo, false);
 OPTION_DEFINE(bool, s_unlimitedAmmo, "Player/Unlimited Ammo");
 
+OPTION_DECLARE(bool, s_noSpecial, false);
+OPTION_DEFINE(bool, s_noSpecial, "Player/Disable Special Abilities");
+
 #define WRAP_AROUND_TOP_AND_BOTTOM 1
 
 // todo : m_isGrounded should be true when stickied too. review code and make change!
@@ -796,7 +799,7 @@ void Player::tick(float dt)
 				m_attack.hasCollision = true;
 			}
 
-			if (m_netObject->m_input.wentDown(INPUT_BUTTON_Y) && isAnimOverrideAllowed(kPlayerAnim_Attack))
+			if (m_netObject->m_input.wentDown(INPUT_BUTTON_Y) && !s_noSpecial && isAnimOverrideAllowed(kPlayerAnim_Attack))
 			{
 				if (m_special.type == kPlayerSpecial_DoubleSidedMelee)
 				{
@@ -1058,7 +1061,7 @@ void Player::tick(float dt)
 
 			bool canWallSlide = true;
 
-			if (m_special.type == kPlayerSpecial_Jetpack && m_netObject->m_input.isDown(INPUT_BUTTON_Y))
+			if (m_special.type == kPlayerSpecial_Jetpack && m_netObject->m_input.isDown(INPUT_BUTTON_Y) && !s_noSpecial)
 			{
 				gravity -= JETPACK_ACCEL;
 				m_isUsingJetpack = true;
@@ -1260,6 +1263,19 @@ void Player::tick(float dt)
 								{
 									strength = strength / 4.f;
 									m_netObject->m_gameSim->addScreenShake(0.f, strength, 3000.f, .3f);
+								}
+
+								// fixme : use down attack speed treshold
+								// todo : use separate PlayerAnim for special attack
+
+								if (m_special.type == kPlayerSpecial_DownAttack && m_anim == kPlayerAnim_AttackDown)
+								{
+									LOG_ERR("not yet implemented");
+
+									int blockX = (m_pos[0] / BLOCK_SX);
+									int blockY = (m_pos[1] / BLOCK_SY) + 1;
+
+									addFloorEffect(blockX, blockY, 5);
 								}
 
 								m_vel[i] = 0.f;
@@ -1880,6 +1896,56 @@ void Player::awardScore(int score)
 	m_score += score;
 }
 
+static const Block * getBlock(int x, int y)
+{
+	if (x >= 0 && x < ARENA_SX && y >= 0 && y < ARENA_SY)
+		return &g_gameSim->m_arena.getBlock(x, y);
+	else
+		return 0;
+}
+
+static void addFloorEffectR(int x, int _y, int size, int dx)
+{
+	x %= ARENA_SX;
+
+	for (int dy = 0; dy < 2; ++dy)
+	{
+		const int y = _y + dy;
+
+		const Block * above = getBlock(x, y - 1);
+		if (above && ((1 << above->type) & kBlockMask_Solid))
+		{
+			return;
+		}
+
+		const Block * block = getBlock(x, y);
+
+		if (block && ((1 << block->type) & kBlockMask_Solid))
+		{
+			ParticleSpawnInfo spawnInfo(
+				(x - 0 + .5f) * BLOCK_SX,
+				y * BLOCK_SY,
+				kBulletType_ParticleA, 2,
+				50.f, 100.f, 50.f);
+			spawnInfo.color = 0xffffff80;
+			g_gameSim->spawnParticles(spawnInfo);
+
+			if (size > 0)
+				addFloorEffectR(x + dx, y, size - 1, dx);
+			return;
+		}
+	}
+}
+
+void Player::addFloorEffect(int blockX, int blockY, int size)
+{
+	if (blockX >= 0 && blockX < ARENA_SX && blockY >= 0 && blockY < ARENA_SY)
+	{
+		addFloorEffectR(blockX, blockY, size, -1);
+		addFloorEffectR(blockX, blockY, size, +1);
+	}
+}
+
 void PlayerNetObject::setCharacterIndex(int index)
 {
 	m_player->m_characterIndex = index;
@@ -1910,6 +1976,8 @@ void PlayerNetObject::handleCharacterIndexChange()
 
 		if (specialStr == "double_melee")
 			special = kPlayerSpecial_DoubleSidedMelee;
+		if (specialStr == "down_attack")
+			special = kPlayerSpecial_DownAttack;
 		if (specialStr == "shield")
 			special = kPlayerSpecial_Shield;
 		if (specialStr == "invisibility")

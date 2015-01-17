@@ -32,6 +32,7 @@ enum PlayerSpecial
 {
 	kPlayerSpecial_None,
 	kPlayerSpecial_DoubleSidedMelee,
+	kPlayerSpecial_DownAttack,
 	kPlayerSpecial_Shield,
 	kPlayerSpecial_Invisibility,
 	kPlayerSpecial_Jetpack,

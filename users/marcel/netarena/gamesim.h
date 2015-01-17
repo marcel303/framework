@@ -87,6 +87,8 @@ struct Player
 	bool handleBubble(Vec2Arg velocity, Player * attacker);
 	void awardScore(int score);
 
+	void addFloorEffect(int blockX, int blockY, int size);
+
 	char * makeCharacterFilename(const char * filename);
 
 	bool m_isUsed;
