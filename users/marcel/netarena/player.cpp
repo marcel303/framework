@@ -1272,10 +1272,7 @@ void Player::tick(float dt)
 								{
 									LOG_ERR("not yet implemented");
 
-									int blockX = (m_pos[0] / BLOCK_SX);
-									int blockY = (m_pos[1] / BLOCK_SY) + 1;
-
-									addFloorEffect(blockX, blockY, 5);
+									addFloorEffect(m_pos[0], m_pos[1], 5);
 								}
 
 								m_vel[i] = 0.f;
@@ -1904,46 +1901,67 @@ static const Block * getBlock(int x, int y)
 		return 0;
 }
 
-static void addFloorEffectR(int x, int _y, int size, int dx)
+static void addFloorEffectR(int x, int y, int size, int dx)
 {
-	x %= ARENA_SX;
+	x = (x + ARENA_SX_PIXELS) % ARENA_SX_PIXELS;
 
-	for (int dy = 0; dy < 2; ++dy)
+	const Arena & arena = g_gameSim->m_arena;
+
+	// try to move up
+
+	bool foundEmpty = false;
+
+	for (int dy = 0; dy < BLOCK_SY * 3 / 2; ++dy)
 	{
-		const int y = _y + dy;
+		const uint32_t blockMask = arena.getIntersectingBlocksMask(x, y - dy);
 
-		const Block * above = getBlock(x, y - 1);
-		if (above && ((1 << above->type) & kBlockMask_Solid))
+		if (!(blockMask & kBlockMask_Solid))
 		{
-			return;
+			y = y - dy;
+			foundEmpty = true;
+			break;
 		}
+	}
 
-		const Block * block = getBlock(x, y);
+	if (!foundEmpty)
+		return;
 
-		if (block && ((1 << block->type) & kBlockMask_Solid))
+	// try to move down
+
+	bool hitGround = false;
+
+	for (int dy = 0; dy < BLOCK_SY * 3 / 2; ++dy)
+	{
+		const uint32_t blockMask = arena.getIntersectingBlocksMask(x, y + dy + 1);
+
+		if (blockMask & kBlockMask_Solid)
 		{
-			ParticleSpawnInfo spawnInfo(
-				(x - 0 + .5f) * BLOCK_SX,
-				y * BLOCK_SY,
-				kBulletType_ParticleA, 2,
-				50.f, 100.f, 50.f);
-			spawnInfo.color = 0xffffff80;
-			g_gameSim->spawnParticles(spawnInfo);
-
-			if (size > 0)
-				addFloorEffectR(x + dx, y, size - 1, dx);
-			return;
+			y = y + dy;
+			hitGround = true;
+			break;
 		}
+	}
+
+	if (hitGround)
+	{
+		ParticleSpawnInfo spawnInfo(
+			x,
+			y,
+			kBulletType_ParticleA, 2,
+			50.f, 100.f, 50.f);
+		spawnInfo.color = 0xffffff80;
+		g_gameSim->spawnParticles(spawnInfo);
+
+		if (size > 0)
+			addFloorEffectR(x + dx, y, size - 1, dx);
+		return;
 	}
 }
 
-void Player::addFloorEffect(int blockX, int blockY, int size)
+void Player::addFloorEffect(int x, int y, int size)
 {
-	if (blockX >= 0 && blockX < ARENA_SX && blockY >= 0 && blockY < ARENA_SY)
-	{
-		addFloorEffectR(blockX, blockY, size, -1);
-		addFloorEffectR(blockX, blockY, size, +1);
-	}
+	addFloorEffectR(x, y, size, -BLOCK_SX);
+	addFloorEffectR(x, y, size, +BLOCK_SX);
 }
 
 void PlayerNetObject::setCharacterIndex(int index)
