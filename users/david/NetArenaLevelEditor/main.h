@@ -166,6 +166,7 @@ public:
 };
 
 class QTextEdit;
+class QColorDialog;
 class ObjectPropertyWindow : public QObject
 {
 	Q_OBJECT
@@ -176,15 +177,21 @@ public:
 	void CreateObjectPropertyWindow();
 
 	void SetCurrentGameObject(GameObject* object);
+
+    void UpdateObjectText();
+
+
 	GameObject* GetCurrentGameObject();
 
 	QWidget* m_w;
 	QTextEdit* text;
 
 	GameObject* currentObject;
+    QColorDialog* picker;
 
 
 public slots:
 	void SaveToGameObject();
+    void SetColor();
 
 };

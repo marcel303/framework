@@ -54,7 +54,7 @@ QMap<QString, GameObject*> objectPallette;
 QGraphicsScene* sceneObjectPallette;
 QList<GameObject*> gameObjects;
 QString ObjectPath; //the directory for all object textures
-ObjectPropertyWindow* objectPropWindow;
+ObjectPropertyWindow* objectPropWindow = 0;
 
 EditorView* view;
 QGraphicsView* viewPallette;
@@ -825,6 +825,8 @@ void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e )
 
 			AddGameObject(obj);
 
+            objectPropWindow->SetCurrentGameObject(obj);
+
 			e->accept();
 			break;
 		}
@@ -1157,9 +1159,16 @@ void ObjectPropertyWindow::CreateObjectPropertyWindow()
 
 	QPushButton* b = new QPushButton;
 	b->setText("Save");
-	connect(b, SIGNAL(triggered()), this, SLOT(SaveToGameObject()));
+    connect(b, SIGNAL(pressed()), this, SLOT(SaveToGameObject()));
 
 	grid->addWidget(b, 1, 0);
+
+
+    picker = new QColorDialog();
+    picker->setOption(QColorDialog::ShowAlphaChannel);
+    connect(picker, SIGNAL(currentColorChanged(const QColor&)), this, SLOT(SetColor()));
+
+    grid->addWidget(picker, 2, 0);
 
 	m_w->setLayout(grid);
 
@@ -1167,10 +1176,22 @@ void ObjectPropertyWindow::CreateObjectPropertyWindow()
 	m_w->show();
 }
 
+void ObjectPropertyWindow::SetColor()
+{
+    currentObject->q = picker->currentColor();
+    UpdateObjectText();
+}
+
 void ObjectPropertyWindow::SetCurrentGameObject(GameObject* object)
 {
 	text->setText(object->toText());
 	currentObject = object;
+}
+
+void ObjectPropertyWindow::UpdateObjectText()
+{
+    if(currentObject)
+        text->setText(currentObject->toText());
 }
 
 GameObject* ObjectPropertyWindow::GetCurrentGameObject()
@@ -1183,6 +1204,7 @@ void ObjectPropertyWindow::SaveToGameObject()
 	if(currentObject)
 	{
 		currentObject->Load(text->toPlainText());
+        text->setText(currentObject->toText());
 	}
 }
 
@@ -1201,6 +1223,8 @@ GameObject::GameObject()
 	speed = -1;
 
 	palletteTile = false;
+
+    setFlags(ItemIsMovable | ItemSendsGeometryChanges);
 }
 
 GameObject::~GameObject()
@@ -1210,13 +1234,18 @@ GameObject::~GameObject()
 void GameObject::mousePressEvent ( QGraphicsSceneMouseEvent * e )
 {
 	objectPropWindow->SetCurrentGameObject(this);
+
+    e->accept();
 }
 
 void GameObject::SetPos(QPointF p)
 {
 	setPos(p);
-	x = pos().x();
-	y = pos().y();
+    //x = pos().x();
+    //y = pos().y();
+
+    //if(objectPropWindow && objectPropWindow->currentObject == this)
+    //    objectPropWindow->UpdateObjectText();
 }
 
 typedef QPair<int, int> qp; //hack around compiler for foreach not being nice
@@ -1256,7 +1285,8 @@ void GameObject::Load(QMap<QString, QString>& map)
 		x = map["x"].toInt();
     if(map.contains("y"))
 		y = map["y"].toInt();
-    //set pixmap position
+
+    setPos(x, y);
 
     if(map.contains("speed"))
         speed = map["speed"].toInt();
@@ -1275,6 +1305,9 @@ void GameObject::Load(QMap<QString, QString>& map)
 
 QString GameObject::toText()
 {
+    x = pos().x();
+    y = pos().y();
+
 	QString ret = "";
 	if(type != "none")
 	{ret += "object:" + type;						ret += "\n";}
@@ -1313,8 +1346,12 @@ QVariant GameObject::itemChange(GraphicsItemChange change, const QVariant &value
 {
     if(change == ItemPositionChange)
     {
-		x = pos().x();
-		y = pos().y();
+
+        //x = pos().x();
+        //y = pos().y();
+
+        if(objectPropWindow && objectPropWindow->currentObject == this)
+            objectPropWindow->UpdateObjectText();
     }
 
     return QGraphicsPixmapItem::itemChange(change, value);
