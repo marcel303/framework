@@ -282,6 +282,8 @@ QList<QString> GetLinesFromConfigFile(QString filename)
         list.push_back(line);
     }
 
+    file.close();
+
     return list;
 }
 
@@ -1225,6 +1227,9 @@ GameObject::GameObject()
 	palletteTile = false;
 
     setFlags(ItemIsMovable | ItemSendsGeometryChanges);
+
+    pivotx = 0;
+    pivoty = 0;
 }
 
 GameObject::~GameObject()
@@ -1272,9 +1277,22 @@ void GameObject::Load(QString data)
     Load(map);
 }
 
+
 void GameObject::Load(QMap<QString, QString>& map)
 {
-    type = map["object"];
+    if(map["object"] != type) //prevent needless reloading of pivots
+    {
+        type = map["object"];
+
+        QList<QString> list = GetLinesFromConfigFile(ObjectPath + type + ".txt");
+        QStringList l2 = list.first().split(" ");
+        if(l2.front() == "sheet")
+        {
+            l2.pop_front();
+            pivotx = (l2.front().split(":").last()).toInt();
+            pivoty = (l2.last().split(":").last()).toInt();
+        }
+    }
 
     if(map.contains("texture"))
         texture = map["texture"];
@@ -1282,9 +1300,9 @@ void GameObject::Load(QMap<QString, QString>& map)
     setPixmap(*GetObjectPixmap(texture));
 
     if(map.contains("x"))
-		x = map["x"].toInt();
+        x = map["x"].toInt() - pivotx;
     if(map.contains("y"))
-		y = map["y"].toInt();
+        y = map["y"].toInt() - pivoty;
 
     setPos(x, y);
 
@@ -1305,8 +1323,8 @@ void GameObject::Load(QMap<QString, QString>& map)
 
 QString GameObject::toText()
 {
-    x = pos().x();
-    y = pos().y();
+    x = pos().x() + pivotx;
+    y = pos().y() + pivoty;
 
 	QString ret = "";
 	if(type != "none")
@@ -1345,14 +1363,8 @@ QString GameObject::toText()
 QVariant GameObject::itemChange(GraphicsItemChange change, const QVariant &value)
 {
     if(change == ItemPositionChange)
-    {
-
-        //x = pos().x();
-        //y = pos().y();
-
         if(objectPropWindow && objectPropWindow->currentObject == this)
             objectPropWindow->UpdateObjectText();
-    }
 
     return QGraphicsPixmapItem::itemChange(change, value);
 }
