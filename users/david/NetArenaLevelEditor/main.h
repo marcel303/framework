@@ -68,6 +68,10 @@ public:
 
 	int speed;
 
+    int pivotx;
+    int pivoty;
+
+
 	QString type;
     QString texture;
 	QString toText();
