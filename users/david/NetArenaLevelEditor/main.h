@@ -111,6 +111,20 @@ public:
 
     virtual void keyPressEvent(QKeyEvent *event);
     virtual void keyReleaseEvent(QKeyEvent *e);
+
+    void zoomIn(int level = 1);
+    void zoomOut(int level = 1);
+
+    int zoomLevel;
+
+    void UpdateMatrix();
+
+
+#ifndef QT_NO_WHEELEVENT
+    void wheelEvent(QWheelEvent * e);
+#endif
+
+
 };
 
 class QSlider;

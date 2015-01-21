@@ -24,10 +24,10 @@
 
 #include <QButtonGroup>
 
-#define BASEX 26
-#define BASEY 16
+#define BASEX 52
+#define BASEY 32
 
-#define BLOCKSIZE 64
+#define BLOCKSIZE 32
 
 int MAPX = BASEX;
 int MAPY = BASEY;
@@ -62,6 +62,10 @@ QGraphicsView* viewPallette;
 
 EditorScene* templateScene;
 Tile** m_templateTiles;
+
+
+
+QWidget* settingsWidget;
 
 bool leftbuttonHeld = false;
 
@@ -592,12 +596,25 @@ void SwitchMap(int x, int y)
 
 
 
+#include <QGridLayout>
+QHBoxLayout* hlayout;
+QVBoxLayout* vlayout;
+QGridLayout* grid;
+
 
 void CreateSettingsWidget();
 void CreateObjectPropertyWindow();
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+
+    QWidget mainwindow;
+
+    grid = new QGridLayout();
+    vlayout = new QVBoxLayout();
+    hlayout = new QHBoxLayout();
+
+
 
 	editorMode = EM_Level;
 
@@ -607,7 +624,7 @@ int main(int argc, char *argv[])
 	sceneCollission = new EditorScene();
 
     view->setScene(sceneMech);
-    view->showMaximized();
+    //view->showMaximized();
 
 
 
@@ -639,13 +656,25 @@ int main(int argc, char *argv[])
 
     LoadPallette();
 
-    viewPallette->show();
+    //viewPallette->show();
 
     AddAllToScene();
     sceneMech->AddGrid();
 
     CreateSettingsWidget();
 
+    hlayout->addWidget(view);
+    hlayout->addLayout(vlayout);
+
+   // grid->addLayout(vlayout, 0, 0);
+
+
+    vlayout->addWidget(viewPallette);
+    vlayout->addWidget(settingsWidget);
+    vlayout->addWidget(objectPropWindow->m_w);
+
+    mainwindow.setLayout(hlayout);
+    mainwindow.showMaximized();
 
 
     return a.exec();
@@ -1015,9 +1044,52 @@ void EditorView::SetOpacityObject(int s)
 
 
 #include <QKeyEvent>
+#ifndef QT_NO_WHEELEVENT
+void EditorViewBasic::wheelEvent(QWheelEvent* e)
+{
+    {
+        if (e->delta() > 0)
+            zoomIn(6);
+        else
+            zoomOut(6);
+        e->accept();
+    }
+}
+#endif
+
+void EditorViewBasic::zoomIn(int level)
+{
+    zoomLevel += level;
+
+    UpdateMatrix();
+}
+
+void EditorViewBasic::zoomOut(int level)
+{
+    zoomLevel -= level;
+
+    if(zoomLevel < 0)
+        zoomLevel = 0;
+
+    UpdateMatrix();
+}
+
+#include <QtMath>
+
+void EditorViewBasic::UpdateMatrix()
+{
+    qreal scale = qPow(qreal(2), (zoomLevel - 250) / qreal(50));
+
+    QMatrix matrix;
+    matrix.scale(scale, scale);
+
+    setMatrix(matrix);
+}
+
 
 EditorViewBasic::EditorViewBasic() : QGraphicsView()
 {
+    zoomLevel = 220;
 }
 
 EditorViewBasic::~EditorViewBasic()
@@ -1027,29 +1099,11 @@ EditorViewBasic::~EditorViewBasic()
 
 void EditorViewBasic::keyPressEvent(QKeyEvent *e)
 {
-    if(e->key() == Qt::Key_Space)
-    {
-        SwitchScene();
-        e->accept();
-    }
-
-    if(e->key() == Qt::Key_P)
-    {
-        QGraphicsView* v1 = new QGraphicsView();
-        v1->setScene(templateScene);
-        v1->showNormal();
-        v1->scale((float)MAPY/(float)MAPX,(float)MAPY/(float)MAPX);
-        e->accept();
-    }
-
     if(e->key() == Qt::Key_Shift)
     {
         leftbuttonHeld = true;
         e->accept();
     }
-
-    if(e->key() == Qt::Key_I)
-        AddAllToScene();
 }
 
 void EditorViewBasic::keyReleaseEvent(QKeyEvent *e)
@@ -1062,10 +1116,10 @@ void EditorViewBasic::keyReleaseEvent(QKeyEvent *e)
 }
 
 
-
 void CreateSettingsWidget()
 {
-    QWidget* w = new QWidget();
+
+    settingsWidget = new QWidget();
 
     QGridLayout* grid = new QGridLayout();
 
@@ -1139,8 +1193,8 @@ void CreateSettingsWidget()
     grid->addWidget(view->sliderOpacColl, 3, 2);
 	grid->addWidget(view->sliderOpacObject, 4, 2);
 
-    w->setLayout(grid);
-    w->show();
+    settingsWidget->setLayout(grid);
+    //w->show();
 }
 
 
