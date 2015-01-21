@@ -19,6 +19,7 @@
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
+#include <QSplitter>
 #include <QCheckBox>
 #include <QLabel>
 
@@ -66,6 +67,11 @@ Tile** m_templateTiles;
 
 
 QWidget* settingsWidget;
+
+#include <QGridLayout>
+QSplitter* hlayout;
+QVBoxLayout* vlayout;
+QGridLayout* grid;
 
 bool leftbuttonHeld = false;
 
@@ -596,10 +602,7 @@ void SwitchMap(int x, int y)
 
 
 
-#include <QGridLayout>
-QHBoxLayout* hlayout;
-QVBoxLayout* vlayout;
-QGridLayout* grid;
+
 
 
 void CreateSettingsWidget();
@@ -608,12 +611,9 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
-    QWidget mainwindow;
-
     grid = new QGridLayout();
     vlayout = new QVBoxLayout();
-    hlayout = new QHBoxLayout();
-
+    hlayout = new QSplitter();
 
 
 	editorMode = EM_Level;
@@ -624,13 +624,8 @@ int main(int argc, char *argv[])
 	sceneCollission = new EditorScene();
 
     view->setScene(sceneMech);
-    //view->showMaximized();
-
-
 
     SwitchMap(MAPX, MAPY);
-
-
 
     palletteTile = new TilePallette();
 
@@ -663,19 +658,17 @@ int main(int argc, char *argv[])
 
     CreateSettingsWidget();
 
+
+    QWidget rightside;
+    rightside.setLayout(vlayout);
     hlayout->addWidget(view);
-    hlayout->addLayout(vlayout);
-
-   // grid->addLayout(vlayout, 0, 0);
-
+    hlayout->addWidget(&rightside);
 
     vlayout->addWidget(viewPallette);
     vlayout->addWidget(settingsWidget);
     vlayout->addWidget(objectPropWindow->m_w);
 
-    mainwindow.setLayout(hlayout);
-    mainwindow.showMaximized();
-
+    hlayout->showMaximized();
 
     return a.exec();
 }
