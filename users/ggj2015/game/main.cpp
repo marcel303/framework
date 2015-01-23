@@ -1,6 +1,7 @@
 #include "Calc.h"
 #include "framework.h"
 #include "gamedefs.h"
+#include "gamestate.h"
 #include "main.h"
 #include "OptionMenu.h"
 #include "StatTimerMenu.h"
@@ -27,13 +28,260 @@ TIMER_DEFINE(g_appDrawTime, PerFrame, "App/Draw");
 
 //
 
+#define CHARICON_SX 80
+#define CHARICON_SY 100
+
+#define NUM_VOTING_BUTTONS 4
+
+//
+
 App * g_app = 0;
+GameState * g_gameState = 0;
 
-int g_updateTicks = 0;
+class VotingScreen
+{
+public:
+	class CharacterIcon
+	{
+	public:
+		int x1, y1;
+		int x2, y2;
 
-Surface * g_colorMap = 0;
-Surface * g_lightMap = 0;
-Surface * g_finalMap = 0;
+		CharacterIcon()
+		{
+			memset(this, 0, sizeof(*this));
+		}
+
+		void draw()
+		{
+		}
+	};
+
+	class VotingButton
+	{
+	public:
+		int x1, y1;
+		int x2, y2;
+
+		VotingButton()
+		{
+			memset(this, 0, sizeof(*this));
+		}
+
+		void setup(int x, int y)
+		{
+			x1 = x - 100;
+			y1 = y;
+			x2 = x + 100;
+			y2 = y + 50;
+		}
+
+		bool isClicked() const
+		{
+			if (mouse.wentDown(BUTTON_LEFT))
+			{
+				if (mouse.x >= x1 &&
+					mouse.y >= y1 &&
+					mouse.x <= x2 &&
+					mouse.y <= y2)
+				{
+					return true;
+				}
+			}
+
+			return false;
+		}
+	};
+
+	struct
+	{
+		int x1, y1;
+		int x2, y2;
+	} m_backButton;
+
+	int m_selectedCharacter;
+	CharacterIcon m_characterIcons[MAX_PLAYERS];
+	VotingButton m_votingButtons[NUM_VOTING_BUTTONS];
+
+	VotingScreen()
+		: m_selectedCharacter(-1)
+	{
+		setupCharacterIcons();
+
+		m_backButton.x1 = (GFX_SX - 200) / 2;
+		m_backButton.y1 = GFX_SY - 100;
+		m_backButton.x2 = (GFX_SX + 200) / 2;
+		m_backButton.y2 = GFX_SY - 50;
+
+		for (int i = 0; i < NUM_VOTING_BUTTONS; ++i)
+		{
+			m_votingButtons[i].setup(GFX_SX/2, GFX_SY/2 + i * 80);
+		}
+	}
+
+	void setupCharacterIcons()
+	{
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+		{
+			// todo : setup rect
+
+			CharacterIcon & icon = m_characterIcons[i];
+
+			const int sx = CHARICON_SX;
+			const int sy = CHARICON_SY;
+
+			const int x = GFX_SX / (MAX_PLAYERS + 1) * (i + 1);
+			icon.x1 = x - sx / 2;
+			icon.y1 = 0;
+			icon.x2 = x + sx / 2;
+			icon.y2 = CHARICON_SY;
+		}
+	}
+
+	void tick()
+	{
+		if (m_selectedCharacter == -1)
+		{
+			for (int i = 0; i < g_gameState->m_numPlayers; ++i)
+			{
+				// todo : see if mouse was down on character
+
+				if (!g_gameState->m_players[i].m_hasVoted && mouse.wentDown(BUTTON_LEFT))
+				{
+					if (mouse.x >= m_characterIcons[i].x1 &&
+						mouse.y >= m_characterIcons[i].y1 &&
+						mouse.x <= m_characterIcons[i].x2 &&
+						mouse.y <= m_characterIcons[i].y2)
+					{
+						m_selectedCharacter = i;
+						break;
+					}
+				}
+			}
+		}
+		else
+		{
+			// check voting option
+
+			for (int i = 0; i < NUM_VOTING_BUTTONS; ++i)
+			{
+				if (m_votingButtons[i].isClicked())
+				{
+					// commit vote
+
+					g_gameState->m_players[m_selectedCharacter].vote(i);
+
+					m_selectedCharacter = -1;
+				}
+			}
+
+			if (mouse.wentDown(BUTTON_LEFT))
+			{
+				// todo : loop over voting options
+
+				if (mouse.x >= m_backButton.x1 &&
+					mouse.y >= m_backButton.y1 &&
+					mouse.x <= m_backButton.x2 &&
+					mouse.y <= m_backButton.y2)
+				{
+					m_selectedCharacter = -1;
+				}
+			}
+		}
+	}
+
+	void draw()
+	{
+		// todo : draw background
+
+		if (m_selectedCharacter == -1)
+		{
+			for (int i = 0; i < MAX_PLAYERS; ++i)
+			{
+				const CharacterIcon & icon = m_characterIcons[i];
+
+				if (i < g_gameState->m_numPlayers && !g_gameState->m_players[i].m_hasVoted)
+				{
+					setColor(colorGreen);
+					drawRect(
+						icon.x1,
+						icon.y1,
+						icon.x2,
+						icon.y2);
+				}
+				else
+				{
+					// todo : draw character icon in disabled state
+
+					setColor(colorRed);
+					drawRect(
+						icon.x1,
+						icon.y1,
+						icon.x2,
+						icon.y2);
+				}
+			}
+		}
+		else
+		{
+			setFont("calibri.ttf");
+			setColor(colorWhite);
+			drawText(GFX_SX / 2, 20, 24, 0.f, +1.f, "<Character Name>");
+
+			// todo : draw character icon
+
+			setColor(colorGreen);
+			drawRect(
+				(GFX_SX - CHARICON_SX) / 2,
+				(GFX_SY/2 - CHARICON_SY) / 2,
+				(GFX_SX + CHARICON_SX) / 2,
+				(GFX_SY/2 + CHARICON_SY) / 2);
+
+			// todo : draw voting buttons
+
+			for (int i = 0; i < NUM_VOTING_BUTTONS;++i)
+			{
+				VotingButton & button = m_votingButtons[i];
+
+				setColor(colorWhite);
+				drawRect(
+					button.x1,
+					button.y1,
+					button.x2,
+					button.y2);
+			}
+
+			// todo : draw back button
+
+			setColor(colorWhite);
+			drawRect(
+				m_backButton.x1,
+				m_backButton.y1,
+				m_backButton.x2,
+				m_backButton.y2);
+		}
+	}
+};
+
+class StatsScreen
+{
+public:
+	StatsScreen()
+	{
+	}
+
+	void tick()
+	{
+	}
+
+	void draw()
+	{
+		// todo : draw background
+	}
+};
+
+static VotingScreen * g_votingScreen = 0;
+static StatsScreen * g_statsScreen = 0;
 
 //
 
@@ -121,10 +369,11 @@ bool App::init()
 
 		//
 
-		// todo : free these maps at exit
-		g_colorMap = new Surface(GFX_SX, GFX_SY);
-		g_lightMap = new Surface(GFX_SX, GFX_SY);
-		g_finalMap = new Surface(GFX_SX, GFX_SY);
+		g_gameState = new GameState();
+		g_gameState->m_numPlayers = g_devMode ? 2 : MAX_PLAYERS;
+
+		g_votingScreen = new VotingScreen();
+		g_statsScreen = new StatsScreen();
 
 		//
 
@@ -164,27 +413,11 @@ bool App::tick()
 		dt = 1.f / 60.f;
 	lastTime = time;
 
-	// determine number of update ticks
-
-	static float dtAccum = 0.f;
-	dtAccum += dt;
-	g_updateTicks = (int)(dtAccum * 60.f);
-	dtAccum -= g_updateTicks / 60.f;
-
-#if 1
-	g_updateTicks = 1;
-#endif
-
-	// shared update
-
 	framework.process();
 
-	// update host
+	g_votingScreen->tick();
 
-	if (!m_optionMenuIsOpen && g_updateTicks)
-	{
-		// todo : tick the game
-	}
+	g_statsScreen->tick();
 
 	// debug
 
@@ -258,7 +491,9 @@ void App::draw()
 
 	framework.beginDraw(10, 15, 10, 0);
 	{
-		// todo : draw
+		g_votingScreen->draw();
+
+		g_statsScreen->draw();
 
 		if (m_optionMenuIsOpen)
 		{
