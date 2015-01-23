@@ -1,0 +1,56 @@
+#if __SHADER__
+
+#if 1
+	#define shader_attrib attribute
+	#define shader_in varying
+	#define shader_out varying
+#else
+	#define shader_attrib in
+	#define shader_in in
+	#define shader_out out
+#endif
+
+#define tex2D texture
+
+#else
+
+class vec2
+{
+public:
+	vec2() { }
+	vec2(float _x, float _y) : x(_x), y(_y) { }
+	float x, y;
+};
+
+class vec3
+{
+public:
+	vec3() { }
+	vec3(float _x, float _y, float _z) : x(_x), y(_y), z(_z) { }
+	float x, y, z, _;
+};
+
+class vec4
+{
+public:
+	vec4() { }
+	vec4(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) { }
+	float x, y, z, w;
+};
+
+class mat4
+{
+public:
+	float v[16];
+};
+
+#endif
+
+#define VS_USE_LEGACY_MATRICES 0
+
+#define VS_POSITION      0
+#define VS_NORMAL        1
+#define VS_COLOR         2
+#define VS_TEXCOORD      3
+#define VS_BLEND_INDICES 4
+#define VS_BLEND_WEIGHTS 5
