@@ -1268,7 +1268,7 @@ void Player::tick(float dt)
 								// fixme : use down attack speed treshold
 								// todo : use separate PlayerAnim for special attack
 
-								if (m_special.type == kPlayerSpecial_DownAttack && m_anim == kPlayerAnim_AttackDown)
+								if (m_special.type == kPlayerSpecial_DownAttack && m_anim == kPlayerAnim_AttackDown && !s_noSpecial)
 								{
 									LOG_ERR("not yet implemented");
 
