@@ -32,6 +32,8 @@ void AgendaEffect::load(const std::string & text)
 		m_target = Target_TargetOnly;
 	else if (target == "nontarget")
 		m_target = Target_NonTarget;
+	else if (target == "race")
+		m_target = Target_Race;
 	else
 		logError("invalid target");
 

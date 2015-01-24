@@ -42,6 +42,13 @@ OPTION_DEFINE(int, VOTING_AGENDA_TEXTBOX_HEIGHT, "Voting Agenda/Textbox Height")
 
 //
 
+OPTION_DEFINE(int, VOTING_ABSTAIN_X, "Voting Abstain/X");
+OPTION_DEFINE(int, VOTING_ABSTAIN_Y, "Voting Abstain/Y");
+OPTION_DEFINE(int, VOTING_ABSTAIN_WIDTH, "Voting Abstain/Width");
+OPTION_DEFINE(int, VOTING_ABSTAIN_HEIGHT, "Voting Abstain/Height");
+
+//
+
 OPTION_DEFINE(int, VOTING_CHAR_X, "Voting Char/Y");
 OPTION_DEFINE(int, VOTING_CHAR_Y, "Voting Char/X");
 

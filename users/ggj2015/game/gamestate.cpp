@@ -29,16 +29,18 @@ bool PlayerGoal::isComplete(const Player & player) const
 
 Player::Player()
 	: m_hasVoted(false)
+	, m_hasAbstained(false)
 	, m_voteSelection(0)
 {
 }
 
-bool Player::vote(int selection, int target)
+bool Player::vote(int selection, int target, bool abstain)
 {
 	Assert(!m_hasVoted);
 	if (!m_hasVoted)
 	{
 		m_hasVoted = true;
+		m_hasAbstained = abstain;
 		m_voteSelection = selection;
 		m_targetSelection = target;
 
@@ -64,6 +66,8 @@ void Player::newGame()
 	m_resources.food = 5;
 	m_resources.wealth = 5;
 	m_resources.tech = 5;
+
+	m_oldResources = m_resources;
 }
 
 void Player::nextRound()
@@ -266,6 +270,11 @@ void GameState::newGame()
 void GameState::nextRound(bool applyCurrentAgenda)
 {
 	Assert(m_state == State_Playing);
+
+	for (int i = 0; i < m_numPlayers; ++i)
+	{
+		m_players[i].m_oldResources = m_players[i].m_resources;
+	}
 
 	if (applyCurrentAgenda)
 	{

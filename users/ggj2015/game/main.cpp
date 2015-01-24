@@ -51,6 +51,8 @@ TIMER_DEFINE(g_appDrawTime, PerFrame, "App/Draw");
 #define CHARICON_SX 80
 #define CHARICON_SY 100
 
+#define PLAYER_STATS_TIME 5.f
+
 //
 
 void splitString(const std::string & str, std::vector<std::string> & result, char c);
@@ -131,7 +133,7 @@ public:
 	{
 		int x1, y1;
 		int x2, y2;
-	} m_backButton;
+	} m_abstainButton;
 
 	enum State
 	{
@@ -148,6 +150,28 @@ public:
 	CharacterIcon m_targetIcons[MAX_PLAYERS];
 	VotingButton m_votingButtons[NUM_VOTING_BUTTONS];
 
+	struct ResultsAnim
+	{
+		enum State
+		{
+			State_ShowPlayerResults,
+			State_ShowGlobalResults,
+			State_ShowVotingResults,
+			State_Done
+		};
+
+		State state;
+		float timer;
+		int player;
+
+		ResultsAnim()
+			: state(State_ShowPlayerResults)
+			, timer(0.f)
+			, player(0)
+		{
+		}
+	} m_resultsAnim;
+
 	VotingScreen()
 		: m_state(State_SelectCharacter)
 		, m_selectedCharacter(0)
@@ -156,10 +180,10 @@ public:
 		setupCharacterIcons();
 		setupTargetIcons();
 
-		m_backButton.x1 = (GFX_SX - 200) / 2;
-		m_backButton.y1 = GFX_SY - 100;
-		m_backButton.x2 = (GFX_SX + 200) / 2;
-		m_backButton.y2 = GFX_SY - 50;
+		m_abstainButton.x1 = VOTING_ABSTAIN_X;
+		m_abstainButton.y1 = VOTING_ABSTAIN_Y;
+		m_abstainButton.x2 = VOTING_ABSTAIN_X + VOTING_ABSTAIN_WIDTH;
+		m_abstainButton.y2 = VOTING_ABSTAIN_Y + VOTING_ABSTAIN_HEIGHT;
 
 		for (int i = 0; i < NUM_VOTING_BUTTONS; ++i)
 		{
@@ -296,8 +320,11 @@ public:
 					}
 					else
 					{
-						if (g_gameState->m_players[m_selectedCharacter].vote(i))
+						if (g_gameState->m_players[m_selectedCharacter].vote(i, -1, false))
+						{
+							m_resultsAnim = ResultsAnim();
 							m_state = State_ShowResults;
+						}
 						else
 							m_state = State_SelectCharacter;
 					}
@@ -306,14 +333,18 @@ public:
 
 			if (mouse.wentDown(BUTTON_LEFT))
 			{
-				// todo : loop over voting options
-
-				if (mouse.x >= m_backButton.x1 &&
-					mouse.y >= m_backButton.y1 &&
-					mouse.x <= m_backButton.x2 &&
-					mouse.y <= m_backButton.y2)
+				if (mouse.x >= m_abstainButton.x1 &&
+					mouse.y >= m_abstainButton.y1 &&
+					mouse.x <= m_abstainButton.x2 &&
+					mouse.y <= m_abstainButton.y2)
 				{
-					m_state = State_SelectCharacter;
+					if (player.vote(-1, -1, true))
+					{
+						m_resultsAnim = ResultsAnim();
+						m_state = State_ShowResults;
+					}
+					else
+						m_state = State_SelectCharacter;
 				}
 			}
 		}
@@ -330,8 +361,11 @@ public:
 						mouse.x <= m_targetIcons[i].x2 &&
 						mouse.y <= m_targetIcons[i].y2)
 					{
-						if (g_gameState->m_players[m_selectedCharacter].vote(m_selectedOption, i))
+						if (g_gameState->m_players[m_selectedCharacter].vote(m_selectedOption, i, false))
+						{
+							m_resultsAnim = ResultsAnim();
 							m_state = State_ShowResults;
+						}
 						else
 							m_state = State_SelectCharacter;
 						break;
@@ -341,12 +375,6 @@ public:
 		}
 		else if (m_state == State_ShowResults)
 		{
-			// todo : use a timer to transition to the next screen
-
-			if (mouse.wentDown(BUTTON_LEFT))
-			{
-				m_state = State_SelectCharacter;
-			}
 		}
 	}
 
@@ -354,11 +382,11 @@ public:
 	{
 		// draw background
 
-		setColor(colorWhite);
-		Sprite("voting-back.png").draw();
-
 		if (m_state == State_SelectCharacter)
 		{
+			setColor(colorWhite);
+			Sprite("voting-back.png").draw();
+
 			setFont("calibri.ttf");
 			setColor(colorWhite);
 			drawText(GFX_SX / 2, 20, 40, 0.f, +1.f, "<Select Character>");
@@ -405,6 +433,9 @@ public:
 		}
 		else if (m_state == State_SelectOption)
 		{
+			setColor(colorWhite);
+			Sprite("voting-vote-back.png").draw();
+
 			// agenda text box
 
 			setFont("calibri.ttf");
@@ -442,15 +473,17 @@ public:
 
 			// stats
 
+			const int statSize = 50;
+
 			setFont("calibri.ttf");
 			setColor(colorWhite);
-			drawText(VOTING_STAT_FOOD_X, VOTING_STAT_FOOD_Y, 30, +1.f, +1.f, "%d",
+			drawText(VOTING_STAT_FOOD_X, VOTING_STAT_FOOD_Y, statSize, +1.f, +1.f, "%d",
 				g_gameState->m_players[m_selectedCharacter].m_resources.food);
-			drawText(VOTING_STAT_WEALTH_X, VOTING_STAT_WEALTH_Y, 30, +1.f, +1.f, "%d",
+			drawText(VOTING_STAT_WEALTH_X, VOTING_STAT_WEALTH_Y, statSize, +1.f, +1.f, "%d",
 				g_gameState->m_players[m_selectedCharacter].m_resources.wealth);
-			drawText(VOTING_STAT_TECH_X, VOTING_STAT_TECH_Y, 30, +1.f, +1.f, "%d",
+			drawText(VOTING_STAT_TECH_X, VOTING_STAT_TECH_Y, statSize, +1.f, +1.f, "%d",
 				g_gameState->m_players[m_selectedCharacter].m_resources.tech);
-			drawText(VOTING_STAT_HAPPINESS_X, VOTING_STAT_HAPPINESS_Y, 30, +1.f, +1.f, "%d",
+			drawText(VOTING_STAT_HAPPINESS_X, VOTING_STAT_HAPPINESS_Y, statSize, +1.f, +1.f, "%d",
 				-1);
 
 			// goal
@@ -463,15 +496,6 @@ public:
 				g_gameState->m_players[m_selectedCharacter].m_goal.m_description.c_str());
 
 			// todo : vote timer
-
-			// todo : draw character icon
-
-			setColor(colorGreen);
-			drawRect(
-				(GFX_SX - CHARICON_SX) / 2,
-				(GFX_SY/2 - CHARICON_SY) / 2,
-				(GFX_SX + CHARICON_SX) / 2,
-				(GFX_SY/2 + CHARICON_SY) / 2);
 
 			// todo : draw voting buttons
 
@@ -494,21 +518,21 @@ public:
 				drawText(button.x2, button.y1 + 40, 20, 1.f, 1.f, option.m_text.c_str());
 			}
 
-			// todo : draw back button
-
-			setColor(colorWhite);
-			drawRect(
-				m_backButton.x1,
-				m_backButton.y1,
-				m_backButton.x2,
-				m_backButton.y2);
-
-			setFont("calibri.ttf");
-			setColor(colorBlack);
-			drawText((m_backButton.x1 + m_backButton.x2) / 2, (m_backButton.y1 + m_backButton.y2) / 2, 40, 0.f, 0.f, "Back");
+			if (g_devMode)
+			{
+				setColor(colorGreen);
+				drawRectLine(
+					m_abstainButton.x1,
+					m_abstainButton.y1,
+					m_abstainButton.x2,
+					m_abstainButton.y2);
+			}
 		}
 		else if (m_state == State_SelectTarget)
 		{
+			setColor(colorWhite);
+			Sprite("voting-back.png").draw();
+
 			setFont("calibri.ttf");
 			setColor(colorWhite);
 			drawText(GFX_SX / 2, 20, 40, 0.f, +1.f, "<Select Target>");
@@ -553,9 +577,76 @@ public:
 		}
 		else if (m_state == State_ShowResults)
 		{
+			setColor(colorWhite);
+			Sprite("voting-back.png").draw();
+
 			setFont("calibri.ttf");
 			setColor(colorWhite);
-			drawText(GFX_SX / 2, 20, 40, 0.f, +1.f, "<Results>");
+			drawText(GFX_SX / 2, 20, 40, 0.f, +1.f, "<Results %d/%d/%g>", m_resultsAnim.state, m_resultsAnim.player, m_resultsAnim.timer);
+
+			switch (m_resultsAnim.state)
+			{
+			case ResultsAnim::State_ShowPlayerResults:
+				{
+					if (m_resultsAnim.timer == 0.f)
+						m_resultsAnim.timer = g_TimerRT.Time_get() + PLAYER_STATS_TIME;
+
+					const Player & player = g_gameState->m_players[m_resultsAnim.player];
+
+					int y = GFX_SY/3;
+
+					drawCharIcon(GFX_SX/2, y, m_resultsAnim.player, CHAR_SCALE_NORMAL);
+					y += VOTING_CHAR_HEIGHT;
+
+					const int foodChange = player.m_resources.food - player.m_oldResources.food;
+					const int wealthChange = player.m_resources.wealth - player.m_oldResources.wealth;
+					const int techChange = player.m_resources.tech - player.m_oldResources.tech;
+
+					setFont("calibri.ttf");
+					setColor(colorWhite);
+
+					if (foodChange != 0)
+						drawText(GFX_SX/2, y += 50, 30, 0.f, +1.f, "food %+d", foodChange);
+					if (wealthChange != 0)
+						drawText(GFX_SX/2, y += 50, 30, 0.f, +1.f, "wealth %+d", wealthChange);
+					if (techChange != 0)
+						drawText(GFX_SX/2, y += 50, 30, 0.f, +1.f, "tech %+d", techChange);
+
+					if (g_TimerRT.Time_get() >= m_resultsAnim.timer)
+					{
+						m_resultsAnim.timer = 0.f;
+
+						if (m_resultsAnim.player + 1 < g_gameState->m_numPlayers)
+							m_resultsAnim.player++;
+						else
+							m_resultsAnim.state = ResultsAnim::State_ShowGlobalResults;
+					}
+				}
+				break;
+			case ResultsAnim::State_ShowVotingResults:
+				if (m_resultsAnim.timer == 0.f)
+					m_resultsAnim.timer = g_TimerRT.Time_get() + 5.f;
+
+				if (g_TimerRT.Time_get() >= m_resultsAnim.timer)
+				{
+					m_resultsAnim.timer = 0.f;
+					m_resultsAnim.state = ResultsAnim::State_ShowGlobalResults;
+				}
+				break;
+			case ResultsAnim::State_ShowGlobalResults:
+				if (m_resultsAnim.timer == 0.f)
+					m_resultsAnim.timer = g_TimerRT.Time_get() + 3.f;
+
+				if (g_TimerRT.Time_get() >= m_resultsAnim.timer)
+				{
+					m_resultsAnim.timer = 0.f;
+					m_resultsAnim.state = ResultsAnim::State_Done;
+				}
+				break;
+			case ResultsAnim::State_Done:
+				m_state = State_SelectCharacter;
+				break;
+			}
 
 			// todo : show how end of round effects each player
 		}

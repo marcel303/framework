@@ -41,6 +41,7 @@ class Player
 {
 public:
 	bool m_hasVoted;
+	bool m_hasAbstained;
 	int m_voteSelection;
 	int m_targetSelection;
 	PlayerGoal m_goal;
@@ -55,11 +56,13 @@ public:
 		int food;
 		int wealth;
 		int tech;
-	} m_resources;
+	} m_resources, m_oldResources;
 
 	Player();
 
-	bool vote(int selection, int target = -1);
+	bool vote(int selection, int target, bool hasAbstained);
+	void abstain();
+
 	void newGame();
 	void nextRound();
 };
