@@ -6,15 +6,9 @@
 #include <QGraphicsView>
 #include <QWidget>
 #include <QMainWindow>
-
-
 #include <QGraphicsSceneMouseEvent>
 #include <QDebug>
-
-
 #include <QMap>
-
-
 #include <QSlider>
 #include <QGridLayout>
 #include <QHBoxLayout>
@@ -22,8 +16,15 @@
 #include <QSplitter>
 #include <QCheckBox>
 #include <QLabel>
-
 #include <QButtonGroup>
+#include <QMenuBar>
+#include <QDir>
+#include <QFileDialog>
+#include <QKeyEvent>
+#include <QtMath>
+#include <QColorDialog>
+#include <QTextEdit>
+#include <QPushButton>
 
 #define BASEX 52
 #define BASEY 32
@@ -581,7 +582,7 @@ void SaveLevel(QString filename)
 	SaveObjects(filename + "Objects.txt");
 }
 
-void SwitchMap(int x, int y)
+void CreateNewMap(int x, int y)
 {
     MAPX = x;
     MAPY = y;
@@ -596,12 +597,29 @@ void SwitchMap(int x, int y)
     sceneArt->CreateLevel(x, y);
     sceneCollission->CreateLevel(x, y);
 
+    gameObjects.clear();
+
     view->scale((float)MAPY/(float)MAPX,(float)MAPY/(float)MAPX);
 }
 
 
 
+void CreateAndShowNewMapDialog()
+{
+    QWidget* w = new QWidget;
 
+    QPushButton* ok = new QPushButton;
+    QPushButton* cancel = new QPushButton;
+
+    QSlider x;
+    QSlider y;
+
+
+    connect(newAct1, SIGNAL(triggered()), this, SLOT(New()));
+    connect(newAct1, SIGNAL(triggered()), this, SLOT(New()));
+
+
+}
 
 
 
@@ -625,7 +643,7 @@ int main(int argc, char *argv[])
 
     view->setScene(sceneMech);
 
-    SwitchMap(MAPX, MAPY);
+    CreateNewMap(MAPX, MAPY);
 
     palletteTile = new TilePallette();
 
@@ -882,7 +900,6 @@ void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e )
 }
 
 
-#include <QMenuBar>
 
 
 EditorView::EditorView() : EditorViewBasic()
@@ -924,8 +941,6 @@ EditorView::EditorView() : EditorViewBasic()
 
 
 
-#include <QDir>
-#include <QFileDialog>
 
 EditorView::~EditorView()
 {
@@ -945,9 +960,7 @@ void EditorView::Load()
 }
 void EditorView::New()
 {
-    sceneMech->CreateLevel(MAPX, MAPY);
-    sceneArt->CreateLevel(MAPX, MAPY);
-    sceneCollission->CreateLevel(MAPX, MAPY);
+    CreateNewMap(MAPX, MAPY);
 }
 void EditorView::SwitchToMech(int s)
 {
@@ -998,9 +1011,9 @@ void EditorView::SwitchToObject(int s)
 void EditorView::SwitchToBigMap()
 {
     if(MAPX == BASEX)
-        SwitchMap(2*BASEX, 2*BASEY);
+        CreateNewMap(2*BASEX, 2*BASEY);
     else
-        SwitchMap(BASEX, BASEY);
+        CreateNewMap(BASEX, BASEY);
 }
 
 void EditorView::SwitchToTemplateMode()
@@ -1036,7 +1049,6 @@ void EditorView::SetOpacityObject(int s)
 
 
 
-#include <QKeyEvent>
 #ifndef QT_NO_WHEELEVENT
 void EditorViewBasic::wheelEvent(QWheelEvent* e)
 {
@@ -1067,7 +1079,6 @@ void EditorViewBasic::zoomOut(int level)
     UpdateMatrix();
 }
 
-#include <QtMath>
 
 void EditorViewBasic::UpdateMatrix()
 {
@@ -1191,9 +1202,6 @@ void CreateSettingsWidget()
 }
 
 
-#include <QColorDialog>
-#include <QTextEdit>
-#include <QPushButton>
 
 void ObjectPropertyWindow::CreateObjectPropertyWindow()
 {
