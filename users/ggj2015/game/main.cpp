@@ -25,6 +25,12 @@ todo:
 - check player goal completion
 - determine agenda success or failure
 
+- agenda types:
+	- stockpile
+	- player attack
+	- planet destruction
+	- local
+
 */
 
 //
@@ -49,7 +55,7 @@ TIMER_DEFINE(g_appDrawTime, PerFrame, "App/Draw");
 #define CHARICON_SX 80
 #define CHARICON_SY 100
 
-#define PLAYER_STATS_TIME 5.f
+#define PLAYER_STATS_TIME (g_devMode ? 0.1f : 5.f)
 
 //
 
@@ -277,6 +283,29 @@ public:
 		return Calc::Max<int>(0, m_votingTimeStart + 180 - g_TimerRT.Time_get());
 	}
 
+	bool canSelectCharacter(int player)
+	{
+		if (player >= g_gameState->m_numPlayers)
+			return false;
+		if (g_gameState->m_players[player].m_isDead)
+			return false;
+		if (g_gameState->m_players[player].m_hasVoted)
+			return false;
+		return true;
+	}
+
+	bool canSelectTarget(int player, int target)
+	{
+		if (target == m_selectedCharacter)
+			return false;
+		if (g_gameState->m_players[player].m_isDead)
+			return false;
+		for (int i = 0; i < g_gameState->m_players[player].m_numSelectedTargets; ++i)
+			if (g_gameState->m_players[player].m_targetSelection[i] == target)
+				return false;
+		return true;
+	}
+
 	void tick()
 	{
 		if (m_state == State_SelectCharacter)
@@ -285,7 +314,7 @@ public:
 			{
 				Player & player = g_gameState->m_players[i];
 
-				if (!player.m_hasVoted && mouse.wentDown(BUTTON_LEFT))
+				if (canSelectCharacter(i) && mouse.wentDown(BUTTON_LEFT))
 				{
 					if (mouse.x >= m_characterIcons[i].x1 &&
 						mouse.y >= m_characterIcons[i].y1 &&
@@ -308,24 +337,26 @@ public:
 
 			for (int i = 0; i < NUM_VOTING_BUTTONS; ++i)
 			{
-				if (m_votingButtons[i].isClicked())
+				AgendaOption & option = g_gameState->m_currentAgenda.m_options[i];
+
+				if (option.m_isEnabled && m_votingButtons[i].isClicked())
 				{
 					// subtract cost
 
-					AgendaOption & option = g_gameState->m_currentAgenda.m_options[i];
+					player.m_resources += option.m_cost;
+					player.m_resourcesSpent = -option.m_cost;
 
-					player.m_resources.food -= option.m_cost.food;
-					player.m_resources.wealth -= option.m_cost.wealth;
-					player.m_resources.tech -= option.m_cost.tech;
+					if (option.m_isSabotage)
+						player.m_hasSabotaged = true;
 
-					if (g_gameState->m_currentAgenda.m_options[i].m_isAttack)
+					if (g_gameState->m_currentAgenda.m_options[i].m_isAttack || g_gameState->m_currentAgenda.m_options[i].m_numTargets > 0)
 					{
 						m_selectedOption = i;
 						m_state = State_SelectTarget;
 					}
 					else
 					{
-						if (g_gameState->m_players[m_selectedCharacter].vote(i, -1, false))
+						if (g_gameState->m_players[m_selectedCharacter].vote(i, false))
 						{
 							m_resultsAnim = ResultsAnim();
 							m_state = State_ShowResults;
@@ -343,7 +374,7 @@ public:
 					mouse.x <= m_abstainButton.x2 &&
 					mouse.y <= m_abstainButton.y2)
 				{
-					if (player.vote(-1, -1, true))
+					if (player.vote(-1, true))
 					{
 						m_resultsAnim = ResultsAnim();
 						m_state = State_ShowResults;
@@ -357,7 +388,7 @@ public:
 			{
 				if (getVotingTimeLeft() == 0)
 				{
-					if (player.vote(-1, -1, true))
+					if (player.vote(-1, true))
 					{
 						m_resultsAnim = ResultsAnim();
 						m_state = State_ShowResults;
@@ -373,20 +404,30 @@ public:
 			{
 				// todo : see if mouse was down on character
 
-				if (i != m_selectedCharacter && mouse.wentDown(BUTTON_LEFT))
+				if (canSelectTarget(m_selectedCharacter, i) && mouse.wentDown(BUTTON_LEFT))
 				{
 					if (mouse.x >= m_targetIcons[i].x1 &&
 						mouse.y >= m_targetIcons[i].y1 &&
 						mouse.x <= m_targetIcons[i].x2 &&
 						mouse.y <= m_targetIcons[i].y2)
 					{
-						if (g_gameState->m_players[m_selectedCharacter].vote(m_selectedOption, i, false))
+						Player & player = g_gameState->m_players[m_selectedCharacter];
+
+						player.m_targetSelection[player.m_numSelectedTargets++] = i;
+
+						if (player.m_numSelectedTargets == g_gameState->m_currentAgenda.m_options[m_selectedOption].m_numTargets)
 						{
-							m_resultsAnim = ResultsAnim();
-							m_state = State_ShowResults;
+							m_votingTimeStart = g_TimerRT.Time_get();
+							m_state = State_SelectOption;
+
+							if (g_gameState->m_players[m_selectedCharacter].vote(m_selectedOption, false))
+							{
+								m_resultsAnim = ResultsAnim();
+								m_state = State_ShowResults;
+							}
+							else
+								m_state = State_SelectCharacter;
 						}
-						else
-							m_state = State_SelectCharacter;
 						break;
 					}
 				}
@@ -412,7 +453,7 @@ public:
 
 				const CharacterIcon & icon = m_characterIcons[i];
 
-				if (i < g_gameState->m_numPlayers && !player.m_hasVoted)
+				if (canSelectCharacter(i))
 				{
 					setColor(colorWhite);
 					drawCharIcon(icon.x1, icon.y1, i, VOTING_CHAR_SCALE);
@@ -453,9 +494,17 @@ public:
 
 			// agenda text box
 
-			setFont("calibri.ttf");
-			setColor(colorWhite);
-			drawText(10, 10, 40, +1.f, +1.f, "Agenda");
+			setFont("orbi-bold.ttf");
+			setColor(Color::fromHex("eaffff"));
+			drawText(40, 70, 48, +1.f, +1.f, g_gameState->m_currentAgenda.m_title.c_str());
+
+			setFont("orbi-bold.ttf");
+			setColor(Color::fromHex("3bcac8"));
+			drawText(VOTING_REQ_X, VOTING_REQ_Y, 34, +1.f, +1.f, "REQ.");
+
+			setFont("orbi.ttf");
+			setColor(Color::fromHex("3bcac8"));
+			drawText(VOTING_REQ_X + 105, VOTING_REQ_Y, 34, +1.f, +1.f, "%s", g_gameState->m_currentAgenda.m_requirement.c_str());
 
 			if (g_devMode)
 			{
@@ -465,16 +514,16 @@ public:
 					VOTING_AGENDA_TEXTBOX_Y,
 					VOTING_AGENDA_TEXTBOX_X + VOTING_AGENDA_TEXTBOX_WIDTH,
 					VOTING_AGENDA_TEXTBOX_Y + VOTING_AGENDA_TEXTBOX_HEIGHT);
-
-				setFont("calibri.ttf");
-				setColor(colorWhite);
-				drawTextArea(
-						VOTING_AGENDA_TEXTBOX_X,
-						VOTING_AGENDA_TEXTBOX_Y,
-						VOTING_AGENDA_TEXTBOX_WIDTH,
-						30,
-						g_gameState->m_currentAgenda.m_description.c_str());
 			}
+
+			setFont("orbi.ttf");
+			setColor(Color::fromHex("3bcac8"));
+			drawTextArea(
+					VOTING_AGENDA_TEXTBOX_X,
+					VOTING_AGENDA_TEXTBOX_Y,
+					VOTING_AGENDA_TEXTBOX_WIDTH,
+					30,
+					g_gameState->m_currentAgenda.m_description.c_str());
 
 			// character icon
 
@@ -482,36 +531,43 @@ public:
 
 			// stats
 
-			const int statSize = 50;
+			const int statSize = 48;
 
-			setFont("calibri.ttf");
-			setColor(colorWhite);
+			setFont("electro.ttf");
+			setColor(Color::fromHex("43e981"));
 			drawText(VOTING_STAT_FOOD_X, VOTING_STAT_FOOD_Y, statSize, +1.f, +1.f, "%d",
 				g_gameState->m_players[m_selectedCharacter].m_resources.food);
+
+			setColor(Color::fromHex("e6e38f"));
 			drawText(VOTING_STAT_WEALTH_X, VOTING_STAT_WEALTH_Y, statSize, +1.f, +1.f, "%d",
 				g_gameState->m_players[m_selectedCharacter].m_resources.wealth);
+
+			setColor(Color::fromHex("5ed8ee"));
 			drawText(VOTING_STAT_TECH_X, VOTING_STAT_TECH_Y, statSize, +1.f, +1.f, "%d",
 				g_gameState->m_players[m_selectedCharacter].m_resources.tech);
-			drawText(VOTING_STAT_HAPPINESS_X, VOTING_STAT_HAPPINESS_Y, statSize, +1.f, +1.f, "%d",
-				-1);
 
 			// goal
 
-			setFont("calibri.ttf");
-			setColor(colorWhite);
+			/*
+			setFont("electro.ttf");
+			setColor(Color::fromHex("d3f7ff"));
 			drawText(VOTING_GOAL_X, VOTING_GOAL_Y, 40, +1.f, +1.f,
-				"Your goal:");
+				"YOUR GOAL:");
+			*/
+
+			setFont("electro.ttf");
+			setColor(Color::fromHex("d3f7ff"));
 			drawText(VOTING_GOAL_X, VOTING_GOAL_Y + 45, 40, +1.f, +1.f,
 				g_gameState->m_players[m_selectedCharacter].m_goal.m_description.c_str());
 
-			// todo : vote timer
+			// vote timer
 
-			setFont("calibri.ttf");
-			setColor(colorWhite);
+			setFont("orbi.ttf");
+			setColor(Color::fromHex("3bcac8"));
 			const int votingTimeLeft = getVotingTimeLeft();
 			drawText(VOTING_TIMER_X, VOTING_TIMER_Y, VOTING_TIMER_SIZE, 0.f, 1.f, "%d:%02d", votingTimeLeft / 60, votingTimeLeft % 60);
 
-			// todo : draw voting buttons
+			// draw voting buttons
 
 			for (int i = 0; i < NUM_VOTING_BUTTONS;++i)
 			{
@@ -519,17 +575,59 @@ public:
 
 				VotingButton & button = m_votingButtons[i];
 
-				setColor(colorGreen);
-				drawRectLine(
-					button.x1,
-					button.y1,
-					button.x2,
-					button.y2);
+				if (g_devMode)
+				{
+					setColor(colorGreen);
+					drawRectLine(
+						button.x1,
+						button.y1,
+						button.x2,
+						button.y2);
+				}
 
-				setFont("calibri.ttf");
-				setColor(colorWhite);
-				drawText(VOTING_OPTION_TEXT_X, VOTING_OPTION_TEXT_Y + i * VOTING_OPTION_DY,      40, 1.f, 1.f, option.m_caption.c_str());
+				setFont("orbi.ttf");
+				setColor(Color::fromHex("3bcac8"));
+				drawText(VOTING_OPTION_TEXT_X, VOTING_OPTION_TEXT_Y + i * VOTING_OPTION_DY,      34, 1.f, 1.f, option.m_caption.c_str());
 				drawText(VOTING_OPTION_TEXT_X, VOTING_OPTION_TEXT_Y + i * VOTING_OPTION_DY + 40, 20, 1.f, 1.f, option.m_text.c_str());
+
+				// food, wealth, tech
+
+				const Color colors[3] =
+				{
+					Color::fromHex("43e981"),
+					Color::fromHex("e6e38f"),
+					Color::fromHex("5ed8ee")
+				};
+
+				const int costs[3] =
+				{
+					option.m_cost.food,
+					option.m_cost.wealth,
+					option.m_cost.tech,
+				};
+
+				const int posX[2] =
+				{
+					VOTING_OPTION_COST_1_X,
+					VOTING_OPTION_COST_2_X
+				};
+
+				int idx = 0;
+
+				for (int c = 0; c < 3; ++c)
+				{
+					if (costs[c] != 0)
+					{
+						setFont("electro.ttf");
+						setColor(colors[c]);
+						drawText(posX[idx], VOTING_OPTION_COST_Y + i * VOTING_OPTION_DY, 36, +1.f, +1.f, "%+d", costs[c]);
+
+						idx++;
+
+						if (idx == 2)
+							break;
+					}
+				}
 			}
 
 			if (g_devMode)
@@ -555,7 +653,7 @@ public:
 			{
 				const CharacterIcon & icon = m_targetIcons[i];
 
-				if (i < g_gameState->m_numPlayers && i != m_selectedCharacter)
+				if (i < g_gameState->m_numPlayers && canSelectTarget(m_selectedCharacter, i))
 				{
 					setColor(colorWhite);
 					drawCharIcon(icon.x1, icon.y1, i, VOTING_CHAR_SCALE);
@@ -754,18 +852,12 @@ bool App::init()
 		//
 
 		g_gameState = new GameState();
-		g_gameState->m_numPlayers = g_devMode ? 2 : MAX_PLAYERS;
+		g_gameState->m_numPlayers = g_devMode ? 4 : MAX_PLAYERS;
 
 		g_votingScreen = new VotingScreen();
 		g_statsScreen = new StatsScreen();
 
 		// >> fixme : remove
-
-		AgendaEffect effect;
-
-		effect.load("onresult:success target:everyone food:1 wealth:2 tech:3 special:incomemod special1:0 special2:-1");
-
-		effect.apply(true, 0);
 
 		try
 		{

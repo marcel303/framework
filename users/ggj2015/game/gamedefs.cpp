@@ -40,6 +40,8 @@ OPTION_DEFINE(int, VOTING_AGENDA_TEXTBOX_X, "Voting Agenda/Textbox X");
 OPTION_DEFINE(int, VOTING_AGENDA_TEXTBOX_Y, "Voting Agenda/Textbox Y");
 OPTION_DEFINE(int, VOTING_AGENDA_TEXTBOX_WIDTH, "Voting Agenda/Textbox Width");
 OPTION_DEFINE(int, VOTING_AGENDA_TEXTBOX_HEIGHT, "Voting Agenda/Textbox Height");
+OPTION_DEFINE(int, VOTING_REQ_X, "Voting Agenda/Req X");
+OPTION_DEFINE(int, VOTING_REQ_Y, "Voting Agenda/Req Y");
 
 //
 
@@ -75,6 +77,10 @@ OPTION_DEFINE(int, VOTING_OPTION_TEXT_Y, "Voting Screen/Options/Text Y");
 OPTION_DEFINE(int, VOTING_OPTION_DY, "Voting Screen/Options/Spacing Y");
 OPTION_DEFINE(int, VOTING_OPTION_BUTTON_WIDTH, "Voting Screen/Options/Button Width");
 OPTION_DEFINE(int, VOTING_OPTION_BUTTON_HEIGHT, "Voting Screen/Options/Button Height");
+
+OPTION_DEFINE(int, VOTING_OPTION_COST_1_X, "Voting Cost/X1");
+OPTION_DEFINE(int, VOTING_OPTION_COST_2_X, "Voting Cost/X2");
+OPTION_DEFINE(int, VOTING_OPTION_COST_Y, "Voting Cost/Y");
 
 //
 

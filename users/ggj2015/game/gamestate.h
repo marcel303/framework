@@ -40,31 +40,27 @@ public:
 class Player
 {
 public:
+	bool m_isDead;
 	bool m_hasVoted;
 	bool m_hasAbstained;
+	bool m_hasSabotaged;
+	bool m_hasParticipated;
 	int m_voteSelection;
-	int m_targetSelection;
+	int m_targetSelection[3];
+	int m_numSelectedTargets;
 	PlayerGoal m_goal;
 
-	struct Resources
-	{
-		Resources()
-		{
-			memset(this, 0, sizeof(*this));
-		}
-
-		int food;
-		int wealth;
-		int tech;
-	} m_resources, m_oldResources;
+	Resources m_resources;
+	Resources m_resourcesSpent;
+	Resources m_oldResources;
 
 	Player();
 
-	bool vote(int selection, int target, bool hasAbstained);
+	bool vote(int selection, bool hasAbstained);
 	void abstain();
 
 	void newGame();
-	void nextRound();
+	void nextRound(bool isNewGame);
 };
 
 class GameState

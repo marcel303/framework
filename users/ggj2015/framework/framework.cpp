@@ -1036,6 +1036,28 @@ Color::Color(float r, float g, float b, float a)
 	this->a = a;
 }
 
+Color Color::fromHex(const char * str)
+{
+	if (strlen(str) == 6)
+	{
+		const uint32_t hex = std::stoul(str, 0, 16);
+		const float r = ((hex >> 16) & 0xff) / 255.f;
+		const float g = ((hex >>  8) & 0xff) / 255.f;
+		const float b = ((hex >>  0) & 0xff) / 255.f;
+		const float a = 1.f;
+		return Color(r, g, b, a);
+	}
+	else
+	{
+		const uint32_t hex = std::stoul(str, 0, 16);
+		const float r = ((hex >> 24) & 0xff) / 255.f;
+		const float g = ((hex >> 16) & 0xff) / 255.f;
+		const float b = ((hex >>  8) & 0xff) / 255.f;
+		const float a = ((hex >>  0) & 0xff) / 255.f;
+		return Color(r, g, b, a);
+	}
+}
+
 Color Color::interp(const Color & other, float t) const
 {
 	const float t1 = 1.f - t;
@@ -2678,7 +2700,7 @@ void drawTextArea(float x, float y, float sx, int size, const char * format, ...
 			*nextptr = temp;
 
 			textptr = nextptr;
-			y += size;
+			y += size * 11 / 10; // fixme : make this an option
 		}
 		gxPopMatrix();
 	}

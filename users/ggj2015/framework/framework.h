@@ -267,7 +267,8 @@ public:
 	Color();
 	explicit Color(int r, int g, int b, int a = 255);
 	explicit Color(float r, float g, float b, float a = 1.f);
-	
+
+	static Color fromHex(const char * str);
 	Color interp(const Color & other, float t) const;
 	
 	float r, g, b, a;

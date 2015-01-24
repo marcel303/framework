@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <string.h>
+#include "main.h"
 #include "framework.h"
 #include "gamerules.h"
 #include "gamestate.h"
@@ -28,13 +29,16 @@ bool PlayerGoal::isComplete(const Player & player) const
 }
 
 Player::Player()
-	: m_hasVoted(false)
+	: m_isDead(false)
+	, m_hasVoted(false)
 	, m_hasAbstained(false)
+	, m_hasParticipated(false)
 	, m_voteSelection(0)
+	, m_numSelectedTargets(0)
 {
 }
 
-bool Player::vote(int selection, int target, bool abstain)
+bool Player::vote(int selection, bool abstain)
 {
 	Assert(!m_hasVoted);
 	if (!m_hasVoted)
@@ -42,7 +46,6 @@ bool Player::vote(int selection, int target, bool abstain)
 		m_hasVoted = true;
 		m_hasAbstained = abstain;
 		m_voteSelection = selection;
-		m_targetSelection = target;
 
 		// check if everyone has voted
 
@@ -63,6 +66,8 @@ bool Player::vote(int selection, int target, bool abstain)
 
 void Player::newGame()
 {
+	m_isDead = false;
+
 	m_resources.food = 5;
 	m_resources.wealth = 5;
 	m_resources.tech = 5;
@@ -70,10 +75,20 @@ void Player::newGame()
 	m_oldResources = m_resources;
 }
 
-void Player::nextRound()
+void Player::nextRound(bool isNewGame)
 {
-	Assert(m_hasVoted);
+	Assert(m_hasVoted || !isNewGame);
 	m_hasVoted = false;
+
+	m_hasAbstained = false;
+	m_hasSabotaged = false;
+	m_hasParticipated = false;
+
+	m_numSelectedTargets = 0;
+
+	m_resources.food++;
+	m_resources.wealth++;
+	m_resources.tech++;
 }
 
 //
@@ -88,6 +103,7 @@ void GameState::setupPlayerGoals()
 {
 	// fixme : need at least one unique goal per player..
 
+	for (int i = 0; i < 10; ++i)
 	{
 		PlayerGoal goal;
 		goal.m_description = "Gain 15 food";
@@ -148,6 +164,8 @@ void GameState::loadAgendas(const std::vector<std::string> & lines)
 	for (size_t i = 0; i < lines.size(); ++i)
 	{
 		const std::string line = String::Trim(lines[i]);
+		if (line.empty())
+			continue;
 
 		if (line == "agenda")
 		{
@@ -168,8 +186,25 @@ void GameState::loadAgendas(const std::vector<std::string> & lines)
 		{
 			if (mode == Mode_Agenda)
 			{
-				if (startsWith(line, "description", substr))
+				if (startsWith(line, "title", substr))
+					agenda->m_title = String::Trim(substr);
+				else if (startsWith(line, "description", substr))
 					agenda->m_description = String::Trim(substr);
+				else if (startsWith(line, "requirement", substr))
+					agenda->m_requirement = String::Trim(substr);
+				else
+				{
+					Dictionary d;
+					d.parse(line);
+					agenda->m_type = d.getString("type", "");
+					if (agenda->m_type.empty())
+						logError("invalid agenda type");
+					agenda->m_percentage = d.getInt("percentage", 100);
+					agenda->m_race = d.getInt("race", 0);
+					agenda->m_resourceConditions.food = d.getInt("food", 0);
+					agenda->m_resourceConditions.wealth = d.getInt("wealth", 0);
+					agenda->m_resourceConditions.tech = d.getInt("tech", 0);
+				}
 			}
 			else if (mode == Mode_AgendaOptions)
 			{
@@ -179,17 +214,24 @@ void GameState::loadAgendas(const std::vector<std::string> & lines)
 				{
 					Dictionary d;
 					d.parse(line);
+					option.m_isEnabled = true;
 					option.m_isAttack = d.getBool("isattack", false);
+					option.m_isSabotage = d.getBool("sabotage", false);
+					option.m_isBribe = d.getBool("bribe", false);
+					option.m_numTargets = d.getInt("numtargets", 0);
 					option.m_cost.food = d.getInt("food", 0);
 					option.m_cost.wealth = d.getInt("wealth", 0);
 					option.m_cost.tech = d.getInt("tech", 0);
+					option.m_bribe.wealth = d.getInt("bribe_wealth", 0);
 				}
 				if (optionCounter == 1)
-					option.m_caption = line;
+					option.m_effect.load(line);
 				if (optionCounter == 2)
+					option.m_caption = line;
+				if (optionCounter == 3)
 					option.m_text = line;
 
-				optionCounter = (optionCounter + 1) % 3;
+				optionCounter = (optionCounter + 1) % 4;
 
 				if (optionCounter == 0)
 				{
@@ -234,7 +276,10 @@ void GameState::randomizeAgendaDeck()
 
 	m_agendas = m_agendasLoaded;
 
-	std::random_shuffle(m_agendas.begin(), m_agendas.end());
+	if (g_devMode)
+		std::reverse(m_agendas.begin(), m_agendas.end());
+	else
+		std::random_shuffle(m_agendas.begin(), m_agendas.end());
 }
 
 Agenda GameState::pickAgendaFromDeck()
@@ -271,6 +316,29 @@ void GameState::nextRound(bool applyCurrentAgenda)
 {
 	Assert(m_state == State_Playing);
 
+	// validate target list
+
+	for (int i = 0; i < m_numPlayers; ++i)
+	{
+		if (m_players[i].m_numSelectedTargets == 0)
+			m_players[i].m_targetSelection[m_players[i].m_numSelectedTargets++] = i;
+	}
+
+	// apply bribes
+
+	for (int i = 0; i < m_numPlayers; ++i)
+	{
+		AgendaOption & option = m_currentAgenda.m_options[m_players[i].m_voteSelection];
+
+		if (option.m_isBribe)
+		{
+			for (int t = 0; t < m_players[i].m_numSelectedTargets; ++t)
+			{
+				m_players[m_players[i].m_targetSelection[t]].m_resources += option.m_bribe;
+			}
+		}
+	}
+
 	for (int i = 0; i < m_numPlayers; ++i)
 	{
 		m_players[i].m_oldResources = m_players[i].m_resources;
@@ -282,7 +350,66 @@ void GameState::nextRound(bool applyCurrentAgenda)
 
 		bool success = true;
 
-		m_currentAgenda.apply(success, 0);
+		if (m_currentAgenda.m_type == "stockpile")
+		{
+			bool sabotaged = false;
+
+			Resources total;
+
+			for (int i = 0; i < m_numPlayers; ++i)
+			{
+				if (m_players[i].m_hasSabotaged)
+					sabotaged = true;
+				else
+				{
+					total += m_players[i].m_resourcesSpent;
+					m_players[i].m_hasParticipated = true;
+				}
+			}
+
+			success &= (m_currentAgenda.m_resourceConditions.food == 0) || (total.food >= m_currentAgenda.m_resourceConditions.food);
+			success &= (m_currentAgenda.m_resourceConditions.wealth == 0) || (total.wealth >= m_currentAgenda.m_resourceConditions.wealth);
+			success &= (m_currentAgenda.m_resourceConditions.tech == 0) || (total.tech >= m_currentAgenda.m_resourceConditions.tech);
+		}
+		else if (m_currentAgenda.m_type == "attack")
+		{
+		}
+		else if (m_currentAgenda.m_type == "majorityvote")
+		{
+			// check for majority vote
+
+			int numParticipants = 0;
+
+			for (int i = 0; i < m_numPlayers; ++i)
+			{
+				if (m_players[i].m_voteSelection == 0)
+				{
+					numParticipants++;
+					m_players[i].m_hasParticipated = true;
+				}
+			}
+
+			success &= numParticipants >= m_numPlayers * m_currentAgenda.m_percentage / 100;
+		}
+		else if (m_currentAgenda.m_type == "local")
+		{
+		}
+		else
+		{
+			logError("invalid agenda type: %s", m_currentAgenda.m_type.c_str());
+		}
+
+		for (int i = 0; i < m_numPlayers; ++i)
+		{
+			if (m_players[i].m_isDead)
+				continue;
+
+			AgendaOption & option = m_currentAgenda.m_options[m_players[i].m_voteSelection];
+
+			option.m_effect.apply(success, i, m_players[i].m_targetSelection, m_players[i].m_numSelectedTargets);
+		}
+
+		m_currentAgenda.apply(success, 0, 0);
 	}
 
 	// check for player goal completion
@@ -291,7 +418,7 @@ void GameState::nextRound(bool applyCurrentAgenda)
 
 	for (int i = 0; i < m_numPlayers; ++i)
 	{
-		if (m_players[i].m_goal.isComplete(m_players[i]))
+		if (!m_players[i].m_isDead && m_players[i].m_goal.isComplete(m_players[i]))
 		{
 			winningPlayers.push_back(i);
 		}
@@ -305,7 +432,7 @@ void GameState::nextRound(bool applyCurrentAgenda)
 	{
 		for (int i = 0; i < m_numPlayers; ++i)
 		{
-			m_players[i].nextRound();
+			m_players[i].nextRound(applyCurrentAgenda);
 		}
 
 		m_currentAgenda = pickAgendaFromDeck();
