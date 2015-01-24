@@ -1,11 +1,14 @@
 #include "Calc.h"
+#include "FileStream.h"
 #include "framework.h"
 #include "gamedefs.h"
+#include "gamerules.h"
 #include "gamestate.h"
 #include "main.h"
 #include "OptionMenu.h"
 #include "StatTimerMenu.h"
 #include "StatTimers.h"
+#include "StreamReader.h"
 #include "StringBuilder.h"
 #include "Timer.h"
 
@@ -32,6 +35,9 @@ TIMER_DEFINE(g_appDrawTime, PerFrame, "App/Draw");
 #define CHARICON_SY 100
 
 #define NUM_VOTING_BUTTONS 4
+
+#define CHARACTER_SELECT_OFFSET 200
+#define TARGET_SELECT_OFFSET 400
 
 //
 
@@ -99,12 +105,24 @@ public:
 		int x2, y2;
 	} m_backButton;
 
+	enum State
+	{
+		State_SelectCharacter,
+		State_SelectOption,
+		State_SelectTarget,
+		State_ShowResults
+	};
+
+	State m_state;
 	int m_selectedCharacter;
+	int m_selectedOption;
 	CharacterIcon m_characterIcons[MAX_PLAYERS];
 	VotingButton m_votingButtons[NUM_VOTING_BUTTONS];
 
 	VotingScreen()
-		: m_selectedCharacter(-1)
+		: m_state(State_SelectCharacter)
+		, m_selectedCharacter(0)
+		, m_selectedOption(0)
 	{
 		setupCharacterIcons();
 
@@ -140,7 +158,7 @@ public:
 
 	void tick()
 	{
-		if (m_selectedCharacter == -1)
+		if (m_state == State_SelectCharacter)
 		{
 			for (int i = 0; i < g_gameState->m_numPlayers; ++i)
 			{
@@ -149,17 +167,18 @@ public:
 				if (!g_gameState->m_players[i].m_hasVoted && mouse.wentDown(BUTTON_LEFT))
 				{
 					if (mouse.x >= m_characterIcons[i].x1 &&
-						mouse.y >= m_characterIcons[i].y1 &&
+						mouse.y >= m_characterIcons[i].y1 + CHARACTER_SELECT_OFFSET &&
 						mouse.x <= m_characterIcons[i].x2 &&
-						mouse.y <= m_characterIcons[i].y2)
+						mouse.y <= m_characterIcons[i].y2 + CHARACTER_SELECT_OFFSET)
 					{
 						m_selectedCharacter = i;
+						m_state = State_SelectOption;
 						break;
 					}
 				}
 			}
 		}
-		else
+		else if (m_state == State_SelectOption)
 		{
 			// check voting option
 
@@ -169,9 +188,20 @@ public:
 				{
 					// commit vote
 
-					g_gameState->m_players[m_selectedCharacter].vote(i);
+					// todo : base choice upon option info
 
-					m_selectedCharacter = -1;
+					if (false)
+					{
+						if (g_gameState->m_players[m_selectedCharacter].vote(i))
+							m_state = State_ShowResults;
+						else
+							m_state = State_SelectTarget;
+					}
+					else
+					{
+						m_selectedOption = i;
+						m_state = State_SelectTarget;
+					}
 				}
 			}
 
@@ -184,18 +214,56 @@ public:
 					mouse.x <= m_backButton.x2 &&
 					mouse.y <= m_backButton.y2)
 				{
-					m_selectedCharacter = -1;
+					m_state = State_SelectCharacter;
 				}
+			}
+		}
+		else if (m_state == State_SelectTarget)
+		{
+			for (int i = 0; i < g_gameState->m_numPlayers; ++i)
+			{
+				// todo : see if mouse was down on character
+
+				if (i != m_selectedCharacter && mouse.wentDown(BUTTON_LEFT))
+				{
+					if (mouse.x >= m_characterIcons[i].x1 &&
+						mouse.y >= m_characterIcons[i].y1 + TARGET_SELECT_OFFSET &&
+						mouse.x <= m_characterIcons[i].x2 &&
+						mouse.y <= m_characterIcons[i].y2 + TARGET_SELECT_OFFSET)
+					{
+						if (g_gameState->m_players[m_selectedCharacter].vote(m_selectedOption, i))
+							m_state = State_ShowResults;
+						else
+							m_state = State_SelectCharacter;
+						break;
+					}
+				}
+			}
+		}
+		else if (m_state == State_ShowResults)
+		{
+			// todo : use a timer to transition to the next screen
+
+			if (mouse.wentDown(BUTTON_LEFT))
+			{
+				m_state = State_SelectCharacter;
 			}
 		}
 	}
 
 	void draw()
 	{
-		// todo : draw background
+		// draw background
 
-		if (m_selectedCharacter == -1)
+		setColor(colorWhite);
+		Sprite("voting-back.png").draw();
+
+		if (m_state == State_SelectCharacter)
 		{
+			setFont("calibri.ttf");
+			setColor(colorWhite);
+			drawText(GFX_SX / 2, 20, 40, 0.f, +1.f, "<Select Character>");
+
 			for (int i = 0; i < MAX_PLAYERS; ++i)
 			{
 				const CharacterIcon & icon = m_characterIcons[i];
@@ -205,9 +273,9 @@ public:
 					setColor(colorGreen);
 					drawRect(
 						icon.x1,
-						icon.y1,
+						icon.y1 + CHARACTER_SELECT_OFFSET,
 						icon.x2,
-						icon.y2);
+						icon.y2 + CHARACTER_SELECT_OFFSET);
 				}
 				else
 				{
@@ -216,17 +284,17 @@ public:
 					setColor(colorRed);
 					drawRect(
 						icon.x1,
-						icon.y1,
+						icon.y1 + CHARACTER_SELECT_OFFSET,
 						icon.x2,
-						icon.y2);
+						icon.y2 + CHARACTER_SELECT_OFFSET);
 				}
 			}
 		}
-		else
+		else if (m_state == State_SelectOption)
 		{
 			setFont("calibri.ttf");
 			setColor(colorWhite);
-			drawText(GFX_SX / 2, 20, 24, 0.f, +1.f, "<Character Name>");
+			drawText(GFX_SX / 2, 20, 40, 0.f, +1.f, "<Character Name>");
 
 			// todo : draw character icon
 
@@ -249,6 +317,10 @@ public:
 					button.y1,
 					button.x2,
 					button.y2);
+
+				setFont("calibri.ttf");
+				setColor(colorBlack);
+				drawText((button.x1 + button.x2) / 2, (button.y1 + button.y2) / 2, 40, 0.f, 0.f, "%c", 'A' + i);
 			}
 
 			// todo : draw back button
@@ -259,6 +331,50 @@ public:
 				m_backButton.y1,
 				m_backButton.x2,
 				m_backButton.y2);
+
+			setFont("calibri.ttf");
+			setColor(colorBlack);
+			drawText((m_backButton.x1 + m_backButton.x2) / 2, (m_backButton.y1 + m_backButton.y2) / 2, 40, 0.f, 0.f, "Back");
+		}
+		else if (m_state == State_SelectTarget)
+		{
+			setFont("calibri.ttf");
+			setColor(colorWhite);
+			drawText(GFX_SX / 2, 20, 40, 0.f, +1.f, "<Select Target>");
+
+			for (int i = 0; i < MAX_PLAYERS; ++i)
+			{
+				const CharacterIcon & icon = m_characterIcons[i];
+
+				if (i < g_gameState->m_numPlayers && i != m_selectedCharacter)
+				{
+					setColor(colorGreen);
+					drawRect(
+						icon.x1,
+						icon.y1 + TARGET_SELECT_OFFSET,
+						icon.x2,
+						icon.y2 + TARGET_SELECT_OFFSET);
+				}
+				else
+				{
+					// todo : draw character icon in disabled state
+
+					setColor(colorRed);
+					drawRect(
+						icon.x1,
+						icon.y1 + TARGET_SELECT_OFFSET,
+						icon.x2,
+						icon.y2 + TARGET_SELECT_OFFSET);
+				}
+			}
+		}
+		else if (m_state == State_ShowResults)
+		{
+			setFont("calibri.ttf");
+			setColor(colorWhite);
+			drawText(GFX_SX / 2, 20, 40, 0.f, +1.f, "<Results>");
+
+			// todo : show how end of round effects each player
 		}
 	}
 };
@@ -276,7 +392,17 @@ public:
 
 	void draw()
 	{
-		// todo : draw background
+		gxMatrixMode(GL_MODELVIEW);
+		gxPushMatrix();
+
+		gxTranslatef(GFX_SX, 0, 0);
+
+		// draw background
+
+		setColor(colorWhite);
+		Sprite("overview-back.png").draw();
+
+		gxPopMatrix();
 	}
 };
 
@@ -287,38 +413,6 @@ static StatsScreen * g_statsScreen = 0;
 
 static void HandleAction(const std::string & action, const Dictionary & args)
 {
-}
-
-//
-
-void applyLightMap(Surface & colormap, Surface & lightmap, Surface & dest)
-{
-	// apply lightmap
-
-	setBlend(BLEND_OPAQUE);
-	pushSurface(&dest);
-	{
-		Shader lightShader("lightmap");
-		setShader(lightShader);
-
-		glActiveTexture(GL_TEXTURE0);
-		lightShader.setTexture("colormap", 0, colormap.getTexture());
-		lightShader.setTexture("lightmap", 1, lightmap.getTexture());
-
-		drawRect(0, 0, colormap.getWidth(), colormap.getHeight());
-
-		lightShader.setTexture("colormap", 0, 0);
-		lightShader.setTexture("lightmap", 1, 0);
-
-		clearShader();
-
-		glActiveTexture(GL_TEXTURE0 + 1);
-		glDisable(GL_TEXTURE_2D);
-		glActiveTexture(GL_TEXTURE0 + 0);
-		glDisable(GL_TEXTURE_2D);
-	}
-	popSurface();
-	setBlend(BLEND_ALPHA);
 }
 
 //
@@ -354,7 +448,7 @@ bool App::init()
 
 	framework.actionHandler = HandleAction;
 
-	if (framework.init(0, 0, GFX_SX, GFX_SY))
+	if (framework.init(0, 0, GFX_SX * 2, GFX_SY))
 	{
 		if (!g_devMode)
 		{
@@ -375,7 +469,30 @@ bool App::init()
 		g_votingScreen = new VotingScreen();
 		g_statsScreen = new StatsScreen();
 
-		//
+		// >> fixme : remove
+
+		AgendaEffect effect;
+
+		effect.load("onresult:success target:everyone food:1 wealth:2 tech:3 special:incomemod special1:0 special2:-1");
+
+		effect.apply(true, 0);
+
+		try
+		{
+			FileStream stream;
+			stream.Open("ruleset.txt", (OpenMode)(OpenMode_Read | OpenMode_Text));
+			StreamReader reader(&stream, false);
+			std::vector<std::string> lines = reader.ReadAllLines();
+			g_gameState->loadAgendas(lines);
+		}
+		catch (std::exception & e)
+		{
+			logError(e.what());
+		}
+
+		// << fixme : remove
+
+		g_gameState->newGame();
 
 		return true;
 	}

@@ -1,6 +1,8 @@
 #pragma once
 
+#include <vector>
 #include "Debugging.h"
+#include "gamerules.h"
 
 #define MAX_PLAYERS 10
 
@@ -13,10 +15,18 @@ class Player
 {
 public:
 	bool m_hasVoted;
+	int m_voteSelection;
+
+	struct
+	{
+		int food;
+		int wealth;
+		int tech;
+	} m_resources;
 
 	Player();
 
-	void vote(int selection);
+	bool vote(int selection, int target = -1);
 	void nextRound();
 };
 
@@ -26,6 +36,16 @@ public:
 	Player m_players[MAX_PLAYERS];
 	int m_numPlayers;
 
+	std::vector<Agenda> m_agendasLoaded;
+	std::vector<Agenda> m_agendas;
+	Agenda m_currentAgenda;
+
 	GameState();
-	void nextRound();
+
+	void loadAgendas(const std::vector<std::string> & lines);
+	void randomizeAgendaDeck();
+	Agenda pickAgendaFromDeck();
+
+	void newGame();
+	void nextRound(bool applyCurrentAgenda);
 };
