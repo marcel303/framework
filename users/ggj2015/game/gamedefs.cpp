@@ -2,6 +2,7 @@
 
 OPTION_DEFINE(int, VOTING_CHAR_WIDTH, "Voting Screen/Char Select/Char Width");
 OPTION_DEFINE(int, VOTING_CHAR_HEIGHT, "Voting Screen/Char Select/Char Height");
+OPTION_DEFINE(float, VOTING_CHAR_SCALE, "Voting Screen/Char Select/Char Scale");
 
 OPTION_DEFINE(int, VOTING_CHAR1_X, "Voting Screen/Char Select/Char1 X");
 OPTION_DEFINE(int, VOTING_CHAR1_Y, "Voting Screen/Char Select/Char1 Y");
@@ -51,6 +52,7 @@ OPTION_DEFINE(int, VOTING_ABSTAIN_HEIGHT, "Voting Abstain/Height");
 
 OPTION_DEFINE(int, VOTING_CHAR_X, "Voting Char/Y");
 OPTION_DEFINE(int, VOTING_CHAR_Y, "Voting Char/X");
+OPTION_DEFINE(float, VOTING_OPTION_CHAR_SCALE, "Voting Char/Scale");
 
 OPTION_DEFINE(int, VOTING_GOAL_X, "Voting Goal/X");
 OPTION_DEFINE(int, VOTING_GOAL_Y, "Voting Goal/X");
@@ -68,8 +70,17 @@ OPTION_DEFINE(int, VOTING_STAT_HAPPINESS_Y, "Voting Stats/Happiness Y");
 
 OPTION_DEFINE(int, VOTING_OPTION_X, "Voting Screen/Options/X");
 OPTION_DEFINE(int, VOTING_OPTION_Y, "Voting Screen/Options/Y");
+OPTION_DEFINE(int, VOTING_OPTION_TEXT_X, "Voting Screen/Options/Text X");
+OPTION_DEFINE(int, VOTING_OPTION_TEXT_Y, "Voting Screen/Options/Text Y");
 OPTION_DEFINE(int, VOTING_OPTION_DY, "Voting Screen/Options/Spacing Y");
-OPTION_DEFINE(int, VOTING_OPTION_BUTTON_SIZE, "Voting Screen/Options/Button Size");
+OPTION_DEFINE(int, VOTING_OPTION_BUTTON_WIDTH, "Voting Screen/Options/Button Width");
+OPTION_DEFINE(int, VOTING_OPTION_BUTTON_HEIGHT, "Voting Screen/Options/Button Height");
+
+//
+
+OPTION_DEFINE(int, VOTING_TIMER_X, "Voting Screen/Timer/X");
+OPTION_DEFINE(int, VOTING_TIMER_Y, "Voting Screen/Timer/Y");
+OPTION_DEFINE(int, VOTING_TIMER_SIZE, "Voting Screen/Timer/Size");
 
 //
 

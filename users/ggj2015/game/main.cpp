@@ -27,8 +27,6 @@ todo:
 
 */
 
-#define CHAR_SCALE_NORMAL .5f
-#define CHAR_SCALE_LARGE 1.f
 //
 
 OPTION_DECLARE(bool, g_devMode, false);
@@ -67,8 +65,7 @@ GameState * g_gameState = 0;
 static void drawCharIcon(int x, int y, int index, float scale)
 {
 	char filename[64];
-	//sprintf_s(filename, sizeof(filename), "portrait%d.png", index + 1);
-	sprintf_s(filename, sizeof(filename), "portrait%d.png", 1);
+	sprintf_s(filename, sizeof(filename), "portrait%d.png", index + 1);
 	Sprite(filename).drawEx(x, y, 0.f, scale);
 }
 
@@ -108,8 +105,8 @@ public:
 		{
 			x1 = x;
 			y1 = y;
-			x2 = x + VOTING_OPTION_BUTTON_SIZE;
-			y2 = y + VOTING_OPTION_BUTTON_SIZE;
+			x2 = x + VOTING_OPTION_BUTTON_WIDTH;
+			y2 = y + VOTING_OPTION_BUTTON_HEIGHT;
 		}
 
 		bool isClicked() const
@@ -149,6 +146,7 @@ public:
 	CharacterIcon m_characterIcons[MAX_PLAYERS];
 	CharacterIcon m_targetIcons[MAX_PLAYERS];
 	VotingButton m_votingButtons[NUM_VOTING_BUTTONS];
+	int m_votingTimeStart;
 
 	struct ResultsAnim
 	{
@@ -176,6 +174,7 @@ public:
 		: m_state(State_SelectCharacter)
 		, m_selectedCharacter(0)
 		, m_selectedOption(0)
+		, m_votingTimeStart(0)
 	{
 		setupCharacterIcons();
 		setupTargetIcons();
@@ -273,6 +272,11 @@ public:
 		}
 	}
 
+	int getVotingTimeLeft() const
+	{
+		return Calc::Max<int>(0, m_votingTimeStart + 180 - g_TimerRT.Time_get());
+	}
+
 	void tick()
 	{
 		if (m_state == State_SelectCharacter)
@@ -289,6 +293,7 @@ public:
 						mouse.y <= m_characterIcons[i].y2)
 					{
 						m_selectedCharacter = i;
+						m_votingTimeStart = g_TimerRT.Time_get();
 						m_state = State_SelectOption;
 						break;
 					}
@@ -347,6 +352,20 @@ public:
 						m_state = State_SelectCharacter;
 				}
 			}
+
+			if (m_state == State_SelectOption)
+			{
+				if (getVotingTimeLeft() == 0)
+				{
+					if (player.vote(-1, -1, true))
+					{
+						m_resultsAnim = ResultsAnim();
+						m_state = State_ShowResults;
+					}
+					else
+						m_state = State_SelectCharacter;
+				}
+			}
 		}
 		else if (m_state == State_SelectTarget)
 		{
@@ -387,10 +406,6 @@ public:
 			setColor(colorWhite);
 			Sprite("voting-back.png").draw();
 
-			setFont("calibri.ttf");
-			setColor(colorWhite);
-			drawText(GFX_SX / 2, 20, 40, 0.f, +1.f, "<Select Character>");
-
 			for (int i = 0; i < MAX_PLAYERS; ++i)
 			{
 				Player & player = g_gameState->m_players[i];
@@ -400,7 +415,7 @@ public:
 				if (i < g_gameState->m_numPlayers && !player.m_hasVoted)
 				{
 					setColor(colorWhite);
-					drawCharIcon(icon.x1, icon.y1, i, CHAR_SCALE_NORMAL);
+					drawCharIcon(icon.x1, icon.y1, i, VOTING_CHAR_SCALE);
 
 					if (g_devMode)
 					{
@@ -417,7 +432,7 @@ public:
 					// todo : draw character icon in disabled state
 
 					setColor(colorRed);
-					drawCharIcon(icon.x1, icon.y1, i, CHAR_SCALE_NORMAL);
+					drawCharIcon(icon.x1, icon.y1, i, VOTING_CHAR_SCALE);
 
 					if (g_devMode)
 					{
@@ -453,23 +468,17 @@ public:
 
 				setFont("calibri.ttf");
 				setColor(colorWhite);
-				std::vector<std::string> lines;
-				splitString(g_gameState->m_currentAgenda.m_description, lines, '!');
-				for (size_t i = 0; i < lines.size(); ++i)
-				{
-					std::string line = String::Trim(lines[i]);
-					drawText(
+				drawTextArea(
 						VOTING_AGENDA_TEXTBOX_X,
-						VOTING_AGENDA_TEXTBOX_Y + i * 40,
+						VOTING_AGENDA_TEXTBOX_Y,
+						VOTING_AGENDA_TEXTBOX_WIDTH,
 						30,
-						+1.f, +1.f,
-						line.c_str());
-				}
+						g_gameState->m_currentAgenda.m_description.c_str());
 			}
 
 			// character icon
 
-			drawCharIcon(VOTING_CHAR_X, VOTING_CHAR_Y, m_selectedCharacter, CHAR_SCALE_LARGE);
+			drawCharIcon(VOTING_CHAR_X, VOTING_CHAR_Y, m_selectedCharacter, VOTING_OPTION_CHAR_SCALE);
 
 			// stats
 
@@ -497,6 +506,11 @@ public:
 
 			// todo : vote timer
 
+			setFont("calibri.ttf");
+			setColor(colorWhite);
+			const int votingTimeLeft = getVotingTimeLeft();
+			drawText(VOTING_TIMER_X, VOTING_TIMER_Y, VOTING_TIMER_SIZE, 0.f, 1.f, "%d:%02d", votingTimeLeft / 60, votingTimeLeft % 60);
+
 			// todo : draw voting buttons
 
 			for (int i = 0; i < NUM_VOTING_BUTTONS;++i)
@@ -505,8 +519,8 @@ public:
 
 				VotingButton & button = m_votingButtons[i];
 
-				setColor(colorBlack);
-				drawRect(
+				setColor(colorGreen);
+				drawRectLine(
 					button.x1,
 					button.y1,
 					button.x2,
@@ -514,8 +528,8 @@ public:
 
 				setFont("calibri.ttf");
 				setColor(colorWhite);
-				drawText(button.x2, button.y1 + 0, 40, 1.f, 1.f, option.m_caption.c_str());
-				drawText(button.x2, button.y1 + 40, 20, 1.f, 1.f, option.m_text.c_str());
+				drawText(VOTING_OPTION_TEXT_X, VOTING_OPTION_TEXT_Y + i * VOTING_OPTION_DY,      40, 1.f, 1.f, option.m_caption.c_str());
+				drawText(VOTING_OPTION_TEXT_X, VOTING_OPTION_TEXT_Y + i * VOTING_OPTION_DY + 40, 20, 1.f, 1.f, option.m_text.c_str());
 			}
 
 			if (g_devMode)
@@ -544,7 +558,7 @@ public:
 				if (i < g_gameState->m_numPlayers && i != m_selectedCharacter)
 				{
 					setColor(colorWhite);
-					drawCharIcon(icon.x1, icon.y1, i, CHAR_SCALE_NORMAL);
+					drawCharIcon(icon.x1, icon.y1, i, VOTING_CHAR_SCALE);
 
 					if (g_devMode)
 					{
@@ -561,7 +575,7 @@ public:
 					// draw character icon in disabled state
 
 					setColor(colorRed);
-					drawCharIcon(icon.x1, icon.y1, i, CHAR_SCALE_NORMAL);
+					drawCharIcon(icon.x1, icon.y1, i, VOTING_CHAR_SCALE);
 
 					if (g_devMode)
 					{
@@ -595,7 +609,7 @@ public:
 
 					int y = GFX_SY/3;
 
-					drawCharIcon(GFX_SX/2, y, m_resultsAnim.player, CHAR_SCALE_NORMAL);
+					drawCharIcon(GFX_SX/2, y, m_resultsAnim.player, VOTING_CHAR_SCALE);
 					y += VOTING_CHAR_HEIGHT;
 
 					const int foodChange = player.m_resources.food - player.m_oldResources.food;
