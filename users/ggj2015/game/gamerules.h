@@ -1,6 +1,34 @@
 #pragma once
 
 #include <string>
+#include "gamedefs.h"
+
+class AgendaOption
+{
+public:
+	std::string m_caption;
+	std::string m_text;
+	bool m_isAttack;
+
+	struct Cost
+	{
+		Cost()
+		{
+			memset(this, 0, sizeof(*this));
+		}
+
+		int food;
+		int wealth;
+		int tech;
+	} m_cost;
+
+	AgendaOption()
+		: m_isAttack(false)
+	{
+	}
+
+	void parse(const std::string & line);
+};
 
 class AgendaEffect
 {
@@ -50,6 +78,14 @@ public:
 class Agenda
 {
 public:
+	Agenda()
+		: m_numOptions(0)
+	{
+	}
+
+	std::string m_description;
+	AgendaOption m_options[NUM_VOTING_BUTTONS];
+	int m_numOptions;
 	std::vector<AgendaEffect> m_effects;
 
 	void apply(bool success, int target)

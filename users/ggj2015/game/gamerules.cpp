@@ -2,6 +2,15 @@
 #include "gamerules.h"
 #include "gamestate.h"
 
+void AgendaOption::parse(const std::string & line)
+{
+	Dictionary d;
+	d.parse(line);
+
+	m_caption = d.getString("caption", "[caption]");
+	m_text = d.getString("text", "[text]");
+}
+
 void AgendaEffect::load(const std::string & text)
 {
 	Dictionary d;

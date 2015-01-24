@@ -10,8 +10,25 @@
 #include "StatTimers.h"
 #include "StreamReader.h"
 #include "StringBuilder.h"
+#include "StringEx.h"
 #include "Timer.h"
 
+/*
+
+todo:
+
+- beamer display
+- results screen
+- add option select timer
+- add agenda 'attack' type -> display
+- add agenda discussion timer
+- check player goal completion
+- determine agenda success or failure
+
+*/
+
+#define CHAR_SCALE_NORMAL .5f
+#define CHAR_SCALE_LARGE 1.f
 //
 
 OPTION_DECLARE(bool, g_devMode, false);
@@ -34,15 +51,26 @@ TIMER_DEFINE(g_appDrawTime, PerFrame, "App/Draw");
 #define CHARICON_SX 80
 #define CHARICON_SY 100
 
-#define NUM_VOTING_BUTTONS 4
+//
 
-#define CHARACTER_SELECT_OFFSET 200
-#define TARGET_SELECT_OFFSET 400
+void splitString(const std::string & str, std::vector<std::string> & result, char c);
 
 //
 
 App * g_app = 0;
 GameState * g_gameState = 0;
+
+//
+
+static void drawCharIcon(int x, int y, int index, float scale)
+{
+	char filename[64];
+	//sprintf_s(filename, sizeof(filename), "portrait%d.png", index + 1);
+	sprintf_s(filename, sizeof(filename), "portrait%d.png", 1);
+	Sprite(filename).drawEx(x, y, 0.f, scale);
+}
+
+//
 
 class VotingScreen
 {
@@ -76,10 +104,10 @@ public:
 
 		void setup(int x, int y)
 		{
-			x1 = x - 100;
+			x1 = x;
 			y1 = y;
-			x2 = x + 100;
-			y2 = y + 50;
+			x2 = x + VOTING_OPTION_BUTTON_SIZE;
+			y2 = y + VOTING_OPTION_BUTTON_SIZE;
 		}
 
 		bool isClicked() const
@@ -117,6 +145,7 @@ public:
 	int m_selectedCharacter;
 	int m_selectedOption;
 	CharacterIcon m_characterIcons[MAX_PLAYERS];
+	CharacterIcon m_targetIcons[MAX_PLAYERS];
 	VotingButton m_votingButtons[NUM_VOTING_BUTTONS];
 
 	VotingScreen()
@@ -125,6 +154,7 @@ public:
 		, m_selectedOption(0)
 	{
 		setupCharacterIcons();
+		setupTargetIcons();
 
 		m_backButton.x1 = (GFX_SX - 200) / 2;
 		m_backButton.y1 = GFX_SY - 100;
@@ -133,26 +163,89 @@ public:
 
 		for (int i = 0; i < NUM_VOTING_BUTTONS; ++i)
 		{
-			m_votingButtons[i].setup(GFX_SX/2, GFX_SY/2 + i * 80);
+			m_votingButtons[i].setup(VOTING_OPTION_X, VOTING_OPTION_Y + VOTING_OPTION_DY * i);
 		}
 	}
 
 	void setupCharacterIcons()
 	{
+		const int x[MAX_PLAYERS] =
+		{
+			VOTING_CHAR1_X,
+			VOTING_CHAR2_X,
+			VOTING_CHAR3_X,
+			VOTING_CHAR4_X,
+			VOTING_CHAR5_X,
+			VOTING_CHAR6_X,
+			VOTING_CHAR7_X,
+			VOTING_CHAR8_X,
+			VOTING_CHAR9_X,
+			VOTING_CHAR10_X
+		};
+
+		const int y[MAX_PLAYERS] =
+		{
+			VOTING_CHAR1_Y,
+			VOTING_CHAR2_Y,
+			VOTING_CHAR3_Y,
+			VOTING_CHAR4_Y,
+			VOTING_CHAR5_Y,
+			VOTING_CHAR6_Y,
+			VOTING_CHAR7_Y,
+			VOTING_CHAR8_Y,
+			VOTING_CHAR9_Y,
+			VOTING_CHAR10_Y
+		};
+
 		for (int i = 0; i < MAX_PLAYERS; ++i)
 		{
-			// todo : setup rect
-
 			CharacterIcon & icon = m_characterIcons[i];
 
-			const int sx = CHARICON_SX;
-			const int sy = CHARICON_SY;
+			icon.x1 = x[i];
+			icon.x2 = x[i] + CHARICON_SX;
+			icon.y1 = y[i];
+			icon.y2 = y[i] + CHARICON_SY;
+		}
+	}
 
-			const int x = GFX_SX / (MAX_PLAYERS + 1) * (i + 1);
-			icon.x1 = x - sx / 2;
-			icon.y1 = 0;
-			icon.x2 = x + sx / 2;
-			icon.y2 = CHARICON_SY;
+	void setupTargetIcons()
+	{
+		const int x[MAX_PLAYERS] =
+		{
+			VOTING_TARGET_CHAR1_X,
+			VOTING_TARGET_CHAR2_X,
+			VOTING_TARGET_CHAR3_X,
+			VOTING_TARGET_CHAR4_X,
+			VOTING_TARGET_CHAR5_X,
+			VOTING_TARGET_CHAR6_X,
+			VOTING_TARGET_CHAR7_X,
+			VOTING_TARGET_CHAR8_X,
+			VOTING_TARGET_CHAR9_X,
+			VOTING_TARGET_CHAR10_X
+		};
+
+		const int y[MAX_PLAYERS] =
+		{
+			VOTING_TARGET_CHAR1_Y,
+			VOTING_TARGET_CHAR2_Y,
+			VOTING_TARGET_CHAR3_Y,
+			VOTING_TARGET_CHAR4_Y,
+			VOTING_TARGET_CHAR5_Y,
+			VOTING_TARGET_CHAR6_Y,
+			VOTING_TARGET_CHAR7_Y,
+			VOTING_TARGET_CHAR8_Y,
+			VOTING_TARGET_CHAR9_Y,
+			VOTING_TARGET_CHAR10_Y
+		};
+
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+		{
+			CharacterIcon & icon = m_targetIcons[i];
+
+			icon.x1 = x[i];
+			icon.x2 = x[i] + CHARICON_SX;
+			icon.y1 = y[i];
+			icon.y2 = y[i] + CHARICON_SY;
 		}
 	}
 
@@ -162,14 +255,14 @@ public:
 		{
 			for (int i = 0; i < g_gameState->m_numPlayers; ++i)
 			{
-				// todo : see if mouse was down on character
+				Player & player = g_gameState->m_players[i];
 
-				if (!g_gameState->m_players[i].m_hasVoted && mouse.wentDown(BUTTON_LEFT))
+				if (!player.m_hasVoted && mouse.wentDown(BUTTON_LEFT))
 				{
 					if (mouse.x >= m_characterIcons[i].x1 &&
-						mouse.y >= m_characterIcons[i].y1 + CHARACTER_SELECT_OFFSET &&
+						mouse.y >= m_characterIcons[i].y1 &&
 						mouse.x <= m_characterIcons[i].x2 &&
-						mouse.y <= m_characterIcons[i].y2 + CHARACTER_SELECT_OFFSET)
+						mouse.y <= m_characterIcons[i].y2)
 					{
 						m_selectedCharacter = i;
 						m_state = State_SelectOption;
@@ -180,27 +273,33 @@ public:
 		}
 		else if (m_state == State_SelectOption)
 		{
+			Player & player = g_gameState->m_players[m_selectedCharacter];
+
 			// check voting option
 
 			for (int i = 0; i < NUM_VOTING_BUTTONS; ++i)
 			{
 				if (m_votingButtons[i].isClicked())
 				{
-					// commit vote
+					// subtract cost
 
-					// todo : base choice upon option info
+					AgendaOption & option = g_gameState->m_currentAgenda.m_options[i];
 
-					if (false)
+					player.m_resources.food -= option.m_cost.food;
+					player.m_resources.wealth -= option.m_cost.wealth;
+					player.m_resources.tech -= option.m_cost.tech;
+
+					if (g_gameState->m_currentAgenda.m_options[i].m_isAttack)
+					{
+						m_selectedOption = i;
+						m_state = State_SelectTarget;
+					}
+					else
 					{
 						if (g_gameState->m_players[m_selectedCharacter].vote(i))
 							m_state = State_ShowResults;
 						else
-							m_state = State_SelectTarget;
-					}
-					else
-					{
-						m_selectedOption = i;
-						m_state = State_SelectTarget;
+							m_state = State_SelectCharacter;
 					}
 				}
 			}
@@ -226,10 +325,10 @@ public:
 
 				if (i != m_selectedCharacter && mouse.wentDown(BUTTON_LEFT))
 				{
-					if (mouse.x >= m_characterIcons[i].x1 &&
-						mouse.y >= m_characterIcons[i].y1 + TARGET_SELECT_OFFSET &&
-						mouse.x <= m_characterIcons[i].x2 &&
-						mouse.y <= m_characterIcons[i].y2 + TARGET_SELECT_OFFSET)
+					if (mouse.x >= m_targetIcons[i].x1 &&
+						mouse.y >= m_targetIcons[i].y1 &&
+						mouse.x <= m_targetIcons[i].x2 &&
+						mouse.y <= m_targetIcons[i].y2)
 					{
 						if (g_gameState->m_players[m_selectedCharacter].vote(m_selectedOption, i))
 							m_state = State_ShowResults;
@@ -266,35 +365,104 @@ public:
 
 			for (int i = 0; i < MAX_PLAYERS; ++i)
 			{
+				Player & player = g_gameState->m_players[i];
+
 				const CharacterIcon & icon = m_characterIcons[i];
 
-				if (i < g_gameState->m_numPlayers && !g_gameState->m_players[i].m_hasVoted)
+				if (i < g_gameState->m_numPlayers && !player.m_hasVoted)
 				{
-					setColor(colorGreen);
-					drawRect(
-						icon.x1,
-						icon.y1 + CHARACTER_SELECT_OFFSET,
-						icon.x2,
-						icon.y2 + CHARACTER_SELECT_OFFSET);
+					setColor(colorWhite);
+					drawCharIcon(icon.x1, icon.y1, i, CHAR_SCALE_NORMAL);
+
+					if (g_devMode)
+					{
+						setColor(colorGreen);
+						drawRectLine(
+							icon.x1,
+							icon.y1,
+							icon.x2,
+							icon.y2);
+					}
 				}
 				else
 				{
 					// todo : draw character icon in disabled state
 
 					setColor(colorRed);
-					drawRect(
-						icon.x1,
-						icon.y1 + CHARACTER_SELECT_OFFSET,
-						icon.x2,
-						icon.y2 + CHARACTER_SELECT_OFFSET);
+					drawCharIcon(icon.x1, icon.y1, i, CHAR_SCALE_NORMAL);
+
+					if (g_devMode)
+					{
+						setColor(colorRed);
+						drawRectLine(
+							icon.x1,
+							icon.y1,
+							icon.x2,
+							icon.y2);
+					}
 				}
 			}
 		}
 		else if (m_state == State_SelectOption)
 		{
+			// agenda text box
+
 			setFont("calibri.ttf");
 			setColor(colorWhite);
-			drawText(GFX_SX / 2, 20, 40, 0.f, +1.f, "<Character Name>");
+			drawText(10, 10, 40, +1.f, +1.f, "Agenda");
+
+			if (g_devMode)
+			{
+				setColor(colorGreen);
+				drawRectLine(
+					VOTING_AGENDA_TEXTBOX_X,
+					VOTING_AGENDA_TEXTBOX_Y,
+					VOTING_AGENDA_TEXTBOX_X + VOTING_AGENDA_TEXTBOX_WIDTH,
+					VOTING_AGENDA_TEXTBOX_Y + VOTING_AGENDA_TEXTBOX_HEIGHT);
+
+				setFont("calibri.ttf");
+				setColor(colorWhite);
+				std::vector<std::string> lines;
+				splitString(g_gameState->m_currentAgenda.m_description, lines, '!');
+				for (size_t i = 0; i < lines.size(); ++i)
+				{
+					std::string line = String::Trim(lines[i]);
+					drawText(
+						VOTING_AGENDA_TEXTBOX_X,
+						VOTING_AGENDA_TEXTBOX_Y + i * 40,
+						30,
+						+1.f, +1.f,
+						line.c_str());
+				}
+			}
+
+			// character icon
+
+			drawCharIcon(VOTING_CHAR_X, VOTING_CHAR_Y, m_selectedCharacter, CHAR_SCALE_LARGE);
+
+			// stats
+
+			setFont("calibri.ttf");
+			setColor(colorWhite);
+			drawText(VOTING_STAT_FOOD_X, VOTING_STAT_FOOD_Y, 30, +1.f, +1.f, "%d",
+				g_gameState->m_players[m_selectedCharacter].m_resources.food);
+			drawText(VOTING_STAT_WEALTH_X, VOTING_STAT_WEALTH_Y, 30, +1.f, +1.f, "%d",
+				g_gameState->m_players[m_selectedCharacter].m_resources.wealth);
+			drawText(VOTING_STAT_TECH_X, VOTING_STAT_TECH_Y, 30, +1.f, +1.f, "%d",
+				g_gameState->m_players[m_selectedCharacter].m_resources.tech);
+			drawText(VOTING_STAT_HAPPINESS_X, VOTING_STAT_HAPPINESS_Y, 30, +1.f, +1.f, "%d",
+				-1);
+
+			// goal
+
+			setFont("calibri.ttf");
+			setColor(colorWhite);
+			drawText(VOTING_GOAL_X, VOTING_GOAL_Y, 40, +1.f, +1.f,
+				"Your goal:");
+			drawText(VOTING_GOAL_X, VOTING_GOAL_Y + 45, 40, +1.f, +1.f,
+				g_gameState->m_players[m_selectedCharacter].m_goal.m_description.c_str());
+
+			// todo : vote timer
 
 			// todo : draw character icon
 
@@ -309,9 +477,11 @@ public:
 
 			for (int i = 0; i < NUM_VOTING_BUTTONS;++i)
 			{
+				AgendaOption & option = g_gameState->m_currentAgenda.m_options[i];
+
 				VotingButton & button = m_votingButtons[i];
 
-				setColor(colorWhite);
+				setColor(colorBlack);
 				drawRect(
 					button.x1,
 					button.y1,
@@ -319,8 +489,9 @@ public:
 					button.y2);
 
 				setFont("calibri.ttf");
-				setColor(colorBlack);
-				drawText((button.x1 + button.x2) / 2, (button.y1 + button.y2) / 2, 40, 0.f, 0.f, "%c", 'A' + i);
+				setColor(colorWhite);
+				drawText(button.x2, button.y1 + 0, 40, 1.f, 1.f, option.m_caption.c_str());
+				drawText(button.x2, button.y1 + 40, 20, 1.f, 1.f, option.m_text.c_str());
 			}
 
 			// todo : draw back button
@@ -344,27 +515,39 @@ public:
 
 			for (int i = 0; i < MAX_PLAYERS; ++i)
 			{
-				const CharacterIcon & icon = m_characterIcons[i];
+				const CharacterIcon & icon = m_targetIcons[i];
 
 				if (i < g_gameState->m_numPlayers && i != m_selectedCharacter)
 				{
-					setColor(colorGreen);
-					drawRect(
-						icon.x1,
-						icon.y1 + TARGET_SELECT_OFFSET,
-						icon.x2,
-						icon.y2 + TARGET_SELECT_OFFSET);
+					setColor(colorWhite);
+					drawCharIcon(icon.x1, icon.y1, i, CHAR_SCALE_NORMAL);
+
+					if (g_devMode)
+					{
+						setColor(colorGreen);
+						drawRectLine(
+							icon.x1,
+							icon.y1,
+							icon.x2,
+							icon.y2);
+					}
 				}
 				else
 				{
-					// todo : draw character icon in disabled state
+					// draw character icon in disabled state
 
 					setColor(colorRed);
-					drawRect(
-						icon.x1,
-						icon.y1 + TARGET_SELECT_OFFSET,
-						icon.x2,
-						icon.y2 + TARGET_SELECT_OFFSET);
+					drawCharIcon(icon.x1, icon.y1, i, CHAR_SCALE_NORMAL);
+
+					if (g_devMode)
+					{
+						setColor(colorRed);
+						drawRectLine(
+							icon.x1,
+							icon.y1,
+							icon.x2,
+							icon.y2);
+					}
 				}
 			}
 		}
@@ -444,6 +627,8 @@ bool App::init()
 	else
 	{
 		framework.fullscreen = true;
+		framework.windowX = 0;
+		framework.windowY = 0;
 	}
 
 	framework.actionHandler = HandleAction;
