@@ -2629,6 +2629,61 @@ void drawText(float x, float y, int size, float alignX, float alignY, const char
 	gxPopMatrix();
 }
 
+static char * eatWord(char * str)
+{
+	while (*str && *str != ' ')
+		str++;
+	while (*str && *str == ' ')
+		str++;
+	return str;
+}
+
+void drawTextArea(float x, float y, float sx, int size, const char * format, ...)
+{
+	char text[1024];
+	va_list args;
+	va_start(args, format);
+	vsprintf_s(text, sizeof(text), format, args);
+	va_end(args);
+	
+	char * textend = text + strlen(text);
+	char * textptr = text;
+
+	while (textptr != textend)
+	{
+		char * nextptr = eatWord(textptr);
+		while (*nextptr)
+		{
+			char * tempptr = eatWord(nextptr);
+			float _sx, _sy;
+			char temp = *tempptr;
+			*tempptr = 0;
+			measureText(globals.font->face, size, textptr, _sx, _sy);
+			*tempptr = temp;
+
+			if (_sx >= sx)
+				break;
+			else
+				nextptr = tempptr;
+		}
+
+		gxMatrixMode(GL_MODELVIEW);
+		gxPushMatrix();
+		{
+			gxTranslatef(x, y, 0.f);
+		
+			char temp = *nextptr;
+			*nextptr = 0;
+			drawTextInternal(globals.font->face, size, textptr);
+			*nextptr = temp;
+
+			textptr = nextptr;
+			y += size;
+		}
+		gxPopMatrix();
+	}
+}
+
 void debugDrawText(float x, float y, int size, float alignX, float alignY, const char * format, ...)
 {
 	if (globals.debugDraw.numLines < globals.debugDraw.kMaxLines)
