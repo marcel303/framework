@@ -191,3 +191,9 @@ OPTION_DEFINE(int, RESEARCH_TECH_OFFSET, "Research Info/Tech Offset (X)");
 OPTION_DEFINE(int, RESEARCH_TEXT_OFFSET_X, "Research Info/Text Offset X");
 OPTION_DEFINE(int, RESEARCH_TEXT_OFFSET_Y, "Research Info/Text Offset Y");
 OPTION_DEFINE(int, RESEARCH_TEXT_FONT_SIZE, "Research Info/Text Font Size");
+
+//
+
+OPTION_DEFINE(int, ROUND_INCOME_X, "Round Income/X");
+OPTION_DEFINE(int, ROUND_INCOME_Y, "Round Income/Y");
+OPTION_DEFINE(int, ROUND_INCOME_DX, "Round Income/DX");

@@ -913,11 +913,11 @@ public:
 			drawText(DISCUSSION_TIMER_X, DISCUSSION_TIMER_Y, DISCUSSION_TIMER_SIZE, 0.f, 1.f, "%d:%02d", votingTimeLeft / 60, votingTimeLeft % 60);
 		}
 
-		bool drawAgenda =
+		bool drawRoundStuff =
 			g_votingScreen->m_state != VotingScreen::State_TitleScreen &&
 			g_votingScreen->m_state != VotingScreen::State_ShowWinner;
 
-		if (drawAgenda)
+		if (drawRoundStuff)
 		{
 			// draw agenda
 
@@ -934,6 +934,29 @@ public:
 				setFont("orbi.ttf");
 				setColor(Color::fromHex("3bcac8"));
 				drawText(VOTING_REQ_X + 105, VOTING_REQ_Y, 34, +1.f, +1.f, "%s", g_gameState->m_currentAgenda.m_requirement.c_str());
+			}
+
+			// draw round income
+
+			const Color colors[3] =
+			{
+				Color::fromHex("e6e38f"),
+				Color::fromHex("43e981"),
+				Color::fromHex("5ed8ee")
+			};
+
+			const int income[3] =
+			{
+				g_gameState->m_perRoundIncome.wealth,
+				g_gameState->m_perRoundIncome.food,
+				g_gameState->m_perRoundIncome.tech,
+			};
+
+			for (int i = 0; i < 3; ++i)
+			{
+				setFont("electro.ttf");
+				setColor(colors[i]);
+				drawText(ROUND_INCOME_X + ROUND_INCOME_DX * i, ROUND_INCOME_Y, 32, +1.f, +1.f, "%+d", income[i]);
 			}
 		}
 
@@ -1078,7 +1101,7 @@ public:
 			}
 		}
 
-		if (drawAgenda)
+		if (drawRoundStuff)
 		{
 			// draw voting buttons
 
