@@ -121,9 +121,8 @@ void AgendaEffect::apply(bool success, int playerId, int * targets, int numTarge
 				switch (m_specialEffect)
 				{
 				case SpecialEffect_Kill:
-
 					logDebug("agenda: player %d gets killed!", i);
-					player.m_isDead = true;
+					player.m_shouldBeKilled = true;
 					if (g_gameState->m_players[playerId].m_goal.m_killTarget == i)
 					{
 						logDebug("incrementing kill count for player %d!", playerId);

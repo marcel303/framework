@@ -86,6 +86,8 @@ void Player::newGame()
 	m_resourcesAtStartOfRound = m_resources;
 	m_resourcesGainedThisRound = Resources();
 
+	m_shouldBeKilled = false;
+
 	m_killCount = 0;
 
 	m_bribedPlayers.clear();
@@ -100,7 +102,8 @@ void Player::nextRound(bool isNewGame)
 	m_bribedPlayersPrev = m_bribedPlayers;
 	m_targetSelectionPrev.clear();
 	for (int i = 0; i < m_numSelectedTargets; ++i)
-		m_targetSelectionPrev.push_back(m_targetSelection[i]);
+		if (&g_gameState->m_players[m_targetSelection[i]] != this)
+			m_targetSelectionPrev.push_back(m_targetSelection[i]);
 
 	//
 
@@ -134,11 +137,13 @@ void GameState::setupPlayerGoals()
 {
 	// fixme : need at least one unique goal per player..
 
-	for (int i = 0; i < 10; ++i)
+	for (int i = 0; i < 2; ++i)
+	{
+
 	{
 		PlayerGoal goal;
-		goal.m_description = "Gain 15 food";
-		goal.m_requiredFood = 15;
+		goal.m_description = "Gain 10 food";
+		goal.m_requiredFood = 10;
 		m_playerGoals.push_back(goal);
 	}
 
@@ -170,6 +175,8 @@ void GameState::setupPlayerGoals()
 		goal.m_requiredWealth = 10;
 		goal.m_requiredTech = 10;
 		m_playerGoals.push_back(goal);
+	}
+
 	}
 }
 
@@ -601,12 +608,14 @@ void GameState::nextRound(bool applyCurrentAgenda)
 	{
 		if (m_players[i].m_isDead)
 			m_players[i].m_wasDead = true;
-		else if (m_players[i].m_resources.food == 0)
+		else if (m_players[i].m_resources.food == 0 || m_players[i].m_shouldBeKilled)
 		{
 			m_players[i].m_isDead = true;
 			Assert(!m_players[i].m_wasDead);
 		}
 	}
+
+	m_previousAgenda = m_currentAgenda;
 
 	// check for player goal completion
 
@@ -649,7 +658,6 @@ void GameState::nextRound(bool applyCurrentAgenda)
 			m_players[i].nextRound(applyCurrentAgenda);
 		}
 
-		m_previousAgenda = m_currentAgenda;
 		m_currentAgenda = pickAgendaFromDeck();
 	}
 }

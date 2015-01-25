@@ -56,6 +56,7 @@ public:
 	int m_numSelectedTargets;
 	PlayerGoal m_goal;
 
+	bool m_shouldBeKilled;
 	int m_killCount;
 
 	Resources m_resources;

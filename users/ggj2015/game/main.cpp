@@ -328,7 +328,7 @@ public:
 
 	int getGlobalVotingTimeLeft() const
 	{
-		return Calc::Max<int>(-1, m_globalVotingTimeStart + (g_devMode ? 30 : 120) - g_TimerRT.Time_get());
+		return Calc::Max<int>(-1, m_globalVotingTimeStart + (g_devMode ? 30 : 180) - g_TimerRT.Time_get());
 	}
 
 	int getDiscussionTimeLeft() const
@@ -336,7 +336,7 @@ public:
 		if (keyboard.isDown(SDLK_t))
 			return -1;
 		else
-			return Calc::Max<int>(-1, m_discussionTimeStart + (g_devMode ? 5 : 150) - g_TimerRT.Time_get());
+			return Calc::Max<int>(-1, m_discussionTimeStart + (g_devMode ? 5 : 90) - g_TimerRT.Time_get());
 	}
 
 	bool canSelectCharacter(int player)
@@ -602,6 +602,10 @@ public:
 		{
 			setColor(colorWhite);
 			Sprite("voting-back.png").draw();
+
+			setFont("orbi-bold.ttf");
+			setColor(Color::fromHex("eaffff"));
+			drawText(40, 70, 48, +1.f, +1.f, "Select character");
 
 			for (int i = 0; i < MAX_PLAYERS; ++i)
 			{
@@ -1010,8 +1014,18 @@ public:
 
 					Player & player = g_gameState->m_players[i];
 
-					setColor(colorWhite);
-					drawCharIcon(councilX[i], councilY[i], i, COUNCIL_CHAR_SCALE, player.m_isDead ? CharIcon_Dead : CharIcon_Council);
+					if (player.m_hasVoted || (g_votingScreen->m_state == VotingScreen::State_SelectOption && g_votingScreen->m_selectedCharacter == i))
+					{
+						Shader shader("disabled");
+						setShader(shader);
+						drawCharIcon(councilX[i], councilY[i], i, COUNCIL_CHAR_SCALE, player.m_isDead ? CharIcon_Dead : CharIcon_Council);
+						clearShader();
+					}
+					else
+					{
+						setColor(colorWhite);
+						drawCharIcon(councilX[i], councilY[i], i, COUNCIL_CHAR_SCALE, player.m_isDead ? CharIcon_Dead : CharIcon_Council);
+					}
 				}
 			}
 
