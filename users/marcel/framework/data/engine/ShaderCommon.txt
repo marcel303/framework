@@ -1,4 +1,4 @@
-#if __SHADER__
+#if _SHADER_
 
 #if 1
 	#define shader_attrib attribute
