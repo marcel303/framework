@@ -303,8 +303,7 @@ public:
 
 	int getDiscussionTimeLeft() const
 	{
-		//return Calc::Max<int>(-1, m_discussionTimeStart + (g_devMode ? 5 : 150) - g_TimerRT.Time_get());
-		return -1;
+		return Calc::Max<int>(-1, m_discussionTimeStart + (g_devMode ? 5 : 150) - g_TimerRT.Time_get());
 	}
 
 	bool canSelectCharacter(int player)
