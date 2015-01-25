@@ -967,26 +967,14 @@ public:
 			for (int i = 0; i < MAX_PLAYERS; ++i)
 			{
 				// some characters need to be moved in front of others (layer 1)
-				const int charLayer = (i == 2 || i == 4) ? 1 : 0;
+				const int charLayer = (i == 0 || i == 1 || i == 3 || i == 8) ? 1 : 0;
 				if (layer != charLayer)
 					continue;
 
 				Player & player = g_gameState->m_players[i];
 
-				Color color;
-
-				if (!player.m_hasVoted)
-				{
-					Shader shader("disabled");
-					setShader(shader);
-					drawCharIcon(councilX[i], councilY[i], i, COUNCIL_CHAR_SCALE, CharIcon_Council);
-					clearShader();
-				}
-				else
-				{
-					setColor(colorWhite);
-					drawCharIcon(councilX[i], councilY[i], i, COUNCIL_CHAR_SCALE, CharIcon_Council);
-				}
+				setColor(colorWhite);
+				drawCharIcon(councilX[i], councilY[i], i, COUNCIL_CHAR_SCALE, CharIcon_Council);
 			}
 		}
 
@@ -1054,8 +1042,8 @@ public:
 								drawText(councilX[i] + RESEARCH_TECH_OFFSET, y, RESEARCH_FONT_SIZE, +1.f, +1.f, "%+d", techChange);
 
 								setFont("orbi.ttf");
-								setColor(colorWhite);
-								drawTextArea(councilX[i] + RESEARCH_TEXT_OFFSET_X, councilY[i] + RESEARCH_TEXT_OFFSET_Y, bubble.getWidth() - RESEARCH_TEXT_OFFSET_X  * 2.f, RESEARCH_TEXT_FONT_SIZE, "I VOTED: %s", option.m_caption.c_str());
+								setColor(colorBlack);
+								drawTextArea(councilX[i] + RESEARCH_TEXT_OFFSET_X, councilY[i] + RESEARCH_TEXT_OFFSET_Y, bubble.getWidth() - RESEARCH_TEXT_OFFSET_X  * 2.f, RESEARCH_TEXT_FONT_SIZE, "I VOTE: %s", option.m_caption.c_str());
 							}
 						}
 					}
