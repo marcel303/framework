@@ -208,3 +208,7 @@ OPTION_DEFINE(int, ROUND_INCOME_DX, "Round Income/DX");
 
 OPTION_DEFINE(int, SPEECH_BUBBLE_OFFSET_X, "Speech Bubble/Offset X");
 OPTION_DEFINE(int, SPEECH_BUBBLE_OFFSET_Y, "Speech Bubble/Offset Y");
+
+//
+
+OPTION_DEFINE(int, GOAL_KILL_WEIGHT, "Goals/Kill Weight");

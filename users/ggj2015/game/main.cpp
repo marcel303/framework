@@ -882,8 +882,8 @@ public:
 		enum State
 		{
 			State_ShowPlayerResults,
-			State_ShowGlobalResults,
 			State_ShowVotingResults,
+			State_ShowGlobalResults,
 			State_Done
 		};
 
@@ -1217,22 +1217,32 @@ public:
 				VotingScreen::VotingButton & button = g_votingScreen->m_votingButtons[i];
 
 				setFont("orbi.ttf");
-				if (agenda.m_success && agenda.m_type == "stockpile")
+				if (g_votingScreen->m_state != VotingScreen::State_ShowResults || m_resultsAnim.state <= ResultsAnim::State_ShowVotingResults)
 				{
-					setColor(colorGreen);
-					drawText(COUNCIL_OPTION_TEXT_X, COUNCIL_OPTION_TEXT_Y + i * COUNCIL_OPTION_DY, 34, 1.f, 1.f, "Success");
-				}
-				else
-				{
-					if (agenda.m_success && (i == 0))
-						setColor(colorGreen);
-					else if (!agenda.m_success && (i == 0) && g_gameState->m_state == GameState::State_GameEnded)
-						setColor(colorRed);
-					else
-						setColor(colorWhite);
+					setColor(colorWhite);
 					drawText(COUNCIL_OPTION_TEXT_X, COUNCIL_OPTION_TEXT_Y + i * COUNCIL_OPTION_DY, 34, 1.f, 1.f, option.m_caption.c_str());
 					setColor(Color::fromHex("3bcac8"));
 					drawText(COUNCIL_OPTION_TEXT_X, COUNCIL_OPTION_TEXT_Y + i * COUNCIL_OPTION_DY + 40, 20, 1.f, 1.f, option.m_text.c_str());
+				}
+				else
+				{
+					if (agenda.m_success && agenda.m_type == "stockpile")
+					{
+						setColor(colorGreen);
+						drawText(COUNCIL_OPTION_TEXT_X, COUNCIL_OPTION_TEXT_Y + i * COUNCIL_OPTION_DY, 34, 1.f, 1.f, "Success");
+					}
+					else
+					{
+						if (agenda.m_success && (i == 0))
+							setColor(colorGreen);
+						else if (!agenda.m_success && (i == 0) && g_gameState->m_state == GameState::State_GameEnded)
+							setColor(colorRed);
+						else
+							setColor(colorWhite);
+						drawText(COUNCIL_OPTION_TEXT_X, COUNCIL_OPTION_TEXT_Y + i * COUNCIL_OPTION_DY, 34, 1.f, 1.f, option.m_caption.c_str());
+						setColor(Color::fromHex("3bcac8"));
+						drawText(COUNCIL_OPTION_TEXT_X, COUNCIL_OPTION_TEXT_Y + i * COUNCIL_OPTION_DY + 40, 20, 1.f, 1.f, option.m_text.c_str());
+					}
 				}
 
 				// food, wealth, tech

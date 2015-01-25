@@ -145,6 +145,7 @@ void GameState::setupPlayerGoals()
 		m_playerGoals.push_back(goal);
 	}
 
+	for (int i = 0; i < GOAL_KILL_WEIGHT; ++i)
 	{
 		PlayerGoal goal;
 		goal.m_type = PlayerGoal::Type_Kill;
@@ -354,7 +355,10 @@ void GameState::assignPlayerGoals()
 		// patch up the goal
 		if (m_players[i].m_goal.m_type == PlayerGoal::Type_Kill)
 		{
-			m_players[i].m_goal.m_killTarget = rand() % m_numPlayers;
+			do
+			{
+				m_players[i].m_goal.m_killTarget = rand() % m_numPlayers;
+			} while (m_players[i].m_goal.m_killTarget == i);
 			m_players[i].m_goal.m_description = "Kill " + getRaceName(m_players[i].m_goal.m_killTarget) + "!";
 		}
 	}
