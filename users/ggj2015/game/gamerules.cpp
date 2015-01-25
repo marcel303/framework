@@ -53,7 +53,9 @@ void AgendaEffect::load(const std::string & text)
 		logError("invalid special: %s", specialEffect.c_str());
 
 	const std::string specialEffect2 = d.getString("special2", "");
-	if (m_specialEffect == SpecialEffect_Kill && specialEffect2 == "incomemod")
+	if (specialEffect2 == "")
+		m_specialEffect2 = SpecialEffect_None;
+	else if (m_specialEffect == SpecialEffect_Kill && specialEffect2 == "incomemod")
 		m_specialEffect2 = SpecialEffect_IncomeModifier;
 
 	m_specialEffectParam[0] = d.getInt("specialf", 0);
@@ -101,6 +103,8 @@ void AgendaEffect::apply(bool success, int playerId, int * targets, int numTarge
 
 			if (passesPlayerTest)
 			{
+				logDebug("agenda: player %d gets awarded (%d/%d/%d)", i, m_rewards.food, m_rewards.wealth, m_rewards.tech);
+
 				player.m_resources.food += m_rewards.food;
 				player.m_resources.wealth += m_rewards.wealth;
 				player.m_resources.tech += m_rewards.tech;
@@ -108,6 +112,7 @@ void AgendaEffect::apply(bool success, int playerId, int * targets, int numTarge
 				switch (m_specialEffect)
 				{
 				case SpecialEffect_Kill:
+					logDebug("agenda: player %d gets killed!", i);
 					player.m_isDead = true;
 					break;
 				}

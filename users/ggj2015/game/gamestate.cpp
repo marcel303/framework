@@ -199,7 +199,7 @@ void GameState::loadAgendas(const std::vector<std::string> & lines)
 					Dictionary d;
 					d.parse(line);
 					agenda->m_type = d.getString("type", "");
-					if (agenda->m_type != "" && agenda->m_type != "local")
+					if (agenda->m_type != "" && agenda->m_type != "stockpile" && agenda->m_type != "majorityvote" && agenda->m_type != "local")
 						logError("invalid agenda type");
 					agenda->m_percentage = d.getInt("percentage", 100);
 					agenda->m_race = d.getInt("race", 0);
@@ -233,7 +233,7 @@ void GameState::loadAgendas(const std::vector<std::string> & lines)
 				if (optionCounter == 2)
 					option.m_caption = line;
 				if (optionCounter == 3)
-					option.m_text = line;
+					option.m_text = line == "." ? "" : line;
 
 				optionCounter = (optionCounter + 1) % 4;
 
@@ -438,6 +438,8 @@ void GameState::nextRound(bool applyCurrentAgenda)
 			logError("invalid agenda type: %s", m_currentAgenda.m_type.c_str());
 		}
 
+		logDebug("agenda: success=%s", success ? "yes" : "no");
+
 		for (int i = 0; i < m_numPlayers; ++i)
 		{
 			if (m_players[i].m_isDead)
@@ -474,6 +476,7 @@ void GameState::nextRound(bool applyCurrentAgenda)
 			m_players[i].nextRound(applyCurrentAgenda);
 		}
 
+		m_previousAgenda = m_currentAgenda;
 		m_currentAgenda = pickAgendaFromDeck();
 	}
 }

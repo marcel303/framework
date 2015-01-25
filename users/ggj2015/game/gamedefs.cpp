@@ -139,3 +139,55 @@ OPTION_DEFINE(int, VOTING_TARGET_CHAR9_Y, "Voting Screen/Target Select/Char9 Y")
 
 OPTION_DEFINE(int, VOTING_TARGET_CHAR10_X, "Voting Screen/Target Select/Char10 X");
 OPTION_DEFINE(int, VOTING_TARGET_CHAR10_Y, "Voting Screen/Target Select/Char10 Y");
+
+//
+
+OPTION_DEFINE(int, DISCUSSION_TIMER_X, "Voting Screen/Timer/X");
+OPTION_DEFINE(int, DISCUSSION_TIMER_Y, "Voting Screen/Timer/Y");
+OPTION_DEFINE(int, DISCUSSION_TIMER_SIZE, "Voting Screen/Timer/Size");
+
+//
+
+OPTION_DEFINE(float, COUNCIL_CHAR_SCALE, "Stats Screen/Council/Scales");
+
+OPTION_DEFINE(int, COUNCIL_CHAR1_X, "Stats Screen/Council/Char1 X");
+OPTION_DEFINE(int, COUNCIL_CHAR1_Y, "Stats Screen/Council/Char1 Y");
+
+OPTION_DEFINE(int, COUNCIL_CHAR2_X, "Stats Screen/Council/Char2 X");
+OPTION_DEFINE(int, COUNCIL_CHAR2_Y, "Stats Screen/Council/Char2 Y");
+
+OPTION_DEFINE(int, COUNCIL_CHAR3_X, "Stats Screen/Council/Char3 X");
+OPTION_DEFINE(int, COUNCIL_CHAR3_Y, "Stats Screen/Council/Char3 Y");
+
+OPTION_DEFINE(int, COUNCIL_CHAR4_X, "Stats Screen/Council/Char4 X");
+OPTION_DEFINE(int, COUNCIL_CHAR4_Y, "Stats Screen/Council/Char4 Y");
+
+OPTION_DEFINE(int, COUNCIL_CHAR5_X, "Stats Screen/Council/Char5 X");
+OPTION_DEFINE(int, COUNCIL_CHAR5_Y, "Stats Screen/Council/Char5 Y");
+
+OPTION_DEFINE(int, COUNCIL_CHAR6_X, "Stats Screen/Council/Char6 X");
+OPTION_DEFINE(int, COUNCIL_CHAR6_Y, "Stats Screen/Council/Char6 Y");
+
+OPTION_DEFINE(int, COUNCIL_CHAR7_X, "Stats Screen/Council/Char7 X");
+OPTION_DEFINE(int, COUNCIL_CHAR7_Y, "Stats Screen/Council/Char7 Y");
+
+OPTION_DEFINE(int, COUNCIL_CHAR8_X, "Stats Screen/Council/Char8 X");
+OPTION_DEFINE(int, COUNCIL_CHAR8_Y, "Stats Screen/Council/Char8 Y");
+
+OPTION_DEFINE(int, COUNCIL_CHAR9_X, "Stats Screen/Council/Char9 X");
+OPTION_DEFINE(int, COUNCIL_CHAR9_Y, "Stats Screen/Council/Char9 Y");
+
+OPTION_DEFINE(int, COUNCIL_CHAR10_X, "Stats Screen/Council/Char10 X");
+OPTION_DEFINE(int, COUNCIL_CHAR10_Y, "Stats Screen/Council/Char10 Y");
+
+//
+
+OPTION_DEFINE(int, RESEARCH_FONT_SIZE, "Research Info/Font Size");
+OPTION_DEFINE(int, RESEARCH_RESOURCE_OFFSET_Y, "Research Info/Resource Text Offset");
+OPTION_DEFINE(int, RESEARCH_FOOD_OFFSET, "Research Info/Food Offset (X)");
+OPTION_DEFINE(int, RESEARCH_WEALTH_OFFSET, "Research Info/Wealth Offset (X)");
+OPTION_DEFINE(int, RESEARCH_TECH_OFFSET, "Research Info/Tech Offset (X)");
+
+OPTION_DEFINE(int, RESEARCH_TEXT_OFFSET_X, "Research Info/Text Offset X");
+OPTION_DEFINE(int, RESEARCH_TEXT_OFFSET_Y, "Research Info/Text Offset Y");
+OPTION_DEFINE(int, RESEARCH_TEXT_FONT_SIZE, "Research Info/Text Font Size");

@@ -1,3 +1,4 @@
+#include <ctime>
 #include "Calc.h"
 #include "FileStream.h"
 #include "framework.h"
@@ -53,11 +54,12 @@ OPTION_EXTERN(int, g_playerCharacterIndex);
 TIMER_DEFINE(g_appTickTime, PerFrame, "App/Tick");
 TIMER_DEFINE(g_appDrawTime, PerFrame, "App/Draw");
 
-#define COLOR_CHAR_DISABLED Color(.5f, .5f, .5f, .5f)
-
 //
 
-#define PLAYER_STATS_TIME (g_devMode ? 0.1f : 5.f)
+//#define PLAYER_STATS_TIME (g_devMode ? 0.1f : 5.f)
+#define PLAYER_STATS_TIME (2.f)
+
+#define COLOR_CHAR_DISABLED Color(.5f, .5f, .5f, .5f)
 
 //
 
@@ -157,6 +159,8 @@ public:
 
 	enum State
 	{
+		State_ShowSponsor,
+		State_TitleScreen,
 		State_Discuss,
 		State_SelectCharacter,
 		State_SelectOption,
@@ -165,6 +169,7 @@ public:
 	};
 
 	State m_state;
+	int m_stateTimer;
 	int m_discussionTimeStart;
 	int m_selectedCharacter;
 	int m_selectedOption;
@@ -173,30 +178,9 @@ public:
 	VotingButton m_votingButtons[NUM_VOTING_BUTTONS];
 	int m_votingTimeStart;
 
-	struct ResultsAnim
-	{
-		enum State
-		{
-			State_ShowPlayerResults,
-			State_ShowGlobalResults,
-			State_ShowVotingResults,
-			State_Done
-		};
-
-		State state;
-		float timer;
-		int player;
-
-		ResultsAnim()
-			: state(State_ShowPlayerResults)
-			, timer(0.f)
-			, player(0)
-		{
-		}
-	} m_resultsAnim;
-
 	VotingScreen()
-		: m_state(VotingScreen::State_Discuss)
+		: m_state(g_devMode ? State_Discuss : State_ShowSponsor)
+		, m_stateTimer(g_devMode ? 0.f : (g_TimerRT.Time_get() + 3.f))
 		, m_discussionTimeStart(0)
 		, m_selectedCharacter(0)
 		, m_selectedOption(0)
@@ -349,7 +333,22 @@ public:
 
 	void tick()
 	{
-		if (m_state == State_Discuss)
+		if (m_state == State_ShowSponsor)
+		{
+			if (g_TimerRT.Time_get() >= m_stateTimer)
+			{
+				m_stateTimer = 0.f;
+				m_state = State_TitleScreen;
+			}
+		}
+		else if (m_state == State_TitleScreen)
+		{
+			if (mouse.wentDown(BUTTON_LEFT))
+			{
+				m_state = State_Discuss;
+			}
+		}
+		else if (m_state == State_Discuss)
 		{
 			if (m_discussionTimeStart == 0)
 				m_discussionTimeStart = g_TimerRT.Time_get();
@@ -409,10 +408,7 @@ public:
 					else
 					{
 						if (g_gameState->m_players[m_selectedCharacter].vote(i, false))
-						{
-							m_resultsAnim = ResultsAnim();
 							m_state = State_ShowResults;
-						}
 						else
 							m_state = State_SelectCharacter;
 					}
@@ -427,10 +423,7 @@ public:
 					mouse.y <= m_abstainButton.y2)
 				{
 					if (player.vote(-1, true))
-					{
-						m_resultsAnim = ResultsAnim();
 						m_state = State_ShowResults;
-					}
 					else
 						m_state = State_SelectCharacter;
 				}
@@ -441,10 +434,7 @@ public:
 				if (getVotingTimeLeft() < 0)
 				{
 					if (player.vote(-1, true))
-					{
-						m_resultsAnim = ResultsAnim();
 						m_state = State_ShowResults;
-					}
 					else
 						m_state = State_SelectCharacter;
 				}
@@ -473,10 +463,7 @@ public:
 							m_state = State_SelectOption;
 
 							if (g_gameState->m_players[m_selectedCharacter].vote(m_selectedOption, false))
-							{
-								m_resultsAnim = ResultsAnim();
 								m_state = State_ShowResults;
-							}
 							else
 								m_state = State_SelectCharacter;
 						}
@@ -500,7 +487,17 @@ public:
 
 		// draw background
 
-		if (m_state == State_SelectCharacter)
+		if (m_state == State_ShowSponsor)
+		{
+			setColor(colorWhite);
+			Sprite("sponsors.png").draw();
+		}
+		else if (m_state == State_TitleScreen)
+		{
+			setColor(colorWhite);
+			Sprite("title-screen.jpg").draw();
+		}
+		else if (m_state == State_SelectCharacter)
 		{
 			setColor(colorWhite);
 			Sprite("voting-back.png").draw();
@@ -716,9 +713,9 @@ public:
 			setColor(colorWhite);
 			Sprite("voting-back.png").draw();
 
-			setFont("calibri.ttf");
-			setColor(colorWhite);
-			drawText(GFX_SX / 2, 20, 40, 0.f, +1.f, "<Select Target>");
+			setFont("orbi-bold.ttf");
+			setColor(Color::fromHex("eaffff"));
+			drawText(40, 70, 48, +1.f, +1.f, "Select target");
 
 			for (int i = 0; i < MAX_PLAYERS; ++i)
 			{
@@ -726,8 +723,11 @@ public:
 
 				if (i < g_gameState->m_numPlayers && canSelectTarget(m_selectedCharacter, i))
 				{
-					setColor(colorWhite);
+					Shader shader("focuspoint");
+					shader.setImmediate("time", g_TimerRT.Time_get());
+					setShader(shader);
 					drawCharIcon(icon.x1, icon.y1, i, VOTING_CHAR_SCALE, CharIcon_CharSelect);
+					clearShader();
 
 					if (g_devMode)
 					{
@@ -743,8 +743,10 @@ public:
 				{
 					// draw character icon in disabled state
 
-					setColor(colorRed);
+					Shader shader("disabled");
+					setShader(shader);
 					drawCharIcon(icon.x1, icon.y1, i, VOTING_CHAR_SCALE, CharIcon_CharSelect);
+					clearShader();
 
 					if (g_devMode)
 					{
@@ -762,77 +764,6 @@ public:
 		{
 			setColor(colorWhite);
 			Sprite("voting-back.png").draw();
-
-			setFont("calibri.ttf");
-			setColor(colorWhite);
-			drawText(GFX_SX / 2, 20, 40, 0.f, +1.f, "<Results %d/%d/%g>", m_resultsAnim.state, m_resultsAnim.player, m_resultsAnim.timer);
-
-			switch (m_resultsAnim.state)
-			{
-			case ResultsAnim::State_ShowPlayerResults:
-				{
-					if (m_resultsAnim.timer == 0.f)
-						m_resultsAnim.timer = g_TimerRT.Time_get() + PLAYER_STATS_TIME;
-
-					const Player & player = g_gameState->m_players[m_resultsAnim.player];
-
-					int y = GFX_SY/3;
-
-					setColor(colorWhite);
-					drawCharIcon(GFX_SX/2, y, m_resultsAnim.player, VOTING_CHAR_SCALE, CharIcon_Council);
-					y += VOTING_CHAR_HEIGHT;
-
-					const int foodChange = player.m_resources.food - player.m_oldResources.food;
-					const int wealthChange = player.m_resources.wealth - player.m_oldResources.wealth;
-					const int techChange = player.m_resources.tech - player.m_oldResources.tech;
-
-					setFont("calibri.ttf");
-					setColor(colorWhite);
-
-					if (foodChange != 0)
-						drawText(GFX_SX/2, y += 50, 30, 0.f, +1.f, "food %+d", foodChange);
-					if (wealthChange != 0)
-						drawText(GFX_SX/2, y += 50, 30, 0.f, +1.f, "wealth %+d", wealthChange);
-					if (techChange != 0)
-						drawText(GFX_SX/2, y += 50, 30, 0.f, +1.f, "tech %+d", techChange);
-
-					if (g_TimerRT.Time_get() >= m_resultsAnim.timer)
-					{
-						m_resultsAnim.timer = 0.f;
-
-						if (m_resultsAnim.player + 1 < g_gameState->m_numPlayers)
-							m_resultsAnim.player++;
-						else
-							m_resultsAnim.state = ResultsAnim::State_ShowGlobalResults;
-					}
-				}
-				break;
-			case ResultsAnim::State_ShowVotingResults:
-				if (m_resultsAnim.timer == 0.f)
-					m_resultsAnim.timer = g_TimerRT.Time_get() + 5.f;
-
-				if (g_TimerRT.Time_get() >= m_resultsAnim.timer)
-				{
-					m_resultsAnim.timer = 0.f;
-					m_resultsAnim.state = ResultsAnim::State_ShowGlobalResults;
-				}
-				break;
-			case ResultsAnim::State_ShowGlobalResults:
-				if (m_resultsAnim.timer == 0.f)
-					m_resultsAnim.timer = g_TimerRT.Time_get() + 3.f;
-
-				if (g_TimerRT.Time_get() >= m_resultsAnim.timer)
-				{
-					m_resultsAnim.timer = 0.f;
-					m_resultsAnim.state = ResultsAnim::State_Done;
-				}
-				break;
-			case ResultsAnim::State_Done:
-				m_state = State_Discuss;
-				break;
-			}
-
-			// todo : show how end of round effects each player
 		}
 
 		gxPopMatrix();
@@ -842,6 +773,28 @@ public:
 class StatsScreen
 {
 public:
+		struct ResultsAnim
+	{
+		enum State
+		{
+			State_ShowPlayerResults,
+			State_ShowGlobalResults,
+			State_ShowVotingResults,
+			State_Done
+		};
+
+		State state;
+		float timer;
+		int numPlayers;
+
+		ResultsAnim()
+			: state(State_ShowPlayerResults)
+			, timer(0.f)
+			, numPlayers(1)
+		{
+		}
+	} m_resultsAnim;
+
 	StatsScreen()
 	{
 	}
@@ -860,8 +813,49 @@ public:
 
 		// draw background
 
-		setColor(colorWhite);
-		Sprite("overview-back.png").draw();
+		if (g_votingScreen->m_state == VotingScreen::State_ShowSponsor)
+		{
+			setColor(colorWhite);
+			Sprite("sponsors.png").draw();
+		}
+		else if (g_votingScreen->m_state == VotingScreen::State_TitleScreen)
+		{
+			setColor(colorWhite);
+			Sprite("title-screen.jpg").draw();
+		}
+		else
+		{
+			setColor(colorWhite);
+			Sprite("overview-back.png").draw();
+		}
+
+		const int councilX[MAX_PLAYERS] =
+		{
+			COUNCIL_CHAR1_X,
+			COUNCIL_CHAR2_X,
+			COUNCIL_CHAR3_X,
+			COUNCIL_CHAR4_X,
+			COUNCIL_CHAR5_X,
+			COUNCIL_CHAR6_X,
+			COUNCIL_CHAR7_X,
+			COUNCIL_CHAR8_X,
+			COUNCIL_CHAR9_X,
+			COUNCIL_CHAR10_X
+		};
+
+		const int councilY[MAX_PLAYERS] =
+		{
+			COUNCIL_CHAR1_Y,
+			COUNCIL_CHAR2_Y,
+			COUNCIL_CHAR3_Y,
+			COUNCIL_CHAR4_Y,
+			COUNCIL_CHAR5_Y,
+			COUNCIL_CHAR6_Y,
+			COUNCIL_CHAR7_Y,
+			COUNCIL_CHAR8_Y,
+			COUNCIL_CHAR9_Y,
+			COUNCIL_CHAR10_Y
+		};
 
 		bool drawAgenda = true;
 
@@ -872,10 +866,7 @@ public:
 			setFont("orbi.ttf");
 			setColor(Color::fromHex("3bcac8"));
 			const int votingTimeLeft = g_votingScreen->getDiscussionTimeLeft();
-			drawText(VOTING_TIMER_X, VOTING_TIMER_Y, VOTING_TIMER_SIZE, 0.f, 1.f, "%d:%02d", votingTimeLeft / 60, votingTimeLeft % 60);
-		}
-		else if (g_votingScreen->m_state == VotingScreen::State_SelectCharacter)
-		{
+			drawText(DISCUSSION_TIMER_X, DISCUSSION_TIMER_Y, DISCUSSION_TIMER_SIZE, 0.f, 1.f, "%d:%02d", votingTimeLeft / 60, votingTimeLeft % 60);
 		}
 
 		if (drawAgenda)
@@ -907,100 +898,197 @@ public:
 					30,
 					g_gameState->m_currentAgenda.m_description.c_str());
 			*/
+		}
 
-			// draw council
+		// draw council
 
-			for (int i = 0; i < g_gameState->m_numPlayers; ++i)
+		for (int layer = 0; layer < 2; ++layer)
+		{
+			for (int i = 0; i < MAX_PLAYERS; ++i)
 			{
+				// some characters need to be moved in front of others (layer 1)
+				const int charLayer = (i == 2 || i == 4) ? 1 : 0;
+				if (layer != charLayer)
+					continue;
+
 				Player & player = g_gameState->m_players[i];
 
 				Color color;
 
-				if (player.m_hasVoted)
-					color = colorWhite;
-				else
-					color = COLOR_CHAR_DISABLED;
-
-				setColor(color);
-				drawCharIcon(GFX_SX * (i + 1) / (MAX_PLAYERS + 1), GFX_SY / 4, i, .5f, CharIcon_Council);
-			}
-
-			// draw voting buttons
-
-			for (int i = 0; i < NUM_VOTING_BUTTONS;++i)
-			{
-				AgendaOption & option = g_gameState->m_currentAgenda.m_options[i];
-
-				VotingScreen::VotingButton & button = g_votingScreen->m_votingButtons[i];
-
-				if (g_devMode)
+				if (!player.m_hasVoted)
 				{
-					setColor(colorGreen);
-					drawRectLine(
-						button.x1,
-						button.y1,
-						button.x2,
-						button.y2);
+					Shader shader("disabled");
+					setShader(shader);
+					drawCharIcon(councilX[i], councilY[i], i, COUNCIL_CHAR_SCALE, CharIcon_Council);
+					clearShader();
 				}
-
-				setFont("orbi.ttf");
-				setColor(Color::fromHex("3bcac8"));
-				drawText(COUNCIL_OPTION_TEXT_X, COUNCIL_OPTION_TEXT_Y + i * COUNCIL_OPTION_DY, 34, 1.f, 1.f, option.m_caption.c_str());
-				drawText(COUNCIL_OPTION_TEXT_X, COUNCIL_OPTION_TEXT_Y + i * COUNCIL_OPTION_DY + 40, 20, 1.f, 1.f, option.m_text.c_str());
-
-				// food, wealth, tech
-
-				const Color colors[3] =
+				else
 				{
-					Color::fromHex("43e981"),
-					Color::fromHex("e6e38f"),
-					Color::fromHex("5ed8ee")
-				};
+					setColor(colorWhite);
+					drawCharIcon(councilX[i], councilY[i], i, COUNCIL_CHAR_SCALE, CharIcon_Council);
+				}
+			}
+		}
 
-				const char * boxes[3] =
+		if (g_votingScreen->m_state == VotingScreen::State_ShowResults)
+		{
+			switch (m_resultsAnim.state)
+			{
+			case ResultsAnim::State_ShowPlayerResults:
 				{
-					"costbox-food.png",
-					"costbox-wealth.png",
-					"costbox-tech.png"
-				};
+					if (m_resultsAnim.timer == 0.f)
+						m_resultsAnim.timer = g_TimerRT.Time_get() + PLAYER_STATS_TIME;
 
-				const int costs[3] =
-				{
-					option.m_cost.food,
-					option.m_cost.wealth,
-					option.m_cost.tech,
-				};
+					int numAlivePlayers = 0;
+					for (int i = 0; i < g_gameState->m_numPlayers; ++i)
+						if (!g_gameState->m_players[i].m_isDead)
+							numAlivePlayers++;
 
-				const int posX[2] =
-				{
-					COUNCIL_OPTION_COST_1_X,
-					COUNCIL_OPTION_COST_2_X
-				};
+					int playerIdx = 0;
 
-				const int boxX[2] =
-				{
-					COUNCIL_OPTION_COSTBOX_1_X,
-					COUNCIL_OPTION_COSTBOX_2_X
-				};
-
-				int idx = 0;
-
-				for (int c = 0; c < 3; ++c)
-				{
-					if (costs[c] != 0)
+					for (int i = 0; i < m_resultsAnim.numPlayers; ++i, ++playerIdx)
 					{
-						setColor(colorWhite);
-						Sprite(boxes[c]).drawEx(boxX[idx], COUNCIL_OPTION_COSTBOX_Y + i * COUNCIL_OPTION_DY);
+						while (g_gameState->m_players[playerIdx].m_isDead)
+							playerIdx++;
 
-						setFont("electro.ttf");
-						setColor(colors[c]);
-						drawText(posX[idx], COUNCIL_OPTION_COST_Y + i * COUNCIL_OPTION_DY, 36, +1.f, +1.f, "%+d", costs[c]);
+						if (i >= m_resultsAnim.numPlayers - 2)
+						{
+							const Player & player = g_gameState->m_players[playerIdx];
+							const AgendaOption & option = g_gameState->m_previousAgenda.m_options[player.m_voteSelection];
 
-						idx++;
+							float y = councilY[i] - 50.f;
 
-						if (idx == 2)
-							break;
+							setColor(colorWhite);
+							Sprite bubble("Council_SpeechBubble.png");
+							bubble.drawEx(councilX[i], y, 0.f, 1.f);
+
+							const int foodChange = player.m_resources.food - player.m_oldResources.food;
+							const int wealthChange = player.m_resources.wealth - player.m_oldResources.wealth;
+							const int techChange = player.m_resources.tech - player.m_oldResources.tech;
+
+							y += RESEARCH_RESOURCE_OFFSET_Y;
+
+							setFont("orbi.ttf");
+							setColor(Color::fromHex("43e981"));
+							drawText(councilX[i] + RESEARCH_FOOD_OFFSET, y, RESEARCH_FONT_SIZE, +1.f, +1.f, "%+d", foodChange);
+
+							setFont("orbi.ttf");
+							setColor(Color::fromHex("e6e38f"));
+							drawText(councilX[i] + RESEARCH_WEALTH_OFFSET, y, RESEARCH_FONT_SIZE, +1.f, +1.f, "%+d", wealthChange);
+
+							setFont("orbi.ttf");
+							setColor(Color::fromHex("5ed8ee"));
+							drawText(councilX[i] + RESEARCH_TECH_OFFSET, y, RESEARCH_FONT_SIZE, +1.f, +1.f, "%+d", techChange);
+
+							setFont("orbi.ttf");
+							setColor(colorWhite);
+							drawTextArea(councilX[i] + RESEARCH_TEXT_OFFSET_X, councilY[i] + RESEARCH_TEXT_OFFSET_Y, bubble.getWidth() - RESEARCH_TEXT_OFFSET_X  * 2.f, RESEARCH_TEXT_FONT_SIZE, "I VOTED: %s", option.m_caption.c_str());
+						}
 					}
+
+					if (g_TimerRT.Time_get() >= m_resultsAnim.timer)
+					{
+						m_resultsAnim.timer = 0.f;
+
+						if (m_resultsAnim.numPlayers + 1 <= numAlivePlayers)
+							m_resultsAnim.numPlayers++;
+						else
+							m_resultsAnim.state = ResultsAnim::State_ShowGlobalResults;
+					}
+				}
+				break;
+			case ResultsAnim::State_ShowVotingResults:
+				if (m_resultsAnim.timer == 0.f)
+					m_resultsAnim.timer = g_TimerRT.Time_get() + 5.f;
+
+				if (g_TimerRT.Time_get() >= m_resultsAnim.timer)
+				{
+					m_resultsAnim.timer = 0.f;
+					m_resultsAnim.state = ResultsAnim::State_ShowGlobalResults;
+				}
+				break;
+			case ResultsAnim::State_ShowGlobalResults:
+				if (m_resultsAnim.timer == 0.f)
+					m_resultsAnim.timer = g_TimerRT.Time_get() + 3.f;
+
+				if (g_TimerRT.Time_get() >= m_resultsAnim.timer)
+				{
+					m_resultsAnim.timer = 0.f;
+					m_resultsAnim.state = ResultsAnim::State_Done;
+				}
+				break;
+			case ResultsAnim::State_Done:
+				m_resultsAnim = ResultsAnim();
+				g_votingScreen->m_state = VotingScreen::State_Discuss;
+				break;
+			}
+		}
+
+		// draw voting buttons
+
+		for (int i = 0; i < NUM_VOTING_BUTTONS;++i)
+		{
+			AgendaOption & option = g_gameState->m_currentAgenda.m_options[i];
+
+			VotingScreen::VotingButton & button = g_votingScreen->m_votingButtons[i];
+
+			setFont("orbi.ttf");
+			setColor(Color::fromHex("3bcac8"));
+			drawText(COUNCIL_OPTION_TEXT_X, COUNCIL_OPTION_TEXT_Y + i * COUNCIL_OPTION_DY, 34, 1.f, 1.f, option.m_caption.c_str());
+			drawText(COUNCIL_OPTION_TEXT_X, COUNCIL_OPTION_TEXT_Y + i * COUNCIL_OPTION_DY + 40, 20, 1.f, 1.f, option.m_text.c_str());
+
+			// food, wealth, tech
+
+			const Color colors[3] =
+			{
+				Color::fromHex("43e981"),
+				Color::fromHex("e6e38f"),
+				Color::fromHex("5ed8ee")
+			};
+
+			const char * boxes[3] =
+			{
+				"costbox-food.png",
+				"costbox-wealth.png",
+				"costbox-tech.png"
+			};
+
+			const int costs[3] =
+			{
+				option.m_cost.food,
+				option.m_cost.wealth,
+				option.m_cost.tech,
+			};
+
+			const int posX[2] =
+			{
+				COUNCIL_OPTION_COST_1_X,
+				COUNCIL_OPTION_COST_2_X
+			};
+
+			const int boxX[2] =
+			{
+				COUNCIL_OPTION_COSTBOX_1_X,
+				COUNCIL_OPTION_COSTBOX_2_X
+			};
+
+			int idx = 0;
+
+			for (int c = 0; c < 3; ++c)
+			{
+				if (costs[c] != 0)
+				{
+					setColor(colorWhite);
+					Sprite(boxes[c]).drawEx(boxX[idx], COUNCIL_OPTION_COSTBOX_Y + i * COUNCIL_OPTION_DY);
+
+					setFont("electro.ttf");
+					setColor(colors[c]);
+					drawText(posX[idx], COUNCIL_OPTION_COST_Y + i * COUNCIL_OPTION_DY, 36, +1.f, +1.f, "%+d", costs[c]);
+
+					idx++;
+
+					if (idx == 2)
+						break;
 				}
 			}
 		}
@@ -1031,6 +1119,9 @@ App::~App()
 
 bool App::init()
 {
+	time_t t = time(0);
+	srand(t);
+
 	Calc::Initialize();
 
 	g_optionManager.Load("useroptions.txt");

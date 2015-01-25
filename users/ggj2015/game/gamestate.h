@@ -84,6 +84,7 @@ public:
 	std::vector<Agenda> m_agendasLoaded;
 	std::vector<Agenda> m_agendas;
 	Agenda m_currentAgenda;
+	Agenda m_previousAgenda;
 
 	GameState();
 
