@@ -1017,10 +1017,10 @@ public:
 				setFont("orbi.ttf");
 				setColor(Color::fromHex("245276"));
 				drawTextArea(
-					130,
-					200,
-					720,
-					40,
+					COUNCIL_UI_AGENDAVIEWX,
+					COUNCIL_UI_AGENDAVIEWY,
+					COUNCIL_UI_AGENDAVIEWSX,
+					COUNCIL_UI_AGENDAVIEWSY,
 					g_gameState->m_currentAgenda.m_description.c_str());
 
 				if (!g_gameState->m_currentAgenda.m_requirement.empty())
