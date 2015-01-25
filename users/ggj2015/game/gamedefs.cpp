@@ -197,3 +197,8 @@ OPTION_DEFINE(int, RESEARCH_TEXT_FONT_SIZE, "Research Info/Text Font Size");
 OPTION_DEFINE(int, ROUND_INCOME_X, "Round Income/X");
 OPTION_DEFINE(int, ROUND_INCOME_Y, "Round Income/Y");
 OPTION_DEFINE(int, ROUND_INCOME_DX, "Round Income/DX");
+
+//
+
+OPTION_DEFINE(int, SPEECH_BUBBLE_OFFSET_X, "Speech Bubble/Offset X");
+OPTION_DEFINE(int, SPEECH_BUBBLE_OFFSET_Y, "Speech Bubble/Offset Y");

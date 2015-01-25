@@ -810,6 +810,12 @@ public:
 		{
 			setColor(colorWhite);
 			Sprite("winner-back.png").draw();
+
+			for (size_t i = 0; i < g_gameState->m_winningPlayers.size(); ++i)
+			{
+				const int playerIdx = g_gameState->m_winningPlayers[i];
+				const Player & player = g_gameState->m_players[playerIdx];
+			}
 		}
 
 		gxPopMatrix();
@@ -1039,21 +1045,23 @@ public:
 							{
 								Assert(!player.m_wasDead);
 
-								float y = councilY[i] - 50.f;
+								float x = councilX[i] + SPEECH_BUBBLE_OFFSET_X;
+								float y = councilY[i] + SPEECH_BUBBLE_OFFSET_Y;
 
 								setColor(colorWhite);
-								Sprite bubble("Council_DeathBubble.png");
-								bubble.drawEx(councilX[i], y, 0.f, 1.f);
+								Sprite bubble("Council_SpeechBubble.png");
+								bubble.drawEx(x, y, 0.f, 1.f);
 							}
 							else
 							{
 								const AgendaOption & option = g_gameState->m_previousAgenda.m_options[player.m_voteSelection];
 
-								float y = councilY[i] - 50.f;
+								float x = councilX[i] + SPEECH_BUBBLE_OFFSET_X;
+								float y = councilY[i] + SPEECH_BUBBLE_OFFSET_Y;
 
 								setColor(colorWhite);
 								Sprite bubble("Council_SpeechBubble.png");
-								bubble.drawEx(councilX[i], y, 0.f, 1.f);
+								bubble.drawEx(x, y, 0.f, 1.f);
 
 								const int foodChange = player.m_resourcesGainedThisRound.food;
 								const int wealthChange = player.m_resourcesGainedThisRound.wealth;
@@ -1063,19 +1071,19 @@ public:
 
 								setFont("orbi.ttf");
 								setColor(Color::fromHex("43e981"));
-								drawText(councilX[i] + RESEARCH_FOOD_OFFSET, y, RESEARCH_FONT_SIZE, +1.f, +1.f, "%+d", foodChange);
+								drawText(x + RESEARCH_FOOD_OFFSET, y, RESEARCH_FONT_SIZE, +1.f, +1.f, "%+d", foodChange);
 
 								setFont("orbi.ttf");
 								setColor(Color::fromHex("e6e38f"));
-								drawText(councilX[i] + RESEARCH_WEALTH_OFFSET, y, RESEARCH_FONT_SIZE, +1.f, +1.f, "%+d", wealthChange);
+								drawText(x + RESEARCH_WEALTH_OFFSET, y, RESEARCH_FONT_SIZE, +1.f, +1.f, "%+d", wealthChange);
 
 								setFont("orbi.ttf");
 								setColor(Color::fromHex("5ed8ee"));
-								drawText(councilX[i] + RESEARCH_TECH_OFFSET, y, RESEARCH_FONT_SIZE, +1.f, +1.f, "%+d", techChange);
+								drawText(x + RESEARCH_TECH_OFFSET, y, RESEARCH_FONT_SIZE, +1.f, +1.f, "%+d", techChange);
 
 								setFont("orbi.ttf");
 								setColor(colorBlack);
-								drawTextArea(councilX[i] + RESEARCH_TEXT_OFFSET_X, councilY[i] + RESEARCH_TEXT_OFFSET_Y, bubble.getWidth() - RESEARCH_TEXT_OFFSET_X  * 2.f, RESEARCH_TEXT_FONT_SIZE, "I VOTE: %s", option.m_caption.c_str());
+								drawTextArea(x + RESEARCH_TEXT_OFFSET_X, councilY[i] + RESEARCH_TEXT_OFFSET_Y, bubble.getWidth() - RESEARCH_TEXT_OFFSET_X  * 2.f, RESEARCH_TEXT_FONT_SIZE, "I VOTE: %s", option.m_caption.c_str());
 							}
 						}
 					}
