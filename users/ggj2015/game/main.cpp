@@ -62,6 +62,11 @@ COMMAND_OPTION(g_fakePlayerWin2, "App/Let Player 1 Win As Last Man Standing", []
 		g_gameState->m_players[i].m_isDead = true;
 });
 
+COMMAND_OPTION(g_fakePlayerDie1, "App/Let Player 1 Die Due To No Food", []
+{
+	g_gameState->m_players[0].m_resources.food = 0;
+});
+
 //
 
 TIMER_DEFINE(g_appTickTime, PerFrame, "App/Tick");
@@ -1022,9 +1027,9 @@ public:
 								Sprite bubble("Council_SpeechBubble.png");
 								bubble.drawEx(councilX[i], y, 0.f, 1.f);
 
-								const int foodChange = player.m_resources.food - player.m_oldResources.food;
-								const int wealthChange = player.m_resources.wealth - player.m_oldResources.wealth;
-								const int techChange = player.m_resources.tech - player.m_oldResources.tech;
+								const int foodChange = player.m_resourcesGainedThisRound.food;
+								const int wealthChange = player.m_resourcesGainedThisRound.wealth;
+								const int techChange = player.m_resourcesGainedThisRound.tech;
 
 								y += RESEARCH_RESOURCE_OFFSET_Y;
 

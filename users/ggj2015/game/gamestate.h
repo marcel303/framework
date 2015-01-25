@@ -53,7 +53,8 @@ public:
 
 	Resources m_resources;
 	Resources m_resourcesSpent;
-	Resources m_oldResources;
+	Resources m_resourcesAtStartOfRound;
+	Resources m_resourcesGainedThisRound;
 
 	Player();
 

@@ -76,7 +76,8 @@ void Player::newGame()
 	m_resources.wealth = 5;
 	m_resources.tech = 5;
 
-	m_oldResources = m_resources;
+	m_resourcesAtStartOfRound = m_resources;
+	m_resourcesGainedThisRound = Resources();
 }
 
 void Player::nextRound(bool isNewGame)
@@ -404,11 +405,6 @@ void GameState::nextRound(bool applyCurrentAgenda)
 		}
 	}
 
-	for (int i = 0; i < m_numPlayers; ++i)
-	{
-		m_players[i].m_oldResources = m_players[i].m_resources;
-	}
-
 	if (applyCurrentAgenda)
 	{
 		// todo : was the agenda successful or not? add custom code per agenda?
@@ -453,24 +449,26 @@ void GameState::nextRound(bool applyCurrentAgenda)
 					m_players[i].m_hasParticipated = true;
 				}
 			}
+
 			success &= numParticipants >= m_numPlayers * m_currentAgenda.m_percentage / 100;
 		}
-      else if (m_currentAgenda.m_type == "randomtarget")
-      {
-         // check for majority vote
+		else if (m_currentAgenda.m_type == "randomtarget")
+		{
+			// check for majority vote
 
-         int numParticipants = 0;
+			int numParticipants = 0;
 
-         for (int i = 0; i < m_numPlayers; ++i)
-         {
-            if (m_players[i].m_voteSelection == 0)
-            {
-               numParticipants++;
-               m_players[i].m_hasParticipated = true;
-            }
-         }
-         success &= numParticipants >= m_numPlayers * m_currentAgenda.m_percentage / 100;
-      }
+			for (int i = 0; i < m_numPlayers; ++i)
+			{
+				if (m_players[i].m_voteSelection == 0)
+				{
+					numParticipants++;
+					m_players[i].m_hasParticipated = true;
+				}
+			}
+
+			success &= numParticipants >= m_numPlayers * m_currentAgenda.m_percentage / 100;
+		}
 		else if (m_currentAgenda.m_type == "local")
 		{
 			std::vector<int> participants;
@@ -528,6 +526,15 @@ void GameState::nextRound(bool applyCurrentAgenda)
 		}
 
 		m_currentAgenda.apply(success, 0, 0);
+	}
+
+	for (int i = 0; i < m_numPlayers; ++i)
+	{
+		m_players[i].m_resourcesGainedThisRound = Resources();
+		m_players[i].m_resourcesGainedThisRound += m_players[i].m_resources;
+		m_players[i].m_resourcesGainedThisRound -= m_players[i].m_resourcesAtStartOfRound;
+
+		m_players[i].m_resourcesAtStartOfRound = m_players[i].m_resources;
 	}
 
 	// kill off players that die due to startvation
