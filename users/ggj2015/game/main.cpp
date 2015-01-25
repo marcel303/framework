@@ -976,50 +976,64 @@ public:
 					if (m_resultsAnim.timer == 0.f)
 						m_resultsAnim.timer = g_TimerRT.Time_get() + PLAYER_STATS_TIME;
 
-					int numAlivePlayers = 0;
+					int numAliveOrDiedPlayers = 0;
 					for (int i = 0; i < g_gameState->m_numPlayers; ++i)
-						if (!g_gameState->m_players[i].m_isDead)
-							numAlivePlayers++;
+						if (!g_gameState->m_players[i].m_isDead || !g_gameState->m_players[i].m_wasDead)
+							numAliveOrDiedPlayers++;
 
 					int playerIdx = 0;
 
 					for (int i = 0; i < m_resultsAnim.numPlayers; ++i, ++playerIdx)
 					{
-						while (g_gameState->m_players[playerIdx].m_isDead)
+						while (g_gameState->m_players[playerIdx].m_isDead && g_gameState->m_players[playerIdx].m_wasDead)
 							playerIdx++;
 
 						if (i >= m_resultsAnim.numPlayers - 2)
 						{
 							const Player & player = g_gameState->m_players[playerIdx];
-							const AgendaOption & option = g_gameState->m_previousAgenda.m_options[player.m_voteSelection];
 
-							float y = councilY[i] - 50.f;
+							if (player.m_isDead)
+							{
+								Assert(!player.m_wasDead);
 
-							setColor(colorWhite);
-							Sprite bubble("Council_SpeechBubble.png");
-							bubble.drawEx(councilX[i], y, 0.f, 1.f);
+								float y = councilY[i] - 50.f;
 
-							const int foodChange = player.m_resources.food - player.m_oldResources.food;
-							const int wealthChange = player.m_resources.wealth - player.m_oldResources.wealth;
-							const int techChange = player.m_resources.tech - player.m_oldResources.tech;
+								setColor(colorWhite);
+								Sprite bubble("Council_DeathBubble.png");
+								bubble.drawEx(councilX[i], y, 0.f, 1.f);
+							}
+							else
+							{
+								const AgendaOption & option = g_gameState->m_previousAgenda.m_options[player.m_voteSelection];
 
-							y += RESEARCH_RESOURCE_OFFSET_Y;
+								float y = councilY[i] - 50.f;
 
-							setFont("orbi.ttf");
-							setColor(Color::fromHex("43e981"));
-							drawText(councilX[i] + RESEARCH_FOOD_OFFSET, y, RESEARCH_FONT_SIZE, +1.f, +1.f, "%+d", foodChange);
+								setColor(colorWhite);
+								Sprite bubble("Council_SpeechBubble.png");
+								bubble.drawEx(councilX[i], y, 0.f, 1.f);
 
-							setFont("orbi.ttf");
-							setColor(Color::fromHex("e6e38f"));
-							drawText(councilX[i] + RESEARCH_WEALTH_OFFSET, y, RESEARCH_FONT_SIZE, +1.f, +1.f, "%+d", wealthChange);
+								const int foodChange = player.m_resources.food - player.m_oldResources.food;
+								const int wealthChange = player.m_resources.wealth - player.m_oldResources.wealth;
+								const int techChange = player.m_resources.tech - player.m_oldResources.tech;
 
-							setFont("orbi.ttf");
-							setColor(Color::fromHex("5ed8ee"));
-							drawText(councilX[i] + RESEARCH_TECH_OFFSET, y, RESEARCH_FONT_SIZE, +1.f, +1.f, "%+d", techChange);
+								y += RESEARCH_RESOURCE_OFFSET_Y;
 
-							setFont("orbi.ttf");
-							setColor(colorWhite);
-							drawTextArea(councilX[i] + RESEARCH_TEXT_OFFSET_X, councilY[i] + RESEARCH_TEXT_OFFSET_Y, bubble.getWidth() - RESEARCH_TEXT_OFFSET_X  * 2.f, RESEARCH_TEXT_FONT_SIZE, "I VOTED: %s", option.m_caption.c_str());
+								setFont("orbi.ttf");
+								setColor(Color::fromHex("43e981"));
+								drawText(councilX[i] + RESEARCH_FOOD_OFFSET, y, RESEARCH_FONT_SIZE, +1.f, +1.f, "%+d", foodChange);
+
+								setFont("orbi.ttf");
+								setColor(Color::fromHex("e6e38f"));
+								drawText(councilX[i] + RESEARCH_WEALTH_OFFSET, y, RESEARCH_FONT_SIZE, +1.f, +1.f, "%+d", wealthChange);
+
+								setFont("orbi.ttf");
+								setColor(Color::fromHex("5ed8ee"));
+								drawText(councilX[i] + RESEARCH_TECH_OFFSET, y, RESEARCH_FONT_SIZE, +1.f, +1.f, "%+d", techChange);
+
+								setFont("orbi.ttf");
+								setColor(colorWhite);
+								drawTextArea(councilX[i] + RESEARCH_TEXT_OFFSET_X, councilY[i] + RESEARCH_TEXT_OFFSET_Y, bubble.getWidth() - RESEARCH_TEXT_OFFSET_X  * 2.f, RESEARCH_TEXT_FONT_SIZE, "I VOTED: %s", option.m_caption.c_str());
+							}
 						}
 					}
 
@@ -1027,7 +1041,7 @@ public:
 					{
 						m_resultsAnim.timer = 0.f;
 
-						if (m_resultsAnim.numPlayers + 1 <= numAlivePlayers)
+						if (m_resultsAnim.numPlayers + 1 <= numAliveOrDiedPlayers)
 							m_resultsAnim.numPlayers++;
 						else
 							m_resultsAnim.state = ResultsAnim::State_ShowGlobalResults;
