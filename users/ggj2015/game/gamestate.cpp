@@ -52,7 +52,10 @@ bool Player::vote(int selection, bool abstain)
 		bool allVoted = true;
 
 		for (int i = 0; i < g_gameState->m_numPlayers; ++i)
-			allVoted &= g_gameState->m_players[i].m_hasVoted;
+		{
+			if (!g_gameState->m_players[i].m_isDead)
+				allVoted &= g_gameState->m_players[i].m_hasVoted;
+		}
 
 		if (allVoted)
 		{
@@ -67,6 +70,7 @@ bool Player::vote(int selection, bool abstain)
 void Player::newGame()
 {
 	m_isDead = false;
+	m_wasDead = false;
 
 	m_resources.food = 5;
 	m_resources.wealth = 5;
@@ -304,6 +308,8 @@ void GameState::newGame()
 {
 	m_state = State_Playing;
 
+	m_winningPlayers.clear();
+
 	randomizeAgendaDeck();
 
 	assignPlayerGoals();
@@ -453,19 +459,48 @@ void GameState::nextRound(bool applyCurrentAgenda)
 		m_currentAgenda.apply(success, 0, 0);
 	}
 
-	// check for player goal completion
+	// kill off players that die due to startvation
 
-	std::vector<int> winningPlayers;
+	for (int i = 0; i < m_numPlayers; ++i)
+	{
+		if (m_players[i].m_isDead)
+			m_players[i].m_wasDead = true;
+		else if (m_players[i].m_resources.food == 0)
+		{
+			m_players[i].m_isDead = true;
+			Assert(!m_players[i].m_wasDead);
+		}
+	}
+
+	// check for player goal completion
 
 	for (int i = 0; i < m_numPlayers; ++i)
 	{
 		if (!m_players[i].m_isDead && m_players[i].m_goal.isComplete(m_players[i]))
 		{
-			winningPlayers.push_back(i);
+			m_winningPlayers.push_back(i);
 		}
 	}
 
-	if (!winningPlayers.empty())
+	if (m_winningPlayers.empty())
+	{
+		std::vector<int> alivePlayers;
+
+		for (int i = 0; i < m_numPlayers; ++i)
+		{
+			if (!m_players[i].m_isDead)
+			{
+				alivePlayers.push_back(i);
+			}
+		}
+
+		if (alivePlayers.size() == 1)
+		{
+			m_winningPlayers = alivePlayers;
+		}
+	}
+
+	if (!m_winningPlayers.empty())
 	{
 		m_state = State_GameEnded;
 	}

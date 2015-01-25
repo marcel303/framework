@@ -41,6 +41,7 @@ class Player
 {
 public:
 	bool m_isDead;
+	bool m_wasDead;
 	bool m_hasVoted;
 	bool m_hasAbstained;
 	bool m_hasSabotaged;
@@ -73,6 +74,8 @@ public:
 	};
 
 	State m_state;
+
+	std::vector<int> m_winningPlayers;
 
 	Player m_players[MAX_PLAYERS];
 	int m_numPlayers;

@@ -49,6 +49,19 @@ OPTION_DEFINE(bool, g_flipScreen, "App/Flip Screen");
 
 OPTION_EXTERN(int, g_playerCharacterIndex);
 
+COMMAND_OPTION(g_fakePlayerWin1, "App/Let Player 1 Win With Resources", []
+{
+	g_gameState->m_players[0].m_resources.food = 20;
+	g_gameState->m_players[0].m_resources.wealth = 20;
+	g_gameState->m_players[0].m_resources.tech = 20;
+});
+
+COMMAND_OPTION(g_fakePlayerWin2, "App/Let Player 1 Win As Last Man Standing", []
+{
+	for (int i = 1; i < g_gameState->m_numPlayers; ++i)
+		g_gameState->m_players[i].m_isDead = true;
+});
+
 //
 
 TIMER_DEFINE(g_appTickTime, PerFrame, "App/Tick");
@@ -165,7 +178,8 @@ public:
 		State_SelectCharacter,
 		State_SelectOption,
 		State_SelectTarget,
-		State_ShowResults
+		State_ShowResults,
+		State_ShowWinner
 	};
 
 	State m_state;
@@ -180,7 +194,7 @@ public:
 
 	VotingScreen()
 		: m_state(g_devMode ? State_Discuss : State_ShowSponsor)
-		, m_stateTimer(g_devMode ? 0.f : (g_TimerRT.Time_get() + 3.f))
+		, m_stateTimer(0.f)
 		, m_discussionTimeStart(0)
 		, m_selectedCharacter(0)
 		, m_selectedOption(0)
@@ -335,6 +349,9 @@ public:
 	{
 		if (m_state == State_ShowSponsor)
 		{
+			if (m_stateTimer == 0.f && !g_devMode)
+				m_stateTimer = g_TimerRT.Time_get() + 3.f;
+
 			if (g_TimerRT.Time_get() >= m_stateTimer)
 			{
 				m_stateTimer = 0.f;
@@ -474,6 +491,21 @@ public:
 		}
 		else if (m_state == State_ShowResults)
 		{
+		}
+		else if (m_state == State_ShowWinner)
+		{
+			if (m_stateTimer == 0.f)
+				m_stateTimer = g_TimerRT.Time_get() + 7.f;
+
+			if (g_TimerRT.Time_get() >= m_stateTimer && mouse.wentDown(BUTTON_LEFT))
+			{
+				m_stateTimer = 0.f;
+				m_state = State_TitleScreen;
+			}
+		}
+		else
+		{
+			Assert(false);
 		}
 	}
 
@@ -765,6 +797,11 @@ public:
 			setColor(colorWhite);
 			Sprite("voting-back.png").draw();
 		}
+		else if (m_state == State_ShowWinner)
+		{
+			setColor(colorWhite);
+			Sprite("winner-back.png").draw();
+		}
 
 		gxPopMatrix();
 	}
@@ -1019,7 +1056,10 @@ public:
 				break;
 			case ResultsAnim::State_Done:
 				m_resultsAnim = ResultsAnim();
-				g_votingScreen->m_state = VotingScreen::State_Discuss;
+				if (g_gameState->m_state == GameState::State_GameEnded)
+					g_votingScreen->m_state = VotingScreen::State_ShowWinner;
+				else
+					g_votingScreen->m_state = VotingScreen::State_Discuss;
 				break;
 			}
 		}
