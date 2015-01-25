@@ -71,6 +71,11 @@ COMMAND_OPTION(g_fakePlayerDie1, "App/Let Player 1 Die Due To No Food", []
 	g_gameState->m_players[0].m_resources.food = 0;
 });
 
+COMMAND_OPTION(g_fakeGameWin, "App/Let Player 1 Win The Game", []
+{
+	g_gameState->m_winningPlayers.push_back(0);
+});
+
 //
 
 TIMER_DEFINE(g_appTickTime, PerFrame, "App/Tick");
@@ -101,7 +106,8 @@ enum CharIcon
 {
 	CharIcon_CharSelect,
 	CharIcon_Voting,
-	CharIcon_Council
+	CharIcon_Council,
+	CharIcon_Winner
 };
 
 static void drawCharIcon(int x, int y, int index, float scale, CharIcon icon)
@@ -113,6 +119,8 @@ static void drawCharIcon(int x, int y, int index, float scale, CharIcon icon)
 		sprintf_s(filename, sizeof(filename), "portrait%d.png", index + 1);
 	if (icon == CharIcon_Council)
 		sprintf_s(filename, sizeof(filename), "portrait%d_Council.png", index + 1);
+	if (icon == CharIcon_Winner)
+		sprintf_s(filename, sizeof(filename), "portrait%d_victory.png", index + 1);
 	Sprite(filename).drawEx(x, y, 0.f, scale);
 }
 
@@ -200,6 +208,7 @@ public:
 	CharacterIcon m_targetIcons[MAX_PLAYERS];
 	VotingButton m_votingButtons[NUM_VOTING_BUTTONS];
 	int m_votingTimeStart;
+	int m_globalVotingTimeStart;
 
 	VotingScreen()
 		: m_state(g_devMode ? State_Discuss : State_ShowSponsor)
@@ -208,6 +217,7 @@ public:
 		, m_selectedCharacter(0)
 		, m_selectedOption(0)
 		, m_votingTimeStart(0)
+		, m_globalVotingTimeStart(0)
 	{
 		setupCharacterIcons();
 		setupTargetIcons();
@@ -310,6 +320,11 @@ public:
 		return Calc::Max<int>(-1, m_votingTimeStart + 20 - g_TimerRT.Time_get());
 	}
 
+	int getGlobalVotingTimeLeft() const
+	{
+		return Calc::Max<int>(-1, m_globalVotingTimeStart + (g_devMode ? 30 : 120) - g_TimerRT.Time_get());
+	}
+
 	int getDiscussionTimeLeft() const
 	{
 		if (keyboard.isDown(SDLK_t))
@@ -385,25 +400,45 @@ public:
 			{
 				m_discussionTimeStart = 0;
 				m_state = State_SelectCharacter;
+				m_globalVotingTimeStart = g_TimerRT.Time_get();
 			}
 		}
 		else if (m_state == State_SelectCharacter)
 		{
-			for (int i = 0; i < g_gameState->m_numPlayers; ++i)
+			if (getGlobalVotingTimeLeft() < 0)
 			{
-				Player & player = g_gameState->m_players[i];
+				// everyone who hasn't voted yet abstains
 
-				if (canSelectCharacter(i) && mouse.wentDown(BUTTON_LEFT))
+				for (int i = 0; i < g_gameState->m_numPlayers; ++i)
 				{
-					if (mouse.x >= m_characterIcons[i].x1 &&
-						mouse.y >= m_characterIcons[i].y1 &&
-						mouse.x <= m_characterIcons[i].x2 &&
-						mouse.y <= m_characterIcons[i].y2)
+					Player & player = g_gameState->m_players[i];
+
+					if (canSelectCharacter(i))
 					{
-						m_selectedCharacter = i;
-						m_votingTimeStart = g_TimerRT.Time_get();
-						m_state = State_SelectOption;
-						break;
+						if (player.vote(-1, true))
+							m_state = State_ShowResults;
+					}
+				}
+			}
+
+			if (m_state == State_SelectCharacter)
+			{
+				for (int i = 0; i < g_gameState->m_numPlayers; ++i)
+				{
+					Player & player = g_gameState->m_players[i];
+
+					if (canSelectCharacter(i) && mouse.wentDown(BUTTON_LEFT))
+					{
+						if (mouse.x >= m_characterIcons[i].x1 &&
+							mouse.y >= m_characterIcons[i].y1 &&
+							mouse.x <= m_characterIcons[i].x2 &&
+							mouse.y <= m_characterIcons[i].y2)
+						{
+							m_selectedCharacter = i;
+							m_votingTimeStart = g_TimerRT.Time_get();
+							m_state = State_SelectOption;
+							break;
+						}
 					}
 				}
 			}
@@ -822,6 +857,8 @@ public:
 			{
 				const int playerIdx = g_gameState->m_winningPlayers[i];
 				const Player & player = g_gameState->m_players[playerIdx];
+
+				drawCharIcon(GFX_SX/2, GFX_SY/3, playerIdx, 1.f, CharIcon_Winner);
 			}
 		}
 
@@ -942,6 +979,16 @@ public:
 
 		if (drawRoundStuff)
 		{
+			// draw round timer
+
+			if (g_votingScreen->m_state != VotingScreen::State_Discuss)
+			{
+				setFont("orbi.ttf");
+				setColor(Color::fromHex("3bcac8"));
+				const int votingTimeLeft = g_votingScreen->getGlobalVotingTimeLeft();
+				drawText(DISCUSSION_TIMER_X, DISCUSSION_TIMER_Y, DISCUSSION_TIMER_SIZE, 0.f, 1.f, "%d:%02d", votingTimeLeft / 60, votingTimeLeft % 60);
+			}
+
 			// draw council
 
 			for (int layer = 0; layer < 2; ++layer)
@@ -1089,9 +1136,18 @@ public:
 								setColor(Color::fromHex("5ed8ee"));
 								drawText(x + RESEARCH_TECH_OFFSET, y, RESEARCH_FONT_SIZE, +1.f, +1.f, "%+d", techChange);
 
-								setFont("orbi.ttf");
-								setColor(colorBlack);
-								drawTextArea(x + RESEARCH_TEXT_OFFSET_X, councilY[i] + RESEARCH_TEXT_OFFSET_Y, bubble.getWidth() - RESEARCH_TEXT_OFFSET_X  * 2.f, RESEARCH_TEXT_FONT_SIZE, "I VOTE: %s", option.m_caption.c_str());
+								if (!player.m_hasAbstained)
+								{
+									setFont("orbi.ttf");
+									setColor(colorBlack);
+									drawTextArea(x + RESEARCH_TEXT_OFFSET_X, councilY[i] + RESEARCH_TEXT_OFFSET_Y, bubble.getWidth() - RESEARCH_TEXT_OFFSET_X  * 2.f, RESEARCH_TEXT_FONT_SIZE, "I VOTE: %s", option.m_caption.c_str());
+								}
+								else
+								{
+									setFont("orbi.ttf");
+									setColor(colorBlack);
+									drawTextArea(x + RESEARCH_TEXT_OFFSET_X, councilY[i] + RESEARCH_TEXT_OFFSET_Y, bubble.getWidth() - RESEARCH_TEXT_OFFSET_X  * 2.f, RESEARCH_TEXT_FONT_SIZE, "I ABSTAIN FROM VOTING!");
+								}
 							}
 						}
 					}

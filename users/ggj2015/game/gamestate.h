@@ -59,7 +59,6 @@ public:
 	Player();
 
 	bool vote(int selection, bool hasAbstained);
-	void abstain();
 
 	void newGame();
 	void nextRound(bool isNewGame);
