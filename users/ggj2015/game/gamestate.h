@@ -44,6 +44,7 @@ public:
 	bool m_wasDead;
 	bool m_hasVoted;
 	bool m_hasAbstained;
+	bool m_hadAbstained;
 	bool m_hasSabotaged;
 	bool m_hasParticipated;
 	int m_voteSelection;

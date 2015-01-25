@@ -82,6 +82,10 @@ void Player::newGame()
 
 void Player::nextRound(bool isNewGame)
 {
+	m_hadAbstained = m_hasAbstained;
+
+	//
+
 	Assert(m_hasVoted || !isNewGame);
 	m_hasVoted = false;
 

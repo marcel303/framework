@@ -981,7 +981,9 @@ public:
 		{
 			// draw round timer
 
-			if (g_votingScreen->m_state != VotingScreen::State_Discuss)
+			if (g_votingScreen->m_state == VotingScreen::State_SelectCharacter ||
+				g_votingScreen->m_state == VotingScreen::State_SelectOption ||
+				g_votingScreen->m_state == VotingScreen::State_SelectTarget)
 			{
 				setFont("orbi.ttf");
 				setColor(Color::fromHex("3bcac8"));
@@ -1136,7 +1138,7 @@ public:
 								setColor(Color::fromHex("5ed8ee"));
 								drawText(x + RESEARCH_TECH_OFFSET, y, RESEARCH_FONT_SIZE, +1.f, +1.f, "%+d", techChange);
 
-								if (!player.m_hasAbstained)
+								if (!player.m_hadAbstained)
 								{
 									setFont("orbi.ttf");
 									setColor(colorBlack);
