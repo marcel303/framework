@@ -1042,7 +1042,13 @@ public:
 
 			// draw agenda
 
-			if (g_votingScreen->m_state != VotingScreen::State_Discuss)
+			if (g_votingScreen->m_state == VotingScreen::State_Discuss)
+			{
+				setFont("orbi-bold.ttf");
+				setColor(Color::fromHex("245276"));
+				drawText(130, 100, 48, +1.f, +1.f, g_gameState->m_currentAgenda.m_title.c_str());
+			}
+			else
 			{
 				setFont("orbi-bold.ttf");
 				setColor(Color::fromHex("245276"));
