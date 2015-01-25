@@ -102,6 +102,12 @@ OPTION_DEFINE(int, COUNCIL_OPTION_COSTBOX_1_X, "Council Cost Box/X1");
 OPTION_DEFINE(int, COUNCIL_OPTION_COSTBOX_2_X, "Council Cost Box/X2");
 OPTION_DEFINE(int, COUNCIL_OPTION_COSTBOX_Y, "Council Cost Box/Y");
 
+OPTION_DEFINE(int, COUNCIL_UI_AGENDAVIEWX, "Council Screen/AgendaViewX");
+OPTION_DEFINE(int, COUNCIL_UI_AGENDAVIEWY, "Council Screen/AgendaViewY");
+
+OPTION_DEFINE(int, COUNCIL_UI_AGENDAVIEWSX, "Council Screen/AgendaViewSX");
+OPTION_DEFINE(int, COUNCIL_UI_AGENDAVIEWSY, "Council Screen/AgendaViewSY");
+
 //
 
 OPTION_DEFINE(int, VOTING_TIMER_X, "Voting Screen/Timer/X");
