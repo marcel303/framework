@@ -411,8 +411,6 @@ void GameState::nextRound(bool applyCurrentAgenda)
 
 	if (applyCurrentAgenda)
 	{
-		// todo : was the agenda successful or not? add custom code per agenda?
-
 		bool success = true;
 
 		if (m_currentAgenda.m_type == "stockpile")

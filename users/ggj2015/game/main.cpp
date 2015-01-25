@@ -14,26 +14,6 @@
 #include "StringEx.h"
 #include "Timer.h"
 
-/*
-
-todo:
-
-- beamer display
-- results screen
-- add option select timer
-- add agenda 'attack' type -> display
-- add agenda discussion timer
-- check player goal completion
-- determine agenda success or failure
-
-- agenda types:
-	- stockpile
-	- player attack
-	- planet destruction
-	- local
-
-*/
-
 //
 
 OPTION_DECLARE(bool, g_devMode, false);
@@ -107,7 +87,8 @@ enum CharIcon
 	CharIcon_CharSelect,
 	CharIcon_Voting,
 	CharIcon_Council,
-	CharIcon_Winner
+	CharIcon_Winner,
+	CharIcon_Dead
 };
 
 static void drawCharIcon(int x, int y, int index, float scale, CharIcon icon)
@@ -121,7 +102,30 @@ static void drawCharIcon(int x, int y, int index, float scale, CharIcon icon)
 		sprintf_s(filename, sizeof(filename), "portrait%d_Council.png", index + 1);
 	if (icon == CharIcon_Winner)
 		sprintf_s(filename, sizeof(filename), "portrait%d_victory.png", index + 1);
+	if (icon == CharIcon_Dead)
+		sprintf_s(filename, sizeof(filename), "portrait%d_Council_death.png", index + 1);
 	Sprite(filename).drawEx(x, y, 0.f, scale);
+}
+
+//
+
+static void drawWinnerScreen()
+{
+	setColor(colorWhite);
+	Sprite("winner-back.png").draw();
+
+	for (size_t i = 0; i < g_gameState->m_winningPlayers.size(); ++i)
+	{
+		const int playerIdx = g_gameState->m_winningPlayers[i];
+		const Player & player = g_gameState->m_players[playerIdx];
+
+		drawCharIcon(GFX_SX/2, GFX_SY/4, playerIdx, 1.f, CharIcon_Winner);
+
+		setFont("electro.ttf");
+		setColor(Color::fromHex("d3f7ff"));
+		drawText(GFX_SX/2, GFX_SY*2/3, 40, 0.f, +1.f,
+		g_gameState->m_players[playerIdx].m_goal.m_description.c_str());
+	}
 }
 
 //
@@ -191,6 +195,7 @@ public:
 	{
 		State_ShowSponsor,
 		State_TitleScreen,
+		State_HelpScreen,
 		State_Discuss,
 		State_SelectCharacter,
 		State_SelectOption,
@@ -388,6 +393,13 @@ public:
 		{
 			if (mouse.wentDown(BUTTON_LEFT))
 			{
+				m_state = State_HelpScreen;
+			}
+		}
+		else if (m_state == State_HelpScreen)
+		{
+			if (mouse.wentDown(BUTTON_LEFT))
+			{
 				m_state = State_Discuss;
 			}
 		}
@@ -509,8 +521,6 @@ public:
 		{
 			for (int i = 0; i < g_gameState->m_numPlayers; ++i)
 			{
-				// todo : see if mouse was down on character
-
 				if (canSelectTarget(m_selectedCharacter, i) && mouse.wentDown(BUTTON_LEFT))
 				{
 					if (mouse.x >= m_targetIcons[i].x1 &&
@@ -576,6 +586,11 @@ public:
 		{
 			setColor(colorWhite);
 			Sprite("title-screen.jpg").draw();
+		}
+		else if (m_state == State_HelpScreen)
+		{
+			setColor(colorWhite);
+			Sprite("help-screen.png").draw();
 		}
 		else if (m_state == State_Discuss)
 		{
@@ -852,16 +867,7 @@ public:
 		}
 		else if (m_state == State_ShowWinner)
 		{
-			setColor(colorWhite);
-			Sprite("winner-back.png").draw();
-
-			for (size_t i = 0; i < g_gameState->m_winningPlayers.size(); ++i)
-			{
-				const int playerIdx = g_gameState->m_winningPlayers[i];
-				const Player & player = g_gameState->m_players[playerIdx];
-
-				drawCharIcon(GFX_SX/2, GFX_SY/3, playerIdx, 1.f, CharIcon_Winner);
-			}
+			drawWinnerScreen();
 		}
 
 		gxPopMatrix();
@@ -925,12 +931,7 @@ public:
 		}
 		else if (g_votingScreen->m_state == VotingScreen::State_ShowWinner)
 		{
-			setColor(colorWhite);
-			Sprite("winner-back.png").draw();
-
-			// todo : draw sprites for winning players
-
-			// todo : show winning player goal
+			drawWinnerScreen();
 		}
 		else
 		{
@@ -1009,7 +1010,7 @@ public:
 					Player & player = g_gameState->m_players[i];
 
 					setColor(colorWhite);
-					drawCharIcon(councilX[i], councilY[i], i, COUNCIL_CHAR_SCALE, CharIcon_Council);
+					drawCharIcon(councilX[i], councilY[i], i, COUNCIL_CHAR_SCALE, player.m_isDead ? CharIcon_Dead : CharIcon_Council);
 				}
 			}
 
@@ -1112,8 +1113,8 @@ public:
 							{
 								Assert(!player.m_wasDead);
 
-								float x = councilX[i] + SPEECH_BUBBLE_OFFSET_X;
-								float y = councilY[i] + SPEECH_BUBBLE_OFFSET_Y;
+								float x = councilX[playerIdx] + SPEECH_BUBBLE_OFFSET_X;
+								float y = councilY[playerIdx] + SPEECH_BUBBLE_OFFSET_Y;
 
 								setColor(colorWhite);
 								Sprite bubble("Council_SpeechBubble.png");
@@ -1123,8 +1124,8 @@ public:
 							{
 								const AgendaOption & option = agenda.m_options[player.m_voteSelection];
 
-								float x = councilX[i] + SPEECH_BUBBLE_OFFSET_X;
-								float y = councilY[i] + SPEECH_BUBBLE_OFFSET_Y;
+								float x = councilX[playerIdx] + SPEECH_BUBBLE_OFFSET_X;
+								float y = councilY[playerIdx] + SPEECH_BUBBLE_OFFSET_Y;
 
 								setColor(colorWhite);
 								Sprite bubble("Council_SpeechBubble.png");
@@ -1152,13 +1153,13 @@ public:
 								{
 									setFont("orbi.ttf");
 									setColor(colorBlack);
-									drawTextArea(x + RESEARCH_TEXT_OFFSET_X, councilY[i] + RESEARCH_TEXT_OFFSET_Y, bubble.getWidth() - RESEARCH_TEXT_OFFSET_X  * 2.f, RESEARCH_TEXT_FONT_SIZE, "I VOTE: %s", option.m_caption.c_str());
+									drawTextArea(x + RESEARCH_TEXT_OFFSET_X, councilY[playerIdx] + RESEARCH_TEXT_OFFSET_Y, bubble.getWidth() - RESEARCH_TEXT_OFFSET_X  * 2.f, RESEARCH_TEXT_FONT_SIZE, "I VOTE: %s", option.m_caption.c_str());
 								}
 								else
 								{
 									setFont("orbi.ttf");
 									setColor(colorBlack);
-									drawTextArea(x + RESEARCH_TEXT_OFFSET_X, councilY[i] + RESEARCH_TEXT_OFFSET_Y, bubble.getWidth() - RESEARCH_TEXT_OFFSET_X  * 2.f, RESEARCH_TEXT_FONT_SIZE, "I ABSTAIN FROM VOTING!");
+									drawTextArea(x + RESEARCH_TEXT_OFFSET_X, councilY[playerIdx] + RESEARCH_TEXT_OFFSET_Y, bubble.getWidth() - RESEARCH_TEXT_OFFSET_X  * 2.f, RESEARCH_TEXT_FONT_SIZE, "I ABSTAIN FROM VOTING!");
 								}
 							}
 						}
@@ -1216,13 +1217,23 @@ public:
 				VotingScreen::VotingButton & button = g_votingScreen->m_votingButtons[i];
 
 				setFont("orbi.ttf");
-				if (agenda.m_success && (i == 0))
+				if (agenda.m_success && agenda.m_type == "stockpile")
+				{
 					setColor(colorGreen);
+					drawText(COUNCIL_OPTION_TEXT_X, COUNCIL_OPTION_TEXT_Y + i * COUNCIL_OPTION_DY, 34, 1.f, 1.f, "Success");
+				}
 				else
-					setColor(colorWhite);
-				drawText(COUNCIL_OPTION_TEXT_X, COUNCIL_OPTION_TEXT_Y + i * COUNCIL_OPTION_DY, 34, 1.f, 1.f, option.m_caption.c_str());
-				setColor(Color::fromHex("3bcac8"));
-				drawText(COUNCIL_OPTION_TEXT_X, COUNCIL_OPTION_TEXT_Y + i * COUNCIL_OPTION_DY + 40, 20, 1.f, 1.f, option.m_text.c_str());
+				{
+					if (agenda.m_success && (i == 0))
+						setColor(colorGreen);
+					else if (!agenda.m_success && (i == 0) && g_gameState->m_state == GameState::State_GameEnded)
+						setColor(colorRed);
+					else
+						setColor(colorWhite);
+					drawText(COUNCIL_OPTION_TEXT_X, COUNCIL_OPTION_TEXT_Y + i * COUNCIL_OPTION_DY, 34, 1.f, 1.f, option.m_caption.c_str());
+					setColor(Color::fromHex("3bcac8"));
+					drawText(COUNCIL_OPTION_TEXT_X, COUNCIL_OPTION_TEXT_Y + i * COUNCIL_OPTION_DY + 40, 20, 1.f, 1.f, option.m_text.c_str());
+				}
 
 				// food, wealth, tech
 
