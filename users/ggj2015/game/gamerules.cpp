@@ -52,10 +52,9 @@ void AgendaEffect::load(const std::string & text)
 	else
 		logError("invalid special: %s", specialEffect.c_str());
 
-   const std::string specialEffect2 = d.getString("special2", "");
-   if (m_specialEffect == SpecialEffect_Kill && specialEffect2 == "incomemod")
-      m_specialEffect2 = SpecialEffect_IncomeModifier;
-
+	const std::string specialEffect2 = d.getString("special2", "");
+	if (m_specialEffect == SpecialEffect_Kill && specialEffect2 == "incomemod")
+		m_specialEffect2 = SpecialEffect_IncomeModifier;
 
 	m_specialEffectParam[0] = d.getInt("specialf", 0);
 	m_specialEffectParam[1] = d.getInt("specialw", 0);
@@ -120,24 +119,25 @@ void AgendaEffect::apply(bool success, int playerId, int * targets, int numTarge
 		switch (m_specialEffect)
 		{
 		case SpecialEffect_IncomeModifier:
-            g_gameState->m_foodIncome += m_specialEffectParam[0];
-            g_gameState->m_wealthIncome += m_specialEffectParam[1];
-            g_gameState->m_techIncome += m_specialEffectParam[2];
-            m_specialEffectParam[0] = 0;
-            m_specialEffectParam[1] = 0;
-            m_specialEffectParam[2] = 0;
+			g_gameState->m_perRoundIncome.food += m_specialEffectParam[0];
+			g_gameState->m_perRoundIncome.wealth += m_specialEffectParam[1];
+			g_gameState->m_perRoundIncome.tech += m_specialEffectParam[2];
+			m_specialEffectParam[0] = 0;
+			m_specialEffectParam[1] = 0;
+			m_specialEffectParam[2] = 0;
 			break;
 		}
-      switch (m_specialEffect2)
-      {
-      case SpecialEffect_IncomeModifier:
-         g_gameState->m_foodIncome += m_specialEffectParam[0];
-         g_gameState->m_wealthIncome += m_specialEffectParam[1];
-         g_gameState->m_techIncome += m_specialEffectParam[2];
-         m_specialEffectParam[0] = 0;
-         m_specialEffectParam[1] = 0;
-         m_specialEffectParam[2] = 0;
-         break;
-      }
+
+		switch (m_specialEffect2)
+		{
+		case SpecialEffect_IncomeModifier:
+			g_gameState->m_perRoundIncome.food += m_specialEffectParam[0];
+			g_gameState->m_perRoundIncome.wealth += m_specialEffectParam[1];
+			g_gameState->m_perRoundIncome.tech += m_specialEffectParam[2];
+			m_specialEffectParam[0] = 0;
+			m_specialEffectParam[1] = 0;
+			m_specialEffectParam[2] = 0;
+			break;
+		}
 	}
 }

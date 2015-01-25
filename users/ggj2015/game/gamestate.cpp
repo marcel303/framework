@@ -86,19 +86,18 @@ void Player::nextRound(bool isNewGame)
 
 	m_numSelectedTargets = 0;
 
-	m_resources.food += g_gameState->m_foodIncome;
-   m_resources.wealth += g_gameState->m_wealthIncome;
-   m_resources.tech += g_gameState->m_techIncome;
+	m_resources += g_gameState->m_perRoundIncome;
 }
 
 //
 
 GameState::GameState()
 	: m_numPlayers(0)
-   , m_foodIncome(1)
-   , m_techIncome(1)
-   , m_wealthIncome(1)
 {
+	m_perRoundIncome.food = 1;
+	m_perRoundIncome.wealth = 1;
+	m_perRoundIncome.tech = 1;
+
 	setupPlayerGoals();
 }
 
