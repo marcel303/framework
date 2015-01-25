@@ -533,6 +533,11 @@ public:
 			setColor(colorWhite);
 			Sprite("title-screen.jpg").draw();
 		}
+		else if (m_state == State_Discuss)
+		{
+			setColor(colorWhite);
+			Sprite("voting-back.png").draw();
+		}
 		else if (m_state == State_SelectCharacter)
 		{
 			setColor(colorWhite);
@@ -917,17 +922,58 @@ public:
 			drawText(DISCUSSION_TIMER_X, DISCUSSION_TIMER_Y, DISCUSSION_TIMER_SIZE, 0.f, 1.f, "%d:%02d", votingTimeLeft / 60, votingTimeLeft % 60);
 		}
 
+		// draw council
+
+		for (int layer = 0; layer < 2; ++layer)
+		{
+			for (int i = 0; i < MAX_PLAYERS; ++i)
+			{
+				// some characters need to be moved in front of others (layer 1)
+				const int charLayer = (i == 0 || i == 1 || i == 3 || i == 8) ? 1 : 0;
+				if (layer != charLayer)
+					continue;
+
+				Player & player = g_gameState->m_players[i];
+
+				setColor(colorWhite);
+				drawCharIcon(councilX[i], councilY[i], i, COUNCIL_CHAR_SCALE, CharIcon_Council);
+			}
+		}
+
 		bool drawRoundStuff =
 			g_votingScreen->m_state != VotingScreen::State_TitleScreen &&
 			g_votingScreen->m_state != VotingScreen::State_ShowWinner;
 
 		if (drawRoundStuff)
 		{
+			if (g_votingScreen->m_state == VotingScreen::State_Discuss)
+			{
+				setColor(colorWhite);
+				Sprite("council-ui-agendaview.png").draw();
+
+				setFont("orbi.ttf");
+				setColor(Color::fromHex("245276"));
+				drawTextArea(
+					130,
+					200,
+					720,
+					40,
+					g_gameState->m_currentAgenda.m_description.c_str());
+			}
+			else
+			{
+				setColor(colorWhite);
+				Sprite("council-ui-votingview.png").draw();
+			}
+
 			// draw agenda
 
-			setFont("orbi-bold.ttf");
-			setColor(Color::fromHex("eaffff"));
-			drawText(40, 70, 48, +1.f, +1.f, g_gameState->m_currentAgenda.m_title.c_str());
+			if (g_votingScreen->m_state != VotingScreen::State_Discuss)
+			{
+				setFont("orbi-bold.ttf");
+				setColor(Color::fromHex("245276"));
+				drawText(97, 665, 48, +1.f, +1.f, g_gameState->m_currentAgenda.m_title.c_str());
+			}
 
 			if (!g_gameState->m_currentAgenda.m_requirement.empty())
 			{
@@ -961,24 +1007,6 @@ public:
 				setFont("electro.ttf");
 				setColor(colors[i]);
 				drawText(ROUND_INCOME_X + ROUND_INCOME_DX * i, ROUND_INCOME_Y, 32, +1.f, +1.f, "%+d", income[i]);
-			}
-		}
-
-		// draw council
-
-		for (int layer = 0; layer < 2; ++layer)
-		{
-			for (int i = 0; i < MAX_PLAYERS; ++i)
-			{
-				// some characters need to be moved in front of others (layer 1)
-				const int charLayer = (i == 0 || i == 1 || i == 3 || i == 8) ? 1 : 0;
-				if (layer != charLayer)
-					continue;
-
-				Player & player = g_gameState->m_players[i];
-
-				setColor(colorWhite);
-				drawCharIcon(councilX[i], councilY[i], i, COUNCIL_CHAR_SCALE, CharIcon_Council);
 			}
 		}
 
