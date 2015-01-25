@@ -40,6 +40,10 @@ OPTION_DECLARE(bool, g_devMode, false);
 OPTION_DEFINE(bool, g_devMode, "App/Developer Mode");
 OPTION_ALIAS(g_devMode, "devmode");
 
+OPTION_DECLARE(bool, g_windowed, false);
+OPTION_DEFINE(bool, g_windowed, "App/Windowed Mode");
+OPTION_ALIAS(g_windowed, "windowed");
+
 OPTION_DECLARE(bool, g_monkeyMode, false);
 OPTION_DEFINE(bool, g_monkeyMode, "App/Monkey Mode");
 OPTION_ALIAS(g_monkeyMode, "monkeymode");
@@ -308,7 +312,10 @@ public:
 
 	int getDiscussionTimeLeft() const
 	{
-		return Calc::Max<int>(-1, m_discussionTimeStart + (g_devMode ? 5 : 150) - g_TimerRT.Time_get());
+		if (keyboard.isDown(SDLK_t))
+			return -1;
+		else
+			return Calc::Max<int>(-1, m_discussionTimeStart + (g_devMode ? 5 : 150) - g_TimerRT.Time_get());
 	}
 
 	bool canSelectCharacter(int player)
@@ -928,30 +935,31 @@ public:
 			drawText(DISCUSSION_TIMER_X, DISCUSSION_TIMER_Y, DISCUSSION_TIMER_SIZE, 0.f, 1.f, "%d:%02d", votingTimeLeft / 60, votingTimeLeft % 60);
 		}
 
-		// draw council
-
-		for (int layer = 0; layer < 2; ++layer)
-		{
-			for (int i = 0; i < MAX_PLAYERS; ++i)
-			{
-				// some characters need to be moved in front of others (layer 1)
-				const int charLayer = (i == 0 || i == 1 || i == 3 || i == 8) ? 1 : 0;
-				if (layer != charLayer)
-					continue;
-
-				Player & player = g_gameState->m_players[i];
-
-				setColor(colorWhite);
-				drawCharIcon(councilX[i], councilY[i], i, COUNCIL_CHAR_SCALE, CharIcon_Council);
-			}
-		}
-
 		bool drawRoundStuff =
+			g_votingScreen->m_state != VotingScreen::State_ShowSponsor &&
 			g_votingScreen->m_state != VotingScreen::State_TitleScreen &&
 			g_votingScreen->m_state != VotingScreen::State_ShowWinner;
 
 		if (drawRoundStuff)
 		{
+			// draw council
+
+			for (int layer = 0; layer < 2; ++layer)
+			{
+				for (int i = 0; i < MAX_PLAYERS; ++i)
+				{
+					// some characters need to be moved in front of others (layer 1)
+					const int charLayer = (i == 0 || i == 1 || i == 3 || i == 8) ? 1 : 0;
+					if (layer != charLayer)
+						continue;
+
+					Player & player = g_gameState->m_players[i];
+
+					setColor(colorWhite);
+					drawCharIcon(councilX[i], councilY[i], i, COUNCIL_CHAR_SCALE, CharIcon_Council);
+				}
+			}
+
 			if (g_votingScreen->m_state == VotingScreen::State_Discuss)
 			{
 				setColor(colorWhite);
@@ -965,6 +973,17 @@ public:
 					720,
 					40,
 					g_gameState->m_currentAgenda.m_description.c_str());
+
+				if (!g_gameState->m_currentAgenda.m_requirement.empty())
+				{
+					setFont("orbi-bold.ttf");
+					setColor(Color::fromHex("245276"));
+					drawText(125, 655, 34, +1.f, +1.f, "REQ.");
+
+					setFont("orbi.ttf");
+					setColor(Color::fromHex("245276"));
+					drawText(125 + 105, 655, 34, +1.f, +1.f, "%s", g_gameState->m_currentAgenda.m_requirement.c_str());
+				}
 			}
 			else
 			{
@@ -979,17 +998,6 @@ public:
 				setFont("orbi-bold.ttf");
 				setColor(Color::fromHex("245276"));
 				drawText(97, 665, 48, +1.f, +1.f, g_gameState->m_currentAgenda.m_title.c_str());
-			}
-
-			if (!g_gameState->m_currentAgenda.m_requirement.empty())
-			{
-				setFont("orbi-bold.ttf");
-				setColor(Color::fromHex("3bcac8"));
-				drawText(VOTING_REQ_X, VOTING_REQ_Y, 34, +1.f, +1.f, "REQ.");
-
-				setFont("orbi.ttf");
-				setColor(Color::fromHex("3bcac8"));
-				drawText(VOTING_REQ_X + 105, VOTING_REQ_Y, 34, +1.f, +1.f, "%s", g_gameState->m_currentAgenda.m_requirement.c_str());
 			}
 
 			// draw round income
@@ -1242,9 +1250,17 @@ bool App::init()
 	}
 	else
 	{
-		framework.fullscreen = true;
-		framework.windowX = 0;
-		framework.windowY = 0;
+		if (g_windowed)
+		{
+			framework.minification = 2;
+			framework.fullscreen = false;
+		}
+		else
+		{
+			framework.fullscreen = true;
+			framework.windowX = 0;
+			framework.windowY = 0;
+		}
 	}
 
 	framework.actionHandler = HandleAction;
@@ -1311,6 +1327,8 @@ bool App::tick()
 	TIMER_SCOPE(g_appTickTime);
 
 	// calculate time step
+
+	SDL_Delay(1000 / 60);
 
 	const uint64_t time = g_TimerRT.TimeMS_get();
 	static uint64_t lastTime = time;
