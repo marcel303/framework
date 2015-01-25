@@ -514,6 +514,8 @@ void GameState::nextRound(bool applyCurrentAgenda)
 
 						if (participants.size() >= 2)
 						{
+							m_currentAgenda.m_success = success;
+
 							option.m_effect.apply(success, p1, &p1, 1);
 						}
 					}
@@ -542,6 +544,8 @@ void GameState::nextRound(bool applyCurrentAgenda)
 		}
 
 		m_currentAgenda.apply(success, 0, 0);
+
+		m_currentAgenda.m_success = success;
 	}
 
 	for (int i = 0; i < m_numPlayers; ++i)

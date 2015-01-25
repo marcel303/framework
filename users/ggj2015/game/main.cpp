@@ -455,6 +455,8 @@ public:
 
 				if (canSelectOption(m_selectedCharacter, i) && m_votingButtons[i].isClicked())
 				{
+					option.m_isSelected = true;
+
 					// subtract cost
 
 					player.m_resources += option.m_cost;
@@ -907,6 +909,8 @@ public:
 		if (!g_flipScreen)
 			gxTranslatef(GFX_SX, 0, 0);
 
+		Agenda & agenda = g_votingScreen->m_state == VotingScreen::State_ShowResults ? g_gameState->m_previousAgenda : g_gameState->m_currentAgenda;
+
 		// draw background
 
 		if (g_votingScreen->m_state == VotingScreen::State_ShowSponsor)
@@ -1021,9 +1025,9 @@ public:
 					COUNCIL_UI_AGENDAVIEWY,
 					COUNCIL_UI_AGENDAVIEWSX,
 					COUNCIL_UI_AGENDAVIEWSY,
-					g_gameState->m_currentAgenda.m_description.c_str());
+					agenda.m_description.c_str());
 
-				if (!g_gameState->m_currentAgenda.m_requirement.empty())
+				if (!agenda.m_requirement.empty())
 				{
 					setFont("orbi-bold.ttf");
 					setColor(Color::fromHex("245276"));
@@ -1031,7 +1035,7 @@ public:
 
 					setFont("orbi.ttf");
 					setColor(Color::fromHex("245276"));
-					drawText(125 + 105, 655, 34, +1.f, +1.f, "%s", g_gameState->m_currentAgenda.m_requirement.c_str());
+					drawText(125 + 105, 655, 34, +1.f, +1.f, "%s", agenda.m_requirement.c_str());
 				}
 			}
 			else
@@ -1046,13 +1050,13 @@ public:
 			{
 				setFont("orbi-bold.ttf");
 				setColor(Color::fromHex("245276"));
-				drawText(130, 100, 48, +1.f, +1.f, g_gameState->m_currentAgenda.m_title.c_str());
+				drawText(130, 100, 48, +1.f, +1.f, agenda.m_title.c_str());
 			}
 			else
 			{
 				setFont("orbi-bold.ttf");
 				setColor(Color::fromHex("245276"));
-				drawText(97, 665, 48, +1.f, +1.f, g_gameState->m_currentAgenda.m_title.c_str());
+				drawText(97, 665, 48, +1.f, +1.f, agenda.m_title.c_str());
 			}
 
 			// draw round income
@@ -1117,7 +1121,7 @@ public:
 							}
 							else
 							{
-								const AgendaOption & option = g_gameState->m_previousAgenda.m_options[player.m_voteSelection];
+								const AgendaOption & option = agenda.m_options[player.m_voteSelection];
 
 								float x = councilX[i] + SPEECH_BUBBLE_OFFSET_X;
 								float y = councilY[i] + SPEECH_BUBBLE_OFFSET_Y;
@@ -1207,13 +1211,17 @@ public:
 
 			for (int i = 0; i < NUM_VOTING_BUTTONS;++i)
 			{
-				AgendaOption & option = g_gameState->m_currentAgenda.m_options[i];
+				AgendaOption & option = agenda.m_options[i];
 
 				VotingScreen::VotingButton & button = g_votingScreen->m_votingButtons[i];
 
 				setFont("orbi.ttf");
-				setColor(Color::fromHex("3bcac8"));
+				if (agenda.m_success && (i == 0))
+					setColor(colorGreen);
+				else
+					setColor(colorWhite);
 				drawText(COUNCIL_OPTION_TEXT_X, COUNCIL_OPTION_TEXT_Y + i * COUNCIL_OPTION_DY, 34, 1.f, 1.f, option.m_caption.c_str());
+				setColor(Color::fromHex("3bcac8"));
 				drawText(COUNCIL_OPTION_TEXT_X, COUNCIL_OPTION_TEXT_Y + i * COUNCIL_OPTION_DY + 40, 20, 1.f, 1.f, option.m_text.c_str());
 
 				// food, wealth, tech

@@ -121,11 +121,14 @@ public:
 
 	AgendaEffect m_effect;
 
+	bool m_isSelected;
+
 	AgendaOption()
 		: m_isEnabled(false)
 		, m_isAttack(false)
 		, m_isSabotage(false)
 		, m_numTargets(0)
+		, m_isSelected(false)
 	{
 	}
 };
@@ -137,6 +140,7 @@ public:
 		: m_numOptions(0)
 		, m_percentage(0)
 		, m_race(0)
+		, m_success(false)
 	{
 	}
 
@@ -149,6 +153,8 @@ public:
 	std::string m_type;
 	int m_percentage;
 	int m_race;
+
+	bool m_success;
 
 	struct ResourceConditions
 	{
