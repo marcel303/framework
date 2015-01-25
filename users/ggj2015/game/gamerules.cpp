@@ -79,6 +79,8 @@ void AgendaEffect::apply(bool success, int playerId, int * targets, int numTarge
 
 			if (player.m_isDead)
 				continue;
+			if (player.m_hasAbstained)
+				continue;
 
 			bool passesPlayerTest = false;
 

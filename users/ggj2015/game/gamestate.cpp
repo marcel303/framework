@@ -419,6 +419,8 @@ void GameState::nextRound(bool applyCurrentAgenda)
 
 			for (int i = 0; i < m_numPlayers; ++i)
 			{
+				if (m_players[i].m_hasAbstained)
+					continue;
 				if (m_players[i].m_hasSabotaged)
 					sabotaged = true;
 				else
@@ -443,6 +445,8 @@ void GameState::nextRound(bool applyCurrentAgenda)
 
 			for (int i = 0; i < m_numPlayers; ++i)
 			{
+				if (m_players[i].m_hasAbstained)
+					continue;
 				if (m_players[i].m_voteSelection == 0)
 				{
 					numParticipants++;
@@ -460,6 +464,8 @@ void GameState::nextRound(bool applyCurrentAgenda)
 
 			for (int i = 0; i < m_numPlayers; ++i)
 			{
+				if (m_players[i].m_hasAbstained)
+					continue;
 				if (m_players[i].m_voteSelection == 0)
 				{
 					numParticipants++;
@@ -481,6 +487,8 @@ void GameState::nextRound(bool applyCurrentAgenda)
 				{
 					for (int p1 = 0; p1 < m_numPlayers; ++p1)
 					{
+						if (m_players[p1].m_hasAbstained)
+							continue;
 						if (m_players[p1].m_isDead)
 							continue;
 						if (m_players[p1].m_voteSelection != 0)
@@ -488,6 +496,8 @@ void GameState::nextRound(bool applyCurrentAgenda)
 						for (int p2 = 0; p2 < m_numPlayers; ++p2)
 						{
 							if (m_players[p2].m_isDead)
+								continue;
+							if (m_players[p2].m_hasAbstained)
 								continue;
 							if (m_players[p2].m_voteSelection != 0)
 								continue;
@@ -518,6 +528,8 @@ void GameState::nextRound(bool applyCurrentAgenda)
 		for (int i = 0; i < m_numPlayers; ++i)
 		{
 			if (m_players[i].m_isDead)
+				continue;
+			if (m_players[i].m_hasAbstained)
 				continue;
 
 			AgendaOption & option = m_currentAgenda.m_options[m_players[i].m_voteSelection];
