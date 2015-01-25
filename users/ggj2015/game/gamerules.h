@@ -94,6 +94,13 @@ public:
 	void apply(bool success, int playerId, int * targets, int numTargets);
 };
 
+enum Bribe
+{
+	Bribe_None,
+	Bribe_Transfer,
+	Bribe_War
+};
+
 class AgendaOption
 {
 public:
@@ -102,7 +109,7 @@ public:
 	bool m_isEnabled;
 	bool m_isAttack;
 	bool m_isSabotage;
-	bool m_isBribe;
+	std::string m_bribeType;
 	int m_numTargets;
 
 	Resources m_cost;
@@ -114,7 +121,6 @@ public:
 		: m_isEnabled(false)
 		, m_isAttack(false)
 		, m_isSabotage(false)
-		, m_isBribe(false)
 		, m_numTargets(0)
 	{
 	}

@@ -197,7 +197,7 @@ void GameState::loadAgendas(const std::vector<std::string> & lines)
 					Dictionary d;
 					d.parse(line);
 					agenda->m_type = d.getString("type", "");
-					if (agenda->m_type.empty())
+					if (agenda->m_type != "" && agenda->m_type != "local")
 						logError("invalid agenda type");
 					agenda->m_percentage = d.getInt("percentage", 100);
 					agenda->m_race = d.getInt("race", 0);
@@ -217,7 +217,9 @@ void GameState::loadAgendas(const std::vector<std::string> & lines)
 					option.m_isEnabled = true;
 					option.m_isAttack = d.getBool("isattack", false);
 					option.m_isSabotage = d.getBool("sabotage", false);
-					option.m_isBribe = d.getBool("bribe", false);
+					option.m_bribeType = d.getString("bribe", "");
+					if (option.m_bribeType != "" && option.m_bribeType != "transfer" && option.m_bribeType != "war")
+						logError("invalid bribe type: %s", option.m_bribeType.c_str());
 					option.m_numTargets = d.getInt("numtargets", 0);
 					option.m_cost.food = d.getInt("food", 0);
 					option.m_cost.wealth = d.getInt("wealth", 0);
@@ -259,7 +261,7 @@ void GameState::assignPlayerGoals()
 {
 	std::vector<int> goals;
 
-	for (int i = 0; i < m_playerGoals.size(); ++i)
+	for (size_t i = 0; i < m_playerGoals.size(); ++i)
 		goals.push_back(i);
 
 	std::random_shuffle(goals.begin(), goals.end());
@@ -324,13 +326,13 @@ void GameState::nextRound(bool applyCurrentAgenda)
 			m_players[i].m_targetSelection[m_players[i].m_numSelectedTargets++] = i;
 	}
 
-	// apply bribes
+	// apply resource transfer bribes
 
 	for (int i = 0; i < m_numPlayers; ++i)
 	{
 		AgendaOption & option = m_currentAgenda.m_options[m_players[i].m_voteSelection];
 
-		if (option.m_isBribe)
+		if (option.m_bribeType == "transfer")
 		{
 			for (int t = 0; t < m_players[i].m_numSelectedTargets; ++t)
 			{
@@ -382,6 +384,8 @@ void GameState::nextRound(bool applyCurrentAgenda)
 
 			for (int i = 0; i < m_numPlayers; ++i)
 			{
+				int numParticipants = 0;
+
 				if (m_players[i].m_voteSelection == 0)
 				{
 					numParticipants++;
@@ -393,6 +397,42 @@ void GameState::nextRound(bool applyCurrentAgenda)
 		}
 		else if (m_currentAgenda.m_type == "local")
 		{
+			std::vector<int> participants;
+
+			for (int i = 0; i < 1; ++i)
+			{
+				AgendaOption & option = m_currentAgenda.m_options[i];
+
+				if (option.m_bribeType == "war")
+				{
+					for (int p1 = 0; p1 < m_numPlayers; ++p1)
+					{
+						if (m_players[p1].m_isDead)
+							continue;
+						if (m_players[p1].m_voteSelection != 0)
+							continue;
+						for (int p2 = 0; p2 < m_numPlayers; ++p2)
+						{
+							if (m_players[p2].m_isDead)
+								continue;
+							if (m_players[p2].m_voteSelection != 0)
+								continue;
+
+							if (m_players[p1].m_targetSelection[0] == m_players[p2].m_targetSelection[0])
+							{
+								participants.push_back(p2);
+							}
+						}
+
+						if (participants.size() >= 2)
+						{
+							option.m_effect.apply(success, p1, &p1, 1);
+						}
+					}
+				}
+			}
+
+			success &= false;
 		}
 		else
 		{
