@@ -20,6 +20,12 @@ bool PlayerGoal::isComplete(const Player & player) const
 		}
 		break;
 
+	case Type_Kill:
+		{
+			return player.m_killCount >= 1;
+		}
+		break;
+
 	default:
 		Assert(false);
 		break;
@@ -35,6 +41,7 @@ Player::Player()
 	, m_hasParticipated(false)
 	, m_voteSelection(0)
 	, m_numSelectedTargets(0)
+	, m_killCount(0)
 {
 }
 
@@ -78,6 +85,8 @@ void Player::newGame()
 
 	m_resourcesAtStartOfRound = m_resources;
 	m_resourcesGainedThisRound = Resources();
+
+	m_killCount = 0;
 }
 
 void Player::nextRound(bool isNewGame)
@@ -133,6 +142,12 @@ void GameState::setupPlayerGoals()
 		PlayerGoal goal;
 		goal.m_description = "Gain 15 tech";
 		goal.m_requiredTech = 15;
+		m_playerGoals.push_back(goal);
+	}
+
+	{
+		PlayerGoal goal;
+		goal.m_type = PlayerGoal::Type_Kill;
 		m_playerGoals.push_back(goal);
 	}
 
@@ -335,6 +350,13 @@ void GameState::assignPlayerGoals()
 	for (int i = 0; i < m_numPlayers; ++i)
 	{
 		m_players[i].m_goal = m_playerGoals[goals[i]];
+
+		// patch up the goal
+		if (m_players[i].m_goal.m_type == PlayerGoal::Type_Kill)
+		{
+			m_players[i].m_goal.m_killTarget = rand() % m_numPlayers;
+			m_players[i].m_goal.m_description = "Kill " + getRaceName(m_players[i].m_goal.m_killTarget) + "!";
+		}
 	}
 }
 

@@ -16,7 +16,8 @@ class PlayerGoal
 public:
 	enum Type
 	{
-		Type_Resource
+		Type_Resource,
+		Type_Kill
 	};
 
 	std::string m_description;
@@ -25,11 +26,14 @@ public:
 	int m_requiredWealth;
 	int m_requiredTech;
 
+	int m_killTarget;
+
 	PlayerGoal()
 		: m_type(Type_Resource)
 		, m_requiredFood(0)
 		, m_requiredWealth(0)
 		, m_requiredTech(0)
+		, m_killTarget(-1)
 	{
 		m_description = "kill all puppies";
 	}
@@ -51,6 +55,8 @@ public:
 	int m_targetSelection[3];
 	int m_numSelectedTargets;
 	PlayerGoal m_goal;
+
+	int m_killCount;
 
 	Resources m_resources;
 	Resources m_resourcesSpent;
