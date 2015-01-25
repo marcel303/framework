@@ -71,6 +71,7 @@ TIMER_DEFINE(g_appDrawTime, PerFrame, "App/Draw");
 //
 
 void splitString(const std::string & str, std::vector<std::string> & result, char c);
+std::string getRaceName(int r);
 
 //
 
@@ -1149,11 +1150,26 @@ public:
 								setColor(Color::fromHex("5ed8ee"));
 								drawText(x + RESEARCH_TECH_OFFSET, y, RESEARCH_FONT_SIZE, +1.f, +1.f, "%+d", techChange);
 
+								char temp[1024];
+								sprintf(temp, "I VOTE: %s", option.m_caption.c_str());
+
+								if (!player.m_targetSelectionPrev.empty())
+								{
+									strcat(temp, " (");
+									for (int b = 0; b < player.m_targetSelectionPrev.size(); ++b)
+									{
+										strcat(temp, getRaceName(player.m_targetSelectionPrev[b]).c_str());
+										if (b + 1 < player.m_targetSelectionPrev.size())
+											strcat(temp, " ");
+									}
+									strcat(temp, ")");
+								}
+
 								if (!player.m_hadAbstained)
 								{
 									setFont("orbi.ttf");
 									setColor(colorBlack);
-									drawTextArea(x + RESEARCH_TEXT_OFFSET_X, councilY[playerIdx] + RESEARCH_TEXT_OFFSET_Y, bubble.getWidth() - RESEARCH_TEXT_OFFSET_X  * 2.f, RESEARCH_TEXT_FONT_SIZE, "I VOTE: %s", option.m_caption.c_str());
+									drawTextArea(x + RESEARCH_TEXT_OFFSET_X, councilY[playerIdx] + RESEARCH_TEXT_OFFSET_Y, bubble.getWidth() - RESEARCH_TEXT_OFFSET_X  * 2.f, RESEARCH_TEXT_FONT_SIZE, temp);
 								}
 								else
 								{

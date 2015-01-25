@@ -63,6 +63,10 @@ public:
 	Resources m_resourcesAtStartOfRound;
 	Resources m_resourcesGainedThisRound;
 
+	std::vector<int> m_bribedPlayers;
+	std::vector<int> m_bribedPlayersPrev; // fixme : things like this shouldn't have to be duped. but cannot be bothered changing it now
+	std::vector<int> m_targetSelectionPrev;
+
 	Player();
 
 	bool vote(int selection, bool hasAbstained);

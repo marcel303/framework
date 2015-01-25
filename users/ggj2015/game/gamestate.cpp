@@ -87,11 +87,20 @@ void Player::newGame()
 	m_resourcesGainedThisRound = Resources();
 
 	m_killCount = 0;
+
+	m_bribedPlayers.clear();
+	m_bribedPlayersPrev.clear();
+
+	m_targetSelectionPrev.clear();
 }
 
 void Player::nextRound(bool isNewGame)
 {
 	m_hadAbstained = m_hasAbstained;
+	m_bribedPlayersPrev = m_bribedPlayers;
+	m_targetSelectionPrev.clear();
+	for (int i = 0; i < m_numSelectedTargets; ++i)
+		m_targetSelectionPrev.push_back(m_targetSelection[i]);
 
 	//
 
@@ -105,6 +114,8 @@ void Player::nextRound(bool isNewGame)
 	m_numSelectedTargets = 0;
 
 	m_resources += g_gameState->m_perRoundIncome;
+
+	m_bribedPlayers.clear();
 }
 
 //
@@ -180,34 +191,34 @@ std::string getRaceName(int r)
    switch (r)
    {
    case 0:
-	   racename = "The Terrans ";
+	   racename = "The Terrans";
       break;
    case 1:
-	   racename = "The Forrel ";
+	   racename = "The Forrel";
 	   break;
    case 2:
-	   racename = "The Peredon ";
+	   racename = "The Peredon";
 	   break;
    case 3:
-	   racename = "The Zarks ";
+	   racename = "The Zarks";
 	   break;
    case 4:
-	   racename = "The Querv ";
+	   racename = "The Querv";
 	   break;
    case 5:
-	   racename = "The Breen ";
+	   racename = "The Breen";
 	   break;
    case 6:
-	   racename = "The Ishun ";
+	   racename = "The Ishun";
 	   break;
    case 7:
-	   racename = "The Sarak ";
+	   racename = "The Sarak";
 	   break;
    case 8:
-	   racename = "The Gniff ";
+	   racename = "The Gniff";
 	   break;
    case 9:
-	   racename = "The Rashki ";
+	   racename = "The Rashki";
 	   break;
    }
    return racename;
@@ -305,7 +316,7 @@ void GameState::loadAgendas(const std::vector<std::string> & lines)
 					if (agenda->m_type == "randomtarget" && option.m_effect.m_target == AgendaEffect::Target::Target_Random)
 					{
 						int randomTarget = getRandomTarget();
-						agenda->m_description = (getRaceName(randomTarget) + agenda->m_description);
+						agenda->m_description = (getRaceName(randomTarget) + " " + agenda->m_description);
 						option.m_effect.m_targetRace = randomTarget;
 					}
 
@@ -431,6 +442,7 @@ void GameState::nextRound(bool applyCurrentAgenda)
 			for (int t = 0; t < m_players[i].m_numSelectedTargets; ++t)
 			{
 				m_players[m_players[i].m_targetSelection[t]].m_resources += option.m_bribe;
+				m_players[i].m_bribedPlayers.push_back(m_players[i].m_targetSelection[t]);
 			}
 		}
 	}
@@ -533,6 +545,8 @@ void GameState::nextRound(bool applyCurrentAgenda)
 							if (m_players[p1].m_targetSelection[0] == m_players[p2].m_targetSelection[0])
 							{
 								participants.push_back(p2);
+
+								m_players[p1].m_bribedPlayers.push_back(p2);
 							}
 						}
 
