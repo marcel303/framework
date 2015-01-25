@@ -945,8 +945,8 @@ public:
 
 				setFont("orbi.ttf");
 				setColor(Color::fromHex("3bcac8"));
-				drawText(VOTING_OPTION_TEXT_X, VOTING_OPTION_TEXT_Y + i * VOTING_OPTION_DY,      34, 1.f, 1.f, option.m_caption.c_str());
-				drawText(VOTING_OPTION_TEXT_X, VOTING_OPTION_TEXT_Y + i * VOTING_OPTION_DY + 40, 20, 1.f, 1.f, option.m_text.c_str());
+            drawText(COUNCIL_OPTION_TEXT_X, COUNCIL_OPTION_TEXT_Y + i * COUNCIL_OPTION_DY, 34, 1.f, 1.f, option.m_caption.c_str());
+            drawText(COUNCIL_OPTION_TEXT_X, COUNCIL_OPTION_TEXT_Y + i * COUNCIL_OPTION_DY + 40, 20, 1.f, 1.f, option.m_text.c_str());
 
 				// food, wealth, tech
 
@@ -973,14 +973,14 @@ public:
 
 				const int posX[2] =
 				{
-					VOTING_OPTION_COST_1_X,
-					VOTING_OPTION_COST_2_X
+               COUNCIL_OPTION_COST_1_X,
+               COUNCIL_OPTION_COST_2_X
 				};
 
 				const int boxX[2] =
 				{
-					VOTING_OPTION_COSTBOX_1_X,
-					VOTING_OPTION_COSTBOX_2_X
+               COUNCIL_OPTION_COSTBOX_1_X,
+               COUNCIL_OPTION_COSTBOX_2_X
 				};
 
 				int idx = 0;
@@ -990,11 +990,11 @@ public:
 					if (costs[c] != 0)
 					{
 						setColor(colorWhite);
-						Sprite(boxes[c]).drawEx(boxX[idx], VOTING_OPTION_COSTBOX_Y + i * VOTING_OPTION_DY);
+                  Sprite(boxes[c]).drawEx(boxX[idx], COUNCIL_OPTION_COSTBOX_Y + i * COUNCIL_OPTION_DY);
 
 						setFont("electro.ttf");
 						setColor(colors[c]);
-						drawText(posX[idx], VOTING_OPTION_COST_Y + i * VOTING_OPTION_DY, 36, +1.f, +1.f, "%+d", costs[c]);
+                  drawText(posX[idx], COUNCIL_OPTION_COST_Y + i * COUNCIL_OPTION_DY, 36, +1.f, +1.f, "%+d", costs[c]);
 
 						idx++;
 

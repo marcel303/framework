@@ -77,6 +77,10 @@ public:
 	Player m_players[MAX_PLAYERS];
 	int m_numPlayers;
 
+   int m_foodIncome;
+   int m_techIncome;
+   int m_wealthIncome;
+
 	std::vector<PlayerGoal> m_playerGoals;
 
 	std::vector<Agenda> m_agendasLoaded;

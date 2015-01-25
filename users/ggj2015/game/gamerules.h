@@ -83,6 +83,8 @@ public:
 	} m_rewards;
 
 	SpecialEffect m_specialEffect;
+   SpecialEffect m_specialEffect2;
+
 	int m_specialEffectParam[3];
 
 	AgendaEffect()

@@ -52,12 +52,12 @@ OPTION_DEFINE(int, VOTING_ABSTAIN_HEIGHT, "Voting Abstain/Height");
 
 //
 
-OPTION_DEFINE(int, VOTING_CHAR_X, "Voting Char/Y");
-OPTION_DEFINE(int, VOTING_CHAR_Y, "Voting Char/X");
+OPTION_DEFINE(int, VOTING_CHAR_X, "Voting Char/X");
+OPTION_DEFINE(int, VOTING_CHAR_Y, "Voting Char/Y");
 OPTION_DEFINE(float, VOTING_OPTION_CHAR_SCALE, "Voting Char/Scale");
 
 OPTION_DEFINE(int, VOTING_GOAL_X, "Voting Goal/X");
-OPTION_DEFINE(int, VOTING_GOAL_Y, "Voting Goal/X");
+OPTION_DEFINE(int, VOTING_GOAL_Y, "Voting Goal/Y");
 
 OPTION_DEFINE(int, VOTING_STAT_FOOD_X, "Voting Stats/Food X");
 OPTION_DEFINE(int, VOTING_STAT_FOOD_Y, "Voting Stats/Food Y");
@@ -84,6 +84,23 @@ OPTION_DEFINE(int, VOTING_OPTION_COST_Y, "Voting Cost/Y");
 OPTION_DEFINE(int, VOTING_OPTION_COSTBOX_1_X, "Voting Cost Box/X1");
 OPTION_DEFINE(int, VOTING_OPTION_COSTBOX_2_X, "Voting Cost Box/X2");
 OPTION_DEFINE(int, VOTING_OPTION_COSTBOX_Y, "Voting Cost Box/Y");
+
+//
+
+OPTION_DEFINE(int, COUNCIL_OPTION_X, "Council Screen/Options/X");
+OPTION_DEFINE(int, COUNCIL_OPTION_Y, "Council Screen/Options/Y");
+OPTION_DEFINE(int, COUNCIL_OPTION_TEXT_X, "Council Screen/Options/Text X");
+OPTION_DEFINE(int, COUNCIL_OPTION_TEXT_Y, "Council Screen/Options/Text Y");
+OPTION_DEFINE(int, COUNCIL_OPTION_DY, "Council Screen/Options/Spacing Y");
+OPTION_DEFINE(int, COUNCIL_OPTION_BUTTON_WIDTH, "Council Screen/Options/Button Width");
+OPTION_DEFINE(int, COUNCIL_OPTION_BUTTON_HEIGHT, "Council Screen/Options/Button Height");
+
+OPTION_DEFINE(int, COUNCIL_OPTION_COST_1_X, "Council Cost/X1");
+OPTION_DEFINE(int, COUNCIL_OPTION_COST_2_X, "Council Cost/X2");
+OPTION_DEFINE(int, COUNCIL_OPTION_COST_Y, "Council Cost/Y");
+OPTION_DEFINE(int, COUNCIL_OPTION_COSTBOX_1_X, "Council Cost Box/X1");
+OPTION_DEFINE(int, COUNCIL_OPTION_COSTBOX_2_X, "Council Cost Box/X2");
+OPTION_DEFINE(int, COUNCIL_OPTION_COSTBOX_Y, "Council Cost Box/Y");
 
 //
 

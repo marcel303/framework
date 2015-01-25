@@ -86,15 +86,18 @@ void Player::nextRound(bool isNewGame)
 
 	m_numSelectedTargets = 0;
 
-	m_resources.food++;
-	m_resources.wealth++;
-	m_resources.tech++;
+	m_resources.food += g_gameState->m_foodIncome;
+   m_resources.wealth += g_gameState->m_wealthIncome;
+   m_resources.tech += g_gameState->m_techIncome;
 }
 
 //
 
 GameState::GameState()
 	: m_numPlayers(0)
+   , m_foodIncome(1)
+   , m_techIncome(1)
+   , m_wealthIncome(1)
 {
 	setupPlayerGoals();
 }
@@ -384,15 +387,12 @@ void GameState::nextRound(bool applyCurrentAgenda)
 
 			for (int i = 0; i < m_numPlayers; ++i)
 			{
-				int numParticipants = 0;
-
 				if (m_players[i].m_voteSelection == 0)
 				{
 					numParticipants++;
 					m_players[i].m_hasParticipated = true;
 				}
 			}
-
 			success &= numParticipants >= m_numPlayers * m_currentAgenda.m_percentage / 100;
 		}
 		else if (m_currentAgenda.m_type == "local")
