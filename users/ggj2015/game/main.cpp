@@ -860,6 +860,15 @@ public:
 			setColor(colorWhite);
 			Sprite("title-screen.jpg").draw();
 		}
+		else if (g_votingScreen->m_state == VotingScreen::State_ShowWinner)
+		{
+			setColor(colorWhite);
+			Sprite("winner-back.png").draw();
+
+			// todo : draw sprites for winning players
+
+			// todo : show winning player goal
+		}
 		else
 		{
 			setColor(colorWhite);
@@ -894,8 +903,6 @@ public:
 			COUNCIL_CHAR10_Y
 		};
 
-		bool drawAgenda = true;
-
 		if (g_votingScreen->m_state == VotingScreen::State_Discuss)
 		{
 			// discuss timer
@@ -905,6 +912,10 @@ public:
 			const int votingTimeLeft = g_votingScreen->getDiscussionTimeLeft();
 			drawText(DISCUSSION_TIMER_X, DISCUSSION_TIMER_Y, DISCUSSION_TIMER_SIZE, 0.f, 1.f, "%d:%02d", votingTimeLeft / 60, votingTimeLeft % 60);
 		}
+
+		bool drawAgenda =
+			g_votingScreen->m_state != VotingScreen::State_TitleScreen &&
+			g_votingScreen->m_state != VotingScreen::State_ShowWinner;
 
 		if (drawAgenda)
 		{
@@ -924,17 +935,6 @@ public:
 				setColor(Color::fromHex("3bcac8"));
 				drawText(VOTING_REQ_X + 105, VOTING_REQ_Y, 34, +1.f, +1.f, "%s", g_gameState->m_currentAgenda.m_requirement.c_str());
 			}
-
-			/*
-			setFont("orbi.ttf");
-			setColor(Color::fromHex("3bcac8"));
-			drawTextArea(
-					VOTING_AGENDA_TEXTBOX_X,
-					VOTING_AGENDA_TEXTBOX_Y,
-					VOTING_AGENDA_TEXTBOX_WIDTH,
-					30,
-					g_gameState->m_currentAgenda.m_description.c_str());
-			*/
 		}
 
 		// draw council
@@ -1064,71 +1064,74 @@ public:
 			}
 		}
 
-		// draw voting buttons
-
-		for (int i = 0; i < NUM_VOTING_BUTTONS;++i)
+		if (drawAgenda)
 		{
-			AgendaOption & option = g_gameState->m_currentAgenda.m_options[i];
+			// draw voting buttons
 
-			VotingScreen::VotingButton & button = g_votingScreen->m_votingButtons[i];
-
-			setFont("orbi.ttf");
-			setColor(Color::fromHex("3bcac8"));
-			drawText(COUNCIL_OPTION_TEXT_X, COUNCIL_OPTION_TEXT_Y + i * COUNCIL_OPTION_DY, 34, 1.f, 1.f, option.m_caption.c_str());
-			drawText(COUNCIL_OPTION_TEXT_X, COUNCIL_OPTION_TEXT_Y + i * COUNCIL_OPTION_DY + 40, 20, 1.f, 1.f, option.m_text.c_str());
-
-			// food, wealth, tech
-
-			const Color colors[3] =
+			for (int i = 0; i < NUM_VOTING_BUTTONS;++i)
 			{
-				Color::fromHex("43e981"),
-				Color::fromHex("e6e38f"),
-				Color::fromHex("5ed8ee")
-			};
+				AgendaOption & option = g_gameState->m_currentAgenda.m_options[i];
 
-			const char * boxes[3] =
-			{
-				"costbox-food.png",
-				"costbox-wealth.png",
-				"costbox-tech.png"
-			};
+				VotingScreen::VotingButton & button = g_votingScreen->m_votingButtons[i];
 
-			const int costs[3] =
-			{
-				option.m_cost.food,
-				option.m_cost.wealth,
-				option.m_cost.tech,
-			};
+				setFont("orbi.ttf");
+				setColor(Color::fromHex("3bcac8"));
+				drawText(COUNCIL_OPTION_TEXT_X, COUNCIL_OPTION_TEXT_Y + i * COUNCIL_OPTION_DY, 34, 1.f, 1.f, option.m_caption.c_str());
+				drawText(COUNCIL_OPTION_TEXT_X, COUNCIL_OPTION_TEXT_Y + i * COUNCIL_OPTION_DY + 40, 20, 1.f, 1.f, option.m_text.c_str());
 
-			const int posX[2] =
-			{
-				COUNCIL_OPTION_COST_1_X,
-				COUNCIL_OPTION_COST_2_X
-			};
+				// food, wealth, tech
 
-			const int boxX[2] =
-			{
-				COUNCIL_OPTION_COSTBOX_1_X,
-				COUNCIL_OPTION_COSTBOX_2_X
-			};
-
-			int idx = 0;
-
-			for (int c = 0; c < 3; ++c)
-			{
-				if (costs[c] != 0)
+				const Color colors[3] =
 				{
-					setColor(colorWhite);
-					Sprite(boxes[c]).drawEx(boxX[idx], COUNCIL_OPTION_COSTBOX_Y + i * COUNCIL_OPTION_DY);
+					Color::fromHex("43e981"),
+					Color::fromHex("e6e38f"),
+					Color::fromHex("5ed8ee")
+				};
 
-					setFont("electro.ttf");
-					setColor(colors[c]);
-					drawText(posX[idx], COUNCIL_OPTION_COST_Y + i * COUNCIL_OPTION_DY, 36, +1.f, +1.f, "%+d", costs[c]);
+				const char * boxes[3] =
+				{
+					"costbox-food.png",
+					"costbox-wealth.png",
+					"costbox-tech.png"
+				};
 
-					idx++;
+				const int costs[3] =
+				{
+					option.m_cost.food,
+					option.m_cost.wealth,
+					option.m_cost.tech,
+				};
 
-					if (idx == 2)
-						break;
+				const int posX[2] =
+				{
+					COUNCIL_OPTION_COST_1_X,
+					COUNCIL_OPTION_COST_2_X
+				};
+
+				const int boxX[2] =
+				{
+					COUNCIL_OPTION_COSTBOX_1_X,
+					COUNCIL_OPTION_COSTBOX_2_X
+				};
+
+				int idx = 0;
+
+				for (int c = 0; c < 3; ++c)
+				{
+					if (costs[c] != 0)
+					{
+						setColor(colorWhite);
+						Sprite(boxes[c]).drawEx(boxX[idx], COUNCIL_OPTION_COSTBOX_Y + i * COUNCIL_OPTION_DY);
+
+						setFont("electro.ttf");
+						setColor(colors[c]);
+						drawText(posX[idx], COUNCIL_OPTION_COST_Y + i * COUNCIL_OPTION_DY, 36, +1.f, +1.f, "%+d", costs[c]);
+
+						idx++;
+
+						if (idx == 2)
+							break;
+					}
 				}
 			}
 		}

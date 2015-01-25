@@ -478,6 +478,7 @@ void GameState::nextRound(bool applyCurrentAgenda)
 	{
 		if (!m_players[i].m_isDead && m_players[i].m_goal.isComplete(m_players[i]))
 		{
+			logDebug("game ended due to player goal completion");
 			m_winningPlayers.push_back(i);
 		}
 	}
@@ -496,6 +497,7 @@ void GameState::nextRound(bool applyCurrentAgenda)
 
 		if (alivePlayers.size() == 1)
 		{
+			logDebug("game ended due to last man standing");
 			m_winningPlayers = alivePlayers;
 		}
 	}
