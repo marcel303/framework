@@ -60,6 +60,7 @@ public:
 		Target_Sabotage,
 		Target_Race,
 		Target_Participating, // only those players that actually contribute to accomplishing the agenda
+		Target_NonParticipating,
 		Target_Random
 	};
 

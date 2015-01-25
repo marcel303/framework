@@ -35,6 +35,8 @@ void AgendaEffect::load(const std::string & text)
 		m_target = Target_Race;
 	else if (target == "participating")
 		m_target = Target_Participating;
+	else if (target == "abstainees")
+		m_target = Target_NonParticipating;
 	else
 		logError("invalid target: %s", target.c_str());
 
@@ -121,6 +123,12 @@ void AgendaEffect::apply(bool success, int playerId, int * targets, int numTarge
 					player.m_isDead = true;
 					break;
 				}
+			}
+			if (m_target == Target_NonParticipating && !player.m_hasParticipated)
+			{
+				player.m_resources.food += m_rewards.food;
+				player.m_resources.wealth += m_rewards.wealth;
+				player.m_resources.tech += m_rewards.tech;
 			}
 		}
 
