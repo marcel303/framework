@@ -2,6 +2,7 @@
 #include "gamerules.h"
 #include "gamestate.h"
 
+
 void AgendaEffect::load(const std::string & text)
 {
 	Dictionary d;
@@ -24,6 +25,8 @@ void AgendaEffect::load(const std::string & text)
 		m_target = Target_TargetOnly;
 	else if (target == "self" || target == "")
 		m_target = Target_Self;
+	else if (target == "randomrace")
+		m_target = Target_Random;
 	else if (target == "nontarget")
 		m_target = Target_NonTarget;
 	else if (target == "sabotage")

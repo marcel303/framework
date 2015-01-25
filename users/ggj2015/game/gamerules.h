@@ -59,7 +59,8 @@ public:
 		Target_NonTarget,
 		Target_Sabotage,
 		Target_Race,
-		Target_Participating // only those players that actually contribute to accomplishing the agenda
+		Target_Participating, // only those players that actually contribute to accomplishing the agenda
+		Target_Random
 	};
 
 	// any special effects to apply, like multi-round modifiers

@@ -152,6 +152,51 @@ static bool startsWith(const std::string & str, const char * with, std::string &
 	}
 }
 
+std::string getRaceName(int r)
+{
+   std::string racename = "";
+
+   switch (r)
+   {
+   case 0:
+	   racename = "The Terrans ";
+      break;
+   case 1:
+	   racename = "The Forrel ";
+	   break;
+   case 2:
+	   racename = "The Peredon ";
+	   break;
+   case 3:
+	   racename = "The Zarks ";
+	   break;
+   case 4:
+	   racename = "The Querv ";
+	   break;
+   case 5:
+	   racename = "The Breen ";
+	   break;
+   case 6:
+	   racename = "The Ishun ";
+	   break;
+   case 7:
+	   racename = "The Sarak ";
+	   break;
+   case 8:
+	   racename = "The Gniff ";
+	   break;
+   case 9:
+	   racename = "The Rashki ";
+	   break;
+   }
+   return racename;
+}
+
+int getRandomTarget()
+{
+	return rand() % 10;
+}
+
 void GameState::loadAgendas(const std::vector<std::string> & lines)
 {
 	enum Mode
@@ -203,7 +248,7 @@ void GameState::loadAgendas(const std::vector<std::string> & lines)
 					Dictionary d;
 					d.parse(line);
 					agenda->m_type = d.getString("type", "");
-					if (agenda->m_type != "" && agenda->m_type != "stockpile" && agenda->m_type != "majorityvote" && agenda->m_type != "local")
+					if (agenda->m_type != "" && agenda->m_type != "stockpile" && agenda->m_type != "majorityvote" && agenda->m_type != "local" && agenda->m_type != "randomtarget")
 						logError("invalid agenda type");
 					agenda->m_percentage = d.getInt("percentage", 100);
 					agenda->m_race = d.getInt("race", 0);
@@ -233,7 +278,17 @@ void GameState::loadAgendas(const std::vector<std::string> & lines)
 					option.m_bribe.wealth = d.getInt("bribe_wealth", 0);
 				}
 				if (optionCounter == 1)
+				{
 					option.m_effect.load(line);
+					
+					if (agenda->m_type == "randomtarget" && option.m_effect.m_target == AgendaEffect::Target::Target_Random)
+					{
+						int randomTarget = getRandomTarget();
+						agenda->m_description = (getRaceName(randomTarget) + agenda->m_description);
+						option.m_effect.m_targetRace = randomTarget;
+					}
+
+				}
 				if (optionCounter == 2)
 					option.m_caption = line;
 				if (optionCounter == 3)
@@ -400,6 +455,22 @@ void GameState::nextRound(bool applyCurrentAgenda)
 			}
 			success &= numParticipants >= m_numPlayers * m_currentAgenda.m_percentage / 100;
 		}
+      else if (m_currentAgenda.m_type == "randomtarget")
+      {
+         // check for majority vote
+
+         int numParticipants = 0;
+
+         for (int i = 0; i < m_numPlayers; ++i)
+         {
+            if (m_players[i].m_voteSelection == 0)
+            {
+               numParticipants++;
+               m_players[i].m_hasParticipated = true;
+            }
+         }
+         success &= numParticipants >= m_numPlayers * m_currentAgenda.m_percentage / 100;
+      }
 		else if (m_currentAgenda.m_type == "local")
 		{
 			std::vector<int> participants;
