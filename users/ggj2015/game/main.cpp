@@ -406,6 +406,9 @@ public:
 		}
 		else if (m_state == State_Discuss)
 		{
+			if (g_gameState->m_state != GameState::State_Playing)
+				g_gameState->newGame();
+
 			if (m_discussionTimeStart == 0)
 				m_discussionTimeStart = g_TimerRT.Time_get();
 
@@ -920,7 +923,7 @@ public:
 		if (!g_flipScreen)
 			gxTranslatef(GFX_SX, 0, 0);
 
-		Agenda & agenda = g_votingScreen->m_state == VotingScreen::State_ShowResults ? g_gameState->m_previousAgenda : g_gameState->m_currentAgenda;
+		Agenda & agenda = (g_votingScreen->m_state == VotingScreen::State_ShowResults) ? g_gameState->m_previousAgenda : g_gameState->m_currentAgenda;
 
 		// draw background
 
@@ -1170,7 +1173,7 @@ public:
 								if (!player.m_targetSelectionPrev.empty())
 								{
 									strcat(temp, " (");
-									for (int b = 0; b < player.m_targetSelectionPrev.size(); ++b)
+									for (size_t b = 0; b < player.m_targetSelectionPrev.size(); ++b)
 									{
 										strcat(temp, getRaceName(player.m_targetSelectionPrev[b]).c_str());
 										if (b + 1 < player.m_targetSelectionPrev.size())
@@ -1409,8 +1412,6 @@ bool App::init()
 		g_votingScreen = new VotingScreen();
 		g_statsScreen = new StatsScreen();
 
-		// >> fixme : remove
-
 		try
 		{
 			FileStream stream;
@@ -1423,10 +1424,6 @@ bool App::init()
 		{
 			logError(e.what());
 		}
-
-		// << fixme : remove
-
-		g_gameState->newGame();
 
 		return true;
 	}

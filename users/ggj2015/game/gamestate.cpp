@@ -124,7 +124,8 @@ void Player::nextRound(bool isNewGame)
 //
 
 GameState::GameState()
-	: m_numPlayers(0)
+	: m_state(State_None)
+	, m_numPlayers(0)
 {
 	m_perRoundIncome.food = 1;
 	m_perRoundIncome.wealth = 1;
@@ -388,7 +389,7 @@ void GameState::randomizeAgendaDeck()
 
 	m_agendas = m_agendasLoaded;
 
-	if (g_devMode)
+	if (g_devMode && 0)
 		std::reverse(m_agendas.begin(), m_agendas.end());
 	else
 		std::random_shuffle(m_agendas.begin(), m_agendas.end());

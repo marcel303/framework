@@ -81,6 +81,7 @@ class GameState
 public:
 	enum State
 	{
+		State_None,
 		State_Playing,
 		State_GameEnded
 	};
