@@ -381,8 +381,8 @@ public:
 	{
 		if (m_state == State_ShowSponsor)
 		{
-			if (m_stateTimer == 0.f && !g_devMode)
-				m_stateTimer = g_TimerRT.Time_get() + 3.f;
+			//if (m_stateTimer == 0.f && !g_devMode)
+			//	m_stateTimer = g_TimerRT.Time_get() + .3f;
 
 			if (g_TimerRT.Time_get() >= m_stateTimer)
 			{
@@ -937,6 +937,11 @@ public:
 			setColor(colorWhite);
 			Sprite("title-screen.jpg").draw();
 		}
+		else if (g_votingScreen->m_state == VotingScreen::State_HelpScreen)
+		{
+			setColor(colorWhite);
+			Sprite("help-screen.png").draw();
+		}
 		else if (g_votingScreen->m_state == VotingScreen::State_ShowWinner)
 		{
 			drawWinnerScreen();
@@ -988,6 +993,7 @@ public:
 		bool drawRoundStuff =
 			g_votingScreen->m_state != VotingScreen::State_ShowSponsor &&
 			g_votingScreen->m_state != VotingScreen::State_TitleScreen &&
+			g_votingScreen->m_state != VotingScreen::State_HelpScreen &&
 			g_votingScreen->m_state != VotingScreen::State_ShowWinner;
 
 		if (drawRoundStuff)
@@ -1371,14 +1377,14 @@ bool App::init()
 
 	if (g_devMode)
 	{
-		framework.minification = 2;
+		framework.minification = 3;
 		framework.fullscreen = false;
 	}
 	else
 	{
 		if (g_windowed)
 		{
-			framework.minification = 2;
+			framework.minification = 3;
 			framework.fullscreen = false;
 		}
 		else
@@ -1389,6 +1395,7 @@ bool App::init()
 		}
 	}
 
+	framework.windowTitle = "S.P.A.C.E.";
 	framework.actionHandler = HandleAction;
 
 	if (framework.init(0, 0, GFX_SX * 2, GFX_SY))
