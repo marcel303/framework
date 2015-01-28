@@ -432,7 +432,10 @@ public:
 					if (canSelectCharacter(i))
 					{
 						if (player.vote(-1, true))
+						{
 							m_state = State_ShowResults;
+							break;
+						}
 					}
 				}
 			}

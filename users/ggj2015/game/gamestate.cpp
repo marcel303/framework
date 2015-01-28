@@ -36,11 +36,15 @@ bool PlayerGoal::isComplete(const Player & player) const
 
 Player::Player()
 	: m_isDead(false)
+	, m_wasDead(false)
 	, m_hasVoted(false)
 	, m_hasAbstained(false)
+	, m_hadAbstained(false)
+	, m_hasSabotaged(false)
 	, m_hasParticipated(false)
-	, m_voteSelection(0)
+	, m_voteSelection(-1)
 	, m_numSelectedTargets(0)
+	, m_shouldBeKilled(false)
 	, m_killCount(0)
 {
 }
@@ -78,17 +82,25 @@ void Player::newGame()
 {
 	m_isDead = false;
 	m_wasDead = false;
+	m_hasVoted = false;
+	m_hasAbstained = false;
+	m_hadAbstained = false;
+	m_hasSabotaged = false;
+	m_hasParticipated = false;
+	m_voteSelection = -1;
+	m_numSelectedTargets = 0;
 
+	m_shouldBeKilled = false;
+	m_killCount = 0;
+
+	m_resources = Resources();
 	m_resources.food = 5;
 	m_resources.wealth = 5;
 	m_resources.tech = 5;
-
+	
+	m_resourcesSpent = Resources();
 	m_resourcesAtStartOfRound = m_resources;
 	m_resourcesGainedThisRound = Resources();
-
-	m_shouldBeKilled = false;
-
-	m_killCount = 0;
 
 	m_bribedPlayers.clear();
 	m_bribedPlayersPrev.clear();
@@ -113,8 +125,11 @@ void Player::nextRound(bool isNewGame)
 	m_hasAbstained = false;
 	m_hasSabotaged = false;
 	m_hasParticipated = false;
+	//m_voteSelection = -1;
 
 	m_numSelectedTargets = 0;
+
+	Assert(!m_shouldBeKilled);
 
 	m_resources += g_gameState->m_perRoundIncome;
 
