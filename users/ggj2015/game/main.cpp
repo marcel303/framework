@@ -1277,7 +1277,7 @@ public:
 					{
 						if (agenda.m_success && (i == 0))
 							setColor(colorGreen);
-						else if (!agenda.m_success && (i == 0) && g_gameState->m_state == GameState::State_GameEnded)
+						else if (!agenda.m_success && (i == 0) && agenda.m_type != "local")
 							setColor(colorRed);
 						else
 							setColor(colorWhite);
