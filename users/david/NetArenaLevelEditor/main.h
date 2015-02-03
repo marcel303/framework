@@ -213,3 +213,27 @@ public slots:
     void SetColor();
 
 };
+
+
+class QPushButton;
+class NewMapWindow : public QWidget
+{
+    Q_OBJECT
+public:
+    NewMapWindow();
+    ~NewMapWindow();
+
+public slots:
+    void NewMap();
+    void CancelNewMap();
+
+
+public:
+
+    QPushButton* ok;
+    QPushButton* cancel;
+
+    QSlider* x;
+    QSlider* y;
+
+};

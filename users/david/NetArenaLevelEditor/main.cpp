@@ -600,26 +600,78 @@ void CreateNewMap(int x, int y)
     gameObjects.clear();
 
     view->scale((float)MAPY/(float)MAPX,(float)MAPY/(float)MAPX);
+
+
+    sceneMech->AddGrid();
 }
 
 
+QWidget* newMapWindow = 0;
+
+
+void NewMapWindow::NewMap()
+{
+    if (newMapWindow)
+    {
+        newMapWindow->hide();
+
+
+        CreateNewMap(x->value(), y->value());
+    }
+}
+
+void NewMapWindow::CancelNewMap()
+{
+    if (newMapWindow)
+        newMapWindow->hide();
+}
+
+NewMapWindow::NewMapWindow()
+{
+    x = new QSlider();
+    y = new QSlider();
+
+    x->setSingleStep(52);
+    y->setSingleStep(32);
+
+    x->setSliderPosition(52);
+    y->setSliderPosition(32);
+
+    x->setRange(52, 520);
+    y->setRange(32, 512);
+
+    ok = new QPushButton();
+    cancel = new QPushButton();
+
+    ok->setText("Create Map");
+    cancel->setText("Cancel");
+
+    connect(ok, SIGNAL(clicked()), this, SLOT(NewMap()));
+    connect(cancel, SIGNAL(clicked()), this, SLOT(CancelNewMap()));
+
+
+    QVBoxLayout* b = new QVBoxLayout;
+    b->addWidget(x);
+    b->addWidget(y);
+    b->addWidget(ok);
+    b->addWidget(cancel);
+
+    setLayout(b);
+}
+
+NewMapWindow::~NewMapWindow()
+{
+}
 
 void CreateAndShowNewMapDialog()
 {
-    QWidget* w = new QWidget;
+    if(!newMapWindow)
+        newMapWindow = new NewMapWindow();
 
-    QPushButton* ok = new QPushButton;
-    QPushButton* cancel = new QPushButton;
-
-    QSlider x;
-    QSlider y;
-
-
-    connect(newAct1, SIGNAL(triggered()), this, SLOT(New()));
-    connect(newAct1, SIGNAL(triggered()), this, SLOT(New()));
-
-
+    newMapWindow->show();
 }
+
+
 
 
 
@@ -960,7 +1012,7 @@ void EditorView::Load()
 }
 void EditorView::New()
 {
-    CreateNewMap(MAPX, MAPY);
+    CreateAndShowNewMapDialog();
 }
 void EditorView::SwitchToMech(int s)
 {
@@ -1019,7 +1071,12 @@ void EditorView::SwitchToBigMap()
 void EditorView::SwitchToTemplateMode()
 {
 	if(editorMode != EM_Template)
+    {
 		editorMode = EM_Template;
+
+        viewPallette->setScene(sceneObjectPallette); //templatePallette
+        //template controls
+    }
 	else
 		editorMode = EM_Level;
 }
