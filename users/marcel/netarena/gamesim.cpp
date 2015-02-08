@@ -310,31 +310,34 @@ void FloorEffect::tick(GameSim & gameSim, float dt)
 {
 	for (int i = 0; i < MAX_FLOOR_EFFECT_TILES; ++i)
 	{
-		if (m_tiles[i].time > 0)
+		if (m_tiles[i].time)
 		{
-			CollisionInfo collisionInfo;
-			collisionInfo.x1 = m_tiles[i].x - 4;
-			collisionInfo.x2 = m_tiles[i].x + 4;
-			collisionInfo.y1 = m_tiles[i].y - 16;
-			collisionInfo.y2 = m_tiles[i].y;
-
-			for (int p = 0; p < MAX_PLAYERS; ++p)
+			if (m_tiles[i].damageSize > 0)
 			{
-				if (p != m_tiles[i].playerId)
+				CollisionInfo collisionInfo;
+				collisionInfo.x1 = m_tiles[i].x - 4;
+				collisionInfo.x2 = m_tiles[i].x + 4;
+				collisionInfo.y1 = m_tiles[i].y - 16;
+				collisionInfo.y2 = m_tiles[i].y;
+
+				for (int p = 0; p < MAX_PLAYERS; ++p)
 				{
-					Player & player = gameSim.m_players[p];
-
-					if (!player.m_isUsed)
-						continue;
-					if (!player.m_isAlive)
-						continue;
-
-					CollisionInfo playerCollision;
-					player.getPlayerCollision(playerCollision);
-
-					if (collisionInfo.intersects(playerCollision))
+					if (p != m_tiles[i].playerId)
 					{
-						player.handleDamage(1.f, Vec2(m_tiles[i].dx, -1.f), &gameSim.m_players[m_tiles[i].playerId]);
+						Player & player = gameSim.m_players[p];
+
+						if (!player.m_isUsed)
+							continue;
+						if (!player.m_isAlive)
+							continue;
+
+						CollisionInfo playerCollision;
+						player.getPlayerCollision(playerCollision);
+
+						if (collisionInfo.intersects(playerCollision))
+						{
+							player.handleDamage(1.f, Vec2(m_tiles[i].dx, -1.f), &gameSim.m_players[m_tiles[i].playerId]);
+						}
 					}
 				}
 			}
@@ -348,15 +351,16 @@ void FloorEffect::tick(GameSim & gameSim, float dt)
 				const int y = m_tiles[i].y;
 				const int dx = m_tiles[i].dx;
 				const int size = m_tiles[i].size - 1;
+				const int damageSize = m_tiles[i].damageSize > 0 ? m_tiles[i].damageSize - 1 : 0;
 				memset(&m_tiles[i], 0, sizeof(m_tiles[i]));
 
-				trySpawnAt(gameSim, playerId, x, y, dx, size);
+				trySpawnAt(gameSim, playerId, x, y, dx, size, damageSize);
 			}
 		}
 	}
 }
 
-void FloorEffect::trySpawnAt(GameSim & gameSim, int playerId, int x, int y, int dx, int size)
+void FloorEffect::trySpawnAt(GameSim & gameSim, int playerId, int x, int y, int dx, int size, int damageSize)
 {
 	x = (x + ARENA_SX_PIXELS) % ARENA_SX_PIXELS;
 
@@ -408,6 +412,7 @@ void FloorEffect::trySpawnAt(GameSim & gameSim, int playerId, int x, int y, int 
 				m_tiles[i].y = y;
 				m_tiles[i].dx = dx;
 				m_tiles[i].size = size;
+				m_tiles[i].damageSize = damageSize;
 				m_tiles[i].time = TICKS_PER_SECOND / 12; // fixme : gamedef
 
 				ParticleSpawnInfo spawnInfo(
@@ -415,8 +420,10 @@ void FloorEffect::trySpawnAt(GameSim & gameSim, int playerId, int x, int y, int 
 					y,
 					kBulletType_ParticleA, 10,
 					50.f, 100.f, 50.f);
-				spawnInfo.color = 0xffffff80;
+				spawnInfo.color = damageSize > 0 ? 0xff8000a0 : 0x0000ffa0;
 				g_gameSim->spawnParticles(spawnInfo);
+
+				gameSim.playSound("grenade-frag.ogg");
 
 				break;
 			}
@@ -1213,8 +1220,8 @@ Vec2 GameSim::getScreenShake() const
 	return result;
 }
 
-void GameSim::addFloorEffect(int playerId, int x, int y, int size)
+void GameSim::addFloorEffect(int playerId, int x, int y, int size, int damageSize)
 {
-	m_floorEffect.trySpawnAt(*this, playerId, x, y, -BLOCK_SX, size);
-	m_floorEffect.trySpawnAt(*this, playerId, x, y, +BLOCK_SX, size );
+	m_floorEffect.trySpawnAt(*this, playerId, x, y, -BLOCK_SX, size, damageSize);
+	m_floorEffect.trySpawnAt(*this, playerId, x, y, +BLOCK_SX, size, damageSize);
 }

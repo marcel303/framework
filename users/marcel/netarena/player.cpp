@@ -1269,8 +1269,11 @@ void Player::tick(float dt)
 
 								if (m_special.type == kPlayerSpecial_DownAttack && m_special.attackDownActive && !s_noSpecial)
 								{
-									const int size = std::min(5, int(m_special.attackDownHeight * 5 / (ARENA_SY_PIXELS * 2 / 3)));
-									m_netObject->m_gameSim->addFloorEffect(m_index, m_pos[0], m_pos[1], size);
+									int size = (int(m_special.attackDownHeight) - STOMP_EFFECT_MIN_HEIGHT) * STOMP_EFFECT_MAX_SIZE / (STOMP_EFFECT_MAX_HEIGHT - STOMP_EFFECT_MIN_HEIGHT);
+									if (size > STOMP_EFFECT_MAX_SIZE)
+										size = STOMP_EFFECT_MAX_SIZE;
+									if (size >= 1)
+										m_netObject->m_gameSim->addFloorEffect(m_index, m_pos[0], m_pos[1], size, (size + 1) * 2 / 3);
 								}
 
 								m_special.attackDownActive = false;

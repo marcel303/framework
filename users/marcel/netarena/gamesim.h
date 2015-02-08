@@ -340,6 +340,7 @@ struct FloorEffect
 		int16_t x;
 		int16_t y;
 		int8_t size;
+		int8_t damageSize;
 		int8_t dx;
 		int8_t time;
 		int8_t playerId;
@@ -348,7 +349,7 @@ struct FloorEffect
 	FloorEffect();
 
 	void tick(GameSim & gameSim, float dt);
-	void trySpawnAt(GameSim & gameSim, int playerId, int x, int y, int dx, int size);
+	void trySpawnAt(GameSim & gameSim, int playerId, int x, int y, int dx, int size, int damageSize);
 };
 
 struct GameStateData
@@ -455,7 +456,7 @@ public:
 	void addScreenShake(float dx, float dy, float stiffness, float life);
 	Vec2 getScreenShake() const;
 
-	void addFloorEffect(int playerId, int x, int y, int size);
+	void addFloorEffect(int playerId, int x, int y, int size, int damageSize);
 };
 
 extern GameSim * g_gameSim;
