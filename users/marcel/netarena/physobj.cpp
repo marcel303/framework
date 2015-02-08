@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "arena.h"
+#include "Calc.h"
 #include "framework.h"
 #include "gamedefs.h"
 #include "gamesim.h"
@@ -18,6 +19,13 @@ void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 	if (!m_noGravity)
 	{
 		m_vel[1] += GRAVITY * dt;
+	}
+
+	// speed clamp
+
+	if (std::abs(m_vel[1]) > PLAYER_SPEED_MAX)
+	{
+		m_vel[1] = PLAYER_SPEED_MAX * Calc::Sign(m_vel[1]);
 	}
 
 	uint32_t oldBlockMask = getIntersectingBlockMask(gameSim, Vec2(m_pos[0], m_pos[1]));

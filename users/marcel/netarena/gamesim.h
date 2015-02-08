@@ -14,6 +14,7 @@
 #define MAX_TORCHES 10
 #define MAX_SCREEN_SHAKES 4
 #define MAX_COINS 30
+#define MAX_FLOOR_EFFECT_TILES 20
 
 #include <string.h> // todo : cpp
 
@@ -44,8 +45,6 @@ struct Player
 		m_animAllowGravity = true;
 		m_animAllowSteering = true;
 		m_enableInAirAnim = true;
-
-		m_weaponStackSize = 0;
 
 		m_lastSpawnIndex = -1;
 	}
@@ -93,8 +92,6 @@ struct Player
 	void pushWeapon(PlayerWeapon weapon, int ammo);
 	PlayerWeapon popWeapon();
 
-	void addFloorEffect(int blockX, int blockY, int size);
-
 	char * makeCharacterFilename(const char * filename);
 
 	bool m_isUsed;
@@ -139,6 +136,8 @@ struct Player
 		PlayerSpecial type;
 		float meleeAnimTimer;
 		int meleeCounter;
+		float attackDownHeight;
+		bool attackDownActive;
 	} m_special;
 
 	int m_traits; // PlayerTrait
@@ -331,17 +330,25 @@ struct ScreenShake
 	float stiffness;
 	float life;
 
-	void tick(float dt)
+	void tick(float dt);
+};
+
+struct FloorEffect
+{
+	struct ActiveTile
 	{
-		Vec2 force = pos * (-stiffness);
-		vel += force * dt;
-		pos += vel * dt;
+		int16_t x;
+		int16_t y;
+		int8_t size;
+		int8_t dx;
+		int8_t time;
+		int8_t playerId;
+	} m_tiles[MAX_FLOOR_EFFECT_TILES];
 
-		life -= dt;
+	FloorEffect();
 
-		if (life <= 0.f)
-			isActive = false;
-	}
+	void tick(GameSim & gameSim, float dt);
+	void trySpawnAt(GameSim & gameSim, int playerId, int x, int y, int dx, int size);
 };
 
 struct GameStateData
@@ -370,6 +377,8 @@ struct GameStateData
 	Pickup m_pickups[MAX_PICKUPS];
 	Pickup m_grabbedPickup;
 	uint64_t m_nextPickupSpawnTick;
+
+	FloorEffect m_floorEffect;
 
 	Torch m_torches[MAX_TORCHES];
 
@@ -445,6 +454,8 @@ public:
 
 	void addScreenShake(float dx, float dy, float stiffness, float life);
 	Vec2 getScreenShake() const;
+
+	void addFloorEffect(int playerId, int x, int y, int size);
 };
 
 extern GameSim * g_gameSim;

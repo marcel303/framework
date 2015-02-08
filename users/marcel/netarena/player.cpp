@@ -760,6 +760,9 @@ void Player::tick(float dt)
 					setAttackDirection(0, +1);
 					anim = kPlayerAnim_AttackDown;
 					m_enterPassthrough = true;
+
+					m_special.attackDownActive = true;
+					m_special.attackDownHeight = 0.f;
 				}
 				else
 				{
@@ -1264,12 +1267,14 @@ void Player::tick(float dt)
 								// fixme : use down attack speed treshold
 								// todo : use separate PlayerAnim for special attack
 
-								if (m_special.type == kPlayerSpecial_DownAttack && m_anim == kPlayerAnim_AttackDown && !s_noSpecial)
+								if (m_special.type == kPlayerSpecial_DownAttack && m_special.attackDownActive && !s_noSpecial)
 								{
-									LOG_ERR("not yet implemented");
-
-									addFloorEffect(m_pos[0], m_pos[1], 5);
+									const int size = std::min(5, int(m_special.attackDownHeight * 5 / (ARENA_SY_PIXELS * 2 / 3)));
+									m_netObject->m_gameSim->addFloorEffect(m_index, m_pos[0], m_pos[1], size);
 								}
+
+								m_special.attackDownActive = false;
+								m_special.attackDownHeight = 0.f;
 
 								m_vel[i] = 0.f;
 							}
@@ -1306,6 +1311,9 @@ void Player::tick(float dt)
 
 					totalDelta -= delta;
 				}
+
+				if (m_special.attackDownActive && i == 1 && delta > 0.f)
+					m_special.attackDownHeight += delta;
 			}
 		}
 
@@ -1961,71 +1969,6 @@ void Player::dropCoins(int numCoins)
 	}
 }
 
-static const Block * getBlock(int x, int y)
-{
-	if (x >= 0 && x < ARENA_SX && y >= 0 && y < ARENA_SY)
-		return &g_gameSim->m_arena.getBlock(x, y);
-	else
-		return 0;
-}
-
-static void addFloorEffectR(int x, int y, int size, int dx)
-{
-	x = (x + ARENA_SX_PIXELS) % ARENA_SX_PIXELS;
-
-	const Arena & arena = g_gameSim->m_arena;
-
-	// try to move up
-
-	bool foundEmpty = false;
-
-	for (int dy = 0; dy < BLOCK_SY * 3 / 2; ++dy)
-	{
-		const uint32_t blockMask = arena.getIntersectingBlocksMask(x, y - dy);
-
-		if (!(blockMask & kBlockMask_Solid))
-		{
-			y = y - dy;
-			foundEmpty = true;
-			break;
-		}
-	}
-
-	if (!foundEmpty)
-		return;
-
-	// try to move down
-
-	bool hitGround = false;
-
-	for (int dy = 0; dy < BLOCK_SY * 3 / 2; ++dy)
-	{
-		const uint32_t blockMask = arena.getIntersectingBlocksMask(x, y + dy + 1);
-
-		if (blockMask & kBlockMask_Solid)
-		{
-			y = y + dy;
-			hitGround = true;
-			break;
-		}
-	}
-
-	if (hitGround)
-	{
-		ParticleSpawnInfo spawnInfo(
-			x,
-			y,
-			kBulletType_ParticleA, 2,
-			50.f, 100.f, 50.f);
-		spawnInfo.color = 0xffffff80;
-		g_gameSim->spawnParticles(spawnInfo);
-
-		if (size > 0)
-			addFloorEffectR(x + dx, y, size - 1, dx);
-		return;
-	}
-}
-
 void Player::pushWeapon(PlayerWeapon weapon, int ammo)
 {
 	// fixme ?
@@ -2054,11 +1997,7 @@ PlayerWeapon Player::popWeapon()
 	return result;
 }
 
-void Player::addFloorEffect(int x, int y, int size)
-{
-	addFloorEffectR(x, y, size, -BLOCK_SX);
-	addFloorEffectR(x, y, size, +BLOCK_SX);
-}
+//
 
 void PlayerNetObject::setCharacterIndex(int index)
 {
