@@ -123,12 +123,14 @@ public:
 	void netSetPlayerInputsBroadcast();
 	void netSetPlayerCharacterIndex(uint16_t channelId, uint8_t playerId, uint8_t characterIndex);
 	void netBroadcastCharacterIndex(uint8_t playerId, uint8_t characterIndex);
+	void netDebugAction(const char * name);
 
 	int allocControllerIndex();
 	void freeControllerIndex(int index);
 	int getControllerAllocationCount() const;
 
 	ReplicationManager * getReplicationMgr() { return m_replicationMgr; }
+	std::vector<Client*> getClients() const { return m_clients; }
 };
 
 extern App * g_app;

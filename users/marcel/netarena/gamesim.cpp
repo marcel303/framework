@@ -36,6 +36,7 @@ static const char * s_pickupSprites[kPickupType_COUNT] =
 };
 
 #define TOKEN_SPRITE "token.png"
+#define COIN_SPRITE "token.png"
 
 //
 
@@ -126,11 +127,12 @@ void Token::setup(int blockX, int blockY)
 	m_vel.Set(0.f, 0.f);
 	m_doTeleport = true;
 	m_bounciness = -TOKEN_BOUNCINESS;
-	m_dropTimer = 0.f;
-	m_isDropped = true;
 	m_noGravity = false;
 	m_friction = 0.1f;
 	m_airFriction = 0.9f;
+
+	m_isDropped = true;
+	m_dropTimer = 0.f;
 }
 
 void Token::tick(GameSim & gameSim, float dt)
@@ -171,6 +173,75 @@ void Token::draw()
 }
 
 void Token::drawLight()
+{
+	if (m_isDropped)
+	{
+		Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f);
+	}
+}
+
+//
+
+void Coin::setup(int blockX, int blockY)
+{
+	Sprite sprite(TOKEN_SPRITE); // fixme : COIN_SPRITE
+
+	*static_cast<PhysicsActor*>(this) = PhysicsActor();
+
+	m_bbMin.Set(-sprite.getWidth() / 2.f, -sprite.getHeight() / 2.f);
+	m_bbMax.Set(+sprite.getWidth() / 2.f, +sprite.getHeight() / 2.f);
+	m_pos.Set(
+		(blockX + .5f) * BLOCK_SX,
+		(blockY + .5f) * BLOCK_SY);
+	m_vel.Set(0.f, 0.f);
+	m_doTeleport = true;
+	m_bounciness = -TOKEN_BOUNCINESS;
+	m_noGravity = false;
+	m_friction = 0.1f;
+	m_airFriction = 0.9f;
+
+	m_isDropped = true;
+	m_dropTimer = 0.f;
+}
+
+void Coin::tick(GameSim & gameSim, float dt)
+{
+	if (m_isDropped)
+	{
+		PhysicsActorCBs cbs;
+		cbs.onBlockMask = [](PhysicsActorCBs & cbs, PhysicsActor & actor, uint32_t blockMask) 
+		{
+			if (blockMask & kBlockMask_Spike)
+			{
+				if (actor.m_vel[1] > 0.f)
+				{
+					actor.m_vel.Set(g_gameSim->RandomFloat(-COIN_FLEE_SPEED, +COIN_FLEE_SPEED), -COIN_FLEE_SPEED);
+					g_gameSim->playSound("token-bounce.ogg");
+				}
+			}
+			return false;
+		};
+		cbs.onBounce = [](PhysicsActorCBs & cbs, PhysicsActor & actor)
+		{
+			if (std::abs(actor.m_vel[1]) >= COIN_BOUNCE_SOUND_TRESHOLD)
+				g_gameSim->playSound("token-bounce.ogg");
+		};
+
+		PhysicsActor::tick(gameSim, dt, cbs);
+
+		m_dropTimer -= dt;
+	}
+}
+
+void Coin::draw()
+{
+	if (m_isDropped)
+	{
+		Sprite(COIN_SPRITE).drawEx(m_pos[0], m_pos[1]);
+	}
+}
+
+void Coin::drawLight()
 {
 	if (m_isDropped)
 	{
@@ -346,6 +417,12 @@ void GameSim::setGameState(::GameState gameState)
 		{
 			spawnToken();
 		}
+
+		if (kGameMode_CoinCollector == kGameMode_CoinCollector)
+		{
+			for (int i = 0; i < 4; ++i)
+				spawnCoin();
+		}
 	}
 }
 
@@ -501,7 +578,11 @@ void GameSim::resetGameWorld()
 
 	// reset token hunt game mode
 
-	m_tokenHunt.m_token.m_isDropped = false;
+	m_tokenHunt = TokenHunt();
+
+	// reset coin collector game mode
+
+	m_coinCollector = CoinCollector();
 }
 
 void GameSim::tick()
@@ -619,6 +700,33 @@ void GameSim::tickPlay()
 	// token
 
 	m_tokenHunt.m_token.tick(*this, dt);
+
+	// coins
+
+	for (int i = 0; i < MAX_COINS; ++i)
+	{
+		m_coinCollector.m_coins[i].tick(*this, dt);
+	}
+
+	if (tick >= m_coinCollector.m_nextSpawnTick)
+	{
+		int numCoins = 0;
+
+		for (int i = 0; i < MAX_COINS; ++i)
+			if (m_coinCollector.m_coins[i].m_isDropped)
+				numCoins++;
+
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+			if (m_players[i].m_isAlive)
+				numCoins += m_players[i].m_score;
+
+		if (numCoins < COINCOLLECTOR_COIN_LIMIT)
+		{
+			spawnCoin();
+		}
+
+		m_coinCollector.m_nextSpawnTick = tick + (COIN_SPAWN_INTERVAL + (Random() % COIN_SPAWN_INTERVAL_VARIANCE)) * TICKS_PER_SECOND;
+	}
 
 	// torches
 
@@ -778,6 +886,69 @@ bool GameSim::pickupToken(const CollisionInfo & collisionInfo)
 
 	return false;
 }
+
+//
+
+Coin * GameSim::allocCoin()
+{
+	for (int i = 0; i < MAX_COINS; ++i)
+	{
+		if (!m_coinCollector.m_coins[i].m_isDropped)
+		{
+			return &m_coinCollector.m_coins[i];
+		}
+	}
+
+	return 0;
+}
+
+void GameSim::spawnCoin()
+{
+	Coin * coin = allocCoin();
+
+	if (coin)
+	{
+		const int kMaxLocations = ARENA_SX * ARENA_SY;
+		int numLocations = kMaxLocations;
+		int x[kMaxLocations];
+		int y[kMaxLocations];
+
+		if (m_arena.getRandomPickupLocations(x, y, numLocations, this, 0))
+		{
+			const int index = Random() % numLocations;
+			const int spawnX = x[index];
+			const int spawnY = y[index];
+
+			coin->setup(spawnX, spawnY);
+		}
+	}
+}
+
+bool GameSim::pickupCoin(const CollisionInfo & collisionInfo)
+{
+	for (int i = 0; i < MAX_COINS; ++i)
+	{
+		Coin & coin = m_coinCollector.m_coins[i];
+
+		if (coin.m_isDropped && coin.m_dropTimer <= 0.f)
+		{
+			CollisionInfo coinCollision;
+			coin.getCollisionInfo(coinCollision);
+
+			if (coinCollision.intersects(collisionInfo))
+			{
+				coin.m_isDropped = false;
+				g_gameSim->playSound("token-pickup.ogg");
+
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+//
 
 uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, BulletType type, BulletEffect effect, uint8_t ownerPlayerId)
 {

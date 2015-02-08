@@ -14,11 +14,13 @@ enum GameState
 enum GameMode
 {
 	kGameMode_DeathMatch,
-	kGameMode_TokenHunt
+	kGameMode_TokenHunt,
+	kGameMode_CoinCollector
 };
 
 enum PlayerWeapon
 {
+	kPlayerWeapon_None,
 	kPlayerWeapon_Sword,
 	kPlayerWeapon_Fire,
 	kPlayerWeapon_Ice,

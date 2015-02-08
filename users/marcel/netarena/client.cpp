@@ -306,6 +306,13 @@ void Client::drawPlay()
 
 		m_gameSim->m_tokenHunt.m_token.draw();
 
+		// coins
+
+		for (int i = 0; i < MAX_COINS; ++i)
+		{
+			m_gameSim->m_coinCollector.m_coins[i].draw();
+		}
+
 		// players
 
 		for (int i = 0; i < MAX_PLAYERS; ++i)
@@ -372,6 +379,13 @@ void Client::drawPlay()
 		// token
 
 		m_gameSim->m_tokenHunt.m_token.drawLight();
+
+		// coins
+
+		for (int i = 0; i < MAX_COINS; ++i)
+		{
+			m_gameSim->m_coinCollector.m_coins[i].drawLight();
+		}
 
 		// players
 

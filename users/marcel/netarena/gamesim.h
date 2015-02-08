@@ -9,9 +9,11 @@
 #define MAX_PLAYERS 4
 //#define MAX_BULLETS 1000
 //#define MAX_PARTICLES 1000
+#define MAX_WEAPON_STACK_SIZE 5
 #define MAX_PICKUPS 10
 #define MAX_TORCHES 10
 #define MAX_SCREEN_SHAKES 4
+#define MAX_COINS 30
 
 #include <string.h> // todo : cpp
 
@@ -43,7 +45,7 @@ struct Player
 		m_animAllowSteering = true;
 		m_enableInAirAnim = true;
 
-		m_weaponType = kPlayerWeapon_Fire;
+		m_weaponStackSize = 0;
 
 		m_lastSpawnIndex = -1;
 	}
@@ -86,6 +88,10 @@ struct Player
 	bool handleIce(Vec2Arg velocity, Player * attacker);
 	bool handleBubble(Vec2Arg velocity, Player * attacker);
 	void awardScore(int score);
+	void dropCoins(int numCoins);
+
+	void pushWeapon(PlayerWeapon weapon, int ammo);
+	PlayerWeapon popWeapon();
 
 	void addFloorEffect(int blockX, int blockY, int size);
 
@@ -123,8 +129,8 @@ struct Player
 
 	//
 
-	uint8_t m_weaponAmmo;
-	uint8_t m_weaponType;
+	PlayerWeapon m_weaponStack[MAX_WEAPON_STACK_SIZE];
+	uint8_t m_weaponStackSize;
 
 	//
 
@@ -268,6 +274,30 @@ struct Token : PhysicsActor
 	bool m_isDropped;
 	float m_dropTimer;
 
+	Token()
+		: m_isDropped(false)
+		, m_dropTimer(0.f)
+	{
+	}
+
+	void setup(int blockX, int blockY);
+
+	void tick(GameSim & gameSim, float dt);
+	void draw();
+	void drawLight();
+};
+
+struct Coin : PhysicsActor
+{
+	bool m_isDropped;
+	float m_dropTimer;
+
+	Coin()
+		: m_isDropped(false)
+		, m_dropTimer(0.f)
+	{
+	}
+
 	void setup(int blockX, int blockY);
 
 	void tick(GameSim & gameSim, float dt);
@@ -347,6 +377,17 @@ struct GameStateData
 	{
 		Token m_token;
 	} m_tokenHunt;
+
+	struct CoinCollector
+	{
+		CoinCollector()
+			: m_nextSpawnTick(0)
+		{
+		}
+
+		Coin m_coins[MAX_COINS];
+		uint64_t m_nextSpawnTick;
+	} m_coinCollector;
 };
 
 class GameSim : public GameStateData
@@ -394,6 +435,10 @@ public:
 
 	void spawnToken();
 	bool pickupToken(const CollisionInfo & collisionInfo);
+
+	Coin * allocCoin();
+	void spawnCoin();
+	bool pickupCoin(const CollisionInfo & collisionInfo);
 
 	uint16_t spawnBullet(int16_t x, int16_t y, uint8_t angle, BulletType type, BulletEffect effect, uint8_t ownerPlayerId);
 	void spawnParticles(const ParticleSpawnInfo & spawnInfo);

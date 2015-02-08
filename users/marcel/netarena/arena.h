@@ -34,6 +34,7 @@ enum BlockType
 {
 	kBlockType_Empty,
 	kBlockType_Destructible,
+	kBlockType_DestructibleRegen,
 	kBlockType_Indestructible,
 	kBlockType_Slide,
 	kBlockType_Moving,
@@ -56,6 +57,7 @@ enum BlockType
 
 static const int kBlockMask_Solid =
 	(1 << kBlockType_Destructible) |
+	(1 << kBlockType_DestructibleRegen) |
 	(1 << kBlockType_Indestructible) |
 	(1 << kBlockType_Slide) |
 	(1 << kBlockType_Sticky) |
@@ -97,6 +99,12 @@ struct AppearBlockData
 	uint16_t isVisible : 1;
 	uint16_t switchTime : 8;
 	uint16_t padding : 7;
+};
+
+struct RegenBlockData
+{
+	uint16_t isVisible : 1;
+	uint16_t regenTime : 15;
 };
 
 class Arena

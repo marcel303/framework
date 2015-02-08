@@ -553,23 +553,19 @@ void Player::tick(float dt)
 			switch (pickup->type)
 			{
 			case kPickupType_Ammo:
-				m_weaponAmmo = PICKUP_AMMO_COUNT;
-				m_weaponType = kPlayerWeapon_Fire;
+				pushWeapon(kPlayerWeapon_Fire, PICKUP_AMMO_COUNT);
 				break;
 			case kPickupType_Nade:
-				m_weaponAmmo = 1;
-				m_weaponType = kPlayerWeapon_Grenade;
+				pushWeapon(kPlayerWeapon_Grenade, 1);
 				break;
 			case kPickupType_Shield:
 				m_shield.shield = PICKUP_SHIELD_COUNT;
 				break;
 			case kPickupType_Ice:
-				m_weaponAmmo = PICKUP_ICE_COUNT;
-				m_weaponType = kPlayerWeapon_Ice;
+				pushWeapon(kPlayerWeapon_Ice, PICKUP_ICE_COUNT);
 				break;
 			case kPickupType_Bubble:
-				m_weaponAmmo = PICKUP_BUBBLE_COUNT;
-				m_weaponType = kPlayerWeapon_Bubble;
+				pushWeapon(kPlayerWeapon_Bubble, PICKUP_BUBBLE_COUNT);
 				break;
 			}
 		}
@@ -675,7 +671,7 @@ void Player::tick(float dt)
 
 		if (!m_attack.attacking && m_attack.cooldown <= 0.f)
 		{
-			if (m_netObject->m_input.wentDown(INPUT_BUTTON_B) && (m_weaponAmmo > 0 || s_unlimitedAmmo) && isAnimOverrideAllowed(kPlayerWeapon_Fire))
+			if (m_netObject->m_input.wentDown(INPUT_BUTTON_B) && (m_weaponStackSize > 0 || s_unlimitedAmmo) && isAnimOverrideAllowed(kPlayerWeapon_Fire))
 			{
 				m_attack = AttackInfo();
 
@@ -684,27 +680,29 @@ void Player::tick(float dt)
 				BulletEffect bulletEffect = kBulletEffect_Damage;
 				bool hasAttackCollision = false;
 
-				if (m_weaponType == kPlayerWeapon_Fire)
+				PlayerWeapon weaponType = popWeapon();
+
+				if (weaponType == kPlayerWeapon_Fire)
 				{
 					anim = kPlayerAnim_Fire;
 					bulletType = kBulletType_B;
 					m_attack.cooldown = PLAYER_FIRE_COOLDOWN;
 				}
-				else if (m_weaponType == kPlayerWeapon_Ice)
+				else if (weaponType == kPlayerWeapon_Ice)
 				{
 					anim = kPlayerAnim_Fire;
 					bulletType = kBulletType_B;
 					bulletEffect = kBulletEffect_Ice;
 					m_attack.cooldown = PLAYER_FIRE_COOLDOWN;
 				}
-				else if (m_weaponType == kPlayerWeapon_Bubble)
+				else if (weaponType == kPlayerWeapon_Bubble)
 				{
 					anim = kPlayerAnim_Fire;
 					bulletType = kBulletType_B;
 					bulletEffect = kBulletEffect_Bubble;
 					m_attack.cooldown = PLAYER_FIRE_COOLDOWN;
 				}
-				else if (m_weaponType == kPlayerWeapon_Grenade)
+				else if (weaponType == kPlayerWeapon_Grenade)
 				{
 					bulletType = kBulletType_Grenade;
 					m_netObject->m_gameSim->playSound("grenade-throw.ogg");
@@ -717,8 +715,6 @@ void Player::tick(float dt)
 
 					m_attack.attacking = true;
 				}
-
-				m_weaponAmmo = (m_weaponAmmo > 0) ? (m_weaponAmmo - 1) : 0;
 
 				// determine attack direction based on player input
 
@@ -1446,6 +1442,21 @@ void Player::tick(float dt)
 			}
 		}
 	}
+
+	// coin collector game mode
+
+	if (m_netObject->m_gameSim->m_gameMode == kGameMode_CoinCollector)
+	{
+		if (m_isAlive)
+		{
+			CollisionInfo playerCollision;
+			getPlayerCollision(playerCollision);
+			if (m_netObject->m_gameSim->pickupCoin(playerCollision))
+			{
+				m_score++;
+			}
+		}
+	}
 }
 
 void Player::draw()
@@ -1667,7 +1678,10 @@ void Player::handleNewRound()
 	m_lastSpawnIndex = -1;
 	m_isRespawn = false;
 
-	m_weaponAmmo = 0;
+	m_weaponStackSize = 0;
+
+	m_ice = IceInfo();
+	m_bubble = BubbleInfo();
 
 	m_tokenHunt = TokenHunt();
 }
@@ -1691,7 +1705,7 @@ void Player::respawn()
 
 		m_controlDisableTime = 0.f;
 
-		m_weaponAmmo = 0;
+		m_weaponStackSize = 0;
 
 		m_attack = AttackInfo();
 
@@ -1766,15 +1780,29 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 		}
 		else
 		{
-			setAnim(kPlayerAnim_Die, true, true);
-			m_isAnimDriven = true;
+			bool canBeKilled = true;
 
-			m_canRespawn = false;
+			if (m_netObject->m_gameSim->m_gameMode == kGameMode_CoinCollector)
+				canBeKilled = COINCOLLECTOR_PLAYER_CAN_BE_KILLED || (attacker == 0) || (attacker == this);
 
-			m_isAlive = false;
+			if (canBeKilled)
+			{
+				setAnim(kPlayerAnim_Die, true, true);
+				m_isAnimDriven = true;
 
-			m_ice = IceInfo();
-			m_bubble = BubbleInfo();
+				m_canRespawn = false;
+
+				m_isAlive = false;
+
+				m_ice = IceInfo();
+				m_bubble = BubbleInfo();
+
+				// fixme.. mid pos
+				ParticleSpawnInfo spawnInfo(m_pos[0], m_pos[1] + mirrorY(-PLAYER_COLLISION_HITBOX_SY/2.f), kBulletType_ParticleA, 20, 50, 350, 40);
+				spawnInfo.color = 0xff0000ff;
+
+				m_netObject->m_gameSim->spawnParticles(spawnInfo);
+			}
 
 			//m_netObject->m_gameSim->m_freezeTicks = 10;
 
@@ -1787,6 +1815,7 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 				case kGameMode_DeathMatch:
 					attacker->awardScore(1);
 					break;
+
 				case kGameMode_TokenHunt:
 					// if the attacker has the token, or we're the token bearer
 					if (attacker->m_tokenHunt.m_hasToken || m_tokenHunt.m_hasToken)
@@ -1796,14 +1825,16 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 			}
 			else
 			{
-				awardScore(-1);
+				switch (m_netObject->m_gameSim->m_gameMode)
+				{
+				case kGameMode_CoinCollector:
+					break;
+
+				default:
+					awardScore(-1);
+					break;
+				}
 			}
-
-			// fixme.. mid pos
-			ParticleSpawnInfo spawnInfo(m_pos[0], m_pos[1] + mirrorY(-PLAYER_COLLISION_HITBOX_SY/2.f), kBulletType_ParticleA, 20, 50, 350, 40);
-			spawnInfo.color = 0xff0000ff;
-
-			m_netObject->m_gameSim->spawnParticles(spawnInfo);
 
 			// token hunt
 
@@ -1821,6 +1852,18 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 					token.m_isDropped = true;
 					token.m_dropTimer = TOKEN_DROP_TIME;
 					g_gameSim->playSound("token-bounce.ogg");
+				}
+			}
+
+			// coin collector
+
+			if (m_netObject->m_gameSim->m_gameMode == kGameMode_CoinCollector)
+			{
+				if (m_score >= 1)
+				{
+					const int numCoins = std::max(1, m_score * COINCOLLECTOR_COIN_DROP_PERCENTAGE / 100);
+
+					dropCoins(numCoins);
 				}
 			}
 
@@ -1893,6 +1936,31 @@ void Player::awardScore(int score)
 	m_score += score;
 }
 
+void Player::dropCoins(int numCoins)
+{
+	Assert(numCoins <= m_score);
+
+	m_score -= numCoins;
+
+	for (int i = 0; i < numCoins; ++i)
+	{
+		Coin * coin = m_netObject->m_gameSim->allocCoin();
+
+		if (coin)
+		{
+			const int blockX = (int(m_pos[0] / BLOCK_SX) + ARENA_SX) % ARENA_SX;
+			const int blockY = (int(m_pos[1] / BLOCK_SY) + ARENA_SY) % ARENA_SY;
+
+			coin->setup(blockX, blockY);
+			coin->m_dropTimer = COIN_DROP_TIME;
+
+			coin->m_vel.Set(g_gameSim->RandomFloat(-COIN_DROP_SPEED, +COIN_DROP_SPEED), -COIN_DROP_SPEED);
+
+			g_gameSim->playSound("token-bounce.ogg"); // fixme : sound
+		}
+	}
+}
+
 static const Block * getBlock(int x, int y)
 {
 	if (x >= 0 && x < ARENA_SX && y >= 0 && y < ARENA_SY)
@@ -1956,6 +2024,34 @@ static void addFloorEffectR(int x, int y, int size, int dx)
 			addFloorEffectR(x + dx, y, size - 1, dx);
 		return;
 	}
+}
+
+void Player::pushWeapon(PlayerWeapon weapon, int ammo)
+{
+	// fixme ?
+	ammo = 1;
+
+	for (int a = 0; a < ammo; ++a)
+	{
+		for (int i = 0; i < m_weaponStackSize; ++i)
+			if (i + 1 < MAX_WEAPON_STACK_SIZE)
+				m_weaponStack[i + 1] = m_weaponStack[i];
+		m_weaponStack[0] = weapon;
+		m_weaponStackSize = std::min(m_weaponStackSize + 1, MAX_WEAPON_STACK_SIZE);
+	}
+}
+
+PlayerWeapon Player::popWeapon()
+{
+	PlayerWeapon result = kPlayerWeapon_None;
+	if (m_weaponStackSize > 0)
+	{
+		result = m_weaponStack[0];
+		for (int i = 0; i < m_weaponStackSize - 1; ++i)
+			m_weaponStack[i] = m_weaponStack[i + 1];
+		m_weaponStackSize--;
+	}
+	return result;
 }
 
 void Player::addFloorEffect(int x, int y, int size)

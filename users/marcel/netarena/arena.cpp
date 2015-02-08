@@ -161,6 +161,7 @@ void Arena::load(const char * filename)
 				/*
 				  = kBlockType_Empty,
 				c = kBlockType_Destructible,
+				r = kBlockType_DestructibleRegen,
 				x = kBlockType_Indestructible,
 				v = kBlockType_Slide,
 				    kBlockType_Moving,
@@ -186,6 +187,7 @@ void Arena::load(const char * filename)
 				{
 				case ' ': type = kBlockType_Empty; break;
 				case 'c': type = kBlockType_Destructible; break;
+				case 'r': type = kBlockType_DestructibleRegen; break;
 				case 'x': type = kBlockType_Indestructible; break;
 				case 'v': type = kBlockType_Slide; break;
 				case 's': type = kBlockType_Sticky; break;
@@ -208,11 +210,19 @@ void Arena::load(const char * filename)
 				}
 
 				m_blocks[x][y].type = type;
+
 				if (type == kBlockType_Appear)
 				{
-					AppearBlockData& blockdata = (AppearBlockData&)m_blocks[x][y].param;
-					blockdata.isVisible = true;
-					blockdata.switchTime = 255;
+					AppearBlockData & blockData = (AppearBlockData&)m_blocks[x][y].param;
+					blockData.isVisible = true;
+					blockData.switchTime = 255;
+				}
+
+				if (type == kBlockType_DestructibleRegen)
+				{
+					RegenBlockData & blockData = (RegenBlockData&)m_blocks[x][y].param;
+					blockData.isVisible = true;
+					blockData.regenTime = 0;
 				}
 			}
 		}
@@ -323,6 +333,7 @@ void Arena::drawBlocks()
 	{
 		"block-empty.png",
 		"block-destructible.png",
+		"block-destructible.png",
 		"block-indestructible.png",
 		"block-slide.png",
 		"block-moving.png",
@@ -364,17 +375,29 @@ void Arena::drawBlocks()
 				if (data.isVisible && data.switchTime < 20)
 					setColor(255, 255, 255, 255 - (255 - data.switchTime * 12.75));
 				else if (!data.isVisible)
+				{
 					if (data.switchTime < 20)
 						setColor(255, 255, 255, 2.55 * (100 - data.switchTime * 5));
 					else
 						setColor(255, 255, 255, 0);
+				}
 
-					sprites[block.type]->drawEx(x * BLOCK_SX, y * BLOCK_SY);
-
+				sprites[block.type]->drawEx(x * BLOCK_SX, y * BLOCK_SY);
 				setColor(255, 255, 255);
 			}
+			else if (block.type == kBlockType_DestructibleRegen)
+			{
+				const RegenBlockData & data = (RegenBlockData&)block.param;
+				if (data.isVisible)
+				{
+					setColor(colorWhite);
+					sprites[block.type]->drawEx(x * BLOCK_SX, y * BLOCK_SY);
+				}
+			}
 			else
+			{
 				sprites[block.type]->drawEx(x * BLOCK_SX, y * BLOCK_SY);
+			}
 		}
 	}
 
@@ -430,7 +453,24 @@ void Arena::tick(GameSim & gameSim)
 				}
 				else
 					data.switchTime--;
-				
+			}
+			else if (block.type == kBlockType_DestructibleRegen)
+			{
+				RegenBlockData & data = (RegenBlockData&)block.param;
+
+				if (!data.isVisible)
+				{
+					if (data.regenTime != 0)
+					{
+						data.regenTime--;
+
+						if (data.regenTime == 0)
+						{
+							data.isVisible = true;
+							block.shape = kBlockShape_Opaque;
+						}
+					}
+				}
 			}
 		}
 	}
@@ -751,9 +791,17 @@ bool Arena::handleDamageRect(GameSim & gameSim, int baseX, int baseY, int x1, in
 
 			Block & block = *blockInfo.block;
 
-			if (block.type == kBlockType_Destructible && hitDestructible)
+			if ((block.type == kBlockType_Destructible || block.type == kBlockType_DestructibleRegen) && hitDestructible)
 			{
-				block.type = kBlockType_Empty;
+				if (block.type == kBlockType_DestructibleRegen)
+				{
+					block.shape = kBlockShape_Empty;
+					RegenBlockData & data = (RegenBlockData&)block.param;
+					data.isVisible = false;
+					data.regenTime = BLOCKTYPE_REGEN_TIME * TICKS_PER_SECOND;
+				}
+				else
+					block.type = kBlockType_Empty;
 
 				ParticleSpawnInfo spawnInfo(
 					(blockInfo.x + .5f) * BLOCK_SX,

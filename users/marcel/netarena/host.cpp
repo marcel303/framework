@@ -16,8 +16,6 @@ COMMAND_OPTION(s_gameStateNewGame, "Game State/New Game", [] { if (g_host) g_hos
 COMMAND_OPTION(s_gameStateNewRound, "Game State/New Round", [] { if (g_host) g_host->newRound(0); });
 COMMAND_OPTION(s_gameStateEndRound, "Game State/End Round", [] { if (g_host) g_host->endRound(); });
 
-OPTION_DECLARE(int, g_roundCompleteScore, 10);
-OPTION_DEFINE(int, g_roundCompleteScore, "Game Round/Max Player Score");
 OPTION_DECLARE(int, g_roundCompleteTimer, 6);
 OPTION_DEFINE(int, g_roundCompleteTimer, "Game Round/Game Complete Time");
 
@@ -80,9 +78,30 @@ void Host::tickPlay(float dt)
 		if (!player.m_isUsed)
 			continue;
 
-		if (player.m_score >= g_roundCompleteScore)
+		if (m_gameSim.m_gameMode == kGameMode_DeathMatch)
 		{
-			roundComplete = true;
+			if (player.m_score >= DEATHMATCH_SCORE_LIMIT)
+			{
+				roundComplete = true;
+			}
+		}
+		else if (m_gameSim.m_gameMode == kGameMode_TokenHunt)
+		{
+			if (player.m_score >= TOKENHUNT_SCORE_LIMIT)
+			{
+				roundComplete = true;
+			}
+		}
+		else if (m_gameSim.m_gameMode == kGameMode_CoinCollector)
+		{
+			if (player.m_score >= COINCOLLECTOR_SCORE_LIMIT)
+			{
+				roundComplete = true;
+			}
+		}
+		else
+		{
+			Assert(false);
 		}
 	}
 
@@ -149,7 +168,8 @@ void Host::newRound(const char * mapOverride)
 
 	g_app->netLoadArena(map.c_str());
 
-	g_app->netSetGameMode(kGameMode_TokenHunt);
+	//g_app->netSetGameMode(kGameMode_TokenHunt);
+	g_app->netSetGameMode(kGameMode_CoinCollector);
 	g_app->netSetGameState(kGameState_Play);
 
 	m_nextRoundNumber++;

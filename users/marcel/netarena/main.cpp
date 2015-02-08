@@ -56,6 +56,8 @@ OPTION_DECLARE(std::string, g_connect, "");
 OPTION_DEFINE(std::string, g_connect, "App/Direct Connect");
 OPTION_ALIAS(g_connect, "connect");
 
+COMMAND_OPTION(s_dropCoins, "Player/Drop Coins", []{ g_app->netDebugAction("dropCoins"); });
+
 OPTION_EXTERN(int, g_playerCharacterIndex);
 
 //
@@ -165,6 +167,7 @@ enum RpcMethod
 	s_rpcBroadcastPlayerInputs,
 	s_rpcSetPlayerCharacterIndex,
 	s_rpcSetPlayerCharacterIndexBroadcast,
+	s_rpcDebugAction,
 	s_rpcCOUNT
 };
 
@@ -488,6 +491,42 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			if (player)
 			{
 				player->setCharacterIndex(characterIndex);
+			}
+		}
+	}
+	else if (method == s_rpcDebugAction)
+	{
+		GameSim * gameSim = 0;
+
+		if (!channel)
+			gameSim = &g_host->m_gameSim;
+		else
+		{
+			Client * client = g_app->findClientByChannel(channel);
+			Assert(client);
+			if (client)
+				gameSim = client->m_gameSim;
+		}
+
+		if (gameSim)
+		{
+			const std::string action = bitStream.ReadString();
+
+			if (action == "dropCoins")
+			{
+				g_gameSim = gameSim;
+
+				for (int p = 0; p < MAX_PLAYERS; ++p)
+				{
+					Player & player = gameSim->m_players[p];
+
+					if (player.m_isAlive)
+					{
+						player.dropCoins(player.m_score / 2);
+					}
+				}
+
+				g_gameSim = 0;
 			}
 		}
 	}
@@ -1490,6 +1529,15 @@ void App::netBroadcastCharacterIndex(uint8_t playerId, uint8_t characterIndex)
 	bs.Write(characterIndex);
 
 	m_rpcMgr->Call(s_rpcSetPlayerCharacterIndexBroadcast, bs, ChannelPool_Server, 0, true, false);
+}
+
+void App::netDebugAction(const char * name)
+{
+	BitStream bs;
+
+	bs.WriteString(name);
+
+	m_rpcMgr->Call(s_rpcDebugAction, bs, ChannelPool_Server, 0, true, true);
 }
 
 int App::allocControllerIndex()
