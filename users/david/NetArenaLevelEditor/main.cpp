@@ -31,6 +31,11 @@
 
 #define BLOCKSIZE 32
 
+
+#define SCENEMECH 0
+#define SCENEART 1
+#define SCENECOLL 2
+
 int MAPX = BASEX;
 int MAPY = BASEY;
 
@@ -62,7 +67,7 @@ EditorView* view;
 QGraphicsView* viewPallette;
 
 
-EditorScene* templateScene;
+TemplateScene* templateScene;
 Tile** m_templateTiles;
 
 
@@ -215,7 +220,7 @@ void SwitchSceneTo(int s)
 
     switch(sceneCounter)
     {
-    case 0:
+    case SCENEMECH:
         viewPallette->setScene(scenePallette);
         SetSelectedTile(pixmaps.begin().key());
         view->setWindowTitle("Mechanical Layout");
@@ -223,7 +228,7 @@ void SwitchSceneTo(int s)
         scenePallette->addItem(palletteTile);
         SetEditMechScene();
         break;
-    case 1:
+    case SCENEART:
         viewPallette->setScene(sceneArtPallette);
         SetSelectedTile(pixmapsArt.begin().key());
         view->setWindowTitle("Art Layout");
@@ -231,7 +236,7 @@ void SwitchSceneTo(int s)
         sceneArtPallette->addItem(palletteTile);
         SetEditArtScene();
         break;
-    case 2:
+    case SCENECOLL:
         viewPallette->setScene(sceneCollissionPallette);
         SetSelectedTile(pixmapsCollission.begin().key());
         view->setWindowTitle("Collission Layout");
@@ -374,12 +379,15 @@ void AddGameObject(GameObject* obj)
 }
 
 
-void LoadObjects(QString filename, bool templates)
+void LoadObjects(QString filename, bool pallette)
 {
     QList<QString> list = GetLinesFromConfigFile(filename);
 
-    ObjectPath = list.front();
-    list.pop_front();
+    if(!list.empty())
+    {
+        ObjectPath = list.front();
+        list.pop_front();
+    }
 
 	QMap<QString, QString> map;
     while(!list.empty())
@@ -396,11 +404,11 @@ void LoadObjects(QString filename, bool templates)
 
         list.pop_front();
     }
-    GameObject* obj;
+    GameObject* obj = 0;
     if(!map.isEmpty())
         obj = LoadGameObject(map);
 
-    if(templates) //fill the object pallette
+    if(pallette && obj) //fill the object pallette
 	{
 
 		QPixmap* p = new QPixmap();
@@ -509,12 +517,37 @@ void LoadGeneric(QString filename, EditorScene* s)
     file.close();
 }
 
+void LoadArt(QString filename, EditorScene* s)
+{
+    QFile file(filename);
+    file.open(QIODevice::ReadOnly | QIODevice::Text);
+
+    QDataStream in(&file);
+
+    int mx;
+    in >> mx;
+    int my;
+    in >> my;
+
+    short key;
+    for(int y = 0; y < my; y++)
+    {
+        for (int x = 0; x < mx; x++)
+        {
+            in >> key;
+            s->m_tiles[y][x].SetSelectedBlock(key);
+        }
+    }
+    file.close();
+
+}
+
 void LoadLevel(QString filename)
 {
     sceneCounter = 0;
     LoadGeneric(filename + ".txt", sceneMech);
     sceneCounter = 1;
-    LoadGeneric(filename + "Art.txt", sceneArt);
+    LoadArt(filename + "Art.txt", sceneArt);
     sceneCounter = 2;
     LoadGeneric(filename + "Collission.txt", sceneCollission);
     sceneCounter = 0;
@@ -560,16 +593,67 @@ void SaveObjects(QString filename)
 	QFile file(filename);
 	file.open(QIODevice::WriteOnly);
 
-	QTextStream in(&file);
+    QTextStream out(&file);
 
 	foreach(GameObject* obj, gameObjects)
 	{
 		QString a = obj->toText();
-		in << a;
+        out << a;
 	}
 	file.close();
 }
 
+void SaveTemplateToFile(QString filename, int tx, int ty)
+{
+    QFile file("templates.txt");
+    file.open(QIODevice::WriteOnly | QIODevice::Append);
+
+    QTextStream text(&file);
+
+    {
+        QFile templateFile(filename + ".tmpl");
+        templateFile.open(QIODevice::WriteOnly);
+
+        QDataStream out(&templateFile);
+
+        out << tx << ty;
+
+        for(int y = 0; y < ty; y++)
+            for (int x = 0; x < tx; x++)
+            {
+                out << (quint16 )(sceneMech->m_tiles[y][x].getBlock());
+                out << (quint16 )(sceneArt->m_tiles[y][x].getBlock());
+                out << (quint16 )(sceneCollission->m_tiles[y][x].getBlock());
+            }
+
+        templateFile.close();
+
+        text << filename << ".tmpl" << endl;
+
+        qDebug() << "Template" << filename << " saved.";
+    }
+    file.close();
+}
+
+void LoadTemplates(QString filename = "templates.txt")
+{
+    QFile file(filename);
+    file.open(QIODevice::ReadOnly);
+
+    if(!file.isOpen())
+    qDebug() << filename << " could not be opened. Templates not loaded.";
+
+    QTextStream in(&file);
+
+    while(!in.atEnd())
+    {
+        QString templateName = in.readLine();
+        EditorTemplate* t = new EditorTemplate();
+        t->LoadTemplate(templateName);
+
+        templateScene->AddTemplate(t);
+    }
+}
 
 void SaveLevel(QString filename)
 {
@@ -631,14 +715,14 @@ NewMapWindow::NewMapWindow()
     x = new QSlider();
     y = new QSlider();
 
-    x->setSingleStep(52);
-    y->setSingleStep(32);
+    x->setSingleStep(BASEX);
+    y->setSingleStep(BASEY);
 
-    x->setSliderPosition(52);
-    y->setSliderPosition(32);
+    x->setSliderPosition(BASEX);
+    y->setSliderPosition(BASEY);
 
-    x->setRange(52, 520);
-    y->setRange(32, 512);
+    x->setRange(BASEX, BASEX*10);
+    y->setRange(BASEY, BASEY*10);
 
     ok = new QPushButton();
     cancel = new QPushButton();
@@ -739,6 +823,9 @@ int main(int argc, char *argv[])
     vlayout->addWidget(objectPropWindow->m_w);
 
     hlayout->showMaximized();
+
+    templateScene = new TemplateScene();
+    LoadTemplates();
 
     return a.exec();
 }
@@ -862,8 +949,6 @@ void EditorScene::CreateTiles()
         m_tiles[i] = new Tile[m_mapx];
 }
 
-
-
 void EditorScene::CreateLevel(int x, int y)
 {
     DeleteTiles();
@@ -899,8 +984,6 @@ void EditorScene::AddGrid()
     }
 }
 
-EditorTemplate templ;
-
 void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e )
 {
 	switch(editorMode)
@@ -913,9 +996,7 @@ void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e )
 			GameObject* obj = new GameObject();
 			obj->palletteTile = false;
 			obj->Load(objectPropWindow->GetCurrentGameObject()->toText());
-
 			obj->SetPos(e->scenePos());
-
 
 			AddGameObject(obj);
 
@@ -929,17 +1010,19 @@ void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e )
             int tilex = (int)(e->scenePos().x()/float(BLOCKSIZE));
             int tiley = (int)(e->scenePos().y()/float(BLOCKSIZE));
 
-			EditorTemplate::TemplateTile t;
-			t.x         = tilex;
-			t.y         = tiley;
-			QString n = QString::number(t.x) + "_" + QString::number(t.y);
-			t.blockMech = m_tiles[tiley][tilex].getBlock();
-			t.blockArt  = sceneArt->m_tiles[tiley][tilex].getBlock();
-			t.blockColl = sceneCollission->m_tiles[tiley][tilex].getBlock();
-			if(templ.m_list.contains(n))
-				templ.m_list.remove(n);
-			else
-				templ.m_list[n] = t;
+            //Stamp template on level
+            EditorTemplate* t = templateScene->GetCurrentTemplate();
+            int temp = sceneCounter;
+            foreach(EditorTemplate::TemplateTile tt, t->m_list)
+            {
+                SwitchSceneTo(SCENEMECH);
+                sceneMech->m_tiles[tiley+tt.y][tilex+tt.x].SetSelectedBlock(tt.blockMech);
+                SwitchSceneTo(SCENEART);
+                sceneCollission->m_tiles[tiley+tt.y][tilex+tt.x].SetSelectedBlock(tt.blockColl);
+                SwitchSceneTo(SCENECOLL);
+                sceneArt->m_tiles[tiley+tt.y][tilex+tt.x].SetSelectedBlock(tt.blockArt);
+            }
+            SwitchSceneTo(temp);
 
 			e->accept();
 
@@ -950,8 +1033,6 @@ void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e )
 			break;
 	}
 }
-
-
 
 
 EditorView::EditorView() : EditorViewBasic()
@@ -977,6 +1058,10 @@ EditorView::EditorView() : EditorViewBasic()
     newAct4->setStatusTip(tr("Templaaaaate"));
     connect(newAct4, SIGNAL(triggered()), this, SLOT(SwitchToTemplateMode()));
 
+    QAction* newAct5 = new QAction(tr("&SaveTemplate"), this);
+    newAct5->setStatusTip(tr("Templatus Savus"));
+    connect(newAct5, SIGNAL(triggered()), this, SLOT(SaveTemplate()));
+
     QAction* newAct7 = new QAction(tr("&MapSize"), this);
     newAct7->setStatusTip(tr("Switch to Big Map(tm)"));
     connect(newAct7, SIGNAL(triggered()), this, SLOT(SwitchToBigMap()));
@@ -986,13 +1071,11 @@ EditorView::EditorView() : EditorViewBasic()
     bar->addAction(newAct2);
     bar->addAction(newAct3);
     bar->addAction(newAct4);
+    bar->addAction(newAct5);
     bar->addAction(newAct7);
 
     bar->showNormal();
 }
-
-
-
 
 EditorView::~EditorView()
 {
@@ -1002,6 +1085,16 @@ void EditorView::Save()
 {
     QString fileName = QFileDialog::getSaveFileName(this, tr("Save to file"));
     SaveLevel(fileName);
+}
+
+#include <QInputDialog>
+void EditorView::SaveTemplate()
+{
+    int x = QInputDialog::getInt(this, "Template X size", "X:");
+    int y = QInputDialog::getInt(this, "Template Y size", "Y:");
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Save to file"));
+
+    SaveTemplateToFile(fileName, x, y);
 }
 
 void EditorView::Load()
@@ -1074,11 +1167,17 @@ void EditorView::SwitchToTemplateMode()
     {
 		editorMode = EM_Template;
 
-        viewPallette->setScene(sceneObjectPallette); //templatePallette
+        viewPallette->setScene(templateScene); //templatePallette
         //template controls
     }
 	else
+    {
 		editorMode = EM_Level;
+
+        if(!sceneCounter)
+            SwitchScene();
+        SwitchSceneTo(0);
+    }
 }
 
 void EditorView::SetOpacityMech(int s)
@@ -1179,7 +1278,6 @@ void EditorViewBasic::keyReleaseEvent(QKeyEvent *e)
 
 void CreateSettingsWidget()
 {
-
     settingsWidget = new QWidget();
 
     QGridLayout* grid = new QGridLayout();
@@ -1479,4 +1577,59 @@ QVariant GameObject::itemChange(GraphicsItemChange change, const QVariant &value
             objectPropWindow->UpdateObjectText();
 
     return QGraphicsPixmapItem::itemChange(change, value);
+}
+
+TemplateScene::TemplateScene()
+{
+}
+
+TemplateScene::~TemplateScene()
+{
+}
+
+void TemplateScene::AddTemplate(EditorTemplate* t)
+{
+    m_list.append(t);
+
+    addPixmap(*getCurrentPixmap()[t->m_list.first().blockMech]);
+}
+
+EditorTemplate* TemplateScene::GetCurrentTemplate()
+{
+    return m_list.first();
+}
+
+EditorTemplate::EditorTemplate()
+{
+}
+
+EditorTemplate::~EditorTemplate()
+{
+}
+
+void EditorTemplate::LoadTemplate(QString filename)
+{
+    QFile file(filename);
+    file.open(QIODevice::ReadOnly);
+
+    QDataStream in(&file);
+
+    int x; in >> x;
+    int y; in >> y;
+
+    for(int j = 0; j < y; j++)
+        for(int i = 0; i < x; i++)
+        {
+            TemplateTile tt;
+            in >> tt.blockMech;
+            in >> tt.blockArt;
+            in >> tt.blockColl;
+
+            tt.x = i;
+            tt.y = j;
+
+            m_list.append(tt);
+        }
+
+    file.close();
 }
