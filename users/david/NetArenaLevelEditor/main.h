@@ -103,6 +103,8 @@ public:
     int m_mapy;
 };
 
+
+
 class EditorViewBasic : public QGraphicsView
 {
 public:
@@ -143,6 +145,7 @@ public:
 
 public slots:
     void Save();
+    void SaveTemplate();
     void Load();
     void New();
     void SwitchToMech(int s);
@@ -162,26 +165,6 @@ public slots:
 
 };
 
-class EditorTemplate
-{
-public:
-
-    struct TemplateTile
-    {
-        int x;
-        int y;
-
-        short blockMech;
-        short blockArt;
-        short blockColl;
-    };
-
-    QMap<QString, TemplateTile> m_list;
-
-    QString m_name;
-
-    void SaveTemplate();
-};
 
 class QTextEdit;
 class QColorDialog;
@@ -235,5 +218,45 @@ public:
 
     QSlider* x;
     QSlider* y;
+
+};
+
+
+class EditorTemplate
+{
+public:
+
+    EditorTemplate();
+    ~EditorTemplate();
+
+    struct TemplateTile
+    {
+        int x;
+        int y;
+
+        short blockMech;
+        short blockArt;
+        short blockColl;
+    };
+
+    QList<TemplateTile> m_list;
+
+    QString m_name;
+
+    void LoadTemplate(QString filename);
+};
+
+class TemplateScene: public QGraphicsScene
+{
+public:
+    TemplateScene();
+    virtual ~TemplateScene();
+
+    EditorTemplate* GetCurrentTemplate();
+
+    void AddTemplate(EditorTemplate* t);
+
+    QList<EditorTemplate*> m_list;
+    EditorTemplate* m_currentTemplate;
 
 };
