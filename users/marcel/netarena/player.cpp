@@ -761,8 +761,11 @@ void Player::tick(float dt)
 					anim = kPlayerAnim_AttackDown;
 					m_enterPassthrough = true;
 
-					m_special.attackDownActive = true;
-					m_special.attackDownHeight = 0.f;
+					if (m_special.type == kPlayerSpecial_DownAttack)
+					{
+						m_special.attackDownActive = true;
+						m_special.attackDownHeight = 0.f;
+					}
 				}
 				else
 				{
@@ -1073,6 +1076,7 @@ void Player::tick(float dt)
 				isAnimOverrideAllowed(kPlayerAnim_WallSlide) &&
 				!m_isUsingJetpack &&
 				m_special.meleeCounter == 0 &&
+				!m_special.attackDownActive &&
 				m_vel[0] != 0.f && Calc::Sign(m_facing[0]) == Calc::Sign(m_vel[0]) &&
 				//Calc::Sign(m_vel[1]) == Calc::Sign(gravity) &&
 				(Calc::Sign(m_vel[1]) == Calc::Sign(gravity) || Calc::Abs(m_vel[1]) <= PLAYER_JUMP_SPEED / 2.f) &&
@@ -1085,6 +1089,11 @@ void Player::tick(float dt)
 				if (m_vel[1] > PLAYER_WALLSLIDE_SPEED && Calc::Sign(m_vel[1]) == Calc::Sign(gravity))
 					m_vel[1] = PLAYER_WALLSLIDE_SPEED;
 			}
+		}
+
+		if (gravity < GRAVITY)
+		{
+			m_special.attackDownActive = false;
 		}
 
 		if (m_special.meleeCounter != 0 && Calc::Sign(m_vel[1]) == Calc::Sign(gravity))
