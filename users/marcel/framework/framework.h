@@ -268,6 +268,7 @@ public:
 	explicit Color(int r, int g, int b, int a = 255);
 	explicit Color(float r, float g, float b, float a = 1.f);
 	
+	static Color fromHex(const char * str);
 	Color interp(const Color & other, float t) const;
 	
 	float r, g, b, a;
@@ -663,6 +664,7 @@ void drawRect(float x1, float y1, float x2, float y2);
 void drawRectLine(float x1, float y1, float x2, float y2);
 void drawRectGradient(float x1, float y1, float x2, float y2);
 void drawText(float x, float y, int size, float alignX, float alignY, const char * format, ...);
+void drawTextArea(float x, float y, float sx, int size, const char * format, ...);
 
 void debugDrawText(float x, float y, int size, float alignX, float alignY, const char * format, ...);
 

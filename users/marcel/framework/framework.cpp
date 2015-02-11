@@ -1059,6 +1059,28 @@ Color::Color(float r, float g, float b, float a)
 	this->a = a;
 }
 
+Color Color::fromHex(const char * str)
+{
+	if (strlen(str) == 6)
+	{
+		const uint32_t hex = std::stoul(str, 0, 16);
+		const float r = ((hex >> 16) & 0xff) / 255.f;
+		const float g = ((hex >>  8) & 0xff) / 255.f;
+		const float b = ((hex >>  0) & 0xff) / 255.f;
+		const float a = 1.f;
+		return Color(r, g, b, a);
+	}
+	else
+	{
+		const uint32_t hex = std::stoul(str, 0, 16);
+		const float r = ((hex >> 24) & 0xff) / 255.f;
+		const float g = ((hex >> 16) & 0xff) / 255.f;
+		const float b = ((hex >>  8) & 0xff) / 255.f;
+		const float a = ((hex >>  0) & 0xff) / 255.f;
+		return Color(r, g, b, a);
+	}
+}
+
 Color Color::interp(const Color & other, float t) const
 {
 	const float t1 = 1.f - t;
@@ -2650,6 +2672,61 @@ void drawText(float x, float y, int size, float alignX, float alignY, const char
 		drawTextInternal(globals.font->face, size, text);
 	}
 	gxPopMatrix();
+}
+
+static char * eatWord(char * str)
+{
+	while (*str && *str != ' ')
+		str++;
+	while (*str && *str == ' ')
+		str++;
+	return str;
+}
+
+void drawTextArea(float x, float y, float sx, int size, const char * format, ...)
+{
+	char text[1024];
+	va_list args;
+	va_start(args, format);
+	vsprintf_s(text, sizeof(text), format, args);
+	va_end(args);
+	
+	char * textend = text + strlen(text);
+	char * textptr = text;
+
+	while (textptr != textend)
+	{
+		char * nextptr = eatWord(textptr);
+		while (*nextptr)
+		{
+			char * tempptr = eatWord(nextptr);
+			float _sx, _sy;
+			char temp = *tempptr;
+			*tempptr = 0;
+			measureText(globals.font->face, size, textptr, _sx, _sy);
+			*tempptr = temp;
+
+			if (_sx >= sx)
+				break;
+			else
+				nextptr = tempptr;
+		}
+
+		gxMatrixMode(GL_MODELVIEW);
+		gxPushMatrix();
+		{
+			gxTranslatef(x, y, 0.f);
+		
+			char temp = *nextptr;
+			*nextptr = 0;
+			drawTextInternal(globals.font->face, size, textptr);
+			*nextptr = temp;
+
+			textptr = nextptr;
+			y += size;
+		}
+		gxPopMatrix();
+	}
 }
 
 void debugDrawText(float x, float y, int size, float alignX, float alignY, const char * format, ...)
