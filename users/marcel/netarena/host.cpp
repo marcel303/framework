@@ -168,8 +168,8 @@ void Host::newRound(const char * mapOverride)
 
 	g_app->netLoadArena(map.c_str());
 
-	//g_app->netSetGameMode(kGameMode_TokenHunt);
-	g_app->netSetGameMode(kGameMode_CoinCollector);
+	g_app->netSetGameMode(kGameMode_TokenHunt);
+	//g_app->netSetGameMode(kGameMode_CoinCollector);
 	g_app->netSetGameState(kGameState_Play);
 
 	m_nextRoundNumber++;

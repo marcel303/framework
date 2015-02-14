@@ -564,7 +564,7 @@ void GameSim::setGameState(::GameState gameState)
 			spawnToken();
 		}
 
-		if (kGameMode_CoinCollector == kGameMode_CoinCollector)
+		if (m_gameMode == kGameMode_CoinCollector)
 		{
 			for (int i = 0; i < 4; ++i)
 				spawnCoin();
@@ -845,33 +845,39 @@ void GameSim::tickPlay()
 
 	// token
 
-	m_tokenHunt.m_token.tick(*this, dt);
+	if (m_gameMode == kGameMode_TokenHunt)
+	{
+		m_tokenHunt.m_token.tick(*this, dt);
+	}
 
 	// coins
 
-	for (int i = 0; i < MAX_COINS; ++i)
+	if (m_gameMode == kGameMode_CoinCollector)
 	{
-		m_coinCollector.m_coins[i].tick(*this, dt);
-	}
-
-	if (tick >= m_coinCollector.m_nextSpawnTick)
-	{
-		int numCoins = 0;
-
 		for (int i = 0; i < MAX_COINS; ++i)
-			if (m_coinCollector.m_coins[i].m_isDropped)
-				numCoins++;
-
-		for (int i = 0; i < MAX_PLAYERS; ++i)
-			if (m_players[i].m_isAlive)
-				numCoins += m_players[i].m_score;
-
-		if (numCoins < COINCOLLECTOR_COIN_LIMIT)
 		{
-			spawnCoin();
+			m_coinCollector.m_coins[i].tick(*this, dt);
 		}
 
-		m_coinCollector.m_nextSpawnTick = tick + (COIN_SPAWN_INTERVAL + (Random() % COIN_SPAWN_INTERVAL_VARIANCE)) * TICKS_PER_SECOND;
+		if (tick >= m_coinCollector.m_nextSpawnTick)
+		{
+			int numCoins = 0;
+
+			for (int i = 0; i < MAX_COINS; ++i)
+				if (m_coinCollector.m_coins[i].m_isDropped)
+					numCoins++;
+
+			for (int i = 0; i < MAX_PLAYERS; ++i)
+				if (m_players[i].m_isAlive)
+					numCoins += m_players[i].m_score;
+
+			if (numCoins < COINCOLLECTOR_COIN_LIMIT)
+			{
+				spawnCoin();
+			}
+
+			m_coinCollector.m_nextSpawnTick = tick + (COIN_SPAWN_INTERVAL + (Random() % COIN_SPAWN_INTERVAL_VARIANCE)) * TICKS_PER_SECOND;
+		}
 	}
 
 	// floor effect

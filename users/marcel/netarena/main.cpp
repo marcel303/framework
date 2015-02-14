@@ -1,5 +1,7 @@
 #include <algorithm>
 #include <functional>
+#include <iostream>
+#include <string>
 #include "arena.h"
 #include "BitStream.h"
 #include "bullet.h"
@@ -1569,6 +1571,14 @@ int main(int argc, char * argv[])
 	changeDirectory("data");
 
 	g_optionManager.LoadFromCommandLine(argc, argv);
+
+	if (!g_connectLocal && (std::string)g_connect == "")
+	{
+		std::cout << "host IP address: ";
+		std::string ip;
+		std::cin >> ip;
+		g_connect = ip;
+	}
 
 	g_app = new App();
 
