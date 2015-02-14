@@ -525,11 +525,13 @@ void BulletPool::free(uint16_t id)
 
 void BulletPool::serialize(NetSerializationContext & context)
 {
+	// fixme : should serialize free list ?? or maybe alloc ID doesn't matter..
+
 	if (context.IsRecv())
 	{
 		for (int i = 0; i < MAX_BULLETS; ++i)
 		{
-			if (m_bullets[i].isAlive )
+			if (m_bullets[i].isAlive)
 				free(i);
 		}
 

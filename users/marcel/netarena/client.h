@@ -31,6 +31,7 @@ public:
 
 	void tick(float dt);
 	void draw();
+	void drawMenus();
 	void drawPlay();
 	void drawRoundComplete();
 	void debugDraw();

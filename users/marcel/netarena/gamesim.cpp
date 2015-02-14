@@ -468,6 +468,8 @@ uint32_t GameSim::calcCRC() const
 	for (uint32_t i = 0; i < numBytes; ++i)
 		result = result * 13 + bytes[i];
 
+	// todo : add screen shakes, particle pool, bullet pool, arena
+
 	setPlayerPtrs();
 
 	return result;
@@ -524,6 +526,11 @@ void GameSim::setGameState(::GameState gameState)
 {
 	m_gameState = gameState;
 
+	if (gameState == kGameState_Menus)
+	{
+		resetGameSim();
+	}
+
 	if (gameState == kGameState_NewGame)
 	{
 		// reset players
@@ -542,8 +549,6 @@ void GameSim::setGameState(::GameState gameState)
 	if (gameState == kGameState_Play)
 	{
 		playSound("round-begin.ogg");
-
-		//resetGameWorld();
 
 		// respawn players
 
@@ -704,12 +709,22 @@ void GameSim::resetGameWorld()
 	// reset pickups
 
 	for (int i = 0; i < MAX_PICKUPS; ++i)
-		m_pickups[i].isAlive = false;
+		m_pickups[i] = Pickup();
+
+	m_grabbedPickup = Pickup();
+
+	m_nextPickupSpawnTick = 0;
+
+	// reset floor effect
+
+	m_floorEffect = FloorEffect();
 
 	// reset torches
 
 	for (int i = 0; i < MAX_TORCHES; ++i)
 		m_torches[i].m_isAlive = false;
+
+	m_freezeTicks = 0;
 
 	// reset bullets
 
@@ -722,6 +737,11 @@ void GameSim::resetGameWorld()
 			m_particlePool->free(i);
 	}
 
+	// reset screen shakes
+
+	for (int i = 0; i < MAX_SCREEN_SHAKES; ++i)
+		m_screenShakes[i] = ScreenShake();
+
 	// reset token hunt game mode
 
 	m_tokenHunt = TokenHunt();
@@ -731,12 +751,27 @@ void GameSim::resetGameWorld()
 	m_coinCollector = CoinCollector();
 }
 
+void GameSim::resetPlayers()
+{
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+	{
+		m_players[i] = Player();
+	}
+}
+
+void GameSim::resetGameSim()
+{
+	resetGameWorld();
+
+	resetPlayers();
+}
+
 void GameSim::tick()
 {
 	switch (m_gameState)
 	{
-	case kGameState_Lobby:
-		tickLobby();
+	case kGameState_Menus:
+		tickMenus();
 		break;
 
 	case kGameState_Play:
@@ -749,7 +784,7 @@ void GameSim::tick()
 	}
 }
 
-void GameSim::tickLobby()
+void GameSim::tickMenus()
 {
 	// wait for the host to enter the next game state
 }

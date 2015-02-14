@@ -1114,6 +1114,12 @@ bool App::tick()
 
 	// debug
 
+#if 1
+	if (keyboard.wentDown(SDLK_F1))
+	{
+		netSetGameState(kGameState_Menus);
+	}
+
 	if (keyboard.wentDown(SDLK_F5))
 	{
 		m_optionMenuIsOpen = !m_optionMenuIsOpen;
@@ -1163,6 +1169,7 @@ bool App::tick()
 	{
 		g_optionManager.Load("options.txt");
 	}
+#endif
 
 #if GG_ENABLE_TIMERS
 	TIMER_STOP(g_appTickTime);

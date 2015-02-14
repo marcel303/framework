@@ -94,6 +94,7 @@ void Arena::reset()
 		{
 			m_blocks[x][y].shape = kBlockShape_Opaque;
 			m_blocks[x][y].type = kBlockType_Empty;
+			m_blocks[x][y].param = 0;
 		}
 	}
 }

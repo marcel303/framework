@@ -261,6 +261,11 @@ struct Pickup : PhysicsActor
 	uint8_t blockX;
 	uint8_t blockY;
 
+	Pickup()
+	{
+		memset(this, 0, sizeof(*this));
+	}
+
 	void setup(PickupType type, int blockX, int blockY);
 
 	void tick(GameSim & gameSim, float dt);
@@ -329,6 +334,11 @@ struct ScreenShake
 	Vec2 vel;
 	float stiffness;
 	float life;
+
+	ScreenShake()
+	{
+		memset(this, 0, sizeof(*this));
+	}
 
 	void tick(float dt);
 };
@@ -430,9 +440,11 @@ public:
 
 	void load(const char * filename);
 	void resetGameWorld();
+	void resetPlayers();
+	void resetGameSim();
 
 	void tick();
-	void tickLobby();
+	void tickMenus();
 	void tickPlay();
 	void tickRoundComplete();
 	void anim(float dt);

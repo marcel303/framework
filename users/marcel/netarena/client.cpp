@@ -206,8 +206,8 @@ void Client::tick(float dt)
 
 		switch (m_gameSim->m_gameState)
 		{
-		case kGameState_Lobby:
-			strcpy_s(temp, sizeof(temp), "bgm-lobby.ogg");
+		case kGameState_Menus:
+			strcpy_s(temp, sizeof(temp), "bgm-menus.ogg");
 			break;
 		case kGameState_Play:
 			strcpy_s(temp, sizeof(temp), "bgm-play.ogg");
@@ -236,7 +236,8 @@ void Client::draw()
 
 	switch (m_gameSim->m_gameState)
 	{
-	case kGameState_Lobby:
+	case kGameState_Menus:
+		drawMenus();
 		break;
 
 	case kGameState_Play:
@@ -249,6 +250,10 @@ void Client::draw()
 	}
 
 	//clearPlayerPtrs();
+}
+
+void Client::drawMenus()
+{
 }
 
 void Client::drawPlay()
