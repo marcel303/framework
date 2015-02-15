@@ -159,6 +159,7 @@ public:
 	void beginDraw(int r, int g, int b, int a);
 	void endDraw();
 	
+	bool quitRequested;
 	float time;
 	float timeStep;
 	

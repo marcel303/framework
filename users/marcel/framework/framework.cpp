@@ -67,6 +67,7 @@ Framework::Framework()
 	numSoundSources = 32;
 	actionHandler = 0;
 	
+	quitRequested = false;
 	time = 0.f;
 	timeStep = 1.f / 60.f;
 }
@@ -280,10 +281,18 @@ bool Framework::shutdown()
 	
 	// reset self
 	
+	quitRequested = false;
+	time = 0.f;
+
 	fullscreen = false;
 	minification = 1;
 	reloadCachesOnActivate = false;
+	filedrop = false;
 	numSoundSources = 32;
+	windowX = -1;
+	windowY = -1;
+	windowTitle.clear();
+	windowIsActive = false;
 	actionHandler = 0;
 	
 	return result;
@@ -369,6 +378,10 @@ void Framework::process()
 			Dictionary args;
 			args.setString("file", e.drop.file);
 			processAction("filedrop", args);
+		}
+		else if (e.type == SDL_QUIT)
+		{
+			quitRequested = true;
 		}
 	}
 
