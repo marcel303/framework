@@ -7,9 +7,11 @@
 void HandleAssert(const char * func, int line, const char * expr, ...);
 #define Assert(x) do { if (!(x)) { HandleAssert(__FUNCTION__, __LINE__, #x); } } while (false)
 #define AssertMsg(x, msg, ...) do { if (!(x)) { HandleAssert(__FUNCTION__, __LINE__, #x, msg, __VA_ARGS__); } } while (false)
+#define Verify(x) Assert(x)
 #else
 #define Assert(x) do { } while (false)
 #define AssertMsg(x, msg, ...) do { } while (false)
+#define Verify(x) do { x; } while (false)
 #endif
 
 class AllocState
