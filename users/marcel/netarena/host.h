@@ -11,11 +11,7 @@ class PlayerNetObject;
 
 class Host
 {
-	friend class App; // fixme, for m_gameSim
-	friend class Arena;
-	friend class BulletPool;
-	friend struct Player; // fixme, for m_players array
-
+public:
 	GameSim m_gameSim;
 
 	int m_nextRoundNumber;
@@ -23,7 +19,6 @@ class Host
 	// round complete game state
 	uint64_t m_roundCompleteTimer;
 
-public:
 	Host();
 	~Host();
 
@@ -46,10 +41,6 @@ public:
 	PlayerNetObject * findPlayerByPlayerId(uint8_t playerId);
 	void setPlayerPtrs();
 	void clearPlayerPtrs();
-
-	void trySpawnPickup(PickupType type);
-	void spawnPickup(Pickup & pickup, PickupType type, int blockX, int blockY);
-	Pickup * grabPickup(int x1, int y1, int x2, int y2);
 };
 
 extern Host * g_host;

@@ -1594,7 +1594,7 @@ void Player::drawAt(int x, int y)
 	{
 		const float x = m_pos[0] + (m_collision.x1 + m_collision.x2) / 2.f;
 		const float y = m_pos[1] + (m_collision.y1 + m_collision.y2) / 2.f;
-		Sprite("shield-bubble.png").drawEx(x, y);
+		Sprite("bubble-bubble.png").drawEx(x, y);
 	}
 
 	if (m_anim == kPlayerAnim_Attack || m_anim == kPlayerAnim_AttackUp || m_anim == kPlayerAnim_AttackDown)

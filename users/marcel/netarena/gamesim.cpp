@@ -30,13 +30,13 @@ static const char * s_pickupSprites[kPickupType_COUNT] =
 {
 	"pickup-ammo.png",
 	"pickup-nade.png",
-	"pickup-nade.png",
-	"pickup-nade.png",
-	"pickup-nade.png"
+	"pickup-shield.png",
+	"pickup-ice.png",
+	"pickup-bubble.png"
 };
 
 #define TOKEN_SPRITE "token.png"
-#define COIN_SPRITE "token.png"
+#define COIN_SPRITE "coin.png"
 
 //
 
@@ -100,6 +100,7 @@ void Pickup::draw()
 	{
 		// fixme!
 
+		setFont("calibri.ttf");
 		drawText(m_pos[0], m_pos[1], 24.f, 0.f, 0.f, "type: %d", type);
 	}
 }
@@ -800,8 +801,11 @@ void GameSim::tickPlay()
 			if (m_playerNetObjects[i])
 				numPlayers++;
 
-		const uint32_t crc = calcCRC();
-		LOG_DBG("gamesim %p: tick=%u, crc=%08x, numPlayers=%d", this, m_tick, crc, numPlayers);
+		if (g_logCRCs)
+		{
+			const uint32_t crc = calcCRC();
+			LOG_DBG("gamesim %p: tick=%u, crc=%08x, numPlayers=%d", this, m_tick, crc, numPlayers);
+		}
 	}
 
 	const float dt = 1.f / TICKS_PER_SECOND;

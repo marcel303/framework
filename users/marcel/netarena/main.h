@@ -3,6 +3,7 @@
 #include <map>
 #include <vector>
 #include "ChannelHandler.h"
+#include "gametypes.h"
 #include "libnet_forward.h"
 #include "libreplication_forward.h"
 #include "Options.h"
@@ -10,9 +11,11 @@
 
 OPTION_EXTERN(bool, g_devMode);
 OPTION_EXTERN(bool, g_monkeyMode);
+OPTION_EXTERN(bool, g_logCRCs);
 
 class Client;
 class Host;
+class MainMenu;
 class OptionMenu;
 struct ParticleSpawnInfo;
 struct Player;
@@ -57,6 +60,8 @@ class App : public ChannelHandler, public ReplicationHandler
 
 	std::vector<int> m_freeControllerList;
 
+	MainMenu * m_mainMenu;
+
 	OptionMenu * m_optionMenu;
 	bool m_optionMenuIsOpen;
 
@@ -99,6 +104,14 @@ public:
 
 	bool init(bool isHost);
 	void shutdown();
+
+	void quit();
+
+	bool startHosting();
+	void stopHosting();
+
+	bool findGame();
+	void leaveGame();
 
 	void connect(const char * address);
 	void disconnectClient(int index);

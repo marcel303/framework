@@ -792,7 +792,7 @@ bool Arena::handleDamageRect(GameSim & gameSim, int baseX, int baseY, int x1, in
 
 			Block & block = *blockInfo.block;
 
-			if ((block.type == kBlockType_Destructible || block.type == kBlockType_DestructibleRegen) && hitDestructible)
+			if ((block.type == kBlockType_Destructible || (block.type == kBlockType_DestructibleRegen && block.shape != kBlockShape_Empty)) && hitDestructible)
 			{
 				if (block.type == kBlockType_DestructibleRegen)
 				{

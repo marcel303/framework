@@ -10,7 +10,7 @@
 #include "ReplicationManager.h"
 #include "Timer.h"
 
-COMMAND_OPTION(s_addPickup, "Debug/Add Pickup", [] { if (g_host) g_host->trySpawnPickup((PickupType)(rand() % kPickupType_COUNT)); });
+COMMAND_OPTION(s_addPickup, "Debug/Add Pickup", [] { if (g_host) g_host->m_gameSim.trySpawnPickup((PickupType)(rand() % kPickupType_COUNT)); });
 
 COMMAND_OPTION(s_gameStateNewGame, "Game State/New Game", [] { if (g_host) g_host->newGame(); });
 COMMAND_OPTION(s_gameStateNewRound, "Game State/New Round", [] { if (g_host) g_host->newRound(0); });
@@ -249,19 +249,4 @@ void Host::clearPlayerPtrs()
 		if (player)
 			player->m_player->m_netObject = 0;
 	}
-}
-
-void Host::trySpawnPickup(PickupType type)
-{
-	return m_gameSim.trySpawnPickup(type);
-}
-
-void Host::spawnPickup(Pickup & pickup, PickupType type, int blockX, int blockY)
-{
-	m_gameSim.spawnPickup(pickup, type, blockX, blockY);
-}
-
-Pickup * Host::grabPickup(int x1, int y1, int x2, int y2)
-{
-	return m_gameSim.grabPickup(x1, y1, x2, y2);
 }

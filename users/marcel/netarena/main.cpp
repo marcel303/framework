@@ -14,6 +14,7 @@
 #include "gamesim.h"
 #include "host.h"
 #include "main.h"
+#include "mainmenu.h"
 #include "NetProtocols.h"
 #include "OptionMenu.h"
 #include "PacketDispatcher.h"
@@ -35,6 +36,10 @@ OPTION_ALIAS(g_devMode, "devmode");
 OPTION_DECLARE(bool, g_monkeyMode, false);
 OPTION_DEFINE(bool, g_monkeyMode, "App/Monkey Mode");
 OPTION_ALIAS(g_monkeyMode, "monkeymode");
+
+OPTION_DECLARE(bool, g_logCRCs, false);
+OPTION_DEFINE(bool, g_logCRCs, "App/Enable CRC Logging");
+OPTION_ALIAS(g_logCRCs, "logcrc");
 
 OPTION_DECLARE(std::string, s_mapList, "arena.txt");
 OPTION_DEFINE(std::string, s_mapList, "App/Map List");
@@ -356,7 +361,8 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 
 			const uint32_t crc2 = client->m_gameSim->calcCRC();
 
-			LOG_DBG("remove CRCs: %08x, %08x", crc1, crc2);
+			if (g_logCRCs)
+				LOG_DBG("remove CRCs: %08x, %08x", crc1, crc2);
 		}
 	}
 	else if (method == s_rpcSetPlayerInputs)
@@ -793,8 +799,6 @@ bool App::init(bool isHost)
 			framework.fillCachesWithPath(".");
 		}
 
-		m_isHost = isHost;
-
 		//
 
 		m_packetDispatcher = new PacketDispatcher();
@@ -815,12 +819,6 @@ bool App::init(bool isHost)
 
 		//
 
-		const int port = m_isHost ? 6000 : 0;
-
-		m_channelMgr->Initialize(m_packetDispatcher, this, port, m_isHost);
-
-		//
-
 		m_replicationMgr->CL_RegisterHandler(this);
 
 		//
@@ -829,19 +827,14 @@ bool App::init(bool isHost)
 
 		//
 
-		if (m_isHost)
-		{
-			m_host = new Host();
-
-			m_host->init();
-		}
-
-		//
-
 		Assert(m_freeControllerList.empty());
 		m_freeControllerList.clear();
 		for (int i = 0; i < MAX_GAMEPAD + 1; ++i)
 			m_freeControllerList.push_back(i);
+
+		//
+
+		m_mainMenu = new MainMenu();
 
 		//
 
@@ -853,29 +846,9 @@ bool App::init(bool isHost)
 
 		//
 
-		// todo : free these maps at exit
 		g_colorMap = new Surface(ARENA_SX_PIXELS, ARENA_SY_PIXELS);
 		g_lightMap = new Surface(ARENA_SX_PIXELS, ARENA_SY_PIXELS);
 		g_finalMap = new Surface(ARENA_SX_PIXELS, ARENA_SY_PIXELS);
-
-		//
-
-		if (g_host)
-		{
-			g_host->newGame();
-		}
-
-		if (g_connectLocal)
-		{
-			g_app->connect("127.0.0.1");
-		}
-
-		std::string connect = g_connect;
-
-		if (!connect.empty())
-		{
-			g_app->connect(connect.c_str());
-		}
 
 		return true;
 	}
@@ -885,29 +858,35 @@ bool App::init(bool isHost)
 
 void App::shutdown()
 {
+	stopHosting();
+
+	//
+
+	delete g_colorMap;
+	g_colorMap = 0;
+
+	delete g_lightMap;
+	g_lightMap = 0;
+
+	delete g_finalMap;
+	g_finalMap = 0;
+
+	//
+
 	delete m_statTimerMenu;
 	m_statTimerMenu = 0;
 
 	delete m_optionMenu;
 	m_optionMenu = 0;
 
-	for (size_t i = 0; i < m_clients.size(); ++i)
-	{
-		delete m_clients[i];
-		m_clients[i] = 0;
-	}
+	//
 
-	m_clients.clear();
+	delete m_mainMenu;
+	m_mainMenu = 0;
+
+	//
 
 	m_freeControllerList.clear();
-
-	if (m_isHost)
-	{
-		m_host->shutdown();
-
-		delete m_host;
-		m_host = 0;
-	}
 
 	//
 
@@ -921,8 +900,6 @@ void App::shutdown()
 
 	m_replicationMgr->CL_Shutdown();
 
-	m_channelMgr->Shutdown(true);
-
 	delete m_replicationMgr;
 	m_replicationMgr = 0;
 
@@ -935,9 +912,83 @@ void App::shutdown()
 	delete m_packetDispatcher;
 	m_packetDispatcher = 0;
 
-	m_isHost = false;
-
 	framework.shutdown();
+}
+
+void App::quit()
+{
+	exit(0);
+}
+
+bool App::startHosting()
+{
+	Assert(m_host == 0);
+
+	const int port = 6000;
+
+	if (!m_channelMgr->Initialize(m_packetDispatcher, this, port, true))
+		return false;
+
+	//
+
+	m_host = new Host();
+
+	m_host->init();
+
+	//
+
+	g_host->newGame();
+
+	m_isHost = true;
+
+	return true;
+}
+
+void App::stopHosting()
+{
+	Assert(m_isHost);
+
+	if (m_host)
+	{
+		m_host->shutdown();
+
+		delete m_host;
+		m_host = 0;
+	}
+
+	m_channelMgr->Shutdown(true);
+
+	m_isHost = false;
+}
+
+bool App::findGame()
+{
+	const int port = 0;
+
+	if (!m_channelMgr->Initialize(m_packetDispatcher, this, port, false))
+		return false;
+
+	//
+
+	if (g_connectLocal)
+	{
+		connect("127.0.0.1");
+	}
+	else
+	{
+		std::string address = g_connect;
+
+		if (!address.empty())
+		{
+			connect(address.c_str());
+		}
+	}
+}
+
+void App::leaveGame()
+{
+	while (!m_clients.empty())
+		disconnectClient(0);
 }
 
 void App::connect(const char * address)
@@ -1055,6 +1106,13 @@ bool App::tick()
 	
 	m_discoveryUi->process();
 
+	// update main menu
+
+	if (m_clients.empty())
+	{
+		m_mainMenu->tick(dt);
+	}
+
 	// update host
 
 	if (m_isHost)
@@ -1084,7 +1142,7 @@ bool App::tick()
 
 				const uint32_t crc3 = m_host->m_gameSim.calcCRC();
 
-				if (g_devMode)
+				if (g_logCRCs)
 					LOG_DBG("tick CRCs: %08x, %08x, %08x", crc1, crc2, crc3);
 			}
 
@@ -1177,9 +1235,9 @@ bool App::tick()
 	TIMER_START(g_appTickTime);
 #endif
 
-	if (keyboard.wentDown(SDLK_ESCAPE))
+	if (keyboard.wentDown(SDLK_ESCAPE) || framework.quitRequested)
 	{
-		exit(0);
+		quit();
 	}
 
 	return true;
@@ -1191,6 +1249,13 @@ void App::draw()
 
 	framework.beginDraw(10, 15, 10, 0);
 	{
+		// draw main menu
+
+		if (m_clients.empty())
+		{
+			m_mainMenu->draw();
+		}
+
 		if (m_selectedClient >= 0 && m_selectedClient < (int)m_clients.size())
 		{
 			Client * client = m_clients[m_selectedClient];
@@ -1476,8 +1541,8 @@ void App::netSetPlayerInputs(uint16_t channelId, uint8_t playerId, const PlayerI
 
 void App::netSetPlayerInputsBroadcast()
 {
-	if (g_devMode)
-		LOG_DBG("netSetPlayerInputsBroadcast");
+	//if (g_devMode)
+	//	LOG_DBG("netSetPlayerInputsBroadcast");
 
 	BitStream bs;
 
@@ -1579,7 +1644,7 @@ int main(int argc, char * argv[])
 
 	g_optionManager.LoadFromCommandLine(argc, argv);
 
-	if (!g_connectLocal && (std::string)g_connect == "")
+	if (!g_devMode && !g_connectLocal && (std::string)g_connect == "")
 	{
 		std::cout << "host IP address: ";
 		std::string ip;
