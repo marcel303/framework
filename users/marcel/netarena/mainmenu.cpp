@@ -1,3 +1,5 @@
+#include "Channel.h"
+#include "client.h"
 #include "framework.h"
 #include "gamedefs.h"
 #include "main.h"
@@ -66,6 +68,8 @@ void MainMenu::tick(float dt)
 		logDebug("new game!");
 
 		g_app->startHosting();
+
+		g_app->netSetGameState(kGameState_Menus);
 
 		g_app->connect("127.0.0.1");
 	}

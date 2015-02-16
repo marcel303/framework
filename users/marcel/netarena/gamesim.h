@@ -367,8 +367,6 @@ struct GameStateData
 	GameStateData()
 	{
 		memset(this, 0, sizeof(GameStateData));
-
-		m_gameState = kGameState_Play;
 	}
 
 	uint32_t Random();

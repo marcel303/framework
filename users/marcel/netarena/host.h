@@ -19,6 +19,8 @@ public:
 	// round complete game state
 	uint64_t m_roundCompleteTimer;
 
+	uint64_t m_gameStartTimer;
+
 	Host();
 	~Host();
 
@@ -26,6 +28,7 @@ public:
 	void shutdown();
 
 	void tick(float dt);
+	void tickMenus(float dt);
 	void tickPlay(float dt);
 	void tickRoundComplete(float dt);
 	void debugDraw();

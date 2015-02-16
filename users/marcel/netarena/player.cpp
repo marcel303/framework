@@ -66,7 +66,7 @@ nice to haves:
 // from internal.h
 void splitString(const std::string & str, std::vector<std::string> & result, char c);
 
-OPTION_DECLARE(int, g_playerCharacterIndex, -1);
+OPTION_DECLARE(int, g_playerCharacterIndex, 0);
 OPTION_DEFINE(int, g_playerCharacterIndex, "Player/Character Index (On Create)");
 OPTION_ALIAS(g_playerCharacterIndex, "character");
 

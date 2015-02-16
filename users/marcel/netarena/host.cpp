@@ -29,6 +29,7 @@ Host::Host()
 	: m_gameSim()
 	, m_nextRoundNumber(0)
 	, m_roundCompleteTimer(0)
+	, m_gameStartTimer(0)
 {
 }
 
@@ -54,6 +55,7 @@ void Host::tick(float dt)
 	switch (m_gameSim.m_gameState)
 	{
 	case kGameState_Menus:
+		tickMenus(dt);
 		break;
 
 	case kGameState_Play:
@@ -66,6 +68,21 @@ void Host::tick(float dt)
 	}
 
 	//clearPlayerPtrs();
+}
+
+void Host::tickMenus(float dt)
+{
+	if (m_gameStartTimer == 0)
+	{
+		m_gameStartTimer = g_TimerRT.TimeMS_get() + 3000;
+	}
+
+	if (g_TimerRT.TimeMS_get() >= m_gameStartTimer)
+	{
+		m_gameStartTimer = 0;
+
+		newGame();
+	}
 }
 
 void Host::tickPlay(float dt)

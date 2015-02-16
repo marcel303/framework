@@ -9,6 +9,7 @@ class Arena;
 class BulletPool;
 class GameSim;
 class NetSpriteManager;
+struct ParticleSpawnInfo;
 struct Player;
 class PlayerNetObject;
 
@@ -20,7 +21,7 @@ public:
 
 	GameSim * m_gameSim;
 
-	BitStream m_syncStream;
+	BitStream * m_syncStream;
 
 	std::vector<PlayerNetObject*> m_players;
 

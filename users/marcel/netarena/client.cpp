@@ -22,8 +22,11 @@ Client::Client()
 	: m_channel(0)
 	, m_replicationId(0)
 	, m_gameSim(0)
+	, m_syncStream(0)
 {
 	m_gameSim = new GameSim();
+
+	m_syncStream = new BitStream();
 }
 
 Client::~Client()
@@ -34,6 +37,9 @@ Client::~Client()
 		PlayerNetObject * player = m_players.front();
 		removePlayer(player);
 	}
+
+	delete m_syncStream;
+	m_syncStream = 0;
 
 	delete m_gameSim;
 	m_gameSim = 0;
@@ -254,6 +260,27 @@ void Client::draw()
 
 void Client::drawMenus()
 {
+	Sprite("mainmenu-back.png").draw();
+
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+	{
+		Player & player = m_gameSim->m_players[i];
+
+		const int y = GFX_SY / 2 + i * 50;
+
+		if (player.m_isUsed)
+		{
+			setFont("calibri.ttf");
+			setColor(255, 255, 255);
+			drawText(GFX_SX/2, y, 24, 0.f, 0.f, "PLAYER %d CHAR %d", i, player.m_characterIndex);
+		}
+		else
+		{
+			setFont("calibri.ttf");
+			setColor(127, 127, 127);
+			drawText(GFX_SX/2, y, 24, 0.f, 0.f, "PLAYER %d NOT CONNECTED", i);
+		}
+	}
 }
 
 void Client::drawPlay()

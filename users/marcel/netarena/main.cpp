@@ -197,17 +197,20 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			bitStream.Read(numBits);
 
 			if (isFirst)
-				client->m_syncStream = BitStream();
+			{
+				delete client->m_syncStream;
+				client->m_syncStream = new BitStream();
+			}
 
 			const int numBytes = Net::BitsToBytes(numBits);
 			uint8_t * temp = (uint8_t*)alloca(numBytes);
 			bitStream.ReadAlignedBytes(temp, numBytes);
 
-			client->m_syncStream.WriteAlignedBytes(temp, numBytes);
+			client->m_syncStream->WriteAlignedBytes(temp, numBytes);
 
 			if (isLast)
 			{
-				BitStream bs2(client->m_syncStream.GetData(), client->m_syncStream.GetDataSize());
+				BitStream bs2(client->m_syncStream->GetData(), client->m_syncStream->GetDataSize());
 
 				NetSerializationContext context;
 				context.Set(true, false, bs2);
@@ -937,8 +940,6 @@ bool App::startHosting()
 
 	//
 
-	g_host->newGame();
-
 	m_isHost = true;
 
 	return true;
@@ -983,6 +984,8 @@ bool App::findGame()
 			connect(address.c_str());
 		}
 	}
+
+	return true;
 }
 
 void App::leaveGame()
@@ -991,7 +994,7 @@ void App::leaveGame()
 		disconnectClient(0);
 }
 
-void App::connect(const char * address)
+Client * App::connect(const char * address)
 {
 	Channel * channel = m_channelMgr->CreateChannel(ChannelPool_Client);
 
@@ -1007,6 +1010,8 @@ void App::connect(const char * address)
 	//
 
 	m_selectedClient = (int)m_clients.size() - 1;
+
+	return client;
 }
 
 void App::disconnectClient(int index)

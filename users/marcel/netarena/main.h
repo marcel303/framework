@@ -113,7 +113,7 @@ public:
 	bool findGame();
 	void leaveGame();
 
-	void connect(const char * address);
+	Client * connect(const char * address);
 	void disconnectClient(int index);
 	void selectClient(int index);
 	Client * getSelectedClient();
