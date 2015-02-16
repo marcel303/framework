@@ -163,7 +163,7 @@ void Channel::Update(uint64_t time)
 		}
 	}
 
-	if (m_channelType == ChannelType_Connection)
+	if (m_channelType == ChannelType_Connection && m_isConnected)
 	{
 		// Handle reliable communications.
 
