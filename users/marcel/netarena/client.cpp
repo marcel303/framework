@@ -299,7 +299,7 @@ void Client::drawMenus()
 	{
 		Player & player = m_gameSim->m_players[i];
 
-		const int y = GFX_SY / 2 + i * 50;
+		const int y = GFX_SY * 3 / 4 + i * 50;
 
 		if (player.m_isUsed)
 		{

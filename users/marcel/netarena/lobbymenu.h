@@ -7,6 +7,8 @@ class Client;
 
 class CharSelector
 {
+	void updateButtonLocations();
+
 public:
 	Client * m_client;
 	int m_playerId;

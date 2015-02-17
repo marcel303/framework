@@ -184,3 +184,13 @@ OPTION_STEP(DOUBLEMELEE_GRAVITY_MULTIPLIER, 0, 0, .02f);
 OPTION_DEFINE(int, STOMP_EFFECT_MAX_SIZE, "Special Abilities/Stomp Attack/Max Effect Size");
 OPTION_DEFINE(int, STOMP_EFFECT_MIN_HEIGHT, "Special Abilities/Stomp Attack/Effect Min Height");
 OPTION_DEFINE(int, STOMP_EFFECT_MAX_HEIGHT, "Special Abilities/Stomp Attack/Effect Max Height");
+
+OPTION_DEFINE(int, UI_CHARSELECT_BASE_X, "UI/Character Select/Base X");
+OPTION_DEFINE(int, UI_CHARSELECT_BASE_Y, "UI/Character Select/Base Y");
+OPTION_DEFINE(int, UI_CHARSELECT_SIZE_X, "UI/Character Select/Size X");
+OPTION_DEFINE(int, UI_CHARSELECT_SIZE_Y, "UI/Character Select/Size Y");
+OPTION_DEFINE(int, UI_CHARSELECT_STEP_X, "UI/Character Select/Step X");
+OPTION_DEFINE(int, UI_CHARSELECT_PREV_X, "UI/Character Select/Prev X");
+OPTION_DEFINE(int, UI_CHARSELECT_PREV_Y, "UI/Character Select/Prev Y");
+OPTION_DEFINE(int, UI_CHARSELECT_NEXT_X, "UI/Character Select/Next X");
+OPTION_DEFINE(int, UI_CHARSELECT_NEXT_Y, "UI/Character Select/Next Y");

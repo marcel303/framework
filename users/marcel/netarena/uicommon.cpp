@@ -4,15 +4,22 @@
 Button::Button(int x, int y, const char * filename)
 	: m_sprite(new Sprite(filename))
 	, m_isMouseDown(false)
+	, m_x(0)
+	, m_y(0)
 {
-	m_x = x - m_sprite->getWidth() / 2;
-	m_y = y - m_sprite->getHeight() / 2;
+	setPosition(x, y);
 }
 
 Button::~Button()
 {
 	delete m_sprite;
 	m_sprite = 0;
+}
+
+void Button::setPosition(int x, int y)
+{
+	m_x = x - m_sprite->getWidth() / 2;
+	m_y = y - m_sprite->getHeight() / 2;
 }
 
 bool Button::isClicked()

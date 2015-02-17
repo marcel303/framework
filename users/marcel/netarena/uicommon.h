@@ -13,6 +13,8 @@ public:
 	Button(int x, int y, const char * filename);
 	~Button();
 
+	void setPosition(int x, int y);
+
 	bool isClicked();
 	void draw();
 };
