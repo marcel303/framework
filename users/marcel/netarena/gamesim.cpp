@@ -252,11 +252,14 @@ void Coin::drawLight()
 
 //
 
-void Torch::setup(float x, float y, Color color)
+void Torch::setup(float x, float y, const Color & color)
 {
 	m_isAlive = true;
 	m_pos.Set(x, y);
-	m_color = color;
+	m_color[0] = color.r;
+	m_color[1] = color.g;
+	m_color[2] = color.b;
+	m_color[3] = color.a;
 }
 
 void Torch::tick(GameSim & gameSim, float dt)
@@ -277,7 +280,10 @@ void Torch::drawLight()
 	a = (a + 3.f) / 6.f;
 	a = Calc::Lerp(1.f, a, TORCH_FLICKER_STRENGTH);
 
-	Color color = m_color;
+	Color color;
+	color.r = m_color[0];
+	color.g = m_color[1];
+	color.b = m_color[2];
 	color.a = a;
 	setColor(color);
 
@@ -527,13 +533,16 @@ void GameSim::setGameState(::GameState gameState)
 {
 	m_gameState = gameState;
 
-	if (gameState == kGameState_Menus)
+	switch (gameState)
 	{
-		resetGameSim();
-	}
+	case kGameState_Connecting:
+		break;
 
-	if (gameState == kGameState_NewGame)
-	{
+	case kGameState_Menus:
+		resetGameSim();
+		break;
+
+	case kGameState_NewGame:
 		// reset players
 
 		for (int i = 0; i < MAX_PLAYERS; ++i)
@@ -545,36 +554,38 @@ void GameSim::setGameState(::GameState gameState)
 				player->handleNewGame();
 			}
 		}
-	}
+		break;
 
-	if (gameState == kGameState_Play)
-	{
-		playSound("round-begin.ogg");
-
-		// respawn players
-
-		for (int i = 0; i < MAX_PLAYERS; ++i)
+	case kGameState_Play:
 		{
-			if (m_playerNetObjects[i])
+			playSound("round-begin.ogg");
+
+			// respawn players
+
+			for (int i = 0; i < MAX_PLAYERS; ++i)
 			{
-				Player * player = m_playerNetObjects[i]->m_player;
+				if (m_playerNetObjects[i])
+				{
+					Player * player = m_playerNetObjects[i]->m_player;
 
-				player->handleNewRound();
+					player->handleNewRound();
 
-				player->respawn();
+					player->respawn();
+				}
+			}
+
+			if (m_gameMode == kGameMode_TokenHunt)
+			{
+				spawnToken();
+			}
+
+			if (m_gameMode == kGameMode_CoinCollector)
+			{
+				for (int i = 0; i < 4; ++i)
+					spawnCoin();
 			}
 		}
-
-		if (m_gameMode == kGameMode_TokenHunt)
-		{
-			spawnToken();
-		}
-
-		if (m_gameMode == kGameMode_CoinCollector)
-		{
-			for (int i = 0; i < 4; ++i)
-				spawnCoin();
-		}
+		break;
 	}
 }
 
@@ -684,7 +695,13 @@ void GameSim::load(const char * filename)
 								if (fields[1].length() != 8)
 									LOG_ERR("invalid color format: %s", fields[1].c_str());
 								else
-									torch->m_color = parseColor(fields[1].c_str());
+								{
+									const Color color = parseColor(fields[1].c_str());
+									torch->m_color[0] = color.r;
+									torch->m_color[1] = color.g;
+									torch->m_color[2] = color.b;
+									torch->m_color[3] = color.a;
+								}
 							}
 						}
 						break;

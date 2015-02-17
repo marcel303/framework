@@ -22,6 +22,8 @@ struct Player;
 struct PlayerInput;
 class PlayerNetObject;
 class StatTimerMenu;
+class Surface;
+class Ui;
 
 namespace NetSessionDiscovery
 {

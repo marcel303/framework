@@ -74,7 +74,7 @@ void Host::tickMenus(float dt)
 {
 	if (m_gameStartTimer == 0)
 	{
-		m_gameStartTimer = g_TimerRT.TimeMS_get() + 3000;
+		m_gameStartTimer = g_TimerRT.TimeMS_get() + 20000; // fixme
 	}
 
 	if (g_TimerRT.TimeMS_get() >= m_gameStartTimer)

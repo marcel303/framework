@@ -5,6 +5,7 @@
 enum GameState
 {
 	kGameState_Undefined,
+	kGameState_Connecting,
 	kGameState_Menus,
 	kGameState_NewGame,
 	kGameState_Play,

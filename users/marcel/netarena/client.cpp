@@ -7,6 +7,7 @@
 #include "Debugging.h"
 #include "framework.h"
 #include "host.h"
+#include "lobbymenu.h"
 #include "main.h"
 #include "player.h"
 #include "Timer.h"
@@ -21,12 +22,17 @@ static Music * s_bgmSound = 0;
 Client::Client()
 	: m_channel(0)
 	, m_replicationId(0)
+	, m_lobbyMenu(0)
 	, m_gameSim(0)
 	, m_syncStream(0)
 {
+	m_lobbyMenu = new LobbyMenu(this);
+
 	m_gameSim = new GameSim();
 
 	m_syncStream = new BitStream();
+
+	m_gameSim->setGameState(kGameState_Connecting);
 }
 
 Client::~Client()
@@ -43,6 +49,9 @@ Client::~Client()
 
 	delete m_gameSim;
 	m_gameSim = 0;
+
+	delete m_lobbyMenu;
+	m_lobbyMenu = 0;
 }
 
 void Client::initialize(Channel * channel)
@@ -52,7 +61,12 @@ void Client::initialize(Channel * channel)
 
 void Client::tick(float dt)
 {
-	if (m_channel)
+	if (m_gameSim->m_gameState == kGameState_Menus)
+	{
+		m_lobbyMenu->tick(dt);
+	}
+
+	if (m_channel && m_channel->m_isConnected)
 	{
 		// see if there are more players than gamepads, to decide if we should use keyboard exclusively for one player, or also assign them a gamepad
 
@@ -210,8 +224,13 @@ void Client::tick(float dt)
 	{
 		char temp[64];
 
+		temp[0] = 0;
+
 		switch (m_gameSim->m_gameState)
 		{
+		case kGameState_Undefined:
+			strcpy_s(temp, sizeof(temp), "bgm-menus.ogg");
+			break;
 		case kGameState_Menus:
 			strcpy_s(temp, sizeof(temp), "bgm-menus.ogg");
 			break;
@@ -230,8 +249,11 @@ void Client::tick(float dt)
 			delete s_bgmSound;
 			s_bgmSound = 0;
 
-			s_bgmSound = new Music(s_bgm);
-			s_bgmSound->play();
+			if (strlen(s_bgm))
+			{
+				s_bgmSound = new Music(s_bgm);
+				s_bgmSound->play();
+			}
 		}
 	}
 }
@@ -242,6 +264,10 @@ void Client::draw()
 
 	switch (m_gameSim->m_gameState)
 	{
+	case kGameState_Connecting:
+		drawConnecting();
+		break;
+
 	case kGameState_Menus:
 		drawMenus();
 		break;
@@ -256,6 +282,13 @@ void Client::draw()
 	}
 
 	//clearPlayerPtrs();
+}
+
+void Client::drawConnecting()
+{
+	setColor(colorRed);
+	drawRect(0, 0, GFX_SX, GFX_SY);
+	setColor(colorWhite);
 }
 
 void Client::drawMenus()
@@ -280,6 +313,11 @@ void Client::drawMenus()
 			setColor(127, 127, 127);
 			drawText(GFX_SX/2, y, 24, 0.f, 0.f, "PLAYER %d NOT CONNECTED", i);
 		}
+	}
+
+	if (m_gameSim->m_gameState == kGameState_Menus)
+	{
+		m_lobbyMenu->draw();
 	}
 }
 

@@ -115,15 +115,6 @@ static void HandleAction(const std::string & action, const Dictionary & args)
 			g_app->selectClient(index);
 		}
 	}
-
-	if (action == "char_select")
-	{
-		const int clientChannelId = args.getInt("client_channel", -1);
-		const int playerId = args.getInt("player_id", -1);
-		const int characterIndex = args.getInt("char", -1);
-
-		g_app->netSetPlayerCharacterIndex(clientChannelId, playerId, characterIndex);
-	}
 }
 
 //
@@ -182,8 +173,6 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 {
 	if (method == s_rpcSyncGameSim)
 	{
-		LOG_DBG("handleRpc: s_rpcSyncGameSim");
-
 		Client * client = g_app->findClientByChannel(channel);
 		Assert(client);
 		if (client)
@@ -196,8 +185,15 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			bitStream.Read(isLast);
 			bitStream.Read(numBits);
 
+			if (!isFirst && !isLast)
+			{
+				LOG_DBG("handleRpc: s_rpcSyncGameSim (continuation)");
+			}
+
 			if (isFirst)
 			{
+				LOG_DBG("handleRpc: s_rpcSyncGameSim: first");
+
 				delete client->m_syncStream;
 				client->m_syncStream = new BitStream();
 			}
@@ -210,12 +206,18 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 
 			if (isLast)
 			{
+				LOG_DBG("handleRpc: s_rpcSyncGameSim: last");
+
 				BitStream bs2(client->m_syncStream->GetData(), client->m_syncStream->GetDataSize());
 
 				NetSerializationContext context;
 				context.Set(true, false, bs2);
 				client->m_gameSim->serialize(context);
 			}
+		}
+		else
+		{
+			LOG_ERR("handleRpc: s_rpcSyncGameSim: couldn't find client");
 		}
 	}
 	else if (method == s_rpcSetGameState)
@@ -469,19 +471,24 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 	{
 		LOG_DBG("handleRpc: s_rpcSetPlayerCharacterIndex");
 
-		uint8_t playerId;
-		uint8_t characterIndex;
+		Assert(g_host);
 
-		bitStream.Read(playerId);
-		bitStream.Read(characterIndex);
-
-		PlayerNetObject * player = g_host->findPlayerByPlayerId(playerId);
-		Assert(player);
-		if (player)
+		if (g_host && g_host->m_gameSim.m_gameState == kGameState_Menus)
 		{
-			player->setCharacterIndex(characterIndex);
+			uint8_t playerId;
+			uint8_t characterIndex;
+
+			bitStream.Read(playerId);
+			bitStream.Read(characterIndex);
+
+			PlayerNetObject * player = g_host->findPlayerByPlayerId(playerId);
+			Assert(player);
+			if (player)
+			{
+				player->setCharacterIndex(characterIndex);
+			}
+			g_app->netBroadcastCharacterIndex(playerId, characterIndex);
 		}
-		g_app->netBroadcastCharacterIndex(playerId, characterIndex);
 	}
 	else if (method == s_rpcSetPlayerCharacterIndexBroadcast)
 	{
@@ -586,6 +593,9 @@ void App::processPlayerChanges()
 
 			//
 
+			for (int i = 0; i < 2; ++i) // fixme : hack to alloc two players for each client
+			{
+
 			PlayerNetObject * playerNetObject = m_host->allocPlayer(playerToAddOrRemove.channel->m_destinationId);
 
 			if (playerNetObject)
@@ -603,6 +613,8 @@ void App::processPlayerChanges()
 					playerToAddOrRemove.channel->m_destinationId,
 					player.m_index,
 					player.m_characterIndex);
+			}
+
 			}
 		}
 		else
@@ -1369,42 +1381,6 @@ void App::draw()
 					name, i * 150,
 					i);
 				button.parse(props);
-			}
-		}
-
-		Client * client = getSelectedClient();
-
-		if (client)
-		{
-			int index = 0;
-
-			for (int i = 0; i < MAX_PLAYERS; ++i)
-			{
-				Player & player = client->m_gameSim->m_players[i];
-
-				if (!player.m_isUsed || player.m_owningChannelId != client->m_channel->m_id)
-					continue;
-
-				if (!player.hasValidCharacterIndex())
-				{
-					for (int c = 0; c < 4; ++c)
-					{
-						char name[32];
-						sprintf(name, "select_%d_%d", i, c);
-						Dictionary & button = (*m_discoveryUi)[name];
-						char props[1024];
-						sprintf(props, "type:button name:%s x:%d y:%d scale:0.65 action:char_select client_channel:%d player_id:%d char:%d image:button.png image_over:button-over.png image_down:button-down.png text:char text_color:000000 font:calibri.ttf font_size:24",
-							name,
-							index * 150,
-							GFX_SY - 200 + c * 45,
-							client->m_channel->m_id,
-							i,
-							c);
-						button.parse(props);
-					}
-
-					++index;
-				}
 			}
 		}
 

@@ -19,6 +19,7 @@
 #include <string.h> // todo : cpp
 
 class BulletPool;
+class Color;
 class NetSpriteManager;
 struct ParticleSpawnInfo;
 class PlayerNetObject;
@@ -318,9 +319,9 @@ struct Torch
 {
 	bool m_isAlive;
 	Vec2 m_pos;
-	Color m_color;
+	float m_color[4];
 
-	void setup(float x, float y, Color color);
+	void setup(float x, float y, const Color & color);
 
 	void tick(GameSim & gameSim, float dt);
 	void draw();

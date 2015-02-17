@@ -8,6 +8,7 @@
 class Arena;
 class BulletPool;
 class GameSim;
+class LobbyMenu;
 class NetSpriteManager;
 struct ParticleSpawnInfo;
 struct Player;
@@ -18,6 +19,8 @@ class Client
 public:
 	Channel * m_channel;
 	uint32_t m_replicationId;
+
+	LobbyMenu * m_lobbyMenu;
 
 	GameSim * m_gameSim;
 
@@ -32,6 +35,7 @@ public:
 
 	void tick(float dt);
 	void draw();
+	void drawConnecting();
 	void drawMenus();
 	void drawPlay();
 	void drawRoundComplete();
