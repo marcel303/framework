@@ -339,11 +339,12 @@ void FloorEffect::tick(GameSim & gameSim, float dt)
 							continue;
 
 						CollisionInfo playerCollision;
-						player.getPlayerCollision(playerCollision);
-
-						if (collisionInfo.intersects(playerCollision))
+						if (player.getPlayerCollision(playerCollision))
 						{
-							player.handleDamage(1.f, Vec2(m_tiles[i].dx, -1.f), &gameSim.m_players[m_tiles[i].playerId]);
+							if (collisionInfo.intersects(playerCollision))
+							{
+								player.handleDamage(1.f, Vec2(m_tiles[i].dx, -1.f), &gameSim.m_players[m_tiles[i].playerId]);
+							}
 						}
 					}
 				}

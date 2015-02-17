@@ -309,23 +309,24 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 
 						CollisionInfo collisionInfo;
 
-						player.getPlayerCollision(collisionInfo);
-
-						if (collisionInfo.intersects(b.m_pos[0], b.m_pos[1]))
+						if (player.getPlayerCollision(collisionInfo))
 						{
-							kill = true;
-
-							switch (b.effect)
+							if (collisionInfo.intersects(b.m_pos[0], b.m_pos[1]))
 							{
-							case kBulletEffect_Damage:
-								player.handleDamage(1.f, b.m_vel, owner);
-								break;
-							case kBulletEffect_Ice:
-								player.handleIce(b.m_vel, owner);
-								break;
-							case kBulletEffect_Bubble:
-								player.handleBubble(b.m_vel, owner);
-								break;
+								kill = true;
+
+								switch (b.effect)
+								{
+								case kBulletEffect_Damage:
+									player.handleDamage(1.f, b.m_vel, owner);
+									break;
+								case kBulletEffect_Ice:
+									player.handleIce(b.m_vel, owner);
+									break;
+								case kBulletEffect_Bubble:
+									player.handleBubble(b.m_vel, owner);
+									break;
+								}
 							}
 						}
 					}

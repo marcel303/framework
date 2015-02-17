@@ -1,5 +1,6 @@
 #include "Channel.h"
 #include "client.h"
+#include "framework.h"
 #include "lobbymenu.h"
 #include "main.h"
 #include "uicommon.h"
@@ -48,6 +49,7 @@ void CharSelector::draw()
 
 	if (player.m_isUsed && player.m_owningChannelId == m_client->m_channel->m_id)
 	{
+		setColor(colorWhite);
 		m_prevChar->draw();
 		m_nextChar->draw();
 	}

@@ -58,7 +58,7 @@ struct Player
 
 	void playSecondaryEffects(PlayerEvent e);
 
-	void getPlayerCollision(CollisionInfo & collision);
+	bool getPlayerCollision(CollisionInfo & collision);
 	void getDamageHitbox(CollisionInfo & collision);
 	void getAttackCollision(CollisionInfo & collision);
 	float getAttackDamage(Player * other);

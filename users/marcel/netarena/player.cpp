@@ -236,16 +236,24 @@ void PlayerNetObject::handleAnimationAction(const std::string & action, const Di
 	}
 }
 
-void Player::getPlayerCollision(CollisionInfo & collision)
+bool Player::getPlayerCollision(CollisionInfo & collision)
 {
+	Assert(m_isUsed);
+
+	if (!m_isAlive)
+		return false;
+
 	collision.x1 = m_pos[0] + m_collision.x1;
 	collision.y1 = m_pos[1] + m_collision.y1;
 	collision.x2 = m_pos[0] + m_collision.x2;
 	collision.y2 = m_pos[1] + m_collision.y2;
+	return true;
 }
 
 void Player::getDamageHitbox(CollisionInfo & collision)
 {
+	Assert(m_isUsed);
+
 	collision.x1 = m_pos[0] - PLAYER_DAMAGE_HITBOX_SX/2;
 	collision.y1 = m_pos[1] - PLAYER_DAMAGE_HITBOX_SY;
 	collision.x2 = m_pos[0] + PLAYER_DAMAGE_HITBOX_SX/2;
@@ -254,6 +262,8 @@ void Player::getDamageHitbox(CollisionInfo & collision)
 
 void Player::getAttackCollision(CollisionInfo & collision)
 {
+	Assert(m_isUsed);
+
 	float x1 = m_attack.collision.x1 * m_facing[0];
 	float y1 = m_attack.collision.y1;
 	float x2 = m_attack.collision.x2 * m_facing[0];
@@ -278,6 +288,8 @@ void Player::getAttackCollision(CollisionInfo & collision)
 
 float Player::getAttackDamage(Player * other)
 {
+	Assert(m_isUsed);
+
 	float result = 0.f;
 
 	if (m_attack.attacking && m_attack.hasCollision)
@@ -1445,10 +1457,12 @@ void Player::tick(float dt)
 		if (m_isAlive)
 		{
 			CollisionInfo playerCollision;
-			getPlayerCollision(playerCollision);
-			if (m_netObject->m_gameSim->pickupToken(playerCollision))
+			if (getPlayerCollision(playerCollision))
 			{
-				m_tokenHunt.m_hasToken = true;
+				if (m_netObject->m_gameSim->pickupToken(playerCollision))
+				{
+					m_tokenHunt.m_hasToken = true;
+				}
 			}
 
 			if (m_tokenHunt.m_hasToken && (m_netObject->m_gameSim->GetTick() % 4) == 0)
@@ -1470,10 +1484,12 @@ void Player::tick(float dt)
 		if (m_isAlive)
 		{
 			CollisionInfo playerCollision;
-			getPlayerCollision(playerCollision);
-			if (m_netObject->m_gameSim->pickupCoin(playerCollision))
+			if (getPlayerCollision(playerCollision))
 			{
-				m_score++;
+				if (m_netObject->m_gameSim->pickupCoin(playerCollision))
+				{
+					m_score++;
+				}
 			}
 		}
 	}

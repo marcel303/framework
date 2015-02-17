@@ -48,6 +48,7 @@ void MainMenu::tick(float dt)
 
 void MainMenu::draw()
 {
+	setColor(colorWhite);
 	Sprite("mainmenu-back.png").draw();
 
 	m_newGame->draw();
