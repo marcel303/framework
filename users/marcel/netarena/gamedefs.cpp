@@ -110,33 +110,33 @@ OPTION_STEP(BULLET_GRENADE_FRAG_RADIUS_MAX, 0, 0, 10);
 OPTION_STEP(BULLET_GRENADE_FRAG_SPEED_MIN, 0, 0, 10);
 OPTION_STEP(BULLET_GRENADE_FRAG_SPEED_MAX, 0, 0, 10);
 
-OPTION_DEFINE(int, PICKUP_INTERVAL, "Pickup/Spawn Interval (Sec)");
-OPTION_DEFINE(int, PICKUP_INTERVAL_VARIANCE, "Pickup/Spawn Interval Random (Sec)");
-OPTION_DEFINE(int, MAX_PICKUP_COUNT, "Pickup/Maximum Pickup Count");
+OPTION_DEFINE(int, PICKUP_INTERVAL, "Pickups/Spawn Interval (Sec)");
+OPTION_DEFINE(int, PICKUP_INTERVAL_VARIANCE, "Pickups/Spawn Interval Random (Sec)");
+OPTION_DEFINE(int, MAX_PICKUP_COUNT, "Pickups/Maximum Pickup Count");
 
-OPTION_DEFINE(int, PICKUP_AMMO_COUNT, "Pickup/Ammo Count");
-OPTION_DEFINE(int, PICKUP_AMMO_WEIGHT, "Pickup/Spawn Weights/Ammo");
-OPTION_DEFINE(int, PICKUP_NADE_WEIGHT, "Pickup/Spawn Weights/Nade");
-OPTION_DEFINE(int, PICKUP_SHIELD_COUNT, "Pickup/Shield Count");
-OPTION_DEFINE(int, PICKUP_SHIELD_WEIGHT, "Pickup/Spawn Weights/Shield");
-OPTION_DEFINE(int, PICKUP_ICE_COUNT, "Pickup/Ice Count");
-OPTION_DEFINE(int, PICKUP_ICE_WEIGHT, "Pickup/Spawn Weights/Ice");
-OPTION_DEFINE(int, PICKUP_BUBBLE_COUNT, "Pickup/Bubble Count");
-OPTION_DEFINE(int, PICKUP_BUBBLE_WEIGHT, "Pickup/Spawn Weights/Bubble");
+OPTION_DEFINE(int, PICKUP_AMMO_COUNT, "Pickups/Ammo Count");
+OPTION_DEFINE(int, PICKUP_AMMO_WEIGHT, "Pickups/Spawn Weights/Ammo");
+OPTION_DEFINE(int, PICKUP_NADE_WEIGHT, "Pickups/Spawn Weights/Nade");
+OPTION_DEFINE(int, PICKUP_SHIELD_COUNT, "Pickups/Shield Count");
+OPTION_DEFINE(int, PICKUP_SHIELD_WEIGHT, "Pickups/Spawn Weights/Shield");
+OPTION_DEFINE(int, PICKUP_ICE_COUNT, "Pickups/Ice Count");
+OPTION_DEFINE(int, PICKUP_ICE_WEIGHT, "Pickups/Spawn Weights/Ice");
+OPTION_DEFINE(int, PICKUP_BUBBLE_COUNT, "Pickups/Bubble Count");
+OPTION_DEFINE(int, PICKUP_BUBBLE_WEIGHT, "Pickups/Spawn Weights/Bubble");
 
 // death match
 
-OPTION_DEFINE(int, DEATHMATCH_SCORE_LIMIT, "Game Round/Max Player Score (Death Match)");
+OPTION_DEFINE(int, DEATHMATCH_SCORE_LIMIT, "Game Modes/Death Match/Max Player Score");
 
 // token hunt
 
-OPTION_DEFINE(int, TOKENHUNT_SCORE_LIMIT, "Game Round/Max Player Score (Token Hunt)");
+OPTION_DEFINE(int, TOKENHUNT_SCORE_LIMIT, "Game Modes/Token Hunt/Max Player Score");
 
-OPTION_DEFINE(int, TOKEN_FLEE_SPEED, "Token/Flee Speed");
-OPTION_DEFINE(float, TOKEN_DROP_TIME, "Token/No Pickup Time (Sec)");
-OPTION_DEFINE(float, TOKEN_DROP_SPEED_MULTIPLIER, "Token/Player Drop Speed Multiplier");
-OPTION_DEFINE(float, TOKEN_BOUNCINESS, "Token/Bounciness");
-OPTION_DEFINE(int, TOKEN_BOUNCE_SOUND_TRESHOLD, "Token/Bounce Sound Speed Treshold");
+OPTION_DEFINE(int, TOKEN_FLEE_SPEED, "Game Objects/Token/Flee Speed");
+OPTION_DEFINE(float, TOKEN_DROP_TIME, "Game Objects/Token/No Pickup Time (Sec)");
+OPTION_DEFINE(float, TOKEN_DROP_SPEED_MULTIPLIER, "Game Objects/Token/Player Drop Speed Multiplier");
+OPTION_DEFINE(float, TOKEN_BOUNCINESS, "Game Objects/Token/Bounciness");
+OPTION_DEFINE(int, TOKEN_BOUNCE_SOUND_TRESHOLD, "Game Objects/Token/Bounce Sound Speed Treshold");
 OPTION_STEP(TOKEN_FLEE_SPEED, 0, 0, 10);
 OPTION_STEP(TOKEN_DROP_TIME, 0, 0, 0.05f);
 OPTION_STEP(TOKEN_DROP_SPEED_MULTIPLIER, 0, 0, 0.05f);
@@ -145,42 +145,42 @@ OPTION_STEP(TOKEN_BOUNCE_SOUND_TRESHOLD, 0, 0, 10);
 
 // coin collector
 
-OPTION_DEFINE(int, COINCOLLECTOR_SCORE_LIMIT, "Game Round/Max Player Score (Coin Collector)");
-OPTION_DEFINE(bool, COINCOLLECTOR_PLAYER_CAN_BE_KILLED, "Coin/Player Can Be Killed");
-OPTION_DEFINE(int, COINCOLLECTOR_COIN_DROP_PERCENTAGE, "Coin/Player Coin Drop Percentage");
-OPTION_DEFINE(int, COINCOLLECTOR_COIN_LIMIT, "Coin/Coin Limit");
+OPTION_DEFINE(int, COINCOLLECTOR_SCORE_LIMIT, "Game Modes/Coin Collector/Max Player Score");
+OPTION_DEFINE(bool, COINCOLLECTOR_PLAYER_CAN_BE_KILLED, "Game Modes/Coin Collector/Player Can Be Killed");
+OPTION_DEFINE(int, COINCOLLECTOR_COIN_DROP_PERCENTAGE, "Game Modes/Coin Collector/Player Coin Drop Percentage");
+OPTION_DEFINE(int, COINCOLLECTOR_COIN_LIMIT, "Game Modes/Coin Collector/Coin Limit");
 
-OPTION_DEFINE(int, COIN_SPAWN_INTERVAL, "Coin/Spawn Interval (Sec)");
-OPTION_DEFINE(int, COIN_SPAWN_INTERVAL_VARIANCE, "Coin/Spawn Interval Random (Sec)");
-OPTION_DEFINE(int, COIN_FLEE_SPEED, "Coin/Flee Speed");
-OPTION_DEFINE(int, COIN_DROP_SPEED, "Coin/Drop Speed");
-OPTION_DEFINE(float, COIN_DROP_TIME, "Coin/No Pickup Time (Sec)");
-OPTION_DEFINE(float, COIN_DROP_SPEED_MULTIPLIER, "Coin/Player Drop Speed Multiplier");
-OPTION_DEFINE(float, COIN_BOUNCINESS, "Coin/Bounciness");
-OPTION_DEFINE(int, COIN_BOUNCE_SOUND_TRESHOLD, "Coin/Bounce Sound Speed Treshold");
+OPTION_DEFINE(int, COIN_SPAWN_INTERVAL, "Game Objects/Coin/Spawn Interval (Sec)");
+OPTION_DEFINE(int, COIN_SPAWN_INTERVAL_VARIANCE, "Game Objects/Coin/Spawn Interval Random (Sec)");
+OPTION_DEFINE(int, COIN_FLEE_SPEED, "Game Objects/Coin/Flee Speed");
+OPTION_DEFINE(int, COIN_DROP_SPEED, "Game Objects/Coin/Drop Speed");
+OPTION_DEFINE(float, COIN_DROP_TIME, "Game Objects/Coin/No Pickup Time (Sec)");
+OPTION_DEFINE(float, COIN_DROP_SPEED_MULTIPLIER, "Game Objects/Coin/Player Drop Speed Multiplier");
+OPTION_DEFINE(float, COIN_BOUNCINESS, "Game Objects/Coin/Bounciness");
+OPTION_DEFINE(int, COIN_BOUNCE_SOUND_TRESHOLD, "Game Objects/Coin/Bounce Sound Speed Treshold");
 OPTION_STEP(COIN_DROP_TIME, 0, 0, 0.05f);
 OPTION_STEP(COIN_DROP_SPEED_MULTIPLIER, 0, 0, 0.05f);
 OPTION_STEP(COIN_BOUNCINESS, 0, 0, 0.05f);
 OPTION_STEP(COIN_BOUNCE_SOUND_TRESHOLD, 0, 0, 10);
 
-OPTION_DEFINE(float, TORCH_FLICKER_STRENGTH, "Torch/Flicker Strength");
-OPTION_DEFINE(int, TORCH_FLICKER_FREQ_A, "Torch/Flicker Frequency A");
-OPTION_DEFINE(int, TORCH_FLICKER_FREQ_B, "Torch/Flicker Frequency B");
-OPTION_DEFINE(int, TORCH_FLICKER_FREQ_C, "Torch/Flicker Frequency C");
+OPTION_DEFINE(float, TORCH_FLICKER_STRENGTH, "Game Objects/Torch/Flicker Strength");
+OPTION_DEFINE(int, TORCH_FLICKER_FREQ_A, "Game Objects/Torch/Flicker Frequency A");
+OPTION_DEFINE(int, TORCH_FLICKER_FREQ_B, "Game Objects/Torch/Flicker Frequency B");
+OPTION_DEFINE(int, TORCH_FLICKER_FREQ_C, "Game Objects/Torch/Flicker Frequency C");
 OPTION_STEP(TORCH_FLICKER_STRENGTH, 0, 0, .02f);
 
-OPTION_DEFINE(int, LIGHTING_DEBUG_MODE, "Lighting/Debug Mode");
+OPTION_DEFINE(int, LIGHTING_DEBUG_MODE, "Graphics/Lighting/Debug Mode");
 
-OPTION_DEFINE(float, JETPACK_ACCEL, "Jetpack/Acceleration");
+OPTION_DEFINE(float, JETPACK_ACCEL, "Special Abilities/Jetpack/Acceleration");
 
-OPTION_DEFINE(int, DOUBLEMELEE_ATTACK_RADIUS, "Double Melee/Attack Radius");
-OPTION_DEFINE(int, DOUBLEMELEE_SPIN_COUNT, "Double Melee/Spin Count");
-OPTION_DEFINE(float, DOUBLEMELEE_SPIN_TIME, "Double Melee/Spin Time");
-OPTION_DEFINE(float, DOUBLEMELEE_GRAVITY_MULTIPLIER, "Double Melee/Gravity Multiplier");
+OPTION_DEFINE(int, DOUBLEMELEE_ATTACK_RADIUS, "Special Abilities/Double Melee/Attack Radius");
+OPTION_DEFINE(int, DOUBLEMELEE_SPIN_COUNT, "Special Abilities/Double Melee/Spin Count");
+OPTION_DEFINE(float, DOUBLEMELEE_SPIN_TIME, "Special Abilities/Double Melee/Spin Time");
+OPTION_DEFINE(float, DOUBLEMELEE_GRAVITY_MULTIPLIER, "Special Abilities/Double Melee/Gravity Multiplier");
 OPTION_STEP(DOUBLEMELEE_ATTACK_RADIUS, 0, 0, 10);
 OPTION_STEP(DOUBLEMELEE_SPIN_TIME, 0, 0, .01f);
 OPTION_STEP(DOUBLEMELEE_GRAVITY_MULTIPLIER, 0, 0, .02f);
 
-OPTION_DEFINE(int, STOMP_EFFECT_MAX_SIZE, "Stomp Attack/Max Effect Size");
-OPTION_DEFINE(int, STOMP_EFFECT_MIN_HEIGHT, "Stomp Attack/Effect Min Height");
-OPTION_DEFINE(int, STOMP_EFFECT_MAX_HEIGHT, "Stomp Attack/Effect Max Height");
+OPTION_DEFINE(int, STOMP_EFFECT_MAX_SIZE, "Special Abilities/Stomp Attack/Max Effect Size");
+OPTION_DEFINE(int, STOMP_EFFECT_MIN_HEIGHT, "Special Abilities/Stomp Attack/Effect Min Height");
+OPTION_DEFINE(int, STOMP_EFFECT_MAX_HEIGHT, "Special Abilities/Stomp Attack/Effect Max Height");

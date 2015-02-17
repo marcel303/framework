@@ -17,7 +17,7 @@ COMMAND_OPTION(s_gameStateNewRound, "Game State/New Round", [] { if (g_host) g_h
 COMMAND_OPTION(s_gameStateEndRound, "Game State/End Round", [] { if (g_host) g_host->endRound(); });
 
 OPTION_DECLARE(int, g_roundCompleteTimer, 6);
-OPTION_DEFINE(int, g_roundCompleteTimer, "Game Round/Game Complete Time");
+OPTION_DEFINE(int, g_roundCompleteTimer, "Menus/Results Screen Time");
 
 OPTION_EXTERN(std::string, g_map);
 
