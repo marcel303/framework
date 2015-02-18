@@ -1436,8 +1436,6 @@ void Player::tick(float dt)
 	#endif
 	}
 
-	m_netObject->m_input.next();
-
 	//printf("x: %g\n", m_pos[0]);
 
 	if (m_isUsingJetpack)

@@ -25,6 +25,7 @@ Client::Client()
 	, m_lobbyMenu(0)
 	, m_gameSim(0)
 	, m_syncStream(0)
+	, m_isDesync(false)
 {
 	m_lobbyMenu = new LobbyMenu(this);
 
@@ -61,11 +62,6 @@ void Client::initialize(Channel * channel)
 
 void Client::tick(float dt)
 {
-	if (m_gameSim->m_gameState == kGameState_Menus)
-	{
-		m_lobbyMenu->tick(dt);
-	}
-
 	if (m_channel && m_channel->m_isConnected)
 	{
 		// see if there are more players than gamepads, to decide if we should use keyboard exclusively for one player, or also assign them a gamepad
@@ -258,6 +254,16 @@ void Client::tick(float dt)
 	}
 }
 
+void Client::tickSim()
+{
+	if (m_gameSim->m_gameState == kGameState_Menus)
+	{
+		m_lobbyMenu->tick(1.f / 60.f); // fixme : timestep?
+	}
+
+	m_gameSim->tick();
+}
+
 void Client::draw()
 {
 	//setPlayerPtrs(); // fixme : enable once full simulation runs on clients
@@ -279,6 +285,15 @@ void Client::draw()
 	case kGameState_RoundComplete:
 		drawRoundComplete();
 		break;
+	}
+
+	if (m_isDesync)
+	{
+		setColor(colorRed);
+		drawRect(0, 0, GFX_SX, 40);
+		setColor(colorWhite);
+		setFont("calibri.ttf");
+		drawText(GFX_SX/2, 12, 30, 0.f, 0.f, "DESYNC");
 	}
 
 	//clearPlayerPtrs();

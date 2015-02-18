@@ -41,6 +41,10 @@ OPTION_DECLARE(bool, g_logCRCs, false);
 OPTION_DEFINE(bool, g_logCRCs, "App/Enable CRC Logging");
 OPTION_ALIAS(g_logCRCs, "logcrc");
 
+OPTION_DECLARE(bool, g_windowed, false);
+OPTION_DEFINE(bool, g_windowed, "App/Windowed Mode");
+OPTION_ALIAS(g_windowed, "windowed");
+
 OPTION_DECLARE(std::string, s_mapList, "arena.txt");
 OPTION_DEFINE(std::string, s_mapList, "App/Map List");
 OPTION_ALIAS(s_mapList, "maps");
@@ -408,6 +412,13 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 
 				Assert(crc == 0 || crc == clientCRC);
 
+				if (crc != 0 && crc != clientCRC)
+				{
+					if (!client->m_isDesync)
+						Sound("desync.ogg").play();
+					client->m_isDesync = true;
+				}
+
 				if (ENABLE_GAMESTATE_CRC_LOGGING && crc != 0 && crc != clientCRC)
 				{
 					LOG_ERR("crc mismatch! host=%08x, client=%08x", crc, clientCRC);
@@ -464,7 +475,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 					player->m_input.m_currState = input;
 			}
 
-			client->m_gameSim->tick();
+			client->tickSim();
 		}
 	}
 	else if (method == s_rpcSetPlayerCharacterIndex)
@@ -800,6 +811,11 @@ bool App::init(bool isHost)
 		framework.fullscreen = false;
 		//framework.reloadCachesOnActivate = true;
 	}
+	else if (g_windowed)
+	{
+		framework.minification = 2;
+		framework.fullscreen = false;
+	}
 	else
 	{
 		framework.fullscreen = true;
@@ -939,9 +955,7 @@ bool App::startHosting()
 {
 	Assert(m_host == 0);
 
-	const int port = 6000;
-
-	if (!m_channelMgr->Initialize(m_packetDispatcher, this, port, true))
+	if (!m_channelMgr->Initialize(m_packetDispatcher, this, NET_PORT, true))
 		return false;
 
 	//
@@ -1010,7 +1024,7 @@ Client * App::connect(const char * address)
 {
 	Channel * channel = m_channelMgr->CreateChannel(ChannelPool_Client);
 
-	channel->Connect(NetAddress(address, 6000));
+	channel->Connect(NetAddress(address, NET_PORT));
 
 	Client * client = new Client;
 

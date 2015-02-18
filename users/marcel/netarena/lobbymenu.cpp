@@ -3,6 +3,7 @@
 #include "framework.h"
 #include "lobbymenu.h"
 #include "main.h"
+#include "player.h"
 #include "uicommon.h"
 
 CharSelector::CharSelector(Client * client, int playerId)
@@ -33,23 +34,37 @@ void CharSelector::updateButtonLocations()
 
 void CharSelector::tick(float dt)
 {
+	// fixme : max characters = ?
+	const int MAX_CHARACTERS = 4;
+
 	Player & player = m_client->m_gameSim->m_players[m_playerId];
 
-	if (player.m_isUsed && player.m_owningChannelId == m_client->m_channel->m_id)
+	if (player.m_isUsed)
 	{
-		// fixme : max characters = ?
-		const int MAX_CHARACTERS = 4;
+		int step = 0;
 
-		if (m_prevChar->isClicked())
+		PlayerNetObject * netObject = m_client->m_gameSim->m_playerNetObjects[m_playerId];
+		Assert(netObject);
+
+		if (netObject)
 		{
-			const int characterIndex = (player.m_characterIndex + MAX_CHARACTERS - 1) % MAX_CHARACTERS;
-
-			g_app->netSetPlayerCharacterIndex(m_client->m_channel->m_id, m_playerId, characterIndex);
+			if (netObject->m_input.wentDown(INPUT_BUTTON_LEFT))
+				step = -1;
+			if (netObject->m_input.wentDown(INPUT_BUTTON_RIGHT))
+				step += 1;
 		}
-		else if (m_nextChar->isClicked())
-		{
-			const int characterIndex = (player.m_characterIndex + MAX_CHARACTERS + 1) % MAX_CHARACTERS;
 
+		if (player.m_owningChannelId == m_client->m_channel->m_id)
+		{
+			if (m_prevChar->isClicked())
+				step -= 1;
+			if (m_nextChar->isClicked())
+				step += 1;
+		}
+
+		if (step != 0)
+		{
+			const int characterIndex = (player.m_characterIndex + MAX_CHARACTERS + step) % MAX_CHARACTERS;
 			g_app->netSetPlayerCharacterIndex(m_client->m_channel->m_id, m_playerId, characterIndex);
 		}
 	}
@@ -105,7 +120,7 @@ void LobbyMenu::draw()
 	{
 		m_charSelectors[i]->draw();
 
-		if (g_devMode)
+		if (g_devMode || true) // fixme
 		{
 			const int x1 = UI_CHARSELECT_BASE_X + UI_CHARSELECT_STEP_X * i;
 			const int y1 = UI_CHARSELECT_BASE_Y;

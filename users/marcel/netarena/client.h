@@ -26,6 +26,8 @@ public:
 
 	BitStream * m_syncStream;
 
+	bool m_isDesync;
+
 	std::vector<PlayerNetObject*> m_players;
 
 	Client();
@@ -34,6 +36,7 @@ public:
 	void initialize(Channel * channel);
 
 	void tick(float dt);
+	void tickSim();
 	void draw();
 	void drawConnecting();
 	void drawMenus();

@@ -801,6 +801,14 @@ void GameSim::tick()
 		tickRoundComplete();
 		break;
 	}
+
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+	{
+		if (m_playerNetObjects[i])
+		{
+			m_playerNetObjects[i]->m_input.next();
+		}
+	}
 }
 
 void GameSim::tickMenus()
