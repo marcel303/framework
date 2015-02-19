@@ -2,6 +2,12 @@
 
 #include <stdint.h>
 
+enum NetAction
+{
+	kNetAction_StartGame,
+	kNetAction_ReadyUp
+};
+
 enum GameState
 {
 	kGameState_Undefined,

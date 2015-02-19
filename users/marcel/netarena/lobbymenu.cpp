@@ -52,6 +52,11 @@ void CharSelector::tick(float dt)
 				step = -1;
 			if (netObject->m_input.wentDown(INPUT_BUTTON_RIGHT))
 				step += 1;
+
+			if (netObject->m_input.wentDown(INPUT_BUTTON_A))
+			{
+				g_app->netAction(m_client->m_channel, kNetAction_ReadyUp, m_playerId);
+			}
 		}
 
 		if (player.m_owningChannelId == m_client->m_channel->m_id)
@@ -81,9 +86,12 @@ void CharSelector::draw()
 
 	if (player.m_isUsed && player.m_owningChannelId == m_client->m_channel->m_id)
 	{
-		setColor(colorWhite);
-		m_prevChar->draw();
-		m_nextChar->draw();
+		if (!player.m_isReadyUpped)
+		{
+			setColor(colorWhite);
+			m_prevChar->draw();
+			m_nextChar->draw();
+		}
 	}
 }
 

@@ -32,6 +32,7 @@ namespace NetSessionDiscovery
 
 class App : public ChannelHandler, public ReplicationHandler
 {
+public:
 	struct ClientInfo
 	{
 		ClientInfo()
@@ -126,6 +127,7 @@ public:
 	bool tick();
 	void draw();
 
+	void netAction(Channel * channel, NetAction action, uint8_t param);
 	void netSyncGameSim(Channel * channel);
 	void netSetGameState(GameState gameState);
 	void netSetGameMode(GameMode gameMode);

@@ -95,11 +95,16 @@ struct Player
 
 	char * makeCharacterFilename(const char * filename);
 
+	// allocation
 	bool m_isUsed;
 
 	uint8_t m_index;
 	uint16_t m_owningChannelId;
 
+	// character select
+	bool m_isReadyUpped;
+
+	// alive state
 	bool m_isAlive;
 	uint8_t m_characterIndex;
 	float m_controlDisableTime;

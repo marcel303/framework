@@ -157,6 +157,8 @@ void applyLightMap(Surface & colormap, Surface & lightmap, Surface & dest)
 
 enum RpcMethod
 {
+	s_rpcAction,
+	s_rpcActionBroadcast,
 	s_rpcSyncGameSim,
 	s_rpcSetGameState,
 	s_rpcSetGameMode,
@@ -173,9 +175,81 @@ enum RpcMethod
 	s_rpcCOUNT
 };
 
+static GameSim * findGameSimForChannel(Channel * channel)
+{
+	if (!channel)
+	{
+		Assert(g_host);
+		if (g_host)
+		{
+			return &g_host->m_gameSim;
+		}
+	}
+	else
+	{
+		Client * client = g_app->findClientByChannel(channel);
+		Assert(client);
+		if (client)
+		{
+			return client->m_gameSim;
+		}
+	}
+
+	return 0;
+}
+
 void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 {
-	if (method == s_rpcSyncGameSim)
+	if (method == s_rpcAction)
+	{
+		Assert(g_host);
+		if (g_host)
+		{
+			uint8_t action;
+			uint8_t param;
+
+			bitStream.Read(action);
+			bitStream.Read(param);
+
+			BitStream bs;
+			bs.Write(action);
+			bs.Write(param);
+
+			g_app->m_rpcMgr->Call(s_rpcActionBroadcast, bs, ChannelPool_Server, 0, true, true);
+		}
+	}
+	else if (method == s_rpcActionBroadcast)
+	{
+		GameSim * gameSim = findGameSimForChannel(channel);
+
+		if (gameSim)
+		{
+			uint8_t action;
+			uint8_t param;
+
+			bitStream.Read(action);
+			bitStream.Read(param);
+
+			switch ((NetAction)action)
+			{
+			case kNetAction_StartGame:
+				break;
+			case kNetAction_ReadyUp:
+				Assert(param >= 0 && param < MAX_PLAYERS);
+				if (param >= 0 && param < MAX_PLAYERS)
+				{
+					Player & player = gameSim->m_players[param];
+					Assert(player.m_isUsed);
+					if (player.m_isUsed)
+					{
+						player.m_isReadyUpped = !player.m_isReadyUpped;
+					}
+				}
+				break;
+			}
+		}
+	}
+	else if (method == s_rpcSyncGameSim)
 	{
 		Client * client = g_app->findClientByChannel(channel);
 		Assert(client);
@@ -232,17 +306,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 
 		bitStream.Read(gameState);
 
-		GameSim * gameSim = 0;
-
-		if (!channel)
-			gameSim = &g_host->m_gameSim;
-		else
-		{
-			Client * client = g_app->findClientByChannel(channel);
-			Assert(client);
-			if (client)
-				gameSim = client->m_gameSim;
-		}
+		GameSim * gameSim = findGameSimForChannel(channel);
 
 		if (gameSim)
 		{
@@ -257,17 +321,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 
 		bitStream.Read(gameMode);
 
-		GameSim * gameSim = 0;
-
-		if (!channel)
-			gameSim = &g_host->m_gameSim;
-		else
-		{
-			Client * client = g_app->findClientByChannel(channel);
-			Assert(client);
-			if (client)
-				gameSim = client->m_gameSim;
-		}
+		GameSim * gameSim = findGameSimForChannel(channel);
 
 		if (gameSim)
 		{
@@ -282,17 +336,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 
 		filename = bitStream.ReadString();
 
-		GameSim * gameSim = 0;
-
-		if (!channel)
-			gameSim = &g_host->m_gameSim;
-		else
-		{
-			Client * client = g_app->findClientByChannel(channel);
-			Assert(client);
-			if (client)
-				gameSim = client->m_gameSim;
-		}
+		GameSim * gameSim = findGameSimForChannel(channel);
 
 		if (gameSim)
 		{
@@ -525,17 +569,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 	}
 	else if (method == s_rpcDebugAction)
 	{
-		GameSim * gameSim = 0;
-
-		if (!channel)
-			gameSim = &g_host->m_gameSim;
-		else
-		{
-			Client * client = g_app->findClientByChannel(channel);
-			Assert(client);
-			if (client)
-				gameSim = client->m_gameSim;
-		}
+		GameSim * gameSim = findGameSimForChannel(channel);
 
 		if (gameSim)
 		{
@@ -1396,8 +1430,8 @@ void App::draw()
 				sprintf(name, "disconnect_%d", i);
 				Dictionary & button = (*m_discoveryUi)[name];
 				char props[1024];
-				sprintf(props, "type:button name:%s x:%d y:70 scale:0.65 action:disconnect client:%d image:button.png image_over:button-over.png image_down:button-down.png text:disconnect text_color:000000 font:calibri.ttf font_size:24",
-					name, i * 150,
+				sprintf(props, "type:button name:%s x:%d y:00 scale:0.65 action:disconnect client:%d image:button.png image_over:button-over.png image_down:button-down.png text:disconnect text_color:000000 font:calibri.ttf font_size:24",
+					name, GFX_SX + (i - m_clients.size()) * 150,
 					i);
 				button.parse(props);
 			}
@@ -1407,8 +1441,8 @@ void App::draw()
 				sprintf(name, "view_%d", i);
 				Dictionary & button = (*m_discoveryUi)[name];
 				char props[1024];
-				sprintf(props, "type:button name:%s x:%d y:120 scale:0.65 action:select client:%d image:button.png image_over:button-over.png image_down:button-down.png text:view text_color:000000 font:calibri.ttf font_size:24",
-					name, i * 150,
+				sprintf(props, "type:button name:%s x:%d y:50 scale:0.65 action:select client:%d image:button.png image_over:button-over.png image_down:button-down.png text:view text_color:000000 font:calibri.ttf font_size:24",
+					name, GFX_SX + (i - m_clients.size()) * 150,
 					i);
 				button.parse(props);
 			}
@@ -1420,6 +1454,20 @@ void App::draw()
 	TIMER_STOP(g_appDrawTime);
 	framework.endDraw();
 	TIMER_START(g_appDrawTime);
+}
+
+void App::netAction(Channel * channel, NetAction action, uint8_t param)
+{
+	LOG_DBG("netAction");
+
+	BitStream bs;
+
+	uint8_t actionInt = action;
+
+	bs.Write(actionInt);
+	bs.Write(param);
+
+	m_rpcMgr->Call(s_rpcAction, bs, ChannelPool_Client, &channel->m_id, false, false);
 }
 
 void App::netSyncGameSim(Channel * channel)
