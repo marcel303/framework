@@ -59,7 +59,7 @@ int main(int argc, char * argv[])
 	}
 	if (!framework.init(argc, (const char **)argv, sx, sy))
 		return -1;
-	framework.fillCachesWithPath(".");
+	framework.fillCachesWithPath(".", true);
 	
 	mouse.showCursor(false);
 	

@@ -827,7 +827,7 @@ bool App::init(bool isHost)
 	{
 		if (!g_devMode)
 		{
-			framework.fillCachesWithPath(".");
+			framework.fillCachesWithPath(".", true);
 		}
 
 		//
@@ -1327,6 +1327,22 @@ void App::draw()
 						m_clients[i]->m_gameSim->m_playerNetObjects[0] ? m_clients[i]->m_gameSim->m_playerNetObjects[0]->m_player->m_pos[1] : 0.f);
 				}
 			}
+		}
+
+		// draw desync notifier
+
+		bool isDesync = false;
+
+		for (size_t i = 0; i < m_clients.size(); ++i)
+			isDesync |= m_clients[i]->m_isDesync;
+
+		if (isDesync)
+		{
+			setColor(colorRed);
+			drawRect(0, 0, GFX_SX, 40);
+			setColor(colorWhite);
+			setFont("calibri.ttf");
+			drawText(GFX_SX/2, 12, 30, 0.f, 0.f, "DESYNC");
 		}
 
 		if (m_optionMenuIsOpen)

@@ -522,7 +522,7 @@ void Framework::reloadCaches()
 	}
 }
 
-std::vector<std::string> listFiles(const char * path)
+std::vector<std::string> listFiles(const char * path, bool recurse)
 {
 #ifdef WIN32
 	std::vector<std::string> result;
@@ -534,13 +534,25 @@ std::vector<std::string> listFiles(const char * path)
 	{
 		do
 		{
-			result.push_back(ffd.cFileName);
+			if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+			{
+				if (recurse && strcmp(ffd.cFileName, ".") && strcmp(ffd.cFileName, ".."))
+				{
+					std::vector<std::string> subResult = listFiles(ffd.cFileName, recurse);
+					result.insert(result.end(), subResult.begin(), subResult.end());
+				}
+			}
+			else
+			{
+				result.push_back(ffd.cFileName);
+			}
 		} while (FindNextFileA(find, &ffd) != 0);
 
 		FindClose(find);
 	}
 	return result;
 #else
+	Assert(!recurse); // todo : implement & test
 	std::vector<std::string> result;
 	DIR * dir = opendir(path);
 	dirent * ent;
@@ -554,9 +566,9 @@ std::vector<std::string> listFiles(const char * path)
 #endif
 }
 
-void Framework::fillCachesWithPath(const char * path)
+void Framework::fillCachesWithPath(const char * path, bool recurse)
 {
-	std::vector<std::string> files = listFiles(path);
+	std::vector<std::string> files = listFiles(path, recurse);
 	for (size_t i = 0; i < files.size(); ++i)
 	{
 		const char * f = files[i].c_str();

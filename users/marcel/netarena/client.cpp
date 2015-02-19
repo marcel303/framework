@@ -287,15 +287,6 @@ void Client::draw()
 		break;
 	}
 
-	if (m_isDesync)
-	{
-		setColor(colorRed);
-		drawRect(0, 0, GFX_SX, 40);
-		setColor(colorWhite);
-		setFont("calibri.ttf");
-		drawText(GFX_SX/2, 12, 30, 0.f, 0.f, "DESYNC");
-	}
-
 	//clearPlayerPtrs();
 }
 

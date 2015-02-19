@@ -152,7 +152,7 @@ public:
 	void processAction(const std::string & action, const Dictionary & args);
 	void processActions(const std::string & actions, const Dictionary & args);
 	void reloadCaches();
-	void fillCachesWithPath(const char * path);
+	void fillCachesWithPath(const char * path, bool recurse);
 	
 	void setFullscreen(bool fullscreen);
 
