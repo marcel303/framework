@@ -15,6 +15,7 @@ public:
 
 	Button * m_prevChar;
 	Button * m_nextChar;
+	Button * m_ready;
 
 	CharSelector(Client * client, int playerId);
 	~CharSelector();

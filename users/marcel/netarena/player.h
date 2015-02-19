@@ -76,6 +76,7 @@ public:
 	{
 		InputState()
 			: m_controllerIndex(-1)
+			, m_actions(0)
 		{
 		}
 
@@ -84,10 +85,12 @@ public:
 		PlayerInput m_prevState;
 		PlayerInput m_currState;
 
+		uint32_t m_actions;
+
 		bool wasDown(int input) { return (m_prevState.buttons & input) != 0; }
 		bool isDown(int input) { return (m_currState.buttons & input) != 0; }
 		bool wentDown(int input) { return !wasDown(input) && isDown(input); }
 		bool wentUp(int input) { return wasDown(input) && !isDown(input); }
-		void next() { m_prevState = m_currState; }
+		void next() { m_prevState = m_currState; m_actions = 0; }
 	} m_input;
 };

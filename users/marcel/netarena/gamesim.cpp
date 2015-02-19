@@ -813,7 +813,47 @@ void GameSim::tick()
 
 void GameSim::tickMenus()
 {
+	const int MAX_CHARACTERS = 4;
+
 	// wait for the host to enter the next game state
+
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+	{
+		Player & player = m_players[i];
+
+		if (player.m_isUsed)
+		{
+			PlayerNetObject * netObject = m_playerNetObjects[i];
+			Assert(netObject);
+			if (netObject)
+			{
+				// character select
+
+				if (!player.m_isReadyUpped)
+				{
+					int step = 0;
+
+					if (netObject->m_input.wentDown(INPUT_BUTTON_LEFT) || (netObject->m_input.m_actions & (1 << kPlayerInputAction_PrevChar)))
+						step = -1;
+					if (netObject->m_input.wentDown(INPUT_BUTTON_RIGHT) || (netObject->m_input.m_actions & (1 << kPlayerInputAction_NextChar)))
+						step += 1;
+
+					if (step != 0)
+					{
+						const int characterIndex = (player.m_characterIndex + MAX_CHARACTERS + step) % MAX_CHARACTERS;
+						netObject->setCharacterIndex(characterIndex);
+					}
+				}
+
+				// ready up
+
+				if (netObject->m_input.wentDown(INPUT_BUTTON_A) || (netObject->m_input.m_actions & (1 << kPlayerInputAction_ReadyUp)))
+				{
+					player.m_isReadyUpped = !player.m_isReadyUpped;
+				}
+			}
+		}
+	}
 }
 
 void GameSim::tickPlay()

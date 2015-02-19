@@ -206,14 +206,17 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		if (g_host)
 		{
 			uint8_t action;
-			uint8_t param;
+			uint8_t param1;
+			uint8_t param2;
 
 			bitStream.Read(action);
-			bitStream.Read(param);
+			bitStream.Read(param1);
+			bitStream.Read(param2);
 
 			BitStream bs;
 			bs.Write(action);
-			bs.Write(param);
+			bs.Write(param1);
+			bs.Write(param2);
 
 			g_app->m_rpcMgr->Call(s_rpcActionBroadcast, bs, ChannelPool_Server, 0, true, true);
 		}
@@ -225,24 +228,26 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		if (gameSim)
 		{
 			uint8_t action;
-			uint8_t param;
+			uint8_t param1;
+			uint8_t param2;
 
 			bitStream.Read(action);
-			bitStream.Read(param);
+			bitStream.Read(param1);
+			bitStream.Read(param2);
 
 			switch ((NetAction)action)
 			{
 			case kNetAction_StartGame:
 				break;
-			case kNetAction_ReadyUp:
-				Assert(param >= 0 && param < MAX_PLAYERS);
-				if (param >= 0 && param < MAX_PLAYERS)
+			case kNetAction_PlayerInputAction:
+				Assert(param1 >= 0 && param1 < MAX_PLAYERS);
+				if (param1 >= 0 && param1 < MAX_PLAYERS)
 				{
-					Player & player = gameSim->m_players[param];
-					Assert(player.m_isUsed);
-					if (player.m_isUsed)
+					PlayerNetObject * netObject = gameSim->m_playerNetObjects[param1];
+					Assert(netObject);
+					if (netObject)
 					{
-						player.m_isReadyUpped = !player.m_isReadyUpped;
+						netObject->m_input.m_actions |= (1 << param2);
 					}
 				}
 				break;
@@ -442,15 +447,15 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 	{
 		//LOG_DBG("handleRpc: s_rpcBroadcastPlayerInputs");
 
-		Client * client = g_app->findClientByChannel(channel);
-		Assert(client);
-		if (client)
+		uint32_t crc;
+
+		bitStream.Read(crc);
+
+		if (g_devMode && channel)
 		{
-			uint32_t crc;
-
-			bitStream.Read(crc);
-
-			if (g_devMode)
+			Client * client = g_app->findClientByChannel(channel);
+			Assert(client);
+			if (client)
 			{
 				const uint32_t clientCRC = client->m_gameSim->calcCRC();
 
@@ -494,9 +499,14 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 					}
 				}
 			}
+		}
 
-			//
+		//
 
+		GameSim * gameSim = findGameSimForChannel(channel);
+
+		if (gameSim)
+		{
 			for (int i = 0; i < MAX_PLAYERS; ++i)
 			{
 				PlayerInput input;
@@ -513,13 +523,15 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 				if (hasAnalogY)
 					bitStream.Read(input.analogY);
 
-				PlayerNetObject * player = client->m_gameSim->m_playerNetObjects[i];
+				PlayerNetObject * player = gameSim->m_playerNetObjects[i];
 
 				if (player)
+				{
 					player->m_input.m_currState = input;
+				}
 			}
 
-			client->tickSim();
+			gameSim->tick();
 		}
 	}
 	else if (method == s_rpcSetPlayerCharacterIndex)
@@ -649,7 +661,7 @@ void App::processPlayerChanges()
 
 				ClientInfo & clientInfo = m_hostClients[playerToAddOrRemove.channel];
 
-				clientInfo.player = playerNetObject;
+				clientInfo.players.push_back(playerNetObject);
 
 				playerNetObject->setCharacterIndex(playerToAddOrRemove.characterIndex);
 
@@ -720,15 +732,14 @@ void App::SV_OnChannelDisconnect(Channel * channel)
 
 		// remove player created for this channel
 
-		if (clientInfo.player)
+		for (size_t p = 0; p < clientInfo.players.size(); ++p)
 		{
 			PlayerToAddOrRemove playerToRemove;
 			playerToRemove.add = false;
-			playerToRemove.playerId = clientInfo.player->m_player->m_index;
+			playerToRemove.playerId = clientInfo.players[p]->m_player->m_index;
 			m_playersToAddOrRemove.push_back(playerToRemove);
-
-			clientInfo.player = 0;
 		}
+		clientInfo.players.clear();
 
 		m_replicationMgr->SV_DestroyClient(clientInfo.replicationId);
 
@@ -1203,8 +1214,6 @@ bool App::tick()
 
 				broadcastPlayerInputs();
 
-				m_host->m_gameSim.tick();
-
 				const uint32_t crc3 = m_host->m_gameSim.calcCRC();
 
 				if (g_logCRCs)
@@ -1456,7 +1465,7 @@ void App::draw()
 	TIMER_START(g_appDrawTime);
 }
 
-void App::netAction(Channel * channel, NetAction action, uint8_t param)
+void App::netAction(Channel * channel, NetAction action, uint8_t param1, uint8_t param2)
 {
 	LOG_DBG("netAction");
 
@@ -1465,7 +1474,8 @@ void App::netAction(Channel * channel, NetAction action, uint8_t param)
 	uint8_t actionInt = action;
 
 	bs.Write(actionInt);
-	bs.Write(param);
+	bs.Write(param1);
+	bs.Write(param2);
 
 	m_rpcMgr->Call(s_rpcAction, bs, ChannelPool_Client, &channel->m_id, false, false);
 }
@@ -1633,7 +1643,7 @@ void App::netSetPlayerInputsBroadcast()
 			bs.Write(analogY);
 	}
 
-	m_rpcMgr->Call(s_rpcBroadcastPlayerInputs, bs, ChannelPool_Server, 0, true, false);
+	m_rpcMgr->Call(s_rpcBroadcastPlayerInputs, bs, ChannelPool_Server, 0, true, true);
 }
 
 void App::netSetPlayerCharacterIndex(uint16_t channelId, uint8_t playerId, uint8_t characterIndex)

@@ -5,7 +5,14 @@
 enum NetAction
 {
 	kNetAction_StartGame,
-	kNetAction_ReadyUp
+	kNetAction_PlayerInputAction
+};
+
+enum NetPlayerAction
+{
+	kPlayerInputAction_PrevChar,
+	kPlayerInputAction_NextChar,
+	kPlayerInputAction_ReadyUp
 };
 
 enum GameState

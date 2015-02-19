@@ -202,6 +202,10 @@ void Client::tick(float dt)
 					input);
 			}
 		}
+
+		//
+
+		m_lobbyMenu->tick(dt);
 	}
 
 	if (s_noBgm)
@@ -252,16 +256,6 @@ void Client::tick(float dt)
 			}
 		}
 	}
-}
-
-void Client::tickSim()
-{
-	if (m_gameSim->m_gameState == kGameState_Menus)
-	{
-		m_lobbyMenu->tick(1.f / 60.f); // fixme : timestep?
-	}
-
-	m_gameSim->tick();
 }
 
 void Client::draw()

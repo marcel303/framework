@@ -36,7 +36,6 @@ public:
 	void initialize(Channel * channel);
 
 	void tick(float dt);
-	void tickSim();
 	void draw();
 	void drawConnecting();
 	void drawMenus();

@@ -11,6 +11,7 @@ CharSelector::CharSelector(Client * client, int playerId)
 	, m_playerId(playerId)
 	, m_prevChar(new Button(0, 0, "charselect-prev.png"))
 	, m_nextChar(new Button(0, 0, "charselect-next.png"))
+	, m_ready(new Button(0, 0, "charselect-ready.png"))
 {
 	updateButtonLocations();
 }
@@ -19,6 +20,7 @@ CharSelector::~CharSelector()
 {
 	delete m_prevChar;
 	delete m_nextChar;
+	delete m_ready;
 }
 
 void CharSelector::updateButtonLocations()
@@ -30,47 +32,26 @@ void CharSelector::updateButtonLocations()
 	m_nextChar->setPosition(
 		UI_CHARSELECT_BASE_X + UI_CHARSELECT_NEXT_X + m_playerId * UI_CHARSELECT_STEP_X,
 		UI_CHARSELECT_BASE_Y + UI_CHARSELECT_NEXT_Y);
+
+	m_ready->setPosition(
+		UI_CHARSELECT_BASE_X + UI_CHARSELECT_READY_X + m_playerId * UI_CHARSELECT_STEP_X,
+		UI_CHARSELECT_BASE_Y + UI_CHARSELECT_READY_Y);
 }
 
 void CharSelector::tick(float dt)
 {
-	// fixme : max characters = ?
-	const int MAX_CHARACTERS = 4;
-
 	Player & player = m_client->m_gameSim->m_players[m_playerId];
 
 	if (player.m_isUsed)
 	{
-		int step = 0;
-
-		PlayerNetObject * netObject = m_client->m_gameSim->m_playerNetObjects[m_playerId];
-		Assert(netObject);
-
-		if (netObject)
-		{
-			if (netObject->m_input.wentDown(INPUT_BUTTON_LEFT))
-				step = -1;
-			if (netObject->m_input.wentDown(INPUT_BUTTON_RIGHT))
-				step += 1;
-
-			if (netObject->m_input.wentDown(INPUT_BUTTON_A))
-			{
-				g_app->netAction(m_client->m_channel, kNetAction_ReadyUp, m_playerId);
-			}
-		}
-
 		if (player.m_owningChannelId == m_client->m_channel->m_id)
 		{
 			if (m_prevChar->isClicked())
-				step -= 1;
+				g_app->netAction(m_client->m_channel, kNetAction_PlayerInputAction, m_playerId, kPlayerInputAction_PrevChar);
 			if (m_nextChar->isClicked())
-				step += 1;
-		}
-
-		if (step != 0)
-		{
-			const int characterIndex = (player.m_characterIndex + MAX_CHARACTERS + step) % MAX_CHARACTERS;
-			g_app->netSetPlayerCharacterIndex(m_client->m_channel->m_id, m_playerId, characterIndex);
+				g_app->netAction(m_client->m_channel, kNetAction_PlayerInputAction, m_playerId, kPlayerInputAction_NextChar);
+			if (m_ready->isClicked())
+				g_app->netAction(m_client->m_channel, kNetAction_PlayerInputAction, m_playerId, kPlayerInputAction_ReadyUp);
 		}
 	}
 
@@ -93,6 +74,14 @@ void CharSelector::draw()
 			m_nextChar->draw();
 		}
 	}
+
+	if (player.m_isUsed)
+	{
+		setColor(player.m_isReadyUpped ? colorBlue : colorWhite);
+		m_ready->draw();
+	}
+
+	setColor(colorWhite);
 }
 
 //

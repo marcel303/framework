@@ -4,6 +4,7 @@ class Sprite;
 
 class Button
 {
+public:
 	Sprite * m_sprite;
 	int m_x;
 	int m_y;

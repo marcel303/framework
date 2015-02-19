@@ -37,12 +37,16 @@ public:
 	{
 		ClientInfo()
 			: replicationId(0)
-			, player(0)
 		{
 		}
 
+		~ClientInfo()
+		{
+			Assert(players.empty());
+		}
+
 		uint32_t replicationId;
-		PlayerNetObject * player; // todo : should be an array
+		std::vector<PlayerNetObject*> players;
 	};
 
 	bool m_isHost;
@@ -127,7 +131,7 @@ public:
 	bool tick();
 	void draw();
 
-	void netAction(Channel * channel, NetAction action, uint8_t param);
+	void netAction(Channel * channel, NetAction action, uint8_t param1, uint8_t param2);
 	void netSyncGameSim(Channel * channel);
 	void netSetGameState(GameState gameState);
 	void netSetGameMode(GameMode gameMode);
