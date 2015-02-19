@@ -534,17 +534,23 @@ std::vector<std::string> listFiles(const char * path, bool recurse)
 	{
 		do
 		{
+			char fullPath[MAX_PATH];
+			if (strcmp(path, "."))
+				sprintf_s(fullPath, sizeof(fullPath), "%s/%s", path, ffd.cFileName);
+			else
+				strcpy_s(fullPath, sizeof(fullPath), ffd.cFileName);
+
 			if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 			{
 				if (recurse && strcmp(ffd.cFileName, ".") && strcmp(ffd.cFileName, ".."))
 				{
-					std::vector<std::string> subResult = listFiles(ffd.cFileName, recurse);
+					std::vector<std::string> subResult = listFiles(fullPath, recurse);
 					result.insert(result.end(), subResult.begin(), subResult.end());
 				}
 			}
 			else
 			{
-				result.push_back(ffd.cFileName);
+				result.push_back(fullPath);
 			}
 		} while (FindNextFileA(find, &ffd) != 0);
 
@@ -572,11 +578,12 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 	for (size_t i = 0; i < files.size(); ++i)
 	{
 		const char * f = files[i].c_str();
+		const size_t fl = strlen(f);
 		if (strstr(f, ".png") || strstr(f, ".bmp"))
 			Sprite(f, 0.f, 0.f);
-		if (strstr(f, ".wav"))
+		else if (strstr(f, ".wav"))
 			g_soundCache.findOrCreate(f);
-		if (strstr(f, ".ogg"))
+		else if (strstr(f, ".ogg"))
 		{
 			FILE * file;
 			if (fopen_s(&file, f, "rb") == 0)
@@ -588,14 +595,20 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 					g_soundCache.findOrCreate(f);
 			}
 		}
-		if (strstr(f, ".ttf"))
+		else if (strstr(f, ".ttf"))
 			g_fontCache.findOrCreate(f);
-		if (strstr(f, ".txt"))
+		else if (strstr(f, ".txt"))
 		{
 			FileReader r;
 			std::string line;
 			if (r.open(f, true) && r.read(line) && strstr(line.c_str(), "#ui"))
 				g_uiCache.findOrCreate(f);
+		}
+		else if (strstr(f, ".vs") == f + fl - 3 || strstr(f, ".ps") == f + fl - 3)
+		{
+			std::string name = f;
+			name = name.substr(0, name.rfind('.'));
+			Shader(name.c_str());
 		}
 	}
 }
