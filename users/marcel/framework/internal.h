@@ -11,8 +11,8 @@
 #include "framework.h"
 
 #ifdef DEBUG
-	#define FRAMEWORK_ENABLE_GL_ERROR_LOG 1
-	#define FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT 1
+	#define FRAMEWORK_ENABLE_GL_ERROR_LOG 0
+	#define FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT 0
 #endif
 
 #ifndef WIN32
