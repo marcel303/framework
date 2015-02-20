@@ -101,6 +101,8 @@ void Arena::reset()
 
 void Arena::generate()
 {
+	Assert(false);
+
 	// clear the arena
 
 	reset();
@@ -207,6 +209,7 @@ void Arena::load(const char * filename)
 				case 'a': type = kBlockType_Appear; break;
 				default:
 					LOG_WRN("invalid block type: '%c'", line[x]);
+					Assert(false);
 					break;
 				}
 
@@ -294,6 +297,7 @@ void Arena::load(const char * filename)
 					break;
 				default:
 					LOG_WRN("invalid shape type: '%c'", line[x]);
+					Assert(false);
 					break;
 				}
 
@@ -326,6 +330,19 @@ void Arena::serialize(NetSerializationContext & context)
 			block.shape = (BlockShape)shape;
 		}
 	}
+}
+
+uint32_t Arena::calcCRC() const
+{
+	uint32_t result = 0;
+
+	const uint8_t * bytes = (const uint8_t*)m_blocks;
+	const uint32_t numBytes = sizeof(m_blocks);
+
+	for (uint32_t i = 0; i < numBytes; ++i)
+		result = result * 13 + bytes[i];
+
+	return result;
 }
 
 void Arena::drawBlocks()

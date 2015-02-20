@@ -17,9 +17,9 @@ enum NetPlayerAction
 
 enum GameState
 {
-	kGameState_Undefined,
+	kGameState_MainMenus,
 	kGameState_Connecting,
-	kGameState_Menus,
+	kGameState_OnlineMenus,
 	kGameState_NewGame,
 	kGameState_Play,
 	kGameState_RoundComplete

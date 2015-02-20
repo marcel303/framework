@@ -326,6 +326,10 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 								case kBulletEffect_Bubble:
 									player.handleBubble(b.m_vel, owner);
 									break;
+
+								default:
+									Assert(false);
+									break;
 								}
 							}
 						}

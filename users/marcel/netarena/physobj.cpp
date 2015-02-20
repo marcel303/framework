@@ -9,7 +9,7 @@
 
 PhysicsActor::PhysicsActor()
 {
-	memset(this, 0, sizeof(*this));
+	memset(this, 0, sizeof(PhysicsActor));
 }
 
 void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)

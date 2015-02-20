@@ -18,7 +18,6 @@ class Client
 {
 public:
 	Channel * m_channel;
-	uint32_t m_replicationId;
 
 	LobbyMenu * m_lobbyMenu;
 

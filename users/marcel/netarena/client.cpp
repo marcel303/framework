@@ -21,7 +21,6 @@ static Music * s_bgmSound = 0;
 
 Client::Client()
 	: m_channel(0)
-	, m_replicationId(0)
 	, m_lobbyMenu(0)
 	, m_gameSim(0)
 	, m_syncStream(0)
@@ -192,9 +191,9 @@ void Client::tick(float dt)
 					input.buttons |= INPUT_BUTTON_START;
 			}
 
-			if (input != playerNetObject->m_input.m_currState)
+			if (input != playerNetObject->m_input.m_lastSent)
 			{
-				playerNetObject->m_input.m_currState = input;
+				playerNetObject->m_input.m_lastSent = input;
 
 				g_app->netSetPlayerInputs(
 					m_channel->m_id,
@@ -228,10 +227,9 @@ void Client::tick(float dt)
 
 		switch (m_gameSim->m_gameState)
 		{
-		case kGameState_Undefined:
-			strcpy_s(temp, sizeof(temp), "bgm-menus.ogg");
-			break;
-		case kGameState_Menus:
+		case kGameState_MainMenus:
+		case kGameState_Connecting:
+		case kGameState_OnlineMenus:
 			strcpy_s(temp, sizeof(temp), "bgm-menus.ogg");
 			break;
 		case kGameState_Play:
@@ -239,6 +237,10 @@ void Client::tick(float dt)
 			break;
 		case kGameState_RoundComplete:
 			strcpy_s(temp, sizeof(temp), "bgm-round-complete.ogg");
+			break;
+
+		default:
+			Assert(false);
 			break;
 		}
 
@@ -264,11 +266,15 @@ void Client::draw()
 
 	switch (m_gameSim->m_gameState)
 	{
+	case kGameState_MainMenus:
+		Assert(false);
+		break;
+
 	case kGameState_Connecting:
 		drawConnecting();
 		break;
 
-	case kGameState_Menus:
+	case kGameState_OnlineMenus:
 		drawMenus();
 		break;
 
@@ -278,6 +284,10 @@ void Client::draw()
 
 	case kGameState_RoundComplete:
 		drawRoundComplete();
+		break;
+
+	default:
+		Assert(false);
 		break;
 	}
 
@@ -315,7 +325,7 @@ void Client::drawMenus()
 		}
 	}
 
-	if (m_gameSim->m_gameState == kGameState_Menus)
+	if (m_gameSim->m_gameState == kGameState_OnlineMenus)
 	{
 		m_lobbyMenu->draw();
 	}

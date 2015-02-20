@@ -24,6 +24,9 @@ class NetSpriteManager;
 struct ParticleSpawnInfo;
 class PlayerNetObject;
 
+#pragma pack(push)
+#pragma pack(1)
+
 struct Player
 {
 	PlayerNetObject * m_netObject;
@@ -252,7 +255,7 @@ struct Player
 	{
 		TokenHunt()
 		{
-			memset(this, 0, sizeof(*this));
+			memset(this, 0, sizeof(TokenHunt));
 		}
 
 		bool m_hasToken;
@@ -269,7 +272,7 @@ struct Pickup : PhysicsActor
 
 	Pickup()
 	{
-		memset(this, 0, sizeof(*this));
+		memset(this, 0, sizeof(Pickup));
 	}
 
 	void setup(PickupType type, int blockX, int blockY);
@@ -285,9 +288,8 @@ struct Token : PhysicsActor
 	float m_dropTimer;
 
 	Token()
-		: m_isDropped(false)
-		, m_dropTimer(0.f)
 	{
+		memset(this, 0, sizeof(Token));
 	}
 
 	void setup(int blockX, int blockY);
@@ -303,9 +305,8 @@ struct Coin : PhysicsActor
 	float m_dropTimer;
 
 	Coin()
-		: m_isDropped(false)
-		, m_dropTimer(0.f)
 	{
+		memset(this, 0, sizeof(Coin));
 	}
 
 	void setup(int blockX, int blockY);
@@ -326,6 +327,11 @@ struct Torch
 	Vec2 m_pos;
 	float m_color[4];
 
+	Torch()
+	{
+		memset(this, 0, sizeof(Torch));
+	}
+
 	void setup(float x, float y, const Color & color);
 
 	void tick(GameSim & gameSim, float dt);
@@ -343,7 +349,7 @@ struct ScreenShake
 
 	ScreenShake()
 	{
-		memset(this, 0, sizeof(*this));
+		memset(this, 0, sizeof(ScreenShake));
 	}
 
 	void tick(float dt);
@@ -362,7 +368,10 @@ struct FloorEffect
 		int8_t playerId;
 	} m_tiles[MAX_FLOOR_EFFECT_TILES];
 
-	FloorEffect();
+	FloorEffect()
+	{
+		memset(this, 0, sizeof(FloorEffect));
+	}
 
 	void tick(GameSim & gameSim, float dt);
 	void trySpawnAt(GameSim & gameSim, int playerId, int x, int y, int dx, int size, int damageSize);
@@ -413,6 +422,8 @@ struct GameStateData
 		uint64_t m_nextSpawnTick;
 	} m_coinCollector;
 };
+
+#pragma pack(pop)
 
 class GameSim : public GameStateData
 {

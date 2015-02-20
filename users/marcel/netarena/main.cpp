@@ -19,8 +19,6 @@
 #include "OptionMenu.h"
 #include "PacketDispatcher.h"
 #include "player.h"
-#include "ReplicationClient.h"
-#include "ReplicationManager.h"
 #include "RpcManager.h"
 #include "StatTimerMenu.h"
 #include "StatTimers.h"
@@ -104,9 +102,9 @@ static void HandleAction(const std::string & action, const Dictionary & args)
 	{
 		const int index = args.getInt("client", -1);
 
-		if (index != -1)
+		if (index >= 0 && index < g_app->m_clients.size())
 		{
-			g_app->disconnectClient(index);
+			g_app->leaveGame(g_app->m_clients[index]);
 		}
 	}
 
@@ -251,6 +249,10 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 					}
 				}
 				break;
+
+			default:
+				Assert(false);
+				break;
 			}
 		}
 	}
@@ -316,6 +318,11 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		if (gameSim)
 		{
 			gameSim->setGameState((GameState)gameState);
+
+			if (channel == 0 && gameState == kGameState_MainMenus)
+			{
+				g_app->stopHosting();
+			}
 		}
 	}
 	else if (method == s_rpcSetGameMode)
@@ -504,6 +511,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		//
 
 		GameSim * gameSim = findGameSimForChannel(channel);
+		Assert(gameSim);
 
 		if (gameSim)
 		{
@@ -540,7 +548,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 
 		Assert(g_host);
 
-		if (g_host && g_host->m_gameSim.m_gameState == kGameState_Menus)
+		if (g_host && g_host->m_gameSim.m_gameState == kGameState_OnlineMenus)
 		{
 			uint8_t playerId;
 			uint8_t characterIndex;
@@ -548,12 +556,6 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			bitStream.Read(playerId);
 			bitStream.Read(characterIndex);
 
-			PlayerNetObject * player = g_host->findPlayerByPlayerId(playerId);
-			Assert(player);
-			if (player)
-			{
-				player->setCharacterIndex(characterIndex);
-			}
 			g_app->netBroadcastCharacterIndex(playerId, characterIndex);
 		}
 	}
@@ -561,9 +563,9 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 	{
 		LOG_DBG("handleRpc: s_rpcSetPlayerCharacterIndexBroadcast");
 
-		Client * client = g_app->findClientByChannel(channel);
-		Assert(client);
-		if (client)
+		GameSim * gameSim = findGameSimForChannel(channel);
+		Assert(gameSim);
+		if (gameSim)
 		{
 			uint8_t playerId;
 			uint8_t characterIndex;
@@ -571,7 +573,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			bitStream.Read(playerId);
 			bitStream.Read(characterIndex);
 
-			PlayerNetObject * player = client->findPlayerByPlayerId(playerId);
+			PlayerNetObject * player = gameSim->m_playerNetObjects[playerId];
 			Assert(player);
 			if (player)
 			{
@@ -650,7 +652,7 @@ void App::processPlayerChanges()
 
 			//
 
-			for (int i = 0; i < 2; ++i) // fixme : hack to alloc two players for each client
+			//for (int i = 0; i < 2; ++i) // fixme : hack to alloc two players for each client
 			{
 
 			PlayerNetObject * playerNetObject = m_host->allocPlayer(playerToAddOrRemove.channel->m_destinationId);
@@ -690,15 +692,7 @@ void App::processPlayerChanges()
 
 void App::broadcastPlayerInputs()
 {
-	//if (g_devMode)
-	//	for (int i = 0; i < 10; ++i)
-	//		m_channelMgr->Update(g_TimerRT.TimeUS_get());
-
 	netSetPlayerInputsBroadcast();
-
-	//if (g_devMode)
-	//	for (int i = 0; i < 10; ++i)
-	//		m_channelMgr->Update(g_TimerRT.TimeUS_get());
 }
 
 //
@@ -706,8 +700,6 @@ void App::broadcastPlayerInputs()
 void App::SV_OnChannelConnect(Channel * channel)
 {
 	ClientInfo clientInfo;
-
-	clientInfo.replicationId = m_replicationMgr->SV_CreateClient(channel, 0);
 
 	m_hostClients[channel] = clientInfo;
 
@@ -741,30 +733,8 @@ void App::SV_OnChannelDisconnect(Channel * channel)
 		}
 		clientInfo.players.clear();
 
-		m_replicationMgr->SV_DestroyClient(clientInfo.replicationId);
-
 		m_hostClients.erase(i);
 	}
-}
-
-//
-
-bool App::OnReplicationObjectSerializeType(ReplicationClient * client, ReplicationObject * object, BitStream & bitStream)
-{
-	return false;
-}
-
-bool App::OnReplicationObjectCreateType(ReplicationClient * client, BitStream & bitStream, ReplicationObject ** out_object)
-{
-	return false;
-}
-
-void App::OnReplicationObjectCreated(ReplicationClient * client, ReplicationObject * object)
-{
-}
-
-void App::OnReplicationObjectDestroyed(ReplicationClient * client, ReplicationObject * object)
-{
 }
 
 //
@@ -775,7 +745,6 @@ App::App()
 	, m_packetDispatcher(0)
 	, m_channelMgr(0)
 	, m_rpcMgr(0)
-	, m_replicationMgr(0)
 	, m_discoveryService(0)
 	, m_discoveryUi(0)
 	, m_selectedClient(-1)
@@ -793,7 +762,6 @@ App::~App()
 	Assert(m_packetDispatcher == 0);
 	Assert(m_channelMgr == 0);
 	Assert(m_rpcMgr == 0);
-	Assert(m_replicationMgr == 0);
 
 	Assert(m_discoveryService == 0);
 	Assert(m_discoveryUi == 0);
@@ -866,6 +834,7 @@ bool App::init(bool isHost)
 		framework.fullscreen = true;
 	}
 
+	framework.windowTitle = "NetArena";
 	framework.actionHandler = HandleAction;
 
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
@@ -880,7 +849,6 @@ bool App::init(bool isHost)
 		m_packetDispatcher = new PacketDispatcher();
 		m_channelMgr = new ChannelManager();
 		m_rpcMgr = new RpcManager(m_channelMgr);
-		m_replicationMgr = new ReplicationManager();
 
 		m_discoveryService = new NetSessionDiscovery::Service();
 		m_discoveryService->init(2, 10);
@@ -891,11 +859,6 @@ bool App::init(bool isHost)
 
 		m_packetDispatcher->RegisterProtocol(PROTOCOL_CHANNEL, m_channelMgr);
 		m_packetDispatcher->RegisterProtocol(PROTOCOL_RPC, m_rpcMgr);
-		m_packetDispatcher->RegisterProtocol(PROTOCOL_REPLICATION, m_replicationMgr);
-
-		//
-
-		m_replicationMgr->CL_RegisterHandler(this);
 
 		//
 
@@ -972,13 +935,6 @@ void App::shutdown()
 	delete m_discoveryService;
 	m_discoveryService = 0;
 
-	m_replicationMgr->SV_Shutdown();
-
-	m_replicationMgr->CL_Shutdown();
-
-	delete m_replicationMgr;
-	m_replicationMgr = 0;
-
 	delete m_rpcMgr;
 	m_rpcMgr = 0;
 
@@ -1020,6 +976,11 @@ void App::stopHosting()
 {
 	Assert(m_isHost);
 
+	while (!m_clients.empty())
+	{
+		disconnectClient(0);
+	}
+
 	if (m_host)
 	{
 		m_host->shutdown();
@@ -1059,10 +1020,22 @@ bool App::findGame()
 	return true;
 }
 
-void App::leaveGame()
+void App::leaveGame(Client * client)
 {
-	while (!m_clients.empty())
-		disconnectClient(0);
+	for (size_t i = 0; i < m_clients.size(); ++i)
+	{
+		if (m_clients[i] == client)
+		{
+			disconnectClient(i);
+			break;
+		}
+	}
+
+	// todo : only do this if client is the host
+
+	stopHosting();
+
+	netSetGameState(kGameState_MainMenus);
 }
 
 Client * App::connect(const char * address)
@@ -1074,7 +1047,6 @@ Client * App::connect(const char * address)
 	Client * client = new Client;
 
 	client->initialize(channel);
-	client->m_replicationId = m_replicationMgr->CL_CreateClient(client->m_channel, client);
 
 	m_clients.push_back(client);
 
@@ -1090,8 +1062,6 @@ void App::disconnectClient(int index)
 	if (index >= 0 && index < (int)m_clients.size())
 	{
 		Client * client = m_clients[index];
-
-		m_replicationMgr->CL_DestroyClient(client->m_replicationId);
 
 		m_clients[index]->m_channel->Disconnect();
 
@@ -1195,17 +1165,16 @@ bool App::tick()
 	{
 		m_channelMgr->Update(g_TimerRT.TimeUS_get());
 
-		if (g_updateTicks)
-		{
-			m_replicationMgr->SV_Update();
-		}
-
-		m_channelMgr->Update(g_TimerRT.TimeUS_get());
-
 		if (!m_optionMenuIsOpen)
 		{
 			if (g_updateTicks)
 			{
+				if (g_logCRCs)
+				{
+					for (int i = 0; i < 10; ++i)
+						m_channelMgr->Update(g_TimerRT.TimeUS_get());
+				}
+
 				const uint32_t crc1 = m_host->m_gameSim.calcCRC();
 
 				processPlayerChanges();
@@ -1217,7 +1186,12 @@ bool App::tick()
 				const uint32_t crc3 = m_host->m_gameSim.calcCRC();
 
 				if (g_logCRCs)
+				{
+					for (int i = 0; i < 10; ++i)
+						m_channelMgr->Update(g_TimerRT.TimeUS_get());
+
 					LOG_DBG("tick CRCs: %08x, %08x, %08x", crc1, crc2, crc3);
+				}
 			}
 
 			m_host->tick(dt);
@@ -1233,8 +1207,6 @@ bool App::tick()
 
 	m_channelMgr->Update(g_TimerRT.TimeUS_get());
 
-	m_replicationMgr->CL_Update();
-
 	for (size_t i = 0; i < m_clients.size(); ++i)
 	{
 		Client * client = m_clients[i];
@@ -1249,7 +1221,10 @@ bool App::tick()
 #if 1
 	if (keyboard.wentDown(SDLK_F1))
 	{
-		netSetGameState(kGameState_Menus);
+		std::vector<Client*> clients = m_clients;
+
+		for (size_t i = 0; i < clients.size(); ++i)
+			leaveGame(clients[i]);
 	}
 
 	if (keyboard.wentDown(SDLK_F5))
@@ -1483,6 +1458,7 @@ void App::netAction(Channel * channel, NetAction action, uint8_t param1, uint8_t
 void App::netSyncGameSim(Channel * channel)
 {
 	LOG_DBG("netSyncGameSim");
+	Assert(m_isHost);
 
 	BitStream bs;
 
@@ -1516,6 +1492,7 @@ void App::netSyncGameSim(Channel * channel)
 void App::netSetGameState(GameState _gameState)
 {
 	LOG_DBG("netSetGameState");
+	Assert(m_isHost);
 
 	uint8_t gameState = _gameState;
 
@@ -1529,6 +1506,7 @@ void App::netSetGameState(GameState _gameState)
 void App::netSetGameMode(GameMode _gameMode)
 {
 	LOG_DBG("netSetGameMode");
+	Assert(m_isHost);
 
 	uint8_t gameMode = _gameMode;
 
@@ -1542,6 +1520,7 @@ void App::netSetGameMode(GameMode _gameMode)
 void App::netLoadArena(const char * filename)
 {
 	LOG_DBG("netLoadArena");
+	Assert(m_isHost);
 
 	BitStream bs;
 
@@ -1671,7 +1650,7 @@ void App::netBroadcastCharacterIndex(uint8_t playerId, uint8_t characterIndex)
 	bs.Write(playerId);
 	bs.Write(characterIndex);
 
-	m_rpcMgr->Call(s_rpcSetPlayerCharacterIndexBroadcast, bs, ChannelPool_Server, 0, true, false);
+	m_rpcMgr->Call(s_rpcSetPlayerCharacterIndexBroadcast, bs, ChannelPool_Server, 0, true, true);
 }
 
 void App::netDebugAction(const char * name)
@@ -1717,8 +1696,7 @@ int main(int argc, char * argv[])
 	{
 		std::cout << "host IP address: ";
 		std::string ip;
-		std::cin >> ip;
-		g_connect = ip;
+		std::getline(std::cin, ip);
 	}
 
 	g_app = new App();

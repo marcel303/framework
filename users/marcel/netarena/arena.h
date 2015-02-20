@@ -119,6 +119,8 @@ public:
 	void load(const char * filename);
 	void serialize(NetSerializationContext & context);
 
+	uint32_t calcCRC() const;
+
 	void drawBlocks();
 
 	void tick(GameSim & gameSim);

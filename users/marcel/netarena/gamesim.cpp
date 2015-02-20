@@ -5,6 +5,7 @@
 #include "framework.h"
 #include "gamedefs.h"
 #include "gamesim.h"
+#include "host.h"
 #include "main.h"
 #include "Parse.h"
 #include "Path.h"
@@ -308,11 +309,6 @@ void ScreenShake::tick(float dt)
 
 //
 
-FloorEffect::FloorEffect()
-{
-	memset(this, 0, sizeof(*this));
-}
-
 void FloorEffect::tick(GameSim & gameSim, float dt)
 {
 	for (int i = 0; i < MAX_FLOOR_EFFECT_TILES; ++i)
@@ -476,7 +472,9 @@ uint32_t GameSim::calcCRC() const
 	for (uint32_t i = 0; i < numBytes; ++i)
 		result = result * 13 + bytes[i];
 
-	// todo : add screen shakes, particle pool, bullet pool, arena
+	result = result * 13 + m_arena.calcCRC();
+
+	// todo : add screen shakes, particle pool, bullet pool
 
 	setPlayerPtrs();
 
@@ -536,10 +534,14 @@ void GameSim::setGameState(::GameState gameState)
 
 	switch (gameState)
 	{
+	case kGameState_MainMenus:
+		resetGameSim();
+		break;
+
 	case kGameState_Connecting:
 		break;
 
-	case kGameState_Menus:
+	case kGameState_OnlineMenus:
 		resetGameSim();
 		break;
 
@@ -586,6 +588,10 @@ void GameSim::setGameState(::GameState gameState)
 					spawnCoin();
 			}
 		}
+		break;
+
+	default:
+		Assert(false);
 		break;
 	}
 }
@@ -706,7 +712,12 @@ void GameSim::load(const char * filename)
 							}
 						}
 						break;
+
 					case kObjectType_Mover2:
+						break;
+
+					default:
+						Assert(false);
 						break;
 					}
 				}
@@ -789,7 +800,11 @@ void GameSim::tick()
 {
 	switch (m_gameState)
 	{
-	case kGameState_Menus:
+	case kGameState_MainMenus:
+		Assert(false);
+		break;
+
+	case kGameState_OnlineMenus:
 		tickMenus();
 		break;
 
@@ -799,6 +814,10 @@ void GameSim::tick()
 
 	case kGameState_RoundComplete:
 		tickRoundComplete();
+		break;
+
+	default:
+		Assert(false);
 		break;
 	}
 
@@ -860,19 +879,7 @@ void GameSim::tickPlay()
 {
 	g_gameSim = this;
 
-	if (g_devMode && ENABLE_GAMESTATE_CRC_LOGGING)
-	{
-		int numPlayers = 0;
-		for (int i = 0; i < MAX_PLAYERS; ++i)
-			if (m_playerNetObjects[i])
-				numPlayers++;
-
-		if (g_logCRCs)
-		{
-			const uint32_t crc = calcCRC();
-			LOG_DBG("gamesim %p: tick=%u, crc=%08x, numPlayers=%d", this, m_tick, crc, numPlayers);
-		}
-	}
+	const uint32_t oldCRC = (ENABLE_GAMESTATE_CRC_LOGGING && g_logCRCs) ? calcCRC() : 0;
 
 	const float dt = 1.f / TICKS_PER_SECOND;
 
@@ -1002,6 +1009,18 @@ void GameSim::tickPlay()
 	m_bulletPool->tick(*this, dt);
 
 	m_tick++;
+
+	if (ENABLE_GAMESTATE_CRC_LOGGING && g_logCRCs)
+	{
+		int numPlayers = 0;
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+			if (m_playerNetObjects[i])
+				numPlayers++;
+
+		const uint32_t newCRC = calcCRC();
+
+		LOG_DBG("gamesim %p: tick=%u, oldCRC=%08x, newCRC=%08x, numPlayers=%d [%s]", this, m_tick, oldCRC, newCRC, numPlayers, g_host && &g_host->m_gameSim == this ?  "server" : "client");
+	}
 
 	g_gameSim = 0;
 }
@@ -1264,6 +1283,7 @@ uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, BulletType t
 			b.maxDestroyedBlocks = 1;
 			b.doDamageOwner = true;
 			break;
+
 		default:
 			Assert(false);
 			break;

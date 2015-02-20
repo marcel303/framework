@@ -84,6 +84,7 @@ public:
 
 		PlayerInput m_prevState;
 		PlayerInput m_currState;
+		PlayerInput m_lastSent;
 
 		uint32_t m_actions;
 

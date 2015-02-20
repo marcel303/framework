@@ -7,7 +7,6 @@
 #include "host.h"
 #include "main.h"
 #include "player.h"
-#include "ReplicationManager.h"
 #include "Timer.h"
 
 COMMAND_OPTION(s_addPickup, "Debug/Add Pickup", [] { if (g_host) g_host->m_gameSim.trySpawnPickup((PickupType)(rand() % kPickupType_COUNT)); });
@@ -54,7 +53,11 @@ void Host::tick(float dt)
 
 	switch (m_gameSim.m_gameState)
 	{
-	case kGameState_Menus:
+	case kGameState_MainMenus:
+		Assert(false);
+		break;
+
+	case kGameState_OnlineMenus:
 		tickMenus(dt);
 		break;
 
@@ -64,6 +67,10 @@ void Host::tick(float dt)
 
 	case kGameState_RoundComplete:
 		tickRoundComplete(dt);
+		break;
+
+	default:
+		Assert(false);
 		break;
 	}
 

@@ -459,6 +459,10 @@ void Player::playSecondaryEffects(PlayerEvent e)
 	case kPlayerEvent_DestructibleDestroy:
 		m_netObject->m_gameSim->playSound("player-arena-wrap.ogg");
 		break;
+
+	default:
+		Assert(false);
+		break;
 	}
 }
 
@@ -503,6 +507,11 @@ void Player::tick(float dt)
 
 			switch (m_anim)
 			{
+			case kPlayerAnim_Jump:
+			case kPlayerAnim_WallSlide:
+			case kPlayerAnim_Walk:
+				break;
+
 			case kPlayerAnim_Attack:
 			case kPlayerAnim_AttackUp:
 			case kPlayerAnim_AttackDown:
@@ -513,12 +522,14 @@ void Player::tick(float dt)
 				break;
 			case kPlayerAnim_AirDash:
 				break;
-			case kPlayerAnim_Jump:
-				break;
 			case kPlayerAnim_Spawn:
 				m_isAlive = true;
 				break;
 			case kPlayerAnim_Die:
+				break;
+
+			default:
+				Assert(false);
 				break;
 			}
 		}
@@ -578,6 +589,10 @@ void Player::tick(float dt)
 				break;
 			case kPickupType_Bubble:
 				pushWeapon(kPlayerWeapon_Bubble, PICKUP_BUBBLE_COUNT);
+				break;
+
+			default:
+				Assert(false);
 				break;
 			}
 		}

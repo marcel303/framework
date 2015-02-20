@@ -5,9 +5,7 @@
 #include "ChannelHandler.h"
 #include "gametypes.h"
 #include "libnet_forward.h"
-#include "libreplication_forward.h"
 #include "Options.h"
-#include "ReplicationHandler.h"
 
 OPTION_EXTERN(bool, g_devMode);
 OPTION_EXTERN(bool, g_monkeyMode);
@@ -30,13 +28,12 @@ namespace NetSessionDiscovery
 	class Service;
 }
 
-class App : public ChannelHandler, public ReplicationHandler
+class App : public ChannelHandler
 {
 public:
 	struct ClientInfo
 	{
 		ClientInfo()
-			: replicationId(0)
 		{
 		}
 
@@ -45,7 +42,6 @@ public:
 			Assert(players.empty());
 		}
 
-		uint32_t replicationId;
 		std::vector<PlayerNetObject*> players;
 	};
 
@@ -54,7 +50,6 @@ public:
 	PacketDispatcher * m_packetDispatcher;
 	ChannelManager * m_channelMgr;
 	RpcManager * m_rpcMgr;
-	ReplicationManager * m_replicationMgr;
 
 	NetSessionDiscovery::Service * m_discoveryService;
 	Ui * m_discoveryUi;
@@ -96,12 +91,6 @@ public:
 	virtual void CL_OnChannelConnect(Channel * channel) { }
 	virtual void CL_OnChannelDisconnect(Channel * channel) { }
 
-	// ReplicationHandler
-	virtual bool OnReplicationObjectSerializeType(ReplicationClient * client, ReplicationObject * object, BitStream & bitStream);
-	virtual bool OnReplicationObjectCreateType(ReplicationClient * client, BitStream & bitStream, ReplicationObject ** out_object);
-	virtual void OnReplicationObjectCreated(ReplicationClient * client, ReplicationObject * object);
-	virtual void OnReplicationObjectDestroyed(ReplicationClient * client, ReplicationObject * object);
-
 	// RpcHandler
 	static void handleRpc(Channel * channel, uint32_t method, BitStream & bitStream);
 
@@ -118,7 +107,7 @@ public:
 	void stopHosting();
 
 	bool findGame();
-	void leaveGame();
+	void leaveGame(Client * client);
 
 	Client * connect(const char * address);
 	void disconnectClient(int index);
@@ -150,7 +139,6 @@ public:
 	void freeControllerIndex(int index);
 	int getControllerAllocationCount() const;
 
-	ReplicationManager * getReplicationMgr() { return m_replicationMgr; }
 	std::vector<Client*> getClients() const { return m_clients; }
 };
 
