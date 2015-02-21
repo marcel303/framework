@@ -48,3 +48,5 @@ NET_STAT_EXTERN(NetStat_ReplicationObjectsDestroyed);
 NET_STAT_EXTERN(NetStat_ReplicationObjectsUpdated);
 NET_STAT_EXTERN(NetStat_ReplicationUpdateTime);
 NET_STAT_EXTERN(NetStat_ReplicationReceiveTime);
+
+NET_STAT_EXTERN(NetStat_ChannelRTTMax);

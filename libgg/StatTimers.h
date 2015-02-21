@@ -101,6 +101,11 @@ public:
 		m_countValue += count;
 	}
 
+	void AddTimeUS(uint32_t time)
+	{
+		m_timeValue += time;
+	}
+
 	uint32_t GetLastTime() const;
 	uint32_t GetLastCount() const;
 	uint32_t GetAverageTime() const;
@@ -189,6 +194,7 @@ public:
 #define TIMER_INC(name) TIMER_ADD(name, 1)
 #define TIMER_START(name) name.Start()
 #define TIMER_STOP(name) name.Stop()
+#define TIMER_ADD_MICROSECONDS(name, count) name.AddTimeUS(count)
 #define TIMER_SCOPE(name) StatTimerScope name ## _scope(&name)
 
 // timer views
@@ -222,12 +228,13 @@ public:
 	#define TIMER_EXTERN(name)
 	#define TIMER_DEFINE(name, updateMode, path)
 	#define TIMER_MANUAL(name)
-	#define TIMER_COMMIT(name)     do { } while (false)
-	#define TIMER_ADD(name, count) do { } while (false)
-	#define TIMER_INC(name)        do { } while (false)
-	#define TIMER_START(name)      do { } while (false)
-	#define TIMER_STOP(name)       do { } while (false)
-	#define TIMER_SCOPE(name)      do { } while (false)
+	#define TIMER_COMMIT(name)                  do { } while (false)
+	#define TIMER_ADD(name, count)              do { } while (false)
+	#define TIMER_INC(name)                     do { } while (false)
+	#define TIMER_START(name)                   do { } while (false)
+	#define TIMER_STOP(name)                    do { } while (false)
+	#define TIMER_ADD_MICROSECONDS(name, count) do { } while (false)
+	#define TIMER_SCOPE(name)                   do { } while (false)
 
 	// timer views
 

@@ -4,6 +4,7 @@
 #include "ChannelTypes.h"
 #include "NetDiag.h"
 #include "NetProtocols.h"
+#include "NetStats.h"
 #include "PacketDispatcher.h"
 
 ChannelManager::ChannelManager()
@@ -141,6 +142,14 @@ void ChannelManager::Update(uint64_t time)
 		DestroyChannel(m_destroyedChannels[i]);
 
 	m_destroyedChannels.clear();
+
+#if LIBNET_ENABLE_NET_STATS
+	uint32_t maxRTT = 0;
+	for (ChannelMapItr i = m_channels.begin(); i != m_channels.end(); ++i)
+		if (i->second->m_rtt > maxRTT)
+			maxRTT = i->second->m_rtt;
+	TIMER_ADD_MICROSECONDS(NetStat_ChannelRTTMax, maxRTT);
+#endif
 }
 
 void ChannelManager::OnReceive(Packet & packet, Channel * channel)

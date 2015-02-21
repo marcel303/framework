@@ -27,3 +27,5 @@ NET_STAT_DEFINE(NetStat_ReplicationObjectsDestroyed,  "Net/Replication/Objects D
 NET_STAT_DEFINE(NetStat_ReplicationObjectsUpdated,    "Net/Replication/Objects Updated");
 NET_STAT_DEFINE_TIMER(NetStat_ReplicationUpdateTime,  "Net/Replication/Update Time");
 NET_STAT_DEFINE_TIMER(NetStat_ReplicationReceiveTime, "Net/Replication/Receive Time");
+
+NET_STAT_DEFINE_TIMER(NetStat_ChannelRTTMax, "Net/Channel/Max Channel RTT");
