@@ -40,6 +40,8 @@ NetSocket::~NetSocket()
 
 bool NetSocket::Bind(uint16_t port, bool broadcast)
 {
+	LOG_DBG("NetSocket::Bind: port=%d, broadcast=%d", (int)port, (int)broadcast);
+
 	m_serverPort = port;
 
 	sockaddr_in socketAddress;
@@ -76,6 +78,8 @@ bool NetSocket::Bind(uint16_t port, bool broadcast)
 		setsockopt(m_socket, SOL_SOCKET, SO_RCVBUF, (char*)&receiveBufferSize, sizeof(int));
 		setsockopt(m_socket, SOL_SOCKET, SO_SNDBUF, (char*)&receiveBufferSize, sizeof(int));
 	}
+
+	LOG_DBG("NetSocket::Bind [done]");
 
 	return true;
 }
