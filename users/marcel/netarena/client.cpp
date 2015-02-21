@@ -40,7 +40,7 @@ Client::~Client()
 	Assert(m_players.empty());
 	while (!m_players.empty())
 	{
-		PlayerNetObject * player = m_players.front();
+		PlayerInstanceData * player = m_players.front();
 		removePlayer(player);
 	}
 
@@ -79,12 +79,12 @@ void Client::tick(float dt)
 			if (!player.m_isUsed || player.m_owningChannelId != m_channel->m_id)
 				continue;
 
-			PlayerNetObject * playerNetObject = player.m_netObject;
+			PlayerInstanceData * playerInstanceData = player.m_instanceData;
 
 			PlayerInput input;
 
-			bool useKeyboard = (playerNetObject->m_input.m_controllerIndex == 0) || (g_app->getControllerAllocationCount() == 1);
-			bool useGamepad = !morePlayersThanControllers || (playerNetObject->m_input.m_controllerIndex != 0) || (g_app->getControllerAllocationCount() == 1);
+			bool useKeyboard = (playerInstanceData->m_input.m_controllerIndex == 0) || (g_app->getControllerAllocationCount() == 1);
+			bool useGamepad = !morePlayersThanControllers || (playerInstanceData->m_input.m_controllerIndex != 0) || (g_app->getControllerAllocationCount() == 1);
 
 			if (useKeyboard)
 			{
@@ -124,10 +124,10 @@ void Client::tick(float dt)
 			{
 				const int gamepadIndex =
 					!morePlayersThanControllers
-					? playerNetObject->m_input.m_controllerIndex
+					? playerInstanceData->m_input.m_controllerIndex
 					: (g_app->getControllerAllocationCount() == 1)
 					? 0
-					: (playerNetObject->m_input.m_controllerIndex - 1);
+					: (playerInstanceData->m_input.m_controllerIndex - 1);
 
 				if (gamepadIndex >= 0 && gamepadIndex < MAX_GAMEPAD && gamepad[gamepadIndex].isConnected)
 				{
@@ -191,9 +191,9 @@ void Client::tick(float dt)
 					input.buttons |= INPUT_BUTTON_START;
 			}
 
-			if (input != playerNetObject->m_input.m_lastSent)
+			if (input != playerInstanceData->m_input.m_lastSent)
 			{
-				playerNetObject->m_input.m_lastSent = input;
+				playerInstanceData->m_input.m_lastSent = input;
 
 				g_app->netSetPlayerInputs(
 					m_channel->m_id,
@@ -533,8 +533,8 @@ void Client::drawRoundComplete()
 
 	for (auto p = m_players.begin(); p != m_players.end(); ++p)
 	{
-		PlayerNetObject * playerNetObject = *p;
-		Player * player = playerNetObject->m_player;
+		PlayerInstanceData * playerInstanceData = *p;
+		Player * player = playerInstanceData->m_player;
 
 		drawText(GFX_SX/3*1, y, 40, +1.f, +1.f, "Player %d", index);
 		drawText(GFX_SX/3*2, y, 40, -1.f, +1.f, "%d", player->m_score);
@@ -549,13 +549,13 @@ void Client::debugDraw()
 	m_gameSim->m_tokenHunt.m_token.drawBB();
 }
 
-void Client::addPlayer(PlayerNetObject * player)
+void Client::addPlayer(PlayerInstanceData * player)
 {
 	player->m_player->m_isUsed = true;
 
 	m_players.push_back(player);
 
-	m_gameSim->m_playerNetObjects[player->m_player->m_index] = player;
+	m_gameSim->m_playerInstanceDatas[player->m_player->m_index] = player;
 
 	if (player->m_player->m_owningChannelId == m_channel->m_id)
 	{
@@ -564,7 +564,7 @@ void Client::addPlayer(PlayerNetObject * player)
 	}
 }
 
-void Client::removePlayer(PlayerNetObject * player)
+void Client::removePlayer(PlayerInstanceData * player)
 {
 	auto i = std::find(m_players.begin(), m_players.end(), player);
 
@@ -583,12 +583,12 @@ void Client::removePlayer(PlayerNetObject * player)
 
 		if (playerId != -1)
 		{
-			Assert(m_gameSim->m_playerNetObjects[playerId] != 0);
-			if (m_gameSim->m_playerNetObjects[playerId] != 0)
+			Assert(m_gameSim->m_playerInstanceDatas[playerId] != 0);
+			if (m_gameSim->m_playerInstanceDatas[playerId] != 0)
 			{
-				m_gameSim->m_playerNetObjects[playerId]->m_player->m_isUsed = false;
-				m_gameSim->m_playerNetObjects[playerId]->m_player->m_netObject = 0;
-				m_gameSim->m_playerNetObjects[playerId] = 0;
+				m_gameSim->m_playerInstanceDatas[playerId]->m_player->m_isUsed = false;
+				m_gameSim->m_playerInstanceDatas[playerId]->m_player->m_instanceData = 0;
+				m_gameSim->m_playerInstanceDatas[playerId] = 0;
 			}
 		}
 
@@ -596,13 +596,13 @@ void Client::removePlayer(PlayerNetObject * player)
 	}
 }
 
-PlayerNetObject * Client::findPlayerByPlayerId(uint8_t playerId)
+PlayerInstanceData * Client::findPlayerByPlayerId(uint8_t playerId)
 {
 	for (auto p = m_players.begin(); p != m_players.end(); ++p)
 	{
-		PlayerNetObject * player = *p;
-		if (player->m_player->m_index == playerId)
-			return player;
+		PlayerInstanceData * playerInstanceData = *p;
+		if (playerInstanceData->m_player->m_index == playerId)
+			return playerInstanceData;
 	}
 
 	return 0;
@@ -611,13 +611,13 @@ PlayerNetObject * Client::findPlayerByPlayerId(uint8_t playerId)
 void Client::setPlayerPtrs()
 {
 	for (auto i = m_players.begin(); i != m_players.end(); ++i)
-		(*i)->m_player->m_netObject = (*i);
+		(*i)->m_player->m_instanceData = (*i);
 }
 
 void Client::clearPlayerPtrs()
 {
 	for (auto i = m_players.begin(); i != m_players.end(); ++i)
-		(*i)->m_player->m_netObject = 0;
+		(*i)->m_player->m_instanceData = 0;
 }
 
 void Client::spawnParticles(const ParticleSpawnInfo & spawnInfo)

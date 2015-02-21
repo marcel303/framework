@@ -45,7 +45,7 @@ struct PlayerInput
 	int8_t analogY;
 };
 
-class PlayerNetObject
+class PlayerInstanceData
 {
 	friend struct Player;
 
@@ -61,8 +61,8 @@ class PlayerNetObject
 	static void handleAnimationAction(const std::string & action, const Dictionary & args);
 
 public:
-	PlayerNetObject(Player * player, GameSim * gameSim);
-	~PlayerNetObject();
+	PlayerInstanceData(Player * player, GameSim * gameSim);
+	~PlayerInstanceData();
 
 	void setCharacterIndex(int index);
 	void handleCharacterIndexChange();
@@ -82,7 +82,7 @@ public:
 
 		int m_controllerIndex;
 
-		PlayerInput m_prevState;
+		PlayerInput m_prevState; // todo : move prevState and currState to Player class?
 		PlayerInput m_currState;
 		PlayerInput m_lastSent;
 

@@ -444,7 +444,7 @@ GameSim::GameSim()
 	m_arena.init();
 
 	for (int i = 0; i < MAX_PLAYERS; ++i)
-		m_playerNetObjects[i] = 0;
+		m_playerInstanceDatas[i] = 0;
 
 	m_bulletPool = new BulletPool(false);
 
@@ -495,16 +495,16 @@ void GameSim::serialize(NetSerializationContext & context)
 #endif
 
 	for (int i = 0; i < MAX_PLAYERS; ++i)
-		if (m_playerNetObjects[i])
-			m_playerNetObjects[i]->m_player->m_netObject = 0;
+		if (m_playerInstanceDatas[i])
+			m_playerInstanceDatas[i]->m_player->m_instanceData = 0;
 
 	GameStateData * data = static_cast<GameStateData*>(this);
 
 	context.SerializeBytes(data, sizeof(GameStateData));
 
 	for (int i = 0; i < MAX_PLAYERS; ++i)
-		if (m_playerNetObjects[i])
-			m_playerNetObjects[i]->m_player->m_netObject = m_playerNetObjects[i];
+		if (m_playerInstanceDatas[i])
+			m_playerInstanceDatas[i]->m_player->m_instanceData = m_playerInstanceDatas[i];
 
 	// todo : serialize player animation state
 
@@ -523,15 +523,15 @@ void GameSim::serialize(NetSerializationContext & context)
 void GameSim::clearPlayerPtrs() const
 {
 	for (int i = 0; i < MAX_PLAYERS; ++i)
-		if (m_playerNetObjects[i])
-			m_playerNetObjects[i]->m_player->m_netObject = 0;
+		if (m_playerInstanceDatas[i])
+			m_playerInstanceDatas[i]->m_player->m_instanceData = 0;
 }
 
 void GameSim::setPlayerPtrs() const
 {
 	for (int i = 0; i < MAX_PLAYERS; ++i)
-		if (m_playerNetObjects[i])
-			m_playerNetObjects[i]->m_player->m_netObject = m_playerNetObjects[i];
+		if (m_playerInstanceDatas[i])
+			m_playerInstanceDatas[i]->m_player->m_instanceData = m_playerInstanceDatas[i];
 }
 
 void GameSim::setGameState(::GameState gameState)
@@ -556,9 +556,9 @@ void GameSim::setGameState(::GameState gameState)
 
 		for (int i = 0; i < MAX_PLAYERS; ++i)
 		{
-			if (m_playerNetObjects[i])
+			if (m_playerInstanceDatas[i])
 			{
-				Player * player = m_playerNetObjects[i]->m_player;
+				Player * player = m_playerInstanceDatas[i]->m_player;
 
 				player->handleNewGame();
 			}
@@ -573,9 +573,9 @@ void GameSim::setGameState(::GameState gameState)
 
 			for (int i = 0; i < MAX_PLAYERS; ++i)
 			{
-				if (m_playerNetObjects[i])
+				if (m_playerInstanceDatas[i])
 				{
-					Player * player = m_playerNetObjects[i]->m_player;
+					Player * player = m_playerInstanceDatas[i]->m_player;
 
 					player->handleNewRound();
 
@@ -829,9 +829,9 @@ void GameSim::tick()
 
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		if (m_playerNetObjects[i])
+		if (m_playerInstanceDatas[i])
 		{
-			m_playerNetObjects[i]->m_input.next();
+			m_playerInstanceDatas[i]->m_input.next();
 		}
 	}
 }
@@ -848,9 +848,9 @@ void GameSim::tickMenus()
 
 		if (player.m_isUsed)
 		{
-			PlayerNetObject * netObject = m_playerNetObjects[i];
-			Assert(netObject);
-			if (netObject)
+			PlayerInstanceData * playerInstanceData = m_playerInstanceDatas[i];
+			Assert(playerInstanceData);
+			if (playerInstanceData)
 			{
 				// character select
 
@@ -858,21 +858,21 @@ void GameSim::tickMenus()
 				{
 					int step = 0;
 
-					if (netObject->m_input.wentDown(INPUT_BUTTON_LEFT) || (netObject->m_input.m_actions & (1 << kPlayerInputAction_PrevChar)))
+					if (playerInstanceData->m_input.wentDown(INPUT_BUTTON_LEFT) || (playerInstanceData->m_input.m_actions & (1 << kPlayerInputAction_PrevChar)))
 						step = -1;
-					if (netObject->m_input.wentDown(INPUT_BUTTON_RIGHT) || (netObject->m_input.m_actions & (1 << kPlayerInputAction_NextChar)))
+					if (playerInstanceData->m_input.wentDown(INPUT_BUTTON_RIGHT) || (playerInstanceData->m_input.m_actions & (1 << kPlayerInputAction_NextChar)))
 						step += 1;
 
 					if (step != 0)
 					{
 						const int characterIndex = (player.m_characterIndex + MAX_CHARACTERS + step) % MAX_CHARACTERS;
-						netObject->setCharacterIndex(characterIndex);
+						playerInstanceData->setCharacterIndex(characterIndex);
 					}
 				}
 
 				// ready up
 
-				if (netObject->m_input.wentDown(INPUT_BUTTON_A) || (netObject->m_input.m_actions & (1 << kPlayerInputAction_ReadyUp)))
+				if (playerInstanceData->m_input.wentDown(INPUT_BUTTON_A) || (playerInstanceData->m_input.m_actions & (1 << kPlayerInputAction_ReadyUp)))
 				{
 					player.m_isReadyUpped = !player.m_isReadyUpped;
 				}
@@ -907,8 +907,8 @@ void GameSim::tickPlay()
 
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		if (m_playerNetObjects[i])
-			m_playerNetObjects[i]->m_player->tick(dt);
+		if (m_playerInstanceDatas[i])
+			m_playerInstanceDatas[i]->m_player->tick(dt);
 	}
 
 	// picksup
@@ -1023,7 +1023,7 @@ void GameSim::tickPlay()
 	{
 		int numPlayers = 0;
 		for (int i = 0; i < MAX_PLAYERS; ++i)
-			if (m_playerNetObjects[i])
+			if (m_playerInstanceDatas[i])
 				numPlayers++;
 
 		const uint32_t newCRC = calcCRC();

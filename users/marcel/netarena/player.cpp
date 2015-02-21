@@ -165,17 +165,17 @@ const char * SoundBag::getRandomSound(GameSim & gameSim)
 
 //
 
-void PlayerNetObject::handleAnimationAction(const std::string & action, const Dictionary & args)
+void PlayerInstanceData::handleAnimationAction(const std::string & action, const Dictionary & args)
 {
-	PlayerNetObject * playerNetObject = args.getPtrType<PlayerNetObject>("obj", 0);
-	if (playerNetObject)
+	PlayerInstanceData * self = args.getPtrType<PlayerInstanceData>("obj", 0);
+	if (self)
 	{
 		if (g_devMode)
 		{
 			log("action: %s", action.c_str());
 		}
 
-		Player * player = playerNetObject->m_player;
+		Player * player = self->m_player;
 
 		if (action == "gravity_enable")
 		{
@@ -192,7 +192,7 @@ void PlayerNetObject::handleAnimationAction(const std::string & action, const Di
 		}
 		else if (action == "set_dash_vel")
 		{
-			Vec2 dir(playerNetObject->m_input.m_currState.analogX, playerNetObject->m_input.m_currState.analogY);
+			Vec2 dir(self->m_input.m_currState.analogX, self->m_input.m_currState.analogY);
 			dir.Normalize();
 
 			player->m_vel += dir * args.getFloat("x", player->m_animVel[0]);
@@ -217,17 +217,17 @@ void PlayerNetObject::handleAnimationAction(const std::string & action, const Di
 		}	
 		else if (action == "sound")
 		{
-			playerNetObject->m_gameSim->playSound(args.getString("file", "").c_str(), args.getInt("volume", 100));
+			self->m_gameSim->playSound(args.getString("file", "").c_str(), args.getInt("volume", 100));
 		}
 		else if (action == "char_sound")
 		{
-			playerNetObject->m_gameSim->playSound(player->makeCharacterFilename(args.getString("file", "").c_str()), args.getInt("volume", 100));
+			self->m_gameSim->playSound(player->makeCharacterFilename(args.getString("file", "").c_str()), args.getInt("volume", 100));
 		}
 		else if (action == "char_soundbag")
 		{
 			std::string name = args.getString("name", "");
 
-			playerNetObject->playSoundBag(name.c_str(), args.getInt("volume", 100));
+			self->playSoundBag(name.c_str(), args.getInt("volume", 100));
 		}
 		else
 		{
@@ -366,49 +366,27 @@ void Player::applyAnim()
 
 	if (m_anim != kPlayerAnim_NULL)
 	{
-		delete m_netObject->m_sprite;
-		m_netObject->m_sprite = 0;
+		delete m_instanceData->m_sprite;
+		m_instanceData->m_sprite = 0;
 
 		char filename[64];
 		sprintf_s(filename, sizeof(filename), s_animInfos[m_anim].file, m_characterIndex);
 
-		m_netObject->m_sprite = new Sprite(filename, 0.f, 0.f, 0, false);
-		m_netObject->m_sprite->animActionHandler = PlayerNetObject::handleAnimationAction;
-		m_netObject->m_sprite->animActionHandlerObj = m_netObject;
+		m_instanceData->m_sprite = new Sprite(filename, 0.f, 0.f, 0, false);
+		m_instanceData->m_sprite->animActionHandler = PlayerInstanceData::handleAnimationAction;
+		m_instanceData->m_sprite->animActionHandlerObj = m_instanceData;
 	}
 
-	if (m_netObject->m_sprite)
+	if (m_instanceData->m_sprite)
 	{
 		if (m_animPlay)
-			m_netObject->m_sprite->startAnim("anim");
+			m_instanceData->m_sprite->startAnim("anim");
 		else
-			m_netObject->m_sprite->stopAnim();
+			m_instanceData->m_sprite->stopAnim();
 	}
 }
 
 //
-
-PlayerNetObject::PlayerNetObject(Player * player, GameSim * gameSim)
-	: m_player(player)
-	, m_gameSim(gameSim)
-	, m_sprite(0)
-	, m_spriteScale(1.f)
-{
-	m_player->m_netObject = this;
-
-	//
-
-	m_player->m_collision.x1 = -PLAYER_COLLISION_HITBOX_SX / 2.f;
-	m_player->m_collision.x2 = +PLAYER_COLLISION_HITBOX_SX / 2.f;
-	m_player->m_collision.y1 = -PLAYER_COLLISION_HITBOX_SY / 1.f;
-	m_player->m_collision.y2 = 0.f;
-}
-
-PlayerNetObject::~PlayerNetObject()
-{
-	delete m_sprite;
-	m_sprite = 0;
-}
 
 void Player::playSecondaryEffects(PlayerEvent e)
 {
@@ -417,47 +395,47 @@ void Player::playSecondaryEffects(PlayerEvent e)
 	case kPlayerEvent_Spawn:
 		break;
 	case kPlayerEvent_Respawn:
-		m_netObject->m_gameSim->playSound(makeCharacterFilename(m_netObject->m_sounds["respawn"].getRandomSound(*m_netObject->m_gameSim)));
+		m_instanceData->m_gameSim->playSound(makeCharacterFilename(m_instanceData->m_sounds["respawn"].getRandomSound(*m_instanceData->m_gameSim)));
 		break;
 	case kPlayerEvent_Die:
-		m_netObject->m_gameSim->playSound(makeCharacterFilename("die/die.ogg"));
+		m_instanceData->m_gameSim->playSound(makeCharacterFilename("die/die.ogg"));
 		break;
 	case kPlayerEvent_Jump:
 		{
 			Dictionary args;
-			args.setPtr("obj", m_netObject);
+			args.setPtr("obj", m_instanceData);
 			args.setString("name", "jump_sounds");
-			m_netObject->handleAnimationAction("char_soundbag", args);
+			m_instanceData->handleAnimationAction("char_soundbag", args);
 			break;
 		}
 	case kPlayerEvent_WallJump:
-		m_netObject->m_gameSim->playSound(makeCharacterFilename("walljump.ogg"));
+		m_instanceData->m_gameSim->playSound(makeCharacterFilename("walljump.ogg"));
 		break;
 	case kPlayerEvent_LandOnGround:
-		m_netObject->m_gameSim->playSound(makeCharacterFilename("land_on_ground.ogg"), 25);
+		m_instanceData->m_gameSim->playSound(makeCharacterFilename("land_on_ground.ogg"), 25);
 		break;
 	case kPlayerEvent_StickyAttach:
-		m_netObject->m_gameSim->playSound("player-sticky-attach.ogg");
+		m_instanceData->m_gameSim->playSound("player-sticky-attach.ogg");
 		break;
 	case kPlayerEvent_StickyRelease:
-		m_netObject->m_gameSim->playSound("player-sticky-release.ogg");
+		m_instanceData->m_gameSim->playSound("player-sticky-release.ogg");
 		break;
 	case kPlayerEvent_StickyJump:
-		m_netObject->m_gameSim->playSound("player-sticky-jump.ogg");
+		m_instanceData->m_gameSim->playSound("player-sticky-jump.ogg");
 		break;
 	case kPlayerEvent_SpringJump:
-		m_netObject->m_gameSim->playSound("player-spring-jump.ogg");
+		m_instanceData->m_gameSim->playSound("player-spring-jump.ogg");
 		break;
 	case kPlayerEvent_SpikeHit:
-		m_netObject->m_gameSim->playSound("player-spike-hit.ogg");
+		m_instanceData->m_gameSim->playSound("player-spike-hit.ogg");
 		break;
 	case kPlayerEvent_ArenaWrap:
-		m_netObject->m_gameSim->playSound("player-arena-wrap.ogg");
+		m_instanceData->m_gameSim->playSound("player-arena-wrap.ogg");
 		break;
 	case kPlayerEvent_DashAir:
 		break;
 	case kPlayerEvent_DestructibleDestroy:
-		m_netObject->m_gameSim->playSound("player-arena-wrap.ogg");
+		m_instanceData->m_gameSim->playSound("player-arena-wrap.ogg");
 		break;
 
 	default:
@@ -493,13 +471,13 @@ void Player::tick(float dt)
 
 	//
 
-	if (m_netObject->m_sprite)
+	if (m_instanceData->m_sprite)
 	{
-		m_netObject->m_sprite->update(dt);
+		m_instanceData->m_sprite->update(dt);
 
 		// check for end of animation events
 
-		if (!m_netObject->m_sprite->animIsActive)
+		if (!m_instanceData->m_sprite->animIsActive)
 		{
 			m_isAnimDriven = false;
 
@@ -537,7 +515,7 @@ void Player::tick(float dt)
 
 	//
 
-	if (g_devMode && !g_monkeyMode && m_netObject->m_input.wentDown(INPUT_BUTTON_START))
+	if (g_devMode && !g_monkeyMode && m_instanceData->m_input.wentDown(INPUT_BUTTON_START))
 		respawn();
 
 	if (!m_isAlive && !m_isAnimDriven)
@@ -549,13 +527,13 @@ void Player::tick(float dt)
 			m_respawnTimer = m_isRespawn ? 3.f : 0.f;
 		}
 
-		if (m_canTaunt && m_netObject->m_input.wentDown(INPUT_BUTTON_Y))
+		if (m_canTaunt && m_instanceData->m_input.wentDown(INPUT_BUTTON_Y))
 		{
 			m_canTaunt = false;
-			m_netObject->playSoundBag("taunt_sounds", 100);
+			m_instanceData->playSoundBag("taunt_sounds", 100);
 		}
 
-		if (m_netObject->m_input.wentDown(INPUT_BUTTON_X) || m_respawnTimer <= 0.f)
+		if (m_instanceData->m_input.wentDown(INPUT_BUTTON_X) || m_respawnTimer <= 0.f)
 			respawn();
 
 		m_respawnTimer -= dt;
@@ -565,7 +543,7 @@ void Player::tick(float dt)
 	{
 		// see if we grabbed any pickup
 
-		const Pickup * pickup = m_netObject->m_gameSim->grabPickup(
+		const Pickup * pickup = m_instanceData->m_gameSim->grabPickup(
 			m_pos[0] + m_collision.x1,
 			m_pos[1] + m_collision.y1,
 			m_pos[0] + m_collision.x2,
@@ -670,7 +648,7 @@ void Player::tick(float dt)
 									players[j]->cancelAttack();
 								}
 
-								m_netObject->m_gameSim->playSound("melee-cancel.ogg");
+								m_instanceData->m_gameSim->playSound("melee-cancel.ogg");
 							}
 						}
 					}
@@ -681,8 +659,8 @@ void Player::tick(float dt)
 				CollisionInfo attackCollision;
 				getAttackCollision(attackCollision);
 
-				m_attack.hitDestructible |= m_netObject->m_gameSim->m_arena.handleDamageRect(
-					*m_netObject->m_gameSim,
+				m_attack.hitDestructible |= m_instanceData->m_gameSim->m_arena.handleDamageRect(
+					*m_instanceData->m_gameSim,
 					m_pos[0],
 					m_pos[1],
 					attackCollision.x1,
@@ -698,7 +676,7 @@ void Player::tick(float dt)
 
 		if (!m_attack.attacking && m_attack.cooldown <= 0.f)
 		{
-			if (m_netObject->m_input.wentDown(INPUT_BUTTON_B) && (m_weaponStackSize > 0 || s_unlimitedAmmo) && isAnimOverrideAllowed(kPlayerWeapon_Fire))
+			if (m_instanceData->m_input.wentDown(INPUT_BUTTON_B) && (m_weaponStackSize > 0 || s_unlimitedAmmo) && isAnimOverrideAllowed(kPlayerWeapon_Fire))
 			{
 				m_attack = AttackInfo();
 
@@ -732,7 +710,7 @@ void Player::tick(float dt)
 				else if (weaponType == kPlayerWeapon_Grenade)
 				{
 					bulletType = kBulletType_Grenade;
-					m_netObject->m_gameSim->playSound("grenade-throw.ogg");
+					m_instanceData->m_gameSim->playSound("grenade-throw.ogg");
 				}
 
 				if (anim != -1)
@@ -747,9 +725,9 @@ void Player::tick(float dt)
 
 				int angle;
 
-				if (m_netObject->m_input.isDown(INPUT_BUTTON_UP))
+				if (m_instanceData->m_input.isDown(INPUT_BUTTON_UP))
 					angle = 256*1/4;
-				else if (m_netObject->m_input.isDown(INPUT_BUTTON_DOWN))
+				else if (m_instanceData->m_input.isDown(INPUT_BUTTON_DOWN))
 					angle = 256*3/4;
 				else if (m_facing[0] < 0)
 					angle = 128;
@@ -757,7 +735,7 @@ void Player::tick(float dt)
 					angle = 0;
 
 				Assert(bulletType != kBulletType_COUNT);
-				m_netObject->m_gameSim->spawnBullet(
+				m_instanceData->m_gameSim->spawnBullet(
 					m_pos[0] + mirrorX(0.f),
 					m_pos[1] - mirrorY(44.f),
 					angle,
@@ -766,7 +744,7 @@ void Player::tick(float dt)
 					m_index);
 			}
 
-			if (m_netObject->m_input.wentDown(INPUT_BUTTON_X) && isAnimOverrideAllowed(kPlayerAnim_Attack))
+			if (m_instanceData->m_input.wentDown(INPUT_BUTTON_X) && isAnimOverrideAllowed(kPlayerAnim_Attack))
 			{
 				m_attack = AttackInfo();
 				m_attack.attacking = true;
@@ -777,12 +755,12 @@ void Player::tick(float dt)
 
 				// determine attack direction based on player input
 
-				if (m_netObject->m_input.isDown(INPUT_BUTTON_UP))
+				if (m_instanceData->m_input.isDown(INPUT_BUTTON_UP))
 				{
 					setAttackDirection(0, -1);
 					anim = kPlayerAnim_AttackUp;
 				}
-				else if (m_netObject->m_input.isDown(INPUT_BUTTON_DOWN))
+				else if (m_instanceData->m_input.isDown(INPUT_BUTTON_DOWN))
 				{
 					setAttackDirection(0, +1);
 					anim = kPlayerAnim_AttackDown;
@@ -828,7 +806,7 @@ void Player::tick(float dt)
 				m_attack.hasCollision = true;
 			}
 
-			if (m_netObject->m_input.wentDown(INPUT_BUTTON_Y) && !s_noSpecial && isAnimOverrideAllowed(kPlayerAnim_Attack))
+			if (m_instanceData->m_input.wentDown(INPUT_BUTTON_Y) && !s_noSpecial && isAnimOverrideAllowed(kPlayerAnim_Attack))
 			{
 				if (m_special.type == kPlayerSpecial_DoubleSidedMelee)
 				{
@@ -879,7 +857,7 @@ void Player::tick(float dt)
 			}
 		}
 
-		if (m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && m_netObject->m_input.wentDown(INPUT_BUTTON_A))
+		if (m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && m_instanceData->m_input.wentDown(INPUT_BUTTON_A))
 		{
 			if (isAnimOverrideAllowed(kPlayerAnim_AirDash))
 			{
@@ -918,7 +896,7 @@ void Player::tick(float dt)
 
 			if (!m_teleport.cooldown && px >= 0 && px < ARENA_SX && py >= 0 && py < ARENA_SY)
 			{
-				const Block & block = m_netObject->m_gameSim->m_arena.getBlock(px, py);
+				const Block & block = m_instanceData->m_gameSim->m_arena.getBlock(px, py);
 
 				if (block.type == kBlockType_Teleport)
 				{
@@ -927,7 +905,7 @@ void Player::tick(float dt)
 					int destinationX;
 					int destinationY;
 
-					if (m_netObject->m_gameSim->m_arena.getTeleportDestination(*m_netObject->m_gameSim, px, py, destinationX, destinationY))
+					if (m_instanceData->m_gameSim->m_arena.getTeleportDestination(*m_instanceData->m_gameSim, px, py, destinationX, destinationY))
 					{
 						m_pos[0] = destinationX * BLOCK_SX;
 						m_pos[1] = destinationY * BLOCK_SY;
@@ -958,7 +936,7 @@ void Player::tick(float dt)
 
 		if (currentBlockMaskCeil & (1 << kBlockType_Sticky))
 		{
-			if (playerControl && m_netObject->m_input.wentDown(INPUT_BUTTON_A))
+			if (playerControl && m_instanceData->m_input.wentDown(INPUT_BUTTON_A))
 			{
 				m_vel[1] = PLAYER_JUMP_SPEED / 2.f;
 
@@ -966,7 +944,7 @@ void Player::tick(float dt)
 
 				playSecondaryEffects(kPlayerEvent_StickyJump);
 			}
-			else if (playerControl && m_netObject->m_input.wentDown(INPUT_BUTTON_DOWN))
+			else if (playerControl && m_instanceData->m_input.wentDown(INPUT_BUTTON_DOWN))
 			{
 				m_isAttachedToSticky = false;
 
@@ -999,7 +977,7 @@ void Player::tick(float dt)
 		{
 			int numSteeringFrame = 1;
 
-			steeringSpeed += m_netObject->m_input.m_currState.analogX / 100.f;
+			steeringSpeed += m_instanceData->m_input.m_currState.analogX / 100.f;
 			
 			if (m_isGrounded || m_isAttachedToSticky)
 			{
@@ -1090,7 +1068,7 @@ void Player::tick(float dt)
 
 			bool canWallSlide = true;
 
-			if (m_special.type == kPlayerSpecial_Jetpack && m_netObject->m_input.isDown(INPUT_BUTTON_Y) && !s_noSpecial)
+			if (m_special.type == kPlayerSpecial_Jetpack && m_instanceData->m_input.isDown(INPUT_BUTTON_Y) && !s_noSpecial)
 			{
 				gravity -= JETPACK_ACCEL;
 				m_isUsingJetpack = true;
@@ -1233,7 +1211,7 @@ void Player::tick(float dt)
 					{
 						// colliding with solid object left/right of player
 
-						if (!m_isGrounded && playerControl && m_netObject->m_input.wentDown(INPUT_BUTTON_A))
+						if (!m_isGrounded && playerControl && m_instanceData->m_input.wentDown(INPUT_BUTTON_A))
 						{
 							// wall jump
 
@@ -1250,7 +1228,7 @@ void Player::tick(float dt)
 
 							if (m_isAnimDriven && m_anim == kPlayerAnim_AirDash)
 							{
-								m_netObject->m_sprite->stopAnim();
+								m_instanceData->m_sprite->stopAnim();
 							}
 						}
 					}
@@ -1272,7 +1250,7 @@ void Player::tick(float dt)
 
 						if (delta >= 0.f)
 						{
-							if (playerControl && m_netObject->m_input.wentDown(INPUT_BUTTON_A))
+							if (playerControl && m_instanceData->m_input.wentDown(INPUT_BUTTON_A))
 							{
 								// jumping
 
@@ -1297,7 +1275,7 @@ void Player::tick(float dt)
 								if (strength > PLAYER_SCREENSHAKE_STRENGTH_THRESHHOLD)
 								{
 									strength = strength / 4.f;
-									m_netObject->m_gameSim->addScreenShake(0.f, strength, 3000.f, .3f);
+									m_instanceData->m_gameSim->addScreenShake(0.f, strength, 3000.f, .3f);
 								}
 
 								// fixme : use down attack speed treshold
@@ -1309,7 +1287,7 @@ void Player::tick(float dt)
 									if (size > STOMP_EFFECT_MAX_SIZE)
 										size = STOMP_EFFECT_MAX_SIZE;
 									if (size >= 1)
-										m_netObject->m_gameSim->addFloorEffect(m_index, m_pos[0], m_pos[1], size, (size + 1) * 2 / 3);
+										m_instanceData->m_gameSim->addFloorEffect(m_index, m_pos[0], m_pos[1], size, (size + 1) * 2 / 3);
 								}
 
 								m_special.attackDownActive = false;
@@ -1460,46 +1438,46 @@ void Player::tick(float dt)
 			kBulletType_ParticleA, 2,
 			50.f, 100.f, 50.f);
 		spawnInfo.color = 0xffffff80;
-		m_netObject->m_gameSim->spawnParticles(spawnInfo);
+		m_instanceData->m_gameSim->spawnParticles(spawnInfo);
 	}
 
 	// token hunt game mode
 
-	if (m_netObject->m_gameSim->m_gameMode == kGameMode_TokenHunt)
+	if (m_instanceData->m_gameSim->m_gameMode == kGameMode_TokenHunt)
 	{
 		if (m_isAlive)
 		{
 			CollisionInfo playerCollision;
 			if (getPlayerCollision(playerCollision))
 			{
-				if (m_netObject->m_gameSim->pickupToken(playerCollision))
+				if (m_instanceData->m_gameSim->pickupToken(playerCollision))
 				{
 					m_tokenHunt.m_hasToken = true;
 				}
 			}
 
-			if (m_tokenHunt.m_hasToken && (m_netObject->m_gameSim->GetTick() % 4) == 0)
+			if (m_tokenHunt.m_hasToken && (m_instanceData->m_gameSim->GetTick() % 4) == 0)
 			{
 				ParticleSpawnInfo spawnInfo(
 					m_pos[0], m_pos[1],
 					kBulletType_ParticleA, 2,
 					50.f, 100.f, 50.f);
 				spawnInfo.color = 0xffffff80;
-				m_netObject->m_gameSim->spawnParticles(spawnInfo);
+				m_instanceData->m_gameSim->spawnParticles(spawnInfo);
 			}
 		}
 	}
 
 	// coin collector game mode
 
-	if (m_netObject->m_gameSim->m_gameMode == kGameMode_CoinCollector)
+	if (m_instanceData->m_gameSim->m_gameMode == kGameMode_CoinCollector)
 	{
 		if (m_isAlive)
 		{
 			CollisionInfo playerCollision;
 			if (getPlayerCollision(playerCollision))
 			{
-				if (m_netObject->m_gameSim->pickupCoin(playerCollision))
+				if (m_instanceData->m_gameSim->pickupCoin(playerCollision))
 				{
 					m_score++;
 				}
@@ -1513,16 +1491,16 @@ void Player::draw() const
 	if (!hasValidCharacterIndex())
 		return;
 
-	m_netObject->m_sprite->flipX = m_facing[0] < 0 ? true : false;
-	m_netObject->m_sprite->flipY = m_facing[1] < 0 ? true : false;
+	m_instanceData->m_sprite->flipX = m_facing[0] < 0 ? true : false;
+	m_instanceData->m_sprite->flipY = m_facing[1] < 0 ? true : false;
 
-	drawAt(m_pos[0], m_pos[1] - (m_netObject->m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0));
+	drawAt(m_pos[0], m_pos[1] - (m_instanceData->m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0));
 
 	// render additional sprites for wrap around
-	drawAt(m_pos[0] + ARENA_SX_PIXELS, m_pos[1] - (m_netObject->m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0));
-	drawAt(m_pos[0] - ARENA_SX_PIXELS, m_pos[1] - (m_netObject->m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0));
-	drawAt(m_pos[0], m_pos[1] - (m_netObject->m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0) + ARENA_SY_PIXELS);
-	drawAt(m_pos[0], m_pos[1] - (m_netObject->m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0) - ARENA_SY_PIXELS);
+	drawAt(m_pos[0] + ARENA_SX_PIXELS, m_pos[1] - (m_instanceData->m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0));
+	drawAt(m_pos[0] - ARENA_SX_PIXELS, m_pos[1] - (m_instanceData->m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0));
+	drawAt(m_pos[0], m_pos[1] - (m_instanceData->m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0) + ARENA_SY_PIXELS);
+	drawAt(m_pos[0], m_pos[1] - (m_instanceData->m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0) - ARENA_SY_PIXELS);
 
 	// draw player color
 
@@ -1553,7 +1531,7 @@ void Player::draw() const
 	drawRect(m_pos[0] - 50, m_pos[1] - 110, m_pos[0] + 50, m_pos[1] - 85);
 	
 	/*
-	if (m_netObject->m_gameSim->m_gameMode == kGameMode_TokenHunt && m_tokenHunt.m_hasToken)
+	if (m_instanceData->m_gameSim->m_gameMode == kGameMode_TokenHunt && m_tokenHunt.m_hasToken)
 	{
 		setColorf(1.f, 1.f, 1.f, (std::sin(g_TimerRT.Time_get() * 10.f) * .7f + 1.f) / 2.f);
 		drawRect(m_pos[0] - 50, m_pos[1] - 110, m_pos[0] + 50, m_pos[1] - 85);
@@ -1584,7 +1562,7 @@ void Player::draw() const
 
 void Player::drawAt(int x, int y) const
 {
-	if (m_netObject->m_gameSim->m_gameMode == kGameMode_TokenHunt)
+	if (m_instanceData->m_gameSim->m_gameMode == kGameMode_TokenHunt)
 	{
 		setColorMode(COLOR_ADD);
 		if (m_tokenHunt.m_hasToken)
@@ -1600,7 +1578,7 @@ void Player::drawAt(int x, int y) const
 	if (m_ice.timer > 0.f)
 		setColor(63, 127, 255);
 
-	m_netObject->m_sprite->drawEx(x, y, 0.f, m_netObject->m_spriteScale);
+	m_instanceData->m_sprite->drawEx(x, y, 0.f, m_instanceData->m_spriteScale);
 
 	setColorMode(COLOR_MUL);
 	setColor(255, 255, 255);
@@ -1694,7 +1672,7 @@ uint32_t Player::getIntersectingBlocksMaskInternal(int x, int y, bool doWrap) co
 
 	uint32_t result = 0;
 	
-	const Arena & arena = m_netObject->m_gameSim->m_arena;
+	const Arena & arena = m_instanceData->m_gameSim->m_arena;
 
 	result |= arena.getIntersectingBlocksMask(x1, y1);
 	result |= arena.getIntersectingBlocksMask(x2, y1);
@@ -1742,7 +1720,7 @@ void Player::respawn()
 
 	int x, y;
 
-	if (m_netObject->m_gameSim->m_arena.getRandomSpawnPoint(*m_netObject->m_gameSim, x, y, m_lastSpawnIndex, this))
+	if (m_instanceData->m_gameSim->m_arena.getRandomSpawnPoint(*m_instanceData->m_gameSim, x, y, m_lastSpawnIndex, this))
 	{
 		m_pos[0] = (float)x;
 		m_pos[1] = (float)y;
@@ -1831,7 +1809,7 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 		{
 			bool canBeKilled = true;
 
-			if (m_netObject->m_gameSim->m_gameMode == kGameMode_CoinCollector)
+			if (m_instanceData->m_gameSim->m_gameMode == kGameMode_CoinCollector)
 				canBeKilled = COINCOLLECTOR_PLAYER_CAN_BE_KILLED || (attacker == 0) || (attacker == this);
 
 			if (canBeKilled)
@@ -1850,16 +1828,16 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 				ParticleSpawnInfo spawnInfo(m_pos[0], m_pos[1] + mirrorY(-PLAYER_COLLISION_HITBOX_SY/2.f), kBulletType_ParticleA, 20, 50, 350, 40);
 				spawnInfo.color = 0xff0000ff;
 
-				m_netObject->m_gameSim->spawnParticles(spawnInfo);
+				m_instanceData->m_gameSim->spawnParticles(spawnInfo);
 			}
 
-			//m_netObject->m_gameSim->m_freezeTicks = 10;
+			//m_instanceData->m_gameSim->m_freezeTicks = 10;
 
 			if (attacker && attacker != this)
 			{
 				bool canScore = true;
 
-				switch (m_netObject->m_gameSim->m_gameMode)
+				switch (m_instanceData->m_gameSim->m_gameMode)
 				{
 				case kGameMode_DeathMatch:
 					attacker->awardScore(1);
@@ -1874,7 +1852,7 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 			}
 			else
 			{
-				switch (m_netObject->m_gameSim->m_gameMode)
+				switch (m_instanceData->m_gameSim->m_gameMode)
 				{
 				case kGameMode_CoinCollector:
 					break;
@@ -1887,13 +1865,13 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 
 			// token hunt
 
-			if (m_netObject->m_gameSim->m_gameMode == kGameMode_TokenHunt)
+			if (m_instanceData->m_gameSim->m_gameMode == kGameMode_TokenHunt)
 			{
 				if (m_tokenHunt.m_hasToken)
 				{
 					m_tokenHunt.m_hasToken = false;
 
-					Token & token = m_netObject->m_gameSim->m_tokenHunt.m_token;
+					Token & token = m_instanceData->m_gameSim->m_tokenHunt.m_token;
 					token.setup(
 						int(m_pos[0] / BLOCK_SX),
 						int(m_pos[1] / BLOCK_SY));
@@ -1906,7 +1884,7 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 
 			// coin collector
 
-			if (m_netObject->m_gameSim->m_gameMode == kGameMode_CoinCollector)
+			if (m_instanceData->m_gameSim->m_gameMode == kGameMode_CoinCollector)
 			{
 				if (m_score >= 1)
 				{
@@ -1942,7 +1920,7 @@ bool Player::handleIce(Vec2Arg velocity, Player * attacker)
 			setAnim(kPlayerAnim_Walk, true, true);
 			m_isAnimDriven = true;
 			m_enableInAirAnim = false;
-			m_netObject->m_sprite->animSpeed = 1e-10f;
+			m_instanceData->m_sprite->animSpeed = 1e-10f;
 
 			m_ice.timer = PLAYER_EFFECT_ICE_TIME;
 		}
@@ -1971,7 +1949,7 @@ bool Player::handleBubble(Vec2Arg velocity, Player * attacker)
 			setAnim(kPlayerAnim_Walk, true, true);
 			m_isAnimDriven = true;
 			m_enableInAirAnim = false;
-			m_netObject->m_sprite->animSpeed = 1e-10f;
+			m_instanceData->m_sprite->animSpeed = 1e-10f;
 
 			m_bubble.timer = PLAYER_EFFECT_BUBBLE_TIME;
 		}
@@ -1993,7 +1971,7 @@ void Player::dropCoins(int numCoins)
 
 	for (int i = 0; i < numCoins; ++i)
 	{
-		Coin * coin = m_netObject->m_gameSim->allocCoin();
+		Coin * coin = m_instanceData->m_gameSim->allocCoin();
 
 		if (coin)
 		{
@@ -2038,16 +2016,45 @@ PlayerWeapon Player::popWeapon()
 	return result;
 }
 
+char * Player::makeCharacterFilename(const char * filename)
+{
+	static char temp[64];
+	sprintf_s(temp, sizeof(temp), "char%d/%s", m_characterIndex, filename);
+	return temp;
+}
+
 //
 
-void PlayerNetObject::setCharacterIndex(int index)
+PlayerInstanceData::PlayerInstanceData(Player * player, GameSim * gameSim)
+	: m_player(player)
+	, m_gameSim(gameSim)
+	, m_sprite(0)
+	, m_spriteScale(1.f)
+{
+	m_player->m_instanceData = this;
+
+	//
+
+	m_player->m_collision.x1 = -PLAYER_COLLISION_HITBOX_SX / 2.f;
+	m_player->m_collision.x2 = +PLAYER_COLLISION_HITBOX_SX / 2.f;
+	m_player->m_collision.y1 = -PLAYER_COLLISION_HITBOX_SY / 1.f;
+	m_player->m_collision.y2 = 0.f;
+}
+
+PlayerInstanceData::~PlayerInstanceData()
+{
+	delete m_sprite;
+	m_sprite = 0;
+}
+
+void PlayerInstanceData::setCharacterIndex(int index)
 {
 	m_player->m_characterIndex = index;
 
 	handleCharacterIndexChange();
 }
 
-void PlayerNetObject::handleCharacterIndexChange()
+void PlayerInstanceData::handleCharacterIndexChange()
 {
 	if (m_player->hasValidCharacterIndex())
 	{
@@ -2083,7 +2090,7 @@ void PlayerNetObject::handleCharacterIndexChange()
 	}
 }
 
-void PlayerNetObject::playSoundBag(const char * name, int volume)
+void PlayerInstanceData::playSoundBag(const char * name, int volume)
 {
 	if (m_sounds.count(name) == 0)
 	{
@@ -2092,11 +2099,4 @@ void PlayerNetObject::playSoundBag(const char * name, int volume)
 	}
 
 	m_gameSim->playSound(m_player->makeCharacterFilename(m_sounds[name].getRandomSound(*m_gameSim)), volume);
-}
-
-char * Player::makeCharacterFilename(const char * filename)
-{
-	static char temp[64];
-	sprintf_s(temp, sizeof(temp), "char%d/%s", m_characterIndex, filename);
-	return temp;
 }

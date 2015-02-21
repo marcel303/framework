@@ -521,9 +521,9 @@ bool Arena::getRandomSpawnPoint(GameSim & gameSim, int & out_x, int & out_y, int
 
 				for (int p = 0; p < MAX_PLAYERS; ++p)
 				{
-					if (gameSim.m_playerNetObjects[p])
+					if (gameSim.m_playerInstanceDatas[p])
 					{
-						Player * player = gameSim.m_playerNetObjects[p]->m_player;
+						Player * player = gameSim.m_playerInstanceDatas[p]->m_player;
 
 						if (player != playerToIgnore)
 						{

@@ -7,7 +7,7 @@ class Arena;
 class BulletPool;
 class NetSpriteManager;
 struct Player;
-class PlayerNetObject;
+class PlayerInstanceData;
 
 class Host
 {
@@ -39,9 +39,9 @@ public:
 	void newRound(const char * mapOverride);
 	void endRound();
 
-	PlayerNetObject * allocPlayer(uint16_t owningChannelId);
-	void freePlayer(PlayerNetObject * player);
-	PlayerNetObject * findPlayerByPlayerId(uint8_t playerId);
+	PlayerInstanceData * allocPlayer(uint16_t owningChannelId);
+	void freePlayer(PlayerInstanceData * player);
+	PlayerInstanceData * findPlayerByPlayerId(uint8_t playerId);
 	void setPlayerPtrs();
 	void clearPlayerPtrs();
 };

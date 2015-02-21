@@ -241,11 +241,11 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 				Assert(param1 >= 0 && param1 < MAX_PLAYERS);
 				if (param1 >= 0 && param1 < MAX_PLAYERS)
 				{
-					PlayerNetObject * netObject = gameSim->m_playerNetObjects[param1];
-					Assert(netObject);
-					if (netObject)
+					PlayerInstanceData * playerInstanceData = gameSim->m_playerInstanceDatas[param1];
+					Assert(playerInstanceData);
+					if (playerInstanceData)
 					{
-						netObject->m_input.m_actions |= (1 << param2);
+						playerInstanceData->m_input.m_actions |= (1 << param2);
 					}
 				}
 				break;
@@ -389,11 +389,11 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			Player * player = &client->m_gameSim->m_players[index];
 			*player = Player(index, channelId);
 
-			PlayerNetObject * netObject = new PlayerNetObject(player, client->m_gameSim);
-			player->m_netObject = netObject;
-			netObject->setCharacterIndex(characterIndex);
+			PlayerInstanceData * instanceData = new PlayerInstanceData(player, client->m_gameSim);
+			player->m_instanceData = instanceData;
+			instanceData->setCharacterIndex(characterIndex);
 
-			client->addPlayer(netObject);
+			client->addPlayer(instanceData);
 		}
 	}
 	else if (method == s_rpcRemovePlayer)
@@ -418,12 +418,12 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			const uint32_t crc1 = client->m_gameSim->calcCRC();
 		#endif
 
-			PlayerNetObject * player = client->m_gameSim->m_playerNetObjects[index];
-			Assert(player);
-			if (player)
+			PlayerInstanceData * playerInstanceData = client->m_gameSim->m_playerInstanceDatas[index];
+			Assert(playerInstanceData);
+			if (playerInstanceData)
 			{
-				client->removePlayer(player);
-				delete player;
+				client->removePlayer(playerInstanceData);
+				delete playerInstanceData;
 			}
 
 		#if ENABLE_GAMESTATE_CRC_LOGGING
@@ -446,12 +446,12 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		bitStream.Read(input.analogX);
 		bitStream.Read(input.analogY);
 
-		PlayerNetObject * player = g_host->findPlayerByPlayerId(playerId);
+		PlayerInstanceData * playerInstanceData = g_host->findPlayerByPlayerId(playerId);
 
-		Assert(player);
-		if (player)
+		Assert(playerInstanceData);
+		if (playerInstanceData)
 		{
-			player->m_input.m_currState = input;
+			playerInstanceData->m_input.m_currState = input;
 		}
 	}
 	else if (method == s_rpcBroadcastPlayerInputs)
@@ -540,11 +540,11 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 				if (hasAnalogY)
 					bitStream.Read(input.analogY);
 
-				PlayerNetObject * player = gameSim->m_playerNetObjects[i];
+				PlayerInstanceData * playerInstanceData = gameSim->m_playerInstanceDatas[i];
 
-				if (player)
+				if (playerInstanceData)
 				{
-					player->m_input.m_currState = input;
+					playerInstanceData->m_input.m_currState = input;
 				}
 			}
 
@@ -582,11 +582,11 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			bitStream.Read(playerId);
 			bitStream.Read(characterIndex);
 
-			PlayerNetObject * player = gameSim->m_playerNetObjects[playerId];
-			Assert(player);
-			if (player)
+			PlayerInstanceData * playerInstanceData = gameSim->m_playerInstanceDatas[playerId];
+			Assert(playerInstanceData);
+			if (playerInstanceData)
 			{
-				player->setCharacterIndex(characterIndex);
+				playerInstanceData->setCharacterIndex(characterIndex);
 			}
 		}
 	}
@@ -664,17 +664,17 @@ void App::processPlayerChanges()
 			//for (int i = 0; i < 2; ++i) // fixme : hack to alloc two players for each client
 			{
 
-			PlayerNetObject * playerNetObject = m_host->allocPlayer(playerToAddOrRemove.channel->m_destinationId);
+			PlayerInstanceData * playerInstanceData = m_host->allocPlayer(playerToAddOrRemove.channel->m_destinationId);
 
-			if (playerNetObject)
+			if (playerInstanceData)
 			{
-				Player & player = *playerNetObject->m_player;
+				Player & player = *playerInstanceData->m_player;
 
 				ClientInfo & clientInfo = m_hostClients[playerToAddOrRemove.channel];
 
-				clientInfo.players.push_back(playerNetObject);
+				clientInfo.players.push_back(playerInstanceData);
 
-				playerNetObject->setCharacterIndex(playerToAddOrRemove.characterIndex);
+				playerInstanceData->setCharacterIndex(playerToAddOrRemove.characterIndex);
 
 				netAddPlayerBroadcast(
 					0,
@@ -689,11 +689,11 @@ void App::processPlayerChanges()
 		{
 			netRemovePlayerBroadcast(playerToAddOrRemove.playerId);
 
-			PlayerNetObject * player = m_host->m_gameSim.m_playerNetObjects[playerToAddOrRemove.playerId];
+			PlayerInstanceData * playerInstanceData = m_host->m_gameSim.m_playerInstanceDatas[playerToAddOrRemove.playerId];
 
-			m_host->freePlayer(player);
-			delete player;
-			player = 0;
+			m_host->freePlayer(playerInstanceData);
+			delete playerInstanceData;
+			playerInstanceData = 0;
 		}
 	}
 	m_playersToAddOrRemove.clear();
@@ -1348,16 +1348,16 @@ void App::draw()
 					g_host->m_gameSim.m_randomSeed,
 					(uint32_t)g_host->m_gameSim.m_nextPickupSpawnTick,
 					g_host->m_gameSim.calcCRC(),
-					g_host->m_gameSim.m_playerNetObjects[0] ? g_host->m_gameSim.m_playerNetObjects[0]->m_player->m_pos[0] : 0.f,
-					g_host->m_gameSim.m_playerNetObjects[0] ? g_host->m_gameSim.m_playerNetObjects[0]->m_player->m_pos[1] : 0.f);
+					g_host->m_gameSim.m_playerInstanceDatas[0] ? g_host->m_gameSim.m_playerInstanceDatas[0]->m_player->m_pos[0] : 0.f,
+					g_host->m_gameSim.m_playerInstanceDatas[0] ? g_host->m_gameSim.m_playerInstanceDatas[0]->m_player->m_pos[1] : 0.f);
 				for (size_t i = 0; i < m_clients.size(); ++i)
 				{
 					drawText(0, y += 30, 24, +1, +1, "random seed=%08x, next pickup tick=%u, crc=%08x, px=%g, py=%g",
 						m_clients[i]->m_gameSim->m_randomSeed,
 						(uint32_t)m_clients[i]->m_gameSim->m_nextPickupSpawnTick,
 						m_clients[i]->m_gameSim->calcCRC(),
-						m_clients[i]->m_gameSim->m_playerNetObjects[0] ? m_clients[i]->m_gameSim->m_playerNetObjects[0]->m_player->m_pos[0] : 0.f,
-						m_clients[i]->m_gameSim->m_playerNetObjects[0] ? m_clients[i]->m_gameSim->m_playerNetObjects[0]->m_player->m_pos[1] : 0.f);
+						m_clients[i]->m_gameSim->m_playerInstanceDatas[0] ? m_clients[i]->m_gameSim->m_playerInstanceDatas[0]->m_player->m_pos[0] : 0.f,
+						m_clients[i]->m_gameSim->m_playerInstanceDatas[0] ? m_clients[i]->m_gameSim->m_playerInstanceDatas[0]->m_player->m_pos[1] : 0.f);
 				}
 			}
 		}
@@ -1618,10 +1618,10 @@ void App::netSetPlayerInputsBroadcast()
 
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		const PlayerNetObject * player = m_host->m_gameSim.m_playerNetObjects[i];
-		const uint16_t buttons = (player ? player->m_input.m_currState.buttons : 0);
-		const int8_t analogX = (player ? player->m_input.m_currState.analogX : 0);
-		const int8_t analogY = (player ? player->m_input.m_currState.analogY : 0);
+		const PlayerInstanceData * playerInstanceData = m_host->m_gameSim.m_playerInstanceDatas[i];
+		const uint16_t buttons = (playerInstanceData ? playerInstanceData->m_input.m_currState.buttons : 0);
+		const int8_t analogX = (playerInstanceData ? playerInstanceData->m_input.m_currState.analogX : 0);
+		const int8_t analogY = (playerInstanceData ? playerInstanceData->m_input.m_currState.analogY : 0);
 
 		const bool hasButtons = (buttons != 0);
 		bs.WriteBit(hasButtons);

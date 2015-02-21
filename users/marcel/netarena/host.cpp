@@ -222,7 +222,7 @@ void Host::endRound()
 	m_roundCompleteTimer = g_TimerRT.TimeUS_get() + g_roundCompleteTimer * 1000000; // fixme, option
 }
 
-PlayerNetObject * Host::allocPlayer(uint16_t owningChannelId)
+PlayerInstanceData * Host::allocPlayer(uint16_t owningChannelId)
 {
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
@@ -233,39 +233,39 @@ PlayerNetObject * Host::allocPlayer(uint16_t owningChannelId)
 		player = Player(i, owningChannelId);
 		player.m_isUsed = true;
 
-		PlayerNetObject * netObject = new PlayerNetObject(&player, &m_gameSim);
+		PlayerInstanceData * playerInstanceData = new PlayerInstanceData(&player, &m_gameSim);
 
-		m_gameSim.m_playerNetObjects[i] = netObject;
+		m_gameSim.m_playerInstanceDatas[i] = playerInstanceData;
 
-		return netObject;
+		return playerInstanceData;
 	}
 
 	return 0;
 }
 
-void Host::freePlayer(PlayerNetObject * player)
+void Host::freePlayer(PlayerInstanceData * playerInstanceData)
 {
-	const int playerId = player->m_player->m_index;
+	const int playerId = playerInstanceData->m_player->m_index;
 
 	if (playerId != -1)
 	{
-		Assert(m_gameSim.m_playerNetObjects[playerId] != 0);
-		if (m_gameSim.m_playerNetObjects[playerId] != 0)
+		Assert(m_gameSim.m_playerInstanceDatas[playerId] != 0);
+		if (m_gameSim.m_playerInstanceDatas[playerId] != 0)
 		{
-			m_gameSim.m_playerNetObjects[playerId]->m_player->m_isUsed = false;
-			m_gameSim.m_playerNetObjects[playerId]->m_player->m_netObject = 0;
-			m_gameSim.m_playerNetObjects[playerId] = 0;
+			m_gameSim.m_playerInstanceDatas[playerId]->m_player->m_isUsed = false;
+			m_gameSim.m_playerInstanceDatas[playerId]->m_player->m_instanceData = 0;
+			m_gameSim.m_playerInstanceDatas[playerId] = 0;
 		}
 	}
 }
 
-PlayerNetObject * Host::findPlayerByPlayerId(uint8_t playerId)
+PlayerInstanceData * Host::findPlayerByPlayerId(uint8_t playerId)
 {
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		PlayerNetObject * player = m_gameSim.m_playerNetObjects[i];
-		if (player && player->m_player->m_index == playerId)
-			return player;
+		PlayerInstanceData * playerInstanceData = m_gameSim.m_playerInstanceDatas[i];
+		if (playerInstanceData && playerInstanceData->m_player->m_index == playerId)
+			return playerInstanceData;
 	}
 
 	return 0;
@@ -275,9 +275,9 @@ void Host::setPlayerPtrs()
 {
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		PlayerNetObject * player = m_gameSim.m_playerNetObjects[i];
-		if (player)
-			player->m_player->m_netObject = player;
+		PlayerInstanceData * playerInstanceData = m_gameSim.m_playerInstanceDatas[i];
+		if (playerInstanceData)
+			playerInstanceData->m_player->m_instanceData = playerInstanceData;
 	}
 }
 
@@ -285,8 +285,8 @@ void Host::clearPlayerPtrs()
 {
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		PlayerNetObject * player = m_gameSim.m_playerNetObjects[i];
-		if (player)
-			player->m_player->m_netObject = 0;
+		PlayerInstanceData * playerInstanceData = m_gameSim.m_playerInstanceDatas[i];
+		if (playerInstanceData)
+			playerInstanceData->m_player->m_instanceData = 0;
 	}
 }

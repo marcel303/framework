@@ -12,7 +12,7 @@ class LobbyMenu;
 class NetSpriteManager;
 struct ParticleSpawnInfo;
 struct Player;
-class PlayerNetObject;
+class PlayerInstanceData;
 
 class Client
 {
@@ -27,7 +27,7 @@ public:
 
 	bool m_isDesync;
 
-	std::vector<PlayerNetObject*> m_players;
+	std::vector<PlayerInstanceData*> m_players;
 
 	Client();
 	~Client();
@@ -42,9 +42,9 @@ public:
 	void drawRoundComplete();
 	void debugDraw();
 
-	void addPlayer(PlayerNetObject * player);
-	void removePlayer(PlayerNetObject * player);
-	PlayerNetObject * findPlayerByPlayerId(uint8_t playerId);
+	void addPlayer(PlayerInstanceData * player);
+	void removePlayer(PlayerInstanceData * player);
+	PlayerInstanceData * findPlayerByPlayerId(uint8_t playerId);
 	void setPlayerPtrs();
 	void clearPlayerPtrs();
 

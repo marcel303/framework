@@ -22,14 +22,14 @@ class BulletPool;
 class Color;
 class NetSpriteManager;
 struct ParticleSpawnInfo;
-class PlayerNetObject;
+class PlayerInstanceData;
 
 #pragma pack(push)
 #pragma pack(1)
 
 struct Player
 {
-	PlayerNetObject * m_netObject;
+	PlayerInstanceData * m_instanceData;
 
 	Player()
 	{
@@ -440,7 +440,7 @@ public:
 
 	// non-serialized (RPC)
 
-	PlayerNetObject * m_playerNetObjects[MAX_PLAYERS];
+	PlayerInstanceData * m_playerInstanceDatas[MAX_PLAYERS];
 
 	GameSim();
 	~GameSim();

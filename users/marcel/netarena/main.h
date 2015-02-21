@@ -18,7 +18,7 @@ class OptionMenu;
 struct ParticleSpawnInfo;
 struct Player;
 struct PlayerInput;
-class PlayerNetObject;
+class PlayerInstanceData;
 class StatTimerMenu;
 class Surface;
 class Ui;
@@ -42,7 +42,7 @@ public:
 			Assert(players.empty());
 		}
 
-		std::vector<PlayerNetObject*> players;
+		std::vector<PlayerInstanceData*> players;
 	};
 
 	bool m_isHost;
