@@ -19,8 +19,6 @@ public:
 	// round complete game state
 	uint64_t m_roundCompleteTimer;
 
-	uint64_t m_gameStartTimer;
-
 	Host();
 	~Host();
 

@@ -28,7 +28,6 @@ Host::Host()
 	: m_gameSim()
 	, m_nextRoundNumber(0)
 	, m_roundCompleteTimer(0)
-	, m_gameStartTimer(0)
 {
 }
 
@@ -90,20 +89,6 @@ void Host::tickMenus(float dt)
 
 	if (allReady)
 	{
-		if (m_gameStartTimer == 0)
-		{
-			m_gameStartTimer = g_TimerRT.TimeMS_get() + 4000;
-		}
-	}
-	else
-	{
-		m_gameStartTimer = 0;
-	}
-
-	if (allReady && g_TimerRT.TimeMS_get() >= m_gameStartTimer)
-	{
-		m_gameStartTimer = 0;
-
 		newGame();
 	}
 }
@@ -191,6 +176,7 @@ void Host::newGame()
 	newRound(0);
 }
 
+// todo : remove newRound from Host class, and move it to gamesim
 void Host::newRound(const char * mapOverride)
 {
 	// load arena

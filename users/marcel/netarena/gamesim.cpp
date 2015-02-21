@@ -879,6 +879,35 @@ void GameSim::tickMenus()
 			}
 		}
 	}
+
+	bool allReady = true;
+
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+		if (m_players[i].m_isUsed)
+			allReady &= m_players[i].m_isReadyUpped;
+
+	if (allReady)
+	{
+		if (m_gameStartTicks == 0)
+		{
+			m_gameStartTicks = TICKS_PER_SECOND * 4;
+		}
+	}
+	else
+	{
+		m_gameStartTicks = 0;
+	}
+
+	if (allReady)
+	{
+		if (m_gameStartTicks > 0)
+			m_gameStartTicks--;
+		if (m_gameStartTicks == 0)
+		{
+			//newGame(); // todo : add newGame method to GameSim
+		}
+	}
+
 }
 
 void GameSim::tickPlay()

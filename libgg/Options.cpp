@@ -27,6 +27,15 @@ void OptionManager::AddCommandOption(const char * path, OptionCommandHandlerWith
 	OptionCommandWithParam * option = new OptionCommandWithParam(path, handler, param);
 }
 
+OptionBase * OptionManager::FindOptionByPath(const char * path)
+{
+	for (OptionBase * option = m_head; option != 0; option = option->m_next)
+		if (!strcmp(option->GetPath(), path))
+			return option;
+
+	return 0;
+}
+
 void OptionManager::Load(const char * filename)
 {
 	try

@@ -3,6 +3,7 @@
 #include <map>
 #include <vector>
 #include "ChannelHandler.h"
+#include "Debugging.h"
 #include "gametypes.h"
 #include "libnet_forward.h"
 #include "Options.h"
@@ -133,7 +134,7 @@ public:
 	void netSetPlayerInputsBroadcast();
 	void netSetPlayerCharacterIndex(uint16_t channelId, uint8_t playerId, uint8_t characterIndex);
 	void netBroadcastCharacterIndex(uint8_t playerId, uint8_t characterIndex);
-	void netDebugAction(const char * name);
+	void netDebugAction(const char * name, const char * param);
 
 	int allocControllerIndex();
 	void freeControllerIndex(int index);

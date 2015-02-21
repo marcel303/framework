@@ -162,6 +162,8 @@ public:
 
 	void AddCommandOption(const char * path, OptionCommandHandlerWithParam handler, void * param);
 
+	OptionBase * FindOptionByPath(const char * path);
+
 	void Load(const char * filename);
 	void LoadFromString(const char * line);
 	void LoadFromCommandLine(int argc, char * argv[]);

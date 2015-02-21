@@ -409,16 +409,16 @@ void Player::playSecondaryEffects(PlayerEvent e)
 			break;
 		}
 	case kPlayerEvent_WallJump:
-		m_instanceData->m_gameSim->playSound(makeCharacterFilename("walljump.ogg"));
+		m_instanceData->m_gameSim->playSound("player-wall-jump.ogg");
 		break;
 	case kPlayerEvent_LandOnGround:
 		m_instanceData->m_gameSim->playSound(makeCharacterFilename("land_on_ground.ogg"), 25);
 		break;
 	case kPlayerEvent_StickyAttach:
-		m_instanceData->m_gameSim->playSound("player-sticky-attach.ogg");
+		//m_instanceData->m_gameSim->playSound("player-sticky-attach.ogg");
 		break;
 	case kPlayerEvent_StickyRelease:
-		m_instanceData->m_gameSim->playSound("player-sticky-release.ogg");
+		//m_instanceData->m_gameSim->playSound("player-sticky-release.ogg");
 		break;
 	case kPlayerEvent_StickyJump:
 		m_instanceData->m_gameSim->playSound("player-sticky-jump.ogg");
@@ -427,15 +427,15 @@ void Player::playSecondaryEffects(PlayerEvent e)
 		m_instanceData->m_gameSim->playSound("player-spring-jump.ogg");
 		break;
 	case kPlayerEvent_SpikeHit:
-		m_instanceData->m_gameSim->playSound("player-spike-hit.ogg");
+		//m_instanceData->m_gameSim->playSound("player-spike-hit.ogg");
 		break;
 	case kPlayerEvent_ArenaWrap:
-		m_instanceData->m_gameSim->playSound("player-arena-wrap.ogg");
+		//m_instanceData->m_gameSim->playSound("player-arena-wrap.ogg");
 		break;
 	case kPlayerEvent_DashAir:
 		break;
 	case kPlayerEvent_DestructibleDestroy:
-		m_instanceData->m_gameSim->playSound("player-arena-wrap.ogg");
+		//m_instanceData->m_gameSim->playSound("player-arena-wrap.ogg");
 		break;
 
 	default:
@@ -485,6 +485,7 @@ void Player::tick(float dt)
 
 			switch (m_anim)
 			{
+			case kPlayerAnim_NULL:
 			case kPlayerAnim_Jump:
 			case kPlayerAnim_WallSlide:
 			case kPlayerAnim_Walk:

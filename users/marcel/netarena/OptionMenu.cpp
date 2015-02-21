@@ -2,6 +2,12 @@
 #include "OptionMenu.h"
 #include "Options.h"
 
+#define NETWORKED_OPTIONS_MENU 1
+
+#if NETWORKED_OPTIONS_MENU
+#include "main.h"
+#endif
+
 OptionMenu::OptionMenu()
 	: MultiLevelMenuBase()
 {
@@ -28,17 +34,29 @@ const char * OptionMenu::GetPath(void * menuItem)
 
 void OptionMenu::Select(void * menuItem)
 {
+#if NETWORKED_OPTIONS_MENU
+	g_app->netDebugAction("optionSelect", static_cast<OptionBase*>(menuItem)->GetPath());
+#else
 	static_cast<OptionBase*>(menuItem)->Select();
+#endif
 }
 
 void OptionMenu::Increment(void * menuItem)
 {
+#if NETWORKED_OPTIONS_MENU
+	g_app->netDebugAction("optionIncrement", static_cast<OptionBase*>(menuItem)->GetPath());
+#else
 	static_cast<OptionBase*>(menuItem)->Increment();
+#endif
 }
 
 void OptionMenu::Decrement(void * menuItem)
 {
+#if NETWORKED_OPTIONS_MENU
+	g_app->netDebugAction("optionDecrement", static_cast<OptionBase*>(menuItem)->GetPath());
+#else
 	static_cast<OptionBase*>(menuItem)->Decrement();
+#endif
 }
 
 //

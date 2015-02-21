@@ -65,7 +65,7 @@ OPTION_DECLARE(std::string, g_connect, "");
 OPTION_DEFINE(std::string, g_connect, "App/Direct Connect");
 OPTION_ALIAS(g_connect, "connect");
 
-COMMAND_OPTION(s_dropCoins, "Player/Drop Coins", []{ g_app->netDebugAction("dropCoins"); });
+COMMAND_OPTION(s_dropCoins, "Player/Drop Coins", []{ g_app->netDebugAction("dropCoins", ""); });
 
 OPTION_EXTERN(int, g_playerCharacterIndex);
 
@@ -196,6 +196,16 @@ static GameSim * findGameSimForChannel(Channel * channel)
 	return 0;
 }
 
+static bool canHandleOptionChange(Channel * channel)
+{
+	if (g_app->m_isHost)
+		return channel == 0;
+	else if (g_app->m_clients.empty())
+		return true;
+	else
+		return channel == g_app->m_clients.front()->m_channel;
+}
+
 void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 {
 	if (method == s_rpcAction)
@@ -298,6 +308,21 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 				NetSerializationContext context;
 				context.Set(true, false, bs2);
 				client->m_gameSim->serialize(context);
+
+			#if GG_ENABLE_OPTIONS
+				for (OptionBase * option = g_optionManager.m_head; option != 0; option = option->GetNext())
+				{
+					std::string path;
+					std::string value;
+
+					context.Serialize(path);
+					context.Serialize(value);
+
+					Assert(option && path == option->GetPath());
+					if (option)
+						option->FromString(value.c_str());
+				}
+			#endif
 			}
 		}
 		else
@@ -592,13 +617,14 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 	}
 	else if (method == s_rpcDebugAction)
 	{
-		GameSim * gameSim = findGameSimForChannel(channel);
+		const std::string action = bitStream.ReadString();
+		const std::string param = bitStream.ReadString();
 
-		if (gameSim)
+		if (action == "dropCoins")
 		{
-			const std::string action = bitStream.ReadString();
+			GameSim * gameSim = findGameSimForChannel(channel);
 
-			if (action == "dropCoins")
+			if (gameSim)
 			{
 				g_gameSim = gameSim;
 
@@ -613,6 +639,36 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 				}
 
 				g_gameSim = 0;
+			}
+		}
+		else if (action == "optionSelect")
+		{
+			if (canHandleOptionChange(channel))
+			{
+				OptionBase * option = g_optionManager.FindOptionByPath(param.c_str());
+				Assert(option);
+				if (option)
+					option->Select();
+			}
+		}
+		else if (action == "optionIncrement")
+		{
+			if (canHandleOptionChange(channel))
+			{
+				OptionBase * option = g_optionManager.FindOptionByPath(param.c_str());
+				Assert(option);
+				if (option)
+					option->Increment();
+			}
+		}
+		else if (action == "optionDecrement")
+		{
+			if (canHandleOptionChange(channel))
+			{
+				OptionBase * option = g_optionManager.FindOptionByPath(param.c_str());
+				Assert(option);
+				if (option)
+					option->Decrement();
 			}
 		}
 	}
@@ -1481,17 +1537,31 @@ void App::netSyncGameSim(Channel * channel)
 	context.Set(true, true, bs);
 	m_host->m_gameSim.serialize(context);
 
+#if GG_ENABLE_OPTIONS
+	for (OptionBase * option = g_optionManager.m_head; option != 0; option = option->GetNext())
+	{
+		const int bufferSize = 2048;
+		char buffer[bufferSize];
+
+		option->ToString(buffer, bufferSize);
+		std::string path = option->GetPath();
+		std::string value = buffer;
+
+		context.Serialize(path);
+		context.Serialize(value);
+	}
+#endif
+
 	const int kChunkSize = 1024 * 8;
 
 	for (int i = 0, remaining = bs.GetDataSize(); remaining != 0; i += kChunkSize)
 	{
 		const uint8_t * bytes = (uint8_t*)bs.GetData() + (i >> 3);
-		uint16_t numBits = remaining;
-		if (numBits > kChunkSize)
-			numBits = kChunkSize;
+		const uint16_t numBits = remaining > kChunkSize ? kChunkSize : remaining;
 		remaining -= numBits;
-		uint8_t isFirst = (i == 0);
-		uint8_t isLast = (remaining == 0);
+
+		const uint8_t isFirst = (i == 0);
+		const uint8_t isLast = (remaining == 0);
 
 		BitStream bs2;
 		
@@ -1670,11 +1740,12 @@ void App::netBroadcastCharacterIndex(uint8_t playerId, uint8_t characterIndex)
 	m_rpcMgr->Call(s_rpcSetPlayerCharacterIndexBroadcast, bs, ChannelPool_Server, 0, true, true);
 }
 
-void App::netDebugAction(const char * name)
+void App::netDebugAction(const char * name, const char * param)
 {
 	BitStream bs;
 
 	bs.WriteString(name);
+	bs.WriteString(param);
 
 	m_rpcMgr->Call(s_rpcDebugAction, bs, ChannelPool_Server, 0, true, true);
 }
