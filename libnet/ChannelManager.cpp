@@ -30,6 +30,9 @@ ChannelManager::~ChannelManager()
 
 bool ChannelManager::Initialize(PacketDispatcher * packetDispatcher, ChannelHandler * handler, uint16_t serverPort, bool enableServer)
 {
+	LOG_DBG("ChannelManager::Initialize: serverPort=%d, enableServer=%d", (int)serverPort, (int)enableServer);
+	Assert(m_handler == 0);
+
 	m_packetDispatcher = packetDispatcher;
 	m_handler = handler;
 
@@ -38,7 +41,10 @@ bool ChannelManager::Initialize(PacketDispatcher * packetDispatcher, ChannelHand
 	if (serverPort != 0)
 	{
 		if (m_socket->Bind(serverPort) == false)
+		{
+			Shutdown(false);
 			return false;
+		}
 	}
 
 	if (enableServer)
@@ -46,11 +52,15 @@ bool ChannelManager::Initialize(PacketDispatcher * packetDispatcher, ChannelHand
 		m_listenChannel = CreateListenChannel(ChannelPool_Server);
 	}
 
+	LOG_DBG("ChannelManager::Initialize: done");
+
 	return true;
 }
 
 void ChannelManager::Shutdown(bool sendDisconnectNotification)
 {
+	LOG_DBG("ChannelManager::Shutdown: sendDisconnectNotification=%d, numClients=%d", (int)sendDisconnectNotification, (int)m_channels.size());
+
 	while (m_channels.size())
 	{
 		Channel * channel = m_channels.begin()->second;
@@ -72,6 +82,8 @@ void ChannelManager::Shutdown(bool sendDisconnectNotification)
 
 	SharedNetSocket nullSocket;
 	m_socket = nullSocket;
+
+	LOG_DBG("ChannelManager::Shutdown [done]");
 }
 
 void ChannelManager::SetChannelTimeoutMS(uint32_t timeout)
