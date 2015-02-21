@@ -77,6 +77,14 @@ void CharSelector::draw()
 
 	if (player.m_isUsed)
 	{
+		char portraitFilename[64];
+		sprintf_s(portraitFilename, sizeof(portraitFilename), "char%d/portrait.png", player.m_characterIndex);
+		setColor(colorWhite);
+		Sprite portrait(portraitFilename);
+		portrait.drawEx(
+			UI_CHARSELECT_BASE_X + UI_CHARSELECT_PORTRAIT_X - portrait.getWidth() / 2 + m_playerId * UI_CHARSELECT_STEP_X,
+			UI_CHARSELECT_BASE_Y + UI_CHARSELECT_PORTRAIT_Y - portrait.getHeight() / 2);
+
 		setColor(player.m_isReadyUpped ? colorBlue : colorWhite);
 		m_ready->draw();
 	}
