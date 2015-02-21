@@ -73,6 +73,11 @@ public:
 
 	struct PlayerToAddOrRemove
 	{
+		PlayerToAddOrRemove()
+		{
+			memset(this, -1, sizeof(PlayerToAddOrRemove));
+		}
+
 		bool add;
 		Channel * channel;
 		uint8_t characterIndex;

@@ -372,7 +372,19 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 	{
 		LOG_DBG("handleRpc: s_rpcRemovePlayer");
 
-		g_app->m_rpcMgr->Call(s_rpcRemovePlayerBroadcast, bitStream, ChannelPool_Server, 0, true, false);
+		uint8_t index;
+
+		bitStream.Read(index);
+
+		Assert(index >= 0 && index < MAX_PLAYERS);
+		if (index >= 0 && index < MAX_PLAYERS)
+		{
+			BitStream bs2;
+
+			bs2.Write(index);
+
+			g_app->m_rpcMgr->Call(s_rpcRemovePlayerBroadcast, bs2, ChannelPool_Server, 0, true, true);
+		}
 	}
 	else if (method == s_rpcRemovePlayerBroadcast)
 	{
@@ -386,24 +398,28 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 
 			bitStream.Read(index);
 
-		#if ENABLE_GAMESTATE_CRC_LOGGING
-			const uint32_t crc1 = client->m_gameSim->calcCRC();
-		#endif
-
-			PlayerInstanceData * playerInstanceData = client->m_gameSim->m_playerInstanceDatas[index];
-			Assert(playerInstanceData);
-			if (playerInstanceData)
+			Assert(index >= 0 && index < MAX_PLAYERS);
+			if (index >= 0 && index < MAX_PLAYERS)
 			{
-				client->removePlayer(playerInstanceData);
-				delete playerInstanceData;
+			#if ENABLE_GAMESTATE_CRC_LOGGING
+				const uint32_t crc1 = client->m_gameSim->calcCRC();
+			#endif
+
+				PlayerInstanceData * playerInstanceData = client->m_gameSim->m_playerInstanceDatas[index];
+				Assert(playerInstanceData);
+				if (playerInstanceData)
+				{
+					client->removePlayer(playerInstanceData);
+					delete playerInstanceData;
+				}
+
+			#if ENABLE_GAMESTATE_CRC_LOGGING
+				const uint32_t crc2 = client->m_gameSim->calcCRC();
+
+				if (g_logCRCs)
+					LOG_DBG("remove CRCs: %08x, %08x", crc1, crc2);
+			#endif
 			}
-
-		#if ENABLE_GAMESTATE_CRC_LOGGING
-			const uint32_t crc2 = client->m_gameSim->calcCRC();
-
-			if (g_logCRCs)
-				LOG_DBG("remove CRCs: %08x, %08x", crc1, crc2);
-		#endif
 		}
 	}
 	else if (method == s_rpcSetPlayerInputs)
@@ -668,11 +684,11 @@ Client * App::findClientByChannel(Channel * channel)
 
 void App::processPlayerChanges()
 {
-	for (size_t i = 0; i < m_playersToAddOrRemove.size(); ++i)
+	for (size_t p = 0; p < m_playersToAddOrRemove.size(); ++p)
 	{
 		// todo : remove from playerToAdd on channel disconnect
 
-		const PlayerToAddOrRemove & playerToAddOrRemove = m_playersToAddOrRemove[i];
+		const PlayerToAddOrRemove & playerToAddOrRemove = m_playersToAddOrRemove[p];
 
 		if (playerToAddOrRemove.add)
 		{
@@ -727,9 +743,12 @@ void App::processPlayerChanges()
 
 			PlayerInstanceData * playerInstanceData = m_host->m_gameSim.m_playerInstanceDatas[playerToAddOrRemove.playerId];
 
-			m_host->freePlayer(playerInstanceData);
-			delete playerInstanceData;
-			playerInstanceData = 0;
+			if (playerInstanceData)
+			{
+				m_host->freePlayer(playerInstanceData);
+				delete playerInstanceData;
+				playerInstanceData = 0;
+			}
 		}
 	}
 	m_playersToAddOrRemove.clear();
@@ -771,9 +790,12 @@ void App::SV_OnChannelDisconnect(Channel * channel)
 
 		for (size_t p = 0; p < clientInfo.players.size(); ++p)
 		{
+			PlayerInstanceData * playerInstanceData = clientInfo.players[p];
+			Assert(playerInstanceData->m_player->m_index >= 0 && playerInstanceData->m_player->m_index < MAX_PLAYERS);
+
 			PlayerToAddOrRemove playerToRemove;
 			playerToRemove.add = false;
-			playerToRemove.playerId = clientInfo.players[p]->m_player->m_index;
+			playerToRemove.playerId = playerInstanceData->m_player->m_index;
 			m_playersToAddOrRemove.push_back(playerToRemove);
 		}
 		clientInfo.players.clear();
@@ -1026,6 +1048,8 @@ void App::stopHosting()
 		disconnectClient(0);
 	}
 
+	m_channelMgr->Shutdown(true);
+
 	if (m_host)
 	{
 		m_host->shutdown();
@@ -1033,8 +1057,6 @@ void App::stopHosting()
 		delete m_host;
 		m_host = 0;
 	}
-
-	m_channelMgr->Shutdown(true);
 
 	m_isHost = false;
 }
@@ -1076,9 +1098,12 @@ void App::leaveGame(Client * client)
 		}
 	}
 
-	// todo : only do this if client is the host
+	if (m_isHost)
+	{
+		// todo : only do this if client is the host
 
-	stopHosting();
+		stopHosting();
+	}
 }
 
 Client * App::connect(const char * address)
@@ -1588,11 +1613,15 @@ void App::netRemovePlayerBroadcast(uint8_t index)
 {
 	LOG_DBG("netRemovePlayerBroadcast");
 
-	BitStream bs;
+	Assert(index >= 0 && index < MAX_PLAYERS);
+	if (index >= 0 && index < MAX_PLAYERS)
+	{
+		BitStream bs;
 
-	bs.Write(index);
+		bs.Write(index);
 
-	m_rpcMgr->Call(s_rpcRemovePlayerBroadcast, bs, ChannelPool_Server, 0, true, false);
+		m_rpcMgr->Call(s_rpcRemovePlayerBroadcast, bs, ChannelPool_Server, 0, true, false);
+	}
 }
 
 void App::netSetPlayerInputs(uint16_t channelId, uint8_t playerId, const PlayerInput & input)
