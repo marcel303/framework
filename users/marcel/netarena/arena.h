@@ -119,9 +119,11 @@ public:
 	void load(const char * filename);
 	void serialize(NetSerializationContext & context);
 
+#if ENABLE_GAMESTATE_DESYNC_DETECTION
 	uint32_t calcCRC() const;
+#endif
 
-	void drawBlocks();
+	void drawBlocks() const;
 
 	void tick(GameSim & gameSim);
 

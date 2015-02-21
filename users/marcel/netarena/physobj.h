@@ -37,7 +37,7 @@ struct PhysicsActor
 	PhysicsActor();
 
 	void tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs);
-	void drawBB();
+	void drawBB() const;
 
 	uint32_t getIntersectingBlockMask(GameSim & gameSim, Vec2 pos);
 	void getCollisionInfo(CollisionInfo & collisionInfo);

@@ -79,12 +79,28 @@ void Host::tick(float dt)
 
 void Host::tickMenus(float dt)
 {
-	if (m_gameStartTimer == 0)
+	// check if all players are ready
+	// todo : do this on the client also. makes it possible to show timer on screen
+
+	bool allReady = true;
+
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+		if (m_gameSim.m_players[i].m_isUsed)
+			allReady &= m_gameSim.m_players[i].m_isReadyUpped;
+
+	if (allReady)
 	{
-		m_gameStartTimer = g_TimerRT.TimeMS_get() + 30000;// + 2000000; // fixme
+		if (m_gameStartTimer == 0)
+		{
+			m_gameStartTimer = g_TimerRT.TimeMS_get() + 4000;
+		}
+	}
+	else
+	{
+		m_gameStartTimer = 0;
 	}
 
-	if (g_TimerRT.TimeMS_get() >= m_gameStartTimer)
+	if (allReady && g_TimerRT.TimeMS_get() >= m_gameStartTimer)
 	{
 		m_gameStartTimer = 0;
 

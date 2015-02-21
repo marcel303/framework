@@ -414,7 +414,9 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 
 			bitStream.Read(index);
 
+		#if ENABLE_GAMESTATE_CRC_LOGGING
 			const uint32_t crc1 = client->m_gameSim->calcCRC();
+		#endif
 
 			PlayerNetObject * player = client->m_gameSim->m_playerNetObjects[index];
 			Assert(player);
@@ -424,10 +426,12 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 				delete player;
 			}
 
+		#if ENABLE_GAMESTATE_CRC_LOGGING
 			const uint32_t crc2 = client->m_gameSim->calcCRC();
 
 			if (g_logCRCs)
 				LOG_DBG("remove CRCs: %08x, %08x", crc1, crc2);
+		#endif
 		}
 	}
 	else if (method == s_rpcSetPlayerInputs)
@@ -454,28 +458,31 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 	{
 		//LOG_DBG("handleRpc: s_rpcBroadcastPlayerInputs");
 
+	#if ENABLE_GAMESTATE_DESYNC_DETECTION
 		uint32_t crc;
 
 		bitStream.Read(crc);
 
-		if (g_devMode && channel)
+		if (channel)
 		{
 			Client * client = g_app->findClientByChannel(channel);
 			Assert(client);
 			if (client)
 			{
 				const uint32_t clientCRC = client->m_gameSim->calcCRC();
+				const bool isInSync = crc == 0 || crc == clientCRC;
 
-				Assert(crc == 0 || crc == clientCRC);
+				Assert(isInSync);
 
-				if (crc != 0 && crc != clientCRC)
+				if (!isInSync)
 				{
 					if (!client->m_isDesync)
 						Sound("desync.ogg").play();
 					client->m_isDesync = true;
 				}
 
-				if (ENABLE_GAMESTATE_CRC_LOGGING && crc != 0 && crc != clientCRC)
+			#if ENABLE_GAMESTATE_CRC_LOGGING
+				if (!isInSync)
 				{
 					LOG_ERR("crc mismatch! host=%08x, client=%08x", crc, clientCRC);
 
@@ -505,8 +512,10 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 						client->m_gameSim->setPlayerPtrs();
 					}
 				}
+			#endif
 			}
 		}
+	#endif
 
 		//
 
@@ -1169,21 +1178,26 @@ bool App::tick()
 		{
 			if (g_updateTicks)
 			{
+			#if ENABLE_GAMESTATE_CRC_LOGGING
 				if (g_logCRCs)
 				{
 					for (int i = 0; i < 10; ++i)
 						m_channelMgr->Update(g_TimerRT.TimeUS_get());
 				}
 
-				const uint32_t crc1 = m_host->m_gameSim.calcCRC();
+				const uint32_t crc1 = g_logCRCs ? m_host->m_gameSim.calcCRC() : 0;
+			#endif
 
 				processPlayerChanges();
 
-				const uint32_t crc2 = m_host->m_gameSim.calcCRC();
+			#if ENABLE_GAMESTATE_CRC_LOGGING
+				const uint32_t crc2 = g_logCRCs ? m_host->m_gameSim.calcCRC() : 0;
+			#endif
 
 				broadcastPlayerInputs();
 
-				const uint32_t crc3 = m_host->m_gameSim.calcCRC();
+			#if ENABLE_GAMESTATE_CRC_LOGGING
+				const uint32_t crc3 = g_logCRCs ? m_host->m_gameSim.calcCRC() : 0;
 
 				if (g_logCRCs)
 				{
@@ -1192,6 +1206,7 @@ bool App::tick()
 
 					LOG_DBG("tick CRCs: %08x, %08x, %08x", crc1, crc2, crc3);
 				}
+			#endif
 			}
 
 			m_host->tick(dt);
@@ -1596,8 +1611,10 @@ void App::netSetPlayerInputsBroadcast()
 
 	// todo : if debug, serialize game state CRC
 
-	const uint32_t crc = (g_devMode ? m_host->m_gameSim.calcCRC() : 0);
+#if ENABLE_GAMESTATE_DESYNC_DETECTION
+	const uint32_t crc = m_host->m_gameSim.calcCRC();
 	bs.Write(crc);
+#endif
 
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{

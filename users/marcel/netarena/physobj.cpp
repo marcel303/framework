@@ -146,7 +146,7 @@ void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 	}
 }
 
-void PhysicsActor::drawBB()
+void PhysicsActor::drawBB() const
 {
 	Vec2 min = m_pos + m_bbMin;
 	Vec2 max = m_pos + m_bbMax;

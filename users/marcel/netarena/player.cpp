@@ -236,7 +236,7 @@ void PlayerNetObject::handleAnimationAction(const std::string & action, const Di
 	}
 }
 
-bool Player::getPlayerCollision(CollisionInfo & collision)
+bool Player::getPlayerCollision(CollisionInfo & collision) const
 {
 	Assert(m_isUsed);
 
@@ -250,7 +250,7 @@ bool Player::getPlayerCollision(CollisionInfo & collision)
 	return true;
 }
 
-void Player::getDamageHitbox(CollisionInfo & collision)
+void Player::getDamageHitbox(CollisionInfo & collision) const
 {
 	Assert(m_isUsed);
 
@@ -260,7 +260,7 @@ void Player::getDamageHitbox(CollisionInfo & collision)
 	collision.y2 = m_pos[1];
 }
 
-void Player::getAttackCollision(CollisionInfo & collision)
+void Player::getAttackCollision(CollisionInfo & collision) const
 {
 	Assert(m_isUsed);
 
@@ -286,7 +286,7 @@ void Player::getAttackCollision(CollisionInfo & collision)
 	collision.y2 = m_pos[1] + y2;
 }
 
-float Player::getAttackDamage(Player * other)
+float Player::getAttackDamage(Player * other) const
 {
 	Assert(m_isUsed);
 
@@ -565,7 +565,7 @@ void Player::tick(float dt)
 	{
 		// see if we grabbed any pickup
 
-		Pickup * pickup = m_netObject->m_gameSim->grabPickup(
+		const Pickup * pickup = m_netObject->m_gameSim->grabPickup(
 			m_pos[0] + m_collision.x1,
 			m_pos[1] + m_collision.y1,
 			m_pos[0] + m_collision.x2,
@@ -1508,7 +1508,7 @@ void Player::tick(float dt)
 	}
 }
 
-void Player::draw()
+void Player::draw() const
 {
 	if (!hasValidCharacterIndex())
 		return;
@@ -1582,7 +1582,7 @@ void Player::draw()
 	}
 }
 
-void Player::drawAt(int x, int y)
+void Player::drawAt(int x, int y) const
 {
 	if (m_netObject->m_gameSim->m_gameMode == kGameMode_TokenHunt)
 	{
@@ -1637,14 +1637,14 @@ void Player::drawAt(int x, int y)
 	}
 }
 
-void Player::drawLight()
+void Player::drawLight() const
 {
 	const float x = m_pos[0] + (m_collision.x1 + m_collision.x2) / 2.f;
 	const float y = m_pos[1] + (m_collision.y1 + m_collision.y2) / 2.f;
 	Sprite("player-light.png").drawEx(x, y, 0.f, 3.f);
 }
 
-void Player::debugDraw()
+void Player::debugDraw() const
 {
 	setColor(0, 31, 63, 63);
 	drawRect(

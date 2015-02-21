@@ -462,7 +462,7 @@ void BulletPool::anim(GameSim & gameSim, Bullet & b, float dt)
 	}
 }
 
-void BulletPool::draw()
+void BulletPool::draw() const
 {
 	for (int i = 0; i < kBulletType_COUNT; ++i)
 	{
@@ -493,7 +493,7 @@ void BulletPool::draw()
 	}
 }
 
-void BulletPool::drawLight()
+void BulletPool::drawLight() const
 {
 	for (int i = 0; i < MAX_BULLETS; ++i)
 	{

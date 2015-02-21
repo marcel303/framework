@@ -89,7 +89,7 @@ void Pickup::tick(GameSim & gameSim, float dt)
 	PhysicsActor::tick(gameSim, dt, cbs);
 }
 
-void Pickup::draw()
+void Pickup::draw() const
 {
 	const char * filename = s_pickupSprites[type];
 
@@ -106,9 +106,9 @@ void Pickup::draw()
 	}
 }
 
-void Pickup::drawLight()
+void Pickup::drawLight() const
 {
-	Vec2 pos = m_pos + (m_bbMin + m_bbMax) / 2.f;
+	const Vec2 pos = m_pos + (m_bbMin + m_bbMax) / 2.f;
 
 	Sprite("player-light.png").drawEx(pos[0], pos[1], 0.f, 1.f);
 }
@@ -166,7 +166,7 @@ void Token::tick(GameSim & gameSim, float dt)
 	}
 }
 
-void Token::draw()
+void Token::draw() const
 {
 	if (m_isDropped)
 	{
@@ -174,7 +174,7 @@ void Token::draw()
 	}
 }
 
-void Token::drawLight()
+void Token::drawLight() const
 {
 	if (m_isDropped)
 	{
@@ -235,7 +235,7 @@ void Coin::tick(GameSim & gameSim, float dt)
 	}
 }
 
-void Coin::draw()
+void Coin::draw() const
 {
 	if (m_isDropped)
 	{
@@ -243,7 +243,7 @@ void Coin::draw()
 	}
 }
 
-void Coin::drawLight()
+void Coin::drawLight() const
 {
 	if (m_isDropped)
 	{
@@ -267,12 +267,12 @@ void Torch::tick(GameSim & gameSim, float dt)
 {
 }
 
-void Torch::draw()
+void Torch::draw() const
 {
 	Sprite("torch.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.f);
 }
 
-void Torch::drawLight()
+void Torch::drawLight() const
 {
 	float a = 0.f;
 	a += std::sin(g_TimerRT.Time_get() * Calc::m2PI * TORCH_FLICKER_FREQ_A);
@@ -460,6 +460,7 @@ GameSim::~GameSim()
 	m_bulletPool = 0;
 }
 
+#if ENABLE_GAMESTATE_DESYNC_DETECTION
 uint32_t GameSim::calcCRC() const
 {
 	clearPlayerPtrs();
@@ -480,15 +481,18 @@ uint32_t GameSim::calcCRC() const
 
 	return result;
 }
+#endif
 
 void GameSim::serialize(NetSerializationContext & context)
 {
+#if ENABLE_GAMESTATE_DESYNC_DETECTION
 	uint32_t crc;
 
 	if (context.IsSend())
 		crc = calcCRC();
 
 	context.Serialize(crc);
+#endif
 
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 		if (m_playerNetObjects[i])
@@ -508,10 +512,12 @@ void GameSim::serialize(NetSerializationContext & context)
 
 	m_bulletPool->serialize(context);
 
+	// todo : serialize player animation state, since it affects game play
+
+#if ENABLE_GAMESTATE_DESYNC_DETECTION
 	if (context.IsRecv())
 		Assert(crc == calcCRC());
-
-	// todo : serialize player animation state, since it affects game play
+#endif
 }
 
 void GameSim::clearPlayerPtrs() const
@@ -879,7 +885,9 @@ void GameSim::tickPlay()
 {
 	g_gameSim = this;
 
-	const uint32_t oldCRC = (ENABLE_GAMESTATE_CRC_LOGGING && g_logCRCs) ? calcCRC() : 0;
+#if ENABLE_GAMESTATE_CRC_LOGGING
+	const uint32_t oldCRC = g_logCRCs ? calcCRC() : 0;
+#endif
 
 	const float dt = 1.f / TICKS_PER_SECOND;
 
@@ -1010,7 +1018,8 @@ void GameSim::tickPlay()
 
 	m_tick++;
 
-	if (ENABLE_GAMESTATE_CRC_LOGGING && g_logCRCs)
+#if ENABLE_GAMESTATE_CRC_LOGGING
+	if (g_logCRCs)
 	{
 		int numPlayers = 0;
 		for (int i = 0; i < MAX_PLAYERS; ++i)
@@ -1021,6 +1030,7 @@ void GameSim::tickPlay()
 
 		LOG_DBG("gamesim %p: tick=%u, oldCRC=%08x, newCRC=%08x, numPlayers=%d [%s]", this, m_tick, oldCRC, newCRC, numPlayers, g_host && &g_host->m_gameSim == this ?  "server" : "client");
 	}
+#endif
 
 	g_gameSim = 0;
 }

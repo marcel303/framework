@@ -128,8 +128,8 @@ public:
 	void tick(GameSim & gameSim, float dt);
 	void anim(GameSim & gameSim, float dt);
 	void anim(GameSim & gameSim, Bullet & b, float dt);
-	void draw();
-	void drawLight();
+	void draw() const;
+	void drawLight() const;
 
 	uint16_t alloc();
 	void free(uint16_t id);

@@ -74,7 +74,7 @@ void Client::tick(float dt)
 
 		for (int i = 0; i < MAX_PLAYERS; ++i)
 		{
-			Player & player = m_gameSim->m_players[i];
+			const Player & player = m_gameSim->m_players[i];
 
 			if (!player.m_isUsed || player.m_owningChannelId != m_channel->m_id)
 				continue;
@@ -307,7 +307,7 @@ void Client::drawMenus()
 
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		Player & player = m_gameSim->m_players[i];
+		const Player & player = m_gameSim->m_players[i];
 
 		const int y = GFX_SY * 3 / 4 + i * 50;
 
@@ -368,15 +368,17 @@ void Client::drawPlay()
 
 		for (int i = 0; i < MAX_TORCHES; ++i)
 		{
-			if (m_gameSim->m_torches[i].m_isAlive)
-				m_gameSim->m_torches[i].draw();
+			const Torch & torch = m_gameSim->m_torches[i];
+
+			if (torch.m_isAlive)
+				torch.draw();
 		}
 
 		// pickups
 
 		for (int i = 0; i < MAX_PICKUPS; ++i)
 		{
-			Pickup & pickup = m_gameSim->m_pickups[i];
+			const Pickup & pickup = m_gameSim->m_pickups[i];
 
 			if (pickup.isAlive)
 				pickup.draw();
@@ -397,7 +399,7 @@ void Client::drawPlay()
 
 		for (int i = 0; i < MAX_PLAYERS; ++i)
 		{
-			Player & player = m_gameSim->m_players[i];
+			const Player & player = m_gameSim->m_players[i];
 
 			if (player.m_isUsed)
 				player.draw();
@@ -442,15 +444,17 @@ void Client::drawPlay()
 
 		for (int i = 0; i < MAX_TORCHES; ++i)
 		{
-			if (m_gameSim->m_torches[i].m_isAlive)
-				m_gameSim->m_torches[i].drawLight();
+			const Torch & torch = m_gameSim->m_torches[i];
+
+			if (torch.m_isAlive)
+				torch.drawLight();
 		}
 
 		// pickups
 
 		for (int i = 0; i < MAX_PICKUPS; ++i)
 		{
-			Pickup & pickup = m_gameSim->m_pickups[i];
+			const Pickup & pickup = m_gameSim->m_pickups[i];
 
 			if (pickup.isAlive)
 				pickup.drawLight();
@@ -471,7 +475,7 @@ void Client::drawPlay()
 
 		for (int i = 0; i < MAX_PLAYERS; ++i)
 		{
-			Player & player = m_gameSim->m_players[i];
+			const Player & player = m_gameSim->m_players[i];
 
 			if (player.m_isUsed)
 				player.drawLight();

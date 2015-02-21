@@ -54,17 +54,17 @@ struct Player
 	}
 
 	void tick(float dt); // todo : remove dt
-	void draw();
-	void drawAt(int x, int y);
-	void drawLight();
-	void debugDraw();
+	void draw() const;
+	void drawAt(int x, int y) const;
+	void drawLight() const;
+	void debugDraw() const;
 
 	void playSecondaryEffects(PlayerEvent e);
 
-	bool getPlayerCollision(CollisionInfo & collision);
-	void getDamageHitbox(CollisionInfo & collision);
-	void getAttackCollision(CollisionInfo & collision);
-	float getAttackDamage(Player * other);
+	bool getPlayerCollision(CollisionInfo & collision) const;
+	void getDamageHitbox(CollisionInfo & collision) const;
+	void getAttackCollision(CollisionInfo & collision) const;
+	float getAttackDamage(Player * other) const;
 
 	bool isAnimOverrideAllowed(int anim) const;
 	float mirrorX(float x) const;
@@ -278,8 +278,8 @@ struct Pickup : PhysicsActor
 	void setup(PickupType type, int blockX, int blockY);
 
 	void tick(GameSim & gameSim, float dt);
-	void draw();
-	void drawLight();
+	void draw() const;
+	void drawLight() const;
 };
 
 struct Token : PhysicsActor
@@ -295,8 +295,8 @@ struct Token : PhysicsActor
 	void setup(int blockX, int blockY);
 
 	void tick(GameSim & gameSim, float dt);
-	void draw();
-	void drawLight();
+	void draw() const;
+	void drawLight() const;
 };
 
 struct Coin : PhysicsActor
@@ -312,8 +312,8 @@ struct Coin : PhysicsActor
 	void setup(int blockX, int blockY);
 
 	void tick(GameSim & gameSim, float dt);
-	void draw();
-	void drawLight();
+	void draw() const;
+	void drawLight() const;
 };
 
 struct Mover2
@@ -335,8 +335,8 @@ struct Torch
 	void setup(float x, float y, const Color & color);
 
 	void tick(GameSim & gameSim, float dt);
-	void draw();
-	void drawLight();
+	void draw() const;
+	void drawLight() const;
 };
 
 struct ScreenShake
@@ -445,7 +445,10 @@ public:
 	GameSim();
 	~GameSim();
 
+#if ENABLE_GAMESTATE_DESYNC_DETECTION
 	uint32_t calcCRC() const;
+#endif
+
 	void serialize(NetSerializationContext & context);
 	void clearPlayerPtrs() const;
 	void setPlayerPtrs() const;

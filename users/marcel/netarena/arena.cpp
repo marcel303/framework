@@ -332,6 +332,7 @@ void Arena::serialize(NetSerializationContext & context)
 	}
 }
 
+#if ENABLE_GAMESTATE_DESYNC_DETECTION
 uint32_t Arena::calcCRC() const
 {
 	uint32_t result = 0;
@@ -344,8 +345,9 @@ uint32_t Arena::calcCRC() const
 
 	return result;
 }
+#endif
 
-void Arena::drawBlocks()
+void Arena::drawBlocks() const
 {
 	const char * filenames[kBlockType_COUNT] =
 	{

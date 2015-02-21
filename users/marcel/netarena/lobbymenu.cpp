@@ -40,7 +40,7 @@ void CharSelector::updateButtonLocations()
 
 void CharSelector::tick(float dt)
 {
-	Player & player = m_client->m_gameSim->m_players[m_playerId];
+	const Player & player = m_client->m_gameSim->m_players[m_playerId];
 
 	if (player.m_isUsed)
 	{
@@ -63,7 +63,7 @@ void CharSelector::tick(float dt)
 
 void CharSelector::draw()
 {
-	Player & player = m_client->m_gameSim->m_players[m_playerId];
+	const Player & player = m_client->m_gameSim->m_players[m_playerId];
 
 	if (player.m_isUsed && player.m_owningChannelId == m_client->m_channel->m_id)
 	{
