@@ -398,6 +398,9 @@ struct GameStateData
 	GameState m_gameState;
 	GameMode m_gameMode;
 
+	uint32_t m_nextRoundNumber;
+	uint32_t m_roundCompleteTicks;
+
 	Player m_players[MAX_PLAYERS];
 
 	Pickup m_pickups[MAX_PICKUPS];
@@ -457,6 +460,10 @@ public:
 
 	void setGameState(::GameState gameState);
 	void setGameMode(GameMode gameMode);
+
+	void newGame();
+	void newRound(const char * mapOverride);
+	void endRound();
 
 	void load(const char * filename);
 	void resetGameWorld();

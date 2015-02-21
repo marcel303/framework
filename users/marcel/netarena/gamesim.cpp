@@ -1,6 +1,7 @@
 #include "bullet.h"
 #include "Calc.h"
 #include "client.h"
+#include "Debugging.h"
 #include "FileStream.h"
 #include "framework.h"
 #include "gamedefs.h"
@@ -16,6 +17,13 @@
 OPTION_DECLARE(bool, g_noSound, false);
 OPTION_DEFINE(bool, g_noSound, "Sound/Disable Sound Effects");
 OPTION_ALIAS(g_noSound, "nosound");
+
+OPTION_DECLARE(int, g_roundCompleteTimer, 6);
+OPTION_DEFINE(int, g_roundCompleteTimer, "Menus/Results Screen Time");
+
+OPTION_EXTERN(std::string, g_map);
+
+extern std::vector<std::string> g_mapList;
 
 //
 
@@ -596,6 +604,9 @@ void GameSim::setGameState(::GameState gameState)
 		}
 		break;
 
+	case kGameState_RoundComplete:
+		break;
+
 	default:
 		Assert(false);
 		break;
@@ -615,6 +626,44 @@ static Color parseColor(const char * str)
 	const float b = ((hex >>  8) & 0xff) / 255.f;
 	const float a = ((hex >>  0) & 0xff) / 255.f;
 	return Color(r, g, b, a);
+}
+
+void GameSim::newGame()
+{
+	setGameState(kGameState_NewGame);
+
+	newRound(0);
+}
+
+void GameSim::newRound(const char * mapOverride)
+{
+	// load arena
+
+	std::string map;
+
+	if (mapOverride)
+		map = mapOverride;
+	else if (!((std::string)g_map).empty())
+		map = g_map;
+	else if (!g_mapList.empty())
+		map = g_mapList[m_nextRoundNumber % g_mapList.size()];
+	else
+		map = "arena.txt";
+
+	load(map.c_str());
+
+	setGameMode(kGameMode_TokenHunt);
+	//setGameMode(kGameMode_CoinCollector);
+	setGameState(kGameState_Play);
+
+	m_nextRoundNumber++;
+}
+
+void GameSim::endRound()
+{
+	setGameState(kGameState_RoundComplete);
+
+	m_roundCompleteTicks = TICKS_PER_SECOND * g_roundCompleteTimer;
 }
 
 void GameSim::load(const char * filename)
@@ -892,22 +941,20 @@ void GameSim::tickMenus()
 		{
 			m_gameStartTicks = TICKS_PER_SECOND * 4;
 		}
+		else
+		{
+			m_gameStartTicks--;
+
+			if (m_gameStartTicks == 0)
+			{
+				newGame();
+			}
+		}
 	}
 	else
 	{
 		m_gameStartTicks = 0;
 	}
-
-	if (allReady)
-	{
-		if (m_gameStartTicks > 0)
-			m_gameStartTicks--;
-		if (m_gameStartTicks == 0)
-		{
-			//newGame(); // todo : add newGame method to GameSim
-		}
-	}
-
 }
 
 void GameSim::tickPlay()
@@ -1062,11 +1109,64 @@ void GameSim::tickPlay()
 #endif
 
 	g_gameSim = 0;
+
+	// check if the round has ended
+
+	bool roundComplete = false;
+
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+	{
+		Player & player = m_players[i];
+		if (!player.m_isUsed)
+			continue;
+
+		if (m_gameMode == kGameMode_DeathMatch)
+		{
+			if (player.m_score >= DEATHMATCH_SCORE_LIMIT)
+			{
+				roundComplete = true;
+			}
+		}
+		else if (m_gameMode == kGameMode_TokenHunt)
+		{
+			if (player.m_score >= TOKENHUNT_SCORE_LIMIT)
+			{
+				roundComplete = true;
+			}
+		}
+		else if (m_gameMode == kGameMode_CoinCollector)
+		{
+			if (player.m_score >= COINCOLLECTOR_SCORE_LIMIT)
+			{
+				roundComplete = true;
+			}
+		}
+		else
+		{
+			Assert(false);
+		}
+	}
+
+	if (roundComplete)
+	{
+		endRound();
+	}
 }
 
 void GameSim::tickRoundComplete()
 {
 	// wait for the host to enter the next game state
+
+	Assert(m_roundCompleteTicks > 0);
+	if (m_roundCompleteTicks > 0)
+	{
+		m_roundCompleteTicks--;
+
+		if (m_roundCompleteTicks == 0)
+		{
+			newRound(0);
+		}
+	}
 }
 
 void GameSim::anim(float dt)

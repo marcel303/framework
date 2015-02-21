@@ -2,6 +2,7 @@
 #include "client.h"
 #include "framework.h"
 #include "gamedefs.h"
+#include "host.h"
 #include "main.h"
 #include "mainmenu.h"
 #include "uicommon.h"
@@ -28,7 +29,7 @@ void MainMenu::tick(float dt)
 
 		g_app->startHosting();
 
-		g_app->netSetGameState(kGameState_OnlineMenus);
+		g_app->m_host->m_gameSim.setGameState(kGameState_OnlineMenus);
 
 		g_app->connect("127.0.0.1");
 	}

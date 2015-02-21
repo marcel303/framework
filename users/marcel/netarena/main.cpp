@@ -158,9 +158,6 @@ enum RpcMethod
 	s_rpcAction,
 	s_rpcActionBroadcast,
 	s_rpcSyncGameSim,
-	s_rpcSetGameState,
-	s_rpcSetGameMode,
-	s_rpcLoadArena,
 	s_rpcAddPlayer,
 	s_rpcAddPlayerBroadcast,
 	s_rpcRemovePlayer,
@@ -328,56 +325,6 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		else
 		{
 			LOG_ERR("handleRpc: s_rpcSyncGameSim: couldn't find client");
-		}
-	}
-	else if (method == s_rpcSetGameState)
-	{
-		LOG_DBG("handleRpc: s_rpcSetGameState");
-
-		uint8_t gameState;
-
-		bitStream.Read(gameState);
-
-		GameSim * gameSim = findGameSimForChannel(channel);
-
-		if (gameSim)
-		{
-			gameSim->setGameState((GameState)gameState);
-
-			if (channel == 0 && gameState == kGameState_MainMenus)
-			{
-				g_app->stopHosting();
-			}
-		}
-	}
-	else if (method == s_rpcSetGameMode)
-	{
-		LOG_DBG("handleRpc: s_rpcSetGameMode");
-
-		uint8_t gameMode;
-
-		bitStream.Read(gameMode);
-
-		GameSim * gameSim = findGameSimForChannel(channel);
-
-		if (gameSim)
-		{
-			gameSim->setGameMode((GameMode)gameMode);
-		}
-	}
-	else if (method == s_rpcLoadArena)
-	{
-		LOG_DBG("handleRpc: s_rpcLoadArena");
-
-		std::string filename;
-
-		filename = bitStream.ReadString();
-
-		GameSim * gameSim = findGameSimForChannel(channel);
-
-		if (gameSim)
-		{
-			gameSim->load(filename.c_str());
 		}
 	}
 	else if (method == s_rpcAddPlayer)
@@ -620,9 +567,42 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		const std::string action = bitStream.ReadString();
 		const std::string param = bitStream.ReadString();
 
-		if (action == "dropCoins")
+		if (action == "newGame")
 		{
 			GameSim * gameSim = findGameSimForChannel(channel);
+			Assert(gameSim);
+
+			if (gameSim)
+				gameSim->newGame();
+		}
+		else if (action == "newRound")
+		{
+			GameSim * gameSim = findGameSimForChannel(channel);
+			Assert(gameSim);
+
+			if (gameSim)
+				gameSim->newRound(0);
+		}
+		else if (action == "endRound")
+		{
+			GameSim * gameSim = findGameSimForChannel(channel);
+			Assert(gameSim);
+
+			if (gameSim)
+				gameSim->endRound();
+		}
+		else if (action == "loadMap")
+		{
+			GameSim * gameSim = findGameSimForChannel(channel);
+			Assert(gameSim);
+
+			if (gameSim)
+				gameSim->load(param.c_str());
+		}
+		else if (action == "dropCoins")
+		{
+			GameSim * gameSim = findGameSimForChannel(channel);
+			Assert(gameSim);
 
 			if (gameSim)
 			{
@@ -877,7 +857,7 @@ bool App::init(bool isHost)
 				[](void * param)
 				{
 					if (g_host)
-						g_host->newRound((char*)param);
+						g_app->netDebugAction("loadMap", (char*)param);
 				}, fileCopy
 			);
 		}
@@ -1099,8 +1079,6 @@ void App::leaveGame(Client * client)
 	// todo : only do this if client is the host
 
 	stopHosting();
-
-	netSetGameState(kGameState_MainMenus);
 }
 
 Client * App::connect(const char * address)
@@ -1572,46 +1550,6 @@ void App::netSyncGameSim(Channel * channel)
 
 		m_rpcMgr->Call(s_rpcSyncGameSim, bs2, ChannelPool_Client, &channel->m_id, false, false);
 	}
-}
-
-void App::netSetGameState(GameState _gameState)
-{
-	LOG_DBG("netSetGameState");
-	Assert(m_isHost);
-
-	uint8_t gameState = _gameState;
-
-	BitStream bs;
-
-	bs.Write(gameState);
-
-	m_rpcMgr->Call(s_rpcSetGameState, bs, ChannelPool_Server, 0, true, true);
-}
-
-void App::netSetGameMode(GameMode _gameMode)
-{
-	LOG_DBG("netSetGameMode");
-	Assert(m_isHost);
-
-	uint8_t gameMode = _gameMode;
-
-	BitStream bs;
-
-	bs.Write(gameMode);
-
-	m_rpcMgr->Call(s_rpcSetGameMode, bs, ChannelPool_Server, 0, true, true);
-}
-
-void App::netLoadArena(const char * filename)
-{
-	LOG_DBG("netLoadArena");
-	Assert(m_isHost);
-
-	BitStream bs;
-
-	bs.WriteString(filename);
-
-	m_rpcMgr->Call(s_rpcLoadArena, bs, ChannelPool_Server, 0, true, true);
 }
 
 void App::netAddPlayer(Channel * channel, uint8_t characterIndex)
