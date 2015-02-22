@@ -334,7 +334,7 @@ public:
 	
 	void update(float dt); // only needs to be called if autoUpdate is false!
 	void draw();
-	void drawEx(float x, float y, float angle = 0.f, float scale = 1.f, bool pixelpos = true, TEXTURE_FILTER filter = FILTER_POINT);
+	void drawEx(float x, float y, float angle = 0.f, float scaleX = 1.f, float scaleY = FLT_MAX, bool pixelpos = true, TEXTURE_FILTER filter = FILTER_POINT);
 	
 	// animation
 	void startAnim(const char * anim, int frame = 0);
@@ -352,7 +352,10 @@ public:
 	float x;
 	float y;
 	float angle;
+	bool separateScale;
 	float scale;
+	float scaleX;
+	float scaleY;
 	bool flipX;
 	bool flipY;
 	bool pixelpos;

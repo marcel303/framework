@@ -1324,7 +1324,10 @@ Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * s
 	x = 0.f;
 	y = 0.f;
 	angle = 0.f;
+	separateScale = false;
 	scale = 1.f;
+	scaleX = 1.f;
+	scaleY = 1.f;
 	flipX = false;
 	flipY = false;
 	pixelpos = true;
@@ -1383,11 +1386,14 @@ void Sprite::update(float dt)
 
 void Sprite::draw()
 {
-	drawEx(x, y, angle, scale, pixelpos, filter);
+	drawEx(x, y, angle, separateScale ? scaleX : scale, separateScale ? scaleY : scale, pixelpos, filter);
 }
 
-void Sprite::drawEx(float x, float y, float angle, float scale, bool pixelpos, TEXTURE_FILTER filter)
+void Sprite::drawEx(float x, float y, float angle, float scaleX, float scaleY, bool pixelpos, TEXTURE_FILTER filter)
 {
+	if (scaleY == FLT_MAX)
+		scaleY = scaleX;
+
 	if (m_texture->textures)
 	{
 		gxPushMatrix();
@@ -1400,10 +1406,10 @@ void Sprite::drawEx(float x, float y, float angle, float scale, bool pixelpos, T
 			
 			gxTranslatef(x, y, 0.f);
 			
-			if (scale != 1.f)
-				gxScalef(scale, scale, 1.f);
 			if (angle != 0.f)
 				gxRotatef(angle, 0.f, 0.f, 1.f);
+			if (scaleX != 1.f || scaleY != 1.f)
+				gxScalef(scaleX, scaleY, 1.f);
 			if (flipX || flipY)
 				gxScalef(flipX ? -1.f : +1.f, flipY ? -1.f : +1.f, 1.f);
 			if (pivotX != 0.f || pivotY != 0.f)
