@@ -1764,6 +1764,35 @@ int main(int argc, char * argv[])
 	}
 	else
 	{
+		//
+
+		Spriter spriter("../../ArtistCave/JoyceTestcharacter/TestCharacter_Spriter/Testcharacter.scml");
+
+		const int animIndex = 0;
+		const float animLength = spriter.getAnimLength(animIndex);
+
+		for (int a = 0; a < 3; ++a)
+		{
+			for (float t = 0.f; t < animLength; t += 10.f)
+			{
+				framework.process();
+
+				framework.beginDraw(0, 7, 15, 0);
+				{
+					setColor(0, 0, 255, 63);
+					drawLine(0, GFX_SY/2, GFX_SX, GFX_SY/2);
+					drawLine(GFX_SX/2, 0, GFX_SX/2, GFX_SY);
+
+					setColor(colorWhite);
+					spriter.draw(animIndex, t, GFX_SX/2, GFX_SY/2);
+				}
+				framework.endDraw();
+			}
+		}
+
+
+		//
+
 		while (g_app->tick())
 		{
 			g_app->draw();
