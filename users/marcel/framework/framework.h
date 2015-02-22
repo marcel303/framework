@@ -164,6 +164,7 @@ public:
 	float timeStep;
 	
 	bool fullscreen;
+	bool useClosestDisplayMode;
 	int minification;
 	bool reloadCachesOnActivate;
 	bool filedrop;
@@ -469,6 +470,7 @@ public:
 
 	int getAnimIndexByName(const char * name) const;
 	float getAnimLength(int animIndex) const;
+	bool isAnimDoneAtTime(int animIndex, float time) const;
 
 private:
 	class SpriterCacheElem * m_spriter;

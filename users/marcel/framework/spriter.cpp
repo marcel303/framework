@@ -637,6 +637,11 @@ namespace spriter
 		return m_animations[index]->length;
 	}
 
+	bool Entity::isAnimLooped(int index) const
+	{
+		return m_animations[index]->loopType != kLoopType_Looping;
+	}
+
 	void Entity::getDrawableListAtTime(int animIndex, float time, Drawable * drawables, int & numDrawables) const
 	{
 		Animation * animation = m_animations[animIndex];
@@ -645,7 +650,7 @@ namespace spriter
 
 		numDrawables = std::min(numDrawables, (int)keys.size());
 
-		for (size_t k = 0; k < numDrawables; ++k)
+		for (int k = 0; k < numDrawables; ++k)
 		{
 			const TransformedObjectKey & o = keys[k];
 

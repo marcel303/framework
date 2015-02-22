@@ -58,6 +58,7 @@ Ui ui;
 Framework::Framework()
 {
 	fullscreen = false;
+	useClosestDisplayMode = false;
 	minification = 1;
 	reloadCachesOnActivate = false;
 	filedrop = false;
@@ -133,13 +134,36 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 		
 		SDL_GL_SetSwapInterval(1);
 	}
-	
+
+	int actualSx = sx / minification;
+	int actualSy = sy / minification;
+
+	if (fullscreen && useClosestDisplayMode)
+	{
+		SDL_DisplayMode desired;
+		SDL_DisplayMode closest;
+
+		desired.w = actualSx;
+		desired.h = actualSy;
+		desired.format = SDL_PIXELFORMAT_UNKNOWN;
+		desired.refresh_rate = 60;
+		desired.driverdata = 0;
+
+		if (SDL_GetClosestDisplayMode(0, &desired, &closest) != NULL)
+		{
+			log("closes display mode: %d x %d @ %d Hz", closest.w, closest.h, closest.refresh_rate);
+
+			actualSx = closest.w;
+			actualSy = closest.h;
+		}
+	}
+
 	globals.window = SDL_CreateWindow(
 		windowTitle.c_str(),
 		windowX == -1 ? SDL_WINDOWPOS_CENTERED : windowX,
 		windowY == -1 ? SDL_WINDOWPOS_CENTERED : windowY,
-		sx / minification,
-		sy / minification,
+		actualSx,
+		actualSy,
 		flags);
 	
 	if (!globals.window)
@@ -186,6 +210,9 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	
 	globals.displaySize[0] = sx;
 	globals.displaySize[1] = sy;
+
+	globals.actualDisplaySize[0] = actualSx * minification;
+	globals.actualDisplaySize[1] = actualSy * minification;
 	
 #if 0 // invalid using non-legacy mode
 	glClampColor(GL_CLAMP_VERTEX_COLOR, GL_FALSE);
@@ -287,6 +314,7 @@ bool Framework::shutdown()
 	time = 0.f;
 
 	fullscreen = false;
+	useClosestDisplayMode = false;
 	minification = 1;
 	reloadCachesOnActivate = false;
 	filedrop = false;
@@ -362,8 +390,8 @@ void Framework::process()
 		}
 		else if (e.type == SDL_MOUSEMOTION)
 		{
-			mouse.x = e.motion.x * minification;
-			mouse.y = e.motion.y * minification;
+			mouse.x = e.motion.x * minification * globals.displaySize[0] / globals.actualDisplaySize[0];
+			mouse.y = e.motion.y * minification * globals.displaySize[1] / globals.actualDisplaySize[1];
 		}
 		else if (e.type == SDL_WINDOWEVENT)
 		{
@@ -583,7 +611,9 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 		const char * f = files[i].c_str();
 		const size_t fl = strlen(f);
 		if (strstr(f, ".png") || strstr(f, ".bmp"))
-			Sprite(f, 0.f, 0.f);
+			Sprite s(f);
+		else if (strstr(f, ".scml") && !strstr(f, "autosave"))
+			g_spriterCache.findOrCreate(f);
 		else if (strstr(f, ".wav"))
 			g_soundCache.findOrCreate(f);
 		else if (strstr(f, ".ogg"))
@@ -637,9 +667,13 @@ void Framework::beginDraw(int r, int g, int b, int a)
 	int windowSy;
 	SDL_GL_GetDrawableSize(globals.window, &windowSx, &windowSy);
 	globals.drawableOffset[0] = 0;
-	globals.drawableOffset[1] = windowSy - (globals.displaySize[1] / minification);
+	globals.drawableOffset[1] = windowSy - (globals.actualDisplaySize[1] / minification);
 	
-	glViewport(globals.drawableOffset[0], globals.drawableOffset[1], globals.displaySize[0] / minification, globals.displaySize[1] / minification);
+	glViewport(
+		globals.drawableOffset[0],
+		globals.drawableOffset[1],
+		globals.actualDisplaySize[0] / minification,
+		globals.actualDisplaySize[1] / minification);
 	
 	applyTransform();
 	setBlend(BLEND_ALPHA);
@@ -1771,6 +1805,15 @@ float Spriter::getAnimLength(int animIndex) const
 	return m_spriter->m_scene->m_entities[0]->getAnimLength(animIndex);
 }
 
+bool Spriter::isAnimDoneAtTime(int animIndex, float time) const
+{
+	if (animIndex == -1)
+		return true;
+	if (m_spriter->m_scene->m_entities[0]->isAnimLooped(animIndex))
+		return false;
+	return time >= getAnimLength(animIndex);
+}
+
 // -----
 
 Sound::Sound(const char * filename)
@@ -2435,8 +2478,8 @@ Vec2 transformToScreen(const Vec3 & v)
 static void setSurface(Surface * surface)
 {
 	const GLuint framebuffer = surface ? surface->getFramebuffer() : 0;
-	const GLsizei sx = surface ? surface->getWidth() : globals.displaySize[0];
-	const GLsizei sy = surface ? surface->getHeight() : globals.displaySize[1];
+	const GLsizei sx = surface ? surface->getWidth() : globals.actualDisplaySize[0];
+	const GLsizei sy = surface ? surface->getHeight() : globals.actualDisplaySize[1];
 	
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 	glViewport(0, 0, sx / framework.minification, sy / framework.minification);

@@ -901,6 +901,7 @@ bool App::init(bool isHost)
 		framework.fullscreen = true;
 	}
 
+	framework.useClosestDisplayMode = true;
 	framework.windowTitle = "NetArena";
 	framework.actionHandler = HandleAction;
 
@@ -1208,7 +1209,7 @@ bool App::tick()
 	g_updateTicks = (int)(dtAccum * 60.f);
 	dtAccum -= g_updateTicks / 60.f;
 
-#if 1
+#if 1 // fixme : revert
 	g_updateTicks = 1;
 #endif
 

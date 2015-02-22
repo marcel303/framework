@@ -30,6 +30,7 @@ namespace spriter
 
 		int getAnimIndexByName(const char * name) const;
 		int getAnimLength(int index) const;
+		bool isAnimLooped(int index) const;
 		void getDrawableListAtTime(int animIndex, float time, Drawable * drawables, int & numDrawables) const;
 
 		Scene * m_scene;
