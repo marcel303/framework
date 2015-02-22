@@ -1735,6 +1735,7 @@ void Spriter::draw(int animIndex, float time, float x, float y, float angle, flo
 		sprite.scaleX = d.scaleX ;
 		sprite.scaleY = d.scaleY;
 		sprite.pixelpos = false;
+		sprite.filter = FILTER_LINEAR;
 		sprite.draw();
 
 	#if 0
