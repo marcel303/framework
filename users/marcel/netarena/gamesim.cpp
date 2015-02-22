@@ -18,6 +18,14 @@ OPTION_DECLARE(bool, g_noSound, false);
 OPTION_DEFINE(bool, g_noSound, "Sound/Disable Sound Effects");
 OPTION_ALIAS(g_noSound, "nosound");
 
+OPTION_DECLARE(int, g_gameModeNextRound, -1);
+OPTION_DEFINE(int, g_gameModeNextRound, "Game State/Game Mode Next Round");
+OPTION_STEP(g_gameModeNextRound, 0, kGameMode_COUNT - 1, 1);
+OPTION_ALIAS(g_gameModeNextRound, "gamemode");
+OPTION_VALUE_ALIAS(g_gameModeNextRound, deathmatch, kGameMode_DeathMatch);
+OPTION_VALUE_ALIAS(g_gameModeNextRound, tokenhunt, kGameMode_TokenHunt);
+OPTION_VALUE_ALIAS(g_gameModeNextRound, coincollector, kGameMode_CoinCollector);
+
 OPTION_DECLARE(int, g_roundCompleteTimer, 6);
 OPTION_DEFINE(int, g_roundCompleteTimer, "Menus/Results Screen Time");
 
@@ -652,8 +660,20 @@ void GameSim::newRound(const char * mapOverride)
 
 	load(map.c_str());
 
-	setGameMode(kGameMode_TokenHunt);
-	//setGameMode(kGameMode_CoinCollector);
+	// set game mode
+
+	if (g_gameModeNextRound >= 0 && g_gameModeNextRound < kGameMode_COUNT)
+	{
+		setGameMode((GameMode)(int)g_gameModeNextRound);
+	}
+	else
+	{
+		setGameMode(kGameMode_TokenHunt);
+		//setGameMode(kGameMode_CoinCollector);
+	}
+
+	// and start playing!
+
 	setGameState(kGameState_Play);
 
 	m_nextRoundNumber++;

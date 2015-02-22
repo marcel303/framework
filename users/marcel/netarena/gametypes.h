@@ -29,7 +29,8 @@ enum GameMode
 {
 	kGameMode_DeathMatch,
 	kGameMode_TokenHunt,
-	kGameMode_CoinCollector
+	kGameMode_CoinCollector,
+	kGameMode_COUNT
 };
 
 enum PlayerWeapon

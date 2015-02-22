@@ -72,7 +72,15 @@ void OptionManager::LoadFromString(const char * _line)
 		{
 			if (!strcmp(option->m_name, name.c_str()) || (option->m_alias && !strcmp(option->m_alias, name.c_str())) || !strcmp(option->m_path, name.c_str()))
 			{
-				option->FromString(value.c_str());
+				// look for a suitable alias
+
+				const OptionValueAlias * alias;
+
+				for (alias = option->m_valueAliasList; alias != 0; alias = alias->m_next)
+					if (!strcmp(alias->m_alias, value.c_str()))
+						break;
+
+				option->FromString(alias ? alias->m_value : value.c_str());
 			}
 		}
 	}
@@ -93,6 +101,7 @@ OptionBase::OptionBase(const char * path, const char * name)
 	, m_path(path)
 	, m_name(name)
 	, m_alias(0)
+	, m_valueAliasList(0)
 	, m_flags(0)
 	, m_min(0.f)
 	, m_max(0.f)
@@ -141,6 +150,17 @@ OptionCommandWithParam::OptionCommandWithParam(const char * path, OptionCommandH
 void OptionCommandWithParam::Select()
 {
 	m_handler(m_param);
+}
+
+//
+
+OptionValueAlias::OptionValueAlias(OptionBase & option, const char * alias, int value)
+	: m_alias(alias)
+{
+	m_next = option.m_valueAliasList;
+	option.m_valueAliasList = this;
+
+	sprintf_s(m_value, sizeof(m_value), "%d", value);
 }
 
 // Option<bool>

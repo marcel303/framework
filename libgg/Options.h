@@ -10,11 +10,13 @@ class OptionBase
 	friend class OptionFlags;
 	friend class OptionLimits;
 	friend class OptionManager;
+	friend class OptionValueAlias;
 
 	OptionBase * m_next;
 	const char * m_path;
 	const char * m_name;
 	const char * m_alias;
+	OptionValueAlias * m_valueAliasList;
 	int m_flags;
 
 protected:
@@ -33,6 +35,7 @@ public:
 
 	OptionBase * GetNext() const;
 	const char * GetPath() const;
+	const OptionValueAlias * GetValueAliasList() const { return m_valueAliasList; }
 	bool HasFlags(int flag) const;
 
 	virtual OptionType GetType() = 0;
@@ -144,6 +147,24 @@ public:
 	}
 };
 
+class OptionValueAlias
+{
+	friend class OptionManager;
+
+	static const int kMaxValueSize = 64;
+
+	OptionValueAlias * m_next;
+	const char * m_alias;
+	char m_value[kMaxValueSize];
+
+public:
+	OptionValueAlias(OptionBase & option, const char * alias, int value);
+
+	const OptionValueAlias * GetNext() const { return m_next; }
+	const char * GetAlias() const { return m_alias; }
+	const char * GetValue() const { return m_value; }
+};
+
 class OptionFlags
 {
 public:
@@ -176,6 +197,7 @@ extern OptionManager g_optionManager;
 #define OPTION_DEFINE(type, name, path) Option<type> name(name ## _defaultValue, path, # name)
 #define OPTION_STEP(name, min, max, step) static OptionLimits name ## _limits(name, min, max, step)
 #define OPTION_ALIAS(name, alias) static OptionAlias name ## _alias(name, alias)
+#define OPTION_VALUE_ALIAS(name, alias, value) static OptionValueAlias name ## _alias_ ## alias(name, # alias, value)
 #define OPTION_FLAGS(name, flags) static OptionFlags name ## _flags(name, flags)
 #define COMMAND_OPTION(name, path, command) static OptionCommand name(path, command)
 
@@ -188,6 +210,7 @@ extern OptionManager g_optionManager;
 #define OPTION_DEFINE(type, name, path) type name(name ## _defaultValue)
 #define OPTION_STEP(name, min, max, step)
 #define OPTION_ALIAS(name, alias)
+#define OPTION_VALUE_ALIAS(name, alias)
 #define OPTION_FLAGS(name, flags)
 #define COMMAND_OPTION(name, command, path)
 
