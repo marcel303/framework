@@ -5,6 +5,7 @@
 #include <vector>
 #include "Debugging.h"
 #include "framework.h"
+#include "spriter.h"
 
 // todo : create a nice drawing function
 // todo : remove all of the dynamic memory allocations during draw
@@ -13,7 +14,7 @@
 
 using namespace tinyxml2;
 
-namespace Spriter
+namespace spriter
 {
 	class Transform;
 
@@ -75,10 +76,8 @@ namespace Spriter
 		{
 		}
 
-		Transform multiply(const Transform & parentInfo) const
+		void multiply(const Transform & parentInfo, Transform & result) const
 		{
-			Transform result;
-
 			if (x != 0.f || y != 0.f)
 			{
 				const float preMultX = x * parentInfo.scaleX;
@@ -102,8 +101,6 @@ namespace Spriter
 			result.scaleX = scaleX * parentInfo.scaleX;
 			result.scaleY = scaleY * parentInfo.scaleY;
 			result.a = a * parentInfo.a;
-
-			return result;
 		}
 	};
 
@@ -313,7 +310,7 @@ namespace Spriter
 
 			BoneTimelineKey * result = new BoneTimelineKey();
 			*result = *this;
-			result->transform = Spriter::linear(transform, keyB->transform, spin, t);
+			result->transform = spriter::linear(transform, keyB->transform, spin, t);
 
 			return result;
 		}
@@ -345,12 +342,12 @@ namespace Spriter
 
 			SpriteTimelineKey * result = new SpriteTimelineKey();
 			*result = *this;
-			result->transform = Spriter::linear(transform, keyB->transform, spin, t);
+			result->transform = spriter::linear(transform, keyB->transform, spin, t);
 
 			if (!useDefaultPivot)
 			{
-				result->pivotX = Spriter::linear(pivotX, keyB->pivotX, t);
-				result->pivotY = Spriter::linear(pivotY, keyB->pivotY, t);
+				result->pivotX = spriter::linear(pivotX, keyB->pivotX, t);
+				result->pivotY = spriter::linear(pivotY, keyB->pivotY, t);
 			}
 
 			return result;
@@ -416,7 +413,7 @@ namespace Spriter
 
 				TransformedBoneKey transformedKey;
 				transformedKey.key = dynamic_cast<const BoneTimelineKey*>(keyFromRef(currentRef, newTime));
-				transformedKey.transform = transformedKey.key->transform.multiply(parentTransform);
+				transformedKey.key->transform.multiply(parentTransform, transformedKey.transform);
 				transformedBoneKeys.push_back(transformedKey);
 			}
 
@@ -441,7 +438,7 @@ namespace Spriter
 
 				TransformedObjectKey transformedKey;
 				transformedKey.key = dynamic_cast<const SpriteTimelineKey*>(keyFromRef(currentRef, newTime));
-				transformedKey.transform = transformedKey.key->transform.multiply(parentTransform);
+				transformedKey.key->transform.multiply(parentTransform, transformedKey.transform);
 				objectKeys.push_back(transformedKey);
 			}
 
@@ -509,14 +506,6 @@ namespace Spriter
 		}
 	};
 
-	class Entity
-	{
-	public:
-		std::string name;
-		//std::vector<CharacterMap> characterMaps; // <character_map> tags
-		std::vector<Animation> animations; // <animation> tags
-	};
-
 	// helper functions
 
 	static float toRadians(float degrees)
@@ -576,7 +565,7 @@ namespace Spriter
 		return linear(quadratic(a, b, c, t), quadratic(b, c, d, t), t);
 	}
 	
-	//
+	// tinyxml helper functions
 
 	static const char * stringAttrib(XMLElement * elem, const char * name, const char * defaultValue)
 	{
@@ -621,24 +610,116 @@ namespace Spriter
 		key->c2 = xmlKey->FloatAttribute("c2");
 	}
 
-	void loadSpriterAnimation()
+	//
+
+	Entity::Entity()
+		: m_scene(0)
 	{
-		const char * filename = "Testcharacter.scml";
-		//const char * filename = "spriter-test.scml";
+	}
+
+	Entity::~Entity()
+	{
+		for (size_t i = 0; i < m_animations.size(); ++i)
+			delete m_animations[i];
+		m_animations.clear();
+	}
+
+	int Entity::getAnimIndexByName(const char * name) const
+	{
+		for (size_t i = 0; i < m_animations.size(); ++i)
+			if (m_animations[i]->name == name)
+				return i;
+		return -1;
+	}
+
+	int Entity::getAnimLength(int index) const
+	{
+		return m_animations[index]->length;
+	}
+
+	void Entity::getDrawableListAtTime(int animIndex, float time, SpriterDrawable * drawables, int & numDrawables) const
+	{
+		Animation * animation = m_animations[animIndex];
+
+		std::vector<TransformedObjectKey> keys = animation->getAnimationDataAtTime(time);
+
+		numDrawables = std::min(numDrawables, (int)keys.size());
+
+		for (size_t k = 0; k < numDrawables; ++k)
+		{
+			const TransformedObjectKey & o = keys[k];
+
+			const Transform & tf = o.transform;
+
+			FolderAndFile ff;
+			ff.first = o.key->folder;
+			ff.second = o.key->file;
+			const File & file = m_scene->m_fileCache->files[ff];
+
+			SpriterDrawable & drawable = drawables[k];
+
+			drawable.filename = file.name.c_str();
+			drawable.x = tf.x;
+			drawable.y = -tf.y;
+			drawable.angle = -tf.angle;
+			drawable.scaleX = tf.scaleX;
+			drawable.scaleY = tf.scaleY;
+			drawable.pivotX = (o.key->useDefaultPivot ? file.pivotX : o.key->pivotX) * file.width;
+			drawable.pivotY = (1.f - (o.key->useDefaultPivot ? file.pivotY : o.key->pivotY)) * file.height;
+			drawable.a = tf.a;
+
+			o.key->Release();
+		}
+	}
+
+	//
+
+	Scene::Scene()
+		: m_fileCache(0)
+	{
+	}
+
+	Scene::~Scene()
+	{
+		for (size_t i = 0; i < m_entities.size(); ++i)
+			delete m_entities[i];
+		m_entities.clear();
+
+		delete m_fileCache;
+		m_fileCache = 0;
+	}
+
+	bool Scene::load(const char * filename)
+	{
+		bool result = true;
+
+		filename = "Testcharacter.scml";
+		//filename = "spriter-test.scml";
+		changeDirectory("C:\\Users\\Marcel\\Google Drive\\NetArena\\ArtistCave\\JoyceTestcharacter\\TestCharacter_Spriter");
 
 		// todo : fill file cache with files relative to SCML file
 
-		changeDirectory("C:\\Users\\Marcel\\Google Drive\\NetArena\\ArtistCave\\JoyceTestcharacter\\TestCharacter_Spriter");
-
 		XMLDocument xmlModelDoc;
 		
-		if (xmlModelDoc.LoadFile(filename) == XML_NO_ERROR)
+		if (xmlModelDoc.LoadFile(filename) != XML_NO_ERROR)
+		{
+			logError("failed to load %s", filename);
+
+			result = false;
+		}
+		else
 		{
 			XMLElement * xmlSpriterData = xmlModelDoc.FirstChildElement("spriter_data");
 
-			if (xmlSpriterData)
+			if (xmlSpriterData == 0)
 			{
-				FileCache fileCache;
+				logError("missing <spriter_data> element");
+
+				result = false;
+			}
+			else
+			{
+				m_fileCache = new FileCache();
 
 				int folderIndex = 0;
 
@@ -664,7 +745,7 @@ namespace Spriter
 						ff.first = folderIndex;
 						ff.second = fileIndex;
 
-						fileCache.files[ff] = file;
+						m_fileCache->files[ff] = file;
 
 						fileIndex++;
 					}
@@ -676,9 +757,9 @@ namespace Spriter
 				{
 					// id, name
 
-					Entity entity;
+					Entity * entity = new Entity();
 
-					entity.name = stringAttrib(xmlEntity, "name", "");
+					entity->m_name = stringAttrib(xmlEntity, "name", "");
 
 					// <character_map>
 					// id, name
@@ -689,11 +770,11 @@ namespace Spriter
 					{
 						// id, name, length, looping
 
-						Animation animation;
+						Animation * animation = new Animation();
 
-						animation.name = stringAttrib(xmlAnimation, "name", "");
-						animation.length = xmlAnimation->IntAttribute("length");
-						animation.loopType = boolAttrib(xmlAnimation, "looping", true) ? kLoopType_Looping : kLoopType_NoLooping;
+						animation->name = stringAttrib(xmlAnimation, "name", "");
+						animation->length = xmlAnimation->IntAttribute("length");
+						animation->loopType = boolAttrib(xmlAnimation, "looping", true) ? kLoopType_Looping : kLoopType_NoLooping;
 
 						XMLElement * xmlMainline = xmlAnimation->FirstChildElement("mainline");
 
@@ -733,7 +814,7 @@ namespace Spriter
 									key.boneRefs.push_back(ref);
 								}
 
-								animation.mainlineKeys.push_back(key);
+								animation->mainlineKeys.push_back(key);
 							}
 						}
 
@@ -808,76 +889,25 @@ namespace Spriter
 								}
 							}
 
-							animation.timelines.push_back(timeline);
+							animation->timelines.push_back(timeline);
 						}
 
-						for (int a = 0; a < 4; ++a)
-						{
-							for (float t = 0.f; t < animation.length; t += 10.f)
-							{
-								framework.process();
-
-								framework.beginDraw(0, 7, 15, 0);
-								{
-									std::vector<TransformedObjectKey> keys = animation.getAnimationDataAtTime(t);
-
-									for (size_t k = 0; k < keys.size(); ++k)
-									{
-										const TransformedObjectKey & o = keys[k];
-
-										const Transform & tf = o.transform;
-
-										FolderAndFile ff;
-										ff.first = o.key->folder;
-										ff.second = o.key->file;
-										const File & file = fileCache.files[ff];
-
-										const float pivotX = (o.key->useDefaultPivot ? file.pivotX : o.key->pivotX) * file.width;
-										const float pivotY = (1.f - (o.key->useDefaultPivot ? file.pivotY : o.key->pivotY)) * file.height;
-
-										setColorf(1.f, 1.f, 1.f, o.transform.a);
-
-										gxPushMatrix();
-										gxScalef(2.f, 2.f, 2.f);
-
-										Sprite sprite(file.name.c_str(), pivotX, pivotY);
-										sprite.x = 350 + tf.x;
-										sprite.y = 400 - tf.y;
-										sprite.angle = -tf.angle;
-										sprite.separateScale = true;
-										sprite.scaleX = tf.scaleX ;
-										sprite.scaleY = tf.scaleY;
-										sprite.pixelpos = false;
-										sprite.draw();
-
-										gxPopMatrix();
-
-										setColor(colorWhite);
-
-									#if 0
-										if (k == 0)
-										{
-											printf("transform @ t=%+04.2f: (%+04.2f, %+04.2f) @ %+04.2f x (%+04.2f, %+04.2f) * %+04.2f\n",
-												t,
-												tf.x, tf.y,
-												tf.angle,
-												tf.scaleX,
-												tf.scaleY,
-												tf.a);
-										}
-									#endif
-
-										o.key->Release();
-									}
-								}
-								framework.endDraw();
-							}
-						}
-
-						entity.animations.push_back(animation);
+						entity->m_animations.push_back(animation);
 					}
+
+					m_entities.push_back(entity);
 				}
 			}
 		}
+
+		return result;
+	}
+
+	int Scene::getEntityIndexByName(const char * name) const
+	{
+		for (size_t i = 0; i < m_entities.size(); ++i)
+			if (m_entities[i]->m_name == name)
+				return i;
+		return -1;
 	}
 }

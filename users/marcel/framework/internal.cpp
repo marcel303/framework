@@ -3,12 +3,14 @@
 #include "data/engine/ShaderCommon.txt"
 #include "image.h"
 #include "internal.h"
+#include "../netarena/spriter.h" // fixme, move files
 
 Globals globals;
 
 TextureCache g_textureCache;
 ShaderCache g_shaderCache;
 AnimCache g_animCache;
+SpriterCache g_spriterCache;
 SoundCache g_soundCache;
 FontCache g_fontCache;
 GlyphCache g_glyphCache;
@@ -937,6 +939,74 @@ AnimCacheElem & AnimCache::findOrCreate(const char * name)
 	else
 	{
 		AnimCacheElem elem;
+		
+		elem.load(name);
+		
+		i = m_map.insert(Map::value_type(key, elem)).first;
+		
+		return i->second;
+	}
+}
+
+// -----
+
+SpriterCacheElem::SpriterCacheElem()
+	: m_scene(0)
+{
+}
+
+void SpriterCacheElem::free()
+{
+	delete m_scene;
+	m_scene = 0;
+}
+
+void SpriterCacheElem::load(const char * filename)
+{
+	free();
+	
+	m_scene = new spriter::Scene();
+	
+	if (m_scene->load(filename))
+	{
+	}
+	else
+	{
+		logError("failed to load spriter scene: %s", filename);
+	}
+}
+
+void SpriterCache::clear()
+{
+	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
+	{
+		i->second.free();
+	}
+	
+	m_map.clear();
+}
+
+void SpriterCache::reload()
+{
+	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
+	{
+		i->second.load(i->first.c_str());
+	}
+}
+
+SpriterCacheElem & SpriterCache::findOrCreate(const char * name)
+{
+	Key key = name;
+	
+	Map::iterator i = m_map.find(key);
+	
+	if (i != m_map.end())
+	{
+		return i->second;
+	}
+	else
+	{
+		SpriterCacheElem elem;
 		
 		elem.load(name);
 		

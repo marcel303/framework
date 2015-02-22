@@ -277,6 +277,36 @@ public:
 
 //
 
+namespace spriter
+{
+	class Scene;
+}
+
+class SpriterCacheElem
+{
+public:
+	spriter::Scene * m_scene;
+
+	SpriterCacheElem();
+	void free();
+	void load(const char * filename);
+};
+
+class SpriterCache
+{
+public:
+	typedef std::string Key;
+	typedef std::map<Key, SpriterCacheElem> Map;
+	
+	Map m_map;
+	
+	void clear();
+	void reload();
+	SpriterCacheElem & findOrCreate(const char * name);
+};
+
+//
+
 class SoundCacheElem
 {
 public:
@@ -456,6 +486,7 @@ extern Globals globals;
 extern TextureCache g_textureCache;
 extern ShaderCache g_shaderCache;
 extern AnimCache g_animCache;
+extern SpriterCache g_spriterCache;
 extern SoundCache g_soundCache;
 extern FontCache g_fontCache;
 extern GlyphCache g_glyphCache;

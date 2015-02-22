@@ -27,6 +27,7 @@
 #include "framework.h"
 #include "internal.h"
 #include "model.h"
+#include "../netarena/spriter.h" // fixme, move files
 
 // -----
 
@@ -239,6 +240,7 @@ bool Framework::shutdown()
 	g_textureCache.clear();
 	g_shaderCache.clear();
 	g_animCache.clear();
+	g_spriterCache.clear();
 	g_modelCache.clear();
 	g_soundCache.clear();
 	g_fontCache.clear();
@@ -503,6 +505,7 @@ void Framework::reloadCaches()
 	g_textureCache.reload();
 	g_shaderCache.reload();
 	g_animCache.reload();
+	g_spriterCache.reload();
 	g_modelCache.reload();
 	g_soundCache.reload();
 	g_fontCache.reload();
@@ -1696,6 +1699,71 @@ int Sprite::getWidth() const
 int Sprite::getHeight() const
 {
 	return m_texture->sy / m_anim->m_gridSize[1];
+}
+
+// -----
+
+Spriter::Spriter(const char * filename)
+{
+	m_spriter = &g_spriterCache.findOrCreate(filename);
+}
+
+void Spriter::draw(int animIndex, float time, float x, float y, float angle, float scale)
+{
+	const int kMaxDrawables = 64;
+	spriter::Drawable drawables[kMaxDrawables];
+	int numDrawables = kMaxDrawables;
+
+	m_spriter->m_scene->m_entities[0]->getDrawableListAtTime(animIndex, time, drawables, numDrawables);
+
+	gxPushMatrix();
+	gxTranslatef(x, y, 0.f);
+	gxScalef(scale, scale, 1.f);
+	gxRotatef(angle, 0.f, 0.f, 1.f);
+
+	for (int i = 0; i < numDrawables; ++i)
+	{
+		spriter::Drawable & d = drawables[i];
+
+		setColorf(1.f, 1.f, 1.f, d.a);
+
+		Sprite sprite(d.filename, d.pivotX, d.pivotY);
+		sprite.x = d.x;
+		sprite.y = d.y;
+		sprite.angle = d.angle;
+		sprite.separateScale = true;
+		sprite.scaleX = d.scaleX ;
+		sprite.scaleY = d.scaleY;
+		sprite.pixelpos = false;
+		sprite.draw();
+
+	#if 0
+		if (k == 0)
+		{
+			printf("transform @ t=%+04.2f: (%+04.2f, %+04.2f) @ %+04.2f x (%+04.2f, %+04.2f) * %+04.2f\n",
+				t,
+				tf.x, tf.y,
+				tf.angle,
+				tf.scaleX,
+				tf.scaleY,
+				tf.a);
+		}
+	#endif
+	}
+
+	gxPopMatrix();
+
+	setColor(colorWhite);
+}
+
+int Spriter::getAnimIndexByName(const char * name) const
+{
+	return m_spriter->m_scene->m_entities[0]->getAnimIndexByName(name);
+}
+
+float Spriter::getAnimLength(int animIndex) const
+{
+	return m_spriter->m_scene->m_entities[0]->getAnimLength(animIndex);
 }
 
 // -----

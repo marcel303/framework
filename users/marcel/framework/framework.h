@@ -460,6 +460,23 @@ private:
 
 //
 
+class Spriter
+{
+public:
+	Spriter(const char * filename);
+
+	void draw(int animIndex, float time, float x, float y, float angle = 0.f, float scale = 1.f);
+
+	int getAnimIndexByName(const char * name) const;
+	float getAnimLength(int animIndex) const;
+
+private:
+	class SpriterCacheElem * m_spriter;
+};
+
+
+//
+
 class Sound
 {
 public:
