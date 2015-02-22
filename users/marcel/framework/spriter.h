@@ -25,7 +25,7 @@ namespace spriter
 	class Entity
 	{
 	public:
-		Entity();
+		Entity(Scene * scene);
 		~Entity();
 
 		int getAnimIndexByName(const char * name) const;

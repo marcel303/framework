@@ -1758,11 +1758,15 @@ void Spriter::draw(int animIndex, float time, float x, float y, float angle, flo
 
 int Spriter::getAnimIndexByName(const char * name) const
 {
+	if (m_spriter->m_scene->m_entities.empty())
+		return -1;
 	return m_spriter->m_scene->m_entities[0]->getAnimIndexByName(name);
 }
 
 float Spriter::getAnimLength(int animIndex) const
 {
+	if (animIndex == -1)
+		return 0.f;
 	return m_spriter->m_scene->m_entities[0]->getAnimLength(animIndex);
 }
 

@@ -5,9 +5,9 @@
 #include <vector>
 #include "Debugging.h"
 #include "framework.h"
+#include "Path.h"
 #include "spriter.h"
 
-// todo : create a nice drawing function
 // todo : remove all of the dynamic memory allocations during draw
 // todo : more asserts
 // todo : add support for character map
@@ -567,7 +567,7 @@ namespace spriter
 	
 	// tinyxml helper functions
 
-	static const char * stringAttrib(XMLElement * elem, const char * name, const char * defaultValue)
+	static const char * stringAttrib(const XMLElement * elem, const char * name, const char * defaultValue)
 	{
 		if (elem->Attribute(name))
 			return elem->Attribute(name);
@@ -575,7 +575,7 @@ namespace spriter
 			return defaultValue;
 	}
 
-	static int boolAttrib(XMLElement * elem, const char * name, bool defaultValue)
+	static int boolAttrib(const XMLElement * elem, const char * name, bool defaultValue)
 	{
 		if (elem->Attribute(name))
 			return elem->BoolAttribute(name);
@@ -583,7 +583,7 @@ namespace spriter
 			return defaultValue;
 	}
 
-	static int intAttrib(XMLElement * elem, const char * name, int defaultValue)
+	static int intAttrib(const XMLElement * elem, const char * name, int defaultValue)
 	{
 		if (elem->Attribute(name))
 			return elem->IntAttribute(name);
@@ -591,7 +591,7 @@ namespace spriter
 			return defaultValue;
 	}
 
-	static float floatAttrib(XMLElement * elem, const char * name, float defaultValue)
+	static float floatAttrib(const XMLElement * elem, const char * name, float defaultValue)
 	{
 		if (elem->Attribute(name))
 			return elem->FloatAttribute(name);
@@ -599,7 +599,7 @@ namespace spriter
 			return defaultValue;
 	}
 
-	static void readTimelineKeyProperties(XMLElement * xmlKey, TimelineKey * key)
+	static void readTimelineKeyProperties(const XMLElement * xmlKey, TimelineKey * key)
 	{
 		// id, time, spin, curve_type, c1, c2
 
@@ -612,8 +612,8 @@ namespace spriter
 
 	//
 
-	Entity::Entity()
-		: m_scene(0)
+	Entity::Entity(Scene * scene)
+		: m_scene(scene)
 	{
 	}
 
@@ -693,11 +693,7 @@ namespace spriter
 	{
 		bool result = true;
 
-		filename = "Testcharacter.scml";
-		//filename = "spriter-test.scml";
-		changeDirectory("C:\\Users\\Marcel\\Google Drive\\NetArena\\ArtistCave\\JoyceTestcharacter\\TestCharacter_Spriter");
-
-		// todo : fill file cache with files relative to SCML file
+		const std::string basePath = Path::GetDirectory(filename);
 
 		XMLDocument xmlModelDoc;
 		
@@ -709,7 +705,7 @@ namespace spriter
 		}
 		else
 		{
-			XMLElement * xmlSpriterData = xmlModelDoc.FirstChildElement("spriter_data");
+			const XMLElement * xmlSpriterData = xmlModelDoc.FirstChildElement("spriter_data");
 
 			if (xmlSpriterData == 0)
 			{
@@ -723,19 +719,22 @@ namespace spriter
 
 				int folderIndex = 0;
 
-				for (XMLElement * xmlFolder = xmlSpriterData->FirstChildElement("folder"); xmlFolder; xmlFolder = xmlFolder->NextSiblingElement("folder"))
+				for (const XMLElement * xmlFolder = xmlSpriterData->FirstChildElement("folder"); xmlFolder; xmlFolder = xmlFolder->NextSiblingElement("folder"))
 				{
 					// id, name
 
 					int fileIndex = 0;
 
-					for (XMLElement * xmlFile = xmlFolder->FirstChildElement("file"); xmlFile; xmlFile = xmlFile->NextSiblingElement("file"))
+					for (const XMLElement * xmlFile = xmlFolder->FirstChildElement("file"); xmlFile; xmlFile = xmlFile->NextSiblingElement("file"))
 					{
 						// id, name, width, height, pivot_x, pivot_y
 
 						File file;
 
-						file.name = stringAttrib(xmlFile, "name", "");
+						file.name =  stringAttrib(xmlFile, "name", "");
+						if (!basePath.empty() && !file.name.empty())
+							file.name = basePath + "/" + file.name;
+
 						file.width = intAttrib(xmlFile, "width", 0);
 						file.height = intAttrib(xmlFile, "height", 0);
 						file.pivotX = intAttrib(xmlFile, "pivot_x", 0);
@@ -753,11 +752,11 @@ namespace spriter
 					folderIndex++;
 				}
 
-				for (XMLElement * xmlEntity = xmlSpriterData->FirstChildElement("entity"); xmlEntity; xmlEntity = xmlEntity->NextSiblingElement("entity"))
+				for (const XMLElement * xmlEntity = xmlSpriterData->FirstChildElement("entity"); xmlEntity; xmlEntity = xmlEntity->NextSiblingElement("entity"))
 				{
 					// id, name
 
-					Entity * entity = new Entity();
+					Entity * entity = new Entity(this);
 
 					entity->m_name = stringAttrib(xmlEntity, "name", "");
 
@@ -766,7 +765,7 @@ namespace spriter
 					//     <map>
 					//     folder, file, target_folder, target_file
 
-					for (XMLElement * xmlAnimation = xmlEntity->FirstChildElement("animation"); xmlAnimation; xmlAnimation = xmlAnimation->NextSiblingElement("animation"))
+					for (const XMLElement * xmlAnimation = xmlEntity->FirstChildElement("animation"); xmlAnimation; xmlAnimation = xmlAnimation->NextSiblingElement("animation"))
 					{
 						// id, name, length, looping
 
@@ -776,11 +775,11 @@ namespace spriter
 						animation->length = xmlAnimation->IntAttribute("length");
 						animation->loopType = boolAttrib(xmlAnimation, "looping", true) ? kLoopType_Looping : kLoopType_NoLooping;
 
-						XMLElement * xmlMainline = xmlAnimation->FirstChildElement("mainline");
+						const XMLElement * xmlMainline = xmlAnimation->FirstChildElement("mainline");
 
 						if (xmlMainline)
 						{
-							for (XMLElement * xmlKey = xmlMainline->FirstChildElement("key"); xmlKey; xmlKey = xmlKey->NextSiblingElement("key"))
+							for (const XMLElement * xmlKey = xmlMainline->FirstChildElement("key"); xmlKey; xmlKey = xmlKey->NextSiblingElement("key"))
 							{
 								// id, time
 
@@ -788,7 +787,7 @@ namespace spriter
 
 								key.time = xmlKey->IntAttribute("time");
 
-								for (XMLElement * xmlObjectRef = xmlKey->FirstChildElement("object_ref"); xmlObjectRef; xmlObjectRef = xmlObjectRef->NextSiblingElement("object_ref"))
+								for (const XMLElement * xmlObjectRef = xmlKey->FirstChildElement("object_ref"); xmlObjectRef; xmlObjectRef = xmlObjectRef->NextSiblingElement("object_ref"))
 								{
 									// id, parent, timeline, key
 
@@ -801,7 +800,7 @@ namespace spriter
 									key.objectRefs.push_back(ref);
 								}
 
-								for (XMLElement * xmlBoneRef = xmlKey->FirstChildElement("bone_ref"); xmlBoneRef; xmlBoneRef = xmlBoneRef->NextSiblingElement("bone_ref"))
+								for (const XMLElement * xmlBoneRef = xmlKey->FirstChildElement("bone_ref"); xmlBoneRef; xmlBoneRef = xmlBoneRef->NextSiblingElement("bone_ref"))
 								{
 									// id, parent, timeline, key
 
@@ -818,7 +817,7 @@ namespace spriter
 							}
 						}
 
-						for (XMLElement * xmlTimeline = xmlAnimation->FirstChildElement("timeline"); xmlTimeline; xmlTimeline = xmlTimeline->NextSiblingElement("timeline"))
+						for (const XMLElement * xmlTimeline = xmlAnimation->FirstChildElement("timeline"); xmlTimeline; xmlTimeline = xmlTimeline->NextSiblingElement("timeline"))
 						{
 							// id, name, type
 
@@ -826,13 +825,13 @@ namespace spriter
 
 							timeline.name = stringAttrib(xmlTimeline, "name", "");
 
-							std::string type = stringAttrib(xmlTimeline, "type", "");
+							const std::string type = stringAttrib(xmlTimeline, "type", "");
 							if (type == "sprite")
 								timeline.objectType = kObjectType_Sprite;
 
-							for (XMLElement * xmlKey = xmlTimeline->FirstChildElement(); xmlKey; xmlKey = xmlKey->NextSiblingElement())
+							for (const XMLElement * xmlKey = xmlTimeline->FirstChildElement(); xmlKey; xmlKey = xmlKey->NextSiblingElement())
 							{
-								XMLElement * xmlKeyData = xmlKey->FirstChildElement();
+								const XMLElement * xmlKeyData = xmlKey->FirstChildElement();
 
 								if (xmlKeyData)
 								{
