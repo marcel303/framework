@@ -3,7 +3,7 @@
 #include "data/engine/ShaderCommon.txt"
 #include "image.h"
 #include "internal.h"
-#include "../netarena/spriter.h" // fixme, move files
+#include "spriter.h"
 
 Globals globals;
 

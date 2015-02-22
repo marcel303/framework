@@ -637,7 +637,7 @@ namespace spriter
 		return m_animations[index]->length;
 	}
 
-	void Entity::getDrawableListAtTime(int animIndex, float time, SpriterDrawable * drawables, int & numDrawables) const
+	void Entity::getDrawableListAtTime(int animIndex, float time, Drawable * drawables, int & numDrawables) const
 	{
 		Animation * animation = m_animations[animIndex];
 
@@ -656,7 +656,7 @@ namespace spriter
 			ff.second = o.key->file;
 			const File & file = m_scene->m_fileCache->files[ff];
 
-			SpriterDrawable & drawable = drawables[k];
+			Drawable & drawable = drawables[k];
 
 			drawable.filename = file.name.c_str();
 			drawable.x = tf.x;

@@ -27,7 +27,7 @@
 #include "framework.h"
 #include "internal.h"
 #include "model.h"
-#include "../netarena/spriter.h" // fixme, move files
+#include "spriter.h"
 
 // -----
 
