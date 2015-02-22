@@ -118,7 +118,7 @@ void Pickup::drawLight() const
 {
 	const Vec2 pos = m_pos + (m_bbMin + m_bbMax) / 2.f;
 
-	Sprite("player-light.png").drawEx(pos[0], pos[1], 0.f, 1.f);
+	Sprite("player-light.png").drawEx(pos[0], pos[1], 0.f, 1.f, 1.f, false, FILTER_LINEAR);
 }
 
 //
@@ -186,7 +186,7 @@ void Token::drawLight() const
 {
 	if (m_isDropped)
 	{
-		Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f);
+		Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f, 1.5f, false, FILTER_LINEAR);
 	}
 }
 
@@ -255,7 +255,7 @@ void Coin::drawLight() const
 {
 	if (m_isDropped)
 	{
-		Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f);
+		Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f, 1.5f, false, FILTER_LINEAR);
 	}
 }
 
@@ -296,7 +296,7 @@ void Torch::drawLight() const
 	color.a = a;
 	setColor(color);
 
-	Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f);
+	Sprite("player-light.png").drawEx(m_pos[0], m_pos[1] + TORCH_FLICKER_Y_OFFSET, 0.f, 1.5f, 1.5f, false, FILTER_LINEAR);
 
 	setColor(colorWhite);
 }
@@ -939,7 +939,7 @@ void GameSim::tickMenus()
 	{
 		if (m_gameStartTicks == 0)
 		{
-			m_gameStartTicks = TICKS_PER_SECOND * 4;
+			m_gameStartTicks = TICKS_PER_SECOND * (g_devMode ? 1 : 4);
 		}
 		else
 		{

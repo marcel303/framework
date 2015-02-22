@@ -1752,6 +1752,7 @@ int main(int argc, char * argv[])
 		std::cout << "host IP address: ";
 		std::string ip;
 		std::getline(std::cin, ip);
+		g_connect = ip;
 	}
 
 	g_app = new App();
@@ -1764,8 +1765,7 @@ int main(int argc, char * argv[])
 	}
 	else
 	{
-		//
-
+	#if 0
 		Spriter spriter("../../ArtistCave/JoyceTestcharacter/TestCharacter_Spriter/Testcharacter.scml");
 
 		const int animIndex = 0;
@@ -1789,7 +1789,7 @@ int main(int argc, char * argv[])
 				framework.endDraw();
 			}
 		}
-
+	#endif
 
 		//
 

@@ -1620,7 +1620,7 @@ void Player::drawLight() const
 {
 	const float x = m_pos[0] + (m_collision.x1 + m_collision.x2) / 2.f;
 	const float y = m_pos[1] + (m_collision.y1 + m_collision.y2) / 2.f;
-	Sprite("player-light.png").drawEx(x, y, 0.f, 3.f);
+	Sprite("player-light.png").drawEx(x, y, 0.f, 3.f, 3.f, false, FILTER_LINEAR);
 }
 
 void Player::debugDraw() const

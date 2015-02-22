@@ -167,6 +167,7 @@ OPTION_DEFINE(float, TORCH_FLICKER_STRENGTH, "Game Objects/Torch/Flicker Strengt
 OPTION_DEFINE(int, TORCH_FLICKER_FREQ_A, "Game Objects/Torch/Flicker Frequency A");
 OPTION_DEFINE(int, TORCH_FLICKER_FREQ_B, "Game Objects/Torch/Flicker Frequency B");
 OPTION_DEFINE(int, TORCH_FLICKER_FREQ_C, "Game Objects/Torch/Flicker Frequency C");
+OPTION_DEFINE(int, TORCH_FLICKER_Y_OFFSET, "Game Objects/Torch/Flicker Y Offset");
 OPTION_STEP(TORCH_FLICKER_STRENGTH, 0, 0, .02f);
 
 OPTION_DEFINE(int, LIGHTING_DEBUG_MODE, "Graphics/Lighting/Debug Mode");

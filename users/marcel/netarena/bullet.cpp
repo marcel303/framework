@@ -504,7 +504,7 @@ void BulletPool::drawLight() const
 			const float age = b.calcAge();
 
 			setColorf(1.f, 1.f, 1.f, 1.f - age);
-			Sprite("player-light.png").drawEx(b.m_pos[0], b.m_pos[1], .5f);
+			Sprite("player-light.png").drawEx(b.m_pos[0], b.m_pos[1], 0.f, .5f, .5f, false, FILTER_LINEAR);
 		}
 	}
 

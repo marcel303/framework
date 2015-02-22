@@ -1,22 +1,11 @@
 #pragma once
 
+#include <string.h> // memset
 #include "arena.h"
 #include "gametypes.h"
 #include "physobj.h"
 #include "Random.h"
 #include "Vec2.h"
-
-#define MAX_PLAYERS 4
-//#define MAX_BULLETS 1000
-//#define MAX_PARTICLES 1000
-#define MAX_WEAPON_STACK_SIZE 5
-#define MAX_PICKUPS 10
-#define MAX_TORCHES 10
-#define MAX_SCREEN_SHAKES 4
-#define MAX_COINS 30
-#define MAX_FLOOR_EFFECT_TILES 20
-
-#include <string.h> // todo : cpp
 
 class BulletPool;
 class Color;
