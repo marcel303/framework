@@ -147,6 +147,7 @@ public:
 
 extern App * g_app;
 extern int g_updateTicks;
+extern int g_keyboardLock;
 
 extern Surface * g_colorMap;
 extern Surface * g_lightMap;

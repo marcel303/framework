@@ -90,7 +90,7 @@ void Client::tick(float dt)
 
 			PlayerInput input;
 
-			bool useKeyboard = (playerInstanceData->m_input.m_controllerIndex == 0) || (g_app->getControllerAllocationCount() == 1) && !m_textChat->isActive();
+			bool useKeyboard = ((playerInstanceData->m_input.m_controllerIndex == 0) || (g_app->getControllerAllocationCount() == 1)) && !m_textChat->isActive();
 			bool useGamepad = !morePlayersThanControllers || (playerInstanceData->m_input.m_controllerIndex != 0) || (g_app->getControllerAllocationCount() == 1);
 
 			if (useKeyboard)
@@ -220,7 +220,7 @@ void Client::tick(float dt)
 			g_app->netAction(m_channel, 	kNetAction_TextChat, 0, 0, m_textChat->getText());
 		}
 
-		if (keyboard.wentDown(SDLK_t))
+		if (g_keyboardLock == 0 && keyboard.wentDown(SDLK_t))
 			m_textChat->setActive(true);
 	}
 	else

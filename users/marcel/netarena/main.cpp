@@ -81,6 +81,8 @@ App * g_app = 0;
 
 int g_updateTicks = 0;
 
+int g_keyboardLock = 0;
+
 Surface * g_colorMap = 0;
 Surface * g_lightMap = 0;
 Surface * g_finalMap = 0;
@@ -1364,7 +1366,7 @@ bool App::tick()
 			menu->HandleAction(OptionMenu::Action_ValueIncrement, dt);
 	}
 
-	if (keyboard.wentDown(SDLK_t))
+	if (g_keyboardLock == 0 && keyboard.wentDown(SDLK_t))
 	{
 		g_optionManager.Load("options.txt");
 	}
@@ -1376,7 +1378,7 @@ bool App::tick()
 	TIMER_START(g_appTickTime);
 #endif
 
-	if (keyboard.wentDown(SDLK_ESCAPE) || framework.quitRequested)
+	if ((g_keyboardLock == 0 && keyboard.wentDown(SDLK_ESCAPE)) || framework.quitRequested)
 	{
 		quit();
 	}

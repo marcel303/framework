@@ -1,6 +1,7 @@
 #include "Debugging.h"
 #include "framework.h"
 #include "gamedefs.h"
+#include "main.h"
 #include "textchat.h"
 
 static bool isAllowed(int c)
@@ -110,6 +111,11 @@ void TextChat::setActive(bool isActive)
 
 		m_bufferSize = 0;
 		m_caretTimer = 0.f;
+
+		if (isActive)
+			g_keyboardLock++;
+		else
+			g_keyboardLock--;
 	}
 }
 
