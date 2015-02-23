@@ -2760,8 +2760,16 @@ static void measureText(FT_Face face, int size, const char * text, float & sx, f
 		}
 	}
 
-	sx = maxX - minX;
-	sy = maxY - minY;
+	if (maxX < minX)
+	{
+		sx = 0.f;
+		sy = 0.f;
+	}
+	else
+	{
+		sx = maxX - minX;
+		sy = maxY - minY;
+	}
 }
 
 static void drawTextInternal(FT_Face face, int size, const char * text)
@@ -2808,6 +2816,17 @@ static void drawTextInternal(FT_Face face, int size, const char * text)
 #if USE_LEGACY_OPENGL
 	gxSetTexture(0);
 #endif
+}
+
+void measureText(int size, float & sx, float & sy, const char * format, ...)
+{
+	char text[1024];
+	va_list args;
+	va_start(args, format);
+	vsprintf_s(text, sizeof(text), format, args);
+	va_end(args);
+
+	measureText(globals.font->face, size, text, sx, sy);
 }
 
 void drawText(float x, float y, int size, float alignX, float alignY, const char * format, ...)
