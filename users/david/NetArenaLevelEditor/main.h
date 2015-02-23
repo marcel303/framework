@@ -2,8 +2,16 @@
 
 
 #include <QGraphicsScene>
+#include <QGLWidget>
 #include <QGraphicsView>
 #include <QGraphicsPixmapItem>
+
+#include <QListView>
+
+#include <QPair>
+#include <QList>
+
+#include <QMap>
 
 class Tile : public QGraphicsPixmapItem
 {
@@ -43,43 +51,9 @@ public:
 
 };
 
-#include <QPair>
-#include <QList>
-
-class GameObject : public QGraphicsPixmapItem
-{
-public:
-	GameObject();
-	virtual ~GameObject();
-
-	virtual void mousePressEvent ( QGraphicsSceneMouseEvent * e );
-
-	void Load(QString data);
-    void Load(QMap<QString, QString>& data);
-
-    virtual QVariant itemChange(GraphicsItemChange change, const QVariant &value);
-
-	void SetPos(QPointF pos);
-
-    int x;
-    int y;
-
-	QColor q;
-
-	int speed;
-
-    int pivotx;
-    int pivoty;
 
 
-	QString type;
-    QString texture;
-	QString toText();
 
-	QList<QPair<int, int> > path;
-
-	bool palletteTile; //is this meant for ingame or used for pallette
-};
 
 class EditorScene : public QGraphicsScene
 {
@@ -148,10 +122,10 @@ public slots:
     void SaveTemplate();
     void Load();
     void New();
-    void SwitchToMech(int s);
-    void SwitchToArt(int s);
-    void SwitchToCollission(int s);
-	void SwitchToObject(int s);
+	void SwitchToMech();
+	void SwitchToArt();
+	void SwitchToCollission();
+	void SwitchToObject();
 
     void SwitchToTemplateMode();
 
@@ -163,39 +137,15 @@ public slots:
 
     void SwitchToBigMap();
 
-};
+	void ImportTemplate();
 
-
-class QTextEdit;
-class QColorDialog;
-class ObjectPropertyWindow : public QObject
-{
-	Q_OBJECT
-public:
-	ObjectPropertyWindow(){}
-	virtual ~ObjectPropertyWindow(){}
-
-	void CreateObjectPropertyWindow();
-
-	void SetCurrentGameObject(GameObject* object);
-
-    void UpdateObjectText();
-
-
-	GameObject* GetCurrentGameObject();
-
-	QWidget* m_w;
-	QTextEdit* text;
-
-	GameObject* currentObject;
-    QColorDialog* picker;
-
-
-public slots:
-	void SaveToGameObject();
-    void SetColor();
+	void mousePressEvent(QMouseEvent * e);
+	void mouseReleaseEvent(QMouseEvent * e);
 
 };
+
+
+
 
 
 class QPushButton;
@@ -243,11 +193,19 @@ public:
 
     QString m_name;
 
-    void LoadTemplate(QString filename);
+	void LoadTemplate(QString filename);
+	void SaveTemplate(int tx, int ty);
+
+	int ImportFromImage(QString filename);
+	void ConvertToPalletteTexture();
+
 };
 
-class TemplateScene: public QGraphicsScene
+#include <QStringListModel>
+
+class TemplateScene: public QWidget
 {
+	Q_OBJECT
 public:
     TemplateScene();
     virtual ~TemplateScene();
@@ -256,7 +214,16 @@ public:
 
     void AddTemplate(EditorTemplate* t);
 
-    QList<EditorTemplate*> m_list;
+	void UpdateList();
+
+	QMap<QString, EditorTemplate*> m_templateMap;
+	QStringList m_nameList;
+	QStringListModel* m_model;
+	QListView* m_listView;
     EditorTemplate* m_currentTemplate;
+
+public slots:
+	void templateListClicked(const QModelIndex &index);
+	void templateNameChanged(const QString& name);
 
 };

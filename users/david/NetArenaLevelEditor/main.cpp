@@ -1,30 +1,9 @@
 #include "main.h"
 
-#include <QApplication>
+#include "includeseditor.h"
 
-#include <QGraphicsPixmapItem>
-#include <QGraphicsView>
-#include <QWidget>
-#include <QMainWindow>
-#include <QGraphicsSceneMouseEvent>
-#include <QDebug>
-#include <QMap>
-#include <QSlider>
-#include <QGridLayout>
-#include <QHBoxLayout>
-#include <QVBoxLayout>
-#include <QSplitter>
-#include <QCheckBox>
-#include <QLabel>
-#include <QButtonGroup>
-#include <QMenuBar>
-#include <QDir>
-#include <QFileDialog>
-#include <QKeyEvent>
-#include <QtMath>
-#include <QColorDialog>
-#include <QTextEdit>
-#include <QPushButton>
+
+#include "gameobject.h"
 
 #define BASEX 52
 #define BASEY 32
@@ -32,9 +11,13 @@
 #define BLOCKSIZE 32
 
 
+
+#define ZOOMSPEED 12
+
 #define SCENEMECH 0
 #define SCENEART 1
 #define SCENECOLL 2
+#define SCENEOBJ 3
 
 int MAPX = BASEX;
 int MAPY = BASEY;
@@ -60,8 +43,7 @@ QMap<QString, QPixmap*> pixmapObjects;
 QMap<QString, GameObject*> objectPallette;
 QGraphicsScene* sceneObjectPallette;
 QList<GameObject*> gameObjects;
-QString ObjectPath; //the directory for all object textures
-ObjectPropertyWindow* objectPropWindow = 0;
+
 
 EditorView* view;
 QGraphicsView* viewPallette;
@@ -103,15 +85,15 @@ void AddAllToScene()
     for(int y = 0; y < MAPY; y++)
         for (int x = 0; x < MAPX; x++)
         {
-            sceneMech->m_tiles[y][x].setOpacity(0.7);
+			sceneMech->m_tiles[y][x].setOpacity(1);
 
             sceneCollission->m_tiles[y][x].setAcceptedMouseButtons(0);
             sceneCollission->m_tiles[y][x].setAcceptHoverEvents(false);
-            sceneCollission->m_tiles[y][x].setOpacity(0.2);
+			sceneCollission->m_tiles[y][x].setOpacity(0);
 
             sceneArt->m_tiles[y][x].setAcceptedMouseButtons(0);
             sceneArt->m_tiles[y][x].setAcceptHoverEvents(false);
-            sceneArt->m_tiles[y][x].setOpacity(0.2);
+			sceneArt->m_tiles[y][x].setOpacity(0);
 
             sceneMech->addItem(&sceneCollission->m_tiles[y][x]);
             sceneMech->addItem(&sceneArt->m_tiles[y][x]);
@@ -244,7 +226,7 @@ void SwitchSceneTo(int s)
         sceneCollissionPallette->addItem(palletteTile);
         SetEditCollissionScene();
         break;
-	case 3:
+	case SCENEOBJ:
         editorMode = EM_Object;
         view->setWindowTitle("Editing Level Objects");
 		viewPallette->setWindowTitle("GameObjects");
@@ -265,13 +247,13 @@ QMap<short, QPixmap*>& getCurrentPixmap()
 {
     switch (sceneCounter)
     {
-    case 0:
+	case SCENEMECH:
         return pixmaps;
         break;
-    case 1:
+	case SCENEART:
         return pixmapsArt;
         break;
-    case 2:
+	case SCENECOLL:
         return pixmapsCollission;
         break;
     default:
@@ -345,6 +327,14 @@ void LoadPixmapsArt(QString filename, QMap<short, QPixmap*>& map)
         QString line = list.front();
 
         p = new QPixmap(path+line);
+		if(p->isNull())
+		{
+			qDebug() << "couldn't load artfile: " << line;
+			delete p;
+			list.pop_front();
+			key++;
+			continue;
+		}
         p2 = new QPixmap(p->scaledToWidth(BLOCKSIZE));
         delete p;
         map[key] = p2;
@@ -366,7 +356,7 @@ QPixmap* GetObjectPixmap(QString texture)
 {
     if(!pixmapObjects.contains(texture))
     {
-        QPixmap* p = new QPixmap(ObjectPath + texture);
+		QPixmap* p = new QPixmap(Ed::I().ObjectPath + texture);
         pixmapObjects[texture] = p;
     }
     return pixmapObjects[texture];
@@ -385,7 +375,7 @@ void LoadObjects(QString filename, bool pallette)
 
     if(!list.empty())
     {
-        ObjectPath = list.front();
+		Ed::I().ObjectPath = list.front();
         list.pop_front();
     }
 
@@ -616,6 +606,7 @@ void SaveTemplateToFile(QString filename, int tx, int ty)
 
         QDataStream out(&templateFile);
 
+		out << filename;
         out << tx << ty;
 
         for(int y = 0; y < ty; y++)
@@ -672,7 +663,7 @@ void CreateNewMap(int x, int y)
     MAPY = y;
 
 
-    sceneMech->setSceneRect(0,0,MAPX*BLOCKSIZE,MAPY*BLOCKSIZE);
+	sceneMech->setSceneRect(-MAPX*2*BLOCKSIZE,-MAPY*2*BLOCKSIZE,MAPX*4*BLOCKSIZE,MAPY*4*BLOCKSIZE);
 
     LoadPixmaps();
 
@@ -756,9 +747,6 @@ void CreateAndShowNewMapDialog()
 }
 
 
-
-
-
 void CreateSettingsWidget();
 void CreateObjectPropertyWindow();
 int main(int argc, char *argv[])
@@ -767,15 +755,28 @@ int main(int argc, char *argv[])
 
     grid = new QGridLayout();
     vlayout = new QVBoxLayout();
-    hlayout = new QSplitter();
+	hlayout = new QSplitter();
 
+	QWidget rightside;
 
 	editorMode = EM_Level;
 
     view = new EditorView();
+
+
+	if(0)
+	{
+	view->setViewport(new QGLWidget());
+	view->setViewportUpdateMode(
+		QGraphicsView::FullViewportUpdate);
+	}
+
+	view->setRenderHints(QPainter::Antialiasing);
+
     sceneMech = new EditorScene();
     sceneArt = new EditorScene();
 	sceneCollission = new EditorScene();
+	templateScene = new TemplateScene();
 
     view->setScene(sceneMech);
 
@@ -786,10 +787,11 @@ int main(int argc, char *argv[])
     SetSelectedTile('x');
 
 
-	objectPropWindow = new ObjectPropertyWindow();
-	objectPropWindow->CreateObjectPropertyWindow();
+	Ed::I().objectPropWindow = new ObjectPropertyWindow();
+	Ed::I().objectPropWindow->CreateObjectPropertyWindow();
 
     viewPallette = new EditorViewBasic;
+	viewPallette->setDragMode(QGraphicsView::ScrollHandDrag);
     scenePallette = new QGraphicsScene;
     sceneArtPallette = new QGraphicsScene;
     sceneCollissionPallette = new QGraphicsScene;
@@ -799,32 +801,33 @@ int main(int argc, char *argv[])
     viewPallette->showNormal();
     viewPallette->resize(430, 600);
 
-    scenePallette->setSceneRect(0,0,4*BLOCKSIZE,10*BLOCKSIZE);
-    sceneArtPallette->setSceneRect(0,0,4*BLOCKSIZE,10*BLOCKSIZE);
-    sceneCollissionPallette->setSceneRect(0,0,4*BLOCKSIZE,10*BLOCKSIZE);
+	scenePallette->setSceneRect(0,0,4*BLOCKSIZE,10*BLOCKSIZE);
+	sceneArtPallette->setSceneRect(0,0,4*BLOCKSIZE,10*BLOCKSIZE);
+	sceneCollissionPallette->setSceneRect(0,0,4*BLOCKSIZE,10*BLOCKSIZE);
 
     LoadPallette();
 
-    //viewPallette->show();
 
     AddAllToScene();
     sceneMech->AddGrid();
 
     CreateSettingsWidget();
 
-
-    QWidget rightside;
-    rightside.setLayout(vlayout);
+	rightside.setLayout(vlayout);
+	view->setMinimumWidth(1200);
     hlayout->addWidget(view);
-    hlayout->addWidget(&rightside);
+
+	hlayout->addWidget(&rightside);
 
     vlayout->addWidget(viewPallette);
+	vlayout->addWidget(templateScene->m_listView);
+	templateScene->m_listView->hide();
     vlayout->addWidget(settingsWidget);
-    vlayout->addWidget(objectPropWindow->m_w);
+	vlayout->addWidget(Ed::I().objectPropWindow->m_w);
 
     hlayout->showMaximized();
 
-    templateScene = new TemplateScene();
+
     LoadTemplates();
 
     return a.exec();
@@ -974,6 +977,7 @@ void EditorScene::InitializeLevel()
 
 void EditorScene::AddGrid()
 {
+	return;
     for (int x = 0; x <= m_mapx*BLOCKSIZE; x+=BLOCKSIZE)
     {
         addLine(x, 0, x, m_mapy*BLOCKSIZE);
@@ -995,12 +999,12 @@ void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e )
 		{
 			GameObject* obj = new GameObject();
 			obj->palletteTile = false;
-			obj->Load(objectPropWindow->GetCurrentGameObject()->toText());
+			obj->Load(Ed::I().objectPropWindow->GetCurrentGameObject()->toText());
 			obj->SetPos(e->scenePos());
 
 			AddGameObject(obj);
 
-            objectPropWindow->SetCurrentGameObject(obj);
+			Ed::I().objectPropWindow->SetCurrentGameObject(obj);
 
 			e->accept();
 			break;
@@ -1062,17 +1066,16 @@ EditorView::EditorView() : EditorViewBasic()
     newAct5->setStatusTip(tr("Templatus Savus"));
     connect(newAct5, SIGNAL(triggered()), this, SLOT(SaveTemplate()));
 
-    QAction* newAct7 = new QAction(tr("&MapSize"), this);
-    newAct7->setStatusTip(tr("Switch to Big Map(tm)"));
-    connect(newAct7, SIGNAL(triggered()), this, SLOT(SwitchToBigMap()));
-
+	QAction* newAct6 = new QAction(tr("&ImportTemplate"), this);
+	newAct6->setStatusTip(tr("Import Template Image"));
+	connect(newAct6, SIGNAL(triggered()), this, SLOT(ImportTemplate()));
 
     bar->addAction(newAct1);
     bar->addAction(newAct2);
     bar->addAction(newAct3);
     bar->addAction(newAct4);
     bar->addAction(newAct5);
-    bar->addAction(newAct7);
+	bar->addAction(newAct6);
 
     bar->showNormal();
 }
@@ -1092,9 +1095,9 @@ void EditorView::SaveTemplate()
 {
     int x = QInputDialog::getInt(this, "Template X size", "X:");
     int y = QInputDialog::getInt(this, "Template Y size", "Y:");
-    QString fileName = QFileDialog::getSaveFileName(this, tr("Save to file"));
+	//QString fileName = QFileDialog::getSaveFileName(this, tr("Save to file"));
 
-    SaveTemplateToFile(fileName, x, y);
+	templateScene->GetCurrentTemplate()->SaveTemplate(x, y);
 }
 
 void EditorView::Load()
@@ -1107,50 +1110,38 @@ void EditorView::New()
 {
     CreateAndShowNewMapDialog();
 }
-void EditorView::SwitchToMech(int s)
+void EditorView::SwitchToMech()
 {
-    if(s)
-    {
-        SwitchSceneTo(0);
-        sliderOpacMech->setValue(80);
-        sliderOpacArt->setValue(20);
-        sliderOpacColl->setValue(20);
-		sliderOpacObject->setValue(20);
-    }
+		SwitchSceneTo(SCENEMECH);
+		sliderOpacMech->setValue(100);
+		sliderOpacArt->setValue(0);
+		sliderOpacColl->setValue(0);
+		sliderOpacObject->setValue(0);
 }
-void EditorView::SwitchToArt(int s)
+void EditorView::SwitchToArt()
 {
-    if(s)
-    {
-        SwitchSceneTo(1);
-        sliderOpacMech->setValue(20);
-        sliderOpacArt->setValue(80);
-        sliderOpacColl->setValue(20);
-		sliderOpacObject->setValue(20);
-    }
+		SwitchSceneTo(SCENEART);
+		sliderOpacMech->setValue(20);
+		sliderOpacArt->setValue(80);
+		sliderOpacColl->setValue(0);
+		sliderOpacObject->setValue(0);
 }
-void EditorView::SwitchToCollission(int s)
+void EditorView::SwitchToCollission()
 {
-    if(s)
-    {
-        SwitchSceneTo(2);
-        sliderOpacMech->setValue(20);
-        sliderOpacArt->setValue(20);
-        sliderOpacColl->setValue(80);
-		sliderOpacObject->setValue(20);
-    }
+		SwitchSceneTo(SCENECOLL);
+		sliderOpacMech->setValue(0);
+		sliderOpacArt->setValue(20);
+		sliderOpacColl->setValue(80);
+		sliderOpacObject->setValue(0);
 }
 
-void EditorView::SwitchToObject(int s)
+void EditorView::SwitchToObject()
 {
-	if(s)
-	{
 		SwitchSceneTo(3);
 		sliderOpacMech->setValue(20);
-		sliderOpacArt->setValue(20);
-		sliderOpacColl->setValue(20);
-		sliderOpacObject->setValue(100);
-	}
+		sliderOpacArt->setValue(0);
+		sliderOpacColl->setValue(0);
+		sliderOpacObject->setValue(80);
 }
 
 void EditorView::SwitchToBigMap()
@@ -1163,21 +1154,29 @@ void EditorView::SwitchToBigMap()
 
 void EditorView::SwitchToTemplateMode()
 {
+	QLayoutItem* l = 0;
 	if(editorMode != EM_Template)
     {
 		editorMode = EM_Template;
 
-        viewPallette->setScene(templateScene); //templatePallette
+		viewPallette->hide();
+		templateScene->m_listView->show();
+
         //template controls
     }
 	else
     {
 		editorMode = EM_Level;
 
+
+		templateScene->m_listView->hide();
+		viewPallette->show();
+
         if(!sceneCounter)
             SwitchScene();
         SwitchSceneTo(0);
     }
+
 }
 
 void EditorView::SetOpacityMech(int s)
@@ -1202,7 +1201,21 @@ void EditorView::SetOpacityObject(int s)
 	}
 }
 
+void EditorView::ImportTemplate()
+{
+	QString filename = QFileDialog::getOpenFileName(this, tr("Open Image for Template"));
 
+	EditorTemplate* t = new EditorTemplate();
+	if(t->ImportFromImage(filename))
+	{
+		filename.chop(4);
+		QString f = filename.split('/').last();
+		t->LoadTemplate(f + ".tmpl");
+		templateScene->AddTemplate(t);
+	}
+	else
+		delete t;
+}
 
 
 #ifndef QT_NO_WHEELEVENT
@@ -1210,9 +1223,9 @@ void EditorViewBasic::wheelEvent(QWheelEvent* e)
 {
     {
         if (e->delta() > 0)
-            zoomIn(6);
+			zoomIn(ZOOMSPEED);
         else
-            zoomOut(6);
+			zoomOut(ZOOMSPEED);
         e->accept();
     }
 }
@@ -1298,25 +1311,25 @@ void CreateSettingsWidget()
     QButtonGroup* bgroup = new QButtonGroup();
     QCheckBox* cb = new QCheckBox();
     QObject::connect(cb, SIGNAL(stateChanged(int)),
-            view, SLOT(SwitchToMech(int)));
+			view, SLOT(SwitchToMech()));
     grid->addWidget(cb, 1, 1);
     bgroup->addButton(cb);
 
     cb = new QCheckBox();
     QObject::connect(cb, SIGNAL(stateChanged(int)),
-            view, SLOT(SwitchToArt(int)));
+			view, SLOT(SwitchToArt()));
     grid->addWidget(cb, 2, 1);
     bgroup->addButton(cb);
 
     cb = new QCheckBox();
     QObject::connect(cb, SIGNAL(stateChanged(int)),
-            view, SLOT(SwitchToCollission(int)));
+			view, SLOT(SwitchToCollission()));
     grid->addWidget(cb, 3, 1);
     bgroup->addButton(cb);
 
 	cb = new QCheckBox();
 	QObject::connect(cb, SIGNAL(stateChanged(int)),
-			view, SLOT(SwitchToObject(int)));
+			view, SLOT(SwitchToObject()));
 	grid->addWidget(cb, 4, 1);
 	bgroup->addButton(cb);
 
@@ -1358,245 +1371,68 @@ void CreateSettingsWidget()
 
 
 
-void ObjectPropertyWindow::CreateObjectPropertyWindow()
-{
-	currentObject = 0;
-
-	m_w = new QWidget();
-
-	QGridLayout* grid = new QGridLayout();
-
-	text = new QTextEdit();
-	grid->addWidget(text, 0, 0);
-
-	QPushButton* b = new QPushButton;
-	b->setText("Save");
-    connect(b, SIGNAL(pressed()), this, SLOT(SaveToGameObject()));
-
-	grid->addWidget(b, 1, 0);
-
-
-    picker = new QColorDialog();
-    picker->setOption(QColorDialog::ShowAlphaChannel);
-    connect(picker, SIGNAL(currentColorChanged(const QColor&)), this, SLOT(SetColor()));
-
-    grid->addWidget(picker, 2, 0);
-
-	m_w->setLayout(grid);
-
-	m_w->setWindowTitle("Object Properties");
-	m_w->show();
-}
-
-void ObjectPropertyWindow::SetColor()
-{
-    currentObject->q = picker->currentColor();
-    UpdateObjectText();
-}
-
-void ObjectPropertyWindow::SetCurrentGameObject(GameObject* object)
-{
-	text->setText(object->toText());
-	currentObject = object;
-}
-
-void ObjectPropertyWindow::UpdateObjectText()
-{
-    if(currentObject)
-        text->setText(currentObject->toText());
-}
-
-GameObject* ObjectPropertyWindow::GetCurrentGameObject()
-{
-	return currentObject;
-}
-
-void ObjectPropertyWindow::SaveToGameObject()
-{
-	if(currentObject)
-	{
-		currentObject->Load(text->toPlainText());
-        text->setText(currentObject->toText());
-	}
-}
-
-
-
-GameObject::GameObject()
-{
-    x = -1;
-    y = -1;
-
-	type = "none";
-	q = Qt::black;
-
-    texture = "";
-
-	speed = -1;
-
-	palletteTile = false;
-
-    setFlags(ItemIsMovable | ItemSendsGeometryChanges);
-
-    pivotx = 0;
-    pivoty = 0;
-}
-
-GameObject::~GameObject()
-{
-}
-
-void GameObject::mousePressEvent ( QGraphicsSceneMouseEvent * e )
-{
-	objectPropWindow->SetCurrentGameObject(this);
-
-    e->accept();
-}
-
-void GameObject::SetPos(QPointF p)
-{
-	setPos(p);
-    //x = pos().x();
-    //y = pos().y();
-
-    //if(objectPropWindow && objectPropWindow->currentObject == this)
-    //    objectPropWindow->UpdateObjectText();
-}
-
-typedef QPair<int, int> qp; //hack around compiler for foreach not being nice
-void GameObject::Load(QString data)
-{
-	QList<QString> lines;
-
-	QTextStream stream(&data);
-
-	QList<QString> list;
-	while(!stream.atEnd())
-	{
-		QString line = stream.readLine();
-		list.push_back(line);
-	}
-
-	QMap<QString, QString> map;
-	foreach(QString line, list)
-	{
-		QStringList list = line.split(":");
-        map[*list.begin()] = list.back();
-	}
-
-    Load(map);
-}
-
-
-void GameObject::Load(QMap<QString, QString>& map)
-{
-    if(map["object"] != type) //prevent needless reloading of pivots
-    {
-        type = map["object"];
-
-        QList<QString> list = GetLinesFromConfigFile(ObjectPath + type + ".txt");
-        QStringList l2 = list.first().split(" ");
-        if(l2.front() == "sheet")
-        {
-            l2.pop_front();
-            pivotx = (l2.front().split(":").last()).toInt();
-            pivoty = (l2.last().split(":").last()).toInt();
-        }
-    }
-
-    if(map.contains("texture"))
-        texture = map["texture"];
-
-    setPixmap(*GetObjectPixmap(texture));
-
-    if(map.contains("x"))
-        x = map["x"].toInt() - pivotx;
-    if(map.contains("y"))
-        y = map["y"].toInt() - pivoty;
-
-    setPos(x, y);
-
-    if(map.contains("speed"))
-        speed = map["speed"].toInt();
-
-
-    if(map.contains("color"))
-    {
-        map["color"].push_front(map["color"][map["color"].size()-1]);
-        map["color"].push_front(map["color"][map["color"].size()-2]);
-        map["color"].push_front("#");
-        map["color"].chop(2);
-
-        q.setNamedColor(map["color"]);
-    }
-}
-
-QString GameObject::toText()
-{
-    x = pos().x() + pivotx;
-    y = pos().y() + pivoty;
-
-	QString ret = "";
-	if(type != "none")
-	{ret += "object:" + type;						ret += "\n";}
-    if(x >= 0)
-	{ret += "x:" + QString::number(x);               ret += "\n";}
-    if(y >= 0)
-	{ret += "y:" + QString::number(y);               ret += "\n";}
-
-	if(texture != "")
-	{ret += "texture:" + texture; ret += "\n";}
-
-	if(q != Qt::black)
-	{
-		ret += "color:";
-		ret +=  QString::number(q.red(), 16);
-		ret +=  QString::number(q.green(), 16);
-		ret +=  QString::number(q.blue(), 16);
-		ret +=  QString::number(q.alpha(), 16);		ret += "\n";
-	}
-
-	int i = 1;
-	foreach(qp coord, path)
-	{
-		ret += "x" + QString::number(i) + ":" + QString::number(coord.first); ret += "\n";
-		ret += "y" + QString::number(i) + ":" + QString::number(coord.second); ret += "\n";
-		i++;
-	}
-
-	if(speed >= 0)
-		ret += "speed:" + QString::number(speed);   ret += "\n";
-
-	return ret;
-}
-
-QVariant GameObject::itemChange(GraphicsItemChange change, const QVariant &value)
-{
-    if(change == ItemPositionChange)
-        if(objectPropWindow && objectPropWindow->currentObject == this)
-            objectPropWindow->UpdateObjectText();
-
-    return QGraphicsPixmapItem::itemChange(change, value);
-}
 
 TemplateScene::TemplateScene()
 {
+	m_listView = new QListView();
+	m_model = new QStringListModel();
+
+	UpdateList();
+
+	connect(m_listView, SIGNAL(clicked(QModelIndex)), this, SLOT(templateListClicked(QModelIndex)));
+	connect(m_listView, SIGNAL(objectNameChanged(QString)), this, SLOT(templateNameChanged(QString)));
+
 }
 
 TemplateScene::~TemplateScene()
 {
 }
 
+void TemplateScene::templateListClicked(const QModelIndex &index)
+{
+	QString name = (m_model->data(index, Qt::DisplayRole)).toString();
+
+	m_currentTemplate = m_templateMap[name];
+}
+
+void TemplateScene::templateNameChanged(const QString& name)
+{
+	QString tname = m_currentTemplate->m_name;
+	m_currentTemplate->m_name = name;
+
+	m_templateMap.remove(tname);
+	m_templateMap[name] = m_currentTemplate;
+
+
+	//save new definition?
+}
+
+
 void TemplateScene::AddTemplate(EditorTemplate* t)
 {
-    m_list.append(t);
+	m_templateMap[t->m_name] = t;
 
-    addPixmap(*getCurrentPixmap()[t->m_list.first().blockMech]);
+	UpdateList();
+}
+
+void TemplateScene::UpdateList()
+{
+	m_nameList.clear();
+
+	foreach(QString name, m_templateMap.keys())
+	{
+		m_nameList << name;
+	}
+
+	m_model->setStringList(m_nameList);
+
+	m_listView->setModel(m_model);
 }
 
 EditorTemplate* TemplateScene::GetCurrentTemplate()
 {
-    return m_list.first();
+	//m_listView.
+	return m_currentTemplate;
 }
 
 EditorTemplate::EditorTemplate()
@@ -1614,6 +1450,7 @@ void EditorTemplate::LoadTemplate(QString filename)
 
     QDataStream in(&file);
 
+	in >> m_name;
     int x; in >> x;
     int y; in >> y;
 
@@ -1633,3 +1470,109 @@ void EditorTemplate::LoadTemplate(QString filename)
 
     file.close();
 }
+
+void EditorTemplate::SaveTemplate(int tx, int ty)
+{
+	QFile file("templates.txt");
+	file.open(QIODevice::WriteOnly | QIODevice::Append);
+
+	QTextStream text(&file);
+	{
+		QFile templateFile(m_name + ".tmpl");
+		templateFile.open(QIODevice::WriteOnly);
+
+		QDataStream out(&templateFile);
+
+		out << m_name;
+		out << tx << ty;
+
+		for(int y = 0; y < ty; y++)
+			for (int x = 0; x < tx; x++)
+			{
+				out << (quint16 )(sceneMech->m_tiles[y][x].getBlock());
+				out << (quint16 )(sceneArt->m_tiles[y][x].getBlock());
+				out << (quint16 )(sceneCollission->m_tiles[y][x].getBlock());
+			}
+
+		templateFile.close();
+
+		text << m_name << ".tmpl" << endl;
+
+		qDebug() << "Template" << m_name << " saved.";
+	}
+	file.close();
+}
+
+int EditorTemplate::ImportFromImage(QString filename)
+{
+	QPixmap* img = new QPixmap(filename);
+
+	QString name = filename.split('/').last();
+	name.chop(4); //chops .png
+
+	QPixmap tile = img->scaled(BLOCKSIZE, BLOCKSIZE);
+	QFile tileFile(name+"_tile.png");
+	tileFile.open(QIODevice::WriteOnly);
+	tile.save(&tileFile, "PNG");
+	tileFile.close();
+
+	if(img->size().width() < 1)
+		return 0;
+
+	QFile artList("ArtList.txt");
+	artList.open(QIODevice::WriteOnly | QIODevice::Append);
+	QTextStream in(&artList);
+	for(int x = 0; x*BLOCKSIZE < img->size().width(); x++)
+	{
+		for(int y = 0; y*BLOCKSIZE < img->size().height(); y++)
+		{
+			QPixmap *copy = new QPixmap (img->copy(x*BLOCKSIZE, y*BLOCKSIZE, BLOCKSIZE, BLOCKSIZE));
+
+			QString tmpname = name + "_" + QString::number(x) + "_" + QString::number(y)  + ".png";
+			QFile file(tmpname);
+			file.open(QIODevice::WriteOnly);
+			copy->save(&file, "PNG");
+			file.close();
+
+			in << tmpname << "\r\n";
+
+			pixmapsArt[pixmapsArt.size()] = copy;
+
+			sceneCounter = SCENEART;
+			sceneArt->m_tiles[y][x].SetSelectedBlock(pixmapsArt.size()-1);
+			sceneCounter = SCENEMECH;
+			sceneMech->m_tiles[y][x].SetSelectedBlock(QString("x").toShort());
+		}
+	}
+	artList.close();
+
+	view->SwitchToArt();
+
+	return 1;
+}
+
+void EditorView :: mousePressEvent(QMouseEvent * e)
+{
+   if (e->button() == Qt::MidButton)
+   {
+	  QMouseEvent fake(e->type(), e->pos(), Qt::LeftButton, Qt::LeftButton, e->modifiers());
+	  this->setInteractive(false);
+	  this->setDragMode(QGraphicsView::ScrollHandDrag);
+	  QGraphicsView::mousePressEvent(&fake);
+   }
+   else QGraphicsView::mousePressEvent(e);
+}
+
+void EditorView :: mouseReleaseEvent(QMouseEvent * e)
+{
+   if (e->button() == Qt::MidButton)
+   {
+	  QMouseEvent fake(e->type(), e->pos(), Qt::LeftButton, Qt::LeftButton, e->modifiers());
+	  this->setInteractive(true);
+	  this->setDragMode(QGraphicsView::NoDrag);
+	  QGraphicsView::mouseReleaseEvent(&fake);
+   }
+   else QGraphicsView::mouseReleaseEvent(e);
+}
+
+
