@@ -12,6 +12,17 @@
 
 todo:
 
+- game speed var
+
+- need to be able to kick player at char select
+- i think less bubble/ice freeze time
+- respawn visual to more quickly locate your respawn location
+- drop rate should scale with number of players
+- remove angels in spawn locations -> reduce background noise
+- buff star player
+- score feedback
+- investigate killing the rambo mode, soldat
+
 + clash sound on attack cancel
 + random sound selection on event to avoid repeat sounds
 + fire up/down
@@ -27,12 +38,12 @@ todo:
 + spring block tweakable
 - more death feedback
 + respawn delay
-- character selection
++ character selection
 + force feedback cling animation
 + attack anim up and down
 + analog controls
 - team based game mode
-- token hunt
++ token hunt
 + spawn anim
 
 + death input
@@ -46,18 +57,18 @@ todo:
 + bullet teleport
 + separate player hitbox for damage
 + grenades!
-- ammo drop gravity
++ ammo drop gravity
 + input lock dash weg
 + jump velocity reset na 10 pixels of richting change
-- ammo despawn na x seconds + indicator
+- ammo despawn na x seconds + indicator (?)
 
 + attack cooldown
 
-- camera shakes
++ camera shakes
 
 nice to haves:
 - blood particles
-- real time lighting
++ real time lighting
 - fill the level with lava
 - bee attack
 
@@ -448,6 +459,12 @@ void Player::playSecondaryEffects(PlayerEvent e)
 
 void Player::tick(float dt)
 {
+	if (m_instanceData->m_textChatTicks != 0)
+	{
+		if (--m_instanceData->m_textChatTicks == 0)
+			m_instanceData->m_textChat.clear();
+	}
+
 	m_collision.x1 = -PLAYER_COLLISION_HITBOX_SX / 2.f;
 	m_collision.x2 = +PLAYER_COLLISION_HITBOX_SX / 2.f;
 	m_collision.y1 = -PLAYER_COLLISION_HITBOX_SY / 1.f;
@@ -1559,6 +1576,28 @@ void Player::draw() const
 		setFont("calibri.ttf");
 		drawText(m_pos[0], m_pos[1], 24, 0, 0, "(X)");
 	}
+
+	// draw text chat
+
+	if (!m_instanceData->m_textChat.empty())
+	{
+		float sx, sy;
+		measureText(INGAME_TEXTCHAT_FONT_SIZE, sx, sy, "%s", m_instanceData->m_textChat.c_str());
+
+		const int sizeX = INGAME_TEXTCHAT_PADDING_X * 2 + sx;
+		const int sizeY = INGAME_TEXTCHAT_SIZE_Y;
+		const int offsetX = m_pos[0] - sizeX / 2;
+		const int offsetY = m_pos[1] - 150;
+
+		setColor(255, 255, 255, 227);
+		drawRect(offsetX, offsetY, offsetX + sizeX, offsetY + sizeY);
+		setColor(0, 0, 255, 127);
+		drawRectLine(offsetX, offsetY, offsetX + sizeX, offsetY + sizeY);
+
+		setFont("calibri.ttf");
+		setColor(0, 0, 255);
+		drawText(offsetX + sizeX/2, offsetY + INGAME_TEXTCHAT_PADDING_Y, INGAME_TEXTCHAT_FONT_SIZE, 0.f, +1.f, "%s", m_instanceData->m_textChat.c_str());
+	}
 }
 
 void Player::drawAt(int x, int y) const
@@ -2029,6 +2068,7 @@ char * Player::makeCharacterFilename(const char * filename)
 PlayerInstanceData::PlayerInstanceData(Player * player, GameSim * gameSim)
 	: m_player(player)
 	, m_gameSim(gameSim)
+	, m_textChatTicks(0)
 	, m_sprite(0)
 	, m_spriteScale(1.f)
 {
@@ -2100,4 +2140,10 @@ void PlayerInstanceData::playSoundBag(const char * name, int volume)
 	}
 
 	m_gameSim->playSound(m_player->makeCharacterFilename(m_sounds[name].getRandomSound(*m_gameSim)), volume);
+}
+
+void PlayerInstanceData::addTextChat(const std::string & line)
+{
+	m_textChat = line;
+	m_textChatTicks = TICKS_PER_SECOND * INGAME_TEXTCHAT_DURATION;
 }

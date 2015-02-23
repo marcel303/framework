@@ -20,7 +20,7 @@ OPTION_ALIAS(g_noSound, "nosound");
 
 OPTION_DECLARE(int, g_gameModeNextRound, -1);
 OPTION_DEFINE(int, g_gameModeNextRound, "Game State/Game Mode Next Round");
-OPTION_STEP(g_gameModeNextRound, 0, kGameMode_COUNT - 1, 1);
+OPTION_STEP(g_gameModeNextRound, -1, kGameMode_COUNT - 1, 1);
 OPTION_ALIAS(g_gameModeNextRound, "gamemode");
 OPTION_VALUE_ALIAS(g_gameModeNextRound, deathmatch, kGameMode_DeathMatch);
 OPTION_VALUE_ALIAS(g_gameModeNextRound, tokenhunt, kGameMode_TokenHunt);

@@ -126,7 +126,7 @@ public:
 	bool tick();
 	void draw();
 
-	void netAction(Channel * channel, NetAction action, uint8_t param1, uint8_t param2);
+	void netAction(Channel * channel, NetAction action, uint8_t param1, uint8_t param2, const std::string & param3 = "");
 	void netSyncGameSim(Channel * channel);
 	void netAddPlayer(Channel * channel, uint8_t characterIndex);
 	void netAddPlayerBroadcast(Channel * channel, uint16_t owningChannelId, uint8_t index, uint8_t characterIndex);

@@ -23,6 +23,7 @@
 #include "StatTimerMenu.h"
 #include "StatTimers.h"
 #include "StringBuilder.h"
+#include "textchat.h"
 #include "Timer.h"
 
 //
@@ -213,15 +214,18 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			uint8_t action;
 			uint8_t param1;
 			uint8_t param2;
+			std::string param3;
 
 			bitStream.Read(action);
 			bitStream.Read(param1);
 			bitStream.Read(param2);
+			param3 = bitStream.ReadString();
 
 			BitStream bs;
 			bs.Write(action);
 			bs.Write(param1);
 			bs.Write(param2);
+			bs.WriteString(param3);
 
 			g_app->m_rpcMgr->Call(s_rpcActionBroadcast, bs, ChannelPool_Server, 0, true, true);
 		}
@@ -235,15 +239,15 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			uint8_t action;
 			uint8_t param1;
 			uint8_t param2;
+			std::string param3;
 
 			bitStream.Read(action);
 			bitStream.Read(param1);
 			bitStream.Read(param2);
+			param3 = bitStream.ReadString();
 
 			switch ((NetAction)action)
 			{
-			case kNetAction_StartGame:
-				break;
 			case kNetAction_PlayerInputAction:
 				Assert(param1 >= 0 && param1 < MAX_PLAYERS);
 				if (param1 >= 0 && param1 < MAX_PLAYERS)
@@ -253,6 +257,19 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 					if (playerInstanceData)
 					{
 						playerInstanceData->m_input.m_actions |= (1 << param2);
+					}
+				}
+				break;
+
+			case kNetAction_TextChat:
+				Assert(param1 >= 0 && param1 < MAX_PLAYERS);
+				if (param1 >= 0 && param1 < MAX_PLAYERS)
+				{
+					PlayerInstanceData * playerInstanceData = gameSim->m_playerInstanceDatas[param1];
+					Assert(playerInstanceData);
+					if (playerInstanceData)
+					{
+						playerInstanceData->addTextChat(param3);
 					}
 				}
 				break;
@@ -1515,7 +1532,7 @@ void App::draw()
 	TIMER_START(g_appDrawTime);
 }
 
-void App::netAction(Channel * channel, NetAction action, uint8_t param1, uint8_t param2)
+void App::netAction(Channel * channel, NetAction action, uint8_t param1, uint8_t param2, const std::string & param3)
 {
 	LOG_DBG("netAction");
 
@@ -1526,6 +1543,7 @@ void App::netAction(Channel * channel, NetAction action, uint8_t param1, uint8_t
 	bs.Write(actionInt);
 	bs.Write(param1);
 	bs.Write(param2);
+	bs.WriteString(param3);
 
 	m_rpcMgr->Call(s_rpcAction, bs, ChannelPool_Client, &channel->m_id, false, false);
 }

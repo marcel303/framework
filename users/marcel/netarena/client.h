@@ -13,6 +13,7 @@ class NetSpriteManager;
 struct ParticleSpawnInfo;
 struct Player;
 class PlayerInstanceData;
+class TextChat;
 
 class Client
 {
@@ -20,6 +21,8 @@ public:
 	Channel * m_channel;
 
 	LobbyMenu * m_lobbyMenu;
+
+	TextChat * m_textChat;
 
 	GameSim * m_gameSim;
 

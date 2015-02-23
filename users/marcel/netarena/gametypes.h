@@ -4,8 +4,8 @@
 
 enum NetAction
 {
-	kNetAction_StartGame,
-	kNetAction_PlayerInputAction
+	kNetAction_PlayerInputAction,
+	kNetAction_TextChat
 };
 
 enum NetPlayerAction

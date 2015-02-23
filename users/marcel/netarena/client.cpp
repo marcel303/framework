@@ -10,6 +10,7 @@
 #include "lobbymenu.h"
 #include "main.h"
 #include "player.h"
+#include "textchat.h"
 #include "Timer.h"
 
 OPTION_DECLARE(bool, s_noBgm, false);
@@ -22,11 +23,14 @@ static Music * s_bgmSound = 0;
 Client::Client()
 	: m_channel(0)
 	, m_lobbyMenu(0)
+	, m_textChat(0)
 	, m_gameSim(0)
 	, m_syncStream(0)
 	, m_isDesync(false)
 {
 	m_lobbyMenu = new LobbyMenu(this);
+
+	m_textChat = new TextChat(30, GFX_SY - 100, GFX_SX - 60, 70);
 
 	m_gameSim = new GameSim();
 
@@ -49,6 +53,9 @@ Client::~Client()
 
 	delete m_gameSim;
 	m_gameSim = 0;
+
+	delete m_textChat;
+	m_textChat = 0;
 
 	delete m_lobbyMenu;
 	m_lobbyMenu = 0;
@@ -83,7 +90,7 @@ void Client::tick(float dt)
 
 			PlayerInput input;
 
-			bool useKeyboard = (playerInstanceData->m_input.m_controllerIndex == 0) || (g_app->getControllerAllocationCount() == 1);
+			bool useKeyboard = (playerInstanceData->m_input.m_controllerIndex == 0) || (g_app->getControllerAllocationCount() == 1) && !m_textChat->isActive();
 			bool useGamepad = !morePlayersThanControllers || (playerInstanceData->m_input.m_controllerIndex != 0) || (g_app->getControllerAllocationCount() == 1);
 
 			if (useKeyboard)
@@ -205,6 +212,20 @@ void Client::tick(float dt)
 		//
 
 		m_lobbyMenu->tick(dt);
+
+		//
+
+		if (m_textChat->tick(dt))
+		{
+			g_app->netAction(m_channel, 	kNetAction_TextChat, 0, 0, m_textChat->getText());
+		}
+
+		if (keyboard.wentDown(SDLK_t))
+			m_textChat->setActive(true);
+	}
+	else
+	{
+		m_textChat->setActive(false);
 	}
 
 	if (s_noBgm)
@@ -262,8 +283,6 @@ void Client::tick(float dt)
 
 void Client::draw()
 {
-	//setPlayerPtrs(); // fixme : enable once full simulation runs on clients
-
 	switch (m_gameSim->m_gameState)
 	{
 	case kGameState_MainMenus:
@@ -291,7 +310,7 @@ void Client::draw()
 		break;
 	}
 
-	//clearPlayerPtrs();
+	m_textChat->draw();
 }
 
 void Client::drawConnecting()
@@ -357,6 +376,8 @@ void Client::drawPlay()
 	{
 		gxPushMatrix();
 		gxTranslatef(camTranslation[0], camTranslation[1], 0.f);
+
+		// todo : background depends on level properties
 
 		setBlend(BLEND_OPAQUE);
 		Sprite("back.png").draw();

@@ -199,3 +199,18 @@ OPTION_DEFINE(int, UI_CHARSELECT_READY_X, "UI/Character Select/Ready X");
 OPTION_DEFINE(int, UI_CHARSELECT_READY_Y, "UI/Character Select/Ready Y");
 OPTION_DEFINE(int, UI_CHARSELECT_PORTRAIT_X, "UI/Character Select/Portrait X");
 OPTION_DEFINE(int, UI_CHARSELECT_PORTRAIT_Y, "UI/Character Select/Portrait Y");
+
+OPTION_DEFINE(int, UI_TEXTCHAT_PADDING_X, "UI/Text Chat/Text Padding X");
+OPTION_DEFINE(int, UI_TEXTCHAT_PADDING_Y, "UI/Text Chat/Text Padding Y");
+OPTION_DEFINE(int, UI_TEXTCHAT_FONT_SIZE, "UI/Text Chat/Text Size");
+OPTION_DEFINE(int, UI_TEXTCHAT_CARET_SX, "UI/Text Chat/Caret Width");
+OPTION_DEFINE(int, UI_TEXTCHAT_CARET_PADDING_X, "UI/Text Chat/Caret Padding (Left Side)");
+OPTION_DEFINE(int, UI_TEXTCHAT_CARET_PADDING_Y, "UI/Text Chat/Caret Padding (Top, Bottom)");
+
+OPTION_DEFINE(int, INGAME_TEXTCHAT_FONT_SIZE, "UI/In-Game Text Chat/Text Size");
+OPTION_DEFINE(int, INGAME_TEXTCHAT_PADDING_X, "UI/In-Game Text Chat/Text Padding X");
+OPTION_DEFINE(int, INGAME_TEXTCHAT_PADDING_Y, "UI/In-Game Text Chat/Text Padding Y");
+OPTION_DEFINE(int, INGAME_TEXTCHAT_SIZE_Y, "UI/In-Game Text Chat/Box Height");
+OPTION_DEFINE(int, INGAME_TEXTCHAT_OFFSET_Y, "UI/In-Game Text Chat/Box Offset Y");
+OPTION_DEFINE(float, INGAME_TEXTCHAT_DURATION, "UI/In-Game Text Chat/Time Visible");
+OPTION_STEP(INGAME_TEXTCHAT_DURATION, 0.f, 0.f, .1f);

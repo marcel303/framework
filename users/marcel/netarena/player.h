@@ -69,8 +69,13 @@ public:
 
 	void playSoundBag(const char * name, int volume);
 
+	void addTextChat(const std::string & line);
+
 	Player * m_player;
 	GameSim * m_gameSim;
+
+	std::string m_textChat;
+	int m_textChatTicks;
 
 	struct InputState
 	{
