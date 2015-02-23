@@ -481,19 +481,21 @@ void Framework::process()
 	}
 #endif
 	
-	doReload |= keyboard.wentDown(SDLK_r);
+	//doReload |= keyboard.wentDown(SDLK_r);
 	
 	if (doReload)
 	{
 		reloadCaches();
 	}
 
+	/*
 	if (keyboard.wentDown(SDLK_F12))
 	{
 		fullscreen = !fullscreen;
 		setFullscreen(fullscreen);
 	}
-	
+	*/
+
 	for (SpriteSet::iterator i = m_sprites.begin(); i != m_sprites.end(); ++i)
 	{
 		(*i)->updateAnimation(timeStep);
