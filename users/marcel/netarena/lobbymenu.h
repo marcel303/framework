@@ -29,6 +29,8 @@ class LobbyMenu
 public:
 	Client * m_client;
 	CharSelector * m_charSelectors[MAX_PLAYERS];
+	Button * m_prevGameMode;
+	Button * m_nextGameMode;
 
 	LobbyMenu(Client * client);
 	~LobbyMenu();

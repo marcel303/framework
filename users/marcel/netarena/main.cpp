@@ -250,6 +250,17 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 
 			switch ((NetAction)action)
 			{
+			case kPlayerInputAction_CycleGameMode:
+				{
+					int delta = (int8_t)param1;
+					Assert(delta == -1 || delta == +1);
+					if (delta == -1 || delta == +1)
+					{
+						gameSim->m_gameMode = (GameMode)((gameSim->m_gameMode + kGameMode_COUNT + delta) % kGameMode_COUNT);
+					}
+				}
+				break;
+
 			case kNetAction_PlayerInputAction:
 				Assert(param1 >= 0 && param1 < MAX_PLAYERS);
 				if (param1 >= 0 && param1 < MAX_PLAYERS)

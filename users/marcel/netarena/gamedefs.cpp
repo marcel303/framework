@@ -1,5 +1,11 @@
 #include "gamedefs.h"
 
+OPTION_DEFINE(float, GAME_SPEED_MULTIPLIER, "App/Game Speed Multiplier");
+OPTION_STEP(GAME_SPEED_MULTIPLIER, 0.f, 10.f, .01f);
+
+OPTION_DEFINE(float, PLAYER_RESPAWN_INVINCIBILITY_TIME, "Player/Respawn Invincibility Time");
+OPTION_STEP(PLAYER_RESPAWN_INVINCIBILITY_TIME, 0.f, 10.f, .1f);
+
 OPTION_DEFINE(int, PLAYER_COLLISION_HITBOX_SX, "Player/Hit Boxes/Collision Width");
 OPTION_DEFINE(int, PLAYER_COLLISION_HITBOX_SY, "Player/Hit Boxes/Collision Height");
 
@@ -219,3 +225,13 @@ OPTION_DEFINE(int, INGAME_TEXTCHAT_SIZE_Y, "UI/In-Game Text Chat/Box Height");
 OPTION_DEFINE(int, INGAME_TEXTCHAT_OFFSET_Y, "UI/In-Game Text Chat/Box Offset Y");
 OPTION_DEFINE(float, INGAME_TEXTCHAT_DURATION, "UI/In-Game Text Chat/Time Visible");
 OPTION_STEP(INGAME_TEXTCHAT_DURATION, 0.f, 0.f, .1f);
+
+// fixme : move to gametypes.cpp ?
+
+#include "gametypes.h"
+const char * g_gameModeNames[kGameMode_COUNT] =
+{
+	"Death Match",
+	"Token Hunt",
+	"Coin Collector"
+};

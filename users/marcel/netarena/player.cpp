@@ -14,19 +14,20 @@ todo:
 
 - fix desync as both players get hit/killed by grenade
 
-- game speed var
-- player invincibility on spawn (2 seconds?)
-- add game mode selection to char select
++ game speed var
++ player invincibility on spawn (2 seconds?)
++ add game mode selection to char select
++ count down timer game start after char select
 - add time dilation effect on last kill + zoom in on winning player, wait for a while before transitioning to the next round
 - verify bullet pool allocation order -> may be a source of desync issues, due to differences in the order of bullet updates
-- textchat: left/right/insert text/delete key
++ textchat: left/right/insert text/delete key
 
 - need to be able to kick player at char select
 - i think less bubble/ice freeze time
 - respawn visual to more quickly locate your respawn location
 - drop rate should scale with number of players
 - remove angels in spawn locations -> reduce background noise
-- buff star player
+- buff star player ?
 - score feedback, especially in token hunt mode
 - investigate killing the rambo mode, soldat
 
@@ -567,6 +568,9 @@ void Player::tick(float dt)
 
 	if (m_isAlive)
 	{
+		if (m_spawnInvincibilityTicks > 0)
+			m_spawnInvincibilityTicks--;
+
 		// see if we grabbed any pickup
 
 		const Pickup * pickup = m_instanceData->m_gameSim->grabPickup(
@@ -1770,6 +1774,8 @@ void Player::respawn()
 
 	if (m_instanceData->m_gameSim->m_arena.getRandomSpawnPoint(*m_instanceData->m_gameSim, x, y, m_lastSpawnIndex, this))
 	{
+		m_spawnInvincibilityTicks = TICKS_PER_SECOND * PLAYER_RESPAWN_INVINCIBILITY_TIME;
+
 		m_pos[0] = (float)x;
 		m_pos[1] = (float)y;
 
@@ -1850,6 +1856,10 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 		handleImpact(velocity);
 
 		if (shieldAbsorb(amount))
+		{
+			return false;
+		}
+		else if (m_spawnInvincibilityTicks > 0)
 		{
 			return false;
 		}

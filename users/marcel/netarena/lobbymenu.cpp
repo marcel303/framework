@@ -107,6 +107,8 @@ void CharSelector::draw()
 
 LobbyMenu::LobbyMenu(Client * client)
 	: m_client(client)
+	, m_prevGameMode(new Button(50,  GFX_SY - 40, "charselect-prev.png"))
+	, m_nextGameMode(new Button(150, GFX_SY - 40, "charselect-next.png"))
 {
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
@@ -120,10 +122,21 @@ LobbyMenu::~LobbyMenu()
 	{
 		delete m_charSelectors[i];
 	}
+
+	delete m_prevGameMode;
+	delete m_nextGameMode;
 }
 
 void LobbyMenu::tick(float dt)
 {
+	if (g_app->m_isHost)
+	{
+		if (m_prevGameMode->isClicked())
+			g_app->netAction(m_client->m_channel, kPlayerInputAction_CycleGameMode, -1, 0);
+		if (m_nextGameMode->isClicked())
+			g_app->netAction(m_client->m_channel, kPlayerInputAction_CycleGameMode, +1, 0);
+	}
+
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
 		m_charSelectors[i]->tick(dt);
@@ -132,6 +145,13 @@ void LobbyMenu::tick(float dt)
 
 void LobbyMenu::draw()
 {
+	if (g_app->m_isHost)
+	{
+		setColor(colorWhite);
+		m_prevGameMode->draw();
+		m_nextGameMode->draw();
+	}
+
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
 		m_charSelectors[i]->draw();

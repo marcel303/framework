@@ -985,7 +985,7 @@ void GameSim::tickPlay()
 	const uint32_t oldCRC = g_logCRCs ? calcCRC() : 0;
 #endif
 
-	const float dt = 1.f / TICKS_PER_SECOND;
+	const float dt = 1.f / TICKS_PER_SECOND * GAME_SPEED_MULTIPLIER;
 
 	const uint32_t tick = GetTick();
 

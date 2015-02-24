@@ -4,6 +4,7 @@
 
 enum NetAction
 {
+	kPlayerInputAction_CycleGameMode,
 	kNetAction_PlayerInputAction,
 	kNetAction_TextChat
 };
@@ -32,6 +33,8 @@ enum GameMode
 	kGameMode_CoinCollector,
 	kGameMode_COUNT
 };
+
+extern const char * g_gameModeNames[kGameMode_COUNT];
 
 enum PlayerWeapon
 {

@@ -348,6 +348,24 @@ void Client::drawMenus()
 	{
 		m_lobbyMenu->draw();
 	}
+
+	// draw current game mode selection
+
+	setFont("calibri.ttf");
+	setColor(127, 255, 227);
+	drawText(GFX_SX/2, GFX_SY - 130, 48, 0.f, 0.f, "[%s]", g_gameModeNames[m_gameSim->m_gameMode]);
+
+	// draw game start timer
+
+	if (m_gameSim->m_gameStartTicks != 0)
+	{
+		const float timeRemaining = m_gameSim->m_gameStartTicks / float(TICKS_PER_SECOND);
+
+		// fixme : options for position
+		setFont("calibri.ttf");
+		setColor(127, 255, 227);
+		drawText(GFX_SX/2, GFX_SY - 75, 48, 0.f, 0.f, "ROUND START IN T-%02.2f", timeRemaining);
+	}
 }
 
 void Client::drawPlay()
