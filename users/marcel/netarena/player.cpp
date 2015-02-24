@@ -12,6 +12,8 @@
 
 todo:
 
+- fix desync as both players get hit/killed by grenade
+
 - game speed var
 
 - need to be able to kick player at char select

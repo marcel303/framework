@@ -17,6 +17,7 @@ private:
 	void complete();
 	void close();
 	void addChar(char c);
+	void removeChar();
 
 	static const int kMaxBufferSize = 256;
 
@@ -30,5 +31,6 @@ private:
 	char m_buffer[kMaxBufferSize + 1];
 	int m_bufferSize;
 
+	int m_caretPosition;
 	float m_caretTimer;
 };

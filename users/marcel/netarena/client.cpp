@@ -30,7 +30,7 @@ Client::Client()
 {
 	m_lobbyMenu = new LobbyMenu(this);
 
-	m_textChat = new TextChat(30, GFX_SY - 100, GFX_SX - 60, 70);
+	m_textChat = new TextChat(UI_TEXTCHAT_X, UI_TEXTCHAT_Y, UI_TEXTCHAT_SX, UI_TEXTCHAT_SY);
 
 	m_gameSim = new GameSim();
 

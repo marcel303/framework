@@ -200,6 +200,11 @@ OPTION_DEFINE(int, UI_CHARSELECT_READY_Y, "UI/Character Select/Ready Y");
 OPTION_DEFINE(int, UI_CHARSELECT_PORTRAIT_X, "UI/Character Select/Portrait X");
 OPTION_DEFINE(int, UI_CHARSELECT_PORTRAIT_Y, "UI/Character Select/Portrait Y");
 
+OPTION_DEFINE(int, UI_TEXTCHAT_MAX_TEXT_SIZE, "UI/Text Chat/Max Text Size");
+OPTION_DEFINE(int, UI_TEXTCHAT_X, "UI/Text Chat/X");
+OPTION_DEFINE(int, UI_TEXTCHAT_Y, "UI/Text Chat/Y");
+OPTION_DEFINE(int, UI_TEXTCHAT_SX, "UI/Text Chat/Size X");
+OPTION_DEFINE(int, UI_TEXTCHAT_SY, "UI/Text Chat/Size Y");
 OPTION_DEFINE(int, UI_TEXTCHAT_PADDING_X, "UI/Text Chat/Text Padding X");
 OPTION_DEFINE(int, UI_TEXTCHAT_PADDING_Y, "UI/Text Chat/Text Padding Y");
 OPTION_DEFINE(int, UI_TEXTCHAT_FONT_SIZE, "UI/Text Chat/Text Size");

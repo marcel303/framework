@@ -489,7 +489,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 				}
 
 			#if ENABLE_GAMESTATE_CRC_LOGGING
-				if (!isInSync)
+				if (!isInSync && g_devMode)
 				{
 					LOG_ERR("crc mismatch! host=%08x, client=%08x", crc, clientCRC);
 
@@ -517,6 +517,15 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 
 						g_host->m_gameSim.setPlayerPtrs();
 						client->m_gameSim->setPlayerPtrs();
+
+						Assert(g_host->m_gameSim.m_bulletPool->m_numFree == client->m_gameSim->m_bulletPool->m_numFree);
+						printf("host vs client bullet pool free lists:\n");
+						for (int i = 0; i < g_host->m_gameSim.m_bulletPool->m_numFree; ++i)
+						{
+							printf("%04d vs %04d\n",
+								g_host->m_gameSim.m_bulletPool->m_freeList[i],
+								client->m_gameSim->m_bulletPool->m_freeList[i]);
+						}
 					}
 				}
 			#endif
@@ -684,6 +693,13 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 				Assert(option);
 				if (option)
 					option->Decrement();
+			}
+		}
+		else if (action == "loadOptions")
+		{
+			if (canHandleOptionChange(channel))
+			{
+				g_optionManager.Load(param.c_str());
 			}
 		}
 	}
@@ -928,6 +944,13 @@ bool App::init(bool isHost)
 	{
 		if (!g_devMode)
 		{
+			for (int i = 0; i < 10; ++i)
+			{
+				framework.beginDraw(0, 0, 0, 0);
+				Sprite("loading-back.png").draw();
+				framework.endDraw();
+			}
+
 			framework.fillCachesWithPath(".", true);
 		}
 
@@ -1366,9 +1389,9 @@ bool App::tick()
 			menu->HandleAction(OptionMenu::Action_ValueIncrement, dt);
 	}
 
-	if (g_keyboardLock == 0 && keyboard.wentDown(SDLK_t))
+	if (g_devMode && m_isHost && g_keyboardLock == 0 && keyboard.wentDown(SDLK_t))
 	{
-		g_optionManager.Load("options.txt");
+		netDebugAction("loadOptions", "options.txt");
 	}
 #endif
 

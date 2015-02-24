@@ -116,11 +116,10 @@ struct ParticleSpawnInfo
 
 class BulletPool
 {
+public:
 	uint16_t m_freeList[MAX_BULLETS];
 	uint16_t m_numFree;
-	bool m_localOnly;
 
-public:
 	Bullet m_bullets[MAX_BULLETS];
 
 	BulletPool(bool localOnly);

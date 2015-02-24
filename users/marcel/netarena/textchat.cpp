@@ -18,6 +18,7 @@ TextChat::TextChat(int x, int y, int sx, int sy)
 	, m_sx(sx)
 	, m_sy(sy)
 	, m_bufferSize(0)
+	, m_caretPosition(0)
 	, m_caretTimer(0.f)
 {
 }
@@ -30,6 +31,8 @@ bool TextChat::tick(float dt)
 
 	if (m_isActive)
 	{
+		Assert(m_caretPosition <= m_bufferSize);
+
 		m_caretTimer += dt;
 
 		for (int i = 0; i < 256; ++i)
@@ -47,8 +50,19 @@ bool TextChat::tick(float dt)
 			}
 		}
 
-		if (keyboard.wentDown(SDLK_BACKSPACE) && m_bufferSize > 0)
-			m_bufferSize--;
+		if (keyboard.wentDown(SDLK_LEFT) && m_caretPosition > 0)
+			m_caretPosition--;
+		if (keyboard.wentDown(SDLK_RIGHT) && m_caretPosition < m_bufferSize)
+			m_caretPosition++;
+
+		if (keyboard.wentDown(SDLK_DELETE) && m_caretPosition < m_bufferSize)
+		{
+			m_caretPosition++;
+			removeChar();
+		}
+
+		if (keyboard.wentDown(SDLK_BACKSPACE) && m_caretPosition > 0)
+			removeChar();
 
 		if (keyboard.wentDown(SDLK_RETURN))
 		{
@@ -92,8 +106,13 @@ void TextChat::draw()
 
 		if (std::fmodf(m_caretTimer, .5f) < .25f)
 		{
+			char temp[kMaxBufferSize + 1];
+			strcpy_s(temp, sizeof(temp), m_buffer);
+
+			temp[m_caretPosition] = 0;
+
 			float sx, sy;
-			measureText(UI_TEXTCHAT_FONT_SIZE, sx, sy, "%s", m_buffer);
+			measureText(UI_TEXTCHAT_FONT_SIZE, sx, sy, "%s", temp);
 
 			const int x = m_x + UI_TEXTCHAT_PADDING_X + sx + UI_TEXTCHAT_CARET_PADDING_X;
 
@@ -110,6 +129,7 @@ void TextChat::setActive(bool isActive)
 		m_isActive = isActive;
 
 		m_bufferSize = 0;
+		m_caretPosition = 0;
 		m_caretTimer = 0.f;
 
 		if (isActive)
@@ -147,8 +167,27 @@ void TextChat::addChar(char c)
 {
 	Assert(m_isActive);
 
-	if (m_bufferSize < kMaxBufferSize)
+	if (m_bufferSize < kMaxBufferSize && m_bufferSize < UI_TEXTCHAT_MAX_TEXT_SIZE)
 	{
-		m_buffer[m_bufferSize++] = c;
+		if (m_caretPosition < m_bufferSize)
+			memcpy(&m_buffer[m_caretPosition + 1], &m_buffer[m_caretPosition], m_bufferSize - m_caretPosition);
+
+		m_buffer[m_caretPosition] = c;
+
+		m_bufferSize++;
+		m_caretPosition++;
+	}
+}
+
+void TextChat::removeChar()
+{
+	Assert(m_isActive);
+
+	if (m_caretPosition > 0)
+	{
+		memcpy(&m_buffer[m_caretPosition - 1], &m_buffer[m_caretPosition], m_bufferSize - 1);
+
+		m_bufferSize--;
+		m_caretPosition--;
 	}
 }

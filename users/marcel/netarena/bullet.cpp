@@ -81,7 +81,6 @@ float Bullet::calcAge() const
 
 BulletPool::BulletPool(bool localOnly)
 	: m_numFree(MAX_BULLETS)
-	, m_localOnly(localOnly)
 {
 	memset(m_bullets, 0, sizeof(m_bullets));
 
