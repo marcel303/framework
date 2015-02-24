@@ -13,6 +13,11 @@
 todo:
 
 - game speed var
+- player invincibility on spawn (2 seconds?)
+- add game mode selection to char select
+- add time dilation effect on last kill + zoom in on winning player, wait for a while before transitioning to the next round
+- verify bullet pool allocation order -> may be a source of desync issues, due to differences in the order of bullet updates
+- textchat: left/right/insert text/delete key
 
 - need to be able to kick player at char select
 - i think less bubble/ice freeze time
@@ -20,7 +25,7 @@ todo:
 - drop rate should scale with number of players
 - remove angels in spawn locations -> reduce background noise
 - buff star player
-- score feedback
+- score feedback, especially in token hunt mode
 - investigate killing the rambo mode, soldat
 
 + clash sound on attack cancel
@@ -71,6 +76,7 @@ nice to haves:
 + real time lighting
 - fill the level with lava
 - bee attack
+- earthquake. players go up on quake
 
 */
 
