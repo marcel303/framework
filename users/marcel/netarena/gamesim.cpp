@@ -668,7 +668,7 @@ void GameSim::newRound(const char * mapOverride)
 	}
 	else
 	{
-		setGameMode(kGameMode_TokenHunt);
+		//setGameMode(kGameMode_TokenHunt);
 		//setGameMode(kGameMode_CoinCollector);
 	}
 
