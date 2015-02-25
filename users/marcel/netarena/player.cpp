@@ -18,13 +18,14 @@ todo:
 + player invincibility on spawn (2 seconds?)
 + add game mode selection to char select
 + count down timer game start after char select
-- add time dilation effect on last kill + zoom in on winning player, wait for a while before transitioning to the next round
++ add time dilation effect on last kill
+- zoom in on winning player, wait for a while before transitioning to the next round
 - verify bullet pool allocation order -> may be a source of desync issues, due to differences in the order of bullet updates
 + textchat: left/right/insert text/delete key
 
 - need to be able to kick player at char select
-- i think less bubble/ice freeze time
-- respawn visual to more quickly locate your respawn location
++ i think less bubble/ice freeze time
++ respawn visual to more quickly locate your respawn location
 - drop rate should scale with number of players
 - remove angels in spawn locations -> reduce background noise
 - buff star player ?
@@ -1536,29 +1537,39 @@ void Player::draw() const
 
 	const int alpha = 127;
 
-	if (m_index >= 0 && m_index < 4)
+	const int colorIndex = (m_index >= 0 && m_index < MAX_PLAYERS) ? m_index : MAX_PLAYERS;
+
+	struct color
 	{
-		struct color
-		{
-			unsigned char r, g, b;
-		} colors[4] =
-		{
-			{ 255, 0, 0   },
-			{ 255, 255, 0 },
-			{ 0, 0, 255   },
-			{ 0, 255, 0   }
-		};
-		setColor(
-			colors[m_index].r,
-			colors[m_index].g,
-			colors[m_index].b,
-			alpha);
-	}
-	else
+		unsigned char r, g, b;
+	} colors[MAX_PLAYERS + 1] =
 	{
-		setColor(50, 50, 50, alpha);
-	}
+		{ 255, 0, 0   },
+		{ 255, 255, 0 },
+		{ 0, 0, 255   },
+		{ 0, 255, 0   },
+		{ 50, 50, 50  }
+	};
+
+	setColor(
+		colors[colorIndex].r,
+		colors[colorIndex].g,
+		colors[colorIndex].b,
+		alpha);
 	drawRect(m_pos[0] - 50, m_pos[1] - 110, m_pos[0] + 50, m_pos[1] - 85);
+
+	if (m_spawnInvincibilityTicks > 0)
+	{
+		const float t= m_spawnInvincibilityTicks / float(TICKS_PER_SECOND * PLAYER_RESPAWN_INVINCIBILITY_TIME);
+		setColor(
+			colors[colorIndex].r,
+			colors[colorIndex].g,
+			colors[colorIndex].b,
+			t * 255.f);
+		drawRect(
+			m_pos[0] + m_collision.x1, 0,
+			m_pos[0] + m_collision.x2, GFX_SY);
+	}
 	
 	/*
 	if (m_instanceData->m_gameSim->m_gameMode == kGameMode_TokenHunt && m_tokenHunt.m_hasToken)
