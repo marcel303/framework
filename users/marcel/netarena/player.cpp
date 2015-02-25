@@ -14,6 +14,11 @@ todo:
 
 - fix desync as both players get hit/killed by grenade
 
+- add user name input
++ fix text chat player index
+
+- test time dilation on kill
+
 + game speed var
 + player invincibility on spawn (2 seconds?)
 + add game mode selection to char select

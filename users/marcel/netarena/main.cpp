@@ -965,6 +965,20 @@ bool App::init(bool isHost)
 			framework.fillCachesWithPath(".", true);
 		}
 
+		TextChat textChat(GFX_SX/2-200, GFX_SY/3, 400, 60);
+		textChat.open(UI_TEXTCHAT_MAX_TEXT_SIZE, false); // todo : add max name length define
+		while (!textChat.tick(1.f/60.f))
+		{
+			framework.process();
+			framework.beginDraw(0, 0, 0, 0);
+			setColor(colorWhite);
+			Sprite("loading-back.png").draw();
+			setFont("calibri.ttf");
+			drawText(GFX_SX/2, GFX_SY/3 - 30.f, 24, 0.f, -1.f, "Your name?");
+			textChat.draw();
+			framework.endDraw();
+		}
+
 		//
 
 		m_packetDispatcher = new PacketDispatcher();

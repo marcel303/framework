@@ -13,10 +13,12 @@ static bool isAllowed(int c)
 
 TextChat::TextChat(int x, int y, int sx, int sy)
 	: m_isActive(false)
+	, m_canCancel(false)
 	, m_x(x)
 	, m_y(y)
 	, m_sx(sx)
 	, m_sy(sy)
+	, m_maxBufferSize(0)
 	, m_bufferSize(0)
 	, m_caretPosition(0)
 	, m_caretTimer(0.f)
@@ -72,7 +74,7 @@ bool TextChat::tick(float dt)
 			complete();
 		}
 
-		if (keyboard.wentDown(SDLK_ESCAPE))
+		if (keyboard.wentDown(SDLK_ESCAPE) && m_canCancel)
 			close();
 	}
 
@@ -122,21 +124,37 @@ void TextChat::draw()
 	}
 }
 
-void TextChat::setActive(bool isActive)
+void TextChat::open(int maxLength, bool canCancel)
 {
-	if (isActive != m_isActive)
-	{
-		m_isActive = isActive;
+	Assert(!m_isActive);
 
-		m_bufferSize = 0;
-		m_caretPosition = 0;
-		m_caretTimer = 0.f;
+	m_isActive = true;
+	m_canCancel = canCancel;
 
-		if (isActive)
-			g_keyboardLock++;
-		else
-			g_keyboardLock--;
-	}
+	m_maxBufferSize = maxLength < kMaxBufferSize ? maxLength : kMaxBufferSize;
+	m_bufferSize = 0;
+
+	m_caretPosition = 0;
+	m_caretTimer = 0.f;
+
+	g_keyboardLock++;
+}
+
+void TextChat::close()
+{
+	Assert(m_isActive);
+
+	m_isActive = false;
+	m_canCancel = false;
+
+	m_maxBufferSize = 0;
+	m_bufferSize = 0;
+
+	m_caretPosition = 0;
+	m_caretTimer = 0.f;
+
+	Assert(g_keyboardLock > 0);
+	g_keyboardLock--;
 }
 
 bool TextChat::isActive() const
@@ -156,18 +174,11 @@ void TextChat::complete()
 	close();
 }
 
-void TextChat::close()
-{
-	Assert(m_isActive);
-
-	setActive(false);
-}
-
 void TextChat::addChar(char c)
 {
 	Assert(m_isActive);
 
-	if (m_bufferSize < kMaxBufferSize && m_bufferSize < UI_TEXTCHAT_MAX_TEXT_SIZE)
+	if (m_bufferSize < kMaxBufferSize && m_bufferSize < m_maxBufferSize)
 	{
 		if (m_caretPosition < m_bufferSize)
 			memcpy(&m_buffer[m_caretPosition + 1], &m_buffer[m_caretPosition], m_bufferSize - m_caretPosition);

@@ -217,15 +217,25 @@ void Client::tick(float dt)
 
 		if (m_textChat->tick(dt))
 		{
-			g_app->netAction(m_channel, 	kNetAction_TextChat, 0, 0, m_textChat->getText());
+			for (int i = 0; i < MAX_PLAYERS; ++i)
+			{
+				const Player & player = m_gameSim->m_players[i];
+
+				if (!player.m_isUsed || player.m_owningChannelId != m_channel->m_id)
+					continue;
+
+				g_app->netAction(m_channel, 	kNetAction_TextChat, i, 0, m_textChat->getText());
+
+				logDebug("client %p owns player %d", this, i);
+			}
 		}
 
 		if (g_keyboardLock == 0 && keyboard.wentDown(SDLK_t))
-			m_textChat->setActive(true);
+			m_textChat->open(UI_TEXTCHAT_MAX_TEXT_SIZE, true);
 	}
 	else
 	{
-		m_textChat->setActive(false);
+		m_textChat->close();
 	}
 
 	if (s_noBgm)
