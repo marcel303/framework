@@ -1,5 +1,10 @@
 #include "gamedefs.h"
 
+OPTION_DEFINE(int, GAMESTATE_COMPLETE_TIMER, "Menus/Results Screen Time");
+OPTION_DEFINE(int, GAMESTATE_COMPLETE_TIME_DILATION_TIMER, "Menus/Results Screen Time Dilation Time");
+OPTION_DEFINE(float, GAMESTATE_COMPLETE_TIME_DILATION_BEGIN, "Menus/Results Screen Time Dilation Begin");
+OPTION_DEFINE(float, GAMESTATE_COMPLETE_TIME_DILATION_END, "Menus/Results Screen Time Dilation End");
+
 OPTION_DEFINE(float, GAME_SPEED_MULTIPLIER, "App/Game Speed Multiplier");
 OPTION_STEP(GAME_SPEED_MULTIPLIER, 0.f, 10.f, .01f);
 

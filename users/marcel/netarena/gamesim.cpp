@@ -26,9 +26,6 @@ OPTION_VALUE_ALIAS(g_gameModeNextRound, deathmatch, kGameMode_DeathMatch);
 OPTION_VALUE_ALIAS(g_gameModeNextRound, tokenhunt, kGameMode_TokenHunt);
 OPTION_VALUE_ALIAS(g_gameModeNextRound, coincollector, kGameMode_CoinCollector);
 
-OPTION_DECLARE(int, g_roundCompleteTimer, 6);
-OPTION_DEFINE(int, g_roundCompleteTimer, "Menus/Results Screen Time");
-
 OPTION_EXTERN(std::string, g_map);
 
 extern std::vector<std::string> g_mapList;
@@ -683,7 +680,8 @@ void GameSim::endRound()
 {
 	setGameState(kGameState_RoundComplete);
 
-	m_roundCompleteTicks = TICKS_PER_SECOND * g_roundCompleteTimer;
+	m_roundCompleteTicks = TICKS_PER_SECOND * GAMESTATE_COMPLETE_TIMER;
+	m_roundCompleteTimeDilationTicks = TICKS_PER_SECOND * GAMESTATE_COMPLETE_TIME_DILATION_TIMER;
 }
 
 void GameSim::load(const char * filename)
@@ -888,6 +886,7 @@ void GameSim::tick()
 		break;
 
 	case kGameState_RoundComplete:
+		tickPlay();
 		tickRoundComplete();
 		break;
 
@@ -985,7 +984,18 @@ void GameSim::tickPlay()
 	const uint32_t oldCRC = g_logCRCs ? calcCRC() : 0;
 #endif
 
-	const float dt = 1.f / TICKS_PER_SECOND * GAME_SPEED_MULTIPLIER;
+	float timeDilation = 1.f;
+
+	if (m_gameState == kGameState_RoundComplete)
+	{
+		const float t = 1.f - m_roundCompleteTimeDilationTicks / float(TICKS_PER_SECOND * GAMESTATE_COMPLETE_TIME_DILATION_TIMER);
+		timeDilation = Calc::Lerp(GAMESTATE_COMPLETE_TIME_DILATION_BEGIN, GAMESTATE_COMPLETE_TIME_DILATION_END, t);
+	}
+
+	const float dt =
+		(1.f / TICKS_PER_SECOND) *
+		GAME_SPEED_MULTIPLIER *
+		timeDilation;
 
 	const uint32_t tick = GetTick();
 
@@ -1130,46 +1140,56 @@ void GameSim::tickPlay()
 
 	g_gameSim = 0;
 
-	// check if the round has ended
-
-	bool roundComplete = false;
-
-	for (int i = 0; i < MAX_PLAYERS; ++i)
+	if (m_gameState == kGameState_Play)
 	{
-		Player & player = m_players[i];
-		if (!player.m_isUsed)
-			continue;
+		// check if the round has ended
 
-		if (m_gameMode == kGameMode_DeathMatch)
-		{
-			if (player.m_score >= DEATHMATCH_SCORE_LIMIT)
-			{
-				roundComplete = true;
-			}
-		}
-		else if (m_gameMode == kGameMode_TokenHunt)
-		{
-			if (player.m_score >= TOKENHUNT_SCORE_LIMIT)
-			{
-				roundComplete = true;
-			}
-		}
-		else if (m_gameMode == kGameMode_CoinCollector)
-		{
-			if (player.m_score >= COINCOLLECTOR_SCORE_LIMIT)
-			{
-				roundComplete = true;
-			}
-		}
-		else
-		{
-			Assert(false);
-		}
-	}
+		bool roundComplete = false;
 
-	if (roundComplete)
-	{
-		endRound();
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+		{
+			Player & player = m_players[i];
+			if (!player.m_isUsed)
+				continue;
+
+			bool hasWon = false;
+
+			if (m_gameMode == kGameMode_DeathMatch)
+			{
+				if (player.m_score >= DEATHMATCH_SCORE_LIMIT)
+				{
+					hasWon = true;
+				}
+			}
+			else if (m_gameMode == kGameMode_TokenHunt)
+			{
+				if (player.m_score >= TOKENHUNT_SCORE_LIMIT)
+				{
+					hasWon = true;
+				}
+			}
+			else if (m_gameMode == kGameMode_CoinCollector)
+			{
+				if (player.m_score >= COINCOLLECTOR_SCORE_LIMIT)
+				{
+					hasWon = true;
+				}
+			}
+			else
+			{
+				Assert(false);
+			}
+
+			if (hasWon)
+			{
+				roundComplete = true;
+			}
+		}
+
+		if (roundComplete)
+		{
+			endRound();
+		}
 	}
 }
 
@@ -1186,6 +1206,11 @@ void GameSim::tickRoundComplete()
 		{
 			newRound(0);
 		}
+	}
+
+	if (m_roundCompleteTimeDilationTicks > 0)
+	{
+		m_roundCompleteTimeDilationTicks--;
 	}
 }
 

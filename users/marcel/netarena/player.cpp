@@ -951,7 +951,7 @@ void Player::tick(float dt)
 			}
 		}
 
-		bool playerControl =
+		const bool playerControl =
 			m_controlDisableTime == 0.f &&
 			m_animAllowSteering &&
 			m_ice.timer == 0.f &&
@@ -1009,7 +1009,7 @@ void Player::tick(float dt)
 
 			steeringSpeed += m_instanceData->m_input.m_currState.analogX / 100.f;
 			
-			if (m_isGrounded || m_isAttachedToSticky)
+			if ((m_isGrounded || m_isAttachedToSticky) && playerControl)
 			{
 				if (isAnimOverrideAllowed(kPlayerAnim_Walk))
 				{
@@ -1855,11 +1855,9 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 	{
 		handleImpact(velocity);
 
-		if (shieldAbsorb(amount))
-		{
-			return false;
-		}
-		else if (m_spawnInvincibilityTicks > 0)
+		if (m_spawnInvincibilityTicks > 0 ||
+			shieldAbsorb(amount) ||
+			g_gameSim->m_gameState != kGameState_Play)
 		{
 			return false;
 		}

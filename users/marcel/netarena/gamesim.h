@@ -390,6 +390,7 @@ struct GameStateData
 
 	uint32_t m_nextRoundNumber;
 	uint32_t m_roundCompleteTicks;
+	uint32_t m_roundCompleteTimeDilationTicks;
 
 	Player m_players[MAX_PLAYERS];
 
