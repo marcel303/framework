@@ -4,6 +4,45 @@
 #include "main.h"
 #include "textchat.h"
 
+static SDLKey s_shiftMap[256];
+static bool s_shiftMapIsInit = false;
+
+static void ensureShiftMap()
+{
+	if (s_shiftMapIsInit)
+		return;
+
+	s_shiftMapIsInit = true;
+
+	memset(s_shiftMap, 0, sizeof(s_shiftMap));
+
+	s_shiftMap[SDLK_1] = SDLK_EXCLAIM;
+	s_shiftMap[SDLK_2] = SDLK_AT;
+	s_shiftMap[SDLK_3] = SDLK_HASH;
+	s_shiftMap[SDLK_4] = SDLK_DOLLAR;
+	s_shiftMap[SDLK_5] = SDLK_PERCENT;
+	s_shiftMap[SDLK_6] = SDLK_CARET;
+	s_shiftMap[SDLK_7] = SDLK_AMPERSAND;
+	s_shiftMap[SDLK_8] = SDLK_ASTERISK;
+	s_shiftMap[SDLK_9] = SDLK_LEFTPAREN;
+	s_shiftMap[SDLK_0] = SDLK_RIGHTPAREN;
+
+	s_shiftMap[SDLK_SLASH] = SDLK_QUESTION;
+	s_shiftMap[SDLK_SEMICOLON] = SDLK_COLON;
+
+	s_shiftMap[SDLK_MINUS] = SDLK_UNDERSCORE;
+	s_shiftMap[SDLK_EQUALS] = SDLK_PLUS;
+	s_shiftMap[SDLK_PERIOD] = SDLK_GREATER;
+
+	s_shiftMap[SDLK_QUOTE] = SDLK_QUOTEDBL;
+	s_shiftMap[SDLK_BACKQUOTE] = SDLK_RIGHTPAREN;
+	s_shiftMap[SDLK_COMMA] = SDLK_LESS;
+
+	s_shiftMap[SDLK_LEFTBRACKET] = SDLK_KP_LEFTBRACE;
+	s_shiftMap[SDLK_RIGHTBRACKET] = SDLK_KP_RIGHTBRACE;
+	s_shiftMap[SDLK_BACKSLASH] = SDLK_KP_VERTICALBAR;
+}
+
 static bool isAllowed(int c)
 {
 	if (c >= 32 && c <= 126)
@@ -31,6 +70,8 @@ bool TextChat::tick(float dt)
 
 	// SDL key codes are basically just ASCII codes, so that's easy!
 
+	ensureShiftMap();
+
 	if (m_isActive)
 	{
 		Assert(m_caretPosition <= m_bufferSize);
@@ -46,7 +87,8 @@ bool TextChat::tick(float dt)
 				if (keyboard.isDown(SDLK_LSHIFT))
 					c = toupper(c);
 
-				// todo : generate shift version for arbitrary characters
+				if (s_shiftMap[c])
+					c = s_shiftMap[c];
 
 				addChar(c);
 			}
