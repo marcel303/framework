@@ -115,7 +115,7 @@ void Client::tick(float dt)
 					input.buttons |= INPUT_BUTTON_DOWN;
 					input.analogY += 100;
 				}
-				if (keyboard.isDown(SDLK_a))
+				if (keyboard.isDown(SDLK_a) || keyboard.isDown(SDLK_SPACE))
 					input.buttons |= INPUT_BUTTON_A;
 				if (keyboard.isDown(SDLK_s))
 					input.buttons |= INPUT_BUTTON_B;

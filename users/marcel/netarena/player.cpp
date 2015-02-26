@@ -1625,6 +1625,8 @@ void Player::draw() const
 		setFont("calibri.ttf");
 		setColor(0, 0, 255);
 		drawText(offsetX + sizeX/2, offsetY + INGAME_TEXTCHAT_PADDING_Y, INGAME_TEXTCHAT_FONT_SIZE, 0.f, +1.f, "%s", m_instanceData->m_textChat.c_str());
+
+		setColor(colorWhite);
 	}
 }
 

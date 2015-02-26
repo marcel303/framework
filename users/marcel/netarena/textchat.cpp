@@ -121,6 +121,8 @@ void TextChat::draw()
 			setColor(63, 127, 255);
 			drawRect(x, m_y + UI_TEXTCHAT_CARET_PADDING_Y, x + UI_TEXTCHAT_CARET_SX, m_y + m_sy - UI_TEXTCHAT_CARET_PADDING_Y * 2);
 		}
+
+		setColor(colorWhite);
 	}
 }
 
