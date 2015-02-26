@@ -2,7 +2,46 @@
 #include "framework.h"
 #include "gamedefs.h"
 #include "main.h"
-#include "textchat.h"
+#include "textfield.h"
+
+static SDLKey s_shiftMap[256];
+static bool s_shiftMapIsInit = false;
+
+static void ensureShiftMap()
+{
+	if (s_shiftMapIsInit)
+		return;
+
+	s_shiftMapIsInit = true;
+
+	memset(s_shiftMap, 0, sizeof(s_shiftMap));
+
+	s_shiftMap[SDLK_1] = SDLK_EXCLAIM;
+	s_shiftMap[SDLK_2] = SDLK_AT;
+	s_shiftMap[SDLK_3] = SDLK_HASH;
+	s_shiftMap[SDLK_4] = SDLK_DOLLAR;
+	s_shiftMap[SDLK_5] = SDLK_PERCENT;
+	s_shiftMap[SDLK_6] = SDLK_CARET;
+	s_shiftMap[SDLK_7] = SDLK_AMPERSAND;
+	s_shiftMap[SDLK_8] = SDLK_ASTERISK;
+	s_shiftMap[SDLK_9] = SDLK_LEFTPAREN;
+	s_shiftMap[SDLK_0] = SDLK_RIGHTPAREN;
+
+	s_shiftMap[SDLK_SLASH] = SDLK_QUESTION;
+	s_shiftMap[SDLK_SEMICOLON] = SDLK_COLON;
+
+	s_shiftMap[SDLK_MINUS] = SDLK_UNDERSCORE;
+	s_shiftMap[SDLK_EQUALS] = SDLK_PLUS;
+	s_shiftMap[SDLK_PERIOD] = SDLK_GREATER;
+
+	s_shiftMap[SDLK_QUOTE] = SDLK_QUOTEDBL;
+	s_shiftMap[SDLK_BACKQUOTE] = SDLK_RIGHTPAREN;
+	s_shiftMap[SDLK_COMMA] = SDLK_LESS;
+
+	s_shiftMap[SDLK_LEFTBRACKET] = SDLK_KP_LEFTBRACE;
+	s_shiftMap[SDLK_RIGHTBRACKET] = SDLK_KP_RIGHTBRACE;
+	s_shiftMap[SDLK_BACKSLASH] = SDLK_KP_VERTICALBAR;
+}
 
 static bool isAllowed(int c)
 {
@@ -11,7 +50,7 @@ static bool isAllowed(int c)
 	return false;
 }
 
-TextChat::TextChat(int x, int y, int sx, int sy)
+TextField::TextField(int x, int y, int sx, int sy)
 	: m_isActive(false)
 	, m_canCancel(false)
 	, m_x(x)
@@ -25,11 +64,13 @@ TextChat::TextChat(int x, int y, int sx, int sy)
 {
 }
 
-bool TextChat::tick(float dt)
+bool TextField::tick(float dt)
 {
 	bool result = false;
 
 	// SDL key codes are basically just ASCII codes, so that's easy!
+
+	ensureShiftMap();
 
 	if (m_isActive)
 	{
@@ -46,7 +87,8 @@ bool TextChat::tick(float dt)
 				if (keyboard.isDown(SDLK_LSHIFT))
 					c = toupper(c);
 
-				// todo : generate shift version for arbitrary characters
+				if (s_shiftMap[c])
+					c = s_shiftMap[c];
 
 				addChar(c);
 			}
@@ -81,11 +123,11 @@ bool TextChat::tick(float dt)
 	return result;
 }
 
-void TextChat::draw()
+void TextField::draw()
 {
 	if (m_isActive)
 	{
-		m_buffer[m_bufferSize] = 0;
+		const char * text = getText();
 
 		// draw box
 
@@ -102,19 +144,19 @@ void TextChat::draw()
 		drawText(
 			m_x + UI_TEXTCHAT_PADDING_X,
 			m_y + UI_TEXTCHAT_PADDING_Y, UI_TEXTCHAT_FONT_SIZE,
-			+1.f, +1.f, "%s", m_buffer);
+			+1.f, +1.f, "%s", text);
 
 		// draw caret
 
 		if (std::fmodf(m_caretTimer, .5f) < .25f)
 		{
-			char temp[kMaxBufferSize + 1];
-			strcpy_s(temp, sizeof(temp), m_buffer);
+			char textToCaretPosition[kMaxBufferSize + 1];
+			strcpy_s(textToCaretPosition, sizeof(textToCaretPosition), text);
 
-			temp[m_caretPosition] = 0;
+			textToCaretPosition[m_caretPosition] = 0;
 
 			float sx, sy;
-			measureText(UI_TEXTCHAT_FONT_SIZE, sx, sy, "%s", temp);
+			measureText(UI_TEXTCHAT_FONT_SIZE, sx, sy, "%s", textToCaretPosition);
 
 			const int x = m_x + UI_TEXTCHAT_PADDING_X + sx + UI_TEXTCHAT_CARET_PADDING_X;
 
@@ -126,7 +168,7 @@ void TextChat::draw()
 	}
 }
 
-void TextChat::open(int maxLength, bool canCancel)
+void TextField::open(int maxLength, bool canCancel)
 {
 	Assert(!m_isActive);
 
@@ -142,7 +184,7 @@ void TextChat::open(int maxLength, bool canCancel)
 	g_keyboardLock++;
 }
 
-void TextChat::close()
+void TextField::close()
 {
 	Assert(m_isActive);
 
@@ -159,24 +201,26 @@ void TextChat::close()
 	g_keyboardLock--;
 }
 
-bool TextChat::isActive() const
+bool TextField::isActive() const
 {
 	return m_isActive;
 }
 
-std::string TextChat::getText() const
+const char * TextField::getText() const
 {
+	const_cast<char*>(m_buffer)[m_bufferSize] = 0;
+
 	return m_buffer;
 }
 
-void TextChat::complete()
+void TextField::complete()
 {
 	m_buffer[m_bufferSize] = 0;
 
 	close();
 }
 
-void TextChat::addChar(char c)
+void TextField::addChar(char c)
 {
 	Assert(m_isActive);
 
@@ -192,7 +236,7 @@ void TextChat::addChar(char c)
 	}
 }
 
-void TextChat::removeChar()
+void TextField::removeChar()
 {
 	Assert(m_isActive);
 
