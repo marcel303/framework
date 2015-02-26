@@ -362,13 +362,16 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		LOG_DBG("handleRpc: s_rpcAddPlayer");
 
 		uint8_t characterIndex;
+		std::string displayName;
 
 		bitStream.Read(characterIndex);
+		displayName = bitStream.ReadString();
 
 		PlayerToAddOrRemove playerToAdd;
 		playerToAdd.add = true;
 		playerToAdd.channel = channel;
 		playerToAdd.characterIndex = characterIndex;
+		playerToAdd.displayName = displayName;
 		g_app->m_playersToAddOrRemove.push_back(playerToAdd);
 	}
 	else if (method == s_rpcAddPlayerBroadcast)
@@ -382,10 +385,12 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			uint16_t channelId;
 			uint8_t index;
 			uint8_t characterIndex;
+			std::string displayName;
 
 			bitStream.Read(channelId);
 			bitStream.Read(index);
 			bitStream.Read(characterIndex);
+			displayName = bitStream.ReadString();
 
 			// todo : should allocate here
 			Player * player = &client->m_gameSim->m_players[index];
@@ -394,6 +399,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			PlayerInstanceData * instanceData = new PlayerInstanceData(player, client->m_gameSim);
 			player->m_instanceData = instanceData;
 			instanceData->setCharacterIndex(characterIndex);
+			player->setDisplayName(displayName);
 
 			client->addPlayer(instanceData);
 		}
@@ -751,7 +757,8 @@ void App::processPlayerChanges()
 						channel,
 						player.m_owningChannelId,
 						i,
-						player.m_characterIndex);
+						player.m_characterIndex,
+						player.m_displayName);
 				}
 			}
 
@@ -773,12 +780,14 @@ void App::processPlayerChanges()
 				clientInfo.players.push_back(playerInstanceData);
 
 				playerInstanceData->setCharacterIndex(playerToAddOrRemove.characterIndex);
+				player.setDisplayName(playerToAddOrRemove.displayName);
 
 				netAddPlayerBroadcast(
 					0,
 					playerToAddOrRemove.channel->m_destinationId,
 					player.m_index,
-					player.m_characterIndex);
+					player.m_characterIndex,
+					player.m_displayName);
 			}
 
 			}
@@ -815,11 +824,13 @@ void App::SV_OnChannelConnect(Channel * channel)
 
 	//
 
+	/*
 	PlayerToAddOrRemove playerToAdd;
 	playerToAdd.add = true;
 	playerToAdd.channel = channel;
 	playerToAdd.characterIndex = g_playerCharacterIndex;
 	m_playersToAddOrRemove.push_back(playerToAdd);
+	*/
 }
 
 void App::SV_OnChannelDisconnect(Channel * channel)
@@ -965,8 +976,10 @@ bool App::init(bool isHost)
 			framework.fillCachesWithPath(".", true);
 		}
 
+		// input the user's display name
+
 		TextField nameInput(GFX_SX/2-200, GFX_SY/3, 400, 60);
-		nameInput.open(UI_TEXTCHAT_MAX_TEXT_SIZE, false); // todo : add max name length define
+		nameInput.open(MAX_PLAYER_DISPLAY_NAME, false); // todo : add max name length define
 		while (!nameInput.tick(1.f/60.f))
 		{
 			framework.process();
@@ -978,6 +991,7 @@ bool App::init(bool isHost)
 			nameInput.draw();
 			framework.endDraw();
 		}
+		m_displayName = nameInput.getText();
 
 		//
 
@@ -1648,18 +1662,19 @@ void App::netSyncGameSim(Channel * channel)
 	}
 }
 
-void App::netAddPlayer(Channel * channel, uint8_t characterIndex)
+void App::netAddPlayer(Channel * channel, uint8_t characterIndex, const std::string & displayName)
 {
 	LOG_DBG("netAddPlayer");
 
 	BitStream bs;
 
 	bs.Write(characterIndex);
+	bs.WriteString(displayName);
 
 	m_rpcMgr->Call(s_rpcAddPlayer, bs, ChannelPool_Client, &channel->m_id, false, false);
 }
 
-void App::netAddPlayerBroadcast(Channel * channel, uint16_t owningChannelId, uint8_t index, uint8_t characterIndex)
+void App::netAddPlayerBroadcast(Channel * channel, uint16_t owningChannelId, uint8_t index, uint8_t characterIndex, const std::string & displayName)
 {
 	LOG_DBG("netAddPlayerBroadcast");
 
@@ -1668,6 +1683,7 @@ void App::netAddPlayerBroadcast(Channel * channel, uint16_t owningChannelId, uin
 	bs.Write(owningChannelId);
 	bs.Write(index);
 	bs.Write(characterIndex);
+	bs.WriteString(displayName);
 
 	if (channel)
 		m_rpcMgr->Call(s_rpcAddPlayerBroadcast, bs, ChannelPool_Server, &channel->m_id, false, false);

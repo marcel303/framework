@@ -17,6 +17,8 @@ OPTION_DECLARE(bool, s_noBgm, false);
 OPTION_DEFINE(bool, s_noBgm, "Sound/No BGM");
 OPTION_ALIAS(s_noBgm, "nobgm");
 
+OPTION_EXTERN(int, g_playerCharacterIndex);
+
 static char s_bgm[64] = { };
 static Music * s_bgmSound = 0;
 
@@ -64,6 +66,8 @@ Client::~Client()
 void Client::initialize(Channel * channel)
 {
 	m_channel = channel;
+
+	g_app->netAddPlayer(channel, g_playerCharacterIndex, g_app->m_displayName);
 }
 
 void Client::tick(float dt)
@@ -591,12 +595,15 @@ void Client::drawRoundComplete()
 
 	y += 70;
 
-	for (auto p = m_players.begin(); p != m_players.end(); ++p)
-	{
-		PlayerInstanceData * playerInstanceData = *p;
-		Player * player = playerInstanceData->m_player;
+	auto players = m_players;
+	std::sort(players.begin(), players.end(), [](PlayerInstanceData * p1, PlayerInstanceData * p2) { return p1->m_player->m_score > p2->m_player->m_score; });
 
-		drawText(GFX_SX/3*1, y, 40, +1.f, +1.f, "Player %d", index);
+	for (auto p = players.begin(); p != players.end(); ++p)
+	{
+		const PlayerInstanceData * playerInstanceData = *p;
+		const Player * player = playerInstanceData->m_player;
+
+		drawText(GFX_SX/3*1, y, 40, +1.f, +1.f, "%s", player->m_displayName);
 		drawText(GFX_SX/3*2, y, 40, -1.f, +1.f, "%d", player->m_score);
 
 		index++;

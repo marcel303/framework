@@ -74,16 +74,22 @@ public:
 	struct PlayerToAddOrRemove
 	{
 		PlayerToAddOrRemove()
+			: add(false)
+			, channel(0)
+			, characterIndex(-1)
+			, playerId(-1)
 		{
-			memset(this, -1, sizeof(PlayerToAddOrRemove));
 		}
 
 		bool add;
 		Channel * channel;
 		uint8_t characterIndex;
+		std::string displayName;
 		int playerId;
 	};
 	std::vector<PlayerToAddOrRemove> m_playersToAddOrRemove;
+
+	std::string m_displayName;
 
 	//
 
@@ -128,8 +134,8 @@ public:
 
 	void netAction(Channel * channel, NetAction action, uint8_t param1, uint8_t param2, const std::string & param3 = "");
 	void netSyncGameSim(Channel * channel);
-	void netAddPlayer(Channel * channel, uint8_t characterIndex);
-	void netAddPlayerBroadcast(Channel * channel, uint16_t owningChannelId, uint8_t index, uint8_t characterIndex);
+	void netAddPlayer(Channel * channel, uint8_t characterIndex, const std::string & displayName);
+	void netAddPlayerBroadcast(Channel * channel, uint16_t owningChannelId, uint8_t index, uint8_t characterIndex, const std::string & displayName);
 	void netRemovePlayer(uint8_t index);
 	void netRemovePlayerBroadcast(uint8_t index);
 	void netSetPlayerInputs(uint16_t channelId, uint8_t playerId, const PlayerInput & input);

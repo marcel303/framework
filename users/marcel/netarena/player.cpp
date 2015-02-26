@@ -14,8 +14,11 @@ todo:
 
 - fix desync as both players get hit/killed by grenade
 
-- add user name input
++ add user name input
 + fix text chat player index
+
+- add FixedString class that can be memset(0) and copied over the net. use it for player name, etc
+- clean up flow for adding players
 
 - test time dilation on kill
 
@@ -356,6 +359,13 @@ float Player::mirrorY(float y) const
 bool Player::hasValidCharacterIndex() const
 {
 	return m_characterIndex != (uint8_t)-1;
+}
+
+void Player::setDisplayName(const std::string & name)
+{
+	memset(m_displayName, 0, sizeof(m_displayName));
+	for (size_t i = 0; i < MAX_PLAYER_DISPLAY_NAME && i < name.length(); ++i)
+		m_displayName[i] = name[i];
 }
 
 void Player::setAnim(int anim, bool play, bool restart)

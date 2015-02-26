@@ -60,6 +60,7 @@ struct Player
 	float mirrorY(float y) const;
 
 	bool hasValidCharacterIndex() const;
+	void setDisplayName(const std::string & name);
 
 	void setAnim(int anim, bool play, bool restart);
 	void clearAnimOverrides();
@@ -94,6 +95,7 @@ struct Player
 	uint16_t m_owningChannelId;
 
 	// character select
+	char m_displayName[MAX_PLAYER_DISPLAY_NAME + 1];
 	bool m_isReadyUpped;
 
 	// alive state
