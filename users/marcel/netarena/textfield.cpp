@@ -2,7 +2,7 @@
 #include "framework.h"
 #include "gamedefs.h"
 #include "main.h"
-#include "textchat.h"
+#include "textfield.h"
 
 static SDLKey s_shiftMap[256];
 static bool s_shiftMapIsInit = false;
@@ -50,7 +50,7 @@ static bool isAllowed(int c)
 	return false;
 }
 
-TextChat::TextChat(int x, int y, int sx, int sy)
+TextField::TextField(int x, int y, int sx, int sy)
 	: m_isActive(false)
 	, m_canCancel(false)
 	, m_x(x)
@@ -64,7 +64,7 @@ TextChat::TextChat(int x, int y, int sx, int sy)
 {
 }
 
-bool TextChat::tick(float dt)
+bool TextField::tick(float dt)
 {
 	bool result = false;
 
@@ -123,11 +123,11 @@ bool TextChat::tick(float dt)
 	return result;
 }
 
-void TextChat::draw()
+void TextField::draw()
 {
 	if (m_isActive)
 	{
-		m_buffer[m_bufferSize] = 0;
+		const char * text = getText();
 
 		// draw box
 
@@ -144,19 +144,19 @@ void TextChat::draw()
 		drawText(
 			m_x + UI_TEXTCHAT_PADDING_X,
 			m_y + UI_TEXTCHAT_PADDING_Y, UI_TEXTCHAT_FONT_SIZE,
-			+1.f, +1.f, "%s", m_buffer);
+			+1.f, +1.f, "%s", text);
 
 		// draw caret
 
 		if (std::fmodf(m_caretTimer, .5f) < .25f)
 		{
-			char temp[kMaxBufferSize + 1];
-			strcpy_s(temp, sizeof(temp), m_buffer);
+			char textToCaretPosition[kMaxBufferSize + 1];
+			strcpy_s(textToCaretPosition, sizeof(textToCaretPosition), text);
 
-			temp[m_caretPosition] = 0;
+			textToCaretPosition[m_caretPosition] = 0;
 
 			float sx, sy;
-			measureText(UI_TEXTCHAT_FONT_SIZE, sx, sy, "%s", temp);
+			measureText(UI_TEXTCHAT_FONT_SIZE, sx, sy, "%s", textToCaretPosition);
 
 			const int x = m_x + UI_TEXTCHAT_PADDING_X + sx + UI_TEXTCHAT_CARET_PADDING_X;
 
@@ -166,7 +166,7 @@ void TextChat::draw()
 	}
 }
 
-void TextChat::open(int maxLength, bool canCancel)
+void TextField::open(int maxLength, bool canCancel)
 {
 	Assert(!m_isActive);
 
@@ -182,7 +182,7 @@ void TextChat::open(int maxLength, bool canCancel)
 	g_keyboardLock++;
 }
 
-void TextChat::close()
+void TextField::close()
 {
 	Assert(m_isActive);
 
@@ -199,24 +199,26 @@ void TextChat::close()
 	g_keyboardLock--;
 }
 
-bool TextChat::isActive() const
+bool TextField::isActive() const
 {
 	return m_isActive;
 }
 
-std::string TextChat::getText() const
+const char * TextField::getText() const
 {
+	const_cast<char*>(m_buffer)[m_bufferSize] = 0;
+
 	return m_buffer;
 }
 
-void TextChat::complete()
+void TextField::complete()
 {
 	m_buffer[m_bufferSize] = 0;
 
 	close();
 }
 
-void TextChat::addChar(char c)
+void TextField::addChar(char c)
 {
 	Assert(m_isActive);
 
@@ -232,7 +234,7 @@ void TextChat::addChar(char c)
 	}
 }
 
-void TextChat::removeChar()
+void TextField::removeChar()
 {
 	Assert(m_isActive);
 

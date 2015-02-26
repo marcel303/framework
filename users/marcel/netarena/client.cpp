@@ -10,7 +10,7 @@
 #include "lobbymenu.h"
 #include "main.h"
 #include "player.h"
-#include "textchat.h"
+#include "textfield.h"
 #include "Timer.h"
 
 OPTION_DECLARE(bool, s_noBgm, false);
@@ -30,7 +30,7 @@ Client::Client()
 {
 	m_lobbyMenu = new LobbyMenu(this);
 
-	m_textChat = new TextChat(UI_TEXTCHAT_X, UI_TEXTCHAT_Y, UI_TEXTCHAT_SX, UI_TEXTCHAT_SY);
+	m_textChat = new TextField(UI_TEXTCHAT_X, UI_TEXTCHAT_Y, UI_TEXTCHAT_SX, UI_TEXTCHAT_SY);
 
 	m_gameSim = new GameSim();
 

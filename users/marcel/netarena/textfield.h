@@ -1,9 +1,9 @@
 #pragma once
 
-class TextChat
+class TextField
 {
 public:
-	TextChat(int x, int y, int sx, int sy);
+	TextField(int x, int y, int sx, int sy);
 
 	bool tick(float dt);
 	void draw();
@@ -12,7 +12,7 @@ public:
 	void close();
 	bool isActive() const;
 
-	std::string getText() const;
+	const char * getText() const;
 
 private:
 	void complete();
