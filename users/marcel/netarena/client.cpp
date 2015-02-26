@@ -235,7 +235,10 @@ void Client::tick(float dt)
 	}
 	else
 	{
-		m_textChat->close();
+		if (m_textChat->isActive())
+		{
+			m_textChat->close();
+		}
 	}
 
 	if (s_noBgm)

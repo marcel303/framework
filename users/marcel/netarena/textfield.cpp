@@ -62,6 +62,7 @@ TextField::TextField(int x, int y, int sx, int sy)
 	, m_caretPosition(0)
 	, m_caretTimer(0.f)
 {
+	m_buffer[m_bufferSize] = 0;
 }
 
 bool TextField::tick(float dt)
@@ -85,10 +86,12 @@ bool TextField::tick(float dt)
 				int c = i;
 
 				if (keyboard.isDown(SDLK_LSHIFT))
+				{
 					c = toupper(c);
 
-				if (s_shiftMap[c])
-					c = s_shiftMap[c];
+					if (s_shiftMap[c])
+						c = s_shiftMap[c];
+				}
 
 				addChar(c);
 			}
@@ -115,9 +118,10 @@ bool TextField::tick(float dt)
 
 			complete();
 		}
-
-		if (keyboard.wentDown(SDLK_ESCAPE) && m_canCancel)
+		else if (keyboard.wentDown(SDLK_ESCAPE) && m_canCancel)
+		{
 			close();
+		}
 	}
 
 	return result;
@@ -177,6 +181,7 @@ void TextField::open(int maxLength, bool canCancel)
 
 	m_maxBufferSize = maxLength < kMaxBufferSize ? maxLength : kMaxBufferSize;
 	m_bufferSize = 0;
+	m_buffer[m_bufferSize] = 0;
 
 	m_caretPosition = 0;
 	m_caretTimer = 0.f;
@@ -208,15 +213,11 @@ bool TextField::isActive() const
 
 const char * TextField::getText() const
 {
-	const_cast<char*>(m_buffer)[m_bufferSize] = 0;
-
 	return m_buffer;
 }
 
 void TextField::complete()
 {
-	m_buffer[m_bufferSize] = 0;
-
 	close();
 }
 
@@ -232,6 +233,7 @@ void TextField::addChar(char c)
 		m_buffer[m_caretPosition] = c;
 
 		m_bufferSize++;
+		m_buffer[m_bufferSize] = 0;
 		m_caretPosition++;
 	}
 }
@@ -245,6 +247,7 @@ void TextField::removeChar()
 		memcpy(&m_buffer[m_caretPosition - 1], &m_buffer[m_caretPosition], m_bufferSize - 1);
 
 		m_bufferSize--;
+		m_buffer[m_bufferSize] = 0;
 		m_caretPosition--;
 	}
 }
