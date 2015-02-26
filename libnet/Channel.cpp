@@ -195,7 +195,7 @@ void Channel::Update(uint64_t time)
 				}
 
 				packet.m_lastSend = time;
-				packet.m_nextSend = time + 1000; // todo : use RTT * 2, or make it configurable
+				packet.m_nextSend = time + 100; // todo : use RTT * 2, or make it configurable
 
 				PacketBuilder<6> headerBuilder;
 
