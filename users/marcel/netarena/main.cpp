@@ -1295,11 +1295,13 @@ bool App::tick()
 		m_mainMenu->tick(dt);
 	}
 
+	const uint64_t netTime = g_TimerRT.TimeMS_get();
+
 	// update host
 
 	if (m_isHost)
 	{
-		m_channelMgr->Update(g_TimerRT.TimeUS_get());
+		m_channelMgr->Update(netTime);
 
 		if (!m_optionMenuIsOpen)
 		{
@@ -1309,7 +1311,7 @@ bool App::tick()
 				if (g_logCRCs)
 				{
 					for (int i = 0; i < 10; ++i)
-						m_channelMgr->Update(g_TimerRT.TimeUS_get());
+						m_channelMgr->Update(netTime);
 				}
 
 				const uint32_t crc1 = g_logCRCs ? m_host->m_gameSim.calcCRC() : 0;
@@ -1329,7 +1331,7 @@ bool App::tick()
 				if (g_logCRCs)
 				{
 					for (int i = 0; i < 10; ++i)
-						m_channelMgr->Update(g_TimerRT.TimeUS_get());
+						m_channelMgr->Update(netTime);
 
 					LOG_DBG("tick CRCs: %08x, %08x, %08x", crc1, crc2, crc3);
 				}
@@ -1340,14 +1342,14 @@ bool App::tick()
 
 			if (g_updateTicks)
 			{
-				m_channelMgr->Update(g_TimerRT.TimeUS_get());
+				m_channelMgr->Update(netTime);
 			}
 		}
 	}
 
 	// update client
 
-	m_channelMgr->Update(g_TimerRT.TimeUS_get());
+	m_channelMgr->Update(netTime);
 
 	for (size_t i = 0; i < m_clients.size(); ++i)
 	{
@@ -1356,7 +1358,7 @@ bool App::tick()
 		client->tick(dt);
 	}
 
-	m_channelMgr->Update(g_TimerRT.TimeUS_get());
+	m_channelMgr->Update(netTime);
 
 	// debug
 
