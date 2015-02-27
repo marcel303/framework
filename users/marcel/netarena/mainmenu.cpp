@@ -9,9 +9,9 @@
 
 MainMenu::MainMenu()
 {
-	m_newGame = new Button(GFX_SX/2, GFX_SY/2, "mainmenu-newgame.png");
-	m_findGame = new Button(GFX_SX/2, GFX_SY/2 + 200, "mainmenu-findgame.png");
-	m_quitApp = new Button(GFX_SX/2, GFX_SY/2 + 400, "mainmenu-exitgame.png");
+	m_newGame = new Button(GFX_SX/2, GFX_SY/3, "mainmenu-newgame.png");
+	m_findGame = new Button(GFX_SX/2, GFX_SY/3 + 200, "mainmenu-findgame.png");
+	m_quitApp = new Button(GFX_SX/2, GFX_SY/3 + 400, "mainmenu-exitgame.png");
 }
 
 MainMenu::~MainMenu()

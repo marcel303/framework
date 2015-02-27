@@ -11,12 +11,12 @@
 #define BLOCK_SX 64
 #define BLOCK_SY 64
 
-#define GFX_SX 1680
-#define GFX_SY 1050
+#define GFX_SX 1920
+#define GFX_SY 1080
 
 #define NET_PORT 30000
 
-#define ARENA_SX (GFX_SX / BLOCK_SX) // 26
+#define ARENA_SX (GFX_SX / BLOCK_SX) // 30
 #define ARENA_SY (GFX_SY / BLOCK_SY) // 16
 
 #define ARENA_SX_PIXELS (ARENA_SX * BLOCK_SX)

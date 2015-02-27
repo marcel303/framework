@@ -1297,7 +1297,7 @@ bool App::tick()
 	g_updateTicks = (int)(dtAccum * 60.f);
 	dtAccum -= g_updateTicks / 60.f;
 
-#if 1 // fixme : revert
+#if 0 // fixme : revert
 	g_updateTicks = 1;
 #endif
 

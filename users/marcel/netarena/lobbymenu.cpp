@@ -80,12 +80,35 @@ void CharSelector::draw()
 	if (player.m_isUsed)
 	{
 	#if 1
+		struct color
+		{
+			unsigned char r, g, b;
+		} colors[MAX_PLAYERS + 1] =
+		{
+			{ 255, 0, 0   },
+			{ 255, 255, 0 },
+			{ 0, 0, 255   },
+			{ 0, 255, 0   },
+			{ 50, 50, 50  }
+		};
+
+		setColorMode(COLOR_ADD);
+		const int colorIndex = player.m_characterIndex % MAX_PLAYERS;
+		setColor(
+			colors[colorIndex].r,
+			colors[colorIndex].g,
+			colors[colorIndex].b,
+			255,
+			63);
+
 		Spriter spriter("../../ArtistCave/JoyceTestcharacter/TestCharacter_Spriter/Testcharacter.scml");
 		spriter.draw(0, g_TimerRT.Time_get() * 1000.f,
 			UI_CHARSELECT_BASE_X + UI_CHARSELECT_PORTRAIT_X + m_playerId * UI_CHARSELECT_STEP_X,
 			UI_CHARSELECT_BASE_Y + UI_CHARSELECT_PORTRAIT_Y,
 			0.f,
 			.7f);
+
+		setColorMode(COLOR_MUL);
 	#else
 		char portraitFilename[64];
 		sprintf_s(portraitFilename, sizeof(portraitFilename), "char%d/portrait.png", player.m_characterIndex);

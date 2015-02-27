@@ -138,23 +138,47 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	int actualSx = sx / minification;
 	int actualSy = sy / minification;
 
+	bool foundMode = false;
+
 	if (fullscreen && useClosestDisplayMode)
 	{
-		SDL_DisplayMode desired;
-		SDL_DisplayMode closest;
-
-		desired.w = actualSx;
-		desired.h = actualSy;
-		desired.format = SDL_PIXELFORMAT_UNKNOWN;
-		desired.refresh_rate = 60;
-		desired.driverdata = 0;
-
-		if (SDL_GetClosestDisplayMode(0, &desired, &closest) != NULL)
+		for (int i = 0; i < 3; ++i)
 		{
-			log("closes display mode: %d x %d @ %d Hz", closest.w, closest.h, closest.refresh_rate);
+			if (i == 2)
+			{
+				actualSx /= 2;
+				actualSy /= 2;
+			}
 
-			actualSx = closest.w;
-			actualSy = closest.h;
+			SDL_DisplayMode desired;
+			SDL_DisplayMode closest;
+
+			desired.w = actualSx;
+			desired.h = actualSy;
+			desired.format = SDL_PIXELFORMAT_UNKNOWN;
+			desired.refresh_rate = 60;
+			desired.driverdata = 0;
+
+			if (i == 0)
+				foundMode = SDL_GetClosestDisplayMode(0, &desired, &closest) != NULL;
+			else if (i == 1)
+				foundMode = SDL_GetCurrentDisplayMode(0, &closest) == 0;
+			else if (i == 0)
+				foundMode = SDL_GetClosestDisplayMode(0, &desired, &closest) != NULL;
+
+			if (foundMode)
+			{
+				log("found suitable display mode: %d x %d @ %d Hz", closest.w, closest.h, closest.refresh_rate);
+				actualSx = closest.w;
+				actualSy = closest.h;
+				break;
+			}
+		}
+
+		if (!foundMode)
+		{
+			logError("unable to find suitable display mode");
+			return false;
 		}
 	}
 
@@ -165,7 +189,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 		actualSx,
 		actualSy,
 		flags);
-	
+
 	if (!globals.window)
 	{
 		logError("failed to set video mode (%dx%d @ %dbpp): %s", sx / minification, sy / minification, 32, SDL_GetError());
@@ -1757,11 +1781,17 @@ void Spriter::draw(int animIndex, float time, float x, float y, float angle, flo
 	gxScalef(scale, scale, 1.f);
 	gxRotatef(angle, 0.f, 0.f, 1.f);
 
+	Color oldColor = globals.color;
+
 	for (int i = 0; i < numDrawables; ++i)
 	{
 		spriter::Drawable & d = drawables[i];
 
-		setColorf(1.f, 1.f, 1.f, d.a);
+		setColorf(
+			globals.color.r,
+			globals.color.g,
+			globals.color.b,
+			d.a);
 
 		Sprite sprite(d.filename, d.pivotX, d.pivotY);
 		sprite.x = d.x;
@@ -1788,9 +1818,9 @@ void Spriter::draw(int animIndex, float time, float x, float y, float angle, flo
 	#endif
 	}
 
-	gxPopMatrix();
+	setColor(oldColor);
 
-	setColor(colorWhite);
+	gxPopMatrix();
 }
 
 int Spriter::getAnimIndexByName(const char * name) const
