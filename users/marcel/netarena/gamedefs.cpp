@@ -167,6 +167,7 @@ OPTION_STEP(TOKEN_BOUNCE_SOUND_TRESHOLD, 0, 0, 10);
 // coin collector
 
 OPTION_DEFINE(int, COINCOLLECTOR_SCORE_LIMIT, "Game Modes/Coin Collector/Max Player Score");
+OPTION_DEFINE(int, COINCOLLECTOR_INITIAL_COIN_DROP, "Game Modes/Coin Collector/Initial Coin Drop");
 OPTION_DEFINE(bool, COINCOLLECTOR_PLAYER_CAN_BE_KILLED, "Game Modes/Coin Collector/Player Can Be Killed");
 OPTION_DEFINE(int, COINCOLLECTOR_COIN_DROP_PERCENTAGE, "Game Modes/Coin Collector/Player Coin Drop Percentage");
 OPTION_DEFINE(int, COINCOLLECTOR_COIN_LIMIT, "Game Modes/Coin Collector/Coin Limit");

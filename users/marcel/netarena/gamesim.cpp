@@ -619,7 +619,7 @@ void GameSim::setGameState(::GameState gameState)
 
 			if (m_gameMode == kGameMode_CoinCollector)
 			{
-				for (int i = 0; i < 4; ++i)
+				for (int i = 0; i < COINCOLLECTOR_INITIAL_COIN_DROP; ++i)
 					spawnCoin();
 			}
 		}
