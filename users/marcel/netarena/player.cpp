@@ -13,6 +13,7 @@
 todo:
 
 - fix desync as both players get hit/killed by grenade
+- add support for CRC compare at any time during game sim tick. log CRC's with function/line number and compare?
 
 + add user name input
 + fix text chat player index

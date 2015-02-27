@@ -978,20 +978,27 @@ bool App::init(bool isHost)
 
 		// input the user's display name
 
-		TextField nameInput(GFX_SX/2-200, GFX_SY/3, 400, 60);
-		nameInput.open(MAX_PLAYER_DISPLAY_NAME, false); // todo : add max name length define
-		while (!nameInput.tick(1.f/60.f))
+		if (g_devMode)
 		{
-			framework.process();
-			framework.beginDraw(0, 0, 0, 0);
-			setColor(colorWhite);
-			Sprite("loading-back.png").draw();
-			setFont("calibri.ttf");
-			drawText(GFX_SX/2, GFX_SY/3 - 30.f, 24, 0.f, -1.f, "Your name?");
-			nameInput.draw();
-			framework.endDraw();
+			m_displayName = "Developer";
 		}
-		m_displayName = nameInput.getText();
+		else
+		{
+			TextField nameInput(GFX_SX/2-200, GFX_SY/3, 400, 60);
+			nameInput.open(MAX_PLAYER_DISPLAY_NAME, false); // todo : add max name length define
+			while (!nameInput.tick(1.f/60.f))
+			{
+				framework.process();
+				framework.beginDraw(0, 0, 0, 0);
+				setColor(colorWhite);
+				Sprite("loading-back.png").draw();
+				setFont("calibri.ttf");
+				drawText(GFX_SX/2, GFX_SY/3 - 30.f, 24, 0.f, -1.f, "Your name?");
+				nameInput.draw();
+				framework.endDraw();
+			}
+			m_displayName = nameInput.getText();
+		}
 
 		//
 

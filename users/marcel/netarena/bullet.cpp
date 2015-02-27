@@ -177,7 +177,7 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 					{
 						// reflection
 
-						if (blockMask & kBlockMask_Solid & (~(1 << kBlockType_Destructible)))
+						if (blockMask & kBlockMask_Solid & (~kBlockMask_Destructible))
 						{
 							if (b.maxReflectCount != 0)
 							{

@@ -71,6 +71,10 @@ static const int kBlockMask_Passthrough =
 	(1 << kBlockType_Appear) |
 	(1 << kBlockType_Passthrough);
 
+static const int kBlockMask_Destructible =
+	(1 << kBlockType_Destructible) |
+	(1 << kBlockType_DestructibleRegen);
+
 static const int kBlockMask_Spike =
 	(1 << kBlockType_Spike);
 
