@@ -1,5 +1,15 @@
 #include "gamedefs.h"
 
+// -- prototypes --
+OPTION_DEFINE(bool, PROTO_TIMEDILATION_ON_KILL, "Experimental/Time Dilation On Kill/Enabled");
+OPTION_DEFINE(float, PROTO_TIMEDILATION_ON_KILL_MULTIPLIER1, "Experimental/Time Dilation On Kill/Multiplier At Start");
+OPTION_DEFINE(float, PROTO_TIMEDILATION_ON_KILL_MULTIPLIER2, "Experimental/Time Dilation On Kill/Multiplier At End");
+OPTION_DEFINE(float, PROTO_TIMEDILATION_ON_KILL_DURATION, "Experimental/Time Dilation On Kill/Duration (Seconds)");
+OPTION_STEP(PROTO_TIMEDILATION_ON_KILL_MULTIPLIER1, 0.f, 10.f, .01f);
+OPTION_STEP(PROTO_TIMEDILATION_ON_KILL_MULTIPLIER2, 0.f, 10.f, .01f);
+OPTION_STEP(PROTO_TIMEDILATION_ON_KILL_DURATION, 0.f, 10.f, .01f);
+// -- prototypes --
+
 OPTION_DEFINE(int, GAMESTATE_COMPLETE_TIMER, "Menus/Results Screen Time");
 OPTION_DEFINE(int, GAMESTATE_COMPLETE_TIME_DILATION_TIMER, "Menus/Results Screen Time Dilation Time");
 OPTION_DEFINE(float, GAMESTATE_COMPLETE_TIME_DILATION_BEGIN, "Menus/Results Screen Time Dilation Begin");

@@ -379,12 +379,20 @@ struct GameStateData
 	uint32_t Random();
 	float RandomFloat(float min, float max) { float t = (Random() & 4095) / 4095.f; return t * min + (1.f - t) * max; }
 	uint32_t GetTick();
+	void addTimeDilationEffect(float multiplier1, float multiplier2, float duration);
 
 	uint32_t m_tick;
 	uint32_t m_randomSeed;
 
 	uint32_t m_gameStartTicks;
 
+	struct TimeDilationEffect
+	{
+		float multiplier1;
+		float multiplier2;
+		int ticks;
+		int ticksRemaining;
+	} m_timeDilationEffects[MAX_TIMEDILATION_EFFECTS];
 	uint32_t m_freezeTicks;
 
 	GameState m_gameState;

@@ -20,7 +20,7 @@ todo:
 - add FixedString class that can be memset(0) and copied over the net. use it for player name, etc
 - clean up flow for adding players
 
-- test time dilation on kill
++ test time dilation on kill
 
 + game speed var
 + player invincibility on spawn (2 seconds?)
@@ -1913,6 +1913,14 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 				spawnInfo.color = 0xff0000ff;
 
 				m_instanceData->m_gameSim->spawnParticles(spawnInfo);
+
+				if (PROTO_TIMEDILATION_ON_KILL)
+				{
+					m_instanceData->m_gameSim->addTimeDilationEffect(
+						PROTO_TIMEDILATION_ON_KILL_MULTIPLIER1,
+						PROTO_TIMEDILATION_ON_KILL_MULTIPLIER2,
+						PROTO_TIMEDILATION_ON_KILL_DURATION);
+				}
 			}
 
 			//m_instanceData->m_gameSim->m_freezeTicks = 10;

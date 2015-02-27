@@ -105,7 +105,7 @@ static void HandleAction(const std::string & action, const Dictionary & args)
 	{
 		const int index = args.getInt("client", -1);
 
-		if (index >= 0 && index < g_app->m_clients.size())
+		if (index >= 0 && index < (int)g_app->m_clients.size())
 		{
 			g_app->leaveGame(g_app->m_clients[index]);
 		}
@@ -1524,7 +1524,7 @@ void App::draw()
 		if (m_optionMenuIsOpen)
 		{
 			const int sx = 500;
-			const int sy = GFX_SY / 3;
+			const int sy = GFX_SY / 2;
 			const int x = (GFX_SX - sx) / 2;
 			const int y = (GFX_SY - sy) / 2;
 
@@ -1534,7 +1534,7 @@ void App::draw()
 		if (m_statTimerMenuIsOpen)
 		{
 			const int sx = 500;
-			const int sy = GFX_SY / 3;
+			const int sy = GFX_SY / 2;
 			const int x = (GFX_SX - sx) / 2;
 			const int y = (GFX_SY - sy) / 2;
 

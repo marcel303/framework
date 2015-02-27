@@ -114,9 +114,15 @@ bool TextField::tick(float dt)
 		if (keyboard.wentDown(SDLK_RETURN))
 		{
 			if (m_bufferSize > 0)
+			{
 				result = true;
 
-			complete();
+				complete();
+			}
+			else if (m_canCancel)
+			{
+				close();
+			}
 		}
 		else if (keyboard.wentDown(SDLK_ESCAPE) && m_canCancel)
 		{

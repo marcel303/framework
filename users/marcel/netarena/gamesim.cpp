@@ -66,6 +66,22 @@ uint32_t GameStateData::GetTick()
 	return m_tick;
 }
 
+void GameStateData::addTimeDilationEffect(float multiplier1, float multiplier2, float duration)
+{
+	int minIndex = 0;
+
+	for (int i = 1; i < MAX_TIMEDILATION_EFFECTS; ++i)
+	{
+		if (m_timeDilationEffects[i].ticksRemaining < m_timeDilationEffects[minIndex].ticksRemaining)
+			minIndex = i;
+	}
+
+	m_timeDilationEffects[minIndex].multiplier1 = multiplier1;
+	m_timeDilationEffects[minIndex].multiplier2 = multiplier2;
+	m_timeDilationEffects[minIndex].ticks = duration * TICKS_PER_SECOND;
+	m_timeDilationEffects[minIndex].ticksRemaining = m_timeDilationEffects[minIndex].ticks;
+}
+
 //
 
 void Pickup::setup(PickupType _type, int _blockX, int _blockY)
@@ -986,7 +1002,21 @@ void GameSim::tickPlay()
 
 	float timeDilation = 1.f;
 
-	if (m_gameState == kGameState_RoundComplete)
+	if (m_gameState == kGameState_Play)
+	{
+		for (int i = 0; i < MAX_TIMEDILATION_EFFECTS; ++i)
+		{
+			if (m_timeDilationEffects[i].ticksRemaining != 0)
+			{
+				const float t = 1.f - (m_timeDilationEffects[i].ticksRemaining / float(m_timeDilationEffects[i].ticks));
+				const float multiplier = Calc::Lerp(m_timeDilationEffects[i].multiplier1, m_timeDilationEffects[i].multiplier2, t);
+				if (multiplier < timeDilation)
+					timeDilation = multiplier;
+				m_timeDilationEffects[i].ticksRemaining--;
+			}
+		}
+	}
+	else if (m_gameState == kGameState_RoundComplete)
 	{
 		const float t = 1.f - m_roundCompleteTimeDilationTicks / float(TICKS_PER_SECOND * GAMESTATE_COMPLETE_TIME_DILATION_TIMER);
 		timeDilation = Calc::Lerp(GAMESTATE_COMPLETE_TIME_DILATION_BEGIN, GAMESTATE_COMPLETE_TIME_DILATION_END, t);

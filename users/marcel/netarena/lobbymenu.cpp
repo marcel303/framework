@@ -165,6 +165,12 @@ void LobbyMenu::draw()
 
 			setColor(colorGreen);
 			drawRectLine(x1, y1, x2, y2);
+
+			if (m_client->m_gameSim->m_players[i].m_isUsed)
+			{
+				setColor(colorWhite);
+				drawText((x1 + x2) / 2, y2 + 8, 32, 0.f, +1.f, m_client->m_gameSim->m_players[i].m_displayName);
+			}
 		}
 	}
 
