@@ -1,41 +1,34 @@
 #include "main.h"
 
 #include "includeseditor.h"
-
+#include "ed.h"
 
 #include "gameobject.h"
 
-#define BASEX 52
-#define BASEY 32
-
-#define BLOCKSIZE 32
-
-
-
-#define ZOOMSPEED 12
-
-#define SCENEMECH 0
-#define SCENEART 1
-#define SCENECOLL 2
-#define SCENEOBJ 3
 
 int MAPX = BASEX;
 int MAPY = BASEY;
 
 char selectedTile = ' ';
 
+#define ed Ed::I()
+
+#define sceneArt ed.GetSceneArt()
+#define sceneMech ed.GetSceneMech()
+#define sceneCollission ed.GetSceneCollission()
+
+#define editorMode ed.GetEditorMode()
+
+
+
+
 TilePallette* palletteTile;
-EditorScene* sceneMech;
 QGraphicsScene* scenePallette;
 QMap<short, QPixmap*> pixmaps;
 
-
-EditorScene* sceneArt;
 QGraphicsScene* sceneArtPallette;
 QMap<short, QPixmap*> pixmapsArt;
 
-
-EditorScene* sceneCollission;
 QGraphicsScene* sceneCollissionPallette;
 QMap<short, QPixmap*> pixmapsCollission;
 
@@ -63,12 +56,6 @@ QGridLayout* grid;
 
 bool leftbuttonHeld = false;
 
-enum EditorMode
-{
-	EM_Level,
-	EM_Object,
-	EM_Template,
-} editorMode;
 
 
 
@@ -406,7 +393,7 @@ void LoadObjects(QString filename, bool pallette)
 		obj->setPixmap(*p);
         objectPallette[obj->type] = obj;
 	}
-    else
+	else if(obj)
         AddGameObject(obj);
 
 }
@@ -747,92 +734,6 @@ void CreateAndShowNewMapDialog()
 }
 
 
-void CreateSettingsWidget();
-void CreateObjectPropertyWindow();
-int main(int argc, char *argv[])
-{
-    QApplication a(argc, argv);
-
-    grid = new QGridLayout();
-    vlayout = new QVBoxLayout();
-	hlayout = new QSplitter();
-
-	QWidget rightside;
-
-	editorMode = EM_Level;
-
-    view = new EditorView();
-
-
-	if(0)
-	{
-	view->setViewport(new QGLWidget());
-	view->setViewportUpdateMode(
-		QGraphicsView::FullViewportUpdate);
-	}
-
-	view->setRenderHints(QPainter::Antialiasing);
-
-    sceneMech = new EditorScene();
-    sceneArt = new EditorScene();
-	sceneCollission = new EditorScene();
-	templateScene = new TemplateScene();
-
-    view->setScene(sceneMech);
-
-    CreateNewMap(MAPX, MAPY);
-
-    palletteTile = new TilePallette();
-
-    SetSelectedTile('x');
-
-
-	Ed::I().objectPropWindow = new ObjectPropertyWindow();
-	Ed::I().objectPropWindow->CreateObjectPropertyWindow();
-
-    viewPallette = new EditorViewBasic;
-	viewPallette->setDragMode(QGraphicsView::ScrollHandDrag);
-    scenePallette = new QGraphicsScene;
-    sceneArtPallette = new QGraphicsScene;
-    sceneCollissionPallette = new QGraphicsScene;
-	sceneObjectPallette = new QGraphicsScene();
-
-    viewPallette->setScene(scenePallette);
-    viewPallette->showNormal();
-    viewPallette->resize(430, 600);
-
-	scenePallette->setSceneRect(0,0,4*BLOCKSIZE,10*BLOCKSIZE);
-	sceneArtPallette->setSceneRect(0,0,4*BLOCKSIZE,10*BLOCKSIZE);
-	sceneCollissionPallette->setSceneRect(0,0,4*BLOCKSIZE,10*BLOCKSIZE);
-
-    LoadPallette();
-
-
-    AddAllToScene();
-    sceneMech->AddGrid();
-
-    CreateSettingsWidget();
-
-	rightside.setLayout(vlayout);
-	view->setMinimumWidth(1200);
-    hlayout->addWidget(view);
-
-	hlayout->addWidget(&rightside);
-
-    vlayout->addWidget(viewPallette);
-	vlayout->addWidget(templateScene->m_listView);
-	templateScene->m_listView->hide();
-    vlayout->addWidget(settingsWidget);
-	vlayout->addWidget(Ed::I().objectPropWindow->m_w);
-
-    hlayout->showMaximized();
-
-
-    LoadTemplates();
-
-    return a.exec();
-}
-
 
 
 
@@ -999,12 +900,12 @@ void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e )
 		{
 			GameObject* obj = new GameObject();
 			obj->palletteTile = false;
-			obj->Load(Ed::I().objectPropWindow->GetCurrentGameObject()->toText());
+			obj->Load(ed.objectPropWindow->GetCurrentGameObject()->toText());
 			obj->SetPos(e->scenePos());
 
 			AddGameObject(obj);
 
-			Ed::I().objectPropWindow->SetCurrentGameObject(obj);
+			ed.objectPropWindow->SetCurrentGameObject(obj);
 
 			e->accept();
 			break;
@@ -1505,9 +1406,11 @@ void EditorTemplate::SaveTemplate(int tx, int ty)
 
 int EditorTemplate::ImportFromImage(QString filename)
 {
+	editorMode = EM_Template;
+
 	QPixmap* img = new QPixmap(filename);
 
-	QString name = filename.split('/').last();
+	QString name = filename.split('/').last(); //chops path
 	name.chop(4); //chops .png
 
 	QPixmap tile = img->scaled(BLOCKSIZE, BLOCKSIZE);
@@ -1519,10 +1422,16 @@ int EditorTemplate::ImportFromImage(QString filename)
 	if(img->size().width() < 1)
 		return 0;
 
+	if(img->size().height()/BLOCKSIZE > MAPY || img->size().width()/BLOCKSIZE > MAPX )
+	{
+		qDebug() << "Image too large for template";
+		return 0;
+	}
+
 	QFile artList("ArtList.txt");
 	artList.open(QIODevice::WriteOnly | QIODevice::Append);
 	QTextStream in(&artList);
-	for(int x = 0; x*BLOCKSIZE < img->size().width(); x++)
+	for(int x = 0; x*BLOCKSIZE < img->size().width(); x++) //cut up the image into blocksized bits
 	{
 		for(int y = 0; y*BLOCKSIZE < img->size().height(); y++)
 		{
@@ -1573,6 +1482,105 @@ void EditorView :: mouseReleaseEvent(QMouseEvent * e)
 	  QGraphicsView::mouseReleaseEvent(&fake);
    }
    else QGraphicsView::mouseReleaseEvent(e);
+}
+
+
+void InitializeScenesAndViews()
+{
+	editorMode = EM_Level;
+
+	sceneMech = new EditorScene();
+	sceneArt = new EditorScene();
+	sceneCollission = new EditorScene();
+
+	editorMode = EM_Template;
+
+	sceneMech = new EditorScene();
+	sceneArt = new EditorScene();
+	sceneCollission = new EditorScene();
+
+	templateScene = new TemplateScene();
+
+	editorMode = EM_Level;
+
+	view = new EditorView();
+
+	viewPallette = new EditorViewBasic;
+	viewPallette->setDragMode(QGraphicsView::ScrollHandDrag);
+	scenePallette = new QGraphicsScene;
+	sceneArtPallette = new QGraphicsScene;
+	sceneCollissionPallette = new QGraphicsScene;
+	sceneObjectPallette = new QGraphicsScene();
+
+	viewPallette->setScene(scenePallette);
+	viewPallette->showNormal();
+	viewPallette->resize(430, 600);
+
+	scenePallette->setSceneRect(0,0,4*BLOCKSIZE,10*BLOCKSIZE);
+	sceneArtPallette->setSceneRect(0,0,4*BLOCKSIZE,10*BLOCKSIZE);
+	sceneCollissionPallette->setSceneRect(0,0,4*BLOCKSIZE,10*BLOCKSIZE);
+
+	palletteTile = new TilePallette();
+
+	ed.objectPropWindow = new ObjectPropertyWindow();
+	ed.objectPropWindow->CreateObjectPropertyWindow();
+}
+
+
+int main(int argc, char *argv[])
+{
+	QApplication a(argc, argv);
+
+	grid = new QGridLayout();
+	vlayout = new QVBoxLayout();
+	hlayout = new QSplitter();
+
+	QWidget rightside;
+
+	editorMode = EM_Level;
+
+
+
+	InitializeScenesAndViews();
+
+	if(0)
+	{
+		view->setViewport(new QGLWidget());
+		view->setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
+	}
+
+	view->setRenderHints(QPainter::Antialiasing);
+	view->setScene(sceneMech);
+
+	CreateNewMap(MAPX, MAPY);
+
+	SetSelectedTile('x');
+
+	LoadPallette();
+
+	AddAllToScene();
+	sceneMech->AddGrid();
+
+	CreateSettingsWidget();
+
+	rightside.setLayout(vlayout);
+	view->setMinimumWidth(1200);
+	hlayout->addWidget(view);
+
+	hlayout->addWidget(&rightside);
+
+	vlayout->addWidget(viewPallette);
+	vlayout->addWidget(templateScene->m_listView);
+	templateScene->m_listView->hide();
+	vlayout->addWidget(settingsWidget);
+	vlayout->addWidget(ed.objectPropWindow->m_w);
+
+	hlayout->showMaximized();
+
+
+	LoadTemplates();
+
+	return a.exec();
 }
 
 
