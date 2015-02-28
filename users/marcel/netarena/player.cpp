@@ -108,6 +108,8 @@ OPTION_DEFINE(bool, s_noSpecial, "Player/Disable Special Abilities");
 
 #define WRAP_AROUND_TOP_AND_BOTTOM 1
 
+#define GAMESIM m_instanceData->m_gameSim
+
 // todo : m_isGrounded should be true when stickied too. review code and make change!
 
 enum PlayerAnim
@@ -432,10 +434,10 @@ void Player::playSecondaryEffects(PlayerEvent e)
 	case kPlayerEvent_Spawn:
 		break;
 	case kPlayerEvent_Respawn:
-		m_instanceData->m_gameSim->playSound(makeCharacterFilename(m_instanceData->m_sounds["respawn"].getRandomSound(*m_instanceData->m_gameSim)));
+		GAMESIM->playSound(makeCharacterFilename(m_instanceData->m_sounds["respawn"].getRandomSound(*GAMESIM)));
 		break;
 	case kPlayerEvent_Die:
-		m_instanceData->m_gameSim->playSound(makeCharacterFilename("die/die.ogg"));
+		GAMESIM->playSound(makeCharacterFilename("die/die.ogg"));
 		break;
 	case kPlayerEvent_Jump:
 		{
@@ -446,33 +448,33 @@ void Player::playSecondaryEffects(PlayerEvent e)
 			break;
 		}
 	case kPlayerEvent_WallJump:
-		m_instanceData->m_gameSim->playSound("player-wall-jump.ogg");
+		GAMESIM->playSound("player-wall-jump.ogg");
 		break;
 	case kPlayerEvent_LandOnGround:
-		m_instanceData->m_gameSim->playSound(makeCharacterFilename("land_on_ground.ogg"), 25);
+		GAMESIM->playSound(makeCharacterFilename("land_on_ground.ogg"), 25);
 		break;
 	case kPlayerEvent_StickyAttach:
-		//m_instanceData->m_gameSim->playSound("player-sticky-attach.ogg");
+		//GAMESIM->playSound("player-sticky-attach.ogg");
 		break;
 	case kPlayerEvent_StickyRelease:
-		//m_instanceData->m_gameSim->playSound("player-sticky-release.ogg");
+		//GAMESIM->playSound("player-sticky-release.ogg");
 		break;
 	case kPlayerEvent_StickyJump:
-		m_instanceData->m_gameSim->playSound("player-sticky-jump.ogg");
+		GAMESIM->playSound("player-sticky-jump.ogg");
 		break;
 	case kPlayerEvent_SpringJump:
-		m_instanceData->m_gameSim->playSound("player-spring-jump.ogg");
+		GAMESIM->playSound("player-spring-jump.ogg");
 		break;
 	case kPlayerEvent_SpikeHit:
-		//m_instanceData->m_gameSim->playSound("player-spike-hit.ogg");
+		//GAMESIM->playSound("player-spike-hit.ogg");
 		break;
 	case kPlayerEvent_ArenaWrap:
-		//m_instanceData->m_gameSim->playSound("player-arena-wrap.ogg");
+		//GAMESIM->playSound("player-arena-wrap.ogg");
 		break;
 	case kPlayerEvent_DashAir:
 		break;
 	case kPlayerEvent_DestructibleDestroy:
-		//m_instanceData->m_gameSim->playSound("player-arena-wrap.ogg");
+		//GAMESIM->playSound("player-arena-wrap.ogg");
 		break;
 
 	default:
@@ -577,7 +579,7 @@ void Player::tick(float dt)
 			m_instanceData->playSoundBag("taunt_sounds", 100);
 		}
 
-		if (g_gameSim->m_gameMode == kGameState_Play)
+		if (GAMESIM->m_gameState == kGameState_Play)
 		{
 			if (m_instanceData->m_input.wentDown(INPUT_BUTTON_X) || m_respawnTimer <= 0.f)
 				respawn();
@@ -593,7 +595,7 @@ void Player::tick(float dt)
 
 		// see if we grabbed any pickup
 
-		const Pickup * pickup = m_instanceData->m_gameSim->grabPickup(
+		const Pickup * pickup = GAMESIM->grabPickup(
 			m_pos[0] + m_collision.x1,
 			m_pos[1] + m_collision.y1,
 			m_pos[0] + m_collision.x2,
@@ -663,7 +665,7 @@ void Player::tick(float dt)
 
 				for (int i = 0; i < MAX_PLAYERS; ++i)
 				{
-					Player & other = g_gameSim->m_players[i];
+					Player & other = GAMESIM->m_players[i];
 
 					if (other.m_isUsed && other.m_isAlive && &other != this)
 					{
@@ -698,7 +700,7 @@ void Player::tick(float dt)
 									players[j]->cancelAttack();
 								}
 
-								m_instanceData->m_gameSim->playSound("melee-cancel.ogg");
+								GAMESIM->playSound("melee-cancel.ogg");
 							}
 						}
 					}
@@ -709,8 +711,8 @@ void Player::tick(float dt)
 				CollisionInfo attackCollision;
 				getAttackCollision(attackCollision);
 
-				m_attack.hitDestructible |= m_instanceData->m_gameSim->m_arena.handleDamageRect(
-					*m_instanceData->m_gameSim,
+				m_attack.hitDestructible |= GAMESIM->m_arena.handleDamageRect(
+					*GAMESIM,
 					m_pos[0],
 					m_pos[1],
 					attackCollision.x1,
@@ -760,7 +762,7 @@ void Player::tick(float dt)
 				else if (weaponType == kPlayerWeapon_Grenade)
 				{
 					bulletType = kBulletType_Grenade;
-					m_instanceData->m_gameSim->playSound("grenade-throw.ogg");
+					GAMESIM->playSound("grenade-throw.ogg");
 				}
 
 				if (anim != -1)
@@ -785,7 +787,7 @@ void Player::tick(float dt)
 					angle = 0;
 
 				Assert(bulletType != kBulletType_COUNT);
-				m_instanceData->m_gameSim->spawnBullet(
+				GAMESIM->spawnBullet(
 					m_pos[0] + mirrorX(0.f),
 					m_pos[1] - mirrorY(44.f),
 					angle,
@@ -946,7 +948,7 @@ void Player::tick(float dt)
 
 			if (!m_teleport.cooldown && px >= 0 && px < ARENA_SX && py >= 0 && py < ARENA_SY)
 			{
-				const Block & block = m_instanceData->m_gameSim->m_arena.getBlock(px, py);
+				const Block & block = GAMESIM->m_arena.getBlock(px, py);
 
 				if (block.type == kBlockType_Teleport)
 				{
@@ -955,7 +957,7 @@ void Player::tick(float dt)
 					int destinationX;
 					int destinationY;
 
-					if (m_instanceData->m_gameSim->m_arena.getTeleportDestination(*m_instanceData->m_gameSim, px, py, destinationX, destinationY))
+					if (GAMESIM->m_arena.getTeleportDestination(*GAMESIM, px, py, destinationX, destinationY))
 					{
 						m_pos[0] = destinationX * BLOCK_SX;
 						m_pos[1] = destinationY * BLOCK_SY;
@@ -1325,7 +1327,7 @@ void Player::tick(float dt)
 								if (strength > PLAYER_SCREENSHAKE_STRENGTH_THRESHHOLD)
 								{
 									strength = strength / 4.f;
-									m_instanceData->m_gameSim->addScreenShake(0.f, strength, 3000.f, .3f);
+									GAMESIM->addScreenShake(0.f, strength, 3000.f, .3f);
 								}
 
 								// fixme : use down attack speed treshold
@@ -1337,7 +1339,7 @@ void Player::tick(float dt)
 									if (size > STOMP_EFFECT_MAX_SIZE)
 										size = STOMP_EFFECT_MAX_SIZE;
 									if (size >= 1)
-										m_instanceData->m_gameSim->addFloorEffect(m_index, m_pos[0], m_pos[1], size, (size + 1) * 2 / 3);
+										GAMESIM->addFloorEffect(m_index, m_pos[0], m_pos[1], size, (size + 1) * 2 / 3);
 								}
 
 								m_special.attackDownActive = false;
@@ -1488,46 +1490,46 @@ void Player::tick(float dt)
 			kBulletType_ParticleA, 2,
 			50.f, 100.f, 50.f);
 		spawnInfo.color = 0xffffff80;
-		m_instanceData->m_gameSim->spawnParticles(spawnInfo);
+		GAMESIM->spawnParticles(spawnInfo);
 	}
 
 	// token hunt game mode
 
-	if ((m_instanceData->m_gameSim->m_gameMode == kGameMode_TokenHunt) && (g_gameSim->m_gameMode == kGameState_Play))
+	if ((GAMESIM->m_gameMode == kGameMode_TokenHunt) && (GAMESIM->m_gameState == kGameState_Play))
 	{
 		if (m_isAlive)
 		{
 			CollisionInfo playerCollision;
 			if (getPlayerCollision(playerCollision))
 			{
-				if (m_instanceData->m_gameSim->pickupToken(playerCollision))
+				if (GAMESIM->pickupToken(playerCollision))
 				{
 					m_tokenHunt.m_hasToken = true;
 				}
 			}
 
-			if (m_tokenHunt.m_hasToken && (m_instanceData->m_gameSim->GetTick() % 4) == 0)
+			if (m_tokenHunt.m_hasToken && (GAMESIM->GetTick() % 4) == 0)
 			{
 				ParticleSpawnInfo spawnInfo(
 					m_pos[0], m_pos[1],
 					kBulletType_ParticleA, 2,
 					50.f, 100.f, 50.f);
 				spawnInfo.color = 0xffffff80;
-				m_instanceData->m_gameSim->spawnParticles(spawnInfo);
+				GAMESIM->spawnParticles(spawnInfo);
 			}
 		}
 	}
 
 	// coin collector game mode
 
-	if ((m_instanceData->m_gameSim->m_gameMode == kGameMode_CoinCollector) && (g_gameSim->m_gameMode == kGameState_Play))
+	if ((GAMESIM->m_gameMode == kGameMode_CoinCollector) && (GAMESIM->m_gameState == kGameState_Play))
 	{
 		if (m_isAlive)
 		{
 			CollisionInfo playerCollision;
 			if (getPlayerCollision(playerCollision))
 			{
-				if (m_instanceData->m_gameSim->pickupCoin(playerCollision))
+				if (GAMESIM->pickupCoin(playerCollision))
 				{
 					m_score++;
 				}
@@ -1591,7 +1593,7 @@ void Player::draw() const
 	}
 	
 	/*
-	if (m_instanceData->m_gameSim->m_gameMode == kGameMode_TokenHunt && m_tokenHunt.m_hasToken)
+	if (GAMESIM->m_gameMode == kGameMode_TokenHunt && m_tokenHunt.m_hasToken)
 	{
 		setColorf(1.f, 1.f, 1.f, (std::sin(g_TimerRT.Time_get() * 10.f) * .7f + 1.f) / 2.f);
 		drawRect(m_pos[0] - 50, m_pos[1] - 110, m_pos[0] + 50, m_pos[1] - 85);
@@ -1603,7 +1605,7 @@ void Player::draw() const
 	setColor(255, 255, 255);
 	drawText(m_pos[0], m_pos[1] - 110, 20, 0.f, +1.f, "%d", m_score);
 
-	if (!m_isAlive && m_canRespawn && (g_gameSim->m_gameMode == kGameState_Play) && m_isRespawn)
+	if (!m_isAlive && m_canRespawn && (GAMESIM->m_gameState == kGameState_Play) && m_isRespawn)
 	{
 		int sx = 40;
 		int sy = 40;
@@ -1646,7 +1648,7 @@ void Player::draw() const
 
 void Player::drawAt(int x, int y) const
 {
-	if (m_instanceData->m_gameSim->m_gameMode == kGameMode_TokenHunt)
+	if (GAMESIM->m_gameMode == kGameMode_TokenHunt)
 	{
 		setColorMode(COLOR_ADD);
 		if (m_tokenHunt.m_hasToken)
@@ -1756,7 +1758,7 @@ uint32_t Player::getIntersectingBlocksMaskInternal(int x, int y, bool doWrap) co
 
 	uint32_t result = 0;
 	
-	const Arena & arena = m_instanceData->m_gameSim->m_arena;
+	const Arena & arena = GAMESIM->m_arena;
 
 	result |= arena.getIntersectingBlocksMask(x1, y1);
 	result |= arena.getIntersectingBlocksMask(x2, y1);
@@ -1804,7 +1806,7 @@ void Player::respawn()
 
 	int x, y;
 
-	if (m_instanceData->m_gameSim->m_arena.getRandomSpawnPoint(*m_instanceData->m_gameSim, x, y, m_lastSpawnIndex, this))
+	if (GAMESIM->m_arena.getRandomSpawnPoint(*GAMESIM, x, y, m_lastSpawnIndex, this))
 	{
 		m_spawnInvincibilityTicks = TICKS_PER_SECOND * PLAYER_RESPAWN_INVINCIBILITY_TIME;
 
@@ -1889,7 +1891,7 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 
 		if (m_spawnInvincibilityTicks > 0 ||
 			shieldAbsorb(amount) ||
-			g_gameSim->m_gameState != kGameState_Play)
+			GAMESIM->m_gameState != kGameState_Play)
 		{
 			return false;
 		}
@@ -1897,7 +1899,7 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 		{
 			bool canBeKilled = true;
 
-			if (m_instanceData->m_gameSim->m_gameMode == kGameMode_CoinCollector)
+			if (GAMESIM->m_gameMode == kGameMode_CoinCollector)
 				canBeKilled = COINCOLLECTOR_PLAYER_CAN_BE_KILLED || (attacker == 0) || (attacker == this);
 
 			if (canBeKilled)
@@ -1916,11 +1918,11 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 				ParticleSpawnInfo spawnInfo(m_pos[0], m_pos[1] + mirrorY(-PLAYER_COLLISION_HITBOX_SY/2.f), kBulletType_ParticleA, 20, 50, 350, 40);
 				spawnInfo.color = 0xff0000ff;
 
-				m_instanceData->m_gameSim->spawnParticles(spawnInfo);
+				GAMESIM->spawnParticles(spawnInfo);
 
 				if (PROTO_TIMEDILATION_ON_KILL)
 				{
-					m_instanceData->m_gameSim->addTimeDilationEffect(
+					GAMESIM->addTimeDilationEffect(
 						PROTO_TIMEDILATION_ON_KILL_MULTIPLIER1,
 						PROTO_TIMEDILATION_ON_KILL_MULTIPLIER2,
 						PROTO_TIMEDILATION_ON_KILL_DURATION);
@@ -1931,7 +1933,7 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 			{
 				bool canScore = true;
 
-				switch (m_instanceData->m_gameSim->m_gameMode)
+				switch (GAMESIM->m_gameMode)
 				{
 				case kGameMode_DeathMatch:
 					attacker->awardScore(1);
@@ -1946,7 +1948,7 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 			}
 			else
 			{
-				switch (m_instanceData->m_gameSim->m_gameMode)
+				switch (GAMESIM->m_gameMode)
 				{
 				case kGameMode_CoinCollector:
 					break;
@@ -1959,26 +1961,26 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 
 			// token hunt
 
-			if (m_instanceData->m_gameSim->m_gameMode == kGameMode_TokenHunt)
+			if (GAMESIM->m_gameMode == kGameMode_TokenHunt)
 			{
 				if (m_tokenHunt.m_hasToken)
 				{
 					m_tokenHunt.m_hasToken = false;
 
-					Token & token = m_instanceData->m_gameSim->m_tokenHunt.m_token;
+					Token & token = GAMESIM->m_tokenHunt.m_token;
 					token.setup(
 						int(m_pos[0] / BLOCK_SX),
 						int(m_pos[1] / BLOCK_SY));
 					token.m_vel.Set(velocity[0] * TOKEN_DROP_SPEED_MULTIPLIER, -800.f);
 					token.m_isDropped = true;
 					token.m_dropTimer = TOKEN_DROP_TIME;
-					g_gameSim->playSound("token-bounce.ogg");
+					GAMESIM->playSound("token-bounce.ogg");
 				}
 			}
 
 			// coin collector
 
-			if (m_instanceData->m_gameSim->m_gameMode == kGameMode_CoinCollector)
+			if (GAMESIM->m_gameMode == kGameMode_CoinCollector)
 			{
 				if (m_score >= 1)
 				{
@@ -2065,7 +2067,7 @@ void Player::dropCoins(int numCoins)
 
 	for (int i = 0; i < numCoins; ++i)
 	{
-		Coin * coin = m_instanceData->m_gameSim->allocCoin();
+		Coin * coin = GAMESIM->allocCoin();
 
 		if (coin)
 		{
@@ -2075,9 +2077,9 @@ void Player::dropCoins(int numCoins)
 			coin->setup(blockX, blockY);
 			coin->m_dropTimer = COIN_DROP_TIME;
 
-			coin->m_vel.Set(g_gameSim->RandomFloat(-COIN_DROP_SPEED, +COIN_DROP_SPEED), -COIN_DROP_SPEED);
+			coin->m_vel.Set(GAMESIM->RandomFloat(-COIN_DROP_SPEED, +COIN_DROP_SPEED), -COIN_DROP_SPEED);
 
-			g_gameSim->playSound("token-bounce.ogg"); // fixme : sound
+			GAMESIM->playSound("token-bounce.ogg"); // fixme : sound
 		}
 	}
 }
@@ -2201,3 +2203,5 @@ void PlayerInstanceData::addTextChat(const std::string & line)
 	m_textChat = line;
 	m_textChatTicks = TICKS_PER_SECOND * INGAME_TEXTCHAT_DURATION;
 }
+
+#undef GAMESIM
