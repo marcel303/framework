@@ -26,6 +26,7 @@ Client::Client()
 	: m_channel(0)
 	, m_lobbyMenu(0)
 	, m_textChat(0)
+	, m_textChatFade(0.f)
 	, m_gameSim(0)
 	, m_syncStream(0)
 	, m_isDesync(false)
@@ -234,6 +235,15 @@ void Client::tick(float dt)
 			}
 		}
 
+		if (m_textChat->isActive())
+			m_textChatFade = 1.f;
+		else if (m_textChatFade > 0.f)
+		{
+			m_textChatFade -= dt * 3.f;
+			if (m_textChatFade < 0.f)
+				m_textChatFade = 0.f;
+		}
+
 		if (g_keyboardLock == 0 && keyboard.wentDown(SDLK_t))
 			m_textChat->open(UI_TEXTCHAT_MAX_TEXT_SIZE, true);
 	}
@@ -328,7 +338,7 @@ void Client::draw()
 		break;
 	}
 
-	m_textChat->draw();
+	drawTextChat();
 }
 
 void Client::drawConnecting()
@@ -630,6 +640,40 @@ void Client::drawRoundComplete()
 	}
 }
 
+void Client::drawTextChat()
+{
+	m_textChat->draw();
+
+	if (m_textChatFade != 0.f)
+	{
+		int maxLines = 10;
+		int x = GFX_SX - 500;
+		int y = GFX_SY - 50;
+		const int stepY = 40;
+		const int sizeX = 400;
+
+		setColor(0, 0, 0, 127 * m_textChatFade);
+		drawRect(x, y - stepY * maxLines, x + sizeX, y);
+
+		for (auto i = m_textChatLog.begin(); i != m_textChatLog.end(); ++i)
+		{
+			y -= 40;
+
+			const TextChatLog & log = *i;
+
+			setFont("calibri.ttf");
+
+			setColor(127, 191, 255, 255 * m_textChatFade); // todo : player color
+			drawText(x - 10, y, 24, -1.f, +1.f, "%s:", log.playerDisplayName.c_str());
+
+			setColor(227, 227, 227, 255 * m_textChatFade); // todo : player color
+			drawText(x, y, 24, +1.f, +1.f, "%s", log.message.c_str());
+		}
+
+		setColor(colorWhite);
+	}
+}
+
 void Client::debugDraw()
 {
 	m_gameSim->m_tokenHunt.m_token.drawBB();
@@ -709,4 +753,16 @@ void Client::clearPlayerPtrs()
 void Client::spawnParticles(const ParticleSpawnInfo & spawnInfo)
 {
 	m_gameSim->spawnParticles(spawnInfo);
+}
+
+void Client::addTextChat(int playerIndex, const std::string & text)
+{
+	TextChatLog log;
+	log.playerIndex = playerIndex;
+	log.message = text;
+	log.playerDisplayName = m_gameSim->m_players[playerIndex].m_displayName;
+
+	m_textChatLog.push_front(log);
+	while (m_textChatLog.size() > 10) // todo : add max log size option
+		m_textChatLog.pop_back();
 }

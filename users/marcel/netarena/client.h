@@ -1,6 +1,8 @@
 #pragma once
 
+#include <list>
 #include <stdint.h>
+#include <string>
 #include <vector>
 #include "gamedefs.h"
 #include "libnet_forward.h"
@@ -32,6 +34,15 @@ public:
 
 	std::vector<PlayerInstanceData*> m_players;
 
+	struct TextChatLog
+	{
+		int playerIndex;
+		std::string playerDisplayName;
+		std::string message;
+	};
+	std::list<TextChatLog> m_textChatLog;
+	float m_textChatFade;
+
 	Client();
 	~Client();
 
@@ -43,6 +54,7 @@ public:
 	void drawMenus();
 	void drawPlay();
 	void drawRoundComplete();
+	void drawTextChat();
 	void debugDraw();
 
 	void addPlayer(PlayerInstanceData * player);
@@ -52,4 +64,6 @@ public:
 	void clearPlayerPtrs();
 
 	void spawnParticles(const ParticleSpawnInfo & spawnInfo);
+
+	void addTextChat(int playerIndex, const std::string & text);
 };

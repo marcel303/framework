@@ -12,6 +12,25 @@
 
 todo:
 
+- torch light flicker speed should be time dilated too
+
+- add global method to get player color
+- add global cache of character properties. reduce need for m_instanceData
+
+- improve networking reliability layer on resend. trips currently
+
+- add task bar blink on game start
+- reset level events on round end
+- slow down not on non-player kill (if there's no attacker like when falling into spikes)
+- gravity well -> make it partially a linear or other kind of curve + more powerful at a distance
+- add names to players on talk? -> add color to results screen
+- chat log when chat is open?
+- slow down on kill for everyone acceptable?
+- increase chat visibility time
+- fix late join
+- add build version check for online
+- send client network stats to host so they can be visualized
+
 - fix desync as both players get hit/killed by grenade
 - add support for CRC compare at any time during game sim tick. log CRC's with function/line number and compare?
 
@@ -490,7 +509,9 @@ void Player::tick(float dt)
 	if (m_instanceData->m_textChatTicks != 0)
 	{
 		if (--m_instanceData->m_textChatTicks == 0)
+		{
 			m_instanceData->m_textChat.clear();
+		}
 	}
 
 	m_collision.x1 = -PLAYER_COLLISION_HITBOX_SX / 2.f;

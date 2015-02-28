@@ -230,6 +230,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 	}
 	else if (method == s_rpcActionBroadcast)
 	{
+		Client * client = g_app->findClientByChannel(channel);
 		GameSim * gameSim = findGameSimForChannel(channel);
 
 		if (gameSim)
@@ -279,6 +280,11 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 					if (playerInstanceData)
 					{
 						playerInstanceData->addTextChat(param3);
+					}
+
+					if (client)
+					{
+						client->addTextChat(param1, param3);
 					}
 				}
 				break;
@@ -1312,7 +1318,8 @@ bool App::tick()
 		m_mainMenu->tick(dt);
 	}
 
-	const uint64_t netTime = g_TimerRT.TimeMS_get();
+	//const uint64_t netTime = g_TimerRT.TimeMS_get();
+	const uint64_t netTime = g_TimerRT.TimeUS_get();
 
 	// update host
 

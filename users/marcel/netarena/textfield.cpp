@@ -85,7 +85,7 @@ bool TextField::tick(float dt)
 			{
 				int c = i;
 
-				if (keyboard.isDown(SDLK_LSHIFT))
+				if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
 				{
 					c = toupper(c);
 
