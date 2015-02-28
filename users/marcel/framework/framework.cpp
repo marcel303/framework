@@ -171,6 +171,8 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 				log("found suitable display mode: %d x %d @ %d Hz", closest.w, closest.h, closest.refresh_rate);
 				actualSx = closest.w;
 				actualSy = closest.h;
+				if (i == 1)
+					flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
 				break;
 			}
 		}
@@ -270,6 +272,10 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	// initialize UI
 	
 	ui.load("default_ui");
+
+	// make sure we are focused
+
+	SDL_RaiseWindow(globals.window);
 
 	return true;
 }
