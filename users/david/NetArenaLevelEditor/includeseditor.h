@@ -28,31 +28,18 @@
 #include <QPushButton>
 
 
-class ObjectPropertyWindow;
-class Ed
-{
-public:
-	static Ed& I()
-	{
-		static Ed e;
-		return e;
-	}
+#define BASEX 26//52
+#define BASEY 16//32
 
-private:
-	Ed()
-	{
-		objectPropWindow = 0;
-	}
+#define BLOCKSIZE 64//32
 
-	~Ed(){}
+#define ZOOMSPEED 12
 
-public:
+#define SCENEMECH 0
+#define SCENEART 1
+#define SCENECOLL 2
+#define SCENEOBJ 3
 
-	ObjectPropertyWindow* objectPropWindow;
-
-	QString ObjectPath; //the directory for all object textures
-};
 
 QList<QString> GetLinesFromConfigFile(QString filename);
 QPixmap* GetObjectPixmap(QString texture);
-

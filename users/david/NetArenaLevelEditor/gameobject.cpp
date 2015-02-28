@@ -2,6 +2,8 @@
 
 #include "includeseditor.h"
 
+#include "ed.h"
+
 
 void ObjectPropertyWindow::CreateObjectPropertyWindow()
 {

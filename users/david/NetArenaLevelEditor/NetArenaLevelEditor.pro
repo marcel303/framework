@@ -18,9 +18,11 @@ TEMPLATE = app
 
 SOURCES += main.cpp \
     gameobject.cpp \
-    loaders.cpp
+    loaders.cpp \
+    ed.cpp
 
 HEADERS += \
     main.h \
     gameobject.h \
-    includeseditor.h
+    includeseditor.h \
+    ed.h
