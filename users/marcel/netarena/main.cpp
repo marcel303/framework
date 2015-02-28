@@ -54,10 +54,6 @@ OPTION_DECLARE(std::string, g_map, "");
 OPTION_DEFINE(std::string, g_map, "App/Startup Map");
 OPTION_ALIAS(g_map, "map");
 
-OPTION_DECLARE(bool, g_hosting, true);
-OPTION_DEFINE(bool, g_hosting, "App/Enable Hosting");
-OPTION_ALIAS(g_hosting, "hosting");
-
 OPTION_DECLARE(bool, g_connectLocal, false);
 OPTION_DEFINE(bool, g_connectLocal, "App/Connect Locally");
 OPTION_ALIAS(g_connectLocal, "localconnect");
@@ -895,7 +891,7 @@ App::~App()
 	Assert(m_clients.empty());
 }
 
-bool App::init(bool isHost)
+bool App::init()
 {
 	Calc::Initialize();
 
@@ -1841,6 +1837,8 @@ int main(int argc, char * argv[])
 
 	g_optionManager.LoadFromCommandLine(argc, argv);
 
+	LIBNET_CHANNEL_ENABLE_TIMEOUTS = false;
+
 	if (!g_devMode && !g_connectLocal && (std::string)g_connect == "")
 	{
 		std::cout << "host IP address: ";
@@ -1851,9 +1849,7 @@ int main(int argc, char * argv[])
 
 	g_app = new App();
 
-	bool isHost = g_hosting;
-
-	if (!g_app->init(isHost))
+	if (!g_app->init())
 	{
 		//
 	}

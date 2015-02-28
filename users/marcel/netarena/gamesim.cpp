@@ -58,6 +58,8 @@ uint32_t GameStateData::Random()
 {
 	m_randomSeed += 1;
 	m_randomSeed *= 16807;
+	m_randomSeed = ~m_randomSeed;
+	m_randomSeed -= 1;
 	return m_randomSeed;
 }
 
@@ -80,6 +82,11 @@ void GameStateData::addTimeDilationEffect(float multiplier1, float multiplier2, 
 	m_timeDilationEffects[minIndex].multiplier2 = multiplier2;
 	m_timeDilationEffects[minIndex].ticks = duration * TICKS_PER_SECOND;
 	m_timeDilationEffects[minIndex].ticksRemaining = m_timeDilationEffects[minIndex].ticks;
+}
+
+LevelEvent GameStateData::getRandomLevelEvent()
+{
+	return (LevelEvent)(Random() % kLevelEvent_COUNT);
 }
 
 //
@@ -612,6 +619,12 @@ void GameSim::setGameState(::GameState gameState)
 				}
 			}
 
+			// level events
+
+			m_ticksUntilNextLevelEvent = TICKS_PER_SECOND * 5;
+
+			// game modes
+
 			if (m_gameMode == kGameMode_TokenHunt)
 			{
 				spawnToken();
@@ -843,8 +856,6 @@ void GameSim::resetGameWorld()
 	for (int i = 0; i < MAX_TORCHES; ++i)
 		m_torches[i].m_isAlive = false;
 
-	m_freezeTicks = 0;
-
 	// reset bullets
 
 	for (int i = 0; i < MAX_BULLETS; ++i)
@@ -1029,13 +1040,6 @@ void GameSim::tickPlay()
 
 	const uint32_t tick = GetTick();
 
-	if (m_freezeTicks > 0)
-	{
-		m_freezeTicks--;
-		
-		return;
-	}
-
 	// arena update
 	m_arena.tick(*this);
 
@@ -1097,6 +1101,183 @@ void GameSim::tickPlay()
 		}
 
 		m_nextPickupSpawnTick = tick + (PICKUP_INTERVAL + (Random() % PICKUP_INTERVAL_VARIANCE)) * TICKS_PER_SECOND;
+	}
+
+	// level events
+
+	if (m_ticksUntilNextLevelEvent > 0 && PROTO_ENABLE_LEVEL_EVENTS)
+	{
+		m_ticksUntilNextLevelEvent--;
+
+		if (m_ticksUntilNextLevelEvent == 0)
+		{
+			m_ticksUntilNextLevelEvent = TICKS_PER_SECOND * 5;
+
+			const LevelEvent e = getRandomLevelEvent();
+			//const LevelEvent e = kLevelEvent_GravityWell;
+			//const LevelEvent e = kLevelEvent_EarthQuake;
+
+			switch (e)
+			{
+			case kLevelEvent_EarthQuake:
+				memset(&m_levelEvents.quake, 0, sizeof(m_levelEvents.quake));
+				m_levelEvents.quake.m_ticksRemaining = TICKS_PER_SECOND * 3;
+				m_levelEvents.quake.m_ticksUntilNextShake = TICKS_PER_SECOND; // fixme
+				break;
+
+			case kLevelEvent_GravityWell:
+				memset(&m_levelEvents.gravityWell, 0, sizeof(m_levelEvents.gravityWell));
+				m_levelEvents.gravityWell.m_ticksRemaining = TICKS_PER_SECOND * 3;
+				m_levelEvents.gravityWell.m_x = GFX_SX / 2;
+				m_levelEvents.gravityWell.m_y = GFX_SY / 2;
+				break;
+
+			case kLevelEvent_DestroyBlocks:
+				memset(&m_levelEvents.destroyBlocks, 0, sizeof(m_levelEvents.destroyBlocks));
+				m_levelEvents.destroyBlocks.m_remainingBlockCount = 0;
+				break;
+
+			case kLevelEvent_TimeDilation:
+				memset(&m_levelEvents.timeDilation, 0, sizeof(m_levelEvents.timeDilation));
+				m_levelEvents.timeDilation.m_ticksRemaining = TICKS_PER_SECOND * 3;
+				addTimeDilationEffect(.5f, .25f, 3.f);
+				break;
+
+			case kLevelEvent_SpikeWalls:
+				memset(&m_levelEvents.spikeWalls, 0, sizeof(m_levelEvents.spikeWalls));
+				m_levelEvents.spikeWalls.m_left = true;
+				m_levelEvents.spikeWalls.m_right = true;
+				m_levelEvents.spikeWalls.m_ticksRemaining = TICKS_PER_SECOND * 3;
+				break;
+
+			case kLevelEvent_Wind:
+				memset(&m_levelEvents.wind, 0, sizeof(m_levelEvents.wind));
+				m_levelEvents.wind.m_ticksRemaining = TICKS_PER_SECOND * 3;
+				break;
+
+			case kLevelEvent_BarrelDrop:
+				memset(&m_levelEvents.barrelDrop, 0, sizeof(m_levelEvents.barrelDrop));
+				m_levelEvents.barrelDrop.m_ticksRemaining = TICKS_PER_SECOND * 3;
+				m_levelEvents.barrelDrop.m_ticksUntilNextDrop = TICKS_PER_SECOND;
+				break;
+
+			case kLevelEvent_NightDayCycle:
+				memset(&m_levelEvents.nightDayCycle, 0, sizeof(m_levelEvents.nightDayCycle));
+				m_levelEvents.nightDayCycle.m_ticksRemaining = TICKS_PER_SECOND * 3;
+				break;
+			}
+		}
+	}
+
+	if (m_levelEvents.quake.m_ticksRemaining > 0)
+	{
+		m_levelEvents.quake.m_ticksRemaining--;
+
+		Assert(m_levelEvents.quake.m_ticksUntilNextShake > 0);
+		m_levelEvents.quake.m_ticksUntilNextShake--;
+		if (m_levelEvents.quake.m_ticksUntilNextShake == 0)
+		{
+			// trigger quake
+
+			addScreenShake(0.f, 25.f, 1000.f, .3f);
+
+			for (int i = 0; i < MAX_PLAYERS; ++i)
+			{
+				Player & player = m_players[i];
+
+				if (!player.m_isUsed && player.m_isAlive)
+					continue;
+
+				if (player.m_isGrounded)
+					player.m_vel[1] = -Calc::Sign(player.m_facing[1]) * 350.f;
+			}
+
+			m_levelEvents.quake.m_ticksUntilNextShake = TICKS_PER_SECOND; // fixme
+		}
+	}
+
+	if (m_levelEvents.gravityWell.m_ticksRemaining > 0)
+	{
+		m_levelEvents.gravityWell.m_ticksRemaining--;
+
+		// affect player speeds
+
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+		{
+			Player & player = m_players[i];
+
+			if (!player.m_isUsed && player.m_isAlive)
+				continue;
+
+			const float dx = m_levelEvents.gravityWell.m_x - player.m_pos[0];
+			const float dy = m_levelEvents.gravityWell.m_y - player.m_pos[1];
+			const float d = std::sqrtf(dx * dx + dy * dy) + .1f;
+			const float strength = 300000.f / d;
+			player.m_vel[0] += dx / d * strength * dt;
+			player.m_vel[1] += dy / d * strength * dt;
+		}
+	}
+
+	if (m_levelEvents.destroyBlocks.m_remainingBlockCount > 0)
+	{
+		Assert(m_levelEvents.destroyBlocks.m_ticksUntilNextDestruction > 0);
+		m_levelEvents.destroyBlocks.m_ticksUntilNextDestruction--;
+		if (m_levelEvents.destroyBlocks.m_ticksUntilNextDestruction == 0)
+		{
+			// todo : destroy a random block
+
+			m_levelEvents.destroyBlocks.m_ticksUntilNextDestruction = 0;
+		}
+	}
+
+	if (m_levelEvents.timeDilation.m_ticksRemaining > 0)
+	{
+		m_levelEvents.timeDilation.m_ticksRemaining--;
+	}
+
+	if (m_levelEvents.spikeWalls.m_ticksRemaining > 0)
+	{
+		m_levelEvents.spikeWalls.m_ticksRemaining--;
+		
+		// todo : collision versus players. kill on hit
+	}
+
+	if (m_levelEvents.wind.m_ticksRemaining > 0)
+	{
+		m_levelEvents.wind.m_ticksRemaining--;
+
+		// affect player speeds
+
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+		{
+			Player & player = m_players[i];
+
+			if (!player.m_isUsed && player.m_isAlive)
+				continue;
+
+			player.m_vel[0] += 300.f * dt;
+		}
+	}
+
+	if (m_levelEvents.barrelDrop.m_ticksRemaining > 0)
+	{
+		m_levelEvents.barrelDrop.m_ticksRemaining--;
+
+		Assert(m_levelEvents.barrelDrop.m_ticksUntilNextDrop > 0);
+		m_levelEvents.barrelDrop.m_ticksUntilNextDrop--;
+		if (m_levelEvents.barrelDrop.m_ticksUntilNextDrop == 0)
+		{
+			// todo : add barrel
+
+			// todo : next tick
+
+			m_levelEvents.barrelDrop.m_ticksUntilNextDrop = TICKS_PER_SECOND;
+		}
+	}
+
+	if (m_levelEvents.nightDayCycle.m_ticksRemaining > 0)
+	{
+		m_levelEvents.nightDayCycle.m_ticksRemaining--;
 	}
 
 	// token

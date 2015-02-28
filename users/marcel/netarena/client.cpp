@@ -271,7 +271,7 @@ void Client::tick(float dt)
 			strcpy_s(temp, sizeof(temp), "bgm-menus.ogg");
 			break;
 		case kGameState_Play:
-			strcpy_s(temp, sizeof(temp), "bgm-play.ogg");
+			sprintf_s(temp, sizeof(temp), "bgm-play%02d.ogg", m_gameSim->m_nextRoundNumber % 4);
 			break;
 		case kGameState_RoundComplete:
 			strcpy_s(temp, sizeof(temp), "bgm-round-complete.ogg");
@@ -419,6 +419,18 @@ void Client::drawPlay()
 		Sprite("back.png").draw();
 		setBlend(BLEND_ALPHA);
 
+		if (m_gameSim->m_levelEvents.gravityWell.m_ticksRemaining > 0)
+		{
+			setColor(255, 255, 255, 127);
+			Sprite("gravitywell/well.png").drawEx(
+				m_gameSim->m_levelEvents.gravityWell.m_x,
+				m_gameSim->m_levelEvents.gravityWell.m_y,
+				m_gameSim->m_tick / float(TICKS_PER_SECOND) * 90.f,
+				1.f, true,
+				FILTER_LINEAR);
+			setColor(colorWhite);
+		}
+
 		m_gameSim->m_arena.drawBlocks();
 
 		// torches
@@ -471,6 +483,13 @@ void Client::drawPlay()
 		setBlend(BLEND_ADD);
 		m_gameSim->m_particlePool->draw();
 		setBlend(BLEND_ALPHA);
+
+		// spike walls
+
+		if (m_gameSim->m_levelEvents.spikeWalls.m_ticksRemaining > 0)
+		{
+			setColor(200, 200, 200, 255);
+		}
 
 		gxPopMatrix();
 	}

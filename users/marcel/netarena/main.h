@@ -110,7 +110,7 @@ public:
 	App();
 	~App();
 
-	bool init(bool isHost);
+	bool init();
 	void shutdown();
 
 	void quit();

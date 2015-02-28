@@ -290,7 +290,7 @@ struct Token : PhysicsActor
 	void draw() const;
 	void drawLight() const;
 };
-
+\
 struct Coin : PhysicsActor
 {
 	bool m_isDropped;
@@ -308,9 +308,22 @@ struct Coin : PhysicsActor
 	void drawLight() const;
 };
 
-struct Mover2
+struct Barrel
 {
+	bool m_isActive;
+	Vec2 m_pos;
+	int m_tick; // barrel velocity/position depends on tick number
 
+	Barrel()
+	{
+		memset(this, 0, sizeof(Barrel));
+	}
+
+	void setup(int x, int y);
+
+	void tick(GameSim & gameSim, float dt) { } // todo : check if we are hit by a player using melee, if > GFX_SY, disable
+	void draw() const { }
+	void drawLight() const { }
 };
 
 struct Torch
@@ -443,6 +456,19 @@ struct LevelEvent_NightDayCycle
 	int m_ticks; // current age, for animation
 };
 
+enum LevelEvent
+{
+	kLevelEvent_EarthQuake,
+	kLevelEvent_GravityWell,
+	kLevelEvent_DestroyBlocks,
+	kLevelEvent_TimeDilation,
+	kLevelEvent_SpikeWalls,
+	kLevelEvent_Wind,
+	kLevelEvent_BarrelDrop,
+	kLevelEvent_NightDayCycle,
+	kLevelEvent_COUNT
+};
+
 //
 
 struct GameStateData
@@ -456,6 +482,7 @@ struct GameStateData
 	float RandomFloat(float min, float max) { float t = (Random() & 4095) / 4095.f; return t * min + (1.f - t) * max; }
 	uint32_t GetTick();
 	void addTimeDilationEffect(float multiplier1, float multiplier2, float duration);
+	LevelEvent getRandomLevelEvent();
 
 	uint32_t m_tick;
 	uint32_t m_randomSeed;
@@ -469,7 +496,6 @@ struct GameStateData
 		int ticks;
 		int ticksRemaining;
 	} m_timeDilationEffects[MAX_TIMEDILATION_EFFECTS];
-	uint32_t m_freezeTicks;
 
 	GameState m_gameState;
 	GameMode m_gameMode;
@@ -480,13 +506,39 @@ struct GameStateData
 
 	Player m_players[MAX_PLAYERS];
 
+	// pickups
+
 	Pickup m_pickups[MAX_PICKUPS];
 	Pickup m_grabbedPickup;
 	uint64_t m_nextPickupSpawnTick;
 
+	// barrels
+
+	Barrel m_barrels[MAX_BARRELS];
+
+	// effects
+
 	FloorEffect m_floorEffect;
 
 	Torch m_torches[MAX_TORCHES];
+
+	// level events
+
+	struct LevelEvents
+	{
+		LevelEvent_EarthQuake quake;
+		LevelEvent_GravityWell gravityWell;
+		LevelEvent_DestroyDestructibleBlocks destroyBlocks;
+		LevelEvent_TimeDilation timeDilation;
+		LevelEvent_SpikeWalls spikeWalls;
+		LevelEvent_Wind wind;
+		LevelEvent_BarrelDrop barrelDrop;
+		LevelEvent_NightDayCycle nightDayCycle;
+	} m_levelEvents;
+
+	int m_ticksUntilNextLevelEvent;
+
+	// support for game modes
 
 	struct TokenHunt
 	{

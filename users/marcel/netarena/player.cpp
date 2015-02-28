@@ -577,8 +577,11 @@ void Player::tick(float dt)
 			m_instanceData->playSoundBag("taunt_sounds", 100);
 		}
 
-		if (m_instanceData->m_input.wentDown(INPUT_BUTTON_X) || m_respawnTimer <= 0.f)
-			respawn();
+		if (g_gameSim->m_gameMode == kGameState_Play)
+		{
+			if (m_instanceData->m_input.wentDown(INPUT_BUTTON_X) || m_respawnTimer <= 0.f)
+				respawn();
+		}
 
 		m_respawnTimer -= dt;
 	}
@@ -1490,7 +1493,7 @@ void Player::tick(float dt)
 
 	// token hunt game mode
 
-	if (m_instanceData->m_gameSim->m_gameMode == kGameMode_TokenHunt)
+	if ((m_instanceData->m_gameSim->m_gameMode == kGameMode_TokenHunt) && (g_gameSim->m_gameMode == kGameState_Play))
 	{
 		if (m_isAlive)
 		{
@@ -1517,7 +1520,7 @@ void Player::tick(float dt)
 
 	// coin collector game mode
 
-	if (m_instanceData->m_gameSim->m_gameMode == kGameMode_CoinCollector)
+	if ((m_instanceData->m_gameSim->m_gameMode == kGameMode_CoinCollector) && (g_gameSim->m_gameMode == kGameState_Play))
 	{
 		if (m_isAlive)
 		{
@@ -1600,7 +1603,7 @@ void Player::draw() const
 	setColor(255, 255, 255);
 	drawText(m_pos[0], m_pos[1] - 110, 20, 0.f, +1.f, "%d", m_score);
 
-	if (!m_isAlive && m_canRespawn && m_isRespawn)
+	if (!m_isAlive && m_canRespawn && (g_gameSim->m_gameMode == kGameState_Play) && m_isRespawn)
 	{
 		int sx = 40;
 		int sy = 40;
@@ -1923,8 +1926,6 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 						PROTO_TIMEDILATION_ON_KILL_DURATION);
 				}
 			}
-
-			//m_instanceData->m_gameSim->m_freezeTicks = 10;
 
 			if (attacker && attacker != this)
 			{
