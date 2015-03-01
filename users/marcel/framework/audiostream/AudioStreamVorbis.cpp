@@ -115,6 +115,7 @@ void AudioStream_Vorbis::Open(const char* fileName, bool loop)
 	
 	if (mFile == 0)
 	{
+		logError("Vosbis Audio Stream: failed to open file (%s)", fileName);
 		fassert(mFile != 0);
 		Close();
 		return;
