@@ -12,7 +12,8 @@
 #ifdef WIN32
 	#include <direct.h>
 	#include <GL/glew.h>
-	#include <SDL/SDL_opengl.h>
+	#include <SDL2/SDL_opengl.h>
+	#include <SDL2/SDL_syswm.h>
 	#include <Windows.h>
 	#include <Xinput.h>
 	DWORD timeGetTime(void);
@@ -746,6 +747,26 @@ void Framework::endDraw()
 	// flip back buffers
 	
 	SDL_GL_SwapWindow(globals.window);
+}
+
+void Framework::blinkTaskbarIcon(int count)
+{
+#ifdef WIN32
+	SDL_SysWMinfo info;
+	memset(&info, 0, sizeof(info));
+	SDL_VERSION(&info.version);
+
+	if (SDL_GetWindowWMInfo(globals.window, &info))
+	{
+		FLASHWINFO flashInfo;
+		memset(&flashInfo, 0, sizeof(flashInfo));
+		flashInfo.cbSize = sizeof(flashInfo);
+		flashInfo.hwnd = info.info.win.window;
+		flashInfo.dwFlags = FLASHW_TRAY;
+		flashInfo.uCount = count;
+		FlashWindowEx(&flashInfo);
+	}
+#endif
 }
 
 void Framework::registerSprite(Sprite * sprite)

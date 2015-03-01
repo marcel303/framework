@@ -158,6 +158,8 @@ public:
 
 	void beginDraw(int r, int g, int b, int a);
 	void endDraw();
+
+	void blinkTaskbarIcon(int count);
 	
 	bool quitRequested;
 	float time;
