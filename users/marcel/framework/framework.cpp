@@ -377,6 +377,7 @@ void Framework::process()
 	// poll SDL event queue
 	
 	globals.keyChangeCount = 0;
+	globals.keyRepeatCount = 0;
 	memset(globals.mouseChange, 0, sizeof(globals.mouseChange));
 	memset(globals.midiChange, 0, sizeof(globals.midiChange));
 	
@@ -390,7 +391,11 @@ void Framework::process()
 			for (int i = 0; i < globals.keyDownCount; ++i)
 				if (globals.keyDown[i] == e.key.keysym.sym)
 					isRepeat = true;
-			if (!isRepeat)
+			if (isRepeat)
+			{
+				globals.keyRepeat[globals.keyRepeatCount++] = e.key.keysym.sym;
+			}
+			else
 			{
 				globals.keyDown[globals.keyDownCount++] = e.key.keysym.sym;
 				globals.keyChange[globals.keyChangeCount++] = e.key.keysym.sym;
@@ -2006,14 +2011,22 @@ static bool keyChange(SDLKey key)
 	return false;
 }
 
-bool Keyboard::wentDown(SDLKey key) const
+bool Keyboard::wentDown(SDLKey key, bool allowRepeat) const
 {
-	return isDown(key) && keyChange(key);
+	return (isDown(key) && keyChange(key)) || (allowRepeat && keyRepeat(key));
 }
 
 bool Keyboard::wentUp(SDLKey key) const
 {
 	return !isDown(key) && keyChange(key);
+}
+
+bool Keyboard::keyRepeat(SDLKey key) const
+{
+	for (int i = 0; i < globals.keyRepeatCount; ++i)
+		if (globals.keyRepeat[i] == key)
+			return true;
+	return false;
 }
 
 // -----

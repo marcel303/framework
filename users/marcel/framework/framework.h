@@ -550,8 +550,9 @@ class Keyboard
 {
 public:
 	bool isDown(SDLKey key) const;
-	bool wentDown(SDLKey key) const;
+	bool wentDown(SDLKey key, bool allowRepeat = false) const;
 	bool wentUp(SDLKey key) const;
+	bool keyRepeat(SDLKey key) const;
 };
 
 class Gamepad
