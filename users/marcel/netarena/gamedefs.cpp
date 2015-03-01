@@ -10,6 +10,9 @@ OPTION_STEP(PROTO_TIMEDILATION_ON_KILL_MULTIPLIER2, 0.f, 10.f, .01f);
 OPTION_STEP(PROTO_TIMEDILATION_ON_KILL_DURATION, 0.f, 10.f, .01f);
 
 OPTION_DEFINE(bool, PROTO_ENABLE_LEVEL_EVENTS, "Experimental/Enable Level Events");
+OPTION_DEFINE(float, EVENT_GRAVITYWELL_STRENGTH_BEGIN, "Experimental/Gravity Well/Strength (Begin)");
+OPTION_DEFINE(float, EVENT_GRAVITYWELL_STRENGTH_END, "Experimental/Gravity Well/Strength (End)");
+OPTION_DEFINE(float, EVENT_GRAVITYWELL_DURATION, "Experimental/Gravity Well/Duration");
 // -- prototypes --
 
 OPTION_DEFINE(int, GAMESTATE_COMPLETE_TIMER, "Menus/Results Screen Time");

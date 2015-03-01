@@ -386,11 +386,61 @@ struct FloorEffect
 
 // todo : some events can be combined. make a list of events that can be combined!
 
+struct LevelEventTimer
+{
+	float m_duration;
+	float m_time;
+
+	// tick timer and return whether its active
+	bool tickActive(float dt)
+	{
+		if (m_time < m_duration)
+		{
+			m_time += dt;
+			if (m_time >= m_duration)
+				m_time = m_duration;
+			return true;
+		}
+		return false;
+	}
+
+	// tick timer and return whether it completed
+	bool tickComplete(float dt)
+	{
+		if (m_time < m_duration)
+		{
+			m_time += dt;
+			if (m_time >= m_duration)
+			{
+				m_time = m_duration;
+				return true;
+			}
+		}
+		return false;
+	}
+
+	float getProgress() const
+	{
+		return m_time / m_duration;
+	}
+
+	bool isActive() const
+	{
+		return m_time < m_duration;
+	}
+
+	void operator=(float time)
+	{
+		m_duration = time;
+		m_time = 0.f;
+	}
+};
+
 // the earth suddenly starts shaking. players will loose their footing and be kicked into the air
 struct LevelEvent_EarthQuake
 {
-	int m_ticksRemaining;
-	int m_ticksUntilNextShake;
+	LevelEventTimer endTimer;
+	LevelEventTimer quakeTimer;
 };
 
 // a gravity well appears. players get sucked into it and get concentrated into a smaller area
@@ -398,7 +448,7 @@ struct LevelEvent_EarthQuake
 //         but it should be hard near the center to escape!
 struct LevelEvent_GravityWell
 {
-	int m_ticksRemaining;
+	LevelEventTimer endTimer;
 	int m_x;
 	int m_y;
 };
@@ -409,7 +459,7 @@ struct LevelEvent_GravityWell
 struct LevelEvent_DestroyDestructibleBlocks
 {
 	int m_remainingBlockCount;
-	int m_ticksUntilNextDestruction;
+	LevelEventTimer destructionTimer;
 };
 
 // time suddenly slows down for a while
@@ -417,7 +467,7 @@ struct LevelEvent_DestroyDestructibleBlocks
 //        layer, floating about
 struct LevelEvent_TimeDilation
 {
-	int m_ticksRemaining;
+	LevelEventTimer endTimer;
 };
 
 // spike walls start closing in from the left, right, or both sides
@@ -425,8 +475,7 @@ struct LevelEvent_TimeDilation
 // note : disable respawning while effect is active to avoid respawning in wall?
 struct LevelEvent_SpikeWalls
 {
-	int m_ticksRemaining;
-	int m_ticks; // current age, for animation
+	LevelEventTimer endTimer;
 
 	bool m_right;
 	bool m_left;
@@ -436,7 +485,7 @@ struct LevelEvent_SpikeWalls
 // note: need visual. maybe a wind layer with leafs on the foreground layer, maybe rain?
 struct LevelEvent_Wind
 {
-	int m_ticksRemaining;
+	LevelEventTimer endTimer;
 };
 
 // barrels start dropping from the sky! barrels can be hit for powerful attack
@@ -444,16 +493,15 @@ struct LevelEvent_Wind
 // note : collision should be disabled on barrels. fake gravity/no gravity/floatiness
 struct LevelEvent_BarrelDrop
 {
-	int m_ticksRemaining;
-	int m_ticksUntilNextDrop;
+	LevelEventTimer endTimer;
+	LevelEventTimer spawnTimer;
 };
 
 // the level turns dark for a while. players have limited vision
 // note : accompanied by lightning and rain effects?
 struct LevelEvent_NightDayCycle
 {
-	int m_ticksRemaining;
-	int m_ticks; // current age, for animation
+	LevelEventTimer endTimer;
 };
 
 enum LevelEvent
@@ -543,7 +591,7 @@ struct GameStateData
 		LevelEvent_NightDayCycle nightDayCycle;
 	} m_levelEvents;
 
-	int m_ticksUntilNextLevelEvent;
+	float m_timeUntilNextLevelEvent;
 
 	// support for game modes
 

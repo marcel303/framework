@@ -626,7 +626,7 @@ void GameSim::setGameState(::GameState gameState)
 
 			// level events
 
-			m_ticksUntilNextLevelEvent = TICKS_PER_SECOND * 5;
+			m_timeUntilNextLevelEvent = 1.f;
 
 			// game modes
 
@@ -886,7 +886,7 @@ void GameSim::resetGameWorld()
 	// reset level events
 
 	m_levelEvents = LevelEvents();
-	m_ticksUntilNextLevelEvent = 0;
+	m_timeUntilNextLevelEvent = 0.f;
 
 	// reset token hunt game mode
 
@@ -1121,29 +1121,29 @@ void GameSim::tickPlay()
 
 	// level events
 
-	if (m_ticksUntilNextLevelEvent > 0 && PROTO_ENABLE_LEVEL_EVENTS)
+	if (m_timeUntilNextLevelEvent > 0.f && PROTO_ENABLE_LEVEL_EVENTS)
 	{
-		m_ticksUntilNextLevelEvent--;
+		m_timeUntilNextLevelEvent -= dt;
 
-		if (m_ticksUntilNextLevelEvent == 0)
+		if (m_timeUntilNextLevelEvent <= 0.f)
 		{
-			m_ticksUntilNextLevelEvent = TICKS_PER_SECOND * 5;
+			m_timeUntilNextLevelEvent = 30.f;
 
-			const LevelEvent e = getRandomLevelEvent();
-			//const LevelEvent e = kLevelEvent_GravityWell;
+			//const LevelEvent e = getRandomLevelEvent();
+			const LevelEvent e = kLevelEvent_GravityWell;
 			//const LevelEvent e = kLevelEvent_EarthQuake;
 
 			switch (e)
 			{
 			case kLevelEvent_EarthQuake:
 				memset(&m_levelEvents.quake, 0, sizeof(m_levelEvents.quake));
-				m_levelEvents.quake.m_ticksRemaining = TICKS_PER_SECOND * 3;
-				m_levelEvents.quake.m_ticksUntilNextShake = TICKS_PER_SECOND; // fixme
+				m_levelEvents.quake.endTimer = 3.f;
+				m_levelEvents.quake.quakeTimer = 1.f; // fixme
 				break;
 
 			case kLevelEvent_GravityWell:
 				memset(&m_levelEvents.gravityWell, 0, sizeof(m_levelEvents.gravityWell));
-				m_levelEvents.gravityWell.m_ticksRemaining = TICKS_PER_SECOND * 3;
+				m_levelEvents.gravityWell.endTimer = EVENT_GRAVITYWELL_DURATION;
 				m_levelEvents.gravityWell.m_x = GFX_SX / 2;
 				m_levelEvents.gravityWell.m_y = GFX_SY / 2;
 				break;
@@ -1155,44 +1155,42 @@ void GameSim::tickPlay()
 
 			case kLevelEvent_TimeDilation:
 				memset(&m_levelEvents.timeDilation, 0, sizeof(m_levelEvents.timeDilation));
-				m_levelEvents.timeDilation.m_ticksRemaining = TICKS_PER_SECOND * 3;
+				m_levelEvents.timeDilation.endTimer = 3.f;
 				addTimeDilationEffect(.5f, .25f, 3.f);
 				break;
 
 			case kLevelEvent_SpikeWalls:
 				memset(&m_levelEvents.spikeWalls, 0, sizeof(m_levelEvents.spikeWalls));
+				m_levelEvents.spikeWalls.endTimer = 3.f;
 				m_levelEvents.spikeWalls.m_left = true;
 				m_levelEvents.spikeWalls.m_right = true;
-				m_levelEvents.spikeWalls.m_ticksRemaining = TICKS_PER_SECOND * 3;
 				break;
 
 			case kLevelEvent_Wind:
 				memset(&m_levelEvents.wind, 0, sizeof(m_levelEvents.wind));
-				m_levelEvents.wind.m_ticksRemaining = TICKS_PER_SECOND * 3;
+				m_levelEvents.wind.endTimer = 3.f;
 				break;
 
 			case kLevelEvent_BarrelDrop:
 				memset(&m_levelEvents.barrelDrop, 0, sizeof(m_levelEvents.barrelDrop));
-				m_levelEvents.barrelDrop.m_ticksRemaining = TICKS_PER_SECOND * 3;
-				m_levelEvents.barrelDrop.m_ticksUntilNextDrop = TICKS_PER_SECOND;
+				m_levelEvents.barrelDrop.endTimer = 3.f;
+				m_levelEvents.barrelDrop.spawnTimer = 1.f;
 				break;
 
 			case kLevelEvent_NightDayCycle:
 				memset(&m_levelEvents.nightDayCycle, 0, sizeof(m_levelEvents.nightDayCycle));
-				m_levelEvents.nightDayCycle.m_ticksRemaining = TICKS_PER_SECOND * 3;
+				m_levelEvents.nightDayCycle.endTimer = 3.f;
 				break;
 			}
 		}
 	}
 
-	if (m_levelEvents.quake.m_ticksRemaining > 0)
+	if (m_levelEvents.quake.endTimer.tickActive(dt))
 	{
-		m_levelEvents.quake.m_ticksRemaining--;
-
-		Assert(m_levelEvents.quake.m_ticksUntilNextShake > 0);
-		m_levelEvents.quake.m_ticksUntilNextShake--;
-		if (m_levelEvents.quake.m_ticksUntilNextShake == 0)
+		if (m_levelEvents.quake.quakeTimer.tickComplete(dt))
 		{
+			m_levelEvents.quake.quakeTimer = 1.f; // fixme
+
 			// trigger quake
 
 			addScreenShake(0.f, 25.f, 1000.f, .3f);
@@ -1207,15 +1205,11 @@ void GameSim::tickPlay()
 				if (player.m_isGrounded)
 					player.m_vel[1] = -Calc::Sign(player.m_facing[1]) * 350.f;
 			}
-
-			m_levelEvents.quake.m_ticksUntilNextShake = TICKS_PER_SECOND; // fixme
 		}
 	}
 
-	if (m_levelEvents.gravityWell.m_ticksRemaining > 0)
+	if (m_levelEvents.gravityWell.endTimer.tickActive(dt))
 	{
-		m_levelEvents.gravityWell.m_ticksRemaining--;
-
 		// affect player speeds
 
 		for (int i = 0; i < MAX_PLAYERS; ++i)
@@ -1227,41 +1221,44 @@ void GameSim::tickPlay()
 
 			const float dx = m_levelEvents.gravityWell.m_x - player.m_pos[0];
 			const float dy = m_levelEvents.gravityWell.m_y - player.m_pos[1];
-			const float d = std::sqrtf(dx * dx + dy * dy) + .1f;
-			const float strength = 300000.f / d;
-			player.m_vel[0] += dx / d * strength * dt;
-			player.m_vel[1] += dy / d * strength * dt;
+			const float d = std::sqrtf(dx * dx + dy * dy);
+			if (d != 0.f)
+			{
+				const float ax = dx / d;
+				const float ay = dy / d;
+
+				const float t = m_levelEvents.gravityWell.endTimer.getProgress();
+				const float s = Calc::Lerp(EVENT_GRAVITYWELL_STRENGTH_BEGIN, EVENT_GRAVITYWELL_STRENGTH_END, t);
+				const float strength = s * 10000.f / (d + 1.f);
+
+				player.m_vel[0] += ax * strength * dt;
+				player.m_vel[1] += ay * strength * dt;
+			}
 		}
 	}
 
 	if (m_levelEvents.destroyBlocks.m_remainingBlockCount > 0)
 	{
-		Assert(m_levelEvents.destroyBlocks.m_ticksUntilNextDestruction > 0);
-		m_levelEvents.destroyBlocks.m_ticksUntilNextDestruction--;
-		if (m_levelEvents.destroyBlocks.m_ticksUntilNextDestruction == 0)
+		if (m_levelEvents.destroyBlocks.destructionTimer.tickComplete(dt))
 		{
 			// todo : destroy a random block
 
-			m_levelEvents.destroyBlocks.m_ticksUntilNextDestruction = 0;
+			m_levelEvents.destroyBlocks.destructionTimer = 0.f;
 		}
 	}
 
-	if (m_levelEvents.timeDilation.m_ticksRemaining > 0)
+	if (m_levelEvents.timeDilation.endTimer.tickActive(dt))
 	{
-		m_levelEvents.timeDilation.m_ticksRemaining--;
+		//
 	}
 
-	if (m_levelEvents.spikeWalls.m_ticksRemaining > 0)
+	if (m_levelEvents.spikeWalls.endTimer.tickActive(dt))
 	{
-		m_levelEvents.spikeWalls.m_ticksRemaining--;
-		
 		// todo : collision versus players. kill on hit
 	}
 
-	if (m_levelEvents.wind.m_ticksRemaining > 0)
+	if (m_levelEvents.wind.endTimer.tickActive(dt))
 	{
-		m_levelEvents.wind.m_ticksRemaining--;
-
 		// affect player speeds
 
 		for (int i = 0; i < MAX_PLAYERS; ++i)
@@ -1275,25 +1272,21 @@ void GameSim::tickPlay()
 		}
 	}
 
-	if (m_levelEvents.barrelDrop.m_ticksRemaining > 0)
+	if (m_levelEvents.barrelDrop.endTimer.tickActive(dt))
 	{
-		m_levelEvents.barrelDrop.m_ticksRemaining--;
-
-		Assert(m_levelEvents.barrelDrop.m_ticksUntilNextDrop > 0);
-		m_levelEvents.barrelDrop.m_ticksUntilNextDrop--;
-		if (m_levelEvents.barrelDrop.m_ticksUntilNextDrop == 0)
+		if (m_levelEvents.barrelDrop.spawnTimer.tickComplete(dt))
 		{
 			// todo : add barrel
 
 			// todo : next tick
 
-			m_levelEvents.barrelDrop.m_ticksUntilNextDrop = TICKS_PER_SECOND;
+			m_levelEvents.barrelDrop.spawnTimer = 1.f;
 		}
 	}
 
-	if (m_levelEvents.nightDayCycle.m_ticksRemaining > 0)
+	if (m_levelEvents.nightDayCycle.endTimer.tickActive(dt))
 	{
-		m_levelEvents.nightDayCycle.m_ticksRemaining--;
+		//
 	}
 
 	// token

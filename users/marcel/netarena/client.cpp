@@ -442,7 +442,7 @@ void Client::drawPlay()
 		Sprite("back.png").draw();
 		setBlend(BLEND_ALPHA);
 
-		if (m_gameSim->m_levelEvents.gravityWell.m_ticksRemaining > 0)
+		if (m_gameSim->m_levelEvents.gravityWell.endTimer.isActive())
 		{
 			setColor(255, 255, 255, 127);
 			Sprite("gravitywell/well.png").drawEx(
@@ -509,7 +509,7 @@ void Client::drawPlay()
 
 		// spike walls
 
-		if (m_gameSim->m_levelEvents.spikeWalls.m_ticksRemaining > 0)
+		if (m_gameSim->m_levelEvents.spikeWalls.endTimer.isActive())
 		{
 			setColor(200, 200, 200, 255);
 		}
