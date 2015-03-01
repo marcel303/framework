@@ -663,7 +663,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			Assert(gameSim);
 
 			if (gameSim)
-				gameSim->load(param.c_str());
+				gameSim->newRound(param.c_str());
 		}
 		else if (action == "dropCoins")
 		{
