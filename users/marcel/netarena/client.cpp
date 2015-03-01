@@ -18,7 +18,7 @@ OPTION_DEFINE(bool, s_noBgm, "Sound/No BGM");
 OPTION_ALIAS(s_noBgm, "nobgm");
 
 OPTION_DECLARE(int, s_numLocalPlayersToAdd, 1);
-OPTION_DEFINE(bool, s_numLocalPlayersToAdd, "App/Num Local Players");
+OPTION_DEFINE(int, s_numLocalPlayersToAdd, "App/Num Local Players");
 OPTION_ALIAS(s_numLocalPlayersToAdd, "numlocal");
 
 OPTION_EXTERN(int, g_playerCharacterIndex);
