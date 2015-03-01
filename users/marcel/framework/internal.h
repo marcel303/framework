@@ -72,6 +72,8 @@ public:
 	int keyDownCount;
 	int keyChange[256];
 	int keyChangeCount;
+	int keyRepeat[256];
+	int keyRepeatCount;
 	bool midiDown[256];
 	bool midiChange[256];
 	float midiValue[256];
