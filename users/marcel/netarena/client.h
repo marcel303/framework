@@ -37,6 +37,7 @@ public:
 	struct TextChatLog
 	{
 		int playerIndex;
+		int characterIndex;
 		std::string playerDisplayName;
 		std::string message;
 	};

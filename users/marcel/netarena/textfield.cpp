@@ -81,7 +81,9 @@ bool TextField::tick(float dt)
 
 		for (int i = 0; i < 256; ++i)
 		{
-			if (keyboard.wentDown((SDLKey)i) && isAllowed(i))
+			SDLKey key = (SDLKey)i;
+
+			if (keyboard.wentDown(key, true) && isAllowed(i))
 			{
 				int c = i;
 
@@ -97,18 +99,18 @@ bool TextField::tick(float dt)
 			}
 		}
 
-		if (keyboard.wentDown(SDLK_LEFT) && m_caretPosition > 0)
+		if (keyboard.wentDown(SDLK_LEFT, true) && m_caretPosition > 0)
 			m_caretPosition--;
-		if (keyboard.wentDown(SDLK_RIGHT) && m_caretPosition < m_bufferSize)
+		if (keyboard.wentDown(SDLK_RIGHT, true) && m_caretPosition < m_bufferSize)
 			m_caretPosition++;
 
-		if (keyboard.wentDown(SDLK_DELETE) && m_caretPosition < m_bufferSize)
+		if (keyboard.wentDown(SDLK_DELETE, true) && m_caretPosition < m_bufferSize)
 		{
 			m_caretPosition++;
 			removeChar();
 		}
 
-		if (keyboard.wentDown(SDLK_BACKSPACE) && m_caretPosition > 0)
+		if (keyboard.wentDown(SDLK_BACKSPACE, true) && m_caretPosition > 0)
 			removeChar();
 
 		if (keyboard.wentDown(SDLK_RETURN))

@@ -100,3 +100,5 @@ public:
 		void next() { m_prevState = m_currState; m_actions = 0; }
 	} m_input;
 };
+
+Color getCharacterColor(int characterIndex);

@@ -12,21 +12,22 @@
 
 todo:
 
-- torch light flicker speed should be time dilated too
++ torch light flicker speed should be time dilated too
++ add key repeat to text input
++ add global method to get character color
 
-- add global method to get player color
 - add global cache of character properties. reduce need for m_instanceData
 
 - improve networking reliability layer on resend. trips currently
 
-- add task bar blink on game start
-- reset level events on round end
-- slow down not on non-player kill (if there's no attacker like when falling into spikes)
++ add task bar blink on game start
++ reset level events on round end
++ slow down not on non-player kill (if there's no attacker like when falling into spikes)
 - gravity well -> make it partially a linear or other kind of curve + more powerful at a distance
 - add names to players on talk? -> add color to results screen
-- chat log when chat is open?
++ chat log when chat is open
 - slow down on kill for everyone acceptable?
-- increase chat visibility time
++ increase chat visibility time
 - fix late join
 - add build version check for online
 - send client network stats to host so they can be visualized
@@ -1577,37 +1578,22 @@ void Player::draw() const
 
 	// draw player color
 
-	const int alpha = 127;
-
-	const int colorIndex = (m_index >= 0 && m_index < MAX_PLAYERS) ? m_index : MAX_PLAYERS;
-
-	struct color
-	{
-		unsigned char r, g, b;
-	} colors[MAX_PLAYERS + 1] =
-	{
-		{ 255, 0, 0   },
-		{ 255, 255, 0 },
-		{ 0, 0, 255   },
-		{ 0, 255, 0   },
-		{ 50, 50, 50  }
-	};
-
+	const Color color = getCharacterColor(m_characterIndex);
 	setColor(
-		colors[colorIndex].r,
-		colors[colorIndex].g,
-		colors[colorIndex].b,
-		alpha);
+		color.r,
+		color.g,
+		color.b,
+		.5f);
 	drawRect(m_pos[0] - 50, m_pos[1] - 110, m_pos[0] + 50, m_pos[1] - 85);
 
 	if (m_spawnInvincibilityTicks > 0)
 	{
 		const float t= m_spawnInvincibilityTicks / float(TICKS_PER_SECOND * PLAYER_RESPAWN_INVINCIBILITY_TIME);
 		setColor(
-			colors[colorIndex].r,
-			colors[colorIndex].g,
-			colors[colorIndex].b,
-			t * 255.f);
+			color.r,
+			color.g,
+			color.b,
+			t);
 		drawRect(
 			m_pos[0] + m_collision.x1, 0,
 			m_pos[0] + m_collision.x2, GFX_SY);
@@ -1941,7 +1927,7 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 
 				GAMESIM->spawnParticles(spawnInfo);
 
-				if (PROTO_TIMEDILATION_ON_KILL)
+				if (PROTO_TIMEDILATION_ON_KILL && attacker)
 				{
 					GAMESIM->addTimeDilationEffect(
 						PROTO_TIMEDILATION_ON_KILL_MULTIPLIER1,
@@ -2223,6 +2209,27 @@ void PlayerInstanceData::addTextChat(const std::string & line)
 {
 	m_textChat = line;
 	m_textChatTicks = TICKS_PER_SECOND * INGAME_TEXTCHAT_DURATION;
+}
+
+//
+
+Color getCharacterColor(int characterIndex)
+{
+	// todo : get character color from character props
+
+	static const Color colors[MAX_PLAYERS + 1] =
+	{
+		Color(255, 0,   0,   255),
+		Color(255, 255, 0,   255),
+		Color(0,   0,   255, 255),
+		Color(0,   255, 0,   255),
+		Color(50,  50,  50,  255)
+	};
+
+	if (characterIndex >= 0 && characterIndex < MAX_PLAYERS)
+		return colors[characterIndex];
+	else
+		return colors[MAX_PLAYERS];
 }
 
 #undef GAMESIM

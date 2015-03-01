@@ -480,7 +480,8 @@ struct GameStateData
 
 	uint32_t Random();
 	float RandomFloat(float min, float max) { float t = (Random() & 4095) / 4095.f; return t * min + (1.f - t) * max; }
-	uint32_t GetTick();
+	uint32_t GetTick() const;
+	float getRoundTime() const;
 	void addTimeDilationEffect(float multiplier1, float multiplier2, float duration);
 	LevelEvent getRandomLevelEvent();
 
@@ -500,6 +501,7 @@ struct GameStateData
 	GameState m_gameState;
 	GameMode m_gameMode;
 
+	float m_roundTime;
 	uint32_t m_nextRoundNumber;
 	uint32_t m_roundCompleteTicks;
 	uint32_t m_roundCompleteTimeDilationTicks;
@@ -526,6 +528,11 @@ struct GameStateData
 
 	struct LevelEvents
 	{
+		LevelEvents()
+		{
+			memset(this, 0, sizeof(LevelEvents));
+		}
+
 		LevelEvent_EarthQuake quake;
 		LevelEvent_GravityWell gravityWell;
 		LevelEvent_DestroyDestructibleBlocks destroyBlocks;

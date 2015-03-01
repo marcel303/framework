@@ -17,6 +17,10 @@ OPTION_DECLARE(bool, s_noBgm, false);
 OPTION_DEFINE(bool, s_noBgm, "Sound/No BGM");
 OPTION_ALIAS(s_noBgm, "nobgm");
 
+OPTION_DECLARE(int, s_numLocalPlayersToAdd, 1);
+OPTION_DEFINE(bool, s_numLocalPlayersToAdd, "App/Num Local Players");
+OPTION_ALIAS(s_numLocalPlayersToAdd, "numlocal");
+
 OPTION_EXTERN(int, g_playerCharacterIndex);
 
 static char s_bgm[64] = { };
@@ -68,7 +72,10 @@ void Client::initialize(Channel * channel)
 {
 	m_channel = channel;
 
-	g_app->netAddPlayer(channel, g_playerCharacterIndex, g_app->m_displayName);
+	for (int i = 0; i < s_numLocalPlayersToAdd; ++i)
+	{
+		g_app->netAddPlayer(channel, g_playerCharacterIndex, g_app->m_displayName);
+	}
 }
 
 void Client::tick(float dt)
@@ -310,6 +317,10 @@ void Client::tick(float dt)
 
 void Client::draw()
 {
+	// todo : move drawing code to game sim too?
+
+	g_gameSim = m_gameSim;
+
 	switch (m_gameSim->m_gameState)
 	{
 	case kGameState_MainMenus:
@@ -339,6 +350,8 @@ void Client::draw()
 	}
 
 	drawTextChat();
+
+	g_gameSim = 0;
 }
 
 void Client::drawConnecting()
@@ -663,10 +676,11 @@ void Client::drawTextChat()
 
 			setFont("calibri.ttf");
 
-			setColor(127, 191, 255, 255 * m_textChatFade); // todo : player color
+			const Color color = getCharacterColor(log.characterIndex);
+			setColorf(color.r, color.g, color.b, m_textChatFade);
 			drawText(x - 10, y, 24, -1.f, +1.f, "%s:", log.playerDisplayName.c_str());
 
-			setColor(227, 227, 227, 255 * m_textChatFade); // todo : player color
+			setColor(227, 227, 227, 255 * m_textChatFade);
 			drawText(x, y, 24, +1.f, +1.f, "%s", log.message.c_str());
 		}
 
@@ -759,6 +773,7 @@ void Client::addTextChat(int playerIndex, const std::string & text)
 {
 	TextChatLog log;
 	log.playerIndex = playerIndex;
+	log.characterIndex = m_gameSim->m_players[playerIndex].m_characterIndex;
 	log.message = text;
 	log.playerDisplayName = m_gameSim->m_players[playerIndex].m_displayName;
 

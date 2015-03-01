@@ -63,9 +63,14 @@ uint32_t GameStateData::Random()
 	return m_randomSeed;
 }
 
-uint32_t GameStateData::GetTick()
+uint32_t GameStateData::GetTick() const
 {
 	return m_tick;
+}
+
+float GameStateData::getRoundTime() const
+{
+	return m_roundTime;
 }
 
 void GameStateData::addTimeDilationEffect(float multiplier1, float multiplier2, float duration)
@@ -311,9 +316,9 @@ void Torch::draw() const
 void Torch::drawLight() const
 {
 	float a = 0.f;
-	a += std::sin(g_TimerRT.Time_get() * Calc::m2PI * TORCH_FLICKER_FREQ_A);
-	a += std::sin(g_TimerRT.Time_get() * Calc::m2PI * TORCH_FLICKER_FREQ_B);
-	a += std::sin(g_TimerRT.Time_get() * Calc::m2PI * TORCH_FLICKER_FREQ_C);
+	a += std::sin(g_gameSim->getRoundTime() * Calc::m2PI * TORCH_FLICKER_FREQ_A);
+	a += std::sin(g_gameSim->getRoundTime() * Calc::m2PI * TORCH_FLICKER_FREQ_B);
+	a += std::sin(g_gameSim->getRoundTime() * Calc::m2PI * TORCH_FLICKER_FREQ_C);
 	a = (a + 3.f) / 6.f;
 	a = Calc::Lerp(1.f, a, TORCH_FLICKER_STRENGTH);
 
@@ -667,6 +672,8 @@ void GameSim::newGame()
 	setGameState(kGameState_NewGame);
 
 	newRound(0);
+
+	framework.blinkTaskbarIcon(3); // todo : option
 }
 
 void GameSim::newRound(const char * mapOverride)
@@ -834,6 +841,10 @@ void GameSim::load(const char * filename)
 
 void GameSim::resetGameWorld()
 {
+	// reset round stuff
+
+	m_roundTime = 0.f;
+
 	// reset map
 
 	m_arena.reset();
@@ -871,6 +882,11 @@ void GameSim::resetGameWorld()
 
 	for (int i = 0; i < MAX_SCREEN_SHAKES; ++i)
 		m_screenShakes[i] = ScreenShake();
+
+	// reset level events
+
+	m_levelEvents = LevelEvents();
+	m_ticksUntilNextLevelEvent = 0;
 
 	// reset token hunt game mode
 
@@ -1334,6 +1350,8 @@ void GameSim::tickPlay()
 	m_bulletPool->tick(*this, dt);
 
 	m_tick++;
+
+	m_roundTime += dt;
 
 #if ENABLE_GAMESTATE_CRC_LOGGING
 	if (g_logCRCs)

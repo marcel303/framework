@@ -62,6 +62,9 @@ OPTION_DECLARE(std::string, g_connect, "");
 OPTION_DEFINE(std::string, g_connect, "App/Direct Connect");
 OPTION_ALIAS(g_connect, "connect");
 
+OPTION_DECLARE(bool, g_pauseOnOptionMenuOption, true);
+OPTION_DEFINE(bool, g_pauseOnOptionMenuOption, "App/Pause On Option Menu");
+
 COMMAND_OPTION(s_dropCoins, "Player/Drop Coins", []{ g_app->netDebugAction("dropCoins", ""); });
 
 OPTION_EXTERN(int, g_playerCharacterIndex);
@@ -280,11 +283,11 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 					if (playerInstanceData)
 					{
 						playerInstanceData->addTextChat(param3);
-					}
 
-					if (client)
-					{
-						client->addTextChat(param1, param3);
+						if (client)
+						{
+							client->addTextChat(param1, param3);
+						}
 					}
 				}
 				break;
@@ -746,31 +749,6 @@ void App::processPlayerChanges()
 
 		if (playerToAddOrRemove.add)
 		{
-			// todo : add a separate client sync action
-
-			Channel * channel = playerToAddOrRemove.channel;
-
-			for (int i = 0; i < MAX_PLAYERS; ++i)
-			{
-				Player & player = m_host->m_gameSim.m_players[i];
-				if (player.m_isUsed)
-				{
-					netAddPlayerBroadcast(
-						channel,
-						player.m_owningChannelId,
-						i,
-						player.m_characterIndex,
-						player.m_displayName);
-				}
-			}
-
-			m_host->syncNewClient(channel);
-
-			//
-
-			//for (int i = 0; i < 2; ++i) // fixme : hack to alloc two players for each client
-			{
-
 			PlayerInstanceData * playerInstanceData = m_host->allocPlayer(playerToAddOrRemove.channel->m_destinationId);
 
 			if (playerInstanceData)
@@ -790,8 +768,6 @@ void App::processPlayerChanges()
 					player.m_index,
 					player.m_characterIndex,
 					player.m_displayName);
-			}
-
 			}
 		}
 		else
@@ -824,15 +800,23 @@ void App::SV_OnChannelConnect(Channel * channel)
 
 	m_hostClients[channel] = clientInfo;
 
-	//
+	// sync the new client
 
-	/*
-	PlayerToAddOrRemove playerToAdd;
-	playerToAdd.add = true;
-	playerToAdd.channel = channel;
-	playerToAdd.characterIndex = g_playerCharacterIndex;
-	m_playersToAddOrRemove.push_back(playerToAdd);
-	*/
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+	{
+		Player & player = m_host->m_gameSim.m_players[i];
+		if (player.m_isUsed)
+		{
+			netAddPlayerBroadcast(
+				channel,
+				player.m_owningChannelId,
+				i,
+				player.m_characterIndex,
+				player.m_displayName);
+		}
+	}
+
+	m_host->syncNewClient(channel);
 }
 
 void App::SV_OnChannelDisconnect(Channel * channel)
@@ -1327,7 +1311,7 @@ bool App::tick()
 	{
 		m_channelMgr->Update(netTime);
 
-		if (!m_optionMenuIsOpen)
+		if (!m_optionMenuIsOpen || !g_pauseOnOptionMenuOption)
 		{
 			if (g_updateTicks)
 			{

@@ -115,7 +115,7 @@ void OptionMenu::Draw(int x, int y, int sx, int sy)
 			if (alias)
 				strcpy_s(buffer, sizeof(buffer), alias->GetAlias());
 
-			drawText(x + sx - 1 - 2, y + index * lineSize, fontSize, -1.f, +1.f, buffer);
+			drawText(x + sx - 1 - 2, y + index * lineSize, fontSize, -1.f, +1.f, "%s", buffer);
 		}
 	}
 

@@ -80,26 +80,14 @@ void CharSelector::draw()
 	if (player.m_isUsed)
 	{
 	#if 1
-		struct color
-		{
-			unsigned char r, g, b;
-		} colors[MAX_PLAYERS + 1] =
-		{
-			{ 255, 0, 0   },
-			{ 255, 255, 0 },
-			{ 0, 0, 255   },
-			{ 0, 255, 0   },
-			{ 50, 50, 50  }
-		};
-
 		setColorMode(COLOR_ADD);
-		const int colorIndex = player.m_characterIndex % MAX_PLAYERS;
-		setColor(
-			colors[colorIndex].r,
-			colors[colorIndex].g,
-			colors[colorIndex].b,
-			255,
-			63);
+		const Color color = getCharacterColor(player.m_characterIndex);
+		setColorf(
+			color.r,
+			color.g,
+			color.b,
+			1.f,
+			.25f);
 
 		Spriter spriter("../../ArtistCave/JoyceTestcharacter/TestCharacter_Spriter/Testcharacter.scml");
 		spriter.draw(0, g_TimerRT.Time_get() * 1000.f,
@@ -192,7 +180,7 @@ void LobbyMenu::draw()
 			if (m_client->m_gameSim->m_players[i].m_isUsed)
 			{
 				setColor(colorWhite);
-				drawText((x1 + x2) / 2, y2 + 8, 32, 0.f, +1.f, m_client->m_gameSim->m_players[i].m_displayName);
+				drawText((x1 + x2) / 2, y2 + 8, 32, 0.f, +1.f, "%s", m_client->m_gameSim->m_players[i].m_displayName);
 			}
 		}
 	}
