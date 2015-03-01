@@ -33,7 +33,9 @@ Client::Client()
 	, m_textChatFade(0.f)
 	, m_gameSim(0)
 	, m_syncStream(0)
+	, m_isSynced(false)
 	, m_isDesync(false)
+	, m_hasAddedPlayers(false)
 {
 	m_lobbyMenu = new LobbyMenu(this);
 
@@ -71,17 +73,22 @@ Client::~Client()
 void Client::initialize(Channel * channel)
 {
 	m_channel = channel;
-
-	for (int i = 0; i < s_numLocalPlayersToAdd; ++i)
-	{
-		g_app->netAddPlayer(channel, g_playerCharacterIndex, g_app->m_displayName);
-	}
 }
 
 void Client::tick(float dt)
 {
 	if (m_channel && m_channel->m_isConnected)
 	{
+		if (m_isSynced && !m_hasAddedPlayers)
+		{
+			m_hasAddedPlayers = true;
+
+			for (int i = 0; i < s_numLocalPlayersToAdd; ++i)
+			{
+				g_app->netAddPlayer(m_channel, g_playerCharacterIndex, g_app->m_displayName);
+			}
+		}
+
 		// see if there are more players than gamepads, to decide if we should use keyboard exclusively for one player, or also assign them a gamepad
 
 		int numGamepads = 0;
@@ -676,7 +683,7 @@ void Client::drawTextChat()
 
 			setFont("calibri.ttf");
 
-			const Color color = getCharacterColor(log.characterIndex);
+			const Color color = getPlayerColor(log.playerIndex);
 			setColorf(color.r, color.g, color.b, m_textChatFade);
 			drawText(x - 10, y, 24, -1.f, +1.f, "%s:", log.playerDisplayName.c_str());
 

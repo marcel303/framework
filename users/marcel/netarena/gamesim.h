@@ -394,6 +394,7 @@ struct LevelEventTimer
 	// tick timer and return whether its active
 	bool tickActive(float dt)
 	{
+		Assert(m_time >= 0.f && m_time <= m_duration);
 		if (m_time < m_duration)
 		{
 			m_time += dt;
@@ -407,6 +408,7 @@ struct LevelEventTimer
 	// tick timer and return whether it completed
 	bool tickComplete(float dt)
 	{
+		Assert(m_time >= 0.f && m_time <= m_duration);
 		if (m_time < m_duration)
 		{
 			m_time += dt;
@@ -421,16 +423,22 @@ struct LevelEventTimer
 
 	float getProgress() const
 	{
-		return m_time / m_duration;
+		Assert(m_time >= 0.f && m_time <= m_duration);
+		if (m_duration == 0.f)
+			return 0.f;
+		else
+			return m_time / m_duration;
 	}
 
 	bool isActive() const
 	{
+		Assert(m_time >= 0.f && m_time <= m_duration);
 		return m_time < m_duration;
 	}
 
 	void operator=(float time)
 	{
+		Assert(time >= 0.f);
 		m_duration = time;
 		m_time = 0.f;
 	}

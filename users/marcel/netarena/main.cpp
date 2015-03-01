@@ -341,6 +341,12 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 				context.Set(true, false, bs2);
 				client->m_gameSim->serialize(context);
 
+				client->m_isSynced = true;
+
+			#if ENABLE_GAMESTATE_CRC_LOGGING
+				LOG_DBG("netSyncGameSim: client CRC: %08x", client->m_gameSim->calcCRC());
+			#endif
+
 			#if GG_ENABLE_OPTIONS
 				for (OptionBase * option = g_optionManager.m_head; option != 0; option = option->GetNext())
 				{
@@ -799,22 +805,6 @@ void App::SV_OnChannelConnect(Channel * channel)
 	ClientInfo clientInfo;
 
 	m_hostClients[channel] = clientInfo;
-
-	// sync the new client
-
-	for (int i = 0; i < MAX_PLAYERS; ++i)
-	{
-		Player & player = m_host->m_gameSim.m_players[i];
-		if (player.m_isUsed)
-		{
-			netAddPlayerBroadcast(
-				channel,
-				player.m_owningChannelId,
-				i,
-				player.m_characterIndex,
-				player.m_displayName);
-		}
-	}
 
 	m_host->syncNewClient(channel);
 }
@@ -1612,6 +1602,15 @@ void App::netSyncGameSim(Channel * channel)
 {
 	LOG_DBG("netSyncGameSim");
 	Assert(m_isHost);
+
+	// todo : when serializing the state, make sure all packets that are destined for the host are flushed
+	//        first, to ensure the game sim is up to date and properly synced to the client
+	for (int i = 0; i < 10; ++i)
+		m_channelMgr->Update(0); // fixme
+
+#if ENABLE_GAMESTATE_CRC_LOGGING
+	LOG_DBG("netSyncGameSim: host CRC: %08x", m_host->m_gameSim.calcCRC());
+#endif
 
 	BitStream bs;
 

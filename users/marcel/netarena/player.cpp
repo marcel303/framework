@@ -1578,8 +1578,8 @@ void Player::draw() const
 
 	// draw player color
 
-	const Color color = getCharacterColor(m_characterIndex);
-	setColor(
+	const Color color = getPlayerColor(m_index);
+	setColorf(
 		color.r,
 		color.g,
 		color.b,
@@ -1589,7 +1589,7 @@ void Player::draw() const
 	if (m_spawnInvincibilityTicks > 0)
 	{
 		const float t= m_spawnInvincibilityTicks / float(TICKS_PER_SECOND * PLAYER_RESPAWN_INVINCIBILITY_TIME);
-		setColor(
+		setColorf(
 			color.r,
 			color.g,
 			color.b,
@@ -2215,6 +2215,11 @@ void PlayerInstanceData::addTextChat(const std::string & line)
 
 Color getCharacterColor(int characterIndex)
 {
+	return getPlayerColor(characterIndex);
+}
+
+Color getPlayerColor(int playerIndex)
+{
 	// todo : get character color from character props
 
 	static const Color colors[MAX_PLAYERS + 1] =
@@ -2226,8 +2231,8 @@ Color getCharacterColor(int characterIndex)
 		Color(50,  50,  50,  255)
 	};
 
-	if (characterIndex >= 0 && characterIndex < MAX_PLAYERS)
-		return colors[characterIndex];
+	if (playerIndex >= 0 && playerIndex < MAX_PLAYERS)
+		return colors[playerIndex];
 	else
 		return colors[MAX_PLAYERS];
 }

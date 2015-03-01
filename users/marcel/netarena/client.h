@@ -30,7 +30,10 @@ public:
 
 	BitStream * m_syncStream;
 
+	bool m_isSynced;
 	bool m_isDesync;
+
+	bool m_hasAddedPlayers;
 
 	std::vector<PlayerInstanceData*> m_players;
 

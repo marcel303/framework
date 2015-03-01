@@ -909,6 +909,10 @@ void GameSim::resetGameSim()
 
 void GameSim::tick()
 {
+#if ENABLE_GAMESTATE_CRC_LOGGING
+	const uint32_t oldCRC = g_logCRCs ? calcCRC() : 0;
+#endif
+
 	switch (m_gameState)
 	{
 	case kGameState_MainMenus:
@@ -940,6 +944,20 @@ void GameSim::tick()
 			m_playerInstanceDatas[i]->m_input.next();
 		}
 	}
+
+#if ENABLE_GAMESTATE_CRC_LOGGING
+	if (g_logCRCs)
+	{
+		int numPlayers = 0;
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+			if (m_playerInstanceDatas[i])
+				numPlayers++;
+
+		const uint32_t newCRC = calcCRC();
+
+		LOG_DBG("gamesim %p: tick=%u, oldCRC=%08x, newCRC=%08x, numPlayers=%d [%s]", this, m_tick, oldCRC, newCRC, numPlayers, g_host && &g_host->m_gameSim == this ?  "server" : "client");
+	}
+#endif
 }
 
 void GameSim::tickMenus()
@@ -1017,10 +1035,6 @@ void GameSim::tickMenus()
 void GameSim::tickPlay()
 {
 	g_gameSim = this;
-
-#if ENABLE_GAMESTATE_CRC_LOGGING
-	const uint32_t oldCRC = g_logCRCs ? calcCRC() : 0;
-#endif
 
 	float timeDilation = 1.f;
 
@@ -1340,20 +1354,6 @@ void GameSim::tickPlay()
 	m_tick++;
 
 	m_roundTime += dt;
-
-#if ENABLE_GAMESTATE_CRC_LOGGING
-	if (g_logCRCs)
-	{
-		int numPlayers = 0;
-		for (int i = 0; i < MAX_PLAYERS; ++i)
-			if (m_playerInstanceDatas[i])
-				numPlayers++;
-
-		const uint32_t newCRC = calcCRC();
-
-		LOG_DBG("gamesim %p: tick=%u, oldCRC=%08x, newCRC=%08x, numPlayers=%d [%s]", this, m_tick, oldCRC, newCRC, numPlayers, g_host && &g_host->m_gameSim == this ?  "server" : "client");
-	}
-#endif
 
 	g_gameSim = 0;
 

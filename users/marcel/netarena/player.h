@@ -102,3 +102,4 @@ public:
 };
 
 Color getCharacterColor(int characterIndex);
+Color getPlayerColor(int playerIndex);
