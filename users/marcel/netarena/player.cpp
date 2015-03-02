@@ -41,6 +41,8 @@ todo:
 - add FixedString class that can be memset(0) and copied over the net. use it for player name, etc
 - clean up flow for adding players
 
+- disable changing game options after everyone has readied up
+
 + test time dilation on kill
 
 + game speed var
@@ -177,6 +179,7 @@ SoundBag::SoundBag()
 
 void SoundBag::load(const std::string & files, bool random)
 {
+	m_files.clear();
 	splitString(files, m_files, ',');
 	m_lastIndex = -1;
 	m_random = random;
@@ -1588,7 +1591,7 @@ void Player::draw() const
 
 	if (m_spawnInvincibilityTicks > 0)
 	{
-		const float t= m_spawnInvincibilityTicks / float(TICKS_PER_SECOND * PLAYER_RESPAWN_INVINCIBILITY_TIME);
+		const float t = m_spawnInvincibilityTicks / float(TICKS_PER_SECOND * PLAYER_RESPAWN_INVINCIBILITY_TIME);
 		setColorf(
 			color.r,
 			color.g,

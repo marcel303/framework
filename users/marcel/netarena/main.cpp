@@ -76,6 +76,10 @@ TIMER_DEFINE(g_appDrawTime, PerFrame, "App/Draw");
 
 //
 
+#define NET_TIME g_TimerRT.TimeUS_get()
+
+//
+
 App * g_app = 0;
 
 int g_updateTicks = 0;
@@ -531,7 +535,8 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 						const int numBytes = sizeof(GameStateData);
 
 						uint8_t * temp = (uint8_t*)alloca(numBytes);
-						static GameStateData * state = (GameStateData*)temp;
+						static GameStateData * state;
+						state = (GameStateData*)temp;
 
 						for (int i = 0; i < numBytes; ++i)
 						{
@@ -678,6 +683,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 
 			if (gameSim)
 			{
+				Assert(!g_gameSim);
 				g_gameSim = gameSim;
 
 				for (int p = 0; p < MAX_PLAYERS; ++p)
@@ -1292,14 +1298,11 @@ bool App::tick()
 		m_mainMenu->tick(dt);
 	}
 
-	//const uint64_t netTime = g_TimerRT.TimeMS_get();
-	const uint64_t netTime = g_TimerRT.TimeUS_get();
-
 	// update host
 
 	if (m_isHost)
 	{
-		m_channelMgr->Update(netTime);
+		m_channelMgr->Update(NET_TIME);
 
 		if (!m_optionMenuIsOpen || !g_pauseOnOptionMenuOption)
 		{
@@ -1309,7 +1312,7 @@ bool App::tick()
 				if (g_logCRCs)
 				{
 					for (int i = 0; i < 10; ++i)
-						m_channelMgr->Update(netTime);
+						m_channelMgr->Update(NET_TIME);
 				}
 
 				const uint32_t crc1 = g_logCRCs ? m_host->m_gameSim.calcCRC() : 0;
@@ -1329,7 +1332,7 @@ bool App::tick()
 				if (g_logCRCs)
 				{
 					for (int i = 0; i < 10; ++i)
-						m_channelMgr->Update(netTime);
+						m_channelMgr->Update(NET_TIME);
 
 					LOG_DBG("tick CRCs: %08x, %08x, %08x", crc1, crc2, crc3);
 				}
@@ -1340,14 +1343,14 @@ bool App::tick()
 
 			if (g_updateTicks)
 			{
-				m_channelMgr->Update(netTime);
+				m_channelMgr->Update(NET_TIME);
 			}
 		}
 	}
 
 	// update client
 
-	m_channelMgr->Update(netTime);
+	m_channelMgr->Update(NET_TIME);
 
 	for (size_t i = 0; i < m_clients.size(); ++i)
 	{
@@ -1356,7 +1359,7 @@ bool App::tick()
 		client->tick(dt);
 	}
 
-	m_channelMgr->Update(netTime);
+	m_channelMgr->Update(NET_TIME);
 
 	// debug
 
@@ -1756,7 +1759,17 @@ void App::netSetPlayerInputsBroadcast()
 			bs.Write(analogY);
 	}
 
-	m_rpcMgr->Call(s_rpcBroadcastPlayerInputs, bs, ChannelPool_Server, 0, true, true);
+	if (g_logCRCs)
+	{
+		m_rpcMgr->Call(s_rpcBroadcastPlayerInputs, bs, ChannelPool_Server, 0, true, false);
+		for (int i = 0; i < 10; ++i)
+			m_channelMgr->Update(NET_TIME);
+		m_rpcMgr->Call(s_rpcBroadcastPlayerInputs, bs, ChannelPool_Server, 0, false, true);
+	}
+	else
+	{
+		m_rpcMgr->Call(s_rpcBroadcastPlayerInputs, bs, ChannelPool_Server, 0, true, true);
+	}
 }
 
 void App::netSetPlayerCharacterIndex(uint16_t channelId, uint8_t playerId, uint8_t characterIndex)

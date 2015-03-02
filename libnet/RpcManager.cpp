@@ -97,15 +97,18 @@ void RpcManager::Call(uint32_t method, const BitStream & bs, ChannelPool channel
 	}
 	else
 	{
-		Assert(channelId);
+		Assert(channelId || invokeLocal);
 
-		Channel * channel = m_channelMgr->FindChannel(*channelId);
-
-		Assert(channel);
-
-		if (channel)
+		if (channelId)
 		{
-			channel->Send(p, 0);
+			Channel * channel = m_channelMgr->FindChannel(*channelId);
+
+			Assert(channel);
+
+			if (channel)
+			{
+				channel->Send(p, 0);
+			}
 		}
 	}
 

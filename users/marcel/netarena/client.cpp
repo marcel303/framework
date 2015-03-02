@@ -326,6 +326,7 @@ void Client::draw()
 {
 	// todo : move drawing code to game sim too?
 
+	Assert(!g_gameSim);
 	g_gameSim = m_gameSim;
 
 	switch (m_gameSim->m_gameState)
