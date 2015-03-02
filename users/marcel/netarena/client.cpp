@@ -495,6 +495,14 @@ void Client::drawPlay()
 			m_gameSim->m_coinCollector.m_coins[i].draw();
 		}
 
+		// movers
+
+		for (int i = 0; i < MAX_MOVERS; ++i)
+		{
+			if (m_gameSim->m_movers[i].m_isActive)
+				m_gameSim->m_movers[i].draw();
+		}
+
 		// players
 
 		for (int i = 0; i < MAX_PLAYERS; ++i)

@@ -294,6 +294,161 @@ void Coin::drawLight() const
 
 //
 
+void Mover::setup(int sx, int sy, int x1, int y1, int x2, int y2, int speed)
+{
+	m_isActive = true;
+	m_sx = sx;
+	m_sy = sy;
+	m_x1 = x1;
+	m_y1 = y1;
+	m_x2 = x2;
+	m_y2 = y2;
+	
+	const int dx = x2 - x1;
+	const int dy = y2 - y1;
+
+	m_moveMultiplier = speed / std::sqrtf(dx * dx + dy * dy) / 2.f;
+	m_moveAmount = 0.f;
+}
+
+void Mover::tick(GameSim & gameSim, float dt)
+{
+	m_moveAmount = std::fmodf(m_moveAmount + m_moveMultiplier * dt, 1.f);
+
+	CollisionInfo collision;
+	getCollisionInfo(collision);
+
+	const Vec2 pos = getPosition();
+	const Vec2 speed = getSpeed();
+
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+	{
+		Player & player = gameSim.m_players[i];
+
+		if (player.m_isUsed && player.m_isAlive)
+		{
+			bool grounded = false;
+
+			CollisionInfo playerCollision;
+
+			if (player.m_isGrounded && player.m_vel[1] >= 0.f)
+			{
+				player.getPlayerCollision(playerCollision);
+				playerCollision.y1 += speed[1] + 1.f;
+				playerCollision.y2 += speed[1] + 1.f;
+
+				if (playerCollision.intersects(collision))
+				{
+					player.m_pos += speed * dt;
+
+					grounded = true;
+				}
+			}
+
+			player.getPlayerCollision(playerCollision);
+
+			if (playerCollision.intersects(collision))
+			{
+				const float d[4] =
+				{
+					+ playerCollision.x2 - collision.x1,
+					- playerCollision.x1 + collision.x2,
+					+ playerCollision.y2 - collision.y1,
+					- playerCollision.y1 + collision.y2
+				};
+
+				int lowest = 0;
+
+				for (int j = 1; j < 4; ++j)
+				{
+					if (d[j] >= 0.f && d[j] < d[lowest])
+						lowest = j;
+				}
+
+				if (lowest == 0)
+					player.m_pos[0] -= d[0] + 1.f;
+				if (lowest == 1)
+					player.m_pos[0] += d[1] + 1.f;
+				if (lowest == 2)
+					player.m_pos[1] -= d[2] + 1.f;
+				if (lowest == 3)
+					player.m_pos[1] += d[3] + 1.f;
+			}
+
+			if (grounded)
+			{
+				for (int offset = 1; offset < 4; ++offset)
+				{
+					if (player.getIntersectingBlocksMask(player.m_pos[0], player.m_pos[1] + offset) & kBlockMask_Solid)
+					{
+						if (offset != 0)
+						{
+							player.m_pos[1] += offset - 1.f;
+							Assert((player.getIntersectingBlocksMask(player.m_pos[0], player.m_pos[1] + 1.f) & kBlockMask_Solid) != 0);
+						}
+						break;
+					}
+				}
+			}
+
+			Assert((player.getIntersectingBlocksMask(player.m_pos[0], player.m_pos[1]) & kBlockMask_Solid) == 0);
+		}
+	}
+}
+
+void Mover::draw() const
+{
+	CollisionInfo collision;
+	getCollisionInfo(collision);
+
+	setColor(colorWhite);
+	drawRect(collision.x1, collision.y1, collision.x2, collision.y2);
+}
+
+void Mover::drawLight() const
+{
+}
+
+Vec2 Mover::getPosition() const
+{
+	const float t = m_moveAmount < .5f ? m_moveAmount * 2.f : (1.f - m_moveAmount) * 2.f;
+	const float x = Calc::Lerp(m_x1, m_x2, t);
+	const float y = Calc::Lerp(m_y1, m_y2, t);
+
+	return Vec2(x, y);
+}
+
+Vec2 Mover::getSpeed() const
+{
+	const float t = m_moveAmount < .5f ? +2.f : -2.f;
+	const float dx = m_x2 - m_x1;
+	const float dy = m_y2 - m_y1;
+
+	return Vec2(
+		dx * t * m_moveMultiplier,
+		dy * t * m_moveMultiplier);
+}
+
+void Mover::getCollisionInfo(CollisionInfo & collisionInfo) const
+{
+	const Vec2 pos = getPosition();
+
+	collisionInfo.x1 = pos[0] - m_sx / 2.f;
+	collisionInfo.y1 = pos[1] - m_sy / 2.f;
+	collisionInfo.x2 = pos[0] + m_sx / 2.f;
+	collisionInfo.y2 = pos[1] + m_sy / 2.f;
+}
+
+bool Mover::intersects(CollisionInfo & collisionInfo) const
+{
+	CollisionInfo myCollision;
+	getCollisionInfo(myCollision);
+
+	return myCollision.intersects(collisionInfo);
+}
+
+//
+
 void Torch::setup(float x, float y, const Color & color)
 {
 	m_isAlive = true;
@@ -345,7 +500,9 @@ void ScreenShake::tick(float dt)
 	life -= dt;
 
 	if (life <= 0.f)
-		isActive = false;
+	{
+		*this = ScreenShake();
+	}
 }
 
 //
@@ -725,6 +882,10 @@ void GameSim::load(const char * filename)
 
 	// load objects
 
+	// fixme
+	Mover & mover = m_movers[0];
+	mover.setup(400, 100, GFX_SX*1/4, GFX_SY*2/3, GFX_SX*3/4, GFX_SY*1/3, 100);
+
 	std::string baseName = Path::GetBaseName(filename);
 
 	std::string objectsFilename = baseName + "-objects.txt";
@@ -853,6 +1014,11 @@ void GameSim::resetGameWorld()
 
 	m_nextPickupSpawnTick = 0;
 
+	// reset movers
+
+	for (int i = 0; i < MAX_MOVERS; ++i)
+		m_movers[i] = Mover();
+
 	// reset floor effect
 
 	m_floorEffect = FloorEffect();
@@ -860,7 +1026,7 @@ void GameSim::resetGameWorld()
 	// reset torches
 
 	for (int i = 0; i < MAX_TORCHES; ++i)
-		m_torches[i].m_isAlive = false;
+		m_torches[i] = Torch();
 
 	// reset bullets
 
@@ -1088,12 +1254,20 @@ void GameSim::tickPlay()
 			m_playerInstanceDatas[i]->m_player->tick(dt);
 	}
 
-	// picksup
+	// pickups
 
 	for (int i = 0; i < MAX_PICKUPS; ++i)
 	{
 		if (m_pickups[i].isAlive)
 			m_pickups[i].tick(*this, dt);
+	}
+
+	// movers
+
+	for (int i = 0; i < MAX_MOVERS; ++i)
+	{
+		if (m_movers[i].m_isActive)
+			m_movers[i].tick(*this, dt);
 	}
 
 	// pickup spawning
@@ -1526,7 +1700,7 @@ Pickup * GameSim::grabPickup(int x1, int y1, int x2, int y2)
 			if (collisionInfo.intersects(pickupCollision))
 			{
 				m_grabbedPickup = pickup;
-				pickup.isAlive = false;
+				pickup = Pickup();
 
 				playSound("gun-pickup.ogg");
 
@@ -1568,7 +1742,7 @@ bool GameSim::pickupToken(const CollisionInfo & collisionInfo)
 
 		if (tokenCollision.intersects(collisionInfo))
 		{
-			token.m_isDropped = false;
+			token = Token();
 			g_gameSim->playSound("token-pickup.ogg");
 
 			return true;
@@ -1628,7 +1802,7 @@ bool GameSim::pickupCoin(const CollisionInfo & collisionInfo)
 
 			if (coinCollision.intersects(collisionInfo))
 			{
-				coin.m_isDropped = false;
+				coin = Coin();
 				g_gameSim->playSound("token-pickup.ogg");
 
 				return true;
@@ -1744,7 +1918,7 @@ void GameSim::addScreenShake(float dx, float dy, float stiffness, float life)
 
 	if (DEBUG_RANDOM_CALLSITES)
 		LOG_DBG("Random called from addScreenShake");
-	m_screenShakes[Random() % MAX_SCREEN_SHAKES].isActive = false;
+	m_screenShakes[Random() % MAX_SCREEN_SHAKES] = ScreenShake();
 	addScreenShake(dx, dy, stiffness, life);
 }
 

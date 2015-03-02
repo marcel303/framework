@@ -98,49 +98,6 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 
 		if (b.isAlive)
 		{
-#if 0
-			PhysicsActorCBs cbs;
-			cbs.onBounce = [](PhysicsActorCBs & cbs, PhysicsActor & actor)
-			{
-				Bullet & b = static_cast<Bullet&>(actor);
-
-				if (b.isAlive)
-				{
-					if (b.maxReflectCount != 0)
-					{
-						b.reflectCount++;
-
-						if (b.reflectCount > b.maxReflectCount)
-						{
-							b.isAlive = false;
-						}
-						else
-						{
-							b.m_vel *= -1.f;
-						}
-					}
-					else
-						b.isAlive = false;
-
-					if (!b.isAlive)
-					{
-						ParticleSpawnInfo spawnInfo(b.m_pos[0], b.m_pos[1], kBulletType_ParticleA, 10, 50, 200, 20);
-						g_gameSim->spawnParticles(spawnInfo);
-					}
-				}
-			};
-			cbs.onWrap = [](PhysicsActorCBs & cbs, PhysicsActor & actor)
-			{
-				Bullet & b = static_cast<Bullet&>(actor);
-
-			};
-			cbs.onMove = [](PhysicsActorCBs & cbs, PhysicsActor & actor)
-			{
-				Bullet & b = static_cast<Bullet&>(actor);
-			};
-
-			b.tick(gameSim, _dt, cbs);
-#else
 			const float distance = b.m_vel.CalcSize() * _dt;
 			const int numSteps = std::max<int>(1, (int)std::ceil(std::abs(distance) / 4.f));
 
@@ -397,7 +354,6 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 					free(i);
 				}
 			}
-#endif
 		}
 	}
 }
@@ -522,7 +478,7 @@ void BulletPool::free(uint16_t id)
 	Assert(id != INVALID_BULLET_ID && m_bullets[id].isAlive);
 	if (id != INVALID_BULLET_ID && m_bullets[id].isAlive)
 	{
-		m_bullets[id].isAlive = false;
+		m_bullets[id] = Bullet();
 		m_freeList[m_numFree++] = id;
 	}
 }

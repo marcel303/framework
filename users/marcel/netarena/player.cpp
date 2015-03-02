@@ -663,6 +663,10 @@ void Player::tick(float dt)
 		const uint32_t currentBlockMaskFloor = getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f);
 		const uint32_t currentBlockMaskCeil = getIntersectingBlocksMask(m_pos[0], m_pos[1] - 1.f);
 
+		// kill player when stuck
+		if (currentBlockMask & kBlockMask_Solid)
+			handleDamage(1.f, Vec2(0.f, 0.f), 0);
+
 		float surfaceFriction = 0.f;
 		Vec2 animVel(0.f, 0.f);
 
@@ -1197,6 +1201,20 @@ void Player::tick(float dt)
 		if (currentBlockMaskFloor & (1 << kBlockType_ConveyorBeltRight))
 			animVel[0] += +BLOCKTYPE_CONVEYOR_SPEED;
 
+		// jumping
+
+		if (playerControl && m_instanceData->m_input.wentDown(INPUT_BUTTON_A))
+		{
+			if (currentBlockMaskFloor & kBlockMask_Solid)
+			{
+				m_vel[1] = -PLAYER_JUMP_SPEED;
+
+				m_jump.cancelStarted = false;
+
+				playSecondaryEffects(kPlayerEvent_Jump);
+			}
+		}
+
 		// collision
 
 		for (int i = 0; i < 2; ++i)
@@ -1327,17 +1345,7 @@ void Player::tick(float dt)
 
 						if (delta >= 0.f)
 						{
-							if (playerControl && m_instanceData->m_input.wentDown(INPUT_BUTTON_A))
-							{
-								// jumping
-
-								m_vel[i] = -PLAYER_JUMP_SPEED;
-
-								m_jump.cancelStarted = false;
-
-								playSecondaryEffects(kPlayerEvent_Jump);
-							}
-							else if (newBlockMask & (1 << kBlockType_Spring))
+							if (newBlockMask & (1 << kBlockType_Spring))
 							{
 								// spring
 
@@ -1777,6 +1785,22 @@ uint32_t Player::getIntersectingBlocksMaskInternal(int x, int y, bool doWrap) co
 
 	result |= arena.getIntersectingBlocksMask(x1, y3);
 	result |= arena.getIntersectingBlocksMask(x2, y3);
+
+#if 1
+	CollisionInfo collisionInfo = m_collision;
+	collisionInfo.x1 += x;
+	collisionInfo.y1 += y;
+	collisionInfo.x2 += x;
+	collisionInfo.y2 += y;
+
+	for (int i = 0; i < MAX_MOVERS; ++i)
+	{
+		const Mover & mover = GAMESIM->m_movers[i];
+
+		if (mover.m_isActive && mover.intersects(collisionInfo))
+			result |= (1 << kBlockType_Indestructible);
+	}
+#endif
 
 	return result;
 }

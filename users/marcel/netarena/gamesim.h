@@ -308,6 +308,37 @@ struct Coin : PhysicsActor
 	void drawLight() const;
 };
 
+struct Mover
+{
+	bool m_isActive;
+	int m_sx;
+	int m_sy;
+	int m_x1;
+	int m_y1;
+	int m_x2;
+	int m_y2;
+	float m_moveMultiplier;
+	float m_moveAmount;
+
+	Mover()
+	{
+		memset(this, 0, sizeof(Mover));
+	}
+
+	void setup(int sx, int sy, int x1, int y1, int x2, int y2, int speed);
+
+	void tick(GameSim & gameSim, float dt);
+	void draw() const;
+	void drawLight() const;
+
+	Vec2 getPosition() const;
+	Vec2 getSpeed() const;
+
+	void getCollisionInfo(CollisionInfo & collisionInfo) const;
+
+	bool intersects(CollisionInfo & collisionInfo) const;
+};
+
 struct Barrel
 {
 	bool m_isActive;
@@ -569,6 +600,10 @@ struct GameStateData
 	Pickup m_pickups[MAX_PICKUPS];
 	Pickup m_grabbedPickup;
 	uint64_t m_nextPickupSpawnTick;
+
+	// movers
+
+	Mover m_movers[MAX_MOVERS];
 
 	// barrels
 
