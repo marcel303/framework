@@ -345,6 +345,17 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 				context.Set(true, false, bs2);
 				client->m_gameSim->serialize(context);
 
+				for (int i = 0; i < MAX_PLAYERS; ++i)
+				{
+					if (client->m_gameSim->m_players[i].m_isUsed)
+					{
+						// todo : move input prev/cur state to Player class!
+						PlayerInstanceData * instanceData = new PlayerInstanceData(&client->m_gameSim->m_players[i], client->m_gameSim);
+						client->addPlayer(instanceData);
+						instanceData->handleCharacterIndexChange();
+					}
+				}
+
 				client->m_isSynced = true;
 
 			#if ENABLE_GAMESTATE_CRC_LOGGING
@@ -551,14 +562,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 						g_host->m_gameSim.setPlayerPtrs();
 						client->m_gameSim->setPlayerPtrs();
 
-						Assert(g_host->m_gameSim.m_bulletPool->m_numFree == client->m_gameSim->m_bulletPool->m_numFree);
-						printf("host vs client bullet pool free lists:\n");
-						for (int i = 0; i < g_host->m_gameSim.m_bulletPool->m_numFree; ++i)
-						{
-							printf("%04d vs %04d\n",
-								g_host->m_gameSim.m_bulletPool->m_freeList[i],
-								client->m_gameSim->m_bulletPool->m_freeList[i]);
-						}
+						Assert(g_host->m_gameSim.m_bulletPool->calcCRC() == client->m_gameSim->m_bulletPool->calcCRC());
 					}
 				}
 			#endif
@@ -812,7 +816,7 @@ void App::SV_OnChannelConnect(Channel * channel)
 
 	m_hostClients[channel] = clientInfo;
 
-	m_host->syncNewClient(channel);
+	netSyncGameSim(channel);
 }
 
 void App::SV_OnChannelDisconnect(Channel * channel)

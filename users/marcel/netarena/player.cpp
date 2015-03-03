@@ -736,6 +736,7 @@ void Player::tick(float dt)
 	{
 		const char * name = s_animInfos[m_anim].name;
 		const auto & animData = m_instanceData->m_animData.m_animMap[name];
+		Assert(animData.speed != 0.f);
 
 		const int oldTime = m_spriterState.animTime * 1000.f;
 
@@ -744,6 +745,8 @@ void Player::tick(float dt)
 		const int newTime = m_spriterState.animTime * 1000.f;
 
 		const auto & triggers = animData.frameTriggers;
+
+		// fixme : triggers aren't supported yet for looping animations
 
 		for (int i = oldTime; i < newTime; ++i)
 		{
@@ -2472,7 +2475,14 @@ void PlayerInstanceData::handleCharacterIndexChange()
 		m_animData.load(m_player->makeCharacterFilename("animdata.txt"));
 
 	#if USE_SPRITER_ANIMS
-		m_player->applyAnim();
+		if (m_player->m_anim != kPlayerAnim_NULL)
+		{
+			delete m_spriter;
+			m_spriter = 0;
+
+			const char * filename = m_player->makeCharacterFilename("sprite/sprite.scml");
+			m_spriter = new Spriter(filename);
+		}
 	#else
 		delete m_sprite;
 		m_sprite = new Sprite(m_player->makeCharacterFilename("walk/walk.png"), 0.f, 0.f, 0, false);

@@ -68,25 +68,6 @@ void Host::debugDraw()
 	}
 }
 
-void Host::syncNewClient(Channel * channel)
-{
-	for (int i = 0; i < MAX_PLAYERS; ++i)
-	{
-		Player & player = m_gameSim.m_players[i];
-		if (player.m_isUsed)
-		{
-			g_app->netAddPlayerBroadcast(
-				channel,
-				player.m_owningChannelId,
-				i,
-				player.m_characterIndex,
-				player.m_displayName);
-		}
-	}
-
-	g_app->netSyncGameSim(channel);
-}
-
 PlayerInstanceData * Host::allocPlayer(uint16_t owningChannelId)
 {
 	for (int i = 0; i < MAX_PLAYERS; ++i)
