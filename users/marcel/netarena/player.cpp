@@ -1704,8 +1704,17 @@ void Player::tick(float dt)
 		// facing
 
 		if (playerControl && steeringSpeed != 0.f)
-			m_facing[0] = steeringSpeed < 0.f ? -1 : +1;
+		{
+			const float newFacing = steeringSpeed < 0.f ? -1 : +1;
+			if (newFacing != m_facing[0])
+			{
+				m_facingAnim = 1.f;
+				m_facing[0] = newFacing;
+			}
+		}
 		m_facing[1] = m_isAttachedToSticky ? -1 : +1;
+
+		m_facingAnim = Calc::Saturate(m_facingAnim - dt * 10.f);
 
 		// wrapping
 
@@ -1914,10 +1923,13 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 #if USE_SPRITER_ANIMS
 	if (m_instanceData->m_spriter)
 	{
+		const float scale = m_instanceData->m_spriteScale * PLAYER_SPRITE_SCALE;
+
 		SpriterState spriterState = m_spriterState;
 		spriterState.x = x;
 		spriterState.y = y;
-		spriterState.scale = m_instanceData->m_spriteScale * PLAYER_SPRITE_SCALE; // fixme : hack scale
+		spriterState.scaleX = scale * (1.f - m_facingAnim * 2.f);
+		spriterState.scaleY = scale;
 		spriterState.flipX = flipX;
 		spriterState.flipY = flipY;
 		m_instanceData->m_spriter->draw(spriterState);

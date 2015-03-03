@@ -119,6 +119,7 @@ struct Player
 	Vec2 m_vel;
 
 	Vec2 m_facing;
+	float m_facingAnim;
 
 	//
 
