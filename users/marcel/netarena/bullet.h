@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include "framework.h"
+#include "gamedefs.h"
 #include "gametypes.h"
 #include "NetSerializable.h"
 #include "physobj.h"
@@ -117,9 +118,6 @@ struct ParticleSpawnInfo
 class BulletPool
 {
 public:
-	uint16_t m_freeList[MAX_BULLETS];
-	uint16_t m_numFree;
-
 	Bullet m_bullets[MAX_BULLETS];
 
 	BulletPool(bool localOnly);
@@ -130,10 +128,14 @@ public:
 	void draw() const;
 	void drawLight() const;
 
-	uint16_t alloc();
+	uint16_t alloc(uint16_t * ids, uint16_t count);
 	void free(uint16_t id);
 
 	void serialize(NetSerializationContext & context);
+
+#if ENABLE_GAMESTATE_DESYNC_DETECTION
+	uint32_t calcCRC() const;
+#endif
 };
 
 void initBullet(GameSim & gameSim, Bullet & b, const ParticleSpawnInfo & spawnInfo);

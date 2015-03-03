@@ -80,12 +80,8 @@ float Bullet::calcAge() const
 //
 
 BulletPool::BulletPool(bool localOnly)
-	: m_numFree(MAX_BULLETS)
 {
 	memset(m_bullets, 0, sizeof(m_bullets));
-
-	for (int i = 0; i < MAX_BULLETS; ++i)
-		m_freeList[i] = i;
 }
 
 void BulletPool::tick(GameSim & gameSim, float _dt)
@@ -466,11 +462,20 @@ void BulletPool::drawLight() const
 	setColorf(1.f, 1.f, 1.f);
 }
 
-uint16_t BulletPool::alloc()
+uint16_t BulletPool::alloc(uint16_t * ids, uint16_t count)
 {
-	if (m_numFree == 0)
-		return INVALID_BULLET_ID;
-	return m_freeList[--m_numFree];
+	uint16_t result = 0;
+
+	for (int i = 0; i < MAX_BULLETS && result < count; ++i)
+	{
+		if (!m_bullets[i].isAlive)
+			ids[result++] = i;
+	}
+
+	for (int i = result; i < count; ++i)
+		ids[i] = INVALID_BULLET_ID;
+
+	return result;
 }
 
 void BulletPool::free(uint16_t id)
@@ -478,8 +483,7 @@ void BulletPool::free(uint16_t id)
 	Assert(id != INVALID_BULLET_ID && m_bullets[id].isAlive);
 	if (id != INVALID_BULLET_ID && m_bullets[id].isAlive)
 	{
-		m_bullets[id] = Bullet();
-		m_freeList[m_numFree++] = id;
+		memset(&m_bullets[id], 0, sizeof(Bullet));
 	}
 }
 
@@ -489,11 +493,7 @@ void BulletPool::serialize(NetSerializationContext & context)
 
 	if (context.IsRecv())
 	{
-		for (int i = 0; i < MAX_BULLETS; ++i)
-		{
-			if (m_bullets[i].isAlive)
-				free(i);
-		}
+		memset(m_bullets, 0, sizeof(m_bullets));
 
 		uint16_t bulletCount;
 
@@ -531,6 +531,26 @@ void BulletPool::serialize(NetSerializationContext & context)
 		}
 	}
 }
+
+#if ENABLE_GAMESTATE_DESYNC_DETECTION
+
+uint32_t BulletPool::calcCRC() const
+{
+	const uint8_t * bytes = (uint8_t*)m_bullets;
+	const int numBytes = sizeof(m_bullets);
+	
+	uint32_t result = 0;
+
+	for (int i = 0; i < numBytes; ++i)
+	{
+		result += bytes[i];
+		result *= 13;
+	}
+
+	return result;
+}
+
+#endif
 
 //
 
