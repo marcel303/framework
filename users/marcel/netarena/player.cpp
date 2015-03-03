@@ -1714,8 +1714,6 @@ void Player::tick(float dt)
 		}
 		m_facing[1] = m_isAttachedToSticky ? -1 : +1;
 
-		m_facingAnim = Calc::Saturate(m_facingAnim - dt * 10.f);
-
 		// wrapping
 
 		if (m_pos[0] < 0)
@@ -1745,6 +1743,8 @@ void Player::tick(float dt)
 	}
 
 	//printf("x: %g\n", m_pos[0]);
+
+	m_facingAnim = Calc::Saturate(m_facingAnim - dt / (7.f / 60.f));
 
 	if (m_isUsingJetpack)
 	{
@@ -1924,11 +1924,14 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 	if (m_instanceData->m_spriter)
 	{
 		const float scale = m_instanceData->m_spriteScale * PLAYER_SPRITE_SCALE;
+		const float animScale = (1.f - m_facingAnim * 2.f);
+		const float animScale2 = (animScale < 0.f ? (animScale - .5f) : (animScale + .5f)) / 1.5;
+		//log("%f -> %f", animScale, animScale2);
 
 		SpriterState spriterState = m_spriterState;
 		spriterState.x = x;
 		spriterState.y = y;
-		spriterState.scaleX = scale * (1.f - m_facingAnim * 2.f);
+		spriterState.scaleX = scale * animScale2;
 		spriterState.scaleY = scale;
 		spriterState.flipX = flipX;
 		spriterState.flipY = flipY;
