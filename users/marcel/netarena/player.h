@@ -10,6 +10,37 @@ struct Player;
 class Sprite;
 class Spriter;
 
+class AnimData
+{
+public:
+	class AnimTrigger
+	{
+	public:
+		std::string action;
+		Dictionary args;
+	};
+
+	typedef std::vector<AnimTrigger> AnimTriggers;
+
+	class Anim
+	{
+	public:
+		std::string name;
+		
+		std::map<int, AnimTriggers> frameTriggers;
+		
+		Anim()
+		{
+		}
+	};
+	
+	typedef std::map<std::string, Anim> AnimMap;
+
+	AnimMap m_animMap;
+
+	void load(const char * filename);
+};
+
 class SoundBag
 {
 	std::vector<std::string> m_files;
@@ -53,6 +84,7 @@ class PlayerInstanceData
 	friend class PlayerAnim_NS;
 	
 	Dictionary m_props;
+	AnimData m_animData;
 
 #if USE_SPRITER_ANIMS
 	Spriter * m_spriter;

@@ -116,6 +116,7 @@ nice to haves:
 */
 
 // from internal.h
+void splitString(const std::string & str, std::vector<std::string> & result);
 void splitString(const std::string & str, std::vector<std::string> & result, char c);
 
 OPTION_DECLARE(int, g_playerCharacterIndex, 0);
@@ -128,6 +129,10 @@ OPTION_DEFINE(bool, s_unlimitedAmmo, "Player/Unlimited Ammo");
 OPTION_DECLARE(bool, s_noSpecial, false);
 OPTION_DEFINE(bool, s_noSpecial, "Player/Disable Special Abilities");
 
+OPTION_DECLARE(float, PLAYER_SPRITE_SCALE, 1.f/5.f);
+OPTION_DEFINE(float, PLAYER_SPRITE_SCALE, "Experimental/Player Scale");
+OPTION_STEP(PLAYER_SPRITE_SCALE, 0, 0, .01f);
+
 #define WRAP_AROUND_TOP_AND_BOTTOM 1
 
 #define GAMESIM m_instanceData->m_gameSim
@@ -137,6 +142,7 @@ OPTION_DEFINE(bool, s_noSpecial, "Player/Disable Special Abilities");
 enum PlayerAnim
 {
 	kPlayerAnim_NULL,
+	kPlayerAnim_InAir,
 	kPlayerAnim_Jump,
 	kPlayerAnim_WallSlide,
 	kPlayerAnim_Walk,
@@ -158,17 +164,18 @@ struct PlayerAnimInfo
 	int prio;
 } s_animInfos[kPlayerAnim_COUNT] =
 {
-	{ nullptr,              nullptr, 0 },
-	{ "sprite.scml", "Jump" , 1 },
-	{ "sprite.scml", "WallSlide", 2 },
-	{ "sprite.scml", "Walk", 3 },
-	{ "sprite.scml", "Attack", 4 },
-	{ "sprite.scml", "AttackUp", 4 },
-	{ "sprite.scml", "AttackDown", 4 },
-	{ "sprite.scml", "Shoot", 4 },
-	{ "sprite.scml", "AirDash", 4 },
-	{ "sprite.scml", "Spawn", 5 },
-	{ "sprite.scml", "Die", 6 }
+	{ nullptr,       nullptr,      0 },
+	{ "sprite.scml", "InAir" ,     1 },
+	{ "sprite.scml", "Jump" ,      2 },
+	{ "sprite.scml", "WallSlide",  3 },
+	{ "sprite.scml", "Walk",       4 },
+	{ "sprite.scml", "Attack",     5 },
+	{ "sprite.scml", "AttackUp",   5 },
+	{ "sprite.scml", "AttackDown", 5 },
+	{ "sprite.scml", "Shoot",      5 },
+	{ "sprite.scml", "AirDash",    5 },
+	{ "sprite.scml", "Spawn",      6 },
+	{ "sprite.scml", "Die",        7 }
 };
 #else
 struct PlayerAnimInfo
@@ -179,17 +186,141 @@ struct PlayerAnimInfo
 {
 	{ nullptr,                            0 },
 	{ "char%d/jump/jump.png",             1 },
-	{ "char%d/wallslide/wallslide.png",   2 },
-	{ "char%d/walk/walk.png",             3 },
-	{ "char%d/attack/attack.png",         4 },
-	{ "char%d/attackup/attackup.png",     4 },
-	{ "char%d/attackdown/attackdown.png", 4 },
-	{ "char%d/shoot/shoot.png",           4 },
-	{ "char%d/dash/dash.png",             4 },
-	{ "char%d/spawn/spawn.png",           5 },
-	{ "char%d/die/die.png",               6 }
+	{ "char%d/jump/jump.png",             2 },
+	{ "char%d/wallslide/wallslide.png",   3 },
+	{ "char%d/walk/walk.png",             4 },
+	{ "char%d/attack/attack.png",         5 },
+	{ "char%d/attackup/attackup.png",     5 },
+	{ "char%d/attackdown/attackdown.png", 5 },
+	{ "char%d/shoot/shoot.png",           5 },
+	{ "char%d/dash/dash.png",             5 },
+	{ "char%d/spawn/spawn.png",           6 },
+	{ "char%d/die/die.png",               7 }
 };
 #endif
+
+//
+
+#include "FileStream.h"
+#include "StreamReader.h"
+
+void AnimData::load(const char * filename)
+{
+	try
+	{
+		Anim * currentAnim = 0;
+
+		FileStream f;
+		f.Open(filename, (OpenMode)(OpenMode_Read|OpenMode_Text));
+
+		StreamReader r(&f, false);
+
+		std::vector<std::string> lines = r.ReadAllLines();
+		
+		for (size_t l = 0; l < lines.size(); ++l)
+		{
+			const std::string & line = lines[l];
+
+			// format: <name> <key>:<value> <key:value> <key..
+			
+			std::vector<std::string> parts;
+			splitString(line, parts);
+			
+			if (parts.size() == 0 || parts[0][0] == '#')
+			{
+				// empty line or comment
+				continue;
+			}
+			
+			if (parts.size() == 1)
+			{
+				logError("%s: missing parameters: %s (%s)", filename, line.c_str(), parts[0].c_str());
+				continue;
+			}
+			
+			const std::string section = parts[0];
+			Dictionary args;
+			
+			for (size_t i = 1; i < parts.size(); ++i)
+			{
+				const size_t separator = parts[i].find(':');
+				
+				if (separator == std::string::npos)
+				{
+					logError("%s: incorrect key:value syntax: %s (%s)", filename, line.c_str(), parts[i].c_str());
+					continue;
+				}
+				
+				const std::string key = parts[i].substr(0, separator);
+				const std::string value = parts[i].substr(separator + 1, parts[i].size() - separator - 1);
+				
+				if (key.size() == 0 || value.size() == 0)
+				{
+					logError("%s: incorrect key:value syntax: %s (%s)", filename, line.c_str(), parts[i].c_str());
+					continue;
+				}
+				
+				if (args.contains(key.c_str()))
+				{
+					logError("%s: duplicate key: %s (%s)", filename, line.c_str(), key.c_str());
+					continue;
+				}
+				
+				args.setString(key.c_str(), value.c_str());
+			}
+			
+			// animation name:walk grid_x:0 grid_y:0 frames:12 rate:4 loop:0 pivot_x:2 pivot_y:2
+			// trigger frame:3 action:sound sound:test.wav
+			
+			if (section == "animation")
+			{
+				currentAnim = 0;
+				
+				Anim anim;
+				anim.name = args.getString("name", "");
+				if (anim.name.empty())
+				{
+					logError("%s: name not set: %s", filename, line.c_str());
+					continue;
+				}
+				
+				currentAnim = &m_animMap.insert(AnimMap::value_type(anim.name, anim)).first->second;
+			}
+			else if (section == "trigger")
+			{
+				if (currentAnim == 0)
+				{
+					logError("%s: must first define an animation before adding triggers to it! %s", filename, line.c_str());
+					continue;
+				}
+				
+				const int time = args.getInt("time", -1);
+				
+				if (time < 0)
+				{
+					logWarning("%s: time must be >= 0: %s", filename, line.c_str());
+					continue;
+				}
+				
+				//log("added frame trigger. frame=%d, on=%s, action=%s", frame, event.c_str(), action.c_str());
+				
+				AnimTrigger trigger;
+				trigger.action = args.getString("action", "");
+				trigger.args = args;
+				
+				currentAnim->frameTriggers[time].push_back(trigger);
+			}
+			else
+			{
+				logError("%s: unknown section: %s (%s)", filename, line.c_str(), section.c_str());
+			}
+		}
+	}
+	catch (std::exception & e)
+	{
+		logError("%s: failed to open file!", filename);
+	}
+}
 
 //
 
@@ -450,7 +581,7 @@ void Player::applyAnim()
 
 	if (m_anim != kPlayerAnim_NULL)
 	{
-		const char * filename = makeCharacterFilename("spriter/spriter.scml");
+		const char * filename = makeCharacterFilename("sprite/sprite.scml");
 
 	#if USE_SPRITER_ANIMS
 		delete m_instanceData->m_spriter;
@@ -473,7 +604,7 @@ void Player::applyAnim()
 	{
 		if (!m_spriterState.startAnim(*m_instanceData->m_spriter, s_animInfos[m_anim].name))
 		{
-			const char * filename = makeCharacterFilename("spriter/spriter.scml");
+			const char * filename = makeCharacterFilename("sprite/sprite.scml");
 			logError("unable to find animation %s in file %s", s_animInfos[m_anim].name, filename);
 			m_spriterState.startAnim(*m_instanceData->m_spriter, s_animInfos[kPlayerAnim_Jump].name);
 		}
@@ -596,7 +727,36 @@ void Player::tick(float dt)
 #else
 	if (m_instanceData->m_spriter)
 	{
-		if (m_spriterState.updateAnim(*m_instanceData->m_spriter, dt))
+		const int oldTime = m_spriterState.animTime * 1000.f;
+
+		const bool isDone = m_spriterState.updateAnim(*m_instanceData->m_spriter, dt);
+
+		const int newTime = m_spriterState.animTime * 1000.f;
+
+		if (m_anim != kPlayerAnim_NULL)
+		{
+			const char * name = s_animInfos[m_anim].name;
+			const auto & triggers = m_instanceData->m_animData.m_animMap[name];
+
+			for (int i = oldTime; i < newTime; ++i)
+			{
+				const auto & triggersItr = triggers.frameTriggers.find(i);
+
+				if (triggersItr != triggers.frameTriggers.end())
+				{
+					const auto & triggers = triggersItr->second;
+
+					for (auto & trigger = triggers.cbegin(); trigger != triggers.cend(); ++trigger)
+					{
+						Dictionary d = trigger->args;
+						d.setPtr("obj", m_instanceData);
+						m_instanceData->handleAnimationAction(trigger->action, d);
+					}
+				}
+			}
+		}
+
+		if (isDone)
 #endif
 		{
 			m_isAnimDriven = false;
@@ -1749,7 +1909,7 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 	SpriterState spriterState = m_spriterState;
 	spriterState.x = x;
 	spriterState.y = y;
-	spriterState.scale = m_instanceData->m_spriteScale / 5.f; // fixme : hack scale
+	spriterState.scale = m_instanceData->m_spriteScale * PLAYER_SPRITE_SCALE; // fixme : hack scale
 	spriterState.flipX = flipX;
 	spriterState.flipY = flipY;
 	m_instanceData->m_spriter->draw(spriterState);
@@ -2283,6 +2443,9 @@ void PlayerInstanceData::handleCharacterIndexChange()
 		// reload character properties
 
 		m_props.load(m_player->makeCharacterFilename("props.txt"));
+
+		m_animData = AnimData();
+		m_animData.load(m_player->makeCharacterFilename("animdata.txt"));
 
 	#if USE_SPRITER_ANIMS
 		m_player->applyAnim();
