@@ -14,6 +14,8 @@
 #include "StreamReader.h"
 #include "Timer.h"
 
+#include "BinaryDiff.h" // fixme : remove
+
 OPTION_DECLARE(bool, g_noSound, false);
 OPTION_DEFINE(bool, g_noSound, "Sound/Disable Sound Effects");
 OPTION_ALIAS(g_noSound, "nosound");
@@ -334,8 +336,8 @@ void Mover::tick(GameSim & gameSim, float dt)
 			if (player.m_isGrounded && player.m_vel[1] >= 0.f)
 			{
 				player.getPlayerCollision(playerCollision);
-				playerCollision.y1 += speed[1] + 1.f;
-				playerCollision.y2 += speed[1] + 1.f;
+				playerCollision.y1 += 2.f;
+				playerCollision.y2 += 2.f;
 
 				if (playerCollision.intersects(collision))
 				{
@@ -349,6 +351,7 @@ void Mover::tick(GameSim & gameSim, float dt)
 
 			if (playerCollision.intersects(collision))
 			{
+			#if 0
 				const float d[4] =
 				{
 					+ playerCollision.x2 - collision.x1,
@@ -373,6 +376,14 @@ void Mover::tick(GameSim & gameSim, float dt)
 					player.m_pos[1] -= d[2] + 1.f;
 				if (lowest == 3)
 					player.m_pos[1] += d[3] + 1.f;
+			#else
+				const float d = + playerCollision.y2 - collision.y1;
+
+				if (d >= 0.f && grounded)
+				{
+					player.m_pos[1] -= d + 1.f;
+				}
+			#endif
 			}
 
 			if (grounded)
@@ -391,7 +402,7 @@ void Mover::tick(GameSim & gameSim, float dt)
 				}
 			}
 
-			Assert((player.getIntersectingBlocksMask(player.m_pos[0], player.m_pos[1]) & kBlockMask_Solid) == 0);
+			//Assert((player.getIntersectingBlocksMask(player.m_pos[0], player.m_pos[1]) & kBlockMask_Solid) == 0);
 		}
 	}
 }
@@ -692,17 +703,17 @@ void GameSim::serialize(NetSerializationContext & context)
 	context.Serialize(crc);
 #endif
 
-	for (int i = 0; i < MAX_PLAYERS; ++i)
-		if (m_playerInstanceDatas[i])
-			m_playerInstanceDatas[i]->m_player->m_instanceData = 0;
+	clearPlayerPtrs();
+	{
+		GameStateData * data = static_cast<GameStateData*>(this);
 
-	GameStateData * data = static_cast<GameStateData*>(this);
+		context.SerializeBytes(data, sizeof(GameStateData));
 
-	context.SerializeBytes(data, sizeof(GameStateData));
-
-	for (int i = 0; i < MAX_PLAYERS; ++i)
-		if (m_playerInstanceDatas[i])
-			m_playerInstanceDatas[i]->m_player->m_instanceData = m_playerInstanceDatas[i];
+		//unsigned char temp[sizeof(GameStateData)];
+		//memset(temp, 0, sizeof(temp));
+		//BinaryDiffResult diff = BinaryDiff(data, temp, sizeof(GameStateData), 4);
+	}
+	setPlayerPtrs();
 
 	// todo : serialize player animation state
 
@@ -883,8 +894,9 @@ void GameSim::load(const char * filename)
 	// load objects
 
 	// fixme
-	Mover & mover = m_movers[0];
-	mover.setup(400, 100, GFX_SX*1/4, GFX_SY*2/3, GFX_SX*3/4, GFX_SY*1/3, 100);
+	{ Mover & mover = m_movers[0]; mover.setup(400, 50, GFX_SX*1/4, GFX_SY/2-200, GFX_SX*3/4, GFX_SY/2-300, 100); }
+	{ Mover & mover = m_movers[1]; mover.setup(400, 50, GFX_SX*1/4, GFX_SY/2,     GFX_SX*3/4, GFX_SY/2-100, 111); }
+	{ Mover & mover = m_movers[2]; mover.setup(400, 50, GFX_SX*1/4, GFX_SY/2+200, GFX_SX*3/4, GFX_SY/2+100, 121); }
 
 	std::string baseName = Path::GetBaseName(filename);
 
@@ -1009,8 +1021,6 @@ void GameSim::resetGameWorld()
 
 	for (int i = 0; i < MAX_PICKUPS; ++i)
 		m_pickups[i] = Pickup();
-
-	m_grabbedPickup = Pickup();
 
 	m_nextPickupSpawnTick = 0;
 
@@ -1680,7 +1690,7 @@ void GameSim::spawnPickup(Pickup & pickup, PickupType type, int blockX, int bloc
 	pickup.setup(type, blockX, blockY);
 }
 
-Pickup * GameSim::grabPickup(int x1, int y1, int x2, int y2)
+bool GameSim::grabPickup(int x1, int y1, int x2, int y2, Pickup & grabbedPickup)
 {
 	CollisionInfo collisionInfo;
 	collisionInfo.x1 = x1;
@@ -1699,17 +1709,18 @@ Pickup * GameSim::grabPickup(int x1, int y1, int x2, int y2)
 
 			if (collisionInfo.intersects(pickupCollision))
 			{
-				m_grabbedPickup = pickup;
+				grabbedPickup = pickup;
+
 				pickup = Pickup();
 
 				playSound("gun-pickup.ogg");
 
-				return &m_grabbedPickup;
+				return true;
 			}
 		}
 	}
 
-	return 0;
+	return false;
 }
 
 void GameSim::spawnToken()

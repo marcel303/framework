@@ -8,6 +8,7 @@
 class Dictionary;
 struct Player;
 class Sprite;
+class Spriter;
 
 class SoundBag
 {
@@ -53,7 +54,11 @@ class PlayerInstanceData
 	
 	Dictionary m_props;
 
+#if USE_SPRITER_ANIMS
+	Spriter * m_spriter;
+#else
 	Sprite * m_sprite;
+#endif
 	float m_spriteScale;
 
 	std::map<std::string, SoundBag> m_sounds;

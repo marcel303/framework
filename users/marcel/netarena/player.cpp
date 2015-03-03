@@ -150,6 +150,27 @@ enum PlayerAnim
 	kPlayerAnim_COUNT
 };
 
+#if USE_SPRITER_ANIMS
+struct PlayerAnimInfo
+{
+	const char * file;
+	const char * name;
+	int prio;
+} s_animInfos[kPlayerAnim_COUNT] =
+{
+	{ nullptr,              nullptr, 0 },
+	{ "sprite.scml", "Jump" , 1 },
+	{ "sprite.scml", "WallSlide", 2 },
+	{ "sprite.scml", "Walk", 3 },
+	{ "sprite.scml", "Attack", 4 },
+	{ "sprite.scml", "AttackUp", 4 },
+	{ "sprite.scml", "AttackDown", 4 },
+	{ "sprite.scml", "Shoot", 4 },
+	{ "sprite.scml", "AirDash", 4 },
+	{ "sprite.scml", "Spawn", 5 },
+	{ "sprite.scml", "Die", 6 }
+};
+#else
 struct PlayerAnimInfo
 {
 	const char * file;
@@ -168,6 +189,7 @@ struct PlayerAnimInfo
 	{ "char%d/spawn/spawn.png",           5 },
 	{ "char%d/die/die.png",               6 }
 };
+#endif
 
 //
 
@@ -428,17 +450,38 @@ void Player::applyAnim()
 
 	if (m_anim != kPlayerAnim_NULL)
 	{
+		const char * filename = makeCharacterFilename("spriter/spriter.scml");
+
+	#if USE_SPRITER_ANIMS
+		delete m_instanceData->m_spriter;
+		m_instanceData->m_spriter = 0;
+
+		m_instanceData->m_spriter = new Spriter(filename);
+		m_spriterState = SpriterState();
+	#else
 		delete m_instanceData->m_sprite;
 		m_instanceData->m_sprite = 0;
-
-		char filename[64];
-		sprintf_s(filename, sizeof(filename), s_animInfos[m_anim].file, m_characterIndex);
 
 		m_instanceData->m_sprite = new Sprite(filename, 0.f, 0.f, 0, false);
 		m_instanceData->m_sprite->animActionHandler = PlayerInstanceData::handleAnimationAction;
 		m_instanceData->m_sprite->animActionHandlerObj = m_instanceData;
+	#endif
 	}
 
+#if USE_SPRITER_ANIMS
+	if (m_instanceData->m_spriter)
+	{
+		if (!m_spriterState.startAnim(*m_instanceData->m_spriter, s_animInfos[m_anim].name))
+		{
+			const char * filename = makeCharacterFilename("spriter/spriter.scml");
+			logError("unable to find animation %s in file %s", s_animInfos[m_anim].name, filename);
+			m_spriterState.startAnim(*m_instanceData->m_spriter, s_animInfos[kPlayerAnim_Jump].name);
+		}
+
+		if (!m_animPlay)
+			m_spriterState.stopAnim(*m_instanceData->m_spriter);
+	}
+#else
 	if (m_instanceData->m_sprite)
 	{
 		if (m_animPlay)
@@ -446,6 +489,7 @@ void Player::applyAnim()
 		else
 			m_instanceData->m_sprite->stopAnim();
 	}
+#endif
 }
 
 //
@@ -541,6 +585,7 @@ void Player::tick(float dt)
 
 	//
 
+#if !USE_SPRITER_ANIMS
 	if (m_instanceData->m_sprite)
 	{
 		m_instanceData->m_sprite->update(dt);
@@ -548,6 +593,11 @@ void Player::tick(float dt)
 		// check for end of animation events
 
 		if (!m_instanceData->m_sprite->animIsActive)
+#else
+	if (m_instanceData->m_spriter)
+	{
+		if (m_spriterState.updateAnim(*m_instanceData->m_spriter, dt))
+#endif
 		{
 			m_isAnimDriven = false;
 
@@ -620,15 +670,16 @@ void Player::tick(float dt)
 
 		// see if we grabbed any pickup
 
-		const Pickup * pickup = GAMESIM->grabPickup(
+		Pickup pickup;
+
+		if (GAMESIM->grabPickup(
 			m_pos[0] + m_collision.x1,
 			m_pos[1] + m_collision.y1,
 			m_pos[0] + m_collision.x2,
-			m_pos[1] + m_collision.y2);
-
-		if (pickup)
+			m_pos[1] + m_collision.y2,
+			pickup))
 		{
-			switch (pickup->type)
+			switch (pickup.type)
 			{
 			case kPickupType_Ammo:
 				pushWeapon(kPlayerWeapon_Fire, PICKUP_AMMO_COUNT);
@@ -664,8 +715,8 @@ void Player::tick(float dt)
 		const uint32_t currentBlockMaskCeil = getIntersectingBlocksMask(m_pos[0], m_pos[1] - 1.f);
 
 		// kill player when stuck
-		if (currentBlockMask & kBlockMask_Solid)
-			handleDamage(1.f, Vec2(0.f, 0.f), 0);
+		//if (currentBlockMask & (kBlockMask_Solid & ~kBlockMask_Passthrough))
+		//	handleDamage(1.f, Vec2(0.f, 0.f), 0);
 
 		float surfaceFriction = 0.f;
 		Vec2 animVel(0.f, 0.f);
@@ -1323,7 +1374,11 @@ void Player::tick(float dt)
 
 							if (m_isAnimDriven && m_anim == kPlayerAnim_AirDash)
 							{
+							#if USE_SPRITER_ANIMS
+								m_spriterState.stopAnim(*m_instanceData->m_spriter);
+							#else
 								m_instanceData->m_sprite->stopAnim();
+							#endif
 							}
 						}
 					}
@@ -1576,16 +1631,24 @@ void Player::draw() const
 	if (!hasValidCharacterIndex())
 		return;
 
+#if USE_SPRITER_ANIMS
+	const bool flipX = m_facing[0] > 0 ? true : false;
+	const bool flipY = m_facing[1] < 0 ? true : false;
+#else
 	m_instanceData->m_sprite->flipX = m_facing[0] < 0 ? true : false;
 	m_instanceData->m_sprite->flipY = m_facing[1] < 0 ? true : false;
 
-	drawAt(m_pos[0], m_pos[1] - (m_instanceData->m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0));
+	const bool flipX = m_instanceData->m_sprite->flipX;
+	const bool flipY = m_instanceData->m_sprite->flipY;
+#endif
+
+	drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? PLAYER_COLLISION_HITBOX_SY : 0));
 
 	// render additional sprites for wrap around
-	drawAt(m_pos[0] + ARENA_SX_PIXELS, m_pos[1] - (m_instanceData->m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0));
-	drawAt(m_pos[0] - ARENA_SX_PIXELS, m_pos[1] - (m_instanceData->m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0));
-	drawAt(m_pos[0], m_pos[1] - (m_instanceData->m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0) + ARENA_SY_PIXELS);
-	drawAt(m_pos[0], m_pos[1] - (m_instanceData->m_sprite->flipY ? PLAYER_COLLISION_HITBOX_SY : 0) - ARENA_SY_PIXELS);
+	drawAt(flipX, flipY, m_pos[0] + ARENA_SX_PIXELS, m_pos[1] - (flipY ? PLAYER_COLLISION_HITBOX_SY : 0));
+	drawAt(flipX, flipY, m_pos[0] - ARENA_SX_PIXELS, m_pos[1] - (flipY ? PLAYER_COLLISION_HITBOX_SY : 0));
+	drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? PLAYER_COLLISION_HITBOX_SY : 0) + ARENA_SY_PIXELS);
+	drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? PLAYER_COLLISION_HITBOX_SY : 0) - ARENA_SY_PIXELS);
 
 	// draw player color
 
@@ -1664,7 +1727,7 @@ void Player::draw() const
 	}
 }
 
-void Player::drawAt(int x, int y) const
+void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 {
 	if (GAMESIM->m_gameMode == kGameMode_TokenHunt)
 	{
@@ -1682,7 +1745,17 @@ void Player::drawAt(int x, int y) const
 	if (m_ice.timer > 0.f)
 		setColor(63, 127, 255);
 
+#if USE_SPRITER_ANIMS
+	SpriterState spriterState = m_spriterState;
+	spriterState.x = x;
+	spriterState.y = y;
+	spriterState.scale = m_instanceData->m_spriteScale / 5.f; // fixme : hack scale
+	spriterState.flipX = flipX;
+	spriterState.flipY = flipY;
+	m_instanceData->m_spriter->draw(spriterState);
+#else
 	m_instanceData->m_sprite->drawEx(x, y, 0.f, m_instanceData->m_spriteScale);
+#endif
 
 	setColorMode(COLOR_MUL);
 	setColor(255, 255, 255);
@@ -1798,7 +1871,8 @@ uint32_t Player::getIntersectingBlocksMaskInternal(int x, int y, bool doWrap) co
 		const Mover & mover = GAMESIM->m_movers[i];
 
 		if (mover.m_isActive && mover.intersects(collisionInfo))
-			result |= (1 << kBlockType_Indestructible);
+			//result |= (1 << kBlockType_Indestructible);
+			result |= (1 << kBlockType_Passthrough);
 	}
 #endif
 
@@ -2050,7 +2124,11 @@ bool Player::handleIce(Vec2Arg velocity, Player * attacker)
 			setAnim(kPlayerAnim_Walk, true, true);
 			m_isAnimDriven = true;
 			m_enableInAirAnim = false;
+		#if USE_SPRITER_ANIMS
+			m_spriterState.animSpeed = 1e-10f;
+		#else
 			m_instanceData->m_sprite->animSpeed = 1e-10f;
+		#endif
 
 			m_ice.timer = PLAYER_EFFECT_ICE_TIME;
 		}
@@ -2079,7 +2157,11 @@ bool Player::handleBubble(Vec2Arg velocity, Player * attacker)
 			setAnim(kPlayerAnim_Walk, true, true);
 			m_isAnimDriven = true;
 			m_enableInAirAnim = false;
+		#if USE_SPRITER_ANIMS
+			m_spriterState.animSpeed = 1e-10f;
+		#else
 			m_instanceData->m_sprite->animSpeed = 1e-10f;
+		#endif
 
 			m_bubble.timer = PLAYER_EFFECT_BUBBLE_TIME;
 		}
@@ -2159,7 +2241,11 @@ PlayerInstanceData::PlayerInstanceData(Player * player, GameSim * gameSim)
 	: m_player(player)
 	, m_gameSim(gameSim)
 	, m_textChatTicks(0)
+#if USE_SPRITER_ANIMS
+	, m_spriter(0)
+#else
 	, m_sprite(0)
+#endif
 	, m_spriteScale(1.f)
 {
 	m_player->m_instanceData = this;
@@ -2174,8 +2260,13 @@ PlayerInstanceData::PlayerInstanceData(Player * player, GameSim * gameSim)
 
 PlayerInstanceData::~PlayerInstanceData()
 {
+#if USE_SPRITER_ANIMS
+	delete m_spriter;
+	m_spriter = 0;
+#else
 	delete m_sprite;
 	m_sprite = 0;
+#endif
 }
 
 void PlayerInstanceData::setCharacterIndex(int index)
@@ -2193,8 +2284,12 @@ void PlayerInstanceData::handleCharacterIndexChange()
 
 		m_props.load(m_player->makeCharacterFilename("props.txt"));
 
+	#if USE_SPRITER_ANIMS
+		m_player->applyAnim();
+	#else
 		delete m_sprite;
 		m_sprite = new Sprite(m_player->makeCharacterFilename("walk/walk.png"), 0.f, 0.f, 0, false);
+	#endif
 
 		m_spriteScale = m_props.getFloat("sprite_scale", 1.f);
 

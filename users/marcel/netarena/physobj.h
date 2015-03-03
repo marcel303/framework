@@ -20,6 +20,8 @@ struct PhysicsActorCBs
 	void (*onMove)(PhysicsActorCBs & cbs, PhysicsActor & actor);
 };
 
+// todo : add support for attaching to movers
+
 struct PhysicsActor
 {
 	Vec2 m_pos;

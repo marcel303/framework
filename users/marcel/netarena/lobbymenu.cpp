@@ -89,12 +89,15 @@ void CharSelector::draw()
 			1.f,
 			.25f);
 
+		SpriterState spriterState;
+		spriterState.animIndex = 0;
+		spriterState.animTime = g_TimerRT.Time_get();
+		spriterState.x = UI_CHARSELECT_BASE_X + UI_CHARSELECT_PORTRAIT_X + m_playerId * UI_CHARSELECT_STEP_X;
+		spriterState.y = UI_CHARSELECT_BASE_Y + UI_CHARSELECT_PORTRAIT_Y;
+		spriterState.scale = .7f;
+
 		Spriter spriter("../../ArtistCave/JoyceTestcharacter/TestCharacter_Spriter/Testcharacter.scml");
-		spriter.draw(0, g_TimerRT.Time_get() * 1000.f,
-			UI_CHARSELECT_BASE_X + UI_CHARSELECT_PORTRAIT_X + m_playerId * UI_CHARSELECT_STEP_X,
-			UI_CHARSELECT_BASE_Y + UI_CHARSELECT_PORTRAIT_Y,
-			0.f,
-			.7f);
+		spriter.draw(spriterState);
 
 		setColorMode(COLOR_MUL);
 	#else

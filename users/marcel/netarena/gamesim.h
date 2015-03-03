@@ -2,6 +2,7 @@
 
 #include <string.h> // memset
 #include "arena.h"
+#include "framework.h"
 #include "gametypes.h"
 #include "physobj.h"
 #include "Random.h"
@@ -35,6 +36,10 @@ struct Player
 		m_characterIndex = -1;
 		m_facing.Set(+1.f, +1.f);
 
+	#if USE_SPRITER_ANIMS
+		m_spriterState = SpriterState();
+	#endif
+
 		m_animAllowGravity = true;
 		m_animAllowSteering = true;
 		m_enableInAirAnim = true;
@@ -44,7 +49,7 @@ struct Player
 
 	void tick(float dt); // todo : remove dt
 	void draw() const;
-	void drawAt(int x, int y) const;
+	void drawAt(bool flipX, bool flipY, int x, int y) const;
 	void drawLight() const;
 	void debugDraw() const;
 
@@ -119,6 +124,10 @@ struct Player
 
 	uint8_t m_anim;
 	bool m_animPlay;
+
+#if USE_SPRITER_ANIMS
+	SpriterState m_spriterState;
+#endif
 
 	//
 
@@ -290,7 +299,7 @@ struct Token : PhysicsActor
 	void draw() const;
 	void drawLight() const;
 };
-\
+
 struct Coin : PhysicsActor
 {
 	bool m_isDropped;
@@ -598,7 +607,6 @@ struct GameStateData
 	// pickups
 
 	Pickup m_pickups[MAX_PICKUPS];
-	Pickup m_grabbedPickup;
 	uint64_t m_nextPickupSpawnTick;
 
 	// movers
@@ -707,7 +715,7 @@ public:
 
 	void trySpawnPickup(PickupType type);
 	void spawnPickup(Pickup & pickup, PickupType type, int blockX, int blockY);
-	Pickup * grabPickup(int x1, int y1, int x2, int y2);
+	bool grabPickup(int x1, int y1, int x2, int y2, Pickup & pickup);
 
 	void spawnToken();
 	bool pickupToken(const CollisionInfo & collisionInfo);
