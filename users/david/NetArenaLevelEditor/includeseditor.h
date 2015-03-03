@@ -28,7 +28,7 @@
 #include <QPushButton>
 
 
-#define BASEX 26//52
+#define BASEX 30//52
 #define BASEY 16//32
 
 #define BLOCKSIZE 64//32

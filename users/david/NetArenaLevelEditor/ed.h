@@ -12,6 +12,8 @@ enum EditorMode
 
 class EditorScene;
 class ObjectPropertyWindow;
+class EditorView;
+class QGraphicsView;
 class Ed
 {
 public:
@@ -21,15 +23,25 @@ public:
 		return e;
 	}
 
-
-	//void SwitchToTemplateEditMode();
-	//void SwitchToLevelEditMode();
-
 	EditorScene*& GetSceneArt();
 	EditorScene*& GetSceneMech();
 	EditorScene*& GetSceneCollission();
 
+    EditorScene*& GetCurrentScene();
+
+
+    EditorView*& GetView();
+    QGraphicsView*& GetViewPallette();
+
 	EditorMode& GetEditorMode(){return m_editorMode;}
+
+
+    void EditTemplates();
+    void EditLevels();
+
+
+    int& GetSceneCounter();
+
 
 private:
 	Ed()
@@ -50,6 +62,11 @@ private:
 	EditorScene* m_sceneCollissionTemplate;
 
 	EditorMode m_editorMode;
+
+    EditorView* m_view;
+    QGraphicsView* m_viewPallette;
+
+    int m_sceneCounter;
 
 public:
 

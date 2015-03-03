@@ -25,4 +25,5 @@ HEADERS += \
     main.h \
     gameobject.h \
     includeseditor.h \
-    ed.h
+    ed.h \
+    EditorView.h
