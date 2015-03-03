@@ -1795,25 +1795,72 @@ int Sprite::getHeight() const
 
 // -----
 
+SpriterState::SpriterState()
+{
+	memset(this, 0, sizeof(SpriterState));
+
+	scale = 1.f;
+
+	animIndex = -1;
+	animSpeed = 1.f;
+}
+
+bool SpriterState::startAnim(const Spriter & spriter, const char * name)
+{
+	animIsActive = true;
+	animIndex = spriter.getAnimIndexByName(name);
+	animTime = 0.f;
+
+	return animIndex >= 0;
+}
+
+void SpriterState::stopAnim(const Spriter & spriter)
+{
+	animIsActive = false;
+}
+
+bool SpriterState::updateAnim(const Spriter & spriter, float dt)
+{
+	if (animIsActive)
+		animTime += animSpeed * dt;
+
+	const bool isDone = spriter.isAnimDoneAtTime(animIndex, animTime);
+
+	if (isDone)
+		stopAnim(spriter);
+
+	return isDone;
+}
+
+// -----
+
 Spriter::Spriter(const char * filename)
 {
 	m_spriter = &g_spriterCache.findOrCreate(filename);
 }
 
-void Spriter::draw(int animIndex, float time, float x, float y, float angle, float scale)
+void Spriter::draw(const SpriterState & state)
 {
+	if (m_spriter->m_scene->m_entities.empty())
+	{
+		return;
+	}
+
 	const int kMaxDrawables = 64;
 	spriter::Drawable drawables[kMaxDrawables];
 	int numDrawables = kMaxDrawables;
 
-	m_spriter->m_scene->m_entities[0]->getDrawableListAtTime(animIndex, time, drawables, numDrawables);
+	m_spriter->m_scene->m_entities[0]->getDrawableListAtTime(state.animIndex, state.animTime * 1000.f, drawables, numDrawables);
 
 	gxPushMatrix();
-	gxTranslatef(x, y, 0.f);
-	gxScalef(scale, scale, 1.f);
-	gxRotatef(angle, 0.f, 0.f, 1.f);
+	gxTranslatef(state.x, state.y, 0.f);
+	gxRotatef(state.angle, 0.f, 0.f, 1.f);
+	if (state.scale != 1.f)
+		gxScalef(state.scale, state.scale, 1.f);
+	if (state.flipX || state.flipY)
+		gxScalef(state.flipX ? -1.f : +1.f, state.flipY ? -1.f : +1.f, 1.f);
 
-	Color oldColor = globals.color;
+	const Color oldColor = globals.color;
 
 	for (int i = 0; i < numDrawables; ++i)
 	{
@@ -1875,7 +1922,7 @@ bool Spriter::isAnimDoneAtTime(int animIndex, float time) const
 		return true;
 	if (m_spriter->m_scene->m_entities[0]->isAnimLooped(animIndex))
 		return false;
-	return time >= getAnimLength(animIndex);
+	return time >= getAnimLength(animIndex) / 1000.f;
 }
 
 // -----

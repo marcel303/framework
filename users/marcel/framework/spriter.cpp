@@ -639,11 +639,17 @@ namespace spriter
 
 	bool Entity::isAnimLooped(int index) const
 	{
-		return m_animations[index]->loopType != kLoopType_Looping;
+		return m_animations[index]->loopType != kLoopType_NoLooping;
 	}
 
 	void Entity::getDrawableListAtTime(int animIndex, float time, Drawable * drawables, int & numDrawables) const
 	{
+		if (animIndex < 0)
+		{
+			numDrawables = 0;
+			return;
+		}
+
 		Animation * animation = m_animations[animIndex];
 
 		std::vector<TransformedObjectKey> keys = animation->getAnimationDataAtTime(time);

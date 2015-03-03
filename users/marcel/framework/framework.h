@@ -113,6 +113,8 @@ class Music;
 class Shader;
 class Sound;
 class Sprite;
+class Spriter;
+struct SpriterState;
 class Stage;
 class StageObject;
 class Surface;
@@ -463,12 +465,33 @@ private:
 
 //
 
+struct SpriterState
+{
+	SpriterState();
+
+	int16_t x;
+	int16_t y;
+	float angle;
+	float scale;
+	bool flipX;
+	bool flipY;
+
+	bool animIsActive;
+	int animIndex;
+	float animTime;
+	float animSpeed;
+
+	bool startAnim(const Spriter & spriter, const char * name);
+	void stopAnim(const Spriter & spriter);
+	bool updateAnim(const Spriter & spriter, float dt);
+};
+
 class Spriter
 {
 public:
 	Spriter(const char * filename);
 
-	void draw(int animIndex, float time, float x, float y, float angle = 0.f, float scale = 1.f);
+	void draw(const SpriterState & state);
 
 	int getAnimIndexByName(const char * name) const;
 	float getAnimLength(int animIndex) const;
