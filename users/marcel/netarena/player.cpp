@@ -133,6 +133,10 @@ OPTION_DECLARE(float, PLAYER_SPRITE_SCALE, 1.f/5.f);
 OPTION_DEFINE(float, PLAYER_SPRITE_SCALE, "Experimental/Player Scale");
 OPTION_STEP(PLAYER_SPRITE_SCALE, 0, 0, .01f);
 
+OPTION_DECLARE(float, PLAYER_ANIM_MULTIPLIER, 1.f);
+OPTION_DEFINE(float, PLAYER_ANIM_MULTIPLIER, "Experimental/Animation Speed Multiplier");
+OPTION_STEP(PLAYER_ANIM_MULTIPLIER, 0, 0, .01f);
+
 #define WRAP_AROUND_TOP_AND_BOTTOM 1
 
 #define GAMESIM m_instanceData->m_gameSim
@@ -278,6 +282,7 @@ void AnimData::load(const char * filename)
 				
 				Anim anim;
 				anim.name = args.getString("name", "");
+				anim.speed = args.getFloat("speed", 1.f);
 				if (anim.name.empty())
 				{
 					logError("%s: name not set: %s", filename, line.c_str());
@@ -725,33 +730,32 @@ void Player::tick(float dt)
 
 		if (!m_instanceData->m_sprite->animIsActive)
 #else
-	if (m_instanceData->m_spriter)
+	if (m_instanceData->m_spriter && m_anim != kPlayerAnim_NULL)
 	{
+		const char * name = s_animInfos[m_anim].name;
+		const auto & animData = m_instanceData->m_animData.m_animMap[name];
+
 		const int oldTime = m_spriterState.animTime * 1000.f;
 
-		const bool isDone = m_spriterState.updateAnim(*m_instanceData->m_spriter, dt);
+		const bool isDone = m_spriterState.updateAnim(*m_instanceData->m_spriter, dt * animData.speed * PLAYER_ANIM_MULTIPLIER);
 
 		const int newTime = m_spriterState.animTime * 1000.f;
 
-		if (m_anim != kPlayerAnim_NULL)
+		const auto & triggers = animData.frameTriggers;
+
+		for (int i = oldTime; i < newTime; ++i)
 		{
-			const char * name = s_animInfos[m_anim].name;
-			const auto & triggers = m_instanceData->m_animData.m_animMap[name];
+			const auto & triggersItr = triggers.find(i);
 
-			for (int i = oldTime; i < newTime; ++i)
+			if (triggersItr != triggers.end())
 			{
-				const auto & triggersItr = triggers.frameTriggers.find(i);
+				const auto & triggers = triggersItr->second;
 
-				if (triggersItr != triggers.frameTriggers.end())
+				for (auto & trigger = triggers.cbegin(); trigger != triggers.cend(); ++trigger)
 				{
-					const auto & triggers = triggersItr->second;
-
-					for (auto & trigger = triggers.cbegin(); trigger != triggers.cend(); ++trigger)
-					{
-						Dictionary d = trigger->args;
-						d.setPtr("obj", m_instanceData);
-						m_instanceData->handleAnimationAction(trigger->action, d);
-					}
+					Dictionary d = trigger->args;
+					d.setPtr("obj", m_instanceData);
+					m_instanceData->handleAnimationAction(trigger->action, d);
 				}
 			}
 		}

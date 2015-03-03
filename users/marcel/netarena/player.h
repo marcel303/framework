@@ -26,10 +26,12 @@ public:
 	{
 	public:
 		std::string name;
+		float speed;
 		
 		std::map<int, AnimTriggers> frameTriggers;
 		
 		Anim()
+			: speed(1.f)
 		{
 		}
 	};
