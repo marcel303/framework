@@ -43,43 +43,6 @@ static void ensureShiftMap()
 	s_shiftMap[SDLK_BACKSLASH] = SDLK_KP_VERTICALBAR;
 }
 
-struct ShiftMap
-{
- SDLKey from;
- SDLKey from;
-} shiftMap[256];
-
-memset(shiftMap, 0, sizeof(shiftMap));
-
-shiftMap[SDLK_1] = SDLK_EXCLAIM;
-shiftMap[SDLK_2] = SDLK_AT;
-shiftMap[SDLK_3] = SDLK_HASH;
-shiftMap[SDLK_4] = SDLK_DOLLAR;
-shiftMap[SDLK_5] = SDLK_PERCENT;
-shiftMap[SDLK_6] = SDLK_CARET;
-shiftMap[SDLK_7] = SDLK_AMPERSAND;
-shiftMap[SDLK_8] = SDLK_ASTERISK;
-shiftMap[SDLK_9] = SDLK_LEFTPAREN;
-shiftMap[SDLK_0] = SDLK_RIGHTPAREN;
-
-shiftMap[SDLK_SLASH] = SDLK_QUESTION;
-shiftMap[SDLK_SEMICOLON] = SDLK_COLON;
-
-shiftMap[SDLK_MINUS] = SDLK_UNDERSCORE;
-shiftMap[SDLK_EQUALS] = SDLK_PLUS;
-shiftMap[SDLK_PERIOD] = SDLK_GREATER;
-
-shiftMap[SDLK_QUOTE] = SDLK_QUOTEDBL;
-shiftMap[SDLK_BACKQUOTE] = SDLK_RIGHTPAREN;
-shiftMap[SDLK_COMMA] = SDLK_LESS;
-
-shiftMap[SDLK_LEFTBRACKET] = SDLK_KP_LEFTBRACE;
-shiftMap[SDLK_RIGHTBRACKET] = SDLK_KP_RIGHTBRACE;
-shiftMap[SDLK_BACKSLASH] = SDLK_KP_VERTICALBAR;
-
-
-
-
 static bool isAllowed(int c)
 {
 	if (c >= 32 && c <= 126)
