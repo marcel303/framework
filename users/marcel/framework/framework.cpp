@@ -32,8 +32,10 @@
 
 // -----
 
+#if ENABLE_MIDI_INPUT
 extern void initMidi();
 extern void shutMidi();
+#endif
 
 // -----
 
@@ -248,7 +250,9 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 
 	gxInitialize();
 
+#if ENABLE_MIDI_INPUT
 	initMidi();
+#endif
 
 	// initialize FreeType
 	
@@ -307,14 +311,16 @@ bool Framework::shutdown()
 	
 	// shut down FreeType
 	
-	if (FT_Done_FreeType(globals.freeType) != 0)
+	if (globals.freeType && FT_Done_FreeType(globals.freeType) != 0)
 	{
 		logError("failed to shut down FreeType");
 		result = false;
 	}
 	globals.freeType = 0;
 	
+#if ENABLE_MIDI_INPUT
 	shutMidi();
+#endif
 
 	gxShutdown();
 
@@ -323,13 +329,20 @@ bool Framework::shutdown()
 	
 	// destroy SDL OpenGL context
 	
-	SDL_GL_DeleteContext(globals.glContext);
-	globals.glContext = 0;
+	if (globals.glContext)
+	{
+		SDL_GL_DeleteContext(globals.glContext);
+		globals.glContext = 0;
+		checkErrorGL();
+	}
 	
 	// destroy SDL window
 	
-	SDL_DestroyWindow(globals.window);
-	globals.window = 0;
+	if (globals.window)
+	{
+		SDL_DestroyWindow(globals.window);
+		globals.window = 0;
+	}
 	
 	// shut down SDL
 	

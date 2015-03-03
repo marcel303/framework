@@ -28,6 +28,7 @@
 #endif
 
 #define USE_LEGACY_OPENGL 1
+#define ENABLE_MIDI_INPUT 0
 
 static const int MAX_GAMEPAD = 4;
 
@@ -465,6 +466,9 @@ private:
 
 //
 
+#pragma pack(push)
+#pragma pack(1)
+
 struct SpriterState
 {
 	SpriterState();
@@ -487,6 +491,8 @@ struct SpriterState
 	void stopAnim(const Spriter & spriter);
 	bool updateAnim(const Spriter & spriter, float dt);
 };
+
+#pragma pack(pop)
 
 class Spriter
 {

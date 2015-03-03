@@ -26,12 +26,14 @@ void shutMidi()
 {
 	if (midi.isConnected)
 	{
-		midiInStop(s_midiHandle);
+		if (midiInStop(s_midiHandle) != S_OK)
+			logError("failed to stop MIDI input");
 		midi.isConnected = false;
 	}
 	if (s_midiHandle != 0)
 	{
-		midiInClose(s_midiHandle);
+		if (midiInClose(s_midiHandle) != S_OK)
+			logError("failed to close MIDI input");
 		s_midiHandle = 0;
 	}
 }

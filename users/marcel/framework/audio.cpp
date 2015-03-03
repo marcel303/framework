@@ -494,7 +494,9 @@ bool SoundPlayer::shutdown()
 	
 	// deactivate context
 	
-	alcMakeContextCurrent(NULL);
+	if (!alcMakeContextCurrent(NULL))
+		logError("alcMakeContextCurrent failed");
+	checkError();
 
 	// destroy context
 	
@@ -509,7 +511,8 @@ bool SoundPlayer::shutdown()
 	
 	if (m_device != 0)
 	{
-		alcCloseDevice(m_device);
+		if (!alcCloseDevice(m_device))
+			logError("alcCloseDevice failed");
 		m_device = 0;
 		checkError();
 	}
