@@ -6,6 +6,9 @@
 #include "gameobject.h"
 
 
+#include "EditorView.h"
+
+
 int MAPX = BASEX;
 int MAPY = BASEY;
 
@@ -19,6 +22,11 @@ char selectedTile = ' ';
 
 #define editorMode ed.GetEditorMode()
 
+#define view ed.GetView()
+#define viewPallette ed.GetViewPallette()
+
+
+#define sceneCounter ed.GetSceneCounter()
 
 
 
@@ -38,8 +46,7 @@ QGraphicsScene* sceneObjectPallette;
 QList<GameObject*> gameObjects;
 
 
-EditorView* view;
-QGraphicsView* viewPallette;
+
 
 
 TemplateScene* templateScene;
@@ -174,7 +181,6 @@ void SetOpactyForLayer(EditorScene* s, qreal opac)
 }
 
 
-int sceneCounter = 0;
 void SwitchSceneTo(int s)
 {
     if(s == sceneCounter)
@@ -483,7 +489,7 @@ void LoadGeneric(QString filename, EditorScene* s)
 
     for(int y = 0; y < MAPY; y++)
     {
-        for (int x = 0; x < MAPX; x++)
+		for (int x = 0; x < MAPX-4; x++)
         {
             char key = in.read(1)[0].toLatin1();
             s->m_tiles[y][x].SetSelectedBlock(key);
@@ -644,27 +650,36 @@ void SaveLevel(QString filename)
 	SaveObjects(filename + "Objects.txt");
 }
 
-void CreateNewMap(int x, int y)
+void CreateNewMapHelper(int x, int y)
 {
-    MAPX = x;
-    MAPY = y;
+    sceneMech->setSceneRect(-MAPX*2*BLOCKSIZE,-MAPY*2*BLOCKSIZE,MAPX*4*BLOCKSIZE,MAPY*4*BLOCKSIZE);
 
-
-	sceneMech->setSceneRect(-MAPX*2*BLOCKSIZE,-MAPY*2*BLOCKSIZE,MAPX*4*BLOCKSIZE,MAPY*4*BLOCKSIZE);
-
-    LoadPixmaps();
-
-    //scene->CreateTiles();
     sceneMech->CreateLevel(x, y);
     sceneArt->CreateLevel(x, y);
     sceneCollission->CreateLevel(x, y);
+    sceneMech->AddGrid();
+}
+
+void CreateNewMap(int x, int y)
+{
+    ed.EditLevels();
+
+
+    MAPX = x;
+    MAPY = y;
+
+    LoadPixmaps();
 
     gameObjects.clear();
+
+    CreateNewMapHelper(x, y);
+    ed.EditTemplates();
+    CreateNewMapHelper(x, y);
+    ed.EditLevels();
 
     view->scale((float)MAPY/(float)MAPX,(float)MAPY/(float)MAPX);
 
 
-    sceneMech->AddGrid();
 }
 
 
@@ -920,14 +935,14 @@ void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e )
             int temp = sceneCounter;
             foreach(EditorTemplate::TemplateTile tt, t->m_list)
             {
-                SwitchSceneTo(SCENEMECH);
+                sceneCounter = SCENEMECH;
                 sceneMech->m_tiles[tiley+tt.y][tilex+tt.x].SetSelectedBlock(tt.blockMech);
-                SwitchSceneTo(SCENEART);
+                sceneCounter = SCENEART;
                 sceneCollission->m_tiles[tiley+tt.y][tilex+tt.x].SetSelectedBlock(tt.blockColl);
-                SwitchSceneTo(SCENECOLL);
+                sceneCounter = SCENECOLL;
                 sceneArt->m_tiles[tiley+tt.y][tilex+tt.x].SetSelectedBlock(tt.blockArt);
             }
-            SwitchSceneTo(temp);
+            sceneCounter = temp;
 
 			e->accept();
 
@@ -971,12 +986,17 @@ EditorView::EditorView() : EditorViewBasic()
 	newAct6->setStatusTip(tr("Import Template Image"));
 	connect(newAct6, SIGNAL(triggered()), this, SLOT(ImportTemplate()));
 
+    QAction* newAct7 = new QAction(tr("&SwitchObjectTemplate"), this);
+    newAct7->setStatusTip(tr("SwitchObjectTemplate"));
+    connect(newAct7, SIGNAL(triggered()), this, SLOT(SwitchObjectTemplatePallette()));
+
     bar->addAction(newAct1);
     bar->addAction(newAct2);
     bar->addAction(newAct3);
     bar->addAction(newAct4);
     bar->addAction(newAct5);
 	bar->addAction(newAct6);
+    bar->addAction(newAct7);
 
     bar->showNormal();
 }
@@ -1053,31 +1073,48 @@ void EditorView::SwitchToBigMap()
         CreateNewMap(BASEX, BASEY);
 }
 
+void TemplatePallette()
+{
+    ed.objectPropWindow->m_w->hide();
+    templateScene->m_listView->show();
+}
+
+void ObjectPallette()
+{
+    templateScene->m_listView->hide();
+    ed.objectPropWindow->m_w->show();
+}
+
 void EditorView::SwitchToTemplateMode()
 {
-	QLayoutItem* l = 0;
 	if(editorMode != EM_Template)
     {
-		editorMode = EM_Template;
+        ed.EditTemplates();
 
-		viewPallette->hide();
-		templateScene->m_listView->show();
-
-        //template controls
+        TemplatePallette();
     }
 	else
     {
-		editorMode = EM_Level;
+        ed.EditLevels();
 
-
-		templateScene->m_listView->hide();
-		viewPallette->show();
+        ObjectPallette();
 
         if(!sceneCounter)
             SwitchScene();
         SwitchSceneTo(0);
     }
+}
 
+
+bool flip = true;
+void EditorView::SwitchObjectTemplatePallette()
+{
+    if(flip)
+        TemplatePallette();
+    else
+        ObjectPallette();
+
+    flip = !flip;
 }
 
 void EditorView::SetOpacityMech(int s)
@@ -1104,6 +1141,8 @@ void EditorView::SetOpacityObject(int s)
 
 void EditorView::ImportTemplate()
 {
+    ed.EditTemplates();
+
 	QString filename = QFileDialog::getOpenFileName(this, tr("Open Image for Template"));
 
 	EditorTemplate* t = new EditorTemplate();
@@ -1111,7 +1150,7 @@ void EditorView::ImportTemplate()
 	{
 		filename.chop(4);
 		QString f = filename.split('/').last();
-		t->LoadTemplate(f + ".tmpl");
+        //t->LoadTemplate(f + ".tmpl");
 		templateScene->AddTemplate(t);
 	}
 	else
@@ -1406,15 +1445,15 @@ void EditorTemplate::SaveTemplate(int tx, int ty)
 
 int EditorTemplate::ImportFromImage(QString filename)
 {
-	editorMode = EM_Template;
-
 	QPixmap* img = new QPixmap(filename);
 
 	QString name = filename.split('/').last(); //chops path
 	name.chop(4); //chops .png
 
+    m_name = name;
+
 	QPixmap tile = img->scaled(BLOCKSIZE, BLOCKSIZE);
-	QFile tileFile(name+"_tile.png");
+    QFile tileFile(name + '\\' + name+"_tile.png");
 	tileFile.open(QIODevice::WriteOnly);
 	tile.save(&tileFile, "PNG");
 	tileFile.close();
@@ -1431,13 +1470,14 @@ int EditorTemplate::ImportFromImage(QString filename)
 	QFile artList("ArtList.txt");
 	artList.open(QIODevice::WriteOnly | QIODevice::Append);
 	QTextStream in(&artList);
-	for(int x = 0; x*BLOCKSIZE < img->size().width(); x++) //cut up the image into blocksized bits
+
+    for(int x = 0; x*BLOCKSIZE < img->size().width(); x++) //cut up the image into blocksized bits
 	{
 		for(int y = 0; y*BLOCKSIZE < img->size().height(); y++)
 		{
 			QPixmap *copy = new QPixmap (img->copy(x*BLOCKSIZE, y*BLOCKSIZE, BLOCKSIZE, BLOCKSIZE));
 
-			QString tmpname = name + "_" + QString::number(x) + "_" + QString::number(y)  + ".png";
+            QString tmpname = name + '\\' + name + "_" + QString::number(x) + "_" + QString::number(y)  + ".png";
 			QFile file(tmpname);
 			file.open(QIODevice::WriteOnly);
 			copy->save(&file, "PNG");
@@ -1454,6 +1494,10 @@ int EditorTemplate::ImportFromImage(QString filename)
 		}
 	}
 	artList.close();
+
+
+
+    SaveTemplate(img->size().width()/ BLOCKSIZE, img->size().height()/BLOCKSIZE);
 
 	view->SwitchToArt();
 
@@ -1570,10 +1614,10 @@ int main(int argc, char *argv[])
 	hlayout->addWidget(&rightside);
 
 	vlayout->addWidget(viewPallette);
-	vlayout->addWidget(templateScene->m_listView);
-	templateScene->m_listView->hide();
 	vlayout->addWidget(settingsWidget);
 	vlayout->addWidget(ed.objectPropWindow->m_w);
+    vlayout->addWidget(templateScene->m_listView);
+    templateScene->m_listView->hide();
 
 	hlayout->showMaximized();
 
