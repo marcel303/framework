@@ -361,6 +361,8 @@ bool Framework::shutdown()
 
 void Framework::process()
 {
+	SDL_RaiseWindow(globals.window);
+
 	static int tstamp1 = SDL_GetTicks();
 	const int tstamp2 = SDL_GetTicks();
 	int delta = tstamp2 - tstamp1;
@@ -1800,6 +1802,8 @@ SpriterState::SpriterState()
 	memset(this, 0, sizeof(SpriterState));
 
 	scale = 1.f;
+	scaleX = FLT_MAX;
+	scaleY = FLT_MAX;
 
 	animIndex = -1;
 	animSpeed = 1.f;
@@ -1855,8 +1859,10 @@ void Spriter::draw(const SpriterState & state)
 	gxPushMatrix();
 	gxTranslatef(state.x, state.y, 0.f);
 	gxRotatef(state.angle, 0.f, 0.f, 1.f);
-	if (state.scale != 1.f)
-		gxScalef(state.scale, state.scale, 1.f);
+	const float scaleX = state.scaleX != FLT_MAX ? state.scaleX : state.scale;
+	const float scaleY = state.scaleY != FLT_MAX ? state.scaleY : state.scale;
+	if (scaleX != 1.f || scaleY != 1.f)
+		gxScalef(scaleX, scaleY, 1.f);
 	if (state.flipX || state.flipY)
 		gxScalef(state.flipX ? -1.f : +1.f, state.flipY ? -1.f : +1.f, 1.f);
 

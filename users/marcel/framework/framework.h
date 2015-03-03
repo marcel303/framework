@@ -473,6 +473,8 @@ struct SpriterState
 	int16_t y;
 	float angle;
 	float scale;
+	float scaleX;
+	float scaleY;
 	bool flipX;
 	bool flipY;
 
