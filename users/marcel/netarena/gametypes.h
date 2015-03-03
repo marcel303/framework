@@ -134,3 +134,49 @@ struct CollisionInfo
 	int16_t x2;
 	int16_t y2;
 };
+
+template <int SIZE>
+struct FixedString
+{
+	FixedString()
+	{
+		memset(this, 0, SIZE + 1);
+	}
+
+	size_t length() const
+	{
+		return strlen(m_data);
+	}
+
+	const char * c_str() const
+	{
+		return m_data;
+	}
+
+	void operator=(const char * str)
+	{
+		const size_t len = strlen(str);
+		const size_t copySize = (len > SIZE) ? SIZE : len;
+		for (size_t i = 0; i < copySize; ++i)
+			m_data[i] = str[i];
+		for (size_t i = copySize; i < SIZE + 1; ++i)
+			m_data[i] = 0;
+	}
+
+	bool operator==(const char * str) const
+	{
+		return strcmp(m_data, str) == 0;
+	}
+
+	bool operator!=(const char * str) const
+	{
+		return strcmp(m_data, str) != 0;
+	}
+
+	bool operator<(const FixedString & other) const
+	{
+		return strcmp(m_data, other.m_data) < 0;
+	}
+
+	unsigned char m_data[SIZE + 1];
+};
