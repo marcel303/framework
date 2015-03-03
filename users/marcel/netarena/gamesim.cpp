@@ -296,25 +296,25 @@ void Coin::drawLight() const
 
 //
 
-void Mover::setup(int sx, int sy, int x1, int y1, int x2, int y2, int speed)
+void Mover::setSprite(const char * filename)
 {
-	m_isActive = true;
-	m_sx = sx;
-	m_sy = sy;
-	m_x1 = x1;
-	m_y1 = y1;
-	m_x2 = x2;
-	m_y2 = y2;
-	
-	const int dx = x2 - x1;
-	const int dy = y2 - y1;
+	strcpy_s(m_sprite, sizeof(m_sprite), filename);
 
-	m_moveMultiplier = speed / std::sqrtf(dx * dx + dy * dy) / 2.f;
-	m_moveAmount = 0.f;
+	Sprite sprite(m_sprite);
+	m_sx = sprite.getWidth();
+	m_sy = sprite.getHeight();
 }
 
 void Mover::tick(GameSim & gameSim, float dt)
 {
+	if (m_moveMultiplier == 0.f)
+	{
+		const int dx = m_x2 - m_x1;
+		const int dy = m_y2 - m_y1;
+
+		m_moveMultiplier = m_speed / std::sqrtf(dx * dx + dy * dy) / 2.f;
+	}
+
 	m_moveAmount = std::fmodf(m_moveAmount + m_moveMultiplier * dt, 1.f);
 
 	CollisionInfo collision;
@@ -684,6 +684,8 @@ uint32_t GameSim::calcCRC() const
 
 	result = result * 13 + m_arena.calcCRC();
 
+	result = result * 13 + m_bulletPool->calcCRC();
+
 	// todo : add screen shakes, particle pool, bullet pool
 
 	setPlayerPtrs();
@@ -914,11 +916,12 @@ void GameSim::load(const char * filename)
 		enum ObjectType
 		{
 			kObjectType_Undefined,
+			kObjectType_Mover,
 			kObjectType_Torch,
-			kObjectType_Mover2
 		};
 
 		ObjectType objectType = kObjectType_Undefined;
+		Mover * mover = 0;
 		Torch * torch = 0;
 
 		for (size_t i = 0; i < lines.size(); ++i)
@@ -938,9 +941,28 @@ void GameSim::load(const char * filename)
 				if (fields[0] == "object")
 				{
 					objectType = kObjectType_Undefined;
+					mover = 0;
 					torch = 0;
 
-					if (fields[1] == "torch")
+					if (fields[1] == "mover")
+					{
+						objectType = kObjectType_Mover;
+
+						for (int i = 0; i < MAX_TORCHES; ++i)
+						{
+							if (!m_movers[i].m_isActive)
+							{
+								mover = &m_movers[i];
+								break;
+							}
+						}
+
+						if (mover == 0)
+							LOG_ERR("too many movers!");
+						else
+							mover->m_isActive = true;
+					}
+					else if (fields[1] == "torch")
 					{
 						objectType = kObjectType_Torch;
 
@@ -958,8 +980,6 @@ void GameSim::load(const char * filename)
 						else
 							torch->m_isAlive = true;
 					}
-					if (fields[1] == "mover2")
-						objectType = kObjectType_Mover2;
 				}
 				else
 				{
@@ -967,6 +987,24 @@ void GameSim::load(const char * filename)
 					{
 					case kObjectType_Undefined:
 						LOG_ERR("properties begin before object type is set!");
+						break;
+
+					case kObjectType_Mover:
+						if (mover)
+						{
+							if (fields[0] == "sprite")
+								mover->setSprite(fields[1].c_str());
+							if (fields[0] == "x1")
+								mover->m_x1 = Parse::Int32(fields[1]);
+							if (fields[0] == "y1")
+								mover->m_y1 = Parse::Int32(fields[1]);
+							if (fields[0] == "x2")
+								mover->m_x2 = Parse::Int32(fields[1]);
+							if (fields[0] == "y2")
+								mover->m_y2 = Parse::Int32(fields[1]);
+							if (fields[0] == "speed")
+								mover->m_speed = Parse::Int32(fields[1]);
+						}
 						break;
 
 					case kObjectType_Torch:
@@ -990,9 +1028,6 @@ void GameSim::load(const char * filename)
 								}
 							}
 						}
-						break;
-
-					case kObjectType_Mover2:
 						break;
 
 					default:
@@ -1830,7 +1865,8 @@ bool GameSim::pickupCoin(const CollisionInfo & collisionInfo)
 
 uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, BulletType type, BulletEffect effect, uint8_t ownerPlayerId)
 {
-	const uint16_t id = m_bulletPool->alloc();
+	uint16_t id;
+	m_bulletPool->alloc(&id, 1);
 
 	if (id != INVALID_BULLET_ID)
 	{
@@ -1897,18 +1933,19 @@ uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, BulletType t
 
 void GameSim::spawnParticles(const ParticleSpawnInfo & spawnInfo)
 {
-	for (int i = 0; i < spawnInfo.count; ++i)
+	uint16_t ids[MAX_BULLETS];
+
+	const uint16_t count = m_particlePool->alloc(ids, spawnInfo.count);
+
+	for (int i = 0; i < count; ++i)
 	{
-		uint16_t id = m_particlePool->alloc();
+		uint16_t id = ids[i];
 
-		if (id != INVALID_BULLET_ID)
-		{
-			Bullet & b = m_particlePool->m_bullets[id];
+		Bullet & b = m_particlePool->m_bullets[id];
 
-			initBullet(*this, b, spawnInfo);
+		initBullet(*this, b, spawnInfo);
 
-			b.doAgeAlpha = true;
-		}
+		b.doAgeAlpha = true;
 	}
 }
 

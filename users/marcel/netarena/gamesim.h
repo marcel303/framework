@@ -3,6 +3,7 @@
 #include <string.h> // memset
 #include "arena.h"
 #include "framework.h"
+#include "gamedefs.h"
 #include "gametypes.h"
 #include "physobj.h"
 #include "Random.h"
@@ -321,12 +322,16 @@ struct Coin : PhysicsActor
 struct Mover
 {
 	bool m_isActive;
+
+	char m_sprite[64];
 	int m_sx;
 	int m_sy;
+
 	int m_x1;
 	int m_y1;
 	int m_x2;
 	int m_y2;
+	int m_speed;
 	float m_moveMultiplier;
 	float m_moveAmount;
 
@@ -335,7 +340,7 @@ struct Mover
 		memset(this, 0, sizeof(Mover));
 	}
 
-	void setup(int sx, int sy, int x1, int y1, int x2, int y2, int speed);
+	void setSprite(const char * filename);
 
 	void tick(GameSim & gameSim, float dt);
 	void draw() const;
