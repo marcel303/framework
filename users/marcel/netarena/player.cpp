@@ -146,6 +146,7 @@ OPTION_STEP(PLAYER_ANIM_MULTIPLIER, 0, 0, .01f);
 enum PlayerAnim
 {
 	kPlayerAnim_NULL,
+	kPlayerAnim_Idle,
 	kPlayerAnim_InAir,
 	kPlayerAnim_Jump,
 	kPlayerAnim_WallSlide,
@@ -169,6 +170,7 @@ struct PlayerAnimInfo
 } s_animInfos[kPlayerAnim_COUNT] =
 {
 	{ nullptr,       nullptr,      0 },
+	{ "sprite.scml", "Idle" ,      1 },
 	{ "sprite.scml", "InAir" ,     1 },
 	{ "sprite.scml", "Jump" ,      2 },
 	{ "sprite.scml", "WallSlide",  3 },
@@ -323,7 +325,7 @@ void AnimData::load(const char * filename)
 	}
 	catch (std::exception & e)
 	{
-		logError("%s: failed to open file!", filename);
+		logError("%s: failed to open file: %s", filename, e.what());
 	}
 }
 
@@ -1282,7 +1284,7 @@ void Player::tick(float dt)
 					if (steeringSpeed != 0.f)
 						setAnim(kPlayerAnim_Walk, true, false);
 					else
-						setAnim(kPlayerAnim_Walk, false, false);
+						setAnim(kPlayerAnim_Idle, true, false);
 				}
 			}
 
@@ -1910,13 +1912,16 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 		setColor(63, 127, 255);
 
 #if USE_SPRITER_ANIMS
-	SpriterState spriterState = m_spriterState;
-	spriterState.x = x;
-	spriterState.y = y;
-	spriterState.scale = m_instanceData->m_spriteScale * PLAYER_SPRITE_SCALE; // fixme : hack scale
-	spriterState.flipX = flipX;
-	spriterState.flipY = flipY;
-	m_instanceData->m_spriter->draw(spriterState);
+	if (m_instanceData->m_spriter)
+	{
+		SpriterState spriterState = m_spriterState;
+		spriterState.x = x;
+		spriterState.y = y;
+		spriterState.scale = m_instanceData->m_spriteScale * PLAYER_SPRITE_SCALE; // fixme : hack scale
+		spriterState.flipX = flipX;
+		spriterState.flipY = flipY;
+		m_instanceData->m_spriter->draw(spriterState);
+	}
 #else
 	m_instanceData->m_sprite->drawEx(x, y, 0.f, m_instanceData->m_spriteScale);
 #endif

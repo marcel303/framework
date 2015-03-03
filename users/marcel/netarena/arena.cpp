@@ -488,6 +488,25 @@ void Arena::tick(GameSim & gameSim)
 						{
 							data.isVisible = true;
 							block.shape = kBlockShape_Opaque;
+							block.type = kBlockType_COUNT;
+
+							for (int i = 0; i < MAX_PLAYERS; ++i)
+							{
+								const Player & player = gameSim.m_players[i];
+
+								if (!player.m_isUsed || !player.m_isAlive)
+									continue;
+
+								if (player.getIntersectingBlocksMask(player.m_pos[0], player.m_pos[1]) & (1 << kBlockType_COUNT))
+								{
+									data.regenTime = 1;
+									data.isVisible = false;
+									block.shape = kBlockShape_Empty;
+									break;
+								}
+							}
+
+							block.type = kBlockType_DestructibleRegen;
 						}
 					}
 				}
