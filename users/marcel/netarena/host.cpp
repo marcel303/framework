@@ -68,43 +68,6 @@ void Host::debugDraw()
 	}
 }
 
-PlayerInstanceData * Host::allocPlayer(uint16_t owningChannelId)
-{
-	for (int i = 0; i < MAX_PLAYERS; ++i)
-	{
-		Player & player = m_gameSim.m_players[i];
-		if (player.m_isUsed)
-			continue;
-
-		player = Player(i, owningChannelId);
-		player.m_isUsed = true;
-
-		PlayerInstanceData * playerInstanceData = new PlayerInstanceData(&player, &m_gameSim);
-
-		m_gameSim.m_playerInstanceDatas[i] = playerInstanceData;
-
-		return playerInstanceData;
-	}
-
-	return 0;
-}
-
-void Host::freePlayer(PlayerInstanceData * playerInstanceData)
-{
-	const int playerId = playerInstanceData->m_player->m_index;
-
-	if (playerId != -1)
-	{
-		Assert(m_gameSim.m_playerInstanceDatas[playerId] != 0);
-		if (m_gameSim.m_playerInstanceDatas[playerId] != 0)
-		{
-			m_gameSim.m_playerInstanceDatas[playerId]->m_player->m_isUsed = false;
-			m_gameSim.m_playerInstanceDatas[playerId]->m_player->m_instanceData = 0;
-			m_gameSim.m_playerInstanceDatas[playerId] = 0;
-		}
-	}
-}
-
 PlayerInstanceData * Host::findPlayerByPlayerId(uint8_t playerId)
 {
 	for (int i = 0; i < MAX_PLAYERS; ++i)

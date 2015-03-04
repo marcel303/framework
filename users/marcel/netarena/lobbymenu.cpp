@@ -4,9 +4,8 @@
 #include "lobbymenu.h"
 #include "main.h"
 #include "player.h"
+#include "Timer.h" // for character anim time
 #include "uicommon.h"
-
-#include "Timer.h" // fixme
 
 CharSelector::CharSelector(Client * client, int playerId)
 	: m_client(client)
@@ -89,14 +88,15 @@ void CharSelector::draw()
 				1.f,
 				.25f);
 
+			Spriter spriter(makeCharacterFilename(player.m_characterIndex, "sprite/sprite.scml"));
+
 			SpriterState spriterState;
-			spriterState.animIndex = 0;
+			spriterState.animIndex = spriter.getAnimIndexByName("Idle");
 			spriterState.animTime = g_TimerRT.Time_get();
 			spriterState.x = UI_CHARSELECT_BASE_X + UI_CHARSELECT_PORTRAIT_X + m_playerId * UI_CHARSELECT_STEP_X;
 			spriterState.y = UI_CHARSELECT_BASE_Y + UI_CHARSELECT_PORTRAIT_Y;
 			spriterState.scale = .7f;
 
-			Spriter spriter(makeCharacterFilename(player.m_characterIndex, "sprite/sprite.scml"));
 			spriter.draw(spriterState);
 		}
 		setColorMode(COLOR_MUL);

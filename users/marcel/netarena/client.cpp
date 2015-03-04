@@ -51,11 +51,6 @@ Client::Client()
 Client::~Client()
 {
 	Assert(m_players.empty());
-	while (!m_players.empty())
-	{
-		PlayerInstanceData * player = m_players.front();
-		removePlayer(player);
-	}
 
 	delete m_syncStream;
 	m_syncStream = 0;
@@ -737,19 +732,6 @@ void Client::removePlayer(PlayerInstanceData * player)
 			if (player->m_input.m_controllerIndex != -1)
 				g_app->freeControllerIndex(player->m_input.m_controllerIndex);
 			player->m_input.m_controllerIndex = -1;
-		}
-
-		const int playerId = player->m_player->m_index;
-
-		if (playerId != -1)
-		{
-			Assert(m_gameSim->m_playerInstanceDatas[playerId] != 0);
-			if (m_gameSim->m_playerInstanceDatas[playerId] != 0)
-			{
-				m_gameSim->m_playerInstanceDatas[playerId]->m_player->m_isUsed = false;
-				m_gameSim->m_playerInstanceDatas[playerId]->m_player->m_instanceData = 0;
-				m_gameSim->m_playerInstanceDatas[playerId] = 0;
-			}
 		}
 
 		m_players.erase(i);

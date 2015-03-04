@@ -23,8 +23,6 @@ public:
 	void tick(float dt);
 	void debugDraw();
 
-	PlayerInstanceData * allocPlayer(uint16_t owningChannelId);
-	void freePlayer(PlayerInstanceData * player);
 	PlayerInstanceData * findPlayerByPlayerId(uint8_t playerId);
 	void setPlayerPtrs();
 	void clearPlayerPtrs();

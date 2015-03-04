@@ -142,8 +142,7 @@ void Pickup::draw() const
 
 	if (true)
 	{
-		// fixme!
-
+		// todo : remove
 		setFont("calibri.ttf");
 		drawText(m_pos[0], m_pos[1], 24.f, 0.f, 0.f, "type: %d", type);
 	}
@@ -229,7 +228,7 @@ void Token::drawLight() const
 
 void Coin::setup(int blockX, int blockY)
 {
-	Sprite sprite(TOKEN_SPRITE); // fixme : COIN_SPRITE
+	Sprite sprite(COIN_SPRITE);
 
 	*static_cast<PhysicsActor*>(this) = PhysicsActor();
 
@@ -745,6 +744,42 @@ void GameSim::setPlayerPtrs() const
 			m_playerInstanceDatas[i]->m_player->m_instanceData = m_playerInstanceDatas[i];
 }
 
+PlayerInstanceData * GameSim::allocPlayer(uint16_t owningChannelId)
+{
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+	{
+		Player & player = m_players[i];
+
+		if (player.m_isUsed)
+			continue;
+
+		player = Player(i, owningChannelId);
+		player.m_isUsed = true;
+
+		PlayerInstanceData * playerInstanceData = new PlayerInstanceData(&player, this);
+
+		m_playerInstanceDatas[i] = playerInstanceData;
+
+		return playerInstanceData;
+	}
+
+	return 0;
+}
+
+void GameSim::freePlayer(PlayerInstanceData * instanceData)
+{
+	const int playerIndex = instanceData->m_player->m_index;
+	Assert(playerIndex != -1);
+	if (playerIndex != -1)
+	{
+		Assert(m_players[playerIndex].m_isUsed);
+		m_players[playerIndex] = Player();
+
+		Assert(m_playerInstanceDatas[playerIndex] != 0);
+		m_playerInstanceDatas[playerIndex] = 0;
+	}
+}
+
 void GameSim::setGameState(::GameState gameState)
 {
 	m_gameState = gameState;
@@ -895,8 +930,7 @@ void GameSim::load(const char * filename)
 
 	// load objects
 
-	// fixme
-#if 0
+#if 0 // todo : remove
 	{ Mover & mover = m_movers[0]; mover.setup(400, 50, GFX_SX*1/4, GFX_SY/2-200, GFX_SX*3/4, GFX_SY/2-300, 100); }
 	{ Mover & mover = m_movers[1]; mover.setup(400, 50, GFX_SX*1/4, GFX_SY/2,     GFX_SX*3/4, GFX_SY/2-100, 111); }
 	{ Mover & mover = m_movers[2]; mover.setup(400, 50, GFX_SX*1/4, GFX_SY/2+200, GFX_SX*3/4, GFX_SY/2+100, 121); }

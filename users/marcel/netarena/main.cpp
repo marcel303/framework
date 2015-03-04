@@ -349,7 +349,6 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 				{
 					if (client->m_gameSim->m_players[i].m_isUsed)
 					{
-						// todo : move input prev/cur state to Player class!
 						PlayerInstanceData * instanceData = new PlayerInstanceData(&client->m_gameSim->m_players[i], client->m_gameSim);
 						client->addPlayer(instanceData);
 						instanceData->handleCharacterIndexChange();
@@ -393,20 +392,21 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		bitStream.Read(characterIndex);
 		displayName = bitStream.ReadString();
 
-		PlayerToAddOrRemove playerToAdd;
-		playerToAdd.add = true;
-		playerToAdd.channel = channel;
-		playerToAdd.characterIndex = characterIndex;
-		playerToAdd.displayName = displayName;
-		g_app->m_playersToAddOrRemove.push_back(playerToAdd);
+		//
+
+		g_app->netAddPlayerBroadcast(
+			channel->m_destinationId,
+			-1,
+			characterIndex,
+			displayName);
 	}
 	else if (method == s_rpcAddPlayerBroadcast)
 	{
 		LOG_DBG("handleRpc: s_rpcAddPlayerBroadcast");
 
-		Client * client = g_app->findClientByChannel(channel);
-		Assert(client);
-		if (client)
+		GameSim * gameSim = findGameSimForChannel(channel);
+		Assert(gameSim);
+		if (gameSim)
 		{
 			uint16_t channelId;
 			uint8_t index;
@@ -418,16 +418,33 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			bitStream.Read(characterIndex);
 			displayName = bitStream.ReadString();
 
-			// todo : should allocate here
-			Player * player = &client->m_gameSim->m_players[index];
-			*player = Player(index, channelId);
+			//
 
-			PlayerInstanceData * instanceData = new PlayerInstanceData(player, client->m_gameSim);
-			player->m_instanceData = instanceData;
-			instanceData->setCharacterIndex(characterIndex);
-			player->setDisplayName(displayName);
+			PlayerInstanceData * playerInstanceData = gameSim->allocPlayer(channelId);
 
-			client->addPlayer(instanceData);
+			if (playerInstanceData)
+			{
+				Player & player = *playerInstanceData->m_player;
+
+				playerInstanceData->setCharacterIndex(characterIndex);
+				player.setDisplayName(displayName);
+
+				if (channel)
+				{
+					Client * client = g_app->findClientByChannel(channel);
+					Assert(client);
+					if (client)
+					{
+						client->addPlayer(playerInstanceData);
+					}
+				}
+				else
+				{
+					ClientInfo & clientInfo = g_app->m_hostClients[channelId];
+
+					clientInfo.players.push_back(playerInstanceData);
+				}
+			}
 		}
 	}
 	else if (method == s_rpcRemovePlayer)
@@ -452,9 +469,9 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 	{
 		LOG_DBG("handleRpc: s_rpcRemovePlayerBroadcast");
 
-		Client * client = g_app->findClientByChannel(channel);
-		Assert(client);
-		if (client)
+		GameSim * gameSim = findGameSimForChannel(channel);
+		Assert(gameSim);
+		if (gameSim)
 		{
 			uint8_t index;
 
@@ -464,19 +481,30 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			if (index >= 0 && index < MAX_PLAYERS)
 			{
 			#if ENABLE_GAMESTATE_CRC_LOGGING
-				const uint32_t crc1 = client->m_gameSim->calcCRC();
+				const uint32_t crc1 = gameSim->calcCRC();
 			#endif
 
-				PlayerInstanceData * playerInstanceData = client->m_gameSim->m_playerInstanceDatas[index];
+				PlayerInstanceData * playerInstanceData = gameSim->m_playerInstanceDatas[index];
 				Assert(playerInstanceData);
 				if (playerInstanceData)
 				{
-					client->removePlayer(playerInstanceData);
+					gameSim->freePlayer(playerInstanceData);
+
+					if (channel)
+					{
+						Client * client = g_app->findClientByChannel(channel);
+						Assert(client);
+						if (client)
+						{
+							client->removePlayer(playerInstanceData);
+						}
+					}
+
 					delete playerInstanceData;
 				}
 
 			#if ENABLE_GAMESTATE_CRC_LOGGING
-				const uint32_t crc2 = client->m_gameSim->calcCRC();
+				const uint32_t crc2 = gameSim->calcCRC();
 
 				if (g_logCRCs)
 					LOG_DBG("remove CRCs: %08x, %08x", crc1, crc2);
@@ -755,54 +783,6 @@ Client * App::findClientByChannel(Channel * channel)
 	return 0;
 }
 
-void App::processPlayerChanges()
-{
-	for (size_t p = 0; p < m_playersToAddOrRemove.size(); ++p)
-	{
-		// todo : remove from playerToAdd on channel disconnect
-
-		const PlayerToAddOrRemove & playerToAddOrRemove = m_playersToAddOrRemove[p];
-
-		if (playerToAddOrRemove.add)
-		{
-			PlayerInstanceData * playerInstanceData = m_host->allocPlayer(playerToAddOrRemove.channel->m_destinationId);
-
-			if (playerInstanceData)
-			{
-				Player & player = *playerInstanceData->m_player;
-
-				ClientInfo & clientInfo = m_hostClients[playerToAddOrRemove.channel];
-
-				clientInfo.players.push_back(playerInstanceData);
-
-				playerInstanceData->setCharacterIndex(playerToAddOrRemove.characterIndex);
-				player.setDisplayName(playerToAddOrRemove.displayName);
-
-				netAddPlayerBroadcast(
-					0,
-					playerToAddOrRemove.channel->m_destinationId,
-					player.m_index,
-					player.m_characterIndex,
-					player.m_displayName);
-			}
-		}
-		else
-		{
-			netRemovePlayerBroadcast(playerToAddOrRemove.playerId);
-
-			PlayerInstanceData * playerInstanceData = m_host->m_gameSim.m_playerInstanceDatas[playerToAddOrRemove.playerId];
-
-			if (playerInstanceData)
-			{
-				m_host->freePlayer(playerInstanceData);
-				delete playerInstanceData;
-				playerInstanceData = 0;
-			}
-		}
-	}
-	m_playersToAddOrRemove.clear();
-}
-
 void App::broadcastPlayerInputs()
 {
 	netSetPlayerInputsBroadcast();
@@ -814,7 +794,7 @@ void App::SV_OnChannelConnect(Channel * channel)
 {
 	ClientInfo clientInfo;
 
-	m_hostClients[channel] = clientInfo;
+	m_hostClients[channel->m_id] = clientInfo;
 
 	netSyncGameSim(channel);
 }
@@ -823,7 +803,7 @@ void App::SV_OnChannelDisconnect(Channel * channel)
 {
 	// todo : remove from m_playersToAdd
 
-	std::map<Channel*, ClientInfo>::iterator i = m_hostClients.find(channel);
+	auto i = m_hostClients.find(channel->m_destinationId);
 
 	if (i != m_hostClients.end())
 	{
@@ -831,16 +811,17 @@ void App::SV_OnChannelDisconnect(Channel * channel)
 
 		// remove player created for this channel
 
-		for (size_t p = 0; p < clientInfo.players.size(); ++p)
-		{
-			PlayerInstanceData * playerInstanceData = clientInfo.players[p];
-			Assert(playerInstanceData->m_player->m_index >= 0 && playerInstanceData->m_player->m_index < MAX_PLAYERS);
+		auto players = clientInfo.players;
 
-			PlayerToAddOrRemove playerToRemove;
-			playerToRemove.add = false;
-			playerToRemove.playerId = playerInstanceData->m_player->m_index;
-			m_playersToAddOrRemove.push_back(playerToRemove);
+		for (size_t p = 0; p < players.size(); ++p)
+		{
+			PlayerInstanceData * playerInstanceData = players[p];
+			const int playerIndex = playerInstanceData->m_player->m_index;
+			Assert(playerIndex >= 0 && playerIndex < MAX_PLAYERS);
+
+			g_app->netRemovePlayerBroadcast(playerIndex);
 		}
+
 		clientInfo.players.clear();
 
 		m_hostClients.erase(i);
@@ -1181,7 +1162,7 @@ void App::leaveGame(Client * client)
 		}
 	}
 
-	if (m_isHost)
+	if (m_isHost && m_clients.empty())
 	{
 		// todo : only do this if client is the host
 
@@ -1213,6 +1194,12 @@ void App::disconnectClient(int index)
 	if (index >= 0 && index < (int)m_clients.size())
 	{
 		Client * client = m_clients[index];
+
+		while (!client->m_players.empty())
+		{
+			PlayerInstanceData * player = client->m_players.front();
+			client->removePlayer(player);
+		}
 
 		m_clients[index]->m_channel->Disconnect();
 
@@ -1330,23 +1317,17 @@ bool App::tick()
 				const uint32_t crc1 = g_logCRCs ? m_host->m_gameSim.calcCRC() : 0;
 			#endif
 
-				processPlayerChanges();
-
-			#if ENABLE_GAMESTATE_CRC_LOGGING
-				const uint32_t crc2 = g_logCRCs ? m_host->m_gameSim.calcCRC() : 0;
-			#endif
-
 				broadcastPlayerInputs();
 
 			#if ENABLE_GAMESTATE_CRC_LOGGING
-				const uint32_t crc3 = g_logCRCs ? m_host->m_gameSim.calcCRC() : 0;
+				const uint32_t crc2 = g_logCRCs ? m_host->m_gameSim.calcCRC() : 0;
 
 				if (g_logCRCs)
 				{
 					for (int i = 0; i < 10; ++i)
 						m_channelMgr->Update(NET_TIME);
 
-					LOG_DBG("tick CRCs: %08x, %08x, %08x", crc1, crc2, crc3);
+					LOG_DBG("tick CRCs: %08x, %08x", crc1, crc2);
 				}
 			#endif
 			}
@@ -1682,7 +1663,7 @@ void App::netAddPlayer(Channel * channel, uint8_t characterIndex, const std::str
 	m_rpcMgr->Call(s_rpcAddPlayer, bs, ChannelPool_Client, &channel->m_id, false, false);
 }
 
-void App::netAddPlayerBroadcast(Channel * channel, uint16_t owningChannelId, uint8_t index, uint8_t characterIndex, const std::string & displayName)
+void App::netAddPlayerBroadcast(uint16_t owningChannelId, uint8_t index, uint8_t characterIndex, const std::string & displayName)
 {
 	LOG_DBG("netAddPlayerBroadcast");
 
@@ -1693,15 +1674,22 @@ void App::netAddPlayerBroadcast(Channel * channel, uint16_t owningChannelId, uin
 	bs.Write(characterIndex);
 	bs.WriteString(displayName);
 
-	if (channel)
-		m_rpcMgr->Call(s_rpcAddPlayerBroadcast, bs, ChannelPool_Server, &channel->m_id, false, false);
-	else
-		m_rpcMgr->Call(s_rpcAddPlayerBroadcast, bs, ChannelPool_Server, 0, true, false);
+	m_rpcMgr->Call(s_rpcAddPlayerBroadcast, bs, ChannelPool_Server, 0, true, true);
 }
 
-void App::netRemovePlayer(uint8_t index)
+void App::netRemovePlayer(Channel * channel, uint8_t index)
 {
 	LOG_DBG("netRemovePlayer");
+
+	Assert(index >= 0 && index < MAX_PLAYERS);
+	if (index >= 0 && index < MAX_PLAYERS)
+	{
+		BitStream bs;
+
+		bs.Write(index);
+
+		m_rpcMgr->Call(s_rpcRemovePlayer, bs, ChannelPool_Client, &channel->m_id, true, true);
+	}
 }
 
 void App::netRemovePlayerBroadcast(uint8_t index)
@@ -1715,7 +1703,7 @@ void App::netRemovePlayerBroadcast(uint8_t index)
 
 		bs.Write(index);
 
-		m_rpcMgr->Call(s_rpcRemovePlayerBroadcast, bs, ChannelPool_Server, 0, true, false);
+		m_rpcMgr->Call(s_rpcRemovePlayerBroadcast, bs, ChannelPool_Server, 0, true, true);
 	}
 }
 

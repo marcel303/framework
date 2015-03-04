@@ -1588,7 +1588,6 @@ void Player::tick(float dt)
 									GAMESIM->addScreenShake(0.f, strength, 3000.f, .3f);
 								}
 
-								// fixme : use down attack speed treshold
 								// todo : use separate PlayerAnim for special attack
 
 								if (m_special.type == kPlayerSpecial_DownAttack && m_special.attackDownActive && !s_noSpecial)

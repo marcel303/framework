@@ -715,6 +715,8 @@ public:
 	void serialize(NetSerializationContext & context);
 	void clearPlayerPtrs() const;
 	void setPlayerPtrs() const;
+	PlayerInstanceData * allocPlayer(uint16_t owningChannelId);
+	void freePlayer(PlayerInstanceData * instanceData);
 
 	void setGameState(::GameState gameState);
 	void setGameMode(GameMode gameMode);
