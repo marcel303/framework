@@ -1932,6 +1932,7 @@ float Spriter::getAnimLength(int animIndex) const
 {
 	if (animIndex == -1)
 		return 0.f;
+	fassert(!m_spriter->m_scene->m_entities.empty());
 	return m_spriter->m_scene->m_entities[0]->getAnimLength(animIndex);
 }
 
@@ -1939,6 +1940,7 @@ bool Spriter::isAnimDoneAtTime(int animIndex, float time) const
 {
 	if (animIndex == -1)
 		return true;
+	fassert(!m_spriter->m_scene->m_entities.empty());
 	if (m_spriter->m_scene->m_entities[0]->isAnimLooped(animIndex))
 		return false;
 	return time >= getAnimLength(animIndex) / 1000.f;

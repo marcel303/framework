@@ -9,7 +9,6 @@
 #include "spriter.h"
 
 // todo : remove all of the dynamic memory allocations during draw
-// todo : more asserts
 // todo : add support for character map
 
 using namespace tinyxml2;
@@ -251,9 +250,11 @@ namespace spriter
 			{
 				return cubic(0.f, c1, c2, 1.f, t);
 			}
-
-			Assert(false);
-			return 0.f;
+			else
+			{
+				Assert(false);
+				return 0.f;
+			}
 		}
 
 		virtual TimelineKey * linear(const TimelineKey * keyB, float t) const = 0;
@@ -271,12 +272,24 @@ namespace spriter
 		{
 		}
 
+		Timeline(const Timeline & other)
+			: name(other.name)
+			, objectType(other.objectType)
+		{
+			keys.reserve(other.keys.size());
+			for (size_t i = 0; i < other.keys.size(); ++i)
+			{
+				TimelineKey * key = other.keys[i];
+				key->AddRef();
+				keys.push_back(key);
+			}
+		}
+
 		~Timeline()
 		{
-			// fixme : cannot copy Timeline during load..
-			//for (size_t i = 0; i < keys.size(); ++i)
-			//	delete keys[i];
-			//keys.clear();
+			for (size_t i = 0; i < keys.size(); ++i)
+				keys[i]->Release();
+			keys.clear();
 		}
 	};
 
@@ -284,10 +297,6 @@ namespace spriter
 	{
 	public:
 		Transform transform;
-
-		virtual ~SpatialTimelineKey()
-		{
-		}
 	};
 
 	class BoneTimelineKey : public SpatialTimelineKey
@@ -375,7 +384,7 @@ namespace spriter
 		{
 		}
 
-		std::vector<TransformedObjectKey> getAnimationDataAtTime(float newTime)
+		std::vector<TransformedObjectKey> getAnimationDataAtTime(float newTime) const
 		{
 			if (loopType == kLoopType_NoLooping)
 			{
@@ -384,6 +393,10 @@ namespace spriter
 			else if (loopType == kLoopType_Looping)
 			{
 				newTime = std::fmodf(newTime, length);
+			}
+			else
+			{
+				Assert(false);
 			}
 
 			const MainlineKey & mainKey = mainlineKeyFromTime(newTime);
@@ -408,11 +421,12 @@ namespace spriter
 				}
 				else
 				{
-					parentTransform = Transform(); // todo : set to root node properties of game object
+					//parentTransform = Transform();
 				}
 
 				TransformedBoneKey transformedKey;
 				transformedKey.key = dynamic_cast<const BoneTimelineKey*>(keyFromRef(currentRef, newTime));
+				Assert(transformedKey.key);
 				transformedKey.key->transform.multiply(parentTransform, transformedKey.transform);
 				transformedBoneKeys.push_back(transformedKey);
 			}
@@ -433,11 +447,12 @@ namespace spriter
 				}
 				else
 				{
-					parentTransform = Transform(); // todo : set to root node properties of game object
+					//parentTransform = Transform();
 				}
 
 				TransformedObjectKey transformedKey;
 				transformedKey.key = dynamic_cast<const SpriteTimelineKey*>(keyFromRef(currentRef, newTime));
+				Assert(transformedKey.key);
 				transformedKey.key->transform.multiply(parentTransform, transformedKey.transform);
 				objectKeys.push_back(transformedKey);
 			}
@@ -450,7 +465,7 @@ namespace spriter
 
 		const MainlineKey & mainlineKeyFromTime(int currentTime) const
 		{
-			int currentMainKey = 0;
+			size_t currentMainKey = 0;
 
 			for (size_t m = 0; m < mainlineKeys.size(); ++m)
 			{
@@ -470,7 +485,10 @@ namespace spriter
 
 		const TimelineKey * keyFromRef(const MainlineKey::Ref & ref, float newTime) const
 		{
+			Assert(ref.timeline < (int)timelines.size());
 			const Timeline & timeline = timelines[ref.timeline];
+
+			Assert(ref.key < (int)timeline.keys.size());
 			const TimelineKey * keyA = timeline.keys[ref.key];
 
 			if (timeline.keys.size() == 1)
@@ -539,16 +557,16 @@ namespace spriter
 
 		if (spin > 0)
 		{
-			if ((angleB - angleA) < 0)
+			if ((angleB - angleA) < 0.f)
 			{
-				angleB += 360;
+				angleB += 360.f;
 			}
 		}
 		else if (spin < 0)
 		{
-			if ((angleB - angleA) > 0)
+			if ((angleB - angleA) > 0.f)
 			{
-				angleB -= 360;
+				angleB -= 360.f;
 			}
 		}
 
@@ -634,11 +652,13 @@ namespace spriter
 
 	int Entity::getAnimLength(int index) const
 	{
+		Assert(index >= 0 && index < (int)m_animations.size());
 		return m_animations[index]->length;
 	}
 
 	bool Entity::isAnimLooped(int index) const
 	{
+		Assert(index >= 0 && index < (int)m_animations.size());
 		return m_animations[index]->loopType != kLoopType_NoLooping;
 	}
 
@@ -650,7 +670,7 @@ namespace spriter
 			return;
 		}
 
-		Animation * animation = m_animations[animIndex];
+		const Animation * animation = m_animations[animIndex];
 
 		std::vector<TransformedObjectKey> keys = animation->getAnimationDataAtTime(time);
 
