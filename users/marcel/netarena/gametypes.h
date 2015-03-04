@@ -82,6 +82,28 @@ enum PlayerEvent
 	kPlayerEvent_DestructibleDestroy
 };
 
+struct PlayerInput
+{
+	PlayerInput()
+		: buttons(0)
+		, analogX(0)
+		, analogY(0)
+	{
+	}
+
+	bool operator!=(const PlayerInput & other)
+	{
+		return
+			buttons != other.buttons ||
+			analogX != other.analogX ||
+			analogY != other.analogY;
+	}
+
+	uint16_t buttons;
+	int8_t analogX;
+	int8_t analogY;
+};
+
 enum PickupType
 {
 	kPickupType_Ammo,

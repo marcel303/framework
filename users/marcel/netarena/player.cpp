@@ -407,7 +407,7 @@ void PlayerInstanceData::handleAnimationAction(const std::string & action, const
 		}
 		else if (action == "set_dash_vel")
 		{
-			Vec2 dir(self->m_input.m_currState.analogX, self->m_input.m_currState.analogY);
+			Vec2 dir(player->m_input.m_currState.analogX, player->m_input.m_currState.analogY);
 			dir.Normalize();
 
 			player->m_vel += dir * args.getFloat("x", player->m_animVel[0]);
@@ -805,7 +805,7 @@ void Player::tick(float dt)
 
 	//
 
-	if (g_devMode && !g_monkeyMode && m_instanceData->m_input.wentDown(INPUT_BUTTON_START))
+	if (g_devMode && !g_monkeyMode && m_input.wentDown(INPUT_BUTTON_START))
 		respawn();
 
 	if (!m_isAlive && !m_isAnimDriven)
@@ -817,7 +817,7 @@ void Player::tick(float dt)
 			m_respawnTimer = m_isRespawn ? 3.f : 0.f;
 		}
 
-		if (m_canTaunt && m_instanceData->m_input.wentDown(INPUT_BUTTON_Y))
+		if (m_canTaunt && m_input.wentDown(INPUT_BUTTON_Y))
 		{
 			m_canTaunt = false;
 			m_instanceData->playSoundBag("taunt_sounds", 100);
@@ -825,7 +825,7 @@ void Player::tick(float dt)
 
 		if (GAMESIM->m_gameState == kGameState_Play)
 		{
-			if (m_instanceData->m_input.wentDown(INPUT_BUTTON_X) || m_respawnTimer <= 0.f)
+			if (m_input.wentDown(INPUT_BUTTON_X) || m_respawnTimer <= 0.f)
 				respawn();
 		}
 
@@ -977,7 +977,7 @@ void Player::tick(float dt)
 
 		if (!m_attack.attacking && m_attack.cooldown <= 0.f)
 		{
-			if (m_instanceData->m_input.wentDown(INPUT_BUTTON_B) && (m_weaponStackSize > 0 || s_unlimitedAmmo) && isAnimOverrideAllowed(kPlayerWeapon_Fire))
+			if (m_input.wentDown(INPUT_BUTTON_B) && (m_weaponStackSize > 0 || s_unlimitedAmmo) && isAnimOverrideAllowed(kPlayerWeapon_Fire))
 			{
 				m_attack = AttackInfo();
 
@@ -1026,9 +1026,9 @@ void Player::tick(float dt)
 
 				int angle;
 
-				if (m_instanceData->m_input.isDown(INPUT_BUTTON_UP))
+				if (m_input.isDown(INPUT_BUTTON_UP))
 					angle = 256*1/4;
-				else if (m_instanceData->m_input.isDown(INPUT_BUTTON_DOWN))
+				else if (m_input.isDown(INPUT_BUTTON_DOWN))
 					angle = 256*3/4;
 				else if (m_facing[0] < 0)
 					angle = 128;
@@ -1045,7 +1045,7 @@ void Player::tick(float dt)
 					m_index);
 			}
 
-			if (m_instanceData->m_input.wentDown(INPUT_BUTTON_X) && isAnimOverrideAllowed(kPlayerAnim_Attack))
+			if (m_input.wentDown(INPUT_BUTTON_X) && isAnimOverrideAllowed(kPlayerAnim_Attack))
 			{
 				m_attack = AttackInfo();
 				m_attack.attacking = true;
@@ -1056,12 +1056,12 @@ void Player::tick(float dt)
 
 				// determine attack direction based on player input
 
-				if (m_instanceData->m_input.isDown(INPUT_BUTTON_UP))
+				if (m_input.isDown(INPUT_BUTTON_UP))
 				{
 					setAttackDirection(0, -1);
 					anim = kPlayerAnim_AttackUp;
 				}
-				else if (m_instanceData->m_input.isDown(INPUT_BUTTON_DOWN))
+				else if (m_input.isDown(INPUT_BUTTON_DOWN))
 				{
 					setAttackDirection(0, +1);
 					anim = kPlayerAnim_AttackDown;
@@ -1107,7 +1107,7 @@ void Player::tick(float dt)
 				m_attack.hasCollision = true;
 			}
 
-			if (m_instanceData->m_input.wentDown(INPUT_BUTTON_Y) && !s_noSpecial && isAnimOverrideAllowed(kPlayerAnim_Attack))
+			if (m_input.wentDown(INPUT_BUTTON_Y) && !s_noSpecial && isAnimOverrideAllowed(kPlayerAnim_Attack))
 			{
 				if (m_special.type == kPlayerSpecial_DoubleSidedMelee)
 				{
@@ -1158,7 +1158,7 @@ void Player::tick(float dt)
 			}
 		}
 
-		if (m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && m_instanceData->m_input.wentDown(INPUT_BUTTON_A))
+		if (m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && m_input.wentDown(INPUT_BUTTON_A))
 		{
 			if (isAnimOverrideAllowed(kPlayerAnim_AirDash))
 			{
@@ -1237,7 +1237,7 @@ void Player::tick(float dt)
 
 		if (currentBlockMaskCeil & (1 << kBlockType_Sticky))
 		{
-			if (playerControl && m_instanceData->m_input.wentDown(INPUT_BUTTON_A))
+			if (playerControl && m_input.wentDown(INPUT_BUTTON_A))
 			{
 				m_vel[1] = PLAYER_JUMP_SPEED / 2.f;
 
@@ -1245,7 +1245,7 @@ void Player::tick(float dt)
 
 				playSecondaryEffects(kPlayerEvent_StickyJump);
 			}
-			else if (playerControl && m_instanceData->m_input.wentDown(INPUT_BUTTON_DOWN))
+			else if (playerControl && m_input.wentDown(INPUT_BUTTON_DOWN))
 			{
 				m_isAttachedToSticky = false;
 
@@ -1278,7 +1278,7 @@ void Player::tick(float dt)
 		{
 			int numSteeringFrame = 1;
 
-			steeringSpeed += m_instanceData->m_input.m_currState.analogX / 100.f;
+			steeringSpeed += m_input.m_currState.analogX / 100.f;
 			
 			if ((m_isGrounded || m_isAttachedToSticky) && playerControl)
 			{
@@ -1369,7 +1369,7 @@ void Player::tick(float dt)
 
 			bool canWallSlide = true;
 
-			if (m_special.type == kPlayerSpecial_Jetpack && m_instanceData->m_input.isDown(INPUT_BUTTON_Y) && !s_noSpecial)
+			if (m_special.type == kPlayerSpecial_Jetpack && m_input.isDown(INPUT_BUTTON_Y) && !s_noSpecial)
 			{
 				gravity -= JETPACK_ACCEL;
 				m_isUsingJetpack = true;
@@ -1423,7 +1423,7 @@ void Player::tick(float dt)
 
 		// jumping
 
-		if (playerControl && m_instanceData->m_input.wentDown(INPUT_BUTTON_A))
+		if (playerControl && m_input.wentDown(INPUT_BUTTON_A))
 		{
 			if (currentBlockMaskFloor & kBlockMask_Solid)
 			{
@@ -1526,7 +1526,7 @@ void Player::tick(float dt)
 					{
 						// colliding with solid object left/right of player
 
-						if (!m_isGrounded && playerControl && m_instanceData->m_input.wentDown(INPUT_BUTTON_A))
+						if (!m_isGrounded && playerControl && m_input.wentDown(INPUT_BUTTON_A))
 						{
 							// wall jump
 

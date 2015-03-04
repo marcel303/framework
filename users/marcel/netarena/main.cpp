@@ -273,7 +273,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 					Assert(playerInstanceData);
 					if (playerInstanceData)
 					{
-						playerInstanceData->m_input.m_actions |= (1 << param2);
+						playerInstanceData->m_player->m_input.m_actions |= (1 << param2);
 					}
 				}
 				break;
@@ -501,7 +501,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		Assert(playerInstanceData);
 		if (playerInstanceData)
 		{
-			playerInstanceData->m_input.m_currState = input;
+			playerInstanceData->m_input.m_lastRecv = input;
 		}
 	}
 	else if (method == s_rpcBroadcastPlayerInputs)
@@ -597,7 +597,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 
 				if (playerInstanceData)
 				{
-					playerInstanceData->m_input.m_currState = input;
+					playerInstanceData->m_player->m_input.m_currState = input;
 				}
 			}
 
@@ -1743,9 +1743,9 @@ void App::netSetPlayerInputsBroadcast()
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
 		const PlayerInstanceData * playerInstanceData = m_host->m_gameSim.m_playerInstanceDatas[i];
-		const uint16_t buttons = (playerInstanceData ? playerInstanceData->m_input.m_currState.buttons : 0);
-		const int8_t analogX = (playerInstanceData ? playerInstanceData->m_input.m_currState.analogX : 0);
-		const int8_t analogY = (playerInstanceData ? playerInstanceData->m_input.m_currState.analogY : 0);
+		const uint16_t buttons = (playerInstanceData ? playerInstanceData->m_input.m_lastRecv.buttons : 0);
+		const int8_t analogX = (playerInstanceData ? playerInstanceData->m_input.m_lastRecv.analogX : 0);
+		const int8_t analogY = (playerInstanceData ? playerInstanceData->m_input.m_lastRecv.analogY : 0);
 
 		const bool hasButtons = (buttons != 0);
 		bs.WriteBit(hasButtons);

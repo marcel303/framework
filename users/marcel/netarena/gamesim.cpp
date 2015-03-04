@@ -1157,7 +1157,7 @@ void GameSim::tick()
 	{
 		if (m_playerInstanceDatas[i])
 		{
-			m_playerInstanceDatas[i]->m_input.next();
+			m_playerInstanceDatas[i]->m_player->m_input.next();
 		}
 	}
 
@@ -1177,8 +1177,8 @@ void GameSim::tick()
 			if (m_playerInstanceDatas[i])
 			{
 				LOG_DBG("\tplayer %d: (%04x,%02d,%02d) - (%04x,%02d,%02d)", i,
-					(int)m_playerInstanceDatas[i]->m_input.m_prevState.buttons, (int)m_playerInstanceDatas[i]->m_input.m_prevState.analogX, (int)m_playerInstanceDatas[i]->m_input.m_prevState.analogY,
-					(int)m_playerInstanceDatas[i]->m_input.m_currState.buttons, (int)m_playerInstanceDatas[i]->m_input.m_currState.analogX, (int)m_playerInstanceDatas[i]->m_input.m_currState.analogY);
+					(int)m_playerInstanceDatas[i]->m_player->m_input.m_prevState.buttons, (int)m_playerInstanceDatas[i]->m_player->m_input.m_prevState.analogX, (int)m_playerInstanceDatas[i]->m_player->m_input.m_prevState.analogY,
+					(int)m_playerInstanceDatas[i]->m_player->m_input.m_currState.buttons, (int)m_playerInstanceDatas[i]->m_player->m_input.m_currState.analogX, (int)m_playerInstanceDatas[i]->m_player->m_input.m_currState.analogY);
 			}
 		}
 	}
@@ -1209,9 +1209,9 @@ void GameSim::tickMenus()
 				{
 					int step = 0;
 
-					if (playerInstanceData->m_input.wentDown(INPUT_BUTTON_LEFT) || (playerInstanceData->m_input.m_actions & (1 << kPlayerInputAction_PrevChar)))
+					if (player.m_input.wentDown(INPUT_BUTTON_LEFT) || (player.m_input.m_actions & (1 << kPlayerInputAction_PrevChar)))
 						step = -1;
-					if (playerInstanceData->m_input.wentDown(INPUT_BUTTON_RIGHT) || (playerInstanceData->m_input.m_actions & (1 << kPlayerInputAction_NextChar)))
+					if (player.m_input.wentDown(INPUT_BUTTON_RIGHT) || (player.m_input.m_actions & (1 << kPlayerInputAction_NextChar)))
 						step += 1;
 
 					if (step != 0)
@@ -1223,7 +1223,7 @@ void GameSim::tickMenus()
 
 				// ready up
 
-				if (playerInstanceData->m_input.wentDown(INPUT_BUTTON_A) || (playerInstanceData->m_input.m_actions & (1 << kPlayerInputAction_ReadyUp)))
+				if (player.m_input.wentDown(INPUT_BUTTON_A) || (player.m_input.m_actions & (1 << kPlayerInputAction_ReadyUp)))
 				{
 					player.m_isReadyUpped = !player.m_isReadyUpped;
 				}

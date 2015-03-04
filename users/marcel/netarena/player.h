@@ -57,28 +57,6 @@ public:
 	const char * getRandomSound(GameSim & gameSim);
 };
 
-struct PlayerInput
-{
-	PlayerInput()
-		: buttons(0)
-		, analogX(0)
-		, analogY(0)
-	{
-	}
-
-	bool operator!=(const PlayerInput & other)
-	{
-		return
-			buttons != other.buttons ||
-			analogX != other.analogX ||
-			analogY != other.analogY;
-	}
-
-	uint16_t buttons;
-	int8_t analogX;
-	int8_t analogY;
-};
-
 class PlayerInstanceData
 {
 	friend struct Player;
@@ -120,23 +98,12 @@ public:
 	{
 		InputState()
 			: m_controllerIndex(-1)
-			, m_actions(0)
 		{
 		}
 
 		int m_controllerIndex;
-
-		PlayerInput m_prevState; // todo : move prevState and currState to Player class?
-		PlayerInput m_currState;
+		PlayerInput m_lastRecv;
 		PlayerInput m_lastSent;
-
-		uint32_t m_actions;
-
-		bool wasDown(int input) { return (m_prevState.buttons & input) != 0; }
-		bool isDown(int input) { return (m_currState.buttons & input) != 0; }
-		bool wentDown(int input) { return !wasDown(input) && isDown(input); }
-		bool wentUp(int input) { return wasDown(input) && !isDown(input); }
-		void next() { m_prevState = m_currState; m_actions = 0; }
 	} m_input;
 };
 

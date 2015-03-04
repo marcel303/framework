@@ -48,7 +48,7 @@ struct Player
 		m_lastSpawnIndex = -1;
 	}
 
-	void tick(float dt); // todo : remove dt
+	void tick(float dt);
 	void draw() const;
 	void drawAt(bool flipX, bool flipY, int x, int y) const;
 	void drawLight() const;
@@ -108,6 +108,25 @@ struct Player
 	bool m_isAlive;
 	uint8_t m_characterIndex;
 	float m_controlDisableTime;
+
+	// input
+	struct InputState
+	{
+		InputState()
+			: m_actions(0)
+		{
+		}
+
+		PlayerInput m_prevState;
+		PlayerInput m_currState;
+		uint32_t m_actions;
+
+		bool wasDown(int input) { return (m_prevState.buttons & input) != 0; }
+		bool isDown(int input) { return (m_currState.buttons & input) != 0; }
+		bool wentDown(int input) { return !wasDown(input) && isDown(input); }
+		bool wentUp(int input) { return wasDown(input) && !isDown(input); }
+		void next() { m_prevState = m_currState; m_actions = 0; }
+	} m_input;
 
 	//
 
