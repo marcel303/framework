@@ -588,15 +588,11 @@ void Player::applyAnim()
 
 	if (m_anim != kPlayerAnim_NULL)
 	{
-		const char * filename = makeCharacterFilename(m_characterIndex, "sprite/sprite.scml");
-
 	#if USE_SPRITER_ANIMS
-		delete m_instanceData->m_spriter;
-		m_instanceData->m_spriter = 0;
-
-		m_instanceData->m_spriter = new Spriter(filename);
 		m_spriterState = SpriterState();
 	#else
+		const char * filename = makeCharacterFilename(m_characterIndex, "sprite/sprite.scml");
+
 		delete m_instanceData->m_sprite;
 		m_instanceData->m_sprite = 0;
 
@@ -607,18 +603,17 @@ void Player::applyAnim()
 	}
 
 #if USE_SPRITER_ANIMS
-	if (m_instanceData->m_spriter)
-	{
-		if (!m_spriterState.startAnim(*m_instanceData->m_spriter, s_animInfos[m_anim].name))
-		{
-			const char * filename = makeCharacterFilename(m_characterIndex, "sprite/sprite.scml");
-			logError("unable to find animation %s in file %s", s_animInfos[m_anim].name, filename);
-			m_spriterState.startAnim(*m_instanceData->m_spriter, s_animInfos[kPlayerAnim_Jump].name);
-		}
+	const CharacterData * characterData = getCharacterData(m_characterIndex);
 
-		if (!m_animPlay)
-			m_spriterState.stopAnim(*m_instanceData->m_spriter);
+	if (!m_spriterState.startAnim(*characterData->m_spriter, s_animInfos[m_anim].name))
+	{
+		const char * filename = makeCharacterFilename(m_characterIndex, "sprite/sprite.scml");
+		logError("unable to find animation %s in file %s", s_animInfos[m_anim].name, filename);
+		m_spriterState.startAnim(*characterData->m_spriter, s_animInfos[kPlayerAnim_Jump].name);
 	}
+
+	if (!m_animPlay)
+		m_spriterState.stopAnim(*characterData->m_spriter);
 #else
 	if (m_instanceData->m_sprite)
 	{
@@ -634,6 +629,8 @@ void Player::applyAnim()
 
 void Player::playSecondaryEffects(PlayerEvent e)
 {
+	const CharacterData * characterData = getCharacterData(m_characterIndex);
+
 	switch (e)
 	{
 	case kPlayerEvent_Spawn:
@@ -692,6 +689,8 @@ void Player::playSecondaryEffects(PlayerEvent e)
 
 void Player::tick(float dt)
 {
+	const CharacterData * characterData = getCharacterData(m_characterIndex);
+
 	if (m_instanceData->m_textChatTicks != 0)
 	{
 		if (--m_instanceData->m_textChatTicks == 0)
@@ -732,15 +731,17 @@ void Player::tick(float dt)
 
 		if (!m_instanceData->m_sprite->animIsActive)
 #else
-	if (m_instanceData->m_spriter && m_anim != kPlayerAnim_NULL)
+	if (m_anim != kPlayerAnim_NULL)
 	{
+		const CharacterData * characterData = getCharacterData(m_characterIndex);
+
 		const char * name = s_animInfos[m_anim].name;
-		const auto & animData = m_instanceData->m_animData.m_animMap[name];
+		const auto & animData = characterData->m_animData.m_animMap[name];
 		Assert(animData.speed != 0.f);
 
 		const int oldTime = m_spriterState.animTime * 1000.f;
 
-		const bool isDone = m_spriterState.updateAnim(*m_instanceData->m_spriter, dt * animData.speed * PLAYER_ANIM_MULTIPLIER);
+		const bool isDone = m_spriterState.updateAnim(*characterData->m_spriter, dt * animData.speed * PLAYER_ANIM_MULTIPLIER);
 
 		const int newTime = m_spriterState.animTime * 1000.f;
 
@@ -1544,7 +1545,7 @@ void Player::tick(float dt)
 							if (m_isAnimDriven && m_anim == kPlayerAnim_AirDash)
 							{
 							#if USE_SPRITER_ANIMS
-								m_spriterState.stopAnim(*m_instanceData->m_spriter);
+								m_spriterState.stopAnim(*characterData->m_spriter);
 							#else
 								m_instanceData->m_sprite->stopAnim();
 							#endif
@@ -1907,6 +1908,8 @@ void Player::draw() const
 
 void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 {
+	const CharacterData * characterData = getCharacterData(m_characterIndex);
+
 	if (GAMESIM->m_gameMode == kGameMode_TokenHunt)
 	{
 		setColorMode(COLOR_ADD);
@@ -1924,22 +1927,19 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 		setColor(63, 127, 255);
 
 #if USE_SPRITER_ANIMS
-	if (m_instanceData->m_spriter)
-	{
-		const float scale = m_instanceData->m_spriteScale * PLAYER_SPRITE_SCALE;
-		const float animScale = (1.f - m_facingAnim * 2.f);
-		const float animScale2 = (animScale < 0.f ? (animScale - .5f) : (animScale + .5f)) / 1.5;
-		//log("%f -> %f", animScale, animScale2);
+	const float scale = characterData->m_spriteScale * PLAYER_SPRITE_SCALE;
+	const float animScale = (1.f - m_facingAnim * 2.f);
+	const float animScale2 = (animScale < 0.f ? (animScale - .5f) : (animScale + .5f)) / 1.5;
+	//log("%f -> %f", animScale, animScale2);
 
-		SpriterState spriterState = m_spriterState;
-		spriterState.x = x;
-		spriterState.y = y;
-		spriterState.scaleX = scale * animScale2;
-		spriterState.scaleY = scale;
-		spriterState.flipX = flipX;
-		spriterState.flipY = flipY;
-		m_instanceData->m_spriter->draw(spriterState);
-	}
+	SpriterState spriterState = m_spriterState;
+	spriterState.x = x;
+	spriterState.y = y;
+	spriterState.scaleX = scale * animScale2;
+	spriterState.scaleY = scale;
+	spriterState.flipX = flipX;
+	spriterState.flipY = flipY;
+	characterData->m_spriter->draw(spriterState);
 #else
 	m_instanceData->m_sprite->drawEx(x, y, 0.f, m_instanceData->m_spriteScale);
 #endif
@@ -2417,11 +2417,12 @@ PlayerWeapon Player::popWeapon()
 
 //
 
-CharacterData::CharacterData()
+CharacterData::CharacterData(int characterIndex)
 	: m_spriter(0)
 	, m_spriteScale(1.f)
 	, m_special(kPlayerSpecial_None)
 {
+	load(characterIndex);
 }
 
 CharacterData::~CharacterData()
@@ -2451,9 +2452,6 @@ void CharacterData::load(int characterIndex)
 
 	m_spriteScale = m_props.getFloat("sprite_scale", 1.f);
 
-	// todo : load all of the other sound bags..
-	m_sounds["respawn"].load(m_props.getString("spawn_sounds", ""), true);
-
 	// special
 
 	PlayerSpecial special = kPlayerSpecial_None;
@@ -2477,8 +2475,7 @@ void CharacterData::load(int characterIndex)
 //
 
 PlayerInstanceData::PlayerInstanceData(Player * player, GameSim * gameSim)
-	: CharacterData()
-	, m_player(player)
+	: m_player(player)
 	, m_gameSim(gameSim)
 	, m_textChatTicks(0)
 #if !USE_SPRITER_ANIMS
@@ -2514,21 +2511,27 @@ void PlayerInstanceData::handleCharacterIndexChange()
 {
 	if (m_player->hasValidCharacterIndex())
 	{
-		CharacterData::load(m_player->m_characterIndex);
+		const CharacterData * characterData = getCharacterData(m_player->m_characterIndex);
+
+		// todo : load all of the other sound bags..
+		m_sounds["respawn"].load(characterData->m_props.getString("spawn_sounds", ""), true);
 
 	#if !USE_SPRITER_ANIMS
 		delete m_sprite;
-		m_sprite = new Sprite(m_player->makeCharacterFilename("walk/walk.png"), 0.f, 0.f, 0, false);
+		m_sprite = new Sprite(makeCharacterFilename(m_player->m_characterIndex, "walk/walk.png"), 0.f, 0.f, 0, false);
 	#endif
 	}
 }
 
 void PlayerInstanceData::playSoundBag(const char * name, int volume)
 {
+
 	if (m_sounds.count(name) == 0)
 	{
-		if (m_props.contains(name))
-			m_sounds[name].load(m_props.getString(name, ""), true);
+		const CharacterData * characterData = getCharacterData(m_player->m_characterIndex);
+
+		if (characterData->m_props.contains(name))
+			m_sounds[name].load(characterData->m_props.getString(name, ""), true);
 	}
 
 	m_gameSim->playSound(makeCharacterFilename(m_player->m_characterIndex, m_sounds[name].getRandomSound(*m_gameSim)), volume);
@@ -2541,6 +2544,30 @@ void PlayerInstanceData::addTextChat(const std::string & line)
 }
 
 //
+
+static CharacterData * s_characterData[MAX_CHARACTERS] = { };
+
+void initCharacterData()
+{
+	Assert(!s_characterData[0]);
+	for (int i = 0; i < MAX_CHARACTERS; ++i)
+		s_characterData[i] = new CharacterData(i);
+}
+
+void shutCharacterData()
+{
+	for (int i = 0; i < MAX_CHARACTERS; ++i)
+	{
+		delete s_characterData[i];
+		s_characterData[i] = 0;
+	}
+}
+
+const CharacterData * getCharacterData(int characterIndex)
+{
+	Assert(characterIndex >= 0 && characterIndex < MAX_CHARACTERS);
+	return s_characterData[characterIndex];
+}
 
 char * makeCharacterFilename(int characterIndex, const char * filename)
 {

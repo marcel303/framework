@@ -1191,8 +1191,6 @@ void GameSim::tick()
 
 void GameSim::tickMenus()
 {
-	const int MAX_CHARACTERS = 4;
-
 	// wait for the host to enter the next game state
 
 	for (int i = 0; i < MAX_PLAYERS; ++i)

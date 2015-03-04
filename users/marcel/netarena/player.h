@@ -38,7 +38,7 @@ public:
 	
 	typedef std::map<std::string, Anim> AnimMap;
 
-	AnimMap m_animMap;
+	mutable AnimMap m_animMap;
 
 	void load(const char * filename);
 };
@@ -62,7 +62,6 @@ class CharacterData
 public:
 	Dictionary m_props;
 	AnimData m_animData;
-	std::map<std::string, SoundBag> m_sounds;
 #if USE_SPRITER_ANIMS
 	Spriter * m_spriter;
 #endif
@@ -71,15 +70,17 @@ public:
 
 	//
 
-	CharacterData();
+	CharacterData(int characterIndex);
 	~CharacterData();
 
 	void load(int characterIndex);
 };
 
-class PlayerInstanceData : public CharacterData
+class PlayerInstanceData
 {
 	friend struct Player;
+
+	std::map<std::string, SoundBag> m_sounds; // fixme : store last selected sound elsewhere and move base list to CharacterData
 
 #if !USE_SPRITER_ANIMS
 	Sprite * m_sprite;
@@ -117,6 +118,9 @@ public:
 	} m_input;
 };
 
+void initCharacterData();
+void shutCharacterData();
+const CharacterData * getCharacterData(int characterIndex);
 char * makeCharacterFilename(int characterIndex, const char * filename);
 Color getCharacterColor(int characterIndex);
 Color getPlayerColor(int playerIndex);

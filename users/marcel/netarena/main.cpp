@@ -1031,6 +1031,10 @@ bool App::init()
 		g_lightMap = new Surface(ARENA_SX_PIXELS, ARENA_SY_PIXELS);
 		g_finalMap = new Surface(ARENA_SX_PIXELS, ARENA_SY_PIXELS);
 
+		//
+
+		initCharacterData();
+
 		return true;
 	}
 
@@ -1040,6 +1044,10 @@ bool App::init()
 void App::shutdown()
 {
 	stopHosting();
+
+	//
+
+	shutCharacterData();
 
 	//
 
