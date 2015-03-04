@@ -79,36 +79,27 @@ void CharSelector::draw()
 
 	if (player.m_isUsed)
 	{
-	#if 1
 		setColorMode(COLOR_ADD);
-		const Color color = getCharacterColor(player.m_characterIndex);
-		setColorf(
-			color.r,
-			color.g,
-			color.b,
-			1.f,
-			.25f);
+		{
+			const Color color = getCharacterColor(player.m_characterIndex);
+			setColorf(
+				color.r,
+				color.g,
+				color.b,
+				1.f,
+				.25f);
 
-		SpriterState spriterState;
-		spriterState.animIndex = 0;
-		spriterState.animTime = g_TimerRT.Time_get();
-		spriterState.x = UI_CHARSELECT_BASE_X + UI_CHARSELECT_PORTRAIT_X + m_playerId * UI_CHARSELECT_STEP_X;
-		spriterState.y = UI_CHARSELECT_BASE_Y + UI_CHARSELECT_PORTRAIT_Y;
-		spriterState.scale = .7f;
+			SpriterState spriterState;
+			spriterState.animIndex = 0;
+			spriterState.animTime = g_TimerRT.Time_get();
+			spriterState.x = UI_CHARSELECT_BASE_X + UI_CHARSELECT_PORTRAIT_X + m_playerId * UI_CHARSELECT_STEP_X;
+			spriterState.y = UI_CHARSELECT_BASE_Y + UI_CHARSELECT_PORTRAIT_Y;
+			spriterState.scale = .7f;
 
-		Spriter spriter("../../ArtistCave/JoyceTestcharacter/TestCharacter_Spriter/Testcharacter.scml");
-		spriter.draw(spriterState);
-
+			Spriter spriter(makeCharacterFilename(player.m_characterIndex, "sprite/sprite.scml"));
+			spriter.draw(spriterState);
+		}
 		setColorMode(COLOR_MUL);
-	#else
-		char portraitFilename[64];
-		sprintf_s(portraitFilename, sizeof(portraitFilename), "char%d/portrait.png", player.m_characterIndex);
-		setColor(colorWhite);
-		Sprite portrait(portraitFilename);
-		portrait.drawEx(
-			UI_CHARSELECT_BASE_X + UI_CHARSELECT_PORTRAIT_X - portrait.getWidth() / 2 + m_playerId * UI_CHARSELECT_STEP_X,
-			UI_CHARSELECT_BASE_Y + UI_CHARSELECT_PORTRAIT_Y - portrait.getHeight() / 2);
-	#endif
 
 		setColor(player.m_isReadyUpped ? colorBlue : colorWhite);
 		m_ready->draw();
