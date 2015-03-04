@@ -92,8 +92,6 @@ struct Player
 	void pushWeapon(PlayerWeapon weapon, int ammo);
 	PlayerWeapon popWeapon();
 
-	char * makeCharacterFilename(const char * filename);
-
 	// allocation
 	bool m_isUsed;
 

@@ -436,7 +436,7 @@ void PlayerInstanceData::handleAnimationAction(const std::string & action, const
 		}
 		else if (action == "char_sound")
 		{
-			self->m_gameSim->playSound(player->makeCharacterFilename(args.getString("file", "").c_str()), args.getInt("volume", 100));
+			self->m_gameSim->playSound(makeCharacterFilename(player->m_characterIndex, args.getString("file", "").c_str()), args.getInt("volume", 100));
 		}
 		else if (action == "char_soundbag")
 		{
@@ -588,7 +588,7 @@ void Player::applyAnim()
 
 	if (m_anim != kPlayerAnim_NULL)
 	{
-		const char * filename = makeCharacterFilename("sprite/sprite.scml");
+		const char * filename = makeCharacterFilename(m_characterIndex, "sprite/sprite.scml");
 
 	#if USE_SPRITER_ANIMS
 		delete m_instanceData->m_spriter;
@@ -611,7 +611,7 @@ void Player::applyAnim()
 	{
 		if (!m_spriterState.startAnim(*m_instanceData->m_spriter, s_animInfos[m_anim].name))
 		{
-			const char * filename = makeCharacterFilename("sprite/sprite.scml");
+			const char * filename = makeCharacterFilename(m_characterIndex, "sprite/sprite.scml");
 			logError("unable to find animation %s in file %s", s_animInfos[m_anim].name, filename);
 			m_spriterState.startAnim(*m_instanceData->m_spriter, s_animInfos[kPlayerAnim_Jump].name);
 		}
@@ -639,10 +639,10 @@ void Player::playSecondaryEffects(PlayerEvent e)
 	case kPlayerEvent_Spawn:
 		break;
 	case kPlayerEvent_Respawn:
-		GAMESIM->playSound(makeCharacterFilename(m_instanceData->m_sounds["respawn"].getRandomSound(*GAMESIM)));
+		GAMESIM->playSound(makeCharacterFilename(m_characterIndex, m_instanceData->m_sounds["respawn"].getRandomSound(*GAMESIM)));
 		break;
 	case kPlayerEvent_Die:
-		GAMESIM->playSound(makeCharacterFilename("die/die.ogg"));
+		GAMESIM->playSound(makeCharacterFilename(m_characterIndex, "die/die.ogg"));
 		break;
 	case kPlayerEvent_Jump:
 		{
@@ -656,7 +656,7 @@ void Player::playSecondaryEffects(PlayerEvent e)
 		GAMESIM->playSound("player-wall-jump.ogg");
 		break;
 	case kPlayerEvent_LandOnGround:
-		GAMESIM->playSound(makeCharacterFilename("land_on_ground.ogg"), 25);
+		GAMESIM->playSound(makeCharacterFilename(m_characterIndex, "land_on_ground.ogg"), 25);
 		break;
 	case kPlayerEvent_StickyAttach:
 		//GAMESIM->playSound("player-sticky-attach.ogg");
@@ -2415,25 +2415,75 @@ PlayerWeapon Player::popWeapon()
 	return result;
 }
 
-char * Player::makeCharacterFilename(const char * filename)
+//
+
+CharacterData::CharacterData()
+	: m_spriter(0)
+	, m_spriteScale(1.f)
+	, m_special(kPlayerSpecial_None)
 {
-	static char temp[64];
-	sprintf_s(temp, sizeof(temp), "char%d/%s", m_characterIndex, filename);
-	return temp;
+}
+
+CharacterData::~CharacterData()
+{
+#if USE_SPRITER_ANIMS
+	delete m_spriter;
+	m_spriter = 0;
+#endif
+}
+
+void CharacterData::load(int characterIndex)
+{
+	// reload character properties
+
+	m_props.load(makeCharacterFilename(characterIndex, "props.txt"));
+
+	m_animData = AnimData();
+	m_animData.load(makeCharacterFilename(characterIndex, "animdata.txt"));
+
+#if USE_SPRITER_ANIMS
+	delete m_spriter;
+	m_spriter = 0;
+
+	const char * filename = makeCharacterFilename(characterIndex, "sprite/sprite.scml");
+	m_spriter = new Spriter(filename);
+#endif
+
+	m_spriteScale = m_props.getFloat("sprite_scale", 1.f);
+
+	// todo : load all of the other sound bags..
+	m_sounds["respawn"].load(m_props.getString("spawn_sounds", ""), true);
+
+	// special
+
+	PlayerSpecial special = kPlayerSpecial_None;
+
+	const std::string specialStr = m_props.getString("special", "");
+
+	if (specialStr == "double_melee")
+		special = kPlayerSpecial_DoubleSidedMelee;
+	if (specialStr == "down_attack")
+		special = kPlayerSpecial_DownAttack;
+	if (specialStr == "shield")
+		special = kPlayerSpecial_Shield;
+	if (specialStr == "invisibility")
+		special = kPlayerSpecial_Invisibility;
+	if (specialStr == "jetpack")
+		special = kPlayerSpecial_Jetpack;
+
+	m_special = special;
 }
 
 //
 
 PlayerInstanceData::PlayerInstanceData(Player * player, GameSim * gameSim)
-	: m_player(player)
+	: CharacterData()
+	, m_player(player)
 	, m_gameSim(gameSim)
 	, m_textChatTicks(0)
-#if USE_SPRITER_ANIMS
-	, m_spriter(0)
-#else
+#if !USE_SPRITER_ANIMS
 	, m_sprite(0)
 #endif
-	, m_spriteScale(1.f)
 {
 	m_player->m_instanceData = this;
 
@@ -2447,10 +2497,7 @@ PlayerInstanceData::PlayerInstanceData(Player * player, GameSim * gameSim)
 
 PlayerInstanceData::~PlayerInstanceData()
 {
-#if USE_SPRITER_ANIMS
-	delete m_spriter;
-	m_spriter = 0;
-#else
+#if !USE_SPRITER_ANIMS
 	delete m_sprite;
 	m_sprite = 0;
 #endif
@@ -2467,49 +2514,12 @@ void PlayerInstanceData::handleCharacterIndexChange()
 {
 	if (m_player->hasValidCharacterIndex())
 	{
-		// reload character properties
+		CharacterData::load(m_player->m_characterIndex);
 
-		m_props.load(m_player->makeCharacterFilename("props.txt"));
-
-		m_animData = AnimData();
-		m_animData.load(m_player->makeCharacterFilename("animdata.txt"));
-
-	#if USE_SPRITER_ANIMS
-		if (m_player->m_anim != kPlayerAnim_NULL)
-		{
-			delete m_spriter;
-			m_spriter = 0;
-
-			const char * filename = m_player->makeCharacterFilename("sprite/sprite.scml");
-			m_spriter = new Spriter(filename);
-		}
-	#else
+	#if !USE_SPRITER_ANIMS
 		delete m_sprite;
 		m_sprite = new Sprite(m_player->makeCharacterFilename("walk/walk.png"), 0.f, 0.f, 0, false);
 	#endif
-
-		m_spriteScale = m_props.getFloat("sprite_scale", 1.f);
-
-		m_sounds["respawn"].load(m_props.getString("spawn_sounds", ""), true);
-
-		// special
-
-		PlayerSpecial special = kPlayerSpecial_None;
-
-		const std::string specialStr = m_props.getString("special", "");
-
-		if (specialStr == "double_melee")
-			special = kPlayerSpecial_DoubleSidedMelee;
-		if (specialStr == "down_attack")
-			special = kPlayerSpecial_DownAttack;
-		if (specialStr == "shield")
-			special = kPlayerSpecial_Shield;
-		if (specialStr == "invisibility")
-			special = kPlayerSpecial_Invisibility;
-		if (specialStr == "jetpack")
-			special = kPlayerSpecial_Jetpack;
-
-		m_player->m_special.type = special;
 	}
 }
 
@@ -2521,7 +2531,7 @@ void PlayerInstanceData::playSoundBag(const char * name, int volume)
 			m_sounds[name].load(m_props.getString(name, ""), true);
 	}
 
-	m_gameSim->playSound(m_player->makeCharacterFilename(m_sounds[name].getRandomSound(*m_gameSim)), volume);
+	m_gameSim->playSound(makeCharacterFilename(m_player->m_characterIndex, m_sounds[name].getRandomSound(*m_gameSim)), volume);
 }
 
 void PlayerInstanceData::addTextChat(const std::string & line)
@@ -2531,6 +2541,13 @@ void PlayerInstanceData::addTextChat(const std::string & line)
 }
 
 //
+
+char * makeCharacterFilename(int characterIndex, const char * filename)
+{
+	static char temp[64];
+	sprintf_s(temp, sizeof(temp), "char%d/%s", characterIndex, filename);
+	return temp;
+}
 
 Color getCharacterColor(int characterIndex)
 {

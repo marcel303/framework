@@ -57,23 +57,33 @@ public:
 	const char * getRandomSound(GameSim & gameSim);
 };
 
-class PlayerInstanceData
+class CharacterData
+{
+public:
+	Dictionary m_props;
+	AnimData m_animData;
+	std::map<std::string, SoundBag> m_sounds;
+#if USE_SPRITER_ANIMS
+	Spriter * m_spriter;
+#endif
+	float m_spriteScale;
+	PlayerSpecial m_special;
+
+	//
+
+	CharacterData();
+	~CharacterData();
+
+	void load(int characterIndex);
+};
+
+class PlayerInstanceData : public CharacterData
 {
 	friend struct Player;
 
-	friend class PlayerAnim_NS;
-	
-	Dictionary m_props;
-	AnimData m_animData;
-
-#if USE_SPRITER_ANIMS
-	Spriter * m_spriter;
-#else
+#if !USE_SPRITER_ANIMS
 	Sprite * m_sprite;
 #endif
-	float m_spriteScale;
-
-	std::map<std::string, SoundBag> m_sounds;
 	
 	static void handleAnimationAction(const std::string & action, const Dictionary & args);
 
@@ -107,5 +117,6 @@ public:
 	} m_input;
 };
 
+char * makeCharacterFilename(int characterIndex, const char * filename);
 Color getCharacterColor(int characterIndex);
 Color getPlayerColor(int playerIndex);
