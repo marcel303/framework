@@ -657,7 +657,7 @@ void Client::drawRoundComplete()
 		const Player * player = playerInstanceData->m_player;
 
 		setColor(getPlayerColor(player->m_index));
-		drawText(GFX_SX/3*1, y, 40, +1.f, +1.f, "%s", player->m_displayName);
+		drawText(GFX_SX/3*1, y, 40, +1.f, +1.f, "%s", player->m_displayName.c_str());
 		drawText(GFX_SX/3*2, y, 40, -1.f, +1.f, "%d", player->m_score);
 
 		index++;
@@ -776,7 +776,7 @@ void Client::addTextChat(int playerIndex, const std::string & text)
 	log.playerIndex = playerIndex;
 	log.characterIndex = m_gameSim->m_players[playerIndex].m_characterIndex;
 	log.message = text;
-	log.playerDisplayName = m_gameSim->m_players[playerIndex].m_displayName;
+	log.playerDisplayName = m_gameSim->m_players[playerIndex].m_displayName.c_str();
 
 	m_textChatLog.push_front(log);
 	while (m_textChatLog.size() > 10) // todo : add max log size option

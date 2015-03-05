@@ -162,7 +162,7 @@ struct FixedString
 {
 	FixedString()
 	{
-		memset(this, 0, SIZE + 1);
+		memset(m_data, 0, SIZE + 1);
 	}
 
 	size_t length() const
@@ -200,5 +200,5 @@ struct FixedString
 		return strcmp(m_data, other.m_data) < 0;
 	}
 
-	unsigned char m_data[SIZE + 1];
+	char m_data[SIZE + 1];
 };

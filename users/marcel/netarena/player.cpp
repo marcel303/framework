@@ -32,14 +32,14 @@ todo:
 - add build version check for online
 - send client network stats to host so they can be visualized
 
-- fix desync as both players get hit/killed by grenade
++ fix desync as both players get hit/killed by grenade
 - add support for CRC compare at any time during game sim tick. log CRC's with function/line number and compare?
 
 + add user name input
 + fix text chat player index
 
-- add FixedString class that can be memset(0) and copied over the net. use it for player name, etc
-- clean up flow for adding players
++ add FixedString class that can be memset(0) and copied over the net. use it for player name, etc
++ clean up flow for adding players
 
 - disable changing game options after everyone has readied up
 
@@ -51,7 +51,7 @@ todo:
 + count down timer game start after char select
 + add time dilation effect on last kill
 - zoom in on winning player, wait for a while before transitioning to the next round
-- verify bullet pool allocation order -> may be a source of desync issues, due to differences in the order of bullet updates
++ verify bullet pool allocation order -> may be a source of desync issues, due to differences in the order of bullet updates
 + textchat: left/right/insert text/delete key
 
 - need to be able to kick player at char select
@@ -550,9 +550,7 @@ bool Player::hasValidCharacterIndex() const
 
 void Player::setDisplayName(const std::string & name)
 {
-	memset(m_displayName, 0, sizeof(m_displayName));
-	for (size_t i = 0; i < MAX_PLAYER_DISPLAY_NAME && i < name.length(); ++i)
-		m_displayName[i] = name[i];
+	m_displayName = name.c_str();
 }
 
 void Player::setAnim(int anim, bool play, bool restart)

@@ -99,7 +99,7 @@ struct Player
 	uint16_t m_owningChannelId;
 
 	// character select
-	char m_displayName[MAX_PLAYER_DISPLAY_NAME + 1];
+	FixedString<MAX_PLAYER_DISPLAY_NAME> m_displayName;
 	bool m_isReadyUpped;
 
 	// alive state
@@ -340,7 +340,7 @@ struct Mover
 {
 	bool m_isActive;
 
-	char m_sprite[64];
+	FixedString<64> m_sprite;
 	int m_sx;
 	int m_sy;
 

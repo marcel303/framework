@@ -297,9 +297,9 @@ void Coin::drawLight() const
 
 void Mover::setSprite(const char * filename)
 {
-	strcpy_s(m_sprite, sizeof(m_sprite), filename);
+	m_sprite = filename;
 
-	Sprite sprite(m_sprite);
+	Sprite sprite(m_sprite.c_str());
 	m_sx = sprite.getWidth();
 	m_sy = sprite.getHeight();
 }

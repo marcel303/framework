@@ -174,7 +174,7 @@ void LobbyMenu::draw()
 			if (m_client->m_gameSim->m_players[i].m_isUsed)
 			{
 				setColor(colorWhite);
-				drawText((x1 + x2) / 2, y2 + 8, 32, 0.f, +1.f, "%s", m_client->m_gameSim->m_players[i].m_displayName);
+				drawText((x1 + x2) / 2, y2 + 8, 32, 0.f, +1.f, "%s", m_client->m_gameSim->m_players[i].m_displayName.c_str());
 			}
 		}
 	}
