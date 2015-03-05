@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gamesim.h" // fixme, move MAX_PLAYERS to gamedefs
+#include "gamedefs.h"
 
 class Button;
 class Client;

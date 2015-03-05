@@ -16,7 +16,7 @@ todo:
 + add key repeat to text input
 + add global method to get character color
 
-- add global cache of character properties. reduce need for m_instanceData
++ add global cache of character properties. reduce need for m_instanceData
 
 - improve networking reliability layer on resend. trips currently
 
@@ -24,11 +24,11 @@ todo:
 + reset level events on round end
 + slow down not on non-player kill (if there's no attacker like when falling into spikes)
 - gravity well -> make it partially a linear or other kind of curve + more powerful at a distance
-- add names to players on talk? -> add color to results screen
++ add names to players on talk? -> add color to results screen
 + chat log when chat is open
 - slow down on kill for everyone acceptable?
 + increase chat visibility time
-- fix late join
++ fix late join
 - add build version check for online
 - send client network stats to host so they can be visualized
 
@@ -332,8 +332,7 @@ void AnimData::load(const char * filename)
 //
 
 SoundBag::SoundBag()
-	: m_lastIndex(-1)
-	, m_random(false)
+	: m_random(false)
 {
 }
 
@@ -341,11 +340,10 @@ void SoundBag::load(const std::string & files, bool random)
 {
 	m_files.clear();
 	splitString(files, m_files, ',');
-	m_lastIndex = -1;
 	m_random = random;
 }
 
-const char * SoundBag::getRandomSound(GameSim & gameSim)
+const char * SoundBag::getRandomSound(GameSim & gameSim, int & lastSoundId) const
 {
 	if (m_files.empty())
 		return "";
@@ -366,9 +364,12 @@ const char * SoundBag::getRandomSound(GameSim & gameSim)
 			else
 				index = (index + 1) % m_files.size();
 
-			if (index != m_lastIndex)
+			// add 1 to the index to get the sound ID, so when lastSoundId initially is 0 it means 'pick any sound'
+			const int soundId = index + 1;
+
+			if (soundId != lastSoundId)
 			{
-				m_lastIndex = index;
+				lastSoundId = soundId;
 
 				return m_files[index].c_str();
 			}
@@ -636,10 +637,10 @@ void Player::playSecondaryEffects(PlayerEvent e)
 	case kPlayerEvent_Spawn:
 		break;
 	case kPlayerEvent_Respawn:
-		GAMESIM->playSound(makeCharacterFilename(m_characterIndex, m_instanceData->m_sounds["respawn"].getRandomSound(*GAMESIM)));
+		m_instanceData->playSoundBag("spawn_sounds", 100);
 		break;
 	case kPlayerEvent_Die:
-		GAMESIM->playSound(makeCharacterFilename(m_characterIndex, "die/die.ogg"));
+		m_instanceData->playSoundBag("die_sounds", 100);
 		break;
 	case kPlayerEvent_Jump:
 		{
@@ -684,8 +685,6 @@ void Player::playSecondaryEffects(PlayerEvent e)
 		break;
 	}
 }
-
-// todo : move?
 
 void Player::tick(float dt)
 {
@@ -2381,7 +2380,7 @@ void Player::dropCoins(int numCoins)
 
 			coin->m_vel.Set(GAMESIM->RandomFloat(-COIN_DROP_SPEED, +COIN_DROP_SPEED), -COIN_DROP_SPEED);
 
-			GAMESIM->playSound("token-bounce.ogg"); // fixme : sound
+			GAMESIM->playSound("coin-bounce.ogg");
 		}
 	}
 }
@@ -2437,6 +2436,22 @@ void CharacterData::load(int characterIndex)
 	// reload character properties
 
 	m_props.load(makeCharacterFilename(characterIndex, "props.txt"));
+
+	const char * soundBags[] =
+	{
+		"spawn_sounds",
+		"die_sounds",
+		"jump_sounds",
+		"attack_sounds",
+		"taunt_sounds"
+	};
+
+	for (size_t i = 0; i < sizeof(soundBags) / sizeof(soundBags[0]); ++i)
+	{
+		const char * name = soundBags[i];
+
+		m_sounds[name].load(m_props.getString(name, ""), true);
+	}
 
 	m_animData = AnimData();
 	m_animData.load(makeCharacterFilename(characterIndex, "animdata.txt"));
@@ -2510,11 +2525,6 @@ void PlayerInstanceData::handleCharacterIndexChange()
 {
 	if (m_player->hasValidCharacterIndex())
 	{
-		const CharacterData * characterData = getCharacterData(m_player->m_characterIndex);
-
-		// todo : load all of the other sound bags..
-		m_sounds["respawn"].load(characterData->m_props.getString("spawn_sounds", ""), true);
-
 	#if !USE_SPRITER_ANIMS
 		delete m_sprite;
 		m_sprite = new Sprite(makeCharacterFilename(m_player->m_characterIndex, "walk/walk.png"), 0.f, 0.f, 0, false);
@@ -2524,16 +2534,15 @@ void PlayerInstanceData::handleCharacterIndexChange()
 
 void PlayerInstanceData::playSoundBag(const char * name, int volume)
 {
+	const CharacterData * characterData = getCharacterData(m_player->m_characterIndex);
 
-	if (m_sounds.count(name) == 0)
+	auto sb = characterData->m_sounds.find(name);
+	Assert(sb != characterData->m_sounds.end());
+	if (sb != characterData->m_sounds.end())
 	{
-		const CharacterData * characterData = getCharacterData(m_player->m_characterIndex);
-
-		if (characterData->m_props.contains(name))
-			m_sounds[name].load(characterData->m_props.getString(name, ""), true);
+		int & lastSoundId = m_lastSoundIds[name];
+		m_gameSim->playSound(makeCharacterFilename(m_player->m_characterIndex, sb->second.getRandomSound(*m_gameSim, lastSoundId)), volume);
 	}
-
-	m_gameSim->playSound(makeCharacterFilename(m_player->m_characterIndex, m_sounds[name].getRandomSound(*m_gameSim)), volume);
 }
 
 void PlayerInstanceData::addTextChat(const std::string & line)

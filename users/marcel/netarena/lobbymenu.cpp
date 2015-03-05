@@ -112,8 +112,8 @@ void CharSelector::draw()
 
 LobbyMenu::LobbyMenu(Client * client)
 	: m_client(client)
-	, m_prevGameMode(new Button(50,  GFX_SY - 40, "charselect-prev.png"))
-	, m_nextGameMode(new Button(150, GFX_SY - 40, "charselect-next.png"))
+	, m_prevGameMode(new Button(50,  GFX_SY - 80, "charselect-prev.png"))
+	, m_nextGameMode(new Button(150, GFX_SY - 80, "charselect-next.png"))
 {
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{

@@ -132,6 +132,8 @@ public:
 	std::vector<Client*> getClients() const { return m_clients; }
 };
 
+extern uint32_t g_buildId;
+
 extern App * g_app;
 extern int g_updateTicks;
 extern int g_keyboardLock;

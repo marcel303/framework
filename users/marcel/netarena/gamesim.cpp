@@ -625,7 +625,7 @@ void FloorEffect::trySpawnAt(GameSim & gameSim, int playerId, int x, int y, int 
 				m_tiles[i].dx = dx;
 				m_tiles[i].size = size;
 				m_tiles[i].damageSize = damageSize;
-				m_tiles[i].time = TICKS_PER_SECOND / 12; // fixme : gamedef
+				m_tiles[i].time = TICKS_PER_SECOND / 12; // todo : gamedef
 
 				ParticleSpawnInfo spawnInfo(
 					x,
@@ -1414,7 +1414,7 @@ void GameSim::tickPlay()
 			case kLevelEvent_EarthQuake:
 				memset(&m_levelEvents.quake, 0, sizeof(m_levelEvents.quake));
 				m_levelEvents.quake.endTimer = 3.f;
-				m_levelEvents.quake.quakeTimer = 1.f; // fixme
+				m_levelEvents.quake.quakeTimer = 1.f; // todo
 				break;
 
 			case kLevelEvent_GravityWell:
@@ -1465,7 +1465,7 @@ void GameSim::tickPlay()
 	{
 		if (m_levelEvents.quake.quakeTimer.tickComplete(dt))
 		{
-			m_levelEvents.quake.quakeTimer = 1.f; // fixme
+			m_levelEvents.quake.quakeTimer = 1.f; // todo
 
 			// trigger quake
 

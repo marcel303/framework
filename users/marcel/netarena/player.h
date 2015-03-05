@@ -47,14 +47,13 @@ class SoundBag
 {
 	std::vector<std::string> m_files;
 	bool m_random;
-	int m_lastIndex;
 
 public:
 	SoundBag();
 
 	void load(const std::string & files, bool random);
 
-	const char * getRandomSound(GameSim & gameSim);
+	const char * getRandomSound(GameSim & gameSim, int & lastIndex) const;
 };
 
 class CharacterData
@@ -67,6 +66,7 @@ public:
 #endif
 	float m_spriteScale;
 	PlayerSpecial m_special;
+	std::map<std::string, SoundBag> m_sounds;
 
 	//
 
@@ -79,8 +79,6 @@ public:
 class PlayerInstanceData
 {
 	friend struct Player;
-
-	std::map<std::string, SoundBag> m_sounds; // fixme : store last selected sound elsewhere and move base list to CharacterData
 
 #if !USE_SPRITER_ANIMS
 	Sprite * m_sprite;
@@ -100,7 +98,9 @@ public:
 	void addTextChat(const std::string & line);
 
 	Player * m_player;
-	GameSim * m_gameSim;
+	GameSim * m_gameSim; // todo : remove?
+
+	std::map<std::string, int> m_lastSoundIds;
 
 	std::string m_textChat;
 	int m_textChatTicks;

@@ -9,6 +9,7 @@
 #include "ChannelManager.h"
 #include "client.h"
 #include "discover.h"
+#include "FileStream.h"
 #include "framework.h"
 #include "gamedefs.h"
 #include "gamesim.h"
@@ -22,6 +23,7 @@
 #include "RpcManager.h"
 #include "StatTimerMenu.h"
 #include "StatTimers.h"
+#include "StreamReader.h"
 #include "StringBuilder.h"
 #include "textfield.h"
 #include "Timer.h"
@@ -79,6 +81,8 @@ TIMER_DEFINE(g_appDrawTime, PerFrame, "App/Draw");
 #define NET_TIME g_TimerRT.TimeUS_get()
 
 //
+
+uint32_t g_buildId = 0;
 
 App * g_app = 0;
 
@@ -1460,6 +1464,14 @@ void App::draw()
 			drawText(5, GFX_SY - 25, 20, +1.f, -1.f, "viewing client %d", m_selectedClient);
 		}
 
+		if (g_devMode)
+		{
+			setColor(255, 255, 255);
+			Font font("calibri.ttf");
+			setFont(font);
+			drawText(GFX_SX - 5, GFX_SY - 25, 20, -1.f, -1.f, "build %08x", g_buildId);
+		}
+
 		if (g_devMode && g_host)
 		{
 			g_host->debugDraw();
@@ -1834,8 +1846,39 @@ int App::getControllerAllocationCount() const
 
 //
 
+static bool calculateFileCRC(const char * filename, uint32_t & crc)
+{
+	try
+	{
+		FileStream stream(filename, OpenMode_Read);
+		StreamReader reader(&stream, false);
+
+		const size_t length = stream.Length_get();
+		const uint8_t * bytes = reader.ReadAllBytes();
+
+		crc = 0;
+		for (size_t i = 0; i < length; ++i)
+			crc = crc * 13 + bytes[i];
+		delete[] bytes;
+
+		return true;
+	}
+	catch (std::exception&)
+	{
+		return false;
+	}
+}
+
+//
+
 int main(int argc, char * argv[])
 {
+	if (!calculateFileCRC(argv[0], g_buildId))
+	{
+		logError("failed to calculate CRC for %s", argv[0]);
+		return -1;
+	}
+
 	changeDirectory("data");
 
 	g_optionManager.LoadFromCommandLine(argc, argv);

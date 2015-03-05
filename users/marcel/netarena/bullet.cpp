@@ -489,8 +489,6 @@ void BulletPool::free(uint16_t id)
 
 void BulletPool::serialize(NetSerializationContext & context)
 {
-	// fixme : should serialize free list ?? or maybe alloc ID doesn't matter..
-
 	if (context.IsRecv())
 	{
 		memset(m_bullets, 0, sizeof(m_bullets));

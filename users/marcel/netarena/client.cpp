@@ -405,7 +405,7 @@ void Client::drawMenus()
 	{
 		const float timeRemaining = m_gameSim->m_gameStartTicks / float(TICKS_PER_SECOND);
 
-		// fixme : options for position
+		// todo : options for position
 		setFont("calibri.ttf");
 		setColor(127, 255, 227);
 		drawText(GFX_SX/2, GFX_SY - 75, 48, 0.f, 0.f, "ROUND START IN T-%02.2f", timeRemaining);
@@ -656,12 +656,15 @@ void Client::drawRoundComplete()
 		const PlayerInstanceData * playerInstanceData = *p;
 		const Player * player = playerInstanceData->m_player;
 
+		setColor(getPlayerColor(player->m_index));
 		drawText(GFX_SX/3*1, y, 40, +1.f, +1.f, "%s", player->m_displayName);
 		drawText(GFX_SX/3*2, y, 40, -1.f, +1.f, "%d", player->m_score);
 
 		index++;
 		y += 50;
 	}
+
+	setColor(colorWhite);
 }
 
 void Client::drawTextChat()
