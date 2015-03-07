@@ -375,7 +375,7 @@ public:
 	public:
 		FT_Face face;
 		int size;
-		char c;
+		int c;
 		
 		inline bool operator<(const Key & other) const
 		{
@@ -392,7 +392,7 @@ public:
 	Map m_map;
 	
 	void clear();
-	GlyphCacheElem & findOrCreate(FT_Face face, int size, char c);
+	GlyphCacheElem & findOrCreate(FT_Face face, int size, int c);
 };
 
 //

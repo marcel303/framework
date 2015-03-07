@@ -1234,7 +1234,7 @@ void GlyphCache::clear()
 	m_map.clear();
 }
 
-GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, char c)
+GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 {
 	Key key;
 	key.face = face;

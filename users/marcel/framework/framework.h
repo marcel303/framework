@@ -29,6 +29,7 @@
 
 #define USE_LEGACY_OPENGL 1
 #define ENABLE_MIDI_INPUT 0
+#define ENABLE_UTF8_SUPPORT 0
 
 static const int MAX_GAMEPAD = 4;
 
@@ -845,3 +846,4 @@ extern Color colorWhite;
 extern Color colorRed;
 extern Color colorGreen;
 extern Color colorBlue;
+extern Color colorYellow;

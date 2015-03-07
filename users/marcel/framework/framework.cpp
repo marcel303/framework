@@ -32,6 +32,10 @@
 
 // -----
 
+#if ENABLE_UTF8_SUPPORT
+#include "utf8rewind.h"
+#endif
+
 #if ENABLE_MIDI_INPUT
 extern void initMidi();
 extern void shutMidi();
@@ -44,6 +48,7 @@ Color colorWhite(255, 255, 255, 255);
 Color colorRed(255, 0, 0, 255);
 Color colorGreen(0, 255, 0, 255);
 Color colorBlue(0, 0, 255, 255);
+Color colorYellow(255, 255, 0, 255);
 
 //
 
@@ -374,8 +379,6 @@ bool Framework::shutdown()
 
 void Framework::process()
 {
-	SDL_RaiseWindow(globals.window);
-
 	static int tstamp1 = SDL_GetTicks();
 	const int tstamp2 = SDL_GetTicks();
 	int delta = tstamp2 - tstamp1;
@@ -1841,7 +1844,9 @@ bool SpriterState::updateAnim(const Spriter & spriter, float dt)
 	if (animIsActive)
 		animTime += animSpeed * dt;
 
-	const bool isDone = spriter.isAnimDoneAtTime(animIndex, animTime);
+	const bool isDone =
+		!animIsActive ||
+		spriter.isAnimDoneAtTime(animIndex, animTime);
 
 	if (isDone)
 		stopAnim(spriter);
@@ -2865,8 +2870,18 @@ void drawRectGradient(float x1, float y1, float x2, float y2)
 	setColorf(oldColor[0], oldColor[1], oldColor[2], oldColor[3]);
 }
 
-static void measureText(FT_Face face, int size, const char * text, float & sx, float & sy)
+static void measureText(FT_Face face, int size, const char * _text, float & sx, float & sy)
 {
+#if ENABLE_UTF8_SUPPORT
+	// fixme : convert in calling function
+	const int kMaxTextSize = 2048;
+	unicode_t text[kMaxTextSize];
+	const size_t textLength = utf8toutf32(_text, strlen(_text), text, kMaxTextSize * 4, 0) / 4;
+#else
+	const char * text = _text;
+	const size_t textLength = strlen(_text);
+#endif
+
 	float minX = std::numeric_limits<float>::max();
 	float minY = std::numeric_limits<float>::max();
 	float maxX = std::numeric_limits<float>::min();
@@ -2875,7 +2890,7 @@ static void measureText(FT_Face face, int size, const char * text, float & sx, f
 	float x = 0.f;
 	float y = 0.f;
 	
-	for (int i = 0; text[i]; ++i)
+	for (int i = 0; i < textLength; ++i)
 	{
 		// find or create glyph. skip current character if the element is invalid
 		
@@ -2912,8 +2927,17 @@ static void measureText(FT_Face face, int size, const char * text, float & sx, f
 	}
 }
 
-static void drawTextInternal(FT_Face face, int size, const char * text)
+static void drawTextInternal(FT_Face face, int size, const char * _text)
 {
+#if ENABLE_UTF8_SUPPORT
+	const int kMaxTextSize = 2048;
+	unicode_t text[kMaxTextSize];
+	const size_t textLength = utf8toutf32(_text, strlen(_text), text, kMaxTextSize * 4, 0) / 4;
+#else
+	const char * text = _text;
+	const size_t textLength = strlen(_text);
+#endif
+
 	float x = 0.f;
 	float y = 0.f;
 	
@@ -2922,7 +2946,7 @@ static void drawTextInternal(FT_Face face, int size, const char * text)
 	
 	y += size;
 	
-	for (int i = 0; text[i]; ++i)
+	for (int i = 0; i < textLength; ++i)
 	{
 		// find or create glyph. skip current character if the element is invalid
 		
