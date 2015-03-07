@@ -974,7 +974,7 @@ void Player::tick(float dt)
 						{
 							logDebug("rocket punch: cancel");
 
-							endRocketPunch();
+							endRocketPunch(false);
 						}
 						else
 						{
@@ -1008,16 +1008,14 @@ void Player::tick(float dt)
 
 					if (m_attack.m_rocketPunch.distance >= m_attack.m_rocketPunch.maxDistance)
 					{
-						// todo : change animation
-
-						m_attack.m_rocketPunch.state = AttackInfo::RocketPunch::kState_Stunned;
+						endRocketPunch(true);
 					}
 				}
 				if (m_attack.m_rocketPunch.state == AttackInfo::RocketPunch::kState_Stunned)
 				{
 					if (m_attack.m_rocketPunch.stunTime >= ROCKETPUNCH_STUN_TIME)
 					{
-						endRocketPunch();
+						endRocketPunch(false);
 					}
 					else
 					{
@@ -1418,7 +1416,7 @@ void Player::tick(float dt)
 			!m_isAttachedToSticky &&
 			!m_animVelIsAbsolute &&
 			m_bubble.timer == 0.f &&
-			!m_attack.m_rocketPunch.isActive)
+			(!m_attack.m_rocketPunch.isActive || m_attack.m_rocketPunch.state == AttackInfo::RocketPunch::kState_Stunned))
 		{
 			if (currentBlockMask & (1 << kBlockType_GravityDisable))
 				gravity = 0.f;
@@ -1558,7 +1556,7 @@ void Player::tick(float dt)
 				if (m_attack.m_rocketPunch.isActive && (newBlockMask & kBlockMask_Solid))
 				{
 					if (m_attack.m_rocketPunch.state != AttackInfo::RocketPunch::kState_Charge)
-						endRocketPunch();
+						endRocketPunch(true);
 				}
 
 				// make sure we stay grounded, within reason. allows the player to walk up/down slopes
@@ -2541,16 +2539,30 @@ void Player::beginRocketPunch()
 	Sound("rocketpunch-charge.ogg").play();
 }
 
-void Player::endRocketPunch()
+void Player::endRocketPunch(bool stunned)
 {
-	logDebug("rocket punch: attack: done!");
+	if (stunned)
+	{
+		Assert(m_attack.m_rocketPunch.isActive);
+		Assert(m_attack.m_rocketPunch.stunTime == 0.f);
 
-	m_attack = AttackInfo();
-	clearAnimOverrides();
+		// todo : change animation
 
-	setAnim(kPlayerAnim_Walk, false, true);
+		m_attack.m_rocketPunch.state = AttackInfo::RocketPunch::kState_Stunned;
 
-	m_vel = Vec2();
+		m_animVelIsAbsolute = false;
+	}
+	else
+	{
+		logDebug("rocket punch: attack: done!");
+
+		m_attack = AttackInfo();
+		clearAnimOverrides();
+
+		setAnim(kPlayerAnim_Walk, false, true);
+
+		m_vel = Vec2();
+	}
 }
 
 //

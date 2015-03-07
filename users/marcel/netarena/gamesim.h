@@ -93,7 +93,7 @@ struct Player
 	PlayerWeapon popWeapon();
 
 	void beginRocketPunch();
-	void endRocketPunch();
+	void endRocketPunch(bool stunned);
 
 	// allocation
 	bool m_isUsed;
