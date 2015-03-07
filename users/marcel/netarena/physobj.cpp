@@ -5,6 +5,7 @@
 #include "framework.h"
 #include "gamedefs.h"
 #include "gamesim.h"
+#include "NetSerializable.h"
 #include "physobj.h"
 
 PhysicsActor::PhysicsActor()
@@ -185,11 +186,79 @@ uint32_t PhysicsActor::getIntersectingBlockMask(GameSim & gameSim, Vec2 pos)
 
 void PhysicsActor::getCollisionInfo(CollisionInfo & collisionInfo)
 {
-	Vec2 min = m_pos + m_bbMin;
-	Vec2 max = m_pos + m_bbMax;
+	collisionInfo.min = m_pos + m_bbMin;
+	collisionInfo.max = m_pos + m_bbMax;
+}
 
-	collisionInfo.x1 = min[0];
-	collisionInfo.y1 = min[1];
-	collisionInfo.x2 = max[0];
-	collisionInfo.y2 = max[1];
+bool PhysicsActor::test(const CollisionBox & box) const
+{
+	const Vec2 min = m_pos + m_bbMin;
+	const Vec2 max = m_pos + m_bbMax;
+
+	return
+		min[0] <= box.max[0] &&
+		min[1] <= box.max[1] &&
+		max[0] >= box.min[0] &&
+		max[1] >= box.min[1];
+}
+
+//
+
+PhysicsScene::PhysicsScene()
+{
+}
+
+void PhysicsScene::serialize(NetSerializationContext & ctx)
+{
+	ctx.SerializeBytes(m_actors, sizeof(m_actors));
+}
+
+PhysicsActorId PhysicsScene::allocActor()
+{
+	for (int i = 0; i < MAX_PHYSICS_ACTORS; ++i)
+		if (!m_actors[i].m_isActive)
+			return i;
+
+	return kPhysicsActorId_Invalid;
+}
+
+void PhysicsScene::freeActor(PhysicsActorId id)
+{
+	Assert(id != kPhysicsActorId_Invalid);
+	if (id != kPhysicsActorId_Invalid)
+		m_actors[id] = PhysicsActor();
+}
+
+void PhysicsScene::test(const CollisionBox & box, CollisionCB cb, void * arg, bool wrap)
+{
+	if (wrap)
+	{
+		/* todo : 9x
+		testInternal(b, cb, arg);
+		*/
+	}
+	else
+	{
+		testInternal(box, cb, arg);
+	}
+
+	for (int i = 0; i < MAX_PHYSICS_ACTORS; ++i)
+		if (m_actors[i].m_isHit)
+			m_actors[i].m_isHit = false;
+}
+
+void PhysicsScene::testInternal(const CollisionBox & box, CollisionCB cb, void * arg)
+{
+	for (int i = 0; i < MAX_PHYSICS_ACTORS; ++i)
+	{
+		if (m_actors[i].m_isActive && !m_actors[i].m_isHit)
+		{
+			if (m_actors[i].test(box))
+			{
+				m_actors[i].m_isHit = true;
+
+				cb(arg, &m_actors[i], 0, 0);
+			}
+		}
+	}
 }

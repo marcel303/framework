@@ -1,6 +1,10 @@
 #pragma once
 
 #include <stdint.h>
+#include "Vec2.h"
+
+#pragma pack(push)
+#pragma pack(1)
 
 enum NetAction
 {
@@ -152,30 +156,39 @@ enum BulletEffect
 	kBulletEffect_Bubble
 };
 
-struct CollisionInfo
+struct CollisionBox
 {
-	bool intersects(const CollisionInfo & other) const
+	Vec2 min;
+	Vec2 max;
+
+	bool intersects(const CollisionBox & other) const
 	{
 		return
-			x2 >= other.x1 &&
-			y2 >= other.y1 &&
-			x1 <= other.x2 &&
-			y1 <= other.y2;
+			max[0] >= other.min[0] &&
+			max[1] >= other.min[1] &&
+			min[0] <= other.max[0] &&
+			min[1] <= other.max[1];
 	}
 
-	bool intersects(int x, int y) const
+	bool intersects(float x, float y) const
 	{
 		return
-			x2 >= x &&
-			y2 >= y &&
-			x1 <= x &&
-			y1 <= y;
+			max[0] >= x &&
+			max[1] >= y &&
+			min[0] <= x &&
+			min[1] <= y;
 	}
+};
 
-	int16_t x1;
-	int16_t y1;
-	int16_t x2;
-	int16_t y2;
+struct CollisionInfo : CollisionBox
+{
+	CollisionInfo getTranslated(Vec2 offset) const
+	{
+		CollisionInfo result;
+		result.min = min + offset;
+		result.max = max + offset;
+		return result;
+	}
 };
 
 template <int SIZE>
@@ -223,3 +236,5 @@ struct FixedString
 
 	char m_data[SIZE + 1];
 };
+
+#pragma pack(pop)

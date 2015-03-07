@@ -335,8 +335,8 @@ void Mover::tick(GameSim & gameSim, float dt)
 			if (player.m_isGrounded && player.m_vel[1] >= 0.f)
 			{
 				player.getPlayerCollision(playerCollision);
-				playerCollision.y1 += 2.f;
-				playerCollision.y2 += 2.f;
+				playerCollision.min[1] += 2.f;
+				playerCollision.max[1] += 2.f;
 
 				if (playerCollision.intersects(collision))
 				{
@@ -350,39 +350,12 @@ void Mover::tick(GameSim & gameSim, float dt)
 
 			if (playerCollision.intersects(collision))
 			{
-			#if 0
-				const float d[4] =
-				{
-					+ playerCollision.x2 - collision.x1,
-					- playerCollision.x1 + collision.x2,
-					+ playerCollision.y2 - collision.y1,
-					- playerCollision.y1 + collision.y2
-				};
-
-				int lowest = 0;
-
-				for (int j = 1; j < 4; ++j)
-				{
-					if (d[j] >= 0.f && d[j] < d[lowest])
-						lowest = j;
-				}
-
-				if (lowest == 0)
-					player.m_pos[0] -= d[0] + 1.f;
-				if (lowest == 1)
-					player.m_pos[0] += d[1] + 1.f;
-				if (lowest == 2)
-					player.m_pos[1] -= d[2] + 1.f;
-				if (lowest == 3)
-					player.m_pos[1] += d[3] + 1.f;
-			#else
-				const float d = + playerCollision.y2 - collision.y1;
+				const float d = + playerCollision.max[1] - collision.min[1];
 
 				if (d >= 0.f && grounded)
 				{
 					player.m_pos[1] -= d + 1.f;
 				}
-			#endif
 			}
 
 			if (grounded)
@@ -412,7 +385,7 @@ void Mover::draw() const
 	getCollisionInfo(collision);
 
 	setColor(colorWhite);
-	drawRect(collision.x1, collision.y1, collision.x2, collision.y2);
+	drawRect(collision.min[0], collision.min[1], collision.max[0], collision.max[1]);
 }
 
 void Mover::drawLight() const
@@ -443,10 +416,10 @@ void Mover::getCollisionInfo(CollisionInfo & collisionInfo) const
 {
 	const Vec2 pos = getPosition();
 
-	collisionInfo.x1 = pos[0] - m_sx / 2.f;
-	collisionInfo.y1 = pos[1] - m_sy / 2.f;
-	collisionInfo.x2 = pos[0] + m_sx / 2.f;
-	collisionInfo.y2 = pos[1] + m_sy / 2.f;
+	collisionInfo.min[0] = pos[0] - m_sx / 2.f;
+	collisionInfo.min[1] = pos[1] - m_sy / 2.f;
+	collisionInfo.max[0] = pos[0] + m_sx / 2.f;
+	collisionInfo.max[1] = pos[1] + m_sy / 2.f;
 }
 
 bool Mover::intersects(CollisionInfo & collisionInfo) const
@@ -526,10 +499,10 @@ void FloorEffect::tick(GameSim & gameSim, float dt)
 			if (m_tiles[i].damageSize > 0)
 			{
 				CollisionInfo collisionInfo;
-				collisionInfo.x1 = m_tiles[i].x - 4;
-				collisionInfo.x2 = m_tiles[i].x + 4;
-				collisionInfo.y1 = m_tiles[i].y - 16;
-				collisionInfo.y2 = m_tiles[i].y;
+				collisionInfo.min[0] = m_tiles[i].x - 4;
+				collisionInfo.max[0] = m_tiles[i].x + 4;
+				collisionInfo.min[1] = m_tiles[i].y - 64;
+				collisionInfo.max[1] = m_tiles[i].y;
 
 				for (int p = 0; p < MAX_PLAYERS; ++p)
 				{
@@ -1718,6 +1691,55 @@ void GameSim::playSound(const char * filename, int volume)
 	Sound(filename).play(volume);
 }
 
+void GameSim::testCollision(const CollisionBox & box, CollisionCB cb, void * arg)
+{
+	if (true)
+	{
+		for (int dx = -1; dx <= +1; ++dx)
+		{
+			for (int dy = -1; dy <= +1; ++dy)
+			{
+				CollisionBox b;
+
+				b.min[0] = box.min[0] + ARENA_SX_PIXELS * dx;
+				b.min[1] = box.min[1] + ARENA_SY_PIXELS * dy;
+				b.max[0] = box.max[0] + ARENA_SX_PIXELS * dx;
+				b.max[1] = box.max[1] + ARENA_SY_PIXELS * dy;
+
+				testCollisionInternal(b, cb, arg);
+			}
+		}
+	}
+	else
+	{
+		testCollisionInternal(box, cb, arg);
+	}
+}
+
+void GameSim::testCollisionInternal(const CollisionBox & box, CollisionCB cb, void * arg)
+{
+	// collide vs arena
+
+	m_arena.testCollision(box, cb, arg);
+
+	// collide vs players
+
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+	{
+		if (m_players[i].m_isUsed && m_players[i].m_isAlive)
+		{
+			m_players[i].testCollision(box, cb, arg);
+		}
+	}
+
+	// collide vs movers (?)
+
+	for (int i = 0; i < MAX_MOVERS; ++i)
+	{
+		//m_movers[i].testCollision(box, cb, arg);
+	}
+}
+
 void GameSim::trySpawnPickup(PickupType type)
 {
 	for (int i = 0; i < MAX_PICKUPS; ++i)
@@ -1764,10 +1786,10 @@ void GameSim::spawnPickup(Pickup & pickup, PickupType type, int blockX, int bloc
 bool GameSim::grabPickup(int x1, int y1, int x2, int y2, Pickup & grabbedPickup)
 {
 	CollisionInfo collisionInfo;
-	collisionInfo.x1 = x1;
-	collisionInfo.y1 = y1;
-	collisionInfo.x2 = x2;
-	collisionInfo.y2 = y2;
+	collisionInfo.min[0] = x1;
+	collisionInfo.min[1] = y1;
+	collisionInfo.max[0] = x2;
+	collisionInfo.max[1] = y2;
 
 	for (int i = 0; i < MAX_PICKUPS; ++i)
 	{

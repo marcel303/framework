@@ -3,6 +3,7 @@
 #include "gamedefs.h"
 #include "gametypes.h"
 #include "NetSerializable.h"
+#include "physobj.h"
 
 class Arena;
 class BitStream;
@@ -86,6 +87,8 @@ struct Block
 	BlockType type;
 	BlockShape shape;
 	uint16_t param;
+
+	bool handleDamage(GameSim & gameSim, int blockX, int blockY);
 };
 
 #pragma pack(pop)
@@ -142,4 +145,6 @@ public:
 	Block & getBlock(int x, int y) { return m_blocks[x][y]; }
 
 	bool handleDamageRect(GameSim & gameSim, int x, int y, int x1, int y1, int x2, int y2, bool hitDestructible, bool hitSingleDestructible = true);
+
+	void testCollision(const CollisionBox & box, CollisionCB cb, void * arg);
 };

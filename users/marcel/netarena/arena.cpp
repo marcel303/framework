@@ -77,6 +77,41 @@ OPTION_DEFINE(int, s_drawBlockMask, "Arena/Debug/Draw Block Mask");
 
 //
 
+bool Block::handleDamage(GameSim & gameSim, int blockX, int blockY)
+{
+	bool result = false;
+
+	if ((type == kBlockType_Destructible || (type == kBlockType_DestructibleRegen && shape != kBlockShape_Empty)))
+	{
+		if (type == kBlockType_DestructibleRegen)
+		{
+			shape = kBlockShape_Empty;
+			RegenBlockData & data = (RegenBlockData&)param;
+			data.isVisible = false;
+			data.regenTime = BLOCKTYPE_REGEN_TIME * TICKS_PER_SECOND;
+		}
+		else
+		{
+			type = kBlockType_Empty;
+		}
+
+		Sound("block-destroy.ogg").play();
+
+		ParticleSpawnInfo spawnInfo(
+			(blockX + .5f) * BLOCK_SX,
+			(blockY + .5f) * BLOCK_SY,
+			kBulletType_ParticleA, 10, 50, 200, 20);
+		spawnInfo.color = 0xff8040ff;
+		gameSim.spawnParticles(spawnInfo);
+
+		result = true;
+	}
+
+	return result;
+}
+
+//
+
 void Arena::init()
 {
 	initializeBlockMasks();
@@ -812,27 +847,11 @@ bool Arena::handleDamageRect(GameSim & gameSim, int baseX, int baseY, int x1, in
 
 			Block & block = *blockInfo.block;
 
-			if ((block.type == kBlockType_Destructible || (block.type == kBlockType_DestructibleRegen && block.shape != kBlockShape_Empty)) && hitDestructible)
+			if (!hitDestructible && (block.type == kBlockType_Destructible || block.type == kBlockType_DestructibleRegen))
+				continue;
+
+			if (block.handleDamage(gameSim, blockInfo.x, blockInfo.y))
 			{
-				if (block.type == kBlockType_DestructibleRegen)
-				{
-					block.shape = kBlockShape_Empty;
-					RegenBlockData & data = (RegenBlockData&)block.param;
-					data.isVisible = false;
-					data.regenTime = BLOCKTYPE_REGEN_TIME * TICKS_PER_SECOND;
-				}
-				else
-					block.type = kBlockType_Empty;
-
-				Sound("block-destroy.ogg").play();
-
-				ParticleSpawnInfo spawnInfo(
-					(blockInfo.x + .5f) * BLOCK_SX,
-					(blockInfo.y + .5f) * BLOCK_SY,
-					kBulletType_ParticleA, 10, 50, 200, 20);
-				spawnInfo.color = 0xff8040ff;
-				gameSim.spawnParticles(spawnInfo);
-
 				if (hitSingleDestructible)
 					hitDestructible = false;
 
@@ -842,4 +861,27 @@ bool Arena::handleDamageRect(GameSim & gameSim, int baseX, int baseY, int x1, in
 	}
 
 	return result;
+}
+
+void Arena::testCollision(const CollisionBox & box, CollisionCB cb, void * arg)
+{
+	const int kMaxBlocks = 64;
+	BlockAndDistance blocks[kMaxBlocks];
+	int numBlocks = kMaxBlocks;
+
+	if (getBlocksFromPixels(
+		0, 0,
+		(int)box.min[0],
+		(int)box.min[1],
+		(int)box.max[0],
+		(int)box.max[1],
+		true,
+		blocks,
+		numBlocks))
+	{
+		for (int i = 0; i < numBlocks; ++i)
+		{
+			cb(arg, 0, &blocks[i], 0);
+		}
+	}
 }

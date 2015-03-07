@@ -448,6 +448,18 @@ void PlayerInstanceData::handleAnimationAction(const std::string & action, const
 	}
 }
 
+void Player::testCollision(const CollisionBox & box, CollisionCB cb, void * arg)
+{
+	CollisionInfo collision;
+	if (getPlayerCollision(collision))
+	{
+		if (collision.intersects(box))
+		{
+			cb(arg, 0, 0, this);
+		}
+	}
+}
+
 bool Player::getPlayerCollision(CollisionInfo & collision) const
 {
 	Assert(m_isUsed);
@@ -455,10 +467,9 @@ bool Player::getPlayerCollision(CollisionInfo & collision) const
 	if (!m_isAlive)
 		return false;
 
-	collision.x1 = m_pos[0] + m_collision.x1;
-	collision.y1 = m_pos[1] + m_collision.y1;
-	collision.x2 = m_pos[0] + m_collision.x2;
-	collision.y2 = m_pos[1] + m_collision.y2;
+	collision.min = m_pos + m_collision.min;
+	collision.max = m_pos + m_collision.max;
+
 	return true;
 }
 
@@ -466,20 +477,20 @@ void Player::getDamageHitbox(CollisionInfo & collision) const
 {
 	Assert(m_isUsed);
 
-	collision.x1 = m_pos[0] - PLAYER_DAMAGE_HITBOX_SX/2;
-	collision.y1 = m_pos[1] - PLAYER_DAMAGE_HITBOX_SY;
-	collision.x2 = m_pos[0] + PLAYER_DAMAGE_HITBOX_SX/2;
-	collision.y2 = m_pos[1];
+	collision.min[0] = m_pos[0] - PLAYER_DAMAGE_HITBOX_SX/2;
+	collision.min[1] = m_pos[1] - PLAYER_DAMAGE_HITBOX_SY;
+	collision.max[0] = m_pos[0] + PLAYER_DAMAGE_HITBOX_SX/2;
+	collision.max[1] = m_pos[1];
 }
 
 void Player::getAttackCollision(CollisionInfo & collision) const
 {
 	Assert(m_isUsed);
 
-	float x1 = m_attack.collision.x1 * m_facing[0];
-	float y1 = m_attack.collision.y1;
-	float x2 = m_attack.collision.x2 * m_facing[0];
-	float y2 = m_attack.collision.y2;
+	float x1 = m_attack.collision.min[0] * m_facing[0];
+	float y1 = m_attack.collision.min[1];
+	float x2 = m_attack.collision.max[0] * m_facing[0];
+	float y2 = m_attack.collision.max[1];
 
 	if (m_facing[1] < 0)
 	{
@@ -492,10 +503,10 @@ void Player::getAttackCollision(CollisionInfo & collision) const
 	if (y1 > y2)
 		std::swap(y1, y2);
 
-	collision.x1 = m_pos[0] + x1;
-	collision.y1 = m_pos[1] + y1;
-	collision.x2 = m_pos[0] + x2;
-	collision.y2 = m_pos[1] + y2;
+	collision.min[0] = m_pos[0] + x1;
+	collision.min[1] = m_pos[1] + y1;
+	collision.max[0] = m_pos[0] + x2;
+	collision.max[1] = m_pos[1] + y2;
 }
 
 float Player::getAttackDamage(Player * other) const
@@ -673,10 +684,10 @@ void Player::tick(float dt)
 		}
 	}
 
-	m_collision.x1 = -PLAYER_COLLISION_HITBOX_SX / 2.f;
-	m_collision.x2 = +PLAYER_COLLISION_HITBOX_SX / 2.f;
-	m_collision.y1 = -PLAYER_COLLISION_HITBOX_SY / 1.f;
-	m_collision.y2 = 0.f;
+	m_collision.min[0] = -PLAYER_COLLISION_HITBOX_SX / 2.f;
+	m_collision.max[0] = +PLAYER_COLLISION_HITBOX_SX / 2.f;
+	m_collision.min[1] = -PLAYER_COLLISION_HITBOX_SY / 1.f;
+	m_collision.max[1] = 0.f;
 
 	//
 
@@ -813,10 +824,10 @@ void Player::tick(float dt)
 		Pickup pickup;
 
 		if (GAMESIM->grabPickup(
-			m_pos[0] + m_collision.x1,
-			m_pos[1] + m_collision.y1,
-			m_pos[0] + m_collision.x2,
-			m_pos[1] + m_collision.y2,
+			m_pos[0] + m_collision.min[0],
+			m_pos[1] + m_collision.min[1],
+			m_pos[0] + m_collision.max[0],
+			m_pos[1] + m_collision.max[1],
 			pickup))
 		{
 			switch (pickup.type)
@@ -936,10 +947,10 @@ void Player::tick(float dt)
 					*GAMESIM,
 					m_pos[0],
 					m_pos[1],
-					attackCollision.x1,
-					attackCollision.y1,
-					attackCollision.x2,
-					attackCollision.y2,
+					attackCollision.min[0],
+					attackCollision.min[1],
+					attackCollision.max[0],
+					attackCollision.max[1],
 					!m_attack.hitDestructible);
 			}
 
@@ -1112,22 +1123,22 @@ void Player::tick(float dt)
 
 				// determine attack collision. basically just 3 directions: forward, up and down
 
-				m_attack.collision.x1 = 0.f;
-				m_attack.collision.x2 = (m_attackDirection[0] == 0) ? 0.f : 50.f; // fordward?
-				m_attack.collision.y1 = -PLAYER_COLLISION_HITBOX_SY/3.f*2;
-				m_attack.collision.y2 = -PLAYER_COLLISION_HITBOX_SY/3.f*2 + m_attackDirection[1] * 50.f; // up or down
+				m_attack.collision.min[0] = 0.f;
+				m_attack.collision.max[0] = (m_attackDirection[0] == 0) ? 0.f : 50.f; // fordward?
+				m_attack.collision.min[1] = -PLAYER_COLLISION_HITBOX_SY/3.f*2;
+				m_attack.collision.max[1] = -PLAYER_COLLISION_HITBOX_SY/3.f*2 + m_attackDirection[1] * 50.f; // up or down
 
 				// make sure the attack collision doesn't have a zero sized area
 
-				if (m_attack.collision.x1 == m_attack.collision.x2)
+				if (m_attack.collision.min[0] == m_attack.collision.max[0])
 				{
-					m_attack.collision.x1 -= 2.f;
-					m_attack.collision.x2 += 2.f;
+					m_attack.collision.min[0] -= 2.f;
+					m_attack.collision.max[0] += 2.f;
 				}
-				if (m_attack.collision.y1 == m_attack.collision.y2)
+				if (m_attack.collision.min[1] == m_attack.collision.max[1])
 				{
-					m_attack.collision.y1 -= 2.f;
-					m_attack.collision.y2 += 2.f;
+					m_attack.collision.min[1] -= 2.f;
+					m_attack.collision.max[1] += 2.f;
 				}
 
 				m_attack.hasCollision = true;
@@ -1159,10 +1170,10 @@ void Player::tick(float dt)
 					setAnim(kPlayerAnim_Walk, true, true);
 					//m_isAnimDriven = true;
 
-					m_attack.collision.x1 = 0.f;
-					m_attack.collision.x2 = DOUBLEMELEE_ATTACK_RADIUS;
-					m_attack.collision.y1 = -PLAYER_COLLISION_HITBOX_SY/3.f*2;
-					m_attack.collision.y2 = -PLAYER_COLLISION_HITBOX_SY/3.f*2 + 4.f;
+					m_attack.collision.min[0] = 0.f;
+					m_attack.collision.max[0] = DOUBLEMELEE_ATTACK_RADIUS;
+					m_attack.collision.min[1] = -PLAYER_COLLISION_HITBOX_SY/3.f*2;
+					m_attack.collision.max[1] = -PLAYER_COLLISION_HITBOX_SY/3.f*2 + 4.f;
 
 					m_attack.hasCollision = true;
 
@@ -1225,8 +1236,8 @@ void Player::tick(float dt)
 		// teleport
 
 		{
-			int px = int(m_pos[0] + (m_collision.x1 + m_collision.x2) / 2) / BLOCK_SX;
-			int py = int(m_pos[1] + (m_collision.y1 + m_collision.y2) / 2) / BLOCK_SY;
+			int px = int(m_pos[0] + (m_collision.min[0] + m_collision.max[0]) / 2) / BLOCK_SX;
+			int py = int(m_pos[1] + (m_collision.min[1] + m_collision.max[1]) / 2) / BLOCK_SY;
 
 			if (px != m_teleport.x || py != m_teleport.y)
 			{
@@ -1472,13 +1483,11 @@ void Player::tick(float dt)
 
 		// collision
 
+		const Vec2 totalVel = (m_vel * (m_animVelIsAbsolute ? 0.f : 1.f)) + animVel;
+
 		for (int i = 0; i < 2; ++i)
 		{
-			float totalDelta =
-				(
-					(m_animVelIsAbsolute ? 0.f : m_vel[i]) +
-					animVel[i]
-				) * dt;
+			float totalDelta = totalVel[i] * dt;
 
 			const float deltaSign = totalDelta < 0.f ? -1.f : +1.f;
 
@@ -1501,14 +1510,18 @@ void Player::tick(float dt)
 				// fixme : horrible code..
 				if (m_attack.m_rocketPunch.isActive && m_attack.m_rocketPunch.state == AttackInfo::RocketPunch::kState_Attack)
 				{
-					GAMESIM->m_arena.handleDamageRect(
-						*GAMESIM,
-						(int)newPos[0],
-						(int)newPos[1],
-						(int)newPos[0] + (int)m_collision.x1,
-						(int)newPos[1] + (int)m_collision.y1,
-						(int)newPos[0] + (int)m_collision.x2,
-						(int)newPos[1] + (int)m_collision.y2, true, false);
+					CollisionBox box = m_collision.getTranslated(newPos);
+					GAMESIM->testCollision(
+						box,
+						[](void * arg, PhysicsActor * actor, BlockAndDistance * block, Player * player)
+						{
+							Player * self = (Player*)arg;
+							if (block)
+								block->block->handleDamage(*self->m_instanceData->m_gameSim, block->x, block->y);
+							if (player && player != self)
+								player->handleDamage(1.f, Vec2(), self); // todo : velocity
+						},
+						this);
 				}
 
 				uint32_t newBlockMask = getIntersectingBlocksMask(newPos[0], newPos[1]);
@@ -1940,8 +1953,8 @@ void Player::draw() const
 			color.b,
 			t);
 		drawRect(
-			m_pos[0] + m_collision.x1, 0,
-			m_pos[0] + m_collision.x2, GFX_SY);
+			m_pos[0] + m_collision.min[0], 0,
+			m_pos[0] + m_collision.max[0], GFX_SY);
 	}
 	
 	/*
@@ -2038,20 +2051,20 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 	{
 		Sprite sprite("doublemelee.png");
 		sprite.flipX = m_facing[0] < 0.f;
-		sprite.drawEx(m_pos[0], m_pos[1] + m_attack.collision.y1);
+		sprite.drawEx(m_pos[0], m_pos[1] + m_attack.collision.min[1]);
 	}
 
 	if (m_shield.shield)
 	{
-		const float x = m_pos[0] + (m_collision.x1 + m_collision.x2) / 2.f;
-		const float y = m_pos[1] + (m_collision.y1 + m_collision.y2) / 2.f;
+		const float x = m_pos[0] + (m_collision.min[0] + m_collision.max[0]) / 2.f;
+		const float y = m_pos[1] + (m_collision.min[1] + m_collision.max[1]) / 2.f;
 		Sprite("shield-bubble.png").drawEx(x, y);
 	}
 
 	if (m_bubble.timer > 0.f)
 	{
-		const float x = m_pos[0] + (m_collision.x1 + m_collision.x2) / 2.f;
-		const float y = m_pos[1] + (m_collision.y1 + m_collision.y2) / 2.f;
+		const float x = m_pos[0] + (m_collision.min[0] + m_collision.max[0]) / 2.f;
+		const float y = m_pos[1] + (m_collision.min[1] + m_collision.max[1]) / 2.f;
 		Sprite("bubble-bubble.png").drawEx(x, y);
 	}
 
@@ -2068,8 +2081,8 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 
 void Player::drawLight() const
 {
-	const float x = m_pos[0] + (m_collision.x1 + m_collision.x2) / 2.f;
-	const float y = m_pos[1] + (m_collision.y1 + m_collision.y2) / 2.f;
+	const float x = m_pos[0] + (m_collision.min[0] + m_collision.max[0]) / 2.f;
+	const float y = m_pos[1] + (m_collision.min[1] + m_collision.max[1]) / 2.f;
 	Sprite("player-light.png").drawEx(x, y, 0.f, 3.f, 3.f, false, FILTER_LINEAR);
 }
 
@@ -2077,19 +2090,19 @@ void Player::debugDraw() const
 {
 	setColor(0, 31, 63, 63);
 	drawRect(
-		m_pos[0] + m_collision.x1,
-		m_pos[1] + m_collision.y1,
-		m_pos[0] + m_collision.x2 + 1,
-		m_pos[1] + m_collision.y2 + 1);
+		m_pos[0] + m_collision.min[0],
+		m_pos[1] + m_collision.min[1],
+		m_pos[0] + m_collision.max[0] + 1,
+		m_pos[1] + m_collision.max[1] + 1);
 
 	CollisionInfo damageCollision;
 	getDamageHitbox(damageCollision);
 	setColor(63, 31, 0, 63);
 	drawRect(
-		damageCollision.x1,
-		damageCollision.y1,
-		damageCollision.x2 + 1,
-		damageCollision.y2 + 1);
+		damageCollision.min[0],
+		damageCollision.min[1],
+		damageCollision.max[0] + 1,
+		damageCollision.max[1] + 1);
 
 	if (m_attack.attacking && m_attack.hasCollision)
 	{
@@ -2104,10 +2117,10 @@ void Player::debugDraw() const
 
 		setColor(255, 0, 0, 63);
 		drawRect(
-			attackCollision.x1,
-			attackCollision.y1,
-			attackCollision.x2,
-			attackCollision.y2);
+			attackCollision.min[0],
+			attackCollision.min[1],
+			attackCollision.max[0],
+			attackCollision.max[1]);
 	}
 
 	setColor(colorWhite);
@@ -2115,11 +2128,11 @@ void Player::debugDraw() const
 
 uint32_t Player::getIntersectingBlocksMaskInternal(int x, int y, bool doWrap) const
 {
-	const int x1 = (x + (int)m_collision.x1 + ARENA_SX_PIXELS) % ARENA_SX_PIXELS;
-	const int x2 = (x + (int)m_collision.x2 + ARENA_SX_PIXELS) % ARENA_SX_PIXELS;
-	const int y1 = (y + (int)m_collision.y1 + ARENA_SY_PIXELS) % ARENA_SY_PIXELS;
-	const int y2 = (y + (int)m_collision.y2 + ARENA_SY_PIXELS) % ARENA_SY_PIXELS;
-	const int y3 = (y + (int)(m_collision.y1 + m_collision.y2) / 2 + ARENA_SY_PIXELS) % ARENA_SY_PIXELS;
+	const int x1 = (x + (int)m_collision.min[0] + ARENA_SX_PIXELS) % ARENA_SX_PIXELS;
+	const int x2 = (x + (int)m_collision.max[0] + ARENA_SX_PIXELS) % ARENA_SX_PIXELS;
+	const int y1 = (y + (int)m_collision.min[1] + ARENA_SY_PIXELS) % ARENA_SY_PIXELS;
+	const int y2 = (y + (int)m_collision.max[1] + ARENA_SY_PIXELS) % ARENA_SY_PIXELS;
+	const int y3 = (y + (int)(m_collision.min[1] + m_collision.max[1]) / 2 + ARENA_SY_PIXELS) % ARENA_SY_PIXELS;
 
 	uint32_t result = 0;
 	
@@ -2135,10 +2148,10 @@ uint32_t Player::getIntersectingBlocksMaskInternal(int x, int y, bool doWrap) co
 
 #if 1
 	CollisionInfo collisionInfo = m_collision;
-	collisionInfo.x1 += x;
-	collisionInfo.y1 += y;
-	collisionInfo.x2 += x;
-	collisionInfo.y2 += y;
+	collisionInfo.min[0] += x;
+	collisionInfo.min[1] += y;
+	collisionInfo.max[0] += x;
+	collisionInfo.max[1] += y;
 
 	for (int i = 0; i < MAX_MOVERS; ++i)
 	{
@@ -2601,10 +2614,10 @@ PlayerInstanceData::PlayerInstanceData(Player * player, GameSim * gameSim)
 
 	//
 
-	m_player->m_collision.x1 = -PLAYER_COLLISION_HITBOX_SX / 2.f;
-	m_player->m_collision.x2 = +PLAYER_COLLISION_HITBOX_SX / 2.f;
-	m_player->m_collision.y1 = -PLAYER_COLLISION_HITBOX_SY / 1.f;
-	m_player->m_collision.y2 = 0.f;
+	m_player->m_collision.min[0] = -PLAYER_COLLISION_HITBOX_SX / 2.f;
+	m_player->m_collision.max[0] = +PLAYER_COLLISION_HITBOX_SX / 2.f;
+	m_player->m_collision.min[1] = -PLAYER_COLLISION_HITBOX_SY / 1.f;
+	m_player->m_collision.max[1] = 0.f;
 }
 
 PlayerInstanceData::~PlayerInstanceData()
