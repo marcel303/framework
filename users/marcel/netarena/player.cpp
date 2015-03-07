@@ -1484,7 +1484,7 @@ void Player::tick(float dt)
 			{
 				// update passthrough mode
 				m_blockMask = ~0;
-				if ((getIntersectingBlocksMask(m_pos[0], m_pos[1]) & kBlockMask_Passthrough) || enterPassthrough)
+				if ((getIntersectingBlocksMask(m_pos[0], m_pos[1]) & kBlockMask_Passthrough) || enterPassThrough)
 					m_blockMask = ~kBlockMask_Passthrough;
 			}
 
