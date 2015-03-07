@@ -209,7 +209,8 @@ struct Player
 			enum State
 			{
 				kState_Charge,
-				kState_Attack
+				kState_Attack,
+				kState_Stunned
 			};
 
 			bool isActive;
@@ -218,6 +219,7 @@ struct Player
 			float maxDistance;
 			float distance;
 			Vec2 speed;
+			float stunTime;
 		} m_rocketPunch;
 	} m_attack;
 

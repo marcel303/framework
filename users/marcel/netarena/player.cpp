@@ -21,12 +21,17 @@ todo:
 	1 throw/1 explode
 
 - prototype rocket punch
-	idle in air during charge
-	vulnerable during charge
-	analog stick = direction of attack
+	+ idle in air during charge
+	+ vulnerable during charge
+	+ analog stick = direction of attack
 	max charge = faster, further, succeed/or not, pass through all destructibles/not (strength)
 
-- add hitbox support
+	v2:
+	+ short recharge
+	+ auto discharge
+	- debuff on attack finish
+
+- add Spriter hitbox support
 
 - +1 icon on kill in token hunt game mode
 
@@ -962,7 +967,7 @@ void Player::tick(float dt)
 
 					logDebug("rocket punch: charge: %f", m_attack.m_rocketPunch.chargeTime);
 
-					if (m_input.wentUp(INPUT_BUTTON_Y))
+					if (m_input.wentUp(INPUT_BUTTON_Y) || (ROCKETPUNCH_AUTO_DISCHARGE && m_attack.m_rocketPunch.chargeTime == ROCKETPUNCH_CHARGE_MAX))
 					{
 						if (m_attack.m_rocketPunch.chargeTime < (ROCKETPUNCH_CHARGE_MUST_BE_MAXED ? ROCKETPUNCH_CHARGE_MAX : ROCKETPUNCH_CHARGE_MIN) ||
 							m_input.getAnalogDirection().CalcSize() == 0.f)
@@ -1003,7 +1008,20 @@ void Player::tick(float dt)
 
 					if (m_attack.m_rocketPunch.distance >= m_attack.m_rocketPunch.maxDistance)
 					{
+						// todo : change animation
+
+						m_attack.m_rocketPunch.state = AttackInfo::RocketPunch::kState_Stunned;
+					}
+				}
+				if (m_attack.m_rocketPunch.state == AttackInfo::RocketPunch::kState_Stunned)
+				{
+					if (m_attack.m_rocketPunch.stunTime >= ROCKETPUNCH_STUN_TIME)
+					{
 						endRocketPunch();
+					}
+					else
+					{
+						m_attack.m_rocketPunch.stunTime += dt;
 					}
 				}
 			}
@@ -1510,18 +1528,21 @@ void Player::tick(float dt)
 				// fixme : horrible code..
 				if (m_attack.m_rocketPunch.isActive && m_attack.m_rocketPunch.state == AttackInfo::RocketPunch::kState_Attack)
 				{
-					CollisionBox box = m_collision.getTranslated(newPos);
+					const CollisionBox box = m_collision.getTranslated(newPos);
+					void * args[2] = { this, (void*)&totalVel };
 					GAMESIM->testCollision(
 						box,
 						[](void * arg, PhysicsActor * actor, BlockAndDistance * block, Player * player)
 						{
-							Player * self = (Player*)arg;
+							void ** args = (void**)arg;
+							Player * self = (Player*)args[0];
+							Vec2 * vel = (Vec2*)args[1];
 							if (block)
 								block->block->handleDamage(*self->m_instanceData->m_gameSim, block->x, block->y);
 							if (player && player != self)
-								player->handleDamage(1.f, Vec2(), self); // todo : velocity
+								player->handleDamage(1.f, *vel, self);
 						},
-						this);
+						args);
 				}
 
 				uint32_t newBlockMask = getIntersectingBlocksMask(newPos[0], newPos[1]);
