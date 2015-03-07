@@ -37,9 +37,7 @@ struct Player
 		m_characterIndex = -1;
 		m_facing.Set(+1.f, +1.f);
 
-	#if USE_SPRITER_ANIMS
 		m_spriterState = SpriterState();
-	#endif
 
 		m_animAllowGravity = true;
 		m_animAllowSteering = true;
@@ -61,14 +59,14 @@ struct Player
 	void getAttackCollision(CollisionInfo & collision) const;
 	float getAttackDamage(Player * other) const;
 
-	bool isAnimOverrideAllowed(int anim) const;
+	bool isAnimOverrideAllowed(PlayerAnim anim) const;
 	float mirrorX(float x) const;
 	float mirrorY(float y) const;
 
 	bool hasValidCharacterIndex() const;
 	void setDisplayName(const std::string & name);
 
-	void setAnim(int anim, bool play, bool restart);
+	void setAnim(PlayerAnim anim, bool play, bool restart);
 	void clearAnimOverrides();
 	void setAttackDirection(int dx, int dy);
 	void applyAnim();
@@ -91,6 +89,9 @@ struct Player
 
 	void pushWeapon(PlayerWeapon weapon, int ammo);
 	PlayerWeapon popWeapon();
+
+	void beginRocketPunch();
+	void endRocketPunch();
 
 	// allocation
 	bool m_isUsed;
@@ -124,6 +125,7 @@ struct Player
 		bool wentDown(int input) { return !wasDown(input) && isDown(input); }
 		bool wentUp(int input) { return wasDown(input) && !isDown(input); }
 		void next() { m_prevState = m_currState; m_actions = 0; }
+		Vec2 getAnalogDirection() const { return Vec2(m_currState.analogX / 127.f, m_currState.analogY / 127.f); }
 	} m_input;
 
 	//
@@ -141,12 +143,10 @@ struct Player
 
 	//
 
-	uint8_t m_anim;
+	PlayerAnim m_anim;
 	bool m_animPlay;
 
-#if USE_SPRITER_ANIMS
 	SpriterState m_spriterState;
-#endif
 
 	//
 
@@ -161,7 +161,6 @@ struct Player
 
 	struct
 	{
-		PlayerSpecial type;
 		float meleeAnimTimer;
 		int meleeCounter;
 		float attackDownHeight;
@@ -197,6 +196,27 @@ struct Player
 		CollisionInfo collision;
 		Vec2 attackVel;
 		float cooldown; // this timer needs to hit zero before the player can attack again. it's decremented AFTER the attack animation has finished
+
+		struct RocketPunch
+		{
+			RocketPunch()
+			{
+				memset(this, 0, sizeof(RocketPunch));
+			}
+
+			enum State
+			{
+				kState_Charge,
+				kState_Attack
+			};
+
+			bool isActive;
+			State state;
+			float chargeTime;
+			float maxDistance;
+			float distance;
+			Vec2 speed;
+		} m_rocketPunch;
 	} m_attack;
 
 	struct TeleportInfo

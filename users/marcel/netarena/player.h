@@ -61,9 +61,7 @@ class CharacterData
 public:
 	Dictionary m_props;
 	AnimData m_animData;
-#if USE_SPRITER_ANIMS
 	Spriter * m_spriter;
-#endif
 	float m_spriteScale;
 	PlayerSpecial m_special;
 	std::map<std::string, SoundBag> m_sounds;
@@ -79,10 +77,6 @@ public:
 class PlayerInstanceData
 {
 	friend struct Player;
-
-#if !USE_SPRITER_ANIMS
-	Sprite * m_sprite;
-#endif
 	
 	static void handleAnimationAction(const std::string & action, const Dictionary & args);
 

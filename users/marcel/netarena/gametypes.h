@@ -36,6 +36,26 @@ enum GameMode
 
 extern const char * g_gameModeNames[kGameMode_COUNT];
 
+enum PlayerAnim
+{
+	kPlayerAnim_NULL,
+	kPlayerAnim_Idle,
+	kPlayerAnim_InAir,
+	kPlayerAnim_Jump,
+	kPlayerAnim_WallSlide,
+	kPlayerAnim_Walk,
+	kPlayerAnim_Attack,
+	kPlayerAnim_AttackUp,
+	kPlayerAnim_AttackDown,
+	kPlayerAnim_Fire,
+	kPlayerAnim_RocketPunch_Charge,
+	kPlayerAnim_RocketPunch_Attack,
+	kPlayerAnim_AirDash,
+	kPlayerAnim_Spawn,
+	kPlayerAnim_Die,
+	kPlayerAnim_COUNT
+};
+
 enum PlayerWeapon
 {
 	kPlayerWeapon_None,
@@ -51,6 +71,7 @@ enum PlayerWeapon
 enum PlayerSpecial
 {
 	kPlayerSpecial_None,
+	kPlayerSpecial_RocketPunch,
 	kPlayerSpecial_DoubleSidedMelee,
 	kPlayerSpecial_DownAttack,
 	kPlayerSpecial_Shield,

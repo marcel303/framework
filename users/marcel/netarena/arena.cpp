@@ -661,29 +661,6 @@ bool Arena::getTeleportDestination(GameSim & gameSim, int startX, int startY, in
 	}
 }
 
-/*
-uint32_t Arena::getIntersectingBlocksMask(int x1, int y1, int x2, int y2) const
-{
-	uint32_t result = 0;
-
-	if (getBlockRectFromPixels(x1, y1, x2, y2, x1, y1, x2, y2))
-	{
-		for (int x = x1; x <= x2; ++x)
-		{
-			for (int y = y1; y <= y2; ++y)
-			{
-				if (m_blocks[x][y].shape == kBlockShape_Opaque)
-				{
-					result |= (1 << m_blocks[x][y].type);
-				}
-			}
-		}
-	}
-
-	return result;
-}
-*/
-
 uint32_t Arena::getIntersectingBlocksMask(int x, int y) const
 {
 	uint32_t result = 0;
@@ -806,7 +783,7 @@ bool Arena::getBlocksFromPixels(int baseX, int baseY, int x1, int y1, int x2, in
 	return result != 0;
 }
 
-bool Arena::handleDamageRect(GameSim & gameSim, int baseX, int baseY, int x1, int y1, int x2, int y2, bool hitDestructible)
+bool Arena::handleDamageRect(GameSim & gameSim, int baseX, int baseY, int x1, int y1, int x2, int y2, bool hitDestructible, bool hitSingleDestructible)
 {
 	bool result = false;
 
@@ -849,7 +826,8 @@ bool Arena::handleDamageRect(GameSim & gameSim, int baseX, int baseY, int x1, in
 				spawnInfo.color = 0xff8040ff;
 				gameSim.spawnParticles(spawnInfo);
 
-				hitDestructible = false;
+				if (hitSingleDestructible)
+					hitDestructible = false;
 
 				result = true;
 			}

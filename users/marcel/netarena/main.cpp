@@ -1469,7 +1469,7 @@ void App::draw()
 			setColor(255, 255, 255);
 			Font font("calibri.ttf");
 			setFont(font);
-			drawText(GFX_SX - 5, GFX_SY - 25, 20, -1.f, -1.f, "build %08x", g_buildId);
+			drawText(GFX_SX - 5, GFX_SY - 25, 20, -1.f, -1.f, "build %08x \xc2\xa9", g_buildId);
 		}
 
 		if (g_devMode && g_host)
@@ -1482,7 +1482,11 @@ void App::draw()
 				drawText(0, y += 30, 24, +1, +1, "random seed=%08x, next pickup tick=%u, crc=%08x, px=%g, py=%g",
 					g_host->m_gameSim.m_randomSeed,
 					(uint32_t)g_host->m_gameSim.m_nextPickupSpawnTick,
+				#if ENABLE_GAMESTATE_DESYNC_DETECTION
 					g_host->m_gameSim.calcCRC(),
+				#else
+					-1,
+				#endif
 					g_host->m_gameSim.m_playerInstanceDatas[0] ? g_host->m_gameSim.m_playerInstanceDatas[0]->m_player->m_pos[0] : 0.f,
 					g_host->m_gameSim.m_playerInstanceDatas[0] ? g_host->m_gameSim.m_playerInstanceDatas[0]->m_player->m_pos[1] : 0.f);
 				for (size_t i = 0; i < m_clients.size(); ++i)
@@ -1490,7 +1494,11 @@ void App::draw()
 					drawText(0, y += 30, 24, +1, +1, "random seed=%08x, next pickup tick=%u, crc=%08x, px=%g, py=%g",
 						m_clients[i]->m_gameSim->m_randomSeed,
 						(uint32_t)m_clients[i]->m_gameSim->m_nextPickupSpawnTick,
+					#if ENABLE_GAMESTATE_DESYNC_DETECTION
 						m_clients[i]->m_gameSim->calcCRC(),
+					#else
+						-1,
+					#endif
 						m_clients[i]->m_gameSim->m_playerInstanceDatas[0] ? m_clients[i]->m_gameSim->m_playerInstanceDatas[0]->m_player->m_pos[0] : 0.f,
 						m_clients[i]->m_gameSim->m_playerInstanceDatas[0] ? m_clients[i]->m_gameSim->m_playerInstanceDatas[0]->m_player->m_pos[1] : 0.f);
 				}
@@ -1873,11 +1881,13 @@ static bool calculateFileCRC(const char * filename, uint32_t & crc)
 
 int main(int argc, char * argv[])
 {
+#if 0 // todo
 	if (!calculateFileCRC(argv[0], g_buildId))
 	{
 		logError("failed to calculate CRC for %s", argv[0]);
 		return -1;
 	}
+#endif
 
 	changeDirectory("data");
 

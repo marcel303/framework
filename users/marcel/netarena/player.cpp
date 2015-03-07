@@ -12,6 +12,32 @@
 
 todo:
 
+- better attach to platform logic, so we can have movers closer to each other without the player bugging
+
+- prototype invisibility ability
+	charge periode
+
+- prototype pipe bomb
+	1 throw/1 explode
+
+- prototype rocket punch
+	idle in air during charge
+	vulnerable during charge
+	analog stick = direction of attack
+	max charge = faster, further, succeed/or not, pass through all destructibles/not (strength)
+
+- add hitbox support
+
+- +1 icon on kill in token hunt game mode
+
+- prototype gravity well level event
+- prototype earth quake level event
+- prototype wind level event
+- prototype time dilation level event
+- prototype spike walls level event
+- prototype barrel drop level event
+- prototype day/night level event
+
 + torch light flicker speed should be time dilated too
 + add key repeat to text input
 + add global method to get character color
@@ -143,25 +169,6 @@ OPTION_STEP(PLAYER_ANIM_MULTIPLIER, 0, 0, .01f);
 
 // todo : m_isGrounded should be true when stickied too. review code and make change!
 
-enum PlayerAnim
-{
-	kPlayerAnim_NULL,
-	kPlayerAnim_Idle,
-	kPlayerAnim_InAir,
-	kPlayerAnim_Jump,
-	kPlayerAnim_WallSlide,
-	kPlayerAnim_Walk,
-	kPlayerAnim_Attack,
-	kPlayerAnim_AttackUp,
-	kPlayerAnim_AttackDown,
-	kPlayerAnim_Fire,
-	kPlayerAnim_AirDash,
-	kPlayerAnim_Spawn,
-	kPlayerAnim_Die,
-	kPlayerAnim_COUNT
-};
-
-#if USE_SPRITER_ANIMS
 struct PlayerAnimInfo
 {
 	const char * file;
@@ -179,31 +186,14 @@ struct PlayerAnimInfo
 	{ "sprite.scml", "AttackUp",   5 },
 	{ "sprite.scml", "AttackDown", 5 },
 	{ "sprite.scml", "Shoot",      5 },
+	{ "sprite.scml", "Walk", 5 }, // fixme : charge
+	{ "sprite.scml", "Walk", 5 }, // fixme : attack
+	//{ "sprite.scml", "RocketPunch_Charge", 5 },
+	//{ "sprite.scml", "RocketPunch_Attack", 5 },
 	{ "sprite.scml", "AirDash",    5 },
 	{ "sprite.scml", "Spawn",      6 },
 	{ "sprite.scml", "Die",        7 }
 };
-#else
-struct PlayerAnimInfo
-{
-	const char * file;
-	int prio;
-} s_animInfos[kPlayerAnim_COUNT] =
-{
-	{ nullptr,                            0 },
-	{ "char%d/jump/jump.png",             1 },
-	{ "char%d/jump/jump.png",             2 },
-	{ "char%d/wallslide/wallslide.png",   3 },
-	{ "char%d/walk/walk.png",             4 },
-	{ "char%d/attack/attack.png",         5 },
-	{ "char%d/attackup/attackup.png",     5 },
-	{ "char%d/attackdown/attackdown.png", 5 },
-	{ "char%d/shoot/shoot.png",           5 },
-	{ "char%d/dash/dash.png",             5 },
-	{ "char%d/spawn/spawn.png",           6 },
-	{ "char%d/die/die.png",               7 }
-};
-#endif
 
 //
 
@@ -396,6 +386,9 @@ void PlayerInstanceData::handleAnimationAction(const std::string & action, const
 		if (action == "gravity_enable")
 		{
 			player->m_animAllowGravity = args.getBool("enable", true);
+
+			if (g_devMode)
+				logDebug("-> m_animAllowGravity = %d", player->m_animAllowGravity);
 		}
 		else if (action == "steering_enable")
 		{
@@ -418,6 +411,9 @@ void PlayerInstanceData::handleAnimationAction(const std::string & action, const
 			player->m_animVelIsAbsolute = args.getBool("abs", player->m_animVelIsAbsolute);
 			if (args.getBool("reset", true))
 				player->m_vel = Vec2();
+
+			if (g_devMode)
+				logDebug("-> vel = (%f, %f), m_animVelIsAbsolute = %d", player->m_vel[0], player->m_vel[1], player->m_animVelIsAbsolute);
 		}
 		else if (action == "set_attack_vel")
 		{
@@ -525,7 +521,7 @@ float Player::getAttackDamage(Player * other) const
 	return result;
 }
 
-bool Player::isAnimOverrideAllowed(int anim) const
+bool Player::isAnimOverrideAllowed(PlayerAnim anim) const
 {
 	if ((m_ice.timer > 0.f || m_bubble.timer > 0.f || m_special.meleeCounter != 0) && anim != kPlayerAnim_Die)
 		return false;
@@ -553,10 +549,12 @@ void Player::setDisplayName(const std::string & name)
 	m_displayName = name.c_str();
 }
 
-void Player::setAnim(int anim, bool play, bool restart)
+void Player::setAnim(PlayerAnim anim, bool play, bool restart)
 {
 	if (anim != m_anim || play != m_animPlay || restart)
 	{
+		log("setAnim: %d", anim);
+
 		m_anim = anim;
 		m_animPlay = play;
 
@@ -587,21 +585,9 @@ void Player::applyAnim()
 
 	if (m_anim != kPlayerAnim_NULL)
 	{
-	#if USE_SPRITER_ANIMS
 		m_spriterState = SpriterState();
-	#else
-		const char * filename = makeCharacterFilename(m_characterIndex, "sprite/sprite.scml");
-
-		delete m_instanceData->m_sprite;
-		m_instanceData->m_sprite = 0;
-
-		m_instanceData->m_sprite = new Sprite(filename, 0.f, 0.f, 0, false);
-		m_instanceData->m_sprite->animActionHandler = PlayerInstanceData::handleAnimationAction;
-		m_instanceData->m_sprite->animActionHandlerObj = m_instanceData;
-	#endif
 	}
 
-#if USE_SPRITER_ANIMS
 	const CharacterData * characterData = getCharacterData(m_characterIndex);
 
 	if (!m_spriterState.startAnim(*characterData->m_spriter, s_animInfos[m_anim].name))
@@ -613,15 +599,6 @@ void Player::applyAnim()
 
 	if (!m_animPlay)
 		m_spriterState.stopAnim(*characterData->m_spriter);
-#else
-	if (m_instanceData->m_sprite)
-	{
-		if (m_animPlay)
-			m_instanceData->m_sprite->startAnim("anim");
-		else
-			m_instanceData->m_sprite->stopAnim();
-	}
-#endif
 }
 
 //
@@ -717,17 +694,14 @@ void Player::tick(float dt)
 			m_isAnimDriven = false;
 	}
 
+	if (m_ice.timer > 0.f ||
+		m_bubble.timer > 0.f)
+		m_spriterState.animSpeed = 1e-10f;
+	else
+		m_spriterState.animSpeed = 1.f;
+
 	//
 
-#if !USE_SPRITER_ANIMS
-	if (m_instanceData->m_sprite)
-	{
-		m_instanceData->m_sprite->update(dt);
-
-		// check for end of animation events
-
-		if (!m_instanceData->m_sprite->animIsActive)
-#else
 	if (m_anim != kPlayerAnim_NULL)
 	{
 		const CharacterData * characterData = getCharacterData(m_characterIndex);
@@ -764,7 +738,6 @@ void Player::tick(float dt)
 		}
 
 		if (isDone)
-#endif
 		{
 			m_isAnimDriven = false;
 
@@ -968,6 +941,58 @@ void Player::tick(float dt)
 					attackCollision.y2,
 					!m_attack.hitDestructible);
 			}
+
+			if (m_attack.m_rocketPunch.isActive)
+			{
+				if (m_attack.m_rocketPunch.state == AttackInfo::RocketPunch::kState_Charge)
+				{
+					m_attack.m_rocketPunch.chargeTime = Calc::Min(m_attack.m_rocketPunch.chargeTime + dt, ROCKETPUNCH_CHARGE_MAX);
+
+					logDebug("rocket punch: charge: %f", m_attack.m_rocketPunch.chargeTime);
+
+					if (m_input.wentUp(INPUT_BUTTON_Y))
+					{
+						if (m_attack.m_rocketPunch.chargeTime < (ROCKETPUNCH_CHARGE_MUST_BE_MAXED ? ROCKETPUNCH_CHARGE_MAX : ROCKETPUNCH_CHARGE_MIN) ||
+							m_input.getAnalogDirection().CalcSize() == 0.f)
+						{
+							logDebug("rocket punch: cancel");
+
+							endRocketPunch();
+						}
+						else
+						{
+							const float t = (m_attack.m_rocketPunch.chargeTime - ROCKETPUNCH_CHARGE_MIN) / (ROCKETPUNCH_CHARGE_MAX - ROCKETPUNCH_CHARGE_MIN);
+							const float speed = ROCKETPUNCH_SPEED_BASED_ON_CHARGE ? Calc::Lerp(ROCKETPUNCH_SPEED_MIN, ROCKETPUNCH_SPEED_MAX, t) : ROCKETPUNCH_SPEED_MAX;
+							const float distance = ROCKETPUNCH_DISTANCE_BASED_ON_CHARGE ? Calc::Lerp(ROCKETPUNCH_DISTANCE_MIN, ROCKETPUNCH_DISTANCE_MAX, t) : ROCKETPUNCH_DISTANCE_MAX;
+
+							m_attack.m_rocketPunch.state = AttackInfo::RocketPunch::kState_Attack;
+							m_attack.m_rocketPunch.maxDistance = distance;
+							m_attack.m_rocketPunch.speed = m_input.getAnalogDirection().CalcNormalized() * speed;
+
+							setAnim(kPlayerAnim_RocketPunch_Attack, true, true);
+							m_isAnimDriven = true;
+							m_animVelIsAbsolute = true;
+
+							logDebug("rocket punch: attack! speed = (%f, %f) max distance = %f", m_attack.m_rocketPunch.speed[0], m_attack.m_rocketPunch.speed[1], m_attack.m_rocketPunch.maxDistance);
+						}
+					}
+				}
+				if (m_attack.m_rocketPunch.state == AttackInfo::RocketPunch::kState_Attack)
+				{
+					// move player
+
+					animVel += m_attack.m_rocketPunch.speed;
+
+					m_attack.m_rocketPunch.distance += (animVel * dt).CalcSize();
+
+					logDebug("rocket punch: attack: distance=%f", m_attack.m_rocketPunch.distance);
+
+					if (m_attack.m_rocketPunch.distance >= m_attack.m_rocketPunch.maxDistance)
+					{
+						endRocketPunch();
+					}
+				}
+			}
 		}
 
 		if (!m_attack.attacking)
@@ -975,11 +1000,11 @@ void Player::tick(float dt)
 
 		if (!m_attack.attacking && m_attack.cooldown <= 0.f)
 		{
-			if (m_input.wentDown(INPUT_BUTTON_B) && (m_weaponStackSize > 0 || s_unlimitedAmmo) && isAnimOverrideAllowed(kPlayerWeapon_Fire))
+			if (m_input.wentDown(INPUT_BUTTON_B) && (m_weaponStackSize > 0 || s_unlimitedAmmo) && isAnimOverrideAllowed(kPlayerAnim_Fire))
 			{
 				m_attack = AttackInfo();
 
-				int anim = -1;
+				PlayerAnim anim = kPlayerAnim_NULL;
 				BulletType bulletType = kBulletType_COUNT;
 				BulletEffect bulletEffect = kBulletEffect_Damage;
 				bool hasAttackCollision = false;
@@ -1012,7 +1037,7 @@ void Player::tick(float dt)
 					GAMESIM->playSound("grenade-throw.ogg");
 				}
 
-				if (anim != -1)
+				if (anim != kPlayerAnim_NULL)
 				{
 					setAnim(anim, true, true);
 					m_isAnimDriven = true;
@@ -1050,7 +1075,7 @@ void Player::tick(float dt)
 
 				m_attack.cooldown = PLAYER_SWORD_COOLDOWN;
 
-				int anim = -1;
+				PlayerAnim anim = kPlayerAnim_NULL;
 
 				// determine attack direction based on player input
 
@@ -1065,7 +1090,7 @@ void Player::tick(float dt)
 					anim = kPlayerAnim_AttackDown;
 					m_enterPassthrough = true;
 
-					if (m_special.type == kPlayerSpecial_DownAttack)
+					if (characterData->m_special == kPlayerSpecial_DownAttack)
 					{
 						m_special.attackDownActive = true;
 						m_special.attackDownHeight = 0.f;
@@ -1107,7 +1132,11 @@ void Player::tick(float dt)
 
 			if (m_input.wentDown(INPUT_BUTTON_Y) && !s_noSpecial && isAnimOverrideAllowed(kPlayerAnim_Attack))
 			{
-				if (m_special.type == kPlayerSpecial_DoubleSidedMelee)
+				if (characterData->m_special == kPlayerSpecial_RocketPunch && !m_isGrounded)
+				{
+					beginRocketPunch();
+				}
+				else if (characterData->m_special == kPlayerSpecial_DoubleSidedMelee)
 				{
 					m_attack = AttackInfo();
 					m_attack.attacking = true;
@@ -1134,7 +1163,7 @@ void Player::tick(float dt)
 
 		// update double melee attack
 
-		if (m_special.type == kPlayerSpecial_DoubleSidedMelee && m_special.meleeCounter != 0)
+		if (characterData->m_special == kPlayerSpecial_DoubleSidedMelee && m_special.meleeCounter != 0)
 		{
 			m_special.meleeAnimTimer -= dt;
 
@@ -1225,7 +1254,8 @@ void Player::tick(float dt)
 			m_animAllowSteering &&
 			m_ice.timer == 0.f &&
 			m_bubble.timer == 0.f &&
-			m_special.meleeCounter == 0;
+			m_special.meleeCounter == 0 &&
+			m_attack.m_rocketPunch.isActive == false;
 
 		m_controlDisableTime -= dt;
 		if (m_controlDisableTime < 0.f)
@@ -1339,20 +1369,16 @@ void Player::tick(float dt)
 
 		// gravity
 
-		float gravity;
+		float gravity = 0.f;
 
 		m_isWallSliding = false;
 		m_isUsingJetpack = false;
 
-		if (!m_animAllowGravity)
-			gravity = 0.f;
-		if (m_isAttachedToSticky)
-			gravity = 0.f;
-		else if (m_animVelIsAbsolute)
-			gravity = 0.f;
-		else if (m_bubble.timer > 0.f)
-			gravity = 0.f;
-		else
+		if (m_animAllowGravity &&
+			!m_isAttachedToSticky &&
+			!m_animVelIsAbsolute &&
+			m_bubble.timer == 0.f &&
+			!m_attack.m_rocketPunch.isActive)
 		{
 			if (currentBlockMask & (1 << kBlockType_GravityDisable))
 				gravity = 0.f;
@@ -1367,7 +1393,7 @@ void Player::tick(float dt)
 
 			bool canWallSlide = true;
 
-			if (m_special.type == kPlayerSpecial_Jetpack && m_input.isDown(INPUT_BUTTON_Y) && !s_noSpecial)
+			if (characterData->m_special == kPlayerSpecial_Jetpack && m_input.isDown(INPUT_BUTTON_Y) && !s_noSpecial)
 			{
 				gravity -= JETPACK_ACCEL;
 				m_isUsingJetpack = true;
@@ -1461,7 +1487,25 @@ void Player::tick(float dt)
 
 				newPos[i] += delta;
 
+				// fixme : horrible code..
+				if (m_attack.m_rocketPunch.isActive && m_attack.m_rocketPunch.state == AttackInfo::RocketPunch::kState_Attack)
+				{
+					GAMESIM->m_arena.handleDamageRect(
+						*GAMESIM,
+						(int)newPos[0],
+						(int)newPos[1],
+						(int)newPos[0] + (int)m_collision.x1,
+						(int)newPos[1] + (int)m_collision.y1,
+						(int)newPos[0] + (int)m_collision.x2,
+						(int)newPos[1] + (int)m_collision.y2, true, false);
+				}
+
 				uint32_t newBlockMask = getIntersectingBlocksMask(newPos[0], newPos[1]);
+
+				if (m_attack.m_rocketPunch.isActive && (newBlockMask & kBlockMask_Solid))
+				{
+					endRocketPunch();
+				}
 
 				// ignore passthough blocks if we're moving horizontally or upwards
 				// todo : update block mask each iteration. reset m_blockMask first
@@ -1541,11 +1585,7 @@ void Player::tick(float dt)
 
 							if (m_isAnimDriven && m_anim == kPlayerAnim_AirDash)
 							{
-							#if USE_SPRITER_ANIMS
 								m_spriterState.stopAnim(*characterData->m_spriter);
-							#else
-								m_instanceData->m_sprite->stopAnim();
-							#endif
 							}
 						}
 					}
@@ -1587,7 +1627,7 @@ void Player::tick(float dt)
 
 								// todo : use separate PlayerAnim for special attack
 
-								if (m_special.type == kPlayerSpecial_DownAttack && m_special.attackDownActive && !s_noSpecial)
+								if (characterData->m_special == kPlayerSpecial_DownAttack && m_special.attackDownActive && !s_noSpecial)
 								{
 									int size = (int(m_special.attackDownHeight) - STOMP_EFFECT_MIN_HEIGHT) * STOMP_EFFECT_MAX_SIZE / (STOMP_EFFECT_MAX_HEIGHT - STOMP_EFFECT_MIN_HEIGHT);
 									if (size > STOMP_EFFECT_MAX_SIZE)
@@ -1806,16 +1846,38 @@ void Player::draw() const
 	if (!hasValidCharacterIndex())
 		return;
 
-#if USE_SPRITER_ANIMS
+	// draw rocket punch charge and direction
+
+	if (m_attack.m_rocketPunch.isActive && m_attack.m_rocketPunch.state == AttackInfo::RocketPunch::kState_Charge)
+	{
+		const float t = (m_attack.m_rocketPunch.chargeTime - ROCKETPUNCH_CHARGE_MIN) / (ROCKETPUNCH_CHARGE_MAX - ROCKETPUNCH_CHARGE_MIN);
+		Color c1 = colorRed;
+		Color c2 = colorYellow;
+		Color c = t == 1.f ? colorWhite : c1.interp(c2, t);
+		setColor(c);
+		drawRect(
+			m_pos[0] - 50,
+			m_pos[1] - 100,
+			m_pos[0] + 50,
+			m_pos[1] + 50);
+
+		const float x = m_pos[0];
+		const float y = m_pos[1] - 30.f;
+		const Vec2 dir = m_input.getAnalogDirection().CalcNormalized();
+		const Vec2 off1 = dir * 50.f;
+		const Vec2 off2 = dir * 150.f;
+
+		setColor(colorWhite);
+		drawLine(
+			x + off1[0],
+			y + off1[1],
+			x + off2[0],
+			y + off2[1]);
+	}
+
+
 	const bool flipX = m_facing[0] > 0 ? true : false;
 	const bool flipY = m_facing[1] < 0 ? true : false;
-#else
-	m_instanceData->m_sprite->flipX = m_facing[0] < 0 ? true : false;
-	m_instanceData->m_sprite->flipY = m_facing[1] < 0 ? true : false;
-
-	const bool flipX = m_instanceData->m_sprite->flipX;
-	const bool flipY = m_instanceData->m_sprite->flipY;
-#endif
 
 	drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? PLAYER_COLLISION_HITBOX_SY : 0));
 
@@ -1834,6 +1896,8 @@ void Player::draw() const
 		color.b,
 		.5f);
 	drawRect(m_pos[0] - 50, m_pos[1] - 110, m_pos[0] + 50, m_pos[1] - 85);
+
+	// draw invincibility marker
 
 	if (m_spawnInvincibilityTicks > 0)
 	{
@@ -1922,11 +1986,9 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 	if (m_ice.timer > 0.f)
 		setColor(63, 127, 255);
 
-#if USE_SPRITER_ANIMS
 	const float scale = characterData->m_spriteScale * PLAYER_SPRITE_SCALE;
 	const float animScale = (1.f - m_facingAnim * 2.f);
-	const float animScale2 = (animScale < 0.f ? (animScale - .5f) : (animScale + .5f)) / 1.5;
-	//log("%f -> %f", animScale, animScale2);
+	const float animScale2 = (animScale < 0.f ? (animScale - .5f) : (animScale + .5f)) / 1.5f;
 
 	SpriterState spriterState = m_spriterState;
 	spriterState.x = x;
@@ -1936,9 +1998,6 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 	spriterState.flipX = flipX;
 	spriterState.flipY = flipY;
 	characterData->m_spriter->draw(spriterState);
-#else
-	m_instanceData->m_sprite->drawEx(x, y, 0.f, m_instanceData->m_spriteScale);
-#endif
 
 	setColorMode(COLOR_MUL);
 	setColor(255, 255, 255);
@@ -2307,11 +2366,6 @@ bool Player::handleIce(Vec2Arg velocity, Player * attacker)
 			setAnim(kPlayerAnim_Walk, true, true);
 			m_isAnimDriven = true;
 			m_enableInAirAnim = false;
-		#if USE_SPRITER_ANIMS
-			m_spriterState.animSpeed = 1e-10f;
-		#else
-			m_instanceData->m_sprite->animSpeed = 1e-10f;
-		#endif
 
 			m_ice.timer = PLAYER_EFFECT_ICE_TIME;
 		}
@@ -2340,11 +2394,6 @@ bool Player::handleBubble(Vec2Arg velocity, Player * attacker)
 			setAnim(kPlayerAnim_Walk, true, true);
 			m_isAnimDriven = true;
 			m_enableInAirAnim = false;
-		#if USE_SPRITER_ANIMS
-			m_spriterState.animSpeed = 1e-10f;
-		#else
-			m_instanceData->m_sprite->animSpeed = 1e-10f;
-		#endif
 
 			m_bubble.timer = PLAYER_EFFECT_BUBBLE_TIME;
 		}
@@ -2411,6 +2460,32 @@ PlayerWeapon Player::popWeapon()
 	return result;
 }
 
+void Player::beginRocketPunch()
+{
+	m_attack = AttackInfo();
+	m_attack.attacking = true;
+
+	m_attack.m_rocketPunch.isActive = true;
+
+	// start anim
+
+	setAnim(kPlayerAnim_RocketPunch_Charge, true, true);
+	m_isAnimDriven = true;
+	m_animVelIsAbsolute = true;
+}
+
+void Player::endRocketPunch()
+{
+	logDebug("rocket punch: attack: done!");
+
+	m_attack = AttackInfo();
+	clearAnimOverrides();
+
+	setAnim(kPlayerAnim_Walk, false, true);
+
+	m_vel = Vec2();
+}
+
 //
 
 CharacterData::CharacterData(int characterIndex)
@@ -2423,10 +2498,8 @@ CharacterData::CharacterData(int characterIndex)
 
 CharacterData::~CharacterData()
 {
-#if USE_SPRITER_ANIMS
 	delete m_spriter;
 	m_spriter = 0;
-#endif
 }
 
 void CharacterData::load(int characterIndex)
@@ -2454,13 +2527,11 @@ void CharacterData::load(int characterIndex)
 	m_animData = AnimData();
 	m_animData.load(makeCharacterFilename(characterIndex, "animdata.txt"));
 
-#if USE_SPRITER_ANIMS
 	delete m_spriter;
 	m_spriter = 0;
 
 	const char * filename = makeCharacterFilename(characterIndex, "sprite/sprite.scml");
 	m_spriter = new Spriter(filename);
-#endif
 
 	m_spriteScale = m_props.getFloat("sprite_scale", 1.f);
 
@@ -2470,6 +2541,8 @@ void CharacterData::load(int characterIndex)
 
 	const std::string specialStr = m_props.getString("special", "");
 
+	if (specialStr == "rocket_punch")
+		special = kPlayerSpecial_RocketPunch;
 	if (specialStr == "double_melee")
 		special = kPlayerSpecial_DoubleSidedMelee;
 	if (specialStr == "down_attack")
@@ -2490,9 +2563,6 @@ PlayerInstanceData::PlayerInstanceData(Player * player, GameSim * gameSim)
 	: m_player(player)
 	, m_gameSim(gameSim)
 	, m_textChatTicks(0)
-#if !USE_SPRITER_ANIMS
-	, m_sprite(0)
-#endif
 {
 	m_player->m_instanceData = this;
 
@@ -2506,10 +2576,6 @@ PlayerInstanceData::PlayerInstanceData(Player * player, GameSim * gameSim)
 
 PlayerInstanceData::~PlayerInstanceData()
 {
-#if !USE_SPRITER_ANIMS
-	delete m_sprite;
-	m_sprite = 0;
-#endif
 }
 
 void PlayerInstanceData::setCharacterIndex(int index)
@@ -2521,13 +2587,7 @@ void PlayerInstanceData::setCharacterIndex(int index)
 
 void PlayerInstanceData::handleCharacterIndexChange()
 {
-	if (m_player->hasValidCharacterIndex())
-	{
-	#if !USE_SPRITER_ANIMS
-		delete m_sprite;
-		m_sprite = new Sprite(makeCharacterFilename(m_player->m_characterIndex, "walk/walk.png"), 0.f, 0.f, 0, false);
-	#endif
-	}
+	//m_player->m_spriterState.animIndex = // todo : recalc anim index?
 }
 
 void PlayerInstanceData::playSoundBag(const char * name, int volume)

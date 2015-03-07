@@ -213,6 +213,22 @@ OPTION_DEFINE(int, STOMP_EFFECT_MAX_SIZE, "Special Abilities/Stomp Attack/Max Ef
 OPTION_DEFINE(int, STOMP_EFFECT_MIN_HEIGHT, "Special Abilities/Stomp Attack/Effect Min Height");
 OPTION_DEFINE(int, STOMP_EFFECT_MAX_HEIGHT, "Special Abilities/Stomp Attack/Effect Max Height");
 
+OPTION_DEFINE(float, ROCKETPUNCH_CHARGE_MIN, "Special Abilities/Rocket Punch/Charge Min (Sec)");
+OPTION_DEFINE(float, ROCKETPUNCH_CHARGE_MAX, "Special Abilities/Rocket Punch/Charge Max (Sec)");
+OPTION_DEFINE(bool, ROCKETPUNCH_CHARGE_MUST_BE_MAXED, "Special Abilities/Rocket Punch/Charge Must Be Maxed");
+OPTION_DEFINE(int, ROCKETPUNCH_SPEED_MIN, "Special Abilities/Rocket Punch/Speed Min");
+OPTION_DEFINE(int, ROCKETPUNCH_SPEED_MAX, "Special Abilities/Rocket Punch/Speed Max");
+OPTION_DEFINE(bool, ROCKETPUNCH_SPEED_BASED_ON_CHARGE, "Special Abilities/Rocket Punch/Speed Based On Charge");
+OPTION_DEFINE(int, ROCKETPUNCH_DISTANCE_MIN, "Special Abilities/Rocket Punch/Distance Min");
+OPTION_DEFINE(int, ROCKETPUNCH_DISTANCE_MAX, "Special Abilities/Rocket Punch/Distance Max");
+OPTION_DEFINE(bool, ROCKETPUNCH_DISTANCE_BASED_ON_CHARGE, "Special Abilities/Rocket Punch/Distance Based On Charge");
+OPTION_STEP(ROCKETPUNCH_CHARGE_MIN, 0, 0, .1f);
+OPTION_STEP(ROCKETPUNCH_CHARGE_MAX, 0, 0, .1f);
+OPTION_STEP(ROCKETPUNCH_SPEED_MIN, 0, 0, 100);
+OPTION_STEP(ROCKETPUNCH_SPEED_MAX, 0, 0, 100);
+OPTION_STEP(ROCKETPUNCH_DISTANCE_MIN, 0, 0, 100);
+OPTION_STEP(ROCKETPUNCH_DISTANCE_MAX, 0, 0, 100);
+
 OPTION_DEFINE(int, UI_CHARSELECT_BASE_X, "UI/Character Select/Base X");
 OPTION_DEFINE(int, UI_CHARSELECT_BASE_Y, "UI/Character Select/Base Y");
 OPTION_DEFINE(int, UI_CHARSELECT_SIZE_X, "UI/Character Select/Size X");
