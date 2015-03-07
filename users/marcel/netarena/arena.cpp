@@ -506,6 +506,11 @@ void Arena::tick(GameSim & gameSim)
 								}
 							}
 
+							if (data.regenTime == 0)
+							{
+								Sound("block-regen.ogg").play();
+							}
+
 							block.type = kBlockType_DestructibleRegen;
 						}
 					}

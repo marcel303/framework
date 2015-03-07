@@ -974,6 +974,8 @@ void Player::tick(float dt)
 							m_isAnimDriven = true;
 							m_animVelIsAbsolute = true;
 
+							Sound("rocketpunch-attack.ogg").play();
+
 							logDebug("rocket punch: attack! speed = (%f, %f) max distance = %f", m_attack.m_rocketPunch.speed[0], m_attack.m_rocketPunch.speed[1], m_attack.m_rocketPunch.maxDistance);
 						}
 					}
@@ -1196,7 +1198,7 @@ void Player::tick(float dt)
 
 		if (m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && m_input.wentDown(INPUT_BUTTON_A))
 		{
-			if (isAnimOverrideAllowed(kPlayerAnim_AirDash))
+			if (isAnimOverrideAllowed(kPlayerAnim_AirDash) && false)
 			{
 				if ((getIntersectingBlocksMask(m_pos[0] + m_facing[0], m_pos[1]) & kBlockMask_Solid) == 0)
 				{
@@ -2501,6 +2503,8 @@ void Player::beginRocketPunch()
 
 	setAnim(kPlayerAnim_RocketPunch_Charge, true, true);
 	m_isAnimDriven = true;
+
+	Sound("rocketpunch-charge.ogg").play();
 }
 
 void Player::endRocketPunch()
