@@ -27,11 +27,14 @@
 #include <QTextEdit>
 #include <QPushButton>
 
+#include "ed.h"
+
 
 #define BASEX 30//52
 #define BASEY 16//32
 
 #define BLOCKSIZE 64//32
+#define THUMBSIZE 64
 
 #define ZOOMSPEED 12
 
@@ -41,5 +44,33 @@
 #define SCENEOBJ 3
 
 
+#define ed Ed::I()
+
+#define sceneArt ed.GetSceneArt()
+#define sceneMech ed.GetSceneMech()
+#define sceneCollission ed.GetSceneCollission()
+
+#define templateScene ed.GetTemplateScene()
+
+#define editorMode ed.GetEditorMode()
+
+#define view2 ed.GetView() //hack
+#define viewPallette ed.GetViewPallette()
+#define sceneCounter ed.GetSceneCounter()
+
+#define gameObjects ed.GetGameObjects()
+
+#define MAPX ed.GetMapX()
+#define MAPY ed.GetMapY()
+
+#define leftbuttonHeld ed.m_leftbuttonHeld
+
+
 QList<QString> GetLinesFromConfigFile(QString filename);
 QPixmap* GetObjectPixmap(QString texture);
+
+void SaveLevel(QString filename);
+void LoadLevel(QString filename);
+void SwitchSceneTo(int s);
+
+void LoadPixmaps();

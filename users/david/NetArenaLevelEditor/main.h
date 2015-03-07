@@ -39,18 +39,8 @@ public:
     virtual ~TilePallette ();
 
     virtual void mousePressEvent ( QGraphicsSceneMouseEvent * e );
-    virtual void hoverEnterEvent ( QGraphicsSceneHoverEvent * e ){}
+	virtual void hoverEnterEvent ( QGraphicsSceneHoverEvent * e ){}
 };
-
-class TileProperties
-{
-public:
-   TileProperties();
-   ~TileProperties();
-
-
-};
-
 
 class EditorScene : public QGraphicsScene
 {
@@ -67,8 +57,7 @@ public:
 
     virtual void CustomMouseEvent ( QGraphicsSceneMouseEvent * e );
 
-    Tile** m_tiles;
-	TileProperties** m_properties;
+	Tile** m_tiles;
 
     int m_mapx;
     int m_mapy;
@@ -78,61 +67,81 @@ public:
 
 
 
-class QPushButton;
-class NewMapWindow : public QWidget
-{
-    Q_OBJECT
-public:
-    NewMapWindow();
-    ~NewMapWindow();
-
-public slots:
-    void NewMap();
-    void CancelNewMap();
 
 
-public:
-
-    QPushButton* ok;
-    QPushButton* cancel;
-
-    QSlider* x;
-    QSlider* y;
-
-};
-
-
-class EditorTemplate
+class EditorTemplate : public QGraphicsPixmapItem
 {
 public:
 
     EditorTemplate();
     ~EditorTemplate();
 
-    struct TemplateTile
+	virtual void mousePressEvent ( QGraphicsSceneMouseEvent * e );
+
+    class TemplateTile
     {
+    public:
+
         int x;
         int y;
 
         short blockMech;
-        short blockArt;
         short blockColl;
+		QString blockArt;
+
+        short GetArtKey();
+        QPixmap* GetPixmap();
+
+        bool operator==(const TemplateTile& right){return (x == right.x) && (y == right.y);}
     };
+
+
+    TemplateTile* GetTemplateTile(int x, int y);
+    void RemoveTemplateTile(int x, int y);
 
     QList<TemplateTile> m_list;
 
     QString m_name;
 
 	void LoadTemplate(QString filename);
-	void SaveTemplate(int tx, int ty);
+    void SaveTemplate();
 
 	int ImportFromImage(QString filename);
 	void ConvertToPalletteTexture();
-
 };
 
-#include <QStringListModel>
+class TemplateFolder
+{
+public:
 
+	TemplateFolder();
+	~TemplateFolder();
+
+	void AddTemplate(EditorTemplate* t);
+	void SaveTemplate();
+
+	void LoadIntoScene();
+
+	EditorTemplate* GetCurrentTemplate();
+	void SetCurrentTemplate();
+	void SetCurrentTemplate(QString name);
+
+	void SetFolderName(QString name);
+
+
+
+
+
+	EditorTemplate* m_currentTemplate;
+
+	QMap<QString, EditorTemplate*> m_templateMap;
+	QString m_folderName;
+
+	QGraphicsScene* m_scene;
+};
+
+
+#include <QStringListModel>
 class TemplateScene: public QWidget
 {
 	Q_OBJECT
@@ -140,20 +149,29 @@ public:
     TemplateScene();
     virtual ~TemplateScene();
 
+	void Initialize();
+
     EditorTemplate* GetCurrentTemplate();
+	void SetCurrentTemplate(QString name);
+
+	void SetCurrentFolder(QString name);
+	QString GetCurrentFolderName(){return m_currentFolder->m_folderName;}
 
     void AddTemplate(EditorTemplate* t);
+	void AddFolder(QString foldername);
+	void RemoveFolder(QString foldername);
 
 	void UpdateList();
 
-	QMap<QString, EditorTemplate*> m_templateMap;
 	QStringList m_nameList;
 	QStringListModel* m_model;
 	QListView* m_listView;
-    EditorTemplate* m_currentTemplate;
+	TemplateFolder* m_currentFolder;
+
+	QMap<QString, TemplateFolder*> m_folderMap;
 
 public slots:
-	void templateListClicked(const QModelIndex &index);
-	void templateNameChanged(const QString& name);
+	void folderListClicked(const QModelIndex &index);
+	void folderNameChanged(const QString& name);
 
 };
