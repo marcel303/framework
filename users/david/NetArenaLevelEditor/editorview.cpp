@@ -54,8 +54,8 @@ EditorView::EditorView() : EditorViewBasic()
 	newAct8->setStatusTip(tr("AddFolder"));
 	connect(newAct8, SIGNAL(triggered()), this, SLOT(AddNewFolder()));
 
-	QAction* newAct9 = new QAction(tr("&SwitchObjectTemplate"), this);
-	newAct9->setStatusTip(tr("SwitchObjectTemplate"));
+    QAction* newAct9 = new QAction(tr("&RemoveFolder"), this);
+    newAct9->setStatusTip(tr("RemoveFolder"));
 	connect(newAct9, SIGNAL(triggered()), this, SLOT(RemoveFolder()));
 
 	bar->addAction(newAct1);
@@ -84,11 +84,7 @@ void EditorView::Save()
 
 void EditorView::SaveTemplate()
 {
-	int x = QInputDialog::getInt(this, "Template X size", "X:");
-	int y = QInputDialog::getInt(this, "Template Y size", "Y:");
-	//QString fileName = QFileDialog::getSaveFileName(this, tr("Save to file"));
-
-	templateScene->GetCurrentTemplate()->SaveTemplate(x, y);
+    templateScene->GetCurrentTemplate()->SaveTemplate();
 }
 
 void EditorView::Load()
@@ -97,10 +93,12 @@ void EditorView::Load()
 	fileName.chop(4);
 	LoadLevel(fileName);
 }
+
 void EditorView::New()
 {
 	CreateAndShowNewMapDialog();
 }
+
 void EditorView::SwitchToMech()
 {
 		SwitchSceneTo(SCENEMECH);
@@ -109,6 +107,7 @@ void EditorView::SwitchToMech()
 		sliderOpacColl->setValue(0);
 		sliderOpacObject->setValue(0);
 }
+
 void EditorView::SwitchToArt()
 {
 		SwitchSceneTo(SCENEART);
@@ -117,6 +116,7 @@ void EditorView::SwitchToArt()
 		sliderOpacColl->setValue(0);
 		sliderOpacObject->setValue(0);
 }
+
 void EditorView::SwitchToCollission()
 {
 		SwitchSceneTo(SCENECOLL);

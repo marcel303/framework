@@ -554,81 +554,23 @@ void SaveObjects(QString filename)
 	file.close();
 }
 
-void SaveTemplateToFile(QString filename, int tx, int ty)
-{
-    QFile file("templates.txt");
-    file.open(QIODevice::WriteOnly | QIODevice::Append);
 
-    QTextStream text(&file);
-
-    {
-        QFile templateFile(filename + ".tmpl");
-        templateFile.open(QIODevice::WriteOnly);
-
-        QDataStream out(&templateFile);
-
-		out << filename;
-        out << tx << ty;
-
-        for(int y = 0; y < ty; y++)
-            for (int x = 0; x < tx; x++)
-            {
-                out << (quint16 )(sceneMech->m_tiles[y][x].getBlock());
-                out << (quint16 )(sceneArt->m_tiles[y][x].getBlock());
-                out << (quint16 )(sceneCollission->m_tiles[y][x].getBlock());
-            }
-
-        templateFile.close();
-
-        text << filename << ".tmpl" << endl;
-
-        qDebug() << "Template" << filename << " saved.";
-    }
-    file.close();
-}
-
-void LoadTemplates(QString filename = "templates.txt")
-{
-    QFile file(filename);
-    file.open(QIODevice::ReadOnly);
-
-    if(!file.isOpen())
-    qDebug() << filename << " could not be opened. Templates not loaded.";
-
-    QTextStream in(&file);
-
-    while(!in.atEnd())
-    {
-        QString templateName = in.readLine();
-        EditorTemplate* t = new EditorTemplate();
-        t->LoadTemplate(templateName);
-
-        templateScene->AddTemplate(t);
-    }
-}
 
 void SaveLevel(QString filename)
 {
     SaveGeneric(filename + ".txt", sceneMech);
     if(sceneCollission)
         SaveGeneric(filename + "Collission.txt", sceneCollission);
+
     if(sceneArt)
         SaveArtFile(filename + "Art.txt", sceneArt);
+    //TODO: save templates
+    //TODO: save art index file
+    //TODO: save art level file
 
 	SaveObjects(filename + "Objects.txt");
 }
 
-
-
-
-
-
-
-
-
-void LoadImageAndCreateArtTiles()
-{
-}
 
 Tile::Tile()
 {
@@ -811,10 +753,10 @@ void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e )
             {
                 sceneCounter = SCENEMECH;
                 sceneMech->m_tiles[tiley+tt.y][tilex+tt.x].SetSelectedBlock(tt.blockMech);
-                sceneCounter = SCENEART;
-                sceneCollission->m_tiles[tiley+tt.y][tilex+tt.x].SetSelectedBlock(tt.blockColl);
                 sceneCounter = SCENECOLL;
-                sceneArt->m_tiles[tiley+tt.y][tilex+tt.x].SetSelectedBlock(tt.blockArt);
+                sceneCollission->m_tiles[tiley+tt.y][tilex+tt.x].SetSelectedBlock(tt.blockColl);
+                sceneCounter = SCENEART;
+                sceneArt->m_tiles[tiley+tt.y][tilex+tt.x].SetSelectedBlock(tt.GetArtKey());
             }
             sceneCounter = temp;
 
@@ -949,7 +891,7 @@ void TemplateScene::Initialize()
 		//if(templates.count())
 		{
 			AddFolder(d);
-			//SetCurrentFolder(d);
+            SetCurrentFolder(d);
 		}
 
 		foreach(QString filename, templates)
@@ -1134,6 +1076,27 @@ QString GetPath()
 	return ed.ArtFolderPath + templateScene->GetCurrentFolderName() + "\\";
 }
 
+QPixmap GetPixmapForTemplateTile()
+{
+
+}
+
+EditorTemplate::TemplateTile* EditorTemplate::GetTemplateTile(int x, int y)
+{
+    foreach(TemplateTile tt, m_list)
+        if(tt.x == x && tt.y == y)
+            return &tt;
+
+    return 0;
+
+}
+
+void EditorTemplate::RemoveTemplateTile(int x, int y)
+{
+    foreach(TemplateTile tt, m_list)
+        if(tt.x == x && tt.y == y)
+            m_list.removeOne(tt);
+}
 
 EditorTemplate::EditorTemplate()
 {
@@ -1155,11 +1118,6 @@ void EditorTemplate::LoadTemplate(QString filename)
 
 	QString tmpname = GetPath() + m_name;
 
-
-
-    int x; in >> x;
-    int y; in >> y;
-
 	QPixmap p;
 	if(p.load(tmpname + "_tile.png"))
 		setPixmap(p);
@@ -1169,36 +1127,34 @@ void EditorTemplate::LoadTemplate(QString filename)
 		return;
 	}
 
-    for(int j = 0; j < y; j++)
-        for(int i = 0; i < x; i++)
+    for(int i = 0; i < count; i++)
+    {
+        TemplateTile tt;
+        in >> tt.x;
+        in >> tt.y;
+        in >> tt.blockMech;
+        in >> tt.blockColl;
+        in >> tt.blockArt;
+
+        m_list.append(tt);
+
+        if(!templateToArtMap.contains(tt.blockArt))
         {
-            TemplateTile tt;
-            in >> tt.blockMech;
-            in >> tt.blockColl;
-			in >> tt.blockArt;
+            QPixmap* part = new QPixmap;
+            if(!part->load(tt.blockArt))
+                qDebug() << "failed to load artfile: " << tt.blockArt << " for template: " << m_name;
 
-            tt.x = i;
-            tt.y = j;
-
-            m_list.append(tt);
-
-			QPixmap part;
-
-			if(!artMap.contains(tmpname))
-			{
-				QString path = tmpname + "_" + QString::number(x) + "_" + QString::number(y) + ".png";
-				part.load(path);
-
-				short key = (short)artMap.size();
-				artMap[key] = tmpname;
-				pixmapsArt[key] = part;
-			}
+            short key = (short)artMap.size();
+            artMap[key] = tt.blockArt;
+            templateToArtMap[tt.blockArt] = key;
+            pixmapsArt[key] = part;
         }
+    }
 
     file.close();
 }
 
-void EditorTemplate::SaveTemplate(int tx, int ty)
+void EditorTemplate::SaveTemplate()
 {
 
 	QString path = ed.ArtFolderPath + templateScene->GetCurrentFolderName() + "\\";
@@ -1208,21 +1164,17 @@ void EditorTemplate::SaveTemplate(int tx, int ty)
 
 	QDataStream out(&templateFile);
 
-	out << m_name;
-	out << m_artMap.size();
+    out << m_name;
 
-	foreach(QString s, m_artMap.keys())
-		out << s;
-
-	out << tx << ty;
-
-	for(int y = 0; y < ty; y++)
-		for (int x = 0; x < tx; x++)
-		{
-			out << (quint16 )(sceneMech->m_tiles[y][x].getBlock());
-			out << (quint16 )(sceneArt->m_tiles[y][x].getBlock());
-			out << (quint16 )(sceneCollission->m_tiles[y][x].getBlock());
-		}
+    out << m_list.size();
+    foreach(TemplateTile t, m_list)
+    {
+        out << t.x;
+        out << t.y;
+        out << t.blockMech;
+        out << t.blockColl;
+        out << t.blockArt;
+    }
 
 	templateFile.close();
 
@@ -1232,7 +1184,6 @@ void EditorTemplate::SaveTemplate(int tx, int ty)
 
 int EditorTemplate::ImportFromImage(QString filename)
 {
-	QString path = GetPath();
 	QPixmap* img = new QPixmap(filename);
 
 	QString name = filename.split('/').last(); //chops path
@@ -1241,6 +1192,8 @@ int EditorTemplate::ImportFromImage(QString filename)
     m_name = name;
 
 	QPixmap tile = img->scaled(THUMBSIZE, THUMBSIZE);
+
+    QString path = GetPath();
 	QFile tileFile(path + m_name +"_tile.png");
 
 	tileFile.open(QIODevice::WriteOnly);
@@ -1256,44 +1209,28 @@ int EditorTemplate::ImportFromImage(QString filename)
 		return 0;
 	}
 
-	//QFile artList("ArtList.txt");
-	//artList.open(QIODevice::WriteOnly | QIODevice::Append);
-	//QTextStream in(&artList);
-
     for(int x = 0; x*BLOCKSIZE < img->size().width(); x++) //cut up the image into blocksized bits
 	{
 		for(int y = 0; y*BLOCKSIZE < img->size().height(); y++)
 		{
 			QPixmap *copy = new QPixmap (img->copy(x*BLOCKSIZE, y*BLOCKSIZE, BLOCKSIZE, BLOCKSIZE));
 
-			QString tmpname = ed.GetTemplateScene()->GetCurrentFolderName() + '\\' + name + "_" + QString::number(x) + "_" + QString::number(y)  + ".png";
-			QFile file(ed.ArtFolderPath + tmpname);
+            QString tmpname = path + m_name + "_" + QString::number(x) + "_" + QString::number(y)  + ".png";
+            QFile file(tmpname);
 			file.open(QIODevice::WriteOnly);
 			copy->save(&file, "PNG");
 			file.close();
-
-			m_artMap[tmpname] = m_artMap.size();
-
-			if(!artMap.contains(tmpname))
-			{
-				short key = (short)artMap.size();
-				artMap[key] = tmpname;
-				templateToArtMap[tmpname] = key;
-				pixmapsArt[key] = copy;
-			}
-
 
 			TemplateTile tile;
 			tile.x = x;
 			tile.y = y;
 			tile.blockMech = QString("x").toShort();
 			tile.blockColl = QString("x").toShort();
-			tile.blockArt = m_artMap.size()-1;
+            tile.blockArt = tmpname;
 
 			m_list.append(tile);
 		}
-	}
-	//artList.close();
+    }
 
 
 	//template keeps track of own resource files in .tmpl
@@ -1301,16 +1238,21 @@ int EditorTemplate::ImportFromImage(QString filename)
 	//on level save create level.artlist file with list of used path/filename resources and create level.art file with structure
 
 
-    SaveTemplate(img->size().width()/ BLOCKSIZE, img->size().height()/BLOCKSIZE);
+    SaveTemplate();
 
-	view->SwitchToArt();
+    //view->SwitchToArt();
 
 	return 1;
 }
 
-short EditorTemplate::TemplateTile::GetArkKey()
+QPixmap* EditorTemplate::TemplateTile::GetPixmap()
 {
-	return artMap[templateToArtMap[m_artMap[blockArt]]];
+    return pixmapsArt[GetArtKey()];
+}
+
+short EditorTemplate::TemplateTile::GetArtKey()
+{
+    return templateToArtMap[blockArt];
 }
 
 void EditorTemplate::mousePressEvent ( QGraphicsSceneMouseEvent * e )
@@ -1416,10 +1358,7 @@ int main(int argc, char *argv[])
     vlayout->addWidget(templateScene->m_listView);
     templateScene->m_listView->hide();
 
-	hlayout->showMaximized();
-
-
-	LoadTemplates();
+    hlayout->showMaximized();
 
 	templateScene->Initialize();
 

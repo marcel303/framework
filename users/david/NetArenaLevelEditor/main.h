@@ -78,8 +78,10 @@ public:
 
 	virtual void mousePressEvent ( QGraphicsSceneMouseEvent * e );
 
-    struct TemplateTile
+    class TemplateTile
     {
+    public:
+
         int x;
         int y;
 
@@ -87,16 +89,22 @@ public:
         short blockColl;
 		QString blockArt;
 
-		short GetArkKey();
+        short GetArtKey();
+        QPixmap* GetPixmap();
+
+        bool operator==(const TemplateTile& right){return (x == right.x) && (y == right.y);}
     };
 
+
+    TemplateTile* GetTemplateTile(int x, int y);
+    void RemoveTemplateTile(int x, int y);
+
     QList<TemplateTile> m_list;
-	QMap<QString, short> m_artMap;
 
     QString m_name;
 
 	void LoadTemplate(QString filename);
-	void SaveTemplate(int tx, int ty);
+    void SaveTemplate();
 
 	int ImportFromImage(QString filename);
 	void ConvertToPalletteTexture();
