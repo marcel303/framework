@@ -848,7 +848,8 @@ void Player::tick(float dt)
 		const uint32_t currentBlockMask = getIntersectingBlocksMask(m_pos[0], m_pos[1]);
 		
 		const bool isInPassthough = (currentBlockMask & kBlockMask_Passthrough) != 0;
-		if (isInPassthough || m_enterPassthrough)
+		const bool enterPassThrough = m_enterPassthrough || (m_special.attackDownActive) || (m_attack.m_rocketPunch.isActive);
+		if (isInPassthough || enterPassThrough)
 			m_blockMask = ~kBlockMask_Passthrough;
 
 		const uint32_t currentBlockMaskFloor = getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f);
@@ -1483,7 +1484,7 @@ void Player::tick(float dt)
 			{
 				// update passthrough mode
 				m_blockMask = ~0;
-				if ((getIntersectingBlocksMask(m_pos[0], m_pos[1]) & kBlockMask_Passthrough) || m_enterPassthrough)
+				if ((getIntersectingBlocksMask(m_pos[0], m_pos[1]) & kBlockMask_Passthrough) || enterPassthrough)
 					m_blockMask = ~kBlockMask_Passthrough;
 			}
 
@@ -1510,12 +1511,6 @@ void Player::tick(float dt)
 
 				uint32_t newBlockMask = getIntersectingBlocksMask(newPos[0], newPos[1]);
 
-				if (m_attack.m_rocketPunch.isActive && (newBlockMask & kBlockMask_Solid))
-				{
-					if (m_attack.m_rocketPunch.state != AttackInfo::RocketPunch::kState_Charge)
-						endRocketPunch();
-				}
-
 				// ignore passthough blocks if we're moving horizontally or upwards
 				// todo : update block mask each iteration. reset m_blockMask first
 				//if (i != 1 || delta <= 0.f)
@@ -1523,6 +1518,12 @@ void Player::tick(float dt)
 				if ((!m_isGrounded || isInPassthough) && (i != 1 || delta <= 0.f))
 				//if ((i == 0 && isInPassthough) || (i == 1 && delta <= 0.f))
 					newBlockMask &= ~kBlockMask_Passthrough;
+
+				if (m_attack.m_rocketPunch.isActive && (newBlockMask & kBlockMask_Solid))
+				{
+					if (m_attack.m_rocketPunch.state != AttackInfo::RocketPunch::kState_Charge)
+						endRocketPunch();
+				}
 
 				// make sure we stay grounded, within reason. allows the player to walk up/down slopes
 				if (i == 0 && m_isGrounded)
