@@ -2,8 +2,28 @@
 
 #include "includeseditor.h"
 
+class QPushButton;
+class NewMapWindow : public QWidget
+{
+	Q_OBJECT
+public:
+	NewMapWindow();
+	~NewMapWindow();
+
+public slots:
+	void NewMap();
+	void CancelNewMap();
 
 
+public:
+
+	QPushButton* ok;
+	QPushButton* cancel;
+
+	QSlider* x;
+	QSlider* y;
+
+};
 
 class EditorViewBasic : public QGraphicsView
 {
@@ -43,6 +63,8 @@ public:
     QSlider* sliderOpacColl;
     QSlider* sliderOpacObject;
 
+	QWidget* newMapWindow;
+
 public slots:
     void Save();
     void SaveTemplate();
@@ -61,12 +83,16 @@ public slots:
     void SetOpacityCollission(int s);
     void SetOpacityObject(int s);
 
+	void AddNewFolder();
+	void RemoveFolder();
 
-    void SwitchToBigMap();
 
     void ImportTemplate();
 
     void mousePressEvent(QMouseEvent * e);
     void mouseReleaseEvent(QMouseEvent * e);
+
+private:
+	void CreateAndShowNewMapDialog();
 
 };

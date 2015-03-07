@@ -3,6 +3,22 @@
 #include "includeseditor.h"
 
 #include "EditorView.h"
+#include "gameobject.h"
+#include "main.h"
+
+QList<GameObject*> m_gameObjects; //hack
+
+void Ed::Initialize()
+{
+	m_mapx = BASEX;
+	m_mapy = BASEY;
+
+	objectPropWindow = 0;
+
+	m_leftbuttonHeld = false;
+
+	m_sceneTemplatePallette = new QGraphicsScene();
+}
 
 EditorScene*& Ed::GetSceneArt()
 {
@@ -61,6 +77,11 @@ QGraphicsView*& Ed::GetViewPallette()
     return m_viewPallette;
 }
 
+QList<GameObject *> &Ed::GetGameObjects()
+{
+	return m_gameObjects;
+}
+
 
 
 void Ed::EditTemplates()
@@ -75,4 +96,35 @@ void Ed::EditLevels()
     m_editorMode = EM_Level;
 
     m_view->setScene((QGraphicsScene*)(GetCurrentScene()));
+}
+
+
+void CreateNewMapHelper(int x, int y)
+{
+	sceneMech->setSceneRect(-MAPX*BLOCKSIZE,-MAPY*BLOCKSIZE, MAPX*3*BLOCKSIZE,MAPY*3*BLOCKSIZE); //-MAPX*2*BLOCKSIZE,-MAPY*2*BLOCKSIZE,MAPX*4*BLOCKSIZE,MAPY*4*BLOCKSIZE);
+
+	sceneMech->CreateLevel(x, y);
+	sceneArt->CreateLevel(x, y);
+	sceneCollission->CreateLevel(x, y);
+	sceneMech->AddGrid();
+}
+
+void Ed::CreateNewMap(int x, int y)
+{
+	EditLevels();
+
+
+	m_mapx = x;
+	m_mapy = y;
+
+	LoadPixmaps();
+
+	m_gameObjects.clear();
+
+	CreateNewMapHelper(x, y);
+	EditTemplates();
+	CreateNewMapHelper(x, y);
+	EditLevels();
+
+	m_view->scale((float)MAPY/(float)MAPX,(float)MAPY/(float)MAPX);
 }
