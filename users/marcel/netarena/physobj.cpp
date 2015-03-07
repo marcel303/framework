@@ -243,19 +243,19 @@ void PhysicsScene::test(const CollisionBox & box, CollisionCB cb, void * arg, bo
 	}
 
 	for (int i = 0; i < MAX_PHYSICS_ACTORS; ++i)
-		if (m_actors[i].m_isHit)
-			m_actors[i].m_isHit = false;
+		if (m_actors[i].m_isTested)
+			m_actors[i].m_isTested = false;
 }
 
 void PhysicsScene::testInternal(const CollisionBox & box, CollisionCB cb, void * arg)
 {
 	for (int i = 0; i < MAX_PHYSICS_ACTORS; ++i)
 	{
-		if (m_actors[i].m_isActive && !m_actors[i].m_isHit)
+		if (m_actors[i].m_isActive && !m_actors[i].m_isTested)
 		{
 			if (m_actors[i].test(box))
 			{
-				m_actors[i].m_isHit = true;
+				m_actors[i].m_isTested = true;
 
 				cb(arg, &m_actors[i], 0, 0);
 			}
