@@ -1132,9 +1132,17 @@ void Player::tick(float dt)
 
 			if (m_input.wentDown(INPUT_BUTTON_Y) && !s_noSpecial && isAnimOverrideAllowed(kPlayerAnim_Attack))
 			{
-				if (characterData->m_special == kPlayerSpecial_RocketPunch && !m_isGrounded)
+				if (characterData->m_special == kPlayerSpecial_RocketPunch)
 				{
-					beginRocketPunch();
+					if (!ROCKETPUNCH_ONLY_IN_AIR || !m_isGrounded)
+					{
+						if (!ROCKETPUNCH_MUST_GROUND || m_isAirDashCharged)
+						{
+							m_isAirDashCharged = false; // fixme : don't reuse air dash..
+
+							beginRocketPunch();
+						}
+					}
 				}
 				else if (characterData->m_special == kPlayerSpecial_DoubleSidedMelee)
 				{
@@ -1865,14 +1873,19 @@ void Player::draw() const
 		const float y = m_pos[1] - 30.f;
 		const Vec2 dir = m_input.getAnalogDirection().CalcNormalized();
 		const Vec2 off1 = dir * 50.f;
-		const Vec2 off2 = dir * 150.f;
+		const Vec2 off2 = dir * 100.f;
 
-		setColor(colorWhite);
+		setColor(colorGreen);
 		drawLine(
 			x + off1[0],
 			y + off1[1],
 			x + off2[0],
 			y + off2[1]);
+		drawRect(
+			x + off2[0] - 5.f,
+			y + off2[1] - 5.f,
+			x + off2[0] + 5.f,
+			y + off2[1] + 5.f);
 	}
 
 

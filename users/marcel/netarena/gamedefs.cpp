@@ -222,6 +222,8 @@ OPTION_DEFINE(bool, ROCKETPUNCH_SPEED_BASED_ON_CHARGE, "Special Abilities/Rocket
 OPTION_DEFINE(int, ROCKETPUNCH_DISTANCE_MIN, "Special Abilities/Rocket Punch/Distance Min");
 OPTION_DEFINE(int, ROCKETPUNCH_DISTANCE_MAX, "Special Abilities/Rocket Punch/Distance Max");
 OPTION_DEFINE(bool, ROCKETPUNCH_DISTANCE_BASED_ON_CHARGE, "Special Abilities/Rocket Punch/Distance Based On Charge");
+OPTION_DEFINE(bool, ROCKETPUNCH_MUST_GROUND, "Special Abilities/Rocket Punch/Must Hit Ground First");
+OPTION_DEFINE(bool, ROCKETPUNCH_ONLY_IN_AIR, "Special Abilities/Rocket Punch/Only In Air");
 OPTION_STEP(ROCKETPUNCH_CHARGE_MIN, 0, 0, .1f);
 OPTION_STEP(ROCKETPUNCH_CHARGE_MAX, 0, 0, .1f);
 OPTION_STEP(ROCKETPUNCH_SPEED_MIN, 0, 0, 100);
