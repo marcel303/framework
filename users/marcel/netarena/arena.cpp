@@ -819,6 +819,8 @@ bool Arena::handleDamageRect(GameSim & gameSim, int baseX, int baseY, int x1, in
 				else
 					block.type = kBlockType_Empty;
 
+				Sound("block-destroy.ogg").play();
+
 				ParticleSpawnInfo spawnInfo(
 					(blockInfo.x + .5f) * BLOCK_SX,
 					(blockInfo.y + .5f) * BLOCK_SY,

@@ -629,7 +629,7 @@ void Player::playSecondaryEffects(PlayerEvent e)
 		GAMESIM->playSound("player-wall-jump.ogg");
 		break;
 	case kPlayerEvent_LandOnGround:
-		GAMESIM->playSound(makeCharacterFilename(m_characterIndex, "land_on_ground.ogg"), 25);
+		GAMESIM->playSound(makeCharacterFilename(m_characterIndex, "land_on_ground.ogg"), 50);
 		break;
 	case kPlayerEvent_StickyAttach:
 		//GAMESIM->playSound("player-sticky-attach.ogg");
@@ -1512,7 +1512,8 @@ void Player::tick(float dt)
 
 				if (m_attack.m_rocketPunch.isActive && (newBlockMask & kBlockMask_Solid))
 				{
-					endRocketPunch();
+					if (m_attack.m_rocketPunch.state != AttackInfo::RocketPunch::kState_Charge)
+						endRocketPunch();
 				}
 
 				// ignore passthough blocks if we're moving horizontally or upwards
@@ -1574,6 +1575,15 @@ void Player::tick(float dt)
 				{
 					if (i == 0)
 					{
+						const float sign = Calc::Sign(totalDelta);
+						float strength = (Calc::Abs(totalDelta) / dt - PLAYER_JUMP_SPEED) / 25.f;
+
+						if (strength > PLAYER_SCREENSHAKE_STRENGTH_THRESHHOLD)
+						{
+							strength = sign * strength / 4.f;
+							GAMESIM->addScreenShake(strength, 0.f, 3000.f, .3f);
+						}
+
 						// colliding with solid object left/right of player
 
 						if (!m_isGrounded && playerControl && m_input.wentDown(INPUT_BUTTON_A))
@@ -1625,11 +1635,12 @@ void Player::tick(float dt)
 							}
 							else
 							{
-								float strength = (m_vel[i] - PLAYER_JUMP_SPEED) / 25.f;
+								const float sign = Calc::Sign(totalDelta);
+								float strength = (Calc::Abs(totalDelta) / dt - PLAYER_JUMP_SPEED) / 25.f;
 
 								if (strength > PLAYER_SCREENSHAKE_STRENGTH_THRESHHOLD)
 								{
-									strength = strength / 4.f;
+									strength = sign * strength / 4.f;
 									GAMESIM->addScreenShake(0.f, strength, 3000.f, .3f);
 								}
 
@@ -1711,6 +1722,11 @@ void Player::tick(float dt)
 		if (steeringSpeed == 0.f || (std::abs(m_vel[0]) > std::abs(steeringSpeed)))
 		{
 			m_vel[0] *= powf(1.f - surfaceFriction, dt * 60.f);
+		}
+
+		if (m_attack.m_rocketPunch.isActive)
+		{
+			m_vel *= powf(1.f - .05f, dt * 60.f);
 		}
 
 		// speed clamp
@@ -2484,7 +2500,6 @@ void Player::beginRocketPunch()
 
 	setAnim(kPlayerAnim_RocketPunch_Charge, true, true);
 	m_isAnimDriven = true;
-	m_animVelIsAbsolute = true;
 }
 
 void Player::endRocketPunch()
