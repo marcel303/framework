@@ -900,7 +900,7 @@ void TemplateScene::Initialize()
 			file.open(QIODevice::ReadOnly | QIODevice::Text);
 
 			EditorTemplate* t = new EditorTemplate();
-			t->LoadTemplate(dir.path() + filename);
+            t->LoadTemplate(dir.path() + "/" + filename);
 
 			m_currentFolder->AddTemplate(t);
 		}
@@ -922,9 +922,7 @@ void TemplateScene::folderListClicked(const QModelIndex &index)
 {
 	QString name = (m_model->data(index, Qt::DisplayRole)).toString();
 
-	m_currentFolder = m_folderMap[name];
-
-	m_currentFolder->SetCurrentTemplate();
+    SetCurrentFolder(name);
 }
 
 void TemplateScene::folderNameChanged(const QString& name)
@@ -990,6 +988,10 @@ void TemplateScene::SetCurrentFolder(QString name)
 	{
 		m_currentFolder = m_folderMap[name];
 		m_currentFolder->SetCurrentTemplate(); //select top template of this folder.
+
+
+
+        viewPallette->setScene(m_currentFolder->m_scene);
 	}
 }
 
@@ -1073,7 +1075,7 @@ EditorTemplate* TemplateFolder::GetCurrentTemplate()
 
 QString GetPath()
 {
-	return ed.ArtFolderPath + templateScene->GetCurrentFolderName() + "\\";
+    return ed.ArtFolderPath + "templates\\" + templateScene->GetCurrentFolderName() + "\\";
 }
 
 QPixmap GetPixmapForTemplateTile()
@@ -1109,7 +1111,11 @@ EditorTemplate::~EditorTemplate()
 void EditorTemplate::LoadTemplate(QString filename)
 {
     QFile file(filename);
-    file.open(QIODevice::ReadOnly);
+    if(!file.open(QIODevice::ReadOnly))
+    {
+        qDebug() << "Could not open template file: " << filename.split("/").last();
+        return;
+    }
 
     QDataStream in(&file);
 
@@ -1157,7 +1163,7 @@ void EditorTemplate::LoadTemplate(QString filename)
 void EditorTemplate::SaveTemplate()
 {
 
-	QString path = ed.ArtFolderPath + templateScene->GetCurrentFolderName() + "\\";
+    QString path = GetPath();
 	QFile templateFile(path + m_name + ".tmpl");
 
 	templateFile.open(QIODevice::WriteOnly);
