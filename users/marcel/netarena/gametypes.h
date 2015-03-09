@@ -191,6 +191,46 @@ struct CollisionInfo : CollisionBox
 	}
 };
 
+struct CollisionShape
+{
+	const static int kMaxPoints = 4;
+
+	Vec2 points[kMaxPoints];
+	int numPoints;
+
+	//
+
+	void setEmpty()
+	{
+		numPoints = 0;
+	}
+
+	void set(Vec2 p1, Vec2 p2, Vec2 p3)
+	{
+		points[0] = p1;
+		points[1] = p2;
+		points[2] = p3;
+		numPoints = 3;
+	}
+
+	void set(Vec2 p1, Vec2 p2, Vec2 p3, Vec2 p4)
+	{
+		points[0] = p1;
+		points[1] = p2;
+		points[2] = p3;
+		points[3] = p4;
+		numPoints = 4;
+	}
+
+	void translate(float x, float y);
+
+	float projectedMax(Vec2Arg n) const;
+	Vec2 getSegmentNormal(int idx) const;
+	bool checkCollision(const CollisionShape & other, Vec2Arg delta, float & contactDistance, Vec2 & contactNormal) const;
+
+	void debugDraw() const;
+};
+
 template <int SIZE>
 struct FixedString
 {

@@ -31,6 +31,7 @@ public:
 };
 
 static BlockMask s_blockMasks[kBlockShape_COUNT];
+static CollisionShape s_blockPolys[kBlockShape_COUNT];
 
 static void createBlockMask(BlockShape shape, bool (*proc)(int x, int y))
 {
@@ -69,8 +70,38 @@ static void initializeBlockMasks()
 
 		createBlockMask(kBlockShape_HT,     [](int x, int y) { return y < BLOCK_SY / 2; });
 		createBlockMask(kBlockShape_HB,     [](int x, int y) { return s_blockMasks[kBlockShape_HT].test(x, BLOCK_SY - 1 - y); });
+
+		// setup polygon shapes
+
+		s_blockPolys[kBlockShape_Empty ].setEmpty();
+		s_blockPolys[kBlockShape_Opaque].set(Vec2(0.f, 0.f),          Vec2(BLOCK_SX, 0.f         ), Vec2(BLOCK_SX, BLOCK_SY    ), Vec2(0.f, BLOCK_SY    ));
+		
+		s_blockPolys[kBlockShape_TL    ].set(Vec2(0.f, 0.f),          Vec2(BLOCK_SX, 0.f         ), Vec2(0.f,      BLOCK_SY    )                         );
+		s_blockPolys[kBlockShape_TR    ].set(Vec2(0.f, 0.f),          Vec2(BLOCK_SX, 0.f         ), Vec2(BLOCK_SX, BLOCK_SY    )                         );
+		s_blockPolys[kBlockShape_BL    ].set(Vec2(0.f, 0.f),          Vec2(BLOCK_SX, BLOCK_SY    ), Vec2(0.f,      BLOCK_SY    )                         );
+		s_blockPolys[kBlockShape_BR    ].set(Vec2(0.f, BLOCK_SY),     Vec2(BLOCK_SX, 0.f         ), Vec2(BLOCK_SX, BLOCK_SY    )                         );
+		
+		s_blockPolys[kBlockShape_TL2a  ].set(Vec2(0.f, 0.f),          Vec2(BLOCK_SX, 0.f         ), Vec2(BLOCK_SX, BLOCK_SY/2.f), Vec2(0.f, BLOCK_SY    ));
+		s_blockPolys[kBlockShape_TL2b  ].set(Vec2(0.f, 0.f),          Vec2(BLOCK_SX, 0.f         ), Vec2(0.f,      BLOCK_SY/2.f)                         );
+		s_blockPolys[kBlockShape_TR2a  ].set(Vec2(0.f, 0.f),          Vec2(BLOCK_SX, 0.f         ), Vec2(BLOCK_SX, BLOCK_SY/2.f)                         );
+		s_blockPolys[kBlockShape_TR2b  ].set(Vec2(0.f, 0.f),          Vec2(BLOCK_SX, 0.f         ), Vec2(BLOCK_SX, BLOCK_SY    ), Vec2(0.f, BLOCK_SY/2.f));
+		s_blockPolys[kBlockShape_BL2a  ].set(Vec2(0.f, 0.f),          Vec2(BLOCK_SX, BLOCK_SY/2.f), Vec2(BLOCK_SX, BLOCK_SY    ), Vec2(0.f, BLOCK_SY    ));
+		s_blockPolys[kBlockShape_BL2b  ].set(Vec2(0.f, BLOCK_SY/2.f), Vec2(BLOCK_SX, BLOCK_SY    ), Vec2(0.f,      BLOCK_SY    )                         );
+		s_blockPolys[kBlockShape_BR2a  ].set(Vec2(0.f, BLOCK_SY),     Vec2(BLOCK_SX, BLOCK_SY/2.f), Vec2(BLOCK_SX, BLOCK_SY    )                         );
+		s_blockPolys[kBlockShape_BR2b  ].set(Vec2(0.f, BLOCK_SY/2.f), Vec2(BLOCK_SX, 0.f         ), Vec2(BLOCK_SX, BLOCK_SY    ), Vec2(0.f, BLOCK_SY    ));
+		
+		s_blockPolys[kBlockShape_HT    ].set(Vec2(0.f, 0.f), Vec2(BLOCK_SX, 0.f), Vec2(BLOCK_SX, BLOCK_SY/2.f), Vec2(0.f, BLOCK_SY/2.f));
+		s_blockPolys[kBlockShape_HB    ].set(Vec2(0.f, BLOCK_SY/2.f), Vec2(BLOCK_SX, BLOCK_SY/2.f), Vec2(BLOCK_SX, BLOCK_SY), Vec2(0.f, BLOCK_SY));
 	}
 }
+
+static struct Initializer
+{
+	Initializer()
+	{
+		initializeBlockMasks();
+	}
+} s_initializer;
 
 OPTION_DECLARE(int, s_drawBlockMask, -1);
 OPTION_DEFINE(int, s_drawBlockMask, "Arena/Debug/Draw Block Mask");
@@ -114,8 +145,6 @@ bool Block::handleDamage(GameSim & gameSim, int blockX, int blockY)
 
 void Arena::init()
 {
-	initializeBlockMasks();
-
 	reset();
 }
 
@@ -461,7 +490,7 @@ void Arena::drawBlocks() const
 		const BlockMask & mask = s_blockMasks[s_drawBlockMask];
 		const int scale = 8;
 
-		setColor(255, 255, 255);
+		setColor(colorWhite);
 		for (int x = 0; x < BLOCK_SX; ++x)
 		{
 			for (int y = 0; y < BLOCK_SY; ++y)
@@ -476,6 +505,14 @@ void Arena::drawBlocks() const
 				}
 			}
 		}
+
+		const CollisionShape & shape = s_blockPolys[s_drawBlockMask];
+		setColor(colorRed);
+		gxPushMatrix();
+		gxScalef(scale, scale, 1.f);
+		shape.debugDraw();
+		gxPopMatrix();
+		setColor(colorWhite);
 	}
 }
 
@@ -861,6 +898,11 @@ bool Arena::handleDamageRect(GameSim & gameSim, int baseX, int baseY, int x1, in
 	}
 
 	return result;
+}
+
+const CollisionShape & Arena::getBlockCollision(BlockShape shape)
+{
+	return s_blockPolys[shape];
 }
 
 void Arena::testCollision(const CollisionBox & box, CollisionCB cb, void * arg)
