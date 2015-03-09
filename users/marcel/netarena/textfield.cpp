@@ -99,6 +99,11 @@ bool TextField::tick(float dt)
 			}
 		}
 
+		if (keyboard.wentDown(SDLK_HOME))
+			m_caretPosition = 0;
+		if (keyboard.wentDown(SDLK_END))
+			m_caretPosition = m_bufferSize;
+
 		if (keyboard.wentDown(SDLK_LEFT, true) && m_caretPosition > 0)
 			m_caretPosition--;
 		if (keyboard.wentDown(SDLK_RIGHT, true) && m_caretPosition < m_bufferSize)
