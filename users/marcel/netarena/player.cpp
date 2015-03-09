@@ -1534,6 +1534,20 @@ void Player::tick(float dt)
 
 #if USE_NEW_COLLISION_CODE
 
+		// colliding with solid object left/right of player
+
+		if (m_isHuggingWall && playerControl && m_input.wentDown(INPUT_BUTTON_A))
+		{
+			// wall jump
+
+			m_vel[0] = -PLAYER_WALLJUMP_RECOIL_SPEED * m_dirBlockMaskDir[0];
+			m_vel[1] = -PLAYER_WALLJUMP_SPEED;
+
+			m_controlDisableTime = PLAYER_WALLJUMP_RECOIL_TIME;
+
+			playSecondaryEffects(kPlayerEvent_WallJump);
+		}
+
 		m_isHuggingWall = false;
 
 		const Vec2 totalVel = (m_vel * (m_animVelIsAbsolute ? 0.f : 1.f)) + animVel;
@@ -1970,7 +1984,11 @@ void Player::tick(float dt)
 
 		if (m_bubble.timer != 0.f)
 			m_isGrounded = false;
+	#if USE_NEW_COLLISION_CODE
+		else if (m_vel[1] >= 0.f && (dirBlockMask[1] & kBlockMask_Solid) != 0)
+	#else
 		else if (m_vel[1] >= 0.f && (getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f) & kBlockMask_Solid) != 0)
+	#endif
 		{
 			if (!m_isGrounded)
 			{
@@ -2387,6 +2405,20 @@ void Player::debugDraw() const
 	{
 		setColor(colorWhite);
 		drawText(m_pos[0], y, 14, 0.f, 0.f, "wallslide");
+		y += 18.f;
+	}
+
+	if (m_isGrounded)
+	{
+		setColor(colorWhite);
+		drawText(m_pos[0], y, 14, 0.f, 0.f, "grounded");
+		y += 18.f;
+	}
+
+	if (m_isAttachedToSticky)
+	{
+		setColor(colorWhite);
+		drawText(m_pos[0], y, 14, 0.f, 0.f, "stickied");
 		y += 18.f;
 	}
 
