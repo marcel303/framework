@@ -84,6 +84,13 @@ public:
 		return r;
 	}
 
+	inline Vec2 operator^(Vec2 v) const
+	{
+		return Vec2(
+			m_v[0] * v[0],
+			m_v[1] * v[1]);
+	}
+
 	inline float operator*(Vec2 v) const
 	{
 		return
