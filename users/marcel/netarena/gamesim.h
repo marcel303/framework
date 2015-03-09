@@ -92,6 +92,8 @@ struct Player
 	void pushWeapon(PlayerWeapon weapon, int ammo);
 	PlayerWeapon popWeapon();
 
+	void handleJumpCollision();
+
 	void beginRocketPunch();
 	void endRocketPunch(bool stunned);
 
@@ -176,6 +178,10 @@ struct Player
 	CollisionInfo m_collision;
 
 	uint32_t m_blockMask;
+
+	int8_t m_dirBlockMaskDir[2];
+	uint32_t m_dirBlockMask[2];
+	uint32_t m_oldBlockMask;
 
 	//
 
@@ -284,6 +290,7 @@ struct Player
 	bool m_enableInAirAnim;
 
 	bool m_isAirDashCharged; // reset when air dash is used. set when the player hits the ground
+	int8_t m_isHuggingWall;
 	bool m_isWallSliding;
 
 	bool m_isUsingJetpack;

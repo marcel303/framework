@@ -8,17 +8,26 @@
 #include "player.h"
 #include "Timer.h"
 
+#define USE_NEW_COLLISION_CODE 0
+
 /*
 
 todo:
 
-- better attach to platform logic, so we can have movers closer to each other without the player bugging
+** HIGH PRIORITY **
 
-- prototype invisibility ability
-	charge periode
+- fix up/down/dash animations
+- analog jump, accel over frames
 
 - prototype pipe bomb
 	1 throw/1 explode
+
+** MEDIUM PRIORITY **
+
+- add HOME/END support to text field
+
+- prototype invisibility ability
+	charge period
 
 - prototype rocket punch
 	+ idle in air during charge
@@ -29,7 +38,30 @@ todo:
 	v2:
 	+ short recharge
 	+ auto discharge
-	- debuff on attack finish
+	+ debuff on attack finish
+
+	v3:
+	- remove debuff
+
+- add pickup art
+- add path for special
+- prototype grappling hook
+
+- add callstack gathering
+- add IP's to player names (visible on host)
+
+- better attach to platform logic, so we can have movers closer to each other without the player bugging
+
+** LOW PRIORITY **
+
+- add typing/pause bubble on char
+- add key binding
+
+** OTHER **
+
+- prototype 'mine dropper'
+	- move without gravity, drop bombs
+	- when done, bombs explode one by one
 
 - add Spriter hitbox support
 
@@ -43,57 +75,63 @@ todo:
 - prototype barrel drop level event
 - prototype day/night level event
 
-+ torch light flicker speed should be time dilated too
-+ add key repeat to text input
-+ add global method to get character color
-
-+ add global cache of character properties. reduce need for m_instanceData
-
 - improve networking reliability layer on resend. trips currently
 
-+ add task bar blink on game start
-+ reset level events on round end
-+ slow down not on non-player kill (if there's no attacker like when falling into spikes)
 - gravity well -> make it partially a linear or other kind of curve + more powerful at a distance
-+ add names to players on talk? -> add color to results screen
-+ chat log when chat is open
 - slow down on kill for everyone acceptable?
-+ increase chat visibility time
-+ fix late join
 - add build version check for online
 - send client network stats to host so they can be visualized
 
-+ fix desync as both players get hit/killed by grenade
 - add support for CRC compare at any time during game sim tick. log CRC's with function/line number and compare?
-
-+ add user name input
-+ fix text chat player index
-
-+ add FixedString class that can be memset(0) and copied over the net. use it for player name, etc
-+ clean up flow for adding players
 
 - disable changing game options after everyone has readied up
 
-+ test time dilation on kill
-
-+ game speed var
-+ player invincibility on spawn (2 seconds?)
-+ add game mode selection to char select
-+ count down timer game start after char select
-+ add time dilation effect on last kill
 - zoom in on winning player, wait for a while before transitioning to the next round
-+ verify bullet pool allocation order -> may be a source of desync issues, due to differences in the order of bullet updates
-+ textchat: left/right/insert text/delete key
 
 - need to be able to kick player at char select
-+ i think less bubble/ice freeze time
-+ respawn visual to more quickly locate your respawn location
 - drop rate should scale with number of players
 - remove angels in spawn locations -> reduce background noise
 - buff star player ?
 - score feedback, especially in token hunt mode
 - investigate killing the rambo mode, soldat
 
+- better death feedback
+- team based game mode
+- ammo despawn na x seconds + indicator (?)
+
+- blood particles
+- fill the level with lava
+- bee attack
+- earthquake. players go up on quake
+
+** DONE **
+
++ torch light flicker speed should be time dilated too
++ add key repeat to text input
++ add global method to get character color
++ add global cache of character properties. reduce need for m_instanceData
++ add task bar blink on game start
++ reset level events on round end
++ slow down not on non-player kill (if there's no attacker like when falling into spikes)
++ add names to players on talk? -> add color to results screen
++ chat log when chat is open
++ increase chat visibility time
++ fix late join
++ fix desync as both players get hit/killed by grenade
++ add user name input
++ fix text chat player index
++ add FixedString class that can be memset(0) and copied over the net. use it for player name, etc
++ clean up flow for adding players
++ test time dilation on kill
++ game speed var
++ player invincibility on spawn (2 seconds?)
++ add game mode selection to char select
++ count down timer game start after char select
++ add time dilation effect on last kill
++ verify bullet pool allocation order -> may be a source of desync issues, due to differences in the order of bullet updates
++ textchat: left/right/insert text/delete key
++ i think less bubble/ice freeze time
++ respawn visual to more quickly locate your respawn location
 + clash sound on attack cancel
 + random sound selection on event to avoid repeat sounds
 + fire up/down
@@ -107,23 +145,19 @@ todo:
 + add pickup sound
 + add direct connect option
 + spring block tweakable
-- more death feedback
 + respawn delay
 + character selection
 + force feedback cling animation
 + attack anim up and down
 + analog controls
-- team based game mode
 + token hunt
 + spawn anim
-
 + death input
 + hitbox spikes
 + manual spawn (5 seconds?)
 + taunt button
 + shotgun ammo x3
 + add attack vel to player vel
-
 + attack cancel
 + bullet teleport
 + separate player hitbox for damage
@@ -131,18 +165,9 @@ todo:
 + ammo drop gravity
 + input lock dash weg
 + jump velocity reset na 10 pixels of richting change
-- ammo despawn na x seconds + indicator (?)
-
 + attack cooldown
-
 + camera shakes
-
-nice to haves:
-- blood particles
 + real time lighting
-- fill the level with lava
-- bee attack
-- earthquake. players go up on quake
 
 */
 
@@ -859,22 +884,6 @@ void Player::tick(float dt)
 			}
 		}
 
-		m_blockMask = ~0;
-
-		const uint32_t currentBlockMask = getIntersectingBlocksMask(m_pos[0], m_pos[1]);
-		
-		const bool isInPassthough = (currentBlockMask & kBlockMask_Passthrough) != 0;
-		const bool enterPassThrough = m_enterPassthrough || (m_special.attackDownActive) || (m_attack.m_rocketPunch.isActive);
-		if (isInPassthough || enterPassThrough)
-			m_blockMask = ~kBlockMask_Passthrough;
-
-		const uint32_t currentBlockMaskFloor = getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f);
-		const uint32_t currentBlockMaskCeil = getIntersectingBlocksMask(m_pos[0], m_pos[1] - 1.f);
-
-		// kill player when stuck
-		//if (currentBlockMask & (kBlockMask_Solid & ~kBlockMask_Passthrough))
-		//	handleDamage(1.f, Vec2(0.f, 0.f), 0);
-
 		float surfaceFriction = 0.f;
 		Vec2 animVel(0.f, 0.f);
 
@@ -882,7 +891,6 @@ void Player::tick(float dt)
 		animVel[1] += m_animVel[1] * m_facing[1];
 
 		// attack
-
 		if (m_attack.attacking)
 		{
 			if (m_anim == kPlayerAnim_Attack || m_anim == kPlayerAnim_AttackUp || m_anim == kPlayerAnim_AttackDown)
@@ -1223,6 +1231,27 @@ void Player::tick(float dt)
 			}
 		}
 
+		m_blockMask = ~0;
+
+	#if USE_NEW_COLLISION_CODE
+		const uint32_t currentBlockMask = m_oldBlockMask;
+	#else
+		const uint32_t currentBlockMask = getIntersectingBlocksMask(m_pos[0], m_pos[1]);
+	#endif
+
+		const bool isInPassthough = (currentBlockMask & kBlockMask_Passthrough) != 0;
+		const bool enterPassThrough = m_enterPassthrough || (m_special.attackDownActive) || (m_attack.m_rocketPunch.isActive);
+		if (isInPassthough || enterPassThrough)
+			m_blockMask = ~kBlockMask_Passthrough;
+
+	#if USE_NEW_COLLISION_CODE
+		const uint32_t currentBlockMaskFloor = m_dirBlockMaskDir[1] > 0 ? m_dirBlockMask[1] : 0;
+		const uint32_t currentBlockMaskCeil = m_dirBlockMaskDir[1] < 0 ? m_dirBlockMask[1] : 0;
+	#else
+		const uint32_t currentBlockMaskFloor = getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f);
+		const uint32_t currentBlockMaskCeil = getIntersectingBlocksMask(m_pos[0], m_pos[1] - 1.f);
+	#endif
+
 		if (m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && m_input.wentDown(INPUT_BUTTON_A))
 		{
 			if (isAnimOverrideAllowed(kPlayerAnim_AirDash) && false)
@@ -1413,7 +1442,7 @@ void Player::tick(float dt)
 		m_isUsingJetpack = false;
 
 		if (m_animAllowGravity &&
-			!m_isAttachedToSticky &&
+			//!m_isAttachedToSticky &&
 			!m_animVelIsAbsolute &&
 			m_bubble.timer == 0.f &&
 			(!m_attack.m_rocketPunch.isActive || m_attack.m_rocketPunch.state == AttackInfo::RocketPunch::kState_Stunned))
@@ -1427,7 +1456,7 @@ void Player::tick(float dt)
 			else if (currentBlockMask & ((1 << kBlockType_GravityLeft) | (1 << kBlockType_GravityRight)))
 				gravity = 0.f;
 			else
-				gravity = GRAVITY;
+				gravity = m_isAttachedToSticky ? -GRAVITY : +GRAVITY;
 
 			bool canWallSlide = true;
 
@@ -1448,7 +1477,11 @@ void Player::tick(float dt)
 				m_vel[0] != 0.f && Calc::Sign(m_facing[0]) == Calc::Sign(m_vel[0]) &&
 				//Calc::Sign(m_vel[1]) == Calc::Sign(gravity) &&
 				(Calc::Sign(m_vel[1]) == Calc::Sign(gravity) || Calc::Abs(m_vel[1]) <= PLAYER_JUMP_SPEED / 2.f) &&
+			#if USE_NEW_COLLISION_CODE
+				m_isHuggingWall != 0)
+			#else
 				(getIntersectingBlocksMask(m_pos[0] + m_facing[0], m_pos[1]) & kBlockMask_Solid) != 0)
+			#endif
 			{
 				m_isWallSliding = true;
 
@@ -1459,17 +1492,17 @@ void Player::tick(float dt)
 			}
 		}
 
-		if (gravity < GRAVITY)
-		{
-			m_special.attackDownActive = false;
-		}
-
 		if (m_special.meleeCounter != 0 && Calc::Sign(m_vel[1]) == Calc::Sign(gravity))
 		{
 			gravity *= DOUBLEMELEE_GRAVITY_MULTIPLIER;
 		}
 
 		m_vel[1] += gravity * dt;
+
+		if (gravity < GRAVITY)
+		{
+			m_special.attackDownActive = false;
+		}
 
 		if (currentBlockMask & (1 << kBlockType_GravityLeft))
 			m_vel[0] -= GRAVITY * dt;
@@ -1499,6 +1532,222 @@ void Player::tick(float dt)
 
 		// collision
 
+#if USE_NEW_COLLISION_CODE
+
+		m_isHuggingWall = false;
+
+		const Vec2 totalVel = (m_vel * (m_animVelIsAbsolute ? 0.f : 1.f)) + animVel;
+
+		// todo : should integrate below code with collision callback
+
+		if (m_attack.m_rocketPunch.isActive && m_attack.m_rocketPunch.state == AttackInfo::RocketPunch::kState_Attack)
+		{
+			const CollisionBox box = m_collision.getTranslated(m_pos + totalVel * dt);
+			void * args[2] = { this, (void*)&totalVel };
+			GAMESIM->testCollision(
+				box,
+				[](void * arg, PhysicsActor * actor, BlockAndDistance * block, Player * player)
+				{
+					void ** args = (void**)arg;
+					Player * self = (Player*)args[0];
+					Vec2 * vel = (Vec2*)args[1];
+					if (block)
+						block->block->handleDamage(*self->m_instanceData->m_gameSim, block->x, block->y);
+					if (player && player != self)
+						player->handleDamage(1.f, *vel, self);
+				},
+				args);
+		}
+
+		// input step:
+		// - update velocities
+
+		// simulation step:
+		// - physics scene updates
+		// - player receives callbacks
+		// - keeps track of stuff. gets to decide velocity update scheme
+		//   - block mask!
+
+		// player process step:
+		// - react to physics update. evaluate the new block mask, etc
+		// - check for attacks, wall jump, etc
+
+		uint32_t dirBlockMask[2] = { 0, 0 };
+
+		// todo : update this from player input update
+
+		for (int i = 0; i < 2; ++i)
+		{
+			Vec2 delta;
+			delta[i] = totalVel[i] * dt;
+
+			if (delta[i] == 0.f)
+				continue;
+
+			Vec2 newPos = m_pos + delta;
+
+			const Vec2 min = newPos + m_collision.min;
+			const Vec2 max = newPos + m_collision.max;
+
+			// todo : phys object shape
+			CollisionShape playerShape;
+			playerShape.set(
+				Vec2(min[0], min[1]),
+				Vec2(max[0], min[1]),
+				Vec2(max[0], max[1]),
+				Vec2(min[0], max[1]));
+
+			int blockMin[2];
+			int blockMax[2];
+
+			if (GAMESIM->m_arena.getBlockRectFromPixels(
+				min[0], min[1],
+				max[0], max[1],
+				blockMin[0], blockMin[1],
+				blockMax[0], blockMax[1]))
+			{
+				for (int blockX = blockMin[0]; blockX <= blockMax[0]; ++blockX)
+				{
+					for (int blockY = blockMin[1]; blockY <= blockMax[1]; ++blockY)
+					{
+						const Block & block = GAMESIM->m_arena.getBlock(blockX, blockY);
+
+						if (block.type == kBlockType_Empty)
+							continue;
+						if (block.shape == kBlockShape_Empty)
+							continue;
+
+						CollisionShape shape = Arena::getBlockCollision(block.shape);
+						shape.translate(blockX * BLOCK_SX, blockY * BLOCK_SY);
+
+						float contactDistance;
+						Vec2 contactNormal;
+
+						if (playerShape.checkCollision(shape, delta, contactDistance, contactNormal))
+						{
+							// todo : from here is player callback code!
+
+							dirBlockMask[i] |= (1 << block.type) & ~kBlockMask_Passthrough;
+
+							bool isPassthrough = false;
+
+							if ((1 << block.type) & kBlockMask_Passthrough)
+							{
+								if ((m_oldBlockMask & kBlockMask_Passthrough) || (i != 1 || delta[i] < 0.f) || enterPassThrough)
+								{
+									isPassthrough = true;
+
+									dirBlockMask[i] |= (1 << block.type);
+								}
+							}
+
+							if (((1 << block.type) & kBlockMask_Solid) == 0) // todo : should pass all types to player. let player filter on solid yes/no
+								isPassthrough = true;
+							
+							if (!isPassthrough)
+							{
+								// todo : let phys update know if collision was handled
+								// todo : do offset after evaluating all collisions, to avoid missing intersecting blocks
+
+								Vec2 offset = contactNormal * contactDistance;
+								newPos += offset;
+								playerShape.translate(offset[0], offset[1]);
+
+								// wall slide
+
+								if (delta[0] != 0.f)
+								{
+									m_isHuggingWall = delta[0] < 0.f ? -1 : +1;
+								}
+
+								// screen shake
+
+								const float sign = Calc::Sign(delta[i]);
+								float strength = (Calc::Abs(totalVel[i]) - PLAYER_JUMP_SPEED) / 25.f;
+
+								if (strength > PLAYER_SCREENSHAKE_STRENGTH_THRESHHOLD)
+								{
+									strength = sign * strength / 4.f;
+									GAMESIM->addScreenShake(
+										i == 0 ? strength : 0.f,
+										i == 1 ? strength : 0.f,
+										3000.f, .3f);
+								}
+
+								if (true)
+								{
+									// effects
+
+									if ((dirBlockMask[i] & kBlockMask_Solid) && m_ice.timer != 0.f)
+									{
+										m_vel[i] *= -.5f;
+									}
+									else if ((dirBlockMask[i] & kBlockMask_Solid) && m_bubble.timer != 0.f)
+									{
+										m_vel[i] *= -.75f;
+									}
+									else
+									{
+										if (i == 1)
+										{
+											m_enterPassthrough = false;
+										}
+
+										if (i == 1 && delta[1] < 0.f)
+										{
+											handleJumpCollision();
+										}
+										else
+										{
+											// todo : let phys update know whether to update velocity
+
+											const float d = m_vel * contactNormal;
+											if (d > 0.f)
+											{
+												m_vel -= contactNormal * d;
+
+												//logDebug("vel = %f, %f", m_vel[0], m_vel[1]);
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+
+			m_pos = newPos;
+		}
+
+		// surface type
+
+		const uint32_t blockMask = dirBlockMask[0] | dirBlockMask[1];
+
+		if ((dirBlockMask[1] & (1 << kBlockType_Slide)) && totalVel[1] >= 0.f)
+			surfaceFriction = 0.f;
+		else if (m_ice.timer != 0.f)
+			surfaceFriction = 0.f;
+		else if (Calc::Sign(m_vel[1]) != Calc::Sign(gravity) || (dirBlockMask[1] & kBlockMask_Solid) == 0)
+			surfaceFriction = 0.f;
+		else
+			surfaceFriction = FRICTION_GROUNDED;
+
+		// spring
+
+		if ((dirBlockMask[1] & (1 << kBlockType_Spring)) && totalVel[1] >= 0.f)
+		{
+			m_vel[1] = -BLOCKTYPE_SPRING_SPEED;
+
+			playSecondaryEffects(kPlayerEvent_SpringJump);
+		}
+
+		m_dirBlockMaskDir[0] = totalVel[0] == 0.f ? 0 : totalVel[0] < 0.f ? -1 : +1;
+		m_dirBlockMaskDir[1] = totalVel[1] == 0.f ? 0 : totalVel[1] < 0.f ? -1 : +1;
+		m_dirBlockMask[0] = dirBlockMask[0];
+		m_dirBlockMask[1] = dirBlockMask[1];
+		m_oldBlockMask = blockMask;
+#else
 		const Vec2 totalVel = (m_vel * (m_animVelIsAbsolute ? 0.f : 1.f)) + animVel;
 
 		for (int i = 0; i < 2; ++i)
@@ -1698,25 +1947,7 @@ void Player::tick(float dt)
 						}
 						else
 						{
-							if (!m_jump.cancelStarted)
-							{
-								m_jump.cancelStarted = true;
-								m_jump.cancelled = false;
-								m_jump.cancelX = m_pos[0];
-								m_jump.cancelFacing = m_facing[0];
-							}
-							else
-							{
-								m_jump.cancelled =
-									m_jump.cancelled ||
-									std::abs(m_jump.cancelX - m_pos[0]) > PLAYER_JUMP_GRACE_PIXELS ||
-									m_facing[0] != m_jump.cancelFacing;
-
-								if (m_jump.cancelled)
-								{
-									m_vel[i] = 0.f;
-								}
-							}
+							handleJumpCollision();
 						}
 					}
 
@@ -1733,6 +1964,7 @@ void Player::tick(float dt)
 					m_special.attackDownHeight += delta;
 			}
 		}
+	#endif
 
 		// grounded?
 
@@ -1905,41 +2137,6 @@ void Player::draw() const
 	if (!hasValidCharacterIndex())
 		return;
 
-	// draw rocket punch charge and direction
-
-	if (m_attack.m_rocketPunch.isActive && m_attack.m_rocketPunch.state == AttackInfo::RocketPunch::kState_Charge)
-	{
-		const float t = (m_attack.m_rocketPunch.chargeTime - ROCKETPUNCH_CHARGE_MIN) / (ROCKETPUNCH_CHARGE_MAX - ROCKETPUNCH_CHARGE_MIN);
-		Color c1 = colorRed;
-		Color c2 = colorYellow;
-		Color c = t == 1.f ? colorWhite : c1.interp(c2, t);
-		setColor(c);
-		drawRect(
-			m_pos[0] - 50,
-			m_pos[1] - 100,
-			m_pos[0] + 50,
-			m_pos[1] + 50);
-
-		const float x = m_pos[0];
-		const float y = m_pos[1] - 30.f;
-		const Vec2 dir = m_input.getAnalogDirection().CalcNormalized();
-		const Vec2 off1 = dir * 50.f;
-		const Vec2 off2 = dir * 100.f;
-
-		setColor(colorGreen);
-		drawLine(
-			x + off1[0],
-			y + off1[1],
-			x + off2[0],
-			y + off2[1]);
-		drawRect(
-			x + off2[0] - 5.f,
-			y + off2[1] - 5.f,
-			x + off2[0] + 5.f,
-			y + off2[1] + 5.f);
-	}
-
-
 	const bool flipX = m_facing[0] > 0 ? true : false;
 	const bool flipY = m_facing[1] < 0 ? true : false;
 
@@ -2034,6 +2231,40 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 {
 	const CharacterData * characterData = getCharacterData(m_characterIndex);
 
+	// draw rocket punch charge and direction
+
+	if (m_attack.m_rocketPunch.isActive && m_attack.m_rocketPunch.state == AttackInfo::RocketPunch::kState_Charge)
+	{
+		const float t = (m_attack.m_rocketPunch.chargeTime - ROCKETPUNCH_CHARGE_MIN) / (ROCKETPUNCH_CHARGE_MAX - ROCKETPUNCH_CHARGE_MIN);
+		Color c1 = colorRed;
+		Color c2 = colorYellow;
+		Color c = t == 1.f ? colorWhite : c1.interp(c2, t);
+		setColor(c);
+		drawRect(
+			x - 50,
+			y - 100,
+			x + 50,
+			y + 50);
+
+		const float px = x;
+		const float py = y - 30.f;
+		const Vec2 dir = m_input.getAnalogDirection().CalcNormalized();
+		const Vec2 off1 = dir * 50.f;
+		const Vec2 off2 = dir * 100.f;
+
+		setColor(colorGreen);
+		drawLine(
+			px + off1[0],
+			py + off1[1],
+			px + off2[0],
+			py + off2[1]);
+		drawRect(
+			px + off2[0] - 5.f,
+			py + off2[1] - 5.f,
+			px + off2[0] + 5.f,
+			py + off2[1] + 5.f);
+	}
+
 	if (GAMESIM->m_gameMode == kGameMode_TokenHunt)
 	{
 		setColorMode(COLOR_ADD);
@@ -2070,21 +2301,21 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 	{
 		Sprite sprite("doublemelee.png");
 		sprite.flipX = m_facing[0] < 0.f;
-		sprite.drawEx(m_pos[0], m_pos[1] + m_attack.collision.min[1]);
+		sprite.drawEx(x, y + mirrorY(m_attack.collision.min[1]));
 	}
 
 	if (m_shield.shield)
 	{
-		const float x = m_pos[0] + (m_collision.min[0] + m_collision.max[0]) / 2.f;
-		const float y = m_pos[1] + (m_collision.min[1] + m_collision.max[1]) / 2.f;
-		Sprite("shield-bubble.png").drawEx(x, y);
+		const float px = x + mirrorX((m_collision.min[0] + m_collision.max[0]) / 2.f);
+		const float py = y + mirrorY((m_collision.min[1] + m_collision.max[1]) / 2.f);
+		Sprite("shield-bubble.png").drawEx(px, py);
 	}
 
 	if (m_bubble.timer > 0.f)
 	{
-		const float x = m_pos[0] + (m_collision.min[0] + m_collision.max[0]) / 2.f;
-		const float y = m_pos[1] + (m_collision.min[1] + m_collision.max[1]) / 2.f;
-		Sprite("bubble-bubble.png").drawEx(x, y);
+		const float px = x + mirrorX((m_collision.min[0] + m_collision.max[0]) / 2.f);
+		const float py = y + mirrorY((m_collision.min[1] + m_collision.max[1]) / 2.f);
+		Sprite("bubble-bubble.png").drawEx(px, py);
 	}
 
 	if (m_anim == kPlayerAnim_Attack || m_anim == kPlayerAnim_AttackUp || m_anim == kPlayerAnim_AttackDown)
@@ -2123,6 +2354,8 @@ void Player::debugDraw() const
 		damageCollision.max[0] + 1,
 		damageCollision.max[1] + 1);
 
+	float y = m_pos[1];
+
 	if (m_attack.attacking && m_attack.hasCollision)
 	{
 		CollisionInfo attackCollision;
@@ -2132,7 +2365,8 @@ void Player::debugDraw() const
 		setFont(font);
 
 		setColor(colorWhite);
-		drawText(m_pos[0], m_pos[1], 14, 0.f, 0.f, "attacking");
+		drawText(m_pos[0], y, 14, 0.f, 0.f, "attacking");
+		y += 18.f;
 
 		setColor(255, 0, 0, 63);
 		drawRect(
@@ -2140,6 +2374,20 @@ void Player::debugDraw() const
 			attackCollision.min[1],
 			attackCollision.max[0],
 			attackCollision.max[1]);
+	}
+
+	if (m_isHuggingWall)
+	{
+		setColor(colorWhite);
+		drawText(m_pos[0], y, 14, 0.f, 0.f, "wallhug");
+		y += 18.f;
+	}
+
+	if (m_isWallSliding)
+	{
+		setColor(colorWhite);
+		drawText(m_pos[0], y, 14, 0.f, 0.f, "wallslide");
+		y += 18.f;
 	}
 
 	setColor(colorWhite);
@@ -2240,11 +2488,18 @@ void Player::respawn()
 
 		m_blockMask = 0;
 
+		m_dirBlockMask[0] = 0;
+		m_dirBlockMask[1] = 0;
+		m_dirBlockMaskDir[0] = 0;
+		m_dirBlockMaskDir[1] = 0;
+		m_oldBlockMask = 0;
+
 		m_isGrounded = false;
 		m_isAttachedToSticky = false;
 		m_isAnimDriven = false;
 		m_animVelIsAbsolute = false;
 		m_isAirDashCharged = false;
+		m_isHuggingWall = false;
 		m_isWallSliding = false;
 		m_enterPassthrough = false;
 
@@ -2522,6 +2777,29 @@ PlayerWeapon Player::popWeapon()
 		m_weaponStackSize--;
 	}
 	return result;
+}
+
+void Player::handleJumpCollision()
+{
+	if (!m_jump.cancelStarted)
+	{
+		m_jump.cancelStarted = true;
+		m_jump.cancelled = false;
+		m_jump.cancelX = m_pos[0];
+		m_jump.cancelFacing = m_facing[0];
+	}
+	else
+	{
+		m_jump.cancelled =
+			m_jump.cancelled ||
+			std::abs(m_jump.cancelX - m_pos[0]) > PLAYER_JUMP_GRACE_PIXELS ||
+			m_facing[0] != m_jump.cancelFacing;
+
+		if (m_jump.cancelled)
+		{
+			m_vel[1] = 0.f;
+		}
+	}
 }
 
 void Player::beginRocketPunch()
