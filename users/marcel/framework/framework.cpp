@@ -2890,7 +2890,7 @@ static void measureText(FT_Face face, int size, const char * _text, float & sx, 
 	float x = 0.f;
 	float y = 0.f;
 	
-	for (int i = 0; i < textLength; ++i)
+	for (size_t i = 0; i < textLength; ++i)
 	{
 		// find or create glyph. skip current character if the element is invalid
 		
@@ -2946,7 +2946,7 @@ static void drawTextInternal(FT_Face face, int size, const char * _text)
 	
 	y += size;
 	
-	for (int i = 0; i < textLength; ++i)
+	for (size_t i = 0; i < textLength; ++i)
 	{
 		// find or create glyph. skip current character if the element is invalid
 		
