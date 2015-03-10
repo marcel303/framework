@@ -200,6 +200,18 @@ struct CollisionShape
 
 	//
 
+	CollisionShape()
+	{
+		//memset(this, 0, sizeof(*this));
+	}
+
+	CollisionShape(const CollisionBox & box)
+	{
+		//memset(this, 0, sizeof(*this));
+
+		*this = box;
+	}
+
 	void setEmpty()
 	{
 		numPoints = 0;
@@ -222,10 +234,14 @@ struct CollisionShape
 		numPoints = 4;
 	}
 
+	const CollisionShape & operator=(const CollisionBox & box);
+
 	void translate(float x, float y);
 
+	void getMinMax(Vec2 & min, Vec2 & max) const;
 	float projectedMax(Vec2Arg n) const;
 	Vec2 getSegmentNormal(int idx) const;
+	bool intersects(const CollisionShape & other) const;
 	bool checkCollision(const CollisionShape & other, Vec2Arg delta, float & contactDistance, Vec2 & contactNormal) const;
 
 	void debugDraw() const;

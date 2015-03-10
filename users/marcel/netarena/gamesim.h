@@ -54,7 +54,7 @@ struct Player
 
 	void playSecondaryEffects(PlayerEvent e);
 
-	void testCollision(const CollisionBox & box, CollisionCB cb, void * arg);
+	void testCollision(const CollisionShape & box, void * arg, CollisionCB cb);
 
 	bool getPlayerCollision(CollisionInfo & collision) const;
 	void getDamageHitbox(CollisionInfo & collision) const;
@@ -770,8 +770,8 @@ public:
 
 	void playSound(const char * filename, int volume = 100);
 
-	void testCollision(const CollisionBox & box, CollisionCB cb, void * arg);
-	void testCollisionInternal(const CollisionBox & box, CollisionCB cb, void * arg);
+	void testCollision(const CollisionShape & shape, void * arg, CollisionCB cb);
+	void testCollisionInternal(const CollisionShape & shape, void * arg, CollisionCB cb);
 
 	void trySpawnPickup(PickupType type);
 	void spawnPickup(Pickup & pickup, PickupType type, int blockX, int blockY);

@@ -905,25 +905,40 @@ const CollisionShape & Arena::getBlockCollision(BlockShape shape)
 	return s_blockPolys[shape];
 }
 
-void Arena::testCollision(const CollisionBox & box, CollisionCB cb, void * arg)
+void Arena::testCollision(const CollisionShape & shape, void * arg, CollisionCB cb)
 {
 	const int kMaxBlocks = 64;
 	BlockAndDistance blocks[kMaxBlocks];
 	int numBlocks = kMaxBlocks;
 
+	Vec2 min;
+	Vec2 max;
+	shape.getMinMax(min, max);
+
 	if (getBlocksFromPixels(
 		0, 0,
-		(int)box.min[0],
-		(int)box.min[1],
-		(int)box.max[0],
-		(int)box.max[1],
-		true,
+		(int)min[0],
+		(int)min[1],
+		(int)max[0],
+		(int)max[1],
+		false,
 		blocks,
 		numBlocks))
 	{
 		for (int i = 0; i < numBlocks; ++i)
 		{
-			cb(arg, 0, &blocks[i], 0);
+			if (blocks[i].block->type == kBlockType_Empty)
+				continue;
+			if (blocks[i].block->shape == kBlockShape_Empty)
+				continue;
+
+			CollisionShape blockShape = Arena::getBlockCollision(blocks[i].block->shape);
+			blockShape.translate(blocks[i].x * BLOCK_SX, blocks[i].y * BLOCK_SY);
+
+			if (shape.intersects(blockShape))
+			{
+				cb(arg, 0, &blocks[i], 0);
+			}
 		}
 	}
 }

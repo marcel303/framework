@@ -1691,36 +1691,35 @@ void GameSim::playSound(const char * filename, int volume)
 	Sound(filename).play(volume);
 }
 
-void GameSim::testCollision(const CollisionBox & box, CollisionCB cb, void * arg)
+void GameSim::testCollision(const CollisionShape & shape, void * arg, CollisionCB cb)
 {
+	// todo : only do wrapping when needed
+
 	if (true)
 	{
 		for (int dx = -1; dx <= +1; ++dx)
 		{
 			for (int dy = -1; dy <= +1; ++dy)
 			{
-				CollisionBox b;
+				CollisionShape translatedShape = shape;
 
-				b.min[0] = box.min[0] + ARENA_SX_PIXELS * dx;
-				b.min[1] = box.min[1] + ARENA_SY_PIXELS * dy;
-				b.max[0] = box.max[0] + ARENA_SX_PIXELS * dx;
-				b.max[1] = box.max[1] + ARENA_SY_PIXELS * dy;
+				translatedShape.translate(dx * ARENA_SX_PIXELS, dy * ARENA_SY_PIXELS);
 
-				testCollisionInternal(b, cb, arg);
+				testCollisionInternal(translatedShape, arg, cb);
 			}
 		}
 	}
 	else
 	{
-		testCollisionInternal(box, cb, arg);
+		testCollisionInternal(shape, arg, cb);
 	}
 }
 
-void GameSim::testCollisionInternal(const CollisionBox & box, CollisionCB cb, void * arg)
+void GameSim::testCollisionInternal(const CollisionShape & shape, void * arg, CollisionCB cb)
 {
 	// collide vs arena
 
-	m_arena.testCollision(box, cb, arg);
+	m_arena.testCollision(shape, arg, cb);
 
 	// collide vs players
 
@@ -1728,7 +1727,7 @@ void GameSim::testCollisionInternal(const CollisionBox & box, CollisionCB cb, vo
 	{
 		if (m_players[i].m_isUsed && m_players[i].m_isAlive)
 		{
-			m_players[i].testCollision(box, cb, arg);
+			m_players[i].testCollision(shape, arg, cb);
 		}
 	}
 

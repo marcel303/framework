@@ -147,5 +147,5 @@ public:
 	bool handleDamageRect(GameSim & gameSim, int x, int y, int x1, int y1, int x2, int y2, bool hitDestructible, bool hitSingleDestructible = true);
 
 	static const CollisionShape & getBlockCollision(BlockShape shape);
-	void testCollision(const CollisionBox & box, CollisionCB cb, void * arg);
+	void testCollision(const CollisionShape & shape, void * arg, CollisionCB cb);
 };

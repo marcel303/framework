@@ -3,12 +3,38 @@
 #include "gamedefs.h"
 #include "gametypes.h"
 
+const CollisionShape & CollisionShape::operator=(const CollisionBox & box)
+{
+	Vec2 p1(box.min[0], box.min[1]);
+	Vec2 p2(box.max[0], box.min[1]);
+	Vec2 p3(box.max[0], box.max[1]);
+	Vec2 p4(box.min[0], box.max[1]);
+
+	set(p1, p2, p3, p4);
+
+	return *this;
+}
+
 void CollisionShape::translate(float x, float y)
 {
 	for (int i = 0; i < numPoints; ++i)
 	{
 		points[i][0] += x;
 		points[i][1] += y;
+	}
+}
+
+void CollisionShape::getMinMax(Vec2 & min, Vec2 & max) const
+{
+	Assert(numPoints != 0);
+
+	min = points[0];
+	max = points[0];
+
+	for (int i = 1; i < numPoints; ++i)
+	{
+		min = min.Min(points[i]);
+		max = max.Max(points[i]);
 	}
 }
 
@@ -40,6 +66,39 @@ Vec2 CollisionShape::getSegmentNormal(int idx) const
 	const Vec2 n(+d[1], -d[0]);
 
 	return n;
+}
+
+bool CollisionShape::intersects(const CollisionShape & other) const
+{
+	// perform SAT test
+
+	// evaluate edges from the first shape
+
+	for (int i = 0; i < numPoints; ++i)
+	{
+		const Vec2 & p = points[i];
+		const Vec2 pn = getSegmentNormal(i);
+		const float pd = pn * p;
+		const float d = other.projectedMax(pn) - pd;
+
+		if (d >= 0.f)
+			return false;
+	}
+
+	// evaluate edges from the second shape
+
+	for (int i = 0; i < other.numPoints; ++i)
+	{
+		const Vec2 & p = other.points[i];
+		const Vec2 pn = other.getSegmentNormal(i);
+		const float pd = pn * p;
+		const float d = projectedMax(pn) - pd;
+
+		if (d >= 0.f)
+			return false;
+	}
+
+	return true;
 }
 
 bool CollisionShape::checkCollision(const CollisionShape & other, Vec2Arg delta, float & contactDistance, Vec2 & contactNormal) const

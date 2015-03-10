@@ -478,12 +478,14 @@ void PlayerInstanceData::handleAnimationAction(const std::string & action, const
 	}
 }
 
-void Player::testCollision(const CollisionBox & box, CollisionCB cb, void * arg)
+void Player::testCollision(const CollisionShape & shape, void * arg, CollisionCB cb)
 {
 	CollisionInfo collision;
 	if (getPlayerCollision(collision))
 	{
-		if (collision.intersects(box))
+		CollisionShape collisionShape = collision;
+
+		if (collisionShape.intersects(shape))
 		{
 			cb(arg, 0, 0, this);
 		}
@@ -1553,16 +1555,17 @@ void Player::tick(float dt)
 		m_isInPassthrough = false;
 		m_isHuggingWall = false;
 
-		const Vec2 totalVel = (m_vel * (m_animVelIsAbsolute ? 0.f : 1.f)) + animVel;
+		Vec2 totalVel = (m_vel * (m_animVelIsAbsolute ? 0.f : 1.f)) + animVel;
 
 		// todo : should integrate below code with collision callback
 
 		if (m_attack.m_rocketPunch.isActive && m_attack.m_rocketPunch.state == AttackInfo::RocketPunch::kState_Attack)
 		{
-			const CollisionBox box = m_collision.getTranslated(m_pos + totalVel * dt);
+			const CollisionShape shape = m_collision.getTranslated(m_pos + totalVel * dt);
 			void * args[2] = { this, (void*)&totalVel };
 			GAMESIM->testCollision(
-				box,
+				shape,
+				args,
 				[](void * arg, PhysicsActor * actor, BlockAndDistance * block, Player * player)
 				{
 					void ** args = (void**)arg;
@@ -1572,8 +1575,7 @@ void Player::tick(float dt)
 						block->block->handleDamage(*self->m_instanceData->m_gameSim, block->x, block->y);
 					if (player && player != self)
 						player->handleDamage(1.f, *vel, self);
-				},
-				args);
+				});
 		}
 
 		// input step:
@@ -1607,37 +1609,63 @@ void Player::tick(float dt)
 			const Vec2 max = newPos + m_collision.max;
 
 			// todo : phys object shape
-			CollisionShape playerShape;
-			playerShape.set(
+
+			struct CollisionArgs
+			{
+				Player * self;
+				CollisionShape playerShape;
+				Vec2 delta;
+				Vec2 totalVel;
+				Vec2 newPos;
+				int axis;
+				uint32_t * dirBlockMask;
+				bool enterPassThrough;
+				bool wasInPassthrough;
+				float gravity;
+			};
+
+			CollisionArgs args;
+
+			args.self = this;
+			args.playerShape.set(
 				Vec2(min[0], min[1]),
 				Vec2(max[0], min[1]),
 				Vec2(max[0], max[1]),
 				Vec2(min[0], max[1]));
+			args.axis = i;
+			args.delta = delta;
+			args.totalVel = totalVel;
+			args.newPos = newPos;
+			args.dirBlockMask = dirBlockMask;
+			args.enterPassThrough = enterPassThrough;
+			args.wasInPassthrough = wasInPassthrough;
+			args.gravity = gravity;
 
-			int blockMin[2];
-			int blockMax[2];
-
-			// todo : wrapping support
-
-			if (GAMESIM->m_arena.getBlockRectFromPixels(
-				min[0], min[1],
-				max[0], max[1],
-				blockMin[0], blockMin[1],
-				blockMax[0], blockMax[1]))
-			{
-				for (int blockX = blockMin[0]; blockX <= blockMax[0]; ++blockX)
+			GAMESIM->testCollision(
+				args.playerShape,
+				&args,
+				[](void * arg, PhysicsActor * actor, BlockAndDistance * blockAndDistance, Player * player)
 				{
-					for (int blockY = blockMin[1]; blockY <= blockMax[1]; ++blockY)
-					{
-						const Block * block = &GAMESIM->m_arena.getBlock(blockX, blockY);
+					CollisionArgs * args = (CollisionArgs*)arg;
+					Player * self = args->self;
+					CollisionShape & playerShape = args->playerShape;
+					Vec2 & delta = args->delta;
+					const Vec2 & totalVel = args->totalVel;
+					Vec2 & newPos = args->newPos;
+					const bool enterPassThrough = args->enterPassThrough;
+					const int i = args->axis;
+					const float gravity = args->gravity;
 
-						if (block->type == kBlockType_Empty)
-							continue;
-						if (block->shape == kBlockShape_Empty)
-							continue;
+					const CharacterData * characterData = getCharacterData(self->m_characterIndex);
+
+					//
+
+					if (blockAndDistance)
+					{
+						Block * block = blockAndDistance->block;
 
 						CollisionShape shape = Arena::getBlockCollision(block->shape);
-						shape.translate(blockX * BLOCK_SX, blockY * BLOCK_SY);
+						shape.translate(blockAndDistance->x * BLOCK_SX, blockAndDistance->y * BLOCK_SY);
 
 						float contactDistance;
 						Vec2 contactNormal;
@@ -1650,15 +1678,23 @@ void Player::tick(float dt)
 
 							if (block)
 							{
-								dirBlockMask[i] |= (1 << block->type) & ((wasInPassthrough || m_isInPassthrough || enterPassThrough) ? ~kBlockMask_Passthrough : ~0);
+								const uint32_t mask = (1 << block->type) & ((args->wasInPassthrough || self->m_isInPassthrough || enterPassThrough) ? ~kBlockMask_Passthrough : ~0);
+
+								args->dirBlockMask[i] |= mask;
+
+								if (contactNormal[0] * contactNormal[1] != 0.f)
+								{
+									args->dirBlockMask[0] |= mask;
+									args->dirBlockMask[1] |= mask;
+								}
 
 								if ((1 << block->type) & kBlockMask_Passthrough)
 								{
-									if (i == 0 || delta[i] < 0.f || (wasInPassthrough || m_isInPassthrough || enterPassThrough))
+									if (i != 1 || delta[1] < 0.f || (args->wasInPassthrough || self->m_isInPassthrough || enterPassThrough))
 									{
 										collide = false;
 
-										m_isInPassthrough = true;
+										self->m_isInPassthrough = true;
 									}
 								}
 
@@ -1679,7 +1715,7 @@ void Player::tick(float dt)
 
 								if (delta[0] != 0.f)
 								{
-									m_isHuggingWall = delta[0] < 0.f ? -1 : +1;
+									self->m_isHuggingWall = delta[0] < 0.f ? -1 : +1;
 								}
 
 								// screen shake
@@ -1690,21 +1726,21 @@ void Player::tick(float dt)
 								if (strength > PLAYER_SCREENSHAKE_STRENGTH_THRESHHOLD)
 								{
 									strength = sign * strength / 4.f;
-									GAMESIM->addScreenShake(
+									self->GAMESIM->addScreenShake(
 										i == 0 ? strength : 0.f,
 										i == 1 ? strength : 0.f,
 										3000.f, .3f);
 								}
 
-								if (m_attack.m_rocketPunch.isActive)
+								if (self->m_attack.m_rocketPunch.isActive)
 								{
-									if (m_attack.m_rocketPunch.state != AttackInfo::RocketPunch::kState_Charge)
-										endRocketPunch(true);
+									if (self->m_attack.m_rocketPunch.state != AttackInfo::RocketPunch::kState_Charge)
+										self->endRocketPunch(true);
 								}
 
-								if (m_isAnimDriven && m_anim == kPlayerAnim_AirDash)
+								if (self->m_isAnimDriven && self->m_anim == kPlayerAnim_AirDash)
 								{
-									m_spriterState.stopAnim(*characterData->m_spriter);
+									self->m_spriterState.stopAnim(*characterData->m_spriter);
 								}
 
 								if (true)
@@ -1715,29 +1751,29 @@ void Player::tick(float dt)
 
 									// todo : if ice or bubble : do not allow vel change. instead, change vel after all collision code is done
 
-									if (m_ice.timer != 0.f || m_bubble.timer != 0.f)
+									if (self->m_ice.timer != 0.f || self->m_bubble.timer != 0.f)
 										updateVelocity = false;
 
 									if (i == 1)
 									{
-										m_enterPassthrough = false;
+										self->m_enterPassthrough = false;
 									}
 
 									if (i == 1 && delta[1] < 0.f && gravity >= 0.f)
 									{
-										handleJumpCollision();
+										self->handleJumpCollision();
 
 										updateVelocity = false;
 									}
-									
+
 									if (updateVelocity)
 									{
 										// todo : let phys update know whether to update velocity
 
-										const float d = m_vel * contactNormal;
+										const float d = self->m_vel * contactNormal;
 										if (d > 0.f)
 										{
-											m_vel -= contactNormal * d;
+											self->m_vel -= contactNormal * d;
 
 											//logDebug("vel = %f, %f", m_vel[0], m_vel[1]);
 										}
@@ -1746,10 +1782,9 @@ void Player::tick(float dt)
 							}
 						}
 					}
-				}
-			}
 
-			m_pos = newPos;
+					self->m_pos = newPos;
+				});
 		}
 
 		// surface type
@@ -1821,10 +1856,11 @@ void Player::tick(float dt)
 				// fixme : horrible code..
 				if (m_attack.m_rocketPunch.isActive && m_attack.m_rocketPunch.state == AttackInfo::RocketPunch::kState_Attack)
 				{
-					const CollisionBox box = m_collision.getTranslated(newPos);
+					const CollisionShape shape = m_collision.getTranslated(newPos);
 					void * args[2] = { this, (void*)&totalVel };
 					GAMESIM->testCollision(
-						box,
+						shape,
+						args,
 						[](void * arg, PhysicsActor * actor, BlockAndDistance * block, Player * player)
 						{
 							void ** args = (void**)arg;
@@ -1834,8 +1870,7 @@ void Player::tick(float dt)
 								block->block->handleDamage(*self->m_instanceData->m_gameSim, block->x, block->y);
 							if (player && player != self)
 								player->handleDamage(1.f, *vel, self);
-						},
-						args);
+						});
 				}
 
 				uint32_t newBlockMask = getIntersectingBlocksMask(newPos[0], newPos[1]);
