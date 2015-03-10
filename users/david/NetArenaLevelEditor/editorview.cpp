@@ -12,6 +12,17 @@ void SwitchScene()
 	SwitchSceneTo(sceneCounter+1);
 }
 
+void TemplatePallette()
+{
+	ed.objectPropWindow->m_w->hide();
+	templateScene->m_listView->show();
+}
+
+void ObjectPallette()
+{
+	templateScene->m_listView->hide();
+	ed.objectPropWindow->m_w->show();
+}
 
 EditorView::EditorView() : EditorViewBasic()
 {
@@ -34,10 +45,6 @@ EditorView::EditorView() : EditorViewBasic()
 	newAct3->setStatusTip(tr("Load from file"));
 	connect(newAct3, SIGNAL(triggered()), this, SLOT(Load()));
 
-	QAction* newAct4 = new QAction(tr("&TemplateMode"), this);
-	newAct4->setStatusTip(tr("Templaaaaate"));
-	connect(newAct4, SIGNAL(triggered()), this, SLOT(SwitchToTemplateMode()));
-
 	QAction* newAct5 = new QAction(tr("&SaveTemplate"), this);
 	newAct5->setStatusTip(tr("Templatus Savus"));
 	connect(newAct5, SIGNAL(triggered()), this, SLOT(SaveTemplate()));
@@ -46,27 +53,18 @@ EditorView::EditorView() : EditorViewBasic()
 	newAct6->setStatusTip(tr("Import Template Image"));
 	connect(newAct6, SIGNAL(triggered()), this, SLOT(ImportTemplate()));
 
-	QAction* newAct7 = new QAction(tr("&SwitchObjectTemplate"), this);
-	newAct7->setStatusTip(tr("SwitchObjectTemplate"));
-	connect(newAct7, SIGNAL(triggered()), this, SLOT(SwitchObjectTemplatePallette()));
+	QAction* newAct7 = new QAction(tr("&SwitchLevelTemplate"), this);
+	newAct7->setStatusTip(tr("SwitchLevelOrTemplate"));
+	connect(newAct7, SIGNAL(triggered()), this, SLOT(SwitchLevelTemplateEdit()));
 
-	QAction* newAct8 = new QAction(tr("&AddFolder"), this);
-	newAct8->setStatusTip(tr("AddFolder"));
-	connect(newAct8, SIGNAL(triggered()), this, SLOT(AddNewFolder()));
-
-    QAction* newAct9 = new QAction(tr("&RemoveFolder"), this);
-    newAct9->setStatusTip(tr("RemoveFolder"));
-	connect(newAct9, SIGNAL(triggered()), this, SLOT(RemoveFolder()));
 
 	bar->addAction(newAct1);
 	bar->addAction(newAct2);
 	bar->addAction(newAct3);
-	bar->addAction(newAct4);
 	bar->addAction(newAct5);
 	bar->addAction(newAct6);
 	bar->addAction(newAct7);
-	bar->addAction(newAct8);
-	bar->addAction(newAct9);
+
 
 	bar->showNormal();
 }
@@ -128,7 +126,7 @@ void EditorView::SwitchToCollission()
 
 void EditorView::SwitchToObject()
 {
-		SwitchSceneTo(3);
+		SwitchSceneTo(SCENEOBJ);
 		sliderOpacMech->setValue(20);
 		sliderOpacArt->setValue(0);
 		sliderOpacColl->setValue(0);
@@ -136,46 +134,26 @@ void EditorView::SwitchToObject()
 }
 
 
-void TemplatePallette()
+void EditorView::SwitchToTemplates()
 {
-	ed.objectPropWindow->m_w->hide();
-	templateScene->m_listView->show();
-}
-
-void ObjectPallette()
-{
-	templateScene->m_listView->hide();
-	ed.objectPropWindow->m_w->show();
-}
-
-void EditorView::SwitchToTemplateMode()
-{
-	if(editorMode != EM_Template)
-	{
-		ed.EditTemplates();
+		SwitchSceneTo(SCENETEMPLATE);
+		sliderOpacMech->setValue(20);
+		sliderOpacArt->setValue(80);
+		sliderOpacColl->setValue(0);
+		sliderOpacObject->setValue(0);
 
 		TemplatePallette();
-	}
-	else
-	{
-		ed.EditLevels();
 
-		ObjectPallette();
-
-		if(!sceneCounter)
-			SwitchScene();
-		SwitchSceneTo(0);
-	}
 }
 
 
 bool flip = true;
-void EditorView::SwitchObjectTemplatePallette()
+void EditorView::SwitchLevelTemplateEdit()
 {
 	if(flip)
-		TemplatePallette();
+		ed.EditTemplates();
 	else
-		ObjectPallette();
+		ed.EditLevels();
 
 	flip = !flip;
 }
