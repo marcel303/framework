@@ -1610,8 +1610,26 @@ void Player::tick(float dt)
 
 			// todo : phys object shape
 
+			struct ContactInfo
+			{
+				Vec2 n;
+				float d;
+
+				bool operator==(const ContactInfo & other) const
+				{
+					return
+						n == other.n &&
+						d == other.d;
+				}
+			};
+
 			struct CollisionArgs
 			{
+				CollisionArgs()
+				{
+					updateVelocity = false;
+				}
+
 				Player * self;
 				CollisionShape playerShape;
 				Vec2 delta;
@@ -1622,6 +1640,10 @@ void Player::tick(float dt)
 				bool enterPassThrough;
 				bool wasInPassthrough;
 				float gravity;
+
+				// these are inputs for the physics system..
+				std::vector<ContactInfo> contacts;
+				bool updateVelocity;
 			};
 
 			CollisionArgs args;
@@ -1707,9 +1729,16 @@ void Player::tick(float dt)
 								// todo : let phys update know if collision was handled
 								// todo : do offset after evaluating all collisions, to avoid missing intersecting blocks
 
+								ContactInfo contact;
+								contact.n = contactNormal;
+								contact.d = contactDistance;
+								args->contacts.push_back(contact);
+
+								/*
 								Vec2 offset = contactNormal * contactDistance;
 								newPos += offset;
 								playerShape.translate(offset[0], offset[1]);
+								*/
 
 								// wall slide
 
@@ -1743,48 +1772,60 @@ void Player::tick(float dt)
 									self->m_spriterState.stopAnim(*characterData->m_spriter);
 								}
 
-								if (true)
+								//
+
+								bool updateVelocity = true;
+
+								// effects
+
+								// todo : if ice or bubble : do not allow vel change. instead, change vel after all collision code is done
+
+								if (self->m_ice.timer != 0.f || self->m_bubble.timer != 0.f)
+									updateVelocity = false;
+
+								if (i == 1)
 								{
-									bool updateVelocity = true;
-
-									// effects
-
-									// todo : if ice or bubble : do not allow vel change. instead, change vel after all collision code is done
-
-									if (self->m_ice.timer != 0.f || self->m_bubble.timer != 0.f)
-										updateVelocity = false;
-
-									if (i == 1)
-									{
-										self->m_enterPassthrough = false;
-									}
-
-									if (i == 1 && delta[1] < 0.f && gravity >= 0.f)
-									{
-										self->handleJumpCollision();
-
-										updateVelocity = false;
-									}
-
-									if (updateVelocity)
-									{
-										// todo : let phys update know whether to update velocity
-
-										const float d = self->m_vel * contactNormal;
-										if (d > 0.f)
-										{
-											self->m_vel -= contactNormal * d;
-
-											//logDebug("vel = %f, %f", m_vel[0], m_vel[1]);
-										}
-									}
+									self->m_enterPassthrough = false;
 								}
+
+								if (i == 1 && delta[1] < 0.f && gravity >= 0.f)
+								{
+									self->handleJumpCollision();
+
+									updateVelocity = false;
+								}
+
+								args->updateVelocity = updateVelocity;
 							}
 						}
 					}
-
-					self->m_pos = newPos;
 				});
+
+			m_pos = newPos;
+
+			auto u = std::unique(args.contacts.begin(), args.contacts.end());
+			args.contacts.resize(std::distance(args.contacts.begin(), u));
+
+			for (auto contact = args.contacts.begin(); contact != args.contacts.end(); ++contact)
+			{
+				Vec2 offset = contact->n * contact->d;
+
+				m_pos += offset;
+
+				if (args.updateVelocity)
+				{
+					// todo : let phys update know whether to update velocity
+
+					const float d = m_vel * contact->n;
+
+					if (d > 0.f)
+					{
+						m_vel -= contact->n * d;
+
+						//logDebug("vel = %f, %f", m_vel[0], m_vel[1]);
+					}
+				}
+			}
 		}
 
 		// surface type
