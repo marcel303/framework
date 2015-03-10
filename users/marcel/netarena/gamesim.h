@@ -290,6 +290,7 @@ struct Player
 	bool m_enableInAirAnim;
 
 	bool m_isAirDashCharged; // reset when air dash is used. set when the player hits the ground
+	bool m_isInPassthrough;
 	int8_t m_isHuggingWall;
 	bool m_isWallSliding;
 

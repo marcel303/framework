@@ -1237,11 +1237,11 @@ void Player::tick(float dt)
 		const uint32_t currentBlockMask = m_oldBlockMask;
 	#else
 		const uint32_t currentBlockMask = getIntersectingBlocksMask(m_pos[0], m_pos[1]);
+		m_isInPassthrough = (currentBlockMask & kBlockMask_Passthrough) != 0;
 	#endif
 
-		const bool isInPassthough = (currentBlockMask & kBlockMask_Passthrough) != 0;
 		const bool enterPassThrough = m_enterPassthrough || (m_special.attackDownActive) || (m_attack.m_rocketPunch.isActive);
-		if (isInPassthough || enterPassThrough)
+		if (m_isInPassthrough || enterPassThrough)
 			m_blockMask = ~kBlockMask_Passthrough;
 
 	#if USE_NEW_COLLISION_CODE
@@ -1548,6 +1548,9 @@ void Player::tick(float dt)
 			playSecondaryEffects(kPlayerEvent_WallJump);
 		}
 
+		const bool wasInPassthrough = m_isInPassthrough;
+
+		m_isInPassthrough = false;
 		m_isHuggingWall = false;
 
 		const Vec2 totalVel = (m_vel * (m_animVelIsAbsolute ? 0.f : 1.f)) + animVel;
@@ -1614,6 +1617,8 @@ void Player::tick(float dt)
 			int blockMin[2];
 			int blockMax[2];
 
+			// todo : wrapping support
+
 			if (GAMESIM->m_arena.getBlockRectFromPixels(
 				min[0], min[1],
 				max[0], max[1],
@@ -1624,14 +1629,14 @@ void Player::tick(float dt)
 				{
 					for (int blockY = blockMin[1]; blockY <= blockMax[1]; ++blockY)
 					{
-						const Block & block = GAMESIM->m_arena.getBlock(blockX, blockY);
+						const Block * block = &GAMESIM->m_arena.getBlock(blockX, blockY);
 
-						if (block.type == kBlockType_Empty)
+						if (block->type == kBlockType_Empty)
 							continue;
-						if (block.shape == kBlockShape_Empty)
+						if (block->shape == kBlockShape_Empty)
 							continue;
 
-						CollisionShape shape = Arena::getBlockCollision(block.shape);
+						CollisionShape shape = Arena::getBlockCollision(block->shape);
 						shape.translate(blockX * BLOCK_SX, blockY * BLOCK_SY);
 
 						float contactDistance;
@@ -1641,24 +1646,27 @@ void Player::tick(float dt)
 						{
 							// todo : from here is player callback code!
 
-							dirBlockMask[i] |= (1 << block.type) & ~kBlockMask_Passthrough;
+							bool collide = true;
 
-							bool isPassthrough = false;
-
-							if ((1 << block.type) & kBlockMask_Passthrough)
+							if (block)
 							{
-								if ((m_oldBlockMask & kBlockMask_Passthrough) || (i != 1 || delta[i] < 0.f) || enterPassThrough)
+								dirBlockMask[i] |= (1 << block->type) & ((wasInPassthrough || m_isInPassthrough || enterPassThrough) ? ~kBlockMask_Passthrough : ~0);
+
+								if ((1 << block->type) & kBlockMask_Passthrough)
 								{
-									isPassthrough = true;
+									if (i == 0 || delta[i] < 0.f || (wasInPassthrough || m_isInPassthrough || enterPassThrough))
+									{
+										collide = false;
 
-									dirBlockMask[i] |= (1 << block.type);
+										m_isInPassthrough = true;
+									}
 								}
-							}
 
-							if (((1 << block.type) & kBlockMask_Solid) == 0) // todo : should pass all types to player. let player filter on solid yes/no
-								isPassthrough = true;
+								if (((1 << block->type) & kBlockMask_Solid) == 0) // todo : should pass all types to player. let player filter on solid yes/no
+									collide = false;
+							}
 							
-							if (!isPassthrough)
+							if (collide)
 							{
 								// todo : let phys update know if collision was handled
 								// todo : do offset after evaluating all collisions, to avoid missing intersecting blocks
@@ -1688,40 +1696,50 @@ void Player::tick(float dt)
 										3000.f, .3f);
 								}
 
+								if (m_attack.m_rocketPunch.isActive)
+								{
+									if (m_attack.m_rocketPunch.state != AttackInfo::RocketPunch::kState_Charge)
+										endRocketPunch(true);
+								}
+
+								if (m_isAnimDriven && m_anim == kPlayerAnim_AirDash)
+								{
+									m_spriterState.stopAnim(*characterData->m_spriter);
+								}
+
 								if (true)
 								{
+									bool updateVelocity = true;
+
 									// effects
 
-									if ((dirBlockMask[i] & kBlockMask_Solid) && m_ice.timer != 0.f)
+									// todo : if ice or bubble : do not allow vel change. instead, change vel after all collision code is done
+
+									if (m_ice.timer != 0.f || m_bubble.timer != 0.f)
+										updateVelocity = false;
+
+									if (i == 1)
 									{
-										m_vel[i] *= -.5f;
+										m_enterPassthrough = false;
 									}
-									else if ((dirBlockMask[i] & kBlockMask_Solid) && m_bubble.timer != 0.f)
+
+									if (i == 1 && delta[1] < 0.f && gravity >= 0.f)
 									{
-										m_vel[i] *= -.75f;
+										handleJumpCollision();
+
+										updateVelocity = false;
 									}
-									else
+									
+									if (updateVelocity)
 									{
-										if (i == 1)
-										{
-											m_enterPassthrough = false;
-										}
+										// todo : let phys update know whether to update velocity
 
-										if (i == 1 && delta[1] < 0.f)
+										const float d = m_vel * contactNormal;
+										if (d > 0.f)
 										{
-											handleJumpCollision();
-										}
-										else
-										{
-											// todo : let phys update know whether to update velocity
+											m_vel -= contactNormal * d;
 
-											const float d = m_vel * contactNormal;
-											if (d > 0.f)
-											{
-												m_vel -= contactNormal * d;
-
-												//logDebug("vel = %f, %f", m_vel[0], m_vel[1]);
-											}
+											//logDebug("vel = %f, %f", m_vel[0], m_vel[1]);
 										}
 									}
 								}
@@ -1742,7 +1760,7 @@ void Player::tick(float dt)
 			surfaceFriction = 0.f;
 		else if (m_ice.timer != 0.f)
 			surfaceFriction = 0.f;
-		else if (Calc::Sign(m_vel[1]) != Calc::Sign(gravity) || (dirBlockMask[1] & kBlockMask_Solid) == 0)
+		else if ((Calc::Sign(m_vel[1]) != Calc::Sign(gravity) && m_vel[1] != 0.f) || (dirBlockMask[1] & kBlockMask_Solid) == 0)
 			surfaceFriction = 0.f;
 		else
 			surfaceFriction = FRICTION_GROUNDED;
@@ -1754,6 +1772,20 @@ void Player::tick(float dt)
 			m_vel[1] = -BLOCKTYPE_SPRING_SPEED;
 
 			playSecondaryEffects(kPlayerEvent_SpringJump);
+		}
+
+		// effects
+
+		for (int i = 0; i < 2; ++i)
+		{
+			if (m_ice.timer != 0.f && (dirBlockMask[i] & kBlockMask_Solid))
+			{
+				m_vel[i] *= -.5f;
+			}
+			else if (m_bubble.timer != 0.f && (dirBlockMask[i] & kBlockMask_Solid))
+			{
+				m_vel[i] *= -.75f;
+			}
 		}
 
 		m_dirBlockMaskDir[0] = totalVel[0] == 0.f ? 0 : totalVel[0] < 0.f ? -1 : +1;
@@ -2531,6 +2563,7 @@ void Player::respawn()
 		m_isAnimDriven = false;
 		m_animVelIsAbsolute = false;
 		m_isAirDashCharged = false;
+		m_isInPassthrough = false;
 		m_isHuggingWall = false;
 		m_isWallSliding = false;
 		m_enterPassthrough = false;
