@@ -1,6 +1,7 @@
 #include "Channel.h"
 #include "client.h"
 #include "framework.h"
+#include "host.h"
 #include "lobbymenu.h"
 #include "main.h"
 #include "player.h"
@@ -175,6 +176,14 @@ void LobbyMenu::draw()
 			{
 				setColor(colorWhite);
 				drawText((x1 + x2) / 2, y2 + 8, 32, 0.f, +1.f, "%s", m_client->m_gameSim->m_players[i].m_displayName.c_str());
+
+			#if 1 // todo : non final only
+				if (g_host)
+				{
+					setColor(colorWhite);
+					drawText((x1 + x2) / 2, y2 + 42, 24, 0.f, +1.f, "%s", m_client->m_channel->m_address.ToString(true).c_str());
+				}
+			#endif
 			}
 		}
 	}
