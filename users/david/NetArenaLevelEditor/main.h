@@ -55,7 +55,7 @@ public:
     virtual void DeleteTiles();
     virtual void CreateTiles();
 
-    virtual void CustomMouseEvent ( QGraphicsSceneMouseEvent * e );
+	virtual void CustomMouseEvent (QGraphicsSceneMouseEvent * e , Tile *tile);
 
 	Tile** m_tiles;
 

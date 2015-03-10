@@ -43,12 +43,12 @@ QString ArtFolderPath;
 
 
 
-
-
-
+bool placeTemplate = false;
 
 void SetSelectedTile(char selection)
 {
+	placeTemplate = false;
+
     selectedTile = selection;
     if(palletteTile)
         palletteTile->SetSelectedBlock(selectedTile);
@@ -56,22 +56,27 @@ void SetSelectedTile(char selection)
 
 void AddAllToScene()
 {
-    for(int y = 0; y < MAPY; y++)
-        for (int x = 0; x < MAPX; x++)
-        {
-			sceneMech->m_tiles[y][x].setOpacity(1);
+	ed.EditTemplates();
+	for(int i = 0; i < 2; i++)
+	{
+		for(int y = 0; y < MAPY; y++)
+			for (int x = 0; x < MAPX; x++)
+			{
+				sceneMech->m_tiles[y][x].setOpacity(1);
 
-            sceneCollission->m_tiles[y][x].setAcceptedMouseButtons(0);
-            sceneCollission->m_tiles[y][x].setAcceptHoverEvents(false);
-			sceneCollission->m_tiles[y][x].setOpacity(0);
+				sceneCollission->m_tiles[y][x].setAcceptedMouseButtons(0);
+				sceneCollission->m_tiles[y][x].setAcceptHoverEvents(false);
+				sceneCollission->m_tiles[y][x].setOpacity(0);
 
-            sceneArt->m_tiles[y][x].setAcceptedMouseButtons(0);
-            sceneArt->m_tiles[y][x].setAcceptHoverEvents(false);
-			sceneArt->m_tiles[y][x].setOpacity(0);
+				sceneArt->m_tiles[y][x].setAcceptedMouseButtons(0);
+				sceneArt->m_tiles[y][x].setAcceptHoverEvents(false);
+				sceneArt->m_tiles[y][x].setOpacity(0);
 
-            sceneMech->addItem(&sceneCollission->m_tiles[y][x]);
-            sceneMech->addItem(&sceneArt->m_tiles[y][x]);
-        }
+				sceneMech->addItem(&sceneCollission->m_tiles[y][x]);
+				sceneMech->addItem(&sceneArt->m_tiles[y][x]);
+			}
+		ed.EditLevels();
+	}
 }
 
 
@@ -159,10 +164,10 @@ void SwitchSceneTo(int s)
 
 	sceneCounter = s;
 
-	if(sceneCounter > 3)
+	if(sceneCounter > 4)
 		sceneCounter = 0;
 
-	editorMode = EM_Level;
+	//ed.SetEditorMode(EM_Level);
 
 	switch(sceneCounter)
 	{
@@ -191,11 +196,17 @@ void SwitchSceneTo(int s)
 		SetEditCollissionScene();
 		break;
 	case SCENEOBJ:
-		editorMode = EM_Object;
+		ed.SetEditorMode(EM_Object);
 		view->setWindowTitle("Editing Level Objects");
 		viewPallette->setWindowTitle("GameObjects");
 		viewPallette->setScene(sceneObjectPallette);
 		SetEditObjects();
+		break;
+	case SCENETEMPLATE:
+		view->setWindowTitle("Editing with Templates!");
+		viewPallette->setWindowTitle("Templates");
+		//viewPallette->setScene(sceneObjectPallette);
+		SetEditMechScene();
 		break;
 	default:
 		break;
@@ -585,11 +596,17 @@ Tile::~Tile()
 {
 }
 
+
+void ResolveClick(QGraphicsSceneMouseEvent * e )
+{
+
+}
+
 void Tile::mousePressEvent ( QGraphicsSceneMouseEvent * e )
 {
     qDebug() << "setting tile to selectedBlock: " << selectedBlock;
 
-	if(editorMode == EM_Level)
+	if(0)//(editorMode == EM_Level)
     {
         if(e->buttons() == Qt::RightButton)
             SetSelectedBlock(' ');
@@ -603,7 +620,7 @@ void Tile::mousePressEvent ( QGraphicsSceneMouseEvent * e )
         e->accept();
     }
     else
-        sceneMech->CustomMouseEvent(e);
+		sceneMech->CustomMouseEvent(e, this);
 }
 
 void Tile::mouseReleaseEvent ( QGraphicsSceneMouseEvent * e )
@@ -720,13 +737,46 @@ void EditorScene::AddGrid()
     }
 }
 
-void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e )
+void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e, Tile* tile )
 {
 	switch(editorMode)
 	{
 		case EM_Level:
-			e->ignore();
+		case EM_Template:
+		{
+			if(placeTemplate)
+			{
+				int tilex = (int)(e->scenePos().x()/float(BLOCKSIZE));
+				int tiley = (int)(e->scenePos().y()/float(BLOCKSIZE));
+
+				//Stamp template on level
+				int temp = sceneCounter;
+				foreach(EditorTemplate::TemplateTile tt, templateScene->GetCurrentTemplate()->m_list)
+				{
+					if(tilex+tt.x < MAPX && tiley+tt.y < MAPY)
+					{
+						sceneCounter = SCENEMECH;
+						sceneMech->m_tiles[tiley+tt.y][tilex+tt.x].SetSelectedBlock(tt.blockMech);
+						sceneCounter = SCENECOLL;
+						sceneCollission->m_tiles[tiley+tt.y][tilex+tt.x].SetSelectedBlock(tt.blockColl);
+						sceneCounter = SCENEART;
+						sceneArt->m_tiles[tiley+tt.y][tilex+tt.x].SetSelectedBlock(tt.GetArtKey());
+					}
+				}
+				sceneCounter = temp;
+
+				e->accept();
+			}
+			else
+			{
+				if(e->buttons() == Qt::RightButton)
+					tile->SetSelectedBlock(' ');
+				else if (e->buttons() == Qt::LeftButton)
+					tile->SetSelectedBlock(selectedTile);
+			}
+
 			break;
+		}
 		case EM_Object:
 		{
 			GameObject* obj = new GameObject();
@@ -739,29 +789,6 @@ void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e )
 			ed.objectPropWindow->SetCurrentGameObject(obj);
 
 			e->accept();
-			break;
-		}
-		case EM_Template:
-		{
-            int tilex = (int)(e->scenePos().x()/float(BLOCKSIZE));
-            int tiley = (int)(e->scenePos().y()/float(BLOCKSIZE));
-
-            //Stamp template on level
-            EditorTemplate* t = templateScene->GetCurrentTemplate();
-            int temp = sceneCounter;
-            foreach(EditorTemplate::TemplateTile tt, t->m_list)
-            {
-                sceneCounter = SCENEMECH;
-                sceneMech->m_tiles[tiley+tt.y][tilex+tt.x].SetSelectedBlock(tt.blockMech);
-                sceneCounter = SCENECOLL;
-                sceneCollission->m_tiles[tiley+tt.y][tilex+tt.x].SetSelectedBlock(tt.blockColl);
-                sceneCounter = SCENEART;
-                sceneArt->m_tiles[tiley+tt.y][tilex+tt.x].SetSelectedBlock(tt.GetArtKey());
-            }
-            sceneCounter = temp;
-
-			e->accept();
-
 			break;
 		}
 		default:
@@ -791,6 +818,8 @@ void CreateSettingsWidget()
     grid->addWidget(label, 3, 0);
 	label = new QLabel("Obj");
 	grid->addWidget(label, 4, 0);
+	label = new QLabel("Tmpl");
+	grid->addWidget(label, 5, 0);
 
 
     QButtonGroup* bgroup = new QButtonGroup();
@@ -816,6 +845,12 @@ void CreateSettingsWidget()
 	QObject::connect(cb, SIGNAL(stateChanged(int)),
 			view, SLOT(SwitchToObject()));
 	grid->addWidget(cb, 4, 1);
+	bgroup->addButton(cb);
+
+	cb = new QCheckBox();
+	QObject::connect(cb, SIGNAL(stateChanged(int)),
+			view, SLOT(SwitchToTemplates()));
+	grid->addWidget(cb, 5, 1);
 	bgroup->addButton(cb);
 
     bgroup->setExclusive(true);
@@ -850,8 +885,7 @@ void CreateSettingsWidget()
     grid->addWidget(view->sliderOpacColl, 3, 2);
 	grid->addWidget(view->sliderOpacObject, 4, 2);
 
-    settingsWidget->setLayout(grid);
-    //w->show();
+	settingsWidget->setLayout(grid);
 }
 
 
@@ -896,7 +930,7 @@ void TemplateScene::Initialize()
 
 		foreach(QString filename, templates)
 		{
-			QFile file(dir.path() + filename);
+			QFile file(dir.path() + "//" + dir.dirName() + "//" + filename);
 			file.open(QIODevice::ReadOnly | QIODevice::Text);
 
 			EditorTemplate* t = new EditorTemplate();
@@ -1049,6 +1083,8 @@ void TemplateFolder::SetCurrentTemplate()
 {
 	if(m_templateMap.count())
 		m_currentTemplate = m_templateMap.first();
+
+	placeTemplate = true;
 }
 
 void TemplateFolder::SetCurrentTemplate(QString name)
@@ -1057,6 +1093,8 @@ void TemplateFolder::SetCurrentTemplate(QString name)
 		m_currentTemplate = m_templateMap[name];
 	else
 		SetCurrentTemplate();
+
+	placeTemplate = true;
 }
 
 
@@ -1272,13 +1310,15 @@ void EditorTemplate::mousePressEvent ( QGraphicsSceneMouseEvent * e )
 
 void InitializeScenesAndViews()
 {
-	editorMode = EM_Level;
+	ed.SetEditorMode(EM_Level);
+	//editorMode = EM_Level;
 
 	sceneMech = new EditorScene();
 	sceneArt = new EditorScene();
 	sceneCollission = new EditorScene();
 
-	editorMode = EM_Template;
+	ed.SetEditorMode(EM_Template);
+	//editorMode = EM_Template;
 
 	sceneMech = new EditorScene();
 	sceneArt = new EditorScene();
@@ -1286,7 +1326,7 @@ void InitializeScenesAndViews()
 
 	templateScene = new TemplateScene();
 
-	editorMode = EM_Level;
+	ed.SetEditorMode(EM_Level);
 
 	view = new EditorView();
 
@@ -1327,7 +1367,7 @@ int main(int argc, char *argv[])
 
 	QWidget rightside;
 
-	editorMode = EM_Level;
+	ed.SetEditorMode(EM_Level);
 
 
 

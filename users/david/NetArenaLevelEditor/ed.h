@@ -85,6 +85,8 @@ private:
 	EditorScene* m_sceneCollission;
 	EditorScene* m_sceneCollissionTemplate;
 
+
+
 	EditorMode m_editorMode;
 
     EditorView* m_view;
@@ -101,6 +103,8 @@ private:
 	int m_mapy;
 
 public:
+
+	void SetEditorMode(EditorMode e);
 
 	bool m_leftbuttonHeld;
 

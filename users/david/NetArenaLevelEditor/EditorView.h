@@ -74,9 +74,8 @@ public slots:
     void SwitchToArt();
     void SwitchToCollission();
     void SwitchToObject();
-
-    void SwitchToTemplateMode();
-    void SwitchObjectTemplatePallette();
+	void SwitchToTemplates();
+	void SwitchLevelTemplateEdit();
 
     void SetOpacityMech(int s);
     void SetOpacityArt(int s);

@@ -82,18 +82,23 @@ QList<GameObject *> &Ed::GetGameObjects()
 	return m_gameObjects;
 }
 
+void Ed::SetEditorMode(EditorMode e)
+{
+	m_editorMode = e;
 
+	qDebug() << "Setting EditorMode to: " << e;
+}
 
 void Ed::EditTemplates()
 {
-    m_editorMode = EM_Template;
+	SetEditorMode(EM_Template);
 
     m_view->setScene((QGraphicsScene*)(GetCurrentScene()));
 }
 
 void Ed::EditLevels()
 {
-    m_editorMode = EM_Level;
+	SetEditorMode(EM_Level);
 
     m_view->setScene((QGraphicsScene*)(GetCurrentScene()));
 }

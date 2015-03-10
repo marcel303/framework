@@ -42,6 +42,7 @@
 #define SCENEART 1
 #define SCENECOLL 2
 #define SCENEOBJ 3
+#define SCENETEMPLATE 4
 
 
 #define ed Ed::I()
