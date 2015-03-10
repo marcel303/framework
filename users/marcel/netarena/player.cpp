@@ -1844,7 +1844,7 @@ void Player::tick(float dt)
 				// todo : update block mask each iteration. reset m_blockMask first
 				//if (i != 1 || delta <= 0.f)
 				//if ((!m_isGrounded || isInPassthough) && (i != 0 || delta <= 0.f))
-				if ((!m_isGrounded || isInPassthough) && (i != 1 || delta <= 0.f))
+				if ((!m_isGrounded || m_isInPassthrough) && (i != 1 || delta <= 0.f))
 				//if ((i == 0 && isInPassthough) || (i == 1 && delta <= 0.f))
 					newBlockMask &= ~kBlockMask_Passthrough;
 
