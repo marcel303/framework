@@ -249,6 +249,8 @@ void PhysicsScene::test(const CollisionBox & box, CollisionCB cb, void * arg, bo
 
 void PhysicsScene::testInternal(const CollisionBox & box, CollisionCB cb, void * arg)
 {
+	CollisionShape shape = box;
+
 	for (int i = 0; i < MAX_PHYSICS_ACTORS; ++i)
 	{
 		if (m_actors[i].m_isActive && !m_actors[i].m_isTested)
@@ -257,7 +259,7 @@ void PhysicsScene::testInternal(const CollisionBox & box, CollisionCB cb, void *
 			{
 				m_actors[i].m_isTested = true;
 
-				cb(arg, &m_actors[i], 0, 0);
+				cb(shape, arg, &m_actors[i], 0, 0);
 			}
 		}
 	}

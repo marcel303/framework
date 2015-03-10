@@ -67,7 +67,7 @@ typedef uint8_t PhysicsActorId;
 
 #define kPhysicsActorId_Invalid ((PhysicsActorId)-1)
 
-typedef void (*CollisionCB)(void * arg, PhysicsActor * actor, BlockAndDistance * block, Player * player);
+typedef void (*CollisionCB)(const CollisionShape & shape, void * arg, PhysicsActor * actor, BlockAndDistance * block, Player * player);
 
 struct PhysicsScene
 {

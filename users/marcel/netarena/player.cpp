@@ -487,7 +487,7 @@ void Player::testCollision(const CollisionShape & shape, void * arg, CollisionCB
 
 		if (collisionShape.intersects(shape))
 		{
-			cb(arg, 0, 0, this);
+			cb(shape, arg, 0, 0, this);
 		}
 	}
 }
@@ -1566,7 +1566,7 @@ void Player::tick(float dt)
 			GAMESIM->testCollision(
 				shape,
 				args,
-				[](void * arg, PhysicsActor * actor, BlockAndDistance * block, Player * player)
+				[](const CollisionShape & shape, void * arg, PhysicsActor * actor, BlockAndDistance * block, Player * player)
 				{
 					void ** args = (void**)arg;
 					Player * self = (Player*)args[0];
@@ -1631,7 +1631,6 @@ void Player::tick(float dt)
 				}
 
 				Player * self;
-				CollisionShape playerShape;
 				Vec2 delta;
 				Vec2 totalVel;
 				Vec2 newPos;
@@ -1649,11 +1648,6 @@ void Player::tick(float dt)
 			CollisionArgs args;
 
 			args.self = this;
-			args.playerShape.set(
-				Vec2(min[0], min[1]),
-				Vec2(max[0], min[1]),
-				Vec2(max[0], max[1]),
-				Vec2(min[0], max[1]));
 			args.axis = i;
 			args.delta = delta;
 			args.totalVel = totalVel;
@@ -1663,14 +1657,20 @@ void Player::tick(float dt)
 			args.wasInPassthrough = wasInPassthrough;
 			args.gravity = gravity;
 
+			CollisionShape playerShape;
+			playerShape.set(
+				Vec2(min[0], min[1]),
+				Vec2(max[0], min[1]),
+				Vec2(max[0], max[1]),
+				Vec2(min[0], max[1]));
+
 			GAMESIM->testCollision(
-				args.playerShape,
+				playerShape,
 				&args,
-				[](void * arg, PhysicsActor * actor, BlockAndDistance * blockAndDistance, Player * player)
+				[](const CollisionShape & shape, void * arg, PhysicsActor * actor, BlockAndDistance * blockAndDistance, Player * player)
 				{
 					CollisionArgs * args = (CollisionArgs*)arg;
 					Player * self = args->self;
-					CollisionShape & playerShape = args->playerShape;
 					Vec2 & delta = args->delta;
 					const Vec2 & totalVel = args->totalVel;
 					Vec2 & newPos = args->newPos;
@@ -1686,13 +1686,13 @@ void Player::tick(float dt)
 					{
 						Block * block = blockAndDistance->block;
 
-						CollisionShape shape = Arena::getBlockCollision(block->shape);
-						shape.translate(blockAndDistance->x * BLOCK_SX, blockAndDistance->y * BLOCK_SY);
+						CollisionShape blockShape = Arena::getBlockCollision(block->shape);
+						blockShape.translate(blockAndDistance->x * BLOCK_SX, blockAndDistance->y * BLOCK_SY);
 
 						float contactDistance;
 						Vec2 contactNormal;
 
-						if (playerShape.checkCollision(shape, delta, contactDistance, contactNormal))
+						if (shape.checkCollision(blockShape, delta, contactDistance, contactNormal))
 						{
 							// todo : from here is player callback code!
 
@@ -1733,12 +1733,6 @@ void Player::tick(float dt)
 								contact.n = contactNormal;
 								contact.d = contactDistance;
 								args->contacts.push_back(contact);
-
-								/*
-								Vec2 offset = contactNormal * contactDistance;
-								newPos += offset;
-								playerShape.translate(offset[0], offset[1]);
-								*/
 
 								// wall slide
 
@@ -1902,7 +1896,7 @@ void Player::tick(float dt)
 					GAMESIM->testCollision(
 						shape,
 						args,
-						[](void * arg, PhysicsActor * actor, BlockAndDistance * block, Player * player)
+						[](const CollisionShape & shape, void * arg, PhysicsActor * actor, BlockAndDistance * block, Player * player)
 						{
 							void ** args = (void**)arg;
 							Player * self = (Player*)args[0];

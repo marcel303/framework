@@ -937,7 +937,7 @@ void Arena::testCollision(const CollisionShape & shape, void * arg, CollisionCB 
 
 			if (shape.intersects(blockShape))
 			{
-				cb(arg, 0, &blocks[i], 0);
+				cb(shape, arg, 0, &blocks[i], 0);
 			}
 		}
 	}
