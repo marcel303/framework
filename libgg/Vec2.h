@@ -64,6 +64,20 @@ public:
 		*this = CalcNormalized();
 	}
 
+	inline Vec2 Min(const Vec2 & v) const
+	{
+		return Vec2(
+			m_v[0] < v[0] ? m_v[0] : v[0],
+			m_v[1] < v[1] ? m_v[1] : v[1]);
+	}
+
+	inline Vec2 Max(const Vec2 & v) const
+	{
+		return Vec2(
+			m_v[0] > v[0] ? m_v[0] : v[0],
+			m_v[1] > v[1] ? m_v[1] : v[1]);
+	}
+
 	inline Vec2 operator+(const Vec2 & v) const
 	{
 		Vec2 r;
