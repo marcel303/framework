@@ -24,7 +24,7 @@ todo:
 
 ** MEDIUM PRIORITY **
 
-- add HOME/END support to text field
++ add HOME/END support to text field
 
 - prototype invisibility ability
 	charge period
@@ -67,10 +67,12 @@ todo:
 
 - +1 icon on kill in token hunt game mode
 
+- prototype CHAOS event: maximum pickups
+
 - prototype gravity well level event
 - prototype earth quake level event
 - prototype wind level event
-- prototype time dilation level event
+- prototype time dilation level event (fast and/or slowed down?)
 - prototype spike walls level event
 - prototype barrel drop level event
 - prototype day/night level event
@@ -1557,27 +1559,6 @@ void Player::tick(float dt)
 
 		Vec2 totalVel = (m_vel * (m_animVelIsAbsolute ? 0.f : 1.f)) + animVel;
 
-		// todo : should integrate below code with collision callback
-
-		if (m_attack.m_rocketPunch.isActive && m_attack.m_rocketPunch.state == AttackInfo::RocketPunch::kState_Attack)
-		{
-			const CollisionShape shape = m_collision.getTranslated(m_pos + totalVel * dt);
-			void * args[2] = { this, (void*)&totalVel };
-			GAMESIM->testCollision(
-				shape,
-				args,
-				[](const CollisionShape & shape, void * arg, PhysicsActor * actor, BlockAndDistance * block, Player * player)
-				{
-					void ** args = (void**)arg;
-					Player * self = (Player*)args[0];
-					Vec2 * vel = (Vec2*)args[1];
-					if (block)
-						block->block->handleDamage(*self->m_instanceData->m_gameSim, block->x, block->y);
-					if (player && player != self)
-						player->handleDamage(1.f, *vel, self);
-				});
-		}
-
 		// input step:
 		// - update velocities
 
@@ -1682,6 +1663,20 @@ void Player::tick(float dt)
 
 					//
 
+					// todo : move to below checkCollision test
+					if (self->m_attack.m_rocketPunch.isActive && self->m_attack.m_rocketPunch.state == AttackInfo::RocketPunch::kState_Attack)
+					{
+						if (blockAndDistance)
+						{
+							if (blockAndDistance->block->handleDamage(*self->m_instanceData->m_gameSim, blockAndDistance->x, blockAndDistance->y))
+								blockAndDistance = 0;
+							else if ((1 << blockAndDistance->block->type) & kBlockMask_Solid)
+								self->endRocketPunch(true);
+						}
+						if (player && player != self)
+							player->handleDamage(1.f, totalVel, self);
+					}
+
 					if (blockAndDistance)
 					{
 						Block * block = blockAndDistance->block;
@@ -1753,12 +1748,6 @@ void Player::tick(float dt)
 										i == 0 ? strength : 0.f,
 										i == 1 ? strength : 0.f,
 										3000.f, .3f);
-								}
-
-								if (self->m_attack.m_rocketPunch.isActive)
-								{
-									if (self->m_attack.m_rocketPunch.state != AttackInfo::RocketPunch::kState_Charge)
-										self->endRocketPunch(true);
 								}
 
 								if (self->m_isAnimDriven && self->m_anim == kPlayerAnim_AirDash)
@@ -2426,15 +2415,15 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 
 	if (m_shield.shield)
 	{
-		const float px = x + mirrorX((m_collision.min[0] + m_collision.max[0]) / 2.f);
-		const float py = y + mirrorY((m_collision.min[1] + m_collision.max[1]) / 2.f);
+		const float px = x;
+		const float py = y + (flipY ? +PLAYER_COLLISION_HITBOX_SY : -PLAYER_COLLISION_HITBOX_SY) / 2.f;
 		Sprite("shield-bubble.png").drawEx(px, py);
 	}
 
 	if (m_bubble.timer > 0.f)
 	{
-		const float px = x + mirrorX((m_collision.min[0] + m_collision.max[0]) / 2.f);
-		const float py = y + mirrorY((m_collision.min[1] + m_collision.max[1]) / 2.f);
+		const float px = x;
+		const float py = y + (flipY ? +PLAYER_COLLISION_HITBOX_SY : -PLAYER_COLLISION_HITBOX_SY) / 2.f;
 		Sprite("bubble-bubble.png").drawEx(px, py);
 	}
 
