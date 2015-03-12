@@ -78,7 +78,8 @@ TIMER_DEFINE(g_appDrawTime, PerFrame, "App/Draw");
 
 //
 
-#define NET_TIME g_TimerRT.TimeUS_get()
+#define NET_TIME g_TimerRT.TimeUS_get() // fixme : use TimeMS
+//#define NET_TIME g_TimerRT.TimeMS_get()
 
 //
 
@@ -1456,12 +1457,12 @@ void App::draw()
 			if (g_devMode)
 			{
 				client->debugDraw();
-			}
 
-			setColor(255, 255, 255);
-			Font font("calibri.ttf");
-			setFont(font);
-			drawText(5, GFX_SY - 25, 20, +1.f, -1.f, "viewing client %d", m_selectedClient);
+				setColor(255, 255, 255);
+				Font font("calibri.ttf");
+				setFont(font);
+				drawText(5, GFX_SY - 25, 20, +1.f, -1.f, "viewing client %d", m_selectedClient);
+			}
 		}
 
 		if (g_devMode)
@@ -1469,7 +1470,7 @@ void App::draw()
 			setColor(255, 255, 255);
 			Font font("calibri.ttf");
 			setFont(font);
-			drawText(GFX_SX - 5, GFX_SY - 25, 20, -1.f, -1.f, "build %08x \xc2\xa9", g_buildId);
+			drawText(GFX_SX - 5, GFX_SY - 25, 20, -1.f, -1.f, "build %08x", g_buildId);
 		}
 
 		if (g_devMode && g_host)
@@ -1591,6 +1592,68 @@ void App::draw()
 		}
 
 		m_discoveryUi->draw();
+	#endif
+
+	#if 0 // todo : remove test collision/SAT code
+		gxPushMatrix();
+		gxTranslatef(GFX_SX/2, GFX_SY/2, 0.f);
+		gxScalef(4.f, 4.f, 1.f);
+		{
+			static int shape1Id = 0;
+			static int shape2Id = 0;
+
+			if (keyboard.wentDown(SDLK_1))
+				shape1Id = (shape1Id + 1) % kBlockShape_COUNT;
+			if (keyboard.wentDown(SDLK_2))
+				shape2Id = (shape2Id + 1) % kBlockShape_COUNT;
+
+			CollisionShape shape1 = Arena::getBlockCollision((BlockShape)shape1Id);
+			CollisionShape shape2 = Arena::getBlockCollision((BlockShape)shape2Id);
+
+			static float dx = BLOCK_SX;
+			static float dy = 0.f;
+
+			if (keyboard.isDown(SDLK_LEFT))
+				dx -= 1.f;
+			if (keyboard.isDown(SDLK_RIGHT))
+				dx += 1.f;
+			if (keyboard.isDown(SDLK_UP))
+				dy -= 1.f;
+			if (keyboard.isDown(SDLK_DOWN))
+				dy += 1.f;
+
+			CollisionShape shape3 = shape1;
+
+			shape3.translate(dx, dy);
+
+			float contactDistance;
+			Vec2 contactNormal;
+			
+			const bool collision =
+				shape3.checkCollision(shape2, Vec2(1.f, 0.f), contactDistance, contactNormal) ||
+				shape3.checkCollision(shape2, Vec2(0.f, 1.f), contactDistance, contactNormal);
+			//const bool collision = false;
+
+			if (collision && keyboard.isDown(SDLK_c))
+			{
+				dx += contactNormal[0] * contactDistance;
+				dy += contactNormal[1] * contactDistance;
+
+				shape3 = shape1;
+				shape3.translate(dx, dy);
+			}
+
+			if (collision)
+				setColor(colorGreen);
+			else
+				setColor(colorRed);
+
+			shape2.debugDraw();
+			shape3.debugDraw();
+
+			setColor(colorWhite);
+		}
+		gxPopMatrix();
 	#endif
 	}
 	TIMER_STOP(g_appDrawTime);
@@ -1881,12 +1944,17 @@ static bool calculateFileCRC(const char * filename, uint32_t & crc)
 
 int main(int argc, char * argv[])
 {
-#if 0 // todo
-	if (!calculateFileCRC(argv[0], g_buildId))
+#if defined(__WIN32__)
+	const int kMaxModuleNameSize = 1024;
+	char moduleName[kMaxModuleNameSize];
+	if (GetModuleFileName(NULL, moduleName, kMaxModuleNameSize) == kMaxModuleNameSize || !calculateFileCRC(moduleName, g_buildId))
 	{
 		logError("failed to calculate CRC for %s", argv[0]);
 		return -1;
 	}
+	log("build ID: %0x8", g_buildId);
+#else
+	#error calculate g_buildId
 #endif
 
 	changeDirectory("data");

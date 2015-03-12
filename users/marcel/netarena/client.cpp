@@ -366,6 +366,7 @@ void Client::drawConnecting()
 
 void Client::drawMenus()
 {
+	setColor(colorWhite);
 	Sprite("mainmenu-back.png").draw();
 
 	for (int i = 0; i < MAX_PLAYERS; ++i)
@@ -377,7 +378,7 @@ void Client::drawMenus()
 		if (player.m_isUsed)
 		{
 			setFont("calibri.ttf");
-			setColor(255, 255, 255);
+			setColor(colorWhite);
 			drawText(GFX_SX/2, y, 24, 0.f, 0.f, "PLAYER %d CHAR %d", i, player.m_characterIndex);
 		}
 		else
@@ -410,6 +411,8 @@ void Client::drawMenus()
 		setColor(127, 255, 227);
 		drawText(GFX_SX/2, GFX_SY - 75, 48, 0.f, 0.f, "ROUND START IN T-%02.2f", timeRemaining);
 	}
+
+	setColor(colorWhite);
 }
 
 void Client::drawPlay()

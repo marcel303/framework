@@ -1002,7 +1002,7 @@ void Player::tick(float dt)
 							m_isAnimDriven = true;
 							m_animVelIsAbsolute = true;
 
-							Sound("rocketpunch-attack.ogg").play();
+							GAMESIM->playSound("rocketpunch-attack.ogg");
 
 							logDebug("rocket punch: attack! speed = (%f, %f) max distance = %f", m_attack.m_rocketPunch.speed[0], m_attack.m_rocketPunch.speed[1], m_attack.m_rocketPunch.maxDistance);
 						}
@@ -2938,7 +2938,7 @@ void Player::beginRocketPunch()
 	setAnim(kPlayerAnim_RocketPunch_Charge, true, true);
 	m_isAnimDriven = true;
 
-	Sound("rocketpunch-charge.ogg").play();
+	GAMESIM->playSound("rocketpunch-charge.ogg");
 }
 
 void Player::endRocketPunch(bool stunned)
