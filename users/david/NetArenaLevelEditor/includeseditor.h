@@ -67,6 +67,9 @@
 #define leftbuttonHeld ed.m_leftbuttonHeld
 
 
+#define settingsWidget ed.GetSettingsWidget()
+
+
 QList<QString> GetLinesFromConfigFile(QString filename);
 QPixmap* GetObjectPixmap(QString texture);
 

@@ -3,6 +3,7 @@
 #include <QInputDialog>
 
 #include"gameobject.h"
+#include "SettingsWidget.h"
 #include "main.h"
 
 

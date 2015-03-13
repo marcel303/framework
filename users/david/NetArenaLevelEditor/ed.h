@@ -17,6 +17,7 @@ class EditorView;
 class QGraphicsView;
 class GameObject;
 class QGraphicsScene;
+class SettingsWidget;
 class Ed
 {
 public:
@@ -43,6 +44,8 @@ public:
 	QList<GameObject*>& GetGameObjects();
 
 	EditorMode& GetEditorMode(){return m_editorMode;}
+
+    SettingsWidget* GetSettingsWidget();
 
 
     void EditTemplates();
@@ -96,6 +99,9 @@ private:
 
 
 	TemplateScene* m_templateScene;
+
+
+    SettingsWidget* m_settingsWidget;
 
     int m_sceneCounter;
 

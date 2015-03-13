@@ -174,6 +174,6 @@ public:
 
 public slots:
 	void folderListClicked(const QModelIndex &index);
-	void folderNameChanged(const QString& name);
+    void folderNameChanged(const QString& name);
 
 };

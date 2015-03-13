@@ -4,6 +4,7 @@
 
 #include "EditorView.h"
 #include "gameobject.h"
+#include "SettingsWidget.h"
 #include "main.h"
 
 QList<GameObject*> m_gameObjects; //hack
@@ -18,6 +19,8 @@ void Ed::Initialize()
 	m_leftbuttonHeld = false;
 
 	m_sceneTemplatePallette = new QGraphicsScene();
+
+    m_settingsWidget = new SettingsWidget();
 }
 
 EditorScene*& Ed::GetSceneArt()
@@ -80,6 +83,11 @@ QGraphicsView*& Ed::GetViewPallette()
 QList<GameObject *> &Ed::GetGameObjects()
 {
 	return m_gameObjects;
+}
+
+SettingsWidget* Ed::GetSettingsWidget()
+{
+    return m_settingsWidget;
 }
 
 void Ed::SetEditorMode(EditorMode e)

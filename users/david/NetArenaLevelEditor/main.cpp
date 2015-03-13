@@ -6,6 +6,8 @@
 #include "gameobject.h"
 #include "EditorView.h"
 
+#include "SettingsWidget.h"
+
 
 #define view view2 //hack
 
@@ -31,7 +33,6 @@ QGraphicsScene* sceneObjectPallette;
 
 
 
-QWidget* settingsWidget;
 
 #include <QGridLayout>
 QSplitter* hlayout;
@@ -822,93 +823,6 @@ void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e, Tile* tile )
 
 
 
-void CreateSettingsWidget()
-{
-    settingsWidget = new QWidget();
-
-    QGridLayout* grid = new QGridLayout();
-
-    QLabel* label = new QLabel("Edit Layer");
-    grid->addWidget(label, 0, 1);
-
-    label = new QLabel("Mech");
-    grid->addWidget(label, 1, 0);
-    label = new QLabel("Art");
-    grid->addWidget(label, 2, 0);
-    label = new QLabel("Coll");
-    grid->addWidget(label, 3, 0);
-	label = new QLabel("Obj");
-	grid->addWidget(label, 4, 0);
-	label = new QLabel("Tmpl");
-	grid->addWidget(label, 5, 0);
-
-
-    QButtonGroup* bgroup = new QButtonGroup();
-    QCheckBox* cb = new QCheckBox();
-    QObject::connect(cb, SIGNAL(stateChanged(int)),
-			view, SLOT(SwitchToMech()));
-    grid->addWidget(cb, 1, 1);
-    bgroup->addButton(cb);
-
-    cb = new QCheckBox();
-    QObject::connect(cb, SIGNAL(stateChanged(int)),
-			view, SLOT(SwitchToArt()));
-    grid->addWidget(cb, 2, 1);
-    bgroup->addButton(cb);
-
-    cb = new QCheckBox();
-    QObject::connect(cb, SIGNAL(stateChanged(int)),
-			view, SLOT(SwitchToCollission()));
-    grid->addWidget(cb, 3, 1);
-    bgroup->addButton(cb);
-
-	cb = new QCheckBox();
-	QObject::connect(cb, SIGNAL(stateChanged(int)),
-			view, SLOT(SwitchToObject()));
-	grid->addWidget(cb, 4, 1);
-	bgroup->addButton(cb);
-
-	cb = new QCheckBox();
-	QObject::connect(cb, SIGNAL(stateChanged(int)),
-			view, SLOT(SwitchToTemplates()));
-	grid->addWidget(cb, 5, 1);
-	bgroup->addButton(cb);
-
-    bgroup->setExclusive(true);
-
-    label = new QLabel("Transparency");
-    grid->addWidget(label, 0, 2);
-
-    view->sliderOpacMech = new QSlider(Qt::Horizontal);
-    view->sliderOpacMech->setMinimum(0);
-    view->sliderOpacMech->setMaximum(100);
-    view->sliderOpacMech->setTickInterval(1);
-    view->sliderOpacMech->setValue(100);
-
-    view->sliderOpacArt = new QSlider(view->sliderOpacMech);
-    view->sliderOpacArt->setOrientation(Qt::Horizontal);
-    view->sliderOpacColl = new QSlider(view->sliderOpacMech);
-    view->sliderOpacColl->setOrientation(Qt::Horizontal);
-	view->sliderOpacObject = new QSlider(view->sliderOpacMech);
-	view->sliderOpacObject->setOrientation(Qt::Horizontal);
-
-    QObject::connect(view->sliderOpacMech, SIGNAL(valueChanged(int)),
-            view, SLOT(SetOpacityMech(int)));
-    QObject::connect(view->sliderOpacArt, SIGNAL(valueChanged(int)),
-            view, SLOT(SetOpacityArt(int)));
-    QObject::connect(view->sliderOpacColl, SIGNAL(valueChanged(int)),
-            view, SLOT(SetOpacityCollission(int)));
-	QObject::connect(view->sliderOpacObject, SIGNAL(valueChanged(int)),
-			view, SLOT(SetOpacityObject(int)));
-
-    grid->addWidget(view->sliderOpacMech, 1, 2);
-    grid->addWidget(view->sliderOpacArt, 2, 2);
-    grid->addWidget(view->sliderOpacColl, 3, 2);
-	grid->addWidget(view->sliderOpacObject, 4, 2);
-
-	settingsWidget->setLayout(grid);
-}
-
 
 
 
@@ -920,7 +834,7 @@ TemplateScene::TemplateScene()
 	UpdateList();
 
 	connect(m_listView, SIGNAL(clicked(QModelIndex)), this, SLOT(folderListClicked(QModelIndex)));
-	connect(m_listView, SIGNAL(objectNameChanged(QString)), this, SLOT(folderNameChanged(QString)));
+    connect(m_listView, SIGNAL(objectNameChanged(QString)), this, SLOT(folderNameChanged(QString)));
 
 }
 
@@ -982,6 +896,10 @@ void TemplateScene::folderListClicked(const QModelIndex &index)
 
 void TemplateScene::folderNameChanged(const QString& name)
 {
+
+    //QDir dir(ed.ArtFolderPath + "templates";// + m_currentFolder->m_folderName);
+    //dir.rename(m_currentFolder->m_folderName, name);
+
 	QString tname = m_currentFolder->m_folderName;
 	m_currentFolder->SetFolderName(name);
 
@@ -1140,10 +1058,6 @@ QString GetPath()
     return ed.ArtFolderPath + "templates\\" + templateScene->GetCurrentFolderName() + "\\";
 }
 
-QPixmap GetPixmapForTemplateTile()
-{
-
-}
 
 EditorTemplate::TemplateTile* EditorTemplate::GetTemplateTile(int x, int y)
 {
@@ -1432,7 +1346,7 @@ int main(int argc, char *argv[])
 	AddAllToScene();
 	sceneMech->AddGrid();
 
-	CreateSettingsWidget();
+    ed.GetSettingsWidget()->Initialize();
 
 	rightside.setLayout(vlayout);
 	hlayout->addWidget(view);
@@ -1448,6 +1362,10 @@ int main(int argc, char *argv[])
     hlayout->showMaximized();
 
 	templateScene->Initialize();
+
+
+    sceneCounter = 2;
+    ed.GetSettingsWidget()->mech->setCheckState(Qt::Checked);
 
 	return a.exec();
 }

@@ -20,11 +20,13 @@ SOURCES += main.cpp \
     gameobject.cpp \
     loaders.cpp \
     ed.cpp \
-    editorview.cpp
+    editorview.cpp \
+    SettingsWidget.cpp
 
 HEADERS += \
     main.h \
     gameobject.h \
     includeseditor.h \
     ed.h \
-    EditorView.h
+    EditorView.h \
+    SettingsWidget.h
