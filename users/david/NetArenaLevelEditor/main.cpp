@@ -474,7 +474,7 @@ void LoadGeneric(QString filename, EditorScene* s)
             s->m_tiles[y][x].SetSelectedBlock(key);
         }
         if(y < (MAPY -1))
-                in.read(1);
+				in.read(1);
     }
     file.close();
 }
@@ -744,10 +744,11 @@ void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e, Tile* tile )
 		case EM_Level:
 		case EM_Template:
 		{
+		int tilex = (int)(e->scenePos().x()/float(BLOCKSIZE));
+		int tiley = (int)(e->scenePos().y()/float(BLOCKSIZE));
 			if(placeTemplate)
 			{
-				int tilex = (int)(e->scenePos().x()/float(BLOCKSIZE));
-				int tiley = (int)(e->scenePos().y()/float(BLOCKSIZE));
+
 
 				//Stamp template on level
 				int temp = sceneCounter;
@@ -770,9 +771,29 @@ void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e, Tile* tile )
 			else
 			{
 				if(e->buttons() == Qt::RightButton)
+				{
 					tile->SetSelectedBlock(' ');
+					if(editorMode == EM_Template)
+					{
+						if(sceneCounter == SCENEMECH)
+							templateScene->GetCurrentTemplate()->GetTemplateTile(tilex, tiley)->blockMech = ' ';
+						if(sceneCounter == SCENECOLL)
+							templateScene->GetCurrentTemplate()->GetTemplateTile(tilex, tiley)->blockColl = ' ';
+					}
+				}
 				else if (e->buttons() == Qt::LeftButton)
+				{
 					tile->SetSelectedBlock(selectedTile);
+					if(editorMode == EM_Template)
+					{
+						if(sceneCounter == SCENEMECH)
+							templateScene->GetCurrentTemplate()->GetTemplateTile(tilex, tiley)->blockMech = selectedTile;
+						if(sceneCounter == SCENECOLL)
+							templateScene->GetCurrentTemplate()->GetTemplateTile(tilex, tiley)->blockColl = selectedTile;
+					}
+				}
+
+
 			}
 
 			break;
@@ -1090,7 +1111,10 @@ void TemplateFolder::SetCurrentTemplate()
 void TemplateFolder::SetCurrentTemplate(QString name)
 {
 	if(m_templateMap.contains(name))
+	{
 		m_currentTemplate = m_templateMap[name];
+		m_currentTemplate->LoadIntoScene();
+	}
 	else
 		SetCurrentTemplate();
 
@@ -1144,6 +1168,23 @@ EditorTemplate::EditorTemplate()
 
 EditorTemplate::~EditorTemplate()
 {
+}
+
+void EditorTemplate::LoadIntoScene()
+{
+	int s = sceneCounter;
+
+	foreach(TemplateTile t, m_list)
+	{
+		sceneCounter = SCENEMECH;
+		sceneMech->m_tiles[t.y][t.x].SetSelectedBlock(t.blockMech);
+		sceneCounter = SCENECOLL;
+		sceneCollission->m_tiles[t.y][t.x].SetSelectedBlock(t.blockColl);
+		sceneCounter = SCENEART;
+		sceneArt->m_tiles[t.y][t.x].SetSelectedBlock(templateToArtMap[t.blockArt]);
+	}
+
+	sceneCounter = s;
 }
 
 void EditorTemplate::LoadTemplate(QString filename)

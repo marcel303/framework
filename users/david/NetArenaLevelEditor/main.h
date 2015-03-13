@@ -99,6 +99,8 @@ public:
     TemplateTile* GetTemplateTile(int x, int y);
     void RemoveTemplateTile(int x, int y);
 
+	void LoadIntoScene();
+
     QList<TemplateTile> m_list;
 
     QString m_name;
