@@ -166,9 +166,7 @@ void SwitchSceneTo(int s)
 	sceneCounter = s;
 
 	if(sceneCounter > 4)
-		sceneCounter = 0;
-
-	//ed.SetEditorMode(EM_Level);
+        sceneCounter = 0;
 
 	switch(sceneCounter)
 	{
@@ -367,6 +365,7 @@ void LoadObjects(QString filename, bool pallette)
 
         list.pop_front();
     }
+
     GameObject* obj = 0;
     if(!map.isEmpty())
         obj = LoadGameObject(map);
@@ -997,7 +996,7 @@ void TemplateFolder::SetFolderName(QString name)
 	m_folderName = name;
 }
 
-void TemplateFolder::LoadIntoScene()
+void TemplateFolder::LoadTileIntoScene()
 {
 	m_scene->clear();
 
@@ -1031,7 +1030,7 @@ void TemplateFolder::SetCurrentTemplate(QString name)
 	if(m_templateMap.contains(name))
 	{
 		m_currentTemplate = m_templateMap[name];
-		m_currentTemplate->LoadIntoScene();
+        m_currentTemplate->LoadTemplateIntoScene();
 	}
 	else
 		SetCurrentTemplate();
@@ -1044,7 +1043,7 @@ void TemplateFolder::AddTemplate(EditorTemplate* t)
 {
 	m_templateMap[t->m_name] = t;
 
-	LoadIntoScene();
+    LoadTileIntoScene();
 }
 
 EditorTemplate* TemplateFolder::GetCurrentTemplate()
@@ -1084,8 +1083,11 @@ EditorTemplate::~EditorTemplate()
 {
 }
 
-void EditorTemplate::LoadIntoScene()
+void EditorTemplate::LoadTemplateIntoScene()
 {
+    EditorMode orig = editorMode;
+
+    ed.SetEditorMode(EM_Template);
 	int s = sceneCounter;
 
 	foreach(TemplateTile t, m_list)
@@ -1099,6 +1101,7 @@ void EditorTemplate::LoadIntoScene()
 	}
 
 	sceneCounter = s;
+    ed.SetEditorMode(orig);
 }
 
 void EditorTemplate::LoadTemplate(QString filename)
@@ -1366,6 +1369,8 @@ int main(int argc, char *argv[])
 
     sceneCounter = 2;
     ed.GetSettingsWidget()->mech->setCheckState(Qt::Checked);
+
+    view->ResetSliders();
 
 	return a.exec();
 }

@@ -99,7 +99,7 @@ public:
     TemplateTile* GetTemplateTile(int x, int y);
     void RemoveTemplateTile(int x, int y);
 
-	void LoadIntoScene();
+    void LoadTemplateIntoScene();
 
     QList<TemplateTile> m_list;
 
@@ -122,7 +122,7 @@ public:
 	void AddTemplate(EditorTemplate* t);
 	void SaveTemplate();
 
-	void LoadIntoScene();
+    void LoadTileIntoScene();
 
 	EditorTemplate* GetCurrentTemplate();
 	void SetCurrentTemplate();

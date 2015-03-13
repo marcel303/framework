@@ -94,7 +94,20 @@ void Ed::SetEditorMode(EditorMode e)
 {
 	m_editorMode = e;
 
-	qDebug() << "Setting EditorMode to: " << e;
+    switch(e)
+    {
+    case EM_Level:
+            qDebug() << "Setting EditorMode to: Level";
+        break;
+    case EM_Object:
+            qDebug() << "Setting EditorMode to: Object";
+        break;
+    case EM_Template:
+            qDebug() << "Setting EditorMode to: Template";
+        break;
+    }
+
+
 }
 
 void Ed::EditTemplates()

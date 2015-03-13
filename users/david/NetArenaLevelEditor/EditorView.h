@@ -91,6 +91,8 @@ public slots:
     void mousePressEvent(QMouseEvent * e);
     void mouseReleaseEvent(QMouseEvent * e);
 
+    void ResetSliders();
+
 private:
 	void CreateAndShowNewMapDialog();
 
