@@ -50,6 +50,7 @@ public:
 
     virtual void CreateLevel(int x, int y);
     virtual void InitializeLevel();
+	virtual void ResetLevel();
     void AddGrid();
 
     virtual void DeleteTiles();
@@ -82,6 +83,8 @@ public:
     {
     public:
 
+		TemplateTile();
+
         int x;
         int y;
 
@@ -90,18 +93,19 @@ public:
 		QString blockArt;
 
         short GetArtKey();
-        QPixmap* GetPixmap();
+		QPixmap* GetPixmap();
 
         bool operator==(const TemplateTile& right){return (x == right.x) && (y == right.y);}
     };
 
 
     TemplateTile* GetTemplateTile(int x, int y);
+	TemplateTile* GetOrAddTemplateTile(int x, int y);
     void RemoveTemplateTile(int x, int y);
 
     void LoadTemplateIntoScene();
 
-    QList<TemplateTile> m_list;
+	QList<TemplateTile*> m_list;
 
     QString m_name;
 

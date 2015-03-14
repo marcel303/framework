@@ -83,7 +83,8 @@ void EditorView::Save()
 
 void EditorView::SaveTemplate()
 {
-    templateScene->GetCurrentTemplate()->SaveTemplate();
+	if(templateScene->GetCurrentTemplate())
+		templateScene->GetCurrentTemplate()->SaveTemplate();
 }
 
 void EditorView::Load()
@@ -220,7 +221,7 @@ void EditorView::ImportTemplate()
 
 		delete t;
 		t = new EditorTemplate();
-		t->LoadTemplate(f+".tmpl");
+		t->LoadTemplate(GetPath() + f + ".tmpl");
 
 		templateScene->AddTemplate(t);
 	}

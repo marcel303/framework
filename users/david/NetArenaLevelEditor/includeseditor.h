@@ -78,3 +78,5 @@ void LoadLevel(QString filename);
 void SwitchSceneTo(int s);
 
 void LoadPixmaps();
+
+QString GetPath();

@@ -20,7 +20,7 @@ void Ed::Initialize()
 
 	m_sceneTemplatePallette = new QGraphicsScene();
 
-    m_settingsWidget = new SettingsWidget();
+	m_settingsWidget = new SettingsWidget();
 }
 
 EditorScene*& Ed::GetSceneArt()
@@ -98,10 +98,7 @@ void Ed::SetEditorMode(EditorMode e)
     {
     case EM_Level:
             qDebug() << "Setting EditorMode to: Level";
-        break;
-    case EM_Object:
-            qDebug() << "Setting EditorMode to: Object";
-        break;
+		break;
     case EM_Template:
             qDebug() << "Setting EditorMode to: Template";
         break;
@@ -123,7 +120,6 @@ void Ed::EditLevels()
 
     m_view->setScene((QGraphicsScene*)(GetCurrentScene()));
 }
-
 
 void CreateNewMapHelper(int x, int y)
 {

@@ -5,10 +5,8 @@
 enum EditorMode
 {
 	EM_Level,
-	EM_Object,
 	EM_Template,
 };
-
 
 class EditorScene;
 class TemplateScene;
@@ -50,6 +48,7 @@ public:
 
     void EditTemplates();
     void EditLevels();
+	void EditObjects();
 
 
     int& GetSceneCounter();

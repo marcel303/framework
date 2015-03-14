@@ -11,7 +11,7 @@
 
 #define view view2 //hack
 
-char selectedTile = ' ';
+short selectedTile = ' ';
 
 
 
@@ -195,7 +195,6 @@ void SwitchSceneTo(int s)
 		SetEditCollissionScene();
 		break;
 	case SCENEOBJ:
-		ed.SetEditorMode(EM_Object);
 		view->setWindowTitle("Editing Level Objects");
 		viewPallette->setWindowTitle("GameObjects");
 		viewPallette->setScene(sceneObjectPallette);
@@ -462,8 +461,6 @@ void LoadGeneric(QString filename, EditorScene* s)
     QFile file(filename);
     file.open(QIODevice::ReadOnly | QIODevice::Text);
 
-
-
     QTextStream in(&file);
 
     for(int y = 0; y < MAPY; y++)
@@ -501,7 +498,6 @@ void LoadArt(QString filename, EditorScene* s)
         }
     }
     file.close();
-
 }
 
 void LoadLevel(QString filename)
@@ -724,6 +720,15 @@ void EditorScene::InitializeLevel()
         }
 }
 
+void EditorScene::ResetLevel()
+{
+	for(int y = 0; y < m_mapy; y++)
+		for (int x = 0; x < m_mapx; x++)
+		{
+			m_tiles[y][x].SetSelectedBlock(' ');
+		}
+}
+
 void EditorScene::AddGrid()
 {
 	return;
@@ -739,82 +744,87 @@ void EditorScene::AddGrid()
 
 void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e, Tile* tile )
 {
-	switch(editorMode)
+	if(sceneCounter != SCENEOBJ)
 	{
-		case EM_Level:
-		case EM_Template:
-		{
 		int tilex = (int)(e->scenePos().x()/float(BLOCKSIZE));
 		int tiley = (int)(e->scenePos().y()/float(BLOCKSIZE));
-			if(placeTemplate)
-			{
 
-
-				//Stamp template on level
-				int temp = sceneCounter;
-				foreach(EditorTemplate::TemplateTile tt, templateScene->GetCurrentTemplate()->m_list)
-				{
-					if(tilex+tt.x < MAPX && tiley+tt.y < MAPY)
-					{
-						sceneCounter = SCENEMECH;
-						sceneMech->m_tiles[tiley+tt.y][tilex+tt.x].SetSelectedBlock(tt.blockMech);
-						sceneCounter = SCENECOLL;
-						sceneCollission->m_tiles[tiley+tt.y][tilex+tt.x].SetSelectedBlock(tt.blockColl);
-						sceneCounter = SCENEART;
-						sceneArt->m_tiles[tiley+tt.y][tilex+tt.x].SetSelectedBlock(tt.GetArtKey());
-					}
-				}
-				sceneCounter = temp;
-
-				e->accept();
-			}
-			else
-			{
-				if(e->buttons() == Qt::RightButton)
-				{
-					tile->SetSelectedBlock(' ');
-					if(editorMode == EM_Template)
-					{
-						if(sceneCounter == SCENEMECH)
-							templateScene->GetCurrentTemplate()->GetTemplateTile(tilex, tiley)->blockMech = ' ';
-						if(sceneCounter == SCENECOLL)
-							templateScene->GetCurrentTemplate()->GetTemplateTile(tilex, tiley)->blockColl = ' ';
-					}
-				}
-				else if (e->buttons() == Qt::LeftButton)
-				{
-					tile->SetSelectedBlock(selectedTile);
-					if(editorMode == EM_Template)
-					{
-						if(sceneCounter == SCENEMECH)
-							templateScene->GetCurrentTemplate()->GetTemplateTile(tilex, tiley)->blockMech = selectedTile;
-						if(sceneCounter == SCENECOLL)
-							templateScene->GetCurrentTemplate()->GetTemplateTile(tilex, tiley)->blockColl = selectedTile;
-					}
-				}
-
-
-			}
-
-			break;
-		}
-		case EM_Object:
+		if(placeTemplate)
 		{
-			GameObject* obj = new GameObject();
-			obj->palletteTile = false;
-			obj->Load(ed.objectPropWindow->GetCurrentGameObject()->toText());
-			obj->SetPos(e->scenePos());
+			//Stamp template on level
+			int temp = sceneCounter;
+			foreach(EditorTemplate::TemplateTile* tt, templateScene->GetCurrentTemplate()->m_list)
+			{
+				if(tilex+tt->x < MAPX && tiley+tt->y < MAPY)
+				{
+					sceneCounter = SCENEMECH;
+					sceneMech->m_tiles[tiley+tt->y][tilex+tt->x].SetSelectedBlock(tt->blockMech);
+					sceneCounter = SCENECOLL;
+					sceneCollission->m_tiles[tiley+tt->y][tilex+tt->x].SetSelectedBlock(tt->blockColl);
+					sceneCounter = SCENEART;
+					sceneArt->m_tiles[tiley+tt->y][tilex+tt->x].SetSelectedBlock(tt->GetArtKey());
 
-			AddGameObject(obj);
-
-			ed.objectPropWindow->SetCurrentGameObject(obj);
+					if(editorMode == EM_Template)
+					{
+						EditorTemplate::TemplateTile* tt2 = templateScene->GetCurrentTemplate()->GetOrAddTemplateTile(tilex+tt->x, tiley+tt->y);
+						tt2->blockMech = tt->blockMech;
+						tt2->blockColl = tt->blockColl;
+						tt2->blockArt = tt->blockArt;
+					}
+				}
+			}
+			sceneCounter = temp;
 
 			e->accept();
-			break;
 		}
-		default:
-			e->ignore();
-			break;
+		else
+		{
+			if(e->buttons() == Qt::RightButton)
+			{
+				tile->SetSelectedBlock(' ');
+				if(editorMode == EM_Template)
+				{
+					if(sceneCounter == SCENEMECH)
+						templateScene->GetCurrentTemplate()->GetOrAddTemplateTile(tilex, tiley)->blockMech = ' ';
+					if(sceneCounter == SCENECOLL)
+						templateScene->GetCurrentTemplate()->GetOrAddTemplateTile(tilex, tiley)->blockColl = ' ';
+					if(sceneCounter == SCENEART)
+					{
+						templateScene->GetCurrentTemplate()->GetOrAddTemplateTile(tilex, tiley)->blockArt = artMap.first();
+						tile->SetSelectedBlock(artMap.keys().first());
+					}
+				}
+			}
+			else if (e->buttons() == Qt::LeftButton)
+			{
+				tile->SetSelectedBlock(selectedTile);
+				if(editorMode == EM_Template)
+				{
+					if(sceneCounter == SCENEMECH)
+						templateScene->GetCurrentTemplate()->GetOrAddTemplateTile(tilex, tiley)->blockMech = selectedTile;
+					if(sceneCounter == SCENECOLL)
+						templateScene->GetCurrentTemplate()->GetOrAddTemplateTile(tilex, tiley)->blockColl = selectedTile;
+					if(sceneCounter == SCENEART)
+					{
+						templateScene->GetCurrentTemplate()->GetOrAddTemplateTile(tilex, tiley)->blockArt = artMap[selectedTile];
+						tile->SetSelectedBlock(artMap.keys().first());
+					}
+				}
+			}
+		}
+	}
+	else //sceneCounter == SCENEOBJECT
+	{
+		GameObject* obj = new GameObject();
+		obj->palletteTile = false;
+		obj->Load(ed.objectPropWindow->GetCurrentGameObject()->toText());
+		obj->SetPos(e->scenePos());
+
+		AddGameObject(obj);
+
+		ed.objectPropWindow->SetCurrentGameObject(obj);
+
+		e->accept();
 	}
 }
 
@@ -998,7 +1008,8 @@ void TemplateFolder::SetFolderName(QString name)
 
 void TemplateFolder::LoadTileIntoScene()
 {
-	m_scene->clear();
+	foreach(QGraphicsItem* i, m_scene->items())
+		m_scene->removeItem(i);
 
 	int x = 0;
 	int y = 1;
@@ -1057,12 +1068,28 @@ QString GetPath()
     return ed.ArtFolderPath + "templates\\" + templateScene->GetCurrentFolderName() + "\\";
 }
 
+EditorTemplate::TemplateTile* EditorTemplate::GetOrAddTemplateTile(int x, int y)
+{
+	TemplateTile* tt = GetTemplateTile(x, y);
+	if(tt == 0)
+	{
+		tt = new TemplateTile();
+		tt->x = x;
+		tt->y = y;
+
+		tt->blockArt = artMap.first();
+
+		m_list.append(tt);
+	}
+
+	return tt;
+}
 
 EditorTemplate::TemplateTile* EditorTemplate::GetTemplateTile(int x, int y)
 {
-    foreach(TemplateTile tt, m_list)
-        if(tt.x == x && tt.y == y)
-            return &tt;
+	foreach(TemplateTile* tt, m_list)
+		if(tt->x == x && tt->y == y)
+			return tt;
 
     return 0;
 
@@ -1070,8 +1097,8 @@ EditorTemplate::TemplateTile* EditorTemplate::GetTemplateTile(int x, int y)
 
 void EditorTemplate::RemoveTemplateTile(int x, int y)
 {
-    foreach(TemplateTile tt, m_list)
-        if(tt.x == x && tt.y == y)
+	foreach(TemplateTile* tt, m_list)
+		if(tt->x == x && tt->y == y)
             m_list.removeOne(tt);
 }
 
@@ -1090,14 +1117,18 @@ void EditorTemplate::LoadTemplateIntoScene()
     ed.SetEditorMode(EM_Template);
 	int s = sceneCounter;
 
-	foreach(TemplateTile t, m_list)
+	sceneMech->ResetLevel();
+	sceneCollission->ResetLevel();
+	sceneArt->ResetLevel();
+
+	foreach(TemplateTile* t, m_list)
 	{
 		sceneCounter = SCENEMECH;
-		sceneMech->m_tiles[t.y][t.x].SetSelectedBlock(t.blockMech);
+		sceneMech->m_tiles[t->y][t->x].SetSelectedBlock(t->blockMech);
 		sceneCounter = SCENECOLL;
-		sceneCollission->m_tiles[t.y][t.x].SetSelectedBlock(t.blockColl);
+		sceneCollission->m_tiles[t->y][t->x].SetSelectedBlock(t->blockColl);
 		sceneCounter = SCENEART;
-		sceneArt->m_tiles[t.y][t.x].SetSelectedBlock(templateToArtMap[t.blockArt]);
+		sceneArt->m_tiles[t->y][t->x].SetSelectedBlock(templateToArtMap[t->blockArt]);
 	}
 
 	sceneCounter = s;
@@ -1131,24 +1162,24 @@ void EditorTemplate::LoadTemplate(QString filename)
 
     for(int i = 0; i < count; i++)
     {
-        TemplateTile tt;
-        in >> tt.x;
-        in >> tt.y;
-        in >> tt.blockMech;
-        in >> tt.blockColl;
-        in >> tt.blockArt;
+		TemplateTile* tt = new TemplateTile();
+		in >> tt->x;
+		in >> tt->y;
+		in >> tt->blockMech;
+		in >> tt->blockColl;
+		in >> tt->blockArt;
 
         m_list.append(tt);
 
-        if(!templateToArtMap.contains(tt.blockArt))
+		if(!templateToArtMap.contains(tt->blockArt))
         {
             QPixmap* part = new QPixmap;
-            if(!part->load(tt.blockArt))
-                qDebug() << "failed to load artfile: " << tt.blockArt << " for template: " << m_name;
+			if(!part->load(GetPath() + tt->blockArt))
+				qDebug() << "failed to load artfile: " << tt->blockArt << " for template: " << m_name;
 
             short key = (short)artMap.size();
-            artMap[key] = tt.blockArt;
-            templateToArtMap[tt.blockArt] = key;
+			artMap[key] = tt->blockArt;
+			templateToArtMap[tt->blockArt] = key;
             pixmapsArt[key] = part;
         }
     }
@@ -1158,8 +1189,9 @@ void EditorTemplate::LoadTemplate(QString filename)
 
 void EditorTemplate::SaveTemplate()
 {
-
     QString path = GetPath();
+	QDir dir(path);
+
 	QFile templateFile(path + m_name + ".tmpl");
 
 	templateFile.open(QIODevice::WriteOnly);
@@ -1169,16 +1201,24 @@ void EditorTemplate::SaveTemplate()
     out << m_name;
 
     out << m_list.size();
-    foreach(TemplateTile t, m_list)
+	foreach(TemplateTile* t, m_list)
     {
-        out << t.x;
-        out << t.y;
-        out << t.blockMech;
-        out << t.blockColl;
-        out << t.blockArt;
+		out << t->x;
+		out << t->y;
+		out << t->blockMech;
+		out << t->blockColl;
+		out << t->blockArt;
+
+		if(!dir.entryList(QDir::Files).contains(t->blockArt))
+			pixmapsArt[templateToArtMap[t->blockArt]]->save(path + t->blockArt);
     }
 
 	templateFile.close();
+
+	//check if all artfiles are present in the template folder.
+	//copy all unpresent artfiles into template folder.
+
+
 
 	qDebug() << "Template" << m_name << " saved.";
 }
@@ -1218,17 +1258,18 @@ int EditorTemplate::ImportFromImage(QString filename)
 			QPixmap *copy = new QPixmap (img->copy(x*BLOCKSIZE, y*BLOCKSIZE, BLOCKSIZE, BLOCKSIZE));
 
             QString tmpname = path + m_name + "_" + QString::number(x) + "_" + QString::number(y)  + ".png";
+			QString resourceName = m_name + "_" + QString::number(x) + "_" + QString::number(y)  + ".png";
             QFile file(tmpname);
 			file.open(QIODevice::WriteOnly);
 			copy->save(&file, "PNG");
 			file.close();
 
-			TemplateTile tile;
-			tile.x = x;
-			tile.y = y;
-			tile.blockMech = QString("x").toShort();
-			tile.blockColl = QString("x").toShort();
-            tile.blockArt = tmpname;
+			TemplateTile* tile = new TemplateTile();
+			tile->x = x;
+			tile->y = y;
+			tile->blockMech = QString("x").toShort();
+			tile->blockColl = QString("x").toShort();
+			tile->blockArt = resourceName;
 
 			m_list.append(tile);
 		}
@@ -1245,6 +1286,16 @@ int EditorTemplate::ImportFromImage(QString filename)
     //view->SwitchToArt();
 
 	return 1;
+}
+
+EditorTemplate::TemplateTile::TemplateTile()
+{
+	x = -1;
+	y = -1;
+
+	blockMech = 'x';
+	blockArt = "";
+	blockColl = ' ';
 }
 
 QPixmap* EditorTemplate::TemplateTile::GetPixmap()
@@ -1269,14 +1320,12 @@ void EditorTemplate::mousePressEvent ( QGraphicsSceneMouseEvent * e )
 void InitializeScenesAndViews()
 {
 	ed.SetEditorMode(EM_Level);
-	//editorMode = EM_Level;
 
 	sceneMech = new EditorScene();
 	sceneArt = new EditorScene();
 	sceneCollission = new EditorScene();
 
 	ed.SetEditorMode(EM_Template);
-	//editorMode = EM_Template;
 
 	sceneMech = new EditorScene();
 	sceneArt = new EditorScene();
