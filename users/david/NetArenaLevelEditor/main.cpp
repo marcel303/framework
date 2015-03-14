@@ -533,17 +533,34 @@ void SaveGeneric(QString filename, EditorScene* s)
 
 void SaveArtFile(QString filename, EditorScene* s)
 {
-    QFile file(filename);
-    file.open(QIODevice::WriteOnly);
 
+	QMap<short, short> artTranslation;
+	QMap<short, QPixmap> art2;
 
-    QDataStream in(&file);
+	QFile fileArt(filename+".txt");
+	QFile fileArtIndex(filename+"Index.txt");
+	fileArt.open(QIODevice::WriteOnly);
+	fileArtIndex.open(QIODevice::WriteOnly);
 
-    in << MAPX << MAPY;
-    for(int y = 0; y < MAPY; y++)
-        for (int x = 0; x < MAPX; x++)
-            in << (quint16 )(s->m_tiles[y][x].getBlock());
-    file.close();
+	QDataStream in(&fileArt);
+	QTextStream artLines(&fileArtIndex);
+
+	in << MAPX << MAPY;
+	for(int y = 0; y < MAPY; y++)
+		for (int x = 0; x < MAPX; x++)
+		{
+			if(!artTranslation.contains(s->m_tiles[y][x].getBlock()))
+			{
+				artTranslation[s->m_tiles[y][x].getBlock()] = artTranslation.size();
+				s->m_tiles[y][x].pixmap().save(filename + "_" + QString::number(artTranslation.size()-1) + ".png", "PNG");
+
+				artLines << (filename + "_" + QString::number(artTranslation.size()-1) + ".png") << endl;
+			}
+			in << (quint16 )(artTranslation[s->m_tiles[y][x].getBlock()]);
+		}
+
+	fileArt.close();
+	fileArtIndex.close();
 }
 
 void SaveObjects(QString filename)
@@ -565,17 +582,21 @@ void SaveObjects(QString filename)
 
 void SaveLevel(QString filename)
 {
-    SaveGeneric(filename + ".txt", sceneMech);
-    if(sceneCollission)
-        SaveGeneric(filename + "Collission.txt", sceneCollission);
+	QDir dir;
+	dir.mkpath(filename);
 
+	QString name = filename + '/' + filename.split('/').last();
+
+	SaveGeneric(name + ".txt", sceneMech);
+    if(sceneCollission)
+		SaveGeneric(name + "Collission.txt", sceneCollission);
     if(sceneArt)
-        SaveArtFile(filename + "Art.txt", sceneArt);
+		SaveArtFile(name + "Art", sceneArt);
     //TODO: save templates
     //TODO: save art index file
     //TODO: save art level file
 
-	SaveObjects(filename + "Objects.txt");
+	SaveObjects(name + "Objects.txt");
 }
 
 
@@ -827,11 +848,6 @@ void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e, Tile* tile )
 		e->accept();
 	}
 }
-
-
-
-
-
 
 
 
@@ -1210,7 +1226,7 @@ void EditorTemplate::SaveTemplate()
 		out << t->blockArt;
 
 		if(!dir.entryList(QDir::Files).contains(t->blockArt))
-			pixmapsArt[templateToArtMap[t->blockArt]]->save(path + t->blockArt);
+			pixmapsArt[templateToArtMap[t->blockArt]]->save(path + t->blockArt, "PNG");
     }
 
 	templateFile.close();
