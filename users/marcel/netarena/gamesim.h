@@ -251,6 +251,8 @@ struct Player
 			memset(this, 0, sizeof(JumpInfo));
 		}
 
+		float jumpVelocityLeft;
+
 		bool cancelStarted;
 		bool cancelled;
 		int16_t cancelX;

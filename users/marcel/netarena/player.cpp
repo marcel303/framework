@@ -48,7 +48,7 @@ todo:
 - prototype grappling hook
 
 - add callstack gathering
-- add IP's to player names (visible on host)
++ add IP's to player names (visible on host)
 
 - better attach to platform logic, so we can have movers closer to each other without the player bugging
 
@@ -1526,13 +1526,33 @@ void Player::tick(float dt)
 		{
 			if (currentBlockMaskFloor & kBlockMask_Solid)
 			{
-				m_vel[1] = -PLAYER_JUMP_SPEED;
-
+				m_jump.jumpVelocityLeft = -PLAYER_JUMP_SPEED;
 				m_jump.cancelStarted = false;
 
 				playSecondaryEffects(kPlayerEvent_Jump);
 			}
 		}
+
+		// jumping : increment speed over time for soft jump
+
+		if (m_input.isDown(INPUT_BUTTON_A) && m_jump.jumpVelocityLeft != 0.f)
+		{
+			const float velPerSecond = PLAYER_JUMP_SPEED * TICKS_PER_SECOND / (float)PLAYER_JUMP_SPEED_FRAMES;
+			float delta = velPerSecond * Calc::Sign(m_jump.jumpVelocityLeft) * dt;
+			if (Calc::Abs(delta) > Calc::Abs(m_jump.jumpVelocityLeft))
+				delta = m_jump.jumpVelocityLeft;
+			m_vel[1] += delta;
+			m_jump.jumpVelocityLeft -= delta;
+		}
+		else
+		{
+			m_jump.jumpVelocityLeft = 0.f;
+		}
+
+		// update grounded state
+
+		//if (m_isGrounded && m_vel[1] < 0.f)
+		//	m_isGrounded = false;
 
 		// collision
 
@@ -1811,6 +1831,57 @@ void Player::tick(float dt)
 			}
 		}
 
+		// attempt to stay grounded
+
+		if (m_isGrounded)
+			m_vel[1] = 0.f;
+
+	#if 0
+		if (m_isGrounded && !(dirBlockMask[1] & kBlockMask_Solid))
+		{
+			const Vec2 min = m_pos + m_collision.min;
+			const Vec2 max = m_pos + m_collision.max + Vec2(0.f, 4.f);
+
+			CollisionShape playerShape;
+			playerShape.set(
+				Vec2(min[0], min[1]),
+				Vec2(max[0], min[1]),
+				Vec2(max[0], max[1]),
+				Vec2(min[0], max[1]));
+
+			GAMESIM->testCollision(
+				playerShape,
+				this,
+				[](const CollisionShape & shape, void * arg, PhysicsActor * actor, BlockAndDistance * blockAndDistance, Player * player)
+				{
+					Player * self = (Player*)arg;
+
+					if (blockAndDistance)
+					{
+						Block * block = blockAndDistance->block;
+
+						if ((1 << block->type) & kBlockMask_Solid)
+						{
+							CollisionShape blockShape = Arena::getBlockCollision(block->shape);
+							blockShape.translate(blockAndDistance->x * BLOCK_SX, blockAndDistance->y * BLOCK_SY);
+
+							float contactDistance;
+							Vec2 contactNormal;
+
+							if (shape.checkCollision(blockShape, Vec2(0.f, 1.f), contactDistance, contactNormal))
+							{
+								if (contactNormal[1] * contactDistance < 0.f)
+								{
+									self->m_pos[1] += 4.f + contactNormal[1] * contactDistance;
+									log("stay grounded!");
+								}
+							}
+						}
+					}
+				});
+		}
+	#endif
+
 		// surface type
 
 		const uint32_t blockMask = dirBlockMask[0] | dirBlockMask[1];
@@ -2076,7 +2147,7 @@ void Player::tick(float dt)
 		if (m_bubble.timer != 0.f)
 			m_isGrounded = false;
 	#if USE_NEW_COLLISION_CODE
-		else if (m_vel[1] >= 0.f && (dirBlockMask[1] & kBlockMask_Solid) != 0)
+		else if (m_dirBlockMaskDir[1] > 0 && (dirBlockMask[1] & kBlockMask_Solid) != 0)
 	#else
 		else if (m_vel[1] >= 0.f && (getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f) & kBlockMask_Solid) != 0)
 	#endif

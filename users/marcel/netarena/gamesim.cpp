@@ -140,7 +140,7 @@ void Pickup::draw() const
 
 	sprite.drawEx(m_pos[0] + m_bbMin[0], m_pos[1] + m_bbMin[1]);
 
-	if (true)
+	if (false)
 	{
 		// todo : remove
 		setFont("calibri.ttf");
