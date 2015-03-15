@@ -270,10 +270,15 @@ void LoadPixmapsGeneric(QString filename, QMap<short, QPixmap*>& map)
         short key2 = key.toLatin1();
         line.chop(4);
 
-        p = new QPixmap(path+line);
-        p2 = new QPixmap(p->scaledToWidth(BLOCKSIZE));
+        p = new QPixmap;
+        if(p->load(path+line))
+        {
+
+            p2 = new QPixmap(p->scaledToWidth(BLOCKSIZE));
+
+            map[key2] = p2;
+        }
         delete p;
-        map[key2] = p2;
 
         list.pop_front();
     }
@@ -638,6 +643,7 @@ Tile::Tile()
     this->setOpacity(1.0);
 
     setAcceptHoverEvents(true);
+    setShapeMode( QGraphicsPixmapItem::BoundingRectShape );
 }
 
 Tile::~Tile()
@@ -932,11 +938,6 @@ void TemplateScene::Initialize()
 
 		dir.cdUp();//back down
 	}
-
-
-			//bool QDir::mkdir(const QString & dirName) const
-			//bool QDir::rename(const QString & oldName, const QString & newName)
-			//bool QDir::removeRecursively()
 }
 
 TemplateScene::~TemplateScene()
@@ -1151,6 +1152,7 @@ void EditorTemplate::RemoveTemplateTile(int x, int y)
 
 EditorTemplate::EditorTemplate()
 {
+    setShapeMode( QGraphicsPixmapItem::BoundingRectShape );
 }
 
 EditorTemplate::~EditorTemplate()
