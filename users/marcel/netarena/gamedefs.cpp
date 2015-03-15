@@ -36,6 +36,7 @@ OPTION_DEFINE(float, PLAYER_SHIELD_IMPACT_MULTIPLIER, "Player/Shield/Impact Mult
 
 OPTION_DEFINE(int, PLAYER_SPEED_MAX, "Player/Max Speed");
 OPTION_DEFINE(int, PLAYER_JUMP_SPEED, "Player/Jumping/Speed");
+OPTION_DEFINE(int, PLAYER_JUMP_SPEED_FRAMES, "Player/Jumping/Soft Jump Frame Count");
 OPTION_DEFINE(int, PLAYER_JUMP_GRACE_PIXELS, "Player/Jumping/Grace Pixels");
 OPTION_DEFINE(int, PLAYER_WALLJUMP_SPEED, "Player/Wall Jump/Speed");
 OPTION_DEFINE(int, PLAYER_WALLJUMP_RECOIL_SPEED, "Player/Wall Jump/Recoil Speed");
@@ -68,10 +69,14 @@ OPTION_DEFINE(float, PLAYER_EFFECT_ICE_TIME, "Player/Effects/Ice/Duration");
 OPTION_DEFINE(float, PLAYER_EFFECT_ICE_IMPACT_MULTIPLIER, "Player/Effects/Ice/Impact Multiplier");
 OPTION_DEFINE(float, PLAYER_EFFECT_BUBBLE_TIME, "Player/Effects/Bubble/Duration");
 OPTION_DEFINE(float, PLAYER_EFFECT_BUBBLE_SPEED, "Player/Effects/Bubble/Speed");
+OPTION_DEFINE(float, PLAYER_EFFECT_TIMEDILATION_TIME, "Player/Effects/Time Dilation/Time");
+OPTION_DEFINE(float, PLAYER_EFFECT_TIMEDILATION_MULTIPLIER, "Player/Effects/Time Dilation/Speed Multiplier");
+OPTION_DEFINE(bool, PLAYER_EFFECT_TIMEDILATION_ON_OTHERS, "Player/Effects/Time Dilation/Apply On Others");
 OPTION_STEP(PLAYER_EFFECT_ICE_TIME, 0, 0, 0.1f);
 OPTION_STEP(PLAYER_EFFECT_ICE_IMPACT_MULTIPLIER, 0, 0, 0.01f);
 OPTION_STEP(PLAYER_EFFECT_BUBBLE_TIME, 0, 0, 0.1f);
 OPTION_STEP(PLAYER_EFFECT_BUBBLE_SPEED, 0, 0, 10.f);
+OPTION_STEP(PLAYER_EFFECT_TIMEDILATION_MULTIPLIER, 0, 0, .05f);
 
 OPTION_DEFINE(int, STEERING_SPEED_ON_GROUND, "Player/Steering/Speed On Ground");
 OPTION_DEFINE(int, STEERING_SPEED_IN_AIR, "Player/Steering/Speed In Air");
@@ -149,6 +154,7 @@ OPTION_DEFINE(int, PICKUP_ICE_COUNT, "Pickups/Ice Count");
 OPTION_DEFINE(int, PICKUP_ICE_WEIGHT, "Pickups/Spawn Weights/Ice");
 OPTION_DEFINE(int, PICKUP_BUBBLE_COUNT, "Pickups/Bubble Count");
 OPTION_DEFINE(int, PICKUP_BUBBLE_WEIGHT, "Pickups/Spawn Weights/Bubble");
+OPTION_DEFINE(int, PICKUP_TIMEDILATION_WEIGHT, "Pickups/Spawn Weights/Time Dilation");
 
 // death match
 

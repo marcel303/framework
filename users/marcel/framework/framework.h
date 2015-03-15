@@ -506,6 +506,8 @@ public:
 	float getAnimLength(int animIndex) const;
 	bool isAnimDoneAtTime(int animIndex, float time) const;
 
+	bool getHitboxAtTime(int animIndex, const char * name, float time, Vec2 * points);
+
 private:
 	class SpriterCacheElem * m_spriter;
 };

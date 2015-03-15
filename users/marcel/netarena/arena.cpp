@@ -126,7 +126,7 @@ bool Block::handleDamage(GameSim & gameSim, int blockX, int blockY)
 			type = kBlockType_Empty;
 		}
 
-		Sound("block-destroy.ogg").play();
+		gameSim.playSound("block-destroy.ogg");
 
 		ParticleSpawnInfo spawnInfo(
 			(blockX + .5f) * BLOCK_SX,
@@ -580,7 +580,7 @@ void Arena::tick(GameSim & gameSim)
 
 							if (data.regenTime == 0)
 							{
-								Sound("block-regen.ogg").play();
+								gameSim.playSound("block-regen.ogg");
 							}
 
 							block.type = kBlockType_DestructibleRegen;

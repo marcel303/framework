@@ -16,8 +16,27 @@ todo:
 
 ** HIGH PRIORITY **
 
+- zweihander sword guy
+	- slow attack
+	- special on ground:
+		- sword up, 2x movement speed, for max 5 seconds
+		- on release: stomp attack, sword gets stuck in ground
+		- 1 second recovery time
+	- special in air:
+		- stomp attack, sword gets stuck in ground
+		- 1 second recovery time
+
+- shield guy
+	- can block in 1 direction
+	- has charge that pushes and can flatten players against walls
+
+- axe guy
+	- can throw axe away, has to pick it up again
+
+- 1.25x speed pickup
+
 - fix up/down/dash animations
-- analog jump, accel over frames
++ analog jump, accel over frames
 
 - prototype pipe bomb
 	1 throw/1 explode
@@ -48,7 +67,9 @@ todo:
 - prototype grappling hook
 
 - add callstack gathering
-- add IP's to player names (visible on host)
++ add IP's to player names (visible on host)
+
+- check build ID
 
 - better attach to platform logic, so we can have movers closer to each other without the player bugging
 
@@ -103,7 +124,6 @@ todo:
 
 - blood particles
 - fill the level with lava
-- bee attack
 - earthquake. players go up on quake
 
 ** DONE **
@@ -671,10 +691,10 @@ void Player::playSecondaryEffects(PlayerEvent e)
 			break;
 		}
 	case kPlayerEvent_WallJump:
-		GAMESIM->playSound("player-wall-jump.ogg");
+		GAMESIM->playSound("player-wall-jump.ogg"); // player performs a walljump
 		break;
 	case kPlayerEvent_LandOnGround:
-		GAMESIM->playSound(makeCharacterFilename(m_characterIndex, "land_on_ground.ogg"), 50);
+		GAMESIM->playSound(makeCharacterFilename(m_characterIndex, "land_on_ground.ogg"), 50); // players lands on solid ground
 		break;
 	case kPlayerEvent_StickyAttach:
 		//GAMESIM->playSound("player-sticky-attach.ogg");
@@ -683,10 +703,10 @@ void Player::playSecondaryEffects(PlayerEvent e)
 		//GAMESIM->playSound("player-sticky-release.ogg");
 		break;
 	case kPlayerEvent_StickyJump:
-		GAMESIM->playSound("player-sticky-jump.ogg");
+		GAMESIM->playSound("player-sticky-jump.ogg"); // player jumps and releases itself from a sticky ceiling
 		break;
 	case kPlayerEvent_SpringJump:
-		GAMESIM->playSound("player-spring-jump.ogg");
+		GAMESIM->playSound("player-spring-jump.ogg"); // player walks over and activates a jump pad 
 		break;
 	case kPlayerEvent_SpikeHit:
 		//GAMESIM->playSound("player-spike-hit.ogg");
@@ -744,6 +764,8 @@ void Player::tick(float dt)
 		m_spriterState.animSpeed = 1e-10f;
 	else
 		m_spriterState.animSpeed = 1.f;
+
+	m_timeDilationAttack.tick(dt);
 
 	//
 
@@ -881,6 +903,9 @@ void Player::tick(float dt)
 			case kPickupType_Bubble:
 				pushWeapon(kPlayerWeapon_Bubble, PICKUP_BUBBLE_COUNT);
 				break;
+			case kPickupType_TimeDilation:
+				pushWeapon(kPlayerWeapon_TimeDilation, 1);
+				break;
 
 			default:
 				Assert(false);
@@ -949,7 +974,7 @@ void Player::tick(float dt)
 									players[j]->cancelAttack();
 								}
 
-								GAMESIM->playSound("melee-cancel.ogg");
+								GAMESIM->playSound("melee-cancel.ogg"); // sound when two melee attacks hit at the same time
 							}
 						}
 					}
@@ -1002,7 +1027,7 @@ void Player::tick(float dt)
 							m_isAnimDriven = true;
 							m_animVelIsAbsolute = true;
 
-							GAMESIM->playSound("rocketpunch-attack.ogg");
+							GAMESIM->playSound("rocketpunch-attack.ogg"); // sound that plays when the rocket jump attack enter the attack phase
 
 							logDebug("rocket punch: attack! speed = (%f, %f) max distance = %f", m_attack.m_rocketPunch.speed[0], m_attack.m_rocketPunch.speed[1], m_attack.m_rocketPunch.maxDistance);
 						}
@@ -1076,7 +1101,12 @@ void Player::tick(float dt)
 				else if (weaponType == kPlayerWeapon_Grenade)
 				{
 					bulletType = kBulletType_Grenade;
-					GAMESIM->playSound("grenade-throw.ogg");
+					GAMESIM->playSound("grenade-throw.ogg"); // player throws a grenade
+				}
+				else if (weaponType == kPlayerWeapon_TimeDilation)
+				{
+					m_timeDilationAttack.timeRemaining = PLAYER_EFFECT_TIMEDILATION_TIME;
+					GAMESIM->playSound("timedilation-activate.ogg"); // sound that occurs when the player activates the time dilation pickup
 				}
 
 				if (anim != kPlayerAnim_NULL)
@@ -1087,27 +1117,30 @@ void Player::tick(float dt)
 					m_attack.attacking = true;
 				}
 
-				// determine attack direction based on player input
+				if (bulletType != kBulletType_COUNT)
+				{
+					// determine attack direction based on player input
 
-				int angle;
+					int angle;
 
-				if (m_input.isDown(INPUT_BUTTON_UP))
-					angle = 256*1/4;
-				else if (m_input.isDown(INPUT_BUTTON_DOWN))
-					angle = 256*3/4;
-				else if (m_facing[0] < 0)
-					angle = 128;
-				else
-					angle = 0;
+					if (m_input.isDown(INPUT_BUTTON_UP))
+						angle = 256*1/4;
+					else if (m_input.isDown(INPUT_BUTTON_DOWN))
+						angle = 256*3/4;
+					else if (m_facing[0] < 0)
+						angle = 128;
+					else
+						angle = 0;
 
-				Assert(bulletType != kBulletType_COUNT);
-				GAMESIM->spawnBullet(
-					m_pos[0] + mirrorX(0.f),
-					m_pos[1] - mirrorY(44.f),
-					angle,
-					bulletType,
-					bulletEffect,
-					m_index);
+					Assert(bulletType != kBulletType_COUNT);
+					GAMESIM->spawnBullet(
+						m_pos[0] + mirrorX(0.f),
+						m_pos[1] - mirrorY(44.f),
+						angle,
+						bulletType,
+						bulletEffect,
+						m_index);
+				}
 			}
 
 			if (m_input.wentDown(INPUT_BUTTON_X) && isAnimOverrideAllowed(kPlayerAnim_Attack))
@@ -1526,13 +1559,33 @@ void Player::tick(float dt)
 		{
 			if (currentBlockMaskFloor & kBlockMask_Solid)
 			{
-				m_vel[1] = -PLAYER_JUMP_SPEED;
-
+				m_jump.jumpVelocityLeft = -PLAYER_JUMP_SPEED;
 				m_jump.cancelStarted = false;
 
 				playSecondaryEffects(kPlayerEvent_Jump);
 			}
 		}
+
+		// jumping : increment speed over time for soft jump
+
+		if (m_input.isDown(INPUT_BUTTON_A) && m_jump.jumpVelocityLeft != 0.f)
+		{
+			const float velPerSecond = PLAYER_JUMP_SPEED * TICKS_PER_SECOND / (float)PLAYER_JUMP_SPEED_FRAMES;
+			float delta = velPerSecond * Calc::Sign(m_jump.jumpVelocityLeft) * dt;
+			if (Calc::Abs(delta) > Calc::Abs(m_jump.jumpVelocityLeft))
+				delta = m_jump.jumpVelocityLeft;
+			m_vel[1] += delta;
+			m_jump.jumpVelocityLeft -= delta;
+		}
+		else
+		{
+			m_jump.jumpVelocityLeft = 0.f;
+		}
+
+		// update grounded state
+
+		//if (m_isGrounded && m_vel[1] < 0.f)
+		//	m_isGrounded = false;
 
 		// collision
 
@@ -1811,6 +1864,57 @@ void Player::tick(float dt)
 			}
 		}
 
+		// attempt to stay grounded
+
+		if (m_isGrounded)
+			m_vel[1] = 0.f;
+
+	#if 0
+		if (m_isGrounded && !(dirBlockMask[1] & kBlockMask_Solid))
+		{
+			const Vec2 min = m_pos + m_collision.min;
+			const Vec2 max = m_pos + m_collision.max + Vec2(0.f, 4.f);
+
+			CollisionShape playerShape;
+			playerShape.set(
+				Vec2(min[0], min[1]),
+				Vec2(max[0], min[1]),
+				Vec2(max[0], max[1]),
+				Vec2(min[0], max[1]));
+
+			GAMESIM->testCollision(
+				playerShape,
+				this,
+				[](const CollisionShape & shape, void * arg, PhysicsActor * actor, BlockAndDistance * blockAndDistance, Player * player)
+				{
+					Player * self = (Player*)arg;
+
+					if (blockAndDistance)
+					{
+						Block * block = blockAndDistance->block;
+
+						if ((1 << block->type) & kBlockMask_Solid)
+						{
+							CollisionShape blockShape = Arena::getBlockCollision(block->shape);
+							blockShape.translate(blockAndDistance->x * BLOCK_SX, blockAndDistance->y * BLOCK_SY);
+
+							float contactDistance;
+							Vec2 contactNormal;
+
+							if (shape.checkCollision(blockShape, Vec2(0.f, 1.f), contactDistance, contactNormal))
+							{
+								if (contactNormal[1] * contactDistance < 0.f)
+								{
+									self->m_pos[1] += 4.f + contactNormal[1] * contactDistance;
+									log("stay grounded!");
+								}
+							}
+						}
+					}
+				});
+		}
+	#endif
+
 		// surface type
 
 		const uint32_t blockMask = dirBlockMask[0] | dirBlockMask[1];
@@ -2076,7 +2180,7 @@ void Player::tick(float dt)
 		if (m_bubble.timer != 0.f)
 			m_isGrounded = false;
 	#if USE_NEW_COLLISION_CODE
-		else if (m_vel[1] >= 0.f && (dirBlockMask[1] & kBlockMask_Solid) != 0)
+		else if (m_dirBlockMaskDir[1] > 0 && (dirBlockMask[1] & kBlockMask_Solid) != 0)
 	#else
 		else if (m_vel[1] >= 0.f && (getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f) & kBlockMask_Solid) != 0)
 	#endif
@@ -2609,6 +2713,8 @@ void Player::respawn()
 
 		m_attack = AttackInfo();
 
+		m_timeDilationAttack = TimeDilationAttack();
+
 		m_blockMask = 0;
 
 		m_dirBlockMask[0] = 0;
@@ -2767,7 +2873,7 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 					token.m_vel.Set(velocity[0] * TOKEN_DROP_SPEED_MULTIPLIER, -800.f);
 					token.m_isDropped = true;
 					token.m_dropTimer = TOKEN_DROP_TIME;
-					GAMESIM->playSound("token-bounce.ogg");
+					GAMESIM->playSound("token-bounce.ogg"); // sound when the token is dropped
 				}
 			}
 
@@ -2870,7 +2976,7 @@ void Player::dropCoins(int numCoins)
 
 			coin->m_vel.Set(GAMESIM->RandomFloat(-COIN_DROP_SPEED, +COIN_DROP_SPEED), -COIN_DROP_SPEED);
 
-			GAMESIM->playSound("coin-bounce.ogg");
+			GAMESIM->playSound("coin-bounce.ogg"); // sound when a coin hits the ground and bounces
 		}
 	}
 }
@@ -2938,7 +3044,7 @@ void Player::beginRocketPunch()
 	setAnim(kPlayerAnim_RocketPunch_Charge, true, true);
 	m_isAnimDriven = true;
 
-	GAMESIM->playSound("rocketpunch-charge.ogg");
+	GAMESIM->playSound("rocketpunch-charge.ogg"); // charge at the start of the rocket punch attack
 }
 
 void Player::endRocketPunch(bool stunned)

@@ -48,7 +48,8 @@ static const char * s_pickupSprites[kPickupType_COUNT] =
 	"pickup-nade.png",
 	"pickup-shield.png",
 	"pickup-ice.png",
-	"pickup-bubble.png"
+	"pickup-bubble.png",
+	"pickup-time.png"
 };
 
 #define TOKEN_SPRITE "token.png"
@@ -140,7 +141,7 @@ void Pickup::draw() const
 
 	sprite.drawEx(m_pos[0] + m_bbMin[0], m_pos[1] + m_bbMin[1]);
 
-	if (true)
+	if (false)
 	{
 		// todo : remove
 		setFont("calibri.ttf");
@@ -428,6 +429,43 @@ bool Mover::intersects(CollisionInfo & collisionInfo) const
 	getCollisionInfo(myCollision);
 
 	return myCollision.intersects(collisionInfo);
+}
+
+//
+
+void PipeBomb::setup(Vec2Arg pos, Vec2Arg vel)
+{
+}
+
+void PipeBomb::tick(GameSim & gameSim, float dt)
+{
+}
+
+void PipeBomb::draw() const
+{
+}
+
+void PipeBomb::drawLight() const
+{
+}
+
+//
+
+void Barrel::setup(Vec2Arg pos)
+{
+}
+
+void Barrel::tick(GameSim & gameSim, float dt)
+{
+	// todo : check if we are hit by a player using melee, if > GFX_SY, disable
+}
+
+void Barrel::draw() const
+{
+}
+
+void Barrel::drawLight() const
+{
 }
 
 //
@@ -1268,36 +1306,24 @@ void GameSim::tickMenus()
 
 void GameSim::tickPlay()
 {
-	float timeDilation = 1.f;
+	float timeDilation;
 
-	if (m_gameState == kGameState_Play)
-	{
-		for (int i = 0; i < MAX_TIMEDILATION_EFFECTS; ++i)
-		{
-			if (m_timeDilationEffects[i].ticksRemaining != 0)
-			{
-				const float t = 1.f - (m_timeDilationEffects[i].ticksRemaining / float(m_timeDilationEffects[i].ticks));
-				const float multiplier = Calc::Lerp(m_timeDilationEffects[i].multiplier1, m_timeDilationEffects[i].multiplier2, t);
-				if (multiplier < timeDilation)
-					timeDilation = multiplier;
-				m_timeDilationEffects[i].ticksRemaining--;
-			}
-		}
-	}
-	else if (m_gameState == kGameState_RoundComplete)
-	{
-		const float t = 1.f - m_roundCompleteTimeDilationTicks / float(TICKS_PER_SECOND * GAMESTATE_COMPLETE_TIME_DILATION_TIMER);
-		timeDilation = Calc::Lerp(GAMESTATE_COMPLETE_TIME_DILATION_BEGIN, GAMESTATE_COMPLETE_TIME_DILATION_END, t);
-	}
+	getCurrentTimeDilation(timeDilation);
 
 	const float dt =
 		(1.f / TICKS_PER_SECOND) *
-		GAME_SPEED_MULTIPLIER *
 		timeDilation;
 
 	const uint32_t tick = GetTick();
 
+	// time dilation effects
+
+	for (int i = 0; i < MAX_TIMEDILATION_EFFECTS; ++i)
+		if (m_timeDilationEffects[i].ticksRemaining != 0)
+			m_timeDilationEffects[i].ticksRemaining--;
+
 	// arena update
+
 	m_arena.tick(*this);
 
 	// player update
@@ -1305,7 +1331,14 @@ void GameSim::tickPlay()
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
 		if (m_playerInstanceDatas[i])
-			m_playerInstanceDatas[i]->m_player->tick(dt);
+		{
+			float playerTimeMultiplier = 1.f;
+
+			if (m_players[i].m_timeDilationAttack.isActive())
+				playerTimeMultiplier /= PLAYER_EFFECT_TIMEDILATION_MULTIPLIER;
+
+			m_playerInstanceDatas[i]->m_player->tick(dt * playerTimeMultiplier);
+		}
 	}
 
 	// pickups
@@ -1341,7 +1374,8 @@ void GameSim::tickPlay()
 				PICKUP_NADE_WEIGHT,
 				PICKUP_SHIELD_WEIGHT,
 				PICKUP_ICE_WEIGHT,
-				PICKUP_BUBBLE_WEIGHT
+				PICKUP_BUBBLE_WEIGHT,
+				PICKUP_TIMEDILATION_WEIGHT
 			};
 
 			int totalWeight = 0;
@@ -1683,6 +1717,48 @@ void GameSim::anim(float dt)
 	m_particlePool->tick(*this, dt);
 }
 
+void GameSim::getCurrentTimeDilation(float & timeDilation) const
+{
+	timeDilation = 1.f;
+
+	bool playerAttackTimeDilation = false;
+
+	if (m_gameState == kGameState_Play || m_gameState == kGameState_RoundComplete)
+	{
+		float minMultiplier = 1.f;
+
+		for (int i = 0; i < MAX_TIMEDILATION_EFFECTS; ++i)
+		{
+			if (m_timeDilationEffects[i].ticksRemaining != 0)
+			{
+				const float t = 1.f - (m_timeDilationEffects[i].ticksRemaining / float(m_timeDilationEffects[i].ticks));
+				const float multiplier = Calc::Lerp(m_timeDilationEffects[i].multiplier1, m_timeDilationEffects[i].multiplier2, t);
+				if (multiplier < minMultiplier)
+					minMultiplier = multiplier;
+			}
+		}
+
+		timeDilation *= minMultiplier;
+
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+		{
+			if (m_players[i].m_isUsed && m_players[i].m_isAlive && m_players[i].m_timeDilationAttack.isActive())
+				playerAttackTimeDilation = true;
+		}
+
+		if (playerAttackTimeDilation && PLAYER_EFFECT_TIMEDILATION_ON_OTHERS)
+			timeDilation *= PLAYER_EFFECT_TIMEDILATION_MULTIPLIER;
+	}
+
+	if (m_gameState == kGameState_RoundComplete)
+	{
+		const float t = 1.f - m_roundCompleteTimeDilationTicks / float(TICKS_PER_SECOND * GAMESTATE_COMPLETE_TIME_DILATION_TIMER);
+		timeDilation *= Calc::Lerp(GAMESTATE_COMPLETE_TIME_DILATION_BEGIN, GAMESTATE_COMPLETE_TIME_DILATION_END, t);
+	}
+
+	timeDilation *= GAME_SPEED_MULTIPLIER;
+}
+
 void GameSim::playSound(const char * filename, int volume)
 {
 	if (g_noSound || !g_app->getSelectedClient() || g_app->getSelectedClient()->m_gameSim != this)
@@ -1715,6 +1791,18 @@ void GameSim::testCollision(const CollisionShape & shape, void * arg, CollisionC
 	}
 }
 
+template <typename T>
+void testCollision(T * objects, int numObjects, const CollisionShape & shape, void * arg, CollisionCB cb)
+{
+	for (int i = 0; i < numObjects; ++i)
+	{
+		if (objects[i].m_isActive)
+		{
+			objects[i].testCollision(shape, arg, cb);
+		}
+	}
+}
+
 void GameSim::testCollisionInternal(const CollisionShape & shape, void * arg, CollisionCB cb)
 {
 	// collide vs arena
@@ -1730,6 +1818,14 @@ void GameSim::testCollisionInternal(const CollisionShape & shape, void * arg, Co
 			m_players[i].testCollision(shape, arg, cb);
 		}
 	}
+
+	// pipe bombs
+
+	::testCollision(m_pipebombs, MAX_PIPEBOMBS, shape, arg, cb);
+
+	// barrels
+
+	::testCollision(m_barrels, MAX_BARRELS, shape, arg, cb);
 
 	// collide vs movers (?)
 
@@ -1805,7 +1901,7 @@ bool GameSim::grabPickup(int x1, int y1, int x2, int y2, Pickup & grabbedPickup)
 
 				pickup = Pickup();
 
-				playSound("gun-pickup.ogg");
+				playSound("gun-pickup.ogg"); // sound that plays when a player picks up a pickup. todo : different sounds per type
 
 				return true;
 			}
@@ -1846,7 +1942,7 @@ bool GameSim::pickupToken(const CollisionInfo & collisionInfo)
 		if (tokenCollision.intersects(collisionInfo))
 		{
 			token = Token();
-			g_gameSim->playSound("token-pickup.ogg");
+			g_gameSim->playSound("token-pickup.ogg"); // sound that plays when the token is picked up by a player
 
 			return true;
 		}
@@ -1906,7 +2002,7 @@ bool GameSim::pickupCoin(const CollisionInfo & collisionInfo)
 			if (coinCollision.intersects(collisionInfo))
 			{
 				coin = Coin();
-				g_gameSim->playSound("token-pickup.ogg");
+				g_gameSim->playSound("coin-pickup.ogg"); // sound that plays when a coin is picked up by a player
 
 				return true;
 			}

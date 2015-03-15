@@ -54,7 +54,7 @@ struct Player
 
 	void playSecondaryEffects(PlayerEvent e);
 
-	void testCollision(const CollisionShape & box, void * arg, CollisionCB cb);
+	void testCollision(const CollisionShape & shape, void * arg, CollisionCB cb);
 
 	bool getPlayerCollision(CollisionInfo & collision) const;
 	void getDamageHitbox(CollisionInfo & collision) const;
@@ -229,6 +229,23 @@ struct Player
 		} m_rocketPunch;
 	} m_attack;
 
+	struct TimeDilationAttack
+	{
+		bool isActive() const
+		{
+			return timeRemaining != 0.f;
+		}
+
+		void tick(float dt)
+		{
+			timeRemaining -= dt;
+			if (timeRemaining < 0.f)
+				timeRemaining = 0.f;
+		}
+
+		float timeRemaining;
+	} m_timeDilationAttack;
+
 	struct TeleportInfo
 	{
 		TeleportInfo()
@@ -250,6 +267,8 @@ struct Player
 		{
 			memset(this, 0, sizeof(JumpInfo));
 		}
+
+		float jumpVelocityLeft;
 
 		bool cancelStarted;
 		bool cancelled;
@@ -403,7 +422,21 @@ struct Mover
 	bool intersects(CollisionInfo & collisionInfo) const;
 };
 
-struct Barrel
+struct PipeBomb : PhysicsActor
+{
+	PipeBomb()
+	{
+		memset(this, 0, sizeof(PipeBomb));
+	}
+
+	void setup(Vec2Arg pos, Vec2Arg vel);
+
+	void tick(GameSim & gameSim, float dt);
+	void draw() const;
+	void drawLight() const;
+};
+
+struct Barrel : PhysicsActor
 {
 	bool m_isActive;
 	Vec2 m_pos;
@@ -414,11 +447,11 @@ struct Barrel
 		memset(this, 0, sizeof(Barrel));
 	}
 
-	void setup(int x, int y);
+	void setup(Vec2Arg pos);
 
-	void tick(GameSim & gameSim, float dt) { } // todo : check if we are hit by a player using melee, if > GFX_SY, disable
-	void draw() const { }
-	void drawLight() const { }
+	void tick(GameSim & gameSim, float dt);
+	void draw() const;
+	void drawLight() const;
 };
 
 struct Torch
@@ -668,6 +701,10 @@ struct GameStateData
 
 	Mover m_movers[MAX_MOVERS];
 
+	// pipe bombs
+
+	PipeBomb m_pipebombs[MAX_PIPEBOMBS];
+
 	// barrels
 
 	Barrel m_barrels[MAX_BARRELS];
@@ -767,6 +804,8 @@ public:
 	void tickPlay();
 	void tickRoundComplete();
 	void anim(float dt);
+
+	void getCurrentTimeDilation(float & timeDilation) const;
 
 	void playSound(const char * filename, int volume = 100);
 

@@ -1951,6 +1951,48 @@ bool Spriter::isAnimDoneAtTime(int animIndex, float time) const
 	return time >= getAnimLength(animIndex) / 1000.f;
 }
 
+bool Spriter::getHitboxAtTime(int animIndex, const char * name, float time, Vec2 * points)
+{
+	if (animIndex == -1)
+		return true;
+	fassert(!m_spriter->m_scene->m_entities.empty());
+	spriter::Hitbox hitbox;
+	if (!m_spriter->m_scene->m_entities[0]->getHitboxAtTime(animIndex, name, time * 1000.f, hitbox))
+		return false;
+
+	const float x1 = 0.f;
+	const float x2 = +hitbox.sx;
+	const float y1 = 0.f;
+	const float y2 = +hitbox.sy;
+
+	Vec3 p1(x1, y1, 0.f);
+	Vec3 p2(x2, y1, 0.f);
+	Vec3 p3(x2, y2, 0.f);
+	Vec3 p4(x1, y2, 0.f);
+
+	Mat4x4 matT;
+	Mat4x4 matR;
+	Mat4x4 matS;
+	
+	matT.MakeTranslation(hitbox.x, hitbox.y, 0.f);
+	matR.MakeRotationZ(-hitbox.angle / 180.f * M_PI);
+	matS.MakeScaling(hitbox.scaleX, hitbox.scaleY, 1.f);
+
+	Mat4x4 mat = matT * matR * matS;
+
+	p1 = mat * p1;
+	p2 = mat * p2;
+	p3 = mat * p3;
+	p4 = mat * p4;
+
+	points[0] = Vec2(p1[0], p1[1]);
+	points[1] = Vec2(p2[0], p2[1]);
+	points[2] = Vec2(p3[0], p3[1]);
+	points[3] = Vec2(p4[0], p4[1]);
+
+	return true;
+}
+
 // -----
 
 Sound::Sound(const char * filename)

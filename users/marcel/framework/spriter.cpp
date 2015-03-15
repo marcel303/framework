@@ -34,17 +34,6 @@ namespace spriter
 		kLoopType_NoLooping
 	};
 
-	enum ObjectType
-	{
-		kObjectType_Sprite,
-		kObjectType_Bone,
-		kObjectType_Box,
-		kObjectType_Point,
-		kObjectType_Sound,
-		kObjectType_Entity,
-		kObjectType_Variable
-	};
-
 	enum CurveType
 	{
 		kCurveType_Instant,
@@ -161,12 +150,14 @@ namespace spriter
 		class Ref
 		{
 		public:
+			int object;
 			int parent;
 			int timeline;
 			int key;
 
 			Ref()
-				: parent(-1)
+				: object(-1)
+				, parent(-1)
 				, timeline(0)
 				, key(0)
 			{
@@ -264,17 +255,17 @@ namespace spriter
 	{
 	public:
 		std::string name;
-		ObjectType objectType;
+		int object;
 		std::vector<TimelineKey*> keys;
 
 		Timeline()
-			: objectType(kObjectType_Sprite)
+			: object(-1)
 		{
 		}
 
 		Timeline(const Timeline & other)
 			: name(other.name)
-			, objectType(other.objectType)
+			, object(other.object)
 		{
 			keys.reserve(other.keys.size());
 			for (size_t i = 0; i < other.keys.size(); ++i)
@@ -366,6 +357,7 @@ namespace spriter
 	struct TransformedObjectKey
 	{
 		const SpriteTimelineKey * key;
+		const Object * object;
 		Transform transform;
 	};
 
@@ -384,7 +376,7 @@ namespace spriter
 		{
 		}
 
-		std::vector<TransformedObjectKey> getAnimationDataAtTime(float newTime) const
+		std::vector<TransformedObjectKey> getAnimationDataAtTime(const Entity * entity, float newTime) const
 		{
 			if (loopType == kLoopType_NoLooping)
 			{
@@ -425,7 +417,8 @@ namespace spriter
 				}
 
 				TransformedBoneKey transformedKey;
-				transformedKey.key = dynamic_cast<const BoneTimelineKey*>(keyFromRef(currentRef, newTime));
+				const Timeline * timeline;
+				transformedKey.key = dynamic_cast<const BoneTimelineKey*>(keyFromRef(currentRef, newTime, timeline));
 				Assert(transformedKey.key);
 				transformedKey.key->transform.multiply(parentTransform, transformedKey.transform);
 				transformedBoneKeys.push_back(transformedKey);
@@ -437,9 +430,9 @@ namespace spriter
 
 			for (size_t o = 0; o < mainKey.objectRefs.size(); ++o)
 			{
-				Transform parentTransform;
-
 				const auto & currentRef = mainKey.objectRefs[o];
+
+				Transform parentTransform;
 
 				if (currentRef.parent >= 0)
 				{
@@ -451,9 +444,17 @@ namespace spriter
 				}
 
 				TransformedObjectKey transformedKey;
-				transformedKey.key = dynamic_cast<const SpriteTimelineKey*>(keyFromRef(currentRef, newTime));
+				const Timeline * timeline;
+				transformedKey.key = dynamic_cast<const SpriteTimelineKey*>(keyFromRef(currentRef, newTime, timeline));
 				Assert(transformedKey.key);
 				transformedKey.key->transform.multiply(parentTransform, transformedKey.transform);
+
+				const int objectIndex = timeline->object;
+				if (objectIndex >= 0 && objectIndex < entity->m_objects.size())
+					transformedKey.object = &entity->m_objects[objectIndex];
+				else
+					transformedKey.object = 0;
+
 				objectKeys.push_back(transformedKey);
 			}
 
@@ -483,15 +484,15 @@ namespace spriter
 			return mainlineKeys[currentMainKey];
 		}
 
-		const TimelineKey * keyFromRef(const MainlineKey::Ref & ref, float newTime) const
+		const TimelineKey * keyFromRef(const MainlineKey::Ref & ref, float newTime, const Timeline *& timeline) const
 		{
 			Assert(ref.timeline < (int)timelines.size());
-			const Timeline & timeline = timelines[ref.timeline];
+			timeline = &timelines[ref.timeline];
 
-			Assert(ref.key < (int)timeline.keys.size());
-			const TimelineKey * keyA = timeline.keys[ref.key];
+			Assert(ref.key < (int)timeline->keys.size());
+			const TimelineKey * keyA = timeline->keys[ref.key];
 
-			if (timeline.keys.size() == 1)
+			if (timeline->keys.size() == 1)
 			{
 				keyA->AddRef();
 				return keyA;
@@ -499,7 +500,7 @@ namespace spriter
 
 			size_t nextKeyIndex = ref.key + 1;
 
-			if (nextKeyIndex >= timeline.keys.size())
+			if (nextKeyIndex >= timeline->keys.size())
 			{
 				if (loopType == kLoopType_Looping)
 				{
@@ -512,7 +513,7 @@ namespace spriter
 				}
 			}
 
-			const TimelineKey * keyB = timeline.keys[nextKeyIndex];
+			const TimelineKey * keyB = timeline->keys[nextKeyIndex];
 			int keyBTime = keyB->time;
 
 			if (keyBTime < keyA->time)
@@ -672,13 +673,16 @@ namespace spriter
 
 		const Animation * animation = m_animations[animIndex];
 
-		std::vector<TransformedObjectKey> keys = animation->getAnimationDataAtTime(time);
+		std::vector<TransformedObjectKey> keys = animation->getAnimationDataAtTime(this, time);
 
-		numDrawables = std::min(numDrawables, (int)keys.size());
+		int outNumDrawables = 0;
 
-		for (int k = 0; k < numDrawables; ++k)
+		for (size_t k = 0; k < keys.size() && outNumDrawables < numDrawables; ++k)
 		{
 			const TransformedObjectKey & o = keys[k];
+
+			if (o.object && o.object->type != kObjectType_Sprite)
+				continue;
 
 			const Transform & tf = o.transform;
 
@@ -687,7 +691,7 @@ namespace spriter
 			ff.second = o.key->file;
 			const File & file = m_scene->m_fileCache->files[ff];
 
-			Drawable & drawable = drawables[k];
+			Drawable & drawable = drawables[outNumDrawables++];
 
 			drawable.filename = file.name.c_str();
 			drawable.x = tf.x;
@@ -701,6 +705,48 @@ namespace spriter
 
 			o.key->Release();
 		}
+
+		numDrawables = outNumDrawables;
+	}
+
+	bool Entity::getHitboxAtTime(int animIndex, const char * name, float time, Hitbox & hitbox) const
+	{
+		if (animIndex < 0)
+		{
+			return false;
+		}
+
+		const Animation * animation = m_animations[animIndex];
+
+		std::vector<TransformedObjectKey> keys = animation->getAnimationDataAtTime(this, time);
+
+		bool result = false;
+
+		for (size_t k = 0; k < keys.size(); ++k)
+		{
+			const TransformedObjectKey & o = keys[k];
+
+			if (o.object && o.object->type == kObjectType_Box && o.object->name == name)
+			{
+				const Transform & tf = o.transform;
+
+				hitbox.sx = o.object->sx;
+				hitbox.sy = o.object->sy;
+				hitbox.x = tf.x;
+				hitbox.y = -tf.y;
+				hitbox.angle = -tf.angle;
+				hitbox.scaleX = tf.scaleX;
+				hitbox.scaleY = tf.scaleY;
+				hitbox.pivotX = (o.key->useDefaultPivot ? o.object->pivotX : o.key->pivotX) * o.object->sx;
+				hitbox.pivotY = (1.f - (o.key->useDefaultPivot ? o.object->pivotY : o.key->pivotY)) * o.object->sx;
+
+				result = true;
+			}
+
+			o.key->Release();
+		}
+
+		return result;
 	}
 
 	//
@@ -796,6 +842,29 @@ namespace spriter
 					//     <map>
 					//     folder, file, target_folder, target_file
 
+					for (const XMLElement * xmlObjectInfo = xmlEntity->FirstChildElement("obj_info"); xmlObjectInfo; xmlObjectInfo = xmlObjectInfo->NextSiblingElement("obj_info"))
+					{
+						// name, type, w, h, pivot_x, pivot_y
+
+						Object object;
+
+						object.name = stringAttrib(xmlObjectInfo, "name", "");
+
+						const std::string type = stringAttrib(xmlObjectInfo, "type", "sprite");
+
+						if (type == "bone")
+							object.type = kObjectType_Bone;
+						if (type == "box")
+							object.type = kObjectType_Box;
+
+						object.sx = floatAttrib(xmlObjectInfo, "w", 0.f);
+						object.sy = floatAttrib(xmlObjectInfo, "h", 0.f);
+						object.pivotX = floatAttrib(xmlObjectInfo, "pivot_x", 0.f);
+						object.pivotY = floatAttrib(xmlObjectInfo, "pivot_y", 0.f);
+
+						entity->m_objects.push_back(object);
+					}
+
 					for (const XMLElement * xmlAnimation = xmlEntity->FirstChildElement("animation"); xmlAnimation; xmlAnimation = xmlAnimation->NextSiblingElement("animation"))
 					{
 						// id, name, length, looping
@@ -823,6 +892,7 @@ namespace spriter
 									// id, parent, timeline, key
 
 									MainlineKey::Ref ref;
+									ref.object = intAttrib(xmlObjectRef, "id", -1);
 									if (xmlObjectRef->QueryIntAttribute("parent", &ref.parent) != XML_NO_ERROR)
 										ref.parent = -1;
 									ref.timeline = xmlObjectRef->IntAttribute("timeline");
@@ -855,10 +925,7 @@ namespace spriter
 							Timeline timeline;
 
 							timeline.name = stringAttrib(xmlTimeline, "name", "");
-
-							const std::string type = stringAttrib(xmlTimeline, "type", "");
-							if (type == "sprite")
-								timeline.objectType = kObjectType_Sprite;
+							timeline.object = intAttrib(xmlTimeline, "obj", -1);
 
 							for (const XMLElement * xmlKey = xmlTimeline->FirstChildElement(); xmlKey; xmlKey = xmlKey->NextSiblingElement())
 							{

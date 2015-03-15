@@ -22,6 +22,42 @@ namespace spriter
 		float a;
 	};
 
+	struct Hitbox
+	{
+		float sx;
+		float sy;
+
+		float x;
+		float y;
+		float angle;
+		float scaleX;
+		float scaleY;
+		float pivotX;
+		float pivotY;
+	};
+
+	enum ObjectType
+	{
+		kObjectType_Sprite,
+		kObjectType_Bone,
+		kObjectType_Box,
+		kObjectType_Point,
+		kObjectType_Sound,
+		kObjectType_Entity,
+		kObjectType_Variable
+	};
+
+	class Object
+	{
+	public:
+		std::string name;
+		ObjectType type;
+		float sx;
+		float sy;
+		float pivotX;
+		float pivotY;
+	};
+
 	class Entity
 	{
 	public:
@@ -32,9 +68,11 @@ namespace spriter
 		int getAnimLength(int index) const;
 		bool isAnimLooped(int index) const;
 		void getDrawableListAtTime(int animIndex, float time, Drawable * drawables, int & numDrawables) const;
+		bool getHitboxAtTime(int animIndex, const char * name, float time, Hitbox & hitbox) const;
 
 		Scene * m_scene;
 		std::string m_name;
+		std::vector<Object> m_objects;
 		std::vector<Animation*> m_animations;
 	};
 
