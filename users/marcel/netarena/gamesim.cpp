@@ -1413,8 +1413,8 @@ void GameSim::tickPlay()
 		{
 			m_timeUntilNextLevelEvent = 30.f;
 
-			const LevelEvent e = getRandomLevelEvent();
-			//const LevelEvent e = kLevelEvent_SpikeWalls;
+			//const LevelEvent e = getRandomLevelEvent();
+			const LevelEvent e = kLevelEvent_SpikeWalls;
 			//const LevelEvent e = kLevelEvent_GravityWell;
 			//const LevelEvent e = kLevelEvent_EarthQuake;
 

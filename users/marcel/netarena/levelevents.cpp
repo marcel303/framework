@@ -99,7 +99,7 @@ void LevelEvent_EarthQuake::tick(GameSim & gameSim, float dt)
 
 CollisionBox LevelEvent_SpikeWalls::getWallCollision(int side, float move) const
 {
-	const float sx = GFX_SX/5.f;
+	const float sx = GFX_SX * SPIKEWALLS_COVERAGE / 100 / 2;
 
 	CollisionBox box;
 	box.min = Vec2(0.f, 0.f);
@@ -195,6 +195,25 @@ void LevelEvent_SpikeWalls::tick(GameSim & gameSim, float dt)
 		}
 		break;
 	}
+
+	if (m_state != kState_Idle)
+	{
+		int numPlayersAlive = 0;
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+			if (gameSim.m_players[i].m_isUsed && gameSim.m_players[i].m_isAlive)
+				numPlayersAlive++;
+
+		if (numPlayersAlive <= 1)
+		{
+			if (m_state == kState_Warn)
+				m_state = kState_Idle;
+			else if (m_state == kState_Closed)
+			{
+				m_state = kState_Open;
+				m_time = 0.f;
+			}
+		}
+	}
 }
 
 void LevelEvent_SpikeWalls::doCollision(GameSim & gameSim, const CollisionBox & box, int dir)
@@ -228,7 +247,7 @@ void LevelEvent_SpikeWalls::doCollision(GameSim & gameSim)
 
 void LevelEvent_SpikeWalls::draw() const
 {
-	const Color colorWall(127, 127, 127);
+	const Color colorWall(127, 0, 0, 127);
 
 	for (int i = 0; i < 2; ++i)
 	{
