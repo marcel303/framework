@@ -1307,8 +1307,9 @@ void GameSim::tickMenus()
 void GameSim::tickPlay()
 {
 	float timeDilation;
+	bool playerAttackTimeDilation;
 
-	getCurrentTimeDilation(timeDilation);
+	getCurrentTimeDilation(timeDilation, playerAttackTimeDilation);
 
 	const float dt =
 		(1.f / TICKS_PER_SECOND) *
@@ -1334,7 +1335,7 @@ void GameSim::tickPlay()
 		{
 			float playerTimeMultiplier = 1.f;
 
-			if (m_players[i].m_timeDilationAttack.isActive())
+			if (playerAttackTimeDilation && (m_players[i].m_timeDilationAttack.isActive() || (m_players[i].m_attack.attacking && m_players[i].m_attack.allowCancelTimeDilationAttack)))
 				playerTimeMultiplier /= PLAYER_EFFECT_TIMEDILATION_MULTIPLIER;
 
 			m_playerInstanceDatas[i]->m_player->tick(dt * playerTimeMultiplier);
@@ -1717,11 +1718,11 @@ void GameSim::anim(float dt)
 	m_particlePool->tick(*this, dt);
 }
 
-void GameSim::getCurrentTimeDilation(float & timeDilation) const
+void GameSim::getCurrentTimeDilation(float & timeDilation, bool & playerAttackTimeDilation) const
 {
 	timeDilation = 1.f;
 
-	bool playerAttackTimeDilation = false;
+	playerAttackTimeDilation = false;
 
 	if (m_gameState == kGameState_Play || m_gameState == kGameState_RoundComplete)
 	{

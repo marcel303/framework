@@ -1464,7 +1464,8 @@ void App::draw()
 				client->debugDraw();
 
 				float timeDilation;
-				client->m_gameSim->getCurrentTimeDilation(timeDilation);
+				bool playerAttackTimeDilation;
+				client->m_gameSim->getCurrentTimeDilation(timeDilation, playerAttackTimeDilation);
 
 				setColor(255, 255, 255);
 				Font font("calibri.ttf");

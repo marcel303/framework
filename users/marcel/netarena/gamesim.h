@@ -204,6 +204,7 @@ struct Player
 		CollisionInfo collision;
 		Vec2 attackVel;
 		float cooldown; // this timer needs to hit zero before the player can attack again. it's decremented AFTER the attack animation has finished
+		bool allowCancelTimeDilationAttack;
 
 		struct RocketPunch
 		{
@@ -805,7 +806,7 @@ public:
 	void tickRoundComplete();
 	void anim(float dt);
 
-	void getCurrentTimeDilation(float & timeDilation) const;
+	void getCurrentTimeDilation(float & timeDilation, bool & playerAttackTimeDilation) const;
 
 	void playSound(const char * filename, int volume = 100);
 

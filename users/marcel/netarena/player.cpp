@@ -16,6 +16,8 @@ todo:
 
 ** HIGH PRIORITY **
 
+- melee weapon kinetic energy / character data property
+
 - zweihander sword guy
 	- slow attack
 	- special on ground:
@@ -32,8 +34,6 @@ todo:
 
 - axe guy
 	- can throw axe away, has to pick it up again
-
-- 1.25x speed pickup
 
 - fix up/down/dash animations
 + analog jump, accel over frames
@@ -1105,6 +1105,16 @@ void Player::tick(float dt)
 				}
 				else if (weaponType == kPlayerWeapon_TimeDilation)
 				{
+					// update allowCancelTimeDilationAttack flag on players
+					bool wasActive = false;
+					for (int i = 0; i < MAX_PLAYERS; ++i)
+						if (GAMESIM->m_players[i].m_isUsed && GAMESIM->m_players[i].m_isAlive && GAMESIM->m_players[i].m_timeDilationAttack.isActive())
+								wasActive = true;
+					if (!wasActive)
+						for (int i = 0; i < MAX_PLAYERS; ++i)
+							if (GAMESIM->m_players[i].m_isUsed && GAMESIM->m_players[i].m_isAlive && GAMESIM->m_players[i].m_attack.attacking)
+								GAMESIM->m_players[i].m_attack.allowCancelTimeDilationAttack = true;
+
 					m_timeDilationAttack.timeRemaining = PLAYER_EFFECT_TIMEDILATION_TIME;
 					GAMESIM->playSound("timedilation-activate.ogg"); // sound that occurs when the player activates the time dilation pickup
 				}
