@@ -28,6 +28,8 @@
 #include "textfield.h"
 #include "Timer.h"
 
+#include "spriter.h"
+
 //
 
 OPTION_DECLARE(bool, g_devMode, false);
@@ -105,7 +107,10 @@ static void HandleAction(const std::string & action, const Dictionary & args)
 
 		if (!address.empty())
 		{
-			g_app->connect(address.c_str());
+			g_connect = address;
+			g_connectLocal = false;
+
+			g_app->findGame();
 		}
 	}
 
@@ -560,7 +565,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 				if (!isInSync)
 				{
 					if (!client->m_isDesync)
-						Sound("desync.ogg").play();
+						client->m_gameSim->playSound("desync.ogg");
 					client->m_isDesync = true;
 				}
 
@@ -1458,10 +1463,13 @@ void App::draw()
 			{
 				client->debugDraw();
 
+				float timeDilation;
+				client->m_gameSim->getCurrentTimeDilation(timeDilation);
+
 				setColor(255, 255, 255);
 				Font font("calibri.ttf");
 				setFont(font);
-				drawText(5, GFX_SY - 25, 20, +1.f, -1.f, "viewing client %d", m_selectedClient);
+				drawText(5, GFX_SY - 25, 20, +1.f, -1.f, "viewing client %d. time dilation %01.2f", m_selectedClient, timeDilation);
 			}
 		}
 
@@ -1980,15 +1988,22 @@ int main(int argc, char * argv[])
 	else
 	{
 	#if 0
-		Spriter spriter("../../ArtistCave/JoyceTestcharacter/TestCharacter_Spriter/Testcharacter.scml");
+		Spriter spriter("../../ArtistCave/JoyceTestcharacter/char0(Sword)/sprite/Sprite.scml");
 
 		const int animIndex = 0;
 		const float animLength = spriter.getAnimLength(animIndex);
+		SpriterState state;
+		state.x = GFX_SX/2;
+		state.y = GFX_SY/2;
 
-		for (int a = 0; a < 3; ++a)
+		for (int a = 0; a < 300; ++a)
 		{
+			state.startAnim(spriter, "Attack");
+
 			for (float t = 0.f; t < animLength; t += 10.f)
 			{
+				state.updateAnim(spriter, 1.f/60.f);
+
 				framework.process();
 
 				framework.beginDraw(0, 7, 15, 0);
@@ -1998,7 +2013,35 @@ int main(int argc, char * argv[])
 					drawLine(GFX_SX/2, 0, GFX_SX/2, GFX_SY);
 
 					setColor(colorWhite);
-					spriter.draw(animIndex, t, GFX_SX/2, GFX_SY/2);
+					spriter.draw(state);
+
+					Vec2 points[4];
+
+					if (spriter.getHitboxAtTime(
+						state.animIndex,
+						"box_001",
+						state.animTime,
+						points))
+					{
+						CollisionShape shape;
+						shape.set(
+							points[0],
+							points[1],
+							points[2],
+							points[3]);
+
+						for (int p = 0; p < shape.numPoints; ++p)
+						{
+							const int p1 = (p + 0) % shape.numPoints;
+							const int p2 = (p + 1) % shape.numPoints;
+
+							drawLine(
+								state.x + shape.points[p1][0],
+								state.y + shape.points[p1][1],
+								state.x + shape.points[p2][0],
+								state.y + shape.points[p2][1]);
+						}
+					}
 				}
 				framework.endDraw();
 			}

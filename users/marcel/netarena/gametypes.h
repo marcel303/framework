@@ -38,6 +38,13 @@ enum GameMode
 	kGameMode_COUNT
 };
 
+enum ObjectType
+{
+	kObjectType_Undefined,
+	kObjectType_PipeBomb,
+	kObjectType_COUNT
+};
+
 extern const char * g_gameModeNames[kGameMode_COUNT];
 
 enum PlayerAnim
@@ -68,6 +75,7 @@ enum PlayerWeapon
 	kPlayerWeapon_Ice,
 	kPlayerWeapon_Bubble,
 	kPlayerWeapon_Grenade,
+	kPlayerWeapon_TimeDilation,
 	kPlayerWeapon_COUNT
 };
 
@@ -136,6 +144,7 @@ enum PickupType
 	kPickupType_Shield,
 	kPickupType_Ice,
 	kPickupType_Bubble,
+	kPickupType_TimeDilation,
 	kPickupType_COUNT
 };
 
@@ -210,6 +219,15 @@ struct CollisionShape
 		//memset(this, 0, sizeof(*this));
 
 		*this = box;
+	}
+
+	CollisionShape(Vec2Arg min, Vec2Arg max)
+	{
+		set(
+			Vec2(min[0], min[1]),
+			Vec2(max[0], min[1]),
+			Vec2(max[0], max[1]),
+			Vec2(min[0], max[1]));
 	}
 
 	void setEmpty()
