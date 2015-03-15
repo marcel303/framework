@@ -22,6 +22,10 @@ struct LevelEvent_EarthQuake
 {
 	LevelEventTimer endTimer;
 	LevelEventTimer quakeTimer;
+
+	void start();
+	void nextQuake();
+	void tick(GameSim & gameSim, float dt);
 };
 
 // a gravity well appears. players get sucked into it and get concentrated into a smaller area
@@ -56,18 +60,13 @@ struct LevelEvent_TimeDilation
 // note : disable respawning while effect is active to avoid respawning in wall?
 struct LevelEvent_SpikeWalls
 {
-	static const int SPIKEWALLS_TIME_PREVIEW = 2;
-	static const int SPIKEWALLS_TIME_CLOSE = 6;
-	static const int SPIKEWALLS_TIME_CLOSED = 6;
-	static const int SPIKEWALLS_TIME_OPEN = 4;
-
 	enum State
 	{
 		kState_Idle,
 		kState_Warn,
 		kState_Close,
 		kState_Closed,
-		kState_Open,
+		kState_Open
 	};
 
 	CollisionBox getWallCollision(int side, float move) const;

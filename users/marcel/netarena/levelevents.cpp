@@ -1,3 +1,4 @@
+#include "Calc.h"
 #include "framework.h"
 #include "gamesim.h"
 #include "levelevents.h"
@@ -52,6 +53,46 @@ void LevelEventTimer::operator=(float time)
 	Assert(time >= 0.f);
 	m_duration = time;
 	m_time = 0.f;
+}
+
+//
+
+void LevelEvent_EarthQuake::start()
+{
+	endTimer = EVENT_EARTHQUAKE_DURATION;
+
+	nextQuake();
+}
+
+void LevelEvent_EarthQuake::nextQuake()
+{
+	quakeTimer = EVENT_EARTHQUAKE_INTERVAL + Calc::Random(EVENT_EARTHQUAKE_INTERVAL_RAND);
+}
+
+void LevelEvent_EarthQuake::tick(GameSim & gameSim, float dt)
+{
+	if (endTimer.tickActive(dt))
+	{
+		if (quakeTimer.tickComplete(dt))
+		{
+			nextQuake();
+
+			// trigger quake
+
+			gameSim.addScreenShake(0.f, 25.f, 1000.f, .3f);
+
+			for (int i = 0; i < MAX_PLAYERS; ++i)
+			{
+				Player & player = gameSim.m_players[i];
+
+				if (!player.m_isUsed && player.m_isAlive)
+					continue;
+
+				if (player.m_isGrounded)
+					player.m_vel[1] = Calc::Sign(player.m_facing[1]) * EVENT_EARTHQUAKE_PLAYER_BOOST;
+			}
+		}
+	}
 }
 
 //
@@ -169,7 +210,7 @@ void LevelEvent_SpikeWalls::doCollision(GameSim & gameSim, const CollisionBox & 
 			{
 				if (playerCollision.intersects(box))
 				{
-					player.handleDamage(1.f, Vec2(dir, 0.f), 0);
+					player.handleDamage(1.f, Vec2(dir * PLAYER_SWORD_PUSH_SPEED /* todo : speed */, 0.f), 0);
 				}
 			}
 		}

@@ -558,7 +558,7 @@ void FloorEffect::tick(GameSim & gameSim, float dt)
 						{
 							if (collisionInfo.intersects(playerCollision))
 							{
-								player.handleDamage(1.f, Vec2(m_tiles[i].dx, -1.f), &gameSim.m_players[m_tiles[i].playerId]);
+								player.handleDamage(1.f, Vec2(m_tiles[i].dx * PLAYER_SWORD_PUSH_SPEED/10.f /* todo : speed */, -1.f), &gameSim.m_players[m_tiles[i].playerId]);
 							}
 						}
 					}
@@ -1413,8 +1413,8 @@ void GameSim::tickPlay()
 		{
 			m_timeUntilNextLevelEvent = 30.f;
 
-			//const LevelEvent e = getRandomLevelEvent();
-			const LevelEvent e = kLevelEvent_SpikeWalls;
+			const LevelEvent e = getRandomLevelEvent();
+			//const LevelEvent e = kLevelEvent_SpikeWalls;
 			//const LevelEvent e = kLevelEvent_GravityWell;
 			//const LevelEvent e = kLevelEvent_EarthQuake;
 
@@ -1424,8 +1424,7 @@ void GameSim::tickPlay()
 			{
 			case kLevelEvent_EarthQuake:
 				memset(&m_levelEvents.quake, 0, sizeof(m_levelEvents.quake));
-				m_levelEvents.quake.endTimer = 3.f;
-				m_levelEvents.quake.quakeTimer = 1.f; // todo
+				m_levelEvents.quake.start();
 				name = "Earthquake";
 				break;
 
@@ -1440,7 +1439,7 @@ void GameSim::tickPlay()
 			case kLevelEvent_DestroyBlocks:
 				memset(&m_levelEvents.destroyBlocks, 0, sizeof(m_levelEvents.destroyBlocks));
 				m_levelEvents.destroyBlocks.m_remainingBlockCount = 0;
-				name = "Block Destruction";
+				name = "Block Destruction (not yet implemented)";
 				break;
 
 			case kLevelEvent_TimeDilation:
@@ -1459,20 +1458,20 @@ void GameSim::tickPlay()
 			case kLevelEvent_Wind:
 				memset(&m_levelEvents.wind, 0, sizeof(m_levelEvents.wind));
 				m_levelEvents.wind.endTimer = 3.f;
-				name = "Wind";
+				name = "Wind (not yet implemented)";
 				break;
 
 			case kLevelEvent_BarrelDrop:
 				memset(&m_levelEvents.barrelDrop, 0, sizeof(m_levelEvents.barrelDrop));
 				m_levelEvents.barrelDrop.endTimer = 3.f;
 				m_levelEvents.barrelDrop.spawnTimer = 1.f;
-				name = "Barrel Drop";
+				name = "Barrel Drop (not yet implemented)";
 				break;
 
 			case kLevelEvent_NightDayCycle:
 				memset(&m_levelEvents.nightDayCycle, 0, sizeof(m_levelEvents.nightDayCycle));
 				m_levelEvents.nightDayCycle.endTimer = 3.f;
-				name = "Day/Night Cycle";
+				name = "Day/Night Cycle (not yet implemented)";
 				break;
 			}
 
@@ -1480,28 +1479,7 @@ void GameSim::tickPlay()
 		}
 	}
 
-	if (m_levelEvents.quake.endTimer.tickActive(dt))
-	{
-		if (m_levelEvents.quake.quakeTimer.tickComplete(dt))
-		{
-			m_levelEvents.quake.quakeTimer = 1.f; // todo
-
-			// trigger quake
-
-			addScreenShake(0.f, 25.f, 1000.f, .3f);
-
-			for (int i = 0; i < MAX_PLAYERS; ++i)
-			{
-				Player & player = m_players[i];
-
-				if (!player.m_isUsed && player.m_isAlive)
-					continue;
-
-				if (player.m_isGrounded)
-					player.m_vel[1] = -Calc::Sign(player.m_facing[1]) * 350.f;
-			}
-		}
-	}
+	m_levelEvents.quake.tick(*this, dt);
 
 	if (m_levelEvents.gravityWell.endTimer.tickActive(dt))
 	{

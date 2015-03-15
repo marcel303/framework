@@ -13,6 +13,23 @@ OPTION_DEFINE(bool, PROTO_ENABLE_LEVEL_EVENTS, "Experimental/Enable Level Events
 OPTION_DEFINE(float, EVENT_GRAVITYWELL_STRENGTH_BEGIN, "Experimental/Gravity Well/Strength (Begin)");
 OPTION_DEFINE(float, EVENT_GRAVITYWELL_STRENGTH_END, "Experimental/Gravity Well/Strength (End)");
 OPTION_DEFINE(float, EVENT_GRAVITYWELL_DURATION, "Experimental/Gravity Well/Duration");
+
+OPTION_DEFINE(float, EVENT_EARTHQUAKE_DURATION, "Level Events/Earth Quake/Duration");
+OPTION_DEFINE(float, EVENT_EARTHQUAKE_INTERVAL, "Level Events/Earth Quake/Interval (Seconds)");
+OPTION_DEFINE(float, EVENT_EARTHQUAKE_INTERVAL_RAND, "Level Events/Earth Quake/Interval Variance (Seconds)");
+OPTION_DEFINE(float, EVENT_EARTHQUAKE_PLAYER_BOOST, "Level Events/Earth Quake/Player Boost Speed");
+OPTION_STEP(EVENT_EARTHQUAKE_INTERVAL, 0, 0, .1f);
+OPTION_STEP(EVENT_EARTHQUAKE_INTERVAL_RAND, 0, 0, .1f);
+OPTION_STEP(EVENT_EARTHQUAKE_PLAYER_BOOST, 0, 0, 10.f);
+
+OPTION_DEFINE(float, SPIKEWALLS_TIME_PREVIEW, "Level Events/Spike Walls/Warning Time");
+OPTION_DEFINE(float, SPIKEWALLS_TIME_CLOSE, "Level Events/Spike Walls/Closing Time");
+OPTION_DEFINE(float, SPIKEWALLS_TIME_CLOSED, "Level Events/Spike Walls/Closed Time");
+OPTION_DEFINE(float, SPIKEWALLS_TIME_OPEN, "Level Events/Spike Walls/Open Time");
+OPTION_STEP(SPIKEWALLS_TIME_PREVIEW, 0, 0, .1f);
+OPTION_STEP(SPIKEWALLS_TIME_CLOSE, 0, 0, .1f);
+OPTION_STEP(SPIKEWALLS_TIME_CLOSED, 0, 0, .1f);
+OPTION_STEP(SPIKEWALLS_TIME_OPEN, 0, 0, .1f);
 // -- prototypes --
 
 OPTION_DEFINE(int, GAMESTATE_COMPLETE_TIMER, "Menus/Results Screen Time");
