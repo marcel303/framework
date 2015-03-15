@@ -1112,12 +1112,15 @@ void Player::tick(float dt)
 						if (GAMESIM->m_players[i].m_isUsed && GAMESIM->m_players[i].m_isAlive && GAMESIM->m_players[i].m_timeDilationAttack.isActive())
 								wasActive = true;
 					if (!wasActive)
+					{
 						for (int i = 0; i < MAX_PLAYERS; ++i)
 							if (GAMESIM->m_players[i].m_isUsed && GAMESIM->m_players[i].m_isAlive && GAMESIM->m_players[i].m_attack.attacking)
 								GAMESIM->m_players[i].m_attack.allowCancelTimeDilationAttack = true;
+					}
 
 					m_timeDilationAttack.timeRemaining = PLAYER_EFFECT_TIMEDILATION_TIME;
 					GAMESIM->playSound("timedilation-activate.ogg"); // sound that occurs when the player activates the time dilation pickup
+					GAMESIM->addAnnouncement("'%s' activated time dilation!", m_displayName.c_str());
 				}
 
 				if (anim != kPlayerAnim_NULL)
