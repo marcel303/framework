@@ -16,8 +16,27 @@ todo:
 
 ** HIGH PRIORITY **
 
+- zweihander sword guy
+	- slow attack
+	- special on ground:
+		- sword up, 2x movement speed, for max 5 seconds
+		- on release: stomp attack, sword gets stuck in ground
+		- 1 second recovery time
+	- special in air:
+		- stomp attack, sword gets stuck in ground
+		- 1 second recovery time
+
+- shield guy
+	- can block in 1 direction
+	- has charge that pushes and can flatten players against walls
+
+- axe guy
+	- can throw axe away, has to pick it up again
+
+- 1.25x speed pickup
+
 - fix up/down/dash animations
-- analog jump, accel over frames
++ analog jump, accel over frames
 
 - prototype pipe bomb
 	1 throw/1 explode
@@ -49,6 +68,8 @@ todo:
 
 - add callstack gathering
 + add IP's to player names (visible on host)
+
+- check build ID
 
 - better attach to platform logic, so we can have movers closer to each other without the player bugging
 
@@ -103,7 +124,6 @@ todo:
 
 - blood particles
 - fill the level with lava
-- bee attack
 - earthquake. players go up on quake
 
 ** DONE **
