@@ -5,10 +5,8 @@
 enum EditorMode
 {
 	EM_Level,
-	EM_Object,
 	EM_Template,
 };
-
 
 class EditorScene;
 class TemplateScene;
@@ -17,6 +15,7 @@ class EditorView;
 class QGraphicsView;
 class GameObject;
 class QGraphicsScene;
+class SettingsWidget;
 class Ed
 {
 public:
@@ -44,9 +43,12 @@ public:
 
 	EditorMode& GetEditorMode(){return m_editorMode;}
 
+    SettingsWidget* GetSettingsWidget();
+
 
     void EditTemplates();
     void EditLevels();
+	void EditObjects();
 
 
     int& GetSceneCounter();
@@ -96,6 +98,9 @@ private:
 
 
 	TemplateScene* m_templateScene;
+
+
+    SettingsWidget* m_settingsWidget;
 
     int m_sceneCounter;
 

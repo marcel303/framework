@@ -67,6 +67,9 @@
 #define leftbuttonHeld ed.m_leftbuttonHeld
 
 
+#define settingsWidget ed.GetSettingsWidget()
+
+
 QList<QString> GetLinesFromConfigFile(QString filename);
 QPixmap* GetObjectPixmap(QString texture);
 
@@ -75,3 +78,5 @@ void LoadLevel(QString filename);
 void SwitchSceneTo(int s);
 
 void LoadPixmaps();
+
+QString GetPath();

@@ -4,6 +4,7 @@
 
 #include "EditorView.h"
 #include "gameobject.h"
+#include "SettingsWidget.h"
 #include "main.h"
 
 QList<GameObject*> m_gameObjects; //hack
@@ -18,6 +19,8 @@ void Ed::Initialize()
 	m_leftbuttonHeld = false;
 
 	m_sceneTemplatePallette = new QGraphicsScene();
+
+	m_settingsWidget = new SettingsWidget();
 }
 
 EditorScene*& Ed::GetSceneArt()
@@ -82,11 +85,26 @@ QList<GameObject *> &Ed::GetGameObjects()
 	return m_gameObjects;
 }
 
+SettingsWidget* Ed::GetSettingsWidget()
+{
+    return m_settingsWidget;
+}
+
 void Ed::SetEditorMode(EditorMode e)
 {
 	m_editorMode = e;
 
-	qDebug() << "Setting EditorMode to: " << e;
+    switch(e)
+    {
+    case EM_Level:
+            qDebug() << "Setting EditorMode to: Level";
+		break;
+    case EM_Template:
+            qDebug() << "Setting EditorMode to: Template";
+        break;
+    }
+
+
 }
 
 void Ed::EditTemplates()
@@ -102,7 +120,6 @@ void Ed::EditLevels()
 
     m_view->setScene((QGraphicsScene*)(GetCurrentScene()));
 }
-
 
 void CreateNewMapHelper(int x, int y)
 {

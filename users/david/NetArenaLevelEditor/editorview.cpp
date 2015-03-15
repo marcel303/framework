@@ -3,6 +3,7 @@
 #include <QInputDialog>
 
 #include"gameobject.h"
+#include "SettingsWidget.h"
 #include "main.h"
 
 
@@ -82,7 +83,8 @@ void EditorView::Save()
 
 void EditorView::SaveTemplate()
 {
-    templateScene->GetCurrentTemplate()->SaveTemplate();
+	if(templateScene->GetCurrentTemplate())
+		templateScene->GetCurrentTemplate()->SaveTemplate();
 }
 
 void EditorView::Load()
@@ -146,14 +148,32 @@ void EditorView::SwitchToTemplates()
 
 }
 
+void EditorView::ResetSliders()
+{
+    sliderOpacMech->setValue(50);
+    sliderOpacArt->setValue(50);
+    sliderOpacColl->setValue(0);
+    sliderOpacObject->setValue(0);
+
+    //SetOpactyForLayer(sceneMech, 50);
+    //SetOpactyForLayer(sceneArt, 50);
+    //SetOpactyForLayer(sceneCollission, 0);
+    //SetOpacityObject(100);
+}
 
 bool flip = true;
 void EditorView::SwitchLevelTemplateEdit()
 {
 	if(flip)
+    {
 		ed.EditTemplates();
+        ResetSliders();
+    }
 	else
+    {
 		ed.EditLevels();
+        ResetSliders();
+    }
 
 	flip = !flip;
 }
@@ -201,7 +221,7 @@ void EditorView::ImportTemplate()
 
 		delete t;
 		t = new EditorTemplate();
-		t->LoadTemplate(f+".tmpl");
+		t->LoadTemplate(GetPath() + f + ".tmpl");
 
 		templateScene->AddTemplate(t);
 	}
