@@ -503,21 +503,21 @@ void LoadArt(QString filename, EditorScene* s)
 
 	}
 
-	file.open(QIODevice::ReadOnly | QIODevice::Text);
-	QDataStream in(&file);
+    file.open(QIODevice::ReadOnly);
+    QDataStream in(&file);
 
     int mx;
     in >> mx;
     int my;
     in >> my;
 
-    short key;
+    int key;
     for(int y = 0; y < my; y++)
     {
         for (int x = 0; x < mx; x++)
         {
 			in >> key;
-			s->m_tiles[y][x].SetSelectedBlock(tempIndexToArtIndex[key]);
+            s->m_tiles[y][x].SetSelectedBlock(tempIndexToArtIndex[(short)key]);
         }
     }
     file.close();
@@ -563,7 +563,7 @@ void SaveArtFile(QString filename, EditorScene* s)
 
 	QFile fileArtIndex(filename+"Index.txt");
 
-	fileArtIndex.open(QIODevice::WriteOnly);
+    fileArtIndex.open(QIODevice::WriteOnly | QIODevice::Truncate);
 	QTextStream artLines(&fileArtIndex);
 
 	for(int y = 0; y < MAPY; y++)
@@ -578,20 +578,17 @@ void SaveArtFile(QString filename, EditorScene* s)
 	fileArtIndex.close();
 
 	QFile fileArt(filename+".txt");
-	fileArt.open(QIODevice::WriteOnly);
-	QDataStream in(&fileArt);
+    fileArt.open(QIODevice::WriteOnly | QIODevice::Truncate);
+    QDataStream in(&fileArt);
 
-	in << MAPX << MAPY << endl;
+    in << MAPX << MAPY;
 	for(int y = 0; y < MAPY; y++)
-	{
 		for (int x = 0; x < MAPX; x++)
-		{
-			//in << (char)(artTranslation[s->m_tiles[y][x].getBlock()]);
-			in << (quint16 )(artTranslation[s->m_tiles[y][x].getBlock()]);
-		}
-		if(0)//y < (MAPY -1))
-				in << endl;
-	}
+        {
+           qDebug() << "writing " << QString::number((int)(artTranslation[s->m_tiles[y][x].getBlock()])) << " to file";
+           Sleep(50);
+           in << (int)(artTranslation[s->m_tiles[y][x].getBlock()]);
+        }
 
 	fileArt.close();
 
