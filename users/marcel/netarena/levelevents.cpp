@@ -57,16 +57,16 @@ void LevelEventTimer::operator=(float time)
 
 //
 
-void LevelEvent_EarthQuake::start()
+void LevelEvent_EarthQuake::start(GameSim & gameSim)
 {
 	endTimer = EVENT_EARTHQUAKE_DURATION;
 
-	nextQuake();
+	nextQuake(gameSim);
 }
 
-void LevelEvent_EarthQuake::nextQuake()
+void LevelEvent_EarthQuake::nextQuake(GameSim & gameSim)
 {
-	quakeTimer = EVENT_EARTHQUAKE_INTERVAL + Calc::Random(EVENT_EARTHQUAKE_INTERVAL_RAND);
+	quakeTimer = EVENT_EARTHQUAKE_INTERVAL + gameSim.RandomFloat(0.f, EVENT_EARTHQUAKE_INTERVAL_RAND);
 }
 
 void LevelEvent_EarthQuake::tick(GameSim & gameSim, float dt)
@@ -75,7 +75,7 @@ void LevelEvent_EarthQuake::tick(GameSim & gameSim, float dt)
 	{
 		if (quakeTimer.tickComplete(dt))
 		{
-			nextQuake();
+			nextQuake(gameSim);
 
 			// trigger quake
 

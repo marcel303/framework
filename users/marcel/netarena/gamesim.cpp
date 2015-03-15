@@ -1424,7 +1424,7 @@ void GameSim::tickPlay()
 			{
 			case kLevelEvent_EarthQuake:
 				memset(&m_levelEvents.quake, 0, sizeof(m_levelEvents.quake));
-				m_levelEvents.quake.start();
+				m_levelEvents.quake.start(*this);
 				name = "Earthquake";
 				break;
 

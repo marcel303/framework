@@ -23,8 +23,8 @@ struct LevelEvent_EarthQuake
 	LevelEventTimer endTimer;
 	LevelEventTimer quakeTimer;
 
-	void start();
-	void nextQuake();
+	void start(GameSim & gameSim);
+	void nextQuake(GameSim & gameSim);
 	void tick(GameSim & gameSim, float dt);
 };
 

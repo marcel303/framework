@@ -16,6 +16,8 @@ todo:
 
 ** HIGH PRIORITY **
 
+- add curve editing through options
+
 - melee weapon kinetic energy / character data property
 
 - zweihander sword guy
