@@ -1,10 +1,12 @@
 #pragma once
 
+#include <list> // annoucements
 #include <string.h> // memset
 #include "arena.h"
 #include "framework.h"
 #include "gamedefs.h"
 #include "gametypes.h"
+#include "levelevents.h"
 #include "physobj.h"
 #include "Random.h"
 #include "Vec2.h"
@@ -511,149 +513,6 @@ struct FloorEffect
 	void trySpawnAt(GameSim & gameSim, int playerId, int x, int y, int dx, int size, int damageSize);
 };
 
-// level events
-
-// todo : some events can be combined. make a list of events that can be combined!
-
-struct LevelEventTimer
-{
-	float m_duration;
-	float m_time;
-
-	// tick timer and return whether its active
-	bool tickActive(float dt)
-	{
-		Assert(m_time >= 0.f && m_time <= m_duration);
-		if (m_time < m_duration)
-		{
-			m_time += dt;
-			if (m_time >= m_duration)
-				m_time = m_duration;
-			return true;
-		}
-		return false;
-	}
-
-	// tick timer and return whether it completed
-	bool tickComplete(float dt)
-	{
-		Assert(m_time >= 0.f && m_time <= m_duration);
-		if (m_time < m_duration)
-		{
-			m_time += dt;
-			if (m_time >= m_duration)
-			{
-				m_time = m_duration;
-				return true;
-			}
-		}
-		return false;
-	}
-
-	float getProgress() const
-	{
-		Assert(m_time >= 0.f && m_time <= m_duration);
-		if (m_duration == 0.f)
-			return 0.f;
-		else
-			return m_time / m_duration;
-	}
-
-	bool isActive() const
-	{
-		Assert(m_time >= 0.f && m_time <= m_duration);
-		return m_time < m_duration;
-	}
-
-	void operator=(float time)
-	{
-		Assert(time >= 0.f);
-		m_duration = time;
-		m_time = 0.f;
-	}
-};
-
-// the earth suddenly starts shaking. players will loose their footing and be kicked into the air
-struct LevelEvent_EarthQuake
-{
-	LevelEventTimer endTimer;
-	LevelEventTimer quakeTimer;
-};
-
-// a gravity well appears. players get sucked into it and get concentrated into a smaller area
-// note : should be possible to escape the well by moving, to avoid getting stuck against walls
-//         but it should be hard near the center to escape!
-struct LevelEvent_GravityWell
-{
-	LevelEventTimer endTimer;
-	int m_x;
-	int m_y;
-};
-
-// destructible blocks start exploding! the level will slowly disintegrate!
-// note : should only be activated when there's enough blocks in a level. stop at 50% or so of the
-//        starting number of blocks
-struct LevelEvent_DestroyDestructibleBlocks
-{
-	int m_remainingBlockCount;
-	LevelEventTimer destructionTimer;
-};
-
-// time suddenly slows down for a while
-// note : need something visual to indicate the effect. maybe a giant hourglas appears on the background
-//        layer, floating about
-struct LevelEvent_TimeDilation
-{
-	LevelEventTimer endTimer;
-};
-
-// spike walls start closing in from the left, right, or both sides
-// note : should be non lethal when they appear. deploy spikes at some point
-// note : disable respawning while effect is active to avoid respawning in wall?
-struct LevelEvent_SpikeWalls
-{
-	LevelEventTimer endTimer;
-
-	bool m_right;
-	bool m_left;
-};
-
-// the wind suddenly starts blowing. players get accelerated in the left/right direction
-// note: need visual. maybe a wind layer with leafs on the foreground layer, maybe rain?
-struct LevelEvent_Wind
-{
-	LevelEventTimer endTimer;
-};
-
-// barrels start dropping from the sky! barrels can be hit for powerful attack
-// note : should do auto aim to some extent so it's actually possible to hit other players
-// note : collision should be disabled on barrels. fake gravity/no gravity/floatiness
-struct LevelEvent_BarrelDrop
-{
-	LevelEventTimer endTimer;
-	LevelEventTimer spawnTimer;
-};
-
-// the level turns dark for a while. players have limited vision
-// note : accompanied by lightning and rain effects?
-struct LevelEvent_NightDayCycle
-{
-	LevelEventTimer endTimer;
-};
-
-enum LevelEvent
-{
-	kLevelEvent_EarthQuake,
-	kLevelEvent_GravityWell,
-	kLevelEvent_DestroyBlocks,
-	kLevelEvent_TimeDilation,
-	kLevelEvent_SpikeWalls,
-	kLevelEvent_Wind,
-	kLevelEvent_BarrelDrop,
-	kLevelEvent_NightDayCycle,
-	kLevelEvent_COUNT
-};
-
 //
 
 struct GameStateData
@@ -775,6 +634,14 @@ public:
 
 	PlayerInstanceData * m_playerInstanceDatas[MAX_PLAYERS];
 
+	struct AnnounceInfo
+	{
+		float timeLeft;
+		std::string message;
+	};
+
+	std::list<AnnounceInfo> m_annoucements;
+
 	GameSim();
 	~GameSim();
 
@@ -831,6 +698,8 @@ public:
 	Vec2 getScreenShake() const;
 
 	void addFloorEffect(int playerId, int x, int y, int size, int damageSize);
+
+	void addAnnouncement(const char * message, ...);
 };
 
 extern GameSim * g_gameSim;

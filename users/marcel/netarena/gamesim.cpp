@@ -1414,8 +1414,11 @@ void GameSim::tickPlay()
 			m_timeUntilNextLevelEvent = 30.f;
 
 			//const LevelEvent e = getRandomLevelEvent();
-			const LevelEvent e = kLevelEvent_GravityWell;
+			const LevelEvent e = kLevelEvent_SpikeWalls;
+			//const LevelEvent e = kLevelEvent_GravityWell;
 			//const LevelEvent e = kLevelEvent_EarthQuake;
+
+			const char * name = "<unknown level event>";
 
 			switch (e)
 			{
@@ -1423,6 +1426,7 @@ void GameSim::tickPlay()
 				memset(&m_levelEvents.quake, 0, sizeof(m_levelEvents.quake));
 				m_levelEvents.quake.endTimer = 3.f;
 				m_levelEvents.quake.quakeTimer = 1.f; // todo
+				name = "Earthquake";
 				break;
 
 			case kLevelEvent_GravityWell:
@@ -1430,42 +1434,49 @@ void GameSim::tickPlay()
 				m_levelEvents.gravityWell.endTimer = EVENT_GRAVITYWELL_DURATION;
 				m_levelEvents.gravityWell.m_x = GFX_SX / 2;
 				m_levelEvents.gravityWell.m_y = GFX_SY / 2;
+				name = "Gravity Well";
 				break;
 
 			case kLevelEvent_DestroyBlocks:
 				memset(&m_levelEvents.destroyBlocks, 0, sizeof(m_levelEvents.destroyBlocks));
 				m_levelEvents.destroyBlocks.m_remainingBlockCount = 0;
+				name = "Block Destruction";
 				break;
 
 			case kLevelEvent_TimeDilation:
 				memset(&m_levelEvents.timeDilation, 0, sizeof(m_levelEvents.timeDilation));
 				m_levelEvents.timeDilation.endTimer = 3.f;
 				addTimeDilationEffect(.5f, .25f, 3.f);
+				name = "Time Dilation";
 				break;
 
 			case kLevelEvent_SpikeWalls:
 				memset(&m_levelEvents.spikeWalls, 0, sizeof(m_levelEvents.spikeWalls));
-				m_levelEvents.spikeWalls.endTimer = 3.f;
-				m_levelEvents.spikeWalls.m_left = true;
-				m_levelEvents.spikeWalls.m_right = true;
+				m_levelEvents.spikeWalls.start(true, true);
+				name = "Spike Walls";
 				break;
 
 			case kLevelEvent_Wind:
 				memset(&m_levelEvents.wind, 0, sizeof(m_levelEvents.wind));
 				m_levelEvents.wind.endTimer = 3.f;
+				name = "Wind";
 				break;
 
 			case kLevelEvent_BarrelDrop:
 				memset(&m_levelEvents.barrelDrop, 0, sizeof(m_levelEvents.barrelDrop));
 				m_levelEvents.barrelDrop.endTimer = 3.f;
 				m_levelEvents.barrelDrop.spawnTimer = 1.f;
+				name = "Barrel Drop";
 				break;
 
 			case kLevelEvent_NightDayCycle:
 				memset(&m_levelEvents.nightDayCycle, 0, sizeof(m_levelEvents.nightDayCycle));
 				m_levelEvents.nightDayCycle.endTimer = 3.f;
+				name = "Day/Night Cycle";
 				break;
 			}
+
+			addAnnouncement("Level Event: %s", name);
 		}
 	}
 
@@ -1536,10 +1547,7 @@ void GameSim::tickPlay()
 		//
 	}
 
-	if (m_levelEvents.spikeWalls.endTimer.tickActive(dt))
-	{
-		// todo : collision versus players. kill on hit
-	}
+	m_levelEvents.spikeWalls.tick(*this, dt);
 
 	if (m_levelEvents.wind.endTimer.tickActive(dt))
 	{
@@ -2142,4 +2150,18 @@ void GameSim::addFloorEffect(int playerId, int x, int y, int size, int damageSiz
 {
 	m_floorEffect.trySpawnAt(*this, playerId, x, y, -BLOCK_SX, size, damageSize);
 	m_floorEffect.trySpawnAt(*this, playerId, x, y, +BLOCK_SX, size, damageSize);
+}
+
+void GameSim::addAnnouncement(const char * message, ...)
+{
+	char text[1024];
+	va_list args;
+	va_start(args, message);
+	vsprintf_s(text, sizeof(text), message, args);
+	va_end(args);
+
+	AnnounceInfo info;
+	info.timeLeft = 3.f;
+	info.message = text;
+	m_annoucements.push_back(info);
 }

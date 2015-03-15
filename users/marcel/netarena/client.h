@@ -58,6 +58,7 @@ public:
 	void drawMenus();
 	void drawPlay();
 	void drawRoundComplete();
+	void drawAnnouncements();
 	void drawTextChat();
 	void debugDraw();
 

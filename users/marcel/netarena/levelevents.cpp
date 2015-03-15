@@ -1,0 +1,236 @@
+#include "framework.h"
+#include "gamesim.h"
+#include "levelevents.h"
+
+//
+
+bool LevelEventTimer::tickActive(float dt)
+{
+	Assert(m_time >= 0.f && m_time <= m_duration);
+	if (m_time < m_duration)
+	{
+		m_time += dt;
+		if (m_time >= m_duration)
+			m_time = m_duration;
+		return true;
+	}
+	return false;
+}
+
+bool LevelEventTimer::tickComplete(float dt)
+{
+	Assert(m_time >= 0.f && m_time <= m_duration);
+	if (m_time < m_duration)
+	{
+		m_time += dt;
+		if (m_time >= m_duration)
+		{
+			m_time = m_duration;
+			return true;
+		}
+	}
+	return false;
+}
+
+float LevelEventTimer::getProgress() const
+{
+	Assert(m_time >= 0.f && m_time <= m_duration);
+	if (m_duration == 0.f)
+		return 0.f;
+	else
+		return m_time / m_duration;
+}
+
+bool LevelEventTimer::isActive() const
+{
+	Assert(m_time >= 0.f && m_time <= m_duration);
+	return m_time < m_duration;
+}
+
+void LevelEventTimer::operator=(float time)
+{
+	Assert(time >= 0.f);
+	m_duration = time;
+	m_time = 0.f;
+}
+
+//
+
+CollisionBox LevelEvent_SpikeWalls::getWallCollision(int side, float move) const
+{
+	const float sx = GFX_SX/5.f;
+
+	CollisionBox box;
+	box.min = Vec2(0.f, 0.f);
+	box.max = Vec2(sx, GFX_SY);
+
+	const float offset =
+		side == 0
+		?    -sx + move * sx
+		: GFX_SX - move * sx;
+
+	const Vec2 offsetVec(offset, 0.f);
+	box.min += offsetVec;
+	box.max += offsetVec;
+
+	return box;
+}
+
+CollisionBox LevelEvent_SpikeWalls::getWallCollision(int side) const
+{
+	float move = 0.f;
+
+	switch (m_state)
+	{
+	case kState_Warn:
+		move = .05f;
+		break;
+
+	case kState_Close:
+		move = m_time / SPIKEWALLS_TIME_CLOSE;
+		break;
+
+	case kState_Closed:
+		move = 1.f;
+		break;
+
+	case kState_Open:
+		move = 1.f -  m_time / SPIKEWALLS_TIME_OPEN;
+		break;
+	}
+
+	return getWallCollision(side, move);
+}
+
+void LevelEvent_SpikeWalls::start(bool left, bool right)
+{
+	m_left = left;
+	m_right = right;
+	m_state = kState_Warn;
+}
+
+void LevelEvent_SpikeWalls::tick(GameSim & gameSim, float dt)
+{
+	switch (m_state)
+	{
+	case kState_Idle:
+		break;
+
+	case kState_Warn:
+		m_time += dt;
+		if (m_time >= SPIKEWALLS_TIME_PREVIEW)
+		{
+			m_state = kState_Close;
+			m_time = 0.f;
+		}
+		break;
+
+	case kState_Close:
+		doCollision(gameSim);
+		m_time += dt;
+		if (m_time >= SPIKEWALLS_TIME_CLOSE)
+		{
+			m_state = kState_Closed;
+			m_time = 0.f;
+		}
+		break;
+
+	case kState_Closed:
+		doCollision(gameSim);
+		m_time += dt;
+		if (m_time >= SPIKEWALLS_TIME_CLOSED)
+		{
+			m_state = kState_Open;
+			m_time = 0.f;
+		}
+		break;
+
+	case kState_Open:
+		doCollision(gameSim);
+		m_time += dt;
+		if (m_time >= SPIKEWALLS_TIME_OPEN)
+		{
+			memset(this, 0, sizeof(*this));
+		}
+		break;
+	}
+}
+
+void LevelEvent_SpikeWalls::doCollision(GameSim & gameSim, const CollisionBox & box, int dir)
+{
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+	{
+		Player & player = gameSim.m_players[i];
+
+		if (player.m_isUsed && player.m_isAlive)
+		{
+			CollisionInfo playerCollision;
+			if (player.getPlayerCollision(playerCollision))
+			{
+				if (playerCollision.intersects(box))
+				{
+					player.handleDamage(1.f, Vec2(dir, 0.f), 0);
+				}
+			}
+		}
+	}
+}
+
+void LevelEvent_SpikeWalls::doCollision(GameSim & gameSim)
+{
+	if (m_left)
+		doCollision(gameSim, getWallCollision(0), +1);
+
+	if (m_right)
+		doCollision(gameSim, getWallCollision(1), -1);
+}
+
+void LevelEvent_SpikeWalls::draw() const
+{
+	const Color colorWall(127, 127, 127);
+
+	for (int i = 0; i < 2; ++i)
+	{
+		if (i == 0 && !m_left)
+			continue;
+		if (i == 1 && !m_right)
+			continue;
+
+		const CollisionBox box = getWallCollision(i);
+
+		switch (m_state)
+		{
+		case kState_Warn:
+			{
+				const float t = m_time / SPIKEWALLS_TIME_PREVIEW;
+				setColor(colorRed);
+				drawRect(box.min[0], box.min[1], box.max[0], box.max[1]);
+			}
+			break;
+
+		case kState_Close:
+			{
+				const float t = m_time / SPIKEWALLS_TIME_CLOSE;
+				setColor(colorWall);
+				drawRect(box.min[0], box.min[1], box.max[0], box.max[1]);
+			}
+			break;
+
+		case kState_Closed:
+			{
+				const float t = m_time / SPIKEWALLS_TIME_CLOSED;
+				setColor(colorWall);
+				drawRect(box.min[0], box.min[1], box.max[0], box.max[1]);
+			}
+			break;
+
+		case kState_Open:
+			{
+				const float t = m_time / SPIKEWALLS_TIME_OPEN;
+				setColor(colorWall);
+				drawRect(box.min[0], box.min[1], box.max[0], box.max[1]);
+			}
+			break;
+		}
+	}
+}

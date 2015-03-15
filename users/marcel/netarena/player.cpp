@@ -861,10 +861,11 @@ void Player::tick(float dt)
 			m_instanceData->playSoundBag("taunt_sounds", 100);
 		}
 
-		if (GAMESIM->m_gameState == kGameState_Play)
+		if (GAMESIM->m_gameState == kGameState_Play &&
+			!GAMESIM->m_levelEvents.spikeWalls.isActive() &&
+			(m_input.wentDown(INPUT_BUTTON_X) || m_respawnTimer <= 0.f))
 		{
-			if (m_input.wentDown(INPUT_BUTTON_X) || m_respawnTimer <= 0.f)
-				respawn();
+			respawn();
 		}
 
 		m_respawnTimer -= dt;

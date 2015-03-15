@@ -71,6 +71,8 @@ OPTION_DEFINE(bool, g_pauseOnOptionMenuOption, "App/Pause On Option Menu");
 
 COMMAND_OPTION(s_dropCoins, "Player/Drop Coins", []{ g_app->netDebugAction("dropCoins", ""); });
 
+COMMAND_OPTION(s_addAnnoucement, "App/Add Annoucement", []{ g_app->netDebugAction("addAnnouncement", "Test Annoucenment"); });
+
 OPTION_EXTERN(int, g_playerCharacterIndex);
 
 //
@@ -739,6 +741,16 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 				}
 
 				g_gameSim = 0;
+			}
+		}
+		else if (action == "addAnnouncement")
+		{
+			GameSim * gameSim = findGameSimForChannel(channel);
+			Assert(gameSim);
+
+			if (gameSim)
+			{
+				gameSim->addAnnouncement(param.c_str());
 			}
 		}
 		else if (action == "optionSelect")
@@ -2048,6 +2060,17 @@ int main(int argc, char * argv[])
 			}
 		}
 	#endif
+
+		//
+
+		if (g_devMode && (g_connectLocal || (std::string)g_connect != ""))
+		{
+			g_app->startHosting();
+
+			g_app->m_host->m_gameSim.setGameState(kGameState_OnlineMenus);
+
+			g_app->findGame();
+		}
 
 		//
 

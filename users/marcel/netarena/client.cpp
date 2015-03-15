@@ -229,6 +229,18 @@ void Client::tick(float dt)
 
 		//
 
+		for (auto i = m_gameSim->m_annoucements.begin(); i != m_gameSim->m_annoucements.end(); )
+		{
+			i->timeLeft -= dt;
+
+			if (i->timeLeft <= 0.f)
+				i = m_gameSim->m_annoucements.erase(i);
+			else
+				++i;
+		}
+
+		//
+
 		if (m_textChat->tick(dt))
 		{
 			for (int i = 0; i < MAX_PLAYERS; ++i)
@@ -352,6 +364,8 @@ void Client::draw()
 		break;
 	}
 
+	drawAnnouncements();
+
 	drawTextChat();
 
 	g_gameSim = 0;
@@ -454,7 +468,7 @@ void Client::drawPlay()
 			Sprite("gravitywell/well.png").drawEx(
 				m_gameSim->m_levelEvents.gravityWell.m_x,
 				m_gameSim->m_levelEvents.gravityWell.m_y,
-				m_gameSim->m_tick / float(TICKS_PER_SECOND) * 90.f,
+				m_gameSim->m_roundTime * 90.f,
 				1.f, true,
 				FILTER_LINEAR);
 			setColor(colorWhite);
@@ -523,10 +537,7 @@ void Client::drawPlay()
 
 		// spike walls
 
-		if (m_gameSim->m_levelEvents.spikeWalls.endTimer.isActive())
-		{
-			setColor(200, 200, 200, 255);
-		}
+		m_gameSim->m_levelEvents.spikeWalls.draw();
 
 		gxPopMatrix();
 	}
@@ -665,6 +676,26 @@ void Client::drawRoundComplete()
 
 		index++;
 		y += 50;
+	}
+
+	setColor(colorWhite);
+}
+
+void Client::drawAnnouncements()
+{
+	int y = GFX_SY/3;
+	const int sy = 60;
+
+	for (auto i = m_gameSim->m_annoucements.begin(); i != m_gameSim->m_annoucements.end(); ++i)
+	{
+		setColor(0, 0, 255, 127);
+		drawRect(0, y, GFX_SX, y + sy);
+
+		setColor(colorWhite);
+		setFont("calibri.ttf");
+		drawText(GFX_SX/2, y + 5, 40, 0.f, +1.f, i->message.c_str());
+
+		y += 60;
 	}
 
 	setColor(colorWhite);
