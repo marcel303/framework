@@ -384,12 +384,13 @@ void LoadObjects(QString filename, bool pallette)
 
 void LoadPixmaps()
 {
+	sceneCounter = SCENEMECH;
     LoadPixmapsGeneric("BlockList.txt", pixmaps);
-    sceneCounter = 1;
-    LoadPixmapsArt("ArtList.txt", pixmapsArt);
-    sceneCounter =2;
+	sceneCounter = SCENEART;
+	LoadPixmapsArt("ArtList.txt", pixmapsArt);
+	sceneCounter = SCENECOLL;
     LoadPixmapsGeneric("CollissionList.txt", pixmapsCollission);
-    sceneCounter = 0;
+	sceneCounter = SCENEOBJ;
     LoadObjects("Objects.txt", true);
 }
 
@@ -465,9 +466,9 @@ void LoadGeneric(QString filename, EditorScene* s)
 
     for(int y = 0; y < MAPY; y++)
     {
-		for (int x = 0; x < MAPX-4; x++)
+		for (int x = 0; x < MAPX; x++)
         {
-            char key = in.read(1)[0].toLatin1();
+			short key = in.read(1)[0].toLatin1();
             s->m_tiles[y][x].SetSelectedBlock(key);
         }
         if(y < (MAPY -1))
@@ -478,10 +479,32 @@ void LoadGeneric(QString filename, EditorScene* s)
 
 void LoadArt(QString filename, EditorScene* s)
 {
-    QFile file(filename);
-    file.open(QIODevice::ReadOnly | QIODevice::Text);
+	QFile file(filename+".txt");
+	QFile fileIndex(filename+"Index.txt");
 
-    QDataStream in(&file);
+	fileIndex.open(QIODevice::ReadOnly | QIODevice::Text);
+
+
+	QTextStream inIndex(&fileIndex);
+
+	QMap<short, short> tempIndexToArtIndex;
+	filename.chop(filename.split('/').last().size()); //get path
+
+	while(!inIndex.atEnd())
+	{
+		QString artName = inIndex.readLine();
+		QPixmap* p = new QPixmap();
+
+		if(p->load(filename+artName))
+		{
+			tempIndexToArtIndex[tempIndexToArtIndex.size()] = pixmapsArt.size();
+			pixmapsArt[pixmapsArt.size()] = p;
+		}
+
+	}
+
+	file.open(QIODevice::ReadOnly | QIODevice::Text);
+	QDataStream in(&file);
 
     int mx;
     in >> mx;
@@ -493,8 +516,8 @@ void LoadArt(QString filename, EditorScene* s)
     {
         for (int x = 0; x < mx; x++)
         {
-            in >> key;
-            s->m_tiles[y][x].SetSelectedBlock(key);
+			in >> key;
+			s->m_tiles[y][x].SetSelectedBlock(tempIndexToArtIndex[key]);
         }
     }
     file.close();
@@ -505,7 +528,7 @@ void LoadLevel(QString filename)
     sceneCounter = 0;
     LoadGeneric(filename + ".txt", sceneMech);
     sceneCounter = 1;
-    LoadArt(filename + "Art.txt", sceneArt);
+	LoadArt(filename + "Art", sceneArt);
     sceneCounter = 2;
     LoadGeneric(filename + "Collission.txt", sceneCollission);
     sceneCounter = 0;
@@ -537,30 +560,41 @@ void SaveArtFile(QString filename, EditorScene* s)
 	QMap<short, short> artTranslation;
 	QMap<short, QPixmap> art2;
 
-	QFile fileArt(filename+".txt");
-	QFile fileArtIndex(filename+"Index.txt");
-	fileArt.open(QIODevice::WriteOnly);
-	fileArtIndex.open(QIODevice::WriteOnly);
 
-	QDataStream in(&fileArt);
+	QFile fileArtIndex(filename+"Index.txt");
+
+	fileArtIndex.open(QIODevice::WriteOnly);
 	QTextStream artLines(&fileArtIndex);
 
-	in << MAPX << MAPY;
 	for(int y = 0; y < MAPY; y++)
 		for (int x = 0; x < MAPX; x++)
-		{
 			if(!artTranslation.contains(s->m_tiles[y][x].getBlock()))
 			{
-				artTranslation[s->m_tiles[y][x].getBlock()] = artTranslation.size();
+				artTranslation[s->m_tiles[y][x].getBlock()] = artTranslation.size()-1;
 				s->m_tiles[y][x].pixmap().save(filename + "_" + QString::number(artTranslation.size()-1) + ".png", "PNG");
 
-				artLines << (filename + "_" + QString::number(artTranslation.size()-1) + ".png") << endl;
+				artLines << (filename.split('/').last() + "_" + QString::number(artTranslation.size()-1) + ".png") << endl;
 			}
+	fileArtIndex.close();
+
+	QFile fileArt(filename+".txt");
+	fileArt.open(QIODevice::WriteOnly);
+	QDataStream in(&fileArt);
+
+	in << MAPX << MAPY << endl;
+	for(int y = 0; y < MAPY; y++)
+	{
+		for (int x = 0; x < MAPX; x++)
+		{
+			//in << (char)(artTranslation[s->m_tiles[y][x].getBlock()]);
 			in << (quint16 )(artTranslation[s->m_tiles[y][x].getBlock()]);
 		}
+		if(0)//y < (MAPY -1))
+				in << endl;
+	}
 
 	fileArt.close();
-	fileArtIndex.close();
+
 }
 
 void SaveObjects(QString filename)
@@ -1193,7 +1227,7 @@ void EditorTemplate::LoadTemplate(QString filename)
 			if(!part->load(GetPath() + tt->blockArt))
 				qDebug() << "failed to load artfile: " << tt->blockArt << " for template: " << m_name;
 
-            short key = (short)artMap.size();
+			short key = (short)pixmapsArt.size();
 			artMap[key] = tt->blockArt;
 			templateToArtMap[tt->blockArt] = key;
             pixmapsArt[key] = part;
