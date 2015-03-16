@@ -528,46 +528,57 @@ void ScreenShake::tick(float dt)
 
 //
 
+void FloorEffect::ActiveTile::getCollisionInfo(CollisionInfo & collisionInfo) const
+{
+	collisionInfo.min[0] = x - STOMP_EFFECT_DAMAGE_HITBOX_SX/2;
+	collisionInfo.max[0] = x + STOMP_EFFECT_DAMAGE_HITBOX_SX/2;
+	collisionInfo.min[1] = y - STOMP_EFFECT_DAMAGE_HITBOX_SY;
+	collisionInfo.max[1] = y;
+}
+
 void FloorEffect::tick(GameSim & gameSim, float dt)
 {
 	for (int i = 0; i < MAX_FLOOR_EFFECT_TILES; ++i)
 	{
-		if (m_tiles[i].time)
+		bool isAlive = false;
+
+		if (m_tiles[i].damageTime > 0.f && m_tiles[i].damageSize > 0)
 		{
-			if (m_tiles[i].damageSize > 0)
+			isAlive = true;
+
+			CollisionInfo collisionInfo;
+			m_tiles[i].getCollisionInfo(collisionInfo);
+
+			for (int p = 0; p < MAX_PLAYERS; ++p)
 			{
-				CollisionInfo collisionInfo;
-				collisionInfo.min[0] = m_tiles[i].x - 4;
-				collisionInfo.max[0] = m_tiles[i].x + 4;
-				collisionInfo.min[1] = m_tiles[i].y - 64;
-				collisionInfo.max[1] = m_tiles[i].y;
-
-				for (int p = 0; p < MAX_PLAYERS; ++p)
+				if (p != m_tiles[i].playerId)
 				{
-					if (p != m_tiles[i].playerId)
+					Player & player = gameSim.m_players[p];
+
+					if (!player.m_isUsed)
+						continue;
+					if (!player.m_isAlive)
+						continue;
+
+					CollisionInfo playerCollision;
+					if (player.getPlayerCollision(playerCollision))
 					{
-						Player & player = gameSim.m_players[p];
-
-						if (!player.m_isUsed)
-							continue;
-						if (!player.m_isAlive)
-							continue;
-
-						CollisionInfo playerCollision;
-						if (player.getPlayerCollision(playerCollision))
+						if (collisionInfo.intersects(playerCollision))
 						{
-							if (collisionInfo.intersects(playerCollision))
-							{
-								player.handleDamage(1.f, Vec2(m_tiles[i].dx * PLAYER_SWORD_PUSH_SPEED/10.f /* todo : speed */, -1.f), &gameSim.m_players[m_tiles[i].playerId]);
-							}
+							player.handleDamage(1.f, Vec2(m_tiles[i].dx * PLAYER_SWORD_PUSH_SPEED/10.f /* todo : speed */, -1.f), &gameSim.m_players[m_tiles[i].playerId]);
 						}
 					}
 				}
 			}
 
-			m_tiles[i].time--;
+			m_tiles[i].damageTime -= dt;
+		}
 
-			if (m_tiles[i].time == 0 && m_tiles[i].size != 0)
+		if (m_tiles[i].time > 0.f)
+		{
+			m_tiles[i].time -= dt;
+
+			if (m_tiles[i].time <= 0.f && m_tiles[i].size != 0)
 			{
 				const int playerId = m_tiles[i].playerId;
 				const int x = m_tiles[i].x + m_tiles[i].dx;
@@ -575,12 +586,44 @@ void FloorEffect::tick(GameSim & gameSim, float dt)
 				const int dx = m_tiles[i].dx;
 				const int size = m_tiles[i].size - 1;
 				const int damageSize = m_tiles[i].damageSize > 0 ? m_tiles[i].damageSize - 1 : 0;
-				memset(&m_tiles[i], 0, sizeof(m_tiles[i]));
 
 				trySpawnAt(gameSim, playerId, x, y, dx, size, damageSize);
 			}
+			else
+			{
+				isAlive = true;
+			}
+		}
+
+		if (!isAlive)
+		{
+			memset(&m_tiles[i], 0, sizeof(m_tiles[i]));
 		}
 	}
+}
+
+void FloorEffect::draw()
+{
+	if (g_devMode)
+	{
+		for (int i = 0; i < MAX_FLOOR_EFFECT_TILES; ++i)
+		{
+			if (m_tiles[i].damageTime > 0.f && m_tiles[i].damageSize > 0)
+			{
+				CollisionInfo collisionInfo;
+				m_tiles[i].getCollisionInfo(collisionInfo);
+
+				setColor(255, 127, 63, 127);
+				drawRect(
+					collisionInfo.min[0],
+					collisionInfo.min[1],
+					collisionInfo.max[0],
+					collisionInfo.max[1]);
+			}
+		}
+}
+
+	setColor(colorWhite);
 }
 
 void FloorEffect::trySpawnAt(GameSim & gameSim, int playerId, int x, int y, int dx, int size, int damageSize)
@@ -636,7 +679,8 @@ void FloorEffect::trySpawnAt(GameSim & gameSim, int playerId, int x, int y, int 
 				m_tiles[i].dx = dx;
 				m_tiles[i].size = size;
 				m_tiles[i].damageSize = damageSize;
-				m_tiles[i].time = TICKS_PER_SECOND / 12; // todo : gamedef
+				m_tiles[i].time = STOMP_EFFECT_PROPAGATION_INTERVAL;
+				m_tiles[i].damageTime = damageSize ? STOMP_EFFECT_DAMAGE_DURATION : 0.f;
 
 				ParticleSpawnInfo spawnInfo(
 					x,

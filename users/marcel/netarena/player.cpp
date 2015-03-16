@@ -16,6 +16,8 @@ todo:
 
 ** HIGH PRIORITY **
 
+- fix player not moving on death
+
 - add curve editing through options
 
 - melee weapon kinetic energy / character data property

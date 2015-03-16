@@ -500,8 +500,11 @@ struct FloorEffect
 		int8_t size;
 		int8_t damageSize;
 		int8_t dx;
-		int8_t time;
+		float time;
+		float damageTime;
 		int8_t playerId;
+
+		void getCollisionInfo(CollisionInfo & collisionInfo) const;
 	} m_tiles[MAX_FLOOR_EFFECT_TILES];
 
 	FloorEffect()
@@ -510,6 +513,8 @@ struct FloorEffect
 	}
 
 	void tick(GameSim & gameSim, float dt);
+	void draw();
+
 	void trySpawnAt(GameSim & gameSim, int playerId, int x, int y, int dx, int size, int damageSize);
 };
 

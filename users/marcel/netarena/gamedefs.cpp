@@ -237,6 +237,12 @@ OPTION_STEP(DOUBLEMELEE_GRAVITY_MULTIPLIER, 0, 0, .02f);
 OPTION_DEFINE(int, STOMP_EFFECT_MAX_SIZE, "Special Abilities/Stomp Attack/Max Effect Size");
 OPTION_DEFINE(int, STOMP_EFFECT_MIN_HEIGHT, "Special Abilities/Stomp Attack/Effect Min Height");
 OPTION_DEFINE(int, STOMP_EFFECT_MAX_HEIGHT, "Special Abilities/Stomp Attack/Effect Max Height");
+OPTION_DEFINE(float, STOMP_EFFECT_PROPAGATION_INTERVAL, "Special Abilities/Stomp Attack/Propagation Interval (Sec)");
+OPTION_DEFINE(float, STOMP_EFFECT_DAMAGE_DURATION, "Special Abilities/Stomp Attack/Damage Duration (Sec)");
+OPTION_DEFINE(int, STOMP_EFFECT_DAMAGE_HITBOX_SX, "Special Abilities/Stomp Attack/Damage Hitbox Width");
+OPTION_DEFINE(int, STOMP_EFFECT_DAMAGE_HITBOX_SY, "Special Abilities/Stomp Attack/Damage Hitbox Height");
+OPTION_STEP(STOMP_EFFECT_PROPAGATION_INTERVAL, 0, 0, .01f);
+OPTION_STEP(STOMP_EFFECT_DAMAGE_DURATION, 0, 0, .01f);
 
 OPTION_DEFINE(float, ROCKETPUNCH_CHARGE_MIN, "Special Abilities/Rocket Punch/Charge Min (Sec)");
 OPTION_DEFINE(float, ROCKETPUNCH_CHARGE_MAX, "Special Abilities/Rocket Punch/Charge Max (Sec)");

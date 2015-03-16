@@ -476,6 +476,8 @@ void Client::drawPlay()
 
 		m_gameSim->m_arena.drawBlocks();
 
+		m_gameSim->m_floorEffect.draw();
+
 		// torches
 
 		for (int i = 0; i < MAX_TORCHES; ++i)
