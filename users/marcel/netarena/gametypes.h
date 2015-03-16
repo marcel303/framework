@@ -41,6 +41,7 @@ enum GameMode
 enum ObjectType
 {
 	kObjectType_Undefined,
+	kObjectType_Pickup,
 	kObjectType_PipeBomb,
 	kObjectType_COUNT
 };
@@ -61,6 +62,9 @@ enum PlayerAnim
 	kPlayerAnim_Fire,
 	kPlayerAnim_RocketPunch_Charge,
 	kPlayerAnim_RocketPunch_Attack,
+	kPlayerAnim_Zweihander_Charge,
+	kPlayerAnim_Zweihander_Attack,
+	kPlayerAnim_Zweihander_Stunned,
 	kPlayerAnim_AirDash,
 	kPlayerAnim_Spawn,
 	kPlayerAnim_Die,
@@ -89,6 +93,7 @@ enum PlayerSpecial
 	kPlayerSpecial_Shield,
 	kPlayerSpecial_Invisibility,
 	kPlayerSpecial_Jetpack,
+	kPlayerSpecial_Zweihander,
 	kPlayerSpecial_COUNT
 };
 

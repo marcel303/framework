@@ -230,6 +230,29 @@ struct Player
 			Vec2 speed;
 			float stunTime;
 		} m_rocketPunch;
+
+		struct Zweihander
+		{
+			enum State
+			{
+				kState_Idle,
+				kState_Charge,
+				kState_Attack,
+				kState_Stunned
+			};
+
+			Zweihander();
+
+			bool isActive() const;
+			void begin(Player & player);
+			void end(Player & player);
+
+			void handleAttackAnimComplete(Player & player);
+			void tick(Player & player, float dt);
+
+			State state;
+			float timer;
+		} m_zweihander;
 	} m_attack;
 
 	struct TimeDilationAttack

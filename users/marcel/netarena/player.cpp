@@ -242,10 +242,11 @@ struct PlayerAnimInfo
 	{ "sprite.scml", "AttackUp",   5 },
 	{ "sprite.scml", "AttackDown", 5 },
 	{ "sprite.scml", "Shoot",      5 },
-	{ "sprite.scml", "Walk", 5 }, // fixme : charge
-	{ "sprite.scml", "Walk", 5 }, // fixme : attack
-	//{ "sprite.scml", "RocketPunch_Charge", 5 },
-	//{ "sprite.scml", "RocketPunch_Attack", 5 },
+	{ "sprite.scml", "Walk" /*RocketPunch_Charge*/, 5 }, // fixme : charge
+	{ "sprite.scml", "Walk" /*RocketPunch_Attack*/, 5 }, // fixme : attack
+	{ "sprite.scml", "Walk" /*Zweihander_Charge*/, 5 },
+	{ "sprite.scml", "AttackDown" /*Zweihander_Attack*/, 5 },
+	{ "sprite.scml", "Idle" /*Zweihander_Stunned*/, 5 },
 	{ "sprite.scml", "AirDash",    5 },
 	{ "sprite.scml", "Spawn",      6 },
 	{ "sprite.scml", "Die",        7 }
@@ -830,6 +831,15 @@ void Player::tick(float dt)
 			case kPlayerAnim_Fire:
 				m_attack.attacking = false;
 				break;
+
+			case kPlayerAnim_Zweihander_Charge:
+				break;
+			case kPlayerAnim_Zweihander_Attack:
+				m_attack.m_zweihander.handleAttackAnimComplete(*this);
+				break;
+			case kPlayerAnim_Zweihander_Stunned:
+				break;
+
 			case kPlayerAnim_AirDash:
 				break;
 			case kPlayerAnim_Spawn:
@@ -881,7 +891,7 @@ void Player::tick(float dt)
 			m_spawnInvincibilityTicks--;
 
 		// see if we grabbed any pickup
-
+		
 		Pickup pickup;
 
 		if (GAMESIM->grabPickup(
@@ -1001,6 +1011,8 @@ void Player::tick(float dt)
 					!m_attack.hitDestructible);
 			}
 
+			// update rocket punch attack
+
 			if (m_attack.m_rocketPunch.isActive)
 			{
 				if (m_attack.m_rocketPunch.state == AttackInfo::RocketPunch::kState_Charge)
@@ -1065,6 +1077,13 @@ void Player::tick(float dt)
 					}
 				}
 			}
+
+			// update zweihander attack
+
+			if (m_attack.m_zweihander.isActive())
+			{
+				m_attack.m_zweihander.tick(*this, dt);
+			}
 		}
 
 		if (!m_attack.attacking)
@@ -1115,6 +1134,7 @@ void Player::tick(float dt)
 					for (int i = 0; i < MAX_PLAYERS; ++i)
 						if (GAMESIM->m_players[i].m_isUsed && GAMESIM->m_players[i].m_isAlive && GAMESIM->m_players[i].m_timeDilationAttack.isActive())
 								wasActive = true;
+
 					if (!wasActive)
 					{
 						for (int i = 0; i < MAX_PLAYERS; ++i)
@@ -1223,9 +1243,11 @@ void Player::tick(float dt)
 				m_attack.hasCollision = true;
 			}
 
-			if (m_input.wentDown(INPUT_BUTTON_Y) && !s_noSpecial && isAnimOverrideAllowed(kPlayerAnim_Attack))
+			if (!s_noSpecial)
 			{
-				if (characterData->m_special == kPlayerSpecial_RocketPunch)
+				if (characterData->m_special == kPlayerSpecial_RocketPunch &&
+					m_input.wentDown(INPUT_BUTTON_Y) &&
+					isAnimOverrideAllowed(kPlayerAnim_Attack))
 				{
 					if (!ROCKETPUNCH_ONLY_IN_AIR || !m_isGrounded)
 					{
@@ -1237,7 +1259,9 @@ void Player::tick(float dt)
 						}
 					}
 				}
-				else if (characterData->m_special == kPlayerSpecial_DoubleSidedMelee)
+				else if (characterData->m_special == kPlayerSpecial_DoubleSidedMelee &&
+					m_input.wentDown(INPUT_BUTTON_Y) &&
+					isAnimOverrideAllowed(kPlayerAnim_Attack))
 				{
 					m_attack = AttackInfo();
 					m_attack.attacking = true;
@@ -1258,6 +1282,15 @@ void Player::tick(float dt)
 
 					m_special.meleeCounter = DOUBLEMELEE_SPIN_COUNT;
 					m_special.meleeAnimTimer = DOUBLEMELEE_SPIN_TIME;
+				}
+				else if (characterData->m_special == kPlayerSpecial_Zweihander &&
+					m_input.wentDown(INPUT_BUTTON_Y) &&
+					isAnimOverrideAllowed(kPlayerAnim_Attack))
+				{
+					m_attack = AttackInfo();
+					m_attack.attacking = true;
+
+					m_attack.m_zweihander.begin(*this);
 				}
 			}
 		}
@@ -1285,6 +1318,8 @@ void Player::tick(float dt)
 				}
 			}
 		}
+
+		//
 
 		m_blockMask = ~0;
 
@@ -1379,6 +1414,10 @@ void Player::tick(float dt)
 			m_special.meleeCounter == 0 &&
 			m_attack.m_rocketPunch.isActive == false;
 
+		const bool allowJumping =
+			playerControl &&
+			m_attack.m_zweihander.isActive() == false;
+
 		m_controlDisableTime -= dt;
 		if (m_controlDisableTime < 0.f)
 			m_controlDisableTime = 0.f;
@@ -1387,7 +1426,7 @@ void Player::tick(float dt)
 
 		if (currentBlockMaskCeil & (1 << kBlockType_Sticky))
 		{
-			if (playerControl && m_input.wentDown(INPUT_BUTTON_A))
+			if (allowJumping && m_input.wentDown(INPUT_BUTTON_A))
 			{
 				m_vel[1] = PLAYER_JUMP_SPEED / 2.f;
 
@@ -1395,7 +1434,7 @@ void Player::tick(float dt)
 
 				playSecondaryEffects(kPlayerEvent_StickyJump);
 			}
-			else if (playerControl && m_input.wentDown(INPUT_BUTTON_DOWN))
+			else if (allowJumping && m_input.wentDown(INPUT_BUTTON_DOWN))
 			{
 				m_isAttachedToSticky = false;
 
@@ -1450,7 +1489,12 @@ void Player::tick(float dt)
 			else
 				isWalkingOnSolidGround = (currentBlockMaskFloor & kBlockMask_Solid) != 0;
 
-			if (isWalkingOnSolidGround)
+			if (m_attack.m_zweihander.isActive())
+			{
+				steeringSpeed *= STEERING_SPEED_ZWEIHANDER;
+				numSteeringFrame = 5;
+			}
+			else if (isWalkingOnSolidGround)
 			{
 				steeringSpeed *= STEERING_SPEED_ON_GROUND;
 				numSteeringFrame = 5;
@@ -1573,7 +1617,7 @@ void Player::tick(float dt)
 
 		// jumping
 
-		if (playerControl && m_input.wentDown(INPUT_BUTTON_A))
+		if (allowJumping && m_input.wentDown(INPUT_BUTTON_A))
 		{
 			if (currentBlockMaskFloor & kBlockMask_Solid)
 			{
@@ -3093,6 +3137,99 @@ void Player::endRocketPunch(bool stunned)
 
 //
 
+Player::AttackInfo::Zweihander::Zweihander()
+{
+	memset(this, 0, sizeof(Zweihander));
+}
+
+bool Player::AttackInfo::Zweihander::isActive() const
+{
+	return state != kState_Idle;
+}
+
+void Player::AttackInfo::Zweihander::begin(Player & player)
+{
+	Assert(state == kState_Idle);
+
+	if (player.isAnimOverrideAllowed(kPlayerAnim_Zweihander_Charge))
+	{
+		state = kState_Charge;
+		timer = ZWEIHANDER_CHARGE_TIME;
+	}
+	else
+	{
+		end(player);
+	}
+}
+
+void Player::AttackInfo::Zweihander::end(Player & player)
+{
+	Assert(state != kState_Idle);
+	memset(this, 0, sizeof(Zweihander));
+	player.m_attack = AttackInfo();
+	player.m_isAnimDriven = false;
+}
+
+void Player::AttackInfo::Zweihander::handleAttackAnimComplete(Player & player)
+{
+	Assert(state == kState_Attack);
+
+	if (player.isAnimOverrideAllowed(kPlayerAnim_Zweihander_Stunned))
+	{
+		state = kState_Stunned;
+		timer = ZWEIHANDER_STUN_TIME;
+		player.setAnim(kPlayerAnim_Zweihander_Stunned, true, true);
+		player.m_isAnimDriven = true;
+		player.m_animVelIsAbsolute = true;
+
+		player.m_instanceData->m_gameSim->addFloorEffect(
+			player.m_index, player.m_pos[0], player.m_pos[1],
+			ZWEIHANDER_STOMP_EFFECT_SIZE, (ZWEIHANDER_STOMP_EFFECT_SIZE + 1) * 2 / 3);
+	}
+	else
+	{
+		end(player);
+	}
+}
+
+void Player::AttackInfo::Zweihander::tick(Player & player, float dt)
+{
+	switch (state)
+	{
+	case kState_Idle:
+		break;
+				
+	case kState_Charge:
+		timer -= dt;
+		if (timer < 0.f || player.m_input.wentUp(INPUT_BUTTON_Y))
+		{
+			if (player.isAnimOverrideAllowed(kPlayerAnim_Zweihander_Attack))
+			{
+				state = kState_Attack;
+				timer = 0.f;
+				player.setAnim(kPlayerAnim_Zweihander_Attack, true, true);
+				player.m_isAnimDriven = true;
+				player.m_animVelIsAbsolute = true;
+			}
+			else
+			{
+				end(player);
+			}
+		}
+		break;
+
+	case kState_Stunned:
+		timer -= dt;
+		if (timer < 0.f)
+		{
+			end(player);
+		}
+		break;
+	}
+}
+
+//
+
 CharacterData::CharacterData(int characterIndex)
 	: m_spriter(0)
 	, m_spriteScale(1.f)
@@ -3158,6 +3295,8 @@ void CharacterData::load(int characterIndex)
 		special = kPlayerSpecial_Invisibility;
 	if (specialStr == "jetpack")
 		special = kPlayerSpecial_Jetpack;
+	if (specialStr == "zweihander")
+		special = kPlayerSpecial_Zweihander;
 
 	m_special = special;
 }
