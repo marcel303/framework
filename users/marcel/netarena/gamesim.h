@@ -54,8 +54,6 @@ struct Player
 	void drawLight() const;
 	void debugDraw() const;
 
-	void playSecondaryEffects(PlayerEvent e);
-
 	void testCollision(const CollisionShape & shape, void * arg, CollisionCB cb);
 
 	bool getPlayerCollision(CollisionInfo & collision) const;

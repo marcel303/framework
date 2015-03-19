@@ -23,11 +23,11 @@ todo:
 - melee weapon kinetic energy / character data property
 
 - zweihander sword guy
-	- slow attack
-	- special on ground:
-		- sword up, 2x movement speed, for max 5 seconds
-		- on release: stomp attack, sword gets stuck in ground
-		- 1 second recovery time
+	+ slow attack
+	+ special on ground:
+		+ sword up, 2x movement speed, for max 5 seconds
+		+ on release: stomp attack, sword gets stuck in ground
+		+ 1 second recovery time
 	- special in air:
 		- stomp attack, sword gets stuck in ground
 		- 1 second recovery time
@@ -673,64 +673,6 @@ void Player::applyAnim()
 
 //
 
-void Player::playSecondaryEffects(PlayerEvent e)
-{
-	const CharacterData * characterData = getCharacterData(m_characterIndex);
-
-	switch (e)
-	{
-	case kPlayerEvent_Spawn:
-		break;
-	case kPlayerEvent_Respawn:
-		m_instanceData->playSoundBag("spawn_sounds", 100);
-		break;
-	case kPlayerEvent_Die:
-		m_instanceData->playSoundBag("die_sounds", 100);
-		break;
-	case kPlayerEvent_Jump:
-		{
-			Dictionary args;
-			args.setPtr("obj", m_instanceData);
-			args.setString("name", "jump_sounds");
-			m_instanceData->handleAnimationAction("char_soundbag", args);
-			break;
-		}
-	case kPlayerEvent_WallJump:
-		GAMESIM->playSound("player-wall-jump.ogg"); // player performs a walljump
-		break;
-	case kPlayerEvent_LandOnGround:
-		GAMESIM->playSound(makeCharacterFilename(m_characterIndex, "land_on_ground.ogg"), 50); // players lands on solid ground
-		break;
-	case kPlayerEvent_StickyAttach:
-		//GAMESIM->playSound("player-sticky-attach.ogg");
-		break;
-	case kPlayerEvent_StickyRelease:
-		//GAMESIM->playSound("player-sticky-release.ogg");
-		break;
-	case kPlayerEvent_StickyJump:
-		GAMESIM->playSound("player-sticky-jump.ogg"); // player jumps and releases itself from a sticky ceiling
-		break;
-	case kPlayerEvent_SpringJump:
-		GAMESIM->playSound("player-spring-jump.ogg"); // player walks over and activates a jump pad 
-		break;
-	case kPlayerEvent_SpikeHit:
-		//GAMESIM->playSound("player-spike-hit.ogg");
-		break;
-	case kPlayerEvent_ArenaWrap:
-		//GAMESIM->playSound("player-arena-wrap.ogg");
-		break;
-	case kPlayerEvent_DashAir:
-		break;
-	case kPlayerEvent_DestructibleDestroy:
-		//GAMESIM->playSound("player-arena-wrap.ogg");
-		break;
-
-	default:
-		Assert(false);
-		break;
-	}
-}
-
 void Player::tick(float dt)
 {
 	const CharacterData * characterData = getCharacterData(m_characterIndex);
@@ -1363,8 +1305,6 @@ void Player::tick(float dt)
 			if (isAnimOverrideAllowed(kPlayerAnim_Die))
 			{
 				handleDamage(1.f, Vec2(0.f, 0.f), 0);
-
-				playSecondaryEffects(kPlayerEvent_SpikeHit);
 			}
 		}
 
@@ -1432,13 +1372,11 @@ void Player::tick(float dt)
 
 				m_isAttachedToSticky = false;
 
-				playSecondaryEffects(kPlayerEvent_StickyJump);
+				GAMESIM->playSound("player-sticky-jump.ogg"); // player jumps and releases itself from a sticky ceiling
 			}
 			else if (allowJumping && m_input.wentDown(INPUT_BUTTON_DOWN))
 			{
 				m_isAttachedToSticky = false;
-
-				playSecondaryEffects(kPlayerEvent_StickyRelease);
 
 				m_vel[1] = 0.f;
 			}
@@ -1449,8 +1387,6 @@ void Player::tick(float dt)
 				if (!m_isAttachedToSticky)
 				{
 					m_isAttachedToSticky = true;
-
-					playSecondaryEffects(kPlayerEvent_StickyAttach);
 				}
 			}
 		}
@@ -1624,7 +1560,10 @@ void Player::tick(float dt)
 				m_jump.jumpVelocityLeft = -PLAYER_JUMP_SPEED;
 				m_jump.cancelStarted = false;
 
-				playSecondaryEffects(kPlayerEvent_Jump);
+				Dictionary args;
+				args.setPtr("obj", m_instanceData);
+				args.setString("name", "jump_sounds");
+				m_instanceData->handleAnimationAction("char_soundbag", args);
 			}
 		}
 
@@ -1664,7 +1603,7 @@ void Player::tick(float dt)
 
 			m_controlDisableTime = PLAYER_WALLJUMP_RECOIL_TIME;
 
-			playSecondaryEffects(kPlayerEvent_WallJump);
+			GAMESIM->playSound("player-wall-jump.ogg"); // player performs a walljump
 		}
 
 		const bool wasInPassthrough = m_isInPassthrough;
@@ -1996,7 +1935,7 @@ void Player::tick(float dt)
 		{
 			m_vel[1] = -BLOCKTYPE_SPRING_SPEED;
 
-			playSecondaryEffects(kPlayerEvent_SpringJump);
+			GAMESIM->playSound("player-spring-jump.ogg"); // player walks over and activates a jump pad 
 		}
 
 		// effects
@@ -2150,7 +2089,7 @@ void Player::tick(float dt)
 
 							m_controlDisableTime = PLAYER_WALLJUMP_RECOIL_TIME;
 
-							playSecondaryEffects(kPlayerEvent_WallJump);
+							GAMESIM->playSound("player-wall-jump.ogg"); // player performs a walljump
 						}
 						else
 						{
@@ -2186,7 +2125,7 @@ void Player::tick(float dt)
 
 								m_vel[i] = -BLOCKTYPE_SPRING_SPEED;
 
-								playSecondaryEffects(kPlayerEvent_SpringJump);
+								GAMESIM->playSound("player-spring-jump.ogg"); // player walks over and activates a jump pad 
 							}
 							else
 							{
@@ -2251,7 +2190,7 @@ void Player::tick(float dt)
 			{
 				m_isGrounded = true;
 
-				playSecondaryEffects(kPlayerEvent_LandOnGround);
+				GAMESIM->playSound(makeCharacterFilename(m_characterIndex, "land_on_ground.ogg"), 50); // players lands on solid ground
 			}
 		}
 		else
@@ -2323,28 +2262,16 @@ void Player::tick(float dt)
 		// wrapping
 
 		if (m_pos[0] < 0)
-		{
 			m_pos[0] = ARENA_SX_PIXELS;
-			playSecondaryEffects(kPlayerEvent_ArenaWrap);
-		}
 		if (m_pos[0] > ARENA_SX_PIXELS)
-		{
 			m_pos[0] = 0;
-			playSecondaryEffects(kPlayerEvent_ArenaWrap);
-		}
 
 	#if WRAP_AROUND_TOP_AND_BOTTOM
 		if (m_pos[1] > ARENA_SY_PIXELS)
-		{
 			m_pos[1] = 0;
-			playSecondaryEffects(kPlayerEvent_ArenaWrap);
-		}
 
 		if (m_pos[1] < 0)
-		{
 			m_pos[1] = ARENA_SY_PIXELS;
-			playSecondaryEffects(kPlayerEvent_ArenaWrap);
-		}
 	#endif
 	}
 
@@ -2801,10 +2728,11 @@ void Player::respawn()
 		m_isAnimDriven = true;
 
 		if (m_isRespawn)
-			playSecondaryEffects(kPlayerEvent_Respawn);
+		{
+			m_instanceData->playSoundBag("spawn_sounds", 100);
+		}
 		else
 		{
-			playSecondaryEffects(kPlayerEvent_Spawn);
 			m_isRespawn = true;
 		}
 	}
@@ -2878,6 +2806,8 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 				// fixme.. mid pos
 				ParticleSpawnInfo spawnInfo(m_pos[0], m_pos[1] + mirrorY(-PLAYER_COLLISION_HITBOX_SY/2.f), kBulletType_ParticleA, 20, 50, 350, 40);
 				spawnInfo.color = 0xff0000ff;
+
+				m_instanceData->playSoundBag("die_sounds", 100);
 
 				GAMESIM->spawnParticles(spawnInfo);
 
