@@ -2807,8 +2807,6 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 				ParticleSpawnInfo spawnInfo(m_pos[0], m_pos[1] + mirrorY(-PLAYER_COLLISION_HITBOX_SY/2.f), kBulletType_ParticleA, 20, 50, 350, 40);
 				spawnInfo.color = 0xff0000ff;
 
-				m_instanceData->playSoundBag("die_sounds", 100);
-
 				GAMESIM->spawnParticles(spawnInfo);
 
 				if (PROTO_TIMEDILATION_ON_KILL && attacker)
