@@ -116,11 +116,11 @@ enum LevelEvent
 {
 	kLevelEvent_EarthQuake,
 	kLevelEvent_GravityWell,
-	kLevelEvent_DestroyBlocks,
+	//kLevelEvent_DestroyBlocks,
 	kLevelEvent_TimeDilation,
 	kLevelEvent_SpikeWalls,
-	kLevelEvent_Wind,
-	kLevelEvent_BarrelDrop,
-	kLevelEvent_NightDayCycle,
+	//kLevelEvent_Wind,
+	//kLevelEvent_BarrelDrop,
+	//kLevelEvent_NightDayCycle,
 	kLevelEvent_COUNT
 };

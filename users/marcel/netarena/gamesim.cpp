@@ -1455,10 +1455,10 @@ void GameSim::tickPlay()
 
 		if (m_timeUntilNextLevelEvent <= 0.f)
 		{
-			m_timeUntilNextLevelEvent = 30.f;
+			m_timeUntilNextLevelEvent = PROTO_LEVEL_EVENT_INTERVAL;
 
-			//const LevelEvent e = getRandomLevelEvent();
-			const LevelEvent e = kLevelEvent_SpikeWalls;
+			const LevelEvent e = getRandomLevelEvent();
+			//const LevelEvent e = kLevelEvent_SpikeWalls;
 			//const LevelEvent e = kLevelEvent_GravityWell;
 			//const LevelEvent e = kLevelEvent_EarthQuake;
 
@@ -1480,16 +1480,18 @@ void GameSim::tickPlay()
 				name = "Gravity Well";
 				break;
 
+				/*
 			case kLevelEvent_DestroyBlocks:
 				memset(&m_levelEvents.destroyBlocks, 0, sizeof(m_levelEvents.destroyBlocks));
 				m_levelEvents.destroyBlocks.m_remainingBlockCount = 0;
 				name = "Block Destruction (not yet implemented)";
 				break;
+				*/
 
 			case kLevelEvent_TimeDilation:
 				memset(&m_levelEvents.timeDilation, 0, sizeof(m_levelEvents.timeDilation));
 				m_levelEvents.timeDilation.endTimer = 3.f;
-				addTimeDilationEffect(.5f, .25f, 3.f);
+				addTimeDilationEffect(EVENT_TIMEDILATION_MULTIPLIER_BEGIN, EVENT_TIMEDILATION_MULTIPLIER_END, EVENT_TIMEDILATION_DURATION);
 				name = "Time Dilation";
 				break;
 
@@ -1499,6 +1501,7 @@ void GameSim::tickPlay()
 				name = "Spike Walls";
 				break;
 
+				/*
 			case kLevelEvent_Wind:
 				memset(&m_levelEvents.wind, 0, sizeof(m_levelEvents.wind));
 				m_levelEvents.wind.endTimer = 3.f;
@@ -1517,6 +1520,7 @@ void GameSim::tickPlay()
 				m_levelEvents.nightDayCycle.endTimer = 3.f;
 				name = "Day/Night Cycle (not yet implemented)";
 				break;
+				*/
 			}
 
 			addAnnouncement("Level Event: %s", name);

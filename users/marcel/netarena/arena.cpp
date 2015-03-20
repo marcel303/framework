@@ -12,7 +12,8 @@
 #include "player.h"
 #include "StreamReader.h"
 
-#define BLOCK_SPRITE_SCALE .5f
+#define BLOCK_SPRITE_SCALE 1.f
+//#define BLOCK_SPRITE_SCALE .5f
 
 static Sprite * s_sprites[kBlockType_COUNT] = { };
 
