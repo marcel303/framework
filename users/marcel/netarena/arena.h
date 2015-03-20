@@ -149,3 +149,6 @@ public:
 	static const CollisionShape & getBlockCollision(BlockShape shape);
 	void testCollision(const CollisionShape & shape, void * arg, CollisionCB cb);
 };
+
+void initArenaData();
+void shutArenaData();

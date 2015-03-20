@@ -1036,6 +1036,8 @@ bool App::init()
 
 		//
 
+		initArenaData();
+
 		initCharacterData();
 
 		return true;
@@ -1049,6 +1051,8 @@ void App::shutdown()
 	stopHosting();
 
 	//
+
+	shutArenaData();
 
 	shutCharacterData();
 

@@ -12,6 +12,10 @@
 #include "player.h"
 #include "StreamReader.h"
 
+#define BLOCK_SPRITE_SCALE .5f
+
+static Sprite * s_sprites[kBlockType_COUNT] = { };
+
 class BlockMask
 {
 public:
@@ -413,44 +417,11 @@ uint32_t Arena::calcCRC() const
 
 void Arena::drawBlocks() const
 {
-	const char * filenames[kBlockType_COUNT] =
-	{
-		"block-empty.png",
-		"block-destructible.png",
-		"block-destructible.png",
-		"block-indestructible.png",
-		"block-slide.png",
-		"block-moving.png",
-		"block-sticky.png",
-		"block-spike.png",
-		"block-spawn.png",
-		"block-spring.png",
-		"block-teleport.png",
-		"block-gravity-reverse.png",
-		"block-gravity-disable.png",
-		"block-gravity-strong.png",
-		"block-gravity-left.png",
-		"block-gravity-right.png",
-		"block-conveyorbelt-left.png",
-		"block-conveyorbelt-right.png",
-		"block-passthrough.png",
-		"block-appear.png"
-	};
-
-	static Sprite * sprites[kBlockType_COUNT] = { };
-
 	for (int x = 0; x < ARENA_SX; ++x)
 	{
 		for (int y = 0; y < ARENA_SY; ++y)
 		{
 			const Block & block = m_blocks[x][y];
-
-			if (!sprites[block.type])
-			{
-				const char * filename = filenames[block.type];
-
-				sprites[block.type] = new Sprite(filename);
-			}
 
 			if (block.type == kBlockType_Appear)
 			{
@@ -466,7 +437,7 @@ void Arena::drawBlocks() const
 						setColor(255, 255, 255, 0);
 				}
 
-				sprites[block.type]->drawEx(x * BLOCK_SX, y * BLOCK_SY);
+				s_sprites[block.type]->drawEx(x * BLOCK_SX, y * BLOCK_SY, 0.f, BLOCK_SPRITE_SCALE);
 				setColor(255, 255, 255);
 			}
 			else if (block.type == kBlockType_DestructibleRegen)
@@ -475,12 +446,12 @@ void Arena::drawBlocks() const
 				if (data.isVisible)
 				{
 					setColor(colorWhite);
-					sprites[block.type]->drawEx(x * BLOCK_SX, y * BLOCK_SY);
+					s_sprites[block.type]->drawEx(x * BLOCK_SX, y * BLOCK_SY, 0.f, BLOCK_SPRITE_SCALE);
 				}
 			}
 			else
 			{
-				sprites[block.type]->drawEx(x * BLOCK_SX, y * BLOCK_SY);
+				s_sprites[block.type]->drawEx(x * BLOCK_SX, y * BLOCK_SY, 0.f, BLOCK_SPRITE_SCALE);
 			}
 		}
 	}
@@ -940,5 +911,50 @@ void Arena::testCollision(const CollisionShape & shape, void * arg, CollisionCB 
 				cb(shape, arg, 0, &blocks[i], 0);
 			}
 		}
+	}
+}
+
+//
+
+static const char * filenames[kBlockType_COUNT] =
+{
+	"block-empty.png",
+	"block-destructible.png",
+	"block-destructible.png",
+	"block-indestructible.png",
+	"block-slide.png",
+	"block-moving.png",
+	"block-sticky.png",
+	"block-spike.png",
+	"block-spawn.png",
+	"block-spring.png",
+	"block-teleport.png",
+	"block-gravity-reverse.png",
+	"block-gravity-disable.png",
+	"block-gravity-strong.png",
+	"block-gravity-left.png",
+	"block-gravity-right.png",
+	"block-conveyorbelt-left.png",
+	"block-conveyorbelt-right.png",
+	"block-passthrough.png",
+	"block-appear.png"
+};
+
+void initArenaData()
+{
+	for (int i = 0; i < kBlockType_COUNT; ++i)
+	{
+		const char * filename = filenames[i];
+
+		s_sprites[i] = new Sprite(filename);
+	}
+}
+
+void shutArenaData()
+{
+	for (int i = 0; i < kBlockType_COUNT; ++i)
+	{
+		delete s_sprites[i];
+		s_sprites[i] = 0;
 	}
 }

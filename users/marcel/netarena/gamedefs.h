@@ -14,8 +14,10 @@
 
 #define TICKS_PER_SECOND 60
 
-#define BLOCK_SX 64
-#define BLOCK_SY 64
+//#define BLOCK_SX 64
+//#define BLOCK_SY 64
+#define BLOCK_SX 32
+#define BLOCK_SY 32
 
 #define GFX_SX 1920
 #define GFX_SY 1080
