@@ -16,6 +16,9 @@ todo:
 
 ** HIGH PRIORITY **
 
+- add pickup drop on death
+- fix gravity well not activating?
+
 - slow down player vertically when hitting block. maybe add small upward speed?
 
 + scale pickups with # players
@@ -47,7 +50,7 @@ todo:
 	+ idle in air during charge
 	+ vulnerable during charge
 	+ analog stick = direction of attack
-	max charge = faster, further, succeed/or not, pass through all destructibles/not (strength)
+	# max charge = faster, further, succeed/or not, pass through all destructibles/not (strength)
 
 	v2:
 	+ short recharge
@@ -1304,7 +1307,7 @@ void Player::tick(float dt)
 
 		if (m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && m_input.wentDown(INPUT_BUTTON_A))
 		{
-			if (isAnimOverrideAllowed(kPlayerAnim_AirDash) && true)
+			if (isAnimOverrideAllowed(kPlayerAnim_AirDash) && false)
 			{
 				if ((getIntersectingBlocksMask(m_pos[0] + m_facing[0], m_pos[1]) & kBlockMask_Solid) == 0)
 				{

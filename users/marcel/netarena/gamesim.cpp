@@ -1458,18 +1458,21 @@ void GameSim::tickPlay()
 
 				trySpawnPickup(type);
 			}
-
-			const float multipliers[MAX_PLAYERS] =
-			{
-				PICKUP_RATE_MULTIPLIER_1,
-				PICKUP_RATE_MULTIPLIER_2,
-				PICKUP_RATE_MULTIPLIER_3,
-				PICKUP_RATE_MULTIPLIER_4
-			};
-			const float multiplier = multipliers[getNumPlayers()];
-
-			m_nextPickupSpawnTimeRemaining = (PICKUP_INTERVAL + (Random() % PICKUP_INTERVAL_VARIANCE)) * multiplier;
 		}
+	}
+
+	if (m_nextPickupSpawnTimeRemaining == 0.f)
+	{
+		const float multipliers[MAX_PLAYERS] =
+		{
+			PICKUP_RATE_MULTIPLIER_1,
+			PICKUP_RATE_MULTIPLIER_2,
+			PICKUP_RATE_MULTIPLIER_3,
+			PICKUP_RATE_MULTIPLIER_4
+		};
+		const float multiplier = multipliers[getNumPlayers()];
+
+		m_nextPickupSpawnTimeRemaining = (PICKUP_INTERVAL + (Random() % PICKUP_INTERVAL_VARIANCE)) * multiplier;
 	}
 
 	// level events
