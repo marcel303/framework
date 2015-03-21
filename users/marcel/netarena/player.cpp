@@ -16,21 +16,15 @@ todo:
 
 ** HIGH PRIORITY **
 
+- slow down player vertically when hitting block. maybe add small upward speed?
+
++ scale pickups with # players
++ make player impact response character specific (add 'weight')
++ make melee cooldown time character specific
+
 - fix player not moving on death
 
 - add curve editing through options
-
-- melee weapon kinetic energy / character data property
-
-- zweihander sword guy
-	+ slow attack
-	+ special on ground:
-		+ sword up, 2x movement speed, for max 5 seconds
-		+ on release: stomp attack, sword gets stuck in ground
-		+ 1 second recovery time
-	- special in air:
-		- stomp attack, sword gets stuck in ground
-		- 1 second recovery time
 
 - shield guy
 	- can block in 1 direction
@@ -40,14 +34,11 @@ todo:
 	- can throw axe away, has to pick it up again
 
 - fix up/down/dash animations
-+ analog jump, accel over frames
 
 - prototype pipe bomb
 	1 throw/1 explode
 
 ** MEDIUM PRIORITY **
-
-+ add HOME/END support to text field
 
 - prototype invisibility ability
 	charge period
@@ -66,12 +57,13 @@ todo:
 	v3:
 	- remove debuff
 
+- prototype gravity well teleport
+
 - add pickup art
 - add path for special
 - prototype grappling hook
 
 - add callstack gathering
-+ add IP's to player names (visible on host)
 
 - check build ID
 
@@ -132,6 +124,18 @@ todo:
 
 ** DONE **
 
++ add HOME/END support to text field
++ zweihander sword guy
+	+ slow attack
+	+ special on ground:
+		+ sword up, 2x movement speed, for max 5 seconds
+		+ on release: stomp attack, sword gets stuck in ground
+		+ 1 second recovery time
+	+ special in air:
+		+ stomp attack, sword gets stuck in ground
+		+ 1 second recovery time
++ analog jump, accel over frames
++ add IP's to player names (visible on host)
 + torch light flicker speed should be time dilated too
 + add key repeat to text input
 + add global method to get character color
@@ -246,6 +250,7 @@ struct PlayerAnimInfo
 	{ "sprite.scml", "Walk" /*RocketPunch_Attack*/, 5 }, // fixme : attack
 	{ "sprite.scml", "Walk" /*Zweihander_Charge*/, 5 },
 	{ "sprite.scml", "AttackDown" /*Zweihander_Attack*/, 5 },
+	{ "sprite.scml", "AttackDown" /*Zweihander_AttackDown*/, 5 },
 	{ "sprite.scml", "Idle" /*Zweihander_Stunned*/, 5 },
 	{ "sprite.scml", "AirDash",    5 },
 	{ "sprite.scml", "Spawn",      6 },
@@ -532,17 +537,18 @@ bool Player::getPlayerCollision(CollisionInfo & collision) const
 	return true;
 }
 
-void Player::getDamageHitbox(CollisionInfo & collision) const
+void Player::getDamageHitbox(CollisionShape & shape) const
 {
 	Assert(m_isUsed);
 
-	collision.min[0] = m_pos[0] - PLAYER_DAMAGE_HITBOX_SX/2;
-	collision.min[1] = m_pos[1] - PLAYER_DAMAGE_HITBOX_SY;
-	collision.max[0] = m_pos[0] + PLAYER_DAMAGE_HITBOX_SX/2;
-	collision.max[1] = m_pos[1];
+	shape.set(
+		Vec2(m_pos[0] - PLAYER_DAMAGE_HITBOX_SX/2, m_pos[1] - PLAYER_DAMAGE_HITBOX_SY),
+		Vec2(m_pos[0] + PLAYER_DAMAGE_HITBOX_SX/2, m_pos[1] - PLAYER_DAMAGE_HITBOX_SY),
+		Vec2(m_pos[0] + PLAYER_DAMAGE_HITBOX_SX/2, m_pos[1]),
+		Vec2(m_pos[0] - PLAYER_DAMAGE_HITBOX_SX/2, m_pos[1]));
 }
 
-void Player::getAttackCollision(CollisionInfo & collision) const
+void Player::getAttackCollision(CollisionShape & shape) const
 {
 	Assert(m_isUsed);
 
@@ -562,10 +568,18 @@ void Player::getAttackCollision(CollisionInfo & collision) const
 	if (y1 > y2)
 		std::swap(y1, y2);
 
+#if 1
+	shape.set(
+		Vec2(m_pos[0] + x1, m_pos[1] + y1),
+		Vec2(m_pos[0] + x2, m_pos[1] + y1),
+		Vec2(m_pos[0] + x2, m_pos[1] + y2),
+		Vec2(m_pos[0] + x1, m_pos[1] + y2));
+#else
 	collision.min[0] = m_pos[0] + x1;
 	collision.min[1] = m_pos[1] + y1;
 	collision.max[0] = m_pos[0] + x2;
 	collision.max[1] = m_pos[1] + y2;
+#endif
 }
 
 float Player::getAttackDamage(Player * other) const
@@ -576,13 +590,13 @@ float Player::getAttackDamage(Player * other) const
 
 	if (m_attack.attacking && m_attack.hasCollision)
 	{
-		CollisionInfo attackCollision;
-		CollisionInfo otherCollision;
+		CollisionShape attackShape;
+		CollisionShape otherShape;
 
-		getAttackCollision(attackCollision);
-		other->getDamageHitbox(otherCollision);
+		getAttackCollision(attackShape);
+		other->getDamageHitbox(otherShape);
 
-		if (attackCollision.intersects(otherCollision))
+		if (attackShape.intersects(otherShape))
 		{
 			result = 1.f;
 		}
@@ -924,14 +938,17 @@ void Player::tick(float dt)
 
 									if (damage[j])
 									{
-										players[j]->m_vel = reflect * PLAYER_SWORD_CLING_SPEED;
+										players[j]->m_vel = reflect * PLAYER_SWORD_CLING_SPEED / characterData->m_weight;
 										players[j]->m_controlDisableTime = PLAYER_SWORD_CLING_TIME;
 									}
 
 									players[j]->cancelAttack();
 								}
 
-								GAMESIM->playSound("melee-cancel.ogg"); // sound when two melee attacks hit at the same time
+								if (damage[0] && damage[1])
+								{
+									GAMESIM->playSound("melee-cancel.ogg"); // sound when two melee attacks hit at the same time
+								}
 							}
 						}
 					}
@@ -939,17 +956,18 @@ void Player::tick(float dt)
 
 				// see if we've hit a block
 
-				CollisionInfo attackCollision;
+				CollisionShape attackCollision;
 				getAttackCollision(attackCollision);
 
-				m_attack.hitDestructible |= GAMESIM->m_arena.handleDamageRect(
+				m_attack.hitDestructible |= GAMESIM->m_arena.handleDamageShape(
 					*GAMESIM,
 					m_pos[0],
 					m_pos[1],
-					attackCollision.min[0],
+					attackCollision,
+					/*attackCollision.min[0],
 					attackCollision.min[1],
 					attackCollision.max[0],
-					attackCollision.max[1],
+					attackCollision.max[1],*/
 					!m_attack.hitDestructible);
 			}
 
@@ -1128,7 +1146,7 @@ void Player::tick(float dt)
 				m_attack = AttackInfo();
 				m_attack.attacking = true;
 
-				m_attack.cooldown = PLAYER_SWORD_COOLDOWN;
+				m_attack.cooldown = characterData->m_meleeCooldown;
 
 				PlayerAnim anim = kPlayerAnim_NULL;
 
@@ -1208,7 +1226,7 @@ void Player::tick(float dt)
 					m_attack = AttackInfo();
 					m_attack.attacking = true;
 
-					m_attack.cooldown = PLAYER_SWORD_COOLDOWN; // todo : melee
+					m_attack.cooldown = characterData->m_meleeCooldown; // todo : from character data?
 
 					// start anim
 
@@ -1286,7 +1304,7 @@ void Player::tick(float dt)
 
 		if (m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && m_input.wentDown(INPUT_BUTTON_A))
 		{
-			if (isAnimOverrideAllowed(kPlayerAnim_AirDash) && false)
+			if (isAnimOverrideAllowed(kPlayerAnim_AirDash) && true)
 			{
 				if ((getIntersectingBlocksMask(m_pos[0] + m_facing[0], m_pos[1]) & kBlockMask_Solid) == 0)
 				{
@@ -1355,8 +1373,8 @@ void Player::tick(float dt)
 			m_attack.m_rocketPunch.isActive == false;
 
 		const bool allowJumping =
-			playerControl &&
-			m_attack.m_zweihander.isActive() == false;
+			playerControl;// &&
+			//m_attack.m_zweihander.isActive() == false;
 
 		m_controlDisableTime -= dt;
 		if (m_controlDisableTime < 0.f)
@@ -1427,7 +1445,8 @@ void Player::tick(float dt)
 
 			if (m_attack.m_zweihander.isActive())
 			{
-				steeringSpeed *= STEERING_SPEED_ZWEIHANDER;
+				if (m_isGrounded)
+					steeringSpeed *= STEERING_SPEED_ZWEIHANDER;
 				numSteeringFrame = 5;
 			}
 			else if (isWalkingOnSolidGround)
@@ -1509,6 +1528,7 @@ void Player::tick(float dt)
 				!m_isUsingJetpack &&
 				m_special.meleeCounter == 0 &&
 				!m_special.attackDownActive &&
+				m_attack.m_zweihander.state != AttackInfo::Zweihander::kState_AttackDown &&
 				m_vel[0] != 0.f && Calc::Sign(m_facing[0]) == Calc::Sign(m_vel[0]) &&
 				//Calc::Sign(m_vel[1]) == Calc::Sign(gravity) &&
 				(Calc::Sign(m_vel[1]) == Calc::Sign(gravity) || Calc::Abs(m_vel[1]) <= PLAYER_JUMP_SPEED / 2.f) &&
@@ -1537,6 +1557,9 @@ void Player::tick(float dt)
 		if (gravity < GRAVITY)
 		{
 			m_special.attackDownActive = false;
+
+			if (m_attack.m_zweihander.state == AttackInfo::Zweihander::kState_AttackDown)
+				m_attack.m_zweihander.end(*this);
 		}
 
 		if (currentBlockMask & (1 << kBlockType_GravityLeft))
@@ -1735,8 +1758,8 @@ void Player::tick(float dt)
 					{
 						Block * block = blockAndDistance->block;
 
-						CollisionShape blockShape = Arena::getBlockCollision(block->shape);
-						blockShape.translate(blockAndDistance->x * BLOCK_SX, blockAndDistance->y * BLOCK_SY);
+						CollisionShape blockShape;
+						Arena::getBlockCollision(block->shape, blockShape, blockAndDistance->x, blockAndDistance->y);
 
 						float contactDistance;
 						Vec2 contactNormal;
@@ -1896,8 +1919,8 @@ void Player::tick(float dt)
 
 						if ((1 << block->type) & kBlockMask_Solid)
 						{
-							CollisionShape blockShape = Arena::getBlockCollision(block->shape);
-							blockShape.translate(blockAndDistance->x * BLOCK_SX, blockAndDistance->y * BLOCK_SY);
+							CollisionShape blockShape;
+							Arena::getBlockCollision(block->shape, blockShape, blockAndDistance->x, blockAndDistance->y);
 
 							float contactDistance;
 							Vec2 contactNormal;
@@ -2148,6 +2171,9 @@ void Player::tick(float dt)
 									if (size >= 1)
 										GAMESIM->addFloorEffect(m_index, m_pos[0], m_pos[1], size, (size + 1) * 2 / 3);
 								}
+
+								if (m_attack.m_zweihander.state == AttackInfo::Zweihander::kState_AttackDown)
+									m_attack.m_zweihander.handleAttackAnimComplete(*this);
 
 								m_special.attackDownActive = false;
 								m_special.attackDownHeight = 0.f;
@@ -2522,12 +2548,11 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 
 	if (m_anim == kPlayerAnim_Attack || m_anim == kPlayerAnim_AttackUp || m_anim == kPlayerAnim_AttackDown)
 	{
-		CollisionInfo collisionInfo;
-		getAttackCollision(collisionInfo);
+		CollisionShape attackCollision;
+		getAttackCollision(attackCollision);
 
 		setColor(255, 0, 0);
-		//drawRect(collisionInfo.x1, collisionInfo.y1, collisionInfo.x2, collisionInfo.y2);
-		//drawLine(x, y, x + m_anim.m_attackDx * 50, y + m_anim.m_attackDy * 50);
+		//attackCollision.debugDraw();
 	}
 }
 
@@ -2547,20 +2572,16 @@ void Player::debugDraw() const
 		m_pos[0] + m_collision.max[0] + 1,
 		m_pos[1] + m_collision.max[1] + 1);
 
-	CollisionInfo damageCollision;
+	CollisionShape damageCollision;
 	getDamageHitbox(damageCollision);
 	setColor(63, 31, 0, 63);
-	drawRect(
-		damageCollision.min[0],
-		damageCollision.min[1],
-		damageCollision.max[0] + 1,
-		damageCollision.max[1] + 1);
+	damageCollision.debugDraw();
 
 	float y = m_pos[1];
 
 	if (m_attack.attacking && m_attack.hasCollision)
 	{
-		CollisionInfo attackCollision;
+		CollisionShape attackCollision;
 		getAttackCollision(attackCollision);
 
 		Font font("calibri.ttf");
@@ -2571,11 +2592,7 @@ void Player::debugDraw() const
 		y += 18.f;
 
 		setColor(255, 0, 0, 63);
-		drawRect(
-			attackCollision.min[0],
-			attackCollision.min[1],
-			attackCollision.max[0],
-			attackCollision.max[1]);
+		attackCollision.debugDraw();
 	}
 
 	if (m_isHuggingWall)
@@ -2759,7 +2776,7 @@ void Player::handleImpact(Vec2Arg velocity)
 	for (int i = 0; i < 2; ++i)
 	{
 		if (Calc::Sign(velDelta[i]) == Calc::Sign(velocity[i]))
-			m_vel[i] += velDelta[i];
+			m_vel[i] += velDelta[i] / getCharacterData(m_characterIndex)->m_weight;
 	}
 }
 
@@ -2768,6 +2785,10 @@ bool Player::shieldAbsorb(float amount)
 	if (m_shield.shield > 0)
 	{
 		m_shield.shield--;
+
+		if (m_shield.shield == 0)
+			GAMESIM->playSound("shield-pop.ogg");
+
 		return true;
 	}
 	else
@@ -3100,11 +3121,18 @@ void Player::AttackInfo::Zweihander::end(Player & player)
 	memset(this, 0, sizeof(Zweihander));
 	player.m_attack = AttackInfo();
 	player.m_isAnimDriven = false;
+	player.clearAnimOverrides();
 }
 
 void Player::AttackInfo::Zweihander::handleAttackAnimComplete(Player & player)
 {
-	Assert(state == kState_Attack);
+	Assert(state == kState_Attack || state == kState_AttackDown);
+
+	if (player.m_anim == kPlayerAnim_Zweihander_AttackDown)
+	{
+		player.clearAnimOverrides();
+		player.setAnim(kPlayerAnim_Idle, true, true);
+	}
 
 	if (player.isAnimOverrideAllowed(kPlayerAnim_Zweihander_Stunned))
 	{
@@ -3113,6 +3141,7 @@ void Player::AttackInfo::Zweihander::handleAttackAnimComplete(Player & player)
 		player.setAnim(kPlayerAnim_Zweihander_Stunned, true, true);
 		player.m_isAnimDriven = true;
 		player.m_animVelIsAbsolute = true;
+		player.m_animAllowSteering = false;
 
 		player.m_instanceData->m_gameSim->addFloorEffect(
 			player.m_index, player.m_pos[0], player.m_pos[1],
@@ -3137,11 +3166,22 @@ void Player::AttackInfo::Zweihander::tick(Player & player, float dt)
 		{
 			if (player.isAnimOverrideAllowed(kPlayerAnim_Zweihander_Attack))
 			{
-				state = kState_Attack;
-				timer = 0.f;
-				player.setAnim(kPlayerAnim_Zweihander_Attack, true, true);
-				player.m_isAnimDriven = true;
-				player.m_animVelIsAbsolute = true;
+				if (player.m_isGrounded)
+				{
+					state = kState_Attack;
+					timer = 0.f;
+					player.setAnim(kPlayerAnim_Zweihander_Attack, true, true);
+					player.m_isAnimDriven = true;
+					player.m_animVelIsAbsolute = true;
+				}
+				else
+				{
+					state = kState_AttackDown;
+					timer = 0.f;
+					player.setAnim(kPlayerAnim_Zweihander_AttackDown, true, true);
+					player.m_isAnimDriven = true;
+					player.m_enterPassthrough = true;
+				}
 			}
 			else
 			{
@@ -3165,6 +3205,8 @@ void Player::AttackInfo::Zweihander::tick(Player & player, float dt)
 CharacterData::CharacterData(int characterIndex)
 	: m_spriter(0)
 	, m_spriteScale(1.f)
+	, m_weight(1.f)
+	, m_meleeCooldown(0.f)
 	, m_special(kPlayerSpecial_None)
 {
 	load(characterIndex);
@@ -3208,6 +3250,8 @@ void CharacterData::load(int characterIndex)
 	m_spriter = new Spriter(filename);
 
 	m_spriteScale = m_props.getFloat("sprite_scale", 1.f);
+	m_meleeCooldown = m_props.getFloat("melee_cooldown", PLAYER_SWORD_COOLDOWN);
+	m_weight = m_props.getFloat("weight", 1.f);
 
 	// special
 

@@ -835,6 +835,15 @@ void GameSim::freePlayer(PlayerInstanceData * instanceData)
 	}
 }
 
+int GameSim::getNumPlayers() const
+{
+	int result = 0;
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+		if (m_players[i].m_isUsed)
+			result++;
+	return result;
+}
+
 void GameSim::setGameState(::GameState gameState)
 {
 	m_gameState = gameState;
@@ -1148,7 +1157,7 @@ void GameSim::resetGameWorld()
 	for (int i = 0; i < MAX_PICKUPS; ++i)
 		m_pickups[i] = Pickup();
 
-	m_nextPickupSpawnTick = 0;
+	m_nextPickupSpawnTimeRemaining = 0.f;
 
 	// reset movers
 
@@ -1404,47 +1413,63 @@ void GameSim::tickPlay()
 
 	// pickup spawning
 
-	if (tick >= m_nextPickupSpawnTick)
+	if (m_nextPickupSpawnTimeRemaining > 0.f)
 	{
-		int numPickups = 0;
-		for (int i = 0; i < MAX_PICKUPS; ++i)
-			if (m_pickups[i].isAlive)
-				numPickups++;
+		m_nextPickupSpawnTimeRemaining -= dt;
 
-		if (numPickups < MAX_PICKUP_COUNT)
+		if (m_nextPickupSpawnTimeRemaining < 0.f)
 		{
-			int weights[kPickupType_COUNT] =
-			{
-				PICKUP_AMMO_WEIGHT,
-				PICKUP_NADE_WEIGHT,
-				PICKUP_SHIELD_WEIGHT,
-				PICKUP_ICE_WEIGHT,
-				PICKUP_BUBBLE_WEIGHT,
-				PICKUP_TIMEDILATION_WEIGHT
-			};
+			m_nextPickupSpawnTimeRemaining = 0.f;
 
-			int totalWeight = 0;
+			int numPickups = 0;
+			for (int i = 0; i < MAX_PICKUPS; ++i)
+				if (m_pickups[i].isAlive)
+					numPickups++;
 
-			for (int i = 0; i < kPickupType_COUNT; ++i)
+			if (numPickups < MAX_PICKUP_COUNT)
 			{
-				totalWeight += weights[i];
-				weights[i] = totalWeight;
+				int weights[kPickupType_COUNT] =
+				{
+					PICKUP_AMMO_WEIGHT,
+					PICKUP_NADE_WEIGHT,
+					PICKUP_SHIELD_WEIGHT,
+					PICKUP_ICE_WEIGHT,
+					PICKUP_BUBBLE_WEIGHT,
+					PICKUP_TIMEDILATION_WEIGHT
+				};
+
+				int totalWeight = 0;
+
+				for (int i = 0; i < kPickupType_COUNT; ++i)
+				{
+					totalWeight += weights[i];
+					weights[i] = totalWeight;
+				}
+
+				if (DEBUG_RANDOM_CALLSITES)
+					LOG_DBG("Random called from pre trySpawnPickup");
+				int value = Random() % totalWeight;
+
+				PickupType type = kPickupType_COUNT;
+
+				for (int i = 0; type == kPickupType_COUNT; ++i)
+					if (value < weights[i])
+						type = (PickupType)i;
+
+				trySpawnPickup(type);
 			}
 
-			if (DEBUG_RANDOM_CALLSITES)
-				LOG_DBG("Random called from pre trySpawnPickup");
-			int value = Random() % totalWeight;
+			const float multipliers[MAX_PLAYERS] =
+			{
+				PICKUP_RATE_MULTIPLIER_1,
+				PICKUP_RATE_MULTIPLIER_2,
+				PICKUP_RATE_MULTIPLIER_3,
+				PICKUP_RATE_MULTIPLIER_4
+			};
+			const float multiplier = multipliers[getNumPlayers()];
 
-			PickupType type = kPickupType_COUNT;
-
-			for (int i = 0; type == kPickupType_COUNT; ++i)
-				if (value < weights[i])
-					type = (PickupType)i;
-
-			trySpawnPickup(type);
+			m_nextPickupSpawnTimeRemaining = (PICKUP_INTERVAL + (Random() % PICKUP_INTERVAL_VARIANCE)) * multiplier;
 		}
-
-		m_nextPickupSpawnTick = tick + (PICKUP_INTERVAL + (Random() % PICKUP_INTERVAL_VARIANCE)) * TICKS_PER_SECOND;
 	}
 
 	// level events

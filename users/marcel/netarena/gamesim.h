@@ -57,8 +57,8 @@ struct Player
 	void testCollision(const CollisionShape & shape, void * arg, CollisionCB cb);
 
 	bool getPlayerCollision(CollisionInfo & collision) const;
-	void getDamageHitbox(CollisionInfo & collision) const;
-	void getAttackCollision(CollisionInfo & collision) const;
+	void getDamageHitbox(CollisionShape & shape) const;
+	void getAttackCollision(CollisionShape & shape) const;
 	float getAttackDamage(Player * other) const;
 
 	bool isAnimOverrideAllowed(PlayerAnim anim) const;
@@ -236,6 +236,7 @@ struct Player
 				kState_Idle,
 				kState_Charge,
 				kState_Attack,
+				kState_AttackDown,
 				kState_Stunned
 			};
 
@@ -581,7 +582,7 @@ struct GameStateData
 	// pickups
 
 	Pickup m_pickups[MAX_PICKUPS];
-	uint64_t m_nextPickupSpawnTick;
+	float m_nextPickupSpawnTimeRemaining;
 
 	// movers
 
@@ -680,6 +681,7 @@ public:
 	void setPlayerPtrs() const;
 	PlayerInstanceData * allocPlayer(uint16_t owningChannelId);
 	void freePlayer(PlayerInstanceData * instanceData);
+	int getNumPlayers() const;
 
 	void setGameState(::GameState gameState);
 	void setGameMode(GameMode gameMode);

@@ -872,9 +872,70 @@ bool Arena::handleDamageRect(GameSim & gameSim, int baseX, int baseY, int x1, in
 	return result;
 }
 
+bool Arena::handleDamageShape(GameSim & gameSim, int baseX, int baseY, const CollisionShape & shape, bool hitDestructible, bool hitSingleDestructible)
+{
+	bool result = false;
+
+	Vec2 min;
+	Vec2 max;
+	shape.getMinMax(min, max);
+
+	const int x1 = (int)std::floor(min[0]);
+	const int y1 = (int)std::floor(min[1]);
+	const int x2 = (int)std::ceil(max[0]);
+	const int y2 = (int)std::ceil(max[1]);
+
+	const int kMaxBlocks = 64;
+
+	BlockAndDistance blocks[kMaxBlocks];
+
+	int numBlocks = kMaxBlocks;
+
+	if (getBlocksFromPixels(
+		baseX, baseY,
+		x1, y1, x2, y2,
+		true,
+		blocks, numBlocks))
+	{
+		std::sort(blocks, blocks + numBlocks, [] (BlockAndDistance & block1, BlockAndDistance & block2) { return block1.distanceSq < block2.distanceSq; });
+
+		for (int i = 0; i < numBlocks; ++i)
+		{
+			BlockAndDistance & blockInfo = blocks[i];
+
+			Block & block = *blockInfo.block;
+
+			CollisionShape blockCollision;
+			getBlockCollision(block.shape, blockCollision, blockInfo.x, blockInfo.y);
+
+			if (!blockCollision.intersects(shape))
+				continue;
+
+			if (!hitDestructible && (block.type == kBlockType_Destructible || block.type == kBlockType_DestructibleRegen))
+				continue;
+
+			if (block.handleDamage(gameSim, blockInfo.x, blockInfo.y))
+			{
+				if (hitSingleDestructible)
+					hitDestructible = false;
+
+				result = true;
+			}
+		}
+	}
+
+	return result;
+}
+
 const CollisionShape & Arena::getBlockCollision(BlockShape shape)
 {
 	return s_blockPolys[shape];
+}
+
+void Arena::getBlockCollision(BlockShape shape, CollisionShape & collisionShape, int blockX, int blockY)
+{
+	collisionShape = getBlockCollision(shape);
+	collisionShape.translate(blockX * BLOCK_SX, blockY * BLOCK_SY);
 }
 
 void Arena::testCollision(const CollisionShape & shape, void * arg, CollisionCB cb)
@@ -904,8 +965,8 @@ void Arena::testCollision(const CollisionShape & shape, void * arg, CollisionCB 
 			if (blocks[i].block->shape == kBlockShape_Empty)
 				continue;
 
-			CollisionShape blockShape = Arena::getBlockCollision(blocks[i].block->shape);
-			blockShape.translate(blocks[i].x * BLOCK_SX, blocks[i].y * BLOCK_SY);
+			CollisionShape blockShape;
+			Arena::getBlockCollision(blocks[i].block->shape, blockShape, blocks[i].x, blocks[i].y);
 
 			if (shape.intersects(blockShape))
 			{

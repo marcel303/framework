@@ -1486,7 +1486,7 @@ void App::draw()
 				setColor(255, 255, 255);
 				Font font("calibri.ttf");
 				setFont(font);
-				drawText(5, GFX_SY - 25, 20, +1.f, -1.f, "viewing client %d. time dilation %01.2f", m_selectedClient, timeDilation);
+				drawText(5, GFX_SY - 25, 20, +1.f, -1.f, "viewing client %d. time dilation %01.2f. state %s", m_selectedClient, timeDilation, g_gameStateNames[client->m_gameSim->m_gameState]);
 			}
 		}
 
@@ -1505,9 +1505,9 @@ void App::draw()
 			{
 				int y = 100;
 				setFont("calibri.ttf");
-				drawText(0, y += 30, 24, +1, +1, "random seed=%08x, next pickup tick=%u, crc=%08x, px=%g, py=%g",
+				drawText(0, y += 30, 24, +1, +1, "random seed=%08x, next pickup tick=%02.1f, crc=%08x, px=%g, py=%g",
 					g_host->m_gameSim.m_randomSeed,
-					(uint32_t)g_host->m_gameSim.m_nextPickupSpawnTick,
+					g_host->m_gameSim.m_nextPickupSpawnTimeRemaining,
 				#if ENABLE_GAMESTATE_DESYNC_DETECTION
 					g_host->m_gameSim.calcCRC(),
 				#else
@@ -1517,9 +1517,9 @@ void App::draw()
 					g_host->m_gameSim.m_playerInstanceDatas[0] ? g_host->m_gameSim.m_playerInstanceDatas[0]->m_player->m_pos[1] : 0.f);
 				for (size_t i = 0; i < m_clients.size(); ++i)
 				{
-					drawText(0, y += 30, 24, +1, +1, "random seed=%08x, next pickup tick=%u, crc=%08x, px=%g, py=%g",
+					drawText(0, y += 30, 24, +1, +1, "random seed=%08x, next pickup tick=%02.1f, crc=%08x, px=%g, py=%g",
 						m_clients[i]->m_gameSim->m_randomSeed,
-						(uint32_t)m_clients[i]->m_gameSim->m_nextPickupSpawnTick,
+						m_clients[i]->m_gameSim->m_nextPickupSpawnTimeRemaining,
 					#if ENABLE_GAMESTATE_DESYNC_DETECTION
 						m_clients[i]->m_gameSim->calcCRC(),
 					#else

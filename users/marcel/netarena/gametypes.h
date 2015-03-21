@@ -27,8 +27,11 @@ enum GameState
 	kGameState_OnlineMenus,
 	kGameState_NewGame,
 	kGameState_Play,
-	kGameState_RoundComplete
+	kGameState_RoundComplete,
+	kGameState_COUNT
 };
+
+extern const char * g_gameStateNames[kGameState_COUNT];
 
 enum GameMode
 {
@@ -64,6 +67,7 @@ enum PlayerAnim
 	kPlayerAnim_RocketPunch_Attack,
 	kPlayerAnim_Zweihander_Charge,
 	kPlayerAnim_Zweihander_Attack,
+	kPlayerAnim_Zweihander_AttackDown,
 	kPlayerAnim_Zweihander_Stunned,
 	kPlayerAnim_AirDash,
 	kPlayerAnim_Spawn,

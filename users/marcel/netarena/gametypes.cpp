@@ -3,6 +3,17 @@
 #include "gamedefs.h"
 #include "gametypes.h"
 
+const char * g_gameStateNames[kGameState_COUNT] =
+{
+	"mainMenus",
+	"connecting",
+	"onlineMenus",
+	"newGame",
+	"roundComplete"
+};
+
+//
+
 const CollisionShape & CollisionShape::operator=(const CollisionBox & box)
 {
 	Vec2 p1(box.min[0], box.min[1]);

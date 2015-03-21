@@ -63,6 +63,8 @@ public:
 	AnimData m_animData;
 	Spriter * m_spriter;
 	float m_spriteScale;
+	float m_weight; // the change in velocity as a result of a hit depends on this value
+	float m_meleeCooldown;
 	PlayerSpecial m_special;
 	std::map<std::string, SoundBag> m_sounds;
 
