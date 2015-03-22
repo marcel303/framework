@@ -1672,7 +1672,7 @@ void Player::tick(float dt)
 
 		// colliding with solid object left/right of player
 
-		if (m_isHuggingWall && playerControl && m_input.wentDown(INPUT_BUTTON_A))
+		if (m_isWallSliding && playerControl && m_input.wentDown(INPUT_BUTTON_A))
 		{
 			// wall jump
 
