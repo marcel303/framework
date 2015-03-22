@@ -1660,8 +1660,10 @@ void Player::tick(float dt)
 
 		// update grounded state
 
-		//if (m_isGrounded && m_vel[1] < 0.f)
-		//	m_isGrounded = false;
+	#if 1 // player will think it's grounded if not reset and hitting spring
+		if (m_isGrounded && m_vel[1] < 0.f)
+			m_isGrounded = false;
+	#endif
 
 		// collision
 
@@ -2524,7 +2526,7 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 		Sprite("bubble-bubble.png").drawEx(px, py);
 	}
 
-	if (m_anim == kPlayerAnim_Attack || m_anim == kPlayerAnim_AttackUp || m_anim == kPlayerAnim_AttackDown)
+	if (g_devMode && m_anim == kPlayerAnim_Attack || m_anim == kPlayerAnim_AttackUp || m_anim == kPlayerAnim_AttackDown)
 	{
 		CollisionShape attackCollision;
 		if (getAttackCollision(attackCollision))
