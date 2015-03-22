@@ -1,5 +1,6 @@
 #pragma once
 
+#include "gametypes.h"
 #include "Vec2.h"
 
 #define MAX_ACTOR_TYPES 32
@@ -21,13 +22,17 @@ struct PhysicsActorCBs
 	}
 
 	bool (*onBlockMask)(PhysicsActorCBs & cbs, PhysicsActor & actor, uint32_t blockMask);
-	//bool (*onHitActor)(PhysicsActorCBs & cbs, PhysicsActor & actor, PhysicsActor & otherActor); // todo : check actors vs actor collisions once PhysicsScene is set up
+	bool (*onHitActor)(PhysicsActorCBs & cbs, PhysicsActor & actor, PhysicsActor & otherActor); // todo : check actors vs actor collisions once PhysicsScene is set up
+	bool (*onHitPlayer)(PhysicsActorCBs & cbs, PhysicsActor & actor, Player & player); // fixme : use onHitActor at some point when player is converted
 	void (*onBounce)(PhysicsActorCBs & cbs, PhysicsActor & actor);
 	void (*onWrap)(PhysicsActorCBs & cbs, PhysicsActor & actor);
 	void (*onMove)(PhysicsActorCBs & cbs, PhysicsActor & actor);
 };
 
-//extern PhysicsActorCBs * g_physicsActorCBs[MAX_ACTOR_TYPES]; // todo : PhysicsScene and the object contained therein cannot contain pointers due to sync across the net. use type IDs indexing into this array to get to the CBs
+typedef void (*CollisionCB)(const CollisionShape & shape, void * arg, PhysicsActor * actor, BlockAndDistance * block, Player * player);
+
+// PhysicsScene and the objects contained therein cannot contain pointers due to sync across the net. use type IDs indexing into this array to get to the CBs
+//extern PhysicsActorCBs * g_physicsActorCBs[kObjectType_COUNT];
 
 // todo : add support for attaching to movers
 
@@ -38,7 +43,7 @@ struct PhysicsActor
 {
 	bool m_isActive;
 	bool m_isTested; // true if this actor has been tested. since we need to test everything multiple times due to screen wrapping we must avoid testing objects positive multiple times
-	uint8_t m_type; // used to index into g_physicsActorCBs
+	ObjectType m_type; // used to index into g_physicsActorCBs
 
 	Vec2 m_pos;
 	Vec2 m_vel;
@@ -60,15 +65,16 @@ struct PhysicsActor
 	uint32_t getIntersectingBlockMask(GameSim & gameSim, Vec2 pos);
 	void getCollisionInfo(CollisionInfo & collisionInfo);
 
-	bool test(const CollisionBox & box) const;
+	void testCollision(const CollisionShape & shape, void * arg, CollisionCB cb);
+
+	//bool test(const CollisionBox & box) const;
 };
 
 typedef uint8_t PhysicsActorId;
 
 #define kPhysicsActorId_Invalid ((PhysicsActorId)-1)
 
-typedef void (*CollisionCB)(const CollisionShape & shape, void * arg, PhysicsActor * actor, BlockAndDistance * block, Player * player);
-
+#if 0
 struct PhysicsScene
 {
 	PhysicsActor m_actors[MAX_PHYSICS_ACTORS];
@@ -83,8 +89,9 @@ struct PhysicsScene
 	void freeActor(PhysicsActorId id);
 
 	// test the given box against all of the registered physics actors and invoke the callback method for each actor that is hit
-	void test(const CollisionBox & box, CollisionCB cb, void * arg, bool wrap);
-	void testInternal(const CollisionBox & box, CollisionCB cb, void * arg);
+	void testCollision(const CollisionShape & shape, CollisionCB cb, void * arg, bool wrap);
+	void testCollisionInternal(const CollisionShape & shape, CollisionCB cb, void * arg);
 };
+#endif
 
 #pragma pack(pop)

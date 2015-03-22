@@ -44,6 +44,7 @@ enum GameMode
 enum ObjectType
 {
 	kObjectType_Undefined,
+	kObjectType_Player,
 	kObjectType_Pickup,
 	kObjectType_PipeBomb,
 	kObjectType_COUNT
@@ -98,6 +99,8 @@ enum PlayerSpecial
 	kPlayerSpecial_Invisibility,
 	kPlayerSpecial_Jetpack,
 	kPlayerSpecial_Zweihander,
+	kPlayerSpecial_AxeThrow,
+	kPlayerSpecial_Pipebomb,
 	kPlayerSpecial_COUNT
 };
 
@@ -250,6 +253,8 @@ struct CollisionShape
 		points[1] = p2;
 		points[2] = p3;
 		numPoints = 3;
+
+		fixup();
 	}
 
 	void set(Vec2 p1, Vec2 p2, Vec2 p3, Vec2 p4)
@@ -259,10 +264,13 @@ struct CollisionShape
 		points[2] = p3;
 		points[3] = p4;
 		numPoints = 4;
+
+		fixup();
 	}
 
 	const CollisionShape & operator=(const CollisionBox & box);
 
+	void fixup();
 	void translate(float x, float y);
 
 	void getMinMax(Vec2 & min, Vec2 & max) const;
@@ -271,7 +279,7 @@ struct CollisionShape
 	bool intersects(const CollisionShape & other) const;
 	bool checkCollision(const CollisionShape & other, Vec2Arg delta, float & contactDistance, Vec2 & contactNormal) const;
 
-	void debugDraw() const;
+	void debugDraw(bool drawNormals = true) const;
 };
 
 template <int SIZE>

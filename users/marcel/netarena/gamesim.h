@@ -58,7 +58,7 @@ struct Player
 
 	bool getPlayerCollision(CollisionInfo & collision) const;
 	void getDamageHitbox(CollisionShape & shape) const;
-	void getAttackCollision(CollisionShape & shape) const;
+	bool getAttackCollision(CollisionShape & shape) const;
 	float getAttackDamage(Player * other) const;
 
 	bool isAnimOverrideAllowed(PlayerAnim anim) const;
@@ -449,16 +449,21 @@ struct Mover
 
 struct PipeBomb : PhysicsActor
 {
+	bool m_exploded;
+	int m_playerIndex;
+
 	PipeBomb()
 	{
 		memset(this, 0, sizeof(PipeBomb));
 	}
 
-	void setup(Vec2Arg pos, Vec2Arg vel);
+	void setup(Vec2Arg pos, Vec2Arg vel, int playerIndex);
 
 	void tick(GameSim & gameSim, float dt);
 	void draw() const;
 	void drawLight() const;
+
+	void explode();
 };
 
 struct Barrel : PhysicsActor
@@ -722,6 +727,8 @@ public:
 	uint16_t spawnBullet(int16_t x, int16_t y, uint8_t angle, BulletType type, BulletEffect effect, uint8_t ownerPlayerId);
 	void spawnParticles(const ParticleSpawnInfo & spawnInfo);
 
+	void spawnPipeBomb(Vec2 pos, Vec2 vel, int playerIndex);
+
 	void addScreenShake(float dx, float dy, float stiffness, float life);
 	Vec2 getScreenShake() const;
 
@@ -731,3 +738,50 @@ public:
 };
 
 extern GameSim * g_gameSim;
+
+//
+
+struct PhysicsUpdateInfo;
+
+struct ContactInfo
+{
+	Vec2 n;
+	float d;
+
+	bool operator==(const ContactInfo & other) const
+	{
+		return
+			n == other.n &&
+			d == other.d;
+	}
+};
+
+enum PhysicsUpdateFlags
+{
+	kPhysicsUpdateFlag_DontCollide = 1 << 0,
+	kPhysicsUpdateFlag_DontUpdateVelocity = 1 << 1
+};
+
+// return one or more PhysicsUpdateFlags
+typedef int (*PhysicsUpdateCB)(PhysicsUpdateInfo & updateInfo);
+
+struct PhysicsUpdateInfo
+{
+	CollisionShape shape;
+	void * arg;
+	PhysicsUpdateCB cb;
+
+	int axis;
+	Vec2 delta;
+
+	PhysicsActor * actor;
+	BlockAndDistance * blockInfo;
+	Player * player;
+	Vec2 contactNormal;
+	float contactDistance;
+
+	std::vector<ContactInfo> contacts;
+	int flags;
+};
+
+void updatePhysics(GameSim & gameSim, Vec2 & pos, Vec2 & vel, float dt, const CollisionShape & shape, void * arg, PhysicsUpdateCB cb);
