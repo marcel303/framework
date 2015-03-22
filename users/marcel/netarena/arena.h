@@ -123,7 +123,7 @@ public:
 
 	void reset();
 	void generate();
-	void load(const char * filename);
+	void load(const char * name);
 	void serialize(NetSerializationContext & context);
 
 #if ENABLE_GAMESTATE_DESYNC_DETECTION

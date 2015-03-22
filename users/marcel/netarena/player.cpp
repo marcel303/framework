@@ -997,7 +997,8 @@ void Player::tick(float dt)
 						m_pos[0],
 						m_pos[1],
 						attackCollision,
-						!m_attack.hitDestructible);
+						!m_attack.hitDestructible,
+						PLAYER_SWORD_SINGLE_BLOCK);
 				}
 			}
 
@@ -1746,7 +1747,7 @@ void Player::tick(float dt)
 			{
 				CollisionArgs * args = (CollisionArgs*)updateInfo.arg;
 				Player * self = args->self;
-				Vec2 & delta = updateInfo.delta;
+				const Vec2 & delta = updateInfo.delta;
 				const Vec2 & totalVel = args->totalVel;
 				const bool enterPassThrough = args->enterPassThrough;
 				const int i = updateInfo.axis;
@@ -1838,10 +1839,12 @@ void Player::tick(float dt)
 
 						// effects
 
-						// todo : if ice or bubble : do not allow vel change. instead, change vel after all collision code is done
-
 						if (self->m_ice.timer != 0.f || self->m_bubble.timer != 0.f)
+						{
+							// ice and bubble effects do their own collision handling (reflect)
+
 							result |= kPhysicsUpdateFlag_DontUpdateVelocity;
+						}
 
 						if (i == 1)
 						{

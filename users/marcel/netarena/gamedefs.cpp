@@ -82,6 +82,7 @@ OPTION_DEFINE(float, PLAYER_SWORD_COOLDOWN, "Player/Attacks/Sword/Cooldown Time"
 OPTION_DEFINE(int, PLAYER_SWORD_PUSH_SPEED, "Player/Attacks/Sword/Push Speed");
 OPTION_DEFINE(int, PLAYER_SWORD_CLING_SPEED, "Player/Attacks/Sword/Cancel Recoil Speed");
 OPTION_DEFINE(float, PLAYER_SWORD_CLING_TIME, "Player/Attacks/Sword/Cancel Recoil Control Time");
+OPTION_DEFINE(bool, PLAYER_SWORD_SINGLE_BLOCK, "Player/Attacks/Sword/Damage Single Block Only");
 OPTION_STEP(PLAYER_SWORD_COOLDOWN, 0, 0, 0.1f);
 OPTION_STEP(PLAYER_SWORD_PUSH_SPEED, 0, 0, 50);
 OPTION_STEP(PLAYER_SWORD_CLING_SPEED, 0, 0, 10);

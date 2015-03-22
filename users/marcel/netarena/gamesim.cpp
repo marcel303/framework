@@ -141,13 +141,6 @@ void Pickup::draw() const
 	Sprite sprite(filename);
 
 	sprite.drawEx(m_pos[0] + m_bbMin[0], m_pos[1] + m_bbMin[1]);
-
-	if (false)
-	{
-		// todo : remove
-		setFont("calibri.ttf");
-		drawText(m_pos[0], m_pos[1], 24.f, 0.f, 0.f, "type: %d", type);
-	}
 }
 
 void Pickup::drawLight() const
@@ -2293,7 +2286,7 @@ void updatePhysics(GameSim & gameSim, Vec2 & pos, Vec2 & vel, float dt, const Co
 		if (delta[i] == 0.f)
 			continue;
 
-		Vec2 newPos = pos + delta;
+		const Vec2 newPos = pos + delta;
 
 		PhysicsUpdateInfo updateInfo;
 
@@ -2372,14 +2365,12 @@ void updatePhysics(GameSim & gameSim, Vec2 & pos, Vec2 & vel, float dt, const Co
 
 		for (auto contact = updateInfo.contacts.begin(); contact != updateInfo.contacts.end(); ++contact)
 		{
-			Vec2 offset = contact->n * contact->d;
+			const Vec2 offset = contact->n * contact->d;
 
 			pos += offset;
 
 			if (!(updateInfo.flags & kPhysicsUpdateFlag_DontUpdateVelocity))
 			{
-				// todo : let phys update know whether to update velocity
-
 				const float d = vel * contact->n;
 
 				if (d > 0.f)

@@ -12,8 +12,11 @@
 #include "player.h"
 #include "StreamReader.h"
 
-#define BLOCK_SPRITE_SCALE 1.f
-//#define BLOCK_SPRITE_SCALE .5f
+#if USE_32X32_TILES
+	#define BLOCK_SPRITE_SCALE .5f
+#else
+	#define BLOCK_SPRITE_SCALE 1.f
+#endif
 
 static Sprite * s_sprites[kBlockType_COUNT] = { };
 
@@ -203,20 +206,22 @@ void Arena::generate()
 	}
 }
 
-void Arena::load(const char * filename)
+void Arena::load(const char * name)
 {
 	reset();
 
 	//
 
-	std::string baseName = Path::GetBaseName(filename);
+	std::string baseName = Path::GetBaseName(name);
 
+	std::string techFilename = baseName + ".txt";
 	std::string maskFilename = baseName + "-mask.txt";
+	std::string artFilename = baseName + "-art.txt";
 
 	try
 	{
 		FileStream stream;
-		stream.Open(filename, (OpenMode)(OpenMode_Read | OpenMode_Text));
+		stream.Open(techFilename.c_str(), (OpenMode)(OpenMode_Read | OpenMode_Text));
 		StreamReader reader(&stream, false);
 		std::vector<std::string> lines = reader.ReadAllLines();
 
@@ -302,7 +307,7 @@ void Arena::load(const char * filename)
 	}
 	catch (std::exception & e)
 	{
-		LOG_ERR("failed to open %s: %s", filename, e.what());
+		LOG_ERR("failed to open %s: %s", name, e.what());
 	}
 
 	try
@@ -534,6 +539,10 @@ void Arena::tick(GameSim & gameSim)
 							block.shape = kBlockShape_Opaque;
 							block.type = kBlockType_COUNT;
 
+							CollisionInfo blockCollision;
+							blockCollision.min = Vec2((x + 0) * BLOCK_SX, (y + 0) * BLOCK_SY);
+							blockCollision.max = Vec2((x + 1) * BLOCK_SX, (y + 1) * BLOCK_SY);
+
 							for (int i = 0; i < MAX_PLAYERS; ++i)
 							{
 								const Player & player = gameSim.m_players[i];
@@ -541,12 +550,16 @@ void Arena::tick(GameSim & gameSim)
 								if (!player.m_isUsed || !player.m_isAlive)
 									continue;
 
-								if (player.getIntersectingBlocksMask(player.m_pos[0], player.m_pos[1]) & (1 << kBlockType_COUNT))
+								CollisionInfo playerCollision;
+								if (player.getPlayerCollision(playerCollision))
 								{
-									data.regenTime = 1;
-									data.isVisible = false;
-									block.shape = kBlockShape_Empty;
-									break;
+									if (blockCollision.intersects(playerCollision))
+									{
+										data.regenTime = 1;
+										data.isVisible = false;
+										block.shape = kBlockShape_Empty;
+										break;
+									}
 								}
 							}
 
@@ -650,14 +663,22 @@ bool Arena::getRandomPickupLocations(int * out_x, int * out_y, int & numLocation
 {
 	int numCandidates = 0;
 
-	for (int x = 0; x < ARENA_SX; ++x)
-	{
-		for (int y=  0; y < ARENA_SY - 1; ++y)
-		{
-			const Block & block1 = m_blocks[x][y];
-			const Block & block2 = m_blocks[x][y + 1];
+	const int sx = (PICKUP_BLOCK_SX - 1) / 2;
+	const int sy = (PICKUP_BLOCK_SY - 1) / 2;
 
-			if ((block1.type == kBlockType_Empty) && ((1 << block2.type) & kBlockMask_Solid))
+	for (int x = sx; x < ARENA_SX - sx; ++x)
+	{
+		for (int y = sy; y < ARENA_SY - sy - 1; ++y)
+		{
+			bool isCandidate = true;
+
+			for (int ox = -sx; ox <= +sx; ++ox)
+				for (int oy = -sy; oy <= +sy; ++oy)
+					isCandidate &= (m_blocks[x + ox][y + oy].type == kBlockType_Empty);
+			for (int ox = -sx; ox <= +sx; ++ox)
+				isCandidate &= ((1 << m_blocks[x + ox][y + sy + 1].type) & kBlockMask_Solid) != 0;
+
+			if (isCandidate)
 			{
 				if (!reject || !reject(obj, x, y))
 				{
@@ -904,6 +925,9 @@ bool Arena::handleDamageShape(GameSim & gameSim, int baseX, int baseY, const Col
 			BlockAndDistance & blockInfo = blocks[i];
 
 			Block & block = *blockInfo.block;
+
+			if (block.shape == kBlockShape_Empty)
+				continue;
 
 			CollisionShape blockCollision;
 			getBlockCollision(block.shape, blockCollision, blockInfo.x, blockInfo.y);
