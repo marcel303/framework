@@ -30,10 +30,10 @@
 #include "ed.h"
 
 
-#define BASEX 30//52
-#define BASEY 16//32
+#define BASEX 60//52
+#define BASEY 32//32
 
-#define BLOCKSIZE 64//32
+#define BLOCKSIZE 32//32
 #define THUMBSIZE 64
 
 #define ZOOMSPEED 12

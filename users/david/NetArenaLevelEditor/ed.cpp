@@ -112,6 +112,7 @@ void Ed::EditTemplates()
 	SetEditorMode(EM_Template);
 
     m_view->setScene((QGraphicsScene*)(GetCurrentScene()));
+    GetCurrentScene()->setBackgroundBrush(Qt::green);
 }
 
 void Ed::EditLevels()
