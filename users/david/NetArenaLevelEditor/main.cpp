@@ -58,7 +58,7 @@ void SetSelectedTile(char selection)
 void AddAllToScene()
 {
 	ed.EditTemplates();
-	for(int i = 0; i < 2; i++)
+	for(int i = 0; i < 2; i++) //once for templates, once for level
 	{
 		for(int y = 0; y < MAPY; y++)
 			for (int x = 0; x < MAPX; x++)
@@ -313,6 +313,7 @@ void LoadPixmapsArt(QString filename, QMap<short, QPixmap*>& map)
         p2 = new QPixmap(p->scaledToWidth(BLOCKSIZE));
         delete p;
         map[key] = p2;
+		artMap[key] = line;
         key++;
 
         list.pop_front();
@@ -561,7 +562,6 @@ void SaveGeneric(QString filename, EditorScene* s)
 
 void SaveArtFile(QString filename, EditorScene* s)
 {
-
 	QMap<short, short> artTranslation;
 	QMap<short, QPixmap> art2;
 
@@ -590,10 +590,12 @@ void SaveArtFile(QString filename, EditorScene* s)
 	for(int y = 0; y < MAPY; y++)
 		for (int x = 0; x < MAPX; x++)
         {
-           qDebug() << "writing " << QString::number((int)(artTranslation[s->m_tiles[y][x].getBlock()])) << " to file";
-           Sleep(50);
+		   //qDebug() << "writing " << QString::number((int)(artTranslation[s->m_tiles[y][x].getBlock()])) << " to file";
+		   //Sleep(50);
            in << (int)(artTranslation[s->m_tiles[y][x].getBlock()]);
         }
+
+	qDebug() << "Done saving level.";
 
 	fileArt.close();
 
@@ -628,9 +630,6 @@ void SaveLevel(QString filename)
 		SaveGeneric(name + "Collission.txt", sceneCollission);
     if(sceneArt)
 		SaveArtFile(name + "Art", sceneArt);
-    //TODO: save templates
-    //TODO: save art index file
-    //TODO: save art level file
 
 	SaveObjects(name + "Objects.txt");
 }
@@ -816,11 +815,11 @@ void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e, Tile* tile )
 				if(tilex+tt->x < MAPX && tiley+tt->y < MAPY)
 				{
 					sceneCounter = SCENEMECH;
-					sceneMech->m_tiles[tiley+tt->y][tilex+tt->x].SetSelectedBlock(tt->blockMech);
+					sceneMech->m_tiles			[tiley+tt->y][tilex+tt->x].SetSelectedBlock(tt->blockMech);
 					sceneCounter = SCENECOLL;
-					sceneCollission->m_tiles[tiley+tt->y][tilex+tt->x].SetSelectedBlock(tt->blockColl);
+					sceneCollission->m_tiles	[tiley+tt->y][tilex+tt->x].SetSelectedBlock(tt->blockColl);
 					sceneCounter = SCENEART;
-					sceneArt->m_tiles[tiley+tt->y][tilex+tt->x].SetSelectedBlock(tt->GetArtKey());
+					sceneArt->m_tiles			[tiley+tt->y][tilex+tt->x].SetSelectedBlock(tt->GetArtKey());
 
 					if(editorMode == EM_Template)
 					{
@@ -839,7 +838,11 @@ void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e, Tile* tile )
 		{
 			if(e->buttons() == Qt::RightButton)
 			{
-				tile->SetSelectedBlock(' ');
+				if(sceneCounter == SCENEART)
+					tile->SetSelectedBlock(artMap.keys().first());
+				else
+					tile->SetSelectedBlock(' ');
+
 				if(editorMode == EM_Template)
 				{
 					if(sceneCounter == SCENEMECH)

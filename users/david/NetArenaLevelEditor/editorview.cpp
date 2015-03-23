@@ -209,7 +209,7 @@ void EditorView::SetOpacityObject(int s)
 
 void EditorView::ImportTemplate()
 {
-	ed.EditTemplates();
+	ed.EditTemplates(); flip = false;
 
 	QString filename = QFileDialog::getOpenFileName(this, tr("Open Image for Template"));
 
