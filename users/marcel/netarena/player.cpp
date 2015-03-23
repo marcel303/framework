@@ -8,7 +8,7 @@
 #include "player.h"
 #include "Timer.h"
 
-#define USE_NEW_COLLISION_CODE 0
+#define USE_NEW_COLLISION_CODE 1
 
 /*
 
@@ -16,21 +16,18 @@ todo:
 
 ** HIGH PRIORITY **
 
+- add pickup drop on death
+- fix gravity well not activating?
+
+- slow down player vertically when hitting block. maybe add small upward speed?
+
++ scale pickups with # players
++ make player impact response character specific (add 'weight')
++ make melee cooldown time character specific
+
 - fix player not moving on death
 
 - add curve editing through options
-
-- melee weapon kinetic energy / character data property
-
-- zweihander sword guy
-	- slow attack
-	- special on ground:
-		- sword up, 2x movement speed, for max 5 seconds
-		- on release: stomp attack, sword gets stuck in ground
-		- 1 second recovery time
-	- special in air:
-		- stomp attack, sword gets stuck in ground
-		- 1 second recovery time
 
 - shield guy
 	- can block in 1 direction
@@ -40,14 +37,14 @@ todo:
 	- can throw axe away, has to pick it up again
 
 - fix up/down/dash animations
-+ analog jump, accel over frames
 
 - prototype pipe bomb
-	1 throw/1 explode
+	- 1 throw/1 explode
+	- detonate on Y button
+	- detonate on collision?
+	- detonate on player leave
 
 ** MEDIUM PRIORITY **
-
-+ add HOME/END support to text field
 
 - prototype invisibility ability
 	charge period
@@ -56,7 +53,7 @@ todo:
 	+ idle in air during charge
 	+ vulnerable during charge
 	+ analog stick = direction of attack
-	max charge = faster, further, succeed/or not, pass through all destructibles/not (strength)
+	# max charge = faster, further, succeed/or not, pass through all destructibles/not (strength)
 
 	v2:
 	+ short recharge
@@ -66,12 +63,13 @@ todo:
 	v3:
 	- remove debuff
 
+- prototype gravity well teleport
+
 - add pickup art
 - add path for special
 - prototype grappling hook
 
 - add callstack gathering
-+ add IP's to player names (visible on host)
 
 - check build ID
 
@@ -116,7 +114,7 @@ todo:
 - zoom in on winning player, wait for a while before transitioning to the next round
 
 - need to be able to kick player at char select
-- drop rate should scale with number of players
++ drop rate should scale with number of players
 - remove angels in spawn locations -> reduce background noise
 - buff star player ?
 - score feedback, especially in token hunt mode
@@ -124,14 +122,26 @@ todo:
 
 - better death feedback
 - team based game mode
-- ammo despawn na x seconds + indicator (?)
+# ammo despawn na x seconds + indicator (?)
 
 - blood particles
 - fill the level with lava
-- earthquake. players go up on quake
++ earthquake. players go up on quake
 
 ** DONE **
 
++ add HOME/END support to text field
++ zweihander sword guy
+	+ slow attack
+	+ special on ground:
+		+ sword up, 2x movement speed, for max 5 seconds
+		+ on release: stomp attack, sword gets stuck in ground
+		+ 1 second recovery time
+	+ special in air:
+		+ stomp attack, sword gets stuck in ground
+		+ 1 second recovery time
++ analog jump, accel over frames
++ add IP's to player names (visible on host)
 + torch light flicker speed should be time dilated too
 + add key repeat to text input
 + add global method to get character color
@@ -246,6 +256,7 @@ struct PlayerAnimInfo
 	{ "sprite.scml", "Walk" /*RocketPunch_Attack*/, 5 }, // fixme : attack
 	{ "sprite.scml", "Walk" /*Zweihander_Charge*/, 5 },
 	{ "sprite.scml", "AttackDown" /*Zweihander_Attack*/, 5 },
+	{ "sprite.scml", "AttackDown" /*Zweihander_AttackDown*/, 5 },
 	{ "sprite.scml", "Idle" /*Zweihander_Stunned*/, 5 },
 	{ "sprite.scml", "AirDash",    5 },
 	{ "sprite.scml", "Spawn",      6 },
@@ -532,20 +543,46 @@ bool Player::getPlayerCollision(CollisionInfo & collision) const
 	return true;
 }
 
-void Player::getDamageHitbox(CollisionInfo & collision) const
+void Player::getDamageHitbox(CollisionShape & shape) const
 {
 	Assert(m_isUsed);
 
-	collision.min[0] = m_pos[0] - PLAYER_DAMAGE_HITBOX_SX/2;
-	collision.min[1] = m_pos[1] - PLAYER_DAMAGE_HITBOX_SY;
-	collision.max[0] = m_pos[0] + PLAYER_DAMAGE_HITBOX_SX/2;
-	collision.max[1] = m_pos[1];
+	shape.set(
+		Vec2(m_pos[0] - PLAYER_DAMAGE_HITBOX_SX/2, m_pos[1] - PLAYER_DAMAGE_HITBOX_SY),
+		Vec2(m_pos[0] + PLAYER_DAMAGE_HITBOX_SX/2, m_pos[1] - PLAYER_DAMAGE_HITBOX_SY),
+		Vec2(m_pos[0] + PLAYER_DAMAGE_HITBOX_SX/2, m_pos[1]),
+		Vec2(m_pos[0] - PLAYER_DAMAGE_HITBOX_SX/2, m_pos[1]));
 }
 
-void Player::getAttackCollision(CollisionInfo & collision) const
+bool Player::getAttackCollision(CollisionShape & shape) const
 {
 	Assert(m_isUsed);
 
+#if 1
+	const CharacterData * characterData = getCharacterData(m_characterIndex);
+
+	Vec2 points[4];
+
+	if (!characterData->m_spriter->getHitboxAtTime(m_spriterState.animIndex, "hitbox", m_spriterState.animTime, points))
+	{
+		return false;
+	}
+	else
+	{
+		for (int i = 0; i < 4; ++i)
+		{
+			points[i][0] *= characterData->m_spriteScale * PLAYER_SPRITE_SCALE * (-m_facing[0]);
+			points[i][1] *= characterData->m_spriteScale * PLAYER_SPRITE_SCALE;
+			if (m_facing[1] < 0)
+				points[i][1] = -PLAYER_COLLISION_HITBOX_SY - points[i][1];
+			points[i] += m_pos;
+		}
+
+		shape.set(points[0], points[1], points[2], points[3]);
+
+		return true;
+	}
+#else
 	float x1 = m_attack.collision.min[0] * m_facing[0];
 	float y1 = m_attack.collision.min[1];
 	float x2 = m_attack.collision.max[0] * m_facing[0];
@@ -562,10 +599,19 @@ void Player::getAttackCollision(CollisionInfo & collision) const
 	if (y1 > y2)
 		std::swap(y1, y2);
 
+#if 1
+	shape.set(
+		Vec2(m_pos[0] + x1, m_pos[1] + y1),
+		Vec2(m_pos[0] + x2, m_pos[1] + y1),
+		Vec2(m_pos[0] + x2, m_pos[1] + y2),
+		Vec2(m_pos[0] + x1, m_pos[1] + y2));
+#else
 	collision.min[0] = m_pos[0] + x1;
 	collision.min[1] = m_pos[1] + y1;
 	collision.max[0] = m_pos[0] + x2;
 	collision.max[1] = m_pos[1] + y2;
+#endif
+#endif
 }
 
 float Player::getAttackDamage(Player * other) const
@@ -576,15 +622,16 @@ float Player::getAttackDamage(Player * other) const
 
 	if (m_attack.attacking && m_attack.hasCollision)
 	{
-		CollisionInfo attackCollision;
-		CollisionInfo otherCollision;
-
-		getAttackCollision(attackCollision);
-		other->getDamageHitbox(otherCollision);
-
-		if (attackCollision.intersects(otherCollision))
+		CollisionShape attackShape;
+		if (getAttackCollision(attackShape))
 		{
-			result = 1.f;
+			CollisionShape otherShape;
+			other->getDamageHitbox(otherShape);
+
+			if (attackShape.intersects(otherShape))
+			{
+				result = 1.f;
+			}
 		}
 	}
 
@@ -672,64 +719,6 @@ void Player::applyAnim()
 }
 
 //
-
-void Player::playSecondaryEffects(PlayerEvent e)
-{
-	const CharacterData * characterData = getCharacterData(m_characterIndex);
-
-	switch (e)
-	{
-	case kPlayerEvent_Spawn:
-		break;
-	case kPlayerEvent_Respawn:
-		m_instanceData->playSoundBag("spawn_sounds", 100);
-		break;
-	case kPlayerEvent_Die:
-		m_instanceData->playSoundBag("die_sounds", 100);
-		break;
-	case kPlayerEvent_Jump:
-		{
-			Dictionary args;
-			args.setPtr("obj", m_instanceData);
-			args.setString("name", "jump_sounds");
-			m_instanceData->handleAnimationAction("char_soundbag", args);
-			break;
-		}
-	case kPlayerEvent_WallJump:
-		GAMESIM->playSound("player-wall-jump.ogg"); // player performs a walljump
-		break;
-	case kPlayerEvent_LandOnGround:
-		GAMESIM->playSound(makeCharacterFilename(m_characterIndex, "land_on_ground.ogg"), 50); // players lands on solid ground
-		break;
-	case kPlayerEvent_StickyAttach:
-		//GAMESIM->playSound("player-sticky-attach.ogg");
-		break;
-	case kPlayerEvent_StickyRelease:
-		//GAMESIM->playSound("player-sticky-release.ogg");
-		break;
-	case kPlayerEvent_StickyJump:
-		GAMESIM->playSound("player-sticky-jump.ogg"); // player jumps and releases itself from a sticky ceiling
-		break;
-	case kPlayerEvent_SpringJump:
-		GAMESIM->playSound("player-spring-jump.ogg"); // player walks over and activates a jump pad 
-		break;
-	case kPlayerEvent_SpikeHit:
-		//GAMESIM->playSound("player-spike-hit.ogg");
-		break;
-	case kPlayerEvent_ArenaWrap:
-		//GAMESIM->playSound("player-arena-wrap.ogg");
-		break;
-	case kPlayerEvent_DashAir:
-		break;
-	case kPlayerEvent_DestructibleDestroy:
-		//GAMESIM->playSound("player-arena-wrap.ogg");
-		break;
-
-	default:
-		Assert(false);
-		break;
-	}
-}
 
 void Player::tick(float dt)
 {
@@ -982,14 +971,17 @@ void Player::tick(float dt)
 
 									if (damage[j])
 									{
-										players[j]->m_vel = reflect * PLAYER_SWORD_CLING_SPEED;
+										players[j]->m_vel = reflect * PLAYER_SWORD_CLING_SPEED / characterData->m_weight;
 										players[j]->m_controlDisableTime = PLAYER_SWORD_CLING_TIME;
 									}
 
 									players[j]->cancelAttack();
 								}
 
-								GAMESIM->playSound("melee-cancel.ogg"); // sound when two melee attacks hit at the same time
+								if (damage[0] && damage[1])
+								{
+									GAMESIM->playSound("melee-cancel.ogg"); // sound when two melee attacks hit at the same time
+								}
 							}
 						}
 					}
@@ -997,18 +989,16 @@ void Player::tick(float dt)
 
 				// see if we've hit a block
 
-				CollisionInfo attackCollision;
-				getAttackCollision(attackCollision);
-
-				m_attack.hitDestructible |= GAMESIM->m_arena.handleDamageRect(
-					*GAMESIM,
-					m_pos[0],
-					m_pos[1],
-					attackCollision.min[0],
-					attackCollision.min[1],
-					attackCollision.max[0],
-					attackCollision.max[1],
-					!m_attack.hitDestructible);
+				CollisionShape attackCollision;
+				if (getAttackCollision(attackCollision))
+				{
+					m_attack.hitDestructible |= GAMESIM->m_arena.handleDamageShape(
+						*GAMESIM,
+						m_pos[0],
+						m_pos[1],
+						attackCollision,
+						!m_attack.hitDestructible);
+				}
 			}
 
 			// update rocket punch attack
@@ -1186,7 +1176,7 @@ void Player::tick(float dt)
 				m_attack = AttackInfo();
 				m_attack.attacking = true;
 
-				m_attack.cooldown = PLAYER_SWORD_COOLDOWN;
+				m_attack.cooldown = characterData->m_meleeCooldown;
 
 				PlayerAnim anim = kPlayerAnim_NULL;
 
@@ -1245,7 +1235,29 @@ void Player::tick(float dt)
 
 			if (!s_noSpecial)
 			{
-				if (characterData->m_special == kPlayerSpecial_RocketPunch &&
+				if (characterData->m_special == kPlayerSpecial_Pipebomb &&
+					m_input.wentDown(INPUT_BUTTON_Y) &&
+					isAnimOverrideAllowed(kPlayerAnim_Attack))
+				{
+					// detonate?
+
+					bool hasDetonated = false;
+					for (int i = 0; i < MAX_PIPEBOMBS; ++i)
+					{
+						if (GAMESIM->m_pipebombs[i].m_isActive && GAMESIM->m_pipebombs[i].m_playerIndex == m_index)
+						{
+							GAMESIM->m_pipebombs[i].explode();
+							hasDetonated = true;
+						}
+					}
+
+					if (!hasDetonated)
+					{
+						// throw a new one
+						GAMESIM->spawnPipeBomb(m_pos, Vec2(m_facing[0] * 100.f, 0.f), m_index);
+					}
+				}
+				else if (characterData->m_special == kPlayerSpecial_RocketPunch &&
 					m_input.wentDown(INPUT_BUTTON_Y) &&
 					isAnimOverrideAllowed(kPlayerAnim_Attack))
 				{
@@ -1266,7 +1278,7 @@ void Player::tick(float dt)
 					m_attack = AttackInfo();
 					m_attack.attacking = true;
 
-					m_attack.cooldown = PLAYER_SWORD_COOLDOWN; // todo : melee
+					m_attack.cooldown = characterData->m_meleeCooldown; // todo : from character data?
 
 					// start anim
 
@@ -1363,8 +1375,6 @@ void Player::tick(float dt)
 			if (isAnimOverrideAllowed(kPlayerAnim_Die))
 			{
 				handleDamage(1.f, Vec2(0.f, 0.f), 0);
-
-				playSecondaryEffects(kPlayerEvent_SpikeHit);
 			}
 		}
 
@@ -1415,8 +1425,8 @@ void Player::tick(float dt)
 			m_attack.m_rocketPunch.isActive == false;
 
 		const bool allowJumping =
-			playerControl &&
-			m_attack.m_zweihander.isActive() == false;
+			playerControl;// &&
+			//m_attack.m_zweihander.isActive() == false;
 
 		m_controlDisableTime -= dt;
 		if (m_controlDisableTime < 0.f)
@@ -1432,13 +1442,11 @@ void Player::tick(float dt)
 
 				m_isAttachedToSticky = false;
 
-				playSecondaryEffects(kPlayerEvent_StickyJump);
+				GAMESIM->playSound("player-sticky-jump.ogg"); // player jumps and releases itself from a sticky ceiling
 			}
 			else if (allowJumping && m_input.wentDown(INPUT_BUTTON_DOWN))
 			{
 				m_isAttachedToSticky = false;
-
-				playSecondaryEffects(kPlayerEvent_StickyRelease);
 
 				m_vel[1] = 0.f;
 			}
@@ -1449,8 +1457,6 @@ void Player::tick(float dt)
 				if (!m_isAttachedToSticky)
 				{
 					m_isAttachedToSticky = true;
-
-					playSecondaryEffects(kPlayerEvent_StickyAttach);
 				}
 			}
 		}
@@ -1491,7 +1497,8 @@ void Player::tick(float dt)
 
 			if (m_attack.m_zweihander.isActive())
 			{
-				steeringSpeed *= STEERING_SPEED_ZWEIHANDER;
+				if (m_isGrounded)
+					steeringSpeed *= STEERING_SPEED_ZWEIHANDER;
 				numSteeringFrame = 5;
 			}
 			else if (isWalkingOnSolidGround)
@@ -1573,6 +1580,7 @@ void Player::tick(float dt)
 				!m_isUsingJetpack &&
 				m_special.meleeCounter == 0 &&
 				!m_special.attackDownActive &&
+				m_attack.m_zweihander.state != AttackInfo::Zweihander::kState_AttackDown &&
 				m_vel[0] != 0.f && Calc::Sign(m_facing[0]) == Calc::Sign(m_vel[0]) &&
 				//Calc::Sign(m_vel[1]) == Calc::Sign(gravity) &&
 				(Calc::Sign(m_vel[1]) == Calc::Sign(gravity) || Calc::Abs(m_vel[1]) <= PLAYER_JUMP_SPEED / 2.f) &&
@@ -1601,6 +1609,9 @@ void Player::tick(float dt)
 		if (gravity < GRAVITY)
 		{
 			m_special.attackDownActive = false;
+
+			if (m_attack.m_zweihander.state == AttackInfo::Zweihander::kState_AttackDown)
+				m_attack.m_zweihander.end(*this);
 		}
 
 		if (currentBlockMask & (1 << kBlockType_GravityLeft))
@@ -1624,7 +1635,10 @@ void Player::tick(float dt)
 				m_jump.jumpVelocityLeft = -PLAYER_JUMP_SPEED;
 				m_jump.cancelStarted = false;
 
-				playSecondaryEffects(kPlayerEvent_Jump);
+				Dictionary args;
+				args.setPtr("obj", m_instanceData);
+				args.setString("name", "jump_sounds");
+				m_instanceData->handleAnimationAction("char_soundbag", args);
 			}
 		}
 
@@ -1646,8 +1660,10 @@ void Player::tick(float dt)
 
 		// update grounded state
 
-		//if (m_isGrounded && m_vel[1] < 0.f)
-		//	m_isGrounded = false;
+	#if 1 // player will think it's grounded if not reset and hitting spring
+		if (m_isGrounded && m_vel[1] < 0.f)
+			m_isGrounded = false;
+	#endif
 
 		// collision
 
@@ -1664,7 +1680,7 @@ void Player::tick(float dt)
 
 			m_controlDisableTime = PLAYER_WALLJUMP_RECOIL_TIME;
 
-			playSecondaryEffects(kPlayerEvent_WallJump);
+			GAMESIM->playSound("player-wall-jump.ogg"); // player performs a walljump
 		}
 
 		const bool wasInPassthrough = m_isInPassthrough;
@@ -1691,239 +1707,165 @@ void Player::tick(float dt)
 
 		// todo : update this from player input update
 
-		for (int i = 0; i < 2; ++i)
+		CollisionShape shape;
+		shape.set(
+			Vec2(m_collision.min[0], m_collision.min[1]),
+			Vec2(m_collision.max[0], m_collision.min[1]),
+			Vec2(m_collision.max[0], m_collision.max[1]),
+			Vec2(m_collision.min[0], m_collision.max[1]));
+
+		struct CollisionArgs
 		{
-			Vec2 delta;
-			delta[i] = totalVel[i] * dt;
+			Player * self;
+			Vec2 totalVel;
+			uint32_t * dirBlockMask;
+			bool enterPassThrough;
+			bool wasInPassthrough;
+			float gravity;
+		};
 
-			if (delta[i] == 0.f)
-				continue;
+		CollisionArgs args;
 
-			Vec2 newPos = m_pos + delta;
+		args.self = this;
+		args.totalVel = totalVel;
+		args.dirBlockMask = dirBlockMask;
+		args.enterPassThrough = enterPassThrough;
+		args.wasInPassthrough = wasInPassthrough;
+		args.gravity = gravity;
 
-			const Vec2 min = newPos + m_collision.min;
-			const Vec2 max = newPos + m_collision.max;
+		Vec2 newTotalVel = totalVel;
 
-			// todo : phys object shape
-
-			struct ContactInfo
+		updatePhysics(
+			*GAMESIM,
+			m_pos,
+			newTotalVel,
+			dt,
+			shape,
+			&args,
+			[](PhysicsUpdateInfo & updateInfo)
 			{
-				Vec2 n;
-				float d;
+				CollisionArgs * args = (CollisionArgs*)updateInfo.arg;
+				Player * self = args->self;
+				Vec2 & delta = updateInfo.delta;
+				const Vec2 & totalVel = args->totalVel;
+				const bool enterPassThrough = args->enterPassThrough;
+				const int i = updateInfo.axis;
+				const float gravity = args->gravity;
 
-				bool operator==(const ContactInfo & other) const
+				const CharacterData * characterData = getCharacterData(self->m_characterIndex);
+
+				//
+
+				int result = 0;
+
+				//
+
+				BlockAndDistance * blockAndDistance = updateInfo.blockInfo;
+
+				if (self->m_attack.m_rocketPunch.isActive && self->m_attack.m_rocketPunch.state == AttackInfo::RocketPunch::kState_Attack)
 				{
-					return
-						n == other.n &&
-						d == other.d;
-				}
-			};
-
-			struct CollisionArgs
-			{
-				CollisionArgs()
-				{
-					updateVelocity = false;
-				}
-
-				Player * self;
-				Vec2 delta;
-				Vec2 totalVel;
-				Vec2 newPos;
-				int axis;
-				uint32_t * dirBlockMask;
-				bool enterPassThrough;
-				bool wasInPassthrough;
-				float gravity;
-
-				// these are inputs for the physics system..
-				std::vector<ContactInfo> contacts;
-				bool updateVelocity;
-			};
-
-			CollisionArgs args;
-
-			args.self = this;
-			args.axis = i;
-			args.delta = delta;
-			args.totalVel = totalVel;
-			args.newPos = newPos;
-			args.dirBlockMask = dirBlockMask;
-			args.enterPassThrough = enterPassThrough;
-			args.wasInPassthrough = wasInPassthrough;
-			args.gravity = gravity;
-
-			CollisionShape playerShape;
-			playerShape.set(
-				Vec2(min[0], min[1]),
-				Vec2(max[0], min[1]),
-				Vec2(max[0], max[1]),
-				Vec2(min[0], max[1]));
-
-			GAMESIM->testCollision(
-				playerShape,
-				&args,
-				[](const CollisionShape & shape, void * arg, PhysicsActor * actor, BlockAndDistance * blockAndDistance, Player * player)
-				{
-					CollisionArgs * args = (CollisionArgs*)arg;
-					Player * self = args->self;
-					Vec2 & delta = args->delta;
-					const Vec2 & totalVel = args->totalVel;
-					Vec2 & newPos = args->newPos;
-					const bool enterPassThrough = args->enterPassThrough;
-					const int i = args->axis;
-					const float gravity = args->gravity;
-
-					const CharacterData * characterData = getCharacterData(self->m_characterIndex);
-
-					//
-
-					// todo : move to below checkCollision test
-					if (self->m_attack.m_rocketPunch.isActive && self->m_attack.m_rocketPunch.state == AttackInfo::RocketPunch::kState_Attack)
-					{
-						if (blockAndDistance)
-						{
-							if (blockAndDistance->block->handleDamage(*self->m_instanceData->m_gameSim, blockAndDistance->x, blockAndDistance->y))
-								blockAndDistance = 0;
-							else if ((1 << blockAndDistance->block->type) & kBlockMask_Solid)
-								self->endRocketPunch(true);
-						}
-						if (player && player != self)
-							player->handleDamage(1.f, totalVel, self);
-					}
-
 					if (blockAndDistance)
 					{
-						Block * block = blockAndDistance->block;
-
-						CollisionShape blockShape = Arena::getBlockCollision(block->shape);
-						blockShape.translate(blockAndDistance->x * BLOCK_SX, blockAndDistance->y * BLOCK_SY);
-
-						float contactDistance;
-						Vec2 contactNormal;
-
-						if (shape.checkCollision(blockShape, delta, contactDistance, contactNormal))
+						if (blockAndDistance->block->handleDamage(*self->m_instanceData->m_gameSim, blockAndDistance->x, blockAndDistance->y))
 						{
-							// todo : from here is player callback code!
+							blockAndDistance = 0;
+							result |= kPhysicsUpdateFlag_DontCollide;
+						}
+						else if ((1 << blockAndDistance->block->type) & kBlockMask_Solid)
+							self->endRocketPunch(true);
+					}
+					if (updateInfo.player && updateInfo.player != self)
+						updateInfo.player->handleDamage(1.f, totalVel, self);
+				}
 
-							bool collide = true;
+				if (blockAndDistance)
+				{
+					Block * block = blockAndDistance->block;
 
-							if (block)
+					if (block)
+					{
+						const uint32_t mask = (1 << block->type) & ((args->wasInPassthrough || self->m_isInPassthrough || enterPassThrough) ? ~kBlockMask_Passthrough : ~0);
+
+						args->dirBlockMask[i] |= mask;
+
+						if (updateInfo.contactNormal[0] * updateInfo.contactNormal[1] != 0.f)
+						{
+							args->dirBlockMask[0] |= mask;
+							args->dirBlockMask[1] |= mask;
+						}
+
+						if ((1 << block->type) & kBlockMask_Passthrough)
+						{
+							if (i != 1 || delta[1] < 0.f || (args->wasInPassthrough || self->m_isInPassthrough || enterPassThrough))
 							{
-								const uint32_t mask = (1 << block->type) & ((args->wasInPassthrough || self->m_isInPassthrough || enterPassThrough) ? ~kBlockMask_Passthrough : ~0);
+								result |= kPhysicsUpdateFlag_DontCollide;
 
-								args->dirBlockMask[i] |= mask;
-
-								if (contactNormal[0] * contactNormal[1] != 0.f)
-								{
-									args->dirBlockMask[0] |= mask;
-									args->dirBlockMask[1] |= mask;
-								}
-
-								if ((1 << block->type) & kBlockMask_Passthrough)
-								{
-									if (i != 1 || delta[1] < 0.f || (args->wasInPassthrough || self->m_isInPassthrough || enterPassThrough))
-									{
-										collide = false;
-
-										self->m_isInPassthrough = true;
-									}
-								}
-
-								if (((1 << block->type) & kBlockMask_Solid) == 0) // todo : should pass all types to player. let player filter on solid yes/no
-									collide = false;
-							}
-							
-							if (collide)
-							{
-								// todo : let phys update know if collision was handled
-								// todo : do offset after evaluating all collisions, to avoid missing intersecting blocks
-
-								ContactInfo contact;
-								contact.n = contactNormal;
-								contact.d = contactDistance;
-								args->contacts.push_back(contact);
-
-								// wall slide
-
-								if (delta[0] != 0.f)
-								{
-									self->m_isHuggingWall = delta[0] < 0.f ? -1 : +1;
-								}
-
-								// screen shake
-
-								const float sign = Calc::Sign(delta[i]);
-								float strength = (Calc::Abs(totalVel[i]) - PLAYER_JUMP_SPEED) / 25.f;
-
-								if (strength > PLAYER_SCREENSHAKE_STRENGTH_THRESHHOLD)
-								{
-									strength = sign * strength / 4.f;
-									self->GAMESIM->addScreenShake(
-										i == 0 ? strength : 0.f,
-										i == 1 ? strength : 0.f,
-										3000.f, .3f);
-								}
-
-								if (self->m_isAnimDriven && self->m_anim == kPlayerAnim_AirDash)
-								{
-									self->m_spriterState.stopAnim(*characterData->m_spriter);
-								}
-
-								//
-
-								bool updateVelocity = true;
-
-								// effects
-
-								// todo : if ice or bubble : do not allow vel change. instead, change vel after all collision code is done
-
-								if (self->m_ice.timer != 0.f || self->m_bubble.timer != 0.f)
-									updateVelocity = false;
-
-								if (i == 1)
-								{
-									self->m_enterPassthrough = false;
-								}
-
-								if (i == 1 && delta[1] < 0.f && gravity >= 0.f)
-								{
-									self->handleJumpCollision();
-
-									updateVelocity = false;
-								}
-
-								args->updateVelocity = updateVelocity;
+								self->m_isInPassthrough = true;
 							}
 						}
+
+						if (((1 << block->type) & kBlockMask_Solid) == 0) // todo : should pass all types to player. let player filter on solid yes/no
+							result |= kPhysicsUpdateFlag_DontCollide;
 					}
-				});
 
-			m_pos = newPos;
-
-			auto u = std::unique(args.contacts.begin(), args.contacts.end());
-			args.contacts.resize(std::distance(args.contacts.begin(), u));
-
-			for (auto contact = args.contacts.begin(); contact != args.contacts.end(); ++contact)
-			{
-				Vec2 offset = contact->n * contact->d;
-
-				m_pos += offset;
-
-				if (args.updateVelocity)
-				{
-					// todo : let phys update know whether to update velocity
-
-					const float d = m_vel * contact->n;
-
-					if (d > 0.f)
+					if (!(result & kPhysicsUpdateFlag_DontCollide))
 					{
-						m_vel -= contact->n * d;
+						// wall slide
 
-						//logDebug("vel = %f, %f", m_vel[0], m_vel[1]);
+						if (delta[0] != 0.f)
+						{
+							self->m_isHuggingWall = delta[0] < 0.f ? -1 : +1;
+						}
+
+						// screen shake
+
+						const float sign = Calc::Sign(delta[i]);
+						float strength = (Calc::Abs(totalVel[i]) - PLAYER_JUMP_SPEED) / 25.f;
+
+						if (strength > PLAYER_SCREENSHAKE_STRENGTH_THRESHHOLD)
+						{
+							strength = sign * strength / 4.f;
+							self->GAMESIM->addScreenShake(
+								i == 0 ? strength : 0.f,
+								i == 1 ? strength : 0.f,
+								3000.f, .3f);
+						}
+
+						if (self->m_isAnimDriven && self->m_anim == kPlayerAnim_AirDash)
+						{
+							self->m_spriterState.stopAnim(*characterData->m_spriter);
+						}
+
+						// effects
+
+						// todo : if ice or bubble : do not allow vel change. instead, change vel after all collision code is done
+
+						if (self->m_ice.timer != 0.f || self->m_bubble.timer != 0.f)
+							result |= kPhysicsUpdateFlag_DontUpdateVelocity;
+
+						if (i == 1)
+						{
+							self->m_enterPassthrough = false;
+						}
+
+						if (i == 1 && delta[1] < 0.f && gravity >= 0.f)
+						{
+							self->handleJumpCollision();
+
+							result |= kPhysicsUpdateFlag_DontUpdateVelocity;
+						}
 					}
 				}
-			}
+
+				return result;
+			});
+
+		if (m_animVelIsAbsolute)
+			m_vel = Vec2();
+		else
+		{
+			Vec2 delta = newTotalVel - totalVel;
+			m_vel += delta;
 		}
 
 		// attempt to stay grounded
@@ -1957,8 +1899,8 @@ void Player::tick(float dt)
 
 						if ((1 << block->type) & kBlockMask_Solid)
 						{
-							CollisionShape blockShape = Arena::getBlockCollision(block->shape);
-							blockShape.translate(blockAndDistance->x * BLOCK_SX, blockAndDistance->y * BLOCK_SY);
+							CollisionShape blockShape;
+							Arena::getBlockCollision(block->shape, blockShape, blockAndDistance->x, blockAndDistance->y);
 
 							float contactDistance;
 							Vec2 contactNormal;
@@ -1996,7 +1938,7 @@ void Player::tick(float dt)
 		{
 			m_vel[1] = -BLOCKTYPE_SPRING_SPEED;
 
-			playSecondaryEffects(kPlayerEvent_SpringJump);
+			GAMESIM->playSound("player-spring-jump.ogg"); // player walks over and activates a jump pad 
 		}
 
 		// effects
@@ -2150,7 +2092,7 @@ void Player::tick(float dt)
 
 							m_controlDisableTime = PLAYER_WALLJUMP_RECOIL_TIME;
 
-							playSecondaryEffects(kPlayerEvent_WallJump);
+							GAMESIM->playSound("player-wall-jump.ogg"); // player performs a walljump
 						}
 						else
 						{
@@ -2186,7 +2128,7 @@ void Player::tick(float dt)
 
 								m_vel[i] = -BLOCKTYPE_SPRING_SPEED;
 
-								playSecondaryEffects(kPlayerEvent_SpringJump);
+								GAMESIM->playSound("player-spring-jump.ogg"); // player walks over and activates a jump pad 
 							}
 							else
 							{
@@ -2209,6 +2151,9 @@ void Player::tick(float dt)
 									if (size >= 1)
 										GAMESIM->addFloorEffect(m_index, m_pos[0], m_pos[1], size, (size + 1) * 2 / 3);
 								}
+
+								if (m_attack.m_zweihander.state == AttackInfo::Zweihander::kState_AttackDown)
+									m_attack.m_zweihander.handleAttackAnimComplete(*this);
 
 								m_special.attackDownActive = false;
 								m_special.attackDownHeight = 0.f;
@@ -2251,7 +2196,7 @@ void Player::tick(float dt)
 			{
 				m_isGrounded = true;
 
-				playSecondaryEffects(kPlayerEvent_LandOnGround);
+				GAMESIM->playSound(makeCharacterFilename(m_characterIndex, "land_on_ground.ogg"), 50); // players lands on solid ground
 			}
 		}
 		else
@@ -2323,28 +2268,16 @@ void Player::tick(float dt)
 		// wrapping
 
 		if (m_pos[0] < 0)
-		{
 			m_pos[0] = ARENA_SX_PIXELS;
-			playSecondaryEffects(kPlayerEvent_ArenaWrap);
-		}
 		if (m_pos[0] > ARENA_SX_PIXELS)
-		{
 			m_pos[0] = 0;
-			playSecondaryEffects(kPlayerEvent_ArenaWrap);
-		}
 
 	#if WRAP_AROUND_TOP_AND_BOTTOM
 		if (m_pos[1] > ARENA_SY_PIXELS)
-		{
 			m_pos[1] = 0;
-			playSecondaryEffects(kPlayerEvent_ArenaWrap);
-		}
 
 		if (m_pos[1] < 0)
-		{
 			m_pos[1] = ARENA_SY_PIXELS;
-			playSecondaryEffects(kPlayerEvent_ArenaWrap);
-		}
 	#endif
 	}
 
@@ -2593,14 +2526,14 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 		Sprite("bubble-bubble.png").drawEx(px, py);
 	}
 
-	if (m_anim == kPlayerAnim_Attack || m_anim == kPlayerAnim_AttackUp || m_anim == kPlayerAnim_AttackDown)
+	if (g_devMode && m_anim == kPlayerAnim_Attack || m_anim == kPlayerAnim_AttackUp || m_anim == kPlayerAnim_AttackDown)
 	{
-		CollisionInfo collisionInfo;
-		getAttackCollision(collisionInfo);
-
-		setColor(255, 0, 0);
-		//drawRect(collisionInfo.x1, collisionInfo.y1, collisionInfo.x2, collisionInfo.y2);
-		//drawLine(x, y, x + m_anim.m_attackDx * 50, y + m_anim.m_attackDy * 50);
+		CollisionShape attackCollision;
+		if (getAttackCollision(attackCollision))
+		{
+			setColor(255, 0, 0);
+			attackCollision.debugDraw(false);
+		}
 	}
 }
 
@@ -2620,22 +2553,15 @@ void Player::debugDraw() const
 		m_pos[0] + m_collision.max[0] + 1,
 		m_pos[1] + m_collision.max[1] + 1);
 
-	CollisionInfo damageCollision;
+	CollisionShape damageCollision;
 	getDamageHitbox(damageCollision);
 	setColor(63, 31, 0, 63);
-	drawRect(
-		damageCollision.min[0],
-		damageCollision.min[1],
-		damageCollision.max[0] + 1,
-		damageCollision.max[1] + 1);
+	damageCollision.debugDraw();
 
 	float y = m_pos[1];
 
 	if (m_attack.attacking && m_attack.hasCollision)
 	{
-		CollisionInfo attackCollision;
-		getAttackCollision(attackCollision);
-
 		Font font("calibri.ttf");
 		setFont(font);
 
@@ -2643,12 +2569,12 @@ void Player::debugDraw() const
 		drawText(m_pos[0], y, 14, 0.f, 0.f, "attacking");
 		y += 18.f;
 
-		setColor(255, 0, 0, 63);
-		drawRect(
-			attackCollision.min[0],
-			attackCollision.min[1],
-			attackCollision.max[0],
-			attackCollision.max[1]);
+		CollisionShape attackCollision;
+		if (getAttackCollision(attackCollision))
+		{
+			setColor(255, 0, 0, 63);
+			attackCollision.debugDraw();
+		}
 	}
 
 	if (m_isHuggingWall)
@@ -2686,6 +2612,7 @@ uint32_t Player::getIntersectingBlocksMaskInternal(int x, int y, bool doWrap) co
 {
 	const int x1 = (x + (int)m_collision.min[0] + ARENA_SX_PIXELS) % ARENA_SX_PIXELS;
 	const int x2 = (x + (int)m_collision.max[0] + ARENA_SX_PIXELS) % ARENA_SX_PIXELS;
+	const int x3 = (x + (int)(m_collision.min[0] + m_collision.max[0]) / 2 + ARENA_SX_PIXELS) % ARENA_SX_PIXELS;
 	const int y1 = (y + (int)m_collision.min[1] + ARENA_SY_PIXELS) % ARENA_SY_PIXELS;
 	const int y2 = (y + (int)m_collision.max[1] + ARENA_SY_PIXELS) % ARENA_SY_PIXELS;
 	const int y3 = (y + (int)(m_collision.min[1] + m_collision.max[1]) / 2 + ARENA_SY_PIXELS) % ARENA_SY_PIXELS;
@@ -2696,8 +2623,11 @@ uint32_t Player::getIntersectingBlocksMaskInternal(int x, int y, bool doWrap) co
 
 	result |= arena.getIntersectingBlocksMask(x1, y1);
 	result |= arena.getIntersectingBlocksMask(x2, y1);
-	result |= arena.getIntersectingBlocksMask(x2, y2);
 	result |= arena.getIntersectingBlocksMask(x1, y2);
+	result |= arena.getIntersectingBlocksMask(x2, y2);
+
+	result |= arena.getIntersectingBlocksMask(x3, y1);
+	result |= arena.getIntersectingBlocksMask(x3, y2);
 
 	result |= arena.getIntersectingBlocksMask(x1, y3);
 	result |= arena.getIntersectingBlocksMask(x2, y3);
@@ -2801,10 +2731,11 @@ void Player::respawn()
 		m_isAnimDriven = true;
 
 		if (m_isRespawn)
-			playSecondaryEffects(kPlayerEvent_Respawn);
+		{
+			m_instanceData->playSoundBag("spawn_sounds", 100);
+		}
 		else
 		{
-			playSecondaryEffects(kPlayerEvent_Spawn);
 			m_isRespawn = true;
 		}
 	}
@@ -2827,7 +2758,7 @@ void Player::handleImpact(Vec2Arg velocity)
 	for (int i = 0; i < 2; ++i)
 	{
 		if (Calc::Sign(velDelta[i]) == Calc::Sign(velocity[i]))
-			m_vel[i] += velDelta[i];
+			m_vel[i] += velDelta[i] / getCharacterData(m_characterIndex)->m_weight;
 	}
 }
 
@@ -2836,6 +2767,10 @@ bool Player::shieldAbsorb(float amount)
 	if (m_shield.shield > 0)
 	{
 		m_shield.shield--;
+
+		if (m_shield.shield == 0)
+			GAMESIM->playSound("shield-pop.ogg");
+
 		return true;
 	}
 	else
@@ -3168,11 +3103,18 @@ void Player::AttackInfo::Zweihander::end(Player & player)
 	memset(this, 0, sizeof(Zweihander));
 	player.m_attack = AttackInfo();
 	player.m_isAnimDriven = false;
+	player.clearAnimOverrides();
 }
 
 void Player::AttackInfo::Zweihander::handleAttackAnimComplete(Player & player)
 {
-	Assert(state == kState_Attack);
+	Assert(state == kState_Attack || state == kState_AttackDown);
+
+	if (player.m_anim == kPlayerAnim_Zweihander_AttackDown)
+	{
+		player.clearAnimOverrides();
+		player.setAnim(kPlayerAnim_Idle, true, true);
+	}
 
 	if (player.isAnimOverrideAllowed(kPlayerAnim_Zweihander_Stunned))
 	{
@@ -3181,6 +3123,7 @@ void Player::AttackInfo::Zweihander::handleAttackAnimComplete(Player & player)
 		player.setAnim(kPlayerAnim_Zweihander_Stunned, true, true);
 		player.m_isAnimDriven = true;
 		player.m_animVelIsAbsolute = true;
+		player.m_animAllowSteering = false;
 
 		player.m_instanceData->m_gameSim->addFloorEffect(
 			player.m_index, player.m_pos[0], player.m_pos[1],
@@ -3205,11 +3148,22 @@ void Player::AttackInfo::Zweihander::tick(Player & player, float dt)
 		{
 			if (player.isAnimOverrideAllowed(kPlayerAnim_Zweihander_Attack))
 			{
-				state = kState_Attack;
-				timer = 0.f;
-				player.setAnim(kPlayerAnim_Zweihander_Attack, true, true);
-				player.m_isAnimDriven = true;
-				player.m_animVelIsAbsolute = true;
+				if (player.m_isGrounded)
+				{
+					state = kState_Attack;
+					timer = 0.f;
+					player.setAnim(kPlayerAnim_Zweihander_Attack, true, true);
+					player.m_isAnimDriven = true;
+					player.m_animVelIsAbsolute = true;
+				}
+				else
+				{
+					state = kState_AttackDown;
+					timer = 0.f;
+					player.setAnim(kPlayerAnim_Zweihander_AttackDown, true, true);
+					player.m_isAnimDriven = true;
+					player.m_enterPassthrough = true;
+				}
 			}
 			else
 			{
@@ -3233,6 +3187,8 @@ void Player::AttackInfo::Zweihander::tick(Player & player, float dt)
 CharacterData::CharacterData(int characterIndex)
 	: m_spriter(0)
 	, m_spriteScale(1.f)
+	, m_weight(1.f)
+	, m_meleeCooldown(0.f)
 	, m_special(kPlayerSpecial_None)
 {
 	load(characterIndex);
@@ -3276,6 +3232,8 @@ void CharacterData::load(int characterIndex)
 	m_spriter = new Spriter(filename);
 
 	m_spriteScale = m_props.getFloat("sprite_scale", 1.f);
+	m_meleeCooldown = m_props.getFloat("melee_cooldown", PLAYER_SWORD_COOLDOWN);
+	m_weight = m_props.getFloat("weight", 1.f);
 
 	// special
 
@@ -3297,6 +3255,10 @@ void CharacterData::load(int characterIndex)
 		special = kPlayerSpecial_Jetpack;
 	if (specialStr == "zweihander")
 		special = kPlayerSpecial_Zweihander;
+	if (specialStr == "pipebomb")
+		special = kPlayerSpecial_Pipebomb;
+	if (specialStr == "axe")
+		special = kPlayerSpecial_AxeThrow;
 
 	m_special = special;
 }

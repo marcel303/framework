@@ -3,6 +3,17 @@
 #include "gamedefs.h"
 #include "gametypes.h"
 
+const char * g_gameStateNames[kGameState_COUNT] =
+{
+	"mainMenus",
+	"connecting",
+	"onlineMenus",
+	"newGame",
+	"roundComplete"
+};
+
+//
+
 const CollisionShape & CollisionShape::operator=(const CollisionBox & box)
 {
 	Vec2 p1(box.min[0], box.min[1]);
@@ -13,6 +24,23 @@ const CollisionShape & CollisionShape::operator=(const CollisionBox & box)
 	set(p1, p2, p3, p4);
 
 	return *this;
+}
+
+void CollisionShape::fixup()
+{
+	Assert(numPoints > 0);
+	Vec2 center;
+	for (int i = 0; i < numPoints; ++i)
+		center += points[i];
+	center /= numPoints;
+	const Vec2 n = getSegmentNormal(0);
+	const float d1 = n * points[0];
+	const float d2 = n * center - d1;
+	if (d2 > 0.f)
+	{
+		for (int i = 0; i < numPoints/2; ++i)
+			std::swap(points[i], points[numPoints - 1 - i]);
+	}
 }
 
 void CollisionShape::translate(float x, float y)
@@ -180,7 +208,7 @@ bool CollisionShape::checkCollision(const CollisionShape & other, Vec2Arg delta,
 	return any;
 }
 
-void CollisionShape::debugDraw() const
+void CollisionShape::debugDraw(bool drawNormals) const
 {
 	for (int i = 0; i < numPoints; ++i)
 	{
@@ -188,8 +216,11 @@ void CollisionShape::debugDraw() const
 		const Vec2 p2 = points[(i + 1) % numPoints];
 		drawLine(p1[0], p1[1], p2[0], p2[1]);
 
-		const Vec2 m = (p1 + p2) / 2.f;
-		const Vec2 n = getSegmentNormal(i);
-		drawLine(m[0], m[1], m[0] + n[0] * BLOCK_SX/2.f, m[1] + n[1] * BLOCK_SX/2.f);
+		if (drawNormals)
+		{
+			const Vec2 m = (p1 + p2) / 2.f;
+			const Vec2 n = getSegmentNormal(i);
+			drawLine(m[0], m[1], m[0] + n[0] * BLOCK_SX/2.f, m[1] + n[1] * BLOCK_SX/2.f);
+		}
 	}
 }

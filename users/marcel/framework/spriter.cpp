@@ -450,7 +450,7 @@ namespace spriter
 				transformedKey.key->transform.multiply(parentTransform, transformedKey.transform);
 
 				const int objectIndex = timeline->object;
-				if (objectIndex >= 0 && objectIndex < entity->m_objects.size())
+				if (objectIndex >= 0 && objectIndex < (int)entity->m_objects.size())
 					transformedKey.object = &entity->m_objects[objectIndex];
 				else
 					transformedKey.object = 0;

@@ -145,7 +145,12 @@ public:
 	Block & getBlock(int x, int y) { return m_blocks[x][y]; }
 
 	bool handleDamageRect(GameSim & gameSim, int x, int y, int x1, int y1, int x2, int y2, bool hitDestructible, bool hitSingleDestructible = true);
+	bool handleDamageShape(GameSim & gameSim, int x, int y, const CollisionShape & shape, bool hitDestructible, bool hitSingleDestructible = true);
 
 	static const CollisionShape & getBlockCollision(BlockShape shape);
+	static void getBlockCollision(BlockShape shape, CollisionShape & collisionShape, int blockX, int blockY);
 	void testCollision(const CollisionShape & shape, void * arg, CollisionCB cb);
 };
+
+void initArenaData();
+void shutArenaData();

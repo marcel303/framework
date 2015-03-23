@@ -12,6 +12,11 @@
 #include "player.h"
 #include "StreamReader.h"
 
+#define BLOCK_SPRITE_SCALE 1.f
+//#define BLOCK_SPRITE_SCALE .5f
+
+static Sprite * s_sprites[kBlockType_COUNT] = { };
+
 class BlockMask
 {
 public:
@@ -413,44 +418,11 @@ uint32_t Arena::calcCRC() const
 
 void Arena::drawBlocks() const
 {
-	const char * filenames[kBlockType_COUNT] =
-	{
-		"block-empty.png",
-		"block-destructible.png",
-		"block-destructible.png",
-		"block-indestructible.png",
-		"block-slide.png",
-		"block-moving.png",
-		"block-sticky.png",
-		"block-spike.png",
-		"block-spawn.png",
-		"block-spring.png",
-		"block-teleport.png",
-		"block-gravity-reverse.png",
-		"block-gravity-disable.png",
-		"block-gravity-strong.png",
-		"block-gravity-left.png",
-		"block-gravity-right.png",
-		"block-conveyorbelt-left.png",
-		"block-conveyorbelt-right.png",
-		"block-passthrough.png",
-		"block-appear.png"
-	};
-
-	static Sprite * sprites[kBlockType_COUNT] = { };
-
 	for (int x = 0; x < ARENA_SX; ++x)
 	{
 		for (int y = 0; y < ARENA_SY; ++y)
 		{
 			const Block & block = m_blocks[x][y];
-
-			if (!sprites[block.type])
-			{
-				const char * filename = filenames[block.type];
-
-				sprites[block.type] = new Sprite(filename);
-			}
 
 			if (block.type == kBlockType_Appear)
 			{
@@ -466,7 +438,7 @@ void Arena::drawBlocks() const
 						setColor(255, 255, 255, 0);
 				}
 
-				sprites[block.type]->drawEx(x * BLOCK_SX, y * BLOCK_SY);
+				s_sprites[block.type]->drawEx(x * BLOCK_SX, y * BLOCK_SY, 0.f, BLOCK_SPRITE_SCALE);
 				setColor(255, 255, 255);
 			}
 			else if (block.type == kBlockType_DestructibleRegen)
@@ -475,12 +447,12 @@ void Arena::drawBlocks() const
 				if (data.isVisible)
 				{
 					setColor(colorWhite);
-					sprites[block.type]->drawEx(x * BLOCK_SX, y * BLOCK_SY);
+					s_sprites[block.type]->drawEx(x * BLOCK_SX, y * BLOCK_SY, 0.f, BLOCK_SPRITE_SCALE);
 				}
 			}
 			else
 			{
-				sprites[block.type]->drawEx(x * BLOCK_SX, y * BLOCK_SY);
+				s_sprites[block.type]->drawEx(x * BLOCK_SX, y * BLOCK_SY, 0.f, BLOCK_SPRITE_SCALE);
 			}
 		}
 	}
@@ -900,9 +872,70 @@ bool Arena::handleDamageRect(GameSim & gameSim, int baseX, int baseY, int x1, in
 	return result;
 }
 
+bool Arena::handleDamageShape(GameSim & gameSim, int baseX, int baseY, const CollisionShape & shape, bool hitDestructible, bool hitSingleDestructible)
+{
+	bool result = false;
+
+	Vec2 min;
+	Vec2 max;
+	shape.getMinMax(min, max);
+
+	const int x1 = (int)std::floor(min[0]);
+	const int y1 = (int)std::floor(min[1]);
+	const int x2 = (int)std::ceil(max[0]);
+	const int y2 = (int)std::ceil(max[1]);
+
+	const int kMaxBlocks = 64;
+
+	BlockAndDistance blocks[kMaxBlocks];
+
+	int numBlocks = kMaxBlocks;
+
+	if (getBlocksFromPixels(
+		baseX, baseY,
+		x1, y1, x2, y2,
+		true,
+		blocks, numBlocks))
+	{
+		std::sort(blocks, blocks + numBlocks, [] (BlockAndDistance & block1, BlockAndDistance & block2) { return block1.distanceSq < block2.distanceSq; });
+
+		for (int i = 0; i < numBlocks; ++i)
+		{
+			BlockAndDistance & blockInfo = blocks[i];
+
+			Block & block = *blockInfo.block;
+
+			CollisionShape blockCollision;
+			getBlockCollision(block.shape, blockCollision, blockInfo.x, blockInfo.y);
+
+			if (!blockCollision.intersects(shape))
+				continue;
+
+			if (!hitDestructible && (block.type == kBlockType_Destructible || block.type == kBlockType_DestructibleRegen))
+				continue;
+
+			if (block.handleDamage(gameSim, blockInfo.x, blockInfo.y))
+			{
+				if (hitSingleDestructible)
+					hitDestructible = false;
+
+				result = true;
+			}
+		}
+	}
+
+	return result;
+}
+
 const CollisionShape & Arena::getBlockCollision(BlockShape shape)
 {
 	return s_blockPolys[shape];
+}
+
+void Arena::getBlockCollision(BlockShape shape, CollisionShape & collisionShape, int blockX, int blockY)
+{
+	collisionShape = getBlockCollision(shape);
+	collisionShape.translate(blockX * BLOCK_SX, blockY * BLOCK_SY);
 }
 
 void Arena::testCollision(const CollisionShape & shape, void * arg, CollisionCB cb)
@@ -932,13 +965,58 @@ void Arena::testCollision(const CollisionShape & shape, void * arg, CollisionCB 
 			if (blocks[i].block->shape == kBlockShape_Empty)
 				continue;
 
-			CollisionShape blockShape = Arena::getBlockCollision(blocks[i].block->shape);
-			blockShape.translate(blocks[i].x * BLOCK_SX, blocks[i].y * BLOCK_SY);
+			CollisionShape blockShape;
+			Arena::getBlockCollision(blocks[i].block->shape, blockShape, blocks[i].x, blocks[i].y);
 
 			if (shape.intersects(blockShape))
 			{
 				cb(shape, arg, 0, &blocks[i], 0);
 			}
 		}
+	}
+}
+
+//
+
+static const char * filenames[kBlockType_COUNT] =
+{
+	"block-empty.png",
+	"block-destructible.png",
+	"block-destructible.png",
+	"block-indestructible.png",
+	"block-slide.png",
+	"block-moving.png",
+	"block-sticky.png",
+	"block-spike.png",
+	"block-spawn.png",
+	"block-spring.png",
+	"block-teleport.png",
+	"block-gravity-reverse.png",
+	"block-gravity-disable.png",
+	"block-gravity-strong.png",
+	"block-gravity-left.png",
+	"block-gravity-right.png",
+	"block-conveyorbelt-left.png",
+	"block-conveyorbelt-right.png",
+	"block-passthrough.png",
+	"block-appear.png"
+};
+
+void initArenaData()
+{
+	for (int i = 0; i < kBlockType_COUNT; ++i)
+	{
+		const char * filename = filenames[i];
+
+		s_sprites[i] = new Sprite(filename);
+	}
+}
+
+void shutArenaData()
+{
+	for (int i = 0; i < kBlockType_COUNT; ++i)
+	{
+		delete s_sprites[i];
+		s_sprites[i] = 0;
 	}
 }

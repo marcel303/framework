@@ -54,6 +54,7 @@ static const char * s_pickupSprites[kPickupType_COUNT] =
 
 #define TOKEN_SPRITE "token.png"
 #define COIN_SPRITE "coin.png"
+#define PIPEBOMB_SPRITE "pipebomb.png"
 
 //
 
@@ -433,20 +434,68 @@ bool Mover::intersects(CollisionInfo & collisionInfo) const
 
 //
 
-void PipeBomb::setup(Vec2Arg pos, Vec2Arg vel)
+void PipeBomb::setup(Vec2Arg pos, Vec2Arg vel, int playerIndex)
 {
+	Sprite sprite(PIPEBOMB_SPRITE);
+
+	*static_cast<PhysicsActor*>(this) = PhysicsActor();
+
+	m_isActive = true;
+	m_bbMin.Set(-sprite.getWidth() / 2.f, -sprite.getHeight() / 2.f);
+	m_bbMax.Set(+sprite.getWidth() / 2.f, +sprite.getHeight() / 2.f);
+	m_pos = pos;
+	m_vel.Set(0.f, 0.f);
+	m_doTeleport = true;
+	m_bounciness = 0.f;
+	m_noGravity = false;
+	m_friction = 0.1f;
+	m_airFriction = 0.9f;
+
+	m_playerIndex = playerIndex;
+	m_exploded = false;
 }
 
 void PipeBomb::tick(GameSim & gameSim, float dt)
 {
+	PhysicsActorCBs cbs;
+	cbs.onHitPlayer = [](PhysicsActorCBs & cbs, PhysicsActor & actor, Player & player)
+	{
+		PipeBomb & self = static_cast<PipeBomb&>(actor);
+
+		// filter collision with owning player
+		if (player.m_index == self.m_playerIndex)
+			return false;
+
+		if (!self.m_exploded)
+			self.explode();
+
+		return false;
+	};
+	PhysicsActor::tick(gameSim, dt, cbs);
+
+	if (m_exploded)
+	{
+		m_isActive = false;
+	}
 }
 
 void PipeBomb::draw() const
 {
+	Sprite(PIPEBOMB_SPRITE).drawEx(
+		m_pos[0],
+		m_pos[1]);
 }
 
 void PipeBomb::drawLight() const
 {
+	Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f, 1.5f, false, FILTER_LINEAR);
+}
+
+void PipeBomb::explode()
+{
+	logDebug("PipeBomb::explode");
+
+	m_exploded = true;
 }
 
 //
@@ -835,6 +884,15 @@ void GameSim::freePlayer(PlayerInstanceData * instanceData)
 	}
 }
 
+int GameSim::getNumPlayers() const
+{
+	int result = 0;
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+		if (m_players[i].m_isUsed)
+			result++;
+	return result;
+}
+
 void GameSim::setGameState(::GameState gameState)
 {
 	m_gameState = gameState;
@@ -1148,7 +1206,7 @@ void GameSim::resetGameWorld()
 	for (int i = 0; i < MAX_PICKUPS; ++i)
 		m_pickups[i] = Pickup();
 
-	m_nextPickupSpawnTick = 0;
+	m_nextPickupSpawnTimeRemaining = 0.f;
 
 	// reset movers
 
@@ -1404,47 +1462,66 @@ void GameSim::tickPlay()
 
 	// pickup spawning
 
-	if (tick >= m_nextPickupSpawnTick)
+	if (m_nextPickupSpawnTimeRemaining > 0.f)
 	{
-		int numPickups = 0;
-		for (int i = 0; i < MAX_PICKUPS; ++i)
-			if (m_pickups[i].isAlive)
-				numPickups++;
+		m_nextPickupSpawnTimeRemaining -= dt;
 
-		if (numPickups < MAX_PICKUP_COUNT)
+		if (m_nextPickupSpawnTimeRemaining < 0.f)
 		{
-			int weights[kPickupType_COUNT] =
-			{
-				PICKUP_AMMO_WEIGHT,
-				PICKUP_NADE_WEIGHT,
-				PICKUP_SHIELD_WEIGHT,
-				PICKUP_ICE_WEIGHT,
-				PICKUP_BUBBLE_WEIGHT,
-				PICKUP_TIMEDILATION_WEIGHT
-			};
+			m_nextPickupSpawnTimeRemaining = 0.f;
 
-			int totalWeight = 0;
+			int numPickups = 0;
+			for (int i = 0; i < MAX_PICKUPS; ++i)
+				if (m_pickups[i].isAlive)
+					numPickups++;
 
-			for (int i = 0; i < kPickupType_COUNT; ++i)
+			if (numPickups < MAX_PICKUP_COUNT)
 			{
-				totalWeight += weights[i];
-				weights[i] = totalWeight;
+				int weights[kPickupType_COUNT] =
+				{
+					PICKUP_AMMO_WEIGHT,
+					PICKUP_NADE_WEIGHT,
+					PICKUP_SHIELD_WEIGHT,
+					PICKUP_ICE_WEIGHT,
+					PICKUP_BUBBLE_WEIGHT,
+					PICKUP_TIMEDILATION_WEIGHT
+				};
+
+				int totalWeight = 0;
+
+				for (int i = 0; i < kPickupType_COUNT; ++i)
+				{
+					totalWeight += weights[i];
+					weights[i] = totalWeight;
+				}
+
+				if (DEBUG_RANDOM_CALLSITES)
+					LOG_DBG("Random called from pre trySpawnPickup");
+				int value = Random() % totalWeight;
+
+				PickupType type = kPickupType_COUNT;
+
+				for (int i = 0; type == kPickupType_COUNT; ++i)
+					if (value < weights[i])
+						type = (PickupType)i;
+
+				trySpawnPickup(type);
 			}
-
-			if (DEBUG_RANDOM_CALLSITES)
-				LOG_DBG("Random called from pre trySpawnPickup");
-			int value = Random() % totalWeight;
-
-			PickupType type = kPickupType_COUNT;
-
-			for (int i = 0; type == kPickupType_COUNT; ++i)
-				if (value < weights[i])
-					type = (PickupType)i;
-
-			trySpawnPickup(type);
 		}
+	}
 
-		m_nextPickupSpawnTick = tick + (PICKUP_INTERVAL + (Random() % PICKUP_INTERVAL_VARIANCE)) * TICKS_PER_SECOND;
+	if (m_nextPickupSpawnTimeRemaining == 0.f)
+	{
+		const float multipliers[MAX_PLAYERS] =
+		{
+			PICKUP_RATE_MULTIPLIER_1,
+			PICKUP_RATE_MULTIPLIER_2,
+			PICKUP_RATE_MULTIPLIER_3,
+			PICKUP_RATE_MULTIPLIER_4
+		};
+		const float multiplier = multipliers[getNumPlayers()];
+
+		m_nextPickupSpawnTimeRemaining = (PICKUP_INTERVAL + (Random() % PICKUP_INTERVAL_VARIANCE)) * multiplier;
 	}
 
 	// level events
@@ -1455,10 +1532,10 @@ void GameSim::tickPlay()
 
 		if (m_timeUntilNextLevelEvent <= 0.f)
 		{
-			m_timeUntilNextLevelEvent = 30.f;
+			m_timeUntilNextLevelEvent = PROTO_LEVEL_EVENT_INTERVAL;
 
-			//const LevelEvent e = getRandomLevelEvent();
-			const LevelEvent e = kLevelEvent_SpikeWalls;
+			const LevelEvent e = getRandomLevelEvent();
+			//const LevelEvent e = kLevelEvent_SpikeWalls;
 			//const LevelEvent e = kLevelEvent_GravityWell;
 			//const LevelEvent e = kLevelEvent_EarthQuake;
 
@@ -1480,16 +1557,18 @@ void GameSim::tickPlay()
 				name = "Gravity Well";
 				break;
 
+				/*
 			case kLevelEvent_DestroyBlocks:
 				memset(&m_levelEvents.destroyBlocks, 0, sizeof(m_levelEvents.destroyBlocks));
 				m_levelEvents.destroyBlocks.m_remainingBlockCount = 0;
 				name = "Block Destruction (not yet implemented)";
 				break;
+				*/
 
 			case kLevelEvent_TimeDilation:
 				memset(&m_levelEvents.timeDilation, 0, sizeof(m_levelEvents.timeDilation));
 				m_levelEvents.timeDilation.endTimer = 3.f;
-				addTimeDilationEffect(.5f, .25f, 3.f);
+				addTimeDilationEffect(EVENT_TIMEDILATION_MULTIPLIER_BEGIN, EVENT_TIMEDILATION_MULTIPLIER_END, EVENT_TIMEDILATION_DURATION);
 				name = "Time Dilation";
 				break;
 
@@ -1499,6 +1578,7 @@ void GameSim::tickPlay()
 				name = "Spike Walls";
 				break;
 
+				/*
 			case kLevelEvent_Wind:
 				memset(&m_levelEvents.wind, 0, sizeof(m_levelEvents.wind));
 				m_levelEvents.wind.endTimer = 3.f;
@@ -1517,6 +1597,7 @@ void GameSim::tickPlay()
 				m_levelEvents.nightDayCycle.endTimer = 3.f;
 				name = "Day/Night Cycle (not yet implemented)";
 				break;
+				*/
 			}
 
 			addAnnouncement("Level Event: %s", name);
@@ -2113,6 +2194,18 @@ uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, BulletType t
 	return id;
 }
 
+void GameSim::spawnPipeBomb(Vec2 pos, Vec2 vel, int playerIndex)
+{
+	for (int i = 0; i < MAX_PIPEBOMBS; ++i)
+	{
+		if (!m_pipebombs[i].m_isActive)
+		{
+			m_pipebombs[i].setup(pos, vel, playerIndex);
+			return;
+		}
+	}
+}
+
 void GameSim::spawnParticles(const ParticleSpawnInfo & spawnInfo)
 {
 	uint16_t ids[MAX_BULLETS];
@@ -2186,4 +2279,116 @@ void GameSim::addAnnouncement(const char * message, ...)
 	info.timeLeft = 3.f;
 	info.message = text;
 	m_annoucements.push_back(info);
+}
+
+//
+
+void updatePhysics(GameSim & gameSim, Vec2 & pos, Vec2 & vel, float dt, const CollisionShape & shape, void * arg, PhysicsUpdateCB cb)
+{
+	for (int i = 0; i < 2; ++i)
+	{
+		Vec2 delta;
+		delta[i] = vel[i] * dt;
+
+		if (delta[i] == 0.f)
+			continue;
+
+		Vec2 newPos = pos + delta;
+
+		PhysicsUpdateInfo updateInfo;
+
+		updateInfo.arg = arg;
+		updateInfo.cb = cb;
+		updateInfo.shape = shape;
+		updateInfo.shape.translate(newPos[0], newPos[1]);
+
+		updateInfo.axis = i;
+		updateInfo.delta = delta;
+		updateInfo.flags = 0;
+
+		gameSim.testCollision(
+			updateInfo.shape,
+			&updateInfo,
+			[](const CollisionShape & shape, void * arg, PhysicsActor * actor, BlockAndDistance * blockInfo, Player * player)
+			{
+				PhysicsUpdateInfo & updateInfo = *reinterpret_cast<PhysicsUpdateInfo*>(arg);
+				updateInfo.actor = actor;
+				updateInfo.blockInfo = blockInfo;
+				updateInfo.player = player;
+
+				int flags = 0;
+
+				bool collision = false;
+
+				Vec2 contactNormal;
+				float contactDistance;
+
+				if (blockInfo)
+				{
+					Block * block = blockInfo->block;
+
+					if (!((1 << block->type) & kBlockMask_Solid))
+						flags |= kPhysicsUpdateFlag_DontCollide;
+
+					CollisionShape blockShape;
+					Arena::getBlockCollision(
+						block->shape,
+						blockShape,
+						blockInfo->x,
+						blockInfo->y);
+
+					if (shape.checkCollision(blockShape, updateInfo.delta, contactDistance, contactNormal))
+					{
+						collision = true;
+					}
+				}
+
+				if (collision)
+				{
+					if (updateInfo.cb)
+					{
+						updateInfo.contactNormal = contactNormal;
+						updateInfo.contactDistance = contactDistance;
+
+						flags |= updateInfo.cb(updateInfo);
+					}
+
+					if (!(flags & kPhysicsUpdateFlag_DontCollide))
+					{
+						ContactInfo contact;
+						contact.n = contactNormal;
+						contact.d = contactDistance;
+						updateInfo.contacts.push_back(contact);
+					}
+
+					updateInfo.flags |= flags;
+				}
+			});
+
+		pos = newPos;
+
+		auto u = std::unique(updateInfo.contacts.begin(), updateInfo.contacts.end());
+		updateInfo.contacts.resize(std::distance(updateInfo.contacts.begin(), u));
+
+		for (auto contact = updateInfo.contacts.begin(); contact != updateInfo.contacts.end(); ++contact)
+		{
+			Vec2 offset = contact->n * contact->d;
+
+			pos += offset;
+
+			if (!(updateInfo.flags & kPhysicsUpdateFlag_DontUpdateVelocity))
+			{
+				// todo : let phys update know whether to update velocity
+
+				const float d = vel * contact->n;
+
+				if (d > 0.f)
+				{
+					vel -= contact->n * d;
+
+					//logDebug("vel = %f, %f", m_vel[0], m_vel[1]);
+				}
+			}
+		}
+	}
 }

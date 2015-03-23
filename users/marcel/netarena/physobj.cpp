@@ -190,6 +190,19 @@ void PhysicsActor::getCollisionInfo(CollisionInfo & collisionInfo)
 	collisionInfo.max = m_pos + m_bbMax;
 }
 
+void PhysicsActor::testCollision(const CollisionShape & shape, void * arg, CollisionCB cb)
+{
+	CollisionShape myShape(
+		m_pos + m_bbMin,
+		m_pos + m_bbMax);
+
+	if (myShape.intersects(shape))
+	{
+		cb(shape, arg, this, 0, 0);
+	}
+}
+
+/*
 bool PhysicsActor::test(const CollisionBox & box) const
 {
 	const Vec2 min = m_pos + m_bbMin;
@@ -201,9 +214,11 @@ bool PhysicsActor::test(const CollisionBox & box) const
 		max[0] >= box.min[0] &&
 		max[1] >= box.min[1];
 }
+*/
 
 //
 
+#if 0
 PhysicsScene::PhysicsScene()
 {
 }
@@ -229,7 +244,7 @@ void PhysicsScene::freeActor(PhysicsActorId id)
 		m_actors[id] = PhysicsActor();
 }
 
-void PhysicsScene::test(const CollisionBox & box, CollisionCB cb, void * arg, bool wrap)
+void PhysicsScene::testCollision(const CollisionShape & shape, CollisionCB cb, void * arg, bool wrap)
 {
 	if (wrap)
 	{
@@ -239,7 +254,7 @@ void PhysicsScene::test(const CollisionBox & box, CollisionCB cb, void * arg, bo
 	}
 	else
 	{
-		testInternal(box, cb, arg);
+		testCollisionInternal(shape, cb, arg);
 	}
 
 	for (int i = 0; i < MAX_PHYSICS_ACTORS; ++i)
@@ -247,7 +262,7 @@ void PhysicsScene::test(const CollisionBox & box, CollisionCB cb, void * arg, bo
 			m_actors[i].m_isTested = false;
 }
 
-void PhysicsScene::testInternal(const CollisionBox & box, CollisionCB cb, void * arg)
+void PhysicsScene::testCollisionInternal(const CollisionShape & shape, CollisionCB cb, void * arg)
 {
 	CollisionShape shape = box;
 
@@ -255,7 +270,7 @@ void PhysicsScene::testInternal(const CollisionBox & box, CollisionCB cb, void *
 	{
 		if (m_actors[i].m_isActive && !m_actors[i].m_isTested)
 		{
-			if (m_actors[i].test(box))
+			if (m_actors[i].testCollision(shape))
 			{
 				m_actors[i].m_isTested = true;
 
@@ -264,3 +279,4 @@ void PhysicsScene::testInternal(const CollisionBox & box, CollisionCB cb, void *
 		}
 	}
 }
+#endif

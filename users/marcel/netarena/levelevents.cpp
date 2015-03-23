@@ -203,11 +203,9 @@ void LevelEvent_SpikeWalls::tick(GameSim & gameSim, float dt)
 			if (gameSim.m_players[i].m_isUsed && gameSim.m_players[i].m_isAlive)
 				numPlayersAlive++;
 
-		if (numPlayersAlive <= 1)
+		if (numPlayersAlive <= 1 && SPIKEWALLS_OPEN_ON_LAST_MAN_STANDING)
 		{
-			if (m_state == kState_Warn)
-				m_state = kState_Idle;
-			else if (m_state == kState_Closed)
+			if (m_state == kState_Closed)
 			{
 				m_state = kState_Open;
 				m_time = 0.f;

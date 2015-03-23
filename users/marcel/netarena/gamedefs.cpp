@@ -1,18 +1,19 @@
 #include "gamedefs.h"
 
 // -- prototypes --
-OPTION_DEFINE(bool, PROTO_TIMEDILATION_ON_KILL, "Experimental/Time Dilation On Kill/Enabled");
-OPTION_DEFINE(float, PROTO_TIMEDILATION_ON_KILL_MULTIPLIER1, "Experimental/Time Dilation On Kill/Multiplier At Start");
-OPTION_DEFINE(float, PROTO_TIMEDILATION_ON_KILL_MULTIPLIER2, "Experimental/Time Dilation On Kill/Multiplier At End");
-OPTION_DEFINE(float, PROTO_TIMEDILATION_ON_KILL_DURATION, "Experimental/Time Dilation On Kill/Duration (Seconds)");
+OPTION_DEFINE(bool, PROTO_TIMEDILATION_ON_KILL, "Player/Time Dilation On Kill/Enabled");
+OPTION_DEFINE(float, PROTO_TIMEDILATION_ON_KILL_MULTIPLIER1, "Player/Time Dilation On Kill/Multiplier At Start");
+OPTION_DEFINE(float, PROTO_TIMEDILATION_ON_KILL_MULTIPLIER2, "Player/Time Dilation On Kill/Multiplier At End");
+OPTION_DEFINE(float, PROTO_TIMEDILATION_ON_KILL_DURATION, "Player/Time Dilation On Kill/Duration (Seconds)");
 OPTION_STEP(PROTO_TIMEDILATION_ON_KILL_MULTIPLIER1, 0.f, 10.f, .01f);
 OPTION_STEP(PROTO_TIMEDILATION_ON_KILL_MULTIPLIER2, 0.f, 10.f, .01f);
 OPTION_STEP(PROTO_TIMEDILATION_ON_KILL_DURATION, 0.f, 10.f, .01f);
 
-OPTION_DEFINE(bool, PROTO_ENABLE_LEVEL_EVENTS, "Experimental/Enable Level Events");
-OPTION_DEFINE(float, EVENT_GRAVITYWELL_STRENGTH_BEGIN, "Experimental/Gravity Well/Strength (Begin)");
-OPTION_DEFINE(float, EVENT_GRAVITYWELL_STRENGTH_END, "Experimental/Gravity Well/Strength (End)");
-OPTION_DEFINE(float, EVENT_GRAVITYWELL_DURATION, "Experimental/Gravity Well/Duration");
+OPTION_DEFINE(bool, PROTO_ENABLE_LEVEL_EVENTS, "Level Events/Enable Level Events");
+OPTION_DEFINE(int, PROTO_LEVEL_EVENT_INTERVAL, "Level Events/Level Event Interval");
+OPTION_DEFINE(float, EVENT_GRAVITYWELL_STRENGTH_BEGIN, "Level Events/Gravity Well/Strength (Begin)");
+OPTION_DEFINE(float, EVENT_GRAVITYWELL_STRENGTH_END, "Level Events/Gravity Well/Strength (End)");
+OPTION_DEFINE(float, EVENT_GRAVITYWELL_DURATION, "Level Events/Gravity Well/Duration");
 
 OPTION_DEFINE(float, EVENT_EARTHQUAKE_DURATION, "Level Events/Earth Quake/Duration");
 OPTION_DEFINE(float, EVENT_EARTHQUAKE_INTERVAL, "Level Events/Earth Quake/Interval (Seconds)");
@@ -21,6 +22,13 @@ OPTION_DEFINE(float, EVENT_EARTHQUAKE_PLAYER_BOOST, "Level Events/Earth Quake/Pl
 OPTION_STEP(EVENT_EARTHQUAKE_INTERVAL, 0, 0, .1f);
 OPTION_STEP(EVENT_EARTHQUAKE_INTERVAL_RAND, 0, 0, .1f);
 OPTION_STEP(EVENT_EARTHQUAKE_PLAYER_BOOST, 0, 0, 10.f);
+
+OPTION_DEFINE(float, EVENT_TIMEDILATION_DURATION, "Level Events/Time Dilation/Duration (Sec)");
+OPTION_DEFINE(float, EVENT_TIMEDILATION_MULTIPLIER_BEGIN, "Level Events/Time Dilation/Multiplier Begin");
+OPTION_DEFINE(float, EVENT_TIMEDILATION_MULTIPLIER_END, "Level Events/Time Dilation/Multiplier End");
+OPTION_STEP(EVENT_TIMEDILATION_DURATION, 0, 0, .1f);
+OPTION_STEP(EVENT_TIMEDILATION_MULTIPLIER_BEGIN, 0, 0, .1f);
+OPTION_STEP(EVENT_TIMEDILATION_MULTIPLIER_END, 0, 0, .1f);
 
 OPTION_DEFINE(int, SPIKEWALLS_COVERAGE, "Level Events/Spike Walls/Screen Coverage (Percent)");
 OPTION_DEFINE(float, SPIKEWALLS_TIME_PREVIEW, "Level Events/Spike Walls/Warning Time");
@@ -165,6 +173,14 @@ OPTION_STEP(BULLET_GRENADE_FRAG_SPEED_MAX, 0, 0, 10);
 OPTION_DEFINE(int, PICKUP_INTERVAL, "Pickups/Spawn Interval (Sec)");
 OPTION_DEFINE(int, PICKUP_INTERVAL_VARIANCE, "Pickups/Spawn Interval Random (Sec)");
 OPTION_DEFINE(int, MAX_PICKUP_COUNT, "Pickups/Maximum Pickup Count");
+OPTION_DEFINE(float, PICKUP_RATE_MULTIPLIER_1, "Pickups/Scaling/1 Players");
+OPTION_DEFINE(float, PICKUP_RATE_MULTIPLIER_2, "Pickups/Scaling/2 Players");
+OPTION_DEFINE(float, PICKUP_RATE_MULTIPLIER_3, "Pickups/Scaling/3 Players");
+OPTION_DEFINE(float, PICKUP_RATE_MULTIPLIER_4, "Pickups/Scaling/4 Players");
+OPTION_STEP(PICKUP_RATE_MULTIPLIER_1, 0, 0, 0.1f);
+OPTION_STEP(PICKUP_RATE_MULTIPLIER_2, 0, 0, 0.1f);
+OPTION_STEP(PICKUP_RATE_MULTIPLIER_3, 0, 0, 0.1f);
+OPTION_STEP(PICKUP_RATE_MULTIPLIER_4, 0, 0, 0.1f);
 
 OPTION_DEFINE(int, PICKUP_AMMO_COUNT, "Pickups/Ammo Count");
 OPTION_DEFINE(int, PICKUP_AMMO_WEIGHT, "Pickups/Spawn Weights/Ammo");
