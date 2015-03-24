@@ -126,9 +126,13 @@ void CreateNewMapHelper(int x, int y)
 {
 	sceneMech->setSceneRect(-MAPX*BLOCKSIZE,-MAPY*BLOCKSIZE, MAPX*3*BLOCKSIZE,MAPY*3*BLOCKSIZE); //-MAPX*2*BLOCKSIZE,-MAPY*2*BLOCKSIZE,MAPX*4*BLOCKSIZE,MAPY*4*BLOCKSIZE);
 
+	sceneCounter = SCENEMECH;
 	sceneMech->CreateLevel(x, y);
+	sceneCounter = SCENEART;
 	sceneArt->CreateLevel(x, y);
+	sceneCounter = SCENECOLL;
 	sceneCollission->CreateLevel(x, y);
+	sceneCounter = SCENEMECH;
 	sceneMech->AddGrid();
 }
 

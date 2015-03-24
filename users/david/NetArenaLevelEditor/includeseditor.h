@@ -45,6 +45,9 @@
 #define SCENETEMPLATE 4
 
 
+#define PALLATTEROWSIZE 3
+
+
 #define ed Ed::I()
 
 #define sceneArt ed.GetSceneArt()
