@@ -45,7 +45,7 @@
 #define SCENETEMPLATE 4
 
 
-#define PALLATTEROWSIZE 3
+#define PALLETTEROWSIZE 3
 
 
 #define ed Ed::I()

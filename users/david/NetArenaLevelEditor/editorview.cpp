@@ -133,6 +133,8 @@ void EditorView::SwitchToObject()
 		sliderOpacArt->setValue(0);
 		sliderOpacColl->setValue(0);
 		sliderOpacObject->setValue(80);
+
+		ObjectPallette();
 }
 
 
