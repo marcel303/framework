@@ -48,7 +48,7 @@ OPTION_DECLARE(bool, g_windowed, false);
 OPTION_DEFINE(bool, g_windowed, "App/Windowed Mode");
 OPTION_ALIAS(g_windowed, "windowed");
 
-OPTION_DECLARE(std::string, s_mapList, "arena.txt");
+OPTION_DECLARE(std::string, s_mapList, "testArena");
 OPTION_DEFINE(std::string, s_mapList, "App/Map List");
 OPTION_ALIAS(s_mapList, "maps");
 OPTION_FLAGS(s_mapList, OPTION_FLAG_HIDDEN);

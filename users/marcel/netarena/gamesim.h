@@ -326,7 +326,7 @@ struct Player
 	bool m_canTaunt; // set when the player is allowed to taunt, which is after the death animation is done. it's reset after a taunt
 	bool m_isRespawn; // set after the first respawn. the first spawn is special, as the player doesn't need to press X and isn't allowed to use taunt
 	int m_lastSpawnIndex;
-	int m_spawnInvincibilityTicks;
+	float m_spawnInvincibilityTime;
 
 	bool m_isGrounded; // set when the player is walking on ground
 	bool m_isAttachedToSticky;
@@ -772,6 +772,7 @@ struct PhysicsUpdateInfo
 	PhysicsUpdateCB cb;
 
 	int axis;
+	Vec2 pos;
 	Vec2 delta;
 
 	PhysicsActor * actor;

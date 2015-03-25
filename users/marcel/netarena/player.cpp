@@ -17,7 +17,6 @@ todo:
 ** HIGH PRIORITY **
 
 - add pickup drop on death
-- fix gravity well not activating?
 
 - slow down player vertically when hitting block. maybe add small upward speed?
 
@@ -876,8 +875,7 @@ void Player::tick(float dt)
 
 	if (m_isAlive)
 	{
-		if (m_spawnInvincibilityTicks > 0)
-			m_spawnInvincibilityTicks--;
+		m_spawnInvincibilityTime = Calc::Max(0.f, m_spawnInvincibilityTime - dt);
 
 		// see if we grabbed any pickup
 		
@@ -1779,6 +1777,27 @@ void Player::tick(float dt)
 						updateInfo.player->handleDamage(1.f, totalVel, self);
 				}
 
+				if (self->m_attack.attacking && self->m_attack.hasCollision)
+				{
+					if (blockAndDistance)
+					{
+						CollisionShape attackCollision;
+						if (self->getAttackCollision(attackCollision))
+						{
+							self->m_attack.hitDestructible |= self->m_instanceData->m_gameSim->m_arena.handleDamageShape(
+								*self->m_instanceData->m_gameSim,
+								updateInfo.pos[0],
+								updateInfo.pos[1],
+								attackCollision,
+								!self->m_attack.hitDestructible,
+								PLAYER_SWORD_SINGLE_BLOCK);
+
+							if (blockAndDistance->block->shape == kBlockShape_Empty)
+								blockAndDistance = 0;
+						}
+					}
+				}
+
 				if (blockAndDistance)
 				{
 					Block * block = blockAndDistance->block;
@@ -1805,7 +1824,7 @@ void Player::tick(float dt)
 							}
 						}
 
-						if (((1 << block->type) & kBlockMask_Solid) == 0) // todo : should pass all types to player. let player filter on solid yes/no
+						if (((1 << block->type) & kBlockMask_Solid) == 0)
 							result |= kPhysicsUpdateFlag_DontCollide;
 					}
 
@@ -2371,9 +2390,9 @@ void Player::draw() const
 
 	// draw invincibility marker
 
-	if (m_spawnInvincibilityTicks > 0)
+	if (m_spawnInvincibilityTime > 0.f)
 	{
-		const float t = m_spawnInvincibilityTicks / float(TICKS_PER_SECOND * PLAYER_RESPAWN_INVINCIBILITY_TIME);
+		const float t = m_spawnInvincibilityTime / float(PLAYER_RESPAWN_INVINCIBILITY_TIME);
 		setColorf(
 			color.r,
 			color.g,
@@ -2692,7 +2711,7 @@ void Player::respawn()
 
 	if (GAMESIM->m_arena.getRandomSpawnPoint(*GAMESIM, x, y, m_lastSpawnIndex, this))
 	{
-		m_spawnInvincibilityTicks = TICKS_PER_SECOND * PLAYER_RESPAWN_INVINCIBILITY_TIME;
+		m_spawnInvincibilityTime = PLAYER_RESPAWN_INVINCIBILITY_TIME;
 
 		m_pos[0] = (float)x;
 		m_pos[1] = (float)y;
@@ -2788,7 +2807,7 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 	{
 		handleImpact(velocity);
 
-		if (m_spawnInvincibilityTicks > 0 ||
+		if (m_spawnInvincibilityTime > 0.f ||
 			shieldAbsorb(amount) ||
 			GAMESIM->m_gameState != kGameState_Play)
 		{

@@ -1000,7 +1000,7 @@ void GameSim::newRound(const char * mapOverride)
 	else if (!g_mapList.empty())
 		map = g_mapList[m_nextRoundNumber % g_mapList.size()];
 	else
-		map = "arena.txt";
+		map = "testArena";
 
 	load(map.c_str());
 
@@ -2296,6 +2296,7 @@ void updatePhysics(GameSim & gameSim, Vec2 & pos, Vec2 & vel, float dt, const Co
 		updateInfo.shape.translate(newPos[0], newPos[1]);
 
 		updateInfo.axis = i;
+		updateInfo.pos = newPos;
 		updateInfo.delta = delta;
 		updateInfo.flags = 0;
 

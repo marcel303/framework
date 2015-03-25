@@ -5,10 +5,13 @@
 #include "NetSerializable.h"
 #include "physobj.h"
 
+#define NEW_LEVEL_FORMAT 1
+
 class Arena;
 class BitStream;
 class GameSim;
 struct Player;
+class Sprite;
 
 enum BlockShape
 {
@@ -86,6 +89,7 @@ struct Block
 {
 	BlockType type;
 	BlockShape shape;
+	uint16_t artIndex;
 	uint16_t param;
 
 	bool handleDamage(GameSim & gameSim, int blockX, int blockY);
@@ -118,12 +122,20 @@ class Arena
 {
 	Block m_blocks[ARENA_SX][ARENA_SY];
 
+	FixedString<64> m_name;
+	Sprite ** m_sprites;
+	int m_numSprites;
+
 public:
+	Arena();
+	~Arena();
+
 	void init();
 
 	void reset();
 	void generate();
 	void load(const char * name);
+	void loadArt(const char * name);
 	void serialize(NetSerializationContext & context);
 
 #if ENABLE_GAMESTATE_DESYNC_DETECTION

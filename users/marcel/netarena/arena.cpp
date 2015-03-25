@@ -13,7 +13,7 @@
 #include "StreamReader.h"
 
 #if USE_32X32_TILES
-	#define BLOCK_SPRITE_SCALE .5f
+	#define BLOCK_SPRITE_SCALE 1.f
 #else
 	#define BLOCK_SPRITE_SCALE 1.f
 #endif
@@ -151,6 +151,17 @@ bool Block::handleDamage(GameSim & gameSim, int blockX, int blockY)
 
 //
 
+Arena::Arena()
+	: m_sprites(0)
+	, m_numSprites(0)
+{
+}
+
+Arena::~Arena()
+{
+	reset();
+}
+
 void Arena::init()
 {
 	reset();
@@ -166,9 +177,22 @@ void Arena::reset()
 		{
 			m_blocks[x][y].shape = kBlockShape_Opaque;
 			m_blocks[x][y].type = kBlockType_Empty;
+			m_blocks[x][y].artIndex = -1;
 			m_blocks[x][y].param = 0;
 		}
 	}
+
+	// clear sprites
+
+	for (int i = 0; i < m_numSprites; ++i)
+	{
+		delete m_sprites[i];
+		m_sprites[i] = 0;
+	}
+
+	delete [] m_sprites;
+	m_sprites = 0;
+	m_numSprites = 0;
 }
 
 void Arena::generate()
@@ -212,16 +236,31 @@ void Arena::load(const char * name)
 
 	//
 
+#if NEW_LEVEL_FORMAT
+	m_name = name;
+
+	loadArt(name);
+
+	const std::string baseName = std::string("levels/") + name + "/";
+
+	const std::string mecFilename = baseName + "Mec.txt";
+	const std::string colFilename = baseName + "Col.txt";
+	const std::string objFilename = baseName + "Obj.txt";
+	const std::string artFilename = baseName + "Art.txt";
+#else
 	std::string baseName = Path::GetBaseName(name);
 
-	std::string techFilename = baseName + ".txt";
-	std::string maskFilename = baseName + "-mask.txt";
-	std::string artFilename = baseName + "-art.txt";
+	std::string techFilename = baseName + "Mec.txt";
+	std::string maskFilename = baseName + "Col.txt";
+	std::string artFilename = baseName + "Art.txt";
+#endif
+
+	// load block type layer
 
 	try
 	{
 		FileStream stream;
-		stream.Open(techFilename.c_str(), (OpenMode)(OpenMode_Read | OpenMode_Text));
+		stream.Open(mecFilename.c_str(), (OpenMode)(OpenMode_Read | OpenMode_Text));
 		StreamReader reader(&stream, false);
 		std::vector<std::string> lines = reader.ReadAllLines();
 
@@ -307,13 +346,15 @@ void Arena::load(const char * name)
 	}
 	catch (std::exception & e)
 	{
-		LOG_ERR("failed to open %s: %s", name, e.what());
+		LOG_ERR("failed to open %s: %s", mecFilename.c_str(), e.what());
 	}
+
+	// load collision shape layer
 
 	try
 	{
 		FileStream stream;
-		stream.Open(maskFilename.c_str(), (OpenMode)(OpenMode_Read | OpenMode_Text));
+		stream.Open(colFilename.c_str(), (OpenMode)(OpenMode_Read | OpenMode_Text));
 		StreamReader reader(&stream, false);
 		std::vector<std::string> lines = reader.ReadAllLines();
 
@@ -381,12 +422,82 @@ void Arena::load(const char * name)
 	}
 	catch (std::exception & e)
 	{
-		LOG_ERR("failed to open %s: %s", maskFilename.c_str(), e.what());
+		LOG_ERR("failed to open %s: %s", colFilename.c_str(), e.what());
+	}
+
+#if NEW_LEVEL_FORMAT
+	// load art layer
+
+	try
+	{
+		FileStream stream;
+		stream.Open(artFilename.c_str(), OpenMode_Read);
+		StreamReader reader(&stream, false);
+		
+		const int sx = reader.ReadInt32();
+		const int sy = reader.ReadInt32();
+
+		for (int y = 0; y < sy; ++y)
+		{
+			for (int x = 0; x < sx; ++x)
+			{
+				const int index = reader.ReadInt32();
+				Assert(index >= 0 && index < m_numSprites);
+
+				if (x < ARENA_SX && y < ARENA_SY)
+				{
+					if (index >= 0 && index < m_numSprites)
+					{
+						m_blocks[x][y].artIndex = index;
+					}
+					else
+					{
+						logDebug("art tile at (%d, %d) is out of range. index=%d", x, y, index);
+					}
+				}
+			}
+		}
+	}
+	catch (std::exception & e)
+	{
+		LOG_ERR("failed to open %s: %s", artFilename.c_str(), e.what());
+	}
+#endif
+}
+
+void Arena::loadArt(const char * name)
+{
+	const std::string baseName = std::string("levels/") + name + "/";
+	const std::string artFileName = baseName + "ArtIndex.txt";
+	const std::string spriteBaseName = std::string("levels/") + name + "/";
+
+	try
+	{
+		FileStream stream(artFileName.c_str(), OpenMode_Read);
+		StreamReader reader(&stream, false);
+		std::vector<std::string> lines = reader.ReadAllLines();
+
+		m_sprites = new Sprite*[lines.size()];
+		m_numSprites = (int)lines.size();
+
+		for (size_t i = 0; i < lines.size(); ++i)
+		{
+			const std::string spriteFilename = spriteBaseName + lines[i];
+			m_sprites[i] = new Sprite(spriteFilename.c_str());
+		}
+	}
+	catch (std::exception & e)
+	{
+		logError("failed to load art index for %s: %s", name, e.what());
 	}
 }
 
 void Arena::serialize(NetSerializationContext & context)
 {
+	reset();
+
+	//
+
 	for (int x = 0; x < ARENA_SX; ++x)
 	{
 		for (int y = 0; y < ARENA_SY; ++y)
@@ -403,6 +514,20 @@ void Arena::serialize(NetSerializationContext & context)
 			block.type = (BlockType)type;
 			block.shape = (BlockShape)shape;
 		}
+	}
+
+	if (context.IsSend())
+	{
+		std::string name = m_name.c_str();
+		context.Serialize(name);
+	}
+	else
+	{
+		std::string name;
+		context.Serialize(name);
+		m_name = name.c_str();
+
+		loadArt(m_name.c_str());
 	}
 }
 
@@ -440,25 +565,27 @@ void Arena::drawBlocks() const
 					if (data.switchTime < 20)
 						setColor(255, 255, 255, 2.55 * (100 - data.switchTime * 5));
 					else
-						setColor(255, 255, 255, 0);
+						continue;
 				}
-
-				s_sprites[block.type]->drawEx(x * BLOCK_SX, y * BLOCK_SY, 0.f, BLOCK_SPRITE_SCALE);
-				setColor(255, 255, 255);
 			}
 			else if (block.type == kBlockType_DestructibleRegen)
 			{
 				const RegenBlockData & data = (RegenBlockData&)block.param;
-				if (data.isVisible)
-				{
-					setColor(colorWhite);
-					s_sprites[block.type]->drawEx(x * BLOCK_SX, y * BLOCK_SY, 0.f, BLOCK_SPRITE_SCALE);
-				}
+				if (!data.isVisible)
+					continue;
+				setColor(colorWhite);
 			}
 			else
 			{
-				s_sprites[block.type]->drawEx(x * BLOCK_SX, y * BLOCK_SY, 0.f, BLOCK_SPRITE_SCALE);
+				setColor(255, 255, 255, 255);
 			}
+
+		#if NEW_LEVEL_FORMAT
+			if (block.artIndex != (uint16_t)-1)
+				m_sprites[block.artIndex]->drawEx(x * BLOCK_SX, y * BLOCK_SY, 0.f, BLOCK_SPRITE_SCALE);
+		#else
+			s_sprites[block.type]->drawEx(x * BLOCK_SX, y * BLOCK_SY, 0.f, BLOCK_SPRITE_SCALE);
+		#endif
 		}
 	}
 
