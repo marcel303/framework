@@ -27,7 +27,7 @@ public:
 
 	EditorScene*& GetSceneArt();
 	EditorScene*& GetSceneMech();
-	EditorScene*& GetSceneCollission();
+	EditorScene*& GetSceneCollision();
 	QGraphicsScene* GetSceneTemplatePallette();
 
 
@@ -84,8 +84,8 @@ private:
 	EditorScene* m_sceneMech;
 	EditorScene* m_sceneMechTemplate;
 
-	EditorScene* m_sceneCollission;
-	EditorScene* m_sceneCollissionTemplate;
+	EditorScene* m_sceneCollision;
+	EditorScene* m_sceneCollisionTemplate;
 
 
 

@@ -117,7 +117,7 @@ void EditorView::SwitchToArt()
 		sliderOpacObject->setValue(0);
 }
 
-void EditorView::SwitchToCollission()
+void EditorView::SwitchToCollision()
 {
 		SwitchSceneTo(SCENECOLL);
 		sliderOpacMech->setValue(0);
@@ -191,9 +191,9 @@ void EditorView::SetOpacityArt(int s)
 {
    SetOpactyForLayer(sceneArt, s/100.0);
 }
-void EditorView::SetOpacityCollission(int s)
+void EditorView::SetOpacityCollision(int s)
 {
-	SetOpactyForLayer(sceneCollission, s/100.0);
+	SetOpactyForLayer(sceneCollision, s/100.0);
 }
 
 void EditorView::SetOpacityObject(int s)

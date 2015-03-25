@@ -72,14 +72,14 @@ public slots:
     void New();
     void SwitchToMech();
     void SwitchToArt();
-    void SwitchToCollission();
+	void SwitchToCollision();
     void SwitchToObject();
 	void SwitchToTemplates();
 	void SwitchLevelTemplateEdit();
 
     void SetOpacityMech(int s);
     void SetOpacityArt(int s);
-    void SetOpacityCollission(int s);
+	void SetOpacityCollision(int s);
     void SetOpacityObject(int s);
 
 	void AddNewFolder();
