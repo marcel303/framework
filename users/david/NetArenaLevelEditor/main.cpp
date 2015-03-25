@@ -582,6 +582,7 @@ void SaveArtFile(QString filename, EditorScene* s)
 	QFile fileArt(filename+".txt");
     fileArt.open(QIODevice::WriteOnly | QIODevice::Truncate);
     QDataStream in(&fileArt);
+    in.setByteOrder(QDataStream::LittleEndian);
 
     in << MAPX << MAPY;
 	for(int y = 0; y < MAPY; y++)
@@ -1133,6 +1134,7 @@ void EditorTemplate::RemoveTemplateTile(int x, int y)
 EditorTemplate::EditorTemplate()
 {
     setShapeMode( QGraphicsPixmapItem::BoundingRectShape );
+
 }
 
 EditorTemplate::~EditorTemplate()
@@ -1322,7 +1324,7 @@ EditorTemplate::TemplateTile::TemplateTile()
 	x = -1;
 	y = -1;
 
-	blockMech = 'x';
+    blockMech = ' ';
 	blockArt = "";
 	blockColl = ' ';
 }
