@@ -11,7 +11,7 @@
 
 #define view view2 //hack
 
-short selectedTile = 0;
+short selectedTile = ' ';
 
 
 
@@ -633,7 +633,7 @@ void SaveLevel(QString filename)
 
 Tile::Tile()
 {
-	SetSelectedBlock(0);
+	selectedBlock = ' ';
 
     this->setOpacity(1.0);
 
@@ -658,9 +658,13 @@ void Tile::mouseReleaseEvent ( QGraphicsSceneMouseEvent * e )
 void Tile::SetSelectedBlock(short block)
 {
     if(getCurrentPixmap().contains(block))
+	{
         setPixmap(*(getCurrentPixmap()[block]));
 
-    selectedBlock = block;
+		selectedBlock = block;
+	}
+	else
+		qDebug() << "trying to set tile to nonexistant block";
 }
 
 void Tile::hoverEnterEvent ( QGraphicsSceneHoverEvent * e )
@@ -1298,8 +1302,6 @@ int EditorTemplate::ImportFromImage(QString filename)
 			TemplateTile* tile = new TemplateTile();
 			tile->x = x;
 			tile->y = y;
-			tile->blockMech = QString("x").toShort();
-			tile->blockColl = QString("x").toShort();
 			tile->blockArt = resourceName;
 
 			m_list.append(tile);
@@ -1313,8 +1315,6 @@ int EditorTemplate::ImportFromImage(QString filename)
 
 
     SaveTemplate();
-
-    //view->SwitchToArt();
 
 	return 1;
 }

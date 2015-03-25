@@ -102,8 +102,8 @@ void EditorView::New()
 void EditorView::SwitchToMech()
 {
 		SwitchSceneTo(SCENEMECH);
-		sliderOpacMech->setValue(100);
-		sliderOpacArt->setValue(0);
+		sliderOpacMech->setValue(80);
+		sliderOpacArt->setValue(20);
 		sliderOpacColl->setValue(0);
 		sliderOpacObject->setValue(0);
 }
@@ -141,8 +141,8 @@ void EditorView::SwitchToObject()
 void EditorView::SwitchToTemplates()
 {
 		SwitchSceneTo(SCENETEMPLATE);
-		sliderOpacMech->setValue(20);
-		sliderOpacArt->setValue(80);
+		sliderOpacMech->setValue(0);
+		sliderOpacArt->setValue(100);
 		sliderOpacColl->setValue(0);
 		sliderOpacObject->setValue(0);
 
@@ -156,11 +156,6 @@ void EditorView::ResetSliders()
     sliderOpacArt->setValue(50);
     sliderOpacColl->setValue(0);
     sliderOpacObject->setValue(0);
-
-    //SetOpactyForLayer(sceneMech, 50);
-    //SetOpactyForLayer(sceneArt, 50);
-    //SetOpactyForLayer(sceneCollission, 0);
-    //SetOpacityObject(100);
 }
 
 bool flip = true;
