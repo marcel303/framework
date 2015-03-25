@@ -136,6 +136,7 @@ public:
 	void generate();
 	void load(const char * name);
 	void loadArt(const char * name);
+	void freeArt();
 	void serialize(NetSerializationContext & context);
 
 #if ENABLE_GAMESTATE_DESYNC_DETECTION

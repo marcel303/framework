@@ -184,15 +184,7 @@ void Arena::reset()
 
 	// clear sprites
 
-	for (int i = 0; i < m_numSprites; ++i)
-	{
-		delete m_sprites[i];
-		m_sprites[i] = 0;
-	}
-
-	delete [] m_sprites;
-	m_sprites = 0;
-	m_numSprites = 0;
+	freeArt();
 }
 
 void Arena::generate()
@@ -467,6 +459,8 @@ void Arena::load(const char * name)
 
 void Arena::loadArt(const char * name)
 {
+	freeArt();
+
 	const std::string baseName = std::string("levels/") + name + "/";
 	const std::string artFileName = baseName + "ArtIndex.txt";
 	const std::string spriteBaseName = std::string("levels/") + name + "/";
@@ -492,12 +486,21 @@ void Arena::loadArt(const char * name)
 	}
 }
 
+void Arena::freeArt()
+{
+	for (int i = 0; i < m_numSprites; ++i)
+	{
+		delete m_sprites[i];
+		m_sprites[i] = 0;
+	}
+
+	delete [] m_sprites;
+	m_sprites = 0;
+	m_numSprites = 0;
+}
+
 void Arena::serialize(NetSerializationContext & context)
 {
-	reset();
-
-	//
-
 	for (int x = 0; x < ARENA_SX; ++x)
 	{
 		for (int y = 0; y < ARENA_SY; ++y)
@@ -509,6 +512,7 @@ void Arena::serialize(NetSerializationContext & context)
 
 			context.SerializeBits(type, 5);
 			context.SerializeBits(shape, 5);
+			context.Serialize(block.artIndex);
 			context.Serialize(block.param);
 
 			block.type = (BlockType)type;
