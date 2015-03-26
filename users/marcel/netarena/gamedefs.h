@@ -17,8 +17,8 @@
 #define USE_32X32_TILES 1
 
 #if USE_32X32_TILES
-	#define BLOCK_SX 32
-	#define BLOCK_SY 32
+	#define BLOCK_SX 30
+	#define BLOCK_SY 30
 	#define PICKUP_BLOCK_SX 3
 	#define PICKUP_BLOCK_SY 3
 #else

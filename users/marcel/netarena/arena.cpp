@@ -434,11 +434,11 @@ void Arena::load(const char * name)
 			for (int x = 0; x < sx; ++x)
 			{
 				const int index = reader.ReadInt32();
-				Assert(index >= 0 && index < m_numSprites);
+				Assert(index == -1 || (index >= 0 && index < m_numSprites));
 
 				if (x < ARENA_SX && y < ARENA_SY)
 				{
-					if (index >= 0 && index < m_numSprites)
+					if (index == -1 || (index >= 0 && index < m_numSprites))
 					{
 						m_blocks[x][y].artIndex = index;
 					}
