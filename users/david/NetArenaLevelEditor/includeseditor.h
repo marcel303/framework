@@ -30,11 +30,11 @@
 #include "ed.h"
 
 
-#define BASEX 60//52
-#define BASEY 32//32
+#define BASEX 64//60//52 96 64
+#define BASEY 36//32//32 54 36
 
-#define BLOCKSIZE 32//32
-#define THUMBSIZE 64
+#define BLOCKSIZE 30//32//32
+#define THUMBSIZE 60
 
 #define ZOOMSPEED 12
 
@@ -79,6 +79,8 @@ QPixmap* GetObjectPixmap(QString texture);
 void SaveLevel(QString filename);
 void LoadLevel(QString filename);
 void SwitchSceneTo(int s);
+void StampTemplate(int tilex, int tiley, EditorTemplate* ct, bool record = true);
+void UnstampTemplate(int tilex, int tiley, EditorTemplate* ct, bool record = true);
 
 void LoadPixmaps();
 

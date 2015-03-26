@@ -23,6 +23,7 @@ void Ed::Initialize()
 	m_settingsWidget = new SettingsWidget();
 
 	bg = 0;
+	undoTemplate = 0;
 }
 
 EditorScene*& Ed::GetSceneArt()

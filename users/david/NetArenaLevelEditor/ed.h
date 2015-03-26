@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QString>
+#include <QStack>
 
 enum EditorMode
 {
@@ -10,6 +11,7 @@ enum EditorMode
 
 class EditorScene;
 class TemplateScene;
+class EditorTemplate;
 class ObjectPropertyWindow;
 class EditorView;
 class QGraphicsView;
@@ -89,7 +91,6 @@ private:
 	EditorScene* m_sceneCollisionTemplate;
 
 
-
 	EditorMode m_editorMode;
 
     EditorView* m_view;
@@ -120,6 +121,10 @@ public:
 	QString ArtFolderPath; //the root directory for all art and template textures
 
 	QGraphicsPixmapItem* bg; //global pointer for the level background image
+
+	QStack<EditorTemplate*>			undoStack;
+	QStack<EditorTemplate*>			redoStack;
+	EditorTemplate*					undoTemplate;
 };
 
 

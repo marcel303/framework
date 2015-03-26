@@ -342,6 +342,38 @@ void EditorViewBasic::keyPressEvent(QKeyEvent *e)
 		leftbuttonHeld = true;
 		e->accept();
 	}
+
+	if(e->key() == Qt::Key_Z)
+	{
+		if(!ed.undoStack.empty() && editorMode == EM_Level)
+		{
+			EditorTemplate* et = ed.undoStack.pop();
+			if(et)
+			{
+				StampTemplate(0,0,et, false);
+
+				delete et;
+			}
+		}
+
+		e->accept();
+	}
+
+	if(0 )//e->key() == Qt::Key_Y)
+	{
+		if(!ed.undoStack.empty() && editorMode == EM_Level)
+		{
+			EditorTemplate* et = ed.undoStack.pop();
+			if(et)
+			{
+				StampTemplate(0,0,et, false);
+
+				delete et;
+			}
+		}
+
+		e->accept();
+	}
 }
 
 void EditorViewBasic::keyReleaseEvent(QKeyEvent *e)

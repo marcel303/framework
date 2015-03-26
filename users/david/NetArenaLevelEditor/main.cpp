@@ -8,9 +8,6 @@
 
 #include "SettingsWidget.h"
 
-#include <QPixmap>
-
-
 #define view view2 //hack
 
 short selectedTile = ' ';
@@ -41,6 +38,7 @@ QGridLayout* grid;
 QString ArtFolderPath;
 
 bool placeTemplate = false;
+
 
 
 
@@ -785,10 +783,86 @@ void EditorScene::ResetLevel()
 {
 	for(int y = 0; y < m_mapy; y++)
 		for (int x = 0; x < m_mapx; x++)
-		{
 			m_tiles[y][x].SetSelectedBlock(' ');
-		}
 }
+
+void StampTemplate(int tilex, int tiley, EditorTemplate* ct, bool record)
+{
+	//Stamp template on level
+	if(record)
+		ed.undoTemplate = new EditorTemplate();
+
+	int temp = sceneCounter;
+	if(ct)
+		foreach(EditorTemplate::TemplateTile* tt, ct->m_list)
+		{
+			if(tilex+tt->x < MAPX && tiley+tt->y < MAPY)
+			{
+				if(record)
+				{
+					EditorTemplate::TemplateTile*	undoTemplateTile = ed.undoTemplate->GetOrAddTemplateTile(tilex+tt->x, tiley+tt->y);
+					undoTemplateTile->blockMech = sceneMech->m_tiles			[tiley+tt->y][tilex+tt->x].getBlock();
+					undoTemplateTile->blockColl = sceneCollision->m_tiles		[tiley+tt->y][tilex+tt->x].getBlock();
+					undoTemplateTile->blockArt =  artMap[sceneArt->m_tiles		[tiley+tt->y][tilex+tt->x].getBlock()];
+				}
+
+				sceneCounter = SCENEMECH;
+				sceneMech->m_tiles			[tiley+tt->y][tilex+tt->x].SetSelectedBlock(tt->blockMech);
+				sceneCounter = SCENECOLL;
+				sceneCollision->m_tiles	[tiley+tt->y][tilex+tt->x].SetSelectedBlock(tt->blockColl);
+				sceneCounter = SCENEART;
+				sceneArt->m_tiles			[tiley+tt->y][tilex+tt->x].SetSelectedBlock(tt->GetArtKey());
+
+				if(editorMode == EM_Template)
+				{
+					EditorTemplate::TemplateTile* tt2 = ct->GetOrAddTemplateTile(tilex+tt->x, tiley+tt->y);
+					tt2->blockMech = tt->blockMech;
+					tt2->blockColl = tt->blockColl;
+					tt2->blockArt = tt->blockArt;
+				}
+			}
+		}
+	sceneCounter = temp;
+}
+
+void UnstampTemplate(int tilex, int tiley, EditorTemplate* ct, bool record)
+{
+	if(record)
+		ed.undoTemplate = new EditorTemplate();
+
+	int temp = sceneCounter;
+	if(ct)
+		foreach(EditorTemplate::TemplateTile* tt, ct->m_list)
+		{
+			if(tilex+tt->x < MAPX && tiley+tt->y < MAPY)
+			{
+				if(record)
+				{
+					EditorTemplate::TemplateTile*	undoTemplateTile = ed.undoTemplate->GetOrAddTemplateTile(tilex+tt->x, tiley+tt->y);
+					undoTemplateTile->blockMech = sceneMech->m_tiles			[tiley+tt->y][tilex+tt->x].getBlock();
+					undoTemplateTile->blockColl = sceneCollision->m_tiles		[tiley+tt->y][tilex+tt->x].getBlock();
+					undoTemplateTile->blockArt =  artMap[sceneArt->m_tiles		[tiley+tt->y][tilex+tt->x].getBlock()];
+				}
+
+				sceneCounter = SCENEMECH;
+				sceneMech->m_tiles			[tiley+tt->y][tilex+tt->x].SetSelectedBlock(' ');
+				sceneCounter = SCENECOLL;
+				sceneCollision->m_tiles	[tiley+tt->y][tilex+tt->x].SetSelectedBlock(' ');
+				sceneCounter = SCENEART;
+				sceneArt->m_tiles			[tiley+tt->y][tilex+tt->x].SetSelectedBlock(artMap.firstKey());
+
+				if(editorMode == EM_Template)
+				{
+					EditorTemplate::TemplateTile* tt2 = ct->GetOrAddTemplateTile(tilex+tt->x, tiley+tt->y);
+					tt2->blockMech = ' ';
+					tt2->blockColl = ' ';
+					tt2->blockArt = artMap.first();
+				}
+			}
+		}
+	sceneCounter = temp;
+}
+
 
 void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e, Tile* tile )
 {
@@ -797,38 +871,20 @@ void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e, Tile* tile )
 		int tilex = (int)(e->scenePos().x()/float(BLOCKSIZE));
 		int tiley = (int)(e->scenePos().y()/float(BLOCKSIZE));
 
+
 		if(placeTemplate)
 		{
-			//Stamp template on level
-			int temp = sceneCounter;
 			EditorTemplate* ct = templateScene->GetCurrentTemplate();
-			if(ct)
-				foreach(EditorTemplate::TemplateTile* tt, ct->m_list)
-				{
-					if(tilex+tt->x < MAPX && tiley+tt->y < MAPY)
-					{
-						sceneCounter = SCENEMECH;
-						sceneMech->m_tiles			[tiley+tt->y][tilex+tt->x].SetSelectedBlock(tt->blockMech);
-						sceneCounter = SCENECOLL;
-						sceneCollision->m_tiles	[tiley+tt->y][tilex+tt->x].SetSelectedBlock(tt->blockColl);
-						sceneCounter = SCENEART;
-						sceneArt->m_tiles			[tiley+tt->y][tilex+tt->x].SetSelectedBlock(tt->GetArtKey());
 
-						if(editorMode == EM_Template)
-						{
-							EditorTemplate::TemplateTile* tt2 = ct->GetOrAddTemplateTile(tilex+tt->x, tiley+tt->y);
-							tt2->blockMech = tt->blockMech;
-							tt2->blockColl = tt->blockColl;
-							tt2->blockArt = tt->blockArt;
-						}
-					}
-				}
-			sceneCounter = temp;
-
+			if(e->buttons() == Qt::LeftButton)
+				StampTemplate(tilex, tiley, ct);
+			else if(e->buttons() == Qt::RightButton)
+				UnstampTemplate(tilex, tiley, ct);
 			e->accept();
 		}
 		else
 		{
+			ed.undoStack.clear();
 			if(e->buttons() == Qt::RightButton)
 			{
 				if(sceneCounter == SCENEART)
@@ -881,6 +937,12 @@ void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e, Tile* tile )
 		ed.objectPropWindow->SetCurrentGameObject(obj);
 
 		e->accept();
+	}
+
+	if(ed.undoTemplate)
+	{
+		ed.undoStack.append(ed.undoTemplate);
+		ed.undoTemplate = 0;
 	}
 }
 
