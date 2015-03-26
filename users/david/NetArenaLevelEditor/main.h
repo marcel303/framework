@@ -53,7 +53,6 @@ public:
     virtual void CreateLevel(int x, int y);
     virtual void InitializeLevel();
 	virtual void ResetLevel();
-    void AddGrid();
 
     virtual void DeleteTiles();
     virtual void CreateTiles();

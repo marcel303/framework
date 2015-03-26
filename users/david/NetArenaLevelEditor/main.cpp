@@ -772,19 +772,6 @@ void EditorScene::ResetLevel()
 		}
 }
 
-void EditorScene::AddGrid()
-{
-	return;
-    for (int x = 0; x <= m_mapx*BLOCKSIZE; x+=BLOCKSIZE)
-    {
-		addLine(x, 0, x, m_mapy*BLOCKSIZE);
-    }
-	for(int y = 0; y <= m_mapy*BLOCKSIZE; y+= BLOCKSIZE)
-    {
-		addLine(0, y, m_mapx*BLOCKSIZE, y);
-    }
-}
-
 void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e, Tile* tile )
 {
 	if(sceneCounter != SCENEOBJ)
@@ -1458,7 +1445,6 @@ int main(int argc, char *argv[])
 	LoadPallette();
 
 	AddAllToScene();
-	sceneMech->AddGrid();
 
     ed.GetSettingsWidget()->Initialize();
 
