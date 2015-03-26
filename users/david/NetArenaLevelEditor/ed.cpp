@@ -133,7 +133,6 @@ void CreateNewMapHelper(int x, int y)
 	sceneCounter = SCENECOLL;
 	sceneCollision->CreateLevel(x, y);
 	sceneCounter = SCENEMECH;
-	sceneMech->AddGrid();
 }
 
 void Ed::CreateNewMap(int x, int y)
