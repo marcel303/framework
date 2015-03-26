@@ -48,7 +48,7 @@ void SettingsWidget::Initialize() //CreateSettingsWidget()
 
     coll= new QCheckBox();
     QObject::connect(coll, SIGNAL(stateChanged(int)),
-            view, SLOT(SwitchToCollission()));
+			view, SLOT(SwitchToCollision()));
     grid->addWidget(coll, 3, 1);
     bgroup->addButton(coll);
 
@@ -87,7 +87,7 @@ void SettingsWidget::Initialize() //CreateSettingsWidget()
     QObject::connect(view->sliderOpacArt, SIGNAL(valueChanged(int)),
             view, SLOT(SetOpacityArt(int)));
     QObject::connect(view->sliderOpacColl, SIGNAL(valueChanged(int)),
-            view, SLOT(SetOpacityCollission(int)));
+			view, SLOT(SetOpacityCollision(int)));
     QObject::connect(view->sliderOpacObject, SIGNAL(valueChanged(int)),
             view, SLOT(SetOpacityObject(int)));
 

@@ -24,8 +24,8 @@ QMap<short, QPixmap*> pixmapsArt;
 QMap<short, QString> artMap;
 QMap<QString, short> templateToArtMap;
 
-QGraphicsScene* sceneCollissionPallette;
-QMap<short, QPixmap*> pixmapsCollission;
+QGraphicsScene* sceneCollisionPallette;
+QMap<short, QPixmap*> pixmapsCollision;
 
 QMap<QString, QPixmap*> pixmapObjects;
 QMap<QString, GameObject*> objectPallette;
@@ -61,15 +61,15 @@ void AddAllToScene()
 			{
 				sceneMech->m_tiles[y][x].setOpacity(1);
 
-				sceneCollission->m_tiles[y][x].setAcceptedMouseButtons(0);
-				sceneCollission->m_tiles[y][x].setAcceptHoverEvents(false);
-				sceneCollission->m_tiles[y][x].setOpacity(0);
+				sceneCollision->m_tiles[y][x].setAcceptedMouseButtons(0);
+				sceneCollision->m_tiles[y][x].setAcceptHoverEvents(false);
+				sceneCollision->m_tiles[y][x].setOpacity(0);
 
 				sceneArt->m_tiles[y][x].setAcceptedMouseButtons(0);
 				sceneArt->m_tiles[y][x].setAcceptHoverEvents(false);
 				sceneArt->m_tiles[y][x].setOpacity(0);
 
-				sceneMech->addItem(&sceneCollission->m_tiles[y][x]);
+				sceneMech->addItem(&sceneCollision->m_tiles[y][x]);
 				sceneMech->addItem(&sceneArt->m_tiles[y][x]);
 			}
 		ed.EditLevels();
@@ -86,8 +86,8 @@ void SetEditMechScene()
             sceneMech->m_tiles[y][x].setAcceptedMouseButtons(Qt::AllButtons);
             sceneMech->m_tiles[y][x].setAcceptHoverEvents(true);
 
-            sceneCollission->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
-            sceneCollission->m_tiles[y][x].setAcceptHoverEvents(false);
+			sceneCollision->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
+			sceneCollision->m_tiles[y][x].setAcceptHoverEvents(false);
 
             sceneArt->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
             sceneArt->m_tiles[y][x].setAcceptHoverEvents(false);
@@ -105,8 +105,8 @@ void SetEditArtScene()
             sceneMech->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
             sceneMech->m_tiles[y][x].setAcceptHoverEvents(false);
 
-            sceneCollission->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
-            sceneCollission->m_tiles[y][x].setAcceptHoverEvents(false);
+			sceneCollision->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
+			sceneCollision->m_tiles[y][x].setAcceptHoverEvents(false);
 
             sceneArt->m_tiles[y][x].setAcceptedMouseButtons(Qt::AllButtons);
             sceneArt->m_tiles[y][x].setAcceptHoverEvents(true);
@@ -116,7 +116,7 @@ void SetEditArtScene()
 		obj->setAcceptedMouseButtons(Qt::NoButton);
 }
 
-void SetEditCollissionScene()
+void SetEditCollisionScene()
 {
     for(int y = 0; y < MAPY; y++)
         for (int x = 0; x < MAPX; x++)
@@ -124,8 +124,8 @@ void SetEditCollissionScene()
             sceneMech->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
             sceneMech->m_tiles[y][x].setAcceptHoverEvents(false);
 
-            sceneCollission->m_tiles[y][x].setAcceptedMouseButtons(Qt::AllButtons);
-            sceneCollission->m_tiles[y][x].setAcceptHoverEvents(true);
+			sceneCollision->m_tiles[y][x].setAcceptedMouseButtons(Qt::AllButtons);
+			sceneCollision->m_tiles[y][x].setAcceptHoverEvents(true);
 
             sceneArt->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
             sceneArt->m_tiles[y][x].setAcceptHoverEvents(false);
@@ -143,8 +143,8 @@ void SetEditObjects()
 			sceneMech->m_tiles[y][x].setAcceptedMouseButtons(Qt::AllButtons);
 			sceneMech->m_tiles[y][x].setAcceptHoverEvents(false);
 
-			sceneCollission->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
-			sceneCollission->m_tiles[y][x].setAcceptHoverEvents(false);
+			sceneCollision->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
+			sceneCollision->m_tiles[y][x].setAcceptHoverEvents(false);
 
 			sceneArt->m_tiles[y][x].setAcceptedMouseButtons(Qt::NoButton);
 			sceneArt->m_tiles[y][x].setAcceptHoverEvents(false);
@@ -183,12 +183,12 @@ void SwitchSceneTo(int s)
 		SetEditArtScene();
 		break;
 	case SCENECOLL:
-		viewPallette->setScene(sceneCollissionPallette);
-		SetSelectedTile(pixmapsCollission.begin().key());
-		view->setWindowTitle("Collission Layout");
-		viewPallette->setWindowTitle("Collission Pallette");
-		sceneCollissionPallette->addItem(palletteTile);
-		SetEditCollissionScene();
+		viewPallette->setScene(sceneCollisionPallette);
+		SetSelectedTile(pixmapsCollision.begin().key());
+		view->setWindowTitle("Collision Layout");
+		viewPallette->setWindowTitle("Collision Pallette");
+		sceneCollisionPallette->addItem(palletteTile);
+		SetEditCollisionScene();
 		break;
 	case SCENEOBJ:
 		view->setWindowTitle("Editing Level Objects");
@@ -200,7 +200,7 @@ void SwitchSceneTo(int s)
 		view->setWindowTitle("Editing with Templates!");
 		viewPallette->setWindowTitle("Templates");
 		//viewPallette->setScene(sceneObjectPallette);
-		SetEditMechScene();
+		SetEditArtScene();
 		break;
 	default:
 		break;
@@ -218,7 +218,7 @@ QMap<short, QPixmap*>& getCurrentPixmap()
         return pixmapsArt;
         break;
 	case SCENECOLL:
-        return pixmapsCollission;
+		return pixmapsCollision;
         break;
     default:
         return pixmaps;
@@ -391,7 +391,7 @@ void LoadPixmaps()
 	sceneCounter = SCENEART;
 	LoadPixmapsArt("ArtList.txt", pixmapsArt);
 	sceneCounter = SCENECOLL;
-    LoadPixmapsGeneric("CollissionList.txt", pixmapsCollission);
+	LoadPixmapsGeneric("CollisionList.txt", pixmapsCollision);
 	sceneCounter = SCENEOBJ;
     LoadObjects("Objects.txt", true);
 }
@@ -449,7 +449,7 @@ void LoadPallette()
     sceneCounter = 1;
     LoadPalletteGeneric(sceneArtPallette, pixmapsArt);
     sceneCounter = 2;
-    LoadPalletteGeneric(sceneCollissionPallette, pixmapsCollission);
+	LoadPalletteGeneric(sceneCollisionPallette, pixmapsCollision);
     sceneCounter =0;
     LoadPalletteGeneric(scenePallette, pixmaps);
 
@@ -507,18 +507,23 @@ void LoadArt(QString filename, EditorScene* s)
     file.open(QIODevice::ReadOnly);
     QDataStream in(&file);
 
+	in.setByteOrder(QDataStream::LittleEndian);
+
     int mx;
     in >> mx;
     int my;
     in >> my;
 
-    int key;
+	qint32 key;
     for(int y = 0; y < my; y++)
     {
         for (int x = 0; x < mx; x++)
         {
 			in >> key;
-            s->m_tiles[y][x].SetSelectedBlock(tempIndexToArtIndex[(short)key]);
+			if(key == -1)
+				s->m_tiles[y][x].SetSelectedBlock(0);
+			else
+				s->m_tiles[y][x].SetSelectedBlock(tempIndexToArtIndex[(short)key]);
         }
     }
     file.close();
@@ -527,13 +532,13 @@ void LoadArt(QString filename, EditorScene* s)
 void LoadLevel(QString filename)
 {
     sceneCounter = 0;
-    LoadGeneric(filename + ".txt", sceneMech);
+	LoadGeneric(filename + "Mec.txt", sceneMech);
     sceneCounter = 1;
 	LoadArt(filename + "Art", sceneArt);
     sceneCounter = 2;
-    LoadGeneric(filename + "Collission.txt", sceneCollission);
+	LoadGeneric(filename + "Col.txt", sceneCollision);
     sceneCounter = 0;
-    LoadObjects(filename, false);
+	LoadObjects(filename + "Obj.txt", false);
 }
 
 void SaveGeneric(QString filename, EditorScene* s)
@@ -563,7 +568,7 @@ void SaveArtFile(QString filename, EditorScene* s)
 
 	QFile fileArtIndex(filename+"Index.txt");
 
-    fileArtIndex.open(QIODevice::WriteOnly | QIODevice::Truncate);
+	fileArtIndex.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text);
 	QTextStream artLines(&fileArtIndex);
 
 	for(int y = 0; y < MAPY; y++)
@@ -588,7 +593,10 @@ void SaveArtFile(QString filename, EditorScene* s)
 	for(int y = 0; y < MAPY; y++)
 		for (int x = 0; x < MAPX; x++)
         {
-           in << (int)(artTranslation[s->m_tiles[y][x].getBlock()]);
+			if(s->m_tiles[y][x].getBlock() != 0)
+				in << (qint32)artTranslation[s->m_tiles[y][x].getBlock()];
+			else
+				in << (qint32)(-1);
         }
 
 	qDebug() << "Done saving level.";
@@ -619,21 +627,19 @@ void SaveLevel(QString filename)
 	QDir dir;
 	dir.mkpath(filename);
 
-	QString name = filename + '/' + filename.split('/').last();
-
-	SaveGeneric(name + ".txt", sceneMech);
-    if(sceneCollission)
-		SaveGeneric(name + "Collission.txt", sceneCollission);
+	SaveGeneric(filename + '/' + "Mec.txt", sceneMech);
+	if(sceneCollision)
+		SaveGeneric(filename + '/' + "Col.txt", sceneCollision);
     if(sceneArt)
-		SaveArtFile(name + "Art", sceneArt);
+		SaveArtFile(filename + '/' + "Art", sceneArt);
 
-	SaveObjects(name + "Objects.txt");
+	SaveObjects(filename + '/' + "Obj.txt");
 }
 
 
 Tile::Tile()
 {
-	selectedBlock = ' ';
+	selectedBlock = -1;
 
     this->setOpacity(1.0);
 
@@ -657,9 +663,11 @@ void Tile::mouseReleaseEvent ( QGraphicsSceneMouseEvent * e )
 
 void Tile::SetSelectedBlock(short block)
 {
-    if(getCurrentPixmap().contains(block))
+	QMap<short, QPixmap*>& currentMap = getCurrentPixmap();
+	if(currentMap.contains(block))
 	{
-        setPixmap(*(getCurrentPixmap()[block]));
+		if(selectedBlock != block)
+			setPixmap(*(currentMap[block]));
 
 		selectedBlock = block;
 	}
@@ -797,7 +805,7 @@ void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e, Tile* tile )
 						sceneCounter = SCENEMECH;
 						sceneMech->m_tiles			[tiley+tt->y][tilex+tt->x].SetSelectedBlock(tt->blockMech);
 						sceneCounter = SCENECOLL;
-						sceneCollission->m_tiles	[tiley+tt->y][tilex+tt->x].SetSelectedBlock(tt->blockColl);
+						sceneCollision->m_tiles	[tiley+tt->y][tilex+tt->x].SetSelectedBlock(tt->blockColl);
 						sceneCounter = SCENEART;
 						sceneArt->m_tiles			[tiley+tt->y][tilex+tt->x].SetSelectedBlock(tt->GetArtKey());
 
@@ -848,7 +856,9 @@ void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e, Tile* tile )
 					if(sceneCounter == SCENEART)
 					{
 						templateScene->GetCurrentTemplate()->GetOrAddTemplateTile(tilex, tiley)->blockArt = artMap[selectedTile];
-						tile->SetSelectedBlock(artMap.keys().first());
+						if(!templateToArtMap.contains(artMap[selectedTile]))
+							templateToArtMap[artMap[selectedTile]] = selectedTile;
+						tile->SetSelectedBlock(selectedTile);
 					}
 				}
 			}
@@ -867,6 +877,24 @@ void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e, Tile* tile )
 
 		e->accept();
 	}
+}
+
+EditorArtScene::EditorArtScene() : EditorScene()
+{
+}
+
+EditorArtScene::~EditorArtScene ()
+{
+	DeleteTiles();
+}
+
+void EditorArtScene::ResetLevel()
+{
+	for(int y = 0; y < m_mapy; y++)
+		for (int x = 0; x < m_mapx; x++)
+		{
+			m_tiles[y][x].SetSelectedBlock(0);
+		}
 }
 
 
@@ -1152,8 +1180,11 @@ void EditorTemplate::LoadTemplateIntoScene()
     ed.SetEditorMode(EM_Template);
 	int s = sceneCounter;
 
+	sceneCounter = SCENEMECH;
 	sceneMech->ResetLevel();
-	sceneCollission->ResetLevel();
+	sceneCounter = SCENECOLL;
+	sceneCollision->ResetLevel();
+	sceneCounter = SCENEART;
 	sceneArt->ResetLevel();
 
 	foreach(TemplateTile* t, m_list)
@@ -1161,7 +1192,7 @@ void EditorTemplate::LoadTemplateIntoScene()
 		sceneCounter = SCENEMECH;
 		sceneMech->m_tiles[t->y][t->x].SetSelectedBlock(t->blockMech);
 		sceneCounter = SCENECOLL;
-		sceneCollission->m_tiles[t->y][t->x].SetSelectedBlock(t->blockColl);
+		sceneCollision->m_tiles[t->y][t->x].SetSelectedBlock(t->blockColl);
 		sceneCounter = SCENEART;
 		sceneArt->m_tiles[t->y][t->x].SetSelectedBlock(templateToArtMap[t->blockArt]);
 	}
@@ -1353,14 +1384,14 @@ void InitializeScenesAndViews()
 	ed.SetEditorMode(EM_Level);
 
 	sceneMech = new EditorScene();
-	sceneArt = new EditorScene();
-	sceneCollission = new EditorScene();
+	sceneArt = new EditorArtScene();
+	sceneCollision = new EditorScene();
 
 	ed.SetEditorMode(EM_Template);
 
 	sceneMech = new EditorScene();
-	sceneArt = new EditorScene();
-	sceneCollission = new EditorScene();
+	sceneArt = new EditorArtScene();
+	sceneCollision = new EditorScene();
 
 	templateScene = new TemplateScene();
 
@@ -1372,7 +1403,7 @@ void InitializeScenesAndViews()
 	viewPallette->setDragMode(QGraphicsView::ScrollHandDrag);
 	scenePallette = new QGraphicsScene;
 	sceneArtPallette = new QGraphicsScene;
-	sceneCollissionPallette = new QGraphicsScene;
+	sceneCollisionPallette = new QGraphicsScene;
 	sceneObjectPallette = new QGraphicsScene();
 
 	viewPallette->setScene(scenePallette);
@@ -1384,7 +1415,7 @@ void InitializeScenesAndViews()
 
 	scenePallette->setSceneRect(0,0,4*BLOCKSIZE,10*BLOCKSIZE);
 	sceneArtPallette->setSceneRect(0,0,4*BLOCKSIZE,10*BLOCKSIZE);
-	sceneCollissionPallette->setSceneRect(0,0,4*BLOCKSIZE,10*BLOCKSIZE);
+	sceneCollisionPallette->setSceneRect(0,0,4*BLOCKSIZE,10*BLOCKSIZE);
 
 	palletteTile = new TilePallette();
 
@@ -1446,9 +1477,8 @@ int main(int argc, char *argv[])
 
 	templateScene->Initialize();
 
-
-    sceneCounter = 2;
-    ed.GetSettingsWidget()->mech->setCheckState(Qt::Checked);
+	sceneCounter = SCENECOLL; //incorrect so setting to mech will initiate change in pallette
+	ed.GetSettingsWidget()->mech->setCheckState(Qt::Checked);
 
     view->ResetSliders();
 
@@ -1456,3 +1486,29 @@ int main(int argc, char *argv[])
 }
 
 
+
+void EditorScene::dragEnterEvent(QGraphicsSceneDragDropEvent *e)
+{
+	if (e->mimeData()->hasUrls())
+		e->acceptProposedAction();
+}
+
+void EditorScene::dropEvent(QGraphicsSceneDragDropEvent *e)
+{
+	foreach (const QUrl &url, e->mimeData()->urls())
+	{
+		QString filename = url.toLocalFile();
+
+		view->ImportTemplate(filename);
+	}
+}
+
+void EditorScene::dragMoveEvent(QGraphicsSceneDragDropEvent *e)
+{
+	e->acceptProposedAction();
+}
+
+short Tile::getBlock()
+{
+	return selectedBlock;
+}

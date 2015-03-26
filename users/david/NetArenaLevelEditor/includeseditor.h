@@ -52,7 +52,7 @@
 
 #define sceneArt ed.GetSceneArt()
 #define sceneMech ed.GetSceneMech()
-#define sceneCollission ed.GetSceneCollission()
+#define sceneCollision ed.GetSceneCollision()
 
 #define templateScene ed.GetTemplateScene()
 

@@ -37,12 +37,12 @@ EditorScene*& Ed::GetSceneMech()
 
 	return m_sceneMech;
 }
-EditorScene*& Ed::GetSceneCollission()
+EditorScene*& Ed::GetSceneCollision()
 {
 	if(m_editorMode == EM_Template)
-		return m_sceneCollissionTemplate;
+		return m_sceneCollisionTemplate;
 
-	return m_sceneCollission;
+	return m_sceneCollision;
 }
 
 int &Ed::GetSceneCounter()
@@ -61,7 +61,7 @@ EditorScene*& Ed::GetCurrentScene()
         return GetSceneArt();
         break;
     case SCENECOLL:
-        return GetSceneCollission();
+		return GetSceneCollision();
         break;
     default:
         return GetSceneMech();
@@ -131,7 +131,7 @@ void CreateNewMapHelper(int x, int y)
 	sceneCounter = SCENEART;
 	sceneArt->CreateLevel(x, y);
 	sceneCounter = SCENECOLL;
-	sceneCollission->CreateLevel(x, y);
+	sceneCollision->CreateLevel(x, y);
 	sceneCounter = SCENEMECH;
 	sceneMech->AddGrid();
 }
