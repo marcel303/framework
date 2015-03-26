@@ -27,6 +27,7 @@ void ObjectPallette()
 
 EditorView::EditorView() : EditorViewBasic()
 {
+	flip = true;
 	newMapWindow = 0;
 
 	QMenuBar* bar = new QMenuBar(this);
@@ -50,9 +51,9 @@ EditorView::EditorView() : EditorViewBasic()
 	newAct5->setStatusTip(tr("Templatus Savus"));
 	connect(newAct5, SIGNAL(triggered()), this, SLOT(SaveTemplate()));
 
-	QAction* newAct6 = new QAction(tr("&ImportTemplate"), this);
+	/*QAction* newAct6 = new QAction(tr("&ImportTemplate"), this);
 	newAct6->setStatusTip(tr("Import Template Image"));
-	connect(newAct6, SIGNAL(triggered()), this, SLOT(ImportTemplate()));
+	connect(newAct6, SIGNAL(triggered()), this, SLOT(ImportTemplate()));*/
 
 	QAction* newAct7 = new QAction(tr("&SwitchLevelTemplate"), this);
 	newAct7->setStatusTip(tr("SwitchLevelOrTemplate"));
@@ -63,7 +64,7 @@ EditorView::EditorView() : EditorViewBasic()
 	bar->addAction(newAct2);
 	bar->addAction(newAct3);
 	bar->addAction(newAct5);
-	bar->addAction(newAct6);
+	//bar->addAction(newAct6);
 	bar->addAction(newAct7);
 
 
@@ -90,7 +91,7 @@ void EditorView::SaveTemplate()
 void EditorView::Load()
 {
 	QString fileName = QFileDialog::getOpenFileName(this, tr("Open file"));
-	fileName.chop(4);
+	fileName.chop(7);
 	LoadLevel(fileName);
 }
 
@@ -158,7 +159,6 @@ void EditorView::ResetSliders()
     sliderOpacObject->setValue(0);
 }
 
-bool flip = true;
 void EditorView::SwitchLevelTemplateEdit()
 {
 	if(flip)
@@ -206,9 +206,14 @@ void EditorView::SetOpacityObject(int s)
 
 void EditorView::ImportTemplate()
 {
-	ed.EditTemplates(); flip = false;
 
 	QString filename = QFileDialog::getOpenFileName(this, tr("Open Image for Template"));
+	ImportTemplate(filename);
+}
+
+void EditorView::ImportTemplate(QString filename)
+{
+	ed.EditTemplates(); flip = false;
 
 	EditorTemplate* t = new EditorTemplate();
 	if(t->ImportFromImage(filename))

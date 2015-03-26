@@ -57,6 +57,8 @@ public:
     EditorView();
     virtual ~EditorView();
 
+	void ImportTemplate(QString filename);
+
 
     QSlider* sliderOpacMech;
     QSlider* sliderOpacArt;
@@ -95,5 +97,7 @@ public slots:
 
 private:
 	void CreateAndShowNewMapDialog();
+
+	bool flip;
 
 };

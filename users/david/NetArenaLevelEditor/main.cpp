@@ -507,18 +507,23 @@ void LoadArt(QString filename, EditorScene* s)
     file.open(QIODevice::ReadOnly);
     QDataStream in(&file);
 
+	in.setByteOrder(QDataStream::LittleEndian);
+
     int mx;
     in >> mx;
     int my;
     in >> my;
 
-    int key;
+	qint32 key;
     for(int y = 0; y < my; y++)
     {
         for (int x = 0; x < mx; x++)
         {
 			in >> key;
-            s->m_tiles[y][x].SetSelectedBlock(tempIndexToArtIndex[(short)key]);
+			if(key == -1)
+				s->m_tiles[y][x].SetSelectedBlock(0);
+			else
+				s->m_tiles[y][x].SetSelectedBlock(tempIndexToArtIndex[(short)key]);
         }
     }
     file.close();
@@ -527,13 +532,13 @@ void LoadArt(QString filename, EditorScene* s)
 void LoadLevel(QString filename)
 {
     sceneCounter = 0;
-    LoadGeneric(filename + ".txt", sceneMech);
+	LoadGeneric(filename + "Mec.txt", sceneMech);
     sceneCounter = 1;
 	LoadArt(filename + "Art", sceneArt);
     sceneCounter = 2;
-	LoadGeneric(filename + "Collision.txt", sceneCollision);
+	LoadGeneric(filename + "Col.txt", sceneCollision);
     sceneCounter = 0;
-    LoadObjects(filename, false);
+	LoadObjects(filename + "Obj.txt", false);
 }
 
 void SaveGeneric(QString filename, EditorScene* s)
@@ -563,7 +568,7 @@ void SaveArtFile(QString filename, EditorScene* s)
 
 	QFile fileArtIndex(filename+"Index.txt");
 
-    fileArtIndex.open(QIODevice::WriteOnly | QIODevice::Truncate);
+	fileArtIndex.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text);
 	QTextStream artLines(&fileArtIndex);
 
 	for(int y = 0; y < MAPY; y++)
@@ -588,7 +593,10 @@ void SaveArtFile(QString filename, EditorScene* s)
 	for(int y = 0; y < MAPY; y++)
 		for (int x = 0; x < MAPX; x++)
         {
-           in << (int)(artTranslation[s->m_tiles[y][x].getBlock()]);
+			if(s->m_tiles[y][x].getBlock() != 0)
+				in << (qint32)artTranslation[s->m_tiles[y][x].getBlock()];
+			else
+				in << (qint32)(-1);
         }
 
 	qDebug() << "Done saving level.";
@@ -619,21 +627,19 @@ void SaveLevel(QString filename)
 	QDir dir;
 	dir.mkpath(filename);
 
-	QString name = filename + '/' + filename.split('/').last();
-
-	SaveGeneric(name + ".txt", sceneMech);
+	SaveGeneric(filename + '/' + "Mec.txt", sceneMech);
 	if(sceneCollision)
-		SaveGeneric(name + "Collision.txt", sceneCollision);
+		SaveGeneric(filename + '/' + "Col.txt", sceneCollision);
     if(sceneArt)
-		SaveArtFile(name + "Art", sceneArt);
+		SaveArtFile(filename + '/' + "Art", sceneArt);
 
-	SaveObjects(name + "Objects.txt");
+	SaveObjects(filename + '/' + "Obj.txt");
 }
 
 
 Tile::Tile()
 {
-	selectedBlock = ' ';
+	selectedBlock = -1;
 
     this->setOpacity(1.0);
 
@@ -657,9 +663,11 @@ void Tile::mouseReleaseEvent ( QGraphicsSceneMouseEvent * e )
 
 void Tile::SetSelectedBlock(short block)
 {
-    if(getCurrentPixmap().contains(block))
+	QMap<short, QPixmap*>& currentMap = getCurrentPixmap();
+	if(currentMap.contains(block))
 	{
-        setPixmap(*(getCurrentPixmap()[block]));
+		if(selectedBlock != block)
+			setPixmap(*(currentMap[block]));
 
 		selectedBlock = block;
 	}
@@ -848,7 +856,9 @@ void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e, Tile* tile )
 					if(sceneCounter == SCENEART)
 					{
 						templateScene->GetCurrentTemplate()->GetOrAddTemplateTile(tilex, tiley)->blockArt = artMap[selectedTile];
-						tile->SetSelectedBlock(artMap.keys().first());
+						if(!templateToArtMap.contains(artMap[selectedTile]))
+							templateToArtMap[artMap[selectedTile]] = selectedTile;
+						tile->SetSelectedBlock(selectedTile);
 					}
 				}
 			}
@@ -867,6 +877,24 @@ void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e, Tile* tile )
 
 		e->accept();
 	}
+}
+
+EditorArtScene::EditorArtScene() : EditorScene()
+{
+}
+
+EditorArtScene::~EditorArtScene ()
+{
+	DeleteTiles();
+}
+
+void EditorArtScene::ResetLevel()
+{
+	for(int y = 0; y < m_mapy; y++)
+		for (int x = 0; x < m_mapx; x++)
+		{
+			m_tiles[y][x].SetSelectedBlock(0);
+		}
 }
 
 
@@ -1152,8 +1180,11 @@ void EditorTemplate::LoadTemplateIntoScene()
     ed.SetEditorMode(EM_Template);
 	int s = sceneCounter;
 
+	sceneCounter = SCENEMECH;
 	sceneMech->ResetLevel();
+	sceneCounter = SCENECOLL;
 	sceneCollision->ResetLevel();
+	sceneCounter = SCENEART;
 	sceneArt->ResetLevel();
 
 	foreach(TemplateTile* t, m_list)
@@ -1353,13 +1384,13 @@ void InitializeScenesAndViews()
 	ed.SetEditorMode(EM_Level);
 
 	sceneMech = new EditorScene();
-	sceneArt = new EditorScene();
+	sceneArt = new EditorArtScene();
 	sceneCollision = new EditorScene();
 
 	ed.SetEditorMode(EM_Template);
 
 	sceneMech = new EditorScene();
-	sceneArt = new EditorScene();
+	sceneArt = new EditorArtScene();
 	sceneCollision = new EditorScene();
 
 	templateScene = new TemplateScene();
@@ -1446,9 +1477,8 @@ int main(int argc, char *argv[])
 
 	templateScene->Initialize();
 
-
-    sceneCounter = 2;
-    ed.GetSettingsWidget()->mech->setCheckState(Qt::Checked);
+	sceneCounter = SCENECOLL; //incorrect so setting to mech will initiate change in pallette
+	ed.GetSettingsWidget()->mech->setCheckState(Qt::Checked);
 
     view->ResetSliders();
 
@@ -1456,3 +1486,29 @@ int main(int argc, char *argv[])
 }
 
 
+
+void EditorScene::dragEnterEvent(QGraphicsSceneDragDropEvent *e)
+{
+	if (e->mimeData()->hasUrls())
+		e->acceptProposedAction();
+}
+
+void EditorScene::dropEvent(QGraphicsSceneDragDropEvent *e)
+{
+	foreach (const QUrl &url, e->mimeData()->urls())
+	{
+		QString filename = url.toLocalFile();
+
+		view->ImportTemplate(filename);
+	}
+}
+
+void EditorScene::dragMoveEvent(QGraphicsSceneDragDropEvent *e)
+{
+	e->acceptProposedAction();
+}
+
+short Tile::getBlock()
+{
+	return selectedBlock;
+}
