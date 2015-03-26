@@ -36,31 +36,31 @@ void SettingsWidget::Initialize() //CreateSettingsWidget()
     QButtonGroup* bgroup = new QButtonGroup();
     mech = new QCheckBox();
     QObject::connect(mech, SIGNAL(stateChanged(int)),
-            view, SLOT(SwitchToMech()));
+			view, SLOT(SwitchToMech(int)));
     grid->addWidget(mech, 1, 1);
     bgroup->addButton(mech);
 
     art = new QCheckBox();
     QObject::connect(art, SIGNAL(stateChanged(int)),
-            view, SLOT(SwitchToArt()));
+			view, SLOT(SwitchToArt(int)));
     grid->addWidget(art, 2, 1);
     bgroup->addButton(art);
 
     coll= new QCheckBox();
     QObject::connect(coll, SIGNAL(stateChanged(int)),
-			view, SLOT(SwitchToCollision()));
+			view, SLOT(SwitchToCollision(int)));
     grid->addWidget(coll, 3, 1);
     bgroup->addButton(coll);
 
     object = new QCheckBox();
     QObject::connect(object, SIGNAL(stateChanged(int)),
-            view, SLOT(SwitchToObject()));
+			view, SLOT(SwitchToObject(int)));
     grid->addWidget(object, 4, 1);
     bgroup->addButton(object);
 
     tmpl = new QCheckBox();
     QObject::connect(tmpl, SIGNAL(stateChanged(int)),
-            view, SLOT(SwitchToTemplates()));
+			view, SLOT(SwitchToTemplates(int)));
     grid->addWidget(tmpl, 5, 1);
     bgroup->addButton(tmpl);
 

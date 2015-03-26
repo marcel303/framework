@@ -111,7 +111,7 @@ void Ed::EditTemplates()
 {
 	SetEditorMode(EM_Template);
 
-    m_view->setScene((QGraphicsScene*)(GetCurrentScene()));
+	m_view->setScene((QGraphicsScene*)(sceneMech));
     GetCurrentScene()->setBackgroundBrush(Qt::green);
 }
 
@@ -119,7 +119,7 @@ void Ed::EditLevels()
 {
 	SetEditorMode(EM_Level);
 
-    m_view->setScene((QGraphicsScene*)(GetCurrentScene()));
+	m_view->setScene((QGraphicsScene*)(sceneMech));
 }
 
 void CreateNewMapHelper(int x, int y)

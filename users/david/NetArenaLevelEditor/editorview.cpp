@@ -100,35 +100,46 @@ void EditorView::New()
 	CreateAndShowNewMapDialog();
 }
 
-void EditorView::SwitchToMech()
+void EditorView::SwitchToMech(int s)
 {
+	if(s)
+	{
 		SwitchSceneTo(SCENEMECH);
 		sliderOpacMech->setValue(80);
 		sliderOpacArt->setValue(20);
 		sliderOpacColl->setValue(0);
 		sliderOpacObject->setValue(0);
+	}
 }
 
-void EditorView::SwitchToArt()
+void EditorView::SwitchToArt(int s)
 {
+	if(s)
+	{
 		SwitchSceneTo(SCENEART);
 		sliderOpacMech->setValue(20);
 		sliderOpacArt->setValue(80);
 		sliderOpacColl->setValue(0);
 		sliderOpacObject->setValue(0);
+	}
 }
 
-void EditorView::SwitchToCollision()
+void EditorView::SwitchToCollision(int s)
 {
+	if(s)
+	{
 		SwitchSceneTo(SCENECOLL);
 		sliderOpacMech->setValue(0);
 		sliderOpacArt->setValue(20);
 		sliderOpacColl->setValue(80);
 		sliderOpacObject->setValue(0);
+	}
 }
 
-void EditorView::SwitchToObject()
+void EditorView::SwitchToObject(int s)
 {
+	if(s)
+	{
 		SwitchSceneTo(SCENEOBJ);
 		sliderOpacMech->setValue(20);
 		sliderOpacArt->setValue(0);
@@ -136,11 +147,14 @@ void EditorView::SwitchToObject()
 		sliderOpacObject->setValue(80);
 
 		ObjectPallette();
+	}
 }
 
 
-void EditorView::SwitchToTemplates()
+void EditorView::SwitchToTemplates(int s)
 {
+	if(s)
+	{
 		SwitchSceneTo(SCENETEMPLATE);
 		sliderOpacMech->setValue(0);
 		sliderOpacArt->setValue(100);
@@ -148,6 +162,7 @@ void EditorView::SwitchToTemplates()
 		sliderOpacObject->setValue(0);
 
 		TemplatePallette();
+	}
 
 }
 
@@ -164,18 +179,20 @@ void EditorView::SwitchLevelTemplateEdit()
 	if(flip)
     {
 		ed.EditTemplates();
-        ResetSliders();
+		ResetSliders();
     }
 	else
     {
 		ed.EditLevels();
-        ResetSliders();
+		ResetSliders();
     }
+
+	UpdateMatrix();
 
 	flip = !flip;
 }
 
-void SetOpactyForLayer(EditorScene* s, qreal opac)
+void SetOpacityForLayer(EditorScene* s, qreal opac)
 {
 	for(int y = 0; y < MAPY; y++)
 		for (int x = 0; x < MAPX; x++)
@@ -184,16 +201,16 @@ void SetOpactyForLayer(EditorScene* s, qreal opac)
 
 void EditorView::SetOpacityMech(int s)
 {
-   SetOpactyForLayer(sceneMech, s/100.0);
+   SetOpacityForLayer(sceneMech, s/100.0);
 }
 
 void EditorView::SetOpacityArt(int s)
 {
-   SetOpactyForLayer(sceneArt, s/100.0);
+   SetOpacityForLayer(sceneArt, s/100.0);
 }
 void EditorView::SetOpacityCollision(int s)
 {
-	SetOpactyForLayer(sceneCollision, s/100.0);
+	SetOpacityForLayer(sceneCollision, s/100.0);
 }
 
 void EditorView::SetOpacityObject(int s)

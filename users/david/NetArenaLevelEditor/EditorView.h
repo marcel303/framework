@@ -72,11 +72,11 @@ public slots:
     void SaveTemplate();
     void Load();
     void New();
-    void SwitchToMech();
-    void SwitchToArt();
-	void SwitchToCollision();
-    void SwitchToObject();
-	void SwitchToTemplates();
+	void SwitchToMech(int s);
+	void SwitchToArt(int s);
+	void SwitchToCollision(int s);
+	void SwitchToObject(int s);
+	void SwitchToTemplates(int s);
 	void SwitchLevelTemplateEdit();
 
     void SetOpacityMech(int s);
