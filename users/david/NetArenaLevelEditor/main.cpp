@@ -8,6 +8,8 @@
 
 #include "SettingsWidget.h"
 
+#include <QPixmap>
+
 
 #define view view2 //hack
 
@@ -539,6 +541,19 @@ void LoadLevel(QString filename)
 	LoadGeneric(filename + "Col.txt", sceneCollision);
     sceneCounter = 0;
 	LoadObjects(filename + "Obj.txt", false);
+
+	QPixmap p;
+	if(p.load(filename+"Background.png") && (p.size().width() == 1920) && (p.size().height() == 1080))
+	{
+		ed.EditLevels();
+
+		if(ed.bg)
+			sceneMech->removeItem(ed.bg);
+
+		ed.bg = sceneMech->addPixmap(p);
+		ed.bg->setZValue(-10);
+	}
+
 }
 
 void SaveGeneric(QString filename, EditorScene* s)
@@ -634,6 +649,9 @@ void SaveLevel(QString filename)
 		SaveArtFile(filename + '/' + "Art", sceneArt);
 
 	SaveObjects(filename + '/' + "Obj.txt");
+
+	if(ed.bg)
+		ed.bg->pixmap().save(filename + "/Background.png", "PNG");
 }
 
 

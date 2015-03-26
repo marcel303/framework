@@ -88,7 +88,7 @@ public slots:
 	void RemoveFolder();
 
 
-    void ImportTemplate();
+	void ImportBackground();
 
     void mousePressEvent(QMouseEvent * e);
     void mouseReleaseEvent(QMouseEvent * e);

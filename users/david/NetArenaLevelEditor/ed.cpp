@@ -21,6 +21,8 @@ void Ed::Initialize()
 	m_sceneTemplatePallette = new QGraphicsScene();
 
 	m_settingsWidget = new SettingsWidget();
+
+	bg = 0;
 }
 
 EditorScene*& Ed::GetSceneArt()

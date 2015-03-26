@@ -16,6 +16,7 @@ class QGraphicsView;
 class GameObject;
 class QGraphicsScene;
 class SettingsWidget;
+class QGraphicsPixmapItem;
 class Ed
 {
 public:
@@ -117,6 +118,8 @@ public:
 
 	QString ObjectPath; //the directory for all object textures
 	QString ArtFolderPath; //the root directory for all art and template textures
+
+	QGraphicsPixmapItem* bg; //global pointer for the level background image
 };
 
 

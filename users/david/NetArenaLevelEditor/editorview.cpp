@@ -6,6 +6,8 @@
 #include "SettingsWidget.h"
 #include "main.h"
 
+#include <QPixmap>
+
 
 
 void SwitchScene()
@@ -51,9 +53,9 @@ EditorView::EditorView() : EditorViewBasic()
 	newAct5->setStatusTip(tr("Templatus Savus"));
 	connect(newAct5, SIGNAL(triggered()), this, SLOT(SaveTemplate()));
 
-	/*QAction* newAct6 = new QAction(tr("&ImportTemplate"), this);
-	newAct6->setStatusTip(tr("Import Template Image"));
-	connect(newAct6, SIGNAL(triggered()), this, SLOT(ImportTemplate()));*/
+	QAction* newAct6 = new QAction(tr("&ImportBackground"), this);
+	newAct6->setStatusTip(tr("Import Background Image"));
+	connect(newAct6, SIGNAL(triggered()), this, SLOT(ImportBackground()));
 
 	QAction* newAct7 = new QAction(tr("&SwitchLevelTemplate"), this);
 	newAct7->setStatusTip(tr("SwitchLevelOrTemplate"));
@@ -64,7 +66,7 @@ EditorView::EditorView() : EditorViewBasic()
 	bar->addAction(newAct2);
 	bar->addAction(newAct3);
 	bar->addAction(newAct5);
-	//bar->addAction(newAct6);
+	bar->addAction(newAct6);
 	bar->addAction(newAct7);
 
 
@@ -221,11 +223,30 @@ void EditorView::SetOpacityObject(int s)
 	}
 }
 
-void EditorView::ImportTemplate()
-{
+#include <QMessageBox>
 
-	QString filename = QFileDialog::getOpenFileName(this, tr("Open Image for Template"));
-	ImportTemplate(filename);
+void EditorView::ImportBackground()
+{
+	QString filename = QFileDialog::getOpenFileName(this, tr("Open Image for background"));
+
+	QPixmap p(filename);
+
+	if(p.size().width() != 1920 || p.size().height() != 1080)
+	{
+		QMessageBox messageBox;
+		messageBox.critical(0,"Error","Background image not 1920x1080!");
+		messageBox.setFixedSize(500,200);
+
+		return;
+	}
+
+	ed.EditLevels();
+
+	if(ed.bg)
+		sceneMech->removeItem(ed.bg);
+
+	ed.bg = sceneMech->addPixmap(p);
+	ed.bg->setZValue(-10);
 }
 
 void EditorView::ImportTemplate(QString filename)
