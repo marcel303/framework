@@ -57,6 +57,8 @@ public:
     EditorView();
     virtual ~EditorView();
 
+	void ImportTemplate(QString filename);
+
 
     QSlider* sliderOpacMech;
     QSlider* sliderOpacArt;
@@ -70,23 +72,23 @@ public slots:
     void SaveTemplate();
     void Load();
     void New();
-    void SwitchToMech();
-    void SwitchToArt();
-    void SwitchToCollission();
-    void SwitchToObject();
-	void SwitchToTemplates();
+	void SwitchToMech(int s);
+	void SwitchToArt(int s);
+	void SwitchToCollision(int s);
+	void SwitchToObject(int s);
+	void SwitchToTemplates(int s);
 	void SwitchLevelTemplateEdit();
 
     void SetOpacityMech(int s);
     void SetOpacityArt(int s);
-    void SetOpacityCollission(int s);
+	void SetOpacityCollision(int s);
     void SetOpacityObject(int s);
 
 	void AddNewFolder();
 	void RemoveFolder();
 
 
-    void ImportTemplate();
+	void ImportBackground();
 
     void mousePressEvent(QMouseEvent * e);
     void mouseReleaseEvent(QMouseEvent * e);
@@ -95,5 +97,7 @@ public slots:
 
 private:
 	void CreateAndShowNewMapDialog();
+
+	bool flip;
 
 };

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QString>
+#include <QStack>
 
 enum EditorMode
 {
@@ -10,12 +11,14 @@ enum EditorMode
 
 class EditorScene;
 class TemplateScene;
+class EditorTemplate;
 class ObjectPropertyWindow;
 class EditorView;
 class QGraphicsView;
 class GameObject;
 class QGraphicsScene;
 class SettingsWidget;
+class QGraphicsPixmapItem;
 class Ed
 {
 public:
@@ -27,7 +30,7 @@ public:
 
 	EditorScene*& GetSceneArt();
 	EditorScene*& GetSceneMech();
-	EditorScene*& GetSceneCollission();
+	EditorScene*& GetSceneCollision();
 	QGraphicsScene* GetSceneTemplatePallette();
 
 
@@ -84,9 +87,8 @@ private:
 	EditorScene* m_sceneMech;
 	EditorScene* m_sceneMechTemplate;
 
-	EditorScene* m_sceneCollission;
-	EditorScene* m_sceneCollissionTemplate;
-
+	EditorScene* m_sceneCollision;
+	EditorScene* m_sceneCollisionTemplate;
 
 
 	EditorMode m_editorMode;
@@ -117,6 +119,12 @@ public:
 
 	QString ObjectPath; //the directory for all object textures
 	QString ArtFolderPath; //the root directory for all art and template textures
+
+	QGraphicsPixmapItem* bg; //global pointer for the level background image
+
+	QStack<EditorTemplate*>			undoStack;
+	QStack<EditorTemplate*>			redoStack;
+	EditorTemplate*					undoTemplate;
 };
 
 

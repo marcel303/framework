@@ -21,6 +21,9 @@ void Ed::Initialize()
 	m_sceneTemplatePallette = new QGraphicsScene();
 
 	m_settingsWidget = new SettingsWidget();
+
+	bg = 0;
+	undoTemplate = 0;
 }
 
 EditorScene*& Ed::GetSceneArt()
@@ -37,12 +40,12 @@ EditorScene*& Ed::GetSceneMech()
 
 	return m_sceneMech;
 }
-EditorScene*& Ed::GetSceneCollission()
+EditorScene*& Ed::GetSceneCollision()
 {
 	if(m_editorMode == EM_Template)
-		return m_sceneCollissionTemplate;
+		return m_sceneCollisionTemplate;
 
-	return m_sceneCollission;
+	return m_sceneCollision;
 }
 
 int &Ed::GetSceneCounter()
@@ -61,7 +64,7 @@ EditorScene*& Ed::GetCurrentScene()
         return GetSceneArt();
         break;
     case SCENECOLL:
-        return GetSceneCollission();
+		return GetSceneCollision();
         break;
     default:
         return GetSceneMech();
@@ -111,7 +114,7 @@ void Ed::EditTemplates()
 {
 	SetEditorMode(EM_Template);
 
-    m_view->setScene((QGraphicsScene*)(GetCurrentScene()));
+	m_view->setScene((QGraphicsScene*)(sceneMech));
     GetCurrentScene()->setBackgroundBrush(Qt::green);
 }
 
@@ -119,7 +122,7 @@ void Ed::EditLevels()
 {
 	SetEditorMode(EM_Level);
 
-    m_view->setScene((QGraphicsScene*)(GetCurrentScene()));
+	m_view->setScene((QGraphicsScene*)(sceneMech));
 }
 
 void CreateNewMapHelper(int x, int y)
@@ -131,9 +134,8 @@ void CreateNewMapHelper(int x, int y)
 	sceneCounter = SCENEART;
 	sceneArt->CreateLevel(x, y);
 	sceneCounter = SCENECOLL;
-	sceneCollission->CreateLevel(x, y);
+	sceneCollision->CreateLevel(x, y);
 	sceneCounter = SCENEMECH;
-	sceneMech->AddGrid();
 }
 
 void Ed::CreateNewMap(int x, int y)

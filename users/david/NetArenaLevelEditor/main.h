@@ -12,6 +12,8 @@
 #include <QList>
 
 #include <QMap>
+#include <QDrag>
+#include <QMimeData>
 
 class Tile : public QGraphicsPixmapItem
 {
@@ -25,7 +27,7 @@ public:
 
     virtual void SetSelectedBlock(short block);
 
-    short getBlock(){return selectedBlock;}
+	short getBlock();
 
 protected:
     short selectedBlock;
@@ -51,17 +53,29 @@ public:
     virtual void CreateLevel(int x, int y);
     virtual void InitializeLevel();
 	virtual void ResetLevel();
-    void AddGrid();
 
     virtual void DeleteTiles();
     virtual void CreateTiles();
 
 	virtual void CustomMouseEvent (QGraphicsSceneMouseEvent * e , Tile *tile);
 
+	void dragEnterEvent(QGraphicsSceneDragDropEvent *e);
+	void dropEvent(QGraphicsSceneDragDropEvent *e);
+	void dragMoveEvent(QGraphicsSceneDragDropEvent *e);
+
 	Tile** m_tiles;
 
     int m_mapx;
     int m_mapy;
+};
+
+class EditorArtScene: public EditorScene
+{
+public:
+	EditorArtScene();
+	virtual ~EditorArtScene ();
+
+	virtual void ResetLevel();
 };
 
 

@@ -6,6 +6,8 @@
 #include "SettingsWidget.h"
 #include "main.h"
 
+#include <QPixmap>
+
 
 
 void SwitchScene()
@@ -27,6 +29,7 @@ void ObjectPallette()
 
 EditorView::EditorView() : EditorViewBasic()
 {
+	flip = true;
 	newMapWindow = 0;
 
 	QMenuBar* bar = new QMenuBar(this);
@@ -50,9 +53,9 @@ EditorView::EditorView() : EditorViewBasic()
 	newAct5->setStatusTip(tr("Templatus Savus"));
 	connect(newAct5, SIGNAL(triggered()), this, SLOT(SaveTemplate()));
 
-	QAction* newAct6 = new QAction(tr("&ImportTemplate"), this);
-	newAct6->setStatusTip(tr("Import Template Image"));
-	connect(newAct6, SIGNAL(triggered()), this, SLOT(ImportTemplate()));
+	QAction* newAct6 = new QAction(tr("&ImportBackground"), this);
+	newAct6->setStatusTip(tr("Import Background Image"));
+	connect(newAct6, SIGNAL(triggered()), this, SLOT(ImportBackground()));
 
 	QAction* newAct7 = new QAction(tr("&SwitchLevelTemplate"), this);
 	newAct7->setStatusTip(tr("SwitchLevelOrTemplate"));
@@ -90,7 +93,7 @@ void EditorView::SaveTemplate()
 void EditorView::Load()
 {
 	QString fileName = QFileDialog::getOpenFileName(this, tr("Open file"));
-	fileName.chop(4);
+	fileName.chop(7);
 	LoadLevel(fileName);
 }
 
@@ -99,35 +102,46 @@ void EditorView::New()
 	CreateAndShowNewMapDialog();
 }
 
-void EditorView::SwitchToMech()
+void EditorView::SwitchToMech(int s)
 {
+	if(s)
+	{
 		SwitchSceneTo(SCENEMECH);
 		sliderOpacMech->setValue(80);
 		sliderOpacArt->setValue(20);
 		sliderOpacColl->setValue(0);
 		sliderOpacObject->setValue(0);
+	}
 }
 
-void EditorView::SwitchToArt()
+void EditorView::SwitchToArt(int s)
 {
+	if(s)
+	{
 		SwitchSceneTo(SCENEART);
 		sliderOpacMech->setValue(20);
 		sliderOpacArt->setValue(80);
 		sliderOpacColl->setValue(0);
 		sliderOpacObject->setValue(0);
+	}
 }
 
-void EditorView::SwitchToCollission()
+void EditorView::SwitchToCollision(int s)
 {
+	if(s)
+	{
 		SwitchSceneTo(SCENECOLL);
 		sliderOpacMech->setValue(0);
 		sliderOpacArt->setValue(20);
 		sliderOpacColl->setValue(80);
 		sliderOpacObject->setValue(0);
+	}
 }
 
-void EditorView::SwitchToObject()
+void EditorView::SwitchToObject(int s)
 {
+	if(s)
+	{
 		SwitchSceneTo(SCENEOBJ);
 		sliderOpacMech->setValue(20);
 		sliderOpacArt->setValue(0);
@@ -135,11 +149,14 @@ void EditorView::SwitchToObject()
 		sliderOpacObject->setValue(80);
 
 		ObjectPallette();
+	}
 }
 
 
-void EditorView::SwitchToTemplates()
+void EditorView::SwitchToTemplates(int s)
 {
+	if(s)
+	{
 		SwitchSceneTo(SCENETEMPLATE);
 		sliderOpacMech->setValue(0);
 		sliderOpacArt->setValue(100);
@@ -147,6 +164,7 @@ void EditorView::SwitchToTemplates()
 		sliderOpacObject->setValue(0);
 
 		TemplatePallette();
+	}
 
 }
 
@@ -158,24 +176,25 @@ void EditorView::ResetSliders()
     sliderOpacObject->setValue(0);
 }
 
-bool flip = true;
 void EditorView::SwitchLevelTemplateEdit()
 {
 	if(flip)
     {
 		ed.EditTemplates();
-        ResetSliders();
+		ResetSliders();
     }
 	else
     {
 		ed.EditLevels();
-        ResetSliders();
+		ResetSliders();
     }
+
+	UpdateMatrix();
 
 	flip = !flip;
 }
 
-void SetOpactyForLayer(EditorScene* s, qreal opac)
+void SetOpacityForLayer(EditorScene* s, qreal opac)
 {
 	for(int y = 0; y < MAPY; y++)
 		for (int x = 0; x < MAPX; x++)
@@ -184,16 +203,16 @@ void SetOpactyForLayer(EditorScene* s, qreal opac)
 
 void EditorView::SetOpacityMech(int s)
 {
-   SetOpactyForLayer(sceneMech, s/100.0);
+   SetOpacityForLayer(sceneMech, s/100.0);
 }
 
 void EditorView::SetOpacityArt(int s)
 {
-   SetOpactyForLayer(sceneArt, s/100.0);
+   SetOpacityForLayer(sceneArt, s/100.0);
 }
-void EditorView::SetOpacityCollission(int s)
+void EditorView::SetOpacityCollision(int s)
 {
-	SetOpactyForLayer(sceneCollission, s/100.0);
+	SetOpacityForLayer(sceneCollision, s/100.0);
 }
 
 void EditorView::SetOpacityObject(int s)
@@ -204,11 +223,35 @@ void EditorView::SetOpacityObject(int s)
 	}
 }
 
-void EditorView::ImportTemplate()
+#include <QMessageBox>
+
+void EditorView::ImportBackground()
+{
+	QString filename = QFileDialog::getOpenFileName(this, tr("Open Image for background"));
+
+	QPixmap p(filename);
+
+	if(p.size().width() != 1920 || p.size().height() != 1080)
+	{
+		QMessageBox messageBox;
+		messageBox.critical(0,"Error","Background image not 1920x1080!");
+		messageBox.setFixedSize(500,200);
+
+		return;
+	}
+
+	ed.EditLevels();
+
+	if(ed.bg)
+		sceneMech->removeItem(ed.bg);
+
+	ed.bg = sceneMech->addPixmap(p);
+	ed.bg->setZValue(-10);
+}
+
+void EditorView::ImportTemplate(QString filename)
 {
 	ed.EditTemplates(); flip = false;
-
-	QString filename = QFileDialog::getOpenFileName(this, tr("Open Image for Template"));
 
 	EditorTemplate* t = new EditorTemplate();
 	if(t->ImportFromImage(filename))
@@ -297,6 +340,38 @@ void EditorViewBasic::keyPressEvent(QKeyEvent *e)
 	if(e->key() == Qt::Key_Shift)
 	{
 		leftbuttonHeld = true;
+		e->accept();
+	}
+
+	if(e->key() == Qt::Key_Z)
+	{
+		if(!ed.undoStack.empty() && editorMode == EM_Level)
+		{
+			EditorTemplate* et = ed.undoStack.pop();
+			if(et)
+			{
+				StampTemplate(0,0,et, false);
+
+				delete et;
+			}
+		}
+
+		e->accept();
+	}
+
+	if(0 )//e->key() == Qt::Key_Y)
+	{
+		if(!ed.undoStack.empty() && editorMode == EM_Level)
+		{
+			EditorTemplate* et = ed.undoStack.pop();
+			if(et)
+			{
+				StampTemplate(0,0,et, false);
+
+				delete et;
+			}
+		}
+
 		e->accept();
 	}
 }
