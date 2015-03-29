@@ -19,6 +19,7 @@ todo:
 ** HIGH PRIORITY **
 
 - change cling so it checks attack vs attack hitbox, instead of attack vs player hitbox
++ make player collision sizes character dependent
 
 - add pickup drop on death
 
@@ -597,7 +598,7 @@ bool Player::getAttackCollision(CollisionShape & shape) const
 			points[i][0] *= characterData->m_spriteScale * PLAYER_SPRITE_SCALE * (-m_facing[0]);
 			points[i][1] *= characterData->m_spriteScale * PLAYER_SPRITE_SCALE;
 			if (m_facing[1] < 0)
-				points[i][1] = -PLAYER_COLLISION_HITBOX_SY - points[i][1];
+				points[i][1] = -characterData->m_collisionSy - points[i][1];
 			points[i] += m_pos;
 		}
 
@@ -676,7 +677,9 @@ float Player::mirrorX(float x) const
 
 float Player::mirrorY(float y) const
 {
-	return m_facing[1] > 0 ? y : PLAYER_COLLISION_HITBOX_SY - y;
+	const CharacterData * characterData = getCharacterData(m_index);
+
+	return m_facing[1] > 0 ? y : characterData->m_collisionSy - y;
 }
 
 bool Player::hasValidCharacterIndex() const
@@ -755,9 +758,9 @@ void Player::tick(float dt)
 		}
 	}
 
-	m_collision.min[0] = -PLAYER_COLLISION_HITBOX_SX / 2.f;
-	m_collision.max[0] = +PLAYER_COLLISION_HITBOX_SX / 2.f;
-	m_collision.min[1] = -PLAYER_COLLISION_HITBOX_SY / 1.f;
+	m_collision.min[0] = -characterData->m_collisionSx / 2.f;
+	m_collision.max[0] = +characterData->m_collisionSx / 2.f;
+	m_collision.min[1] = -characterData->m_collisionSy / 1.f;
 	m_collision.max[1] = 0.f;
 
 	//
@@ -1252,8 +1255,8 @@ void Player::tick(float dt)
 
 				m_attack.collision.min[0] = 0.f;
 				m_attack.collision.max[0] = (m_attackDirection[0] == 0) ? 0.f : 50.f; // fordward?
-				m_attack.collision.min[1] = -PLAYER_COLLISION_HITBOX_SY/3.f*2;
-				m_attack.collision.max[1] = -PLAYER_COLLISION_HITBOX_SY/3.f*2 + m_attackDirection[1] * 50.f; // up or down
+				m_attack.collision.min[1] = -characterData->m_collisionSy/3.f*2;
+				m_attack.collision.max[1] = -characterData->m_collisionSy/3.f*2 + m_attackDirection[1] * 50.f; // up or down
 
 				// make sure the attack collision doesn't have a zero sized area
 
@@ -1324,8 +1327,8 @@ void Player::tick(float dt)
 
 					m_attack.collision.min[0] = 0.f;
 					m_attack.collision.max[0] = DOUBLEMELEE_ATTACK_RADIUS;
-					m_attack.collision.min[1] = -PLAYER_COLLISION_HITBOX_SY/3.f*2;
-					m_attack.collision.max[1] = -PLAYER_COLLISION_HITBOX_SY/3.f*2 + 4.f;
+					m_attack.collision.min[1] = -characterData->m_collisionSy/3.f*2;
+					m_attack.collision.max[1] = -characterData->m_collisionSy/3.f*2 + 4.f;
 
 					m_attack.hasCollision = true;
 
@@ -2426,16 +2429,18 @@ void Player::draw() const
 	if (!hasValidCharacterIndex())
 		return;
 
+	const CharacterData * characterData = getCharacterData(m_index);
+
 	const bool flipX = m_facing[0] > 0 ? true : false;
 	const bool flipY = m_facing[1] < 0 ? true : false;
 
-	drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? PLAYER_COLLISION_HITBOX_SY : 0));
+	drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0));
 
 	// render additional sprites for wrap around
-	drawAt(flipX, flipY, m_pos[0] + ARENA_SX_PIXELS, m_pos[1] - (flipY ? PLAYER_COLLISION_HITBOX_SY : 0));
-	drawAt(flipX, flipY, m_pos[0] - ARENA_SX_PIXELS, m_pos[1] - (flipY ? PLAYER_COLLISION_HITBOX_SY : 0));
-	drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? PLAYER_COLLISION_HITBOX_SY : 0) + ARENA_SY_PIXELS);
-	drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? PLAYER_COLLISION_HITBOX_SY : 0) - ARENA_SY_PIXELS);
+	drawAt(flipX, flipY, m_pos[0] + ARENA_SX_PIXELS, m_pos[1] - (flipY ? characterData->m_collisionSy : 0));
+	drawAt(flipX, flipY, m_pos[0] - ARENA_SX_PIXELS, m_pos[1] - (flipY ? characterData->m_collisionSy : 0));
+	drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0) + ARENA_SY_PIXELS);
+	drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0) - ARENA_SY_PIXELS);
 
 	// draw player color
 
@@ -2596,14 +2601,14 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 	if (m_shield.shield)
 	{
 		const float px = x;
-		const float py = y + (flipY ? +PLAYER_COLLISION_HITBOX_SY : -PLAYER_COLLISION_HITBOX_SY) / 2.f;
+		const float py = y + (flipY ? +characterData->m_collisionSy : -characterData->m_collisionSy) / 2.f;
 		Sprite("shield-bubble.png").drawEx(px, py);
 	}
 
 	if (m_bubble.timer > 0.f)
 	{
 		const float px = x;
-		const float py = y + (flipY ? +PLAYER_COLLISION_HITBOX_SY : -PLAYER_COLLISION_HITBOX_SY) / 2.f;
+		const float py = y + (flipY ? +characterData->m_collisionSy : -characterData->m_collisionSy) / 2.f;
 		Sprite("bubble-bubble.png").drawEx(px, py);
 	}
 
@@ -2902,7 +2907,8 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 				m_isUsingJetpack = false;
 
 				// fixme.. mid pos
-				ParticleSpawnInfo spawnInfo(m_pos[0], m_pos[1] + mirrorY(-PLAYER_COLLISION_HITBOX_SY/2.f), kBulletType_ParticleA, 20, 50, 350, 40);
+				const CharacterData * characterData = getCharacterData(m_index);
+				ParticleSpawnInfo spawnInfo(m_pos[0], m_pos[1] + mirrorY(-characterData->m_collisionSy/2.f), kBulletType_ParticleA, 20, 50, 350, 40);
 				spawnInfo.color = 0xff0000ff;
 
 				GAMESIM->spawnParticles(spawnInfo);
@@ -3276,7 +3282,9 @@ void Player::AttackInfo::Zweihander::tick(Player & player, float dt)
 //
 
 CharacterData::CharacterData(int characterIndex)
-	: m_spriter(0)
+	: m_collisionSx(0)
+	, m_collisionSy(0)
+	, m_spriter(0)
 	, m_spriteScale(1.f)
 	, m_weight(1.f)
 	, m_meleeCooldown(0.f)
@@ -3313,6 +3321,9 @@ void CharacterData::load(int characterIndex)
 
 		m_sounds[name].load(m_props.getString(name, ""), true);
 	}
+
+	m_collisionSx = m_props.getInt("collision_sx", 10);
+	m_collisionSy = m_props.getInt("collision_sy", 10);
 
 	m_animData = AnimData();
 	m_animData.load(makeCharacterFilename(characterIndex, "animdata.txt"));
@@ -3381,13 +3392,6 @@ PlayerInstanceData::PlayerInstanceData(Player * player, GameSim * gameSim)
 	, m_textChatTicks(0)
 {
 	m_player->m_instanceData = this;
-
-	//
-
-	m_player->m_collision.min[0] = -PLAYER_COLLISION_HITBOX_SX / 2.f;
-	m_player->m_collision.max[0] = +PLAYER_COLLISION_HITBOX_SX / 2.f;
-	m_player->m_collision.min[1] = -PLAYER_COLLISION_HITBOX_SY / 1.f;
-	m_player->m_collision.max[1] = 0.f;
 }
 
 PlayerInstanceData::~PlayerInstanceData()
@@ -3403,7 +3407,14 @@ void PlayerInstanceData::setCharacterIndex(int index)
 
 void PlayerInstanceData::handleCharacterIndexChange()
 {
+	const CharacterData * characterData = getCharacterData(m_player->m_index);
+
 	//m_player->m_spriterState.animIndex = // todo : recalc anim index?
+
+	m_player->m_collision.min[0] = -characterData->m_collisionSx / 2.f;
+	m_player->m_collision.max[0] = +characterData->m_collisionSx / 2.f;
+	m_player->m_collision.min[1] = -characterData->m_collisionSy / 1.f;
+	m_player->m_collision.max[1] = 0.f;
 }
 
 void PlayerInstanceData::playSoundBag(const char * name, int volume)

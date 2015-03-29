@@ -60,6 +60,8 @@ class CharacterData
 {
 public:
 	Dictionary m_props;
+	int m_collisionSx;
+	int m_collisionSy;
 	AnimData m_animData;
 	Spriter * m_spriter;
 	float m_spriteScale;
