@@ -56,6 +56,8 @@ struct Player
 
 	void testCollision(const CollisionShape & shape, void * arg, CollisionCB cb);
 
+	bool getPlayerControl() const;
+
 	bool getPlayerCollision(CollisionInfo & collision) const;
 	void getDamageHitbox(CollisionShape & shape) const;
 	bool getAttackCollision(CollisionShape & shape) const;
@@ -163,8 +165,13 @@ struct Player
 
 	//
 
-	struct
+	struct SpecialInfo
 	{
+		SpecialInfo()
+		{
+			memset(this, 0, sizeof(SpecialInfo));
+		}
+
 		float meleeAnimTimer;
 		int meleeCounter;
 		float attackDownHeight;

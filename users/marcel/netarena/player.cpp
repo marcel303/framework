@@ -18,6 +18,8 @@ todo:
 
 ** HIGH PRIORITY **
 
+- change cling so it checks attack vs attack hitbox, instead of attack vs player hitbox
+
 - add pickup drop on death
 
 - slow down player vertically when hitting block. maybe add small upward speed?
@@ -539,6 +541,18 @@ void Player::testCollision(const CollisionShape & shape, void * arg, CollisionCB
 	}
 }
 
+bool Player::getPlayerControl() const
+{
+	return
+		m_isAlive &&
+		m_controlDisableTime == 0.f &&
+		m_animAllowSteering &&
+		m_ice.timer == 0.f &&
+		m_bubble.timer == 0.f &&
+		m_special.meleeCounter == 0 &&
+		m_attack.m_rocketPunch.isActive == false;
+}
+
 bool Player::getPlayerCollision(CollisionInfo & collision) const
 {
 	Assert(m_isUsed);
@@ -883,45 +897,50 @@ void Player::tick(float dt)
 		m_respawnTimer -= dt;
 	}
 
-	if (m_isAlive)
+	//if (m_isAlive)
 	{
 		m_spawnInvincibilityTime = Calc::Max(0.f, m_spawnInvincibilityTime - dt);
 
-		// see if we grabbed any pickup
-		
-		Pickup pickup;
+		bool playerControl = getPlayerControl();
 
-		if (GAMESIM->grabPickup(
-			m_pos[0] + m_collision.min[0],
-			m_pos[1] + m_collision.min[1],
-			m_pos[0] + m_collision.max[0],
-			m_pos[1] + m_collision.max[1],
-			pickup))
+		if (m_isAlive)
 		{
-			switch (pickup.type)
-			{
-			case kPickupType_Ammo:
-				pushWeapon(kPlayerWeapon_Fire, PICKUP_AMMO_COUNT);
-				break;
-			case kPickupType_Nade:
-				pushWeapon(kPlayerWeapon_Grenade, 1);
-				break;
-			case kPickupType_Shield:
-				m_shield.shield = PICKUP_SHIELD_COUNT;
-				break;
-			case kPickupType_Ice:
-				pushWeapon(kPlayerWeapon_Ice, PICKUP_ICE_COUNT);
-				break;
-			case kPickupType_Bubble:
-				pushWeapon(kPlayerWeapon_Bubble, PICKUP_BUBBLE_COUNT);
-				break;
-			case kPickupType_TimeDilation:
-				pushWeapon(kPlayerWeapon_TimeDilation, 1);
-				break;
+			// see if we grabbed any pickup
+		
+			Pickup pickup;
 
-			default:
-				Assert(false);
-				break;
+			if (GAMESIM->grabPickup(
+				m_pos[0] + m_collision.min[0],
+				m_pos[1] + m_collision.min[1],
+				m_pos[0] + m_collision.max[0],
+				m_pos[1] + m_collision.max[1],
+				pickup))
+			{
+				switch (pickup.type)
+				{
+				case kPickupType_Ammo:
+					pushWeapon(kPlayerWeapon_Fire, PICKUP_AMMO_COUNT);
+					break;
+				case kPickupType_Nade:
+					pushWeapon(kPlayerWeapon_Grenade, 1);
+					break;
+				case kPickupType_Shield:
+					m_shield.shield = PICKUP_SHIELD_COUNT;
+					break;
+				case kPickupType_Ice:
+					pushWeapon(kPlayerWeapon_Ice, PICKUP_ICE_COUNT);
+					break;
+				case kPickupType_Bubble:
+					pushWeapon(kPlayerWeapon_Bubble, PICKUP_BUBBLE_COUNT);
+					break;
+				case kPickupType_TimeDilation:
+					pushWeapon(kPlayerWeapon_TimeDilation, 1);
+					break;
+
+				default:
+					Assert(false);
+					break;
+				}
 			}
 		}
 
@@ -931,9 +950,12 @@ void Player::tick(float dt)
 		animVel[0] += m_animVel[0] * m_facing[0];
 		animVel[1] += m_animVel[1] * m_facing[1];
 
-		// attack
+		// attack processing
+
 		if (m_attack.attacking)
 		{
+			Assert(m_isAlive);
+
 			if (m_anim == kPlayerAnim_Attack || m_anim == kPlayerAnim_AttackUp || m_anim == kPlayerAnim_AttackDown)
 			{
 				animVel[0] += m_attack.attackVel[0] * m_attackDirection[0];
@@ -1088,10 +1110,14 @@ void Player::tick(float dt)
 			}
 		}
 
+		// attack cooldown
+
 		if (!m_attack.attacking)
 			m_attack.cooldown -= dt;
 
-		if (!m_attack.attacking && m_attack.cooldown <= 0.f)
+		// attack triggering
+
+		if (playerControl && !m_attack.attacking && m_attack.cooldown <= 0.f)
 		{
 			if (m_input.wentDown(INPUT_BUTTON_B) && (m_weaponStackSize > 0 || s_unlimitedAmmo) && isAnimOverrideAllowed(kPlayerAnim_Fire))
 			{
@@ -1319,10 +1345,14 @@ void Player::tick(float dt)
 			}
 		}
 
+		playerControl = getPlayerControl();
+
 		// update double melee attack
 
 		if (characterData->m_special == kPlayerSpecial_DoubleSidedMelee && m_special.meleeCounter != 0)
 		{
+			Assert(m_isAlive);
+
 			m_special.meleeAnimTimer -= dt;
 
 			if (m_special.meleeAnimTimer <= 0.f)
@@ -1368,7 +1398,7 @@ void Player::tick(float dt)
 
 		if (characterData->hasTrait(kPlayerTrait_AirDash))
 		{
-			if (m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && m_input.wentDown(INPUT_BUTTON_A))
+			if (playerControl && m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && m_input.wentDown(INPUT_BUTTON_A))
 			{
 				if (isAnimOverrideAllowed(kPlayerAnim_AirDash))
 				{
@@ -1384,7 +1414,7 @@ void Player::tick(float dt)
 		}
 		else if (characterData->hasTrait(kPlayerTrait_DoubleJump))
 		{
-			if (m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && m_input.wentDown(INPUT_BUTTON_A))
+			if (playerControl && m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && m_input.wentDown(INPUT_BUTTON_A))
 			{
 				if (isAnimOverrideAllowed(kPlayerAnim_AirDash))
 				{
@@ -1443,14 +1473,6 @@ void Player::tick(float dt)
 				}
 			}
 		}
-
-		const bool playerControl =
-			m_controlDisableTime == 0.f &&
-			m_animAllowSteering &&
-			m_ice.timer == 0.f &&
-			m_bubble.timer == 0.f &&
-			m_special.meleeCounter == 0 &&
-			m_attack.m_rocketPunch.isActive == false;
 
 		const bool allowJumping =
 			playerControl;// &&
@@ -1525,6 +1547,8 @@ void Player::tick(float dt)
 
 			if (m_attack.m_zweihander.isActive())
 			{
+				Assert(m_isAlive);
+
 				if (m_isGrounded)
 					steeringSpeed *= STEERING_SPEED_ZWEIHANDER;
 				numSteeringFrame = 5;
@@ -1551,8 +1575,8 @@ void Player::tick(float dt)
 			}
 
 			bool doSteering =
-				playerControl ||
-				m_special.meleeCounter != 0;
+				m_isAlive &&
+				(playerControl || m_special.meleeCounter != 0);
 
 			if (doSteering && steeringSpeed != 0.f)
 			{
@@ -1594,7 +1618,7 @@ void Player::tick(float dt)
 
 			bool canWallSlide = true;
 
-			if (characterData->m_special == kPlayerSpecial_Jetpack && m_input.isDown(INPUT_BUTTON_Y) && !s_noSpecial)
+			if (playerControl && characterData->m_special == kPlayerSpecial_Jetpack && m_input.isDown(INPUT_BUTTON_Y) && !s_noSpecial)
 			{
 				gravity -= JETPACK_ACCEL;
 				m_isUsingJetpack = true;
@@ -1672,7 +1696,7 @@ void Player::tick(float dt)
 
 		// jumping : increment speed over time for soft jump
 
-		if (m_input.isDown(INPUT_BUTTON_A) && m_jump.jumpVelocityLeft != 0.f)
+		if (allowJumping && m_input.isDown(INPUT_BUTTON_A) && m_jump.jumpVelocityLeft != 0.f)
 		{
 			const float velPerSecond = PLAYER_JUMP_SPEED * TICKS_PER_SECOND / (float)PLAYER_JUMP_SPEED_FRAMES;
 			float delta = velPerSecond * Calc::Sign(m_jump.jumpVelocityLeft) * dt;
@@ -1792,6 +1816,8 @@ void Player::tick(float dt)
 
 				if (self->m_attack.m_rocketPunch.isActive && self->m_attack.m_rocketPunch.state == AttackInfo::RocketPunch::kState_Attack)
 				{
+					Assert(self->m_isAlive);
+
 					if (blockAndDistance)
 					{
 						if (blockAndDistance->block->handleDamage(*self->m_instanceData->m_gameSim, blockAndDistance->x, blockAndDistance->y))
@@ -1808,6 +1834,8 @@ void Player::tick(float dt)
 
 				if (self->m_attack.attacking && self->m_attack.hasCollision)
 				{
+					Assert(self->m_isAlive);
+
 					if (blockAndDistance)
 					{
 						CollisionShape attackCollision;
@@ -2339,6 +2367,8 @@ void Player::tick(float dt)
 
 	if (m_isUsingJetpack)
 	{
+		Assert(m_isAlive);
+
 		ParticleSpawnInfo spawnInfo(
 			m_pos[0], m_pos[1],
 			kBulletType_ParticleA, 2,
@@ -2759,6 +2789,8 @@ void Player::respawn()
 
 		m_timeDilationAttack = TimeDilationAttack();
 
+		m_jump = JumpInfo();
+
 		m_blockMask = 0;
 
 		m_dirBlockMask[0] = 0;
@@ -2860,8 +2892,14 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 
 				m_isAlive = false;
 
+				m_special = SpecialInfo();
+
+				m_attack = AttackInfo();
+
 				m_ice = IceInfo();
 				m_bubble = BubbleInfo();
+
+				m_isUsingJetpack = false;
 
 				// fixme.. mid pos
 				ParticleSpawnInfo spawnInfo(m_pos[0], m_pos[1] + mirrorY(-PLAYER_COLLISION_HITBOX_SY/2.f), kBulletType_ParticleA, 20, 50, 350, 40);
