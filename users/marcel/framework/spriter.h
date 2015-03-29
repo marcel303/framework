@@ -51,6 +51,7 @@ namespace spriter
 	{
 	public:
 		std::string name;
+		std::string shortName;
 		ObjectType type;
 		float sx;
 		float sy;

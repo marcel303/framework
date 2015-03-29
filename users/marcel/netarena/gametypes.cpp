@@ -12,6 +12,20 @@ const char * g_gameStateNames[kGameState_COUNT] =
 	"roundComplete"
 };
 
+const char * g_playerSpacialNames[kPlayerSpecial_COUNT] =
+{
+	"none",
+	"RocketPunch",
+	"DoubleSidedMelee",
+	"StompAttack",
+	"Shield",
+	"Invisibility",
+	"Jetpack",
+	"Zweihander",
+	"Axe",
+	"Pipebomb"
+};
+
 //
 
 const CollisionShape & CollisionShape::operator=(const CollisionBox & box)

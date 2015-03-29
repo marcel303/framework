@@ -66,6 +66,7 @@ public:
 	float m_weight; // the change in velocity as a result of a hit depends on this value
 	float m_meleeCooldown;
 	PlayerSpecial m_special;
+	int m_traits; // PlayerTrait
 	std::map<std::string, SoundBag> m_sounds;
 
 	//
@@ -74,6 +75,8 @@ public:
 	~CharacterData();
 
 	void load(int characterIndex);
+
+	bool hasTrait(PlayerTrait trait) const;
 };
 
 class PlayerInstanceData

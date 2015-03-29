@@ -171,8 +171,6 @@ struct Player
 		bool attackDownActive;
 	} m_special;
 
-	int m_traits; // PlayerTrait
-
 	//
 
 	CollisionInfo m_collision;

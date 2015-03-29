@@ -120,6 +120,7 @@ struct RegenBlockData
 
 class Arena
 {
+public:
 	Block m_blocks[ARENA_SX][ARENA_SY];
 
 	FixedString<64> m_name;

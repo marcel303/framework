@@ -935,10 +935,6 @@ void GameSim::setGameState(::GameState gameState)
 				}
 			}
 
-			// level events
-
-			m_timeUntilNextLevelEvent = 1.f;
-
 			// game modes
 
 			if (m_gameMode == kGameMode_TokenHunt)
@@ -1514,19 +1510,17 @@ void GameSim::tickPlay()
 		};
 		const float multiplier = multipliers[getNumPlayers()];
 
-		m_nextPickupSpawnTimeRemaining = (PICKUP_INTERVAL + (Random() % PICKUP_INTERVAL_VARIANCE)) * multiplier;
+		m_nextPickupSpawnTimeRemaining = (PICKUP_INTERVAL + (Random() % PICKUP_INTERVAL_VARIANCE)) / multiplier;
 	}
 
 	// level events
 
 	if (m_timeUntilNextLevelEvent > 0.f && PROTO_ENABLE_LEVEL_EVENTS)
 	{
-		m_timeUntilNextLevelEvent -= dt;
+		m_timeUntilNextLevelEvent = Calc::Max(0.f, m_timeUntilNextLevelEvent - dt);
 
-		if (m_timeUntilNextLevelEvent <= 0.f)
+		if (m_timeUntilNextLevelEvent == 0.f)
 		{
-			m_timeUntilNextLevelEvent = PROTO_LEVEL_EVENT_INTERVAL;
-
 			const LevelEvent e = getRandomLevelEvent();
 			//const LevelEvent e = kLevelEvent_SpikeWalls;
 			//const LevelEvent e = kLevelEvent_GravityWell;
@@ -1595,6 +1589,11 @@ void GameSim::tickPlay()
 
 			addAnnouncement("Level Event: %s", name);
 		}
+	}
+
+	if (m_timeUntilNextLevelEvent == 0.f)
+	{
+		m_timeUntilNextLevelEvent = PROTO_LEVEL_EVENT_INTERVAL;
 	}
 
 	m_levelEvents.quake.tick(*this, dt);

@@ -726,7 +726,7 @@ namespace spriter
 		{
 			const TransformedObjectKey & o = keys[k];
 
-			if (o.object && o.object->type == kObjectType_Box && o.object->name == name)
+			if (o.object && o.object->type == kObjectType_Box && o.object->shortName == name)
 			{
 				const Transform & tf = o.transform;
 
@@ -849,6 +849,8 @@ namespace spriter
 						Object object;
 
 						object.name = stringAttrib(xmlObjectInfo, "name", "");
+						const size_t pos = object.name.find('_');
+						object.shortName = pos == std::string::npos ? object.name : object.name.substr(0, pos);
 
 						const std::string type = stringAttrib(xmlObjectInfo, "type", "sprite");
 

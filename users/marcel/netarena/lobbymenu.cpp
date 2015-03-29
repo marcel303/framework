@@ -174,14 +174,23 @@ void LobbyMenu::draw()
 
 			if (m_client->m_gameSim->m_players[i].m_isUsed)
 			{
+				int y = 8;
+
 				setColor(colorWhite);
-				drawText((x1 + x2) / 2, y2 + 8, 32, 0.f, +1.f, "%s", m_client->m_gameSim->m_players[i].m_displayName.c_str());
+				drawText((x1 + x2) / 2, y2 + y, 32, 0.f, +1.f, "%s", m_client->m_gameSim->m_players[i].m_displayName.c_str());
+				y += 34;
+
+				const CharacterData * characterData = getCharacterData(m_client->m_gameSim->m_players[i].m_characterIndex);
+				setColor(colorWhite);
+				drawText((x1 + x2) / 2, y2 + y, 32, 0.f, +1.f, "%s", g_playerSpacialNames[characterData->m_special]);
+				y += 34;
 
 			#if 1 // todo : non final only
 				if (g_host)
 				{
 					setColor(colorWhite);
-					drawText((x1 + x2) / 2, y2 + 42, 24, 0.f, +1.f, "%s", m_client->m_channel->m_address.ToString(true).c_str());
+					drawText((x1 + x2) / 2, y2 + y, 24, 0.f, +1.f, "%s", m_client->m_channel->m_address.ToString(true).c_str());
+					y += 34;
 				}
 			#endif
 			}

@@ -10,6 +10,8 @@
 
 #define USE_NEW_COLLISION_CODE 1
 
+//#pragma optimize("", off)
+
 /*
 
 todo:
@@ -85,7 +87,7 @@ todo:
 	- move without gravity, drop bombs
 	- when done, bombs explode one by one
 
-- add Spriter hitbox support
++ add Spriter hitbox support
 
 - +1 icon on kill in token hunt game mode
 
@@ -114,7 +116,7 @@ todo:
 
 - need to be able to kick player at char select
 + drop rate should scale with number of players
-- remove angels in spawn locations -> reduce background noise
++ remove angels in spawn locations -> reduce background noise
 - buff star player ?
 - score feedback, especially in token hunt mode
 - investigate killing the rambo mode, soldat
@@ -468,10 +470,18 @@ void PlayerInstanceData::handleAnimationAction(const std::string & action, const
 		}
 		else if (action == "set_dash_vel")
 		{
-			Vec2 dir(player->m_input.m_currState.analogX, player->m_input.m_currState.analogY);
-			dir.Normalize();
+			//const Vec2 dir = Vec2(player->m_input.m_currState.analogX, player->m_input.m_currState.analogY).CalcNormalized();
+			const Vec2 dir(player->m_facing[0], player->m_facing[1]);
+			const Vec2 vel(args.getFloat("x", player->m_animVel[0]), args.getFloat("y", player->m_animVel[1]));
 
-			player->m_vel += dir * args.getFloat("x", player->m_animVel[0]);
+			player->m_vel += dir ^ vel;
+		}
+		else if (action == "set_jump_vel")
+		{
+			const Vec2 dir(player->m_facing[0], player->m_facing[1]);
+			const Vec2 vel(args.getFloat("x", player->m_animVel[0]), args.getFloat("y", player->m_animVel[1]));
+
+			player->m_vel += dir ^ vel;
 		}
 		else if (action == "set_anim_vel_abs")
 		{
@@ -990,13 +1000,16 @@ void Player::tick(float dt)
 				CollisionShape attackCollision;
 				if (getAttackCollision(attackCollision))
 				{
-					m_attack.hitDestructible |= GAMESIM->m_arena.handleDamageShape(
+					const bool hit = GAMESIM->m_arena.handleDamageShape(
 						*GAMESIM,
 						m_pos[0],
 						m_pos[1],
 						attackCollision,
 						!m_attack.hitDestructible,
 						PLAYER_SWORD_SINGLE_BLOCK);
+
+					if (hit && PLAYER_SWORD_SINGLE_BLOCK)
+						m_attack.hitDestructible = true;
 				}
 			}
 
@@ -1353,15 +1366,31 @@ void Player::tick(float dt)
 		const uint32_t currentBlockMaskCeil = getIntersectingBlocksMask(m_pos[0], m_pos[1] - 1.f);
 	#endif
 
-		if (m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && m_input.wentDown(INPUT_BUTTON_A))
+		if (characterData->hasTrait(kPlayerTrait_AirDash))
 		{
-			if (isAnimOverrideAllowed(kPlayerAnim_AirDash) && false)
+			if (m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && m_input.wentDown(INPUT_BUTTON_A))
 			{
-				if ((getIntersectingBlocksMask(m_pos[0] + m_facing[0], m_pos[1]) & kBlockMask_Solid) == 0)
+				if (isAnimOverrideAllowed(kPlayerAnim_AirDash))
+				{
+					if ((getIntersectingBlocksMask(m_pos[0] + m_facing[0], m_pos[1]) & kBlockMask_Solid) == 0)
+					{
+						m_isAirDashCharged = false;
+
+						setAnim(kPlayerAnim_AirDash, true, true);
+						m_enableInAirAnim = false;
+					}
+				}
+			}
+		}
+		else if (characterData->hasTrait(kPlayerTrait_DoubleJump))
+		{
+			if (m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && m_input.wentDown(INPUT_BUTTON_A))
+			{
+				if (isAnimOverrideAllowed(kPlayerAnim_AirDash))
 				{
 					m_isAirDashCharged = false;
 
-					setAnim(kPlayerAnim_AirDash, true, true);
+					setAnim(kPlayerAnim_AirDash, true, true); // todo : separate anim?
 					m_enableInAirAnim = false;
 				}
 			}
@@ -1435,7 +1464,7 @@ void Player::tick(float dt)
 
 		if (currentBlockMaskCeil & (1 << kBlockType_Sticky))
 		{
-			if (allowJumping && m_input.wentDown(INPUT_BUTTON_A))
+			if (m_isAttachedToSticky && allowJumping && m_input.wentDown(INPUT_BUTTON_A))
 			{
 				m_vel[1] = PLAYER_JUMP_SPEED / 2.f;
 
@@ -1443,13 +1472,13 @@ void Player::tick(float dt)
 
 				GAMESIM->playSound("player-sticky-jump.ogg"); // player jumps and releases itself from a sticky ceiling
 			}
-			else if (allowJumping && m_input.wentDown(INPUT_BUTTON_DOWN))
+			else if (m_isAttachedToSticky && allowJumping && m_input.wentDown(INPUT_BUTTON_DOWN))
 			{
 				m_isAttachedToSticky = false;
 
 				m_vel[1] = 0.f;
 			}
-			else if (m_vel[1] <= 0.f)
+			else if (m_vel[1] <= 0.f && characterData->hasTrait(kPlayerTrait_StickyWalk))
 			{
 				surfaceFriction = FRICTION_GROUNDED;
 
@@ -1851,9 +1880,10 @@ void Player::tick(float dt)
 								3000.f, .3f);
 						}
 
-						if (self->m_isAnimDriven && self->m_anim == kPlayerAnim_AirDash)
+						if (/*self->m_isAnimDriven && */self->m_anim == kPlayerAnim_AirDash && characterData->hasTrait(kPlayerTrait_AirDash))
 						{
 							self->m_spriterState.stopAnim(*characterData->m_spriter);
+							self->clearAnimOverrides();
 						}
 
 						// effects
@@ -2767,7 +2797,8 @@ void Player::cancelAttack()
 {
 	if (m_attack.attacking)
 	{
-		m_attack.attacking = false;
+		m_attack = AttackInfo();
+		//m_attack.attacking = false;
 
 		setAnim(kPlayerAnim_Walk, false, true);
 	}
@@ -3212,6 +3243,7 @@ CharacterData::CharacterData(int characterIndex)
 	, m_weight(1.f)
 	, m_meleeCooldown(0.f)
 	, m_special(kPlayerSpecial_None)
+	, m_traits(0)
 {
 	load(characterIndex);
 }
@@ -3283,6 +3315,24 @@ void CharacterData::load(int characterIndex)
 		special = kPlayerSpecial_AxeThrow;
 
 	m_special = special;
+
+	//
+
+	m_traits = 0;
+
+	const std::string traitsStr = m_props.getString("traits", "");
+
+	if (traitsStr.find(" "))
+		m_traits |= kPlayerTrait_StickyWalk;
+	if (traitsStr.find("double_jump"))
+		m_traits |= kPlayerTrait_DoubleJump;
+	if (traitsStr.find("air_dash"))
+		m_traits |= kPlayerTrait_AirDash;
+}
+
+bool CharacterData::hasTrait(PlayerTrait trait) const
+{
+	return (m_traits & trait) != 0;
 }
 
 //
@@ -3395,3 +3445,5 @@ Color getPlayerColor(int playerIndex)
 }
 
 #undef GAMESIM
+
+//#pragma optimize("", on)

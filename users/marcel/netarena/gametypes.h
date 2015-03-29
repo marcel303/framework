@@ -104,9 +104,13 @@ enum PlayerSpecial
 	kPlayerSpecial_COUNT
 };
 
+extern const char * g_playerSpacialNames[kPlayerSpecial_COUNT];
+
 enum PlayerTrait
 {
-	kPlayerTrait_StickyWalk = 0x1,
+	kPlayerTrait_StickyWalk = 1 << 0,
+	kPlayerTrait_DoubleJump = 1 << 1,
+	kPlayerTrait_AirDash = 1 << 2
 };
 
 enum PlayerEvent
