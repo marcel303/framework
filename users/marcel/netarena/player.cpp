@@ -1321,7 +1321,6 @@ void Player::tick(float dt)
 					// start anim
 
 					setAnim(kPlayerAnim_Walk, true, true);
-					//m_isAnimDriven = true;
 
 					m_attack.collision.min[0] = 0.f;
 					m_attack.collision.max[0] = DOUBLEMELEE_ATTACK_RADIUS;
@@ -2802,6 +2801,7 @@ void Player::respawn()
 		m_isGrounded = false;
 		m_isAttachedToSticky = false;
 		m_isAnimDriven = false;
+		m_enableInAirAnim = true;
 		m_animVelIsAbsolute = false;
 		m_isAirDashCharged = false;
 		m_isInPassthrough = false;
@@ -2830,7 +2830,6 @@ void Player::cancelAttack()
 	if (m_attack.attacking)
 	{
 		m_attack = AttackInfo();
-		//m_attack.attacking = false;
 
 		setAnim(kPlayerAnim_Walk, false, true);
 	}
@@ -2887,6 +2886,7 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 			{
 				setAnim(kPlayerAnim_Die, true, true);
 				m_isAnimDriven = true;
+				m_enableInAirAnim = false;
 
 				m_canRespawn = false;
 
