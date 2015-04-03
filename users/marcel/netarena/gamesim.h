@@ -3,6 +3,7 @@
 #include <list> // annoucements
 #include <string.h> // memset
 #include "arena.h"
+#include "background.h"
 #include "framework.h"
 #include "gamedefs.h"
 #include "gametypes.h"
@@ -660,6 +661,8 @@ public:
 	// serialized
 
 	Arena m_arena;
+
+	Background m_background;
 
 	BulletPool * m_bulletPool;
 
