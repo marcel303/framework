@@ -58,6 +58,7 @@ enum PlayerAnim
 	kPlayerAnim_Idle,
 	kPlayerAnim_InAir,
 	kPlayerAnim_Jump,
+	kPlayerAnim_DoubleJump,
 	kPlayerAnim_WallSlide,
 	kPlayerAnim_Walk,
 	kPlayerAnim_Attack,

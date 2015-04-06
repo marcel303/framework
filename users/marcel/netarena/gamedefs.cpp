@@ -62,6 +62,7 @@ OPTION_DEFINE(int, PLAYER_SPEED_MAX, "Player/Max Speed");
 OPTION_DEFINE(int, PLAYER_JUMP_SPEED, "Player/Jumping/Speed");
 OPTION_DEFINE(int, PLAYER_JUMP_SPEED_FRAMES, "Player/Jumping/Soft Jump Frame Count");
 OPTION_DEFINE(int, PLAYER_JUMP_GRACE_PIXELS, "Player/Jumping/Grace Pixels");
+OPTION_DEFINE(int, PLAYER_DOUBLE_JUMP_SPEED, "Player/Jumping/Double Jump Speed");
 OPTION_DEFINE(int, PLAYER_WALLJUMP_SPEED, "Player/Wall Jump/Speed");
 OPTION_DEFINE(int, PLAYER_WALLJUMP_RECOIL_SPEED, "Player/Wall Jump/Recoil Speed");
 OPTION_DEFINE(float, PLAYER_WALLJUMP_RECOIL_TIME, "Player/Wall Jump/Control Time");

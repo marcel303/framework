@@ -2344,6 +2344,14 @@ void updatePhysics(GameSim & gameSim, Vec2 & pos, Vec2 & vel, float dt, const Co
 						collision = true;
 					}
 				}
+				else
+				{
+					collision = true;
+
+					// todo : contact info for player/actor
+					contactDistance = 0.f;
+					contactNormal.Set(0.f, 0.f);
+				}
 
 				if (collision)
 				{

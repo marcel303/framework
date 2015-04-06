@@ -18,6 +18,23 @@ todo:
 
 ** HIGH PRIORITY **
 
+- add animations:
+	jump - feet
+	fall on ground - feet
+	wallslide - side of char?
+	sword hit sword - point of intersection
+	swordt hit non destruct block - sparks at collission point
+	sword hit destruct block - pop of block + block particles?
+	sword hit character
+	gun hit block
+	gun hit character
+	shield pop
+	dash effect - side
+	dbl jump effect - feet
+	jetpack - smoke from jetpack
+	sword drag - special hitbox on sword tip, collission with tiles
+	gun shoot flash/smoke
+
 - change cling so it checks attack vs attack hitbox, instead of attack vs player hitbox
 
 - add pickup drop on death
@@ -247,6 +264,7 @@ struct PlayerAnimInfo
 	{ "sprite.scml", "Idle" ,      1 },
 	{ "sprite.scml", "InAir" ,     1 },
 	{ "sprite.scml", "Jump" ,      2 },
+	{ "sprite.scml", "AirDash",    2 },
 	{ "sprite.scml", "WallSlide",  3 },
 	{ "sprite.scml", "Walk",       4 },
 	{ "sprite.scml", "Attack",     5 },
@@ -831,6 +849,7 @@ void Player::tick(float dt)
 			{
 			case kPlayerAnim_NULL:
 			case kPlayerAnim_Jump:
+			case kPlayerAnim_DoubleJump:
 			case kPlayerAnim_WallSlide:
 			case kPlayerAnim_Walk:
 				break;
@@ -1434,12 +1453,14 @@ void Player::tick(float dt)
 		{
 			if (playerControl && m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && m_input.wentDown(INPUT_BUTTON_A))
 			{
-				if (isAnimOverrideAllowed(kPlayerAnim_AirDash))
+				if (isAnimOverrideAllowed(kPlayerAnim_DoubleJump))
 				{
 					m_isAirDashCharged = false;
 
-					setAnim(kPlayerAnim_AirDash, true, true); // todo : separate anim?
+					setAnim(kPlayerAnim_DoubleJump, true, true);
 					m_enableInAirAnim = false;
+
+					m_vel[1] = -PLAYER_DOUBLE_JUMP_SPEED;
 				}
 			}
 		}
@@ -3387,11 +3408,11 @@ void CharacterData::load(int characterIndex)
 
 	const std::string traitsStr = m_props.getString("traits", "");
 
-	if (traitsStr.find(" "))
+	if (traitsStr.find(" ") != std::string::npos)
 		m_traits |= kPlayerTrait_StickyWalk;
-	if (traitsStr.find("double_jump"))
+	if (traitsStr.find("double_jump") != std::string::npos)
 		m_traits |= kPlayerTrait_DoubleJump;
-	if (traitsStr.find("air_dash"))
+	if (traitsStr.find("air_dash") != std::string::npos)
 		m_traits |= kPlayerTrait_AirDash;
 }
 
