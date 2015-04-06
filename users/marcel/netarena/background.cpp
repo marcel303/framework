@@ -1,63 +1,38 @@
 #include "background.h"
-
-
-#include "main.h"
 #include "framework.h"
+#include "gamesim.h"
+#include "main.h"
 
-Background::Background() : m_spriter(0), m_state(0)
-{
-}
-
-Background::~Background()
-{
-	clear();
-}
-
-void Background::clear()
-{
-	if (m_spriter)
-		delete m_spriter;
-	if (m_state)
-		delete m_state;
-
-}
-
-void Background::reset()
-{
-	m_state->startAnim(*m_spriter, "Idle");
-}
+#define BACKGROUND_SPRITER Spriter(m_name.c_str())
 
 void Background::load(const char * name)
 {
-	clear();
+	memset(this, 0, sizeof(Background));
 
-	m_spriter = new Spriter(name);
-	m_state = new SpriterState();
-	m_state->startAnim(*m_spriter, "Idle");
-
+	m_name = name;
+	m_state = SpriterState();
+	m_state.startAnim(BACKGROUND_SPRITER, "Idle");
 }
 
-float t = 0.f;
-void Background::tick(GameSim & gameSim)
+void Background::tick(GameSim & gameSim, float dt)
 {
-	if (t > 20.f)
+	if (!m_isTriggered && gameSim.m_roundTime >= 20.f)
 	{
 		doEvent();
-		t = 0.f;
 	}
 
-	if (m_state->updateAnim(*m_spriter, 1.f / 60.f))
-		m_state->startAnim(*m_spriter, "Idle");
-
-	t += 1.f / 60.f;
+	if (m_state.updateAnim(BACKGROUND_SPRITER, dt))
+		m_state.startAnim(BACKGROUND_SPRITER, "Idle");
 }
 
 void Background::draw()
 {
-	m_spriter->draw(*m_state);
+	BACKGROUND_SPRITER.draw(m_state);
 }
 
 void Background::doEvent()
 {
-	m_state->startAnim(*m_spriter, "Erupt");
+	m_state.startAnim(BACKGROUND_SPRITER, "Erupt");
+
+	m_isTriggered = true;
 }
