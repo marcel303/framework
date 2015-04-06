@@ -1826,13 +1826,18 @@ SpriterState::SpriterState()
 	animSpeed = 1.f;
 }
 
-bool SpriterState::startAnim(const Spriter & spriter, const char * name)
+bool SpriterState::startAnim(const Spriter & spriter, int index)
 {
 	animIsActive = true;
-	animIndex = spriter.getAnimIndexByName(name);
+	animIndex = index;
 	animTime = 0.f;
 
 	return animIndex >= 0;
+}
+
+bool SpriterState::startAnim(const Spriter & spriter, const char * name)
+{
+	return startAnim(spriter, spriter.getAnimIndexByName(name));
 }
 
 void SpriterState::stopAnim(const Spriter & spriter)
@@ -1925,6 +1930,13 @@ void Spriter::draw(const SpriterState & state)
 	setColor(oldColor);
 
 	gxPopMatrix();
+}
+
+int Spriter::getAnimCount() const
+{
+	if (m_spriter->m_scene->m_entities.empty())
+		return 0;
+	return (int)m_spriter->m_scene->m_entities[0]->m_animations.size();
 }
 
 int Spriter::getAnimIndexByName(const char * name) const

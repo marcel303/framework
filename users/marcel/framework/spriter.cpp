@@ -814,8 +814,8 @@ namespace spriter
 
 						file.width = intAttrib(xmlFile, "width", 0);
 						file.height = intAttrib(xmlFile, "height", 0);
-						file.pivotX = intAttrib(xmlFile, "pivot_x", 0);
-						file.pivotY = intAttrib(xmlFile, "pivot_y", 0);
+						file.pivotX = floatAttrib(xmlFile, "pivot_x", 0.f);
+						file.pivotY = floatAttrib(xmlFile, "pivot_y", 1.f);
 
 						FolderAndFile ff;
 						ff.first = folderIndex;
