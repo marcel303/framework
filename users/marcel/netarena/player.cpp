@@ -1451,7 +1451,7 @@ void Player::tick(float dt)
 		}
 		else if (characterData->hasTrait(kPlayerTrait_DoubleJump))
 		{
-			if (playerControl && m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && m_input.wentDown(INPUT_BUTTON_A))
+			if (playerControl && m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && !m_isWallSliding && m_input.wentDown(INPUT_BUTTON_A))
 			{
 				if (isAnimOverrideAllowed(kPlayerAnim_DoubleJump))
 				{
@@ -2649,7 +2649,7 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 		Sprite("bubble-bubble.png").drawEx(px, py);
 	}
 
-	if (g_devMode && m_anim == kPlayerAnim_Attack || m_anim == kPlayerAnim_AttackUp || m_anim == kPlayerAnim_AttackDown)
+	if (g_devMode && (m_anim == kPlayerAnim_Attack || m_anim == kPlayerAnim_AttackUp || m_anim == kPlayerAnim_AttackDown))
 	{
 		CollisionShape attackCollision;
 		if (getAttackCollision(attackCollision))
