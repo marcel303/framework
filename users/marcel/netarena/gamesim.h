@@ -551,6 +551,17 @@ struct FloorEffect
 	void trySpawnAt(GameSim & gameSim, int playerId, int x, int y, int dx, int size, int damageSize);
 };
 
+struct AnimationFxState
+{
+	bool m_isActive;
+	FixedString<32> m_fileName;
+	FixedString<16> m_animName;
+	SpriterState m_state;
+
+	void tick(float dt);
+	void draw();
+};
+
 //
 
 struct GameStateData
@@ -612,6 +623,8 @@ struct GameStateData
 	FloorEffect m_floorEffect;
 
 	Torch m_torches[MAX_TORCHES];
+
+	AnimationFxState m_animationEffects[MAX_ANIM_EFFECTS];
 
 	// level events
 
@@ -743,6 +756,8 @@ public:
 	Vec2 getScreenShake() const;
 
 	void addFloorEffect(int playerId, int x, int y, int size, int damageSize);
+
+	void addAnimationFx(const char * fileName, const char * animName, int x, int y);
 
 	void addAnnouncement(const char * message, ...);
 };

@@ -464,6 +464,7 @@ void PipeBomb::tick(GameSim & gameSim, float dt)
 
 		return false;
 	};
+
 	PhysicsActor::tick(gameSim, dt, cbs);
 
 	if (m_exploded)
@@ -737,6 +738,27 @@ void FloorEffect::trySpawnAt(GameSim & gameSim, int playerId, int x, int y, int 
 				break;
 			}
 		}
+	}
+}
+
+//
+
+void AnimationFxState::tick(float dt)
+{
+	if (m_isActive)
+	{
+		if (m_state.updateAnim(Spriter(m_fileName.c_str()), dt))
+		{
+			memset(this, 0, sizeof(AnimationFxState));
+		}
+	}
+}
+
+void AnimationFxState::draw()
+{
+	if (m_isActive)
+	{
+		Spriter(m_fileName.c_str()).draw(m_state);
 	}
 }
 
@@ -1734,6 +1756,13 @@ void GameSim::tickPlay()
 			m_torches[i].tick(*this, dt);
 	}
 
+	// animation effects
+
+	for (int i = 0; i < MAX_ANIM_EFFECTS; ++i)
+	{
+		m_animationEffects[i].tick(dt);
+	}
+
 	anim(dt);
 
 	m_bulletPool->tick(*this, dt);
@@ -2266,6 +2295,25 @@ void GameSim::addFloorEffect(int playerId, int x, int y, int size, int damageSiz
 {
 	m_floorEffect.trySpawnAt(*this, playerId, x, y, -BLOCK_SX, size, damageSize);
 	m_floorEffect.trySpawnAt(*this, playerId, x, y, +BLOCK_SX, size, damageSize);
+}
+
+void GameSim::addAnimationFx(const char * fileName, const char * animName, int x, int y)
+{
+	for (int i = 0; i < MAX_ANIM_EFFECTS; ++i)
+	{
+		if (!m_animationEffects[i].m_isActive)
+		{
+			m_animationEffects[i] = AnimationFxState();
+			m_animationEffects[i].m_isActive = true;
+			m_animationEffects[i].m_fileName = fileName;
+			m_animationEffects[i].m_animName = animName;
+			m_animationEffects[i].m_state.x = x;
+			m_animationEffects[i].m_state.y = y;
+			m_animationEffects[i].m_state.startAnim(Spriter(fileName), animName);
+
+			break;
+		}
+	}
 }
 
 void GameSim::addAnnouncement(const char * message, ...)

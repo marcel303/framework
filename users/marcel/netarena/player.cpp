@@ -19,8 +19,8 @@ todo:
 ** HIGH PRIORITY **
 
 - add animations:
-	jump - feet
-	fall on ground - feet
+	+ jump - feet
+	+ fall on ground - feet
 	wallslide - side of char?
 	sword hit sword - point of intersection
 	swordt hit non destruct block - sparks at collission point
@@ -28,14 +28,14 @@ todo:
 	sword hit character
 	gun hit block
 	gun hit character
-	shield pop
+	+ shield pop
 	dash effect - side
 	dbl jump effect - feet
 	jetpack - smoke from jetpack
 	sword drag - special hitbox on sword tip, collission with tiles
 	gun shoot flash/smoke
 
-- change cling so it checks attack vs attack hitbox, instead of attack vs player hitbox
++ change cling so it checks attack vs attack hitbox, instead of attack vs player hitbox
 
 - add pickup drop on death
 
@@ -1010,7 +1010,7 @@ void Player::tick(float dt)
 
 						if (cancelled == false)
 						{
-							const float damage = getAttackDamage(&other);;
+							const float damage = getAttackDamage(&other);
 
 							if (damage != 0.f)
 							{
@@ -1730,6 +1730,7 @@ void Player::tick(float dt)
 				args.setPtr("obj", m_instanceData);
 				args.setString("name", "jump_sounds");
 				m_instanceData->handleAnimationAction("char_soundbag", args);
+				GAMESIM->addAnimationFx("fx/Dust.scml", "JumpFromGround", m_pos[0], m_pos[1]); // player jumps
 			}
 		}
 
@@ -2051,20 +2052,20 @@ void Player::tick(float dt)
 		else
 			surfaceFriction = FRICTION_GROUNDED;
 
-		// spring
-
-		if ((dirBlockMask[1] & (1 << kBlockType_Spring)) && totalVel[1] >= 0.f)
-		{
-			m_vel[1] = -BLOCKTYPE_SPRING_SPEED;
-
-			GAMESIM->playSound("player-spring-jump.ogg"); // player walks over and activates a jump pad 
-		}
-
-		// effects
-
 		for (int i = 0; i < 2; ++i)
 		{
-			if (m_ice.timer != 0.f && (dirBlockMask[i] & kBlockMask_Solid))
+			// spring
+
+			if (i == 1 && (dirBlockMask[i] & (1 << kBlockType_Spring)) && totalVel[i] >= 0.f)
+			{
+				m_vel[i] = -BLOCKTYPE_SPRING_SPEED;
+
+				GAMESIM->playSound("player-spring-jump.ogg"); // player walks over and activates a jump pad
+			}
+
+			// effects
+
+			else if (m_ice.timer != 0.f && (dirBlockMask[i] & kBlockMask_Solid))
 			{
 				m_vel[i] *= -.5f;
 			}
@@ -2316,6 +2317,7 @@ void Player::tick(float dt)
 				m_isGrounded = true;
 
 				GAMESIM->playSound(makeCharacterFilename(m_characterIndex, "land_on_ground.ogg"), 50); // players lands on solid ground
+				GAMESIM->addAnimationFx("fx/Dust.scml", "LandOnGround", m_pos[0], m_pos[1]); // players lands on solid ground
 			}
 		}
 		else
@@ -2895,7 +2897,10 @@ bool Player::shieldAbsorb(float amount)
 		m_shield.shield--;
 
 		if (m_shield.shield == 0)
+		{
 			GAMESIM->playSound("shield-pop.ogg");
+			GAMESIM->addAnimationFx("fx/shield.scml", "Pop", m_pos[0], m_pos[1]); // player shield is popped
+		}
 
 		return true;
 	}

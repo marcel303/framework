@@ -55,6 +55,7 @@
 #define MAX_PIPEBOMBS 10
 #define MAX_BARRELS 10
 #define MAX_FLOOR_EFFECT_TILES 20
+#define MAX_ANIM_EFFECTS 20
 
 // -- prototypes --
 OPTION_DECLARE(bool, PROTO_TIMEDILATION_ON_KILL, true);
