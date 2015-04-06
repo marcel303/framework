@@ -634,6 +634,10 @@ struct GameStateData
 
 	float m_timeUntilNextLevelEvent;
 
+	// background
+
+	Background m_background;
+
 	// support for game modes
 
 	struct TokenHunt
@@ -661,8 +665,6 @@ public:
 	// serialized
 
 	Arena m_arena;
-
-	Background m_background;
 
 	BulletPool * m_bulletPool;
 

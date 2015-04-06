@@ -985,9 +985,6 @@ void GameSim::newGame()
 
 void GameSim::newRound(const char * mapOverride)
 {
-	// reset background
-	m_background.load("backgrounds/VolcanoTest/background.scml");
-
 	// load arena
 
 	std::string map;
@@ -1034,6 +1031,7 @@ void GameSim::load(const char * name)
 	m_arena.load(name);
 
 	//load background
+
 	m_background.load("backgrounds/VolcanoTest/background.scml");
 
 	// load objects
@@ -1425,8 +1423,9 @@ void GameSim::tickPlay()
 
 	m_arena.tick(*this);
 
-	// background update;
-	m_background.tick(*this); //not time dilation effected, for now at least
+	// background update
+
+	m_background.tick(*this, dt);
 
 	// player update
 
