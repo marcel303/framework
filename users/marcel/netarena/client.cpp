@@ -459,9 +459,12 @@ void Client::drawPlay()
 		// todo : background depends on level properties
 
 		setBlend(BLEND_OPAQUE);
-		std::string background = std::string("levels/") + m_gameSim->m_arena.m_name.c_str() + "/Background.png";
-		Sprite(background.c_str()).draw();
+		//std::string background = std::string("levels/") + m_gameSim->m_arena.m_name.c_str() + "/Background.png";
+		//Sprite(background.c_str()).draw();
+		m_gameSim->m_background.draw();
 		setBlend(BLEND_ALPHA);
+
+		
 
 		if (m_gameSim->m_levelEvents.gravityWell.endTimer.isActive())
 		{
