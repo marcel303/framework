@@ -19,17 +19,10 @@ todo:
 ** HIGH PRIORITY **
 
 - change cling so it checks attack vs attack hitbox, instead of attack vs player hitbox
-+ make player collision sizes character dependent
 
 - add pickup drop on death
 
 - slow down player vertically when hitting block. maybe add small upward speed?
-
-+ scale pickups with # players
-+ make player impact response character specific (add 'weight')
-+ make melee cooldown time character specific
-
-- fix player not moving on death
 
 - add curve editing through options
 
@@ -39,8 +32,6 @@ todo:
 
 - axe guy
 	- can throw axe away, has to pick it up again
-
-- fix up/down/dash animations
 
 - prototype pipe bomb
 	- 1 throw/1 explode
@@ -69,7 +60,7 @@ todo:
 
 - prototype gravity well teleport
 
-- add pickup art
++ add pickup art
 - add path for special
 - prototype grappling hook
 
@@ -134,6 +125,12 @@ todo:
 
 ** DONE **
 
++ make player collision sizes character dependent
++ scale pickups with # players
++ make player impact response character specific (add 'weight')
++ make melee cooldown time character specific
++ fix player not moving on death
++ fix up/down/dash animations
 + add HOME/END support to text field
 + zweihander sword guy
 	+ slow attack
@@ -980,41 +977,60 @@ void Player::tick(float dt)
 
 					if (other.m_isUsed && other.m_isAlive && &other != this)
 					{
-						float damage[2];
-						damage[0] = getAttackDamage(&other);
-						damage[1] = other.getAttackDamage(this);
+						bool cancelled = false;
+						bool absorbed = false;
 
-						if (damage[0] != 0.f)
+						CollisionShape shape1;
+						CollisionShape shape2;
+
+						if (getAttackCollision(shape1) && other.getAttackCollision(shape2))
 						{
-							if (damage[1] != 0.f || !other.handleDamage(damage[0], Vec2(m_facing[0] * PLAYER_SWORD_PUSH_SPEED, 0.f), this))
+							if (shape1.intersects(shape2))
+								cancelled = true;
+						}
+
+						if (cancelled == false)
+						{
+							const float damage = getAttackDamage(&other);;
+
+							if (damage != 0.f)
 							{
-								//log("-> attack cancel");
-
-								Player * players[2] = { this, &other };
-
-								const Vec2 midPoint = (players[0]->m_pos + players[1]->m_pos) / 2.f;
-
-								for (int j = 0; j < 2; ++j)
+								if (!other.handleDamage(damage, Vec2(m_facing[0] * PLAYER_SWORD_PUSH_SPEED, 0.f), this))
 								{
-									const Vec2 delta = midPoint - players[j]->m_pos;
-									const Vec2 normal = delta.CalcNormalized();
-									const Vec2 attackDirection = Vec2(players[j]->m_attackDirection[0], players[j]->m_attackDirection[1]).CalcNormalized();
-									const float dot = attackDirection * normal;
-									const Vec2 reflect = attackDirection - normal * dot * 2.f;
+									absorbed = true;
+								}
+							}
+						}
 
-									if (damage[j])
-									{
-										players[j]->m_vel = reflect * PLAYER_SWORD_CLING_SPEED / characterData->m_weight;
-										players[j]->m_controlDisableTime = PLAYER_SWORD_CLING_TIME;
-									}
+						if (cancelled || absorbed)
+						{
+							//log("-> attack cancel");
 
-									players[j]->cancelAttack();
+							Player * players[2] = { this, &other };
+
+							const Vec2 midPoint = (players[0]->m_pos + players[1]->m_pos) / 2.f;
+
+							for (int j = 0; j < 2; ++j)
+							{
+								const Vec2 delta = midPoint - players[j]->m_pos;
+								const Vec2 normal = delta.CalcNormalized();
+								const Vec2 attackDirection = Vec2(players[j]->m_attackDirection[0], players[j]->m_attackDirection[1]).CalcNormalized();
+								const float dot = attackDirection * normal;
+								const Vec2 reflect = attackDirection - normal * dot * 2.f;
+
+								if (j == 1 || cancelled)
+								//if (true)
+								{
+									players[j]->m_vel = reflect * PLAYER_SWORD_CLING_SPEED / characterData->m_weight;
+									players[j]->m_controlDisableTime = PLAYER_SWORD_CLING_TIME;
 								}
 
-								if (damage[0] && damage[1])
-								{
-									GAMESIM->playSound("melee-cancel.ogg"); // sound when two melee attacks hit at the same time
-								}
+								players[j]->cancelAttack();
+							}
+
+							if (cancelled)
+							{
+								GAMESIM->playSound("melee-cancel.ogg"); // sound when two melee attacks hit at the same time
 							}
 						}
 					}

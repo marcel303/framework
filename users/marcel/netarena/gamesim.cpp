@@ -1022,13 +1022,13 @@ void GameSim::endRound()
 	m_roundCompleteTimeDilationTicks = TICKS_PER_SECOND * GAMESTATE_COMPLETE_TIME_DILATION_TIMER;
 }
 
-void GameSim::load(const char * filename)
+void GameSim::load(const char * name)
 {
 	resetGameWorld();
 
 	// load arena
 
-	m_arena.load(filename);
+	m_arena.load(name);
 
 	// load objects
 
@@ -1038,14 +1038,15 @@ void GameSim::load(const char * filename)
 	{ Mover & mover = m_movers[2]; mover.setup(400, 50, GFX_SX*1/4, GFX_SY/2+200, GFX_SX*3/4, GFX_SY/2+100, 121); }
 #endif
 
-	std::string baseName = Path::GetBaseName(filename);
+	const std::string baseName = std::string("levels/") + name + "/";
+	const std::string objFilename = baseName + "Obj.txt";
 
-	std::string objectsFilename = baseName + "-objects.txt";
+	//std::string objectsFilename = baseName + "-objects.txt";
 
 	try
 	{
 		FileStream stream;
-		stream.Open(objectsFilename.c_str(), (OpenMode)(OpenMode_Read | OpenMode_Text));
+		stream.Open(objFilename.c_str(), (OpenMode)(OpenMode_Read | OpenMode_Text));
 		StreamReader reader(&stream, false);
 		std::vector<std::string> lines = reader.ReadAllLines();
 

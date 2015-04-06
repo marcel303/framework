@@ -700,7 +700,7 @@ public:
 	void newRound(const char * mapOverride);
 	void endRound();
 
-	void load(const char * filename);
+	void load(const char * name);
 	void resetGameWorld();
 	void resetPlayers();
 	void resetGameSim();
