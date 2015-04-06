@@ -1902,7 +1902,7 @@ void Spriter::draw(const SpriterState & state)
 		sprite.y = d.y;
 		sprite.angle = d.angle;
 		sprite.separateScale = true;
-		sprite.scaleX = d.scaleX ;
+		sprite.scaleX = d.scaleX;
 		sprite.scaleY = d.scaleY;
 		sprite.pixelpos = false;
 		sprite.filter = FILTER_LINEAR;
