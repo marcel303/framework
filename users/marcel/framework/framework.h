@@ -489,6 +489,7 @@ struct SpriterState
 	float animSpeed;
 
 	bool startAnim(const Spriter & spriter, const char * name);
+	bool startAnim(const Spriter & spriter, int index);
 	void stopAnim(const Spriter & spriter);
 	bool updateAnim(const Spriter & spriter, float dt);
 };
@@ -502,6 +503,7 @@ public:
 
 	void draw(const SpriterState & state);
 
+	int getAnimCount() const;
 	int getAnimIndexByName(const char * name) const;
 	float getAnimLength(int animIndex) const;
 	bool isAnimDoneAtTime(int animIndex, float time) const;
@@ -786,6 +788,7 @@ void gxSetTexture(GLuint texture);
 // utility
 
 void changeDirectory(const char * path);
+std::vector<std::string> listFiles(const char * path, bool recurse);
 
 // math
 

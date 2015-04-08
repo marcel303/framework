@@ -535,6 +535,13 @@ void Client::drawPlay()
 
 		m_gameSim->m_bulletPool->draw();
 
+		// animation effects
+
+		for (int i = 0; i < MAX_ANIM_EFFECTS; ++i)
+		{
+			m_gameSim->m_animationEffects[i].draw();
+		}
+
 		// particles
 
 		setBlend(BLEND_ADD);

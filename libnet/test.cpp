@@ -1,6 +1,6 @@
 #include <exception>
 #include <map>
-#include <SDL/SDL.h>
+#include <SDL2/SDL.h>
 #include "BitStream.h"
 #include "BinaryDiff.h"
 #include "ChannelHandler.h"

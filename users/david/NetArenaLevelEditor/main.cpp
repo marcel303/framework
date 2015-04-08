@@ -706,8 +706,6 @@ void displayPreview(int x, int y)
 	EditorTemplate* ct = templateScene->GetCurrentTemplate();
 	if(ct && placeTemplate)
 	{
-		qDebug() << x << " " << y;
-
 		foreach(EditorTemplate::TemplateTile* tt, ct->m_list)
 		{
 			previewList.push_back(ed.GetSceneMech()->addPixmap(*tt->GetPixmap()));

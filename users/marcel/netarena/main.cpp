@@ -19,6 +19,7 @@
 #include "NetProtocols.h"
 #include "OptionMenu.h"
 #include "PacketDispatcher.h"
+#include "Path.h"
 #include "player.h"
 #include "RpcManager.h"
 #include "StatTimerMenu.h"
@@ -98,6 +99,15 @@ int g_keyboardLock = 0;
 Surface * g_colorMap = 0;
 Surface * g_lightMap = 0;
 Surface * g_finalMap = 0;
+
+//
+
+static void animationTestInit();
+static bool animationTestIsActive();
+static void animationTestToggleIsActive();
+static void animationTestChangeAnim(int direction, int x, int y);
+static void animationTestTick(float dt);
+static void animationTestDraw();
 
 //
 
@@ -1022,6 +1032,10 @@ bool App::init()
 
 		//
 
+		animationTestInit();
+
+		//
+
 		m_optionMenu = new OptionMenu();
 		m_optionMenuIsOpen = false;
 
@@ -1383,6 +1397,10 @@ bool App::tick()
 	// debug
 
 #if 1
+	static bool testAnimationMode = false;
+	if (keyboard.wentDown(SDLK_1))
+		animationTestToggleIsActive();
+
 	if (keyboard.wentDown(SDLK_F1))
 	{
 		std::vector<Client*> clients = m_clients;
@@ -1440,6 +1458,8 @@ bool App::tick()
 	{
 		netDebugAction("loadOptions", "options.txt");
 	}
+
+	animationTestTick(dt);
 #endif
 
 #if GG_ENABLE_TIMERS
@@ -1546,6 +1566,12 @@ void App::draw()
 			setFont("calibri.ttf");
 			drawText(GFX_SX/2, 12, 30, 0.f, 0.f, "DESYNC");
 		}
+
+		//
+
+		animationTestDraw();
+
+		//
 
 		if (m_optionMenuIsOpen)
 		{
@@ -1938,6 +1964,102 @@ void App::freeControllerIndex(int index)
 int App::getControllerAllocationCount() const
 {
 	return (MAX_GAMEPAD + 1) - m_freeControllerList.size();
+}
+
+// spriter animation tests
+
+static bool s_animationTestIsActive = false;
+static SpriterState s_animationTestState;
+static Spriter * s_animationTestSprite = 0;
+
+static void animationTestInit()
+{
+	auto files = listFiles("testAnimations", true);
+
+	for (auto file : files)
+	{
+		if (file.find(".scml") == std::string::npos || file.find("autosave") != std::string::npos)
+			continue;
+
+		std::string * path = new std::string(file);
+		std::string * optionPath = new std::string("Artist Tools/Animation Test/Load '" + Path::GetBaseName(file) + "'");
+
+		g_optionManager.AddCommandOption(optionPath->c_str(),
+			[](void * param)
+			{
+				std::string * path = (std::string*)param;
+				s_animationTestState = SpriterState();
+				delete s_animationTestSprite;
+				s_animationTestSprite = new Spriter(path->c_str());
+
+				if (!animationTestIsActive())
+					animationTestToggleIsActive();
+			},
+			path);
+	}
+}
+
+static bool animationTestIsActive()
+{
+	return s_animationTestIsActive;
+}
+
+static void animationTestToggleIsActive()
+{
+	s_animationTestIsActive = !s_animationTestIsActive;
+}
+
+static void animationTestChangeAnim(int direction, int x, int y)
+{
+	if (s_animationTestIsActive && s_animationTestSprite)
+	{
+		const int animCount = s_animationTestSprite->getAnimCount();
+
+		if (animCount != 0)
+		{
+			int index = 0;
+			if (s_animationTestState.animIndex >= 0)
+				index = (s_animationTestState.animIndex + direction + animCount) % animCount;
+			s_animationTestState.startAnim(*s_animationTestSprite, index);
+			s_animationTestState.x = x;
+			s_animationTestState.y = y;
+		}
+		else
+		{
+			s_animationTestState.stopAnim(*s_animationTestSprite);
+		}
+	}
+}
+
+static void animationTestTick(float dt)
+{
+	if (s_animationTestIsActive)
+	{
+		if (mouse.wentDown(BUTTON_LEFT))
+			animationTestChangeAnim(0, mouse.x, mouse.y);
+		if (mouse.wentDown(BUTTON_RIGHT))
+			animationTestChangeAnim(keyboard.isDown(SDLK_LSHIFT) ? -1 : +1, mouse.x, mouse.y);
+
+		if (s_animationTestSprite)
+			s_animationTestState.updateAnim(*s_animationTestSprite, dt);
+	}
+}
+
+static void animationTestDraw()
+{
+	if (s_animationTestIsActive)
+	{
+		setColor(colorGreen);
+		drawRect(0, 0, GFX_SX, 40);
+
+		setColor(colorBlack);
+		setFont("calibri.ttf");
+		drawText(GFX_SX/2, 20, 24, 0.f, 0.f, "Animation Test (Toggle Using '1')");
+
+		setColor(colorWhite);
+		if (s_animationTestSprite)
+			s_animationTestSprite->draw(s_animationTestState);
+	}
 }
 
 //

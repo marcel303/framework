@@ -37,7 +37,6 @@ void HandleAssert(const char * func, int line, const char * expr, ...)
 
 #endif
 
-
 //
 
 static LogCtx g_Log("dbg");

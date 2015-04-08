@@ -18,7 +18,24 @@ todo:
 
 ** HIGH PRIORITY **
 
-- change cling so it checks attack vs attack hitbox, instead of attack vs player hitbox
+- add animations:
+	+ jump - feet
+	+ fall on ground - feet
+	wallslide - side of char?
+	sword hit sword - point of intersection
+	swordt hit non destruct block - sparks at collission point
+	sword hit destruct block - pop of block + block particles?
+	sword hit character
+	gun hit block
+	gun hit character
+	+ shield pop
+	dash effect - side
+	dbl jump effect - feet
+	jetpack - smoke from jetpack
+	sword drag - special hitbox on sword tip, collission with tiles
+	gun shoot flash/smoke
+
++ change cling so it checks attack vs attack hitbox, instead of attack vs player hitbox
 
 - add pickup drop on death
 
@@ -247,6 +264,7 @@ struct PlayerAnimInfo
 	{ "sprite.scml", "Idle" ,      1 },
 	{ "sprite.scml", "InAir" ,     1 },
 	{ "sprite.scml", "Jump" ,      2 },
+	{ "sprite.scml", "AirDash",    2 },
 	{ "sprite.scml", "WallSlide",  3 },
 	{ "sprite.scml", "Walk",       4 },
 	{ "sprite.scml", "Attack",     5 },
@@ -831,6 +849,7 @@ void Player::tick(float dt)
 			{
 			case kPlayerAnim_NULL:
 			case kPlayerAnim_Jump:
+			case kPlayerAnim_DoubleJump:
 			case kPlayerAnim_WallSlide:
 			case kPlayerAnim_Walk:
 				break;
@@ -991,7 +1010,7 @@ void Player::tick(float dt)
 
 						if (cancelled == false)
 						{
-							const float damage = getAttackDamage(&other);;
+							const float damage = getAttackDamage(&other);
 
 							if (damage != 0.f)
 							{
@@ -1432,14 +1451,16 @@ void Player::tick(float dt)
 		}
 		else if (characterData->hasTrait(kPlayerTrait_DoubleJump))
 		{
-			if (playerControl && m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && m_input.wentDown(INPUT_BUTTON_A))
+			if (playerControl && m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && !m_isWallSliding && m_input.wentDown(INPUT_BUTTON_A))
 			{
-				if (isAnimOverrideAllowed(kPlayerAnim_AirDash))
+				if (isAnimOverrideAllowed(kPlayerAnim_DoubleJump))
 				{
 					m_isAirDashCharged = false;
 
-					setAnim(kPlayerAnim_AirDash, true, true); // todo : separate anim?
+					setAnim(kPlayerAnim_DoubleJump, true, true);
 					m_enableInAirAnim = false;
+
+					m_vel[1] = -PLAYER_DOUBLE_JUMP_SPEED;
 				}
 			}
 		}
@@ -1709,6 +1730,7 @@ void Player::tick(float dt)
 				args.setPtr("obj", m_instanceData);
 				args.setString("name", "jump_sounds");
 				m_instanceData->handleAnimationAction("char_soundbag", args);
+				GAMESIM->addAnimationFx("fx/Dust.scml", "JumpFromGround", m_pos[0], m_pos[1]); // player jumps
 			}
 		}
 
@@ -2030,20 +2052,20 @@ void Player::tick(float dt)
 		else
 			surfaceFriction = FRICTION_GROUNDED;
 
-		// spring
-
-		if ((dirBlockMask[1] & (1 << kBlockType_Spring)) && totalVel[1] >= 0.f)
-		{
-			m_vel[1] = -BLOCKTYPE_SPRING_SPEED;
-
-			GAMESIM->playSound("player-spring-jump.ogg"); // player walks over and activates a jump pad 
-		}
-
-		// effects
-
 		for (int i = 0; i < 2; ++i)
 		{
-			if (m_ice.timer != 0.f && (dirBlockMask[i] & kBlockMask_Solid))
+			// spring
+
+			if (i == 1 && (dirBlockMask[i] & (1 << kBlockType_Spring)) && totalVel[i] >= 0.f)
+			{
+				m_vel[i] = -BLOCKTYPE_SPRING_SPEED;
+
+				GAMESIM->playSound("player-spring-jump.ogg"); // player walks over and activates a jump pad
+			}
+
+			// effects
+
+			else if (m_ice.timer != 0.f && (dirBlockMask[i] & kBlockMask_Solid))
 			{
 				m_vel[i] *= -.5f;
 			}
@@ -2295,6 +2317,7 @@ void Player::tick(float dt)
 				m_isGrounded = true;
 
 				GAMESIM->playSound(makeCharacterFilename(m_characterIndex, "land_on_ground.ogg"), 50); // players lands on solid ground
+				GAMESIM->addAnimationFx("fx/Dust.scml", "LandOnGround", m_pos[0], m_pos[1]); // players lands on solid ground
 			}
 		}
 		else
@@ -2628,7 +2651,7 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 		Sprite("bubble-bubble.png").drawEx(px, py);
 	}
 
-	if (g_devMode && m_anim == kPlayerAnim_Attack || m_anim == kPlayerAnim_AttackUp || m_anim == kPlayerAnim_AttackDown)
+	if (g_devMode && (m_anim == kPlayerAnim_Attack || m_anim == kPlayerAnim_AttackUp || m_anim == kPlayerAnim_AttackDown))
 	{
 		CollisionShape attackCollision;
 		if (getAttackCollision(attackCollision))
@@ -2874,7 +2897,10 @@ bool Player::shieldAbsorb(float amount)
 		m_shield.shield--;
 
 		if (m_shield.shield == 0)
+		{
 			GAMESIM->playSound("shield-pop.ogg");
+			GAMESIM->addAnimationFx("fx/shield.scml", "Pop", m_pos[0], m_pos[1]); // player shield is popped
+		}
 
 		return true;
 	}
@@ -3387,11 +3413,11 @@ void CharacterData::load(int characterIndex)
 
 	const std::string traitsStr = m_props.getString("traits", "");
 
-	if (traitsStr.find(" "))
+	if (traitsStr.find(" ") != std::string::npos)
 		m_traits |= kPlayerTrait_StickyWalk;
-	if (traitsStr.find("double_jump"))
+	if (traitsStr.find("double_jump") != std::string::npos)
 		m_traits |= kPlayerTrait_DoubleJump;
-	if (traitsStr.find("air_dash"))
+	if (traitsStr.find("air_dash") != std::string::npos)
 		m_traits |= kPlayerTrait_AirDash;
 }
 
