@@ -264,6 +264,9 @@ void EditorView::ImportTemplate(QString filename)
 		t->LoadTemplate(GetPath() + f + ".tmpl");
 
 		templateScene->AddTemplate(t);
+
+		SetOpacityArt(99);
+		SetOpacityArt(100);
 	}
 	else
 		delete t;

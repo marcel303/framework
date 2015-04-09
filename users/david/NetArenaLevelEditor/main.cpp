@@ -691,10 +691,38 @@ void Tile::SetSelectedBlock(short block)
 		qDebug() << "trying to set tile to nonexistant block";
 }
 
+QList<QGraphicsItem*> previewList;
+void displayPreview(int x, int y)
+{
+	if(!previewList.empty())
+	{
+		foreach(QGraphicsItem* i, previewList)
+		{
+			ed.GetSceneMech()->removeItem(i);
+		}
+		previewList.clear();
+	}
+
+	EditorTemplate* ct = templateScene->GetCurrentTemplate();
+	if(ct && placeTemplate)
+	{
+		foreach(EditorTemplate::TemplateTile* tt, ct->m_list)
+		{
+			previewList.push_back(ed.GetSceneMech()->addPixmap(*tt->GetPixmap()));
+			previewList.back()->setPos(x + tt->x*BLOCKSIZE, y + tt->y * BLOCKSIZE);
+			previewList.back()->setOpacity(0.4);
+		}
+	}
+}
+
+#include <QGraphicsItem>
 void Tile::hoverEnterEvent ( QGraphicsSceneHoverEvent * e )
 {
     if(leftbuttonHeld)
             SetSelectedBlock(selectedTile);
+	else
+		displayPreview(pos().x(), pos().y());
+
 
     e->accept();
 }
