@@ -359,6 +359,14 @@ void EditorViewBasic::keyPressEvent(QKeyEvent *e)
 		e->accept();
 	}
 
+    if(e->key() == Qt::Key_A)
+        if(templateScene->GetCurrentFolder())
+            templateScene->GetCurrentFolder()->SelectPreviousTemplate();
+
+    if(e->key() == Qt::Key_D)
+        if(templateScene->GetCurrentFolder())
+            templateScene->GetCurrentFolder()->SelectNextTemplate();
+
 	if(0 )//e->key() == Qt::Key_Y)
 	{
 		if(!ed.undoStack.empty() && editorMode == EM_Level)

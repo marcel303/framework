@@ -148,6 +148,8 @@ public:
 
 	void SetFolderName(QString name);
 
+    void SelectNextTemplate();
+    void SelectPreviousTemplate();
 
 
 
@@ -173,6 +175,7 @@ public:
 
     EditorTemplate* GetCurrentTemplate();
 	void SetCurrentTemplate(QString name);
+    TemplateFolder* GetCurrentFolder();
 
 	void SetCurrentFolder(QString name);
 	QString GetCurrentFolderName(){return m_currentFolder->m_folderName;}

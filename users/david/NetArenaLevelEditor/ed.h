@@ -30,7 +30,7 @@ public:
 
 	EditorScene*& GetSceneArt();
 	EditorScene*& GetSceneMech();
-	EditorScene*& GetSceneCollision();
+    EditorScene*& GetSceneCollision();
 	QGraphicsScene* GetSceneTemplatePallette();
 
 

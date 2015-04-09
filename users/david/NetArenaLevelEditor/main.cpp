@@ -1107,6 +1107,11 @@ EditorTemplate* TemplateScene::GetCurrentTemplate()
 	return m_currentFolder->GetCurrentTemplate();
 }
 
+TemplateFolder* TemplateScene::GetCurrentFolder()
+{
+    return m_currentFolder;
+}
+
 
 
 
@@ -1183,6 +1188,24 @@ void TemplateFolder::AddTemplate(EditorTemplate* t)
 	m_templateMap[t->m_name] = t;
 
     LoadTileIntoScene();
+}
+
+void TemplateFolder::SelectNextTemplate()
+{
+    if(m_currentTemplate)
+    {
+        if(m_templateMap.find(m_currentTemplate->m_name) != m_templateMap.end())
+            SetCurrentTemplate((m_templateMap.find(m_currentTemplate->m_name)+1).key());
+    }
+}
+
+void TemplateFolder::SelectPreviousTemplate()
+{
+    if(m_currentTemplate)
+    {
+        if((m_templateMap.find(m_currentTemplate->m_name)) != m_templateMap.begin())
+            SetCurrentTemplate((m_templateMap.find(m_currentTemplate->m_name)-1).key());
+    }
 }
 
 EditorTemplate* TemplateFolder::GetCurrentTemplate()
