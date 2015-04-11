@@ -790,26 +790,40 @@ bool Arena::getRandomSpawnPoint(GameSim & gameSim, int & out_x, int & out_y, int
 	return false;
 }
 
+bool Arena::isValidPickupLocation(int x, int y, bool grounded) const
+{
+	const int sx = (PICKUP_BLOCK_SX - 1) / 2;
+	const int sy = (PICKUP_BLOCK_SY - 1) / 2;
+
+	bool result = true;
+
+	if (x < sx || y < sy || x >= ARENA_SX - sx || y >= ARENA_SY - sy - 1)
+		result = false;
+	else
+	{
+		for (int ox = -sx; ox <= +sx; ++ox)
+			for (int oy = -sy; oy <= +sy; ++oy)
+				result &= (m_blocks[x + ox][y + oy].type == kBlockType_Empty);
+
+		if (grounded)
+		{
+			for (int ox = -sx; ox <= +sx; ++ox)
+				result &= ((1 << m_blocks[x + ox][y + sy + 1].type) & kBlockMask_Solid) != 0;
+		}
+	}
+
+	return result;
+}
+
 bool Arena::getRandomPickupLocations(int * out_x, int * out_y, int & numLocations, void * obj, bool (*reject)(void * obj, int x, int y)) const
 {
 	int numCandidates = 0;
 
-	const int sx = (PICKUP_BLOCK_SX - 1) / 2;
-	const int sy = (PICKUP_BLOCK_SY - 1) / 2;
-
-	for (int x = sx; x < ARENA_SX - sx; ++x)
+	for (int x = 0; x < ARENA_SX; ++x)
 	{
-		for (int y = sy; y < ARENA_SY - sy - 1; ++y)
+		for (int y = 0; y < ARENA_SY; ++y)
 		{
-			bool isCandidate = true;
-
-			for (int ox = -sx; ox <= +sx; ++ox)
-				for (int oy = -sy; oy <= +sy; ++oy)
-					isCandidate &= (m_blocks[x + ox][y + oy].type == kBlockType_Empty);
-			for (int ox = -sx; ox <= +sx; ++ox)
-				isCandidate &= ((1 << m_blocks[x + ox][y + sy + 1].type) & kBlockMask_Solid) != 0;
-
-			if (isCandidate)
+			if (isValidPickupLocation(x, y, true))
 			{
 				if (!reject || !reject(obj, x, y))
 				{

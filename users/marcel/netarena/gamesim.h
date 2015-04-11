@@ -737,6 +737,7 @@ public:
 	void testCollision(const CollisionShape & shape, void * arg, CollisionCB cb);
 	void testCollisionInternal(const CollisionShape & shape, void * arg, CollisionCB cb);
 
+	Pickup * allocPickup();
 	void trySpawnPickup(PickupType type);
 	void spawnPickup(Pickup & pickup, PickupType type, int blockX, int blockY);
 	bool grabPickup(int x1, int y1, int x2, int y2, Pickup & pickup);

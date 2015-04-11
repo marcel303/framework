@@ -247,6 +247,8 @@ OPTION_DECLARE(float, PLAYER_ANIM_MULTIPLIER, 1.f);
 OPTION_DEFINE(float, PLAYER_ANIM_MULTIPLIER, "Experimental/Animation Speed Multiplier");
 OPTION_STEP(PLAYER_ANIM_MULTIPLIER, 0, 0, .01f);
 
+COMMAND_OPTION(s_killPlayers, "Player/Kill Players", []{ g_app->netDebugAction("killPlayers", 0); });
+
 #define WRAP_AROUND_TOP_AND_BOTTOM 1
 
 #define GAMESIM m_instanceData->m_gameSim
@@ -2937,9 +2939,62 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 
 			if (canBeKilled)
 			{
+				// play death animation
+
 				setAnim(kPlayerAnim_Die, true, true);
 				m_isAnimDriven = true;
 				m_enableInAirAnim = false;
+
+				// item drop
+
+				if (m_weaponStackSize > 0)
+				{
+					const int blockX = m_pos[0] / BLOCK_SX;
+					const int blockY = (m_pos[1] - 1.f) / BLOCK_SY - 1;
+
+					if (GAMESIM->m_arena.isValidPickupLocation(blockX, blockY, false))
+					{
+						Pickup * pickup = GAMESIM->allocPickup();
+						if (pickup)
+						{
+							const int index = GAMESIM->Random() % m_weaponStackSize;
+							const PlayerWeapon weapon = m_weaponStack[index];
+
+							PickupType pickupType;
+
+							switch (weapon)
+							{
+							case kPlayerWeapon_Sword:
+								Assert(false);
+								break;
+							case kPlayerWeapon_Fire:
+								pickupType = kPickupType_Ammo;
+								break;
+							case kPlayerWeapon_Ice:
+								pickupType = kPickupType_Ice;
+								break;
+							case kPlayerWeapon_Bubble:
+								pickupType = kPickupType_Bubble;
+								break;
+							case kPlayerWeapon_Grenade:
+								pickupType = kPickupType_Nade;
+								break;
+							case kPlayerWeapon_TimeDilation:
+								pickupType = kPickupType_TimeDilation;
+								break;
+							default:
+								AssertMsg(false, "missing translation for player weapon %d to pickup type", weapon);
+								break;
+							}
+
+							GAMESIM->spawnPickup(*pickup, pickupType, blockX, blockY);
+
+							pickup->m_vel = velocity * 2.f / 3.f;
+						}
+					}
+				}
+
+				// reset some stuff now
 
 				m_canRespawn = false;
 

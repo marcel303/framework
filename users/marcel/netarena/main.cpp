@@ -730,6 +730,18 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			if (gameSim)
 				gameSim->newRound(param.c_str());
 		}
+		else if (action == "killPlayers")
+		{
+			GameSim * gameSim = findGameSimForChannel(channel);
+			Assert(gameSim);
+
+			if (gameSim)
+			{
+				for (int i = 0; i < MAX_PLAYERS; ++i)
+					if (gameSim->m_players[i].m_isUsed && gameSim->m_players[i].m_isAlive)
+						gameSim->m_players[i].handleDamage(1.f, Vec2(), 0);
+			}
+		}
 		else if (action == "dropCoins")
 		{
 			GameSim * gameSim = findGameSimForChannel(channel);
@@ -1939,7 +1951,7 @@ void App::netDebugAction(const char * name, const char * param)
 	BitStream bs;
 
 	bs.WriteString(name);
-	bs.WriteString(param);
+	bs.WriteString(param ? param : "");
 
 	m_rpcMgr->Call(s_rpcDebugAction, bs, ChannelPool_Server, 0, true, true);
 }

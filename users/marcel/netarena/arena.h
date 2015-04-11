@@ -149,6 +149,7 @@ public:
 	void tick(GameSim & gameSim);
 
 	bool getRandomSpawnPoint(GameSim & gameSim, int & out_x, int & out_y, int & io_lastSpawnIndex, Player * playerToIgnore) const;
+	bool isValidPickupLocation(int x, int y, bool grounded) const;
 	bool getRandomPickupLocations(int * out_x, int * out_y, int & numLocations, void * obj, bool (*reject)(void * obj, int x, int y)) const;
 	bool getTeleportDestination(GameSim & gameSim, int x, int y, int & out_x, int & out_y) const;
 

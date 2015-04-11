@@ -1977,39 +1977,41 @@ void GameSim::testCollisionInternal(const CollisionShape & shape, void * arg, Co
 	}
 }
 
-void GameSim::trySpawnPickup(PickupType type)
+Pickup * GameSim::allocPickup()
 {
 	for (int i = 0; i < MAX_PICKUPS; ++i)
+		if (!m_pickups[i].isAlive)
+			return &m_pickups[i];
+	return 0;
+}
+
+void GameSim::trySpawnPickup(PickupType type)
+{
+	Pickup * pickup = allocPickup();
+	if (pickup)
 	{
-		Pickup & pickup = m_pickups[i];
+		const int kMaxLocations = ARENA_SX * ARENA_SY;
+		int numLocations = kMaxLocations;
+		int x[kMaxLocations];
+		int y[kMaxLocations];
 
-		if (!pickup.isAlive)
-		{
-			const int kMaxLocations = ARENA_SX * ARENA_SY;
-			int numLocations = kMaxLocations;
-			int x[kMaxLocations];
-			int y[kMaxLocations];
-
-			if (m_arena.getRandomPickupLocations(x, y, numLocations, this,
-				[](void * obj, int x, int y) 
-				{
-					GameSim * self = (GameSim*)obj;
-					for (int i = 0; i < MAX_PICKUPS; ++i)
-						if (self->m_pickups[i].blockX == x && self->m_pickups[i].blockY == y)
-							return true;
-					return false;
-				}))
+		if (m_arena.getRandomPickupLocations(x, y, numLocations, this,
+			[](void * obj, int x, int y) 
 			{
-				if (DEBUG_RANDOM_CALLSITES)
-					LOG_DBG("Random called from trySpawnPickup");
-				const int index = Random() % numLocations;
-				const int spawnX = x[index];
-				const int spawnY = y[index];
+				GameSim * self = (GameSim*)obj;
+				for (int i = 0; i < MAX_PICKUPS; ++i)
+					if (self->m_pickups[i].blockX == x && self->m_pickups[i].blockY == y)
+						return true;
+				return false;
+			}))
+		{
+			if (DEBUG_RANDOM_CALLSITES)
+				LOG_DBG("Random called from trySpawnPickup");
+			const int index = Random() % numLocations;
+			const int spawnX = x[index];
+			const int spawnY = y[index];
 
-				spawnPickup(pickup, type, spawnX, spawnY);
-			}
-
-			break;
+			spawnPickup(*pickup, type, spawnX, spawnY);
 		}
 	}
 }
