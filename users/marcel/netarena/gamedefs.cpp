@@ -242,6 +242,7 @@ OPTION_STEP(TORCH_FLICKER_STRENGTH, 0, 0, .02f);
 OPTION_DEFINE(int, LIGHTING_DEBUG_MODE, "Graphics/Lighting/Debug Mode");
 
 OPTION_DEFINE(float, JETPACK_ACCEL, "Special Abilities/Jetpack/Acceleration");
+OPTION_DEFINE(float, JETPACK_FX_INTERVAL, "Special Abilities/Jetpack/Smoke Fx Interval (Sec)");
 
 OPTION_DEFINE(int, DOUBLEMELEE_ATTACK_RADIUS, "Special Abilities/Double Melee/Attack Radius");
 OPTION_DEFINE(int, DOUBLEMELEE_SPIN_COUNT, "Special Abilities/Double Melee/Spin Count");

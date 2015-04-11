@@ -61,7 +61,7 @@ struct Player
 
 	bool getPlayerCollision(CollisionInfo & collision) const;
 	void getDamageHitbox(CollisionShape & shape) const;
-	bool getAttackCollision(CollisionShape & shape) const;
+	bool getAttackCollision(CollisionShape & shape, Vec2Arg shift = Vec2()) const;
 	float getAttackDamage(Player * other) const;
 
 	bool isAnimOverrideAllowed(PlayerAnim anim) const;
@@ -345,6 +345,7 @@ struct Player
 	bool m_isWallSliding;
 
 	bool m_isUsingJetpack;
+	float m_jetpackFxTime;
 
 	bool m_animVelIsAbsolute; // should the animation velocity be added to or replace the regular player velocity?
 	bool m_animAllowGravity;
@@ -757,7 +758,7 @@ public:
 
 	void addFloorEffect(int playerId, int x, int y, int size, int damageSize);
 
-	void addAnimationFx(const char * fileName, const char * animName, int x, int y);
+	void addAnimationFx(const char * fileName, const char * animName, int x, int y, bool flipX = false, bool flipY = false);
 
 	void addAnnouncement(const char * message, ...);
 };

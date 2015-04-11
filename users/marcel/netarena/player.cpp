@@ -29,9 +29,9 @@ todo:
 	gun hit block
 	gun hit character
 	+ shield pop
-	dash effect - side
-	dbl jump effect - feet
-	jetpack - smoke from jetpack
+	# dash effect - side
+	# dbl jump effect - feet
+	+ jetpack - smoke from jetpack
 	sword drag - special hitbox on sword tip, collission with tiles
 	gun shoot flash/smoke
 
@@ -593,7 +593,7 @@ void Player::getDamageHitbox(CollisionShape & shape) const
 		Vec2(m_pos[0] - PLAYER_DAMAGE_HITBOX_SX/2, m_pos[1]));
 }
 
-bool Player::getAttackCollision(CollisionShape & shape) const
+bool Player::getAttackCollision(CollisionShape & shape, Vec2Arg shift) const
 {
 	Assert(m_isUsed);
 
@@ -614,7 +614,7 @@ bool Player::getAttackCollision(CollisionShape & shape) const
 			points[i][1] *= characterData->m_spriteScale * PLAYER_SPRITE_SCALE;
 			if (m_facing[1] < 0)
 				points[i][1] = -characterData->m_collisionSy - points[i][1];
-			points[i] += m_pos;
+			points[i] += m_pos + shift;
 		}
 
 		shape.set(points[0], points[1], points[2], points[3]);
@@ -1878,19 +1878,25 @@ void Player::tick(float dt)
 
 					if (blockAndDistance)
 					{
-						CollisionShape attackCollision;
-						if (self->getAttackCollision(attackCollision))
+						for (int dx = -1; dx <= +1 && blockAndDistance; ++dx)
 						{
-							self->m_attack.hitDestructible |= self->m_instanceData->m_gameSim->m_arena.handleDamageShape(
-								*self->m_instanceData->m_gameSim,
-								updateInfo.pos[0],
-								updateInfo.pos[1],
-								attackCollision,
-								!self->m_attack.hitDestructible,
-								PLAYER_SWORD_SINGLE_BLOCK);
+							for (int dy = -1; dy <= +1 && blockAndDistance; ++dy)
+							{
+								CollisionShape attackCollision;
+								if (self->getAttackCollision(attackCollision, Vec2(dx * ARENA_SX_PIXELS, dy * ARENA_SY_PIXELS)))
+								{
+									self->m_attack.hitDestructible |= self->m_instanceData->m_gameSim->m_arena.handleDamageShape(
+										*self->m_instanceData->m_gameSim,
+										updateInfo.pos[0],
+										updateInfo.pos[1],
+										attackCollision,
+										!self->m_attack.hitDestructible,
+										PLAYER_SWORD_SINGLE_BLOCK);
 
-							if (blockAndDistance->block->shape == kBlockShape_Empty)
-								blockAndDistance = 0;
+									if (blockAndDistance->block->shape == kBlockShape_Empty)
+										blockAndDistance = 0;
+								}
+							}
 						}
 					}
 				}
@@ -2410,12 +2416,12 @@ void Player::tick(float dt)
 	{
 		Assert(m_isAlive);
 
-		ParticleSpawnInfo spawnInfo(
-			m_pos[0], m_pos[1],
-			kBulletType_ParticleA, 2,
-			50.f, 100.f, 50.f);
-		spawnInfo.color = 0xffffff80;
-		GAMESIM->spawnParticles(spawnInfo);
+		m_jetpackFxTime -= dt;
+		if (m_jetpackFxTime <= 0.f)
+		{
+			m_jetpackFxTime += JETPACK_FX_INTERVAL;
+			GAMESIM->addAnimationFx("fx/Jetpack.scml", "Smoke", m_pos[0], m_pos[1], m_facing[0] < 0);
+		}
 	}
 
 	// token hunt game mode
@@ -2899,7 +2905,7 @@ bool Player::shieldAbsorb(float amount)
 		if (m_shield.shield == 0)
 		{
 			GAMESIM->playSound("shield-pop.ogg");
-			GAMESIM->addAnimationFx("fx/shield.scml", "Pop", m_pos[0], m_pos[1]); // player shield is popped
+			GAMESIM->addAnimationFx("fx/Shield.scml", "Pop", m_pos[0], m_pos[1]); // player shield is popped
 		}
 
 		return true;
@@ -2947,6 +2953,7 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 				m_bubble = BubbleInfo();
 
 				m_isUsingJetpack = false;
+				m_jetpackFxTime = 0.f;
 
 				// fixme.. mid pos
 				const CharacterData * characterData = getCharacterData(m_index);

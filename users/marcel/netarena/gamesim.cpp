@@ -2297,7 +2297,7 @@ void GameSim::addFloorEffect(int playerId, int x, int y, int size, int damageSiz
 	m_floorEffect.trySpawnAt(*this, playerId, x, y, +BLOCK_SX, size, damageSize);
 }
 
-void GameSim::addAnimationFx(const char * fileName, const char * animName, int x, int y)
+void GameSim::addAnimationFx(const char * fileName, const char * animName, int x, int y, bool flipX, bool flipY)
 {
 	for (int i = 0; i < MAX_ANIM_EFFECTS; ++i)
 	{
@@ -2309,6 +2309,8 @@ void GameSim::addAnimationFx(const char * fileName, const char * animName, int x
 			m_animationEffects[i].m_animName = animName;
 			m_animationEffects[i].m_state.x = x;
 			m_animationEffects[i].m_state.y = y;
+			m_animationEffects[i].m_state.flipX = flipX;
+			m_animationEffects[i].m_state.flipY = flipY;
 			m_animationEffects[i].m_state.startAnim(Spriter(fileName), animName);
 
 			break;
