@@ -37,7 +37,7 @@ todo:
 
 + change cling so it checks attack vs attack hitbox, instead of attack vs player hitbox
 
-- add pickup drop on death
++ add pickup drop on death
 
 - slow down player vertically when hitting block. maybe add small upward speed?
 

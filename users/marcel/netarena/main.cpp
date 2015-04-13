@@ -739,7 +739,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			{
 				for (int i = 0; i < MAX_PLAYERS; ++i)
 					if (gameSim->m_players[i].m_isUsed && gameSim->m_players[i].m_isAlive)
-						gameSim->m_players[i].handleDamage(1.f, Vec2(), 0);
+						gameSim->m_players[i].handleDamage(1.f, Vec2(gameSim->RandomFloat(-100.f, +100.f), -50.f), 0);
 			}
 		}
 		else if (action == "dropCoins")

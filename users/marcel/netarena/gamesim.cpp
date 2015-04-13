@@ -1254,6 +1254,10 @@ void GameSim::resetGameWorld()
 	for (int i = 0; i < MAX_SCREEN_SHAKES; ++i)
 		m_screenShakes[i] = ScreenShake();
 
+	// reset time dilation effects
+
+	memset(m_timeDilationEffects, 0, sizeof(m_timeDilationEffects));
+
 	// reset level events
 
 	m_levelEvents = LevelEvents();
