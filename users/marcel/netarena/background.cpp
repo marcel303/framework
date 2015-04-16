@@ -13,7 +13,7 @@ void Background::load(const char * name, GameSim& gameSim)
 	m_state = SpriterState();
 	m_state.startAnim(BACKGROUND_SPRITER, "Idle");
 
-	m_startErupt = gameSim.RandomFloat(21.0f, 22.0f);
+	m_startErupt = gameSim.RandomFloat(40.0f, 120.0f);
 
 	t1 = true;
 	t2 = true;
@@ -22,15 +22,15 @@ void Background::load(const char * name, GameSim& gameSim)
 
 void Background::tick(GameSim & gameSim, float dt)
 {
-	if (t1 && !m_isTriggered && gameSim.m_roundTime >= (m_startErupt - 16.f))
+	if (t1 && !m_isTriggered && gameSim.m_roundTime >= (m_startErupt - 12.f))
 	{
-		gameSim.addScreenShake(-1.2f, 1.3f, 4000.f, 8.f);
+		gameSim.addScreenShake(-1.2f, 1.3f, 4000.f, 6.f);
 		t1 = false;
 	}
 
-	if (t2 && !m_isTriggered && gameSim.m_roundTime >= (m_startErupt - 8.f))
+	if (t2 && !m_isTriggered && gameSim.m_roundTime >= (m_startErupt - 6.f))
 	{
-		gameSim.addScreenShake(-2.3f, 1.5f, 6000.f, 6.f);
+		gameSim.addScreenShake(-2.3f, 1.5f, 6000.f, 4.f);
 		gameSim.playSound("volcano-rumble.ogg");
 		
 		t2 = false;
