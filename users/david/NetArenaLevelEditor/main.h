@@ -91,6 +91,8 @@ public:
     EditorTemplate();
     ~EditorTemplate();
 
+    EditorTemplate* GetMirror();
+
 	virtual void mousePressEvent ( QGraphicsSceneMouseEvent * e );
 
     class TemplateTile
@@ -98,6 +100,7 @@ public:
     public:
 
 		TemplateTile();
+        TemplateTile(TemplateTile& t);
 
         int x;
         int y;

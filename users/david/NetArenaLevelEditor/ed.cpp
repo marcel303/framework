@@ -24,6 +24,7 @@ void Ed::Initialize()
 
 	bg = 0;
     undoTemplate = 0;
+    m_currentTemplate = 0;
 }
 
 EditorScene*& Ed::GetSceneArt()
