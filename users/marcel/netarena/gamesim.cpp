@@ -1054,7 +1054,7 @@ void GameSim::load(const char * name)
 
 	//load background
 
-	m_background.load("backgrounds/VolcanoTest/background.scml");
+	m_background.load("backgrounds/VolcanoTest/background.scml", *this);
 
 	// load objects
 
