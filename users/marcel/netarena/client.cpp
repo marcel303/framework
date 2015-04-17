@@ -548,6 +548,13 @@ void Client::drawPlay()
 
 		m_gameSim->m_levelEvents.spikeWalls.draw();
 
+		// fireballs
+		for (int i = 0; i < MAX_FIREBALLS; ++i)
+		{
+			m_gameSim->m_fireballs[i].draw();
+		}
+			
+
 		gxPopMatrix();
 	}
 	popSurface();

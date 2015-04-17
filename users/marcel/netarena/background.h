@@ -3,9 +3,9 @@
 #include "framework.h"
 #include "gamedefs.h"
 #include "gametypes.h"
+#include "fireball.h"
 
 class GameSim;
-
 class Background
 {
 public:
@@ -16,9 +16,12 @@ public:
 
 	void doEvent(GameSim & gameSim);
 
+	void launchBall();
+
 public:
 	FixedString<64> m_name;
 	SpriterState m_state;
+	FireBall m_fb;
 	bool m_isTriggered;
 
 	float m_startErupt;
@@ -26,4 +29,12 @@ public:
 	bool t1;
 	bool t2;
 	bool t3;
+
+	enum VolcanoState
+	{
+		VC_IDLE,
+		VC_ERUPT,
+		VC_AFTER,
+	} m_volcanoState;
 };
+
