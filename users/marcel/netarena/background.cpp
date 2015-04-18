@@ -1,9 +1,8 @@
 #include "background.h"
+#include "fireball.h"
 #include "framework.h"
 #include "gamesim.h"
 #include "main.h"
-
-#include "fireball.h"
 
 #define BACKGROUND_SPRITER Spriter(m_name.c_str())
 
@@ -24,7 +23,7 @@ void Background::load(const char * name, GameSim& gameSim)
 	t2 = true;
 	t3 = true;
 
-	m_fb.active = false;
+	m_fireBall.active = false;
 }
 
 void Background::tick(GameSim & gameSim, float dt)
@@ -55,6 +54,7 @@ void Background::tick(GameSim & gameSim, float dt)
 	}
 
 	if (m_state.updateAnim(BACKGROUND_SPRITER, dt))
+	{
 		if (m_isTriggered)
 		{
 			m_state.startAnim(BACKGROUND_SPRITER, "IdleErupted");
@@ -62,33 +62,41 @@ void Background::tick(GameSim & gameSim, float dt)
 				m_volcanoState = VC_AFTER;
 		}
 		else
+		{
 			m_state.startAnim(BACKGROUND_SPRITER, "Idle");
+		}
+	}
 
 	if (m_volcanoState == VC_ERUPT)
 	{
-		if (m_fb.m_y < -350.f)
+		if (m_fireBall.m_y < -350.f)
 		{
-			m_fb.load("backgrounds/VolcanoTest/Fireball/fireball.scml", gameSim, 1280, 220, gameSim.RandomFloat(-120.0f, -80.0f), gameSim.RandomFloat(.1f, .2f));
+			m_fireBall.load("backgrounds/VolcanoTest/Fireball/fireball.scml", gameSim, 1280, 220, gameSim.RandomFloat(-120.0f, -80.0f), gameSim.RandomFloat(.1f, .2f));
 			gameSim.addFireBall();
 		}
 		else
-			m_fb.tick(gameSim, dt);
+		{
+			m_fireBall.tick(gameSim, dt);
+		}
 	}
 	else if (m_volcanoState == VC_AFTER)
 	{
-		if (m_fb.m_y < -850.f)
+		if (m_fireBall.m_y < -850.f)
 		{
-			if (m_fb.active)
+			if (m_fireBall.active)
 			{
 				gameSim.addFireBall();
-				m_fb.active = false;
+
+				m_fireBall = FireBall();
 			}
 
 			if (gameSim.Random() % 1000 == 666)
-				m_fb.load("backgrounds/VolcanoTest/Fireball/fireball.scml", gameSim, 1300, 340, gameSim.RandomFloat(-120.0f, -80.0f), gameSim.RandomFloat(.1f, .2f));
+				m_fireBall.load("backgrounds/VolcanoTest/Fireball/fireball.scml", gameSim, 1300, 340, gameSim.RandomFloat(-120.0f, -80.0f), gameSim.RandomFloat(.1f, .2f));
 		}
 		else
-			m_fb.tick(gameSim, dt);
+		{
+			m_fireBall.tick(gameSim, dt);
+		}
 	}
 }
 
@@ -96,7 +104,7 @@ void Background::draw()
 {
 	BACKGROUND_SPRITER.draw(m_state);
 
-	m_fb.draw();
+	m_fireBall.draw();
 }
 
 void Background::doEvent(GameSim & gameSim)
@@ -109,9 +117,9 @@ void Background::doEvent(GameSim & gameSim)
 	m_isTriggered = true;
 	m_volcanoState = VC_ERUPT;
 
-	m_fb.load("backgrounds/VolcanoTest/Fireball/fireball.scml", gameSim, 1300, 340, -100, 0.15f);
+	m_fireBall.load("backgrounds/VolcanoTest/Fireball/fireball.scml", gameSim, 1300, 340, -100, 0.15f);
 }
 
-void Background::launchBall()
+void Background::launchFireBall()
 {
 }

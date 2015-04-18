@@ -6,6 +6,10 @@
 #include "fireball.h"
 
 class GameSim;
+
+#pragma pack(push)
+#pragma pack(1)
+
 class Background
 {
 public:
@@ -16,12 +20,12 @@ public:
 
 	void doEvent(GameSim & gameSim);
 
-	void launchBall();
+	void launchFireBall();
 
 public:
 	FixedString<64> m_name;
 	SpriterState m_state;
-	FireBall m_fb;
+	FireBall m_fireBall;
 	bool m_isTriggered;
 
 	float m_startErupt;
@@ -38,3 +42,4 @@ public:
 	} m_volcanoState;
 };
 
+#pragma pack(pop)

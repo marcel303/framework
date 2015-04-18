@@ -1056,12 +1056,6 @@ void GameSim::load(const char * name)
 
 	m_background.load("backgrounds/VolcanoTest/background.scml", *this);
 
-	for (int i = 0; i < MAX_FIREBALLS; i++)
-	{
-		m_fireballs[i].active = false;
-	}
-	
-
 	// load objects
 
 #if 0 // todo : remove
@@ -1259,6 +1253,11 @@ void GameSim::resetGameWorld()
 
 	for (int i = 0; i < MAX_SCREEN_SHAKES; ++i)
 		m_screenShakes[i] = ScreenShake();
+
+	// reset fireballs
+
+	for (int i = 0; i < MAX_FIREBALLS; i++)
+		m_fireballs[i] = FireBall();
 
 	// reset time dilation effects
 

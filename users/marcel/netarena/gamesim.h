@@ -628,6 +628,8 @@ struct GameStateData
 
 	AnimationFxState m_animationEffects[MAX_ANIM_EFFECTS];
 
+	ScreenShake m_screenShakes[MAX_SCREEN_SHAKES];
+
 	// level events
 
 	struct LevelEvents
@@ -652,6 +654,10 @@ struct GameStateData
 	// background
 
 	Background m_background;
+
+	// fireballs
+
+	FireBall m_fireballs[MAX_FIREBALLS];
 
 	// support for game modes
 
@@ -684,10 +690,6 @@ public:
 	BulletPool * m_bulletPool;
 
 	BulletPool * m_particlePool;
-
-	ScreenShake m_screenShakes[MAX_SCREEN_SHAKES];
-
-	FireBall m_fireballs[MAX_FIREBALLS];
 
 	// non-serialized (RPC)
 

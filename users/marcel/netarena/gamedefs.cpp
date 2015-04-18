@@ -193,6 +193,7 @@ OPTION_DEFINE(int, PICKUP_BUBBLE_WEIGHT, "Pickups/Spawn Weights/Bubble");
 OPTION_DEFINE(int, PICKUP_TIMEDILATION_WEIGHT, "Pickups/Spawn Weights/Time Dilation");
 
 // fireballs
+
 OPTION_DEFINE(float, FIREBALL_SPEED, "Level Events/FireBalls/Fireball Speed");
 
 // death match
