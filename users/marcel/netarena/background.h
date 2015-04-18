@@ -13,7 +13,7 @@ class GameSim;
 class Background
 {
 public:
-	void load(const char * name, GameSim& gameSim);
+	void load(const char * name, GameSim & gameSim);
 
 	void tick(GameSim & gameSim, float dt);
 	void draw();

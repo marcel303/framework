@@ -733,7 +733,6 @@ public:
 	void tickMenus();
 	void tickPlay();
 	void tickRoundComplete();
-	void anim(float dt);
 
 	void getCurrentTimeDilation(float & timeDilation, bool & playerAttackTimeDilation) const;
 

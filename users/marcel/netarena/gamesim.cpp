@@ -1777,7 +1777,20 @@ void GameSim::tickPlay()
 		m_animationEffects[i].tick(dt);
 	}
 
-	anim(dt);
+	// screen shakes
+
+	for (int i = 0; i < MAX_SCREEN_SHAKES; ++i)
+	{
+		ScreenShake & shake = m_screenShakes[i];
+		if (shake.isActive)
+			shake.tick(dt);
+	}
+
+	// particles
+
+	m_particlePool->tick(*this, dt);
+
+	// bullets
 
 	m_bulletPool->tick(*this, dt);
 
@@ -1857,20 +1870,6 @@ void GameSim::tickRoundComplete()
 	{
 		m_roundCompleteTimeDilationTicks--;
 	}
-}
-
-void GameSim::anim(float dt)
-{
-	// screen shakes
-
-	for (int i = 0; i < MAX_SCREEN_SHAKES; ++i)
-	{
-		ScreenShake & shake = m_screenShakes[i];
-		if (shake.isActive)
-			shake.tick(dt);
-	}
-
-	m_particlePool->tick(*this, dt);
 }
 
 void GameSim::getCurrentTimeDilation(float & timeDilation, bool & playerAttackTimeDilation) const

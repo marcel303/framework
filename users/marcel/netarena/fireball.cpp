@@ -12,8 +12,6 @@ FireBall::FireBall()
 
 void FireBall::load(const char * name, GameSim & gameSim, int x, int y, float angle, float scale)
 {
-	Assert(!active);
-
 	memset(this, 0, sizeof(FireBall));
 
 	m_name = name;

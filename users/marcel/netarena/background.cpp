@@ -6,7 +6,7 @@
 
 #define BACKGROUND_SPRITER Spriter(m_name.c_str())
 
-void Background::load(const char * name, GameSim& gameSim)
+void Background::load(const char * name, GameSim & gameSim)
 {
 	memset(this, 0, sizeof(Background));
 
@@ -72,6 +72,7 @@ void Background::tick(GameSim & gameSim, float dt)
 		if (m_fireBall.m_y < -350.f)
 		{
 			m_fireBall.load("backgrounds/VolcanoTest/Fireball/fireball.scml", gameSim, 1280, 220, gameSim.RandomFloat(-120.0f, -80.0f), gameSim.RandomFloat(.1f, .2f));
+
 			gameSim.addFireBall();
 		}
 		else
