@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cmath>
 #include <map>
 #include <string>
@@ -990,6 +991,31 @@ namespace spriter
 
 							animation->timelines.push_back(timeline);
 						}
+
+					#if 0
+						// fixup bone refs.. spriter sometimes writes these out wrong, but we can fix this by
+						// manually searching for the correct key indices
+
+						for (size_t i = 0; i < animation->mainlineKeys.size(); ++i)
+						{
+							auto & mainlineKey = animation->mainlineKeys[i];
+
+							for (size_t j = 0; j < mainlineKey.boneRefs.size(); ++j)
+							{
+								auto & r = mainlineKey.boneRefs[j];
+
+								Assert(r.timeline >= 0 && r.timeline < animation->timelines.size());
+								Timeline & timeline = animation->timelines[r.timeline];
+
+								int key = 0;
+								while (key + 1 < timeline.keys.size() && timeline.keys[key + 1]->time <= mainlineKey.time)
+									key++;
+
+								r.key = key;
+								Assert(timeline.keys[r.key]->time <= mainlineKey.time);
+							}
+						}
+					#endif
 
 						entity->m_animations.push_back(animation);
 					}
