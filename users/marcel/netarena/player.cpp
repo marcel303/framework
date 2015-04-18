@@ -18,6 +18,8 @@ todo:
 
 ** HIGH PRIORITY **
 
+- add doQuake method to GameSim
+
 - add animations:
 	+ jump - feet
 	+ fall on ground - feet
@@ -57,6 +59,13 @@ todo:
 	- detonate on player leave
 
 ** MEDIUM PRIORITY **
+
+- bubble gun prototype:
+	- small charge period on fire (to allow other player to escape)
+	- create small bubbles on fire
+	- when another player hits bubble, player gets bubbled
+	=> transforms bubble gun into a sort of snare trap, instead of offensive
+	=> bubbles create temporary shield. they pop after a short while though
 
 - prototype invisibility ability
 	charge period
@@ -3186,7 +3195,7 @@ void Player::pushWeapon(PlayerWeapon weapon, int ammo)
 
 	for (int a = 0; a < ammo; ++a)
 	{
-		for (int i = 0; i < m_weaponStackSize; ++i)
+		for (int i = m_weaponStackSize - 1; i >= 0; --i)
 			if (i + 1 < MAX_WEAPON_STACK_SIZE)
 				m_weaponStack[i + 1] = m_weaponStack[i];
 		m_weaponStack[0] = weapon;

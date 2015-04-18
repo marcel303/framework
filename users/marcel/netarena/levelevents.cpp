@@ -81,16 +81,7 @@ void LevelEvent_EarthQuake::tick(GameSim & gameSim, float dt)
 
 			gameSim.addScreenShake(0.f, 25.f, 1000.f, .3f);
 
-			for (int i = 0; i < MAX_PLAYERS; ++i)
-			{
-				Player & player = gameSim.m_players[i];
-
-				if (!player.m_isUsed && player.m_isAlive)
-					continue;
-
-				if (player.m_isGrounded)
-					player.m_vel[1] = Calc::Sign(player.m_facing[1]) * EVENT_EARTHQUAKE_PLAYER_BOOST;
-			}
+			gameSim.doQuake(EVENT_EARTHQUAKE_PLAYER_BOOST);
 		}
 	}
 }

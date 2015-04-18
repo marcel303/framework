@@ -2260,6 +2260,19 @@ void GameSim::spawnParticles(const ParticleSpawnInfo & spawnInfo)
 	}
 }
 
+void GameSim::doQuake(float vel)
+{
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+	{
+		Player & player = m_players[i];
+
+		if (player.m_isUsed && player.m_isAlive && player.m_isGrounded)
+		{
+			player.m_vel[1] = Calc::Sign(player.m_facing[1]) * vel;
+		}
+	}
+}
+
 void GameSim::addScreenShake(float dx, float dy, float stiffness, float life)
 {
 	for (int i = 0; i < MAX_SCREEN_SHAKES; ++i)

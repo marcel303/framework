@@ -2139,19 +2139,22 @@ int main(int argc, char * argv[])
 	else
 	{
 	#if 0
-		Spriter spriter("../../ArtistCave/JoyceTestcharacter/char0(Sword)/sprite/Sprite.scml");
+		//Spriter spriter("../../ArtistCave/JoyceTestcharacter/char0(Sword)/sprite/Sprite.scml");
+		Spriter spriter("char2/sprite/Sprite.scml");
 
 		const int animIndex = 0;
 		const float animLength = spriter.getAnimLength(animIndex);
 		SpriterState state;
 		state.x = GFX_SX/2;
 		state.y = GFX_SY/2;
+		state.scale = 2.f;
+		state.animSpeed = 1.f;//.5f;
 
 		for (int a = 0; a < 300; ++a)
 		{
-			state.startAnim(spriter, "Attack");
+			state.startAnim(spriter, "Idle");
 
-			for (float t = 0.f; t < animLength; t += 10.f)
+			while (state.animTime < animLength / 1000.f)
 			{
 				state.updateAnim(spriter, 1.f/60.f);
 
@@ -2193,6 +2196,10 @@ int main(int argc, char * argv[])
 								state.y + shape.points[p2][1]);
 						}
 					}
+
+					setColor(colorWhite);
+					setFont("calibri.ttf");
+					drawText(0.f, 0.f, 24, +1.f, +1.f, "time: %.2f, speed: %.2fx", state.animTime, state.animSpeed);
 				}
 				framework.endDraw();
 			}

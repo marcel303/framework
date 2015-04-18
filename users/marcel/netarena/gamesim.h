@@ -754,6 +754,8 @@ public:
 
 	void spawnPipeBomb(Vec2 pos, Vec2 vel, int playerIndex);
 
+	void doQuake(float vel);
+
 	void addScreenShake(float dx, float dy, float stiffness, float life);
 	Vec2 getScreenShake() const;
 
