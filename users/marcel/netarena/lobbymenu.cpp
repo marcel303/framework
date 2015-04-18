@@ -135,12 +135,15 @@ LobbyMenu::~LobbyMenu()
 
 void LobbyMenu::tick(float dt)
 {
-	if (g_app->m_isHost)
+	if (g_app->m_isHost && g_app->isSelectedClient(m_client))
 	{
-		if (m_prevGameMode->isClicked())
-			g_app->netAction(m_client->m_channel, kPlayerInputAction_CycleGameMode, -1, 0);
-		if (m_nextGameMode->isClicked())
-			g_app->netAction(m_client->m_channel, kPlayerInputAction_CycleGameMode, +1, 0);
+		if (m_client->m_gameSim->m_gameStartTicks == 0)
+		{
+			if (m_prevGameMode->isClicked())
+				g_app->netAction(m_client->m_channel, kPlayerInputAction_CycleGameMode, -1, 0);
+			if (m_nextGameMode->isClicked())
+				g_app->netAction(m_client->m_channel, kPlayerInputAction_CycleGameMode, +1, 0);
+		}
 	}
 
 	for (int i = 0; i < MAX_PLAYERS; ++i)
