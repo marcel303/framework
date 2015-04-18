@@ -370,6 +370,14 @@ void EditorViewBasic::keyPressEvent(QKeyEvent *e)
         if(templateScene->GetCurrentFolder())
             templateScene->GetCurrentFolder()->SelectNextTemplate();
 
+    if(e->key() == Qt::Key_S && !e->isAutoRepeat())
+        if(templateScene->GetCurrentFolder())
+        {
+            ed.m_currentTemplate = templateScene->GetCurrentTemplate()->GetMirror();
+
+            e->accept();
+        }
+
 	if(0 )//e->key() == Qt::Key_Y)
 	{
 		if(!ed.undoStack.empty() && editorMode == EM_Level)
@@ -394,6 +402,16 @@ void EditorViewBasic::keyReleaseEvent(QKeyEvent *e)
 		leftbuttonHeld = false;
 		e->accept();
 	}
+
+    if(e->key() == Qt::Key_S && !e->isAutoRepeat())
+    {
+        delete ed.m_currentTemplate;
+
+        if(templateScene->GetCurrentFolder())
+            ed.m_currentTemplate = templateScene->GetCurrentTemplate();
+
+        e->accept();
+    }
 }
 
 void EditorView :: mousePressEvent(QMouseEvent * e)

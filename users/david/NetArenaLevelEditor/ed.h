@@ -38,6 +38,8 @@ public:
 
 	TemplateScene*& GetTemplateScene(){return m_templateScene;}
 
+    EditorTemplate* m_currentTemplate;
+
 
     EditorView*& GetView();
     QGraphicsView*& GetViewPallette();

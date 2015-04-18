@@ -1054,7 +1054,13 @@ void GameSim::load(const char * name)
 
 	//load background
 
-	m_background.load("backgrounds/VolcanoTest/background.scml");
+	m_background.load("backgrounds/VolcanoTest/background.scml", *this);
+
+	for (int i = 0; i < MAX_FIREBALLS; i++)
+	{
+		m_fireballs[i].active = false;
+	}
+	
 
 	// load objects
 
@@ -1452,6 +1458,11 @@ void GameSim::tickPlay()
 	// background update
 
 	m_background.tick(*this, dt);
+
+	// fireballs update
+
+	for (int i = 0; i < MAX_FIREBALLS; ++i)
+		m_fireballs[i].tick(*this, dt);
 
 	// player update
 
@@ -2349,6 +2360,18 @@ void GameSim::addAnnouncement(const char * message, ...)
 	info.timeLeft = 3.f;
 	info.message = text;
 	m_annoucements.push_back(info);
+}
+
+void GameSim::addFireBall()
+{
+	for (int i = 0; i < MAX_FIREBALLS; ++i)
+	{
+		if (!m_fireballs[i].active)
+		{
+			m_fireballs[i].load("backgrounds/VolcanoTest/Fireball/fireball.scml", *this, (Random() % 1400) + 260, -80, RandomFloat(70.0f, 110.0f), RandomFloat(.2f, .4f));
+			return;
+		}
+	}
 }
 
 //

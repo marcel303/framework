@@ -4,6 +4,7 @@
 #include <string.h> // memset
 #include "arena.h"
 #include "background.h"
+#include "fireball.h"
 #include "framework.h"
 #include "gamedefs.h"
 #include "gametypes.h"
@@ -686,6 +687,8 @@ public:
 
 	ScreenShake m_screenShakes[MAX_SCREEN_SHAKES];
 
+	FireBall m_fireballs[MAX_FIREBALLS];
+
 	// non-serialized (RPC)
 
 	PlayerInstanceData * m_playerInstanceDatas[MAX_PLAYERS];
@@ -764,6 +767,8 @@ public:
 	void addAnimationFx(const char * fileName, const char * animName, int x, int y, bool flipX = false, bool flipY = false);
 
 	void addAnnouncement(const char * message, ...);
+
+	void addFireBall();
 };
 
 extern GameSim * g_gameSim;

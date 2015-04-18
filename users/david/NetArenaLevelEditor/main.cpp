@@ -703,7 +703,7 @@ void displayPreview(int x, int y)
 		previewList.clear();
 	}
 
-	EditorTemplate* ct = templateScene->GetCurrentTemplate();
+    EditorTemplate* ct = ed.m_currentTemplate;
 	if(ct && placeTemplate)
 	{
 		foreach(EditorTemplate::TemplateTile* tt, ct->m_list)
@@ -891,7 +891,7 @@ void UnstampTemplate(int tilex, int tiley, EditorTemplate* ct, bool record)
 	sceneCounter = temp;
 }
 
-
+bool mirror = true;
 void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e, Tile* tile )
 {
 	if(sceneCounter != SCENEOBJ)
@@ -902,12 +902,10 @@ void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e, Tile* tile )
 
 		if(placeTemplate)
 		{
-			EditorTemplate* ct = templateScene->GetCurrentTemplate();
-
 			if(e->buttons() == Qt::LeftButton)
-				StampTemplate(tilex, tiley, ct);
+                StampTemplate(tilex, tiley, ed.m_currentTemplate);
 			else if(e->buttons() == Qt::RightButton)
-				UnstampTemplate(tilex, tiley, ct);
+                UnstampTemplate(tilex, tiley, ed.m_currentTemplate);
 			e->accept();
 		}
 		else
@@ -923,12 +921,12 @@ void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e, Tile* tile )
 				if(editorMode == EM_Template)
 				{
 					if(sceneCounter == SCENEMECH)
-						templateScene->GetCurrentTemplate()->GetOrAddTemplateTile(tilex, tiley)->blockMech = ' ';
+                        ed.m_currentTemplate->GetOrAddTemplateTile(tilex, tiley)->blockMech = ' ';
 					if(sceneCounter == SCENECOLL)
-						templateScene->GetCurrentTemplate()->GetOrAddTemplateTile(tilex, tiley)->blockColl = ' ';
+                        ed.m_currentTemplate->GetOrAddTemplateTile(tilex, tiley)->blockColl = ' ';
 					if(sceneCounter == SCENEART)
 					{
-						templateScene->GetCurrentTemplate()->GetOrAddTemplateTile(tilex, tiley)->blockArt = artMap.first();
+                        ed.m_currentTemplate->GetOrAddTemplateTile(tilex, tiley)->blockArt = artMap.first();
 						tile->SetSelectedBlock(artMap.keys().first());
 					}
 				}
@@ -939,12 +937,12 @@ void EditorScene::CustomMouseEvent ( QGraphicsSceneMouseEvent * e, Tile* tile )
 				if(editorMode == EM_Template)
 				{
 					if(sceneCounter == SCENEMECH)
-						templateScene->GetCurrentTemplate()->GetOrAddTemplateTile(tilex, tiley)->blockMech = selectedTile;
+                        ed.m_currentTemplate->GetOrAddTemplateTile(tilex, tiley)->blockMech = selectedTile;
 					if(sceneCounter == SCENECOLL)
-						templateScene->GetCurrentTemplate()->GetOrAddTemplateTile(tilex, tiley)->blockColl = selectedTile;
+                        ed.m_currentTemplate->GetOrAddTemplateTile(tilex, tiley)->blockColl = selectedTile;
 					if(sceneCounter == SCENEART)
 					{
-						templateScene->GetCurrentTemplate()->GetOrAddTemplateTile(tilex, tiley)->blockArt = artMap[selectedTile];
+                        ed.m_currentTemplate->GetOrAddTemplateTile(tilex, tiley)->blockArt = artMap[selectedTile];
 						if(!templateToArtMap.contains(artMap[selectedTile]))
 							templateToArtMap[artMap[selectedTile]] = selectedTile;
 						tile->SetSelectedBlock(selectedTile);
@@ -1118,8 +1116,6 @@ void TemplateScene::SetCurrentFolder(QString name)
 		m_currentFolder = m_folderMap[name];
 		m_currentFolder->SetCurrentTemplate(); //select top template of this folder.
 
-
-
         viewPallette->setScene(m_currentFolder->m_scene);
 	}
 }
@@ -1188,10 +1184,14 @@ void TemplateFolder::SetCurrentTemplate()
 	{
 		placeTemplate = true;
 		m_currentTemplate = m_templateMap.first();
+
+        ed.m_currentTemplate = m_currentTemplate;
 	}
 	else
 	{
 		m_currentTemplate = 0;
+        ed.m_currentTemplate = m_currentTemplate;
+
 		placeTemplate = false;
 	}
 
@@ -1205,6 +1205,8 @@ void TemplateFolder::SetCurrentTemplate(QString name)
 		m_currentTemplate = m_templateMap[name];
         m_currentTemplate->LoadTemplateIntoScene();
 		placeTemplate = true;
+
+        ed.m_currentTemplate = m_currentTemplate;
 	}
 	else
 		SetCurrentTemplate();
@@ -1478,6 +1480,16 @@ EditorTemplate::TemplateTile::TemplateTile()
 	blockColl = ' ';
 }
 
+EditorTemplate::TemplateTile::TemplateTile(EditorTemplate::TemplateTile& t)
+{
+    x = t.x;
+    y = t.y;
+
+    blockMech = t.blockMech;
+    blockArt = t.blockArt;
+    blockColl = t.blockColl;
+}
+
 QPixmap* EditorTemplate::TemplateTile::GetPixmap()
 {
     return pixmapsArt[GetArtKey()];
@@ -1495,6 +1507,51 @@ void EditorTemplate::mousePressEvent ( QGraphicsSceneMouseEvent * e )
 	e->accept();
 }
 
+
+EditorTemplate* EditorTemplate::GetMirror()
+{
+    EditorTemplate* t = new EditorTemplate();
+
+    QPixmap* pixmap_reflect = new QPixmap(this->pixmap().transformed(QTransform().scale(-1, 1)));
+
+    t->setPixmap(*pixmap_reflect);
+    //this->setPixmap(*pixmap_reflect);
+
+    delete pixmap_reflect;
+
+    int maxX = 0;
+    foreach(TemplateTile* tt, m_list)                                                           //determine max x
+    {
+        TemplateTile* tt2 = new TemplateTile(*tt);
+        t->m_list.append(tt2);
+
+        if(tt2->x > maxX)
+            maxX = tt2->x;
+    }
+
+
+    foreach(TemplateTile* tt, t->m_list)
+    {
+        tt->x = maxX -tt->x;                                                                    //x values become max x -x
+
+        pixmap_reflect = new QPixmap(tt->GetPixmap()->transformed(QTransform().scale(-1, 1)));  //mirror all art tiles
+
+        tt->blockArt.chop(4);
+        tt->blockArt += "HMirror.png";
+
+
+        if(!templateToArtMap.contains(tt->blockArt))                                            //add new mirrored tiles to artlist
+        {
+            //qDebug() << "adding " << tt->blockArt;
+            short key = (short)pixmapsArt.size();
+            artMap[key] = tt->blockArt;
+            templateToArtMap[tt->blockArt] = key;
+            pixmapsArt[key] = pixmap_reflect;
+        }
+    }
+
+    return t;
+}
 
 
 void InitializeScenesAndViews()
