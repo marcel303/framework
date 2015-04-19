@@ -21,6 +21,10 @@ struct PhysicsActorCBs
 		memset(this, 0, sizeof(PhysicsActorCBs));
 	}
 
+	int axis;
+
+	void * userData;
+
 	bool (*onBlockMask)(PhysicsActorCBs & cbs, PhysicsActor & actor, uint32_t blockMask);
 	bool (*onHitActor)(PhysicsActorCBs & cbs, PhysicsActor & actor, PhysicsActor & otherActor); // todo : check actors vs actor collisions once PhysicsScene is set up
 	bool (*onHitPlayer)(PhysicsActorCBs & cbs, PhysicsActor & actor, Player & player); // fixme : use onHitActor at some point when player is converted

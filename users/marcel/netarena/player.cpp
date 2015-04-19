@@ -1341,7 +1341,7 @@ void Player::tick(float dt)
 					if (!hasDetonated)
 					{
 						// throw a new one
-						GAMESIM->spawnPipeBomb(m_pos, Vec2(m_facing[0] * 100.f, 0.f), m_index);
+						GAMESIM->spawnPipeBomb(m_pos, m_vel * PIPEBOMB_PLAYER_SPEED_MULTIPLIER + Vec2(m_facing[0] * PIPEBOMB_THROW_SPEED, 0.f), m_index);
 					}
 				}
 				else if (characterData->m_special == kPlayerSpecial_RocketPunch &&

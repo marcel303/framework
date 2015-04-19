@@ -434,10 +434,10 @@ void PipeBomb::setup(Vec2Arg pos, Vec2Arg vel, int playerIndex)
 	*static_cast<PhysicsActor*>(this) = PhysicsActor();
 
 	m_isActive = true;
-	m_bbMin.Set(-sprite.getWidth() / 2.f, -sprite.getHeight() / 2.f);
-	m_bbMax.Set(+sprite.getWidth() / 2.f, +sprite.getHeight() / 2.f);
-	m_pos = pos;
-	m_vel.Set(0.f, 0.f);
+	m_bbMin.Set(-sprite.getWidth() / 2.f, -sprite.getHeight());
+	m_bbMax.Set(+sprite.getWidth() / 2.f, 0.f);
+	m_pos = pos + Vec2(0.f, -1.f);
+	m_vel = vel;
 	m_doTeleport = true;
 	m_bounciness = 0.f;
 	m_noGravity = false;
@@ -446,11 +446,30 @@ void PipeBomb::setup(Vec2Arg pos, Vec2Arg vel, int playerIndex)
 
 	m_playerIndex = playerIndex;
 	m_exploded = false;
+	m_activationTime = PIPEBOMB_ACTIVATION_TIME;
 }
 
 void PipeBomb::tick(GameSim & gameSim, float dt)
 {
+	m_activationTime -= dt;
+	if (m_activationTime < 0.f)
+		m_activationTime = 0.f;
+
 	PhysicsActorCBs cbs;
+	cbs.userData = &gameSim;
+	cbs.onBounce = [](PhysicsActorCBs & cbs, PhysicsActor & actor)
+	{
+		GameSim * gameSim = (GameSim*)cbs.userData;
+		PipeBomb & self = static_cast<PipeBomb&>(actor);
+
+		if (!self.m_hasLanded && cbs.axis == 1)
+		{
+			self.m_hasLanded = true;
+			self.m_vel.Set(0.f, 0.f);
+
+			gameSim->playSound("pipebomb-bounce.ogg");
+		}
+	};
 	cbs.onHitPlayer = [](PhysicsActorCBs & cbs, PhysicsActor & actor, Player & player)
 	{
 		PipeBomb & self = static_cast<PipeBomb&>(actor);
@@ -469,15 +488,48 @@ void PipeBomb::tick(GameSim & gameSim, float dt)
 
 	if (m_exploded)
 	{
-		m_isActive = false;
+		gameSim.playSound("pipebomb-explode.ogg");
+		gameSim.addAnimationFx("fx/PipeBomb.scml", "Explode", m_pos[0], m_pos[1]);
+
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+		{
+			if (gameSim.m_players[i].m_isUsed && gameSim.m_players[i].m_isAlive)
+			{
+				if (i != m_playerIndex)
+				{
+					const Vec2 delta = gameSim.m_players[i].m_pos - m_pos;
+					const float distance = delta.CalcSize() + 0.001f;
+					if (distance <= PIPEBOMB_BLAST_RADIUS)
+					{
+						const float d = distance / PIPEBOMB_BLAST_RADIUS;
+						const float s = Calc::Lerp(PIPEBOMB_BLAST_STRENGTH_NEAR, PIPEBOMB_BLAST_STRENGTH_FAR, d);
+						const Vec2 dir = delta.CalcNormalized();
+						gameSim.m_players[i].handleDamage(1.f, dir * s, &gameSim.m_players[m_playerIndex]);
+					}
+				}
+			}
+		}
+
+		*this = PipeBomb();
 	}
 }
 
 void PipeBomb::draw() const
 {
 	Sprite(PIPEBOMB_SPRITE).drawEx(
-		m_pos[0],
-		m_pos[1]);
+		m_pos[0] + m_bbMin[0],
+		m_pos[1] + m_bbMin[1]);
+
+	if (g_devMode)
+	{
+		setColor(0, 255, 0, 63);
+		drawRectLine(
+			m_pos[0] - PIPEBOMB_BLAST_RADIUS,
+			m_pos[1] - PIPEBOMB_BLAST_RADIUS,
+			m_pos[0] + PIPEBOMB_BLAST_RADIUS,
+			m_pos[1] + PIPEBOMB_BLAST_RADIUS);
+		setColor(colorWhite);
+	}
 }
 
 void PipeBomb::drawLight() const
@@ -487,9 +539,12 @@ void PipeBomb::drawLight() const
 
 void PipeBomb::explode()
 {
-	logDebug("PipeBomb::explode");
+	if (m_activationTime == 0.f)
+	{
+		logDebug("PipeBomb::explode");
 
-	m_exploded = true;
+		m_exploded = true;
+	}
 }
 
 //
@@ -1229,6 +1284,11 @@ void GameSim::resetGameWorld()
 	for (int i = 0; i < MAX_MOVERS; ++i)
 		m_movers[i] = Mover();
 
+	// reset pipebombs
+
+	for (int i = 0; i < MAX_PIPEBOMBS; ++i)
+		m_pipebombs[i] = PipeBomb();
+
 	// reset floor effect
 
 	m_floorEffect = FloorEffect();
@@ -1492,6 +1552,14 @@ void GameSim::tickPlay()
 	{
 		if (m_movers[i].m_isActive)
 			m_movers[i].tick(*this, dt);
+	}
+
+	// pipebombs
+
+	for (int i = 0; i < MAX_PIPEBOMBS; ++i)
+	{
+		if (m_pipebombs[i].m_isActive)
+			m_pipebombs[i].tick(*this, dt);
 	}
 
 	// pickup spawning
@@ -2245,6 +2313,7 @@ void GameSim::spawnPipeBomb(Vec2 pos, Vec2 vel, int playerIndex)
 	{
 		if (!m_pipebombs[i].m_isActive)
 		{
+			playSound("pipebomb-throw.ogg");
 			m_pipebombs[i].setup(pos, vel, playerIndex);
 			return;
 		}

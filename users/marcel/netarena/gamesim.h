@@ -458,7 +458,9 @@ struct Mover
 struct PipeBomb : PhysicsActor
 {
 	bool m_exploded;
+	bool m_hasLanded;
 	int m_playerIndex;
+	float m_activationTime;
 
 	PipeBomb()
 	{

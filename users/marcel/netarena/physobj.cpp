@@ -68,6 +68,8 @@ void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 		{
 			bool collision = false;
 
+			cbs.axis = j;
+
 			float oldPos = newPos[j];
 
 			newPos[j] += step[j];
@@ -144,6 +146,27 @@ void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 
 		if (cbs.onMove)
 			cbs.onMove(cbs, *this);
+	}
+
+	if (cbs.onHitPlayer)
+	{
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+		{
+			if (gameSim.m_players[i].m_isUsed && gameSim.m_players[i].m_isAlive)
+			{
+				CollisionInfo playerCollision;
+				if (gameSim.m_players[i].getPlayerCollision(playerCollision))
+				{
+					CollisionInfo myCollision;
+					getCollisionInfo(myCollision);
+
+					if (myCollision.intersects(playerCollision))
+					{
+						cbs.onHitPlayer(cbs, *this, gameSim.m_players[i]);
+					}
+				}
+			}
+		}
 	}
 }
 
