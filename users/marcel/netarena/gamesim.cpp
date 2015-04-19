@@ -166,7 +166,7 @@ void Token::setup(int blockX, int blockY)
 		(blockY + .5f) * BLOCK_SY);
 	m_vel.Set(0.f, 0.f);
 	m_doTeleport = true;
-	m_bounciness = -TOKEN_BOUNCINESS;
+	m_bounciness = TOKEN_BOUNCINESS;
 	m_noGravity = false;
 	m_friction = 0.1f;
 	m_airFriction = 0.9f;
@@ -235,7 +235,7 @@ void Coin::setup(int blockX, int blockY)
 		(blockY + .5f) * BLOCK_SY);
 	m_vel.Set(0.f, 0.f);
 	m_doTeleport = true;
-	m_bounciness = -TOKEN_BOUNCINESS;
+	m_bounciness = TOKEN_BOUNCINESS;
 	m_noGravity = false;
 	m_friction = 0.1f;
 	m_airFriction = 0.9f;
@@ -440,7 +440,7 @@ void Axe::setup(Vec2Arg pos, Vec2Arg vel, int playerIndex)
 	m_pos = pos;
 	m_vel = vel;
 	m_doTeleport = true;
-	m_bounciness = 0.5f;
+	m_bounciness = 0.2f;
 	m_noGravity = false;
 	m_friction = 0.01f;
 	m_airFriction = 0.9f;
@@ -450,28 +450,44 @@ void Axe::setup(Vec2Arg pos, Vec2Arg vel, int playerIndex)
 
 void Axe::tick(GameSim & gameSim, float dt)
 {
+	m_hasBounced = false;
+
 	PhysicsActorCBs cbs;
 	cbs.userData = &gameSim;
 	cbs.onBounce = [](PhysicsActorCBs & cbs, PhysicsActor & actor)
 	{
 		GameSim * gameSim = (GameSim*)cbs.userData;
 		Axe & self = static_cast<Axe&>(actor);
+
+		self.m_hasBounced = true;
 	};
 	cbs.onHitPlayer = [](PhysicsActorCBs & cbs, PhysicsActor & actor, Player & player)
 	{
 		GameSim * gameSim = (GameSim*)cbs.userData;
 		Axe & self = static_cast<Axe&>(actor);
 
-		// filter collision with owning player
-		if (player.m_index == self.m_playerIndex)
-			return false;
+		if (!self.m_hasLanded)
+		{
+			// filter collision with owning player
+			if (player.m_index == self.m_playerIndex)
+				return false;
 
-		player.handleDamage(1.f, self.m_vel, &gameSim->m_players[self.m_playerIndex]);
+			player.handleDamage(1.f, self.m_vel, &gameSim->m_players[self.m_playerIndex]);
+		}
 
 		return false;
 	};
 
+	Vec2 pos1 = m_pos;
+
 	PhysicsActor::tick(gameSim, dt, cbs);
+
+	Vec2 pos2 = m_pos;
+
+	//
+
+	if ((pos2 - pos1).CalcSize() < 4.f && m_hasBounced)
+		m_hasLanded = true;
 }
 
 void Axe::draw() const
@@ -482,7 +498,7 @@ void Axe::draw() const
 
 	if (g_devMode)
 	{
-		setColor(255, 0, 0, 63);
+		setColor(m_hasLanded ? 0 : 255, m_hasLanded ? 255 : 0, 0, 63);
 		drawRectLine(
 			m_pos[0] + m_bbMin[0],
 			m_pos[1] + m_bbMin[1],
@@ -2407,6 +2423,25 @@ void GameSim::spawnAxe(Vec2 pos, Vec2 vel, int playerIndex)
 			return;
 		}
 	}
+}
+
+bool GameSim::grabAxe(const CollisionInfo & collision)
+{
+	for (int i = 0; i < MAX_AXES; ++i)
+	{
+		if (m_axes[i].m_isActive && m_axes[i].m_hasLanded)
+		{
+			CollisionInfo axeCollision;
+			m_axes[i].getCollisionInfo(axeCollision);
+			if (collision.intersects(axeCollision))
+			{
+				playSound("axe-pickup.ogg");
+				m_axes[i] = Axe();
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 void GameSim::spawnPipeBomb(Vec2 pos, Vec2 vel, int playerIndex)

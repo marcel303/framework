@@ -101,8 +101,8 @@ void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 			{
 				newPos[j] = oldPos;
 
-				m_vel[j] *= m_bounciness;
-				step[j] *= m_bounciness;
+				m_vel[j] *= -m_bounciness;
+				step[j] *= -m_bounciness;
 
 				if (cbs.onBounce)
 					cbs.onBounce(cbs, *this);

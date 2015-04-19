@@ -973,6 +973,16 @@ void Player::tick(float dt)
 					break;
 				}
 			}
+
+			if (characterData->m_special == kPlayerSpecial_AxeThrow && !m_hasAxe)
+			{
+				CollisionInfo playerCollision;
+				if (getPlayerCollision(playerCollision))
+				{
+					if (GAMESIM->grabAxe(playerCollision))
+						m_hasAxe = true;
+				}
+			}
 		}
 
 		float surfaceFriction = 0.f;
@@ -1644,7 +1654,7 @@ void Player::tick(float dt)
 
 			bool doSteering =
 				m_isAlive &&
-				(playerControl || m_special.meleeCounter != 0);
+				(playerControl || m_special.meleeCounter != 0 || m_attack.m_axeThrow.isActive);
 
 			if (doSteering && steeringSpeed != 0.f)
 			{

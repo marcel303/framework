@@ -473,6 +473,7 @@ struct Mover
 struct Axe : PhysicsActor
 {
 	bool m_hasLanded;
+	bool m_hasBounced;
 	int m_playerIndex;
 
 	Axe()
@@ -795,6 +796,8 @@ public:
 	void spawnParticles(const ParticleSpawnInfo & spawnInfo);
 
 	void spawnAxe(Vec2 pos, Vec2 vel, int playerIndex);
+	bool grabAxe(const CollisionInfo & collision);
+
 	void spawnPipeBomb(Vec2 pos, Vec2 vel, int playerIndex);
 
 	void doQuake(float vel);
