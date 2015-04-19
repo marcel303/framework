@@ -54,6 +54,7 @@ static const char * s_pickupSprites[kPickupType_COUNT] =
 
 #define TOKEN_SPRITE "token.png"
 #define COIN_SPRITE "coin.png"
+#define AXE_SPRITE "axe.png"
 #define PIPEBOMB_SPRITE "pipebomb.png"
 
 //
@@ -427,6 +428,76 @@ bool Mover::intersects(CollisionInfo & collisionInfo) const
 
 //
 
+void Axe::setup(Vec2Arg pos, Vec2Arg vel, int playerIndex)
+{
+	Sprite sprite(AXE_SPRITE);
+
+	*static_cast<PhysicsActor*>(this) = PhysicsActor();
+
+	m_isActive = true;
+	m_bbMin.Set(-sprite.getWidth() / 2.f, -sprite.getHeight() / 2.f);
+	m_bbMax.Set(+sprite.getWidth() / 2.f, +sprite.getHeight() / 2.f);
+	m_pos = pos;
+	m_vel = vel;
+	m_doTeleport = true;
+	m_bounciness = 0.5f;
+	m_noGravity = false;
+	m_friction = 0.01f;
+	m_airFriction = 0.9f;
+
+	m_playerIndex = playerIndex;
+}
+
+void Axe::tick(GameSim & gameSim, float dt)
+{
+	PhysicsActorCBs cbs;
+	cbs.userData = &gameSim;
+	cbs.onBounce = [](PhysicsActorCBs & cbs, PhysicsActor & actor)
+	{
+		GameSim * gameSim = (GameSim*)cbs.userData;
+		Axe & self = static_cast<Axe&>(actor);
+	};
+	cbs.onHitPlayer = [](PhysicsActorCBs & cbs, PhysicsActor & actor, Player & player)
+	{
+		GameSim * gameSim = (GameSim*)cbs.userData;
+		Axe & self = static_cast<Axe&>(actor);
+
+		// filter collision with owning player
+		if (player.m_index == self.m_playerIndex)
+			return false;
+
+		player.handleDamage(1.f, self.m_vel, &gameSim->m_players[self.m_playerIndex]);
+
+		return false;
+	};
+
+	PhysicsActor::tick(gameSim, dt, cbs);
+}
+
+void Axe::draw() const
+{
+	Sprite(AXE_SPRITE).drawEx(
+		m_pos[0] + m_bbMin[0],
+		m_pos[1] + m_bbMin[1]);
+
+	if (g_devMode)
+	{
+		setColor(255, 0, 0, 63);
+		drawRectLine(
+			m_pos[0] + m_bbMin[0],
+			m_pos[1] + m_bbMin[1],
+			m_pos[0] + m_bbMax[0],
+			m_pos[1] + m_bbMax[1]);
+		setColor(colorWhite);
+	}
+}
+
+void Axe::drawLight() const
+{
+}
+
+//
+
 void PipeBomb::setup(Vec2Arg pos, Vec2Arg vel, int playerIndex)
 {
 	Sprite sprite(PIPEBOMB_SPRITE);
@@ -478,8 +549,7 @@ void PipeBomb::tick(GameSim & gameSim, float dt)
 		if (player.m_index == self.m_playerIndex)
 			return false;
 
-		if (!self.m_exploded)
-			self.explode();
+		self.explode();
 
 		return false;
 	};
@@ -522,6 +592,12 @@ void PipeBomb::draw() const
 
 	if (g_devMode)
 	{
+		setColor(255, 0, 0, 63);
+		drawRectLine(
+			m_pos[0] + m_bbMin[0],
+			m_pos[1] + m_bbMin[1],
+			m_pos[0] + m_bbMax[0],
+			m_pos[1] + m_bbMax[1]);
 		setColor(0, 255, 0, 63);
 		drawRectLine(
 			m_pos[0] - PIPEBOMB_BLAST_RADIUS,
@@ -539,7 +615,7 @@ void PipeBomb::drawLight() const
 
 void PipeBomb::explode()
 {
-	if (m_activationTime == 0.f)
+	if (!m_exploded && m_activationTime == 0.f)
 	{
 		logDebug("PipeBomb::explode");
 
@@ -1284,6 +1360,11 @@ void GameSim::resetGameWorld()
 	for (int i = 0; i < MAX_MOVERS; ++i)
 		m_movers[i] = Mover();
 
+	// reset axes
+
+	for (int i = 0; i < MAX_AXES; ++i)
+		m_axes[i] = Axe();
+
 	// reset pipebombs
 
 	for (int i = 0; i < MAX_PIPEBOMBS; ++i)
@@ -1552,6 +1633,14 @@ void GameSim::tickPlay()
 	{
 		if (m_movers[i].m_isActive)
 			m_movers[i].tick(*this, dt);
+	}
+
+	// axes
+
+	for (int i = 0; i < MAX_AXES; ++i)
+	{
+		if (m_axes[i].m_isActive)
+			m_axes[i].tick(*this, dt);
 	}
 
 	// pipebombs
@@ -2305,6 +2394,19 @@ uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, BulletType t
 	}
 
 	return id;
+}
+
+void GameSim::spawnAxe(Vec2 pos, Vec2 vel, int playerIndex)
+{
+	for (int i = 0; i < MAX_AXES; ++i)
+	{
+		if (!m_axes[i].m_isActive)
+		{
+			playSound("axe-throw.ogg");
+			m_axes[i].setup(pos, vel, playerIndex);
+			return;
+		}
+	}
 }
 
 void GameSim::spawnPipeBomb(Vec2 pos, Vec2 vel, int playerIndex)

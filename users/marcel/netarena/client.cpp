@@ -517,6 +517,14 @@ void Client::drawPlay()
 				m_gameSim->m_movers[i].draw();
 		}
 
+		// axes
+
+		for (int i = 0; i < MAX_AXES; ++i)
+		{
+			if (m_gameSim->m_axes[i].m_isActive)
+				m_gameSim->m_axes[i].draw();
+		}
+
 		// pipebombs
 
 		for (int i = 0; i < MAX_PIPEBOMBS; ++i)

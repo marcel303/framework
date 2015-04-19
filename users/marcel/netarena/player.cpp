@@ -577,7 +577,8 @@ bool Player::getPlayerControl() const
 		m_ice.timer == 0.f &&
 		m_bubble.timer == 0.f &&
 		m_special.meleeCounter == 0 &&
-		m_attack.m_rocketPunch.isActive == false;
+		m_attack.m_rocketPunch.isActive == false &&
+		m_attack.m_axeThrow.isActive == false;
 }
 
 bool Player::getPlayerCollision(CollisionInfo & collision) const
@@ -1151,6 +1152,16 @@ void Player::tick(float dt)
 				}
 			}
 
+			// update axe throw attack
+
+			if (m_attack.m_axeThrow.isActive)
+			{
+				if (m_input.wentUp(INPUT_BUTTON_Y))
+				{
+					endAxeThrow();
+				}
+			}
+
 			// update zweihander attack
 
 			if (m_attack.m_zweihander.isActive())
@@ -1341,7 +1352,8 @@ void Player::tick(float dt)
 					if (!hasDetonated)
 					{
 						// throw a new one
-						GAMESIM->spawnPipeBomb(m_pos, m_vel * PIPEBOMB_PLAYER_SPEED_MULTIPLIER + Vec2(m_facing[0] * PIPEBOMB_THROW_SPEED, 0.f), m_index);
+						const Vec2 pos = m_pos + Vec2(0.f, m_collision.min[1] + m_collision.max[1]);
+						GAMESIM->spawnPipeBomb(pos, m_vel * PIPEBOMB_PLAYER_SPEED_MULTIPLIER + Vec2(m_facing[0] * PIPEBOMB_THROW_SPEED, 0.f), m_index);
 					}
 				}
 				else if (characterData->m_special == kPlayerSpecial_RocketPunch &&
@@ -1357,6 +1369,12 @@ void Player::tick(float dt)
 							beginRocketPunch();
 						}
 					}
+				}
+				else if (characterData->m_special == kPlayerSpecial_AxeThrow &&
+					m_input.wentDown(INPUT_BUTTON_Y) &&
+					isAnimOverrideAllowed(kPlayerAnim_Attack))
+				{
+					beginAxeThrow();
 				}
 				else if (characterData->m_special == kPlayerSpecial_DoubleSidedMelee &&
 					m_input.wentDown(INPUT_BUTTON_Y) &&
@@ -2613,6 +2631,25 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 			py + off2[1] - 5.f,
 			px + off2[0] + 5.f,
 			py + off2[1] + 5.f);
+		setColor(colorWhite);
+	}
+
+	// draw axe throw direction
+
+	if (m_attack.m_axeThrow.isActive)
+	{
+		const float px = x;
+		const float py = y - 30.f; // fixme : height
+		const Vec2 dir = m_input.getAnalogDirection().CalcNormalized();
+		const Vec2 off1 = dir * 50.f;
+		const Vec2 off2 = dir * 100.f;
+		setColor(colorGreen);
+		drawLine(
+			px + off1[0],
+			py + off1[1],
+			px + off2[0],
+			py + off2[1]);
+		setColor(colorWhite);
 	}
 
 	if (GAMESIM->m_gameMode == kGameMode_TokenHunt)
@@ -2688,6 +2725,8 @@ void Player::drawLight() const
 
 void Player::debugDraw() const
 {
+	const CharacterData * characterData = getCharacterData(m_characterIndex);
+
 	setColor(0, 31, 63, 63);
 	drawRect(
 		m_pos[0] + m_collision.min[0],
@@ -2744,6 +2783,13 @@ void Player::debugDraw() const
 	{
 		setColor(colorWhite);
 		drawText(m_pos[0], y, 14, 0.f, 0.f, "stickied");
+		y += 18.f;
+	}
+
+	if (characterData->m_special == kPlayerSpecial_AxeThrow && m_hasAxe)
+	{
+		setColor(colorWhite);
+		drawText(m_pos[0], y, 14, 0.f, 0.f, "axe");
 		y += 18.f;
 	}
 
@@ -2869,6 +2915,8 @@ void Player::respawn()
 		m_isHuggingWall = false;
 		m_isWallSliding = false;
 		m_enterPassthrough = false;
+
+		m_hasAxe = true;
 
 		//
 
@@ -3278,6 +3326,33 @@ void Player::endRocketPunch(bool stunned)
 
 		m_vel = Vec2();
 	}
+}
+
+void Player::beginAxeThrow()
+{
+	if (m_hasAxe)
+	{
+		m_attack = AttackInfo();
+		m_attack.attacking = true;
+
+		m_attack.m_axeThrow.isActive = true;
+	}
+}
+
+void Player::endAxeThrow()
+{
+	m_attack = AttackInfo();
+
+	// throw axe
+
+	const float px = m_pos[0];
+	const float py = m_pos[1] - 30.f; // fixme : height
+	const Vec2 pos(px, py);
+	const Vec2 dir = m_input.getAnalogDirection().CalcNormalized();
+
+	GAMESIM->spawnAxe(pos, dir * AXE_THROW_SPEED, m_index);
+
+	m_hasAxe = false;
 }
 
 //

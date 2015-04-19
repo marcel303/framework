@@ -101,6 +101,9 @@ struct Player
 	void beginRocketPunch();
 	void endRocketPunch(bool stunned);
 
+	void beginAxeThrow();
+	void endAxeThrow();
+
 	// allocation
 	bool m_isUsed;
 
@@ -236,6 +239,16 @@ struct Player
 			float stunTime;
 		} m_rocketPunch;
 
+		struct AxeThrow
+		{
+			AxeThrow()
+			{
+				memset(this, 0, sizeof(AxeThrow));
+			}
+
+			bool isActive;
+		} m_axeThrow;
+
 		struct Zweihander
 		{
 			enum State
@@ -355,6 +368,8 @@ struct Player
 
 	bool m_enterPassthrough; // if set, the player will move through passthrough blocks, without having to press DOWN. this mode is set when using the sword-down attack, and reset when the player hits the ground
 
+	bool m_hasAxe;
+
 	struct TokenHunt
 	{
 		TokenHunt()
@@ -453,6 +468,23 @@ struct Mover
 	void getCollisionInfo(CollisionInfo & collisionInfo) const;
 
 	bool intersects(CollisionInfo & collisionInfo) const;
+};
+
+struct Axe : PhysicsActor
+{
+	bool m_hasLanded;
+	int m_playerIndex;
+
+	Axe()
+	{
+		memset(this, 0, sizeof(Axe));
+	}
+
+	void setup(Vec2Arg pos, Vec2Arg vel, int playerIndex);
+
+	void tick(GameSim & gameSim, float dt);
+	void draw() const;
+	void drawLight() const;
 };
 
 struct PipeBomb : PhysicsActor
@@ -614,6 +646,10 @@ struct GameStateData
 
 	Mover m_movers[MAX_MOVERS];
 
+	// axes
+
+	Axe m_axes[MAX_AXES];
+
 	// pipe bombs
 
 	PipeBomb m_pipebombs[MAX_PIPEBOMBS];
@@ -758,6 +794,7 @@ public:
 	uint16_t spawnBullet(int16_t x, int16_t y, uint8_t angle, BulletType type, BulletEffect effect, uint8_t ownerPlayerId);
 	void spawnParticles(const ParticleSpawnInfo & spawnInfo);
 
+	void spawnAxe(Vec2 pos, Vec2 vel, int playerIndex);
 	void spawnPipeBomb(Vec2 pos, Vec2 vel, int playerIndex);
 
 	void doQuake(float vel);
