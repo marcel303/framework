@@ -102,6 +102,7 @@ enum PlayerSpecial
 	kPlayerSpecial_Zweihander,
 	kPlayerSpecial_AxeThrow,
 	kPlayerSpecial_Pipebomb,
+	kPlayerSpecial_Grapple,
 	kPlayerSpecial_COUNT
 };
 

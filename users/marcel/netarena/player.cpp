@@ -978,12 +978,22 @@ void Player::tick(float dt)
 
 			if (characterData->m_special == kPlayerSpecial_AxeThrow && !m_hasAxe)
 			{
+				if (m_axeRecoveryTime > 0.f)
+				{
+					m_axeRecoveryTime -= dt;
+					if (m_axeRecoveryTime <= 0.f)
+						m_hasAxe = true;
+				}
+
 				CollisionInfo playerCollision;
 				if (getPlayerCollision(playerCollision))
 				{
 					if (GAMESIM->grabAxe(playerCollision))
 						m_hasAxe = true;
 				}
+
+				if (m_hasAxe)
+					m_axeRecoveryTime = 0.f;
 			}
 		}
 
@@ -1373,7 +1383,23 @@ void Player::tick(float dt)
 
 			if (!s_noSpecial)
 			{
-				if (characterData->m_special == kPlayerSpecial_Pipebomb &&
+				if (characterData->m_special == kPlayerSpecial_Grapple &&
+					m_input.wentDown(INPUT_BUTTON_Y) &&
+					isAnimOverrideAllowed(kPlayerAnim_Attack))
+				{
+					beginGrapple();
+					// todo : change animation to grappling anim (reuse attack anim for now)
+					// todo : shoot grapple up with a ~25 degree angle
+					// todo : determine anchor point. cannot do ray cast.. do many point tests. against arena blocks only
+					// todo : remember attachment point and length of grapple rope
+					
+					// processing
+					// todo : check if player is grounded. if grounded, release grapple
+					// todo : check if grapple is release (extra button tap, or button release?)
+					// todo : do movement constraint, based on grapple rope length
+					// todo : on attack, jump, death or wrap around : release grapple
+				}
+				else if (characterData->m_special == kPlayerSpecial_Pipebomb &&
 					m_input.wentDown(INPUT_BUTTON_Y) &&
 					isAnimOverrideAllowed(kPlayerAnim_Attack))
 				{
@@ -1899,6 +1925,23 @@ void Player::tick(float dt)
 		args.gravity = gravity;
 
 		Vec2 newTotalVel = totalVel;
+
+		if (m_grapple.isActive)
+		{
+			const float kMaxMove = 5.f;
+			const Vec2 p1 = getGrapplePos();
+			const Vec2 p2 = m_grapple.anchorPos;
+			const Vec2 pd = p2 - p1;
+			const Vec2 dn = pd.CalcNormalized();
+			const float distance = pd.CalcSize();
+			float move = distance - m_grapple.distance;
+			if (Calc::Abs(move) > kMaxMove)
+				move = kMaxMove * Calc::Sign(move);
+			m_pos += dn * move;
+			const float speed = m_vel.CalcSize();
+			m_vel += m_vel.CalcNormalized() * (dn * m_vel);
+			//m_vel = m_vel.CalcNormalized() * speed;
+		}
 
 		updatePhysics(
 			*GAMESIM,
@@ -2496,6 +2539,7 @@ void Player::tick(float dt)
 				m_facing[0] = newFacing;
 			}
 		}
+
 		m_facing[1] = m_isAttachedToSticky ? -1 : +1;
 
 		// wrapping
@@ -2828,6 +2872,17 @@ void Player::debugDraw() const
 	setColor(63, 31, 0, 63);
 	damageCollision.debugDraw();
 
+	if (m_grapple.isActive)
+	{
+		const Vec2 p1 = getGrapplePos();
+		const Vec2 p2 = m_grapple.anchorPos;
+		setColor(colorRed);
+		drawLine(p1[0], p1[1], p2[0], p2[1]);
+		setColor(colorGreen);
+		drawRect(p1[0] - 4.f, p1[1] - 4.f, p1[0] + 4.f, p1[1] + 4.f);
+		drawRect(p2[0] - 4.f, p2[1] - 4.f, p2[0] + 4.f, p2[1] + 4.f);
+	}
+
 	float y = m_pos[1];
 
 	if (m_attack.attacking && m_attack.hasCollision)
@@ -3076,7 +3131,7 @@ bool Player::shieldAbsorb(float amount)
 		if (m_shield.shield == 0)
 		{
 			GAMESIM->playSound("shield-pop.ogg");
-			GAMESIM->addAnimationFx("fx/Shield.scml", "Pop", m_pos[0], m_pos[1]); // player shield is popped
+			GAMESIM->addAnimationFx("fx/Shield_Pop.scml", "Pop", m_pos[0], m_pos[1]); // player shield is popped
 		}
 
 		return true;
@@ -3178,6 +3233,8 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 
 				m_isUsingJetpack = false;
 				m_jetpackFxTime = 0.f;
+
+				endGrapple();
 
 				// fixme.. mid pos
 				const CharacterData * characterData = getCharacterData(m_index);
@@ -3465,6 +3522,50 @@ void Player::endAxeThrow()
 	GAMESIM->spawnAxe(pos, dir * AXE_THROW_SPEED, m_index);
 
 	m_hasAxe = false;
+	m_axeRecoveryTime = 0.f;
+}
+
+void Player::beginGrapple()
+{
+	m_grapple = GrappleInfo();
+
+	// find anchor point
+
+	const float kGrappleAngle = Calc::DegToRad(15.f * m_facing[0]);
+	const float dx = +std::sin(kGrappleAngle);
+	const float dy = -std::cos(kGrappleAngle);
+
+	const Arena & arena = GAMESIM->m_arena;
+
+	const Vec2 grapplePos = getGrapplePos();
+
+	for (float x = grapplePos[0], y = grapplePos[1]; y >= 0.f; x += dx, y += dy)
+	{
+		if (arena.getIntersectingBlocksMask(x, y) & kBlockMask_Solid)
+		{
+			m_grapple.isActive = true;
+			m_grapple.anchorPos = Vec2(x, y);
+			m_grapple.distance = (grapplePos - m_grapple.anchorPos).CalcSize(); // todo : anchor pos of player should not be at feet
+			break;
+		}
+	}
+}
+
+void Player::endGrapple()
+{
+	m_grapple = GrappleInfo();
+}
+
+void Player::tickGrapple(float dt)
+{
+	if (m_grapple.isActive)
+	{
+	}
+}
+
+Vec2 Player::getGrapplePos() const
+{
+	return m_pos + (m_collision.min + m_collision.max) / 2.f;
 }
 
 //
@@ -3662,6 +3763,8 @@ void CharacterData::load(int characterIndex)
 		special = kPlayerSpecial_Pipebomb;
 	if (specialStr == "axe")
 		special = kPlayerSpecial_AxeThrow;
+	if (specialStr == "grapple")
+		special = kPlayerSpecial_Grapple;
 
 	m_special = special;
 

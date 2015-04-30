@@ -303,8 +303,11 @@ OPTION_DEFINE(float, PIPEBOMB_ACTIVATION_TIME, "Special Abilities/Pipe Bomb/Acti
 OPTION_DEFINE(float, PIPEBOMB_BLAST_RADIUS, "Special Abilities/Pipe Bomb/Blast Radius");
 OPTION_DEFINE(float, PIPEBOMB_BLAST_STRENGTH_NEAR, "Special Abilities/Pipe Bomb/Blast Strength (Near)");
 OPTION_DEFINE(float, PIPEBOMB_BLAST_STRENGTH_FAR, "Special Abilities/Pipe Bomb/Blast Strength (Far)");
+OPTION_STEP(PIPEBOMB_THROW_SPEED, 0, 0, 10);
+OPTION_STEP(PIPEBOMB_ACTIVATION_TIME, 0, 0, .1f);
 
 OPTION_DEFINE(float, AXE_THROW_SPEED, "Special Abilities/Axe/Throw Speed");
+OPTION_DEFINE(float, AXE_FADE_TIME, "Special Abilities/Axe/Fade Time (Sec)");
 OPTION_STEP(AXE_THROW_SPEED, 0, 0, 10);
 
 OPTION_DEFINE(int, UI_CHARSELECT_BASE_X, "UI/Character Select/Base X");

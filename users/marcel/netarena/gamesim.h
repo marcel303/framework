@@ -105,6 +105,11 @@ struct Player
 	void beginAxeThrow();
 	void endAxeThrow();
 
+	void beginGrapple();
+	void endGrapple();
+	void tickGrapple(float dt);
+	Vec2 getGrapplePos() const;
+
 	// allocation
 	bool m_isUsed;
 
@@ -342,6 +347,19 @@ struct Player
 		float timer;
 	} m_bubble;
 
+	struct GrappleInfo
+	{
+		GrappleInfo()
+		{
+			memset(this, 0, sizeof(GrappleInfo));
+		}
+
+		// todo : add states for deploying the grappling hook? currently attached instantly (which may be fine?)
+		bool isActive;
+		Vec2 anchorPos;
+		float distance;
+	} m_grapple;
+
 	float m_respawnTimer; // when this timer counts to zero, the player is automatically respawn
 	bool m_canRespawn; // set when the player is allowed to respawn, which is after the death animation is done
 	bool m_canTaunt; // set when the player is allowed to taunt, which is after the death animation is done. it's reset after a taunt
@@ -371,6 +389,7 @@ struct Player
 	bool m_enterPassthrough; // if set, the player will move through passthrough blocks, without having to press DOWN. this mode is set when using the sword-down attack, and reset when the player hits the ground
 
 	bool m_hasAxe;
+	float m_axeRecoveryTime;
 
 	struct TokenHunt
 	{
@@ -477,6 +496,7 @@ struct Axe : PhysicsActor
 	bool m_hasLanded;
 	bool m_hasBounced;
 	int m_playerIndex;
+	float m_fadeTime;
 
 	Axe()
 	{

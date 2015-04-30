@@ -486,8 +486,29 @@ void Axe::tick(GameSim & gameSim, float dt)
 
 	//
 
-	if ((pos2 - pos1).CalcSize() < 4.f && m_hasBounced)
+	if (!m_hasLanded && (pos2 - pos1).CalcSize() < 4.f && m_hasBounced)
+	{
 		m_hasLanded = true;
+
+		m_fadeTime = AXE_FADE_TIME;
+
+		if (m_playerIndex != -1 && gameSim.m_players[m_playerIndex].m_axeRecoveryTime == 0.f)
+		{
+			gameSim.m_players[m_playerIndex].m_axeRecoveryTime = AXE_FADE_TIME;
+		}
+	}
+
+	//
+
+	if (m_hasLanded)
+	{
+		m_fadeTime -= dt;
+
+		if (m_fadeTime <= 0.f)
+		{
+			*this = Axe();
+		}
+	}
 }
 
 void Axe::draw() const

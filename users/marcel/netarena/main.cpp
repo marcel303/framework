@@ -1410,7 +1410,7 @@ bool App::tick()
 
 #if 1
 	static bool testAnimationMode = false;
-	if (keyboard.wentDown(SDLK_1))
+	if (keyboard.wentDown(SDLK_1) && !(getSelectedClient() && getSelectedClient()->m_textChat->isActive()))
 		animationTestToggleIsActive();
 
 	if (keyboard.wentDown(SDLK_F1))

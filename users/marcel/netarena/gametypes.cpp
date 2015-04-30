@@ -23,7 +23,8 @@ const char * g_playerSpacialNames[kPlayerSpecial_COUNT] =
 	"Jetpack",
 	"Zweihander",
 	"Axe",
-	"Pipebomb"
+	"Pipebomb",
+	"Grapple"
 };
 
 //
