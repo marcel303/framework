@@ -18,14 +18,14 @@ todo:
 
 ** HIGH PRIORITY **
 
-- add player backdrop (particle fx?)
++ add player backdrop (particle fx?)
 
-- add doQuake method to GameSim
++ add doQuake method to GameSim
 
 - add animations:
 	+ jump - feet
 	+ fall on ground - feet
-	wallslide - side of char?
+	+ wallslide - side of char?
 	+ sword hit sword - point of intersection
 	swordt hit non destruct block - sparks at collission point
 	sword hit destruct block - pop of block + block particles?
@@ -43,7 +43,7 @@ todo:
 
 + add pickup drop on death
 
-- slow down player vertically when hitting block. maybe add small upward speed?
++ slow down player vertically when hitting block. maybe add small upward speed?
 
 - add curve editing through options
 
@@ -1101,6 +1101,8 @@ void Player::tick(float dt)
 
 					if (hit && PLAYER_SWORD_SINGLE_BLOCK)
 						m_attack.hitDestructible = true;
+					if (hit)
+						m_vel[1] *= PLAYER_SWORD_BLOCK_DESTROY_SLOWDOWN;
 				}
 			}
 
@@ -2158,7 +2160,8 @@ void Player::tick(float dt)
 						{
 							GAMESIM->addAnimationFx("fx/Dust.scml", "WallSlide",
 								m_facing[0] < 0.f ? playerCollision.min[0] : playerCollision.max[0],
-								newPos[1]);
+								newPos[1],
+								m_facing[0] < 0.f);
 						}
 					}
 				}
