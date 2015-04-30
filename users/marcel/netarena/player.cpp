@@ -1104,6 +1104,25 @@ void Player::tick(float dt)
 					if (hit)
 						m_vel[1] *= PLAYER_SWORD_BLOCK_DESTROY_SLOWDOWN;
 				}
+
+				// see if we hit a fireball
+
+				for (int i = 0; i < MAX_FIREBALLS; ++i)
+				{
+					FireBall& other = GAMESIM->m_fireballs[i];
+
+					if (other.active)
+					{
+						CollisionShape shape1;
+						CollisionShape shape2;
+
+						if (getAttackCollision(shape1) && other.getCollision(shape2))
+						{
+							if (shape1.intersects(shape2))
+								GAMESIM->m_fireballs[i].active = false;
+						}
+					}
+				}
 			}
 
 			// update rocket punch attack

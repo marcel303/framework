@@ -19,6 +19,8 @@ public:
 	void tick(GameSim & gameSim, float dt);
 	void draw();
 
+	bool getCollision(CollisionShape& shape);
+
 public:
 	FixedString<64> m_name;
 	SpriterState m_state;

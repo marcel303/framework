@@ -16,8 +16,11 @@ void Background::load(const char * name, GameSim & gameSim)
 	m_state = SpriterState();
 	m_state.startAnim(BACKGROUND_SPRITER, "Idle");
 
-	m_startErupt = gameSim.RandomFloat(50.0f, 180.0f);
-	//m_startErupt = 13.f;
+	if (VOLCANO_LOOP)
+		m_startErupt = gameSim.m_roundTime + VOLCANO_LOOP_TIME;
+	else
+		m_startErupt = gameSim.RandomFloat(50.0f, 180.0f);
+		
 
 	t1 = true;
 	t2 = true;
@@ -82,6 +85,15 @@ void Background::tick(GameSim & gameSim, float dt)
 	}
 	else if (m_volcanoState == VC_AFTER)
 	{
+		if (VOLCANO_LOOP)
+		{
+			FixedString<64> name = m_name;
+			memset(this, 0, sizeof(Background));
+			this->load(name.c_str(), gameSim);
+
+			return;
+		}
+
 		if (m_fireBall.m_y < -850.f)
 		{
 			if (m_fireBall.active)
@@ -119,8 +131,4 @@ void Background::doEvent(GameSim & gameSim)
 	m_volcanoState = VC_ERUPT;
 
 	m_fireBall.load("backgrounds/VolcanoTest/Fireball/fireball.scml", gameSim, 1300, 340, -100, 0.15f);
-}
-
-void Background::launchFireBall()
-{
 }

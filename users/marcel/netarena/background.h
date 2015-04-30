@@ -20,8 +20,6 @@ public:
 
 	void doEvent(GameSim & gameSim);
 
-	void launchFireBall();
-
 public:
 	FixedString<64> m_name;
 	SpriterState m_state;

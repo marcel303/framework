@@ -1,5 +1,8 @@
 #include "gamedefs.h"
 
+// demo mode
+OPTION_DEFINE(bool, DEMOMODE, "App/Demo Mode");
+
 // -- prototypes --
 OPTION_DEFINE(bool, PROTO_TIMEDILATION_ON_KILL, "Player/Time Dilation On Kill/Enabled");
 OPTION_DEFINE(float, PROTO_TIMEDILATION_ON_KILL_MULTIPLIER1, "Player/Time Dilation On Kill/Multiplier At Start");
@@ -337,6 +340,9 @@ OPTION_DEFINE(int, INGAME_TEXTCHAT_SIZE_Y, "UI/In-Game Text Chat/Box Height");
 OPTION_DEFINE(int, INGAME_TEXTCHAT_OFFSET_Y, "UI/In-Game Text Chat/Box Offset Y");
 OPTION_DEFINE(float, INGAME_TEXTCHAT_DURATION, "UI/In-Game Text Chat/Time Visible");
 OPTION_STEP(INGAME_TEXTCHAT_DURATION, 0.f, 0.f, .1f);
+
+OPTION_DEFINE(bool, VOLCANO_LOOP, "Level Events/Volcano/Loop");
+OPTION_DEFINE(int, VOLCANO_LOOP_TIME, "Level Events/Volcano/LoopTime");
 
 // fixme : move to gametypes.cpp ?
 

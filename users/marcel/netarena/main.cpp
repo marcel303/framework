@@ -1606,55 +1606,58 @@ void App::draw()
 		}
 
 	#if 1
-		m_discoveryUi->clear();
-
-		const auto serverList = m_discoveryService->getServerList();
-
-		for (size_t i = 0; i < serverList.size(); ++i)
+		if (!DEMOMODE)
 		{
-			const auto & serverInfo = serverList[i];
+			m_discoveryUi->clear();
 
-			char name[32];
-			sprintf(name, "connect_%d", i);
-			Dictionary & button = (*m_discoveryUi)[name];
-			char props[1024];
-			sprintf(props, "type:button name:%s x:%d y:0 action:connect address:%s image:button.png image_over:button-over.png image_down:button-down.png text_color:000000 font:calibri.ttf font_size:24",
-				name,
-				i * 300,
-				serverInfo.m_address.ToString(false).c_str(),
-				name);
-			button.parse(props);
-			button.setString("text", serverInfo.m_address.ToString(false).c_str());
-		}
+			const auto serverList = m_discoveryService->getServerList();
 
-		for (size_t i = 0; i < m_clients.size(); ++i)
-		{
-			Client * client = m_clients[i];
-
+			for (size_t i = 0; i < serverList.size(); ++i)
 			{
+				const auto & serverInfo = serverList[i];
+
 				char name[32];
-				sprintf(name, "disconnect_%d", i);
+				sprintf(name, "connect_%d", i);
 				Dictionary & button = (*m_discoveryUi)[name];
 				char props[1024];
-				sprintf(props, "type:button name:%s x:%d y:00 scale:0.65 action:disconnect client:%d image:button.png image_over:button-over.png image_down:button-down.png text:disconnect text_color:000000 font:calibri.ttf font_size:24",
-					name, GFX_SX + (i - m_clients.size()) * 150,
-					i);
+				sprintf(props, "type:button name:%s x:%d y:0 action:connect address:%s image:button.png image_over:button-over.png image_down:button-down.png text_color:000000 font:calibri.ttf font_size:24",
+					name,
+					i * 300,
+					serverInfo.m_address.ToString(false).c_str(),
+					name);
 				button.parse(props);
+				button.setString("text", serverInfo.m_address.ToString(false).c_str());
 			}
 
+			for (size_t i = 0; i < m_clients.size(); ++i)
 			{
-				char name[32];
-				sprintf(name, "view_%d", i);
-				Dictionary & button = (*m_discoveryUi)[name];
-				char props[1024];
-				sprintf(props, "type:button name:%s x:%d y:50 scale:0.65 action:select client:%d image:button.png image_over:button-over.png image_down:button-down.png text:view text_color:000000 font:calibri.ttf font_size:24",
-					name, GFX_SX + (i - m_clients.size()) * 150,
-					i);
-				button.parse(props);
-			}
-		}
+				Client * client = m_clients[i];
 
-		m_discoveryUi->draw();
+				{
+					char name[32];
+					sprintf(name, "disconnect_%d", i);
+					Dictionary & button = (*m_discoveryUi)[name];
+					char props[1024];
+					sprintf(props, "type:button name:%s x:%d y:00 scale:0.65 action:disconnect client:%d image:button.png image_over:button-over.png image_down:button-down.png text:disconnect text_color:000000 font:calibri.ttf font_size:24",
+						name, GFX_SX + (i - m_clients.size()) * 150,
+						i);
+					button.parse(props);
+				}
+
+				{
+					char name[32];
+					sprintf(name, "view_%d", i);
+					Dictionary & button = (*m_discoveryUi)[name];
+					char props[1024];
+					sprintf(props, "type:button name:%s x:%d y:50 scale:0.65 action:select client:%d image:button.png image_over:button-over.png image_down:button-down.png text:view text_color:000000 font:calibri.ttf font_size:24",
+						name, GFX_SX + (i - m_clients.size()) * 150,
+						i);
+					button.parse(props);
+				}
+			}
+
+			m_discoveryUi->draw();
+		}
 	#endif
 
 	#if 0 // todo : remove test collision/SAT code
