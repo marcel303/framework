@@ -18,13 +18,15 @@ todo:
 
 ** HIGH PRIORITY **
 
+- add player backdrop (particle fx?)
+
 - add doQuake method to GameSim
 
 - add animations:
 	+ jump - feet
 	+ fall on ground - feet
 	wallslide - side of char?
-	sword hit sword - point of intersection
+	+ sword hit sword - point of intersection
 	swordt hit non destruct block - sparks at collission point
 	sword hit destruct block - pop of block + block particles?
 	sword hit character
@@ -1072,6 +1074,13 @@ void Player::tick(float dt)
 							if (cancelled)
 							{
 								GAMESIM->playSound("melee-cancel.ogg"); // sound when two melee attacks hit at the same time
+
+								Vec2 min1, max1;
+								Vec2 min2, max2;
+								shape1.getMinMax(min1, max1);
+								shape2.getMinMax(min2, max2);
+								Vec2 mid = (min1 + max1 + min2 + max2) / 4.f;
+								GAMESIM->addAnimationFx("fx/Attack.scml", "MeleeCancel", mid[0], mid[1]);
 							}
 						}
 					}
@@ -1674,6 +1683,8 @@ void Player::tick(float dt)
 
 		float gravity = 0.f;
 
+		const bool wasWallSliding = m_isWallSliding;
+
 		m_isWallSliding = false;
 		m_isUsingJetpack = false;
 
@@ -1795,6 +1806,8 @@ void Player::tick(float dt)
 		if (m_isGrounded && m_vel[1] < 0.f)
 			m_isGrounded = false;
 	#endif
+
+		const Vec2 oldPos = m_pos;
 
 		// collision
 
@@ -2084,6 +2097,8 @@ void Player::tick(float dt)
 		}
 	#endif
 
+		const Vec2 newPos = m_pos;
+
 		// surface type
 
 		const uint32_t blockMask = dirBlockMask[0] | dirBlockMask[1];
@@ -2117,6 +2132,36 @@ void Player::tick(float dt)
 			else if (m_bubble.timer != 0.f && (dirBlockMask[i] & kBlockMask_Solid))
 			{
 				m_vel[i] *= -.75f;
+			}
+
+			// wall slide effects
+
+			if (i == 1)
+			{
+				if (!m_isWallSliding || !wasWallSliding)
+				{
+					m_wallSlideDistance = 0.f;
+				}
+
+				if (m_isWallSliding)
+				{
+					const float delta = Calc::Abs(newPos[i] - oldPos[i]);
+
+					m_wallSlideDistance += delta;
+
+					while (m_wallSlideDistance >= PLAYER_WALLSLIDE_FX_INTERVAL)
+					{
+						m_wallSlideDistance -= PLAYER_WALLSLIDE_FX_INTERVAL;
+
+						CollisionInfo playerCollision;
+						if (getPlayerCollision(playerCollision))
+						{
+							GAMESIM->addAnimationFx("fx/Dust.scml", "WallSlide",
+								m_facing[0] < 0.f ? playerCollision.min[0] : playerCollision.max[0],
+								newPos[1]);
+						}
+					}
+				}
 			}
 		}
 
@@ -2609,6 +2654,18 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 {
 	const CharacterData * characterData = getCharacterData(m_characterIndex);
 
+	// draw backdrop color
+
+	if (true)
+	{
+		Color color = getPlayerColor(m_index);
+		color.a = .2f;
+		setColor(color);
+		const float px = x + (m_collision.min[0] + m_collision.max[0]) / 2.f;
+		const float py = y + (m_collision.min[1] + m_collision.max[1]) / 2.f;
+		Sprite("player-light.png").drawEx(px, py, 0.f, 1.5f, 1.5f, false, FILTER_LINEAR);
+	}
+
 	// draw rocket punch charge and direction
 
 	if (m_attack.m_rocketPunch.isActive && m_attack.m_rocketPunch.state == AttackInfo::RocketPunch::kState_Charge)
@@ -2692,7 +2749,7 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 	characterData->m_spriter->draw(spriterState);
 
 	setColorMode(COLOR_MUL);
-	setColor(255, 255, 255);
+	setColor(colorWhite);
 
 	if (m_special.meleeCounter != 0)
 	{
@@ -3669,7 +3726,10 @@ char * makeCharacterFilename(int characterIndex, const char * filename)
 
 Color getCharacterColor(int characterIndex)
 {
-	return getPlayerColor(characterIndex);
+	if (characterIndex < 4)
+		return getPlayerColor(characterIndex);
+	else
+		return getPlayerColor(characterIndex - 4).interp(colorBlack, .5f);
 }
 
 Color getPlayerColor(int playerIndex)

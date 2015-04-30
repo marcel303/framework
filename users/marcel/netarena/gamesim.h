@@ -357,6 +357,7 @@ struct Player
 	bool m_isInPassthrough;
 	int8_t m_isHuggingWall;
 	bool m_isWallSliding;
+	float m_wallSlideDistance;
 
 	bool m_isUsingJetpack;
 	float m_jetpackFxTime;
