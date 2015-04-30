@@ -472,7 +472,7 @@ void Axe::tick(GameSim & gameSim, float dt)
 			if (player.m_index == self.m_playerIndex)
 				return false;
 
-			player.handleDamage(1.f, self.m_vel, &gameSim->m_players[self.m_playerIndex]);
+			player.handleDamage(1.f, self.m_vel, (self.m_playerIndex == -1) ? 0 : &gameSim->m_players[self.m_playerIndex]);
 		}
 
 		return false;
@@ -590,7 +590,7 @@ void PipeBomb::tick(GameSim & gameSim, float dt)
 						const float d = distance / PIPEBOMB_BLAST_RADIUS;
 						const float s = Calc::Lerp(PIPEBOMB_BLAST_STRENGTH_NEAR, PIPEBOMB_BLAST_STRENGTH_FAR, d);
 						const Vec2 dir = delta.CalcNormalized();
-						gameSim.m_players[i].handleDamage(1.f, dir * s, &gameSim.m_players[m_playerIndex]);
+						gameSim.m_players[i].handleDamage(1.f, dir * s, (m_playerIndex == -1) ? 0 : &gameSim.m_players[m_playerIndex]);
 					}
 				}
 			}
@@ -1039,6 +1039,7 @@ void GameSim::freePlayer(PlayerInstanceData * instanceData)
 	if (playerIndex != -1)
 	{
 		Assert(m_players[playerIndex].m_isUsed);
+		m_players[playerIndex].handleLeave();
 		m_players[playerIndex] = Player();
 
 		Assert(m_playerInstanceDatas[playerIndex] != 0);

@@ -2938,6 +2938,29 @@ void Player::handleNewRound()
 	m_tokenHunt = TokenHunt();
 }
 
+void Player::handleLeave()
+{
+	const CharacterData * characterData = getCharacterData(m_characterIndex);
+
+	for (int i = 0; i < MAX_BULLETS; ++i)
+	{
+		if (GAMESIM->m_bulletPool->m_bullets[i].ownerPlayerId == m_index)
+			GAMESIM->m_bulletPool->m_bullets[i].ownerPlayerId = -1;
+	}
+
+	for (int i = 0; i < MAX_AXES; ++i)
+	{
+		if (GAMESIM->m_axes[i].m_playerIndex == m_index)
+			GAMESIM->m_axes[i].m_playerIndex = -1;
+	}
+
+	for (int i = 0; i < MAX_PIPEBOMBS; ++i)
+	{
+		if (GAMESIM->m_pipebombs[i].m_playerIndex == m_index)
+			GAMESIM->m_pipebombs[i].m_playerIndex = -1;
+	}
+}
+
 void Player::respawn()
 {
 	if (!hasValidCharacterIndex())

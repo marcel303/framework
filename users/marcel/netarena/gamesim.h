@@ -82,6 +82,7 @@ struct Player
 
 	void handleNewGame();
 	void handleNewRound();
+	void handleLeave();
 
 	void respawn();
 	void cancelAttack();
