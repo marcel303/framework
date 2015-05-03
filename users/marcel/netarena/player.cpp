@@ -18,32 +18,16 @@ todo:
 
 ** HIGH PRIORITY **
 
-+ add player backdrop (particle fx?)
-
-+ add doQuake method to GameSim
-
 - add animations:
-	+ jump - feet
-	+ fall on ground - feet
-	+ wallslide - side of char?
-	+ sword hit sword - point of intersection
 	swordt hit non destruct block - sparks at collission point
 	sword hit destruct block - pop of block + block particles?
 	sword hit character
 	gun hit block
 	gun hit character
-	+ shield pop
 	# dash effect - side
 	# dbl jump effect - feet
-	+ jetpack - smoke from jetpack
 	sword drag - special hitbox on sword tip, collission with tiles
 	gun shoot flash/smoke
-
-+ change cling so it checks attack vs attack hitbox, instead of attack vs player hitbox
-
-+ add pickup drop on death
-
-+ slow down player vertically when hitting block. maybe add small upward speed?
 
 - add curve editing through options
 
@@ -88,7 +72,6 @@ todo:
 
 - prototype gravity well teleport
 
-+ add pickup art
 - add path for special
 - prototype grappling hook
 
@@ -108,8 +91,6 @@ todo:
 - prototype 'mine dropper'
 	- move without gravity, drop bombs
 	- when done, bombs explode one by one
-
-+ add Spriter hitbox support
 
 - +1 icon on kill in token hunt game mode
 
@@ -137,8 +118,6 @@ todo:
 - zoom in on winning player, wait for a while before transitioning to the next round
 
 - need to be able to kick player at char select
-+ drop rate should scale with number of players
-+ remove angels in spawn locations -> reduce background noise
 - buff star player ?
 - score feedback, especially in token hunt mode
 - investigate killing the rambo mode, soldat
@@ -149,10 +128,27 @@ todo:
 
 - blood particles
 - fill the level with lava
-+ earthquake. players go up on quake
 
 ** DONE **
 
++ add animations:
+	+ jump - feet
+	+ fall on ground - feet
+	+ wallslide - side of char?
+	+ sword hit sword - point of intersection
+	+ shield pop
+	+ jetpack - smoke from jetpack
++ add pickup art
++ drop rate should scale with number of players
++ remove angels in spawn locations -> reduce background noise
++ earthquake. players go up on quake
++ add Spriter hitbox support
++ passthrough on pressing down, instead of down attack only
++ add player backdrop (particle fx?)
++ add doQuake method to GameSim
++ change cling so it checks attack vs attack hitbox, instead of attack vs player hitbox
++ add pickup drop on death
++ slow down player vertically when hitting block. maybe add small upward speed?
 + make player collision sizes character dependent
 + scale pickups with # players
 + make player impact response character specific (add 'weight')
@@ -1516,7 +1512,8 @@ void Player::tick(float dt)
 		m_isInPassthrough = (currentBlockMask & kBlockMask_Passthrough) != 0;
 	#endif
 
-		const bool enterPassThrough = m_enterPassthrough || (m_special.attackDownActive) || (m_attack.m_rocketPunch.isActive);
+		const bool enterPassThrough = m_enterPassthrough || (m_special.attackDownActive) || (m_attack.m_rocketPunch.isActive)
+			|| m_input.isDown(INPUT_BUTTON_DOWN);
 		if (m_isInPassthrough || enterPassThrough)
 			m_blockMask = ~kBlockMask_Passthrough;
 
@@ -1847,6 +1844,36 @@ void Player::tick(float dt)
 			m_jump.jumpVelocityLeft = 0.f;
 		}
 
+		// grapple rope
+
+		if (m_grapple.isActive)
+		{
+			const float kMaxMove = 5.f;
+			const Vec2 p1 = getGrapplePos();
+			const Vec2 p2 = m_grapple.anchorPos;
+			const Vec2 pd = p2 - p1;
+			const Vec2 dn = pd.CalcNormalized();
+			const float distance = pd.CalcSize();
+			float move = distance - m_grapple.distance;
+			if (move > 0.f)
+			{
+				if (Calc::Abs(move) > kMaxMove)
+					move = kMaxMove * Calc::Sign(move);
+				m_pos += dn * move;
+			}
+			const float speed = m_vel.CalcSize();
+			const float d = dn * m_vel;
+			m_vel -= dn * d;
+			//m_vel = m_vel.CalcNormalized() * speed;
+
+			if (m_input.isDown(INPUT_BUTTON_DOWN))
+				m_grapple.distance = Calc::Min(500.f, m_grapple.distance + dt * 200.f);
+			if (m_input.isDown(INPUT_BUTTON_UP))
+				m_grapple.distance = Calc::Max( 30.f, m_grapple.distance - dt * 200.f);
+			//if (m_input.wentDown(INPUT_BUTTON_Y))
+			//	m_grapple = GrappleInfo();
+		}
+
 		// update grounded state
 
 	#if 1 // player will think it's grounded if not reset and hitting spring
@@ -1925,23 +1952,6 @@ void Player::tick(float dt)
 		args.gravity = gravity;
 
 		Vec2 newTotalVel = totalVel;
-
-		if (m_grapple.isActive)
-		{
-			const float kMaxMove = 5.f;
-			const Vec2 p1 = getGrapplePos();
-			const Vec2 p2 = m_grapple.anchorPos;
-			const Vec2 pd = p2 - p1;
-			const Vec2 dn = pd.CalcNormalized();
-			const float distance = pd.CalcSize();
-			float move = distance - m_grapple.distance;
-			if (Calc::Abs(move) > kMaxMove)
-				move = kMaxMove * Calc::Sign(move);
-			m_pos += dn * move;
-			const float speed = m_vel.CalcSize();
-			m_vel += m_vel.CalcNormalized() * (dn * m_vel);
-			//m_vel = m_vel.CalcNormalized() * speed;
-		}
 
 		updatePhysics(
 			*GAMESIM,
