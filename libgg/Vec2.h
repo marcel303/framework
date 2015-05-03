@@ -173,6 +173,13 @@ public:
 			m_v[1] == other.m_v[1];
 	}
 
+	inline bool operator!=(const Vec2 & other) const
+	{
+		return
+			m_v[0] != other.m_v[0] ||
+			m_v[1] != other.m_v[1];
+	}
+
 	inline float & operator[](int index)
 	{
 		return m_v[index];

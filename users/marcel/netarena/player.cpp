@@ -1375,11 +1375,14 @@ void Player::tick(float dt)
 				}
 
 				m_attack.hasCollision = true;
+
+				endGrapple();
 			}
 
 			if (!s_noSpecial)
 			{
 				if (characterData->m_special == kPlayerSpecial_Grapple &&
+					!m_grapple.isActive &&
 					m_input.wentDown(INPUT_BUTTON_Y) &&
 					isAnimOverrideAllowed(kPlayerAnim_Attack))
 				{
@@ -1553,6 +1556,8 @@ void Player::tick(float dt)
 					m_enableInAirAnim = false;
 
 					m_vel[1] = -PLAYER_DOUBLE_JUMP_SPEED;
+
+					endGrapple();
 				}
 			}
 		}
@@ -1699,6 +1704,11 @@ void Player::tick(float dt)
 				steeringSpeed *= STEERING_SPEED_DOUBLEMELEE;
 				numSteeringFrame = 5;
 			}
+			else if (m_grapple.isActive)
+			{
+				steeringSpeed *= STEERING_SPEED_GRAPPLE;
+				numSteeringFrame = 5;
+			}
 			else
 			{
 				steeringSpeed *= STEERING_SPEED_IN_AIR;
@@ -1825,6 +1835,8 @@ void Player::tick(float dt)
 				args.setString("name", "jump_sounds");
 				m_instanceData->handleAnimationAction("char_soundbag", args);
 				GAMESIM->addAnimationFx("fx/Dust.scml", "JumpFromGround", m_pos[0], m_pos[1]); // player jumps
+
+				endGrapple();
 			}
 		}
 
@@ -1860,18 +1872,21 @@ void Player::tick(float dt)
 				if (Calc::Abs(move) > kMaxMove)
 					move = kMaxMove * Calc::Sign(move);
 				m_pos += dn * move;
+				const float speed = m_vel.CalcSize();
+				const float d = dn * m_vel;
+				m_vel -= dn * d;
+				//m_vel = m_vel.CalcNormalized() * speed;
 			}
-			const float speed = m_vel.CalcSize();
-			const float d = dn * m_vel;
-			m_vel -= dn * d;
-			//m_vel = m_vel.CalcNormalized() * speed;
 
-			if (m_input.isDown(INPUT_BUTTON_DOWN))
-				m_grapple.distance = Calc::Min(500.f, m_grapple.distance + dt * 200.f);
+			//if (m_input.isDown(INPUT_BUTTON_DOWN))
+			//	m_grapple.distance = Calc::Min(500.f, m_grapple.distance + dt * 200.f);
 			if (m_input.isDown(INPUT_BUTTON_UP))
-				m_grapple.distance = Calc::Max( 30.f, m_grapple.distance - dt * 200.f);
-			//if (m_input.wentDown(INPUT_BUTTON_Y))
-			//	m_grapple = GrappleInfo();
+				m_grapple.distance = Calc::Max(0.f, m_grapple.distance - dt * 200.f);
+
+			if (m_grapple.isReady && m_input.wentDown(INPUT_BUTTON_Y))
+				m_grapple = GrappleInfo();
+			else
+				m_grapple.isReady = true;
 		}
 
 		// update grounded state
@@ -2554,18 +2569,29 @@ void Player::tick(float dt)
 
 		// wrapping
 
-		if (m_pos[0] < 0)
-			m_pos[0] = ARENA_SX_PIXELS;
-		if (m_pos[0] > ARENA_SX_PIXELS)
-			m_pos[0] = 0;
+		{
+			const Vec2 oldPos = m_pos;
 
-	#if WRAP_AROUND_TOP_AND_BOTTOM
-		if (m_pos[1] > ARENA_SY_PIXELS)
-			m_pos[1] = 0;
+			if (m_pos[0] < 0)
+				m_pos[0] = ARENA_SX_PIXELS;
+			if (m_pos[0] > ARENA_SX_PIXELS)
+				m_pos[0] = 0;
 
-		if (m_pos[1] < 0)
-			m_pos[1] = ARENA_SY_PIXELS;
-	#endif
+		#if WRAP_AROUND_TOP_AND_BOTTOM
+			if (m_pos[1] > ARENA_SY_PIXELS)
+				m_pos[1] = 0;
+
+			if (m_pos[1] < 0)
+				m_pos[1] = ARENA_SY_PIXELS;
+		#endif
+
+			const Vec2 newPos = m_pos;
+
+			if (newPos != oldPos)
+			{
+				endGrapple();
+			}
+		}
 	}
 
 	//printf("x: %g\n", m_pos[0]);
@@ -2635,6 +2661,17 @@ void Player::draw() const
 		return;
 
 	const CharacterData * characterData = getCharacterData(m_index);
+
+	if (m_grapple.isActive)
+	{
+		const Vec2 p1 = getGrapplePos();
+		const Vec2 p2 = m_grapple.anchorPos;
+		setColor(colorRed);
+		drawLine(p1[0], p1[1], p2[0], p2[1]);
+		setColor(colorGreen);
+		drawRect(p1[0] - 4.f, p1[1] - 4.f, p1[0] + 4.f, p1[1] + 4.f);
+		drawRect(p2[0] - 4.f, p2[1] - 4.f, p2[0] + 4.f, p2[1] + 4.f);
+	}
 
 	const bool flipX = m_facing[0] > 0 ? true : false;
 	const bool flipY = m_facing[1] < 0 ? true : false;
@@ -2881,17 +2918,6 @@ void Player::debugDraw() const
 	getDamageHitbox(damageCollision);
 	setColor(63, 31, 0, 63);
 	damageCollision.debugDraw();
-
-	if (m_grapple.isActive)
-	{
-		const Vec2 p1 = getGrapplePos();
-		const Vec2 p2 = m_grapple.anchorPos;
-		setColor(colorRed);
-		drawLine(p1[0], p1[1], p2[0], p2[1]);
-		setColor(colorGreen);
-		drawRect(p1[0] - 4.f, p1[1] - 4.f, p1[0] + 4.f, p1[1] + 4.f);
-		drawRect(p2[0] - 4.f, p2[1] - 4.f, p2[0] + 4.f, p2[1] + 4.f);
-	}
 
 	float y = m_pos[1];
 
@@ -3549,9 +3575,14 @@ void Player::beginGrapple()
 
 	const Vec2 grapplePos = getGrapplePos();
 
+	const int grappleBlockMask =
+		kBlockMask_Solid
+		- kBlockMask_Destructible
+		- (1 << kBlockType_Appear);
+
 	for (float x = grapplePos[0], y = grapplePos[1]; y >= 0.f; x += dx, y += dy)
 	{
-		if (arena.getIntersectingBlocksMask(x, y) & kBlockMask_Solid)
+		if (arena.getIntersectingBlocksMask(x, y) & grappleBlockMask)
 		{
 			m_grapple.isActive = true;
 			m_grapple.anchorPos = Vec2(x, y);

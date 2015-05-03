@@ -356,6 +356,7 @@ struct Player
 
 		// todo : add states for deploying the grappling hook? currently attached instantly (which may be fine?)
 		bool isActive;
+		bool isReady; // fully deployed
 		Vec2 anchorPos;
 		float distance;
 	} m_grapple;
