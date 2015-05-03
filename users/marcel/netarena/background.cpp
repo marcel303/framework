@@ -120,6 +120,11 @@ void Background::draw()
 	m_fireBall.draw();
 }
 
+void Background::drawLight()
+{
+	m_fireBall.drawLight();
+}
+
 void Background::doEvent(GameSim & gameSim)
 {
 	m_state.startAnim(BACKGROUND_SPRITER, "Erupt");

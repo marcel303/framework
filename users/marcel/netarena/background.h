@@ -17,6 +17,7 @@ public:
 
 	void tick(GameSim & gameSim, float dt);
 	void draw();
+	void drawLight();
 
 	void doEvent(GameSim & gameSim);
 

@@ -627,6 +627,22 @@ void Client::drawPlay()
 			m_gameSim->m_coinCollector.m_coins[i].drawLight();
 		}
 
+		// axes
+
+		for (int i = 0; i < MAX_AXES; ++i)
+		{
+			if (m_gameSim->m_axes[i].m_isActive)
+				m_gameSim->m_axes[i].drawLight();
+		}
+
+		// pipebombs
+
+		for (int i = 0; i < MAX_PIPEBOMBS; ++i)
+		{
+			if (m_gameSim->m_pipebombs[i].m_isActive)
+				m_gameSim->m_pipebombs[i].drawLight();
+		}
+
 		// players
 
 		for (int i = 0; i < MAX_PLAYERS; ++i)
@@ -644,6 +660,13 @@ void Client::drawPlay()
 		// particles
 
 		m_gameSim->m_particlePool->drawLight();
+
+		// fireballs
+
+		for (int i = 0; i < MAX_FIREBALLS; ++i)
+		{
+			m_gameSim->m_fireballs[i].drawLight();
+		}
 
 		setBlend(BLEND_ALPHA);
 

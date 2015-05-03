@@ -87,6 +87,15 @@ void FireBall::draw()
 	}
 }
 
+void FireBall::drawLight()
+{
+	if (active)
+	{
+		setColor(colorWhite);
+		Sprite("player-light.png").drawEx(m_state.x, m_state.y, m_state.angle, 2.f, 2.f, false, FILTER_LINEAR);
+	}
+}
+
 bool FireBall::getCollision(CollisionShape& shape)
 {
 	Vec2 points[4];

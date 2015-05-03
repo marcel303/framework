@@ -18,6 +18,7 @@ public:
 
 	void tick(GameSim & gameSim, float dt);
 	void draw();
+	void drawLight();
 
 	bool getCollision(CollisionShape& shape);
 

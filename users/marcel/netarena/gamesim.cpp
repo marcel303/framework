@@ -531,6 +531,7 @@ void Axe::draw() const
 
 void Axe::drawLight() const
 {
+	Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f, 1.5f, false, FILTER_LINEAR);
 }
 
 //
