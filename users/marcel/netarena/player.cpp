@@ -73,7 +73,16 @@ todo:
 - prototype gravity well teleport
 
 - add path for special
+
 - prototype grappling hook
+	- aim for angle, or auto angle?
+	- jump behavior
+	- pull up/down/none?
+	- detach conditions: jump, detach (Y), attack, death
+	- swing behavior: separate steering speed
+	- sounds and fx
+	- grapple attach animation: will probably need an animation, but shouldn't make it harder to attach..
+	- grapple rope draw. textured quad? currently just a line
 
 - add callstack gathering
 
@@ -1884,7 +1893,7 @@ void Player::tick(float dt)
 			//if (m_input.isDown(INPUT_BUTTON_DOWN))
 			//	m_grapple.distance = Calc::Min(500.f, m_grapple.distance + dt * 200.f);
 			if (m_input.isDown(INPUT_BUTTON_UP))
-				m_grapple.distance = Calc::Max((float)GRAPPLE_LENGTH_MIN, m_grapple.distance - dt * 200.f);
+				m_grapple.distance = Calc::Max((float)GRAPPLE_LENGTH_MIN, m_grapple.distance - dt * GRAPPLE_PULL_UP_SPEED);
 
 			if (m_grapple.isReady && m_input.wentDown(INPUT_BUTTON_Y))
 				m_grapple = GrappleInfo();
@@ -3603,15 +3612,27 @@ void Player::beginGrapple()
 				m_grapple.isActive = true;
 				m_grapple.anchorPos = anchorPos;
 				m_grapple.distance = length;
+
+				Sound("grapple-attach.ogg").play(); // sound played when grapple is attached
 			}
 			break;
 		}
+	}
+
+	if (!m_grapple.isActive)
+	{
+		Sound("grapple-attach-fail.ogg").play(); // sound played when grapple attach fails
 	}
 }
 
 void Player::endGrapple()
 {
-	m_grapple = GrappleInfo();
+	if (m_grapple.isActive)
+	{
+		Sound("grapple-detach.ogg").play(); // sound played when grapple is detached
+
+		m_grapple = GrappleInfo();
+	}
 }
 
 void Player::tickGrapple(float dt)
