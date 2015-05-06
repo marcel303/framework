@@ -63,7 +63,7 @@ void FireBall::tick(GameSim & gameSim, float dt)
 					{
 						active = false;
 
-						other.handleDamage(1.f, Vec2(vx, vy), 0);
+						other.handleDamage(1.f, Vec2(vx, vy), 0, true);
 					}
 				}
 			}

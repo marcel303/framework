@@ -1546,7 +1546,7 @@ void Player::tick(float dt)
 		}
 		else if (characterData->hasTrait(kPlayerTrait_DoubleJump))
 		{
-			if (playerControl && m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && !m_isWallSliding && m_input.wentDown(INPUT_BUTTON_A))
+			if (playerControl && m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && !m_isWallSliding && !m_grapple.isActive && m_input.wentDown(INPUT_BUTTON_A))
 			{
 				if (isAnimOverrideAllowed(kPlayerAnim_DoubleJump))
 				{
@@ -1556,8 +1556,6 @@ void Player::tick(float dt)
 					m_enableInAirAnim = false;
 
 					m_vel[1] = -PLAYER_DOUBLE_JUMP_SPEED;
-
-					endGrapple();
 				}
 			}
 		}
@@ -1825,7 +1823,7 @@ void Player::tick(float dt)
 
 		if (allowJumping && m_input.wentDown(INPUT_BUTTON_A))
 		{
-			if (currentBlockMaskFloor & kBlockMask_Solid)
+			if ((currentBlockMaskFloor & kBlockMask_Solid) || m_grapple.isActive)
 			{
 				m_jump.jumpVelocityLeft = -PLAYER_JUMP_SPEED;
 				m_jump.cancelStarted = false;
@@ -1836,7 +1834,12 @@ void Player::tick(float dt)
 				m_instanceData->handleAnimationAction("char_soundbag", args);
 				GAMESIM->addAnimationFx("fx/Dust.scml", "JumpFromGround", m_pos[0], m_pos[1]); // player jumps
 
-				endGrapple();
+				if (m_grapple.isActive)
+				{
+					m_isAirDashCharged = true;
+
+					endGrapple();
+				}
 			}
 		}
 
@@ -1881,7 +1884,7 @@ void Player::tick(float dt)
 			//if (m_input.isDown(INPUT_BUTTON_DOWN))
 			//	m_grapple.distance = Calc::Min(500.f, m_grapple.distance + dt * 200.f);
 			if (m_input.isDown(INPUT_BUTTON_UP))
-				m_grapple.distance = Calc::Max(0.f, m_grapple.distance - dt * 200.f);
+				m_grapple.distance = Calc::Max((float)GRAPPLE_LENGTH_MIN, m_grapple.distance - dt * 200.f);
 
 			if (m_grapple.isReady && m_input.wentDown(INPUT_BUTTON_Y))
 				m_grapple = GrappleInfo();
@@ -2973,6 +2976,13 @@ void Player::debugDraw() const
 		y += 18.f;
 	}
 
+	if (m_grapple.isActive)
+	{
+		setColor(colorWhite);
+		drawText(m_pos[0], y, 14, 0.f, 0.f, "%.2f px", getGrappleLength());
+		y += 18.f;
+	}
+
 	setColor(colorWhite);
 }
 
@@ -3178,7 +3188,7 @@ bool Player::shieldAbsorb(float amount)
 	}
 }
 
-bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
+bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, bool isNeutralDamage)
 {
 	if (m_isAlive && isAnimOverrideAllowed(kPlayerAnim_Die))
 	{
@@ -3313,7 +3323,8 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker)
 					break;
 
 				default:
-					awardScore(-1);
+					if (!isNeutralDamage)
+						awardScore(-1);
 					break;
 				}
 			}
@@ -3584,9 +3595,15 @@ void Player::beginGrapple()
 	{
 		if (arena.getIntersectingBlocksMask(x, y) & grappleBlockMask)
 		{
-			m_grapple.isActive = true;
-			m_grapple.anchorPos = Vec2(x, y);
-			m_grapple.distance = (grapplePos - m_grapple.anchorPos).CalcSize(); // todo : anchor pos of player should not be at feet
+			const Vec2 anchorPos(x, y);
+			const float length = (grapplePos - anchorPos).CalcSize(); // todo : anchor pos of player should not be at feet
+
+			if (length >= GRAPPLE_LENGTH_MIN && length <= GRAPPLE_LENGTH_MAX)
+			{
+				m_grapple.isActive = true;
+				m_grapple.anchorPos = anchorPos;
+				m_grapple.distance = length;
+			}
 			break;
 		}
 	}
@@ -3607,6 +3624,13 @@ void Player::tickGrapple(float dt)
 Vec2 Player::getGrapplePos() const
 {
 	return m_pos + (m_collision.min + m_collision.max) / 2.f;
+}
+
+float Player::getGrappleLength() const
+{
+	const Vec2 p1 = getGrapplePos();
+	const Vec2 p2 = m_grapple.anchorPos;
+	return (p2 - p1).CalcSize();
 }
 
 //

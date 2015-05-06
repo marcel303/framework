@@ -88,7 +88,7 @@ struct Player
 	void cancelAttack();
 	void handleImpact(Vec2Arg velocity);
 	bool shieldAbsorb(float amount);
-	bool handleDamage(float amount, Vec2Arg velocity, Player * attacker);
+	bool handleDamage(float amount, Vec2Arg velocity, Player * attacker, bool isNeutralDamage = false);
 	bool handleIce(Vec2Arg velocity, Player * attacker);
 	bool handleBubble(Vec2Arg velocity, Player * attacker);
 	void awardScore(int score);
@@ -109,6 +109,7 @@ struct Player
 	void endGrapple();
 	void tickGrapple(float dt);
 	Vec2 getGrapplePos() const;
+	float getGrappleLength() const;
 
 	// allocation
 	bool m_isUsed;
