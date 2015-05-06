@@ -80,7 +80,7 @@ void Client::tick(float dt)
 
 			for (int i = 0; i < s_numLocalPlayersToAdd; ++i)
 			{
-				g_app->netAddPlayer(m_channel, g_playerCharacterIndex, g_app->m_displayName);
+				g_app->netAddPlayer(m_channel, g_playerCharacterIndex, g_app->m_displayName, -1);
 			}
 		}
 
@@ -796,7 +796,7 @@ void Client::debugDraw()
 	m_gameSim->m_tokenHunt.m_token.drawBB();
 }
 
-void Client::addPlayer(PlayerInstanceData * player)
+void Client::addPlayer(PlayerInstanceData * player, int controllerIndex)
 {
 	player->m_player->m_isUsed = true;
 
@@ -807,7 +807,11 @@ void Client::addPlayer(PlayerInstanceData * player)
 	if (player->m_player->m_owningChannelId == m_channel->m_id)
 	{
 		Assert(player->m_input.m_controllerIndex == -1);
-		player->m_input.m_controllerIndex = g_app->allocControllerIndex();
+
+		if (controllerIndex != -1)
+			player->m_input.m_controllerIndex = controllerIndex;
+		else
+			player->m_input.m_controllerIndex = g_app->allocControllerIndex();
 	}
 }
 

@@ -372,7 +372,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 					if (client->m_gameSim->m_players[i].m_isUsed)
 					{
 						PlayerInstanceData * instanceData = new PlayerInstanceData(&client->m_gameSim->m_players[i], client->m_gameSim);
-						client->addPlayer(instanceData);
+						client->addPlayer(instanceData, -1);
 						instanceData->handleCharacterIndexChange();
 					}
 				}
@@ -409,9 +409,11 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		LOG_DBG("handleRpc: s_rpcAddPlayer");
 
 		uint8_t characterIndex;
+		int8_t controllerIndex;
 		std::string displayName;
 
 		bitStream.Read(characterIndex);
+		bitStream.Read(controllerIndex);
 		displayName = bitStream.ReadString();
 
 		//
@@ -420,7 +422,8 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			channel->m_destinationId,
 			-1,
 			characterIndex,
-			displayName);
+			displayName,
+			controllerIndex);
 	}
 	else if (method == s_rpcAddPlayerBroadcast)
 	{
@@ -433,11 +436,13 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			uint16_t channelId;
 			uint8_t index;
 			uint8_t characterIndex;
+			int8_t controllerIndex;
 			std::string displayName;
 
 			bitStream.Read(channelId);
 			bitStream.Read(index);
 			bitStream.Read(characterIndex);
+			bitStream.Read(controllerIndex);
 			displayName = bitStream.ReadString();
 
 			//
@@ -457,7 +462,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 					Assert(client);
 					if (client)
 					{
-						client->addPlayer(playerInstanceData);
+						client->addPlayer(playerInstanceData, controllerIndex);
 					}
 				}
 				else
@@ -510,8 +515,6 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 				Assert(playerInstanceData);
 				if (playerInstanceData)
 				{
-					gameSim->freePlayer(playerInstanceData);
-
 					if (channel)
 					{
 						Client * client = g_app->findClientByChannel(channel);
@@ -521,6 +524,8 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 							client->removePlayer(playerInstanceData);
 						}
 					}
+
+					gameSim->freePlayer(playerInstanceData);
 
 					delete playerInstanceData;
 				}
@@ -1406,6 +1411,35 @@ bool App::tick()
 
 	m_channelMgr->Update(NET_TIME);
 
+	if (DEMOMODE && g_host && !m_clients.empty())
+	{
+		Client * client = m_clients.front();
+
+		for (int i = 0; i < MAX_GAMEPAD; ++i)
+		{
+			if (gamepad[i].wentDown(GAMEPAD_START))
+			{
+				bool isUsed = false;
+				for (auto p : client->m_players)
+				{
+					if (p->m_input.m_controllerIndex == i)
+					{
+						g_app->netRemovePlayer(client->m_channel, p->m_player->m_index);
+						isUsed = true;
+					}
+				}
+
+				if (!isUsed)
+				{
+					g_app->netAddPlayer(client->m_channel, 0, "Player " + i, i);
+				}
+
+				for (int j = 0; j < 10; ++j)
+					m_channelMgr->Update(NET_TIME);
+			}
+		}
+	}
+
 	// debug
 
 #if 1
@@ -1800,19 +1834,20 @@ void App::netSyncGameSim(Channel * channel)
 	}
 }
 
-void App::netAddPlayer(Channel * channel, uint8_t characterIndex, const std::string & displayName)
+void App::netAddPlayer(Channel * channel, uint8_t characterIndex, const std::string & displayName, int8_t controllerIndex)
 {
 	LOG_DBG("netAddPlayer");
 
 	BitStream bs;
 
 	bs.Write(characterIndex);
+	bs.Write(controllerIndex);
 	bs.WriteString(displayName);
 
 	m_rpcMgr->Call(s_rpcAddPlayer, bs, ChannelPool_Client, &channel->m_id, false, false);
 }
 
-void App::netAddPlayerBroadcast(uint16_t owningChannelId, uint8_t index, uint8_t characterIndex, const std::string & displayName)
+void App::netAddPlayerBroadcast(uint16_t owningChannelId, uint8_t index, uint8_t characterIndex, const std::string & displayName, int8_t controllerIndex)
 {
 	LOG_DBG("netAddPlayerBroadcast");
 
@@ -1821,6 +1856,7 @@ void App::netAddPlayerBroadcast(uint16_t owningChannelId, uint8_t index, uint8_t
 	bs.Write(owningChannelId);
 	bs.Write(index);
 	bs.Write(characterIndex);
+	bs.Write(controllerIndex);
 	bs.WriteString(displayName);
 
 	m_rpcMgr->Call(s_rpcAddPlayerBroadcast, bs, ChannelPool_Server, 0, true, true);

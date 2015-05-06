@@ -62,7 +62,7 @@ public:
 	void drawTextChat();
 	void debugDraw();
 
-	void addPlayer(PlayerInstanceData * player);
+	void addPlayer(PlayerInstanceData * player, int controllerIndex);
 	void removePlayer(PlayerInstanceData * player);
 	PlayerInstanceData * findPlayerByPlayerId(uint8_t playerId);
 	void setPlayerPtrs();

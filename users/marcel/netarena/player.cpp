@@ -898,7 +898,7 @@ void Player::tick(float dt)
 
 	//
 
-	if (g_devMode && !g_monkeyMode && m_input.wentDown(INPUT_BUTTON_START))
+	if (g_devMode && !g_monkeyMode && !DEMOMODE && m_input.wentDown(INPUT_BUTTON_START))
 		respawn();
 
 	if (!m_isAlive && !m_isAnimDriven)
