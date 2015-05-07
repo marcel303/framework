@@ -1466,6 +1466,11 @@ bool App::tick()
 		m_statTimerMenuIsOpen = !m_statTimerMenuIsOpen;
 	}
 
+	if (keyboard.wentDown(SDLK_F12))
+	{
+		netDebugAction("newRound", "");
+	}
+
 	if (m_optionMenuIsOpen || m_statTimerMenuIsOpen)
 	{
 		MultiLevelMenuBase * menu = 0;

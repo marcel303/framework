@@ -16,6 +16,7 @@ struct ParticleSpawnInfo;
 struct Player;
 class PlayerInstanceData;
 class TextField;
+class QuickLook;
 
 class Client
 {
@@ -25,6 +26,8 @@ public:
 	LobbyMenu * m_lobbyMenu;
 
 	TextField * m_textChat;
+
+	QuickLook * m_quickLook;
 
 	GameSim * m_gameSim;
 
@@ -57,6 +60,7 @@ public:
 	void drawConnecting();
 	void drawMenus();
 	void drawPlay();
+	void drawQuickLook();
 	void drawRoundComplete();
 	void drawAnnouncements();
 	void drawTextChat();

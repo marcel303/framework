@@ -346,6 +346,9 @@ OPTION_DEFINE(int, UI_TEXTCHAT_CARET_SX, "UI/Text Chat/Caret Width");
 OPTION_DEFINE(int, UI_TEXTCHAT_CARET_PADDING_X, "UI/Text Chat/Caret Padding (Left Side)");
 OPTION_DEFINE(int, UI_TEXTCHAT_CARET_PADDING_Y, "UI/Text Chat/Caret Padding (Top, Bottom)");
 
+OPTION_DEFINE(float, UI_QUICKLOOK_OPEN_TIME, "UI/Quick Look/Open Time");
+OPTION_DEFINE(float, UI_QUICKLOOK_CLOSE_TIME, "UI/Quick Look/Close Time");
+
 OPTION_DEFINE(int, INGAME_TEXTCHAT_FONT_SIZE, "UI/In-Game Text Chat/Text Size");
 OPTION_DEFINE(int, INGAME_TEXTCHAT_PADDING_X, "UI/In-Game Text Chat/Text Padding X");
 OPTION_DEFINE(int, INGAME_TEXTCHAT_PADDING_Y, "UI/In-Game Text Chat/Text Padding Y");

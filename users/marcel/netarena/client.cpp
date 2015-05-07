@@ -10,6 +10,7 @@
 #include "lobbymenu.h"
 #include "main.h"
 #include "player.h"
+#include "quicklook.h"
 #include "textfield.h"
 #include "Timer.h"
 
@@ -31,6 +32,7 @@ Client::Client()
 	, m_lobbyMenu(0)
 	, m_textChat(0)
 	, m_textChatFade(0.f)
+	, m_quickLook(0)
 	, m_gameSim(0)
 	, m_syncStream(0)
 	, m_isSynced(false)
@@ -40,6 +42,8 @@ Client::Client()
 	m_lobbyMenu = new LobbyMenu(this);
 
 	m_textChat = new TextField(UI_TEXTCHAT_X, UI_TEXTCHAT_Y, UI_TEXTCHAT_SX, UI_TEXTCHAT_SY);
+
+	m_quickLook = new QuickLook();
 
 	m_gameSim = new GameSim();
 
@@ -57,6 +61,9 @@ Client::~Client()
 
 	delete m_gameSim;
 	m_gameSim = 0;
+
+	delete m_quickLook;
+	m_quickLook = 0;
 
 	delete m_textChat;
 	m_textChat = 0;
@@ -154,6 +161,8 @@ void Client::tick(float dt)
 					input.buttons |= INPUT_BUTTON_Y;
 				if (keyboard.isDown(SDLK_d))
 					input.buttons |= INPUT_BUTTON_START;
+				if (keyboard.isDown(SDLK_c))
+					input.buttons |= INPUT_BUTTON_L1R1;
 			}
 
 			if (useGamepad)
@@ -191,6 +200,8 @@ void Client::tick(float dt)
 						input.buttons |= INPUT_BUTTON_Y;
 					if (g.isDown(GAMEPAD_START))
 						input.buttons |= INPUT_BUTTON_START;
+					if (g.isDown(GAMEPAD_L1) || g.isDown(GAMEPAD_R1))
+						input.buttons |= INPUT_BUTTON_L1R1;
 
 					input.analogX = g.getAnalog(0, ANALOG_X) * 100;
 					input.analogY = g.getAnalog(0, ANALOG_Y) * 100;
@@ -229,6 +240,8 @@ void Client::tick(float dt)
 					input.buttons |= INPUT_BUTTON_Y;
 				if ((rand() % 60) == 0)
 					input.buttons |= INPUT_BUTTON_START;
+				if ((rand() % 120) == 0)
+					input.buttons |= INPUT_BUTTON_L1R1;
 			}
 
 			if (input != playerInstanceData->m_input.m_lastSent)
@@ -258,7 +271,7 @@ void Client::tick(float dt)
 				++i;
 		}
 
-		//
+		// text chat
 
 		if (m_textChat->tick(dt))
 		{
@@ -286,6 +299,23 @@ void Client::tick(float dt)
 
 		if (g_keyboardLock == 0 && keyboard.wentDown(SDLK_t))
 			m_textChat->open(UI_TEXTCHAT_MAX_TEXT_SIZE, true);
+
+		// quicklook
+
+		bool isQuickLookRequested = false;
+
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+			isQuickLookRequested |= m_gameSim->m_players[i].m_isUsed && m_gameSim->m_players[i].m_input.isDown(INPUT_BUTTON_L1R1);
+
+		if (isQuickLookRequested)
+		{
+			if (!m_quickLook->isActive())
+				m_quickLook->open(true);
+		}
+		else
+		{
+			m_quickLook->close(true);
+		}
 	}
 	else
 	{
@@ -293,7 +323,16 @@ void Client::tick(float dt)
 		{
 			m_textChat->close();
 		}
+
+		if (m_quickLook->isActive())
+		{
+			m_quickLook->close(false);
+		}
 	}
+
+	m_quickLook->tick(dt);
+
+	// background music
 
 	if (s_noBgm)
 	{
@@ -386,6 +425,8 @@ void Client::draw()
 	drawAnnouncements();
 
 	drawTextChat();
+
+	drawQuickLook();
 
 	g_gameSim = 0;
 }
@@ -714,6 +755,12 @@ void Client::drawPlay()
 	}
 	glDisable(GL_TEXTURE_2D);
 	setBlend(BLEND_ALPHA);
+}
+
+void Client::drawQuickLook()
+{
+	m_quickLook->drawWorld(*m_gameSim);
+	m_quickLook->drawHud(*m_gameSim);
 }
 
 void Client::drawRoundComplete()
