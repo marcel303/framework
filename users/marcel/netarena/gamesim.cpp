@@ -597,7 +597,7 @@ void PipeBomb::tick(GameSim & gameSim, float dt)
 	if (m_exploded)
 	{
 		gameSim.playSound("pipebomb-explode.ogg");
-		gameSim.addAnimationFx("fx/PipeBomb.scml", "Explode", m_pos[0], m_pos[1]);
+		gameSim.addAnimationFx("fx/PipeBomb_Explode.scml", "Explode", m_pos[0], m_pos[1]);
 
 		for (int i = 0; i < MAX_PLAYERS; ++i)
 		{

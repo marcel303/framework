@@ -1098,7 +1098,7 @@ void Player::tick(float dt)
 								shape1.getMinMax(min1, max1);
 								shape2.getMinMax(min2, max2);
 								Vec2 mid = (min1 + max1 + min2 + max2) / 4.f;
-								GAMESIM->addAnimationFx("fx/Attack.scml", "MeleeCancel", mid[0], mid[1]);
+								GAMESIM->addAnimationFx("fx/Attack_MeleeCancel.scml", "MeleeCancel", mid[0], mid[1]);
 							}
 						}
 					}
@@ -1316,14 +1316,25 @@ void Player::tick(float dt)
 					else
 						angle = 0;
 
+					const float x = m_pos[0] + mirrorX(0.f);
+					const float y = m_pos[1] - mirrorY(44.f);
+
 					Assert(bulletType != kBulletType_COUNT);
 					GAMESIM->spawnBullet(
-						m_pos[0] + mirrorX(0.f),
-						m_pos[1] - mirrorY(44.f),
+						x,
+						y,
 						angle,
 						bulletType,
 						bulletEffect,
 						m_index);
+
+					GAMESIM->addAnimationFx(
+						"fx/Attack_FireBullet.scml",
+						"FireBullet",
+						x,
+						y,
+						m_facing[0] < 0,
+						m_facing[1] < 0);
 				}
 			}
 
@@ -1845,7 +1856,7 @@ void Player::tick(float dt)
 				args.setString("name", "jump_sounds");
 				m_instanceData->handleAnimationAction("char_soundbag", args);
 				if (currentBlockMaskFloor & kBlockMask_Solid)
-					GAMESIM->addAnimationFx("fx/Dust.scml", "JumpFromGround", m_pos[0], m_pos[1]); // player jumps
+					GAMESIM->addAnimationFx("fx/Dust_JumpFromGround.scml", "JumpFromGround", m_pos[0], m_pos[1]); // player jumps
 
 				if (m_grapple.isActive)
 				{
@@ -2261,7 +2272,7 @@ void Player::tick(float dt)
 						CollisionInfo playerCollision;
 						if (getPlayerCollision(playerCollision))
 						{
-							GAMESIM->addAnimationFx("fx/Dust.scml", "WallSlide",
+							GAMESIM->addAnimationFx("fx/Dust_WallSlide.scml", "WallSlide",
 								m_facing[0] < 0.f ? playerCollision.min[0] : playerCollision.max[0],
 								newPos[1],
 								m_facing[0] < 0.f);
@@ -2513,7 +2524,7 @@ void Player::tick(float dt)
 				m_isGrounded = true;
 
 				GAMESIM->playSound(makeCharacterFilename(m_characterIndex, "land_on_ground.ogg"), 50); // players lands on solid ground
-				GAMESIM->addAnimationFx("fx/Dust.scml", "LandOnGround", m_pos[0], m_pos[1]); // players lands on solid ground
+				GAMESIM->addAnimationFx("fx/Dust_LandOnGround.scml", "LandOnGround", m_pos[0], m_pos[1]); // players lands on solid ground
 			}
 		}
 		else
@@ -2622,7 +2633,7 @@ void Player::tick(float dt)
 		if (m_jetpackFxTime <= 0.f)
 		{
 			m_jetpackFxTime += JETPACK_FX_INTERVAL;
-			GAMESIM->addAnimationFx("fx/Jetpack.scml", "Smoke", m_pos[0], m_pos[1], m_facing[0] < 0);
+			GAMESIM->addAnimationFx("fx/Jetpack_Smoke.scml", "Smoke", m_pos[0], m_pos[1], m_facing[0] < 0);
 		}
 	}
 
@@ -2690,61 +2701,66 @@ void Player::draw() const
 	}
 
 #if ENABLE_CHARACTER_OUTLINE
-	int sx = 256;
-	int sy = 256;
-	int oy = (sy + characterData->m_collisionSy) / 2;
+	if (UI_PLAYER_OUTLINE)
+	{
+		int sx = 256;
+		int sy = 256;
+		int oy = (sy + characterData->m_collisionSy) / 2;
 
-	Surface surface1(sx, sy);
-	pushSurface(&surface1);
+		Surface surface1(sx, sy);
+		pushSurface(&surface1);
+		{
+			const bool flipX = m_facing[0] > 0 ? true : false;
+			const bool flipY = m_facing[1] < 0 ? true : false;
+			drawAt(flipX, flipY, sx/2, oy - (flipY ? characterData->m_collisionSy : 0));
+		}
+		popSurface();
+
+		Surface surface2(256, 256);
+		pushSurface(&surface2);
+		{
+			setBlend(BLEND_OPAQUE);
+			Shader shader("character-outline");
+			setShader(shader);
+
+			const Color color = getPlayerColor(m_index);
+
+			shader.setTexture("colormap", 0, surface1.getTexture());
+			shader.setImmediate("color", color.r, color.g, color.b, color.a * UI_PLAYER_OUTLINE_ALPHA / 100.f);
+			drawRect(0, 0, sx, sy);
+			shader.setTexture("colormap", 0, 0);
+
+			clearShader();
+			setBlend(BLEND_ALPHA);
+		}
+		popSurface();
+
+		setColor(colorWhite);
+		gxSetTexture(surface2.getTexture());
+		gxBegin(GL_QUADS);
+		{
+			gxTexCoord2f(0.f, 1.f); gxVertex2f(m_pos[0] - sx/2, m_pos[1] - oy);
+			gxTexCoord2f(1.f, 1.f); gxVertex2f(m_pos[0] + sx/2, m_pos[1] - oy);
+			gxTexCoord2f(1.f, 0.f); gxVertex2f(m_pos[0] + sx/2, m_pos[1] - oy + sy);
+			gxTexCoord2f(0.f, 0.f); gxVertex2f(m_pos[0] - sx/2, m_pos[1] - oy + sy);
+		}
+		gxEnd();
+		gxSetTexture(0);
+	}
+	else
+#endif
 	{
 		const bool flipX = m_facing[0] > 0 ? true : false;
 		const bool flipY = m_facing[1] < 0 ? true : false;
-		drawAt(flipX, flipY, sx/2, oy - (flipY ? characterData->m_collisionSy : 0));
+
+		drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0));
+
+		// render additional sprites for wrap around
+		drawAt(flipX, flipY, m_pos[0] + ARENA_SX_PIXELS, m_pos[1] - (flipY ? characterData->m_collisionSy : 0));
+		drawAt(flipX, flipY, m_pos[0] - ARENA_SX_PIXELS, m_pos[1] - (flipY ? characterData->m_collisionSy : 0));
+		drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0) + ARENA_SY_PIXELS);
+		drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0) - ARENA_SY_PIXELS);
 	}
-	popSurface();
-
-	Surface surface2(256, 256);
-	pushSurface(&surface2);
-	{
-		setBlend(BLEND_OPAQUE);
-		Shader shader("character-outline");
-		setShader(shader);
-
-		const Color color = getPlayerColor(m_index);
-
-		shader.setTexture("colormap", 0, surface1.getTexture());
-		shader.setImmediate("color", color.r, color.g, color.b, color.a * UI_PLAYER_OUTLINE_ALPHA / 100.f);
-		drawRect(0, 0, sx, sy);
-		shader.setTexture("colormap", 0, 0);
-
-		clearShader();
-		setBlend(BLEND_ALPHA);
-	}
-	popSurface();
-
-	setColor(colorWhite);
-	gxSetTexture(surface2.getTexture());
-	gxBegin(GL_QUADS);
-	{
-		gxTexCoord2f(0.f, 1.f); gxVertex2f(m_pos[0] - sx/2, m_pos[1] - oy);
-		gxTexCoord2f(1.f, 1.f); gxVertex2f(m_pos[0] + sx/2, m_pos[1] - oy);
-		gxTexCoord2f(1.f, 0.f); gxVertex2f(m_pos[0] + sx/2, m_pos[1] - oy + sy);
-		gxTexCoord2f(0.f, 0.f); gxVertex2f(m_pos[0] - sx/2, m_pos[1] - oy + sy);
-	}
-	gxEnd();
-	gxSetTexture(0);
-#else
-	const bool flipX = m_facing[0] > 0 ? true : false;
-	const bool flipY = m_facing[1] < 0 ? true : false;
-
-	drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0));
-
-	// render additional sprites for wrap around
-	drawAt(flipX, flipY, m_pos[0] + ARENA_SX_PIXELS, m_pos[1] - (flipY ? characterData->m_collisionSy : 0));
-	drawAt(flipX, flipY, m_pos[0] - ARENA_SX_PIXELS, m_pos[1] - (flipY ? characterData->m_collisionSy : 0));
-	drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0) + ARENA_SY_PIXELS);
-	drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0) - ARENA_SY_PIXELS);
-#endif
 
 	// draw player color
 

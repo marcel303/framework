@@ -112,7 +112,7 @@ void Client::tick(float dt)
 			for (int i = 0; i < MAX_GAMEPAD; ++i)
 			{
 				bool used = true;
-				for (int j = 0; j < g_app->m_freeControllerList.size(); ++j)
+				for (size_t j = 0; j < g_app->m_freeControllerList.size(); ++j)
 					if (g_app->m_freeControllerList[j] == i)
 						used = false;
 				if (used)
