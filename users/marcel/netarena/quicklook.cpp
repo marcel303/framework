@@ -69,6 +69,24 @@ void QuickLook::drawHud(GameSim & gameSim)
 			drawRect(0, 0, sx, sy);
 
 			setColor(colorWhite);
+			setFont("calibri.ttf");
+
+			std::vector<Player*> players;
+			for (int i = 0; i < MAX_PLAYERS; ++i)
+				if (gameSim.m_players[i].m_isUsed)
+					players.push_back(&gameSim.m_players[i]);
+			std::sort(players.begin(), players.end(), [](Player * p1, Player * p2) { return p1->m_score > p2->m_score; });
+
+			float y = 50.f;
+
+			for (auto p : players)
+			{
+				drawText(50.f + 100.f, y, 24, -1.f, +1.f, "%d", p->m_score);
+				drawText(50.f + 120.f, y, 24, +1.f, +1.f, "%s", p->m_displayName.c_str());
+				y += 50.f;
+			}
+
+			setColor(colorWhite);
 		}
 		gxPopMatrix();
 	}
