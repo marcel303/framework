@@ -3554,12 +3554,12 @@ void Player::handleKill(bool hasScored)
 
 		// sound feedback
 
-		if (m_multiKillCount >= 2 && m_multiKillCount <= 5)
+		if (m_multiKillCount >= 2)
 		{
 			logDebug("multikill: %d", m_multiKillCount);
 
 			char name[64];
-			sprintf_s(name, sizeof(name), "multikill-%d.ogg", m_multiKillCount);
+			sprintf_s(name, sizeof(name), "multikill-%d.ogg", Calc::Min(5, m_multiKillCount));
 			GAMESIM->playSound(name);
 		}
 		else if (m_killingSpree == KILLINGSPREE_START)
