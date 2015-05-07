@@ -824,6 +824,8 @@ void Player::tick(float dt)
 
 	m_timeDilationAttack.tick(dt);
 
+	m_multiKillTimer = Calc::Max(0.f, m_multiKillTimer - dt);
+
 	//
 
 	if (m_anim != kPlayerAnim_NULL)
@@ -2632,6 +2634,30 @@ void Player::tick(float dt)
 		}
 	}
 
+	// death match game mode
+
+	if ((GAMESIM->m_gameMode == kGameMode_DeathMatch) && (GAMESIM->m_gameState == kGameState_Play))
+	{
+		if (m_isAlive)
+		{
+			bool isInTheLeaded = true;
+
+			for (int i = 0; i < MAX_PLAYERS; ++i)
+				if (i != m_index && GAMESIM->m_players[i].m_isUsed && GAMESIM->m_players[i].m_score >= m_score)
+					isInTheLeaded = false;
+
+			if (isInTheLeaded || m_killingSpree >= KILLINGSPREE_START)
+			{
+				ParticleSpawnInfo spawnInfo(
+						m_pos[0], m_pos[1],
+						kBulletType_ParticleA, 2,
+						50.f, 100.f, 50.f);
+					spawnInfo.color = 0xffffff80;
+					GAMESIM->spawnParticles(spawnInfo);
+			}
+		}
+	}
+
 	// token hunt game mode
 
 	if ((GAMESIM->m_gameMode == kGameMode_TokenHunt) && (GAMESIM->m_gameState == kGameState_Play))
@@ -3172,6 +3198,10 @@ void Player::respawn()
 
 		m_controlDisableTime = 0.f;
 
+		m_multiKillTimer = 0.f;
+		m_multiKillCount = 0;
+		m_killingSpree = 0;
+
 		m_weaponStackSize = 0;
 
 		m_attack = AttackInfo();
@@ -3372,20 +3402,26 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 
 			if (attacker && attacker != this)
 			{
-				bool canScore = true;
+				bool hasScored = false;
 
 				switch (GAMESIM->m_gameMode)
 				{
 				case kGameMode_DeathMatch:
 					attacker->awardScore(1);
+					hasScored = true;
 					break;
 
 				case kGameMode_TokenHunt:
 					// if the attacker has the token, or we're the token bearer
 					if (attacker->m_tokenHunt.m_hasToken || m_tokenHunt.m_hasToken)
+					{
 						attacker->awardScore(1);
+						hasScored = true;
+					}
 					break;
 				}
+
+				attacker->handleKill(hasScored);
 			}
 			else
 			{
@@ -3497,6 +3533,40 @@ bool Player::handleBubble(Vec2Arg velocity, Player * attacker)
 void Player::awardScore(int score)
 {
 	m_score += score;
+}
+
+void Player::handleKill(bool hasScored)
+{
+	if (hasScored)
+	{
+		// multi kill
+
+		if (m_multiKillTimer > 0.f)
+			m_multiKillCount++;
+		else
+			m_multiKillCount = 1;
+
+		m_multiKillTimer = MULTIKILL_TIMER;
+
+		// killing spree
+
+		m_killingSpree++;
+
+		// sound feedback
+
+		if (m_multiKillCount >= 2 && m_multiKillCount <= 5)
+		{
+			logDebug("multikill: %d", m_multiKillCount);
+
+			char name[64];
+			sprintf_s(name, sizeof(name), "multikill-%d.ogg", m_multiKillCount);
+			GAMESIM->playSound(name);
+		}
+		else if (m_killingSpree == KILLINGSPREE_START)
+			GAMESIM->playSound("killingspree-start.ogg");
+		else if (m_killingSpree == KILLINGSPREE_UNSTOPPABLE)
+			GAMESIM->playSound("killingspree-unstoppable.ogg");
+	}
 }
 
 void Player::dropCoins(int numCoins)

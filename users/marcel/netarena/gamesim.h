@@ -92,6 +92,7 @@ struct Player
 	bool handleIce(Vec2Arg velocity, Player * attacker);
 	bool handleBubble(Vec2Arg velocity, Player * attacker);
 	void awardScore(int score);
+	void handleKill(bool hasScored);
 	void dropCoins(int numCoins);
 
 	void pushWeapon(PlayerWeapon weapon, int ammo);
@@ -169,6 +170,12 @@ struct Player
 	//
 
 	int8_t m_attackDirection[2];
+
+	//
+
+	float m_multiKillTimer;
+	int m_multiKillCount;
+	int m_killingSpree;
 
 	//
 
