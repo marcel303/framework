@@ -3676,7 +3676,7 @@ void Player::beginGrapple()
 				m_grapple.anchorPos = anchorPos;
 				m_grapple.distance = length;
 
-				Sound("grapple-attach.ogg").play(); // sound played when grapple is attached
+				GAMESIM->playSound("grapple-attach.ogg"); // sound played when grapple is attached
 			}
 			break;
 		}
@@ -3684,7 +3684,7 @@ void Player::beginGrapple()
 
 	if (!m_grapple.isActive)
 	{
-		Sound("grapple-attach-fail.ogg").play(); // sound played when grapple attach fails
+		GAMESIM->playSound("grapple-attach-fail.ogg"); // sound played when grapple attach fails
 	}
 }
 
@@ -3692,7 +3692,7 @@ void Player::endGrapple()
 {
 	if (m_grapple.isActive)
 	{
-		Sound("grapple-detach.ogg").play(); // sound played when grapple is detached
+		GAMESIM->playSound("grapple-detach.ogg"); // sound played when grapple is detached
 
 		m_grapple = GrappleInfo();
 
