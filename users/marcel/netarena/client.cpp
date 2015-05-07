@@ -104,8 +104,23 @@ void Client::tick(float dt)
 
 			PlayerInput input;
 
+		#if 0
 			bool useKeyboard = ((playerInstanceData->m_input.m_controllerIndex == 0) || (g_app->getControllerAllocationCount() == 1)) && !m_textChat->isActive();
 			bool useGamepad = !morePlayersThanControllers || (playerInstanceData->m_input.m_controllerIndex != 0) || (g_app->getControllerAllocationCount() == 1);
+		#else
+			int highest = -1;
+			for (int i = 0; i < MAX_GAMEPAD; ++i)
+			{
+				bool used = true;
+				for (int j = 0; j < g_app->m_freeControllerList.size(); ++j)
+					if (g_app->m_freeControllerList[j] == i)
+						used = false;
+				if (used)
+					highest = i;
+			}
+			bool useKeyboard = (playerInstanceData->m_input.m_controllerIndex == highest) && !m_textChat->isActive();
+			bool useGamepad = true;
+		#endif
 
 			if (useKeyboard)
 			{
@@ -144,11 +159,15 @@ void Client::tick(float dt)
 			if (useGamepad)
 			{
 				const int gamepadIndex =
+				#if 1
+					playerInstanceData->m_input.m_controllerIndex;
+				#else
 					!morePlayersThanControllers
 					? playerInstanceData->m_input.m_controllerIndex
 					: (g_app->getControllerAllocationCount() == 1)
 					? 0
 					: (playerInstanceData->m_input.m_controllerIndex - 1);
+				#endif
 
 				if (gamepadIndex >= 0 && gamepadIndex < MAX_GAMEPAD && gamepad[gamepadIndex].isConnected)
 				{
@@ -474,7 +493,9 @@ void Client::drawPlay()
 			setColor(colorWhite);
 		}
 
-		m_gameSim->m_arena.drawBlocks();
+		// background blocks
+
+		m_gameSim->m_arena.drawBlocks(0);
 
 		m_gameSim->m_floorEffect.draw();
 
@@ -560,16 +581,20 @@ void Client::drawPlay()
 		m_gameSim->m_particlePool->draw();
 		setBlend(BLEND_ALPHA);
 
-		// spike walls
-
-		m_gameSim->m_levelEvents.spikeWalls.draw();
-
 		// fireballs
 
 		for (int i = 0; i < MAX_FIREBALLS; ++i)
 		{
 			m_gameSim->m_fireballs[i].draw();
 		}
+
+		// foreground blocks
+
+		m_gameSim->m_arena.drawBlocks(1);
+
+		// spike walls
+
+		m_gameSim->m_levelEvents.spikeWalls.draw();
 
 		gxPopMatrix();
 	}

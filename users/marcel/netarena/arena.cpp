@@ -177,7 +177,8 @@ void Arena::reset()
 		{
 			m_blocks[x][y].shape = kBlockShape_Opaque;
 			m_blocks[x][y].type = kBlockType_Empty;
-			m_blocks[x][y].artIndex = -1;
+			m_blocks[x][y].artIndex[0] = -1;
+			m_blocks[x][y].artIndex[1] = -1;
 			m_blocks[x][y].param = 0;
 		}
 	}
@@ -238,7 +239,8 @@ void Arena::load(const char * name)
 	const std::string mecFilename = baseName + "Mec.txt";
 	const std::string colFilename = baseName + "Col.txt";
 	const std::string objFilename = baseName + "Obj.txt";
-	const std::string artFilename = baseName + "Art.txt";
+	const std::string artFilenameBG = baseName + "Art.txt";
+	const std::string artFilenameFG = baseName + "ArtFG.txt";
 #else
 	std::string baseName = Path::GetBaseName(name);
 
@@ -420,40 +422,8 @@ void Arena::load(const char * name)
 #if NEW_LEVEL_FORMAT
 	// load art layer
 
-	try
-	{
-		FileStream stream;
-		stream.Open(artFilename.c_str(), OpenMode_Read);
-		StreamReader reader(&stream, false);
-		
-		const int sx = reader.ReadInt32();
-		const int sy = reader.ReadInt32();
-
-		for (int y = 0; y < sy; ++y)
-		{
-			for (int x = 0; x < sx; ++x)
-			{
-				const int index = reader.ReadInt32();
-				Assert(index == -1 || (index >= 0 && index < m_numSprites));
-
-				if (x < ARENA_SX && y < ARENA_SY)
-				{
-					if (index == -1 || (index >= 0 && index < m_numSprites))
-					{
-						m_blocks[x][y].artIndex = index;
-					}
-					else
-					{
-						logDebug("art tile at (%d, %d) is out of range. index=%d", x, y, index);
-					}
-				}
-			}
-		}
-	}
-	catch (std::exception & e)
-	{
-		LOG_ERR("failed to open %s: %s", artFilename.c_str(), e.what());
-	}
+	loadArtIndices(artFilenameBG.c_str(), 0);
+	loadArtIndices(artFilenameFG.c_str(), 1);
 #endif
 }
 
@@ -499,6 +469,44 @@ void Arena::freeArt()
 	m_numSprites = 0;
 }
 
+void Arena::loadArtIndices(const char * filename, int layer)
+{
+	try
+	{
+		FileStream stream;
+		stream.Open(filename, OpenMode_Read);
+		StreamReader reader(&stream, false);
+		
+		const int sx = reader.ReadInt32();
+		const int sy = reader.ReadInt32();
+
+		for (int y = 0; y < sy; ++y)
+		{
+			for (int x = 0; x < sx; ++x)
+			{
+				const int index = reader.ReadInt32();
+				Assert(index == -1 || (index >= 0 && index < m_numSprites));
+
+				if (x < ARENA_SX && y < ARENA_SY)
+				{
+					if (index == -1 || (index >= 0 && index < m_numSprites))
+					{
+						m_blocks[x][y].artIndex[layer] = index;
+					}
+					else
+					{
+						logDebug("art tile at (%d, %d) is out of range. layer=%d, index=%d", x, y, layer, index);
+					}
+				}
+			}
+		}
+	}
+	catch (std::exception & e)
+	{
+		LOG_ERR("failed to open %s: %s", filename, e.what());
+	}
+}
+
 void Arena::serialize(NetSerializationContext & context)
 {
 	for (int x = 0; x < ARENA_SX; ++x)
@@ -512,7 +520,8 @@ void Arena::serialize(NetSerializationContext & context)
 
 			context.SerializeBits(type, 5);
 			context.SerializeBits(shape, 5);
-			context.Serialize(block.artIndex);
+			context.Serialize(block.artIndex[0]);
+			context.Serialize(block.artIndex[1]);
 			context.Serialize(block.param);
 
 			block.type = (BlockType)type;
@@ -550,7 +559,7 @@ uint32_t Arena::calcCRC() const
 }
 #endif
 
-void Arena::drawBlocks() const
+void Arena::drawBlocks(int layer) const
 {
 	for (int x = 0; x < ARENA_SX; ++x)
 	{
@@ -558,7 +567,7 @@ void Arena::drawBlocks() const
 		{
 			const Block & block = m_blocks[x][y];
 
-			if (block.type == kBlockType_Appear)
+			if (layer == 0 && block.type == kBlockType_Appear)
 			{
 				const AppearBlockData& data = (AppearBlockData&)block.param;
 
@@ -572,7 +581,7 @@ void Arena::drawBlocks() const
 						continue;
 				}
 			}
-			else if (block.type == kBlockType_DestructibleRegen)
+			else if (layer == 0 && block.type == kBlockType_DestructibleRegen)
 			{
 				const RegenBlockData & data = (RegenBlockData&)block.param;
 				if (!data.isVisible)
@@ -585,15 +594,15 @@ void Arena::drawBlocks() const
 			}
 
 		#if NEW_LEVEL_FORMAT
-			if (block.artIndex != (uint16_t)-1)
-				m_sprites[block.artIndex]->drawEx(x * BLOCK_SX, y * BLOCK_SY, 0.f, BLOCK_SPRITE_SCALE);
+			if (block.artIndex[layer] != (uint16_t)-1)
+				m_sprites[block.artIndex[layer]]->drawEx(x * BLOCK_SX, y * BLOCK_SY, 0.f, BLOCK_SPRITE_SCALE);
 		#else
 			s_sprites[block.type]->drawEx(x * BLOCK_SX, y * BLOCK_SY, 0.f, BLOCK_SPRITE_SCALE);
 		#endif
 		}
 	}
 
-	if (s_drawBlockMask >= 0 && s_drawBlockMask < kBlockShape_COUNT)
+	if (layer == 0 && s_drawBlockMask >= 0 && s_drawBlockMask < kBlockShape_COUNT)
 	{
 		const BlockMask & mask = s_blockMasks[s_drawBlockMask];
 		const int scale = 8;

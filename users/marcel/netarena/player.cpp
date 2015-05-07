@@ -76,17 +76,19 @@ todo:
 
 - prototype grappling hook
 	- aim for angle, or auto angle?
-	- jump behavior
+	+ jump behavior -> allow double jump?
 	- pull up/down/none?
-	- detach conditions: jump, detach (Y), attack, death
-	- swing behavior: separate steering speed
-	- sounds and fx
+	+ detach conditions: jump, detach (Y), attack, death, level wrap
+	+ swing behavior: separate steering speed
+	+ sounds and fx
 	- grapple attach animation: will probably need an animation, but shouldn't make it harder to attach..
 	- grapple rope draw. textured quad? currently just a line
+	=> speed on attach + steering doesn't seem right (too slow). math issue, or add boost for better feeling?
 
 - add callstack gathering
 
 - check build ID
+	- add built-in version ID on channel connect
 
 - better attach to platform logic, so we can have movers closer to each other without the player bugging
 

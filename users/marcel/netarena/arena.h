@@ -89,7 +89,7 @@ struct Block
 {
 	BlockType type;
 	BlockShape shape;
-	uint16_t artIndex;
+	uint16_t artIndex[2];
 	uint16_t param;
 
 	bool handleDamage(GameSim & gameSim, int blockX, int blockY);
@@ -138,13 +138,14 @@ public:
 	void load(const char * name);
 	void loadArt(const char * name);
 	void freeArt();
+	void loadArtIndices(const char * name, int layer);
 	void serialize(NetSerializationContext & context);
 
 #if ENABLE_GAMESTATE_DESYNC_DETECTION
 	uint32_t calcCRC() const;
 #endif
 
-	void drawBlocks() const;
+	void drawBlocks(int layer) const;
 
 	void tick(GameSim & gameSim);
 
