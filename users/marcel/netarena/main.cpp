@@ -159,7 +159,6 @@ void applyLightMap(Surface & colormap, Surface & lightmap, Surface & dest)
 		Shader lightShader("lightmap");
 		setShader(lightShader);
 
-		glActiveTexture(GL_TEXTURE0);
 		lightShader.setTexture("colormap", 0, colormap.getTexture());
 		lightShader.setTexture("lightmap", 1, lightmap.getTexture());
 

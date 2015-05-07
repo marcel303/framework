@@ -350,6 +350,9 @@ OPTION_DEFINE(int, INGAME_TEXTCHAT_OFFSET_Y, "UI/In-Game Text Chat/Box Offset Y"
 OPTION_DEFINE(float, INGAME_TEXTCHAT_DURATION, "UI/In-Game Text Chat/Time Visible");
 OPTION_STEP(INGAME_TEXTCHAT_DURATION, 0.f, 0.f, .1f);
 
+OPTION_DEFINE(int, UI_PLAYER_OUTLINE_ALPHA, "UI/Player/Outline Alpha (%%)");
+OPTION_DEFINE(int, UI_PLAYER_BACKDROP_ALPHA, "UI/Player/Background Alpha (%%)");
+
 OPTION_DEFINE(bool, VOLCANO_LOOP, "Level Events/Volcano/Loop");
 OPTION_DEFINE(int, VOLCANO_LOOP_TIME, "Level Events/Volcano/LoopTime");
 

@@ -1843,7 +1843,8 @@ void Player::tick(float dt)
 				args.setPtr("obj", m_instanceData);
 				args.setString("name", "jump_sounds");
 				m_instanceData->handleAnimationAction("char_soundbag", args);
-				GAMESIM->addAnimationFx("fx/Dust.scml", "JumpFromGround", m_pos[0], m_pos[1]); // player jumps
+				if (currentBlockMaskFloor & kBlockMask_Solid)
+					GAMESIM->addAnimationFx("fx/Dust.scml", "JumpFromGround", m_pos[0], m_pos[1]); // player jumps
 
 				if (m_grapple.isActive)
 				{
@@ -2687,6 +2688,55 @@ void Player::draw() const
 		drawRect(p2[0] - 4.f, p2[1] - 4.f, p2[0] + 4.f, p2[1] + 4.f);
 	}
 
+#if 1
+	int sx = 256;
+	int sy = 256;
+	int oy = (sy + characterData->m_collisionSy) / 2;
+
+	Surface surface1(sx, sy);
+	pushSurface(&surface1);
+	{
+		const bool flipX = m_facing[0] > 0 ? true : false;
+		const bool flipY = m_facing[1] < 0 ? true : false;
+		drawAt(flipX, flipY, sx/2, oy - (flipY ? characterData->m_collisionSy : 0));
+	}
+	popSurface();
+
+#if 1
+	Surface surface2(256, 256);
+	pushSurface(&surface2);
+	{
+		setBlend(BLEND_OPAQUE);
+		Shader shader("character-outline");
+		setShader(shader);
+
+		const Color color = getPlayerColor(m_index);
+
+		shader.setTexture("colormap", 0, surface1.getTexture());
+		shader.setImmediate("color", color.r, color.g, color.b, color.a * UI_PLAYER_OUTLINE_ALPHA / 100.f);
+		drawRect(0, 0, sx, sy);
+		shader.setTexture("colormap", 0, 0);
+
+		clearShader();
+		setBlend(BLEND_ALPHA);
+	}
+	popSurface();
+	GLuint texture = surface2.getTexture();
+#else
+	GLuint texture = surface1.getTexture();
+#endif
+	setColor(colorWhite);
+	gxSetTexture(texture);
+	gxBegin(GL_QUADS);
+	{
+		gxTexCoord2f(0.f, 1.f); gxVertex2f(m_pos[0] - sx/2, m_pos[1] - oy);
+		gxTexCoord2f(1.f, 1.f); gxVertex2f(m_pos[0] + sx/2, m_pos[1] - oy);
+		gxTexCoord2f(1.f, 0.f); gxVertex2f(m_pos[0] + sx/2, m_pos[1] - oy + sy);
+		gxTexCoord2f(0.f, 0.f); gxVertex2f(m_pos[0] - sx/2, m_pos[1] - oy + sy);
+	}
+	gxEnd();
+	gxSetTexture(0);
+#else
 	const bool flipX = m_facing[0] > 0 ? true : false;
 	const bool flipY = m_facing[1] < 0 ? true : false;
 
@@ -2697,6 +2747,7 @@ void Player::draw() const
 	drawAt(flipX, flipY, m_pos[0] - ARENA_SX_PIXELS, m_pos[1] - (flipY ? characterData->m_collisionSy : 0));
 	drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0) + ARENA_SY_PIXELS);
 	drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0) - ARENA_SY_PIXELS);
+#endif
 
 	// draw player color
 
@@ -2783,10 +2834,10 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 
 	// draw backdrop color
 
-	if (true)
+	if (UI_PLAYER_BACKDROP_ALPHA != 0)
 	{
 		Color color = getPlayerColor(m_index);
-		color.a = .2f;
+		color.a = UI_PLAYER_BACKDROP_ALPHA / 100.f;
 		setColor(color);
 		const float px = x + (m_collision.min[0] + m_collision.max[0]) / 2.f;
 		const float py = y + (m_collision.min[1] + m_collision.max[1]) / 2.f;
