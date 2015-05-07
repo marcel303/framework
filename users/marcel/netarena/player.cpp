@@ -9,6 +9,7 @@
 #include "Timer.h"
 
 #define USE_NEW_COLLISION_CODE 1
+#define ENABLE_CHARACTER_OUTLINE 1
 
 //#pragma optimize("", off)
 
@@ -2688,7 +2689,7 @@ void Player::draw() const
 		drawRect(p2[0] - 4.f, p2[1] - 4.f, p2[0] + 4.f, p2[1] + 4.f);
 	}
 
-#if 1
+#if ENABLE_CHARACTER_OUTLINE
 	int sx = 256;
 	int sy = 256;
 	int oy = (sy + characterData->m_collisionSy) / 2;
@@ -2702,7 +2703,6 @@ void Player::draw() const
 	}
 	popSurface();
 
-#if 1
 	Surface surface2(256, 256);
 	pushSurface(&surface2);
 	{
@@ -2721,12 +2721,9 @@ void Player::draw() const
 		setBlend(BLEND_ALPHA);
 	}
 	popSurface();
-	GLuint texture = surface2.getTexture();
-#else
-	GLuint texture = surface1.getTexture();
-#endif
+
 	setColor(colorWhite);
-	gxSetTexture(texture);
+	gxSetTexture(surface2.getTexture());
 	gxBegin(GL_QUADS);
 	{
 		gxTexCoord2f(0.f, 1.f); gxVertex2f(m_pos[0] - sx/2, m_pos[1] - oy);
