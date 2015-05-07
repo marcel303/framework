@@ -1858,12 +1858,7 @@ void Player::tick(float dt)
 				if (currentBlockMaskFloor & kBlockMask_Solid)
 					GAMESIM->addAnimationFx("fx/Dust_JumpFromGround.scml", "JumpFromGround", m_pos[0], m_pos[1]); // player jumps
 
-				if (m_grapple.isActive)
-				{
-					m_isAirDashCharged = true;
-
-					endGrapple();
-				}
+				endGrapple();
 			}
 		}
 
@@ -3241,6 +3236,8 @@ void Player::handleImpact(Vec2Arg velocity)
 		if (Calc::Sign(velDelta[i]) == Calc::Sign(velocity[i]))
 			m_vel[i] += velDelta[i] / getCharacterData(m_characterIndex)->m_weight;
 	}
+
+	endGrapple();
 }
 
 bool Player::shieldAbsorb(float amount)
@@ -3698,6 +3695,8 @@ void Player::endGrapple()
 		Sound("grapple-detach.ogg").play(); // sound played when grapple is detached
 
 		m_grapple = GrappleInfo();
+
+		m_isAirDashCharged = true;
 	}
 }
 
