@@ -88,8 +88,8 @@ void __stdcall debugOutputGL(
 	GLvoid * userParam)
 {
 	FILE * file = (FILE*)userParam;
-	char formattedMessage[256];
-	formatDebugOutputGL(formattedMessage, 256, source, type, id, severity, message);
+	char formattedMessage[1024];
+	formatDebugOutputGL(formattedMessage, 1024, source, type, id, severity, message);
 	fprintf(file, "%s\n", formattedMessage);
 }
 #endif
