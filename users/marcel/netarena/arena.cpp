@@ -132,6 +132,7 @@ bool Block::handleDamage(GameSim & gameSim, int blockX, int blockY)
 		else
 		{
 			type = kBlockType_Empty;
+			artIndex[0] = -1;
 		}
 
 		gameSim.playSound("block-destroy.ogg");

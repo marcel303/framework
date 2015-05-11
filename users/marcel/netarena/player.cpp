@@ -2730,16 +2730,17 @@ void Player::draw() const
 		int sy = 256;
 		int oy = (sy + characterData->m_collisionSy) / 2;
 
-		Surface surface1(sx, sy);
+		static Surface surface1(sx, sy);
 		pushSurface(&surface1);
 		{
+			surface1.clear();
 			const bool flipX = m_facing[0] > 0 ? true : false;
 			const bool flipY = m_facing[1] < 0 ? true : false;
 			drawAt(flipX, flipY, sx/2, oy - (flipY ? characterData->m_collisionSy : 0));
 		}
 		popSurface();
 
-		Surface surface2(256, 256);
+		static Surface surface2(256, 256);
 		pushSurface(&surface2);
 		{
 			setBlend(BLEND_OPAQUE);
