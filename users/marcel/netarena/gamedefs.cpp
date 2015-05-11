@@ -319,6 +319,7 @@ OPTION_STEP(AXE_THROW_SPEED, 0, 0, 10);
 OPTION_DEFINE(float, GRAPPLE_LENGTH_MIN, "Special Abilities/Grapple Rope/Min Length");
 OPTION_DEFINE(float, GRAPPLE_LENGTH_MAX, "Special Abilities/Grapple Rope/Max Length");
 OPTION_DEFINE(float, GRAPPLE_PULL_UP_SPEED, "Special Abilities/Grapple Rope/Pull Up Speed");
+OPTION_DEFINE(float, GRAPPLE_PULL_DOWN_SPEED, "Special Abilities/Grapple Rope/Pull Down Speed");
 
 OPTION_DEFINE(int, UI_CHARSELECT_BASE_X, "UI/Character Select/Base X");
 OPTION_DEFINE(int, UI_CHARSELECT_BASE_Y, "UI/Character Select/Base Y");

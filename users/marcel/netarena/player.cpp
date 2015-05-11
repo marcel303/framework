@@ -1902,13 +1902,15 @@ void Player::tick(float dt)
 				//m_vel = m_vel.CalcNormalized() * speed;
 			}
 
-			//if (m_input.isDown(INPUT_BUTTON_DOWN))
-			//	m_grapple.distance = Calc::Min(500.f, m_grapple.distance + dt * 200.f);
+			bool isAttached = (GAMESIM->m_arena.getIntersectingBlocksMask(m_grapple.anchorPos[0], m_grapple.anchorPos[1]) & kBlockMask_Solid) != 0;
+
+			if (m_input.isDown(INPUT_BUTTON_DOWN))
+				m_grapple.distance = Calc::Min((float)GRAPPLE_LENGTH_MAX, m_grapple.distance + dt * GRAPPLE_PULL_DOWN_SPEED);
 			if (m_input.isDown(INPUT_BUTTON_UP))
 				m_grapple.distance = Calc::Max((float)GRAPPLE_LENGTH_MIN, m_grapple.distance - dt * GRAPPLE_PULL_UP_SPEED);
 
-			if (m_grapple.isReady && m_input.wentDown(INPUT_BUTTON_Y))
-				m_grapple = GrappleInfo();
+			if (m_grapple.isReady && m_input.wentDown(INPUT_BUTTON_Y) || !isAttached)
+				endGrapple();
 			else
 				m_grapple.isReady = true;
 		}
@@ -2646,7 +2648,7 @@ void Player::tick(float dt)
 				if (i != m_index && GAMESIM->m_players[i].m_isUsed && GAMESIM->m_players[i].m_score >= m_score)
 					isInTheLeaded = false;
 
-			if (isInTheLeaded || m_killingSpree >= KILLINGSPREE_START)
+			if (/*isInTheLeaded || */m_killingSpree >= KILLINGSPREE_START)
 			{
 				ParticleSpawnInfo spawnInfo(
 						m_pos[0], m_pos[1],
@@ -3729,9 +3731,9 @@ void Player::beginGrapple()
 	const Vec2 grapplePos = getGrapplePos();
 
 	const int grappleBlockMask =
-		kBlockMask_Solid
-		- kBlockMask_Destructible
-		- (1 << kBlockType_Appear);
+		kBlockMask_Solid;
+		//- kBlockMask_Destructible
+		//- (1 << kBlockType_Appear);
 
 	for (float x = grapplePos[0], y = grapplePos[1]; y >= 0.f; x += dx, y += dy)
 	{
