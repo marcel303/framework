@@ -397,6 +397,8 @@ struct Player
 
 	bool m_enterPassthrough; // if set, the player will move through passthrough blocks, without having to press DOWN. this mode is set when using the sword-down attack, and reset when the player hits the ground
 
+	float m_pipebombCooldown;
+
 	bool m_hasAxe;
 	float m_axeRecoveryTime;
 
@@ -537,7 +539,7 @@ struct PipeBomb : PhysicsActor
 	void draw() const;
 	void drawLight() const;
 
-	void explode();
+	bool explode();
 };
 
 struct Barrel : PhysicsActor

@@ -822,6 +822,11 @@ void Player::tick(float dt)
 	else
 		m_spriterState.animSpeed = 1.f;
 
+	if (m_pipebombCooldown > 0.f)
+	{
+		m_pipebombCooldown = Calc::Max(0.f, m_pipebombCooldown - dt);
+	}
+
 	m_timeDilationAttack.tick(dt);
 
 	m_multiKillTimer = Calc::Max(0.f, m_multiKillTimer - dt);
@@ -1429,17 +1434,19 @@ void Player::tick(float dt)
 				{
 					// detonate?
 
-					bool hasDetonated = false;
+					bool isDeployed = false;
 					for (int i = 0; i < MAX_PIPEBOMBS; ++i)
 					{
 						if (GAMESIM->m_pipebombs[i].m_isActive && GAMESIM->m_pipebombs[i].m_playerIndex == m_index)
 						{
-							GAMESIM->m_pipebombs[i].explode();
-							hasDetonated = true;
+							isDeployed = true;
+
+							if (GAMESIM->m_pipebombs[i].explode())
+								m_pipebombCooldown = PIPEBOMB_COOLDOWN;
 						}
 					}
 
-					if (!hasDetonated)
+					if (!isDeployed && m_pipebombCooldown == 0.f)
 					{
 						// throw a new one
 						const Vec2 pos = m_pos + Vec2(0.f, m_collision.min[1] + m_collision.max[1]);
@@ -3232,7 +3239,10 @@ void Player::respawn()
 		m_isWallSliding = false;
 		m_enterPassthrough = false;
 
+		m_pipebombCooldown = 0.f;
+
 		m_hasAxe = true;
+		m_axeRecoveryTime = 0.f;
 
 		//
 

@@ -306,11 +306,13 @@ OPTION_DEFINE(int, ZWEIHANDER_STOMP_EFFECT_SIZE, "Special Abilities/Zweihander/S
 OPTION_DEFINE(float, PIPEBOMB_PLAYER_SPEED_MULTIPLIER, "Special Abilities/Pipe Bomb/Player Speed Multiplier");
 OPTION_DEFINE(float, PIPEBOMB_THROW_SPEED, "Special Abilities/Pipe Bomb/Throw Speed");
 OPTION_DEFINE(float, PIPEBOMB_ACTIVATION_TIME, "Special Abilities/Pipe Bomb/Activation Time (Sec)");
+OPTION_DEFINE(float, PIPEBOMB_COOLDOWN, "Special Abilities/Pipe Bomb/Cooldown Time (Sec)");
 OPTION_DEFINE(float, PIPEBOMB_BLAST_RADIUS, "Special Abilities/Pipe Bomb/Blast Radius");
 OPTION_DEFINE(float, PIPEBOMB_BLAST_STRENGTH_NEAR, "Special Abilities/Pipe Bomb/Blast Strength (Near)");
 OPTION_DEFINE(float, PIPEBOMB_BLAST_STRENGTH_FAR, "Special Abilities/Pipe Bomb/Blast Strength (Far)");
 OPTION_STEP(PIPEBOMB_THROW_SPEED, 0, 0, 10);
 OPTION_STEP(PIPEBOMB_ACTIVATION_TIME, 0, 0, .1f);
+OPTION_STEP(PIPEBOMB_COOLDOWN, 0, 0, .1f);
 
 OPTION_DEFINE(float, AXE_THROW_SPEED, "Special Abilities/Axe/Throw Speed");
 OPTION_DEFINE(float, AXE_FADE_TIME, "Special Abilities/Axe/Fade Time (Sec)");
