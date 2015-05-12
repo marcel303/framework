@@ -651,14 +651,18 @@ void PipeBomb::drawLight() const
 	Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f, 1.5f, false, FILTER_LINEAR);
 }
 
-void PipeBomb::explode()
+bool PipeBomb::explode()
 {
 	if (!m_exploded && m_activationTime == 0.f)
 	{
 		logDebug("PipeBomb::explode");
 
 		m_exploded = true;
+
+		return true;
 	}
+
+	return false;
 }
 
 //
