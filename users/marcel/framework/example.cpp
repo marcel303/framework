@@ -14,7 +14,7 @@ static Sprite * createRandomSprite()
 {
 	const int index = rand() % 4;
 	char filename[32];
-	sprintf(filename, "%s%d.png", "rpg", index);
+	sprintf_s(filename, sizeof(filename), "%s%d.png", "rpg", index);
 	
 	Sprite * sprite = new Sprite(filename, 0, 0, "rpg.txt");
 	
@@ -22,7 +22,7 @@ static Sprite * createRandomSprite()
 	const int guy = rand() % 8;
 	const int dir = rand() % 4;
 	char dirName[4] = { 'u', 'd', 'l', 'r' };
-	sprintf(anim, "%d%c", guy, dirName[dir]);
+	sprintf_s(anim, sizeof(anim), "%d%c", guy, dirName[dir]);
 	
 	sprite->startAnim(anim);
 	sprite->x = rand() % sx;
