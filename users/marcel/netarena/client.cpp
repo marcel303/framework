@@ -359,13 +359,13 @@ void Client::tick(float dt)
 		case kGameState_MainMenus:
 		case kGameState_Connecting:
 		case kGameState_OnlineMenus:
-			strcpy_s(temp, sizeof(temp), "bgm/menus.ogg");
+			strcpy_s(temp, sizeof(temp), "bgm/bgm-menus.ogg");
 			break;
 		case kGameState_Play:
-			sprintf_s(temp, sizeof(temp), "bgm/play%02d.ogg", m_gameSim->m_nextRoundNumber % 4);
+			sprintf_s(temp, sizeof(temp), "bgm/bgm-play%02d.ogg", m_gameSim->m_nextRoundNumber % 4);
 			break;
 		case kGameState_RoundComplete:
-			strcpy_s(temp, sizeof(temp), "bgm/round-complete.ogg");
+			strcpy_s(temp, sizeof(temp), "bgm/bgm-round-complete.ogg");
 			break;
 
 		default:
@@ -515,6 +515,9 @@ void Client::drawPlay()
 
 	pushSurface(g_colorMap);
 	{
+		glClearColor(0.f, 0.f, 0.f, 0.f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
 		gxPushMatrix();
 		gxTranslatef(camTranslation[0], camTranslation[1], 0.f);
 
