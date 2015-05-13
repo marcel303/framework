@@ -5,8 +5,6 @@
 #include "NetSerializable.h"
 #include "physobj.h"
 
-#define NEW_LEVEL_FORMAT 1
-
 class Arena;
 class BitStream;
 class GameSim;

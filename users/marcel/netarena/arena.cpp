@@ -18,8 +18,6 @@
 	#define BLOCK_SPRITE_SCALE 1.f
 #endif
 
-static Sprite * s_sprites[kBlockType_COUNT] = { };
-
 class BlockMask
 {
 public:
@@ -230,7 +228,6 @@ void Arena::load(const char * name)
 
 	//
 
-#if NEW_LEVEL_FORMAT
 	m_name = name;
 
 	loadArt(name);
@@ -242,13 +239,6 @@ void Arena::load(const char * name)
 	const std::string objFilename = baseName + "Obj.txt";
 	const std::string artFilenameBG = baseName + "Art.txt";
 	const std::string artFilenameFG = baseName + "ArtFG.txt";
-#else
-	std::string baseName = Path::GetBaseName(name);
-
-	std::string techFilename = baseName + "Mec.txt";
-	std::string maskFilename = baseName + "Col.txt";
-	std::string artFilename = baseName + "Art.txt";
-#endif
 
 	// load block type layer
 
@@ -420,12 +410,10 @@ void Arena::load(const char * name)
 		LOG_ERR("failed to open %s: %s", colFilename.c_str(), e.what());
 	}
 
-#if NEW_LEVEL_FORMAT
 	// load art layer
 
 	loadArtIndices(artFilenameBG.c_str(), 0);
 	loadArtIndices(artFilenameFG.c_str(), 1);
-#endif
 }
 
 void Arena::loadArt(const char * name)
@@ -594,12 +582,8 @@ void Arena::drawBlocks(int layer) const
 				setColor(255, 255, 255, 255);
 			}
 
-		#if NEW_LEVEL_FORMAT
 			if (block.artIndex[layer] != (uint16_t)-1)
 				m_sprites[block.artIndex[layer]]->drawEx(x * BLOCK_SX, y * BLOCK_SY, 0.f, BLOCK_SPRITE_SCALE);
-		#else
-			s_sprites[block.type]->drawEx(x * BLOCK_SX, y * BLOCK_SY, 0.f, BLOCK_SPRITE_SCALE);
-		#endif
 		}
 	}
 
@@ -1157,45 +1141,10 @@ void Arena::testCollision(const CollisionShape & shape, void * arg, CollisionCB 
 
 //
 
-static const char * filenames[kBlockType_COUNT] =
-{
-	"block-empty.png",
-	"block-destructible.png",
-	"block-destructible.png",
-	"block-indestructible.png",
-	"block-slide.png",
-	"block-moving.png",
-	"block-sticky.png",
-	"block-spike.png",
-	"block-spawn.png",
-	"block-spring.png",
-	"block-teleport.png",
-	"block-gravity-reverse.png",
-	"block-gravity-disable.png",
-	"block-gravity-strong.png",
-	"block-gravity-left.png",
-	"block-gravity-right.png",
-	"block-conveyorbelt-left.png",
-	"block-conveyorbelt-right.png",
-	"block-passthrough.png",
-	"block-appear.png"
-};
-
 void initArenaData()
 {
-	for (int i = 0; i < kBlockType_COUNT; ++i)
-	{
-		const char * filename = filenames[i];
-
-		s_sprites[i] = new Sprite(filename);
-	}
 }
 
 void shutArenaData()
 {
-	for (int i = 0; i < kBlockType_COUNT; ++i)
-	{
-		delete s_sprites[i];
-		s_sprites[i] = 0;
-	}
 }
