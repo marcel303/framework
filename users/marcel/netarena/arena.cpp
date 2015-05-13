@@ -529,7 +529,10 @@ void Arena::serialize(NetSerializationContext & context)
 		context.Serialize(name);
 		m_name = name.c_str();
 
-		loadArt(m_name.c_str());
+		if (m_name.empty())
+			freeArt();
+		else
+			loadArt(m_name.c_str());
 	}
 }
 

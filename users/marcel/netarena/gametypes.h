@@ -306,6 +306,11 @@ struct FixedString
 		return m_data;
 	}
 
+	bool empty() const
+	{
+		return m_data[0] == 0;
+	}
+
 	void operator=(const char * str)
 	{
 		const size_t len = strlen(str);
