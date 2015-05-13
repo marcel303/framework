@@ -12,6 +12,8 @@
 // todo : remove all of the dynamic memory allocations during draw
 // todo : add support for character map
 
+#define FIXUP_BONE_REFS 0
+
 using namespace tinyxml2;
 
 namespace spriter
@@ -649,6 +651,7 @@ namespace spriter
 		for (size_t i = 0; i < m_animations.size(); ++i)
 			if (m_animations[i]->name == name)
 				return i;
+		logWarning("failed to find animation: %s", name);
 		return -1;
 	}
 
@@ -992,7 +995,7 @@ namespace spriter
 							animation->timelines.push_back(timeline);
 						}
 
-					#if 0
+					#if FIXUP_BONE_REFS
 						// fixup bone refs.. spriter sometimes writes these out wrong, but we can fix this by
 						// manually searching for the correct key indices
 
@@ -1004,11 +1007,11 @@ namespace spriter
 							{
 								auto & r = mainlineKey.boneRefs[j];
 
-								Assert(r.timeline >= 0 && r.timeline < animation->timelines.size());
+								Assert(r.timeline >= 0 && r.timeline < (int)animation->timelines.size());
 								Timeline & timeline = animation->timelines[r.timeline];
 
 								int key = 0;
-								while (key + 1 < timeline.keys.size() && timeline.keys[key + 1]->time <= mainlineKey.time)
+								while (key + 1 < (int)timeline.keys.size() && timeline.keys[key + 1]->time <= mainlineKey.time)
 									key++;
 
 								r.key = key;
