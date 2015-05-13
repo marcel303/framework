@@ -529,6 +529,7 @@ struct Axe : PhysicsActor
 	int m_playerIndex;
 	float m_travelTime;
 	float m_fadeTime;
+	SpriterState m_spriterState;
 
 	Axe()
 	{

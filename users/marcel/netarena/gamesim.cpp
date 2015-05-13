@@ -54,8 +54,7 @@ static const char * s_pickupSprites[kPickupType_COUNT] =
 
 #define TOKEN_SPRITE "token.png"
 #define COIN_SPRITE "coin.png"
-#define AXE_SPRITE "objects/axe/axe.png" // todo : remove
-#define AXE_SPRITER "objects/axe/sprite.scml"
+#define AXE_SPRITER Spriter("objects/axe/sprite.scml")
 #define PIPEBOMB_SPRITER Spriter("objects/pipebomb/sprite.scml")
 
 //
@@ -432,6 +431,7 @@ bool Mover::intersects(CollisionInfo & collisionInfo) const
 void Axe::setup(Vec2Arg pos, Vec2Arg vel, int playerIndex)
 {
 	*static_cast<PhysicsActor*>(this) = PhysicsActor();
+	m_spriterState = SpriterState();
 
 	m_isActive = true;
 	m_bbMin.Set(-AXE_COLLISION_SX / 2.f, -AXE_COLLISION_SY / 2.f);
@@ -448,6 +448,8 @@ void Axe::setup(Vec2Arg pos, Vec2Arg vel, int playerIndex)
 	m_playerIndex = playerIndex;
 	m_throwDone = false;
 	m_travelTime = AXE_THROW_TIME;
+
+	m_spriterState.startAnim(AXE_SPRITER, "active");
 }
 
 void Axe::tick(GameSim & gameSim, float dt)
@@ -521,6 +523,21 @@ void Axe::tick(GameSim & gameSim, float dt)
 			*this = Axe();
 		}
 	}
+
+	if (m_vel[0] != 0.f)
+	{
+		m_spriterState.flipX = m_vel[0] < 0.f;
+	}
+
+	if (!m_throwDone)
+	{
+		m_spriterState.angle += AXE_ROTATION_SPEED * dt;
+	}
+
+	if (m_spriterState.animIsActive)
+	{
+		m_spriterState.updateAnim(AXE_SPRITER, dt);
+	}
 }
 
 void Axe::endThrow()
@@ -528,13 +545,16 @@ void Axe::endThrow()
 	m_throwDone = true;
 	m_vel.Set(0.f, 0.f);
 	m_gravityMultiplier = 1.f;
+
+	m_spriterState.startAnim(AXE_SPRITER, "inactive");
 }
 
 void Axe::draw() const
 {
-	Sprite(AXE_SPRITE).drawEx(
-		m_pos[0] + m_bbMin[0],
-		m_pos[1] + m_bbMin[1]);
+	SpriterState state = m_spriterState;
+	state.x = m_pos[0];
+	state.y = m_pos[1];
+	AXE_SPRITER.draw(state);
 
 	if (g_devMode)
 	{
