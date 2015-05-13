@@ -54,8 +54,8 @@ static const char * s_pickupSprites[kPickupType_COUNT] =
 
 #define TOKEN_SPRITE "token.png"
 #define COIN_SPRITE "coin.png"
-#define AXE_SPRITE "axe.png"
-#define PIPEBOMB_SPRITE "pipebomb.png"
+#define AXE_SPRITE "objects/axe/axe.png"
+#define PIPEBOMB_SPRITE "objects/pipebomb/pipebomb.png"
 
 //
 
@@ -576,7 +576,7 @@ void PipeBomb::tick(GameSim & gameSim, float dt)
 			self.m_hasLanded = true;
 			self.m_vel.Set(0.f, 0.f);
 
-			gameSim->playSound("pipebomb-bounce.ogg");
+			gameSim->playSound("objects/pipebomb/bounce.ogg");
 		}
 	};
 	cbs.onHitPlayer = [](PhysicsActorCBs & cbs, PhysicsActor & actor, Player & player)
@@ -596,7 +596,7 @@ void PipeBomb::tick(GameSim & gameSim, float dt)
 
 	if (m_exploded)
 	{
-		gameSim.playSound("pipebomb-explode.ogg");
+		gameSim.playSound("objects/pipebomb/explode.ogg");
 		gameSim.addAnimationFx("fx/PipeBomb_Explode.scml", m_pos[0], m_pos[1]);
 
 		for (int i = 0; i < MAX_PLAYERS; ++i)
@@ -2445,7 +2445,7 @@ void GameSim::spawnAxe(Vec2 pos, Vec2 vel, int playerIndex)
 	{
 		if (!m_axes[i].m_isActive)
 		{
-			playSound("axe-throw.ogg");
+			playSound("objects/axe/throw.ogg");
 			m_axes[i].setup(pos, vel, playerIndex);
 			return;
 		}
@@ -2462,7 +2462,7 @@ bool GameSim::grabAxe(const CollisionInfo & collision)
 			m_axes[i].getCollisionInfo(axeCollision);
 			if (collision.intersects(axeCollision))
 			{
-				playSound("axe-pickup.ogg");
+				playSound("objects/axe/pickup.ogg");
 				m_axes[i] = Axe();
 				return true;
 			}
@@ -2477,7 +2477,7 @@ void GameSim::spawnPipeBomb(Vec2 pos, Vec2 vel, int playerIndex)
 	{
 		if (!m_pipebombs[i].m_isActive)
 		{
-			playSound("pipebomb-throw.ogg");
+			playSound("objects/pipebomb/throw.ogg");
 			m_pipebombs[i].setup(pos, vel, playerIndex);
 			return;
 		}
