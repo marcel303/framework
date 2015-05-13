@@ -302,6 +302,8 @@ OPTION_DEFINE(float, ZWEIHANDER_CHARGE_TIME, "Special Abilities/Zweihander/Charg
 OPTION_DEFINE(float, ZWEIHANDER_STUN_TIME, "Special Abilities/Zweihander/Stun Time (Sec)");
 OPTION_DEFINE(int, ZWEIHANDER_STOMP_EFFECT_SIZE, "Special Abilities/Zweihander/Stomp Effect Size");
 
+OPTION_DEFINE(int, PIPEBOMB_COLLISION_SX, "Special Abilities/Pipe Bomb/Collision SX");
+OPTION_DEFINE(int, PIPEBOMB_COLLISION_SY, "Special Abilities/Pipe Bomb/Collision SY");
 OPTION_DEFINE(float, PIPEBOMB_PLAYER_SPEED_MULTIPLIER, "Special Abilities/Pipe Bomb/Player Speed Multiplier");
 OPTION_DEFINE(float, PIPEBOMB_THROW_SPEED, "Special Abilities/Pipe Bomb/Throw Speed");
 OPTION_DEFINE(float, PIPEBOMB_ACTIVATION_TIME, "Special Abilities/Pipe Bomb/Activation Time (Sec)");

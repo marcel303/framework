@@ -55,7 +55,7 @@ static const char * s_pickupSprites[kPickupType_COUNT] =
 #define TOKEN_SPRITE "token.png"
 #define COIN_SPRITE "coin.png"
 #define AXE_SPRITE "objects/axe/axe.png"
-#define PIPEBOMB_SPRITE "objects/pipebomb/pipebomb.png"
+#define PIPEBOMB_SPRITER Spriter("objects/pipebomb/sprite.scml")
 
 //
 
@@ -538,13 +538,12 @@ void Axe::drawLight() const
 
 void PipeBomb::setup(Vec2Arg pos, Vec2Arg vel, int playerIndex)
 {
-	Sprite sprite(PIPEBOMB_SPRITE);
-
 	*static_cast<PhysicsActor*>(this) = PhysicsActor();
+	m_spriterState = SpriterState();
 
 	m_isActive = true;
-	m_bbMin.Set(-sprite.getWidth() / 2.f, -sprite.getHeight());
-	m_bbMax.Set(+sprite.getWidth() / 2.f, 0.f);
+	m_bbMin.Set(-PIPEBOMB_COLLISION_SX / 2.f, -PIPEBOMB_COLLISION_SY);
+	m_bbMax.Set(+PIPEBOMB_COLLISION_SX / 2.f, 0.f);
 	m_pos = pos + Vec2(0.f, -1.f);
 	m_vel = vel;
 	m_doTeleport = true;
@@ -556,13 +555,21 @@ void PipeBomb::setup(Vec2Arg pos, Vec2Arg vel, int playerIndex)
 	m_playerIndex = playerIndex;
 	m_exploded = false;
 	m_activationTime = PIPEBOMB_ACTIVATION_TIME;
+
+	m_spriterState.startAnim(PIPEBOMB_SPRITER, "thrown");
 }
 
 void PipeBomb::tick(GameSim & gameSim, float dt)
 {
-	m_activationTime -= dt;
-	if (m_activationTime < 0.f)
-		m_activationTime = 0.f;
+	if (m_activationTime > 0.f)
+	{
+		m_activationTime -= dt;
+		if (m_activationTime < 0.f)
+		{
+			m_activationTime = 0.f;
+			m_spriterState.startAnim(PIPEBOMB_SPRITER, "activated");
+		}
+	}
 
 	PhysicsActorCBs cbs;
 	cbs.userData = &gameSim;
@@ -576,7 +583,8 @@ void PipeBomb::tick(GameSim & gameSim, float dt)
 			self.m_hasLanded = true;
 			self.m_vel.Set(0.f, 0.f);
 
-			gameSim->playSound("objects/pipebomb/bounce.ogg");
+			gameSim->playSound("objects/pipebomb/land.ogg");
+			self.m_spriterState.startAnim(PIPEBOMB_SPRITER, "landed");
 		}
 	};
 	cbs.onHitPlayer = [](PhysicsActorCBs & cbs, PhysicsActor & actor, Player & player)
@@ -593,6 +601,11 @@ void PipeBomb::tick(GameSim & gameSim, float dt)
 	};
 
 	PhysicsActor::tick(gameSim, dt, cbs);
+
+	if (m_spriterState.animIsActive)
+	{
+		m_spriterState.updateAnim(PIPEBOMB_SPRITER, dt);
+	}
 
 	if (m_exploded)
 	{
@@ -624,18 +637,14 @@ void PipeBomb::tick(GameSim & gameSim, float dt)
 
 void PipeBomb::draw() const
 {
-	Sprite(PIPEBOMB_SPRITE).drawEx(
-		m_pos[0] + m_bbMin[0],
-		m_pos[1] + m_bbMin[1]);
+	SpriterState state = m_spriterState;
+	state.x = m_pos[0];
+	state.y = m_pos[1];
+	PIPEBOMB_SPRITER.draw(state);
 
 	if (g_devMode)
 	{
-		setColor(255, 0, 0, 63);
-		drawRectLine(
-			m_pos[0] + m_bbMin[0],
-			m_pos[1] + m_bbMin[1],
-			m_pos[0] + m_bbMax[0],
-			m_pos[1] + m_bbMax[1]);
+		drawBB();
 		setColor(0, 255, 0, 63);
 		drawRectLine(
 			m_pos[0] - PIPEBOMB_BLAST_RADIUS,

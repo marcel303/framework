@@ -172,8 +172,8 @@ void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 
 void PhysicsActor::drawBB() const
 {
-	Vec2 min = m_pos + m_bbMin;
-	Vec2 max = m_pos + m_bbMax;
+	const Vec2 min = m_pos + m_bbMin;
+	const Vec2 max = m_pos + m_bbMax;
 
 	setColor(0, 255, 0, 127);
 	drawRect(min[0], min[1], max[0], max[1]);

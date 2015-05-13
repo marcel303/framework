@@ -547,6 +547,7 @@ struct PipeBomb : PhysicsActor
 	bool m_hasLanded;
 	int m_playerIndex;
 	float m_activationTime;
+	SpriterState m_spriterState;
 
 	PipeBomb()
 	{
