@@ -492,9 +492,9 @@ void Axe::tick(GameSim & gameSim, float dt)
 
 		m_fadeTime = AXE_FADE_TIME;
 
-		if (m_playerIndex != -1 && gameSim.m_players[m_playerIndex].m_axeRecoveryTime == 0.f)
+		if (m_playerIndex != -1 && gameSim.m_players[m_playerIndex].m_axe.recoveryTime == 0.f)
 		{
-			gameSim.m_players[m_playerIndex].m_axeRecoveryTime = AXE_FADE_TIME;
+			gameSim.m_players[m_playerIndex].m_axe.recoveryTime = AXE_FADE_TIME;
 		}
 	}
 
@@ -597,7 +597,7 @@ void PipeBomb::tick(GameSim & gameSim, float dt)
 	if (m_exploded)
 	{
 		gameSim.playSound("pipebomb-explode.ogg");
-		gameSim.addAnimationFx("fx/PipeBomb_Explode.scml", "Explode", m_pos[0], m_pos[1]);
+		gameSim.addAnimationFx("fx/PipeBomb_Explode.scml", m_pos[0], m_pos[1]);
 
 		for (int i = 0; i < MAX_PLAYERS; ++i)
 		{
@@ -2558,7 +2558,7 @@ void GameSim::addFloorEffect(int playerId, int x, int y, int size, int damageSiz
 	m_floorEffect.trySpawnAt(*this, playerId, x, y, +BLOCK_SX, size, damageSize);
 }
 
-void GameSim::addAnimationFx(const char * fileName, const char * animName, int x, int y, bool flipX, bool flipY)
+void GameSim::addAnimationFx(const char * fileName, int x, int y, bool flipX, bool flipY)
 {
 	for (int i = 0; i < MAX_ANIM_EFFECTS; ++i)
 	{
@@ -2567,12 +2567,11 @@ void GameSim::addAnimationFx(const char * fileName, const char * animName, int x
 			m_animationEffects[i] = AnimationFxState();
 			m_animationEffects[i].m_isActive = true;
 			m_animationEffects[i].m_fileName = fileName;
-			m_animationEffects[i].m_animName = animName;
 			m_animationEffects[i].m_state.x = x;
 			m_animationEffects[i].m_state.y = y;
 			m_animationEffects[i].m_state.flipX = flipX;
 			m_animationEffects[i].m_state.flipY = flipY;
-			m_animationEffects[i].m_state.startAnim(Spriter(fileName), animName);
+			m_animationEffects[i].m_state.startAnim(Spriter(fileName), 0);
 
 			break;
 		}

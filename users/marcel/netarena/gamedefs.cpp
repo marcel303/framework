@@ -196,7 +196,6 @@ OPTION_STEP(PICKUP_RATE_MULTIPLIER_4, 0, 0, 0.1f);
 OPTION_DEFINE(int, PICKUP_AMMO_COUNT, "Pickups/Ammo Count");
 OPTION_DEFINE(int, PICKUP_AMMO_WEIGHT, "Pickups/Spawn Weights/Ammo");
 OPTION_DEFINE(int, PICKUP_NADE_WEIGHT, "Pickups/Spawn Weights/Nade");
-OPTION_DEFINE(int, PICKUP_SHIELD_COUNT, "Pickups/Shield Count");
 OPTION_DEFINE(int, PICKUP_SHIELD_WEIGHT, "Pickups/Spawn Weights/Shield");
 OPTION_DEFINE(int, PICKUP_ICE_COUNT, "Pickups/Ice Count");
 OPTION_DEFINE(int, PICKUP_ICE_WEIGHT, "Pickups/Spawn Weights/Ice");

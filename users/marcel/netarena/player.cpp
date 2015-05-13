@@ -272,6 +272,9 @@ COMMAND_OPTION(s_killPlayers, "Player/Kill Players", []{ g_app->netDebugAction("
 
 #define GAMESIM m_instanceData->m_gameSim
 
+#define SHIELD_SPRITER Spriter("objects/shield/sprite.scml")
+#define BUBBLE_SPRITER Spriter("objects/bubble/sprite.scml")
+
 // todo : m_isGrounded should be true when stickied too. review code and make change!
 
 struct PlayerAnimInfo
@@ -802,6 +805,11 @@ void Player::tick(float dt)
 
 	//
 
+	if (m_shield.spriterState.animIsActive)
+	{
+		m_shield.spriterState.updateAnim(SHIELD_SPRITER, dt);
+	}
+
 	if (m_ice.timer > 0.f)
 	{
 		m_ice.timer = Calc::Max(0.f, m_ice.timer - dt);
@@ -813,7 +821,15 @@ void Player::tick(float dt)
 	{
 		m_bubble.timer = Calc::Max(0.f, m_bubble.timer - dt);
 		if (m_bubble.timer == 0.f)
+		{
 			m_isAnimDriven = false;
+			m_bubble.spriterState.startAnim(BUBBLE_SPRITER, "end");
+		}
+	}
+
+	if (m_bubble.spriterState.animIsActive)
+	{
+		m_bubble.spriterState.updateAnim(BUBBLE_SPRITER, dt);
 	}
 
 	if (m_ice.timer > 0.f ||
@@ -973,7 +989,11 @@ void Player::tick(float dt)
 					pushWeapon(kPlayerWeapon_Grenade, 1);
 					break;
 				case kPickupType_Shield:
-					m_shield.shield = PICKUP_SHIELD_COUNT;
+					if (!m_shield.hasShield)
+					{
+						m_shield.hasShield = true;
+						m_shield.spriterState.startAnim(SHIELD_SPRITER, "begin");
+					}
 					break;
 				case kPickupType_Ice:
 					pushWeapon(kPlayerWeapon_Ice, PICKUP_ICE_COUNT);
@@ -991,24 +1011,24 @@ void Player::tick(float dt)
 				}
 			}
 
-			if (characterData->m_special == kPlayerSpecial_AxeThrow && !m_hasAxe)
+			if (characterData->m_special == kPlayerSpecial_AxeThrow && !m_axe.hasAxe)
 			{
-				if (m_axeRecoveryTime > 0.f)
+				if (m_axe.recoveryTime > 0.f)
 				{
-					m_axeRecoveryTime -= dt;
-					if (m_axeRecoveryTime <= 0.f)
-						m_hasAxe = true;
+					m_axe.recoveryTime -= dt;
+					if (m_axe.recoveryTime <= 0.f)
+						m_axe.hasAxe = true;
 				}
 
 				CollisionInfo playerCollision;
 				if (getPlayerCollision(playerCollision))
 				{
 					if (GAMESIM->grabAxe(playerCollision))
-						m_hasAxe = true;
+						m_axe.hasAxe = true;
 				}
 
-				if (m_hasAxe)
-					m_axeRecoveryTime = 0.f;
+				if (m_axe.hasAxe)
+					m_axe.recoveryTime = 0.f;
 			}
 		}
 
@@ -1105,7 +1125,7 @@ void Player::tick(float dt)
 								shape1.getMinMax(min1, max1);
 								shape2.getMinMax(min2, max2);
 								Vec2 mid = (min1 + max1 + min2 + max2) / 4.f;
-								GAMESIM->addAnimationFx("fx/Attack_MeleeCancel.scml", "MeleeCancel", mid[0], mid[1]);
+								GAMESIM->addAnimationFx("fx/Attack_MeleeCancel.scml", mid[0], mid[1]);
 							}
 						}
 					}
@@ -1337,7 +1357,6 @@ void Player::tick(float dt)
 
 					GAMESIM->addAnimationFx(
 						"fx/Attack_FireBullet.scml",
-						"FireBullet",
 						x,
 						y,
 						m_facing[0] < 0,
@@ -1865,7 +1884,7 @@ void Player::tick(float dt)
 				args.setString("name", "jump_sounds");
 				m_instanceData->handleAnimationAction("char_soundbag", args);
 				if (currentBlockMaskFloor & kBlockMask_Solid)
-					GAMESIM->addAnimationFx("fx/Dust_JumpFromGround.scml", "JumpFromGround", m_pos[0], m_pos[1]); // player jumps
+					GAMESIM->addAnimationFx("fx/Dust_JumpFromGround.scml", m_pos[0], m_pos[1]); // player jumps
 
 				endGrapple();
 			}
@@ -2278,7 +2297,7 @@ void Player::tick(float dt)
 						CollisionInfo playerCollision;
 						if (getPlayerCollision(playerCollision))
 						{
-							GAMESIM->addAnimationFx("fx/Dust_WallSlide.scml", "WallSlide",
+							GAMESIM->addAnimationFx("fx/Dust_WallSlide.scml",
 								m_facing[0] < 0.f ? playerCollision.min[0] : playerCollision.max[0],
 								newPos[1],
 								m_facing[0] < 0.f);
@@ -2530,7 +2549,7 @@ void Player::tick(float dt)
 				m_isGrounded = true;
 
 				GAMESIM->playSound(makeCharacterFilename(m_characterIndex, "land_on_ground.ogg"), 50); // players lands on solid ground
-				GAMESIM->addAnimationFx("fx/Dust_LandOnGround.scml", "LandOnGround", m_pos[0], m_pos[1]); // players lands on solid ground
+				GAMESIM->addAnimationFx("fx/Dust_LandOnGround.scml", m_pos[0], m_pos[1]); // players lands on solid ground
 			}
 		}
 		else
@@ -2639,7 +2658,7 @@ void Player::tick(float dt)
 		if (m_jetpackFxTime <= 0.f)
 		{
 			m_jetpackFxTime += JETPACK_FX_INTERVAL;
-			GAMESIM->addAnimationFx("fx/Jetpack_Smoke.scml", "Smoke", m_pos[0], m_pos[1], m_facing[0] < 0);
+			GAMESIM->addAnimationFx("fx/Jetpack_Smoke.scml", m_pos[0], m_pos[1], m_facing[0] < 0);
 		}
 	}
 
@@ -2980,18 +2999,24 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 		sprite.drawEx(x, y + mirrorY(m_attack.collision.min[1]));
 	}
 
-	if (m_shield.shield)
+	if (m_shield.hasShield || m_shield.spriterState.animIsActive)
 	{
-		const float px = x;
-		const float py = y + (flipY ? +characterData->m_collisionSy : -characterData->m_collisionSy) / 2.f;
-		Sprite("shield-bubble.png").drawEx(px, py);
+		SpriterState state = m_shield.spriterState;
+		state.x = x;
+		state.y = y + (flipY ? +characterData->m_collisionSy : -characterData->m_collisionSy) / 2.f;
+		state.flipX = flipX;
+		state.flipY = flipY;
+		SHIELD_SPRITER.draw(state);
 	}
 
-	if (m_bubble.timer > 0.f)
+	if (m_bubble.timer > 0.f || m_bubble.spriterState.animIsActive)
 	{
-		const float px = x;
-		const float py = y + (flipY ? +characterData->m_collisionSy : -characterData->m_collisionSy) / 2.f;
-		Sprite("bubble-bubble.png").drawEx(px, py);
+		SpriterState state = m_bubble.spriterState;
+		state.x = x;
+		state.y = y + (flipY ? +characterData->m_collisionSy : -characterData->m_collisionSy) / 2.f;
+		state.flipX = flipX;
+		state.flipY = flipY;
+		BUBBLE_SPRITER.draw(state);
 	}
 
 	if (g_devMode && (m_anim == kPlayerAnim_Attack || m_anim == kPlayerAnim_AttackUp || m_anim == kPlayerAnim_AttackDown))
@@ -3075,7 +3100,7 @@ void Player::debugDraw() const
 		y += 18.f;
 	}
 
-	if (characterData->m_special == kPlayerSpecial_AxeThrow && m_hasAxe)
+	if (characterData->m_special == kPlayerSpecial_AxeThrow && m_axe.hasAxe)
 	{
 		setColor(colorWhite);
 		drawText(m_pos[0], y, 14, 0.f, 0.f, "axe");
@@ -3215,10 +3240,14 @@ void Player::respawn()
 		m_weaponStackSize = 0;
 
 		m_attack = AttackInfo();
-
 		m_timeDilationAttack = TimeDilationAttack();
-
+		m_teleport = TeleportInfo();
 		m_jump = JumpInfo();
+		m_shield = ShieldInfo();
+		m_ice = IceInfo();
+		m_bubble = BubbleInfo();
+		m_grapple = GrappleInfo();
+		m_axe = AxeInfo();
 
 		m_blockMask = 0;
 
@@ -3241,8 +3270,8 @@ void Player::respawn()
 
 		m_pipebombCooldown = 0.f;
 
-		m_hasAxe = true;
-		m_axeRecoveryTime = 0.f;
+		m_axe.hasAxe = true;
+		m_axe.recoveryTime = 0.f;
 
 		//
 
@@ -3285,16 +3314,12 @@ void Player::handleImpact(Vec2Arg velocity)
 
 bool Player::shieldAbsorb(float amount)
 {
-	if (m_shield.shield > 0)
+	if (m_shield.hasShield)
 	{
-		m_shield.shield--;
-
-		if (m_shield.shield == 0)
-		{
-			GAMESIM->playSound("shield-pop.ogg");
-			GAMESIM->addAnimationFx("fx/Shield_Pop.scml", "Pop", m_pos[0], m_pos[1]); // player shield is popped
-		}
-
+		m_shield.hasShield = false;
+		m_shield.spriterState.startAnim(SHIELD_SPRITER, "end");
+		GAMESIM->playSound("objects/shield/pop.ogg");
+		GAMESIM->addAnimationFx("fx/Shield_Pop.scml", m_pos[0], m_pos[1]); // player shield is popped
 		return true;
 	}
 	else
@@ -3537,6 +3562,7 @@ bool Player::handleBubble(Vec2Arg velocity, Player * attacker)
 			m_enableInAirAnim = false;
 
 			m_bubble.timer = PLAYER_EFFECT_BUBBLE_TIME;
+			m_bubble.spriterState.startAnim(BUBBLE_SPRITER, "begin");
 		}
 	}
 
@@ -3701,7 +3727,7 @@ void Player::endRocketPunch(bool stunned)
 
 void Player::beginAxeThrow()
 {
-	if (m_hasAxe)
+	if (m_axe.hasAxe)
 	{
 		m_attack = AttackInfo();
 		m_attack.attacking = true;
@@ -3723,8 +3749,7 @@ void Player::endAxeThrow()
 
 	GAMESIM->spawnAxe(pos, dir * AXE_THROW_SPEED, m_index);
 
-	m_hasAxe = false;
-	m_axeRecoveryTime = 0.f;
+	m_axe = AxeInfo();
 }
 
 void Player::beginGrapple()

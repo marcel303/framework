@@ -212,12 +212,6 @@ struct Player
 	struct AttackInfo
 	{
 		AttackInfo()
-			: attacking(false)
-			, hitDestructible(false)
-			, hasCollision(false)
-			, collision()
-			, attackVel()
-			, cooldown(0.f)
 		{
 			memset(this, 0, sizeof(AttackInfo));
 		}
@@ -290,6 +284,11 @@ struct Player
 
 	struct TimeDilationAttack
 	{
+		TimeDilationAttack()
+		{
+			memset(this, 0, sizeof(TimeDilationAttack));
+		}
+
 		bool isActive() const
 		{
 			return timeRemaining != 0.f;
@@ -308,9 +307,6 @@ struct Player
 	struct TeleportInfo
 	{
 		TeleportInfo()
-			: cooldown(false)
-			, x(0)
-			, y(0)
 		{
 			memset(this, 0, sizeof(TeleportInfo));
 		}
@@ -340,19 +336,35 @@ struct Player
 		ShieldInfo()
 		{
 			memset(this, 0, sizeof(ShieldInfo));
+
+			spriterState = SpriterState();
 		}
 
-		int shield;
+		bool hasShield;
+		SpriterState spriterState;
 	} m_shield;
 
 	struct IceInfo
 	{
+		IceInfo()
+		{
+			memset(this, 0, sizeof(IceInfo));
+		}
+
 		float timer;
 	} m_ice;
 
 	struct BubbleInfo
 	{
+		BubbleInfo()
+		{
+			memset(this, 0, sizeof(BubbleInfo));
+
+			spriterState = SpriterState();
+		}
+
 		float timer;
+		SpriterState spriterState;
 	} m_bubble;
 
 	struct GrappleInfo
@@ -368,6 +380,17 @@ struct Player
 		Vec2 anchorPos;
 		float distance;
 	} m_grapple;
+
+	struct AxeInfo
+	{
+		AxeInfo()
+		{
+			memset(this, 0, sizeof(AxeInfo));
+		}
+
+		bool hasAxe;
+		float recoveryTime;
+	} m_axe;
 
 	float m_respawnTimer; // when this timer counts to zero, the player is automatically respawn
 	bool m_canRespawn; // set when the player is allowed to respawn, which is after the death animation is done
@@ -398,9 +421,6 @@ struct Player
 	bool m_enterPassthrough; // if set, the player will move through passthrough blocks, without having to press DOWN. this mode is set when using the sword-down attack, and reset when the player hits the ground
 
 	float m_pipebombCooldown;
-
-	bool m_hasAxe;
-	float m_axeRecoveryTime;
 
 	struct TokenHunt
 	{
@@ -623,9 +643,15 @@ struct FloorEffect
 
 struct AnimationFxState
 {
+	AnimationFxState()
+	{
+		memset(this, 0, sizeof(AnimationFxState));
+
+		m_state = SpriterState();
+	}
+
 	bool m_isActive;
 	FixedString<32> m_fileName;
-	FixedString<16> m_animName;
 	SpriterState m_state;
 
 	void tick(float dt);
@@ -840,7 +866,7 @@ public:
 
 	void addFloorEffect(int playerId, int x, int y, int size, int damageSize);
 
-	void addAnimationFx(const char * fileName, const char * animName, int x, int y, bool flipX = false, bool flipY = false);
+	void addAnimationFx(const char * fileName, int x, int y, bool flipX = false, bool flipY = false);
 
 	void addAnnouncement(const char * message, ...);
 
