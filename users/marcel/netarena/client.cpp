@@ -306,6 +306,8 @@ void Client::tick(float dt)
 
 		for (int i = 0; i < MAX_PLAYERS; ++i)
 			isQuickLookRequested |= m_gameSim->m_players[i].m_isUsed && m_gameSim->m_players[i].m_input.isDown(INPUT_BUTTON_L1R1);
+		
+		isQuickLookRequested &= !DEMOMODE;
 
 		if (isQuickLookRequested)
 		{
