@@ -355,6 +355,7 @@ struct Player
 		}
 
 		float timer;
+		int bounceFrames[2];
 	} m_ice;
 
 	struct BubbleInfo
@@ -367,6 +368,7 @@ struct Player
 		}
 
 		float timer;
+		int bounceFrames[2];
 		SpriterState spriterState;
 	} m_bubble;
 

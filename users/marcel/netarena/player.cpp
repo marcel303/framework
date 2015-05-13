@@ -47,6 +47,8 @@ todo:
 
 ** MEDIUM PRIORITY **
 
+- fix bubbled player getting stuck on upward collision
+
 - bubble gun prototype:
 	- small charge period on fire (to allow other player to escape)
 	- create small bubbles on fire
@@ -2252,6 +2254,11 @@ void Player::tick(float dt)
 
 		for (int i = 0; i < 2; ++i)
 		{
+			if (m_ice.bounceFrames[i] > 0)
+				m_ice.bounceFrames[i]--;
+			if (m_bubble.bounceFrames[i] > 0)
+				m_bubble.bounceFrames[i]--;
+
 			// spring
 
 			if (i == 1 && (dirBlockMask[i] & (1 << kBlockType_Spring)) && totalVel[i] >= 0.f)
@@ -2265,11 +2272,19 @@ void Player::tick(float dt)
 
 			else if (m_ice.timer != 0.f && (dirBlockMask[i] & kBlockMask_Solid))
 			{
-				m_vel[i] *= -.5f;
+				if (m_ice.bounceFrames[i] == 0)
+				{
+					m_ice.bounceFrames[i] = 2;
+					m_vel[i] *= -.5f;
+				}
 			}
 			else if (m_bubble.timer != 0.f && (dirBlockMask[i] & kBlockMask_Solid))
 			{
-				m_vel[i] *= -.75f;
+				if (m_bubble.bounceFrames[i] == 0)
+				{
+					m_bubble.bounceFrames[i] = 2;
+					m_vel[i] *= -.75f;
+				}
 			}
 
 			// wall slide effects
