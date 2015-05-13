@@ -54,7 +54,8 @@ static const char * s_pickupSprites[kPickupType_COUNT] =
 
 #define TOKEN_SPRITE "token.png"
 #define COIN_SPRITE "coin.png"
-#define AXE_SPRITE "objects/axe/axe.png"
+#define AXE_SPRITE "objects/axe/axe.png" // todo : remove
+#define AXE_SPRITER "objects/axe/sprite.scml"
 #define PIPEBOMB_SPRITER Spriter("objects/pipebomb/sprite.scml")
 
 //
@@ -430,28 +431,27 @@ bool Mover::intersects(CollisionInfo & collisionInfo) const
 
 void Axe::setup(Vec2Arg pos, Vec2Arg vel, int playerIndex)
 {
-	Sprite sprite(AXE_SPRITE);
-
 	*static_cast<PhysicsActor*>(this) = PhysicsActor();
 
 	m_isActive = true;
-	m_bbMin.Set(-sprite.getWidth() / 2.f, -sprite.getHeight() / 2.f);
-	m_bbMax.Set(+sprite.getWidth() / 2.f, +sprite.getHeight() / 2.f);
+	m_bbMin.Set(-AXE_COLLISION_SX / 2.f, -AXE_COLLISION_SY / 2.f);
+	m_bbMax.Set(+AXE_COLLISION_SX / 2.f, +AXE_COLLISION_SY / 2.f);
 	m_pos = pos;
 	m_vel = vel;
 	m_doTeleport = true;
 	m_bounciness = 0.2f;
 	m_noGravity = false;
+	m_gravityMultiplier = AXE_GRAVITY_MULTIPLIER;
 	m_friction = 0.01f;
 	m_airFriction = 0.9f;
 
 	m_playerIndex = playerIndex;
+	m_throwDone = false;
+	m_travelTime = AXE_THROW_TIME;
 }
 
 void Axe::tick(GameSim & gameSim, float dt)
 {
-	m_hasBounced = false;
-
 	PhysicsActorCBs cbs;
 	cbs.userData = &gameSim;
 	cbs.onBounce = [](PhysicsActorCBs & cbs, PhysicsActor & actor)
@@ -459,7 +459,10 @@ void Axe::tick(GameSim & gameSim, float dt)
 		GameSim * gameSim = (GameSim*)cbs.userData;
 		Axe & self = static_cast<Axe&>(actor);
 
-		self.m_hasBounced = true;
+		if (!self.m_throwDone)
+		{
+			self.endThrow();
+		}
 	};
 	cbs.onHitPlayer = [](PhysicsActorCBs & cbs, PhysicsActor & actor, Player & player)
 	{
@@ -478,15 +481,24 @@ void Axe::tick(GameSim & gameSim, float dt)
 		return false;
 	};
 
-	Vec2 pos1 = m_pos;
-
 	PhysicsActor::tick(gameSim, dt, cbs);
-
-	Vec2 pos2 = m_pos;
 
 	//
 
-	if (!m_hasLanded && (pos2 - pos1).CalcSize() < 4.f && m_hasBounced)
+	if (!m_throwDone && m_travelTime > 0.f)
+	{
+		m_travelTime -= dt;
+
+		if (m_travelTime < 0.f)
+		{
+			m_travelTime = 0.f;
+			endThrow();
+		}
+	}
+
+	//
+
+	if (!m_hasLanded && m_throwDone)
 	{
 		m_hasLanded = true;
 
@@ -509,6 +521,13 @@ void Axe::tick(GameSim & gameSim, float dt)
 			*this = Axe();
 		}
 	}
+}
+
+void Axe::endThrow()
+{
+	m_throwDone = true;
+	m_vel.Set(0.f, 0.f);
+	m_gravityMultiplier = 1.f;
 }
 
 void Axe::draw() const

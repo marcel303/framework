@@ -11,6 +11,8 @@
 PhysicsActor::PhysicsActor()
 {
 	memset(this, 0, sizeof(PhysicsActor));
+
+	m_gravityMultiplier = 1.f;
 }
 
 void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
@@ -19,7 +21,7 @@ void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 
 	if (!m_noGravity)
 	{
-		m_vel[1] += GRAVITY * dt;
+		m_vel[1] += GRAVITY * m_gravityMultiplier * dt;
 	}
 
 	// speed clamp

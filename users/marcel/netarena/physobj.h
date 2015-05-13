@@ -56,6 +56,7 @@ struct PhysicsActor
 	Vec2 m_bbMax;
 
 	bool m_noGravity;
+	float m_gravityMultiplier;
 	bool m_doTeleport;
 	float m_bounciness;
 	float m_friction;

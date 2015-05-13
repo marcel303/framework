@@ -525,8 +525,9 @@ struct Mover
 struct Axe : PhysicsActor
 {
 	bool m_hasLanded;
-	bool m_hasBounced;
+	bool m_throwDone;
 	int m_playerIndex;
+	float m_travelTime;
 	float m_fadeTime;
 
 	Axe()
@@ -537,6 +538,7 @@ struct Axe : PhysicsActor
 	void setup(Vec2Arg pos, Vec2Arg vel, int playerIndex);
 
 	void tick(GameSim & gameSim, float dt);
+	void endThrow();
 	void draw() const;
 	void drawLight() const;
 };
