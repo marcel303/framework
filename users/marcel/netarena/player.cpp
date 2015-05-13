@@ -1241,10 +1241,7 @@ void Player::tick(float dt)
 
 			if (m_attack.m_axeThrow.isActive)
 			{
-				if (m_input.wentUp(INPUT_BUTTON_Y))
-				{
-					endAxeThrow();
-				}
+				tickAxeThrow();
 			}
 
 			// update zweihander attack
@@ -2946,18 +2943,21 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 
 	if (m_attack.m_axeThrow.isActive)
 	{
-		const float px = x;
-		const float py = y - 30.f; // fixme : height
-		const Vec2 dir = m_input.getAnalogDirection().CalcNormalized();
-		const Vec2 off1 = dir * 50.f;
-		const Vec2 off2 = dir * 100.f;
-		setColor(colorGreen);
-		drawLine(
-			px + off1[0],
-			py + off1[1],
-			px + off2[0],
-			py + off2[1]);
-		setColor(colorWhite);
+		if (m_attack.m_axeThrow.directionIsValid)
+		{
+			const float px = x;
+			const float py = y - 30.f; // fixme : height
+			const Vec2 dir = m_attack.m_axeThrow.direction;
+			const Vec2 off1 = dir * 50.f;
+			const Vec2 off2 = dir * 100.f;
+			setColor(colorGreen);
+			drawLine(
+				px + off1[0],
+				py + off1[1],
+				px + off2[0],
+				py + off2[1]);
+			setColor(colorWhite);
+		}
 	}
 
 	if (GAMESIM->m_gameMode == kGameMode_TokenHunt)
@@ -3750,6 +3750,28 @@ void Player::endAxeThrow()
 	GAMESIM->spawnAxe(pos, dir * AXE_THROW_SPEED, m_index);
 
 	m_axe = AxeInfo();
+}
+
+void Player::tickAxeThrow()
+{
+	Assert(m_attack.m_axeThrow.isActive);
+
+	// update direction vector
+
+	const Vec2 analog = m_input.getAnalogDirection();
+
+	if (analog.CalcSize() >= AXE_ANALOG_TRESHOLD)
+	{
+		m_attack.m_axeThrow.direction = analog.CalcNormalized();
+		m_attack.m_axeThrow.directionIsValid = true;
+	}
+
+	// throw it?
+
+	if (m_input.wentUp(INPUT_BUTTON_Y))
+	{
+		endAxeThrow();
+	}
 }
 
 void Player::beginGrapple()

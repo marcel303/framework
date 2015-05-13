@@ -317,11 +317,13 @@ OPTION_STEP(PIPEBOMB_COOLDOWN, 0, 0, .1f);
 
 OPTION_DEFINE(int, AXE_COLLISION_SX, "Special Abilities/Axe/Collision SX");
 OPTION_DEFINE(int, AXE_COLLISION_SY, "Special Abilities/Axe/Collision SY");
+OPTION_DEFINE(float, AXE_ANALOG_TRESHOLD, "Special Abilities/Axe/Analog Treshold");
 OPTION_DEFINE(float, AXE_GRAVITY_MULTIPLIER, "Special Abilities/Axe/Gravity Multiplier");
 OPTION_DEFINE(float, AXE_THROW_TIME, "Special Abilities/Axe/Throw Time (Sec)");
 OPTION_DEFINE(float, AXE_THROW_SPEED, "Special Abilities/Axe/Throw Speed");
 OPTION_DEFINE(float, AXE_ROTATION_SPEED, "Special Abilities/Axe/Rotation Speed (Degrees Per Sec)");
 OPTION_DEFINE(float, AXE_FADE_TIME, "Special Abilities/Axe/Fade Time (Sec)");
+OPTION_STEP(AXE_ANALOG_TRESHOLD, 0, 0, .02f);
 OPTION_STEP(AXE_GRAVITY_MULTIPLIER, 0, 0, .05f);
 OPTION_STEP(AXE_THROW_TIME, 0, 0, .1f);
 OPTION_STEP(AXE_THROW_SPEED, 0, 0, 10);

@@ -105,6 +105,7 @@ struct Player
 
 	void beginAxeThrow();
 	void endAxeThrow();
+	void tickAxeThrow();
 
 	void beginGrapple();
 	void endGrapple();
@@ -255,6 +256,8 @@ struct Player
 			}
 
 			bool isActive;
+			Vec2 direction;
+			bool directionIsValid;
 		} m_axeThrow;
 
 		struct Zweihander
