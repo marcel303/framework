@@ -96,7 +96,12 @@ void GameStateData::addTimeDilationEffect(float multiplier1, float multiplier2, 
 
 LevelEvent GameStateData::getRandomLevelEvent()
 {
-	return (LevelEvent)(Random() % kLevelEvent_COUNT);
+	LevelEvent e = (LevelEvent)(Random() % kLevelEvent_COUNT);
+
+	if (DEMOMODE && e == kLevelEvent_GravityWell)
+		return getRandomLevelEvent();
+	else
+		return e;
 }
 
 //

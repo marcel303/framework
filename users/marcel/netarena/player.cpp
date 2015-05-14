@@ -2322,7 +2322,7 @@ void Player::tick(float dt)
 							GAMESIM->addAnimationFx("fx/Dust_WallSlide.scml",
 								m_facing[0] < 0.f ? playerCollision.min[0] : playerCollision.max[0],
 								newPos[1],
-								m_facing[0] < 0.f);
+								m_facing[0] > 0.f);
 						}
 					}
 				}
