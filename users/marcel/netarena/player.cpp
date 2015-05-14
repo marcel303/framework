@@ -19,6 +19,8 @@ todo:
 
 ** HIGH PRIORITY **
 
+- cancel passthrough/attack down behavior on attack up/double jump/etc (any attack/jump) + proto no auto mode, or duration = attack only
+
 - add animations:
 	swordt hit non destruct block - sparks at collission point
 	sword hit destruct block - pop of block + block particles?
@@ -1754,8 +1756,16 @@ void Player::tick(float dt)
 			}
 			else if (m_grapple.isActive)
 			{
-				steeringSpeed *= STEERING_SPEED_GRAPPLE;
-				numSteeringFrame = 5;
+				const Vec2 v1 = getGrapplePos() - m_grapple.anchorPos;
+				if (Calc::Sign(v1[0]) != Calc::Sign(steeringSpeed))
+				{
+					steeringSpeed *= STEERING_SPEED_GRAPPLE;
+					numSteeringFrame = 5;
+				}
+				else
+				{
+					steeringSpeed = 0.f;
+				}
 			}
 			else
 			{
