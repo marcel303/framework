@@ -379,7 +379,7 @@ namespace spriter
 		{
 		}
 
-		std::vector<TransformedObjectKey> getAnimationDataAtTime(const Entity * entity, float newTime) const
+		void getAnimationDataAtTime(std::vector<TransformedObjectKey> & result, const Entity * entity, float newTime) const
 		{
 			if (loopType == kLoopType_NoLooping)
 			{
@@ -403,6 +403,7 @@ namespace spriter
 			};
 
 			std::vector<TransformedBoneKey> transformedBoneKeys;
+			transformedBoneKeys.resize(mainKey.boneRefs.size());
 
 			for (size_t b = 0; b < mainKey.boneRefs.size(); ++b)
 			{
@@ -419,17 +420,16 @@ namespace spriter
 					//parentTransform = Transform();
 				}
 
-				TransformedBoneKey transformedKey;
+				TransformedBoneKey & transformedKey = transformedBoneKeys[b];
 				const Timeline * timeline;
 				transformedKey.key = dynamic_cast<const BoneTimelineKey*>(keyFromRef(currentRef, newTime, timeline));
 				Assert(transformedKey.key);
 				transformedKey.key->transform.multiply(parentTransform, transformedKey.transform);
-				transformedBoneKeys.push_back(transformedKey);
 			}
 
 			//
 
-			std::vector<TransformedObjectKey> objectKeys;
+			result.resize(mainKey.objectRefs.size());
 
 			for (size_t o = 0; o < mainKey.objectRefs.size(); ++o)
 			{
@@ -446,7 +446,7 @@ namespace spriter
 					//parentTransform = Transform();
 				}
 
-				TransformedObjectKey transformedKey;
+				TransformedObjectKey & transformedKey = result[o];
 				const Timeline * timeline;
 				transformedKey.key = dynamic_cast<const SpriteTimelineKey*>(keyFromRef(currentRef, newTime, timeline));
 				Assert(transformedKey.key);
@@ -457,14 +457,10 @@ namespace spriter
 					transformedKey.object = &entity->m_objects[objectIndex];
 				else
 					transformedKey.object = 0;
-
-				objectKeys.push_back(transformedKey);
 			}
 
 			for (auto k : transformedBoneKeys)
 				k.key->Release();
-
-			return objectKeys;
 		}
 
 		const MainlineKey & mainlineKeyFromTime(int currentTime) const
@@ -677,7 +673,8 @@ namespace spriter
 
 		const Animation * animation = m_animations[animIndex];
 
-		std::vector<TransformedObjectKey> keys = animation->getAnimationDataAtTime(this, time);
+		std::vector<TransformedObjectKey> keys;
+		animation->getAnimationDataAtTime(keys, this, time);
 
 		int outNumDrawables = 0;
 
@@ -722,7 +719,8 @@ namespace spriter
 
 		const Animation * animation = m_animations[animIndex];
 
-		std::vector<TransformedObjectKey> keys = animation->getAnimationDataAtTime(this, time);
+		std::vector<TransformedObjectKey> keys;
+		animation->getAnimationDataAtTime(keys, this, time);
 
 		bool result = false;
 
