@@ -19,6 +19,8 @@ todo:
 
 ** HIGH PRIORITY **
 
+- add character select between rounds
+
 - cancel passthrough/attack down behavior on attack up/double jump/etc (any attack/jump) + proto no auto mode, or duration = attack only
 
 - add animations:

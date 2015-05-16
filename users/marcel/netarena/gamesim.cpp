@@ -1566,7 +1566,9 @@ void GameSim::tick()
 	{
 		if (m_playerInstanceDatas[i])
 		{
-			m_playerInstanceDatas[i]->m_player->m_input.next();
+			const float dt = 1.f / TICKS_PER_SECOND;
+
+			m_playerInstanceDatas[i]->m_player->m_input.next(dt);
 		}
 	}
 
@@ -2097,6 +2099,11 @@ void GameSim::tickPlay()
 			}
 		}
 
+		if (DEMOMODE && getNumPlayers() < 2)
+		{
+			roundComplete = true;
+		}
+
 		if (roundComplete)
 		{
 			endRound();
@@ -2115,7 +2122,14 @@ void GameSim::tickRoundComplete()
 
 		if (m_roundCompleteTicks == 0)
 		{
-			newRound(0);
+			if (DEMOMODE && getNumPlayers() < 2)
+			{
+				setGameState(kGameState_OnlineMenus);
+			}
+			else
+			{
+				newRound(0);
+			}
 		}
 	}
 
@@ -2382,6 +2396,15 @@ void GameSim::drawPlay()
 	// compose
 
 	applyLightMap(*g_colorMap, *g_lightMap, *g_finalMap);
+
+#if 0
+	// fsfx
+
+	Shader fsfx("fsfx-test");
+	fsfx.setImmediate("time", m_roundTime);
+	fsfx.setImmediate("color", 1.f, .5f, .25f, 1.f);
+	g_finalMap->postprocess(fsfx);
+#endif
 
 	// blit
 

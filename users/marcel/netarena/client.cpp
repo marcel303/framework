@@ -18,10 +18,6 @@ OPTION_DECLARE(bool, s_noBgm, false);
 OPTION_DEFINE(bool, s_noBgm, "Sound/No BGM");
 OPTION_ALIAS(s_noBgm, "nobgm");
 
-OPTION_DECLARE(int, s_numLocalPlayersToAdd, 1);
-OPTION_DEFINE(int, s_numLocalPlayersToAdd, "App/Num Local Players");
-OPTION_ALIAS(s_numLocalPlayersToAdd, "numlocal");
-
 OPTION_EXTERN(int, g_playerCharacterIndex);
 
 static char s_bgm[64] = { };
@@ -85,7 +81,7 @@ void Client::tick(float dt)
 		{
 			m_hasAddedPlayers = true;
 
-			for (int i = 0; i < s_numLocalPlayersToAdd; ++i)
+			for (int i = 0; i < NUM_LOCAL_PLAYERS_TO_ADD; ++i)
 			{
 				g_app->netAddPlayer(m_channel, g_playerCharacterIndex, g_app->m_displayName, -1);
 			}

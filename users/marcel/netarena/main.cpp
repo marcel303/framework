@@ -917,6 +917,15 @@ bool App::init()
 	g_optionManager.Load("options.txt");
 	g_optionManager.Load("gameoptions.txt");
 
+	if (DEMOMODE)
+	{
+		NUM_LOCAL_PLAYERS_TO_ADD = 4;
+		PLAYER_INACTIVITY_KICK = true;
+		VOLCANO_LOOP = true;
+
+		PLAYER_INACTIVITY_TIME = 3;
+	}
+
 	std::string mapList = s_mapList;
 
 	do

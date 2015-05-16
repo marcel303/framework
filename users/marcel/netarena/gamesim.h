@@ -133,18 +133,32 @@ struct Player
 	{
 		InputState()
 			: m_actions(0)
+			, m_inactivityTime(0.f)
 		{
 		}
 
 		PlayerInput m_prevState;
 		PlayerInput m_currState;
 		uint32_t m_actions;
+		float m_inactivityTime;
 
 		bool wasDown(int input) { return (m_prevState.buttons & input) != 0; }
 		bool isDown(int input) { return (m_currState.buttons & input) != 0; }
 		bool wentDown(int input) { return !wasDown(input) && isDown(input); }
 		bool wentUp(int input) { return wasDown(input) && !isDown(input); }
-		void next() { m_prevState = m_currState; m_actions = 0; }
+		void next(float dt)
+		{
+			if ((m_prevState != m_currState) || (m_actions != 0))
+			{
+				m_inactivityTime = 0.f;
+				m_prevState = m_currState;
+				m_actions = 0;
+			}
+			else
+			{
+				m_inactivityTime += dt;
+			}
+		}
 		Vec2 getAnalogDirection() const { return Vec2(m_currState.analogX / 127.f, m_currState.analogY / 127.f); }
 	} m_input;
 

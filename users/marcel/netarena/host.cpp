@@ -54,6 +54,20 @@ void Host::tick(float dt)
 		Assert(false);
 		break;
 	}
+
+	if (PLAYER_INACTIVITY_KICK)
+	{
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+		{
+			if (m_gameSim.m_playerInstanceDatas[i])
+			{
+				if (m_gameSim.m_players[i].m_input.m_inactivityTime >= PLAYER_INACTIVITY_TIME)
+				{
+					g_app->netRemovePlayer(0, i);
+				}
+			}
+		}
+	}
 }
 
 void Host::debugDraw()
