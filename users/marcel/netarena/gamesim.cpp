@@ -1566,9 +1566,13 @@ void GameSim::tick()
 	{
 		if (m_playerInstanceDatas[i])
 		{
+			const bool doInactivityCheck =
+				m_gameState == kGameState_Play ||
+				m_gameState == kGameState_OnlineMenus && !m_playerInstanceDatas[i]->m_player->m_isReadyUpped;
+
 			const float dt = 1.f / TICKS_PER_SECOND;
 
-			m_playerInstanceDatas[i]->m_player->m_input.next(dt);
+			m_playerInstanceDatas[i]->m_player->m_input.next(doInactivityCheck, dt);
 		}
 	}
 
@@ -1647,6 +1651,8 @@ void GameSim::tickMenus()
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 		if (m_players[i].m_isUsed)
 			allReady &= m_players[i].m_isReadyUpped;
+
+	allReady &= getNumPlayers() >= MIN_PLAYER_COUNT;
 
 	if (allReady)
 	{
@@ -2099,7 +2105,7 @@ void GameSim::tickPlay()
 			}
 		}
 
-		if (DEMOMODE && getNumPlayers() < 2)
+		if (DEMOMODE && getNumPlayers() < MIN_PLAYER_COUNT)
 		{
 			roundComplete = true;
 		}
@@ -2122,7 +2128,7 @@ void GameSim::tickRoundComplete()
 
 		if (m_roundCompleteTicks == 0)
 		{
-			if (DEMOMODE && getNumPlayers() < 2)
+			if (DEMOMODE || (getNumPlayers() < MIN_PLAYER_COUNT))
 			{
 				setGameState(kGameState_OnlineMenus);
 			}

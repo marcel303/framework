@@ -146,7 +146,7 @@ struct Player
 		bool isDown(int input) { return (m_currState.buttons & input) != 0; }
 		bool wentDown(int input) { return !wasDown(input) && isDown(input); }
 		bool wentUp(int input) { return wasDown(input) && !isDown(input); }
-		void next(float dt)
+		void next(bool doInactivityCheck, float dt)
 		{
 			if ((m_prevState != m_currState) || (m_actions != 0))
 			{
@@ -156,7 +156,10 @@ struct Player
 			}
 			else
 			{
-				m_inactivityTime += dt;
+				if (doInactivityCheck)
+					m_inactivityTime += dt;
+				else
+					m_inactivityTime = 0.f;
 			}
 		}
 		Vec2 getAnalogDirection() const { return Vec2(m_currState.analogX / 127.f, m_currState.analogY / 127.f); }

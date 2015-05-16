@@ -61,7 +61,7 @@ void Host::tick(float dt)
 		{
 			if (m_gameSim.m_playerInstanceDatas[i])
 			{
-				if (m_gameSim.m_players[i].m_input.m_inactivityTime >= PLAYER_INACTIVITY_TIME)
+				if (m_gameSim.m_playerInstanceDatas[i]->m_player->m_input.m_inactivityTime >= PLAYER_INACTIVITY_TIME)
 				{
 					g_app->netRemovePlayer(0, i);
 				}

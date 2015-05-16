@@ -8,8 +8,11 @@
 #include "Timer.h" // for character anim time
 #include "uicommon.h"
 
-CharSelector::CharSelector(Client * client, int playerId)
+#define JOIN_SPRITER Spriter("ui/lobby/join.scml")
+
+CharSelector::CharSelector(Client * client, LobbyMenu * menu, int playerId)
 	: m_client(client)
+	, m_menu(menu)
 	, m_playerId(playerId)
 	, m_prevChar(new Button(0, 0, "charselect-prev.png"))
 	, m_nextChar(new Button(0, 0, "charselect-next.png"))
@@ -77,6 +80,9 @@ void CharSelector::draw()
 		}
 	}
 
+	const int characterX = UI_CHARSELECT_BASE_X + UI_CHARSELECT_PORTRAIT_X + m_playerId * UI_CHARSELECT_STEP_X;
+	const int characterY = UI_CHARSELECT_BASE_Y + UI_CHARSELECT_PORTRAIT_Y;
+
 	if (player.m_isUsed)
 	{
 		setColorMode(COLOR_ADD);
@@ -94,8 +100,8 @@ void CharSelector::draw()
 			SpriterState spriterState;
 			spriterState.animIndex = spriter.getAnimIndexByName("Idle");
 			spriterState.animTime = g_TimerRT.Time_get();
-			spriterState.x = UI_CHARSELECT_BASE_X + UI_CHARSELECT_PORTRAIT_X + m_playerId * UI_CHARSELECT_STEP_X;
-			spriterState.y = UI_CHARSELECT_BASE_Y + UI_CHARSELECT_PORTRAIT_Y;
+			spriterState.x = characterX;
+			spriterState.y = characterY;
 			spriterState.scale = .7f;
 
 			spriter.draw(spriterState);
@@ -104,6 +110,16 @@ void CharSelector::draw()
 
 		setColor(player.m_isReadyUpped ? colorBlue : colorWhite);
 		m_ready->draw();
+	}
+	else
+	{
+		SpriterState state = m_menu->m_joinSpriterState;
+		state.x = characterX;
+		state.y = characterY;
+		setColor(colorWhite);
+		JOIN_SPRITER.draw(state);
+
+		drawRect(characterX, characterY, characterX+5, characterY+5);
 	}
 
 	setColor(colorWhite);
@@ -118,8 +134,10 @@ LobbyMenu::LobbyMenu(Client * client)
 {
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		m_charSelectors[i] = new CharSelector(client, i);
+		m_charSelectors[i] = new CharSelector(client, this, i);
 	}
+
+	m_joinSpriterState.startAnim(JOIN_SPRITER, 0);
 }
 
 LobbyMenu::~LobbyMenu()
@@ -135,6 +153,8 @@ LobbyMenu::~LobbyMenu()
 
 void LobbyMenu::tick(float dt)
 {
+	m_joinSpriterState.updateAnim(JOIN_SPRITER, dt);
+
 	if (g_app->m_isHost && g_app->isSelectedClient(m_client))
 	{
 		if (m_client->m_gameSim->m_gameStartTicks == 0)
