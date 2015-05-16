@@ -282,4 +282,6 @@ void LevelEvent_SpikeWalls::draw() const
 			break;
 		}
 	}
+
+	setColor(colorWhite);
 }
