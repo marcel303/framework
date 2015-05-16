@@ -1,0 +1,106 @@
++ slow down on kill for everyone acceptable?
++ axe guy
+	+ can throw axe away, has to pick it up again
++ prototype pipe bomb
+	+ 1 throw/1 explode
+	+ detonate on Y button
+	+ detonate on collision?
+	+ detonate on player leave
++ add animations:
+	+ jump - feet
+	+ fall on ground - feet
+	+ wallslide - side of char?
+	+ sword hit sword - point of intersection
+	+ shield pop
+	+ jetpack - smoke from jetpack
++ add pickup art
++ drop rate should scale with number of players
++ remove angels in spawn locations -> reduce background noise
++ earthquake. players go up on quake
++ add Spriter hitbox support
++ passthrough on pressing down, instead of down attack only
++ add player backdrop (particle fx?)
++ add doQuake method to GameSim
++ change cling so it checks attack vs attack hitbox, instead of attack vs player hitbox
++ add pickup drop on death
++ slow down player vertically when hitting block. maybe add small upward speed?
++ make player collision sizes character dependent
++ scale pickups with # players
++ make player impact response character specific (add 'weight')
++ make melee cooldown time character specific
++ fix player not moving on death
++ fix up/down/dash animations
++ add HOME/END support to text field
++ zweihander sword guy
+	+ slow attack
+	+ special on ground:
+		+ sword up, 2x movement speed, for max 5 seconds
+		+ on release: stomp attack, sword gets stuck in ground
+		+ 1 second recovery time
+	+ special in air:
+		+ stomp attack, sword gets stuck in ground
+		+ 1 second recovery time
++ analog jump, accel over frames
++ add IP's to player names (visible on host)
++ torch light flicker speed should be time dilated too
++ add key repeat to text input
++ add global method to get character color
++ add global cache of character properties. reduce need for m_instanceData
++ add task bar blink on game start
++ reset level events on round end
++ slow down not on non-player kill (if there's no attacker like when falling into spikes)
++ add names to players on talk? -> add color to results screen
++ chat log when chat is open
++ increase chat visibility time
++ fix late join
++ fix desync as both players get hit/killed by grenade
++ add user name input
++ fix text chat player index
++ add FixedString class that can be memset(0) and copied over the net. use it for player name, etc
++ clean up flow for adding players
++ test time dilation on kill
++ game speed var
++ player invincibility on spawn (2 seconds?)
++ add game mode selection to char select
++ count down timer game start after char select
++ add time dilation effect on last kill
++ verify bullet pool allocation order -> may be a source of desync issues, due to differences in the order of bullet updates
++ textchat: left/right/insert text/delete key
++ i think less bubble/ice freeze time
++ respawn visual to more quickly locate your respawn location
++ clash sound on attack cancel
++ random sound selection on event to avoid repeat sounds
++ fire up/down
++ fire affects destructible blocks
++ respawn on round begin
++ respawn on level load
++ avoid repeating spawn location
++ play sounds for current client only to avoid volume ramp
++ meelee X, pickup B
++ wrapping support attack
++ add pickup sound
++ add direct connect option
++ spring block tweakable
++ respawn delay
++ character selection
++ force feedback cling animation
++ attack anim up and down
++ analog controls
++ token hunt
++ spawn anim
++ death input
++ hitbox spikes
++ manual spawn (5 seconds?)
++ taunt button
++ shotgun ammo x3
++ add attack vel to player vel
++ attack cancel
++ bullet teleport
++ separate player hitbox for damage
++ grenades!
++ ammo drop gravity
++ input lock dash weg
++ jump velocity reset na 10 pixels of richting change
++ attack cooldown
++ camera shakes
++ real time lighting

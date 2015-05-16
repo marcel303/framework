@@ -841,6 +841,8 @@ public:
 	void tickPlay();
 	void tickRoundComplete();
 
+	void drawPlay();
+
 	void getCurrentTimeDilation(float & timeDilation, bool & playerAttackTimeDilation) const;
 
 	void playSound(const char * filename, int volume = 100);

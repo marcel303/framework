@@ -1143,7 +1143,7 @@ bool App::startHosting()
 {
 	Assert(m_host == 0);
 
-	if (!m_channelMgr->Initialize(m_packetDispatcher, this, NET_PORT, true))
+	if (!m_channelMgr->Initialize(m_packetDispatcher, this, NET_PORT, true, g_buildId))
 		return false;
 
 	//
@@ -1185,7 +1185,7 @@ bool App::findGame()
 {
 	const int port = 0;
 
-	if (!m_channelMgr->Initialize(m_packetDispatcher, this, port, false))
+	if (!m_channelMgr->Initialize(m_packetDispatcher, this, port, false, g_buildId))
 		return false;
 
 	//

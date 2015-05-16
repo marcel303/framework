@@ -2125,6 +2125,277 @@ void GameSim::tickRoundComplete()
 	}
 }
 
+void GameSim::drawPlay()
+{
+	const Vec2 shake = getScreenShake();
+
+	Vec2 camTranslation = shake;
+
+#if 0
+	const float asx = ARENA_SX_PIXELS;
+	const float asy = ARENA_SY_PIXELS;
+	const float asx2 = asx / 2.f;
+	const float asy2 = asy / 2.f;
+	const float dx = m_players[0].m_pos[0] - asx2;
+	const float dy = m_players[0].m_pos[1] - asy2;
+	const float d = sqrt(dx * dx + dy * dy);
+	const float t = d / sqrt(asx2 * asx2 + asy2 * asy2);
+	const float scale = 1.f * t + 1.2f * (1.f - t);
+	
+	gxTranslatef(+ARENA_SX_PIXELS/2.f, +ARENA_SY_PIXELS/2.f, 0.f);
+	gxScalef(scale, scale, 1.f);
+	gxTranslatef(-ARENA_SX_PIXELS/2.f, -ARENA_SY_PIXELS/2.f, 0.f);
+#endif
+
+	pushSurface(g_colorMap);
+	{
+		glClearColor(0.f, 0.f, 0.f, 0.f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		gxPushMatrix();
+		gxTranslatef(camTranslation[0], camTranslation[1], 0.f);
+
+		// todo : background depends on level properties
+
+		//setBlend(BLEND_OPAQUE);
+		m_background.draw();
+		//setBlend(BLEND_ALPHA);
+
+		if (m_levelEvents.gravityWell.endTimer.isActive())
+		{
+			setColor(255, 255, 255, 127);
+			Sprite("gravitywell/well.png").drawEx(
+				m_levelEvents.gravityWell.m_x,
+				m_levelEvents.gravityWell.m_y,
+				m_roundTime * 90.f,
+				1.f, true,
+				FILTER_LINEAR);
+			setColor(colorWhite);
+		}
+
+		// background blocks
+
+		m_arena.drawBlocks(0);
+
+		m_floorEffect.draw();
+
+		// torches
+
+		for (int i = 0; i < MAX_TORCHES; ++i)
+		{
+			const Torch & torch = m_torches[i];
+
+			if (torch.m_isAlive)
+				torch.draw();
+		}
+
+		// pickups
+
+		for (int i = 0; i < MAX_PICKUPS; ++i)
+		{
+			const Pickup & pickup = m_pickups[i];
+
+			if (pickup.isAlive)
+				pickup.draw();
+		}
+
+		// token
+
+		m_tokenHunt.m_token.draw();
+
+		// coins
+
+		for (int i = 0; i < MAX_COINS; ++i)
+		{
+			m_coinCollector.m_coins[i].draw();
+		}
+
+		// movers
+
+		for (int i = 0; i < MAX_MOVERS; ++i)
+		{
+			if (m_movers[i].m_isActive)
+				m_movers[i].draw();
+		}
+
+		// axes
+
+		for (int i = 0; i < MAX_AXES; ++i)
+		{
+			if (m_axes[i].m_isActive)
+				m_axes[i].draw();
+		}
+
+		// pipebombs
+
+		for (int i = 0; i < MAX_PIPEBOMBS; ++i)
+		{
+			if (m_pipebombs[i].m_isActive)
+				m_pipebombs[i].draw();
+		}
+
+		// players
+
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+		{
+			const Player & player = m_players[i];
+
+			if (player.m_isUsed)
+				player.draw();
+		}
+
+		// bullets
+
+		m_bulletPool->draw();
+
+		// animation effects
+
+		for (int i = 0; i < MAX_ANIM_EFFECTS; ++i)
+		{
+			m_animationEffects[i].draw();
+		}
+
+		// particles
+
+		setBlend(BLEND_ADD);
+		m_particlePool->draw();
+		setBlend(BLEND_ALPHA);
+
+		// fireballs
+
+		for (int i = 0; i < MAX_FIREBALLS; ++i)
+		{
+			m_fireballs[i].draw();
+		}
+
+		// foreground blocks
+
+		m_arena.drawBlocks(1);
+
+		// spike walls
+
+		m_levelEvents.spikeWalls.draw();
+
+		gxPopMatrix();
+	}
+	popSurface();
+
+	pushSurface(g_lightMap);
+	{
+		gxPushMatrix();
+		gxTranslatef(camTranslation[0], camTranslation[1], 0.f);
+
+		const int lightingDebugMode = LIGHTING_DEBUG_MODE % 4;
+
+		float v = 1.f;
+		if (lightingDebugMode == 0)
+			v = .1f + (std::sin(g_TimerRT.Time_get() / 5.f) + 1.f) / 2.f * .9f;
+		else if (lightingDebugMode == 1)
+			v = 1.f;
+		else if (lightingDebugMode == 2)
+			v = .5f;
+		else if (lightingDebugMode == 3)
+			v = 0.f;
+		glClearColor(v, v, v, 1.f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		setBlend(BLEND_ADD);
+
+		// torches
+
+		for (int i = 0; i < MAX_TORCHES; ++i)
+		{
+			const Torch & torch = m_torches[i];
+
+			if (torch.m_isAlive)
+				torch.drawLight();
+		}
+
+		// pickups
+
+		for (int i = 0; i < MAX_PICKUPS; ++i)
+		{
+			const Pickup & pickup = m_pickups[i];
+
+			if (pickup.isAlive)
+				pickup.drawLight();
+		}
+
+		// token
+
+		m_tokenHunt.m_token.drawLight();
+
+		// coins
+
+		for (int i = 0; i < MAX_COINS; ++i)
+		{
+			m_coinCollector.m_coins[i].drawLight();
+		}
+
+		// axes
+
+		for (int i = 0; i < MAX_AXES; ++i)
+		{
+			if (m_axes[i].m_isActive)
+				m_axes[i].drawLight();
+		}
+
+		// pipebombs
+
+		for (int i = 0; i < MAX_PIPEBOMBS; ++i)
+		{
+			if (m_pipebombs[i].m_isActive)
+				m_pipebombs[i].drawLight();
+		}
+
+		// players
+
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+		{
+			const Player & player = m_players[i];
+
+			if (player.m_isUsed)
+				player.drawLight();
+		}
+
+		// bullets
+
+		m_bulletPool->drawLight();
+
+		// particles
+
+		m_particlePool->drawLight();
+
+		// fireballs
+
+		for (int i = 0; i < MAX_FIREBALLS; ++i)
+		{
+			m_fireballs[i].drawLight();
+		}
+
+		setBlend(BLEND_ALPHA);
+
+		gxPopMatrix();
+	}
+	popSurface();
+
+	// compose
+
+	applyLightMap(*g_colorMap, *g_lightMap, *g_finalMap);
+
+	// blit
+
+	setBlend(BLEND_OPAQUE);
+	setColor(255, 255, 255);
+	glEnable(GL_TEXTURE_2D);
+	{
+		glBindTexture(GL_TEXTURE_2D, g_finalMap->getTexture());
+		drawRect(0, 0, g_finalMap->getWidth(), g_finalMap->getHeight());
+	}
+	glDisable(GL_TEXTURE_2D);
+	setBlend(BLEND_ALPHA);
+}
+
 void GameSim::getCurrentTimeDilation(float & timeDilation, bool & playerAttackTimeDilation) const
 {
 	timeDilation = 1.f;
