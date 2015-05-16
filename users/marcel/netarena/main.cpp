@@ -1430,7 +1430,9 @@ bool App::tick()
 
 				if (!isUsed)
 				{
-					g_app->netAddPlayer(client->m_channel, 0, "Player " + i, i);
+					char name[32];
+					sprintf_s(name, sizeof(name), "Player %d", i);
+					g_app->netAddPlayer(client->m_channel, i, name, i);
 				}
 
 				for (int j = 0; j < 10; ++j)
