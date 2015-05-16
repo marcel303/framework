@@ -1069,11 +1069,27 @@ void Surface::invertAlpha()
 
 void Surface::blitTo(Surface * surface)
 {
-	pushSurface(surface);
-	{
-		// todo: draw fullscreen rect using our own texture
-	}
-	popSurface();
+	int oldReadBuffer = 0;
+	int oldDrawBuffer = 0;
+
+	glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &oldReadBuffer);
+	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &oldDrawBuffer);
+	checkErrorGL();
+
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, getFramebuffer());
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, surface->getFramebuffer());
+	checkErrorGL();
+
+	glBlitFramebuffer(
+		0, 0, getWidth(), getHeight(),
+		0, 0, surface->getWidth(), surface->getHeight(),
+		GL_COLOR_BUFFER_BIT,
+		GL_NEAREST);
+	checkErrorGL();
+
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, oldReadBuffer);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, oldDrawBuffer);
+	checkErrorGL();
 }
 
 // -----
