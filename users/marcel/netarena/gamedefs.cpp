@@ -1,7 +1,7 @@
 #include "gamedefs.h"
 
-// demo mode
 OPTION_DEFINE(bool, DEMOMODE, "App/Demo Mode");
+OPTION_ALIAS(DEMOMODE, "demomode");
 
 // -- prototypes --
 OPTION_DEFINE(bool, PROTO_TIMEDILATION_ON_KILL, "Player/Time Dilation On Kill/Enabled");
