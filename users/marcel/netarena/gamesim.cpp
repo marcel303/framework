@@ -1806,7 +1806,7 @@ void GameSim::tickPlay()
 			PICKUP_RATE_MULTIPLIER_3,
 			PICKUP_RATE_MULTIPLIER_4
 		};
-		const float multiplier = multipliers[getNumPlayers()];
+		const float multiplier = multipliers[Calc::Max(0, getNumPlayers() - 1)];
 
 		m_nextPickupSpawnTimeRemaining = (PICKUP_INTERVAL + (Random() % PICKUP_INTERVAL_VARIANCE)) / multiplier;
 	}
