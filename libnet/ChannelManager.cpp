@@ -10,6 +10,7 @@
 ChannelManager::ChannelManager()
 	: m_socket()
 	, m_listenChannel(0)
+	, m_serverVersion(0)
 	, m_channelTimeout(LIBNET_CHANNEL_TIMEOUT_INTERVAL)
 	, m_channels()
 	, m_channelIds()
@@ -28,7 +29,7 @@ ChannelManager::~ChannelManager()
 	NetAssert(m_listenChannel == 0);
 }
 
-bool ChannelManager::Initialize(PacketDispatcher * packetDispatcher, ChannelHandler * handler, uint16_t serverPort, bool enableServer)
+bool ChannelManager::Initialize(PacketDispatcher * packetDispatcher, ChannelHandler * handler, uint16_t serverPort, bool enableServer, uint32_t serverVersion)
 {
 	LOG_DBG("ChannelManager::Initialize: serverPort=%d, enableServer=%d", (int)serverPort, (int)enableServer);
 	Assert(m_handler == 0);
@@ -51,6 +52,8 @@ bool ChannelManager::Initialize(PacketDispatcher * packetDispatcher, ChannelHand
 	{
 		m_listenChannel = CreateListenChannel(ChannelPool_Server);
 	}
+
+	m_serverVersion = serverVersion;
 
 	LOG_DBG("ChannelManager::Initialize: done");
 
@@ -266,6 +269,7 @@ void ChannelManager::HandleTrunk(Packet & packet, Channel * channel)
 
 void ChannelManager::HandleConnect(Packet & packet, Channel * channel)
 {
+	uint32_t serverVersion;
 	uint16_t channelId;
 
 	if (packet.Read16(&channelId))
@@ -281,32 +285,64 @@ void ChannelManager::HandleConnect(Packet & packet, Channel * channel)
 			packet.m_rcvAddress.GetSockAddr()->sin_port);
 #endif
 
-		Channel * newChannel = CreateChannelEx(ChannelType_Connection, ChannelPool_Server);
-		newChannel->m_destinationId = channelId;
-		newChannel->m_address = packet.m_rcvAddress;
+		if (!packet.Read32(&serverVersion))
+		{
+			LOG_ERR("chanmgr: connect: failed to read from packet", 0);
+			NetAssert(false);
+		}
+		else if (serverVersion != m_serverVersion)
+		{
+			LOG_INF("chanmgr: connect: incompatible server version [%09u]. got %u9u, expected %09u",
+				static_cast<uint32_t>(channelId),
+				static_cast<uint32_t>(serverVersion),
+				static_cast<uint32_t>(m_serverVersion));
 
-		LOG_INF("chanmgr: connect: created new server channel [%09u]",
-			static_cast<uint32_t>(newChannel->m_id));
+			PacketBuilder<6> replyBuilder;
 
-		PacketBuilder<6> replyBuilder;
+			const uint8_t protocolId = PROTOCOL_CHANNEL;
+			const uint8_t messageId = CHANNELMSG_CONNECT_ERROR;
+			const uint16_t destinationId = channelId;
 
-		const uint8_t protocolId = PROTOCOL_CHANNEL;
-		const uint8_t messageId = CHANNELMSG_CONNECT_OK;
-		const uint16_t destinationId = channelId;
-		const uint16_t newDestinationId = newChannel->m_id;
+			replyBuilder.Write8(&protocolId);
+			replyBuilder.Write8(&messageId);
+			replyBuilder.Write16(&destinationId);
 
-		replyBuilder.Write8(&protocolId);
-		replyBuilder.Write8(&messageId);
-		replyBuilder.Write16(&destinationId);
-		replyBuilder.Write16(&newDestinationId);
+			Packet reply = replyBuilder.ToPacket();
 
-		Packet reply = replyBuilder.ToPacket();
+			m_socket->Send(reply.GetData(), reply.GetSize(), &packet.m_rcvAddress);
 
-		newChannel->SendUnreliable(reply, false);
+			LOG_INF("chanmgr: connect: sent ConnectError to client channel %09u",
+				static_cast<uint32_t>(channelId));
+		}
+		else
+		{
+			Channel * newChannel = CreateChannelEx(ChannelType_Connection, ChannelPool_Server);
+			newChannel->m_destinationId = channelId;
+			newChannel->m_address = packet.m_rcvAddress;
 
-		LOG_INF("chanmgr: connect: sent ConnectOK to client channel %09u with request to change destination ID to %09u",
-			static_cast<uint32_t>(newChannel->m_destinationId),
-			static_cast<uint32_t>(newDestinationId));
+			LOG_INF("chanmgr: connect: created new server channel [%09u]",
+				static_cast<uint32_t>(newChannel->m_id));
+
+			PacketBuilder<6> replyBuilder;
+
+			const uint8_t protocolId = PROTOCOL_CHANNEL;
+			const uint8_t messageId = CHANNELMSG_CONNECT_OK;
+			const uint16_t destinationId = channelId;
+			const uint16_t newDestinationId = newChannel->m_id;
+
+			replyBuilder.Write8(&protocolId);
+			replyBuilder.Write8(&messageId);
+			replyBuilder.Write16(&destinationId);
+			replyBuilder.Write16(&newDestinationId);
+
+			Packet reply = replyBuilder.ToPacket();
+
+			newChannel->SendUnreliable(reply, false);
+
+			LOG_INF("chanmgr: connect: sent ConnectOK to client channel %09u with request to change destination ID to %09u",
+				static_cast<uint32_t>(newChannel->m_destinationId),
+				static_cast<uint32_t>(newDestinationId));
+		}
 	}
 	else
 	{
@@ -384,6 +420,8 @@ void ChannelManager::HandleConnectError(Packet & packet, Channel * channel)
 	LOG_ERR("chanmgr: connect-error: received error from channel %09u",
 		static_cast<uint32_t>(channel->m_id));
 	NetAssert(false);
+
+	DestroyChannelQueued(channel); // TODO: Handle this in the application code
 }
 
 void ChannelManager::HandleConnectAck(Packet & packet, Channel * channel)

@@ -77,15 +77,17 @@ bool Channel::Connect(const NetAddress & address)
 
 	m_address = address;
 
-	PacketBuilder<4> packetBuilder;
+	PacketBuilder<8> packetBuilder;
 
 	const uint8_t protocolId = PROTOCOL_CHANNEL;
 	const uint8_t messageId = CHANNELMSG_CONNECT;
 	const uint16_t channelId = m_id;
+	const uint32_t serverVersion = m_channelMgr->m_serverVersion;
 
 	packetBuilder.Write8(&protocolId);
 	packetBuilder.Write8(&messageId);
 	packetBuilder.Write16(&channelId);
+	packetBuilder.Write32(&serverVersion);
 
 	const Packet packet = packetBuilder.ToPacket();
 

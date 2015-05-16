@@ -15,7 +15,7 @@ public:
 	ChannelManager();
 	~ChannelManager();
 
-	bool Initialize(PacketDispatcher * packetDispatcher, ChannelHandler * handler, uint16_t serverPort, bool enableServer);
+	bool Initialize(PacketDispatcher * packetDispatcher, ChannelHandler * handler, uint16_t serverPort, bool enableServer, uint32_t serverVersion);
 	void Shutdown(bool sendDisconnectNotification);
 
 	void SetChannelTimeoutMS(uint32_t timeout);
@@ -47,6 +47,7 @@ public:
 	SharedNetSocket m_socket;
 	Channel * m_listenChannel;
 	
+	uint32_t m_serverVersion;
 	uint32_t m_channelTimeout;
 
 	ChannelMap m_channels;
