@@ -1503,10 +1503,7 @@ void Player::tick(float dt)
 
 		if (currentBlockMask & (1 << kBlockType_Spike))
 		{
-			if (isAnimOverrideAllowed(kPlayerAnim_Die))
-			{
-				handleDamage(1.f, Vec2(0.f, 0.f), 0);
-			}
+			handleDamage(1.f, Vec2(0.f, 0.f), 0);
 		}
 
 		// teleport
@@ -2494,7 +2491,7 @@ void Player::tick(float dt)
 
 		// animation
 
-		if (!m_isGrounded && !m_isAttachedToSticky && !m_isWallSliding && !m_isAnimDriven && m_enableInAirAnim)
+		if (m_isAlive && !m_isGrounded && !m_isAttachedToSticky && !m_isWallSliding && !m_isAnimDriven && m_enableInAirAnim)
 		{
 			setAnim(kPlayerAnim_Jump, true, false);
 		}
