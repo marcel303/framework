@@ -2643,6 +2643,8 @@ void Player::draw() const
 {
 	if (!hasValidCharacterIndex())
 		return;
+	if (!m_isAlive && !m_isRespawn)
+		return;
 
 	const CharacterData * characterData = getCharacterData(m_index);
 

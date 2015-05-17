@@ -1888,7 +1888,16 @@ void App::netRemovePlayer(Channel * channel, uint8_t index)
 
 		bs.Write(index);
 
-		m_rpcMgr->Call(s_rpcRemovePlayer, bs, ChannelPool_Client, &channel->m_id, true, true);
+		if (channel)
+		{
+			m_rpcMgr->Call(s_rpcRemovePlayer, bs, ChannelPool_Client, &channel->m_id, false, false);
+		}
+		else
+		{
+			Assert(g_host);
+
+			m_rpcMgr->Call(s_rpcRemovePlayer, bs, ChannelPool_Server, 0, false, true);
+		}
 	}
 }
 

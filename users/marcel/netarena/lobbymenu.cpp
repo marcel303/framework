@@ -118,8 +118,6 @@ void CharSelector::draw()
 		state.y = characterY;
 		setColor(colorWhite);
 		JOIN_SPRITER.draw(state);
-
-		drawRect(characterX, characterY, characterX+5, characterY+5);
 	}
 
 	setColor(colorWhite);

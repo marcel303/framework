@@ -1149,7 +1149,19 @@ void GameSim::setGameState(::GameState gameState)
 		break;
 
 	case kGameState_OnlineMenus:
-		resetGameSim();
+		resetGameWorld();
+
+		// reset players
+
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+		{
+			if (m_playerInstanceDatas[i])
+			{
+				Player * player = m_playerInstanceDatas[i]->m_player;
+
+				player->m_isReadyUpped = false;
+			}
+		}
 		break;
 
 	case kGameState_NewGame:
