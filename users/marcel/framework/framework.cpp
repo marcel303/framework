@@ -2705,6 +2705,11 @@ static void setSurface(Surface * surface)
 
 void pushSurface(Surface * surface)
 {
+	gxMatrixMode(GL_PROJECTION);
+	gxPushMatrix();
+	gxMatrixMode(GL_MODELVIEW);
+	gxPushMatrix();
+
 	fassert(surfaceStackSize < kMaxSurfaceStackSize);
 	surfaceStack[surfaceStackSize++] = surface;
 	setSurface(surface);
@@ -2718,6 +2723,11 @@ void popSurface()
 	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : 0;
 	setSurface(surface);
 	checkErrorGL();
+
+	gxMatrixMode(GL_PROJECTION);
+	gxPopMatrix();
+	gxMatrixMode(GL_MODELVIEW);
+	gxPopMatrix();
 }
 
 void setDrawRect(int x, int y, int sx, int sy)
