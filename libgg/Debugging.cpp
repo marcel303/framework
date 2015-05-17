@@ -31,8 +31,14 @@
 
 void HandleAssert(const char * func, int line, const char * expr, ...)
 {
-	// todo : varargs
-	LOG_ERR("assertion failed: %s: %d: %s", func, line, expr);
+	char text[1024];
+	va_list args;
+	va_start(args, expr);
+	vsprintf_s(text, expr, args);
+	va_end(args);
+
+	LOG_ERR("assertion failed: %s: %d: %s", func, line, text);
+	//assert(false);
 }
 
 #endif
