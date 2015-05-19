@@ -272,7 +272,14 @@ void Channel::Update(uint64_t time)
 			if (LIBNET_CHANNEL_LOG_PINGPONG)
 				LOG_CHANNEL_DBG("sent ping message", 0);
 		}
+	}
+	else
+	{
+		m_rtQueue.clear();
+	}
 
+	if (m_channelType == ChannelType_Connection && m_state != ChannelState_Disconnected)
+	{
 		// Check for connection time out.
 		if (LIBNET_CHANNEL_ENABLE_TIMEOUTS && m_timeoutTimer.ReadTick())
 		{
@@ -282,10 +289,6 @@ void Channel::Update(uint64_t time)
 
 			LOG_CHANNEL_DBG("timeout", 0);
 		}
-	}
-	else
-	{
-		m_rtQueue.clear();
 	}
 
 	if (m_state != ChannelState_Disconnected)
