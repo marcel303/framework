@@ -15,6 +15,14 @@ enum ChannelPool_
 	ChannelPool_CUSTOM = 8
 };
 
+enum ChannelState
+{
+	ChannelState_Disconnected,
+	ChannelState_Connecting,
+	ChannelState_Connected,
+	ChannelState_Listening
+};
+
 enum ChannelSendFlag
 {
 	ChannelSendFlag_Unreliable = 0x1,

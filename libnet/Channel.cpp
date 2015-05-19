@@ -17,7 +17,7 @@ Channel::Channel(ChannelType channelType, ChannelPool channelPool, uint32_t prot
 	, m_address()
 	, m_id(0)
 	, m_destinationId(0)
-	, m_isConnected(false)
+	, m_state(ChannelState_Disconnected)
 	, m_sendQueue()
 	, m_pingTimer()
 	, m_timeoutTimer()
@@ -53,6 +53,9 @@ void Channel::Initialize(ChannelManager * channelMgr, SharedNetSocket socket)
 	m_channelMgr = channelMgr;
 	m_socket = socket;
 
+	if (m_channelType == ChannelType_Listen)
+		m_state = ChannelState_Listening;
+
 	m_timeoutTimer.Initialize(&g_netTimer);
 	m_timeoutTimer.SetIntervalMS(m_channelMgr->m_channelTimeout);
 }
@@ -72,10 +75,13 @@ void Channel::SetConnected(bool connected)
 
 bool Channel::Connect(const NetAddress & address)
 {
+	NetAssert(m_state == ChannelState_Disconnected);
+
 	if (m_timeoutTimer.Interval_get() != 0.f)
 		m_timeoutTimer.Start();
 
 	m_address = address;
+	m_state = ChannelState_Connecting;
 
 	PacketBuilder<8> packetBuilder;
 
@@ -101,6 +107,7 @@ void Channel::Disconnect(bool sendDisconnectNotification, bool waitForAck)
 {
 	// todo : remember we're disconnected. make sure timeout kicks in while waiting for ack
 
+	NetAssert(m_state != ChannelState_Disconnected);
 	NetAssert(!waitForAck || sendDisconnectNotification);
 
 	Flush();
@@ -108,8 +115,6 @@ void Channel::Disconnect(bool sendDisconnectNotification, bool waitForAck)
 	//m_address = NetAddress(0, 0, 0, 0, 0);
 
 	SetConnected(false);
-
-	m_isConnected = false;
 
 	if (sendDisconnectNotification)
 	{
@@ -136,6 +141,9 @@ void Channel::Disconnect(bool sendDisconnectNotification, bool waitForAck)
 	{
 		m_channelMgr->DestroyChannelQueued(this);
 	}
+
+	// todo : if waiting for ack, change state to ChannelState_Disconnecting
+	m_state = ChannelState_Disconnected;
 }
 
 void Channel::Update(uint64_t time)
@@ -146,7 +154,7 @@ void Channel::Update(uint64_t time)
 	{
 		ReceiveData receiveData;
 
-		while (Receive(receiveData))
+		while (m_state != ChannelState_Disconnected && Receive(receiveData))
 		{
 			if (LIBNET_CHANNEL_SIMULATED_PACKETLOSS != 0)
 			{
@@ -165,7 +173,7 @@ void Channel::Update(uint64_t time)
 		}
 	}
 
-	if (m_channelType == ChannelType_Connection && m_isConnected)
+	if (m_channelType == ChannelType_Connection && m_state == ChannelState_Connected)
 	{
 		// Handle reliable communications.
 
@@ -275,12 +283,21 @@ void Channel::Update(uint64_t time)
 			LOG_CHANNEL_DBG("timeout", 0);
 		}
 	}
+	else
+	{
+		m_rtQueue.clear();
+	}
 
-	Flush();
+	if (m_state != ChannelState_Disconnected)
+	{
+		Flush();
+	}
 }
 
 void Channel::Flush()
 {
+	NetAssert(m_state != ChannelState_Disconnected);
+
 	if (m_sendQueue.GetSize() > 4) // header is 4 bytes. a size > 4 bytes means we've got something to send
 	{
 		// write header
@@ -301,6 +318,7 @@ void Channel::Flush()
 
 bool Channel::Send(const Packet & packet, int channelSendFlags)
 {
+	NetAssert(m_state != ChannelState_Disconnected);
 	NetAssert(m_address.IsValid());
 
 	bool unreliable = (channelSendFlags & ChannelSendFlag_Unreliable) != 0;
@@ -320,6 +338,7 @@ bool Channel::Send(const Packet & packet, int channelSendFlags)
 
 bool Channel::SendBegin(uint32_t size)
 {
+	NetAssert(m_state != ChannelState_Disconnected);
 	NetAssert(m_txBegun == false && m_txSize == 0);
 
 	const uint32_t OVERHEAD = 2;
@@ -353,6 +372,7 @@ bool Channel::SendBegin(uint32_t size)
 
 void Channel::SendEnd()
 {
+	NetAssert(m_state != ChannelState_Disconnected);
 	NetAssert(m_txBegun == true && m_txSize == 0);
 
 	m_txBegun = false;
@@ -361,6 +381,8 @@ void Channel::SendEnd()
 
 bool Channel::SendUnreliable(const Packet & packet, bool sendImmediately)
 {
+	NetAssert(m_state != ChannelState_Disconnected);
+
 	if (sendImmediately)
 	{
 		PacketBuilder<4> headerBuilder;
@@ -410,6 +432,8 @@ bool Channel::SendUnreliable(const Packet & packet, bool sendImmediately)
 
 bool Channel::SendReliable(const Packet & packet)
 {
+	NetAssert(m_state != ChannelState_Disconnected);
+
 	RTPacket temp;
 
 	temp.m_acknowledged = false;
@@ -432,6 +456,8 @@ bool Channel::SendReliable(const Packet & packet)
 
 bool Channel::SendSelf(const Packet & packet, uint32_t delay, NetAddress * address)
 {
+	NetAssert(m_state != ChannelState_Disconnected);
+
 	if (address == 0)
 		address = &m_address;
 
@@ -449,6 +475,8 @@ bool Channel::SendSelf(const Packet & packet, uint32_t delay, NetAddress * addre
 
 bool Channel::Receive(ReceiveData & rcvData)
 {
+	NetAssert(m_state != ChannelState_Disconnected);
+
 	if (m_delayedReceivePackets.size() > 0)
 	{
 		const uint32_t time1 = static_cast<uint32_t>(m_delayTimer.TimeMS_get());
@@ -493,6 +521,8 @@ bool Channel::Receive(ReceiveData & rcvData)
 
 void Channel::HandlePing(Packet & packet)
 {
+	NetAssert(m_state != ChannelState_Disconnected);
+
 	if (LIBNET_CHANNEL_LOG_PINGPONG)
 		LOG_CHANNEL_DBG("received ping message", 0);
 
@@ -521,6 +551,8 @@ void Channel::HandlePing(Packet & packet)
 
 void Channel::HandlePong(Packet & packet)
 {
+	NetAssert(m_state != ChannelState_Disconnected);
+
 	uint32_t time;
 
 	if (!packet.Read32(&time))
@@ -541,6 +573,8 @@ void Channel::HandlePong(Packet & packet)
 
 void Channel::HandleRTUpdate(Packet & packet)
 {
+	NetAssert(m_state != ChannelState_Disconnected);
+
 	uint32_t packetId;
 
 	if (!packet.Read32(&packetId))
@@ -624,6 +658,8 @@ void Channel::HandleRTUpdate(Packet & packet)
 
 void Channel::HandleRTAck(Packet & packet)
 {
+	NetAssert(m_state != ChannelState_Disconnected);
+
 	uint32_t packetId;
 
 	if (!packet.Read32(&packetId))
@@ -664,6 +700,8 @@ void Channel::HandleRTAck(Packet & packet)
 
 void Channel::HandleRTNack(Packet & packet)
 {
+	NetAssert(m_state != ChannelState_Disconnected);
+
 	uint32_t packetId;
 
 	if (!packet.Read32(&packetId))
@@ -716,6 +754,8 @@ void Channel::InitSendQueue()
 
 void Channel::OnReceive()
 {
+	NetAssert(m_state != ChannelState_Disconnected);
+
 	if (m_timeoutTimer.Interval_get() != 0.f)
 		m_timeoutTimer.Restart();
 }

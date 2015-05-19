@@ -89,7 +89,7 @@ void RpcManager::Call(uint32_t method, const BitStream & bs, ChannelPool channel
 		{
 			Channel * channel = i->second;
 
-			if (channel->m_isConnected && channel->m_channelPool == channelPool && channel->m_channelType == ChannelType_Connection)
+			if (channel->m_state == ChannelState_Connected && channel->m_channelPool == channelPool && channel->m_channelType == ChannelType_Connection)
 			{
 				channel->Send(p, 0);
 			}

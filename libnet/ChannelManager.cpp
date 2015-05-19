@@ -51,6 +51,8 @@ bool ChannelManager::Initialize(PacketDispatcher * packetDispatcher, ChannelHand
 	if (enableServer)
 	{
 		m_listenChannel = CreateListenChannel(ChannelPool_Server);
+
+		LOG_DBG("ChannelManager::Initialize: listenChannel=%p", m_listenChannel);
 	}
 
 	m_serverVersion = serverVersion;
@@ -68,7 +70,12 @@ void ChannelManager::Shutdown(bool sendDisconnectNotification)
 	{
 		Channel * channel = m_channels.begin()->second;
 
-		if (channel->m_channelType == ChannelType_Connection)
+		if (channel->m_channelType == ChannelType_Listen && channel->m_state != ChannelState_Disconnected)
+		{
+			channel->m_state = ChannelState_Disconnected;
+		}
+
+		if (channel->m_channelType == ChannelType_Connection && channel->m_state != ChannelState_Disconnected)
 		{
 			channel->Disconnect(sendDisconnectNotification, false);
 		}
@@ -120,6 +127,9 @@ Channel * ChannelManager::CreateChannelEx(ChannelType channelType, ChannelPool c
 
 void ChannelManager::DestroyChannel(Channel * channel)
 {
+	NetAssert(channel->m_state == ChannelState_Disconnected);
+	LOG_DBG("DestroyChannel: channel=%p", channel);
+
 	if (m_handler && channel->m_channelType == ChannelType_Connection)
 	{
 		/**/ if (channel->m_channelPool == ChannelPool_Client)
@@ -142,6 +152,7 @@ void ChannelManager::DestroyChannelQueued(Channel * channel)
 	if (!channel->m_queueForDestroy)
 	{
 		NetAssert(std::find(m_destroyedChannels.begin(), m_destroyedChannels.end(), channel) == m_destroyedChannels.end());
+		LOG_DBG("DestroyChannelQueued: channel=%p", channel);
 		m_destroyedChannels.push_back(channel);
 		channel->m_queueForDestroy = true;
 	}
@@ -150,7 +161,8 @@ void ChannelManager::DestroyChannelQueued(Channel * channel)
 void ChannelManager::Update(uint64_t time)
 {
 	for (ChannelMapItr i = m_channels.begin(); i != m_channels.end(); ++i)
-		i->second->Update(time);
+		if (!i->second->m_queueForDestroy)
+			i->second->Update(time);
 
 	// Destroy disconnected client channels.
 	for (size_t i = 0; i < m_destroyedChannels.size(); ++i)
@@ -319,6 +331,7 @@ void ChannelManager::HandleConnect(Packet & packet, Channel * channel)
 			Channel * newChannel = CreateChannelEx(ChannelType_Connection, ChannelPool_Server);
 			newChannel->m_destinationId = channelId;
 			newChannel->m_address = packet.m_rcvAddress;
+			newChannel->m_state = ChannelState_Connecting;
 
 			LOG_INF("chanmgr: connect: created new server channel [%09u]",
 				static_cast<uint32_t>(newChannel->m_id));
@@ -365,10 +378,10 @@ void ChannelManager::HandleConnectOK(Packet & packet, Channel * channel)
 
 		Channel * channel2 = FindChannel(channelId);
 
-		if (channel2 && channel2 == channel)
+		if (channel2/* && channel2 == channel*/)
 		{
 			channel2->m_destinationId = newDestinationId;
-			channel2->m_isConnected = true;
+			channel2->m_state = ChannelState_Connected;
 
 			LOG_INF("chanmgr: connect-ok: updated destination server channel ID to %09u",
 				static_cast<uint32_t>(channel2->m_destinationId));
@@ -392,7 +405,7 @@ void ChannelManager::HandleConnectOK(Packet & packet, Channel * channel)
 			channel2->m_protocolMask = 0xffffffff;
 
 			if (m_handler)
-				m_handler->CL_OnChannelConnect(channel);
+				m_handler->CL_OnChannelConnect(channel2);
 		}
 		else
 		{
@@ -417,11 +430,39 @@ void ChannelManager::HandleConnectOK(Packet & packet, Channel * channel)
 
 void ChannelManager::HandleConnectError(Packet & packet, Channel * channel)
 {
-	LOG_ERR("chanmgr: connect-error: received error from channel %09u",
-		static_cast<uint32_t>(channel->m_id));
-	NetAssert(false);
+	uint16_t channelId;
+	uint16_t newDestinationId;
 
-	DestroyChannelQueued(channel); // TODO: Handle this in the application code
+	if (packet.Read16(&channelId))
+	{
+		LOG_ERR("chanmgr: connect-error: received error from channel %09u",
+			static_cast<uint32_t>(channel->m_id));
+
+		Channel * channel2 = FindChannel(channelId);
+
+		if (channel2/* && channel2 == channel*/)
+		{
+			channel2->Disconnect(false, false);
+		}
+		else
+		{
+			if (channel2 == 0)
+			{
+				LOG_ERR("chanmgr: connect-error: unknown channel %u", channelId);
+				NetAssert(false);
+			}
+			else
+			{
+				LOG_ERR("chanmgr: connect-error: channel mismatch %u", channelId);
+				NetAssert(false);
+			}
+		}
+	}
+	else
+	{
+		LOG_ERR("chanmgr: connect-error: failed to read from packet", 0);
+		NetAssert(false);
+	}
 }
 
 void ChannelManager::HandleConnectAck(Packet & packet, Channel * channel)
@@ -437,7 +478,7 @@ void ChannelManager::HandleConnectAck(Packet & packet, Channel * channel)
 				static_cast<uint32_t>(channelId),
 				static_cast<uint32_t>(channel->m_destinationId));
 
-			channel->m_isConnected = true;
+			channel->m_state = ChannelState_Connected;
 
 			channel->m_protocolMask = 0xffffffff;
 
