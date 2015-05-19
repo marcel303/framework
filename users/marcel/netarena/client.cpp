@@ -75,7 +75,7 @@ void Client::initialize(Channel * channel)
 
 void Client::tick(float dt)
 {
-	if (m_channel && m_channel->m_isConnected)
+	if (m_channel && m_channel->m_state == ChannelState_Connected)
 	{
 		if (m_isSynced && !m_hasAddedPlayers)
 		{

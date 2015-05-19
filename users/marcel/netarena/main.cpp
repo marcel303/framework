@@ -70,6 +70,9 @@ OPTION_ALIAS(g_connect, "connect");
 OPTION_DECLARE(bool, g_pauseOnOptionMenuOption, true);
 OPTION_DEFINE(bool, g_pauseOnOptionMenuOption, "App/Pause On Option Menu");
 
+OPTION_DECLARE(bool, g_fakeIncompatibleServerVersion, false);
+OPTION_DEFINE(bool, g_fakeIncompatibleServerVersion, "Net/Fake Incompatible Server Version");
+
 COMMAND_OPTION(s_dropCoins, "Player/Drop Coins", []{ g_app->netDebugAction("dropCoins", ""); });
 
 COMMAND_OPTION(s_addAnnoucement, "App/Add Annoucement", []{ g_app->netDebugAction("addAnnouncement", "Test Annoucenment"); });
@@ -876,6 +879,30 @@ void App::SV_OnChannelDisconnect(Channel * channel)
 	}
 }
 
+void App::CL_OnChannelDisconnect(Channel * channel)
+{
+	Client * client = 0;
+
+	for (size_t i = 0; i < m_clients.size(); ++i)
+	{
+		if (m_clients[i]->m_channel == channel)
+		{
+			client = m_clients[i];
+		}
+	}
+
+	if (client)
+	{
+		LOG_DBG("CL_OnChannelDisconnect: found client %p for channel %p", client, channel);
+
+		leaveGame(client);
+	}
+	else
+	{
+		LOG_ERR("CL_OnChannelDisconnect: couldn't find client for channel %p. numClients=%d", channel, (int)m_clients.size());
+	}
+}
+
 //
 
 App::App()
@@ -1157,9 +1184,13 @@ bool App::startHosting()
 
 	//
 
+	LOG_DBG("creating host");
+
 	m_host = new Host();
 
 	m_host->init();
+
+	LOG_DBG("creating host [done]");
 
 	//
 
@@ -1174,17 +1205,21 @@ void App::stopHosting()
 
 	while (!m_clients.empty())
 	{
-		disconnectClient(0);
+		destroyClient(0);
 	}
 
 	m_channelMgr->Shutdown(true);
 
 	if (m_host)
 	{
+		LOG_DBG("destroying host");
+
 		m_host->shutdown();
 
 		delete m_host;
 		m_host = 0;
+
+		LOG_DBG("destroying host [done]");
 	}
 
 	m_isHost = false;
@@ -1222,24 +1257,27 @@ void App::leaveGame(Client * client)
 	{
 		if (m_clients[i] == client)
 		{
-			disconnectClient(i);
+			destroyClient(i);
 			break;
 		}
-	}
-
-	if (m_isHost && m_clients.empty())
-	{
-		// todo : only do this if client is the host
-
-		stopHosting();
 	}
 }
 
 Client * App::connect(const char * address)
 {
+	LOG_DBG("connect: %s", address);
+
 	Channel * channel = m_channelMgr->CreateChannel(ChannelPool_Client);
 
+	const auto serverVersion = m_channelMgr->m_serverVersion;
+	if (g_fakeIncompatibleServerVersion)
+		m_channelMgr->m_serverVersion = -1;
 	channel->Connect(NetAddress(address, NET_PORT));
+	m_channelMgr->m_serverVersion = serverVersion;
+
+	LOG_DBG("connect: %s [done]", address);
+
+	LOG_DBG("connect: creating client");
 
 	Client * client = new Client;
 
@@ -1247,26 +1285,33 @@ Client * App::connect(const char * address)
 
 	m_clients.push_back(client);
 
+	LOG_DBG("connect: creating client [done] client=%p", client);
+
 	//
 
 	m_selectedClient = (int)m_clients.size() - 1;
 
+	LOG_DBG("connect: updated selected client to %d", m_selectedClient);
+
 	return client;
 }
 
-void App::disconnectClient(int index)
+void App::destroyClient(int index)
 {
 	if (index >= 0 && index < (int)m_clients.size())
 	{
 		Client * client = m_clients[index];
+
+		LOG_DBG("destroyClient: destroying client %p", client);
+
+		if (client->m_channel->m_state != ChannelState_Disconnected)
+			client->m_channel->Disconnect();
 
 		while (!client->m_players.empty())
 		{
 			PlayerInstanceData * player = client->m_players.front();
 			client->removePlayer(player);
 		}
-
-		m_clients[index]->m_channel->Disconnect();
 
 		delete client;
 
@@ -1277,7 +1322,13 @@ void App::disconnectClient(int index)
 		if (m_selectedClient >= (int)m_clients.size())
 		{
 			m_selectedClient = (int)m_clients.size() - 1;
+
+			LOG_DBG("destroyClient: updated selected client to %d", m_selectedClient);
 		}
+	}
+	else
+	{
+		LOG_ERR("destroyClient: invalid index %d", (int)index);
 	}
 }
 
@@ -1363,6 +1414,13 @@ bool App::tick()
 	}
 
 	// update host
+
+	if (m_isHost && m_clients.empty())
+	{
+		// todo : only do this if client is the host
+
+		stopHosting();
+	}
 
 	if (m_isHost)
 	{

@@ -82,7 +82,7 @@ public:
 	virtual void SV_OnChannelConnect(Channel * channel);
 	virtual void SV_OnChannelDisconnect(Channel * channel);
 	virtual void CL_OnChannelConnect(Channel * channel) { }
-	virtual void CL_OnChannelDisconnect(Channel * channel) { }
+	virtual void CL_OnChannelDisconnect(Channel * channel);
 
 	// RpcHandler
 	static void handleRpc(Channel * channel, uint32_t method, BitStream & bitStream);
@@ -103,7 +103,7 @@ public:
 	void leaveGame(Client * client);
 
 	Client * connect(const char * address);
-	void disconnectClient(int index);
+	void destroyClient(int index);
 	void selectClient(int index);
 	Client * getSelectedClient();
 	bool isSelectedClient(Client * client);
