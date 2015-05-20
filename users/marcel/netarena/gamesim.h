@@ -665,7 +665,6 @@ struct PipeBomb : PhysicsActor
 
 struct Barrel : PhysicsActor
 {
-	bool m_isActive;
 	Vec2 m_pos;
 	int m_tick; // barrel velocity/position depends on tick number
 
@@ -940,7 +939,7 @@ public:
 	void playSound(const char * filename, int volume = 100);
 
 	void testCollision(const CollisionShape & shape, void * arg, CollisionCB cb);
-	void testCollisionInternal(const CollisionShape & shape, void * arg, CollisionCB cb);
+	void testCollisionInternal(const CollisionShape & shape, uint32_t typeMask, void * arg, CollisionCB cb);
 
 	Pickup * allocPickup();
 	void trySpawnPickup(PickupType type);
@@ -963,6 +962,7 @@ public:
 	void spawnPipeBomb(Vec2 pos, Vec2 vel, int playerIndex);
 
 	void doQuake(float vel);
+	void doBlastEffect(Vec2Arg center, float radius, const Curve & speedCurve);
 
 	void addScreenShake(float dx, float dy, float stiffness, float life);
 	Vec2 getScreenShake() const;

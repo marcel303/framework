@@ -2507,13 +2507,13 @@ void GameSim::testCollision(const CollisionShape & shape, void * arg, CollisionC
 
 				translatedShape.translate(dx * ARENA_SX_PIXELS, dy * ARENA_SY_PIXELS);
 
-				testCollisionInternal(translatedShape, arg, cb);
+				testCollisionInternal(translatedShape, -1, arg, cb);
 			}
 		}
 	}
 	else
 	{
-		testCollisionInternal(shape, arg, cb);
+		testCollisionInternal(shape, -1, arg, cb);
 	}
 }
 
@@ -2529,35 +2529,66 @@ void testCollision(T * objects, int numObjects, const CollisionShape & shape, vo
 	}
 }
 
-void GameSim::testCollisionInternal(const CollisionShape & shape, void * arg, CollisionCB cb)
+void GameSim::testCollisionInternal(const CollisionShape & shape, uint32_t typeMask, void * arg, CollisionCB cb)
 {
-	// collide vs arena
-
-	m_arena.testCollision(shape, arg, cb);
-
-	// collide vs players
-
-	for (int i = 0; i < MAX_PLAYERS; ++i)
+	if (typeMask & kCollisionType_Block)
 	{
-		if (m_players[i].m_isUsed && m_players[i].m_isAlive)
+		// collide vs arena
+
+		m_arena.testCollision(shape, arg, cb);
+	}
+
+	if (typeMask & kCollisionType_Player)
+	{
+		// collide vs players
+
+		for (int i = 0; i < MAX_PLAYERS; ++i)
 		{
-			m_players[i].testCollision(shape, arg, cb);
+			if (m_players[i].m_isUsed && m_players[i].m_isAlive)
+			{
+				m_players[i].testCollision(shape, arg, cb);
+			}
 		}
 	}
 
-	// pipe bombs
-
-	::testCollision(m_pipebombs, MAX_PIPEBOMBS, shape, arg, cb);
-
-	// barrels
-
-	::testCollision(m_barrels, MAX_BARRELS, shape, arg, cb);
-
-	// collide vs movers (?)
-
-	for (int i = 0; i < MAX_MOVERS; ++i)
+	if (typeMask & kCollisionType_PhysObj)
 	{
-		//m_movers[i].testCollision(box, cb, arg);
+		// pickups
+
+		::testCollision(m_pickups, MAX_PICKUPS, shape, arg, cb);
+
+		// token
+
+		if (m_gameMode == kGameMode_TokenHunt)
+		{
+			::testCollision(&m_tokenHunt.m_token, 1, shape, arg, cb);
+		}
+
+		// coins
+
+		if (m_gameMode == kGameMode_CoinCollector)
+		{
+			::testCollision(m_coinCollector.m_coins, MAX_COINS, shape, arg, cb);
+		}
+
+		// axes
+
+		::testCollision(m_axes, MAX_AXES, shape, arg, cb);
+
+		// pipe bombs
+
+		::testCollision(m_pipebombs, MAX_PIPEBOMBS, shape, arg, cb);
+
+		// barrels
+
+		::testCollision(m_barrels, MAX_BARRELS, shape, arg, cb);
+
+		// collide vs movers (?)
+
+		for (int i = 0; i < MAX_MOVERS; ++i)
+		{
+			//m_movers[i].testCollision(box, cb, arg);
+		}
 	}
 }
 
@@ -2884,6 +2915,45 @@ void GameSim::doQuake(float vel)
 			player.m_vel[1] = Calc::Sign(player.m_facing[1]) * vel;
 		}
 	}
+}
+
+void GameSim::doBlastEffect(Vec2Arg center, float radius, const Curve & speedCurve)
+{
+	const Vec2 extents(radius, radius);
+	const CollisionShape shape(center - extents, center + extents);
+
+	struct BlastArgs
+	{
+		Vec2 center;
+		float radius;
+		const Curve * speedCurve;
+	} args;
+
+	args.center = center;
+	args.radius = radius;
+	args.speedCurve = &speedCurve;
+
+	testCollisionInternal(
+		shape,
+		kCollisionType_PhysObj,
+		&args,
+		[](const CollisionShape & shape, void * arg, PhysicsActor * actor, BlockAndDistance * block, Player * player)
+		{
+			BlastArgs * blastArgs = (BlastArgs*)arg;
+
+			if (actor)
+			{
+				const Vec2 delta = actor->m_pos - blastArgs->center;
+				const float distance = delta.CalcSize();
+				if (distance != 0.f)
+				{
+					const Vec2 dir = delta / distance;
+					const float t = distance / blastArgs->radius;
+					const float speed = blastArgs->speedCurve->eval(t);
+					actor->m_vel += dir * speed;
+				}
+			}
+		});
 }
 
 void GameSim::addScreenShake(float dx, float dy, float stiffness, float life)

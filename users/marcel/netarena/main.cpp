@@ -112,6 +112,10 @@ static void animationTestChangeAnim(int direction, int x, int y);
 static void animationTestTick(float dt);
 static void animationTestDraw();
 
+static void blastEffectTestToggleIsActive();
+static void blastEffectTestTick(float dt);
+static void blastEffectTestDraw();
+
 //
 
 static void HandleAction(const std::string & action, const Dictionary & args)
@@ -782,6 +786,24 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 				gameSim->addAnnouncement(param.c_str());
 			}
 		}
+		else if (action == "addBlastEffect")
+		{
+			GameSim * gameSim = findGameSimForChannel(channel);
+			Assert(gameSim);
+
+			if (gameSim)
+			{
+				Dictionary args;
+				args.parse(param);
+				const float speed = args.getFloat("speed", 0.f);
+				const Curve curve(speed, 0.f);
+
+				gameSim->doBlastEffect(
+					Vec2(args.getFloat("x", GFX_SX/2.f), args.getFloat("y", GFX_SY/2.f)),
+					args.getFloat("radius", 100.f),
+					curve);
+			}
+		}
 		else if (action == "optionSelect")
 		{
 			if (canHandleOptionChange(channel))
@@ -1370,6 +1392,12 @@ bool App::isSelectedClient(uint16_t channelId)
 		return false;
 }
 
+void App::debugSyncGameSims()
+{
+	for (int i = 0; i < 10; ++i)
+		m_channelMgr->Update(NET_TIME);
+}
+
 bool App::tick()
 {
 	TIMER_SCOPE(g_appTickTime);
@@ -1434,11 +1462,7 @@ bool App::tick()
 			{
 			#if ENABLE_GAMESTATE_CRC_LOGGING
 				if (g_logCRCs)
-				{
-					for (int i = 0; i < 10; ++i)
-						m_channelMgr->Update(NET_TIME);
-				}
-
+					debugSyncGameSims();
 				const uint32_t crc1 = g_logCRCs ? m_host->m_gameSim.calcCRC() : 0;
 			#endif
 
@@ -1449,9 +1473,7 @@ bool App::tick()
 
 				if (g_logCRCs)
 				{
-					for (int i = 0; i < 10; ++i)
-						m_channelMgr->Update(NET_TIME);
-
+					debugSyncGameSims();
 					LOG_DBG("tick CRCs: %08x, %08x", crc1, crc2);
 				}
 			#endif
@@ -1504,8 +1526,7 @@ bool App::tick()
 					g_app->netAddPlayer(client->m_channel, i, name, i);
 				}
 
-				for (int j = 0; j < 10; ++j)
-					m_channelMgr->Update(NET_TIME);
+				debugSyncGameSims();
 			}
 		}
 	}
@@ -1513,9 +1534,10 @@ bool App::tick()
 	// debug
 
 #if 1
-	static bool testAnimationMode = false;
 	if (keyboard.wentDown(SDLK_1) && !(getSelectedClient() && getSelectedClient()->m_textChat->isActive()))
 		animationTestToggleIsActive();
+	if (keyboard.wentDown(SDLK_2) && !(getSelectedClient() && getSelectedClient()->m_textChat->isActive()))
+		blastEffectTestToggleIsActive();
 
 	if (keyboard.wentDown(SDLK_F1))
 	{
@@ -1581,6 +1603,8 @@ bool App::tick()
 	}
 
 	animationTestTick(dt);
+
+	blastEffectTestTick(dt);
 #endif
 
 #if GG_ENABLE_TIMERS
@@ -1691,6 +1715,7 @@ void App::draw()
 		//
 
 		animationTestDraw();
+		blastEffectTestDraw();
 
 		//
 
@@ -1859,8 +1884,7 @@ void App::netSyncGameSim(Channel * channel)
 
 	// todo : when serializing the state, make sure all packets that are destined for the host are flushed
 	//        first, to ensure the game sim is up to date and properly synced to the client
-	for (int i = 0; i < 10; ++i)
-		m_channelMgr->Update(0); // fixme
+	debugSyncGameSims();
 
 #if ENABLE_GAMESTATE_CRC_LOGGING
 	LOG_DBG("netSyncGameSim: host CRC: %08x", m_host->m_gameSim.calcCRC());
@@ -2031,8 +2055,7 @@ void App::netSetPlayerInputsBroadcast()
 	if (g_logCRCs)
 	{
 		m_rpcMgr->Call(s_rpcBroadcastPlayerInputs, bs, ChannelPool_Server, 0, true, false);
-		for (int i = 0; i < 10; ++i)
-			m_channelMgr->Update(NET_TIME);
+		debugSyncGameSims();
 		m_rpcMgr->Call(s_rpcBroadcastPlayerInputs, bs, ChannelPool_Server, 0, false, true);
 	}
 	else
@@ -2194,6 +2217,52 @@ static void animationTestDraw()
 		setColor(colorWhite);
 		if (s_animationTestSprite)
 			s_animationTestSprite->draw(s_animationTestState);
+	}
+}
+
+// blast effects test
+
+static bool s_blastEffectTestIsActive = false;
+
+static bool blastEffectTestIsActive()
+{
+	return s_blastEffectTestIsActive;
+}
+
+static void blastEffectTestToggleIsActive()
+{
+	s_blastEffectTestIsActive = !s_blastEffectTestIsActive;
+}
+
+static void blastEffectTestTick(float dt)
+{
+	if (s_blastEffectTestIsActive && g_host)
+	{
+		if (mouse.wentDown(BUTTON_LEFT))
+		{
+			char temp[256];
+			sprintf_s(temp, sizeof(temp), "x:%f y:%f radius:%f speed:%f",
+				(float)mouse.x,
+				(float)mouse.y,
+				500.f,
+				500.f);
+			g_app->netDebugAction("addBlastEffect", temp);
+		}
+	}
+}
+
+static void blastEffectTestDraw()
+{
+	if (s_blastEffectTestIsActive)
+	{
+		setColor(colorGreen);
+		drawRect(0, 0, GFX_SX, 40);
+
+		setColor(colorBlack);
+		setFont("calibri.ttf");
+		drawText(GFX_SX/2, 20, 24, 0.f, 0.f, "Blast Effect Test (Toggle Using '2')");
+
+		setColor(colorWhite);
 	}
 }
 

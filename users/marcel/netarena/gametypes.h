@@ -189,6 +189,13 @@ enum BulletEffect
 	kBulletEffect_Bubble
 };
 
+enum CollisionType
+{
+	kCollisionType_Block = 1 << 0,
+	kCollisionType_Player = 1 << 1,
+	kCollisionType_PhysObj = 1 << 2
+};
+
 struct CollisionBox
 {
 	Vec2 min;

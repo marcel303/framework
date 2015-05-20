@@ -109,6 +109,7 @@ public:
 	bool isSelectedClient(Client * client);
 	bool isSelectedClient(Channel * channel);
 	bool isSelectedClient(uint16_t channelId);
+	void debugSyncGameSims();
 
 	bool tick();
 	void draw();
