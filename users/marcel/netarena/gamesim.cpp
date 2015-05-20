@@ -446,7 +446,7 @@ void Axe::setup(Vec2Arg pos, Vec2Arg vel, int playerIndex)
 	m_doTeleport = true;
 	m_bounciness = 0.2f;
 	m_noGravity = false;
-	m_gravityMultiplier = AXE_GRAVITY_MULTIPLIER;
+	m_gravityMultiplier = AXE_GRAVITY_MULTIPLIER_ACTIVE;
 	m_friction = 0.01f;
 	m_airFriction = 0.9f;
 
@@ -548,8 +548,8 @@ void Axe::tick(GameSim & gameSim, float dt)
 void Axe::endThrow()
 {
 	m_throwDone = true;
-	m_vel.Set(0.f, 0.f);
-	m_gravityMultiplier = 1.f;
+	m_vel *= AXE_SPEED_MULTIPLIER_ON_DIE;
+	m_gravityMultiplier = AXE_GRAVITY_MULTIPLIER_INACTIVE;
 
 	m_spriterState.startAnim(AXE_SPRITER, "inactive");
 }
@@ -2192,6 +2192,12 @@ void GameSim::drawPlay()
 		//setBlend(BLEND_OPAQUE);
 		m_background.draw();
 		//setBlend(BLEND_ALPHA);
+
+	#if 0
+		Shader fsfx("fsfx-test3");
+		fsfx.setImmediate("time", m_roundTime);
+		g_colorMap->postprocess(fsfx);
+	#endif
 
 		if (m_levelEvents.gravityWell.endTimer.isActive())
 		{

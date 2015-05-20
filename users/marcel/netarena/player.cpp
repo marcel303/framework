@@ -3942,9 +3942,8 @@ void CharacterData::load(int characterIndex)
 	delete m_spriter;
 	m_spriter = 0;
 
-#ifndef DEBUG
-	getSpriter();
-#endif
+	if (!g_devMode)
+		getSpriter();
 
 	m_spriteScale = m_props.getFloat("sprite_scale", 1.f);
 	m_meleeCooldown = m_props.getFloat("melee_cooldown", PLAYER_SWORD_COOLDOWN);
