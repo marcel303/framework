@@ -17,7 +17,8 @@
 
 todo:
 
-- explosion effects: force affecting players, pickups, etc
+- add explosion effects on bombs 'n stuff
++ explosion effects: force affecting players, pickups, etc
 - arc bullets
 + axe velocity x 50% on deactivate, 50% gravity
 - grapple auto shorten
@@ -27,7 +28,7 @@ todo:
 + slide block type friction %
 - pickup spawn weights per tile
 - shield ability: deflect projectiles in aim direction. recharge period. shield gets transparent
-- fix drawing of aim
+- fix drawing of aim above/below layers
 + add reusable aiming code and UI
 + add grapple aim
 
@@ -1289,7 +1290,8 @@ void Player::tick(float dt)
 				{
 					setAttackDirection(0, +1);
 					anim = kPlayerAnim_AttackDown;
-					m_enterPassthrough = true;
+					if (PLAYER_SWORD_DOWN_PASSTHROUGH)
+						m_enterPassthrough = true;
 
 					if (characterData->m_special == kPlayerSpecial_DownAttack)
 					{
