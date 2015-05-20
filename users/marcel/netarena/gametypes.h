@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <string.h>
 #include "Vec2.h"
 
 #pragma pack(push)
@@ -106,7 +107,7 @@ enum PlayerSpecial
 	kPlayerSpecial_COUNT
 };
 
-extern const char * g_playerSpacialNames[kPlayerSpecial_COUNT];
+extern const char * g_playerSpecialNames[kPlayerSpecial_COUNT];
 
 enum PlayerTrait
 {
@@ -293,6 +294,17 @@ struct CollisionShape
 	void debugDraw(bool drawNormals = true) const;
 };
 
+struct Curve
+{
+	float value[32];
+
+	Curve();
+	Curve(float min, float max);
+
+	void makeLinear(float v1, float v2);
+	float eval(float t) const;
+};
+
 template <int SIZE>
 struct FixedString
 {
@@ -345,3 +357,5 @@ struct FixedString
 };
 
 #pragma pack(pop)
+
+extern Curve defaultCurve;

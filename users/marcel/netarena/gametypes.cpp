@@ -12,7 +12,7 @@ const char * g_gameStateNames[kGameState_COUNT] =
 	"roundComplete"
 };
 
-const char * g_playerSpacialNames[kPlayerSpecial_COUNT] =
+const char * g_playerSpecialNames[kPlayerSpecial_COUNT] =
 {
 	"none",
 	"RocketPunch",
@@ -26,6 +26,8 @@ const char * g_playerSpacialNames[kPlayerSpecial_COUNT] =
 	"Pipebomb",
 	"Grapple"
 };
+
+Curve defaultCurve(0.f, 1.f);
 
 //
 
@@ -238,4 +240,39 @@ void CollisionShape::debugDraw(bool drawNormals) const
 			drawLine(m[0], m[1], m[0] + n[0] * BLOCK_SX/2.f, m[1] + n[1] * BLOCK_SX/2.f);
 		}
 	}
+}
+
+//
+
+Curve::Curve()
+{
+	memset(this, 0, sizeof(Curve));
+}
+
+Curve::Curve(float min, float max)
+{
+	makeLinear(min, max);
+}
+
+void Curve::makeLinear(float v1, float v2)
+{
+	for (int i = 0; i < 32; ++i)
+	{
+		const float u = i / 31.f;
+		const float v = 1.f - u;
+		value[i] = v1 * v + v2 * u;
+	}
+}
+
+float Curve::eval(float t) const
+{
+	t = t < 0.f ? 0.f : t > 1.f ? 1.f : t;
+	const float s = t * 31.f;
+	const int index1 = (int)s;
+	const int index2 = (index1 + 1) & 31;
+	const float u = s - index1;
+	const float v = 1.f - u;
+	const float v1 = value[index1];
+	const float v2 = value[index2];
+	return v1 * v + v2 * u;
 }

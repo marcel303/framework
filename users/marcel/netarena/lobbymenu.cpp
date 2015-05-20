@@ -203,7 +203,7 @@ void LobbyMenu::draw()
 
 				const CharacterData * characterData = getCharacterData(m_client->m_gameSim->m_players[i].m_characterIndex);
 				setColor(colorWhite);
-				drawText((x1 + x2) / 2, y2 + y, 32, 0.f, +1.f, "%s", g_playerSpacialNames[characterData->m_special]);
+				drawText((x1 + x2) / 2, y2 + y, 32, 0.f, +1.f, "%s", g_playerSpecialNames[characterData->m_special]);
 				y += 34;
 
 			#if 1 // todo : non final only
