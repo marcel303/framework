@@ -3698,14 +3698,9 @@ bool Player::findGrappleAnchorPos(Vec2 & anchorPos, float & length) const
 {
 	// find anchor point
 
-#if 0
 	const float kGrappleAngle = Calc::DegToRad(15.f * m_facing[0]);
-	const float dx = +std::sin(kGrappleAngle);
-	const float dy = -std::cos(kGrappleAngle);
-#else
-	const float dx = m_grapple.aiming.aim[0];
-	const float dy = m_grapple.aiming.aim[1];
-#endif
+	const float dx = GRAPPLE_ANALOG_AIM ? m_grapple.aiming.aim[0] : +std::sin(kGrappleAngle);
+	const float dy = GRAPPLE_ANALOG_AIM ? m_grapple.aiming.aim[1] : -std::cos(kGrappleAngle);
 
 	const Arena & arena = GAMESIM->m_arena;
 
@@ -3762,7 +3757,7 @@ void Player::tickGrapple(float dt)
 	case GrappleInfo::State_Aiming:
 		m_grapple.aiming.tick(*GAMESIM, m_input, dt);
 
-		if (m_input.wentUp(INPUT_BUTTON_Y))
+		if (m_input.wentUp(INPUT_BUTTON_Y) || !GRAPPLE_ANALOG_AIM)
 		{
 			if (findGrappleAnchorPos(m_grapple.anchorPos, m_grapple.distance))
 			{

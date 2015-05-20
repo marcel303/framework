@@ -340,6 +340,7 @@ OPTION_STEP(AXE_THROW_TIME, 0, 0, .1f);
 OPTION_STEP(AXE_THROW_SPEED, 0, 0, 10);
 OPTION_STEP(AXE_SPEED_MULTIPLIER_ON_DIE, 0, 0, .05f);
 
+OPTION_DEFINE(bool, GRAPPLE_ANALOG_AIM, "Special Abilities/Grapple Rope/Analog Aim");
 OPTION_DEFINE(float, GRAPPLE_LENGTH_MIN, "Special Abilities/Grapple Rope/Min Length");
 OPTION_DEFINE(float, GRAPPLE_LENGTH_MAX, "Special Abilities/Grapple Rope/Max Length");
 OPTION_DEFINE(float, GRAPPLE_PULL_UP_SPEED, "Special Abilities/Grapple Rope/Pull Up Speed");
