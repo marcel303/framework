@@ -22,6 +22,11 @@ public:
 		m_v[1] = y;
 	}
 
+	inline void SetZero()
+	{
+		m_v[0] = m_v[1] = 0.f;
+	}
+
 	inline float CalcSize() const
 	{
 		const float sq =
