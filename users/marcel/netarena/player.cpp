@@ -18,25 +18,15 @@
 todo:
 
 - add explosion effects on bombs 'n stuff
-+ explosion effects: force affecting players, pickups, etc
 - arc bullets
-+ axe velocity x 50% on deactivate, 50% gravity
 - grapple auto shorten
 - grapple small speed boost on attach in swing direction
 - diagonal jump pads
-+ attack down/passthrough behavior
-+ slide block type friction %
 - pickup spawn weights per tile
 - shield ability: deflect projectiles in aim direction. recharge period. shield gets transparent
 - fix drawing of aim above/below layers
-+ add reusable aiming code and UI
-+ add grapple aim
 
 ** HIGH PRIORITY **
-
-+ add character select between rounds
-
-- cancel passthrough/attack down behavior on attack up/double jump/etc (any attack/jump) + proto no auto mode, or duration = attack only
 
 - add animations:
 	sword hit non destruct block - sparks at collission point
@@ -69,28 +59,14 @@ todo:
 - prototype invisibility ability
 	charge period
 
-- prototype rocket punch
-	+ idle in air during charge
-	+ vulnerable during charge
-	+ analog stick = direction of attack
-	# max charge = faster, further, succeed/or not, pass through all destructibles/not (strength)
-
-	v2:
-	+ short recharge
-	+ auto discharge
-	+ debuff on attack finish
-
-	v3:
-	- remove debuff
-
 - prototype gravity well teleport
 
 - add path for special
 
 - prototype grappling hook
-	- aim for angle, or auto angle?
+	+ aim for angle, or auto angle?
 	+ jump behavior -> allow double jump?
-	- pull up/down/none?
+	+ pull up/down/none?
 	+ detach conditions: jump, detach (Y), attack, death, level wrap
 	+ swing behavior: separate steering speed
 	+ sounds and fx
@@ -149,6 +125,25 @@ todo:
 - fill the level with lava
 
 ** DONE **
+
++ explosion effects: force affecting players, pickups, etc
++ axe velocity x 50% on deactivate, 50% gravity
++ attack down/passthrough behavior
++ slide block type friction %
++ add reusable aiming code and UI
++ add grapple aim
++ add character select between rounds
++ cancel passthrough/attack down behavior on attack up/double jump/etc (any attack/jump) + proto no auto mode, or duration = attack only
+
++ prototype rocket punch
+	+ idle in air during charge
+	+ vulnerable during charge
+	+ analog stick = direction of attack
+	# max charge = faster, further, succeed/or not, pass through all destructibles/not (strength)
+	v2:
+	+ short recharge
+	+ auto discharge
+	+ debuff on attack finish
 
 */
 
