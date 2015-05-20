@@ -946,6 +946,8 @@ bool App::init()
 
 	if (DEMOMODE)
 	{
+		LIBNET_CHANNEL_ENABLE_TIMEOUTS = false;
+
 		NUM_LOCAL_PLAYERS_TO_ADD = 4;
 		PLAYER_INACTIVITY_KICK = true;
 		VOLCANO_LOOP = true;
