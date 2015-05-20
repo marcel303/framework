@@ -658,6 +658,10 @@ void PipeBomb::tick(GameSim & gameSim, float dt)
 	{
 		gameSim.playSound("objects/pipebomb/explode.ogg");
 		gameSim.addAnimationFx("fx/PipeBomb_Explode.scml", m_pos[0], m_pos[1]);
+		gameSim.doBlastEffect(
+			m_pos,
+			PIPEBOMB_BLAST_RADIUS,
+			pipebombBlastCurve);
 
 		for (int i = 0; i < MAX_PLAYERS; ++i)
 		{
@@ -1552,6 +1556,18 @@ void GameSim::tick()
 #if ENABLE_GAMESTATE_CRC_LOGGING
 	const uint32_t oldCRC = g_logCRCs ? calcCRC() : 0;
 #endif
+
+	// options support
+
+	static bool curvesAreInitialized = false;
+	if (!curvesAreInitialized || g_devMode)
+	{
+		curvesAreInitialized = true;
+
+		pipebombBlastCurve.makeLinear(PIPEBOMB_BLAST_STRENGTH_NEAR, PIPEBOMB_BLAST_STRENGTH_FAR);
+		grenadeBlastCurve.makeLinear(BULLET_GRENADE_BLAST_STRENGTH_NEAR, BULLET_GRENADE_BLAST_STRENGTH_FAR);
+		gravityWellFalloffCurve.makeLinear(1.f, 0.f);
+	}
 
 	switch (m_gameState)
 	{

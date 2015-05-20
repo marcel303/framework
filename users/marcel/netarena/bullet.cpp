@@ -335,6 +335,10 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 						}
 
 						gameSim.playSound("grenade-explode.ogg");
+						gameSim.doBlastEffect(
+							b.m_pos,
+							BULLET_GRENADE_BLAST_RADIUS,
+							grenadeBlastCurve);
 					}
 
 					if (b.type == kBulletType_GrenadeA)

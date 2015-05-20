@@ -366,3 +366,6 @@ struct FixedString
 #pragma pack(pop)
 
 extern Curve defaultCurve;
+extern Curve pipebombBlastCurve;
+extern Curve grenadeBlastCurve;
+extern Curve gravityWellFalloffCurve;
