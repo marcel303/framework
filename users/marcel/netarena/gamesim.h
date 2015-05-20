@@ -22,6 +22,106 @@ class PlayerInstanceData;
 #pragma pack(push)
 #pragma pack(1)
 
+struct PlayerInputState
+{
+	PlayerInputState()
+		: m_actions(0)
+		, m_inactivityTime(0.f)
+	{
+	}
+
+	PlayerInput m_prevState;
+	PlayerInput m_currState;
+	uint32_t m_actions;
+	float m_inactivityTime;
+
+	bool wasDown(int input) { return (m_prevState.buttons & input) != 0; }
+	bool isDown(int input) { return (m_currState.buttons & input) != 0; }
+	bool wentDown(int input) { return !wasDown(input) && isDown(input); }
+	bool wentUp(int input) { return wasDown(input) && !isDown(input); }
+	void next(bool doInactivityCheck, float dt)
+	{
+		if ((m_prevState != m_currState) || (m_actions != 0))
+		{
+			m_inactivityTime = 0.f;
+			m_prevState = m_currState;
+			m_actions = 0;
+		}
+		else
+		{
+			if (doInactivityCheck)
+				m_inactivityTime += dt;
+			else
+				m_inactivityTime = 0.f;
+		}
+	}
+	Vec2 getAnalogDirection() const { return m_currState.getAnalogDirection(); }
+};
+
+struct PlayerAiming
+{
+	PlayerAiming()
+	{
+		memset(this, 0, sizeof(PlayerAiming));
+	}
+
+	void begin(float treshold)
+	{
+		Assert(!isActive);
+		*this = PlayerAiming();
+		isActive = true;
+	}
+
+	void end()
+	{
+		Assert(isActive);
+		*this = PlayerAiming();
+	}
+
+	void tick(GameSim & gameSim, const PlayerInputState & input, float dt)
+	{
+		Assert(isActive);
+
+		if (isActive)
+		{
+			const Vec2 analog = input.getAnalogDirection();
+
+			if (analog.CalcSize() >= treshold)
+			{
+				aim = analog.CalcNormalized();
+				aimIsValid = true;
+			}
+		}
+	}
+
+	void drawBelow(Vec2Arg pos) const
+	{
+		// todo : draw circle thingy or whatever, to indicate that aiming is active
+	}
+
+	void drawAbove(Vec2Arg pos) const
+	{
+		if (aimIsValid)
+		{
+			const Vec2 dir = aim;
+			const Vec2 p1 = pos + dir * 50.f;
+			const Vec2 p2 = pos + dir * 100.f;
+			setColor(colorGreen);
+			drawLine(
+				p1[0],
+				p1[1],
+				p2[0],
+				p2[1]);
+			setColor(colorWhite);
+		}
+	}
+
+	bool isActive;
+	float treshold;
+	bool aimIsValid;
+	Vec2 aim;
+};
+
 struct Player
 {
 	PlayerInstanceData * m_instanceData;
@@ -105,7 +205,8 @@ struct Player
 
 	void beginAxeThrow();
 	void endAxeThrow();
-	void tickAxeThrow();
+	void tickAxeThrow(float dt);
+	Vec2 getAxeThrowPos() const;
 
 	void beginGrapple();
 	void endGrapple();
@@ -129,41 +230,7 @@ struct Player
 	float m_controlDisableTime;
 
 	// input
-	struct InputState
-	{
-		InputState()
-			: m_actions(0)
-			, m_inactivityTime(0.f)
-		{
-		}
-
-		PlayerInput m_prevState;
-		PlayerInput m_currState;
-		uint32_t m_actions;
-		float m_inactivityTime;
-
-		bool wasDown(int input) { return (m_prevState.buttons & input) != 0; }
-		bool isDown(int input) { return (m_currState.buttons & input) != 0; }
-		bool wentDown(int input) { return !wasDown(input) && isDown(input); }
-		bool wentUp(int input) { return wasDown(input) && !isDown(input); }
-		void next(bool doInactivityCheck, float dt)
-		{
-			if ((m_prevState != m_currState) || (m_actions != 0))
-			{
-				m_inactivityTime = 0.f;
-				m_prevState = m_currState;
-				m_actions = 0;
-			}
-			else
-			{
-				if (doInactivityCheck)
-					m_inactivityTime += dt;
-				else
-					m_inactivityTime = 0.f;
-			}
-		}
-		Vec2 getAnalogDirection() const { return Vec2(m_currState.analogX / 127.f, m_currState.analogY / 127.f); }
-	} m_input;
+	PlayerInputState m_input;
 
 	//
 
@@ -273,8 +340,7 @@ struct Player
 			}
 
 			bool isActive;
-			Vec2 direction;
-			bool directionIsValid;
+			PlayerAiming aiming;
 		} m_axeThrow;
 
 		struct Zweihander

@@ -150,6 +150,11 @@ struct PlayerInput
 			analogY != other.analogY;
 	}
 
+	Vec2 getAnalogDirection() const
+	{
+		return Vec2(analogX / 100.f, analogY / 100.f);
+	}
+
 	uint16_t buttons;
 	int8_t analogX;
 	int8_t analogY;

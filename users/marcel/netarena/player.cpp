@@ -19,7 +19,7 @@ todo:
 
 - explosion effects: force affecting players, pickups, etc
 - arc bullets
-- axe velocity x 50% on deactivate, 50% gravity
++ axe velocity x 50% on deactivate, 50% gravity
 - grapple auto shorten
 - grapple small speed boost on attach in swing direction
 - diagonal jump pads
@@ -1148,7 +1148,7 @@ void Player::tick(float dt)
 
 			if (m_attack.m_axeThrow.isActive)
 			{
-				tickAxeThrow();
+				tickAxeThrow(dt);
 			}
 
 			// update zweihander attack
@@ -1675,7 +1675,7 @@ void Player::tick(float dt)
 
 			bool doSteering =
 				m_isAlive &&
-				(playerControl || m_special.meleeCounter != 0 || m_attack.m_axeThrow.isActive);
+				(playerControl || m_special.meleeCounter != 0/* || m_attack.m_axeThrow.isActive*/);
 
 			if (doSteering && steeringSpeed != 0.f)
 			{
@@ -2870,21 +2870,8 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 
 	if (m_attack.m_axeThrow.isActive)
 	{
-		if (m_attack.m_axeThrow.directionIsValid)
-		{
-			const float px = x;
-			const float py = y - 30.f; // fixme : height
-			const Vec2 dir = m_attack.m_axeThrow.direction;
-			const Vec2 off1 = dir * 50.f;
-			const Vec2 off2 = dir * 100.f;
-			setColor(colorGreen);
-			drawLine(
-				px + off1[0],
-				py + off1[1],
-				px + off2[0],
-				py + off2[1]);
-			setColor(colorWhite);
-		}
+		m_attack.m_axeThrow.aiming.drawBelow(getAxeThrowPos());
+		m_attack.m_axeThrow.aiming.drawAbove(getAxeThrowPos()); // todo : draw above player sprites
 	}
 
 	if (GAMESIM->m_gameMode == kGameMode_TokenHunt)
@@ -3660,6 +3647,7 @@ void Player::beginAxeThrow()
 		m_attack.attacking = true;
 
 		m_attack.m_axeThrow.isActive = true;
+		m_attack.m_axeThrow.aiming.begin(AXE_ANALOG_TRESHOLD);
 	}
 }
 
@@ -3669,9 +3657,7 @@ void Player::endAxeThrow()
 
 	// throw axe
 
-	const float px = m_pos[0];
-	const float py = m_pos[1] - 30.f; // fixme : height
-	const Vec2 pos(px, py);
+	const Vec2 pos = getAxeThrowPos();
 	const Vec2 dir = m_input.getAnalogDirection().CalcNormalized();
 
 	GAMESIM->spawnAxe(pos, dir * AXE_THROW_SPEED, m_index);
@@ -3679,19 +3665,13 @@ void Player::endAxeThrow()
 	m_axe = AxeInfo();
 }
 
-void Player::tickAxeThrow()
+void Player::tickAxeThrow(float dt)
 {
 	Assert(m_attack.m_axeThrow.isActive);
 
 	// update direction vector
 
-	const Vec2 analog = m_input.getAnalogDirection();
-
-	if (analog.CalcSize() >= AXE_ANALOG_TRESHOLD)
-	{
-		m_attack.m_axeThrow.direction = analog.CalcNormalized();
-		m_attack.m_axeThrow.directionIsValid = true;
-	}
+	m_attack.m_axeThrow.aiming.tick(*GAMESIM, m_input, dt);
 
 	// throw it?
 
@@ -3699,6 +3679,11 @@ void Player::tickAxeThrow()
 	{
 		endAxeThrow();
 	}
+}
+
+Vec2 Player::getAxeThrowPos() const
+{
+	return m_pos + Vec2(0.f, -30.f);
 }
 
 void Player::beginGrapple()
