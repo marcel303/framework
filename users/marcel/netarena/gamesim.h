@@ -211,6 +211,7 @@ struct Player
 	void beginGrapple();
 	void endGrapple();
 	void tickGrapple(float dt);
+	bool findGrappleAnchorPos(Vec2 & anchorPos, float & length) const;
 	Vec2 getGrapplePos() const;
 	float getGrappleLength() const;
 
@@ -462,9 +463,17 @@ struct Player
 			memset(this, 0, sizeof(GrappleInfo));
 		}
 
-		// todo : add states for deploying the grappling hook? currently attached instantly (which may be fine?)
-		bool isActive;
-		bool isReady; // fully deployed
+		enum State
+		{
+			State_Inactive,
+			State_Aiming,
+			State_Attaching,
+			State_Attached,
+			State_Detaching
+		};
+
+		State state;
+		PlayerAiming aiming;
 		Vec2 anchorPos;
 		float distance;
 	} m_grapple;

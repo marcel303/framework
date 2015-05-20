@@ -27,12 +27,13 @@ todo:
 + slide block type friction %
 - pickup spawn weights per tile
 - shield ability: deflect projectiles in aim direction. recharge period. shield gets transparent
-- fix drawing of grapple aim
-- add reusable aiming code and UI
+- fix drawing of aim
++ add reusable aiming code and UI
++ add grapple aim
 
 ** HIGH PRIORITY **
 
-- add character select between rounds
++ add character select between rounds
 
 - cancel passthrough/attack down behavior on attack up/double jump/etc (any attack/jump) + proto no auto mode, or duration = attack only
 
@@ -435,7 +436,7 @@ void PlayerInstanceData::handleAnimationAction(const std::string & action, const
 		{
 			player->m_animVelIsAbsolute = args.getBool("abs", player->m_animVelIsAbsolute);
 			if (args.getBool("reset", true))
-				player->m_vel = Vec2();
+				player->m_vel.SetZero();
 
 			if (g_devMode)
 				logDebug("-> vel = (%f, %f), m_animVelIsAbsolute = %d", player->m_vel[0], player->m_vel[1], player->m_animVelIsAbsolute);
@@ -653,7 +654,7 @@ void Player::setAnim(PlayerAnim anim, bool play, bool restart)
 
 void Player::clearAnimOverrides()
 {
-	m_animVel = Vec2();
+	m_animVel.SetZero();
 	m_animVelIsAbsolute = false;
 	m_animAllowGravity = true;
 	m_animAllowSteering = true;
@@ -1335,21 +1336,11 @@ void Player::tick(float dt)
 			if (!s_noSpecial)
 			{
 				if (characterData->m_special == kPlayerSpecial_Grapple &&
-					!m_grapple.isActive &&
+					m_grapple.state == GrappleInfo::State_Inactive &&
 					m_input.wentDown(INPUT_BUTTON_Y) &&
 					isAnimOverrideAllowed(kPlayerAnim_Attack))
 				{
 					beginGrapple();
-					// todo : change animation to grappling anim (reuse attack anim for now)
-					// todo : shoot grapple up with a ~25 degree angle
-					// todo : determine anchor point. cannot do ray cast.. do many point tests. against arena blocks only
-					// todo : remember attachment point and length of grapple rope
-					
-					// processing
-					// todo : check if player is grounded. if grounded, release grapple
-					// todo : check if grapple is release (extra button tap, or button release?)
-					// todo : do movement constraint, based on grapple rope length
-					// todo : on attack, jump, death or wrap around : release grapple
 				}
 				else if (characterData->m_special == kPlayerSpecial_Pipebomb &&
 					m_input.wentDown(INPUT_BUTTON_Y) &&
@@ -1501,7 +1492,7 @@ void Player::tick(float dt)
 		}
 		else if (characterData->hasTrait(kPlayerTrait_DoubleJump))
 		{
-			if (playerControl && m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && !m_isWallSliding && !m_grapple.isActive && m_input.wentDown(INPUT_BUTTON_A))
+			if (playerControl && m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && !m_isWallSliding && (m_grapple.state == GrappleInfo::State_Inactive) && m_input.wentDown(INPUT_BUTTON_A))
 			{
 				if (isAnimOverrideAllowed(kPlayerAnim_DoubleJump))
 				{
@@ -1654,7 +1645,7 @@ void Player::tick(float dt)
 				steeringSpeed *= STEERING_SPEED_DOUBLEMELEE;
 				numSteeringFrame = 5;
 			}
-			else if (m_grapple.isActive)
+			else if (m_grapple.state == GrappleInfo::State_Attached)
 			{
 				const Vec2 v1 = getGrapplePos() - m_grapple.anchorPos;
 				if (Calc::Sign(v1[0]) != Calc::Sign(steeringSpeed))
@@ -1783,7 +1774,7 @@ void Player::tick(float dt)
 
 		if (allowJumping && m_input.wentDown(INPUT_BUTTON_A))
 		{
-			if ((currentBlockMaskFloor & kBlockMask_Solid) || m_grapple.isActive)
+			if ((currentBlockMaskFloor & kBlockMask_Solid) || (m_grapple.state == GrappleInfo::State_Attached))
 			{
 				m_jump.jumpVelocityLeft = -PLAYER_JUMP_SPEED;
 				m_jump.cancelStarted = false;
@@ -1817,7 +1808,9 @@ void Player::tick(float dt)
 
 		// grapple rope
 
-		if (m_grapple.isActive)
+		tickGrapple(dt);
+
+		if (m_grapple.state == GrappleInfo::State_Attached)
 		{
 			const float kMaxMove = 5.f;
 			const Vec2 p1 = getGrapplePos();
@@ -1836,18 +1829,6 @@ void Player::tick(float dt)
 				m_vel -= dn * d;
 				//m_vel = m_vel.CalcNormalized() * speed;
 			}
-
-			bool isAttached = (GAMESIM->m_arena.getIntersectingBlocksMask(m_grapple.anchorPos[0], m_grapple.anchorPos[1]) & kBlockMask_Solid) != 0;
-
-			if (m_input.isDown(INPUT_BUTTON_DOWN))
-				m_grapple.distance = Calc::Min((float)GRAPPLE_LENGTH_MAX, m_grapple.distance + dt * GRAPPLE_PULL_DOWN_SPEED);
-			if (m_input.isDown(INPUT_BUTTON_UP))
-				m_grapple.distance = Calc::Max((float)GRAPPLE_LENGTH_MIN, m_grapple.distance - dt * GRAPPLE_PULL_UP_SPEED);
-
-			if (m_grapple.isReady && m_input.wentDown(INPUT_BUTTON_Y) || !isAttached)
-				endGrapple();
-			else
-				m_grapple.isReady = true;
 		}
 
 		// update grounded state
@@ -2089,7 +2070,7 @@ void Player::tick(float dt)
 			});
 
 		if (m_animVelIsAbsolute)
-			m_vel = Vec2();
+			m_vel.SetZero();
 		else
 		{
 			Vec2 delta = newTotalVel - totalVel;
@@ -2662,7 +2643,7 @@ void Player::draw() const
 
 	const CharacterData * characterData = getCharacterData(m_index);
 
-	if (m_grapple.isActive)
+	if (m_grapple.state == GrappleInfo::State_Attached)
 	{
 		const Vec2 p1 = getGrapplePos();
 		const Vec2 p2 = m_grapple.anchorPos;
@@ -2866,6 +2847,14 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 		setColor(colorWhite);
 	}
 
+	// draw grapple direction
+
+	if (m_grapple.state == GrappleInfo::State_Aiming)
+	{
+		m_grapple.aiming.drawBelow(getGrapplePos());
+		m_grapple.aiming.drawAbove(getGrapplePos()); // todo : draw above player sprites
+	}
+
 	// draw axe throw direction
 
 	if (m_attack.m_axeThrow.isActive)
@@ -3021,10 +3010,16 @@ void Player::debugDraw() const
 		y += 18.f;
 	}
 
-	if (m_grapple.isActive)
+	if (m_grapple.state == GrappleInfo::State_Attached)
 	{
 		setColor(colorWhite);
 		drawText(m_pos[0], y, 14, 0.f, 0.f, "%.2f px", getGrappleLength());
+		y += 18.f;
+	}
+	else if (m_grapple.state != GrappleInfo::State_Inactive)
+	{
+		setColor(colorWhite);
+		drawText(m_pos[0], y, 14, 0.f, 0.f, "grappling");
 		y += 18.f;
 	}
 
@@ -3635,7 +3630,7 @@ void Player::endRocketPunch(bool stunned)
 
 		setAnim(kPlayerAnim_Walk, false, true);
 
-		m_vel = Vec2();
+		m_vel.SetZero();
 	}
 }
 
@@ -3688,13 +3683,29 @@ Vec2 Player::getAxeThrowPos() const
 
 void Player::beginGrapple()
 {
+	Assert(m_grapple.state == GrappleInfo::State_Inactive);
+
 	m_grapple = GrappleInfo();
 
+	m_grapple.state = GrappleInfo::State_Aiming;
+
+	m_grapple.aiming.begin(AXE_ANALOG_TRESHOLD); // fixme : grapple aiming treshold
+
+	// todo : change animation to grappling anim (reuse attack anim for now)
+}
+
+bool Player::findGrappleAnchorPos(Vec2 & anchorPos, float & length) const
+{
 	// find anchor point
 
+#if 0
 	const float kGrappleAngle = Calc::DegToRad(15.f * m_facing[0]);
 	const float dx = +std::sin(kGrappleAngle);
 	const float dy = -std::cos(kGrappleAngle);
+#else
+	const float dx = m_grapple.aiming.aim[0];
+	const float dy = m_grapple.aiming.aim[1];
+#endif
 
 	const Arena & arena = GAMESIM->m_arena;
 
@@ -3702,50 +3713,96 @@ void Player::beginGrapple()
 
 	const int grappleBlockMask =
 		kBlockMask_Solid;
-		//- kBlockMask_Destructible
-		//- (1 << kBlockType_Appear);
 
-	for (float x = grapplePos[0], y = grapplePos[1]; y >= 0.f; x += dx, y += dy)
+	for (float x = grapplePos[0], y = grapplePos[1]; x >= 0 && x < ARENA_SX_PIXELS && y >= 0 && y < ARENA_SY_PIXELS; x += dx, y += dy)
 	{
 		if (arena.getIntersectingBlocksMask(x, y) & grappleBlockMask)
 		{
-			const Vec2 anchorPos(x, y);
-			const float length = (grapplePos - anchorPos).CalcSize(); // todo : anchor pos of player should not be at feet
+			anchorPos.Set(x, y);
+			length = (grapplePos - anchorPos).CalcSize(); // todo : anchor pos of player should not be at feet
 
 			if (length >= GRAPPLE_LENGTH_MIN && length <= GRAPPLE_LENGTH_MAX)
 			{
-				m_grapple.isActive = true;
-				m_grapple.anchorPos = anchorPos;
-				m_grapple.distance = length;
-
-				GAMESIM->playSound("grapple-attach.ogg"); // sound played when grapple is attached
+				return true;
 			}
-			break;
 		}
 	}
 
-	if (!m_grapple.isActive)
-	{
-		GAMESIM->playSound("grapple-attach-fail.ogg"); // sound played when grapple attach fails
-	}
+	return false;
 }
 
 void Player::endGrapple()
 {
-	if (m_grapple.isActive)
+	switch (m_grapple.state)
 	{
+	case GrappleInfo::State_Inactive:
+		break;
+	case GrappleInfo::State_Aiming:
+		m_grapple.state = GrappleInfo::State_Inactive;
+		break;
+	case GrappleInfo::State_Attaching:
+		m_grapple.state = GrappleInfo::State_Inactive;
+		break;
+	case GrappleInfo::State_Attached:
 		GAMESIM->playSound("grapple-detach.ogg"); // sound played when grapple is detached
-
-		m_grapple = GrappleInfo();
-
-		m_isAirDashCharged = true;
+		m_grapple.state = GrappleInfo::State_Detaching;
+		break;
+	case GrappleInfo::State_Detaching:
+		break;
 	}
 }
 
 void Player::tickGrapple(float dt)
 {
-	if (m_grapple.isActive)
+	switch (m_grapple.state)
 	{
+	case GrappleInfo::State_Inactive:
+		break;
+
+	case GrappleInfo::State_Aiming:
+		m_grapple.aiming.tick(*GAMESIM, m_input, dt);
+
+		if (m_input.wentUp(INPUT_BUTTON_Y))
+		{
+			if (findGrappleAnchorPos(m_grapple.anchorPos, m_grapple.distance))
+			{
+				m_grapple.state = GrappleInfo::State_Attaching;
+
+				GAMESIM->playSound("grapple-attach.ogg"); // sound played when grapple is attached
+			}
+			else
+			{
+				m_grapple.state = GrappleInfo::State_Detaching;
+
+				GAMESIM->playSound("grapple-attach-fail.ogg"); // sound played when grapple attach fails
+			}
+		}
+		break;
+
+	case GrappleInfo::State_Attaching:
+		m_grapple.state = GrappleInfo::State_Attached;
+		break;
+
+	case GrappleInfo::State_Attached:
+		{
+			// todo : check if player is grounded. if grounded, release grapple
+
+			const bool isAttached = (GAMESIM->m_arena.getIntersectingBlocksMask(m_grapple.anchorPos[0], m_grapple.anchorPos[1]) & kBlockMask_Solid) != 0;
+
+			if (m_input.isDown(INPUT_BUTTON_DOWN))
+				m_grapple.distance = Calc::Min((float)GRAPPLE_LENGTH_MAX, m_grapple.distance + dt * GRAPPLE_PULL_DOWN_SPEED);
+			if (m_input.isDown(INPUT_BUTTON_UP))
+				m_grapple.distance = Calc::Max((float)GRAPPLE_LENGTH_MIN, m_grapple.distance - dt * GRAPPLE_PULL_UP_SPEED);
+
+			if (m_input.wentDown(INPUT_BUTTON_Y) || !isAttached)
+				endGrapple();
+		}
+		break;
+
+	case GrappleInfo::State_Detaching:
+		m_grapple = GrappleInfo();
+		m_isAirDashCharged = true;
+		break;
 	}
 }
 
@@ -3756,6 +3813,7 @@ Vec2 Player::getGrapplePos() const
 
 float Player::getGrappleLength() const
 {
+	Assert(m_grapple.state == GrappleInfo::State_Attached);
 	const Vec2 p1 = getGrapplePos();
 	const Vec2 p2 = m_grapple.anchorPos;
 	return (p2 - p1).CalcSize();
