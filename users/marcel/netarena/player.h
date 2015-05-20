@@ -58,12 +58,14 @@ public:
 
 class CharacterData
 {
+	mutable Spriter * m_spriter;
+
 public:
+	int m_characterIndex;
 	Dictionary m_props;
 	int m_collisionSx;
 	int m_collisionSy;
 	AnimData m_animData;
-	Spriter * m_spriter;
 	float m_spriteScale;
 	float m_weight; // the change in velocity as a result of a hit depends on this value
 	float m_meleeCooldown;
@@ -79,6 +81,7 @@ public:
 	void load(int characterIndex);
 
 	bool hasTrait(PlayerTrait trait) const;
+	Spriter * getSpriter() const;
 };
 
 class PlayerInstanceData

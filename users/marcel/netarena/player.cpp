@@ -17,6 +17,19 @@
 
 todo:
 
+- explosion effects: force affecting players, pickups, etc
+- arc bullets
+- axe velocity x 50% on deactivate, 50% gravity
+- grapple auto shorten
+- grapple small speed boost on attach in swing direction
+- diagonal jump pads
++ attack down/passthrough behavior
++ slide block type friction %
+- pickup spawn weights per tile
+- shield ability: deflect projectiles in aim direction. recharge period. shield gets transparent
+- fix drawing of grapple aim
+- add reusable aiming code and UI
+
 ** HIGH PRIORITY **
 
 - add character select between rounds
@@ -520,7 +533,7 @@ bool Player::getAttackCollision(CollisionShape & shape, Vec2Arg shift) const
 
 	Vec2 points[4];
 
-	if (!characterData->m_spriter->getHitboxAtTime(m_spriterState.animIndex, "hitbox", m_spriterState.animTime, points))
+	if (!characterData->getSpriter()->getHitboxAtTime(m_spriterState.animIndex, "hitbox", m_spriterState.animTime, points))
 	{
 		return false;
 	}
@@ -666,15 +679,15 @@ void Player::applyAnim()
 
 	const CharacterData * characterData = getCharacterData(m_characterIndex);
 
-	if (!m_spriterState.startAnim(*characterData->m_spriter, s_animInfos[m_anim].name))
+	if (!m_spriterState.startAnim(*characterData->getSpriter(), s_animInfos[m_anim].name))
 	{
 		const char * filename = makeCharacterFilename(m_characterIndex, "sprite/sprite.scml");
 		logError("unable to find animation %s in file %s", s_animInfos[m_anim].name, filename);
-		m_spriterState.startAnim(*characterData->m_spriter, s_animInfos[kPlayerAnim_Jump].name);
+		m_spriterState.startAnim(*characterData->getSpriter(), s_animInfos[kPlayerAnim_Jump].name);
 	}
 
 	if (!m_animPlay)
-		m_spriterState.stopAnim(*characterData->m_spriter);
+		m_spriterState.stopAnim(*characterData->getSpriter());
 }
 
 //
@@ -752,7 +765,7 @@ void Player::tick(float dt)
 
 		const int oldTime = m_spriterState.animTime * 1000.f;
 
-		const bool isDone = m_spriterState.updateAnim(*characterData->m_spriter, dt * animData.speed * PLAYER_ANIM_MULTIPLIER);
+		const bool isDone = m_spriterState.updateAnim(*characterData->getSpriter(), dt * animData.speed * PLAYER_ANIM_MULTIPLIER);
 
 		const int newTime = m_spriterState.animTime * 1000.f;
 
@@ -796,6 +809,7 @@ void Player::tick(float dt)
 			case kPlayerAnim_AttackUp:
 			case kPlayerAnim_AttackDown:
 				m_attack.attacking = false;
+				m_enterPassthrough = false;
 				break;
 			case kPlayerAnim_Fire:
 				m_attack.attacking = false;
@@ -2044,7 +2058,7 @@ void Player::tick(float dt)
 
 						if (/*self->m_isAnimDriven && */self->m_anim == kPlayerAnim_AirDash && characterData->hasTrait(kPlayerTrait_AirDash))
 						{
-							self->m_spriterState.stopAnim(*characterData->m_spriter);
+							self->m_spriterState.stopAnim(*characterData->getSpriter());
 							self->clearAnimOverrides();
 						}
 
@@ -2140,7 +2154,7 @@ void Player::tick(float dt)
 		const uint32_t blockMask = dirBlockMask[0] | dirBlockMask[1];
 
 		if ((dirBlockMask[1] & (1 << kBlockType_Slide)) && totalVel[1] >= 0.f)
-			surfaceFriction = 0.f;
+			surfaceFriction = FRICTION_GROUNDED_SLIDE;
 		else if (m_ice.timer != 0.f)
 			surfaceFriction = 0.f;
 		else if ((Calc::Sign(m_vel[1]) != Calc::Sign(gravity) && m_vel[1] != 0.f) || (dirBlockMask[1] & kBlockMask_Solid) == 0)
@@ -2900,7 +2914,7 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 	spriterState.scaleY = scale;
 	spriterState.flipX = flipX;
 	spriterState.flipY = flipY;
-	characterData->m_spriter->draw(spriterState);
+	characterData->getSpriter()->draw(spriterState);
 
 	setColorMode(COLOR_MUL);
 	setColor(colorWhite);
@@ -3897,6 +3911,8 @@ CharacterData::~CharacterData()
 
 void CharacterData::load(int characterIndex)
 {
+	m_characterIndex = characterIndex;
+
 	// reload character properties
 
 	m_props.load(makeCharacterFilename(characterIndex, "props.txt"));
@@ -3926,8 +3942,9 @@ void CharacterData::load(int characterIndex)
 	delete m_spriter;
 	m_spriter = 0;
 
-	const char * filename = makeCharacterFilename(characterIndex, "sprite/sprite.scml");
-	m_spriter = new Spriter(filename);
+#ifndef DEBUG
+	getSpriter();
+#endif
 
 	m_spriteScale = m_props.getFloat("sprite_scale", 1.f);
 	m_meleeCooldown = m_props.getFloat("melee_cooldown", PLAYER_SWORD_COOLDOWN);
@@ -3979,6 +3996,17 @@ void CharacterData::load(int characterIndex)
 bool CharacterData::hasTrait(PlayerTrait trait) const
 {
 	return (m_traits & trait) != 0;
+}
+
+Spriter * CharacterData::getSpriter() const
+{
+	if (!m_spriter)
+	{
+		const char * filename = makeCharacterFilename(m_characterIndex, "sprite/sprite.scml");
+		m_spriter = new Spriter(filename);
+	}
+
+	return m_spriter;
 }
 
 //
