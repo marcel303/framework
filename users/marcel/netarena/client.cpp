@@ -199,8 +199,8 @@ void Client::tick(float dt)
 					if (g.isDown(GAMEPAD_L1) || g.isDown(GAMEPAD_R1))
 						input.buttons |= INPUT_BUTTON_L1R1;
 
-					input.analogX = g.getAnalog(0, ANALOG_X) * 100;
-					input.analogY = g.getAnalog(0, ANALOG_Y) * 100;
+					input.analogX = Calc::Mid((int)(input.analogX + g.getAnalog(0, ANALOG_X) * 100), -100, +100);
+					input.analogY = Calc::Mid((int)(input.analogY + g.getAnalog(0, ANALOG_Y) * 100), -100, +100);
 				}
 			}
 
