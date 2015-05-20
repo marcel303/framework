@@ -532,8 +532,6 @@ struct Player
 
 struct Pickup : PhysicsActor
 {
-	bool isAlive;
-
 	PickupType type;
 	uint8_t blockX;
 	uint8_t blockY;

@@ -120,6 +120,7 @@ void Pickup::setup(PickupType _type, int _blockX, int _blockY)
 
 	*static_cast<PhysicsActor*>(this) = PhysicsActor();
 
+	m_isActive = true;
 	m_pos.Set(
 		blockX * BLOCK_SX + BLOCK_SX / 2.f,
 		blockY * BLOCK_SY + BLOCK_SY - sprite.getHeight());
@@ -164,6 +165,7 @@ void Token::setup(int blockX, int blockY)
 
 	*static_cast<PhysicsActor*>(this) = PhysicsActor();
 
+	m_isActive = true;
 	m_bbMin.Set(-sprite.getWidth() / 2.f, -sprite.getHeight() / 2.f);
 	m_bbMax.Set(+sprite.getWidth() / 2.f, +sprite.getHeight() / 2.f);
 	m_pos.Set(
@@ -233,6 +235,7 @@ void Coin::setup(int blockX, int blockY)
 
 	*static_cast<PhysicsActor*>(this) = PhysicsActor();
 
+	m_isActive = true;
 	m_bbMin.Set(-sprite.getWidth() / 2.f, -sprite.getHeight() / 2.f);
 	m_bbMax.Set(+sprite.getWidth() / 2.f, +sprite.getHeight() / 2.f);
 	m_pos.Set(
@@ -1739,7 +1742,7 @@ void GameSim::tickPlay()
 
 	for (int i = 0; i < MAX_PICKUPS; ++i)
 	{
-		if (m_pickups[i].isAlive)
+		if (m_pickups[i].m_isActive)
 			m_pickups[i].tick(*this, dt);
 	}
 
@@ -1779,7 +1782,7 @@ void GameSim::tickPlay()
 
 			int numPickups = 0;
 			for (int i = 0; i < MAX_PICKUPS; ++i)
-				if (m_pickups[i].isAlive)
+				if (m_pickups[i].m_isActive)
 					numPickups++;
 
 			if (numPickups < MAX_PICKUP_COUNT)
@@ -2233,7 +2236,7 @@ void GameSim::drawPlay()
 		{
 			const Pickup & pickup = m_pickups[i];
 
-			if (pickup.isAlive)
+			if (pickup.m_isActive)
 				pickup.draw();
 		}
 
@@ -2355,7 +2358,7 @@ void GameSim::drawPlay()
 		{
 			const Pickup & pickup = m_pickups[i];
 
-			if (pickup.isAlive)
+			if (pickup.m_isActive)
 				pickup.drawLight();
 		}
 
@@ -2595,7 +2598,7 @@ void GameSim::testCollisionInternal(const CollisionShape & shape, uint32_t typeM
 Pickup * GameSim::allocPickup()
 {
 	for (int i = 0; i < MAX_PICKUPS; ++i)
-		if (!m_pickups[i].isAlive)
+		if (!m_pickups[i].m_isActive)
 			return &m_pickups[i];
 	return 0;
 }
@@ -2633,7 +2636,6 @@ void GameSim::trySpawnPickup(PickupType type)
 
 void GameSim::spawnPickup(Pickup & pickup, PickupType type, int blockX, int blockY)
 {
-	pickup.isAlive = true;
 	pickup.setup(type, blockX, blockY);
 }
 
@@ -2649,7 +2651,7 @@ bool GameSim::grabPickup(int x1, int y1, int x2, int y2, Pickup & grabbedPickup)
 	{
 		Pickup & pickup = m_pickups[i];
 
-		if (pickup.isAlive)
+		if (pickup.m_isActive)
 		{
 			CollisionInfo pickupCollision;
 			pickup.getCollisionInfo(pickupCollision);
