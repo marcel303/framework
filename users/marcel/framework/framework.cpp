@@ -1392,6 +1392,13 @@ void Dictionary::setBool(const char * name, bool value)
 	setInt(name, value ? 1 : 0);
 }
 
+void Dictionary::setFloat(const char * name, float value)
+{
+	char text[64];
+	sprintf_s(text, sizeof(text), "%f", value);
+	setString(name, text);
+}
+
 void Dictionary::setPtr(const char * name, void * value)
 {
 	// fixme : right now this only works with 32 bit pointers

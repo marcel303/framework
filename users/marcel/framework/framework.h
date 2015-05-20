@@ -317,6 +317,7 @@ public:
 	void setString(const char * name, const char * value);
 	void setInt(const char * name, int value);
 	void setBool(const char * name, bool value);
+	void setFloat(const char * name, float value);
 	void setPtr(const char * name, void * value);
 	
 	std::string getString(const char * name, const char * _default) const;
