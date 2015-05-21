@@ -1643,7 +1643,9 @@ void Player::tick(float dt)
 				const Vec2 analog = m_input.getAnalogDirection();
 				m_jetpack.dashRemaining = Calc::Max(0.f, m_jetpack.dashRemaining - dt);
 				//if (analog.CalcSize() < .1f)
-				if (analog * m_jetpack.oldAnalog <= JETPACK_DASH_RELOAD_TRESHOLD)
+				if (JETPACK_DASH_ON_JUMP && m_input.wentDown(INPUT_BUTTON_X))
+					m_jetpack.dashRemaining = JETPACK_DASH_DURATION;
+				if (JETPACK_DASH_ON_DIRECTION_CHANGE && analog * m_jetpack.oldAnalog <= JETPACK_DASH_RELOAD_TRESHOLD)
 					m_jetpack.dashRemaining = JETPACK_DASH_DURATION;
 				m_jetpack.oldAnalog = analog;
 				const float mult = (m_jetpack.dashRemaining > 0.f && analog.CalcSize() > .5f)

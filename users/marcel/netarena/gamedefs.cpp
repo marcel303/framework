@@ -277,11 +277,16 @@ OPTION_DEFINE(float, JETPACK_ACCEL, "Special Abilities/Jetpack/Acceleration");
 OPTION_DEFINE(float, JETPACK_FX_INTERVAL, "Special Abilities/Jetpack/Smoke Fx Interval (Sec)");
 OPTION_DEFINE(float, JETPACK_BOB_AMOUNT, "Special Abilities/Jetpack/Bob Amount (px)");
 OPTION_DEFINE(float, JETPACK_BOB_FREQ, "Special Abilities/Jetpack/Bob Frequency (Hz)");
+OPTION_DEFINE(bool, JETPACK_DASH_ON_JUMP, "Special Abilities/Jetpack/Dash On X Button Press");
+OPTION_DEFINE(bool, JETPACK_DASH_ON_DIRECTION_CHANGE, "Special Abilities/Jetpack/Dash On Direction Change");
 OPTION_DEFINE(float, JETPACK_DASH_SPEED_MULTIPLIER, "Special Abilities/Jetpack/Dash Speed Multiplier");
 OPTION_DEFINE(float, JETPACK_DASH_DURATION, "Special Abilities/Jetpack/Dash Duration");
 OPTION_DEFINE(float, JETPACK_DASH_RELOAD_TRESHOLD, "Special Abilities/Jetpack/Dash Reload Input Treshold");
 OPTION_STEP(JETPACK_NEW_STEERING_CURVE_MIN, 0, 0, 10.f);
 OPTION_STEP(JETPACK_NEW_STEERING_CURVE_MAX, 0, 0, 10.f);
+OPTION_STEP(JETPACK_DASH_SPEED_MULTIPLIER, 0, 0, .1f);
+OPTION_STEP(JETPACK_DASH_DURATION, 0, 0, .1f);
+OPTION_STEP(JETPACK_DASH_RELOAD_TRESHOLD, 0, 0, .1f);
 
 OPTION_DEFINE(int, DOUBLEMELEE_ATTACK_RADIUS, "Special Abilities/Double Melee/Attack Radius");
 OPTION_DEFINE(int, DOUBLEMELEE_SPIN_COUNT, "Special Abilities/Double Melee/Spin Count");
