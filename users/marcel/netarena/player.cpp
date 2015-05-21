@@ -11,7 +11,7 @@
 #define USE_NEW_COLLISION_CODE 1
 #define ENABLE_CHARACTER_OUTLINE 1
 
-#pragma optimize("", off)
+//#pragma optimize("", off)
 
 /*
 
@@ -1643,7 +1643,7 @@ void Player::tick(float dt)
 				const Vec2 analog = m_input.getAnalogDirection();
 				m_jetpack.dashRemaining = Calc::Max(0.f, m_jetpack.dashRemaining - dt);
 				//if (analog.CalcSize() < .1f)
-				if (JETPACK_DASH_ON_JUMP && m_input.wentDown(INPUT_BUTTON_X))
+				if (JETPACK_DASH_ON_JUMP && m_input.wentDown(INPUT_BUTTON_A))
 					m_jetpack.dashRemaining = JETPACK_DASH_DURATION;
 				if (JETPACK_DASH_ON_DIRECTION_CHANGE && analog * m_jetpack.oldAnalog <= JETPACK_DASH_RELOAD_TRESHOLD)
 					m_jetpack.dashRemaining = JETPACK_DASH_DURATION;
