@@ -1566,6 +1566,8 @@ void GameSim::tick()
 
 		pipebombBlastCurve.makeLinear(PIPEBOMB_BLAST_STRENGTH_NEAR, PIPEBOMB_BLAST_STRENGTH_FAR);
 		grenadeBlastCurve.makeLinear(BULLET_GRENADE_BLAST_STRENGTH_NEAR, BULLET_GRENADE_BLAST_STRENGTH_FAR);
+		jetpackAnalogCurveX.makeLinear(JETPACK_NEW_STEERING_CURVE_MIN, JETPACK_NEW_STEERING_CURVE_MAX);
+		jetpackAnalogCurveY.makeLinear(JETPACK_NEW_STEERING_CURVE_MIN, JETPACK_NEW_STEERING_CURVE_MAX);
 		gravityWellFalloffCurve.makeLinear(1.f, 0.f);
 	}
 

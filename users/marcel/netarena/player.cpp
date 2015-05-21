@@ -17,6 +17,21 @@
 
 todo:
 
+- jetpack ability V2:
+	- free analog stick control
+	- fly/land behavior?
+	- how to combine with attacks?
+	- slight bobbing up and down. reset/disable bobbing during fast movement?
+	- affected by gravity or not at all?
+	- add fuel system?
+	- recharge -> how?
+	- debuffs:
+		- slower speed when grounded?
+		- no up/down/forward attack momentum?
+		- less attack range?
+	- extra buff ability
+		- destroy jetpack with Y, repel players, need full recharge 
+
 - add explosion effects on bombs 'n stuff
 - arc bullets
 - grapple auto shorten
@@ -1591,91 +1606,115 @@ void Player::tick(float dt)
 
 		// steering
 
-		float steeringSpeed = 0.f;
+		float steeringSpeed[2] = { 0.f, 0.f };
 
-		if (true)
+		for (int i = 0; i < 2; ++i)
 		{
-			int numSteeringFrame = 1;
+			int numSteeringFrames = 1;
 
-			steeringSpeed += m_input.m_currState.analogX / 100.f;
-			
-			if ((m_isGrounded || m_isAttachedToSticky) && playerControl)
+			if (m_isUsingJetpack)
 			{
-				if (isAnimOverrideAllowed(kPlayerAnim_Walk))
+				if (playerControl && isAnimOverrideAllowed(kPlayerAnim_Walk))
 				{
-					if (steeringSpeed != 0.f)
-						setAnim(kPlayerAnim_Walk, true, false);
-					else
-						setAnim(kPlayerAnim_Idle, true, false);
+					setAnim(kPlayerAnim_Idle, true, false);
+				}
+			}
+			else if (i == 0)
+			{
+				steeringSpeed[i] += m_input.m_currState.analogX / 100.f;
+			
+				if ((m_isGrounded || m_isAttachedToSticky) && playerControl)
+				{
+					if (isAnimOverrideAllowed(kPlayerAnim_Walk))
+					{
+						if (steeringSpeed[i] != 0.f)
+							setAnim(kPlayerAnim_Walk, true, false);
+						else
+							setAnim(kPlayerAnim_Idle, true, false);
+					}
 				}
 			}
 
 			//
 
-			bool isWalkingOnSolidGround = false;
+			if (JETPACK_NEW_STEERING && m_isUsingJetpack)
+			{
+				const Curve * curves[2] = { &jetpackAnalogCurveX, &jetpackAnalogCurveY };
+				const Vec2 analog = m_input.getAnalogDirection();
+				const float value = Calc::Sign(analog[i]) * curves[i]->eval(Calc::Abs(analog[i]));
+				//if (value != 0.f)
+					m_jetpackSteeringSpeed[i] = value;
+				//else
+				//	m_jetpackSteeringSpeed[i] *= powf(1.f - FRICTION_JETPACK, dt * 60.f);
+				steeringSpeed[i] = m_jetpackSteeringSpeed[i];
+			}
+			else if (i == 0)
+			{
+				bool isWalkingOnSolidGround = false;
 
-			if (m_isAttachedToSticky)
-				isWalkingOnSolidGround = (currentBlockMaskCeil & kBlockMask_Solid) != 0;
-			else
-				isWalkingOnSolidGround = (currentBlockMaskFloor & kBlockMask_Solid) != 0;
+				if (m_isAttachedToSticky)
+					isWalkingOnSolidGround = (currentBlockMaskCeil & kBlockMask_Solid) != 0;
+				else
+					isWalkingOnSolidGround = (currentBlockMaskFloor & kBlockMask_Solid) != 0;
 
-			if (m_attack.m_zweihander.isActive())
-			{
-				Assert(m_isAlive);
-
-				if (m_isGrounded)
-					steeringSpeed *= STEERING_SPEED_ZWEIHANDER;
-				numSteeringFrame = 5;
-			}
-			else if (isWalkingOnSolidGround)
-			{
-				steeringSpeed *= STEERING_SPEED_ON_GROUND;
-				numSteeringFrame = 5;
-			}
-			else if (m_isUsingJetpack)
-			{
-				steeringSpeed *= STEERING_SPEED_JETPACK;
-				numSteeringFrame = 5;
-			}
-			else if (m_special.meleeCounter != 0)
-			{
-				steeringSpeed *= STEERING_SPEED_DOUBLEMELEE;
-				numSteeringFrame = 5;
-			}
-			else if (m_grapple.state == GrappleInfo::State_Attached)
-			{
-				const Vec2 v1 = getGrapplePos() - m_grapple.anchorPos;
-				if (Calc::Sign(v1[0]) != Calc::Sign(steeringSpeed))
+				if (m_attack.m_zweihander.isActive())
 				{
-					steeringSpeed *= STEERING_SPEED_GRAPPLE;
-					numSteeringFrame = 5;
+					Assert(m_isAlive);
+
+					if (m_isGrounded)
+						steeringSpeed[i] *= STEERING_SPEED_ZWEIHANDER;
+					numSteeringFrames = 5;
+				}
+				else if (isWalkingOnSolidGround)
+				{
+					steeringSpeed[i] *= STEERING_SPEED_ON_GROUND;
+					numSteeringFrames = 5;
+				}
+				else if (m_isUsingJetpack)
+				{
+					steeringSpeed[i] *= STEERING_SPEED_JETPACK;
+					numSteeringFrames = 5;
+				}
+				else if (m_special.meleeCounter != 0)
+				{
+					steeringSpeed[i] *= STEERING_SPEED_DOUBLEMELEE;
+					numSteeringFrames = 5;
+				}
+				else if (m_grapple.state == GrappleInfo::State_Attached)
+				{
+					const Vec2 v1 = getGrapplePos() - m_grapple.anchorPos;
+					if (Calc::Sign(v1[i]) != Calc::Sign(steeringSpeed[i]))
+					{
+						steeringSpeed[i] *= STEERING_SPEED_GRAPPLE;
+						numSteeringFrames = 5;
+					}
+					else
+					{
+						steeringSpeed[i] = 0.f;
+					}
 				}
 				else
 				{
-					steeringSpeed = 0.f;
+					steeringSpeed[i] *= STEERING_SPEED_IN_AIR;
+					numSteeringFrames = 5;
 				}
-			}
-			else
-			{
-				steeringSpeed *= STEERING_SPEED_IN_AIR;
-				numSteeringFrame = 5;
 			}
 
 			bool doSteering =
 				m_isAlive &&
 				(playerControl || m_special.meleeCounter != 0/* || m_attack.m_axeThrow.isActive*/);
 
-			if (doSteering && steeringSpeed != 0.f)
+			if (doSteering && steeringSpeed[i] != 0.f)
 			{
 				float maxSteeringDelta;
 
-				if (steeringSpeed > 0)
-					maxSteeringDelta = steeringSpeed - m_vel[0];
-				if (steeringSpeed < 0)
-					maxSteeringDelta = steeringSpeed - m_vel[0];
+				if (steeringSpeed[i] > 0.f)
+					maxSteeringDelta = steeringSpeed[i] - m_vel[i];
+				if (steeringSpeed[i] < 0.f)
+					maxSteeringDelta = steeringSpeed[i] - m_vel[i];
 
-				if (Calc::Sign(steeringSpeed) == Calc::Sign(maxSteeringDelta))
-					m_vel[0] += maxSteeringDelta * dt * 60.f / numSteeringFrame;
+				if (Calc::Sign(steeringSpeed[i]) == Calc::Sign(maxSteeringDelta))
+					m_vel[i] += maxSteeringDelta * dt * 60.f / numSteeringFrames;
 			}
 		}
 
@@ -1688,13 +1727,18 @@ void Player::tick(float dt)
 		m_isWallSliding = false;
 		m_isUsingJetpack = false;
 
+		if (playerControl && characterData->m_special == kPlayerSpecial_Jetpack && (m_input.isDown(INPUT_BUTTON_Y) || JETPACK_NEW_STEERING) && !s_noSpecial)
+			m_isUsingJetpack = true;
+
 		if (m_animAllowGravity &&
 			//!m_isAttachedToSticky &&
 			!m_animVelIsAbsolute &&
 			m_bubble.timer == 0.f &&
 			(!m_attack.m_rocketPunch.isActive || m_attack.m_rocketPunch.state == AttackInfo::RocketPunch::kState_Stunned))
 		{
-			if (currentBlockMask & (1 << kBlockType_GravityDisable))
+			if (JETPACK_NEW_STEERING && m_isUsingJetpack)
+				gravity = 0.f;
+			else if (currentBlockMask & (1 << kBlockType_GravityDisable))
 				gravity = 0.f;
 			else if (currentBlockMask & (1 << kBlockType_GravityReverse))
 				gravity = GRAVITY * BLOCKTYPE_GRAVITY_REVERSE_MULTIPLIER;
@@ -1707,11 +1751,8 @@ void Player::tick(float dt)
 
 			bool canWallSlide = true;
 
-			if (playerControl && characterData->m_special == kPlayerSpecial_Jetpack && m_input.isDown(INPUT_BUTTON_Y) && !s_noSpecial)
-			{
+			if (!JETPACK_NEW_STEERING && m_isUsingJetpack)
 				gravity -= JETPACK_ACCEL;
-				m_isUsingJetpack = true;
-			}
 			
 			// wall slide
 
@@ -2131,7 +2172,9 @@ void Player::tick(float dt)
 
 		const uint32_t blockMask = dirBlockMask[0] | dirBlockMask[1];
 
-		if ((dirBlockMask[1] & (1 << kBlockType_Slide)) && totalVel[1] >= 0.f)
+		if (JETPACK_NEW_STEERING && m_isUsingJetpack)
+			surfaceFriction = 0.f;
+		else if ((dirBlockMask[1] & (1 << kBlockType_Slide)) && totalVel[1] >= 0.f)
 			surfaceFriction = FRICTION_GROUNDED_SLIDE;
 		else if (m_ice.timer != 0.f)
 			surfaceFriction = 0.f;
@@ -2459,7 +2502,12 @@ void Player::tick(float dt)
 
 		// breaking
 
-		if (steeringSpeed == 0.f || (std::abs(m_vel[0]) > std::abs(steeringSpeed)))
+		if (JETPACK_NEW_STEERING && m_isUsingJetpack)
+		{
+			// fixme : should only decelerate jetpack steering speed, not total velocity?
+			m_vel *= powf(1.f - FRICTION_JETPACK, dt * 60.f);
+		}
+		if (steeringSpeed[0] == 0.f || (std::abs(m_vel[0]) > std::abs(steeringSpeed[0])))
 		{
 			m_vel[0] *= powf(1.f - surfaceFriction, dt * 60.f);
 		}
@@ -2507,9 +2555,9 @@ void Player::tick(float dt)
 
 		// facing
 
-		if (playerControl && steeringSpeed != 0.f)
+		if (playerControl && steeringSpeed[0] != 0.f)
 		{
-			const float newFacing = steeringSpeed < 0.f ? -1 : +1;
+			const float newFacing = steeringSpeed[0] < 0.f ? -1 : +1;
 			if (newFacing != m_facing[0])
 			{
 				m_facingAnim = 1.f;

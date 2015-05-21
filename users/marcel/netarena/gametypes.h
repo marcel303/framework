@@ -368,4 +368,6 @@ struct FixedString
 extern Curve defaultCurve;
 extern Curve pipebombBlastCurve;
 extern Curve grenadeBlastCurve;
+extern Curve jetpackAnalogCurveX;
+extern Curve jetpackAnalogCurveY;
 extern Curve gravityWellFalloffCurve;

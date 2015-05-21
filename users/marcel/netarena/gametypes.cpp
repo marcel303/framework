@@ -30,6 +30,8 @@ const char * g_playerSpecialNames[kPlayerSpecial_COUNT] =
 Curve defaultCurve(0.f, 1.f);
 Curve pipebombBlastCurve;
 Curve grenadeBlastCurve;
+Curve jetpackAnalogCurveX;
+Curve jetpackAnalogCurveY;
 Curve gravityWellFalloffCurve;
 
 //

@@ -509,6 +509,7 @@ struct Player
 
 	bool m_isUsingJetpack;
 	float m_jetpackFxTime;
+	Vec2 m_jetpackSteeringSpeed;
 
 	bool m_animVelIsAbsolute; // should the animation velocity be added to or replace the regular player velocity?
 	bool m_animAllowGravity;

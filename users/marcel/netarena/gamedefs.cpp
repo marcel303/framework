@@ -139,8 +139,10 @@ OPTION_STEP(PLAYER_WALLSLIDE_SPEED, 0, 0, 10);
 
 OPTION_DEFINE(float, FRICTION_GROUNDED, "Physics/Friction/On Ground");
 OPTION_DEFINE(float, FRICTION_GROUNDED_SLIDE, "Physics/Friction/On Slippery Ground");
+OPTION_DEFINE(float, FRICTION_JETPACK, "Physics/Friction/When Using (New) Jetpack");
 OPTION_STEP(FRICTION_GROUNDED, 0, 0, 0.01f);
 OPTION_STEP(FRICTION_GROUNDED_SLIDE, 0, 0, 0.01f);
+OPTION_STEP(FRICTION_JETPACK, 0, 0, 0.01f);
 
 OPTION_DEFINE(float, GRAVITY, "Physics/Gravity");
 OPTION_STEP(GRAVITY, 0, 10000, 50);
@@ -268,6 +270,9 @@ OPTION_STEP(TORCH_FLICKER_STRENGTH, 0, 0, .02f);
 
 OPTION_DEFINE(int, LIGHTING_DEBUG_MODE, "Graphics/Lighting/Debug Mode");
 
+OPTION_DEFINE(bool, JETPACK_NEW_STEERING, "Special Abilities/Jetpack/New Steering Behavior");
+OPTION_DEFINE(float, JETPACK_NEW_STEERING_CURVE_MIN, "Special Abilities/Jetpack/New Steering Speed Min");
+OPTION_DEFINE(float, JETPACK_NEW_STEERING_CURVE_MAX, "Special Abilities/Jetpack/New Steering Speed Max");
 OPTION_DEFINE(float, JETPACK_ACCEL, "Special Abilities/Jetpack/Acceleration");
 OPTION_DEFINE(float, JETPACK_FX_INTERVAL, "Special Abilities/Jetpack/Smoke Fx Interval (Sec)");
 
