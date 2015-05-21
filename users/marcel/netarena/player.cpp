@@ -11,7 +11,7 @@
 #define USE_NEW_COLLISION_CODE 1
 #define ENABLE_CHARACTER_OUTLINE 1
 
-//#pragma optimize("", off)
+#pragma optimize("", off)
 
 /*
 
@@ -1612,7 +1612,7 @@ void Player::tick(float dt)
 		{
 			int numSteeringFrames = 1;
 
-			if (m_isUsingJetpack)
+			if (m_jetpack.isActive)
 			{
 				if (playerControl && isAnimOverrideAllowed(kPlayerAnim_Walk))
 				{
@@ -1637,16 +1637,24 @@ void Player::tick(float dt)
 
 			//
 
-			if (JETPACK_NEW_STEERING && m_isUsingJetpack)
+			if (JETPACK_NEW_STEERING && m_jetpack.isActive)
 			{
 				const Curve * curves[2] = { &jetpackAnalogCurveX, &jetpackAnalogCurveY };
 				const Vec2 analog = m_input.getAnalogDirection();
+				m_jetpack.dashRemaining = Calc::Max(0.f, m_jetpack.dashRemaining - dt);
+				//if (analog.CalcSize() < .1f)
+				if (analog * m_jetpack.oldAnalog <= JETPACK_DASH_RELOAD_TRESHOLD)
+					m_jetpack.dashRemaining = JETPACK_DASH_DURATION;
+				m_jetpack.oldAnalog = analog;
+				const float mult = (m_jetpack.dashRemaining > 0.f && analog.CalcSize() > .5f)
+					? JETPACK_DASH_SPEED_MULTIPLIER
+					: 1.f;
 				const float value = Calc::Sign(analog[i]) * curves[i]->eval(Calc::Abs(analog[i]));
 				//if (value != 0.f)
-					m_jetpackSteeringSpeed[i] = value;
+					m_jetpack.steeringSpeed[i] = value * mult;
 				//else
-				//	m_jetpackSteeringSpeed[i] *= powf(1.f - FRICTION_JETPACK, dt * 60.f);
-				steeringSpeed[i] = m_jetpackSteeringSpeed[i];
+				//	m_jetpack.steeringSpeed[i] *= powf(1.f - FRICTION_JETPACK, dt * 60.f);
+				steeringSpeed[i] = m_jetpack.steeringSpeed[i];
 			}
 			else if (i == 0)
 			{
@@ -1670,7 +1678,7 @@ void Player::tick(float dt)
 					steeringSpeed[i] *= STEERING_SPEED_ON_GROUND;
 					numSteeringFrames = 5;
 				}
-				else if (m_isUsingJetpack)
+				else if (m_jetpack.isActive)
 				{
 					steeringSpeed[i] *= STEERING_SPEED_JETPACK;
 					numSteeringFrames = 5;
@@ -1725,10 +1733,10 @@ void Player::tick(float dt)
 		const bool wasWallSliding = m_isWallSliding;
 
 		m_isWallSliding = false;
-		m_isUsingJetpack = false;
+		m_jetpack.isActive = false;
 
 		if (playerControl && characterData->m_special == kPlayerSpecial_Jetpack && (m_input.isDown(INPUT_BUTTON_Y) || JETPACK_NEW_STEERING) && !s_noSpecial)
-			m_isUsingJetpack = true;
+			m_jetpack.isActive = true;
 
 		if (m_animAllowGravity &&
 			//!m_isAttachedToSticky &&
@@ -1736,7 +1744,7 @@ void Player::tick(float dt)
 			m_bubble.timer == 0.f &&
 			(!m_attack.m_rocketPunch.isActive || m_attack.m_rocketPunch.state == AttackInfo::RocketPunch::kState_Stunned))
 		{
-			if (JETPACK_NEW_STEERING && m_isUsingJetpack)
+			if (JETPACK_NEW_STEERING && m_jetpack.isActive)
 				gravity = 0.f;
 			else if (currentBlockMask & (1 << kBlockType_GravityDisable))
 				gravity = 0.f;
@@ -1751,7 +1759,7 @@ void Player::tick(float dt)
 
 			bool canWallSlide = true;
 
-			if (!JETPACK_NEW_STEERING && m_isUsingJetpack)
+			if (!JETPACK_NEW_STEERING && m_jetpack.isActive)
 				gravity -= JETPACK_ACCEL;
 			
 			// wall slide
@@ -1759,7 +1767,7 @@ void Player::tick(float dt)
 			if (!m_isGrounded &&
 				!m_isAttachedToSticky &&
 				isAnimOverrideAllowed(kPlayerAnim_WallSlide) &&
-				!m_isUsingJetpack &&
+				!m_jetpack.isActive &&
 				m_special.meleeCounter == 0 &&
 				!m_special.attackDownActive &&
 				m_attack.m_zweihander.state != AttackInfo::Zweihander::kState_AttackDown &&
@@ -2172,7 +2180,7 @@ void Player::tick(float dt)
 
 		const uint32_t blockMask = dirBlockMask[0] | dirBlockMask[1];
 
-		if (JETPACK_NEW_STEERING && m_isUsingJetpack)
+		if (JETPACK_NEW_STEERING && m_jetpack.isActive)
 			surfaceFriction = 0.f;
 		else if ((dirBlockMask[1] & (1 << kBlockType_Slide)) && totalVel[1] >= 0.f)
 			surfaceFriction = FRICTION_GROUNDED_SLIDE;
@@ -2502,7 +2510,7 @@ void Player::tick(float dt)
 
 		// breaking
 
-		if (JETPACK_NEW_STEERING && m_isUsingJetpack)
+		if (JETPACK_NEW_STEERING && m_jetpack.isActive)
 		{
 			// fixme : should only decelerate jetpack steering speed, not total velocity?
 			m_vel *= powf(1.f - FRICTION_JETPACK, dt * 60.f);
@@ -2598,14 +2606,14 @@ void Player::tick(float dt)
 
 	m_facingAnim = Calc::Saturate(m_facingAnim - dt / (7.f / 60.f));
 
-	if (m_isUsingJetpack)
+	if (m_jetpack.isActive)
 	{
 		Assert(m_isAlive);
 
-		m_jetpackFxTime -= dt;
-		if (m_jetpackFxTime <= 0.f)
+		m_jetpack.fxTime -= dt;
+		if (m_jetpack.fxTime <= 0.f)
 		{
-			m_jetpackFxTime += JETPACK_FX_INTERVAL;
+			m_jetpack.fxTime += JETPACK_FX_INTERVAL;
 			GAMESIM->addAnimationFx("fx/Jetpack_Smoke.scml", m_pos[0], m_pos[1], m_facing[0] < 0);
 		}
 	}
@@ -2845,7 +2853,7 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 {
 	const CharacterData * characterData = getCharacterData(m_characterIndex);
 
-	if (JETPACK_NEW_STEERING && m_isUsingJetpack)
+	if (JETPACK_NEW_STEERING && m_jetpack.isActive)
 	{
 		// todo : add jetpack bob curve
 		y += std::sinf(GAMESIM->m_roundTime * JETPACK_BOB_FREQ * Calc::m2PI) * JETPACK_BOB_AMOUNT;
@@ -3377,8 +3385,7 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 				m_ice = IceInfo();
 				m_bubble = BubbleInfo();
 
-				m_isUsingJetpack = false;
-				m_jetpackFxTime = 0.f;
+				m_jetpack = JetpackInfo();
 
 				endGrapple();
 

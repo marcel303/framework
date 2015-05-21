@@ -507,9 +507,19 @@ struct Player
 	bool m_isWallSliding;
 	float m_wallSlideDistance;
 
-	bool m_isUsingJetpack;
-	float m_jetpackFxTime;
-	Vec2 m_jetpackSteeringSpeed;
+	struct JetpackInfo
+	{
+		JetpackInfo()
+		{
+			memset(this, 0, sizeof(JetpackInfo));
+		}
+
+		bool isActive;
+		float fxTime;
+		float dashRemaining;
+		Vec2 oldAnalog;
+		Vec2 steeringSpeed;
+	} m_jetpack;
 
 	bool m_animVelIsAbsolute; // should the animation velocity be added to or replace the regular player velocity?
 	bool m_animAllowGravity;

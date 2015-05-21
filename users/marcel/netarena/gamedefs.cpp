@@ -277,6 +277,9 @@ OPTION_DEFINE(float, JETPACK_ACCEL, "Special Abilities/Jetpack/Acceleration");
 OPTION_DEFINE(float, JETPACK_FX_INTERVAL, "Special Abilities/Jetpack/Smoke Fx Interval (Sec)");
 OPTION_DEFINE(float, JETPACK_BOB_AMOUNT, "Special Abilities/Jetpack/Bob Amount (px)");
 OPTION_DEFINE(float, JETPACK_BOB_FREQ, "Special Abilities/Jetpack/Bob Frequency (Hz)");
+OPTION_DEFINE(float, JETPACK_DASH_SPEED_MULTIPLIER, "Special Abilities/Jetpack/Dash Speed Multiplier");
+OPTION_DEFINE(float, JETPACK_DASH_DURATION, "Special Abilities/Jetpack/Dash Duration");
+OPTION_DEFINE(float, JETPACK_DASH_RELOAD_TRESHOLD, "Special Abilities/Jetpack/Dash Reload Input Treshold");
 OPTION_STEP(JETPACK_NEW_STEERING_CURVE_MIN, 0, 0, 10.f);
 OPTION_STEP(JETPACK_NEW_STEERING_CURVE_MAX, 0, 0, 10.f);
 
