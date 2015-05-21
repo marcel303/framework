@@ -2845,6 +2845,12 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 {
 	const CharacterData * characterData = getCharacterData(m_characterIndex);
 
+	if (JETPACK_NEW_STEERING && m_isUsingJetpack)
+	{
+		// todo : add jetpack bob curve
+		y += std::sinf(GAMESIM->m_roundTime * JETPACK_BOB_FREQ * Calc::m2PI) * JETPACK_BOB_AMOUNT;
+	}
+
 	// draw backdrop color
 
 	if (UI_PLAYER_BACKDROP_ALPHA != 0)

@@ -275,6 +275,10 @@ OPTION_DEFINE(float, JETPACK_NEW_STEERING_CURVE_MIN, "Special Abilities/Jetpack/
 OPTION_DEFINE(float, JETPACK_NEW_STEERING_CURVE_MAX, "Special Abilities/Jetpack/New Steering Speed Max");
 OPTION_DEFINE(float, JETPACK_ACCEL, "Special Abilities/Jetpack/Acceleration");
 OPTION_DEFINE(float, JETPACK_FX_INTERVAL, "Special Abilities/Jetpack/Smoke Fx Interval (Sec)");
+OPTION_DEFINE(float, JETPACK_BOB_AMOUNT, "Special Abilities/Jetpack/Bob Amount (px)");
+OPTION_DEFINE(float, JETPACK_BOB_FREQ, "Special Abilities/Jetpack/Bob Frequency (Hz)");
+OPTION_STEP(JETPACK_NEW_STEERING_CURVE_MIN, 0, 0, 10.f);
+OPTION_STEP(JETPACK_NEW_STEERING_CURVE_MAX, 0, 0, 10.f);
 
 OPTION_DEFINE(int, DOUBLEMELEE_ATTACK_RADIUS, "Special Abilities/Double Melee/Attack Radius");
 OPTION_DEFINE(int, DOUBLEMELEE_SPIN_COUNT, "Special Abilities/Double Melee/Spin Count");
