@@ -18,11 +18,11 @@
 todo:
 
 - jetpack ability V2:
-	- free analog stick control
-	- fly/land behavior?
+	+ free analog stick control
+	# fly/land behavior?
 	- how to combine with attacks?
-	- slight bobbing up and down. reset/disable bobbing during fast movement?
-	- affected by gravity or not at all?
+	+ slight bobbing up and down. reset/disable bobbing during fast movement?
+	+ affected by gravity or not at all?
 	- add fuel system?
 	- recharge -> how?
 	- debuffs:
@@ -32,7 +32,7 @@ todo:
 	- extra buff ability
 		- destroy jetpack with Y, repel players, need full recharge 
 
-- add explosion effects on bombs 'n stuff
++ add explosion effects on bombs 'n stuff
 - arc bullets
 - grapple auto shorten
 - grapple small speed boost on attach in swing direction
