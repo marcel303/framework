@@ -665,15 +665,20 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 	std::vector<std::string> files = listFiles(path, recurse);
 	for (size_t i = 0; i < files.size(); ++i)
 	{
-		const char * f = files[i].c_str();
+		const std::string & fs = files[i];
+		auto ep = fs.rfind('.');
+		if (ep == std::string::npos)
+			continue;
+		const std::string e = fs.substr(ep + 1);
+		const char * f = fs.c_str();
 		const size_t fl = strlen(f);
-		if (strstr(f, ".png") || strstr(f, ".bmp"))
+		if (e == "png" || e == "bmp")
 			Sprite s(f);
-		else if (strstr(f, ".scml") && !strstr(f, "autosave"))
+		else if (e == "scml" && !strstr(f, "autosave"))
 			g_spriterCache.findOrCreate(f);
-		else if (strstr(f, ".wav"))
+		else if (e == "wav")
 			g_soundCache.findOrCreate(f);
-		else if (strstr(f, ".ogg"))
+		else if (e == "ogg")
 		{
 			FILE * file;
 			if (fopen_s(&file, f, "rb") == 0)
@@ -685,9 +690,9 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 					g_soundCache.findOrCreate(f);
 			}
 		}
-		else if (strstr(f, ".ttf"))
+		else if (e == "ttf")
 			g_fontCache.findOrCreate(f);
-		else if (strstr(f, ".txt"))
+		else if (e == "txt")
 		{
 			FileReader r;
 			std::string line;
