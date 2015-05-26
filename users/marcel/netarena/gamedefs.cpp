@@ -1,7 +1,9 @@
 #include "gamedefs.h"
 
 OPTION_DEFINE(bool, DEMOMODE, "App/Demo Mode");
+OPTION_DEFINE(bool, RECORDMODE, "App/Record Mode");
 OPTION_ALIAS(DEMOMODE, "demomode");
+OPTION_ALIAS(RECORDMODE, "recordmode");
 
 // -- prototypes --
 OPTION_DEFINE(bool, PROTO_TIMEDILATION_ON_KILL, "Player/Time Dilation On Kill/Enabled");
@@ -366,6 +368,8 @@ OPTION_DEFINE(float, GRAPPLE_LENGTH_MIN, "Special Abilities/Grapple Rope/Min Len
 OPTION_DEFINE(float, GRAPPLE_LENGTH_MAX, "Special Abilities/Grapple Rope/Max Length");
 OPTION_DEFINE(float, GRAPPLE_PULL_UP_SPEED, "Special Abilities/Grapple Rope/Pull Up Speed");
 OPTION_DEFINE(float, GRAPPLE_PULL_DOWN_SPEED, "Special Abilities/Grapple Rope/Pull Down Speed");
+
+OPTION_DEFINE(bool, UI_DEBUG_VISIBLE, "UI/Debug UI/Visible");
 
 OPTION_DEFINE(int, UI_CHARSELECT_BASE_X, "UI/Character Select/Base X");
 OPTION_DEFINE(int, UI_CHARSELECT_BASE_Y, "UI/Character Select/Base Y");

@@ -968,13 +968,18 @@ bool App::init()
 
 	if (DEMOMODE)
 	{
+		UI_DEBUG_VISIBLE = false;
 		LIBNET_CHANNEL_ENABLE_TIMEOUTS = false;
-
 		NUM_LOCAL_PLAYERS_TO_ADD = 4;
 		PLAYER_INACTIVITY_KICK = true;
 		VOLCANO_LOOP = true;
-
 		PLAYER_INACTIVITY_TIME = 3;
+	}
+
+	if (RECORDMODE)
+	{
+		UI_DEBUG_VISIBLE = false;
+		VOLCANO_LOOP = true;
 	}
 
 	std::string mapList = s_mapList;
@@ -1740,7 +1745,7 @@ void App::draw()
 		}
 
 	#if 1
-		if (!DEMOMODE)
+		if (UI_DEBUG_VISIBLE)
 		{
 			m_discoveryUi->clear();
 

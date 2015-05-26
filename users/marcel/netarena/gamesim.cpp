@@ -98,7 +98,7 @@ LevelEvent GameStateData::getRandomLevelEvent()
 {
 	LevelEvent e = (LevelEvent)(Random() % kLevelEvent_COUNT);
 
-	if (DEMOMODE && e == kLevelEvent_GravityWell)
+	if ((DEMOMODE || RECORDMODE) && e == kLevelEvent_GravityWell)
 		return getRandomLevelEvent();
 	else
 		return e;
@@ -1926,7 +1926,8 @@ void GameSim::tickPlay()
 				*/
 			}
 
-			addAnnouncement("Level Event: %s", name);
+			if (!RECORDMODE)
+				addAnnouncement("Level Event: %s", name);
 		}
 	}
 
