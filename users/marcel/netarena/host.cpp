@@ -41,7 +41,7 @@ void Host::tick(float dt)
 {
 	switch (m_gameSim.m_gameState)
 	{
-	case kGameState_MainMenus:
+	case kGameState_Initial:
 		Assert(false);
 		break;
 

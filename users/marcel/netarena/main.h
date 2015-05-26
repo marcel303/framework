@@ -6,6 +6,7 @@
 #include "Debugging.h"
 #include "gametypes.h"
 #include "libnet_forward.h"
+#include "menu.h"
 #include "Options.h"
 
 OPTION_EXTERN(bool, g_devMode);
@@ -15,6 +16,7 @@ OPTION_EXTERN(bool, g_logCRCs);
 class Client;
 class Host;
 class MainMenu;
+class MenuMgr;
 class OptionMenu;
 struct ParticleSpawnInfo;
 struct Player;
@@ -32,6 +34,12 @@ namespace NetSessionDiscovery
 class App : public ChannelHandler
 {
 public:
+	enum AppState
+	{
+		AppState_Offline,
+		AppState_Online
+	};
+
 	struct ClientInfo
 	{
 		ClientInfo()
@@ -45,6 +53,8 @@ public:
 
 		std::vector<PlayerInstanceData*> players;
 	};
+
+	AppState m_appState;
 
 	bool m_isHost;
 
@@ -63,7 +73,7 @@ public:
 
 	std::vector<int> m_freeControllerList;
 
-	MainMenu * m_mainMenu;
+	MenuMgr * m_menuMgr;
 
 	OptionMenu * m_optionMenu;
 	bool m_optionMenuIsOpen;

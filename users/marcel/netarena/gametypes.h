@@ -23,7 +23,7 @@ enum NetPlayerAction
 
 enum GameState
 {
-	kGameState_MainMenus,
+	kGameState_Initial,
 	kGameState_Connecting,
 	kGameState_OnlineMenus,
 	kGameState_NewGame,

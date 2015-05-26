@@ -352,7 +352,8 @@ void Client::tick(float dt)
 
 		switch (m_gameSim->m_gameState)
 		{
-		case kGameState_MainMenus:
+		case kGameState_Initial:
+			Assert(false);
 		case kGameState_Connecting:
 		case kGameState_OnlineMenus:
 			strcpy_s(temp, sizeof(temp), "bgm/bgm-menus.ogg");
@@ -394,7 +395,7 @@ void Client::draw()
 
 	switch (m_gameSim->m_gameState)
 	{
-	case kGameState_MainMenus:
+	case kGameState_Initial:
 		Assert(false);
 		break;
 
@@ -431,8 +432,11 @@ void Client::draw()
 
 void Client::drawConnecting()
 {
-	setColor(colorRed);
+	setColor(colorBlue);
 	drawRect(0, 0, GFX_SX, GFX_SY);
+	setColor(colorWhite);
+	setFont("calibri.ttf");
+	drawText(GFX_SX/2, GFX_SY/2, 32, 0.f, 0.f, "Connecting..");
 	setColor(colorWhite);
 }
 

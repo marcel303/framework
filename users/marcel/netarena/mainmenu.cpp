@@ -21,7 +21,7 @@ MainMenu::~MainMenu()
 	delete m_quitApp;
 }
 
-void MainMenu::tick(float dt)
+bool MainMenu::tick(float dt)
 {
 	if (m_newGame->isClicked())
 	{
@@ -45,6 +45,8 @@ void MainMenu::tick(float dt)
 
 		g_app->quit();
 	}
+
+	return false;
 }
 
 void MainMenu::draw()

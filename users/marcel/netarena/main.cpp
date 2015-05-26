@@ -22,12 +22,14 @@
 #include "Path.h"
 #include "player.h"
 #include "RpcManager.h"
+#include "settings.h"
 #include "StatTimerMenu.h"
 #include "StatTimers.h"
 #include "StreamReader.h"
 #include "StringBuilder.h"
 #include "textfield.h"
 #include "Timer.h"
+#include "title.h"
 
 #include "spriter.h"
 
@@ -928,7 +930,8 @@ void App::CL_OnChannelDisconnect(Channel * channel)
 //
 
 App::App()
-	: m_isHost(false)
+	: m_appState(AppState_Offline)
+	, m_isHost(false)
 	, m_host(0)
 	, m_packetDispatcher(0)
 	, m_channelMgr(0)
@@ -1109,7 +1112,7 @@ bool App::init()
 
 		//
 
-		m_mainMenu = new MainMenu();
+		m_menuMgr = new MenuMgr();
 
 		//
 
@@ -1134,6 +1137,9 @@ bool App::init()
 		initArenaData();
 
 		initCharacterData();
+
+		m_menuMgr->push(new MainMenu());
+		m_menuMgr->push(new Title());
 
 		return true;
 	}
@@ -1172,8 +1178,8 @@ void App::shutdown()
 
 	//
 
-	delete m_mainMenu;
-	m_mainMenu = 0;
+	delete m_menuMgr;
+	m_menuMgr = 0;
 
 	//
 
@@ -1441,12 +1447,9 @@ bool App::tick()
 	
 	m_discoveryUi->process();
 
-	// update main menu
+	// update menus
 
-	if (m_clients.empty())
-	{
-		m_mainMenu->tick(dt);
-	}
+	m_menuMgr->tick(dt);
 
 	// update host
 
@@ -1632,12 +1635,7 @@ void App::draw()
 
 	framework.beginDraw(10, 15, 10, 0);
 	{
-		// draw main menu
-
-		if (m_clients.empty())
-		{
-			m_mainMenu->draw();
-		}
+		// draw client
 
 		if (m_selectedClient >= 0 && m_selectedClient < (int)m_clients.size())
 		{
@@ -1659,6 +1657,12 @@ void App::draw()
 				drawText(5, GFX_SY - 25, 20, +1.f, -1.f, "viewing client %d. time dilation %01.2f. state %s", m_selectedClient, timeDilation, g_gameStateNames[client->m_gameSim->m_gameState]);
 			}
 		}
+
+		// draw menus
+
+		m_menuMgr->draw();
+
+		// draw debug stuff
 
 		if (g_devMode)
 		{

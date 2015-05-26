@@ -1148,8 +1148,8 @@ void GameSim::setGameState(::GameState gameState)
 
 	switch (gameState)
 	{
-	case kGameState_MainMenus:
-		resetGameSim();
+	case kGameState_Initial:
+		Assert(false);
 		break;
 
 	case kGameState_Connecting:
@@ -1573,7 +1573,7 @@ void GameSim::tick()
 
 	switch (m_gameState)
 	{
-	case kGameState_MainMenus:
+	case kGameState_Initial:
 		Assert(false);
 		break;
 

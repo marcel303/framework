@@ -2,18 +2,16 @@
 
 #include "menu.h"
 
-class Button;
-
-class MainMenu : public Menu
+class Settings
 {
-	Button * m_newGame;
-	Button * m_findGame;
-	Button * m_quitApp;
-
 public:
-	MainMenu();
-	~MainMenu();
+	void load(const char * filename);
+	void save(const char * filename);
+};
 
+class SettingsMenu : public Menu
+{
+public:
 	virtual void onEnter() { }
 	virtual void onExit() { }
 
