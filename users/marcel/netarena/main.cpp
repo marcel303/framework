@@ -43,6 +43,10 @@ OPTION_DECLARE(bool, g_monkeyMode, false);
 OPTION_DEFINE(bool, g_monkeyMode, "App/Monkey Mode");
 OPTION_ALIAS(g_monkeyMode, "monkeymode");
 
+OPTION_DECLARE(bool, g_precacheResources, true);
+OPTION_DEFINE(bool, g_precacheResources, "App/Precache Resources");
+OPTION_ALIAS(g_precacheResources, "precache");
+
 OPTION_DECLARE(bool, g_logCRCs, false);
 OPTION_DEFINE(bool, g_logCRCs, "App/Enable CRC Logging");
 OPTION_ALIAS(g_logCRCs, "logcrc");
@@ -1047,7 +1051,7 @@ bool App::init()
 
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
-		if (!g_devMode)
+		if (!g_devMode && g_precacheResources)
 		{
 			for (int i = 0; i < 10; ++i)
 			{
@@ -1205,6 +1209,34 @@ void App::shutdown()
 	framework.shutdown();
 }
 
+void App::setAppState(AppState state)
+{
+	if (state == m_appState)
+		return;
+
+	switch (m_appState)
+	{
+	case AppState_Offline:
+		break;
+	case AppState_Online:
+		break;
+	}
+
+	m_appState = state;
+
+	switch (m_appState)
+	{
+	case AppState_Offline:
+		m_menuMgr->reset(0);
+		m_menuMgr->push(new MainMenu());
+		m_menuMgr->push(new Title());
+		break;
+	case AppState_Online:
+		m_menuMgr->reset(0);
+		break;
+	}
+}
+
 void App::quit()
 {
 	exit(0);
@@ -1296,6 +1328,8 @@ void App::leaveGame(Client * client)
 			break;
 		}
 	}
+
+	setAppState(AppState_Offline);
 }
 
 Client * App::connect(const char * address)
@@ -1327,6 +1361,10 @@ Client * App::connect(const char * address)
 	m_selectedClient = (int)m_clients.size() - 1;
 
 	LOG_DBG("connect: updated selected client to %d", m_selectedClient);
+
+	//
+
+	setAppState(AppState_Online);
 
 	return client;
 }

@@ -104,6 +104,7 @@ public:
 	bool init();
 	void shutdown();
 
+	void setAppState(AppState state);
 	void quit();
 
 	bool startHosting();
