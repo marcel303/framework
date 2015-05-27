@@ -3847,6 +3847,8 @@ void Player::shieldSpecialReflect(Vec2Arg pos, Vec2 & dir) const
 
 		if (delta * dir < 0.f)
 			return;
+		if (delta.CalcSize() < SHIELDSPECIAL_RADIUS/4.f)
+			return;
 		if (delta.CalcSize() > SHIELDSPECIAL_RADIUS)
 			return;
 

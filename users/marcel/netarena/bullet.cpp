@@ -253,13 +253,14 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 
 					for (int p = 0; p < MAX_PLAYERS; ++p)
 					{
-						if (p == b.ownerPlayerId && !b.doDamageOwner)
-							continue;
 						Player & player = gameSim.m_players[p];
-						if (!player.m_isUsed || !player.m_isAlive)
-							continue;
 
 						player.shieldSpecialReflect(b.m_pos, b.m_vel);
+
+						if (p == b.ownerPlayerId && !b.doDamageOwner)
+							continue;
+						if (!player.m_isUsed || !player.m_isAlive)
+							continue;
 
 						CollisionInfo collisionInfo;
 
