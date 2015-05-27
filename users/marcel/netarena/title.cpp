@@ -58,12 +58,15 @@ bool Title::tick(float dt)
 
 void Title::draw()
 {
-	Sprite("title/back.png").drawEx(0.f, 0.f);
-
 	setColorMode(COLOR_ADD);
-	setColor(255, 127, 63, 255, m_logoFlash >= 0.f ? m_logoFlash * 255.f : 0.f);
-	Sprite("title/logo.png").drawEx(
-		kLogoX,
-		s_logoCurve.eval(m_logoAnim / kLogoDuration));
+	{
+		setColor(255, 127, 63, 255, m_logoFlash >= 0.f ? m_logoFlash * 63.f : 0.f);
+		Sprite("title/back.png").drawEx(0.f, 0.f);
+
+		setColor(255, 127, 63, 255, m_logoFlash >= 0.f ? m_logoFlash * 255.f : 0.f);
+		Sprite("title/logo.png").drawEx(
+			kLogoX,
+			s_logoCurve.eval(m_logoAnim / kLogoDuration));
+	}
 	setColorMode(COLOR_MUL);
 }
