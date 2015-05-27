@@ -973,6 +973,11 @@ bool App::init()
 	g_optionManager.Load("options.txt");
 	g_optionManager.Load("gameoptions.txt");
 
+	if (g_devMode)
+	{
+		LIBNET_CHANNEL_ENABLE_TIMEOUTS = false;
+	}
+
 	if (DEMOMODE)
 	{
 		UI_DEBUG_VISIBLE = false;
@@ -986,6 +991,7 @@ bool App::init()
 	if (RECORDMODE)
 	{
 		UI_DEBUG_VISIBLE = false;
+		LIBNET_CHANNEL_ENABLE_TIMEOUTS = false;
 		VOLCANO_LOOP = true;
 	}
 
@@ -1848,6 +1854,7 @@ void App::draw()
 				}
 			}
 
+			setColor(colorWhite);
 			m_discoveryUi->draw();
 		}
 	#endif
@@ -2369,8 +2376,6 @@ int main(int argc, char * argv[])
 	changeDirectory("data");
 
 	g_optionManager.LoadFromCommandLine(argc, argv);
-
-	LIBNET_CHANNEL_ENABLE_TIMEOUTS = false;
 
 	if (!g_devMode && !g_connectLocal && (std::string)g_connect == "")
 	{
