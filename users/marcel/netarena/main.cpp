@@ -145,7 +145,7 @@ static void HandleAction(const std::string & action, const Dictionary & args)
 
 		if (index >= 0 && index < (int)g_app->m_clients.size())
 		{
-			g_app->leaveGame(g_app->m_clients[index]);
+			g_app->m_clients[index]->m_channel->Disconnect();
 		}
 	}
 
