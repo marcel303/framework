@@ -533,7 +533,7 @@ void ChannelManager::HandleDisconnect(Packet & packet, Channel * channel)
 				LOG_INF("chanmgr: disconnect-ok: sent ACK to client channel %u", channel->m_destinationId);
 			}
 
-			DestroyChannelQueued(channel);
+			channel->Disconnect(false, false);
 		}
 		else
 		{
