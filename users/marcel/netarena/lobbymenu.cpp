@@ -85,28 +85,15 @@ void CharSelector::draw()
 
 	if (player.m_isUsed)
 	{
-		setColorMode(COLOR_ADD);
-		{
-			const Color color = getCharacterColor(player.m_characterIndex);
-			setColorf(
-				color.r,
-				color.g,
-				color.b,
-				1.f,
-				.25f);
+		Spriter spriter(makeCharacterFilename(player.m_characterIndex, "sprite/sprite.scml"));
 
-			Spriter spriter(makeCharacterFilename(player.m_characterIndex, "sprite/sprite.scml"));
-
-			SpriterState spriterState;
-			spriterState.animIndex = spriter.getAnimIndexByName("Idle");
-			spriterState.animTime = g_TimerRT.Time_get();
-			spriterState.x = characterX;
-			spriterState.y = characterY;
-			spriterState.scale = .7f;
-
-			spriter.draw(spriterState);
-		}
-		setColorMode(COLOR_MUL);
+		SpriterState spriterState;
+		spriterState.animIndex = spriter.getAnimIndexByName("Idle");
+		spriterState.animTime = g_TimerRT.Time_get();
+		spriterState.x = characterX;
+		spriterState.y = characterY;
+		spriterState.scale = .7f;
+		spriter.draw(spriterState);
 
 		setColor(player.m_isReadyUpped ? colorBlue : colorWhite);
 		m_ready->draw();
@@ -121,6 +108,12 @@ void CharSelector::draw()
 	}
 
 	setColor(colorWhite);
+}
+
+bool CharSelector::isLocalPlayer() const
+{
+	const Player & player = m_client->m_gameSim->m_players[m_playerId];
+	return player.m_isUsed && player.m_owningChannelId == m_client->m_channel->m_id;
 }
 
 //
@@ -181,6 +174,19 @@ void LobbyMenu::draw()
 
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
+		if (g_devMode || true) // fixme
+		{
+			const int x1 = UI_CHARSELECT_BASE_X + UI_CHARSELECT_STEP_X * i;
+			const int y1 = UI_CHARSELECT_BASE_Y;
+			const int x2 = UI_CHARSELECT_BASE_X + UI_CHARSELECT_STEP_X * i + UI_CHARSELECT_SIZE_X;
+			const int y2 = UI_CHARSELECT_BASE_Y + UI_CHARSELECT_SIZE_Y;
+
+			const float v = m_charSelectors[i]->isLocalPlayer() ? (std::sinf(g_TimerRT.Time_get() * M_PI * 2.f / 1.5f) + 1.f) / 10.f : 0.f;
+
+			setColorf(v, v, v, .7f);
+			drawRect(x1, y1, x2, y2);
+		}
+
 		m_charSelectors[i]->draw();
 
 		if (g_devMode || true) // fixme

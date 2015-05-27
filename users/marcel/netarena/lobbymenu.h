@@ -24,6 +24,8 @@ public:
 
 	void tick(float dt);
 	void draw();
+
+	bool isLocalPlayer() const;
 };
 
 class LobbyMenu
