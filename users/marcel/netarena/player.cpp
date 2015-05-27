@@ -3789,7 +3789,7 @@ void Player::beginShieldSpecial()
 	m_shieldSpecial.state = ShieldSpecial::State_Active;
 	m_shieldSpecial.spriterState.startAnim(SHIELDSPECIAL_SPRITER, "begin");
 
-	Sound("objects/shieldspecial/activate.ogg").play();
+	GAMESIM->playSound("objects/shieldspecial/activate.ogg");
 }
 
 const float SHIELDSPECIAL_CHARGE_MAX = 1.f; // todo
@@ -3804,7 +3804,7 @@ void Player::endShieldSpecial()
 	m_shieldSpecial.cooldown = SHIELDSPECIAL_COOLDOWN;
 	m_shieldSpecial.spriterState.startAnim(SHIELDSPECIAL_SPRITER, "end");
 
-	Sound("objects/shieldspecial/deactivate.ogg").play();
+	GAMESIM->playSound("objects/shieldspecial/deactivate.ogg");
 }
 
 void Player::tickShieldSpecial(float dt)
@@ -3856,7 +3856,7 @@ void Player::shieldSpecialReflect(Vec2Arg pos, Vec2 & dir) const
 		const float d = n * dir;
 		dir = dir - n * d * 2.f;
 
-		Sound("objects/shieldspecial/reflect.ogg").play();
+		GAMESIM->playSound("objects/shieldspecial/reflect.ogg");
 	}
 }
 
