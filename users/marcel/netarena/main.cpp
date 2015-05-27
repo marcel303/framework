@@ -1209,8 +1209,16 @@ void App::shutdown()
 	framework.shutdown();
 }
 
+static const char * s_appStates[2] =
+{
+	"AppState_Offline",
+	"AppState_Online",
+};
+
 void App::setAppState(AppState state)
 {
+	LOG_DBG("setAppState: %s", s_appStates[state]);
+
 	if (state == m_appState)
 		return;
 
@@ -1329,7 +1337,10 @@ void App::leaveGame(Client * client)
 		}
 	}
 
-	setAppState(AppState_Offline);
+	if (m_clients.empty())
+	{
+		setAppState(AppState_Offline);
+	}
 }
 
 Client * App::connect(const char * address)
