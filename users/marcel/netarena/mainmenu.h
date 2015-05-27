@@ -10,12 +10,14 @@ class MainMenu : public Menu
 	Button * m_findGame;
 	Button * m_quitApp;
 
+	float m_inactivityTime;
+
 public:
 	MainMenu();
 	~MainMenu();
 
-	virtual void onEnter() { }
-	virtual void onExit() { }
+	virtual void onEnter();
+	virtual void onExit();
 
 	virtual bool tick(float dt);
 	virtual void draw();

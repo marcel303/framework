@@ -26,6 +26,8 @@ void MenuMgr::push(Menu * menu)
 	Assert(menu);
 	Assert(m_menuStackSize < kMaxMenuStack);
 	Assert(m_menuStack[m_menuStackSize] == 0);
+	if (m_menuStackSize >= 1)
+		m_menuStack[m_menuStackSize - 1]->onExit();
 	m_menuStack[m_menuStackSize] = menu;
 	m_menuStack[m_menuStackSize]->onEnter();
 	m_menuStackSize++;
@@ -38,6 +40,8 @@ void MenuMgr::pop()
 	m_menuStack[m_menuStackSize]->onExit();
 	delete m_menuStack[m_menuStackSize];
 	m_menuStack[m_menuStackSize] = 0;
+	if (m_menuStackSize >= 1)
+		m_menuStack[m_menuStackSize - 1]->onEnter();
 }
 
 void MenuMgr::reset(Menu * menu)

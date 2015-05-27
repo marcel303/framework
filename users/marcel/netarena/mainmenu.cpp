@@ -5,7 +5,13 @@
 #include "host.h"
 #include "main.h"
 #include "mainmenu.h"
+#include "title.h"
 #include "uicommon.h"
+
+static const float kMaxInactivityTime = 30.f;
+
+static Mouse s_lastMouse;
+static Gamepad s_lastGamepad;
 
 MainMenu::MainMenu()
 {
@@ -21,8 +27,33 @@ MainMenu::~MainMenu()
 	delete m_quitApp;
 }
 
+void MainMenu::onEnter()
+{
+	m_inactivityTime = 0.f;
+	s_lastMouse = mouse;
+	s_lastGamepad = gamepad[0];
+}
+
+void MainMenu::onExit()
+{
+}
+
 bool MainMenu::tick(float dt)
 {
+	// inactivity check
+
+	const bool isInactive =
+		memcmp(&s_lastMouse, &mouse, sizeof(Mouse)) == 0 &&
+		memcmp(&s_lastGamepad, &gamepad[0], sizeof(Gamepad)) == 0;
+
+	if (isInactive)
+		m_inactivityTime += dt;
+	else
+	{
+		s_lastMouse = mouse;
+		s_lastGamepad = gamepad[0];
+	}
+
 	if (m_newGame->isClicked())
 	{
 		logDebug("new game!");
@@ -45,6 +76,9 @@ bool MainMenu::tick(float dt)
 
 		g_app->quit();
 	}
+
+	if (m_inactivityTime >= (g_devMode ? 5.f : kMaxInactivityTime))
+		g_app->m_menuMgr->push(new Title());
 
 	return false;
 }
