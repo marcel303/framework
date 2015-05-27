@@ -61,6 +61,7 @@ OPTION_DEFINE(int, PLAYER_INACTIVITY_TIME, "Player/Inactivity Detection/Time (Se
 OPTION_DEFINE(bool, PLAYER_INACTIVITY_KICK, "Player/Inactivity Detection/Kick Player When Inactive");
 OPTION_DEFINE(int, MIN_PLAYER_COUNT, "Player/Inactivity Detection/Minimum Player Count");
 
+OPTION_DEFINE(bool, PLAYER_RESPAWN_AUTOMICALLY, "Player/Respawn Automatically");
 OPTION_DEFINE(float, PLAYER_RESPAWN_INVINCIBILITY_TIME, "Player/Respawn Invincibility Time");
 OPTION_STEP(PLAYER_RESPAWN_INVINCIBILITY_TIME, 0.f, 10.f, .1f);
 

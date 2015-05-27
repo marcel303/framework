@@ -872,7 +872,7 @@ void Player::tick(float dt)
 
 		if (GAMESIM->m_gameState == kGameState_Play &&
 			!GAMESIM->m_levelEvents.spikeWalls.isActive() &&
-			(m_input.wentDown(INPUT_BUTTON_X) || m_respawnTimer <= 0.f))
+			(m_input.wentDown(INPUT_BUTTON_X) || (PLAYER_RESPAWN_AUTOMICALLY && m_respawnTimer <= 0.f)))
 		{
 			respawn();
 		}
@@ -2772,15 +2772,19 @@ void Player::draw() const
 		drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0) - ARENA_SY_PIXELS);
 	}
 
-	// draw player color
-
 	const Color color = getPlayerColor(m_index);
-	setColorf(
-		color.r,
-		color.g,
-		color.b,
-		.5f);
-	drawRect(m_pos[0] - 50, m_pos[1] - 110, m_pos[0] + 50, m_pos[1] - 85);
+
+	if (!RECORDMODE)
+	{
+		// draw player color
+
+		setColorf(
+			color.r,
+			color.g,
+			color.b,
+			.5f);
+		drawRect(m_pos[0] - 50, m_pos[1] - 110, m_pos[0] + 50, m_pos[1] - 85);
+	}
 
 	// draw invincibility marker
 
@@ -2805,10 +2809,13 @@ void Player::draw() const
 	}
 	*/
 
-	// draw score
-	setFont("calibri.ttf");
-	setColor(255, 255, 255);
-	drawText(m_pos[0], m_pos[1] - 110, 20, 0.f, +1.f, "%d", m_score);
+	if (!RECORDMODE)
+	{
+		// draw score
+		setFont("calibri.ttf");
+		setColor(255, 255, 255);
+		drawText(m_pos[0], m_pos[1] - 110, 20, 0.f, +1.f, "%d", m_score);
+	}
 
 	if (!m_isAlive && m_canRespawn && (GAMESIM->m_gameState == kGameState_Play) && m_isRespawn)
 	{
