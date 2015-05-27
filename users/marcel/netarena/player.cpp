@@ -518,6 +518,15 @@ bool Player::getPlayerControl() const
 		m_attack.m_axeThrow.isActive == false;
 }
 
+Vec2 Player::getPlayerCenter() const
+{
+	const CharacterData * characterData = getCharacterData(m_characterIndex);
+
+	return Vec2(
+		m_pos[0],
+		m_pos[1] + characterData->m_collisionSy / 2.f);
+}
+
 bool Player::getPlayerCollision(CollisionInfo & collision) const
 {
 	Assert(m_isUsed);
@@ -3785,6 +3794,7 @@ void Player::beginShieldSpecial()
 
 const float SHIELDSPECIAL_CHARGE_MAX = 1.f; // todo
 const float SHIELDSPECIAL_COOLDOWN = .2f;
+const float SHIELDSPECIAL_RADIUS = 100.f;
 
 void Player::endShieldSpecial()
 {
@@ -3807,7 +3817,7 @@ void Player::tickShieldSpecial(float dt)
 	switch (m_shieldSpecial.state)
 	{
 	case ShieldSpecial::State_Inactive:
-		if (characterData->m_special == kPlayerSpecial_Shield)
+		if (m_isAlive && characterData->m_special == kPlayerSpecial_Shield)
 		{
 			m_shieldSpecial.cooldown = Calc::Max(0.f, m_shieldSpecial.cooldown - dt);
 			m_shieldSpecial.charge = Calc::Min(SHIELDSPECIAL_CHARGE_MAX, m_shieldSpecial.charge + dt);
@@ -3826,6 +3836,25 @@ void Player::tickShieldSpecial(float dt)
 		if (m_shieldSpecial.charge == 0.f || m_input.wentUp(INPUT_BUTTON_Y))
 			endShieldSpecial();
 		break;
+	}
+}
+
+void Player::shieldSpecialReflect(Vec2Arg pos, Vec2 & dir) const
+{
+	if (m_shieldSpecial.isActive())
+	{
+		const Vec2 delta = getPlayerCenter() - pos;
+
+		if (delta * dir < 0.f)
+			return;
+		if (delta.CalcSize() > SHIELDSPECIAL_RADIUS)
+			return;
+
+		const Vec2 n = delta.CalcNormalized();
+		const float d = n * dir;
+		dir = dir - n * d * 2.f;
+
+		Sound("objects/shieldspecial/reflect.ogg").play();
 	}
 }
 

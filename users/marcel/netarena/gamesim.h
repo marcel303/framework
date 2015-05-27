@@ -160,6 +160,7 @@ struct Player
 
 	bool getPlayerControl() const;
 
+	Vec2 getPlayerCenter() const;
 	bool getPlayerCollision(CollisionInfo & collision) const;
 	void getDamageHitbox(CollisionShape & shape) const;
 	bool getAttackCollision(CollisionShape & shape, Vec2Arg shift = Vec2()) const;
@@ -214,6 +215,7 @@ struct Player
 	void beginShieldSpecial();
 	void endShieldSpecial();
 	void tickShieldSpecial(float dt);
+	void shieldSpecialReflect(Vec2Arg pos, Vec2 & dir) const;
 
 	// special : grapple
 	void beginGrapple();
