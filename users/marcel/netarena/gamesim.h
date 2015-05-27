@@ -200,14 +200,22 @@ struct Player
 
 	void handleJumpCollision();
 
+	// special : rocket punch
 	void beginRocketPunch();
 	void endRocketPunch(bool stunned);
 
+	// special : axe
 	void beginAxeThrow();
 	void endAxeThrow();
 	void tickAxeThrow(float dt);
 	Vec2 getAxeThrowPos() const;
 
+	// special : shield
+	void beginShieldSpecial();
+	void endShieldSpecial();
+	void tickShieldSpecial(float dt);
+
+	// special : grapple
 	void beginGrapple();
 	void endGrapple();
 	void tickGrapple(float dt);
@@ -488,6 +496,32 @@ struct Player
 		bool hasAxe;
 		float recoveryTime;
 	} m_axe;
+
+	struct ShieldSpecial
+	{
+		ShieldSpecial()
+		{
+			memset(this, 0, sizeof(ShieldSpecial));
+
+			spriterState = SpriterState();
+		}
+
+		bool isActive() const
+		{
+			return (state == State_Active);
+		}
+
+		enum State
+		{
+			State_Inactive,
+			State_Active
+		};
+
+		State state;
+		float charge;
+		float cooldown;
+		SpriterState spriterState;
+	} m_shieldSpecial;
 
 	float m_respawnTimer; // when this timer counts to zero, the player is automatically respawn
 	bool m_canRespawn; // set when the player is allowed to respawn, which is after the death animation is done

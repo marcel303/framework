@@ -17,6 +17,11 @@
 
 todo:
 
++ add title screen
++ add main menu/title screen loop
+
++ disable auto respawn. player must press X to respawn
+
 - jetpack ability V2:
 	+ free analog stick control
 	# fly/land behavior?
@@ -192,6 +197,7 @@ COMMAND_OPTION(s_killPlayers, "Player/Kill Players", []{ g_app->netDebugAction("
 
 #define SHIELD_SPRITER Spriter("objects/shield/sprite.scml")
 #define BUBBLE_SPRITER Spriter("objects/bubble/sprite.scml")
+#define SHIELDSPECIAL_SPRITER Spriter("objects/shieldspecial/sprite.scml")
 
 // todo : m_isGrounded should be true when stickied too. review code and make change!
 
@@ -1879,6 +1885,10 @@ void Player::tick(float dt)
 			}
 		}
 
+		// shield special
+
+		tickShieldSpecial(dt);
+
 		// update grounded state
 
 	#if 1 // player will think it's grounded if not reset and hitting spring
@@ -2931,6 +2941,8 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 		m_attack.m_axeThrow.aiming.drawAbove(getAxeThrowPos()); // todo : draw above player sprites
 	}
 
+	// enable effect when player has the token
+
 	if (GAMESIM->m_gameMode == kGameMode_TokenHunt)
 	{
 		setColorMode(COLOR_ADD);
@@ -2943,6 +2955,8 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 	{
 		setColor(colorWhite);
 	}
+
+	// enable ice effect
 
 	if (m_ice.timer > 0.f)
 		setColor(63, 127, 255);
@@ -2968,6 +2982,16 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 		Sprite sprite("doublemelee.png");
 		sprite.flipX = m_facing[0] < 0.f;
 		sprite.drawEx(x, y + mirrorY(m_attack.collision.min[1]));
+	}
+
+	if (m_shieldSpecial.isActive() || m_shieldSpecial.spriterState.animIsActive)
+	{
+		SpriterState state = m_shieldSpecial.spriterState;
+		state.x = x;
+		state.y = y + (flipY ? +characterData->m_collisionSy : -characterData->m_collisionSy) / 2.f;
+		state.flipX = flipX;
+		state.flipY = flipY;
+		SHIELDSPECIAL_SPRITER.draw(state);
 	}
 
 	if (m_shield.hasShield || m_shield.spriterState.animIsActive)
@@ -3225,6 +3249,7 @@ void Player::respawn()
 		m_bubble = BubbleInfo();
 		m_grapple = GrappleInfo();
 		m_axe = AxeInfo();
+		m_shieldSpecial = ShieldSpecial();
 
 		m_blockMask = 0;
 
@@ -3746,6 +3771,62 @@ void Player::tickAxeThrow(float dt)
 Vec2 Player::getAxeThrowPos() const
 {
 	return m_pos + Vec2(0.f, -30.f);
+}
+
+void Player::beginShieldSpecial()
+{
+	Assert(m_shieldSpecial.state == ShieldSpecial::State_Inactive);
+
+	m_shieldSpecial.state = ShieldSpecial::State_Active;
+	m_shieldSpecial.spriterState.startAnim(SHIELDSPECIAL_SPRITER, "begin");
+
+	Sound("objects/shieldspecial/activate.ogg").play();
+}
+
+const float SHIELDSPECIAL_CHARGE_MAX = 1.f; // todo
+const float SHIELDSPECIAL_COOLDOWN = .2f;
+
+void Player::endShieldSpecial()
+{
+	Assert(m_shieldSpecial.state != ShieldSpecial::State_Inactive);
+
+	m_shieldSpecial.state = ShieldSpecial::State_Inactive;
+	m_shieldSpecial.cooldown = SHIELDSPECIAL_COOLDOWN;
+	m_shieldSpecial.spriterState.startAnim(SHIELDSPECIAL_SPRITER, "end");
+
+	Sound("objects/shieldspecial/deactivate.ogg").play();
+}
+
+void Player::tickShieldSpecial(float dt)
+{
+	const CharacterData * characterData = getCharacterData(m_characterIndex);
+
+	if (m_shieldSpecial.spriterState.animIsActive)
+		m_shieldSpecial.spriterState.updateAnim(SHIELDSPECIAL_SPRITER, dt);
+
+	switch (m_shieldSpecial.state)
+	{
+	case ShieldSpecial::State_Inactive:
+		if (characterData->m_special == kPlayerSpecial_Shield)
+		{
+			m_shieldSpecial.cooldown = Calc::Max(0.f, m_shieldSpecial.cooldown - dt);
+			m_shieldSpecial.charge = Calc::Min(SHIELDSPECIAL_CHARGE_MAX, m_shieldSpecial.charge + dt);
+
+			if (m_input.wentDown(INPUT_BUTTON_Y) &&
+				isAnimOverrideAllowed(kPlayerAnim_Attack) &&
+				m_shieldSpecial.cooldown == 0.f)
+			{
+				beginShieldSpecial();
+			}
+		}
+		break;
+
+	case ShieldSpecial::State_Active:
+		m_shieldSpecial.charge = Calc::Max(0.f, m_shieldSpecial.charge - dt);
+		if (m_shieldSpecial.charge == 0.f || m_input.wentUp(INPUT_BUTTON_Y))
+			endShieldSpecial();
+		break;
+	}
 }
 
 void Player::beginGrapple()

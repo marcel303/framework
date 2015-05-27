@@ -1691,7 +1691,7 @@ void GameSim::tickMenus()
 	{
 		if (m_gameStartTicks == 0)
 		{
-			m_gameStartTicks = TICKS_PER_SECOND * (g_devMode ? 1 : 4);
+			m_gameStartTicks = g_devMode ? 1 : (TICKS_PER_SECOND * 4);
 		}
 		else
 		{
