@@ -17,11 +17,6 @@
 
 todo:
 
-+ add title screen
-+ add main menu/title screen loop
-
-+ disable auto respawn. player must press X to respawn
-
 - jetpack ability V2:
 	+ free analog stick control
 	# fly/land behavior?
@@ -146,6 +141,9 @@ todo:
 
 ** DONE **
 
++ add title screen
++ add main menu/title screen loop
++ disable auto respawn. player must press X to respawn
 + explosion effects: force affecting players, pickups, etc
 + axe velocity x 50% on deactivate, 50% gravity
 + attack down/passthrough behavior
@@ -1636,7 +1634,7 @@ void Player::tick(float dt)
 			}
 			else if (i == 0)
 			{
-				steeringSpeed[i] += m_input.m_currState.analogX / 100.f;
+				steeringSpeed[i] += m_input.m_currState.getAnalogDirection()[i];
 			
 				if ((m_isGrounded || m_isAttachedToSticky) && playerControl)
 				{
@@ -2721,7 +2719,7 @@ void Player::draw() const
 	{
 		const Vec2 p1 = getGrapplePos();
 		const Vec2 p2 = m_grapple.anchorPos;
-		setColor(colorRed);
+		setColor(colorWhite);
 		drawLine(p1[0], p1[1], p2[0], p2[1]);
 		setColor(colorGreen);
 		drawRect(p1[0] - 4.f, p1[1] - 4.f, p1[0] + 4.f, p1[1] + 4.f);
@@ -2940,6 +2938,14 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 	{
 		m_grapple.aiming.drawBelow(getGrapplePos());
 		m_grapple.aiming.drawAbove(getGrapplePos()); // todo : draw above player sprites
+
+		Vec2 anchorPos;
+		float length;
+		if (findGrappleAnchorPos(anchorPos, length))
+		{
+			setColor(colorWhite);
+			Sprite("coin.png").drawEx(anchorPos[0], anchorPos[1]);
+		}
 	}
 
 	// draw axe throw direction
@@ -3325,6 +3331,10 @@ void Player::handleImpact(Vec2Arg velocity)
 
 bool Player::shieldAbsorb(float amount)
 {
+	if (m_shieldSpecial.isActive())
+	{
+		return true;
+	}
 	if (m_shield.hasShield)
 	{
 		m_shield.hasShield = false;
@@ -3792,10 +3802,6 @@ void Player::beginShieldSpecial()
 	GAMESIM->playSound("objects/shieldspecial/activate.ogg");
 }
 
-const float SHIELDSPECIAL_CHARGE_MAX = 1.f; // todo
-const float SHIELDSPECIAL_COOLDOWN = .2f;
-const float SHIELDSPECIAL_RADIUS = 100.f;
-
 void Player::endShieldSpecial()
 {
 	Assert(m_shieldSpecial.state != ShieldSpecial::State_Inactive);
@@ -3820,7 +3826,7 @@ void Player::tickShieldSpecial(float dt)
 		if (m_isAlive && characterData->m_special == kPlayerSpecial_Shield)
 		{
 			m_shieldSpecial.cooldown = Calc::Max(0.f, m_shieldSpecial.cooldown - dt);
-			m_shieldSpecial.charge = Calc::Min(SHIELDSPECIAL_CHARGE_MAX, m_shieldSpecial.charge + dt);
+			m_shieldSpecial.charge = Calc::Min(SHIELDSPECIAL_CHARGE_MAX, m_shieldSpecial.charge + SHIELDSPECIAL_CHARGE_SPEED * dt);
 
 			if (m_input.wentDown(INPUT_BUTTON_Y) &&
 				isAnimOverrideAllowed(kPlayerAnim_Attack) &&
@@ -3839,25 +3845,29 @@ void Player::tickShieldSpecial(float dt)
 	}
 }
 
-void Player::shieldSpecialReflect(Vec2Arg pos, Vec2 & dir) const
+bool Player::shieldSpecialReflect(Vec2Arg pos, Vec2 & dir) const
 {
 	if (m_shieldSpecial.isActive())
 	{
 		const Vec2 delta = getPlayerCenter() - pos;
 
 		if (delta * dir < 0.f)
-			return;
+			return false;
 		if (delta.CalcSize() < 4.f)
-			return;
+			return false;
 		if (delta.CalcSize() > SHIELDSPECIAL_RADIUS)
-			return;
+			return false;
 
 		const Vec2 n = delta.CalcNormalized();
 		const float d = n * dir;
 		dir = dir - n * d * 2.f;
 
 		GAMESIM->playSound("objects/shieldspecial/reflect.ogg");
+
+		return true;
 	}
+
+	return false;
 }
 
 void Player::beginGrapple()
@@ -3875,6 +3885,9 @@ void Player::beginGrapple()
 
 bool Player::findGrappleAnchorPos(Vec2 & anchorPos, float & length) const
 {
+	if (!m_grapple.aiming.aimIsValid)
+		return false;
+
 	// find anchor point
 
 	const float kGrappleAngle = Calc::DegToRad(15.f * m_facing[0]);
@@ -3964,7 +3977,13 @@ void Player::tickGrapple(float dt)
 			const bool isAttached = (GAMESIM->m_arena.getIntersectingBlocksMask(m_grapple.anchorPos[0], m_grapple.anchorPos[1]) & kBlockMask_Solid) != 0;
 
 			if (m_input.isDown(INPUT_BUTTON_DOWN))
+			{
+				//const bool isMaxLength = getGrappleLength() + 4.f >= m_grapple.distance;
+				//if (m_vel[1] >= 0.f && isMaxLength && m_vel[1] < GRAPPLE_PULL_DOWN_SPEED)
+				//	m_vel[1] = GRAPPLE_PULL_DOWN_SPEED;
+
 				m_grapple.distance = Calc::Min((float)GRAPPLE_LENGTH_MAX, m_grapple.distance + dt * GRAPPLE_PULL_DOWN_SPEED);
+			}
 			if (m_input.isDown(INPUT_BUTTON_UP))
 				m_grapple.distance = Calc::Max((float)GRAPPLE_LENGTH_MIN, m_grapple.distance - dt * GRAPPLE_PULL_UP_SPEED);
 

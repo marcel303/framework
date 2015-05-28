@@ -982,10 +982,9 @@ bool App::init()
 	{
 		UI_DEBUG_VISIBLE = false;
 		LIBNET_CHANNEL_ENABLE_TIMEOUTS = false;
-		NUM_LOCAL_PLAYERS_TO_ADD = 4;
+		NUM_LOCAL_PLAYERS_TO_ADD = 1;
 		PLAYER_INACTIVITY_KICK = true;
 		VOLCANO_LOOP = true;
-		PLAYER_INACTIVITY_TIME = 3;
 	}
 
 	if (RECORDMODE)
@@ -2098,8 +2097,8 @@ void App::netSetPlayerInputsBroadcast()
 	{
 		const PlayerInstanceData * playerInstanceData = m_host->m_gameSim.m_playerInstanceDatas[i];
 		const uint16_t buttons = (playerInstanceData ? playerInstanceData->m_input.m_lastRecv.buttons : 0);
-		const int8_t analogX = (playerInstanceData ? playerInstanceData->m_input.m_lastRecv.analogX : 0);
-		const int8_t analogY = (playerInstanceData ? playerInstanceData->m_input.m_lastRecv.analogY : 0);
+		const int16_t analogX = (playerInstanceData ? playerInstanceData->m_input.m_lastRecv.analogX : 0);
+		const int16_t analogY = (playerInstanceData ? playerInstanceData->m_input.m_lastRecv.analogY : 0);
 
 		const bool hasButtons = (buttons != 0);
 		bs.WriteBit(hasButtons);

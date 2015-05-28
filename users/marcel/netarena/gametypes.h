@@ -153,12 +153,12 @@ struct PlayerInput
 
 	Vec2 getAnalogDirection() const
 	{
-		return Vec2(analogX / 100.f, analogY / 100.f);
+		return Vec2(analogX / 10000.f, analogY / 10000.f);
 	}
 
 	uint16_t buttons;
-	int8_t analogX;
-	int8_t analogY;
+	int16_t analogX;
+	int16_t analogY;
 };
 
 enum PickupType

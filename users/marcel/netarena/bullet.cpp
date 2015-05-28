@@ -255,7 +255,11 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 					{
 						Player & player = gameSim.m_players[p];
 
-						player.shieldSpecialReflect(b.m_pos, b.m_vel);
+						if (player.shieldSpecialReflect(b.m_pos, b.m_vel))
+						{
+							if (b.ownerPlayerId != -1)
+								b.ownerPlayerId = p;
+						}
 
 						if (p == b.ownerPlayerId && !b.doDamageOwner)
 							continue;

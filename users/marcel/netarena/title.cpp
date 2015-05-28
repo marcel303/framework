@@ -40,7 +40,10 @@ bool Title::tick(float dt)
 		m_logoFlash = Calc::Max(0.f, m_logoFlash - dt);
 
 	if (m_logoFlash == -1.f && m_logoAnim >= kLogoFlashBegin)
+	{
 		m_logoFlash = kLogoFlashDuration;
+		Sound("title/flash.ogg").play();
+	}
 
 	if (m_logoAnim >= kTitleDuration)
 		return true;

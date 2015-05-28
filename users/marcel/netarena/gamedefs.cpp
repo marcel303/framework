@@ -370,6 +370,11 @@ OPTION_DEFINE(float, GRAPPLE_LENGTH_MAX, "Special Abilities/Grapple Rope/Max Len
 OPTION_DEFINE(float, GRAPPLE_PULL_UP_SPEED, "Special Abilities/Grapple Rope/Pull Up Speed");
 OPTION_DEFINE(float, GRAPPLE_PULL_DOWN_SPEED, "Special Abilities/Grapple Rope/Pull Down Speed");
 
+OPTION_DEFINE(float, SHIELDSPECIAL_CHARGE_MAX, "Special Abilities/Shield/Charge Max (Sec)");
+OPTION_DEFINE(float, SHIELDSPECIAL_COOLDOWN, "Special Abilities/Shield/Cooldown (Sec)");
+OPTION_DEFINE(float, SHIELDSPECIAL_RADIUS, "Special Abilities/Shield/Radius");
+OPTION_DEFINE(float, SHIELDSPECIAL_CHARGE_SPEED, "Special Abilities/Shield/Charge Speed (Charge/Sec)");
+
 OPTION_DEFINE(bool, UI_DEBUG_VISIBLE, "UI/Debug UI/Visible");
 
 OPTION_DEFINE(int, UI_CHARSELECT_BASE_X, "UI/Character Select/Base X");

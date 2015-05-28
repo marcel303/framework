@@ -70,6 +70,7 @@ struct PlayerAiming
 		Assert(!isActive);
 		*this = PlayerAiming();
 		isActive = true;
+		this->treshold = treshold;
 	}
 
 	void end()
@@ -215,7 +216,7 @@ struct Player
 	void beginShieldSpecial();
 	void endShieldSpecial();
 	void tickShieldSpecial(float dt);
-	void shieldSpecialReflect(Vec2Arg pos, Vec2 & dir) const;
+	bool shieldSpecialReflect(Vec2Arg pos, Vec2 & dir) const;
 
 	// special : grapple
 	void beginGrapple();
