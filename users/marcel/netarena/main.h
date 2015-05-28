@@ -14,6 +14,7 @@ OPTION_EXTERN(bool, g_monkeyMode);
 OPTION_EXTERN(bool, g_logCRCs);
 
 class Client;
+class DialogMgr;
 class Host;
 class MainMenu;
 class MenuMgr;
@@ -73,6 +74,7 @@ public:
 
 	std::vector<int> m_freeControllerList;
 
+	DialogMgr * m_dialogMgr;
 	MenuMgr * m_menuMgr;
 
 	OptionMenu * m_optionMenu;

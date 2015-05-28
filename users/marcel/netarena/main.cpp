@@ -8,6 +8,7 @@
 #include "Calc.h"
 #include "ChannelManager.h"
 #include "client.h"
+#include "dialog.h"
 #include "discover.h"
 #include "FileStream.h"
 #include "framework.h"
@@ -77,11 +78,12 @@ OPTION_DECLARE(bool, g_pauseOnOptionMenuOption, true);
 OPTION_DEFINE(bool, g_pauseOnOptionMenuOption, "App/Pause On Option Menu");
 
 OPTION_DECLARE(bool, g_fakeIncompatibleServerVersion, false);
-OPTION_DEFINE(bool, g_fakeIncompatibleServerVersion, "Net/Fake Incompatible Server Version");
+OPTION_DEFINE(bool, g_fakeIncompatibleServerVersion, "Network/Fake Incompatible Server Version");
 
 COMMAND_OPTION(s_dropCoins, "Player/Drop Coins", []{ g_app->netDebugAction("dropCoins", ""); });
 
-COMMAND_OPTION(s_addAnnoucement, "App/Add Annoucement", []{ g_app->netDebugAction("addAnnouncement", "Test Annoucenment"); });
+COMMAND_OPTION(s_addAnnoucement, "Debug/Add Annoucement", []{ g_app->netDebugAction("addAnnouncement", "Test Annoucenment"); });
+COMMAND_OPTION(s_addPickup, "Debug/Add Dialog", [] { g_app->m_dialogMgr->push(DialogType_YesNo, "Hello", "World"); });
 
 OPTION_EXTERN(int, g_playerCharacterIndex);
 
@@ -1121,6 +1123,8 @@ bool App::init()
 
 		//
 
+		m_dialogMgr = new DialogMgr();
+
 		m_menuMgr = new MenuMgr();
 
 		//
@@ -1149,6 +1153,8 @@ bool App::init()
 
 		m_menuMgr->push(new MainMenu());
 		m_menuMgr->push(new Title());
+
+		m_dialogMgr->push(DialogType_YesNo, "Hello", "World");
 
 		return true;
 	}
@@ -1189,6 +1195,9 @@ void App::shutdown()
 
 	delete m_menuMgr;
 	m_menuMgr = 0;
+
+	delete m_dialogMgr;
+	m_dialogMgr = 0;
 
 	//
 
@@ -1517,6 +1526,10 @@ bool App::tick()
 	
 	m_discoveryUi->process();
 
+	// update dialogs
+
+	m_dialogMgr->tick(dt);
+
 	// update menus
 
 	m_menuMgr->tick(dt);
@@ -1731,6 +1744,10 @@ void App::draw()
 		// draw menus
 
 		m_menuMgr->draw();
+
+		// draw dialogs
+
+		m_dialogMgr->draw();
 
 		// draw debug stuff
 
