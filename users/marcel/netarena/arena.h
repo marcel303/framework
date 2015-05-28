@@ -11,7 +11,7 @@ class GameSim;
 struct Player;
 class Sprite;
 
-#define USE_TEXTURE_ATLAS 1
+#define USE_TEXTURE_ATLAS 0
 
 enum BlockShape
 {
