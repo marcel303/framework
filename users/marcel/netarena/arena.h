@@ -11,6 +11,8 @@ class GameSim;
 struct Player;
 class Sprite;
 
+#define USE_TEXTURE_ATLAS 1
+
 enum BlockShape
 {
 	kBlockShape_Empty,
@@ -122,8 +124,12 @@ public:
 	Block m_blocks[ARENA_SX][ARENA_SY];
 
 	FixedString<64> m_name;
+#if USE_TEXTURE_ATLAS
+	uint64_t m_texture;
+#else
 	Sprite ** m_sprites;
 	int m_numSprites;
+#endif
 
 public:
 	Arena();

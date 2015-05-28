@@ -136,6 +136,8 @@ enum PlayerEvent
 
 struct PlayerInput
 {
+	const static int AnalogRange = 10000;
+
 	PlayerInput()
 		: buttons(0)
 		, analogX(0)
@@ -153,7 +155,7 @@ struct PlayerInput
 
 	Vec2 getAnalogDirection() const
 	{
-		return Vec2(analogX / 10000.f, analogY / 10000.f);
+		return Vec2(analogX / float(AnalogRange), analogY / float(AnalogRange));
 	}
 
 	uint16_t buttons;

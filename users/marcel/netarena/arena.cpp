@@ -151,8 +151,12 @@ bool Block::handleDamage(GameSim & gameSim, int blockX, int blockY)
 //
 
 Arena::Arena()
+#if USE_TEXTURE_ATLAS
+	: m_texture(0)
+#else
 	: m_sprites(0)
 	, m_numSprites(0)
+#endif
 {
 }
 
@@ -420,6 +424,11 @@ void Arena::loadArt(const char * name)
 {
 	freeArt();
 
+#if USE_TEXTURE_ATLAS
+	const std::string atlasName = std::string("levels/") + name + "/ArtAtlas.png";
+
+	m_texture = Sprite(atlasName.c_str()).getTexture();
+#else
 	const std::string baseName = std::string("levels/") + name + "/";
 	const std::string artFileName = baseName + "ArtIndex.txt";
 	const std::string spriteBaseName = std::string("levels/") + name + "/";
@@ -443,10 +452,14 @@ void Arena::loadArt(const char * name)
 	{
 		logError("failed to load art index for %s: %s", name, e.what());
 	}
+#endif
 }
 
 void Arena::freeArt()
 {
+#if USE_TEXTURE_ATLAS
+	m_texture = 0;
+#else
 	for (int i = 0; i < m_numSprites; ++i)
 	{
 		delete m_sprites[i];
@@ -456,6 +469,7 @@ void Arena::freeArt()
 	delete [] m_sprites;
 	m_sprites = 0;
 	m_numSprites = 0;
+#endif
 }
 
 void Arena::loadArtIndices(const char * filename, int layer)
@@ -474,11 +488,20 @@ void Arena::loadArtIndices(const char * filename, int layer)
 			for (int x = 0; x < sx; ++x)
 			{
 				const int index = reader.ReadInt32();
+
+			#if USE_TEXTURE_ATLAS
+				Assert(index == -1 || index >= 0);
+			#else
 				Assert(index == -1 || (index >= 0 && index < m_numSprites));
+			#endif
 
 				if (x < ARENA_SX && y < ARENA_SY)
 				{
+				#if USE_TEXTURE_ATLAS
+					if (true)
+				#else
 					if (index == -1 || (index >= 0 && index < m_numSprites))
+				#endif
 					{
 						m_blocks[x][y].artIndex[layer] = index;
 					}
@@ -553,22 +576,52 @@ uint32_t Arena::calcCRC() const
 
 void Arena::drawBlocks(int layer) const
 {
+#if USE_TEXTURE_ATLAS
+	float pos[4 * ARENA_SX * ARENA_SY * 2];
+	float uv [4 * ARENA_SX * ARENA_SY * 2];
+	float a  [4 * ARENA_SX * ARENA_SY * 1];
+	int numVerts = 0;
+
+	const int ATLAS_TILE_SX = (1920 / BLOCK_SX);
+	const int ATLAS_TILE_SY = (1080 / BLOCK_SY);
+	const float BLOCK_SU = 1.f / ATLAS_TILE_SX;
+	const float BLOCK_SV = 1.f / ATLAS_TILE_SY;
+	const int OFFSET_X[4] = { 0, 1, 1, 0 };
+	const int OFFSET_Y[4] = { 0, 0, 1, 1 };
+
+	#define AddQuad(x, y, t, _a) \
+	{ \
+		const int tx = t % ATLAS_TILE_SX; \
+		const int ty = t / ATLAS_TILE_SX; \
+		for (int v = 0; v < 4; ++v, ++numVerts) \
+		{ \
+			pos[numVerts * 2 + 0] = (x  + OFFSET_X[v]) * BLOCK_SX; \
+			pos[numVerts * 2 + 1] = (y  + OFFSET_Y[v]) * BLOCK_SY; \
+			uv[numVerts * 2 + 0]  = (tx + OFFSET_X[v]) * BLOCK_SU; \
+			uv[numVerts * 2 + 1]  = (ty + OFFSET_Y[v]) * BLOCK_SV; \
+			a[numVerts] = _a; \
+		} \
+	}
+#endif
+
 	for (int x = 0; x < ARENA_SX; ++x)
 	{
 		for (int y = 0; y < ARENA_SY; ++y)
 		{
 			const Block & block = m_blocks[x][y];
 
+			float alpha = 1.f;
+
 			if (layer == 0 && block.type == kBlockType_Appear)
 			{
 				const AppearBlockData& data = (AppearBlockData&)block.param;
 
 				if (data.isVisible && data.switchTime < 20)
-					setColor(255, 255, 255, 255 - (255 - data.switchTime * 12.75));
+					alpha = (255 - data.switchTime * 12.75) / 255.f;
 				else if (!data.isVisible)
 				{
 					if (data.switchTime < 20)
-						setColor(255, 255, 255, 2.55 * (100 - data.switchTime * 5));
+						alpha = (2.55 * (100 - data.switchTime * 5)) / 255.f;
 					else
 						continue;
 				}
@@ -578,17 +631,39 @@ void Arena::drawBlocks(int layer) const
 				const RegenBlockData & data = (RegenBlockData&)block.param;
 				if (!data.isVisible)
 					continue;
-				setColor(colorWhite);
-			}
-			else
-			{
-				setColor(255, 255, 255, 255);
 			}
 
 			if (block.artIndex[layer] != (uint16_t)-1)
+			{
+			#if USE_TEXTURE_ATLAS
+				AddQuad(x, y, block.artIndex[layer], alpha);
+			#else
+				setColorf(1.f, 1.f, 1.f, alpha);
 				m_sprites[block.artIndex[layer]]->drawEx(x * BLOCK_SX, y * BLOCK_SY, 0.f, BLOCK_SPRITE_SCALE);
+			#endif
+			}
 		}
 	}
+
+#if USE_TEXTURE_ATLAS
+	gxSetTexture(m_texture);
+	
+	glVertexPointer(2, GL_FLOAT, 0, pos);
+	//glColorPointer(1, GL_FLOAT, 0, a);
+	glTexCoordPointer(2, GL_FLOAT, 0, uv);
+
+	glEnableClientState(GL_VERTEX_ARRAY);
+	//glEnableClientState(GL_COLOR_ARRAY);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	
+	glDrawArrays(GL_QUADS, 0, numVerts);
+	
+	glDisableClientState(GL_VERTEX_ARRAY);
+	//glDisableClientState(GL_COLOR_ARRAY);
+	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+
+	setColor(colorWhite);
+#endif
 
 	if (layer == 0 && s_drawBlockMask >= 0 && s_drawBlockMask < kBlockShape_COUNT)
 	{

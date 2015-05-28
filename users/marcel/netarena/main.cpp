@@ -1154,8 +1154,6 @@ bool App::init()
 		m_menuMgr->push(new MainMenu());
 		m_menuMgr->push(new Title());
 
-		m_dialogMgr->push(DialogType_YesNo, "Hello", "World");
-
 		return true;
 	}
 

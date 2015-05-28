@@ -130,22 +130,22 @@ void Client::tick(float dt)
 				if (keyboard.isDown(SDLK_LEFT))
 				{
 					input.buttons |= INPUT_BUTTON_LEFT;
-					input.analogX -= 100;
+					input.analogX -= PlayerInput::AnalogRange;
 				}
 				if (keyboard.isDown(SDLK_RIGHT))
 				{
 					input.buttons |= INPUT_BUTTON_RIGHT;
-					input.analogX += 100;
+					input.analogX += PlayerInput::AnalogRange;
 				}
 				if (keyboard.isDown(SDLK_UP))
 				{
 					input.buttons |= INPUT_BUTTON_UP;
-					input.analogY -= 100;
+					input.analogY -= PlayerInput::AnalogRange;
 				}
 				if (keyboard.isDown(SDLK_DOWN))
 				{
 					input.buttons |= INPUT_BUTTON_DOWN;
-					input.analogY += 100;
+					input.analogY += PlayerInput::AnalogRange;
 				}
 				if (keyboard.isDown(SDLK_a) || keyboard.isDown(SDLK_SPACE))
 					input.buttons |= INPUT_BUTTON_A;
@@ -199,10 +199,8 @@ void Client::tick(float dt)
 					if (g.isDown(GAMEPAD_L1) || g.isDown(GAMEPAD_R1))
 						input.buttons |= INPUT_BUTTON_L1R1;
 
-					const int range = 10000;
-
-					input.analogX = Calc::Mid((int)(input.analogX + g.getAnalog(0, ANALOG_X) * range), -range, +range);
-					input.analogY = Calc::Mid((int)(input.analogY + g.getAnalog(0, ANALOG_Y) * range), -range, +range);
+					input.analogX = Calc::Mid((int)(input.analogX + g.getAnalog(0, ANALOG_X) * PlayerInput::AnalogRange), -PlayerInput::AnalogRange, +PlayerInput::AnalogRange);
+					input.analogY = Calc::Mid((int)(input.analogY + g.getAnalog(0, ANALOG_Y) * PlayerInput::AnalogRange), -PlayerInput::AnalogRange, +PlayerInput::AnalogRange);
 				}
 			}
 
@@ -211,22 +209,22 @@ void Client::tick(float dt)
 				if ((rand() % 2) == 0)
 				{
 					input.buttons |= INPUT_BUTTON_LEFT;
-					input.analogX -= 100;
+					input.analogX -= PlayerInput::AnalogRange;
 				}
 				if ((rand() % 10) == 0)
 				{
 					input.buttons |= INPUT_BUTTON_RIGHT;
-					input.analogX += 100;
+					input.analogX += PlayerInput::AnalogRange;
 				}
 				if ((rand() % 10) == 0)
 				{
 					input.buttons |= INPUT_BUTTON_UP;
-					input.analogY -= 100;
+					input.analogY -= PlayerInput::AnalogRange;
 				}
 				if ((rand() % 10) == 0)
 				{
 					input.buttons |= INPUT_BUTTON_DOWN;
-					input.analogY += 100;
+					input.analogY += PlayerInput::AnalogRange;
 				}
 				if ((rand() % 60) == 0)
 					input.buttons |= INPUT_BUTTON_A;
