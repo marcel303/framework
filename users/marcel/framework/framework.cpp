@@ -1840,6 +1840,14 @@ int Sprite::getHeight() const
 	return m_texture->sy / m_anim->m_gridSize[1];
 }
 
+GLuint Sprite::getTexture() const
+{
+	if (m_texture->textures)
+		return m_texture->textures[0];
+	else
+		return 0;
+}
+
 // -----
 
 SpriterState::SpriterState()

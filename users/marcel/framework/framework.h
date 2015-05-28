@@ -371,6 +371,7 @@ public:
 	
 	int getWidth() const;
 	int getHeight() const;
+	GLuint getTexture() const;
 	
 	// animation
 	float animSpeed;
