@@ -1497,6 +1497,22 @@ bool App::tick()
 
 	framework.process();
 
+	// mouse cursor
+
+	static Mouse lastMouse;
+	static float mouseInactivityTime = 0.f;
+	if (!memcmp(&mouse, &lastMouse, sizeof(Mouse)))
+		mouseInactivityTime += dt;
+	else
+	{
+		mouseInactivityTime =  0.f;
+		lastMouse = mouse;
+	}
+
+	SDL_ShowCursor(mouseInactivityTime >= 3.f ? 0 : 1);
+	
+	// debug UI
+
 	m_discoveryService->update(m_isHost);
 	
 	m_discoveryUi->process();
