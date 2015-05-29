@@ -8,6 +8,8 @@
 
 #include "SettingsWidget.h"
 
+#include <QImage>
+
 #define view view2 //hack
 
 short selectedTile = ' ';
@@ -481,49 +483,28 @@ void LoadGeneric(QString filename, EditorScene* s)
 
 void LoadArt(QString filename, EditorScene* s)
 {
-	QFile file(filename+".txt");
-	QFile fileIndex(filename+"Index.txt");
-
-	fileIndex.open(QIODevice::ReadOnly | QIODevice::Text);
-
-
-	QTextStream inIndex(&fileIndex);
-
-	QMap<short, short> tempIndexToArtIndex;
-	filename.chop(filename.split('/').last().size()); //get path
-
-	while(!inIndex.atEnd())
-	{
-		QString artName = inIndex.readLine();
-		QPixmap* p = new QPixmap();
-
-		if(p->load(filename+artName))
-		{
-			tempIndexToArtIndex[tempIndexToArtIndex.size()] = pixmapsArt.size();
-			pixmapsArt[pixmapsArt.size()] = p;
-		}
-	}
+    QFile file(filename+".txt");
 
     file.open(QIODevice::ReadOnly);
     QDataStream in(&file);
 
-	in.setByteOrder(QDataStream::LittleEndian);
+    QPixmap image(filename + ".png");
 
-    int mx;
-    in >> mx;
-    int my;
-    in >> my;
-
-	qint32 key;
-    for(int y = 0; y < my; y++)
+    bool key = false;
+    for(int y = 0; y < MAPY; y++)
     {
-        for (int x = 0; x < mx; x++)
+        for (int x = 0; x < MAPX; x++)
         {
-			in >> key;
-			if(key == -1)
-				s->m_tiles[y][x].SetSelectedBlock(0);
-			else
-				s->m_tiles[y][x].SetSelectedBlock(tempIndexToArtIndex[(short)key]);
+            in >> key;
+            if(!key)
+                s->m_tiles[y][x].SetSelectedBlock(0);
+            else
+            {
+               QPixmap* p = new QPixmap(image.copy(x*BLOCKSIZE, y*BLOCKSIZE, BLOCKSIZE, BLOCKSIZE));
+
+               pixmapsArt[pixmapsArt.size()] = p;
+               s->m_tiles[y][x].SetSelectedBlock((short)pixmapsArt.size()-1);
+            }
         }
     }
     file.close();
@@ -573,49 +554,49 @@ void SaveGeneric(QString filename, EditorScene* s)
     file.close();
 }
 
+bool testTransparentImage(QImage image)
+{
+    image.convertToFormat(QImage::Format_ARGB32);
+
+    for (int x = 0 ; x < image.width(); x++)
+    {
+        for (int y = 0 ; y < image.height(); y++)
+            if (qAlpha(image.pixel(x, y)) != 0)
+                return false;
+    }
+
+    return true;
+}
+
 void SaveArtFile(QString filename, EditorScene* s)
 {
-	QMap<short, short> artTranslation;
-	QMap<short, QPixmap> art2;
+    QImage artImage(BASEX*BLOCKSIZE, BASEY*BLOCKSIZE, QImage::Format_ARGB32_Premultiplied);
+    QPainter painter(&artImage);
 
-
-	QFile fileArtIndex(filename+"Index.txt");
-
-	fileArtIndex.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text);
-	QTextStream artLines(&fileArtIndex);
-
-	for(int y = 0; y < MAPY; y++)
-		for (int x = 0; x < MAPX; x++)
-		{
-			if(!artTranslation.contains(s->m_tiles[y][x].getBlock()))
-			{
-				artTranslation[s->m_tiles[y][x].getBlock()] = artTranslation.size()-1;
-				s->m_tiles[y][x].pixmap().save(filename + "_" + QString::number(artTranslation.size()-1) + ".png", "PNG");
-
-				artLines << (filename.split('/').last() + "_" + QString::number(artTranslation.size()-1) + ".png") << endl;
-			}
-		}
-	fileArtIndex.close();
-
-	QFile fileArt(filename+".txt");
+    QFile fileArt(filename+".txt");
     fileArt.open(QIODevice::WriteOnly | QIODevice::Truncate);
-    QDataStream in(&fileArt);
-    in.setByteOrder(QDataStream::LittleEndian);
+    QDataStream out(&fileArt);
+    out.setByteOrder(QDataStream::LittleEndian);
 
-    in << MAPX << MAPY;
-	for(int y = 0; y < MAPY; y++)
-		for (int x = 0; x < MAPX; x++)
+    for(int y = 0; y < MAPY; y++)
+    {
+        for (int x = 0; x < MAPX; x++)
         {
-			if(s->m_tiles[y][x].getBlock() != 0)
-				in << (qint32)artTranslation[s->m_tiles[y][x].getBlock()];
-			else
-				in << (qint32)(-1);
+                if(s->m_tiles[y][x].getBlock() == 0 || testTransparentImage(s->m_tiles[y][x].pixmap().toImage()))
+                {
+                    //qDebug() << "skipping empty tile";
+                    out << false;
+                }
+                else
+                {
+                    out << true;
+                    painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, s->m_tiles[y][x].pixmap());
+                }
         }
+    }
 
-	qDebug() << "Done saving level.";
-
-	fileArt.close();
-
+    artImage.save(filename + ".png");
+    fileArt.close();
 }
 
 void SaveObjects(QString filename)
