@@ -431,7 +431,6 @@ void ChannelManager::HandleConnectOK(Packet & packet, Channel * channel)
 void ChannelManager::HandleConnectError(Packet & packet, Channel * channel)
 {
 	uint16_t channelId;
-	uint16_t newDestinationId;
 
 	if (packet.Read16(&channelId))
 	{
