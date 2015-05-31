@@ -1710,7 +1710,7 @@ bool App::tick()
 
 	if ((g_keyboardLock == 0 && keyboard.wentDown(SDLK_ESCAPE)) || framework.quitRequested)
 	{
-		quit();
+		m_dialogMgr->push(DialogType_YesNo, "Do you really want to quit?", "", DialogQuit, this);
 	}
 
 	return true;
@@ -2223,6 +2223,16 @@ void App::freeControllerIndex(int index)
 int App::getControllerAllocationCount() const
 {
 	return (MAX_GAMEPAD + 1) - m_freeControllerList.size();
+}
+
+void App::DialogQuit(void * arg, int dialogId, DialogResult result)
+{
+	App * self = (App*)arg;
+
+	if (result == DialogResult_Yes)
+	{
+		self->quit();
+	}
 }
 
 // spriter animation tests

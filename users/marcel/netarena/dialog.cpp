@@ -7,8 +7,8 @@
 #define UI_DIALOG_FADEIN_TIME .2f
 #define UI_DIALOG_FADEOUT_TIME .2f
 
-#define UI_DIALOG_SX 700
-#define UI_DIALOG_SY 400
+#define UI_DIALOG_SX 600
+#define UI_DIALOG_SY 200
 #define UI_DIALOG_PX ((GFX_SX -  UI_DIALOG_SX) / 2)
 #define UI_DIALOG_PY ((GFX_SY -  UI_DIALOG_SY) / 2)
 #define UI_DIALOG_FONT_SIZE 32
@@ -115,7 +115,7 @@ void Dialog::draw()
 
 		if (g_devMode)
 		{
-			setColor(colorGreen);
+			setColor(0, 255, 0, 63);
 			drawRectLine(
 				UI_DIALOG_PX,
 				UI_DIALOG_PY,
@@ -194,17 +194,22 @@ int DialogMgr::push(DialogType type, std::string text1, std::string text2, Dialo
 
 	m_dialogs.push_back(dialog);
 
+	g_keyboardLock++;
+
 	return dialog.m_id;
 }
 
 void DialogMgr::pop()
 {
+	g_keyboardLock--;
+
 	m_dialogs.pop_back();
 }
 
 void DialogMgr::reset()
 {
-	m_dialogs.clear();
+	while (!m_dialogs.empty())
+		pop();
 }
 
 void DialogMgr::dismiss(int id)

@@ -4,6 +4,7 @@
 #include <vector>
 #include "ChannelHandler.h"
 #include "Debugging.h"
+#include "dialog.h" // DialogResult
 #include "gametypes.h"
 #include "libnet_forward.h"
 #include "menu.h"
@@ -144,6 +145,8 @@ public:
 	int getControllerAllocationCount() const;
 
 	std::vector<Client*> getClients() const { return m_clients; }
+
+	static void DialogQuit(void * arg, int dialogId, DialogResult result);
 };
 
 extern uint32_t g_buildId;
