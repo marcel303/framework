@@ -82,8 +82,14 @@ OPTION_DEFINE(bool, g_fakeIncompatibleServerVersion, "Network/Fake Incompatible 
 
 COMMAND_OPTION(s_dropCoins, "Player/Drop Coins", []{ g_app->netDebugAction("dropCoins", ""); });
 
+static void HandleDialogResult(void * arg, int dialogId, DialogResult result)
+{
+	LOG_DBG("dialog result: arg=%p, id=%d, result=%d", arg, dialogId, (int)result);
+}
+static int s_lastDialogId = -1;
 COMMAND_OPTION(s_addAnnoucement, "Debug/Add Annoucement", []{ g_app->netDebugAction("addAnnouncement", "Test Annoucenment"); });
-COMMAND_OPTION(s_addPickup, "Debug/Add Dialog", [] { g_app->m_dialogMgr->push(DialogType_YesNo, "Hello", "World"); });
+COMMAND_OPTION(s_addDialog, "Debug/Add Dialog", [] { s_lastDialogId = g_app->m_dialogMgr->push(DialogType_YesNo, "Hello", "World", HandleDialogResult, 0); });
+COMMAND_OPTION(s_dismissDialog, "Debug/Dismiss Last Dialog", [] { g_app->m_dialogMgr->dismiss(s_lastDialogId); });
 
 OPTION_EXTERN(int, g_playerCharacterIndex);
 
