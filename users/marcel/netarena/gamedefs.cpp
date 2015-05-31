@@ -140,6 +140,9 @@ OPTION_DEFINE(int, PLAYER_WALLSLIDE_SPEED, "Player/Wall Slide/Speed");
 OPTION_DEFINE(int, PLAYER_WALLSLIDE_FX_INTERVAL, "Player/Wall Slide/FX Interval (px)");
 OPTION_STEP(PLAYER_WALLSLIDE_SPEED, 0, 0, 10);
 
+OPTION_DEFINE(float, BACKGROUND_SCREENSHAKE_MULTIPLIER, "Background/Screen Shake Multiplier");
+OPTION_STEP(BACKGROUND_SCREENSHAKE_MULTIPLIER, 0, 0, 0.05f);
+
 OPTION_DEFINE(float, FRICTION_GROUNDED, "Physics/Friction/On Ground");
 OPTION_DEFINE(float, FRICTION_GROUNDED_SLIDE, "Physics/Friction/On Slippery Ground");
 OPTION_DEFINE(float, FRICTION_JETPACK, "Physics/Friction/When Using (New) Jetpack");

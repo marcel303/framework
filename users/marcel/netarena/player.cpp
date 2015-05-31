@@ -2099,7 +2099,8 @@ void Player::tick(float dt)
 							self->GAMESIM->addScreenShake(
 								i == 0 ? strength : 0.f,
 								i == 1 ? strength : 0.f,
-								3000.f, .3f);
+								3000.f, .3f,
+								true);
 						}
 
 						if (/*self->m_isAnimDriven && */self->m_anim == kPlayerAnim_AirDash && characterData->hasTrait(kPlayerTrait_AirDash))
@@ -2400,7 +2401,7 @@ void Player::tick(float dt)
 						if (strength > PLAYER_SCREENSHAKE_STRENGTH_THRESHHOLD)
 						{
 							strength = sign * strength / 4.f;
-							GAMESIM->addScreenShake(strength, 0.f, 3000.f, .3f);
+							GAMESIM->addScreenShake(strength, 0.f, 3000.f, .3f, true);
 						}
 
 						// colliding with solid object left/right of player
@@ -2460,7 +2461,7 @@ void Player::tick(float dt)
 								if (strength > PLAYER_SCREENSHAKE_STRENGTH_THRESHHOLD)
 								{
 									strength = sign * strength / 4.f;
-									GAMESIM->addScreenShake(0.f, strength, 3000.f, .3f);
+									GAMESIM->addScreenShake(0.f, strength, 3000.f, .3f, true);
 								}
 
 								// todo : use separate PlayerAnim for special attack

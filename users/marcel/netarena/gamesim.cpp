@@ -2207,13 +2207,21 @@ void GameSim::drawPlay()
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		gxPushMatrix();
+		gxTranslatef(
+			camTranslation[0] * BACKGROUND_SCREENSHAKE_MULTIPLIER,
+			camTranslation[1] * BACKGROUND_SCREENSHAKE_MULTIPLIER,
+			0.f);
+		{
+			// todo : background depends on level properties
+
+			//setBlend(BLEND_OPAQUE);
+			m_background.draw();
+			//setBlend(BLEND_ALPHA);
+		}
+		gxPopMatrix();
+
+		gxPushMatrix();
 		gxTranslatef(camTranslation[0], camTranslation[1], 0.f);
-
-		// todo : background depends on level properties
-
-		//setBlend(BLEND_OPAQUE);
-		m_background.draw();
-		//setBlend(BLEND_ALPHA);
 
 	#if 0
 		Shader fsfx("fsfx-test3");
@@ -2977,15 +2985,19 @@ void GameSim::doBlastEffect(Vec2Arg center, float radius, const Curve & speedCur
 		});
 }
 
-void GameSim::addScreenShake(float dx, float dy, float stiffness, float life)
+void GameSim::addScreenShake(float dx, float dy, float stiffness, float life, bool fade)
 {
+	Assert(life != 0.f);
+
 	for (int i = 0; i < MAX_SCREEN_SHAKES; ++i)
 	{
 		ScreenShake & shake = m_screenShakes[i];
 		if (!shake.isActive)
 		{
 			shake.isActive = true;
+			shake.fade = fade;
 			shake.life = life;
+			shake.lifeRcp = 1.f / life;
 			shake.stiffness = stiffness;
 
 			shake.pos.Set(dx, dy);
@@ -2997,7 +3009,7 @@ void GameSim::addScreenShake(float dx, float dy, float stiffness, float life)
 	if (DEBUG_RANDOM_CALLSITES)
 		LOG_DBG("Random called from addScreenShake");
 	m_screenShakes[Random() % MAX_SCREEN_SHAKES] = ScreenShake();
-	addScreenShake(dx, dy, stiffness, life);
+	addScreenShake(dx, dy, stiffness, life, fade);
 }
 
 Vec2 GameSim::getScreenShake() const
@@ -3008,7 +3020,7 @@ Vec2 GameSim::getScreenShake() const
 	{
 		const ScreenShake & shake = m_screenShakes[i];
 		if (shake.isActive)
-			result += shake.pos;
+			result += shake.pos * (shake.fade ? (shake.life * shake.lifeRcp) : 1.f);
 	}
 
 	return result;

@@ -79,7 +79,7 @@ void LevelEvent_EarthQuake::tick(GameSim & gameSim, float dt)
 
 			// trigger quake
 
-			gameSim.addScreenShake(0.f, 25.f, 1000.f, .3f);
+			gameSim.addScreenShake(0.f, 25.f, 1000.f, .3f, true);
 
 			gameSim.doQuake(EVENT_EARTHQUAKE_PLAYER_BOOST);
 		}

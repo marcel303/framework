@@ -355,7 +355,8 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 						const float strength = 5.f;
 						gameSim.addScreenShake(
 							gameSim.RandomFloat(-strength, +strength),
-							gameSim.RandomFloat(-strength, +strength), 2500.f, .3f);
+							gameSim.RandomFloat(-strength, +strength), 2500.f, .3f,
+							true);
 					}
 
 					free(i);

@@ -747,10 +747,12 @@ struct Torch
 struct ScreenShake
 {
 	bool isActive;
+	bool fade;
 	Vec2 pos;
 	Vec2 vel;
 	float stiffness;
 	float life;
+	float lifeRcp;
 
 	ScreenShake()
 	{
@@ -1010,7 +1012,7 @@ public:
 	void doQuake(float vel);
 	void doBlastEffect(Vec2Arg center, float radius, const Curve & speedCurve);
 
-	void addScreenShake(float dx, float dy, float stiffness, float life);
+	void addScreenShake(float dx, float dy, float stiffness, float life, bool fade);
 	Vec2 getScreenShake() const;
 
 	void addFloorEffect(int playerId, int x, int y, int size, int damageSize);

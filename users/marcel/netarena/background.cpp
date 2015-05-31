@@ -37,13 +37,13 @@ void Background::tick(GameSim & gameSim, float dt)
 
 	if (t1 && !m_isTriggered && gameSim.m_roundTime >= (m_startErupt - 12.f))
 	{
-		gameSim.addScreenShake(-1.2f, 1.3f, 4000.f, 6.f);
+		gameSim.addScreenShake(-1.2f, 1.3f, 4000.f, 6.f, false);
 		t1 = false;
 	}
 
 	if (t2 && !m_isTriggered && gameSim.m_roundTime >= (m_startErupt - 6.f))
 	{
-		gameSim.addScreenShake(-2.3f, 1.5f, 6000.f, 4.f);
+		gameSim.addScreenShake(-2.3f, 1.5f, 6000.f, 4.f, false);
 		gameSim.playSound("volcano-rumble.ogg");
 		
 		t2 = false;
@@ -51,7 +51,7 @@ void Background::tick(GameSim & gameSim, float dt)
 
 	if (t3 && !m_isTriggered && gameSim.m_roundTime >= (m_startErupt - 2.f))
 	{
-		gameSim.addScreenShake(-3.f, 2.5f, 7000.f, 2.f);
+		gameSim.addScreenShake(-3.f, 2.5f, 7000.f, 2.f, true);
 		t3 = false;
 	}
 
@@ -132,7 +132,7 @@ void Background::doEvent(GameSim & gameSim)
 	m_state.startAnim(BACKGROUND_SPRITER, "Erupt");
 
 	gameSim.playSound("volcano-eruption.ogg");
-	gameSim.addScreenShake(-5.5f, 5.5f, 7500.f, 5.f);
+	gameSim.addScreenShake(-5.5f, 5.5f, 7500.f, 5.f, true);
 
 	m_isTriggered = true;
 	m_volcanoState = VC_ERUPT;
