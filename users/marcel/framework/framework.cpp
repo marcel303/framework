@@ -1936,7 +1936,7 @@ void Spriter::draw(const SpriterState & state)
 			globals.color.r,
 			globals.color.g,
 			globals.color.b,
-			d.a);
+			d.a * oldColor.a);
 
 		Sprite sprite(d.filename, d.pivotX, d.pivotY);
 		sprite.x = d.x;
