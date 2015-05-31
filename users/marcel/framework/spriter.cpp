@@ -18,6 +18,8 @@ using namespace tinyxml2;
 
 namespace spriter
 {
+	class BoneTimelineKey;
+	class SpriteTimelineKey;
 	class Transform;
 
 	// helper functions
@@ -28,6 +30,12 @@ namespace spriter
 	static float angleLinear(float angleA, float angleB, int spin, float t);
 	static float quadratic(float a, float b, float c, float t);
 	static float cubic(float a, float b, float c, float d, float t);
+
+	// allocators
+
+	static void resetAllocators();
+	static SpriteTimelineKey * allocSpriteTimelineKey();
+	static BoneTimelineKey * allocBoneTimelineKey();
 
 	//
 
@@ -188,6 +196,16 @@ namespace spriter
 
 		mutable int refCount;
 
+		TimelineKey & operator=(const TimelineKey & other)
+		{
+			time = other.time;
+			spin = other.spin;
+			curveType = other.curveType;
+			c1 = other.c1;
+			c2 = other.c2;
+			return *this;
+		}
+
 		TimelineKey()
 			: time(0)
 			, spin(1)
@@ -311,7 +329,7 @@ namespace spriter
 			const BoneTimelineKey * keyB = dynamic_cast<const BoneTimelineKey*>(_keyB);
 			Assert(keyB);
 
-			BoneTimelineKey * result = new BoneTimelineKey();
+			BoneTimelineKey * result = allocBoneTimelineKey();
 			*result = *this;
 			result->transform = spriter::linear(transform, keyB->transform, spin, t);
 
@@ -343,7 +361,7 @@ namespace spriter
 			const SpriteTimelineKey * keyB = dynamic_cast<const SpriteTimelineKey*>(_keyB);
 			Assert(keyB);
 
-			SpriteTimelineKey * result = new SpriteTimelineKey();
+			SpriteTimelineKey * result = allocSpriteTimelineKey();
 			*result = *this;
 			result->transform = spriter::linear(transform, keyB->transform, spin, t);
 
@@ -381,6 +399,8 @@ namespace spriter
 
 		void getAnimationDataAtTime(std::vector<TransformedObjectKey> & result, const Entity * entity, float newTime) const
 		{
+			resetAllocators();
+
 			if (loopType == kLoopType_NoLooping)
 			{
 				newTime = std::min<float>(newTime, length);
@@ -583,6 +603,38 @@ namespace spriter
 		return linear(quadratic(a, b, c, t), quadratic(b, c, d, t), t);
 	}
 	
+	static const int kMaxTimelineKeys = 256;
+	static SpriteTimelineKey s_spriteTimelineKeys[kMaxTimelineKeys];
+	static int s_numSpriteTimelineKeys = 0;
+	static BoneTimelineKey s_boneTimeLineKeys[kMaxTimelineKeys];
+	static int s_numBoneTimeLineKeys = 0;
+
+	static void resetAllocators()
+	{
+		s_numSpriteTimelineKeys = 0;
+		s_numBoneTimeLineKeys = 0;
+	}
+
+	static SpriteTimelineKey * allocSpriteTimelineKey()
+	{
+		Assert(s_numSpriteTimelineKeys < kMaxTimelineKeys);
+		auto result = &s_spriteTimelineKeys[s_numSpriteTimelineKeys++];
+		Assert(result->refCount == 1);
+		new (result) SpriteTimelineKey();
+		result->AddRef();
+		return result;
+	}
+
+	static BoneTimelineKey * allocBoneTimelineKey()
+	{
+		Assert(s_numBoneTimeLineKeys < kMaxTimelineKeys);
+		auto result = &s_boneTimeLineKeys[s_numBoneTimeLineKeys++];
+		Assert(result->refCount == 1);
+		new (result) BoneTimelineKey();
+		result->AddRef();
+		return result;
+	}
+
 	// tinyxml helper functions
 
 	static const char * stringAttrib(const XMLElement * elem, const char * name, const char * defaultValue)
@@ -703,6 +755,11 @@ namespace spriter
 			drawable.pivotX = (o.key->useDefaultPivot ? file.pivotX : o.key->pivotX) * file.width;
 			drawable.pivotY = (1.f - (o.key->useDefaultPivot ? file.pivotY : o.key->pivotY)) * file.height;
 			drawable.a = tf.a;
+		}
+
+		for (size_t k = 0; k < keys.size(); ++k)
+		{
+			const TransformedObjectKey & o = keys[k];
 
 			o.key->Release();
 		}
