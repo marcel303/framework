@@ -153,6 +153,8 @@ struct PlayerInput
 			analogY != other.analogY;
 	}
 
+	void gather(bool useKeyboard, int gamepadIndex, bool monkeyMode);
+
 	Vec2 getAnalogDirection() const
 	{
 		return Vec2(analogX / float(AnalogRange), analogY / float(AnalogRange));

@@ -112,6 +112,9 @@ App * g_app = 0;
 int g_updateTicks = 0;
 
 int g_keyboardLock = 0;
+int g_keyboardLockRelease = 0;
+
+PlayerInputState * g_uiInput = 0;
 
 Surface * g_colorMap = 0;
 Surface * g_lightMap = 0;
@@ -166,6 +169,19 @@ static void HandleAction(const std::string & action, const Dictionary & args)
 			g_app->selectClient(index);
 		}
 	}
+}
+
+//
+
+void inputLockAcquire()
+{
+	g_keyboardLock++;
+}
+
+void inputLockRelease()
+{
+	g_keyboardLockRelease++;
+	Assert(g_keyboardLockRelease <= g_keyboardLock);
 }
 
 //
@@ -1129,6 +1145,8 @@ bool App::init()
 
 		//
 
+		g_uiInput = new PlayerInputState();
+
 		m_dialogMgr = new DialogMgr();
 
 		m_menuMgr = new MenuMgr();
@@ -1202,6 +1220,9 @@ void App::shutdown()
 
 	delete m_dialogMgr;
 	m_dialogMgr = 0;
+
+	delete g_uiInput;
+	g_uiInput = 0;
 
 	//
 
@@ -1524,6 +1545,11 @@ bool App::tick()
 
 	SDL_ShowCursor(mouseInactivityTime >= 3.f ? 0 : 1);
 	
+	// UI input
+
+	g_uiInput->next(false, dt);
+	g_uiInput->m_currState.gather(true, 0, false);
+
 	// debug UI
 
 	m_discoveryService->update(m_isHost);
@@ -1702,16 +1728,20 @@ bool App::tick()
 	blastEffectTestTick(dt);
 #endif
 
+	if ((g_keyboardLock == 0 && keyboard.wentDown(SDLK_ESCAPE)) || framework.quitRequested)
+	{
+		m_dialogMgr->push(DialogType_YesNo, "Do you really want to quit?", "", DialogQuit, this);
+	}
+
+	Assert(g_keyboardLockRelease <= g_keyboardLock);
+	g_keyboardLock -= g_keyboardLockRelease;
+	g_keyboardLockRelease = 0;
+
 #if GG_ENABLE_TIMERS
 	TIMER_STOP(g_appTickTime);
 	g_statTimerManager.Update();
 	TIMER_START(g_appTickTime);
 #endif
-
-	if ((g_keyboardLock == 0 && keyboard.wentDown(SDLK_ESCAPE)) || framework.quitRequested)
-	{
-		m_dialogMgr->push(DialogType_YesNo, "Do you really want to quit?", "", DialogQuit, this);
-	}
 
 	return true;
 }

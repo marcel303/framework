@@ -2,6 +2,7 @@
 #include "dialog.h"
 #include "framework.h"
 #include "gamedefs.h"
+#include "gamesim.h"
 #include "main.h" // g_devMode
 
 #define UI_DIALOG_FADEIN_TIME .2f
@@ -57,10 +58,13 @@ void Dialog::tick(float dt)
 
 			int newSelection = m_selection;
 
-			if (gamepad[0].wentDown(DPAD_LEFT) && newSelection > 0)
+			if (g_uiInput->wentDown(INPUT_BUTTON_LEFT) && newSelection > 0)
 				newSelection--;
-			if (gamepad[0].wentDown(DPAD_RIGHT) && newSelection < m_numSelections - 1)
+			if (g_uiInput->wentDown(INPUT_BUTTON_RIGHT) && newSelection < m_numSelections - 1)
 				newSelection++;
+
+			if (g_uiInput->wentDown(INPUT_BUTTON_B))
+				newSelection = m_numSelections - 1;
 
 			if (newSelection != m_selection)
 			{
@@ -71,7 +75,7 @@ void Dialog::tick(float dt)
 				Sound("ui/dialog/change.ogg").play();
 			}
 
-			if (gamepad[0].wentDown(GAMEPAD_A) && m_selection != -1)
+			if ((g_uiInput->wentDown(INPUT_BUTTON_A) && m_selection != -1) || (g_uiInput->wentDown(INPUT_BUTTON_B) && m_selection == 1))
 			{
 				complete(m_selection == 0 ? DialogResult_Yes : DialogResult_No);
 
@@ -194,14 +198,14 @@ int DialogMgr::push(DialogType type, std::string text1, std::string text2, Dialo
 
 	m_dialogs.push_back(dialog);
 
-	g_keyboardLock++;
+	inputLockAcquire();
 
 	return dialog.m_id;
 }
 
 void DialogMgr::pop()
 {
-	g_keyboardLock--;
+	inputLockRelease();
 
 	m_dialogs.pop_back();
 }

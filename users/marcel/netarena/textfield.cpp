@@ -199,7 +199,7 @@ void TextField::open(int maxLength, bool canCancel)
 	m_caretPosition = 0;
 	m_caretTimer = 0.f;
 
-	g_keyboardLock++;
+	inputLockAcquire();
 }
 
 void TextField::close()
@@ -215,8 +215,7 @@ void TextField::close()
 	m_caretPosition = 0;
 	m_caretTimer = 0.f;
 
-	Assert(g_keyboardLock > 0);
-	g_keyboardLock--;
+	inputLockRelease();
 }
 
 bool TextField::isActive() const

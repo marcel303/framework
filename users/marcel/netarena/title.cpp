@@ -1,6 +1,8 @@
 #include "Calc.h"
 #include "framework.h"
+#include "gamesim.h"
 #include "gametypes.h"
+#include "main.h"
 #include "title.h"
 
 const float kLogoDuration = 1.5f;
@@ -48,12 +50,7 @@ bool Title::tick(float dt)
 	if (m_logoAnim >= kTitleDuration)
 		return true;
 
-	if (keyboard.wentDown(SDLK_ESCAPE) ||
-		keyboard.wentDown(SDLK_RETURN))
-		return true;
-
-	if (gamepad[0].wentDown(GAMEPAD_A) ||
-		gamepad[0].wentDown(GAMEPAD_START))
+	if (g_keyboardLock == 0 && (g_uiInput->wentDown(INPUT_BUTTON_A) || g_uiInput->wentDown(INPUT_BUTTON_START)))
 		return true;
 
 	return false;

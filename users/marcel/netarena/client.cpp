@@ -105,12 +105,6 @@ void Client::tick(float dt)
 
 			PlayerInstanceData * playerInstanceData = player.m_instanceData;
 
-			PlayerInput input;
-
-		#if 0
-			bool useKeyboard = ((playerInstanceData->m_input.m_controllerIndex == 0) || (g_app->getControllerAllocationCount() == 1)) && !m_textChat->isActive();
-			bool useGamepad = !morePlayersThanControllers || (playerInstanceData->m_input.m_controllerIndex != 0) || (g_app->getControllerAllocationCount() == 1);
-		#else
 			int highest = -1;
 			for (int i = 0; i < MAX_GAMEPAD; ++i)
 			{
@@ -121,133 +115,26 @@ void Client::tick(float dt)
 				if (used)
 					highest = i;
 			}
-			bool useKeyboard = (playerInstanceData->m_input.m_controllerIndex == highest) && !m_textChat->isActive();
-			bool useGamepad = true;
-		#endif
 
-			if (useKeyboard)
+			const bool useKeyboard = playerInstanceData->m_input.m_controllerIndex == highest;
+			const bool useGamepad = true;
+			const int gamepadIndex = useGamepad ? playerInstanceData->m_input.m_controllerIndex : -1;
+
+			PlayerInput input;
+
+			input.gather(useKeyboard, gamepadIndex, g_monkeyMode);
+
+			if (g_keyboardLock == 0)
 			{
-				if (keyboard.isDown(SDLK_LEFT))
+				if (input != playerInstanceData->m_input.m_lastSent)
 				{
-					input.buttons |= INPUT_BUTTON_LEFT;
-					input.analogX -= PlayerInput::AnalogRange;
-				}
-				if (keyboard.isDown(SDLK_RIGHT))
-				{
-					input.buttons |= INPUT_BUTTON_RIGHT;
-					input.analogX += PlayerInput::AnalogRange;
-				}
-				if (keyboard.isDown(SDLK_UP))
-				{
-					input.buttons |= INPUT_BUTTON_UP;
-					input.analogY -= PlayerInput::AnalogRange;
-				}
-				if (keyboard.isDown(SDLK_DOWN))
-				{
-					input.buttons |= INPUT_BUTTON_DOWN;
-					input.analogY += PlayerInput::AnalogRange;
-				}
-				if (keyboard.isDown(SDLK_a) || keyboard.isDown(SDLK_SPACE))
-					input.buttons |= INPUT_BUTTON_A;
-				if (keyboard.isDown(SDLK_s))
-					input.buttons |= INPUT_BUTTON_B;
-				if (keyboard.isDown(SDLK_z))
-					input.buttons |= INPUT_BUTTON_X;
-				if (keyboard.isDown(SDLK_x))
-					input.buttons |= INPUT_BUTTON_Y;
-				if (keyboard.isDown(SDLK_d))
-					input.buttons |= INPUT_BUTTON_START;
-				if (keyboard.isDown(SDLK_c))
-					input.buttons |= INPUT_BUTTON_L1R1;
-			}
+					playerInstanceData->m_input.m_lastSent = input;
 
-			if (useGamepad)
-			{
-				const int gamepadIndex =
-				#if 1
-					playerInstanceData->m_input.m_controllerIndex;
-				#else
-					!morePlayersThanControllers
-					? playerInstanceData->m_input.m_controllerIndex
-					: (g_app->getControllerAllocationCount() == 1)
-					? 0
-					: (playerInstanceData->m_input.m_controllerIndex - 1);
-				#endif
-
-				if (gamepadIndex >= 0 && gamepadIndex < MAX_GAMEPAD && gamepad[gamepadIndex].isConnected)
-				{
-					const Gamepad & g = gamepad[gamepadIndex];
-
-					if (g.isDown(DPAD_LEFT) || g.getAnalog(0, ANALOG_X) < -0.4f)
-						input.buttons |= INPUT_BUTTON_LEFT;
-					if (g.isDown(DPAD_RIGHT) || g.getAnalog(0, ANALOG_X) > +0.4f)
-						input.buttons |= INPUT_BUTTON_RIGHT;
-					if (g.isDown(DPAD_UP) || g.getAnalog(0, ANALOG_Y) < -0.4f)
-						input.buttons |= INPUT_BUTTON_UP;
-					if (g.isDown(DPAD_DOWN) || g.getAnalog(0, ANALOG_Y) > +0.4f)
-						input.buttons |= INPUT_BUTTON_DOWN;
-					if (g.isDown(GAMEPAD_A))
-						input.buttons |= INPUT_BUTTON_A;
-					if (g.isDown(GAMEPAD_B))
-						input.buttons |= INPUT_BUTTON_B;
-					if (g.isDown(GAMEPAD_X))
-						input.buttons |= INPUT_BUTTON_X;
-					if (g.isDown(GAMEPAD_Y))
-						input.buttons |= INPUT_BUTTON_Y;
-					if (g.isDown(GAMEPAD_START))
-						input.buttons |= INPUT_BUTTON_START;
-					if (g.isDown(GAMEPAD_L1) || g.isDown(GAMEPAD_R1))
-						input.buttons |= INPUT_BUTTON_L1R1;
-
-					input.analogX = Calc::Mid((int)(input.analogX + g.getAnalog(0, ANALOG_X) * PlayerInput::AnalogRange), -PlayerInput::AnalogRange, +PlayerInput::AnalogRange);
-					input.analogY = Calc::Mid((int)(input.analogY + g.getAnalog(0, ANALOG_Y) * PlayerInput::AnalogRange), -PlayerInput::AnalogRange, +PlayerInput::AnalogRange);
+					g_app->netSetPlayerInputs(
+						m_channel->m_id,
+						player.m_index,
+						input);
 				}
-			}
-
-			if (g_monkeyMode)
-			{
-				if ((rand() % 2) == 0)
-				{
-					input.buttons |= INPUT_BUTTON_LEFT;
-					input.analogX -= PlayerInput::AnalogRange;
-				}
-				if ((rand() % 10) == 0)
-				{
-					input.buttons |= INPUT_BUTTON_RIGHT;
-					input.analogX += PlayerInput::AnalogRange;
-				}
-				if ((rand() % 10) == 0)
-				{
-					input.buttons |= INPUT_BUTTON_UP;
-					input.analogY -= PlayerInput::AnalogRange;
-				}
-				if ((rand() % 10) == 0)
-				{
-					input.buttons |= INPUT_BUTTON_DOWN;
-					input.analogY += PlayerInput::AnalogRange;
-				}
-				if ((rand() % 60) == 0)
-					input.buttons |= INPUT_BUTTON_A;
-				if ((rand() % 60) == 0)
-					input.buttons |= INPUT_BUTTON_B;
-				if ((rand() % 60) == 0)
-					input.buttons |= INPUT_BUTTON_X;
-				if ((rand() % 60) == 0)
-					input.buttons |= INPUT_BUTTON_Y;
-				if ((rand() % 60) == 0)
-					input.buttons |= INPUT_BUTTON_START;
-				if ((rand() % 120) == 0)
-					input.buttons |= INPUT_BUTTON_L1R1;
-			}
-
-			if (input != playerInstanceData->m_input.m_lastSent)
-			{
-				playerInstanceData->m_input.m_lastSent = input;
-
-				g_app->netSetPlayerInputs(
-					m_channel->m_id,
-					player.m_index,
-					input);
 			}
 		}
 

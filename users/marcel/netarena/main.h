@@ -23,6 +23,7 @@ class OptionMenu;
 struct ParticleSpawnInfo;
 struct Player;
 struct PlayerInput;
+struct PlayerInputState;
 class PlayerInstanceData;
 class StatTimerMenu;
 class Surface;
@@ -154,9 +155,12 @@ extern uint32_t g_buildId;
 extern App * g_app;
 extern int g_updateTicks;
 extern int g_keyboardLock;
+extern PlayerInputState * g_uiInput;
 
 extern Surface * g_colorMap;
 extern Surface * g_lightMap;
 extern Surface * g_finalMap;
 
+void inputLockAcquire();
+void inputLockRelease();
 void applyLightMap(Surface & colormap, Surface & lightmap, Surface & dest);
