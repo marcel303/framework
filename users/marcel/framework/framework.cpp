@@ -3110,8 +3110,9 @@ void drawText(float x, float y, int size, float alignX, float alignY, const char
 		
 		x += sx * (alignX - 1.f) / 2.f;
 		y += sy * (alignY - 1.f) / 2.f;
+		//y += size * (alignY - 1.f) / 2.f;
 
-		gxTranslatef(x, y, 0.f);
+ 		gxTranslatef(x, y, 0.f);
 		
 		drawTextInternal(globals.font->face, size, text);
 	}
@@ -3134,11 +3135,28 @@ void drawTextArea(float x, float y, float sx, int size, const char * format, ...
 	va_start(args, format);
 	vsprintf_s(text, sizeof(text), format, args);
 	va_end(args);
+
+	drawTextArea(x, y, sx, 0.f, size, +1.f, +1.f, text);
+}
+
+void drawTextArea(float x, float y, float sx, float sy, int size, float alignX, float alignY, const char * format, ...)
+{
+	char text[1024];
+	va_list args;
+	va_start(args, format);
+	vsprintf_s(text, sizeof(text), format, args);
+	va_end(args);
 	
+	const int kMaxLines = 64;
+	char lines[kMaxLines][1024];
+	int numLines = 0;
+
 	char * textend = text + strlen(text);
 	char * textptr = text;
 
-	while (textptr != textend)
+	float tsx = 0.f;
+
+	while (textptr != textend && numLines < kMaxLines)
 	{
 		char * nextptr = eatWord(textptr);
 		while (*nextptr)
@@ -3150,26 +3168,34 @@ void drawTextArea(float x, float y, float sx, int size, const char * format, ...
 			measureText(globals.font->face, size, textptr, _sx, _sy);
 			*tempptr = temp;
 
+			if (_sx > tsx)
+				tsx = _sx;
+
 			if (_sx >= sx)
+			{
 				break;
+			}
 			else
 				nextptr = tempptr;
 		}
 
-		gxMatrixMode(GL_MODELVIEW);
-		gxPushMatrix();
-		{
-			gxTranslatef(x, y, 0.f);
-		
-			char temp = *nextptr;
-			*nextptr = 0;
-			drawTextInternal(globals.font->face, size, textptr);
-			*nextptr = temp;
+		char temp = *nextptr;
+		*nextptr = 0;
+		strcpy_s(lines[numLines++], sizeof(lines[0]), textptr);
+		*nextptr = temp;
 
-			textptr = nextptr;
-			y += size;
-		}
-		gxPopMatrix();
+		textptr = nextptr;
+	}
+
+	const float tsy = size * (numLines - 1);
+
+	x += (sx      ) * (-alignX + 1.f) / 2.f;
+	y += (sy - tsy) * (-alignY + 1.f) / 2.f;
+
+	for (int i = 0; i < numLines; ++i)
+	{
+		drawText(x, y, size, alignX, alignY, lines[i]);
+		y += size;
 	}
 }
 
