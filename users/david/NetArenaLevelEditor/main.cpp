@@ -505,7 +505,7 @@ void LoadArt(QString filename, EditorScene* s)
 	while(!in.atEnd())
 	{
 		in >> key;
-		QPixmap* p = new QPixmap(image.copy(hitcount*BLOCKSIZE, 0, BLOCKSIZE, BLOCKSIZE));
+		QPixmap* p = new QPixmap(image.copy((hitcount*BLOCKSIZE)%1920, ((hitcount*BLOCKSIZE)/1920)*BLOCKSIZE, BLOCKSIZE, BLOCKSIZE));
 
 		pixmapsArt[pixmapsArt.size()] = p;
 		int tiley = key/MAPX;
@@ -564,55 +564,55 @@ void SaveGeneric(QString filename, EditorScene* s)
 
 bool testTransparentImage(QImage image)
 {
-    image.convertToFormat(QImage::Format_ARGB32);
+	image.convertToFormat(QImage::Format_ARGB32);
 
-    for (int x = 0 ; x < image.width(); x++)
-    {
-        for (int y = 0 ; y < image.height(); y++)
-            if (qAlpha(image.pixel(x, y)) != 0)
-                return false;
-    }
+	for (int x = 0 ; x < image.width(); x++)
+	{
+		for (int y = 0 ; y < image.height(); y++)
+			if (qAlpha(image.pixel(x, y)) != 0)
+				return false;
+	}
 
-    return true;
+	return true;
 }
 
 void SaveArtFile(QString filename, EditorScene* s)
 {
-    QFile fileArt(filename+".txt");
-    fileArt.open(QIODevice::WriteOnly | QIODevice::Truncate);
-    QDataStream out(&fileArt);
-    out.setByteOrder(QDataStream::LittleEndian);
+	QFile fileArt(filename+".txt");
+	fileArt.open(QIODevice::WriteOnly | QIODevice::Truncate);
+	QDataStream out(&fileArt);
+	out.setByteOrder(QDataStream::LittleEndian);
 
 	int count = 0;
 	QList<int> hitlist;
-    for(int y = 0; y < MAPY; y++)
-    {
-        for (int x = 0; x < MAPX; x++)
-        {
+	for(int y = 0; y < MAPY; y++)
+	{
+		for (int x = 0; x < MAPX; x++)
+		{
 				if(s->m_tiles[y][x].getBlock() != 0 && !testTransparentImage(s->m_tiles[y][x].pixmap().toImage()))
 				{
 					out << count;
 					hitlist.append(count);
-                }
+				}
 				count++;
-        }
-    }
+		}
+	}
 
 	int count2 = 0;
-	QImage artImage(hitlist.size()*BLOCKSIZE, BLOCKSIZE, QImage::Format_ARGB32_Premultiplied);
+	QImage artImage(1920, (((hitlist.size()*BLOCKSIZE)/1920)*BLOCKSIZE)+BLOCKSIZE, QImage::Format_ARGB32_Premultiplied);
 	QPainter painter(&artImage);
 
 	while(!hitlist.empty())
 	{
 		int key = hitlist.front();
-		painter.drawPixmap(count2*BLOCKSIZE, 0, s->m_tiles[key/MAPX][key%MAPX].pixmap());
+		painter.drawPixmap((count2*BLOCKSIZE)%1920, ((count2*BLOCKSIZE)/1920)*BLOCKSIZE, s->m_tiles[key/MAPX][key%MAPX].pixmap());
 		hitlist.pop_front();
 
 		count2++;
 	}
 
-    artImage.save(filename + ".png");
-    fileArt.close();
+	artImage.save(filename + ".png");
+	fileArt.close();
 }
 
 void SaveObjects(QString filename)
