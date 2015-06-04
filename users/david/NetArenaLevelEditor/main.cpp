@@ -487,26 +487,39 @@ void LoadArt(QString filename, EditorScene* s)
 
     file.open(QIODevice::ReadOnly);
     QDataStream in(&file);
+	in.setByteOrder(QDataStream::LittleEndian);
 
-    QPixmap image(filename + ".png");
+    QPixmap image(filename + "data.png");
 
-    bool key = false;
+	int key = 0;
+	int hitcount = 0;
+
     for(int y = 0; y < MAPY; y++)
     {
         for (int x = 0; x < MAPX; x++)
         {
-            in >> key;
-            if(!key)
-                s->m_tiles[y][x].SetSelectedBlock(0);
-            else
-            {
-               QPixmap* p = new QPixmap(image.copy(x*BLOCKSIZE, y*BLOCKSIZE, BLOCKSIZE, BLOCKSIZE));
+			s->m_tiles[y][x].SetSelectedBlock(0);
+		}
+	}
 
-               pixmapsArt[pixmapsArt.size()] = p;
-               s->m_tiles[y][x].SetSelectedBlock((short)pixmapsArt.size()-1);
-            }
-        }
-    }
+    in >> key; //version
+    in >> key; //mapx
+    in >> key; //mapy
+    in >> key; //count
+
+	while(!in.atEnd())
+	{
+		in >> key;
+		QPixmap* p = new QPixmap(image.copy((hitcount*BLOCKSIZE)%1920, ((hitcount*BLOCKSIZE)/1920)*BLOCKSIZE, BLOCKSIZE, BLOCKSIZE));
+
+		pixmapsArt[pixmapsArt.size()] = p;
+		int tiley = key/MAPX;
+		int tilex = key%MAPX;
+		s->m_tiles[tiley][tilex].SetSelectedBlock((short)pixmapsArt.size()-1);
+
+		hitcount++;
+	}
+
     file.close();
 }
 
@@ -556,47 +569,63 @@ void SaveGeneric(QString filename, EditorScene* s)
 
 bool testTransparentImage(QImage image)
 {
-    image.convertToFormat(QImage::Format_ARGB32);
+	image.convertToFormat(QImage::Format_ARGB32);
 
-    for (int x = 0 ; x < image.width(); x++)
-    {
-        for (int y = 0 ; y < image.height(); y++)
-            if (qAlpha(image.pixel(x, y)) != 0)
-                return false;
-    }
+	for (int x = 0 ; x < image.width(); x++)
+	{
+		for (int y = 0 ; y < image.height(); y++)
+			if (qAlpha(image.pixel(x, y)) != 0)
+				return false;
+	}
 
-    return true;
+	return true;
 }
 
 void SaveArtFile(QString filename, EditorScene* s)
 {
-    QImage artImage(BASEX*BLOCKSIZE, BASEY*BLOCKSIZE, QImage::Format_ARGB32_Premultiplied);
-    QPainter painter(&artImage);
+	QFile fileArt(filename+".txt");
+	fileArt.open(QIODevice::WriteOnly | QIODevice::Truncate);
+	QDataStream out(&fileArt);
+	out.setByteOrder(QDataStream::LittleEndian);
 
-    QFile fileArt(filename+".txt");
-    fileArt.open(QIODevice::WriteOnly | QIODevice::Truncate);
-    QDataStream out(&fileArt);
-    out.setByteOrder(QDataStream::LittleEndian);
 
-    for(int y = 0; y < MAPY; y++)
-    {
-        for (int x = 0; x < MAPX; x++)
-        {
-                if(s->m_tiles[y][x].getBlock() == 0 || testTransparentImage(s->m_tiles[y][x].pixmap().toImage()))
-                {
-                    //qDebug() << "skipping empty tile";
-                    out << false;
-                }
-                else
-                {
-                    out << true;
-                    painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, s->m_tiles[y][x].pixmap());
-                }
-        }
-    }
+    out << VERSION;
+    out << MAPX;
+    out << MAPY;
 
-    artImage.save(filename + ".png");
-    fileArt.close();
+	int count = 0;
+	QList<int> hitlist;
+	for(int y = 0; y < MAPY; y++)
+	{
+		for (int x = 0; x < MAPX; x++)
+		{
+				if(s->m_tiles[y][x].getBlock() != 0 && !testTransparentImage(s->m_tiles[y][x].pixmap().toImage()))
+				{
+					hitlist.append(count);
+				}
+				count++;
+		}
+	}
+
+    out << hitlist.size();
+
+	int count2 = 0;
+	QImage artImage(1920, (((hitlist.size()*BLOCKSIZE)/1920)*BLOCKSIZE)+BLOCKSIZE, QImage::Format_ARGB32_Premultiplied);
+	QPainter painter(&artImage);
+
+	while(!hitlist.empty())
+	{
+		int key = hitlist.front();
+		painter.drawPixmap((count2*BLOCKSIZE)%1920, ((count2*BLOCKSIZE)/1920)*BLOCKSIZE, s->m_tiles[key/MAPX][key%MAPX].pixmap());
+
+        out << key;
+		hitlist.pop_front();
+
+		count2++;
+	}
+
+    artImage.save(filename + "data.png");
+	fileArt.close();
 }
 
 void SaveObjects(QString filename)
@@ -678,9 +707,8 @@ void displayPreview(int x, int y)
 	if(!previewList.empty())
 	{
 		foreach(QGraphicsItem* i, previewList)
-		{
 			ed.GetSceneMech()->removeItem(i);
-		}
+
 		previewList.clear();
 	}
 

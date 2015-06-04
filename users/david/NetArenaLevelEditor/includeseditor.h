@@ -30,6 +30,8 @@
 #include "ed.h"
 
 
+#define VERSION 1
+
 #define BASEX 64//60//52 96 64
 #define BASEY 36//32//32 54 36
 
