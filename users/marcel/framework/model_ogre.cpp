@@ -1,4 +1,3 @@
-#include <assert.h>
 #include "model_ogre.h"
 #include "tinyxml2.h"
 
@@ -94,7 +93,7 @@ namespace AnimModel
 							
 							while (xmlVertex)
 							{
-								assert(vertexIndex + 1 <= mesh->m_numVertices);
+								fassert(vertexIndex + 1 <= mesh->m_numVertices);
 								
 								if (vertexIndex + 1 <= mesh->m_numVertices)
 								{
@@ -167,7 +166,7 @@ namespace AnimModel
 						
 						while (xmlFace)
 						{
-							assert(indexIndex + 3 <= mesh->m_numIndices);
+							fassert(indexIndex + 3 <= mesh->m_numIndices);
 							
 							if (indexIndex + 3 <= mesh->m_numIndices)
 							{
@@ -200,7 +199,7 @@ namespace AnimModel
 							
 							//printf("vertexIndex=%d, boneIndex=%d, weight=%g\n", vertexIndex, boneIndex, weight);
 							
-							assert(vertexIndex + 1 <= mesh->m_numVertices);
+							fassert(vertexIndex + 1 <= mesh->m_numVertices);
 							
 							if (vertexIndex + 1 <= mesh->m_numVertices)
 							{
@@ -325,7 +324,7 @@ namespace AnimModel
 					if (!name)
 						name = "";
 					
-					assert(boneIndex + 1 <= boneSet->m_numBones);
+					fassert(boneIndex + 1 <= boneSet->m_numBones);
 					
 					if (boneIndex + 1 <= boneSet->m_numBones)
 					{
@@ -406,8 +405,8 @@ namespace AnimModel
 						
 						//printf("bone link: %d -> %d\n", boneIndex, parentIndex);
 						
-						assert(boneIndex + 1 <= boneSet->m_numBones);
-						assert(parentIndex + 1 <= boneSet->m_numBones);
+						fassert(boneIndex + 1 <= boneSet->m_numBones);
+						fassert(parentIndex + 1 <= boneSet->m_numBones);
 						
 						if ((boneIndex + 1 <= boneSet->m_numBones) && (parentIndex + 1 <= boneSet->m_numBones))
 						{
@@ -485,13 +484,13 @@ namespace AnimModel
 							
 							BoneNameToBoneIndexMap::iterator i = boneNameToBoneIndex.find(boneName);
 							
-							assert(i != boneNameToBoneIndex.end());
+							fassert(i != boneNameToBoneIndex.end());
 							
 							if (i != boneNameToBoneIndex.end())
 							{
 								const int boneIndex = i->second;
 								
-								assert(boneIndex + 1 <= boneSet->m_numBones);
+								fassert(boneIndex + 1 <= boneSet->m_numBones);
 								
 								if (boneIndex + 1 <= boneSet->m_numBones)
 								{

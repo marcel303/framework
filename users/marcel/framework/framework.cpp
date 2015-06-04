@@ -1,6 +1,5 @@
 #define NOMINMAX
 
-#include <assert.h>
 #include <cmath>
 #include <limits>
 #include <map>
@@ -2686,7 +2685,7 @@ void applyTransform()
 		}
 		default:
 		{
-			assert(false);
+			fassert(false);
 			gxLoadIdentity();
 			break;
 		}
@@ -3266,14 +3265,14 @@ public:
 	
 	void push()
 	{
-		assert(stackDepth + 1 < kSize);
+		fassert(stackDepth + 1 < kSize);
 		stackDepth++;
 		stack[stackDepth] = stack[stackDepth - 1];
 	}
 	
 	void pop()
 	{
-		assert(stackDepth > 0);
+		fassert(stackDepth > 0);
 		stackDepth--;
 		
 		isDirty = true;
@@ -3312,7 +3311,7 @@ void gxMatrixMode(GLenum mode)
 			s_gxMatrixStack = &s_gxProjection;
 			break;
 		default:
-			assert(false);
+			fassert(false);
 			break;
 	}
 }
@@ -3348,7 +3347,7 @@ void gxGetMatrixf(GLenum mode, float * m)
 			memcpy(m, s_gxModelView.get().m_v, sizeof(float) * 16);
 			break;
 		default:
-			assert(false);
+			fassert(false);
 			break;
 	}
 }

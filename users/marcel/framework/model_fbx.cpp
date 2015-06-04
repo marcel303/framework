@@ -77,7 +77,7 @@ static RotationType convertRotationOrder(int order)
 	case 0:
 		return RotationType_EulerXYZ;
 	default:
-		assert(false);
+		fassert(false);
 		return RotationType_EulerXYZ;
 	}
 }
@@ -110,7 +110,7 @@ static Mat4x4 matrixRotation(const Vec3 & v, RotationType rotationType)
 		break;
 		
 	default:
-		assert(false);
+		fassert(false);
 		quat.makeIdentity();
 		break;
 	}

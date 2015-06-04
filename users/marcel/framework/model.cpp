@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <assert.h>
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
 #include "data/engine/ShaderCommon.txt"
@@ -465,7 +464,7 @@ namespace AnimModel
 			}
 			else
 			{
-				assert(false);
+				fassert(false);
 				quat.makeIdentity();
 			}
 		}
@@ -545,11 +544,11 @@ namespace AnimModel
 						const AnimKey & key1 = key[0];
 						const AnimKey & key2 = key[1];
 						
-						assert(time >= key1.time && time <= key2.time);
+						fassert(time >= key1.time && time <= key2.time);
 						
 						const float t = (time - key1.time) / (key2.time - key1.time);
 						
-						assert(t >= 0.f && t <= 1.f);
+						fassert(t >= 0.f && t <= 1.f);
 						
 						AnimKey::interpolate(transform, key1, key2, t, m_rotationType);
 					}
@@ -557,7 +556,7 @@ namespace AnimModel
 					{
 						// either the first or last key in the animation. copy value
 						
-						assert(key == firstKey || key == lastKey);
+						fassert(key == firstKey || key == lastKey);
 						
 						AnimKey::interpolate(transform, *key, *key, 0.f, m_rotationType);
 					}
