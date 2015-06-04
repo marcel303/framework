@@ -15,6 +15,23 @@
 
 /*
 
+feedback:
+
+- fireball broken
+- grapple aim
+- spike wall texture
+- lijntjes
+- jetpack op, boost mustnt be spammable
+- more speed axe throw?
+- bullets faster
+- shield shouldn't be spammable, needs cooldown when destroyed
+	cling/cancel melee attack
+- jump pad jetpack
+- volcano bugged
+- ninja move axe character
+- earth quake sound
+- earth quake -> bump items
+
 todo:
 
 - grapple: swing!
@@ -2826,31 +2843,6 @@ void Player::draw() const
 
 	const Color color = getPlayerColor(m_index);
 
-#if 0
-	if (!RECORDMODE)
-	{
-		// draw player color
-
-		setColorf(
-			color.r,
-			color.g,
-			color.b,
-			.5f);
-		drawRect(m_pos[0] - 50, m_pos[1] - 110, m_pos[0] + 50, m_pos[1] - 85);
-	}
-#else
-	if (!RECORDMODE)
-	{
-		// draw player emblem
-
-		SpriterState state = m_emblemSpriterState;
-		state.x = m_pos[0];
-		state.y = m_pos[1] + UI_PLAYER_EMBLEM_OFFSET_Y;
-		setColor(colorWhite);
-		EMBLEM_SPRITER.draw(state);
-	}
-#endif
-
 	// draw invincibility marker
 
 	if (m_spawnInvincibilityTime > 0.f)
@@ -2865,7 +2857,7 @@ void Player::draw() const
 			m_pos[0] + m_collision.min[0], 0,
 			m_pos[0] + m_collision.max[0], GFX_SY);
 	}
-	
+
 	/*
 	if (GAMESIM->m_gameMode == kGameMode_TokenHunt && m_tokenHunt.m_hasToken)
 	{
@@ -2876,6 +2868,13 @@ void Player::draw() const
 
 	if (!RECORDMODE)
 	{
+		// draw player emblem
+		SpriterState state = m_emblemSpriterState;
+		state.x = m_pos[0];
+		state.y = m_pos[1] + UI_PLAYER_EMBLEM_OFFSET_Y;
+		setColor(colorWhite);
+		EMBLEM_SPRITER.draw(state);
+
 		// draw score
 		setFont("calibri.ttf");
 		setColor(colorBlack);

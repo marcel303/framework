@@ -30,6 +30,10 @@ OPTION_VALUE_ALIAS(g_gameModeNextRound, coincollector, kGameMode_CoinCollector);
 
 OPTION_EXTERN(std::string, g_map);
 
+OPTION_DECLARE(int, s_pickupTest, -1);
+OPTION_DEFINE(int, s_pickupTest, "Debug/Pickup Test");
+OPTION_ALIAS(s_pickupTest, "pickuptest");
+
 extern std::vector<std::string> g_mapList;
 
 //
@@ -991,6 +995,7 @@ void AnimationFxState::draw()
 {
 	if (m_isActive)
 	{
+		setColor(colorWhite);
 		Spriter(m_fileName.c_str()).draw(m_state);
 	}
 }
@@ -1829,9 +1834,14 @@ void GameSim::tickPlay()
 
 				PickupType type = kPickupType_COUNT;
 
-				for (int i = 0; type == kPickupType_COUNT; ++i)
-					if (value < weights[i])
-						type = (PickupType)i;
+				if (s_pickupTest >= 0 && s_pickupTest < kPickupType_COUNT)
+					type = (PickupType)(int)s_pickupTest;
+				else
+				{
+					for (int i = 0; type == kPickupType_COUNT; ++i)
+						if (value < weights[i])
+							type = (PickupType)i;
+				}
 
 				trySpawnPickup(type);
 			}
@@ -2861,6 +2871,7 @@ uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, BulletType t
 			b.noCollide = true;
 			b.maxWrapCount = 1;
 			b.maxDistanceTravelled = RandomFloat(BULLET_BUBBLE_RADIUS_MIN, BULLET_BUBBLE_RADIUS_MAX);
+			break;
 
 		default:
 			Assert(false);

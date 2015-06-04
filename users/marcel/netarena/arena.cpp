@@ -718,6 +718,7 @@ void Arena::drawBlocks(int layer) const
 	//glDisableClientState(GL_COLOR_ARRAY);
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 
+	gxSetTexture(0);
 	setColor(colorWhite);
 #endif
 

@@ -1098,6 +1098,10 @@ bool App::init()
 		{
 			m_displayName = "Developer";
 		}
+		else if (DEMOMODE)
+		{
+			m_displayName = "Riposte";
+		}
 		else
 		{
 			TextField nameInput(GFX_SX/2-200, GFX_SY/3, 400, 60);
@@ -1785,6 +1789,28 @@ void App::draw()
 
 		// draw debug stuff
 
+	#if 0
+		setColor(colorWhite);
+		static volatile float sy = 50.f;
+		static volatile float ax = 0.f;
+		static volatile float ay = 0.f;
+		drawTextArea(
+			GFX_SX/2.f,
+			GFX_SY/2.f,
+			100.f,
+			sy,
+			32,
+			ax,
+			ay,
+			"Hello %s Hello Hello Hello Hello!",
+			"World");
+		drawRectLine(
+			GFX_SX/2.f,
+			GFX_SY/2.f,
+			GFX_SX/2.f + 100.f,
+			GFX_SY/2.f + sy);
+	#endif
+
 		if (g_devMode)
 		{
 			setColor(255, 255, 255);
@@ -2453,6 +2479,7 @@ int main(int argc, char * argv[])
 
 	g_optionManager.LoadFromCommandLine(argc, argv);
 
+#if 0
 	if (!g_devMode && !g_connectLocal && (std::string)g_connect == "")
 	{
 		std::cout << "host IP address: ";
@@ -2460,6 +2487,7 @@ int main(int argc, char * argv[])
 		std::getline(std::cin, ip);
 		g_connect = ip;
 	}
+#endif
 
 	g_app = new App();
 
