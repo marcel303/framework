@@ -182,10 +182,9 @@ public:
 	ActionHandler actionHandler;
 	
 private:
-	typedef std::set<Sprite*> SpriteSet;
 	typedef std::set<Model*> ModelSet;
 	
-	SpriteSet m_sprites;
+	Sprite * m_sprites;
 	ModelSet m_models;
 	
 	void registerSprite(Sprite * sprite);
@@ -381,6 +380,10 @@ public:
 	void * animActionHandlerObj;
 	
 private:
+	// book keeping
+	Sprite * m_prev;
+	Sprite * m_next;
+
 	// drawing
 	class TextureCacheElem * m_texture;
 	

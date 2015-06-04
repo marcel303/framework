@@ -80,6 +80,8 @@ Framework::Framework()
 	quitRequested = false;
 	time = 0.f;
 	timeStep = 1.f / 60.f;
+
+	m_sprites = 0;
 }
 
 Framework::~Framework()
@@ -551,9 +553,9 @@ void Framework::process()
 	}
 	*/
 
-	for (SpriteSet::iterator i = m_sprites.begin(); i != m_sprites.end(); ++i)
+	for (Sprite * sprite = m_sprites; sprite; sprite = sprite->m_next)
 	{
-		(*i)->updateAnimation(timeStep);
+		sprite->updateAnimation(timeStep);
 	}
 	
 	for (ModelSet::iterator i = m_models.begin(); i != m_models.end(); ++i)
@@ -599,9 +601,9 @@ void Framework::reloadCaches()
 	
 	globals.resourceVersion++;
 	
-	for (SpriteSet::iterator i = m_sprites.begin(); i != m_sprites.end(); ++i)
+	for (Sprite * sprite = m_sprites; sprite; sprite = sprite->m_next)
 	{
-		(*i)->updateAnimationSegment();
+		sprite->updateAnimationSegment();
 	}
 	
 	for (ModelSet::iterator i = m_models.begin(); i != m_models.end(); ++i)
@@ -795,12 +797,30 @@ void Framework::blinkTaskbarIcon(int count)
 
 void Framework::registerSprite(Sprite * sprite)
 {
-	m_sprites.insert(sprite);
+	fassert(sprite->m_prev == 0);
+	fassert(sprite->m_next == 0);
+
+	if (m_sprites)
+	{
+		m_sprites->m_prev = sprite;
+		sprite->m_next = m_sprites;
+	}
+
+	m_sprites = sprite;
 }
 
 void Framework::unregisterSprite(Sprite * sprite)
 {
-	m_sprites.erase(m_sprites.find(sprite));
+	if (sprite == m_sprites)
+		m_sprites = sprite->m_next;
+
+	if (sprite->m_prev)
+		sprite->m_prev->m_next = sprite->m_next;
+	if (sprite->m_next)
+		sprite->m_next->m_prev = sprite->m_prev;
+
+	sprite->m_prev = 0;
+	sprite->m_next = 0;
 }
 
 void Framework::registerModel(Model * model)
@@ -1511,6 +1531,8 @@ Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * s
 	// texture
 	m_texture = &g_textureCache.findOrCreate(filename, m_anim->m_gridSize[0], m_anim->m_gridSize[1]);
 	
+	m_prev = 0;
+	m_next = 0;
 	if (m_autoUpdate)
 		framework.registerSprite(this);
 }
