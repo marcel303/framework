@@ -336,7 +336,7 @@ class Sprite
 public:
 	friend class Framework;
 	
-	Sprite(const char * filename, float pivotX = 0.f, float pivotY = 0.f, const char * spritesheet = 0, bool autoUpdate = true);
+	Sprite(const char * filename, float pivotX = 0.f, float pivotY = 0.f, const char * spritesheet = 0, bool autoUpdate = false);
 	~Sprite();
 	
 	void update(float dt); // only needs to be called if autoUpdate is false!
