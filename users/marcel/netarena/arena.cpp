@@ -7,6 +7,7 @@
 #include "gamesim.h"
 #include "host.h"
 #include "image.h"
+#include "Log.h"
 #include "main.h"
 #include "Path.h"
 #include "player.h"

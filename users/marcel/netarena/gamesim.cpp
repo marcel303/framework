@@ -7,6 +7,7 @@
 #include "gamedefs.h"
 #include "gamesim.h"
 #include "host.h"
+#include "Log.h"
 #include "main.h"
 #include "Parse.h"
 #include "Path.h"

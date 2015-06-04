@@ -9,6 +9,7 @@
 #include "framework.h"
 #include "gamedefs.h"
 #include "host.h"
+#include "Log.h"
 #include "main.h"
 #include "player.h"
 

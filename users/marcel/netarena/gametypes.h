@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include "Debugging.h"
 #include "Vec2.h"
 
 #pragma pack(push)
@@ -343,6 +344,7 @@ struct FixedString
 	void operator=(const char * str)
 	{
 		const size_t len = strlen(str);
+		Assert(len <= SIZE);
 		const size_t copySize = (len > SIZE) ? SIZE : len;
 		for (size_t i = 0; i < copySize; ++i)
 			m_data[i] = str[i];
