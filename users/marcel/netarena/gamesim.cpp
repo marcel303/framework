@@ -2856,6 +2856,11 @@ uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, BulletType t
 			b.maxDestroyedBlocks = 1;
 			b.doDamageOwner = true;
 			break;
+		case kBulletType_Bubble:
+			velocity = RandomFloat(BULLET_BUBBLE_SPEED_MIN, BULLET_BUBBLE_SPEED_MAX);
+			b.noCollide = true;
+			b.maxWrapCount = 1;
+			b.maxDistanceTravelled = RandomFloat(BULLET_BUBBLE_RADIUS_MIN, BULLET_BUBBLE_RADIUS_MAX);
 
 		default:
 			Assert(false);

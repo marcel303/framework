@@ -270,6 +270,7 @@ struct Player
 
 	//
 
+	SpriterState m_emblemSpriterState;
 	float m_multiKillTimer;
 	int m_multiKillCount;
 	int m_killingSpree;

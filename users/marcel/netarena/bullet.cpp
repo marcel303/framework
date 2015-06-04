@@ -20,6 +20,7 @@ static const char * s_bulletSpriteFiles[kBulletType_COUNT] =
 	"fire-type-0.png",
 	"particle-0.png",
 	"particle-0.png",
+	"particle-0.png",
 	"particle-0.png"
 };
 
@@ -247,7 +248,7 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 						kill = true;
 				}
 
-				if (!kill && !b.noCollide && !b.noDamagePlayer)
+				if (!kill && !b.noDamagePlayer)
 				{
 					// collide with players
 
@@ -579,6 +580,7 @@ void initBullet(GameSim & gameSim, Bullet & b, const ParticleSpawnInfo & spawnIn
 	b.setVel(angle / 128.f * float(M_PI), velocity);
 
 	b.noCollide = true;
+	b.noDamagePlayer = true;
 	b.maxWrapCount = 1;
 	b.maxDistanceTravelled = spawnInfo.maxDistance;
 	b.color = spawnInfo.color;

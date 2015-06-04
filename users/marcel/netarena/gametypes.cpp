@@ -63,7 +63,7 @@ void PlayerInput::gather(bool useKeyboard, int gamepadIndex, bool monkeyMode)
 			buttons |= INPUT_BUTTON_DOWN;
 			analogY += PlayerInput::AnalogRange;
 		}
-		if (keyboard.isDown(SDLK_a) || keyboard.isDown(SDLK_SPACE))
+		if (keyboard.isDown(SDLK_a) || keyboard.isDown(SDLK_SPACE) || keyboard.isDown(SDLK_RETURN))
 			buttons |= INPUT_BUTTON_A;
 		if (keyboard.isDown(SDLK_s))
 			buttons |= INPUT_BUTTON_B;

@@ -17,6 +17,25 @@
 
 todo:
 
+- grapple: swing!
+- napalm pickup
+- freeze gun flow
+- animated spring
+- fluids
+- humor objects
+- interactive main menu
+- physics particles
+- interactive level objects
+- arced bullets
+- exploding barrels
+- flamethrower
+
++ add dialog spriter support
+- add dialog button spriter object. add active/inactive animations
++ add yes/no dialog
+
+- add dust particles when moving grounded at speed > treshold (> normal walking speed)
+
 - jetpack ability V2:
 	+ free analog stick control
 	# fly/land behavior?
@@ -39,7 +58,7 @@ todo:
 - diagonal jump pads
 - pickup spawn weights per tile
 - shield ability: deflect projectiles in aim direction. recharge period. shield gets transparent
-- fix drawing of aim above/below layers
++ fix drawing of aim above/below layers
 
 ** HIGH PRIORITY **
 
@@ -91,8 +110,8 @@ todo:
 
 - add callstack gathering
 
-- check build ID
-	- add built-in version ID on channel connect
++ check build ID
+	+ add built-in version ID on channel connect
 
 - better attach to platform logic, so we can have movers closer to each other without the player bugging
 
@@ -196,6 +215,7 @@ COMMAND_OPTION(s_killPlayers, "Player/Kill Players", []{ g_app->netDebugAction("
 #define SHIELD_SPRITER Spriter("objects/shield/sprite.scml")
 #define BUBBLE_SPRITER Spriter("objects/bubble/sprite.scml")
 #define SHIELDSPECIAL_SPRITER Spriter("objects/shieldspecial/sprite.scml")
+#define EMBLEM_SPRITER Spriter("Player_Emblem/Player_Emblem.scml")
 
 // todo : m_isGrounded should be true when stickied too. review code and make change!
 
@@ -1201,6 +1221,8 @@ void Player::tick(float dt)
 				BulletType bulletType = kBulletType_COUNT;
 				BulletEffect bulletEffect = kBulletEffect_Damage;
 				bool hasAttackCollision = false;
+				int numBullets = 1;
+				bool randomBulletAngle = false;
 
 				PlayerWeapon weaponType = popWeapon();
 
@@ -1220,9 +1242,11 @@ void Player::tick(float dt)
 				else if (weaponType == kPlayerWeapon_Bubble)
 				{
 					anim = kPlayerAnim_Fire;
-					bulletType = kBulletType_B;
+					bulletType = kBulletType_Bubble;
 					bulletEffect = kBulletEffect_Bubble;
 					m_attack.cooldown = PLAYER_FIRE_COOLDOWN;
+					numBullets = BULLET_BUBBLE_COUNT;
+					randomBulletAngle = true;
 				}
 				else if (weaponType == kPlayerWeapon_Grenade)
 				{
@@ -1259,30 +1283,40 @@ void Player::tick(float dt)
 
 				if (bulletType != kBulletType_COUNT)
 				{
-					// determine attack direction based on player input
-
-					int angle;
-
-					if (m_input.isDown(INPUT_BUTTON_UP))
-						angle = 256*1/4;
-					else if (m_input.isDown(INPUT_BUTTON_DOWN))
-						angle = 256*3/4;
-					else if (m_facing[0] < 0)
-						angle = 128;
-					else
-						angle = 0;
-
 					const float x = m_pos[0] + mirrorX(0.f);
 					const float y = m_pos[1] - mirrorY(44.f);
 
-					Assert(bulletType != kBulletType_COUNT);
-					GAMESIM->spawnBullet(
-						x,
-						y,
-						angle,
-						bulletType,
-						bulletEffect,
-						m_index);
+					for (int i = 0; i < numBullets; ++i)
+					{
+						int angle;
+
+						if (randomBulletAngle)
+						{
+							angle = GAMESIM->Random() % 256;
+						}
+						else
+						{
+							// determine attack direction based on player input
+
+							if (m_input.isDown(INPUT_BUTTON_UP))
+								angle = 256*1/4;
+							else if (m_input.isDown(INPUT_BUTTON_DOWN))
+								angle = 256*3/4;
+							else if (m_facing[0] < 0)
+								angle = 128;
+							else
+								angle = 0;
+						}
+
+						Assert(bulletType != kBulletType_COUNT);
+						GAMESIM->spawnBullet(
+							x,
+							y,
+							angle,
+							bulletType,
+							bulletEffect,
+							m_index);
+					}
 
 					GAMESIM->addAnimationFx(
 						"fx/Attack_FireBullet.scml",
@@ -2804,6 +2838,14 @@ void Player::draw() const
 		drawRect(m_pos[0] - 50, m_pos[1] - 110, m_pos[0] + 50, m_pos[1] - 85);
 	}
 
+	{
+		SpriterState state = m_emblemSpriterState;
+		state.x = m_pos[0];
+		state.y = m_pos[1] + UI_PLAYER_EMBLEM_OFFSET_Y;
+		setColor(colorWhite);
+		EMBLEM_SPRITER.draw(state);
+	}
+
 	// draw invincibility marker
 
 	if (m_spawnInvincibilityTime > 0.f)
@@ -3250,6 +3292,8 @@ void Player::respawn()
 
 		m_controlDisableTime = 0.f;
 
+		m_emblemSpriterState = SpriterState();
+		m_emblemSpriterState.startAnim(EMBLEM_SPRITER, 1);
 		m_multiKillTimer = 0.f;
 		m_multiKillCount = 0;
 		m_killingSpree = 0;

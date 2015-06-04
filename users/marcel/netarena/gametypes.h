@@ -183,6 +183,7 @@ enum BulletType
 	kBulletType_Grenade,
 	kBulletType_GrenadeA,
 	kBulletType_ParticleA,
+	kBulletType_Bubble,
 	kBulletType_COUNT
 };
 
