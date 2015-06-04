@@ -93,6 +93,8 @@ void CharSelector::draw()
 		spriterState.x = characterX;
 		spriterState.y = characterY;
 		spriterState.scale = .7f;
+
+		setColor(colorWhite);
 		spriter.draw(spriterState);
 
 		setColor(player.m_isReadyUpped ? colorBlue : colorWhite);
@@ -103,6 +105,7 @@ void CharSelector::draw()
 		SpriterState state = m_menu->m_joinSpriterState;
 		state.x = characterX;
 		state.y = characterY;
+
 		setColor(colorWhite);
 		JOIN_SPRITER.draw(state);
 	}

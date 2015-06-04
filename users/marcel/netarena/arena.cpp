@@ -635,7 +635,7 @@ void Arena::drawBlocks(int layer) const
 #if USE_TEXTURE_ATLAS
 	float pos[4 * ARENA_SX * ARENA_SY * 2];
 	float uv [4 * ARENA_SX * ARENA_SY * 2];
-	float a  [4 * ARENA_SX * ARENA_SY * 1];
+	uint32_t c  [4 * ARENA_SX * ARENA_SY * 1];
 	int numVerts = 0;
 
 	const int ATLAS_TILE_SX = (m_textureSx / BLOCK_SX);
@@ -649,13 +649,14 @@ void Arena::drawBlocks(int layer) const
 	{ \
 		const int tx = t % ATLAS_TILE_SX; \
 		const int ty = t / ATLAS_TILE_SX; \
+		const uint32_t tc = 0x00ffffff | (_a << 24); \
 		for (int v = 0; v < 4; ++v, ++numVerts) \
 		{ \
 			pos[numVerts * 2 + 0] = (x  + OFFSET_X[v]) * BLOCK_SX; \
 			pos[numVerts * 2 + 1] = (y  + OFFSET_Y[v]) * BLOCK_SY; \
 			uv[numVerts * 2 + 0]  = (tx + OFFSET_X[v]) * BLOCK_SU; \
 			uv[numVerts * 2 + 1]  = 1.f - (ty + OFFSET_Y[v]) * BLOCK_SV; \
-			a[numVerts] = _a; \
+			c[numVerts] = tc; \
 		} \
 	}
 #endif
@@ -666,18 +667,18 @@ void Arena::drawBlocks(int layer) const
 		{
 			const Block & block = m_blocks[x][y];
 
-			float alpha = 1.f;
+			int alpha = 255;
 
 			if (layer == 0 && block.type == kBlockType_Appear)
 			{
 				const AppearBlockData& data = (AppearBlockData&)block.param;
 
 				if (data.isVisible && data.switchTime < 20)
-					alpha = (255 - data.switchTime * 12.75) / 255.f;
+					alpha = data.switchTime * 12.75f;
 				else if (!data.isVisible)
 				{
 					if (data.switchTime < 20)
-						alpha = (2.55 * (100 - data.switchTime * 5)) / 255.f;
+						alpha = (2.55f * (100 - data.switchTime * 5.f));
 					else
 						continue;
 				}
@@ -689,8 +690,11 @@ void Arena::drawBlocks(int layer) const
 					continue;
 			}
 
-			if (block.artIndex[layer] != (uint16_t)-1)
+			if (block.artIndex[layer] != (uint16_t)-1 && alpha > 0)
 			{
+				if (alpha > 255)
+					alpha = 255;
+
 			#if USE_TEXTURE_ATLAS
 				AddQuad(x, y, block.artIndex[layer], alpha);
 			#else
@@ -705,17 +709,17 @@ void Arena::drawBlocks(int layer) const
 	gxSetTexture(m_texture);
 	
 	glVertexPointer(2, GL_FLOAT, 0, pos);
-	//glColorPointer(1, GL_FLOAT, 0, a);
+	glColorPointer(4, GL_UNSIGNED_BYTE, 0, c);
 	glTexCoordPointer(2, GL_FLOAT, 0, uv);
 
 	glEnableClientState(GL_VERTEX_ARRAY);
-	//glEnableClientState(GL_COLOR_ARRAY);
+	glEnableClientState(GL_COLOR_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 	
 	glDrawArrays(GL_QUADS, 0, numVerts);
 	
 	glDisableClientState(GL_VERTEX_ARRAY);
-	//glDisableClientState(GL_COLOR_ARRAY);
+	glDisableClientState(GL_COLOR_ARRAY);
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 
 	gxSetTexture(0);
