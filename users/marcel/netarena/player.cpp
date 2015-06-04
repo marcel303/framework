@@ -2826,6 +2826,7 @@ void Player::draw() const
 
 	const Color color = getPlayerColor(m_index);
 
+#if 0
 	if (!RECORDMODE)
 	{
 		// draw player color
@@ -2837,14 +2838,18 @@ void Player::draw() const
 			.5f);
 		drawRect(m_pos[0] - 50, m_pos[1] - 110, m_pos[0] + 50, m_pos[1] - 85);
 	}
-
+#else
+	if (!RECORDMODE)
 	{
+		// draw player emblem
+
 		SpriterState state = m_emblemSpriterState;
 		state.x = m_pos[0];
 		state.y = m_pos[1] + UI_PLAYER_EMBLEM_OFFSET_Y;
 		setColor(colorWhite);
 		EMBLEM_SPRITER.draw(state);
 	}
+#endif
 
 	// draw invincibility marker
 
@@ -2873,8 +2878,8 @@ void Player::draw() const
 	{
 		// draw score
 		setFont("calibri.ttf");
-		setColor(255, 255, 255);
-		drawText(m_pos[0], m_pos[1] - 110, 20, 0.f, +1.f, "%d", m_score);
+		setColor(colorBlack);
+		drawText(m_pos[0], m_pos[1] + UI_PLAYER_EMBLEM_TEXT_OFFSET_Y, 20, 0.f, +1.f, "%d", m_score);
 	}
 
 	if (!m_isAlive && m_canRespawn && (GAMESIM->m_gameState == kGameState_Play) && m_isRespawn)

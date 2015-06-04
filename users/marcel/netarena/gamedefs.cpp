@@ -432,6 +432,7 @@ OPTION_DEFINE(bool, UI_PLAYER_OUTLINE, "UI/Player/Outline Enabled");
 OPTION_DEFINE(int, UI_PLAYER_OUTLINE_ALPHA, "UI/Player/Outline Alpha (%%)");
 OPTION_DEFINE(int, UI_PLAYER_BACKDROP_ALPHA, "UI/Player/Background Alpha (%%)");
 OPTION_DEFINE(int, UI_PLAYER_EMBLEM_OFFSET_Y, "UI/Player/Emblem Y Offset");
+OPTION_DEFINE(int, UI_PLAYER_EMBLEM_TEXT_OFFSET_Y, "UI/Player/Emblem Text Y Offset");
 
 OPTION_DEFINE(bool, VOLCANO_LOOP, "Level Events/Volcano/Loop");
 OPTION_DEFINE(int, VOLCANO_LOOP_TIME, "Level Events/Volcano/LoopTime");
