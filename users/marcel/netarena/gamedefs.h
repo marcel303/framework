@@ -33,8 +33,8 @@
 
 #define NET_PORT 30000
 
-#define ARENA_SX (GFX_SX / BLOCK_SX) // 30
-#define ARENA_SY (GFX_SY / BLOCK_SY) // 16
+#define ARENA_SX (GFX_SX / BLOCK_SX) // 64
+#define ARENA_SY (GFX_SY / BLOCK_SY) // 36
 
 #define ARENA_SX_PIXELS (ARENA_SX * BLOCK_SX)
 #define ARENA_SY_PIXELS (ARENA_SY * BLOCK_SY)

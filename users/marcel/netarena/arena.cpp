@@ -153,6 +153,8 @@ bool Block::handleDamage(GameSim & gameSim, int blockX, int blockY)
 Arena::Arena()
 #if USE_TEXTURE_ATLAS
 	: m_texture(0)
+	, m_textureSx(0)
+	, m_textureSy(0)
 #else
 	: m_sprites(0)
 	, m_numSprites(0)
@@ -425,9 +427,11 @@ void Arena::loadArt(const char * name)
 	freeArt();
 
 #if USE_TEXTURE_ATLAS
-	const std::string atlasName = std::string("levels/") + name + "/ArtAtlas.png";
-
-	m_texture = Sprite(atlasName.c_str()).getTexture();
+	const std::string atlasName = std::string("levels/") + name + "/ArtData.png";
+	const Sprite atlasSprite(atlasName.c_str());
+	m_texture = atlasSprite.getTexture();
+	m_textureSx = atlasSprite.getWidth();
+	m_textureSy = atlasSprite.getHeight();
 #else
 	const std::string baseName = std::string("levels/") + name + "/";
 	const std::string artFileName = baseName + "ArtIndex.txt";
@@ -459,6 +463,8 @@ void Arena::freeArt()
 {
 #if USE_TEXTURE_ATLAS
 	m_texture = 0;
+	m_textureSx = 0;
+	m_textureSy = 0;
 #else
 	for (int i = 0; i < m_numSprites; ++i)
 	{
@@ -474,6 +480,55 @@ void Arena::freeArt()
 
 void Arena::loadArtIndices(const char * filename, int layer)
 {
+#if USE_TEXTURE_ATLAS
+	try
+	{
+		FileStream stream;
+		stream.Open(filename, OpenMode_Read);
+		StreamReader reader(&stream, false);
+		
+		{
+			const int version = reader.ReadInt32();
+			const int sx = reader.ReadInt32();
+			const int sy = reader.ReadInt32();
+		}
+
+		const int sx = ARENA_SX;
+		const int sy = ARENA_SY;
+
+		for (int y = 0; y < sy; ++y)
+			for (int x = 0; x < sx; ++x)
+				m_blocks[x][y].artIndex[layer] = -1;
+
+		//const int numIndices = stream.Length_get() / sizeof(int32_t);
+		const int numIndices = reader.ReadInt32();
+
+		Assert(numIndices <= ARENA_SX * ARENA_SY);
+
+		for (int i = 0; i < numIndices; ++i)
+		{
+			const int index = reader.ReadInt32();
+
+			Assert(index <= ARENA_SX * ARENA_SY);
+
+			const int x = index % ARENA_SX;
+			const int y = index / ARENA_SX;
+
+			if (x < ARENA_SX && y < ARENA_SY)
+			{
+				m_blocks[x][y].artIndex[layer] = i;
+			}
+			else
+			{
+				logDebug("art tile at (%d, %d) is out of range. layer=%d, index=%d", x, y, layer, i);
+			}
+		}
+	}
+	catch (std::exception & e)
+	{
+		LOG_ERR("failed to open %s: %s", filename, e.what());
+	}
+#else
 	try
 	{
 		FileStream stream;
@@ -517,6 +572,7 @@ void Arena::loadArtIndices(const char * filename, int layer)
 	{
 		LOG_ERR("failed to open %s: %s", filename, e.what());
 	}
+#endif
 }
 
 void Arena::serialize(NetSerializationContext & context)
@@ -582,8 +638,8 @@ void Arena::drawBlocks(int layer) const
 	float a  [4 * ARENA_SX * ARENA_SY * 1];
 	int numVerts = 0;
 
-	const int ATLAS_TILE_SX = (1920 / BLOCK_SX);
-	const int ATLAS_TILE_SY = (1080 / BLOCK_SY);
+	const int ATLAS_TILE_SX = (m_textureSx / BLOCK_SX);
+	const int ATLAS_TILE_SY = (m_textureSy / BLOCK_SY);
 	const float BLOCK_SU = 1.f / ATLAS_TILE_SX;
 	const float BLOCK_SV = 1.f / ATLAS_TILE_SY;
 	const int OFFSET_X[4] = { 0, 1, 1, 0 };
@@ -598,7 +654,7 @@ void Arena::drawBlocks(int layer) const
 			pos[numVerts * 2 + 0] = (x  + OFFSET_X[v]) * BLOCK_SX; \
 			pos[numVerts * 2 + 1] = (y  + OFFSET_Y[v]) * BLOCK_SY; \
 			uv[numVerts * 2 + 0]  = (tx + OFFSET_X[v]) * BLOCK_SU; \
-			uv[numVerts * 2 + 1]  = (ty + OFFSET_Y[v]) * BLOCK_SV; \
+			uv[numVerts * 2 + 1]  = 1.f - (ty + OFFSET_Y[v]) * BLOCK_SV; \
 			a[numVerts] = _a; \
 		} \
 	}
