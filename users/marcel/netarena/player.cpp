@@ -4,6 +4,7 @@
 #include "client.h"
 #include "framework.h"
 #include "host.h"
+#include "Log.h"
 #include "main.h"
 #include "player.h"
 #include "Timer.h"
@@ -19,14 +20,14 @@ feedback:
 
 - fireball broken
 - grapple aim
-- spike wall texture
-- lijntjes
-- jetpack op, boost mustnt be spammable
-- more speed axe throw?
-- bullets faster
++ spike wall texture
++ lijntjes
+- jetpack op, boost mustn't be spammable
+# more speed axe throw?
++ bullets faster
 - shield shouldn't be spammable, needs cooldown when destroyed
 	cling/cancel melee attack
-- jump pad jetpack
++ jump pad jetpack
 - volcano bugged
 - ninja move axe character
 - earth quake sound
@@ -2271,7 +2272,7 @@ void Player::tick(float dt)
 
 			// spring
 
-			if (i == 1 && (dirBlockMask[i] & (1 << kBlockType_Spring)) && totalVel[i] >= 0.f)
+			if (i == 1 && (dirBlockMask[i] & (1 << kBlockType_Spring)) && totalVel[i] >= 0.f && !m_jetpack.isActive)
 			{
 				m_vel[i] = -BLOCKTYPE_SPRING_SPEED;
 
