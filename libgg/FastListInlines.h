@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Debugging.h"
 #include "FastList.h"
 
 template <typename T>
@@ -18,7 +19,7 @@ inline FastList<T>::~FastList()
 template <typename T>
 inline void FastList<T>::push_head(T * pElem)
 {
-	assert(pElem->m_pPrev == 0 && pElem->m_pNext == 0);
+	Assert(pElem->m_pPrev == 0 && pElem->m_pNext == 0);
 
 	if (m_pHead == 0)
 	{
@@ -37,7 +38,7 @@ inline void FastList<T>::push_head(T * pElem)
 template <typename T>
 inline void FastList<T>::push_tail(T * pElem)
 {
-	assert(pElem->m_pPrev == 0 && pElem->m_pNext == 0);
+	Assert(pElem->m_pPrev == 0 && pElem->m_pNext == 0);
 
 	if (m_pHead == 0)
 	{

@@ -18,12 +18,12 @@ PsdDisplayInfo::~PsdDisplayInfo()
 
 void PsdDisplayInfo::Setup(const std::string& name, PsdColorSpace colorSpace, int r, int g, int b, int a, int opacity, bool kind)
 {
-	assert(colorSpace == PsdColorSpace_Rgb);
-	assert(r >= 0 && r <= 65535);
-	assert(g >= 0 && g <= 65535);
-	assert(b >= 0 && b <= 65535);
-	assert(a >= 0 && a <= 65535);
-	assert(opacity >= 0 && opacity <= 100);
+	Assert(colorSpace == PsdColorSpace_Rgb);
+	Assert(r >= 0 && r <= 65535);
+	Assert(g >= 0 && g <= 65535);
+	Assert(b >= 0 && b <= 65535);
+	Assert(a >= 0 && a <= 65535);
+	Assert(opacity >= 0 && opacity <= 100);
 	
 	PsdImageResource::Setup("8BIM", PsdResourceId_DisplayInfo, name);
 	

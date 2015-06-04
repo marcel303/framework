@@ -52,7 +52,7 @@ void PsdLayer::ReadHeader(PsdInfo* pi, Stream* stream)
 
 	mChannelCount = SwapU16(reader.ReadUInt16());
 
-	assert(mChannelCount <= 10);
+	Assert(mChannelCount <= 10);
 
 	PSD_LOG_DBG("layer: read: channelCount: %d", (int)mChannelCount);
 
@@ -142,8 +142,8 @@ void PsdLayer::WritePrepare()
 
 void PsdLayer::WriteHeader(PsdInfo* pi, Stream* stream)
 {
-	assert(mWritePrepared);
-	assert(!memcmp(mSignature, "8BIM", 4));
+	Assert(mWritePrepared);
+	Assert(!memcmp(mSignature, "8BIM", 4));
 
 	//
 	
@@ -223,7 +223,7 @@ void PsdLayer::WriteHeader(PsdInfo* pi, Stream* stream)
 
 void PsdLayer::WriteData(PsdInfo* pi, Stream* stream)
 {
-	assert(mWritePrepared);
+	Assert(mWritePrepared);
 	
 	StreamWriter writer(stream, false);
 

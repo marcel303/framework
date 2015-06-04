@@ -31,7 +31,7 @@ void PsdImageResourceList::Read(PsdInfo* pi, Stream* stream)
 		mResourceList.push_back(resource);
 	}
 
-	assert(stream->Position_get() == end);
+	Assert(stream->Position_get() == end);
 
 	stream->Seek(end, SeekMode_Begin);
 }

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <assert.h>
 #include <stdint.h>
+#include "Debugging.h"
 #include "Log.h"
 
 #if 1
@@ -11,7 +11,7 @@ static inline void NetAssertImpl(const char * function, const uint32_t line, con
 	if (result == false)
 	{
 		LOG_ERR("assertion failed: %s:%u: %s\n", function, line, expr);
-		//assert(false);
+		//Assert(false);
 	}
 }
 

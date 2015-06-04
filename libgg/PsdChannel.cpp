@@ -27,7 +27,7 @@ void PsdChannel::ReadHeader(StreamReader& reader)
 	mUsage = SwapU16(reader.ReadUInt16());
 	mLength = SwapU32(reader.ReadUInt32());
 
-	assert(mLength > 0);
+	Assert(mLength > 0);
 
 	PSD_LOG_DBG("channel: read: usage=%d, length=%d",
 		(int)mUsage,
@@ -50,7 +50,7 @@ void PsdChannel::ReadChannelHeader(Stream* stream, uint16_t compression, int sy)
 			{
 				const uint16_t size = SwapU16(reader.ReadUInt16());
 
-				assert(size > 0);
+				Assert(size > 0);
 				
 				mRleHeader[y] = size;
 				
@@ -65,8 +65,8 @@ void PsdChannel::ReadChannelHeader(Stream* stream, uint16_t compression, int sy)
 
 void PsdChannel::ReadChannelData(Stream* stream, uint16_t compression, PsdImageMode mode, int sx, int sy)
 {
-	assert(sx >= 0);
-	assert(sy >= 0);
+	Assert(sx >= 0);
+	Assert(sy >= 0);
 
 	StreamReader reader(stream, false);
 
@@ -125,7 +125,7 @@ void PsdChannel::ReadChannelData(Stream* stream, uint16_t compression, PsdImageM
 
 						const int size = 257 - header;
 
-						assert(size > 0);
+						Assert(size > 0);
 
 						const uint8_t v = reader.ReadUInt8();
 
@@ -143,7 +143,7 @@ void PsdChannel::ReadChannelData(Stream* stream, uint16_t compression, PsdImageM
 
 						const int size = header + 1;
 
-						assert(size > 0);
+						Assert(size > 0);
 
 						for (int j = 0; j < size; ++j)
 						{
@@ -161,14 +161,14 @@ void PsdChannel::ReadChannelData(Stream* stream, uint16_t compression, PsdImageM
 				
 				const int size = end - begin;
 				
-				assert(size > 0);
+				Assert(size > 0);
 
 				PSD_LOG_DBG("RLE size read: %d/%d", size, (int)mRleHeader[y]);
 			}
 
 			PSD_LOG_DBG("packet count: %d", packetCount);
 
-			assert(i == area);
+			Assert(i == area);
 			
 			break;
 		}
@@ -197,14 +197,14 @@ void PsdChannel::WritePrepare(uint16_t compression, uint16_t mode, bool merged)
 
 	mLength = mChannelData.Length_get();
 
-	assert(mLength > 0);
+	Assert(mLength > 0);
 }
 
 void PsdChannel::WriteChannelHeader(Stream* stream, uint16_t compression)
 {
 	StreamWriter writer(stream, false);
 
-	assert(
+	Assert(
 		compression == PsdCompressionType_Raw ||
 		compression == PsdCompressionType_Rle);
 
@@ -214,7 +214,7 @@ void PsdChannel::WriteChannelHeader(Stream* stream, uint16_t compression)
 			break;
 		case PsdCompressionType_Rle:
 		{
-			assert((int)mRleHeader.size() == mSy);
+			Assert((int)mRleHeader.size() == mSy);
 
 			for (size_t i = 0; i < mRleHeader.size(); ++i)
 			{
@@ -240,7 +240,7 @@ void PsdChannel::WriteChannelData(Stream* stream)
 
 void PsdChannel::WriteHeader(Stream* stream)
 {
-	assert(mLength > 0);
+	Assert(mLength > 0);
 	
 	StreamWriter writer(stream, false);
 
@@ -302,9 +302,9 @@ void PsdChannel::EncodeBytes(uint16_t compression, uint16_t mode)
 
 void PsdChannel::Setup(int sx, int sy, int bpp, uint16_t usage)
 {
-	assert(sx >= 0);
-	assert(sy >= 0);
-	assert(bpp == 8);
+	Assert(sx >= 0);
+	Assert(sy >= 0);
+	Assert(bpp == 8);
 	
 	const int area = sx * sy;
 

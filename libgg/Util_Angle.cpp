@@ -5,7 +5,7 @@ namespace Util
 {
 	bool AngleBetween(float angle, float baseAngle, float arc)
 	{
-		assert(arc >= 0.0f);
+		Assert(arc >= 0.0f);
 		
 		Rerange(angle);
 		Rerange(baseAngle);

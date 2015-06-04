@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <exception>
 #include <string.h>
 #if defined(DEBUG) && defined(WIN32) && 0

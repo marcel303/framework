@@ -1,8 +1,8 @@
 #pragma once
 
-#include <assert.h>
 #include <stdint.h>
 #include <xmmintrin.h>
+#include "Debugging.h"
 #include "FastList.h"
 #include "MemOps.h"
 
@@ -166,7 +166,7 @@ public:
 
 	virtual ~MemAllocatorGeneric()
 	{
-		assert(m_allocList.size() == 0);
+		Assert(m_allocList.size() == 0);
 	}
 	
 	virtual void * Alloc(size_t size, uint32_t tag = 0)
@@ -234,7 +234,7 @@ public:
 
 		m_pBytePtr += sizeof(MemAllocInfo) + size;
 
-		assert(m_pBytePtr <= m_pBytes + m_size);
+		Assert(m_pBytePtr <= m_pBytes + m_size);
 
 		m_allocList.push_tail(pAllocInfo);
 
@@ -250,7 +250,7 @@ public:
 
 	virtual void Free(void * p)
 	{
-		//assert(false);
+		//Assert(false);
 	}
 
 	virtual IMemAllocationIterator * GetAllocationIterator()
@@ -275,7 +275,7 @@ protected:
 
 	void SetBytes(void * p, uint32_t size)
 	{
-		assert(m_pBytes == m_pBytePtr);
+		Assert(m_pBytes == m_pBytePtr);
 
 		m_pBytes = reinterpret_cast<uint8_t *>(p);
 		m_pBytePtr = m_pBytes;
@@ -305,7 +305,7 @@ protected:
 #ifdef _DEBUG
 		MemAllocInfo * pAllocInfo = reinterpret_cast<MemAllocInfo *>(pBytePtr) - 1;
 		MemAllocInfo * pTail = m_allocList.pop_tail_value();
-		assert(pTail == pAllocInfo);
+		Assert(pTail == pAllocInfo);
 		pBytePtr = pAllocInfo;
 #endif
 
@@ -349,7 +349,7 @@ public:
 
 	virtual ~MemAllocatorStack()
 	{
-		assert(m_stackSize == 0);
+		Assert(m_stackSize == 0);
 
 		void * pBytes = GetBytes();
 		_mm_free(pBytes);
@@ -361,7 +361,7 @@ public:
 
 	virtual void * Alloc(size_t size, uint32_t tag = 0)
 	{
-		assert(m_stackSize <= m_maxStackSize);
+		Assert(m_stackSize <= m_maxStackSize);
 #ifdef _DEBUG
 		if (m_stackSize == m_maxStackSize)
 			return 0;
@@ -374,7 +374,7 @@ public:
 
 	virtual void Free(void * p)
 	{
-		assert(m_stackSize != 0 && m_pStack[m_stackSize - 1] == p);
+		Assert(m_stackSize != 0 && m_pStack[m_stackSize - 1] == p);
 		PopAllocAndSetBytePtr(m_pStack[m_stackSize - 1]);
 		m_stackSize--;
 	}
@@ -398,7 +398,7 @@ public:
 
 	virtual ~MemAllocatorManualStack()
 	{
-		assert(m_stackSize == 0);
+		Assert(m_stackSize == 0);
 
 		void * pBytes = GetBytes();
 		_mm_free(pBytes);
@@ -419,7 +419,7 @@ public:
 
 	inline void Push()
 	{
-		assert(m_stackSize <= m_maxStackSize);
+		Assert(m_stackSize <= m_maxStackSize);
 #ifdef _DEBUG
 		if (m_stackSize == m_maxStackSize)
 			return;
@@ -431,7 +431,7 @@ public:
 
 	inline void Pop()
 	{
-		assert(m_stackSize != 0);
+		Assert(m_stackSize != 0);
 		void * pBytePtr = m_pStack[m_stackSize - 1];
 		SetBytePtr(pBytePtr);
 		PopAllocTillBytePtr(pBytePtr);
@@ -473,7 +473,7 @@ public:
 
 	virtual void * Alloc(size_t size, uint32_t tag = 0)
 	{
-		assert(size == (1 << POW2));
+		Assert(size == (1 << POW2));
 
 		MemAllocInfo * pAllocInfo = m_freeList.pop_tail_value();
 
@@ -515,7 +515,7 @@ private:
 			reinterpret_cast<uintptr_t>(p) -
 			reinterpret_cast<uintptr_t>(m_pBytes);
 
-		assert((offset & ((1 << POW2) - 1)) == 0);
+		Assert((offset & ((1 << POW2) - 1)) == 0);
 
 		return static_cast<uint32_t>(offset >> POW2);
 	}

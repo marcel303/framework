@@ -1,5 +1,5 @@
-#include <assert.h>
 #include <cmath>
+#include "Debugging.h"
 #include "Quat.h"
 
 Quat::Quat()
@@ -30,7 +30,7 @@ void Quat::normalize()
 
 	const float size = calcSize();
 	
-	assert(size != 0.0f);
+	Assert(size != 0.0f);
 
 	m_w /= size;
 	m_xyz /= size;
@@ -437,7 +437,7 @@ Quat Quat::operator+(const Quat & quat) const
 
 Quat Quat::operator/(float v) const
 {
-	assert(v != 0.0f);
+	Assert(v != 0.0f);
 
 	Quat result;
 	
@@ -494,7 +494,7 @@ Quat & Quat::operator+=(const Quat & quat)
 
 Quat & Quat::operator/=(float v)
 {
-	assert(v != 0.0f);
+	Assert(v != 0.0f);
 
 	(*this)[0] /= v;
 	(*this)[1] /= v;

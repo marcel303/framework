@@ -13,7 +13,7 @@ PsdImageData::PsdImageData()
 
 void PsdImageData::Setup(Image* image, PsdCompressionType compression)
 {
-	assert(compression == PsdCompressionType_Rle);
+	Assert(compression == PsdCompressionType_Rle);
 	
 	mImage.SetSize(image->m_Sx, image->m_Sy);
 	image->Blit(&mImage, 0, 0);
@@ -49,12 +49,12 @@ void PsdImageData::Read(PsdInfo* pi, Stream* stream)
 
 void PsdImageData::Write(PsdInfo* pi, Stream* stream)
 {
-	assert((int)pi->mHeaderInfo.mSx == mImage.m_Sx);
-	assert((int)pi->mHeaderInfo.mSy == mImage.m_Sy);
+	Assert((int)pi->mHeaderInfo.mSx == mImage.m_Sx);
+	Assert((int)pi->mHeaderInfo.mSy == mImage.m_Sy);
 
 	StreamWriter writer(stream, false);
 
-	assert(mCompression == PsdCompressionType_Rle);
+	Assert(mCompression == PsdCompressionType_Rle);
 
 	writer.WriteUInt16(SwapU16(mCompression));
 

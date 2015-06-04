@@ -1,7 +1,6 @@
 #pragma once
 
-#include <assert.h>
-#include "Log.h"
+#include <stdint.h>
 
 #ifdef DEBUG
 void HandleAssert(const char * func, int line, const char * expr, ...);

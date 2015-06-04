@@ -45,7 +45,7 @@ void PsdLayerAndMaskInfo::Read(PsdInfo* pi, Stream* stream)
 	if (mLayerCount < 0)
 		mLayerCount = -mLayerCount;
 
-	assert(mLayerCount <= 100);
+	Assert(mLayerCount <= 100);
 	
 	PSD_LOG_DBG("layer_count: %d", mLayerCount);
 	PSD_LOG_DBG("skip_alpha: %d", mSkipAlpha ? 1 : 0);
@@ -85,7 +85,7 @@ void PsdLayerAndMaskInfo::WritePrepare()
 
 void PsdLayerAndMaskInfo::Write(PsdInfo* pi, Stream* stream)
 {
-	assert(mIsWritePrepared);
+	Assert(mIsWritePrepared);
 	
 	StreamWriter writer(stream, false);
 

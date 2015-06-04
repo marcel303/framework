@@ -60,8 +60,8 @@ void PsdHeaderInfo::Write(PsdInfo* pi, Stream* stream)
 
 void PsdHeaderInfo::Setup(const std::string& signature, int version, int channelCount, int sx, int sy, int bpp, PsdImageMode mode)
 {
-	assert(sx >= 0);
-	assert(sy >= 0);
+	Assert(sx >= 0);
+	Assert(sy >= 0);
 
 	if (signature != "8BPS")
 		throw ExceptionVA("signature not recognized");

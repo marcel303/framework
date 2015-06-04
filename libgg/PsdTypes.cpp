@@ -30,8 +30,8 @@ std::string PsdPascalString::Read(Stream* stream, int padding)
 
 void PsdPascalString::Write(Stream* stream, const std::string& text, int padding)
 {
-	assert(text.length() <= 255);
-	assert(padding >= 1);
+	Assert(text.length() <= 255);
+	Assert(padding >= 1);
 	
 	StreamWriter writer(stream, false);
 	

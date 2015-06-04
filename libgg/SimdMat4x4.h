@@ -1,7 +1,7 @@
 #pragma once
 
-#include <assert.h>
 #include <math.h>
+#include "Debugging.h"
 #include "SIMD.h"
 
 ALIGN_CLASS(16) SimdMat4x4
@@ -281,8 +281,8 @@ public:
 
 	inline void Mul(const SimdMat4x4 & mat, SimdMat4x4 & rResult) const
 	{
-		assert(&rResult != this);
-		assert(&rResult != &mat);
+		Assert(&rResult != this);
+		Assert(&rResult != &mat);
 
 	#if 0
 		for (int x = 0; x < 4; ++x)
