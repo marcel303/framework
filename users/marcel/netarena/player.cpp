@@ -11,7 +11,7 @@
 
 #define ENABLE_CHARACTER_OUTLINE 1
 
-//#pragma optimize("", off)
+#pragma optimize("", off)
 
 /*
 
@@ -699,6 +699,7 @@ void Player::setDisplayName(const std::string & name)
 
 void Player::setAnim(PlayerAnim anim, bool play, bool restart)
 {
+	Assert(isAnimOverrideAllowed(anim));
 	if (anim != m_anim || play != m_animPlay || restart)
 	{
 		//logDebug("setAnim: %d", anim);
@@ -1572,15 +1573,18 @@ void Player::tick(float dt)
 		{
 			if (playerControl && m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && !m_isWallSliding && (m_grapple.state == GrappleInfo::State_Inactive) && m_input.wentDown(INPUT_BUTTON_A))
 			{
-				Vec2 targetPosition;
-				if (findNinjaDashTarget(targetPosition))
+				if (isAnimOverrideAllowed(kPlayerAnim_AirDash))
 				{
-					m_pos = targetPosition;
+					Vec2 targetPosition;
+					if (findNinjaDashTarget(targetPosition))
+					{
+						m_pos = targetPosition;
 
-					m_isAirDashCharged = false;
+						m_isAirDashCharged = false;
 
-					setAnim(kPlayerAnim_AirDash, true, true);
-					m_enableInAirAnim = false;
+						setAnim(kPlayerAnim_AirDash, true, true);
+						m_enableInAirAnim = false;
+					}
 				}
 			}
 		}
