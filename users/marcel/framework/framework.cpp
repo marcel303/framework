@@ -670,7 +670,8 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 		auto ep = fs.rfind('.');
 		if (ep == std::string::npos)
 			continue;
-		const std::string e = fs.substr(ep + 1);
+		std::string e = fs.substr(ep + 1);
+		std::transform(e.begin(), e.end(), e.begin(), ::tolower);
 		const char * f = fs.c_str();
 		const size_t fl = strlen(f);
 		if (e == "png" || e == "bmp")
