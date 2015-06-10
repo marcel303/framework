@@ -529,6 +529,28 @@ void Framework::process()
 				if (wasDown[j] && !isDown[j])
 					wentUp[j] = true;
 			}
+
+			// update vibration
+
+			if (gamepad[i].m_vibrationDuration > 0.f)
+			{
+				gamepad[i].m_vibrationDuration -= timeStep;
+				if (gamepad[i].m_vibrationDuration <= 0.f)
+				{
+					gamepad[i].m_vibrationDuration = 0.f;
+					gamepad[i].m_vibrationStrength = 0.f;
+				}
+			}
+
+			if (gamepad[i].m_vibrationStrength != gamepad[i].m_lastVibrationStrength)
+			{
+				gamepad[i].m_lastVibrationStrength = gamepad[i].m_vibrationStrength;
+
+				XINPUT_VIBRATION v;
+				v.wLeftMotorSpeed = 65535 * gamepad[i].m_vibrationStrength;
+				v.wRightMotorSpeed = 65535 * gamepad[i].m_vibrationStrength;
+				XInputSetState(i, &v);
+			}
 		}
 		else
 		{
@@ -2265,6 +2287,17 @@ float Gamepad::getAnalog(int stick, ANALOG analog, float scale) const
 		return m_analog[stick][analog] * scale;
 	else
 		return 0.f;
+}
+
+void Gamepad::vibrate(float duration, float strength)
+{
+	fassert(strength >= 0.f && strength <= 1.f);
+	if (strength < 0.f)
+		strength = 0.f;
+	if (strength > 1.f)
+		strength = 1.f;
+	m_vibrationDuration = duration;
+	m_vibrationStrength = strength;
 }
 
 // -----

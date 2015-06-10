@@ -606,6 +606,9 @@ class Gamepad
 	bool m_wentDown[GAMEPAD_MAX];
 	bool m_wentUp[GAMEPAD_MAX];
 	float m_analog[2][ANALOG_MAX];
+	float m_vibrationDuration;
+	float m_vibrationStrength;
+	float m_lastVibrationStrength;
 
 public:
 	Gamepad();
@@ -615,6 +618,8 @@ public:
 	bool wentDown(GAMEPAD button) const;
 	bool wentUp(GAMEPAD button) const;
 	float getAnalog(int stick, ANALOG analog, float scale = 1.f) const;
+
+	void vibrate(float duration, float strength);
 };
 
 class Midi
