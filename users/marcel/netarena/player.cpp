@@ -19,17 +19,11 @@ feedback:
 
 - fireball broken / volcano bugged
 - grapple aim
-+ spike wall texture
-+ lijntjes
 - jetpack op, boost mustn't be spammable
-# more speed axe throw?
-+ bullets faster
 - shield shouldn't be spammable, needs cooldown when destroyed
 	cling/cancel melee attack
-+ jump pad jetpack
 - ninja move axe character
 - earth quake sound
-- earth quake -> bump items
 
 todo:
 
@@ -46,13 +40,7 @@ todo:
 - exploding barrels
 - flamethrower
 
-+ add ninja dash
-
-+ add dialog spriter support
 - add dialog button spriter object. add active/inactive animations
-+ add yes/no dialog
-
-+ add dust particles when moving grounded at speed > treshold (> normal walking speed)
 
 - jetpack ability V2:
 	+ free analog stick control
@@ -69,14 +57,12 @@ todo:
 	- extra buff ability
 		- destroy jetpack with Y, repel players, need full recharge 
 
-+ add explosion effects on bombs 'n stuff
 - arc bullets
 - grapple auto shorten
 - grapple small speed boost on attach in swing direction
 - diagonal jump pads
 - pickup spawn weights per tile
 - shield ability: deflect projectiles in aim direction. recharge period. shield gets transparent
-+ fix drawing of aim above/below layers
 
 ** HIGH PRIORITY **
 
@@ -128,9 +114,6 @@ todo:
 
 - add callstack gathering
 
-+ check build ID
-	+ add built-in version ID on channel connect
-
 - better attach to platform logic, so we can have movers closer to each other without the player bugging
 
 ** LOW PRIORITY **
@@ -155,12 +138,9 @@ todo:
 - improve networking reliability layer on resend. trips currently
 
 - gravity well -> make it partially a linear or other kind of curve + more powerful at a distance
-- add build version check for online
 - send client network stats to host so they can be visualized
 
-- add support for CRC compare at any time during game sim tick. log CRC's with function/line number and compare?
-
-- disable changing game options after everyone has readied up
+# add support for CRC compare at any time during game sim tick. log CRC's with function/line number and compare?
 
 - zoom in on winning player, wait for a while before transitioning to the next round
 
@@ -178,6 +158,22 @@ todo:
 
 ** DONE **
 
++ spike wall texture
++ lijntjes
+# more speed axe throw?
++ bullets faster
++ jump pad jetpack
++ earth quake -> bump items
++ add ninja dash
++ add dialog spriter support
++ add yes/no dialog
++ add dust particles when moving grounded at speed > treshold (> normal walking speed)
++ add explosion effects on bombs 'n stuff
++ fix drawing of aim above/below layers
++ check build ID
+	+ add built-in version ID on channel connect
++ add build version check for online
++ disable changing game options after everyone has readied up
 + add title screen
 + add main menu/title screen loop
 + disable auto respawn. player must press X to respawn
