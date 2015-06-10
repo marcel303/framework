@@ -428,7 +428,7 @@ void Arena::loadArt(const char * name)
 	freeArt();
 
 #if USE_TEXTURE_ATLAS
-	const std::string atlasName = std::string("levels/") + name + "/ArtData.png";
+	const std::string atlasName = std::string("levels/") + name + "/Artdata.png";
 	const Sprite atlasSprite(atlasName.c_str());
 	m_texture = atlasSprite.getTexture();
 	m_textureSx = atlasSprite.getWidth();

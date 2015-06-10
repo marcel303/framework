@@ -701,7 +701,7 @@ void Player::setAnim(PlayerAnim anim, bool play, bool restart)
 {
 	if (anim != m_anim || play != m_animPlay || restart)
 	{
-		log("setAnim: %d", anim);
+		//logDebug("setAnim: %d", anim);
 
 		m_anim = anim;
 		m_animPlay = play;
