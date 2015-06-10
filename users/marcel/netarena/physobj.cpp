@@ -170,6 +170,8 @@ void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 			}
 		}
 	}
+
+	m_isGrounded = (getIntersectingBlockMask(gameSim, Vec2(m_pos[0], m_pos[1] + 1.f)) & kBlockMask_Solid) != 0;
 }
 
 void PhysicsActor::drawBB() const

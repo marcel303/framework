@@ -56,6 +56,7 @@ Bullet::Bullet()
 
 	*static_cast<PhysicsActor*>(this) = PhysicsActor();
 
+	m_type = kObjectType_Bullet;
 	m_noGravity = true;
 }
 

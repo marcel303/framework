@@ -46,9 +46,13 @@ enum GameMode
 enum ObjectType
 {
 	kObjectType_Undefined,
-	kObjectType_Player,
+	kObjectType_Axe,
+	kObjectType_Bullet,
+	kObjectType_Coin,
 	kObjectType_Pickup,
 	kObjectType_PipeBomb,
+	kObjectType_Player,
+	kObjectType_Token,
 	kObjectType_COUNT
 };
 

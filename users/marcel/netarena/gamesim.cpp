@@ -126,6 +126,7 @@ void Pickup::setup(PickupType _type, int _blockX, int _blockY)
 	*static_cast<PhysicsActor*>(this) = PhysicsActor();
 
 	m_isActive = true;
+	m_type = kObjectType_Pickup;
 	m_pos.Set(
 		blockX * BLOCK_SX + BLOCK_SX / 2.f,
 		blockY * BLOCK_SY + BLOCK_SY - sprite.getHeight());
@@ -171,6 +172,7 @@ void Token::setup(int blockX, int blockY)
 	*static_cast<PhysicsActor*>(this) = PhysicsActor();
 
 	m_isActive = true;
+	m_type = kObjectType_Token;
 	m_bbMin.Set(-sprite.getWidth() / 2.f, -sprite.getHeight() / 2.f);
 	m_bbMax.Set(+sprite.getWidth() / 2.f, +sprite.getHeight() / 2.f);
 	m_pos.Set(
@@ -241,6 +243,7 @@ void Coin::setup(int blockX, int blockY)
 	*static_cast<PhysicsActor*>(this) = PhysicsActor();
 
 	m_isActive = true;
+	m_type = kObjectType_Coin;
 	m_bbMin.Set(-sprite.getWidth() / 2.f, -sprite.getHeight() / 2.f);
 	m_bbMax.Set(+sprite.getWidth() / 2.f, +sprite.getHeight() / 2.f);
 	m_pos.Set(
@@ -447,6 +450,7 @@ void Axe::setup(Vec2Arg pos, Vec2Arg vel, int playerIndex)
 	m_spriterState = SpriterState();
 
 	m_isActive = true;
+	m_type = kObjectType_Axe;
 	m_bbMin.Set(-AXE_COLLISION_SX / 2.f, -AXE_COLLISION_SY / 2.f);
 	m_bbMax.Set(+AXE_COLLISION_SX / 2.f, +AXE_COLLISION_SY / 2.f);
 	m_pos = pos;
@@ -594,6 +598,7 @@ void PipeBomb::setup(Vec2Arg pos, Vec2Arg vel, int playerIndex)
 	m_spriterState = SpriterState();
 
 	m_isActive = true;
+	m_type = kObjectType_PipeBomb;
 	m_bbMin.Set(-PIPEBOMB_COLLISION_SX / 2.f, -PIPEBOMB_COLLISION_SY);
 	m_bbMax.Set(+PIPEBOMB_COLLISION_SX / 2.f, 0.f);
 	m_pos = pos + Vec2(0.f, -1.f);
@@ -1876,69 +1881,7 @@ void GameSim::tickPlay()
 			//const LevelEvent e = kLevelEvent_GravityWell;
 			//const LevelEvent e = kLevelEvent_EarthQuake;
 
-			const char * name = "<unknown level event>";
-
-			switch (e)
-			{
-			case kLevelEvent_EarthQuake:
-				memset(&m_levelEvents.quake, 0, sizeof(m_levelEvents.quake));
-				m_levelEvents.quake.start(*this);
-				name = "Earthquake";
-				break;
-
-			case kLevelEvent_GravityWell:
-				memset(&m_levelEvents.gravityWell, 0, sizeof(m_levelEvents.gravityWell));
-				m_levelEvents.gravityWell.endTimer = EVENT_GRAVITYWELL_DURATION;
-				m_levelEvents.gravityWell.m_x = GFX_SX / 2;
-				m_levelEvents.gravityWell.m_y = GFX_SY / 2;
-				name = "Gravity Well";
-				break;
-
-				/*
-			case kLevelEvent_DestroyBlocks:
-				memset(&m_levelEvents.destroyBlocks, 0, sizeof(m_levelEvents.destroyBlocks));
-				m_levelEvents.destroyBlocks.m_remainingBlockCount = 0;
-				name = "Block Destruction (not yet implemented)";
-				break;
-				*/
-
-			case kLevelEvent_TimeDilation:
-				memset(&m_levelEvents.timeDilation, 0, sizeof(m_levelEvents.timeDilation));
-				m_levelEvents.timeDilation.endTimer = 3.f;
-				addTimeDilationEffect(EVENT_TIMEDILATION_MULTIPLIER_BEGIN, EVENT_TIMEDILATION_MULTIPLIER_END, EVENT_TIMEDILATION_DURATION);
-				name = "Time Dilation";
-				break;
-
-			case kLevelEvent_SpikeWalls:
-				memset(&m_levelEvents.spikeWalls, 0, sizeof(m_levelEvents.spikeWalls));
-				m_levelEvents.spikeWalls.start(true, true);
-				name = "Spike Walls";
-				break;
-
-				/*
-			case kLevelEvent_Wind:
-				memset(&m_levelEvents.wind, 0, sizeof(m_levelEvents.wind));
-				m_levelEvents.wind.endTimer = 3.f;
-				name = "Wind (not yet implemented)";
-				break;
-
-			case kLevelEvent_BarrelDrop:
-				memset(&m_levelEvents.barrelDrop, 0, sizeof(m_levelEvents.barrelDrop));
-				m_levelEvents.barrelDrop.endTimer = 3.f;
-				m_levelEvents.barrelDrop.spawnTimer = 1.f;
-				name = "Barrel Drop (not yet implemented)";
-				break;
-
-			case kLevelEvent_NightDayCycle:
-				memset(&m_levelEvents.nightDayCycle, 0, sizeof(m_levelEvents.nightDayCycle));
-				m_levelEvents.nightDayCycle.endTimer = 3.f;
-				name = "Day/Night Cycle (not yet implemented)";
-				break;
-				*/
-			}
-
-			if (!RECORDMODE)
-				addAnnouncement("Level Event: %s", name);
+			triggerLevelEvent(e);
 		}
 	}
 
@@ -2950,17 +2893,102 @@ void GameSim::spawnParticles(const ParticleSpawnInfo & spawnInfo)
 	}
 }
 
+void GameSim::triggerLevelEvent(LevelEvent e)
+{
+	const char * name = "<unknown level event>";
+
+	switch (e)
+	{
+	case kLevelEvent_EarthQuake:
+		memset(&m_levelEvents.quake, 0, sizeof(m_levelEvents.quake));
+		m_levelEvents.quake.start(*this);
+		name = "Earthquake";
+		break;
+
+	case kLevelEvent_GravityWell:
+		memset(&m_levelEvents.gravityWell, 0, sizeof(m_levelEvents.gravityWell));
+		m_levelEvents.gravityWell.endTimer = EVENT_GRAVITYWELL_DURATION;
+		m_levelEvents.gravityWell.m_x = GFX_SX / 2;
+		m_levelEvents.gravityWell.m_y = GFX_SY / 2;
+		name = "Gravity Well";
+		break;
+
+		/*
+	case kLevelEvent_DestroyBlocks:
+		memset(&m_levelEvents.destroyBlocks, 0, sizeof(m_levelEvents.destroyBlocks));
+		m_levelEvents.destroyBlocks.m_remainingBlockCount = 0;
+		name = "Block Destruction (not yet implemented)";
+		break;
+		*/
+
+	case kLevelEvent_TimeDilation:
+		memset(&m_levelEvents.timeDilation, 0, sizeof(m_levelEvents.timeDilation));
+		m_levelEvents.timeDilation.endTimer = 3.f;
+		addTimeDilationEffect(EVENT_TIMEDILATION_MULTIPLIER_BEGIN, EVENT_TIMEDILATION_MULTIPLIER_END, EVENT_TIMEDILATION_DURATION);
+		name = "Time Dilation";
+		break;
+
+	case kLevelEvent_SpikeWalls:
+		memset(&m_levelEvents.spikeWalls, 0, sizeof(m_levelEvents.spikeWalls));
+		m_levelEvents.spikeWalls.start(true, true);
+		name = "Spike Walls";
+		break;
+
+		/*
+	case kLevelEvent_Wind:
+		memset(&m_levelEvents.wind, 0, sizeof(m_levelEvents.wind));
+		m_levelEvents.wind.endTimer = 3.f;
+		name = "Wind (not yet implemented)";
+		break;
+
+	case kLevelEvent_BarrelDrop:
+		memset(&m_levelEvents.barrelDrop, 0, sizeof(m_levelEvents.barrelDrop));
+		m_levelEvents.barrelDrop.endTimer = 3.f;
+		m_levelEvents.barrelDrop.spawnTimer = 1.f;
+		name = "Barrel Drop (not yet implemented)";
+		break;
+
+	case kLevelEvent_NightDayCycle:
+		memset(&m_levelEvents.nightDayCycle, 0, sizeof(m_levelEvents.nightDayCycle));
+		m_levelEvents.nightDayCycle.endTimer = 3.f;
+		name = "Day/Night Cycle (not yet implemented)";
+		break;
+		*/
+	}
+
+	if (!RECORDMODE)
+		addAnnouncement("Level Event: %s", name);
+}
+
 void GameSim::doQuake(float vel)
 {
-	for (int i = 0; i < MAX_PLAYERS; ++i)
-	{
-		Player & player = m_players[i];
+	const CollisionShape shape(Vec2(0.f, 0.f), Vec2(GFX_SX, GFX_SY));
 
-		if (player.m_isUsed && player.m_isAlive && player.m_isGrounded)
+	struct QuakeArgs
+	{
+		float vel;
+	} args;
+
+	args.vel = vel;
+
+	testCollisionInternal(
+		shape,
+		kCollisionType_Player | kCollisionType_PhysObj,
+		&args,
+		[](const CollisionShape & shape, void * arg, PhysicsActor * actor, BlockAndDistance * block, Player * player)
 		{
-			player.m_vel[1] = Calc::Sign(player.m_facing[1]) * vel;
-		}
-	}
+			QuakeArgs * quakeArgs = (QuakeArgs*)arg;
+
+			if (actor && actor->m_isGrounded)
+			{
+				actor->m_vel[1] += quakeArgs->vel;
+			}
+
+			if (player && player->m_isAlive && player->m_isGrounded)
+			{
+				player->m_vel[1] = Calc::Sign(player->m_facing[1]) * quakeArgs->vel;
+			}
+		});
 }
 
 void GameSim::doBlastEffect(Vec2Arg center, float radius, const Curve & speedCurve)

@@ -51,6 +51,7 @@ struct PhysicsActor
 
 	Vec2 m_pos;
 	Vec2 m_vel;
+	bool m_isGrounded;
 
 	Vec2 m_bbMin;
 	Vec2 m_bbMax;

@@ -90,6 +90,10 @@ static int s_lastDialogId = -1;
 COMMAND_OPTION(s_addAnnoucement, "Debug/Add Annoucement", []{ g_app->netDebugAction("addAnnouncement", "Test Annoucenment"); });
 COMMAND_OPTION(s_addDialog, "Debug/Add Dialog", [] { s_lastDialogId = g_app->m_dialogMgr->push(DialogType_YesNo, "Hello", "World", HandleDialogResult, 0); });
 COMMAND_OPTION(s_dismissDialog, "Debug/Dismiss Last Dialog", [] { g_app->m_dialogMgr->dismiss(s_lastDialogId); });
+COMMAND_OPTION(s_triggerLevelEvent_QuakeEvent, "Debug/Trigger Quake Level Event", []{ g_app->netDebugAction("triggerLevelEvent", "quake"); });
+COMMAND_OPTION(s_triggerLevelEvent_GravityWell, "Debug/Trigger Gravity Well Level Event", []{ g_app->netDebugAction("triggerLevelEvent", "gravity"); });
+COMMAND_OPTION(s_triggerLevelEvent_SpikeWalls, "Debug/Trigger Spike Walls Level Event", []{ g_app->netDebugAction("triggerLevelEvent", "spikewalls"); });
+COMMAND_OPTION(s_triggerLevelEvent_TimeDilation, "Debug/Trigger Time Dilation Level Event", []{ g_app->netDebugAction("triggerLevelEvent", "timedilation"); });
 
 OPTION_EXTERN(int, g_playerCharacterIndex);
 
@@ -832,6 +836,31 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 					Vec2(args.getFloat("x", GFX_SX/2.f), args.getFloat("y", GFX_SY/2.f)),
 					args.getFloat("radius", 100.f),
 					curve);
+			}
+		}
+		else if (action == "triggerLevelEvent")
+		{
+			GameSim * gameSim = findGameSimForChannel(channel);
+			Assert(gameSim);
+
+			if (gameSim)
+			{
+				LevelEvent e = kLevelEvent_COUNT;
+
+				if (param == "quake")
+					e = kLevelEvent_EarthQuake;
+				else if (param == "gravity")
+					e = kLevelEvent_GravityWell;
+				else if (param == "spikewalls")
+					e = kLevelEvent_SpikeWalls;
+				else if (param == "timedilation")
+					e = kLevelEvent_TimeDilation;
+
+				Assert(e != kLevelEvent_COUNT);
+				if (e != kLevelEvent_COUNT)
+				{
+					gameSim->triggerLevelEvent(e);
+				}
 			}
 		}
 		else if (action == "optionSelect")

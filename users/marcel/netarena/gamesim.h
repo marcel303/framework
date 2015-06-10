@@ -1010,6 +1010,8 @@ public:
 
 	void spawnPipeBomb(Vec2 pos, Vec2 vel, int playerIndex);
 
+	void triggerLevelEvent(LevelEvent e);
+
 	void doQuake(float vel);
 	void doBlastEffect(Vec2Arg center, float radius, const Curve & speedCurve);
 
