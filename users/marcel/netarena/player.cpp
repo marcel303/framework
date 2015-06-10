@@ -18,7 +18,7 @@
 
 feedback:
 
-- fireball broken
+- fireball broken / volcano bugged
 - grapple aim
 + spike wall texture
 + lijntjes
@@ -28,7 +28,6 @@ feedback:
 - shield shouldn't be spammable, needs cooldown when destroyed
 	cling/cancel melee attack
 + jump pad jetpack
-- volcano bugged
 - ninja move axe character
 - earth quake sound
 - earth quake -> bump items
@@ -2580,6 +2579,24 @@ void Player::tick(float dt)
 			m_isGrounded = false;
 		}
 
+		// ground dash particles
+
+		if (m_isGrounded && m_attack.attacking && m_attack.hasCollision && Calc::Abs(m_vel[0]) > STEERING_SPEED_ON_GROUND * FX_ATTACK_DUST_PLAYER_SPEED_TRESHOLD / 100.f)
+		{
+			m_groundDashDistance += Calc::Abs(oldPos[0] - m_pos[0]);
+
+			while (m_groundDashDistance >= FX_ATTACK_DUST_INTERVAL)
+			{
+				m_groundDashDistance -= FX_ATTACK_DUST_INTERVAL;
+
+				GAMESIM->addAnimationFx("fx/Dust_GroundAttack.scml", m_pos[0], m_pos[1]); // attack dust on ground
+			}
+		}
+		else
+		{
+			m_groundDashDistance = 0.f;
+		}
+
 		// breaking
 
 		if (JETPACK_NEW_STEERING && m_jetpack.isActive)
@@ -2587,7 +2604,7 @@ void Player::tick(float dt)
 			// fixme : should only decelerate jetpack steering speed, not total velocity?
 			m_vel *= powf(1.f - FRICTION_JETPACK, dt * 60.f);
 		}
-		if (steeringSpeed[0] == 0.f || (std::abs(m_vel[0]) > std::abs(steeringSpeed[0])))
+		if (steeringSpeed[0] == 0.f || (std::abs(m_vel[0]) > std::abs(steeringSpeed[0] + m_animVel[0])))
 		{
 			m_vel[0] *= powf(1.f - surfaceFriction, dt * 60.f);
 		}
