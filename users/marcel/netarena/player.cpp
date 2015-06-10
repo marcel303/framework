@@ -11,11 +11,13 @@
 
 #define ENABLE_CHARACTER_OUTLINE 1
 
-#pragma optimize("", off)
+//#pragma optimize("", off)
 
 /*
 
 feedback:
+
+- use lower case on all SCML and PNG filenames referenced in code
 
 - fireball broken / volcano bugged
 - grapple aim
