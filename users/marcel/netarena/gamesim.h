@@ -538,6 +538,7 @@ struct Player
 	bool m_isAttachedToSticky;
 	bool m_isAnimDriven; // an animation is active that drives the player using animation actions/triggers
 	bool m_enableInAirAnim;
+	float m_groundDashDistance; // distance travelled at high velocity while grounded. used for ground dust particles
 
 	bool m_isAirDashCharged; // reset when air dash is used. set when the player hits the ground
 	bool m_isInPassthrough;

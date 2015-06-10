@@ -389,6 +389,9 @@ OPTION_DEFINE(float, SHIELDSPECIAL_COOLDOWN, "Special Abilities/Shield/Cooldown 
 OPTION_DEFINE(float, SHIELDSPECIAL_RADIUS, "Special Abilities/Shield/Radius");
 OPTION_DEFINE(float, SHIELDSPECIAL_CHARGE_SPEED, "Special Abilities/Shield/Charge Speed (Charge/Sec)");
 
+OPTION_DEFINE(float, FX_ATTACK_DUST_INTERVAL, "FX/Attack Dust/Interval (px)");
+OPTION_DEFINE(int, FX_ATTACK_DUST_PLAYER_SPEED_TRESHOLD, "FX/Attack Dust/Player Speed Treshold (%%)");
+
 OPTION_DEFINE(bool, UI_DEBUG_VISIBLE, "UI/Debug UI/Visible");
 
 OPTION_DEFINE(int, UI_CHARSELECT_BASE_X, "UI/Character Select/Base X");
