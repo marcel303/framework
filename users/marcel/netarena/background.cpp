@@ -117,6 +117,7 @@ void Background::tick(GameSim & gameSim, float dt)
 
 void Background::draw()
 {
+	setColor(colorWhite);
 	BACKGROUND_SPRITER.draw(m_state);
 
 	m_fireBall.draw();
