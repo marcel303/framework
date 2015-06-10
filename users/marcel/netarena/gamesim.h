@@ -226,6 +226,9 @@ struct Player
 	Vec2 getGrapplePos() const;
 	float getGrappleLength() const;
 
+	// special : ninja dash
+	bool findNinjaDashTarget(Vec2 & destination) const;
+
 	// allocation
 	bool m_isUsed;
 

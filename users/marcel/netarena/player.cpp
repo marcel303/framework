@@ -9,7 +9,6 @@
 #include "player.h"
 #include "Timer.h"
 
-#define USE_NEW_COLLISION_CODE 1
 #define ENABLE_CHARACTER_OUTLINE 1
 
 //#pragma optimize("", off)
@@ -1530,25 +1529,15 @@ void Player::tick(float dt)
 
 		m_blockMask = ~0;
 
-	#if USE_NEW_COLLISION_CODE
 		const uint32_t currentBlockMask = m_oldBlockMask;
-	#else
-		const uint32_t currentBlockMask = getIntersectingBlocksMask(m_pos[0], m_pos[1]);
-		m_isInPassthrough = (currentBlockMask & kBlockMask_Passthrough) != 0;
-	#endif
 
 		const bool enterPassThrough = m_enterPassthrough || (m_special.attackDownActive) || (m_attack.m_rocketPunch.isActive)
 			|| m_input.isDown(INPUT_BUTTON_DOWN);
 		if (m_isInPassthrough || enterPassThrough)
 			m_blockMask = ~kBlockMask_Passthrough;
 
-	#if USE_NEW_COLLISION_CODE
 		const uint32_t currentBlockMaskFloor = m_dirBlockMaskDir[1] > 0 ? m_dirBlockMask[1] : 0;
 		const uint32_t currentBlockMaskCeil = m_dirBlockMaskDir[1] < 0 ? m_dirBlockMask[1] : 0;
-	#else
-		const uint32_t currentBlockMaskFloor = getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f);
-		const uint32_t currentBlockMaskCeil = getIntersectingBlocksMask(m_pos[0], m_pos[1] - 1.f);
-	#endif
 
 		if (characterData->hasTrait(kPlayerTrait_AirDash))
 		{
@@ -1840,11 +1829,7 @@ void Player::tick(float dt)
 				m_vel[0] != 0.f && Calc::Sign(m_facing[0]) == Calc::Sign(m_vel[0]) &&
 				//Calc::Sign(m_vel[1]) == Calc::Sign(gravity) &&
 				(Calc::Sign(m_vel[1]) == Calc::Sign(gravity) || Calc::Abs(m_vel[1]) <= PLAYER_JUMP_SPEED / 2.f) &&
-			#if USE_NEW_COLLISION_CODE
 				m_isHuggingWall != 0)
-			#else
-				(getIntersectingBlocksMask(m_pos[0] + m_facing[0], m_pos[1]) & kBlockMask_Solid) != 0)
-			#endif
 			{
 				m_isWallSliding = true;
 
@@ -1957,8 +1942,6 @@ void Player::tick(float dt)
 		const Vec2 oldPos = m_pos;
 
 		// collision
-
-#if USE_NEW_COLLISION_CODE
 
 		// colliding with solid object left/right of player
 
@@ -2334,237 +2317,12 @@ void Player::tick(float dt)
 		m_dirBlockMask[0] = dirBlockMask[0];
 		m_dirBlockMask[1] = dirBlockMask[1];
 		m_oldBlockMask = blockMask;
-#else
-		const Vec2 totalVel = (m_vel * (m_animVelIsAbsolute ? 0.f : 1.f)) + animVel;
-
-		for (int i = 0; i < 2; ++i)
-		{
-			float totalDelta = totalVel[i] * dt;
-
-			const float deltaSign = totalDelta < 0.f ? -1.f : +1.f;
-
-			if (i == 1)
-			{
-				// update passthrough mode
-				m_blockMask = ~0;
-				if ((getIntersectingBlocksMask(m_pos[0], m_pos[1]) & kBlockMask_Passthrough) || enterPassThrough)
-					m_blockMask = ~kBlockMask_Passthrough;
-			}
-
-			while (totalDelta != 0.f)
-			{
-				const float delta = (std::abs(totalDelta) < 1.f) ? totalDelta : deltaSign;
-
-				Vec2 newPos = m_pos;
-
-				newPos[i] += delta;
-
-				// fixme : horrible code..
-				if (m_attack.m_rocketPunch.isActive && m_attack.m_rocketPunch.state == AttackInfo::RocketPunch::kState_Attack)
-				{
-					const CollisionShape shape = m_collision.getTranslated(newPos);
-					void * args[2] = { this, (void*)&totalVel };
-					GAMESIM->testCollision(
-						shape,
-						args,
-						[](const CollisionShape & shape, void * arg, PhysicsActor * actor, BlockAndDistance * block, Player * player)
-						{
-							void ** args = (void**)arg;
-							Player * self = (Player*)args[0];
-							Vec2 * vel = (Vec2*)args[1];
-							if (block)
-								block->block->handleDamage(*self->m_instanceData->m_gameSim, block->x, block->y);
-							if (player && player != self)
-								player->handleDamage(1.f, *vel, self);
-						});
-				}
-
-				uint32_t newBlockMask = getIntersectingBlocksMask(newPos[0], newPos[1]);
-
-				// ignore passthough blocks if we're moving horizontally or upwards
-				// todo : update block mask each iteration. reset m_blockMask first
-				//if (i != 1 || delta <= 0.f)
-				//if ((!m_isGrounded || isInPassthough) && (i != 0 || delta <= 0.f))
-				if ((!m_isGrounded || m_isInPassthrough) && (i != 1 || delta <= 0.f))
-				//if ((i == 0 && isInPassthough) || (i == 1 && delta <= 0.f))
-					newBlockMask &= ~kBlockMask_Passthrough;
-
-				if (m_attack.m_rocketPunch.isActive && (newBlockMask & kBlockMask_Solid))
-				{
-					if (m_attack.m_rocketPunch.state != AttackInfo::RocketPunch::kState_Charge)
-						endRocketPunch(true);
-				}
-
-				// make sure we stay grounded, within reason. allows the player to walk up/down slopes
-				if (i == 0 && m_isGrounded)
-				{
-					if (newBlockMask & kBlockMask_Solid)
-					{
-						for (int dy = 1; dy <= 2; ++dy)
-						{
-							const uint32_t blockMask = getIntersectingBlocksMask(newPos[0], newPos[1] - dy);
-
-							if ((blockMask & kBlockMask_Solid) == 0)
-							{
-								m_pos[1] -= dy;
-								newPos[1] -= dy;
-								newBlockMask = blockMask;
-								break;
-							}
-						}
-					}
-					else
-					{
-						for (int dy = 1; dy <= 1; ++dy)
-						{
-							const uint32_t blockMask = getIntersectingBlocksMask(newPos[0], newPos[1] + 1.f);
-
-							if ((blockMask & kBlockMask_Solid) == 0)
-							{
-								m_pos[1] += 1.f;
-								newPos[1] += 1.f;
-								newBlockMask = blockMask;
-								break;
-							}
-						}
-					}
-				}
-
-				if ((newBlockMask & kBlockMask_Solid) && m_ice.timer != 0.f)
-				{
-					m_vel[i] *= -.5f;
-
-					totalDelta = 0.f;
-				}
-				else if ((newBlockMask & kBlockMask_Solid) && m_bubble.timer != 0.f)
-				{
-					m_vel[i] *= -.75f;
-
-					totalDelta = 0.f;
-				}
-				else if (newBlockMask & kBlockMask_Solid)
-				{
-					if (i == 0)
-					{
-						const float sign = Calc::Sign(totalDelta);
-						float strength = (Calc::Abs(totalDelta) / dt - PLAYER_JUMP_SPEED) / 25.f;
-
-						if (strength > PLAYER_SCREENSHAKE_STRENGTH_THRESHHOLD)
-						{
-							strength = sign * strength / 4.f;
-							GAMESIM->addScreenShake(strength, 0.f, 3000.f, .3f, true);
-						}
-
-						// colliding with solid object left/right of player
-
-						if (!m_isGrounded && playerControl && m_input.wentDown(INPUT_BUTTON_A))
-						{
-							// wall jump
-
-							m_vel[0] = -PLAYER_WALLJUMP_RECOIL_SPEED * deltaSign;
-							m_vel[1] = -PLAYER_WALLJUMP_SPEED;
-
-							m_controlDisableTime = PLAYER_WALLJUMP_RECOIL_TIME;
-
-							GAMESIM->playSound("player-wall-jump.ogg"); // player performs a walljump
-						}
-						else
-						{
-							m_vel[0] = 0.f;
-
-							if (m_isAnimDriven && m_anim == kPlayerAnim_AirDash)
-							{
-								m_spriterState.stopAnim(*characterData->m_spriter);
-							}
-						}
-					}
-
-					if (i == 1)
-					{
-						m_enterPassthrough = false;
-
-						// grounded
-
-						if (newBlockMask & (1 << kBlockType_Slide))
-							surfaceFriction = 0.f;
-						else if (m_ice.timer != 0.f)
-							surfaceFriction = 0.f;
-						else if (Calc::Sign(m_vel[1]) != Calc::Sign(gravity))
-							surfaceFriction = 0.f;
-						else
-							surfaceFriction = FRICTION_GROUNDED;
-
-						if (delta >= 0.f)
-						{
-							if (newBlockMask & (1 << kBlockType_Spring))
-							{
-								// spring
-
-								m_vel[i] = -BLOCKTYPE_SPRING_SPEED;
-
-								GAMESIM->playSound("player-spring-jump.ogg"); // player walks over and activates a jump pad 
-							}
-							else
-							{
-								const float sign = Calc::Sign(totalDelta);
-								float strength = (Calc::Abs(totalDelta) / dt - PLAYER_JUMP_SPEED) / 25.f;
-
-								if (strength > PLAYER_SCREENSHAKE_STRENGTH_THRESHHOLD)
-								{
-									strength = sign * strength / 4.f;
-									GAMESIM->addScreenShake(0.f, strength, 3000.f, .3f, true);
-								}
-
-								// todo : use separate PlayerAnim for special attack
-
-								if (characterData->m_special == kPlayerSpecial_DownAttack && m_special.attackDownActive && !s_noSpecial)
-								{
-									int size = (int(m_special.attackDownHeight) - STOMP_EFFECT_MIN_HEIGHT) * STOMP_EFFECT_MAX_SIZE / (STOMP_EFFECT_MAX_HEIGHT - STOMP_EFFECT_MIN_HEIGHT);
-									if (size > STOMP_EFFECT_MAX_SIZE)
-										size = STOMP_EFFECT_MAX_SIZE;
-									if (size >= 1)
-										GAMESIM->addFloorEffect(m_index, m_pos[0], m_pos[1], size, (size + 1) * 2 / 3);
-								}
-
-								if (m_attack.m_zweihander.state == AttackInfo::Zweihander::kState_AttackDown)
-									m_attack.m_zweihander.handleAttackAnimComplete(*this);
-
-								m_special.attackDownActive = false;
-								m_special.attackDownHeight = 0.f;
-
-								m_vel[i] = 0.f;
-							}
-						}
-						else
-						{
-							handleJumpCollision();
-						}
-					}
-
-					totalDelta = 0.f;
-				}
-				else
-				{
-					m_pos[i] = newPos[i];
-
-					totalDelta -= delta;
-				}
-
-				if (m_special.attackDownActive && i == 1 && delta > 0.f)
-					m_special.attackDownHeight += delta;
-			}
-		}
-	#endif
 
 		// grounded?
 
 		if (m_bubble.timer != 0.f)
 			m_isGrounded = false;
-	#if USE_NEW_COLLISION_CODE
 		else if (m_dirBlockMaskDir[1] > 0 && (dirBlockMask[1] & kBlockMask_Solid) != 0)
-	#else
-		else if (m_vel[1] >= 0.f && (getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f) & kBlockMask_Solid) != 0)
-	#endif
 		{
 			if (!m_isGrounded)
 			{
@@ -4077,6 +3835,10 @@ float Player::getGrappleLength() const
 	const Vec2 p1 = getGrapplePos();
 	const Vec2 p2 = m_grapple.anchorPos;
 	return (p2 - p1).CalcSize();
+}
+
+bool Player::findNinjaDashTarget(Vec2 & destination) const
+{
 }
 
 //
