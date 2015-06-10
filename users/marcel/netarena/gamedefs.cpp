@@ -389,6 +389,11 @@ OPTION_DEFINE(float, SHIELDSPECIAL_COOLDOWN, "Special Abilities/Shield/Cooldown 
 OPTION_DEFINE(float, SHIELDSPECIAL_RADIUS, "Special Abilities/Shield/Radius");
 OPTION_DEFINE(float, SHIELDSPECIAL_CHARGE_SPEED, "Special Abilities/Shield/Charge Speed (Charge/Sec)");
 
+OPTION_DEFINE(int, NINJADASH_DISTANCE_MAX, "Special Abilities/Ninja Dash/Max Distance");
+OPTION_DEFINE(int, NINJADASH_DISTANCE_MIN, "Special Abilities/Ninja Dash/Min Distance");
+OPTION_STEP(NINJADASH_DISTANCE_MAX, 0, 0, 10);
+OPTION_STEP(NINJADASH_DISTANCE_MIN, 0, 0, 10);
+
 OPTION_DEFINE(float, FX_ATTACK_DUST_INTERVAL, "FX/Attack Dust/Interval (px)");
 OPTION_DEFINE(int, FX_ATTACK_DUST_PLAYER_SPEED_TRESHOLD, "FX/Attack Dust/Player Speed Treshold (%%)");
 

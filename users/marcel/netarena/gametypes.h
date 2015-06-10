@@ -118,7 +118,8 @@ enum PlayerTrait
 {
 	kPlayerTrait_StickyWalk = 1 << 0,
 	kPlayerTrait_DoubleJump = 1 << 1,
-	kPlayerTrait_AirDash = 1 << 2
+	kPlayerTrait_AirDash = 1 << 2,
+	kPlayerTrait_NinjaDash = 1 << 3
 };
 
 enum PlayerEvent

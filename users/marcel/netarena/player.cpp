@@ -46,11 +46,13 @@ todo:
 - exploding barrels
 - flamethrower
 
++ add ninja dash
+
 + add dialog spriter support
 - add dialog button spriter object. add active/inactive animations
 + add yes/no dialog
 
-- add dust particles when moving grounded at speed > treshold (> normal walking speed)
++ add dust particles when moving grounded at speed > treshold (> normal walking speed)
 
 - jetpack ability V2:
 	+ free analog stick control
@@ -1469,7 +1471,7 @@ void Player::tick(float dt)
 					m_attack = AttackInfo();
 					m_attack.attacking = true;
 
-					m_attack.cooldown = characterData->m_meleeCooldown; // todo : from character data?
+					m_attack.cooldown = characterData->m_meleeCooldown;
 
 					// start anim
 
@@ -1567,6 +1569,22 @@ void Player::tick(float dt)
 					m_enableInAirAnim = false;
 
 					m_vel[1] = -PLAYER_DOUBLE_JUMP_SPEED;
+				}
+			}
+		}
+		else if (characterData->hasTrait(kPlayerTrait_NinjaDash))
+		{
+			if (playerControl && m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && !m_isWallSliding && (m_grapple.state == GrappleInfo::State_Inactive) && m_input.wentDown(INPUT_BUTTON_A))
+			{
+				Vec2 targetPosition;
+				if (findNinjaDashTarget(targetPosition))
+				{
+					m_pos = targetPosition;
+
+					m_isAirDashCharged = false;
+
+					setAnim(kPlayerAnim_AirDash, true, true);
+					m_enableInAirAnim = false;
 				}
 			}
 		}
@@ -3731,7 +3749,7 @@ bool Player::findGrappleAnchorPos(Vec2 & anchorPos, float & length) const
 		if (arena.getIntersectingBlocksMask(x, y) & grappleBlockMask)
 		{
 			anchorPos.Set(x, y);
-			length = (grapplePos - anchorPos).CalcSize(); // todo : anchor pos of player should not be at feet
+			length = (grapplePos - anchorPos).CalcSize();
 
 			if (length >= GRAPPLE_LENGTH_MIN && length <= GRAPPLE_LENGTH_MAX)
 			{
@@ -3797,7 +3815,7 @@ void Player::tickGrapple(float dt)
 
 	case GrappleInfo::State_Attached:
 		{
-			// todo : check if player is grounded. if grounded, release grapple
+			// check if player is grounded. if grounded, release grapple
 
 			const bool isAttached = (GAMESIM->m_arena.getIntersectingBlocksMask(m_grapple.anchorPos[0], m_grapple.anchorPos[1]) & kBlockMask_Solid) != 0;
 
@@ -3837,8 +3855,45 @@ float Player::getGrappleLength() const
 	return (p2 - p1).CalcSize();
 }
 
-bool Player::findNinjaDashTarget(Vec2 & destination) const
+bool Player::findNinjaDashTarget(Vec2 & destination)
 {
+	bool result = false;
+
+	const Vec2 oldPos = m_pos;
+
+	for (int d = NINJADASH_DISTANCE_MAX; d >= NINJADASH_DISTANCE_MIN; --d)
+	{
+		// check if this location doesn't intersect with anything that may block
+
+		m_pos[0] = oldPos[0] + d * m_facing[0];
+
+		CollisionInfo playerCollision;
+		if (getPlayerCollision(playerCollision))
+		{
+			bool collision = false;
+
+			GAMESIM->testCollision(playerCollision, &collision, [](const CollisionShape & shape, void * arg, PhysicsActor * actor, BlockAndDistance * blockAndDistance, Player * player)
+			{
+				if (blockAndDistance && ((1 << blockAndDistance->block->type) & kBlockMask_Solid))
+				{
+					bool * collision = (bool*)arg;
+
+					*collision = true;
+				}
+			});
+
+			if (!collision)
+			{
+				result = true;
+				destination = m_pos;
+				break;
+			}
+		}
+	}
+
+	m_pos = oldPos;
+
+	return result;
 }
 
 //
@@ -4055,6 +4110,8 @@ void CharacterData::load(int characterIndex)
 		m_traits |= kPlayerTrait_DoubleJump;
 	if (traitsStr.find("air_dash") != std::string::npos)
 		m_traits |= kPlayerTrait_AirDash;
+	if (traitsStr.find("ninja_dash") != std::string::npos)
+		m_traits |= kPlayerTrait_NinjaDash;
 }
 
 bool CharacterData::hasTrait(PlayerTrait trait) const
@@ -4179,6 +4236,7 @@ Color getPlayerColor(int playerIndex)
 		Color(50,  50,  50,  255)
 	};
 
+	Assert(playerIndex >= 0 && playerIndex < MAX_PLAYERS);
 	if (playerIndex >= 0 && playerIndex < MAX_PLAYERS)
 		return colors[playerIndex];
 	else

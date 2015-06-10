@@ -641,8 +641,6 @@ void Arena::drawBlocks(int layer) const
 
 	const int ATLAS_TILE_SX = (m_textureSx / BLOCK_SX);
 	const int ATLAS_TILE_SY = (m_textureSy / BLOCK_SY);
-	const float BLOCK_SU = 1.f / ATLAS_TILE_SX;
-	const float BLOCK_SV = 1.f / ATLAS_TILE_SY;
 	const int OFFSET_X[4] = { 0, 1, 1, 0 };
 	const int OFFSET_Y[4] = { 0, 0, 1, 1 };
 
@@ -655,8 +653,8 @@ void Arena::drawBlocks(int layer) const
 		{ \
 			pos[numVerts * 2 + 0] = (x  + OFFSET_X[v]) * BLOCK_SX; \
 			pos[numVerts * 2 + 1] = (y  + OFFSET_Y[v]) * BLOCK_SY; \
-			uv[numVerts * 2 + 0]  = (tx + OFFSET_X[v]) * BLOCK_SU; \
-			uv[numVerts * 2 + 1]  = 1.f - (ty + OFFSET_Y[v]) * BLOCK_SV; \
+			uv[numVerts * 2 + 0]  =               (tx + OFFSET_X[v]) * BLOCK_SX + (OFFSET_X[v] ? -.1f : +.1f); \
+			uv[numVerts * 2 + 1]  = m_textureSy - (ty + OFFSET_Y[v]) * BLOCK_SY + (OFFSET_Y[v] ? +.1f : -.1f); \
 			c[numVerts] = tc; \
 		} \
 	}
@@ -708,7 +706,14 @@ void Arena::drawBlocks(int layer) const
 
 #if USE_TEXTURE_ATLAS
 	gxSetTexture(m_texture);
-	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	glMatrixMode(GL_TEXTURE);
+	glPushMatrix();
+	glLoadIdentity();
+	glScalef(1.f / m_textureSx, 1.f / m_textureSy, 1.f);
+
 	glVertexPointer(2, GL_FLOAT, 0, pos);
 	glColorPointer(4, GL_UNSIGNED_BYTE, 0, c);
 	glTexCoordPointer(2, GL_FLOAT, 0, uv);
@@ -722,6 +727,9 @@ void Arena::drawBlocks(int layer) const
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_COLOR_ARRAY);
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+
+	glPopMatrix();
+	glMatrixMode(GL_MODELVIEW);
 
 	gxSetTexture(0);
 	setColor(colorWhite);
