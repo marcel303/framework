@@ -20,7 +20,6 @@
 - improve blinds/slowmo on death. add vertical bar
 - prototype invisibility ability
 - remove ninja dash from axe character
-- 
 
 feedback:
 
@@ -3410,9 +3409,20 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 						PROTO_TIMEDILATION_ON_KILL_DURATION);
 				}
 
-				// todo : make blinds effect directional
-				const Vec2 mid = m_pos + (m_collision.min + m_collision.max) / 2.f;
-				GAMESIM->addBlindsEffect(m_index, mid[0], mid[1], .5f);
+				if (attacker)
+				{
+					// todo : make blinds effect directional
+					const Vec2 mid = m_pos + (m_collision.min + m_collision.max) / 2.f;
+					GAMESIM->addBlindsEffect(m_index, mid[0], mid[1], .5f);
+				}
+
+				if (m_instanceData->m_input.m_controllerIndex != -1)
+				{
+					if (m_instanceData->m_input.m_controllerIndex >= 0 && m_instanceData->m_input.m_controllerIndex < MAX_GAMEPAD)
+					{
+						gamepad[m_instanceData->m_input.m_controllerIndex].vibrate(PLAYER_DEATH_VIBRATION_DURATION, PLAYER_DEATH_VIBRATION_STRENGTH);
+					}
+				}
 			}
 
 			if (attacker && attacker != this)
