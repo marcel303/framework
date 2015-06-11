@@ -22,7 +22,7 @@ static const char * s_bulletSpriteFiles[kBulletType_COUNT] =
 	"particle-0.png",
 	"particle-0.png",
 	"particle-0.png",
-	"particle-0.png"
+	"fire-type-bubble.png"
 };
 
 static Sprite * s_bulletSprites[kBulletType_COUNT] = { };

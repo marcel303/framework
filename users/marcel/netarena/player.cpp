@@ -15,16 +15,23 @@
 
 /*
 
+- fix stars getting stuck in geometry
+- investigate player collision bug test level
+- improve blinds/slowmo on death. add vertical bar
+- prototype invisibility ability
+- remove ninja dash from axe character
+- 
+
 feedback:
 
 - use lower case on all SCML and PNG filenames referenced in code
 
 - fireball broken / volcano bugged
-- grapple aim
++ grapple aim
 - jetpack op, boost mustn't be spammable
 - shield shouldn't be spammable, needs cooldown when destroyed
 	cling/cancel melee attack
-- ninja move axe character
++ ninja move axe character
 - earth quake sound
 
 todo:
@@ -1234,6 +1241,9 @@ void Player::tick(float dt)
 			{
 				m_attack = AttackInfo();
 
+				const float x = m_pos[0] + mirrorX(0.f);
+				const float y = m_pos[1] - mirrorY(44.f);
+
 				PlayerAnim anim = kPlayerAnim_NULL;
 				BulletType bulletType = kBulletType_COUNT;
 				BulletEffect bulletEffect = kBulletEffect_Damage;
@@ -1248,6 +1258,8 @@ void Player::tick(float dt)
 					anim = kPlayerAnim_Fire;
 					bulletType = kBulletType_B;
 					m_attack.cooldown = PLAYER_FIRE_COOLDOWN;
+					
+					GAMESIM->playSound("gun-fire.ogg", 30);
 				}
 				else if (weaponType == kPlayerWeapon_Ice)
 				{
@@ -1255,15 +1267,42 @@ void Player::tick(float dt)
 					bulletType = kBulletType_B;
 					bulletEffect = kBulletEffect_Ice;
 					m_attack.cooldown = PLAYER_FIRE_COOLDOWN;
+
+					GAMESIM->playSound("gun-fire-ice.ogg", 30);
 				}
 				else if (weaponType == kPlayerWeapon_Bubble)
 				{
 					anim = kPlayerAnim_Fire;
-					bulletType = kBulletType_Bubble;
-					bulletEffect = kBulletEffect_Bubble;
 					m_attack.cooldown = PLAYER_FIRE_COOLDOWN;
-					numBullets = BULLET_BUBBLE_COUNT;
-					randomBulletAngle = true;
+
+					for (int i = 0; i < BULLET_BUBBLE_COUNT; ++i)
+					{
+						const float angle = GAMESIM->Random() % 256;
+
+						const uint16_t bulletId = GAMESIM->spawnBullet(
+							x,
+							y,
+							angle,
+							kBulletType_Bubble,
+							kBulletEffect_Bubble,
+							m_index);
+
+						if (bulletId != INVALID_BULLET_ID)
+						{
+							Bullet & b = GAMESIM->m_bulletPool->m_bullets[bulletId];
+
+							b.m_pos += b.m_vel.CalcNormalized() * BULLET_BUBBLE_SPAWN_DISTANCE;
+						}
+					}
+
+					GAMESIM->addAnimationFx(
+						"fx/Attack_FireBullet.scml",
+						x,
+						y,
+						m_facing[0] < 0,
+						m_facing[1] < 0);
+
+					GAMESIM->playSound("gun-fire-bubble.ogg", 30);
 				}
 				else if (weaponType == kPlayerWeapon_Grenade)
 				{
@@ -1289,6 +1328,10 @@ void Player::tick(float dt)
 					GAMESIM->playSound("timedilation-activate.ogg"); // sound that occurs when the player activates the time dilation pickup
 					GAMESIM->addAnnouncement("'%s' activated time dilation!", m_displayName.c_str());
 				}
+				else
+				{
+					Assert(false);
+				}
 
 				if (anim != kPlayerAnim_NULL)
 				{
@@ -1300,9 +1343,6 @@ void Player::tick(float dt)
 
 				if (bulletType != kBulletType_COUNT)
 				{
-					const float x = m_pos[0] + mirrorX(0.f);
-					const float y = m_pos[1] - mirrorY(44.f);
-
 					for (int i = 0; i < numBullets; ++i)
 					{
 						int angle;
@@ -1494,6 +1534,22 @@ void Player::tick(float dt)
 					m_attack.attacking = true;
 
 					m_attack.m_zweihander.begin(*this);
+				}
+				else if (characterData->m_special == kPlayerSpecial_Invisibility &&
+					m_input.wentDown(INPUT_BUTTON_Y) &&
+					isAnimOverrideAllowed(kPlayerAnim_Attack))
+				{
+					// todo : spawn invisibility curtain
+
+					for (int i = 0; i < INVISIBILITY_PLUME_COUNT; ++i)
+					{
+						const float angle = Calc::m2PI * i / INVISIBILITY_PLUME_COUNT;
+						const float radius = GAMESIM->RandomFloat(INVISIBILITY_PLUME_DISTANCE_MIN, INVISIBILITY_PLUME_DISTANCE_MAX);
+						GAMESIM->addAnimationFx(
+							"fx/Invisibility_Plume.scml",
+							m_pos[0] + std::sin(angle) * radius,
+							m_pos[1] + std::cos(angle) * radius);
+					}
 				}
 			}
 		}
@@ -3301,6 +3357,10 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 						PROTO_TIMEDILATION_ON_KILL_MULTIPLIER2,
 						PROTO_TIMEDILATION_ON_KILL_DURATION);
 				}
+
+				// todo : make blinds effect directional
+				const Vec2 mid = m_pos + (m_collision.min + m_collision.max) / 2.f;
+				GAMESIM->addBlindsEffect(m_index, mid[0], mid[1], .5f);
 			}
 
 			if (attacker && attacker != this)
@@ -3730,12 +3790,12 @@ void Player::beginGrapple()
 
 bool Player::findGrappleAnchorPos(Vec2 & anchorPos, float & length) const
 {
-	if (!m_grapple.aiming.aimIsValid)
+	if (GRAPPLE_ANALOG_AIM && !m_grapple.aiming.aimIsValid)
 		return false;
 
 	// find anchor point
 
-	const float kGrappleAngle = Calc::DegToRad(15.f * m_facing[0]);
+	const float kGrappleAngle = Calc::DegToRad(GRAPPLE_FIXED_AIM_ANGLE * m_facing[0]);
 	const float dx = GRAPPLE_ANALOG_AIM ? m_grapple.aiming.aim[0] : +std::sin(kGrappleAngle);
 	const float dy = GRAPPLE_ANALOG_AIM ? m_grapple.aiming.aim[1] : -std::cos(kGrappleAngle);
 

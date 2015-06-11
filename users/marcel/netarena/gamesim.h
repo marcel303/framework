@@ -794,6 +794,21 @@ struct FloorEffect
 	void trySpawnAt(GameSim & gameSim, int playerId, int x, int y, int dx, int size, int damageSize);
 };
 
+struct BlindsEffect
+{
+	BlindsEffect()
+	{
+		memset(this, 0, sizeof(BlindsEffect));
+	}
+
+	float m_time;
+	int m_x;
+	int m_y;
+
+	void tick(GameSim & gameSim, float dt);
+	void drawLight();
+};
+
 struct AnimationFxState
 {
 	AnimationFxState()
@@ -874,6 +889,8 @@ struct GameStateData
 	// effects
 
 	FloorEffect m_floorEffect;
+
+	BlindsEffect m_blindsEffects[MAX_BLINDS_EFFECTS];
 
 	Torch m_torches[MAX_TORCHES];
 
@@ -1023,6 +1040,8 @@ public:
 	Vec2 getScreenShake() const;
 
 	void addFloorEffect(int playerId, int x, int y, int size, int damageSize);
+
+	void addBlindsEffect(int playerId, int x, int y, float time);
 
 	void addAnimationFx(const char * fileName, int x, int y, bool flipX = false, bool flipY = false);
 

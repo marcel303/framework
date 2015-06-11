@@ -986,6 +986,35 @@ void FloorEffect::trySpawnAt(GameSim & gameSim, int playerId, int x, int y, int 
 
 //
 
+void BlindsEffect::tick(GameSim & gameSim, float dt)
+{
+	if (m_time > 0.f)
+	{
+		m_time -= dt;
+
+		if (m_time <= 0.f)
+		{
+			*this = BlindsEffect();
+		}
+	}
+}
+
+void BlindsEffect::drawLight()
+{
+	if (m_time > 0.f)
+	{
+		setBlend(BLEND_SUBTRACT);
+		{
+			setColor(227, 227, 227);
+			drawRect(0, 0, GFX_SX, m_y - 100);
+			drawRect(0, m_y + 100, GFX_SX, GFX_SY);
+		}
+		setBlend(BLEND_ADD);
+	}
+}
+
+//
+
 void AnimationFxState::tick(float dt)
 {
 	if (m_isActive)
@@ -1500,6 +1529,11 @@ void GameSim::resetGameWorld()
 
 	m_floorEffect = FloorEffect();
 
+	// reset blinds effects
+
+	for (int i = 0; i < MAX_BLINDS_EFFECTS; ++i)
+		m_blindsEffects[i] = BlindsEffect();
+
 	// reset torches
 
 	for (int i = 0; i < MAX_TORCHES; ++i)
@@ -2011,6 +2045,11 @@ void GameSim::tickPlay()
 
 	m_floorEffect.tick(*this, dt);
 
+	// blinds effects
+
+	for (int i = 0; i < MAX_BLINDS_EFFECTS; ++i)
+		m_blindsEffects[i].tick(*this, dt);
+
 	// torches
 
 	for (int i = 0; i < MAX_TORCHES; ++i)
@@ -2198,6 +2237,7 @@ void GameSim::drawPlay()
 		// background blocks
 
 		m_arena.drawBlocks(0);
+		m_arena.drawBlocks(1);
 
 		m_floorEffect.draw();
 
@@ -2292,7 +2332,7 @@ void GameSim::drawPlay()
 
 		// foreground blocks
 
-		m_arena.drawBlocks(1);
+		m_arena.drawBlocks(2);
 
 		// spike walls
 
@@ -2301,6 +2341,13 @@ void GameSim::drawPlay()
 		gxPopMatrix();
 	}
 	popSurface();
+
+#if 0
+	Shader shader("shaders/trans1");
+	shader.setTexture("colormap", 0, g_colorMap->getTexture());
+	shader.setImmediate("tint", 1.f, .5f, .25f);
+	g_colorMap->postprocess(shader);
+#endif
 
 	pushSurface(g_lightMap);
 	{
@@ -2370,16 +2417,6 @@ void GameSim::drawPlay()
 				m_pipebombs[i].drawLight();
 		}
 
-		// players
-
-		for (int i = 0; i < MAX_PLAYERS; ++i)
-		{
-			const Player & player = m_players[i];
-
-			if (player.m_isUsed)
-				player.drawLight();
-		}
-
 		// bullets
 
 		m_bulletPool->drawLight();
@@ -2393,6 +2430,23 @@ void GameSim::drawPlay()
 		for (int i = 0; i < MAX_FIREBALLS; ++i)
 		{
 			m_fireballs[i].drawLight();
+		}
+
+		// blinds effects
+
+		for (int i = 0; i < MAX_BLINDS_EFFECTS; ++i)
+		{
+			m_blindsEffects[i].drawLight();
+		}
+
+		// players
+
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+		{
+			const Player & player = m_players[i];
+
+			if (player.m_isUsed)
+				player.drawLight();
 		}
 
 		setBlend(BLEND_ALPHA);
@@ -3075,6 +3129,20 @@ void GameSim::addFloorEffect(int playerId, int x, int y, int size, int damageSiz
 {
 	m_floorEffect.trySpawnAt(*this, playerId, x, y, -BLOCK_SX, size, damageSize);
 	m_floorEffect.trySpawnAt(*this, playerId, x, y, +BLOCK_SX, size, damageSize);
+}
+
+void GameSim::addBlindsEffect(int playerId, int x, int y, float time)
+{
+	for (int i = 0; i < MAX_BLINDS_EFFECTS; ++i)
+	{
+		if (m_blindsEffects[i].m_time == 0.f)
+		{
+			m_blindsEffects[i].m_x = x;
+			m_blindsEffects[i].m_y = y;
+			m_blindsEffects[i].m_time = time;
+			break;
+		}
+	}
 }
 
 void GameSim::addAnimationFx(const char * fileName, int x, int y, bool flipX, bool flipY)

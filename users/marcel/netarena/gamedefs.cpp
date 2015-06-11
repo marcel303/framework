@@ -203,6 +203,7 @@ OPTION_STEP(BULLET_GRENADE_FRAG_SPEED_MAX, 0, 0, 10);
 
 // todo : add bubble size variation
 OPTION_DEFINE(int, BULLET_BUBBLE_COUNT, "Bullets/Bubble/Spawn Count");
+OPTION_DEFINE(int, BULLET_BUBBLE_SPAWN_DISTANCE, "Bullets/Bubble/Spawn Distance");
 OPTION_DEFINE(int, BULLET_BUBBLE_RADIUS_MIN, "Bullets/Bubble/Radius Min");
 OPTION_DEFINE(int, BULLET_BUBBLE_RADIUS_MAX, "Bullets/Bubble/Radius Max");
 OPTION_DEFINE(int, BULLET_BUBBLE_SPEED_MIN, "Bullets/Bubble/Speed Min");
@@ -379,6 +380,7 @@ OPTION_STEP(AXE_THROW_SPEED, 0, 0, 10);
 OPTION_STEP(AXE_SPEED_MULTIPLIER_ON_DIE, 0, 0, .05f);
 
 OPTION_DEFINE(bool, GRAPPLE_ANALOG_AIM, "Special Abilities/Grapple Rope/Analog Aim");
+OPTION_DEFINE(float, GRAPPLE_FIXED_AIM_ANGLE, "Special Abilities/Grapple Rope/Fixed Aim Angle");
 OPTION_DEFINE(float, GRAPPLE_LENGTH_MIN, "Special Abilities/Grapple Rope/Min Length");
 OPTION_DEFINE(float, GRAPPLE_LENGTH_MAX, "Special Abilities/Grapple Rope/Max Length");
 OPTION_DEFINE(float, GRAPPLE_PULL_UP_SPEED, "Special Abilities/Grapple Rope/Pull Up Speed");
@@ -393,6 +395,10 @@ OPTION_DEFINE(int, NINJADASH_DISTANCE_MAX, "Special Abilities/Ninja Dash/Max Dis
 OPTION_DEFINE(int, NINJADASH_DISTANCE_MIN, "Special Abilities/Ninja Dash/Min Distance");
 OPTION_STEP(NINJADASH_DISTANCE_MAX, 0, 0, 10);
 OPTION_STEP(NINJADASH_DISTANCE_MIN, 0, 0, 10);
+
+OPTION_DEFINE(int, INVISIBILITY_PLUME_COUNT, "Special Abilities/Invisibility/Plume Count");
+OPTION_DEFINE(float, INVISIBILITY_PLUME_DISTANCE_MIN, "Special Abilities/Invisibility/Plume Distance Min");
+OPTION_DEFINE(float, INVISIBILITY_PLUME_DISTANCE_MAX, "Special Abilities/Invisibility/Plume Distance Max");
 
 OPTION_DEFINE(float, FX_ATTACK_DUST_INTERVAL, "FX/Attack Dust/Interval (px)");
 OPTION_DEFINE(int, FX_ATTACK_DUST_PLAYER_SPEED_TRESHOLD, "FX/Attack Dust/Player Speed Treshold (%%)");

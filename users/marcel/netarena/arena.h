@@ -89,7 +89,7 @@ struct Block
 {
 	BlockType type;
 	BlockShape shape;
-	uint16_t artIndex[2];
+	uint16_t artIndex[3];
 	uint16_t param;
 
 	bool handleDamage(GameSim & gameSim, int blockX, int blockY);

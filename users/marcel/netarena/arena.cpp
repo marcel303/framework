@@ -131,7 +131,7 @@ bool Block::handleDamage(GameSim & gameSim, int blockX, int blockY)
 		else
 		{
 			type = kBlockType_Empty;
-			artIndex[0] = -1;
+			artIndex[1] = -1;
 		}
 
 		gameSim.playSound("block-destroy.ogg");
@@ -185,6 +185,7 @@ void Arena::reset()
 			m_blocks[x][y].type = kBlockType_Empty;
 			m_blocks[x][y].artIndex[0] = -1;
 			m_blocks[x][y].artIndex[1] = -1;
+			m_blocks[x][y].artIndex[2] = -1;
 			m_blocks[x][y].param = 0;
 		}
 	}
@@ -244,7 +245,8 @@ void Arena::load(const char * name)
 	const std::string mecFilename = baseName + "Mec.txt";
 	const std::string colFilename = baseName + "Col.txt";
 	const std::string objFilename = baseName + "Obj.txt";
-	const std::string artFilenameBG = baseName + "Art.txt";
+	const std::string artFilenameBG = baseName + "ArtBG.txt";
+	const std::string artFilenameMG = baseName + "Art.txt";
 	const std::string artFilenameFG = baseName + "ArtFG.txt";
 
 	// load block type layer
@@ -420,7 +422,8 @@ void Arena::load(const char * name)
 	// load art layer
 
 	loadArtIndices(artFilenameBG.c_str(), 0);
-	loadArtIndices(artFilenameFG.c_str(), 1);
+	loadArtIndices(artFilenameMG.c_str(), 1);
+	loadArtIndices(artFilenameFG.c_str(), 2);
 }
 
 void Arena::loadArt(const char * name)
@@ -589,8 +592,30 @@ void Arena::serialize(NetSerializationContext & context)
 
 			context.SerializeBits(type, 5);
 			context.SerializeBits(shape, 5);
-			context.Serialize(block.artIndex[0]);
-			context.Serialize(block.artIndex[1]);
+			
+			bool hasIndices = false;
+
+			if (context.IsSend())
+			{
+				for (int i = 0; i < 3; ++i)
+					if (block.artIndex[i] != (uint16_t)-1)
+						hasIndices = true;
+			}
+			
+			context.Serialize(hasIndices);
+
+			if (hasIndices)
+			{
+				context.Serialize(block.artIndex[0]);
+				context.Serialize(block.artIndex[1]);
+				context.Serialize(block.artIndex[2]);
+			}
+			else
+			{
+				for (int i = 0; i < 3; ++i)
+					block.artIndex[i] = -1;
+			}
+
 			context.Serialize(block.param);
 
 			block.type = (BlockType)type;
@@ -668,7 +693,7 @@ void Arena::drawBlocks(int layer) const
 
 			int alpha = 255;
 
-			if (layer == 0 && block.type == kBlockType_Appear)
+			if (layer == 1 && block.type == kBlockType_Appear)
 			{
 				const AppearBlockData& data = (AppearBlockData&)block.param;
 
@@ -682,7 +707,7 @@ void Arena::drawBlocks(int layer) const
 						continue;
 				}
 			}
-			else if (layer == 0 && block.type == kBlockType_DestructibleRegen)
+			else if (layer == 1 && block.type == kBlockType_DestructibleRegen)
 			{
 				const RegenBlockData & data = (RegenBlockData&)block.param;
 				if (!data.isVisible)
