@@ -1867,7 +1867,7 @@ void App::draw()
 					g_host->m_gameSim.m_playerInstanceDatas[0] ? g_host->m_gameSim.m_playerInstanceDatas[0]->m_player->m_pos[1] : 0.f);
 				for (size_t i = 0; i < m_clients.size(); ++i)
 				{
-					drawText(0, y += 30, 24, +1, +1, "random seed=%08x, next pickup tick=%02.1f, crc=%08x, px=%g, py=%g",
+					drawText(0, y += 30, 24, +1, +1, "random seed=%08x, next pickup tick=%02.1f, crc=%08x, px=%g, py=%g, vx=%g, vy=%g",
 						m_clients[i]->m_gameSim->m_randomSeed,
 						m_clients[i]->m_gameSim->m_nextPickupSpawnTimeRemaining,
 					#if ENABLE_GAMESTATE_DESYNC_DETECTION
@@ -1876,7 +1876,9 @@ void App::draw()
 						-1,
 					#endif
 						m_clients[i]->m_gameSim->m_playerInstanceDatas[0] ? m_clients[i]->m_gameSim->m_playerInstanceDatas[0]->m_player->m_pos[0] : 0.f,
-						m_clients[i]->m_gameSim->m_playerInstanceDatas[0] ? m_clients[i]->m_gameSim->m_playerInstanceDatas[0]->m_player->m_pos[1] : 0.f);
+						m_clients[i]->m_gameSim->m_playerInstanceDatas[0] ? m_clients[i]->m_gameSim->m_playerInstanceDatas[0]->m_player->m_pos[1] : 0.f,
+						m_clients[i]->m_gameSim->m_playerInstanceDatas[0] ? m_clients[i]->m_gameSim->m_playerInstanceDatas[0]->m_player->m_vel[0] : 0.f,
+						m_clients[i]->m_gameSim->m_playerInstanceDatas[0] ? m_clients[i]->m_gameSim->m_playerInstanceDatas[0]->m_player->m_vel[1] : 0.f);
 				}
 			}
 		}
