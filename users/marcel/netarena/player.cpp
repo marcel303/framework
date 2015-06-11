@@ -2193,9 +2193,12 @@ void Player::tick(float dt)
 					{
 						// wall slide
 
-						if (delta[0] != 0.f)
+						if (delta[0] != 0.f &&
+							updateInfo.contactNormal[0] != 0.f &&
+							Calc::Sign(delta[0]) == Calc::Sign(updateInfo.contactNormal[0]))
 						{
-							self->m_isHuggingWall = delta[0] < 0.f ? -1 : +1;
+							//self->m_isHuggingWall = delta[0] < 0.f ? -1 : +1;
+							self->m_isHuggingWall = true;
 						}
 
 						// screen shake
@@ -2257,52 +2260,6 @@ void Player::tick(float dt)
 
 		if (m_isGrounded)
 			m_vel[1] = 0.f;
-
-	#if 0
-		if (m_isGrounded && !(dirBlockMask[1] & kBlockMask_Solid))
-		{
-			const Vec2 min = m_pos + m_collision.min;
-			const Vec2 max = m_pos + m_collision.max + Vec2(0.f, 4.f);
-
-			CollisionShape playerShape;
-			playerShape.set(
-				Vec2(min[0], min[1]),
-				Vec2(max[0], min[1]),
-				Vec2(max[0], max[1]),
-				Vec2(min[0], max[1]));
-
-			GAMESIM->testCollision(
-				playerShape,
-				this,
-				[](const CollisionShape & shape, void * arg, PhysicsActor * actor, BlockAndDistance * blockAndDistance, Player * player)
-				{
-					Player * self = (Player*)arg;
-
-					if (blockAndDistance)
-					{
-						Block * block = blockAndDistance->block;
-
-						if ((1 << block->type) & kBlockMask_Solid)
-						{
-							CollisionShape blockShape;
-							Arena::getBlockCollision(block->shape, blockShape, blockAndDistance->x, blockAndDistance->y);
-
-							float contactDistance;
-							Vec2 contactNormal;
-
-							if (shape.checkCollision(blockShape, Vec2(0.f, 1.f), contactDistance, contactNormal))
-							{
-								if (contactNormal[1] * contactDistance < 0.f)
-								{
-									self->m_pos[1] += 4.f + contactNormal[1] * contactDistance;
-									log("stay grounded!");
-								}
-							}
-						}
-					}
-				});
-		}
-	#endif
 
 		const Vec2 newPos = m_pos;
 
@@ -2394,11 +2351,104 @@ void Player::tick(float dt)
 		m_dirBlockMask[1] = dirBlockMask[1];
 		m_oldBlockMask = blockMask;
 
+	#if 1
+		if (m_isGrounded)
+		{
+			const uint32_t newBlockMask = getIntersectingBlocksMask(m_pos[0], m_pos[1]);
+
+			if (newBlockMask & kBlockMask_Solid)
+			{
+				logDebug("keep grounded");
+
+				m_dirBlockMaskDir[1] = 1.f;
+				m_dirBlockMask[1] |= kBlockMask_Solid;
+
+#if 0
+				for (int dy = 1; dy <= 2; ++dy)
+				{
+					const uint32_t blockMask = getIntersectingBlocksMask(m_pos[0], m_pos[1] - dy);
+
+					if ((blockMask & kBlockMask_Solid) == 0)
+					{
+						m_pos[1] -= dy;
+						break;
+					}
+				}
+#endif
+			}
+			else
+			{
+				logDebug("try keep grounded");
+
+				for (int dy = 1; dy <= 10; ++dy)
+				{
+					const uint32_t blockMask = getIntersectingBlocksMask(m_pos[0], m_pos[1] + dy);
+
+					if ((blockMask & kBlockMask_Solid) != 0)
+					{
+						logDebug("keep grounded success");
+
+						m_pos[1] += dy - 1.f;
+						m_dirBlockMaskDir[1] = 1;
+						m_dirBlockMask[1] |= kBlockMask_Solid;
+						break;
+					}
+				}
+			}
+		}
+	#endif
+
+	#if 0
+		if (m_isGrounded && !(dirBlockMask[1] & kBlockMask_Solid))
+		{
+			const Vec2 min = m_pos + m_collision.min;
+			const Vec2 max = m_pos + m_collision.max + Vec2(0.f, 4.f);
+
+			CollisionShape playerShape;
+			playerShape.set(
+				Vec2(min[0], min[1]),
+				Vec2(max[0], min[1]),
+				Vec2(max[0], max[1]),
+				Vec2(min[0], max[1]));
+
+			GAMESIM->testCollision(
+				playerShape,
+				this,
+				[](const CollisionShape & shape, void * arg, PhysicsActor * actor, BlockAndDistance * blockAndDistance, Player * player)
+				{
+					Player * self = (Player*)arg;
+
+					if (blockAndDistance)
+					{
+						Block * block = blockAndDistance->block;
+
+						if ((1 << block->type) & kBlockMask_Solid)
+						{
+							CollisionShape blockShape;
+							Arena::getBlockCollision(block->shape, blockShape, blockAndDistance->x, blockAndDistance->y);
+
+							float contactDistance;
+							Vec2 contactNormal;
+
+							if (shape.checkCollision(blockShape, Vec2(0.f, 1.f), contactDistance, contactNormal))
+							{
+								if (contactNormal[1] * contactDistance < 0.f)
+								{
+									self->m_pos[1] += 4.f + contactNormal[1] * contactDistance;
+									log("stay grounded!");
+								}
+							}
+						}
+					}
+				});
+		}
+	#endif
+
 		// grounded?
 
 		if (m_bubble.timer != 0.f)
 			m_isGrounded = false;
-		else if (m_dirBlockMaskDir[1] > 0 && (dirBlockMask[1] & kBlockMask_Solid) != 0)
+		else if (m_dirBlockMaskDir[1] > 0 && (m_dirBlockMask[1] & kBlockMask_Solid) != 0)
 		{
 			if (!m_isGrounded)
 			{
@@ -2618,6 +2668,7 @@ void Player::draw() const
 		return;
 
 	const CharacterData * characterData = getCharacterData(m_index);
+	const Color playerColor = getPlayerColor(m_index);
 
 	if (m_grapple.state == GrappleInfo::State_Attached)
 	{
@@ -2654,10 +2705,8 @@ void Player::draw() const
 			Shader shader("character-outline");
 			setShader(shader);
 
-			const Color color = getPlayerColor(m_index);
-
 			shader.setTexture("colormap", 0, surface1.getTexture());
-			shader.setImmediate("color", color.r, color.g, color.b, color.a * UI_PLAYER_OUTLINE_ALPHA / 100.f);
+			shader.setImmediate("color", playerColor.r, playerColor.g, playerColor.b, playerColor.a * UI_PLAYER_OUTLINE_ALPHA / 100.f);
 			drawRect(0, 0, sx, sy);
 			shader.setTexture("colormap", 0, 0);
 
@@ -2693,17 +2742,15 @@ void Player::draw() const
 		drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0) - ARENA_SY_PIXELS);
 	}
 
-	const Color color = getPlayerColor(m_index);
-
 	// draw invincibility marker
 
 	if (m_spawnInvincibilityTime > 0.f)
 	{
 		const float t = m_spawnInvincibilityTime / float(PLAYER_RESPAWN_INVINCIBILITY_TIME);
 		setColorf(
-			color.r,
-			color.g,
-			color.b,
+			playerColor.r,
+			playerColor.g,
+			playerColor.b,
 			t);
 		drawRect(
 			m_pos[0] + m_collision.min[0], 0,
@@ -2724,6 +2771,10 @@ void Player::draw() const
 		SpriterState state = m_emblemSpriterState;
 		state.x = m_pos[0];
 		state.y = m_pos[1] + UI_PLAYER_EMBLEM_OFFSET_Y;
+		state.animIndex = 2;
+		setColor(playerColor);
+		EMBLEM_SPRITER.draw(state);
+		state.animIndex = 0;
 		setColor(colorWhite);
 		EMBLEM_SPRITER.draw(state);
 
@@ -2777,6 +2828,7 @@ void Player::draw() const
 void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 {
 	const CharacterData * characterData = getCharacterData(m_characterIndex);
+	const Color playerColor = getPlayerColor(m_index);
 
 	if (JETPACK_NEW_STEERING && m_jetpack.isActive)
 	{
@@ -2788,7 +2840,7 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 
 	if (UI_PLAYER_BACKDROP_ALPHA != 0)
 	{
-		Color color = getPlayerColor(m_index);
+		Color color = playerColor;
 		color.a = UI_PLAYER_BACKDROP_ALPHA / 100.f;
 		setColor(color);
 		const float px = x + (m_collision.min[0] + m_collision.max[0]) / 2.f;
