@@ -2155,9 +2155,9 @@ Music::Music(const char * filename)
 	m_filename = filename;
 }
 
-void Music::play()
+void Music::play(bool loop)
 {
-	g_soundPlayer.playMusic(m_filename.c_str());
+	g_soundPlayer.playMusic(m_filename.c_str(), loop);
 }
 
 void Music::stop()

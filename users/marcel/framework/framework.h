@@ -550,7 +550,7 @@ class Music
 public:
 	Music(const char * filename);
 	
-	void play();
+	void play(bool loop = true);
 	void stop();
 	void setVolume(int volume);
 };

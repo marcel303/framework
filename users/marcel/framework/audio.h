@@ -92,7 +92,7 @@ public:
 	void stopSoundsForBuffer(ALuint buffer);
 	void stopAllSounds();
 	void setSoundVolume(int playId, float volume);
-	void playMusic(const char * filename);
+	void playMusic(const char * filename, bool loop);
 	void stopMusic();
 	void setMusicVolume(float volume);
 };

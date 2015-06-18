@@ -638,10 +638,10 @@ void SoundPlayer::setSoundVolume(int playId, float volume)
 	}
 }
 
-void SoundPlayer::playMusic(const char * filename)
+void SoundPlayer::playMusic(const char * filename, bool loop)
 {
 	MutexScope scope(m_musicMutex);
-	m_musicStream->Open(filename, true);
+	m_musicStream->Open(filename, loop);
 	m_musicOutput->Play();
 }
 
