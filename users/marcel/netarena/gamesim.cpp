@@ -32,7 +32,7 @@ OPTION_VALUE_ALIAS(g_gameModeNextRound, coincollector, kGameMode_CoinCollector);
 OPTION_EXTERN(std::string, g_map);
 
 OPTION_DECLARE(int, s_pickupTest, -1);
-OPTION_DEFINE(int, s_pickupTest, "Debug/Pickup Test");
+OPTION_DEFINE(int, s_pickupTest, "Pickups/Debug Spawn Type");
 OPTION_ALIAS(s_pickupTest, "pickuptest");
 
 extern std::vector<std::string> g_mapList;
@@ -47,14 +47,18 @@ GameSim * g_gameSim = 0;
 
 //
 
-static const char * s_pickupSprites[kPickupType_COUNT] =
+struct PickupSprite
 {
-	"pickup-ammo.png",
-	"pickup-nade.png",
-	"pickup-shield.png",
-	"pickup-ice.png",
-	"pickup-bubble.png",
-	"pickup-time.png"
+	bool isSpriter;
+	const char * filename;
+} s_pickupSprites[kPickupType_COUNT] =
+{
+	false, "pickup-ammo.png",
+	false, "pickup-nade.png",
+	false, "pickup-shield.png",
+	true,  "objects/pickups/freezeray/freezeray.scml",
+	false, "pickup-bubble.png",
+	false, "pickup-time.png"
 };
 
 #define TOKEN_SPRITE "token.png"
@@ -113,9 +117,22 @@ LevelEvent GameStateData::getRandomLevelEvent()
 
 void Pickup::setup(PickupType _type, int _blockX, int _blockY)
 {
-	const char * filename = s_pickupSprites[type];
+	int spriteSx;
+	int spriteSy;
 
-	Sprite sprite(filename);
+	if (s_pickupSprites[type].isSpriter)
+	{
+		spriteSx = 62;
+		spriteSy = 42;
+	}
+	else
+	{
+		const char * filename = s_pickupSprites[type].filename;
+
+		Sprite sprite(filename);
+		spriteSx = sprite.getWidth();
+		spriteSy = sprite.getHeight();
+	}
 
 	type = _type;
 	blockX = _blockX;
@@ -129,11 +146,11 @@ void Pickup::setup(PickupType _type, int _blockX, int _blockY)
 	m_type = kObjectType_Pickup;
 	m_pos.Set(
 		blockX * BLOCK_SX + BLOCK_SX / 2.f,
-		blockY * BLOCK_SY + BLOCK_SY - sprite.getHeight());
+		blockY * BLOCK_SY + BLOCK_SY - spriteSy);
 	m_vel.Set(0.f, 0.f);
 
-	m_bbMin.Set(-sprite.getWidth() / 2.f, -sprite.getHeight());
-	m_bbMax.Set(+sprite.getWidth() / 2.f, 0.f);
+	m_bbMin.Set(-spriteSx / 2.f, -spriteSy);
+	m_bbMax.Set(+spriteSx / 2.f, 0.f);
 
 	m_doTeleport = true;
 	m_bounciness = .25f;
@@ -147,13 +164,35 @@ void Pickup::tick(GameSim & gameSim, float dt)
 	PhysicsActor::tick(gameSim, dt, cbs);
 }
 
-void Pickup::draw() const
+void Pickup::draw(const GameSim & gameSim) const
 {
-	const char * filename = s_pickupSprites[type];
+	if (s_pickupSprites[type].isSpriter)
+	{
+		const char * filename = s_pickupSprites[type].filename;
 
-	Sprite sprite(filename);
+		Spriter spriter(filename);
 
-	sprite.drawEx(m_pos[0] + m_bbMin[0], m_pos[1] + m_bbMin[1]);
+		SpriterState state;
+		state.startAnim(spriter, 0);
+		state.animTime = gameSim.m_roundTime;
+		state.x = m_pos[0];
+		state.y = m_pos[1] + m_bbMax[1];
+
+		spriter.draw(state);
+	}
+	else
+	{
+		const char * filename = s_pickupSprites[type].filename;
+
+		Sprite sprite(filename);
+
+		sprite.drawEx(m_pos[0] + m_bbMin[0], m_pos[1] + m_bbMin[1]);
+	}
+
+	if (g_devMode)
+	{
+		drawBB();
+	}
 }
 
 void Pickup::drawLight() const
@@ -223,6 +262,11 @@ void Token::draw() const
 	if (m_isDropped)
 	{
 		Sprite(TOKEN_SPRITE).drawEx(m_pos[0], m_pos[1]);
+	}
+
+	if (g_devMode)
+	{
+		drawBB();
 	}
 }
 
@@ -294,6 +338,11 @@ void Coin::draw() const
 	if (m_isDropped)
 	{
 		Sprite(COIN_SPRITE).drawEx(m_pos[0], m_pos[1]);
+	}
+
+	if (g_devMode)
+	{
+		drawBB();
 	}
 }
 
@@ -748,6 +797,10 @@ void Barrel::tick(GameSim & gameSim, float dt)
 
 void Barrel::draw() const
 {
+	if (g_devMode)
+	{
+		drawBB();
+	}
 }
 
 void Barrel::drawLight() const
@@ -986,6 +1039,17 @@ void FloorEffect::trySpawnAt(GameSim & gameSim, int playerId, int x, int y, int 
 
 //
 
+void BlindsEffect::setup(float time, int x, int y, int size, bool vertical, const char * text)
+{
+	m_duration = time;
+	m_time = time;
+	m_x = x;
+	m_y = y;
+	m_size = size;
+	m_vertical = vertical;
+	m_text = text;
+}
+
 void BlindsEffect::tick(GameSim & gameSim, float dt)
 {
 	if (m_time > 0.f)
@@ -999,19 +1063,45 @@ void BlindsEffect::tick(GameSim & gameSim, float dt)
 	}
 }
 
+
 void BlindsEffect::drawLight()
 {
 	if (m_time > 0.f)
 	{
 		setBlend(BLEND_SUBTRACT);
 		{
-			setColor(227, 227, 227);
-			drawRect(0, 0, GFX_SX, m_y - 100);
-			drawRect(0, m_y + 100, GFX_SX, GFX_SY);
+			setColorf(.8f, .8f, .8f, m_time / m_duration * 4.f);
+			if (m_vertical)
+			{
+				drawRect(0, 0, m_x - m_size, GFX_SY);
+				drawRect(m_x + m_size, 0, GFX_SX, GFX_SY);
+			}
+			else
+			{
+				drawRect(0, 0, GFX_SX, m_y - m_size);
+				drawRect(0, m_y + m_size, GFX_SX, GFX_SY);
+			}
 		}
 		setBlend(BLEND_ADD);
 	}
+
+	setColor(colorWhite);
 }
+
+void BlindsEffect::drawHud()
+{
+	if (m_vertical)
+	{
+	}
+	else
+	{
+		setColorf(1.f, 1.f, 1.f, m_time / m_duration * 4.f);
+		drawText(150, m_y - m_size - 20, 40, +1.f, -1.f, "%s", m_text.c_str());
+	}
+
+	setColor(colorWhite);
+}
+
 
 //
 
@@ -1209,9 +1299,16 @@ void GameSim::setGameState(::GameState gameState)
 				player->m_isReadyUpped = false;
 			}
 		}
+
+		load("lobby");
+
+		setGameMode(kGameMode_Lobby);
+
 		break;
 
 	case kGameState_NewGame:
+		resetGameWorld(); // todo : why was this moved?
+
 		// reset players
 
 		for (int i = 0; i < MAX_PLAYERS; ++i)
@@ -1223,6 +1320,8 @@ void GameSim::setGameState(::GameState gameState)
 				player->handleNewGame();
 			}
 		}
+
+		setGameMode(m_desiredGameMode);
 		break;
 
 	case kGameState_Play:
@@ -1239,7 +1338,7 @@ void GameSim::setGameState(::GameState gameState)
 
 					player->handleNewRound();
 
-					player->respawn();
+					player->respawn(0);
 				}
 			}
 
@@ -1338,9 +1437,12 @@ void GameSim::load(const char * name)
 
 	m_arena.load(name);
 
-	//load background
+	// load background
 
-	m_background.load("backgrounds/VolcanoTest/background.scml", *this);
+	if (m_gameState == kGameState_OnlineMenus)
+		m_background.load("backgrounds/lobby/background.scml", *this);
+	else
+		m_background.load("backgrounds/VolcanoTest/background.scml", *this);
 
 	// load objects
 
@@ -1623,6 +1725,7 @@ void GameSim::tick()
 		break;
 
 	case kGameState_OnlineMenus:
+		tickPlay();
 		tickMenus();
 		break;
 
@@ -1716,9 +1819,24 @@ void GameSim::tickMenus()
 
 				// ready up
 
-				if (player.m_input.wentDown(INPUT_BUTTON_A) || (player.m_input.m_actions & (1 << kPlayerInputAction_ReadyUp)))
+				if (!player.m_isReadyUpped)
 				{
-					player.m_isReadyUpped = !player.m_isReadyUpped;
+					if (player.m_input.wentDown(INPUT_BUTTON_A) || (player.m_input.m_actions & (1 << kPlayerInputAction_ReadyUp)))
+					{
+						player.m_isReadyUpped = true;
+
+						Vec2 pos(560, 900);
+						player.respawn(&pos);
+					}
+				}
+				else
+				{
+					if (player.m_input.wentDown(INPUT_BUTTON_Y) || (player.m_input.m_actions & (1 << kPlayerInputAction_ReadyUp)))
+					{
+						player.m_isReadyUpped = false;
+
+						player.despawn(false);
+					}
 				}
 			}
 		}
@@ -1835,7 +1953,7 @@ void GameSim::tickPlay()
 
 	// pickup spawning
 
-	if (m_nextPickupSpawnTimeRemaining > 0.f)
+	if (m_nextPickupSpawnTimeRemaining > 0.f && m_gameMode != kGameMode_Lobby)
 	{
 		m_nextPickupSpawnTimeRemaining -= dt;
 
@@ -2199,146 +2317,7 @@ void GameSim::drawPlay()
 		glClearColor(0.f, 0.f, 0.f, 0.f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		gxPushMatrix();
-		gxTranslatef(
-			camTranslation[0] * BACKGROUND_SCREENSHAKE_MULTIPLIER,
-			camTranslation[1] * BACKGROUND_SCREENSHAKE_MULTIPLIER,
-			0.f);
-		{
-			// todo : background depends on level properties
-
-			//setBlend(BLEND_OPAQUE);
-			m_background.draw();
-			//setBlend(BLEND_ALPHA);
-		}
-		gxPopMatrix();
-
-		gxPushMatrix();
-		gxTranslatef(camTranslation[0], camTranslation[1], 0.f);
-
-	#if 0
-		Shader fsfx("fsfx-test3");
-		fsfx.setImmediate("time", m_roundTime);
-		g_colorMap->postprocess(fsfx);
-	#endif
-
-		if (m_levelEvents.gravityWell.endTimer.isActive())
-		{
-			setColor(255, 255, 255, 127);
-			Sprite("gravitywell/well.png").drawEx(
-				m_levelEvents.gravityWell.m_x,
-				m_levelEvents.gravityWell.m_y,
-				m_roundTime * 90.f,
-				1.f, true,
-				FILTER_LINEAR);
-			setColor(colorWhite);
-		}
-
-		// background blocks
-
-		m_arena.drawBlocks(0);
-		m_arena.drawBlocks(1);
-
-		m_floorEffect.draw();
-
-		// torches
-
-		for (int i = 0; i < MAX_TORCHES; ++i)
-		{
-			const Torch & torch = m_torches[i];
-
-			if (torch.m_isAlive)
-				torch.draw();
-		}
-
-		// pickups
-
-		for (int i = 0; i < MAX_PICKUPS; ++i)
-		{
-			const Pickup & pickup = m_pickups[i];
-
-			if (pickup.m_isActive)
-				pickup.draw();
-		}
-
-		// token
-
-		m_tokenHunt.m_token.draw();
-
-		// coins
-
-		for (int i = 0; i < MAX_COINS; ++i)
-		{
-			m_coinCollector.m_coins[i].draw();
-		}
-
-		// movers
-
-		for (int i = 0; i < MAX_MOVERS; ++i)
-		{
-			if (m_movers[i].m_isActive)
-				m_movers[i].draw();
-		}
-
-		// axes
-
-		for (int i = 0; i < MAX_AXES; ++i)
-		{
-			if (m_axes[i].m_isActive)
-				m_axes[i].draw();
-		}
-
-		// pipebombs
-
-		for (int i = 0; i < MAX_PIPEBOMBS; ++i)
-		{
-			if (m_pipebombs[i].m_isActive)
-				m_pipebombs[i].draw();
-		}
-
-		// players
-
-		for (int i = 0; i < MAX_PLAYERS; ++i)
-		{
-			const Player & player = m_players[i];
-
-			if (player.m_isUsed)
-				player.draw();
-		}
-
-		// bullets
-
-		m_bulletPool->draw();
-
-		// animation effects
-
-		for (int i = 0; i < MAX_ANIM_EFFECTS; ++i)
-		{
-			m_animationEffects[i].draw();
-		}
-
-		// particles
-
-		setBlend(BLEND_ADD);
-		m_particlePool->draw();
-		setBlend(BLEND_ALPHA);
-
-		// fireballs
-
-		for (int i = 0; i < MAX_FIREBALLS; ++i)
-		{
-			m_fireballs[i].draw();
-		}
-
-		// foreground blocks
-
-		m_arena.drawBlocks(2);
-
-		// spike walls
-
-		m_levelEvents.spikeWalls.draw();
-
-		gxPopMatrix();
+		drawPlayColor(camTranslation);
 	}
 	popSurface();
 
@@ -2351,9 +2330,6 @@ void GameSim::drawPlay()
 
 	pushSurface(g_lightMap);
 	{
-		gxPushMatrix();
-		gxTranslatef(camTranslation[0], camTranslation[1], 0.f);
-
 		const int lightingDebugMode = LIGHTING_DEBUG_MODE % 4;
 
 		float v = 1.f;
@@ -2368,96 +2344,27 @@ void GameSim::drawPlay()
 		glClearColor(v, v, v, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		setBlend(BLEND_ADD);
-
-		// torches
-
-		for (int i = 0; i < MAX_TORCHES; ++i)
-		{
-			const Torch & torch = m_torches[i];
-
-			if (torch.m_isAlive)
-				torch.drawLight();
-		}
-
-		// pickups
-
-		for (int i = 0; i < MAX_PICKUPS; ++i)
-		{
-			const Pickup & pickup = m_pickups[i];
-
-			if (pickup.m_isActive)
-				pickup.drawLight();
-		}
-
-		// token
-
-		m_tokenHunt.m_token.drawLight();
-
-		// coins
-
-		for (int i = 0; i < MAX_COINS; ++i)
-		{
-			m_coinCollector.m_coins[i].drawLight();
-		}
-
-		// axes
-
-		for (int i = 0; i < MAX_AXES; ++i)
-		{
-			if (m_axes[i].m_isActive)
-				m_axes[i].drawLight();
-		}
-
-		// pipebombs
-
-		for (int i = 0; i < MAX_PIPEBOMBS; ++i)
-		{
-			if (m_pipebombs[i].m_isActive)
-				m_pipebombs[i].drawLight();
-		}
-
-		// bullets
-
-		m_bulletPool->drawLight();
-
-		// particles
-
-		m_particlePool->drawLight();
-
-		// fireballs
-
-		for (int i = 0; i < MAX_FIREBALLS; ++i)
-		{
-			m_fireballs[i].drawLight();
-		}
-
-		// blinds effects
-
-		for (int i = 0; i < MAX_BLINDS_EFFECTS; ++i)
-		{
-			m_blindsEffects[i].drawLight();
-		}
-
-		// players
-
-		for (int i = 0; i < MAX_PLAYERS; ++i)
-		{
-			const Player & player = m_players[i];
-
-			if (player.m_isUsed)
-				player.drawLight();
-		}
-
-		setBlend(BLEND_ALPHA);
-
-		gxPopMatrix();
+		drawPlayLight(camTranslation);
 	}
 	popSurface();
 
 	// compose
 
 	applyLightMap(*g_colorMap, *g_lightMap, *g_finalMap);
+
+	pushSurface(g_finalMap);
+	{
+		gxPushMatrix();
+		gxTranslatef(camTranslation[0], camTranslation[1], 0.f);
+
+		setBlend(BLEND_ALPHA);
+
+		for (int i = 0; i < MAX_BLINDS_EFFECTS; ++i)
+			m_blindsEffects[i].drawHud();
+
+		gxPopMatrix();
+	}
+	popSurface();
 
 #if 0
 	// fsfx
@@ -2479,6 +2386,241 @@ void GameSim::drawPlay()
 	}
 	glDisable(GL_TEXTURE_2D);
 	setBlend(BLEND_ALPHA);
+}
+
+void GameSim::drawPlayColor(Vec2Arg camTranslation)
+{
+	gxPushMatrix();
+	gxTranslatef(
+		camTranslation[0] * BACKGROUND_SCREENSHAKE_MULTIPLIER,
+		camTranslation[1] * BACKGROUND_SCREENSHAKE_MULTIPLIER,
+		0.f);
+	{
+		// todo : background depends on level properties
+
+		//setBlend(BLEND_OPAQUE);
+		m_background.draw();
+		//setBlend(BLEND_ALPHA);
+	}
+	gxPopMatrix();
+
+	gxPushMatrix();
+	gxTranslatef(camTranslation[0], camTranslation[1], 0.f);
+
+#if 0
+	Shader fsfx("fsfx-test3");
+	fsfx.setImmediate("time", m_roundTime);
+	g_colorMap->postprocess(fsfx);
+#endif
+
+	if (m_levelEvents.gravityWell.endTimer.isActive())
+	{
+		setColor(255, 255, 255, 127);
+		Sprite("gravitywell/well.png").drawEx(
+			m_levelEvents.gravityWell.m_x,
+			m_levelEvents.gravityWell.m_y,
+			m_roundTime * 90.f,
+			1.f, true,
+			FILTER_LINEAR);
+		setColor(colorWhite);
+	}
+
+	// background blocks
+
+	m_arena.drawBlocks(0);
+	m_arena.drawBlocks(1);
+
+	m_floorEffect.draw();
+
+	// torches
+
+	for (int i = 0; i < MAX_TORCHES; ++i)
+	{
+		const Torch & torch = m_torches[i];
+
+		if (torch.m_isAlive)
+			torch.draw();
+	}
+
+	// pickups
+
+	for (int i = 0; i < MAX_PICKUPS; ++i)
+	{
+		const Pickup & pickup = m_pickups[i];
+
+		if (pickup.m_isActive)
+			pickup.draw(*this);
+	}
+
+	// token
+
+	m_tokenHunt.m_token.draw();
+
+	// coins
+
+	for (int i = 0; i < MAX_COINS; ++i)
+	{
+		m_coinCollector.m_coins[i].draw();
+	}
+
+	// movers
+
+	for (int i = 0; i < MAX_MOVERS; ++i)
+	{
+		if (m_movers[i].m_isActive)
+			m_movers[i].draw();
+	}
+
+	// axes
+
+	for (int i = 0; i < MAX_AXES; ++i)
+	{
+		if (m_axes[i].m_isActive)
+			m_axes[i].draw();
+	}
+
+	// pipebombs
+
+	for (int i = 0; i < MAX_PIPEBOMBS; ++i)
+	{
+		if (m_pipebombs[i].m_isActive)
+			m_pipebombs[i].draw();
+	}
+
+	// players
+
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+	{
+		const Player & player = m_players[i];
+
+		if (player.m_isUsed)
+			player.draw();
+	}
+
+	// bullets
+
+	m_bulletPool->draw();
+
+	// animation effects
+
+	for (int i = 0; i < MAX_ANIM_EFFECTS; ++i)
+	{
+		m_animationEffects[i].draw();
+	}
+
+	// particles
+
+	setBlend(BLEND_ADD);
+	m_particlePool->draw();
+	setBlend(BLEND_ALPHA);
+
+	// fireballs
+
+	for (int i = 0; i < MAX_FIREBALLS; ++i)
+	{
+		m_fireballs[i].draw();
+	}
+
+	// foreground blocks
+
+	m_arena.drawBlocks(2);
+
+	// spike walls
+
+	m_levelEvents.spikeWalls.draw();
+
+	gxPopMatrix();
+}
+
+void GameSim::drawPlayLight(Vec2Arg camTranslation)
+{
+	gxPushMatrix();
+	gxTranslatef(camTranslation[0], camTranslation[1], 0.f);
+
+	setBlend(BLEND_ADD);
+
+	// torches
+
+	for (int i = 0; i < MAX_TORCHES; ++i)
+	{
+		const Torch & torch = m_torches[i];
+
+		if (torch.m_isAlive)
+			torch.drawLight();
+	}
+
+	// pickups
+
+	for (int i = 0; i < MAX_PICKUPS; ++i)
+	{
+		const Pickup & pickup = m_pickups[i];
+
+		if (pickup.m_isActive)
+			pickup.drawLight();
+	}
+
+	// token
+
+	m_tokenHunt.m_token.drawLight();
+
+	// coins
+
+	for (int i = 0; i < MAX_COINS; ++i)
+	{
+		m_coinCollector.m_coins[i].drawLight();
+	}
+
+	// axes
+
+	for (int i = 0; i < MAX_AXES; ++i)
+	{
+		if (m_axes[i].m_isActive)
+			m_axes[i].drawLight();
+	}
+
+	// pipebombs
+
+	for (int i = 0; i < MAX_PIPEBOMBS; ++i)
+	{
+		if (m_pipebombs[i].m_isActive)
+			m_pipebombs[i].drawLight();
+	}
+
+	// bullets
+
+	m_bulletPool->drawLight();
+
+	// particles
+
+	m_particlePool->drawLight();
+
+	// fireballs
+
+	for (int i = 0; i < MAX_FIREBALLS; ++i)
+	{
+		m_fireballs[i].drawLight();
+	}
+
+	// blinds effects
+
+	for (int i = 0; i < MAX_BLINDS_EFFECTS; ++i)
+	{
+		m_blindsEffects[i].drawLight();
+	}
+
+	// players
+
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+	{
+		const Player & player = m_players[i];
+
+		if (player.m_isUsed)
+			player.drawLight();
+	}
+
+	setBlend(BLEND_ALPHA);
+
+	gxPopMatrix();
 }
 
 void GameSim::getCurrentTimeDilation(float & timeDilation, bool & playerAttackTimeDilation) const
@@ -3131,15 +3273,19 @@ void GameSim::addFloorEffect(int playerId, int x, int y, int size, int damageSiz
 	m_floorEffect.trySpawnAt(*this, playerId, x, y, +BLOCK_SX, size, damageSize);
 }
 
-void GameSim::addBlindsEffect(int playerId, int x, int y, float time)
+void GameSim::addBlindsEffect(int playerId, int x, int y, int size, bool vertical, float time, const char * text)
 {
 	for (int i = 0; i < MAX_BLINDS_EFFECTS; ++i)
 	{
 		if (m_blindsEffects[i].m_time == 0.f)
 		{
-			m_blindsEffects[i].m_x = x;
-			m_blindsEffects[i].m_y = y;
-			m_blindsEffects[i].m_time = time;
+			m_blindsEffects[i].setup(
+				time,
+				x,
+				y,
+				100,
+				vertical,
+				text);
 			break;
 		}
 	}

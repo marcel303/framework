@@ -69,6 +69,7 @@ public:
 	void addPlayer(PlayerInstanceData * player, int controllerIndex);
 	void removePlayer(PlayerInstanceData * player);
 	PlayerInstanceData * findPlayerByPlayerId(uint8_t playerId);
+	bool isLocalPlayer(uint8_t playerId);
 	void setPlayerPtrs();
 	void clearPlayerPtrs();
 

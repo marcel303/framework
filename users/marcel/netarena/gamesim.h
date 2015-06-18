@@ -35,10 +35,10 @@ struct PlayerInputState
 	uint32_t m_actions;
 	float m_inactivityTime;
 
-	bool wasDown(int input) { return (m_prevState.buttons & input) != 0; }
-	bool isDown(int input) { return (m_currState.buttons & input) != 0; }
-	bool wentDown(int input) { return !wasDown(input) && isDown(input); }
-	bool wentUp(int input) { return wasDown(input) && !isDown(input); }
+	bool wasDown(int input) const { return (m_prevState.buttons & input) != 0; }
+	bool isDown(int input) const { return (m_currState.buttons & input) != 0; }
+	bool wentDown(int input) const { return !wasDown(input) && isDown(input); }
+	bool wentUp(int input) const { return wasDown(input) && !isDown(input); }
 	void next(bool doInactivityCheck, float dt)
 	{
 		if ((m_prevState != m_currState) || (m_actions != 0))
@@ -186,7 +186,8 @@ struct Player
 	void handleNewRound();
 	void handleLeave();
 
-	void respawn();
+	void respawn(Vec2 * pos);
+	void despawn(bool willRespawn);
 	void cancelAttack();
 	void handleImpact(Vec2Arg velocity);
 	bool shieldAbsorb(float amount);
@@ -597,7 +598,7 @@ struct Pickup : PhysicsActor
 	void setup(PickupType type, int blockX, int blockY);
 
 	void tick(GameSim & gameSim, float dt);
-	void draw() const;
+	void draw(const GameSim & gameSim) const;
 	void drawLight() const;
 };
 
@@ -801,12 +802,19 @@ struct BlindsEffect
 		memset(this, 0, sizeof(BlindsEffect));
 	}
 
+	float m_duration;
 	float m_time;
 	int m_x;
 	int m_y;
+	int m_size;
+	bool m_vertical;
+	FixedString<MAX_PLAYER_DISPLAY_NAME> m_text;
+
+	void setup(float time, int x, int y, int size, bool vertical, const char * text);
 
 	void tick(GameSim & gameSim, float dt);
 	void drawLight();
+	void drawHud();
 };
 
 struct AnimationFxState
@@ -833,6 +841,8 @@ struct GameStateData
 	GameStateData()
 	{
 		memset(this, 0, sizeof(GameStateData));
+
+		m_desiredGameMode = kGameMode_DeathMatch;
 	}
 
 	uint32_t Random();
@@ -857,6 +867,7 @@ struct GameStateData
 
 	GameState m_gameState;
 	GameMode m_gameMode;
+	GameMode m_desiredGameMode;
 
 	float m_roundTime;
 	uint32_t m_nextRoundNumber;
@@ -1003,6 +1014,8 @@ public:
 	void tickRoundComplete();
 
 	void drawPlay();
+	void drawPlayColor(Vec2Arg camTranslation);
+	void drawPlayLight(Vec2Arg camTranslation);
 
 	void getCurrentTimeDilation(float & timeDilation, bool & playerAttackTimeDilation) const;
 
@@ -1041,7 +1054,7 @@ public:
 
 	void addFloorEffect(int playerId, int x, int y, int size, int damageSize);
 
-	void addBlindsEffect(int playerId, int x, int y, float time);
+	void addBlindsEffect(int playerId, int x, int y, int size, bool vertical, float time, const char * text);
 
 	void addAnimationFx(const char * fileName, int x, int y, bool flipX = false, bool flipY = false);
 

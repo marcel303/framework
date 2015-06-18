@@ -461,6 +461,7 @@ OPTION_DEFINE(int, VOLCANO_LOOP_TIME, "Level Events/Volcano/LoopTime");
 #include "gametypes.h"
 const char * g_gameModeNames[kGameMode_COUNT] =
 {
+	"Lobby",
 	"Death Match",
 	"Token Hunt",
 	"Coin Collector"

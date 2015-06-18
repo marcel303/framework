@@ -8,7 +8,145 @@
 #include "Timer.h" // for character anim time
 #include "uicommon.h"
 
+//#pragma optimize("", off)
+
 #define JOIN_SPRITER Spriter("ui/lobby/join.scml")
+
+#if GRIDBASED_CHARSELECT
+
+OPTION_DECLARE(int, CHARCELL_INIT_X, 162);
+OPTION_DECLARE(int, CHARCELL_INIT_Y, 102);
+OPTION_DECLARE(int, CHARCELL_SPACING_X, 38);
+OPTION_DECLARE(int, CHARCELL_SPACING_Y, 0);
+OPTION_DECLARE(int, CHARCELL_SX, 166);
+OPTION_DECLARE(int, CHARCELL_SY, 162);
+OPTION_DECLARE(int, PLAYERCOL_SX, 36);
+OPTION_DECLARE(int, PLAYERCOL_SY, 18);
+OPTION_DEFINE(int, CHARCELL_INIT_X, "UI/Character Select/Grid/Base X");
+OPTION_DEFINE(int, CHARCELL_INIT_Y, "UI/Character Select/Grid/Base Y");
+OPTION_DEFINE(int, CHARCELL_SPACING_X, "UI/Character Select/Grid/Cell Spacing X");
+OPTION_DEFINE(int, CHARCELL_SPACING_Y, "UI/Character Select/Grid/Cell Spacing Y");
+OPTION_DEFINE(int, CHARCELL_SX, "UI/Character Select/Grid/Cell SX");
+OPTION_DEFINE(int, CHARCELL_SY, "UI/Character Select/Grid/Cell SY");
+OPTION_DEFINE(int, PLAYERCOL_SX, "UI/Character Select/Grid/Player Color SX");
+OPTION_DEFINE(int, PLAYERCOL_SY, "UI/Character Select/Grid/Player Color SY");
+
+#define CHARGRID_SX 8
+#define CHARGRID_SY 1
+
+static void characterIndexToXY(int characterIndex, int & x, int & y);
+static void modulateXY(int & x, int & y);
+static int xyToCharacterIndex(int x, int y);
+static bool isValidGridCell(int x, int y);
+
+CharGrid::CharGrid(Client * client, LobbyMenu * menu)
+	: m_client(client)
+	, m_menu(menu)
+{
+}
+
+void CharGrid::tick(float dt)
+{
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+	{
+		Player & player = m_client->m_gameSim->m_players[i];
+
+		if (!player.m_isUsed)
+			continue;
+		if (player.m_owningChannelId != m_client->m_channel->m_id)
+			continue;
+
+		if (player.m_isReadyUpped)
+		{
+		}
+		else
+		{
+			int dx = 0;
+			int dy = 0;
+
+			if (player.m_input.wentDown(INPUT_BUTTON_LEFT))
+				dx--;
+			if (player.m_input.wentDown(INPUT_BUTTON_RIGHT))
+				dx++;
+			if (player.m_input.wentDown(INPUT_BUTTON_UP))
+				dy--;
+			if (player.m_input.wentDown(INPUT_BUTTON_DOWN))
+				dy++;
+
+			if (dx || dy)
+			{
+				int x, y;
+
+				characterIndexToXY(player.m_characterIndex, x, y);
+				x += dx;
+				y += dy;
+				modulateXY(x, y);
+
+				if (isValidGridCell(x, y))
+				{
+					player.m_characterIndex = xyToCharacterIndex(x, y);
+				}
+			}
+		}
+	}
+}
+
+void CharGrid::draw()
+{
+	const GameSim * gameSim = m_client->m_gameSim;
+
+	int py = CHARCELL_INIT_Y;
+
+	for (int cy = 0; cy < CHARGRID_SY; ++cy)
+	{
+		int px = CHARCELL_INIT_X;
+
+		for (int cx = 0; cx < CHARGRID_SX; ++cx)
+		{
+			const int x1 = px;
+			const int y1 = py;
+			const int x2 = px + CHARCELL_SX;
+			const int y2 = py + CHARCELL_SY;
+
+			setColor(colorWhite);
+			drawRectLine(x1, y1, x2, y2);
+
+			for (int i = 0; i < MAX_PLAYERS; ++i)
+			{
+				const Player & player = gameSim->m_players[i];
+				if (!player.m_isUsed)
+					continue;
+				int x, y;
+				characterIndexToXY(player.m_characterIndex, x, y);
+				if (x == cx && y == cy)
+				{
+					const int rx1 = x1 + i * PLAYERCOL_SX;
+					const int ry1 = y1 + 0;
+					const int rx2 = rx1 + PLAYERCOL_SX;
+					const int ry2 = ry1 + PLAYERCOL_SY;
+
+					const Color playerColor = getPlayerColor(i);
+					setColorf(
+						playerColor.r,
+						playerColor.g,
+						playerColor.b,
+						player.m_isReadyUpped ? 1.f : .5f);
+					drawRect(rx1, ry1, rx2, ry2);
+				}
+			}
+
+			px += CHARCELL_SX + CHARCELL_SPACING_X;
+		}
+
+		py += CHARCELL_SY + CHARCELL_SPACING_Y;
+	}
+}
+
+#endif
+
+//
+
+#if !GRIDBASED_CHARSELECT
 
 CharSelector::CharSelector(Client * client, LobbyMenu * menu, int playerId)
 	: m_client(client)
@@ -118,28 +256,39 @@ bool CharSelector::isLocalPlayer() const
 	const Player & player = m_client->m_gameSim->m_players[m_playerId];
 	return player.m_isUsed && player.m_owningChannelId == m_client->m_channel->m_id;
 }
+#endif
 
 //
 
 LobbyMenu::LobbyMenu(Client * client)
 	: m_client(client)
+	, m_charGrid(0)
 	, m_prevGameMode(new Button(50,  GFX_SY - 80, "charselect-prev.png"))
 	, m_nextGameMode(new Button(150, GFX_SY - 80, "charselect-next.png"))
 {
+#if GRIDBASED_CHARSELECT
+	m_charGrid = new CharGrid(client, this);
+#else
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
 		m_charSelectors[i] = new CharSelector(client, this, i);
 	}
+#endif
 
 	m_joinSpriterState.startAnim(JOIN_SPRITER, 0);
 }
 
 LobbyMenu::~LobbyMenu()
 {
+#if !GRIDBASED_CHARSELECT
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
 		delete m_charSelectors[i];
 	}
+#else
+	delete m_charGrid;
+	m_charGrid = 0;
+#endif
 
 	delete m_prevGameMode;
 	delete m_nextGameMode;
@@ -160,14 +309,21 @@ void LobbyMenu::tick(float dt)
 		}
 	}
 
+#if GRIDBASED_CHARSELECT
+	m_charGrid->tick(dt);
+#else
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
 		m_charSelectors[i]->tick(dt);
 	}
+#endif
 }
 
 void LobbyMenu::draw()
 {
+	setColor(colorWhite);
+	Sprite("ui/lobby/background.png").draw();
+
 	if (g_app->m_isHost)
 	{
 		setColor(colorWhite);
@@ -175,6 +331,9 @@ void LobbyMenu::draw()
 		m_nextGameMode->draw();
 	}
 
+	m_charGrid->draw();
+
+#if !GRIDBASED_CHARSELECT
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
 		if (g_devMode || true) // fixme
@@ -184,7 +343,7 @@ void LobbyMenu::draw()
 			const int x2 = UI_CHARSELECT_BASE_X + UI_CHARSELECT_STEP_X * i + UI_CHARSELECT_SIZE_X;
 			const int y2 = UI_CHARSELECT_BASE_Y + UI_CHARSELECT_SIZE_Y;
 
-			const float v = m_charSelectors[i]->isLocalPlayer() ? (std::sinf(g_TimerRT.Time_get() * M_PI * 2.f / 1.5f) + 1.f) / 10.f : 0.f;
+			const float v = m_client->isLocalPlayer(i) ? (std::sinf(g_TimerRT.Time_get() * M_PI * 2.f / 1.5f) + 1.f) / 10.f : 0.f;
 
 			setColorf(v, v, v, .7f);
 			drawRect(x1, y1, x2, y2);
@@ -226,6 +385,38 @@ void LobbyMenu::draw()
 			}
 		}
 	}
+#endif
 
 	setColor(colorWhite);
 }
+
+//
+
+#if GRIDBASED_CHARSELECT
+
+static void characterIndexToXY(int characterIndex, int & x, int & y)
+{
+	x = characterIndex;
+	y = 0;
+}
+
+static void modulateXY(int & x, int & y)
+{
+	x = (x + MAX_CHARACTERS) % MAX_CHARACTERS;
+	Assert(x >= 0 && x < MAX_CHARACTERS);
+	y = 0;
+}
+
+static int xyToCharacterIndex(int x, int y)
+{
+	const int result = x;
+	Assert(result >= 0 && result < MAX_CHARACTERS);
+	return result;
+}
+
+static bool isValidGridCell(int x, int y)
+{
+	return true;
+}
+
+#endif

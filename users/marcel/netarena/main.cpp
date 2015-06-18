@@ -322,7 +322,10 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 					Assert(delta == -1 || delta == +1);
 					if (delta == -1 || delta == +1)
 					{
-						gameSim->m_gameMode = (GameMode)((gameSim->m_gameMode + kGameMode_COUNT + delta) % kGameMode_COUNT);
+						do
+						{
+							gameSim->m_desiredGameMode = (GameMode)((gameSim->m_desiredGameMode + kGameMode_COUNT + delta) % kGameMode_COUNT);
+						} while (gameSim->m_desiredGameMode == kGameMode_Lobby);
 					}
 				}
 				break;
@@ -1804,7 +1807,7 @@ void App::draw()
 				setColor(255, 255, 255);
 				Font font("calibri.ttf");
 				setFont(font);
-				drawText(5, GFX_SY - 25, 20, +1.f, -1.f, "viewing client %d. time dilation %01.2f. state %s", m_selectedClient, timeDilation, g_gameStateNames[client->m_gameSim->m_gameState]);
+				drawText(5, GFX_SY - 25, 20, +1.f, -1.f, "viewing client %d. time dilation %01.2f. state %s. mouse %d, %d", m_selectedClient, timeDilation, g_gameStateNames[client->m_gameSim->m_gameState], mouse.x, mouse.y);
 			}
 		}
 
@@ -1909,7 +1912,7 @@ void App::draw()
 		if (m_optionMenuIsOpen)
 		{
 			const int sx = 500;
-			const int sy = GFX_SY / 2;
+			const int sy = GFX_SY * 4 / 5;
 			const int x = (GFX_SX - sx) / 2;
 			const int y = (GFX_SY - sy) / 2;
 

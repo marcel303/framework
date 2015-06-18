@@ -237,12 +237,15 @@ void Client::tick(float dt)
 
 		temp[0] = 0;
 
+		bool loop = true;
+
 		switch (m_gameSim->m_gameState)
 		{
 		case kGameState_Initial:
 			Assert(false);
 		case kGameState_Connecting:
 		case kGameState_OnlineMenus:
+		case kGameState_NewGame:
 			strcpy_s(temp, sizeof(temp), "bgm/bgm-menus.ogg");
 			break;
 		case kGameState_Play:
@@ -250,6 +253,7 @@ void Client::tick(float dt)
 			break;
 		case kGameState_RoundComplete:
 			strcpy_s(temp, sizeof(temp), "bgm/bgm-round-complete.ogg");
+			loop = false;
 			break;
 
 		default:
@@ -267,7 +271,7 @@ void Client::tick(float dt)
 			if (strlen(s_bgm))
 			{
 				s_bgmSound = new Music(s_bgm);
-				s_bgmSound->play();
+				s_bgmSound->play(loop);
 			}
 		}
 	}
@@ -292,6 +296,7 @@ void Client::draw()
 
 	case kGameState_OnlineMenus:
 		drawMenus();
+		m_gameSim->drawPlayColor(Vec2(0.f, 0.f));
 		break;
 
 	case kGameState_Play:
@@ -329,9 +334,7 @@ void Client::drawConnecting()
 
 void Client::drawMenus()
 {
-	setColor(colorWhite);
-	Sprite("mainmenu-back.png").draw();
-
+#if 0
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
 		const Player & player = m_gameSim->m_players[i];
@@ -351,17 +354,23 @@ void Client::drawMenus()
 			drawText(GFX_SX/2, y, 24, 0.f, 0.f, "PLAYER %d NOT CONNECTED", i);
 		}
 	}
+#endif
 
 	if (m_gameSim->m_gameState == kGameState_OnlineMenus)
 	{
 		m_lobbyMenu->draw();
+	}
+	else
+	{
+		setColor(colorWhite);
+		Sprite("mainmenu-back.png").draw();
 	}
 
 	// draw current game mode selection
 
 	setFont("calibri.ttf");
 	setColor(127, 255, 227);
-	drawText(GFX_SX/2, GFX_SY - 130, 48, 0.f, 0.f, "[%s]", g_gameModeNames[m_gameSim->m_gameMode]);
+	drawText(GFX_SX/2, GFX_SY - 130, 48, 0.f, 0.f, "[%s]", g_gameModeNames[m_gameSim->m_desiredGameMode]);
 
 	// draw game start timer
 
@@ -542,6 +551,12 @@ PlayerInstanceData * Client::findPlayerByPlayerId(uint8_t playerId)
 	}
 
 	return 0;
+}
+
+bool Client::isLocalPlayer(uint8_t playerId)
+{
+	const Player & player = m_gameSim->m_players[playerId];
+	return player.m_isUsed && player.m_owningChannelId == m_channel->m_id;
 }
 
 void Client::setPlayerPtrs()

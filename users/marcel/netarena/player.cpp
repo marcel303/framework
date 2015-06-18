@@ -15,11 +15,21 @@
 
 /*
 
++ add player character grid UI
+- escape on dialog
+
++ round complete music loops
++ jump pad broken
++ show name on black bar
++ vertical black bars
+
++ new freeze pickup is huge -> make it smaller
+
 - fix stars getting stuck in geometry
 - investigate player collision bug test level
-- improve blinds/slowmo on death. add vertical bar
++ improve blinds/slowmo on death. add vertical bar
 - prototype invisibility ability
-- remove ninja dash from axe character
+- remove ninja dash from axe character. should be a special ability for a separate character
 
 feedback:
 
@@ -909,7 +919,7 @@ void Player::tick(float dt)
 	//
 
 	if (g_devMode && !g_monkeyMode && !DEMOMODE && m_input.wentDown(INPUT_BUTTON_START))
-		respawn();
+		respawn(0);
 
 	if (!m_isAlive && !m_isAnimDriven)
 	{
@@ -930,7 +940,7 @@ void Player::tick(float dt)
 			!GAMESIM->m_levelEvents.spikeWalls.isActive() &&
 			(m_input.wentDown(INPUT_BUTTON_X) || (PLAYER_RESPAWN_AUTOMICALLY && m_respawnTimer <= 0.f)))
 		{
-			respawn();
+			respawn(0);
 		}
 
 		m_respawnTimer -= dt;
@@ -1058,7 +1068,13 @@ void Player::tick(float dt)
 
 							if (damage != 0.f)
 							{
-								if (!other.handleDamage(damage, Vec2(m_facing[0] * PLAYER_SWORD_PUSH_SPEED, 0.f), this))
+								Vec2 direction;
+								if (m_anim == kPlayerAnim_Attack || m_anim == kPlayerAnim_AttackUp || m_anim == kPlayerAnim_AttackDown)
+									direction = Vec2(m_attackDirection[0], m_attackDirection[1]).CalcNormalized();
+								else
+									direction = Vec2(m_facing[0], 0.f).CalcNormalized();
+
+								if (!other.handleDamage(damage, direction * PLAYER_SWORD_PUSH_SPEED, this))
 								{
 									absorbed = true;
 								}
@@ -1904,7 +1920,7 @@ void Player::tick(float dt)
 				m_vel[0] != 0.f && Calc::Sign(m_facing[0]) == Calc::Sign(m_vel[0]) &&
 				//Calc::Sign(m_vel[1]) == Calc::Sign(gravity) &&
 				(Calc::Sign(m_vel[1]) == Calc::Sign(gravity) || Calc::Abs(m_vel[1]) <= PLAYER_JUMP_SPEED / 2.f) &&
-				m_isHuggingWall != 0)
+				m_isHuggingWall)
 			{
 				m_isWallSliding = true;
 
@@ -2255,11 +2271,6 @@ void Player::tick(float dt)
 			m_vel += delta;
 		}
 
-		// attempt to stay grounded
-
-		if (m_isGrounded)
-			m_vel[1] = 0.f;
-
 		const Vec2 newPos = m_pos;
 
 		// surface type
@@ -2350,34 +2361,26 @@ void Player::tick(float dt)
 		m_dirBlockMask[1] = dirBlockMask[1];
 		m_oldBlockMask = blockMask;
 
-	#if 1
-		if (m_isGrounded)
+		// attempt to stay grounded
+
+		if (m_isGrounded && m_vel[1] >= 0.f)
 		{
+			const uint32_t groundBlockMask = getIntersectingBlocksMask(m_pos[0], m_pos[1] + 1.f);
+
+			if (groundBlockMask & kBlockMask_Solid)
+			{
+				//logDebug("keep grounded");
+
+				m_vel[1] = Calc::Max(0.f, m_vel[1]);
+				m_dirBlockMaskDir[1] = 1;
+				m_dirBlockMask[1] |= kBlockMask_Solid;
+			}
+
 			const uint32_t newBlockMask = getIntersectingBlocksMask(m_pos[0], m_pos[1]);
 
-			if (newBlockMask & kBlockMask_Solid)
+			if ((newBlockMask & kBlockMask_Solid) == 0)
 			{
-				logDebug("keep grounded");
-
-				m_dirBlockMaskDir[1] = 1.f;
-				m_dirBlockMask[1] |= kBlockMask_Solid;
-
-#if 0
-				for (int dy = 1; dy <= 2; ++dy)
-				{
-					const uint32_t blockMask = getIntersectingBlocksMask(m_pos[0], m_pos[1] - dy);
-
-					if ((blockMask & kBlockMask_Solid) == 0)
-					{
-						m_pos[1] -= dy;
-						break;
-					}
-				}
-#endif
-			}
-			else
-			{
-				logDebug("try keep grounded");
+				//logDebug("try keep grounded");
 
 				for (int dy = 1; dy <= 10; ++dy)
 				{
@@ -2388,6 +2391,7 @@ void Player::tick(float dt)
 						logDebug("keep grounded success");
 
 						m_pos[1] += dy - 1.f;
+						m_vel[1] = Calc::Max(0.f, m_vel[1]);
 						m_dirBlockMaskDir[1] = 1;
 						m_dirBlockMask[1] |= kBlockMask_Solid;
 						break;
@@ -2395,53 +2399,6 @@ void Player::tick(float dt)
 				}
 			}
 		}
-	#endif
-
-	#if 0
-		if (m_isGrounded && !(dirBlockMask[1] & kBlockMask_Solid))
-		{
-			const Vec2 min = m_pos + m_collision.min;
-			const Vec2 max = m_pos + m_collision.max + Vec2(0.f, 4.f);
-
-			CollisionShape playerShape;
-			playerShape.set(
-				Vec2(min[0], min[1]),
-				Vec2(max[0], min[1]),
-				Vec2(max[0], max[1]),
-				Vec2(min[0], max[1]));
-
-			GAMESIM->testCollision(
-				playerShape,
-				this,
-				[](const CollisionShape & shape, void * arg, PhysicsActor * actor, BlockAndDistance * blockAndDistance, Player * player)
-				{
-					Player * self = (Player*)arg;
-
-					if (blockAndDistance)
-					{
-						Block * block = blockAndDistance->block;
-
-						if ((1 << block->type) & kBlockMask_Solid)
-						{
-							CollisionShape blockShape;
-							Arena::getBlockCollision(block->shape, blockShape, blockAndDistance->x, blockAndDistance->y);
-
-							float contactDistance;
-							Vec2 contactNormal;
-
-							if (shape.checkCollision(blockShape, Vec2(0.f, 1.f), contactDistance, contactNormal))
-							{
-								if (contactNormal[1] * contactDistance < 0.f)
-								{
-									self->m_pos[1] += 4.f + contactNormal[1] * contactDistance;
-									log("stay grounded!");
-								}
-							}
-						}
-					}
-				});
-		}
-	#endif
 
 		// grounded?
 
@@ -2459,7 +2416,8 @@ void Player::tick(float dt)
 		}
 		else
 		{
-			m_isGrounded = false;
+			if (m_isGrounded)
+				m_isGrounded = false;
 		}
 
 		// ground dash particles
@@ -3032,6 +2990,13 @@ void Player::debugDraw() const
 		}
 	}
 
+	if (m_isGrounded)
+	{
+		setColor(colorWhite);
+		drawText(m_pos[0], y, 14, 0.f, 0.f, "grounded");
+		y += 18.f;
+	}
+
 	if (m_isHuggingWall)
 	{
 		setColor(colorWhite);
@@ -3043,13 +3008,6 @@ void Player::debugDraw() const
 	{
 		setColor(colorWhite);
 		drawText(m_pos[0], y, 14, 0.f, 0.f, "wallslide");
-		y += 18.f;
-	}
-
-	if (m_isGrounded)
-	{
-		setColor(colorWhite);
-		drawText(m_pos[0], y, 14, 0.f, 0.f, "grounded");
 		y += 18.f;
 	}
 
@@ -3178,14 +3136,29 @@ void Player::handleLeave()
 	}
 }
 
-void Player::respawn()
+void Player::respawn(Vec2 * pos)
 {
 	if (!hasValidCharacterIndex())
 		return;
 
+	bool hasSpawnPoint = false;
 	int x, y;
 
-	if (GAMESIM->m_arena.getRandomSpawnPoint(*GAMESIM, x, y, m_lastSpawnIndex, this))
+	if (pos)
+	{
+		hasSpawnPoint = true;
+		x = (*pos)[0];
+		y = (*pos)[1];
+	}
+	else
+	{
+		hasSpawnPoint = GAMESIM->m_arena.getRandomSpawnPoint(
+			*GAMESIM, x, y,
+			m_lastSpawnIndex,
+			this);
+	}
+
+	if (hasSpawnPoint)
 	{
 		m_spawnInvincibilityTime = PLAYER_RESPAWN_INVINCIBILITY_TIME;
 
@@ -3256,6 +3229,27 @@ void Player::respawn()
 			m_isRespawn = true;
 		}
 	}
+}
+
+void Player::despawn(bool willRespawn)
+{
+	// reset some stuff now
+
+	m_canRespawn = false;
+	m_isRespawn = willRespawn;
+
+	m_isAlive = false;
+
+	m_special = SpecialInfo();
+
+	m_attack = AttackInfo();
+
+	m_ice = IceInfo();
+	m_bubble = BubbleInfo();
+
+	m_jetpack = JetpackInfo();
+
+	endGrapple();
 }
 
 void Player::cancelAttack()
@@ -3377,26 +3371,9 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 					}
 				}
 
-				// reset some stuff now
-
-				m_canRespawn = false;
-
-				m_isAlive = false;
-
-				m_special = SpecialInfo();
-
-				m_attack = AttackInfo();
-
-				m_ice = IceInfo();
-				m_bubble = BubbleInfo();
-
-				m_jetpack = JetpackInfo();
-
-				endGrapple();
-
 				// fixme.. mid pos
 				const CharacterData * characterData = getCharacterData(m_index);
-				ParticleSpawnInfo spawnInfo(m_pos[0], m_pos[1] + mirrorY(-characterData->m_collisionSy/2.f), kBulletType_ParticleA, 20, 50, 350, 40);
+				ParticleSpawnInfo spawnInfo(m_pos[0], m_pos[1] + mirrorY(-characterData->m_collisionSy/2.f), kBulletType_ParticleA, 200, 50, 350, 140);
 				spawnInfo.color = 0xff0000ff;
 
 				GAMESIM->spawnParticles(spawnInfo);
@@ -3411,9 +3388,9 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 
 				if (attacker)
 				{
-					// todo : make blinds effect directional
 					const Vec2 mid = m_pos + (m_collision.min + m_collision.max) / 2.f;
-					GAMESIM->addBlindsEffect(m_index, mid[0], mid[1], .5f);
+					const bool vertical = Calc::Abs(velocity[1]) > Calc::Abs(velocity[0]);
+					GAMESIM->addBlindsEffect(m_index, mid[0], mid[1], 100, vertical, .5f, m_displayName.c_str());
 				}
 
 				if (m_instanceData->m_input.m_controllerIndex != -1)
@@ -3423,6 +3400,8 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 						gamepad[m_instanceData->m_input.m_controllerIndex].vibrate(PLAYER_DEATH_VIBRATION_DURATION, PLAYER_DEATH_VIBRATION_STRENGTH);
 					}
 				}
+
+				despawn(true);
 			}
 
 			if (attacker && attacker != this)
