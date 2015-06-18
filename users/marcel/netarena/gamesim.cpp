@@ -7,6 +7,7 @@
 #include "gamedefs.h"
 #include "gamesim.h"
 #include "host.h"
+#include "lobbymenu.h"
 #include "Log.h"
 #include "main.h"
 #include "Parse.h"
@@ -1296,6 +1297,7 @@ void GameSim::setGameState(::GameState gameState)
 			{
 				Player * player = m_playerInstanceDatas[i]->m_player;
 
+				player->m_isActive = false;
 				player->m_isReadyUpped = false;
 			}
 		}
@@ -1801,6 +1803,37 @@ void GameSim::tickMenus()
 			{
 				// character select
 
+			#if 1
+				if (!player.m_isReadyUpped)
+				{
+					int dx = 0;
+					int dy = 0;
+
+					if (player.m_input.wentDown(INPUT_BUTTON_LEFT))
+						dx--;
+					if (player.m_input.wentDown(INPUT_BUTTON_RIGHT))
+						dx++;
+					if (player.m_input.wentDown(INPUT_BUTTON_UP))
+						dy--;
+					if (player.m_input.wentDown(INPUT_BUTTON_DOWN))
+						dy++;
+
+					if (dx || dy)
+					{
+						int x, y;
+
+						CharGrid::characterIndexToXY(player.m_characterIndex, x, y);
+						x += dx;
+						y += dy;
+						CharGrid::modulateXY(x, y);
+
+						if (CharGrid::isValidGridCell(x, y))
+						{
+							player.m_characterIndex = CharGrid::xyToCharacterIndex(x, y);
+						}
+					}
+				}
+			#else
 				if (!player.m_isReadyUpped)
 				{
 					int step = 0;
@@ -1816,6 +1849,7 @@ void GameSim::tickMenus()
 						playerInstanceData->setCharacterIndex(characterIndex);
 					}
 				}
+			#endif
 
 				// ready up
 

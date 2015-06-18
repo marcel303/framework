@@ -19,6 +19,11 @@ public:
 
 	void tick(float dt);
 	void draw();
+
+	static void characterIndexToXY(int characterIndex, int & x, int & y);
+	static void modulateXY(int & x, int & y);
+	static int xyToCharacterIndex(int x, int y);
+	static bool isValidGridCell(int x, int y);
 };
 #endif
 

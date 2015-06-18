@@ -34,11 +34,6 @@ OPTION_DEFINE(int, PLAYERCOL_SY, "UI/Character Select/Grid/Player Color SY");
 #define CHARGRID_SX 8
 #define CHARGRID_SY 1
 
-static void characterIndexToXY(int characterIndex, int & x, int & y);
-static void modulateXY(int & x, int & y);
-static int xyToCharacterIndex(int x, int y);
-static bool isValidGridCell(int x, int y);
-
 CharGrid::CharGrid(Client * client, LobbyMenu * menu)
 	: m_client(client)
 	, m_menu(menu)
@@ -47,48 +42,7 @@ CharGrid::CharGrid(Client * client, LobbyMenu * menu)
 
 void CharGrid::tick(float dt)
 {
-	for (int i = 0; i < MAX_PLAYERS; ++i)
-	{
-		Player & player = m_client->m_gameSim->m_players[i];
-
-		if (!player.m_isUsed)
-			continue;
-		if (player.m_owningChannelId != m_client->m_channel->m_id)
-			continue;
-
-		if (player.m_isReadyUpped)
-		{
-		}
-		else
-		{
-			int dx = 0;
-			int dy = 0;
-
-			if (player.m_input.wentDown(INPUT_BUTTON_LEFT))
-				dx--;
-			if (player.m_input.wentDown(INPUT_BUTTON_RIGHT))
-				dx++;
-			if (player.m_input.wentDown(INPUT_BUTTON_UP))
-				dy--;
-			if (player.m_input.wentDown(INPUT_BUTTON_DOWN))
-				dy++;
-
-			if (dx || dy)
-			{
-				int x, y;
-
-				characterIndexToXY(player.m_characterIndex, x, y);
-				x += dx;
-				y += dy;
-				modulateXY(x, y);
-
-				if (isValidGridCell(x, y))
-				{
-					player.m_characterIndex = xyToCharacterIndex(x, y);
-				}
-			}
-		}
-	}
+	// todo : update animations
 }
 
 void CharGrid::draw()
@@ -140,6 +94,31 @@ void CharGrid::draw()
 
 		py += CHARCELL_SY + CHARCELL_SPACING_Y;
 	}
+}
+
+void CharGrid::characterIndexToXY(int characterIndex, int & x, int & y)
+{
+	x = characterIndex;
+	y = 0;
+}
+
+void CharGrid::modulateXY(int & x, int & y)
+{
+	x = (x + MAX_CHARACTERS) % MAX_CHARACTERS;
+	Assert(x >= 0 && x < MAX_CHARACTERS);
+	y = 0;
+}
+
+int CharGrid::xyToCharacterIndex(int x, int y)
+{
+	const int result = x;
+	Assert(result >= 0 && result < MAX_CHARACTERS);
+	return result;
+}
+
+bool CharGrid::isValidGridCell(int x, int y)
+{
+	return true;
 }
 
 #endif
@@ -389,34 +368,3 @@ void LobbyMenu::draw()
 
 	setColor(colorWhite);
 }
-
-//
-
-#if GRIDBASED_CHARSELECT
-
-static void characterIndexToXY(int characterIndex, int & x, int & y)
-{
-	x = characterIndex;
-	y = 0;
-}
-
-static void modulateXY(int & x, int & y)
-{
-	x = (x + MAX_CHARACTERS) % MAX_CHARACTERS;
-	Assert(x >= 0 && x < MAX_CHARACTERS);
-	y = 0;
-}
-
-static int xyToCharacterIndex(int x, int y)
-{
-	const int result = x;
-	Assert(result >= 0 && result < MAX_CHARACTERS);
-	return result;
-}
-
-static bool isValidGridCell(int x, int y)
-{
-	return true;
-}
-
-#endif

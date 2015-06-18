@@ -772,6 +772,9 @@ void Player::applyAnim()
 
 void Player::tick(float dt)
 {
+	if (!m_isActive)
+		return;
+
 	const CharacterData * characterData = getCharacterData(m_characterIndex);
 
 	if (m_instanceData->m_textChatTicks != 0)
@@ -1250,7 +1253,7 @@ void Player::tick(float dt)
 
 		// attack triggering
 
-		if (playerControl && !m_attack.attacking && m_attack.cooldown <= 0.f)
+		if (playerControl && !m_attack.attacking && m_attack.cooldown <= 0.f && (GAMESIM->m_gameMode != kGameMode_Lobby))
 		{
 			if (m_input.wentDown(INPUT_BUTTON_B) && (m_weaponStackSize > 0 || s_unlimitedAmmo) && isAnimOverrideAllowed(kPlayerAnim_Fire))
 			{
@@ -1464,7 +1467,7 @@ void Player::tick(float dt)
 				endGrapple();
 			}
 
-			if (!s_noSpecial)
+			if (!s_noSpecial && (GAMESIM->m_gameMode != kGameMode_Lobby))
 			{
 				if (characterData->m_special == kPlayerSpecial_Grapple &&
 					m_grapple.state == GrappleInfo::State_Inactive &&
@@ -1611,7 +1614,11 @@ void Player::tick(float dt)
 		const uint32_t currentBlockMaskFloor = m_dirBlockMaskDir[1] > 0 ? m_dirBlockMask[1] : 0;
 		const uint32_t currentBlockMaskCeil = m_dirBlockMaskDir[1] < 0 ? m_dirBlockMask[1] : 0;
 
-		if (characterData->hasTrait(kPlayerTrait_AirDash))
+		if (GAMESIM->m_gameMode == kGameMode_Lobby)
+		{
+			// none of that special traits stuff onboard the enterprise!
+		}
+		else if (characterData->hasTrait(kPlayerTrait_AirDash))
 		{
 			if (playerControl && m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && m_input.wentDown(INPUT_BUTTON_A))
 			{
@@ -2621,6 +2628,8 @@ void Player::draw() const
 {
 	if (!hasValidCharacterIndex())
 		return;
+	if (!m_isActive)
+		return;
 	if (!m_isAlive && !m_isRespawn)
 		return;
 
@@ -2950,6 +2959,13 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 
 void Player::drawLight() const
 {
+	if (!hasValidCharacterIndex())
+		return;
+	if (!m_isActive)
+		return;
+	if (!m_isAlive && !m_isRespawn)
+		return;
+
 	const float x = m_pos[0] + (m_collision.min[0] + m_collision.max[0]) / 2.f;
 	const float y = m_pos[1] + (m_collision.min[1] + m_collision.max[1]) / 2.f;
 	Sprite("player-light.png").drawEx(x, y, 0.f, 3.f, 3.f, false, FILTER_LINEAR);
@@ -3092,6 +3108,8 @@ uint32_t Player::getIntersectingBlocksMask(int x, int y) const
 
 void Player::handleNewGame()
 {
+	m_isActive = true;
+
 	m_score = 0;
 	m_totalScore = 0;
 }
@@ -3160,6 +3178,8 @@ void Player::respawn(Vec2 * pos)
 
 	if (hasSpawnPoint)
 	{
+		m_isActive = true;
+
 		m_spawnInvincibilityTime = PLAYER_RESPAWN_INVINCIBILITY_TIME;
 
 		m_pos[0] = (float)x;
@@ -3234,6 +3254,8 @@ void Player::respawn(Vec2 * pos)
 void Player::despawn(bool willRespawn)
 {
 	// reset some stuff now
+
+	m_isActive = willRespawn;
 
 	m_canRespawn = false;
 	m_isRespawn = willRespawn;

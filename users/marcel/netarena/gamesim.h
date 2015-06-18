@@ -239,6 +239,7 @@ struct Player
 	// character select
 	FixedString<MAX_PLAYER_DISPLAY_NAME> m_displayName;
 	bool m_isReadyUpped;
+	bool m_isActive;
 
 	// alive state
 	bool m_isAlive;
