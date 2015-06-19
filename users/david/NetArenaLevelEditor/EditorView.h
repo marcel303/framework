@@ -69,6 +69,7 @@ public:
 
 public slots:
     void Save();
+    void SaveAs();
     void SaveTemplate();
     void Load();
     void New();
@@ -99,5 +100,7 @@ private:
 	void CreateAndShowNewMapDialog();
 
 	bool flip;
+
+    QString m_filename;
 
 };

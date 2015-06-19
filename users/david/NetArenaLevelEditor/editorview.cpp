@@ -34,6 +34,8 @@ EditorView::EditorView() : EditorViewBasic()
 
 	QMenuBar* bar = new QMenuBar(this);
 
+    m_filename = "";
+
 	QAction* newAct1 = new QAction(tr("&New"), this);
 	newAct1->setShortcuts(QKeySequence::New);
 	newAct1->setStatusTip(tr("Create a new file"));
@@ -41,13 +43,18 @@ EditorView::EditorView() : EditorViewBasic()
 
 	QAction* newAct2 = new QAction(tr("&Save"), this);
 	newAct2->setShortcuts(QKeySequence::Save);
-	newAct2->setStatusTip(tr("Save to file"));
+    newAct2->setStatusTip(tr("Save"));
 	connect(newAct2, SIGNAL(triggered()), this, SLOT(Save()));
 
-	QAction* newAct3 = new QAction(tr("&Load"), this);
-	newAct3->setShortcuts(QKeySequence::Open);
-	newAct3->setStatusTip(tr("Load from file"));
-	connect(newAct3, SIGNAL(triggered()), this, SLOT(Load()));
+    QAction* newAct3 = new QAction(tr("&SaveAs"), this);
+    newAct3->setShortcuts(QKeySequence::SaveAs);
+    newAct3->setStatusTip(tr("Save to file"));
+    connect(newAct3, SIGNAL(triggered()), this, SLOT(SaveAs()));
+
+    QAction* newAct4 = new QAction(tr("&Load"), this);
+    newAct4->setShortcuts(QKeySequence::Open);
+    newAct4->setStatusTip(tr("Load from file"));
+    connect(newAct4, SIGNAL(triggered()), this, SLOT(Load()));
 
 	QAction* newAct5 = new QAction(tr("&SaveTemplate"), this);
 	newAct5->setStatusTip(tr("Templatus Savus"));
@@ -65,6 +72,7 @@ EditorView::EditorView() : EditorViewBasic()
 	bar->addAction(newAct1);
 	bar->addAction(newAct2);
 	bar->addAction(newAct3);
+    bar->addAction(newAct4);
 	bar->addAction(newAct5);
 	bar->addAction(newAct6);
 	bar->addAction(newAct7);
@@ -79,8 +87,27 @@ EditorView::~EditorView()
 
 void EditorView::Save()
 {
-	QString fileName = QFileDialog::getSaveFileName(this, tr("Save to file"));
-	SaveLevel(fileName);
+    if(m_filename != "")
+        SaveLevel(m_filename);
+    else
+    {
+        m_filename = QFileDialog::getSaveFileName(this, tr("Save to file"));
+
+        if(m_filename != "")
+            SaveLevel(m_filename);
+    }
+
+}
+
+void EditorView::SaveAs()
+{
+    QString temp = m_filename;
+    m_filename = QFileDialog::getSaveFileName(this, tr("Save to file"));
+
+    if(m_filename != "")
+        SaveLevel(m_filename);
+    else
+        m_filename = temp;
 }
 
 
@@ -93,13 +120,20 @@ void EditorView::SaveTemplate()
 void EditorView::Load()
 {
 	QString fileName = QFileDialog::getOpenFileName(this, tr("Open file"));
-	fileName.chop(7);
-	LoadLevel(fileName);
+    if(fileName != "")
+    {
+        fileName.chop(7);
+        m_filename = fileName;
+
+        LoadLevel(m_filename);
+    }
 }
 
 void EditorView::New()
 {
 	CreateAndShowNewMapDialog();
+
+    m_filename = "";
 }
 
 void EditorView::SwitchToMech(int s)
