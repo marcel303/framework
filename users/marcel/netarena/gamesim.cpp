@@ -55,7 +55,7 @@ struct PickupSprite
 } s_pickupSprites[kPickupType_COUNT] =
 {
 	false, "pickup-ammo.png",
-	false, "pickup-nade.png",//true,  "objects/pickups/bomb/bomb.scml",
+	true,  "objects/pickups/bomb/bomb.scml",//false, "pickup-nade.png"
 	true,  "objects/pickups/shield/shield.scml",//false, "pickup-shield.png",
 	true,  "objects/pickups/freezeray/freezeray.scml",
 	false, "pickup-bubble.png",
