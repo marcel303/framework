@@ -2878,7 +2878,7 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 			Sprite("coin.png").drawEx(anchorPos[0], anchorPos[1]);
 		}
 	}
-	else if (!GRAPPLE_ANALOG_AIM && GRAPPLE_FIXED_AIM_PREVIEW && GAMESIM->m_gameState == kGameState_Play)
+	else if (!GRAPPLE_ANALOG_AIM && GRAPPLE_FIXED_AIM_PREVIEW && m_grapple.state == GrappleInfo::State_Inactive && GAMESIM->m_gameState == kGameState_Play)
 	{
 		Vec2 anchorPos;
 		float length;
