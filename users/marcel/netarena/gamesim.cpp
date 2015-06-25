@@ -1473,9 +1473,9 @@ void GameSim::load(const char * name)
 	// load background
 
 	if (m_gameState == kGameState_OnlineMenus)
-		m_background.load("backgrounds/lobby/background.scml", *this);
+		m_background.load(kBackgroundType_Lobby, *this);
 	else
-		m_background.load("backgrounds/VolcanoTest/background.scml", *this);
+		m_background.load(kBackgroundType_Volcano, *this);
 
 	// load objects
 

@@ -260,8 +260,9 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 
 						if (player.shieldSpecialReflect(b.m_pos, b.m_vel))
 						{
-							if (b.ownerPlayerId != -1)
+							if (b.ownerPlayerId != -1 && b.effect != kBulletEffect_Bubble)
 								b.ownerPlayerId = p;
+							continue;
 						}
 
 						if (p == b.ownerPlayerId && !b.doDamageOwner)

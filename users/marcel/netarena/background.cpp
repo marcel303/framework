@@ -4,17 +4,118 @@
 #include "gamesim.h"
 #include "main.h"
 
-#define BACKGROUND_SPRITER Spriter(m_name.c_str())
+OPTION_DECLARE(bool, s_debugBackground, false);
+OPTION_DEFINE(bool, s_debugBackground, "Debug/Debug Background");
 
-void Background::load(const char * name, GameSim & gameSim)
+#define LOBBY_SPRITER Spriter("backgrounds/lobby/background.scml")
+#define VOLCANO_SPRITER Spriter("backgrounds/VolcanoTest/background.scml")
+
+void Background::load(BackgroundType type, GameSim & gameSim)
 {
 	memset(this, 0, sizeof(Background));
 
-	m_volcanoState = VC_IDLE;
+	m_type = type;
 
-	m_name = name;
-	m_state = SpriterState();
-	m_state.startAnim(BACKGROUND_SPRITER, "Idle");
+	switch (m_type)
+	{
+	case kBackgroundType_Lobby:
+		m_lobbyState = LobbyState();
+		break;
+
+	case kBackgroundType_Volcano:
+		m_volcanoState = VolcanoState();
+		break;
+
+	default:
+		Assert(false);
+		break;
+	}
+}
+
+void Background::tick(GameSim & gameSim, float dt)
+{
+	switch (m_type)
+	{
+	case kBackgroundType_Lobby:
+		m_lobbyState.tick(gameSim, *this, dt);
+		break;
+
+	case kBackgroundType_Volcano:
+		m_volcanoState.tick(gameSim, *this, dt);
+		break;
+
+	default:
+		Assert(false);
+		break;
+	}
+}
+
+void Background::draw()
+{
+	switch (m_type)
+	{
+	case kBackgroundType_Lobby:
+		setColor(colorWhite);
+		LOBBY_SPRITER.draw(m_lobbyState.m_spriterState);
+
+		if (s_debugBackground)
+		{
+			setColor(colorWhite);
+			drawText(0.f, 100.f, 24, +1.f, +1.f, "background: type=lobby, animTime=%02.2f", m_lobbyState.m_spriterState.animTime);
+		}
+		break;
+
+	case kBackgroundType_Volcano:
+		setColor(colorWhite);
+		VOLCANO_SPRITER.draw(m_volcanoState.m_spriterState);
+		m_volcanoState.m_fireBall.draw();
+
+		if (s_debugBackground)
+		{
+			setColor(colorWhite);
+			drawText(0.f, 100.f, 24, +1.f, +1.f, "background: type=volcano, animTime=%02.2f, fireballIsActive=%d", m_volcanoState.m_spriterState.animTime, m_volcanoState.m_fireBall.active);
+		}
+		break;
+
+	default:
+		Assert(false);
+		break;
+	}
+}
+
+void Background::drawLight()
+{
+	switch (m_type)
+	{
+	case kBackgroundType_Volcano:
+		m_volcanoState.m_fireBall.drawLight();
+		break;
+	}
+}
+
+//
+
+Background::LobbyState::LobbyState()
+{
+	m_spriterState = SpriterState();
+	m_spriterState.startAnim(LOBBY_SPRITER, "Idle");
+}
+
+void Background::LobbyState::tick(GameSim & gameSim, Background & background, float dt)
+{
+	m_spriterState.updateAnim(LOBBY_SPRITER, dt);
+}
+
+//
+
+Background::VolcanoState::VolcanoState()
+{
+	memset(this, 0, sizeof(*this));
+
+	m_state = VC_IDLE;
+
+	m_spriterState = SpriterState();
+	m_spriterState.startAnim(VOLCANO_SPRITER, "Idle");
 
 	m_startErupt = 0;
 
@@ -25,7 +126,7 @@ void Background::load(const char * name, GameSim & gameSim)
 	m_fireBall.active = false;
 }
 
-void Background::tick(GameSim & gameSim, float dt)
+void Background::VolcanoState::tick(GameSim & gameSim, Background & background, float dt)
 {
 	if (m_startErupt == 0)
 	{
@@ -60,21 +161,21 @@ void Background::tick(GameSim & gameSim, float dt)
 		doEvent(gameSim);
 	}
 
-	if (m_state.updateAnim(BACKGROUND_SPRITER, dt))
+	if (m_spriterState.updateAnim(VOLCANO_SPRITER, dt))
 	{
 		if (m_isTriggered)
 		{
-			m_state.startAnim(BACKGROUND_SPRITER, "IdleErupted");
-			if (m_volcanoState == VC_ERUPT)
-				m_volcanoState = VC_AFTER;
+			m_spriterState.startAnim(VOLCANO_SPRITER, "IdleErupted");
+			if (m_state == VC_ERUPT)
+				m_state = VC_AFTER;
 		}
 		else
 		{
-			m_state.startAnim(BACKGROUND_SPRITER, "Idle");
+			m_spriterState.startAnim(VOLCANO_SPRITER, "Idle");
 		}
 	}
 
-	if (m_volcanoState == VC_ERUPT)
+	if (m_state == VC_ERUPT)
 	{
 		if (m_fireBall.m_y < -350.f)
 		{
@@ -87,12 +188,11 @@ void Background::tick(GameSim & gameSim, float dt)
 			m_fireBall.tick(gameSim, dt);
 		}
 	}
-	else if (m_volcanoState == VC_AFTER)
+	else if (m_state == VC_AFTER)
 	{
 		if (VOLCANO_LOOP)
 		{
-			FixedString<64> name = m_name;
-			load(name.c_str(), gameSim);
+			background.load(kBackgroundType_Volcano, gameSim);
 			return;
 		}
 
@@ -115,28 +215,15 @@ void Background::tick(GameSim & gameSim, float dt)
 	}
 }
 
-void Background::draw()
+void Background::VolcanoState::doEvent(GameSim & gameSim)
 {
-	setColor(colorWhite);
-	BACKGROUND_SPRITER.draw(m_state);
-
-	m_fireBall.draw();
-}
-
-void Background::drawLight()
-{
-	m_fireBall.drawLight();
-}
-
-void Background::doEvent(GameSim & gameSim)
-{
-	m_state.startAnim(BACKGROUND_SPRITER, "Erupt");
+	m_spriterState.startAnim(VOLCANO_SPRITER, "Erupt");
 
 	gameSim.playSound("volcano-eruption.ogg");
 	gameSim.addScreenShake(-5.5f, 5.5f, 7500.f, 5.f, true);
 
 	m_isTriggered = true;
-	m_volcanoState = VC_ERUPT;
+	m_state = VC_ERUPT;
 
 	m_fireBall.load("backgrounds/VolcanoTest/Fireball/fireball.scml", gameSim, 1300, 340, -100, 0.15f);
 }
