@@ -172,6 +172,8 @@ public:
 	static const CollisionShape & getBlockCollision(BlockShape shape);
 	static void getBlockCollision(BlockShape shape, CollisionShape & collisionShape, int blockX, int blockY);
 	void testCollision(const CollisionShape & shape, void * arg, CollisionCB cb);
+
+	bool testCollisionLine(float x1, float y1, float x2, float y2, uint32_t blockMask);
 };
 
 void initArenaData();

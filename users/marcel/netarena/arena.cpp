@@ -1312,6 +1312,25 @@ void Arena::testCollision(const CollisionShape & shape, void * arg, CollisionCB 
 	}
 }
 
+bool Arena::testCollisionLine(float x1, float y1, float x2, float y2, uint32_t blockMask)
+{
+	const Vec2 delta = Vec2(x2 - x1, y2 - y1);
+	const Vec2 dir = delta.CalcNormalized();
+	const float numLoops = dir.CalcSize();
+	const float dx = dir[0];
+	const float dy = dir[1];
+
+	for (float x = x1, y = y1, loop = 0; x >= 0 && x < ARENA_SX_PIXELS && y >= 0 && y < ARENA_SY_PIXELS && loop <= numLoops; x += dx, y += dy, loop += 1)
+	{
+		if (getIntersectingBlocksMask(x, y) & blockMask)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 //
 
 void initArenaData()
