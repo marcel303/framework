@@ -1357,7 +1357,7 @@ void GameSim::setGameState(::GameState gameState)
 			playSound("round-begin.ogg");
 
 			m_roundBegin = RoundBegin();
-			m_roundBegin.m_nextPlayerSpawnTicks = PLAYER_SPAWN_TIME_ROUNDBEGIN * TICKS_PER_SECOND;
+			m_roundBegin.m_delayTicks = GAMESTATE_ROUNDBEGIN_SPAWN_DELAY * TICKS_PER_SECOND;
 
 			for (int i = 0; i < MAX_PLAYERS; ++i)
 			{
@@ -1950,11 +1950,12 @@ void GameSim::tickMenus()
 
 void GameSim::tickRoundBegin()
 {
-	if (m_roundBegin.m_nextPlayerSpawnTicks > 0)
+	if (m_roundBegin.m_state == RoundBegin::kState_SpawnPlayers)
 	{
-		m_roundBegin.m_nextPlayerSpawnTicks--;
+		Assert(m_roundBegin.m_delayTicks > 0);
+		m_roundBegin.m_delayTicks--;
 
-		if (m_roundBegin.m_nextPlayerSpawnTicks == 0)
+		if (m_roundBegin.m_delayTicks == 0)
 		{
 			// respawn players
 
@@ -1988,12 +1989,26 @@ void GameSim::tickRoundBegin()
 
 			if (allDone)
 			{
-				setGameState(kGameState_Play);
+				m_roundBegin.m_state = RoundBegin::kState_FightMessage;
+				m_roundBegin.m_delayTicks = GAMESTATE_ROUNDBEGIN_MESSAGE_DELAY * TICKS_PER_SECOND;
+
+				addAnimationFx("ui/fight/fight.scml", GAMESTATE_ROUNDBEGIN_MESSAGE_X, GAMESTATE_ROUNDBEGIN_MESSAGE_Y);
+				playSound("round-begin-fight.ogg");
 			}
 			else
 			{
-				m_roundBegin.m_nextPlayerSpawnTicks = PLAYER_SPAWN_TIME_ROUNDBEGIN * TICKS_PER_SECOND;
+				m_roundBegin.m_delayTicks = GAMESTATE_ROUNDBEGIN_SPAWN_DELAY * TICKS_PER_SECOND;
 			}
+		}
+	}
+	else if (m_roundBegin.m_state == RoundBegin::kState_FightMessage)
+	{
+		Assert(m_roundBegin.m_delayTicks > 0);
+		m_roundBegin.m_delayTicks--;
+
+		if (m_roundBegin.m_delayTicks == 0)
+		{
+			setGameState(kGameState_Play);
 		}
 	}
 }

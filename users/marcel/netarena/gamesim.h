@@ -903,12 +903,19 @@ struct GameStateData
 
 	struct RoundBegin
 	{
+		enum State
+		{
+			kState_SpawnPlayers,
+			kState_FightMessage
+		};
+
 		RoundBegin()
 		{
 			memset(this, 0, sizeof(*this));
 		}
 
-		uint8_t m_nextPlayerSpawnTicks;
+		State m_state;
+		uint8_t m_delayTicks;
 	} m_roundBegin;
 
 	Player m_players[MAX_PLAYERS];

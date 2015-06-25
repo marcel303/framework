@@ -47,10 +47,15 @@ OPTION_STEP(SPIKEWALLS_TIME_CLOSED, 0, 0, .1f);
 OPTION_STEP(SPIKEWALLS_TIME_OPEN, 0, 0, .1f);
 // -- prototypes --
 
-OPTION_DEFINE(int, GAMESTATE_COMPLETE_TIMER, "Menus/Results Screen Time");
-OPTION_DEFINE(int, GAMESTATE_COMPLETE_TIME_DILATION_TIMER, "Menus/Results Screen Time Dilation Time");
-OPTION_DEFINE(float, GAMESTATE_COMPLETE_TIME_DILATION_BEGIN, "Menus/Results Screen Time Dilation Begin");
-OPTION_DEFINE(float, GAMESTATE_COMPLETE_TIME_DILATION_END, "Menus/Results Screen Time Dilation End");
+OPTION_DEFINE(int, GAMESTATE_COMPLETE_TIMER, "Game State/Round Complete/Display Time");
+OPTION_DEFINE(int, GAMESTATE_COMPLETE_TIME_DILATION_TIMER, "Game State/Round Complete/Time Dilation Time");
+OPTION_DEFINE(float, GAMESTATE_COMPLETE_TIME_DILATION_BEGIN, "Game State/Round Complete/Time Dilation Begin");
+OPTION_DEFINE(float, GAMESTATE_COMPLETE_TIME_DILATION_END, "Game State/Round Complete/Time Dilation End");
+
+OPTION_DEFINE(float, GAMESTATE_ROUNDBEGIN_SPAWN_DELAY, "Game State/Round Begin/Player Spawn Delay");
+OPTION_DEFINE(float, GAMESTATE_ROUNDBEGIN_MESSAGE_DELAY, "Game State/Round Begin/Message Delay");
+OPTION_DEFINE(int, GAMESTATE_ROUNDBEGIN_MESSAGE_X, "Game State/Round Begin/Message X");
+OPTION_DEFINE(int, GAMESTATE_ROUNDBEGIN_MESSAGE_Y, "Game State/Round Begin/Message Y");
 
 OPTION_DEFINE(float, GAME_SPEED_MULTIPLIER, "App/Game Speed Multiplier");
 OPTION_STEP(GAME_SPEED_MULTIPLIER, 0.f, 10.f, .01f);
@@ -61,7 +66,6 @@ OPTION_DEFINE(int, PLAYER_INACTIVITY_TIME, "Player/Inactivity Detection/Time (Se
 OPTION_DEFINE(bool, PLAYER_INACTIVITY_KICK, "Player/Inactivity Detection/Kick Player When Inactive");
 OPTION_DEFINE(int, MIN_PLAYER_COUNT, "Player/Inactivity Detection/Minimum Player Count");
 
-OPTION_DEFINE(float, PLAYER_SPAWN_TIME_ROUNDBEGIN, "Player/Spawn Time On Round Begin");
 OPTION_DEFINE(bool, PLAYER_RESPAWN_AUTOMICALLY, "Player/Respawn Automatically");
 OPTION_DEFINE(float, PLAYER_RESPAWN_INVINCIBILITY_TIME, "Player/Respawn Invincibility Time");
 OPTION_STEP(PLAYER_RESPAWN_INVINCIBILITY_TIME, 0.f, 10.f, .1f);
@@ -387,6 +391,7 @@ OPTION_STEP(AXE_SPEED_MULTIPLIER_ON_DIE, 0, 0, .05f);
 
 OPTION_DEFINE(bool, GRAPPLE_ANALOG_AIM, "Special Abilities/Grapple Rope/Analog Aim");
 OPTION_DEFINE(float, GRAPPLE_FIXED_AIM_ANGLE, "Special Abilities/Grapple Rope/Fixed Aim Angle");
+OPTION_DEFINE(bool, GRAPPLE_FIXED_AIM_PREVIEW, "Special Abilities/Grapple Rope/Fixed Aim Preview");
 OPTION_DEFINE(float, GRAPPLE_LENGTH_MIN, "Special Abilities/Grapple Rope/Min Length");
 OPTION_DEFINE(float, GRAPPLE_LENGTH_MAX, "Special Abilities/Grapple Rope/Max Length");
 OPTION_DEFINE(float, GRAPPLE_PULL_UP_SPEED, "Special Abilities/Grapple Rope/Pull Up Speed");
