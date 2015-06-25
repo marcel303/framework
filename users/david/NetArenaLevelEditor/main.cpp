@@ -551,7 +551,7 @@ void LoadLevel(QString filename)
 void SaveGeneric(QString filename, EditorScene* s)
 {
     QFile file(filename);
-    file.open(QIODevice::WriteOnly | QIODevice::Text);
+    file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate);
 
     QTextStream in(&file);
 
@@ -631,7 +631,7 @@ void SaveArtFile(QString filename, EditorScene* s)
 void SaveObjects(QString filename)
 {
 	QFile file(filename);
-	file.open(QIODevice::WriteOnly);
+    file.open(QIODevice::WriteOnly | QIODevice::Truncate);
 
     QTextStream out(&file);
 
