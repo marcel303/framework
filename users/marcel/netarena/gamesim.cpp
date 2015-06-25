@@ -55,11 +55,11 @@ struct PickupSprite
 } s_pickupSprites[kPickupType_COUNT] =
 {
 	false, "pickup-ammo.png",
-	false, "pickup-nade.png",
-	false, "pickup-shield.png",
+	false, "pickup-nade.png",//true,  "objects/pickups/bomb/bomb.scml",
+	true,  "objects/pickups/shield/shield.scml",//false, "pickup-shield.png",
 	true,  "objects/pickups/freezeray/freezeray.scml",
 	false, "pickup-bubble.png",
-	false, "pickup-time.png"
+	true,  "objects/pickups/time/time.scml"//false, "pickup-time.png"
 };
 
 #define TOKEN_SPRITE "token.png"
