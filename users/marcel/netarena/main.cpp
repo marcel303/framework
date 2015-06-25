@@ -62,6 +62,12 @@ OPTION_ALIAS(s_mapList, "maps");
 OPTION_FLAGS(s_mapList, OPTION_FLAG_HIDDEN);
 std::vector<std::string> g_mapList;
 
+OPTION_DECLARE(std::string, s_mapRotationList, "testArena");
+OPTION_DEFINE(std::string, s_mapRotationList, "App/Map Rotation List");
+OPTION_ALIAS(s_mapRotationList, "maprotation");
+OPTION_FLAGS(s_mapRotationList, OPTION_FLAG_HIDDEN);
+std::vector<std::string> g_mapRotationList;
+
 OPTION_DECLARE(std::string, g_map, "");
 OPTION_DEFINE(std::string, g_map, "App/Startup Map");
 OPTION_ALIAS(g_map, "map");
@@ -138,6 +144,8 @@ static void animationTestDraw();
 static void blastEffectTestToggleIsActive();
 static void blastEffectTestTick(float dt);
 static void blastEffectTestDraw();
+
+static std::vector<std::string> parseMapList(const std::string & list);
 
 //
 
@@ -1065,45 +1073,28 @@ bool App::init()
 		VOLCANO_LOOP = true;
 	}
 
-	std::string mapList = s_mapList;
+	g_mapList = parseMapList(s_mapList);
+	g_mapRotationList = parseMapList(s_mapRotationList);
 
-	do
+	for (size_t i = 0; i < g_mapList.size(); ++i)
 	{
-		const size_t pos = mapList.find(',');
+		const std::string & file = g_mapList[i];
 
-		std::string file;
-
-		if (pos == mapList.npos)
-		{
-			file = mapList;
-			mapList.clear();
-		}
-		else
-		{
-			file = mapList.substr(0, pos);
-			mapList = mapList.substr(pos + 1);
-		}
-
-		if (!file.empty())
-		{
-			g_mapList.push_back(file);
-
-			StringBuilder<64> sb;
-			sb.AppendFormat("Arena/Load %s", file.c_str());
-			std::string name = sb.ToString();
-			char * nameCopy = new char[name.size() + 1];
-			char * fileCopy = new char[file.size() + 1];
-			strcpy_s(nameCopy, name.size() + 1, name.c_str());
-			strcpy_s(fileCopy, file.size() + 1, file.c_str());
-			g_optionManager.AddCommandOption(nameCopy,
-				[](void * param)
-				{
-					if (g_host)
-						g_app->netDebugAction("loadMap", (char*)param);
-				}, fileCopy
-			);
-		}
-	} while (!mapList.empty());
+		StringBuilder<64> sb;
+		sb.AppendFormat("Arena/Load %s", file.c_str());
+		std::string name = sb.ToString();
+		char * nameCopy = new char[name.size() + 1];
+		char * fileCopy = new char[file.size() + 1];
+		strcpy_s(nameCopy, name.size() + 1, name.c_str());
+		strcpy_s(fileCopy, file.size() + 1, file.c_str());
+		g_optionManager.AddCommandOption(nameCopy,
+			[](void * param)
+			{
+				if (g_host)
+					g_app->netDebugAction("loadMap", (char*)param);
+			}, fileCopy
+		);
+	}
 
 	if (g_devMode)
 	{
@@ -2480,6 +2471,38 @@ static void blastEffectTestDraw()
 
 		setColor(colorWhite);
 	}
+}
+
+static std::vector<std::string> parseMapList(const std::string & list)
+{
+	std::vector<std::string> result;
+
+	std::string mapList = list;
+
+	do
+	{
+		const size_t pos = mapList.find(',');
+
+		std::string file;
+
+		if (pos == mapList.npos)
+		{
+			file = mapList;
+			mapList.clear();
+		}
+		else
+		{
+			file = mapList.substr(0, pos);
+			mapList = mapList.substr(pos + 1);
+		}
+
+		if (!file.empty())
+		{
+			result.push_back(file);
+		}
+	} while (!mapList.empty());
+
+	return result;
 }
 
 //

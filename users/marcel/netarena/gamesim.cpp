@@ -36,7 +36,7 @@ OPTION_DECLARE(int, s_pickupTest, -1);
 OPTION_DEFINE(int, s_pickupTest, "Pickups/Debug Spawn Type");
 OPTION_ALIAS(s_pickupTest, "pickuptest");
 
-extern std::vector<std::string> g_mapList;
+extern std::vector<std::string> g_mapRotationList;
 
 //
 
@@ -54,7 +54,7 @@ struct PickupSprite
 	const char * filename;
 } s_pickupSprites[kPickupType_COUNT] =
 {
-	false, "pickup-ammo.png",
+	true,  "objects/pickups/deathray/deathray.scml",//false, "pickup-ammo.png",
 	true,  "objects/pickups/bomb/bomb.scml",//false, "pickup-nade.png"
 	true,  "objects/pickups/shield/shield.scml",//false, "pickup-shield.png",
 	true,  "objects/pickups/freezeray/freezeray.scml",
@@ -1433,8 +1433,8 @@ void GameSim::newRound(const char * mapOverride)
 		map = mapOverride;
 	else if (!((std::string)g_map).empty())
 		map = g_map;
-	else if (!g_mapList.empty())
-		map = g_mapList[m_nextRoundNumber % g_mapList.size()];
+	else if (!g_mapRotationList.empty())
+		map = g_mapRotationList[m_nextRoundNumber % g_mapRotationList.size()];
 	else
 		map = "testArena";
 
@@ -1497,127 +1497,75 @@ void GameSim::load(const char * name)
 		StreamReader reader(&stream, false);
 		std::vector<std::string> lines = reader.ReadAllLines();
 
-		enum ObjectType
-		{
-			kObjectType_Undefined,
-			kObjectType_Mover,
-			kObjectType_Torch,
-		};
-
-		ObjectType objectType = kObjectType_Undefined;
-		Mover * mover = 0;
-		Torch * torch = 0;
-
 		for (size_t i = 0; i < lines.size(); ++i)
 		{
 			if (lines[i].empty() || lines[i][0] == '#')
 				continue;
 
-			std::vector<std::string> fields;
-			splitString(lines[i], fields, ':');
+			Dictionary d;
 
-			if (fields.size() != 2)
+			if (!d.parse(lines[i]))
 			{
-				LOG_WRN("syntax error: %s", lines[i].c_str());
+				LOG_ERR("failed to parse object definition: %s", lines[i].c_str());
+				continue;
 			}
-			else
+
+			std::string type = d.getString("type", "");
+
+			if (type == "mover")
 			{
-				if (fields[0] == "object")
+				Mover * mover = 0;
+
+				for (int i = 0; i < MAX_MOVERS; ++i)
 				{
-					objectType = kObjectType_Undefined;
-					mover = 0;
-					torch = 0;
-
-					if (fields[1] == "mover")
+					if (!m_movers[i].m_isActive)
 					{
-						objectType = kObjectType_Mover;
-
-						for (int i = 0; i < MAX_TORCHES; ++i)
-						{
-							if (!m_movers[i].m_isActive)
-							{
-								mover = &m_movers[i];
-								break;
-							}
-						}
-
-						if (mover == 0)
-							LOG_ERR("too many movers!");
-						else
-							mover->m_isActive = true;
-					}
-					else if (fields[1] == "torch")
-					{
-						objectType = kObjectType_Torch;
-
-						for (int i = 0; i < MAX_TORCHES; ++i)
-						{
-							if (!m_torches[i].m_isAlive)
-							{
-								torch = &m_torches[i];
-								break;
-							}
-						}
-
-						if (torch == 0)
-							LOG_ERR("too many torches!");
-						else
-							torch->m_isAlive = true;
+						mover = &m_movers[i];
+						break;
 					}
 				}
+
+				if (mover == 0)
+					LOG_ERR("too many movers!");
 				else
 				{
-					switch (objectType)
+					mover->m_isActive = true;
+
+					mover->setSprite(d.getString("sprite", "").c_str());
+					mover->m_x1 = d.getInt("x1", 0);
+					mover->m_y1 = d.getInt("y1", 0);
+					mover->m_x2 = d.getInt("x2", 0);
+					mover->m_y2 = d.getInt("y2", 0);
+					mover->m_speed = d.getInt("speed", 0);
+				}
+			}
+			else if (type == "torch")
+			{
+				Torch * torch = 0;
+
+				for (int i = 0; i < MAX_TORCHES; ++i)
+				{
+					if (!m_torches[i].m_isAlive)
 					{
-					case kObjectType_Undefined:
-						LOG_ERR("properties begin before object type is set!");
-						break;
-
-					case kObjectType_Mover:
-						if (mover)
-						{
-							if (fields[0] == "sprite")
-								mover->setSprite(fields[1].c_str());
-							if (fields[0] == "x1")
-								mover->m_x1 = Parse::Int32(fields[1]);
-							if (fields[0] == "y1")
-								mover->m_y1 = Parse::Int32(fields[1]);
-							if (fields[0] == "x2")
-								mover->m_x2 = Parse::Int32(fields[1]);
-							if (fields[0] == "y2")
-								mover->m_y2 = Parse::Int32(fields[1]);
-							if (fields[0] == "speed")
-								mover->m_speed = Parse::Int32(fields[1]);
-						}
-						break;
-
-					case kObjectType_Torch:
-						if (torch)
-						{
-							if (fields[0] == "x")
-								torch->m_pos[0] = Parse::Int32(fields[1]);
-							if (fields[0] == "y")
-								torch->m_pos[1] = Parse::Int32(fields[1]);
-							if (fields[0] == "color")
-							{
-								if (fields[1].length() != 8)
-									LOG_ERR("invalid color format: %s", fields[1].c_str());
-								else
-								{
-									const Color color = parseColor(fields[1].c_str());
-									torch->m_color[0] = color.r;
-									torch->m_color[1] = color.g;
-									torch->m_color[2] = color.b;
-									torch->m_color[3] = color.a;
-								}
-							}
-						}
-						break;
-
-					default:
-						Assert(false);
+						torch = &m_torches[i];
 						break;
 					}
+				}
+
+				if (torch == 0)
+					LOG_ERR("too many torches!");
+				else
+				{
+					torch->m_isAlive = true;
+
+					torch->m_pos[0] = d.getInt("x", 0);
+					torch->m_pos[1] = d.getInt("y", 0);
+	
+					const Color color = parseColor(d.getString("color", "ffffffff").c_str());
+					torch->m_color[0] = color.r;
+					torch->m_color[1] = color.g;
+					torch->m_color[2] = color.b;
+					torch->m_color[3] = color.a;
 				}
 			}
 		}
