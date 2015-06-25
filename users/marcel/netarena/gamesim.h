@@ -752,6 +752,26 @@ struct Torch
 	void drawLight() const;
 };
 
+struct TileSprite
+{
+	TileSprite()
+	{
+		memset(this, 0, sizeof(TileSprite));
+	}
+
+	void setup(const char * name, int x, int y);
+	void tick(GameSim & gameSim, float dt);
+	void draw() const;
+	void drawLight() const;
+
+	int getBlockX() const { return m_spriterState.x / BLOCK_SX; }
+	int getBlockY() const { return m_spriterState.y / BLOCK_SY; }
+
+	bool m_isAlive;
+	FixedString<32> m_spriter;
+	SpriterState m_spriterState;
+};
+
 struct ScreenShake
 {
 	bool isActive;
@@ -949,6 +969,8 @@ struct GameStateData
 
 	Torch m_torches[MAX_TORCHES];
 
+	TileSprite m_tileSprites[MAX_TILE_SPRITES];
+
 	AnimationFxState m_animationEffects[MAX_ANIM_EFFECTS];
 
 	ScreenShake m_screenShakes[MAX_SCREEN_SHAKES];
@@ -1105,6 +1127,8 @@ public:
 	void addFloorEffect(int playerId, int x, int y, int size, int damageSize);
 
 	void addBlindsEffect(int playerId, int x, int y, int size, bool vertical, float time, const char * text);
+
+	TileSprite * findTileSpriteAtBlockXY(int blockX, int blockY);
 
 	void addAnimationFx(const char * fileName, int x, int y, bool flipX = false, bool flipY = false);
 

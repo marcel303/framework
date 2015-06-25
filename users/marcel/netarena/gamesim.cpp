@@ -852,6 +852,37 @@ void Torch::drawLight() const
 
 //
 
+void TileSprite::setup(const char * name, int x, int y)
+{
+	m_isAlive = true;
+
+	m_spriter = name;
+	m_spriterState = SpriterState();
+	m_spriterState.x = x;
+	m_spriterState.y = y;
+	m_spriterState.startAnim(Spriter(m_spriter.c_str()), 0);
+}
+
+void TileSprite::tick(GameSim & gameSim, float dt)
+{
+	if (m_spriterState.updateAnim(Spriter(m_spriter.c_str()), dt))
+	{
+		m_spriterState.startAnim(Spriter(m_spriter.c_str()), 0);
+	}
+}
+
+void TileSprite::draw() const
+{
+	Spriter(m_spriter.c_str()).draw(m_spriterState);
+}
+
+void TileSprite::drawLight() const
+{
+	// todo : let object define light map?
+}
+
+//
+
 void ScreenShake::tick(float dt)
 {
 	Vec2 force = pos * (-stiffness);
@@ -1568,6 +1599,29 @@ void GameSim::load(const char * name)
 					torch->m_color[3] = color.a;
 				}
 			}
+			else if (type == "tilesprite")
+			{
+				TileSprite * tileSprite = 0;
+
+				for (int i = 0; i < MAX_TILE_SPRITES; ++i)
+				{
+					if (!m_tileSprites[i].m_isAlive)
+					{
+						tileSprite = &m_tileSprites[i];
+						break;
+					}
+				}
+
+				if (tileSprite == 0)
+					LOG_ERR("too many tile sprites!");
+				else
+				{
+					tileSprite->setup(
+						d.getString("sprite", "").c_str(),
+						d.getInt("x", 0),
+						d.getInt("y", 0));
+				}
+			}
 		}
 	}
 	catch (std::exception & e)
@@ -1622,6 +1676,11 @@ void GameSim::resetGameWorld()
 
 	for (int i = 0; i < MAX_TORCHES; ++i)
 		m_torches[i] = Torch();
+
+	// reset tile sprites
+
+	for (int i = 0; i < MAX_TILE_SPRITES; ++i)
+		m_tileSprites[i] = TileSprite();
 
 	// reset bullets
 
@@ -2267,6 +2326,14 @@ void GameSim::tickPlay()
 			m_torches[i].tick(*this, dt);
 	}
 
+	// tile sprites
+
+	for (int i = 0; i < MAX_TILE_SPRITES; ++i)
+	{
+		if (m_tileSprites[i].m_isAlive)
+			m_tileSprites[i].tick(*this, dt);
+	}
+
 	// animation effects
 
 	for (int i = 0; i < MAX_ANIM_EFFECTS; ++i)
@@ -2533,6 +2600,16 @@ void GameSim::drawPlayColor(Vec2Arg camTranslation)
 			torch.draw();
 	}
 
+	// tile sprites
+
+	for (int i = 0; i < MAX_TILE_SPRITES; ++i)
+	{
+		const TileSprite & tileSprite = m_tileSprites[i];
+
+		if (tileSprite.m_isAlive)
+			tileSprite.draw();
+	}
+
 	// pickups
 
 	for (int i = 0; i < MAX_PICKUPS; ++i)
@@ -2638,6 +2715,16 @@ void GameSim::drawPlayLight(Vec2Arg camTranslation)
 
 		if (torch.m_isAlive)
 			torch.drawLight();
+	}
+
+	// tile sprites
+
+	for (int i = 0; i < MAX_TILE_SPRITES; ++i)
+	{
+		const TileSprite & tileSprite = m_tileSprites[i];
+
+		if (tileSprite.m_isAlive)
+			tileSprite.drawLight();
 	}
 
 	// pickups
@@ -3447,6 +3534,19 @@ void GameSim::addBlindsEffect(int playerId, int x, int y, int size, bool vertica
 			break;
 		}
 	}
+}
+
+TileSprite * GameSim::findTileSpriteAtBlockXY(int blockX, int blockY)
+{
+	for (int i = 0; i < MAX_TILE_SPRITES; ++i)
+	{
+		TileSprite & tileSprite = m_tileSprites[i];
+
+		if (tileSprite.m_isAlive && tileSprite.getBlockX() == blockX && tileSprite.getBlockY() == blockY)
+			return &tileSprite;
+	}
+
+	return 0;
 }
 
 void GameSim::addAnimationFx(const char * fileName, int x, int y, bool flipX, bool flipY)
