@@ -88,6 +88,8 @@ static void HandleDialogResult(void * arg, int dialogId, DialogResult result)
 }
 static int s_lastDialogId = -1;
 COMMAND_OPTION(s_addAnnoucement, "Debug/Add Annoucement", []{ g_app->netDebugAction("addAnnouncement", "Test Annoucenment"); });
+COMMAND_OPTION(s_addLightEffect_Darken, "Debug/Add Light Effect: Darken", [] { g_app->netDebugAction("addLightEffect", "darken"); });
+COMMAND_OPTION(s_addLightEffect_Lighten, "Debug/Add Light Effect: Lighten", [] { g_app->netDebugAction("addLightEffect", "lighten"); });
 COMMAND_OPTION(s_addDialog, "Debug/Add Dialog", [] { s_lastDialogId = g_app->m_dialogMgr->push(DialogType_YesNo, "Hello", "World", HandleDialogResult, 0); });
 COMMAND_OPTION(s_dismissDialog, "Debug/Dismiss Last Dialog", [] { g_app->m_dialogMgr->dismiss(s_lastDialogId); });
 COMMAND_OPTION(s_triggerLevelEvent_QuakeEvent, "Debug/Trigger Quake Level Event", []{ g_app->netDebugAction("triggerLevelEvent", "quake"); });
@@ -821,6 +823,19 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			if (gameSim)
 			{
 				gameSim->addAnnouncement(param.c_str());
+			}
+		}
+		else if (action == "addLightEffect")
+		{
+			GameSim * gameSim = findGameSimForChannel(channel);
+			Assert(gameSim);
+
+			if (gameSim)
+			{
+				if (param == "darken")
+					gameSim->addLightEffect(LightEffect::kType_Darken, gameSim->RandomFloat(1.f, 4.f), gameSim->RandomFloat(0.f, .5f));
+				if (param == "lighten")
+					gameSim->addLightEffect(LightEffect::kType_Lighten, gameSim->RandomFloat(1.f, 4.f), gameSim->RandomFloat(.8f, 1.f));
 			}
 		}
 		else if (action == "addBlastEffect")

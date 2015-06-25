@@ -186,8 +186,9 @@ struct Player
 	void handleNewRound();
 	void handleLeave();
 
-	void respawn(Vec2 * pos);
+	bool respawn(Vec2 * pos);
 	void despawn(bool willRespawn);
+	bool isSpawned() const;
 	void cancelAttack();
 	void handleImpact(Vec2Arg velocity);
 	bool shieldAbsorb(float amount);
@@ -769,6 +770,30 @@ struct ScreenShake
 	void tick(float dt);
 };
 
+struct LightEffect
+{
+	enum Type
+	{
+		kType_Darken,
+		kType_Lighten
+	};
+
+	Type type;
+	float life;
+	float lifeRcp;
+	float amount;
+
+	LightEffect()
+	{
+		memset(this, 0, sizeof(LightEffect));
+	}
+
+	void setDarken(float time, float amount);
+	void setLighten(float time, float amount);
+
+	void tick(float dt);
+};
+
 struct FloorEffect
 {
 	struct ActiveTile
@@ -871,9 +896,20 @@ struct GameStateData
 	GameMode m_desiredGameMode;
 
 	float m_roundTime;
+	float m_physicalRoundTime;
 	uint32_t m_nextRoundNumber;
 	uint32_t m_roundCompleteTicks;
 	uint32_t m_roundCompleteTimeDilationTicks;
+
+	struct RoundBegin
+	{
+		RoundBegin()
+		{
+			memset(this, 0, sizeof(*this));
+		}
+
+		uint8_t m_nextPlayerSpawnTicks;
+	} m_roundBegin;
 
 	Player m_players[MAX_PLAYERS];
 
@@ -909,6 +945,8 @@ struct GameStateData
 	AnimationFxState m_animationEffects[MAX_ANIM_EFFECTS];
 
 	ScreenShake m_screenShakes[MAX_SCREEN_SHAKES];
+
+	LightEffect m_lightEffects[MAX_LIGHT_EFFECTS];
 
 	// level events
 
@@ -1011,6 +1049,7 @@ public:
 
 	void tick();
 	void tickMenus();
+	void tickRoundBegin();
 	void tickPlay();
 	void tickRoundComplete();
 
@@ -1052,6 +1091,9 @@ public:
 
 	void addScreenShake(float dx, float dy, float stiffness, float life, bool fade);
 	Vec2 getScreenShake() const;
+
+	void addLightEffect(LightEffect::Type type, float time, float amount);
+	float getLightAmount() const;
 
 	void addFloorEffect(int playerId, int x, int y, int size, int damageSize);
 

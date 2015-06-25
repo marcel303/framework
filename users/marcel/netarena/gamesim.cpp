@@ -868,6 +868,32 @@ void ScreenShake::tick(float dt)
 
 //
 
+void LightEffect::setDarken(float time, float amount)
+{
+	this->type = kType_Darken;
+	this->life = time;
+	this->lifeRcp = 1.f / time;
+	this->amount = amount;
+}
+
+void LightEffect::setLighten(float time, float amount)
+{
+	this->type = kType_Lighten;
+	this->life = time;
+	this->lifeRcp = 1.f / time;
+	this->amount = amount;
+}
+
+void LightEffect::tick(float dt)
+{
+	if (life > 0.f)
+	{
+		life = Calc::Max(0.f, life - dt);
+	}
+}
+
+//
+
 void FloorEffect::ActiveTile::getCollisionInfo(CollisionInfo & collisionInfo) const
 {
 	collisionInfo.min[0] = x - STOMP_EFFECT_DAMAGE_HITBOX_SX/2;
@@ -1326,11 +1352,12 @@ void GameSim::setGameState(::GameState gameState)
 		setGameMode(m_desiredGameMode);
 		break;
 
-	case kGameState_Play:
+	case kGameState_RoundBegin:
 		{
 			playSound("round-begin.ogg");
 
-			// respawn players
+			m_roundBegin = RoundBegin();
+			m_roundBegin.m_nextPlayerSpawnTicks = PLAYER_SPAWN_TIME_ROUNDBEGIN * TICKS_PER_SECOND;
 
 			for (int i = 0; i < MAX_PLAYERS; ++i)
 			{
@@ -1338,12 +1365,16 @@ void GameSim::setGameState(::GameState gameState)
 				{
 					Player * player = m_playerInstanceDatas[i]->m_player;
 
-					player->handleNewRound();
+					player->despawn(false);
 
-					player->respawn(0);
+					player->handleNewRound();
 				}
 			}
+		}
+		break;
 
+	case kGameState_Play:
+		{
 			// game modes
 
 			if (m_gameMode == kGameMode_TokenHunt)
@@ -1418,7 +1449,7 @@ void GameSim::newRound(const char * mapOverride)
 
 	// and start playing!
 
-	setGameState(kGameState_Play);
+	setGameState(kGameState_RoundBegin);
 
 	m_nextRoundNumber++;
 }
@@ -1602,6 +1633,7 @@ void GameSim::resetGameWorld()
 	// reset round stuff
 
 	m_roundTime = 0.f;
+	m_physicalRoundTime = 0.f;
 
 	// reset map
 
@@ -1658,6 +1690,11 @@ void GameSim::resetGameWorld()
 
 	for (int i = 0; i < MAX_SCREEN_SHAKES; ++i)
 		m_screenShakes[i] = ScreenShake();
+
+	// reset light effects
+
+	for (int i = 0; i < MAX_LIGHT_EFFECTS; ++i)
+		m_lightEffects[i] = LightEffect();
 
 	// reset fireballs
 
@@ -1729,6 +1766,11 @@ void GameSim::tick()
 	case kGameState_OnlineMenus:
 		tickPlay();
 		tickMenus();
+		break;
+
+	case kGameState_RoundBegin:
+		tickPlay();
+		tickRoundBegin();
 		break;
 
 	case kGameState_Play:
@@ -1906,8 +1948,60 @@ void GameSim::tickMenus()
 	}
 }
 
+void GameSim::tickRoundBegin()
+{
+	if (m_roundBegin.m_nextPlayerSpawnTicks > 0)
+	{
+		m_roundBegin.m_nextPlayerSpawnTicks--;
+
+		if (m_roundBegin.m_nextPlayerSpawnTicks == 0)
+		{
+			// respawn players
+
+			for (int i = 0; i < MAX_PLAYERS; ++i)
+			{
+				if (m_playerInstanceDatas[i])
+				{
+					Player * player = m_playerInstanceDatas[i]->m_player;
+
+					if (!player->isSpawned())
+					{
+						if (player->respawn(0))
+						{
+							break;
+						}
+					}
+				}
+			}
+
+			bool allDone = true;
+
+			for (int i = 0; i < MAX_PLAYERS; ++i)
+			{
+				if (m_playerInstanceDatas[i])
+				{
+					Player * player = m_playerInstanceDatas[i]->m_player;
+
+					allDone &= player->isSpawned();
+				}
+			}
+
+			if (allDone)
+			{
+				setGameState(kGameState_Play);
+			}
+			else
+			{
+				m_roundBegin.m_nextPlayerSpawnTicks = PLAYER_SPAWN_TIME_ROUNDBEGIN * TICKS_PER_SECOND;
+			}
+		}
+	}
+}
+
 void GameSim::tickPlay()
 {
+	const float physicalDt = 1.f / TICKS_PER_SECOND;
+
 	float timeDilation;
 	bool playerAttackTimeDilation;
 
@@ -2226,6 +2320,13 @@ void GameSim::tickPlay()
 			shake.tick(dt);
 	}
 
+	// light effects
+
+	for (int i = 0; i < MAX_LIGHT_EFFECTS; ++i)
+	{
+		m_lightEffects[i].tick(dt);
+	}
+
 	// particles
 
 	m_particlePool->tick(*this, dt);
@@ -2237,6 +2338,8 @@ void GameSim::tickPlay()
 	m_tick++;
 
 	m_roundTime += dt;
+
+	m_physicalRoundTime += physicalDt;
 
 	if (m_gameState == kGameState_Play)
 	{
@@ -2364,17 +2467,8 @@ void GameSim::drawPlay()
 
 	pushSurface(g_lightMap);
 	{
-		const int lightingDebugMode = LIGHTING_DEBUG_MODE % 4;
+		const float v = getLightAmount();
 
-		float v = 1.f;
-		if (lightingDebugMode == 0)
-			v = .1f + (std::sin(g_TimerRT.Time_get() / 5.f) + 1.f) / 2.f * .9f;
-		else if (lightingDebugMode == 1)
-			v = 1.f;
-		else if (lightingDebugMode == 2)
-			v = .5f;
-		else if (lightingDebugMode == 3)
-			v = 0.f;
 		glClearColor(v, v, v, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
@@ -2663,7 +2757,7 @@ void GameSim::getCurrentTimeDilation(float & timeDilation, bool & playerAttackTi
 
 	playerAttackTimeDilation = false;
 
-	if (m_gameState == kGameState_Play || m_gameState == kGameState_RoundComplete)
+	if (m_gameState == kGameState_RoundBegin || m_gameState == kGameState_Play || m_gameState == kGameState_RoundComplete)
 	{
 		float minMultiplier = 1.f;
 
@@ -3045,6 +3139,7 @@ uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, BulletType t
 			b.noCollide = true;
 			b.maxWrapCount = 1;
 			b.maxDistanceTravelled = RandomFloat(BULLET_BUBBLE_RADIUS_MIN, BULLET_BUBBLE_RADIUS_MAX);
+			b.playerDamageRadius = 15;
 			break;
 
 		default:
@@ -3281,6 +3376,8 @@ void GameSim::addScreenShake(float dx, float dy, float stiffness, float life, bo
 		}
 	}
 
+	AssertMsg(false, "unable to find free screen shake");
+
 	if (DEBUG_RANDOM_CALLSITES)
 		LOG_DBG("Random called from addScreenShake");
 	m_screenShakes[Random() % MAX_SCREEN_SHAKES] = ScreenShake();
@@ -3296,6 +3393,70 @@ Vec2 GameSim::getScreenShake() const
 		const ScreenShake & shake = m_screenShakes[i];
 		if (shake.isActive)
 			result += shake.pos * (shake.fade ? (shake.life * shake.lifeRcp) : 1.f);
+	}
+
+	return result;
+}
+
+void GameSim::addLightEffect(LightEffect::Type type, float time, float amount)
+{
+	for (int i = 0; i < MAX_LIGHT_EFFECTS; ++i)
+	{
+		LightEffect & e = m_lightEffects[i];
+		if (e.life == 0.f)
+		{
+			if (type == LightEffect::kType_Darken)
+				e.setDarken(time, amount);
+			else if (type == LightEffect::kType_Lighten)
+				e.setLighten(time, amount);
+			else
+				Assert(false);
+			return;
+		}
+	}
+
+	AssertMsg(false, "unable to find free light effect");
+}
+
+float GameSim::getLightAmount() const
+{
+	const int lightingDebugMode = LIGHTING_DEBUG_MODE % 5;
+
+	float result = 1.f;
+
+	if (lightingDebugMode == 1)
+		result = .1f + (std::sin(g_TimerRT.Time_get() / 5.f) + 1.f) / 2.f * .9f;
+	else if (lightingDebugMode == 2)
+		result = 1.f;
+	else if (lightingDebugMode == 3)
+		result = .5f;
+	else if (lightingDebugMode == 4)
+		result = 0.f;
+
+	// apply darken effects
+
+	for (int i = 0; i < MAX_LIGHT_EFFECTS; ++i)
+	{
+		const LightEffect & e = m_lightEffects[i];
+
+		if (e.type == LightEffect::kType_Darken && e.life != 0.f)
+		{
+			const float t = e.life * e.lifeRcp;
+			result = Calc::Min(result, Calc::Lerp(1.f, e.amount, t));
+		}
+	}
+
+	// apply lighten effects
+
+	for (int i = 0; i < MAX_LIGHT_EFFECTS; ++i)
+	{
+		const LightEffect & e = m_lightEffects[i];
+
+		if (e.type == LightEffect::kType_Lighten && e.life != 0.f)
+		{
+			const float t = e.life * e.lifeRcp;
+			result = Calc::Max(result, Calc::Lerp(0.f, e.amount, t));
+		}
 	}
 
 	return result;

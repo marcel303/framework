@@ -179,7 +179,7 @@ void PhysicsActor::drawBB() const
 	const Vec2 min = m_pos + m_bbMin;
 	const Vec2 max = m_pos + m_bbMax;
 
-	setColor(0, 255, 0, 127);
+	setColor(0, 255, 0, 63);
 	drawRect(min[0], min[1], max[0], max[1]);
 
 	setColor(255, 255, 255);

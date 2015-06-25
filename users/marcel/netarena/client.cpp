@@ -248,6 +248,7 @@ void Client::tick(float dt)
 		case kGameState_NewGame:
 			strcpy_s(temp, sizeof(temp), "bgm/bgm-menus.ogg");
 			break;
+		case kGameState_RoundBegin:
 		case kGameState_Play:
 			sprintf_s(temp, sizeof(temp), "bgm/bgm-play%02d.ogg", m_gameSim->m_nextRoundNumber % 4);
 			break;
@@ -297,6 +298,10 @@ void Client::draw()
 	case kGameState_OnlineMenus:
 		drawMenus();
 		m_gameSim->drawPlayColor(Vec2(0.f, 0.f));
+		break;
+
+	case kGameState_RoundBegin:
+		drawPlay();
 		break;
 
 	case kGameState_Play:

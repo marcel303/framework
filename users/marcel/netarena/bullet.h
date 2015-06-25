@@ -64,6 +64,7 @@ public:
 	float life;
 
 	uint32_t ownerPlayerId;
+	uint8_t playerDamageRadius;
 };
 
 #pragma pack(push)

@@ -28,6 +28,7 @@ enum GameState
 	kGameState_Connecting,
 	kGameState_OnlineMenus,
 	kGameState_NewGame,
+	kGameState_RoundBegin,
 	kGameState_Play,
 	kGameState_RoundComplete,
 	kGameState_COUNT

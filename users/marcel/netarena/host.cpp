@@ -46,6 +46,7 @@ void Host::tick(float dt)
 		break;
 
 	case kGameState_OnlineMenus:
+	case kGameState_RoundBegin:
 	case kGameState_Play:
 	case kGameState_RoundComplete:
 		break;

@@ -273,7 +273,10 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 
 						if (player.getPlayerCollision(collisionInfo))
 						{
-							if (collisionInfo.intersects(b.m_pos[0], b.m_pos[1]))
+							CollisionBox box;
+							box.min = b.m_pos - Vec2(b.playerDamageRadius, b.playerDamageRadius);
+							box.max = b.m_pos + Vec2(b.playerDamageRadius, b.playerDamageRadius);
+							if (collisionInfo.intersects(box))
 							{
 								kill = true;
 
@@ -454,7 +457,15 @@ void BulletPool::draw() const
 			setColorf(cr, cg, cb, ca);
 			s_bulletSprites[b.type]->drawEx(b.m_pos[0], b.m_pos[1], Calc::RadToDeg(toAngle(b.m_vel[0], b.m_vel[1])), s_bulletSprites[b.type]->scale);
 
-			setColor(255, 255, 255);
+			if (g_devMode)
+			{
+				setColor(colorGreen);
+				Vec2 min = b.m_pos - Vec2(b.playerDamageRadius, b.playerDamageRadius);
+				Vec2 max = b.m_pos + Vec2(b.playerDamageRadius, b.playerDamageRadius);
+				drawRectLine(min[0], min[1], max[0], max[1]);
+			}
+
+			setColor(colorWhite);
 		}
 	}
 }

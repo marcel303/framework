@@ -15,6 +15,19 @@
 
 /*
 
+- add jump pad animation and particles
+- iterate on bubble gun. add trap animation, make directional, add cloud in the background to create a 'field' effect
+- reverse player emblem color
+- hide player emblem, unless when scoring or when summoned
+- add weapon UI prototype. do some drawings first
+- improve pipebomb art. add clearly visible flash
+- add deploy animation to pipebomb guy. make it mines instead
+- add killstreaks to screen. do some drawings first
+- 'faster' grapple?
+- add grapple targeting preview
+- add down strike animation effect
+- add jumppad object
+
 + add player character grid UI
 - escape on dialog
 
@@ -565,7 +578,8 @@ bool Player::getPlayerControl() const
 		m_bubble.timer == 0.f &&
 		m_special.meleeCounter == 0 &&
 		m_attack.m_rocketPunch.isActive == false &&
-		m_attack.m_axeThrow.isActive == false;
+		m_attack.m_axeThrow.isActive == false &&
+		GAMESIM->m_gameState != kGameState_RoundBegin;
 }
 
 Vec2 Player::getPlayerCenter() const
@@ -3154,10 +3168,10 @@ void Player::handleLeave()
 	}
 }
 
-void Player::respawn(Vec2 * pos)
+bool Player::respawn(Vec2 * pos)
 {
 	if (!hasValidCharacterIndex())
-		return;
+		return false;
 
 	bool hasSpawnPoint = false;
 	int x, y;
@@ -3176,6 +3190,7 @@ void Player::respawn(Vec2 * pos)
 			this);
 	}
 
+	Assert(hasSpawnPoint);
 	if (hasSpawnPoint)
 	{
 		m_isActive = true;
@@ -3249,6 +3264,8 @@ void Player::respawn(Vec2 * pos)
 			m_isRespawn = true;
 		}
 	}
+
+	return true;
 }
 
 void Player::despawn(bool willRespawn)
@@ -3272,6 +3289,11 @@ void Player::despawn(bool willRespawn)
 	m_jetpack = JetpackInfo();
 
 	endGrapple();
+}
+
+bool Player::isSpawned() const
+{
+	return m_isActive && m_isAlive;
 }
 
 void Player::cancelAttack()
