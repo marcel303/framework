@@ -96,7 +96,12 @@ namespace spriter
 				result.y = parentInfo.y;
 			}
 
-			result.angle = angle + parentInfo.angle;
+			if (parentInfo.scaleX * parentInfo.scaleY < 0.f)
+				result.angle = (360 - angle) + parentInfo.angle;
+			else
+				result.angle = angle + parentInfo.angle;
+
+			//result.angle = angle + parentInfo.angle;
 			result.scaleX = scaleX * parentInfo.scaleX;
 			result.scaleY = scaleY * parentInfo.scaleY;
 			result.a = a * parentInfo.a;
