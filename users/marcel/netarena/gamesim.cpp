@@ -58,7 +58,7 @@ struct PickupSprite
 	true,  "objects/pickups/bomb/bomb.scml",//false, "pickup-nade.png"
 	true,  "objects/pickups/shield/shield.scml",//false, "pickup-shield.png",
 	true,  "objects/pickups/freezeray/freezeray.scml",
-	false, "pickup-bubble.png",
+	true,  "objects/pickups/bubble/bubble.scml",//false, "pickup-bubble.png",
 	true,  "objects/pickups/time/time.scml"//false, "pickup-time.png"
 };
 
