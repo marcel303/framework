@@ -47,16 +47,17 @@ OPTION_STEP(SPIKEWALLS_TIME_CLOSED, 0, 0, .1f);
 OPTION_STEP(SPIKEWALLS_TIME_OPEN, 0, 0, .1f);
 // -- prototypes --
 
-OPTION_DEFINE(int, GAMESTATE_COMPLETE_TIMER, "Game State/Round Complete/Display Time");
-OPTION_DEFINE(int, GAMESTATE_COMPLETE_TIME_DILATION_TIMER, "Game State/Round Complete/Time Dilation Time");
-OPTION_DEFINE(float, GAMESTATE_COMPLETE_TIME_DILATION_BEGIN, "Game State/Round Complete/Time Dilation Begin");
-OPTION_DEFINE(float, GAMESTATE_COMPLETE_TIME_DILATION_END, "Game State/Round Complete/Time Dilation End");
-
 OPTION_DEFINE(float, GAMESTATE_ROUNDBEGIN_TRANSITION_TIME, "Game State/Round Begin/Transition Time");
 OPTION_DEFINE(float, GAMESTATE_ROUNDBEGIN_SPAWN_DELAY, "Game State/Round Begin/Player Spawn Delay");
 OPTION_DEFINE(float, GAMESTATE_ROUNDBEGIN_MESSAGE_DELAY, "Game State/Round Begin/Message Delay");
 OPTION_DEFINE(int, GAMESTATE_ROUNDBEGIN_MESSAGE_X, "Game State/Round Begin/Message X");
 OPTION_DEFINE(int, GAMESTATE_ROUNDBEGIN_MESSAGE_Y, "Game State/Round Begin/Message Y");
+
+OPTION_DEFINE(float, GAMESTATE_ROUNDCOMPLETE_SHOWWINNER_TIME, "Game State/Round Complete/Time Dilation Time");
+OPTION_DEFINE(float, GAMESTATE_ROUNDCOMPLETE_SHOWWINNER_TIMEDILATION_BEGIN, "Game State/Round Complete/Time Dilation Begin");
+OPTION_DEFINE(float, GAMESTATE_ROUNDCOMPLETE_SHOWWINNER_TIMEDILATION_END, "Game State/Round Complete/Time Dilation End");
+OPTION_DEFINE(float, GAMESTATE_ROUNDCOMPLETE_SHOWRESULTS_TIME, "Game State/Round Complete/Show Results Time");
+OPTION_DEFINE(float, GAMESTATE_ROUNDCOMPLETE_TRANSITION_TIME, "Game State/Round Complete/Transition Time");
 
 OPTION_DEFINE(float, GAME_SPEED_MULTIPLIER, "App/Game Speed Multiplier");
 OPTION_STEP(GAME_SPEED_MULTIPLIER, 0.f, 10.f, .01f);

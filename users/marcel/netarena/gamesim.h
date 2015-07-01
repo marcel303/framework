@@ -920,8 +920,6 @@ struct GameStateData
 	float m_roundTime;
 	float m_physicalRoundTime;
 	uint32_t m_nextRoundNumber;
-	uint32_t m_roundCompleteTicks;
-	uint32_t m_roundCompleteTimeDilationTicks;
 
 	struct RoundBegin
 	{
@@ -941,6 +939,25 @@ struct GameStateData
 		float m_delay;
 		float m_delayTimeRcp;
 	} m_roundBegin;
+
+	struct RoundEnd
+	{
+		enum State
+		{
+			kState_ShowWinner,
+			kState_ShowResults,
+			kState_LevelTransition
+		};
+
+		RoundEnd()
+		{
+			memset(this, 0, sizeof(*this));
+		}
+
+		State m_state;
+		float m_delay;
+		float m_delayTimeRcp;
+	} m_roundEnd;
 
 	Player m_players[MAX_PLAYERS];
 
@@ -1084,7 +1101,7 @@ public:
 	void tickMenus();
 	void tickRoundBegin(float dt);
 	void tickPlay();
-	void tickRoundComplete();
+	void tickRoundComplete(float dt);
 
 	void drawPlay();
 	void drawPlayColor(Vec2Arg camTranslation);

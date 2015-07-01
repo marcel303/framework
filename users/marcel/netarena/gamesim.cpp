@@ -1448,6 +1448,11 @@ void GameSim::setGameState(::GameState gameState)
 		break;
 
 	case kGameState_RoundComplete:
+		{
+			m_roundEnd = RoundEnd();
+			m_roundEnd.m_delayTimeRcp = 1.f / GAMESTATE_ROUNDCOMPLETE_SHOWWINNER_TIME;
+			m_roundEnd.m_delay = 1.f;
+		}
 		break;
 
 	default:
@@ -1514,9 +1519,6 @@ void GameSim::newRound(const char * mapOverride)
 void GameSim::endRound()
 {
 	setGameState(kGameState_RoundComplete);
-
-	m_roundCompleteTicks = TICKS_PER_SECOND * GAMESTATE_COMPLETE_TIMER;
-	m_roundCompleteTimeDilationTicks = TICKS_PER_SECOND * GAMESTATE_COMPLETE_TIME_DILATION_TIMER;
 }
 
 void GameSim::load(const char * name)
@@ -1818,7 +1820,7 @@ void GameSim::tick()
 
 	case kGameState_RoundComplete:
 		tickPlay();
-		tickRoundComplete();
+		tickRoundComplete(dt);
 		break;
 
 	default:
@@ -2475,16 +2477,35 @@ void GameSim::tickPlay()
 	}
 }
 
-void GameSim::tickRoundComplete()
+void GameSim::tickRoundComplete(float dt)
 {
-	// wait for the host to enter the next game state
-
-	Assert(m_roundCompleteTicks > 0);
-	if (m_roundCompleteTicks > 0)
+	if (m_roundEnd.m_state == RoundEnd::kState_ShowWinner)
 	{
-		m_roundCompleteTicks--;
-
-		if (m_roundCompleteTicks == 0)
+		Assert(m_roundEnd.m_delay > 0.f);
+		m_roundEnd.m_delay -= dt * m_roundEnd.m_delayTimeRcp;
+		if (m_roundEnd.m_delay <= 0.f)
+		{
+			m_roundEnd.m_state = RoundEnd::kState_ShowResults;
+			m_roundEnd.m_delayTimeRcp = 1.f / GAMESTATE_ROUNDCOMPLETE_SHOWRESULTS_TIME;
+			m_roundEnd.m_delay = 1.f;
+		}
+	}
+	else if (m_roundEnd.m_state == RoundEnd::kState_ShowResults)
+	{
+		Assert(m_roundEnd.m_delay > 0.f);
+		m_roundEnd.m_delay -= dt * m_roundEnd.m_delayTimeRcp;
+		if (m_roundEnd.m_delay <= 0.f)
+		{
+			m_roundEnd.m_state = RoundEnd::kState_LevelTransition;
+			m_roundEnd.m_delayTimeRcp = 1.f / GAMESTATE_ROUNDCOMPLETE_TRANSITION_TIME;
+			m_roundEnd.m_delay = 1.f;
+		}
+	}
+	else if (m_roundEnd.m_state == RoundEnd::kState_LevelTransition)
+	{
+		Assert(m_roundEnd.m_delay > 0.f);
+		m_roundEnd.m_delay -= dt * m_roundEnd.m_delayTimeRcp;
+		if (m_roundEnd.m_delay <= 0.f)
 		{
 			if (DEMOMODE || (getNumPlayers() < MIN_PLAYER_COUNT))
 			{
@@ -2495,11 +2516,6 @@ void GameSim::tickRoundComplete()
 				newRound(0);
 			}
 		}
-	}
-
-	if (m_roundCompleteTimeDilationTicks > 0)
-	{
-		m_roundCompleteTimeDilationTicks--;
 	}
 }
 
@@ -2537,6 +2553,18 @@ void GameSim::drawPlay()
 	if (m_gameState == kGameState_RoundBegin && m_roundBegin.m_state == RoundBegin::kState_LevelTransition)
 	{
 		const float t = 1.f - m_roundBegin.m_delay;
+
+	#if 1 // level transition shader test
+		Shader shader("shaders/trans1");
+		shader.setTexture("colormap", 0, g_colorMap->getTexture());
+		shader.setImmediate("tint", t, t, t);
+		g_colorMap->postprocess(shader);
+	#endif
+	}
+
+	if (m_gameState == kGameState_RoundComplete && m_roundEnd.m_state == RoundEnd::kState_LevelTransition)
+	{
+		const float t = m_roundEnd.m_delay;
 
 	#if 1 // level transition shader test
 		Shader shader("shaders/trans1");
@@ -2887,8 +2915,10 @@ void GameSim::getCurrentTimeDilation(float & timeDilation, bool & playerAttackTi
 
 	if (m_gameState == kGameState_RoundComplete)
 	{
-		const float t = 1.f - m_roundCompleteTimeDilationTicks / float(TICKS_PER_SECOND * GAMESTATE_COMPLETE_TIME_DILATION_TIMER);
-		timeDilation *= Calc::Lerp(GAMESTATE_COMPLETE_TIME_DILATION_BEGIN, GAMESTATE_COMPLETE_TIME_DILATION_END, t);
+		if (m_roundEnd.m_state == RoundEnd::kState_ShowWinner)
+			timeDilation *= m_roundEnd.m_delay;
+		else
+			timeDilation *= 0.f;
 	}
 
 	timeDilation *= GAME_SPEED_MULTIPLIER;

@@ -405,10 +405,12 @@ void Client::drawQuickLook()
 
 void Client::drawRoundComplete()
 {
-	const int numTicks = TICKS_PER_SECOND * GAMESTATE_COMPLETE_TIME_DILATION_TIMER;
+#if 0
+	const int numTicks = TICKS_PER_SECOND * GAMESTATE_ROUNDCOMPLETE_TIMEDILATION_TIMER;
 	const float t = 1.f - Calc::Saturate(m_gameSim->m_roundCompleteTimeDilationTicks / float(numTicks));
 	setColorf(0.f, 0.f, 0.f, t);
 	drawRect(0, 0, GFX_SX, GFX_SY);
+#endif
 
 	setColor(colorWhite);
 
