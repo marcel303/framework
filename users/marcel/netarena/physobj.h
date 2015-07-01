@@ -80,7 +80,7 @@ typedef uint8_t PhysicsActorId;
 
 #define kPhysicsActorId_Invalid ((PhysicsActorId)-1)
 
-#if 0
+#if 0 // PhysicsScene
 struct PhysicsScene
 {
 	PhysicsActor m_actors[MAX_PHYSICS_ACTORS];

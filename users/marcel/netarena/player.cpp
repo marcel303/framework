@@ -619,7 +619,6 @@ bool Player::getAttackCollision(CollisionShape & shape, Vec2Arg shift) const
 {
 	Assert(m_isUsed);
 
-#if 1
 	const CharacterData * characterData = getCharacterData(m_characterIndex);
 
 	Vec2 points[4];
@@ -643,36 +642,6 @@ bool Player::getAttackCollision(CollisionShape & shape, Vec2Arg shift) const
 
 		return true;
 	}
-#else
-	float x1 = m_attack.collision.min[0] * m_facing[0];
-	float y1 = m_attack.collision.min[1];
-	float x2 = m_attack.collision.max[0] * m_facing[0];
-	float y2 = m_attack.collision.max[1];
-
-	if (m_facing[1] < 0)
-	{
-		y1 = -PLAYER_COLLISION_HITBOX_SY - y1;
-		y2 = -PLAYER_COLLISION_HITBOX_SY - y2;
-	}
-
-	if (x1 > x2)
-		std::swap(x1, x2);
-	if (y1 > y2)
-		std::swap(y1, y2);
-
-#if 1
-	shape.set(
-		Vec2(m_pos[0] + x1, m_pos[1] + y1),
-		Vec2(m_pos[0] + x2, m_pos[1] + y1),
-		Vec2(m_pos[0] + x2, m_pos[1] + y2),
-		Vec2(m_pos[0] + x1, m_pos[1] + y2));
-#else
-	collision.min[0] = m_pos[0] + x1;
-	collision.min[1] = m_pos[1] + y1;
-	collision.max[0] = m_pos[0] + x2;
-	collision.max[1] = m_pos[1] + y2;
-#endif
-#endif
 }
 
 float Player::getAttackDamage(Player * other) const
@@ -3138,7 +3107,7 @@ uint32_t Player::getIntersectingBlocksMaskInternal(int x, int y, bool doWrap) co
 	result |= arena.getIntersectingBlocksMask(x1, y3);
 	result |= arena.getIntersectingBlocksMask(x2, y3);
 
-#if 1
+#if 1 // mover collision
 	CollisionInfo collisionInfo = m_collision;
 	collisionInfo.min[0] += x;
 	collisionInfo.min[1] += y;

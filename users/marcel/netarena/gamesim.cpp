@@ -1535,7 +1535,7 @@ void GameSim::load(const char * name)
 
 	// load objects
 
-#if 0 // todo : remove
+#if 0 // todo : remove (mover test)
 	{ Mover & mover = m_movers[0]; mover.setup(400, 50, GFX_SX*1/4, GFX_SY/2-200, GFX_SX*3/4, GFX_SY/2-300, 100); }
 	{ Mover & mover = m_movers[1]; mover.setup(400, 50, GFX_SX*1/4, GFX_SY/2,     GFX_SX*3/4, GFX_SY/2-100, 111); }
 	{ Mover & mover = m_movers[2]; mover.setup(400, 50, GFX_SX*1/4, GFX_SY/2+200, GFX_SX*3/4, GFX_SY/2+100, 121); }
@@ -2492,7 +2492,7 @@ void GameSim::drawPlay()
 
 	Vec2 camTranslation = shake;
 
-#if 0
+#if 0 // map scaling test
 	const float asx = ARENA_SX_PIXELS;
 	const float asy = ARENA_SY_PIXELS;
 	const float asx2 = asx / 2.f;
@@ -2517,7 +2517,7 @@ void GameSim::drawPlay()
 	}
 	popSurface();
 
-#if 0
+#if 0 // colormap tinting test
 	Shader shader("shaders/trans1");
 	shader.setTexture("colormap", 0, g_colorMap->getTexture());
 	shader.setImmediate("tint", 1.f, .5f, .25f);
@@ -2553,7 +2553,7 @@ void GameSim::drawPlay()
 	}
 	popSurface();
 
-#if 0
+#if 0 // fsfx test
 	// fsfx
 
 	Shader fsfx("fsfx-test");
@@ -2594,7 +2594,7 @@ void GameSim::drawPlayColor(Vec2Arg camTranslation)
 	gxPushMatrix();
 	gxTranslatef(camTranslation[0], camTranslation[1], 0.f);
 
-#if 0
+#if 0 // fsfx test
 	Shader fsfx("fsfx-test3");
 	fsfx.setImmediate("time", m_roundTime);
 	g_colorMap->postprocess(fsfx);

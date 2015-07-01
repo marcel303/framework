@@ -245,7 +245,7 @@ bool PhysicsActor::test(const CollisionBox & box) const
 
 //
 
-#if 0
+#if 0 // PhysicsScene
 PhysicsScene::PhysicsScene()
 {
 }
