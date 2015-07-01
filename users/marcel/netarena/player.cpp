@@ -2100,6 +2100,8 @@ void Player::tick(float dt)
 			Vec2(m_collision.max[0], m_collision.max[1]),
 			Vec2(m_collision.min[0], m_collision.max[1]));
 
+		const int kMaxSpringLocations = 32;
+
 		struct CollisionArgs
 		{
 			Player * self;
@@ -2108,6 +2110,12 @@ void Player::tick(float dt)
 			bool enterPassThrough;
 			bool wasInPassthrough;
 			float gravity;
+			struct
+			{
+				int x, y;
+			} springLocations[kMaxSpringLocations];
+			int numSpringLocations;
+			int maxSpringLocations;
 		};
 
 		CollisionArgs args;
@@ -2118,6 +2126,8 @@ void Player::tick(float dt)
 		args.enterPassThrough = enterPassThrough;
 		args.wasInPassthrough = wasInPassthrough;
 		args.gravity = gravity;
+		args.numSpringLocations = 0;
+		args.maxSpringLocations = kMaxSpringLocations;
 
 		Vec2 newTotalVel = totalVel;
 
@@ -2218,6 +2228,16 @@ void Player::tick(float dt)
 								result |= kPhysicsUpdateFlag_DontCollide;
 
 								self->m_isInPassthrough = true;
+							}
+						}
+
+						if (block->type == kBlockType_Spring)
+						{
+							if (args->numSpringLocations < args->maxSpringLocations)
+							{
+								args->springLocations[args->numSpringLocations].x = blockAndDistance->x;
+								args->springLocations[args->numSpringLocations].y = blockAndDistance->y;
+								args->numSpringLocations++;
 							}
 						}
 
@@ -2323,6 +2343,13 @@ void Player::tick(float dt)
 				m_vel[i] = -BLOCKTYPE_SPRING_SPEED;
 
 				GAMESIM->playSound("player-spring-jump.ogg"); // player walks over and activates a jump pad
+
+				for (int s = 0; s < args.numSpringLocations; ++s)
+				{
+					TileSprite * tileSprite = GAMESIM->findTileSpriteAtBlockXY(args.springLocations[s].x, args.springLocations[s].y);
+					if (tileSprite)
+						tileSprite->startAnim("Activate");
+				}
 			}
 
 			// effects

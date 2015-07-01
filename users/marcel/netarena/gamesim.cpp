@@ -852,7 +852,7 @@ void Torch::drawLight() const
 
 //
 
-void TileSprite::setup(const char * name, int x, int y)
+void TileSprite::setup(const char * name, int x, int y, int blockX, int blockY, int blockSx, int blockSy)
 {
 	m_isAlive = true;
 
@@ -861,6 +861,13 @@ void TileSprite::setup(const char * name, int x, int y)
 	m_spriterState.x = x;
 	m_spriterState.y = y;
 	m_spriterState.startAnim(Spriter(m_spriter.c_str()), 0);
+
+	Assert(blockSx >= 1);
+	Assert(blockSy >= 1);
+	m_x1 = blockX;
+	m_y1 = blockY;
+	m_x2 = blockX + blockSx - 1;
+	m_y2 = blockY + blockSy - 1;
 }
 
 void TileSprite::tick(GameSim & gameSim, float dt)
@@ -879,6 +886,24 @@ void TileSprite::draw() const
 void TileSprite::drawLight() const
 {
 	// todo : let object define light map?
+}
+
+void TileSprite::startAnim(const char * name)
+{
+	m_spriterState.startAnim(
+		Spriter(m_spriter.c_str()),
+		name);
+}
+
+bool TileSprite::intersectsBlock(int blockX, int blockY) const
+{
+	if (m_x1 < 0 || m_y1 < 0)
+		return false;
+	if (blockX < m_x1 && blockX > m_x2)
+		return false;
+	if (blockY < m_y1 && blockY > m_y2)
+		return false;
+	return true;
 }
 
 //
@@ -1619,7 +1644,11 @@ void GameSim::load(const char * name)
 					tileSprite->setup(
 						d.getString("sprite", "").c_str(),
 						d.getInt("x", 0),
-						d.getInt("y", 0));
+						d.getInt("y", 0),
+						d.getInt("block_x", -1),
+						d.getInt("block_y", -1),
+						d.getInt("block_sx", 1),
+						d.getInt("block_sy", 1));
 				}
 			}
 		}
@@ -3542,7 +3571,7 @@ TileSprite * GameSim::findTileSpriteAtBlockXY(int blockX, int blockY)
 	{
 		TileSprite & tileSprite = m_tileSprites[i];
 
-		if (tileSprite.m_isAlive && tileSprite.getBlockX() == blockX && tileSprite.getBlockY() == blockY)
+		if (tileSprite.m_isAlive && tileSprite.intersectsBlock(blockX, blockY))
 			return &tileSprite;
 	}
 

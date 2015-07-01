@@ -759,17 +759,19 @@ struct TileSprite
 		memset(this, 0, sizeof(TileSprite));
 	}
 
-	void setup(const char * name, int x, int y);
+	void setup(const char * name, int x, int y, int blockX, int blockY, int blockSx, int blockSy);
 	void tick(GameSim & gameSim, float dt);
 	void draw() const;
 	void drawLight() const;
 
-	int getBlockX() const { return m_spriterState.x / BLOCK_SX; }
-	int getBlockY() const { return m_spriterState.y / BLOCK_SY; }
+	void startAnim(const char * name);
+
+	bool intersectsBlock(int blockX, int blockY) const;
 
 	bool m_isAlive;
 	FixedString<32> m_spriter;
 	SpriterState m_spriterState;
+	int m_x1, m_y1, m_x2, m_y2;
 };
 
 struct ScreenShake
