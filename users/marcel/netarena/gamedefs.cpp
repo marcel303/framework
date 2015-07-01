@@ -52,6 +52,7 @@ OPTION_DEFINE(int, GAMESTATE_COMPLETE_TIME_DILATION_TIMER, "Game State/Round Com
 OPTION_DEFINE(float, GAMESTATE_COMPLETE_TIME_DILATION_BEGIN, "Game State/Round Complete/Time Dilation Begin");
 OPTION_DEFINE(float, GAMESTATE_COMPLETE_TIME_DILATION_END, "Game State/Round Complete/Time Dilation End");
 
+OPTION_DEFINE(float, GAMESTATE_ROUNDBEGIN_TRANSITION_TIME, "Game State/Round Begin/Transition Time");
 OPTION_DEFINE(float, GAMESTATE_ROUNDBEGIN_SPAWN_DELAY, "Game State/Round Begin/Player Spawn Delay");
 OPTION_DEFINE(float, GAMESTATE_ROUNDBEGIN_MESSAGE_DELAY, "Game State/Round Begin/Message Delay");
 OPTION_DEFINE(int, GAMESTATE_ROUNDBEGIN_MESSAGE_X, "Game State/Round Begin/Message X");

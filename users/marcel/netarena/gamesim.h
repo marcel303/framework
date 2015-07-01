@@ -927,6 +927,7 @@ struct GameStateData
 	{
 		enum State
 		{
+			kState_LevelTransition,
 			kState_SpawnPlayers,
 			kState_FightMessage
 		};
@@ -937,7 +938,8 @@ struct GameStateData
 		}
 
 		State m_state;
-		uint8_t m_delayTicks;
+		float m_delay;
+		float m_delayTimeRcp;
 	} m_roundBegin;
 
 	Player m_players[MAX_PLAYERS];
@@ -1080,7 +1082,7 @@ public:
 
 	void tick();
 	void tickMenus();
-	void tickRoundBegin();
+	void tickRoundBegin(float dt);
 	void tickPlay();
 	void tickRoundComplete();
 

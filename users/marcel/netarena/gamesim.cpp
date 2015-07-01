@@ -1413,7 +1413,8 @@ void GameSim::setGameState(::GameState gameState)
 			playSound("round-begin.ogg");
 
 			m_roundBegin = RoundBegin();
-			m_roundBegin.m_delayTicks = GAMESTATE_ROUNDBEGIN_SPAWN_DELAY * TICKS_PER_SECOND;
+			m_roundBegin.m_delayTimeRcp = 1.f / GAMESTATE_ROUNDBEGIN_TRANSITION_TIME;
+			m_roundBegin.m_delay = 1.f;
 
 			for (int i = 0; i < MAX_PLAYERS; ++i)
 			{
@@ -1793,6 +1794,8 @@ void GameSim::tick()
 		gravityWellFalloffCurve.makeLinear(1.f, 0.f);
 	}
 
+	const float dt = 1.f / TICKS_PER_SECOND;
+
 	switch (m_gameState)
 	{
 	case kGameState_Initial:
@@ -1806,7 +1809,7 @@ void GameSim::tick()
 
 	case kGameState_RoundBegin:
 		tickPlay();
-		tickRoundBegin();
+		tickRoundBegin(dt);
 		break;
 
 	case kGameState_Play:
@@ -1984,14 +1987,26 @@ void GameSim::tickMenus()
 	}
 }
 
-void GameSim::tickRoundBegin()
+void GameSim::tickRoundBegin(float dt)
 {
+	if (m_roundBegin.m_state == RoundBegin::kState_LevelTransition)
+	{
+		Assert(m_roundBegin.m_delay > 0.f);
+		m_roundBegin.m_delay -= dt * m_roundBegin.m_delayTimeRcp;
+
+		if (m_roundBegin.m_delay <= 0.f)
+		{
+			m_roundBegin.m_state = RoundBegin::kState_SpawnPlayers;
+			m_roundBegin.m_delayTimeRcp = 1.f / GAMESTATE_ROUNDBEGIN_SPAWN_DELAY;
+			m_roundBegin.m_delay = 1.f;
+		}
+	}
 	if (m_roundBegin.m_state == RoundBegin::kState_SpawnPlayers)
 	{
-		Assert(m_roundBegin.m_delayTicks > 0);
-		m_roundBegin.m_delayTicks--;
+		Assert(m_roundBegin.m_delay > 0.f);
+		m_roundBegin.m_delay -= dt * m_roundBegin.m_delayTimeRcp;
 
-		if (m_roundBegin.m_delayTicks == 0)
+		if (m_roundBegin.m_delay <= 0.f)
 		{
 			// respawn players
 
@@ -2026,23 +2041,25 @@ void GameSim::tickRoundBegin()
 			if (allDone)
 			{
 				m_roundBegin.m_state = RoundBegin::kState_FightMessage;
-				m_roundBegin.m_delayTicks = GAMESTATE_ROUNDBEGIN_MESSAGE_DELAY * TICKS_PER_SECOND;
+				m_roundBegin.m_delayTimeRcp = 1.f / GAMESTATE_ROUNDBEGIN_MESSAGE_DELAY;
+				m_roundBegin.m_delay = 1.f;
 
 				addAnimationFx("ui/fight/fight.scml", GAMESTATE_ROUNDBEGIN_MESSAGE_X, GAMESTATE_ROUNDBEGIN_MESSAGE_Y);
 				playSound("round-begin-fight.ogg");
 			}
 			else
 			{
-				m_roundBegin.m_delayTicks = GAMESTATE_ROUNDBEGIN_SPAWN_DELAY * TICKS_PER_SECOND;
+				m_roundBegin.m_delayTimeRcp = 1.f / GAMESTATE_ROUNDBEGIN_SPAWN_DELAY;
+				m_roundBegin.m_delay = 1.f;
 			}
 		}
 	}
 	else if (m_roundBegin.m_state == RoundBegin::kState_FightMessage)
 	{
-		Assert(m_roundBegin.m_delayTicks > 0);
-		m_roundBegin.m_delayTicks--;
+		Assert(m_roundBegin.m_delay > 0.f);
+		m_roundBegin.m_delay -= dt * m_roundBegin.m_delayTimeRcp;
 
-		if (m_roundBegin.m_delayTicks == 0)
+		if (m_roundBegin.m_delay <= 0.f)
 		{
 			setGameState(kGameState_Play);
 		}
@@ -2517,12 +2534,17 @@ void GameSim::drawPlay()
 	}
 	popSurface();
 
-#if 0 // colormap tinting test
-	Shader shader("shaders/trans1");
-	shader.setTexture("colormap", 0, g_colorMap->getTexture());
-	shader.setImmediate("tint", 1.f, .5f, .25f);
-	g_colorMap->postprocess(shader);
-#endif
+	if (m_gameState == kGameState_RoundBegin && m_roundBegin.m_state == RoundBegin::kState_LevelTransition)
+	{
+		const float t = 1.f - m_roundBegin.m_delay;
+
+	#if 1 // level transition shader test
+		Shader shader("shaders/trans1");
+		shader.setTexture("colormap", 0, g_colorMap->getTexture());
+		shader.setImmediate("tint", t, t, t);
+		g_colorMap->postprocess(shader);
+	#endif
+	}
 
 	pushSurface(g_lightMap);
 	{
