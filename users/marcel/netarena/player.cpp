@@ -3159,6 +3159,8 @@ void Player::handleNewRound()
 
 void Player::handleLeave()
 {
+	despawn(false);
+
 	const CharacterData * characterData = getCharacterData(m_characterIndex);
 
 	for (int i = 0; i < MAX_BULLETS; ++i)
@@ -3171,12 +3173,6 @@ void Player::handleLeave()
 	{
 		if (GAMESIM->m_axes[i].m_playerIndex == m_index)
 			GAMESIM->m_axes[i].m_playerIndex = -1;
-	}
-
-	for (int i = 0; i < MAX_PIPEBOMBS; ++i)
-	{
-		if (GAMESIM->m_pipebombs[i].m_playerIndex == m_index)
-			GAMESIM->m_pipebombs[i].m_playerIndex = -1;
 	}
 }
 
@@ -3301,6 +3297,14 @@ void Player::despawn(bool willRespawn)
 	m_jetpack = JetpackInfo();
 
 	endGrapple();
+
+	// make sure pipe bombs are cleaned up
+
+	for (int i = 0; i < MAX_PIPEBOMBS; ++i)
+	{
+		if (GAMESIM->m_pipebombs[i].m_playerIndex == m_index)
+			GAMESIM->m_pipebombs[i] = PipeBomb();
+	}
 }
 
 bool Player::isSpawned() const
