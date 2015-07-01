@@ -51,10 +51,7 @@ public:
 
 		~ClientInfo()
 		{
-			Assert(players.empty());
 		}
-
-		std::vector<PlayerInstanceData*> players;
 	};
 
 	AppState m_appState;

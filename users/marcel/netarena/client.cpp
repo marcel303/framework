@@ -167,7 +167,7 @@ void Client::tick(float dt)
 
 				g_app->netAction(m_channel, 	kNetAction_TextChat, i, 0, m_textChat->getText());
 
-				logDebug("client %p owns player %d", this, i);
+				LOG_DBG("client %p owns player %d", this, i);
 			}
 		}
 
@@ -339,7 +339,7 @@ void Client::drawConnecting()
 
 void Client::drawMenus()
 {
-#if 0
+#if 0 // player character debug text
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
 		const Player & player = m_gameSim->m_players[i];
@@ -510,16 +510,18 @@ void Client::debugDraw()
 
 void Client::addPlayer(PlayerInstanceData * player, int controllerIndex)
 {
+	LOG_DBG("%s: player=%p, controllerIndex=%d", __FUNCTION__, player, controllerIndex);
+
 	player->m_player->m_isUsed = true;
 
+	Assert(std::find(m_players.begin(), m_players.end(), player) == m_players.end());
 	m_players.push_back(player);
 
-	m_gameSim->m_playerInstanceDatas[player->m_player->m_index] = player;
+	Assert(m_gameSim->m_playerInstanceDatas[player->m_player->m_index] == player);
+	Assert(player->m_input.m_controllerIndex == -1);
 
 	if (player->m_player->m_owningChannelId == m_channel->m_id)
 	{
-		Assert(player->m_input.m_controllerIndex == -1);
-
 		if (controllerIndex != -1)
 			player->m_input.m_controllerIndex = controllerIndex;
 		else
@@ -529,9 +531,11 @@ void Client::addPlayer(PlayerInstanceData * player, int controllerIndex)
 
 void Client::removePlayer(PlayerInstanceData * player)
 {
-	auto i = std::find(m_players.begin(), m_players.end(), player);
+	LOG_DBG("%s: player=%p", __FUNCTION__, player);
 
+	auto i = std::find(m_players.begin(), m_players.end(), player);
 	Assert(i != m_players.end());
+
 	if (i != m_players.end())
 	{
 		if (player->m_player->m_owningChannelId == m_channel->m_id)

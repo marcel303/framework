@@ -498,9 +498,12 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			bitStream.Read(controllerIndex);
 			displayName = bitStream.ReadString();
 
+			LOG_DBG("handleRpc: s_rpcAddPlayerBroadcast: channelId=%d, index=%d, characterIndex=%d, controllerIndex=%d", channelId, index, characterIndex, controllerIndex);
+
 			//
 
 			PlayerInstanceData * playerInstanceData = gameSim->allocPlayer(channelId);
+			Assert(playerInstanceData);
 
 			if (playerInstanceData)
 			{
@@ -517,12 +520,6 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 					{
 						client->addPlayer(playerInstanceData, controllerIndex);
 					}
-				}
-				else
-				{
-					ClientInfo & clientInfo = g_app->m_hostClients[channelId];
-
-					clientInfo.players.push_back(playerInstanceData);
 				}
 			}
 		}
@@ -743,6 +740,8 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			bitStream.Read(playerId);
 			bitStream.Read(characterIndex);
 
+			LOG_DBG("handleRpc: s_rpcSetPlayerCharacterIndexBroadcast: playerId=%d, characterIndex=%d", playerId, characterIndex);
+
 			PlayerInstanceData * playerInstanceData = gameSim->m_playerInstanceDatas[playerId];
 			Assert(playerInstanceData);
 			if (playerInstanceData)
@@ -952,6 +951,7 @@ void App::SV_OnChannelConnect(Channel * channel)
 {
 	ClientInfo clientInfo;
 
+	Assert(m_hostClients.find(channel->m_id) == m_hostClients.end());
 	m_hostClients[channel->m_id] = clientInfo;
 
 	netSyncGameSim(channel);
@@ -959,30 +959,38 @@ void App::SV_OnChannelConnect(Channel * channel)
 
 void App::SV_OnChannelDisconnect(Channel * channel)
 {
-	// todo : remove from m_playersToAdd
-
-	auto i = m_hostClients.find(channel->m_destinationId);
-
-	if (i != m_hostClients.end())
+	Assert(g_host);
+	if (!g_host)
 	{
-		ClientInfo & clientInfo = i->second;
+		Assert(m_hostClients.empty());
+	}
+	else
+	{
+		// todo : remove from m_playersToAdd
 
-		// remove player created for this channel
+		auto i = m_hostClients.find(channel->m_id);
 
-		auto players = clientInfo.players;
-
-		for (size_t p = 0; p < players.size(); ++p)
+		Assert(i != m_hostClients.end());
+		if (i != m_hostClients.end())
 		{
-			PlayerInstanceData * playerInstanceData = players[p];
-			const int playerIndex = playerInstanceData->m_player->m_index;
-			Assert(playerIndex >= 0 && playerIndex < MAX_PLAYERS);
+			ClientInfo & clientInfo = i->second;
 
-			g_app->netRemovePlayerBroadcast(playerIndex);
+			// remove player created for this channel
+
+			bool removedAny = false;
+			for (int playerIndex = 0; playerIndex < MAX_PLAYERS; ++playerIndex)
+			{
+				const Player & player = g_host->m_gameSim.m_players[playerIndex];
+				if (player.m_owningChannelId == channel->m_destinationId)
+				{
+					g_app->netRemovePlayerBroadcast(playerIndex);
+					removedAny = true;
+				}
+			}
+			Assert(removedAny);
+
+			m_hostClients.erase(i);
 		}
-
-		clientInfo.players.clear();
-
-		m_hostClients.erase(i);
 	}
 }
 
@@ -998,6 +1006,7 @@ void App::CL_OnChannelDisconnect(Channel * channel)
 		}
 	}
 
+	Assert(client);
 	if (client)
 	{
 		LOG_DBG("CL_OnChannelDisconnect: found client %p for channel %p", client, channel);
@@ -1316,6 +1325,7 @@ void App::setAppState(AppState state)
 	switch (m_appState)
 	{
 	case AppState_Offline:
+		Assert(m_clients.empty());
 		m_menuMgr->reset(0);
 		m_menuMgr->push(new MainMenu());
 		m_menuMgr->push(new Title());
@@ -1467,7 +1477,7 @@ void App::destroyClient(int index)
 	{
 		Client * client = m_clients[index];
 
-		LOG_DBG("destroyClient: destroying client %p", client);
+		LOG_DBG("destroyClient: index=%d, client=%p", index, client);
 
 		if (client->m_channel->m_state != ChannelState_Disconnected)
 			client->m_channel->Disconnect();
@@ -1696,7 +1706,7 @@ bool App::tick()
 
 	// debug
 
-#if 1
+#if 1 // debug controls for animation and blast test, etc
 	if (keyboard.wentDown(SDLK_1) && !(getSelectedClient() && getSelectedClient()->m_textChat->isActive()))
 		animationTestToggleIsActive();
 	if (keyboard.wentDown(SDLK_2) && !(getSelectedClient() && getSelectedClient()->m_textChat->isActive()))
@@ -1827,7 +1837,7 @@ void App::draw()
 
 		// draw debug stuff
 
-	#if 0
+	#if 0 // text area test
 		setColor(colorWhite);
 		static volatile float sy = 50.f;
 		static volatile float ax = 0.f;
@@ -1935,7 +1945,6 @@ void App::draw()
 			m_statTimerMenu->Draw(x, y, sx, sy);
 		}
 
-	#if 1
 		if (UI_DEBUG_VISIBLE)
 		{
 			m_discoveryUi->clear();
@@ -1989,7 +1998,6 @@ void App::draw()
 			setColor(colorWhite);
 			m_discoveryUi->draw();
 		}
-	#endif
 
 	#if 0 // todo : remove test collision/SAT code
 		gxPushMatrix();
@@ -2060,7 +2068,7 @@ void App::draw()
 
 void App::netAction(Channel * channel, NetAction action, uint8_t param1, uint8_t param2, const std::string & param3)
 {
-	LOG_DBG("netAction");
+	LOG_DBG("netAction: channel=%p, action=%d, param1=%d, param2=%d, param3='%d'", channel, action, param1, param2, param3.c_str());
 
 	BitStream bs;
 
@@ -2076,7 +2084,7 @@ void App::netAction(Channel * channel, NetAction action, uint8_t param1, uint8_t
 
 void App::netSyncGameSim(Channel * channel)
 {
-	LOG_DBG("netSyncGameSim");
+	LOG_DBG("netSyncGameSim: channel=%p", channel);
 	Assert(m_isHost);
 
 	// todo : when serializing the state, make sure all packets that are destined for the host are flushed
@@ -2145,7 +2153,7 @@ void App::netAddPlayer(Channel * channel, uint8_t characterIndex, const std::str
 
 void App::netAddPlayerBroadcast(uint16_t owningChannelId, uint8_t index, uint8_t characterIndex, const std::string & displayName, int8_t controllerIndex)
 {
-	LOG_DBG("netAddPlayerBroadcast");
+	LOG_DBG("netAddPlayerBroadcast: owningChannelId=%d, index=%d, characterIndex=%d, displayName=%s, controllerIndex=%d", owningChannelId, index, characterIndex, displayName.c_str(), controllerIndex);
 
 	BitStream bs;
 
@@ -2160,7 +2168,7 @@ void App::netAddPlayerBroadcast(uint16_t owningChannelId, uint8_t index, uint8_t
 
 void App::netRemovePlayer(Channel * channel, uint8_t index)
 {
-	LOG_DBG("netRemovePlayer");
+	LOG_DBG("netRemovePlayer: channel=%p, index=%d", channel, index);
 
 	Assert(index >= 0 && index < MAX_PLAYERS);
 	if (index >= 0 && index < MAX_PLAYERS)
@@ -2184,7 +2192,7 @@ void App::netRemovePlayer(Channel * channel, uint8_t index)
 
 void App::netRemovePlayerBroadcast(uint8_t index)
 {
-	LOG_DBG("netRemovePlayerBroadcast");
+	LOG_DBG("netRemovePlayerBroadcast: index=%d", index);
 
 	Assert(index >= 0 && index < MAX_PLAYERS);
 	if (index >= 0 && index < MAX_PLAYERS)
@@ -2263,7 +2271,7 @@ void App::netSetPlayerInputsBroadcast()
 
 void App::netSetPlayerCharacterIndex(uint16_t channelId, uint8_t playerId, uint8_t characterIndex)
 {
-	LOG_DBG("netSetPlayerCharacterIndex");
+	LOG_DBG("netSetPlayerCharacterIndex: channelId=%d, playerId=%d, characterIndex=%d", channelId, playerId, characterIndex);
 
 	// client -> host
 
@@ -2277,7 +2285,7 @@ void App::netSetPlayerCharacterIndex(uint16_t channelId, uint8_t playerId, uint8
 
 void App::netBroadcastCharacterIndex(uint8_t playerId, uint8_t characterIndex)
 {
-	LOG_DBG("netBroadcastCharacterIndex");
+	LOG_DBG("netBroadcastCharacterIndex: playerId=%d, characterIndex=%d", playerId, characterIndex);
 
 	// host -> clients
 
@@ -2313,7 +2321,10 @@ void App::freeControllerIndex(int index)
 {
 	Assert(index != -1);
 	if (index != -1)
+	{
+		Assert(std::find(m_freeControllerList.begin(), m_freeControllerList.end(), index) == m_freeControllerList.end());
 		m_freeControllerList.push_back(index);
+	}
 }
 
 int App::getControllerAllocationCount() const
@@ -2551,7 +2562,7 @@ int main(int argc, char * argv[])
 
 	g_optionManager.LoadFromCommandLine(argc, argv);
 
-#if 0
+#if 0 // host IP prompt
 	if (!g_devMode && !g_connectLocal && (std::string)g_connect == "")
 	{
 		std::cout << "host IP address: ";
@@ -2569,7 +2580,7 @@ int main(int argc, char * argv[])
 	}
 	else
 	{
-	#if 0
+	#if 0 // spriter test
 		//Spriter spriter("../../ArtistCave/JoyceTestcharacter/char0(Sword)/sprite/Sprite.scml");
 		Spriter spriter("char2/sprite/Sprite.scml");
 
