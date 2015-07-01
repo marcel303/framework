@@ -138,7 +138,7 @@ public:
 	void netBroadcastCharacterIndex(uint8_t playerId, uint8_t characterIndex);
 	void netDebugAction(const char * name, const char * param);
 
-	int allocControllerIndex();
+	int allocControllerIndex(int preferredControllerIndex);
 	void freeControllerIndex(int index);
 	int getControllerAllocationCount() const;
 

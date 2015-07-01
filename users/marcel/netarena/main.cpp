@@ -1678,9 +1678,9 @@ bool App::tick()
 	{
 		Client * client = m_clients.front();
 
-		for (int i = 0; i < MAX_GAMEPAD; ++i)
+		for (int i = 0; i < MAX_GAMEPAD + 1; ++i)
 		{
-			if (gamepad[i].wentDown(GAMEPAD_START))
+			if ((i < MAX_GAMEPAD && gamepad[i].wentDown(GAMEPAD_START)) || (i == MAX_GAMEPAD && keyboard.wentDown(SDLK_d)))
 			{
 				bool isUsed = false;
 				for (auto p : client->m_players)
@@ -2307,13 +2307,25 @@ void App::netDebugAction(const char * name, const char * param)
 	m_rpcMgr->Call(s_rpcDebugAction, bs, ChannelPool_Server, 0, true, true);
 }
 
-int App::allocControllerIndex()
+int App::allocControllerIndex(int preferredControllerIndex)
 {
 	if (m_freeControllerList.empty())
 		return -1;
+
+	if (preferredControllerIndex != -1)
+	{
+		auto i = std::find(m_freeControllerList.begin(), m_freeControllerList.end(), preferredControllerIndex);
+		if (i != m_freeControllerList.end())
+		{
+			m_freeControllerList.erase(i);
+			return preferredControllerIndex;
+		}
+	}
+
 	std::sort(m_freeControllerList.begin(), m_freeControllerList.end(), std::greater<int>());
 	const int index = m_freeControllerList.back();
 	m_freeControllerList.pop_back();
+
 	return index;
 }
 

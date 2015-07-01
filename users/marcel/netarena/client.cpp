@@ -106,7 +106,7 @@ void Client::tick(float dt)
 			PlayerInstanceData * playerInstanceData = player.m_instanceData;
 
 			int highest = -1;
-			for (int i = 0; i < MAX_GAMEPAD; ++i)
+			for (int i = 0; i < MAX_GAMEPAD + 1; ++i)
 			{
 				bool used = true;
 				for (size_t j = 0; j < g_app->m_freeControllerList.size(); ++j)
@@ -522,10 +522,7 @@ void Client::addPlayer(PlayerInstanceData * player, int controllerIndex)
 
 	if (player->m_player->m_owningChannelId == m_channel->m_id)
 	{
-		if (controllerIndex != -1)
-			player->m_input.m_controllerIndex = controllerIndex;
-		else
-			player->m_input.m_controllerIndex = g_app->allocControllerIndex();
+		player->m_input.m_controllerIndex = g_app->allocControllerIndex(controllerIndex);
 	}
 }
 
