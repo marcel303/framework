@@ -579,7 +579,8 @@ bool Player::getPlayerControl() const
 		m_special.meleeCounter == 0 &&
 		m_attack.m_rocketPunch.isActive == false &&
 		m_attack.m_axeThrow.isActive == false &&
-		GAMESIM->m_gameState != kGameState_RoundBegin;
+		GAMESIM->m_gameState != kGameState_RoundBegin &&
+		(GAMESIM->m_gameState != kGameState_RoundComplete || GAMESIM->m_roundEnd.m_state == GameSim::RoundEnd::kState_ShowWinner);
 }
 
 Vec2 Player::getPlayerCenter() const
