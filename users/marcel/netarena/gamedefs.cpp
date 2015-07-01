@@ -459,6 +459,9 @@ OPTION_DEFINE(int, UI_PLAYER_BACKDROP_ALPHA, "UI/Player/Background Alpha (%%)");
 OPTION_DEFINE(int, UI_PLAYER_EMBLEM_OFFSET_Y, "UI/Player/Emblem Y Offset");
 OPTION_DEFINE(int, UI_PLAYER_EMBLEM_TEXT_OFFSET_Y, "UI/Player/Emblem Text Y Offset");
 
+OPTION_DEFINE(int, UI_KILLCOUNTER_OFFSET_X, "UI/Player/Kill Counter X Offset");
+OPTION_DEFINE(int, UI_KILLCOUNTER_OFFSET_Y, "UI/Player/Kill Counter Y Offset");
+
 OPTION_DEFINE(bool, VOLCANO_LOOP, "Level Events/Volcano/Loop");
 OPTION_DEFINE(int, VOLCANO_LOOP_TIME, "Level Events/Volcano/LoopTime");
 

@@ -2494,7 +2494,10 @@ void Player::tick(float dt)
 
 		if (m_isAlive && !m_isGrounded && !m_isAttachedToSticky && !m_isWallSliding && !m_isAnimDriven && m_enableInAirAnim)
 		{
-			setAnim(kPlayerAnim_Jump, true, false);
+			if (characterData->getSpriter()->getAnimIndexByName("InAir") != -1)
+				setAnim(kPlayerAnim_InAir, true, false);
+			else
+				setAnim(kPlayerAnim_Jump, true, false);
 		}
 
 	#if !WRAP_AROUND_TOP_AND_BOTTOM
@@ -3628,6 +3631,14 @@ void Player::handleKill(bool hasScored)
 			GAMESIM->playSound("killingspree-start.ogg");
 		else if (m_killingSpree == KILLINGSPREE_UNSTOPPABLE)
 			GAMESIM->playSound("killingspree-unstoppable.ogg");
+
+		// score UI
+
+		{
+			char name[64];
+			sprintf_s(name, sizeof(name), "ui/killcounter/%d.scml", Calc::Min(5, m_multiKillCount));
+			GAMESIM->addAnimationFx(name, m_pos[0] + UI_KILLCOUNTER_OFFSET_X, m_pos[1] + UI_KILLCOUNTER_OFFSET_Y);
+		}
 	}
 }
 
