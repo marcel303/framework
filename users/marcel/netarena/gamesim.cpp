@@ -899,9 +899,9 @@ bool TileSprite::intersectsBlock(int blockX, int blockY) const
 {
 	if (m_x1 < 0 || m_y1 < 0)
 		return false;
-	if (blockX < m_x1 && blockX > m_x2)
+	if (blockX < m_x1 || blockX > m_x2)
 		return false;
-	if (blockY < m_y1 && blockY > m_y2)
+	if (blockY < m_y1 || blockY > m_y2)
 		return false;
 	return true;
 }

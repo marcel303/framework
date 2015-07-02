@@ -15,7 +15,13 @@
 
 /*
 
-- add jump pad animation and particles
++ fix jump pad anim triggered for all jump pads
+- fix black borders not drawing fullscreen when screen shakes are active
+- fix controller assignments and joining/leaving using START when connected through online multiplayer. also, names were messed up
+- let +1 icon follow player, improve art/animation
+
++ add jump pad animation
+- and support for particles triggered by spriter animations?
 - iterate on bubble gun. add trap animation, make directional, add cloud in the background to create a 'field' effect
 - reverse player emblem color
 - hide player emblem, unless when scoring or when summoned
@@ -24,9 +30,9 @@
 - add deploy animation to pipebomb guy. make it mines instead
 - add killstreaks to screen. do some drawings first
 - 'faster' grapple?
-- add grapple targeting preview
-- add down strike animation effect
-- add jumppad object
++ add grapple targeting preview
+- add down strike animation effect?
+# add jumppad object
 
 + add player character grid UI
 - escape on dialog
