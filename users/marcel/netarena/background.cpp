@@ -97,6 +97,8 @@ void Background::drawLight()
 
 Background::LobbyState::LobbyState()
 {
+	memset(this, 0, sizeof(*this));
+
 	m_spriterState = SpriterState();
 	m_spriterState.startAnim(LOBBY_SPRITER, "Idle");
 }

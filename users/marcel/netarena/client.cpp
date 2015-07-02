@@ -519,7 +519,8 @@ void Client::addPlayer(PlayerInstanceData * player, int controllerIndex)
 	Assert(std::find(m_players.begin(), m_players.end(), player) == m_players.end());
 	m_players.push_back(player);
 
-	Assert(m_gameSim->m_playerInstanceDatas[player->m_player->m_index] == player);
+	m_gameSim->m_playerInstanceDatas[player->m_player->m_index] = player;
+	//Assert(m_gameSim->m_playerInstanceDatas[player->m_player->m_index] == player);
 	Assert(player->m_input.m_controllerIndex == -1);
 
 	if (player->m_player->m_owningChannelId == m_channel->m_id)

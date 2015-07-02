@@ -538,8 +538,15 @@ void BulletPool::serialize(NetSerializationContext & context)
 		uint16_t numBullets = 0;
 
 		for (int i = 0; i < MAX_BULLETS; ++i)
+		{
 			if (m_bullets[i].isAlive)
 				numBullets++;
+			else
+			{
+				for (int j = 0; j < sizeof(Bullet); ++j)
+					Assert(((char*)&m_bullets[i])[j] == 0);
+			}
+		}
 
 		context.Serialize(numBullets);
 

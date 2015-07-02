@@ -3163,17 +3163,18 @@ void Player::handleLeave()
 	despawn(false);
 
 	const CharacterData * characterData = getCharacterData(m_characterIndex);
+	GameSim & gameSim = *GAMESIM;
 
 	for (int i = 0; i < MAX_BULLETS; ++i)
 	{
-		if (GAMESIM->m_bulletPool->m_bullets[i].ownerPlayerId == m_index)
-			GAMESIM->m_bulletPool->m_bullets[i].ownerPlayerId = -1;
+		if (gameSim.m_bulletPool->m_bullets[i].isAlive && gameSim.m_bulletPool->m_bullets[i].ownerPlayerId == m_index)
+			gameSim.m_bulletPool->m_bullets[i].ownerPlayerId = -1;
 	}
 
 	for (int i = 0; i < MAX_AXES; ++i)
 	{
-		if (GAMESIM->m_axes[i].m_playerIndex == m_index)
-			GAMESIM->m_axes[i].m_playerIndex = -1;
+		if (gameSim.m_axes[i].m_isActive && gameSim.m_axes[i].m_playerIndex == m_index)
+			gameSim.m_axes[i].m_playerIndex = -1;
 	}
 }
 
@@ -3303,7 +3304,7 @@ void Player::despawn(bool willRespawn)
 
 	for (int i = 0; i < MAX_PIPEBOMBS; ++i)
 	{
-		if (GAMESIM->m_pipebombs[i].m_playerIndex == m_index)
+		if (GAMESIM->m_pipebombs[i].m_isActive && GAMESIM->m_pipebombs[i].m_playerIndex == m_index)
 			GAMESIM->m_pipebombs[i] = PipeBomb();
 	}
 }

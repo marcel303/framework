@@ -631,9 +631,13 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 
 				if (!isInSync)
 				{
-					if (!client->m_isDesync)
-						client->m_gameSim->playSound("desync.ogg");
+					//if (!client->m_isDesync)
+					//	client->m_gameSim->playSound("desync.ogg");
 					client->m_isDesync = true;
+				}
+				else
+				{
+					client->m_isDesync = false;
 				}
 
 			#if ENABLE_GAMESTATE_CRC_LOGGING
