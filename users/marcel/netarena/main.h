@@ -141,6 +141,7 @@ public:
 	int allocControllerIndex(int preferredControllerIndex);
 	void freeControllerIndex(int index);
 	int getControllerAllocationCount() const;
+	bool isControllerIndexAvailable(int index) const;
 
 	std::vector<Client*> getClients() const { return m_clients; }
 

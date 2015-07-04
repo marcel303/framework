@@ -2220,7 +2220,7 @@ void GameSim::tickPlay()
 
 	// level events
 
-	if (m_timeUntilNextLevelEvent > 0.f && PROTO_ENABLE_LEVEL_EVENTS)
+	if (m_timeUntilNextLevelEvent > 0.f && PROTO_ENABLE_LEVEL_EVENTS && m_gameMode != kGameMode_Lobby)
 	{
 		m_timeUntilNextLevelEvent = Calc::Max(0.f, m_timeUntilNextLevelEvent - dt);
 
@@ -2627,19 +2627,20 @@ void GameSim::drawPlay()
 
 void GameSim::drawPlayColor(Vec2Arg camTranslation)
 {
-	gxPushMatrix();
-	gxTranslatef(
-		camTranslation[0] * BACKGROUND_SCREENSHAKE_MULTIPLIER,
-		camTranslation[1] * BACKGROUND_SCREENSHAKE_MULTIPLIER,
-		0.f);
+	if (m_gameMode != kGameMode_Lobby)
 	{
-		// todo : background depends on level properties
-
-		//setBlend(BLEND_OPAQUE);
-		m_background.draw();
-		//setBlend(BLEND_ALPHA);
+		gxPushMatrix();
+		gxTranslatef(
+			camTranslation[0] * BACKGROUND_SCREENSHAKE_MULTIPLIER,
+			camTranslation[1] * BACKGROUND_SCREENSHAKE_MULTIPLIER,
+			0.f);
+		{
+			//setBlend(BLEND_OPAQUE);
+			m_background.draw();
+			//setBlend(BLEND_ALPHA);
+		}
+		gxPopMatrix();
 	}
-	gxPopMatrix();
 
 	gxPushMatrix();
 	gxTranslatef(camTranslation[0], camTranslation[1], 0.f);

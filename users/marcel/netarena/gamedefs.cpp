@@ -418,20 +418,6 @@ OPTION_DEFINE(int, FX_ATTACK_DUST_PLAYER_SPEED_TRESHOLD, "FX/Attack Dust/Player 
 
 OPTION_DEFINE(bool, UI_DEBUG_VISIBLE, "UI/Debug UI/Visible");
 
-OPTION_DEFINE(int, UI_CHARSELECT_BASE_X, "UI/Character Select/Base X");
-OPTION_DEFINE(int, UI_CHARSELECT_BASE_Y, "UI/Character Select/Base Y");
-OPTION_DEFINE(int, UI_CHARSELECT_SIZE_X, "UI/Character Select/Size X");
-OPTION_DEFINE(int, UI_CHARSELECT_SIZE_Y, "UI/Character Select/Size Y");
-OPTION_DEFINE(int, UI_CHARSELECT_STEP_X, "UI/Character Select/Step X");
-OPTION_DEFINE(int, UI_CHARSELECT_PREV_X, "UI/Character Select/Prev X");
-OPTION_DEFINE(int, UI_CHARSELECT_PREV_Y, "UI/Character Select/Prev Y");
-OPTION_DEFINE(int, UI_CHARSELECT_NEXT_X, "UI/Character Select/Next X");
-OPTION_DEFINE(int, UI_CHARSELECT_NEXT_Y, "UI/Character Select/Next Y");
-OPTION_DEFINE(int, UI_CHARSELECT_READY_X, "UI/Character Select/Ready X");
-OPTION_DEFINE(int, UI_CHARSELECT_READY_Y, "UI/Character Select/Ready Y");
-OPTION_DEFINE(int, UI_CHARSELECT_PORTRAIT_X, "UI/Character Select/Portrait X");
-OPTION_DEFINE(int, UI_CHARSELECT_PORTRAIT_Y, "UI/Character Select/Portrait Y");
-
 OPTION_DEFINE(int, UI_TEXTCHAT_MAX_TEXT_SIZE, "UI/Text Chat/Max Text Size");
 OPTION_DEFINE(int, UI_TEXTCHAT_X, "UI/Text Chat/X");
 OPTION_DEFINE(int, UI_TEXTCHAT_Y, "UI/Text Chat/Y");

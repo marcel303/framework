@@ -1604,7 +1604,8 @@ void Player::tick(float dt)
 		const uint32_t currentBlockMaskFloor = m_dirBlockMaskDir[1] > 0 ? m_dirBlockMask[1] : 0;
 		const uint32_t currentBlockMaskCeil = m_dirBlockMaskDir[1] < 0 ? m_dirBlockMask[1] : 0;
 
-		if (GAMESIM->m_gameMode == kGameMode_Lobby)
+		//if (GAMESIM->m_gameMode == kGameMode_Lobby)
+		if (false)
 		{
 			// none of that special traits stuff onboard the enterprise!
 		}
@@ -3458,7 +3459,7 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 				{
 					const Vec2 mid = m_pos + (m_collision.min + m_collision.max) / 2.f;
 					const bool vertical = Calc::Abs(velocity[1]) > Calc::Abs(velocity[0]);
-					GAMESIM->addBlindsEffect(m_index, mid[0], mid[1], 100, vertical, .5f, m_displayName.c_str());
+					GAMESIM->addBlindsEffect(m_index, mid[0], mid[1], 100, vertical, .5f, attacker->m_displayName.c_str());
 				}
 
 				if (m_instanceData->m_input.m_controllerIndex != -1)

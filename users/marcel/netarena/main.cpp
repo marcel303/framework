@@ -1700,7 +1700,7 @@ bool App::tick()
 				{
 					char name[32];
 					sprintf_s(name, sizeof(name), "Player %d", i);
-					g_app->netAddPlayer(client->m_channel, i, name, i);
+					g_app->netAddPlayer(client->m_channel, 0, name, i);
 				}
 
 				debugSyncGameSims();
@@ -2346,6 +2346,14 @@ void App::freeControllerIndex(int index)
 int App::getControllerAllocationCount() const
 {
 	return (MAX_GAMEPAD + 1) - m_freeControllerList.size();
+}
+
+bool App::isControllerIndexAvailable(int index) const
+{
+	for (size_t i = 0; i < m_freeControllerList.size(); ++i)
+		if (m_freeControllerList[i] == index)
+			return true;
+	return false;
 }
 
 void App::DialogQuit(void * arg, int dialogId, DialogResult result)

@@ -12,6 +12,15 @@
 
 #define JOIN_SPRITER Spriter("ui/lobby/join.scml")
 
+OPTION_DECLARE(int, UI_CHARSELECT_GAMEMODE_TEXT_X, 350);
+OPTION_DECLARE(int, UI_CHARSELECT_GAMEMODE_TEXT_Y, 616);
+OPTION_DECLARE(int, UI_CHARSELECT_GAMEMODE_SELECT_X, 105);
+OPTION_DECLARE(int, UI_CHARSELECT_GAMEMODE_SELECT_Y, 630);
+OPTION_DEFINE(int, UI_CHARSELECT_GAMEMODE_TEXT_X, "UI/Character Select/GameMode Text X");
+OPTION_DEFINE(int, UI_CHARSELECT_GAMEMODE_TEXT_Y, "UI/Character Select/GameMode Text Y");
+OPTION_DEFINE(int, UI_CHARSELECT_GAMEMODE_SELECT_X, "UI/Character Select/GameMode Select X");
+OPTION_DEFINE(int, UI_CHARSELECT_GAMEMODE_SELECT_Y, "UI/Character Select/GameMode Select Y");
+
 #if GRIDBASED_CHARSELECT
 
 OPTION_DECLARE(int, CHARCELL_INIT_X, 162);
@@ -30,6 +39,13 @@ OPTION_DEFINE(int, CHARCELL_SX, "UI/Character Select/Grid/Cell SX");
 OPTION_DEFINE(int, CHARCELL_SY, "UI/Character Select/Grid/Cell SY");
 OPTION_DEFINE(int, PLAYERCOL_SX, "UI/Character Select/Grid/Player Color SX");
 OPTION_DEFINE(int, PLAYERCOL_SY, "UI/Character Select/Grid/Player Color SY");
+
+OPTION_DECLARE(int, UI_CHARSELECT_PRESSTART_BASE_X, 290);
+OPTION_DECLARE(int, UI_CHARSELECT_PRESSTART_BASE_Y, 420);
+OPTION_DECLARE(int, UI_CHARSELECT_PRESSTART_STEP_X, 430);
+OPTION_DEFINE(int, UI_CHARSELECT_PRESSTART_BASE_X, "UI/Character Select/PressStart Base X");
+OPTION_DEFINE(int, UI_CHARSELECT_PRESSTART_BASE_Y, "UI/Character Select/PressStart Base Y");
+OPTION_DEFINE(int, UI_CHARSELECT_PRESSTART_STEP_X, "UI/Character Select/PressStart Step X");
 
 #define CHARGRID_SX 8
 #define CHARGRID_SY 1
@@ -62,8 +78,11 @@ void CharGrid::draw()
 			const int x2 = px + CHARCELL_SX;
 			const int y2 = py + CHARCELL_SY;
 
-			setColor(colorWhite);
-			drawRectLine(x1, y1, x2, y2);
+			if (g_devMode)
+			{
+				setColor(colorWhite);
+				drawRectLine(x1, y1, x2, y2);
+			}
 
 			for (int i = 0; i < MAX_PLAYERS; ++i)
 			{
@@ -77,14 +96,18 @@ void CharGrid::draw()
 					const int rx1 = x1 + i * PLAYERCOL_SX;
 					const int ry1 = y1 + 0;
 					const int rx2 = rx1 + PLAYERCOL_SX;
-					const int ry2 = ry1 + PLAYERCOL_SY;
+					const int ry2 = ry1 + PLAYERCOL_SY / (player.m_isReadyUpped ? 2 : 1);
 
 					const Color playerColor = getPlayerColor(i);
+					const Color color =
+						player.m_isReadyUpped
+						 ? playerColor
+						 : playerColor.interp(colorWhite, std::fmod(gameSim->m_physicalRoundTime * 2.f, 1.f) * .5f);
+
 					setColorf(
-						playerColor.r,
-						playerColor.g,
-						playerColor.b,
-						player.m_isReadyUpped ? 1.f : .5f);
+						color.r,
+						color.g,
+						color.b);
 					drawRect(rx1, ry1, rx2, ry2);
 				}
 			}
@@ -126,6 +149,33 @@ bool CharGrid::isValidGridCell(int x, int y)
 //
 
 #if !GRIDBASED_CHARSELECT
+
+OPTION_DECLARE(int, UI_CHARSELECT_BASE_X, 290);
+OPTION_DECLARE(int, UI_CHARSELECT_BASE_Y, 270);
+OPTION_DECLARE(int, UI_CHARSELECT_SIZE_X, 310);
+OPTION_DECLARE(int, UI_CHARSELECT_SIZE_Y, 400);
+OPTION_DECLARE(int, UI_CHARSELECT_STEP_X, 340);
+OPTION_DECLARE(int, UI_CHARSELECT_PREV_X, 45);
+OPTION_DECLARE(int, UI_CHARSELECT_PREV_Y, 300);
+OPTION_DECLARE(int, UI_CHARSELECT_NEXT_X, 265);
+OPTION_DECLARE(int, UI_CHARSELECT_NEXT_Y, 300);
+OPTION_DECLARE(int, UI_CHARSELECT_READY_X, 155);
+OPTION_DECLARE(int, UI_CHARSELECT_READY_Y, 350);
+OPTION_DECLARE(int, UI_CHARSELECT_PORTRAIT_X, 155);
+OPTION_DECLARE(int, UI_CHARSELECT_PORTRAIT_Y, 270);
+OPTION_DEFINE(int, UI_CHARSELECT_BASE_X, "UI/Character Select/Base X");
+OPTION_DEFINE(int, UI_CHARSELECT_BASE_Y, "UI/Character Select/Base Y");
+OPTION_DEFINE(int, UI_CHARSELECT_SIZE_X, "UI/Character Select/Size X");
+OPTION_DEFINE(int, UI_CHARSELECT_SIZE_Y, "UI/Character Select/Size Y");
+OPTION_DEFINE(int, UI_CHARSELECT_STEP_X, "UI/Character Select/Step X");
+OPTION_DEFINE(int, UI_CHARSELECT_PREV_X, "UI/Character Select/Prev X");
+OPTION_DEFINE(int, UI_CHARSELECT_PREV_Y, "UI/Character Select/Prev Y");
+OPTION_DEFINE(int, UI_CHARSELECT_NEXT_X, "UI/Character Select/Next X");
+OPTION_DEFINE(int, UI_CHARSELECT_NEXT_Y, "UI/Character Select/Next Y");
+OPTION_DEFINE(int, UI_CHARSELECT_READY_X, "UI/Character Select/Ready X");
+OPTION_DEFINE(int, UI_CHARSELECT_READY_Y, "UI/Character Select/Ready Y");
+OPTION_DEFINE(int, UI_CHARSELECT_PORTRAIT_X, "UI/Character Select/Portrait X");
+OPTION_DEFINE(int, UI_CHARSELECT_PORTRAIT_Y, "UI/Character Select/Portrait Y");
 
 CharSelector::CharSelector(Client * client, LobbyMenu * menu, int playerId)
 	: m_client(client)
@@ -277,6 +327,13 @@ void LobbyMenu::tick(float dt)
 {
 	m_joinSpriterState.updateAnim(JOIN_SPRITER, dt);
 
+	m_prevGameMode->setPosition(
+		UI_CHARSELECT_GAMEMODE_SELECT_X,
+		UI_CHARSELECT_GAMEMODE_SELECT_Y);
+	m_nextGameMode->setPosition(
+		UI_CHARSELECT_GAMEMODE_SELECT_X + 60,
+		UI_CHARSELECT_GAMEMODE_SELECT_Y);
+
 	if (g_app->m_isHost && g_app->isSelectedClient(m_client))
 	{
 		if (m_client->m_gameSim->m_gameStartTicks == 0)
@@ -300,8 +357,45 @@ void LobbyMenu::tick(float dt)
 
 void LobbyMenu::draw()
 {
+	const GameSim * gameSim = m_client->m_gameSim;
+
+#if GRIDBASED_CHARSELECT
+	const float t = gameSim->m_physicalRoundTime;
+	const float s = 0.05f;
+	const float dx = std::sinf(t * 1.123f * s) * 100.f;
+	const float dy = std::cosf(t * 1.234f * s) * 50.f;
+	Sprite stars("ui/lobby/stars.png");
+	stars.x = (GFX_SX - stars.getWidth()) / 2.f + dx;
+	stars.y = (GFX_SY - stars.getHeight()) / 2.f + dy;
+	stars.pixelpos = false;
+	stars.filter = FILTER_LINEAR;
+	stars.draw();
+#endif
+
 	setColor(colorWhite);
 	Sprite("ui/lobby/background.png").draw();
+
+#if GRIDBASED_CHARSELECT
+	m_charGrid->draw();
+
+	setFont("calibri.ttf");
+	setColorf(1.f, 1.f, 1.f, std::fmod(gameSim->m_physicalRoundTime * 1.5f, 1.f));
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+	{
+		if (i >= MAX_GAMEPAD || !gamepad[i].isConnected)
+			continue;
+		if (!g_app->isControllerIndexAvailable(i))
+			continue;
+
+		drawText(
+			UI_CHARSELECT_PRESSTART_BASE_X + i * UI_CHARSELECT_PRESSTART_STEP_X,
+			UI_CHARSELECT_PRESSTART_BASE_Y,
+			48,
+			0.f, 0.f,
+			"P%d PRESS START",
+			i + 1);
+	}
+#endif
 
 	if (g_app->m_isHost)
 	{
@@ -309,8 +403,6 @@ void LobbyMenu::draw()
 		m_prevGameMode->draw();
 		m_nextGameMode->draw();
 	}
-
-	m_charGrid->draw();
 
 #if !GRIDBASED_CHARSELECT
 	for (int i = 0; i < MAX_PLAYERS; ++i)
@@ -365,6 +457,27 @@ void LobbyMenu::draw()
 		}
 	}
 #endif
+
+	// draw current game mode selection
+
+	setFont("calibri.ttf");
+	setColor(127, 255, 227);
+	drawText(
+		UI_CHARSELECT_GAMEMODE_TEXT_X,
+		UI_CHARSELECT_GAMEMODE_TEXT_Y,
+		48, 0.f, 0.f, "[%s]", g_gameModeNames[gameSim->m_desiredGameMode]);
+
+	// draw game start timer
+
+	if (gameSim->m_gameStartTicks != 0)
+	{
+		const float timeRemaining = gameSim->m_gameStartTicks / float(TICKS_PER_SECOND);
+
+		// todo : options for position
+		setFont("calibri.ttf");
+		setColor(127, 255, 227);
+		drawText(GFX_SX/2, GFX_SY - 75, 48, 0.f, 0.f, "ROUND START IN T-%02.2f", timeRemaining);
+	}
 
 	setColor(colorWhite);
 }
