@@ -1886,7 +1886,7 @@ void GameSim::tickMenus()
 			{
 				// character select
 
-			#if 1
+			#if GRIDBASED_CHARSELECT
 				if (!player.m_isReadyUpped)
 				{
 					int dx = 0;

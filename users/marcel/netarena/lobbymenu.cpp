@@ -291,7 +291,9 @@ bool CharSelector::isLocalPlayer() const
 
 LobbyMenu::LobbyMenu(Client * client)
 	: m_client(client)
+#if GRIDBASED_CHARSELECT
 	, m_charGrid(0)
+#endif
 	, m_prevGameMode(new Button(50,  GFX_SY - 80, "charselect-prev.png"))
 	, m_nextGameMode(new Button(150, GFX_SY - 80, "charselect-next.png"))
 {
@@ -360,6 +362,7 @@ void LobbyMenu::draw()
 	const GameSim * gameSim = m_client->m_gameSim;
 
 #if GRIDBASED_CHARSELECT
+	setColor(colorWhite);
 	const float t = gameSim->m_physicalRoundTime;
 	const float s = 0.05f;
 	const float dx = std::sinf(t * 1.123f * s) * 100.f;
@@ -476,7 +479,7 @@ void LobbyMenu::draw()
 		// todo : options for position
 		setFont("calibri.ttf");
 		setColor(127, 255, 227);
-		drawText(GFX_SX/2, GFX_SY - 75, 48, 0.f, 0.f, "ROUND START IN T-%02.2f", timeRemaining);
+		drawText(GFX_SX/2, 330, 48, 0.f, 0.f, "ROUND START IN T-%02.2f", timeRemaining);
 	}
 
 	setColor(colorWhite);
