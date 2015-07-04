@@ -82,7 +82,7 @@ void PlayerInput::gather(bool useKeyboard, int gamepadIndex, bool monkeyMode)
 		const Gamepad & g = gamepad[gamepadIndex];
 
 		if (g.isDown(GAMEPAD_START))
-			gamepad[gamepadIndex].vibrate(1.f, .5f);
+			gamepad[gamepadIndex].vibrate(.5f, .5f);
 
 		if (g.isDown(DPAD_LEFT) || g.getAnalog(0, ANALOG_X) < -0.4f)
 			buttons |= INPUT_BUTTON_LEFT;
