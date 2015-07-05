@@ -22,8 +22,10 @@
 // configuration
 
 #if defined(DEBUG)
+	#define ENABLE_LOGGING_DBG 1
 	#define ENABLE_LOGGING 1
 #else
+	#define ENABLE_LOGGING_DBG 0 // do not alter
 	#define ENABLE_LOGGING 0 // do not alter
 #endif
 
@@ -843,13 +845,17 @@ static T random(T min, T max)
 
 // logging
 
-#if ENABLE_LOGGING
+#if ENABLE_LOGGING && ENABLE_LOGGING_DBG
 	void logDebug(const char * format, ...);
+#else
+	#define logDebug(...) do { } while (false)
+#endif
+
+#if ENABLE_LOGGING
 	void log(const char * format, ...);
 	void logWarning(const char * format, ...);
 	void logError(const char * format, ...);
 #else
-	#define logDebug(...) do { } while (false)
 	#define log(...) do { } while (false)
 	#define logWarning(...) do { } while (false)
 	#define logError(...) do { } while (false)

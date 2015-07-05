@@ -29,6 +29,8 @@
 #include "model.h"
 #include "spriter.h"
 
+#include "Timer.h"
+
 // -----
 
 #if ENABLE_UTF8_SUPPORT
@@ -686,6 +688,9 @@ std::vector<std::string> listFiles(const char * path, bool recurse)
 void Framework::fillCachesWithPath(const char * path, bool recurse)
 {
 	std::vector<std::string> files = listFiles(path, recurse);
+
+	uint64_t lastProcessTime = g_TimerRT.TimeMS_get();
+
 	for (size_t i = 0; i < files.size(); ++i)
 	{
 		const std::string & fs = files[i];
@@ -728,6 +733,13 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 			std::string name = f;
 			name = name.substr(0, name.rfind('.'));
 			Shader(name.c_str());
+		}
+
+		const uint64_t currentTime = g_TimerRT.TimeMS_get();
+		if (currentTime - lastProcessTime >= 20)
+		{
+			lastProcessTime = currentTime;
+			process();
 		}
 	}
 }
@@ -3917,6 +3929,8 @@ void changeDirectory(const char * path)
 
 static int logLevel = 0;
 
+#if ENABLE_LOGGING_DBG
+
 void logDebug(const char * format, ...)
 {
 	if (logLevel > 0)
@@ -3930,6 +3944,8 @@ void logDebug(const char * format, ...)
 	
 	fprintf(stderr, "[DD] %s\n", text);
 }
+
+#endif
 
 void log(const char * format, ...)
 {
