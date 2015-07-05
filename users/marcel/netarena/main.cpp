@@ -1065,6 +1065,10 @@ bool App::init()
 	g_optionManager.Load("options.txt");
 	g_optionManager.Load("gameoptions.txt");
 
+#if PUBLIC_DEMO_BUILD
+	DEMOMODE = true;
+#endif
+
 	if (g_devMode)
 	{
 		LIBNET_CHANNEL_ENABLE_TIMEOUTS = false;

@@ -64,12 +64,14 @@ bool MainMenu::tick(float dt)
 
 		g_app->connect("127.0.0.1");
 	}
+#if !PUBLIC_DEMO_BUILD
 	else if (m_findGame->isClicked())
 	{
 		logDebug("find game!");
 
 		g_app->findGame();
 	}
+#endif
 	else if (m_quitApp->isClicked())
 	{
 		logDebug("exit game!");
@@ -89,6 +91,8 @@ void MainMenu::draw()
 	Sprite("mainmenu-back.png").draw();
 
 	m_newGame->draw();
+#if !PUBLIC_DEMO_BUILD
 	m_findGame->draw();
+#endif
 	m_quitApp->draw();
 }

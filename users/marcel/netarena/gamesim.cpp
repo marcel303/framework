@@ -1391,6 +1391,8 @@ void GameSim::setGameState(::GameState gameState)
 		break;
 
 	case kGameState_NewGame:
+		m_consecutiveRoundCount = 0;
+
 		resetGameWorld(); // todo : why was this moved?
 
 		// reset players
@@ -1514,6 +1516,7 @@ void GameSim::newRound(const char * mapOverride)
 	setGameState(kGameState_RoundBegin);
 
 	m_nextRoundNumber++;
+	m_consecutiveRoundCount++;
 }
 
 void GameSim::endRound()
@@ -2507,7 +2510,7 @@ void GameSim::tickRoundComplete(float dt)
 		m_roundEnd.m_delay -= dt * m_roundEnd.m_delayTimeRcp;
 		if (m_roundEnd.m_delay <= 0.f)
 		{
-			if (DEMOMODE || (getNumPlayers() < MIN_PLAYER_COUNT))
+			if ((DEMOMODE && m_consecutiveRoundCount >= MAX_CONSECUTIVE_ROUND_COUNT) || (getNumPlayers() < MIN_PLAYER_COUNT))
 			{
 				setGameState(kGameState_OnlineMenus);
 			}

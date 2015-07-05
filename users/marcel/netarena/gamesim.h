@@ -920,6 +920,7 @@ struct GameStateData
 	float m_roundTime;
 	float m_physicalRoundTime;
 	uint32_t m_nextRoundNumber;
+	uint32_t m_consecutiveRoundCount;
 
 	struct RoundBegin
 	{
