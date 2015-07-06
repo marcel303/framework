@@ -534,6 +534,7 @@ struct Player
 	} m_shieldSpecial;
 
 	float m_respawnTimer; // when this timer counts to zero, the player is automatically respawn
+	float m_respawnTimerRcp;
 	bool m_canRespawn; // set when the player is allowed to respawn, which is after the death animation is done
 	bool m_canTaunt; // set when the player is allowed to taunt, which is after the death animation is done. it's reset after a taunt
 	bool m_isRespawn; // set after the first respawn. the first spawn is special, as the player doesn't need to press X and isn't allowed to use taunt

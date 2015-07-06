@@ -11,6 +11,8 @@
 
 #define ENABLE_CHARACTER_OUTLINE 1
 
+#define AUTO_RESPAWN 1
+
 //#pragma optimize("", off)
 
 /*
@@ -914,13 +916,24 @@ void Player::tick(float dt)
 	if (g_devMode && !g_monkeyMode && !DEMOMODE && m_input.wentDown(INPUT_BUTTON_START))
 		respawn(0);
 
+#if AUTO_RESPAWN
+	if (!m_isAlive && !m_canRespawn)
+	{
+		m_canRespawn = true;
+		m_canTaunt = true;
+		m_respawnTimer = m_isRespawn ? 2.5f : 0.f;
+		m_respawnTimerRcp = m_isRespawn ? 1.f / m_respawnTimer : 0.f;
+	}
+#endif
+
 	if (!m_isAlive && !m_isAnimDriven)
 	{
 		if (!m_canRespawn)
 		{
 			m_canRespawn = true;
 			m_canTaunt = true;
-			m_respawnTimer = m_isRespawn ? 3.f : 0.f;
+			m_respawnTimer = m_isRespawn ? 2.f : 0.f;
+			m_respawnTimerRcp = m_isRespawn ? 1.f / m_respawnTimer : 0.f;
 		}
 
 		if (m_canTaunt && m_input.wentDown(INPUT_BUTTON_Y))
@@ -931,12 +944,16 @@ void Player::tick(float dt)
 
 		if (GAMESIM->m_gameState == kGameState_Play &&
 			!GAMESIM->m_levelEvents.spikeWalls.isActive() &&
+		#if AUTO_RESPAWN
+			(m_respawnTimer <= 0.f))
+		#else
 			(m_input.wentDown(INPUT_BUTTON_X) || (PLAYER_RESPAWN_AUTOMICALLY && m_respawnTimer <= 0.f)))
+		#endif
 		{
 			respawn(0);
 		}
 
-		m_respawnTimer -= dt;
+		m_respawnTimer = Calc::Max(0.f, m_respawnTimer - dt);
 	}
 
 	//if (m_isAlive)
@@ -1267,7 +1284,7 @@ void Player::tick(float dt)
 					bulletType = kBulletType_B;
 					m_attack.cooldown = PLAYER_FIRE_COOLDOWN;
 					
-					GAMESIM->playSound("gun-fire.ogg", 30);
+					GAMESIM->playSound("gun-fire.ogg");
 				}
 				else if (weaponType == kPlayerWeapon_Ice)
 				{
@@ -1276,7 +1293,7 @@ void Player::tick(float dt)
 					bulletEffect = kBulletEffect_Ice;
 					m_attack.cooldown = PLAYER_FIRE_COOLDOWN;
 
-					GAMESIM->playSound("gun-fire-ice.ogg", 30);
+					GAMESIM->playSound("gun-fire-ice.ogg");
 				}
 				else if (weaponType == kPlayerWeapon_Bubble)
 				{
@@ -1310,7 +1327,7 @@ void Player::tick(float dt)
 						m_facing[0] < 0,
 						m_facing[1] < 0);
 
-					GAMESIM->playSound("gun-fire-bubble.ogg", 30);
+					GAMESIM->playSound("gun-fire-bubble.ogg");
 				}
 				else if (weaponType == kPlayerWeapon_Grenade)
 				{
@@ -2771,6 +2788,28 @@ void Player::draw() const
 		drawText(m_pos[0], m_pos[1] + UI_PLAYER_EMBLEM_TEXT_OFFSET_Y, 20, 0.f, +1.f, "%d", m_score);
 	}
 
+#if AUTO_RESPAWN
+	if (!m_isAlive && m_respawnTimerRcp != 0.f && (GAMESIM->m_gameState == kGameState_Play) && m_isRespawn)
+	{
+		int sx = 60;
+		int sy = 10;
+
+		setColor(colorBlack);
+		drawRect(
+			m_pos[0] - sx/2, m_pos[1] - sy/2,
+			m_pos[0] + sx/2, m_pos[1] + sy/2);
+
+		setColorf(255, 0, 0);
+		drawRect(
+			m_pos[0] - sx/2, m_pos[1] - sy/2,
+			m_pos[0] - sx/2 + sx * m_respawnTimer * m_respawnTimerRcp, m_pos[1] + sy/2);
+
+		setColor(0, 0, 63);
+		drawRectLine(
+			m_pos[0] - sx/2, m_pos[1] - sy/2,
+			m_pos[0] + sx/2, m_pos[1] + sy/2);
+	}
+#else
 	if (!m_isAlive && m_canRespawn && (GAMESIM->m_gameState == kGameState_Play) && m_isRespawn)
 	{
 		int sx = 40;
@@ -2786,6 +2825,7 @@ void Player::draw() const
 		setFont("calibri.ttf");
 		drawText(m_pos[0], m_pos[1], 24, 0, 0, "(X)");
 	}
+#endif
 
 	// draw text chat
 
