@@ -489,7 +489,7 @@ void LobbyMenu::draw()
 		// todo : options for position
 		setFont("calibri.ttf");
 		setColor(127, 255, 227);
-		drawText(GFX_SX/2, 330, 48, 0.f, 0.f, "ROUND START IN T-%02.2f", timeRemaining);
+		drawText(GFX_SX/2, 410, 48, 0.f, 0.f, "ROUND START IN T-%02.2f", timeRemaining);
 	}
 
 	setColor(colorWhite);

@@ -1412,11 +1412,20 @@ void GameSim::setGameState(::GameState gameState)
 
 	case kGameState_RoundBegin:
 		{
-			playSound("round-begin.ogg");
-
 			m_roundBegin = RoundBegin();
-			m_roundBegin.m_delayTimeRcp = 1.f / GAMESTATE_ROUNDBEGIN_TRANSITION_TIME;
-			m_roundBegin.m_delay = 1.f;
+			if (DEMOMODE && m_consecutiveRoundCount == 0)
+			{
+				m_roundBegin.m_delayTimeRcp = 1.f / 4.f;
+				m_roundBegin.m_delay = 1.f;
+				m_roundBegin.m_state = RoundBegin::kState_ShowControls;
+			}
+			else
+			{
+				m_roundBegin.m_delayTimeRcp = 1.f / GAMESTATE_ROUNDBEGIN_TRANSITION_TIME;
+				m_roundBegin.m_delay = 1.f;
+				m_roundBegin.m_state = RoundBegin::kState_LevelTransition;
+				playSound("round-begin.ogg");
+			}
 
 			for (int i = 0; i < MAX_PLAYERS; ++i)
 			{
@@ -2000,7 +2009,20 @@ void GameSim::tickMenus()
 
 void GameSim::tickRoundBegin(float dt)
 {
-	if (m_roundBegin.m_state == RoundBegin::kState_LevelTransition)
+	if (m_roundBegin.m_state == RoundBegin::kState_ShowControls)
+	{
+		Assert(m_roundBegin.m_delay > 0.f);
+		m_roundBegin.m_delay -= dt * m_roundBegin.m_delayTimeRcp;
+
+		if (m_roundBegin.m_delay <= 0.f)
+		{
+			m_roundBegin.m_state = RoundBegin::kState_LevelTransition;
+			m_roundBegin.m_delayTimeRcp = 1.f / GAMESTATE_ROUNDBEGIN_TRANSITION_TIME;
+			m_roundBegin.m_delay = 1.f;
+			playSound("round-begin.ogg");
+		}
+	}
+	else if (m_roundBegin.m_state == RoundBegin::kState_LevelTransition)
 	{
 		Assert(m_roundBegin.m_delay > 0.f);
 		m_roundBegin.m_delay -= dt * m_roundBegin.m_delayTimeRcp;
@@ -2012,7 +2034,7 @@ void GameSim::tickRoundBegin(float dt)
 			m_roundBegin.m_delay = 1.f;
 		}
 	}
-	if (m_roundBegin.m_state == RoundBegin::kState_SpawnPlayers)
+	else if (m_roundBegin.m_state == RoundBegin::kState_SpawnPlayers)
 	{
 		Assert(m_roundBegin.m_delay > 0.f);
 		m_roundBegin.m_delay -= dt * m_roundBegin.m_delayTimeRcp;
@@ -2558,6 +2580,16 @@ void GameSim::drawPlay()
 		drawPlayColor(camTranslation);
 	}
 	popSurface();
+
+	if (m_gameState == kGameState_RoundBegin && m_roundBegin.m_state == RoundBegin::kState_ShowControls)
+	{
+		pushSurface(g_colorMap);
+		{
+			setColor(colorWhite);
+			Sprite("ui/controls.png").draw();
+		}
+		popSurface();
+	}
 
 	if (m_gameState == kGameState_RoundBegin && m_roundBegin.m_state == RoundBegin::kState_LevelTransition)
 	{

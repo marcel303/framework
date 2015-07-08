@@ -927,6 +927,7 @@ struct GameStateData
 	{
 		enum State
 		{
+			kState_ShowControls,
 			kState_LevelTransition,
 			kState_SpawnPlayers,
 			kState_FightMessage
