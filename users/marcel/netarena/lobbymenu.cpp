@@ -24,7 +24,7 @@ OPTION_DEFINE(int, UI_CHARSELECT_GAMEMODE_SELECT_Y, "UI/Character Select/GameMod
 #if GRIDBASED_CHARSELECT
 
 OPTION_DECLARE(int, CHARCELL_INIT_X, 162);
-OPTION_DECLARE(int, CHARCELL_INIT_Y, 102);
+OPTION_DECLARE(int, CHARCELL_INIT_Y, 155);
 OPTION_DECLARE(int, CHARCELL_SPACING_X, 38);
 OPTION_DECLARE(int, CHARCELL_SPACING_Y, 0);
 OPTION_DECLARE(int, CHARCELL_SX, 166);
@@ -93,10 +93,19 @@ void CharGrid::draw()
 				characterIndexToXY(player.m_characterIndex, x, y);
 				if (x == cx && y == cy)
 				{
+				#if 0
 					const int rx1 = x1 + i * PLAYERCOL_SX;
 					const int ry1 = y1 + 0;
 					const int rx2 = rx1 + PLAYERCOL_SX;
 					const int ry2 = ry1 + PLAYERCOL_SY / (player.m_isReadyUpped ? 2 : 1);
+					const float a = 1.f;
+				#else
+					const int rx1 = x1 + 0;
+					const int ry1 = y1 + CHARCELL_SY * i / MAX_PLAYERS;
+					const int rx2 = rx1 + CHARCELL_SX;
+					const int ry2 = ry1 + CHARCELL_SY / MAX_PLAYERS;
+					const float a = .5f;
+				#endif
 
 					const Color playerColor = getPlayerColor(i);
 					const Color color =
@@ -107,7 +116,8 @@ void CharGrid::draw()
 					setColorf(
 						color.r,
 						color.g,
-						color.b);
+						color.b,
+						a);
 					drawRect(rx1, ry1, rx2, ry2);
 				}
 			}

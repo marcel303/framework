@@ -1916,6 +1916,8 @@ void GameSim::tickMenus()
 						if (CharGrid::isValidGridCell(x, y))
 						{
 							player.m_characterIndex = CharGrid::xyToCharacterIndex(x, y);
+
+							playSound("ui/sounds/charselect-change.ogg");
 						}
 					}
 				}
@@ -1943,6 +1945,8 @@ void GameSim::tickMenus()
 				{
 					if (player.m_input.wentDown(INPUT_BUTTON_A) || (player.m_input.m_actions & (1 << kPlayerInputAction_ReadyUp)))
 					{
+						playSound("ui/sounds/charselect-select.ogg");
+
 						player.m_isReadyUpped = true;
 
 						Vec2 pos(560, 900);
@@ -1953,6 +1957,8 @@ void GameSim::tickMenus()
 				{
 					if (player.m_input.wentDown(INPUT_BUTTON_Y) || (player.m_input.m_actions & (1 << kPlayerInputAction_ReadyUp)))
 					{
+						playSound("ui/sounds/charselect-deselect.ogg");
+
 						player.m_isReadyUpped = false;
 
 						player.despawn(false);
