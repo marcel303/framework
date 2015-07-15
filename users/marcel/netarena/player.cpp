@@ -921,7 +921,7 @@ void Player::tick(float dt)
 	{
 		m_canRespawn = true;
 		m_canTaunt = true;
-		m_respawnTimer = m_isRespawn ? 2.5f : 0.f;
+		m_respawnTimer = m_isRespawn ? 1.5f : 0.f;
 		m_respawnTimerRcp = m_isRespawn ? 1.f / m_respawnTimer : 0.f;
 	}
 #endif

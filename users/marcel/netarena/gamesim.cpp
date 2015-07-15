@@ -1954,12 +1954,15 @@ void GameSim::tickMenus()
 				{
 					if (player.m_input.wentDown(INPUT_BUTTON_A) || (player.m_input.m_actions & (1 << kPlayerInputAction_ReadyUp)))
 					{
-						playSound("ui/sounds/charselect-select.ogg");
+						if (!DEMOMODE || (player.m_characterIndex != 4 && player.m_characterIndex != 7))
+						{
+							playSound("ui/sounds/charselect-select.ogg");
 
-						player.m_isReadyUpped = true;
+							player.m_isReadyUpped = true;
 
-						Vec2 pos(560, 900);
-						player.respawn(&pos);
+							Vec2 pos(560, 900);
+							player.respawn(&pos);
+						}
 					}
 				}
 				else
