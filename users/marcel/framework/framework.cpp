@@ -276,7 +276,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	if (!g_soundPlayer.init(numSoundSources))
 	{
 		logError("failed to initialize sound player");
-		return false;
+		//return false;
 	}
 
 	// load settings

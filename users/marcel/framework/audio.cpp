@@ -523,7 +523,8 @@ bool SoundPlayer::shutdown()
 void SoundPlayer::process()
 {
 #if !THREADED_MUSIC_PLAYER
-	m_musicOutput->Update(m_musicStream);
+	if (m_musicOutput)
+		m_musicOutput->Update(m_musicStream);
 #endif
 }
 
@@ -641,19 +642,26 @@ void SoundPlayer::setSoundVolume(int playId, float volume)
 void SoundPlayer::playMusic(const char * filename, bool loop)
 {
 	MutexScope scope(m_musicMutex);
-	m_musicStream->Open(filename, loop);
-	m_musicOutput->Play();
+	if (m_musicStream && m_musicOutput)
+	{
+		m_musicStream->Open(filename, loop);
+		m_musicOutput->Play();
+	}
 }
 
 void SoundPlayer::stopMusic()
 {
 	MutexScope scope(m_musicMutex);
-	m_musicStream->Close();
-	m_musicOutput->Stop();
+	if (m_musicStream && m_musicOutput)
+	{
+		m_musicStream->Close();
+		m_musicOutput->Stop();
+	}
 }
 
 void SoundPlayer::setMusicVolume(float volume)
 {
 	MutexScope scope(m_musicMutex);
-	m_musicOutput->Volume_set(volume);
+	if (m_musicOutput)
+		m_musicOutput->Volume_set(volume);
 }
