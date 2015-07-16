@@ -1329,6 +1329,7 @@ static const char * s_appStates[2] =
 
 void App::setAppState(AppState state)
 {
+	Assert(state < sizeof(s_appStates) / sizeof(s_appStates[0]));
 	LOG_DBG("setAppState: %s", s_appStates[state]);
 
 	if (state == m_appState)

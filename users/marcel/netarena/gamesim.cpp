@@ -18,6 +18,12 @@
 
 #include "BinaryDiff.h" // fixme : remove
 
+//#pragma optimize("", off)
+
+OPTION_DECLARE(bool, g_checkCRCs, true);
+OPTION_DEFINE(bool, g_checkCRCs, "App/Check CRCs");
+OPTION_ALIAS(g_checkCRCs, "checkcrc");
+
 OPTION_DECLARE(bool, g_noSound, false);
 OPTION_DEFINE(bool, g_noSound, "Sound/Disable Sound Effects");
 OPTION_ALIAS(g_noSound, "nosound");
@@ -1238,6 +1244,9 @@ GameSim::~GameSim()
 #if ENABLE_GAMESTATE_DESYNC_DETECTION
 uint32_t GameSim::calcCRC() const
 {
+	if (!g_checkCRCs)
+		return 0;
+
 	clearPlayerPtrs();
 
 	uint32_t result = 0;

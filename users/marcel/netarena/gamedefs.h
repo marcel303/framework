@@ -406,16 +406,24 @@ OPTION_DECLARE(int, UI_PLAYER_EMBLEM_TEXT_OFFSET_Y, -154);
 OPTION_DECLARE(int, UI_KILLCOUNTER_OFFSET_X, -30);
 OPTION_DECLARE(int, UI_KILLCOUNTER_OFFSET_Y, -60);
 
+OPTION_DECLARE(int, EMOTE_DISPLAY_OFFSET_Y, -145);
+OPTION_DECLARE(float, EMOTE_DISPLAY_TIME, 3.f);
+
 OPTION_DECLARE(bool, VOLCANO_LOOP, false);
 OPTION_DECLARE(int, VOLCANO_LOOP_TIME, 60);
 
-#define INPUT_BUTTON_UP       (1 << 0)
-#define INPUT_BUTTON_DOWN     (1 << 1)
-#define INPUT_BUTTON_LEFT     (1 << 2)
-#define INPUT_BUTTON_RIGHT    (1 << 3)
-#define INPUT_BUTTON_A        (1 << 4)
-#define INPUT_BUTTON_B        (1 << 5)
-#define INPUT_BUTTON_X        (1 << 6)
-#define INPUT_BUTTON_Y        (1 << 7)
-#define INPUT_BUTTON_START    (1 << 8)
-#define INPUT_BUTTON_L1R1     (1 << 9)
+#define INPUT_BUTTON_UP         (1 << 0)
+#define INPUT_BUTTON_DOWN       (1 << 1)
+#define INPUT_BUTTON_LEFT       (1 << 2)
+#define INPUT_BUTTON_RIGHT      (1 << 3)
+#define INPUT_BUTTON_A          (1 << 4)
+#define INPUT_BUTTON_B          (1 << 5)
+#define INPUT_BUTTON_X          (1 << 6)
+#define INPUT_BUTTON_Y          (1 << 7)
+#define INPUT_BUTTON_START      (1 << 8)
+#define INPUT_BUTTON_L1         (1 << 9)
+#define INPUT_BUTTON_R1         (1 << 10)
+#define INPUT_BUTTON_DPAD_LEFT  (1 << 11)
+#define INPUT_BUTTON_DPAD_RIGHT (1 << 12)
+#define INPUT_BUTTON_DPAD_UP    (1 << 13)
+#define INPUT_BUTTON_DPAD_DOWN  (1 << 14)

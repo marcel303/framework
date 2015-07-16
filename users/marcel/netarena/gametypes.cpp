@@ -63,6 +63,7 @@ void PlayerInput::gather(bool useKeyboard, int gamepadIndex, bool monkeyMode)
 			buttons |= INPUT_BUTTON_DOWN;
 			analogY += PlayerInput::AnalogRange;
 		}
+
 		if (keyboard.isDown(SDLK_a) || keyboard.isDown(SDLK_SPACE) || keyboard.isDown(SDLK_RETURN))
 			buttons |= INPUT_BUTTON_A;
 		if (keyboard.isDown(SDLK_s))
@@ -71,10 +72,22 @@ void PlayerInput::gather(bool useKeyboard, int gamepadIndex, bool monkeyMode)
 			buttons |= INPUT_BUTTON_X;
 		if (keyboard.isDown(SDLK_x))
 			buttons |= INPUT_BUTTON_Y;
+
 		if (keyboard.isDown(SDLK_d))
 			buttons |= INPUT_BUTTON_START;
 		if (keyboard.isDown(SDLK_c))
-			buttons |= INPUT_BUTTON_L1R1;
+			buttons |= INPUT_BUTTON_L1;
+		if (keyboard.isDown(SDLK_v))
+			buttons |= INPUT_BUTTON_R1;
+
+		if (keyboard.isDown(SDLK_h))
+			buttons |= INPUT_BUTTON_DPAD_LEFT;
+		if (keyboard.isDown(SDLK_k))
+			buttons |= INPUT_BUTTON_DPAD_RIGHT;
+		if (keyboard.isDown(SDLK_u))
+			buttons |= INPUT_BUTTON_DPAD_UP;
+		if (keyboard.isDown(SDLK_j))
+			buttons |= INPUT_BUTTON_DPAD_DOWN;
 	}
 
 	if (gamepadIndex >= 0 && gamepadIndex < MAX_GAMEPAD && gamepad[gamepadIndex].isConnected)
@@ -92,6 +105,7 @@ void PlayerInput::gather(bool useKeyboard, int gamepadIndex, bool monkeyMode)
 			buttons |= INPUT_BUTTON_UP;
 		if (g.isDown(DPAD_DOWN) || g.getAnalog(0, ANALOG_Y) > +0.4f)
 			buttons |= INPUT_BUTTON_DOWN;
+
 		if (g.isDown(GAMEPAD_A))
 			buttons |= INPUT_BUTTON_A;
 		if (g.isDown(GAMEPAD_B))
@@ -100,10 +114,22 @@ void PlayerInput::gather(bool useKeyboard, int gamepadIndex, bool monkeyMode)
 			buttons |= INPUT_BUTTON_X;
 		if (g.isDown(GAMEPAD_Y))
 			buttons |= INPUT_BUTTON_Y;
+
 		if (g.isDown(GAMEPAD_START))
 			buttons |= INPUT_BUTTON_START;
-		if (g.isDown(GAMEPAD_L1) || g.isDown(GAMEPAD_R1))
-			buttons |= INPUT_BUTTON_L1R1;
+		if (g.isDown(GAMEPAD_L1))
+			buttons |= INPUT_BUTTON_L1;
+		if (g.isDown(GAMEPAD_R1))
+			buttons |= INPUT_BUTTON_R1;
+
+		if (g.isDown(DPAD_LEFT))
+			buttons |= INPUT_BUTTON_DPAD_LEFT;
+		if (g.isDown(DPAD_RIGHT))
+			buttons |= INPUT_BUTTON_DPAD_RIGHT;
+		if (g.isDown(DPAD_UP))
+			buttons |= INPUT_BUTTON_DPAD_UP;
+		if (g.isDown(DPAD_DOWN))
+			buttons |= INPUT_BUTTON_DPAD_DOWN;
 
 		analogX = Calc::Mid((int)(analogX + g.getAnalog(0, ANALOG_X) * PlayerInput::AnalogRange), -PlayerInput::AnalogRange, +PlayerInput::AnalogRange);
 		analogY = Calc::Mid((int)(analogY + g.getAnalog(0, ANALOG_Y) * PlayerInput::AnalogRange), -PlayerInput::AnalogRange, +PlayerInput::AnalogRange);
@@ -131,6 +157,7 @@ void PlayerInput::gather(bool useKeyboard, int gamepadIndex, bool monkeyMode)
 			buttons |= INPUT_BUTTON_DOWN;
 			analogY += PlayerInput::AnalogRange;
 		}
+
 		if ((rand() % 60) == 0)
 			buttons |= INPUT_BUTTON_A;
 		if ((rand() % 60) == 0)
@@ -139,10 +166,22 @@ void PlayerInput::gather(bool useKeyboard, int gamepadIndex, bool monkeyMode)
 			buttons |= INPUT_BUTTON_X;
 		if ((rand() % 60) == 0)
 			buttons |= INPUT_BUTTON_Y;
+
 		if ((rand() % 60) == 0)
 			buttons |= INPUT_BUTTON_START;
 		if ((rand() % 120) == 0)
-			buttons |= INPUT_BUTTON_L1R1;
+			buttons |= INPUT_BUTTON_L1;
+		if ((rand() % 120) == 0)
+			buttons |= INPUT_BUTTON_R1;
+
+		if ((rand() % 600) == 0)
+			buttons |= INPUT_BUTTON_DPAD_LEFT;
+		if ((rand() % 600) == 0)
+			buttons |= INPUT_BUTTON_DPAD_RIGHT;
+		if ((rand() % 600) == 0)
+			buttons |= INPUT_BUTTON_DPAD_UP;
+		if ((rand() % 600) == 0)
+			buttons |= INPUT_BUTTON_DPAD_DOWN;
 	}
 }
 

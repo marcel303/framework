@@ -188,7 +188,7 @@ void Client::tick(float dt)
 		bool isQuickLookRequested = false;
 
 		for (int i = 0; i < MAX_PLAYERS; ++i)
-			isQuickLookRequested |= m_gameSim->m_players[i].m_isUsed && m_gameSim->m_players[i].m_input.isDown(INPUT_BUTTON_L1R1);
+			isQuickLookRequested |= m_gameSim->m_players[i].m_isUsed && m_gameSim->m_players[i].m_input.isDown(INPUT_BUTTON_L1);
 		
 		isQuickLookRequested &= !DEMOMODE;
 
@@ -253,7 +253,7 @@ void Client::tick(float dt)
 			sprintf_s(temp, sizeof(temp), "bgm/bgm-play%02d.ogg", m_gameSim->m_nextRoundNumber % 4);
 			break;
 		case kGameState_RoundComplete:
-			strcpy_s(temp, sizeof(temp), "bgm/bgm-round-complete.ogg");
+			//strcpy_s(temp, sizeof(temp), "bgm/bgm-round-complete.ogg");
 			loop = false;
 			break;
 

@@ -456,6 +456,10 @@ OPTION_DEFINE(int, UI_PLAYER_EMBLEM_TEXT_OFFSET_Y, "UI/Player/Emblem Text Y Offs
 OPTION_DEFINE(int, UI_KILLCOUNTER_OFFSET_X, "UI/Player/Kill Counter X Offset");
 OPTION_DEFINE(int, UI_KILLCOUNTER_OFFSET_Y, "UI/Player/Kill Counter Y Offset");
 
+OPTION_DEFINE(int, EMOTE_DISPLAY_OFFSET_Y, "UI/Emotes/Display Y Offset");
+OPTION_DEFINE(float, EMOTE_DISPLAY_TIME, "UI/Emotes/Display Time");
+OPTION_STEP(EMOTE_DISPLAY_TIME, 0.f, 0.f, .1f);
+
 OPTION_DEFINE(bool, VOLCANO_LOOP, "Level Events/Volcano/Loop");
 OPTION_DEFINE(int, VOLCANO_LOOP_TIME, "Level Events/Volcano/LoopTime");
 

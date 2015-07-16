@@ -576,6 +576,9 @@ struct Player
 	bool m_isWallSliding;
 	float m_wallSlideDistance;
 
+	int m_emoteId;
+	float m_emoteTime;
+
 	struct JetpackInfo
 	{
 		JetpackInfo()
@@ -1180,6 +1183,7 @@ public:
 	void addAnimationFx(const char * fileName, int x, int y, bool flipX = false, bool flipY = false);
 
 	void addAnnouncement(const char * message, ...);
+	void addEmote(int playerId, int emoteId);
 
 	void addFireBall();
 };

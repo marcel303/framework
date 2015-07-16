@@ -17,8 +17,8 @@
 
 /*
 
-- bomb stuck on death kill
-- bomb deploy in air
++ bomb stuck on death kill
++ bomb deploy in air
 - player score UI toggle
 - add victory animation at end of round 'Victory'
 - add emotes
@@ -689,6 +689,8 @@ float Player::getAttackDamage(Player * other) const
 
 bool Player::isAnimOverrideAllowed(PlayerAnim anim) const
 {
+	Assert(anim < sizeof(s_animInfos) / sizeof(s_animInfos[0]));
+
 	if ((m_ice.timer > 0.f || m_bubble.timer > 0.f || m_special.meleeCounter != 0) && anim != kPlayerAnim_Die)
 		return false;
 
@@ -719,7 +721,9 @@ void Player::setDisplayName(const std::string & name)
 
 void Player::setAnim(PlayerAnim anim, bool play, bool restart)
 {
+	Assert(anim < sizeof(s_animInfos) / sizeof(s_animInfos[0]));
 	Assert(isAnimOverrideAllowed(anim));
+
 	if (anim != m_anim || play != m_animPlay || restart)
 	{
 		//logDebug("setAnim: %d", anim);
@@ -776,6 +780,29 @@ void Player::tick(float dt)
 {
 	if (!m_isActive)
 		return;
+
+	// -- emote hack --
+
+	m_emoteTime = Calc::Max(0.f, m_emoteTime - dt); // fixme : should use phys time
+
+	int emoteIndex = -1;
+
+	if (m_input.wentUp(INPUT_BUTTON_DPAD_LEFT))
+		emoteIndex = 0;
+	if (m_input.wentUp(INPUT_BUTTON_DPAD_RIGHT))
+		emoteIndex = 1;
+	if (m_input.wentUp(INPUT_BUTTON_DPAD_UP))
+		emoteIndex = 2;
+	if (m_input.wentUp(INPUT_BUTTON_DPAD_DOWN))
+		emoteIndex = 3;
+
+	if (emoteIndex != -1)
+	{
+		m_emoteId = emoteIndex;
+		m_emoteTime = EMOTE_DISPLAY_TIME;
+	}
+
+	// -- emote hack --
 
 	const CharacterData * characterData = getCharacterData(m_characterIndex);
 
@@ -3097,6 +3124,24 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 		drawText(x, y, 24, 0, 0, "(X)");
 	}
 #endif
+
+	// emotes
+
+	if (m_emoteTime > 0.f)
+	{
+		char filename[64];
+		sprintf_s(filename, sizeof(filename), "emotes/%d.scml", m_emoteId + 1);
+
+		Spriter spriter(filename);
+
+		SpriterState state;
+		state.startAnim(spriter, 0);
+		state.x = m_pos[0];
+		state.y = m_pos[1] + EMOTE_DISPLAY_OFFSET_Y;
+
+		setColor(colorWhite);
+		spriter.draw(state);
+	}
 }
 
 void Player::drawLight() const

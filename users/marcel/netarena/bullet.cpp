@@ -456,6 +456,7 @@ void BulletPool::draw() const
 			const float ca = ((b.color >>  0) & 0xff) / 255.f * ageAlpha;
 
 			setColorf(cr, cg, cb, ca);
+			Assert(b.type < sizeof(s_bulletSprites) / sizeof(s_bulletSprites[0]));
 			s_bulletSprites[b.type]->drawEx(b.m_pos[0], b.m_pos[1], Calc::RadToDeg(Bullet::toAngle(b.m_vel[0], b.m_vel[1])), s_bulletSprites[b.type]->scale);
 
 			if (g_devMode)
