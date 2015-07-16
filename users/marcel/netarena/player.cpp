@@ -17,6 +17,12 @@
 
 /*
 
+- bomb stuck on death kill
+- bomb deploy in air
+- player score UI toggle
+- add victory animation at end of round 'Victory'
+- add emotes
+
 + fix jump pad anim triggered for all jump pads
 + fix black borders not drawing fullscreen when screen shakes are active
 - fix controller assignments and joining/leaving using START when connected through online multiplayer. also, names were messed up
@@ -3351,6 +3357,7 @@ bool Player::respawn(Vec2 * pos)
 		m_ice = IceInfo();
 		m_bubble = BubbleInfo();
 		m_grapple = GrappleInfo();
+		m_pipebomb = PipebombInfo();
 		m_axe = AxeInfo();
 		m_shieldSpecial = ShieldSpecial();
 
