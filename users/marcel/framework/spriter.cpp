@@ -372,8 +372,8 @@ namespace spriter
 
 			if (!useDefaultPivot)
 			{
-				result->pivotX = spriter::linear(pivotX, keyB->pivotX, t);
-				result->pivotY = spriter::linear(pivotY, keyB->pivotY, t);
+				//result->pivotX = spriter::linear(pivotX, keyB->pivotX, t);
+				//result->pivotY = spriter::linear(pivotY, keyB->pivotY, t);
 			}
 
 			return result;
