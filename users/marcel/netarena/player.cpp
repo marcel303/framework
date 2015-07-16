@@ -591,7 +591,6 @@ bool Player::getPlayerControl() const
 		m_special.meleeCounter == 0 &&
 		m_attack.m_rocketPunch.isActive == false &&
 		m_attack.m_axeThrow.isActive == false &&
-		m_pipebomb.state == PipebombInfo::State_Inactive &&
 		GAMESIM->m_gameState != kGameState_RoundBegin &&
 		(GAMESIM->m_gameState != kGameState_RoundComplete || GAMESIM->m_roundEnd.m_state == GameSim::RoundEnd::kState_ShowWinner);
 }
@@ -899,6 +898,12 @@ void Player::tick(float dt)
 				m_attack.m_zweihander.handleAttackAnimComplete(*this);
 				break;
 			case kPlayerAnim_Zweihander_Stunned:
+				break;
+
+			case kPlayerAnim_Pipebomb_Deploy:
+				Assert(m_pipebomb.state == PipebombInfo::State_Deploy && m_pipebomb.time > 0.f);
+				if (m_pipebomb.state == PipebombInfo::State_Deploy)
+					endPipebomb();
 				break;
 
 			case kPlayerAnim_AirDash:
@@ -2051,7 +2056,7 @@ void Player::tick(float dt)
 
 		// pipebomb special
 
-		tickPipebomb();
+		tickPipebomb(dt);
 
 		// update grounded state
 
@@ -4192,6 +4197,8 @@ void Player::beginPipebomb()
 
 		setAnim(kPlayerAnim_Pipebomb_Deploy, true, true);
 		m_isAnimDriven = true;
+		m_animVelIsAbsolute = true;
+		m_animAllowSteering = false;
 	}
 }
 
@@ -4209,11 +4216,13 @@ void Player::tickPipebomb(float dt)
 {
 	switch (m_pipebomb.state)
 	{
+	case PipebombInfo::State_Inactive:
+		break;
 	case PipebombInfo::State_Deploy:
-		Assert(m_pipebomb.time > 0.f);
-		m_pipebomb.time -= dt;
-		if (m_pipebomb.time <= 0.f)
-			endPipebomb();
+		break;
+
+	default:
+		Assert(false);
 		break;
 	}
 }
