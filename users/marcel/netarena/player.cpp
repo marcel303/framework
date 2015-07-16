@@ -18,13 +18,16 @@
 /*
 
 + fix jump pad anim triggered for all jump pads
-- fix black borders not drawing fullscreen when screen shakes are active
++ fix black borders not drawing fullscreen when screen shakes are active
 - fix controller assignments and joining/leaving using START when connected through online multiplayer. also, names were messed up
 - let +1 icon follow player, improve art/animation
 
 + add jump pad animation
 - and support for particles triggered by spriter animations?
-- iterate on bubble gun. add trap animation, make directional, add cloud in the background to create a 'field' effect
+- iterate on bubble gun:
+	- add trap animation
+	+ make directional
+	- add cloud in the background to create a 'field' effect
 - reverse player emblem color
 - hide player emblem, unless when scoring or when summoned
 - add weapon UI prototype. do some drawings first
@@ -296,6 +299,7 @@ struct PlayerAnimInfo
 	{ "sprite.scml", "AttackDown" /*Zweihander_Attack*/, 5 },
 	{ "sprite.scml", "AttackDown" /*Zweihander_AttackDown*/, 5 },
 	{ "sprite.scml", "Idle" /*Zweihander_Stunned*/, 5 },
+	{ "sprite.scml", "Shoot" /* Pipebomb_Deploy*/, 5 },
 	{ "sprite.scml", "AirDash",    5 },
 	{ "sprite.scml", "Spawn",      6 },
 	{ "sprite.scml", "Die",        7 }
@@ -587,6 +591,7 @@ bool Player::getPlayerControl() const
 		m_special.meleeCounter == 0 &&
 		m_attack.m_rocketPunch.isActive == false &&
 		m_attack.m_axeThrow.isActive == false &&
+		m_pipebomb.state == PipebombInfo::State_Inactive &&
 		GAMESIM->m_gameState != kGameState_RoundBegin &&
 		(GAMESIM->m_gameState != kGameState_RoundComplete || GAMESIM->m_roundEnd.m_state == GameSim::RoundEnd::kState_ShowWinner);
 }
@@ -1300,6 +1305,8 @@ void Player::tick(float dt)
 					anim = kPlayerAnim_Fire;
 					m_attack.cooldown = PLAYER_FIRE_COOLDOWN;
 
+					const Vec2 playerSpeed = m_lastTotalVel;
+
 					for (int i = 0; i < BULLET_BUBBLE_COUNT; ++i)
 					{
 						const float angle = GAMESIM->Random() % 256;
@@ -1316,6 +1323,10 @@ void Player::tick(float dt)
 						{
 							Bullet & b = GAMESIM->m_bulletPool->m_bullets[bulletId];
 
+							const Vec2 dir = (-m_lastTotalVel * BULLET_BUBBLE_PLAYERSPEED_MULTIPLIER + b.m_vel).CalcNormalized();
+							const float vel = GAMESIM->RandomFloat(BULLET_BUBBLE_SPEED_MIN, BULLET_BUBBLE_SPEED_MAX);
+
+							b.m_vel = dir * vel;
 							b.m_pos += b.m_vel.CalcNormalized() * BULLET_BUBBLE_SPAWN_DISTANCE;
 						}
 					}
@@ -1484,12 +1495,14 @@ void Player::tick(float dt)
 					beginGrapple();
 				}
 				else if (characterData->m_special == kPlayerSpecial_Pipebomb &&
+					m_pipebomb.state == PipebombInfo::State_Inactive &&
 					m_input.wentDown(INPUT_BUTTON_Y) &&
 					isAnimOverrideAllowed(kPlayerAnim_Attack))
 				{
 					// detonate?
 
 					bool isDeployed = false;
+
 					for (int i = 0; i < MAX_PIPEBOMBS; ++i)
 					{
 						if (GAMESIM->m_pipebombs[i].m_isActive && GAMESIM->m_pipebombs[i].m_playerIndex == m_index)
@@ -1503,9 +1516,7 @@ void Player::tick(float dt)
 
 					if (!isDeployed && m_pipebombCooldown == 0.f)
 					{
-						// throw a new one
-						const Vec2 pos = m_pos + Vec2(0.f, m_collision.min[1] + m_collision.max[1]);
-						GAMESIM->spawnPipeBomb(pos, m_vel * PIPEBOMB_PLAYER_SPEED_MULTIPLIER + Vec2(m_facing[0] * PIPEBOMB_THROW_SPEED, 0.f), m_index);
+						beginPipebomb();
 					}
 				}
 				else if (characterData->m_special == kPlayerSpecial_RocketPunch &&
@@ -2038,6 +2049,10 @@ void Player::tick(float dt)
 
 		tickShieldSpecial(dt);
 
+		// pipebomb special
+
+		tickPipebomb();
+
 		// update grounded state
 
 	#if 1 // player will think it's grounded if not reset and hitting spring
@@ -2069,6 +2084,8 @@ void Player::tick(float dt)
 		m_isHuggingWall = false;
 
 		Vec2 totalVel = (m_vel * (m_animVelIsAbsolute ? 0.f : 1.f)) + animVel;
+
+		m_lastTotalVel = totalVel;
 
 		// input step:
 		// - update velocities
@@ -2761,72 +2778,6 @@ void Player::draw() const
 			m_pos[0] + m_collision.max[0], GFX_SY);
 	}
 
-	/*
-	if (GAMESIM->m_gameMode == kGameMode_TokenHunt && m_tokenHunt.m_hasToken)
-	{
-		setColorf(1.f, 1.f, 1.f, (std::sin(g_TimerRT.Time_get() * 10.f) * .7f + 1.f) / 2.f);
-		drawRect(m_pos[0] - 50, m_pos[1] - 110, m_pos[0] + 50, m_pos[1] - 85);
-	}
-	*/
-
-	if (!RECORDMODE)
-	{
-		// draw player emblem
-		SpriterState state = m_emblemSpriterState;
-		state.x = m_pos[0];
-		state.y = m_pos[1] + UI_PLAYER_EMBLEM_OFFSET_Y;
-		state.animIndex = 2;
-		setColor(playerColor);
-		EMBLEM_SPRITER.draw(state);
-		state.animIndex = 0;
-		setColor(colorWhite);
-		EMBLEM_SPRITER.draw(state);
-
-		// draw score
-		setFont("calibri.ttf");
-		setColor(colorBlack);
-		drawText(m_pos[0], m_pos[1] + UI_PLAYER_EMBLEM_TEXT_OFFSET_Y, 20, 0.f, +1.f, "%d", m_score);
-	}
-
-#if AUTO_RESPAWN
-	if (!m_isAlive && m_respawnTimerRcp != 0.f && (GAMESIM->m_gameState == kGameState_Play) && m_isRespawn)
-	{
-		int sx = 60;
-		int sy = 10;
-
-		setColor(colorBlack);
-		drawRect(
-			m_pos[0] - sx/2, m_pos[1] - sy/2,
-			m_pos[0] + sx/2, m_pos[1] + sy/2);
-
-		setColorf(255, 0, 0);
-		drawRect(
-			m_pos[0] - sx/2, m_pos[1] - sy/2,
-			m_pos[0] - sx/2 + sx * m_respawnTimer * m_respawnTimerRcp, m_pos[1] + sy/2);
-
-		setColor(0, 0, 63);
-		drawRectLine(
-			m_pos[0] - sx/2, m_pos[1] - sy/2,
-			m_pos[0] + sx/2, m_pos[1] + sy/2);
-	}
-#else
-	if (!m_isAlive && m_canRespawn && (GAMESIM->m_gameState == kGameState_Play) && m_isRespawn)
-	{
-		int sx = 40;
-		int sy = 40;
-
-		// we're dead and we're waiting for respawn
-		setColor(0, 0, 255, 127);
-		drawRect(m_pos[0] - sx / 2, m_pos[1] - sy / 2, m_pos[0] + sx / 2, m_pos[1] + sy / 2);
-		setColor(0, 0, 255);
-		drawRectLine(m_pos[0] - sx / 2, m_pos[1] - sy / 2, m_pos[0] + sx / 2, m_pos[1] + sy / 2);
-
-		setColor(255, 255, 255);
-		setFont("calibri.ttf");
-		drawText(m_pos[0], m_pos[1], 24, 0, 0, "(X)");
-	}
-#endif
-
 	// draw text chat
 
 	if (!m_instanceData->m_textChat.empty())
@@ -3029,6 +2980,111 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 			attackCollision.debugDraw(false);
 		}
 	}
+
+	//
+
+	/*
+	if (GAMESIM->m_gameMode == kGameMode_TokenHunt && m_tokenHunt.m_hasToken)
+	{
+		setColorf(1.f, 1.f, 1.f, (std::sin(g_TimerRT.Time_get() * 10.f) * .7f + 1.f) / 2.f);
+		drawRect(x - 50, y - 110, x + 50, y - 85);
+	}
+	*/
+
+	if (!RECORDMODE)
+	{
+		// draw player emblem
+		SpriterState state = m_emblemSpriterState;
+		state.x = x;
+		state.y = y + UI_PLAYER_EMBLEM_OFFSET_Y;
+		state.animIndex = 2;
+		setColor(playerColor);
+		EMBLEM_SPRITER.draw(state);
+		state.animIndex = 0;
+		setColor(colorWhite);
+		EMBLEM_SPRITER.draw(state);
+
+		// draw score
+		setFont("calibri.ttf");
+		setColor(colorBlack);
+		drawText(x, y + UI_PLAYER_EMBLEM_TEXT_OFFSET_Y, 20, 0.f, +1.f, "%d", m_score);
+	}
+
+	// draw player inventory
+
+	for (int i = 0; i < m_weaponStackSize; ++i)
+	{
+		const int ix = x - 100;
+		const int iy = y - 100 + i * 16;
+		const PlayerWeapon & weapon = m_weaponStack[i];
+
+		Color color;
+
+		switch (weapon)
+		{
+		case kPlayerWeapon_Fire:
+			color = Color(0.f, 1.f, 0.f);
+			break;
+		case kPlayerWeapon_Ice:
+			color = Color(.5f, .5f, 1.f);
+			break;
+		case kPlayerWeapon_Bubble:
+			color = Color(0.f, 0.f, 1.f);
+			break;
+		case kPlayerWeapon_Grenade:
+			color = Color(1.f, 1.f, 0.f);
+			break;
+		case kPlayerWeapon_TimeDilation:
+			color = Color(1.f, 1.f, 1.f);
+			break;
+		default:
+			Assert(false);
+			color = colorWhite;
+			break;
+		}
+
+		setColor(color);
+		drawRect(ix, iy, ix + 12, iy + 12);
+	}
+
+#if AUTO_RESPAWN
+	if (!m_isAlive && m_respawnTimerRcp != 0.f && (GAMESIM->m_gameState == kGameState_Play) && m_isRespawn)
+	{
+		int sx = 60;
+		int sy = 10;
+
+		setColor(colorBlack);
+		drawRect(
+			x - sx/2, y - sy/2,
+			x + sx/2, y + sy/2);
+
+		setColorf(255, 0, 0);
+		drawRect(
+			x - sx/2, y - sy/2,
+			x - sx/2 + sx * m_respawnTimer * m_respawnTimerRcp, y + sy/2);
+
+		setColor(0, 0, 63);
+		drawRectLine(
+			x - sx/2, y - sy/2,
+			x + sx/2, y + sy/2);
+	}
+#else
+	if (!m_isAlive && m_canRespawn && (GAMESIM->m_gameState == kGameState_Play) && m_isRespawn)
+	{
+		int sx = 40;
+		int sy = 40;
+
+		// we're dead and we're waiting for respawn
+		setColor(0, 0, 255, 127);
+		drawRect(x - sx / 2, y - sy / 2, x + sx / 2, y + sy / 2);
+		setColor(0, 0, 255);
+		drawRectLine(x - sx / 2, y - sy / 2, x + sx / 2, y + sy / 2);
+
+		setColor(255, 255, 255);
+		setFont("calibri.ttf");
+		drawText(x, y, 24, 0, 0, "(X)");
+	}
+#endif
 }
 
 void Player::drawLight() const
@@ -3125,6 +3181,13 @@ void Player::debugDraw() const
 	{
 		setColor(colorWhite);
 		drawText(m_pos[0], y, 14, 0.f, 0.f, "grappling");
+		y += 18.f;
+	}
+
+	if (m_pipebomb.state != PipebombInfo::State_Inactive)
+	{
+		setColor(colorWhite);
+		drawText(m_pos[0], y, 14, 0.f, 0.f, "pipebomb");
 		y += 18.f;
 	}
 
@@ -3259,6 +3322,9 @@ bool Player::respawn(Vec2 * pos)
 
 		m_vel[0] = 0.f;
 		m_vel[1] = 0.f;
+
+		m_lastTotalVel[0] = 0.f;
+		m_lastTotalVel[1] = 0.f;
 
 		m_isAlive = true;
 
@@ -3450,9 +3516,6 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 
 							switch (weapon)
 							{
-							case kPlayerWeapon_Sword:
-								Assert(false);
-								break;
 							case kPlayerWeapon_Fire:
 								pickupType = kPickupType_Ammo;
 								break;
@@ -4114,6 +4177,45 @@ bool Player::findNinjaDashTarget(Vec2 & destination)
 	m_pos = oldPos;
 
 	return result;
+}
+
+void Player::beginPipebomb()
+{
+	Assert(m_pipebomb.state == PipebombInfo::State_Inactive);
+
+	if (isAnimOverrideAllowed(kPlayerAnim_Pipebomb_Deploy))
+	{
+		m_pipebomb = PipebombInfo();
+
+		m_pipebomb.state = PipebombInfo::State_Deploy;
+		m_pipebomb.time = PIPEBOMB_DEPLOY_TIME;
+
+		setAnim(kPlayerAnim_Pipebomb_Deploy, true, true);
+		m_isAnimDriven = true;
+	}
+}
+
+void Player::endPipebomb()
+{
+	// throw a new one
+	const Vec2 pos = m_pos + Vec2(0.f, m_collision.min[1] + m_collision.max[1]);
+	GAMESIM->spawnPipeBomb(pos, m_vel * PIPEBOMB_PLAYER_SPEED_MULTIPLIER + Vec2(m_facing[0] * PIPEBOMB_THROW_SPEED, 0.f), m_index);
+
+	Assert(m_pipebomb.state != PipebombInfo::State_Inactive);
+	m_pipebomb = PipebombInfo();
+}
+
+void Player::tickPipebomb(float dt)
+{
+	switch (m_pipebomb.state)
+	{
+	case PipebombInfo::State_Deploy:
+		Assert(m_pipebomb.time > 0.f);
+		m_pipebomb.time -= dt;
+		if (m_pipebomb.time <= 0.f)
+			endPipebomb();
+		break;
+	}
 }
 
 //

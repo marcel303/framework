@@ -27,18 +27,18 @@ static const char * s_bulletSpriteFiles[kBulletType_COUNT] =
 
 static Sprite * s_bulletSprites[kBulletType_COUNT] = { };
 
-static void getVelocityXY(float angle, float velocity, float & x, float & y)
+void Bullet::getVelocityXY(float angle, float velocity, float & x, float & y)
 {
 	x = +std::cos(angle) * velocity;
 	y = -std::sin(angle) * velocity;
 }
 
-static float toAngle(float dx, float dy)
+float Bullet::toAngle(float dx, float dy)
 {
 	return std::atan2f(dy, dx);
 }
 
-static void mirrorAngle(float & angle, float x, float y)
+void Bullet::mirrorAngle(float & angle, float x, float y)
 {
 	float dx;
 	float dy;
@@ -456,7 +456,7 @@ void BulletPool::draw() const
 			const float ca = ((b.color >>  0) & 0xff) / 255.f * ageAlpha;
 
 			setColorf(cr, cg, cb, ca);
-			s_bulletSprites[b.type]->drawEx(b.m_pos[0], b.m_pos[1], Calc::RadToDeg(toAngle(b.m_vel[0], b.m_vel[1])), s_bulletSprites[b.type]->scale);
+			s_bulletSprites[b.type]->drawEx(b.m_pos[0], b.m_pos[1], Calc::RadToDeg(Bullet::toAngle(b.m_vel[0], b.m_vel[1])), s_bulletSprites[b.type]->scale);
 
 			if (g_devMode)
 			{

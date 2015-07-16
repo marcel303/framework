@@ -1072,6 +1072,13 @@ bool App::init()
 	if (g_devMode)
 	{
 		LIBNET_CHANNEL_ENABLE_TIMEOUTS = false;
+
+		GAMESTATE_ROUNDBEGIN_TRANSITION_TIME = 1.f / 60.f;
+		GAMESTATE_ROUNDBEGIN_SPAWN_DELAY = 1.f / 60.f;
+		GAMESTATE_ROUNDBEGIN_MESSAGE_DELAY = 1.f / 60.f;
+		GAMESTATE_ROUNDCOMPLETE_SHOWWINNER_TIME = 1.f / 60.f;
+		GAMESTATE_ROUNDCOMPLETE_SHOWRESULTS_TIME = 1.f / 60.f;
+		GAMESTATE_ROUNDCOMPLETE_TRANSITION_TIME = 1.f / 60.f;
 	}
 
 	if (DEMOMODE)
@@ -1086,9 +1093,8 @@ bool App::init()
 
 		LIGHTING_DEBUG_MODE = 3;
 		GAME_SPEED_MULTIPLIER = 1.15f;
-		NUM_LOCAL_PLAYERS_TO_ADD = 4;
+		//NUM_LOCAL_PLAYERS_TO_ADD = 4;
 		MAX_CONSECUTIVE_ROUND_COUNT = 2;
-
 	}
 
 	if (RECORDMODE)
@@ -2618,9 +2624,10 @@ int main(int argc, char * argv[])
 	{
 	#if 0 // spriter test
 		//Spriter spriter("../../ArtistCave/JoyceTestcharacter/char0(Sword)/sprite/Sprite.scml");
-		Spriter spriter("char2/sprite/Sprite.scml");
+		Spriter spriter("char4/sprite/Sprite.scml");
 
-		const int animIndex = 0;
+		//const int animIndex = 0;
+		const int animIndex = spriter.getAnimIndexByName("Idle");
 		const float animLength = spriter.getAnimLength(animIndex);
 		SpriterState state;
 		state.x = GFX_SX/2;

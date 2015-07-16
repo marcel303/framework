@@ -1149,6 +1149,8 @@ void BlindsEffect::tick(GameSim & gameSim, float dt)
 
 void BlindsEffect::drawLight()
 {
+	const int kBorderSize = 1024;
+
 	if (m_time > 0.f)
 	{
 		setBlend(BLEND_SUBTRACT);
@@ -1156,13 +1158,13 @@ void BlindsEffect::drawLight()
 			setColorf(.8f, .8f, .8f, m_time / m_duration * 4.f);
 			if (m_vertical)
 			{
-				drawRect(0, 0, m_x - m_size, GFX_SY);
-				drawRect(m_x + m_size, 0, GFX_SX, GFX_SY);
+				drawRect(-kBorderSize, -kBorderSize, m_x - m_size, GFX_SY + kBorderSize);
+				drawRect(m_x + m_size, -kBorderSize, GFX_SX + kBorderSize, GFX_SY + kBorderSize);
 			}
 			else
 			{
-				drawRect(0, 0, GFX_SX, m_y - m_size);
-				drawRect(0, m_y + m_size, GFX_SX, GFX_SY);
+				drawRect(-kBorderSize, -kBorderSize, GFX_SX + kBorderSize, m_y - m_size);
+				drawRect(-kBorderSize, m_y + m_size, GFX_SX + kBorderSize, GFX_SY + kBorderSize);
 			}
 		}
 		setBlend(BLEND_ADD);
@@ -1954,7 +1956,7 @@ void GameSim::tickMenus()
 				{
 					if (player.m_input.wentDown(INPUT_BUTTON_A) || (player.m_input.m_actions & (1 << kPlayerInputAction_ReadyUp)))
 					{
-						if (!DEMOMODE || (player.m_characterIndex != 4 && player.m_characterIndex != 7))
+						//if (!DEMOMODE || (player.m_characterIndex != 4 && player.m_characterIndex != 7))
 						{
 							playSound("ui/sounds/charselect-select.ogg");
 

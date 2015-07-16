@@ -79,6 +79,7 @@ enum PlayerAnim
 	kPlayerAnim_Zweihander_Attack,
 	kPlayerAnim_Zweihander_AttackDown,
 	kPlayerAnim_Zweihander_Stunned,
+	kPlayerAnim_Pipebomb_Deploy,
 	kPlayerAnim_AirDash,
 	kPlayerAnim_Spawn,
 	kPlayerAnim_Die,
@@ -88,7 +89,6 @@ enum PlayerAnim
 enum PlayerWeapon
 {
 	kPlayerWeapon_None,
-	kPlayerWeapon_Sword,
 	kPlayerWeapon_Fire,
 	kPlayerWeapon_Ice,
 	kPlayerWeapon_Bubble,

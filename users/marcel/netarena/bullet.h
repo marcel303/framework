@@ -18,6 +18,10 @@ class GameSim;
 class Bullet : public PhysicsActor
 {
 public:
+	static void getVelocityXY(float angle, float velocity, float & x, float & y);
+	static float toAngle(float dx, float dy);
+	static void mirrorAngle(float & angle, float x, float y);
+
 	Bullet();
 
 	void setVel(float angle, float velocity);

@@ -222,10 +222,12 @@ OPTION_DEFINE(int, BULLET_BUBBLE_RADIUS_MIN, "Bullets/Bubble/Radius Min");
 OPTION_DEFINE(int, BULLET_BUBBLE_RADIUS_MAX, "Bullets/Bubble/Radius Max");
 OPTION_DEFINE(int, BULLET_BUBBLE_SPEED_MIN, "Bullets/Bubble/Speed Min");
 OPTION_DEFINE(int, BULLET_BUBBLE_SPEED_MAX, "Bullets/Bubble/Speed Max");
+OPTION_DEFINE(float, BULLET_BUBBLE_PLAYERSPEED_MULTIPLIER, "Bullets/Bubble/Player Speed Multiplier");
 OPTION_STEP(BULLET_BUBBLE_RADIUS_MIN, 0, 0, 5);
 OPTION_STEP(BULLET_BUBBLE_RADIUS_MAX, 0, 0, 5);
 OPTION_STEP(BULLET_BUBBLE_SPEED_MIN, 0, 0, 5);
 OPTION_STEP(BULLET_BUBBLE_SPEED_MAX, 0, 0, 5);
+OPTION_STEP(BULLET_BUBBLE_PLAYERSPEED_MULTIPLIER, 0, 0, .02f);
 
 OPTION_DEFINE(int, PICKUP_INTERVAL, "Pickups/Spawn Interval (Sec)");
 OPTION_DEFINE(int, PICKUP_INTERVAL_VARIANCE, "Pickups/Spawn Interval Random (Sec)");
@@ -368,11 +370,13 @@ OPTION_DEFINE(int, PIPEBOMB_COLLISION_SY, "Special Abilities/Pipe Bomb/Collision
 OPTION_DEFINE(float, PIPEBOMB_PLAYER_SPEED_MULTIPLIER, "Special Abilities/Pipe Bomb/Player Speed Multiplier");
 OPTION_DEFINE(float, PIPEBOMB_THROW_SPEED, "Special Abilities/Pipe Bomb/Throw Speed");
 OPTION_DEFINE(float, PIPEBOMB_ACTIVATION_TIME, "Special Abilities/Pipe Bomb/Activation Time (Sec)");
+OPTION_DEFINE(float, PIPEBOMB_DEPLOY_TIME, "Special Abilities/Pipe Bomb/Deploy Time (Sec)");
 OPTION_DEFINE(float, PIPEBOMB_COOLDOWN, "Special Abilities/Pipe Bomb/Cooldown Time (Sec)");
 OPTION_DEFINE(float, PIPEBOMB_BLAST_RADIUS, "Special Abilities/Pipe Bomb/Blast Radius");
 OPTION_DEFINE(float, PIPEBOMB_BLAST_STRENGTH_NEAR, "Special Abilities/Pipe Bomb/Blast Strength (Near)");
 OPTION_DEFINE(float, PIPEBOMB_BLAST_STRENGTH_FAR, "Special Abilities/Pipe Bomb/Blast Strength (Far)");
 OPTION_STEP(PIPEBOMB_THROW_SPEED, 0, 0, 10);
+OPTION_STEP(PIPEBOMB_DEPLOY_TIME, 0, 0, .1f);
 OPTION_STEP(PIPEBOMB_ACTIVATION_TIME, 0, 0, .1f);
 OPTION_STEP(PIPEBOMB_COOLDOWN, 0, 0, .1f);
 

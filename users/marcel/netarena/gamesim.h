@@ -231,6 +231,11 @@ struct Player
 	// special : ninja dash
 	bool findNinjaDashTarget(Vec2 & destination);
 
+	// special : pipebomb
+	void beginPipebomb();
+	void endPipebomb();
+	void tickPipebomb(float dt);
+
 	// allocation
 	bool m_isUsed;
 
@@ -259,6 +264,7 @@ struct Player
 
 	Vec2 m_pos;
 	Vec2 m_vel;
+	Vec2 m_lastTotalVel;
 
 	Vec2 m_facing;
 	float m_facingAnim;
@@ -495,6 +501,23 @@ struct Player
 		Vec2 anchorPos;
 		float distance;
 	} m_grapple;
+
+	struct PipebombInfo
+	{
+		PipebombInfo()
+		{
+			memset(this, 0, sizeof(PipebombInfo));
+		}
+
+		enum State
+		{
+			State_Inactive,
+			State_Deploy
+		};
+
+		State state;
+		float time;
+	} m_pipebomb;
 
 	struct AxeInfo
 	{
