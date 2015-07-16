@@ -288,27 +288,27 @@ struct PlayerAnimInfo
 	int prio;
 } s_animInfos[kPlayerAnim_COUNT] =
 {
-	{ nullptr,       nullptr,      0 },
-	{ "sprite.scml", "Idle" ,      1 },
-	{ "sprite.scml", "InAir" ,     1 },
-	{ "sprite.scml", "Jump" ,      2 },
-	{ "sprite.scml", "AirDash",    2 },
-	{ "sprite.scml", "WallSlide",  3 },
-	{ "sprite.scml", "Walk",       4 },
-	{ "sprite.scml", "Attack",     5 },
-	{ "sprite.scml", "AttackUp",   5 },
-	{ "sprite.scml", "AttackDown", 5 },
-	{ "sprite.scml", "Shoot",      5 },
-	{ "sprite.scml", "Walk" /*RocketPunch_Charge*/, 5 }, // fixme : charge
-	{ "sprite.scml", "Walk" /*RocketPunch_Attack*/, 5 }, // fixme : attack
-	{ "sprite.scml", "Walk" /*Zweihander_Charge*/, 5 },
-	{ "sprite.scml", "AttackDown" /*Zweihander_Attack*/, 5 },
-	{ "sprite.scml", "AttackDown" /*Zweihander_AttackDown*/, 5 },
-	{ "sprite.scml", "Idle" /*Zweihander_Stunned*/, 5 },
-	{ "sprite.scml", "Shoot" /* Pipebomb_Deploy*/, 5 },
-	{ "sprite.scml", "AirDash",    5 },
-	{ "sprite.scml", "Spawn",      6 },
-	{ "sprite.scml", "Die",        7 }
+	{ nullptr,       nullptr,              0 },
+	{ "sprite.scml", "Idle" ,              1 },
+	{ "sprite.scml", "InAir" ,             1 },
+	{ "sprite.scml", "Jump" ,              2 },
+	{ "sprite.scml", "AirDash",            2 },
+	{ "sprite.scml", "WallSlide",          3 },
+	{ "sprite.scml", "Walk",               4 },
+	{ "sprite.scml", "Attack",             5 },
+	{ "sprite.scml", "AttackUp",           5 },
+	{ "sprite.scml", "AttackDown",         5 },
+	{ "sprite.scml", "Shoot",              5 },
+	{ "sprite.scml", "RocketPunch_Charge", 5 },
+	{ "sprite.scml", "RocketPunch_Attack", 5 },
+	{ "sprite.scml", "Walk"                /*Zweihander_Charge*/,     5 },
+	{ "sprite.scml", "AttackDown"          /*Zweihander_Attack*/,     5 },
+	{ "sprite.scml", "AttackDown"          /*Zweihander_AttackDown*/, 5 },
+	{ "sprite.scml", "Idle"                /*Zweihander_Stunned*/,    5 },
+	{ "sprite.scml", "Pipebomb_Deploy",    5 },
+	{ "sprite.scml", "AirDash",            5 },
+	{ "sprite.scml", "Spawn",              6 },
+	{ "sprite.scml", "Die",                7 }
 };
 
 //
