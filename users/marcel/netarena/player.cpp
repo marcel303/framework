@@ -1506,6 +1506,7 @@ void Player::tick(float dt)
 					beginGrapple();
 				}
 				else if (characterData->m_special == kPlayerSpecial_Pipebomb &&
+					m_isGrounded &&
 					m_pipebomb.state == PipebombInfo::State_Inactive &&
 					m_input.wentDown(INPUT_BUTTON_Y) &&
 					isAnimOverrideAllowed(kPlayerAnim_Attack))
