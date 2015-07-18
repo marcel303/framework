@@ -1084,16 +1084,19 @@ bool App::init()
 	if (DEMOMODE)
 	{
 		UI_DEBUG_VISIBLE = false;
-		LIBNET_CHANNEL_ENABLE_TIMEOUTS = false;
+		UI_LOBBY_LEAVEJOIN_ENABLE = true;
 		NUM_LOCAL_PLAYERS_TO_ADD = 1;
-		PLAYER_INACTIVITY_KICK = true;
 		VOLCANO_LOOP = true;
+
+	#if !PUBLIC_DEMO_BUILD
+		LIBNET_CHANNEL_ENABLE_TIMEOUTS = false;
+		PLAYER_INACTIVITY_KICK = true;
+	#endif
 
 		//
 
 		LIGHTING_DEBUG_MODE = 3;
 		GAME_SPEED_MULTIPLIER = 1.15f;
-		//NUM_LOCAL_PLAYERS_TO_ADD = 4;
 		MAX_CONSECUTIVE_ROUND_COUNT = 2;
 	}
 
@@ -1697,7 +1700,7 @@ bool App::tick()
 
 	m_channelMgr->Update(NET_TIME);
 
-	if (DEMOMODE && g_host && !m_clients.empty())
+	if (UI_LOBBY_LEAVEJOIN_ENABLE && g_host && !m_clients.empty())
 	{
 		Client * client = m_clients.front();
 

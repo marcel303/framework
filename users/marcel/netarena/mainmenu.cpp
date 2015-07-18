@@ -16,6 +16,9 @@ static Mouse s_lastMouse;
 static Gamepad s_lastGamepad;
 
 MainMenu::MainMenu()
+	: m_newGame(0)
+	, m_findGame(0)
+	, m_quitApp(0)
 {
 	if (!PUBLIC_DEMO_BUILD || ((std::string)g_connect).empty())
 		m_newGame = new Button(GFX_SX/2, GFX_SY/3, "mainmenu-newgame.png");
