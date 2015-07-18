@@ -266,7 +266,6 @@ void Client::tick(float dt)
 		{
 			strcpy_s(s_bgm, sizeof(s_bgm), temp);
 
-		#if !PUBLIC_DEMO_BUILD // no BGM support in public demo for now
 			delete s_bgmSound;
 			s_bgmSound = 0;
 
@@ -275,7 +274,6 @@ void Client::tick(float dt)
 				s_bgmSound = new Music(s_bgm);
 				s_bgmSound->play(loop);
 			}
-		#endif
 		}
 	}
 }

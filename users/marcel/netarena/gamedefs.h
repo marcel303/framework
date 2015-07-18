@@ -2,9 +2,9 @@
 
 #include "Options.h"
 
-#define PUBLIC_DEMO_BUILD 0
+#define PUBLIC_DEMO_BUILD 1
 
-#if 1
+#if !PUBLIC_DEMO_BUILD
 	#define DEBUG_RANDOM_CALLSITES 0
 	#define ENABLE_GAMESTATE_DESYNC_DETECTION 1
 	#define ENABLE_GAMESTATE_CRC_LOGGING (ENABLE_GAMESTATE_DESYNC_DETECTION && 1)
@@ -16,19 +16,10 @@
 
 #define TICKS_PER_SECOND 60
 
-#define USE_32X32_TILES 1
-
-#if USE_32X32_TILES
-	#define BLOCK_SX 30
-	#define BLOCK_SY 30
-	#define PICKUP_BLOCK_SX 3
-	#define PICKUP_BLOCK_SY 3
-#else
-	#define BLOCK_SX 64
-	#define BLOCK_SY 64
-	#define PICKUP_BLOCK_SX 1
-	#define PICKUP_BLOCK_SY 1
-#endif
+#define BLOCK_SX 30
+#define BLOCK_SY 30
+#define PICKUP_BLOCK_SX 3
+#define PICKUP_BLOCK_SY 3
 
 #define GFX_SX 1920
 #define GFX_SY 1080

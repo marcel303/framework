@@ -8,6 +8,8 @@
 #include "title.h"
 #include "uicommon.h"
 
+OPTION_EXTERN(std::string, g_connect);
+
 static const float kMaxInactivityTime = 30.f;
 
 static Mouse s_lastMouse;
@@ -15,8 +17,10 @@ static Gamepad s_lastGamepad;
 
 MainMenu::MainMenu()
 {
-	m_newGame = new Button(GFX_SX/2, GFX_SY/3, "mainmenu-newgame.png");
-	m_findGame = new Button(GFX_SX/2, GFX_SY/3 + 200, "mainmenu-findgame.png");
+	if (!PUBLIC_DEMO_BUILD || ((std::string)g_connect).empty())
+		m_newGame = new Button(GFX_SX/2, GFX_SY/3, "mainmenu-newgame.png");
+	if (!PUBLIC_DEMO_BUILD || !((std::string)g_connect).empty())
+		m_findGame = new Button(GFX_SX/2, GFX_SY/3 + 200, "mainmenu-findgame.png");
 	m_quitApp = new Button(GFX_SX/2, GFX_SY/3 + 400, "mainmenu-exitgame.png");
 }
 
@@ -54,7 +58,7 @@ bool MainMenu::tick(float dt)
 		s_lastGamepad = gamepad[0];
 	}
 
-	if (m_newGame->isClicked())
+	if (m_newGame && m_newGame->isClicked())
 	{
 		logDebug("new game!");
 
@@ -64,14 +68,12 @@ bool MainMenu::tick(float dt)
 
 		g_app->connect("127.0.0.1");
 	}
-#if !PUBLIC_DEMO_BUILD
-	else if (m_findGame->isClicked())
+	else if (m_findGame && m_findGame->isClicked())
 	{
 		logDebug("find game!");
 
 		g_app->findGame();
 	}
-#endif
 	else if (m_quitApp->isClicked())
 	{
 		logDebug("exit game!");
@@ -90,9 +92,9 @@ void MainMenu::draw()
 	setColor(colorWhite);
 	Sprite("mainmenu-back.png").draw();
 
-	m_newGame->draw();
-#if !PUBLIC_DEMO_BUILD
-	m_findGame->draw();
-#endif
+	if (m_newGame)
+		m_newGame->draw();
+	if (m_findGame)
+		m_findGame->draw();
 	m_quitApp->draw();
 }

@@ -21,31 +21,31 @@ endif (NOT HAS_FRAMEWORK)
 
 #
 
-project(netarena)
+project(riposte)
 
-# --- netarena ---
+# --- riposte ---
 
 file(GLOB source "*.cpp" "*.h")
 
-add_executable(netarena ${source})
+add_executable(riposte ${source})
 
-target_compile_definitions(netarena PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS)
+target_compile_definitions(riposte PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS)
 
-target_include_directories(netarena PRIVATE "${PROJECT_SOURCE_DIR}")
+target_include_directories(riposte PRIVATE "${PROJECT_SOURCE_DIR}")
 
-target_link_libraries(netarena PRIVATE framework)
-target_link_libraries(netarena PRIVATE libnet)
-target_link_libraries(netarena PRIVATE libgg)
+target_link_libraries(riposte PRIVATE framework)
+target_link_libraries(riposte PRIVATE libnet)
+target_link_libraries(riposte PRIVATE libgg)
 
-target_link_libraries(netarena PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/FreeImage.lib)
-target_link_libraries(netarena PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/freetype252.lib)
-target_link_libraries(netarena PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/glew32.lib)
-target_link_libraries(netarena PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/OpenAL32.lib)
-target_link_libraries(netarena PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/SDL2.lib)
-target_link_libraries(netarena PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/SDL2main.lib)
-target_link_libraries(netarena PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/XInput9_1_0.lib)
-target_link_libraries(netarena PRIVATE Winmm.lib OpenGL32.lib WSock32.lib)
+target_link_libraries(riposte PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/FreeImage.lib)
+target_link_libraries(riposte PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/freetype252.lib)
+target_link_libraries(riposte PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/glew32.lib)
+target_link_libraries(riposte PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/OpenAL32.lib)
+target_link_libraries(riposte PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/SDL2.lib)
+target_link_libraries(riposte PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/SDL2main.lib)
+target_link_libraries(riposte PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/XInput9_1_0.lib)
+target_link_libraries(riposte PRIVATE Winmm.lib OpenGL32.lib WSock32.lib)
 
 if (MSVC)
-	set_property(TARGET netarena APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
+	set_property(TARGET riposte APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
 endif (MSVC)

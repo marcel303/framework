@@ -13,12 +13,6 @@
 #include "player.h"
 #include "StreamReader.h"
 
-#if USE_32X32_TILES
-	#define BLOCK_SPRITE_SCALE 1.f
-#else
-	#define BLOCK_SPRITE_SCALE 1.f
-#endif
-
 class BlockMask
 {
 public:
