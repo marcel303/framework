@@ -422,9 +422,8 @@ struct Player
 			memset(this, 0, sizeof(TeleportInfo));
 		}
 
-		bool cooldown; // when set, we're waiting for the player to exit (x, y), which is the destination of the previous teleport
-		int16_t x;
-		int16_t y;
+		bool cooldown; // when set, we're waiting for the player to exit the portal (id), which is the destination of the previous teleport
+		int lastPortalId;
 	} m_teleport;
 
 	struct JumpInfo
@@ -779,6 +778,25 @@ struct Torch
 	void drawLight() const;
 };
 
+struct Portal
+{
+	Portal()
+	{
+		memset(this, 0, sizeof(Portal));
+	}
+
+	void setup(int blockX, int blockY, int blockSx, int blockSy, int key);
+	bool intersectsBlockArea(int x1, int y1, int x2, int y2) const;
+	bool doTeleport(GameSim & gameSim, Portal *& destination, int & destinationId);
+	Vec2 getDestinationPos() const;
+
+	void draw() const;
+
+	bool m_isAlive;
+	int m_x1, m_y1, m_x2, m_y2;
+	int m_key;
+};
+
 struct TileSprite
 {
 	TileSprite()
@@ -1019,6 +1037,8 @@ struct GameStateData
 
 	Torch m_torches[MAX_TORCHES];
 
+	Portal m_portals[MAX_PORTALS];
+
 	TileSprite m_tileSprites[MAX_TILE_SPRITES];
 
 	AnimationFxState m_animationEffects[MAX_ANIM_EFFECTS];
@@ -1177,6 +1197,8 @@ public:
 	void addFloorEffect(int playerId, int x, int y, int size, int damageSize);
 
 	void addBlindsEffect(int playerId, int x, int y, int size, bool vertical, float time, const char * text);
+
+	Portal * findPortal(float x1, float y1, float x2, float y2, int & id);
 
 	TileSprite * findTileSpriteAtBlockXY(int blockX, int blockY);
 

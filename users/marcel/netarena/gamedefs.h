@@ -2,7 +2,7 @@
 
 #include "Options.h"
 
-#define PUBLIC_DEMO_BUILD 1
+#define PUBLIC_DEMO_BUILD 0
 
 #if !PUBLIC_DEMO_BUILD
 	#define DEBUG_RANDOM_CALLSITES 0
@@ -43,6 +43,7 @@
 #define MAX_PICKUPS 10
 #define MAX_MOVERS 10
 #define MAX_TORCHES 10
+#define MAX_PORTALS 10
 #define MAX_TILE_SPRITES 20
 #define MAX_SCREEN_SHAKES 10
 #define MAX_LIGHT_EFFECTS 10

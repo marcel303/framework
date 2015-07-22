@@ -185,6 +185,7 @@ void Pickup::draw(const GameSim & gameSim) const
 		state.x = m_pos[0];
 		state.y = m_pos[1] + m_bbMax[1];
 
+		setColor(colorWhite);
 		spriter.draw(state);
 	}
 	else
@@ -193,6 +194,7 @@ void Pickup::draw(const GameSim & gameSim) const
 
 		Sprite sprite(filename);
 
+		setColor(colorWhite);
 		sprite.drawEx(m_pos[0] + m_bbMin[0], m_pos[1] + m_bbMin[1]);
 	}
 
@@ -206,6 +208,7 @@ void Pickup::drawLight() const
 {
 	const Vec2 pos = m_pos + (m_bbMin + m_bbMax) / 2.f;
 
+	setColor(colorWhite);
 	Sprite("player-light.png").drawEx(pos[0], pos[1], 0.f, 1.f, 1.f, false, FILTER_LINEAR);
 }
 
@@ -268,6 +271,7 @@ void Token::draw() const
 {
 	if (m_isDropped)
 	{
+		setColor(colorWhite);
 		Sprite(TOKEN_SPRITE).drawEx(m_pos[0], m_pos[1]);
 	}
 
@@ -281,6 +285,7 @@ void Token::drawLight() const
 {
 	if (m_isDropped)
 	{
+		setColor(colorWhite);
 		Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f, 1.5f, false, FILTER_LINEAR);
 	}
 }
@@ -344,6 +349,7 @@ void Coin::draw() const
 {
 	if (m_isDropped)
 	{
+		setColor(colorWhite);
 		Sprite(COIN_SPRITE).drawEx(m_pos[0], m_pos[1]);
 	}
 
@@ -357,6 +363,7 @@ void Coin::drawLight() const
 {
 	if (m_isDropped)
 	{
+		setColor(colorWhite);
 		Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f, 1.5f, false, FILTER_LINEAR);
 	}
 }
@@ -458,6 +465,7 @@ void Mover::draw() const
 
 void Mover::drawLight() const
 {
+	setColor(colorWhite);
 }
 
 Vec2 Mover::getPosition() const
@@ -627,6 +635,7 @@ void Axe::draw() const
 	SpriterState state = m_spriterState;
 	state.x = m_pos[0];
 	state.y = m_pos[1];
+	setColor(colorWhite);
 	AXE_SPRITER.draw(state);
 
 	if (g_devMode)
@@ -637,12 +646,12 @@ void Axe::draw() const
 			m_pos[1] + m_bbMin[1],
 			m_pos[0] + m_bbMax[0],
 			m_pos[1] + m_bbMax[1]);
-		setColor(colorWhite);
 	}
 }
 
 void Axe::drawLight() const
 {
+	setColor(colorWhite);
 	Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f, 1.5f, false, FILTER_LINEAR);
 }
 
@@ -757,6 +766,7 @@ void PipeBomb::draw() const
 	SpriterState state = m_spriterState;
 	state.x = m_pos[0];
 	state.y = m_pos[1];
+	setColor(colorWhite);
 	PIPEBOMB_SPRITER.draw(state);
 
 	if (g_devMode)
@@ -768,12 +778,12 @@ void PipeBomb::draw() const
 			m_pos[1] - PIPEBOMB_BLAST_RADIUS,
 			m_pos[0] + PIPEBOMB_BLAST_RADIUS,
 			m_pos[1] + PIPEBOMB_BLAST_RADIUS);
-		setColor(colorWhite);
 	}
 }
 
 void PipeBomb::drawLight() const
 {
+	setColor(colorWhite);
 	Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f, 1.5f, false, FILTER_LINEAR);
 }
 
@@ -812,6 +822,7 @@ void Barrel::draw() const
 
 void Barrel::drawLight() const
 {
+	setColor(colorWhite);
 }
 
 //
@@ -832,6 +843,7 @@ void Torch::tick(GameSim & gameSim, float dt)
 
 void Torch::draw() const
 {
+	setColor(colorWhite);
 	Sprite("torch.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.f);
 }
 
@@ -852,8 +864,83 @@ void Torch::drawLight() const
 	setColor(color);
 
 	Sprite("player-light.png").drawEx(m_pos[0], m_pos[1] + TORCH_FLICKER_Y_OFFSET, 0.f, 1.5f, 1.5f, false, FILTER_LINEAR);
+}
 
-	setColor(colorWhite);
+//
+
+void Portal::setup(int blockX, int blockY, int blockSx, int blockSy, int key)
+{
+	m_isAlive = true;
+
+	Assert(blockSx >= 1);
+	Assert(blockSy >= 1);
+	m_x1 = blockX;
+	m_y1 = blockY;
+	m_x2 = blockX + blockSx - 1;
+	m_y2 = blockY + blockSy - 1;
+
+	m_key = key;
+}
+
+bool Portal::intersectsBlockArea(int x1, int y1, int x2, int y2) const
+{
+	if (m_x1 < 0 || m_y1 < 0)
+		return false;
+	if (x2 < m_x1 || x1 > m_x2)
+		return false;
+	if (y2 < m_y1 || y1 > m_y2)
+		return false;
+	return true;
+}
+
+bool Portal::doTeleport(GameSim & gameSim, Portal *& destination, int & destinationId)
+{
+	// find a destination portal
+
+	for (int i = 0; i < MAX_PORTALS; ++i)
+	{
+		Portal & portal = gameSim.m_portals[i];
+
+		if (portal.m_isAlive &&
+			portal.m_key == m_key &&
+			&portal != this)
+		{
+			// found it
+
+			// todo : make a random selection
+
+			// todo : trigger tile sprite animation
+
+			// todo : make a sound?
+
+			destination = &portal;
+			destinationId = i;
+
+			return true;
+		}
+	}
+
+	return false;
+}
+
+Vec2 Portal::getDestinationPos() const
+{
+	return Vec2(
+		(m_x1 + m_x2 + 1) * BLOCK_SX / 2,
+		(m_y2 + 1) * BLOCK_SY);
+}
+
+void Portal::draw() const
+{
+	if (g_devMode)
+	{
+		setColor(colorGreen);
+		drawRectLine(
+			m_x1 * BLOCK_SX,
+			m_y1 * BLOCK_SY,
+			m_x2 * BLOCK_SX + BLOCK_SX,
+			m_y2 * BLOCK_SY + BLOCK_SY);
+	}
 }
 
 //
@@ -886,12 +973,25 @@ void TileSprite::tick(GameSim & gameSim, float dt)
 
 void TileSprite::draw() const
 {
+	setColor(colorWhite);
 	Spriter(m_spriter.c_str()).draw(m_spriterState);
+
+	if (g_devMode)
+	{
+		setColor(colorGreen);
+		drawRectLine(
+			m_x1 * BLOCK_SX,
+			m_y1 * BLOCK_SY,
+			m_x2 * BLOCK_SX + BLOCK_SX,
+			m_y2 * BLOCK_SY + BLOCK_SY);
+	}
 }
 
 void TileSprite::drawLight() const
 {
 	// todo : let object define light map?
+
+	setColor(colorWhite);
 }
 
 void TileSprite::startAnim(const char * name)
@@ -1049,9 +1149,7 @@ void FloorEffect::draw()
 					collisionInfo.max[1]);
 			}
 		}
-}
-
-	setColor(colorWhite);
+	}
 }
 
 void FloorEffect::trySpawnAt(GameSim & gameSim, int playerId, int x, int y, int dx, int size, int damageSize)
@@ -1175,8 +1273,6 @@ void BlindsEffect::drawLight()
 		}
 		setBlend(BLEND_ADD);
 	}
-
-	setColor(colorWhite);
 }
 
 void BlindsEffect::drawHud()
@@ -1189,8 +1285,6 @@ void BlindsEffect::drawHud()
 		setColorf(1.f, 1.f, 1.f, m_time / m_duration * 4.f);
 		drawText(150, m_y - m_size - 20, 40, +1.f, -1.f, "%s", m_text.c_str());
 	}
-
-	setColor(colorWhite);
 }
 
 
@@ -1677,6 +1771,31 @@ void GameSim::load(const char * name)
 						d.getInt("block_sy", 1));
 				}
 			}
+			else if (type == "portal")
+			{
+				Portal * portal = 0;
+
+				for (int i = 0; i < MAX_PORTALS; ++i)
+				{
+					if (!m_portals[i].m_isAlive)
+					{
+						portal = &m_portals[i];
+						break;
+					}
+				}
+
+				if (portal == 0)
+					LOG_ERR("too many portals!");
+				else
+				{
+					portal->setup(
+						d.getInt("block_x", -1),
+						d.getInt("block_y", -1),
+						d.getInt("block_sx", 1),
+						d.getInt("block_sy", 1),
+						d.getInt("key", 0));
+				}
+			}
 		}
 	}
 	catch (std::exception & e)
@@ -1731,6 +1850,11 @@ void GameSim::resetGameWorld()
 
 	for (int i = 0; i < MAX_TORCHES; ++i)
 		m_torches[i] = Torch();
+
+	// reset portals
+
+	for (int i = 0; i < MAX_PORTALS; ++i)
+		m_portals[i] = Portal();
 
 	// reset tile sprites
 
@@ -2419,6 +2543,11 @@ void GameSim::tickPlay()
 			m_torches[i].tick(*this, dt);
 	}
 
+	// portals
+
+	{
+	}
+
 	// tile sprites
 
 	for (int i = 0; i < MAX_TILE_SPRITES; ++i)
@@ -2735,6 +2864,16 @@ void GameSim::drawPlayColor(Vec2Arg camTranslation)
 			torch.draw();
 	}
 
+	// portals
+
+	for (int i = 0; i < MAX_PORTALS; ++i)
+	{
+		const Portal & portal = m_portals[i];
+
+		if (portal.m_isAlive)
+			portal.draw();
+	}
+
 	// tile sprites
 
 	for (int i = 0; i < MAX_TILE_SPRITES; ++i)
@@ -2850,6 +2989,11 @@ void GameSim::drawPlayLight(Vec2Arg camTranslation)
 
 		if (torch.m_isAlive)
 			torch.drawLight();
+	}
+
+	// portals
+
+	{
 	}
 
 	// tile sprites
@@ -3671,6 +3815,27 @@ void GameSim::addBlindsEffect(int playerId, int x, int y, int size, bool vertica
 			break;
 		}
 	}
+}
+
+Portal * GameSim::findPortal(float x1, float y1, float x2, float y2, int & id)
+{
+	const int blockX1 = x1 / BLOCK_SX;
+	const int blockY1 = y1 / BLOCK_SY;
+	const int blockX2 = x2 / BLOCK_SX;
+	const int blockY2 = y2 / BLOCK_SY;
+
+	for (int i = 0; i < MAX_PORTALS; ++i)
+	{
+		Portal & portal = m_portals[i];
+
+		if (portal.m_isAlive && portal.intersectsBlockArea(blockX1, blockY1, blockX2, blockY2))
+		{
+			id = i;
+			return &m_portals[i];
+		}
+	}
+
+	return 0;
 }
 
 TileSprite * GameSim::findTileSpriteAtBlockXY(int blockX, int blockY)

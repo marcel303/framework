@@ -40,5 +40,6 @@ bool Button::isClicked()
 
 void Button::draw()
 {
+	setColor(colorWhite);
 	m_sprite->drawEx(m_x, m_y);
 }

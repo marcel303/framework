@@ -17,6 +17,8 @@
 
 /*
 
+- add teleport object
+
 + bomb stuck on death kill
 + bomb deploy in air
 - player score UI toggle
@@ -1737,37 +1739,31 @@ void Player::tick(float dt)
 		// teleport
 
 		{
-			int px = int(m_pos[0] + (m_collision.min[0] + m_collision.max[0]) / 2) / BLOCK_SX;
-			int py = int(m_pos[1] + (m_collision.min[1] + m_collision.max[1]) / 2) / BLOCK_SY;
+			int portalId;
 
-			if (px != m_teleport.x || py != m_teleport.y)
+			Portal * portal = GAMESIM->findPortal(
+				m_pos[0] + m_collision.min[0],
+				m_pos[1] + m_collision.min[1],
+				m_pos[0] + m_collision.max[0],
+				m_pos[1] + m_collision.max[1],
+				portalId);
+
+			if (!portal || portalId != m_teleport.lastPortalId)
 			{
 				m_teleport.cooldown = false;
 			}
 
-			if (!m_teleport.cooldown && px >= 0 && px < ARENA_SX && py >= 0 && py < ARENA_SY)
+			if (portal && !m_teleport.cooldown)
 			{
-				const Block & block = GAMESIM->m_arena.getBlock(px, py);
+				Portal * destination;
+				int destinationId;
 
-				if (block.type == kBlockType_Teleport)
+				if (portal->doTeleport(*GAMESIM, destination, destinationId))
 				{
-					// find a teleport destination
+					m_pos = destination->getDestinationPos();
 
-					int destinationX;
-					int destinationY;
-
-					if (GAMESIM->m_arena.getTeleportDestination(*GAMESIM, px, py, destinationX, destinationY))
-					{
-						m_pos[0] = destinationX * BLOCK_SX;
-						m_pos[1] = destinationY * BLOCK_SY;
-
-						m_pos[0] += BLOCK_SX / 2;
-						m_pos[1] += BLOCK_SY - 1;
-
-						m_teleport.cooldown = true;
-						m_teleport.x = destinationX;
-						m_teleport.y = destinationY;
-					}
+					m_teleport.cooldown = true;
+					m_teleport.lastPortalId = destinationId;
 				}
 			}
 		}
@@ -2837,8 +2833,6 @@ void Player::draw() const
 		setFont("calibri.ttf");
 		setColor(0, 0, 255);
 		drawText(offsetX + sizeX/2, offsetY + INGAME_TEXTCHAT_PADDING_Y, INGAME_TEXTCHAT_FONT_SIZE, 0.f, +1.f, "%s", m_instanceData->m_textChat.c_str());
-
-		setColor(colorWhite);
 	}
 }
 
@@ -2897,7 +2891,6 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 			py + off2[1] - 5.f,
 			px + off2[0] + 5.f,
 			py + off2[1] + 5.f);
-		setColor(colorWhite);
 	}
 
 	// draw grapple direction
@@ -2971,12 +2964,12 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 	characterData->getSpriter()->draw(spriterState);
 
 	setColorMode(COLOR_MUL);
-	setColor(colorWhite);
 
 	if (m_special.meleeCounter != 0)
 	{
 		Sprite sprite("doublemelee.png");
 		sprite.flipX = m_facing[0] < 0.f;
+		setColor(colorWhite);
 		sprite.drawEx(x, y + mirrorY(m_attack.collision.min[1]));
 	}
 
@@ -2987,6 +2980,7 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 		state.y = y + (flipY ? +characterData->m_collisionSy : -characterData->m_collisionSy) / 2.f;
 		state.flipX = flipX;
 		state.flipY = flipY;
+		setColor(colorWhite);
 		SHIELDSPECIAL_SPRITER.draw(state);
 	}
 
@@ -2997,6 +2991,7 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 		state.y = y + (flipY ? +characterData->m_collisionSy : -characterData->m_collisionSy) / 2.f;
 		state.flipX = flipX;
 		state.flipY = flipY;
+		setColor(colorWhite);
 		SHIELD_SPRITER.draw(state);
 	}
 
@@ -3007,6 +3002,7 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 		state.y = y + (flipY ? +characterData->m_collisionSy : -characterData->m_collisionSy) / 2.f;
 		state.flipX = flipX;
 		state.flipY = flipY;
+		setColor(colorWhite);
 		BUBBLE_SPRITER.draw(state);
 	}
 
@@ -3155,6 +3151,7 @@ void Player::drawLight() const
 
 	const float x = m_pos[0] + (m_collision.min[0] + m_collision.max[0]) / 2.f;
 	const float y = m_pos[1] + (m_collision.min[1] + m_collision.max[1]) / 2.f;
+	setColor(colorWhite);
 	Sprite("player-light.png").drawEx(x, y, 0.f, 3.f, 3.f, false, FILTER_LINEAR);
 }
 
