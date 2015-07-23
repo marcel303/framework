@@ -120,28 +120,45 @@ void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 
 		if (m_doTeleport)
 		{
-			const uint32_t blockMask = getIntersectingBlockMask(gameSim, newPos) & blockExcludeMask;
+			const Vec2 min = m_pos + m_bbMin;
+			const Vec2 max = m_pos + m_bbMax;
 
-			const bool oldTeleport = (oldBlockMask & (1 << kBlockType_Teleport)) != 0;
-			const bool newTeleport = (   blockMask & (1 << kBlockType_Teleport)) != 0;
-
-			if (!oldTeleport && newTeleport)
+			if (m_portalCooldown)
 			{
-				int sourceX = int(m_pos[0]) / BLOCK_SX;
-				int sourceY = int(m_pos[1]) / BLOCK_SY;
+				int portalId;
 
-				int destX;
-				int destY;
+				Portal * portal = gameSim.findPortal(
+					min[0], min[1],
+					max[0], max[1],
+					true,
+					portalId);
 
-				if (gameSim.m_arena.getTeleportDestination(gameSim, sourceX, sourceY, destX, destY))
+				if (!portal || portalId != m_lastPortalId)
+					m_portalCooldown = false;
+			}
+
+			if (!m_portalCooldown)
+			{
+				int portalId;
+
+				Portal * portal = gameSim.findPortal(
+					min[0], min[1],
+					max[0], max[1],
+					false,
+					portalId);
+
+				if (portal)
 				{
-					int deltaX = destX - sourceX;
-					int deltaY = destY - sourceY;
+					int destinationId;
+					Portal * destination;
 
-					m_pos[0] += deltaX * BLOCK_SX;
-					m_pos[1] += deltaY * BLOCK_SY;
-
-					oldBlockMask = blockMask;
+					if (portal->doTeleport(gameSim, destination, destinationId))
+					{
+						const Vec2 offset = m_pos - portal->getDestinationPos(Vec2(0.f, 0.f));
+						m_pos = destination->getDestinationPos(offset);
+						m_portalCooldown = true;
+						m_lastPortalId = destinationId;
+					}
 				}
 			}
 		}

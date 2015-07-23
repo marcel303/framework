@@ -273,7 +273,6 @@ void Arena::load(const char * name)
 				q   kBlockType_Spike,
 				p = kBlockType_Spawn,
 				j = kBlockType_Spring,
-				t = kBlockType_Teleport,
 				u = kBlockType_GravityReverse,
 				- = kBlockType_GravityDisable,
 				d = kBlockType_GravityStrong,
@@ -298,7 +297,6 @@ void Arena::load(const char * name)
 				case 'q': type = kBlockType_Spike; break;
 				case 'p': type = kBlockType_Spawn; break;
 				case 'j': type = kBlockType_Spring; break;
-				case 't': type = kBlockType_Teleport; break;
 				case 'u': type = kBlockType_GravityReverse; break;
 				case '-': type = kBlockType_GravityDisable; break;
 				case 'd': type = kBlockType_GravityStrong; break;
@@ -1005,36 +1003,6 @@ bool Arena::getRandomPickupLocations(int * out_x, int * out_y, int & numLocation
 	numLocations = numCandidates;
 
 	return true;
-}
-
-bool Arena::getTeleportDestination(GameSim & gameSim, int startX, int startY, int & out_x, int & out_y) const
-{
-	// find a teleport destination
-
-	std::vector< std::pair<int, int> > destinations;
-
-	for (int x = 0; x < ARENA_SX; ++x)
-		for (int y = 0; y < ARENA_SY; ++y)
-			if (x != startX && y != startY && m_blocks[x][y].type == kBlockType_Teleport)
-				destinations.push_back(std::make_pair(x, y));
-
-	if (destinations.empty())
-	{
-		LOG_WRN("unable to find teleport destination");
-
-		return false;
-	}
-	else
-	{
-		if (DEBUG_RANDOM_CALLSITES)
-			LOG_DBG("Random called from getTeleportDestination");
-		const int idx = gameSim.Random() % destinations.size();
-
-		out_x = std::get<0>(destinations[idx]);
-		out_y = std::get<1>(destinations[idx]);
-
-		return true;
-	}
 }
 
 uint32_t Arena::getIntersectingBlocksMask(int x, int y) const
