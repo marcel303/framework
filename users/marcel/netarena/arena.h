@@ -11,8 +11,6 @@ class GameSim;
 struct Player;
 class Sprite;
 
-#define USE_TEXTURE_ATLAS 1
-
 enum BlockShape
 {
 	kBlockShape_Empty,
@@ -123,14 +121,42 @@ public:
 	Block m_blocks[ARENA_SX][ARENA_SY];
 
 	FixedString<64> m_name;
-#if USE_TEXTURE_ATLAS
 	uint64_t m_texture;
 	int m_textureSx;
 	int m_textureSy;
-#else
-	Sprite ** m_sprites;
-	int m_numSprites;
-#endif
+
+	struct TileTransition
+	{
+		int m_x1, m_y1;
+		int m_x2, m_y2;
+		TransitionInfo m_transition;
+
+		void setup(int x1, int y1, int x2, int y2, Dictionary & d)
+		{
+			m_x1 = x1;
+			m_y1 = y1;
+			m_x2 = x2;
+			m_y2 = y2;
+			m_transition.parse(d);
+		}
+
+		bool isActiveAtTime(float transitionTime) const
+		{
+			return m_transition.isActiveAtTime(transitionTime);
+		}
+
+		void apply(float transitionTime, int x, int y, float & dx, float & dy) const
+		{
+			if (x >= m_x1 && y >= m_y1 && x <= m_x2 && y <= m_y2)
+			{
+				const Vec2 offset = m_transition.eval(transitionTime);
+
+				dx += offset[0];
+				dy += offset[1];
+			}
+		}
+	} m_tileTransitions[MAX_TILE_TRANSITIONS];
+	int m_numTileTransitions;
 
 public:
 	Arena();
@@ -150,7 +176,7 @@ public:
 	uint32_t calcCRC() const;
 #endif
 
-	void drawBlocks(int layer) const;
+	void drawBlocks(const GameSim & gameSim, int layer) const;
 
 	void tick(GameSim & gameSim);
 

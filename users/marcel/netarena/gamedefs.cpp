@@ -464,14 +464,3 @@ OPTION_STEP(EMOTE_DISPLAY_TIME, 0.f, 0.f, .1f);
 
 OPTION_DEFINE(bool, VOLCANO_LOOP, "Level Events/Volcano/Loop");
 OPTION_DEFINE(int, VOLCANO_LOOP_TIME, "Level Events/Volcano/LoopTime");
-
-// fixme : move to gametypes.cpp ?
-
-#include "gametypes.h"
-const char * g_gameModeNames[kGameMode_COUNT] =
-{
-	"Lobby",
-	"Death Match",
-	"Token Hunt",
-	"Coin Collector"
-};

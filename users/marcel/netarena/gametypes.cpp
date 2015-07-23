@@ -4,6 +4,85 @@
 #include "gamedefs.h"
 #include "gametypes.h"
 
+//#pragma optimize("", off)
+
+Vec2 getTransitionOffset(TransitionType type, float transitionAmount)
+{
+	switch (type)
+	{
+	case kTransitionType_None:
+		return Vec2(0.f, 0.f);
+	case kTransitionType_SlideFromLeft:
+		return Vec2(-ARENA_SX_PIXELS * transitionAmount, 0.f);
+	case kTransitionType_SlideFromRight:
+		return Vec2(+ARENA_SX_PIXELS * transitionAmount, 0.f);
+	case kTransitionType_SlideFromTop:
+		return Vec2(0.f, -ARENA_SY_PIXELS * transitionAmount);
+	case kTransitionType_SlideFromBottom:
+		return Vec2(0.f, +ARENA_SY_PIXELS * transitionAmount);
+	default:
+		Assert(false);
+		break;
+	}
+
+	return Vec2(0.f, 0.f);
+}
+
+void TransitionInfo::setup(TransitionType type, float time, float curve)
+{
+	m_type = type;
+	m_time = time;
+	m_curve = curve;
+}
+
+void TransitionInfo::parse(const class Dictionary & d)
+{
+	const std::string type = d.getString("transition_type", "");
+
+	if (type == "none")
+		m_type = kTransitionType_None;
+	else if (type == "left")
+		m_type = kTransitionType_SlideFromLeft;
+	else if (type == "right")
+		m_type = kTransitionType_SlideFromRight;
+	else if (type == "top")
+		m_type = kTransitionType_SlideFromTop;
+	else if (type == "bottom")
+		m_type = kTransitionType_SlideFromBottom;
+	else
+	{
+		logError("unknown transition type: %s", type.c_str());
+		m_type = kTransitionType_None;
+	}
+
+	m_time = d.getFloat("transition_time", 1.f);
+	m_curve = d.getFloat("transition_curve", 1.f);
+}
+
+Vec2 TransitionInfo::eval(float transitionTime) const
+{
+	if (isActiveAtTime(transitionTime))
+	{
+		const float transitionProgress = std::powf(1.f - transitionTime / m_time, m_curve);
+
+		return getTransitionOffset(m_type, transitionProgress);
+	}
+	else
+	{
+		return Vec2(0.f, 0.f);
+	}
+}
+
+//
+
+const char * g_gameModeNames[kGameMode_COUNT] =
+{
+	"Lobby",
+	"Death Match",
+	"Token Hunt",
+	"Coin Collector"
+};
+
 const char * g_gameStateNames[kGameState_COUNT] =
 {
 	"mainMenus",

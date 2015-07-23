@@ -17,6 +17,11 @@
 
 /*
 
+- indievelopment explosion 101 video
++ add tile transition object type. define rect, specify transition type
++ add transition support to tile sprites
+- add support for spriter reskins
+
 + add teleport object
 
 - add mine radius animation. also makes it more explicit where it's deployed

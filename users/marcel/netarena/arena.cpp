@@ -13,6 +13,8 @@
 #include "player.h"
 #include "StreamReader.h"
 
+//#pragma optimize("", off)
+
 class BlockMask
 {
 public:
@@ -146,14 +148,10 @@ bool Block::handleDamage(GameSim & gameSim, int blockX, int blockY)
 //
 
 Arena::Arena()
-#if USE_TEXTURE_ATLAS
 	: m_texture(0)
 	, m_textureSx(0)
 	, m_textureSy(0)
-#else
-	: m_sprites(0)
-	, m_numSprites(0)
-#endif
+	, m_numTileTransitions(0)
 {
 }
 
@@ -187,6 +185,11 @@ void Arena::reset()
 	// clear sprites
 
 	freeArt();
+
+	// reset tile transitions
+
+	memset(m_tileTransitions, 0, sizeof(m_tileTransitions));
+	m_numTileTransitions = 0;
 }
 
 void Arena::generate()
@@ -422,61 +425,22 @@ void Arena::loadArt(const char * name)
 {
 	freeArt();
 
-#if USE_TEXTURE_ATLAS
 	const std::string atlasName = std::string("levels/") + name + "/Artdata.png";
 	const Sprite atlasSprite(atlasName.c_str());
 	m_texture = atlasSprite.getTexture();
 	m_textureSx = atlasSprite.getWidth();
 	m_textureSy = atlasSprite.getHeight();
-#else
-	const std::string baseName = std::string("levels/") + name + "/";
-	const std::string artFileName = baseName + "ArtIndex.txt";
-	const std::string spriteBaseName = std::string("levels/") + name + "/";
-
-	try
-	{
-		FileStream stream(artFileName.c_str(), OpenMode_Read);
-		StreamReader reader(&stream, false);
-		std::vector<std::string> lines = reader.ReadAllLines();
-
-		m_sprites = new Sprite*[lines.size()];
-		m_numSprites = (int)lines.size();
-
-		for (size_t i = 0; i < lines.size(); ++i)
-		{
-			const std::string spriteFilename = spriteBaseName + lines[i];
-			m_sprites[i] = new Sprite(spriteFilename.c_str());
-		}
-	}
-	catch (std::exception & e)
-	{
-		logError("failed to load art index for %s: %s", name, e.what());
-	}
-#endif
 }
 
 void Arena::freeArt()
 {
-#if USE_TEXTURE_ATLAS
 	m_texture = 0;
 	m_textureSx = 0;
 	m_textureSy = 0;
-#else
-	for (int i = 0; i < m_numSprites; ++i)
-	{
-		delete m_sprites[i];
-		m_sprites[i] = 0;
-	}
-
-	delete [] m_sprites;
-	m_sprites = 0;
-	m_numSprites = 0;
-#endif
 }
 
 void Arena::loadArtIndices(const char * filename, int layer)
 {
-#if USE_TEXTURE_ATLAS
 	try
 	{
 		FileStream stream;
@@ -524,51 +488,6 @@ void Arena::loadArtIndices(const char * filename, int layer)
 	{
 		LOG_ERR("failed to open %s: %s", filename, e.what());
 	}
-#else
-	try
-	{
-		FileStream stream;
-		stream.Open(filename, OpenMode_Read);
-		StreamReader reader(&stream, false);
-		
-		const int sx = reader.ReadInt32();
-		const int sy = reader.ReadInt32();
-
-		for (int y = 0; y < sy; ++y)
-		{
-			for (int x = 0; x < sx; ++x)
-			{
-				const int index = reader.ReadInt32();
-
-			#if USE_TEXTURE_ATLAS
-				Assert(index == -1 || index >= 0);
-			#else
-				Assert(index == -1 || (index >= 0 && index < m_numSprites));
-			#endif
-
-				if (x < ARENA_SX && y < ARENA_SY)
-				{
-				#if USE_TEXTURE_ATLAS
-					if (true)
-				#else
-					if (index == -1 || (index >= 0 && index < m_numSprites))
-				#endif
-					{
-						m_blocks[x][y].artIndex[layer] = index;
-					}
-					else
-					{
-						logDebug("art tile at (%d, %d) is out of range. layer=%d, index=%d", x, y, layer, index);
-					}
-				}
-			}
-		}
-	}
-	catch (std::exception & e)
-	{
-		LOG_ERR("failed to open %s: %s", filename, e.what());
-	}
-#endif
 }
 
 void Arena::serialize(NetSerializationContext & context)
@@ -631,6 +550,9 @@ void Arena::serialize(NetSerializationContext & context)
 		else
 			loadArt(m_name.c_str());
 	}
+
+	context.Serialize(m_numTileTransitions);
+	context.SerializeBytes(m_tileTransitions, sizeof(m_tileTransitions));
 }
 
 #if ENABLE_GAMESTATE_DESYNC_DETECTION
@@ -644,13 +566,14 @@ uint32_t Arena::calcCRC() const
 	for (uint32_t i = 0; i < numBytes; ++i)
 		result = result * 13 + bytes[i];
 
+	// todo : calculate CRC using serialize?
+
 	return result;
 }
 #endif
 
-void Arena::drawBlocks(int layer) const
+void Arena::drawBlocks(const GameSim & gameSim, int layer) const
 {
-#if USE_TEXTURE_ATLAS
 	float pos[4 * ARENA_SX * ARENA_SY * 2];
 	float uv [4 * ARENA_SX * ARENA_SY * 2];
 	uint32_t c  [4 * ARENA_SX * ARENA_SY * 1];
@@ -668,14 +591,19 @@ void Arena::drawBlocks(int layer) const
 		const uint32_t tc = 0x00ffffff | (_a << 24); \
 		for (int v = 0; v < 4; ++v, ++numVerts) \
 		{ \
-			pos[numVerts * 2 + 0] = (x  + OFFSET_X[v]) * BLOCK_SX; \
-			pos[numVerts * 2 + 1] = (y  + OFFSET_Y[v]) * BLOCK_SY; \
+			pos[numVerts * 2 + 0] = dx + (x  + OFFSET_X[v]) * BLOCK_SX; \
+			pos[numVerts * 2 + 1] = dy + (y  + OFFSET_Y[v]) * BLOCK_SY; \
 			uv[numVerts * 2 + 0]  =               (tx + OFFSET_X[v]) * BLOCK_SX + (OFFSET_X[v] ? -.1f : +.1f); \
 			uv[numVerts * 2 + 1]  = m_textureSy - (ty + OFFSET_Y[v]) * BLOCK_SY + (OFFSET_Y[v] ? +.1f : -.1f); \
 			c[numVerts] = tc; \
 		} \
 	}
-#endif
+
+	const float transitionTime = gameSim.m_physicalRoundTime;
+
+	bool hasActiveTransition = false;
+	for (int i = 0; i < m_numTileTransitions; ++i)
+		hasActiveTransition |= m_tileTransitions[i].isActiveAtTime(transitionTime);
 
 	for (int x = 0; x < ARENA_SX; ++x)
 	{
@@ -711,17 +639,20 @@ void Arena::drawBlocks(int layer) const
 				if (alpha > 255)
 					alpha = 255;
 
-			#if USE_TEXTURE_ATLAS
+				float dx = 0.f;
+				float dy = 0.f;
+
+				if (hasActiveTransition)
+				{
+					for (int i = 0; i < m_numTileTransitions; ++i)
+						m_tileTransitions[i].apply(transitionTime, x, y, dx, dy);
+				}
+
 				AddQuad(x, y, block.artIndex[layer], alpha);
-			#else
-				setColorf(1.f, 1.f, 1.f, alpha);
-				m_sprites[block.artIndex[layer]]->drawEx(x * BLOCK_SX, y * BLOCK_SY, 0.f, BLOCK_SPRITE_SCALE);
-			#endif
 			}
 		}
 	}
 
-#if USE_TEXTURE_ATLAS
 	gxSetTexture(m_texture);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -750,7 +681,6 @@ void Arena::drawBlocks(int layer) const
 
 	gxSetTexture(0);
 	setColor(colorWhite);
-#endif
 
 	if (layer == 0 && s_drawBlockMask >= 0 && s_drawBlockMask < kBlockShape_COUNT)
 	{

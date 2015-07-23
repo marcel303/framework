@@ -806,7 +806,7 @@ struct TileSprite
 
 	void setup(const char * name, int x, int y, int blockX, int blockY, int blockSx, int blockSy);
 	void tick(GameSim & gameSim, float dt);
-	void draw() const;
+	void draw(const GameSim & gameSim) const;
 	void drawLight() const;
 
 	void startAnim(const char * name);
@@ -814,9 +814,12 @@ struct TileSprite
 	bool intersectsBlock(int blockX, int blockY) const;
 
 	bool m_isAlive;
+	int m_x;
+	int m_y;
 	FixedString<32> m_spriter;
 	SpriterState m_spriterState;
 	int m_x1, m_y1, m_x2, m_y2;
+	TransitionInfo m_transition;
 };
 
 struct ScreenShake

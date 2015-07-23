@@ -961,10 +961,11 @@ void TileSprite::setup(const char * name, int x, int y, int blockX, int blockY, 
 {
 	m_isAlive = true;
 
+	m_x = x;
+	m_y = y;
+
 	m_spriter = name;
 	m_spriterState = SpriterState();
-	m_spriterState.x = x;
-	m_spriterState.y = y;
 	m_spriterState.startAnim(Spriter(m_spriter.c_str()), 0);
 
 	Assert(blockSx >= 1);
@@ -983,10 +984,14 @@ void TileSprite::tick(GameSim & gameSim, float dt)
 	}
 }
 
-void TileSprite::draw() const
+void TileSprite::draw(const GameSim & gameSim) const
 {
 	setColor(colorWhite);
-	Spriter(m_spriter.c_str()).draw(m_spriterState);
+	const Vec2 offset = m_transition.eval(gameSim.m_physicalRoundTime);
+	SpriterState state = m_spriterState;
+	state.x = m_x + offset[0];
+	state.y = m_y + offset[1];
+	Spriter(m_spriter.c_str()).draw(state);
 
 	if (g_devMode)
 	{
@@ -1781,6 +1786,25 @@ void GameSim::load(const char * name)
 						d.getInt("block_y", -1),
 						d.getInt("block_sx", 1),
 						d.getInt("block_sy", 1));
+					tileSprite->m_transition.parse(d);
+				}
+			}
+			else if (type == "tiletransition")
+			{
+				if (m_arena.m_numTileTransitions < MAX_TILE_TRANSITIONS)
+				{
+					Arena::TileTransition & tileTransition = m_arena.m_tileTransitions[m_arena.m_numTileTransitions++];
+
+					tileTransition.setup(
+						d.getInt("x1", 0) / BLOCK_SX,
+						d.getInt("y1", 0) / BLOCK_SY,
+						d.getInt("x2", 0) / BLOCK_SX,
+						d.getInt("y2", 0) / BLOCK_SY,
+						d);
+				}
+				else
+				{
+					LOG_ERR("too many tile transitions!");
 				}
 			}
 			else if (type == "portal")
@@ -2861,8 +2885,8 @@ void GameSim::drawPlayColor(Vec2Arg camTranslation)
 
 	// background blocks
 
-	m_arena.drawBlocks(0);
-	m_arena.drawBlocks(1);
+	m_arena.drawBlocks(*this, 0);
+	m_arena.drawBlocks(*this, 1);
 
 	m_floorEffect.draw();
 
@@ -2893,7 +2917,7 @@ void GameSim::drawPlayColor(Vec2Arg camTranslation)
 		const TileSprite & tileSprite = m_tileSprites[i];
 
 		if (tileSprite.m_isAlive)
-			tileSprite.draw();
+			tileSprite.draw(*this);
 	}
 
 	// pickups
@@ -2977,7 +3001,7 @@ void GameSim::drawPlayColor(Vec2Arg camTranslation)
 
 	// foreground blocks
 
-	m_arena.drawBlocks(2);
+	m_arena.drawBlocks(*this, 2);
 
 	// spike walls
 

@@ -58,6 +58,34 @@ enum ObjectType
 	kObjectType_COUNT
 };
 
+enum TransitionType
+{
+	kTransitionType_None,
+	kTransitionType_SlideFromLeft,
+	kTransitionType_SlideFromRight,
+	kTransitionType_SlideFromTop,
+	kTransitionType_SlideFromBottom
+};
+
+Vec2 getTransitionOffset(TransitionType type, float transitionAmount);
+
+struct TransitionInfo
+{
+	TransitionInfo()
+	{
+		memset(this, 0, sizeof(TransitionInfo));
+	}
+
+	TransitionType m_type;
+	float m_time;
+	float m_curve;
+
+	void setup(TransitionType type, float time, float curve);
+	void parse(const class Dictionary & d);
+	bool isActiveAtTime(float time) const { return time >= 0.f && time <= m_time; }
+	Vec2 eval(float transitionProgress) const;
+};
+
 extern const char * g_gameModeNames[kGameMode_COUNT];
 
 enum PlayerAnim
