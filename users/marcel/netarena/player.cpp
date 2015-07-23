@@ -17,7 +17,9 @@
 
 /*
 
-- add teleport object
++ add teleport object
+
+- add mine radius animation. also makes it more explicit where it's deployed
 
 + bomb stuck on death kill
 + bomb deploy in air
@@ -1739,31 +1741,49 @@ void Player::tick(float dt)
 		// teleport
 
 		{
-			int portalId;
-
-			Portal * portal = GAMESIM->findPortal(
-				m_pos[0] + m_collision.min[0],
-				m_pos[1] + m_collision.min[1],
-				m_pos[0] + m_collision.max[0],
-				m_pos[1] + m_collision.max[1],
-				portalId);
-
-			if (!portal || portalId != m_teleport.lastPortalId)
 			{
-				m_teleport.cooldown = false;
+				int portalId;
+
+				Portal * portal = GAMESIM->findPortal(
+					m_pos[0] + m_collision.min[0],
+					m_pos[1] + m_collision.min[1],
+					m_pos[0] + m_collision.max[0],
+					m_pos[1] + m_collision.max[1],
+					true,
+					portalId);
+
+				if (!portal || portalId != m_teleport.lastPortalId)
+				{
+					m_teleport.cooldown = false;
+				}
 			}
 
-			if (portal && !m_teleport.cooldown)
+			if (!m_teleport.cooldown)
 			{
-				Portal * destination;
-				int destinationId;
+				int portalId;
 
-				if (portal->doTeleport(*GAMESIM, destination, destinationId))
+				Portal * portal = GAMESIM->findPortal(
+					m_pos[0] + m_collision.min[0],
+					m_pos[1] + m_collision.min[1],
+					m_pos[0] + m_collision.max[0],
+					m_pos[1] + m_collision.max[1],
+					false,
+					portalId);
+
+				if (portal)
 				{
-					m_pos = destination->getDestinationPos();
+					Portal * destination;
+					int destinationId;
 
-					m_teleport.cooldown = true;
-					m_teleport.lastPortalId = destinationId;
+					if (portal->doTeleport(*GAMESIM, destination, destinationId))
+					{
+						const Vec2 offset = m_pos - portal->getDestinationPos(Vec2(0.f, 0.f));
+
+						m_pos = destination->getDestinationPos(offset);
+
+						m_teleport.cooldown = true;
+						m_teleport.lastPortalId = destinationId;
+					}
 				}
 			}
 		}

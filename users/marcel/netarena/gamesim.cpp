@@ -868,27 +868,32 @@ void Torch::drawLight() const
 
 //
 
-void Portal::setup(int blockX, int blockY, int blockSx, int blockSy, int key)
+static const float kPortalSafeZoneSize = 10.f;
+
+void Portal::setup(float x1, float y1, float x2, float y2, int key)
 {
 	m_isAlive = true;
 
-	Assert(blockSx >= 1);
-	Assert(blockSy >= 1);
-	m_x1 = blockX;
-	m_y1 = blockY;
-	m_x2 = blockX + blockSx - 1;
-	m_y2 = blockY + blockSy - 1;
+	Assert(x1 < x2);
+	Assert(y1 < y2);
+	m_x1 = x1;
+	m_y1 = y1;
+	m_x2 = x2;
+	m_y2 = y2;
 
 	m_key = key;
 }
 
-bool Portal::intersectsBlockArea(int x1, int y1, int x2, int y2) const
+bool Portal::intersects(float x1, float y1, float x2, float y2, bool applySafeZone) const
 {
-	if (m_x1 < 0 || m_y1 < 0)
+	if (m_x1 >= m_x2 || m_y1 >= m_y2)
 		return false;
-	if (x2 < m_x1 || x1 > m_x2)
+
+	const float safeZone = applySafeZone ? kPortalSafeZoneSize : 0.f;
+
+	if (x2 < m_x1 - safeZone || x1 > m_x2 + safeZone)
 		return false;
-	if (y2 < m_y1 || y1 > m_y2)
+	if (y2 < m_y1 - safeZone || y1 > m_y2 + safeZone)
 		return false;
 	return true;
 }
@@ -923,23 +928,30 @@ bool Portal::doTeleport(GameSim & gameSim, Portal *& destination, int & destinat
 	return false;
 }
 
-Vec2 Portal::getDestinationPos() const
+Vec2 Portal::getDestinationPos(Vec2Arg offset) const
 {
 	return Vec2(
-		(m_x1 + m_x2 + 1) * BLOCK_SX / 2,
-		(m_y2 + 1) * BLOCK_SY);
+		offset[0] + (m_x1 + m_x2) / 2.f,
+		offset[1] + m_y2);
 }
 
 void Portal::draw() const
 {
-	if (g_devMode)
+	if (g_devMode || 1) // fixme
 	{
 		setColor(colorGreen);
 		drawRectLine(
-			m_x1 * BLOCK_SX,
-			m_y1 * BLOCK_SY,
-			m_x2 * BLOCK_SX + BLOCK_SX,
-			m_y2 * BLOCK_SY + BLOCK_SY);
+			m_x1,
+			m_y1,
+			m_x2,
+			m_y2);
+
+		setColor(colorRed);
+		drawRectLine(
+			m_x1 - kPortalSafeZoneSize,
+			m_y1 - kPortalSafeZoneSize,
+			m_x2 + kPortalSafeZoneSize,
+			m_y2 + kPortalSafeZoneSize);
 	}
 }
 
@@ -1789,10 +1801,10 @@ void GameSim::load(const char * name)
 				else
 				{
 					portal->setup(
-						d.getInt("block_x", -1),
-						d.getInt("block_y", -1),
-						d.getInt("block_sx", 1),
-						d.getInt("block_sy", 1),
+						d.getInt("x1", 0),
+						d.getInt("y1", 0),
+						d.getInt("x2", 0),
+						d.getInt("y2", 0),
 						d.getInt("key", 0));
 				}
 			}
@@ -3817,18 +3829,13 @@ void GameSim::addBlindsEffect(int playerId, int x, int y, int size, bool vertica
 	}
 }
 
-Portal * GameSim::findPortal(float x1, float y1, float x2, float y2, int & id)
+Portal * GameSim::findPortal(float x1, float y1, float x2, float y2, bool applySafeZone, int & id)
 {
-	const int blockX1 = x1 / BLOCK_SX;
-	const int blockY1 = y1 / BLOCK_SY;
-	const int blockX2 = x2 / BLOCK_SX;
-	const int blockY2 = y2 / BLOCK_SY;
-
 	for (int i = 0; i < MAX_PORTALS; ++i)
 	{
 		Portal & portal = m_portals[i];
 
-		if (portal.m_isAlive && portal.intersectsBlockArea(blockX1, blockY1, blockX2, blockY2))
+		if (portal.m_isAlive && portal.intersects(x1, y1, x2, y2, applySafeZone))
 		{
 			id = i;
 			return &m_portals[i];

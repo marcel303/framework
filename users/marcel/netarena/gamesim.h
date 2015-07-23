@@ -785,10 +785,10 @@ struct Portal
 		memset(this, 0, sizeof(Portal));
 	}
 
-	void setup(int blockX, int blockY, int blockSx, int blockSy, int key);
-	bool intersectsBlockArea(int x1, int y1, int x2, int y2) const;
+	void setup(float x1, float y1, float x2, float y2, int key);
+	bool intersects(float x1, float y1, float x2, float y2, bool applySafeZone) const;
 	bool doTeleport(GameSim & gameSim, Portal *& destination, int & destinationId);
-	Vec2 getDestinationPos() const;
+	Vec2 getDestinationPos(Vec2Arg offset) const;
 
 	void draw() const;
 
@@ -1198,7 +1198,7 @@ public:
 
 	void addBlindsEffect(int playerId, int x, int y, int size, bool vertical, float time, const char * text);
 
-	Portal * findPortal(float x1, float y1, float x2, float y2, int & id);
+	Portal * findPortal(float x1, float y1, float x2, float y2, bool applySafeZone, int & id);
 
 	TileSprite * findTileSpriteAtBlockXY(int blockX, int blockY);
 

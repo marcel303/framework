@@ -63,6 +63,9 @@ struct PhysicsActor
 	float m_friction;
 	float m_airFriction;
 
+	int m_lastPortalId;
+	bool m_portalCooldown;
+
 	PhysicsActor();
 
 	void tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs);

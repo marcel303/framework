@@ -198,26 +198,42 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 
 					// teleport
 
-					const bool oldTeleport = (oldBlockMask & (1 << kBlockType_Teleport)) != 0;
-					const bool newTeleport = (   blockMask & (1 << kBlockType_Teleport)) != 0;
-
-					if (!oldTeleport && newTeleport)
+					if (b.m_portalCooldown)
 					{
-						int sourceX = int(b.m_pos[0]) / BLOCK_SX;
-						int sourceY = int(b.m_pos[1]) / BLOCK_SY;
+						int portalId;
 
-						int destX;
-						int destY;
+						Portal * portal = gameSim.findPortal(
+							b.m_pos[0], b.m_pos[1],
+							b.m_pos[0], b.m_pos[1],
+							true,
+							portalId);
 
-						if (arena.getTeleportDestination(gameSim, sourceX, sourceY, destX, destY))
+						if (!portal || portalId != b.m_lastPortalId)
+							b.m_portalCooldown = false;
+					}
+
+					if (!b.m_portalCooldown)
+					{
+						int portalId;
+
+						Portal * portal = gameSim.findPortal(
+							b.m_pos[0], b.m_pos[1],
+							b.m_pos[0], b.m_pos[1],
+							false,
+							portalId);
+
+						if (portal)
 						{
-							int deltaX = destX - sourceX;
-							int deltaY = destY - sourceY;
+							int destinationId;
+							Portal * destination;
 
-							b.m_pos[0] += deltaX * BLOCK_SX;
-							b.m_pos[1] += deltaY * BLOCK_SY;
-
-							oldBlockMask = blockMask;
+							if (portal->doTeleport(gameSim, destination, destinationId))
+							{
+								const Vec2 offset = b.m_pos - portal->getDestinationPos(Vec2(0.f, 0.f));
+								b.m_pos = destination->getDestinationPos(offset);
+								b.m_portalCooldown = true;
+								b.m_lastPortalId = destinationId;
+							}
 						}
 					}
 				}
