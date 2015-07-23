@@ -811,11 +811,11 @@ struct TileSprite
 
 	void startAnim(const char * name);
 
-	bool intersectsBlock(int blockX, int blockY) const;
+	bool intersects(int x, int y) const;
 
 	bool m_isAlive;
-	int m_x;
-	int m_y;
+	int m_pivotX;
+	int m_pivotY;
 	FixedString<32> m_spriter;
 	SpriterState m_spriterState;
 	int m_x1, m_y1, m_x2, m_y2;
@@ -1203,6 +1203,7 @@ public:
 
 	Portal * findPortal(float x1, float y1, float x2, float y2, bool applySafeZone, int & id);
 
+	TileSprite * findTileSpriteAtPos(int x, int y);
 	TileSprite * findTileSpriteAtBlockXY(int blockX, int blockY);
 
 	void addAnimationFx(const char * fileName, int x, int y, bool flipX = false, bool flipY = false);

@@ -902,6 +902,9 @@ bool Portal::doTeleport(GameSim & gameSim, Portal *& destination, int & destinat
 {
 	// find a destination portal
 
+	int numPortals = 0;
+	int portals[MAX_PORTALS];
+
 	for (int i = 0; i < MAX_PORTALS; ++i)
 	{
 		Portal & portal = gameSim.m_portals[i];
@@ -910,22 +913,37 @@ bool Portal::doTeleport(GameSim & gameSim, Portal *& destination, int & destinat
 			portal.m_key == m_key &&
 			&portal != this)
 		{
-			// found it
+			// found one!
 
-			// todo : make a random selection
-
-			// todo : trigger tile sprite animation
-
-			// todo : make a sound?
-
-			destination = &portal;
-			destinationId = i;
-
-			return true;
+			portals[numPortals++] = i;
 		}
 	}
 
-	return false;
+	if (numPortals > 0)
+	{
+		// make a random selection
+
+		const int index = portals[gameSim.Random() % numPortals];
+		Portal & portal = gameSim.m_portals[index];
+
+		// trigger tile sprite animation
+
+		const Vec2 pos = portal.getDestinationPos(Vec2(0.f, 0.f));
+		TileSprite * tileSprite = gameSim.findTileSpriteAtPos(pos[0], pos[1]);
+		if (tileSprite)
+			tileSprite->startAnim("Activate");
+
+		// todo : make a sound?
+
+		destination = &portal;
+		destinationId = index;
+
+		return true;
+	}
+	else
+	{
+		return false;
+	}
 }
 
 Vec2 Portal::getDestinationPos(Vec2Arg offset) const
@@ -957,23 +975,23 @@ void Portal::draw() const
 
 //
 
-void TileSprite::setup(const char * name, int x, int y, int blockX, int blockY, int blockSx, int blockSy)
+void TileSprite::setup(const char * name, int pivotX, int pivotY, int x1, int y1, int x2, int y2)
 {
 	m_isAlive = true;
 
-	m_x = x;
-	m_y = y;
+	m_pivotX = pivotX;
+	m_pivotY = pivotY;
 
 	m_spriter = name;
 	m_spriterState = SpriterState();
 	m_spriterState.startAnim(Spriter(m_spriter.c_str()), 0);
 
-	Assert(blockSx >= 1);
-	Assert(blockSy >= 1);
-	m_x1 = blockX;
-	m_y1 = blockY;
-	m_x2 = blockX + blockSx - 1;
-	m_y2 = blockY + blockSy - 1;
+	Assert(x1 < x2);
+	Assert(y1 < y2);
+	m_x1 = x1;
+	m_y1 = y1;
+	m_x2 = x2;
+	m_y2 = y2;
 }
 
 void TileSprite::tick(GameSim & gameSim, float dt)
@@ -989,18 +1007,18 @@ void TileSprite::draw(const GameSim & gameSim) const
 	setColor(colorWhite);
 	const Vec2 offset = m_transition.eval(gameSim.m_physicalRoundTime);
 	SpriterState state = m_spriterState;
-	state.x = m_x + offset[0];
-	state.y = m_y + offset[1];
+	state.x = (m_x1 + m_x2) / 2 + m_pivotX + offset[0];
+	state.y = m_y2 + m_pivotY + offset[1];
 	Spriter(m_spriter.c_str()).draw(state);
 
 	if (g_devMode)
 	{
 		setColor(colorGreen);
 		drawRectLine(
-			m_x1 * BLOCK_SX,
-			m_y1 * BLOCK_SY,
-			m_x2 * BLOCK_SX + BLOCK_SX,
-			m_y2 * BLOCK_SY + BLOCK_SY);
+			m_x1,
+			m_y1,
+			m_x2,
+			m_y2);
 	}
 }
 
@@ -1018,13 +1036,13 @@ void TileSprite::startAnim(const char * name)
 		name);
 }
 
-bool TileSprite::intersectsBlock(int blockX, int blockY) const
+bool TileSprite::intersects(int x, int y) const
 {
 	if (m_x1 < 0 || m_y1 < 0)
 		return false;
-	if (blockX < m_x1 || blockX > m_x2)
+	if (x < m_x1 || x > m_x2)
 		return false;
-	if (blockY < m_y1 || blockY > m_y2)
+	if (y < m_y1 || y > m_y2)
 		return false;
 	return true;
 }
@@ -1780,12 +1798,12 @@ void GameSim::load(const char * name)
 				{
 					tileSprite->setup(
 						d.getString("sprite", "").c_str(),
-						d.getInt("x", 0),
-						d.getInt("y", 0),
-						d.getInt("block_x", -1),
-						d.getInt("block_y", -1),
-						d.getInt("block_sx", 1),
-						d.getInt("block_sy", 1));
+						d.getInt("px", 0),
+						d.getInt("py", 0),
+						d.getInt("x1", 0),
+						d.getInt("y1", 0),
+						d.getInt("x2", 0),
+						d.getInt("y2", 0));
 					tileSprite->m_transition.parse(d);
 				}
 			}
@@ -3869,17 +3887,24 @@ Portal * GameSim::findPortal(float x1, float y1, float x2, float y2, bool applyS
 	return 0;
 }
 
-TileSprite * GameSim::findTileSpriteAtBlockXY(int blockX, int blockY)
+TileSprite * GameSim::findTileSpriteAtPos(int x, int y)
 {
 	for (int i = 0; i < MAX_TILE_SPRITES; ++i)
 	{
 		TileSprite & tileSprite = m_tileSprites[i];
 
-		if (tileSprite.m_isAlive && tileSprite.intersectsBlock(blockX, blockY))
+		if (tileSprite.m_isAlive && tileSprite.intersects(x, y))
 			return &tileSprite;
 	}
 
 	return 0;
+}
+
+TileSprite * GameSim::findTileSpriteAtBlockXY(int blockX, int blockY)
+{
+	const int x = blockX * BLOCK_SX + BLOCK_SX/2;
+	const int y = blockY * BLOCK_SY + BLOCK_SY/2;
+	return findTileSpriteAtPos(x, y);
 }
 
 void GameSim::addAnimationFx(const char * fileName, int x, int y, bool flipX, bool flipY)
