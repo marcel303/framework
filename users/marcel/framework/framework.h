@@ -495,10 +495,15 @@ struct SpriterState
 	float animTime;
 	float animSpeed;
 
+	int characterMap;
+
 	bool startAnim(const Spriter & spriter, const char * name);
 	bool startAnim(const Spriter & spriter, int index);
 	void stopAnim(const Spriter & spriter);
 	bool updateAnim(const Spriter & spriter, float dt);
+
+	void setCharacterMap(const Spriter & spriter, int index); // -1 is the default map. 0, 1, etc are the maps as authored in Spriter
+	void setCharacterMap(const Spriter & spriter, const char * name);
 };
 
 #pragma pack(pop)
@@ -506,6 +511,8 @@ struct SpriterState
 class Spriter
 {
 public:
+	friend struct SpriterState;
+
 	Spriter(const char * filename);
 
 	void draw(const SpriterState & state);

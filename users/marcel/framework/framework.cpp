@@ -1952,6 +1952,27 @@ bool SpriterState::updateAnim(const Spriter & spriter, float dt)
 	return isDone;
 }
 
+void SpriterState::setCharacterMap(const Spriter & spriter, int index)
+{
+	index++; // index -1 is reserved for the default character map. all other maps start at 1
+
+	fassert(index >= 0 && index < spriter.m_spriter->m_scene->m_fileCaches.size());
+	if (index >= 0 && index < spriter.m_spriter->m_scene->m_fileCaches.size())
+		characterMap = index;
+	else
+		characterMap = 0;
+}
+
+void SpriterState::setCharacterMap(const Spriter & spriter, const char * name)
+{
+	const int index = spriter.m_spriter->m_scene->getCharacterMapIndexByName(name);
+	fassert(index != -1);
+	if (index == -1)
+		logError("character map not found: %s", name);
+
+	characterMap = index < 0 ? 0 : characterMap;
+}
+
 // -----
 
 Spriter::Spriter(const char * filename)
@@ -1970,7 +1991,11 @@ void Spriter::draw(const SpriterState & state)
 	spriter::Drawable drawables[kMaxDrawables];
 	int numDrawables = kMaxDrawables;
 
-	m_spriter->m_scene->m_entities[0]->getDrawableListAtTime(state.animIndex, state.animTime * 1000.f, drawables, numDrawables);
+	m_spriter->m_scene->m_entities[0]->getDrawableListAtTime(
+		state.animIndex,
+		state.characterMap,
+		state.animTime * 1000.f,
+		drawables, numDrawables);
 
 	gxPushMatrix();
 	gxTranslatef(state.x, state.y, 0.f);

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector> // fixme : remove dep
+
 namespace spriter
 {
 	class Animation;
@@ -68,7 +70,7 @@ namespace spriter
 		int getAnimIndexByName(const char * name) const;
 		int getAnimLength(int index) const;
 		bool isAnimLooped(int index) const;
-		void getDrawableListAtTime(int animIndex, float time, Drawable * drawables, int & numDrawables) const;
+		void getDrawableListAtTime(int animIndex, int characterMap, float time, Drawable * drawables, int & numDrawables) const;
 		bool getHitboxAtTime(int animIndex, const char * name, float time, Hitbox & hitbox) const;
 
 		Scene * m_scene;
@@ -86,8 +88,9 @@ namespace spriter
 		bool load(const char * filename);
 
 		int getEntityIndexByName(const char * name) const;
+		int getCharacterMapIndexByName(const char * name) const;
 
-		FileCache * m_fileCache;
+		std::vector<FileCache*> m_fileCaches;
 		std::vector<Entity*> m_entities;
 	};
 }

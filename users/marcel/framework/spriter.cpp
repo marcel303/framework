@@ -10,7 +10,6 @@
 #include "spriter.h"
 
 // todo : remove all of the dynamic memory allocations during draw
-// todo : add support for character map
 
 #define FIXUP_BONE_REFS 0
 
@@ -131,10 +130,10 @@ namespace spriter
 	class FileCache
 	{
 	public:
+		std::string name;
 		std::map<FolderAndFile, File> files;
 	};
 
-#if 0
 	class MapInstruction
 	{
 	public:
@@ -158,7 +157,6 @@ namespace spriter
 		std::string name;
 		std::vector<MapInstruction> maps;
 	};
-#endif
 
 	class MainlineKey
 	{
@@ -720,13 +718,16 @@ namespace spriter
 		return m_animations[index]->loopType != kLoopType_NoLooping;
 	}
 
-	void Entity::getDrawableListAtTime(int animIndex, float time, Drawable * drawables, int & numDrawables) const
+	void Entity::getDrawableListAtTime(int animIndex, int characterMap, float time, Drawable * drawables, int & numDrawables) const
 	{
-		if (animIndex < 0)
+		if (animIndex == -1 || characterMap == -1)
 		{
 			numDrawables = 0;
 			return;
 		}
+
+		fassert(animIndex >= 0 && animIndex < m_animations.size());
+		fassert(characterMap >= 0 && characterMap < m_scene->m_fileCaches.size());
 
 		const Animation * animation = m_animations[animIndex];
 
@@ -747,7 +748,7 @@ namespace spriter
 			FolderAndFile ff;
 			ff.first = o.key->folder;
 			ff.second = o.key->file;
-			const File & file = m_scene->m_fileCache->files[ff];
+			const File & file = m_scene->m_fileCaches[characterMap]->files[ff];
 
 			Drawable & drawable = drawables[outNumDrawables++];
 
@@ -816,7 +817,6 @@ namespace spriter
 	//
 
 	Scene::Scene()
-		: m_fileCache(0)
 	{
 	}
 
@@ -826,8 +826,9 @@ namespace spriter
 			delete m_entities[i];
 		m_entities.clear();
 
-		delete m_fileCache;
-		m_fileCache = 0;
+		for (auto i : m_fileCaches)
+			delete i;
+		m_fileCaches.clear();
 	}
 
 	bool Scene::load(const char * filename)
@@ -856,7 +857,7 @@ namespace spriter
 			}
 			else
 			{
-				m_fileCache = new FileCache();
+				FileCache * fileCache = new FileCache();
 
 				int folderIndex = 0;
 
@@ -885,13 +886,15 @@ namespace spriter
 						ff.first = folderIndex;
 						ff.second = fileIndex;
 
-						m_fileCache->files[ff] = file;
+						fileCache->files[ff] = file;
 
 						fileIndex++;
 					}
 
 					folderIndex++;
 				}
+
+				m_fileCaches.push_back(fileCache);
 
 				for (const XMLElement * xmlEntity = xmlSpriterData->FirstChildElement("entity"); xmlEntity; xmlEntity = xmlEntity->NextSiblingElement("entity"))
 				{
@@ -901,10 +904,51 @@ namespace spriter
 
 					entity->m_name = stringAttrib(xmlEntity, "name", "");
 
-					// <character_map>
-					// id, name
-					//     <map>
-					//     folder, file, target_folder, target_file
+					for (const XMLElement * xmlCharacterMap = xmlEntity->FirstChildElement("character_map"); xmlCharacterMap; xmlCharacterMap = xmlCharacterMap->NextSiblingElement("character_map"))
+					{
+						// id, name
+
+						CharacterMap characterMap;
+
+						characterMap.name = stringAttrib(xmlCharacterMap, "name", "");
+
+						for (const XMLElement * xmlMapInstruction = xmlCharacterMap->FirstChildElement("map"); xmlMapInstruction; xmlMapInstruction = xmlMapInstruction->NextSiblingElement("map"))
+						{
+							// folder, file, target_folder, target_file
+
+							MapInstruction map;
+
+							map.folder = intAttrib(xmlMapInstruction, "folder", -1);
+							map.file = intAttrib(xmlMapInstruction, "file", -1);
+							map.targetFolder = intAttrib(xmlMapInstruction, "target_folder", -1);
+							map.targetFile = intAttrib(xmlMapInstruction, "target_file", -1);
+
+							fassert(map.folder != -1);
+							fassert(map.file != -1);
+							fassert(map.targetFolder != -1);
+							fassert(map.targetFile != -1);
+
+							characterMap.maps.push_back(map);
+						}
+
+						FileCache * mappedFileCache = new FileCache();
+
+						*mappedFileCache = *fileCache;
+						mappedFileCache->name = characterMap.name;
+
+						for (auto mapInstruction : characterMap.maps)
+						{
+							FolderAndFile ff;
+							FolderAndFile ffTarget;
+							ff.first = mapInstruction.folder;
+							ff.second = mapInstruction.file;
+							ffTarget.first = mapInstruction.targetFolder;
+							ffTarget.second = mapInstruction.targetFile;
+							mappedFileCache->files[ff] = mappedFileCache->files[ffTarget];
+						}
+
+						m_fileCaches.push_back(mappedFileCache);
+					}
 
 					for (const XMLElement * xmlObjectInfo = xmlEntity->FirstChildElement("obj_info"); xmlObjectInfo; xmlObjectInfo = xmlObjectInfo->NextSiblingElement("obj_info"))
 					{
@@ -1097,5 +1141,16 @@ namespace spriter
 			if (m_entities[i]->m_name == name)
 				return i;
 		return -1;
+	}
+
+	int Scene::getCharacterMapIndexByName(const char * name) const
+	{
+		int index = -1;
+
+		for (size_t i = 0; i < m_fileCaches.size(); ++i)
+			if (m_fileCaches[i]->name == name)
+				index = i;
+
+		return index;
 	}
 }
