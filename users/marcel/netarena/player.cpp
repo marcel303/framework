@@ -2986,6 +2986,8 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 	spriterState.scaleY = scale;
 	spriterState.flipX = flipX;
 	spriterState.flipY = flipY;
+	if (PLAYER_SKIN_OVERRIDE >= 0)
+		spriterState.setCharacterMap(*characterData->getSpriter(), PLAYER_SKIN_OVERRIDE);
 	characterData->getSpriter()->draw(spriterState);
 
 	setColorMode(COLOR_MUL);
