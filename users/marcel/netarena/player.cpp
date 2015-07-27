@@ -22,6 +22,7 @@
 - add 'muzzle flash' when firing some weapons
 - add small screen shake when firing?
 - apply color/light effect on player that kills using melee?
+- add spriter FX for bullet hits against wall
 
 - indievelopment explosion 101 video
 + add tile transition object type. define rect, specify transition type
@@ -2812,10 +2813,22 @@ void Player::draw() const
 		gxSetTexture(surface2.getTexture());
 		gxBegin(GL_QUADS);
 		{
-			gxTexCoord2f(0.f, 1.f); gxVertex2f(m_pos[0] - sx/2, m_pos[1] - oy);
-			gxTexCoord2f(1.f, 1.f); gxVertex2f(m_pos[0] + sx/2, m_pos[1] - oy);
-			gxTexCoord2f(1.f, 0.f); gxVertex2f(m_pos[0] + sx/2, m_pos[1] - oy + sy);
-			gxTexCoord2f(0.f, 0.f); gxVertex2f(m_pos[0] - sx/2, m_pos[1] - oy + sy);
+			const int offsets[5][2] =
+			{
+				{ 0, 0 },
+				{ -ARENA_SX_PIXELS, 0 },
+				{ +ARENA_SX_PIXELS, 0 },
+				{ 0, -ARENA_SX_PIXELS },
+				{ 0, +ARENA_SX_PIXELS }
+			};
+
+			for (int i = 0; i < 5; ++i)
+			{
+				gxTexCoord2f(0.f, 1.f); gxVertex2f(offsets[i][0] + m_pos[0] - sx/2, offsets[i][1] + m_pos[1] - oy);
+				gxTexCoord2f(1.f, 1.f); gxVertex2f(offsets[i][0] + m_pos[0] + sx/2, offsets[i][1] + m_pos[1] - oy);
+				gxTexCoord2f(1.f, 0.f); gxVertex2f(offsets[i][0] + m_pos[0] + sx/2, offsets[i][1] + m_pos[1] - oy + sy);
+				gxTexCoord2f(0.f, 0.f); gxVertex2f(offsets[i][0] + m_pos[0] - sx/2, offsets[i][1] + m_pos[1] - oy + sy);
+			}
 		}
 		gxEnd();
 		gxSetTexture(0);
