@@ -3903,7 +3903,7 @@ PlayerWeapon Player::popWeapon()
 
 void Player::addKnockBack(float strength)
 {
-	m_vel[0] += m_facing[0] * strength;
+	m_vel[0] -= m_facing[0] * strength;
 }
 
 void Player::handleJumpCollision()
