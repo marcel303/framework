@@ -201,6 +201,7 @@ struct Player
 
 	void pushWeapon(PlayerWeapon weapon, int ammo);
 	PlayerWeapon popWeapon();
+	void addKnockBack(float strength);
 
 	void handleJumpCollision();
 

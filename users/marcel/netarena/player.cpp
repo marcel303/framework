@@ -17,6 +17,12 @@
 
 /*
 
++ add knockback when firing weapons (looks cool in air in while sliding. adds a little bit of movement depth)
++ add sounds when axe bounces around
+- add 'muzzle flash' when firing some weapons
+- add small screen shake when firing?
+- apply color/light effect on player that kills using melee?
+
 - indievelopment explosion 101 video
 + add tile transition object type. define rect, specify transition type
 + add transition support to tile sprites
@@ -1029,8 +1035,8 @@ void Player::tick(float dt)
 			{
 				switch (pickup.type)
 				{
-				case kPickupType_Ammo:
-					pushWeapon(kPlayerWeapon_Fire, PICKUP_AMMO_COUNT);
+				case kPickupType_Gun:
+					pushWeapon(kPlayerWeapon_Gun, PICKUP_GUN_COUNT);
 					break;
 				case kPickupType_Nade:
 					pushWeapon(kPlayerWeapon_Grenade, 1);
@@ -1330,12 +1336,13 @@ void Player::tick(float dt)
 
 				PlayerWeapon weaponType = popWeapon();
 
-				if (weaponType == kPlayerWeapon_Fire)
+				if (weaponType == kPlayerWeapon_Gun)
 				{
 					anim = kPlayerAnim_Fire;
 					bulletType = kBulletType_B;
-					m_attack.cooldown = PLAYER_FIRE_COOLDOWN;
+					m_attack.cooldown = PLAYER_WEAPON_GUN_COOLDOWN;
 					
+					addKnockBack(PLAYER_WEAPON_GUN_KNOCKBACK);
 					GAMESIM->playSound("gun-fire.ogg");
 				}
 				else if (weaponType == kPlayerWeapon_Ice)
@@ -1343,14 +1350,15 @@ void Player::tick(float dt)
 					anim = kPlayerAnim_Fire;
 					bulletType = kBulletType_B;
 					bulletEffect = kBulletEffect_Ice;
-					m_attack.cooldown = PLAYER_FIRE_COOLDOWN;
+					m_attack.cooldown = PLAYER_WEAPON_ICE_COOLDOWN;
 
+					addKnockBack(PLAYER_WEAPON_ICE_KNOCKBACK);
 					GAMESIM->playSound("gun-fire-ice.ogg");
 				}
 				else if (weaponType == kPlayerWeapon_Bubble)
 				{
 					anim = kPlayerAnim_Fire;
-					m_attack.cooldown = PLAYER_FIRE_COOLDOWN;
+					m_attack.cooldown = PLAYER_WEAPON_BUBBLE_COOLDOWN;
 
 					const Vec2 playerSpeed = m_lastTotalVel;
 
@@ -1389,7 +1397,11 @@ void Player::tick(float dt)
 				}
 				else if (weaponType == kPlayerWeapon_Grenade)
 				{
+					anim = kPlayerAnim_Fire;
 					bulletType = kBulletType_Grenade;
+					m_attack.cooldown = PLAYER_WEAPON_GRENADE_COOLDOWN;
+					
+					addKnockBack(PLAYER_WEAPON_GRENADE_KNOCKBACK);
 					GAMESIM->playSound("grenade-throw.ogg"); // player throws a grenade
 				}
 				else if (weaponType == kPlayerWeapon_TimeDilation)
@@ -3084,7 +3096,7 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 
 		switch (weapon)
 		{
-		case kPlayerWeapon_Fire:
+		case kPlayerWeapon_Gun:
 			color = Color(0.f, 1.f, 0.f);
 			break;
 		case kPlayerWeapon_Ice:
@@ -3598,8 +3610,8 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 
 							switch (weapon)
 							{
-							case kPlayerWeapon_Fire:
-								pickupType = kPickupType_Ammo;
+							case kPlayerWeapon_Gun:
+								pickupType = kPickupType_Gun;
 								break;
 							case kPlayerWeapon_Ice:
 								pickupType = kPickupType_Ice;
@@ -3887,6 +3899,11 @@ PlayerWeapon Player::popWeapon()
 		m_weaponStackSize--;
 	}
 	return result;
+}
+
+void Player::addKnockBack(float strength)
+{
+	m_vel[0] += m_facing[0] * strength;
 }
 
 void Player::handleJumpCollision()

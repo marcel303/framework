@@ -168,6 +168,12 @@ void Pickup::setup(PickupType _type, int _blockX, int _blockY)
 void Pickup::tick(GameSim & gameSim, float dt)
 {
 	PhysicsActorCBs cbs;
+	cbs.onBounce = [](PhysicsActorCBs & cbs, PhysicsActor & actor)
+	{
+		if (std::abs(actor.m_vel[cbs.axis]) >= TOKEN_BOUNCE_SOUND_TRESHOLD) // fixme : add gamedef
+			g_gameSim->playSound("pickup-bounce.ogg");
+	};
+
 	PhysicsActor::tick(gameSim, dt, cbs);
 }
 
@@ -257,7 +263,7 @@ void Token::tick(GameSim & gameSim, float dt)
 		};
 		cbs.onBounce = [](PhysicsActorCBs & cbs, PhysicsActor & actor)
 		{
-			if (std::abs(actor.m_vel[1]) >= TOKEN_BOUNCE_SOUND_TRESHOLD)
+			if (std::abs(actor.m_vel[cbs.axis]) >= TOKEN_BOUNCE_SOUND_TRESHOLD)
 				g_gameSim->playSound("token-bounce.ogg");
 		};
 
@@ -328,7 +334,7 @@ void Coin::tick(GameSim & gameSim, float dt)
 				if (actor.m_vel[1] > 0.f)
 				{
 					actor.m_vel.Set(g_gameSim->RandomFloat(-COIN_FLEE_SPEED, +COIN_FLEE_SPEED), -COIN_FLEE_SPEED);
-					g_gameSim->playSound("token-bounce.ogg");
+					g_gameSim->playSound("coin-bounce.ogg");
 				}
 			}
 			return false;
@@ -336,7 +342,7 @@ void Coin::tick(GameSim & gameSim, float dt)
 		cbs.onBounce = [](PhysicsActorCBs & cbs, PhysicsActor & actor)
 		{
 			if (std::abs(actor.m_vel[1]) >= COIN_BOUNCE_SOUND_TRESHOLD)
-				g_gameSim->playSound("token-bounce.ogg");
+				g_gameSim->playSound("coin-bounce.ogg");
 		};
 
 		PhysicsActor::tick(gameSim, dt, cbs);
@@ -530,6 +536,7 @@ void Axe::setup(Vec2Arg pos, Vec2Arg vel, int playerIndex)
 	m_throwDone = false;
 	m_travelTime = AXE_THROW_TIME;
 
+	g_gameSim->playSound("objects/axe/activate.ogg");
 	m_spriterState.startAnim(AXE_SPRITER, "active");
 }
 
@@ -546,6 +553,9 @@ void Axe::tick(GameSim & gameSim, float dt)
 		{
 			self.endThrow();
 		}
+
+		if (std::abs(actor.m_vel[cbs.axis]) >= TOKEN_BOUNCE_SOUND_TRESHOLD) // fixme : add gamedef
+			g_gameSim->playSound("objects/axe/bounce.ogg");
 	};
 	cbs.onHitPlayer = [](PhysicsActorCBs & cbs, PhysicsActor & actor, Player & player)
 	{
@@ -627,6 +637,7 @@ void Axe::endThrow()
 	m_vel *= AXE_SPEED_MULTIPLIER_ON_DIE;
 	m_gravityMultiplier = AXE_GRAVITY_MULTIPLIER_INACTIVE;
 
+	g_gameSim->playSound("objects/axe/deactivate.ogg");
 	m_spriterState.startAnim(AXE_SPRITER, "inactive");
 }
 
@@ -689,6 +700,7 @@ void PipeBomb::tick(GameSim & gameSim, float dt)
 		if (m_activationTime < 0.f)
 		{
 			m_activationTime = 0.f;
+			gameSim.playSound("objects/pipebomb/activate.ogg");
 			m_spriterState.startAnim(PIPEBOMB_SPRITER, "activated");
 		}
 	}
@@ -2391,7 +2403,7 @@ void GameSim::tickPlay()
 			{
 				int weights[kPickupType_COUNT] =
 				{
-					PICKUP_AMMO_WEIGHT,
+					PICKUP_GUN_WEIGHT,
 					PICKUP_NADE_WEIGHT,
 					PICKUP_SHIELD_WEIGHT,
 					PICKUP_ICE_WEIGHT,

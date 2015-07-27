@@ -117,7 +117,7 @@ enum PlayerAnim
 enum PlayerWeapon
 {
 	kPlayerWeapon_None,
-	kPlayerWeapon_Fire,
+	kPlayerWeapon_Gun,
 	kPlayerWeapon_Ice,
 	kPlayerWeapon_Bubble,
 	kPlayerWeapon_Grenade,
@@ -203,7 +203,7 @@ struct PlayerInput
 
 enum PickupType
 {
-	kPickupType_Ammo,
+	kPickupType_Gun,
 	kPickupType_Nade,
 	kPickupType_Shield,
 	kPickupType_Ice,
