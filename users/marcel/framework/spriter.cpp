@@ -250,8 +250,13 @@ namespace spriter
 				return 0.f;
 			}
 
+		#if 0
 			const float t = (currentTime - time) / (nextKeyTime - time);
 			Assert(t >= 0.f && t <= 1.f);
+		#else
+			const float v = (currentTime - time) / (nextKeyTime - time);
+			const float t = v < 0.f ? 0.f : v > 1.f ? 1.f : v;
+		#endif
 
 			if (curveType == kCurveType_Linear)
 			{

@@ -1960,7 +1960,10 @@ void SpriterState::setCharacterMap(const Spriter & spriter, int index)
 	if (index >= 0 && index < spriter.m_spriter->m_scene->m_fileCaches.size())
 		characterMap = index;
 	else
+	{
+		logError("character map does not exist: index=%d", index);
 		characterMap = 0;
+	}
 }
 
 void SpriterState::setCharacterMap(const Spriter & spriter, const char * name)
