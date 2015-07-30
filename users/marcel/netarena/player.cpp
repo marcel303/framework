@@ -17,6 +17,11 @@
 
 /*
 
+- check coin drop location. should be center on center
+- add fixed pickup spawner
++ add first blood sound
+- add victory dance at the end of the round
+
 + add knockback when firing weapons (looks cool in air in while sliding. adds a little bit of movement depth)
 + add sounds when axe bounces around
 - add 'muzzle flash' when firing some weapons
@@ -3704,7 +3709,9 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 					break;
 				}
 
-				attacker->handleKill(hasScored);
+				attacker->handleKill(hasScored, GAMESIM->m_isFirstKill);
+
+				GAMESIM->m_isFirstKill = false;
 			}
 			else
 			{
@@ -3819,7 +3826,7 @@ void Player::awardScore(int score)
 	m_score += score;
 }
 
-void Player::handleKill(bool hasScored)
+void Player::handleKill(bool hasScored, bool isFirstKill)
 {
 	if (hasScored)
 	{
@@ -3837,6 +3844,11 @@ void Player::handleKill(bool hasScored)
 		m_killingSpree++;
 
 		// sound feedback
+
+		if (isFirstKill)
+		{
+			GAMESIM->playSound("firstblood.ogg");
+		}
 
 		if (m_multiKillCount >= 2)
 		{

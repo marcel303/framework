@@ -196,7 +196,7 @@ struct Player
 	bool handleIce(Vec2Arg velocity, Player * attacker);
 	bool handleBubble(Vec2Arg velocity, Player * attacker);
 	void awardScore(int score);
-	void handleKill(bool hasScored);
+	void handleKill(bool hasScored, bool isFirstKill);
 	void dropCoins(int numCoins);
 
 	void pushWeapon(PlayerWeapon weapon, int ammo);
@@ -970,6 +970,7 @@ struct GameStateData
 	float m_physicalRoundTime;
 	uint32_t m_nextRoundNumber;
 	uint32_t m_consecutiveRoundCount;
+	bool m_isFirstKill;
 
 	struct RoundBegin
 	{

@@ -1876,6 +1876,7 @@ void GameSim::resetGameWorld()
 
 	m_roundTime = 0.f;
 	m_physicalRoundTime = 0.f;
+	m_isFirstKill = true;
 
 	// reset map
 
