@@ -212,6 +212,9 @@ enum PickupType
 	kPickupType_COUNT
 };
 
+bool parsePickupType(char c, PickupType & type);
+bool parsePickupType(const char * s, PickupType & type);
+
 enum BulletType
 {
 	kBulletType_A,

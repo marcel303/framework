@@ -266,6 +266,33 @@ void PlayerInput::gather(bool useKeyboard, int gamepadIndex, bool monkeyMode)
 
 //
 
+bool parsePickupType(char c, PickupType & type)
+{
+	switch (c)
+	{
+	case 'w': type = kPickupType_Gun; break;
+	case 'g': type = kPickupType_Nade; break;
+	case 's': type = kPickupType_Shield; break;
+	case 'i': type = kPickupType_Ice; break;
+	case 'b': type = kPickupType_Bubble; break;
+	case 't': type = kPickupType_TimeDilation; break;
+	default:
+		return false;
+	}
+
+	return true;
+}
+
+bool parsePickupType(const char * s, PickupType & type)
+{
+	if (strlen(s) != 1)
+		return false;
+	else
+		return parsePickupType(s[0], type);
+}
+
+//
+
 const CollisionShape & CollisionShape::operator=(const CollisionBox & box)
 {
 	Vec2 p1(box.min[0], box.min[1]);

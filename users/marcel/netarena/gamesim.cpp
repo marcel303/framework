@@ -122,7 +122,7 @@ LevelEvent GameStateData::getRandomLevelEvent()
 
 //
 
-void Pickup::setup(PickupType _type, float x, float y)
+void Pickup::setup(PickupType type, float x, float y)
 {
 	int spriteSx;
 	int spriteSy;
@@ -141,7 +141,7 @@ void Pickup::setup(PickupType _type, float x, float y)
 		spriteSy = sprite.getHeight();
 	}
 
-	type = _type;
+	m_pickupType = type;
 
 	//
 
@@ -149,9 +149,7 @@ void Pickup::setup(PickupType _type, float x, float y)
 
 	m_isActive = true;
 	m_type = kObjectType_Pickup;
-	m_pos.Set(
-		x - spriteSx / 2.f,
-		y - spriteSy / 2.f);
+	m_pos.Set(x, y);
 	m_vel.Set(0.f, 0.f);
 
 	m_bbMin.Set(-spriteSx / 2.f, -spriteSy / 2.f);
@@ -177,9 +175,9 @@ void Pickup::tick(GameSim & gameSim, float dt)
 
 void Pickup::draw(const GameSim & gameSim) const
 {
-	if (s_pickupSprites[type].isSpriter)
+	if (s_pickupSprites[m_pickupType].isSpriter)
 	{
-		const char * filename = s_pickupSprites[type].filename;
+		const char * filename = s_pickupSprites[m_pickupType].filename;
 
 		Spriter spriter(filename);
 
@@ -194,7 +192,7 @@ void Pickup::draw(const GameSim & gameSim) const
 	}
 	else
 	{
-		const char * filename = s_pickupSprites[type].filename;
+		const char * filename = s_pickupSprites[m_pickupType].filename;
 
 		Sprite sprite(filename);
 
@@ -980,6 +978,53 @@ void Portal::draw() const
 			m_y1 - kPortalSafeZoneSize,
 			m_x2 + kPortalSafeZoneSize,
 			m_y2 + kPortalSafeZoneSize);
+	}
+}
+
+//
+
+void PickupSpawner::setup(float x1, float y1, float x2, float y2, PickupType type, float interval)
+{
+	m_isAlive = true;
+	m_x = (x1 + x2) / 2.f;
+	m_y = (y1 + y2) / 2.f;
+	m_type = type;
+	m_interval = interval;
+	m_timeLeft = interval;
+}
+
+void PickupSpawner::tick(GameSim & gameSim, float dt)
+{
+	if (m_interval > 0.f)
+	{
+		m_timeLeft -= dt;
+
+		if (m_timeLeft <= 0.f)
+		{
+			Pickup * pickup = gameSim.allocPickup();
+
+			if (pickup)
+			{
+				pickup->setup(m_type, m_x, m_y);
+
+				m_timeLeft = m_interval;
+			}
+		}
+	}
+}
+
+void PickupSpawner::draw() const
+{
+	if (g_devMode || 1) // fixme
+	{
+		static const float kBorderSize = 8.f;
+
+		setColor(colorGreen);
+		drawRectLine(
+			m_x - kBorderSize,
+			m_y - kBorderSize,
+			m_x + kBorderSize,
+			m_y + kBorderSize);
 	}
 }
 
@@ -1860,6 +1905,36 @@ void GameSim::load(const char * name)
 						d.getInt("key", 0));
 				}
 			}
+			else if (type == "pickupspawn")
+			{
+				PickupSpawner * spawner = 0;
+
+				for (int i = 0; i < MAX_PICKUP_SPAWNERS; ++i)
+				{
+					if (!m_pickupSpawners[i].m_isAlive)
+					{
+						spawner = &m_pickupSpawners[i];
+						break;
+					}
+				}
+
+				if (spawner == 0)
+					LOG_ERR("too many pickup spawners!");
+				else
+				{
+					PickupType type;
+					if (parsePickupType(d.getString("pickup", 0).c_str(), type))
+					{
+						spawner->setup(
+							d.getInt("x1", 0),
+							d.getInt("y1", 0),
+							d.getInt("x2", 0),
+							d.getInt("y2", 0),
+							type,
+							d.getInt("interval", 0));
+					}
+				}
+			}
 		}
 	}
 	catch (std::exception & e)
@@ -1920,6 +1995,11 @@ void GameSim::resetGameWorld()
 
 	for (int i = 0; i < MAX_PORTALS; ++i)
 		m_portals[i] = Portal();
+
+	// reset pickup spawners
+
+	for (int i = 0; i < MAX_PICKUP_SPAWNERS; ++i)
+		m_pickupSpawners[i] = PickupSpawner();
 
 	// reset tile sprites
 
@@ -2613,6 +2693,14 @@ void GameSim::tickPlay()
 	{
 	}
 
+	// pickup spawners
+
+	for (int i = 0; i < MAX_PICKUP_SPAWNERS; ++i)
+	{
+		if (m_pickupSpawners[i].m_isAlive)
+			m_pickupSpawners[i].tick(*this, dt);
+	}
+
 	// tile sprites
 
 	for (int i = 0; i < MAX_TILE_SPRITES; ++i)
@@ -2939,6 +3027,16 @@ void GameSim::drawPlayColor(Vec2Arg camTranslation)
 			portal.draw();
 	}
 
+	// pickup spawners
+
+	for (int i = 0; i < MAX_PICKUP_SPAWNERS; ++i)
+	{
+		const PickupSpawner & spawner = m_pickupSpawners[i];
+
+		if (spawner.m_isAlive)
+			spawner.draw();
+	}
+
 	// tile sprites
 
 	for (int i = 0; i < MAX_TILE_SPRITES; ++i)
@@ -3057,6 +3155,11 @@ void GameSim::drawPlayLight(Vec2Arg camTranslation)
 	}
 
 	// portals
+
+	{
+	}
+
+	// pickup spawners
 
 	{
 	}

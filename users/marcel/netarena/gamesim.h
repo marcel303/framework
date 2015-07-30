@@ -616,7 +616,7 @@ struct Player
 
 struct Pickup : PhysicsActor
 {
-	PickupType type;
+	PickupType m_pickupType;
 
 	Pickup()
 	{
@@ -795,6 +795,24 @@ struct Portal
 	bool m_isAlive;
 	int m_x1, m_y1, m_x2, m_y2;
 	int m_key;
+};
+
+struct PickupSpawner
+{
+	PickupSpawner()
+	{
+		memset(this, 0, sizeof(PickupSpawner));
+	}
+
+	void setup(float x1, float y1, float x2, float y2, PickupType type, float interval);
+	void tick(GameSim & gameSim, float dt);
+	void draw() const;
+
+	bool m_isAlive;
+	float m_x, m_y;
+	PickupType m_type;
+	float m_interval;
+	float m_timeLeft;
 };
 
 struct TileSprite
@@ -1042,6 +1060,8 @@ struct GameStateData
 	Torch m_torches[MAX_TORCHES];
 
 	Portal m_portals[MAX_PORTALS];
+
+	PickupSpawner m_pickupSpawners[MAX_PICKUP_SPAWNERS];
 
 	TileSprite m_tileSprites[MAX_TILE_SPRITES];
 

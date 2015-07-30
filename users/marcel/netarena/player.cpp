@@ -17,6 +17,7 @@
 
 /*
 
+- only do teleport when completely inside teleport
 - for pickup spawn: keep a list of MAX_PICKUPS previous spawn locations, instead of storing recently used x/y in pickups themselves
 
 + cancel grapple on teleport
@@ -1042,7 +1043,7 @@ void Player::tick(float dt)
 				m_pos[1] + m_collision.max[1],
 				pickup))
 			{
-				switch (pickup.type)
+				switch (pickup.m_pickupType)
 				{
 				case kPickupType_Gun:
 					pushWeapon(kPlayerWeapon_Gun, PICKUP_GUN_COUNT);
