@@ -17,7 +17,10 @@
 
 /*
 
-- check coin drop location. should be center on center
+- for pickup spawn: keep a list of MAX_PICKUPS previous spawn locations, instead of storing recently used x/y in pickups themselves
+
++ cancel grapple on teleport
++ check coin drop location. should be center on center
 - add fixed pickup spawner
 + add first blood sound
 - add victory dance at the end of the round
@@ -1806,6 +1809,8 @@ void Player::tick(float dt)
 
 						m_teleport.cooldown = true;
 						m_teleport.lastPortalId = destinationId;
+
+						endGrapple();
 					}
 				}
 			}
@@ -3611,49 +3616,7 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 
 				// item drop
 
-				if (m_weaponStackSize > 0)
-				{
-					const int blockX = m_pos[0] / BLOCK_SX;
-					const int blockY = (m_pos[1] - 1.f) / BLOCK_SY - 1;
-
-					if (GAMESIM->m_arena.isValidPickupLocation(blockX, blockY, false))
-					{
-						Pickup * pickup = GAMESIM->allocPickup();
-						if (pickup)
-						{
-							const int index = GAMESIM->Random() % m_weaponStackSize;
-							const PlayerWeapon weapon = m_weaponStack[index];
-
-							PickupType pickupType;
-
-							switch (weapon)
-							{
-							case kPlayerWeapon_Gun:
-								pickupType = kPickupType_Gun;
-								break;
-							case kPlayerWeapon_Ice:
-								pickupType = kPickupType_Ice;
-								break;
-							case kPlayerWeapon_Bubble:
-								pickupType = kPickupType_Bubble;
-								break;
-							case kPlayerWeapon_Grenade:
-								pickupType = kPickupType_Nade;
-								break;
-							case kPlayerWeapon_TimeDilation:
-								pickupType = kPickupType_TimeDilation;
-								break;
-							default:
-								AssertMsg(false, "missing translation for player weapon %d to pickup type", weapon);
-								break;
-							}
-
-							GAMESIM->spawnPickup(*pickup, pickupType, blockX, blockY);
-
-							pickup->m_vel = velocity * 2.f / 3.f;
-						}
-					}
-				}
+				dropWeapons(velocity);
 
 				// fixme.. mid pos
 				const CharacterData * characterData = getCharacterData(m_index);
@@ -3885,15 +3848,66 @@ void Player::dropCoins(int numCoins)
 
 		if (coin)
 		{
-			const int blockX = (int(m_pos[0] / BLOCK_SX) + ARENA_SX) % ARENA_SX;
-			const int blockY = (int(m_pos[1] / BLOCK_SY) + ARENA_SY) % ARENA_SY;
+			const Vec2 mid = m_pos + (m_collision.min + m_collision.max) / 2.f;
 
-			coin->setup(blockX, blockY);
+			coin->setup(mid[0], mid[1]);
 			coin->m_dropTimer = COIN_DROP_TIME;
 
 			coin->m_vel.Set(GAMESIM->RandomFloat(-COIN_DROP_SPEED, +COIN_DROP_SPEED), -COIN_DROP_SPEED);
 
 			GAMESIM->playSound("coin-bounce.ogg"); // sound when a coin hits the ground and bounces
+		}
+	}
+}
+
+void Player::dropWeapons(Vec2Arg velocity)
+{
+	if (m_weaponStackSize > 0)
+	{
+	#if 0 // just assume the player position is always valid
+		const int blockX = m_pos[0] / BLOCK_SX;
+		const int blockY = (m_pos[1] - 1.f) / BLOCK_SY - 1;
+
+		if (GAMESIM->m_arena.isValidPickupLocation(blockX, blockY, false))
+	#endif
+		{
+			Pickup * pickup = GAMESIM->allocPickup();
+			if (pickup)
+			{
+				const int index = GAMESIM->Random() % m_weaponStackSize;
+				const PlayerWeapon weapon = m_weaponStack[index];
+
+				PickupType pickupType;
+
+				switch (weapon)
+				{
+				case kPlayerWeapon_Gun:
+					pickupType = kPickupType_Gun;
+					break;
+				case kPlayerWeapon_Ice:
+					pickupType = kPickupType_Ice;
+					break;
+				case kPlayerWeapon_Bubble:
+					pickupType = kPickupType_Bubble;
+					break;
+				case kPlayerWeapon_Grenade:
+					pickupType = kPickupType_Nade;
+					break;
+				case kPlayerWeapon_TimeDilation:
+					pickupType = kPickupType_TimeDilation;
+					break;
+				default:
+					AssertMsg(false, "missing translation for player weapon %d to pickup type", weapon);
+					break;
+				}
+
+				//GAMESIM->spawnPickup(*pickup, pickupType, blockX, blockY);
+
+				const Vec2 mid = m_pos + (m_collision.min + m_collision.max) / 2.f;
+				pickup->setup(pickupType, mid[0], mid[1]);
+
+				pickup->m_vel = velocity * 2.f / 3.f;
+			}
 		}
 	}
 }

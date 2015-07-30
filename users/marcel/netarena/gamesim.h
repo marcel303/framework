@@ -198,6 +198,7 @@ struct Player
 	void awardScore(int score);
 	void handleKill(bool hasScored, bool isFirstKill);
 	void dropCoins(int numCoins);
+	void dropWeapons(Vec2Arg velocity);
 
 	void pushWeapon(PlayerWeapon weapon, int ammo);
 	PlayerWeapon popWeapon();
@@ -616,15 +617,13 @@ struct Player
 struct Pickup : PhysicsActor
 {
 	PickupType type;
-	uint8_t blockX;
-	uint8_t blockY;
 
 	Pickup()
 	{
 		memset(this, 0, sizeof(Pickup));
 	}
 
-	void setup(PickupType type, int blockX, int blockY);
+	void setup(PickupType type, float x, float y);
 
 	void tick(GameSim & gameSim, float dt);
 	void draw(const GameSim & gameSim) const;

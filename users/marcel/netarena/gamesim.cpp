@@ -122,7 +122,7 @@ LevelEvent GameStateData::getRandomLevelEvent()
 
 //
 
-void Pickup::setup(PickupType _type, int _blockX, int _blockY)
+void Pickup::setup(PickupType _type, float x, float y)
 {
 	int spriteSx;
 	int spriteSy;
@@ -142,8 +142,6 @@ void Pickup::setup(PickupType _type, int _blockX, int _blockY)
 	}
 
 	type = _type;
-	blockX = _blockX;
-	blockY = _blockY;
 
 	//
 
@@ -152,12 +150,12 @@ void Pickup::setup(PickupType _type, int _blockX, int _blockY)
 	m_isActive = true;
 	m_type = kObjectType_Pickup;
 	m_pos.Set(
-		blockX * BLOCK_SX + BLOCK_SX / 2.f,
-		blockY * BLOCK_SY + BLOCK_SY - spriteSy);
+		x - spriteSx / 2.f,
+		y - spriteSy / 2.f);
 	m_vel.Set(0.f, 0.f);
 
-	m_bbMin.Set(-spriteSx / 2.f, -spriteSy);
-	m_bbMax.Set(+spriteSx / 2.f, 0.f);
+	m_bbMin.Set(-spriteSx / 2.f, -spriteSy / 2.f);
+	m_bbMax.Set(+spriteSx / 2.f, +spriteSy / 2.f);
 
 	m_doTeleport = true;
 	m_bounciness = .25f;
@@ -3319,10 +3317,12 @@ void GameSim::trySpawnPickup(PickupType type)
 		if (m_arena.getRandomPickupLocations(x, y, numLocations, this,
 			[](void * obj, int x, int y) 
 			{
+			#if 0 // todo : maintain list of previous spawn locations in GameSim
 				GameSim * self = (GameSim*)obj;
 				for (int i = 0; i < MAX_PICKUPS; ++i)
 					if (self->m_pickups[i].blockX == x && self->m_pickups[i].blockY == y)
 						return true;
+			#endif
 				return false;
 			}))
 		{
@@ -3339,7 +3339,7 @@ void GameSim::trySpawnPickup(PickupType type)
 
 void GameSim::spawnPickup(Pickup & pickup, PickupType type, int blockX, int blockY)
 {
-	pickup.setup(type, blockX, blockY);
+	pickup.setup(type, blockX * BLOCK_SX + BLOCK_SX/2.f, blockY * BLOCK_SY + BLOCK_SY/2.f);
 }
 
 bool GameSim::grabPickup(int x1, int y1, int x2, int y2, Pickup & grabbedPickup)
