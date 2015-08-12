@@ -12,7 +12,7 @@ public:
 	MenuNavElem();
 
 	virtual void getPosition(int & x, int & y) const;
-	virtual void onFocusChange(bool hasFocus);
+	virtual void onFocusChange(bool hasFocus, bool isAutomaticSelection);
 	virtual void onSelect();
 };
 
@@ -29,7 +29,7 @@ public:
 
 	void addElem(MenuNavElem * elem);
 	void moveSelection(int dx, int dy);
-	void setSelection(MenuNavElem * elem);
+	void setSelection(MenuNavElem * elem, bool isAutomaticSelection);
 	void handleSelect();
 };
 
@@ -57,7 +57,7 @@ public:
 	void draw();
 
 	virtual void getPosition(int & x, int & y) const;
-	virtual void onFocusChange(bool hasFocus);
+	virtual void onFocusChange(bool hasFocus, bool isAutomaticSelection);
 	virtual void onSelect();
 };
 

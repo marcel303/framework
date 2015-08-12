@@ -18,7 +18,7 @@ void MenuNavElem::getPosition(int & x, int & y) const
 	y = 0;
 }
 
-void MenuNavElem::onFocusChange(bool hasFocus)
+void MenuNavElem::onFocusChange(bool hasFocus, bool isAutomaticSelection)
 {
 	m_hasFocus = hasFocus;
 }
@@ -38,6 +38,8 @@ MenuNav::MenuNav()
 void MenuNav::tick(float dt)
 {
 	// fixme : don't hard code gamepad index. select main controller at start or let all navigate?
+
+	// todo : check if mouse is used. if true, do mouse hover collision test and change selection
 
 	const int gamepadIndex = 0;
 
@@ -59,7 +61,7 @@ void MenuNav::addElem(MenuNavElem * elem)
 	m_first = elem;
 
 	if (!m_selection)
-		setSelection(elem);
+		setSelection(elem, true);
 }
 
 void MenuNav::moveSelection(int dx, int dy)
@@ -110,18 +112,18 @@ void MenuNav::moveSelection(int dx, int dy)
 	}
 
 	if (newSelection)
-		setSelection(newSelection);
+		setSelection(newSelection, false);
 }
 
-void MenuNav::setSelection(MenuNavElem * elem)
+void MenuNav::setSelection(MenuNavElem * elem, bool isAutomaticSelection)
 {
 	if (m_selection)
-		m_selection->onFocusChange(false);
+		m_selection->onFocusChange(false, isAutomaticSelection);
 
 	m_selection = elem;
 
 	if (m_selection)
-		m_selection->onFocusChange(true);
+		m_selection->onFocusChange(true, isAutomaticSelection);
 }
 
 void MenuNav::handleSelect()
@@ -160,24 +162,33 @@ void Button::setPosition(int x, int y)
 
 bool Button::isClicked()
 {
+	bool result = false;
+
 	if (m_hasBeenSelected)
 	{
 		m_hasBeenSelected = false;
-		return true;
+		result = true;
+	}
+	else
+	{
+		const bool isInside =
+			mouse.x >= m_x &&
+			mouse.y >= m_y &&
+			mouse.x < m_x + m_sprite->getWidth() &&
+			mouse.y < m_y + m_sprite->getHeight();
+		const bool isDown = isInside && mouse.isDown(BUTTON_LEFT);
+		result = isInside && !isDown && m_isMouseDown;
+
+		if (mouse.wentDown(BUTTON_LEFT))
+			m_isMouseDown = isInside;
+		if (!mouse.isDown(BUTTON_LEFT))
+			m_isMouseDown = false;
 	}
 
-	const bool isInside =
-		mouse.x >= m_x &&
-		mouse.y >= m_y &&
-		mouse.x < m_x + m_sprite->getWidth() &&
-		mouse.y < m_y + m_sprite->getHeight();
-	const bool isDown = isInside && mouse.isDown(BUTTON_LEFT);
-	const bool isClicked = isInside && !isDown && m_isMouseDown;
-	if (mouse.wentDown(BUTTON_LEFT))
-		m_isMouseDown = isInside;
-	if (!mouse.isDown(BUTTON_LEFT))
-		m_isMouseDown = false;
-	return isClicked;
+	if (result)
+		Sound("ui/button/select.ogg").play();
+
+	return result;
 }
 
 void Button::draw()
@@ -202,9 +213,12 @@ void Button::getPosition(int & x, int & y) const
 	y = m_y;
 }
 
-void Button::onFocusChange(bool hasFocus)
+void Button::onFocusChange(bool hasFocus, bool isAutomaticSelection)
 {
-	MenuNavElem::onFocusChange(hasFocus);
+	MenuNavElem::onFocusChange(hasFocus, isAutomaticSelection);
+
+	if (hasFocus && !isAutomaticSelection)
+		Sound("ui/button/focus.ogg").play();
 }
 
 void Button::onSelect()

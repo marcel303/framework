@@ -53,6 +53,7 @@ bool OptioneMenu::tick(float dt)
 	}
 	else if (gamepad[0].wentDown(GAMEPAD_B) || keyboard.wentDown(SDLK_ESCAPE)) // fixme : generalize and remove hardcoded gamepad index
 	{
+		Sound("ui/sounds/menu-back.ogg").play();
 		return true;
 	}
 
