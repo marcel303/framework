@@ -39,15 +39,15 @@ void MenuNav::tick(float dt)
 
 	const int gamepadIndex = 0;
 
-	if (gamepad[gamepadIndex].wentDown(DPAD_UP))
+	if (gamepad[gamepadIndex].wentDown(DPAD_UP) || keyboard.wentDown(SDLK_UP, true))
 		moveSelection(0, -1);
-	if (gamepad[gamepadIndex].wentDown(DPAD_DOWN))
+	if (gamepad[gamepadIndex].wentDown(DPAD_DOWN) || keyboard.wentDown(SDLK_DOWN, true))
 		moveSelection(0, +1);
-	if (gamepad[gamepadIndex].wentDown(DPAD_LEFT))
+	if (gamepad[gamepadIndex].wentDown(DPAD_LEFT) || keyboard.wentDown(SDLK_LEFT, true))
 		moveSelection(-1, 0);
-	if (gamepad[gamepadIndex].wentDown(DPAD_RIGHT))
+	if (gamepad[gamepadIndex].wentDown(DPAD_RIGHT) || keyboard.wentDown(SDLK_RIGHT, true))
 		moveSelection(+1, 0);
-	if (gamepad[gamepadIndex].wentDown(GAMEPAD_A))
+	if (gamepad[gamepadIndex].wentDown(GAMEPAD_A) || keyboard.wentDown(SDLK_RETURN, false))
 		handleSelect();
 }
 
