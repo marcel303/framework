@@ -3,12 +3,14 @@
 #include "menu.h"
 
 class Button;
+class MenuNav;
 
 class MainMenu : public Menu
 {
 	Button * m_newGame;
 	Button * m_findGame;
 	Button * m_quitApp;
+	MenuNav * m_menuNav;
 
 	float m_inactivityTime;
 

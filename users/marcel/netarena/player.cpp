@@ -22,7 +22,7 @@
 
 + cancel grapple on teleport
 + check coin drop location. should be center on center
-- add fixed pickup spawner
++ add fixed pickup spawner
 + add first blood sound
 - add victory dance at the end of the round
 

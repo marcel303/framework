@@ -19,16 +19,24 @@ MainMenu::MainMenu()
 	: m_newGame(0)
 	, m_findGame(0)
 	, m_quitApp(0)
+	, m_menuNav(0)
 {
 	if (!PUBLIC_DEMO_BUILD || ((std::string)g_connect).empty())
 		m_newGame = new Button(GFX_SX/2, GFX_SY/3, "mainmenu-newgame.png");
 	if (!PUBLIC_DEMO_BUILD || !((std::string)g_connect).empty())
 		m_findGame = new Button(GFX_SX/2, GFX_SY/3 + 200, "mainmenu-findgame.png");
 	m_quitApp = new Button(GFX_SX/2, GFX_SY/3 + 400, "mainmenu-exitgame.png");
+
+	m_menuNav = new MenuNav();
+	m_menuNav->addElem(m_newGame);
+	m_menuNav->addElem(m_findGame);
+	m_menuNav->addElem(m_quitApp);
 }
 
 MainMenu::~MainMenu()
 {
+	delete m_menuNav;
+
 	delete m_newGame;
 	delete m_findGame;
 	delete m_quitApp;
@@ -60,6 +68,12 @@ bool MainMenu::tick(float dt)
 		s_lastMouse = mouse;
 		s_lastGamepad = gamepad[0];
 	}
+
+	//
+
+	m_menuNav->tick(dt);
+
+	//
 
 	if (m_newGame && m_newGame->isClicked())
 	{
