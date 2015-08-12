@@ -4,7 +4,7 @@
 #include "StreamReader.h"
 #include "uicommon.h"
 
-#pragma optimize("", off)
+//#pragma optimize("", off)
 
 MenuNavElem::MenuNavElem()
 	: m_hasFocus(false)

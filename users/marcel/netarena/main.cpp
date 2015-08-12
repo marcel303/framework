@@ -33,7 +33,9 @@
 #include "title.h"
 #include "uicommon.h"
 
+#include "MemoryStream.h"
 #include "spriter.h"
+#include "StreamWriter.h"
 
 //
 
@@ -2598,6 +2600,12 @@ static bool calculateFileCRC(const char * filename, uint32_t & crc)
 
 int main(int argc, char * argv[])
 {
+	// fixme : remove UserSettings test
+	UserSettings userSettings;
+	MemoryStream stream;
+	StreamWriter writer(&stream, false);
+	userSettings.save(writer);
+
 #if defined(__WIN32__)
 	const int kMaxModuleNameSize = 1024;
 	char moduleName[kMaxModuleNameSize];

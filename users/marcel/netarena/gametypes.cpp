@@ -3,6 +3,7 @@
 #include "framework.h"
 #include "gamedefs.h"
 #include "gametypes.h"
+#include "tinyxml2.h"
 
 //#pragma optimize("", off)
 
@@ -537,4 +538,72 @@ float Curve::eval(float t) const
 	const float v1 = value[index1];
 	const float v2 = value[index2];
 	return v1 * v + v2 * u;
+}
+
+//
+
+void UserSettings::save(class StreamWriter & writer)
+{
+	tinyxml2::XMLPrinter p;
+
+	p.OpenElement("settings");
+	{
+		p.OpenElement("audio");
+		{
+			p.PushAttribute("musicEnabled", audio.musicEnabled);
+			p.PushAttribute("musicVolume", audio.musicVolume);
+			p.PushAttribute("soundEnabled", audio.soundEnabled);
+			p.PushAttribute("soundVolume", audio.soundVolume);
+			p.PushAttribute("announcerEnabled", audio.announcerEnabled);
+			p.PushAttribute("announcerVolume", audio.announcerVolume);
+		}
+		p.CloseElement();
+
+		p.OpenElement("display");
+		{
+			p.PushAttribute("fullscreen", display.fullscreen);
+			p.PushAttribute("exclusiveFullscreen", display.exclusiveFullscreen);
+			p.PushAttribute("exclusiveFullscreenVsync", display.exclusiveFullscreenVsync);
+			p.PushAttribute("exclusiveFullscreenHz", display.exclusiveFullscreenHz);
+			p.PushAttribute("fullscreenSx", display.fullscreenSx);
+			p.PushAttribute("fullscreenSy", display.fullscreenSy);
+			p.PushAttribute("windowedSx", display.windowedSx);
+			p.PushAttribute("windowedSy", display.windowedSy);
+		}
+		p.CloseElement();
+
+		p.OpenElement("graphics");
+		{
+			p.PushAttribute("brightness", graphics.brightness);
+		}
+		p.CloseElement();
+
+		p.OpenElement("effects");
+		{
+			p.PushAttribute("screenShakeStrength", effects.screenShakeStrength);
+		}
+		p.CloseElement();
+
+		p.OpenElement("characters");
+		{
+			for (int i = 0; i < MAX_CHARACTERS; ++i)
+			{
+				p.OpenElement("character");
+				{
+					p.PushAttribute("index", i);
+					p.PushAttribute("emblem", chars[i].emblem);
+					p.PushAttribute("skin", chars[i].skin);
+				}
+				p.CloseElement();
+			}
+		}
+		p.CloseElement();
+	}
+	p.CloseElement();
+
+	printf("XML:\n%s\n", p.CStr());
+}
+
+void UserSettings::load(class StreamReader & reader)
+{
 }

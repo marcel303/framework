@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "Debugging.h"
+#include "gamedefs.h"
 #include "Vec2.h"
 
 #pragma pack(push)
@@ -409,6 +410,57 @@ struct FixedString
 };
 
 #pragma pack(pop)
+
+struct UserSettings
+{
+	struct Audio
+	{
+		bool musicEnabled;
+		float musicVolume;
+
+		bool soundEnabled;
+		float soundVolume;
+
+		bool announcerEnabled;
+		float announcerVolume;
+	} audio;
+
+	struct Display
+	{
+		bool fullscreen;
+		bool exclusiveFullscreen;
+		bool exclusiveFullscreenVsync;
+		bool exclusiveFullscreenHz;
+		int fullscreenSx;
+		int fullscreenSy;
+		int windowedSx;
+		int windowedSy;
+	} display;
+
+	struct Graphics
+	{
+		float brightness;
+	} graphics;
+
+	struct Effects
+	{
+		float screenShakeStrength;
+	} effects;
+
+	struct Char
+	{
+		int emblem;
+		int skin;
+	} chars[MAX_CHARACTERS];
+
+	UserSettings()
+	{
+		memset(this, 0, sizeof(UserSettings));
+	}
+
+	void save(class StreamWriter & writer);
+	void load(class StreamReader & reader);
+};
 
 extern Curve defaultCurve;
 extern Curve pipebombBlastCurve;
