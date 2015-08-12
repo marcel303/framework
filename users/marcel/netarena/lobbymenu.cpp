@@ -304,8 +304,8 @@ LobbyMenu::LobbyMenu(Client * client)
 #if GRIDBASED_CHARSELECT
 	, m_charGrid(0)
 #endif
-	, m_prevGameMode(new Button(50,  GFX_SY - 80, "charselect-prev.png", 0))
-	, m_nextGameMode(new Button(150, GFX_SY - 80, "charselect-next.png", 0))
+	, m_prevGameMode(new Button(50,  GFX_SY - 80, "charselect-prev.png", 0, 0, 0, 0))
+	, m_nextGameMode(new Button(150, GFX_SY - 80, "charselect-next.png", 0, 0, 0, 0))
 {
 #if GRIDBASED_CHARSELECT
 	m_charGrid = new CharGrid(client, this);

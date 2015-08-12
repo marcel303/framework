@@ -26,14 +26,14 @@ MainMenu::MainMenu()
 	, m_menuNav(0)
 {
 	if (!PUBLIC_DEMO_BUILD || ((std::string)g_connect).empty())
-		m_newGame = new Button(GFX_SX/2, GFX_SY/3, "mainmenu-newgame.png", "menu-newgame");
+		m_newGame = new Button(GFX_SX/2, GFX_SY/3, "mainmenu-button.png", "menu-newgame", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 	if (!PUBLIC_DEMO_BUILD || !((std::string)g_connect).empty())
-		m_findGame = new Button(GFX_SX/2, GFX_SY/3 + 150, "mainmenu-findgame.png", "menu-findgame");
+		m_findGame = new Button(GFX_SX/2, GFX_SY/3 + 150, "mainmenu-button.png", "menu-findgame", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 	if (!PUBLIC_DEMO_BUILD)
-		m_customize = new Button(GFX_SX/2, GFX_SY/3 + 300, "mainmenu-customize.png", "menu-customize");
+		m_customize = new Button(GFX_SX/2, GFX_SY/3 + 300, "mainmenu-button.png", "menu-customize", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 	if (!PUBLIC_DEMO_BUILD)
-		m_options = new Button(GFX_SX/2, GFX_SY/3 + 450, "mainmenu-options.png", "menu-options");
-	m_quitApp = new Button(GFX_SX/2, GFX_SY/3 + 600, "mainmenu-exitgame.png", "menu-quit");
+		m_options = new Button(GFX_SX/2, GFX_SY/3 + 450, "mainmenu-button.png", "menu-options", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_quitApp = new Button(GFX_SX/2, GFX_SY/3 + 600, "mainmenu-button.png", "menu-quit", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 
 	m_menuNav = new MenuNav();
 

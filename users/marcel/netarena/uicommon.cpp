@@ -1,5 +1,7 @@
 #include "Calc.h"
+#include "FileStream.h"
 #include "framework.h"
+#include "StreamReader.h"
 #include "uicommon.h"
 
 #pragma optimize("", off)
@@ -130,13 +132,16 @@ void MenuNav::handleSelect()
 
 //
 
-Button::Button(int x, int y, const char * filename, const char * localString)
+Button::Button(int x, int y, const char * filename, const char * localString, int textX, int textY, int textSize)
 	: m_sprite(new Sprite(filename))
-	, m_localString(localString)
 	, m_isMouseDown(false)
 	, m_x(0)
 	, m_y(0)
 	, m_hasBeenSelected(false)
+	, m_localString(localString)
+	, m_textX(textX)
+	, m_textY(textY)
+	, m_textSize(textSize)
 {
 	setPosition(x, y);
 }
@@ -182,6 +187,13 @@ void Button::draw()
 	else
 		setColor(255, 255, 255, 255, 63);
 	m_sprite->drawEx(m_x, m_y);
+
+	if (m_localString)
+	{
+		// todo : translate local string, etc
+
+		drawText(m_x + m_textX, m_y + m_textY, m_textSize, +1.f, +1.f, "%s", getLocalString(m_localString));
+	}
 }
 
 void Button::getPosition(int & x, int & y) const
@@ -198,4 +210,52 @@ void Button::onFocusChange(bool hasFocus)
 void Button::onSelect()
 {
 	m_hasBeenSelected = true;
+}
+
+//
+
+std::map<std::string, std::string> s_localStrings;
+
+void setLocal(const char * local)
+{
+	s_localStrings.clear();
+
+	try
+	{
+		const std::string filename = std::string("local-") + local + ".txt";
+
+		FileStream stream;
+		stream.Open(filename.c_str(), (OpenMode)(OpenMode_Read | OpenMode_Text));
+		StreamReader reader(&stream, false);
+		std::vector<std::string> lines = reader.ReadAllLines();
+		for (auto & line : lines)
+		{
+			auto p = line.find_first_of(':');
+			if (p == std::string::npos)
+				logError("invalid local string definition: %s", line.c_str());
+			else
+			{
+				std::string key = line.substr(0, p);
+				std::string value = line.substr(p + 1);
+
+				if (s_localStrings.count(key) != 0)
+					logError("duplicate local string definition: %s", line.c_str());
+				else
+					s_localStrings[key] = value;
+			}
+		}
+	}
+	catch (std::exception & e)
+	{
+		logError(e.what());
+	}
+}
+
+const char * getLocalString(const char * localString)
+{
+	auto i = s_localStrings.find(localString);
+	if (i == s_localStrings.end())
+		return localString;
+	else
+		return i->second.c_str();
 }

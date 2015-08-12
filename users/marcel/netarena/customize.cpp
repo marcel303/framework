@@ -7,7 +7,7 @@ CustomizeMenu::CustomizeMenu()
 	: m_characters(0)
 	, m_menuNav(0)
 {
-	m_characters = new Button(GFX_SX/2, GFX_SY/3, "mainmenu-newgame.png", "menu-characters");
+	m_characters = new Button(GFX_SX/2, GFX_SY/3, "mainmenu-button.png", "menu-characters", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 
 	m_menuNav = new MenuNav();
 
@@ -63,10 +63,10 @@ CharacterMenu::CharacterMenu()
 	, m_testGame(0)
 	, m_menuNav(0)
 {
-	m_effects = new Button(GFX_SX/2, GFX_SY/3, "mainmenu-newgame.png", "menu-char-effects");
-	m_skin = new Button(GFX_SX/2, GFX_SY/3 + 150, "mainmenu-newgame.png", "menu-char-skin");
-	m_emblem = new Button(GFX_SX/2, GFX_SY/3 + 300, "mainmenu-newgame.png", "menu-char-emblem");
-	m_testGame = new Button(GFX_SX/2, GFX_SY/3 + 450, "mainmenu-newgame.png", "menu-char-test");
+	m_effects = new Button(GFX_SX/2, GFX_SY/3, "mainmenu-button.png", "menu-char-effects", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_skin = new Button(GFX_SX/2, GFX_SY/3 + 150, "mainmenu-button.png", "menu-char-skin", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_emblem = new Button(GFX_SX/2, GFX_SY/3 + 300, "mainmenu-button.png", "menu-char-emblem", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_testGame = new Button(GFX_SX/2, GFX_SY/3 + 450, "mainmenu-button.png", "menu-char-test", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 
 	m_menuNav = new MenuNav();
 

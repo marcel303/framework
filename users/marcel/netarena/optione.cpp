@@ -9,9 +9,9 @@ OptioneMenu::OptioneMenu()
 	, m_video(0)
 	, m_menuNav(0)
 {
-	m_audio = new Button(GFX_SX/2, GFX_SY/3, "mainmenu-newgame.png", "menu-audio");
-	m_display = new Button(GFX_SX/2, GFX_SY/3 + 150, "mainmenu-newgame.png", "menu-display");
-	m_video = new Button(GFX_SX/2, GFX_SY/3 + 300, "mainmenu-newgame.png", "menu-video");
+	m_audio = new Button(GFX_SX/2, GFX_SY/3, "mainmenu-button.png", "menu-audio", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_display = new Button(GFX_SX/2, GFX_SY/3 + 150, "mainmenu-button.png", "menu-display", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_video = new Button(GFX_SX/2, GFX_SY/3 + 300, "mainmenu-button.png", "menu-video", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 
 	m_menuNav = new MenuNav();
 	m_menuNav->addElem(m_audio);

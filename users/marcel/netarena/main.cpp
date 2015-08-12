@@ -31,6 +31,7 @@
 #include "textfield.h"
 #include "Timer.h"
 #include "title.h"
+#include "uicommon.h"
 
 #include "spriter.h"
 
@@ -1253,6 +1254,12 @@ bool App::init()
 
 		m_menuMgr->push(new MainMenu());
 		m_menuMgr->push(new Title());
+
+		// todo : read options
+
+		// todo : set local from options
+
+		setLocal("en");
 
 		return true;
 	}
