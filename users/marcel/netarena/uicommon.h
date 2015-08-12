@@ -37,13 +37,14 @@ class Button : public MenuNavElem
 {
 public:
 	Sprite * m_sprite;
+	const char * m_localString;
 	int m_x;
 	int m_y;
 	bool m_isMouseDown;
 	bool m_hasBeenSelected;
 
 public:
-	Button(int x, int y, const char * filename);
+	Button(int x, int y, const char * filename, const char * localString);
 	~Button();
 
 	void setPosition(int x, int y);

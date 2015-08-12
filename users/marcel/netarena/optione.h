@@ -5,20 +5,16 @@
 class Button;
 class MenuNav;
 
-class MainMenu : public Menu
+class OptioneMenu : public Menu
 {
-	Button * m_newGame;
-	Button * m_findGame;
-	Button * m_customize;
-	Button * m_options;
-	Button * m_quitApp;
+	Button * m_audio;
+	Button * m_display;
+	Button * m_video;
 	MenuNav * m_menuNav;
 
-	float m_inactivityTime;
-
 public:
-	MainMenu();
-	~MainMenu();
+	OptioneMenu();
+	~OptioneMenu();
 
 	virtual void onEnter();
 	virtual void onExit();

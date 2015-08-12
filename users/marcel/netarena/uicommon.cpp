@@ -130,8 +130,9 @@ void MenuNav::handleSelect()
 
 //
 
-Button::Button(int x, int y, const char * filename)
+Button::Button(int x, int y, const char * filename, const char * localString)
 	: m_sprite(new Sprite(filename))
+	, m_localString(localString)
 	, m_isMouseDown(false)
 	, m_x(0)
 	, m_y(0)
