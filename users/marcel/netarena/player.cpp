@@ -3915,9 +3915,6 @@ void Player::dropWeapons(Vec2Arg velocity)
 
 void Player::pushWeapon(PlayerWeapon weapon, int ammo)
 {
-	// fixme ?
-	ammo = 1;
-
 	for (int a = 0; a < ammo; ++a)
 	{
 		for (int i = m_weaponStackSize - 1; i >= 0; --i)
