@@ -404,6 +404,9 @@ void Framework::process()
 	memset(globals.mouseChange, 0, sizeof(globals.mouseChange));
 	memset(globals.midiChange, 0, sizeof(globals.midiChange));
 	
+	const int oldMouseX = mouse.x;
+	const int oldMouseY = mouse.y;
+
 	SDL_Event e;
 	
 	while (SDL_PollEvent(&e))
@@ -472,6 +475,9 @@ void Framework::process()
 			quitRequested = true;
 		}
 	}
+
+	mouse.dx = mouse.x - oldMouseX;
+	mouse.dy = mouse.y - oldMouseY;
 
 #ifdef __WIN32__
 	// use XInput to poll gamepad state

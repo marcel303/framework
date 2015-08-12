@@ -586,10 +586,12 @@ class Mouse
 {
 public:
 	int x, y;
+	int dx, dy;
 	
 	Mouse()
 	{
 		x = y = 0;
+		dx = dy = 0;
 	}
 	
 	bool isDown(BUTTON button) const;
