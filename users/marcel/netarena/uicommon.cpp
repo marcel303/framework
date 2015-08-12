@@ -18,6 +18,11 @@ void MenuNavElem::getPosition(int & x, int & y) const
 	y = 0;
 }
 
+bool MenuNavElem::hitTest(int x, int y) const
+{
+	return false;
+}
+
 void MenuNavElem::onFocusChange(bool hasFocus, bool isAutomaticSelection)
 {
 	m_hasFocus = hasFocus;
@@ -53,6 +58,18 @@ void MenuNav::tick(float dt)
 		moveSelection(+1, 0);
 	if (gamepad[gamepadIndex].wentDown(GAMEPAD_A) || keyboard.wentDown(SDLK_RETURN, false))
 		handleSelect();
+
+	if (mouse.dx || mouse.dy)
+	{
+		MenuNavElem * newSelection = 0;
+
+		for (MenuNavElem * elem = m_first; elem; elem = elem->m_next)
+			if (elem->hitTest(mouse.x, mouse.y))
+				newSelection = elem;
+
+		if (newSelection)
+			setSelection(newSelection, false);
+	}
 }
 
 void MenuNav::addElem(MenuNavElem * elem)
@@ -117,13 +134,16 @@ void MenuNav::moveSelection(int dx, int dy)
 
 void MenuNav::setSelection(MenuNavElem * elem, bool isAutomaticSelection)
 {
-	if (m_selection)
-		m_selection->onFocusChange(false, isAutomaticSelection);
+	if (elem != m_selection)
+	{
+		if (m_selection)
+			m_selection->onFocusChange(false, isAutomaticSelection);
 
-	m_selection = elem;
+		m_selection = elem;
 
-	if (m_selection)
-		m_selection->onFocusChange(true, isAutomaticSelection);
+		if (m_selection)
+			m_selection->onFocusChange(true, isAutomaticSelection);
+	}
 }
 
 void MenuNav::handleSelect()
@@ -171,11 +191,7 @@ bool Button::isClicked()
 	}
 	else
 	{
-		const bool isInside =
-			mouse.x >= m_x &&
-			mouse.y >= m_y &&
-			mouse.x < m_x + m_sprite->getWidth() &&
-			mouse.y < m_y + m_sprite->getHeight();
+		const bool isInside = hitTest(mouse.x, mouse.y);
 		const bool isDown = isInside && mouse.isDown(BUTTON_LEFT);
 		result = isInside && !isDown && m_isMouseDown;
 
@@ -211,6 +227,15 @@ void Button::getPosition(int & x, int & y) const
 {
 	x = m_x;
 	y = m_y;
+}
+
+bool Button::hitTest(int x, int y) const
+{
+	return
+		x >= m_x &&
+		y >= m_y &&
+		x < m_x + m_sprite->getWidth() &&
+		y < m_y + m_sprite->getHeight();
 }
 
 void Button::onFocusChange(bool hasFocus, bool isAutomaticSelection)
