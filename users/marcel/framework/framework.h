@@ -607,6 +607,8 @@ public:
 	bool wentDown(SDLKey key, bool allowRepeat = false) const;
 	bool wentUp(SDLKey key) const;
 	bool keyRepeat(SDLKey key) const;
+
+	bool isIdle() const; // return true when there are no buttons being pressed
 };
 
 class Gamepad

@@ -1468,6 +1468,8 @@ void Dictionary::setPtr(const char * name, void * value)
 {
 	// fixme : right now this only works with 32 bit pointers
 
+	fassert(sizeof(intptr_t) <= sizeof(int));
+
 	setInt(name, reinterpret_cast<intptr_t>(value));
 }
 
@@ -2302,6 +2304,13 @@ bool Keyboard::keyRepeat(SDLKey key) const
 		if (globals.keyRepeat[i] == key)
 			return true;
 	return false;
+}
+
+bool Keyboard::isIdle() const
+{
+	return
+		globals.keyDownCount == 0 &&
+		globals.keyChangeCount == 0;
 }
 
 // -----
