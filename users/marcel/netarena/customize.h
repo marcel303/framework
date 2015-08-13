@@ -4,6 +4,7 @@
 #include "menu.h"
 
 class Button;
+class ButtonLegend;
 class MenuNav;
 class SpinButton;
 
@@ -11,6 +12,7 @@ class CustomizeMenu : public Menu
 {
 	Button * m_characters[MAX_CHARACTERS];
 	MenuNav * m_menuNav;
+	ButtonLegend * m_buttonLegend;
 
 public:
 	CustomizeMenu();
@@ -32,6 +34,7 @@ class CharacterMenu : public Menu
 	SpinButton * m_emblem;
 	Button * m_testGame;
 	MenuNav * m_menuNav;
+	ButtonLegend * m_buttonLegend;
 
 public:
 	CharacterMenu(int characterIndex);

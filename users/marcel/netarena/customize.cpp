@@ -6,6 +6,7 @@
 
 CustomizeMenu::CustomizeMenu()
 	: m_menuNav(0)
+	, m_buttonLegend(0)
 {
 	m_menuNav = new MenuNav();
 
@@ -24,10 +25,16 @@ CustomizeMenu::CustomizeMenu()
 
 		m_menuNav->addElem(m_characters[i]);
 	}
+
+	m_buttonLegend = new ButtonLegend();
+	m_buttonLegend->addElem(ButtonLegend::kButton_B, "ui-legend-back");
+	m_buttonLegend->addElem(ButtonLegend::kButton_ESCAPE, "ui-legend-back");
 }
 
 CustomizeMenu::~CustomizeMenu()
 {
+	delete m_buttonLegend;
+
 	delete m_menuNav;
 
 	delete m_characters;
@@ -59,6 +66,8 @@ bool CustomizeMenu::tick(float dt)
 
 	m_menuNav->tick(dt);
 
+	m_buttonLegend->tick(dt);
+
 	//
 
 	bool clicked = false;
@@ -87,6 +96,8 @@ bool CustomizeMenu::tick(float dt)
 
 void CustomizeMenu::draw()
 {
+	m_buttonLegend->draw(UI_BUTTONLEGEND_X, UI_BUTTONLEGEND_Y);
+
 	for (int i = 0; i < MAX_CHARACTERS; ++i)
 		m_characters[i]->draw();
 }
@@ -100,6 +111,7 @@ CharacterMenu::CharacterMenu(int characterIndex)
 	, m_emblem(0)
 	, m_testGame(0)
 	, m_menuNav(0)
+	, m_buttonLegend(0)
 {
 	const int numSkins = 4;
 	const int numEmblems = 4;
@@ -121,10 +133,15 @@ CharacterMenu::CharacterMenu(int characterIndex)
 		m_menuNav->addElem(m_emblem);
 	if (m_testGame)
 		m_menuNav->addElem(m_testGame);
+
+	m_buttonLegend = new ButtonLegend();
+	m_buttonLegend->addElem(ButtonLegend::kButton_B, "ui-legend-back");
+	m_buttonLegend->addElem(ButtonLegend::kButton_ESCAPE, "ui-legend-back");
 }
 
 CharacterMenu::~CharacterMenu()
 {
+	delete m_buttonLegend;
 	delete m_menuNav;
 
 	delete m_effects;
@@ -145,6 +162,8 @@ bool CharacterMenu::tick(float dt)
 {
 	m_menuNav->tick(dt);
 
+	m_buttonLegend->tick(dt);
+
 	// todo : check for button clicks
 
 	if (m_skin->hasChanged())
@@ -164,6 +183,8 @@ bool CharacterMenu::tick(float dt)
 
 void CharacterMenu::draw()
 {
+	m_buttonLegend->draw(UI_BUTTONLEGEND_X, UI_BUTTONLEGEND_Y);
+
 	// draw the selected character
 
 	const int skinIndex = 0;

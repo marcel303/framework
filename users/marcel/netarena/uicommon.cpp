@@ -1,6 +1,7 @@
 #include "Calc.h"
 #include "FileStream.h"
 #include "framework.h"
+#include "gamedefs.h"
 #include "StreamReader.h"
 #include "uicommon.h"
 
@@ -150,6 +151,56 @@ void MenuNav::handleSelect()
 {
 	if (m_selection)
 		m_selection->onSelect();
+}
+
+//
+
+void ButtonLegend::tick(float dt)
+{
+}
+
+void ButtonLegend::draw(int x, int y)
+{
+	for (auto & e : m_elems)
+	{
+		std::string filename;
+
+		switch (e.button)
+		{
+		case kButton_B:
+			filename = "ui/legend/gamepad-b.png";
+			break;
+		case kButton_ESCAPE:
+			filename = "ui/legend/keyboard-escape.png";
+			break;
+
+		default:
+			fassert(false);
+		}
+
+		if (!filename.empty())
+		{
+			Sprite sprite(filename.c_str());
+			sprite.drawEx(x, y);
+			x += sprite.getWidth();
+			x += UI_BUTTONLEGEND_ICON_SPACING;
+		}
+
+		float sx, sy;
+		measureText(UI_BUTTONLEGEND_FONT_SIZE, sx, sy, "%s", getLocalString(e.localString));
+		drawText(x, y, UI_BUTTONLEGEND_FONT_SIZE, +1.f, +1.f, "%s", getLocalString(e.localString));
+
+		x += (int)sx;
+		x += UI_BUTTONLEGEND_TEXT_SPACING;
+	}
+}
+
+void ButtonLegend::addElem(Button button, const char * localString)
+{
+	Elem e;
+	e.button = button;
+	e.localString = localString;
+	m_elems.push_back(e);
 }
 
 //

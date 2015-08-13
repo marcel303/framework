@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 class Sprite;
 
 class MenuNavElem
@@ -32,6 +34,29 @@ public:
 	void moveSelection(int dx, int dy);
 	void setSelection(MenuNavElem * elem, bool isAutomaticSelection);
 	void handleSelect();
+};
+
+class ButtonLegend
+{
+public:
+	enum Button
+	{
+		kButton_B,
+		kButton_ESCAPE
+	};
+
+	struct Elem
+	{
+		Button button;
+		const char * localString;
+	};
+
+	std::vector<Elem> m_elems;
+
+	void tick(float dt);
+	void draw(int x, int y);
+
+	void addElem(Button button, const char * localString);
 };
 
 class Button : public MenuNavElem
