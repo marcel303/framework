@@ -107,13 +107,13 @@ void MenuNav::moveSelection(int dx, int dy)
 				int distY = newY - oldY;
 
 				if (dx == 0)
-					distX = 0;
-				else if (Calc::Sign(dx) != Calc::Sign(distX))
+					distX /= 10;
+				else if ((Calc::Sign(dx) != Calc::Sign(distX)) || distX == 0)
 					continue;
 
 				if (dy == 0)
-					distY = 0;
-				else if (Calc::Sign(dy) != Calc::Sign(distY))
+					distY /= 10;
+				else if ((Calc::Sign(dy) != Calc::Sign(distY)) || distY == 0)
 					continue;
 
 				const int distance = distX * distX + distY * distY;
@@ -247,6 +247,103 @@ void Button::onFocusChange(bool hasFocus, bool isAutomaticSelection)
 void Button::onSelect()
 {
 	m_hasBeenSelected = true;
+}
+
+//
+
+SpinButton::SpinButton(int x, int y, int min, int max, const char * filename, const char * localString, int textX, int textY, int textSize)
+	: m_sprite(new Sprite(filename))
+	, m_x(0)
+	, m_y(0)
+	, m_value(min)
+	, m_min(min)
+	, m_max(max)
+	, m_localString(localString)
+	, m_textX(textX)
+	, m_textY(textY)
+	, m_textSize(textSize)
+{
+	setPosition(x, y);
+}
+
+SpinButton::~SpinButton()
+{
+	delete m_sprite;
+	m_sprite = 0;
+}
+
+void SpinButton::setPosition(int x, int y)
+{
+	m_x = x - m_sprite->getWidth() / 2;
+	m_y = y - m_sprite->getHeight() / 2;
+}
+
+void SpinButton::changeValue(int delta)
+{
+	const int oldValue = m_value;
+
+	m_value = Calc::Clamp(m_value + delta, m_min, m_max);
+
+	if (m_value != oldValue)
+		Sound("ui/button/select.ogg").play();
+}
+
+bool SpinButton::hasChanged()
+{
+	bool result = false;
+
+	const int oldValue = m_value;
+
+	if (m_hasFocus)
+	{
+		if (gamepad[0].wentDown(DPAD_LEFT) || keyboard.wentDown(SDLK_LEFT))
+			changeValue(-1);
+		if (gamepad[0].wentDown(DPAD_RIGHT) || keyboard.wentDown(SDLK_RIGHT))
+			changeValue(+1);
+	}
+
+	return m_value != oldValue;
+}
+
+void SpinButton::draw()
+{
+	if (m_hasFocus)
+		setColor(colorWhite);
+	else
+		setColor(255, 255, 255, 255, 63);
+	m_sprite->drawEx(m_x, m_y);
+
+	if (m_localString)
+	{
+		drawText(m_x + m_textX, m_y + m_textY, m_textSize, +1.f, +1.f, "%s", getLocalString(m_localString));
+	}
+}
+
+void SpinButton::getPosition(int & x, int & y) const
+{
+	x = m_x;
+	y = m_y;
+}
+
+bool SpinButton::hitTest(int x, int y) const
+{
+	return
+		x >= m_x &&
+		y >= m_y &&
+		x < m_x + m_sprite->getWidth() &&
+		y < m_y + m_sprite->getHeight();
+}
+
+void SpinButton::onFocusChange(bool hasFocus, bool isAutomaticSelection)
+{
+	MenuNavElem::onFocusChange(hasFocus, isAutomaticSelection);
+
+	if (hasFocus && !isAutomaticSelection)
+		Sound("ui/button/focus.ogg").play();
+}
+
+void SpinButton::onSelect()
+{
 }
 
 //

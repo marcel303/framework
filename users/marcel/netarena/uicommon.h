@@ -63,5 +63,36 @@ public:
 	virtual void onSelect();
 };
 
+class SpinButton : public MenuNavElem
+{
+public:
+	Sprite * m_sprite;
+	int m_x;
+	int m_y;
+	int m_value;
+	int m_min;
+	int m_max;
+
+	const char * m_localString;
+	int m_textX;
+	int m_textY;
+	int m_textSize;
+
+public:
+	SpinButton(int x, int y, int min, int max, const char * filename, const char * localString, int textX, int textY, int textSize);
+	~SpinButton();
+
+	void setPosition(int x, int y);
+	void changeValue(int delta);
+
+	bool hasChanged();
+	void draw();
+
+	virtual void getPosition(int & x, int & y) const;
+	virtual bool hitTest(int x, int y) const;
+	virtual void onFocusChange(bool hasFocus, bool isAutomaticSelection);
+	virtual void onSelect();
+};
+
 void setLocal(const char * local);
 const char * getLocalString(const char * localString);

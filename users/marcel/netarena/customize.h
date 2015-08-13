@@ -1,13 +1,15 @@
 #pragma once
 
+#include "gamedefs.h"
 #include "menu.h"
 
 class Button;
 class MenuNav;
+class SpinButton;
 
 class CustomizeMenu : public Menu
 {
-	Button * m_characters;
+	Button * m_characters[MAX_CHARACTERS];
 	MenuNav * m_menuNav;
 
 public:
@@ -23,14 +25,16 @@ public:
 
 class CharacterMenu : public Menu
 {
+	int m_characterIndex;
+
 	Button * m_effects;
-	Button * m_skin;
-	Button * m_emblem;
+	SpinButton * m_skin;
+	SpinButton * m_emblem;
 	Button * m_testGame;
 	MenuNav * m_menuNav;
 
 public:
-	CharacterMenu();
+	CharacterMenu(int characterIndex);
 	~CharacterMenu();
 
 	virtual void onEnter();

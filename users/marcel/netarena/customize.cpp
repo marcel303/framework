@@ -1,18 +1,29 @@
 #include "customize.h"
 #include "gamedefs.h"
 #include "main.h"
+#include "player.h"
 #include "uicommon.h"
 
 CustomizeMenu::CustomizeMenu()
-	: m_characters(0)
-	, m_menuNav(0)
+	: m_menuNav(0)
 {
-	m_characters = new Button(GFX_SX/2, GFX_SY/3, "mainmenu-button.png", "menu-characters", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
-
 	m_menuNav = new MenuNav();
 
-	if (m_characters)
-		m_menuNav->addElem(m_characters);
+	for (int i = 0; i < MAX_CHARACTERS; ++i)
+	{
+		const int cellX = i % 4;
+		const int cellY = i / 4;
+
+		const int x = 200 + cellX * 300;
+		const int y = 200 + cellY * 300; // todo : add gamedefs
+
+		char portraitName[64];
+		sprintf_s(portraitName, sizeof(portraitName), "ui/characters/%02d-portrait.png", i);
+
+		m_characters[i] = new Button(x, y, portraitName, 0, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+
+		m_menuNav->addElem(m_characters[i]);
+	}
 }
 
 CustomizeMenu::~CustomizeMenu()
@@ -36,9 +47,20 @@ bool CustomizeMenu::tick(float dt)
 
 	//
 
-	if (m_characters && m_characters->isClicked())
+	bool clicked = false;
+
+	for (int i = 0; i < MAX_CHARACTERS; ++i)
 	{
-		g_app->m_menuMgr->push(new CharacterMenu());
+		if (m_characters[i]->isClicked())
+		{
+			g_app->m_menuMgr->push(new CharacterMenu(i));
+			break;
+		}
+	}
+
+	if (clicked)
+	{
+		// already handled
 	}
 	else if (gamepad[0].wentDown(GAMEPAD_B) || keyboard.wentDown(SDLK_ESCAPE)) // fixme : generalize and remove hardcoded gamepad index
 	{
@@ -51,23 +73,29 @@ bool CustomizeMenu::tick(float dt)
 
 void CustomizeMenu::draw()
 {
-	if (m_characters)
-		m_characters->draw();
+	for (int i = 0; i < MAX_CHARACTERS; ++i)
+		m_characters[i]->draw();
 }
 
 //
 
-CharacterMenu::CharacterMenu()
-	: m_effects(0)
+CharacterMenu::CharacterMenu(int characterIndex)
+	: m_characterIndex(characterIndex)
+	, m_effects(0)
 	, m_skin(0)
 	, m_emblem(0)
 	, m_testGame(0)
 	, m_menuNav(0)
 {
-	m_effects = new Button(GFX_SX/2, GFX_SY/3, "mainmenu-button.png", "menu-char-effects", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
-	m_skin = new Button(GFX_SX/2, GFX_SY/3 + 150, "mainmenu-button.png", "menu-char-skin", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
-	m_emblem = new Button(GFX_SX/2, GFX_SY/3 + 300, "mainmenu-button.png", "menu-char-emblem", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
-	m_testGame = new Button(GFX_SX/2, GFX_SY/3 + 450, "mainmenu-button.png", "menu-char-test", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	const int numSkins = 4;
+	const int numEmblems = 4;
+
+	const int buttonPosX = GFX_SX*1/4;
+
+	m_effects = new Button(buttonPosX, GFX_SY/3, "mainmenu-button.png", "menu-char-effects", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_skin = new SpinButton(buttonPosX, GFX_SY/3 + 150, 0, numSkins - 1, "mainmenu-button.png", "menu-char-skin", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_emblem = new SpinButton(buttonPosX, GFX_SY/3 + 300, 0, numEmblems - 1, "mainmenu-button.png", "menu-char-emblem", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_testGame = new Button(buttonPosX, GFX_SY/3 + 450, "mainmenu-button.png", "menu-char-test", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 
 	m_menuNav = new MenuNav();
 
@@ -105,7 +133,13 @@ bool CharacterMenu::tick(float dt)
 
 	// todo : check for button clicks
 
-	if (gamepad[0].wentDown(GAMEPAD_B) || keyboard.wentDown(SDLK_ESCAPE)) // fixme : generalize and remove hardcoded gamepad index
+	if (m_skin->hasChanged())
+	{
+	}
+	else if (m_emblem->hasChanged())
+	{
+	}
+	else if (gamepad[0].wentDown(GAMEPAD_B) || keyboard.wentDown(SDLK_ESCAPE)) // fixme : generalize and remove hardcoded gamepad index
 	{
 		Sound("ui/sounds/menu-back.ogg").play();
 		return true;
@@ -116,6 +150,25 @@ bool CharacterMenu::tick(float dt)
 
 void CharacterMenu::draw()
 {
+	// draw the selected character
+
+	const int skinIndex = 0;
+
+	const CharacterData * characterData = getCharacterData(m_characterIndex);
+
+	fassert(characterData);
+	if (characterData)
+	{
+		Spriter & spriter = *characterData->getSpriter();
+		SpriterState spriterState;
+		spriterState.x = GFX_SX*3/4;
+		spriterState.y = GFX_SY/2;
+		spriterState.startAnim(spriter, "Idle");
+		spriterState.animTime = framework.time;
+		spriterState.setCharacterMap(spriter, skinIndex);
+		spriter.draw(spriterState);
+	}
+
 	if (m_effects)
 		m_effects->draw();
 	if (m_skin)
