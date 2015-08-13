@@ -3,6 +3,7 @@
 #include "menu.h"
 
 class Button;
+class ButtonLegend;
 class MenuNav;
 
 class OptioneMenu : public Menu
@@ -11,6 +12,7 @@ class OptioneMenu : public Menu
 	Button * m_display;
 	Button * m_video;
 	MenuNav * m_menuNav;
+	ButtonLegend * m_buttonLegend;
 
 public:
 	OptioneMenu();

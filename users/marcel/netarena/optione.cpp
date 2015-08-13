@@ -10,6 +10,7 @@ OptioneMenu::OptioneMenu()
 	, m_display(0)
 	, m_video(0)
 	, m_menuNav(0)
+	, m_buttonLegend(0)
 {
 	m_audio = new Button(GFX_SX/2, GFX_SY/3, "mainmenu-button.png", "menu-audio", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 	m_display = new Button(GFX_SX/2, GFX_SY/3 + 150, "mainmenu-button.png", "menu-display", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
@@ -19,10 +20,16 @@ OptioneMenu::OptioneMenu()
 	m_menuNav->addElem(m_audio);
 	m_menuNav->addElem(m_display);
 	m_menuNav->addElem(m_video);
+
+	m_buttonLegend = new ButtonLegend();
+	m_buttonLegend->addElem(ButtonLegend::kButton_B, "ui-legend-back");
+	m_buttonLegend->addElem(ButtonLegend::kButton_ESCAPE, "ui-legend-back");
 }
 
 OptioneMenu::~OptioneMenu()
 {
+	delete m_buttonLegend;
+
 	delete m_menuNav;
 
 	delete m_audio;
@@ -43,6 +50,8 @@ void OptioneMenu::onExit()
 bool OptioneMenu::tick(float dt)
 {
 	m_menuNav->tick(dt);
+
+	m_buttonLegend->tick(dt);
 
 	//
 
@@ -66,6 +75,8 @@ bool OptioneMenu::tick(float dt)
 
 void OptioneMenu::draw()
 {
+	m_buttonLegend->draw(UI_BUTTONLEGEND_X, UI_BUTTONLEGEND_Y);
+
 	if (m_audio)
 		m_audio->draw();
 	if (m_display)
