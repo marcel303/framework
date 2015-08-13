@@ -77,12 +77,15 @@ bool MainMenu::tick(float dt)
 
 	const bool isInactive =
 		memcmp(&s_lastMouse, &mouse, sizeof(Mouse)) == 0 &&
-		memcmp(&s_lastGamepad, &gamepad[0], sizeof(Gamepad)) == 0;
+		memcmp(&s_lastGamepad, &gamepad[0], sizeof(Gamepad)) == 0 &&
+		keyboard.isIdle();
 
 	if (isInactive)
 		m_inactivityTime += dt;
 	else
 	{
+		m_inactivityTime = 0.f;
+
 		s_lastMouse = mouse;
 		s_lastGamepad = gamepad[0];
 	}

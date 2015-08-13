@@ -609,7 +609,7 @@ void UserSettings::save(class StreamWriter & writer)
 	//printf("XML:\n%s\n", p.CStr());
 }
 
-static int boolAttrib(const XMLElement * elem, const char * name, bool defaultValue)
+static bool boolAttrib(const XMLElement * elem, const char * name, bool defaultValue)
 {
 	if (elem->Attribute(name))
 		return elem->BoolAttribute(name);
