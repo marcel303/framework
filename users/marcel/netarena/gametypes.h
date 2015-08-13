@@ -415,6 +415,16 @@ struct UserSettings
 {
 	struct Audio
 	{
+		Audio()
+			: musicEnabled(true)
+			, musicVolume(1.f)
+			, soundEnabled(true)
+			, soundVolume(1.f)
+			, announcerEnabled(true)
+			, announcerVolume(1.f)
+		{
+		}
+
 		bool musicEnabled;
 		float musicVolume;
 
@@ -427,6 +437,18 @@ struct UserSettings
 
 	struct Display
 	{
+		Display()
+			: fullscreen(true)
+			, exclusiveFullscreen(false)
+			, exclusiveFullscreenVsync(true)
+			, exclusiveFullscreenHz(0)
+			, fullscreenSx(1920)
+			, fullscreenSy(1080)
+			, windowedSx(1920/2)
+			, windowedSy(1080/2)
+		{
+		}
+
 		bool fullscreen;
 		bool exclusiveFullscreen;
 		bool exclusiveFullscreenVsync;
@@ -439,24 +461,35 @@ struct UserSettings
 
 	struct Graphics
 	{
+		Graphics()
+			: brightness(1.f)
+		{
+		}
+
 		float brightness;
 	} graphics;
 
 	struct Effects
 	{
+		Effects()
+			: screenShakeStrength(1.f)
+		{
+		}
+
 		float screenShakeStrength;
 	} effects;
 
 	struct Char
 	{
+		Char()
+			: emblem(0)
+			, skin(0)
+		{
+		}
+
 		int emblem;
 		int skin;
 	} chars[MAX_CHARACTERS];
-
-	UserSettings()
-	{
-		memset(this, 0, sizeof(UserSettings));
-	}
 
 	void save(class StreamWriter & writer);
 	void load(class StreamReader & reader);

@@ -2605,6 +2605,9 @@ int main(int argc, char * argv[])
 	MemoryStream stream;
 	StreamWriter writer(&stream, false);
 	userSettings.save(writer);
+	stream.Seek(0, SeekMode_Begin);
+	StreamReader reader(&stream, false);
+	userSettings.load(reader);
 
 #if defined(__WIN32__)
 	const int kMaxModuleNameSize = 1024;

@@ -4,8 +4,12 @@
 #include "gamedefs.h"
 #include "gametypes.h"
 #include "tinyxml2.h"
+#include "StreamReader.h"
+#include "StreamWriter.h"
 
 //#pragma optimize("", off)
+
+using namespace tinyxml2;
 
 Vec2 getTransitionOffset(TransitionType type, float transitionAmount)
 {
@@ -544,7 +548,7 @@ float Curve::eval(float t) const
 
 void UserSettings::save(class StreamWriter & writer)
 {
-	tinyxml2::XMLPrinter p;
+	XMLPrinter p;
 
 	p.OpenElement("settings");
 	{
@@ -601,9 +605,96 @@ void UserSettings::save(class StreamWriter & writer)
 	}
 	p.CloseElement();
 
-	printf("XML:\n%s\n", p.CStr());
+	writer.WriteText_Binary(p.CStr());
+	//printf("XML:\n%s\n", p.CStr());
+}
+
+static int boolAttrib(const XMLElement * elem, const char * name, bool defaultValue)
+{
+	if (elem->Attribute(name))
+		return elem->BoolAttribute(name);
+	else
+		return defaultValue;
+}
+
+static int intAttrib(const XMLElement * elem, const char * name, int defaultValue)
+{
+	if (elem->Attribute(name))
+		return elem->IntAttribute(name);
+	else
+		return defaultValue;
+}
+
+static float floatAttrib(const XMLElement * elem, const char * name, float defaultValue)
+{
+	if (elem->Attribute(name))
+		return elem->FloatAttribute(name);
+	else
+		return defaultValue;
 }
 
 void UserSettings::load(class StreamReader & reader)
 {
+	*this = UserSettings();
+
+	const std::string text = reader.ReadText_Binary();
+
+	XMLDocument doc;
+	doc.Parse(text.c_str(), text.length());
+
+	auto settingsXml = doc.FirstChildElement("settings");
+	if (settingsXml)
+	{
+		auto audioXml = settingsXml->FirstChildElement("audio");
+		if (audioXml)
+		{
+			audio.musicEnabled = boolAttrib(audioXml, "musicEnabled", true);
+			audio.musicVolume = floatAttrib(audioXml, "musicVolume", 1.f);
+			audio.soundEnabled = boolAttrib(audioXml, "soundEnabled", true);
+			audio.soundVolume = floatAttrib(audioXml, "soundVolume", 1.f);
+			audio.announcerEnabled = boolAttrib(audioXml, "announcerEnabled", true);
+			audio.announcerVolume = floatAttrib(audioXml, "announcerVolume", 1.f);
+		}
+
+		auto displayXml = settingsXml->FirstChildElement("display");
+		if (displayXml)
+		{
+			display.fullscreen = boolAttrib(displayXml, "fullscreen", true);
+			display.exclusiveFullscreen = boolAttrib(displayXml, "exclusiveFullscreen", false);
+			display.exclusiveFullscreenVsync = boolAttrib(displayXml, "exclusiveFullscreenVsync", true);
+			display.exclusiveFullscreenHz = intAttrib(displayXml, "exclusiveFullscreenHz", 0);
+			display.fullscreenSx = intAttrib(displayXml, "fullscreenSx", 1920);
+			display.fullscreenSy = intAttrib(displayXml, "fullscreenSy", 1080);
+			display.windowedSx = intAttrib(displayXml, "windowedSx", 1920/2);
+			display.windowedSy = intAttrib(displayXml, "windowedSy", 1080/2);
+		}
+
+		auto graphicsXml = settingsXml->FirstChildElement("graphics");
+		if (graphicsXml)
+		{
+			graphics.brightness = floatAttrib(graphicsXml, "brightness", 1.f);
+		}
+
+		auto effectsXml = settingsXml->FirstChildElement("effects");
+		if (effectsXml)
+		{
+			effects.screenShakeStrength = floatAttrib(effectsXml, "screenShakeStrength", 1.f);
+		}
+
+		auto charactersXml = settingsXml->FirstChildElement("characters");
+		if (charactersXml)
+		{
+			for (auto characterXml = charactersXml->FirstChildElement("character"); characterXml; characterXml = characterXml->NextSiblingElement())
+			{
+				const int index = intAttrib(characterXml, "index", -1);
+				if (index >= 0 && index < MAX_CHARACTERS)
+				{
+					auto & character = chars[index];
+
+					character.emblem = intAttrib(characterXml, "emblem", 0);
+					character.skin = intAttrib(characterXml, "skin", 0);
+				}
+			}
+		}
+	}
 }
