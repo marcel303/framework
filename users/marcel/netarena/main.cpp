@@ -2600,14 +2600,27 @@ static bool calculateFileCRC(const char * filename, uint32_t & crc)
 
 int main(int argc, char * argv[])
 {
+	char machineName[256];
+	DWORD machineNameSize = sizeof(machineName);
+	if (!GetComputerName(machineName, &machineNameSize))
+		strcpy(machineName, "noname");
+
+	std::string userSettingsFilename = std::string("settings-") + machineName + ".txt";
+
 	// fixme : remove UserSettings test
 	UserSettings userSettings;
-	MemoryStream stream;
-	StreamWriter writer(&stream, false);
-	userSettings.save(writer);
-	stream.Seek(0, SeekMode_Begin);
-	StreamReader reader(&stream, false);
-	userSettings.load(reader);
+	{
+		FileStream stream;
+		stream.Open(userSettingsFilename.c_str(), OpenMode_Write);
+		StreamWriter writer(&stream, false);
+		userSettings.save(writer);
+	}
+	{
+		FileStream stream;
+		stream.Open(userSettingsFilename.c_str(), OpenMode_Read);
+		StreamReader reader(&stream, false);
+		userSettings.load(reader);
+	}
 
 #if defined(__WIN32__)
 	const int kMaxModuleNameSize = 1024;
