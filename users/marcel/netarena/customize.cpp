@@ -14,8 +14,8 @@ CustomizeMenu::CustomizeMenu()
 		const int cellX = i % 4;
 		const int cellY = i / 4;
 
-		const int x = 200 + cellX * 300;
-		const int y = 200 + cellY * 300; // todo : add gamedefs
+		const int x = CUSTOMIZEMENU_PORTRAIT_BASE_X + cellX * CUSTOMIZEMENU_PORTRAIT_SPACING_X;
+		const int y = CUSTOMIZEMENU_PORTRAIT_BASE_Y + cellY * CUSTOMIZEMENU_PORTRAIT_SPACING_Y;
 
 		char portraitName[64];
 		sprintf_s(portraitName, sizeof(portraitName), "ui/characters/%02d-portrait.png", i);
@@ -43,6 +43,20 @@ void CustomizeMenu::onExit()
 
 bool CustomizeMenu::tick(float dt)
 {
+	if (g_devMode)
+	{
+		for (int i = 0; i < MAX_CHARACTERS; ++i)
+		{
+			const int cellX = i % 4;
+			const int cellY = i / 4;
+
+			const int x = CUSTOMIZEMENU_PORTRAIT_BASE_X + cellX * CUSTOMIZEMENU_PORTRAIT_SPACING_X;
+			const int y = CUSTOMIZEMENU_PORTRAIT_BASE_Y + cellY * CUSTOMIZEMENU_PORTRAIT_SPACING_Y;
+
+			m_characters[i]->setPosition(x, y);
+		}
+	}
+
 	m_menuNav->tick(dt);
 
 	//
