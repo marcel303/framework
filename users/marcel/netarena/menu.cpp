@@ -1,6 +1,9 @@
 #include <string.h>
 #include "Debugging.h"
+#include "framework.h"
 #include "menu.h"
+
+MenuInputMode g_currentMenuInputMode = kMenuInputMode_Gamepad;
 
 MenuMgr::MenuMgr()
 	: m_menuStackSize(0)
@@ -55,6 +58,19 @@ void MenuMgr::reset(Menu * menu)
 
 void MenuMgr::tick(float dt)
 {
+	static Gamepad s_oldGamepad;
+
+	if (memcmp(&s_oldGamepad, &gamepad[0], sizeof(Gamepad)))
+	{
+		g_currentMenuInputMode = kMenuInputMode_Gamepad;
+		s_oldGamepad = gamepad[0];
+	}
+
+	if (!keyboard.isIdle())
+		g_currentMenuInputMode = kMenuInputMode_Keyboard;
+	
+	//
+
 	Menu * menu = getActiveMenu();
 
 	if (menu)

@@ -1,5 +1,13 @@
 #pragma once
 
+enum MenuInputMode
+{
+	kMenuInputMode_Gamepad,
+	kMenuInputMode_Keyboard
+};
+
+extern MenuInputMode g_currentMenuInputMode;
+
 class Menu
 {
 public:

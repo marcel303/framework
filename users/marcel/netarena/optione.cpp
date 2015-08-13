@@ -3,6 +3,8 @@
 #include "optione.h"
 #include "uicommon.h"
 
+#include "main.h" // fixme : remove. needed for escape = quit hack for now
+
 OptioneMenu::OptioneMenu()
 	: m_audio(0)
 	, m_display(0)
@@ -30,10 +32,12 @@ OptioneMenu::~OptioneMenu()
 
 void OptioneMenu::onEnter()
 {
+	inputLockAcquire(); // fixme : remove. needed for escape = quit hack for now
 }
 
 void OptioneMenu::onExit()
 {
+	inputLockRelease(); // fixme : remove. needed for escape = quit hack for now
 }
 
 bool OptioneMenu::tick(float dt)

@@ -42,10 +42,12 @@ CustomizeMenu::~CustomizeMenu()
 
 void CustomizeMenu::onEnter()
 {
+	inputLockAcquire(); // fixme : remove. needed for escape = quit hack for now
 }
 
 void CustomizeMenu::onExit()
 {
+	inputLockRelease(); // fixme : remove. needed for escape = quit hack for now
 }
 
 bool CustomizeMenu::tick(float dt)
