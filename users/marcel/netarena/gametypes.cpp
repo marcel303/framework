@@ -582,6 +582,12 @@ void UserSettings::save(class StreamWriter & writer)
 		}
 		p.CloseElement();
 
+		p.OpenElement("language");
+		{
+			p.PushAttribute("locale", language.locale.c_str());
+		}
+		p.CloseElement();
+
 		p.OpenElement("effects");
 		{
 			p.PushAttribute("screenShakeStrength", effects.screenShakeStrength);
@@ -607,6 +613,14 @@ void UserSettings::save(class StreamWriter & writer)
 
 	writer.WriteText_Binary(p.CStr());
 	//printf("XML:\n%s\n", p.CStr());
+}
+
+static const char * stringAttrib(const XMLElement * elem, const char * name, const char * defaultValue)
+{
+	if (elem->Attribute(name))
+		return elem->Attribute(name);
+	else
+		return defaultValue;
 }
 
 static bool boolAttrib(const XMLElement * elem, const char * name, bool defaultValue)
@@ -648,37 +662,43 @@ void UserSettings::load(class StreamReader & reader)
 		auto audioXml = settingsXml->FirstChildElement("audio");
 		if (audioXml)
 		{
-			audio.musicEnabled = boolAttrib(audioXml, "musicEnabled", true);
-			audio.musicVolume = floatAttrib(audioXml, "musicVolume", 1.f);
-			audio.soundEnabled = boolAttrib(audioXml, "soundEnabled", true);
-			audio.soundVolume = floatAttrib(audioXml, "soundVolume", 1.f);
-			audio.announcerEnabled = boolAttrib(audioXml, "announcerEnabled", true);
-			audio.announcerVolume = floatAttrib(audioXml, "announcerVolume", 1.f);
+			audio.musicEnabled = boolAttrib(audioXml, "musicEnabled", audio.musicEnabled);
+			audio.musicVolume = floatAttrib(audioXml, "musicVolume", audio.musicVolume);
+			audio.soundEnabled = boolAttrib(audioXml, "soundEnabled", audio.soundEnabled);
+			audio.soundVolume = floatAttrib(audioXml, "soundVolume", audio.soundVolume);
+			audio.announcerEnabled = boolAttrib(audioXml, "announcerEnabled", audio.announcerEnabled);
+			audio.announcerVolume = floatAttrib(audioXml, "announcerVolume", audio.announcerVolume);
 		}
 
 		auto displayXml = settingsXml->FirstChildElement("display");
 		if (displayXml)
 		{
-			display.fullscreen = boolAttrib(displayXml, "fullscreen", true);
-			display.exclusiveFullscreen = boolAttrib(displayXml, "exclusiveFullscreen", false);
-			display.exclusiveFullscreenVsync = boolAttrib(displayXml, "exclusiveFullscreenVsync", true);
-			display.exclusiveFullscreenHz = intAttrib(displayXml, "exclusiveFullscreenHz", 0);
-			display.fullscreenSx = intAttrib(displayXml, "fullscreenSx", 1920);
-			display.fullscreenSy = intAttrib(displayXml, "fullscreenSy", 1080);
-			display.windowedSx = intAttrib(displayXml, "windowedSx", 1920/2);
-			display.windowedSy = intAttrib(displayXml, "windowedSy", 1080/2);
+			display.fullscreen = boolAttrib(displayXml, "fullscreen", display.fullscreen);
+			display.exclusiveFullscreen = boolAttrib(displayXml, "exclusiveFullscreen", display.exclusiveFullscreen);
+			display.exclusiveFullscreenVsync = boolAttrib(displayXml, "exclusiveFullscreenVsync", display.exclusiveFullscreenVsync);
+			display.exclusiveFullscreenHz = intAttrib(displayXml, "exclusiveFullscreenHz", display.exclusiveFullscreenHz);
+			display.fullscreenSx = intAttrib(displayXml, "fullscreenSx", display.fullscreenSx);
+			display.fullscreenSy = intAttrib(displayXml, "fullscreenSy", display.fullscreenSy);
+			display.windowedSx = intAttrib(displayXml, "windowedSx", display.windowedSx);
+			display.windowedSy = intAttrib(displayXml, "windowedSy", display.windowedSy);
 		}
 
 		auto graphicsXml = settingsXml->FirstChildElement("graphics");
 		if (graphicsXml)
 		{
-			graphics.brightness = floatAttrib(graphicsXml, "brightness", 1.f);
+			graphics.brightness = floatAttrib(graphicsXml, "brightness", graphics.brightness);
+		}
+
+		auto languageXml = settingsXml->FirstChildElement("language");
+		if (languageXml)
+		{
+			language.locale = stringAttrib(languageXml, "locale", language.locale.c_str());
 		}
 
 		auto effectsXml = settingsXml->FirstChildElement("effects");
 		if (effectsXml)
 		{
-			effects.screenShakeStrength = floatAttrib(effectsXml, "screenShakeStrength", 1.f);
+			effects.screenShakeStrength = floatAttrib(effectsXml, "screenShakeStrength", effects.screenShakeStrength);
 		}
 
 		auto charactersXml = settingsXml->FirstChildElement("characters");
@@ -691,8 +711,8 @@ void UserSettings::load(class StreamReader & reader)
 				{
 					auto & character = chars[index];
 
-					character.emblem = intAttrib(characterXml, "emblem", 0);
-					character.skin = intAttrib(characterXml, "skin", 0);
+					character.emblem = intAttrib(characterXml, "emblem", character.emblem);
+					character.skin = intAttrib(characterXml, "skin", character.skin);
 				}
 			}
 		}

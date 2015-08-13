@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <string>
 #include <string.h>
 #include "Debugging.h"
 #include "gamedefs.h"
@@ -468,6 +469,16 @@ struct UserSettings
 
 		float brightness;
 	} graphics;
+
+	struct Language
+	{
+		Language()
+		{
+			locale = "en";
+		}
+
+		std::string locale;
+	} language;
 
 	struct Effects
 	{

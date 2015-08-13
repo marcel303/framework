@@ -76,6 +76,8 @@ public:
 	DialogMgr * m_dialogMgr;
 	MenuMgr * m_menuMgr;
 
+	UserSettings * m_userSettings;
+
 	OptionMenu * m_optionMenu;
 	bool m_optionMenuIsOpen;
 
@@ -107,6 +109,10 @@ public:
 
 	void setAppState(AppState state);
 	void quit();
+
+	std::string getUserSettingsFilename();
+	void saveUserSettings();
+	void loadUserSettings();
 
 	bool startHosting();
 	void stopHosting();

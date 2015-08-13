@@ -1038,6 +1038,9 @@ App::App()
 	, m_discoveryService(0)
 	, m_discoveryUi(0)
 	, m_selectedClient(-1)
+	, m_dialogMgr(0)
+	, m_menuMgr(0)
+	, m_userSettings(0)
 	, m_optionMenu(0)
 	, m_optionMenuIsOpen(false)
 	, m_statTimerMenu(0)
@@ -1230,6 +1233,8 @@ bool App::init()
 
 		m_menuMgr = new MenuMgr();
 
+		m_userSettings = new UserSettings();
+
 		//
 
 		animationTestInit();
@@ -1254,14 +1259,12 @@ bool App::init()
 
 		initCharacterData();
 
+		loadUserSettings();
+
+		setLocal(m_userSettings->language.locale.c_str());
+
 		m_menuMgr->push(new MainMenu());
 		m_menuMgr->push(new Title());
-
-		// todo : read options
-
-		// todo : set local from options
-
-		setLocal("en");
 
 		return true;
 	}
@@ -1299,6 +1302,9 @@ void App::shutdown()
 	m_optionMenu = 0;
 
 	//
+
+	delete m_userSettings;
+	m_userSettings = 0;
 
 	delete m_menuMgr;
 	m_menuMgr = 0;
@@ -1374,6 +1380,47 @@ void App::setAppState(AppState state)
 void App::quit()
 {
 	exit(0);
+}
+
+std::string App::getUserSettingsFilename()
+{
+	// todo : change this once we have Steam integration
+
+	char machineName[256];
+	DWORD machineNameSize = sizeof(machineName);
+	if (!GetComputerName(machineName, &machineNameSize))
+		strcpy(machineName, "noname");
+	return std::string("../settings-") + machineName + ".txt";
+}
+
+void App::saveUserSettings()
+{
+	try
+	{
+		FileStream stream;
+		stream.Open(getUserSettingsFilename().c_str(), OpenMode_Write);
+		StreamWriter writer(&stream, false);
+		m_userSettings->save(writer);
+	}
+	catch (std::exception & e)
+	{
+		logWarning(e.what());
+	}
+}
+
+void App::loadUserSettings()
+{
+	try
+	{
+		FileStream stream;
+		stream.Open(getUserSettingsFilename().c_str(), OpenMode_Read);
+		StreamReader reader(&stream, false);
+		m_userSettings->load(reader);
+	}
+	catch (std::exception & e)
+	{
+		logWarning(e.what());
+	}
 }
 
 bool App::startHosting()

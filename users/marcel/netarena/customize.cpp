@@ -170,9 +170,11 @@ bool CharacterMenu::tick(float dt)
 
 	if (m_skin->hasChanged())
 	{
+		g_app->m_userSettings->chars[m_characterIndex].skin = m_skin->m_value;
 	}
 	else if (m_emblem->hasChanged())
 	{
+		g_app->m_userSettings->chars[m_characterIndex].emblem = m_emblem->m_value;
 	}
 	else if (gamepad[0].wentDown(GAMEPAD_B) || keyboard.wentDown(SDLK_ESCAPE)) // fixme : generalize and remove hardcoded gamepad index
 	{
@@ -189,9 +191,8 @@ void CharacterMenu::draw()
 
 	// draw the selected character
 
-	const int skinIndex = 0;
-
 	const CharacterData * characterData = getCharacterData(m_characterIndex);
+	const auto & characterSettings = g_app->m_userSettings->chars[m_characterIndex];
 
 	fassert(characterData);
 	if (characterData)
@@ -202,7 +203,7 @@ void CharacterMenu::draw()
 		spriterState.y = GFX_SY/2;
 		spriterState.startAnim(spriter, "Idle");
 		spriterState.animTime = framework.time;
-		spriterState.setCharacterMap(spriter, skinIndex);
+		spriterState.setCharacterMap(spriter, characterSettings.skin);
 		spriter.draw(spriterState);
 	}
 
