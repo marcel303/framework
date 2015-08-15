@@ -657,19 +657,24 @@ void Arena::drawBlocks(const GameSim & gameSim, int layer) const
 
 #if USE_TILE_SHADER
 	Shader shader("maptiles");
-	shader.setTexture("atlas", 0, m_texture);
-	shader.setTexture("decal", 1, g_decalMap->getTexture());
+	setShader(shader);
+	shader.setTexture("colormap", 0, m_texture);
+	shader.setTexture("decalmap", 1, g_decalMap->getTexture());
+	shader.setImmediate("colormapScale", 1.f / m_textureSx, 1.f / m_textureSy);
+	shader.setImmediate("decalmapScale",
+		framework.minification / g_decalMap->getWidth(),
+		framework.minification / g_decalMap->getHeight());
 #else
 	// fixme : set texture filter when using shader too
 	gxSetTexture(m_texture);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-#endif
 
 	glMatrixMode(GL_TEXTURE);
 	glPushMatrix();
 	glLoadIdentity();
 	glScalef(1.f / m_textureSx, 1.f / m_textureSy, 1.f);
+#endif
 
 	glVertexPointer(2, GL_FLOAT, 0, pos);
 	glColorPointer(4, GL_UNSIGNED_BYTE, 0, c);
@@ -685,12 +690,14 @@ void Arena::drawBlocks(const GameSim & gameSim, int layer) const
 	glDisableClientState(GL_COLOR_ARRAY);
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 
+#if USE_TILE_SHADER
+	shader.setTexture("colormap", 0, 0);
+	shader.setTexture("decalmap", 0, 0);
+	clearShader();
+#else
 	glPopMatrix();
 	glMatrixMode(GL_MODELVIEW);
 
-#if USE_TILE_SHADER
-	clearShader();
-#else
 	gxSetTexture(0);
 #endif
 	setColor(colorWhite);
