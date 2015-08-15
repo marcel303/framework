@@ -1104,6 +1104,18 @@ bool TileSprite::intersects(int x, int y) const
 
 //
 
+void Decal::tick(float dt)
+{
+}
+
+void Decal::draw()
+{
+	setColor(getPlayerColor(playerColor));
+	Sprite("decals/0.png").drawEx(x, y);
+}
+
+//
+
 void ScreenShake::tick(float dt)
 {
 	Vec2 force = pos * (-stiffness);
@@ -1470,9 +1482,17 @@ void GameSim::serialize(NetSerializationContext & context)
 
 		context.SerializeBytes(data, sizeof(GameStateData));
 
+	#if 0 // todo : use zero compression to keep serialization size down
+		int numZeroes = 0;
+		uint8_t * bytes = (uint8_t*)data;
+		for (int i = 0; i < sizeof(GameStateData); ++i)
+			if (!bytes[i])
+				numZeroes++;
+		logDebug("GameStateData: size=%u, numZeroes=%u", sizeof(GameStateData), numZeroes);
 		//unsigned char temp[sizeof(GameStateData)];
 		//memset(temp, 0, sizeof(temp));
 		//BinaryDiffResult diff = BinaryDiff(data, temp, sizeof(GameStateData), 4);
+	#endif
 	}
 	setPlayerPtrs();
 
@@ -2016,6 +2036,12 @@ void GameSim::resetGameWorld()
 		if (m_particlePool->m_bullets[i].isAlive)
 			m_particlePool->free(i);
 	}
+
+	// reset decals
+
+	for (int i = 0; i < MAX_DECALS; ++i)
+		m_decals[i] = Decal();
+	g_decalMap->clear();
 
 	// reset screen shakes
 
@@ -2716,6 +2742,13 @@ void GameSim::tickPlay()
 		m_animationEffects[i].tick(dt);
 	}
 
+	// decals
+
+	for (int i = 0; i < MAX_DECALS; ++i)
+	{
+		m_decals[i].tick(dt);
+	}
+
 	// screen shakes
 
 	for (int i = 0; i < MAX_SCREEN_SHAKES; ++i)
@@ -2867,6 +2900,15 @@ void GameSim::drawPlay()
 	gxScalef(scale, scale, 1.f);
 	gxTranslatef(-ARENA_SX_PIXELS/2.f, -ARENA_SY_PIXELS/2.f, 0.f);
 #endif
+
+	pushSurface(g_decalMap);
+	{
+		glClearColor(0.f, 0.f, 0.f, 0.f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		drawPlayDecal(camTranslation);
+	}
+	popSurface();
 
 	pushSurface(g_colorMap);
 	{
@@ -3133,6 +3175,20 @@ void GameSim::drawPlayColor(Vec2Arg camTranslation)
 	// spike walls
 
 	m_levelEvents.spikeWalls.draw();
+
+	gxPopMatrix();
+}
+
+void GameSim::drawPlayDecal(Vec2Arg camTranslation)
+{
+	gxPushMatrix();
+	gxTranslatef(camTranslation[0], camTranslation[1], 0.f);
+
+	for (int i = 0; i < MAX_DECALS; ++i)
+	{
+		if (m_decals[i].isActive)
+			m_decals[i].draw();
+	}
 
 	gxPopMatrix();
 }
@@ -3854,6 +3910,30 @@ void GameSim::doBlastEffect(Vec2Arg center, float radius, const Curve & speedCur
 				}
 			}
 		});
+}
+
+void GameSim::addDecal(int x, int y, int playerColor, int sprite)
+{
+	for (int i = 0; i < MAX_DECALS; ++i)
+	{
+		Decal & decal = m_decals[i];
+		if (!decal.isActive)
+		{
+			decal.isActive = true;
+			decal.x = x;
+			decal.y = y;
+			decal.playerColor = playerColor;
+			decal.sprite = sprite;
+			return;
+		}
+	}
+
+	AssertMsg(false, "unable to find free decal");
+
+	if (DEBUG_RANDOM_CALLSITES)
+		LOG_DBG("Random called from addDecal");
+	m_decals[Random() % MAX_DECALS] = Decal();
+	addDecal(x, y, playerColor, sprite);
 }
 
 void GameSim::addScreenShake(float dx, float dy, float stiffness, float life, bool fade)

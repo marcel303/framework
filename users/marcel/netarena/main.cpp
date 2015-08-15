@@ -132,6 +132,7 @@ int g_keyboardLockRelease = 0;
 PlayerInputState * g_uiInput = 0;
 
 Surface * g_colorMap = 0;
+Surface * g_decalMap = 0;
 Surface * g_lightMap = 0;
 Surface * g_finalMap = 0;
 
@@ -1250,6 +1251,7 @@ bool App::init()
 		//
 
 		g_colorMap = new Surface(ARENA_SX_PIXELS, ARENA_SY_PIXELS);
+		g_decalMap = new Surface(ARENA_SX_PIXELS, ARENA_SY_PIXELS);
 		g_lightMap = new Surface(ARENA_SX_PIXELS, ARENA_SY_PIXELS);
 		g_finalMap = new Surface(ARENA_SX_PIXELS, ARENA_SY_PIXELS);
 
@@ -1286,6 +1288,9 @@ void App::shutdown()
 
 	delete g_colorMap;
 	g_colorMap = 0;
+
+	delete g_decalMap;
+	g_decalMap = 0;
 
 	delete g_lightMap;
 	g_lightMap = 0;

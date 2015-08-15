@@ -17,6 +17,10 @@
 
 /*
 
+- add decal support
+- draw all decals to decal map on client connect
+- make sure clearing decal list is atomic with clearing decal map -> ensures proper client sync
+
 - only do teleport when completely inside teleport
 - for pickup spawn: keep a list of MAX_PICKUPS previous spawn locations, instead of storing recently used x/y in pickups themselves
 
@@ -948,6 +952,9 @@ void Player::tick(float dt)
 				break;
 			case kPlayerAnim_Fire:
 				m_attack.attacking = false;
+
+				// fixme : add decal on death particle collision..
+				GAMESIM->addDecal(m_pos[0], m_pos[1], m_characterIndex, 0);
 				break;
 
 			case kPlayerAnim_Zweihander_Charge:

@@ -745,7 +745,6 @@ struct PipeBomb : PhysicsActor
 
 struct Barrel : PhysicsActor
 {
-	Vec2 m_pos;
 	int m_tick; // barrel velocity/position depends on tick number
 
 	Barrel()
@@ -758,6 +757,22 @@ struct Barrel : PhysicsActor
 	void tick(GameSim & gameSim, float dt);
 	void draw() const;
 	void drawLight() const;
+};
+
+// todo : implement Debris object
+struct Debris : PhysicsActor
+{
+	FixedString<16> m_name;
+
+	Debris()
+	{
+		memset(this, 0, sizeof(Debris));
+	}
+
+	void setup(Vec2Arg pos, float size);
+
+	void tick(GameSim & gameSim, float dt);
+	void draw() const;
 };
 
 struct Torch
@@ -838,6 +853,23 @@ struct TileSprite
 	SpriterState m_spriterState;
 	int m_x1, m_y1, m_x2, m_y2;
 	TransitionInfo m_transition;
+};
+
+struct Decal
+{
+	bool isActive;
+	int16_t x;
+	int16_t y;
+	uint8_t playerColor : 4;
+	uint8_t sprite : 4;
+
+	Decal()
+	{
+		memset(this, 0, sizeof(Decal));
+	}
+
+	void tick(float dt);
+	void draw();
 };
 
 struct ScreenShake
@@ -1067,6 +1099,8 @@ struct GameStateData
 
 	AnimationFxState m_animationEffects[MAX_ANIM_EFFECTS];
 
+	Decal m_decals[MAX_DECALS];
+
 	ScreenShake m_screenShakes[MAX_SCREEN_SHAKES];
 
 	LightEffect m_lightEffects[MAX_LIGHT_EFFECTS];
@@ -1178,6 +1212,7 @@ public:
 
 	void drawPlay();
 	void drawPlayColor(Vec2Arg camTranslation);
+	void drawPlayDecal(Vec2Arg camTranslation);
 	void drawPlayLight(Vec2Arg camTranslation);
 
 	void getCurrentTimeDilation(float & timeDilation, bool & playerAttackTimeDilation) const;
@@ -1211,6 +1246,8 @@ public:
 
 	void doQuake(float vel);
 	void doBlastEffect(Vec2Arg center, float radius, const Curve & speedCurve);
+
+	void addDecal(int x, int y, int playerColor, int sprite);
 
 	void addScreenShake(float dx, float dy, float stiffness, float life, bool fade);
 	Vec2 getScreenShake() const;

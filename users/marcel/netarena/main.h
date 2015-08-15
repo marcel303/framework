@@ -162,6 +162,7 @@ extern int g_keyboardLock;
 extern PlayerInputState * g_uiInput;
 
 extern Surface * g_colorMap;
+extern Surface * g_decalMap;
 extern Surface * g_lightMap;
 extern Surface * g_finalMap;
 

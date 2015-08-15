@@ -37,7 +37,8 @@ CustomizeMenu::~CustomizeMenu()
 
 	delete m_menuNav;
 
-	delete m_characters;
+	for (int i = 0; i < MAX_CHARACTERS; ++i)
+		delete m_characters[i];
 }
 
 void CustomizeMenu::onEnter()

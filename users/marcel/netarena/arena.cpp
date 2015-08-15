@@ -653,9 +653,18 @@ void Arena::drawBlocks(const GameSim & gameSim, int layer) const
 		}
 	}
 
+#define USE_TILE_SHADER 0
+
+#if USE_TILE_SHADER
+	Shader shader("maptiles");
+	shader.setTexture("atlas", 0, m_texture);
+	shader.setTexture("decal", 1, g_decalMap->getTexture());
+#else
+	// fixme : set texture filter when using shader too
 	gxSetTexture(m_texture);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+#endif
 
 	glMatrixMode(GL_TEXTURE);
 	glPushMatrix();
@@ -679,7 +688,11 @@ void Arena::drawBlocks(const GameSim & gameSim, int layer) const
 	glPopMatrix();
 	glMatrixMode(GL_MODELVIEW);
 
+#if USE_TILE_SHADER
+	clearShader();
+#else
 	gxSetTexture(0);
+#endif
 	setColor(colorWhite);
 
 	if (layer == 0 && s_drawBlockMask >= 0 && s_drawBlockMask < kBlockShape_COUNT)
