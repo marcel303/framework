@@ -70,7 +70,7 @@ void MenuNav::tick(float dt)
 			if (elem->hitTest(mouse.x, mouse.y))
 				newSelection = elem;
 
-		if (newSelection)
+		if (newSelection || false)
 			setSelection(newSelection, false);
 	}
 }
@@ -407,6 +407,15 @@ bool SpinButton::hasChanged()
 
 	if (m_hasFocus)
 	{
+		if (mouse.wentDown(BUTTON_LEFT))
+		{
+			if (mouse.x >= m_x && mouse.x < m_x + m_sprite->getWidth() / 2 && mouse.y >= m_y && mouse.y < m_y + m_sprite->getHeight())
+				changeValue(-1);
+
+			if (mouse.x >= m_x + m_sprite->getWidth() / 2 && mouse.x < m_x + m_sprite->getWidth() && 	mouse.y >= m_y && mouse.y < m_y + m_sprite->getHeight())
+				changeValue(+1);
+		}
+
 		if (gamepad[0].wentDown(DPAD_LEFT) || keyboard.wentDown(SDLK_LEFT))
 			changeValue(-1);
 		if (gamepad[0].wentDown(DPAD_RIGHT) || keyboard.wentDown(SDLK_RIGHT))
@@ -434,7 +443,7 @@ void SpinButton::draw()
 		drawText(m_x, m_y, 18, +1.f, +1.f, "min=%d, max=%d, value=%d", m_min, m_max, m_value);
 	}
 
-	const int kArrowSpacing = 30;
+	const int kArrowSpacing = -30;
 	const int kArrowSx = 20;
 	const int kArrowSy = 25;
 	
