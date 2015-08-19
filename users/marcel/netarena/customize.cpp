@@ -5,10 +5,13 @@
 #include "uicommon.h"
 
 CustomizeMenu::CustomizeMenu()
-	: m_menuNav(0)
+	: m_back(0)
+	, m_menuNav(0)
 	, m_buttonLegend(0)
 {
 	m_menuNav = new MenuNav();
+
+	m_back = new Button(0, 0, "mainmenu-button.png", 0, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 
 	for (int i = 0; i < MAX_CHARACTERS; ++i)
 	{
@@ -27,8 +30,8 @@ CustomizeMenu::CustomizeMenu()
 	}
 
 	m_buttonLegend = new ButtonLegend();
-	m_buttonLegend->addElem(ButtonLegend::kButton_B, "ui-legend-back");
-	m_buttonLegend->addElem(ButtonLegend::kButton_ESCAPE, "ui-legend-back");
+	m_buttonLegend->addElem(ButtonLegend::kButtonId_B, m_back, "ui-legend-back");
+	m_buttonLegend->addElem(ButtonLegend::kButtonId_ESCAPE, m_back, "ui-legend-back");
 }
 
 CustomizeMenu::~CustomizeMenu()
@@ -39,6 +42,8 @@ CustomizeMenu::~CustomizeMenu()
 
 	for (int i = 0; i < MAX_CHARACTERS; ++i)
 		delete m_characters[i];
+
+	delete m_back;
 }
 
 void CustomizeMenu::onEnter()
@@ -69,7 +74,7 @@ bool CustomizeMenu::tick(float dt)
 
 	m_menuNav->tick(dt);
 
-	m_buttonLegend->tick(dt);
+	m_buttonLegend->tick(dt, UI_BUTTONLEGEND_X, UI_BUTTONLEGEND_Y);
 
 	//
 
@@ -88,9 +93,9 @@ bool CustomizeMenu::tick(float dt)
 	{
 		// already handled
 	}
-	else if (gamepad[0].wentDown(GAMEPAD_B) || keyboard.wentDown(SDLK_ESCAPE)) // fixme : generalize and remove hardcoded gamepad index
+	else if (m_back->isClicked() || gamepad[0].wentDown(GAMEPAD_B) || keyboard.wentDown(SDLK_ESCAPE)) // fixme : generalize and remove hardcoded gamepad index
 	{
-		Sound("ui/sounds/menu-back.ogg").play();
+		g_app->playSound("ui/sounds/menu-back.ogg");
 		return true;
 	}
 
@@ -109,6 +114,7 @@ void CustomizeMenu::draw()
 
 CharacterMenu::CharacterMenu(int characterIndex)
 	: m_characterIndex(characterIndex)
+	, m_back(0)
 	, m_effects(0)
 	, m_skin(0)
 	, m_emblem(0)
@@ -121,6 +127,7 @@ CharacterMenu::CharacterMenu(int characterIndex)
 
 	const int buttonPosX = GFX_SX*1/4;
 
+	m_back = new Button(0, 0, "mainmenu-button.png", 0, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 	m_effects = new Button(buttonPosX, GFX_SY/3, "mainmenu-button.png", "menu-char-effects", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 	m_skin = new SpinButton(buttonPosX, GFX_SY/3 + 150, 0, numSkins - 1, "mainmenu-button.png", "menu-char-skin", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 	m_emblem = new SpinButton(buttonPosX, GFX_SY/3 + 300, 0, numEmblems - 1, "mainmenu-button.png", "menu-char-emblem", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
@@ -138,8 +145,8 @@ CharacterMenu::CharacterMenu(int characterIndex)
 		m_menuNav->addElem(m_testGame);
 
 	m_buttonLegend = new ButtonLegend();
-	m_buttonLegend->addElem(ButtonLegend::kButton_B, "ui-legend-back");
-	m_buttonLegend->addElem(ButtonLegend::kButton_ESCAPE, "ui-legend-back");
+	m_buttonLegend->addElem(ButtonLegend::kButtonId_B, m_back, "ui-legend-back");
+	m_buttonLegend->addElem(ButtonLegend::kButtonId_ESCAPE, m_back, "ui-legend-back");
 }
 
 CharacterMenu::~CharacterMenu()
@@ -147,6 +154,7 @@ CharacterMenu::~CharacterMenu()
 	delete m_buttonLegend;
 	delete m_menuNav;
 
+	delete m_back;
 	delete m_effects;
 	delete m_skin;
 	delete m_emblem;
@@ -165,7 +173,7 @@ bool CharacterMenu::tick(float dt)
 {
 	m_menuNav->tick(dt);
 
-	m_buttonLegend->tick(dt);
+	m_buttonLegend->tick(dt, UI_BUTTONLEGEND_X, UI_BUTTONLEGEND_Y);
 
 	// todo : check for button clicks
 
@@ -177,9 +185,9 @@ bool CharacterMenu::tick(float dt)
 	{
 		g_app->m_userSettings->chars[m_characterIndex].emblem = m_emblem->m_value;
 	}
-	else if (gamepad[0].wentDown(GAMEPAD_B) || keyboard.wentDown(SDLK_ESCAPE)) // fixme : generalize and remove hardcoded gamepad index
+	else if (m_back->isClicked() || gamepad[0].wentDown(GAMEPAD_B) || keyboard.wentDown(SDLK_ESCAPE)) // fixme : generalize and remove hardcoded gamepad index
 	{
-		Sound("ui/sounds/menu-back.ogg").play();
+		g_app->playSound("ui/sounds/menu-back.ogg");
 		return true;
 	}
 
@@ -198,6 +206,8 @@ void CharacterMenu::draw()
 	fassert(characterData);
 	if (characterData)
 	{
+		setColor(colorWhite);
+
 		Spriter & spriter = *characterData->getSpriter();
 		SpriterState spriterState;
 		spriterState.x = GFX_SX*3/4;

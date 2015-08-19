@@ -107,6 +107,7 @@ COMMAND_OPTION(s_triggerLevelEvent_SpikeWalls, "Debug/Trigger Spike Walls Level 
 COMMAND_OPTION(s_triggerLevelEvent_TimeDilation, "Debug/Trigger Time Dilation Level Event", []{ g_app->netDebugAction("triggerLevelEvent", "timedilation"); });
 
 OPTION_EXTERN(int, g_playerCharacterIndex);
+OPTION_EXTERN(bool, g_noSound);
 
 //
 
@@ -2437,6 +2438,14 @@ bool App::isControllerIndexAvailable(int index) const
 		if (m_freeControllerList[i] == index)
 			return true;
 	return false;
+}
+
+void App::playSound(const char * filename, int volume)
+{
+	if (g_noSound)
+		return;
+
+	Sound(filename).play(volume);
 }
 
 void App::DialogQuit(void * arg, int dialogId, DialogResult result)

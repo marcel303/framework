@@ -8,6 +8,7 @@ class MenuNav;
 
 class OptioneMenu : public Menu
 {
+	Button * m_back;
 	Button * m_audio;
 	Button * m_display;
 	Button * m_video;

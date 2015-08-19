@@ -5,6 +5,8 @@
 #include "main.h"
 #include "title.h"
 
+OPTION_EXTERN(bool, g_noSound);
+
 const float kLogoDuration = 1.5f;
 const float kLogoX = 300.f;
 const float kLogoBegin = -450.f;
@@ -19,7 +21,8 @@ static Curve s_logoFlashCurve;
 void Title::onEnter()
 {
 	m_logoSound = new Sound("title/laugh.ogg");
-	m_logoSound->play();
+	if (!g_noSound)
+		m_logoSound->play();
 
 	m_logoAnim = 0.f;
 	m_logoFlash = -1.f;
@@ -44,7 +47,7 @@ bool Title::tick(float dt)
 	if (m_logoFlash == -1.f && m_logoAnim >= kLogoFlashBegin)
 	{
 		m_logoFlash = kLogoFlashDuration;
-		Sound("title/flash.ogg").play();
+		g_app->playSound("title/flash.ogg");
 	}
 
 	if (m_logoAnim >= kTitleDuration)

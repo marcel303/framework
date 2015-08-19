@@ -10,6 +10,7 @@ class SpinButton;
 
 class CustomizeMenu : public Menu
 {
+	Button * m_back;
 	Button * m_characters[MAX_CHARACTERS];
 	MenuNav * m_menuNav;
 	ButtonLegend * m_buttonLegend;
@@ -29,6 +30,7 @@ class CharacterMenu : public Menu
 {
 	int m_characterIndex;
 
+	Button * m_back;
 	Button * m_effects;
 	SpinButton * m_skin;
 	SpinButton * m_emblem;

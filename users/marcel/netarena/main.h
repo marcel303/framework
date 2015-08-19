@@ -149,6 +149,8 @@ public:
 	int getControllerAllocationCount() const;
 	bool isControllerIndexAvailable(int index) const;
 
+	void playSound(const char * filename, int volume = -1);
+
 	std::vector<Client*> getClients() const { return m_clients; }
 
 	static void DialogQuit(void * arg, int dialogId, DialogResult result);

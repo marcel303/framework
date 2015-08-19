@@ -17,9 +17,14 @@
 
 /*
 
+- make walljump sound per character
+
+- fix pickup drop location. seems to get stuck in geometry sometimes
+- why does the bubbled player not bonce correctly, still?
+
 - add decal support
-- draw all decals to decal map on client connect
-- make sure clearing decal list is atomic with clearing decal map -> ensures proper client sync
+# draw all decals to decal map on client connect
+# make sure clearing decal list is atomic with clearing decal map -> ensures proper client sync
 
 - only do teleport when completely inside teleport
 - for pickup spawn: keep a list of MAX_PICKUPS previous spawn locations, instead of storing recently used x/y in pickups themselves
@@ -2166,7 +2171,7 @@ void Player::tick(float dt)
 
 			m_controlDisableTime = PLAYER_WALLJUMP_RECOIL_TIME;
 
-			GAMESIM->playSound("player-wall-jump.ogg"); // player performs a walljump
+			GAMESIM->playSound(makeCharacterFilename(m_characterIndex, "sounds/walljump.ogg")); // player performs a walljump
 		}
 
 		const bool wasInPassthrough = m_isInPassthrough;
@@ -3914,7 +3919,7 @@ void Player::dropWeapons(Vec2Arg velocity)
 				const Vec2 mid = m_pos + (m_collision.min + m_collision.max) / 2.f;
 				pickup->setup(pickupType, mid[0], mid[1]);
 
-				pickup->m_vel = velocity * 2.f / 3.f;
+				pickup->m_vel = velocity * 2.f / 3.f; // todo: add pickup drop speed multiplier gamedef
 			}
 		}
 	}

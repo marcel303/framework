@@ -66,7 +66,7 @@ void MenuMgr::tick(float dt)
 		s_oldGamepad = gamepad[0];
 	}
 
-	if (!keyboard.isIdle())
+	if (!keyboard.isIdle() || mouse.dx || mouse.dy)
 		g_currentMenuInputMode = kMenuInputMode_Keyboard;
 	
 	//

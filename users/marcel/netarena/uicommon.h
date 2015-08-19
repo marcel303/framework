@@ -2,6 +2,7 @@
 
 #include <vector>
 
+class Button;
 class Sprite;
 
 class MenuNavElem
@@ -39,24 +40,45 @@ public:
 class ButtonLegend
 {
 public:
-	enum Button
+	enum ButtonId
 	{
-		kButton_B,
-		kButton_ESCAPE
+		kButtonId_B,
+		kButtonId_ESCAPE
 	};
 
 	struct Elem
 	{
-		Button button;
+		ButtonId buttonId;
+		Button * button;
 		const char * localString;
+	};
+
+	struct DrawElem
+	{
+		Button * button;
+		int clickX1;
+		int clickY1;
+		int clickX2;
+		int clickY2;
+
+		const char * sprite;
+		int spriteX;
+		int spriteY;
+
+		const char * text;
+		int textX;
+		int textY;
 	};
 
 	std::vector<Elem> m_elems;
 
-	void tick(float dt);
+	ButtonLegend();
+
+	void tick(float dt, int x, int y);
 	void draw(int x, int y);
 
-	void addElem(Button button, const char * localString);
+	void addElem(ButtonId buttonId, Button * button, const char * localString);
+	std::vector<DrawElem> getDrawElems(int x, int y);
 };
 
 class Button : public MenuNavElem

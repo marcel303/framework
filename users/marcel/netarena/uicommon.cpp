@@ -2,6 +2,7 @@
 #include "FileStream.h"
 #include "framework.h"
 #include "gamedefs.h"
+#include "main.h"
 #include "menu.h"
 #include "StreamReader.h"
 #include "uicommon.h"
@@ -156,23 +157,65 @@ void MenuNav::handleSelect()
 
 //
 
-void ButtonLegend::tick(float dt)
+ButtonLegend::ButtonLegend()
 {
+}
+
+void ButtonLegend::tick(float dt, int x, int y)
+{
+	auto elems = getDrawElems(x, y);
+
+	for (auto e : elems)
+	{
+		if (e.button)
+		{
+			if (mouse.wentDown(BUTTON_LEFT) &&
+				mouse.x >= e.clickX1 && mouse.x <= e.clickX2 &&
+				mouse.y >= e.clickY1 && mouse.y <= e.clickY2)
+			{
+				e.button->onSelect();
+			}
+		}
+	}
 }
 
 void ButtonLegend::draw(int x, int y)
 {
+	auto elems = getDrawElems(x, y);
+
+	for (auto e : elems)
+	{
+		setColor(colorWhite);
+		Sprite(e.sprite).drawEx(e.spriteX, e.spriteY);
+
+		drawText(e.textX, e.textY, UI_BUTTONLEGEND_FONT_SIZE, +1.f, +1.f, "%s", e.text);
+	}
+}
+
+void ButtonLegend::addElem(ButtonId buttonId, Button * button, const char * localString)
+{
+	Elem e;
+	e.buttonId = buttonId;
+	e.button = button;
+	e.localString = localString;
+	m_elems.push_back(e);
+}
+
+std::vector<ButtonLegend::DrawElem> ButtonLegend::getDrawElems(int x, int y)
+{
+	std::vector<ButtonLegend::DrawElem> result;
+
 	for (auto & e : m_elems)
 	{
-		std::string filename;
+		const char * filename = 0;
 
-		switch (e.button)
+		switch (e.buttonId)
 		{
-		case kButton_B:
+		case kButtonId_B:
 			if (g_currentMenuInputMode == kMenuInputMode_Gamepad)
 				filename = "ui/legend/gamepad-b.png";
 			break;
-		case kButton_ESCAPE:
+		case kButtonId_ESCAPE:
 			if (g_currentMenuInputMode == kMenuInputMode_Keyboard)
 				filename = "ui/legend/keyboard-escape.png";
 			break;
@@ -181,29 +224,42 @@ void ButtonLegend::draw(int x, int y)
 			fassert(false);
 		}
 
-		if (!filename.empty())
+		if (filename)
 		{
-			Sprite sprite(filename.c_str());
-			sprite.drawEx(x, y);
+			DrawElem d;
+
+			d.button = e.button;
+			d.clickX1 = x;
+			d.clickY1 = y;
+
+			d.sprite = filename;
+			d.spriteX = x;
+			d.spriteY = y;
+
+			Sprite sprite(filename);
+
 			x += sprite.getWidth();
 			x += UI_BUTTONLEGEND_ICON_SPACING;
 
+			d.text = getLocalString(e.localString);
+			d.textX = x;
+			d.textY = y;
+
 			float sx, sy;
-			measureText(UI_BUTTONLEGEND_FONT_SIZE, sx, sy, "%s", getLocalString(e.localString));
-			drawText(x, y, UI_BUTTONLEGEND_FONT_SIZE, +1.f, +1.f, "%s", getLocalString(e.localString));
+			measureText(UI_BUTTONLEGEND_FONT_SIZE, sx, sy, "%s", d.text);
 
 			x += (int)sx;
+
+			d.clickX2 = x;
+			d.clickY2 = y + sprite.getHeight();
+
 			x += UI_BUTTONLEGEND_TEXT_SPACING;
+
+			result.push_back(d);
 		}
 	}
-}
 
-void ButtonLegend::addElem(Button button, const char * localString)
-{
-	Elem e;
-	e.button = button;
-	e.localString = localString;
-	m_elems.push_back(e);
+	return result;
 }
 
 //
@@ -256,7 +312,7 @@ bool Button::isClicked()
 	}
 
 	if (result)
-		Sound("ui/button/select.ogg").play();
+		g_app->playSound("ui/button/select.ogg");
 
 	return result;
 }
@@ -271,6 +327,7 @@ void Button::draw()
 
 	if (m_localString)
 	{
+		setFont("calibri.ttf");
 		drawText(m_x + m_textX, m_y + m_textY, m_textSize, +1.f, +1.f, "%s", getLocalString(m_localString));
 	}
 }
@@ -295,7 +352,7 @@ void Button::onFocusChange(bool hasFocus, bool isAutomaticSelection)
 	MenuNavElem::onFocusChange(hasFocus, isAutomaticSelection);
 
 	if (hasFocus && !isAutomaticSelection)
-		Sound("ui/button/focus.ogg").play();
+		g_app->playSound("ui/button/focus.ogg");
 }
 
 void Button::onSelect()
@@ -339,7 +396,7 @@ void SpinButton::changeValue(int delta)
 	m_value = Calc::Clamp(m_value + delta, m_min, m_max);
 
 	if (m_value != oldValue)
-		Sound("ui/button/select.ogg").play();
+		g_app->playSound("ui/button/select.ogg");
 }
 
 bool SpinButton::hasChanged()
@@ -371,6 +428,32 @@ void SpinButton::draw()
 	{
 		drawText(m_x + m_textX, m_y + m_textY, m_textSize, +1.f, +1.f, "%s", getLocalString(m_localString));
 	}
+
+	const int kArrowSpacing = 30;
+	const int kArrowSx = 20;
+	const int kArrowSy = 25;
+	
+	const int arrowY = m_y + m_sprite->getHeight() / 2;
+
+	if (m_value > m_min)
+	{
+		gxBegin(GL_TRIANGLES);
+		gxColor3ub(255, 255, 255);
+		gxVertex2f(m_x - kArrowSpacing + kArrowSx, arrowY - kArrowSy/2);
+		gxVertex2f(m_x - kArrowSpacing + kArrowSx, arrowY + kArrowSy/2);
+		gxVertex2f(m_x - kArrowSpacing, arrowY);
+		gxEnd();
+	}
+
+	if (m_value < m_max)
+	{
+		gxBegin(GL_TRIANGLES);
+		gxColor3ub(255, 255, 255);
+		gxVertex2f(m_x + m_sprite->getWidth() + kArrowSpacing - kArrowSx, arrowY - kArrowSy/2);
+		gxVertex2f(m_x + m_sprite->getWidth() + kArrowSpacing - kArrowSx, arrowY + kArrowSy/2);
+		gxVertex2f(m_x + m_sprite->getWidth() + kArrowSpacing, arrowY);
+		gxEnd();
+	}
 }
 
 void SpinButton::getPosition(int & x, int & y) const
@@ -393,7 +476,7 @@ void SpinButton::onFocusChange(bool hasFocus, bool isAutomaticSelection)
 	MenuNavElem::onFocusChange(hasFocus, isAutomaticSelection);
 
 	if (hasFocus && !isAutomaticSelection)
-		Sound("ui/button/focus.ogg").play();
+		g_app->playSound("ui/button/focus.ogg");
 }
 
 void SpinButton::onSelect()

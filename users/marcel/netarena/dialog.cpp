@@ -82,7 +82,7 @@ void Dialog::tick(float dt)
 				m_state = State_FadeOut;
 				m_fadeTime = UI_DIALOG_FADEOUT_TIME;
 
-				Sound("ui/dialog/select.ogg").play();
+				g_app->playSound("ui/dialog/select.ogg");
 			}
 		}
 		break;
