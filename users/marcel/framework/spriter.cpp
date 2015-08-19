@@ -1158,4 +1158,9 @@ namespace spriter
 
 		return index;
 	}
+
+	bool Scene::hasCharacterMap(int index) const
+	{
+		return index < m_fileCaches.size();
+	}
 }

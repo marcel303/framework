@@ -1962,9 +1962,7 @@ bool SpriterState::updateAnim(const Spriter & spriter, float dt)
 
 void SpriterState::setCharacterMap(const Spriter & spriter, int index)
 {
-	index++; // index -1 is reserved for the default character map. all other maps start at 1
-
-	fassert(index >= 0 && index < spriter.m_spriter->m_scene->m_fileCaches.size());
+	//fassert(index >= 0 && index < spriter.m_spriter->m_scene->m_fileCaches.size());
 	if (index >= 0 && index < spriter.m_spriter->m_scene->m_fileCaches.size())
 		characterMap = index;
 	else
@@ -2132,6 +2130,14 @@ bool Spriter::getHitboxAtTime(int animIndex, const char * name, float time, Vec2
 	points[3] = Vec2(p4[0], p4[1]);
 
 	return true;
+}
+
+bool Spriter::hasCharacterMap(int index) const
+{
+	if (m_spriter->m_scene->m_entities.empty())
+		return false;
+
+	return m_spriter->m_scene->hasCharacterMap(index);
 }
 
 // -----

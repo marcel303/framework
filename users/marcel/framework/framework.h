@@ -502,7 +502,7 @@ struct SpriterState
 	void stopAnim(const Spriter & spriter);
 	bool updateAnim(const Spriter & spriter, float dt);
 
-	void setCharacterMap(const Spriter & spriter, int index); // -1 is the default map. 0, 1, etc are the maps as authored in Spriter
+	void setCharacterMap(const Spriter & spriter, int index);
 	void setCharacterMap(const Spriter & spriter, const char * name);
 };
 
@@ -523,6 +523,8 @@ public:
 	bool isAnimDoneAtTime(int animIndex, float time) const;
 
 	bool getHitboxAtTime(int animIndex, const char * name, float time, Vec2 * points);
+
+	bool hasCharacterMap(int index) const;
 
 private:
 	class SpriterCacheElem * m_spriter;

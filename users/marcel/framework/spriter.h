@@ -89,6 +89,7 @@ namespace spriter
 
 		int getEntityIndexByName(const char * name) const;
 		int getCharacterMapIndexByName(const char * name) const;
+		bool hasCharacterMap(int index) const;
 
 		std::vector<FileCache*> m_fileCaches;
 		std::vector<Entity*> m_entities;
