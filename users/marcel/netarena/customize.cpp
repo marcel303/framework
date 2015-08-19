@@ -122,7 +122,9 @@ CharacterMenu::CharacterMenu(int characterIndex)
 	, m_menuNav(0)
 	, m_buttonLegend(0)
 {
-	const int numSkins = 4;
+	const CharacterData * characterData = getCharacterData(characterIndex);
+
+	const int numSkins = characterData->m_numSkins;
 	const int numEmblems = 4;
 
 	const int buttonPosX = GFX_SX*1/4;

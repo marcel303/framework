@@ -71,6 +71,7 @@ public:
 	float m_meleeCooldown;
 	PlayerSpecial m_special;
 	int m_traits; // PlayerTrait
+	int m_numSkins;
 	std::map<std::string, SoundBag> m_sounds;
 
 	//

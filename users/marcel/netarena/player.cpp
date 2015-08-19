@@ -4493,6 +4493,7 @@ CharacterData::CharacterData(int characterIndex)
 	, m_meleeCooldown(0.f)
 	, m_special(kPlayerSpecial_None)
 	, m_traits(0)
+	, m_numSkins(0)
 {
 	load(characterIndex);
 }
@@ -4586,6 +4587,13 @@ void CharacterData::load(int characterIndex)
 		m_traits |= kPlayerTrait_AirDash;
 	if (traitsStr.find("ninja_dash") != std::string::npos)
 		m_traits |= kPlayerTrait_NinjaDash;
+
+	//
+
+	m_numSkins = 0;
+
+	while (getSpriter()->hasCharacterMap(m_numSkins))
+		m_numSkins++;
 }
 
 bool CharacterData::hasTrait(PlayerTrait trait) const

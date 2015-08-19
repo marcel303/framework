@@ -429,6 +429,11 @@ void SpinButton::draw()
 		drawText(m_x + m_textX, m_y + m_textY, m_textSize, +1.f, +1.f, "%s", getLocalString(m_localString));
 	}
 
+	if (g_devMode)
+	{
+		drawText(m_x, m_y, 18, +1.f, +1.f, "min=%d, max=%d, value=%d", m_min, m_max, m_value);
+	}
+
 	const int kArrowSpacing = 30;
 	const int kArrowSx = 20;
 	const int kArrowSy = 25;
