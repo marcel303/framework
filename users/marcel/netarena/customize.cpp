@@ -4,6 +4,8 @@
 #include "player.h"
 #include "uicommon.h"
 
+OPTION_EXTERN(float, PLAYER_SPRITE_SCALE);
+
 CustomizeMenu::CustomizeMenu()
 	: m_back(0)
 	, m_menuNav(0)
@@ -213,9 +215,10 @@ void CharacterMenu::draw()
 		Spriter & spriter = *characterData->getSpriter();
 		SpriterState spriterState;
 		spriterState.x = GFX_SX*3/4;
-		spriterState.y = GFX_SY/2;
+		spriterState.y = GFX_SY*2/3;
 		spriterState.startAnim(spriter, "Idle");
 		spriterState.animTime = framework.time;
+		spriterState.scale = characterData->m_spriteScale * PLAYER_SPRITE_SCALE * 2.f;
 		spriterState.setCharacterMap(spriter, characterSettings.skin);
 		spriter.draw(spriterState);
 	}

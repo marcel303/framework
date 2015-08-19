@@ -17,7 +17,7 @@
 
 /*
 
-- make walljump sound per character
++ make walljump sound per character
 
 - fix pickup drop location. seems to get stuck in geometry sometimes
 - why does the bubbled player not bonce correctly, still?
