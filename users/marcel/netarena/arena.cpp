@@ -662,8 +662,8 @@ void Arena::drawBlocks(const GameSim & gameSim, int layer) const
 	shader.setTexture("decalmap", 1, g_decalMap->getTexture());
 	shader.setImmediate("colormapScale", 1.f / m_textureSx, 1.f / m_textureSy);
 	shader.setImmediate("decalmapScale",
-		framework.minification / float(g_decalMap->getWidth()),
-		framework.minification / float(g_decalMap->getHeight()));
+		1.f / float(g_decalMap->getWidth()),
+		1.f / float(g_decalMap->getHeight()));
 #else
 	// fixme : set texture filter when using shader too
 	gxSetTexture(m_texture);

@@ -1128,9 +1128,12 @@ void Decal::draw()
 {
 	if (DECAL_ENABLED)
 	{
-		setColor(getPlayerColor(playerColor).interp(colorBlack, .5f));
+		setColor(getPlayerColor(playerColor).interp(colorBlack, 0.f)); // todo : modify decal color in some way?
 		Sprite sprite("decals/0.png");
-		sprite.drawEx(x - sprite.getWidth() / 2, y - sprite.getHeight() / 2, 0.f, scale);
+		sprite.drawEx(
+			x - sprite.getWidth() * scale / 2.f,
+			y - sprite.getHeight() * scale / 2.f,
+			0.f, scale);
 	}
 }
 
