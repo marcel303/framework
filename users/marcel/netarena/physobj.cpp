@@ -130,6 +130,7 @@ void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 				Portal * portal = gameSim.findPortal(
 					min[0], min[1],
 					max[0], max[1],
+					false,
 					true,
 					portalId);
 
@@ -144,6 +145,7 @@ void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 				Portal * portal = gameSim.findPortal(
 					min[0], min[1],
 					max[0], max[1],
+					true,
 					false,
 					portalId);
 

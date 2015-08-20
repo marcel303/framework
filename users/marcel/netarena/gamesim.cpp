@@ -892,18 +892,34 @@ void Portal::setup(float x1, float y1, float x2, float y2, int key)
 	m_key = key;
 }
 
-bool Portal::intersects(float x1, float y1, float x2, float y2, bool applySafeZone) const
+bool Portal::intersects(float x1, float y1, float x2, float y2, bool mustEncapsulate, bool applySafeZone) const
 {
-	if (m_x1 >= m_x2 || m_y1 >= m_y2)
-		return false;
+	if (mustEncapsulate)
+	{
+		if (m_x1 >= m_x2 || m_y1 >= m_y2)
+			return false;
 
-	const float safeZone = applySafeZone ? kPortalSafeZoneSize : 0.f;
+		const float safeZone = applySafeZone ? kPortalSafeZoneSize : 0.f;
 
-	if (x2 < m_x1 - safeZone || x1 > m_x2 + safeZone)
-		return false;
-	if (y2 < m_y1 - safeZone || y1 > m_y2 + safeZone)
-		return false;
-	return true;
+		if (x1 < m_x1 - safeZone || x2 > m_x2 + safeZone)
+			return false;
+		if (y1 < m_y1 - safeZone || y2 > m_y2 + safeZone)
+			return false;
+		return true;
+	}
+	else
+	{
+		if (m_x1 >= m_x2 || m_y1 >= m_y2)
+			return false;
+
+		const float safeZone = applySafeZone ? kPortalSafeZoneSize : 0.f;
+
+		if (x2 < m_x1 - safeZone || x1 > m_x2 + safeZone)
+			return false;
+		if (y2 < m_y1 - safeZone || y1 > m_y2 + safeZone)
+			return false;
+		return true;
+	}
 }
 
 bool Portal::doTeleport(GameSim & gameSim, Portal *& destination, int & destinationId)
@@ -2042,6 +2058,7 @@ void GameSim::resetGameWorld()
 
 	for (int i = 0; i < MAX_DECALS; ++i)
 		m_decals[i] = Decal();
+	g_decalMap->clear();
 
 	// reset screen shakes
 
@@ -2912,6 +2929,7 @@ void GameSim::drawPlay()
 	gxTranslatef(-ARENA_SX_PIXELS/2.f, -ARENA_SY_PIXELS/2.f, 0.f);
 #endif
 
+#if 0
 	pushSurface(g_decalMap);
 	{
 		glClearColor(0.f, 0.f, 0.f, 0.f);
@@ -2920,6 +2938,7 @@ void GameSim::drawPlay()
 		drawPlayDecal(camTranslation);
 	}
 	popSurface();
+#endif
 
 	pushSurface(g_colorMap);
 	{
@@ -3946,6 +3965,14 @@ void GameSim::addDecal(int x, int y, int playerColor, int sprite, float scale)
 			decal.playerColor = playerColor;
 			decal.sprite = sprite;
 			decal.scale = scale;
+			if (g_decalMap)
+			{
+				pushSurface(g_decalMap);
+				{
+					decal.draw();
+				}
+				popSurface();
+			}
 			return;
 		}
 	}
@@ -4089,13 +4116,13 @@ void GameSim::addBlindsEffect(int playerId, int x, int y, int size, bool vertica
 	}
 }
 
-Portal * GameSim::findPortal(float x1, float y1, float x2, float y2, bool applySafeZone, int & id)
+Portal * GameSim::findPortal(float x1, float y1, float x2, float y2, bool mustEncapsulate, bool applySafeZone, int & id)
 {
 	for (int i = 0; i < MAX_PORTALS; ++i)
 	{
 		Portal & portal = m_portals[i];
 
-		if (portal.m_isAlive && portal.intersects(x1, y1, x2, y2, applySafeZone))
+		if (portal.m_isAlive && portal.intersects(x1, y1, x2, y2, mustEncapsulate, applySafeZone))
 		{
 			id = i;
 			return &m_portals[i];

@@ -157,6 +157,16 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 					{
 						ParticleSpawnInfo spawnInfo(b.m_pos[0], b.m_pos[1], kBulletType_ParticleA, 10, 50, 200, 20);
 						gameSim.spawnParticles(spawnInfo);
+
+						if (b.ownerPlayerId != -1)
+						{
+							// fixme : add decal on death particle collision..
+							gameSim.addDecal(
+								b.m_pos[0], b.m_pos[1],
+								b.ownerPlayerId,
+								gameSim.Random() % DECAL_COUNT,
+								gameSim.RandomFloat(DECAL_SIZE_MIN, DECAL_SIZE_MAX));
+						}
 					}
 
 					if (!kill && b.doBounce)
@@ -205,6 +215,7 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 						Portal * portal = gameSim.findPortal(
 							b.m_pos[0], b.m_pos[1],
 							b.m_pos[0], b.m_pos[1],
+							false,
 							true,
 							portalId);
 
@@ -219,6 +230,7 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 						Portal * portal = gameSim.findPortal(
 							b.m_pos[0], b.m_pos[1],
 							b.m_pos[0], b.m_pos[1],
+							true,
 							false,
 							portalId);
 

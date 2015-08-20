@@ -17,9 +17,11 @@
 
 /*
 
+- apply decal map cam offset in shader (?)
+
 - add 'blood' particles and spawn decals on impact
 
-- add go to zone character select
++ add go to zone character select
 + fix decal map draw/apply?
 + save settings to user folder
 - save settings after options menu close
@@ -33,7 +35,7 @@
 # draw all decals to decal map on client connect
 # make sure clearing decal list is atomic with clearing decal map -> ensures proper client sync
 
-- only do teleport when completely inside teleport
++ only do teleport when completely inside teleport
 - for pickup spawn: keep a list of MAX_PICKUPS previous spawn locations, instead of storing recently used x/y in pickups themselves
 
 + cancel grapple on teleport
@@ -964,13 +966,6 @@ void Player::tick(float dt)
 				break;
 			case kPlayerAnim_Fire:
 				m_attack.attacking = false;
-
-				// fixme : add decal on death particle collision..
-				GAMESIM->addDecal(
-					m_pos[0], m_pos[1],
-					m_index,
-					GAMESIM->Random() % DECAL_COUNT,
-					GAMESIM->RandomFloat(DECAL_SIZE_MIN, DECAL_SIZE_MAX));
 				break;
 
 			case kPlayerAnim_Zweihander_Charge:
@@ -1799,6 +1794,7 @@ void Player::tick(float dt)
 					m_pos[1] + m_collision.min[1],
 					m_pos[0] + m_collision.max[0],
 					m_pos[1] + m_collision.max[1],
+					false,
 					true,
 					portalId);
 
@@ -1817,6 +1813,7 @@ void Player::tick(float dt)
 					m_pos[1] + m_collision.min[1],
 					m_pos[0] + m_collision.max[0],
 					m_pos[1] + m_collision.max[1],
+					true,
 					false,
 					portalId);
 
