@@ -1111,7 +1111,8 @@ void Decal::tick(float dt)
 void Decal::draw()
 {
 	setColor(getPlayerColor(playerColor));
-	Sprite("decals/0.png").drawEx(x, y);
+	Sprite sprite("decals/0.png");
+	sprite.drawEx(x - sprite.getWidth() / 2, y - sprite.getHeight() / 2);
 }
 
 //
@@ -2041,7 +2042,6 @@ void GameSim::resetGameWorld()
 
 	for (int i = 0; i < MAX_DECALS; ++i)
 		m_decals[i] = Decal();
-	g_decalMap->clear();
 
 	// reset screen shakes
 
@@ -3912,7 +3912,7 @@ void GameSim::doBlastEffect(Vec2Arg center, float radius, const Curve & speedCur
 		});
 }
 
-void GameSim::addDecal(int x, int y, int playerColor, int sprite)
+void GameSim::addDecal(int x, int y, int playerColor, int sprite, float scale)
 {
 	for (int i = 0; i < MAX_DECALS; ++i)
 	{
@@ -3924,6 +3924,7 @@ void GameSim::addDecal(int x, int y, int playerColor, int sprite)
 			decal.y = y;
 			decal.playerColor = playerColor;
 			decal.sprite = sprite;
+			decal.scale = scale;
 			return;
 		}
 	}
@@ -3933,7 +3934,7 @@ void GameSim::addDecal(int x, int y, int playerColor, int sprite)
 	if (DEBUG_RANDOM_CALLSITES)
 		LOG_DBG("Random called from addDecal");
 	m_decals[Random() % MAX_DECALS] = Decal();
-	addDecal(x, y, playerColor, sprite);
+	addDecal(x, y, playerColor, sprite, scale);
 }
 
 void GameSim::addScreenShake(float dx, float dy, float stiffness, float life, bool fade)

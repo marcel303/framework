@@ -17,6 +17,11 @@
 
 /*
 
+- add go to zone character select
+- fix decal map draw/apply?
+- save settings to user folder
+- save settings after options menu close
+- apply settings on customize menu enter/leave
 + make walljump sound per character
 
 - fix pickup drop location. seems to get stuck in geometry sometimes
@@ -959,7 +964,11 @@ void Player::tick(float dt)
 				m_attack.attacking = false;
 
 				// fixme : add decal on death particle collision..
-				GAMESIM->addDecal(m_pos[0], m_pos[1], m_characterIndex, 0);
+				GAMESIM->addDecal(
+					m_pos[0], m_pos[1],
+					m_index,
+					GAMESIM->Random() % DECAL_COUNT,
+					GAMESIM->RandomFloat(DECAL_SIZE_MIN, DECAL_SIZE_MAX));
 				break;
 
 			case kPlayerAnim_Zweihander_Charge:
@@ -3034,8 +3043,8 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 	spriterState.scaleY = scale;
 	spriterState.flipX = flipX;
 	spriterState.flipY = flipY;
-	if (PLAYER_SKIN_OVERRIDE >= 0)
-		spriterState.setCharacterMap(*characterData->getSpriter(), PLAYER_SKIN_OVERRIDE);
+	const int skin = PLAYER_SKIN_OVERRIDE >= 0 ? PLAYER_SKIN_OVERRIDE : g_app->m_userSettings->chars[m_characterIndex].skin;
+	spriterState.setCharacterMap(*characterData->getSpriter(), skin);
 	characterData->getSpriter()->draw(spriterState);
 
 	setColorMode(COLOR_MUL);

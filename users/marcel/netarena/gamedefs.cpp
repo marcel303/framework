@@ -430,6 +430,10 @@ OPTION_DEFINE(int, INVISIBILITY_PLUME_COUNT, "Special Abilities/Invisibility/Plu
 OPTION_DEFINE(float, INVISIBILITY_PLUME_DISTANCE_MIN, "Special Abilities/Invisibility/Plume Distance Min");
 OPTION_DEFINE(float, INVISIBILITY_PLUME_DISTANCE_MAX, "Special Abilities/Invisibility/Plume Distance Max");
 
+OPTION_DEFINE(int, DECAL_COUNT, "Graphics/Decals/Num Decals");
+OPTION_DEFINE(float, DECAL_SIZE_MIN, "Graphics/Decals/Random Size Min");
+OPTION_DEFINE(float, DECAL_SIZE_MAX, "Graphics/Decals/Random Size Max");
+
 OPTION_DEFINE(float, FX_ATTACK_DUST_INTERVAL, "FX/Attack Dust/Interval (px)");
 OPTION_DEFINE(int, FX_ATTACK_DUST_PLAYER_SPEED_TRESHOLD, "FX/Attack Dust/Player Speed Treshold (%%)");
 

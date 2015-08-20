@@ -362,11 +362,11 @@ void Button::onSelect()
 
 //
 
-SpinButton::SpinButton(int x, int y, int min, int max, const char * filename, const char * localString, int textX, int textY, int textSize)
+SpinButton::SpinButton(int x, int y, int min, int max, int value, const char * filename, const char * localString, int textX, int textY, int textSize)
 	: m_sprite(new Sprite(filename))
 	, m_x(0)
 	, m_y(0)
-	, m_value(min)
+	, m_value(Calc::Clamp(value, min, max))
 	, m_min(min)
 	, m_max(max)
 	, m_localString(localString)

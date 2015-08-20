@@ -862,6 +862,7 @@ struct Decal
 	int16_t y;
 	uint8_t playerColor : 4;
 	uint8_t sprite : 4;
+	float scale;
 
 	Decal()
 	{
@@ -1247,7 +1248,7 @@ public:
 	void doQuake(float vel);
 	void doBlastEffect(Vec2Arg center, float radius, const Curve & speedCurve);
 
-	void addDecal(int x, int y, int playerColor, int sprite);
+	void addDecal(int x, int y, int playerColor, int sprite, float scale);
 
 	void addScreenShake(float dx, float dy, float stiffness, float life, bool fade);
 	Vec2 getScreenShake() const;

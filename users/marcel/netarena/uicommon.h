@@ -126,7 +126,7 @@ public:
 	int m_textSize;
 
 public:
-	SpinButton(int x, int y, int min, int max, const char * filename, const char * localString, int textX, int textY, int textSize);
+	SpinButton(int x, int y, int min, int max, int value, const char * filename, const char * localString, int textX, int textY, int textSize);
 	~SpinButton();
 
 	void setPosition(int x, int y);

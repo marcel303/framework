@@ -110,6 +110,7 @@ public:
 	void setAppState(AppState state);
 	void quit();
 
+	std::string getUserSettingsDirectory();
 	std::string getUserSettingsFilename();
 	void saveUserSettings();
 	void loadUserSettings();

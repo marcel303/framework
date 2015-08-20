@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gamedefs.h"
+#include "gametypes.h"
 #include "menu.h"
 
 class Button;
@@ -29,6 +30,7 @@ public:
 class CharacterMenu : public Menu
 {
 	int m_characterIndex;
+	UserSettings::Char m_charSettings;
 
 	Button * m_back;
 	Button * m_effects;

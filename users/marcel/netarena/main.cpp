@@ -1388,23 +1388,60 @@ void App::quit()
 	exit(0);
 }
 
-std::string App::getUserSettingsFilename()
+#include <Shlobj.h> // todo : remove once proper Steam integration?
+
+std::string App::getUserSettingsDirectory()
 {
+#if 1
 	// todo : change this once we have Steam integration
 
+	//FOLDERID_SavedGames // Vista+
+	//FOLDERID_LocalAppData
+
+	char path[MAX_PATH];
+	if (SHGetSpecialFolderPathA(NULL, path, CSIDL_LOCAL_APPDATA, TRUE))
+	//if (SHGetKnownFolderPath(FOLDERID_SavedGames, KF_FLAG_CREATE, NULL, &path) == S_OK)
+	{
+		std::string result = std::string(path) + "\\Damajo Games\\Riposte";
+		//CoTaskMemFree(path);
+		return result;
+	}
+	else
+	{
+		logWarning("failed to get local appdata path");
+
+		return "..";
+	}
+#else
+	return "..";
+#endif
+}
+
+std::string App::getUserSettingsFilename()
+{
+#if 1
+	return getUserSettingsDirectory() + "\\settings.txt";
+#else
 	char machineName[256];
 	DWORD machineNameSize = sizeof(machineName);
 	if (!GetComputerName(machineName, &machineNameSize))
 		strcpy(machineName, "noname");
-	return std::string("../settings-") + machineName + ".txt";
+	return getUserSettingsDirectory() + "\\settings-" + machineName + ".txt";
+#endif
 }
 
 void App::saveUserSettings()
 {
 	try
 	{
+		auto directory = getUserSettingsDirectory();
+		auto filename = getUserSettingsFilename();
+
+		int result = SHCreateDirectoryEx(NULL, directory.c_str(), NULL);
+		fassert(result == S_OK || result == ERROR_FILE_EXISTS || result == ERROR_ALREADY_EXISTS);
+
 		FileStream stream;
-		stream.Open(getUserSettingsFilename().c_str(), OpenMode_Write);
+		stream.Open(filename.c_str(), OpenMode_Write);
 		StreamWriter writer(&stream, false);
 		m_userSettings->save(writer);
 	}
@@ -2661,28 +2698,6 @@ static bool calculateFileCRC(const char * filename, uint32_t & crc)
 
 int main(int argc, char * argv[])
 {
-	char machineName[256];
-	DWORD machineNameSize = sizeof(machineName);
-	if (!GetComputerName(machineName, &machineNameSize))
-		strcpy(machineName, "noname");
-
-	std::string userSettingsFilename = std::string("settings-") + machineName + ".txt";
-
-	// fixme : remove UserSettings test
-	UserSettings userSettings;
-	{
-		FileStream stream;
-		stream.Open(userSettingsFilename.c_str(), OpenMode_Write);
-		StreamWriter writer(&stream, false);
-		userSettings.save(writer);
-	}
-	{
-		FileStream stream;
-		stream.Open(userSettingsFilename.c_str(), OpenMode_Read);
-		StreamReader reader(&stream, false);
-		userSettings.load(reader);
-	}
-
 #if defined(__WIN32__)
 	const int kMaxModuleNameSize = 1024;
 	char moduleName[kMaxModuleNameSize];

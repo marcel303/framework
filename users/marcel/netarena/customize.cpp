@@ -55,6 +55,8 @@ void CustomizeMenu::onEnter()
 
 void CustomizeMenu::onExit()
 {
+	g_app->saveUserSettings();
+
 	inputLockRelease(); // fixme : remove. needed for escape = quit hack for now
 }
 
@@ -124,6 +126,8 @@ CharacterMenu::CharacterMenu(int characterIndex)
 	, m_menuNav(0)
 	, m_buttonLegend(0)
 {
+	m_charSettings = g_app->m_userSettings->chars[characterIndex];
+
 	const CharacterData * characterData = getCharacterData(characterIndex);
 
 	const int numSkins = characterData->m_numSkins;
@@ -133,8 +137,8 @@ CharacterMenu::CharacterMenu(int characterIndex)
 
 	m_back = new Button(0, 0, "mainmenu-button.png", 0, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 	m_effects = new Button(buttonPosX, GFX_SY/3, "mainmenu-button.png", "menu-char-effects", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
-	m_skin = new SpinButton(buttonPosX, GFX_SY/3 + 150, 0, numSkins - 1, "mainmenu-button.png", "menu-char-skin", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
-	m_emblem = new SpinButton(buttonPosX, GFX_SY/3 + 300, 0, numEmblems - 1, "mainmenu-button.png", "menu-char-emblem", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_skin = new SpinButton(buttonPosX, GFX_SY/3 + 150, 0, numSkins - 1, m_charSettings.skin, "mainmenu-button.png", "menu-char-skin", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_emblem = new SpinButton(buttonPosX, GFX_SY/3 + 300, 0, numEmblems - 1, m_charSettings.emblem, "mainmenu-button.png", "menu-char-emblem", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 	m_testGame = new Button(buttonPosX, GFX_SY/3 + 450, "mainmenu-button.png", "menu-char-test", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 
 	m_menuNav = new MenuNav();
@@ -183,14 +187,16 @@ bool CharacterMenu::tick(float dt)
 
 	if (m_skin->hasChanged())
 	{
-		g_app->m_userSettings->chars[m_characterIndex].skin = m_skin->m_value;
+		m_charSettings.skin = m_skin->m_value;
 	}
 	else if (m_emblem->hasChanged())
 	{
-		g_app->m_userSettings->chars[m_characterIndex].emblem = m_emblem->m_value;
+		m_charSettings.emblem = m_emblem->m_value;
 	}
 	else if (m_back->isClicked() || gamepad[0].wentDown(GAMEPAD_B) || keyboard.wentDown(SDLK_ESCAPE)) // fixme : generalize and remove hardcoded gamepad index
 	{
+		g_app->m_userSettings->chars[m_characterIndex] = m_charSettings;
+
 		g_app->playSound("ui/sounds/menu-back.ogg");
 		return true;
 	}
@@ -205,7 +211,6 @@ void CharacterMenu::draw()
 	// draw the selected character
 
 	const CharacterData * characterData = getCharacterData(m_characterIndex);
-	const auto & characterSettings = g_app->m_userSettings->chars[m_characterIndex];
 
 	fassert(characterData);
 	if (characterData)
@@ -219,7 +224,7 @@ void CharacterMenu::draw()
 		spriterState.startAnim(spriter, "Idle");
 		spriterState.animTime = framework.time;
 		spriterState.scale = characterData->m_spriteScale * PLAYER_SPRITE_SCALE * 2.f;
-		spriterState.setCharacterMap(spriter, characterSettings.skin);
+		spriterState.setCharacterMap(spriter, m_charSettings.skin);
 		spriter.draw(spriterState);
 	}
 
