@@ -17,17 +17,19 @@
 
 /*
 
+- add 'blood' particles and spawn decals on impact
+
 - add go to zone character select
-- fix decal map draw/apply?
-- save settings to user folder
++ fix decal map draw/apply?
++ save settings to user folder
 - save settings after options menu close
-- apply settings on customize menu enter/leave
++ save and apply settings on customize menu enter/leave
 + make walljump sound per character
 
 - fix pickup drop location. seems to get stuck in geometry sometimes
-- why does the bubbled player not bonce correctly, still?
+- why does the bubbled player not bounce correctly, still?
 
-- add decal support
++ add decal support
 # draw all decals to decal map on client connect
 # make sure clearing decal list is atomic with clearing decal map -> ensures proper client sync
 

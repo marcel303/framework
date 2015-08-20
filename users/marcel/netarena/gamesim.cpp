@@ -2289,8 +2289,19 @@ void GameSim::tickMenus()
 	bool allReady = true;
 
 	for (int i = 0; i < MAX_PLAYERS; ++i)
-		if (m_players[i].m_isUsed)
-			allReady &= m_players[i].m_isReadyUpped;
+	{
+		const Player & p = m_players[i];
+		if (p.m_isUsed)
+		{
+			const bool isInStartZone =
+				p.m_pos[0] >= GAMESTATE_LOBBY_STARTZONE_X &&
+				p.m_pos[1] >= GAMESTATE_LOBBY_STARTZONE_Y &&
+				p.m_pos[0] <= GAMESTATE_LOBBY_STARTZONE_X + GAMESTATE_LOBBY_STARTZONE_SX &&
+				p.m_pos[1] <= GAMESTATE_LOBBY_STARTZONE_Y + GAMESTATE_LOBBY_STARTZONE_SY;
+
+			allReady &= p.m_isReadyUpped && isInStartZone;
+		}
+	}
 
 	allReady &= getNumPlayers() >= MIN_PLAYER_COUNT;
 
@@ -3175,6 +3186,16 @@ void GameSim::drawPlayColor(Vec2Arg camTranslation)
 	// spike walls
 
 	m_levelEvents.spikeWalls.draw();
+
+	if (g_devMode && m_gameMode == kGameMode_Lobby)
+	{
+		setColor(colorGreen);
+		drawRectLine(
+			GAMESTATE_LOBBY_STARTZONE_X,
+			GAMESTATE_LOBBY_STARTZONE_Y,
+			GAMESTATE_LOBBY_STARTZONE_X + GAMESTATE_LOBBY_STARTZONE_SX,
+			GAMESTATE_LOBBY_STARTZONE_Y + GAMESTATE_LOBBY_STARTZONE_SY);
+	}
 
 	gxPopMatrix();
 }
