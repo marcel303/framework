@@ -158,7 +158,7 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 						ParticleSpawnInfo spawnInfo(b.m_pos[0], b.m_pos[1], kBulletType_ParticleA, 10, 50, 200, 20);
 						gameSim.spawnParticles(spawnInfo);
 
-						if (b.ownerPlayerId != -1)
+						if (b.ownerPlayerId != -1 && false)
 						{
 							// fixme : add decal on death particle collision..
 							gameSim.addDecal(

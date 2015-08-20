@@ -3646,6 +3646,12 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 
 				GAMESIM->spawnParticles(spawnInfo);
 
+				GAMESIM->addDecal(
+					m_pos[0], m_pos[1],
+					m_index,
+					GAMESIM->Random() % DECAL_COUNT,
+					GAMESIM->RandomFloat(DECAL_SIZE_MIN, DECAL_SIZE_MAX));
+
 				if (PROTO_TIMEDILATION_ON_KILL && attacker)
 				{
 					GAMESIM->addTimeDilationEffect(

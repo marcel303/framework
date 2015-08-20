@@ -442,6 +442,7 @@ OPTION_DEFINE(float, INVISIBILITY_PLUME_DISTANCE_MAX, "Special Abilities/Invisib
 OPTION_DEFINE(int, DECAL_COUNT, "Graphics/Decals/Num Decals");
 OPTION_DEFINE(float, DECAL_SIZE_MIN, "Graphics/Decals/Random Size Min");
 OPTION_DEFINE(float, DECAL_SIZE_MAX, "Graphics/Decals/Random Size Max");
+OPTION_DEFINE(bool, DECAL_ENABLED, "Graphics/Decals/Enabled");
 OPTION_STEP(DECAL_SIZE_MIN, 0, 0, .1f);
 OPTION_STEP(DECAL_SIZE_MAX, 0, 0, .1f);
 

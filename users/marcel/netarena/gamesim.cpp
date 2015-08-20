@@ -1126,9 +1126,12 @@ void Decal::tick(float dt)
 
 void Decal::draw()
 {
-	setColor(getPlayerColor(playerColor));
-	Sprite sprite("decals/0.png");
-	sprite.drawEx(x - sprite.getWidth() / 2, y - sprite.getHeight() / 2);
+	if (DECAL_ENABLED)
+	{
+		setColor(getPlayerColor(playerColor).interp(colorBlack, .5f));
+		Sprite sprite("decals/0.png");
+		sprite.drawEx(x - sprite.getWidth() / 2, y - sprite.getHeight() / 2, 0.f, scale);
+	}
 }
 
 //
