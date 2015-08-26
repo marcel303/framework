@@ -1259,12 +1259,14 @@ void Shader::setTextureUnit(GLint index, int unit)
 	checkErrorGL();
 }
 
-void Shader::setTexture(const char * name, int unit, GLuint texture)
+void Shader::setTexture(const char * name, int unit, GLuint texture, bool filtered)
 {
 	SET_UNIFORM(name, glUniform1i(index, unit));
 	checkErrorGL();
 	glActiveTexture(GL_TEXTURE0 + unit);
 	glBindTexture(GL_TEXTURE_2D, texture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filtered ? GL_LINEAR : GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filtered ? GL_LINEAR : GL_NEAREST);
 }
 
 #undef SET_UNIFORM
