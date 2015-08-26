@@ -20,8 +20,6 @@
 
 /*
 
-+ enable attacks in lobby
-
 - add pipebomb/mine trigger animation
 - add axe throw animation
 - add emote animations:
@@ -37,64 +35,31 @@
 - write particle editor
 - make a list of resources that still need to be done
 
-+ wrap for decal draw
-+ check using point filter for decal map and texture atlas
-+ wrap for player light?
-+ fix decal offset during screen shakes
-
 - add 'blood' particles and spawn decals on impact
-
-+ add go to zone character select
-+ fix decal map draw/apply?
-+ save settings to user folder
-+ save settings after options menu close
-+ save and apply settings on customize menu enter/leave
-+ make walljump sound per character
 
 - fix pickup drop location. seems to get stuck in geometry sometimes
 - why does the bubbled player not bounce correctly, still?
 
-+ add decal support
-# draw all decals to decal map on client connect
-# make sure clearing decal list is atomic with clearing decal map -> ensures proper client sync
-
-+ only do teleport when completely inside teleport
 - for pickup spawn: keep a list of MAX_PICKUPS previous spawn locations, instead of storing recently used x/y in pickups themselves
 
-+ cancel grapple on teleport
-+ check coin drop location. should be center on center
-+ add fixed pickup spawner
-+ add first blood sound
 - add victory dance at the end of the round
 
-+ add knockback when firing weapons (looks cool in air in while sliding. adds a little bit of movement depth)
-+ add sounds when axe bounces around
 - add 'muzzle flash' when firing some weapons
 - add small screen shake when firing?
 - apply color/light effect on player that kills using melee?
 - add spriter FX for bullet hits against wall
 
 - indievelopment explosion 101 video
-+ add tile transition object type. define rect, specify transition type
-+ add transition support to tile sprites
-+ add support for spriter reskins
-
-+ add teleport object
 
 - add mine radius animation. also makes it more explicit where it's deployed
 
-+ bomb stuck on death kill
-+ bomb deploy in air
 - player score UI toggle
 - add victory animation at end of round 'Victory'
 - add emotes
 
-+ fix jump pad anim triggered for all jump pads
-+ fix black borders not drawing fullscreen when screen shakes are active
 - fix controller assignments and joining/leaving using START when connected through online multiplayer. also, names were messed up
 - let +1 icon follow player, improve art/animation
 
-+ add jump pad animation
 - and support for particles triggered by spriter animations?
 - iterate on bubble gun:
 	- add trap animation
@@ -107,23 +72,12 @@
 - add deploy animation to pipebomb guy. make it mines instead
 - add killstreaks to screen. do some drawings first
 - 'faster' grapple?
-+ add grapple targeting preview
 - add down strike animation effect?
-# add jumppad object
 
-+ add player character grid UI
 - escape on dialog
-
-+ round complete music loops
-+ jump pad broken
-+ show name on black bar
-+ vertical black bars
-
-+ new freeze pickup is huge -> make it smaller
 
 - fix stars getting stuck in geometry
 - investigate player collision bug test level
-+ improve blinds/slowmo on death. add vertical bar
 - prototype invisibility ability
 - remove ninja dash from axe character. should be a special ability for a separate character
 
@@ -132,11 +86,9 @@ feedback:
 - use lower case on all SCML and PNG filenames referenced in code
 
 - fireball broken / volcano bugged
-+ grapple aim
 - jetpack op, boost mustn't be spammable
 - shield shouldn't be spammable, needs cooldown when destroyed
 	cling/cancel melee attack
-+ ninja move axe character
 - earth quake sound
 
 todo:
@@ -157,11 +109,6 @@ todo:
 - add dialog button spriter object. add active/inactive animations
 
 - jetpack ability V2:
-	+ free analog stick control
-	# fly/land behavior?
-	- how to combine with attacks?
-	+ slight bobbing up and down. reset/disable bobbing during fast movement?
-	+ affected by gravity or not at all?
 	- add fuel system?
 	- recharge -> how?
 	- debuffs:
@@ -216,12 +163,6 @@ todo:
 - add path for special
 
 - prototype grappling hook
-	+ aim for angle, or auto angle?
-	+ jump behavior -> allow double jump?
-	+ pull up/down/none?
-	+ detach conditions: jump, detach (Y), attack, death, level wrap
-	+ swing behavior: separate steering speed
-	+ sounds and fx
 	- grapple attach animation: will probably need an animation, but shouldn't make it harder to attach..
 	- grapple rope draw. textured quad? currently just a line
 	=> speed on attach + steering doesn't seem right (too slow). math issue, or add boost for better feeling?
@@ -271,44 +212,6 @@ todo:
 - fill the level with lava
 
 ** DONE **
-
-+ spike wall texture
-+ lijntjes
-# more speed axe throw?
-+ bullets faster
-+ jump pad jetpack
-+ earth quake -> bump items
-+ add ninja dash
-+ add dialog spriter support
-+ add yes/no dialog
-+ add dust particles when moving grounded at speed > treshold (> normal walking speed)
-+ add explosion effects on bombs 'n stuff
-+ fix drawing of aim above/below layers
-+ check build ID
-	+ add built-in version ID on channel connect
-+ add build version check for online
-+ disable changing game options after everyone has readied up
-+ add title screen
-+ add main menu/title screen loop
-+ disable auto respawn. player must press X to respawn
-+ explosion effects: force affecting players, pickups, etc
-+ axe velocity x 50% on deactivate, 50% gravity
-+ attack down/passthrough behavior
-+ slide block type friction %
-+ add reusable aiming code and UI
-+ add grapple aim
-+ add character select between rounds
-+ cancel passthrough/attack down behavior on attack up/double jump/etc (any attack/jump) + proto no auto mode, or duration = attack only
-
-+ prototype rocket punch
-	+ idle in air during charge
-	+ vulnerable during charge
-	+ analog stick = direction of attack
-	# max charge = faster, further, succeed/or not, pass through all destructibles/not (strength)
-	v2:
-	+ short recharge
-	+ auto discharge
-	+ debuff on attack finish
 
 */
 
