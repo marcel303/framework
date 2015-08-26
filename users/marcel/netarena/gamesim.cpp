@@ -129,8 +129,8 @@ void Pickup::setup(PickupType type, float x, float y)
 
 	if (s_pickupSprites[type].isSpriter)
 	{
-		spriteSx = 62;
-		spriteSy = 42;
+		spriteSx = 60;
+		spriteSy = 40;
 	}
 	else
 	{
@@ -3753,6 +3753,12 @@ uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, BulletType t
 			b.maxWrapCount = 1;
 			b.maxDistanceTravelled = RandomFloat(BULLET_BUBBLE_RADIUS_MIN, BULLET_BUBBLE_RADIUS_MAX);
 			b.playerDamageRadius = 15;
+			break;
+		case kBulletType_BloodParticle:
+			velocity = RandomFloat(BULLET_BLOOD_SPEED_MIN, BULLET_BLOOD_SPEED_MAX);
+			b.m_noGravity = false;
+			b.noDamagePlayer = true;
+			b.life = BULLET_BLOOD_LIFE;
 			break;
 
 		default:

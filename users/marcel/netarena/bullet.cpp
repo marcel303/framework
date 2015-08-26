@@ -15,17 +15,26 @@
 
 #define WRAP_AROUND 1
 
-static const char * s_bulletSpriteFiles[kBulletType_COUNT] =
+struct ParticleSprite
 {
-	"fire-type-0.png",
-	"fire-type-0.png",
-	"particle-0.png",
-	"particle-0.png",
-	"particle-0.png",
-	"fire-type-bubble.png"
+	const char * filename;
+	bool isSpriter;
+	Sprite * sprite;
+	Spriter * spriter;
 };
 
-static Sprite * s_bulletSprites[kBulletType_COUNT] = { };
+static ParticleSprite s_bulletSprites[kBulletType_COUNT] =
+{
+	{ "fire-type-0.png", false, 0, 0 },
+	{ "fire-type-0.png", false, 0, 0 },
+	{ "particle-0.png", false, 0, 0 },
+	{ "particle-0.png", false, 0, 0 },
+	{ "particle-0.png", false, 0, 0 },
+	{ "fire-type-bubble.png", false, 0, 0 },
+	{ "particle-blood-0.png", false, 0, 0 }
+};
+
+//
 
 void Bullet::getVelocityXY(float angle, float velocity, float & x, float & y)
 {
@@ -311,6 +320,8 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 
 								switch (b.effect)
 								{
+								case kBulletEffect_None:
+									break;
 								case kBulletEffect_Damage:
 									player.handleDamage(1.f, b.m_vel, owner);
 									break;
@@ -394,6 +405,18 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 							true);
 					}
 
+					if (b.type == kBulletType_BloodParticle)
+					{
+						gameSim.playSound("grenade-frag.ogg"); // todo : blood particle sound
+
+						gameSim.addDecal(
+							b.m_pos[0],
+							b.m_pos[1],
+							b.ownerPlayerId,
+							gameSim.Random() % DECAL_COUNT,
+							gameSim.RandomFloat(DECAL_SIZE_MIN, DECAL_SIZE_MAX));
+					}
+
 					free(i);
 				}
 			}
@@ -464,9 +487,12 @@ void BulletPool::draw() const
 {
 	for (int i = 0; i < kBulletType_COUNT; ++i)
 	{
-		if (!s_bulletSprites[i])
+		if (!s_bulletSprites[i].sprite && !s_bulletSprites[i].spriter)
 		{
-			s_bulletSprites[i] = new Sprite(s_bulletSpriteFiles[i]);
+			if (s_bulletSprites[i].isSpriter)
+				s_bulletSprites[i].spriter = new Spriter(s_bulletSprites[i].filename);
+			else
+				s_bulletSprites[i].sprite = new Sprite(s_bulletSprites[i].filename);
 		}
 	}
 
@@ -485,7 +511,9 @@ void BulletPool::draw() const
 
 			setColorf(cr, cg, cb, ca);
 			Assert(b.type < sizeof(s_bulletSprites) / sizeof(s_bulletSprites[0]));
-			s_bulletSprites[b.type]->drawEx(b.m_pos[0], b.m_pos[1], Calc::RadToDeg(Bullet::toAngle(b.m_vel[0], b.m_vel[1])), s_bulletSprites[b.type]->scale);
+			if (s_bulletSprites[b.type].isSpriter) { } // todo : add spriter draw code
+			else
+				s_bulletSprites[b.type].sprite->drawEx(b.m_pos[0], b.m_pos[1], Calc::RadToDeg(Bullet::toAngle(b.m_vel[0], b.m_vel[1])), s_bulletSprites[b.type].sprite->scale);
 
 			if (g_devMode)
 			{

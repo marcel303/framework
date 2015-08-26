@@ -13,6 +13,9 @@
 
 #define AUTO_RESPAWN 1
 
+#define MIN_PLAYER_SX 62
+#define MIN_PLAYER_SY 42
+
 //#pragma optimize("", off)
 
 /*
@@ -3659,9 +3662,24 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 
 				// fixme.. mid pos
 				const CharacterData * characterData = getCharacterData(m_index);
-				ParticleSpawnInfo spawnInfo(m_pos[0], m_pos[1] + mirrorY(-characterData->m_collisionSy/2.f), kBulletType_ParticleA, 200, 50, 350, 140);
+				ParticleSpawnInfo spawnInfo(
+					m_pos[0], m_pos[1] + mirrorY(-characterData->m_collisionSy/2.f),
+					kBulletType_BloodParticle,
+					200, 50, 350, 140);
 				spawnInfo.color = 0xff0000ff;
-
+				
+			#if 1
+				for (int i = 0; i < 10; ++i)
+				{
+					GAMESIM->spawnBullet(
+						m_pos[0],
+						m_pos[1] + mirrorY(-characterData->m_collisionSy/2.f),
+						GAMESIM->Random() % 256,
+						kBulletType_BloodParticle,
+						kBulletEffect_None,
+						m_index);
+				}
+			#else
 				GAMESIM->spawnParticles(spawnInfo);
 
 				GAMESIM->addDecal(
@@ -3669,6 +3687,7 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 					m_index,
 					GAMESIM->Random() % DECAL_COUNT,
 					GAMESIM->RandomFloat(DECAL_SIZE_MIN, DECAL_SIZE_MAX));
+			#endif
 
 				if (PROTO_TIMEDILATION_ON_KILL && attacker)
 				{
@@ -3956,10 +3975,10 @@ void Player::dropWeapons(Vec2Arg velocity)
 			#ifdef DEBUG
 				CollisionInfo collisionInfo;
 				getPlayerCollision(collisionInfo);
-				fassert(pickup->m_bbMin[0] >= collisionInfo.min[0]);
-				fassert(pickup->m_bbMin[1] >= collisionInfo.min[1]);
-				fassert(pickup->m_bbMax[0] <= collisionInfo.max[0]);
-				fassert(pickup->m_bbMax[1] <= collisionInfo.max[1]);
+				fassert(pickup->m_pos[0] + pickup->m_bbMin[0] >= collisionInfo.min[0]);
+				fassert(pickup->m_pos[1] + pickup->m_bbMin[1] >= collisionInfo.min[1]);
+				fassert(pickup->m_pos[0] + pickup->m_bbMax[0] <= collisionInfo.max[0]);
+				fassert(pickup->m_pos[1] + pickup->m_bbMax[1] <= collisionInfo.max[1]);
 			#endif
 			}
 		}
@@ -4571,6 +4590,8 @@ void CharacterData::load(int characterIndex)
 
 	m_collisionSx = m_props.getInt("collision_sx", 10);
 	m_collisionSy = m_props.getInt("collision_sy", 10);
+	fassert(m_collisionSx >= MIN_PLAYER_SX);
+	fassert(m_collisionSy >= MIN_PLAYER_SY);
 
 	m_animData = AnimData();
 	m_animData.load(makeCharacterFilename(characterIndex, "animdata.txt"));

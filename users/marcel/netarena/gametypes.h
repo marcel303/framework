@@ -225,11 +225,13 @@ enum BulletType
 	kBulletType_GrenadeA,
 	kBulletType_ParticleA,
 	kBulletType_Bubble,
+	kBulletType_BloodParticle,
 	kBulletType_COUNT
 };
 
 enum BulletEffect
 {
+	kBulletEffect_None,
 	kBulletEffect_Damage,
 	kBulletEffect_Ice,
 	kBulletEffect_Bubble
