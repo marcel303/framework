@@ -4,7 +4,9 @@
 
 class Button;
 class ButtonLegend;
+class CheckButton;
 class MenuNav;
+class Slider;
 
 class OptioneMenu : public Menu
 {
@@ -29,6 +31,12 @@ public:
 class OptioneAudioMenu : public Menu
 {
 	Button * m_back;
+	CheckButton * m_musicEnabled;
+	Slider * m_musicVolume;
+	CheckButton * m_soundEnabled;
+	Slider * m_soundVolume;
+	CheckButton * m_announcerEnabled;
+	Slider * m_announcerVolume;
 	MenuNav * m_menuNav;
 	ButtonLegend * m_buttonLegend;
 

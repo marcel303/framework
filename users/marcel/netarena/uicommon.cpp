@@ -499,6 +499,254 @@ void SpinButton::onSelect()
 
 //
 
+CheckButton::CheckButton(int x, int y, bool value, const char * filename, const char * localString, int textX, int textY, int textSize)
+	: m_sprite(new Sprite(filename))
+	, m_isMouseDown(false)
+	, m_x(0)
+	, m_y(0)
+	, m_value(value)
+	, m_hasBeenSelected(false)
+	, m_localString(localString)
+	, m_textX(textX)
+	, m_textY(textY)
+	, m_textSize(textSize)
+{
+	setPosition(x, y);
+}
+
+CheckButton::~CheckButton()
+{
+	delete m_sprite;
+	m_sprite = 0;
+}
+
+void CheckButton::setPosition(int x, int y)
+{
+	m_x = x - m_sprite->getWidth() / 2;
+	m_y = y - m_sprite->getHeight() / 2;
+}
+
+bool CheckButton::isClicked()
+{
+	bool result = false;
+
+	if (m_hasBeenSelected)
+	{
+		m_hasBeenSelected = false;
+		result = true;
+	}
+	else
+	{
+		const bool isInside = hitTest(mouse.x, mouse.y);
+		const bool isDown = isInside && mouse.isDown(BUTTON_LEFT);
+		result = isInside && !isDown && m_isMouseDown;
+
+		if (mouse.wentDown(BUTTON_LEFT))
+			m_isMouseDown = isInside;
+		if (!mouse.isDown(BUTTON_LEFT))
+			m_isMouseDown = false;
+	}
+
+	if (result)
+	{
+		m_value = !m_value;
+
+		g_app->playSound("ui/button/select.ogg");
+	}
+
+	return result;
+}
+
+void CheckButton::draw()
+{
+	if (m_hasFocus)
+		setColor(colorWhite);
+	else
+		setColor(255, 255, 255, 255, 63);
+	m_sprite->drawEx(m_x, m_y);
+
+	if (m_localString)
+	{
+		if (m_value)
+			setColor(colorWhite);
+		else
+			setColor(255, 255, 255, 255, 63);
+		setFont("calibri.ttf");
+		drawText(m_x + m_textX, m_y + m_textY, m_textSize, +1.f, +1.f, "%s", getLocalString(m_localString));
+	}
+}
+
+void CheckButton::getPosition(int & x, int & y) const
+{
+	x = m_x;
+	y = m_y;
+}
+
+bool CheckButton::hitTest(int x, int y) const
+{
+	return
+		x >= m_x &&
+		y >= m_y &&
+		x < m_x + m_sprite->getWidth() &&
+		y < m_y + m_sprite->getHeight();
+}
+
+void CheckButton::onFocusChange(bool hasFocus, bool isAutomaticSelection)
+{
+	MenuNavElem::onFocusChange(hasFocus, isAutomaticSelection);
+
+	if (hasFocus && !isAutomaticSelection)
+		g_app->playSound("ui/button/focus.ogg");
+}
+
+void CheckButton::onSelect()
+{
+	m_hasBeenSelected = true;
+}
+
+//
+
+Slider::Slider(int x, int y, float min, float max, float value, const char * filename, const char * localString, int textX, int textY, int textSize)
+	: m_sprite(new Sprite(filename))
+	, m_x(0)
+	, m_y(0)
+	, m_value(Calc::Clamp(value, min, max))
+	, m_min(min)
+	, m_max(max)
+	, m_localString(localString)
+	, m_textX(textX)
+	, m_textY(textY)
+	, m_textSize(textSize)
+{
+	setPosition(x, y);
+}
+
+Slider::~Slider()
+{
+	delete m_sprite;
+	m_sprite = 0;
+}
+
+void Slider::setPosition(int x, int y)
+{
+	m_x = x - m_sprite->getWidth() / 2;
+	m_y = y - m_sprite->getHeight() / 2;
+}
+
+void Slider::changeValue(float value)
+{
+	const float oldValue = m_value;
+
+	m_value = Calc::Clamp(value, m_min, m_max);
+
+	if (m_value != oldValue)
+		g_app->playSound("ui/button/select.ogg");
+}
+
+bool Slider::hasChanged()
+{
+	bool result = false;
+
+	const float oldValue = m_value;
+
+	if (m_hasFocus)
+	{
+		if (mouse.wentDown(BUTTON_LEFT))
+		{
+			// todo : directly compute value
+
+			if (mouse.x >= m_x && mouse.x < m_x + m_sprite->getWidth() / 2 && mouse.y >= m_y && mouse.y < m_y + m_sprite->getHeight())
+				changeValue(-1);
+
+			if (mouse.x >= m_x + m_sprite->getWidth() / 2 && mouse.x < m_x + m_sprite->getWidth() && 	mouse.y >= m_y && mouse.y < m_y + m_sprite->getHeight())
+				changeValue(+1);
+		}
+
+		const float step = (m_max - m_min) / 15.f;
+
+		if (gamepad[0].wentDown(DPAD_LEFT) || keyboard.wentDown(SDLK_LEFT))
+			changeValue(-step);
+		if (gamepad[0].wentDown(DPAD_RIGHT) || keyboard.wentDown(SDLK_RIGHT))
+			changeValue(+step);
+	}
+
+	return m_value != oldValue;
+}
+
+void Slider::draw()
+{
+	if (m_hasFocus)
+		setColor(colorWhite);
+	else
+		setColor(255, 255, 255, 255, 63);
+	m_sprite->drawEx(m_x, m_y);
+
+	if (m_localString)
+	{
+		drawText(m_x + m_textX, m_y + m_textY, m_textSize, +1.f, +1.f, "%s", getLocalString(m_localString));
+	}
+
+	if (g_devMode)
+	{
+		drawText(m_x, m_y, 18, +1.f, +1.f, "min=%d, max=%d, value=%d", m_min, m_max, m_value);
+	}
+
+	const int kArrowSpacing = -30;
+	const int kArrowSx = 20;
+	const int kArrowSy = 25;
+	
+	const int arrowY = m_y + m_sprite->getHeight() / 2;
+
+	if (m_value > m_min)
+	{
+		gxBegin(GL_TRIANGLES);
+		gxColor3ub(255, 255, 255);
+		gxVertex2f(m_x - kArrowSpacing + kArrowSx, arrowY - kArrowSy/2);
+		gxVertex2f(m_x - kArrowSpacing + kArrowSx, arrowY + kArrowSy/2);
+		gxVertex2f(m_x - kArrowSpacing, arrowY);
+		gxEnd();
+	}
+
+	if (m_value < m_max)
+	{
+		gxBegin(GL_TRIANGLES);
+		gxColor3ub(255, 255, 255);
+		gxVertex2f(m_x + m_sprite->getWidth() + kArrowSpacing - kArrowSx, arrowY - kArrowSy/2);
+		gxVertex2f(m_x + m_sprite->getWidth() + kArrowSpacing - kArrowSx, arrowY + kArrowSy/2);
+		gxVertex2f(m_x + m_sprite->getWidth() + kArrowSpacing, arrowY);
+		gxEnd();
+	}
+}
+
+void Slider::getPosition(int & x, int & y) const
+{
+	x = m_x;
+	y = m_y;
+}
+
+bool Slider::hitTest(int x, int y) const
+{
+	return
+		x >= m_x &&
+		y >= m_y &&
+		x < m_x + m_sprite->getWidth() &&
+		y < m_y + m_sprite->getHeight();
+}
+
+void Slider::onFocusChange(bool hasFocus, bool isAutomaticSelection)
+{
+	MenuNavElem::onFocusChange(hasFocus, isAutomaticSelection);
+
+	if (hasFocus && !isAutomaticSelection)
+		g_app->playSound("ui/button/focus.ogg");
+}
+
+void Slider::onSelect()
+{
+}
+
+//
+
 std::map<std::string, std::string> s_localStrings;
 
 void setLocal(const char * local)

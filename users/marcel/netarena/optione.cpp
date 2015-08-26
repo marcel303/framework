@@ -101,8 +101,20 @@ OptioneAudioMenu::OptioneAudioMenu()
 	, m_buttonLegend(0)
 {
 	m_back = new Button(0, 0, "mainmenu-button.png", 0, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_musicEnabled = new CheckButton(GFX_SX/3, GFX_SY/3, g_app->m_userSettings->audio.musicEnabled, "mainmenu-button.png", "menu-music-enabled", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_musicVolume = new Slider(GFX_SX/3 + 650, GFX_SY/3, 0.f, 1.f, g_app->m_userSettings->audio.musicVolume, "mainmenu-button.png", "menu-music-volume", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_soundEnabled = new CheckButton(GFX_SX/3, GFX_SY/3 + 150, g_app->m_userSettings->audio.soundEnabled, "mainmenu-button.png", "menu-sound-enabled", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_soundVolume = new Slider(GFX_SX/3 + 650, GFX_SY/3 + 150, 0.f, 1.f, g_app->m_userSettings->audio.soundVolume, "mainmenu-button.png", "menu-sound-volume", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_announcerEnabled = new CheckButton(GFX_SX/3, GFX_SY/3 + 300, g_app->m_userSettings->audio.announcerEnabled, "mainmenu-button.png", "menu-announcer-enabled", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_announcerVolume = new Slider(GFX_SX/3 + 650, GFX_SY/3 + 300, 0.f, 1.f, g_app->m_userSettings->audio.announcerVolume, "mainmenu-button.png", "menu-announcer-volume", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 
 	m_menuNav = new MenuNav();
+	m_menuNav->addElem(m_musicEnabled);
+	m_menuNav->addElem(m_musicVolume);
+	m_menuNav->addElem(m_soundEnabled);
+	m_menuNav->addElem(m_soundVolume);
+	m_menuNav->addElem(m_announcerEnabled);
+	m_menuNav->addElem(m_announcerVolume);
 
 	m_buttonLegend = new ButtonLegend();
 	m_buttonLegend->addElem(ButtonLegend::kButtonId_B, m_back, "ui-legend-back");
@@ -116,6 +128,12 @@ OptioneAudioMenu::~OptioneAudioMenu()
 	delete m_menuNav;
 
 	delete m_back;
+	delete m_musicEnabled;
+	delete m_musicVolume;
+	delete m_soundEnabled;
+	delete m_soundVolume;
+	delete m_announcerEnabled;
+	delete m_announcerVolume;
 }
 
 void OptioneAudioMenu::onEnter()
@@ -134,7 +152,20 @@ bool OptioneAudioMenu::tick(float dt)
 
 	m_buttonLegend->tick(dt, UI_BUTTONLEGEND_X, UI_BUTTONLEGEND_Y);
 
-	//
+	// check for changes and apply the new settings
+
+	if (m_musicEnabled->isClicked())
+		g_app->m_userSettings->audio.musicEnabled = m_musicEnabled->m_value;
+	if (m_musicVolume->hasChanged())
+		g_app->m_userSettings->audio.musicVolume = m_musicVolume->m_value;
+	if (m_soundEnabled->isClicked())
+		g_app->m_userSettings->audio.soundEnabled = m_soundEnabled->m_value;
+	if (m_soundVolume->hasChanged())
+		g_app->m_userSettings->audio.soundVolume = m_soundVolume->m_value;
+	if (m_announcerEnabled->isClicked())
+		g_app->m_userSettings->audio.announcerEnabled = m_announcerEnabled->m_value;
+	if (m_announcerVolume->hasChanged())
+		g_app->m_userSettings->audio.announcerVolume = m_announcerVolume->m_value;
 
 	if (m_back->isClicked() || gamepad[0].wentDown(GAMEPAD_B) || keyboard.wentDown(SDLK_ESCAPE)) // fixme : generalize and remove hardcoded gamepad index
 	{
@@ -149,8 +180,12 @@ void OptioneAudioMenu::draw()
 {
 	m_buttonLegend->draw(UI_BUTTONLEGEND_X, UI_BUTTONLEGEND_Y);
 
-//	if (m_audio)
-//		m_audio->draw();
+	m_musicEnabled->draw();
+	m_musicVolume->draw();
+	m_soundEnabled->draw();
+	m_soundVolume->draw();
+	m_announcerEnabled->draw();
+	m_announcerVolume->draw();
 }
 
 //
@@ -208,9 +243,6 @@ bool OptioneDisplayMenu::tick(float dt)
 void OptioneDisplayMenu::draw()
 {
 	m_buttonLegend->draw(UI_BUTTONLEGEND_X, UI_BUTTONLEGEND_Y);
-
-//	if (m_audio)
-//		m_audio->draw();
 }
 
 //
@@ -268,7 +300,4 @@ bool OptioneVideoMenu::tick(float dt)
 void OptioneVideoMenu::draw()
 {
 	m_buttonLegend->draw(UI_BUTTONLEGEND_X, UI_BUTTONLEGEND_Y);
-
-//	if (m_audio)
-//		m_audio->draw();
 }
