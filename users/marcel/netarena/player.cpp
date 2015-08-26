@@ -20,8 +20,19 @@
 
 /*
 
++ enable attacks in lobby
+
+- add pipebomb/mine trigger animation
+- add axe throw animation
+- add emote animations:
+	EmoteCheer
+	EmoteTaunt
+	EmoteDance
+	EmoteFacepalm
+
 - add basic video options to video menu
 - add basic audio options to audio menu
+- hook up user sound/music settings
 
 - write particle editor
 - make a list of resources that still need to be done
@@ -346,6 +357,10 @@ struct PlayerAnimInfo
 	{ nullptr,       nullptr,              0 },
 	{ "sprite.scml", "Idle" ,              1 },
 	{ "sprite.scml", "InAir" ,             1 },
+	{ "sprite.scml", "EmoteCheer",         1 },
+	{ "sprite.scml", "EmoteTaunt",         1 },
+	{ "sprite.scml", "EmoteDance",         1 },
+	{ "sprite.scml", "EmoteFacepalm",      1 },
 	{ "sprite.scml", "Jump" ,              2 },
 	{ "sprite.scml", "AirDash",            2 },
 	{ "sprite.scml", "WallSlide",          3 },
@@ -1358,7 +1373,7 @@ void Player::tick(float dt)
 
 		// attack triggering
 
-		if (playerControl && !m_attack.attacking && m_attack.cooldown <= 0.f && (GAMESIM->m_gameMode != kGameMode_Lobby))
+		if (playerControl && !m_attack.attacking && m_attack.cooldown <= 0.f/* && (GAMESIM->m_gameMode != kGameMode_Lobby)*/)
 		{
 			if (m_input.wentDown(INPUT_BUTTON_B) && (m_weaponStackSize > 0 || s_unlimitedAmmo) && isAnimOverrideAllowed(kPlayerAnim_Fire))
 			{
@@ -3646,7 +3661,9 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 			bool canBeKilled = true;
 
 			if (GAMESIM->m_gameMode == kGameMode_CoinCollector)
-				canBeKilled = COINCOLLECTOR_PLAYER_CAN_BE_KILLED || (attacker == 0) || (attacker == this);
+				canBeKilled &= COINCOLLECTOR_PLAYER_CAN_BE_KILLED || (attacker == 0) || (attacker == this);
+			if (GAMESIM->m_gameMode == kGameMode_Lobby)
+				canBeKilled &= false;
 
 			if (canBeKilled)
 			{
