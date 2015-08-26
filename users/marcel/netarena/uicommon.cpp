@@ -11,6 +11,7 @@
 
 MenuNavElem::MenuNavElem()
 	: m_hasFocus(false)
+	, m_hasFocusLock(false)
 	, m_next(0)
 {
 }
@@ -29,6 +30,7 @@ bool MenuNavElem::hitTest(int x, int y) const
 void MenuNavElem::onFocusChange(bool hasFocus, bool isAutomaticSelection)
 {
 	m_hasFocus = hasFocus;
+	m_hasFocusLock = false;
 }
 
 void MenuNavElem::onSelect()
@@ -49,20 +51,26 @@ void MenuNav::tick(float dt)
 
 	// todo : check if mouse is used. if true, do mouse hover collision test and change selection
 
+	const bool isFocusLocked = m_selection && m_selection->m_hasFocusLock;
+
 	const int gamepadIndex = 0;
 
-	if (gamepad[gamepadIndex].wentDown(DPAD_UP) || keyboard.wentDown(SDLK_UP, true))
-		moveSelection(0, -1);
-	if (gamepad[gamepadIndex].wentDown(DPAD_DOWN) || keyboard.wentDown(SDLK_DOWN, true))
-		moveSelection(0, +1);
-	if (gamepad[gamepadIndex].wentDown(DPAD_LEFT) || keyboard.wentDown(SDLK_LEFT, true))
-		moveSelection(-1, 0);
-	if (gamepad[gamepadIndex].wentDown(DPAD_RIGHT) || keyboard.wentDown(SDLK_RIGHT, true))
-		moveSelection(+1, 0);
+	if (!isFocusLocked)
+	{
+		if (gamepad[gamepadIndex].wentDown(DPAD_UP) || keyboard.wentDown(SDLK_UP, true))
+			moveSelection(0, -1);
+		if (gamepad[gamepadIndex].wentDown(DPAD_DOWN) || keyboard.wentDown(SDLK_DOWN, true))
+			moveSelection(0, +1);
+		if (gamepad[gamepadIndex].wentDown(DPAD_LEFT) || keyboard.wentDown(SDLK_LEFT, true))
+			moveSelection(-1, 0);
+		if (gamepad[gamepadIndex].wentDown(DPAD_RIGHT) || keyboard.wentDown(SDLK_RIGHT, true))
+			moveSelection(+1, 0);
+	}
+
 	if (gamepad[gamepadIndex].wentDown(GAMEPAD_A) || keyboard.wentDown(SDLK_RETURN, false))
 		handleSelect();
 
-	if (mouse.dx || mouse.dy)
+	if (!isFocusLocked && (mouse.dx || mouse.dy))
 	{
 		MenuNavElem * newSelection = 0;
 
@@ -438,11 +446,6 @@ void SpinButton::draw()
 		drawText(m_x + m_textX, m_y + m_textY, m_textSize, +1.f, +1.f, "%s", getLocalString(m_localString));
 	}
 
-	if (g_devMode)
-	{
-		drawText(m_x, m_y, 18, +1.f, +1.f, "min=%d, max=%d, value=%d", m_min, m_max, m_value);
-	}
-
 	const int kArrowSpacing = -30;
 	const int kArrowSx = 20;
 	const int kArrowSy = 25;
@@ -467,6 +470,12 @@ void SpinButton::draw()
 		gxVertex2f(m_x + m_sprite->getWidth() + kArrowSpacing - kArrowSx, arrowY + kArrowSy/2);
 		gxVertex2f(m_x + m_sprite->getWidth() + kArrowSpacing, arrowY);
 		gxEnd();
+	}
+
+	if (g_devMode)
+	{
+		setColor(colorWhite);
+		drawText(m_x, m_y, 18, +1.f, +1.f, "min=%d, max=%d, value=%d", m_min, m_max, m_value);
 	}
 }
 
@@ -633,7 +642,7 @@ void Slider::setPosition(int x, int y)
 	m_y = y - m_sprite->getHeight() / 2;
 }
 
-void Slider::changeValue(float value)
+void Slider::setValue(float value)
 {
 	const float oldValue = m_value;
 
@@ -641,6 +650,11 @@ void Slider::changeValue(float value)
 
 	if (m_value != oldValue)
 		g_app->playSound("ui/button/select.ogg");
+}
+
+void Slider::changeValue(float delta)
+{
+	setValue(m_value + delta);
 }
 
 bool Slider::hasChanged()
@@ -651,22 +665,30 @@ bool Slider::hasChanged()
 
 	if (m_hasFocus)
 	{
-		if (mouse.wentDown(BUTTON_LEFT))
+		if (keyboard.wentDown(SDLK_RETURN))
+			m_hasFocusLock = !m_hasFocusLock;
+	}
+
+	if (m_hasFocus)
+	{
+		if (mouse.isDown(BUTTON_LEFT))
 		{
 			// todo : directly compute value
 
-			if (mouse.x >= m_x && mouse.x < m_x + m_sprite->getWidth() / 2 && mouse.y >= m_y && mouse.y < m_y + m_sprite->getHeight())
-				changeValue(-1);
+			const float t = Calc::Clamp((mouse.x - m_x) / float(m_sprite->getWidth()), 0.f, 1.f);
+			const float v = m_min + t * (m_max - m_min);
 
-			if (mouse.x >= m_x + m_sprite->getWidth() / 2 && mouse.x < m_x + m_sprite->getWidth() && 	mouse.y >= m_y && mouse.y < m_y + m_sprite->getHeight())
-				changeValue(+1);
+			setValue(v);
 		}
+	}
 
+	if (m_hasFocusLock)
+	{
 		const float step = (m_max - m_min) / 15.f;
 
-		if (gamepad[0].wentDown(DPAD_LEFT) || keyboard.wentDown(SDLK_LEFT))
+		if (gamepad[0].wentDown(DPAD_LEFT) || keyboard.wentDown(SDLK_LEFT, true))
 			changeValue(-step);
-		if (gamepad[0].wentDown(DPAD_RIGHT) || keyboard.wentDown(SDLK_RIGHT))
+		if (gamepad[0].wentDown(DPAD_RIGHT) || keyboard.wentDown(SDLK_RIGHT, true))
 			changeValue(+step);
 	}
 
@@ -681,40 +703,21 @@ void Slider::draw()
 		setColor(255, 255, 255, 255, 63);
 	m_sprite->drawEx(m_x, m_y);
 
+	const float t = (m_value - m_min) / (m_max - m_min);
+	const float x = m_x + m_sprite->getWidth() * t;
+
 	if (m_localString)
 	{
 		drawText(m_x + m_textX, m_y + m_textY, m_textSize, +1.f, +1.f, "%s", getLocalString(m_localString));
 	}
 
+	setColor(colorGreen);
+	drawLine(x, m_y, x, m_y + m_sprite->getHeight());
+
 	if (g_devMode)
 	{
+		setColor(colorWhite);
 		drawText(m_x, m_y, 18, +1.f, +1.f, "min=%d, max=%d, value=%d", m_min, m_max, m_value);
-	}
-
-	const int kArrowSpacing = -30;
-	const int kArrowSx = 20;
-	const int kArrowSy = 25;
-	
-	const int arrowY = m_y + m_sprite->getHeight() / 2;
-
-	if (m_value > m_min)
-	{
-		gxBegin(GL_TRIANGLES);
-		gxColor3ub(255, 255, 255);
-		gxVertex2f(m_x - kArrowSpacing + kArrowSx, arrowY - kArrowSy/2);
-		gxVertex2f(m_x - kArrowSpacing + kArrowSx, arrowY + kArrowSy/2);
-		gxVertex2f(m_x - kArrowSpacing, arrowY);
-		gxEnd();
-	}
-
-	if (m_value < m_max)
-	{
-		gxBegin(GL_TRIANGLES);
-		gxColor3ub(255, 255, 255);
-		gxVertex2f(m_x + m_sprite->getWidth() + kArrowSpacing - kArrowSx, arrowY - kArrowSy/2);
-		gxVertex2f(m_x + m_sprite->getWidth() + kArrowSpacing - kArrowSx, arrowY + kArrowSy/2);
-		gxVertex2f(m_x + m_sprite->getWidth() + kArrowSpacing, arrowY);
-		gxEnd();
 	}
 }
 

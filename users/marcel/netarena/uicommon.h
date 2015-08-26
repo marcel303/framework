@@ -9,6 +9,7 @@ class MenuNavElem
 {
 public:
 	bool m_hasFocus;
+	bool m_hasFocusLock;
 	MenuNavElem * m_next;
 
 public:
@@ -191,7 +192,8 @@ public:
 	~Slider();
 
 	void setPosition(int x, int y);
-	void changeValue(float value);
+	void setValue(float value);
+	void changeValue(float delta);
 
 	bool hasChanged();
 	void draw();

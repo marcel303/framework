@@ -219,7 +219,7 @@ void Client::tick(float dt)
 
 	// background music
 
-	if (s_noBgm)
+	if (s_noBgm || !g_app->m_userSettings->audio.musicEnabled)
 	{
 		if (s_bgmSound)
 		{
@@ -275,6 +275,8 @@ void Client::tick(float dt)
 				s_bgmSound->play(loop);
 			}
 		}
+
+		s_bgmSound->setVolume(g_app->m_userSettings->audio.musicVolume * 100.f);
 	}
 }
 

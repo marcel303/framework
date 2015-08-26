@@ -3406,10 +3406,10 @@ void GameSim::getCurrentTimeDilation(float & timeDilation, bool & playerAttackTi
 
 void GameSim::playSound(const char * filename, int volume)
 {
-	if (g_noSound || !g_app->getSelectedClient() || g_app->getSelectedClient()->m_gameSim != this)
+	if (!g_app->getSelectedClient() || g_app->getSelectedClient()->m_gameSim != this)
 		return;
 
-	Sound(filename).play(volume);
+	g_app->playSound(filename, volume);
 }
 
 void GameSim::testCollision(const CollisionShape & shape, void * arg, CollisionCB cb)

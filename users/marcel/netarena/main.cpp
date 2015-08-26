@@ -2479,10 +2479,10 @@ bool App::isControllerIndexAvailable(int index) const
 
 void App::playSound(const char * filename, int volume)
 {
-	if (g_noSound)
+	if (g_noSound || !m_userSettings->audio.soundEnabled)
 		return;
 
-	Sound(filename).play(volume);
+	Sound(filename).play(volume * m_userSettings->audio.soundVolume);
 }
 
 void App::DialogQuit(void * arg, int dialogId, DialogResult result)

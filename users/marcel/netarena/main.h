@@ -150,7 +150,7 @@ public:
 	int getControllerAllocationCount() const;
 	bool isControllerIndexAvailable(int index) const;
 
-	void playSound(const char * filename, int volume = -1);
+	void playSound(const char * filename, int volume = 100);
 
 	std::vector<Client*> getClients() const { return m_clients; }
 
