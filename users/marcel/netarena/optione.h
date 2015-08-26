@@ -25,3 +25,54 @@ public:
 	virtual bool tick(float dt);
 	virtual void draw();
 };
+
+class OptioneAudioMenu : public Menu
+{
+	Button * m_back;
+	MenuNav * m_menuNav;
+	ButtonLegend * m_buttonLegend;
+
+public:
+	OptioneAudioMenu();
+	~OptioneAudioMenu();
+
+	virtual void onEnter();
+	virtual void onExit();
+
+	virtual bool tick(float dt);
+	virtual void draw();
+};
+
+class OptioneDisplayMenu : public Menu
+{
+	Button * m_back;
+	MenuNav * m_menuNav;
+	ButtonLegend * m_buttonLegend;
+
+public:
+	OptioneDisplayMenu();
+	~OptioneDisplayMenu();
+
+	virtual void onEnter();
+	virtual void onExit();
+
+	virtual bool tick(float dt);
+	virtual void draw();
+};
+
+class OptioneVideoMenu : public Menu
+{
+	Button * m_back;
+	MenuNav * m_menuNav;
+	ButtonLegend * m_buttonLegend;
+
+public:
+	OptioneVideoMenu();
+	~OptioneVideoMenu();
+
+	virtual void onEnter();
+	virtual void onExit();
+
+	virtual bool tick(float dt);
+	virtual void draw();
+};

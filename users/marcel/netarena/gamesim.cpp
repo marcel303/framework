@@ -1124,17 +1124,27 @@ void Decal::tick(float dt)
 {
 }
 
-void Decal::draw()
+void Decal::draw() const
 {
 	if (DECAL_ENABLED)
 	{
-		setColor(getPlayerColor(playerColor).interp(colorBlack, 0.f)); // todo : modify decal color in some way?
-		Sprite sprite("decals/0.png");
-		sprite.drawEx(
-			x - sprite.getWidth() * scale / 2.f,
-			y - sprite.getHeight() * scale / 2.f,
-			0.f, scale);
+		// note: should draw at all combinations of +1/-1, but drawing it four times will do 99% of the time
+		drawAt(x, y);
+		drawAt(x - ARENA_SX_PIXELS, y);
+		drawAt(x + ARENA_SX_PIXELS, y);
+		drawAt(x, y - ARENA_SY_PIXELS);
+		drawAt(x, y + ARENA_SY_PIXELS);
 	}
+}
+
+void Decal::drawAt(int x, int y) const
+{
+	setColor(getPlayerColor(playerColor).interp(colorBlack, 0.f)); // todo : modify decal color in some way?
+	Sprite sprite("decals/0.png");
+	sprite.drawEx(
+		x - sprite.getWidth() * scale / 2.f,
+		y - sprite.getHeight() * scale / 2.f,
+		0.f, scale);
 }
 
 //
@@ -2971,7 +2981,7 @@ void GameSim::drawPlay()
 
 	#if 1 // level transition shader test
 		Shader shader("shaders/trans1");
-		shader.setTexture("colormap", 0, g_colorMap->getTexture());
+		shader.setTexture("colormap", 0, g_colorMap->getTexture(), false);
 		shader.setImmediate("tint", t, t, t);
 		g_colorMap->postprocess(shader);
 	#endif
@@ -2983,7 +2993,7 @@ void GameSim::drawPlay()
 
 	#if 1 // level transition shader test
 		Shader shader("shaders/trans1");
-		shader.setTexture("colormap", 0, g_colorMap->getTexture());
+		shader.setTexture("colormap", 0, g_colorMap->getTexture(), false);
 		shader.setImmediate("tint", t, t, t);
 		g_colorMap->postprocess(shader);
 	#endif

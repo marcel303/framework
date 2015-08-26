@@ -155,6 +155,7 @@ struct Player
 	void draw() const;
 	void drawAt(bool flipX, bool flipY, int x, int y) const;
 	void drawLight() const;
+	void drawLightAt(int x, int y) const;
 	void debugDraw() const;
 
 	void testCollision(const CollisionShape & shape, void * arg, CollisionCB cb);
@@ -870,7 +871,8 @@ struct Decal
 	}
 
 	void tick(float dt);
-	void draw();
+	void draw() const;
+	void drawAt(int x, int y) const;
 };
 
 struct ScreenShake

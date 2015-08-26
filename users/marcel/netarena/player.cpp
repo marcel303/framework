@@ -17,14 +17,23 @@
 
 /*
 
-- apply decal map cam offset in shader (?)
+- add basic video options to video menu
+- add basic audio options to audio menu
+
+- write particle editor
+- make a list of resources that still need to be done
+
++ wrap for decal draw
++ check using point filter for decal map and texture atlas
++ wrap for player light?
++ fix decal offset during screen shakes
 
 - add 'blood' particles and spawn decals on impact
 
 + add go to zone character select
 + fix decal map draw/apply?
 + save settings to user folder
-- save settings after options menu close
++ save settings after options menu close
 + save and apply settings on customize menu enter/leave
 + make walljump sound per character
 
@@ -2830,10 +2839,10 @@ void Player::draw() const
 			Shader shader("character-outline");
 			setShader(shader);
 
-			shader.setTexture("colormap", 0, surface1.getTexture());
+			shader.setTexture("colormap", 0, surface1.getTexture(), false);
 			shader.setImmediate("color", playerColor.r, playerColor.g, playerColor.b, playerColor.a * UI_PLAYER_OUTLINE_ALPHA / 100.f);
 			drawRect(0, 0, sx, sy);
-			shader.setTexture("colormap", 0, 0);
+			shader.setTexture("colormap", 0, 0, false);
 
 			clearShader();
 			setBlend(BLEND_ALPHA);
@@ -3234,6 +3243,15 @@ void Player::drawLight() const
 
 	const float x = m_pos[0] + (m_collision.min[0] + m_collision.max[0]) / 2.f;
 	const float y = m_pos[1] + (m_collision.min[1] + m_collision.max[1]) / 2.f;
+	drawLightAt(x, y);
+	drawLightAt(x - ARENA_SX_PIXELS, y);
+	drawLightAt(x + ARENA_SX_PIXELS, y);
+	drawLightAt(x, y - ARENA_SY_PIXELS);
+	drawLightAt(x, y + ARENA_SY_PIXELS);
+}
+
+void Player::drawLightAt(int x, int y) const
+{
 	setColor(colorWhite);
 	Sprite("player-light.png").drawEx(x, y, 0.f, 3.f, 3.f, false, FILTER_LINEAR);
 }
@@ -3934,6 +3952,15 @@ void Player::dropWeapons(Vec2Arg velocity)
 				pickup->setup(pickupType, mid[0], mid[1]);
 
 				pickup->m_vel = velocity * 2.f / 3.f; // todo: add pickup drop speed multiplier gamedef
+
+			#ifdef DEBUG
+				CollisionInfo collisionInfo;
+				getPlayerCollision(collisionInfo);
+				fassert(pickup->m_bbMin[0] >= collisionInfo.min[0]);
+				fassert(pickup->m_bbMin[1] >= collisionInfo.min[1]);
+				fassert(pickup->m_bbMax[0] <= collisionInfo.max[0]);
+				fassert(pickup->m_bbMax[1] <= collisionInfo.max[1]);
+			#endif
 			}
 		}
 	}

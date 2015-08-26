@@ -658,8 +658,8 @@ void Arena::drawBlocks(const GameSim & gameSim, int layer) const
 #if USE_TILE_SHADER
 	Shader shader("maptiles");
 	setShader(shader);
-	shader.setTexture("colormap", 0, m_texture);
-	shader.setTexture("decalmap", 1, g_decalMap->getTexture());
+	shader.setTexture("colormap", 0, m_texture, false);
+	shader.setTexture("decalmap", 1, g_decalMap->getTexture(), false);
 	shader.setImmediate("colormapScale", 1.f / m_textureSx, 1.f / m_textureSy);
 	shader.setImmediate("decalmapScale",
 		1.f / float(g_decalMap->getWidth()),
@@ -691,8 +691,8 @@ void Arena::drawBlocks(const GameSim & gameSim, int layer) const
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 
 #if USE_TILE_SHADER
-	shader.setTexture("colormap", 0, 0);
-	shader.setTexture("decalmap", 0, 0);
+	shader.setTexture("colormap", 0, 0, false);
+	shader.setTexture("decalmap", 0, 0, false);
 	clearShader();
 #else
 	glPopMatrix();

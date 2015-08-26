@@ -215,13 +215,13 @@ void applyLightMap(Surface & colormap, Surface & lightmap, Surface & dest)
 		Shader lightShader("lightmap");
 		setShader(lightShader);
 
-		lightShader.setTexture("colormap", 0, colormap.getTexture());
-		lightShader.setTexture("lightmap", 1, lightmap.getTexture());
+		lightShader.setTexture("colormap", 0, colormap.getTexture(), false);
+		lightShader.setTexture("lightmap", 1, lightmap.getTexture(), false);
 
 		drawRect(0, 0, colormap.getWidth(), colormap.getHeight());
 
-		lightShader.setTexture("colormap", 0, 0);
-		lightShader.setTexture("lightmap", 1, 0);
+		lightShader.setTexture("colormap", 0, 0, false);
+		lightShader.setTexture("lightmap", 1, 0, false);
 
 		clearShader();
 
