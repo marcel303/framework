@@ -1120,9 +1120,9 @@ void Player::tick(float dt)
 							}
 						}
 
-						if (cancelled || absorbed)
+						if (cancelled)
 						{
-							//log("-> attack cancel");
+							log("-> attack cancel");
 
 							Player * players[2] = { this, &other };
 
@@ -1136,27 +1136,36 @@ void Player::tick(float dt)
 								const float dot = attackDirection * normal;
 								const Vec2 reflect = attackDirection - normal * dot * 2.f;
 
-								if (j == 1 || cancelled)
-								//if (true)
-								{
-									players[j]->m_vel = reflect * PLAYER_SWORD_CLING_SPEED / characterData->m_weight;
-									players[j]->m_controlDisableTime = PLAYER_SWORD_CLING_TIME;
-								}
-
+								players[j]->m_vel = reflect * PLAYER_SWORD_CLING_SPEED / characterData->m_weight;
+								players[j]->m_controlDisableTime = PLAYER_SWORD_CLING_TIME;
 								players[j]->cancelAttack();
 							}
 
-							if (cancelled)
-							{
-								gameSim.playSound("melee-cancel.ogg"); // sound when two melee attacks hit at the same time
+							gameSim.playSound("melee-cancel.ogg"); // sound when two melee attacks hit at the same time
 
-								Vec2 min1, max1;
-								Vec2 min2, max2;
-								shape1.getMinMax(min1, max1);
-								shape2.getMinMax(min2, max2);
-								Vec2 mid = (min1 + max1 + min2 + max2) / 4.f;
-								gameSim.addAnimationFx("fx/Attack_MeleeCancel.scml", mid[0], mid[1]);
-							}
+							Vec2 min1, max1;
+							Vec2 min2, max2;
+							shape1.getMinMax(min1, max1);
+							shape2.getMinMax(min2, max2);
+							Vec2 mid = (min1 + max1 + min2 + max2) / 4.f;
+							gameSim.addAnimationFx("fx/Attack_MeleeCancel.scml", mid[0], mid[1]);
+						}
+						else if (absorbed)
+						{
+							log("-> attack absorbed");
+
+							Player * players[2] = { this, &other };
+
+							const Vec2 attackDirection = Vec2(players[0]->m_attackDirection[0], players[0]->m_attackDirection[1]).CalcNormalized();
+
+							players[1]->m_vel += attackDirection * PLAYER_SWORD_CLING_SPEED / characterData->m_weight;
+							players[1]->m_controlDisableTime = PLAYER_SWORD_CLING_TIME;
+
+							players[0]->cancelAttack();
+							players[1]->cancelAttack();
+
+							// todo : add melee absorb sound(s)?
+							//gameSim.playSound("melee-cancel.ogg"); // sound when two melee attacks hit at the same time
 						}
 					}
 				}
