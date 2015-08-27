@@ -875,6 +875,8 @@ struct Decal
 	void drawAt(int x, int y) const;
 };
 
+Color getDecalColor(int playerIndex);
+
 struct ScreenShake
 {
 	bool isActive;
@@ -1239,10 +1241,18 @@ public:
 	void tickPlay();
 	void tickRoundComplete(float dt);
 
+	struct CamParams
+	{
+		Vec2 shake;
+		Vec2 zoomFocus;
+		float zoom;
+	};
+
 	void drawPlay();
-	void drawPlayColor(Vec2Arg camTranslation);
-	void drawPlayDecal(Vec2Arg camTranslation);
-	void drawPlayLight(Vec2Arg camTranslation);
+	void drawPlayColor(const CamParams & camParams);
+	void drawPlayDecal(const CamParams & camParams);
+	void drawPlayLight(const CamParams & camParams);
+	void applyCamParams(const CamParams & camParams, float shakeFactor) const;
 
 	void getCurrentTimeDilation(float & timeDilation, bool & playerAttackTimeDilation) const;
 

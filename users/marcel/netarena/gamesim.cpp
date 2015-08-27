@@ -1139,15 +1139,20 @@ void Decal::draw() const
 
 void Decal::drawAt(int x, int y) const
 {
-	const int colorIndex = DECAL_COLOR >= 0 ? (DECAL_COLOR % MAX_PLAYERS) : playerColor;
-	const Color color = DECAL_COLOR == MAX_PLAYERS ? Color(92, 173, 255) : getPlayerColor(colorIndex);
-	setColor(color.interp(colorBlack, 0.f)); // todo : modify decal color in some way?
+	setColor(getDecalColor(playerColor));
 	Sprite sprite("decals/0.png");
 	sprite.drawEx(
 		x - sprite.getWidth() * scale / 2.f,
 		y - sprite.getHeight() * scale / 2.f,
 		0.f, scale, scale,
 		false, FILTER_LINEAR);
+}
+
+Color getDecalColor(int playerIndex)
+{
+	const int colorIndex = (DECAL_COLOR >= 0) ? (DECAL_COLOR % MAX_PLAYERS) : playerIndex;
+	const Color color = (DECAL_COLOR == MAX_PLAYERS) ? Color(92, 173, 255) : getPlayerColor(colorIndex);
+	return color.interp(colorBlack, 0.f);  // todo : modify decal color in some way?
 }
 
 //
@@ -2956,9 +2961,10 @@ void GameSim::tickRoundComplete(float dt)
 
 void GameSim::drawPlay()
 {
-	const Vec2 shake = getScreenShake();
-
-	Vec2 camTranslation = shake;
+	CamParams camParams;
+	camParams.shake = getScreenShake();
+	camParams.zoom = m_activeZoom;
+	camParams.zoomFocus = calculateDrawZoomFocus();
 
 #if 0 // map scaling test
 	const float asx = ARENA_SX_PIXELS;
@@ -2985,7 +2991,7 @@ void GameSim::drawPlay()
 		glClearColor(0.f, 0.f, 0.f, 0.f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		drawPlayColor(camTranslation);
+		drawPlayColor(camParams);
 	}
 	popSurface();
 
@@ -3030,7 +3036,7 @@ void GameSim::drawPlay()
 		glClearColor(v, v, v, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		drawPlayLight(camTranslation);
+		drawPlayLight(camParams);
 	}
 	popSurface();
 
@@ -3041,7 +3047,7 @@ void GameSim::drawPlay()
 	pushSurface(g_finalMap);
 	{
 		gxPushMatrix();
-		gxTranslatef(camTranslation[0], camTranslation[1], 0.f);
+		applyCamParams(camParams, 1.f);
 
 		setBlend(BLEND_ALPHA);
 
@@ -3074,15 +3080,12 @@ void GameSim::drawPlay()
 	setBlend(BLEND_ALPHA);
 }
 
-void GameSim::drawPlayColor(Vec2Arg camTranslation)
+void GameSim::drawPlayColor(const CamParams & camParams)
 {
 	if (m_gameMode != kGameMode_Lobby)
 	{
 		gxPushMatrix();
-		gxTranslatef(
-			camTranslation[0] * BACKGROUND_SCREENSHAKE_MULTIPLIER,
-			camTranslation[1] * BACKGROUND_SCREENSHAKE_MULTIPLIER,
-			0.f);
+		applyCamParams(camParams, BACKGROUND_SCREENSHAKE_MULTIPLIER);
 		{
 			//setBlend(BLEND_OPAQUE);
 			m_background.draw();
@@ -3092,14 +3095,7 @@ void GameSim::drawPlayColor(Vec2Arg camTranslation)
 	}
 
 	gxPushMatrix();
-	gxTranslatef(camTranslation[0], camTranslation[1], 0.f);
-
-#if 1
-	const Vec2 drawZoomFocus = calculateDrawZoomFocus();
-	gxTranslatef(GFX_SX/2.f, GFX_SY/2.f, 0.f);
-	gxScalef(m_activeZoom, m_activeZoom, 1.f);
-	gxTranslatef(-drawZoomFocus[0], -drawZoomFocus[1], 0.f);
-#endif
+	applyCamParams(camParams, 1.f);
 
 #if 0 // fsfx test
 	Shader fsfx("fsfx-test3");
@@ -3266,10 +3262,10 @@ void GameSim::drawPlayColor(Vec2Arg camTranslation)
 	gxPopMatrix();
 }
 
-void GameSim::drawPlayDecal(Vec2Arg camTranslation)
+void GameSim::drawPlayDecal(const CamParams & camParams)
 {
 	gxPushMatrix();
-	gxTranslatef(camTranslation[0], camTranslation[1], 0.f);
+	applyCamParams(camParams, 1.f);
 
 	for (int i = 0; i < MAX_DECALS; ++i)
 	{
@@ -3280,10 +3276,10 @@ void GameSim::drawPlayDecal(Vec2Arg camTranslation)
 	gxPopMatrix();
 }
 
-void GameSim::drawPlayLight(Vec2Arg camTranslation)
+void GameSim::drawPlayLight(const CamParams & camParams)
 {
 	gxPushMatrix();
-	gxTranslatef(camTranslation[0], camTranslation[1], 0.f);
+	applyCamParams(camParams, 1.f);
 
 	setBlend(BLEND_ADD);
 
@@ -3389,6 +3385,17 @@ void GameSim::drawPlayLight(Vec2Arg camTranslation)
 	setBlend(BLEND_ALPHA);
 
 	gxPopMatrix();
+}
+
+void GameSim::applyCamParams(const CamParams & camParams, float shakeFactor) const
+{
+	gxTranslatef(camParams.shake[0] * shakeFactor, camParams.shake[1] * shakeFactor, 0.f);
+#if 1
+	const Vec2 drawZoomFocus = calculateDrawZoomFocus();
+	gxTranslatef(GFX_SX/2.f, GFX_SY/2.f, 0.f);
+	gxScalef(camParams.zoom, camParams.zoom, 1.f);
+	gxTranslatef(-camParams.zoomFocus[0], -camParams.zoomFocus[1], 0.f);
+#endif
 }
 
 void GameSim::getCurrentTimeDilation(float & timeDilation, bool & playerAttackTimeDilation) const

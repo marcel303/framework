@@ -298,8 +298,14 @@ void Client::draw()
 		break;
 
 	case kGameState_OnlineMenus:
-		drawMenus();
-		m_gameSim->drawPlayColor(Vec2(0.f, 0.f));
+		{
+			drawMenus();
+			GameSim::CamParams camParams;
+			camParams.shake.SetZero();
+			camParams.zoom = 1.f;
+			camParams.zoomFocus.Set(GFX_SX/2.f, GFX_SY/2.f);
+			m_gameSim->drawPlayColor(camParams);
+		}
 		break;
 
 	case kGameState_RoundBegin:

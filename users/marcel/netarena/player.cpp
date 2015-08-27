@@ -21,10 +21,10 @@
 /*
 
 - zoom effects:
-	- zoom only in center region
+	+ zoom only in center region
 	- zoom in on winning player, wait for a while before transitioning to the next round
 	- zoom in on kill?
-	- auto zoom during play
+	+ auto zoom during play
 	requirements: explicit vs automatic focus point selection, auto zoom factor calculation vs explicit zoom factors (take max zoom of all effects..)
 
 - character portait kill animation. diagonal slice, etc
@@ -3596,26 +3596,35 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 
 				dropWeapons(velocity);
 
-				// fixme.. mid pos
 				const CharacterData * characterData = getCharacterData(m_index);
-				ParticleSpawnInfo spawnInfo(
-					m_pos[0], m_pos[1] + mirrorY(-characterData->m_collisionSy/2.f),
-					kBulletType_BloodParticle,
-					200, 50, 350, 140);
-				spawnInfo.color = 0xff0000ff;
-				
+
 			#if 1
+				const uint32_t color = getDecalColor(m_index).toRGBA();
+
 				for (int i = 0; i < 10; ++i)
 				{
-					GAMESIM->spawnBullet(
+					// fixme : mid pos
+					auto id = GAMESIM->spawnBullet(
 						m_pos[0],
 						m_pos[1] + mirrorY(-characterData->m_collisionSy/2.f),
 						GAMESIM->Random() % 256,
 						kBulletType_BloodParticle,
 						kBulletEffect_None,
 						m_index);
+					if (id != INVALID_BULLET_ID)
+					{
+						Bullet & b = GAMESIM->m_bulletPool->m_bullets[id];
+						b.color = color;
+					}
 				}
 			#else
+				// fixme : mid pos
+				ParticleSpawnInfo spawnInfo(
+					m_pos[0], m_pos[1] + mirrorY(-characterData->m_collisionSy/2.f),
+					kBulletType_BloodParticle,
+					200, 50, 350, 140);
+				spawnInfo.color = getDecalColor(m_index).toRGBA();
+
 				GAMESIM->spawnParticles(spawnInfo);
 
 				GAMESIM->addDecal(
