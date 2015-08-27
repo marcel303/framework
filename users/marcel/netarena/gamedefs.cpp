@@ -287,6 +287,7 @@ OPTION_DEFINE(float, FIREBALL_SPEED, "Level Events/FireBalls/Fireball Speed");
 // zoom effect
 
 OPTION_DEFINE(int, ZOOM_PLAYER, "Zoom Effect/Override Player");
+OPTION_DEFINE(float, ZOOM_PLAYER_MAX_DISTANCE, "Zoom Effect/Max Player Distance From Center");
 OPTION_DEFINE(float, ZOOM_FACTOR, "Zoom Effect/Override Zoom Factor");
 OPTION_DEFINE(float, ZOOM_FACTOR_MIN, "Zoom Effect/Zoom Factor Min");
 OPTION_DEFINE(float, ZOOM_FACTOR_MAX, "Zoom Effect/Zoom Factor Max");
@@ -462,6 +463,7 @@ OPTION_DEFINE(int, DECAL_COUNT, "Graphics/Decals/Num Decals");
 OPTION_DEFINE(float, DECAL_SIZE_MIN, "Graphics/Decals/Random Size Min");
 OPTION_DEFINE(float, DECAL_SIZE_MAX, "Graphics/Decals/Random Size Max");
 OPTION_DEFINE(bool, DECAL_ENABLED, "Graphics/Decals/Enabled");
+OPTION_DEFINE(int, DECAL_COLOR, "Graphics/Decals/Color Override");
 OPTION_STEP(DECAL_SIZE_MIN, 0, 0, .1f);
 OPTION_STEP(DECAL_SIZE_MAX, 0, 0, .1f);
 

@@ -1139,7 +1139,9 @@ void Decal::draw() const
 
 void Decal::drawAt(int x, int y) const
 {
-	setColor(getPlayerColor(playerColor).interp(colorBlack, 0.f)); // todo : modify decal color in some way?
+	const int colorIndex = DECAL_COLOR >= 0 ? (DECAL_COLOR % MAX_PLAYERS) : playerColor;
+	const Color color = DECAL_COLOR == MAX_PLAYERS ? Color(92, 173, 255) : getPlayerColor(colorIndex);
+	setColor(color.interp(colorBlack, 0.f)); // todo : modify decal color in some way?
 	Sprite sprite("decals/0.png");
 	sprite.drawEx(
 		x - sprite.getWidth() * scale / 2.f,
@@ -4122,6 +4124,7 @@ float GameSim::calculateZoom() const
 
 	Vec2 min, max;
 	bool hasMinMax = false;
+	float maxDistanceFromCenter = 0.f;
 
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
@@ -4137,6 +4140,10 @@ float GameSim::calculateZoom() const
 				min = min.Min(m_players[i].m_pos);
 				max = max.Max(m_players[i].m_pos);
 			}
+
+
+			const Vec2 delta = m_players[i].m_pos - Vec2(ARENA_SX_PIXELS/2.f, ARENA_SY_PIXELS/2.f);
+			maxDistanceFromCenter = Calc::Max(maxDistanceFromCenter, delta.CalcSize());
 		}
 	}
 
@@ -4150,7 +4157,10 @@ float GameSim::calculateZoom() const
 		const float scaleX = (GFX_SX - 200.f) / (dx + .0001f);
 		const float scaleY = (GFX_SY - 200.f) / (dy + .0001f);
 
-		zoom = Calc::Max(zoom, Calc::Clamp(Calc::Min(scaleX, scaleY), ZOOM_FACTOR_MIN, ZOOM_FACTOR_MAX));
+		const float strength = Calc::Clamp(1.f - maxDistanceFromCenter / ZOOM_PLAYER_MAX_DISTANCE, 0.f, 1.f);
+		const float playerZoom = Calc::Clamp(Calc::Min(scaleX, scaleY), ZOOM_FACTOR_MIN, ZOOM_FACTOR_MAX);
+
+		zoom = Calc::Max(zoom, Calc::Lerp(1.f, playerZoom, strength));
 	}
 
 	for (int i = 0; i < MAX_ZOOM_EFFECTS; ++i)

@@ -21,6 +21,7 @@
 /*
 
 - zoom effects:
+	- zoom only in center region
 	- zoom in on winning player, wait for a while before transitioning to the next round
 	- zoom in on kill?
 	- auto zoom during play
@@ -1003,8 +1004,6 @@ void Player::tick(float dt)
 				m_pos[1] + m_collision.max[1],
 				pickup))
 			{
-				gameSim.addZoomEffect(1.4f, .7f, m_index);
-
 				switch (pickup.m_pickupType)
 				{
 				case kPickupType_Gun:
