@@ -1328,6 +1328,15 @@ Color Color::interp(const Color & other, float t) const
 		a * t1 + other.a * t2);
 }
 
+uint32_t Color::toRGBA() const
+{
+	const int ir = r < 0.f ? 0 : r > 1.f ? 255 : int(r * 255.f);
+	const int ig = g < 0.f ? 0 : g > 1.f ? 255 : int(g * 255.f);
+	const int ib = b < 0.f ? 0 : b > 1.f ? 255 : int(b * 255.f);
+	const int ia = a < 0.f ? 0 : a > 1.f ? 255 : int(a * 255.f);
+	return (ir << 24) | (ig << 16) | (ib << 8) | (ia << 0);
+}
+
 // -----
 
 Gradient::Gradient()

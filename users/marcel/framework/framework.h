@@ -279,6 +279,8 @@ public:
 	
 	static Color fromHex(const char * str);
 	Color interp(const Color & other, float t) const;
+
+	uint32_t toRGBA() const;
 	
 	float r, g, b, a;
 };
