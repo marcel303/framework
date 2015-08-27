@@ -20,6 +20,18 @@
 
 /*
 
+- zoom effects:
+	- zoom in on winning player, wait for a while before transitioning to the next round
+	- zoom in on kill?
+	- auto zoom during play
+	requirements: explicit vs automatic focus point selection, auto zoom factor calculation vs explicit zoom factors (take max zoom of all effects..)
+
+- character portait kill animation. diagonal slice, etc
+
+- discuss variable level size with david, joyce
+
+- editor: needs theme selection support
+
 - add pipebomb/mine trigger animation
 - add axe throw animation
 - add emote animations:
@@ -29,15 +41,15 @@
 	EmoteFacepalm
 
 - add basic video options to video menu
-- add basic audio options to audio menu
-- hook up user sound/music settings
++ add basic audio options to audio menu
++ hook up user sound/music settings
 
 - write particle editor
 - make a list of resources that still need to be done
 
-- add 'blood' particles and spawn decals on impact
++ add 'blood' particles and spawn decals on impact
 
-- fix pickup drop location. seems to get stuck in geometry sometimes
++ fix pickup drop location. seems to get stuck in geometry sometimes
 - why does the bubbled player not bounce correctly, still?
 
 - for pickup spawn: keep a list of MAX_PICKUPS previous spawn locations, instead of storing recently used x/y in pickups themselves
@@ -89,14 +101,14 @@ feedback:
 - jetpack op, boost mustn't be spammable
 - shield shouldn't be spammable, needs cooldown when destroyed
 	cling/cancel melee attack
-- earth quake sound
++ earth quake sound
 
 todo:
 
 - grapple: swing!
 - napalm pickup
 - freeze gun flow
-- animated spring
++ animated spring
 - fluids
 - humor objects
 - interactive main menu
@@ -196,8 +208,6 @@ todo:
 - send client network stats to host so they can be visualized
 
 # add support for CRC compare at any time during game sim tick. log CRC's with function/line number and compare?
-
-- zoom in on winning player, wait for a while before transitioning to the next round
 
 - need to be able to kick player at char select
 - buff star player ?
@@ -754,6 +764,8 @@ void Player::tick(float dt)
 	if (!m_isActive)
 		return;
 
+	GameSim & gameSim = *GAMESIM;
+
 	// -- emote hack --
 
 	m_emoteTime = Calc::Max(0.f, m_emoteTime - dt); // fixme : should use phys time
@@ -958,8 +970,8 @@ void Player::tick(float dt)
 			m_instanceData->playSoundBag("taunt_sounds", 100);
 		}
 
-		if (GAMESIM->m_gameState == kGameState_Play &&
-			!GAMESIM->m_levelEvents.spikeWalls.isActive() &&
+		if (gameSim.m_gameState == kGameState_Play &&
+			!gameSim.m_levelEvents.spikeWalls.isActive() &&
 		#if AUTO_RESPAWN
 			(m_respawnTimer <= 0.f))
 		#else
@@ -984,13 +996,15 @@ void Player::tick(float dt)
 		
 			Pickup pickup;
 
-			if (GAMESIM->grabPickup(
+			if (gameSim.grabPickup(
 				m_pos[0] + m_collision.min[0],
 				m_pos[1] + m_collision.min[1],
 				m_pos[0] + m_collision.max[0],
 				m_pos[1] + m_collision.max[1],
 				pickup))
 			{
+				gameSim.addZoomEffect(1.4f, .7f, m_index);
+
 				switch (pickup.m_pickupType)
 				{
 				case kPickupType_Gun:
@@ -1034,7 +1048,7 @@ void Player::tick(float dt)
 				CollisionInfo playerCollision;
 				if (getPlayerCollision(playerCollision))
 				{
-					if (GAMESIM->grabAxe(playerCollision))
+					if (gameSim.grabAxe(playerCollision))
 						m_axe.hasAxe = true;
 				}
 
@@ -1072,7 +1086,7 @@ void Player::tick(float dt)
 
 				for (int i = 0; i < MAX_PLAYERS; ++i)
 				{
-					Player & other = GAMESIM->m_players[i];
+					Player & other = gameSim.m_players[i];
 
 					if (other.m_isUsed && other.m_isAlive && &other != this)
 					{
@@ -1135,14 +1149,14 @@ void Player::tick(float dt)
 
 							if (cancelled)
 							{
-								GAMESIM->playSound("melee-cancel.ogg"); // sound when two melee attacks hit at the same time
+								gameSim.playSound("melee-cancel.ogg"); // sound when two melee attacks hit at the same time
 
 								Vec2 min1, max1;
 								Vec2 min2, max2;
 								shape1.getMinMax(min1, max1);
 								shape2.getMinMax(min2, max2);
 								Vec2 mid = (min1 + max1 + min2 + max2) / 4.f;
-								GAMESIM->addAnimationFx("fx/Attack_MeleeCancel.scml", mid[0], mid[1]);
+								gameSim.addAnimationFx("fx/Attack_MeleeCancel.scml", mid[0], mid[1]);
 							}
 						}
 					}
@@ -1153,7 +1167,7 @@ void Player::tick(float dt)
 				CollisionShape attackCollision;
 				if (getAttackCollision(attackCollision))
 				{
-					const bool hit = GAMESIM->m_arena.handleDamageShape(
+					const bool hit = gameSim.m_arena.handleDamageShape(
 						*GAMESIM,
 						m_pos[0],
 						m_pos[1],
@@ -1171,7 +1185,7 @@ void Player::tick(float dt)
 
 				for (int i = 0; i < MAX_FIREBALLS; ++i)
 				{
-					FireBall& other = GAMESIM->m_fireballs[i];
+					FireBall& other = gameSim.m_fireballs[i];
 
 					if (other.active)
 					{
@@ -1181,7 +1195,7 @@ void Player::tick(float dt)
 						if (getAttackCollision(shape1) && other.getCollision(shape2))
 						{
 							if (shape1.intersects(shape2))
-								GAMESIM->m_fireballs[i].active = false;
+								gameSim.m_fireballs[i].active = false;
 						}
 					}
 				}
@@ -1220,7 +1234,7 @@ void Player::tick(float dt)
 							m_isAnimDriven = true;
 							m_animVelIsAbsolute = true;
 
-							GAMESIM->playSound("rocketpunch-attack.ogg"); // sound that plays when the rocket jump attack enter the attack phase
+							gameSim.playSound("rocketpunch-attack.ogg"); // sound that plays when the rocket jump attack enter the attack phase
 
 							logDebug("rocket punch: attack! speed = (%f, %f) max distance = %f", m_attack.m_rocketPunch.speed[0], m_attack.m_rocketPunch.speed[1], m_attack.m_rocketPunch.maxDistance);
 						}
@@ -1276,7 +1290,7 @@ void Player::tick(float dt)
 
 		// attack triggering
 
-		if (playerControl && !m_attack.attacking && m_attack.cooldown <= 0.f/* && (GAMESIM->m_gameMode != kGameMode_Lobby)*/)
+		if (playerControl && !m_attack.attacking && m_attack.cooldown <= 0.f/* && (gameSim.m_gameMode != kGameMode_Lobby)*/)
 		{
 			if (m_input.wentDown(INPUT_BUTTON_B) && (m_weaponStackSize > 0 || s_unlimitedAmmo) && isAnimOverrideAllowed(kPlayerAnim_Fire))
 			{
@@ -1301,7 +1315,7 @@ void Player::tick(float dt)
 					m_attack.cooldown = PLAYER_WEAPON_GUN_COOLDOWN;
 					
 					addKnockBack(PLAYER_WEAPON_GUN_KNOCKBACK);
-					GAMESIM->playSound("gun-fire.ogg");
+					gameSim.playSound("gun-fire.ogg");
 				}
 				else if (weaponType == kPlayerWeapon_Ice)
 				{
@@ -1311,7 +1325,7 @@ void Player::tick(float dt)
 					m_attack.cooldown = PLAYER_WEAPON_ICE_COOLDOWN;
 
 					addKnockBack(PLAYER_WEAPON_ICE_KNOCKBACK);
-					GAMESIM->playSound("gun-fire-ice.ogg");
+					gameSim.playSound("gun-fire-ice.ogg");
 				}
 				else if (weaponType == kPlayerWeapon_Bubble)
 				{
@@ -1322,9 +1336,9 @@ void Player::tick(float dt)
 
 					for (int i = 0; i < BULLET_BUBBLE_COUNT; ++i)
 					{
-						const float angle = GAMESIM->Random() % 256;
+						const float angle = gameSim.Random() % 256;
 
-						const uint16_t bulletId = GAMESIM->spawnBullet(
+						const uint16_t bulletId = gameSim.spawnBullet(
 							x,
 							y,
 							angle,
@@ -1334,24 +1348,24 @@ void Player::tick(float dt)
 
 						if (bulletId != INVALID_BULLET_ID)
 						{
-							Bullet & b = GAMESIM->m_bulletPool->m_bullets[bulletId];
+							Bullet & b = gameSim.m_bulletPool->m_bullets[bulletId];
 
 							const Vec2 dir = (-m_lastTotalVel * BULLET_BUBBLE_PLAYERSPEED_MULTIPLIER + b.m_vel).CalcNormalized();
-							const float vel = GAMESIM->RandomFloat(BULLET_BUBBLE_SPEED_MIN, BULLET_BUBBLE_SPEED_MAX);
+							const float vel = gameSim.RandomFloat(BULLET_BUBBLE_SPEED_MIN, BULLET_BUBBLE_SPEED_MAX);
 
 							b.m_vel = dir * vel;
 							b.m_pos += b.m_vel.CalcNormalized() * BULLET_BUBBLE_SPAWN_DISTANCE;
 						}
 					}
 
-					GAMESIM->addAnimationFx(
+					gameSim.addAnimationFx(
 						"fx/Attack_FireBullet.scml",
 						x,
 						y,
 						m_facing[0] < 0,
 						m_facing[1] < 0);
 
-					GAMESIM->playSound("gun-fire-bubble.ogg");
+					gameSim.playSound("gun-fire-bubble.ogg");
 				}
 				else if (weaponType == kPlayerWeapon_Grenade)
 				{
@@ -1360,26 +1374,26 @@ void Player::tick(float dt)
 					m_attack.cooldown = PLAYER_WEAPON_GRENADE_COOLDOWN;
 					
 					addKnockBack(PLAYER_WEAPON_GRENADE_KNOCKBACK);
-					GAMESIM->playSound("grenade-throw.ogg"); // player throws a grenade
+					gameSim.playSound("grenade-throw.ogg"); // player throws a grenade
 				}
 				else if (weaponType == kPlayerWeapon_TimeDilation)
 				{
 					// update allowCancelTimeDilationAttack flag on players
 					bool wasActive = false;
 					for (int i = 0; i < MAX_PLAYERS; ++i)
-						if (GAMESIM->m_players[i].m_isUsed && GAMESIM->m_players[i].m_isAlive && GAMESIM->m_players[i].m_timeDilationAttack.isActive())
+						if (gameSim.m_players[i].m_isUsed && gameSim.m_players[i].m_isAlive && gameSim.m_players[i].m_timeDilationAttack.isActive())
 								wasActive = true;
 
 					if (!wasActive)
 					{
 						for (int i = 0; i < MAX_PLAYERS; ++i)
-							if (GAMESIM->m_players[i].m_isUsed && GAMESIM->m_players[i].m_isAlive && GAMESIM->m_players[i].m_attack.attacking)
-								GAMESIM->m_players[i].m_attack.allowCancelTimeDilationAttack = true;
+							if (gameSim.m_players[i].m_isUsed && gameSim.m_players[i].m_isAlive && gameSim.m_players[i].m_attack.attacking)
+								gameSim.m_players[i].m_attack.allowCancelTimeDilationAttack = true;
 					}
 
 					m_timeDilationAttack.timeRemaining = PLAYER_EFFECT_TIMEDILATION_TIME;
-					GAMESIM->playSound("timedilation-activate.ogg"); // sound that occurs when the player activates the time dilation pickup
-					GAMESIM->addAnnouncement("'%s' activated time dilation!", m_displayName.c_str());
+					gameSim.playSound("timedilation-activate.ogg"); // sound that occurs when the player activates the time dilation pickup
+					gameSim.addAnnouncement("'%s' activated time dilation!", m_displayName.c_str());
 				}
 				else
 				{
@@ -1402,7 +1416,7 @@ void Player::tick(float dt)
 
 						if (randomBulletAngle)
 						{
-							angle = GAMESIM->Random() % 256;
+							angle = gameSim.Random() % 256;
 						}
 						else
 						{
@@ -1419,7 +1433,7 @@ void Player::tick(float dt)
 						}
 
 						Assert(bulletType != kBulletType_COUNT);
-						GAMESIM->spawnBullet(
+						gameSim.spawnBullet(
 							x,
 							y,
 							angle,
@@ -1428,7 +1442,7 @@ void Player::tick(float dt)
 							m_index);
 					}
 
-					GAMESIM->addAnimationFx(
+					gameSim.addAnimationFx(
 						"fx/Attack_FireBullet.scml",
 						x,
 						y,
@@ -1502,7 +1516,7 @@ void Player::tick(float dt)
 				endGrapple();
 			}
 
-			if (!s_noSpecial && (GAMESIM->m_gameMode != kGameMode_Lobby))
+			if (!s_noSpecial && (gameSim.m_gameMode != kGameMode_Lobby))
 			{
 				if (characterData->m_special == kPlayerSpecial_Grapple &&
 					m_grapple.state == GrappleInfo::State_Inactive &&
@@ -1523,11 +1537,11 @@ void Player::tick(float dt)
 
 					for (int i = 0; i < MAX_PIPEBOMBS; ++i)
 					{
-						if (GAMESIM->m_pipebombs[i].m_isActive && GAMESIM->m_pipebombs[i].m_playerIndex == m_index)
+						if (gameSim.m_pipebombs[i].m_isActive && gameSim.m_pipebombs[i].m_playerIndex == m_index)
 						{
 							isDeployed = true;
 
-							if (GAMESIM->m_pipebombs[i].explode())
+							if (gameSim.m_pipebombs[i].explode())
 								m_pipebombCooldown = PIPEBOMB_COOLDOWN;
 						}
 					}
@@ -1598,8 +1612,8 @@ void Player::tick(float dt)
 					for (int i = 0; i < INVISIBILITY_PLUME_COUNT; ++i)
 					{
 						const float angle = Calc::m2PI * i / INVISIBILITY_PLUME_COUNT;
-						const float radius = GAMESIM->RandomFloat(INVISIBILITY_PLUME_DISTANCE_MIN, INVISIBILITY_PLUME_DISTANCE_MAX);
-						GAMESIM->addAnimationFx(
+						const float radius = gameSim.RandomFloat(INVISIBILITY_PLUME_DISTANCE_MIN, INVISIBILITY_PLUME_DISTANCE_MAX);
+						gameSim.addAnimationFx(
 							"fx/Invisibility_Plume.scml",
 							m_pos[0] + std::sin(angle) * radius,
 							m_pos[1] + std::cos(angle) * radius);
@@ -1650,7 +1664,7 @@ void Player::tick(float dt)
 		const uint32_t currentBlockMaskFloor = m_dirBlockMaskDir[1] > 0 ? m_dirBlockMask[1] : 0;
 		const uint32_t currentBlockMaskCeil = m_dirBlockMaskDir[1] < 0 ? m_dirBlockMask[1] : 0;
 
-		//if (GAMESIM->m_gameMode == kGameMode_Lobby)
+		//if (gameSim.m_gameMode == kGameMode_Lobby)
 		if (false)
 		{
 			// none of that special traits stuff onboard the enterprise!
@@ -1719,7 +1733,7 @@ void Player::tick(float dt)
 			{
 				int portalId;
 
-				Portal * portal = GAMESIM->findPortal(
+				Portal * portal = gameSim.findPortal(
 					m_pos[0] + m_collision.min[0],
 					m_pos[1] + m_collision.min[1],
 					m_pos[0] + m_collision.max[0],
@@ -1738,7 +1752,7 @@ void Player::tick(float dt)
 			{
 				int portalId;
 
-				Portal * portal = GAMESIM->findPortal(
+				Portal * portal = gameSim.findPortal(
 					m_pos[0] + m_collision.min[0],
 					m_pos[1] + m_collision.min[1],
 					m_pos[0] + m_collision.max[0],
@@ -1785,7 +1799,7 @@ void Player::tick(float dt)
 
 				m_isAttachedToSticky = false;
 
-				GAMESIM->playSound("player-sticky-jump.ogg"); // player jumps and releases itself from a sticky ceiling
+				gameSim.playSound("player-sticky-jump.ogg"); // player jumps and releases itself from a sticky ceiling
 			}
 			else if (m_isAttachedToSticky && allowJumping && m_input.wentDown(INPUT_BUTTON_DOWN))
 			{
@@ -2032,7 +2046,7 @@ void Player::tick(float dt)
 				args.setString("name", "jump_sounds");
 				m_instanceData->handleAnimationAction("char_soundbag", args);
 				if (currentBlockMaskFloor & kBlockMask_Solid)
-					GAMESIM->addAnimationFx("fx/Dust_JumpFromGround.scml", m_pos[0], m_pos[1]); // player jumps
+					gameSim.addAnimationFx("fx/Dust_JumpFromGround.scml", m_pos[0], m_pos[1]); // player jumps
 
 				endGrapple();
 			}
@@ -2109,7 +2123,7 @@ void Player::tick(float dt)
 
 			m_controlDisableTime = PLAYER_WALLJUMP_RECOIL_TIME;
 
-			GAMESIM->playSound(makeCharacterFilename(m_characterIndex, "sounds/walljump.ogg")); // player performs a walljump
+			gameSim.playSound(makeCharacterFilename(m_characterIndex, "sounds/walljump.ogg")); // player performs a walljump
 		}
 
 		const bool wasInPassthrough = m_isInPassthrough;
@@ -2387,11 +2401,11 @@ void Player::tick(float dt)
 			{
 				m_vel[i] = -BLOCKTYPE_SPRING_SPEED;
 
-				GAMESIM->playSound("player-spring-jump.ogg"); // player walks over and activates a jump pad
+				gameSim.playSound("player-spring-jump.ogg"); // player walks over and activates a jump pad
 
 				for (int s = 0; s < args.numSpringLocations; ++s)
 				{
-					TileSprite * tileSprite = GAMESIM->findTileSpriteAtBlockXY(args.springLocations[s].x, args.springLocations[s].y);
+					TileSprite * tileSprite = gameSim.findTileSpriteAtBlockXY(args.springLocations[s].x, args.springLocations[s].y);
 					if (tileSprite)
 						tileSprite->startAnim("Activate");
 				}
@@ -2438,7 +2452,7 @@ void Player::tick(float dt)
 						CollisionInfo playerCollision;
 						if (getPlayerCollision(playerCollision))
 						{
-							GAMESIM->addAnimationFx("fx/Dust_WallSlide.scml",
+							gameSim.addAnimationFx("fx/Dust_WallSlide.scml",
 								m_facing[0] < 0.f ? playerCollision.min[0] : playerCollision.max[0],
 								newPos[1],
 								m_facing[0] > 0.f);
@@ -2503,8 +2517,8 @@ void Player::tick(float dt)
 			{
 				m_isGrounded = true;
 
-				GAMESIM->playSound(makeCharacterFilename(m_characterIndex, "land_on_ground.ogg"), 50); // players lands on solid ground
-				GAMESIM->addAnimationFx("fx/Dust_LandOnGround.scml", m_pos[0], m_pos[1]); // players lands on solid ground
+				gameSim.playSound(makeCharacterFilename(m_characterIndex, "land_on_ground.ogg"), 50); // players lands on solid ground
+				gameSim.addAnimationFx("fx/Dust_LandOnGround.scml", m_pos[0], m_pos[1]); // players lands on solid ground
 			}
 		}
 		else
@@ -2523,7 +2537,7 @@ void Player::tick(float dt)
 			{
 				m_groundDashDistance -= FX_ATTACK_DUST_INTERVAL;
 
-				GAMESIM->addAnimationFx("fx/Dust_GroundAttack.scml", m_pos[0], m_pos[1]); // attack dust on ground
+				gameSim.addAnimationFx("fx/Dust_GroundAttack.scml", m_pos[0], m_pos[1]); // attack dust on ground
 			}
 		}
 		else
@@ -2630,7 +2644,10 @@ void Player::tick(float dt)
 
 	//printf("x: %g\n", m_pos[0]);
 
-	m_facingAnim = Calc::Saturate(m_facingAnim - dt / (7.f / 60.f));
+	if (PLAYER_FACING_ANIM_FRAMES <= 0)
+		m_facingAnim = 0.f;
+	else
+		m_facingAnim = Calc::Saturate(m_facingAnim - gameSim.m_physicalTimeStep / (PLAYER_FACING_ANIM_FRAMES / 60.f));
 
 	if (m_jetpack.isActive)
 	{
@@ -2640,20 +2657,20 @@ void Player::tick(float dt)
 		if (m_jetpack.fxTime <= 0.f)
 		{
 			m_jetpack.fxTime += JETPACK_FX_INTERVAL;
-			GAMESIM->addAnimationFx("fx/Jetpack_Smoke.scml", m_pos[0], m_pos[1], m_facing[0] < 0);
+			gameSim.addAnimationFx("fx/Jetpack_Smoke.scml", m_pos[0], m_pos[1], m_facing[0] < 0);
 		}
 	}
 
 	// death match game mode
 
-	if ((GAMESIM->m_gameMode == kGameMode_DeathMatch) && (GAMESIM->m_gameState == kGameState_Play))
+	if ((gameSim.m_gameMode == kGameMode_DeathMatch) && (gameSim.m_gameState == kGameState_Play))
 	{
 		if (m_isAlive)
 		{
 			bool isInTheLeaded = true;
 
 			for (int i = 0; i < MAX_PLAYERS; ++i)
-				if (i != m_index && GAMESIM->m_players[i].m_isUsed && GAMESIM->m_players[i].m_score >= m_score)
+				if (i != m_index && gameSim.m_players[i].m_isUsed && gameSim.m_players[i].m_score >= m_score)
 					isInTheLeaded = false;
 
 			if (/*isInTheLeaded || */m_killingSpree >= KILLINGSPREE_START)
@@ -2663,48 +2680,48 @@ void Player::tick(float dt)
 						kBulletType_ParticleA, 2,
 						50.f, 100.f, 50.f);
 					spawnInfo.color = 0xffffff80;
-					GAMESIM->spawnParticles(spawnInfo);
+					gameSim.spawnParticles(spawnInfo);
 			}
 		}
 	}
 
 	// token hunt game mode
 
-	if ((GAMESIM->m_gameMode == kGameMode_TokenHunt) && (GAMESIM->m_gameState == kGameState_Play))
+	if ((gameSim.m_gameMode == kGameMode_TokenHunt) && (gameSim.m_gameState == kGameState_Play))
 	{
 		if (m_isAlive)
 		{
 			CollisionInfo playerCollision;
 			if (getPlayerCollision(playerCollision))
 			{
-				if (GAMESIM->pickupToken(playerCollision))
+				if (gameSim.pickupToken(playerCollision))
 				{
 					m_tokenHunt.m_hasToken = true;
 				}
 			}
 
-			if (m_tokenHunt.m_hasToken && (GAMESIM->GetTick() % 4) == 0)
+			if (m_tokenHunt.m_hasToken && (gameSim.GetTick() % 4) == 0)
 			{
 				ParticleSpawnInfo spawnInfo(
 					m_pos[0], m_pos[1],
 					kBulletType_ParticleA, 2,
 					50.f, 100.f, 50.f);
 				spawnInfo.color = 0xffffff80;
-				GAMESIM->spawnParticles(spawnInfo);
+				gameSim.spawnParticles(spawnInfo);
 			}
 		}
 	}
 
 	// coin collector game mode
 
-	if ((GAMESIM->m_gameMode == kGameMode_CoinCollector) && (GAMESIM->m_gameState == kGameState_Play))
+	if ((gameSim.m_gameMode == kGameMode_CoinCollector) && (gameSim.m_gameState == kGameState_Play))
 	{
 		if (m_isAlive)
 		{
 			CollisionInfo playerCollision;
 			if (getPlayerCollision(playerCollision))
 			{
-				if (GAMESIM->pickupCoin(playerCollision))
+				if (gameSim.pickupCoin(playerCollision))
 				{
 					m_score++;
 				}
@@ -3622,6 +3639,7 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 					const Vec2 mid = m_pos + (m_collision.min + m_collision.max) / 2.f;
 					const bool vertical = Calc::Abs(velocity[1]) > Calc::Abs(velocity[0]);
 					GAMESIM->addBlindsEffect(m_index, mid[0], mid[1], 100, vertical, .5f, attacker->m_displayName.c_str());
+					GAMESIM->addZoomEffect(1.4f, .5f, m_index);
 				}
 
 				if (m_instanceData->m_input.m_controllerIndex != -1)

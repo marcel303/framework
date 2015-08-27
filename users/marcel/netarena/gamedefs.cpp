@@ -93,6 +93,8 @@ OPTION_DEFINE(int, PLAYER_DAMAGE_HITBOX_SY, "Player/Hit Boxes/Damage Height");
 
 OPTION_DEFINE(float, PLAYER_SHIELD_IMPACT_MULTIPLIER, "Player/Shield/Impact Multiplier");
 
+OPTION_DEFINE(float, PLAYER_FACING_ANIM_FRAMES, "Player/Animation/Paper Mario Frames");
+
 OPTION_DEFINE(int, PLAYER_SPEED_MAX, "Player/Max Speed");
 OPTION_DEFINE(int, PLAYER_JUMP_SPEED, "Player/Jumping/Speed");
 OPTION_DEFINE(int, PLAYER_JUMP_SPEED_FRAMES, "Player/Jumping/Soft Jump Frame Count");
@@ -281,6 +283,16 @@ OPTION_DEFINE(int, PICKUP_TIMEDILATION_WEIGHT, "Pickups/Spawn Weights/Time Dilat
 // fireballs
 
 OPTION_DEFINE(float, FIREBALL_SPEED, "Level Events/FireBalls/Fireball Speed");
+
+// zoom effect
+
+OPTION_DEFINE(int, ZOOM_PLAYER, "Zoom Effect/Override Player");
+OPTION_DEFINE(float, ZOOM_FACTOR, "Zoom Effect/Override Zoom Factor");
+OPTION_DEFINE(float, ZOOM_FACTOR_MIN, "Zoom Effect/Zoom Factor Min");
+OPTION_DEFINE(float, ZOOM_FACTOR_MAX, "Zoom Effect/Zoom Factor Max");
+OPTION_STEP(ZOOM_FACTOR, 0.f, 10.f, .1f);
+OPTION_STEP(ZOOM_FACTOR_MIN, 0.f, 10.f, .1f);
+OPTION_STEP(ZOOM_FACTOR_MAX, 0.f, 10.f, .1f);
 
 // death match
 

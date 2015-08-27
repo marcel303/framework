@@ -893,6 +893,21 @@ struct ScreenShake
 	void tick(float dt);
 };
 
+struct ZoomEffect
+{
+	float zoom;
+	float life;
+	float lifeRcp;
+	int player;
+
+	ZoomEffect()
+	{
+		memset(this, 0, sizeof(ZoomEffect));
+	}
+
+	void tick(float dt);
+};
+
 struct LightEffect
 {
 	enum Type
@@ -1018,6 +1033,7 @@ struct GameStateData
 	GameMode m_gameMode;
 	GameMode m_desiredGameMode;
 
+	float m_physicalTimeStep;
 	float m_roundTime;
 	float m_physicalRoundTime;
 	uint32_t m_nextRoundNumber;
@@ -1105,6 +1121,16 @@ struct GameStateData
 	Decal m_decals[MAX_DECALS];
 
 	ScreenShake m_screenShakes[MAX_SCREEN_SHAKES];
+
+	// todo : reset the on reset
+
+	ZoomEffect m_zoomEffects[MAX_ZOOM_EFFECTS];
+
+	float m_zoom;
+	Vec2 m_zoomFocus;
+	bool m_zoomFocusIsSet;
+	float m_activeZoom;
+	Vec2 m_activeZoomFocus;
 
 	LightEffect m_lightEffects[MAX_LIGHT_EFFECTS];
 
@@ -1254,6 +1280,14 @@ public:
 
 	void addScreenShake(float dx, float dy, float stiffness, float life, bool fade);
 	Vec2 getScreenShake() const;
+
+	void addZoomEffect(float zoom, float life, int player);
+	void setZoom(float zoom);
+	void setZoomFocus(Vec2Arg focusPoint);
+	float calculateZoom() const;
+	Vec2 calculateZoomFocus() const;
+	void tickZoom(float dt);
+	Vec2 calculateDrawZoomFocus() const;
 
 	void addLightEffect(LightEffect::Type type, float time, float amount);
 	float getLightAmount() const;

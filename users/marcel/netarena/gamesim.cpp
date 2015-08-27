@@ -1144,7 +1144,8 @@ void Decal::drawAt(int x, int y) const
 	sprite.drawEx(
 		x - sprite.getWidth() * scale / 2.f,
 		y - sprite.getHeight() * scale / 2.f,
-		0.f, scale);
+		0.f, scale, scale,
+		false, FILTER_LINEAR);
 }
 
 //
@@ -1161,6 +1162,13 @@ void ScreenShake::tick(float dt)
 	{
 		*this = ScreenShake();
 	}
+}
+
+//
+
+void ZoomEffect::tick(float dt)
+{
+	life = Calc::Max(0.f, life - lifeRcp * dt);
 }
 
 //
@@ -2081,6 +2089,15 @@ void GameSim::resetGameWorld()
 	for (int i = 0; i < MAX_SCREEN_SHAKES; ++i)
 		m_screenShakes[i] = ScreenShake();
 
+	// reset zoom effects
+
+	for (int i = 0; i < MAX_ZOOM_EFFECTS; ++i)
+		m_zoomEffects[i] = ZoomEffect();
+
+	m_zoom = 1.f;
+	m_zoomFocus.SetZero();
+	m_zoomFocusIsSet = false;
+
 	// reset light effects
 
 	for (int i = 0; i < MAX_LIGHT_EFFECTS; ++i)
@@ -2148,6 +2165,8 @@ void GameSim::tick()
 	}
 
 	const float dt = 1.f / TICKS_PER_SECOND;
+
+	m_physicalTimeStep = dt;
 
 	switch (m_gameState)
 	{
@@ -2802,6 +2821,16 @@ void GameSim::tickPlay()
 			shake.tick(dt);
 	}
 
+	// zoom effects
+
+	for (int i = 0; i < MAX_SCREEN_SHAKES; ++i)
+	{
+		ZoomEffect & zoomEffect = m_zoomEffects[i];
+		zoomEffect.tick(dt);
+	}
+
+	tickZoom(dt);
+
 	// light effects
 
 	for (int i = 0; i < MAX_LIGHT_EFFECTS; ++i)
@@ -2945,15 +2974,8 @@ void GameSim::drawPlay()
 	gxTranslatef(-ARENA_SX_PIXELS/2.f, -ARENA_SY_PIXELS/2.f, 0.f);
 #endif
 
-#if 0
-	pushSurface(g_decalMap);
-	{
-		glClearColor(0.f, 0.f, 0.f, 0.f);
-		glClear(GL_COLOR_BUFFER_BIT);
+#if 1
 
-		drawPlayDecal(camTranslation);
-	}
-	popSurface();
 #endif
 
 	pushSurface(g_colorMap);
@@ -3069,6 +3091,13 @@ void GameSim::drawPlayColor(Vec2Arg camTranslation)
 
 	gxPushMatrix();
 	gxTranslatef(camTranslation[0], camTranslation[1], 0.f);
+
+#if 1
+	const Vec2 drawZoomFocus = calculateDrawZoomFocus();
+	gxTranslatef(GFX_SX/2.f, GFX_SY/2.f, 0.f);
+	gxScalef(m_activeZoom, m_activeZoom, 1.f);
+	gxTranslatef(-drawZoomFocus[0], -drawZoomFocus[1], 0.f);
+#endif
 
 #if 0 // fsfx test
 	Shader fsfx("fsfx-test3");
@@ -4048,6 +4077,179 @@ Vec2 GameSim::getScreenShake() const
 	}
 
 	return result;
+}
+
+void GameSim::addZoomEffect(float zoom, float life, int player)
+{
+	Assert(life != 0.f);
+
+	for (int i = 0; i < MAX_ZOOM_EFFECTS; ++i)
+	{
+		ZoomEffect & zoomEffect = m_zoomEffects[i];
+		if (zoomEffect.life == 0.f)
+		{
+			zoomEffect.zoom = zoom;
+			zoomEffect.life = life;
+			zoomEffect.lifeRcp = 1.f / life;
+			zoomEffect.player = player;
+			return;
+		}
+	}
+
+	AssertMsg(false, "unable to find free zoom effect");
+
+	if (DEBUG_RANDOM_CALLSITES)
+		LOG_DBG("Random called from addZoomEffect");
+	m_zoomEffects[Random() % MAX_SCREEN_SHAKES] = ZoomEffect();
+	addZoomEffect(zoom, life, player);
+}
+
+void GameSim::setZoom(float zoom)
+{
+	m_zoom = zoom;
+}
+
+void GameSim::setZoomFocus(Vec2Arg focus)
+{
+	m_zoomFocus = focus;
+	m_zoomFocusIsSet = true;
+}
+
+float GameSim::calculateZoom() const
+{
+	if (ZOOM_FACTOR != 1.f)
+		return ZOOM_FACTOR;
+
+	Vec2 min, max;
+	bool hasMinMax = false;
+
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+	{
+		if (m_players[i].m_isUsed && m_players[i].m_isActive)
+		{
+			if (!hasMinMax)
+			{
+				min = max = m_players[i].m_pos;
+				hasMinMax = true;
+			}
+			else
+			{
+				min = min.Min(m_players[i].m_pos);
+				max = max.Max(m_players[i].m_pos);
+			}
+		}
+	}
+
+	float zoom = 1.f;
+
+	if (hasMinMax)
+	{
+		const float dx = max[0] - min[0];
+		const float dy = max[1] - min[1];
+
+		const float scaleX = (GFX_SX - 200.f) / (dx + .0001f);
+		const float scaleY = (GFX_SY - 200.f) / (dy + .0001f);
+
+		zoom = Calc::Max(zoom, Calc::Clamp(Calc::Min(scaleX, scaleY), ZOOM_FACTOR_MIN, ZOOM_FACTOR_MAX));
+	}
+
+	for (int i = 0; i < MAX_ZOOM_EFFECTS; ++i)
+	{
+		zoom = Calc::Max(zoom, Calc::Lerp(1.f, m_zoomEffects[i].zoom, m_zoomEffects[i].life));
+	}
+
+	return zoom;
+}
+
+Vec2 GameSim::calculateZoomFocus() const
+{
+	if (ZOOM_PLAYER >= 0 && ZOOM_PLAYER < MAX_PLAYERS && m_players[ZOOM_PLAYER].m_isUsed && m_players[ZOOM_PLAYER].m_isActive)
+		return m_players[ZOOM_PLAYER].m_pos;
+	else if (m_zoomFocusIsSet)
+		return m_zoomFocus;
+	else
+	{
+		// todo : iterate over all player, calculate mid point
+
+		int numPlayers = 0;
+		Vec2 mid(0.f, 0.f);
+
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+		{
+			if (m_players[i].m_isUsed && m_players[i].m_isActive)
+			{
+				numPlayers++;
+				mid += m_players[i].m_pos;
+			}
+		}
+
+		Vec2 result;
+
+		if (numPlayers == 0)
+			result = Vec2(ARENA_SX_PIXELS / 2.f, ARENA_SY_PIXELS / 2.f);
+		else
+			result = mid / numPlayers;
+
+		//
+
+		float playerWeight = 0.f;
+		Vec2 playerPos(0.f, 0.f);
+
+		for (int i = 0; i < MAX_ZOOM_EFFECTS; ++i)
+		{
+			const int p = m_zoomEffects[i].player;
+			if (p != -1 && m_players[p].m_isUsed && m_players[p].m_isActive)
+			{
+				playerWeight += m_zoomEffects[i].life;
+				playerPos += m_players[p].m_pos * m_zoomEffects[i].life;
+			}
+		}
+
+		if (playerWeight != 0.f)
+			result = playerPos / playerWeight;
+
+		return result;
+	}
+}
+
+void GameSim::tickZoom(float dt)
+{
+	// todo: slowly ease in to the new zoom values
+
+	m_activeZoom = calculateZoom();;
+	m_activeZoomFocus = calculateZoomFocus();
+
+	m_zoomFocusIsSet = false;
+
+	calculateDrawZoomFocus(); // fixme, remove
+}
+
+Vec2 GameSim::calculateDrawZoomFocus() const
+{
+	Vec2 screenMin(0.f, 0.f);
+	Vec2 screenMax(GFX_SX, GFX_SY);
+
+	Vec2 min = m_activeZoomFocus - screenMax / m_activeZoom / 2.f;
+	Vec2 max = m_activeZoomFocus + screenMax / m_activeZoom / 2.f;
+
+	for (int i = 0; i < 2; ++i)
+	{
+		if (min[i] < screenMin[i])
+		{
+			const float delta = screenMin[i] - min[i];
+			min[i] += delta;
+			max[i] += delta;
+		}	
+
+		if (max[i] > screenMax[i])
+		{
+			const float delta = screenMax[i] - max[i];
+			min[i] += delta;
+			max[i] += delta;
+		}
+	}
+
+	return (min + max) / 2.f;
 }
 
 void GameSim::addLightEffect(LightEffect::Type type, float time, float amount)
