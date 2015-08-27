@@ -3644,10 +3644,11 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 
 				if (attacker)
 				{
+					// todo : add option to control blinds duration
 					const Vec2 mid = m_pos + (m_collision.min + m_collision.max) / 2.f;
 					const bool vertical = Calc::Abs(velocity[1]) > Calc::Abs(velocity[0]);
 					GAMESIM->addBlindsEffect(m_index, mid[0], mid[1], 100, vertical, .5f, attacker->m_displayName.c_str());
-					GAMESIM->addZoomEffect(1.4f, .5f, m_index);
+					GAMESIM->addZoomEffect(PLAYER_DEATH_ZOOM_FACTOR, .5f, m_index);
 				}
 
 				if (m_instanceData->m_input.m_controllerIndex != -1)
