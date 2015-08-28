@@ -407,7 +407,7 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 
 					if (b.type == kBulletType_BloodParticle)
 					{
-						gameSim.playSound("grenade-frag.ogg"); // todo : blood particle sound
+						gameSim.playSound("blood-splash.ogg");
 
 						gameSim.addDecal(
 							b.m_pos[0],
