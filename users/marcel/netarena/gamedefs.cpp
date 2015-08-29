@@ -292,6 +292,7 @@ OPTION_DEFINE(float, ZOOM_PLAYER_MAX_DISTANCE, "Zoom Effect/Max Player Distance 
 OPTION_DEFINE(float, ZOOM_FACTOR, "Zoom Effect/Override Zoom Factor");
 OPTION_DEFINE(float, ZOOM_FACTOR_MIN, "Zoom Effect/Zoom Factor Min");
 OPTION_DEFINE(float, ZOOM_FACTOR_MAX, "Zoom Effect/Zoom Factor Max");
+OPTION_DEFINE(float, ZOOM_CONVERGE_SPEED, "Zoom Effect/Converge Speed");
 OPTION_STEP(ZOOM_FACTOR, 0.f, 10.f, .1f);
 OPTION_STEP(ZOOM_FACTOR_MIN, 0.f, 10.f, .1f);
 OPTION_STEP(ZOOM_FACTOR_MAX, 0.f, 10.f, .1f);

@@ -2101,9 +2101,11 @@ void GameSim::resetGameWorld()
 	for (int i = 0; i < MAX_ZOOM_EFFECTS; ++i)
 		m_zoomEffects[i] = ZoomEffect();
 
-	m_zoom = 1.f;
-	m_zoomFocus.SetZero();
-	m_zoomFocusIsSet = false;
+	m_desiredZoom = 1.f;
+	m_desiredZoomFocus.SetZero();
+	m_desiredZoomFocusIsSet = false;
+	m_effectiveZoom = 1.f;
+	m_effectiveZoomFocus.Set(ARENA_SX_PIXELS/2.f, ARENA_SY_PIXELS/2.f);
 
 	// reset light effects
 
@@ -2830,7 +2832,7 @@ void GameSim::tickPlay()
 
 	// zoom effects
 
-	for (int i = 0; i < MAX_SCREEN_SHAKES; ++i)
+	for (int i = 0; i < MAX_ZOOM_EFFECTS; ++i)
 	{
 		ZoomEffect & zoomEffect = m_zoomEffects[i];
 		zoomEffect.tick(dt);
@@ -2963,8 +2965,8 @@ void GameSim::drawPlay()
 {
 	CamParams camParams;
 	camParams.shake = getScreenShake();
-	camParams.zoom = m_activeZoom;
-	camParams.zoomFocus = calculateDrawZoomFocus();
+	camParams.zoom = m_effectiveZoom;
+	camParams.zoomFocus = m_effectiveZoomFocus;
 
 #if 0 // map scaling test
 	const float asx = ARENA_SX_PIXELS;
@@ -3391,7 +3393,6 @@ void GameSim::applyCamParams(const CamParams & camParams, float shakeFactor) con
 {
 	gxTranslatef(camParams.shake[0] * shakeFactor, camParams.shake[1] * shakeFactor, 0.f);
 #if 1
-	const Vec2 drawZoomFocus = calculateDrawZoomFocus();
 	gxTranslatef(GFX_SX/2.f, GFX_SY/2.f, 0.f);
 	gxScalef(camParams.zoom, camParams.zoom, 1.f);
 	gxTranslatef(-camParams.zoomFocus[0], -camParams.zoomFocus[1], 0.f);
@@ -4109,22 +4110,22 @@ void GameSim::addZoomEffect(float zoom, float life, int player)
 
 	if (DEBUG_RANDOM_CALLSITES)
 		LOG_DBG("Random called from addZoomEffect");
-	m_zoomEffects[Random() % MAX_SCREEN_SHAKES] = ZoomEffect();
+	m_zoomEffects[Random() % MAX_ZOOM_EFFECTS] = ZoomEffect();
 	addZoomEffect(zoom, life, player);
 }
 
-void GameSim::setZoom(float zoom)
+void GameSim::setDesiredZoom(float zoom)
 {
-	m_zoom = zoom;
+	m_desiredZoom = zoom;
 }
 
-void GameSim::setZoomFocus(Vec2Arg focus)
+void GameSim::setDesiredZoomFocus(Vec2Arg focus)
 {
-	m_zoomFocus = focus;
-	m_zoomFocusIsSet = true;
+	m_desiredZoomFocus = focus;
+	m_desiredZoomFocusIsSet = true;
 }
 
-float GameSim::calculateZoom() const
+float GameSim::calculateEffectiveZoom() const
 {
 	if (ZOOM_FACTOR != 1.f)
 		return ZOOM_FACTOR;
@@ -4178,12 +4179,12 @@ float GameSim::calculateZoom() const
 	return zoom;
 }
 
-Vec2 GameSim::calculateZoomFocus() const
+Vec2 GameSim::calculateEffectiveZoomFocus() const
 {
 	if (ZOOM_PLAYER >= 0 && ZOOM_PLAYER < MAX_PLAYERS && m_players[ZOOM_PLAYER].m_isUsed && m_players[ZOOM_PLAYER].m_isActive)
 		return m_players[ZOOM_PLAYER].m_pos;
-	else if (m_zoomFocusIsSet)
-		return m_zoomFocus;
+	else if (m_desiredZoomFocusIsSet)
+		return m_desiredZoomFocus;
 	else
 	{
 		// todo : iterate over all player, calculate mid point
@@ -4233,21 +4234,26 @@ void GameSim::tickZoom(float dt)
 {
 	// todo: slowly ease in to the new zoom values
 
-	m_activeZoom = calculateZoom();;
-	m_activeZoomFocus = calculateZoomFocus();
+	float effectiveZoom = calculateEffectiveZoom();
+	Vec2 effectiveZoomFocus = calculateEffectiveZoomFocus();
+	m_desiredZoomFocusIsSet = false;
 
-	m_zoomFocusIsSet = false;
+	restrictZoomParams(effectiveZoom, effectiveZoomFocus);
 
-	calculateDrawZoomFocus(); // fixme, remove
+	const float convergeSpeed = ZOOM_CONVERGE_SPEED;
+	const float a = 1.f - convergeSpeed;
+	const float b = convergeSpeed;
+	m_effectiveZoom = m_effectiveZoom * a + effectiveZoom * b;
+	m_effectiveZoomFocus = (m_effectiveZoomFocus * a) + (effectiveZoomFocus * b);
 }
 
-Vec2 GameSim::calculateDrawZoomFocus() const
+void GameSim::restrictZoomParams(float & zoom, Vec2 & zoomFocus) const
 {
 	Vec2 screenMin(0.f, 0.f);
 	Vec2 screenMax(GFX_SX, GFX_SY);
 
-	Vec2 min = m_activeZoomFocus - screenMax / m_activeZoom / 2.f;
-	Vec2 max = m_activeZoomFocus + screenMax / m_activeZoom / 2.f;
+	Vec2 min = zoomFocus - screenMax / zoom / 2.f;
+	Vec2 max = zoomFocus + screenMax / zoom / 2.f;
 
 	for (int i = 0; i < 2; ++i)
 	{
@@ -4266,7 +4272,8 @@ Vec2 GameSim::calculateDrawZoomFocus() const
 		}
 	}
 
-	return (min + max) / 2.f;
+	zoom = zoom;
+	zoomFocus = (min + max) / 2.f;
 }
 
 void GameSim::addLightEffect(LightEffect::Type type, float time, float amount)

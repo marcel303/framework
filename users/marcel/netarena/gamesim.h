@@ -1128,11 +1128,11 @@ struct GameStateData
 
 	ZoomEffect m_zoomEffects[MAX_ZOOM_EFFECTS];
 
-	float m_zoom;
-	Vec2 m_zoomFocus;
-	bool m_zoomFocusIsSet;
-	float m_activeZoom;
-	Vec2 m_activeZoomFocus;
+	float m_desiredZoom;
+	Vec2 m_desiredZoomFocus;
+	bool m_desiredZoomFocusIsSet;
+	float m_effectiveZoom;
+	Vec2 m_effectiveZoomFocus;
 
 	LightEffect m_lightEffects[MAX_LIGHT_EFFECTS];
 
@@ -1292,12 +1292,12 @@ public:
 	Vec2 getScreenShake() const;
 
 	void addZoomEffect(float zoom, float life, int player);
-	void setZoom(float zoom);
-	void setZoomFocus(Vec2Arg focusPoint);
-	float calculateZoom() const;
-	Vec2 calculateZoomFocus() const;
+	void setDesiredZoom(float zoom);
+	void setDesiredZoomFocus(Vec2Arg focusPoint);
+	float calculateEffectiveZoom() const;
+	Vec2 calculateEffectiveZoomFocus() const;
+	void restrictZoomParams(float & zoom, Vec2 & zoomFocus) const;
 	void tickZoom(float dt);
-	Vec2 calculateDrawZoomFocus() const;
 
 	void addLightEffect(LightEffect::Type type, float time, float amount);
 	float getLightAmount() const;
