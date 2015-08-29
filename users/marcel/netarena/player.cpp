@@ -3607,41 +3607,44 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 
 				const CharacterData * characterData = getCharacterData(m_index);
 
-			#if 1
-				const uint32_t color = getDecalColor(m_index).toRGBA();
-
-				for (int i = 0; i < 10; ++i)
+				if (DECAL_ENABLED) // todo
 				{
-					// fixme : mid pos
-					auto id = GAMESIM->spawnBullet(
-						m_pos[0],
-						m_pos[1] + mirrorY(-characterData->m_collisionSy/2.f),
-						GAMESIM->Random() % 256,
-						kBulletType_BloodParticle,
-						kBulletEffect_None,
-						m_index);
-					if (id != INVALID_BULLET_ID)
+					const uint32_t color = getDecalColor(m_index).toRGBA();
+
+					for (int i = 0; i < 10; ++i)
 					{
-						Bullet & b = GAMESIM->m_bulletPool->m_bullets[id];
-						b.color = color;
+						// fixme : mid pos
+						auto id = GAMESIM->spawnBullet(
+							m_pos[0],
+							m_pos[1] + mirrorY(-characterData->m_collisionSy/2.f),
+							GAMESIM->Random() % 256,
+							kBulletType_BloodParticle,
+							kBulletEffect_None,
+							m_index);
+						if (id != INVALID_BULLET_ID)
+						{
+							Bullet & b = GAMESIM->m_bulletPool->m_bullets[id];
+							b.color = color;
+						}
 					}
 				}
-			#else
-				// fixme : mid pos
-				ParticleSpawnInfo spawnInfo(
-					m_pos[0], m_pos[1] + mirrorY(-characterData->m_collisionSy/2.f),
-					kBulletType_BloodParticle,
-					200, 50, 350, 140);
-				spawnInfo.color = getDecalColor(m_index).toRGBA();
+				else
+				{
+					// fixme : mid pos
+					ParticleSpawnInfo spawnInfo(
+						m_pos[0], m_pos[1] + mirrorY(-characterData->m_collisionSy/2.f),
+						kBulletType_BloodParticle,
+						200, 50, 350, 140);
+					spawnInfo.color = getDecalColor(m_index).toRGBA();
 
-				GAMESIM->spawnParticles(spawnInfo);
+					GAMESIM->spawnParticles(spawnInfo);
 
-				GAMESIM->addDecal(
-					m_pos[0], m_pos[1],
-					m_index,
-					GAMESIM->Random() % DECAL_COUNT,
-					GAMESIM->RandomFloat(DECAL_SIZE_MIN, DECAL_SIZE_MAX));
-			#endif
+					GAMESIM->addDecal(
+						m_pos[0], m_pos[1],
+						m_index,
+						GAMESIM->Random() % DECAL_COUNT,
+						GAMESIM->RandomFloat(DECAL_SIZE_MIN, DECAL_SIZE_MAX));
+				}
 
 				if (PROTO_TIMEDILATION_ON_KILL && attacker)
 				{
