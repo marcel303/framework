@@ -3395,8 +3395,8 @@ void GameSim::applyCamParams(const CamParams & camParams, float zoomFactor, floa
 	gxTranslatef(camParams.shake[0] * shakeFactor, camParams.shake[1] * shakeFactor, 0.f);
 	const float zoom = Calc::Lerp(1.f, camParams.zoom, zoomFactor);
 	const Vec2 zoomFocus(
-		Calc::Lerp(ARENA_SX_PIXELS/2.f, camParams.zoomFocus[0], zoomFactor),
-		Calc::Lerp(ARENA_SX_PIXELS/2.f, camParams.zoomFocus[1], zoomFactor));
+		Calc::Lerp(GFX_SX/2.f, camParams.zoomFocus[0], zoomFactor),
+		Calc::Lerp(GFX_SY/2.f, camParams.zoomFocus[1], zoomFactor));
 #if 1
 	gxTranslatef(GFX_SX/2.f, GFX_SY/2.f, 0.f);
 	gxScalef(zoom, zoom, 1.f);
