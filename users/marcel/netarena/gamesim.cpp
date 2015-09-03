@@ -68,7 +68,9 @@ struct PickupSprite
 	true,  "objects/pickups/time/time.scml"//false, "pickup-time.png"
 };
 
-#define TOKEN_SPRITE "token.png"
+#define TOKEN_SPRITER "objects/token/Token.scml"
+#define TOKEN_SX 38
+#define TOKEN_SY 38
 #define COIN_SPRITE "coin.png"
 #define AXE_SPRITER Spriter("objects/axe/sprite.scml")
 #define PIPEBOMB_SPRITER Spriter("objects/pipebomb/sprite.scml")
@@ -218,14 +220,12 @@ void Pickup::drawLight() const
 
 void Token::setup(int blockX, int blockY)
 {
-	Sprite sprite(TOKEN_SPRITE);
-
 	*static_cast<PhysicsActor*>(this) = PhysicsActor();
 
 	m_isActive = true;
 	m_type = kObjectType_Token;
-	m_bbMin.Set(-sprite.getWidth() / 2.f, -sprite.getHeight() / 2.f);
-	m_bbMax.Set(+sprite.getWidth() / 2.f, +sprite.getHeight() / 2.f);
+	m_bbMin.Set(-TOKEN_SX / 2.f, -TOKEN_SY / 2.f);
+	m_bbMax.Set(+TOKEN_SX / 2.f, +TOKEN_SY / 2.f);
 	m_pos.Set(
 		(blockX + .5f) * BLOCK_SX,
 		(blockY + .5f) * BLOCK_SY);
@@ -274,7 +274,12 @@ void Token::draw() const
 	if (m_isDropped)
 	{
 		setColor(colorWhite);
-		Sprite(TOKEN_SPRITE).drawEx(m_pos[0], m_pos[1]);
+		Spriter spriter(TOKEN_SPRITER);
+		SpriterState spriterState;
+		spriterState.startAnim(spriter, 0);
+		spriterState.x = m_pos[0];
+		spriterState.y = m_pos[1];
+		spriter.draw(spriterState);
 	}
 
 	if (g_devMode)

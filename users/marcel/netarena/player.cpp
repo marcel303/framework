@@ -20,6 +20,24 @@
 
 /*
 
+- add demomode.txt for DEMOMODE specific options
+
+- black smudge on decal layer on explosion impact
+
+- vary decal color over time? rainbow colors!
+	- adds a history to the decals
+- let level define decal base color
+- recycle decals using fifo, instead of random like now
+
+- use sine for screen shakes. let user define duration, strength and curvature/pow factor (or just multiplier on -1..+1 & clamp)
+
+- blood particle direction dependent on attack vector + random variability
+
+- destruct all destructibles for some weapons
+- destruct destructibles in radius for some weapons?
+
+- add small trail rendering to players
+
 - zoom effects:
 	+ zoom only in center region
 	- zoom in on winning player, wait for a while before transitioning to the next round
@@ -3611,7 +3629,7 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 				{
 					const uint32_t color = getDecalColor(m_index).toRGBA();
 
-					for (int i = 0; i < 10; ++i)
+					for (int i = 0; i < BULLET_BLOOD_COUNT; ++i)
 					{
 						// fixme : mid pos
 						auto id = GAMESIM->spawnBullet(
