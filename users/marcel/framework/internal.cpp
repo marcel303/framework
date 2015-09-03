@@ -1176,6 +1176,12 @@ void FontCacheElem::load(const char * filename)
 	else
 	{
 		log("loaded %s", filename);
+
+		// fixme : this is a work around for FreeType returning monochrome data in FT_Load_Char, instead of the 8 gray scale
+		// data it should be returning, when it find a stored glyph bitmap in the font itself. since we cannot directly upload
+		// bit packed font data to OpenGL, we 'force' FreeType to always render the outline version instead, by setting
+		// num_fixed_sizes to zero here
+		face->num_fixed_sizes = 0;
 	}
 }
 
@@ -1254,8 +1260,8 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 		GlyphCacheElem elem;
 		
 		FT_Set_Pixel_Sizes(face, 0, size);
-		
-		if (FT_Load_Char(face, c, FT_LOAD_RENDER) == 0)
+
+		if (FT_Load_Char(face, c, FT_LOAD_RENDER | FT_LOAD_TARGET_NORMAL) == 0)
 		{
 			// capture current OpenGL states before we change them
 			
