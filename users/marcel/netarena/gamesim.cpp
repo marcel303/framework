@@ -2989,10 +2989,6 @@ void GameSim::drawPlay()
 	gxTranslatef(-ARENA_SX_PIXELS/2.f, -ARENA_SY_PIXELS/2.f, 0.f);
 #endif
 
-#if 1
-
-#endif
-
 	pushSurface(g_colorMap);
 	{
 		glClearColor(0.f, 0.f, 0.f, 0.f);
@@ -3054,7 +3050,7 @@ void GameSim::drawPlay()
 	pushSurface(g_finalMap);
 	{
 		gxPushMatrix();
-		applyCamParams(camParams, 1.f);
+		applyCamParams(camParams, 1.f, 1.f);
 
 		setBlend(BLEND_ALPHA);
 
@@ -3092,7 +3088,7 @@ void GameSim::drawPlayColor(const CamParams & camParams)
 	if (m_gameMode != kGameMode_Lobby)
 	{
 		gxPushMatrix();
-		applyCamParams(camParams, BACKGROUND_SCREENSHAKE_MULTIPLIER);
+		applyCamParams(camParams, BACKGROUND_ZOOM_MULTIPLIER, BACKGROUND_SCREENSHAKE_MULTIPLIER);
 		{
 			//setBlend(BLEND_OPAQUE);
 			m_background.draw();
@@ -3102,7 +3098,7 @@ void GameSim::drawPlayColor(const CamParams & camParams)
 	}
 
 	gxPushMatrix();
-	applyCamParams(camParams, 1.f);
+	applyCamParams(camParams, 1.f, 1.f);
 
 #if 0 // fsfx test
 	Shader fsfx("fsfx-test3");
@@ -3272,7 +3268,7 @@ void GameSim::drawPlayColor(const CamParams & camParams)
 void GameSim::drawPlayDecal(const CamParams & camParams)
 {
 	gxPushMatrix();
-	applyCamParams(camParams, 1.f);
+	applyCamParams(camParams, 1.f, 1.f);
 
 	for (int i = 0; i < MAX_DECALS; ++i)
 	{
@@ -3286,7 +3282,7 @@ void GameSim::drawPlayDecal(const CamParams & camParams)
 void GameSim::drawPlayLight(const CamParams & camParams)
 {
 	gxPushMatrix();
-	applyCamParams(camParams, 1.f);
+	applyCamParams(camParams, 1.f, 1.f);
 
 	setBlend(BLEND_ADD);
 
@@ -3394,13 +3390,17 @@ void GameSim::drawPlayLight(const CamParams & camParams)
 	gxPopMatrix();
 }
 
-void GameSim::applyCamParams(const CamParams & camParams, float shakeFactor) const
+void GameSim::applyCamParams(const CamParams & camParams, float zoomFactor, float shakeFactor) const
 {
 	gxTranslatef(camParams.shake[0] * shakeFactor, camParams.shake[1] * shakeFactor, 0.f);
+	const float zoom = Calc::Lerp(1.f, camParams.zoom, zoomFactor);
+	const Vec2 zoomFocus(
+		Calc::Lerp(ARENA_SX_PIXELS/2.f, camParams.zoomFocus[0], zoomFactor),
+		Calc::Lerp(ARENA_SX_PIXELS/2.f, camParams.zoomFocus[1], zoomFactor));
 #if 1
 	gxTranslatef(GFX_SX/2.f, GFX_SY/2.f, 0.f);
-	gxScalef(camParams.zoom, camParams.zoom, 1.f);
-	gxTranslatef(-camParams.zoomFocus[0], -camParams.zoomFocus[1], 0.f);
+	gxScalef(zoom, zoom, 1.f);
+	gxTranslatef(-zoomFocus[0], -zoomFocus[1], 0.f);
 #endif
 }
 

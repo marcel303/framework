@@ -20,6 +20,18 @@
 
 /*
 
+- background animation speed always at 100% regardless of game speed. *should* be affected by time dilation
+- bakground parallax effect through less zoom/panning strength
+- allow exploding mine in air. currently when grounded only
+- allow pickup o axe even when already having an axe. allows player to clean up axes of competing players
+- replace pipebomb sounds
+- clear weapon stack on death. currently only drops percentage
+- disable player light when using invisibility
+- add light effects to grenade explosions and cling (small lighting flash; test effect)
+- darker ambient on level events
+
+- test player vs player collision 
+
 - add demomode.txt for DEMOMODE specific options
 
 - black smudge on decal layer on explosion impact
@@ -38,12 +50,13 @@
 
 - add small trail rendering to players
 
-- zoom effects:
+- zoom in on winning player, wait for a while before transitioning to the next round
+
++ zoom effects:
 	+ zoom only in center region
-	- zoom in on winning player, wait for a while before transitioning to the next round
-	- zoom in on kill?
+	+ zoom in on kill?
 	+ auto zoom during play
-	requirements: explicit vs automatic focus point selection, auto zoom factor calculation vs explicit zoom factors (take max zoom of all effects..)
+	# requirements: explicit vs automatic focus point selection, auto zoom factor calculation vs explicit zoom factors (take max zoom of all effects..)
 
 - character portait kill animation. diagonal slice, etc
 
@@ -3903,63 +3916,59 @@ void Player::dropCoins(int numCoins)
 
 void Player::dropWeapons(Vec2Arg velocity)
 {
-	if (m_weaponStackSize > 0)
+	// todo : vary weapon drop count based on random parameters
+
+	while (m_weaponStackSize > 0)
 	{
-	#if 0 // just assume the player position is always valid
-		const int blockX = m_pos[0] / BLOCK_SX;
-		const int blockY = (m_pos[1] - 1.f) / BLOCK_SY - 1;
-
-		if (GAMESIM->m_arena.isValidPickupLocation(blockX, blockY, false))
-	#endif
+		Pickup * pickup = GAMESIM->allocPickup();
+		if (pickup)
 		{
-			Pickup * pickup = GAMESIM->allocPickup();
-			if (pickup)
+			const int index = GAMESIM->Random() % m_weaponStackSize;
+			std::swap(m_weaponStack[index],  m_weaponStack[m_weaponStackSize - 1]);
+			const PlayerWeapon weapon = popWeapon();
+
+			PickupType pickupType;
+
+			switch (weapon)
 			{
-				const int index = GAMESIM->Random() % m_weaponStackSize;
-				const PlayerWeapon weapon = m_weaponStack[index];
-
-				PickupType pickupType;
-
-				switch (weapon)
-				{
-				case kPlayerWeapon_Gun:
-					pickupType = kPickupType_Gun;
-					break;
-				case kPlayerWeapon_Ice:
-					pickupType = kPickupType_Ice;
-					break;
-				case kPlayerWeapon_Bubble:
-					pickupType = kPickupType_Bubble;
-					break;
-				case kPlayerWeapon_Grenade:
-					pickupType = kPickupType_Nade;
-					break;
-				case kPlayerWeapon_TimeDilation:
-					pickupType = kPickupType_TimeDilation;
-					break;
-				default:
-					AssertMsg(false, "missing translation for player weapon %d to pickup type", weapon);
-					break;
-				}
-
-				//GAMESIM->spawnPickup(*pickup, pickupType, blockX, blockY);
-
-				const Vec2 mid = m_pos + (m_collision.min + m_collision.max) / 2.f;
-				pickup->setup(pickupType, mid[0], mid[1]);
-
-				pickup->m_vel = velocity * 2.f / 3.f; // todo: add pickup drop speed multiplier gamedef
-
-			#ifdef DEBUG
-				CollisionInfo collisionInfo;
-				getPlayerCollision(collisionInfo);
-				fassert(pickup->m_pos[0] + pickup->m_bbMin[0] >= collisionInfo.min[0]);
-				fassert(pickup->m_pos[1] + pickup->m_bbMin[1] >= collisionInfo.min[1]);
-				fassert(pickup->m_pos[0] + pickup->m_bbMax[0] <= collisionInfo.max[0]);
-				fassert(pickup->m_pos[1] + pickup->m_bbMax[1] <= collisionInfo.max[1]);
-			#endif
+			case kPlayerWeapon_Gun:
+				pickupType = kPickupType_Gun;
+				break;
+			case kPlayerWeapon_Ice:
+				pickupType = kPickupType_Ice;
+				break;
+			case kPlayerWeapon_Bubble:
+				pickupType = kPickupType_Bubble;
+				break;
+			case kPlayerWeapon_Grenade:
+				pickupType = kPickupType_Nade;
+				break;
+			case kPlayerWeapon_TimeDilation:
+				pickupType = kPickupType_TimeDilation;
+				break;
+			default:
+				AssertMsg(false, "missing translation for player weapon %d to pickup type", weapon);
+				break;
 			}
+
+			const Vec2 mid = m_pos + (m_collision.min + m_collision.max) / 2.f;
+			pickup->setup(pickupType, mid[0], mid[1]);
+
+			pickup->m_vel = velocity * 2.f / 3.f; // todo: add pickup drop speed multiplier gamedef
+
+		#ifdef DEBUG
+			CollisionInfo collisionInfo;
+			getPlayerCollision(collisionInfo);
+			fassert(pickup->m_pos[0] + pickup->m_bbMin[0] >= collisionInfo.min[0]);
+			fassert(pickup->m_pos[1] + pickup->m_bbMin[1] >= collisionInfo.min[1]);
+			fassert(pickup->m_pos[0] + pickup->m_bbMax[0] <= collisionInfo.max[0]);
+			fassert(pickup->m_pos[1] + pickup->m_bbMax[1] <= collisionInfo.max[1]);
+		#endif
 		}
 	}
+
+	while (m_weaponStackSize > 0)
+		popWeapon();
 }
 
 void Player::pushWeapon(PlayerWeapon weapon, int ammo)
@@ -3983,6 +3992,7 @@ PlayerWeapon Player::popWeapon()
 		for (int i = 0; i < m_weaponStackSize - 1; ++i)
 			m_weaponStack[i] = m_weaponStack[i + 1];
 		m_weaponStackSize--;
+		m_weaponStack[m_weaponStackSize] = kPlayerWeapon_None;
 	}
 	return result;
 }

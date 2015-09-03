@@ -369,7 +369,7 @@ struct FixedString
 {
 	FixedString()
 	{
-		memset(m_data, 0, SIZE + 1);
+		memset(m_data, 0, sizeof(m_data));
 	}
 
 	size_t length() const

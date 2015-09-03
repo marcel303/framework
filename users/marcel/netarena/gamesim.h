@@ -1252,7 +1252,7 @@ public:
 	void drawPlayColor(const CamParams & camParams);
 	void drawPlayDecal(const CamParams & camParams);
 	void drawPlayLight(const CamParams & camParams);
-	void applyCamParams(const CamParams & camParams, float shakeFactor) const;
+	void applyCamParams(const CamParams & camParams, float zoomFactor, float shakeFactor) const;
 
 	void getCurrentTimeDilation(float & timeDilation, bool & playerAttackTimeDilation) const;
 
