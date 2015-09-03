@@ -821,7 +821,7 @@ bool Arena::getRandomSpawnPoint(GameSim & gameSim, int & out_x, int & out_y, int
 {
 	// find a spawn point
 
-	const int kMaxCandidates = 8;
+	const int kMaxCandidates = 256;
 	struct Candidate
 	{
 		int blockX;
@@ -834,7 +834,7 @@ bool Arena::getRandomSpawnPoint(GameSim & gameSim, int & out_x, int & out_y, int
 	{
 		for (int y = 0; y < ARENA_SY; ++y)
 		{
-			if (m_blocks[x][y].type == kBlockType_Spawn)
+			if (m_blocks[x][y].type == kBlockType_Spawn && numCandidates < kMaxCandidates)
 			{
 				candidates[numCandidates].blockX = x;
 				candidates[numCandidates].blockY = y;
