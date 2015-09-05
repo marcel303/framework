@@ -101,6 +101,16 @@ enum TRANSFORM
 	TRANSFORM_3D      // use transform set through setTransform3d
 };
 
+enum RESOURCE_CACHE
+{
+	CACHE_FONT = 1 << 0,
+	CACHE_SHADER = 1 << 1,
+	CACHE_SOUND = 1 << 2,
+	CACHE_SPRITE = 1 << 3,
+	CACHE_SPRITER = 1 << 4,
+	CACHE_TEXTURE = 1 << 5
+};
+
 // forward declations
 
 class Color;
@@ -722,6 +732,8 @@ public:
 
 	Dictionary & operator[](const char * name);
 };
+
+void clearCaches(int caches);
 
 // drawing
 

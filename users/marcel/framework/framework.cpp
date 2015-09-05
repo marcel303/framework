@@ -566,21 +566,11 @@ void Framework::process()
 		}
 	}
 #endif
-	
-	//doReload |= keyboard.wentDown(SDLK_r);
-	
+
 	if (doReload)
 	{
 		reloadCaches();
 	}
-
-	/*
-	if (keyboard.wentDown(SDLK_F12))
-	{
-		fullscreen = !fullscreen;
-		setFullscreen(fullscreen);
-	}
-	*/
 
 	for (Sprite * sprite = m_sprites; sprite; sprite = sprite->m_next)
 	{
@@ -2722,6 +2712,32 @@ Dictionary & Ui::operator[](const char * name)
 	}
 
 	return i->second;
+}
+
+// -----
+
+void clearCaches(int caches)
+{
+	if (caches & CACHE_FONT)
+	{
+		g_fontCache.clear();
+		g_glyphCache.clear();
+	}
+
+	if (caches & CACHE_SHADER)
+		g_shaderCache.clear();
+
+	if (caches & CACHE_SOUND)
+		g_soundCache.clear();
+
+	if (caches & CACHE_SPRITE)
+		g_animCache.clear();
+
+	if (caches & CACHE_SPRITER)
+		g_spriterCache.clear();
+
+	if (caches & CACHE_TEXTURE)
+		g_textureCache.clear();
 }
 
 // -----
