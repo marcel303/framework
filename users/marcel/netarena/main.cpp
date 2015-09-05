@@ -31,6 +31,7 @@
 #include "textfield.h"
 #include "Timer.h"
 #include "title.h"
+#include "tools.h"
 #include "uicommon.h"
 
 #include "MemoryStream.h"
@@ -138,17 +139,6 @@ Surface * g_lightMap = 0;
 Surface * g_finalMap = 0;
 
 //
-
-static void animationTestInit();
-static bool animationTestIsActive();
-static void animationTestToggleIsActive();
-static void animationTestChangeAnim(int direction, int x, int y);
-static void animationTestTick(float dt);
-static void animationTestDraw();
-
-static void blastEffectTestToggleIsActive();
-static void blastEffectTestTick(float dt);
-static void blastEffectTestDraw();
 
 static std::vector<std::string> parseMapList(const std::string & list);
 
@@ -1832,18 +1822,20 @@ bool App::tick()
 	// debug
 
 #if 1 // debug controls for animation and blast test, etc
-	if (keyboard.wentDown(SDLK_1) && !(getSelectedClient() && getSelectedClient()->m_textChat->isActive()))
-		animationTestToggleIsActive();
-	if (keyboard.wentDown(SDLK_2) && !(getSelectedClient() && getSelectedClient()->m_textChat->isActive()))
-		blastEffectTestToggleIsActive();
-
-	if (keyboard.wentDown(SDLK_F1))
+	if (keyboard.wentDown(SDLK_F2))
 	{
 		std::vector<Client*> clients = m_clients;
 
 		for (size_t i = 0; i < clients.size(); ++i)
 			leaveGame(clients[i]);
 	}
+
+	if (keyboard.wentDown(SDLK_F3) && !(getSelectedClient() && getSelectedClient()->m_textChat->isActive()))
+		animationTestToggleIsActive();
+	if (keyboard.wentDown(SDLK_F4) && !(getSelectedClient() && getSelectedClient()->m_textChat->isActive()))
+		blastEffectTestToggleIsActive();
+	if (keyboard.wentDown(SDLK_F11) && !(getSelectedClient() && getSelectedClient()->m_textChat->isActive()))
+		gifCaptureToggleIsActive(false);
 
 	if (keyboard.wentDown(SDLK_F5))
 	{
@@ -1900,9 +1892,18 @@ bool App::tick()
 		netDebugAction("loadOptions", "options.txt");
 	}
 
+	if (g_devMode && keyboard.wentDown(SDLK_y))
+		clearCaches(CACHE_SPRITE | CACHE_SPRITER | CACHE_TEXTURE);
+	if (g_devMode && keyboard.wentDown(SDLK_u))
+		clearCaches(CACHE_SOUND);
+	if (g_devMode && keyboard.wentDown(SDLK_i))
+		clearCaches(CACHE_SHADER);
+
 	animationTestTick(dt);
 
 	blastEffectTestTick(dt);
+
+	gifCaptureTick(dt);
 #endif
 
 	if ((g_keyboardLock == 0 && keyboard.wentDown(SDLK_ESCAPE)) || framework.quitRequested)
@@ -2027,6 +2028,36 @@ void App::draw()
 			}
 		}
 
+		if (/*g_devMode && */keyboard.isDown(SDLK_F1))
+		{
+			setColor(0, 0, 0, 191);
+			drawRect(0, 0, GFX_SX, GFX_SY);
+
+			int x = 50;
+			int y = 100;
+			int sy = 40;
+			int fontSize = 24;
+			setColor(colorWhite);
+			setFont("calibri.ttf");
+			drawText(x, y += sy, fontSize, +1.f, +1.f, "F1: Show help");
+			drawText(x, y += sy, fontSize, +1.f, +1.f, "F2: Leave Game");
+			drawText(x, y += sy, fontSize, +1.f, +1.f, "F3: Toggle Animation Test Tool");
+			drawText(x, y += sy, fontSize, +1.f, +1.f, "        Left click = test");
+			drawText(x, y += sy, fontSize, +1.f, +1.f, "        Right click = next animation");
+			drawText(x, y += sy, fontSize, +1.f, +1.f, "        Shift + right click = previous animation");
+			drawText(x, y += sy, fontSize, +1.f, +1.f, "F4: Toggle Blast Effect Test Tool");
+			drawText(x, y += sy, fontSize, +1.f, +1.f, "        Left click = test");
+			drawText(x, y += sy, fontSize, +1.f, +1.f, "F5: Toggle Options Menu");
+			drawText(x, y += sy, fontSize, +1.f, +1.f, "F6: Toggle Statistics Menu");
+			drawText(x, y += sy, fontSize, +1.f, +1.f, "F9: (reserved)");
+			drawText(x, y += sy, fontSize, +1.f, +1.f, "F11: GIF Capture Tool");
+			drawText(x, y += sy, fontSize, +1.f, +1.f, "F12: New Round");
+			drawText(x, y += sy, fontSize, +1.f, +1.f, "T: Reload Options");
+			drawText(x, y += sy, fontSize, +1.f, +1.f, "Y: Reload sprites and textures");
+			drawText(x, y += sy, fontSize, +1.f, +1.f, "U: Reload sounds");
+			drawText(x, y += sy, fontSize, +1.f, +1.f, "I: Reload shaders");
+		}
+
 		// draw desync notifier
 
 		bool isDesync = false;
@@ -2047,6 +2078,7 @@ void App::draw()
 
 		animationTestDraw();
 		blastEffectTestDraw();
+		gifCaptureTick_PostRender();
 
 		//
 
@@ -2123,68 +2155,6 @@ void App::draw()
 			setColor(colorWhite);
 			m_discoveryUi->draw();
 		}
-
-	#if 0 // todo : remove test collision/SAT code
-		gxPushMatrix();
-		gxTranslatef(GFX_SX/2, GFX_SY/2, 0.f);
-		gxScalef(4.f, 4.f, 1.f);
-		{
-			static int shape1Id = 0;
-			static int shape2Id = 0;
-
-			if (keyboard.wentDown(SDLK_1))
-				shape1Id = (shape1Id + 1) % kBlockShape_COUNT;
-			if (keyboard.wentDown(SDLK_2))
-				shape2Id = (shape2Id + 1) % kBlockShape_COUNT;
-
-			CollisionShape shape1 = Arena::getBlockCollision((BlockShape)shape1Id);
-			CollisionShape shape2 = Arena::getBlockCollision((BlockShape)shape2Id);
-
-			static float dx = BLOCK_SX;
-			static float dy = 0.f;
-
-			if (keyboard.isDown(SDLK_LEFT))
-				dx -= 1.f;
-			if (keyboard.isDown(SDLK_RIGHT))
-				dx += 1.f;
-			if (keyboard.isDown(SDLK_UP))
-				dy -= 1.f;
-			if (keyboard.isDown(SDLK_DOWN))
-				dy += 1.f;
-
-			CollisionShape shape3 = shape1;
-
-			shape3.translate(dx, dy);
-
-			float contactDistance;
-			Vec2 contactNormal;
-			
-			const bool collision =
-				shape3.checkCollision(shape2, Vec2(1.f, 0.f), contactDistance, contactNormal) ||
-				shape3.checkCollision(shape2, Vec2(0.f, 1.f), contactDistance, contactNormal);
-			//const bool collision = false;
-
-			if (collision && keyboard.isDown(SDLK_c))
-			{
-				dx += contactNormal[0] * contactDistance;
-				dy += contactNormal[1] * contactDistance;
-
-				shape3 = shape1;
-				shape3.translate(dx, dy);
-			}
-
-			if (collision)
-				setColor(colorGreen);
-			else
-				setColor(colorRed);
-
-			shape2.debugDraw();
-			shape3.debugDraw();
-
-			setColor(colorWhite);
-		}
-		gxPopMatrix();
-	#endif
 	}
 	TIMER_STOP(g_appDrawTime);
 	framework.endDraw();
@@ -2492,148 +2462,6 @@ void App::DialogQuit(void * arg, int dialogId, DialogResult result)
 	if (result == DialogResult_Yes)
 	{
 		self->quit();
-	}
-}
-
-// spriter animation tests
-
-static bool s_animationTestIsActive = false;
-static SpriterState s_animationTestState;
-static Spriter * s_animationTestSprite = 0;
-
-static void animationTestInit()
-{
-	auto files = listFiles("testAnimations", true);
-
-	for (auto file : files)
-	{
-		if (file.find(".scml") == std::string::npos || file.find("autosave") != std::string::npos)
-			continue;
-
-		std::string * path = new std::string(file);
-		std::string * optionPath = new std::string("Artist Tools/Animation Test/Load '" + Path::GetBaseName(file) + "'");
-
-		g_optionManager.AddCommandOption(optionPath->c_str(),
-			[](void * param)
-			{
-				std::string * path = (std::string*)param;
-				s_animationTestState = SpriterState();
-				delete s_animationTestSprite;
-				s_animationTestSprite = new Spriter(path->c_str());
-
-				if (!animationTestIsActive())
-					animationTestToggleIsActive();
-			},
-			path);
-	}
-}
-
-static bool animationTestIsActive()
-{
-	return s_animationTestIsActive;
-}
-
-static void animationTestToggleIsActive()
-{
-	s_animationTestIsActive = !s_animationTestIsActive;
-}
-
-static void animationTestChangeAnim(int direction, int x, int y)
-{
-	if (s_animationTestIsActive && s_animationTestSprite)
-	{
-		const int animCount = s_animationTestSprite->getAnimCount();
-
-		if (animCount != 0)
-		{
-			int index = 0;
-			if (s_animationTestState.animIndex >= 0)
-				index = (s_animationTestState.animIndex + direction + animCount) % animCount;
-			s_animationTestState.startAnim(*s_animationTestSprite, index);
-			s_animationTestState.x = x;
-			s_animationTestState.y = y;
-		}
-		else
-		{
-			s_animationTestState.stopAnim(*s_animationTestSprite);
-		}
-	}
-}
-
-static void animationTestTick(float dt)
-{
-	if (s_animationTestIsActive)
-	{
-		if (mouse.wentDown(BUTTON_LEFT))
-			animationTestChangeAnim(0, mouse.x, mouse.y);
-		if (mouse.wentDown(BUTTON_RIGHT))
-			animationTestChangeAnim(keyboard.isDown(SDLK_LSHIFT) ? -1 : +1, mouse.x, mouse.y);
-
-		if (s_animationTestSprite)
-			s_animationTestState.updateAnim(*s_animationTestSprite, dt);
-	}
-}
-
-static void animationTestDraw()
-{
-	if (s_animationTestIsActive)
-	{
-		setColor(colorGreen);
-		drawRect(0, 0, GFX_SX, 40);
-
-		setColor(colorBlack);
-		setFont("calibri.ttf");
-		drawText(GFX_SX/2, 20, 24, 0.f, 0.f, "Animation Test (Toggle Using '1')");
-
-		setColor(colorWhite);
-		if (s_animationTestSprite)
-			s_animationTestSprite->draw(s_animationTestState);
-	}
-}
-
-// blast effects test
-
-static bool s_blastEffectTestIsActive = false;
-
-static bool blastEffectTestIsActive()
-{
-	return s_blastEffectTestIsActive;
-}
-
-static void blastEffectTestToggleIsActive()
-{
-	s_blastEffectTestIsActive = !s_blastEffectTestIsActive;
-}
-
-static void blastEffectTestTick(float dt)
-{
-	if (s_blastEffectTestIsActive && g_host)
-	{
-		if (mouse.wentDown(BUTTON_LEFT))
-		{
-			char temp[256];
-			sprintf_s(temp, sizeof(temp), "x:%f y:%f radius:%f speed:%f",
-				(float)mouse.x,
-				(float)mouse.y,
-				500.f,
-				500.f);
-			g_app->netDebugAction("addBlastEffect", temp);
-		}
-	}
-}
-
-static void blastEffectTestDraw()
-{
-	if (s_blastEffectTestIsActive)
-	{
-		setColor(colorGreen);
-		drawRect(0, 0, GFX_SX, 40);
-
-		setColor(colorBlack);
-		setFont("calibri.ttf");
-		drawText(GFX_SX/2, 20, 24, 0.f, 0.f, "Blast Effect Test (Toggle Using '2')");
-
-		setColor(colorWhite);
 	}
 }
 
