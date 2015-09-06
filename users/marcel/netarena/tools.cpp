@@ -1,3 +1,4 @@
+#include "FileStream.h"
 #include "framework.h"
 #include "host.h"
 #include "main.h"
@@ -5,6 +6,26 @@
 #include "Path.h"
 #include "tools.h"
 #include <string>
+
+#define ANIM_COLOR Color(255, 255, 127)
+#define BLAST_COLOR Color(255, 127, 127)
+#define GIF_COLOR Color(127, 127, 255)
+
+static void drawToolCaption(const Color & backColor, const char * format, ...)
+{
+	char text[1024];
+	va_list args;
+	va_start(args, format);
+	vsprintf_s(text, sizeof(text), format, args);
+	va_end(args);
+
+	setColor(backColor);
+	drawRect(0, 0, GFX_SX, 40);
+
+	setColor(colorBlack);
+	setFont("calibri.ttf");
+	drawText(GFX_SX/2, 20, 24, 0.f, 0.f, text);
+}
 
 // spriter animation tests
 
@@ -89,12 +110,7 @@ void animationTestDraw()
 {
 	if (s_animationTestIsActive)
 	{
-		setColor(colorGreen);
-		drawRect(0, 0, GFX_SX, 40);
-
-		setColor(colorBlack);
-		setFont("calibri.ttf");
-		drawText(GFX_SX/2, 20, 24, 0.f, 0.f, "Animation Test (Toggle Using '1')");
+		drawToolCaption(ANIM_COLOR, "Animation Test. LEFT = Trigger, RIGHT = Next, SHIFT+RIGHT = Previous");
 
 		setColor(colorWhite);
 		if (s_animationTestSprite)
@@ -137,13 +153,7 @@ void blastEffectTestDraw()
 {
 	if (s_blastEffectTestIsActive)
 	{
-		setColor(colorGreen);
-		drawRect(0, 0, GFX_SX, 40);
-
-		setColor(colorBlack);
-		setFont("calibri.ttf");
-		drawText(GFX_SX/2, 20, 24, 0.f, 0.f, "Blast Effect Test (Toggle Using '2')");
-
+		drawToolCaption(BLAST_COLOR, "Blast Effect Test. LEFT = Add Blast");
 		setColor(colorWhite);
 	}
 }
@@ -249,12 +259,10 @@ static FIBITMAP * ditherQuantize(FIBITMAP * src)
 	return result;
 }
 
-static FIBITMAP * captureScreen()
+static FIBITMAP * captureScreen(int ox, int oy, int sx, int sy)
 {
-	const int sx = GFX_SX / framework.minification;
-	const int sy = GFX_SY / framework.minification;
 	uint8_t * __restrict pixels = new uint8_t[sx * sy * 4];
-	glReadPixels(0, 0, sx, sy, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+	glReadPixels(ox, oy, sx, sy, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 
 	FIBITMAP * result = FreeImage_Allocate(sx, sy, 24);
 
@@ -337,34 +345,64 @@ static bool writeGif(const char * filename, const std::vector<FIBITMAP*> & pages
 //
 
 OPTION_DECLARE(bool, g_screenCapture, false);
-OPTION_DECLARE(int, g_screenCaptureDuration, 5);
-OPTION_DECLARE(float, g_screenCaptureDownscaleFactor, 2.f);
-OPTION_DECLARE(int, g_screenCaptureFrameSkip, 4);
+OPTION_DECLARE(int, g_screenCaptureDuration, 4);
+OPTION_DECLARE(int, g_screenCaptureDownscaleFactor, 2);
+OPTION_DECLARE(int, g_screenCaptureFrameSkip, 2);
 OPTION_DEFINE(bool, g_screenCapture, "App/GIF Capture/Capture! (Full Screen)");
 OPTION_DEFINE(int, g_screenCaptureDuration, "App/GIF Capture/Duration (Seconds)");
-OPTION_DEFINE(float, g_screenCaptureDownscaleFactor, "App/GIF Capture/Downscale Factor");
+OPTION_DEFINE(int, g_screenCaptureDownscaleFactor, "App/GIF Capture/Downscale Factor");
 OPTION_DEFINE(int, g_screenCaptureFrameSkip, "App/GIF Capture/Frame Skip");
-OPTION_STEP(g_screenCaptureDownscaleFactor, 0.f, 0.f, .1f);
+OPTION_STEP(g_screenCaptureDownscaleFactor, 1, 4, 1);
+OPTION_STEP(g_screenCaptureFrameSkip, 1, 60, 1);
 
-static bool s_gifCaptureIsActive = false;
+enum GifCaptureState
+{
+	kGifCapture_Idle,
+	kGifCapture_AreaSelect1,
+	kGifCapture_AreaSelect2,
+	kGifCapture_Capture,
+};
+
+static GifCaptureState s_gifCaptureState = kGifCapture_Idle;
+struct
+{
+	float x1, y1, x2, y2;
+} s_gifCaptureRect;
 static int s_skipFrames = 0;
 static int s_numFrames = 0;
+static int s_numCapturedFrames = 0;
 static std::vector<FIBITMAP*> s_pages;
 
 void gifCaptureToggleIsActive(bool cancel)
 {
-	if (s_gifCaptureIsActive)
-		gifCaptureComplete(cancel);
+	if (s_gifCaptureState == kGifCapture_Idle)
+		s_gifCaptureState = kGifCapture_AreaSelect1;
+	else if (s_gifCaptureState == kGifCapture_Capture)
+		gifCaptureEnd(cancel);
+	else
+		s_gifCaptureState = kGifCapture_Idle;
 
-	s_gifCaptureIsActive = !s_gifCaptureIsActive;
-
-	if (s_gifCaptureIsActive)
+	if (s_gifCaptureState == kGifCapture_Idle)
 		fassert(s_pages.empty());
 }
 
-void gifCaptureComplete(bool cancel)
+void gifCaptureBegin()
 {
-	fassert(s_gifCaptureIsActive);
+	s_gifCaptureState = kGifCapture_Capture;
+
+	s_skipFrames = 0;
+	s_numFrames = 60 * g_screenCaptureDuration / g_screenCaptureFrameSkip;
+	s_numCapturedFrames = 0;
+
+	g_screenCapture = false;
+	g_app->m_optionMenuIsOpen = false;
+}
+
+void gifCaptureEnd(bool cancel)
+{
+	fassert(s_gifCaptureState == kGifCapture_Capture);
+
+	s_gifCaptureState = kGifCapture_Idle;
 
 	if (cancel)
 	{
@@ -374,51 +412,104 @@ void gifCaptureComplete(bool cancel)
 	}
 	else
 	{
-		writeGif("c:/temp/test2.gif", s_pages, 1000 * g_screenCaptureFrameSkip / 60);
+		char filename[256];
+		std::string userFolder = g_app->getUserSettingsDirectory();
+		int i = 0;
+		do
+		{
+			sprintf_s(filename, sizeof(filename), "%s/MovieCapture%03d.gif", userFolder.c_str(), i);
+			i++;
+		} while (FileStream::Exists(filename));
+		writeGif(filename, s_pages, 1000 * g_screenCaptureFrameSkip / 60);
 	}
 
-	s_skipFrames = 0;
-	s_numFrames = 0;
 	s_pages.clear();
 }
 
 void gifCaptureTick(float dt)
 {
-	if (!s_gifCaptureIsActive)
-		return;
+	switch (s_gifCaptureState)
+	{
+	case kGifCapture_Idle:
+		break;
+	case kGifCapture_AreaSelect1:
+		if (mouse.wentDown(BUTTON_LEFT))
+		{
+			s_gifCaptureRect.x1 = s_gifCaptureRect.x2 = mouse.x;
+			s_gifCaptureRect.y1 = s_gifCaptureRect.y2 = mouse.y;
+			s_gifCaptureState = kGifCapture_AreaSelect2;
+		}
+		break;
+	case kGifCapture_AreaSelect2:
+		s_gifCaptureRect.x2 = mouse.x;
+		s_gifCaptureRect.y2 = mouse.y;
+		if (mouse.wentUp(BUTTON_LEFT))
+			gifCaptureBegin();
+		break;
+	case kGifCapture_Capture:
+		break;
+	default:
+		fassert(false);
+	}
 }
 
 void gifCaptureTick_PostRender()
 {
-	if (!s_gifCaptureIsActive)
-		return;
-
-	const bool screenCapture = g_screenCapture;
-	if (screenCapture)
+	switch (s_gifCaptureState)
 	{
-		g_screenCapture = false;
-		g_app->m_optionMenuIsOpen = false;
-	}
+	case kGifCapture_Idle:
+		break;
+	case kGifCapture_AreaSelect1:
+		drawToolCaption(GIF_COLOR, "GIF Capture : Select Rectangle");
+		break;
+	case kGifCapture_AreaSelect2:
+		drawToolCaption(GIF_COLOR, "GIF Capture : Select Rectangle");
 
-	if (screenCapture)
-	{
-		s_skipFrames = 0;
-		s_numFrames = 60 * g_screenCaptureDuration / g_screenCaptureFrameSkip;
-	}
+		setColor(colorGreen);
+		drawRectLine(
+			s_gifCaptureRect.x1,
+			s_gifCaptureRect.y1,
+			s_gifCaptureRect.x2,
+			s_gifCaptureRect.y2);
+		break;
+	case kGifCapture_Capture:
+		fassert(s_numCapturedFrames < s_numFrames);
 
-	if ((s_skipFrames++ % g_screenCaptureFrameSkip) == 0)
-	{
-		if (s_numFrames > 0)
+		if ((s_skipFrames++ % g_screenCaptureFrameSkip) == 0)
 		{
-			FIBITMAP * capture = captureScreen();
-			capture = downsample2x2(capture, true);
-			//capture = downsample2x2(capture, true);
+			if (s_gifCaptureRect.x1 > s_gifCaptureRect.x2)
+				std::swap(s_gifCaptureRect.x1, s_gifCaptureRect.x2);
+			if (s_gifCaptureRect.y1 > s_gifCaptureRect.y2)
+				std::swap(s_gifCaptureRect.y1, s_gifCaptureRect.y2);
+
+			const int ox = s_gifCaptureRect.x1 / framework.minification;
+			const int oy = (GFX_SY - s_gifCaptureRect.y2) / framework.minification;
+			const int sx = (s_gifCaptureRect.x2 - s_gifCaptureRect.x1) / framework.minification;
+			const int sy = (s_gifCaptureRect.y2 - s_gifCaptureRect.y1) / framework.minification;
+
+			FIBITMAP * capture = captureScreen(ox, oy, sx, sy);
+			// fixme : this doesn't really make sense. use the GPU to downsample the buffers..
+			const int numDownsamples = g_screenCaptureDownscaleFactor - (framework.minification == 2 ? 1 : 0);
+			for (int i = 0; i < numDownsamples; ++i)
+				capture = downsample2x2(capture, true);
 			s_pages.push_back(capture);
 
-			s_numFrames--;
+			s_numCapturedFrames++;
 
-			if (s_numFrames == 0)
-				gifCaptureComplete(false);
+			if (s_numCapturedFrames == s_numFrames)
+				gifCaptureEnd(false);
 		}
+
+		setColor(255, 255, 255, 127);
+		drawRectLine(
+			s_gifCaptureRect.x1,
+			s_gifCaptureRect.y1,
+			s_gifCaptureRect.x2,
+			s_gifCaptureRect.y2);
+
+		drawToolCaption(GIF_COLOR, "GIF Capture : Capturing Frame %d/%d", s_numCapturedFrames, s_numFrames);
+		break;
+	default:
+		fassert(false);
 	}
 }

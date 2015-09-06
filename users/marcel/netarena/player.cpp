@@ -20,6 +20,9 @@
 
 /*
 
+- level setting: max zoom factor
+- level setting: zoom restriction near borders. not needed when no level wrap
+
 - background animation speed always at 100% regardless of game speed. *should* be affected by time dilation
 - bakground parallax effect through less zoom/panning strength
 - allow exploding mine in air. currently when grounded only

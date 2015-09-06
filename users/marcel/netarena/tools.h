@@ -12,6 +12,7 @@ void blastEffectTestTick(float dt);
 void blastEffectTestDraw();
 
 void gifCaptureToggleIsActive(bool cancel);
-void gifCaptureComplete(bool cancel);
+void gifCaptureBegin();
+void gifCaptureEnd(bool cancel);
 void gifCaptureTick(float dt);
 void gifCaptureTick_PostRender();
