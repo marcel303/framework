@@ -346,13 +346,13 @@ static bool writeGif(const char * filename, const std::vector<FIBITMAP*> & pages
 
 OPTION_DECLARE(bool, g_screenCapture, false);
 OPTION_DECLARE(int, g_screenCaptureDuration, 4);
-OPTION_DECLARE(int, g_screenCaptureDownscaleFactor, 2);
+OPTION_DECLARE(int, g_screenCaptureDownscalePasses, 1);
 OPTION_DECLARE(int, g_screenCaptureFrameSkip, 2);
 OPTION_DEFINE(bool, g_screenCapture, "App/GIF Capture/Capture! (Full Screen)");
 OPTION_DEFINE(int, g_screenCaptureDuration, "App/GIF Capture/Duration (Seconds)");
-OPTION_DEFINE(int, g_screenCaptureDownscaleFactor, "App/GIF Capture/Downscale Factor");
+OPTION_DEFINE(int, g_screenCaptureDownscalePasses, "App/GIF Capture/Number of Downscale Passes");
 OPTION_DEFINE(int, g_screenCaptureFrameSkip, "App/GIF Capture/Frame Skip");
-OPTION_STEP(g_screenCaptureDownscaleFactor, 1, 4, 1);
+OPTION_STEP(g_screenCaptureDownscalePasses, 0, 4, 1);
 OPTION_STEP(g_screenCaptureFrameSkip, 1, 60, 1);
 
 enum GifCaptureState
@@ -488,9 +488,7 @@ void gifCaptureTick_PostRender()
 			const int sy = (s_gifCaptureRect.y2 - s_gifCaptureRect.y1) / framework.minification;
 
 			FIBITMAP * capture = captureScreen(ox, oy, sx, sy);
-			// fixme : this doesn't really make sense. use the GPU to downsample the buffers..
-			const int numDownsamples = g_screenCaptureDownscaleFactor - (framework.minification == 2 ? 1 : 0);
-			for (int i = 0; i < numDownsamples; ++i)
+			for (int i = 0; i < g_screenCaptureDownscalePasses; ++i)
 				capture = downsample2x2(capture, true);
 			s_pages.push_back(capture);
 
