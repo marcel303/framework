@@ -23,10 +23,11 @@ static const Color kBackgroundColor(0.f, 0.f, 0.f, .5f);
 
 static bool g_doActions = false;
 static bool g_doDraw = false;
+static int g_drawX = 0;
 static int g_drawY = 0;
 
-#define COLORWHEEL_X(sx) (sx / 2.f)
-#define COLORWHEEL_Y(sy) (sy / 2.f)
+#define COLORWHEEL_X(sx) (kMenuWidth + kMenuSpacing + ColorWheel::size)
+#define COLORWHEEL_Y(sy) (kMenuSpacing + ColorWheel::size)
 
 static ParticleEmitterInfo g_pei;
 static ParticleInfo g_pi;
@@ -42,6 +43,15 @@ static float saturate(const float v)
 {
 	return v < 0.f ? 0.f : v > 1.f ? 1.f : v;
 }
+
+template<typename T>
+struct ScopedValueAdjust
+{
+	T m_oldValue;
+	T & m_value;
+	ScopedValueAdjust(T & value, T amount) : m_oldValue(value), m_value(value) { m_value += amount; }
+	~ScopedValueAdjust() { m_value = m_oldValue; }
+};
 
 //
 
@@ -322,15 +332,16 @@ public:
 	bool intersectWheel(const float x, const float y, float & hue) const;
 	bool intersectTriangle(const float x, const float y, float & saturation, float & value) const;
 
+	void fromColor(ParticleColor & color);
 	void toColor(const float hue, const float saturation, const float value, ParticleColor & color) const;
 	void toColor(ParticleColor & color) const;
 };
 
 void ColorWheel::getTriangleAngles(float a[3])
 {
-	a[0] = 2.f * M_PI / 3.f * 0.f;
-	a[1] = 2.f * M_PI / 3.f * 1.f;
-	a[2] = 2.f * M_PI / 3.f * 2.f;
+	a[0] = 2.f * float(M_PI) / 3.f * 0.f;
+	a[1] = 2.f * float(M_PI) / 3.f * 1.f;
+	a[2] = 2.f * float(M_PI) / 3.f * 2.f;
 }
 
 void ColorWheel::getTriangleCoords(float xy[6])
@@ -373,8 +384,8 @@ void ColorWheel::tick(const float mouseX, const float mouseY, const bool mouseDo
 			{
 				state = kState_SelectSatValue;
 
-				//saturation = s;
-				//value = v;
+				baryWhite = bw;
+				baryBlack = bb;
 			}
 		}
 		break;
@@ -405,7 +416,8 @@ void ColorWheel::draw()
 	const float r1 = size;
 	const float r2 = size - wheelThickness;
 
-#if 1 // wheel
+	// color wheel
+
 	gxBegin(GL_QUADS);
 	{
 		for (int i = 0; i < numSteps; ++i)
@@ -429,15 +441,17 @@ void ColorWheel::draw()
 	}
 	gxEnd();
 
+	// selection circle on the color wheel
+
 	{
 		setColor(colorWhite);
 		const float x = cosf(hue) * (size - wheelThickness / 2.f);
 		const float y = sinf(hue) * (size - wheelThickness / 2.f);
 		Sprite("circle.png", 7.5f, 7.5f).drawEx(x, y);
 	}
-#endif
 
-#if 1 // triangle
+	// lightness triangle
+
 	{
 		gxBegin(GL_TRIANGLES);
 		{
@@ -467,7 +481,6 @@ void ColorWheel::draw()
 		const float y = xy[1] + (xy[3] - xy[1]) * baryBlack + (xy[5] - xy[1]) * baryWhite;
 		Sprite("circle.png", 7.5f, 7.5f).drawEx(x, y);
 	}
-#endif
 
 #if 1 // fixme : work around for weird (driver?) issue where next draw call retains the color of the previous one
 	gxBegin(GL_TRIANGLES);
@@ -540,8 +553,8 @@ bool ColorWheel::intersectTriangle(const float x, const float y, float & baryWhi
 		baryWhite >= 0.f && baryWhite <= 1.f &&
 		baryBlack >= 0.f && baryBlack <= 1.f;
 
-	baryWhite = saturate(baryWhite);
-	baryBlack = saturate(baryBlack);
+	baryWhite = std::max(0.f, baryWhite);
+	baryBlack = std::max(0.f, baryBlack);
 
 	const float bs = baryWhite + baryBlack;
 	if (bs > 1.f)
@@ -550,7 +563,7 @@ bool ColorWheel::intersectTriangle(const float x, const float y, float & baryWhi
 		baryBlack /= bs;
 	}
 
-#if 1
+#if 0
 	setFont("calibri.ttf");
 	setColor(colorWhite);
 	drawText(xy[2], xy[3], 16, +1.f, +1.f, "bb: %f", baryWhite);
@@ -558,6 +571,11 @@ bool ColorWheel::intersectTriangle(const float x, const float y, float & baryWhi
 #endif
 
 	return inside;
+}
+
+void ColorWheel::fromColor(ParticleColor & color)
+{
+	// todo
 }
 
 void ColorWheel::toColor(const float hue, const float baryWhite, const float baryBlack, ParticleColor & color) const
@@ -583,8 +601,59 @@ void ColorWheel::toColor(ParticleColor & color) const
 //
 
 static ColorWheel g_colorWheel;
+static ParticleColor * g_activeColor = 0;
 
 //
+
+static bool doButton(const char * name, bool & hasFocus)
+{
+	const int kPadding = 5;
+
+	const int x1 = g_drawX;
+	const int x2 = g_drawX + kMenuWidth;
+	const int y1 = g_drawY;
+	const int y2 = g_drawY + kCheckBoxHeight;
+
+	g_drawY += kCheckBoxHeight;
+
+	bool result = false;
+
+	if (g_doActions)
+	{
+		if (mouse.x >= x1 &&
+			mouse.y >= y1 &&
+			mouse.x <= x2 &&
+			mouse.y <= y2)
+		{
+			hasFocus = true;
+		}
+		else
+		{
+			hasFocus = false;
+		}
+
+		if (mouse.wentUp(BUTTON_LEFT) && hasFocus)
+		{
+			result = true;
+		}
+	}
+
+	if (g_doDraw)
+	{
+		if (hasFocus)
+			setColor(kBackgroundFocusColor);
+		else
+			setColor(kBackgroundColor);
+		drawRect(x1, y1, x2, y2);
+		setColor(colorBlue);
+		drawRectLine(x1, y1, x2, y2);
+
+		setColor(colorWhite);
+		drawText(x1 + kPadding, y1, kFontSize, +1.f, +1.f, "%s", name);
+	}
+
+	return result;
+}
 
 static bool valueToString(const std::string & src, char * dst, int dstSize)
 {
@@ -627,8 +696,8 @@ static void doTextBox(T & value, const char * name, float xOffset, float xScale,
 {
 	const int kPadding = 5;
 
-	const int x1 = kMenuWidth * xOffset;
-	const int x2 = x1 + kMenuWidth * xScale;
+	const int x1 = g_drawX + kMenuWidth * xOffset;
+	const int x2 = g_drawX + kMenuWidth * xOffset + kMenuWidth * xScale;
 	const int y1 = g_drawY;
 	const int y2 = g_drawY + kTextBoxHeight;
 
@@ -708,11 +777,12 @@ static bool doCheckBox(bool & value, const char * name, bool isCollapsable, bool
 	const int kPadding = 5;
 	const int kCheckButtonSize = kCheckBoxHeight - kPadding * 2;
 
-	const int x1 = 0;
-	const int x2 = kMenuWidth;
+	const int x1 = g_drawX;
+	const int x2 = g_drawX + kMenuWidth;
 	const int y1 = g_drawY;
+	const int y2 = g_drawY + kCheckBoxHeight;
+
 	g_drawY += kCheckBoxHeight;
-	const int y2 = g_drawY;
 
 	const int cx1 = x1 + kPadding;
 	const int cx2 = x1 + kPadding + kCheckButtonSize;
@@ -806,11 +876,12 @@ static void doEnum(E & value, const char * name, const std::vector<EnumValue> & 
 {
 	const int kPadding = 5;
 
-	const int x1 = 0;
-	const int x2 = kMenuWidth;
+	const int x1 = g_drawX;
+	const int x2 = g_drawX + kMenuWidth;
 	const int y1 = g_drawY;
+	const int y2 = g_drawY + kEnumHeight;
+
 	g_drawY += kEnumHeight;
-	const int y2 = g_drawY;
 
 	if (g_doActions)
 	{
@@ -876,11 +947,12 @@ void doParticleCurve(ParticleCurve & curve, const char * name, bool & hasFocus)
 	const int kPadding = 5;
 	const int kCheckButtonSize = kCheckBoxHeight - kPadding * 2;
 
-	const int x1 = 0;
-	const int x2 = kMenuWidth;
+	const int x1 = g_drawX;
+	const int x2 = g_drawX + kMenuWidth;
 	const int y1 = g_drawY;
+	const int y2 = g_drawY + kCurveHeight;
+
 	g_drawY += kCurveHeight;
-	const int y2 = g_drawY;
 
 	const int cx1 = x1;
 	const int cy1 = y1;
@@ -924,11 +996,12 @@ void doParticleColor(ParticleColor & color, const char * name, bool & hasFocus)
 	const int kPadding = 5;
 	const int kCheckButtonSize = kCheckBoxHeight - kPadding * 2;
 
-	const int x1 = 0;
-	const int x2 = kMenuWidth;
+	const int x1 = g_drawX;
+	const int x2 = g_drawX + kMenuWidth;
 	const int y1 = g_drawY;
+	const int y2 = g_drawY + kColorHeight;
+
 	g_drawY += kColorHeight;
-	const int y2 = g_drawY;
 
 	const int cx1 = x1;
 	const int cy1 = y1;
@@ -952,7 +1025,7 @@ void doParticleColor(ParticleColor & color, const char * name, bool & hasFocus)
 		// todo : add, remove, move keys and select color
 		if (hasFocus && mouse.wentDown(BUTTON_LEFT))
 		{
-			g_colorWheel.toColor(color);
+			g_activeColor = &color;
 		}
 	}
 
@@ -980,16 +1053,48 @@ void doParticleColor(ParticleColor & color, const char * name, bool & hasFocus)
 	}
 }
 
-void doParticleColorCurve(ParticleColorCurve & curve, const char * name, bool & hasFocus)
+static float screenToCurve(int x1, int x2, int x)
+{
+	return saturate((x - x1) / float(x2 - x1));
+}
+
+static float curveToScreen(int x1, int x2, float t)
+{
+	return x1 + (x2 - x1) * t;
+}
+
+static ParticleColorCurve::Key * findNearestKey(ParticleColorCurve & curve, float t, float maxDeviation)
+{
+	ParticleColorCurve::Key * nearestKey = 0;
+	float nearestDistance = 0.f;
+
+	for (int i = 0; i < curve.numKeys; ++i)
+	{
+		const float dt = curve.keys[i].t - t;
+		const float distance = std::sqrtf(dt * dt);
+
+		if (distance < maxDeviation && (distance < nearestDistance || nearestKey == 0))
+		{
+			nearestKey = &curve.keys[i];
+			nearestDistance = distance;
+		}
+	}
+
+	return nearestKey;
+}
+
+void doParticleColorCurve(ParticleColorCurve & curve, const char * name, bool & hasFocus, ParticleColorCurve::Key *& selectedKey)
 {
 	const int kPadding = 5;
 	const int kCheckButtonSize = kCheckBoxHeight - kPadding * 2;
+	const float kMaxSelectionDeviation = 5 / float(kMenuWidth);
 
-	const int x1 = 0;
-	const int x2 = kMenuWidth;
+	const int x1 = g_drawX;
+	const int x2 = g_drawX + kMenuWidth;
 	const int y1 = g_drawY;
+	const int y2 = g_drawY + kColorCurveHeight;
+
 	g_drawY += kColorCurveHeight;
-	const int y2 = g_drawY;
 
 	const int cx1 = x1;
 	const int cy1 = y1;
@@ -1010,34 +1115,63 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, bool & 
 			hasFocus = false;
 		}
 
-		// todo : add, remove, move keys and select color
-		if (hasFocus && mouse.wentDown(BUTTON_LEFT))
+		if (hasFocus)
 		{
-			curve.clearKeys();
-
-			ParticleColorCurve::Key * key;
-
-			if (curve.allocKey(key))
+			if (mouse.wentDown(BUTTON_LEFT))
 			{
-				key->t = (rand() % 256) / 255.f;
-				key->color.set(
-					(rand() % 256) / 255.f,
-					(rand() % 256) / 255.f,
-					(rand() % 256) / 255.f,
-					(rand() % 256) / 255.f);
+				// select or insert key
+
+				const float t = screenToCurve(x1, x2, mouse.x);
+				auto key = findNearestKey(curve, t, kMaxSelectionDeviation);
+				
+				if (key)
+				{
+					g_colorWheel.fromColor(key->color);
+				}
+				else
+				{
+					// insert a new key
+
+					if (curve.allocKey(key))
+					{
+						g_colorWheel.toColor(key->color);
+						key->t = t;
+
+						key = curve.sortKeys(key);
+					}
+				}
+
+				selectedKey = key;
 			}
 
-			if (curve.allocKey(key))
+			if (mouse.wentDown(BUTTON_RIGHT) && !mouse.isDown(BUTTON_LEFT))
 			{
-				key->t = (rand() % 256) / 255.f;
-				key->color.set(
-					(rand() % 256) / 255.f,
-					(rand() % 256) / 255.f,
-					(rand() % 256) / 255.f,
-					(rand() % 256) / 255.f);
+				selectedKey = 0;
+
+				// erase key
+
+				const float t = screenToCurve(x1, x2, mouse.x);
+				auto * key = findNearestKey(curve, t, kMaxSelectionDeviation);
+
+				if (key)
+				{
+					curve.freeKey(key);
+				}
 			}
 
-			curve.sortKeys();
+			if (selectedKey && mouse.isDown(BUTTON_LEFT))
+			{
+				// move selected key around
+
+				const float t = screenToCurve(x1, x2, mouse.x);
+
+				selectedKey->t = t;
+				selectedKey = curve.sortKeys(selectedKey);
+
+				fassert(selectedKey->t == t);
+			}
+
+			g_activeColor = selectedKey ? &selectedKey->color : 0;
 		}
 	}
 
@@ -1060,6 +1194,17 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, bool & 
 			curve.sample(t, c);
 			setColorf(c.rgba[0], c.rgba[1], c.rgba[2], c.rgba[3]);
 			drawRect(x, cy1, x + 1.f, cy2);
+		}
+
+		for (int i = 0; i < curve.numKeys; ++i)
+		{
+			if (selectedKey == &curve.keys[i])
+				setColor(colorYellow);
+			else
+				setColor(colorWhite);
+			const float x = curveToScreen(x1, x2, curve.keys[i].t);
+			const float y = (y1 + y2) / 2.f;
+			Sprite("circle.png", 7.5f, 7.5f).drawEx(x, y);
 		}
 
 		setColor(colorWhite);
@@ -1093,15 +1238,18 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, bool & 
 
 #define DO_PARTICLECOLORCURVE(sym, value, name) \
 	static bool sym ## hasFocus = false; \
-	doParticleColorCurve(value, name, sym ## hasFocus);
+	static ParticleColorCurve::Key * sym ## selectedKey = 0; \
+	doParticleColorCurve(value, name, sym ## hasFocus, sym ## selectedKey);
 
 static void doMenu(bool doActions, bool doDraw)
 {
 	g_doActions = doActions;
 	g_doDraw = doDraw;
-	g_drawY = 0;
 
 	setFont("calibri.ttf");
+
+	g_drawX = 10;
+	g_drawY = 0;
 
 	DO_TEXTBOX(rate, g_pi.rate, "Rate (Particles/Sec)");
 
@@ -1135,6 +1283,7 @@ static void doMenu(bool doActions, bool doDraw)
 	static bool velocityOverLifetimeHasFocus = false;
 	if (doCheckBox(g_pi.velocityOverLifetime, "Velocity Over Lifetime", true, velocityOverLifetimeHasFocus))
 	{
+		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
 		DO_TEXTBOX2(velocityOverLifetimeValueX, g_pi.velocityOverLifetimeValueX, 0.f, .5f, false, "X");
 		DO_TEXTBOX2(velocityOverLifetimeValueY, g_pi.velocityOverLifetimeValueY, .5f, .5f, true, "Y");
 	}
@@ -1142,6 +1291,7 @@ static void doMenu(bool doActions, bool doDraw)
 	static bool velocityOverLifetimeLimitHasFocus = false;
 	if (doCheckBox(g_pi.velocityOverLifetimeLimit, "Velocity Over Lifetime Limit", true, velocityOverLifetimeLimitHasFocus))
 	{
+		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
 		DO_PARTICLECURVE(velocityOverLifetimeLimitCurve, g_pi.velocityOverLifetimeLimitCurve, "Curve");
 		DO_TEXTBOX(velocityOverLifetimeLimitDampen, g_pi.velocityOverLifetimeLimitDampen, "Dampen/Sec");
 	}
@@ -1149,6 +1299,7 @@ static void doMenu(bool doActions, bool doDraw)
 	static bool forceOverLifetimeHasFocus = false;
 	if (doCheckBox(g_pi.forceOverLifetime, "Force Over Lifetime", true, forceOverLifetimeHasFocus))
 	{
+		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
 		DO_TEXTBOX2(forceOverLifetimeValueX, g_pi.forceOverLifetimeValueX, 0.f, .5f, false, "X");
 		DO_TEXTBOX2(forceOverLifetimeValueY, g_pi.forceOverLifetimeValueY, .5f, .5f, true, "Y");
 	}
@@ -1156,12 +1307,14 @@ static void doMenu(bool doActions, bool doDraw)
 	static bool colorOverLifetimeHasFocus = false;
 	if (doCheckBox(g_pi.colorOverLifetime, "Color Over Lifetime", true, colorOverLifetimeHasFocus))
 	{
+		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
 		DO_PARTICLECOLORCURVE(colorOverLifetimeCurve, g_pi.colorOverLifetimeCurve, "Curve");
 	}
 
 	static bool colorBySpeedHasFocus = false;
 	if (doCheckBox(g_pi.colorBySpeed, "Color By Speed", true, colorBySpeedHasFocus))
 	{
+		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
 		DO_PARTICLECOLORCURVE(colorBySpeedCurve, g_pi.colorBySpeedCurve, "Curve");
 		DO_TEXTBOX2(colorBySpeedRangeMin, g_pi.colorBySpeedRangeMin, 0.f, .5f, false, "Range");
 		DO_TEXTBOX2(colorBySpeedRangeMax, g_pi.colorBySpeedRangeMax, .5f, .5f, true, "");
@@ -1170,12 +1323,14 @@ static void doMenu(bool doActions, bool doDraw)
 	static bool sizeOverLifetimeHasFocus = false;
 	if (doCheckBox(g_pi.sizeOverLifetime, "Size Over Lifetime", true, sizeOverLifetimeHasFocus))
 	{
+		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
 		DO_PARTICLECURVE(sizeOverLifetimeCurve, g_pi.sizeOverLifetimeCurve, "Curve");
 	}
 
 	static bool sizeBySpeedHasFocus = false;
 	if (doCheckBox(g_pi.sizeBySpeed, "Size By Speed", true, sizeBySpeedHasFocus))
 	{
+		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
 		DO_PARTICLECURVE(sizeBySpeedCurve, g_pi.sizeBySpeedCurve, "Curve");
 		DO_TEXTBOX2(sizeBySpeedRangeMin, g_pi.sizeBySpeedRangeMin, 0.f, .5f, false, "Range");
 		DO_TEXTBOX2(sizeBySpeedRangeMax, g_pi.sizeBySpeedRangeMax, .5f, .5f, true, "");
@@ -1184,12 +1339,14 @@ static void doMenu(bool doActions, bool doDraw)
 	static bool rotationOverLifetimeHasFocus = false;
 	if (doCheckBox(g_pi.rotationOverLifetime, "Rotation Over Lifetime", true, rotationOverLifetimeHasFocus))
 	{
+		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
 		DO_TEXTBOX(rotationOverLifetimeValue, g_pi.rotationOverLifetimeValue, "Degrees/Sec");
 	}
 
 	static bool rotationBySpeedHasFocus = false;
 	if (doCheckBox(g_pi.rotationBySpeed, "Rotation By Speed", true, rotationBySpeedHasFocus))
 	{
+		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
 		DO_PARTICLECURVE(rotationBySpeedCurve, g_pi.rotationBySpeedCurve, "Curve");
 		DO_TEXTBOX2(rotationBySpeedRangeMin, g_pi.rotationBySpeedRangeMin, 0.f, .5f, false, "Range");
 		DO_TEXTBOX2(rotationBySpeedRangeMax, g_pi.rotationBySpeedRangeMax, .5f, .5f, true, "");
@@ -1198,6 +1355,7 @@ static void doMenu(bool doActions, bool doDraw)
 	static bool collisionHasFocus = false;
 	if (doCheckBox(g_pi.collision, "Collision", true, collisionHasFocus))
 	{
+		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
 		DO_TEXTBOX(bounciness, g_pi.bounciness, "Bounciness");
 		DO_TEXTBOX(lifetimeLoss, g_pi.lifetimeLoss, "Lifetime Loss On Collision");
 		DO_TEXTBOX(minKillSpeed, g_pi.minKillSpeed, "Kill Speed");
@@ -1207,6 +1365,7 @@ static void doMenu(bool doActions, bool doDraw)
 	static bool subEmittersHasFocus = false;
 	if (doCheckBox(g_pi.subEmitters, "Sub Emitters", true, subEmittersHasFocus))
 	{
+		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
 		//SubEmitter onBirth;
 		//SubEmitter onCollision;
 		//SubEmitter onDeath;
@@ -1239,6 +1398,28 @@ static void doMenu(bool doActions, bool doDraw)
 	DO_CHECKBOX(worldSpace, g_pei.worldSpace, "World Space", false);
 	DO_TEXTBOX(maxParticles, g_pei.maxParticles, "Max Particles");
 	// todo : char materialName[32];
+
+	// right side menu
+
+	setFont("calibri.ttf");
+
+	g_drawX = 10 + kMenuWidth + 10;
+	g_drawY = 0;
+
+	static bool loadHasFocus = false;
+	if (doButton("Load", loadHasFocus))
+	{
+	}
+
+	static bool saveHasFocus = false;
+	if (doButton("Save", saveHasFocus))
+	{
+	}
+
+	static bool saveAsHasFocus = false;
+	if (doButton("Save as..", saveAsHasFocus))
+	{
+	}
 }
 
 void particleEditorTick(bool menuActive, float dt)
@@ -1294,7 +1475,18 @@ void particleEditorDraw(bool menuActive, float sx, float sy)
 	strcpy_s(g_pei.materialName, sizeof(g_pei.materialName), "texture.png");
 
 	gxSetTexture(Sprite(g_pei.materialName).getTexture());
-	for (Particle * p = g_pool.head; p; p = p->next)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	if (g_pi.blendMode == ParticleInfo::kBlendMode_AlphaBlended)
+		setBlend(BLEND_ALPHA);
+	else if (g_pi.blendMode == ParticleInfo::kBlendMode_Additive)
+		setBlend(BLEND_ADD);
+	else
+		fassert(false);
+
+	for (Particle * p = (g_pi.sortMode == ParticleInfo::kSortMode_OldestFirst) ? g_pool.head : g_pool.tail;
+		         p; p = (g_pi.sortMode == ParticleInfo::kSortMode_OldestFirst) ? p->next : p->prev)
 	{
 		const float particleLife = 1.f - p->life;
 		const float particleSpeed = std::sqrtf(p->speed[0] * p->speed[0] + p->speed[1] * p->speed[1]);
@@ -1317,18 +1509,23 @@ void particleEditorDraw(bool menuActive, float sx, float sy)
 		gxPopMatrix();
 	}
 	gxSetTexture(0);
+
+	setBlend(BLEND_ALPHA);
 #endif
 
 	gxPopMatrix();
 
-	if (menuActive)
+	if (menuActive && g_activeColor)
 	{
 	#if 1
 		gxPushMatrix();
-		const float wheelX = sx/2.f;
-		const float wheelY = sy/2.f;
-		gxTranslatef(COLORWHEEL_X(sx), COLORWHEEL_Y(sy), 0.f);
+		const float wheelX = COLORWHEEL_X(sx);
+		const float wheelY = COLORWHEEL_Y(sy);
+		gxTranslatef(wheelX, wheelY, 0.f);
+
 		g_colorWheel.tick(mouse.x - wheelX, mouse.y - wheelY, mouse.isDown(BUTTON_LEFT), 1.f / 60.f); // fixme : mouseDown and dt
+		g_colorWheel.toColor(*g_activeColor);
+
 		g_colorWheel.draw();
 
 	#if 1 // fixme : work around for weird (driver?) issue where next draw call retains the color of the previous one

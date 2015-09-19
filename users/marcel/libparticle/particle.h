@@ -75,8 +75,9 @@ struct ParticleColorCurve
 	bool operator!=(const ParticleColorCurve & other) const;
 
 	bool allocKey(Key *& key);
+	void freeKey(Key *& key);
 	void clearKeys();
-	void sortKeys();
+	Key * sortKeys(Key * keyToReturn = 0);
 	void setLinear(const ParticleColor & v1, const ParticleColor & v2);
 	void setLinearAlpha(float v1, float v2);
 	void sample(const float t, ParticleColor & result) const;

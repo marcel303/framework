@@ -187,6 +187,14 @@ bool ParticleColorCurve::allocKey(Key *& key)
 	}
 }
 
+void ParticleColorCurve::freeKey(Key *& key)
+{
+	const int index = key - keys;
+	for (int i = index + 1; i < numKeys; ++i)
+		keys[i - 1] = keys[i];
+	numKeys--;
+}
+
 void ParticleColorCurve::clearKeys()
 {
 	for (int i = 0; i < numKeys; ++i)
@@ -195,9 +203,32 @@ void ParticleColorCurve::clearKeys()
 	numKeys = 0;
 }
 
-void ParticleColorCurve::sortKeys()
+ParticleColorCurve::Key * ParticleColorCurve::sortKeys(Key * keyToReturn)
 {
-	std::sort(keys, keys + numKeys);
+	Key * result = 0;
+
+	if (keyToReturn)
+	{
+		Key keyValues[kMaxKeys];
+		memcpy(keyValues, keys, sizeof(Key) * numKeys);
+		Key * keysForSorting[kMaxKeys];
+		for (int i = 0; i < numKeys; ++i)
+			keysForSorting[i] = &keys[i];
+		std::sort(keysForSorting, keysForSorting + numKeys, [](Key * k1, Key * k2) { return k1->t < k2->t; });
+		for (int i = 0; i < numKeys; ++i)
+		{
+			if (keysForSorting[i] == keyToReturn)
+				result = &keys[i];
+			const int index = keysForSorting[i] - keys;
+			keys[i] = keyValues[index];
+		}
+	}
+	else
+	{
+		std::sort(keys, keys + numKeys);
+	}
+
+	return result;
 }
 
 void ParticleColorCurve::setLinear(const ParticleColor & v1, const ParticleColor & v2)
