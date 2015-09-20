@@ -1,7 +1,11 @@
 #include "framework.h"
+#include "nfd.h"
 #include "particle.h"
 #include "particle_editor.h"
 #include "particle_framework.h"
+#include "tinyxml2.h"
+
+using namespace tinyxml2;
 
 #define UI_TEXTCHAT_CARET_PADDING_X 0
 #define UI_TEXTCHAT_CARET_PADDING_Y 5 // todo : look these up
@@ -52,6 +56,30 @@ struct ScopedValueAdjust
 	ScopedValueAdjust(T & value, T amount) : m_oldValue(value), m_value(value) { m_value += amount; }
 	~ScopedValueAdjust() { m_value = m_oldValue; }
 };
+
+struct UiElem
+{
+	bool hasFocus;
+	bool isActive;
+
+	UiElem()
+		: hasFocus(false)
+		, isActive(false)
+	{
+	}
+
+	void tick(int x1, int y1, int x2, int y2);
+};
+
+static UiElem * g_activeElem = 0;
+
+void UiElem::tick(int x1, int y1, int x2, int y2)
+{
+	hasFocus = mouse.x >= x1 && mouse.x <= x2 && mouse.y >= y1 && mouse.y <= y2;
+	if (hasFocus && mouse.wentDown(BUTTON_LEFT))
+		g_activeElem = this;
+	isActive = (g_activeElem == this);
+}
 
 //
 
@@ -605,7 +633,7 @@ static ParticleColor * g_activeColor = 0;
 
 //
 
-static bool doButton(const char * name, bool & hasFocus)
+static bool doButton(const char * name, UiElem & elem)
 {
 	const int kPadding = 5;
 
@@ -620,19 +648,9 @@ static bool doButton(const char * name, bool & hasFocus)
 
 	if (g_doActions)
 	{
-		if (mouse.x >= x1 &&
-			mouse.y >= y1 &&
-			mouse.x <= x2 &&
-			mouse.y <= y2)
-		{
-			hasFocus = true;
-		}
-		else
-		{
-			hasFocus = false;
-		}
+		elem.tick(x1, y1, x2, y2);
 
-		if (mouse.wentUp(BUTTON_LEFT) && hasFocus)
+		if (elem.isActive && elem.hasFocus && mouse.wentUp(BUTTON_LEFT))
 		{
 			result = true;
 		}
@@ -640,7 +658,7 @@ static bool doButton(const char * name, bool & hasFocus)
 
 	if (g_doDraw)
 	{
-		if (hasFocus)
+		if (elem.hasFocus)
 			setColor(kBackgroundFocusColor);
 		else
 			setColor(kBackgroundColor);
@@ -692,7 +710,7 @@ static bool stringToValue(const char * src, float & dst)
 }
 
 template <typename T>
-static void doTextBox(T & value, const char * name, float xOffset, float xScale, bool lineBreak, bool & hasFocus, TextField & textField, bool & textFieldIsInit)
+static void doTextBox(T & value, const char * name, float xOffset, float xScale, bool lineBreak, UiElem & elem, TextField & textField, bool & textFieldIsInit)
 {
 	const int kPadding = 5;
 
@@ -719,23 +737,13 @@ static void doTextBox(T & value, const char * name, float xOffset, float xScale,
 			textField.close();
 		}
 
-		const bool hadFocus = hasFocus;
+		const bool wasActive = elem.isActive;
 
-		if (mouse.x >= x1 &&
-			mouse.y >= y1 &&
-			mouse.x <= x2 &&
-			mouse.y <= y2)
-		{
-			hasFocus = true;
-		}
-		else
-		{
-			hasFocus = false;
-		}
+		elem.tick(x1, y1, x2, y2);
 
-		if (hasFocus != hadFocus)
+		if (elem.isActive != wasActive)
 		{
-			if (hasFocus)
+			if (elem.isActive)
 			{
 				textField.open(32, false, false);
 
@@ -757,7 +765,7 @@ static void doTextBox(T & value, const char * name, float xOffset, float xScale,
 
 	if (g_doDraw)
 	{
-		if (hasFocus)
+		if (elem.hasFocus)
 			setColor(kBackgroundFocusColor);
 		else
 			setColor(kBackgroundColor);
@@ -772,7 +780,7 @@ static void doTextBox(T & value, const char * name, float xOffset, float xScale,
 	}
 }
 
-static bool doCheckBox(bool & value, const char * name, bool isCollapsable, bool & hasFocus)
+static bool doCheckBox(bool & value, const char * name, bool isCollapsable, UiElem & elem)
 {
 	const int kPadding = 5;
 	const int kCheckButtonSize = kCheckBoxHeight - kPadding * 2;
@@ -784,6 +792,8 @@ static bool doCheckBox(bool & value, const char * name, bool isCollapsable, bool
 
 	g_drawY += kCheckBoxHeight;
 
+	elem.tick(x1, y1, x2, y2);
+
 	const int cx1 = x1 + kPadding;
 	const int cx2 = x1 + kPadding + kCheckButtonSize;
 	const int cy1 = y1 + kPadding;
@@ -791,23 +801,7 @@ static bool doCheckBox(bool & value, const char * name, bool isCollapsable, bool
 
 	if (g_doActions)
 	{
-		if (mouse.x >= x1 &&
-			mouse.y >= y1 &&
-			mouse.x <= x2 &&
-			mouse.y <= y2)
-		{
-			hasFocus = true;
-		}
-		else
-		{
-			hasFocus = false;
-		}
-
-		if (mouse.wentUp(BUTTON_LEFT) &&
-			mouse.x >= x1 &&
-			mouse.y >= y1 &&
-			mouse.x <= x2 &&
-			mouse.y <= y2)
+		if (elem.isActive && elem.hasFocus && mouse.wentUp(BUTTON_LEFT))
 		{
 			value = !value;
 		}
@@ -815,7 +809,7 @@ static bool doCheckBox(bool & value, const char * name, bool isCollapsable, bool
 
 	if (g_doDraw)
 	{
-		if (hasFocus)
+		if (elem.hasFocus)
 			setColor(kBackgroundFocusColor);
 		else
 			setColor(kBackgroundColor);
@@ -872,7 +866,7 @@ struct EnumValue
 };
 
 template <typename E>
-static void doEnum(E & value, const char * name, const std::vector<EnumValue> & enumValues, bool & hasFocus)
+static void doEnum(E & value, const char * name, const std::vector<EnumValue> & enumValues, UiElem & elem)
 {
 	const int kPadding = 5;
 
@@ -885,19 +879,9 @@ static void doEnum(E & value, const char * name, const std::vector<EnumValue> & 
 
 	if (g_doActions)
 	{
-		if (mouse.x >= x1 &&
-			mouse.y >= y1 &&
-			mouse.x <= x2 &&
-			mouse.y <= y2)
-		{
-			hasFocus = true;
-		}
-		else
-		{
-			hasFocus = false;
-		}
+		elem.tick(x1, y1, x2, y2);
 
-		if (hasFocus)
+		if (elem.isActive && elem.hasFocus)
 		{
 			// cycle prev/next
 
@@ -922,7 +906,7 @@ static void doEnum(E & value, const char * name, const std::vector<EnumValue> & 
 
 	if (g_doDraw)
 	{
-		if (hasFocus)
+		if (elem.hasFocus)
 			setColor(kBackgroundFocusColor);
 		else
 			setColor(kBackgroundColor);
@@ -942,7 +926,7 @@ static void doEnum(E & value, const char * name, const std::vector<EnumValue> & 
 	}
 }
 
-void doParticleCurve(ParticleCurve & curve, const char * name, bool & hasFocus)
+void doParticleCurve(ParticleCurve & curve, const char * name, UiElem & elem)
 {
 	const int kPadding = 5;
 	const int kCheckButtonSize = kCheckBoxHeight - kPadding * 2;
@@ -961,24 +945,14 @@ void doParticleCurve(ParticleCurve & curve, const char * name, bool & hasFocus)
 
 	if (g_doActions)
 	{
-		if (mouse.x >= x1 &&
-			mouse.y >= y1 &&
-			mouse.x <= x2 &&
-			mouse.y <= y2)
-		{
-			hasFocus = true;
-		}
-		else
-		{
-			hasFocus = false;
-		}
+		elem.tick(x1, y1, x2, y2);
 
 		// todo : curve type selection
 	}
 
 	if (g_doDraw)
 	{
-		if (hasFocus)
+		if (elem.hasFocus)
 			setColor(kBackgroundFocusColor);
 		else
 			setColor(kBackgroundColor);
@@ -991,7 +965,7 @@ void doParticleCurve(ParticleCurve & curve, const char * name, bool & hasFocus)
 	}
 }
 
-void doParticleColor(ParticleColor & color, const char * name, bool & hasFocus)
+void doParticleColor(ParticleColor & color, const char * name, UiElem & elem)
 {
 	const int kPadding = 5;
 	const int kCheckButtonSize = kCheckBoxHeight - kPadding * 2;
@@ -1010,20 +984,9 @@ void doParticleColor(ParticleColor & color, const char * name, bool & hasFocus)
 
 	if (g_doActions)
 	{
-		if (mouse.x >= x1 &&
-			mouse.y >= y1 &&
-			mouse.x <= x2 &&
-			mouse.y <= y2)
-		{
-			hasFocus = true;
-		}
-		else
-		{
-			hasFocus = false;
-		}
+		elem.tick(x1, y1, x2, y2);
 
-		// todo : add, remove, move keys and select color
-		if (hasFocus && mouse.wentDown(BUTTON_LEFT))
+		if (elem.isActive && elem.hasFocus && mouse.wentDown(BUTTON_LEFT))
 		{
 			g_activeColor = &color;
 		}
@@ -1031,7 +994,7 @@ void doParticleColor(ParticleColor & color, const char * name, bool & hasFocus)
 
 	if (g_doDraw)
 	{
-		if (hasFocus)
+		if (elem.hasFocus)
 			setColor(kBackgroundFocusColor);
 		else
 			setColor(kBackgroundColor);
@@ -1083,7 +1046,7 @@ static ParticleColorCurve::Key * findNearestKey(ParticleColorCurve & curve, floa
 	return nearestKey;
 }
 
-void doParticleColorCurve(ParticleColorCurve & curve, const char * name, bool & hasFocus, ParticleColorCurve::Key *& selectedKey)
+void doParticleColorCurve(ParticleColorCurve & curve, const char * name, UiElem & elem, ParticleColorCurve::Key *& selectedKey, bool & isDragging)
 {
 	const int kPadding = 5;
 	const int kCheckButtonSize = kCheckBoxHeight - kPadding * 2;
@@ -1103,19 +1066,9 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, bool & 
 
 	if (g_doActions)
 	{
-		if (mouse.x >= x1 &&
-			mouse.y >= y1 &&
-			mouse.x <= x2 &&
-			mouse.y <= y2)
-		{
-			hasFocus = true;
-		}
-		else
-		{
-			hasFocus = false;
-		}
+		elem.tick(x1, y1, x2, y2);
 
-		if (hasFocus)
+		if (elem.isActive && elem.hasFocus)
 		{
 			if (mouse.wentDown(BUTTON_LEFT))
 			{
@@ -1142,6 +1095,9 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, bool & 
 				}
 
 				selectedKey = key;
+
+				if (selectedKey)
+					isDragging = true;
 			}
 
 			if (mouse.wentDown(BUTTON_RIGHT) && !mouse.isDown(BUTTON_LEFT))
@@ -1158,8 +1114,11 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, bool & 
 					curve.freeKey(key);
 				}
 			}
+		}
 
-			if (selectedKey && mouse.isDown(BUTTON_LEFT))
+		if (isDragging)
+		{
+			if (elem.isActive && selectedKey && mouse.isDown(BUTTON_LEFT))
 			{
 				// move selected key around
 
@@ -1170,14 +1129,21 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, bool & 
 
 				fassert(selectedKey->t == t);
 			}
+			else
+			{
+				isDragging = false;
+			}
+		}
 
+		if (elem.isActive)
+		{
 			g_activeColor = selectedKey ? &selectedKey->color : 0;
 		}
 	}
 
 	if (g_doDraw)
 	{
-		if (hasFocus)
+		if (elem.hasFocus)
 			setColor(kBackgroundFocusColor);
 		else
 			setColor(kBackgroundColor);
@@ -1198,7 +1164,9 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, bool & 
 
 		for (int i = 0; i < curve.numKeys; ++i)
 		{
-			if (selectedKey == &curve.keys[i])
+			if (!elem.isActive)
+				setColor(63, 63, 63);
+			else if (selectedKey == &curve.keys[i])
 				setColor(colorYellow);
 			else
 				setColor(colorWhite);
@@ -1207,39 +1175,40 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, bool & 
 			Sprite("circle.png", 7.5f, 7.5f).drawEx(x, y);
 		}
 
-		setColor(colorWhite);
-		drawText(x1 + kPadding + kCheckButtonSize + kPadding, y1, kFontSize, +1.f, +1.f, "%s", name);
+		//setColor(colorWhite);
+		//drawText(x1 + kPadding + kCheckButtonSize + kPadding, y1, kFontSize, +1.f, +1.f, "%s", name);
 	}
 }
 
 #define DO_TEXTBOX(sym, value, name) \
-	static bool sym ## hasFocus = false; \
+	static UiElem sym ## elem; \
 	static TextField sym ## textField; \
 	static bool sym ## textFieldIsInit = false; \
-	doTextBox(value, name, 0.f, 1.f, true, sym ## hasFocus, sym ## textField, sym ## textFieldIsInit);
+	doTextBox(value, name, 0.f, 1.f, true, sym ## elem, sym ## textField, sym ## textFieldIsInit);
 
 #define DO_TEXTBOX2(sym, value, xOffset, xScale, lineBreak, name) \
-	static bool sym ## hasFocus = false; \
+	static UiElem sym ## elem; \
 	static TextField sym ## textField; \
 	static bool sym ## textFieldIsInit = false; \
-	doTextBox(value, name, xOffset, xScale, lineBreak, sym ## hasFocus, sym ## textField, sym ## textFieldIsInit);
+	doTextBox(value, name, xOffset, xScale, lineBreak, sym ## elem, sym ## textField, sym ## textFieldIsInit);
 
 #define DO_CHECKBOX(sym, value, name, isCollapsable) \
-	static bool sym ## hasFocus = false; \
-	doCheckBox(value, name, isCollapsable, sym ## hasFocus);
+	static UiElem sym ## elem; \
+	doCheckBox(value, name, isCollapsable, sym ## elem);
 
 #define DO_ENUM(sym, value, enumValues, name) \
-	static bool sym ## hasFocus = false; \
-	doEnum(value, name, enumValues, sym ## hasFocus);
+	static UiElem sym ## elem; \
+	doEnum(value, name, enumValues, sym ## elem);
 
 #define DO_PARTICLECURVE(sym, value, name) \
-	static bool sym ## hasFocus = false; \
-	doParticleCurve(value, name, sym ## hasFocus);
+	static UiElem sym ## elem; \
+	doParticleCurve(value, name, sym ## elem);
 
 #define DO_PARTICLECOLORCURVE(sym, value, name) \
-	static bool sym ## hasFocus = false; \
+	static UiElem sym ## elem; \
 	static ParticleColorCurve::Key * sym ## selectedKey = 0; \
-	doParticleColorCurve(value, name, sym ## hasFocus, sym ## selectedKey);
+	static bool sym ## isDragging = false; \
+	doParticleColorCurve(value, name, sym ## elem, sym ## selectedKey, sym ## isDragging);
 
 static void doMenu(bool doActions, bool doDraw)
 {
@@ -1280,39 +1249,39 @@ static void doMenu(bool doActions, bool doDraw)
 	DO_TEXTBOX(boxSizeY, g_pi.boxSizeY, "Box Height");
 	DO_CHECKBOX(emitFromShell, g_pi.emitFromShell, "Emit From Shell", false);
 
-	static bool velocityOverLifetimeHasFocus = false;
-	if (doCheckBox(g_pi.velocityOverLifetime, "Velocity Over Lifetime", true, velocityOverLifetimeHasFocus))
+	static UiElem velocityOverLifetimeElem;
+	if (doCheckBox(g_pi.velocityOverLifetime, "Velocity Over Lifetime", true, velocityOverLifetimeElem))
 	{
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
 		DO_TEXTBOX2(velocityOverLifetimeValueX, g_pi.velocityOverLifetimeValueX, 0.f, .5f, false, "X");
 		DO_TEXTBOX2(velocityOverLifetimeValueY, g_pi.velocityOverLifetimeValueY, .5f, .5f, true, "Y");
 	}
 
-	static bool velocityOverLifetimeLimitHasFocus = false;
-	if (doCheckBox(g_pi.velocityOverLifetimeLimit, "Velocity Over Lifetime Limit", true, velocityOverLifetimeLimitHasFocus))
+	static UiElem velocityOverLifetimeLimitElem;
+	if (doCheckBox(g_pi.velocityOverLifetimeLimit, "Velocity Over Lifetime Limit", true, velocityOverLifetimeLimitElem))
 	{
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
 		DO_PARTICLECURVE(velocityOverLifetimeLimitCurve, g_pi.velocityOverLifetimeLimitCurve, "Curve");
 		DO_TEXTBOX(velocityOverLifetimeLimitDampen, g_pi.velocityOverLifetimeLimitDampen, "Dampen/Sec");
 	}
 
-	static bool forceOverLifetimeHasFocus = false;
-	if (doCheckBox(g_pi.forceOverLifetime, "Force Over Lifetime", true, forceOverLifetimeHasFocus))
+	static UiElem forceOverLifetimeElem;
+	if (doCheckBox(g_pi.forceOverLifetime, "Force Over Lifetime", true, forceOverLifetimeElem))
 	{
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
 		DO_TEXTBOX2(forceOverLifetimeValueX, g_pi.forceOverLifetimeValueX, 0.f, .5f, false, "X");
 		DO_TEXTBOX2(forceOverLifetimeValueY, g_pi.forceOverLifetimeValueY, .5f, .5f, true, "Y");
 	}
 
-	static bool colorOverLifetimeHasFocus = false;
-	if (doCheckBox(g_pi.colorOverLifetime, "Color Over Lifetime", true, colorOverLifetimeHasFocus))
+	static UiElem colorOverLifetimeElem;
+	if (doCheckBox(g_pi.colorOverLifetime, "Color Over Lifetime", true, colorOverLifetimeElem))
 	{
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
 		DO_PARTICLECOLORCURVE(colorOverLifetimeCurve, g_pi.colorOverLifetimeCurve, "Curve");
 	}
 
-	static bool colorBySpeedHasFocus = false;
-	if (doCheckBox(g_pi.colorBySpeed, "Color By Speed", true, colorBySpeedHasFocus))
+	static UiElem colorBySpeedElem;
+	if (doCheckBox(g_pi.colorBySpeed, "Color By Speed", true, colorBySpeedElem))
 	{
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
 		DO_PARTICLECOLORCURVE(colorBySpeedCurve, g_pi.colorBySpeedCurve, "Curve");
@@ -1320,15 +1289,15 @@ static void doMenu(bool doActions, bool doDraw)
 		DO_TEXTBOX2(colorBySpeedRangeMax, g_pi.colorBySpeedRangeMax, .5f, .5f, true, "");
 	}
 
-	static bool sizeOverLifetimeHasFocus = false;
-	if (doCheckBox(g_pi.sizeOverLifetime, "Size Over Lifetime", true, sizeOverLifetimeHasFocus))
+	static UiElem sizeOverLifetimeElem;
+	if (doCheckBox(g_pi.sizeOverLifetime, "Size Over Lifetime", true, sizeOverLifetimeElem))
 	{
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
 		DO_PARTICLECURVE(sizeOverLifetimeCurve, g_pi.sizeOverLifetimeCurve, "Curve");
 	}
 
-	static bool sizeBySpeedHasFocus = false;
-	if (doCheckBox(g_pi.sizeBySpeed, "Size By Speed", true, sizeBySpeedHasFocus))
+	static UiElem sizeBySpeedElem;
+	if (doCheckBox(g_pi.sizeBySpeed, "Size By Speed", true, sizeBySpeedElem))
 	{
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
 		DO_PARTICLECURVE(sizeBySpeedCurve, g_pi.sizeBySpeedCurve, "Curve");
@@ -1336,15 +1305,15 @@ static void doMenu(bool doActions, bool doDraw)
 		DO_TEXTBOX2(sizeBySpeedRangeMax, g_pi.sizeBySpeedRangeMax, .5f, .5f, true, "");
 	}
 
-	static bool rotationOverLifetimeHasFocus = false;
-	if (doCheckBox(g_pi.rotationOverLifetime, "Rotation Over Lifetime", true, rotationOverLifetimeHasFocus))
+	static UiElem rotationOverLifetimeElem;
+	if (doCheckBox(g_pi.rotationOverLifetime, "Rotation Over Lifetime", true, rotationOverLifetimeElem))
 	{
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
 		DO_TEXTBOX(rotationOverLifetimeValue, g_pi.rotationOverLifetimeValue, "Degrees/Sec");
 	}
 
-	static bool rotationBySpeedHasFocus = false;
-	if (doCheckBox(g_pi.rotationBySpeed, "Rotation By Speed", true, rotationBySpeedHasFocus))
+	static UiElem rotationBySpeedElem;
+	if (doCheckBox(g_pi.rotationBySpeed, "Rotation By Speed", true, rotationBySpeedElem))
 	{
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
 		DO_PARTICLECURVE(rotationBySpeedCurve, g_pi.rotationBySpeedCurve, "Curve");
@@ -1352,8 +1321,8 @@ static void doMenu(bool doActions, bool doDraw)
 		DO_TEXTBOX2(rotationBySpeedRangeMax, g_pi.rotationBySpeedRangeMax, .5f, .5f, true, "");
 	}
 
-	static bool collisionHasFocus = false;
-	if (doCheckBox(g_pi.collision, "Collision", true, collisionHasFocus))
+	static UiElem collisionElem;
+	if (doCheckBox(g_pi.collision, "Collision", true, collisionElem))
 	{
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
 		DO_TEXTBOX(bounciness, g_pi.bounciness, "Bounciness");
@@ -1362,8 +1331,8 @@ static void doMenu(bool doActions, bool doDraw)
 		DO_TEXTBOX(collisionRadius, g_pi.collisionRadius, "Collision Radius");
 	}
 
-	static bool subEmittersHasFocus = false;
-	if (doCheckBox(g_pi.subEmitters, "Sub Emitters", true, subEmittersHasFocus))
+	static UiElem subEmittersElem;
+	if (doCheckBox(g_pi.subEmitters, "Sub Emitters", true, subEmittersElem))
 	{
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
 		//SubEmitter onBirth;
@@ -1391,8 +1360,8 @@ static void doMenu(bool doActions, bool doDraw)
 	DO_TEXTBOX(startSpeed, g_pei.startSpeed, "Start Speed");
 	DO_TEXTBOX(startSize, g_pei.startSize, "Start Size");
 	DO_TEXTBOX(startRotation, g_pei.startRotation, "Start Rotation"); // todo : min and max values for random start rotation?
-	static bool startColorHasFocus = false;
-	doParticleColor(g_pei.startColor, "Start Color", startColorHasFocus);
+	static UiElem startColorElem;
+	doParticleColor(g_pei.startColor, "Start Color", startColorElem);
 	DO_TEXTBOX(gravityMultiplier, g_pei.gravityMultiplier, "Gravity Multiplier");
 	DO_CHECKBOX(inheritVelocity, g_pei.inheritVelocity, "Inherit Velocity", false);
 	DO_CHECKBOX(worldSpace, g_pei.worldSpace, "World Space", false);
@@ -1406,18 +1375,63 @@ static void doMenu(bool doActions, bool doDraw)
 	g_drawX = 10 + kMenuWidth + 10;
 	g_drawY = 0;
 
-	static bool loadHasFocus = false;
-	if (doButton("Load", loadHasFocus))
+	static UiElem loadElem;
+	if (doButton("Load", loadElem))
 	{
+		nfdchar_t * path = 0;
+		nfdresult_t result = NFD_OpenDialog("pfx", "", &path);
+
+		if (result == NFD_OKAY)
+		{
+			XMLDocument d;
+
+			if (d.LoadFile(path) == XML_NO_ERROR)
+			{
+				for (XMLElement * emitterElem = d.FirstChildElement("emitter"); emitterElem; emitterElem = emitterElem->NextSiblingElement())
+				{
+					//ParticleEmitterInfo pei;
+					g_pei.load(emitterElem);
+				}
+
+				for (XMLElement * particleElem = d.FirstChildElement("particle"); particleElem; particleElem = particleElem->NextSiblingElement())
+				{
+					//ParticleInfo pi;
+					g_pi.load(particleElem);
+				}
+			}
+		}
 	}
 
-	static bool saveHasFocus = false;
-	if (doButton("Save", saveHasFocus))
+	static UiElem saveElem;
+	if (doButton("Save", saveElem))
 	{
+		nfdchar_t * path = 0;
+		nfdresult_t result = NFD_SaveDialog("pfx", "", &path);
+
+		if (result == NFD_OKAY)
+		{
+			XMLPrinter p;
+
+			p.OpenElement("emitter");
+			{
+				g_pei.save(&p);
+			}
+			p.CloseElement();
+
+			p.OpenElement("particle");
+			{
+				g_pi.save(&p);
+			}
+			p.CloseElement();
+
+			XMLDocument d;
+			d.Parse(p.CStr());
+			d.SaveFile(path);
+		}
 	}
 
-	static bool saveAsHasFocus = false;
-	if (doButton("Save as..", saveAsHasFocus))
+	static UiElem saveAsElem;
+	if (doButton("Save as..", saveAsElem))
 	{
 	}
 }

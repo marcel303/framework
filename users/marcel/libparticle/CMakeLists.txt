@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
 
 set(HAS_LIBGG 0)
+set(HAS_LIBNFD 0)
 set(HAS_FRAMEWORK 0)
 
 # --- dependencies ---
@@ -9,6 +10,10 @@ if (NOT HAS_LIBGG)
 	message("including libgg")
 	add_subdirectory(../../../libgg libgg)
 endif (NOT HAS_LIBGG)
+if (NOT HAS_LIBNFD)
+	message("including libnfd")
+	add_subdirectory(../../../libnfd libnfd)
+endif (NOT HAS_LIBNFD)
 if (NOT HAS_FRAMEWORK)
 	message("including framework")
 	add_subdirectory(../framework framework)
@@ -29,6 +34,7 @@ target_compile_definitions(libparticle PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_
 target_include_directories(libparticle PRIVATE "${PROJECT_SOURCE_DIR}")
 
 target_link_libraries(libparticle PRIVATE framework)
+target_link_libraries(libparticle PRIVATE libnfd)
 target_link_libraries(libparticle PRIVATE libgg)
 
 target_link_libraries(libparticle PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/FreeImage.lib)
