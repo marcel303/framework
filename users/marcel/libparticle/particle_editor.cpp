@@ -5,6 +5,15 @@
 #include "particle_framework.h"
 #include "tinyxml2.h"
 
+/*
+
++ color curve key highlight on hover
++ color curve key color on inactive
+- make UiElem from color picker
++ implement color picker fromColor
+
+*/
+
 using namespace tinyxml2;
 
 #define UI_TEXTCHAT_CARET_PADDING_X 0
@@ -46,6 +55,100 @@ static float lerp(const float v1, const float v2, const float t)
 static float saturate(const float v)
 {
 	return v < 0.f ? 0.f : v > 1.f ? 1.f : v;
+}
+
+void hlsToRGB(float hue, float lum, float sat, float & r, float & g, float & b)
+{
+	float m2 = (lum <= .5f) ? (lum + (lum * sat)) : (lum + sat - lum * sat);
+	float m1 = lum + lum - m2;
+
+	hue = fmod(hue, 1.f) * 6.f;
+
+	if (hue < 0.f)
+	{
+		hue += 6.f;
+	}
+
+	if (hue < 3.0f)
+	{
+		if (hue < 2.0f)
+		{
+			if(hue < 1.0f)
+			{
+				r = m2;
+				g = m1 + (m2 - m1) * hue;
+				b = m1;
+			}
+			else
+			{
+				r = (m1 + (m2 - m1) * (2.f - hue));
+				g = m2;
+				b = m1;
+			}
+		}
+		else
+		{
+			r = m1;
+			g = m2;
+			b = (m1 + (m2 - m1) * (hue - 2.f));
+		}
+	}
+	else
+	{
+		if (hue < 5.0f)
+		{
+			if (hue < 4.0f)
+			{
+				r = m1;
+				g = (m1 + (m2 - m1) * (4.f - hue));
+				b = m2;
+			}
+			else
+			{
+				r = (m1 + (m2 - m1) * (hue - 4.f));
+				g = m1;
+				b = m2;
+			}
+		}
+		else
+		{
+			r = m2;
+			g = m1;
+			b = (m1 + (m2 - m1) * (6.f - hue));
+		}
+	}
+}
+
+void rgbToHSL(float r, float g, float b, float & hue, float & lum, float & sat)
+{
+	float max = std::max(r, std::max(g, b));
+	float min = std::min(r, std::min(g, b));
+
+	lum = (max + min) / 2.0f;
+
+	float delta = max - min;
+
+	if (delta < FLT_EPSILON)
+	{
+		sat = 0.f;
+		hue = 0.f;
+	}
+	else
+	{
+		sat = (lum <= .5f) ? (delta / (max + min)) : (delta / (2.f - (max + min)));
+
+		if (r == max)
+			hue = (g - b) / delta;
+		else if (g == max)
+			hue = 2.f + (b - r) / delta;
+		else
+			hue = 4.f + (r - g) / delta;
+
+		if (hue < 0.f)
+			hue += 6.0f;
+
+		hue /= 6.f;
+	}
 }
 
 template<typename T>
@@ -472,10 +575,14 @@ void ColorWheel::draw()
 	// selection circle on the color wheel
 
 	{
-		setColor(colorWhite);
-		const float x = cosf(hue) * (size - wheelThickness / 2.f);
-		const float y = sinf(hue) * (size - wheelThickness / 2.f);
-		Sprite("circle.png", 7.5f, 7.5f).drawEx(x, y);
+		for (int i = 0; i < 3; ++i)
+		{
+			setColor(i == 0 ? colorWhite : colorBlack);
+			const float a = hue + i / 3.f * 2.f * float(M_PI);
+			const float x = cosf(a) * (size - wheelThickness / 2.f);
+			const float y = sinf(a) * (size - wheelThickness / 2.f);
+			Sprite("circle.png", 7.5f, 7.5f).drawEx(x, y);
+		}
 	}
 
 	// lightness triangle
@@ -603,16 +710,27 @@ bool ColorWheel::intersectTriangle(const float x, const float y, float & baryWhi
 
 void ColorWheel::fromColor(ParticleColor & color)
 {
-	// todo
+	float lum, sat;
+	rgbToHSL(color.rgba[0], color.rgba[1], color.rgba[2], hue, lum, sat);
+
+	hue = hue * 2.f * float(M_PI);
+	baryWhite = lum > .5f ? (lum - .5f) * 2.f : 0.f;
+	baryBlack = lum < .5f ? (.5f - lum) * 2.f : 0.f;
+
+	// bw + bb + t * 2 = 1
+	// t = (1 - bw - bb) / 2
+	const float t = (1.f - baryWhite - baryBlack) / 2.f;
+	const float s = 1.f - sat;
+	baryWhite += t * s;
+	baryBlack += t * s;
 }
 
 void ColorWheel::toColor(const float hue, const float baryWhite, const float baryBlack, ParticleColor & color) const
 {
 	const float baryColor = 1.f - baryWhite - baryBlack;
 
-	float r = (cosf(hue + 2.f * M_PI / 3.f * 0.f) + 1.f) / 2.f;
-	float g = (cosf(hue + 2.f * M_PI / 3.f * 1.f) + 1.f) / 2.f;
-	float b = (cosf(hue + 2.f * M_PI / 3.f * 2.f) + 1.f) / 2.f;
+	float r, g, b;
+	hlsToRGB(hue / (2.f * float(M_PI)), .5f, 1.f, r, g, b);
 
 	r = r * baryColor + 1.f * baryWhite + 0.f * baryBlack;
 	g = g * baryColor + 1.f * baryWhite + 0.f * baryBlack;
@@ -1068,7 +1186,9 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, UiElem 
 	{
 		elem.tick(x1, y1, x2, y2);
 
-		if (elem.isActive && elem.hasFocus)
+		if (!elem.isActive)
+			selectedKey = 0;
+		else if (elem.hasFocus)
 		{
 			if (mouse.wentDown(BUTTON_LEFT))
 			{
@@ -1162,14 +1282,16 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, UiElem 
 			drawRect(x, cy1, x + 1.f, cy2);
 		}
 
+		const float t = screenToCurve(x1, x2, mouse.x);
+		auto key = findNearestKey(curve, t, kMaxSelectionDeviation);
 		for (int i = 0; i < curve.numKeys; ++i)
 		{
-			if (!elem.isActive)
-				setColor(63, 63, 63);
-			else if (selectedKey == &curve.keys[i])
-				setColor(colorYellow);
-			else
-				setColor(colorWhite);
+			int c =
+				  !elem.hasFocus ? 127
+				: (key == &curve.keys[i]) ? 255
+				: (selectedKey == &curve.keys[i]) ? 227
+				: 127;
+			setColor(c, c, c);
 			const float x = curveToScreen(x1, x2, curve.keys[i].t);
 			const float y = (y1 + y2) / 2.f;
 			Sprite("circle.png", 7.5f, 7.5f).drawEx(x, y);
@@ -1387,13 +1509,13 @@ static void doMenu(bool doActions, bool doDraw)
 
 			if (d.LoadFile(path) == XML_NO_ERROR)
 			{
-				for (XMLElement * emitterElem = d.FirstChildElement("emitter"); emitterElem; emitterElem = emitterElem->NextSiblingElement())
+				for (XMLElement * emitterElem = d.FirstChildElement("emitter"); emitterElem; emitterElem = emitterElem->NextSiblingElement("emitter"))
 				{
 					//ParticleEmitterInfo pei;
 					g_pei.load(emitterElem);
 				}
 
-				for (XMLElement * particleElem = d.FirstChildElement("particle"); particleElem; particleElem = particleElem->NextSiblingElement())
+				for (XMLElement * particleElem = d.FirstChildElement("particle"); particleElem; particleElem = particleElem->NextSiblingElement("particle"))
 				{
 					//ParticleInfo pi;
 					g_pi.load(particleElem);
