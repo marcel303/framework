@@ -753,11 +753,13 @@ void ParticleEmitter::emitParticle(const ParticleEmitterInfo & pei, const Partic
 		p->lifeRcp = 1.f / pei.startLifetime;
 
 		getParticleSpawnLocation(pi, p->position[0], p->position[1]);
-		float speedAngle = 0.f;
+		float speedAngle;
 		if (pi.randomDirection)
 			speedAngle = (rand() % 256) / 255.f * 2.f * M_PI; // fixme : remove all libc random calls
-		p->speed[0] = sinf(speedAngle) * pei.startSpeed;
-		p->speed[1] = cosf(speedAngle) * pei.startSpeed;
+		else
+			speedAngle = M_PI / 2.f; // todo : add pei.startAngle;
+		p->speed[0] = cosf(speedAngle) * pei.startSpeed;
+		p->speed[1] = sinf(speedAngle) * pei.startSpeed;
 		p->rotation = pei.startRotation;
 
 		/*
@@ -881,23 +883,68 @@ void getParticleSpawnLocation(const ParticleInfo & pi, float & x, float & y)
 		break;
 	case ParticleInfo::kShapeBox:
 		{
-			const float tx = (rand() % 256) / 255.f; // fixme : random
-			const float ty = (rand() % 256) / 255.f; // fixme : random
-			x = (tx - .5f) * 2.f * pi.boxSizeX;
-			y = (ty - .5f) * 2.f * pi.boxSizeY;
+			if (pi.emitFromShell)
+			{
+				const float s = pi.boxSizeX * 2.f + pi.boxSizeY * 2.f;
+				const float t = (rand() % 1024) / 1023.f * s; // fixme : random
+
+				const float s1 = pi.boxSizeX;
+				const float s2 = s1 + pi.boxSizeX;
+				const float s3 = s2 + pi.boxSizeY;
+
+				if (t < s1)
+				{
+					x = t;
+					y = 0.f;
+				}
+				else if (t < s2)
+				{
+					x = t - s1;
+					y = pi.boxSizeY;
+				}
+				else if (t < s3)
+				{
+					x = 0.f;
+					y = t - s2;
+				}
+				else
+				{
+					x = pi.boxSizeX;
+					y = t - s3;
+				}
+
+				x = x * 2.f - pi.boxSizeX;
+				y = y * 2.f - pi.boxSizeY;
+			}
+			else
+			{
+				const float tx = (rand() % 256) / 255.f; // fixme : random
+				const float ty = (rand() % 256) / 255.f; // fixme : random
+				x = (tx - .5f) * 2.f * pi.boxSizeX;
+				y = (ty - .5f) * 2.f * pi.boxSizeY;
+			}
 		}
 		break;
 	case ParticleInfo::kShapeCircle:
 		{
-			for (;;)
+			if (pi.emitFromShell)
 			{
-				const float tx = (rand() % 256) / 255.f; // fixme : random
-				const float ty = (rand() % 256) / 255.f; // fixme : random
-				x = (tx - .5f) * 2.f * pi.circleRadius;
-				y = (ty - .5f) * 2.f * pi.circleRadius;
-				const float dSquared = x * x + y * y;
-				if (dSquared <= pi.circleRadius * pi.circleRadius)
-					break;
+				const float a = (rand() % 1024) / 1023.f * 2.f * float(M_PI); // fixme : random
+				x = std::cosf(a) * pi.circleRadius;
+				y = std::sinf(a) * pi.circleRadius;
+			}
+			else
+			{
+				for (;;)
+				{
+					const float tx = (rand() % 256) / 255.f; // fixme : random
+					const float ty = (rand() % 256) / 255.f; // fixme : random
+					x = (tx - .5f) * 2.f * pi.circleRadius;
+					y = (ty - .5f) * 2.f * pi.circleRadius;
+					const float dSquared = x * x + y * y;
+					if (dSquared <= pi.circleRadius * pi.circleRadius)
+						break;
+				}
 			}
 		}
 		break;

@@ -47,8 +47,8 @@ static bool g_doDraw = false;
 static int g_drawX = 0;
 static int g_drawY = 0;
 
-#define COLORWHEEL_X(sx) (kMenuWidth + kMenuSpacing + ColorWheel::size)
-#define COLORWHEEL_Y(sy) (kMenuSpacing + ColorWheel::size)
+#define COLORWHEEL_X(sx) (kMenuWidth + kMenuSpacing)
+#define COLORWHEEL_Y(sy) (kMenuSpacing)
 
 static ParticleEmitterInfo g_pei;
 static ParticleInfo g_pi;
@@ -473,6 +473,9 @@ public:
 	void tick(const float mouseX, const float mouseY, const bool mouseDown, const float dt);
 	void draw();
 
+	int getSx() const { return size * 2; }
+	int getSy() const { return size * 2 + 16; }
+
 	bool intersectWheel(const float x, const float y, float & hue) const;
 	bool intersectTriangle(const float x, const float y, float & saturation, float & value) const;
 	bool intersectBar(const float x, const float y, float & t) const;
@@ -512,8 +515,11 @@ ColorWheel::ColorWheel()
 {
 }
 
-void ColorWheel::tick(const float mouseX, const float mouseY, const bool mouseDown, const float dt)
+void ColorWheel::tick(const float _mouseX, const float _mouseY, const bool mouseDown, const float dt)
 {
+	const float mouseX = _mouseX - size;
+	const float mouseY = _mouseY - size;
+
 	switch (state)
 	{
 	case kState_Idle:
@@ -563,6 +569,9 @@ void ColorWheel::tick(const float mouseX, const float mouseY, const bool mouseDo
 
 void ColorWheel::draw()
 {
+	gxPushMatrix();
+	gxTranslatef(size, size, 0.f);
+
 	const int numSteps = 100;
 	const float r1 = size;
 	const float r2 = size - wheelThickness;
@@ -643,18 +652,14 @@ void ColorWheel::draw()
 	gxEnd();
 #endif
 
-	gxBegin(GL_QUADS);
 	{
 		ParticleColor c;
 		toColor(c);
-		gxColor4f(c.rgba[0], c.rgba[1], c.rgba[2], c.rgba[3]);
-		gxVertex2f(barX1, barY1);
-		gxVertex2f(barX2, barY1);
-		gxVertex2f(barX2, barY2);
-		gxVertex2f(barX1, barY2);
+		setColorf(c.rgba[0], c.rgba[1], c.rgba[2], c.rgba[3]);
+		drawRect(barX1, barY1, barX2, barY2);
+		setColor(colorBlue);
+		drawRectLine(barX1, barY1, barX2, barY2);
 	}
-	gxEnd();
-	gxPopMatrix();
 
 #if 1 // fixme : work around for weird (driver?) issue where next draw call retains the color of the previous one
 	gxBegin(GL_TRIANGLES);
@@ -672,6 +677,8 @@ void ColorWheel::draw()
 		drawText(0.f, 0.f, 18, +1.f, +1.f, "%f, %f, %f", c.rgba[0], c.rgba[1], c.rgba[2]);
 	}
 #endif
+
+	gxPopMatrix();
 }
 
 bool ColorWheel::intersectWheel(const float x, const float y, float & hue) const
@@ -1644,6 +1651,32 @@ static void doMenu(bool doActions, bool doDraw)
 	{
 		g_pe.restart(g_pool);
 	}
+
+	static UiElem colorPickerElem;
+	if (g_activeColor)
+	{
+		const float wheelX = g_drawX;
+		const float wheelY = g_drawY;
+
+		if (g_doActions)
+		{
+			colorPickerElem.tick(g_drawX, g_drawY, g_drawX + g_colorWheel.getSx(), g_drawY + g_colorWheel.getSy());
+			g_colorWheel.tick(mouse.x - wheelX, mouse.y - wheelY, mouse.isDown(BUTTON_LEFT), 1.f / 60.f); // fixme : mouseDown and dt
+			g_colorWheel.toColor(*g_activeColor);
+		}
+
+		if (g_doDraw)
+		{
+			gxPushMatrix();
+			{
+				gxTranslatef(wheelX, wheelY, 0.f);
+				g_colorWheel.draw();
+			}
+			gxPopMatrix();
+		}
+
+		g_drawY += g_colorWheel.getSy();
+	}
 }
 
 void particleEditorTick(bool menuActive, float dt)
@@ -1738,19 +1771,4 @@ void particleEditorDraw(bool menuActive, float sx, float sy)
 #endif
 
 	gxPopMatrix();
-
-	if (menuActive && g_activeColor)
-	{
-	#if 1
-		gxPushMatrix();
-		const float wheelX = COLORWHEEL_X(sx);
-		const float wheelY = COLORWHEEL_Y(sy);
-		gxTranslatef(wheelX, wheelY, 0.f);
-
-		g_colorWheel.tick(mouse.x - wheelX, mouse.y - wheelY, mouse.isDown(BUTTON_LEFT), 1.f / 60.f); // fixme : mouseDown and dt
-		g_colorWheel.toColor(*g_activeColor);
-
-		g_colorWheel.draw();
-	#endif
-	}
 }
