@@ -275,9 +275,10 @@ struct ParticleEmitter
 	ParticleEmitter();
 
 	bool allocParticle(ParticlePool & pool, Particle *& p);
-	void clearParticles();
+	void clearParticles(ParticlePool & pool);
 
 	void emitParticle(const ParticleEmitterInfo & pei, const ParticleInfo & pi, ParticlePool & pool, const float timeOffsetconst, const float gravityX, const float gravityY);
+	void restart(ParticlePool & pool);
 };
 
 struct Particle

@@ -736,8 +736,12 @@ bool ParticleEmitter::allocParticle(ParticlePool & pool, Particle *& p)
 	return p != 0;
 }
 
-void ParticleEmitter::clearParticles()
+void ParticleEmitter::clearParticles(ParticlePool & pool)
 {
+	while (pool.head)
+	{
+		pool.freeParticle(pool.head);
+	}
 }
 
 void ParticleEmitter::emitParticle(const ParticleEmitterInfo & pei, const ParticleInfo & pi, ParticlePool & pool, const float timeOffset, const float gravityX, const float gravityY)
@@ -764,6 +768,15 @@ void ParticleEmitter::emitParticle(const ParticleEmitterInfo & pei, const Partic
 
 		tickParticle(pei, pi, timeOffset, gravityX, gravityY, *p);
 	}
+}
+
+void ParticleEmitter::restart(ParticlePool & pool)
+{
+	clearParticles(pool);
+
+	delaying = true;
+	time = 0.f;
+	totalTime = 0.f;
 }
 
 //

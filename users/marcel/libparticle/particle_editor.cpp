@@ -11,6 +11,14 @@
 + color curve key color on inactive
 - make UiElem from color picker
 + implement color picker fromColor
+- add alpha selection color picker
+
+- fix color curve key select = move
+- move color picker and emitter info to the right side of the screen
+- fix 'loop' toggle behavior
+- add 'restart simulation' button
+- add support for multiple particle emitters
+- add support for subemitters
 
 */
 
@@ -441,10 +449,15 @@ class ColorWheel
 public:
 	static const int size = 100;
 	static const int wheelThickness = 20;
+	static const int barX1 = -size;
+	static const int barY1 = +size + 4;
+	static const int barX2 = +size;
+	static const int barY2 = +size + 16;
 
 	float hue;
 	float baryWhite;
 	float baryBlack;
+	float opacity;
 
 	enum State
 	{
@@ -462,6 +475,7 @@ public:
 
 	bool intersectWheel(const float x, const float y, float & hue) const;
 	bool intersectTriangle(const float x, const float y, float & saturation, float & value) const;
+	bool intersectBar(const float x, const float y, float & t) const;
 
 	void fromColor(ParticleColor & color);
 	void toColor(const float hue, const float saturation, const float value, ParticleColor & color) const;
@@ -493,6 +507,7 @@ ColorWheel::ColorWheel()
 	: hue(0.f)
 	, baryWhite(0.f)
 	, baryBlack(0.f)
+	, opacity(1.f)
 	, state(kState_Idle)
 {
 }
@@ -504,6 +519,7 @@ void ColorWheel::tick(const float mouseX, const float mouseY, const bool mouseDo
 	case kState_Idle:
 		{
 			float h, bw, bb;
+			float t;
 
 			if (mouseDown && intersectWheel(mouseX, mouseY, h))
 			{
@@ -517,6 +533,10 @@ void ColorWheel::tick(const float mouseX, const float mouseY, const bool mouseDo
 
 				baryWhite = bw;
 				baryBlack = bb;
+			}
+			else if (mouseDown && intersectBar(mouseX, mouseY, t))
+			{
+				opacity = t;
 			}
 		}
 		break;
@@ -555,7 +575,7 @@ void ColorWheel::draw()
 		{
 			ParticleColor c;
 			toColor(i / float(numSteps) * 2.f * M_PI, 0.f, 0.f, c);
-			gxColor4f(c.rgba[0], c.rgba[1], c.rgba[2], c.rgba[3]);
+			gxColor4f(c.rgba[0], c.rgba[1], c.rgba[2], 1.f);
 
 			const float a1 = (i + 0) / float(numSteps) * 2.f * M_PI;
 			const float a2 = (i + 1) / float(numSteps) * 2.f * M_PI;
@@ -595,7 +615,7 @@ void ColorWheel::draw()
 
 			ParticleColor c;
 			toColor(hue, 0.f, 0.f, c);
-			gxColor4f(c.rgba[0], c.rgba[1], c.rgba[2], c.rgba[3]);
+			gxColor4f(c.rgba[0], c.rgba[1], c.rgba[2], 1.f);
 			gxVertex2f(xy[0], xy[1]);
 
 			gxColor4f(0.f, 0.f, 0.f, 1.f);
@@ -616,6 +636,25 @@ void ColorWheel::draw()
 		const float y = xy[1] + (xy[3] - xy[1]) * baryBlack + (xy[5] - xy[1]) * baryWhite;
 		Sprite("circle.png", 7.5f, 7.5f).drawEx(x, y);
 	}
+
+#if 1 // fixme : work around for weird (driver?) issue where next draw call retains the color of the previous one
+	gxBegin(GL_TRIANGLES);
+	gxColor4f(0.f, 0.f, 0.f, 0.f);
+	gxEnd();
+#endif
+
+	gxBegin(GL_QUADS);
+	{
+		ParticleColor c;
+		toColor(c);
+		gxColor4f(c.rgba[0], c.rgba[1], c.rgba[2], c.rgba[3]);
+		gxVertex2f(barX1, barY1);
+		gxVertex2f(barX2, barY1);
+		gxVertex2f(barX2, barY2);
+		gxVertex2f(barX1, barY2);
+	}
+	gxEnd();
+	gxPopMatrix();
 
 #if 1 // fixme : work around for weird (driver?) issue where next draw call retains the color of the previous one
 	gxBegin(GL_TRIANGLES);
@@ -708,6 +747,19 @@ bool ColorWheel::intersectTriangle(const float x, const float y, float & baryWhi
 	return inside;
 }
 
+bool ColorWheel::intersectBar(const float x, const float y, float & t) const
+{
+	if (x >= barX1 && x <= barX2 && y >= barY1 && y <= barY2)
+	{
+		t = (x - barX1) / (barX2 - barX1);
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
 void ColorWheel::fromColor(ParticleColor & color)
 {
 	float lum, sat;
@@ -723,6 +775,8 @@ void ColorWheel::fromColor(ParticleColor & color)
 	const float s = 1.f - sat;
 	baryWhite += t * s;
 	baryBlack += t * s;
+
+	opacity = color.rgba[3];
 }
 
 void ColorWheel::toColor(const float hue, const float baryWhite, const float baryBlack, ParticleColor & color) const
@@ -736,7 +790,7 @@ void ColorWheel::toColor(const float hue, const float baryWhite, const float bar
 	g = g * baryColor + 1.f * baryWhite + 0.f * baryBlack;
 	b = b * baryColor + 1.f * baryWhite + 0.f * baryBlack;
 
-	color.set(r, g, b, 1.f);
+	color.set(r, g, b, opacity);
 }
 
 void ColorWheel::toColor(ParticleColor & color) const
@@ -1102,11 +1156,16 @@ void doParticleColor(ParticleColor & color, const char * name, UiElem & elem)
 
 	if (g_doActions)
 	{
+		const bool wasActive = elem.isActive;
+
 		elem.tick(x1, y1, x2, y2);
 
 		if (elem.isActive && elem.hasFocus && mouse.wentDown(BUTTON_LEFT))
 		{
 			g_activeColor = &color;
+
+			if (!wasActive)
+				g_colorWheel.fromColor(*g_activeColor);
 		}
 	}
 
@@ -1555,6 +1614,35 @@ static void doMenu(bool doActions, bool doDraw)
 	static UiElem saveAsElem;
 	if (doButton("Save as..", saveAsElem))
 	{
+		nfdchar_t * path = 0;
+		nfdresult_t result = NFD_SaveDialog("pfx", "", &path);
+
+		if (result == NFD_OKAY)
+		{
+			XMLPrinter p;
+
+			p.OpenElement("emitter");
+			{
+				g_pei.save(&p);
+			}
+			p.CloseElement();
+
+			p.OpenElement("particle");
+			{
+				g_pi.save(&p);
+			}
+			p.CloseElement();
+
+			XMLDocument d;
+			d.Parse(p.CStr());
+			d.SaveFile(path);
+		}
+	}
+
+	static UiElem restartSimulationElem;
+	if (doButton("Restart simulation", restartSimulationElem))
+	{
+		g_pe.restart(g_pool);
 	}
 }
 
@@ -1663,25 +1751,6 @@ void particleEditorDraw(bool menuActive, float sx, float sy)
 		g_colorWheel.toColor(*g_activeColor);
 
 		g_colorWheel.draw();
-
-	#if 1 // fixme : work around for weird (driver?) issue where next draw call retains the color of the previous one
-		gxBegin(GL_TRIANGLES);
-		gxColor4f(0.f, 0.f, 0.f, 0.f);
-		gxEnd();
-	#endif
-
-		gxBegin(GL_QUADS);
-		{
-			ParticleColor c;
-			g_colorWheel.toColor(c);
-			gxColor4f(c.rgba[0], c.rgba[1], c.rgba[2], c.rgba[3]);
-			gxVertex2f(-g_colorWheel.size, g_colorWheel.size);
-			gxVertex2f(+g_colorWheel.size, g_colorWheel.size);
-			gxVertex2f(+g_colorWheel.size, g_colorWheel.size + 10.f);
-			gxVertex2f(-g_colorWheel.size, g_colorWheel.size + 10.f);
-		}
-		gxEnd();
-		gxPopMatrix();
 	#endif
 	}
 }
