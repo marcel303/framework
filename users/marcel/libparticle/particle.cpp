@@ -757,7 +757,7 @@ void ParticleEmitter::emitParticle(const ParticleEmitterInfo & pei, const Partic
 		if (pi.randomDirection)
 			speedAngle = (rand() % 256) / 255.f * 2.f * M_PI; // fixme : remove all libc random calls
 		else
-			speedAngle = M_PI / 2.f; // todo : add pei.startAngle;
+			speedAngle = float(M_PI) / 2.f; // todo : add pei.startAngle;
 		p->speed[0] = cosf(speedAngle) * pei.startSpeed;
 		p->speed[1] = sinf(speedAngle) * pei.startSpeed;
 		p->rotation = pei.startRotation;

@@ -9,16 +9,19 @@
 
 + color curve key highlight on hover
 + color curve key color on inactive
-- make UiElem from color picker
++ make UiElem from color picker
 + implement color picker fromColor
-- add alpha selection color picker
++ add alpha selection color picker
++ fix unable to select alpha when mouse is outside bar
 
-- fix color curve key select = move
++ fix color curve key select = move
 - move color picker and emitter info to the right side of the screen
 - fix 'loop' toggle behavior
-- add 'restart simulation' button
++ add 'restart simulation' button
 - add support for multiple particle emitters
 - add support for subemitters
+
++ add copy & paste buttons pi, pei
 
 */
 
@@ -50,10 +53,21 @@ static int g_drawY = 0;
 #define COLORWHEEL_X(sx) (kMenuWidth + kMenuSpacing)
 #define COLORWHEEL_Y(sy) (kMenuSpacing)
 
+// current editing
 static ParticleEmitterInfo g_pei;
 static ParticleInfo g_pi;
+
+// preview
 static ParticlePool g_pool;
 static ParticleEmitter g_pe;
+
+// copy & paste
+static ParticleEmitterInfo g_copyPei;
+static bool g_copyPeiIsValid = false;
+static ParticleInfo g_copyPi;
+static bool g_copyPiIsValid = false;
+
+//
 
 static float lerp(const float v1, const float v2, const float t)
 {
@@ -157,6 +171,24 @@ void rgbToHSL(float r, float g, float b, float & hue, float & lum, float & sat)
 
 		hue /= 6.f;
 	}
+}
+
+static void drawRectCheckered(float x1, float y1, float x2, float y2, float scale)
+{
+	gxSetTexture(Sprite("checkers.png").getTexture());
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	gxBegin(GL_QUADS);
+	{
+		gxTexCoord2f(0.f,               (y2 - y1) / scale); gxVertex2f(x1, y1);
+		gxTexCoord2f((x2 - x1) / scale, (y2 - y1) / scale); gxVertex2f(x2, y1);
+		gxTexCoord2f((x2 - x1) / scale, 0.f              ); gxVertex2f(x2, y2);
+		gxTexCoord2f(0.f,               0.f              ); gxVertex2f(x1, y2);
+	}
+	gxEnd();
+	gxSetTexture(0);
 }
 
 template<typename T>
@@ -449,10 +481,11 @@ class ColorWheel
 public:
 	static const int size = 100;
 	static const int wheelThickness = 20;
+	static const int barHeight = 16;
 	static const int barX1 = -size;
 	static const int barY1 = +size + 4;
 	static const int barX2 = +size;
-	static const int barY2 = +size + 16;
+	static const int barY2 = +size + 4 + barHeight;
 
 	float hue;
 	float baryWhite;
@@ -463,14 +496,15 @@ public:
 	{
 		kState_Idle,
 		kState_SelectHue,
-		kState_SelectSatValue
+		kState_SelectSatValue,
+		kState_SelectOpacity
 	};
 
 	State state;
 
 	ColorWheel();
 
-	void tick(const float mouseX, const float mouseY, const bool mouseDown, const float dt);
+	void tick(const float mouseX, const float mouseY, const bool mouseWentDown, const bool mouseIsDown, const float dt);
 	void draw();
 
 	int getSx() const { return size * 2; }
@@ -515,7 +549,7 @@ ColorWheel::ColorWheel()
 {
 }
 
-void ColorWheel::tick(const float _mouseX, const float _mouseY, const bool mouseDown, const float dt)
+void ColorWheel::tick(const float _mouseX, const float _mouseY, const bool mouseWentDown, const bool mouseIsDown, const float dt)
 {
 	const float mouseX = _mouseX - size;
 	const float mouseY = _mouseY - size;
@@ -527,29 +561,29 @@ void ColorWheel::tick(const float _mouseX, const float _mouseY, const bool mouse
 			float h, bw, bb;
 			float t;
 
-			if (mouseDown && intersectWheel(mouseX, mouseY, h))
+			if (mouseWentDown && intersectWheel(mouseX, mouseY, h))
 			{
 				state = kState_SelectHue;
 
 				hue = h;
 			}
-			else if (mouseDown && intersectTriangle(mouseX, mouseY, bw, bb))
+			else if (mouseWentDown && intersectTriangle(mouseX, mouseY, bw, bb))
 			{
 				state = kState_SelectSatValue;
 
 				baryWhite = bw;
 				baryBlack = bb;
 			}
-			else if (mouseDown && intersectBar(mouseX, mouseY, t))
+			else if (mouseWentDown && intersectBar(mouseX, mouseY, t))
 			{
-				opacity = t;
+				state = kState_SelectOpacity;
 			}
 		}
 		break;
 
 	case kState_SelectHue:
 		{
-			if (mouseDown)
+			if (mouseIsDown)
 				intersectWheel(mouseX, mouseY, hue);
 			else
 				state = kState_Idle;
@@ -558,12 +592,20 @@ void ColorWheel::tick(const float _mouseX, const float _mouseY, const bool mouse
 
 	case kState_SelectSatValue:
 		{
-			if (mouseDown)
+			if (mouseIsDown)
 				intersectTriangle(mouseX, mouseY, baryWhite, baryBlack);
 			else
 				state = kState_Idle;
 		}
 		break;
+
+	case kState_SelectOpacity:
+		{
+			if (mouseIsDown)
+				intersectBar(mouseX, mouseY, opacity);
+			else
+				state = kState_Idle;
+		}
 	}
 }
 
@@ -653,6 +695,8 @@ void ColorWheel::draw()
 #endif
 
 	{
+		setColor(colorWhite);
+		drawRectCheckered(barX1, barY1, barX2, barY2, barHeight / 2.f);
 		ParticleColor c;
 		toColor(c);
 		setColorf(c.rgba[0], c.rgba[1], c.rgba[2], c.rgba[3]);
@@ -756,15 +800,8 @@ bool ColorWheel::intersectTriangle(const float x, const float y, float & baryWhi
 
 bool ColorWheel::intersectBar(const float x, const float y, float & t) const
 {
-	if (x >= barX1 && x <= barX2 && y >= barY1 && y <= barY2)
-	{
-		t = (x - barX1) / (barX2 - barX1);
-		return true;
-	}
-	else
-	{
-		return false;
-	}
+	t = saturate((x - barX1) / (barX2 - barX1));
+	return x >= barX1 && x <= barX2 && y >= barY1 && y <= barY2;
 }
 
 void ColorWheel::fromColor(ParticleColor & color)
@@ -812,16 +849,17 @@ static ParticleColor * g_activeColor = 0;
 
 //
 
-static bool doButton(const char * name, UiElem & elem)
+static bool doButton(const char * name, float xOffset, float xScale, bool lineBreak, UiElem & elem)
 {
 	const int kPadding = 5;
 
-	const int x1 = g_drawX;
-	const int x2 = g_drawX + kMenuWidth;
+	const int x1 = g_drawX + kMenuWidth * xOffset;
+	const int x2 = g_drawX + kMenuWidth * xOffset + kMenuWidth * xScale;
 	const int y1 = g_drawY;
 	const int y2 = g_drawY + kCheckBoxHeight;
 
-	g_drawY += kCheckBoxHeight;
+	if (lineBreak)
+		g_drawY += kCheckBoxHeight;
 
 	bool result = false;
 
@@ -1186,8 +1224,8 @@ void doParticleColor(ParticleColor & color, const char * name, UiElem & elem)
 		setColor(colorBlue);
 		drawRectLine(x1, y1, x2, y2);
 
-		setColor(colorBlack); // todo : checkers pattern
-		drawRect(cx1, cy1, cx2, cy2);
+		setColor(colorWhite);
+		drawRectCheckered(cx1, cy1, cx2, cy2, 4.f);
 		for (int x = cx1; x < cx2; ++x)
 		{
 			const float t = (x - cx1 + .5f) / float(cx2 - cx1 - .5f);
@@ -1230,7 +1268,7 @@ static ParticleColorCurve::Key * findNearestKey(ParticleColorCurve & curve, floa
 	return nearestKey;
 }
 
-void doParticleColorCurve(ParticleColorCurve & curve, const char * name, UiElem & elem, ParticleColorCurve::Key *& selectedKey, bool & isDragging)
+void doParticleColorCurve(ParticleColorCurve & curve, const char * name, UiElem & elem, ParticleColorCurve::Key *& selectedKey, bool & isDragging, float & dragOffset)
 {
 	const int kPadding = 5;
 	const int kCheckButtonSize = kCheckBoxHeight - kPadding * 2;
@@ -1271,10 +1309,15 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, UiElem 
 				{
 					// insert a new key
 
+					ParticleColor color;
+					curve.sample(t, color);
+
 					if (curve.allocKey(key))
 					{
-						g_colorWheel.toColor(key->color);
+						key->color = color;
 						key->t = t;
+
+						g_colorWheel.fromColor(key->color);
 
 						key = curve.sortKeys(key);
 					}
@@ -1283,7 +1326,10 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, UiElem 
 				selectedKey = key;
 
 				if (selectedKey)
+				{
 					isDragging = true;
+					dragOffset = key->t - t;
+				}
 			}
 
 			if (mouse.wentDown(BUTTON_RIGHT) && !mouse.isDown(BUTTON_LEFT))
@@ -1308,7 +1354,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, UiElem 
 			{
 				// move selected key around
 
-				const float t = screenToCurve(x1, x2, mouse.x);
+				const float t = screenToCurve(x1, x2, mouse.x) + dragOffset;
 
 				selectedKey->t = t;
 				selectedKey = curve.sortKeys(selectedKey);
@@ -1337,8 +1383,8 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, UiElem 
 		setColor(colorBlue);
 		drawRectLine(x1, y1, x2, y2);
 
-		setColor(colorBlack); // todo : checkers pattern
-		drawRect(cx1, cy1, cx2, cy2);
+		setColor(colorWhite);
+		drawRectCheckered(cx1, cy1, cx2, cy2, 4.f);
 		for (int x = cx1; x < cx2; ++x)
 		{
 			const float t = (x - cx1 + .5f) / float(cx2 - cx1 - .5f);
@@ -1396,7 +1442,8 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, UiElem 
 	static UiElem sym ## elem; \
 	static ParticleColorCurve::Key * sym ## selectedKey = 0; \
 	static bool sym ## isDragging = false; \
-	doParticleColorCurve(value, name, sym ## elem, sym ## selectedKey, sym ## isDragging);
+	static float sym ## dragOffset = 0.f; \
+	doParticleColorCurve(value, name, sym ## elem, sym ## selectedKey, sym ## isDragging, sym ## dragOffset);
 
 static void doMenu(bool doActions, bool doDraw)
 {
@@ -1407,6 +1454,21 @@ static void doMenu(bool doActions, bool doDraw)
 
 	g_drawX = 10;
 	g_drawY = 0;
+
+	static UiElem copyPiElem;
+	if (doButton("Copy", 0.f, .5f, !g_copyPiIsValid, copyPiElem))
+	{
+		g_copyPi = g_pi;
+		g_copyPiIsValid = true;
+	}
+
+	static UiElem pastePiElem;
+	if (g_copyPiIsValid && doButton("Paste", .5f, .5f, true, pastePiElem))
+	{
+		g_pi = g_copyPi;
+		if (g_activeColor)
+			g_colorWheel.fromColor(*g_activeColor);
+	}
 
 	DO_TEXTBOX(rate, g_pi.rate, "Rate (Particles/Sec)");
 
@@ -1538,7 +1600,27 @@ static void doMenu(bool doActions, bool doDraw)
 	blendModeValues.push_back(EnumValue(ParticleInfo::kBlendMode_Additive, "Additive"));
 	DO_ENUM(blendMode, g_pi.blendMode, blendModeValues, "Blend Mode");
 
-	g_drawY += kMenuSpacing;
+	// right side menu
+
+	setFont("calibri.ttf");
+
+	g_drawX = 1400 - kMenuWidth - 10; // fixme : window size
+	g_drawY = 0;
+
+	static UiElem copyPeiElem;
+	if (doButton("Copy", 0.f, .5f, !g_copyPeiIsValid, copyPeiElem))
+	{
+		g_copyPei = g_pei;
+		g_copyPeiIsValid = true;
+	}
+
+	static UiElem pastePeiElem;
+	if (g_copyPeiIsValid && doButton("Paste", .5f, .5f, true, pastePeiElem))
+	{
+		g_pei = g_copyPei;
+		if (g_activeColor)
+			g_colorWheel.fromColor(*g_activeColor);
+	}
 
 	DO_TEXTBOX(duration, g_pei.duration, "Duration");
 	DO_CHECKBOX(loop, g_pei.loop, "Loop", false);
@@ -1556,15 +1638,47 @@ static void doMenu(bool doActions, bool doDraw)
 	DO_TEXTBOX(maxParticles, g_pei.maxParticles, "Max Particles");
 	// todo : char materialName[32];
 
-	// right side menu
+	//
 
-	setFont("calibri.ttf");
+	g_drawY += kMenuSpacing;
 
-	g_drawX = 10 + kMenuWidth + 10;
-	g_drawY = 0;
+	//
+
+	static UiElem colorPickerElem;
+	if (g_activeColor)
+	{
+		const float wheelX = g_drawX;
+		const float wheelY = g_drawY;
+
+		if (g_doActions)
+		{
+			colorPickerElem.tick(g_drawX, g_drawY, g_drawX + g_colorWheel.getSx(), g_drawY + g_colorWheel.getSy());
+			if (colorPickerElem.isActive)
+				g_colorWheel.tick(mouse.x - wheelX, mouse.y - wheelY, mouse.wentDown(BUTTON_LEFT), mouse.isDown(BUTTON_LEFT), 1.f / 60.f); // fixme : mouseDown and dt
+			g_colorWheel.toColor(*g_activeColor);
+		}
+
+		if (g_doDraw)
+		{
+			gxPushMatrix();
+			{
+				gxTranslatef(wheelX, wheelY, 0.f);
+				g_colorWheel.draw();
+			}
+			gxPopMatrix();
+		}
+
+		g_drawY += g_colorWheel.getSy();
+	}
+
+	//
+
+	g_drawY += kMenuSpacing;
+
+	//
 
 	static UiElem loadElem;
-	if (doButton("Load", loadElem))
+	if (doButton("Load", 0.f, 1.f, true, loadElem))
 	{
 		nfdchar_t * path = 0;
 		nfdresult_t result = NFD_OpenDialog("pfx", "", &path);
@@ -1591,7 +1705,7 @@ static void doMenu(bool doActions, bool doDraw)
 	}
 
 	static UiElem saveElem;
-	if (doButton("Save", saveElem))
+	if (doButton("Save", 0.f, 1.f, true, saveElem))
 	{
 		nfdchar_t * path = 0;
 		nfdresult_t result = NFD_SaveDialog("pfx", "", &path);
@@ -1619,7 +1733,7 @@ static void doMenu(bool doActions, bool doDraw)
 	}
 
 	static UiElem saveAsElem;
-	if (doButton("Save as..", saveAsElem))
+	if (doButton("Save as..", 0.f, 1.f, true, saveAsElem))
 	{
 		nfdchar_t * path = 0;
 		nfdresult_t result = NFD_SaveDialog("pfx", "", &path);
@@ -1647,35 +1761,9 @@ static void doMenu(bool doActions, bool doDraw)
 	}
 
 	static UiElem restartSimulationElem;
-	if (doButton("Restart simulation", restartSimulationElem))
+	if (doButton("Restart simulation", 0.f, 1.f, true, restartSimulationElem))
 	{
 		g_pe.restart(g_pool);
-	}
-
-	static UiElem colorPickerElem;
-	if (g_activeColor)
-	{
-		const float wheelX = g_drawX;
-		const float wheelY = g_drawY;
-
-		if (g_doActions)
-		{
-			colorPickerElem.tick(g_drawX, g_drawY, g_drawX + g_colorWheel.getSx(), g_drawY + g_colorWheel.getSy());
-			g_colorWheel.tick(mouse.x - wheelX, mouse.y - wheelY, mouse.isDown(BUTTON_LEFT), 1.f / 60.f); // fixme : mouseDown and dt
-			g_colorWheel.toColor(*g_activeColor);
-		}
-
-		if (g_doDraw)
-		{
-			gxPushMatrix();
-			{
-				gxTranslatef(wheelX, wheelY, 0.f);
-				g_colorWheel.draw();
-			}
-			gxPopMatrix();
-		}
-
-		g_drawY += g_colorWheel.getSy();
 	}
 }
 
