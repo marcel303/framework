@@ -1964,7 +1964,7 @@ bool SpriterState::updateAnim(const Spriter & spriter, float dt)
 void SpriterState::setCharacterMap(const Spriter & spriter, int index)
 {
 	//fassert(index >= 0 && index < spriter.m_spriter->m_scene->m_fileCaches.size());
-	if (index >= 0 && index < spriter.m_spriter->m_scene->m_fileCaches.size())
+	if (index >= 0 && index < (int)spriter.m_spriter->m_scene->m_fileCaches.size())
 		characterMap = index;
 	else
 	{

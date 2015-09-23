@@ -1161,6 +1161,6 @@ namespace spriter
 
 	bool Scene::hasCharacterMap(int index) const
 	{
-		return index < m_fileCaches.size();
+		return index < (int)m_fileCaches.size();
 	}
 }
