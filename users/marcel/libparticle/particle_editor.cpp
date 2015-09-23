@@ -13,10 +13,10 @@
 + implement color picker fromColor
 + add alpha selection color picker
 + fix unable to select alpha when mouse is outside bar
-- fix save and 'save as' functionality
++ fix save and 'save as' functionality
 
 + fix color curve key select = move
-- move color picker and emitter info to the right side of the screen
++ move color picker and emitter info to the right side of the screen
 - fix 'loop' toggle behavior
 + add 'restart simulation' button
 - add support for multiple particle emitters
@@ -54,7 +54,7 @@ static int g_drawX = 0;
 static int g_drawY = 0;
 
 // library
-static const int kMaxParticleInfos = 1;
+static const int kMaxParticleInfos = 6;
 static ParticleEmitterInfo g_peiList[kMaxParticleInfos];
 static ParticleInfo g_piList[kMaxParticleInfos];
 
@@ -64,8 +64,8 @@ static ParticleEmitterInfo & g_pei() { return g_peiList[g_activeEditingIndex]; }
 static ParticleInfo & g_pi() { return g_piList[g_activeEditingIndex]; }
 
 // preview
-static ParticlePool g_pool;
-static ParticleEmitter g_pe;
+static ParticlePool g_pool[kMaxParticleInfos];
+static ParticleEmitter g_pe[kMaxParticleInfos];
 
 // copy & paste
 static ParticleEmitterInfo g_copyPei;
@@ -1545,7 +1545,8 @@ static void doMenu_LoadSave()
 	static UiElem restartSimulationElem;
 	if (doButton("Restart simulation", 0.f, 1.f, true, restartSimulationElem))
 	{
-		g_pe.restart(g_pool);
+		for (int i = 0; i < kMaxParticleInfos; ++i)
+			g_pe[i].restart(g_pool[i]);
 	}
 }
 
@@ -1797,20 +1798,27 @@ void particleEditorTick(bool menuActive, float dt)
 	{
 		firstTick = false;
 		for (int i = 0; i < kMaxParticleInfos; ++i)
+		{
 			strcpy_s(g_peiList[i].materialName, sizeof(g_peiList[i].materialName), "texture.png");
+			if (i != 0)
+				g_piList[i].rate = 0.f;
+		}
 	}
 
 	if (menuActive)
 		doMenu(true, false);
 
-	const float gravityX = 0.f;
-	const float gravityY = 100.f;
-	for (Particle * p = g_pool.head; p; )
-		if (!tickParticle(g_pei(), g_pi(), dt, gravityX, gravityY, *p))
-			p = g_pool.freeParticle(p);
-		else
-			p = p->next;
-	tickParticleEmitter(g_pei(), g_pi(), g_pool, dt, gravityX, gravityY, g_pe);
+	for (int i = 0; i < kMaxParticleInfos; ++i)
+	{
+		const float gravityX = 0.f;
+		const float gravityY = 100.f;
+		for (Particle * p = g_pool[i].head; p; )
+			if (!tickParticle(g_pei(), g_pi(), dt, gravityX, gravityY, *p))
+				p = g_pool[i].freeParticle(p);
+			else
+				p = p->next;
+		tickParticleEmitter(g_peiList[i], g_piList[i], g_pool[i], dt, gravityX, gravityY, g_pe[i]);
+	}
 }
 
 void particleEditorDraw(bool menuActive, float sx, float sy)
@@ -1848,41 +1856,44 @@ void particleEditorDraw(bool menuActive, float sx, float sy)
 		break;
 	}
 
-	gxSetTexture(Sprite(g_pei().materialName).getTexture());
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	if (g_pi().blendMode == ParticleInfo::kBlendMode_AlphaBlended)
-		setBlend(BLEND_ALPHA);
-	else if (g_pi().blendMode == ParticleInfo::kBlendMode_Additive)
-		setBlend(BLEND_ADD);
-	else
-		fassert(false);
-
-	for (Particle * p = (g_pi().sortMode == ParticleInfo::kSortMode_OldestFirst) ? g_pool.head : g_pool.tail;
-		         p; p = (g_pi().sortMode == ParticleInfo::kSortMode_OldestFirst) ? p->next : p->prev)
+	for (int i = 0; i < kMaxParticleInfos; ++i)
 	{
-		const float particleLife = 1.f - p->life;
-		const float particleSpeed = std::sqrtf(p->speed[0] * p->speed[0] + p->speed[1] * p->speed[1]);
+		gxSetTexture(Sprite(g_peiList[i].materialName).getTexture());
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-		ParticleColor color;
-		computeParticleColor(g_pei(), g_pi(), particleLife, particleSpeed, color);
-		const float size = computeParticleSize(g_pei(), g_pi(), particleLife, particleSpeed);
-		gxPushMatrix();
-		gxTranslatef(
-			p->position[0],
-			p->position[1],
-			0.f);
-		gxRotatef(p->rotation, 0.f, 0.f, 1.f);
-		setColorf(color.rgba[0], color.rgba[1], color.rgba[2], color.rgba[3]);
-		drawRect(
-			- size / 2.f,
-			- size / 2.f,
-			+ size / 2.f,
-			+ size / 2.f);
-		gxPopMatrix();
+		if (g_piList[i].blendMode == ParticleInfo::kBlendMode_AlphaBlended)
+			setBlend(BLEND_ALPHA);
+		else if (g_piList[i].blendMode == ParticleInfo::kBlendMode_Additive)
+			setBlend(BLEND_ADD);
+		else
+			fassert(false);
+
+		for (Particle * p = (g_piList[i].sortMode == ParticleInfo::kSortMode_OldestFirst) ? g_pool[i].head : g_pool[i].tail;
+					 p; p = (g_piList[i].sortMode == ParticleInfo::kSortMode_OldestFirst) ? p->next : p->prev)
+		{
+			const float particleLife = 1.f - p->life;
+			const float particleSpeed = std::sqrtf(p->speed[0] * p->speed[0] + p->speed[1] * p->speed[1]);
+
+			ParticleColor color;
+			computeParticleColor(g_peiList[i], g_piList[i], particleLife, particleSpeed, color);
+			const float size = computeParticleSize(g_peiList[i], g_piList[i], particleLife, particleSpeed);
+			gxPushMatrix();
+			gxTranslatef(
+				p->position[0],
+				p->position[1],
+				0.f);
+			gxRotatef(p->rotation, 0.f, 0.f, 1.f);
+			setColorf(color.rgba[0], color.rgba[1], color.rgba[2], color.rgba[3]);
+			drawRect(
+				- size / 2.f,
+				- size / 2.f,
+				+ size / 2.f,
+				+ size / 2.f);
+			gxPopMatrix();
+		}
+		gxSetTexture(0);
 	}
-	gxSetTexture(0);
 
 	setBlend(BLEND_ALPHA);
 #endif
