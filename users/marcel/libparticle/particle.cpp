@@ -1,6 +1,7 @@
 #include "particle.h"
 #include "tinyxml2.h"
 #include <algorithm>
+#include <assert.h>
 
 using namespace tinyxml2;
 
@@ -358,6 +359,7 @@ ParticleEmitterInfo::ParticleEmitterInfo()
 	, worldSpace(false)
 	, maxParticles(100)
 {
+	memset(name, 0, sizeof(name));
 	memset(materialName, 0, sizeof(materialName));
 }
 
@@ -373,6 +375,7 @@ bool ParticleEmitterInfo::operator!=(const ParticleEmitterInfo & other) const
 
 void ParticleEmitterInfo::save(XMLPrinter * printer)
 {
+	printer->PushAttribute("name", name);
 	printer->PushAttribute("duration", duration);
 	printer->PushAttribute("loop", loop);
 	printer->PushAttribute("prewarm", prewarm);
@@ -398,6 +401,7 @@ void ParticleEmitterInfo::load(XMLElement * elem)
 {
 	*this = ParticleEmitterInfo();
 
+	strcpy_s(name, sizeof(name), stringAttrib(elem, "name", ""));
 	duration = floatAttrib(elem, "duration", duration);
 	loop = boolAttrib(elem, "loop", loop);
 	prewarm = boolAttrib(elem, "prewarm", prewarm);
@@ -420,7 +424,7 @@ void ParticleEmitterInfo::load(XMLElement * elem)
 
 ParticleInfo::ParticleInfo()
 	// emission
-	: rate(1.f)
+	: rate(0.f)
 	, numBursts(0)
 	// shape
 	, shape(kShapeCircle)
@@ -474,10 +478,7 @@ ParticleInfo::ParticleInfo()
 	, minKillSpeed(0.f)
 	, collisionRadius(1.f)
 	// sub emitters
-	, subEmitters(false)
-	, onBirth()
-	, onCollision()
-	, onDeath()
+	, enableSubEmitters(false)
 	// texture sheet animation
 	//
 	// renderer
@@ -565,10 +566,7 @@ void ParticleInfo::save(tinyxml2::XMLPrinter * printer)
 	printer->PushAttribute("minKillSpeed", minKillSpeed);
 	printer->PushAttribute("collisionRadius", collisionRadius);
 	// sub emitters
-	printer->PushAttribute("subEmitters", subEmitters);
-	// todo : SubEmitter onBirth;
-	// todo : SubEmitter onCollision;
-	// todo : SubEmitter onDeath;
+	printer->PushAttribute("subEmitters", enableSubEmitters);
 	// texture sheet animation
 	// todo
 	// renderer
@@ -627,6 +625,17 @@ void ParticleInfo::save(tinyxml2::XMLPrinter * printer)
 		rotationBySpeedCurve.save(printer);
 	}
 	printer->CloseElement();
+
+	// sub emitters
+	for (int i = 0; i < kSubEmitterEvent_COUNT; ++i)
+	{
+		printer->OpenElement("subEmitter");
+		{
+			printer->PushAttribute("event", i);
+			subEmitters[i].save(printer);
+		}
+		printer->CloseElement();
+	}
 }
 
 void ParticleInfo::load(tinyxml2::XMLElement * elem)
@@ -708,15 +717,42 @@ void ParticleInfo::load(tinyxml2::XMLElement * elem)
 	minKillSpeed = floatAttrib(elem, "minKillSpeed", minKillSpeed);
 	collisionRadius = floatAttrib(elem, "collisionRadius", collisionRadius);
 	// sub emitters
-	subEmitters = boolAttrib(elem, "subEmitters", subEmitters);
-	// todo : SubEmitter onBirth;
-	// todo : SubEmitter onCollision;
-	// todo : SubEmitter onDeath;
+	enableSubEmitters = boolAttrib(elem, "subEmitters", enableSubEmitters);
+	for (auto subEmitterElem = elem->FirstChildElement("subEmitter"); subEmitterElem; subEmitterElem = subEmitterElem->NextSiblingElement("subEmitter"))
+	{
+		const int index = intAttrib(subEmitterElem, "event", -1);
+		if (index >= 0 && index < kSubEmitterEvent_COUNT)
+			subEmitters[index].load(subEmitterElem);
+	}
 	// texture sheet animation
 	// todo
 	// renderer
 	sortMode = (SortMode)intAttrib(elem, "sortMode", sortMode);
 	blendMode = (BlendMode)intAttrib(elem, "blendMode", blendMode);
+}
+
+ParticleInfo::SubEmitter::SubEmitter()
+	: enabled(false)
+	, count(1)
+	, chance(1.f)
+{
+	memset(emitterName, 0, sizeof(emitterName));
+}
+
+void ParticleInfo::SubEmitter::save(tinyxml2::XMLPrinter * printer)
+{
+	printer->PushAttribute("enabled", enabled);
+	printer->PushAttribute("count", count);
+	printer->PushAttribute("chance", chance);
+	printer->PushAttribute("emitterName", emitterName);
+}
+
+void ParticleInfo::SubEmitter::load(tinyxml2::XMLElement * elem)
+{
+	enabled = boolAttrib(elem, "enabled", enabled);
+	count = intAttrib(elem, "count", count);
+	chance = floatAttrib(elem, "chance", chance);
+	strcpy_s(emitterName, sizeof(emitterName), stringAttrib(elem, "emitterName", emitterName));
 }
 
 //
@@ -744,9 +780,8 @@ void ParticleEmitter::clearParticles(ParticlePool & pool)
 	}
 }
 
-void ParticleEmitter::emitParticle(const ParticleEmitterInfo & pei, const ParticleInfo & pi, ParticlePool & pool, const float timeOffset, const float gravityX, const float gravityY)
+bool ParticleEmitter::emitParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei, const ParticleInfo & pi, ParticlePool & pool, const float timeOffset, const float gravityX, const float gravityY, Particle *& p)
 {
-	Particle * p;
 	if (allocParticle(pool, p))
 	{
 		p->life = 1.f;
@@ -768,7 +803,13 @@ void ParticleEmitter::emitParticle(const ParticleEmitterInfo & pei, const Partic
 			bool worldSpace; // Should particles be animated in the parent object’s local space (and therefore move with the object) or in world space?
 		*/
 
-		tickParticle(pei, pi, timeOffset, gravityX, gravityY, *p);
+		tickParticle(cbs, pei, pi, timeOffset, gravityX, gravityY, *p);
+
+		return true;
+	}
+	else
+	{
+		return false;
 	}
 }
 
@@ -834,8 +875,12 @@ Particle * ParticlePool::freeParticle(Particle * p)
 
 //
 
-bool tickParticle(const ParticleEmitterInfo & pei, const ParticleInfo & pi, const float timeStep, const float gravityX, const float gravityY, Particle & p)
+bool tickParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei, const ParticleInfo & pi, const float timeStep, const float gravityX, const float gravityY, Particle & p)
 {
+	assert(p.life > 0.f);
+
+	// todo : clamp timeStep to available life
+
 	p.life -= p.lifeRcp * timeStep;
 	if (p.life < 0.f)
 		p.life = 0.f;
@@ -867,7 +912,66 @@ bool tickParticle(const ParticleEmitterInfo & pei, const ParticleInfo & pi, cons
 		color.rgba[0], color.rgba[1], color.rgba[2], color.rgba[3], size, p.rotation);
 #endif
 
+	if (p.life <= 0.f)
+	{
+		if (pi.enableSubEmitters && pi.subEmitters[ParticleInfo::kSubEmitterEvent_Death].enabled)
+		{
+			handleSubEmitter(cbs, pi, gravityX, gravityY, p, ParticleInfo::kSubEmitterEvent_Death);
+		}
+	}
+
 	return p.life > 0.f;
+}
+
+void handleSubEmitter(const ParticleCallbacks & cbs, const ParticleInfo & pi, const float gravityX, const float gravityY, const Particle & p, const ParticleInfo::SubEmitterEvent e)
+{
+	if (!pi.subEmitters[e].emitterName[0])
+		return;
+
+	for (int i = 0; i < pi.subEmitters[e].count; ++i)
+	{
+		const float t = cbs.randomFloat(0.f, 1.f);
+		if (t > pi.subEmitters[e].chance)
+			continue;
+
+		const ParticleEmitterInfo * subPei;
+		const ParticleInfo * subPi;
+		ParticlePool * subPool;
+		ParticleEmitter * subPe;
+		if (cbs.getEmitterByName(
+			pi.subEmitters[e].emitterName,
+			subPei,
+			subPi,
+			subPool,
+			subPe))
+		{
+			assert(subPi != &pi); // todo : warn about this?
+
+			if (subPi != &pi)
+			{
+				Particle * subP;
+				if (subPe->emitParticle(
+					cbs,
+					*subPei,
+					*subPi,
+					*subPool,
+					0.f,
+					gravityX,
+					gravityY,
+					subP))
+				{
+					subP->position[0] += p.position[0];
+					subP->position[1] += p.position[1];
+
+					if (subPei->inheritVelocity)
+					{
+						subP->speed[0] += p.speed[0];
+						subP->speed[1] += p.speed[1];
+					}
+				}
+			}
+		}
+	}
 }
 
 void getParticleSpawnLocation(const ParticleInfo & pi, float & x, float & y)
@@ -1012,7 +1116,7 @@ float computeParticleRotation(const ParticleEmitterInfo & pei, const ParticleInf
 	return result;
 }
 
-void tickParticleEmitter(const ParticleEmitterInfo & pei, const ParticleInfo & pi, ParticlePool & pool, const float timeStep, const float gravityX, const float gravityY, ParticleEmitter & pe)
+void tickParticleEmitter(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei, const ParticleInfo & pi, ParticlePool & pool, const float timeStep, const float gravityX, const float gravityY, ParticleEmitter & pe)
 {
 	if (pi.rate <= 0.f)
 		return;
@@ -1039,7 +1143,8 @@ void tickParticleEmitter(const ParticleEmitterInfo & pei, const ParticleInfo & p
 
 		const float timeOffset = fmodf(pe.time, rateTime);
 
-		pe.emitParticle(pei, pi, pool, timeOffset, gravityX, gravityY);
+		Particle * p;
+		pe.emitParticle(cbs, pei, pi, pool, timeOffset, gravityX, gravityY, p);
 	}
 
 	// todo : int maxParticles; // The maximum number of particles in the system at once. Older particles will be removed when the limit is reached.

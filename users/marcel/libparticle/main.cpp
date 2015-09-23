@@ -12,6 +12,10 @@ static float toRadians(float degrees)
 
 int main(int argc, char * argv[])
 {
+#ifdef WIN32
+	_CrtSetDebugFillThreshold(0);
+#endif
+
 	ParticleColor c1;
 	ParticleColor c2;
 	ParticleColorCurve cc1;
@@ -87,7 +91,7 @@ int main(int argc, char * argv[])
 	pi1.sizeOverLifetime = true;
 	pi1.sizeOverLifetimeCurve.setLinear(0.f, 1.f);
 	pi1.sortMode = ParticleInfo::kSortMode_YoungestFirst;
-	pi1.subEmitters = false;
+	pi1.enableSubEmitters = false;
 	pi1.velocityOverLifetime = false;
 	//pi1.velocityOverLifetimeValue;
 	pi1.velocityOverLifetimeLimit = false;

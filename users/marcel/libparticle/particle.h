@@ -10,6 +10,7 @@ namespace tinyxml2
 }
 
 struct Particle;
+struct ParticleCallbacks;
 struct ParticleColor;
 struct ParticleColorCurve;
 struct ParticleCurve;
@@ -88,6 +89,7 @@ struct ParticleColorCurve
 
 struct ParticleEmitterInfo
 {
+	char name[16];
 	float duration; // The length of time the system will run.
 	bool loop; // If enabled, the system will start again at the end of its duration time and continue to repeat the cycle.
 	bool prewarm; // If enabled, the system will be initialized as though it had already completed a full cycle (only works if Looping is also enabled).
@@ -218,16 +220,28 @@ struct ParticleInfo
 
 	// sub emitters
 
-	bool subEmitters;
+	bool enableSubEmitters;
+
+	enum SubEmitterEvent
+	{
+		kSubEmitterEvent_Birth,
+		kSubEmitterEvent_Collision,
+		kSubEmitterEvent_Death,
+		kSubEmitterEvent_COUNT
+	};
 
 	struct SubEmitter
 	{
-		// todo : reference to sub emitter
-	};
+		SubEmitter();
 
-	SubEmitter onBirth;
-	SubEmitter onCollision;
-	SubEmitter onDeath;
+		void save(tinyxml2::XMLPrinter * printer);
+		void load(tinyxml2::XMLElement * elem);
+
+		bool enabled;
+		float chance;
+		int count;
+		char emitterName[32];
+	} subEmitters[kSubEmitterEvent_COUNT];
 
 	// texture sheet animation
 
@@ -277,7 +291,7 @@ struct ParticleEmitter
 	bool allocParticle(ParticlePool & pool, Particle *& p);
 	void clearParticles(ParticlePool & pool);
 
-	void emitParticle(const ParticleEmitterInfo & pei, const ParticleInfo & pi, ParticlePool & pool, const float timeOffsetconst, const float gravityX, const float gravityY);
+	bool emitParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei, const ParticleInfo & pi, ParticlePool & pool, const float timeOffsetconst, const float gravityX, const float gravityY, Particle *& p);
 	void restart(ParticlePool & pool);
 };
 
@@ -306,12 +320,27 @@ struct ParticlePool
 	Particle * freeParticle(Particle * p);
 };
 
-bool tickParticle(const ParticleEmitterInfo & pei, const ParticleInfo & pi, const float timeStep, const float gravityX, const float gravityY, Particle & p);
+struct ParticleCallbacks
+{
+	int (*randomInt)(int min, int max);
+	float (*randomFloat)(float min, float max);
+	bool (*getEmitterByName)(const char * name, const ParticleEmitterInfo *& pei, const ParticleInfo *& pi, ParticlePool *& pool, ParticleEmitter *& pe);
+
+	ParticleCallbacks()
+		: randomInt(0)
+		, randomFloat(0)
+		, getEmitterByName(0)
+	{
+	}
+};
+
+bool tickParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei, const ParticleInfo & pi, const float timeStep, const float gravityX, const float gravityY, Particle & p);
+void handleSubEmitter(const ParticleCallbacks & cbs, const ParticleInfo & pi, const float gravityX, const float gravityY, const Particle & p, const ParticleInfo::SubEmitterEvent e);
 void getParticleSpawnLocation(const ParticleInfo & pi, float & x, float & y);
 void computeParticleColor(const ParticleEmitterInfo & pei, const ParticleInfo & pi, const float particleLife, const float particleSpeed, ParticleColor & result);
 float computeParticleSize(const ParticleEmitterInfo & pei, const ParticleInfo & pi, const float particleLife, const float particleSpeed);
 float computeParticleRotation(const ParticleEmitterInfo & pei, const ParticleInfo & pi, const float timeStep, const float particleLife, const float particleSpeed, const float particleRotation);
 
-void tickParticleEmitter(const ParticleEmitterInfo & pei, const ParticleInfo & pi, ParticlePool & pool, const float timeStep, const float gravityX, const float gravityY, ParticleEmitter & pe);
+void tickParticleEmitter(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei, const ParticleInfo & pi, ParticlePool & pool, const float timeStep, const float gravityX, const float gravityY, ParticleEmitter & pe);
 
 #pragma pack(pop)

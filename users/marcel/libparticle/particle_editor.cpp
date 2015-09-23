@@ -52,6 +52,8 @@ static bool g_doActions = false;
 static bool g_doDraw = false;
 static int g_drawX = 0;
 static int g_drawY = 0;
+static bool g_forceUiRefreshRequested = false;
+static bool g_forceUiRefresh = false;
 
 // library
 static const int kMaxParticleInfos = 6;
@@ -66,6 +68,24 @@ static ParticleInfo & g_pi() { return g_piList[g_activeEditingIndex]; }
 // preview
 static ParticlePool g_pool[kMaxParticleInfos];
 static ParticleEmitter g_pe[kMaxParticleInfos];
+static ParticleCallbacks g_callbacks;
+static int randomInt(int min, int max) { return min + (rand() % (max - min + 1)); }
+static float randomFloat(float min, float max) { return min + (rand() % 4096) / 4095.f * (max - min); }
+static bool getEmitterByName(const char * name, const ParticleEmitterInfo *& pei, const ParticleInfo *& pi, ParticlePool *& pool, ParticleEmitter *& pe)
+{
+	for (int i = 0; i < kMaxParticleInfos; ++i)
+	{
+		if (!strcmp(name, g_peiList[i].name))
+		{
+			pei = &g_peiList[i];
+			pi = &g_piList[i];
+			pool = &g_pool[i];
+			pe = &g_pe[i];
+			return true;
+		}
+	}
+	return false;
+}
 
 // copy & paste
 static ParticleEmitterInfo g_copyPei;
@@ -1424,12 +1444,16 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, UiElem 
 	static UiElem sym ## elem; \
 	static TextField sym ## textField; \
 	static bool sym ## textFieldIsInit = false; \
+	if (g_doActions && g_forceUiRefresh) \
+		sym ## textFieldIsInit = false; \
 	doTextBox(value, name, 0.f, 1.f, true, sym ## elem, sym ## textField, sym ## textFieldIsInit);
 
 #define DO_TEXTBOX2(sym, value, xOffset, xScale, lineBreak, name) \
 	static UiElem sym ## elem; \
 	static TextField sym ## textField; \
 	static bool sym ## textFieldIsInit = false; \
+	if (g_doActions && g_forceUiRefresh) \
+		sym ## textFieldIsInit = false; \
 	doTextBox(value, name, xOffset, xScale, lineBreak, sym ## elem, sym ## textField, sym ## textFieldIsInit);
 
 #define DO_CHECKBOX(sym, value, name, isCollapsable) \
@@ -1455,6 +1479,7 @@ static void refreshUi()
 {
 	g_activeElem = 0;
 	g_activeColor = 0;
+	g_forceUiRefreshRequested = true;
 }
 
 static void doMenu_LoadSave()
@@ -1472,19 +1497,32 @@ static void doMenu_LoadSave()
 
 			if (d.LoadFile(path) == XML_NO_ERROR)
 			{
+				for (int i = 0; i < kMaxParticleInfos; ++i)
+				{
+					g_peiList[i] = ParticleEmitterInfo();
+					g_piList[i] = ParticleInfo();
+					g_pe[i].clearParticles(g_pool[i]);
+					fassert(g_pool[i].head == 0);
+					fassert(g_pool[i].tail == 0);
+					g_pe[i] = ParticleEmitter();
+				}
+
+				int peiIdx = 0;
 				for (XMLElement * emitterElem = d.FirstChildElement("emitter"); emitterElem; emitterElem = emitterElem->NextSiblingElement("emitter"))
 				{
-					g_pei().load(emitterElem);
+					g_peiList[peiIdx++].load(emitterElem);
 				}
 
+				int piIdx = 0;
 				for (XMLElement * particleElem = d.FirstChildElement("particle"); particleElem; particleElem = particleElem->NextSiblingElement("particle"))
 				{
-					g_pi().load(particleElem);
+					g_piList[piIdx++].load(particleElem);
 				}
 
-				refreshUi();
-
 				activeFilename = path;
+
+				g_activeEditingIndex = 0;
+				refreshUi();
 			}
 		}
 	}
@@ -1522,17 +1560,20 @@ static void doMenu_LoadSave()
 		{
 			XMLPrinter p;
 
-			p.OpenElement("emitter");
+			for (int i = 0; i < kMaxParticleInfos; ++i)
 			{
-				g_pei().save(&p);
-			}
-			p.CloseElement();
+				p.OpenElement("emitter");
+				{
+					g_peiList[i].save(&p);
+				}
+				p.CloseElement();
 
-			p.OpenElement("particle");
-			{
-				g_pi().save(&p);
+				p.OpenElement("particle");
+				{
+					g_piList[i].save(&p);
+				}
+				p.CloseElement();
 			}
-			p.CloseElement();
 
 			XMLDocument d;
 			d.Parse(p.CStr());
@@ -1547,6 +1588,21 @@ static void doMenu_LoadSave()
 	{
 		for (int i = 0; i < kMaxParticleInfos; ++i)
 			g_pe[i].restart(g_pool[i]);
+	}
+}
+
+static void doMenu_EmitterSelect()
+{
+	static UiElem uiElems[kMaxParticleInfos];
+	for (int i = 0; i < 6; ++i)
+	{
+		char name[32];
+		sprintf_s(name, sizeof(name), "System %d", i + 1);
+		if (doButton(name, 0.f, 1.f, true, uiElems[i]))
+		{
+			g_activeEditingIndex = i;
+			refreshUi();
+		}
 	}
 }
 
@@ -1678,9 +1734,23 @@ static void doMenu_Pi()
 	}
 
 	static UiElem subEmittersElem;
-	if (doCheckBox(g_pi().subEmitters, "Sub Emitters", true, subEmittersElem))
+	if (doCheckBox(g_pi().enableSubEmitters, "Sub Emitters", true, subEmittersElem))
 	{
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
+		static bool onEvent[ParticleInfo::kSubEmitterEvent_COUNT] = { };
+		const char * onEventName[ParticleInfo::kSubEmitterEvent_COUNT] = { "onBirth", "onCollision", "onDeath" };
+		static UiElem onEventElem[ParticleInfo::kSubEmitterEvent_COUNT];
+		for (int i = 0; i < ParticleInfo::kSubEmitterEvent_COUNT; ++i) // fixme : cannot use loops
+		{
+			if (doCheckBox(g_pi().subEmitters[i].enabled, onEventName[i], true, onEventElem[i]))
+			{
+				DO_TEXTBOX(chance, g_pi().subEmitters[i].chance, "Spawn Chance");
+				DO_TEXTBOX(count, g_pi().subEmitters[i].count, "Spawn Count");
+				std::string emitterName = g_pi().subEmitters[i].emitterName;
+				DO_TEXTBOX(emitterName, emitterName, "Emitter Name");
+				strcpy_s(g_pi().subEmitters[i].emitterName, sizeof(g_pi().subEmitters[i].emitterName), emitterName.c_str());
+			}
+		}
 		//SubEmitter onBirth;
 		//SubEmitter onCollision;
 		//SubEmitter onDeath;
@@ -1713,6 +1783,10 @@ static void doMenu_Pei()
 		refreshUi();
 	}
 
+	std::string name;
+	name = g_pei().name;
+	DO_TEXTBOX(name, name, "Name");
+	strcpy_s(g_pei().name, sizeof(g_pei().name), name.c_str());
 	DO_TEXTBOX(duration, g_pei().duration, "Duration");
 	DO_CHECKBOX(loop, g_pei().loop, "Loop", false);
 	DO_CHECKBOX(prewarm, g_pei().prewarm, "Prewarm", false);
@@ -1767,6 +1841,12 @@ static void doMenu(bool doActions, bool doDraw)
 	g_doActions = doActions;
 	g_doDraw = doDraw;
 
+	if (g_doActions && g_forceUiRefreshRequested)
+	{
+		g_forceUiRefreshRequested = false;
+		g_forceUiRefresh = true;
+	}
+
 	// left side menu
 
 	setFont("calibri.ttf");
@@ -1784,11 +1864,17 @@ static void doMenu(bool doActions, bool doDraw)
 	doMenu_LoadSave();
 	g_drawY += kMenuSpacing;
 
+	doMenu_EmitterSelect();
+	g_drawY += kMenuSpacing;
+
 	doMenu_Pei();
 	g_drawY += kMenuSpacing;
 
 	doMenu_ColorWheel();
 	g_drawY += kMenuSpacing;
+
+	if (g_doActions)
+		g_forceUiRefresh = false;
 }
 
 void particleEditorTick(bool menuActive, float dt)
@@ -1797,12 +1883,14 @@ void particleEditorTick(bool menuActive, float dt)
 	if (firstTick)
 	{
 		firstTick = false;
+
+		g_callbacks.randomInt = randomInt;
+		g_callbacks.randomFloat = randomFloat;
+		g_callbacks.getEmitterByName = getEmitterByName;
+
+		g_piList[0].rate = 1.f;
 		for (int i = 0; i < kMaxParticleInfos; ++i)
-		{
 			strcpy_s(g_peiList[i].materialName, sizeof(g_peiList[i].materialName), "texture.png");
-			if (i != 0)
-				g_piList[i].rate = 0.f;
-		}
 	}
 
 	if (menuActive)
@@ -1813,11 +1901,11 @@ void particleEditorTick(bool menuActive, float dt)
 		const float gravityX = 0.f;
 		const float gravityY = 100.f;
 		for (Particle * p = g_pool[i].head; p; )
-			if (!tickParticle(g_pei(), g_pi(), dt, gravityX, gravityY, *p))
+			if (!tickParticle(g_callbacks, g_peiList[i], g_piList[i], dt, gravityX, gravityY, *p))
 				p = g_pool[i].freeParticle(p);
 			else
 				p = p->next;
-		tickParticleEmitter(g_peiList[i], g_piList[i], g_pool[i], dt, gravityX, gravityY, g_pe[i]);
+		tickParticleEmitter(g_callbacks, g_peiList[i], g_piList[i], g_pool[i], dt, gravityX, gravityY, g_pe[i]);
 	}
 }
 
