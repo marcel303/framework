@@ -13,6 +13,7 @@
 + implement color picker fromColor
 + add alpha selection color picker
 + fix unable to select alpha when mouse is outside bar
+- fix save and 'save as' functionality
 
 + fix color curve key select = move
 - move color picker and emitter info to the right side of the screen
@@ -1453,6 +1454,12 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, UiElem 
 	static float sym ## dragOffset = 0.f; \
 	doParticleColorCurve(value, name, sym ## elem, sym ## selectedKey, sym ## isDragging, sym ## dragOffset);
 
+static void refreshUi()
+{
+	g_activeElem = 0;
+	g_activeColor = 0;
+}
+
 static void doMenu(bool doActions, bool doDraw)
 {
 	g_doActions = doActions;
@@ -1474,8 +1481,7 @@ static void doMenu(bool doActions, bool doDraw)
 	if (g_copyPiIsValid && doButton("Paste", .5f, .5f, true, pastePiElem))
 	{
 		g_pi() = g_copyPi;
-		if (g_activeColor)
-			g_colorWheel.fromColor(*g_activeColor);
+		refreshUi();
 	}
 
 	DO_TEXTBOX(rate, g_pi().rate, "Rate (Particles/Sec)");
@@ -1626,8 +1632,7 @@ static void doMenu(bool doActions, bool doDraw)
 	if (g_copyPeiIsValid && doButton("Paste", .5f, .5f, true, pastePeiElem))
 	{
 		g_pei() = g_copyPei;
-		if (g_activeColor)
-			g_colorWheel.fromColor(*g_activeColor);
+		refreshUi();
 	}
 
 	DO_TEXTBOX(duration, g_pei().duration, "Duration");
@@ -1685,6 +1690,7 @@ static void doMenu(bool doActions, bool doDraw)
 
 	//
 
+	static std::string activeFilename;
 	static UiElem loadElem;
 	if (doButton("Load", 0.f, 1.f, true, loadElem))
 	{
@@ -1699,54 +1705,51 @@ static void doMenu(bool doActions, bool doDraw)
 			{
 				for (XMLElement * emitterElem = d.FirstChildElement("emitter"); emitterElem; emitterElem = emitterElem->NextSiblingElement("emitter"))
 				{
-					//ParticleEmitterInfo pei;
 					g_pei().load(emitterElem);
 				}
 
 				for (XMLElement * particleElem = d.FirstChildElement("particle"); particleElem; particleElem = particleElem->NextSiblingElement("particle"))
 				{
-					//ParticleInfo pi;
 					g_pi().load(particleElem);
 				}
+
+				refreshUi();
+
+				activeFilename = path;
 			}
 		}
 	}
 
+	bool save = false;
+	std::string saveFilename;
+
 	static UiElem saveElem;
 	if (doButton("Save", 0.f, 1.f, true, saveElem))
 	{
-		nfdchar_t * path = 0;
-		nfdresult_t result = NFD_SaveDialog("pfx", "", &path);
-
-		if (result == NFD_OKAY)
-		{
-			XMLPrinter p;
-
-			p.OpenElement("emitter");
-			{
-				g_pei().save(&p);
-			}
-			p.CloseElement();
-
-			p.OpenElement("particle");
-			{
-				g_pi().save(&p);
-			}
-			p.CloseElement();
-
-			XMLDocument d;
-			d.Parse(p.CStr());
-			d.SaveFile(path);
-		}
+		save = true;
+		saveFilename = activeFilename;
 	}
 
 	static UiElem saveAsElem;
 	if (doButton("Save as..", 0.f, 1.f, true, saveAsElem))
 	{
-		nfdchar_t * path = 0;
-		nfdresult_t result = NFD_SaveDialog("pfx", "", &path);
+		save = true;
+	}
 
-		if (result == NFD_OKAY)
+	if (save)
+	{
+		if (saveFilename.empty())
+		{
+			nfdchar_t * path = 0;
+			nfdresult_t result = NFD_SaveDialog("pfx", "", &path);
+
+			if (result == NFD_OKAY)
+			{
+				saveFilename = path;
+			}
+		}
+
+		if (!saveFilename.empty())
 		{
 			XMLPrinter p;
 
@@ -1764,7 +1767,9 @@ static void doMenu(bool doActions, bool doDraw)
 
 			XMLDocument d;
 			d.Parse(p.CStr());
-			d.SaveFile(path);
+			d.SaveFile(saveFilename.c_str());
+
+			activeFilename = saveFilename;
 		}
 	}
 
