@@ -27,6 +27,7 @@
 
 using namespace tinyxml2;
 
+// ui design
 #define UI_TEXTCHAT_CARET_PADDING_X 0
 #define UI_TEXTCHAT_CARET_PADDING_Y 5 // todo : look these up
 #define UI_TEXTCHAT_CARET_SX 4
@@ -45,17 +46,24 @@ static const int kMenuSpacing = 30;
 static const Color kBackgroundFocusColor(1.f, 1.f, 1.f, .5f);
 static const Color kBackgroundColor(0.f, 0.f, 0.f, .5f);
 
+#define COLORWHEEL_X(sx) (kMenuWidth + kMenuSpacing)
+#define COLORWHEEL_Y(sy) (kMenuSpacing)
+
+// ui draw state
 static bool g_doActions = false;
 static bool g_doDraw = false;
 static int g_drawX = 0;
 static int g_drawY = 0;
 
-#define COLORWHEEL_X(sx) (kMenuWidth + kMenuSpacing)
-#define COLORWHEEL_Y(sy) (kMenuSpacing)
+// library
+static const int kMaxParticleInfos = 1;
+static ParticleEmitterInfo g_peiList[kMaxParticleInfos];
+static ParticleInfo g_piList[kMaxParticleInfos];
 
 // current editing
-static ParticleEmitterInfo g_pei;
-static ParticleInfo g_pi;
+static int g_activeEditingIndex = 0;
+static ParticleEmitterInfo & g_pei() { return g_peiList[g_activeEditingIndex]; }
+static ParticleInfo & g_pi() { return g_piList[g_activeEditingIndex]; }
 
 // preview
 static ParticlePool g_pool;
@@ -1458,19 +1466,19 @@ static void doMenu(bool doActions, bool doDraw)
 	static UiElem copyPiElem;
 	if (doButton("Copy", 0.f, .5f, !g_copyPiIsValid, copyPiElem))
 	{
-		g_copyPi = g_pi;
+		g_copyPi = g_pi();
 		g_copyPiIsValid = true;
 	}
 
 	static UiElem pastePiElem;
 	if (g_copyPiIsValid && doButton("Paste", .5f, .5f, true, pastePiElem))
 	{
-		g_pi = g_copyPi;
+		g_pi() = g_copyPi;
 		if (g_activeColor)
 			g_colorWheel.fromColor(*g_activeColor);
 	}
 
-	DO_TEXTBOX(rate, g_pi.rate, "Rate (Particles/Sec)");
+	DO_TEXTBOX(rate, g_pi().rate, "Rate (Particles/Sec)");
 
 	/*
 	struct Burst
@@ -1491,98 +1499,98 @@ static void doMenu(bool doActions, bool doDraw)
 	shapeValues.push_back(EnumValue('e', "Edge"));
 	shapeValues.push_back(EnumValue('b', "Box"));
 	shapeValues.push_back(EnumValue('c', "Circle"));
-	DO_ENUM(shape, g_pi.shape, shapeValues, "Shape");
+	DO_ENUM(shape, g_pi().shape, shapeValues, "Shape");
 
-	DO_CHECKBOX(randomDirection, g_pi.randomDirection, "Random Direction", false);
-	DO_TEXTBOX(circleRadius, g_pi.circleRadius, "Circle Radius");
-	DO_TEXTBOX(boxSizeX, g_pi.boxSizeX, "Box Width");
-	DO_TEXTBOX(boxSizeY, g_pi.boxSizeY, "Box Height");
-	DO_CHECKBOX(emitFromShell, g_pi.emitFromShell, "Emit From Shell", false);
+	DO_CHECKBOX(randomDirection, g_pi().randomDirection, "Random Direction", false);
+	DO_TEXTBOX(circleRadius, g_pi().circleRadius, "Circle Radius");
+	DO_TEXTBOX(boxSizeX, g_pi().boxSizeX, "Box Width");
+	DO_TEXTBOX(boxSizeY, g_pi().boxSizeY, "Box Height");
+	DO_CHECKBOX(emitFromShell, g_pi().emitFromShell, "Emit From Shell", false);
 
 	static UiElem velocityOverLifetimeElem;
-	if (doCheckBox(g_pi.velocityOverLifetime, "Velocity Over Lifetime", true, velocityOverLifetimeElem))
+	if (doCheckBox(g_pi().velocityOverLifetime, "Velocity Over Lifetime", true, velocityOverLifetimeElem))
 	{
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
-		DO_TEXTBOX2(velocityOverLifetimeValueX, g_pi.velocityOverLifetimeValueX, 0.f, .5f, false, "X");
-		DO_TEXTBOX2(velocityOverLifetimeValueY, g_pi.velocityOverLifetimeValueY, .5f, .5f, true, "Y");
+		DO_TEXTBOX2(velocityOverLifetimeValueX, g_pi().velocityOverLifetimeValueX, 0.f, .5f, false, "X");
+		DO_TEXTBOX2(velocityOverLifetimeValueY, g_pi().velocityOverLifetimeValueY, .5f, .5f, true, "Y");
 	}
 
 	static UiElem velocityOverLifetimeLimitElem;
-	if (doCheckBox(g_pi.velocityOverLifetimeLimit, "Velocity Over Lifetime Limit", true, velocityOverLifetimeLimitElem))
+	if (doCheckBox(g_pi().velocityOverLifetimeLimit, "Velocity Over Lifetime Limit", true, velocityOverLifetimeLimitElem))
 	{
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
-		DO_PARTICLECURVE(velocityOverLifetimeLimitCurve, g_pi.velocityOverLifetimeLimitCurve, "Curve");
-		DO_TEXTBOX(velocityOverLifetimeLimitDampen, g_pi.velocityOverLifetimeLimitDampen, "Dampen/Sec");
+		DO_PARTICLECURVE(velocityOverLifetimeLimitCurve, g_pi().velocityOverLifetimeLimitCurve, "Curve");
+		DO_TEXTBOX(velocityOverLifetimeLimitDampen, g_pi().velocityOverLifetimeLimitDampen, "Dampen/Sec");
 	}
 
 	static UiElem forceOverLifetimeElem;
-	if (doCheckBox(g_pi.forceOverLifetime, "Force Over Lifetime", true, forceOverLifetimeElem))
+	if (doCheckBox(g_pi().forceOverLifetime, "Force Over Lifetime", true, forceOverLifetimeElem))
 	{
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
-		DO_TEXTBOX2(forceOverLifetimeValueX, g_pi.forceOverLifetimeValueX, 0.f, .5f, false, "X");
-		DO_TEXTBOX2(forceOverLifetimeValueY, g_pi.forceOverLifetimeValueY, .5f, .5f, true, "Y");
+		DO_TEXTBOX2(forceOverLifetimeValueX, g_pi().forceOverLifetimeValueX, 0.f, .5f, false, "X");
+		DO_TEXTBOX2(forceOverLifetimeValueY, g_pi().forceOverLifetimeValueY, .5f, .5f, true, "Y");
 	}
 
 	static UiElem colorOverLifetimeElem;
-	if (doCheckBox(g_pi.colorOverLifetime, "Color Over Lifetime", true, colorOverLifetimeElem))
+	if (doCheckBox(g_pi().colorOverLifetime, "Color Over Lifetime", true, colorOverLifetimeElem))
 	{
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
-		DO_PARTICLECOLORCURVE(colorOverLifetimeCurve, g_pi.colorOverLifetimeCurve, "Curve");
+		DO_PARTICLECOLORCURVE(colorOverLifetimeCurve, g_pi().colorOverLifetimeCurve, "Curve");
 	}
 
 	static UiElem colorBySpeedElem;
-	if (doCheckBox(g_pi.colorBySpeed, "Color By Speed", true, colorBySpeedElem))
+	if (doCheckBox(g_pi().colorBySpeed, "Color By Speed", true, colorBySpeedElem))
 	{
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
-		DO_PARTICLECOLORCURVE(colorBySpeedCurve, g_pi.colorBySpeedCurve, "Curve");
-		DO_TEXTBOX2(colorBySpeedRangeMin, g_pi.colorBySpeedRangeMin, 0.f, .5f, false, "Range");
-		DO_TEXTBOX2(colorBySpeedRangeMax, g_pi.colorBySpeedRangeMax, .5f, .5f, true, "");
+		DO_PARTICLECOLORCURVE(colorBySpeedCurve, g_pi().colorBySpeedCurve, "Curve");
+		DO_TEXTBOX2(colorBySpeedRangeMin, g_pi().colorBySpeedRangeMin, 0.f, .5f, false, "Range");
+		DO_TEXTBOX2(colorBySpeedRangeMax, g_pi().colorBySpeedRangeMax, .5f, .5f, true, "");
 	}
 
 	static UiElem sizeOverLifetimeElem;
-	if (doCheckBox(g_pi.sizeOverLifetime, "Size Over Lifetime", true, sizeOverLifetimeElem))
+	if (doCheckBox(g_pi().sizeOverLifetime, "Size Over Lifetime", true, sizeOverLifetimeElem))
 	{
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
-		DO_PARTICLECURVE(sizeOverLifetimeCurve, g_pi.sizeOverLifetimeCurve, "Curve");
+		DO_PARTICLECURVE(sizeOverLifetimeCurve, g_pi().sizeOverLifetimeCurve, "Curve");
 	}
 
 	static UiElem sizeBySpeedElem;
-	if (doCheckBox(g_pi.sizeBySpeed, "Size By Speed", true, sizeBySpeedElem))
+	if (doCheckBox(g_pi().sizeBySpeed, "Size By Speed", true, sizeBySpeedElem))
 	{
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
-		DO_PARTICLECURVE(sizeBySpeedCurve, g_pi.sizeBySpeedCurve, "Curve");
-		DO_TEXTBOX2(sizeBySpeedRangeMin, g_pi.sizeBySpeedRangeMin, 0.f, .5f, false, "Range");
-		DO_TEXTBOX2(sizeBySpeedRangeMax, g_pi.sizeBySpeedRangeMax, .5f, .5f, true, "");
+		DO_PARTICLECURVE(sizeBySpeedCurve, g_pi().sizeBySpeedCurve, "Curve");
+		DO_TEXTBOX2(sizeBySpeedRangeMin, g_pi().sizeBySpeedRangeMin, 0.f, .5f, false, "Range");
+		DO_TEXTBOX2(sizeBySpeedRangeMax, g_pi().sizeBySpeedRangeMax, .5f, .5f, true, "");
 	}
 
 	static UiElem rotationOverLifetimeElem;
-	if (doCheckBox(g_pi.rotationOverLifetime, "Rotation Over Lifetime", true, rotationOverLifetimeElem))
+	if (doCheckBox(g_pi().rotationOverLifetime, "Rotation Over Lifetime", true, rotationOverLifetimeElem))
 	{
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
-		DO_TEXTBOX(rotationOverLifetimeValue, g_pi.rotationOverLifetimeValue, "Degrees/Sec");
+		DO_TEXTBOX(rotationOverLifetimeValue, g_pi().rotationOverLifetimeValue, "Degrees/Sec");
 	}
 
 	static UiElem rotationBySpeedElem;
-	if (doCheckBox(g_pi.rotationBySpeed, "Rotation By Speed", true, rotationBySpeedElem))
+	if (doCheckBox(g_pi().rotationBySpeed, "Rotation By Speed", true, rotationBySpeedElem))
 	{
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
-		DO_PARTICLECURVE(rotationBySpeedCurve, g_pi.rotationBySpeedCurve, "Curve");
-		DO_TEXTBOX2(rotationBySpeedRangeMin, g_pi.rotationBySpeedRangeMin, 0.f, .5f, false, "Range");
-		DO_TEXTBOX2(rotationBySpeedRangeMax, g_pi.rotationBySpeedRangeMax, .5f, .5f, true, "");
+		DO_PARTICLECURVE(rotationBySpeedCurve, g_pi().rotationBySpeedCurve, "Curve");
+		DO_TEXTBOX2(rotationBySpeedRangeMin, g_pi().rotationBySpeedRangeMin, 0.f, .5f, false, "Range");
+		DO_TEXTBOX2(rotationBySpeedRangeMax, g_pi().rotationBySpeedRangeMax, .5f, .5f, true, "");
 	}
 
 	static UiElem collisionElem;
-	if (doCheckBox(g_pi.collision, "Collision", true, collisionElem))
+	if (doCheckBox(g_pi().collision, "Collision", true, collisionElem))
 	{
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
-		DO_TEXTBOX(bounciness, g_pi.bounciness, "Bounciness");
-		DO_TEXTBOX(lifetimeLoss, g_pi.lifetimeLoss, "Lifetime Loss On Collision");
-		DO_TEXTBOX(minKillSpeed, g_pi.minKillSpeed, "Kill Speed");
-		DO_TEXTBOX(collisionRadius, g_pi.collisionRadius, "Collision Radius");
+		DO_TEXTBOX(bounciness, g_pi().bounciness, "Bounciness");
+		DO_TEXTBOX(lifetimeLoss, g_pi().lifetimeLoss, "Lifetime Loss On Collision");
+		DO_TEXTBOX(minKillSpeed, g_pi().minKillSpeed, "Kill Speed");
+		DO_TEXTBOX(collisionRadius, g_pi().collisionRadius, "Collision Radius");
 	}
 
 	static UiElem subEmittersElem;
-	if (doCheckBox(g_pi.subEmitters, "Sub Emitters", true, subEmittersElem))
+	if (doCheckBox(g_pi().subEmitters, "Sub Emitters", true, subEmittersElem))
 	{
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
 		//SubEmitter onBirth;
@@ -1593,12 +1601,12 @@ static void doMenu(bool doActions, bool doDraw)
 	std::vector<EnumValue> sortModeValues;
 	sortModeValues.push_back(EnumValue(ParticleInfo::kSortMode_OldestFirst, "Oldest First"));
 	sortModeValues.push_back(EnumValue(ParticleInfo::kSortMode_YoungestFirst, "Youngest First"));
-	DO_ENUM(sortMode, g_pi.sortMode, sortModeValues, "Sort Mode");
+	DO_ENUM(sortMode, g_pi().sortMode, sortModeValues, "Sort Mode");
 
 	std::vector<EnumValue> blendModeValues;
 	blendModeValues.push_back(EnumValue(ParticleInfo::kBlendMode_AlphaBlended, "Use Alpha"));
 	blendModeValues.push_back(EnumValue(ParticleInfo::kBlendMode_Additive, "Additive"));
-	DO_ENUM(blendMode, g_pi.blendMode, blendModeValues, "Blend Mode");
+	DO_ENUM(blendMode, g_pi().blendMode, blendModeValues, "Blend Mode");
 
 	// right side menu
 
@@ -1610,32 +1618,32 @@ static void doMenu(bool doActions, bool doDraw)
 	static UiElem copyPeiElem;
 	if (doButton("Copy", 0.f, .5f, !g_copyPeiIsValid, copyPeiElem))
 	{
-		g_copyPei = g_pei;
+		g_copyPei = g_pei();
 		g_copyPeiIsValid = true;
 	}
 
 	static UiElem pastePeiElem;
 	if (g_copyPeiIsValid && doButton("Paste", .5f, .5f, true, pastePeiElem))
 	{
-		g_pei = g_copyPei;
+		g_pei() = g_copyPei;
 		if (g_activeColor)
 			g_colorWheel.fromColor(*g_activeColor);
 	}
 
-	DO_TEXTBOX(duration, g_pei.duration, "Duration");
-	DO_CHECKBOX(loop, g_pei.loop, "Loop", false);
-	DO_CHECKBOX(prewarm, g_pei.prewarm, "Prewarm", false);
-	DO_TEXTBOX(startDelay, g_pei.startDelay, "Start Delay");
-	DO_TEXTBOX(startLifetime, g_pei.startLifetime, "Start Lifetime");
-	DO_TEXTBOX(startSpeed, g_pei.startSpeed, "Start Speed");
-	DO_TEXTBOX(startSize, g_pei.startSize, "Start Size");
-	DO_TEXTBOX(startRotation, g_pei.startRotation, "Start Rotation"); // todo : min and max values for random start rotation?
+	DO_TEXTBOX(duration, g_pei().duration, "Duration");
+	DO_CHECKBOX(loop, g_pei().loop, "Loop", false);
+	DO_CHECKBOX(prewarm, g_pei().prewarm, "Prewarm", false);
+	DO_TEXTBOX(startDelay, g_pei().startDelay, "Start Delay");
+	DO_TEXTBOX(startLifetime, g_pei().startLifetime, "Start Lifetime");
+	DO_TEXTBOX(startSpeed, g_pei().startSpeed, "Start Speed");
+	DO_TEXTBOX(startSize, g_pei().startSize, "Start Size");
+	DO_TEXTBOX(startRotation, g_pei().startRotation, "Start Rotation"); // todo : min and max values for random start rotation?
 	static UiElem startColorElem;
-	doParticleColor(g_pei.startColor, "Start Color", startColorElem);
-	DO_TEXTBOX(gravityMultiplier, g_pei.gravityMultiplier, "Gravity Multiplier");
-	DO_CHECKBOX(inheritVelocity, g_pei.inheritVelocity, "Inherit Velocity", false);
-	DO_CHECKBOX(worldSpace, g_pei.worldSpace, "World Space", false);
-	DO_TEXTBOX(maxParticles, g_pei.maxParticles, "Max Particles");
+	doParticleColor(g_pei().startColor, "Start Color", startColorElem);
+	DO_TEXTBOX(gravityMultiplier, g_pei().gravityMultiplier, "Gravity Multiplier");
+	DO_CHECKBOX(inheritVelocity, g_pei().inheritVelocity, "Inherit Velocity", false);
+	DO_CHECKBOX(worldSpace, g_pei().worldSpace, "World Space", false);
+	DO_TEXTBOX(maxParticles, g_pei().maxParticles, "Max Particles");
 	// todo : char materialName[32];
 
 	//
@@ -1692,13 +1700,13 @@ static void doMenu(bool doActions, bool doDraw)
 				for (XMLElement * emitterElem = d.FirstChildElement("emitter"); emitterElem; emitterElem = emitterElem->NextSiblingElement("emitter"))
 				{
 					//ParticleEmitterInfo pei;
-					g_pei.load(emitterElem);
+					g_pei().load(emitterElem);
 				}
 
 				for (XMLElement * particleElem = d.FirstChildElement("particle"); particleElem; particleElem = particleElem->NextSiblingElement("particle"))
 				{
 					//ParticleInfo pi;
-					g_pi.load(particleElem);
+					g_pi().load(particleElem);
 				}
 			}
 		}
@@ -1716,13 +1724,13 @@ static void doMenu(bool doActions, bool doDraw)
 
 			p.OpenElement("emitter");
 			{
-				g_pei.save(&p);
+				g_pei().save(&p);
 			}
 			p.CloseElement();
 
 			p.OpenElement("particle");
 			{
-				g_pi.save(&p);
+				g_pi().save(&p);
 			}
 			p.CloseElement();
 
@@ -1744,13 +1752,13 @@ static void doMenu(bool doActions, bool doDraw)
 
 			p.OpenElement("emitter");
 			{
-				g_pei.save(&p);
+				g_pei().save(&p);
 			}
 			p.CloseElement();
 
 			p.OpenElement("particle");
 			{
-				g_pi.save(&p);
+				g_pi().save(&p);
 			}
 			p.CloseElement();
 
@@ -1775,11 +1783,11 @@ void particleEditorTick(bool menuActive, float dt)
 	const float gravityX = 0.f;
 	const float gravityY = 100.f;
 	for (Particle * p = g_pool.head; p; )
-		if (!tickParticle(g_pei, g_pi, dt, gravityX, gravityY, *p))
+		if (!tickParticle(g_pei(), g_pi(), dt, gravityX, gravityY, *p))
 			p = g_pool.freeParticle(p);
 		else
 			p = p->next;
-	tickParticleEmitter(g_pei, g_pi, g_pool, dt, gravityX, gravityY, g_pe);
+	tickParticleEmitter(g_pei(), g_pi(), g_pool, dt, gravityX, gravityY, g_pe);
 }
 
 void particleEditorDraw(bool menuActive, float sx, float sy)
@@ -1792,53 +1800,53 @@ void particleEditorDraw(bool menuActive, float sx, float sy)
 
 #if 1
 	setColor(0, 255, 0, 31);
-	switch (g_pi.shape)
+	switch (g_pi().shape)
 	{
 	case ParticleInfo::kShapeBox:
 		drawRectLine(
-			-g_pi.boxSizeX,
-			-g_pi.boxSizeY,
-			+g_pi.boxSizeX,
-			+g_pi.boxSizeY);
+			-g_pi().boxSizeX,
+			-g_pi().boxSizeY,
+			+g_pi().boxSizeX,
+			+g_pi().boxSizeY);
 		break;
 	case ParticleInfo::kShapeCircle:
 		drawRectLine(
-			-g_pi.circleRadius,
-			-g_pi.circleRadius,
-			+g_pi.circleRadius,
-			+g_pi.circleRadius);
+			-g_pi().circleRadius,
+			-g_pi().circleRadius,
+			+g_pi().circleRadius,
+			+g_pi().circleRadius);
 		break;
 	case ParticleInfo::kShapeEdge:
 		drawLine(
-			-g_pi.boxSizeX,
+			-g_pi().boxSizeX,
 			0.f,
-			+g_pi.boxSizeX,
+			+g_pi().boxSizeX,
 			0.f);
 		break;
 	}
 
-	strcpy_s(g_pei.materialName, sizeof(g_pei.materialName), "texture.png");
+	strcpy_s(g_pei().materialName, sizeof(g_pei().materialName), "texture.png");
 
-	gxSetTexture(Sprite(g_pei.materialName).getTexture());
+	gxSetTexture(Sprite(g_pei().materialName).getTexture());
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	if (g_pi.blendMode == ParticleInfo::kBlendMode_AlphaBlended)
+	if (g_pi().blendMode == ParticleInfo::kBlendMode_AlphaBlended)
 		setBlend(BLEND_ALPHA);
-	else if (g_pi.blendMode == ParticleInfo::kBlendMode_Additive)
+	else if (g_pi().blendMode == ParticleInfo::kBlendMode_Additive)
 		setBlend(BLEND_ADD);
 	else
 		fassert(false);
 
-	for (Particle * p = (g_pi.sortMode == ParticleInfo::kSortMode_OldestFirst) ? g_pool.head : g_pool.tail;
-		         p; p = (g_pi.sortMode == ParticleInfo::kSortMode_OldestFirst) ? p->next : p->prev)
+	for (Particle * p = (g_pi().sortMode == ParticleInfo::kSortMode_OldestFirst) ? g_pool.head : g_pool.tail;
+		         p; p = (g_pi().sortMode == ParticleInfo::kSortMode_OldestFirst) ? p->next : p->prev)
 	{
 		const float particleLife = 1.f - p->life;
 		const float particleSpeed = std::sqrtf(p->speed[0] * p->speed[0] + p->speed[1] * p->speed[1]);
 
 		ParticleColor color;
-		computeParticleColor(g_pei, g_pi, particleLife, particleSpeed, color);
-		const float size = computeParticleSize(g_pei, g_pi, particleLife, particleSpeed);
+		computeParticleColor(g_pei(), g_pi(), particleLife, particleSpeed, color);
+		const float size = computeParticleSize(g_pei(), g_pi(), particleLife, particleSpeed);
 		gxPushMatrix();
 		gxTranslatef(
 			p->position[0],
