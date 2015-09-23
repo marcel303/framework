@@ -43,12 +43,9 @@ static const int kEnumSelectOffset = 150;
 static const int kCurveHeight = 20;
 static const int kColorHeight = 20;
 static const int kColorCurveHeight = 20;
-static const int kMenuSpacing = 30;
+static const int kMenuSpacing = 15;
 static const Color kBackgroundFocusColor(1.f, 1.f, 1.f, .5f);
 static const Color kBackgroundColor(0.f, 0.f, 0.f, .5f);
-
-#define COLORWHEEL_X(sx) (kMenuWidth + kMenuSpacing)
-#define COLORWHEEL_Y(sy) (kMenuSpacing)
 
 // ui draw state
 static bool g_doActions = false;
@@ -1460,16 +1457,100 @@ static void refreshUi()
 	g_activeColor = 0;
 }
 
-static void doMenu(bool doActions, bool doDraw)
+static void doMenu_LoadSave()
 {
-	g_doActions = doActions;
-	g_doDraw = doDraw;
+	static std::string activeFilename;
+	static UiElem loadElem;
+	if (doButton("Load", 0.f, 1.f, true, loadElem))
+	{
+		nfdchar_t * path = 0;
+		nfdresult_t result = NFD_OpenDialog("pfx", "", &path);
 
-	setFont("calibri.ttf");
+		if (result == NFD_OKAY)
+		{
+			XMLDocument d;
 
-	g_drawX = 10;
-	g_drawY = 0;
+			if (d.LoadFile(path) == XML_NO_ERROR)
+			{
+				for (XMLElement * emitterElem = d.FirstChildElement("emitter"); emitterElem; emitterElem = emitterElem->NextSiblingElement("emitter"))
+				{
+					g_pei().load(emitterElem);
+				}
 
+				for (XMLElement * particleElem = d.FirstChildElement("particle"); particleElem; particleElem = particleElem->NextSiblingElement("particle"))
+				{
+					g_pi().load(particleElem);
+				}
+
+				refreshUi();
+
+				activeFilename = path;
+			}
+		}
+	}
+
+	bool save = false;
+	std::string saveFilename;
+
+	static UiElem saveElem;
+	if (doButton("Save", 0.f, 1.f, true, saveElem))
+	{
+		save = true;
+		saveFilename = activeFilename;
+	}
+
+	static UiElem saveAsElem;
+	if (doButton("Save as..", 0.f, 1.f, true, saveAsElem))
+	{
+		save = true;
+	}
+
+	if (save)
+	{
+		if (saveFilename.empty())
+		{
+			nfdchar_t * path = 0;
+			nfdresult_t result = NFD_SaveDialog("pfx", "", &path);
+
+			if (result == NFD_OKAY)
+			{
+				saveFilename = path;
+			}
+		}
+
+		if (!saveFilename.empty())
+		{
+			XMLPrinter p;
+
+			p.OpenElement("emitter");
+			{
+				g_pei().save(&p);
+			}
+			p.CloseElement();
+
+			p.OpenElement("particle");
+			{
+				g_pi().save(&p);
+			}
+			p.CloseElement();
+
+			XMLDocument d;
+			d.Parse(p.CStr());
+			d.SaveFile(saveFilename.c_str());
+
+			activeFilename = saveFilename;
+		}
+	}
+
+	static UiElem restartSimulationElem;
+	if (doButton("Restart simulation", 0.f, 1.f, true, restartSimulationElem))
+	{
+		g_pe.restart(g_pool);
+	}
+}
+
+static void doMenu_Pi()
+{
 	static UiElem copyPiElem;
 	if (doButton("Copy", 0.f, .5f, !g_copyPiIsValid, copyPiElem))
 	{
@@ -1613,14 +1694,10 @@ static void doMenu(bool doActions, bool doDraw)
 	blendModeValues.push_back(EnumValue(ParticleInfo::kBlendMode_AlphaBlended, "Use Alpha"));
 	blendModeValues.push_back(EnumValue(ParticleInfo::kBlendMode_Additive, "Additive"));
 	DO_ENUM(blendMode, g_pi().blendMode, blendModeValues, "Blend Mode");
+}
 
-	// right side menu
-
-	setFont("calibri.ttf");
-
-	g_drawX = 1400 - kMenuWidth - 10; // fixme : window size
-	g_drawY = 0;
-
+static void doMenu_Pei()
+{
 	static UiElem copyPeiElem;
 	if (doButton("Copy", 0.f, .5f, !g_copyPeiIsValid, copyPeiElem))
 	{
@@ -1649,23 +1726,22 @@ static void doMenu(bool doActions, bool doDraw)
 	DO_CHECKBOX(inheritVelocity, g_pei().inheritVelocity, "Inherit Velocity", false);
 	DO_CHECKBOX(worldSpace, g_pei().worldSpace, "World Space", false);
 	DO_TEXTBOX(maxParticles, g_pei().maxParticles, "Max Particles");
-	// todo : char materialName[32];
+	std::string materialName = g_pei().materialName;
+	DO_TEXTBOX(materialName, materialName, "Material");
+	strcpy_s(g_pei().materialName, sizeof(g_pei().materialName), materialName.c_str());
+}
 
-	//
-
-	g_drawY += kMenuSpacing;
-
-	//
-
+static void doMenu_ColorWheel()
+{
 	static UiElem colorPickerElem;
 	if (g_activeColor)
 	{
-		const float wheelX = g_drawX;
+		const float wheelX = g_drawX + (kMenuWidth - g_colorWheel.getSx()) / 2;
 		const float wheelY = g_drawY;
 
 		if (g_doActions)
 		{
-			colorPickerElem.tick(g_drawX, g_drawY, g_drawX + g_colorWheel.getSx(), g_drawY + g_colorWheel.getSy());
+			colorPickerElem.tick(wheelX, wheelY, wheelX + g_colorWheel.getSx(), wheelY + g_colorWheel.getSy());
 			if (colorPickerElem.isActive)
 				g_colorWheel.tick(mouse.x - wheelX, mouse.y - wheelY, mouse.wentDown(BUTTON_LEFT), mouse.isDown(BUTTON_LEFT), 1.f / 60.f); // fixme : mouseDown and dt
 			g_colorWheel.toColor(*g_activeColor);
@@ -1683,105 +1759,47 @@ static void doMenu(bool doActions, bool doDraw)
 
 		g_drawY += g_colorWheel.getSy();
 	}
+}
 
-	//
+static void doMenu(bool doActions, bool doDraw)
+{
+	g_doActions = doActions;
+	g_doDraw = doDraw;
 
+	// left side menu
+
+	setFont("calibri.ttf");
+	g_drawX = 10;
+	g_drawY = 0;
+
+	doMenu_Pi();
+
+	// right side menu
+
+	setFont("calibri.ttf");
+	g_drawX = 1400 - kMenuWidth - 10; // fixme : window size
+	g_drawY = 0;
+
+	doMenu_LoadSave();
 	g_drawY += kMenuSpacing;
 
-	//
+	doMenu_Pei();
+	g_drawY += kMenuSpacing;
 
-	static std::string activeFilename;
-	static UiElem loadElem;
-	if (doButton("Load", 0.f, 1.f, true, loadElem))
-	{
-		nfdchar_t * path = 0;
-		nfdresult_t result = NFD_OpenDialog("pfx", "", &path);
-
-		if (result == NFD_OKAY)
-		{
-			XMLDocument d;
-
-			if (d.LoadFile(path) == XML_NO_ERROR)
-			{
-				for (XMLElement * emitterElem = d.FirstChildElement("emitter"); emitterElem; emitterElem = emitterElem->NextSiblingElement("emitter"))
-				{
-					g_pei().load(emitterElem);
-				}
-
-				for (XMLElement * particleElem = d.FirstChildElement("particle"); particleElem; particleElem = particleElem->NextSiblingElement("particle"))
-				{
-					g_pi().load(particleElem);
-				}
-
-				refreshUi();
-
-				activeFilename = path;
-			}
-		}
-	}
-
-	bool save = false;
-	std::string saveFilename;
-
-	static UiElem saveElem;
-	if (doButton("Save", 0.f, 1.f, true, saveElem))
-	{
-		save = true;
-		saveFilename = activeFilename;
-	}
-
-	static UiElem saveAsElem;
-	if (doButton("Save as..", 0.f, 1.f, true, saveAsElem))
-	{
-		save = true;
-	}
-
-	if (save)
-	{
-		if (saveFilename.empty())
-		{
-			nfdchar_t * path = 0;
-			nfdresult_t result = NFD_SaveDialog("pfx", "", &path);
-
-			if (result == NFD_OKAY)
-			{
-				saveFilename = path;
-			}
-		}
-
-		if (!saveFilename.empty())
-		{
-			XMLPrinter p;
-
-			p.OpenElement("emitter");
-			{
-				g_pei().save(&p);
-			}
-			p.CloseElement();
-
-			p.OpenElement("particle");
-			{
-				g_pi().save(&p);
-			}
-			p.CloseElement();
-
-			XMLDocument d;
-			d.Parse(p.CStr());
-			d.SaveFile(saveFilename.c_str());
-
-			activeFilename = saveFilename;
-		}
-	}
-
-	static UiElem restartSimulationElem;
-	if (doButton("Restart simulation", 0.f, 1.f, true, restartSimulationElem))
-	{
-		g_pe.restart(g_pool);
-	}
+	doMenu_ColorWheel();
+	g_drawY += kMenuSpacing;
 }
 
 void particleEditorTick(bool menuActive, float dt)
 {
+	static bool firstTick = true;
+	if (firstTick)
+	{
+		firstTick = false;
+		for (int i = 0; i < kMaxParticleInfos; ++i)
+			strcpy_s(g_peiList[i].materialName, sizeof(g_peiList[i].materialName), "texture.png");
+	}
+
 	if (menuActive)
 		doMenu(true, false);
 
@@ -1829,8 +1847,6 @@ void particleEditorDraw(bool menuActive, float sx, float sy)
 			0.f);
 		break;
 	}
-
-	strcpy_s(g_pei().materialName, sizeof(g_pei().materialName), "texture.png");
 
 	gxSetTexture(Sprite(g_pei().materialName).getTexture());
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
