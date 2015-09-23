@@ -1744,6 +1744,7 @@ static void doMenu_Pi()
 		{
 			if (doCheckBox(g_pi().subEmitters[i].enabled, onEventName[i], true, onEventElem[i]))
 			{
+				ScopedValueAdjust<int> xAdjust(g_drawX, +10);
 				DO_TEXTBOX(chance, g_pi().subEmitters[i].chance, "Spawn Chance");
 				DO_TEXTBOX(count, g_pi().subEmitters[i].count, "Spawn Count");
 				std::string emitterName = g_pi().subEmitters[i].emitterName;
@@ -1957,28 +1958,58 @@ void particleEditorDraw(bool menuActive, float sx, float sy)
 		else
 			fassert(false);
 
-		for (Particle * p = (g_piList[i].sortMode == ParticleInfo::kSortMode_OldestFirst) ? g_pool[i].head : g_pool[i].tail;
-					 p; p = (g_piList[i].sortMode == ParticleInfo::kSortMode_OldestFirst) ? p->next : p->prev)
+		//if (rand() % 2)
+		if (true)
 		{
-			const float particleLife = 1.f - p->life;
-			const float particleSpeed = std::sqrtf(p->speed[0] * p->speed[0] + p->speed[1] * p->speed[1]);
+			gxBegin(GL_QUADS);
+			{
+				for (Particle * p = (g_piList[i].sortMode == ParticleInfo::kSortMode_OldestFirst) ? g_pool[i].head : g_pool[i].tail;
+							 p; p = (g_piList[i].sortMode == ParticleInfo::kSortMode_OldestFirst) ? p->next : p->prev)
+				{
+					const float particleLife = 1.f - p->life;
+					const float particleSpeed = std::sqrtf(p->speed[0] * p->speed[0] + p->speed[1] * p->speed[1]);
 
-			ParticleColor color;
-			computeParticleColor(g_peiList[i], g_piList[i], particleLife, particleSpeed, color);
-			const float size = computeParticleSize(g_peiList[i], g_piList[i], particleLife, particleSpeed);
-			gxPushMatrix();
-			gxTranslatef(
-				p->position[0],
-				p->position[1],
-				0.f);
-			gxRotatef(p->rotation, 0.f, 0.f, 1.f);
-			setColorf(color.rgba[0], color.rgba[1], color.rgba[2], color.rgba[3]);
-			drawRect(
-				- size / 2.f,
-				- size / 2.f,
-				+ size / 2.f,
-				+ size / 2.f);
-			gxPopMatrix();
+					ParticleColor color;
+					computeParticleColor(g_peiList[i], g_piList[i], particleLife, particleSpeed, color);
+					const float size = computeParticleSize(g_peiList[i], g_piList[i], particleLife, particleSpeed);
+
+					const float s = std::sinf(-p->rotation * float(M_PI) / 180.f);
+					const float c = std::cosf(-p->rotation * float(M_PI) / 180.f);
+
+					gxColor4f(color.rgba[0], color.rgba[1], color.rgba[2], color.rgba[3]);
+					gxTexCoord2f(0.f, 1.f); gxVertex2f(p->position[0] + (- c - s) * size / 2.f, p->position[1] + (+ s - c) * size / 2.f);
+					gxTexCoord2f(1.f, 1.f); gxVertex2f(p->position[0] + (+ c - s) * size / 2.f, p->position[1] + (- s - c) * size / 2.f);
+					gxTexCoord2f(1.f, 0.f); gxVertex2f(p->position[0] + (+ c + s) * size / 2.f, p->position[1] + (- s + c) * size / 2.f);
+					gxTexCoord2f(0.f, 0.f); gxVertex2f(p->position[0] + (- c + s) * size / 2.f, p->position[1] + (+ s + c) * size / 2.f);
+				}
+			}
+			gxEnd();
+		}
+		else
+		{
+			for (Particle * p = (g_piList[i].sortMode == ParticleInfo::kSortMode_OldestFirst) ? g_pool[i].head : g_pool[i].tail;
+						 p; p = (g_piList[i].sortMode == ParticleInfo::kSortMode_OldestFirst) ? p->next : p->prev)
+			{
+				const float particleLife = 1.f - p->life;
+				const float particleSpeed = std::sqrtf(p->speed[0] * p->speed[0] + p->speed[1] * p->speed[1]);
+
+				ParticleColor color;
+				computeParticleColor(g_peiList[i], g_piList[i], particleLife, particleSpeed, color);
+				const float size = computeParticleSize(g_peiList[i], g_piList[i], particleLife, particleSpeed);
+				gxPushMatrix();
+				gxTranslatef(
+					p->position[0],
+					p->position[1],
+					0.f);
+				gxRotatef(p->rotation, 0.f, 0.f, 1.f);
+				setColorf(color.rgba[0], color.rgba[1], color.rgba[2], color.rgba[3]);
+				drawRect(
+					- size / 2.f,
+					- size / 2.f,
+					+ size / 2.f,
+					+ size / 2.f);
+				gxPopMatrix();
+			}
 		}
 		gxSetTexture(0);
 	}

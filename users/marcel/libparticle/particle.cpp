@@ -900,14 +900,14 @@ bool tickParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei
 	const float particleLife = 1.f - p.life;
 	const float particleSpeed = sqrtf(p.speed[0] * p.speed[0] + p.speed[1] * p.speed[1]);
 
-	ParticleColor color;
-	computeParticleColor(pei, pi, particleLife, particleSpeed, color);
-
 	const float size = computeParticleSize(pei, pi, particleLife, particleSpeed);
 
 	p.rotation = computeParticleRotation(pei, pi, timeStep, particleLife, particleSpeed, p.rotation);
 
 #if 0
+	ParticleColor color;
+	computeParticleColor(pei, pi, particleLife, particleSpeed, color);
+
 	printf("tickParticle: color=%1.2f, %1.2f, %1.2f, %1.2f size=%03.2f, rotation=%+03.2f\n",
 		color.rgba[0], color.rgba[1], color.rgba[2], color.rgba[3], size, p.rotation);
 #endif
