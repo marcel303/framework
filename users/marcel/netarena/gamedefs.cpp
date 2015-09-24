@@ -1,3 +1,4 @@
+#include "framework.h"
 #include "gamedefs.h"
 
 OPTION_DEFINE(bool, DEMOMODE, "App/Demo Mode");
@@ -533,3 +534,13 @@ OPTION_STEP(EMOTE_DISPLAY_TIME, 0.f, 0.f, .1f);
 
 OPTION_DEFINE(bool, VOLCANO_LOOP, "Level Events/Volcano/Loop");
 OPTION_DEFINE(int, VOLCANO_LOOP_TIME, "Level Events/Volcano/LoopTime");
+
+void setMainFont()
+{
+	setFont("font-main.ttf");
+}
+
+void setDebugFont()
+{
+	setFont("calibri.ttf");
+}

@@ -83,6 +83,7 @@ SplashScreen::SplashScreen(const char * filename, float duration, float fadeInDu
 	, m_fadeInDuration(fadeInDuration)
 	, m_fadeOutDuration(fadeOutDuration)
 	, m_hasPlayedSound(false)
+	, m_extraFrames(0)
 {
 }
 
@@ -90,6 +91,7 @@ void SplashScreen::onEnter()
 {
 	m_time = 0.f;
 	m_hasPlayedSound = false;
+	m_extraFrames = 0;
 }
 
 void SplashScreen::onExit()
@@ -101,14 +103,18 @@ bool SplashScreen::tick(float dt)
 {
 	m_time += dt;
 
-	if (m_time >= m_fadeInDuration/2.f && !m_hasPlayedSound)
+	if (m_time >= m_fadeInDuration/2.5f && !m_hasPlayedSound)
 	{
 		m_hasPlayedSound = true;
 		Sound("title/splash.ogg").play();
 	}
 
 	if (m_time >= m_duration)
-		return true;
+	{
+		m_extraFrames++;
+		if (m_extraFrames == 4)
+			return true;
+	}
 
 	if (g_keyboardLock == 0 && (g_uiInput->wentDown(INPUT_BUTTON_A) || g_uiInput->wentDown(INPUT_BUTTON_START)))
 		return true;
@@ -120,9 +126,9 @@ void SplashScreen::draw()
 {
 	float c = 1.f;
 	if (m_time < m_fadeInDuration)
-		c = m_time / m_fadeInDuration;
+		c = saturate(m_time / m_fadeInDuration);
 	if (m_time > m_duration - m_fadeOutDuration)
-		c = 1.f - (m_time - (m_duration - m_fadeOutDuration))  / m_fadeOutDuration;
+		c = saturate((m_duration - m_time) / m_fadeOutDuration);
 	setColorf(c, c, c, 1.f);
 	Sprite(m_filename.c_str()).drawEx(0.f, 0.f);
 }

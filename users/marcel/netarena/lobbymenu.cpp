@@ -391,7 +391,7 @@ void LobbyMenu::draw()
 #if GRIDBASED_CHARSELECT
 	m_charGrid->draw();
 
-	setFont("calibri.ttf");
+	setMainFont();
 	setColorf(1.f, 1.f, 1.f, std::fmod(gameSim->m_physicalRoundTime * 1.5f, 1.f));
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
@@ -473,7 +473,7 @@ void LobbyMenu::draw()
 
 	// draw current game mode selection
 
-	setFont("calibri.ttf");
+	setMainFont();
 	setColor(127, 255, 227);
 	drawText(
 		UI_CHARSELECT_GAMEMODE_TEXT_X,
@@ -487,7 +487,7 @@ void LobbyMenu::draw()
 		const float timeRemaining = gameSim->m_gameStartTicks / float(TICKS_PER_SECOND);
 
 		// todo : options for position
-		setFont("calibri.ttf");
+		setMainFont();
 		setColor(127, 255, 227);
 		drawText(GFX_SX/2, 410, 48, 0.f, 0.f, "ROUND START IN T-%02.2f", timeRemaining);
 	}

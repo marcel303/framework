@@ -335,7 +335,7 @@ void Button::draw()
 
 	if (m_localString)
 	{
-		setFont("calibri.ttf");
+		setMainFont();
 		drawText(m_x + m_textX, m_y + m_textY, m_textSize, +1.f, +1.f, "%s", getLocalString(m_localString));
 	}
 }
@@ -580,7 +580,7 @@ void CheckButton::draw()
 			setColor(colorWhite);
 		else
 			setColor(255, 255, 255, 255, 63);
-		setFont("calibri.ttf");
+		setMainFont();
 		drawText(m_x + m_textX, m_y + m_textY, m_textSize, +1.f, +1.f, "%s", getLocalString(m_localString));
 	}
 }

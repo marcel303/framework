@@ -77,8 +77,7 @@ void OptionMenu::Draw(int x, int y, int sx, int sy)
 	setColor(0, 0, 0, 191);
 	drawRect(x, y, x + sx, y + numNodes * lineSize);
 
-	Font font("calibri.ttf");
-	setFont(font);
+	setDebugFont();
 
 	int index = 0;
 	for (Node * node = m_currentNode->m_firstChild; node != 0; node = node->m_nextSibling, index++)

@@ -8,9 +8,22 @@ enum MenuInputMode
 
 extern MenuInputMode g_currentMenuInputMode;
 
+enum MenuId
+{
+	kMenuId_IntroScreen,
+	kMenuId_Unknown
+};
+
 class Menu
 {
 public:
+	MenuId m_menuId;
+
+	Menu()
+		: m_menuId(kMenuId_Unknown)
+	{
+	}
+
 	virtual void onEnter() { }
 	virtual void onExit() { }
 
@@ -37,4 +50,6 @@ public:
 
 	void tick(float dt);
 	void draw();
+
+	MenuId getActiveMenuId();
 };

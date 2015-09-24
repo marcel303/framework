@@ -14,14 +14,7 @@
 #include "textfield.h"
 #include "Timer.h"
 
-OPTION_DECLARE(bool, s_noBgm, false);
-OPTION_DEFINE(bool, s_noBgm, "Sound/No BGM");
-OPTION_ALIAS(s_noBgm, "nobgm");
-
 OPTION_EXTERN(int, g_playerCharacterIndex);
-
-static char s_bgm[64] = { };
-static Music * s_bgmSound = 0;
 
 Client::Client()
 	: m_channel(0)
@@ -216,68 +209,6 @@ void Client::tick(float dt)
 	}
 
 	m_quickLook->tick(dt);
-
-	// background music
-
-	if (s_noBgm || !g_app->m_userSettings->audio.musicEnabled)
-	{
-		if (s_bgmSound)
-		{
-			s_bgmSound->stop();
-
-			delete s_bgmSound;
-			s_bgmSound = 0;
-
-			memset(s_bgm, 0, sizeof(s_bgm));
-		}
-	}
-	else if (g_app->isSelectedClient(this))
-	{
-		char temp[64];
-
-		temp[0] = 0;
-
-		bool loop = true;
-
-		switch (m_gameSim->m_gameState)
-		{
-		case kGameState_Initial:
-			Assert(false);
-		case kGameState_Connecting:
-		case kGameState_OnlineMenus:
-		case kGameState_NewGame:
-			strcpy_s(temp, sizeof(temp), "bgm/bgm-menus.ogg");
-			break;
-		case kGameState_RoundBegin:
-		case kGameState_Play:
-			sprintf_s(temp, sizeof(temp), "bgm/bgm-play%02d.ogg", m_gameSim->m_nextRoundNumber % 4);
-			break;
-		case kGameState_RoundComplete:
-			//strcpy_s(temp, sizeof(temp), "bgm/bgm-round-complete.ogg");
-			loop = false;
-			break;
-
-		default:
-			Assert(false);
-			break;
-		}
-
-		if (strcmp(temp, s_bgm) != 0)
-		{
-			strcpy_s(s_bgm, sizeof(s_bgm), temp);
-
-			delete s_bgmSound;
-			s_bgmSound = 0;
-
-			if (strlen(s_bgm))
-			{
-				s_bgmSound = new Music(s_bgm);
-				s_bgmSound->play(loop);
-			}
-		}
-
-		s_bgmSound->setVolume(g_app->m_userSettings->audio.musicVolume * 100.f);
-	}
 }
 
 void Client::draw()
@@ -340,7 +271,7 @@ void Client::drawConnecting()
 	setColor(colorBlue);
 	drawRect(0, 0, GFX_SX, GFX_SY);
 	setColor(colorWhite);
-	setFont("calibri.ttf");
+	setMainFont();
 	drawText(GFX_SX/2, GFX_SY/2, 32, 0.f, 0.f, "Connecting..");
 	setColor(colorWhite);
 }
@@ -356,13 +287,13 @@ void Client::drawMenus()
 
 		if (player.m_isUsed)
 		{
-			setFont("calibri.ttf");
+			setDebugFont();
 			setColor(colorWhite);
 			drawText(GFX_SX/2, y, 24, 0.f, 0.f, "PLAYER %d CHAR %d", i, player.m_characterIndex);
 		}
 		else
 		{
-			setFont("calibri.ttf");
+			setDebugFont();
 			setColor(127, 127, 127);
 			drawText(GFX_SX/2, y, 24, 0.f, 0.f, "PLAYER %d NOT CONNECTED", i);
 		}
@@ -406,7 +337,7 @@ void Client::drawRoundComplete()
 
 	int y = GFX_SY / 4;
 
-	setFont("calibri.ttf");
+	setMainFont();
 	drawText(GFX_SX / 2, y, 60, 0.f, 0.f, "Round Complete!");
 
 	y += 80;
@@ -451,7 +382,7 @@ void Client::drawAnnouncements()
 		drawRect(0, y, GFX_SX, y + sy);
 
 		setColor(colorWhite);
-		setFont("calibri.ttf");
+		setMainFont();
 		drawText(GFX_SX/2, y + 5, 40, 0.f, +1.f, i->message.c_str());
 
 		y += 60;
@@ -481,7 +412,7 @@ void Client::drawTextChat()
 
 			const TextChatLog & log = *i;
 
-			setFont("calibri.ttf");
+			setMainFont();
 
 			const Color color = getPlayerColor(log.playerIndex);
 			setColorf(color.r, color.g, color.b, m_textChatFade);

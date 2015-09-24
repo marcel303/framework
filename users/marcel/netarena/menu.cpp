@@ -87,3 +87,13 @@ void MenuMgr::draw()
 	if (menu)
 		menu->draw();
 }
+
+MenuId MenuMgr::getActiveMenuId()
+{
+	Menu * activeMenu = getActiveMenu();
+
+	if (activeMenu)
+		return activeMenu->m_menuId;
+	else
+		return kMenuId_Unknown;
+}

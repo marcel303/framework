@@ -128,7 +128,7 @@ void Dialog::draw()
 		}
 
 		setColor(255, 255, 255, opacity * 255.f);
-		setFont("calibri.ttf");
+		setMainFont();
 		drawText(
 			UI_DIALOG_PX + UI_DIALOG_SX/2,
 			UI_DIALOG_PY + UI_DIALOG_SY/2,

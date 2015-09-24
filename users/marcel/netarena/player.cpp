@@ -2920,7 +2920,7 @@ void Player::draw() const
 		setColor(0, 0, 255, 127);
 		drawRectLine(offsetX, offsetY, offsetX + sizeX, offsetY + sizeY);
 
-		setFont("calibri.ttf");
+		setMainFont();
 		setColor(0, 0, 255);
 		drawText(offsetX + sizeX/2, offsetY + INGAME_TEXTCHAT_PADDING_Y, INGAME_TEXTCHAT_FONT_SIZE, 0.f, +1.f, "%s", m_instanceData->m_textChat.c_str());
 	}
@@ -3132,7 +3132,7 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 		EMBLEM_SPRITER.draw(state);
 
 		// draw score
-		setFont("calibri.ttf");
+		setMainFont();
 		setColor(colorBlack);
 		drawText(x, y + UI_PLAYER_EMBLEM_TEXT_OFFSET_Y, 20, 0.f, +1.f, "%d", m_score);
 	}
@@ -3208,7 +3208,7 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 		drawRectLine(x - sx / 2, y - sy / 2, x + sx / 2, y + sy / 2);
 
 		setColor(255, 255, 255);
-		setFont("calibri.ttf");
+		setMainFont();
 		drawText(x, y, 24, 0, 0, "(X)");
 	}
 #endif
@@ -3276,9 +3276,7 @@ void Player::debugDraw() const
 
 	if (m_attack.attacking && m_attack.hasCollision)
 	{
-		Font font("calibri.ttf");
-		setFont(font);
-
+		setDebugFont();
 		setColor(colorWhite);
 		drawText(m_pos[0], y, 14, 0.f, 0.f, "attacking");
 		y += 18.f;

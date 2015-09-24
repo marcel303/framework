@@ -157,7 +157,7 @@ void TextField::draw()
 		// draw text
 
 		setColor(127, 227, 255);
-		setFont("calibri.ttf");
+		setMainFont();
 		drawText(
 			m_x + UI_TEXTCHAT_PADDING_X,
 			m_y + UI_TEXTCHAT_PADDING_Y, UI_TEXTCHAT_FONT_SIZE,

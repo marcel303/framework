@@ -1,5 +1,6 @@
 #pragma once
 
+#include "gamedefs.h"
 #include "menu.h"
 
 class Button;
@@ -13,6 +14,9 @@ class MainMenu : public Menu
 	Button * m_options;
 	Button * m_quitApp;
 	MenuNav * m_menuNav;
+
+	Button * m_socialFb;
+	Button * m_socialTw;
 
 	float m_inactivityTime;
 

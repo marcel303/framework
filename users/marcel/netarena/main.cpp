@@ -107,6 +107,10 @@ COMMAND_OPTION(s_triggerLevelEvent_GravityWell, "Debug/Trigger Gravity Well Leve
 COMMAND_OPTION(s_triggerLevelEvent_SpikeWalls, "Debug/Trigger Spike Walls Level Event", []{ g_app->netDebugAction("triggerLevelEvent", "spikewalls"); });
 COMMAND_OPTION(s_triggerLevelEvent_TimeDilation, "Debug/Trigger Time Dilation Level Event", []{ g_app->netDebugAction("triggerLevelEvent", "timedilation"); });
 
+OPTION_DECLARE(bool, s_noBgm, false);
+OPTION_DEFINE(bool, s_noBgm, "Sound/No BGM");
+OPTION_ALIAS(s_noBgm, "nobgm");
+
 OPTION_EXTERN(int, g_playerCharacterIndex);
 OPTION_EXTERN(bool, g_noSound);
 
@@ -178,6 +182,18 @@ static void HandleAction(const std::string & action, const Dictionary & args)
 			g_app->selectClient(index);
 		}
 	}
+}
+
+static void HandleFillCachesCallback(float filePercentage)
+{
+	framework.process();
+
+	framework.beginDraw(0, 0, 0, 0);
+	{
+		setMainFont();
+		drawText(GFX_SX/2, GFX_SY/2, 24, 0.f, 0.f, "Loading %0.2f%%", filePercentage * 100.f);
+	}
+	framework.endDraw();
 }
 
 //
@@ -1147,17 +1163,16 @@ bool App::init()
 	framework.useClosestDisplayMode = true;
 	framework.windowTitle = "NetArena";
 	framework.actionHandler = HandleAction;
+	framework.fillCachesCallback = HandleFillCachesCallback;
 
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
+		SDL_ShowCursor(0);
+
 		if (!g_devMode && g_precacheResources)
 		{
 			for (int i = 0; i < 10; ++i)
-			{
-				framework.beginDraw(0, 0, 0, 0);
-				Sprite("loading-back.png").draw();
-				framework.endDraw();
-			}
+				HandleFillCachesCallback(0.f);
 
 			framework.fillCachesWithPath(".", true);
 		}
@@ -1182,7 +1197,7 @@ bool App::init()
 				framework.beginDraw(0, 0, 0, 0);
 				setColor(colorWhite);
 				Sprite("loading-back.png").draw();
-				setFont("calibri.ttf");
+				setMainFont();
 				drawText(GFX_SX/2, GFX_SY/3 - 30.f, 24, 0.f, -1.f, "Your name?");
 				nameInput.draw();
 				framework.endDraw();
@@ -1259,8 +1274,15 @@ bool App::init()
 		m_menuMgr->push(new MainMenu());
 
 	#if ITCHIO_BUILD
-		m_menuMgr->push(new SplashScreen("title/itchio2.png", 5.f, .5f, .3f));
-		m_menuMgr->push(new SplashScreen("title/itchio1.png", 5.f, .5f, .3f));
+		if (!g_devMode)
+		{
+			Menu * splash1 = new SplashScreen("title/itchio1.png", 5.f, .5f, .3f);
+			Menu * splash2 = new SplashScreen("title/itchio2.png", 5.f, .5f, .3f);
+			splash1->m_menuId = kMenuId_IntroScreen;
+			splash2->m_menuId = kMenuId_IntroScreen;
+			m_menuMgr->push(splash2);
+			m_menuMgr->push(splash1);
+		}
 	#else
 		m_menuMgr->push(new Title());
 	#endif
@@ -1718,7 +1740,12 @@ bool App::tick()
 		lastMouse = mouse;
 	}
 
-	SDL_ShowCursor(mouseInactivityTime >= 3.f ? 0 : 1);
+	bool showCursor = true;
+	if (mouseInactivityTime >= 3.f)
+		showCursor = false;
+	if (m_menuMgr->getActiveMenuId() == kMenuId_IntroScreen)
+		showCursor = false;
+	SDL_ShowCursor(showCursor);
 	
 	// UI input
 
@@ -1738,6 +1765,10 @@ bool App::tick()
 	// update menus
 
 	m_menuMgr->tick(dt);
+
+	// update BGM
+
+	tickBgm();
 
 	// update host
 
@@ -1932,6 +1963,86 @@ bool App::tick()
 	return true;
 }
 
+void App::tickBgm()
+{
+	// background music
+
+	static char bgm[64] = { };
+	static Music * bgmSound = 0;
+
+	Client * selectedClient = getSelectedClient();
+
+	char temp[64];
+	temp[0] = 0;
+
+	bool loop = true;
+
+	if (s_noBgm || !m_userSettings->audio.musicEnabled)
+	{
+		if (bgmSound)
+		{
+			bgmSound->stop();
+
+			delete bgmSound;
+			bgmSound = 0;
+
+			memset(bgm, 0, sizeof(bgm));
+		}
+	}
+	else if (selectedClient)
+	{
+		switch (selectedClient->m_gameSim->m_gameState)
+		{
+		case kGameState_Initial:
+			Assert(false);
+		case kGameState_Connecting:
+		case kGameState_OnlineMenus:
+		case kGameState_NewGame:
+			strcpy_s(temp, sizeof(temp), "bgm/bgm-menus.ogg");
+			break;
+		case kGameState_RoundBegin:
+		case kGameState_Play:
+			sprintf_s(temp, sizeof(temp), "bgm/bgm-play%02d.ogg", selectedClient->m_gameSim->m_nextRoundNumber % 4);
+			break;
+		case kGameState_RoundComplete:
+			//strcpy_s(temp, sizeof(temp), "bgm/bgm-round-complete.ogg");
+			loop = false;
+			break;
+
+		default:
+			Assert(false);
+			break;
+		}
+	}
+	else if (m_menuMgr->getActiveMenuId() == kMenuId_IntroScreen)
+	{
+		// no bgm
+	}
+	else
+	{
+		sprintf_s(temp, sizeof(temp), "bgm/bgm-menus.ogg");
+	}
+
+	if (strcmp(temp, bgm) != 0)
+	{
+		strcpy_s(bgm, sizeof(bgm), temp);
+
+		delete bgmSound;
+		bgmSound = 0;
+
+		if (strlen(bgm))
+		{
+			bgmSound = new Music(bgm);
+			bgmSound->play(loop);
+		}
+	}
+
+	if (bgmSound)
+	{
+		bgmSound->setVolume(g_app->m_userSettings->audio.musicVolume * 100.f);
+	}
+}
+
 void App::draw()
 {
 	TIMER_SCOPE(g_appDrawTime);
@@ -1955,8 +2066,7 @@ void App::draw()
 				client->m_gameSim->getCurrentTimeDilation(timeDilation, playerAttackTimeDilation);
 
 				setColor(255, 255, 255);
-				Font font("calibri.ttf");
-				setFont(font);
+				setDebugFont();
 				drawText(5, GFX_SY - 25, 20, +1.f, -1.f, "viewing client %d. time dilation %01.2f. state %s. mouse %d, %d", m_selectedClient, timeDilation, g_gameStateNames[client->m_gameSim->m_gameState], mouse.x, mouse.y);
 			}
 		}
@@ -1996,8 +2106,7 @@ void App::draw()
 		if (g_devMode)
 		{
 			setColor(255, 255, 255);
-			Font font("calibri.ttf");
-			setFont(font);
+			setDebugFont();
 			drawText(GFX_SX - 5, GFX_SY - 25, 20, -1.f, -1.f, "build %08x", g_buildId);
 		}
 
@@ -2007,7 +2116,7 @@ void App::draw()
 
 			{
 				int y = 100;
-				setFont("calibri.ttf");
+				setDebugFont();
 				drawText(0, y += 30, 24, +1, +1, "random seed=%08x, next pickup tick=%02.1f, crc=%08x, px=%g, py=%g",
 					g_host->m_gameSim.m_randomSeed,
 					g_host->m_gameSim.m_nextPickupSpawnTimeRemaining,
@@ -2046,7 +2155,7 @@ void App::draw()
 			int sy = 40;
 			int fontSize = 24;
 			setColor(colorWhite);
-			setFont("calibri.ttf");
+			setDebugFont();
 			drawText(x, y += sy, fontSize, +1.f, +1.f, "F1: Show help");
 			drawText(x, y += sy, fontSize, +1.f, +1.f, "F2: Leave Game");
 			drawText(x, y += sy, fontSize, +1.f, +1.f, "F3: Toggle Animation Test Tool");
@@ -2078,7 +2187,7 @@ void App::draw()
 			setColor(colorRed);
 			drawRect(0, 0, GFX_SX, 40);
 			setColor(colorWhite);
-			setFont("calibri.ttf");
+			setDebugFont();
 			drawText(GFX_SX/2, 12, 30, 0.f, 0.f, "DESYNC");
 		}
 
@@ -2631,7 +2740,7 @@ int main(int argc, char * argv[])
 					}
 
 					setColor(colorWhite);
-					setFont("calibri.ttf");
+					setDebugFont();
 					drawText(0.f, 0.f, 24, +1.f, +1.f, "time: %.2f, speed: %.2fx", state.animTime, state.animSpeed);
 				}
 				framework.endDraw();

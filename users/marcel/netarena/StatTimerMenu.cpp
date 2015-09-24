@@ -1,4 +1,5 @@
 #include "framework.h"
+#include "gamedefs.h"
 #include "StatTimerMenu.h"
 #include "StatTimers.h"
 
@@ -40,8 +41,7 @@ void StatTimerMenu::Draw(int x, int y, int sx, int sy)
 	setColor(0, 0, 0, 191);
 	drawRect(x, y, x + sx, y + (numNodes + 1) * lineSize);
 
-	Font font("calibri.ttf");
-	setFont(font);
+	setDebugFont();
 
 	int currentY = y;
 

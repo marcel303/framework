@@ -10,6 +10,16 @@
 #include "title.h"
 #include "uicommon.h"
 
+#ifdef WIN32
+#include <Shellapi.h>
+static void openBrowserWithUrl(const char * url)
+{
+	ShellExecute(NULL, "open", url, NULL, NULL, SW_SHOWNORMAL);
+}
+#else
+static void openBrowserWithUrl(const char * url) { }
+#endif
+
 OPTION_EXTERN(std::string, g_connect);
 
 static const float kMaxInactivityTime = 30.f;
@@ -24,16 +34,29 @@ MainMenu::MainMenu()
 	, m_options(0)
 	, m_quitApp(0)
 	, m_menuNav(0)
+	, m_socialFb(0)
+	, m_socialTw(0)
 {
 	if (!PUBLIC_DEMO_BUILD || ((std::string)g_connect).empty())
 		m_newGame = new Button(GFX_SX/2, GFX_SY/3, "mainmenu-button.png", "menu-newgame", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+#if ENABLE_NETWORKING
 	if (!PUBLIC_DEMO_BUILD || !((std::string)g_connect).empty())
 		m_findGame = new Button(GFX_SX/2, GFX_SY/3 + 150, "mainmenu-button.png", "menu-findgame", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
-	if (!PUBLIC_DEMO_BUILD)
-		m_customize = new Button(GFX_SX/2, GFX_SY/3 + 300, "mainmenu-button.png", "menu-customize", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
-	if (!PUBLIC_DEMO_BUILD)
-		m_options = new Button(GFX_SX/2, GFX_SY/3 + 450, "mainmenu-button.png", "menu-options", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+#endif
+#if ENABLE_OPTIONS
+	m_customize = new Button(GFX_SX/2, GFX_SY/3 + 300, "mainmenu-button.png", "menu-customize", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_options = new Button(GFX_SX/2, GFX_SY/3 + 450, "mainmenu-button.png", "menu-options", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+#endif
 	m_quitApp = new Button(GFX_SX/2, GFX_SY/3 + 600, "mainmenu-button.png", "menu-quit", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+
+#if ITCHIO_BUILD
+	m_newGame->setPosition(670 + m_newGame->m_sprite->getWidth()/2, 610 + m_newGame->m_sprite->getHeight()/2);
+	m_quitApp->setPosition(670 + m_newGame->m_sprite->getWidth()/2, 765 + m_newGame->m_sprite->getHeight()/2);
+	const int socialSx = 385;
+	const int socialSy = 85;
+	m_socialFb = new Button(165 + socialSx/2, 925 + socialSy/2, "itch-social-fb.png", "", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_socialTw = new Button(165 + socialSx/2, 830 + socialSy/2, "itch-social-tw.png", "", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+#endif
 
 	m_menuNav = new MenuNav();
 
@@ -47,6 +70,11 @@ MainMenu::MainMenu()
 		m_menuNav->addElem(m_options);
 	if (m_quitApp)
 		m_menuNav->addElem(m_quitApp);
+
+	if (m_socialFb)
+		m_menuNav->addElem(m_socialFb);
+	if (m_socialTw)
+		m_menuNav->addElem(m_socialTw);
 }
 
 MainMenu::~MainMenu()
@@ -58,6 +86,9 @@ MainMenu::~MainMenu()
 	delete m_customize;
 	delete m_options;
 	delete m_quitApp;
+
+	delete m_socialFb;
+	delete m_socialTw;
 }
 
 void MainMenu::onEnter()
@@ -126,6 +157,14 @@ bool MainMenu::tick(float dt)
 
 		g_app->quit();
 	}
+	else if (m_socialFb && m_socialFb->isClicked())
+	{
+		openBrowserWithUrl("https://www.facebook.com/ripostegame");
+	}
+	else if (m_socialTw && m_socialTw->isClicked())
+	{
+		openBrowserWithUrl("https://twitter.com/damajogames");
+	}
 #if !ITCHIO_BUILD
 	else if (m_inactivityTime >= (g_devMode ? 5.f : kMaxInactivityTime))
 	{
@@ -155,4 +194,9 @@ void MainMenu::draw()
 		m_options->draw();
 	if (m_quitApp)
 		m_quitApp->draw();
+
+	if (m_socialFb)
+		m_socialFb->draw();
+	if (m_socialTw)
+		m_socialTw->draw();
 }

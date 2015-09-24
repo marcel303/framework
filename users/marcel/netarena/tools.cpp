@@ -25,7 +25,7 @@ static void drawToolCaption(const Color & backColor, const char * format, ...)
 	drawRect(0, 0, GFX_SX, 40);
 
 	setColor(colorBlack);
-	setFont("calibri.ttf");
+	setDebugFont();
 	drawText(GFX_SX/2, 20, 24, 0.f, 0.f, text);
 }
 

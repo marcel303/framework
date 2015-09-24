@@ -2,8 +2,17 @@
 
 #include "Options.h"
 
-#define PUBLIC_DEMO_BUILD 1
 #define ITCHIO_BUILD 1
+
+#if ITCHIO_BUILD
+	#define PUBLIC_DEMO_BUILD 1
+	#define ENABLE_NETWORKING 0
+	#define ENABLE_OPTIONS 0
+#else
+	#define PUBLIC_DEMO_BUILD 0
+	#define ENABLE_NETWORKING 1
+	#define ENABLE_OPTIONS 1
+#endif
 
 #if !PUBLIC_DEMO_BUILD
 	#define DEBUG_RANDOM_CALLSITES 0
@@ -482,3 +491,6 @@ OPTION_DECLARE(int, VOLCANO_LOOP_TIME, 60);
 #define INPUT_BUTTON_DPAD_RIGHT (1 << 12)
 #define INPUT_BUTTON_DPAD_UP    (1 << 13)
 #define INPUT_BUTTON_DPAD_DOWN  (1 << 14)
+
+void setMainFont();
+void setDebugFont();

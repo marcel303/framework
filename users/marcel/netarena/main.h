@@ -131,6 +131,7 @@ public:
 	void debugSyncGameSims();
 
 	bool tick();
+	void tickBgm();
 	void draw();
 
 	void netAction(Channel * channel, NetAction action, uint8_t param1, uint8_t param2, const std::string & param3 = "");

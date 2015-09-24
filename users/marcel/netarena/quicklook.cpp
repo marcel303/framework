@@ -69,7 +69,7 @@ void QuickLook::drawHud(GameSim & gameSim)
 			drawRect(0, 0, sx, sy);
 
 			setColor(colorWhite);
-			setFont("calibri.ttf");
+			setMainFont();
 
 			std::vector<Player*> players;
 			for (int i = 0; i < MAX_PLAYERS; ++i)
