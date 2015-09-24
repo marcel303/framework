@@ -1120,6 +1120,8 @@ void tickParticleEmitter(const ParticleCallbacks & cbs, const ParticleEmitterInf
 {
 	if (pi.rate <= 0.f)
 		return;
+	if (!pei.loop && pe.totalTime >= pei.duration)
+		return;
 
 	pe.time += timeStep;
 	pe.totalTime += timeStep;

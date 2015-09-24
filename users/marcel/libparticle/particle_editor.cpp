@@ -17,10 +17,12 @@
 
 + fix color curve key select = move
 + move color picker and emitter info to the right side of the screen
-- fix 'loop' toggle behavior
++ fix 'loop' toggle behavior
 + add 'restart simulation' button
-- add support for multiple particle emitters
++ add support for multiple particle emitters
 - add support for subemitters
++ fix subemitter UI reusing elems etc
+- fix elems not refreshing when not drawn at refresh frame. use version number on elems?
 
 + add copy & paste buttons pi, pei
 
@@ -44,8 +46,8 @@ static const int kCurveHeight = 20;
 static const int kColorHeight = 20;
 static const int kColorCurveHeight = 20;
 static const int kMenuSpacing = 15;
-static const Color kBackgroundFocusColor(1.f, 1.f, 1.f, .5f);
-static const Color kBackgroundColor(0.f, 0.f, 0.f, .5f);
+static const Color kBackgroundFocusColor(0.f, 0.f, 1.f, .5f);
+static const Color kBackgroundColor(0.f, 0.f, 0.f, .7f);
 
 // ui draw state
 static bool g_doActions = false;
@@ -1264,9 +1266,9 @@ void doParticleColor(ParticleColor & color, const char * name, UiElem & elem)
 	}
 }
 
-static float screenToCurve(int x1, int x2, int x)
+static float screenToCurve(int x1, int x2, int x, float offset)
 {
-	return saturate((x - x1) / float(x2 - x1));
+	return saturate((x - x1) / float(x2 - x1) + offset);
 }
 
 static float curveToScreen(int x1, int x2, float t)
@@ -1324,7 +1326,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, UiElem 
 			{
 				// select or insert key
 
-				const float t = screenToCurve(x1, x2, mouse.x);
+				const float t = screenToCurve(x1, x2, mouse.x, 0.f);
 				auto key = findNearestKey(curve, t, kMaxSelectionDeviation);
 				
 				if (key)
@@ -1364,7 +1366,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, UiElem 
 
 				// erase key
 
-				const float t = screenToCurve(x1, x2, mouse.x);
+				const float t = screenToCurve(x1, x2, mouse.x, 0.f);
 				auto * key = findNearestKey(curve, t, kMaxSelectionDeviation);
 
 				if (key)
@@ -1380,7 +1382,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, UiElem 
 			{
 				// move selected key around
 
-				const float t = screenToCurve(x1, x2, mouse.x) + dragOffset;
+				const float t = screenToCurve(x1, x2, mouse.x, dragOffset);
 
 				selectedKey->t = t;
 				selectedKey = curve.sortKeys(selectedKey);
@@ -1420,7 +1422,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, UiElem 
 			drawRect(x, cy1, x + 1.f, cy2);
 		}
 
-		const float t = screenToCurve(x1, x2, mouse.x);
+		const float t = screenToCurve(x1, x2, mouse.x, 0.f);
 		auto key = findNearestKey(curve, t, kMaxSelectionDeviation);
 		for (int i = 0; i < curve.numKeys; ++i)
 		{
@@ -1740,15 +1742,28 @@ static void doMenu_Pi()
 		static bool onEvent[ParticleInfo::kSubEmitterEvent_COUNT] = { };
 		const char * onEventName[ParticleInfo::kSubEmitterEvent_COUNT] = { "onBirth", "onCollision", "onDeath" };
 		static UiElem onEventElem[ParticleInfo::kSubEmitterEvent_COUNT];
+		struct SubEmitterField
+		{
+			SubEmitterField()
+				: textFieldIsInit(false)
+			{
+			}
+
+			UiElem elem;
+			TextField textField;
+			bool textFieldIsInit;
+		};
+		static SubEmitterField fields[ParticleInfo::kSubEmitterEvent_COUNT][3];
 		for (int i = 0; i < ParticleInfo::kSubEmitterEvent_COUNT; ++i) // fixme : cannot use loops
 		{
 			if (doCheckBox(g_pi().subEmitters[i].enabled, onEventName[i], true, onEventElem[i]))
 			{
 				ScopedValueAdjust<int> xAdjust(g_drawX, +10);
-				DO_TEXTBOX(chance, g_pi().subEmitters[i].chance, "Spawn Chance");
-				DO_TEXTBOX(count, g_pi().subEmitters[i].count, "Spawn Count");
+				doTextBox(g_pi().subEmitters[i].chance, "Spawn Chance", 0.f, 1.f, true, fields[i][0].elem, fields[i][0].textField, fields[i][0].textFieldIsInit);
+				doTextBox(g_pi().subEmitters[i].count, "Spawn Count", 0.f, 1.f, true, fields[i][1].elem, fields[i][1].textField, fields[i][1].textFieldIsInit);
+
 				std::string emitterName = g_pi().subEmitters[i].emitterName;
-				DO_TEXTBOX(emitterName, emitterName, "Emitter Name");
+				doTextBox(emitterName, "Emitter Name", 0.f, 1.f, true, fields[i][2].elem, fields[i][2].textField, fields[i][2].textFieldIsInit);
 				strcpy_s(g_pi().subEmitters[i].emitterName, sizeof(g_pi().subEmitters[i].emitterName), emitterName.c_str());
 			}
 		}
@@ -1912,9 +1927,6 @@ void particleEditorTick(bool menuActive, float dt)
 
 void particleEditorDraw(bool menuActive, float sx, float sy)
 {
-	if (menuActive)
-		doMenu(false, true);
-
 	gxPushMatrix();
 	gxTranslatef(sx/2.f, sy/2.f, 0.f);
 
@@ -2018,4 +2030,7 @@ void particleEditorDraw(bool menuActive, float sx, float sy)
 #endif
 
 	gxPopMatrix();
+
+	if (menuActive)
+		doMenu(false, true);
 }
