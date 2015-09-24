@@ -36,11 +36,15 @@ OPTION_VALUE_ALIAS(g_gameModeNextRound, deathmatch, kGameMode_DeathMatch);
 OPTION_VALUE_ALIAS(g_gameModeNextRound, tokenhunt, kGameMode_TokenHunt);
 OPTION_VALUE_ALIAS(g_gameModeNextRound, coincollector, kGameMode_CoinCollector);
 
-OPTION_EXTERN(std::string, g_map);
+OPTION_DECLARE(bool, g_autoReadyUp, false);
+OPTION_DEFINE(bool, g_autoReadyUp, "App/Auto Ready Up");
+OPTION_ALIAS(g_autoReadyUp, "readyup");
 
 OPTION_DECLARE(int, s_pickupTest, -1);
 OPTION_DEFINE(int, s_pickupTest, "Pickups/Debug Spawn Type");
 OPTION_ALIAS(s_pickupTest, "pickuptest");
+
+OPTION_EXTERN(std::string, g_map);
 
 extern std::vector<std::string> g_mapRotationList;
 
@@ -2324,7 +2328,7 @@ void GameSim::tickMenus()
 
 				if (!player.m_isReadyUpped)
 				{
-					if (player.m_input.wentDown(INPUT_BUTTON_A) || (player.m_input.m_actions & (1 << kPlayerInputAction_ReadyUp)))
+					if (player.m_input.wentDown(INPUT_BUTTON_A) || (player.m_input.m_actions & (1 << kPlayerInputAction_ReadyUp)) || g_autoReadyUp)
 					{
 						//if (!DEMOMODE || (player.m_characterIndex != 4 && player.m_characterIndex != 7))
 						{
@@ -2360,10 +2364,13 @@ void GameSim::tickMenus()
 		if (p.m_isUsed)
 		{
 			const bool isInStartZone =
-				p.m_pos[0] >= GAMESTATE_LOBBY_STARTZONE_X &&
-				p.m_pos[1] >= GAMESTATE_LOBBY_STARTZONE_Y &&
-				p.m_pos[0] <= GAMESTATE_LOBBY_STARTZONE_X + GAMESTATE_LOBBY_STARTZONE_SX &&
-				p.m_pos[1] <= GAMESTATE_LOBBY_STARTZONE_Y + GAMESTATE_LOBBY_STARTZONE_SY;
+				g_devMode ||
+				(
+					p.m_pos[0] >= GAMESTATE_LOBBY_STARTZONE_X &&
+					p.m_pos[1] >= GAMESTATE_LOBBY_STARTZONE_Y &&
+					p.m_pos[0] <= GAMESTATE_LOBBY_STARTZONE_X + GAMESTATE_LOBBY_STARTZONE_SX &&
+					p.m_pos[1] <= GAMESTATE_LOBBY_STARTZONE_Y + GAMESTATE_LOBBY_STARTZONE_SY
+				);
 
 			allReady &= p.m_isReadyUpped && isInStartZone;
 		}

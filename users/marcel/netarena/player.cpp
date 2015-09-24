@@ -20,35 +20,58 @@
 
 /*
 
+- itch build:
+	- new splash screen
+		- logo, [FB] /Riposte-Game, [TW] /DamajoGames
+	- replace lobby w/ simple art
+	- only 3 chars, arkthas, stalya, tilly
+	- disable options menu
+	- disable netcode
+	- enable public build macro
+	- add input screen to main screen/help button
+	- add Greenlight/KickStarter en Twitter buttons
+
 - level setting: max zoom factor
 - level setting: zoom restriction near borders. not needed when no level wrap
+- level setting: level theme / background
+- level setting: wrap around yes/no? could be done more easily by adding collision around the map
+- level editor: add spriter object placement
+- level editor: add teleporter placement
+- level editor: add light source placement
+- level editor: add particle emitter placement
+- level editor: add moving platform placement
+- level editor: add pickup spawner placement
+- level editor: add foreground layer support
 
-- background animation speed always at 100% regardless of game speed. *should* be affected by time dilation
-- bakground parallax effect through less zoom/panning strength
+- upgrade bullet sprites to spriter animations
+
+- add small pickup delay on weapon drop. avoids pickup being picked up directly on kill -> adds more randomness
+- experiment with decal color. add history through slightly changing color over time. try rainbow colors (maybe hue based on bullet direction on impact?)
+
+- background animation speed always at 100% regardless of game speed? *should* be affected by time dilation
++ background parallax effect through less zoom/panning strength
 - allow exploding mine in air. currently when grounded only
-- allow pickup o axe even when already having an axe. allows player to clean up axes of competing players
+- allow pickup of axe even when already having an axe. allows player to clean up axes of competing players
 - replace pipebomb sounds
-- clear weapon stack on death. currently only drops percentage
++ clear weapon stack on death. currently only drops percentage
 - disable player light when using invisibility
 - add light effects to grenade explosions and cling (small lighting flash; test effect)
-- darker ambient on level events
+- try darker ambient on level events
 
-- test player vs player collision 
+- test player vs player collision
 
 - add demomode.txt for DEMOMODE specific options
 
-- black smudge on decal layer on explosion impact
+- black/dark smudges on decal layer on explosion impact
 
-- vary decal color over time? rainbow colors!
-	- adds a history to the decals
-- let level define decal base color
+- let level define decal base color?
 - recycle decals using fifo, instead of random like now
 
 - use sine for screen shakes. let user define duration, strength and curvature/pow factor (or just multiplier on -1..+1 & clamp)
 
 - blood particle direction dependent on attack vector + random variability
 
-- destruct all destructibles for some weapons
+- destruct all destructibles for some weapons (like with the blood particle bug)
 - destruct destructibles in radius for some weapons?
 
 - add small trail rendering to players
@@ -61,19 +84,18 @@
 	+ auto zoom during play
 	# requirements: explicit vs automatic focus point selection, auto zoom factor calculation vs explicit zoom factors (take max zoom of all effects..)
 
-- character portait kill animation. diagonal slice, etc
+- character portait kill animation. diagonal slice, etc, as discussed with joyce
 
-- discuss variable level size with david, joyce
-
-- editor: needs theme selection support
++ discuss variable level size with david, joyce
 
 - add pipebomb/mine trigger animation
 - add axe throw animation
-- add emote animations:
-	EmoteCheer
-	EmoteTaunt
-	EmoteDance
-	EmoteFacepalm
+- add emotes
+	- add emote animations:
+		EmoteCheer
+		EmoteTaunt
+		EmoteDance
+		EmoteFacepalm
 
 - add basic video options to video menu
 + add basic audio options to audio menu
@@ -85,11 +107,11 @@
 + add 'blood' particles and spawn decals on impact
 
 + fix pickup drop location. seems to get stuck in geometry sometimes
-- why does the bubbled player not bounce correctly, still?
+- why does the bubbled player not bounce correctly, still? fix it!
 
 - for pickup spawn: keep a list of MAX_PICKUPS previous spawn locations, instead of storing recently used x/y in pickups themselves
 
-- add victory dance at the end of the round
+- add victory dance at the end of the round 'Victory'
 
 - add 'muzzle flash' when firing some weapons
 - add small screen shake when firing?
@@ -101,8 +123,6 @@
 - add mine radius animation. also makes it more explicit where it's deployed
 
 - player score UI toggle
-- add victory animation at end of round 'Victory'
-- add emotes
 
 - fix controller assignments and joining/leaving using START when connected through online multiplayer. also, names were messed up
 - let +1 icon follow player, improve art/animation
@@ -116,7 +136,7 @@
 - hide player emblem, unless when scoring or when summoned
 - add weapon UI prototype. do some drawings first
 - improve pipebomb art. add clearly visible flash
-- add deploy animation to pipebomb guy. make it mines instead
++ add deploy animation to pipebomb guy. make it mines instead
 - add killstreaks to screen. do some drawings first
 - 'faster' grapple?
 - add down strike animation effect?

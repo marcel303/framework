@@ -73,3 +73,56 @@ void Title::draw()
 	}
 	setColorMode(COLOR_MUL);
 }
+
+//
+
+SplashScreen::SplashScreen(const char * filename, float duration, float fadeInDuration, float fadeOutDuration)
+	: m_filename(filename)
+	, m_time(0.f)
+	, m_duration(duration)
+	, m_fadeInDuration(fadeInDuration)
+	, m_fadeOutDuration(fadeOutDuration)
+	, m_hasPlayedSound(false)
+{
+}
+
+void SplashScreen::onEnter()
+{
+	m_time = 0.f;
+	m_hasPlayedSound = false;
+}
+
+void SplashScreen::onExit()
+{
+}
+
+
+bool SplashScreen::tick(float dt)
+{
+	m_time += dt;
+
+	if (m_time >= m_fadeInDuration/2.f && !m_hasPlayedSound)
+	{
+		m_hasPlayedSound = true;
+		Sound("title/splash.ogg").play();
+	}
+
+	if (m_time >= m_duration)
+		return true;
+
+	if (g_keyboardLock == 0 && (g_uiInput->wentDown(INPUT_BUTTON_A) || g_uiInput->wentDown(INPUT_BUTTON_START)))
+		return true;
+
+	return false;
+}
+
+void SplashScreen::draw()
+{
+	float c = 1.f;
+	if (m_time < m_fadeInDuration)
+		c = m_time / m_fadeInDuration;
+	if (m_time > m_duration - m_fadeOutDuration)
+		c = 1.f - (m_time - (m_duration - m_fadeOutDuration))  / m_fadeOutDuration;
+	setColorf(c, c, c, 1.f);
+	Sprite(m_filename.c_str()).drawEx(0.f, 0.f);
+}

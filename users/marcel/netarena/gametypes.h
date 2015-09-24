@@ -459,7 +459,7 @@ struct UserSettings
 		bool fullscreen;
 		bool exclusiveFullscreen;
 		bool exclusiveFullscreenVsync;
-		bool exclusiveFullscreenHz;
+		int exclusiveFullscreenHz;
 		int fullscreenSx;
 		int fullscreenSy;
 		int windowedSx;

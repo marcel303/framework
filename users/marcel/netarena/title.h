@@ -17,3 +17,22 @@ public:
 	virtual bool tick(float dt);
 	virtual void draw();
 };
+
+class SplashScreen : public Menu
+{
+	std::string m_filename;
+	float m_time;
+	float m_duration;
+	float m_fadeInDuration;
+	float m_fadeOutDuration;
+	bool m_hasPlayedSound;
+
+public:
+	SplashScreen(const char * filename, float duration, float fadeInDuration, float fadeOutDuration);
+
+	virtual void onEnter();
+	virtual void onExit();
+
+	virtual bool tick(float dt);
+	virtual void draw();
+};

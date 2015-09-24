@@ -126,10 +126,12 @@ bool MainMenu::tick(float dt)
 
 		g_app->quit();
 	}
+#if !ITCHIO_BUILD
 	else if (m_inactivityTime >= (g_devMode ? 5.f : kMaxInactivityTime))
 	{
 		g_app->m_menuMgr->push(new Title());
 	}
+#endif
 
 	return false;
 }
@@ -137,7 +139,11 @@ bool MainMenu::tick(float dt)
 void MainMenu::draw()
 {
 	setColor(colorWhite);
+#if ITCHIO_BUILD
+	Sprite("itch-mainmenu-back.png").draw();
+#else
 	Sprite("mainmenu-back.png").draw();
+#endif
 
 	if (m_newGame)
 		m_newGame->draw();

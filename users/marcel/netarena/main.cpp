@@ -1257,7 +1257,13 @@ bool App::init()
 		setLocal(m_userSettings->language.locale.c_str());
 
 		m_menuMgr->push(new MainMenu());
+
+	#if ITCHIO_BUILD
+		m_menuMgr->push(new SplashScreen("title/itchio2.png", 5.f, .5f, .3f));
+		m_menuMgr->push(new SplashScreen("title/itchio1.png", 5.f, .5f, .3f));
+	#else
 		m_menuMgr->push(new Title());
+	#endif
 
 		return true;
 	}
@@ -1365,7 +1371,9 @@ void App::setAppState(AppState state)
 		Assert(m_clients.empty());
 		m_menuMgr->reset(0);
 		m_menuMgr->push(new MainMenu());
+	#if !ITCHIO_BUILD
 		m_menuMgr->push(new Title());
+	#endif
 		break;
 	case AppState_Online:
 		m_menuMgr->reset(0);
@@ -2527,6 +2535,7 @@ static bool calculateFileCRC(const char * filename, uint32_t & crc)
 int main(int argc, char * argv[])
 {
 #if defined(__WIN32__)
+	_CrtSetDebugFillThreshold(0);
 	const int kMaxModuleNameSize = 1024;
 	char moduleName[kMaxModuleNameSize];
 	if (GetModuleFileName(NULL, moduleName, kMaxModuleNameSize) == kMaxModuleNameSize || !calculateFileCRC(moduleName, g_buildId))

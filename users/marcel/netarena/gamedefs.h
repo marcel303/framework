@@ -2,7 +2,8 @@
 
 #include "Options.h"
 
-#define PUBLIC_DEMO_BUILD 0
+#define PUBLIC_DEMO_BUILD 1
+#define ITCHIO_BUILD 1
 
 #if !PUBLIC_DEMO_BUILD
 	#define DEBUG_RANDOM_CALLSITES 0
