@@ -1,6 +1,9 @@
 #pragma once
 
+#include "config.h"
 #include "MultiLevelMenu.h"
+
+#if ENABLE_OPTIONS
 
 class OptionBase;
 
@@ -18,3 +21,5 @@ public:
 
 	void Draw(int x, int y, int sx, int sy);
 };
+
+#endif

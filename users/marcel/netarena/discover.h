@@ -1,9 +1,12 @@
 #pragma once
 
 #include <vector>
+#include "config.h"
 #include "NetAddress.h"
 #include "NetSocket.h"
 #include "SharedPtr.h"
+
+#if ENABLE_NETWORKING
 
 namespace NetSessionDiscovery
 {
@@ -43,3 +46,5 @@ namespace NetSessionDiscovery
 		uint64_t m_purgeTime;
 	};
 }
+
+#endif

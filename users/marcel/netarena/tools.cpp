@@ -9,6 +9,8 @@
 
 #include "Timer.h" // fixme
 
+#if ENABLE_DEVMODE
+
 #define ANIM_COLOR Color(255, 255, 127)
 #define BLAST_COLOR Color(255, 127, 127)
 #define GIF_COLOR Color(127, 127, 255)
@@ -711,3 +713,5 @@ void gifCaptureTick_PostRender()
 		fassert(false);
 	}
 }
+
+#endif

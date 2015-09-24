@@ -1,28 +1,7 @@
 #pragma once
 
+#include "config.h"
 #include "Options.h"
-
-#define ITCHIO_BUILD 1
-
-#if ITCHIO_BUILD
-	#define PUBLIC_DEMO_BUILD 1
-	#define ENABLE_NETWORKING 0
-	#define ENABLE_OPTIONS 0
-#else
-	#define PUBLIC_DEMO_BUILD 0
-	#define ENABLE_NETWORKING 1
-	#define ENABLE_OPTIONS 1
-#endif
-
-#if !PUBLIC_DEMO_BUILD
-	#define DEBUG_RANDOM_CALLSITES 0
-	#define ENABLE_GAMESTATE_DESYNC_DETECTION 1
-	#define ENABLE_GAMESTATE_CRC_LOGGING (ENABLE_GAMESTATE_DESYNC_DETECTION && 1)
-#else
-	#define DEBUG_RANDOM_CALLSITES 0 // do not alter
-	#define ENABLE_GAMESTATE_DESYNC_DETECTION 0 // do not alter
-	#define ENABLE_GAMESTATE_CRC_LOGGING 0 // do not alter
-#endif
 
 #define TICKS_PER_SECOND 60
 

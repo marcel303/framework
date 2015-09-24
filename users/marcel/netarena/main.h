@@ -3,6 +3,7 @@
 #include <map>
 #include <vector>
 #include "ChannelHandler.h"
+#include "config.h"
 #include "Debugging.h"
 #include "dialog.h" // DialogResult
 #include "gametypes.h"
@@ -62,8 +63,10 @@ public:
 	ChannelManager * m_channelMgr;
 	RpcManager * m_rpcMgr;
 
+#if ENABLE_NETWORKING
 	NetSessionDiscovery::Service * m_discoveryService;
 	Ui * m_discoveryUi;
+#endif
 
 	Host * m_host;
 	std::map<uint16_t, ClientInfo> m_hostClients;
@@ -78,11 +81,15 @@ public:
 
 	UserSettings * m_userSettings;
 
+#if ENABLE_OPTIONS
 	OptionMenu * m_optionMenu;
 	bool m_optionMenuIsOpen;
+#endif
 
+#if ENABLE_OPTIONS
 	StatTimerMenu * m_statTimerMenu;
 	bool m_statTimerMenuIsOpen;
+#endif
 
 	std::string m_displayName;
 

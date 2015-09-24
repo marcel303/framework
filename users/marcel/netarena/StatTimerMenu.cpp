@@ -3,6 +3,8 @@
 #include "StatTimerMenu.h"
 #include "StatTimers.h"
 
+#if ENABLE_OPTIONS
+
 StatTimerMenu::StatTimerMenu()
 	: MultiLevelMenuBase()
 {
@@ -81,3 +83,5 @@ void StatTimerMenu::Draw(int x, int y, int sx, int sy)
 
 	setColor(colorWhite);
 }
+
+#endif

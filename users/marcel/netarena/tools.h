@@ -1,5 +1,9 @@
 #pragma once
 
+#include "config.h"
+
+#if ENABLE_DEVMODE
+
 void animationTestInit();
 bool animationTestIsActive();
 void animationTestToggleIsActive();
@@ -16,3 +20,5 @@ void gifCaptureBegin();
 void gifCaptureEnd(bool cancel);
 void gifCaptureTick(float dt);
 void gifCaptureTick_PostRender();
+
+#endif

@@ -2,6 +2,8 @@
 #include "Packet.h"
 #include "Timer.h"
 
+#if ENABLE_NETWORKING
+
 namespace NetSessionDiscovery
 {
 	Service::Service()
@@ -138,3 +140,5 @@ namespace NetSessionDiscovery
 		m_socket->Send(data, 4, &broadcastAddress);
 	}
 }
+
+#endif

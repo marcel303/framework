@@ -1,6 +1,9 @@
 #include "framework.h"
+#include "gamedefs.h"
 #include "OptionMenu.h"
 #include "Options.h"
+
+#if ENABLE_OPTIONS
 
 #define NETWORKED_OPTIONS_MENU 1
 
@@ -120,3 +123,5 @@ void OptionMenu::Draw(int x, int y, int sx, int sy)
 
 	setColor(colorWhite);
 }
+
+#endif

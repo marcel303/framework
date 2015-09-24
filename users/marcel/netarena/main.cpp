@@ -255,7 +255,9 @@ enum RpcMethod
 	s_rpcBroadcastPlayerInputs,
 	s_rpcSetPlayerCharacterIndex,
 	s_rpcSetPlayerCharacterIndexBroadcast,
+#if ENABLE_NETWORKING_DEBUGS
 	s_rpcDebugAction,
+#endif
 	s_rpcCOUNT
 };
 
@@ -765,6 +767,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			}
 		}
 	}
+#if ENABLE_NETWORKING_DEBUGS
 	else if (method == s_rpcDebugAction)
 	{
 		const std::string action = bitStream.ReadString();
@@ -941,6 +944,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			}
 		}
 	}
+#endif
 	else
 	{
 		AssertMsg(false, "unknown RPC call: %u", method);
@@ -1043,16 +1047,22 @@ App::App()
 	, m_packetDispatcher(0)
 	, m_channelMgr(0)
 	, m_rpcMgr(0)
+#if ENABLE_NETWORKING
 	, m_discoveryService(0)
 	, m_discoveryUi(0)
+#endif
 	, m_selectedClient(-1)
 	, m_dialogMgr(0)
 	, m_menuMgr(0)
 	, m_userSettings(0)
+#if ENABLE_OPTIONS
 	, m_optionMenu(0)
 	, m_optionMenuIsOpen(false)
+#endif
+#if ENABLE_OPTIONS
 	, m_statTimerMenu(0)
 	, m_statTimerMenuIsOpen(false)
+#endif
 {
 }
 
@@ -1064,8 +1074,10 @@ App::~App()
 	Assert(m_channelMgr == 0);
 	Assert(m_rpcMgr == 0);
 
+#if ENABLE_NETWORKING
 	Assert(m_discoveryService == 0);
 	Assert(m_discoveryUi == 0);
+#endif
 
 	Assert(m_host == 0);
 
@@ -1211,10 +1223,12 @@ bool App::init()
 		m_channelMgr = new ChannelManager();
 		m_rpcMgr = new RpcManager(m_channelMgr);
 
+	#if ENABLE_NETWORKING
 		m_discoveryService = new NetSessionDiscovery::Service();
 		m_discoveryService->init(2, 10);
 
 		m_discoveryUi = new Ui();
+	#endif
 
 		//
 
@@ -1244,15 +1258,20 @@ bool App::init()
 
 		//
 
+	#if ENABLE_DEVMODE
 		animationTestInit();
+	#endif
 
 		//
 
+	#if ENABLE_OPTIONS
 		m_optionMenu = new OptionMenu();
 		m_optionMenuIsOpen = false;
-
+	#endif
+	#if ENABLE_OPTIONS
 		m_statTimerMenu = new StatTimerMenu();
 		m_statTimerMenuIsOpen = false;
+	#endif
 
 		//
 
@@ -1319,11 +1338,15 @@ void App::shutdown()
 
 	//
 
+#if ENABLE_OPTIONS
 	delete m_statTimerMenu;
 	m_statTimerMenu = 0;
+#endif
 
+#if ENABLE_OPTIONS
 	delete m_optionMenu;
 	m_optionMenu = 0;
+#endif
 
 	//
 
@@ -1345,11 +1368,13 @@ void App::shutdown()
 
 	//
 
+#if ENABLE_NETWORKING
 	delete m_discoveryUi;
 	m_discoveryUi = 0;
 
 	delete m_discoveryService;
 	m_discoveryService = 0;
+#endif
 
 	delete m_rpcMgr;
 	m_rpcMgr = 0;
@@ -1754,9 +1779,11 @@ bool App::tick()
 
 	// debug UI
 
+#if ENABLE_NETWORKING
 	m_discoveryService->update(m_isHost);
 	
 	m_discoveryUi->process();
+#endif
 
 	// update dialogs
 
@@ -1783,7 +1810,9 @@ bool App::tick()
 	{
 		m_channelMgr->Update(NET_TIME);
 
+	#if ENABLE_OPTIONS
 		if (!m_optionMenuIsOpen || !g_pauseOnOptionMenuOption)
+	#endif
 		{
 			if (g_updateTicks)
 			{
@@ -1860,7 +1889,7 @@ bool App::tick()
 
 	// debug
 
-#if 1 // debug controls for animation and blast test, etc
+#if ENABLE_DEVMODE // debug controls for animation and blast test, etc
 	if (keyboard.wentDown(SDLK_F2))
 	{
 		std::vector<Client*> clients = m_clients;
@@ -1876,23 +1905,30 @@ bool App::tick()
 	if (keyboard.wentDown(SDLK_F11) && !(getSelectedClient() && getSelectedClient()->m_textChat->isActive()))
 		gifCaptureToggleIsActive(false);
 
+#if ENABLE_OPTIONS
 	if (keyboard.wentDown(SDLK_F5))
 	{
 		m_optionMenuIsOpen = !m_optionMenuIsOpen;
 		m_statTimerMenuIsOpen = false;
 	}
+#endif
 
+#if ENABLE_OPTIONS
 	if (keyboard.wentDown(SDLK_F6))
 	{
 		m_optionMenuIsOpen = false;
 		m_statTimerMenuIsOpen = !m_statTimerMenuIsOpen;
 	}
+#endif
 
+#if ENABLE_DEVMODE
 	if (keyboard.wentDown(SDLK_F12))
 	{
 		netDebugAction("newRound", "");
 	}
+#endif
 
+#if ENABLE_OPTIONS
 	if (m_optionMenuIsOpen || m_statTimerMenuIsOpen)
 	{
 		MultiLevelMenuBase * menu = 0;
@@ -1925,6 +1961,7 @@ bool App::tick()
 		if (keyboard.isDown(SDLK_RIGHT) || gamepad[0].isDown(DPAD_RIGHT))
 			menu->HandleAction(OptionMenu::Action_ValueIncrement, dt);
 	}
+#endif
 
 	if (g_devMode && m_isHost && g_keyboardLock == 0 && keyboard.wentDown(SDLK_t))
 	{
@@ -2079,6 +2116,16 @@ void App::draw()
 
 		m_dialogMgr->draw();
 
+	#if ITCHIO_BUILD
+		if (m_menuMgr->getActiveMenuId() != kMenuId_IntroScreen)
+		{
+			// draw itch.io badge
+			setColor(colorWhite);
+			Sprite itchBadge("itch-badge.png");
+			itchBadge.drawEx(GFX_SX - itchBadge.getWidth() - 10, 10);
+		}
+	#endif
+
 		// draw debug stuff
 
 	#if 0 // text area test
@@ -2145,6 +2192,7 @@ void App::draw()
 			}
 		}
 
+	#if ENABLE_DEVMODE
 		if (/*g_devMode && */keyboard.isDown(SDLK_F1))
 		{
 			setColor(0, 0, 0, 191);
@@ -2174,6 +2222,7 @@ void App::draw()
 			drawText(x, y += sy, fontSize, +1.f, +1.f, "U: Reload sounds");
 			drawText(x, y += sy, fontSize, +1.f, +1.f, "I: Reload shaders");
 		}
+	#endif
 
 		// draw desync notifier
 
@@ -2193,12 +2242,15 @@ void App::draw()
 
 		//
 
+	#if ENABLE_DEVMODE
 		animationTestDraw();
 		blastEffectTestDraw();
 		gifCaptureTick_PostRender();
+	#endif
 
 		//
 
+	#if ENABLE_OPTIONS
 		if (m_optionMenuIsOpen)
 		{
 			const int sx = 500;
@@ -2208,7 +2260,9 @@ void App::draw()
 
 			m_optionMenu->Draw(x, y, sx, sy);
 		}
+	#endif
 
+	#if ENABLE_OPTIONS
 		if (m_statTimerMenuIsOpen)
 		{
 			const int sx = 500;
@@ -2218,9 +2272,11 @@ void App::draw()
 
 			m_statTimerMenu->Draw(x, y, sx, sy);
 		}
+	#endif
 
 		if (UI_DEBUG_VISIBLE)
 		{
+		#if ENABLE_NETWORKING
 			m_discoveryUi->clear();
 
 			const auto serverList = m_discoveryService->getServerList();
@@ -2271,6 +2327,7 @@ void App::draw()
 
 			setColor(colorWhite);
 			m_discoveryUi->draw();
+		#endif
 		}
 	}
 	TIMER_STOP(g_appDrawTime);
@@ -2511,12 +2568,14 @@ void App::netBroadcastCharacterIndex(uint8_t playerId, uint8_t characterIndex)
 
 void App::netDebugAction(const char * name, const char * param)
 {
+#if ENABLE_NETWORKING_DEBUGS
 	BitStream bs;
 
 	bs.WriteString(name);
 	bs.WriteString(param ? param : "");
 
 	m_rpcMgr->Call(s_rpcDebugAction, bs, ChannelPool_Server, 0, true, true);
+#endif
 }
 
 int App::allocControllerIndex(int preferredControllerIndex)
