@@ -148,6 +148,7 @@ extern Ui ui;
 // event handlers
 
 typedef void (*ActionHandler)(const std::string & action, const Dictionary & args);
+typedef void (*FillCachesCallback)(float filePercentage);
 
 //
 
@@ -192,6 +193,7 @@ public:
 	std::string windowTitle;
 	bool windowIsActive;
 	ActionHandler actionHandler;
+	FillCachesCallback fillCachesCallback;
 	
 private:
 	typedef std::set<Model*> ModelSet;

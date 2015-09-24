@@ -77,6 +77,7 @@ Framework::Framework()
 	windowIsActive = false;
 	numSoundSources = 32;
 	actionHandler = 0;
+	fillCachesCallback = 0;
 	
 	quitRequested = false;
 	time = 0.f;
@@ -377,6 +378,7 @@ bool Framework::shutdown()
 	windowTitle.clear();
 	windowIsActive = false;
 	actionHandler = 0;
+	fillCachesCallback = 0;
 	
 	return result;
 }
@@ -735,7 +737,10 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 		if (currentTime - lastProcessTime >= 20)
 		{
 			lastProcessTime = currentTime;
-			process();
+			if (fillCachesCallback)
+				fillCachesCallback((i + 1.f) / files.size());
+			else
+				process();
 		}
 	}
 }
