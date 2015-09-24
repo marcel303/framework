@@ -7,6 +7,8 @@
 #include "tools.h"
 #include <string>
 
+#include "Timer.h" // fixme
+
 #define ANIM_COLOR Color(255, 255, 127)
 #define BLAST_COLOR Color(255, 127, 127)
 #define GIF_COLOR Color(127, 127, 255)
@@ -168,33 +170,208 @@ static FIBITMAP * captureScreen();
 static FIBITMAP * downsample2x2(FIBITMAP * src, bool freeSrc);
 static bool writeGif(const char * filename, const std::vector<FIBITMAP*> & pages, int frameTimeMS);
 
-// todo : arbitrary rectangle selection
+struct kd_node_data_t
+{
+	int rgb[3];
+	int index;
+};
+
+struct kd_node_t : kd_node_data_t
+{
+	kd_node_t * left;
+	kd_node_t * right;
+};
+
+inline int dist(const kd_node_data_t * a, const kd_node_data_t * b)
+{
+	const int dr = a->rgb[0] - b->rgb[0];
+	const int dg = a->rgb[1] - b->rgb[1];
+	const int db = a->rgb[2] - b->rgb[2];
+	return dr * dr + dg * dg + db * db;
+}
+
+inline void swap(kd_node_data_t * __restrict x, kd_node_data_t * __restrict y)
+{
+	std::swap(*x, *y);
+}
+
+// see quickselect method
+
+kd_node_t * find_median(kd_node_t * start, kd_node_t * end, int idx)
+{
+	if (end <= start)
+		return 0;
+
+	if (end == start + 1)
+		return start;
+
+	kd_node_t * md = start + (end - start) / 2;
+
+	for (;;)
+	{
+		const int pivot = md->rgb[idx];
+
+		swap(md, end - 1);
+
+		kd_node_t * p;
+		kd_node_t * store;
+
+		for (store = p = start; p < end; p++)
+		{
+			if (p->rgb[idx] < pivot)
+			{
+				if (p != store)
+					swap(p, store);
+
+				store++;
+			}
+		}
+
+		swap(store, end - 1);
+
+		// median has duplicate values
+
+		if (store->rgb[idx] == md->rgb[idx])
+			return md;
+
+		if (store > md)
+			end = store;
+		else
+			start = store;
+	}
+}
+
+kd_node_t * make_tree(kd_node_t * t, int len, int i)
+{
+	if (!len)
+		return 0;
+
+	kd_node_t * n;
+
+	if ((n = find_median(t, t + len, i)))
+	{
+		i = (i + 1) % 3;
+		n->left  = make_tree(t, n - t, i);
+		n->right = make_tree(n + 1, t + len - (n + 1), i);
+	}
+
+	return n;
+}
+
+void nearest(
+	kd_node_t * __restrict root,
+	kd_node_data_t * __restrict nd,
+	int i,
+	kd_node_t * __restrict & best,
+	int & best_dist)
+{
+	if (!root)
+		return;
+
+	const int d = dist(root, nd);
+	const int dx = root->rgb[i] - nd->rgb[i];
+	const int dx2 = dx * dx;
+
+	if (!best || d < best_dist)
+	{
+		best_dist = d;
+		best = root;
+	}
+
+	// if chance of exact match is high
+
+	if (!best_dist)
+		return;
+
+	if (++i == 3)
+		i = 0;
+
+	// todo : compute bb min/max?
+
+	nearest(dx > 0 ? root->left : root->right, nd, i, best, best_dist);
+
+	if (dx2 >= best_dist)
+		return;
+
+	nearest(dx > 0 ? root->right : root->left, nd, i, best, best_dist);
+}
+
+//
+
+#define USE_KD_TREE 1
+#define OPTIMIZED_ERROR_DIFFUSION 1
 
 static FIBITMAP * dither(FIBITMAP * src, const RGBQUAD * __restrict palette)
 {
+#if USE_KD_TREE
+	const float t1 = g_TimerRT.Time_get();
+	kd_node_t nodes[256];
+
+	for (int i = 0; i < 256; ++i)
+	{
+		nodes[i].rgb[0] = palette[i].rgbRed;
+		nodes[i].rgb[1] = palette[i].rgbGreen;
+		nodes[i].rgb[2] = palette[i].rgbBlue;
+		nodes[i].index = i;
+	}
+
+	kd_node_t * root = make_tree(nodes, 256, 0);
+	const float t2 = g_TimerRT.Time_get();
+	printf("t took %03.2fms\n", (t2 - t1) * 1000.f);
+#endif
+
 	const int sx = FreeImage_GetWidth(src);
 	const int sy = FreeImage_GetHeight(src);
 
 	FIBITMAP * dst = FreeImage_AllocateEx(sx, sy, 8, &palette[0], 0, palette);
 
+#if OPTIMIZED_ERROR_DIFFUSION
+	int * __restrict errorValues = new int[(sx + 2) * (sy + 1) * 3];
+	memset(errorValues, 0, (sx + 2) * (sy + 1) * 3 * sizeof(int));
+#else
 	int * __restrict errorValues = new int[sx * sy * 3];
 	memset(errorValues, 0, sx * sy * 3 * sizeof(int));
+#endif
 
 	for (int y = 0; y < sy; ++y)
 	{
 		const uint8_t * __restrict srcLine = (uint8_t*)FreeImage_GetScanLine(src, y);
 		      uint8_t * __restrict dstLine = (uint8_t*)FreeImage_GetScanLine(dst, y);
 		
+	#if OPTIMIZED_ERROR_DIFFUSION
+		int * __restrict errorLine1 = &errorValues[(y + 0) * (sx + 2) * 3];
+		int * __restrict errorLine2 = &errorValues[(y + 1) * (sx + 2) * 3];
+	#endif
+
 		for (int x = 0; x < sx; ++x)
 		{
 			// apply floyd steinberg error diffusion
 
+		#if OPTIMIZED_ERROR_DIFFUSION
+			const int rDesired = srcLine[2] + errorLine1[0] / 16;
+			const int gDesired = srcLine[1] + errorLine1[1] / 16;
+			const int bDesired = srcLine[0] + errorLine1[2] / 16;
+		#else
 			const int rDesired = srcLine[2] + errorValues[(x + y * sx) * 3 + 0] / 16;
 			const int gDesired = srcLine[1] + errorValues[(x + y * sx) * 3 + 1] / 16;
 			const int bDesired = srcLine[0] + errorValues[(x + y * sx) * 3 + 2] / 16;
+		#endif
 
 			srcLine += 3;
 
+		#if USE_KD_TREE
+			kd_node_data_t lookup;
+			lookup.rgb[0] = rDesired;
+			lookup.rgb[1] = gDesired;
+			lookup.rgb[2] = bDesired;
+
+			kd_node_t * best = 0;
+			int bestDist;
+			nearest(root, &lookup, 0, best, bestDist);
+
+			const int bestIndex = best->index;
+			const RGBQUAD * bestQuad = &palette[bestIndex];
+		#else
 			// find the nearest palette entry. this is the slow part
 
 			int bestIndex = -1;
@@ -215,11 +392,13 @@ static FIBITMAP * dither(FIBITMAP * src, const RGBQUAD * __restrict palette)
 					bestQuad = &palette[i];
 				}
 			}
+		#endif
 
 			// set the palette index
 
 			dstLine[x] = bestIndex;
 
+		#if 1
 			// calculate the error and propagate it to the neighboring pixels
 
 			const int rActual = bestQuad->rgbRed;
@@ -235,11 +414,24 @@ static FIBITMAP * dither(FIBITMAP * src, const RGBQUAD * __restrict palette)
 
 			for (int i = 0; i < 3; ++i)
 			{
+			#if OPTIMIZED_ERROR_DIFFUSION
+				errorLine1[3 + i] += currentError[i] * 7;
+				errorLine2[0 + i] += currentError[i] * 3;
+				errorLine2[3 + i] += currentError[i] * 5;
+				errorLine2[6 + i] += currentError[i] * 1;
+			#else
 				if (x + 1 < sx && y + 0 < sy) errorValues[((x + 1) + (y + 0) * sx) * 3 + i] += currentError[i] * 7;
 				if (x + 0 < sx && y + 1 < sy) errorValues[((x + 0) + (y + 1) * sx) * 3 + i] += currentError[i] * 3;
 				if (x + 1 < sx && y + 1 < sy) errorValues[((x + 1) + (y + 1) * sx) * 3 + i] += currentError[i] * 5;
 				if (x + 2 < sx && y + 1 < sy) errorValues[((x + 2) + (y + 1) * sx) * 3 + i] += currentError[i] * 1;
+			#endif
 			}
+		#endif
+
+		#if OPTIMIZED_ERROR_DIFFUSION
+			errorLine1 += 3;
+			errorLine2 += 3;
+		#endif
 		}
 	}
 
@@ -254,7 +446,10 @@ static FIBITMAP * ditherQuantize(FIBITMAP * src)
 	FIBITMAP * quantized = FreeImage_ColorQuantize(src, FIQ_WUQUANT);
 	const RGBQUAD * palette = FreeImage_GetPalette(quantized);
 	// dither the original image using the palette we just got
+	const float t1 = g_TimerRT.Time_get();
 	FIBITMAP * result = dither(src, palette);
+	const float t2 = g_TimerRT.Time_get();
+	printf("q took %03.2fms\n", (t2 - t1) * 1000.f);
 	FreeImage_Unload(quantized);
 	return result;
 }
@@ -319,10 +514,17 @@ static FIBITMAP * downsample2x2(FIBITMAP * src, bool freeSrc)
 
 static bool writeGif(const char * filename, const std::vector<FIBITMAP*> & pages, int frameTimeMS)
 {
+	if (frameTimeMS < 20)
+		frameTimeMS = 20;
+
 	FIMULTIBITMAP * bmp = FreeImage_OpenMultiBitmap(FIF_GIF, filename, TRUE, FALSE, TRUE, GIF_DEFAULT);
 	for (size_t i = 0; i < pages.size(); ++i)
 	{
+		const float t1 = g_TimerRT.Time_get();
 		FIBITMAP * page = ditherQuantize(pages[i]);
+		const float t2 = g_TimerRT.Time_get();
+		printf("dq took %03.2fms\n", (t2 - t1) * 1000.f);
+
 		FITAG * tag = FreeImage_CreateTag();
 		if (tag)
 		{
@@ -347,7 +549,7 @@ static bool writeGif(const char * filename, const std::vector<FIBITMAP*> & pages
 OPTION_DECLARE(bool, g_screenCapture, false);
 OPTION_DECLARE(int, g_screenCaptureDuration, 4);
 OPTION_DECLARE(int, g_screenCaptureDownscalePasses, 1);
-OPTION_DECLARE(int, g_screenCaptureFrameSkip, 2);
+OPTION_DECLARE(int, g_screenCaptureFrameSkip, 1);
 OPTION_DEFINE(bool, g_screenCapture, "App/GIF Capture/Capture! (Full Screen)");
 OPTION_DEFINE(int, g_screenCaptureDuration, "App/GIF Capture/Duration (Seconds)");
 OPTION_DEFINE(int, g_screenCaptureDownscalePasses, "App/GIF Capture/Number of Downscale Passes");
@@ -404,13 +606,7 @@ void gifCaptureEnd(bool cancel)
 
 	s_gifCaptureState = kGifCapture_Idle;
 
-	if (cancel)
-	{
-		for (auto page : s_pages)
-			FreeImage_Unload(page);
-		s_pages.clear();
-	}
-	else
+	if (!cancel)
 	{
 		char filename[256];
 		std::string userFolder = g_app->getUserSettingsDirectory();
@@ -422,6 +618,10 @@ void gifCaptureEnd(bool cancel)
 		} while (FileStream::Exists(filename));
 		writeGif(filename, s_pages, 1000 * g_screenCaptureFrameSkip / 60);
 	}
+
+	for (auto page : s_pages)
+		FreeImage_Unload(page);
+	s_pages.clear();
 
 	s_pages.clear();
 }
