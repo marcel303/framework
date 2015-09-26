@@ -80,8 +80,10 @@ void ParticleColor::modulateWith(const ParticleColor & other)
 
 void ParticleColor::interpolateBetween(const ParticleColor & v1, const ParticleColor & v2, const float t)
 {
+	const float t1 = 1.f - t;
+	const float t2 =       t;
 	for (int i = 0; i < 4; ++i)
-		rgba[i] = v1.rgba[i] * (1.f - t) + v2.rgba[i] * t;
+		rgba[i] = v1.rgba[i] * t1 + v2.rgba[i] * t2;
 }
 
 void ParticleColor::save(XMLPrinter * printer)
@@ -278,8 +280,8 @@ void ParticleColorCurve::sample(const float t, ParticleColor & result) const
 {
 	if (numKeys == 0)
 		result.set(1.f, 1.f, 1.f, 1.f);
-//	else if (numKeys == 1)
-//		result = keys[0].color;
+	else if (numKeys == 1)
+		result = keys[0].color;
 	else
 	{
 		int endKey = 0;
@@ -898,15 +900,17 @@ bool tickParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei
 	p.position[1] += p.speed[1] * timeStep;
 
 	const float particleLife = 1.f - p.life;
-	const float particleSpeed = sqrtf(p.speed[0] * p.speed[0] + p.speed[1] * p.speed[1]);
-
-	const float size = computeParticleSize(pei, pi, particleLife, particleSpeed);
+	//const float particleSpeed = sqrtf(p.speed[0] * p.speed[0] + p.speed[1] * p.speed[1]);
+	const float particleSpeed = _mm_sqrt_ss(_mm_set_ss(p.speed[0] * p.speed[0] + p.speed[1] * p.speed[1])).m128_f32[0];
+	p.speedScalar = particleSpeed;
 
 	p.rotation = computeParticleRotation(pei, pi, timeStep, particleLife, particleSpeed, p.rotation);
 
 #if 0
 	ParticleColor color;
 	computeParticleColor(pei, pi, particleLife, particleSpeed, color);
+
+	const float size = computeParticleSize(pei, pi, particleLife, particleSpeed);
 
 	printf("tickParticle: color=%1.2f, %1.2f, %1.2f, %1.2f size=%03.2f, rotation=%+03.2f\n",
 		color.rgba[0], color.rgba[1], color.rgba[2], color.rgba[3], size, p.rotation);
@@ -1065,7 +1069,7 @@ void computeParticleColor(const ParticleEmitterInfo & pei, const ParticleInfo & 
 
 	if (pi.colorOverLifetime)
 	{
-		ParticleColor temp;
+		ParticleColor temp(true);
 		pi.colorOverLifetimeCurve.sample(particleLife, temp);
 		result.modulateWith(temp);
 	}
@@ -1073,7 +1077,7 @@ void computeParticleColor(const ParticleEmitterInfo & pei, const ParticleInfo & 
 	if (pi.colorBySpeed)
 	{
 		const float t = (particleSpeed - pi.colorBySpeedRangeMin) / (pi.colorBySpeedRangeMax - pi.colorBySpeedRangeMin);
-		ParticleColor temp;
+		ParticleColor temp(true);
 		pi.colorBySpeedCurve.sample(t, temp);
 		result.modulateWith(temp);
 	}

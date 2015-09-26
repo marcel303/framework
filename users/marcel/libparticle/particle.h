@@ -24,6 +24,7 @@ struct ParticleColor
 	float rgba[4];
 
 	ParticleColor();
+	ParticleColor(bool noinit) { }
 	ParticleColor(float r, float g, float b, float a);
 
 	bool operator==(const ParticleColor & other) const;
@@ -301,6 +302,7 @@ struct Particle
 	float lifeRcp;
 	float position[2];
 	float speed[2];
+	float speedScalar;
 	float rotation;
 
 	Particle * prev;
