@@ -21,13 +21,13 @@
 /*
 
 - itch build:
-	- new splash screen
-		- logo, [FB] /Riposte-Game, [TW] /DamajoGames
+	+ new splash screen
+		+ logo, [FB] /Riposte-Game, [TW] /DamajoGames
 	- replace lobby w/ simple art
 	- only 3 chars, arkthas, stalya, tilly
-	- disable options menu
-	- disable netcode
-	- enable public build macro
+	+ disable options menu
+	+ disable netcode
+	+ enable public build macro
 	- add input screen to main screen/help button
 	- add Greenlight/KickStarter en Twitter buttons
 

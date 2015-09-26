@@ -1982,7 +1982,7 @@ bool App::tick()
 	gifCaptureTick(dt);
 #endif
 
-	if ((g_keyboardLock == 0 && keyboard.wentDown(SDLK_ESCAPE)) || framework.quitRequested)
+	if ((g_keyboardLock == 0 && (keyboard.wentDown(SDLK_ESCAPE) || keyboard.wentDown(SDLK_q))) || framework.quitRequested)
 	{
 		m_dialogMgr->push(DialogType_YesNo, "Do you really want to quit?", "", DialogQuit, this);
 	}
@@ -2637,7 +2637,10 @@ void App::DialogQuit(void * arg, int dialogId, DialogResult result)
 
 	if (result == DialogResult_Yes)
 	{
-		self->quit();
+		if (self->m_clients.empty())
+			self->quit();
+		else
+			self->leaveGame(self->m_clients.front());
 	}
 }
 

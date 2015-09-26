@@ -1,3 +1,5 @@
+#define NOMINMAX // grr windows
+
 #include "Channel.h"
 #include "client.h"
 #include "customize.h"
@@ -93,6 +95,8 @@ MainMenu::~MainMenu()
 
 void MainMenu::onEnter()
 {
+	m_animTime = 0.f;
+
 	m_inactivityTime = 0.f;
 	s_lastMouse = mouse;
 	s_lastGamepad = gamepad[0];
@@ -104,6 +108,8 @@ void MainMenu::onExit()
 
 bool MainMenu::tick(float dt)
 {
+	m_animTime += dt;
+
 	// inactivity check
 
 	const bool isInactive =
@@ -131,11 +137,16 @@ bool MainMenu::tick(float dt)
 	{
 		logDebug("new game!");
 
-		g_app->startHosting();
+		if (g_app->startHosting())
+		{
+			g_app->m_host->m_gameSim.setGameState(kGameState_OnlineMenus);
 
-		g_app->m_host->m_gameSim.setGameState(kGameState_OnlineMenus);
-
-		g_app->connect("127.0.0.1");
+			g_app->connect("127.0.0.1");
+		}
+		else
+		{
+			// todo : show error dialog
+		}
 	}
 	else if (m_findGame && m_findGame->isClicked())
 	{
@@ -177,12 +188,31 @@ bool MainMenu::tick(float dt)
 
 void MainMenu::draw()
 {
-	setColor(colorWhite);
+	const float kBackFadeinTime = .2f;
+	const float kLogoFadeinTime = .5f;
+	const float kBallFloatTime = 10.f;
+	const float kBallFloatPixs = 30.f;
+	const float kBallFloatOffs = -.5;
+
 #if ITCHIO_BUILD
+	const float backOpacity = saturate(m_animTime / kBackFadeinTime);
+	const float logoOpacity = saturate(m_animTime / kLogoFadeinTime);
+	const float ball1Y = std::sinf((m_animTime                 ) * 2.f * M_PI / kBallFloatTime) * kBallFloatPixs;
+	const float ball2Y = std::sinf((m_animTime + kBallFloatOffs) * 2.f * M_PI / kBallFloatTime) * kBallFloatPixs;
+
+	setColorf(1.f, 1.f, 1.f, 1.f, backOpacity);
 	Sprite("itch-mainmenu-back.png").draw();
+	setColorf(1.f, 1.f, 1.f, logoOpacity);
+	Sprite("itch-mainmenu-logo.png").draw();
+	setColorf(1.f, 1.f, 1.f, 1.f, backOpacity);
+	Sprite("itch-mainmenu-ball1.png").drawEx(0.f, ball1Y, 0.f, 1.f, 1.f, false, FILTER_LINEAR);
+	Sprite("itch-mainmenu-ball2.png").drawEx(0.f, ball2Y, 0.f, 1.f, 1.f, false, FILTER_LINEAR);
 #else
+	setColor(colorWhite);
 	Sprite("mainmenu-back.png").draw();
 #endif
+
+	setColor(colorWhite);
 
 	if (m_newGame)
 		m_newGame->draw();

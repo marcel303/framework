@@ -330,7 +330,7 @@ void Button::draw()
 	if (m_hasFocus)
 		setColor(colorWhite);
 	else
-		setColor(255, 255, 255, 255, 63);
+		setColor(255, 255, 255, 255, 127);
 	m_sprite->drawEx(m_x, m_y);
 
 	if (m_localString)
