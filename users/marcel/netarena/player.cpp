@@ -43,6 +43,8 @@
 - level editor: add pickup spawner placement
 - level editor: add foreground layer support
 
+- add decal on bullet collision for some types of ammo
+
 - upgrade bullet sprites to spriter animations
 
 - add small pickup delay on weapon drop. avoids pickup being picked up directly on kill -> adds more randomness
@@ -3661,7 +3663,7 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 
 				if (DECAL_ENABLED) // todo
 				{
-					const uint32_t color = getDecalColor(m_index).toRGBA();
+					const uint32_t color = getDecalColor(m_index, Vec2(0.f, 0.f)).toRGBA();
 
 					for (int i = 0; i < BULLET_BLOOD_COUNT; ++i)
 					{
@@ -3687,15 +3689,18 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 						m_pos[0], m_pos[1] + mirrorY(-characterData->m_collisionSy/2.f),
 						kBulletType_BloodParticle,
 						200, 50, 350, 140);
-					spawnInfo.color = getDecalColor(m_index).toRGBA();
+					spawnInfo.color = getDecalColor(m_index, Vec2(0.f, 0.f)).toRGBA();
 
 					GAMESIM->spawnParticles(spawnInfo);
 
+				#if 0
+					// fixme : why was this here?
 					GAMESIM->addDecal(
 						m_pos[0], m_pos[1],
-						m_index,
+						getPlayerColor(m_index),
 						GAMESIM->Random() % DECAL_COUNT,
 						GAMESIM->RandomFloat(DECAL_SIZE_MIN, DECAL_SIZE_MAX));
+				#endif
 				}
 
 				if (PROTO_TIMEDILATION_ON_KILL && attacker)

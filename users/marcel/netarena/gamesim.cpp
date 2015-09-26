@@ -1148,7 +1148,7 @@ void Decal::draw() const
 
 void Decal::drawAt(int x, int y) const
 {
-	setColor(getDecalColor(playerColor));
+	setColor(color[0], color[1], color[2]);
 	Sprite sprite("decals/0.png");
 	sprite.drawEx(
 		x - sprite.getWidth() * scale / 2.f,
@@ -1157,11 +1157,13 @@ void Decal::drawAt(int x, int y) const
 		false, FILTER_LINEAR);
 }
 
-Color getDecalColor(int playerIndex)
+Color getDecalColor(int playerIndex, Vec2Arg direction)
 {
 	const int colorIndex = (DECAL_COLOR >= 0) ? (DECAL_COLOR % MAX_PLAYERS) : playerIndex;
-	const Color color = (DECAL_COLOR == MAX_PLAYERS) ? Color(92, 173, 255) : getPlayerColor(colorIndex);
-	return color.interp(colorBlack, 0.f);  // todo : modify decal color in some way?
+	const Color color1 = (DECAL_COLOR == MAX_PLAYERS) ? Color(92, 173, 255) : getPlayerColor(colorIndex);
+	const Color color2 = color1.interp(colorBlack, 0.f);  // todo : modify decal color in some way?
+	const Color color3 = direction.CalcSize() == 0.f ? color2 : color2.hueShift(Bullet::toAngle(direction[0], direction[1]) / (2.f * float(M_PI)));
+	return color3;
 }
 
 //
@@ -4025,7 +4027,7 @@ void GameSim::doBlastEffect(Vec2Arg center, float radius, const Curve & speedCur
 		});
 }
 
-void GameSim::addDecal(int x, int y, int playerColor, int sprite, float scale)
+void GameSim::addDecal(int x, int y, const Color & color, int sprite, float scale)
 {
 	for (int i = 0; i < MAX_DECALS; ++i)
 	{
@@ -4035,7 +4037,9 @@ void GameSim::addDecal(int x, int y, int playerColor, int sprite, float scale)
 			decal.isActive = true;
 			decal.x = x;
 			decal.y = y;
-			decal.playerColor = playerColor;
+			decal.color[0] = color.r * 255.f;
+			decal.color[1] = color.g * 255.f;
+			decal.color[2] = color.b * 255.f;
 			decal.sprite = sprite;
 			decal.scale = scale;
 			if (g_decalMap)
@@ -4055,7 +4059,7 @@ void GameSim::addDecal(int x, int y, int playerColor, int sprite, float scale)
 	if (DEBUG_RANDOM_CALLSITES)
 		LOG_DBG("Random called from addDecal");
 	m_decals[Random() % MAX_DECALS] = Decal();
-	addDecal(x, y, playerColor, sprite, scale);
+	addDecal(x, y, color, sprite, scale);
 }
 
 void GameSim::addScreenShake(float dx, float dy, float stiffness, float life, bool fade)

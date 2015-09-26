@@ -172,7 +172,7 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 							// fixme : add decal on death particle collision..
 							gameSim.addDecal(
 								b.m_pos[0], b.m_pos[1],
-								b.ownerPlayerId,
+								getDecalColor(b.ownerPlayerId, b.m_vel),
 								gameSim.Random() % DECAL_COUNT,
 								gameSim.RandomFloat(DECAL_SIZE_MIN, DECAL_SIZE_MAX));
 						}
@@ -408,11 +408,11 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 					if (b.type == kBulletType_BloodParticle)
 					{
 						gameSim.playSound("blood-splash.ogg");
-
+						
 						gameSim.addDecal(
 							b.m_pos[0],
 							b.m_pos[1],
-							b.ownerPlayerId,
+							getDecalColor(b.ownerPlayerId, b.m_vel),
 							gameSim.Random() % DECAL_COUNT,
 							gameSim.RandomFloat(DECAL_SIZE_MIN, DECAL_SIZE_MAX));
 					}

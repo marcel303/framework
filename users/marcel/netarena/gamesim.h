@@ -861,8 +861,8 @@ struct Decal
 	bool isActive;
 	int16_t x;
 	int16_t y;
-	uint8_t playerColor : 4;
-	uint8_t sprite : 4;
+	uint8_t color[3];
+	uint8_t sprite;
 	float scale;
 
 	Decal()
@@ -875,7 +875,7 @@ struct Decal
 	void drawAt(int x, int y) const;
 };
 
-Color getDecalColor(int playerIndex);
+Color getDecalColor(int playerIndex, Vec2Arg direction);
 
 struct ScreenShake
 {
@@ -1286,7 +1286,7 @@ public:
 	void doQuake(float vel);
 	void doBlastEffect(Vec2Arg center, float radius, const Curve & speedCurve);
 
-	void addDecal(int x, int y, int playerColor, int sprite, float scale);
+	void addDecal(int x, int y, const Color & color, int sprite, float scale);
 
 	void addScreenShake(float dx, float dy, float stiffness, float life, bool fade);
 	Vec2 getScreenShake() const;
