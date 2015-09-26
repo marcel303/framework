@@ -1311,6 +1311,104 @@ Color Color::fromHex(const char * str)
 	}
 }
 
+Color Color::fromHSL(float hue, float sat, float lum)
+{
+	float r, g, b;
+
+	float m2 = (lum <= .5f) ? (lum + (lum * sat)) : (lum + sat - lum * sat);
+	float m1 = lum + lum - m2;
+
+	hue = fmod(hue, 1.f) * 6.f;
+
+	if (hue < 0.f)
+	{
+		hue += 6.f;
+	}
+
+	if (hue < 3.0f)
+	{
+		if (hue < 2.0f)
+		{
+			if(hue < 1.0f)
+			{
+				r = m2;
+				g = m1 + (m2 - m1) * hue;
+				b = m1;
+			}
+			else
+			{
+				r = (m1 + (m2 - m1) * (2.f - hue));
+				g = m2;
+				b = m1;
+			}
+		}
+		else
+		{
+			r = m1;
+			g = m2;
+			b = (m1 + (m2 - m1) * (hue - 2.f));
+		}
+	}
+	else
+	{
+		if (hue < 5.0f)
+		{
+			if (hue < 4.0f)
+			{
+				r = m1;
+				g = (m1 + (m2 - m1) * (4.f - hue));
+				b = m2;
+			}
+			else
+			{
+				r = (m1 + (m2 - m1) * (hue - 4.f));
+				g = m1;
+				b = m2;
+			}
+		}
+		else
+		{
+			r = m2;
+			g = m1;
+			b = (m1 + (m2 - m1) * (6.f - hue));
+		}
+	}
+
+	return Color(r, g, b);
+}
+
+void Color::toHSL(float & hue, float & sat, float & lum) const
+{
+	float max = std::max(r, std::max(g, b));
+	float min = std::min(r, std::min(g, b));
+
+	lum = (max + min) / 2.0f;
+
+	float delta = max - min;
+
+	if (delta < FLT_EPSILON)
+	{
+		sat = 0.f;
+		hue = 0.f;
+	}
+	else
+	{
+		sat = (lum <= .5f) ? (delta / (max + min)) : (delta / (2.f - (max + min)));
+
+		if (r == max)
+			hue = (g - b) / delta;
+		else if (g == max)
+			hue = 2.f + (b - r) / delta;
+		else
+			hue = 4.f + (r - g) / delta;
+
+		if (hue < 0.f)
+			hue += 6.0f;
+
+		hue /= 6.f;
+	}
+}
+
 Color Color::interp(const Color & other, float t) const
 {
 	const float t1 = 1.f - t;
@@ -1321,6 +1419,13 @@ Color Color::interp(const Color & other, float t) const
 		g * t1 + other.g * t2,
 		b * t1 + other.b * t2,
 		a * t1 + other.a * t2);
+}
+
+Color Color::hueShift(float shift) const
+{
+	float hue, sat, lum;
+	toHSL(hue, sat, lum);
+	return Color::fromHSL(hue + shift, sat, lum);
 }
 
 uint32_t Color::toRGBA() const

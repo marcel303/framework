@@ -290,7 +290,10 @@ public:
 	explicit Color(float r, float g, float b, float a = 1.f);
 	
 	static Color fromHex(const char * str);
+	static Color fromHSL(float hue, float sat, float lum);
+	void toHSL(float & hue, float & sat, float & lum) const;
 	Color interp(const Color & other, float t) const;
+	Color hueShift(float shift) const;
 
 	uint32_t toRGBA() const;
 	
