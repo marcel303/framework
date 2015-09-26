@@ -3886,6 +3886,11 @@ void gxColor4f(float r, float g, float b, float a)
 	s_gxVertex.cw = a;
 }
 
+void gxColor4fv(const float * rgba)
+{
+	gxColor4f(rgba[0], rgba[1], rgba[2], rgba[3]);
+}
+
 void gxColor3ub(int r, int g, int b)
 {
 	gxColor4f(

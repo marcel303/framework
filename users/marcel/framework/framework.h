@@ -793,6 +793,7 @@ void gxShutdown();
 void gxBegin(int primitiveType);
 void gxEnd();
 void gxColor4f(float r, float g, float b, float a);
+void gxColor4fv(const float * rgba);
 void gxColor3ub(int r, int g, int b);
 void gxTexCoord2f(float u, float v);
 void gxNormal3f(float x, float y, float z);
@@ -818,6 +819,7 @@ static inline void gxShutdown() { }
 void gxBegin(int primitiveType);
 #define gxEnd glEnd
 #define gxColor4f glColor4f
+#define gxColor4fv glColor4fv
 #define gxColor3ub glColor3ub
 #define gxTexCoord2f glTexCoord2f
 #define gxNormal3f glNormal3f
