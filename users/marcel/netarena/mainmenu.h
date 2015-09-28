@@ -17,6 +17,8 @@ class MainMenu : public Menu
 
 	Button * m_socialFb;
 	Button * m_socialTw;
+	Button * m_campaignGl;
+	Button * m_campaignKs;
 
 	float m_animTime;
 	float m_inactivityTime;

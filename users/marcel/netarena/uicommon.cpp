@@ -78,7 +78,7 @@ void MenuNav::tick(float dt)
 			if (elem->hitTest(mouse.x, mouse.y))
 				newSelection = elem;
 
-		if (newSelection || false)
+		if (newSelection || true)
 			setSelection(newSelection, false);
 	}
 }
@@ -118,12 +118,12 @@ void MenuNav::moveSelection(int dx, int dy)
 				int distY = newY - oldY;
 
 				if (dx == 0)
-					distX /= 10;
+					distX *= 10;
 				else if ((Calc::Sign(dx) != Calc::Sign(distX)) || distX == 0)
 					continue;
 
 				if (dy == 0)
-					distY /= 10;
+					distY *= 10;
 				else if ((Calc::Sign(dy) != Calc::Sign(distY)) || distY == 0)
 					continue;
 
@@ -282,6 +282,11 @@ Button::Button(int x, int y, const char * filename, const char * localString, in
 	, m_textX(textX)
 	, m_textY(textY)
 	, m_textSize(textSize)
+	, m_moveX(0)
+	, m_moveY(0)
+	, m_startOpacity(0.f)
+	, m_moveTime(0.f)
+	, m_moveTimeStart(0.f)
 {
 	setPosition(x, y);
 }
@@ -296,6 +301,15 @@ void Button::setPosition(int x, int y)
 {
 	m_x = x - m_sprite->getWidth() / 2;
 	m_y = y - m_sprite->getHeight() / 2;
+}
+
+void Button::setAnimation(int moveX, int moveY, float startOpacity, float time)
+{
+	m_moveX = moveX;
+	m_moveY = moveY;
+	m_startOpacity = startOpacity;
+	m_moveTime = time;
+	m_moveTimeStart = framework.time;
 }
 
 bool Button::isClicked()
@@ -327,17 +341,42 @@ bool Button::isClicked()
 
 void Button::draw()
 {
-	if (m_hasFocus)
-		setColor(colorWhite);
-	else
-		setColor(255, 255, 255, 255, 127);
-	m_sprite->drawEx(m_x, m_y);
+	const float animT = saturate(m_moveTime == 0.f ? 1.f : ((framework.time - m_moveTimeStart) / m_moveTime));
+	const float opacity = m_startOpacity * (1.f - animT) + animT;
 
-	if (m_localString)
+	gxPushMatrix();
 	{
-		setMainFont();
-		drawText(m_x + m_textX, m_y + m_textY, m_textSize, +1.f, +1.f, "%s", getLocalString(m_localString));
+		gxTranslatef(m_moveX * (animT - 1.f), m_moveY * (animT - 1.f), 0.f);
+
+	#if 0
+		if (m_hasFocus)
+			setColorf(1.f, 1.f, 1.f, opacity);
+		else
+			setColorf(1.f, 1.f, 1.f, opacity, .5f);
+	#else
+		setColorMode(COLOR_ADD);
+		if (m_hasFocus)
+			setColorf(.15f, .15f, .15f, opacity);
+		else
+			setColorf(0.f, 0.f, 0.f, opacity * .9f);
+	#endif
+
+		m_sprite->drawEx(m_x, m_y);
+
+		if (m_hasFocus)
+			setColorf(1.f, 1.f, 1.f, opacity);
+		else
+			setColorf(1.f, 1.f, 1.f, opacity, .75f);
+
+		if (m_localString)
+		{
+			setMainFont();
+			drawText(m_x + m_textX, m_y + m_textY, m_textSize, +1.f, +1.f, "%s", getLocalString(m_localString));
+		}
+
+		setColorMode(COLOR_MUL);
 	}
+	gxPopMatrix();
 }
 
 void Button::getPosition(int & x, int & y) const

@@ -21,8 +21,6 @@ OPTION_DEFINE(int, UI_CHARSELECT_GAMEMODE_TEXT_Y, "UI/Character Select/GameMode 
 OPTION_DEFINE(int, UI_CHARSELECT_GAMEMODE_SELECT_X, "UI/Character Select/GameMode Select X");
 OPTION_DEFINE(int, UI_CHARSELECT_GAMEMODE_SELECT_Y, "UI/Character Select/GameMode Select Y");
 
-#if GRIDBASED_CHARSELECT
-
 OPTION_DECLARE(int, CHARCELL_INIT_X, 162);
 OPTION_DECLARE(int, CHARCELL_INIT_Y, 155);
 OPTION_DECLARE(int, CHARCELL_SPACING_X, 38);
@@ -154,182 +152,23 @@ bool CharGrid::isValidGridCell(int x, int y)
 	return true;
 }
 
-#endif
-
-//
-
-#if !GRIDBASED_CHARSELECT
-
-OPTION_DECLARE(int, UI_CHARSELECT_BASE_X, 290);
-OPTION_DECLARE(int, UI_CHARSELECT_BASE_Y, 270);
-OPTION_DECLARE(int, UI_CHARSELECT_SIZE_X, 310);
-OPTION_DECLARE(int, UI_CHARSELECT_SIZE_Y, 400);
-OPTION_DECLARE(int, UI_CHARSELECT_STEP_X, 340);
-OPTION_DECLARE(int, UI_CHARSELECT_PREV_X, 45);
-OPTION_DECLARE(int, UI_CHARSELECT_PREV_Y, 300);
-OPTION_DECLARE(int, UI_CHARSELECT_NEXT_X, 265);
-OPTION_DECLARE(int, UI_CHARSELECT_NEXT_Y, 300);
-OPTION_DECLARE(int, UI_CHARSELECT_READY_X, 155);
-OPTION_DECLARE(int, UI_CHARSELECT_READY_Y, 350);
-OPTION_DECLARE(int, UI_CHARSELECT_PORTRAIT_X, 155);
-OPTION_DECLARE(int, UI_CHARSELECT_PORTRAIT_Y, 270);
-OPTION_DEFINE(int, UI_CHARSELECT_BASE_X, "UI/Character Select/Base X");
-OPTION_DEFINE(int, UI_CHARSELECT_BASE_Y, "UI/Character Select/Base Y");
-OPTION_DEFINE(int, UI_CHARSELECT_SIZE_X, "UI/Character Select/Size X");
-OPTION_DEFINE(int, UI_CHARSELECT_SIZE_Y, "UI/Character Select/Size Y");
-OPTION_DEFINE(int, UI_CHARSELECT_STEP_X, "UI/Character Select/Step X");
-OPTION_DEFINE(int, UI_CHARSELECT_PREV_X, "UI/Character Select/Prev X");
-OPTION_DEFINE(int, UI_CHARSELECT_PREV_Y, "UI/Character Select/Prev Y");
-OPTION_DEFINE(int, UI_CHARSELECT_NEXT_X, "UI/Character Select/Next X");
-OPTION_DEFINE(int, UI_CHARSELECT_NEXT_Y, "UI/Character Select/Next Y");
-OPTION_DEFINE(int, UI_CHARSELECT_READY_X, "UI/Character Select/Ready X");
-OPTION_DEFINE(int, UI_CHARSELECT_READY_Y, "UI/Character Select/Ready Y");
-OPTION_DEFINE(int, UI_CHARSELECT_PORTRAIT_X, "UI/Character Select/Portrait X");
-OPTION_DEFINE(int, UI_CHARSELECT_PORTRAIT_Y, "UI/Character Select/Portrait Y");
-
-CharSelector::CharSelector(Client * client, LobbyMenu * menu, int playerId)
-	: m_client(client)
-	, m_menu(menu)
-	, m_playerId(playerId)
-	, m_prevChar(new Button(0, 0, "charselect-prev.png"))
-	, m_nextChar(new Button(0, 0, "charselect-next.png"))
-	, m_ready(new Button(0, 0, "charselect-ready.png"))
-{
-	updateButtonLocations();
-}
-
-CharSelector::~CharSelector()
-{
-	delete m_prevChar;
-	delete m_nextChar;
-	delete m_ready;
-}
-
-void CharSelector::updateButtonLocations()
-{
-	m_prevChar->setPosition(
-		UI_CHARSELECT_BASE_X + UI_CHARSELECT_PREV_X + m_playerId * UI_CHARSELECT_STEP_X,
-		UI_CHARSELECT_BASE_Y + UI_CHARSELECT_PREV_Y);
-
-	m_nextChar->setPosition(
-		UI_CHARSELECT_BASE_X + UI_CHARSELECT_NEXT_X + m_playerId * UI_CHARSELECT_STEP_X,
-		UI_CHARSELECT_BASE_Y + UI_CHARSELECT_NEXT_Y);
-
-	m_ready->setPosition(
-		UI_CHARSELECT_BASE_X + UI_CHARSELECT_READY_X + m_playerId * UI_CHARSELECT_STEP_X,
-		UI_CHARSELECT_BASE_Y + UI_CHARSELECT_READY_Y);
-}
-
-void CharSelector::tick(float dt)
-{
-	const Player & player = m_client->m_gameSim->m_players[m_playerId];
-
-	if (player.m_isUsed)
-	{
-		if (player.m_owningChannelId == m_client->m_channel->m_id)
-		{
-			if (m_prevChar->isClicked())
-				g_app->netAction(m_client->m_channel, kNetAction_PlayerInputAction, m_playerId, kPlayerInputAction_PrevChar);
-			if (m_nextChar->isClicked())
-				g_app->netAction(m_client->m_channel, kNetAction_PlayerInputAction, m_playerId, kPlayerInputAction_NextChar);
-			if (m_ready->isClicked())
-				g_app->netAction(m_client->m_channel, kNetAction_PlayerInputAction, m_playerId, kPlayerInputAction_ReadyUp);
-		}
-	}
-
-	if (g_devMode)
-	{
-		updateButtonLocations();
-	}
-}
-
-void CharSelector::draw()
-{
-	const Player & player = m_client->m_gameSim->m_players[m_playerId];
-
-	if (player.m_isUsed && player.m_owningChannelId == m_client->m_channel->m_id)
-	{
-		if (!player.m_isReadyUpped)
-		{
-			setColor(colorWhite);
-			m_prevChar->draw();
-			m_nextChar->draw();
-		}
-	}
-
-	const int characterX = UI_CHARSELECT_BASE_X + UI_CHARSELECT_PORTRAIT_X + m_playerId * UI_CHARSELECT_STEP_X;
-	const int characterY = UI_CHARSELECT_BASE_Y + UI_CHARSELECT_PORTRAIT_Y;
-
-	if (player.m_isUsed)
-	{
-		Spriter spriter(makeCharacterFilename(player.m_characterIndex, "sprite/sprite.scml"));
-
-		SpriterState spriterState;
-		spriterState.animIndex = spriter.getAnimIndexByName("Idle");
-		spriterState.animTime = g_TimerRT.Time_get();
-		spriterState.x = characterX;
-		spriterState.y = characterY;
-		spriterState.scale = .7f;
-
-		setColor(colorWhite);
-		spriter.draw(spriterState);
-
-		setColor(player.m_isReadyUpped ? colorBlue : colorWhite);
-		m_ready->draw();
-	}
-	else
-	{
-		SpriterState state = m_menu->m_joinSpriterState;
-		state.x = characterX;
-		state.y = characterY;
-
-		setColor(colorWhite);
-		JOIN_SPRITER.draw(state);
-	}
-
-	setColor(colorWhite);
-}
-
-bool CharSelector::isLocalPlayer() const
-{
-	const Player & player = m_client->m_gameSim->m_players[m_playerId];
-	return player.m_isUsed && player.m_owningChannelId == m_client->m_channel->m_id;
-}
-#endif
-
 //
 
 LobbyMenu::LobbyMenu(Client * client)
 	: m_client(client)
-#if GRIDBASED_CHARSELECT
 	, m_charGrid(0)
-#endif
 	, m_prevGameMode(new Button(50,  GFX_SY - 80, "charselect-prev.png", 0, 0, 0, 0))
 	, m_nextGameMode(new Button(150, GFX_SY - 80, "charselect-next.png", 0, 0, 0, 0))
 {
-#if GRIDBASED_CHARSELECT
 	m_charGrid = new CharGrid(client, this);
-#else
-	for (int i = 0; i < MAX_PLAYERS; ++i)
-	{
-		m_charSelectors[i] = new CharSelector(client, this, i);
-	}
-#endif
 
 	m_joinSpriterState.startAnim(JOIN_SPRITER, 0);
 }
 
 LobbyMenu::~LobbyMenu()
 {
-#if !GRIDBASED_CHARSELECT
-	for (int i = 0; i < MAX_PLAYERS; ++i)
-	{
-		delete m_charSelectors[i];
-	}
-#else
 	delete m_charGrid;
 	m_charGrid = 0;
-#endif
 
 	delete m_prevGameMode;
 	delete m_nextGameMode;
@@ -346,7 +185,7 @@ void LobbyMenu::tick(float dt)
 		UI_CHARSELECT_GAMEMODE_SELECT_X + 60,
 		UI_CHARSELECT_GAMEMODE_SELECT_Y);
 
-	if (g_app->m_isHost && g_app->isSelectedClient(m_client))
+	if (g_app->m_isHost && g_app->isSelectedClient(m_client) && UI_LOBBY_GAMEMODE_SELECT_ENABLE)
 	{
 		if (m_client->m_gameSim->m_gameStartTicks == 0)
 		{
@@ -357,21 +196,13 @@ void LobbyMenu::tick(float dt)
 		}
 	}
 
-#if GRIDBASED_CHARSELECT
 	m_charGrid->tick(dt);
-#else
-	for (int i = 0; i < MAX_PLAYERS; ++i)
-	{
-		m_charSelectors[i]->tick(dt);
-	}
-#endif
 }
 
 void LobbyMenu::draw()
 {
 	const GameSim * gameSim = m_client->m_gameSim;
 
-#if GRIDBASED_CHARSELECT
 	setColor(colorWhite);
 	const float t = gameSim->m_physicalRoundTime;
 	const float s = 0.05f;
@@ -383,12 +214,10 @@ void LobbyMenu::draw()
 	stars.pixelpos = false;
 	stars.filter = FILTER_LINEAR;
 	stars.draw();
-#endif
 
 	setColor(colorWhite);
 	Sprite("ui/lobby/background.png").draw();
 
-#if GRIDBASED_CHARSELECT
 	m_charGrid->draw();
 
 	setMainFont();
@@ -408,77 +237,25 @@ void LobbyMenu::draw()
 			"P%d PRESS START",
 			i + 1);
 	}
-#endif
 
-	if (g_app->m_isHost)
+	if (g_app->m_isHost && UI_LOBBY_GAMEMODE_SELECT_ENABLE)
 	{
 		setColor(colorWhite);
 		m_prevGameMode->draw();
 		m_nextGameMode->draw();
 	}
 
-#if !GRIDBASED_CHARSELECT
-	for (int i = 0; i < MAX_PLAYERS; ++i)
-	{
-		if (g_devMode || true) // fixme
-		{
-			const int x1 = UI_CHARSELECT_BASE_X + UI_CHARSELECT_STEP_X * i;
-			const int y1 = UI_CHARSELECT_BASE_Y;
-			const int x2 = UI_CHARSELECT_BASE_X + UI_CHARSELECT_STEP_X * i + UI_CHARSELECT_SIZE_X;
-			const int y2 = UI_CHARSELECT_BASE_Y + UI_CHARSELECT_SIZE_Y;
-
-			const float v = m_client->isLocalPlayer(i) ? (std::sinf(g_TimerRT.Time_get() * M_PI * 2.f / 1.5f) + 1.f) / 10.f : 0.f;
-
-			setColorf(v, v, v, .7f);
-			drawRect(x1, y1, x2, y2);
-		}
-
-		m_charSelectors[i]->draw();
-
-		if (g_devMode || true) // fixme
-		{
-			const int x1 = UI_CHARSELECT_BASE_X + UI_CHARSELECT_STEP_X * i;
-			const int y1 = UI_CHARSELECT_BASE_Y;
-			const int x2 = UI_CHARSELECT_BASE_X + UI_CHARSELECT_STEP_X * i + UI_CHARSELECT_SIZE_X;
-			const int y2 = UI_CHARSELECT_BASE_Y + UI_CHARSELECT_SIZE_Y;
-
-			setColor(colorGreen);
-			drawRectLine(x1, y1, x2, y2);
-
-			if (m_client->m_gameSim->m_players[i].m_isUsed)
-			{
-				int y = 8;
-
-				setColor(colorWhite);
-				drawText((x1 + x2) / 2, y2 + y, 32, 0.f, +1.f, "%s", m_client->m_gameSim->m_players[i].m_displayName.c_str());
-				y += 34;
-
-				const CharacterData * characterData = getCharacterData(m_client->m_gameSim->m_players[i].m_characterIndex);
-				setColor(colorWhite);
-				drawText((x1 + x2) / 2, y2 + y, 32, 0.f, +1.f, "%s", g_playerSpecialNames[characterData->m_special]);
-				y += 34;
-
-			#if 1 // todo : non final only
-				if (g_host)
-				{
-					setColor(colorWhite);
-					drawText((x1 + x2) / 2, y2 + y, 24, 0.f, +1.f, "%s", m_client->m_channel->m_address.ToString(true).c_str());
-					y += 34;
-				}
-			#endif
-			}
-		}
-	}
-#endif
-
 	// draw current game mode selection
 
-	setMainFont();
-	setColor(127, 255, 227);
-	drawText(
-		UI_CHARSELECT_GAMEMODE_TEXT_X,
-		UI_CHARSELECT_GAMEMODE_TEXT_Y,
-		48, 0.f, 0.f, "[%s]", g_gameModeNames[gameSim->m_desiredGameMode]);
+	if (UI_LOBBY_GAMEMODE_SELECT_ENABLE)
+	{
+		setMainFont();
+		setColor(127, 255, 227);
+		drawText(
+			UI_CHARSELECT_GAMEMODE_TEXT_X,
+			UI_CHARSELECT_GAMEMODE_TEXT_Y,
+			48, 0.f, 0.f, "[%s]", g_gameModeNames[gameSim->m_desiredGameMode]);
+	}
 
 	// draw game start timer
 

@@ -1,6 +1,10 @@
 #pragma once
 
-#define ITCHIO_BUILD 1
+#ifdef DEBUG
+	#define ITCHIO_BUILD 0
+#else
+	#define ITCHIO_BUILD 1
+#endif
 
 #if ITCHIO_BUILD
 	#define PUBLIC_DEMO_BUILD 1

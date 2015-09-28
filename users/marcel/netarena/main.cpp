@@ -1111,6 +1111,7 @@ bool App::init()
 	{
 		UI_DEBUG_VISIBLE = false;
 		UI_LOBBY_LEAVEJOIN_ENABLE = true;
+		UI_LOBBY_GAMEMODE_SELECT_ENABLE = false;
 		NUM_LOCAL_PLAYERS_TO_ADD = 1;
 		VOLCANO_LOOP = true;
 
@@ -2122,7 +2123,7 @@ void App::draw()
 			// draw itch.io badge
 			setColor(colorWhite);
 			Sprite itchBadge("itch-badge.png");
-			itchBadge.drawEx(GFX_SX - itchBadge.getWidth() - 10, 10);
+			itchBadge.drawEx(1510, 1010);
 		}
 	#endif
 

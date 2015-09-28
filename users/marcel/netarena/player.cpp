@@ -30,12 +30,15 @@
 	+ enable public build macro
 	- add input screen to main screen/help button
 	- add Greenlight/KickStarter en Twitter buttons
+	- disable START button in-game
+	- enable inactivity timeout only when: in DEMOMODE or in online multiplayer game
 
 - level setting: max zoom factor
 - level setting: zoom restriction near borders. not needed when no level wrap
 - level setting: level theme / background
 - level setting: wrap around yes/no? could be done more easily by adding collision around the map
-- level editor: add spriter object placement
+- level editor: add tile sprite placement
+- level editor: add tile transition placement
 - level editor: add teleporter placement
 - level editor: add light source placement
 - level editor: add particle emitter placement

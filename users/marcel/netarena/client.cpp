@@ -268,12 +268,17 @@ void Client::draw()
 
 void Client::drawConnecting()
 {
+#if !ENABLE_NETWORKING
+	setColor(colorBlack);
+	drawRect(0, 0, GFX_SX, GFX_SY);
+#else
 	setColor(colorBlue);
 	drawRect(0, 0, GFX_SX, GFX_SY);
 	setColor(colorWhite);
 	setMainFont();
 	drawText(GFX_SX/2, GFX_SY/2, 32, 0.f, 0.f, "Connecting..");
 	setColor(colorWhite);
+#endif
 }
 
 void Client::drawMenus()

@@ -38,6 +38,8 @@ MainMenu::MainMenu()
 	, m_menuNav(0)
 	, m_socialFb(0)
 	, m_socialTw(0)
+	, m_campaignGl(0)
+	, m_campaignKs(0)
 {
 	if (!PUBLIC_DEMO_BUILD || ((std::string)g_connect).empty())
 		m_newGame = new Button(GFX_SX/2, GFX_SY/3, "mainmenu-button.png", "menu-newgame", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
@@ -56,8 +58,14 @@ MainMenu::MainMenu()
 	m_quitApp->setPosition(670 + m_newGame->m_sprite->getWidth()/2, 765 + m_newGame->m_sprite->getHeight()/2);
 	const int socialSx = 385;
 	const int socialSy = 85;
+	const int glSx = 316;
+	const int glSy = 171;
+	const int ksSx = 300;
+	const int ksSy = 86;
 	m_socialFb = new Button(165 + socialSx/2, 925 + socialSy/2, "itch-social-fb.png", "", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 	m_socialTw = new Button(165 + socialSx/2, 830 + socialSy/2, "itch-social-tw.png", "", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_campaignGl = new Button(1501 + glSx/2, 821 + glSy/2, "itch-campaign-gl.png", "", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_campaignKs = new Button(1501 + ksSx/2, 721 + ksSy/2, "itch-campaign-ks.png", "", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 #endif
 
 	m_menuNav = new MenuNav();
@@ -77,6 +85,10 @@ MainMenu::MainMenu()
 		m_menuNav->addElem(m_socialFb);
 	if (m_socialTw)
 		m_menuNav->addElem(m_socialTw);
+	if (m_campaignGl)
+		m_menuNav->addElem(m_campaignGl);
+	if (m_campaignKs)
+		m_menuNav->addElem(m_campaignKs);
 }
 
 MainMenu::~MainMenu()
@@ -91,6 +103,8 @@ MainMenu::~MainMenu()
 
 	delete m_socialFb;
 	delete m_socialTw;
+	delete m_campaignGl;
+	delete m_campaignKs;
 }
 
 void MainMenu::onEnter()
@@ -100,6 +114,10 @@ void MainMenu::onEnter()
 	m_inactivityTime = 0.f;
 	s_lastMouse = mouse;
 	s_lastGamepad = gamepad[0];
+
+	const int animX = 100;
+	m_newGame->setAnimation(animX, 0, 0.f, .4f);
+	m_quitApp->setAnimation(animX, 0, 0.f, .4f);
 }
 
 void MainMenu::onExit()
@@ -176,6 +194,14 @@ bool MainMenu::tick(float dt)
 	{
 		openBrowserWithUrl("https://twitter.com/damajogames");
 	}
+	else if (m_campaignGl && m_campaignGl->isClicked())
+	{
+		openBrowserWithUrl("https://twitter.com/damajogames");
+	}
+	else if (m_campaignKs && m_campaignKs->isClicked())
+	{
+		openBrowserWithUrl("https://twitter.com/damajogames");
+	}
 #if !ITCHIO_BUILD
 	else if (m_inactivityTime >= (g_devMode ? 5.f : kMaxInactivityTime))
 	{
@@ -229,4 +255,8 @@ void MainMenu::draw()
 		m_socialFb->draw();
 	if (m_socialTw)
 		m_socialTw->draw();
+	if (m_campaignGl)
+		m_campaignGl->draw();
+	if (m_campaignKs)
+		m_campaignKs->draw();
 }

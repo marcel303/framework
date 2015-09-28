@@ -2276,7 +2276,6 @@ void GameSim::tickMenus()
 			{
 				// character select
 
-			#if GRIDBASED_CHARSELECT
 				if (!player.m_isReadyUpped)
 				{
 					int dx = 0;
@@ -2308,23 +2307,6 @@ void GameSim::tickMenus()
 						}
 					}
 				}
-			#else
-				if (!player.m_isReadyUpped)
-				{
-					int step = 0;
-
-					if (player.m_input.wentDown(INPUT_BUTTON_LEFT) || (player.m_input.m_actions & (1 << kPlayerInputAction_PrevChar)))
-						step = -1;
-					if (player.m_input.wentDown(INPUT_BUTTON_RIGHT) || (player.m_input.m_actions & (1 << kPlayerInputAction_NextChar)))
-						step += 1;
-
-					if (step != 0)
-					{
-						const int characterIndex = (player.m_characterIndex + MAX_CHARACTERS + step) % MAX_CHARACTERS;
-						playerInstanceData->setCharacterIndex(characterIndex);
-					}
-				}
-			#endif
 
 				// ready up
 
@@ -2755,7 +2737,7 @@ void GameSim::tickPlay()
 
 	// coins
 
-	if (m_gameMode == kGameMode_CoinCollector)
+	if (m_gameMode == kGameMode_CoinCollector && m_gameState == kGameState_Play)
 	{
 		for (int i = 0; i < MAX_COINS; ++i)
 		{
@@ -2764,19 +2746,22 @@ void GameSim::tickPlay()
 
 		if (tick >= m_coinCollector.m_nextSpawnTick)
 		{
-			int numCoins = 0;
-
-			for (int i = 0; i < MAX_COINS; ++i)
-				if (m_coinCollector.m_coins[i].m_isDropped)
-					numCoins++;
-
-			for (int i = 0; i < MAX_PLAYERS; ++i)
-				if (m_players[i].m_isAlive)
-					numCoins += m_players[i].m_score;
-
-			if (numCoins < COINCOLLECTOR_COIN_LIMIT)
+			if (m_coinCollector.m_nextSpawnTick != 0)
 			{
-				spawnCoin();
+				int numCoins = 0;
+
+				for (int i = 0; i < MAX_COINS; ++i)
+					if (m_coinCollector.m_coins[i].m_isDropped)
+						numCoins++;
+
+				for (int i = 0; i < MAX_PLAYERS; ++i)
+					if (m_players[i].m_isAlive)
+						numCoins += m_players[i].m_score;
+
+				if (numCoins < COINCOLLECTOR_COIN_LIMIT)
+				{
+					spawnCoin();
+				}
 			}
 
 			m_coinCollector.m_nextSpawnTick = tick + (COIN_SPAWN_INTERVAL + (Random() % COIN_SPAWN_INTERVAL_VARIANCE)) * TICKS_PER_SECOND;

@@ -96,11 +96,18 @@ public:
 	int m_textY;
 	int m_textSize;
 
+	int m_moveX;
+	int m_moveY;
+	float m_startOpacity;
+	float m_moveTime;
+	float m_moveTimeStart;
+
 public:
 	Button(int x, int y, const char * filename, const char * localString, int textX, int textY, int textSize);
 	~Button();
 
 	void setPosition(int x, int y);
+	void setAnimation(int moveX, int moveY, float opacity, float time);
 
 	bool isClicked();
 	void draw();
