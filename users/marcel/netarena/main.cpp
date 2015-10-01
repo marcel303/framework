@@ -786,7 +786,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			GameSim * gameSim = findGameSimForChannel(channel);
 			Assert(gameSim);
 
-			if (gameSim)
+			if (gameSim && gameSim->m_gameState >= kGameState_RoundBegin)
 				gameSim->newRound(0);
 		}
 		else if (action == "endRound")
@@ -794,7 +794,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			GameSim * gameSim = findGameSimForChannel(channel);
 			Assert(gameSim);
 
-			if (gameSim)
+			if (gameSim && gameSim->m_gameState >= kGameState_RoundBegin)
 				gameSim->endRound();
 		}
 		else if (action == "goToLobby")
@@ -802,7 +802,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			GameSim * gameSim = findGameSimForChannel(channel);
 			Assert(gameSim);
 
-			if (gameSim)
+			if (gameSim && gameSim->m_gameState >= kGameState_RoundBegin)
 				gameSim->setGameState(kGameState_OnlineMenus);
 		}
 		else if (action == "loadMap")
@@ -810,7 +810,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			GameSim * gameSim = findGameSimForChannel(channel);
 			Assert(gameSim);
 
-			if (gameSim)
+			if (gameSim && gameSim->m_gameState >= kGameState_RoundBegin)
 				gameSim->newRound(param.c_str());
 		}
 		else if (action == "killPlayers")
