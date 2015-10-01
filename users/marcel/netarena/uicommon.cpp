@@ -47,6 +47,9 @@ MenuNav::MenuNav()
 
 void MenuNav::tick(float dt)
 {
+	if (g_keyboardLock)
+		return;
+
 	// fixme : don't hard code gamepad index. select main controller at start or let all navigate?
 
 	// todo : check if mouse is used. if true, do mouse hover collision test and change selection
