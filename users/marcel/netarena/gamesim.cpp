@@ -1801,7 +1801,7 @@ void GameSim::newRound(const char * mapOverride)
 	m_nextRoundNumber++;
 	m_consecutiveRoundCount++;
 
-	addAnnouncement(colorRed, "Map: %s", map.c_str());
+	addAnnouncement(colorRed, "Map: %s", m_arena.m_displayName.c_str());
 }
 
 void GameSim::endRound()
@@ -2951,7 +2951,7 @@ void GameSim::tickRoundComplete(float dt)
 		m_roundEnd.m_delay -= dt * m_roundEnd.m_delayTimeRcp;
 		if (m_roundEnd.m_delay <= 0.f)
 		{
-			if ((DEMOMODE && m_consecutiveRoundCount >= MAX_CONSECUTIVE_ROUND_COUNT) || (getNumPlayers() < MIN_PLAYER_COUNT))
+			if ((DEMOMODE && m_consecutiveRoundCount >= (uint32_t)MAX_CONSECUTIVE_ROUND_COUNT) || (getNumPlayers() < MIN_PLAYER_COUNT))
 			{
 				setGameState(kGameState_OnlineMenus);
 			}

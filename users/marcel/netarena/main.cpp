@@ -40,6 +40,12 @@
 
 //
 
+#if PUBLIC_DEMO_BUILD
+	#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
+#endif
+
+//
+
 OPTION_DECLARE(bool, g_devMode, false);
 OPTION_DEFINE(bool, g_devMode, "App/Developer Mode");
 OPTION_ALIAS(g_devMode, "devmode");
@@ -1120,6 +1126,7 @@ bool App::init()
 		UI_DEBUG_VISIBLE = false;
 		UI_LOBBY_LEAVEJOIN_ENABLE = true;
 		UI_LOBBY_GAMEMODE_SELECT_ENABLE = false;
+		UI_TEXTCHAT_ENABLE = false;
 		NUM_LOCAL_PLAYERS_TO_ADD = 1;
 		VOLCANO_LOOP = true;
 		GAMESTATE_LOBBY_STARTZONE_ENABLED = false;
@@ -1184,7 +1191,11 @@ bool App::init()
 	}
 
 	framework.useClosestDisplayMode = true;
-	framework.windowTitle = "NetArena";
+#if PUBLIC_DEMO_BUILD
+	framework.windowTitle = "Riposte (Public Demo Build)";
+#else
+	framework.windowTitle = "Riposte";
+#endif
 	framework.actionHandler = HandleAction;
 	framework.fillCachesCallback = HandleFillCachesCallback;
 

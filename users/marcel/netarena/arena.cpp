@@ -242,6 +242,7 @@ void Arena::load(const char * name)
 	const std::string mecFilename = baseName + "Mec.txt";
 	const std::string colFilename = baseName + "Col.txt";
 	const std::string objFilename = baseName + "Obj.txt";
+	const std::string metFilename = baseName + "Met.txt";
 	const std::string artFilenameBG = baseName + "ArtBG.txt";
 	const std::string artFilenameMG = baseName + "Art.txt";
 	const std::string artFilenameFG = baseName + "ArtFG.txt";
@@ -414,6 +415,36 @@ void Arena::load(const char * name)
 		LOG_ERR("failed to open %s: %s", colFilename.c_str(), e.what());
 	}
 
+	// load meta data
+
+	try
+	{
+		FileStream stream;
+		stream.Open(metFilename.c_str(), (OpenMode)(OpenMode_Read | OpenMode_Text));
+		StreamReader reader(&stream, false);
+		std::vector<std::string> lines = reader.ReadAllLines();
+		for (auto & line : lines)
+		{
+			const auto sep = line.find_first_of(':');
+			if (sep == line.npos)
+				LOG_ERR("syntax error: %s", line.c_str());
+			else
+			{
+				std::string key = line.substr(0, sep);
+				std::string value = line.substr(sep + 1);
+
+				if (key == "name")
+					m_displayName = value.c_str();
+				else
+					LOG_ERR("unknown key: %s", key.c_str());
+			}
+		}
+	}
+	catch (std::exception & e)
+	{
+		LOG_ERR("failed to open %s: %s", metFilename.c_str(), e.what());
+	}
+
 	// load art layer
 
 	loadArtIndices(artFilenameBG.c_str(), 0);
@@ -538,12 +569,21 @@ void Arena::serialize(NetSerializationContext & context)
 	{
 		std::string name = m_name.c_str();
 		context.Serialize(name);
+
+		std::string displayName = m_displayName.c_str();
+		context.Serialize(displayName);
 	}
 	else
 	{
 		std::string name;
 		context.Serialize(name);
 		m_name = name.c_str();
+
+		std::string displayName;
+		context.Serialize(displayName);
+		m_displayName = displayName.c_str();
+
+		//
 
 		if (m_name.empty())
 			freeArt();

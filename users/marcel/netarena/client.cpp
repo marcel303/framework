@@ -173,7 +173,7 @@ void Client::tick(float dt)
 				m_textChatFade = 0.f;
 		}
 
-		if (g_keyboardLock == 0 && keyboard.wentDown(SDLK_t))
+		if (g_keyboardLock == 0 && keyboard.wentDown(SDLK_t) && UI_TEXTCHAT_ENABLE)
 			m_textChat->open(UI_TEXTCHAT_MAX_TEXT_SIZE, true);
 
 		// quicklook

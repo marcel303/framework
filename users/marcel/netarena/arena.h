@@ -125,6 +125,8 @@ public:
 	int m_textureSx;
 	int m_textureSy;
 
+	FixedString<32> m_displayName;
+
 	struct TileTransition
 	{
 		int m_x1, m_y1;

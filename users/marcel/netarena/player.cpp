@@ -28,7 +28,7 @@
 	+ disable options menu
 	+ disable netcode
 	+ enable public build macro
-	- add input screen to main screen/help button
+	+ add input screen to main screen/help button
 	+ add Greenlight/KickStarter & Twitter/Facebook buttons
 	+ disable START button in-game
 	- enable inactivity timeout only when: in DEMOMODE or in online multiplayer game
@@ -45,6 +45,7 @@
 - level editor: add moving platform placement
 - level editor: add pickup spawner placement
 - level editor: add foreground layer support
+- level editor: add ability to set map name. perhaps description
 
 - add decal on bullet collision for some types of ammo
 
