@@ -383,7 +383,8 @@ void Client::drawAnnouncements()
 
 	for (auto i = m_gameSim->m_annoucements.begin(); i != m_gameSim->m_annoucements.end(); ++i)
 	{
-		setColor(0, 0, 255, 127);
+		//setColor(0, 0, 255, 127);
+		setColorf(i->color.r, i->color.g, i->color.b, .5f);
 		drawRect(0, y, GFX_SX, y + sy);
 
 		setColor(colorWhite);

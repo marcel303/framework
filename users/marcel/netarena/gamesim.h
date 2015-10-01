@@ -1205,6 +1205,7 @@ public:
 	{
 		float timeLeft;
 		std::string message;
+		Color color;
 	};
 
 	std::list<AnnounceInfo> m_annoucements;
@@ -1252,6 +1253,7 @@ public:
 	void drawPlayColor(const CamParams & camParams);
 	void drawPlayDecal(const CamParams & camParams);
 	void drawPlayLight(const CamParams & camParams);
+	void drawPlayHud(const CamParams & camParams);
 	void applyCamParams(const CamParams & camParams, float zoomFactor, float shakeFactor) const;
 
 	void getCurrentTimeDilation(float & timeDilation, bool & playerAttackTimeDilation) const;
@@ -1313,7 +1315,7 @@ public:
 
 	void addAnimationFx(const char * fileName, int x, int y, bool flipX = false, bool flipY = false);
 
-	void addAnnouncement(const char * message, ...);
+	void addAnnouncement(const Color & color, const char * message, ...);
 	void addEmote(int playerId, int emoteId);
 
 	void addFireBall();

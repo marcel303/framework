@@ -1800,6 +1800,8 @@ void GameSim::newRound(const char * mapOverride)
 
 	m_nextRoundNumber++;
 	m_consecutiveRoundCount++;
+
+	addAnnouncement(colorRed, "Map: %s", map.c_str());
 }
 
 void GameSim::endRound()
@@ -2349,6 +2351,7 @@ void GameSim::tickMenus()
 		{
 			const bool isInStartZone =
 				g_devMode ||
+				!GAMESTATE_LOBBY_STARTZONE_ENABLED ||
 				(
 					p.m_pos[0] >= GAMESTATE_LOBBY_STARTZONE_X &&
 					p.m_pos[1] >= GAMESTATE_LOBBY_STARTZONE_Y &&
@@ -2992,16 +2995,6 @@ void GameSim::drawPlay()
 	}
 	popSurface();
 
-	if (m_gameState == kGameState_RoundBegin && m_roundBegin.m_state == RoundBegin::kState_ShowControls)
-	{
-		pushSurface(g_colorMap);
-		{
-			setColor(colorWhite);
-			Sprite("ui/controls.png").draw();
-		}
-		popSurface();
-	}
-
 	if (m_gameState == kGameState_RoundBegin && m_roundBegin.m_state == RoundBegin::kState_LevelTransition)
 	{
 		const float t = 1.f - m_roundBegin.m_delay;
@@ -3052,6 +3045,8 @@ void GameSim::drawPlay()
 			m_blindsEffects[i].drawHud();
 
 		gxPopMatrix();
+
+		drawPlayHud(camParams);
 	}
 	popSurface();
 
@@ -3382,6 +3377,30 @@ void GameSim::drawPlayLight(const CamParams & camParams)
 	setBlend(BLEND_ALPHA);
 
 	gxPopMatrix();
+}
+
+void GameSim::drawPlayHud(const CamParams & camParams)
+{
+	gxPushMatrix();
+	applyCamParams(camParams, 1.f, 1.f);
+
+	// todo : draw player HUD elements here
+
+	gxPopMatrix();
+
+#if ITCHIO_BUILD
+	if (m_gameState >= kGameState_RoundBegin)
+	{
+		setColor(colorWhite);
+		Sprite("itch-game-buttons.png").drawEx(1495, 45);
+	}
+#endif
+
+	if (m_gameState == kGameState_RoundBegin && m_roundBegin.m_state == RoundBegin::kState_ShowControls)
+	{
+		setColor(colorWhite);
+		Sprite("ui/controls.png").draw();
+	}
 }
 
 void GameSim::applyCamParams(const CamParams & camParams, float zoomFactor, float shakeFactor) const
@@ -3939,7 +3958,7 @@ void GameSim::triggerLevelEvent(LevelEvent e)
 	}
 
 	if (!RECORDMODE)
-		addAnnouncement("Level Event: %s", name);
+		addAnnouncement(colorBlue, "Level Event: %s", name);
 }
 
 void GameSim::doQuake(float vel)
@@ -4308,7 +4327,7 @@ float GameSim::getLightAmount() const
 	else if (lightingDebugMode == 2)
 		result = 1.f;
 	else if (lightingDebugMode == 3)
-		result = .5f;
+		result = .75f;
 	else if (lightingDebugMode == 4)
 		result = 0.f;
 
@@ -4421,7 +4440,7 @@ void GameSim::addAnimationFx(const char * fileName, int x, int y, bool flipX, bo
 	}
 }
 
-void GameSim::addAnnouncement(const char * message, ...)
+void GameSim::addAnnouncement(const Color & color, const char * message, ...)
 {
 	char text[1024];
 	va_list args;
@@ -4432,6 +4451,7 @@ void GameSim::addAnnouncement(const char * message, ...)
 	AnnounceInfo info;
 	info.timeLeft = 3.f;
 	info.message = text;
+	info.color = color;
 	m_annoucements.push_back(info);
 }
 

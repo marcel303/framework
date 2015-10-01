@@ -459,7 +459,12 @@ static FIBITMAP * ditherQuantize(FIBITMAP * src)
 static FIBITMAP * captureScreen(int ox, int oy, int sx, int sy)
 {
 	uint8_t * __restrict pixels = new uint8_t[sx * sy * 4];
-	glReadPixels(ox, oy, sx, sy, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+
+	pushSurface(&g_finalMap);
+	{
+		glReadPixels(ox, oy, sx, sy, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+	}
+	popSurface();
 
 	FIBITMAP * result = FreeImage_Allocate(sx, sy, 24);
 
@@ -564,6 +569,7 @@ enum GifCaptureState
 	kGifCapture_Idle,
 	kGifCapture_AreaSelect1,
 	kGifCapture_AreaSelect2,
+	kGifCapture_PressHotkey,
 	kGifCapture_Capture,
 };
 
@@ -576,6 +582,8 @@ static int s_skipFrames = 0;
 static int s_numFrames = 0;
 static int s_numCapturedFrames = 0;
 static std::vector<FIBITMAP*> s_pages;
+
+extern Surface * g_finalMap = 0;
 
 void gifCaptureToggleIsActive(bool cancel)
 {
@@ -606,10 +614,14 @@ void gifCaptureEnd(bool cancel)
 {
 	fassert(s_gifCaptureState == kGifCapture_Capture);
 
-	s_gifCaptureState = kGifCapture_Idle;
-
-	if (!cancel)
+	if (cancel)
 	{
+		s_gifCaptureState = kGifCapture_Idle;
+	}
+	else
+	{
+		s_gifCaptureState = kGifCapture_PressHotkey;
+
 		char filename[256];
 		std::string userFolder = g_app->getUserSettingsDirectory();
 		int i = 0;
@@ -623,8 +635,6 @@ void gifCaptureEnd(bool cancel)
 
 	for (auto page : s_pages)
 		FreeImage_Unload(page);
-	s_pages.clear();
-
 	s_pages.clear();
 }
 
@@ -646,6 +656,10 @@ void gifCaptureTick(float dt)
 		s_gifCaptureRect.x2 = mouse.x;
 		s_gifCaptureRect.y2 = mouse.y;
 		if (mouse.wentUp(BUTTON_LEFT))
+			s_gifCaptureState = kGifCapture_PressHotkey;
+		break;
+	case kGifCapture_PressHotkey:
+		if (gamepad[0].wentDown(GAMEPAD_BACK))
 			gifCaptureBegin();
 		break;
 	case kGifCapture_Capture:
@@ -666,6 +680,16 @@ void gifCaptureTick_PostRender()
 		break;
 	case kGifCapture_AreaSelect2:
 		drawToolCaption(GIF_COLOR, "GIF Capture : Select Rectangle");
+
+		setColor(colorGreen);
+		drawRectLine(
+			s_gifCaptureRect.x1,
+			s_gifCaptureRect.y1,
+			s_gifCaptureRect.x2,
+			s_gifCaptureRect.y2);
+		break;
+	case kGifCapture_PressHotkey:
+		drawToolCaption(GIF_COLOR, "GIF Capture : Press BACK To Start Recording");
 
 		setColor(colorGreen);
 		drawRectLine(

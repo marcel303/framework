@@ -196,11 +196,11 @@ bool MainMenu::tick(float dt)
 	}
 	else if (m_campaignGl && m_campaignGl->isClicked())
 	{
-		openBrowserWithUrl("https://twitter.com/damajogames");
+		openBrowserWithUrl("http://steamcommunity.com/sharedfiles/filedetails/?id=499076298");
 	}
 	else if (m_campaignKs && m_campaignKs->isClicked())
 	{
-		openBrowserWithUrl("https://twitter.com/damajogames");
+		openBrowserWithUrl("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
 	}
 #if !ITCHIO_BUILD
 	else if (m_inactivityTime >= (g_devMode ? 5.f : kMaxInactivityTime))
@@ -211,6 +211,94 @@ bool MainMenu::tick(float dt)
 
 	return false;
 }
+
+#if ITCHIO_BUILD
+static void drawParticles(float ballY)
+{
+	struct Part
+	{
+		Part()
+		{
+			memset(this, 0, sizeof(Part));
+		}
+
+		float x;
+		float y;
+		float angle;
+		float life;
+		float lifeRcp;
+		int type;
+
+		void tick(float dt)
+		{
+			life = life - dt;
+			if (life < 0.f)
+				life = 0.f;
+		}
+
+		void draw(float dy) const
+		{
+			if (life == 0.f)
+				return;
+
+			const float scale = 1.f - life * lifeRcp * .5f;
+			const float opacity = std::sinf(life * lifeRcp * M_PI);
+
+			setColorf(1.f, 1.f, 1.f, opacity);
+			if (type == 0)
+				Sprite("itch-ball-part1.png").drawEx(x, y + dy, angle, scale, scale, false, FILTER_LINEAR);
+			else
+				Sprite("itch-ball-part2.png").drawEx(x, y + dy, angle, scale, scale, false, FILTER_LINEAR);
+		}
+	};
+
+	const int ballXBase = 1462;
+	const int ballYBase = 426;
+
+	const float dt = framework.timeStep;
+
+	static const int numParts = 16;
+	static Part parts[numParts];
+	static float spawnTime = 0.f;
+	static int spawnIdx = 0;
+
+	spawnTime -= dt;
+	if (spawnTime < 0.f)
+		spawnTime = 0.f;
+
+	if (spawnTime == 0.f)
+	{
+		bool large = (spawnIdx % 10) == 0;
+		spawnIdx++;
+
+		spawnTime = large ? 0.f : 1.f;
+
+		for (int j = 0; j < numParts; ++j)
+		{
+			if (parts[j].life == 0.f)
+			{
+				parts[j].x = ballXBase;
+				parts[j].y = ballYBase;
+				parts[j].angle = rand() % 360;
+				parts[j].type = large ? 0 : 1;
+				parts[j].life = parts[j].type == 0 ? 12.f : 4.f;
+				parts[j].lifeRcp = 1.f / parts[j].life;
+				break;
+			}
+		}
+	}
+
+	for (int i = 0; i < numParts; ++i)
+		parts[i].tick(dt);
+
+	for (int i = 0; i < numParts; ++i)
+		if (parts[i].type == 0)
+			parts[i].draw(ballY);
+	for (int i = 0; i < numParts; ++i)
+		if (parts[i].type == 1)
+			parts[i].draw(ballY);
+}
+#endif
 
 void MainMenu::draw()
 {
@@ -228,11 +316,15 @@ void MainMenu::draw()
 
 	setColorf(1.f, 1.f, 1.f, 1.f, backOpacity);
 	Sprite("itch-mainmenu-back.png").draw();
-	setColorf(1.f, 1.f, 1.f, logoOpacity);
-	Sprite("itch-mainmenu-logo.png").draw();
+
+	drawParticles(ball1Y);
+
 	setColorf(1.f, 1.f, 1.f, 1.f, backOpacity);
 	Sprite("itch-mainmenu-ball1.png").drawEx(0.f, ball1Y, 0.f, 1.f, 1.f, false, FILTER_LINEAR);
 	Sprite("itch-mainmenu-ball2.png").drawEx(0.f, ball2Y, 0.f, 1.f, 1.f, false, FILTER_LINEAR);
+
+	setColorf(1.f, 1.f, 1.f, logoOpacity);
+	Sprite("itch-mainmenu-logo.png").draw();
 #else
 	setColor(colorWhite);
 	Sprite("mainmenu-back.png").draw();

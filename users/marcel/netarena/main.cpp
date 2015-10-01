@@ -797,6 +797,14 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 			if (gameSim)
 				gameSim->endRound();
 		}
+		else if (action == "goToLobby")
+		{
+			GameSim * gameSim = findGameSimForChannel(channel);
+			Assert(gameSim);
+
+			if (gameSim)
+				gameSim->setGameState(kGameState_OnlineMenus);
+		}
 		else if (action == "loadMap")
 		{
 			GameSim * gameSim = findGameSimForChannel(channel);
@@ -847,7 +855,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 
 			if (gameSim)
 			{
-				gameSim->addAnnouncement(param.c_str());
+				gameSim->addAnnouncement(colorBlack, param.c_str());
 			}
 		}
 		else if (action == "addLightEffect")
@@ -1114,6 +1122,7 @@ bool App::init()
 		UI_LOBBY_GAMEMODE_SELECT_ENABLE = false;
 		NUM_LOCAL_PLAYERS_TO_ADD = 1;
 		VOLCANO_LOOP = true;
+		GAMESTATE_LOBBY_STARTZONE_ENABLED = false;
 
 	#if !PUBLIC_DEMO_BUILD
 		LIBNET_CHANNEL_ENABLE_TIMEOUTS = false;
@@ -1858,7 +1867,7 @@ bool App::tick()
 
 	m_channelMgr->Update(NET_TIME);
 
-	if (UI_LOBBY_LEAVEJOIN_ENABLE && g_host && !m_clients.empty())
+	if (UI_LOBBY_LEAVEJOIN_ENABLE && g_host && g_host->m_gameSim.m_gameState == kGameState_OnlineMenus && !m_clients.empty())
 	{
 		Client * client = m_clients.front();
 
@@ -1888,6 +1897,15 @@ bool App::tick()
 		}
 	}
 
+#if ITCHIO_BUILD
+	// itch.io controls
+
+	if (keyboard.wentDown(SDLK_F10))
+		netDebugAction("newRound", "");
+	if (keyboard.wentDown(SDLK_F12))
+		netDebugAction("goToLobby", "");
+#endif
+
 	// debug
 
 #if ENABLE_DEVMODE // debug controls for animation and blast test, etc
@@ -1904,7 +1922,7 @@ bool App::tick()
 	if (keyboard.wentDown(SDLK_F4) && !(getSelectedClient() && getSelectedClient()->m_textChat->isActive()))
 		blastEffectTestToggleIsActive();
 	if (keyboard.wentDown(SDLK_F11) && !(getSelectedClient() && getSelectedClient()->m_textChat->isActive()))
-		gifCaptureToggleIsActive(false);
+		gifCaptureToggleIsActive(true);
 
 #if ENABLE_OPTIONS
 	if (keyboard.wentDown(SDLK_F5))

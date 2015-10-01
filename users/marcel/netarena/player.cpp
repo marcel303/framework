@@ -1460,7 +1460,7 @@ void Player::tick(float dt)
 
 					m_timeDilationAttack.timeRemaining = PLAYER_EFFECT_TIMEDILATION_TIME;
 					gameSim.playSound("timedilation-activate.ogg"); // sound that occurs when the player activates the time dilation pickup
-					gameSim.addAnnouncement("'%s' activated time dilation!", m_displayName.c_str());
+					gameSim.addAnnouncement(colorBlue, "'%s' activated time dilation!", m_displayName.c_str());
 				}
 				else
 				{
