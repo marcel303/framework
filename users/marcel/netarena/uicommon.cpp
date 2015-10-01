@@ -104,6 +104,8 @@ void MenuNav::moveSelection(int dx, int dy)
 	if (!m_selection)
 	{
 		newSelection = m_first;
+		while (newSelection->m_next)
+			newSelection = newSelection->m_next;
 	}
 	else
 	{
