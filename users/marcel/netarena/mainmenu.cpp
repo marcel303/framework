@@ -36,6 +36,7 @@ MainMenu::MainMenu()
 	, m_options(0)
 	, m_quitApp(0)
 	, m_menuNav(0)
+	, m_controls(0)
 	, m_socialFb(0)
 	, m_socialTw(0)
 	, m_campaignGl(0)
@@ -62,6 +63,7 @@ MainMenu::MainMenu()
 	const int glSy = 171;
 	const int ksSx = 300;
 	const int ksSy = 86;
+	m_controls = new Button(1340, 1010, "mainmenu-button-small.png", "Controls", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y/2, MAINMENU_BUTTON_TEXT_SIZE/2);
 	m_socialFb = new Button(165 + socialSx/2, 925 + socialSy/2, "itch-social-fb.png", "", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 	m_socialTw = new Button(165 + socialSx/2, 830 + socialSy/2, "itch-social-tw.png", "", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 	m_campaignGl = new Button(1501 + glSx/2, 821 + glSy/2, "itch-campaign-gl.png", "", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
@@ -81,6 +83,8 @@ MainMenu::MainMenu()
 	if (m_quitApp)
 		m_menuNav->addElem(m_quitApp);
 
+	if (m_controls)
+		m_menuNav->addElem(m_controls);
 	if (m_socialFb)
 		m_menuNav->addElem(m_socialFb);
 	if (m_socialTw)
@@ -101,6 +105,7 @@ MainMenu::~MainMenu()
 	delete m_options;
 	delete m_quitApp;
 
+	delete m_controls;
 	delete m_socialFb;
 	delete m_socialTw;
 	delete m_campaignGl;
@@ -186,6 +191,10 @@ bool MainMenu::tick(float dt)
 
 		g_app->quit();
 	}
+	else if (m_controls && m_controls->isClicked())
+	{
+		g_app->m_menuMgr->push(new HelpMenu());
+	}
 	else if (m_socialFb && m_socialFb->isClicked())
 	{
 		openBrowserWithUrl("https://www.facebook.com/ripostegame");
@@ -268,10 +277,10 @@ static void drawParticles(float ballY)
 
 	if (spawnTime == 0.f)
 	{
-		bool large = (spawnIdx % 10) == 0;
+		bool large = (spawnIdx % 20) == 0;
 		spawnIdx++;
 
-		spawnTime = large ? 0.f : 1.f;
+		spawnTime = large ? 0.f : .5f;
 
 		for (int j = 0; j < numParts; ++j)
 		{
@@ -281,7 +290,7 @@ static void drawParticles(float ballY)
 				parts[j].y = ballYBase;
 				parts[j].angle = rand() % 360;
 				parts[j].type = large ? 0 : 1;
-				parts[j].life = parts[j].type == 0 ? 12.f : 4.f;
+				parts[j].life = parts[j].type == 0 ? 12.f : 2.f;
 				parts[j].lifeRcp = 1.f / parts[j].life;
 				break;
 			}
@@ -343,6 +352,8 @@ void MainMenu::draw()
 	if (m_quitApp)
 		m_quitApp->draw();
 
+	if (m_controls)
+		m_controls->draw();
 	if (m_socialFb)
 		m_socialFb->draw();
 	if (m_socialTw)
@@ -351,4 +362,66 @@ void MainMenu::draw()
 		m_campaignGl->draw();
 	if (m_campaignKs)
 		m_campaignKs->draw();
+}
+
+//
+
+HelpMenu::HelpMenu()
+	: m_back(0)
+	, m_menuNav(0)
+	, m_buttonLegend(0)
+{
+	m_back = new Button(0, 0, "mainmenu-button.png", 0, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+
+	m_menuNav = new MenuNav();
+
+	m_buttonLegend = new ButtonLegend();
+	m_buttonLegend->addElem(ButtonLegend::kButtonId_B, m_back, "ui-legend-back");
+	m_buttonLegend->addElem(ButtonLegend::kButtonId_ESCAPE, m_back, "ui-legend-back");
+}
+
+HelpMenu::~HelpMenu()
+{
+	delete m_buttonLegend;
+
+	delete m_menuNav;
+
+	delete m_back;
+}
+
+void HelpMenu::onEnter()
+{
+	inputLockAcquire(); // fixme : remove. needed for escape = quit hack for now
+}
+
+void HelpMenu::onExit()
+{
+	g_app->saveUserSettings();
+
+	inputLockRelease(); // fixme : remove. needed for escape = quit hack for now
+}
+
+bool HelpMenu::tick(float dt)
+{
+	m_menuNav->tick(dt);
+
+	m_buttonLegend->tick(dt, UI_BUTTONLEGEND_X, UI_BUTTONLEGEND_Y);
+
+	//
+
+	if (m_back->isClicked() || gamepad[0].wentDown(GAMEPAD_B) || keyboard.wentDown(SDLK_ESCAPE)) // fixme : generalize and remove hardcoded gamepad index
+	{
+		g_app->playSound("ui/sounds/menu-back.ogg");
+		return true;
+	}
+
+	return false;
+}
+
+void HelpMenu::draw()
+{
+	setColor(colorWhite);
+	Sprite("ui/controls.png").draw();
+
+	m_buttonLegend->draw(UI_BUTTONLEGEND_X, UI_BUTTONLEGEND_Y);
 }

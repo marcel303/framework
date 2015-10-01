@@ -196,6 +196,12 @@ void ButtonLegend::draw(int x, int y)
 		setColor(colorWhite);
 		Sprite(e.sprite).drawEx(e.spriteX, e.spriteY);
 
+		if (g_currentMenuInputMode == kMenuInputMode_Keyboard &&
+			mouse.x >= e.clickX1 && mouse.x <= e.clickX2 &&
+			mouse.y >= e.clickY1 && mouse.y <= e.clickY2)
+			setColor(255, 255, 255);
+		else
+			setColor(255, 255, 255, 255, 227); // todo : make button legend colors configurable somewhere
 		drawText(e.textX, e.textY, UI_BUTTONLEGEND_FONT_SIZE, +1.f, +1.f, "%s", e.text);
 	}
 }
@@ -242,7 +248,7 @@ std::vector<ButtonLegend::DrawElem> ButtonLegend::getDrawElems(int x, int y)
 
 			d.sprite = filename;
 			d.spriteX = x;
-			d.spriteY = y;
+			d.spriteY = y - 5; // fixme : make this depend on actual sprite height
 
 			Sprite sprite(filename);
 

@@ -1687,7 +1687,7 @@ void GameSim::setGameState(::GameState gameState)
 	case kGameState_RoundBegin:
 		{
 			m_roundBegin = RoundBegin();
-			if (DEMOMODE && m_consecutiveRoundCount == 0)
+			if (GAMESTATE_ROUNDBEGIN_SHOW_CONTROLS && m_consecutiveRoundCount == 0)
 			{
 				m_roundBegin.m_delayTimeRcp = 1.f / 4.f;
 				m_roundBegin.m_delay = 1.f;

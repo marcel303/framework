@@ -29,8 +29,8 @@
 	+ disable netcode
 	+ enable public build macro
 	- add input screen to main screen/help button
-	- add Greenlight/KickStarter en Twitter buttons
-	- disable START button in-game
+	+ add Greenlight/KickStarter & Twitter/Facebook buttons
+	+ disable START button in-game
 	- enable inactivity timeout only when: in DEMOMODE or in online multiplayer game
 
 - level setting: max zoom factor

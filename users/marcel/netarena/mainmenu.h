@@ -4,6 +4,7 @@
 #include "menu.h"
 
 class Button;
+class ButtonLegend;
 class MenuNav;
 
 class MainMenu : public Menu
@@ -15,6 +16,7 @@ class MainMenu : public Menu
 	Button * m_quitApp;
 	MenuNav * m_menuNav;
 
+	Button * m_controls;
 	Button * m_socialFb;
 	Button * m_socialTw;
 	Button * m_campaignGl;
@@ -26,6 +28,23 @@ class MainMenu : public Menu
 public:
 	MainMenu();
 	~MainMenu();
+
+	virtual void onEnter();
+	virtual void onExit();
+
+	virtual bool tick(float dt);
+	virtual void draw();
+};
+
+class HelpMenu : public Menu
+{
+	Button * m_back;
+	MenuNav * m_menuNav;
+	ButtonLegend * m_buttonLegend;
+
+public:
+	HelpMenu();
+	~HelpMenu();
 
 	virtual void onEnter();
 	virtual void onExit();
