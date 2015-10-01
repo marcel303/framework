@@ -191,6 +191,7 @@ public:
 	int windowX;
 	int windowY;
 	std::string windowTitle;
+	std::string windowIcon;
 	bool windowIsActive;
 	ActionHandler actionHandler;
 	FillCachesCallback fillCachesCallback;

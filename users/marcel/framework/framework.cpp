@@ -25,6 +25,7 @@
 #include "audio.h"
 #include "data/engine/ShaderCommon.txt"
 #include "framework.h"
+#include "image.h"
 #include "internal.h"
 #include "model.h"
 #include "spriter.h"
@@ -291,6 +292,15 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	// make sure we are focused
 
 	SDL_RaiseWindow(globals.window);
+
+	if (!windowIcon.empty())
+	{
+		ImageData * iconData = loadImage(windowIcon.c_str());
+		SDL_Surface * surface = SDL_CreateRGBSurfaceFrom(iconData->imageData, iconData->sx, iconData->sy, 32, iconData->sx * sizeof(ImageData::Pixel), 0xff << 0, 0xff << 8, 0xff << 16, 0xff << 24);
+		SDL_SetWindowIcon(globals.window, surface);
+		SDL_FreeSurface(surface);
+		delete iconData;
+	}
 
 	return true;
 }
