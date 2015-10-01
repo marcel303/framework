@@ -460,7 +460,7 @@ static FIBITMAP * captureScreen(int ox, int oy, int sx, int sy)
 {
 	uint8_t * __restrict pixels = new uint8_t[sx * sy * 4];
 
-	pushSurface(&g_finalMap);
+	pushSurface(g_finalMap);
 	{
 		glReadPixels(ox, oy, sx, sy, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 	}
@@ -583,7 +583,7 @@ static int s_numFrames = 0;
 static int s_numCapturedFrames = 0;
 static std::vector<FIBITMAP*> s_pages;
 
-extern Surface * g_finalMap = 0;
+extern Surface * g_finalMap;
 
 void gifCaptureToggleIsActive(bool cancel)
 {
@@ -708,10 +708,10 @@ void gifCaptureTick_PostRender()
 			if (s_gifCaptureRect.y1 > s_gifCaptureRect.y2)
 				std::swap(s_gifCaptureRect.y1, s_gifCaptureRect.y2);
 
-			const int ox = s_gifCaptureRect.x1 / framework.minification;
-			const int oy = (GFX_SY - s_gifCaptureRect.y2) / framework.minification;
-			const int sx = (s_gifCaptureRect.x2 - s_gifCaptureRect.x1) / framework.minification;
-			const int sy = (s_gifCaptureRect.y2 - s_gifCaptureRect.y1) / framework.minification;
+			const int ox = s_gifCaptureRect.x1;
+			const int oy = (GFX_SY - s_gifCaptureRect.y2);
+			const int sx = (s_gifCaptureRect.x2 - s_gifCaptureRect.x1);
+			const int sy = (s_gifCaptureRect.y2 - s_gifCaptureRect.y1);
 
 			FIBITMAP * capture = captureScreen(ox, oy, sx, sy);
 			for (int i = 0; i < g_screenCaptureDownscalePasses; ++i)
