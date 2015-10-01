@@ -1196,6 +1196,7 @@ bool App::init()
 #else
 	framework.windowTitle = "Riposte";
 #endif
+	framework.windowIcon = "icon.png";
 	framework.actionHandler = HandleAction;
 	framework.fillCachesCallback = HandleFillCachesCallback;
 
