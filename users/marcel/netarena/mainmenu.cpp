@@ -421,7 +421,11 @@ bool HelpMenu::tick(float dt)
 void HelpMenu::draw()
 {
 	setColor(colorWhite);
+#if ITCHIO_BUILD
+	Sprite("itch-controls.png").draw();
+#else
 	Sprite("ui/controls.png").draw();
+#endif
 
 	m_buttonLegend->draw(UI_BUTTONLEGEND_X, UI_BUTTONLEGEND_Y);
 }
