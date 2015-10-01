@@ -1212,6 +1212,10 @@ bool App::init()
 			framework.fillCachesWithPath(".", true);
 		}
 
+		// make sure WinSock is initialised
+
+		NetSocket netSocket; // this will init WSA, since it's the first socket we create..
+
 		// input the user's display name
 
 		if (g_devMode)

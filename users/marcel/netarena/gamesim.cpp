@@ -3815,6 +3815,7 @@ uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, BulletType t
 			velocity = RandomFloat(BULLET_BLOOD_SPEED_MIN, BULLET_BLOOD_SPEED_MAX);
 			b.m_noGravity = false;
 			b.noDamagePlayer = true;
+			b.maxWrapCount = 1;
 			b.life = BULLET_BLOOD_LIFE;
 			break;
 
