@@ -918,3 +918,79 @@ const char * getLocalString(const char * localString)
 	else
 		return i->second.c_str();
 }
+
+//
+
+TileTransition::TileTransition()
+	: m_surface(0)
+	, m_time(0.f)
+	, m_timeRcp(1.f)
+{
+	m_surface = new Surface(GFX_SX, GFX_SY);
+}
+
+TileTransition::~TileTransition()
+{
+	delete m_surface;
+}
+
+void TileTransition::begin(float time)
+{
+	m_time = time;
+	m_timeRcp = 1.f / time;
+
+	blitBackBufferToSurface(m_surface);
+}
+
+void TileTransition::tick(float dt)
+{
+	m_time-= dt;
+	if (m_time < 0.f)
+		m_time = 0.f;
+}
+
+void TileTransition::draw()
+{
+	const float t = m_time * m_timeRcp;
+
+	if (t != 0.f)
+	{
+		gxSetTexture(m_surface->getTexture());
+		setColorf(1.f, 1.f, 1.f, t);
+
+		const int quadSize = 50;
+		const int numX = GFX_SX / quadSize;
+		const int numY = GFX_SY / quadSize;
+		const float sizeX = GFX_SX / float(numX);
+		const float sizeY = GFX_SY / float(numY);
+
+		for (int y = 0; y < numY; ++y)
+		{
+			for (int x = 0; x < numX; ++x)
+			{
+				const float x1 = (x + 0) * sizeX;
+				const float y1 = (y + 0) * sizeY;
+				const float x2 = (x + 1 * t) * sizeX;
+				const float y2 = (y + 1 * t) * sizeY;
+
+				const float u1 = (x + 0) / float(numX);
+				const float v1 = (y + 0) / float(numY);
+				const float u2 = (x + 1) / float(numX);
+				const float v2 = (y + 1) / float(numY);
+
+				gxBegin(GL_QUADS);
+				{
+					gxTexCoord2f(u1, 1.f - v1); gxVertex2f(x1, y1);
+					gxTexCoord2f(u2, 1.f - v1); gxVertex2f(x2, y1);
+					gxTexCoord2f(u2, 1.f - v2); gxVertex2f(x2, y2);
+					gxTexCoord2f(u1, 1.f - v2); gxVertex2f(x1, y2);
+				}
+				gxEnd();
+			}
+		}
+
+		gxSetTexture(0);
+	}
+}
+
+TileTransition * g_tileTransition = 0;

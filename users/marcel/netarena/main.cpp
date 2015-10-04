@@ -1309,6 +1309,10 @@ bool App::init()
 
 		//
 
+		g_tileTransition = new TileTransition();
+
+		//
+
 		initArenaData();
 
 		initCharacterData();
@@ -1348,6 +1352,11 @@ void App::shutdown()
 	shutArenaData();
 
 	shutCharacterData();
+
+	//
+
+	delete g_tileTransition;
+	g_tileTransition = 0;
 
 	//
 
@@ -2161,6 +2170,9 @@ void App::draw()
 			itchBadge.drawEx(1510, 1010);
 		}
 	#endif
+
+		g_tileTransition->tick(framework.timeStep); // todo : move to tick
+		g_tileTransition->draw();
 
 		// draw debug stuff
 

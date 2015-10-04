@@ -5,6 +5,7 @@
 
 class Button;
 class Sprite;
+class Surface;
 
 class MenuNavElem
 {
@@ -222,3 +223,21 @@ public:
 
 void setLocal(const char * local);
 const char * getLocalString(const char * localString);
+
+// effects and stuff
+
+struct TileTransition
+{
+	TileTransition();
+	~TileTransition();
+
+	Surface * m_surface;
+	float m_time;
+	float m_timeRcp;
+
+	void begin(float time);
+	void tick(float dt);
+	void draw();
+};
+
+extern TileTransition * g_tileTransition;

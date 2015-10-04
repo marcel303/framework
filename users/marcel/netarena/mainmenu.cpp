@@ -126,6 +126,8 @@ void MainMenu::onEnter()
 	const int animX = 100;
 	m_newGame->setAnimation(animX, 0, 0.f, .4f);
 	m_quitApp->setAnimation(animX, 0, 0.f, .4f);
+
+	g_tileTransition->begin(.5f);
 }
 
 void MainMenu::onExit()
@@ -312,6 +314,24 @@ static void drawParticles(float ballY)
 }
 #endif
 
+static void drawSexyScroller(float x1, float y1, float x2, float y2, float xOffset, float yOffset, float scale, float a1, float a2)
+{
+	gxSetTexture(Sprite("itch-scroller.png").getTexture());
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	gxBegin(GL_QUADS);
+	{
+		/*gxColor4f(1.f, 1.f, 1.f, a1);*/ gxTexCoord2f(xOffset + x1 * scale, yOffset + y1 * scale); gxVertex2f(x1, y1);
+		/*gxColor4f(1.f, 1.f, 1.f, a1);*/ gxTexCoord2f(xOffset + x2 * scale, yOffset + y1 * scale); gxVertex2f(x2, y1);
+		/*gxColor4f(1.f, 1.f, 1.f, a2);*/ gxTexCoord2f(xOffset + x2 * scale, yOffset + y2 * scale); gxVertex2f(x2, y2);
+		/*gxColor4f(1.f, 1.f, 1.f, a2);*/ gxTexCoord2f(xOffset + x1 * scale, yOffset + y2 * scale); gxVertex2f(x1, y2);
+	}
+	gxEnd();
+	gxSetTexture(0);
+}
+
 void MainMenu::draw()
 {
 	const float kBackFadeinTime = .2f;
@@ -365,6 +385,15 @@ void MainMenu::draw()
 		m_campaignGl->draw();
 	if (m_campaignKs)
 		m_campaignKs->draw();
+
+#if ITCHIO_BUILD
+	const float offset = framework.time * .5f;
+	const float scale = 1.f / 70.f;
+	const float size = 8.f;
+	setColor(255, 255, 0, 63);
+	drawSexyScroller(0.f,           0.f, GFX_SX,   size, +offset, -offset * .5f, scale, 1.f, 1.f);
+	drawSexyScroller(0.f, GFX_SY - size, GFX_SX, GFX_SY, +offset, -offset * .5f, scale, 1.f, 1.f);
+#endif
 }
 
 //
