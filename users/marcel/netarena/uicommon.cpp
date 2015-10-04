@@ -22,6 +22,23 @@ void MenuNavElem::getPosition(int & x, int & y) const
 	y = 0;
 }
 
+void MenuNavElem::getSize(int & sx, int & sy) const
+{
+	sx = 0;
+	sy = 0;
+}
+
+void MenuNavElem::getCenter(int & x, int & y) const
+{
+	getPosition(x, y);
+
+	int sx, sy;
+	getSize(sx, sy);
+
+	x += sx / 2;
+	y += sy / 2;
+}
+
 bool MenuNavElem::hitTest(int x, int y) const
 {
 	return false;
@@ -109,36 +126,57 @@ void MenuNav::moveSelection(int dx, int dy)
 	}
 	else
 	{
-		int oldX, oldY;
-		m_selection->getPosition(oldX, oldY);
+		std::pair<int, int> move(dx, dy);
+		auto moveItr = m_selection->m_moveSet.find(move);
+		if (moveItr != m_selection->m_moveSet.end())
+			newSelection = moveItr->second;
 
-		for (MenuNavElem * elem = m_first; elem != 0; elem = elem->m_next)
+		if (!newSelection)
 		{
-			if (elem != m_selection)
+			int oldX, oldY;
+			m_selection->getCenter(oldX, oldY);
+
+			for (MenuNavElem * elem = m_first; elem != 0; elem = elem->m_next)
 			{
-				int newX, newY;
-				elem->getPosition(newX, newY);
-
-				int distX = newX - oldX;
-				int distY = newY - oldY;
-
-				if (dx == 0)
-					distX *= 10;
-				else if ((Calc::Sign(dx) != Calc::Sign(distX)) || distX == 0)
-					continue;
-
-				if (dy == 0)
-					distY *= 10;
-				else if ((Calc::Sign(dy) != Calc::Sign(distY)) || distY == 0)
-					continue;
-
-				const int distance = distX * distX + distY * distY;
-
-				if (distance < minDistance || minDistance == 0)
+				if (elem != m_selection)
 				{
-					minDistance = distance;
+					int newX, newY;
+					elem->getCenter(newX, newY);
 
-					newSelection = elem;
+				#if 1
+					int distX = newX - oldX;
+					int distY = newY - oldY;
+
+					if (dx == 0)
+						distX *= 10;
+					else if ((Calc::Sign(dx) != Calc::Sign(distX)) || distX == 0)
+						continue;
+
+					if (dy == 0)
+						distY *= 10;
+					else if ((Calc::Sign(dy) != Calc::Sign(distY)) || distY == 0)
+						continue;
+
+					const int distance = distX * distX + distY * distY;
+				#else
+					const float distX = newX - oldX;
+					const float distY = newY - oldY;
+					// todo : do intersection test against all elems, skip when hitting another one
+					const float dist = std::sqrtf(distX * distX + distY * distY);
+					const float dirX = distX / dist;
+					const float dirY = distY / dist;
+					const float dot = dirX * dx + dirY * dy;
+					if (dot < 0.f)
+						continue;
+					const float distance = 1.f - dot;
+				#endif
+
+					if (distance < minDistance || minDistance == 0)
+					{
+						minDistance = distance;
+
+						newSelection = elem;
+					}
 				}
 			}
 		}
@@ -386,6 +424,17 @@ void Button::draw()
 		}
 
 		setColorMode(COLOR_MUL);
+
+	#if 0
+		setColor(colorGreen);
+		int cx, cy;
+		getCenter(cx, cy);
+		drawRect(
+			cx - 10.f,
+			cy - 10.f,
+			cx + 10.f,
+			cy + 10.f);
+	#endif
 	}
 	gxPopMatrix();
 }
@@ -394,6 +443,12 @@ void Button::getPosition(int & x, int & y) const
 {
 	x = m_x;
 	y = m_y;
+}
+
+void Button::getSize(int & sx, int & sy) const
+{
+	sx = m_sprite->getWidth();
+	sy = m_sprite->getHeight();
 }
 
 bool Button::hitTest(int x, int y) const
@@ -535,6 +590,12 @@ void SpinButton::getPosition(int & x, int & y) const
 	y = m_y;
 }
 
+void SpinButton::getSize(int & sx, int & sy) const
+{
+	sx = m_sprite->getWidth();
+	sy = m_sprite->getHeight();
+}
+
 bool SpinButton::hitTest(int x, int y) const
 {
 	return
@@ -639,6 +700,12 @@ void CheckButton::getPosition(int & x, int & y) const
 {
 	x = m_x;
 	y = m_y;
+}
+
+void CheckButton::getSize(int & sx, int & sy) const
+{
+	sx = m_sprite->getWidth();
+	sy = m_sprite->getHeight();
 }
 
 bool CheckButton::hitTest(int x, int y) const
@@ -775,6 +842,12 @@ void Slider::getPosition(int & x, int & y) const
 {
 	x = m_x;
 	y = m_y;
+}
+
+void Slider::getSize(int & sx, int & sy) const
+{
+	sx = m_sprite->getWidth();
+	sy = m_sprite->getHeight();
 }
 
 bool Slider::hitTest(int x, int y) const

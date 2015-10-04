@@ -32,6 +32,7 @@
 	+ add Greenlight/KickStarter & Twitter/Facebook buttons
 	+ disable START button in-game
 	- enable inactivity timeout only when: in DEMOMODE or in online multiplayer game
+	+ improve main menu navigation using keyboard/gamepad
 
 - level setting: max zoom factor
 - level setting: zoom restriction near borders. not needed when no level wrap
@@ -48,6 +49,7 @@
 - level editor: add ability to set map name. perhaps description
 
 - add decal on bullet collision for some types of ammo
+- slowdown and/or zoom on cling?
 
 - upgrade bullet sprites to spriter animations
 
@@ -1208,7 +1210,7 @@ void Player::tick(float dt)
 							shape1.getMinMax(min1, max1);
 							shape2.getMinMax(min2, max2);
 							Vec2 mid = (min1 + max1 + min2 + max2) / 4.f;
-							gameSim.addAnimationFx("fx/Attack_MeleeCancel.scml", mid[0], mid[1]);
+							gameSim.addAnimationFx(kDrawLayer_Game, "fx/Attack_MeleeCancel.scml", mid[0], mid[1]);
 						}
 						else if (absorbed)
 						{
@@ -1427,6 +1429,7 @@ void Player::tick(float dt)
 					}
 
 					gameSim.addAnimationFx(
+						kDrawLayer_Game,
 						"fx/Attack_FireBullet.scml",
 						x,
 						y,
@@ -1511,6 +1514,7 @@ void Player::tick(float dt)
 					}
 
 					gameSim.addAnimationFx(
+						kDrawLayer_Game,
 						"fx/Attack_FireBullet.scml",
 						x,
 						y,
@@ -1682,6 +1686,7 @@ void Player::tick(float dt)
 						const float angle = Calc::m2PI * i / INVISIBILITY_PLUME_COUNT;
 						const float radius = gameSim.RandomFloat(INVISIBILITY_PLUME_DISTANCE_MIN, INVISIBILITY_PLUME_DISTANCE_MAX);
 						gameSim.addAnimationFx(
+							kDrawLayer_Game,
 							"fx/Invisibility_Plume.scml",
 							m_pos[0] + std::sin(angle) * radius,
 							m_pos[1] + std::cos(angle) * radius);
@@ -2114,7 +2119,7 @@ void Player::tick(float dt)
 				args.setString("name", "jump_sounds");
 				m_instanceData->handleAnimationAction("char_soundbag", args);
 				if (currentBlockMaskFloor & kBlockMask_Solid)
-					gameSim.addAnimationFx("fx/Dust_JumpFromGround.scml", m_pos[0], m_pos[1]); // player jumps
+					gameSim.addAnimationFx(kDrawLayer_Game, "fx/Dust_JumpFromGround.scml", m_pos[0], m_pos[1]); // player jumps
 
 				endGrapple();
 			}
@@ -2520,7 +2525,7 @@ void Player::tick(float dt)
 						CollisionInfo playerCollision;
 						if (getPlayerCollision(playerCollision))
 						{
-							gameSim.addAnimationFx("fx/Dust_WallSlide.scml",
+							gameSim.addAnimationFx(kDrawLayer_Game, "fx/Dust_WallSlide.scml",
 								m_facing[0] < 0.f ? playerCollision.min[0] : playerCollision.max[0],
 								newPos[1],
 								m_facing[0] > 0.f);
@@ -2586,7 +2591,7 @@ void Player::tick(float dt)
 				m_isGrounded = true;
 
 				gameSim.playSound(makeCharacterFilename(m_characterIndex, "land_on_ground.ogg"), 50); // players lands on solid ground
-				gameSim.addAnimationFx("fx/Dust_LandOnGround.scml", m_pos[0], m_pos[1]); // players lands on solid ground
+				gameSim.addAnimationFx(kDrawLayer_Game, "fx/Dust_LandOnGround.scml", m_pos[0], m_pos[1]); // players lands on solid ground
 			}
 		}
 		else
@@ -2605,7 +2610,7 @@ void Player::tick(float dt)
 			{
 				m_groundDashDistance -= FX_ATTACK_DUST_INTERVAL;
 
-				gameSim.addAnimationFx("fx/Dust_GroundAttack.scml", m_pos[0], m_pos[1]); // attack dust on ground
+				gameSim.addAnimationFx(kDrawLayer_Game, "fx/Dust_GroundAttack.scml", m_pos[0], m_pos[1]); // attack dust on ground
 			}
 		}
 		else
@@ -2725,7 +2730,7 @@ void Player::tick(float dt)
 		if (m_jetpack.fxTime <= 0.f)
 		{
 			m_jetpack.fxTime += JETPACK_FX_INTERVAL;
-			gameSim.addAnimationFx("fx/Jetpack_Smoke.scml", m_pos[0], m_pos[1], m_facing[0] < 0);
+			gameSim.addAnimationFx(kDrawLayer_Game, "fx/Jetpack_Smoke.scml", m_pos[0], m_pos[1], m_facing[0] < 0);
 		}
 	}
 
@@ -3621,7 +3626,7 @@ bool Player::shieldAbsorb(float amount)
 		m_shield.hasShield = false;
 		m_shield.spriterState.startAnim(SHIELD_SPRITER, "end");
 		GAMESIM->playSound("objects/shield/pop.ogg");
-		GAMESIM->addAnimationFx("fx/Shield_Pop.scml", m_pos[0], m_pos[1]); // player shield is popped
+		GAMESIM->addAnimationFx(kDrawLayer_Game, "fx/Shield_Pop.scml", m_pos[0], m_pos[1]); // player shield is popped
 		return true;
 	}
 	else
@@ -3915,7 +3920,7 @@ void Player::handleKill(bool hasScored, bool isFirstKill)
 		{
 			char name[64];
 			sprintf_s(name, sizeof(name), "ui/killcounter/%d.scml", Calc::Min(5, m_multiKillCount));
-			GAMESIM->addAnimationFx(name, m_pos[0] + UI_KILLCOUNTER_OFFSET_X, m_pos[1] + UI_KILLCOUNTER_OFFSET_Y);
+			GAMESIM->addAnimationFx(kDrawLayer_PlayerHUD, name, m_pos[0] + UI_KILLCOUNTER_OFFSET_X, m_pos[1] + UI_KILLCOUNTER_OFFSET_Y);
 		}
 	}
 }

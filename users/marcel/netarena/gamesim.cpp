@@ -749,7 +749,7 @@ void PipeBomb::tick(GameSim & gameSim, float dt)
 	if (m_exploded)
 	{
 		gameSim.playSound("objects/pipebomb/explode.ogg");
-		gameSim.addAnimationFx("fx/PipeBomb_Explode.scml", m_pos[0], m_pos[1]);
+		gameSim.addAnimationFx(kDrawLayer_Game, "fx/PipeBomb_Explode.scml", m_pos[0], m_pos[1]);
 		gameSim.doBlastEffect(
 			m_pos,
 			PIPEBOMB_BLAST_RADIUS,
@@ -1462,9 +1462,9 @@ void AnimationFxState::tick(float dt)
 	}
 }
 
-void AnimationFxState::draw()
+void AnimationFxState::draw(DrawLayer layer)
 {
-	if (m_isActive)
+	if (m_isActive && layer == m_layer)
 	{
 		setColor(colorWhite);
 		Spriter(m_fileName.c_str()).draw(m_state);
@@ -2457,7 +2457,7 @@ void GameSim::tickRoundBegin(float dt)
 				m_roundBegin.m_delayTimeRcp = 1.f / GAMESTATE_ROUNDBEGIN_MESSAGE_DELAY;
 				m_roundBegin.m_delay = 1.f;
 
-				addAnimationFx("ui/fight/fight.scml", GAMESTATE_ROUNDBEGIN_MESSAGE_X, GAMESTATE_ROUNDBEGIN_MESSAGE_Y);
+				addAnimationFx(kDrawLayer_HUD, "ui/fight/fight.scml", GAMESTATE_ROUNDBEGIN_MESSAGE_X, GAMESTATE_ROUNDBEGIN_MESSAGE_Y);
 				playSound("round-begin-fight.ogg");
 			}
 			else
@@ -3217,7 +3217,7 @@ void GameSim::drawPlayColor(const CamParams & camParams)
 
 	for (int i = 0; i < MAX_ANIM_EFFECTS; ++i)
 	{
-		m_animationEffects[i].draw();
+		m_animationEffects[i].draw(kDrawLayer_Game);
 	}
 
 	// particles
@@ -3382,11 +3382,26 @@ void GameSim::drawPlayLight(const CamParams & camParams)
 void GameSim::drawPlayHud(const CamParams & camParams)
 {
 	gxPushMatrix();
-	applyCamParams(camParams, 1.f, 1.f);
+	{
+		applyCamParams(camParams, 1.f, 1.f);
 
-	// todo : draw player HUD elements here
+		// todo : draw player HUD elements here
 
+		// animation effects
+
+		for (int i = 0; i < MAX_ANIM_EFFECTS; ++i)
+		{
+			m_animationEffects[i].draw(kDrawLayer_PlayerHUD);
+		}
+	}
 	gxPopMatrix();
+
+	// animation effects
+
+	for (int i = 0; i < MAX_ANIM_EFFECTS; ++i)
+	{
+		m_animationEffects[i].draw(kDrawLayer_HUD);
+	}
 
 #if ITCHIO_BUILD
 	if (m_gameState >= kGameState_RoundBegin)
@@ -4421,7 +4436,7 @@ TileSprite * GameSim::findTileSpriteAtBlockXY(int blockX, int blockY)
 	return findTileSpriteAtPos(x, y);
 }
 
-void GameSim::addAnimationFx(const char * fileName, int x, int y, bool flipX, bool flipY)
+void GameSim::addAnimationFx(DrawLayer layer, const char * fileName, int x, int y, bool flipX, bool flipY)
 {
 	for (int i = 0; i < MAX_ANIM_EFFECTS; ++i)
 	{
@@ -4429,6 +4444,7 @@ void GameSim::addAnimationFx(const char * fileName, int x, int y, bool flipX, bo
 		{
 			m_animationEffects[i] = AnimationFxState();
 			m_animationEffects[i].m_isActive = true;
+			m_animationEffects[i].m_layer = layer;
 			m_animationEffects[i].m_fileName = fileName;
 			m_animationEffects[i].m_state.x = x;
 			m_animationEffects[i].m_state.y = y;

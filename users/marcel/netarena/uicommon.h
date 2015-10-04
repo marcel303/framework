@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include <vector>
 
 class Button;
@@ -12,10 +13,14 @@ public:
 	bool m_hasFocusLock;
 	MenuNavElem * m_next;
 
+	std::map<std::pair<int, int>, MenuNavElem*> m_moveSet;
+
 public:
 	MenuNavElem();
 
 	virtual void getPosition(int & x, int & y) const;
+	virtual void getSize(int & sx, int & sy) const;
+	virtual void getCenter(int & x, int & y) const;
 	virtual bool hitTest(int x, int y) const;
 	virtual void onFocusChange(bool hasFocus, bool isAutomaticSelection);
 	virtual void onSelect();
@@ -113,6 +118,7 @@ public:
 	void draw();
 
 	virtual void getPosition(int & x, int & y) const;
+	virtual void getSize(int & sx, int & sy) const;
 	virtual bool hitTest(int x, int y) const;
 	virtual void onFocusChange(bool hasFocus, bool isAutomaticSelection);
 	virtual void onSelect();
@@ -144,6 +150,7 @@ public:
 	void draw();
 
 	virtual void getPosition(int & x, int & y) const;
+	virtual void getSize(int & sx, int & sy) const;
 	virtual bool hitTest(int x, int y) const;
 	virtual void onFocusChange(bool hasFocus, bool isAutomaticSelection);
 	virtual void onSelect();
@@ -174,6 +181,7 @@ public:
 	void draw();
 
 	virtual void getPosition(int & x, int & y) const;
+	virtual void getSize(int & sx, int & sy) const;
 	virtual bool hitTest(int x, int y) const;
 	virtual void onFocusChange(bool hasFocus, bool isAutomaticSelection);
 	virtual void onSelect();
@@ -206,6 +214,7 @@ public:
 	void draw();
 
 	virtual void getPosition(int & x, int & y) const;
+	virtual void getSize(int & sx, int & sy) const;
 	virtual bool hitTest(int x, int y) const;
 	virtual void onFocusChange(bool hasFocus, bool isAutomaticSelection);
 	virtual void onSelect();

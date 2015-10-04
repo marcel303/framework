@@ -68,6 +68,9 @@ MainMenu::MainMenu()
 	m_socialTw = new Button(165 + socialSx/2, 830 + socialSy/2, "itch-social-tw.png", "", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 	m_campaignGl = new Button(1501 + glSx/2, 821 + glSy/2, "itch-campaign-gl.png", "", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 	m_campaignKs = new Button(1501 + ksSx/2, 721 + ksSy/2, "itch-campaign-ks.png", "", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+
+	m_campaignKs->m_moveSet[std::pair<int, int>(-1, 0)] = m_newGame;
+	m_controls->m_moveSet[std::pair<int, int>(0, -1)] = m_quitApp;
 #endif
 
 	m_menuNav = new MenuNav();

@@ -993,11 +993,12 @@ struct AnimationFxState
 	}
 
 	bool m_isActive;
+	DrawLayer m_layer;
 	FixedString<32> m_fileName;
 	SpriterState m_state;
 
 	void tick(float dt);
-	void draw();
+	void draw(DrawLayer layer);
 };
 
 //
@@ -1313,7 +1314,7 @@ public:
 	TileSprite * findTileSpriteAtPos(int x, int y);
 	TileSprite * findTileSpriteAtBlockXY(int blockX, int blockY);
 
-	void addAnimationFx(const char * fileName, int x, int y, bool flipX = false, bool flipY = false);
+	void addAnimationFx(DrawLayer layer, const char * fileName, int x, int y, bool flipX = false, bool flipY = false);
 
 	void addAnnouncement(const Color & color, const char * message, ...);
 	void addEmote(int playerId, int emoteId);

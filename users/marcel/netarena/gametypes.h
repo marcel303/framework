@@ -60,6 +60,13 @@ enum ObjectType
 	kObjectType_COUNT
 };
 
+enum DrawLayer
+{
+	kDrawLayer_Game,
+	kDrawLayer_PlayerHUD,
+	kDrawLayer_HUD,
+};
+
 enum TransitionType
 {
 	kTransitionType_None,
