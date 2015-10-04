@@ -1162,6 +1162,27 @@ void Surface::blitTo(Surface * surface)
 	checkErrorGL();
 }
 
+void blitBackBufferToSurface(Surface * surface)
+{
+	int oldDrawBuffer = 0;
+
+	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &oldDrawBuffer);
+	checkErrorGL();
+
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, surface->getFramebuffer());
+	checkErrorGL();
+
+	glBlitFramebuffer(
+		0, 0, surface->getWidth(), surface->getHeight(), // todo : should be back buffer size
+		0, 0, surface->getWidth(), surface->getHeight(),
+		GL_COLOR_BUFFER_BIT,
+		GL_NEAREST);
+	checkErrorGL();
+
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, oldDrawBuffer);
+	checkErrorGL();
+}
+
 // -----
 
 Shader::Shader()
@@ -1272,6 +1293,7 @@ void Shader::setTexture(const char * name, int unit, GLuint texture, bool filter
 	glBindTexture(GL_TEXTURE_2D, texture);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filtered ? GL_LINEAR : GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filtered ? GL_LINEAR : GL_NEAREST);
+	glActiveTexture(GL_TEXTURE0);
 }
 
 #undef SET_UNIFORM

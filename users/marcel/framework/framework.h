@@ -249,6 +249,8 @@ public:
 	void blitTo(Surface * surface);
 };
 
+void blitBackBufferToSurface(Surface * surface);
+
 //
 
 class Shader
