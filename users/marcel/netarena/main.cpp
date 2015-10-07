@@ -1222,6 +1222,10 @@ bool App::init()
 		{
 			m_displayName = "Developer";
 		}
+		else if (ITCHIO_BUILD)
+		{
+			m_displayName = "Player 1";
+		}
 		else if (DEMOMODE)
 		{
 			m_displayName = "Riposte";
@@ -1914,7 +1918,7 @@ bool App::tick()
 				if (!isUsed)
 				{
 					char name[32];
-					sprintf_s(name, sizeof(name), "Player %d", i);
+					sprintf_s(name, sizeof(name), "Player %d", (i == MAX_GAMEPAD) ? i : (i + 1));
 					g_app->netAddPlayer(client->m_channel, g_validCharacterIndices[0], name, i);
 				}
 

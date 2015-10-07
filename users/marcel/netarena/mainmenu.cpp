@@ -387,10 +387,11 @@ void MainMenu::draw()
 		m_campaignKs->draw();
 
 #if ITCHIO_BUILD
-	const float offset = framework.time * .5f;
+	const float offset = framework.time * .2f;
 	const float scale = 1.f / 70.f;
 	const float size = 8.f;
-	setColor(255, 255, 0, 63);
+	static const Color scrollerColler = Color::fromHex("21c3f5");
+	setColor(scrollerColler);
 	drawSexyScroller(0.f,           0.f, GFX_SX,   size, +offset, -offset * .5f, scale, 1.f, 1.f);
 	drawSexyScroller(0.f, GFX_SY - size, GFX_SX, GFX_SY, +offset, -offset * .5f, scale, 1.f, 1.f);
 #endif

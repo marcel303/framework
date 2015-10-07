@@ -236,7 +236,7 @@ void LobbyMenu::draw()
 			back.drawEx(bubbleX + idx * charSpacing - back.getWidth() / 2, bubbleY - back.getHeight() / 2);
 
 			if (p.m_isReadyUpped)
-				setColor(127, 127, 127);
+				setColor(255, 255, 255, 255, 200);
 			else
 				setColor(getPlayerColor(i));
 			front.drawEx(bubbleX + idx * charSpacing - front.getWidth() / 2, bubbleY - front.getHeight() / 2);
@@ -251,6 +251,68 @@ void LobbyMenu::draw()
 		#endif
 			setColor(colorWhite);
 			drawText(xOff + bubbleX + idx * charSpacing, yOff + bubbleY, 24, 0.f, 0.f, "P%d", i + 1);
+		}
+	}
+
+	const int baseX = 840;
+	const int baseY = 140;
+	const int dy = 45;
+	const int fontSize = 30;
+	int numPressStart = 0;
+	int numFreeControllers = 0;
+	for (int i = 0; i < MAX_GAMEPAD; ++i)
+		if (gamepad[i].isConnected && g_app->isControllerIndexAvailable(i))
+			numFreeControllers++;
+
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+	{
+		auto & p = gameSim->m_players[i];
+
+		const char * text = 0;
+		Color color;
+
+		if (p.m_isUsed)
+		{
+			if (p.m_isReadyUpped)
+			{
+				text = "READY";
+				color = Color(244, 244, 160);
+			}
+			else
+			{
+				text = "NOT READY";
+				color = Color(130, 130, 130);
+			}
+		}
+		else if (i >= MAX_GAMEPAD)
+		{
+		}
+		else if (numPressStart < numFreeControllers)
+		{
+			text = "PRESS START";
+			color = Color(1.f, 1.f, 1.f, std::fmod(gameSim->m_physicalRoundTime * 1.5f, .9f));
+
+			numPressStart++;
+		}
+		else
+		{
+			text = "Please connect Xbox controller";
+			color = Color(130, 130, 130, 100);
+		}
+
+		if (text)
+		{
+			setMainFont();
+			setColor(color);
+
+			drawText(
+				baseX,
+				baseY + dy * i,
+				fontSize,
+				+1.f, +1.f,
+				"Player %d: %s",
+				i + 1,
+				text);
 		}
 	}
 #else
@@ -270,7 +332,6 @@ void LobbyMenu::draw()
 	Sprite("ui/lobby/background.png").draw();
 
 	m_charGrid->draw();
-#endif
 
 	setMainFont();
 	setColorf(1.f, 1.f, 1.f, std::fmod(gameSim->m_physicalRoundTime * 1.5f, 1.f));
@@ -289,6 +350,7 @@ void LobbyMenu::draw()
 			"P%d PRESS START",
 			i + 1);
 	}
+#endif
 
 	if (g_app->m_isHost && UI_LOBBY_GAMEMODE_SELECT_ENABLE)
 	{
@@ -318,7 +380,7 @@ void LobbyMenu::draw()
 		// todo : options for position
 		setMainFont();
 		setColor(127, 255, 227);
-		drawText(GFX_SX/2, 410, 48, 0.f, 0.f, "ROUND START IN T-%02.2f", timeRemaining);
+		drawText(GFX_SX/2, 450, 48, 0.f, 0.f, "ROUND START IN T-%02.2f", timeRemaining);
 	}
 
 	setColor(colorWhite);
