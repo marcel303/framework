@@ -1782,6 +1782,8 @@ void Player::tick(float dt)
 					Vec2 targetPosition;
 					if (findNinjaDashTarget(targetPosition))
 					{
+						GAMESIM->addAnimationFx(kDrawLayer_Game, "fx/dash/dash.scml", m_pos[0], m_pos[1] + (m_collision.min[1] + m_collision.max[1]) / 2.f, m_facing[0] < 0.f, false);
+
 						m_pos = targetPosition;
 
 						m_isAirDashCharged = false;
