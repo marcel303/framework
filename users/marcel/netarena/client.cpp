@@ -76,7 +76,7 @@ void Client::tick(float dt)
 
 			for (int i = 0; i < NUM_LOCAL_PLAYERS_TO_ADD; ++i)
 			{
-				g_app->netAddPlayer(m_channel, g_playerCharacterIndex, g_app->m_displayName, -1);
+				g_app->netAddPlayer(m_channel, g_playerCharacterIndex != -1 ? g_playerCharacterIndex : g_validCharacterIndices[0], g_app->m_displayName, -1);
 			}
 		}
 

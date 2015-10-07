@@ -292,7 +292,7 @@ todo:
 void splitString(const std::string & str, std::vector<std::string> & result);
 void splitString(const std::string & str, std::vector<std::string> & result, char c);
 
-OPTION_DECLARE(int, g_playerCharacterIndex, 0);
+OPTION_DECLARE(int, g_playerCharacterIndex, -1);
 OPTION_DEFINE(int, g_playerCharacterIndex, "Player/Character Index (On Create)");
 OPTION_ALIAS(g_playerCharacterIndex, "character");
 
@@ -4378,7 +4378,7 @@ bool Player::findNinjaDashTarget(Vec2 & destination)
 	{
 		// check if this location doesn't intersect with anything that may block
 
-		m_pos[0] = oldPos[0] + d * m_facing[0];
+		m_pos[0] = std::fmodf(oldPos[0] + d * m_facing[0] + ARENA_SX_PIXELS, ARENA_SX_PIXELS);
 
 		CollisionInfo playerCollision;
 		if (getPlayerCollision(playerCollision))

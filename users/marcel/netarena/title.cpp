@@ -84,6 +84,7 @@ SplashScreen::SplashScreen(const char * filename, float duration, float fadeInDu
 	, m_fadeOutDuration(fadeOutDuration)
 	, m_hasPlayedSound(false)
 	, m_extraFrames(0)
+	, m_skip(false)
 {
 }
 
@@ -101,7 +102,7 @@ void SplashScreen::onExit()
 
 bool SplashScreen::tick(float dt)
 {
-	m_time += dt;
+	m_time += dt * (m_skip ? 5.f : 1.f);
 
 	if (m_time >= m_fadeInDuration/2.5f && !m_hasPlayedSound)
 	{
@@ -116,8 +117,14 @@ bool SplashScreen::tick(float dt)
 			return true;
 	}
 
+	if (g_keyboardLock == 0 && mouse.wentDown(BUTTON_LEFT))
+		m_skip = true;
+
 	if (g_keyboardLock == 0 && (g_uiInput->wentDown(INPUT_BUTTON_A) || g_uiInput->wentDown(INPUT_BUTTON_START)))
-		return true;
+		m_skip = true;
+
+	if (m_skip && m_time > m_fadeInDuration && m_time < m_duration - m_fadeOutDuration)
+		m_time = m_duration - m_fadeOutDuration;
 
 	return false;
 }

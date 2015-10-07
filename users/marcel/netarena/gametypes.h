@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <string>
 #include <string.h>
+#include "config.h"
 #include "Debugging.h"
 #include "gamedefs.h"
 #include "Vec2.h"
@@ -525,3 +526,9 @@ extern Curve grenadeBlastCurve;
 extern Curve jetpackAnalogCurveX;
 extern Curve jetpackAnalogCurveY;
 extern Curve gravityWellFalloffCurve;
+
+#if ITCHIO_BUILD
+static const int g_validCharacterIndices[] = { 1, 2, 4 };
+#else
+static const int g_validCharacterIndices[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+#endif

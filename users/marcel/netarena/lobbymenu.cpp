@@ -203,6 +203,57 @@ void LobbyMenu::draw()
 {
 	const GameSim * gameSim = m_client->m_gameSim;
 
+#if ITCHIO_BUILD
+	setColor(colorWhite);
+	Sprite("itch-lobby-back.png").draw();
+
+	// draw player bubbles and text
+	setMainFont();
+
+	const int bubbleBaseX = 186;
+	const int bubbleBaseY = 170;
+	const int bubbleDx = 310 - bubbleBaseX;
+	const int bubbleDy = 290 - bubbleBaseY;
+	const int charSpacing = 200;
+
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+	{
+		auto & p = gameSim->m_players[i];
+		if (p.m_isUsed)
+		{
+			Sprite back("itch-lobby-bubble-back.png");
+			Sprite front("itch-lobby-bubble-front.png");
+
+			int idx = 0;
+			for (int o = 0; o < _countof(g_validCharacterIndices); ++o)
+				if (p.m_characterIndex == g_validCharacterIndices[o])
+					idx = o;
+
+			const int bubbleX = bubbleBaseX + ((i == 0 || i == 2) ? 0 : bubbleDx);
+			const int bubbleY = bubbleBaseY + ((i == 0 || i == 3) ? 0 : bubbleDy);
+
+			setColor(colorWhite);
+			back.drawEx(bubbleX + idx * charSpacing - back.getWidth() / 2, bubbleY - back.getHeight() / 2);
+
+			if (p.m_isReadyUpped)
+				setColor(127, 127, 127);
+			else
+				setColor(getPlayerColor(i));
+			front.drawEx(bubbleX + idx * charSpacing - front.getWidth() / 2, bubbleY - front.getHeight() / 2);
+
+			const int xOff = -2;
+			const int yOff = -4;
+		#if 0
+			setColor(0, 0, 0, 255);
+			for (int x = -1; x <= +1; ++x)
+				for (int y = -1; y <= +1; ++y)
+					drawText(xOff + bubbleX + idx * charSpacing + x * 2, yOff + bubbleY + y * 2, 24, 0.f, 0.f, "P%d", i);
+		#endif
+			setColor(colorWhite);
+			drawText(xOff + bubbleX + idx * charSpacing, yOff + bubbleY, 24, 0.f, 0.f, "P%d", i + 1);
+		}
+	}
+#else
 	setColor(colorWhite);
 	const float t = gameSim->m_physicalRoundTime;
 	const float s = 0.05f;
@@ -219,6 +270,7 @@ void LobbyMenu::draw()
 	Sprite("ui/lobby/background.png").draw();
 
 	m_charGrid->draw();
+#endif
 
 	setMainFont();
 	setColorf(1.f, 1.f, 1.f, std::fmod(gameSim->m_physicalRoundTime * 1.5f, 1.f));

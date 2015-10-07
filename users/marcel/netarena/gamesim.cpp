@@ -1658,7 +1658,11 @@ void GameSim::setGameState(::GameState gameState)
 			}
 		}
 
+	#if ITCHIO_BUILD
+		load("itch-lobby");
+	#else
 		load("lobby");
+	#endif
 
 		setGameMode(kGameMode_Lobby);
 
@@ -2292,6 +2296,24 @@ void GameSim::tickMenus()
 					if (player.m_input.wentDown(INPUT_BUTTON_DOWN))
 						dy++;
 
+				#if ITCHIO_BUILD
+					if (dx)
+					{
+						const int oldCharacterIndex = player.m_characterIndex;
+						bool valid = false;
+						do
+						{
+							//player.m_characterIndex = (player.m_characterIndex + dx + MAX_CHARACTERS) % MAX_CHARACTERS;
+							player.m_characterIndex = player.m_characterIndex + dx;
+							if (player.m_characterIndex < 0 || player.m_characterIndex >= MAX_CHARACTERS)
+								break;
+							for (int o = 0; o < _countof(g_validCharacterIndices); ++o)
+								valid |= player.m_characterIndex == g_validCharacterIndices[o];
+						} while (!valid);
+						if (!valid)
+							player.m_characterIndex = oldCharacterIndex;
+					}
+				#else
 					if (dx || dy)
 					{
 						int x, y;
@@ -2308,6 +2330,7 @@ void GameSim::tickMenus()
 							playSound("ui/sounds/charselect-change.ogg");
 						}
 					}
+				#endif
 				}
 
 				// ready up

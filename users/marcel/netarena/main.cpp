@@ -1915,7 +1915,7 @@ bool App::tick()
 				{
 					char name[32];
 					sprintf_s(name, sizeof(name), "Player %d", i);
-					g_app->netAddPlayer(client->m_channel, 0, name, i);
+					g_app->netAddPlayer(client->m_channel, g_validCharacterIndices[0], name, i);
 				}
 
 				debugSyncGameSims();

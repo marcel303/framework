@@ -27,6 +27,7 @@ class SplashScreen : public Menu
 	float m_fadeOutDuration;
 	bool m_hasPlayedSound;
 	int m_extraFrames;
+	bool m_skip;
 
 public:
 	SplashScreen(const char * filename, float duration, float fadeInDuration, float fadeOutDuration);
