@@ -181,6 +181,7 @@ void Pickup::tick(GameSim & gameSim, float dt)
 
 void Pickup::draw(const GameSim & gameSim) const
 {
+	gpuTimingBlock(pickupDraw);
 	cpuTimingBlock(pickupDraw);
 
 	if (s_pickupSprites[m_pickupType].isSpriter)
@@ -1086,6 +1087,7 @@ void TileSprite::tick(GameSim & gameSim, float dt)
 
 void TileSprite::draw(const GameSim & gameSim) const
 {
+	gpuTimingBlock(tileSpriteDraw);
 	cpuTimingBlock(tileSpriteDraw);
 
 	setColor(colorWhite);
@@ -1470,6 +1472,7 @@ void AnimationFxState::draw(DrawLayer layer)
 {
 	if (m_isActive && layer == m_layer)
 	{
+		gpuTimingBlock(animationFxDraw);
 		cpuTimingBlock(animationFxDraw);
 
 		setColor(colorWhite);
@@ -3109,6 +3112,8 @@ void GameSim::drawPlay()
 	{
 		gpuTimingBlock(drawPlayBlitToBackbuffer);
 
+		// todo : keep aspect ratio in mind here
+
 		setBlend(BLEND_OPAQUE);
 		setColor(255, 255, 255);
 		glEnable(GL_TEXTURE_2D);
@@ -3128,6 +3133,7 @@ void GameSim::drawPlayColor(const CamParams & camParams)
 		gxPushMatrix();
 		applyCamParams(camParams, BACKGROUND_ZOOM_MULTIPLIER, BACKGROUND_SCREENSHAKE_MULTIPLIER);
 		{
+			gpuTimingBlock(drawPlayColorBackground);
 			cpuTimingBlock(drawPlayColorBackground);
 
 			//setBlend(BLEND_OPAQUE);

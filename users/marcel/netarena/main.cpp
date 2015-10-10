@@ -219,6 +219,9 @@ void inputLockRelease()
 
 void applyLightMap(Surface & colormap, Surface & lightmap, Surface & dest)
 {
+	gpuTimingBlock(applyLightMap);
+	cpuTimingBlock(applyLightMap);
+
 	// apply lightmap
 
 	setBlend(BLEND_OPAQUE);

@@ -614,6 +614,7 @@ uint32_t Arena::calcCRC() const
 
 void Arena::drawBlocks(const GameSim & gameSim, int layer) const
 {
+	gpuTimingBlock(arenaDrawBlocks);
 	cpuTimingBlock(arenaDrawBlocks);
 
 	float pos[4 * ARENA_SX * ARENA_SY * 2];

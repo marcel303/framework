@@ -24,8 +24,8 @@
 - itch build:
 	+ new splash screen
 		+ logo, [FB] /Riposte-Game, [TW] /DamajoGames
-	- replace lobby w/ simple art
-	- only 3 chars, arkthas, stalya, tilly
+	+ replace lobby w/ simple art
+	+ only 3 chars, arkthas, stalya, tylly
 	+ disable options menu
 	+ disable netcode
 	+ enable public build macro
@@ -48,6 +48,12 @@
 - level editor: add pickup spawner placement
 - level editor: add foreground layer support
 - level editor: add ability to set map name. perhaps description
+- level editor: add setting for ambient lighting
+- level editor: add checkboxes for allowed (or disabled?) level events
+- level editor: add text box for map name
+
+- pickup that temporarily allows player to move through destructibles transparently
+- add ropes you can grab and hold on to?
 
 - experiment with shader-only based (menu) transition effects
 	- RGB 'twitch' effect where RGB channels are offset separately
@@ -78,6 +84,7 @@
 - black/dark smudges on decal layer on explosion impact
 
 - let level define decal base color?
+	-> could be made to contrast more vs overal tile colour
 - recycle decals using fifo, instead of random like now
 
 - use sine for screen shakes. let user define duration, strength and curvature/pow factor (or just multiplier on -1..+1 & clamp)
