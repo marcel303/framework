@@ -176,6 +176,8 @@ LobbyMenu::~LobbyMenu()
 
 void LobbyMenu::tick(float dt)
 {
+	cpuTimingBlock(lobbyMenuTick);
+
 	m_joinSpriterState.updateAnim(JOIN_SPRITER, dt);
 
 	m_prevGameMode->setPosition(

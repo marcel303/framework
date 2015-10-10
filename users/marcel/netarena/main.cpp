@@ -40,7 +40,7 @@
 
 //
 
-#if PUBLIC_DEMO_BUILD
+#if PUBLIC_DEMO_BUILD && !defined(DEBUG)
 	#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 #endif
 
@@ -302,6 +302,8 @@ static bool canHandleOptionChange(Channel * channel)
 
 void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 {
+	cpuTimingBlock(appHandleRpc);
+
 	if (method == s_rpcAction)
 	{
 		Assert(g_host);
@@ -1762,6 +1764,7 @@ void App::debugSyncGameSims()
 bool App::tick()
 {
 	TIMER_SCOPE(g_appTickTime);
+	cpuTimingBlock(appTick);
 
 	// calculate time step
 
@@ -1805,17 +1808,23 @@ bool App::tick()
 		lastMouse = mouse;
 	}
 
-	bool showCursor = true;
-	if (mouseInactivityTime >= 3.f)
-		showCursor = false;
-	if (m_menuMgr->getActiveMenuId() == kMenuId_IntroScreen)
-		showCursor = false;
-	SDL_ShowCursor(showCursor);
+	{
+		cpuTimingBlock(cursorUpdate);
+		bool showCursor = true;
+		if (mouseInactivityTime >= 3.f)
+			showCursor = false;
+		if (m_menuMgr->getActiveMenuId() == kMenuId_IntroScreen)
+			showCursor = false;
+		SDL_ShowCursor(showCursor);
+	}
 	
 	// UI input
 
-	g_uiInput->next(false, dt);
-	g_uiInput->m_currState.gather(true, 0, false);
+	{
+		cpuTimingBlock(uiInput);
+		g_uiInput->next(false, dt);
+		g_uiInput->m_currState.gather(true, 0, false);
+	}
 
 	// debug UI
 
@@ -1848,6 +1857,8 @@ bool App::tick()
 
 	if (m_isHost)
 	{
+		cpuTimingBlock(hostTick);
+
 		m_channelMgr->Update(NET_TIME);
 
 	#if ENABLE_OPTIONS
@@ -2051,6 +2062,8 @@ bool App::tick()
 
 void App::tickBgm()
 {
+	cpuTimingBlock(bgmTick);
+
 	// background music
 
 	static char bgm[64] = { };
@@ -2133,6 +2146,8 @@ void App::draw()
 {
 	TIMER_SCOPE(g_appDrawTime);
 
+	gpuTimingBlock(appDraw);
+
 	framework.beginDraw(10, 15, 10, 0);
 	{
 		// draw client
@@ -2175,8 +2190,12 @@ void App::draw()
 		}
 	#endif
 
-		g_tileTransition->tick(framework.timeStep); // todo : move to tick
-		g_tileTransition->draw();
+		{
+			gpuTimingBlock(tileTransitionDraw);
+
+			g_tileTransition->tick(framework.timeStep); // todo : move to tick
+			g_tileTransition->draw();
+		}
 
 		// draw debug stuff
 
@@ -2875,8 +2894,13 @@ int main(int argc, char * argv[])
 
 		//
 
-		while (g_app->tick())
+		for (;;)
 		{
+			cpuTimingBlock(frame);
+
+			if (!g_app->tick())
+				break;
+
 			g_app->draw();
 		}
 

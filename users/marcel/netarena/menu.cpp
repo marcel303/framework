@@ -58,6 +58,8 @@ void MenuMgr::reset(Menu * menu)
 
 void MenuMgr::tick(float dt)
 {
+	cpuTimingBlock(menuMgrTick);
+
 	static Gamepad s_oldGamepad;
 
 	if (memcmp(&s_oldGamepad, &gamepad[0], sizeof(Gamepad)))
@@ -82,6 +84,8 @@ void MenuMgr::tick(float dt)
 
 void MenuMgr::draw()
 {
+	gpuTimingBlock(menuMgrDraw);
+
 	Menu * menu = getActiveMenu();
 
 	if (menu)

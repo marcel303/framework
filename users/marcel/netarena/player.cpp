@@ -48,8 +48,12 @@
 - level editor: add foreground layer support
 - level editor: add ability to set map name. perhaps description
 
+- experiment with shader-only based (menu) transition effects
+	- RGB 'twitch' effect where RGB channels are offset separately
+
 - add decal on bullet collision for some types of ammo
 - slowdown and/or zoom on cling?
+- fix dead player not being affected by blast effects
 
 - upgrade bullet sprites to spriter animations
 

@@ -68,6 +68,8 @@ void Client::initialize(Channel * channel)
 
 void Client::tick(float dt)
 {
+	cpuTimingBlock(clientTick);
+
 	if (m_channel && m_channel->m_state == ChannelState_Connected)
 	{
 		if (m_isSynced && !m_hasAddedPlayers)
@@ -76,6 +78,7 @@ void Client::tick(float dt)
 
 			for (int i = 0; i < NUM_LOCAL_PLAYERS_TO_ADD; ++i)
 			{
+				// todo : add method to App to get display name for player X
 				g_app->netAddPlayer(m_channel, g_playerCharacterIndex != -1 ? g_playerCharacterIndex : g_validCharacterIndices[0], g_app->m_displayName, -1);
 			}
 		}
@@ -213,6 +216,8 @@ void Client::tick(float dt)
 
 void Client::draw()
 {
+	gpuTimingBlock(clientDraw);
+
 	// todo : move drawing code to game sim too?
 
 	Assert(!g_gameSim);

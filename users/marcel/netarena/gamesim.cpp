@@ -2169,6 +2169,8 @@ void GameSim::resetGameSim()
 
 void GameSim::tick()
 {
+	cpuTimingBlock(gameSimTick);
+
 	Assert(!g_gameSim);
 	g_gameSim = this;
 
@@ -3011,6 +3013,8 @@ void GameSim::drawPlay()
 
 	pushSurface(g_colorMap);
 	{
+		gpuTimingBlock(drawPlayColor);
+
 		glClearColor(0.f, 0.f, 0.f, 0.f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
@@ -3020,18 +3024,23 @@ void GameSim::drawPlay()
 
 	if (m_gameState == kGameState_RoundBegin && m_roundBegin.m_state == RoundBegin::kState_LevelTransition)
 	{
+		gpuTimingBlock(drawPlayRoundBeginLevelTransition);
+
 		const float t = 1.f - m_roundBegin.m_delay;
 
 	#if 1 // level transition shader test
 		Shader shader("shaders/trans1");
 		shader.setTexture("colormap", 0, g_colorMap->getTexture(), false);
 		shader.setImmediate("tint", t, t, t);
+		shader.setImmediate("time", t);
 		g_colorMap->postprocess(shader);
 	#endif
 	}
 
 	if (m_gameState == kGameState_RoundComplete && m_roundEnd.m_state == RoundEnd::kState_LevelTransition)
 	{
+		gpuTimingBlock(drawPlayRoundCompleteLevelTransition);
+
 		const float t = m_roundEnd.m_delay;
 
 	#if 1 // level transition shader test
@@ -3044,6 +3053,8 @@ void GameSim::drawPlay()
 
 	pushSurface(g_lightMap);
 	{
+		gpuTimingBlock(drawPlayLight);
+
 		const float v = getLightAmount();
 
 		glClearColor(v, v, v, 1.f);
@@ -3059,6 +3070,8 @@ void GameSim::drawPlay()
 
 	pushSurface(g_finalMap);
 	{
+		gpuTimingBlock(drawPlayHUD);
+
 		gxPushMatrix();
 		applyCamParams(camParams, 1.f, 1.f);
 
@@ -3084,15 +3097,19 @@ void GameSim::drawPlay()
 
 	// blit
 
-	setBlend(BLEND_OPAQUE);
-	setColor(255, 255, 255);
-	glEnable(GL_TEXTURE_2D);
 	{
-		glBindTexture(GL_TEXTURE_2D, g_finalMap->getTexture());
-		drawRect(0, 0, g_finalMap->getWidth(), g_finalMap->getHeight());
+		gpuTimingBlock(drawPlayBlitToBackbuffer);
+
+		setBlend(BLEND_OPAQUE);
+		setColor(255, 255, 255);
+		glEnable(GL_TEXTURE_2D);
+		{
+			glBindTexture(GL_TEXTURE_2D, g_finalMap->getTexture());
+			drawRect(0, 0, g_finalMap->getWidth(), g_finalMap->getHeight());
+		}
+		glDisable(GL_TEXTURE_2D);
+		setBlend(BLEND_ALPHA);
 	}
-	glDisable(GL_TEXTURE_2D);
-	setBlend(BLEND_ALPHA);
 }
 
 void GameSim::drawPlayColor(const CamParams & camParams)

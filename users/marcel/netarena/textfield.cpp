@@ -67,6 +67,8 @@ TextField::TextField(int x, int y, int sx, int sy)
 
 bool TextField::tick(float dt)
 {
+	cpuTimingBlock(textFieldTick);
+
 	bool result = false;
 
 	// SDL key codes are basically just ASCII codes, so that's easy!
