@@ -85,6 +85,7 @@ void MenuMgr::tick(float dt)
 void MenuMgr::draw()
 {
 	gpuTimingBlock(menuMgrDraw);
+	cpuTimingBlock(menuMgrDraw);
 
 	Menu * menu = getActiveMenu();
 

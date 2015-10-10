@@ -217,6 +217,7 @@ void Client::tick(float dt)
 void Client::draw()
 {
 	gpuTimingBlock(clientDraw);
+	cpuTimingBlock(clientDraw);
 
 	// todo : move drawing code to game sim too?
 

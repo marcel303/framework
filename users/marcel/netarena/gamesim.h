@@ -153,7 +153,7 @@ struct Player
 
 	void tick(float dt);
 	void draw() const;
-	void drawAt(bool flipX, bool flipY, int x, int y) const;
+	void drawAt(bool flipX, bool flipY, int x, int y, const SpriterState & spriterState, const spriter::Drawable * drawables, int numDrawables) const;
 	void drawLight() const;
 	void drawLightAt(int x, int y) const;
 	void debugDraw() const;

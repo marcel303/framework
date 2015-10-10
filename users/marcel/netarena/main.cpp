@@ -2144,9 +2144,9 @@ void App::tickBgm()
 
 void App::draw()
 {
-	TIMER_SCOPE(g_appDrawTime);
-
-	gpuTimingBlock(appDraw);
+	TIMER_START(g_appDrawTime);
+	gpuTimingBegin(appDraw);
+	cpuTimingBegin(appDraw);
 
 	framework.beginDraw(10, 15, 10, 0);
 	{
@@ -2192,6 +2192,7 @@ void App::draw()
 
 		{
 			gpuTimingBlock(tileTransitionDraw);
+			cpuTimingBlock(tileTransitionDraw);
 
 			g_tileTransition->tick(framework.timeStep); // todo : move to tick
 			g_tileTransition->draw();
@@ -2401,9 +2402,10 @@ void App::draw()
 		#endif
 		}
 	}
+	cpuTimingEnd();
+	gpuTimingEnd();
 	TIMER_STOP(g_appDrawTime);
 	framework.endDraw();
-	TIMER_START(g_appDrawTime);
 }
 
 void App::netAction(Channel * channel, NetAction action, uint8_t param1, uint8_t param2, const std::string & param3)

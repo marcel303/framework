@@ -485,6 +485,8 @@ void BulletPool::anim(GameSim & gameSim, Bullet & b, float dt)
 
 void BulletPool::draw() const
 {
+	cpuTimingBlock(bulletPoolDraw);
+
 	for (int i = 0; i < kBulletType_COUNT; ++i)
 	{
 		if (!s_bulletSprites[i].sprite && !s_bulletSprites[i].spriter)

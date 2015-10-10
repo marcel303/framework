@@ -7,6 +7,7 @@
 #include "Log.h"
 #include "main.h"
 #include "player.h"
+#include "spriter.h"
 #include "Timer.h"
 
 #define ENABLE_CHARACTER_OUTLINE 1
@@ -2818,6 +2819,9 @@ void Player::draw() const
 	if (!m_isAlive && !m_isRespawn)
 		return;
 
+	gpuTimingBlock(playerDraw);
+	cpuTimingBlock(playerDraw);
+
 	const CharacterData * characterData = getCharacterData(m_index);
 	const Color playerColor = getPlayerColor(m_index);
 
@@ -2832,6 +2836,34 @@ void Player::draw() const
 		drawRect(p2[0] - 4.f, p2[1] - 4.f, p2[0] + 4.f, p2[1] + 4.f);
 	}
 
+	// build spriter state and get drawable list
+
+	const bool flipX = m_facing[0] > 0 ? true : false;
+	const bool flipY = m_facing[1] < 0 ? true : false;
+
+	const float scale = characterData->m_spriteScale * PLAYER_SPRITE_SCALE;
+	const float animScale = (1.f - m_facingAnim * 2.f);
+	const float animScale2 = (animScale < 0.f ? (animScale - .5f) : (animScale + .5f)) / 1.5f;
+
+	SpriterState spriterState = m_spriterState;
+	spriterState.x = 0.f;
+	spriterState.y = 0.f;
+	spriterState.scaleX = scale * animScale2;
+	spriterState.scaleY = scale;
+	spriterState.flipX = flipX;
+	spriterState.flipY = flipY;
+	const int skin = PLAYER_SKIN_OVERRIDE >= 0 ? PLAYER_SKIN_OVERRIDE : g_app->m_userSettings->chars[m_characterIndex].skin;
+	spriterState.setCharacterMap(*characterData->getSpriter(), skin);
+
+	Spriter * spriter = characterData->getSpriter();
+	const int kMaxDrawables = 64;
+	spriter::Drawable drawables[kMaxDrawables];
+	int numDrawables = kMaxDrawables;
+	{
+		cpuTimingBlock(playerDrawGetDrawableList);
+		spriter->getDrawableListAtTime(spriterState, drawables, numDrawables);
+	}
+
 #if ENABLE_CHARACTER_OUTLINE
 	if (UI_PLAYER_OUTLINE)
 	{
@@ -2843,9 +2875,7 @@ void Player::draw() const
 		pushSurface(&surface1);
 		{
 			surface1.clear();
-			const bool flipX = m_facing[0] > 0 ? true : false;
-			const bool flipY = m_facing[1] < 0 ? true : false;
-			drawAt(flipX, flipY, sx/2, oy - (flipY ? characterData->m_collisionSy : 0));
+			drawAt(flipX, flipY, sx/2, oy - (flipY ? characterData->m_collisionSy : 0), spriterState, drawables, numDrawables);
 		}
 		popSurface();
 
@@ -2896,13 +2926,13 @@ void Player::draw() const
 		const bool flipX = m_facing[0] > 0 ? true : false;
 		const bool flipY = m_facing[1] < 0 ? true : false;
 
-		drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0));
+		drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0), spriterState, drawables, numDrawables);
 
 		// render additional sprites for wrap around
-		drawAt(flipX, flipY, m_pos[0] + ARENA_SX_PIXELS, m_pos[1] - (flipY ? characterData->m_collisionSy : 0));
-		drawAt(flipX, flipY, m_pos[0] - ARENA_SX_PIXELS, m_pos[1] - (flipY ? characterData->m_collisionSy : 0));
-		drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0) + ARENA_SY_PIXELS);
-		drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0) - ARENA_SY_PIXELS);
+		drawAt(flipX, flipY, m_pos[0] + ARENA_SX_PIXELS, m_pos[1] - (flipY ? characterData->m_collisionSy : 0), spriterState, drawables, numDrawables);
+		drawAt(flipX, flipY, m_pos[0] - ARENA_SX_PIXELS, m_pos[1] - (flipY ? characterData->m_collisionSy : 0), spriterState, drawables, numDrawables);
+		drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0) + ARENA_SY_PIXELS, spriterState, drawables, numDrawables);
+		drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0) - ARENA_SY_PIXELS, spriterState, drawables, numDrawables);
 	}
 
 	// draw invincibility marker
@@ -2943,8 +2973,10 @@ void Player::draw() const
 	}
 }
 
-void Player::drawAt(bool flipX, bool flipY, int x, int y) const
+void Player::drawAt(bool flipX, bool flipY, int x, int y, const SpriterState & spriterState, const spriter::Drawable * drawables, int numDrawables) const
 {
+	cpuTimingBlock(playerDrawAt);
+
 	const CharacterData * characterData = getCharacterData(m_characterIndex);
 	const Color playerColor = getPlayerColor(m_index);
 
@@ -3057,20 +3089,13 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 	if (m_ice.timer > 0.f)
 		setColor(63, 127, 255);
 
-	const float scale = characterData->m_spriteScale * PLAYER_SPRITE_SCALE;
-	const float animScale = (1.f - m_facingAnim * 2.f);
-	const float animScale2 = (animScale < 0.f ? (animScale - .5f) : (animScale + .5f)) / 1.5f;
-
-	SpriterState spriterState = m_spriterState;
-	spriterState.x = x;
-	spriterState.y = y;
-	spriterState.scaleX = scale * animScale2;
-	spriterState.scaleY = scale;
-	spriterState.flipX = flipX;
-	spriterState.flipY = flipY;
-	const int skin = PLAYER_SKIN_OVERRIDE >= 0 ? PLAYER_SKIN_OVERRIDE : g_app->m_userSettings->chars[m_characterIndex].skin;
-	spriterState.setCharacterMap(*characterData->getSpriter(), skin);
-	characterData->getSpriter()->draw(spriterState);
+	gxPushMatrix();
+	{
+		gxTranslatef(x, y, 0.f);
+		cpuTimingBlock(playerDrawSpriter);
+		characterData->getSpriter()->draw(spriterState, drawables, numDrawables);
+	}
+	gxPopMatrix();
 
 	setColorMode(COLOR_MUL);
 
@@ -3137,6 +3162,8 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y) const
 
 	if (!RECORDMODE)
 	{
+		cpuTimingBlock(playerDrawEmblem);
+
 		// draw player emblem
 		SpriterState state = m_emblemSpriterState;
 		state.x = x;

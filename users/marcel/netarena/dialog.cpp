@@ -181,6 +181,7 @@ void DialogMgr::tick(float dt)
 void DialogMgr::draw()
 {
 	gpuTimingBlock(dialogMgrDraw);
+	cpuTimingBlock(dialogMgrDraw);
 
 	Dialog * dialog = getActiveDialog();
 	if (dialog)

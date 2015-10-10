@@ -181,6 +181,8 @@ void Pickup::tick(GameSim & gameSim, float dt)
 
 void Pickup::draw(const GameSim & gameSim) const
 {
+	cpuTimingBlock(pickupDraw);
+
 	if (s_pickupSprites[m_pickupType].isSpriter)
 	{
 		const char * filename = s_pickupSprites[m_pickupType].filename;
@@ -1084,6 +1086,8 @@ void TileSprite::tick(GameSim & gameSim, float dt)
 
 void TileSprite::draw(const GameSim & gameSim) const
 {
+	cpuTimingBlock(tileSpriteDraw);
+
 	setColor(colorWhite);
 	const Vec2 offset = m_transition.eval(gameSim.m_physicalRoundTime);
 	SpriterState state = m_spriterState;
@@ -1466,6 +1470,8 @@ void AnimationFxState::draw(DrawLayer layer)
 {
 	if (m_isActive && layer == m_layer)
 	{
+		cpuTimingBlock(animationFxDraw);
+
 		setColor(colorWhite);
 		Spriter(m_fileName.c_str()).draw(m_state);
 	}
@@ -3013,6 +3019,7 @@ void GameSim::drawPlay()
 
 	pushSurface(g_colorMap);
 	{
+		cpuTimingBlock(drawPlayColor);
 		gpuTimingBlock(drawPlayColor);
 
 		glClearColor(0.f, 0.f, 0.f, 0.f);
@@ -3053,6 +3060,7 @@ void GameSim::drawPlay()
 
 	pushSurface(g_lightMap);
 	{
+		cpuTimingBlock(drawPlayLight);
 		gpuTimingBlock(drawPlayLight);
 
 		const float v = getLightAmount();
@@ -3070,6 +3078,7 @@ void GameSim::drawPlay()
 
 	pushSurface(g_finalMap);
 	{
+		cpuTimingBlock(drawPlayHUD);
 		gpuTimingBlock(drawPlayHUD);
 
 		gxPushMatrix();
@@ -3119,6 +3128,8 @@ void GameSim::drawPlayColor(const CamParams & camParams)
 		gxPushMatrix();
 		applyCamParams(camParams, BACKGROUND_ZOOM_MULTIPLIER, BACKGROUND_SCREENSHAKE_MULTIPLIER);
 		{
+			cpuTimingBlock(drawPlayColorBackground);
+
 			//setBlend(BLEND_OPAQUE);
 			m_background.draw();
 			//setBlend(BLEND_ALPHA);
