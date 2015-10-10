@@ -136,6 +136,11 @@ class StageObject;
 class Surface;
 class Ui;
 
+namespace spriter
+{
+	struct Drawable;
+}
+
 // globals
 
 extern Framework framework;
@@ -360,7 +365,7 @@ class Sprite
 public:
 	friend class Framework;
 	
-	Sprite(const char * filename, float pivotX = 0.f, float pivotY = 0.f, const char * spritesheet = 0, bool autoUpdate = false);
+	Sprite(const char * filename, float pivotX = 0.f, float pivotY = 0.f, const char * spritesheet = 0, bool autoUpdate = false, bool hasSpriteSheet = true);
 	~Sprite();
 	
 	void update(float dt); // only needs to be called if autoUpdate is false!
@@ -537,7 +542,10 @@ public:
 
 	Spriter(const char * filename);
 
+	void getDrawableListAtTime(const SpriterState & state, spriter::Drawable * drawables, int & numDrawables);
+
 	void draw(const SpriterState & state);
+	void draw(const SpriterState & state, const spriter::Drawable * drawables, int numDrawables);
 
 	int getAnimCount() const;
 	int getAnimIndexByName(const char * name) const;
@@ -905,10 +913,18 @@ static T random(T min, T max)
 #if ENABLE_PROFILING
 	#include "remotery.h"
 	#define cpuTimingBlock(name) rmt_ScopedCPUSample(name)
+	#define cpuTimingBegin(name) rmt_BeginCPUSample(name)
+	#define cpuTimingEnd() rmt_EndCPUSample()
 	#define gpuTimingBlock(name) rmt_ScopedOpenGLSample(name)
+	#define gpuTimingBegin(name) rmt_BeginOpenGLSample(name)
+	#define gpuTimingEnd() rmt_EndOpenGLSample()
 #else
 	#define cpuTimingBlock(name) do { } while (false)
+	#define cpuTimingBegin(name) do { } while (false)
+	#define cpuTimingEnd() do { } while (false)
 	#define gpuTimingBlock(name) do { } while (false)
+	#define gpuTimingBegin(name) do { } while (false)
+	#define gpuTimingEnd() do { } while (false)
 #endif
 
 // constants

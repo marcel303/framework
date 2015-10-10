@@ -511,6 +511,15 @@ void Framework::process()
 	{
 		cpuTimingBlock(XInputGetState);
 
+		// this is such a lame hack.. XInputGetState takes up a lot of time when the controller isn't connected. the
+		// total amount of time spent here is usually over 2ms. slightly over 500us for each controller.. madness!
+		// so instead of checking all disabled controllers.. only check one disabled controller per process call
+		// ..maybe we should be checking WM_DEVICECHANGE instead.. and update the list of connected controllers
+		// whenever a device is (dis)connected
+
+		if (!gamepad[i].isConnected && i != (globals.xinputGamepadIdx % MAX_GAMEPAD))
+			continue;
+
 		XINPUT_STATE state;
 		ZeroMemory(&state, sizeof(XINPUT_STATE));
 		DWORD result = XInputGetState(i, &state);
@@ -593,6 +602,8 @@ void Framework::process()
 			memset(&gamepad[i], 0, sizeof(Gamepad));
 		}
 	}
+
+	globals.xinputGamepadIdx++;
 #endif
 
 	if (doReload)
@@ -1678,7 +1689,9 @@ std::string & Dictionary::operator[](const char * name)
 
 // -----
 
-Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * spritesheet, bool autoUpdate)
+static AnimCacheElem s_dummyAnimCacheElem;
+
+Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * spritesheet, bool autoUpdate, bool hasSpriteSheet)
 	: m_autoUpdate(autoUpdate)
 {
 	// drawing
@@ -1697,20 +1710,28 @@ Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * s
 	filter = FILTER_POINT;
 	
 	// animation
-	std::string sheetFilename;
-	if (spritesheet)
+	const char * sheetFilename = 0;
+	std::string sheetFilenameStr;
+	if (hasSpriteSheet)
 	{
-		sheetFilename = spritesheet;
-	}
-	else
-	{
-		sheetFilename = filename;
-		size_t dot = sheetFilename.rfind('.');
-		if (dot != std::string::npos)
-			sheetFilename = sheetFilename.substr(0, dot) + ".txt";
+		if (spritesheet)
+		{
+			sheetFilename = spritesheet;
+		}
+		else
+		{
+			sheetFilenameStr = filename;
+			size_t dot = sheetFilenameStr.rfind('.');
+			if (dot != std::string::npos)
+				sheetFilenameStr = sheetFilenameStr.substr(0, dot) + ".txt";
+			sheetFilename = sheetFilenameStr.c_str();
+		}
 	}
 	
-	m_anim = &g_animCache.findOrCreate(sheetFilename.c_str());
+	if (sheetFilename)
+		m_anim = &g_animCache.findOrCreate(sheetFilename);
+	else
+		m_anim = &s_dummyAnimCacheElem;
 	m_animVersion = m_anim->getVersion();
 	m_animSegment = 0;
 	animIsActive = false;
@@ -2148,6 +2169,20 @@ Spriter::Spriter(const char * filename)
 	m_spriter = &g_spriterCache.findOrCreate(filename);
 }
 
+void Spriter::getDrawableListAtTime(const SpriterState & state, spriter::Drawable * drawables, int & numDrawables)
+{
+	if (m_spriter->m_scene->m_entities.empty())
+		numDrawables = 0;
+	else
+	{
+		m_spriter->m_scene->m_entities[0]->getDrawableListAtTime(
+			state.animIndex,
+			state.characterMap,
+			state.animTime * 1000.f,
+			drawables, numDrawables);
+	}
+}
+
 void Spriter::draw(const SpriterState & state)
 {
 	if (m_spriter->m_scene->m_entities.empty())
@@ -2165,6 +2200,11 @@ void Spriter::draw(const SpriterState & state)
 		state.animTime * 1000.f,
 		drawables, numDrawables);
 
+	draw(state, drawables, numDrawables);
+}
+
+void Spriter::draw(const SpriterState & state, const spriter::Drawable * drawables, int numDrawables)
+{
 	gxPushMatrix();
 	gxTranslatef(state.x, state.y, 0.f);
 	gxRotatef(state.angle, 0.f, 0.f, 1.f);
@@ -2179,7 +2219,7 @@ void Spriter::draw(const SpriterState & state)
 
 	for (int i = 0; i < numDrawables; ++i)
 	{
-		spriter::Drawable & d = drawables[i];
+		const spriter::Drawable & d = drawables[i];
 
 		setColorf(
 			globals.color.r,
@@ -2187,7 +2227,7 @@ void Spriter::draw(const SpriterState & state)
 			globals.color.b,
 			d.a * oldColor.a);
 
-		Sprite sprite(d.filename, d.pivotX, d.pivotY);
+		Sprite sprite(d.filename, d.pivotX, d.pivotY, 0, false, false);
 		sprite.x = d.x;
 		sprite.y = d.y;
 		sprite.angle = d.angle;

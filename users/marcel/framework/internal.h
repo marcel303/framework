@@ -10,8 +10,8 @@
 #include "framework.h"
 
 #ifdef DEBUG
-	#define FRAMEWORK_ENABLE_GL_ERROR_LOG 0
-	#define FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT 0
+	#define FRAMEWORK_ENABLE_GL_ERROR_LOG 1
+	#define FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT 1
 #endif
 
 #ifndef WIN32
@@ -59,6 +59,9 @@ public:
 	int displaySize[2];
 	int actualDisplaySize[2];
 	int drawableOffset[2];
+#if ENABLE_PROFILING
+	Remotery * rmt;
+#endif
 	FT_Library freeType;
 	int resourceVersion;
 	COLOR_MODE colorMode;
@@ -73,6 +76,7 @@ public:
 	int keyChangeCount;
 	int keyRepeat[256];
 	int keyRepeatCount;
+	int xinputGamepadIdx;
 	bool midiDown[256];
 	bool midiChange[256];
 	float midiValue[256];
