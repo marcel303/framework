@@ -2822,7 +2822,7 @@ void Player::draw() const
 	gpuTimingBlock(playerDraw);
 	cpuTimingBlock(playerDraw);
 
-	const CharacterData * characterData = getCharacterData(m_index);
+	const CharacterData * characterData = getCharacterData(m_characterIndex);
 	const Color playerColor = getPlayerColor(m_index);
 
 	if (m_grapple.state == GrappleInfo::State_Attached)
