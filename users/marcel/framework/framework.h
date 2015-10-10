@@ -24,9 +24,11 @@
 #if defined(DEBUG)
 	#define ENABLE_LOGGING_DBG 1
 	#define ENABLE_LOGGING 1
+	#define ENABLE_PROFILING 1
 #else
 	#define ENABLE_LOGGING_DBG 0 // do not alter
 	#define ENABLE_LOGGING 0 // do not alter
+	#define ENABLE_PROFILING 1 // do not alter
 #endif
 
 #define USE_LEGACY_OPENGL 1
@@ -896,6 +898,17 @@ static T random(T min, T max)
 	#define log(...) do { } while (false)
 	#define logWarning(...) do { } while (false)
 	#define logError(...) do { } while (false)
+#endif
+
+// profiling
+
+#if ENABLE_PROFILING
+	#include "remotery.h"
+	#define cpuTimingBlock(name) rmt_ScopedCPUSample(name)
+	#define gpuTimingBlock(name) rmt_ScopedOpenGLSample(name)
+#else
+	#define cpuTimingBlock(name) do { } while (false)
+	#define gpuTimingBlock(name) do { } while (false)
 #endif
 
 // constants

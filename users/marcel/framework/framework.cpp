@@ -261,6 +261,12 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 
 	gxInitialize();
 
+#if ENABLE_PROFILING
+	if (rmt_CreateGlobalInstance(&globals.rmt) != RMT_ERROR_NONE)
+		return false;
+	rmt_BindOpenGL();
+#endif
+
 #if ENABLE_MIDI_INPUT
 	initMidi();
 #endif
@@ -342,6 +348,12 @@ bool Framework::shutdown()
 	shutMidi();
 #endif
 
+#if ENABLE_PROFILING
+	rmt_UnbindOpenGL();
+	rmt_DestroyGlobalInstance(globals.rmt);
+	globals.rmt = 0;
+#endif
+
 	gxShutdown();
 
 	glBlendEquation = 0;
@@ -395,6 +407,8 @@ bool Framework::shutdown()
 
 void Framework::process()
 {
+	cpuTimingBlock(frameworkProcess);
+
 	static int tstamp1 = SDL_GetTicks();
 	const int tstamp2 = SDL_GetTicks();
 	int delta = tstamp2 - tstamp1;
@@ -495,6 +509,8 @@ void Framework::process()
 	// use XInput to poll gamepad state
 	for (int i = 0; i < MAX_GAMEPAD; ++i)
 	{
+		cpuTimingBlock(XInputGetState);
+
 		XINPUT_STATE state;
 		ZeroMemory(&state, sizeof(XINPUT_STATE));
 		DWORD result = XInputGetState(i, &state);
@@ -1173,7 +1189,7 @@ void blitBackBufferToSurface(Surface * surface)
 	checkErrorGL();
 
 	glBlitFramebuffer(
-		0, 0, surface->getWidth(), surface->getHeight(), // todo : should be back buffer size
+		0, 0, globals.actualDisplaySize[0] / framework.minification, globals.actualDisplaySize[1] / framework.minification,
 		0, 0, surface->getWidth(), surface->getHeight(),
 		GL_COLOR_BUFFER_BIT,
 		GL_NEAREST);
@@ -4203,7 +4219,7 @@ void logError(const char * format, ...)
 	if (logLevel > 3)
 		return;
 
-	char text[1024];
+	char text[4096];
 	va_list args;
 	va_start(args, format);
 	vsprintf_s(text, sizeof(text), format, args);

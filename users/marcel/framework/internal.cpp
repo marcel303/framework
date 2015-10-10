@@ -88,8 +88,8 @@ void __stdcall debugOutputGL(
 	GLvoid * userParam)
 {
 	FILE * file = (FILE*)userParam;
-	char formattedMessage[1024];
-	formatDebugOutputGL(formattedMessage, 1024, source, type, id, severity, message);
+	char formattedMessage[4096];
+	formatDebugOutputGL(formattedMessage, sizeof(formattedMessage), source, type, id, severity, message);
 	fprintf(file, "%s\n", formattedMessage);
 }
 #endif
@@ -298,7 +298,7 @@ static void showShaderInfoLog(GLuint shader)
 	GLint logSize = 0;
 	
 	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logSize);
-	
+
 	char * log = new char[logSize];
 	
 	glGetShaderInfoLog(shader, logSize, &logSize, log);
