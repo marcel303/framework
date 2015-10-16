@@ -677,13 +677,30 @@ namespace spriter
 			return defaultValue;
 	}
 
+	static CurveType readCurveType(const XMLElement * elem, const char * name, CurveType defaultValue)
+	{
+		const char * curveType = elem->Attribute(name);
+		if (!curveType)
+			return defaultValue;
+		else if (!strcmp(curveType, "instant"))
+			return kCurveType_Instant;
+		else if (!strcmp(curveType, "linear"))
+			return kCurveType_Linear;
+		else if (!strcmp(curveType, "bezier"))
+			return kCurveType_Quadratic;
+		else if (!strcmp(curveType, "cubic"))
+			return kCurveType_Cubic;
+		else
+			return (CurveType)intAttrib(elem, name, defaultValue);
+	}
+
 	static void readTimelineKeyProperties(const XMLElement * xmlKey, TimelineKey * key)
 	{
 		// id, time, spin, curve_type, c1, c2
 
 		key->time = xmlKey->IntAttribute("time");
 		key->spin = intAttrib(xmlKey, "spin", 1);
-		key->curveType = (CurveType)intAttrib(xmlKey, "curve_type", kCurveType_Linear);
+		key->curveType = readCurveType(xmlKey, "curve_type", kCurveType_Linear);
 		key->c1 = xmlKey->FloatAttribute("c1");
 		key->c2 = xmlKey->FloatAttribute("c2");
 	}
