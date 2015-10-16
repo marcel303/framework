@@ -30,7 +30,6 @@ public:
 	CharGrid * m_charGrid;
 	Button * m_prevGameMode;
 	Button * m_nextGameMode;
-	SpriterState m_joinSpriterState;
 
 	LobbyMenu(Client * client);
 	~LobbyMenu();

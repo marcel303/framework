@@ -10,8 +10,6 @@
 
 //#pragma optimize("", off)
 
-#define JOIN_SPRITER Spriter("ui/lobby/join.scml")
-
 OPTION_DECLARE(int, UI_CHARSELECT_GAMEMODE_TEXT_X, 350);
 OPTION_DECLARE(int, UI_CHARSELECT_GAMEMODE_TEXT_Y, 616);
 OPTION_DECLARE(int, UI_CHARSELECT_GAMEMODE_SELECT_X, 105);
@@ -161,8 +159,6 @@ LobbyMenu::LobbyMenu(Client * client)
 	, m_nextGameMode(new Button(150, GFX_SY - 80, "charselect-next.png", 0, 0, 0, 0))
 {
 	m_charGrid = new CharGrid(client, this);
-
-	m_joinSpriterState.startAnim(JOIN_SPRITER, 0);
 }
 
 LobbyMenu::~LobbyMenu()
@@ -177,8 +173,6 @@ LobbyMenu::~LobbyMenu()
 void LobbyMenu::tick(float dt)
 {
 	cpuTimingBlock(lobbyMenuTick);
-
-	m_joinSpriterState.updateAnim(JOIN_SPRITER, dt);
 
 	m_prevGameMode->setPosition(
 		UI_CHARSELECT_GAMEMODE_SELECT_X,
