@@ -66,6 +66,7 @@ public:
 	float gravityModifier;
 
 	float life;
+	float lifeTime;
 
 	uint32_t ownerPlayerId;
 	uint8_t playerDamageRadius;

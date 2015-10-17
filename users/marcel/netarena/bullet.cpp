@@ -25,13 +25,13 @@ struct ParticleSprite
 
 static ParticleSprite s_bulletSprites[kBulletType_COUNT] =
 {
-	{ "fire-type-0.png", false, 0, 0 },
-	{ "fire-type-0.png", false, 0, 0 },
-	{ "particle-0.png", false, 0, 0 },
-	{ "particle-0.png", false, 0, 0 },
-	{ "particle-0.png", false, 0, 0 },
-	{ "fire-type-bubble.png", false, 0, 0 },
-	{ "particle-blood-0.png", false, 0, 0 }
+	{ "fire-type-0.png", false, 0, 0 }, // kBulletType_A
+	{ "fire-type-0.png", false, 0, 0 }, // kBulletType_B
+	{ "objects/grenade/grenade.scml", true, 0, 0 }, // kBulletType_Grenade
+	{ "objects/grenade/grenade-fragment.scml", true, 0, 0 }, // kBulletType_GrenadeA
+	{ "particle-0.png", false, 0, 0 }, // kBulletType_ParticleA
+	{ "fire-type-bubble.png", false, 0, 0 }, // kBulletType_Bubble
+	{ "particle-blood-0.png", false, 0, 0 } // kBulletType_BloodParticle
 };
 
 //
@@ -106,6 +106,8 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 
 		if (b.isAlive)
 		{
+			b.lifeTime += _dt;
+
 			const float distance = b.m_vel.CalcSize() * _dt;
 			const int numSteps = std::max<int>(1, (int)std::ceil(std::abs(distance) / 4.f));
 
@@ -513,7 +515,17 @@ void BulletPool::draw() const
 
 			setColorf(cr, cg, cb, ca);
 			Assert(b.type < sizeof(s_bulletSprites) / sizeof(s_bulletSprites[0]));
-			if (s_bulletSprites[b.type].isSpriter) { } // todo : add spriter draw code
+			if (s_bulletSprites[b.type].isSpriter)
+			{
+				Spriter * spriter = s_bulletSprites[b.type].spriter;
+				SpriterState state;
+				state.startAnim(*spriter, 0);
+				state.animTime = b.lifeTime; 
+				state.x = b.m_pos[0];
+				state.y = b.m_pos[1];
+				state.angle = Calc::RadToDeg(Bullet::toAngle(b.m_vel[0], b.m_vel[1]));
+				spriter->draw(state);
+			}
 			else
 				s_bulletSprites[b.type].sprite->drawEx(b.m_pos[0], b.m_pos[1], Calc::RadToDeg(Bullet::toAngle(b.m_vel[0], b.m_vel[1])), s_bulletSprites[b.type].sprite->scale);
 
