@@ -52,6 +52,9 @@
 - level editor: add checkboxes for allowed (or disabled?) level events
 - level editor: add text box for map name
 
+- remove torch code
+- add light source object type
+
 - pickup that temporarily allows player to move through destructibles transparently
 - add ropes you can grab and hold on to?
 
@@ -2935,11 +2938,23 @@ void Player::draw() const
 
 		drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0), spriterState, drawables, numDrawables);
 
+		const int borderSize = 300;
+
 		// render additional sprites for wrap around
-		drawAt(flipX, flipY, m_pos[0] + ARENA_SX_PIXELS, m_pos[1] - (flipY ? characterData->m_collisionSy : 0), spriterState, drawables, numDrawables);
-		drawAt(flipX, flipY, m_pos[0] - ARENA_SX_PIXELS, m_pos[1] - (flipY ? characterData->m_collisionSy : 0), spriterState, drawables, numDrawables);
-		drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0) + ARENA_SY_PIXELS, spriterState, drawables, numDrawables);
-		drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0) - ARENA_SY_PIXELS, spriterState, drawables, numDrawables);
+		if (m_pos[0] < borderSize)
+			drawAt(flipX, flipY, m_pos[0] + ARENA_SX_PIXELS, m_pos[1] - (flipY ? characterData->m_collisionSy : 0), spriterState, drawables, numDrawables);
+		if (m_pos[0] > ARENA_SX_PIXELS - borderSize)
+			drawAt(flipX, flipY, m_pos[0] - ARENA_SX_PIXELS, m_pos[1] - (flipY ? characterData->m_collisionSy : 0), spriterState, drawables, numDrawables);
+		if (m_pos[1] < borderSize)
+			drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0) + ARENA_SY_PIXELS, spriterState, drawables, numDrawables);
+		if (m_pos[1] > ARENA_SY_PIXELS - borderSize)
+			drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0) - ARENA_SY_PIXELS, spriterState, drawables, numDrawables);
+
+		if (g_devMode)
+		{
+			setColor(colorGreen);
+			drawRect(m_pos[0] - borderSize, m_pos[1] - borderSize, m_pos[0] + borderSize, m_pos[1] + borderSize);
+		}
 	}
 
 	// draw invincibility marker
@@ -3002,7 +3017,7 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y, const SpriterState & s
 		setColor(color);
 		const float px = x + (m_collision.min[0] + m_collision.max[0]) / 2.f;
 		const float py = y + (m_collision.min[1] + m_collision.max[1]) / 2.f;
-		Sprite("player-light.png").drawEx(px, py, 0.f, 1.5f, 1.5f, false, FILTER_LINEAR);
+		Sprite("player-light.png").drawEx(px, py, 0.f, 1.5f, 1.5f, false, FILTER_MIPMAP);
 	}
 
 	// draw rocket punch charge and direction
@@ -3304,7 +3319,7 @@ void Player::drawLight() const
 void Player::drawLightAt(int x, int y) const
 {
 	setColor(colorWhite);
-	Sprite("player-light.png").drawEx(x, y, 0.f, 3.f, 3.f, false, FILTER_LINEAR);
+	Sprite("player-light.png").drawEx(x, y, 0.f, 3.f, 3.f, false, FILTER_MIPMAP);
 }
 
 void Player::debugDraw() const

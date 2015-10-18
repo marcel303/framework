@@ -220,7 +220,7 @@ void Pickup::drawLight() const
 	const Vec2 pos = m_pos + (m_bbMin + m_bbMax) / 2.f;
 
 	setColor(colorWhite);
-	Sprite("player-light.png").drawEx(pos[0], pos[1], 0.f, 1.f, 1.f, false, FILTER_LINEAR);
+	Sprite("player-light.png").drawEx(pos[0], pos[1], 0.f, 1.f, 1.f, false, FILTER_MIPMAP);
 }
 
 //
@@ -300,7 +300,7 @@ void Token::drawLight() const
 	if (m_isDropped)
 	{
 		setColor(colorWhite);
-		Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f, 1.5f, false, FILTER_LINEAR);
+		Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f, 1.5f, false, FILTER_MIPMAP);
 	}
 }
 
@@ -378,7 +378,7 @@ void Coin::drawLight() const
 	if (m_isDropped)
 	{
 		setColor(colorWhite);
-		Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f, 1.5f, false, FILTER_LINEAR);
+		Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f, 1.5f, false, FILTER_MIPMAP);
 	}
 }
 
@@ -671,7 +671,7 @@ void Axe::draw() const
 void Axe::drawLight() const
 {
 	setColor(colorWhite);
-	Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f, 1.5f, false, FILTER_LINEAR);
+	Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f, 1.5f, false, FILTER_MIPMAP);
 }
 
 //
@@ -804,7 +804,7 @@ void PipeBomb::draw() const
 void PipeBomb::drawLight() const
 {
 	setColor(colorWhite);
-	Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f, 1.5f, false, FILTER_LINEAR);
+	Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f, 1.5f, false, FILTER_MIPMAP);
 }
 
 bool PipeBomb::explode()
@@ -883,7 +883,7 @@ void Torch::drawLight() const
 	color.a = a;
 	setColor(color);
 
-	Sprite("player-light.png").drawEx(m_pos[0], m_pos[1] + TORCH_FLICKER_Y_OFFSET, 0.f, 1.5f, 1.5f, false, FILTER_LINEAR);
+	Sprite("player-light.png").drawEx(m_pos[0], m_pos[1] + TORCH_FLICKER_Y_OFFSET, 0.f, 1.5f, 1.5f, false, FILTER_MIPMAP);
 }
 
 //
@@ -1160,7 +1160,7 @@ void Decal::drawAt(int x, int y) const
 		x - sprite.getWidth() * scale / 2.f,
 		y - sprite.getHeight() * scale / 2.f,
 		0.f, scale, scale,
-		false, FILTER_LINEAR);
+		false, FILTER_MIPMAP);
 }
 
 Color getDecalColor(int playerIndex, Vec2Arg direction)

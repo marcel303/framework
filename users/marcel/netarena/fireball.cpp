@@ -92,7 +92,7 @@ void FireBall::drawLight()
 	if (active)
 	{
 		setColor(colorWhite);
-		Sprite("player-light.png").drawEx(m_state.x, m_state.y, m_state.angle, 2.f, 2.f, false, FILTER_LINEAR);
+		Sprite("player-light.png").drawEx(m_state.x, m_state.y, m_state.angle, 2.f, 2.f, false, FILTER_MIPMAP);
 	}
 }
 
