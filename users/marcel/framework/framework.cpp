@@ -1200,7 +1200,9 @@ void blitBackBufferToSurface(Surface * surface)
 	checkErrorGL();
 
 	glBlitFramebuffer(
-		0, 0, globals.actualDisplaySize[0] / framework.minification, globals.actualDisplaySize[1] / framework.minification,
+		// fixme
+		//0, 0, globals.actualDisplaySize[0] / framework.minification, globals.actualDisplaySize[1] / framework.minification,
+		0, 0, globals.actualDisplaySize[0], globals.actualDisplaySize[1],
 		0, 0, surface->getWidth(), surface->getHeight(),
 		GL_COLOR_BUFFER_BIT,
 		GL_NEAREST);
@@ -1823,12 +1825,25 @@ void Sprite::drawEx(float x, float y, float angle, float scaleX, float scaleY, b
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 			}
-			if (filter == FILTER_LINEAR)
+			else if (filter == FILTER_LINEAR)
 			{
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			}
+			else if (filter == FILTER_MIPMAP)
+			{
+				glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
+
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			}
+			else
+			{
+				fassert(false);
+			}
 			
+			checkErrorGL();
+
 			const float rsx = float(m_texture->sx / m_anim->m_gridSize[0]);
 			const float rsy = float(m_texture->sy / m_anim->m_gridSize[1]);
 			
@@ -1866,6 +1881,8 @@ void Sprite::drawEx(float x, float y, float angle, float scaleX, float scaleY, b
 			}
 			gxEnd();
 		#endif
+
+			checkErrorGL();
 
 		#if USE_LEGACY_OPENGL
 			gxSetTexture(0);
@@ -2235,7 +2252,7 @@ void Spriter::draw(const SpriterState & state, const spriter::Drawable * drawabl
 		sprite.scaleX = d.scaleX;
 		sprite.scaleY = d.scaleY;
 		sprite.pixelpos = false;
-		sprite.filter = FILTER_LINEAR;
+		sprite.filter = FILTER_MIPMAP;
 		sprite.draw();
 
 	#if 0
