@@ -23,6 +23,11 @@ public:
 		mSize = 0;
 	}
 
+	inline bool empty() const
+	{
+		return mSize == 0;
+	}
+
 	const char* c_str() const { const_cast<FixedSizeString<SIZE>*>(this)->mText[mSize] = 0; return mText; }
 
 	inline void append(const char* c)
@@ -38,6 +43,24 @@ public:
 	{
 		if (mSize < SIZE)
 			mText[mSize++] = c;
+	}
+
+	inline int find(char c)
+	{
+		for (int i = 0; i < mSize; ++i)
+			if (mText[i] == c)
+				return i;
+		return -1;
+	}
+
+	inline FixedSizeString<SIZE> substr(int offset, int length) const
+	{
+		FixedSizeString<SIZE> result;
+
+		for (int i = 0; i < length; ++i)
+			result.push_back(mText[offset + i]);
+
+		return result;
 	}
 
 	inline void operator=(const char* c)
