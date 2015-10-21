@@ -1825,6 +1825,13 @@ void Sprite::drawEx(float x, float y, float angle, float scaleX, float scaleY, b
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 			}
+		#if 1
+			else if (filter == FILTER_LINEAR || filter == FILTER_MIPMAP)
+			{
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			}
+		#else
 			else if (filter == FILTER_LINEAR)
 			{
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -1837,6 +1844,7 @@ void Sprite::drawEx(float x, float y, float angle, float scaleX, float scaleY, b
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			}
+		#endif
 			else
 			{
 				fassert(false);
@@ -2354,6 +2362,11 @@ bool Spriter::hasCharacterMap(int index) const
 		return false;
 
 	return m_spriter->m_scene->hasCharacterMap(index);
+}
+
+spriter::Scene * Spriter::getSpriterScene() const
+{
+	return m_spriter->m_scene;
 }
 
 // -----

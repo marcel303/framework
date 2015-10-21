@@ -28,7 +28,7 @@
 #else
 	#define ENABLE_LOGGING_DBG 0 // do not alter
 	#define ENABLE_LOGGING 0 // do not alter
-	#define ENABLE_PROFILING 1 // do not alter
+	#define ENABLE_PROFILING 0 // do not alter
 #endif
 
 #define USE_LEGACY_OPENGL 1
@@ -140,6 +140,7 @@ class Ui;
 namespace spriter
 {
 	struct Drawable;
+	class Scene;
 }
 
 // globals
@@ -556,6 +557,8 @@ public:
 	bool getHitboxAtTime(int animIndex, const char * name, float time, Vec2 * points);
 
 	bool hasCharacterMap(int index) const;
+
+	spriter::Scene * getSpriterScene() const;
 
 private:
 	class SpriterCacheElem * m_spriter;
