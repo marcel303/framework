@@ -348,10 +348,10 @@ struct PlayerAnimInfo
 	{ nullptr,       nullptr,              0 },
 	{ "sprite.scml", "Idle" ,              1 },
 	{ "sprite.scml", "InAir" ,             1 },
-	{ "sprite.scml", "EmoteCheer",         1 },
-	{ "sprite.scml", "EmoteTaunt",         1 },
-	{ "sprite.scml", "EmoteDance",         1 },
-	{ "sprite.scml", "EmoteFacepalm",      1 },
+	{ "sprite.scml", "EmoteCheer",         5 },
+	{ "sprite.scml", "EmoteTaunt",         5 },
+	{ "sprite.scml", "EmoteDance",         5 },
+	{ "sprite.scml", "EmoteFacepalm",      5 },
 	{ "sprite.scml", "Jump" ,              2 },
 	{ "sprite.scml", "AirDash",            2 },
 	{ "sprite.scml", "WallSlide",          3 },
@@ -849,20 +849,40 @@ void Player::tick(float dt)
 	m_emoteTime = Calc::Max(0.f, m_emoteTime - dt); // fixme : should use phys time
 
 	int emoteIndex = -1;
+	PlayerAnim emoteAnim = kPlayerAnim_NULL;
 
 	if (m_input.wentUp(INPUT_BUTTON_DPAD_LEFT))
+	{
 		emoteIndex = 0;
+		emoteAnim = kPlayerAnim_EmoteCheer;
+	}
 	if (m_input.wentUp(INPUT_BUTTON_DPAD_RIGHT))
+	{
 		emoteIndex = 1;
+		emoteAnim = kPlayerAnim_EmoteDance;
+	}
 	if (m_input.wentUp(INPUT_BUTTON_DPAD_UP))
+	{
 		emoteIndex = 2;
+		emoteAnim = kPlayerAnim_EmoteFacepalm;
+	}
 	if (m_input.wentUp(INPUT_BUTTON_DPAD_DOWN))
+	{
 		emoteIndex = 3;
+		emoteAnim = kPlayerAnim_EmoteTaunt;
+	}
 
 	if (emoteIndex != -1)
 	{
 		m_emoteId = emoteIndex;
 		m_emoteTime = EMOTE_DISPLAY_TIME;
+	}
+
+	if (emoteAnim != kPlayerAnim_NULL && isAnimOverrideAllowed(emoteAnim))
+	{
+		setAnim(emoteAnim, true, true);
+		m_isAnimDriven = true;
+		m_animAllowSteering = false;
 	}
 
 	// -- emote hack --
@@ -3279,6 +3299,7 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y, const SpriterState & s
 	}
 #endif
 
+#if 0 // todo : show emotes? bake them into the animations?
 	// emotes
 
 	if (m_emoteTime > 0.f)
@@ -3296,6 +3317,7 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y, const SpriterState & s
 		setColor(colorWhite);
 		spriter.draw(state);
 	}
+#endif
 }
 
 void Player::drawLight() const

@@ -72,7 +72,7 @@ void Dialog::tick(float dt)
 
 				applySelection(false);
 
-				Sound("ui/dialog/change.ogg").play();
+				g_app->playSound("ui/dialog/change.ogg");
 			}
 
 			if ((g_uiInput->wentDown(INPUT_BUTTON_A) && m_selection != -1) || (g_uiInput->wentDown(INPUT_BUTTON_B) && m_selection == 1))

@@ -107,7 +107,7 @@ bool SplashScreen::tick(float dt)
 	if (m_time >= m_fadeInDuration/2.5f && !m_hasPlayedSound)
 	{
 		m_hasPlayedSound = true;
-		Sound("title/splash.ogg").play();
+		g_app->playSound("title/splash.ogg");
 	}
 
 	if (m_time >= m_duration)
