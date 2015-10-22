@@ -214,7 +214,7 @@ bool MainMenu::tick(float dt)
 	}
 	else if (m_campaignKs && m_campaignKs->isClicked())
 	{
-		openBrowserWithUrl("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+		openBrowserWithUrl("https://www.kickstarter.com/projects/1766566023/riposte");
 	}
 #if !ITCHIO_BUILD
 	else if (m_inactivityTime >= (g_devMode ? 5.f : kMaxInactivityTime))

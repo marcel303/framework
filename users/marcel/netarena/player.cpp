@@ -878,12 +878,14 @@ void Player::tick(float dt)
 		m_emoteTime = EMOTE_DISPLAY_TIME;
 	}
 
+#if !ITCHIO_BUILD
 	if (emoteAnim != kPlayerAnim_NULL && isAnimOverrideAllowed(emoteAnim))
 	{
 		setAnim(emoteAnim, true, true);
 		m_isAnimDriven = true;
 		m_animAllowSteering = false;
 	}
+#endif
 
 	// -- emote hack --
 
@@ -3219,8 +3221,8 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y, const SpriterState & s
 
 		// draw score
 		setMainFont();
-		setColor(colorBlack);
-		drawText(x, y + UI_PLAYER_EMBLEM_TEXT_OFFSET_Y, 20, 0.f, +1.f, "%d", m_score);
+		setColor(colorWhite);
+		drawText(x, y + UI_PLAYER_EMBLEM_TEXT_OFFSET_Y, 19, 0.f, +1.f, "%d", m_score);
 	}
 
 	// draw player inventory
