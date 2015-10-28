@@ -896,8 +896,53 @@ bool tickParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei
 		p.speed[1] += pi.forceOverLifetimeValueY * timeStep;
 	}
 
-	p.position[0] += p.speed[0] * timeStep;
-	p.position[1] += p.speed[1] * timeStep;
+	const float oldX = p.position[0];
+	const float oldY = p.position[1];
+
+	const float newX = oldX + p.speed[0] * timeStep;
+	const float newY = oldY + p.speed[1] * timeStep;
+
+	if (pi.collision)
+	{
+		float t;
+		float nx;
+		float ny;
+
+		if (cbs.checkCollision && cbs.checkCollision(oldX, oldY, newX, newY, t, nx, ny))
+		{
+			p.position[0] = oldX + (newX - oldX) * t;
+			p.position[1] = oldY + (newY - oldY) * t;
+
+			p.life -= pi.lifetimeLoss;
+			if (p.life < 0.f)
+				p.life = 0.f;
+
+			const float d = nx * p.speed[0] + ny * p.speed[1];
+
+			p.speed[0] -= nx * d * (1.f + pi.bounciness);
+			p.speed[1] -= ny * d * (1.f + pi.bounciness);
+
+			const float particleSpeed = _mm_sqrt_ss(_mm_set_ss(p.speed[0] * p.speed[0] + p.speed[1] * p.speed[1])).m128_f32[0];
+
+			if (particleSpeed < pi.minKillSpeed)
+				p.life = 0.f;
+
+			if (pi.enableSubEmitters && pi.subEmitters[ParticleInfo::kSubEmitterEvent_Collision].enabled)
+			{
+				handleSubEmitter(cbs, pi, gravityX, gravityY, p, ParticleInfo::kSubEmitterEvent_Collision);
+			}
+		}
+		else
+		{
+			p.position[0] = newX;
+			p.position[1] = newY;
+		}
+	}
+	else
+	{
+		p.position[0] = newX;
+		p.position[1] = newY;
+	}
 
 	const float particleLife = 1.f - p.life;
 	//const float particleSpeed = sqrtf(p.speed[0] * p.speed[0] + p.speed[1] * p.speed[1]);

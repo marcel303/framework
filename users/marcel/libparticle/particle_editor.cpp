@@ -88,6 +88,27 @@ static bool getEmitterByName(const char * name, const ParticleEmitterInfo *& pei
 	}
 	return false;
 }
+static bool checkCollision(float x1, float y1, float x2, float y2, float & t, float & nx, float & ny)
+{
+	const float px = 0.f;
+	const float py = 100.f;
+	const float pnx = 0.f;
+	const float pny = -1.f;
+	const float pd = px * pnx + py * pny;
+	const float d1 = x1 * pnx + y1 * pny - pd;
+	const float d2 = x2 * pnx + y2 * pny - pd;
+	if (d1 >= 0.f && d2 < 0.f)
+	{
+		t = -d1 / (d2 - d1);
+		nx = pnx;
+		ny = pny;
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
 
 // copy & paste
 static ParticleEmitterInfo g_copyPei;
@@ -1903,6 +1924,7 @@ void particleEditorTick(bool menuActive, float sx, float sy, float dt)
 		g_callbacks.randomInt = randomInt;
 		g_callbacks.randomFloat = randomFloat;
 		g_callbacks.getEmitterByName = getEmitterByName;
+		g_callbacks.checkCollision = checkCollision;
 
 		g_piList[0].rate = 1.f;
 		for (int i = 0; i < kMaxParticleInfos; ++i)
