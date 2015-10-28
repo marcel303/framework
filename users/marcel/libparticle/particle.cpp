@@ -807,6 +807,11 @@ bool ParticleEmitter::emitParticle(const ParticleCallbacks & cbs, const Particle
 
 		tickParticle(cbs, pei, pi, timeOffset, gravityX, gravityY, *p);
 
+		if (pi.enableSubEmitters && pi.subEmitters[ParticleInfo::kSubEmitterEvent_Birth].enabled)
+		{
+			handleSubEmitter(cbs, pi, gravityX, gravityY, *p, ParticleInfo::kSubEmitterEvent_Birth);
+		}
+
 		return true;
 	}
 	else
