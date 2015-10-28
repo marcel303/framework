@@ -282,10 +282,10 @@ static bool isAllowed(int c)
 	return false;
 }
 
-class TextField
+class EditorTextField
 {
 public:
-	TextField();
+	EditorTextField();
 
 	bool tick(float dt);
 	void draw(int ax, int ay, int asy);
@@ -316,7 +316,7 @@ private:
 	float m_caretTimer;
 };
 
-TextField::TextField()
+EditorTextField::EditorTextField()
 	: m_isActive(false)
 	, m_canCancel(false)
 	, m_maxBufferSize(0)
@@ -327,7 +327,7 @@ TextField::TextField()
 	m_buffer[m_bufferSize] = 0;
 }
 
-bool TextField::tick(float dt)
+bool EditorTextField::tick(float dt)
 {
 	bool result = false;
 
@@ -397,7 +397,7 @@ bool TextField::tick(float dt)
 	return result;
 }
 
-void TextField::draw(int ax, int ay, int asy)
+void EditorTextField::draw(int ax, int ay, int asy)
 {
 	//if (m_isActive)
 	{
@@ -434,7 +434,7 @@ void TextField::draw(int ax, int ay, int asy)
 	}
 }
 
-void TextField::open(int maxLength, bool canCancel, bool clearText)
+void EditorTextField::open(int maxLength, bool canCancel, bool clearText)
 {
 	fassert(!m_isActive);
 
@@ -454,7 +454,7 @@ void TextField::open(int maxLength, bool canCancel, bool clearText)
 	m_caretTimer = 0.f;
 }
 
-void TextField::close()
+void EditorTextField::close()
 {
 	fassert(m_isActive);
 
@@ -468,28 +468,28 @@ void TextField::close()
 	m_caretTimer = 0.f;
 }
 
-bool TextField::isActive() const
+bool EditorTextField::isActive() const
 {
 	return m_isActive;
 }
 
-void TextField::setText(const char * text)
+void EditorTextField::setText(const char * text)
 {
 	strcpy_s(m_buffer, m_maxBufferSize, text);
 	m_bufferSize = strlen(m_buffer);
 }
 
-const char * TextField::getText() const
+const char * EditorTextField::getText() const
 {
 	return m_buffer;
 }
 
-void TextField::complete()
+void EditorTextField::complete()
 {
 	close();
 }
 
-void TextField::addChar(char c)
+void EditorTextField::addChar(char c)
 {
 	fassert(m_isActive);
 
@@ -506,7 +506,7 @@ void TextField::addChar(char c)
 	}
 }
 
-void TextField::removeChar()
+void EditorTextField::removeChar()
 {
 	fassert(m_isActive);
 
@@ -976,7 +976,7 @@ static bool stringToValue(const char * src, float & dst)
 }
 
 template <typename T>
-static void doTextBox(T & value, const char * name, float xOffset, float xScale, bool lineBreak, UiElem & elem, TextField & textField, bool & textFieldIsInit)
+static void doTextBox(T & value, const char * name, float xOffset, float xScale, bool lineBreak, UiElem & elem, EditorTextField & textField, bool & textFieldIsInit)
 {
 	const int kPadding = 5;
 
@@ -1465,7 +1465,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, UiElem 
 
 #define DO_TEXTBOX(sym, value, name) \
 	static UiElem sym ## elem; \
-	static TextField sym ## textField; \
+	static EditorTextField sym ## textField; \
 	static bool sym ## textFieldIsInit = false; \
 	if (g_doActions && g_forceUiRefresh) \
 		sym ## textFieldIsInit = false; \
@@ -1473,7 +1473,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, UiElem 
 
 #define DO_TEXTBOX2(sym, value, xOffset, xScale, lineBreak, name) \
 	static UiElem sym ## elem; \
-	static TextField sym ## textField; \
+	static EditorTextField sym ## textField; \
 	static bool sym ## textFieldIsInit = false; \
 	if (g_doActions && g_forceUiRefresh) \
 		sym ## textFieldIsInit = false; \
@@ -1771,7 +1771,7 @@ static void doMenu_Pi()
 			}
 
 			UiElem elem;
-			TextField textField;
+			EditorTextField textField;
 			bool textFieldIsInit;
 		};
 		static SubEmitterField fields[ParticleInfo::kSubEmitterEvent_COUNT][3];
