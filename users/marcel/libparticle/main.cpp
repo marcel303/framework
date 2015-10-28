@@ -238,7 +238,7 @@ int main(int argc, char * argv[])
 				if (keyboard.wentDown(SDLK_TAB))
 					menuActive = !menuActive;
 
-				particleEditorTick(menuActive, timeStep);
+				particleEditorTick(menuActive, windowSx, windowSy, timeStep);
 
 #if 0
 				const float gravityX = 0.f;

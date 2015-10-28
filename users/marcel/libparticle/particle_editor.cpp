@@ -1852,7 +1852,7 @@ static void doMenu_ColorWheel()
 	}
 }
 
-static void doMenu(bool doActions, bool doDraw)
+static void doMenu(bool doActions, bool doDraw, int sx, int sy)
 {
 	g_doActions = doActions;
 	g_doDraw = doDraw;
@@ -1874,7 +1874,7 @@ static void doMenu(bool doActions, bool doDraw)
 	// right side menu
 
 	setFont("calibri.ttf");
-	g_drawX = 1400 - kMenuWidth - 10; // fixme : window size
+	g_drawX = sx - kMenuWidth - 10;
 	g_drawY = 0;
 
 	doMenu_LoadSave();
@@ -1893,7 +1893,7 @@ static void doMenu(bool doActions, bool doDraw)
 		g_forceUiRefresh = false;
 }
 
-void particleEditorTick(bool menuActive, float dt)
+void particleEditorTick(bool menuActive, float sx, float sy, float dt)
 {
 	static bool firstTick = true;
 	if (firstTick)
@@ -1910,7 +1910,7 @@ void particleEditorTick(bool menuActive, float dt)
 	}
 
 	if (menuActive)
-		doMenu(true, false);
+		doMenu(true, false, sx, sy);
 
 	for (int i = 0; i < kMaxParticleInfos; ++i)
 	{
@@ -2033,5 +2033,5 @@ void particleEditorDraw(bool menuActive, float sx, float sy)
 	gxPopMatrix();
 
 	if (menuActive)
-		doMenu(false, true);
+		doMenu(false, true, sx, sy);
 }
