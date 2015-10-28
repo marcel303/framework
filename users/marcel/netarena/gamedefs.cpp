@@ -344,12 +344,11 @@ OPTION_STEP(COIN_DROP_SPEED_MULTIPLIER, 0, 0, 0.05f);
 OPTION_STEP(COIN_BOUNCINESS, 0, 0, 0.05f);
 OPTION_STEP(COIN_BOUNCE_SOUND_TRESHOLD, 0, 0, 10);
 
-OPTION_DEFINE(float, TORCH_FLICKER_STRENGTH, "Game Objects/Torch/Flicker Strength");
-OPTION_DEFINE(int, TORCH_FLICKER_FREQ_A, "Game Objects/Torch/Flicker Frequency A");
-OPTION_DEFINE(int, TORCH_FLICKER_FREQ_B, "Game Objects/Torch/Flicker Frequency B");
-OPTION_DEFINE(int, TORCH_FLICKER_FREQ_C, "Game Objects/Torch/Flicker Frequency C");
-OPTION_DEFINE(int, TORCH_FLICKER_Y_OFFSET, "Game Objects/Torch/Flicker Y Offset");
-OPTION_STEP(TORCH_FLICKER_STRENGTH, 0, 0, .02f);
+OPTION_DEFINE(float, LIGHT_FLICKER_STRENGTH, "Game Objects/Light/Flicker Strength");
+OPTION_DEFINE(int, LIGHT_FLICKER_FREQ_A, "Game Objects/Light/Flicker Frequency A");
+OPTION_DEFINE(int, LIGHT_FLICKER_FREQ_B, "Game Objects/Light/Flicker Frequency B");
+OPTION_DEFINE(int, LIGHT_FLICKER_FREQ_C, "Game Objects/Light/Flicker Frequency C");
+OPTION_STEP(LIGHT_FLICKER_STRENGTH, 0, 0, .02f);
 
 OPTION_DEFINE(int, LIGHTING_DEBUG_MODE, "Graphics/Lighting/Debug Mode");
 

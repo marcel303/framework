@@ -847,7 +847,7 @@ void Barrel::drawLight() const
 
 //
 
-void Torch::setup(float x, float y, const Color & color)
+void Light::setup(float x, float y, const Color & color)
 {
 	m_isAlive = true;
 	m_pos.Set(x, y);
@@ -857,24 +857,22 @@ void Torch::setup(float x, float y, const Color & color)
 	m_color[3] = color.a;
 }
 
-void Torch::tick(GameSim & gameSim, float dt)
+void Light::tick(GameSim & gameSim, float dt)
 {
 }
 
-void Torch::draw() const
+void Light::draw() const
 {
-	setColor(colorWhite);
-	Sprite("torch.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.f);
 }
 
-void Torch::drawLight() const
+void Light::drawLight() const
 {
 	float a = 0.f;
-	a += std::sin(g_gameSim->getRoundTime() * Calc::m2PI * TORCH_FLICKER_FREQ_A);
-	a += std::sin(g_gameSim->getRoundTime() * Calc::m2PI * TORCH_FLICKER_FREQ_B);
-	a += std::sin(g_gameSim->getRoundTime() * Calc::m2PI * TORCH_FLICKER_FREQ_C);
+	a += std::sin(g_gameSim->getRoundTime() * Calc::m2PI * LIGHT_FLICKER_FREQ_A);
+	a += std::sin(g_gameSim->getRoundTime() * Calc::m2PI * LIGHT_FLICKER_FREQ_B);
+	a += std::sin(g_gameSim->getRoundTime() * Calc::m2PI * LIGHT_FLICKER_FREQ_C);
 	a = (a + 3.f) / 6.f;
-	a = Calc::Lerp(1.f, a, TORCH_FLICKER_STRENGTH);
+	a = Calc::Lerp(1.f, a, LIGHT_FLICKER_STRENGTH);
 
 	Color color;
 	color.r = m_color[0];
@@ -883,7 +881,7 @@ void Torch::drawLight() const
 	color.a = a;
 	setColor(color);
 
-	Sprite("player-light.png").drawEx(m_pos[0], m_pos[1] + TORCH_FLICKER_Y_OFFSET, 0.f, 1.5f, 1.5f, false, FILTER_MIPMAP);
+	Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f, 1.5f, false, FILTER_MIPMAP);
 }
 
 //
@@ -1899,33 +1897,33 @@ void GameSim::load(const char * name)
 					mover->m_speed = d.getInt("speed", 0);
 				}
 			}
-			else if (type == "torch")
+			else if (type == "light")
 			{
-				Torch * torch = 0;
+				Light * light = 0;
 
-				for (int i = 0; i < MAX_TORCHES; ++i)
+				for (int i = 0; i < MAX_LIGHTS; ++i)
 				{
-					if (!m_torches[i].m_isAlive)
+					if (!m_lights[i].m_isAlive)
 					{
-						torch = &m_torches[i];
+						light = &m_lights[i];
 						break;
 					}
 				}
 
-				if (torch == 0)
+				if (light == 0)
 					LOG_ERR("too many torches!");
 				else
 				{
-					torch->m_isAlive = true;
+					light->m_isAlive = true;
 
-					torch->m_pos[0] = d.getInt("x", 0);
-					torch->m_pos[1] = d.getInt("y", 0);
+					light->m_pos[0] = d.getInt("x", 0);
+					light->m_pos[1] = d.getInt("y", 0);
 	
 					const Color color = parseColor(d.getString("color", "ffffffff").c_str());
-					torch->m_color[0] = color.r;
-					torch->m_color[1] = color.g;
-					torch->m_color[2] = color.b;
-					torch->m_color[3] = color.a;
+					light->m_color[0] = color.r;
+					light->m_color[1] = color.g;
+					light->m_color[2] = color.b;
+					light->m_color[3] = color.a;
 				}
 			}
 			else if (type == "tilesprite")
@@ -2080,10 +2078,10 @@ void GameSim::resetGameWorld()
 	for (int i = 0; i < MAX_BLINDS_EFFECTS; ++i)
 		m_blindsEffects[i] = BlindsEffect();
 
-	// reset torches
+	// reset lights
 
-	for (int i = 0; i < MAX_TORCHES; ++i)
-		m_torches[i] = Torch();
+	for (int i = 0; i < MAX_LIGHTS; ++i)
+		m_lights[i] = Light();
 
 	// reset portals
 
@@ -2814,12 +2812,12 @@ void GameSim::tickPlay()
 	for (int i = 0; i < MAX_BLINDS_EFFECTS; ++i)
 		m_blindsEffects[i].tick(*this, dt);
 
-	// torches
+	// lights
 
-	for (int i = 0; i < MAX_TORCHES; ++i)
+	for (int i = 0; i < MAX_LIGHTS; ++i)
 	{
-		if (m_torches[i].m_isAlive)
-			m_torches[i].tick(*this, dt);
+		if (m_lights[i].m_isAlive)
+			m_lights[i].tick(*this, dt);
 	}
 
 	// portals
@@ -3171,14 +3169,14 @@ void GameSim::drawPlayColor(const CamParams & camParams)
 
 	m_floorEffect.draw();
 
-	// torches
+	// lights
 
-	for (int i = 0; i < MAX_TORCHES; ++i)
+	for (int i = 0; i < MAX_LIGHTS; ++i)
 	{
-		const Torch & torch = m_torches[i];
+		const Light & light = m_lights[i];
 
-		if (torch.m_isAlive)
-			torch.draw();
+		if (light.m_isAlive)
+			light.draw();
 	}
 
 	// portals
@@ -3332,14 +3330,14 @@ void GameSim::drawPlayLight(const CamParams & camParams)
 
 	setBlend(BLEND_ADD);
 
-	// torches
+	// lights
 
-	for (int i = 0; i < MAX_TORCHES; ++i)
+	for (int i = 0; i < MAX_LIGHTS; ++i)
 	{
-		const Torch & torch = m_torches[i];
+		const Light & light = m_lights[i];
 
-		if (torch.m_isAlive)
-			torch.drawLight();
+		if (light.m_isAlive)
+			light.drawLight();
 	}
 
 	// portals

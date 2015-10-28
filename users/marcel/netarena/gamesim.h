@@ -776,15 +776,15 @@ struct Debris : PhysicsActor
 	void draw() const;
 };
 
-struct Torch
+struct Light
 {
 	bool m_isAlive;
 	Vec2 m_pos;
 	float m_color[4];
 
-	Torch()
+	Light()
 	{
-		memset(this, 0, sizeof(Torch));
+		memset(this, 0, sizeof(Light));
 	}
 
 	void setup(float x, float y, const Color & color);
@@ -1111,7 +1111,7 @@ struct GameStateData
 
 	BlindsEffect m_blindsEffects[MAX_BLINDS_EFFECTS];
 
-	Torch m_torches[MAX_TORCHES];
+	Light m_lights[MAX_LIGHTS];
 
 	Portal m_portals[MAX_PORTALS];
 

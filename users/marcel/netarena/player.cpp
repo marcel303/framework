@@ -21,7 +21,7 @@
 
 /*
 
-- itch build:
++ itch build:
 	+ new splash screen
 		+ logo, [FB] /Riposte-Game, [TW] /DamajoGames
 	+ replace lobby w/ simple art
@@ -32,7 +32,7 @@
 	+ add input screen to main screen/help button
 	+ add Greenlight/KickStarter & Twitter/Facebook buttons
 	+ disable START button in-game
-	- enable inactivity timeout only when: in DEMOMODE or in online multiplayer game
+	# enable inactivity timeout only when: in DEMOMODE or in online multiplayer game
 	+ improve main menu navigation using keyboard/gamepad
 
 - level setting: max zoom factor
@@ -52,11 +52,15 @@
 - level editor: add checkboxes for allowed (or disabled?) level events
 - level editor: add text box for map name
 
-- remove torch code
-- add light source object type
+- fix spawn kill on round start
+
++ remove torch code
++ add light source object type
 
 - pickup that temporarily allows player to move through destructibles transparently
 - add ropes you can grab and hold on to?
+
+- invincibility powerup
 
 - experiment with shader-only based (menu) transition effects
 	- RGB 'twitch' effect where RGB channels are offset separately
@@ -3046,6 +3050,7 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y, const SpriterState & s
 
 	if (m_attack.m_rocketPunch.isActive && m_attack.m_rocketPunch.state == AttackInfo::RocketPunch::kState_Charge)
 	{
+	#if 0
 		const float t = (m_attack.m_rocketPunch.chargeTime - ROCKETPUNCH_CHARGE_MIN) / (ROCKETPUNCH_CHARGE_MAX - ROCKETPUNCH_CHARGE_MIN);
 		Color c1 = colorRed;
 		Color c2 = colorYellow;
@@ -3056,6 +3061,7 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y, const SpriterState & s
 			y - 100,
 			x + 50,
 			y + 50);
+	#endif
 
 		const float px = x;
 		const float py = y - 30.f;
