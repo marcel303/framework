@@ -40,8 +40,17 @@ struct ParticleColor
 
 struct ParticleCurve
 {
-	float valueMin;
-	float valueMax; // fixme : only linear for now..
+	static const int kMaxKeys = 4;
+
+	struct Key
+	{
+		float t;
+		float value;
+		float curveValue;
+	};
+	
+	Key keys[kMaxKeys];
+	int numKeys;
 
 	ParticleCurve();
 

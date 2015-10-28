@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <assert.h>
 
+//#pragma optimize("", off)
+
 using namespace tinyxml2;
 
 //
@@ -107,37 +109,91 @@ void ParticleColor::load(XMLElement * elem)
 //
 
 ParticleCurve::ParticleCurve()
-	: valueMin(0.f)
-	, valueMax(1.f)
 {
+	setLinear(0.f, 1.f);
 }
 
 void ParticleCurve::setLinear(float v1, float v2)
 {
-	// todo
+	memset(this, 0, sizeof(*this));
 
-	valueMin = v1;
-	valueMax = v2;
+	keys[0].t = 0.f;
+	keys[0].value = v1;
+	keys[1].t = 1.f;
+	keys[1].value = v2;
+	numKeys = 2;
 }
 
-float ParticleCurve::sample(const float t) const
+float ParticleCurve::sample(const float _t) const
 {
-	const float t2 = t < 0.f ? 0.f : t > 1.f ? 1.f : t;
-	return valueMin * (1.f - t2) + valueMax * t2;
+	const float t = _t < 0.f ? 0.f : _t > 1.f ? 1.f : _t;
+
+	if (numKeys == 0)
+		return 1.f;
+	else if (numKeys == 1)
+		return keys[0].value;
+	else
+	{
+		int endKey = 0;
+
+		while (endKey < numKeys)
+		{
+			if (t < keys[endKey].t)
+				break;
+			else
+				++endKey;
+		}
+
+		if (endKey == 0)
+			return keys[0].value;
+		else if (endKey == numKeys)
+			return keys[numKeys - 1].value;
+		else
+		{
+			const int startKey = endKey - 1;
+			const float c1 = keys[startKey].value;
+			const float c2 = keys[endKey].value;
+			const float t2 = (t - keys[startKey].t) / (keys[endKey].t - keys[startKey].t);
+			return c1 * (1.f - t2) + c2 * t2;
+		}
+	}
 }
 
-void ParticleCurve::save(tinyxml2::XMLPrinter * printer)
+void ParticleCurve::save(XMLPrinter * printer)
 {
-	printer->PushAttribute("min", valueMin);
-	printer->PushAttribute("max", valueMax);
+	printer->PushAttribute("numKeys", numKeys);
+	for (int i = 0; i < numKeys; ++i)
+	{
+		printer->OpenElement("key");
+		{
+			printer->PushAttribute("t", keys[i].t);
+			printer->PushAttribute("value", keys[i].value);
+			printer->PushAttribute("curveValue", keys[i].curveValue);
+		}
+		printer->CloseElement();
+	}
 }
 
-void ParticleCurve::load(tinyxml2::XMLElement * elem)
+void ParticleCurve::load(XMLElement * elem)
 {
-	*this = ParticleCurve();
+	memset(this, 0, sizeof(*this));
 
-	valueMin = floatAttrib(elem, "min", valueMin);
-	valueMax = floatAttrib(elem, "max", valueMax);
+	for (XMLElement * keyElem = elem->FirstChildElement("key"); keyElem; keyElem = keyElem->NextSiblingElement())
+	{
+		if (numKeys < kMaxKeys)
+		{
+			Key & key = keys[numKeys++];
+
+			key.t = floatAttrib(keyElem, "t", 0.f);
+			key.value = floatAttrib(keyElem, "value", 0.f);
+			key.curveValue = floatAttrib(keyElem, "curveValue", 0.f);
+		}
+	}
+
+	if (numKeys == 0)
+	{
+		setLinear(0.f, 1.f);
+	}
 }
 
 //
@@ -518,7 +574,7 @@ void ParticleInfo::clearBursts()
 	numBursts = 0;
 }
 
-void ParticleInfo::save(tinyxml2::XMLPrinter * printer)
+void ParticleInfo::save(XMLPrinter * printer)
 {
 	// emission
 	printer->PushAttribute("rate", rate);
@@ -640,7 +696,7 @@ void ParticleInfo::save(tinyxml2::XMLPrinter * printer)
 	}
 }
 
-void ParticleInfo::load(tinyxml2::XMLElement * elem)
+void ParticleInfo::load(XMLElement * elem)
 {
 	*this = ParticleInfo();
 
@@ -741,7 +797,7 @@ ParticleInfo::SubEmitter::SubEmitter()
 	memset(emitterName, 0, sizeof(emitterName));
 }
 
-void ParticleInfo::SubEmitter::save(tinyxml2::XMLPrinter * printer)
+void ParticleInfo::SubEmitter::save(XMLPrinter * printer)
 {
 	printer->PushAttribute("enabled", enabled);
 	printer->PushAttribute("count", count);
@@ -749,7 +805,7 @@ void ParticleInfo::SubEmitter::save(tinyxml2::XMLPrinter * printer)
 	printer->PushAttribute("emitterName", emitterName);
 }
 
-void ParticleInfo::SubEmitter::load(tinyxml2::XMLElement * elem)
+void ParticleInfo::SubEmitter::load(XMLElement * elem)
 {
 	enabled = boolAttrib(elem, "enabled", enabled);
 	count = intAttrib(elem, "count", count);
