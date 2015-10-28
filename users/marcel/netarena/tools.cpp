@@ -166,11 +166,48 @@ void blastEffectTestDraw()
 
 #include "particle_editor.h"
 
+OPTION_EXTERN(bool, g_devMode);
+OPTION_EXTERN(bool, g_windowed);
+
 static bool s_particleEditorIsActive = false;
+static bool s_particleEditorMenuIsVisible = true;
+
+static void mouseHack(bool b)
+{
+	static int oldX;
+	static int oldY;
+
+	if (b)
+	{
+		oldX = mouse.x;
+		oldY = mouse.y;
+
+		mouse.x /= 2;
+		mouse.y /= 2;
+	}
+	else
+	{
+		mouse.x = oldX;
+		mouse.y = oldY;
+	}
+}
 
 void particleEditorToggleIsActive()
 {
-	s_particleEditorIsActive = !s_particleEditorIsActive;
+	if (g_devMode || g_windowed)
+	{
+		if (s_particleEditorIsActive)
+		{
+			s_particleEditorIsActive = false;
+			inputLockRelease();
+		}
+		else if (!g_keyboardLock)
+		{
+			s_particleEditorIsActive = true;
+			s_particleEditorMenuIsVisible = true;
+			inputLockAcquire();
+		}
+	}
 }
 
 void particleEditorTick(float dt)
@@ -178,7 +215,14 @@ void particleEditorTick(float dt)
 	if (!s_particleEditorIsActive)
 		return;
 
-	particleEditorTick(true, GFX_SX, GFX_SY, dt);
+	mouseHack(true);
+
+	if (keyboard.wentDown(SDLK_TAB))
+		s_particleEditorMenuIsVisible = !s_particleEditorMenuIsVisible;
+
+	particleEditorTick(s_particleEditorMenuIsVisible, GFX_SX/2, GFX_SY/2, dt);
+
+	mouseHack(false);
 }
 
 void particleEditorDraw()
@@ -186,7 +230,21 @@ void particleEditorDraw()
 	if (!s_particleEditorIsActive)
 		return;
 
-	particleEditorDraw(true, GFX_SX, GFX_SY);
+	setBlend(BLEND_ALPHA);
+	setColorf(0.f, 0.f, 0.f, .8f);
+	drawRect(0, 0, GFX_SX, GFX_SY);
+
+	gxPushMatrix();
+	{
+		gxScalef(2.f, 2.f, 1.f);
+
+		mouseHack(true);
+
+		particleEditorDraw(s_particleEditorMenuIsVisible, GFX_SX/2, GFX_SY/2);
+
+		mouseHack(false);
+	}
+	gxPopMatrix();
 }
 
 // GIF capture tool
