@@ -838,7 +838,7 @@ void ParticleEmitter::clearParticles(ParticlePool & pool)
 	}
 }
 
-bool ParticleEmitter::emitParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei, const ParticleInfo & pi, ParticlePool & pool, const float timeOffset, const float gravityX, const float gravityY, Particle *& p)
+bool ParticleEmitter::emitParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei, const ParticleInfo & pi, ParticlePool & pool, const float timeOffset, const float gravityX, const float gravityY, const float positionX, const float positionY, const float speedX, const float speedY, Particle *& p)
 {
 	if (allocParticle(pool, p))
 	{
@@ -846,13 +846,16 @@ bool ParticleEmitter::emitParticle(const ParticleCallbacks & cbs, const Particle
 		p->lifeRcp = 1.f / pei.startLifetime;
 
 		getParticleSpawnLocation(pi, p->position[0], p->position[1]);
+		p->position[0] += positionX;
+		p->position[1] += positionY;
+
 		float speedAngle;
 		if (pi.randomDirection)
 			speedAngle = (rand() % 256) / 255.f * 2.f * M_PI; // fixme : remove all libc random calls
 		else
 			speedAngle = float(M_PI) / 2.f; // todo : add pei.startAngle;
-		p->speed[0] = cosf(speedAngle) * pei.startSpeed;
-		p->speed[1] = sinf(speedAngle) * pei.startSpeed;
+		p->speed[0] = speedX + cosf(speedAngle) * pei.startSpeed;
+		p->speed[1] = speedY + sinf(speedAngle) * pei.startSpeed;
 		p->rotation = pei.startRotation;
 
 		/*
@@ -1068,16 +1071,13 @@ void handleSubEmitter(const ParticleCallbacks & cbs, const ParticleInfo & pi, co
 					0.f,
 					gravityX,
 					gravityY,
+					p.position[0],
+					p.position[1],
+					subPei->inheritVelocity ? p.speed[0] : 0.f,
+					subPei->inheritVelocity ? p.speed[1] : 0.f,
 					subP))
 				{
-					subP->position[0] += p.position[0];
-					subP->position[1] += p.position[1];
-
-					if (subPei->inheritVelocity)
-					{
-						subP->speed[0] += p.speed[0];
-						subP->speed[1] += p.speed[1];
-					}
+					//
 				}
 			}
 		}
@@ -1256,7 +1256,7 @@ void tickParticleEmitter(const ParticleCallbacks & cbs, const ParticleEmitterInf
 		const float timeOffset = fmodf(pe.time, rateTime);
 
 		Particle * p;
-		pe.emitParticle(cbs, pei, pi, pool, timeOffset, gravityX, gravityY, p);
+		pe.emitParticle(cbs, pei, pi, pool, timeOffset, gravityX, gravityY, 0.f, 0.f, 0.f, 0.f, p);
 	}
 
 	// todo : int maxParticles; // The maximum number of particles in the system at once. Older particles will be removed when the limit is reached.

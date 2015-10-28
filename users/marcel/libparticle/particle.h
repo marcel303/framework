@@ -301,7 +301,7 @@ struct ParticleEmitter
 	bool allocParticle(ParticlePool & pool, Particle *& p);
 	void clearParticles(ParticlePool & pool);
 
-	bool emitParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei, const ParticleInfo & pi, ParticlePool & pool, const float timeOffsetconst, const float gravityX, const float gravityY, Particle *& p);
+	bool emitParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei, const ParticleInfo & pi, ParticlePool & pool, const float timeOffsetconst, const float gravityX, const float gravityY, const float positionX, const float positionY, const float speedX, const float speedY, Particle *& p);
 	void restart(ParticlePool & pool);
 };
 
