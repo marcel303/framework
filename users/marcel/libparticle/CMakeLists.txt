@@ -40,6 +40,10 @@ add_dependencies(libparticle framework)
 add_dependencies(libparticle libnfd)
 add_dependencies(libparticle libgg)
 
+if (MSVC)
+	set_property(TARGET libparticle APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
+endif (MSVC)
+
 # --- libparticle_test ---
 
 add_executable(libparticle_test ${source})
@@ -60,5 +64,5 @@ target_link_libraries(libparticle_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../fr
 target_link_libraries(libparticle_test PRIVATE Winmm.lib OpenGL32.lib WSock32.lib)
 
 if (MSVC)
-	set_property(TARGET libparticle APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
+	set_property(TARGET libparticle_test APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
 endif (MSVC)
