@@ -162,6 +162,33 @@ void blastEffectTestDraw()
 	}
 }
 
+// particle editor
+
+#include "particle_editor.h"
+
+static bool s_particleEditorIsActive = false;
+
+void particleEditorToggleIsActive()
+{
+	s_particleEditorIsActive = !s_particleEditorIsActive;
+}
+
+void particleEditorTick(float dt)
+{
+	if (!s_particleEditorIsActive)
+		return;
+
+	particleEditorTick(true, GFX_SX, GFX_SY, dt);
+}
+
+void particleEditorDraw()
+{
+	if (!s_particleEditorIsActive)
+		return;
+
+	particleEditorDraw(true, GFX_SX, GFX_SY);
+}
+
 // GIF capture tool
 
 #include <FreeImage.h>

@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 2.6)
 
 set(HAS_LIBGG 0)
+set(HAS_LIBNFD 0)
 set(HAS_LIBNET 0)
 set(HAS_FRAMEWORK 0)
+set(HAS_LIBPARTICLE 0)
 
 # --- dependencies ---
 
@@ -10,6 +12,10 @@ if (NOT HAS_LIBGG)
 	message("including libgg")
 	add_subdirectory(../../../libgg libgg)
 endif (NOT HAS_LIBGG)
+if (NOT HAS_LIBNFD)
+	message("including libnfd")
+	add_subdirectory(../../../libnfd libnfd)
+endif (NOT HAS_LIBNFD)
 if (NOT HAS_LIBNET)
 	message("including libnet")
 	add_subdirectory(../../../libnet libnet)
@@ -18,6 +24,10 @@ if (NOT HAS_FRAMEWORK)
 	message("including framework")
 	add_subdirectory(../framework framework)
 endif (NOT HAS_FRAMEWORK)
+if (NOT HAS_LIBPARTICLE)
+	message("including libparticle")
+	add_subdirectory(../libparticle libparticle)
+endif (NOT HAS_LIBPARTICLE)
 
 #
 
@@ -48,8 +58,10 @@ target_compile_definitions(riposte PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFI
 
 target_include_directories(riposte PRIVATE "${PROJECT_SOURCE_DIR}")
 
+target_link_libraries(riposte PRIVATE libparticle)
 target_link_libraries(riposte PRIVATE framework)
 target_link_libraries(riposte PRIVATE libnet)
+target_link_libraries(riposte PRIVATE libnfd)
 target_link_libraries(riposte PRIVATE libgg)
 
 target_link_libraries(riposte PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/FreeImage.lib)

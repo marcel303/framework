@@ -15,6 +15,10 @@ void blastEffectTestToggleIsActive();
 void blastEffectTestTick(float dt);
 void blastEffectTestDraw();
 
+void particleEditorToggleIsActive();
+void particleEditorTick(float dt);
+void particleEditorDraw();
+
 void gifCaptureToggleIsActive(bool cancel);
 void gifCaptureBegin();
 void gifCaptureEnd(bool cancel);

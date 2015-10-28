@@ -1217,6 +1217,10 @@ bool App::init()
 			framework.fillCachesWithPath(".", true);
 		}
 
+		//Spriter("char0/sprite/sprite.scml").getSpriterScene()->saveBinary("test.sbin");
+		//spriter::Scene scene;
+		//scene.loadBinary("test.sbin");
+
 		// make sure WinSock is initialised
 
 		NetSocket netSocket; // this will init WSA, since it's the first socket we create..
@@ -1965,6 +1969,8 @@ bool App::tick()
 		animationTestToggleIsActive();
 	if (keyboard.wentDown(SDLK_F4) && !(getSelectedClient() && getSelectedClient()->m_textChat->isActive()))
 		blastEffectTestToggleIsActive();
+	if (keyboard.wentDown(SDLK_F10) && !(getSelectedClient() && getSelectedClient()->m_textChat->isActive()))
+		particleEditorToggleIsActive();
 	if (keyboard.wentDown(SDLK_F11) && !(getSelectedClient() && getSelectedClient()->m_textChat->isActive()))
 		gifCaptureToggleIsActive(true);
 
@@ -2041,6 +2047,8 @@ bool App::tick()
 	animationTestTick(dt);
 
 	blastEffectTestTick(dt);
+
+	particleEditorTick(dt);
 
 	gifCaptureTick(dt);
 #endif
@@ -2290,6 +2298,7 @@ void App::draw()
 			drawText(x, y += sy, fontSize, +1.f, +1.f, "F5: Toggle Options Menu");
 			drawText(x, y += sy, fontSize, +1.f, +1.f, "F6: Toggle Statistics Menu");
 			drawText(x, y += sy, fontSize, +1.f, +1.f, "F9: (reserved)");
+			drawText(x, y += sy, fontSize, +1.f, +1.f, "F10: Toggle Particle Editor");
 			drawText(x, y += sy, fontSize, +1.f, +1.f, "F11: GIF Capture Tool");
 			drawText(x, y += sy, fontSize, +1.f, +1.f, "F12: New Round");
 			drawText(x, y += sy, fontSize, +1.f, +1.f, "T: Reload Options");
@@ -2320,6 +2329,7 @@ void App::draw()
 	#if ENABLE_DEVMODE
 		animationTestDraw();
 		blastEffectTestDraw();
+		particleEditorDraw();
 		gifCaptureTick_PostRender();
 	#endif
 
