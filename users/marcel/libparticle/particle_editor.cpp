@@ -71,9 +71,9 @@ static ParticleInfo & g_pi() { return g_piList[g_activeEditingIndex]; }
 static ParticlePool g_pool[kMaxParticleInfos];
 static ParticleEmitter g_pe[kMaxParticleInfos];
 static ParticleCallbacks g_callbacks;
-static int randomInt(int min, int max) { return min + (rand() % (max - min + 1)); }
-static float randomFloat(float min, float max) { return min + (rand() % 4096) / 4095.f * (max - min); }
-static bool getEmitterByName(const char * name, const ParticleEmitterInfo *& pei, const ParticleInfo *& pi, ParticlePool *& pool, ParticleEmitter *& pe)
+static int randomInt(void * userData, int min, int max) { return min + (rand() % (max - min + 1)); }
+static float randomFloat(void * userData, float min, float max) { return min + (rand() % 4096) / 4095.f * (max - min); }
+static bool getEmitterByName(void * userData, const char * name, const ParticleEmitterInfo *& pei, const ParticleInfo *& pi, ParticlePool *& pool, ParticleEmitter *& pe)
 {
 	for (int i = 0; i < kMaxParticleInfos; ++i)
 	{
@@ -88,7 +88,7 @@ static bool getEmitterByName(const char * name, const ParticleEmitterInfo *& pei
 	}
 	return false;
 }
-static bool checkCollision(float x1, float y1, float x2, float y2, float & t, float & nx, float & ny)
+static bool checkCollision(void * userData, float x1, float y1, float x2, float y2, float & t, float & nx, float & ny)
 {
 	const float px = 0.f;
 	const float py = 100.f;

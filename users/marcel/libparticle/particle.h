@@ -326,6 +326,7 @@ struct ParticlePool
 	Particle * tail;
 
 	ParticlePool();
+	~ParticlePool();
 
 	Particle * allocParticle();
 	Particle * freeParticle(Particle * p);
@@ -333,18 +334,35 @@ struct ParticlePool
 
 struct ParticleCallbacks
 {
-	int (*randomInt)(int min, int max);
-	float (*randomFloat)(float min, float max);
-	bool (*getEmitterByName)(const char * name, const ParticleEmitterInfo *& pei, const ParticleInfo *& pi, ParticlePool *& pool, ParticleEmitter *& pe);
-	bool (*checkCollision)(float x1, float y1, float x2, float y2, float & t, float & nx, float & ny);
+	void * userData;
+
+	int (*randomInt)(void * userData, int min, int max);
+	float (*randomFloat)(void * userData, float min, float max);
+	bool (*getEmitterByName)(void * userData, const char * name, const ParticleEmitterInfo *& pei, const ParticleInfo *& pi, ParticlePool *& pool, ParticleEmitter *& pe);
+	bool (*checkCollision)(void * userData, float x1, float y1, float x2, float y2, float & t, float & nx, float & ny);
 
 	ParticleCallbacks()
-		: randomInt(0)
+		: userData(0)
+		, randomInt(0)
 		, randomFloat(0)
 		, getEmitterByName(0)
 		, checkCollision(0)
 	{
 	}
+};
+
+struct ParticleSystem
+{
+	ParticleEmitterInfo emitterInfo;
+	ParticleInfo particleInfo;
+	ParticleEmitter emitter;
+	ParticlePool pool;
+
+	~ParticleSystem();
+
+	void tick(const ParticleCallbacks & cbs, const float gravityX, const float gravityY, float dt);
+
+	void restart();
 };
 
 bool tickParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei, const ParticleInfo & pi, const float timeStep, const float gravityX, const float gravityY, Particle & p);

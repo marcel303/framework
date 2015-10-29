@@ -903,6 +903,12 @@ ParticlePool::ParticlePool()
 {
 }
 
+ParticlePool::~ParticlePool()
+{
+	assert(head == 0);
+	assert(tail == 0);
+}
+
 Particle * ParticlePool::allocParticle()
 {
 	Particle * result = new Particle();
@@ -941,6 +947,31 @@ Particle * ParticlePool::freeParticle(Particle * p)
 
 //
 
+ParticleSystem::~ParticleSystem()
+{
+	emitter.clearParticles(pool);
+	assert(pool.head == 0);
+	assert(pool.tail == 0);
+}
+
+void ParticleSystem::tick(const ParticleCallbacks & cbs, const float gravityX, const float gravityY, float dt)
+{
+	for (Particle * p = pool.head; p; )
+		if (!tickParticle(cbs, emitterInfo, particleInfo, dt, gravityX, gravityY, *p))
+			p = pool.freeParticle(p);
+		else
+			p = p->next;
+
+	tickParticleEmitter(cbs, emitterInfo, particleInfo, pool, dt, gravityX, gravityY, emitter);
+}
+
+void ParticleSystem::restart()
+{
+	emitter.restart(pool);
+}
+
+//
+
 bool tickParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei, const ParticleInfo & pi, const float timeStep, const float gravityX, const float gravityY, Particle & p)
 {
 	assert(p.life > 0.f);
@@ -972,7 +1003,7 @@ bool tickParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei
 		float nx;
 		float ny;
 
-		if (cbs.checkCollision && cbs.checkCollision(oldX, oldY, newX, newY, t, nx, ny))
+		if (cbs.checkCollision && cbs.checkCollision(cbs.userData, oldX, oldY, newX, newY, t, nx, ny))
 		{
 			p.position[0] = oldX + (newX - oldX) * t;
 			p.position[1] = oldY + (newY - oldY) * t;
@@ -1043,7 +1074,7 @@ void handleSubEmitter(const ParticleCallbacks & cbs, const ParticleInfo & pi, co
 
 	for (int i = 0; i < pi.subEmitters[e].count; ++i)
 	{
-		const float t = cbs.randomFloat(0.f, 1.f);
+		const float t = cbs.randomFloat(cbs.userData, 0.f, 1.f);
 		if (t > pi.subEmitters[e].chance)
 			continue;
 
@@ -1051,7 +1082,8 @@ void handleSubEmitter(const ParticleCallbacks & cbs, const ParticleInfo & pi, co
 		const ParticleInfo * subPi;
 		ParticlePool * subPool;
 		ParticleEmitter * subPe;
-		if (cbs.getEmitterByName(
+		if (cbs.getEmitterByName && cbs.getEmitterByName(
+			cbs.userData,
 			pi.subEmitters[e].emitterName,
 			subPei,
 			subPi,
