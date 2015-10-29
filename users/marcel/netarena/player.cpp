@@ -2979,7 +2979,7 @@ void Player::draw() const
 		if (g_devMode)
 		{
 			setColor(colorGreen);
-			drawRect(m_pos[0] - borderSize, m_pos[1] - borderSize, m_pos[0] + borderSize, m_pos[1] + borderSize);
+			drawRectLine(m_pos[0] - borderSize, m_pos[1] - borderSize, m_pos[0] + borderSize, m_pos[1] + borderSize);
 		}
 	}
 
