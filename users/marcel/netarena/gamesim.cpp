@@ -970,6 +970,7 @@ void ParticleEffect::draw()
 			gxSetTexture(0);
 		}
 	}
+	gxPopMatrix();
 }
 
 //
