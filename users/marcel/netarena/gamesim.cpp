@@ -18,6 +18,9 @@
 
 #include "BinaryDiff.h" // fixme : remove
 
+#include <tinyxml2.h>
+using namespace tinyxml2;
+
 //#pragma optimize("", off)
 
 OPTION_DECLARE(bool, g_checkCRCs, true);
@@ -886,6 +889,91 @@ void Light::drawLight() const
 
 //
 
+void ParticleEffect::setup(const char * filename, int x, int y)
+{
+	XMLDocument d;
+
+	if (d.LoadFile(filename) == XML_NO_ERROR)
+	{
+		for (int i = 0; i < kMaxParticleSystems; ++i)
+		{
+			m_system[i] = ParticleSystem();
+		}
+
+		int emitterInfoIdx = 0;
+		for (XMLElement * emitterElem = d.FirstChildElement("emitter"); emitterElem; emitterElem = emitterElem->NextSiblingElement("emitter"))
+		{
+			if (emitterInfoIdx < kMaxParticleSystems)
+				m_system[emitterInfoIdx++].emitterInfo.load(emitterElem);
+		}
+
+		int particleInfoIdx = 0;
+		for (XMLElement * particleElem = d.FirstChildElement("particle"); particleElem; particleElem = particleElem->NextSiblingElement("particle"))
+		{
+			if (particleInfoIdx < kMaxParticleSystems)
+				m_system[particleInfoIdx++].particleInfo.load(particleElem);
+		}
+
+		m_data.m_isActive = true;
+		m_data.m_filename = filename;
+		m_data.m_x = x;
+		m_data.m_y = y;
+	}
+}
+
+void ParticleEffect::draw()
+{
+	gxPushMatrix();
+	{
+		gxTranslatef(m_data.m_x, m_data.m_y, 0.f);
+
+		for (int i = 0; i < kMaxParticleSystems; ++i)
+		{
+			ParticleSystem & ps = m_system[i];
+
+			gxSetTexture(Sprite(ps.emitterInfo.materialName).getTexture());
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+			if (ps.particleInfo.blendMode == ParticleInfo::kBlendMode_AlphaBlended)
+				setBlend(BLEND_ALPHA);
+			else if (ps.particleInfo.blendMode == ParticleInfo::kBlendMode_Additive)
+				setBlend(BLEND_ADD);
+			else
+				fassert(false);
+
+			gxBegin(GL_QUADS);
+			{
+				for (Particle * p = (ps.particleInfo.sortMode == ParticleInfo::kSortMode_OldestFirst) ? ps.pool.head : ps.pool.tail;
+								p; p = (ps.particleInfo.sortMode == ParticleInfo::kSortMode_OldestFirst) ? p->next : p->prev)
+				{
+					const float particleLife = 1.f - p->life;
+					//const float particleSpeed = std::sqrtf(p->speed[0] * p->speed[0] + p->speed[1] * p->speed[1]);
+					const float particleSpeed = p->speedScalar;
+
+					ParticleColor color(true);
+					computeParticleColor(ps.emitterInfo, ps.particleInfo, particleLife, particleSpeed, color);
+					const float size_div_2 = computeParticleSize(ps.emitterInfo, ps.particleInfo, particleLife, particleSpeed) / 2.f;
+
+					const float s = std::sinf(-p->rotation * float(M_PI) / 180.f);
+					const float c = std::cosf(-p->rotation * float(M_PI) / 180.f);
+
+					gxColor4fv(color.rgba);
+					gxTexCoord2f(0.f, 1.f); gxVertex2f(p->position[0] + (- c - s) * size_div_2, p->position[1] + (+ s - c) * size_div_2);
+					gxTexCoord2f(1.f, 1.f); gxVertex2f(p->position[0] + (+ c - s) * size_div_2, p->position[1] + (- s - c) * size_div_2);
+					gxTexCoord2f(1.f, 0.f); gxVertex2f(p->position[0] + (+ c + s) * size_div_2, p->position[1] + (- s + c) * size_div_2);
+					gxTexCoord2f(0.f, 0.f); gxVertex2f(p->position[0] + (- c + s) * size_div_2, p->position[1] + (+ s + c) * size_div_2);
+				}
+			}
+			gxEnd();
+
+			gxSetTexture(0);
+		}
+	}
+}
+
+//
+
 static const float kPortalSafeZoneSize = 10.f;
 
 void Portal::setup(float x1, float y1, float x2, float y2, int key)
@@ -1568,6 +1656,19 @@ void GameSim::serialize(NetSerializationContext & context)
 
 	m_bulletPool->serialize(context);
 
+	for (int i = 0; i < MAX_PARTICLE_EFFECTS; ++i)
+	{
+		context.SerializeBytes(&m_particleEffects[i].m_data, sizeof(m_particleEffects[i].m_data));
+
+		if (context.IsRecv() && m_particleEffects[i].m_data.m_isActive)
+		{
+			m_particleEffects[i].setup(
+				m_particleEffects[i].m_data.m_filename.c_str(),
+				m_particleEffects[i].m_data.m_x,
+				m_particleEffects[i].m_data.m_y);
+		}
+	}
+
 	// todo : serialize player animation state, since it affects game play
 
 #if ENABLE_GAMESTATE_DESYNC_DETECTION
@@ -1972,6 +2073,29 @@ void GameSim::load(const char * name)
 					LOG_ERR("too many tile transitions!");
 				}
 			}
+			else if (type == "particleeffect")
+			{
+				ParticleEffect * particleEffect = 0;
+
+				for (int i = 0; i < MAX_PARTICLE_EFFECTS; ++i)
+				{
+					if (!m_particleEffects[i].m_data.m_isActive)
+					{
+						particleEffect = &m_particleEffects[i];
+						break;
+					}
+				}
+
+				if (particleEffect == 0)
+					LOG_ERR("too many particle effects!");
+				else
+				{
+					particleEffect->setup(
+						d.getString("file", "").c_str(),
+						d.getInt("x", 0),
+						d.getInt("y", 0));
+				}
+			}
 			else if (type == "portal")
 			{
 				Portal * portal = 0;
@@ -2082,6 +2206,11 @@ void GameSim::resetGameWorld()
 
 	for (int i = 0; i < MAX_LIGHTS; ++i)
 		m_lights[i] = Light();
+
+	// reset particle effects
+
+	for (int i = 0; i < MAX_PARTICLE_EFFECTS; ++i)
+		m_particleEffects[i] = ParticleEffect();
 
 	// reset portals
 
@@ -2820,6 +2949,56 @@ void GameSim::tickPlay()
 			m_lights[i].tick(*this, dt);
 	}
 
+	// particle effects
+
+	for (int i = 0; i < MAX_PARTICLE_EFFECTS; ++i)
+	{
+		if (m_particleEffects[i].m_data.m_isActive)
+		{
+			cpuTimingBlock("ParticleEffect::tick");
+
+			struct UserData
+			{
+				GameSim * gameSim;
+				ParticleEffect * particleEffect;
+			};
+
+			UserData userData;
+			userData.gameSim = this;
+			userData.particleEffect = &m_particleEffects[i];
+
+			ParticleCallbacks cbs;
+			cbs.userData = &userData;
+			cbs.randomInt = [](void * userData, int min, int max) { return min + (rand() % (max - min + 1)); };
+			cbs.randomFloat = [](void * userData, float min, float max) { return min + (rand() & 4095) / 4095.f * (max - min); };
+			//cbs.randomInt = [](void * userData, int min, int max) { return (int)static_cast<UserData*>(userData)->gameSim->RandomInt(min, max); };
+			//cbs.randomFloat = [](void * userData, float min, float max) { return static_cast<UserData*>(userData)->gameSim->RandomFloat(min, max); };
+			cbs.getEmitterByName = [](void * _userData, const char * name, const ParticleEmitterInfo *& pei, const ParticleInfo *& pi, ParticlePool *& pool, ParticleEmitter *& pe)
+			{
+				UserData * userData = static_cast<UserData*>(_userData);
+				for (int i = 0; i < ParticleEffect::kMaxParticleSystems; ++i)
+				{
+					if (!strcmp(userData->particleEffect->m_system[i].emitterInfo.name, name))
+					{
+						pei = &userData->particleEffect->m_system[i].emitterInfo;
+						pi = &userData->particleEffect->m_system[i].particleInfo;
+						pool = &userData->particleEffect->m_system[i].pool;
+						pe = &userData->particleEffect->m_system[i].emitter;
+						return true;
+					}
+				}
+				return false;
+			};
+			// todo : add collision callback
+			//bool (*checkCollision)(void * userData, float x1, float y1, float x2, float y2, float & t, float & nx, float & ny);
+
+			for (int j = 0; j < ParticleEffect::kMaxParticleSystems; ++j)
+			{
+				m_particleEffects[i].m_system[j].tick(cbs, 0.f, GRAVITY, dt);
+			}
+		}
+	}
+
 	// portals
 
 	{
@@ -3281,6 +3460,20 @@ void GameSim::drawPlayColor(const CamParams & camParams)
 	m_particlePool->draw();
 	setBlend(BLEND_ALPHA);
 
+	// particle effects
+
+	for (int i = 0; i < MAX_PARTICLE_EFFECTS; ++i)
+	{
+		if (m_particleEffects[i].m_data.m_isActive)
+		{
+			m_particleEffects[i].draw();
+
+			// todo : draw particle effect
+
+			// todo : add layer support
+		}
+	}
+
 	// fireballs
 
 	for (int i = 0; i < MAX_FIREBALLS; ++i)
@@ -3404,6 +3597,18 @@ void GameSim::drawPlayLight(const CamParams & camParams)
 	// particles
 
 	m_particlePool->drawLight();
+
+	// particle effects
+
+	for (int i = 0; i < MAX_PARTICLE_EFFECTS; ++i)
+	{
+		if (m_particleEffects[i].m_data.m_isActive)
+		{
+			// todo : draw particle effect
+
+			// todo : add layer support. check if it is in light layer
+		}
+	}
 
 	// fireballs
 

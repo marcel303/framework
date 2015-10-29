@@ -9,6 +9,7 @@
 #include "gamedefs.h"
 #include "gametypes.h"
 #include "levelevents.h"
+#include "particle.h"
 #include "physobj.h"
 #include "Random.h"
 #include "Vec2.h"
@@ -794,6 +795,31 @@ struct Light
 	void drawLight() const;
 };
 
+struct ParticleEffect
+{
+	static const int kMaxParticleSystems = 6;
+
+	struct Data
+	{
+		Data()
+			: m_isActive(false)
+			, m_x(0)
+			, m_y(0)
+		{
+		}
+
+		bool m_isActive;
+		FixedString<16> m_filename;
+		int m_x;
+		int m_y;
+	} m_data;
+
+	ParticleSystem m_system[kMaxParticleSystems];
+
+	void setup(const char * filename, int x, int y);
+	void draw();
+};
+
 struct Portal
 {
 	Portal()
@@ -1014,6 +1040,7 @@ struct GameStateData
 
 	uint32_t Random();
 	float RandomFloat(float min, float max) { float t = (Random() & 4095) / 4095.f; return t * min + (1.f - t) * max; }
+	int RandomInt(int min, int max) { return min + (Random() % (max - min + 1)); }
 	uint32_t GetTick() const;
 	float getRoundTime() const;
 	void addTimeDilationEffect(float multiplier1, float multiplier2, float duration);
@@ -1195,6 +1222,8 @@ public:
 	Arena m_arena;
 
 	BulletPool * m_bulletPool;
+
+	ParticleEffect m_particleEffects[MAX_PARTICLE_EFFECTS];
 
 	BulletPool * m_particlePool;
 
