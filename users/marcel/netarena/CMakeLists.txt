@@ -57,6 +57,7 @@ add_executable(riposte ${source})
 target_compile_definitions(riposte PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS)
 
 target_include_directories(riposte PRIVATE "${PROJECT_SOURCE_DIR}")
+target_include_directories(riposte PRIVATE "${PROJECT_SOURCE_DIR}/SteamAPI")
 
 target_link_libraries(riposte PRIVATE libparticle)
 target_link_libraries(riposte PRIVATE framework)
@@ -64,6 +65,8 @@ target_link_libraries(riposte PRIVATE libnet)
 target_link_libraries(riposte PRIVATE libnfd)
 target_link_libraries(riposte PRIVATE libgg)
 
+target_link_libraries(riposte PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/SteamAPI/lib/win32/steam_api.lib)
+target_link_libraries(riposte PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/SteamAPI/lib/win32/sdkencryptedappticket.lib)
 target_link_libraries(riposte PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/FreeImage.lib)
 target_link_libraries(riposte PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/freetype252.lib)
 target_link_libraries(riposte PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/glew32.lib)

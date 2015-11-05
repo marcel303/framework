@@ -18,6 +18,7 @@
 #include "main.h"
 #include "mainmenu.h"
 #include "NetProtocols.h"
+#include "online.h"
 #include "OptionMenu.h"
 #include "PacketDispatcher.h"
 #include "Path.h"
@@ -26,6 +27,8 @@
 #include "settings.h"
 #include "StatTimerMenu.h"
 #include "StatTimers.h"
+#include "steam_api.h"
+#include "steam_gameserver.h"
 #include "StreamReader.h"
 #include "StringBuilder.h"
 #include "textfield.h"
@@ -119,6 +122,15 @@ OPTION_ALIAS(s_noBgm, "nobgm");
 
 OPTION_EXTERN(int, g_playerCharacterIndex);
 OPTION_EXTERN(bool, g_noSound);
+
+OPTION_DECLARE(int, STEAM_AUTHENTICATION_PORT, 22768);
+OPTION_DECLARE(int, STEAM_SERVER_PORT, 22769);
+OPTION_DECLARE(int, STEAM_MASTER_SERVER_UPDATER_PORT, 22770);
+OPTION_DECLARE(std::string, STEAM_SERVER_VERSION, "0.100");
+OPTION_DEFINE(int, STEAM_AUTHENTICATION_PORT, "Steam/Authentication Port");
+OPTION_DEFINE(int, STEAM_SERVER_PORT, "Steam/Server Port");
+OPTION_DEFINE(int, STEAM_MASTER_SERVER_UPDATER_PORT, "Steam/Master Service Updater Port");
+OPTION_DEFINE(std::string, STEAM_SERVER_VERSION, "Steam/Server Version");
 
 //
 
@@ -1207,6 +1219,42 @@ bool App::init()
 
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
+		if (USE_STEAMAPI)
+		{
+			if (!FileStream::Exists("steam_appid.txt"))
+			{
+				FileStream stream("steam_appid.txt", (OpenMode)(OpenMode_Write | OpenMode_Text));
+				StreamWriter writer(&stream, false);
+				writer.WriteText("480");
+			}
+
+			if (!SteamAPI_Init())
+				return false;
+
+			if (!SteamGameServer_Init(INADDR_ANY, STEAM_AUTHENTICATION_PORT, STEAM_SERVER_PORT, STEAM_MASTER_SERVER_UPDATER_PORT, eServerModeAuthenticationAndSecure, ((std::string)STEAM_SERVER_VERSION).c_str()))
+				return false;
+
+			SteamGameServer()->SetModDir("riposte");
+			SteamGameServer()->SetProduct("SteamworksExample");
+			SteamGameServer()->SetGameDescription("Steamworks Example");
+			SteamGameServer()->LogOnAnonymous();
+			SteamGameServer()->EnableHeartbeats(true);
+
+			//
+
+			SteamGameServer()->SetMaxPlayerCount(MAX_PLAYERS);
+			SteamGameServer()->SetPasswordProtected(false);
+			SteamGameServer()->SetServerName("Vir's Server");
+			SteamGameServer()->SetBotPlayerCount(0);
+			SteamGameServer()->SetMapName("Highlands");
+
+			//SteamGameServer()->EnableHeartbeats(false);
+			//SteamGameServer()->LogOff();
+			//SteamGameServer_Shutdown();
+
+			g_online = new OnlineSteam();
+		}
+
 		SDL_ShowCursor(0);
 
 		if (!g_devMode && g_precacheResources)
@@ -1227,17 +1275,21 @@ bool App::init()
 
 		// input the user's display name
 
-		if (g_devMode)
-		{
-			m_displayName = "Developer";
-		}
-		else if (ITCHIO_BUILD)
+		if (ITCHIO_BUILD)
 		{
 			m_displayName = "Player 1";
 		}
 		else if (DEMOMODE)
 		{
 			m_displayName = "Riposte";
+		}
+		else if (USE_STEAMAPI)
+		{
+			m_displayName = SteamFriends()->GetPersonaName();
+		}
+		else if (g_devMode)
+		{
+			m_displayName = "Developer";
 		}
 		else
 		{
@@ -1350,6 +1402,12 @@ bool App::init()
 		m_menuMgr->push(new Title());
 	#endif
 
+		if (g_online)
+		{
+			//g_online->lobbyFindOrCreateBegin(0);
+			//g_online->lobbyCreateBegin(0);
+		}
+
 		return true;
 	}
 
@@ -1433,6 +1491,13 @@ void App::shutdown()
 
 	delete m_packetDispatcher;
 	m_packetDispatcher = 0;
+
+	if (USE_STEAMAPI)
+	{
+		SteamGameServer_Shutdown();
+
+		SteamAPI_Shutdown();
+	}
 
 	framework.shutdown();
 }
@@ -1802,6 +1867,24 @@ bool App::tick()
 	// shared update
 
 	framework.process();
+
+	// steam update
+
+	if (USE_STEAMAPI)
+	{
+		SteamAPI_RunCallbacks();
+		SteamGameServer_RunCallbacks();
+	}
+
+	if (g_online)
+	{
+		g_online->tick();
+
+		// fixme : remove !
+
+		if (keyboard.wentDown(SDLK_i))
+			g_online->showInviteFriendsUi();
+	}
 
 	// mouse cursor
 

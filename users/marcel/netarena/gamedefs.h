@@ -53,6 +53,7 @@
 // special application modes
 OPTION_DECLARE(bool, DEMOMODE, false);
 OPTION_DECLARE(bool, RECORDMODE, false);
+OPTION_DECLARE(bool, USE_STEAMAPI, true);
 
 // -- prototypes --
 OPTION_DECLARE(bool, PROTO_TIMEDILATION_ON_KILL, true);

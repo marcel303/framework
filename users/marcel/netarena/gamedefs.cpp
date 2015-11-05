@@ -3,8 +3,10 @@
 
 OPTION_DEFINE(bool, DEMOMODE, "App/Demo Mode");
 OPTION_DEFINE(bool, RECORDMODE, "App/Record Mode");
+OPTION_DEFINE(bool, USE_STEAMAPI, "App/Use Steam API");
 OPTION_ALIAS(DEMOMODE, "demomode");
 OPTION_ALIAS(RECORDMODE, "recordmode");
+OPTION_ALIAS(USE_STEAMAPI, "steamapi");
 
 // -- prototypes --
 OPTION_DEFINE(bool, PROTO_TIMEDILATION_ON_KILL, "Player/Time Dilation On Kill/Enabled");
