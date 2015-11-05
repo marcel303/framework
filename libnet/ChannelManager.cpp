@@ -33,6 +33,7 @@ bool ChannelManager::Initialize(PacketDispatcher * packetDispatcher, ChannelHand
 {
 	LOG_DBG("ChannelManager::Initialize: serverPort=%d, enableServer=%d", (int)serverPort, (int)enableServer);
 	Assert(m_handler == 0);
+	Assert(handler != 0);
 
 	m_packetDispatcher = packetDispatcher;
 	m_handler = handler;
@@ -94,6 +95,11 @@ void ChannelManager::Shutdown(bool sendDisconnectNotification)
 	m_socket = nullSocket;
 
 	LOG_DBG("ChannelManager::Shutdown [done]");
+}
+
+bool ChannelManager::IsInitialized()
+{
+	return m_handler != 0;
 }
 
 void ChannelManager::SetChannelTimeoutMS(uint32_t timeout)

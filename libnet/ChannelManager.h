@@ -18,6 +18,7 @@ public:
 	bool Initialize(PacketDispatcher * packetDispatcher, ChannelHandler * handler, uint16_t serverPort, bool enableServer, uint32_t serverVersion);
 	void Shutdown(bool sendDisconnectNotification);
 
+	bool IsInitialized();
 	void SetChannelTimeoutMS(uint32_t timeout);
 
 	Channel * CreateListenChannel(ChannelPool pool);
