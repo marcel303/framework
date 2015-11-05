@@ -2956,7 +2956,7 @@ void GameSim::tickPlay()
 	{
 		if (m_particleEffects[i].m_data.m_isActive)
 		{
-			cpuTimingBlock("ParticleEffect::tick");
+			cpuTimingBlock(particleEffectTick);
 
 			struct UserData
 			{
