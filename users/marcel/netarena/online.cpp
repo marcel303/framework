@@ -282,3 +282,52 @@ void OnlineSteam::showInviteFriendsUi()
 }
 
 #endif
+
+//
+
+OnlineLAN::OnlineLAN()
+{
+}
+
+OnlineLAN::~OnlineLAN()
+{
+}
+
+void OnlineLAN::tick()
+{
+}
+
+OnlineRequestId OnlineLAN::lobbyCreateBegin(OnlineLobbyFindOrCreateHandler * callback)
+{
+	return kOnlineRequestIdInvalid;
+}
+
+void OnlineLAN::lobbyCreateEnd(OnlineRequestId id)
+{
+	Assert(false);
+}
+
+OnlineRequestId OnlineLAN::lobbyFindOrCreateBegin(OnlineLobbyFindOrCreateHandler * callback)
+{
+	return kOnlineRequestIdInvalid;
+}
+
+void OnlineLAN::lobbyFindOrCreateEnd(OnlineRequestId id)
+{
+	Assert(false);
+}
+
+OnlineRequestId OnlineLAN::lobbyLeaveBegin(OnlineLobbyLeaveHandler * callback)
+{
+	return kOnlineRequestIdInvalid;
+}
+
+void OnlineLAN::lobbyLeaveEnd(OnlineRequestId id)
+{
+	Assert(false);
+}
+
+void OnlineLAN::showInviteFriendsUi()
+{
+	Assert(false);
+}

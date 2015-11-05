@@ -62,7 +62,7 @@ class OnlineSteam : public Online
 
 public:
 	OnlineSteam();
-	~OnlineSteam();
+	virtual ~OnlineSteam();
 
 	virtual void tick();
 
@@ -79,5 +79,25 @@ public:
 };
 
 #endif
+
+class OnlineLAN : public Online
+{
+public:
+	OnlineLAN();
+	virtual ~OnlineLAN();
+
+	virtual void tick();
+
+	virtual OnlineRequestId lobbyCreateBegin(OnlineLobbyFindOrCreateHandler * callback);
+	virtual void lobbyCreateEnd(OnlineRequestId id);
+
+	virtual OnlineRequestId lobbyFindOrCreateBegin(OnlineLobbyFindOrCreateHandler * callback);
+	virtual void lobbyFindOrCreateEnd(OnlineRequestId id);
+
+	virtual OnlineRequestId lobbyLeaveBegin(OnlineLobbyLeaveHandler * callback);
+	virtual void lobbyLeaveEnd(OnlineRequestId id);
+
+	virtual void showInviteFriendsUi();
+};
 
 extern Online * g_online;
