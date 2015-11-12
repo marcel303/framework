@@ -36,7 +36,7 @@ public:
 	virtual OnlineRequestId lobbyLeaveBegin() = 0;
 	virtual void lobbyLeaveEnd(OnlineRequestId id) = 0;
 
-	virtual uint64_t getLobbyOwnerAddress() = 0;
+	virtual bool getLobbyOwnerAddress(uint64_t & lobbyOwnerAddress) = 0;
 
 	virtual void showInviteFriendsUi() = 0;
 };
@@ -101,7 +101,7 @@ public:
 	virtual OnlineRequestId lobbyLeaveBegin();
 	virtual void lobbyLeaveEnd(OnlineRequestId id);
 
-	virtual uint64_t getLobbyOwnerAddress();
+	virtual bool getLobbyOwnerAddress(uint64_t & lobbyOwnerAddress);
 
 	virtual void showInviteFriendsUi();
 };
@@ -139,7 +139,7 @@ public:
 	virtual OnlineRequestId lobbyLeaveBegin();
 	virtual void lobbyLeaveEnd(OnlineRequestId id);
 
-	virtual uint64_t getLobbyOwnerAddress();
+	virtual bool getLobbyOwnerAddress(uint64_t & lobbyOwnerAddress);
 
 	virtual void showInviteFriendsUi();
 };

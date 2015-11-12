@@ -155,6 +155,7 @@ public:
 	void leaveGame(Client * client);
 
 	Client * connect(const char * address);
+	Client * connect(const NetAddress & address);
 	void destroyClient(int index);
 	void selectClient(int index);
 	Client * getSelectedClient();

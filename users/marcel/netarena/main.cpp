@@ -175,13 +175,24 @@ static void HandleAction(const std::string & action, const Dictionary & args)
 	if (action == "connect")
 	{
 		const std::string address = args.getString("address", "");
+		const uint64_t userData = args.getInt64("userdata", 0);
 
 		if (!address.empty())
 		{
-			g_connect = address;
-			g_connectLocal = false;
+			if (USE_STEAMAPI)
+			{
+				NetAddress netAddress;
+				netAddress.SetFromString(address.c_str(), NET_PORT);
+				netAddress.m_userData = userData;
+				g_app->connect(netAddress);
+			}
+			else
+			{
+				g_connect = address;
+				g_connectLocal = false;
 
-			g_app->findGame();
+				g_app->findGame();
+			}
 		}
 	}
 
@@ -1766,7 +1777,14 @@ void App::leaveGame(Client * client)
 
 Client * App::connect(const char * address)
 {
-	LOG_DBG("connect: %s", address);
+	const NetAddress netAddress(address, NET_PORT);
+
+	return connect(netAddress);
+}
+
+Client * App::connect(const NetAddress & address)
+{
+	LOG_DBG("connect: %s (%llx)", address.ToString(true).c_str(), address.m_userData);
 
 	Channel * channel = m_channelMgr->CreateChannel(ChannelPool_Client);
 
@@ -1774,16 +1792,7 @@ Client * App::connect(const char * address)
 	if (g_fakeIncompatibleServerVersion)
 		m_channelMgr->m_serverVersion = -1;
 
-	if (USE_STEAMAPI)
-	{
-		NetAddress netAddress(address, NET_PORT);
-		netAddress.m_userData = g_online->getLobbyOwnerAddress();
-		Verify(channel->Connect(netAddress));
-	}
-	else
-	{
-		Verify(channel->Connect(NetAddress(address, NET_PORT)));
-	}
+	Verify(channel->Connect(address));
 
 	m_channelMgr->m_serverVersion = serverVersion;
 
@@ -2361,15 +2370,28 @@ void App::tickNet()
 
 						m_host->m_gameSim.setGameState(kGameState_OnlineMenus);
 
-						connect("127.0.0.1");
+						uint64_t lobbyOwnerAddress;
+						if (g_online->getLobbyOwnerAddress(lobbyOwnerAddress))
+						{
+							NetAddress netAddress;
+							netAddress.SetFromString("127.0.0.1", NET_PORT);
+							netAddress.m_userData = lobbyOwnerAddress;
+							connect(netAddress);
 
-					#if ENABLE_NETWORKING_DEBUGS
-						if (g_testSteamMatchmaking)
-							findGame();
-					#endif
+						#if ENABLE_NETWORKING_DEBUGS
+							if (g_testSteamMatchmaking)
+								findGame();
+						#endif
+						}
+						else
+						{
+							stopHosting();
+						}
 					}
 					else
+					{
 						setNetState(NetState_HostDestroy);
+					}
 				}
 			}
 			else
@@ -2716,7 +2738,16 @@ void App::debugDraw()
 	#if ENABLE_NETWORKING
 		m_discoveryUi->clear();
 
-		const auto serverList = m_discoveryService->getServerList();
+		auto serverList = m_discoveryService->getServerList();
+
+		uint64_t lobbyOwnerAddress;
+		if (g_online->getLobbyOwnerAddress(lobbyOwnerAddress))
+		{
+			NetSessionDiscovery::ServerInfo serverInfo;
+			serverInfo.m_address.Set(127, 0, 0, 1, NET_PORT);
+			serverInfo.m_address.m_userData = lobbyOwnerAddress;
+			serverList.push_back(serverInfo);
+		}
 
 		for (size_t i = 0; i < serverList.size(); ++i)
 		{
@@ -2726,10 +2757,11 @@ void App::debugDraw()
 			sprintf(name, "connect_%d", i);
 			Dictionary & button = (*m_discoveryUi)[name];
 			char props[1024];
-			sprintf(props, "type:button name:%s x:%d y:0 action:connect address:%s image:button.png image_over:button-over.png image_down:button-down.png text_color:000000 font:calibri.ttf font_size:24",
+			sprintf(props, "type:button name:%s x:%d y:0 action:connect address:%s userdata:%llu image:button.png image_over:button-over.png image_down:button-down.png text_color:000000 font:calibri.ttf font_size:24",
 				name,
 				i * 300,
 				serverInfo.m_address.ToString(false).c_str(),
+				serverInfo.m_address.m_userData,
 				name);
 			button.parse(props);
 			button.setString("text", serverInfo.m_address.ToString(false).c_str());

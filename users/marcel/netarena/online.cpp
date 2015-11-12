@@ -423,10 +423,18 @@ void OnlineSteam::lobbyLeaveEnd(OnlineRequestId id)
 	finalizeCall();
 }
 
-uint64_t OnlineSteam::getLobbyOwnerAddress()
+bool OnlineSteam::getLobbyOwnerAddress(uint64_t & lobbyOwnerAddress)
 {
-	Assert(m_lobbyId.IsLobby());
-	return SteamMatchmaking()->GetLobbyOwner(m_lobbyId).ConvertToUint64();
+	if (m_lobbyId.IsLobby())
+	{
+		const CSteamID ownerId = SteamMatchmaking()->GetLobbyOwner(m_lobbyId);
+		if (ownerId.IsValid())
+		{
+			lobbyOwnerAddress = ownerId.ConvertToUint64();
+			return true;
+		}
+	}
+	return false;
 }
 
 void OnlineSteam::showInviteFriendsUi()
@@ -542,10 +550,10 @@ void OnlineLAN::lobbyLeaveEnd(OnlineRequestId id)
 	Assert(false);
 }
 
-uint64_t OnlineLAN::getLobbyOwnerAddress()
+bool OnlineLAN::getLobbyOwnerAddress(uint64_t & lobbyOwnerAddress)
 {
 	Assert(false);
-	return 0;
+	return false;
 }
 
 void OnlineLAN::showInviteFriendsUi()
