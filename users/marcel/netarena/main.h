@@ -78,8 +78,10 @@ public:
 	ChannelManager * m_channelMgr;
 	RpcManager * m_rpcMgr;
 
-#if ENABLE_NETWORKING
+#if ENABLE_NETWORKING_DISCOVERY
 	NetSessionDiscovery::Service * m_discoveryService;
+#endif
+#if ENABLE_NETWORKING
 	Ui * m_discoveryUi;
 #endif
 

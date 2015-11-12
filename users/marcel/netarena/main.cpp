@@ -1138,8 +1138,10 @@ App::App()
 	, m_packetDispatcher(0)
 	, m_channelMgr(0)
 	, m_rpcMgr(0)
-#if ENABLE_NETWORKING
+#if ENABLE_NETWORKING_DISCOVERY
 	, m_discoveryService(0)
+#endif
+#if ENABLE_NETWORKING
 	, m_discoveryUi(0)
 #endif
 	, m_selectedClient(-1)
@@ -1165,8 +1167,10 @@ App::~App()
 	Assert(m_channelMgr == 0);
 	Assert(m_rpcMgr == 0);
 
-#if ENABLE_NETWORKING
+#if ENABLE_NETWORKING_DISCOVERY
 	Assert(m_discoveryService == 0);
+#endif
+#if ENABLE_NETWORKING
 	Assert(m_discoveryUi == 0);
 #endif
 
@@ -1361,10 +1365,11 @@ bool App::init()
 		m_channelMgr = new ChannelManager();
 		m_rpcMgr = new RpcManager(m_channelMgr);
 
-	#if ENABLE_NETWORKING
+	#if ENABLE_NETWORKING_DISCOVERY
 		m_discoveryService = new NetSessionDiscovery::Service();
 		m_discoveryService->init(2, 10);
-
+	#endif
+	#if ENABLE_NETWORKING
 		m_discoveryUi = new Ui();
 	#endif
 
@@ -1518,7 +1523,9 @@ void App::shutdown()
 #if ENABLE_NETWORKING
 	delete m_discoveryUi;
 	m_discoveryUi = 0;
+#endif
 
+#if ENABLE_NETWORKING_DISCOVERY
 	delete m_discoveryService;
 	m_discoveryService = 0;
 #endif
@@ -1990,9 +1997,10 @@ bool App::tick()
 
 	// debug UI
 
-#if ENABLE_NETWORKING
+#if ENABLE_NETWORKING_DISCOVERY
 	m_discoveryService->update(m_isHost);
-	
+#endif
+#if ENABLE_NETWORKING	
 	m_discoveryUi->process();
 #endif
 
@@ -2777,20 +2785,29 @@ void App::debugDraw()
 
 	if (UI_DEBUG_VISIBLE)
 	{
+		std::vector<NetSessionDiscovery::ServerInfo> serverList;
+
+		if (USE_STEAMAPI)
+		{
+			uint64_t lobbyOwnerAddress;
+			if (g_online->getLobbyOwnerAddress(lobbyOwnerAddress))
+			{
+				NetSessionDiscovery::ServerInfo serverInfo;
+				serverInfo.m_address.Set(127, 0, 0, 1, NET_PORT);
+				serverInfo.m_address.m_userData = lobbyOwnerAddress;
+				serverList.push_back(serverInfo);
+			}
+		}
+	#if ENABLE_NETWORKING_DISCOVERY
+		else
+		{
+			serverList = m_discoveryService->getServerList();
+		}
+	#endif
+
 	#if ENABLE_NETWORKING
 		m_discoveryUi->clear();
-
-		auto serverList = m_discoveryService->getServerList();
-
-		uint64_t lobbyOwnerAddress;
-		if (g_online->getLobbyOwnerAddress(lobbyOwnerAddress))
-		{
-			NetSessionDiscovery::ServerInfo serverInfo;
-			serverInfo.m_address.Set(127, 0, 0, 1, NET_PORT);
-			serverInfo.m_address.m_userData = lobbyOwnerAddress;
-			serverList.push_back(serverInfo);
-		}
-
+	
 		for (size_t i = 0; i < serverList.size(); ++i)
 		{
 			const auto & serverInfo = serverList[i];
