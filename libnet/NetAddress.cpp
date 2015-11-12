@@ -13,6 +13,7 @@ void NetAddress::Set(uint32_t address, uint16_t port)
 	// Assign address / port number.
 	m_address = address;
 	m_port = port;
+	m_userData = 0;
 
 	// Setup sockaddr_in structure.
 	memset(&m_socketAddress, 0, sizeof(m_socketAddress));

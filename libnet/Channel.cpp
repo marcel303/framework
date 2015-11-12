@@ -457,7 +457,7 @@ bool Channel::SendReliable(const Packet & packet)
 	return true;
 }
 
-bool Channel::SendSelf(const Packet & packet, uint32_t delay, NetAddress * address)
+bool Channel::SendSelf(const Packet & packet, uint32_t delay, const NetAddress * address)
 {
 	NetAssert(m_state != ChannelState_Disconnected);
 

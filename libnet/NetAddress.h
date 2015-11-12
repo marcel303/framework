@@ -53,6 +53,8 @@ public:
 
 	std::string ToString(bool includePortNumber) const;
 
+	uint64_t m_userData;
+
 private:
 	uint32_t m_address;
 	uint16_t m_port;

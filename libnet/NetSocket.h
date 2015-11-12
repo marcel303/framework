@@ -18,13 +18,22 @@
 class NetSocket
 {
 public:
-	NetSocket();
-	~NetSocket();
+	virtual ~NetSocket() { }
+
+	virtual bool Send(const void * data, uint32_t size, NetAddress * address) = 0;
+	virtual bool Receive(void * out_data, uint32_t maxSize, uint32_t * out_size, NetAddress * out_address) = 0;
+};
+
+class NetSocketUDP : public NetSocket
+{
+public:
+	NetSocketUDP();
+	~NetSocketUDP();
 
 	bool Bind(uint16_t port, bool broadcast = false);
 
-	bool Send(const void * data, uint32_t size, NetAddress * address);
-	bool Receive(void * out_data, uint32_t maxSize, uint32_t * out_size, NetAddress * out_address);
+	virtual bool Send(const void * data, uint32_t size, NetAddress * address);
+	virtual bool Receive(void * out_data, uint32_t maxSize, uint32_t * out_size, NetAddress * out_address);
 
 private:
 	bool CreateSocket();

@@ -12,9 +12,9 @@
 	#define INVALID_SOCKET (~0)
 #endif
 
-uint32_t NetSocket::m_socketCount = 0;
+uint32_t NetSocketUDP::m_socketCount = 0;
 
-NetSocket::NetSocket()
+NetSocketUDP::NetSocketUDP()
 {
 	m_socketCount++;
 
@@ -26,7 +26,7 @@ NetSocket::NetSocket()
 	CreateSocket();
 }
 
-NetSocket::~NetSocket()
+NetSocketUDP::~NetSocketUDP()
 {
 	DestroySocket();
 
@@ -38,7 +38,7 @@ NetSocket::~NetSocket()
 #endif
 }
 
-bool NetSocket::Bind(uint16_t port, bool broadcast)
+bool NetSocketUDP::Bind(uint16_t port, bool broadcast)
 {
 	LOG_DBG("NetSocket::Bind: port=%d, broadcast=%d", (int)port, (int)broadcast);
 
@@ -84,7 +84,7 @@ bool NetSocket::Bind(uint16_t port, bool broadcast)
 	return true;
 }
 
-bool NetSocket::Send(const void * data, uint32_t size, NetAddress * address)
+bool NetSocketUDP::Send(const void * data, uint32_t size, NetAddress * address)
 {
 	NetAddress * dst = address ? address : &m_peerAddress;
 
@@ -110,7 +110,7 @@ bool NetSocket::Send(const void * data, uint32_t size, NetAddress * address)
 	return true;
 }
 
-bool NetSocket::Receive(void * out_data, uint32_t maxSize, uint32_t * out_size, NetAddress * out_address)
+bool NetSocketUDP::Receive(void * out_data, uint32_t maxSize, uint32_t * out_size, NetAddress * out_address)
 {
 	sockaddr_in address;
 #if defined(WINDOWS)
@@ -140,7 +140,7 @@ bool NetSocket::Receive(void * out_data, uint32_t maxSize, uint32_t * out_size, 
 	return true;
 }
 
-bool NetSocket::CreateSocket()
+bool NetSocketUDP::CreateSocket()
 {
 	m_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
@@ -162,7 +162,7 @@ bool NetSocket::CreateSocket()
 	return true;
 }
 
-bool NetSocket::DestroySocket()
+bool NetSocketUDP::DestroySocket()
 {
 	#if defined(WINDOWS)
 	closesocket(m_socket);
@@ -174,7 +174,7 @@ bool NetSocket::DestroySocket()
 }
 
 #if defined(WINDOWS)
-bool NetSocket::WinSockInitialize()
+bool NetSocketUDP::WinSockInitialize()
 {
 	WORD version = MAKEWORD(2, 0);
 	WSADATA wsaData;
@@ -195,7 +195,7 @@ bool NetSocket::WinSockInitialize()
 	return true;
 }
 
-bool NetSocket::WinSockShutdown()
+bool NetSocketUDP::WinSockShutdown()
 {
 	WSACleanup();
 

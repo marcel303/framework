@@ -15,7 +15,7 @@ public:
 	ChannelManager();
 	~ChannelManager();
 
-	bool Initialize(PacketDispatcher * packetDispatcher, ChannelHandler * handler, uint16_t serverPort, bool enableServer, uint32_t serverVersion);
+	bool Initialize(PacketDispatcher * packetDispatcher, ChannelHandler * handler, SharedNetSocket socket, bool enableServer, uint32_t serverVersion);
 	void Shutdown(bool sendDisconnectNotification);
 
 	bool IsInitialized();

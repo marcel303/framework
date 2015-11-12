@@ -29,25 +29,16 @@ ChannelManager::~ChannelManager()
 	NetAssert(m_listenChannel == 0);
 }
 
-bool ChannelManager::Initialize(PacketDispatcher * packetDispatcher, ChannelHandler * handler, uint16_t serverPort, bool enableServer, uint32_t serverVersion)
+bool ChannelManager::Initialize(PacketDispatcher * packetDispatcher, ChannelHandler * handler, SharedNetSocket socket, bool enableServer, uint32_t serverVersion)
 {
-	LOG_DBG("ChannelManager::Initialize: serverPort=%d, enableServer=%d", (int)serverPort, (int)enableServer);
+	LOG_DBG("ChannelManager::Initialize: enableServer=%d", (int)enableServer);
 	Assert(m_handler == 0);
 	Assert(handler != 0);
 
 	m_packetDispatcher = packetDispatcher;
 	m_handler = handler;
 
-	m_socket = new NetSocket();
-
-	if (serverPort != 0)
-	{
-		if (m_socket->Bind(serverPort) == false)
-		{
-			Shutdown(false);
-			return false;
-		}
-	}
+	m_socket = socket;
 
 	if (enableServer)
 	{

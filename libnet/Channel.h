@@ -50,7 +50,7 @@ public:
 
 	bool SendUnreliable(const Packet & packet, bool sendImmediately);
 	bool SendReliable(const Packet & packet);
-	bool SendSelf(const Packet & packet, uint32_t delay, NetAddress * address = 0);
+	bool SendSelf(const Packet & packet, uint32_t delay, const NetAddress * address = 0);
 
 	void HandlePing(Packet & packet);
 	void HandlePong(Packet & packet);

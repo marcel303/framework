@@ -1142,7 +1142,10 @@ static void TestRpc()
 	uint32_t testRpcCall1 = rpcMgr.Register("TestRpcCall1", TestRpcCall1);
 	uint32_t testRpcCall2 = rpcMgr.Register("TestRpcCall2", TestRpcCall2);
 
-	channelMgr.Initialize(&packetDispatcher, nullptr, 12345, true, 0);
+	NetSocketUDP * socketUDP = new NetSocketUDP();
+	socketUDP->Bind(12345);
+	SharedNetSocket socket(socketUDP);
+	channelMgr.Initialize(&packetDispatcher, nullptr, socket, true, 0);
 
 	packetDispatcher.RegisterProtocol(PROTOCOL_CHANNEL, &channelMgr);
 	packetDispatcher.RegisterProtocol(PROTOCOL_RPC, &rpcMgr);
@@ -1504,7 +1507,10 @@ int main(int argc, char * argv[])
 		MyChannelHandler channelHandler(&packetDispatcher);
 		
 		ChannelManager channelMgr;
-		channelMgr.Initialize(&packetDispatcher, &channelHandler, listenPort, isServer, 0);
+		NetSocketUDP * socketUDP = new NetSocketUDP();
+		socketUDP->Bind(listenPort);
+		SharedNetSocket socket(socketUDP);
+		channelMgr.Initialize(&packetDispatcher, &channelHandler, socket, isServer, 0);
 
 		packetDispatcher.RegisterProtocol(PROTOCOL_CHANNEL, &channelMgr);
 
