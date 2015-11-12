@@ -1776,9 +1776,9 @@ Client * App::connect(const char * address)
 
 	if (USE_STEAMAPI)
 	{
-		NetAddress address;
-		address.m_userData = g_online->getLobbyOwnerAddress();
-		Verify(channel->Connect(address));
+		NetAddress netAddress(address, NET_PORT);
+		netAddress.m_userData = g_online->getLobbyOwnerAddress();
+		Verify(channel->Connect(netAddress));
 	}
 	else
 	{

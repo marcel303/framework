@@ -480,7 +480,7 @@ bool NetSocketSteam::Receive(void * out_data, uint32_t maxSize, uint32_t * out_s
 				if (readSize == packetSize)
 				{
 					*out_size = readSize;
-					out_address->Set(0, 0);
+					out_address->Set(127, 0, 0, 1, 666);
 					out_address->m_userData = fromId.ConvertToUint64();
 					return true;
 				}
