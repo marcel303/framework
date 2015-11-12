@@ -352,6 +352,7 @@ public:
 	
 	std::string getString(const char * name, const char * _default) const;
 	int getInt(const char * name, int _default) const;
+	int64_t getInt64(const char * name, int64_t _default) const;
 	bool getBool(const char * name, bool _default) const;
 	float getFloat(const char * name, float _default) const;
 	void * getPtr(const char * name, void * _default) const;

@@ -1663,6 +1663,16 @@ int Dictionary::getInt(const char * name, int _default) const
 		return _default;
 }
 
+int64_t Dictionary::getInt64(const char * name, int64_t _default) const
+{
+	// fixme : _atoi64 is windows only?
+	Map::const_iterator i = m_map.find(name);
+	if (i != m_map.end())
+		return _atoi64(i->second.c_str());
+	else
+		return _default;
+}
+
 bool Dictionary::getBool(const char * name, bool _default) const
 {
 	return getInt(name, _default) != 0;
