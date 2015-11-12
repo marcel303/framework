@@ -9,6 +9,7 @@
 #include "gametypes.h"
 #include "libnet_forward.h"
 #include "menu.h"
+#include "online.h"
 #include "Options.h"
 
 OPTION_EXTERN(bool, g_devMode);
@@ -35,13 +36,24 @@ namespace NetSessionDiscovery
 	class Service;
 }
 
-class App : public ChannelHandler
+class App : public ChannelHandler, public OnlineCallbacks
 {
 public:
 	enum AppState
 	{
 		AppState_Offline,
 		AppState_Online
+	};
+
+	enum NetState
+	{
+		NetState_Offline,
+		NetState_HostCreate,
+		NetState_HostDestroy,
+		NetState_LobbyCreate,
+		NetState_LobbyJoin,
+		NetState_LobbyLeave,
+		NetState_Online
 	};
 
 	struct ClientInfo
@@ -56,8 +68,11 @@ public:
 	};
 
 	AppState m_appState;
+	NetState m_netState;
 
 	bool m_isHost;
+	bool m_isMatchmaking;
+	bool m_matchmakingResult;
 
 	PacketDispatcher * m_packetDispatcher;
 	ChannelManager * m_channelMgr;
@@ -104,6 +119,14 @@ public:
 	virtual void CL_OnChannelConnect(Channel * channel) { }
 	virtual void CL_OnChannelDisconnect(Channel * channel);
 
+	// OnlineCallbacks
+	virtual void OnOnlineLobbyCreateResult(OnlineRequestId requestId, bool success);
+	virtual void OnOnlineLobbyJoinResult(OnlineRequestId requestId, bool success);
+	virtual void OnOnlineLobbyLeaveResult(OnlineRequestId requestId, bool success);
+
+	virtual void OnOnlineLobbyMemberJoined(OnlineLobbyMemberId memberId);
+	virtual void OnOnlineLobbyMemberLeft(OnlineLobbyMemberId memberId);
+
 	// RpcHandler
 	static void handleRpc(Channel * channel, uint32_t method, BitStream & bitStream);
 
@@ -115,6 +138,7 @@ public:
 	void shutdown();
 
 	void setAppState(AppState state);
+	void setNetState(NetState state);
 	void quit();
 
 	std::string getUserSettingsDirectory();
@@ -122,8 +146,10 @@ public:
 	void saveUserSettings();
 	void loadUserSettings();
 
-	bool startHosting();
+	void startHosting();
 	void stopHosting();
+
+	bool pollMatchmaking(bool & isDone, bool & success);
 
 	bool findGame();
 	void leaveGame(Client * client);
@@ -138,8 +164,10 @@ public:
 	void debugSyncGameSims();
 
 	bool tick();
+	void tickNet();
 	void tickBgm();
 	void draw();
+	void debugDraw();
 
 	void netAction(Channel * channel, NetAction action, uint8_t param1, uint8_t param2, const std::string & param3 = "");
 	void netSyncGameSim(Channel * channel);

@@ -13,8 +13,10 @@ namespace NetSessionDiscovery
 
 	void Service::init(int broadcastInterval, int purgeTime)
 	{
-		m_socket = new NetSocket();
-		m_socket->Bind(8888, true);
+		NetSocketUDP * socketUDP = new NetSocketUDP();
+		socketUDP->Bind(8888, true);
+
+		m_socket = socketUDP;
 		m_broadcastInterval = broadcastInterval * 1000;
 		m_nextBroadcastTime = 0;
 		m_purgeTime = purgeTime * 1000;

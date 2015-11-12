@@ -54,7 +54,7 @@ source_group("Game Files" FILES ${GAME_FILES})
 
 add_executable(riposte ${source})
 
-target_compile_definitions(riposte PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS)
+target_compile_definitions(riposte PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)
 
 target_include_directories(riposte PRIVATE "${PROJECT_SOURCE_DIR}")
 target_include_directories(riposte PRIVATE "${PROJECT_SOURCE_DIR}/SteamAPI")

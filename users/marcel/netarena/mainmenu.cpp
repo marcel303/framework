@@ -1,5 +1,3 @@
-#define NOMINMAX // grr windows
-
 #include "Channel.h"
 #include "client.h"
 #include "customize.h"
@@ -155,6 +153,12 @@ bool MainMenu::tick(float dt)
 		s_lastGamepad = gamepad[0];
 	}
 
+	if (g_app->m_netState > App::NetState_Offline && g_app->m_netState < App::NetState_Online)
+	{
+		// don't process menu interactions until we're done starting hosting
+		return false;
+	}
+
 	//
 
 	m_menuNav->tick(dt);
@@ -165,16 +169,7 @@ bool MainMenu::tick(float dt)
 	{
 		logDebug("new game!");
 
-		if (g_app->startHosting())
-		{
-			g_app->m_host->m_gameSim.setGameState(kGameState_OnlineMenus);
-
-			g_app->connect("127.0.0.1");
-		}
-		else
-		{
-			// todo : show error dialog
-		}
+		g_app->startHosting();
 	}
 	else if (m_findGame && m_findGame->isClicked())
 	{

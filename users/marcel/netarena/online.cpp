@@ -7,6 +7,7 @@ Online * g_online = 0;
 
 #if 1
 
+#include "framework.h"
 #include "steam_gameserver.h"
 
 /*
@@ -54,10 +55,47 @@ void OnlineSteam::assertNewCall()
 
 	memset(&m_lobbyCreated, 0, sizeof(m_lobbyCreated));
 	memset(&m_lobbyMatchList, 0, sizeof(m_lobbyMatchList));
+	memset(&m_lobbyEntered, 0, sizeof(m_lobbyEntered));
 }
+
+void OnlineSteam::finalizeCall()
+{
+	Assert(m_currentCallType != kCallType_None);
+	Assert(m_currentCall != k_uAPICallInvalid);
+	Assert(m_currentCallIsDone == true);
+
+	m_currentCallType = kCallType_None;
+	m_currentCall = k_uAPICallInvalid;
+	m_currentCallFailure = false;
+	m_currentCallIsDone = false;
+}
+
+void OnlineSteam::lobbyJoinBegin(CSteamID lobbyId)
+{
+	assertNewCall();
+
+	LOG_DBG("OnlineSteam: lobbyJoinBegin. lobbyId=%llx", lobbyId.ConvertToUint64());
+	m_currentCall = SteamMatchmaking()->JoinLobby(lobbyId);
+	m_currentCallType = kCallType_LobbyJoin;
+
+	if (m_currentCall == k_uAPICallInvalid)
+	{
+		LOG_DBG("OnlineSteam: lobbyJoinBegin: failure");
+		m_currentCallFailure = true;
+		m_currentCallIsDone = true;
+	}
+	else
+	{
+		LOG_DBG("OnlineSteam: lobbyJoinBegin: success. requestId=%d", m_currentRequestId);
+		m_lobbyJoinedCallback.Set(m_currentCall, this, &OnlineSteam::OnLobbyJoined);
+	}
+}
+
+//
 
 void OnlineSteam::OnLobbyMatchList(LobbyMatchList_t * lobbyMatchList, bool failure)
 {
+	LOG_DBG("OnlineSteam: OnLobbyMatchList. failure=%d", failure);
 	if (!failure)
 		m_lobbyMatchList = *lobbyMatchList;
 	m_currentCallFailure = failure;
@@ -66,16 +104,27 @@ void OnlineSteam::OnLobbyMatchList(LobbyMatchList_t * lobbyMatchList, bool failu
 
 void OnlineSteam::OnLobbyCreated(LobbyCreated_t * lobbyCreated, bool failure)
 {
+	LOG_DBG("OnlineSteam: OnLobbyCreated. failure=%d", failure);
 	if (!failure)
 		m_lobbyCreated = *lobbyCreated;
 	m_currentCallFailure = failure;
 	m_currentCallIsDone = true;
 }
 
+void OnlineSteam::OnLobbyJoined(LobbyEnter_t * lobbyEntered, bool failure)
+{
+	LOG_DBG("OnlineSteam: OnLobbyJoined. failure=%d", failure);
+	if (!failure)
+		m_lobbyEntered = *lobbyEntered;
+	m_currentCallFailure = failure;
+	m_currentCallIsDone = true;
+}
+
 //
 
-OnlineSteam::OnlineSteam()
-	: Online()
+OnlineSteam::OnlineSteam(OnlineCallbacks * callbacks)
+	: Online(callbacks)
+	, m_callbacks(callbacks)
 	, m_currentRequestId(kOnlineRequestIdInvalid)
 	, m_currentCallType(kCallType_None)
 	, m_currentCall(k_uAPICallInvalid)
@@ -99,10 +148,7 @@ void OnlineSteam::tick()
 		const SteamAPICall_t call = m_currentCall;
 		const bool failure = m_currentCallFailure;
 
-		m_currentCallType = kCallType_None;
-		m_currentCall = k_uAPICallInvalid;
-		m_currentCallFailure = false;
-		m_currentCallIsDone = false;
+		LOG_DBG("OnlineSteam: current API call is done. callType=%d, call=%llx, failure=%d", callType, call, failure);
 
 		switch (callType)
 		{
@@ -113,35 +159,43 @@ void OnlineSteam::tick()
 		case kCallType_LobbyCreate:
 			if (failure)
 			{
-				Assert(!m_lobbyId.IsLobby());
-				// todo : invoke callback
+				LOG_DBG("OnlineSteam: LobbyCreate failure");
+				m_callbacks->OnOnlineLobbyCreateResult(m_currentRequestId, false);
 			}
 			else
 			{
 				m_lobbyId = m_lobbyCreated.m_ulSteamIDLobby;
 				Assert(m_lobbyId.IsLobby());
 
+				LOG_DBG("OnlineSteam: LobbyCreate success. lobbyId=%llx", m_lobbyId.ConvertToUint64());
+
+				Verify(SteamMatchmaking()->SetLobbyData(m_lobbyId, "GameName", "Riposte"));
 				Verify(SteamMatchmaking()->SetLobbyData(m_lobbyId, "GameMode", "FreeForAll"));
 
 				SteamMatchmaking()->SetLobbyGameServer(m_lobbyId, 0, 0, SteamGameServer()->GetSteamID());
-				// todo : invoke callback
+
+				m_callbacks->OnOnlineLobbyCreateResult(m_currentRequestId, true);
 			}
 			break;
 
 		case kCallType_LobbyList:
 			if (failure)
 			{
-				// todo : invoke callback
+				LOG_DBG("OnlineSteam: LobbyList failure");
+
+				m_callbacks->OnOnlineLobbyJoinResult(m_currentRequestId, false);
 			}
 			else
 			{
+				LOG_DBG("OnlineSteam: LobbyList success. numLobbies=%d", m_lobbyMatchList.m_nLobbiesMatching);
+
 				if (m_lobbyMatchList.m_nLobbiesMatching == 0)
 				{
-					lobbyCreateBegin(0);
+					m_callbacks->OnOnlineLobbyJoinResult(m_currentRequestId, false);
 				}
 				else
 				{
-					for (int i = 0; i < m_lobbyMatchList.m_nLobbiesMatching; ++i)
+					for (uint32 i = 0; i < m_lobbyMatchList.m_nLobbiesMatching; ++i)
 					{
 						const CSteamID lobbyId = SteamMatchmaking()->GetLobbyByIndex(i);
 						const int numMembers = SteamMatchmaking()->GetNumLobbyMembers(lobbyId);
@@ -156,6 +210,14 @@ void OnlineSteam::tick()
 							}
 						}
 					}
+
+					finalizeCall();
+
+					//
+
+					const CSteamID lobbyId = SteamMatchmaking()->GetLobbyByIndex(0);
+
+					lobbyJoinBegin(lobbyId);
 				}
 			}
 			break;
@@ -163,18 +225,90 @@ void OnlineSteam::tick()
 		case kCallType_LobbyJoin:
 			if (failure)
 			{
-				// todo : invoke callback
+				LOG_DBG("OnlineSteam: LobbyJoin failure");
+				m_callbacks->OnOnlineLobbyJoinResult(m_currentRequestId, false);
 			}
 			else
 			{
-				// todo : invoke callback
+				Assert(m_lobbyId.IsLobby());
+				LOG_DBG("OnlineSteam: LobbyJoin success");
+				m_callbacks->OnOnlineLobbyJoinResult(m_currentRequestId, true);
+
+				const int numMembers = SteamMatchmaking()->GetNumLobbyMembers(m_lobbyId);
+				LOG_DBG("num lobby members: %d", numMembers);
+				for (int i = 0; i < numMembers; ++i)
+				{
+					const CSteamID memberId = SteamMatchmaking()->GetLobbyMemberByIndex(m_lobbyId, i);
+					if (memberId.IsValid())
+					{
+						const int data = 0;
+						const int dataSize = sizeof(data);
+						Verify(SteamNetworking()->SendP2PPacket(memberId, &data, dataSize, k_EP2PSendReliable));
+					}
+				}
 			}
+			break;
+
+		case kCallType_LobbyLeave:
+			if (failure)
+			{
+				LOG_DBG("OnlineSteam: LobbyLeave failure");
+				m_callbacks->OnOnlineLobbyLeaveResult(m_currentRequestId, false);
+			}
+			else
+			{
+				LOG_DBG("OnlineSteam: LobbyLeave success");
+				m_callbacks->OnOnlineLobbyLeaveResult(m_currentRequestId, true);
+			}
+			break;
+
+		default:
+			Assert(false);
 			break;
 		}
 	}
 }
 
-OnlineRequestId OnlineSteam::lobbyCreateBegin(OnlineLobbyFindOrCreateHandler * callback)
+void OnlineSteam::debugDraw()
+{
+	const int spacing = 32;
+	const int fontSize = 30;
+	int x = 50;
+	int y = 200;
+
+	setFont("calibri.ttf");
+
+	const int numFriends = SteamFriends()->GetFriendCount(k_EFriendFlagImmediate);
+	drawText(x, y += spacing, fontSize, +1.f, +1.f, "steam.friends.numFriends=%d", numFriends);
+
+	if (m_lobbyId.IsLobby())
+	{
+		const int numMembers = SteamMatchmaking()->GetNumLobbyMembers(m_lobbyId);
+		drawText(x, y += spacing, fontSize, +1.f, +1.f, "steam.lobby.numMembers=%d", numMembers);
+		for (int i = 0; i < numMembers; ++i)
+		{
+			CSteamID memberId = SteamMatchmaking()->GetLobbyMemberByIndex(m_lobbyId, i);
+
+			P2PSessionState_t sessionState;
+			const bool hasConnection = SteamNetworking()->GetP2PSessionState(memberId, &sessionState);
+			if (!hasConnection)
+				memset(&sessionState, 0, sizeof(sessionState));
+
+			drawText(x, y += spacing, fontSize, +1.f, +1.f, "steam.lobby.member[%d]=%llx, con=%d/%d, err=%d, relay=%d, sendqueue=%d/%d, ip=%x, port=%d",
+				i, memberId.ConvertToUint64(),
+				sessionState.m_bConnectionActive,
+				sessionState.m_bConnecting,
+				sessionState.m_eP2PSessionError,
+				sessionState.m_bUsingRelay,
+				sessionState.m_nBytesQueuedForSend,
+				sessionState.m_nPacketsQueuedForSend,
+				sessionState.m_nRemoteIP,
+				sessionState.m_nRemotePort);
+		}
+	}
+}
+
+OnlineRequestId OnlineSteam::lobbyCreateBegin()
 {
 	assertNewCall();
 
@@ -185,21 +319,24 @@ OnlineRequestId OnlineSteam::lobbyCreateBegin(OnlineLobbyFindOrCreateHandler * c
 	k_ELobbyTypeInvisible = 3,		// returned by search, but not visible to other friends 
 	*/
 
+	LOG_DBG("OnlineSteam: lobbyCreateBegin");
 	m_currentCall = SteamMatchmaking()->CreateLobby(k_ELobbyTypePublic, MAX_PLAYERS);
+	m_currentRequestId++;
+	m_currentCallType = kCallType_LobbyCreate;
 
 	if (m_currentCall == k_uAPICallInvalid)
 	{
-		return kOnlineRequestIdInvalid;
+		LOG_DBG("OnlineSteam: lobbyCreateBegin: failure");
+		m_currentCallFailure = true;
+		m_currentCallIsDone = true;
 	}
 	else
 	{
-		m_currentRequestId++;
-		m_currentCallType = kCallType_LobbyCreate;
-
+		LOG_DBG("OnlineSteam: lobbyCreateBegin: success. requestId=%d", m_currentRequestId);
 		m_lobbyCreatedCallback.Set(m_currentCall, this, &OnlineSteam::OnLobbyCreated);
-
-		return m_currentRequestId;
 	}
+
+	return m_currentRequestId;
 }
 
 void OnlineSteam::lobbyCreateEnd(OnlineRequestId id)
@@ -207,54 +344,69 @@ void OnlineSteam::lobbyCreateEnd(OnlineRequestId id)
 	Assert(id == m_currentRequestId);
 	Assert(m_currentCallType == kCallType_LobbyCreate);
 	Assert(m_currentCall != k_uAPICallInvalid);
+
+	LOG_DBG("OnlineSteam: lobbyCreateEnd");
+
+	finalizeCall();
 }
 
-OnlineRequestId OnlineSteam::lobbyFindOrCreateBegin(OnlineLobbyFindOrCreateHandler * callback)
+OnlineRequestId OnlineSteam::lobbyFindBegin()
 {
 	assertNewCall();
 
-	m_currentCall = SteamMatchmaking()->RequestLobbyList();
-
-	if (m_currentCall == k_uAPICallInvalid)
-	{
-		return kOnlineRequestIdInvalid;
-	}
-	else
-	{
-		m_currentRequestId++;
-		m_currentCallType = kCallType_LobbyList;
-
-		m_lobbyMatchListCallback.Set(m_currentCall, this, &OnlineSteam::OnLobbyMatchList);
-
-		return m_currentRequestId;
-	}
-}
-
-void OnlineSteam::lobbyFindOrCreateEnd(OnlineRequestId id)
-{
-	Assert(id == m_currentRequestId);
-	Assert(m_currentCallType == kCallType_LobbyList || m_currentCallType == kCallType_LobbyCreate);
-	Assert(m_currentCall != k_uAPICallInvalid);
+	LOG_DBG("OnlineSteam: lobbyFindBegin");
 
 	//void AddRequestLobbyListStringFilter( const char *pchKeyToMatch, const char *pchValueToMatch, ELobbyComparison eComparisonType )
 	//void AddRequestLobbyListNumericalFilter( const char *pchKeyToMatch, int nValueToMatch, ELobbyComparison eComparisonType )
 	//void AddRequestLobbyListNearValueFilter( const char *pchKeyToMatch, int nValueToBeCloseTo )
 	//void AddRequestLobbyListFilterSlotsAvailable( int nSlotsAvailable )
 
-	//RequestLobbyList
+	SteamMatchmaking()->AddRequestLobbyListStringFilter("GameName", "Riposte", k_ELobbyComparisonEqual);
+
+	m_currentCall = SteamMatchmaking()->RequestLobbyList();
+	m_currentRequestId++;
+	m_currentCallType = kCallType_LobbyList;
+
+	if (m_currentCall == k_uAPICallInvalid)
+	{
+		LOG_DBG("OnlineSteam: lobbyFindBegin: failure");
+		m_currentCallFailure = true;
+		m_currentCallIsDone = true;
+	}
+	else
+	{
+		LOG_DBG("OnlineSteam: lobbyFindBegin: success. requestId=%d", m_currentRequestId);
+		m_lobbyMatchListCallback.Set(m_currentCall, this, &OnlineSteam::OnLobbyMatchList);
+	}
+
+	return m_currentRequestId;
 }
 
-OnlineRequestId OnlineSteam::lobbyLeaveBegin(OnlineLobbyLeaveHandler * callback)
+void OnlineSteam::lobbyFindEnd(OnlineRequestId id)
+{
+	Assert(id == m_currentRequestId);
+	Assert(m_currentCallType == kCallType_LobbyList || m_currentCallType == kCallType_LobbyJoin);
+	Assert(m_currentCall != k_uAPICallInvalid);
+
+	LOG_DBG("OnlineSteam: lobbyFindEnd");
+
+	finalizeCall();
+}
+
+OnlineRequestId OnlineSteam::lobbyLeaveBegin()
 {
 	assertNewCall();
+	Assert(m_lobbyId.IsLobby());
 
-	Assert(m_lobbyId.IsValid());
-
+	LOG_DBG("OnlineSteam: lobbyLeaveBegin");
 	SteamMatchmaking()->LeaveLobby(m_lobbyId);
+	m_currentRequestId++;
+	m_currentCallType = kCallType_LobbyLeave;
 
-	//LeaveLobby( CSteamID steamIDLobby )
+	m_currentCallIsDone = true;
+	m_currentCallFailure = false;
 
-	return kOnlineRequestIdInvalid;
+	return m_currentRequestId;
 }
 
 void OnlineSteam::lobbyLeaveEnd(OnlineRequestId id)
@@ -262,9 +414,19 @@ void OnlineSteam::lobbyLeaveEnd(OnlineRequestId id)
 	Assert(id == m_currentRequestId);
 	Assert(m_currentCallType == kCallType_LobbyLeave);
 	Assert(m_currentCall != k_uAPICallInvalid);
-	Assert(m_lobbyId.IsValid());
+	Assert(m_lobbyId.IsLobby());
 
-	// todo : invalidate lobby id
+	LOG_DBG("OnlineSteam: lobbyLeaveEnd");
+
+	m_lobbyId = CSteamID();
+
+	finalizeCall();
+}
+
+uint64_t OnlineSteam::getLobbyOwnerAddress()
+{
+	Assert(m_lobbyId.IsLobby());
+	return SteamMatchmaking()->GetLobbyOwner(m_lobbyId).ConvertToUint64();
 }
 
 void OnlineSteam::showInviteFriendsUi()
@@ -281,11 +443,60 @@ void OnlineSteam::showInviteFriendsUi()
 		SteamFriends()->ActivateGameOverlayInviteDialog(m_lobbyId);
 }
 
+//
+
+NetSocketSteam::NetSocketSteam()
+	: NetSocket()
+{
+}
+
+NetSocketSteam::~NetSocketSteam()
+{
+}
+
+bool NetSocketSteam::Send(const void * data, uint32_t size, NetAddress * address)
+{
+	const CSteamID remoteId(uint64_t(address->m_userData));
+
+	return SteamNetworking()->SendP2PPacket(remoteId, data, size, k_EP2PSendReliable);
+}
+
+bool NetSocketSteam::Receive(void * out_data, uint32_t maxSize, uint32_t * out_size, NetAddress * out_address)
+{
+	uint32_t packetSize;
+	if (SteamNetworking()->IsP2PPacketAvailable(&packetSize))
+	{
+		if (packetSize > maxSize)
+		{
+			LOG_ERR("IsP2PPacketAvailable: packetSize (%d) > maxSize (%d)", packetSize, maxSize);
+		}
+		else
+		{
+			uint32_t readSize;
+			CSteamID fromId;
+			if (SteamNetworking()->ReadP2PPacket(out_data, maxSize, &readSize, &fromId))
+			{
+				Assert(readSize == packetSize);
+				if (readSize == packetSize)
+				{
+					*out_size = readSize;
+					out_address->Set(0, 0);
+					out_address->m_userData = fromId.ConvertToUint64();
+					return true;
+				}
+			}
+		}
+	}
+
+	return false;
+}
+
 #endif
 
 //
 
-OnlineLAN::OnlineLAN()
+OnlineLAN::OnlineLAN(OnlineCallbacks * callbacks)
+	: Online(callbacks)
 {
 }
 
@@ -297,7 +508,11 @@ void OnlineLAN::tick()
 {
 }
 
-OnlineRequestId OnlineLAN::lobbyCreateBegin(OnlineLobbyFindOrCreateHandler * callback)
+void OnlineLAN::debugDraw()
+{
+}
+
+OnlineRequestId OnlineLAN::lobbyCreateBegin()
 {
 	return kOnlineRequestIdInvalid;
 }
@@ -307,17 +522,17 @@ void OnlineLAN::lobbyCreateEnd(OnlineRequestId id)
 	Assert(false);
 }
 
-OnlineRequestId OnlineLAN::lobbyFindOrCreateBegin(OnlineLobbyFindOrCreateHandler * callback)
+OnlineRequestId OnlineLAN::lobbyFindBegin()
 {
 	return kOnlineRequestIdInvalid;
 }
 
-void OnlineLAN::lobbyFindOrCreateEnd(OnlineRequestId id)
+void OnlineLAN::lobbyFindEnd(OnlineRequestId id)
 {
 	Assert(false);
 }
 
-OnlineRequestId OnlineLAN::lobbyLeaveBegin(OnlineLobbyLeaveHandler * callback)
+OnlineRequestId OnlineLAN::lobbyLeaveBegin()
 {
 	return kOnlineRequestIdInvalid;
 }
@@ -325,6 +540,12 @@ OnlineRequestId OnlineLAN::lobbyLeaveBegin(OnlineLobbyLeaveHandler * callback)
 void OnlineLAN::lobbyLeaveEnd(OnlineRequestId id)
 {
 	Assert(false);
+}
+
+uint64_t OnlineLAN::getLobbyOwnerAddress()
+{
+	Assert(false);
+	return 0;
 }
 
 void OnlineLAN::showInviteFriendsUi()

@@ -57,6 +57,10 @@ OPTION_DECLARE(bool, g_monkeyMode, false);
 OPTION_DEFINE(bool, g_monkeyMode, "App/Monkey Mode");
 OPTION_ALIAS(g_monkeyMode, "monkeymode");
 
+OPTION_DECLARE(bool, g_testSteamMatchmaking, false);
+OPTION_DEFINE(bool, g_testSteamMatchmaking, "App/Test Steam Matchmaking");
+OPTION_ALIAS(g_testSteamMatchmaking, "debugSteam");
+
 OPTION_DECLARE(bool, g_precacheResources, true);
 OPTION_DEFINE(bool, g_precacheResources, "App/Precache Resources");
 OPTION_ALIAS(g_precacheResources, "precache");
@@ -1071,9 +1075,54 @@ void App::CL_OnChannelDisconnect(Channel * channel)
 
 //
 
+void App::OnOnlineLobbyCreateResult(OnlineRequestId requestId, bool success)
+{
+	LOG_DBG("OnOnlineLobbyCreateResult: requestId=%d, result=%d", requestId, success);
+
+	m_isMatchmaking = false;
+	m_matchmakingResult = success;
+
+	g_online->lobbyCreateEnd(requestId);
+}
+
+void App::OnOnlineLobbyJoinResult(OnlineRequestId requestId, bool success)
+{
+	LOG_DBG("OnOnlineLobbyJoinResult: requestId=%d, result=%d", requestId, success);
+
+	m_isMatchmaking = false;
+	m_matchmakingResult = success;
+
+	g_online->lobbyFindEnd(requestId);
+}
+
+void App::OnOnlineLobbyLeaveResult(OnlineRequestId requestId, bool success)
+{
+	LOG_DBG("OnOnlineLobbyLeaveResult: requestId=%d, result=%d", requestId, success);
+
+	m_isMatchmaking = false;
+	m_matchmakingResult = success;
+
+	g_online->lobbyLeaveEnd(requestId);
+}
+
+void App::OnOnlineLobbyMemberJoined(OnlineLobbyMemberId memberId)
+{
+	LOG_DBG("OnOnlineLobbyMemberJoined: memberId=%llx", memberId);
+}
+
+void App::OnOnlineLobbyMemberLeft(OnlineLobbyMemberId memberId)
+{
+	LOG_DBG("OnOnlineLobbyMemberLeft: memberId=%llx", memberId);
+}
+
+//
+
 App::App()
 	: m_appState(AppState_Offline)
+	, m_netState(NetState_Offline)
 	, m_isHost(false)
+	, m_isMatchmaking(false)
+	, m_matchmakingResult(false)
 	, m_host(0)
 	, m_packetDispatcher(0)
 	, m_channelMgr(0)
@@ -1231,28 +1280,11 @@ bool App::init()
 			if (!SteamAPI_Init())
 				return false;
 
-			if (!SteamGameServer_Init(INADDR_ANY, STEAM_AUTHENTICATION_PORT, STEAM_SERVER_PORT, STEAM_MASTER_SERVER_UPDATER_PORT, eServerModeAuthenticationAndSecure, ((std::string)STEAM_SERVER_VERSION).c_str()))
-				return false;
-
-			SteamGameServer()->SetModDir("riposte");
-			SteamGameServer()->SetProduct("SteamworksExample");
-			SteamGameServer()->SetGameDescription("Steamworks Example");
-			SteamGameServer()->LogOnAnonymous();
-			SteamGameServer()->EnableHeartbeats(true);
-
-			//
-
-			SteamGameServer()->SetMaxPlayerCount(MAX_PLAYERS);
-			SteamGameServer()->SetPasswordProtected(false);
-			SteamGameServer()->SetServerName("Vir's Server");
-			SteamGameServer()->SetBotPlayerCount(0);
-			SteamGameServer()->SetMapName("Highlands");
-
-			//SteamGameServer()->EnableHeartbeats(false);
-			//SteamGameServer()->LogOff();
-			//SteamGameServer_Shutdown();
-
-			g_online = new OnlineSteam();
+			g_online = new OnlineSteam(this);
+		}
+		else
+		{
+			g_online = new OnlineLAN(this);
 		}
 
 		SDL_ShowCursor(0);
@@ -1271,7 +1303,10 @@ bool App::init()
 
 		// make sure WinSock is initialised
 
-		NetSocket netSocket; // this will init WSA, since it's the first socket we create..
+		if (!USE_STEAMAPI)
+		{
+			NetSocketUDP netSocket; // this will init WSA, since it's the first socket we create..
+		}
 
 		// input the user's display name
 
@@ -1402,12 +1437,6 @@ bool App::init()
 		m_menuMgr->push(new Title());
 	#endif
 
-		if (g_online)
-		{
-			//g_online->lobbyFindOrCreateBegin(0);
-			//g_online->lobbyCreateBegin(0);
-		}
-
 		return true;
 	}
 
@@ -1494,8 +1523,6 @@ void App::shutdown()
 
 	if (USE_STEAMAPI)
 	{
-		SteamGameServer_Shutdown();
-
 		SteamAPI_Shutdown();
 	}
 
@@ -1511,10 +1538,11 @@ static const char * s_appStates[2] =
 void App::setAppState(AppState state)
 {
 	Assert(state < sizeof(s_appStates) / sizeof(s_appStates[0]));
-	LOG_DBG("setAppState: %s", s_appStates[state]);
 
 	if (state == m_appState)
 		return;
+
+	LOG_DBG("setAppState: %s -> %s", s_appStates[m_appState], s_appStates[state]);
 
 	switch (m_appState)
 	{
@@ -1540,6 +1568,29 @@ void App::setAppState(AppState state)
 		m_menuMgr->reset(0);
 		break;
 	}
+}
+
+static const char * s_netStates[7] =
+{
+	"NetState_Offline",
+	"NetState_HostCreate",
+	"NetState_HostDestroy",
+	"NetState_LobbyCreate",
+	"NetState_LobbyJoin",
+	"NetState_LobbyLeave",
+	"NetState_Online",
+};
+
+void App::setNetState(NetState state)
+{
+	Assert(state < sizeof(s_netStates) / sizeof(s_netStates[0]));
+
+	if (state == m_netState)
+		return;
+
+	LOG_DBG("setNetState: %s -> %s", s_netStates[m_netState], s_netStates[state]);
+
+	m_netState = state;
 }
 
 void App::quit()
@@ -1625,80 +1676,75 @@ void App::loadUserSettings()
 	}
 }
 
-bool App::startHosting()
+void App::startHosting()
 {
+	Assert(m_netState == NetState_Offline);
 	Assert(m_host == 0);
 
-	if (!m_channelMgr->Initialize(m_packetDispatcher, this, NET_PORT, true, g_buildId))
-		return false;
-
-	//
-
-	LOG_DBG("creating host");
-
-	m_host = new Host();
-
-	m_host->init();
-
-	LOG_DBG("creating host [done]");
-
-	//
-
-	m_isHost = true;
-
-	return true;
+	setNetState(NetState_HostCreate);
 }
 
 void App::stopHosting()
 {
-	Assert(m_isHost);
+	Assert(m_netState == NetState_Online);
+	Assert(m_host != 0);
 
-	while (!m_clients.empty())
+	g_online->lobbyLeaveBegin();
+	m_isMatchmaking = true;
+	setNetState(NetState_LobbyLeave);
+}
+
+bool App::pollMatchmaking(bool & isDone, bool & success)
+{
+	if (m_isMatchmaking)
 	{
-		destroyClient(0);
+		isDone = false;
+		success = false;
+	}
+	else
+	{
+		isDone = true;
+		success = m_matchmakingResult;
 	}
 
-	m_channelMgr->Shutdown(true);
-
-	if (m_host)
-	{
-		LOG_DBG("destroying host");
-
-		m_host->shutdown();
-
-		delete m_host;
-		m_host = 0;
-
-		LOG_DBG("destroying host [done]");
-	}
-
-	m_isHost = false;
+	return true;
 }
 
 bool App::findGame()
 {
-	const int port = 0;
-
-	if (!m_channelMgr->Initialize(m_packetDispatcher, this, port, false, g_buildId))
-		return false;
-
-	//
-
-	if (g_connectLocal)
+	if (USE_STEAMAPI)
 	{
-		connect("127.0.0.1");
+		g_online->lobbyFindBegin();
+		m_isMatchmaking = true;
+		setNetState(NetState_LobbyJoin);
+		return true;
 	}
 	else
 	{
-		std::string address = g_connect;
+		NetSocketUDP * socketUDP = new NetSocketUDP();
+		SharedNetSocket socket(socketUDP);
 
-		if (!address.empty())
+		if (!m_channelMgr->Initialize(m_packetDispatcher, this, socket, false, g_buildId))
+			return false;
+
+		//
+
+		if (g_connectLocal)
 		{
-			connect(address.c_str());
+			connect("127.0.0.1");
 		}
-	}
+		else
+		{
+			std::string address = g_connect;
 
-	return true;
+			if (!address.empty())
+			{
+				connect(address.c_str());
+			}
+		}
+
+		return true;
+	}
 }
 
 void App::leaveGame(Client * client)
@@ -1727,7 +1773,18 @@ Client * App::connect(const char * address)
 	const auto serverVersion = m_channelMgr->m_serverVersion;
 	if (g_fakeIncompatibleServerVersion)
 		m_channelMgr->m_serverVersion = -1;
-	channel->Connect(NetAddress(address, NET_PORT));
+
+	if (USE_STEAMAPI)
+	{
+		NetAddress address;
+		address.m_userData = g_online->getLobbyOwnerAddress();
+		Verify(channel->Connect(address));
+	}
+	else
+	{
+		Verify(channel->Connect(NetAddress(address, NET_PORT)));
+	}
+
 	m_channelMgr->m_serverVersion = serverVersion;
 
 	LOG_DBG("connect: %s [done]", address);
@@ -1873,17 +1930,21 @@ bool App::tick()
 	if (USE_STEAMAPI)
 	{
 		SteamAPI_RunCallbacks();
-		SteamGameServer_RunCallbacks();
+
+		if (m_isHost)
+			SteamGameServer_RunCallbacks();
 	}
 
 	if (g_online)
 	{
 		g_online->tick();
 
+	#if ENABLE_NETWORKING_DEBUGS
 		// fixme : remove !
 
 		if (keyboard.wentDown(SDLK_i))
 			g_online->showInviteFriendsUi();
+	#endif
 	}
 
 	// mouse cursor
@@ -1932,20 +1993,24 @@ bool App::tick()
 
 	m_menuMgr->tick(dt);
 
+	// update networking
+
+	tickNet();
+
 	// update BGM
 
 	tickBgm();
 
 	// update host
 
-	if (m_isHost && m_clients.empty())
+	if (m_netState == NetState_Online && m_isHost && m_clients.empty())
 	{
 		// todo : only do this if client is the host
 
 		stopHosting();
 	}
 
-	if (m_isHost)
+	if (m_netState == NetState_Online && m_isHost)
 	{
 		cpuTimingBlock(hostTick);
 
@@ -2115,7 +2180,7 @@ bool App::tick()
 	}
 #endif
 
-	if (g_devMode && m_isHost && g_keyboardLock == 0 && keyboard.wentDown(SDLK_t))
+	if (g_devMode && m_netState == NetState_Online && m_isHost && g_keyboardLock == 0 && keyboard.wentDown(SDLK_t))
 	{
 		netDebugAction("loadOptions", "options.txt");
 	}
@@ -2152,6 +2217,210 @@ bool App::tick()
 #endif
 
 	return true;
+}
+
+void App::tickNet()
+{
+	switch (m_netState)
+	{
+	case NetState_Offline:
+		break;
+
+	case NetState_HostCreate:
+		{
+			Assert(!m_isHost);
+			Assert(!m_host);
+			Assert(!m_channelMgr->IsInitialized());
+
+			SharedNetSocket socket;
+
+			if (USE_STEAMAPI)
+			{
+				NetSocketSteam * socketSteam = new NetSocketSteam();
+				socket = SharedNetSocket(socketSteam);
+			}
+			else
+			{
+				NetSocketUDP * socketUDP = new NetSocketUDP();
+				socket = SharedNetSocket(socketUDP);
+				if (!socketUDP->Bind(NET_PORT))
+				{
+					setNetState(NetState_Offline);
+					break;
+				}
+			}
+
+			if (!m_channelMgr->Initialize(m_packetDispatcher, this, socket, true, g_buildId))
+			{
+				setNetState(NetState_Offline);
+				break;
+			}
+
+			if (USE_STEAMAPI)
+			{
+				if (!SteamGameServer_Init(INADDR_ANY, STEAM_AUTHENTICATION_PORT, STEAM_SERVER_PORT, STEAM_MASTER_SERVER_UPDATER_PORT, eServerModeAuthenticationAndSecure, ((std::string)STEAM_SERVER_VERSION).c_str()))
+				{
+					m_channelMgr->Shutdown(false);
+					setNetState(NetState_Offline);
+					break;
+				}
+			}
+
+			//
+
+			LOG_DBG("creating host");
+
+			m_host = new Host();
+
+			m_host->init();
+
+			LOG_DBG("creating host [done]");
+
+			//
+
+			m_isHost = true;
+
+			//
+
+			if (USE_STEAMAPI)
+			{
+				SteamGameServer()->SetModDir("riposte");
+				SteamGameServer()->SetProduct("SteamworksExample");
+				SteamGameServer()->SetGameDescription("Steamworks Example");
+				SteamGameServer()->LogOnAnonymous();
+				SteamGameServer()->EnableHeartbeats(true);
+
+				//
+
+				SteamGameServer()->SetMaxPlayerCount(MAX_PLAYERS);
+				SteamGameServer()->SetPasswordProtected(false);
+				SteamGameServer()->SetServerName("Vir's Server");
+				SteamGameServer()->SetBotPlayerCount(0);
+				SteamGameServer()->SetMapName("Highlands");
+			}
+
+			//
+
+			g_online->lobbyCreateBegin();
+			m_isMatchmaking = true;
+			setNetState(NetState_LobbyCreate);
+		}
+		break;
+
+	case NetState_HostDestroy:
+		if (m_isHost)
+		{
+			if (USE_STEAMAPI)
+			{
+				SteamGameServer()->EnableHeartbeats(false);
+				SteamGameServer()->LogOff();
+				SteamGameServer_Shutdown();
+			}
+
+			//
+
+			while (!m_clients.empty())
+			{
+				destroyClient(0);
+			}
+
+			if (m_channelMgr->IsInitialized())
+			{
+				m_channelMgr->Shutdown(true);
+			}
+
+			if (m_host)
+			{
+				LOG_DBG("destroying host");
+
+				m_host->shutdown();
+
+				delete m_host;
+				m_host = 0;
+
+				LOG_DBG("destroying host [done]");
+			}
+
+			m_isHost = false;
+		}
+
+		setNetState(NetState_Offline);
+		break;
+
+	case NetState_LobbyCreate:
+		{
+			bool isDone;
+			bool success;
+			if (pollMatchmaking(isDone, success))
+			{
+				if (isDone)
+				{
+					if (success)
+					{
+						setNetState(NetState_Online);
+
+						m_host->m_gameSim.setGameState(kGameState_OnlineMenus);
+
+						connect("127.0.0.1");
+
+					#if ENABLE_NETWORKING_DEBUGS
+						if (g_testSteamMatchmaking)
+							findGame();
+					#endif
+					}
+					else
+						setNetState(NetState_HostDestroy);
+				}
+			}
+			else
+			{
+				Assert(false);
+				setNetState(NetState_HostDestroy);
+			}
+		}
+		break;
+
+	case NetState_LobbyJoin:
+		{
+			bool isDone;
+			bool success;
+			if (pollMatchmaking(isDone, success))
+			{
+				if (isDone)
+				{
+					setNetState(NetState_Online);
+				}
+			}
+			else
+			{
+				Assert(false);
+				setNetState(NetState_Offline);
+			}
+		}
+		break;
+
+	case NetState_LobbyLeave:
+		{
+			bool isDone;
+			bool success;
+			if (pollMatchmaking(isDone, success))
+			{
+				if (isDone)
+				{
+					setNetState(NetState_HostDestroy);
+				}
+			}
+			else
+			{
+				Assert(false);
+				setNetState(NetState_HostDestroy);
+			}
+		}
+		break;
+
+	case NetState_Online:
+		break;
+	}
 }
 
 void App::tickBgm()
@@ -2294,214 +2563,209 @@ void App::draw()
 
 		// draw debug stuff
 
-	#if 0 // text area test
-		setColor(colorWhite);
-		static volatile float sy = 50.f;
-		static volatile float ax = 0.f;
-		static volatile float ay = 0.f;
-		drawTextArea(
-			GFX_SX/2.f,
-			GFX_SY/2.f,
-			100.f,
-			sy,
-			32,
-			ax,
-			ay,
-			"Hello %s Hello Hello Hello Hello!",
-			"World");
-		drawRectLine(
-			GFX_SX/2.f,
-			GFX_SY/2.f,
-			GFX_SX/2.f + 100.f,
-			GFX_SY/2.f + sy);
-	#endif
-
-		if (g_devMode)
-		{
-			setColor(255, 255, 255);
-			setDebugFont();
-			drawText(GFX_SX - 5, GFX_SY - 25, 20, -1.f, -1.f, "build %08x", g_buildId);
-		}
-
-		if (g_devMode && g_host)
-		{
-			g_host->debugDraw();
-
-			{
-				int y = 100;
-				setDebugFont();
-				drawText(0, y += 30, 24, +1, +1, "random seed=%08x, next pickup tick=%02.1f, crc=%08x, px=%g, py=%g",
-					g_host->m_gameSim.m_randomSeed,
-					g_host->m_gameSim.m_nextPickupSpawnTimeRemaining,
-				#if ENABLE_GAMESTATE_DESYNC_DETECTION
-					g_host->m_gameSim.calcCRC(),
-				#else
-					-1,
-				#endif
-					g_host->m_gameSim.m_playerInstanceDatas[0] ? g_host->m_gameSim.m_playerInstanceDatas[0]->m_player->m_pos[0] : 0.f,
-					g_host->m_gameSim.m_playerInstanceDatas[0] ? g_host->m_gameSim.m_playerInstanceDatas[0]->m_player->m_pos[1] : 0.f);
-				for (size_t i = 0; i < m_clients.size(); ++i)
-				{
-					drawText(0, y += 30, 24, +1, +1, "random seed=%08x, next pickup tick=%02.1f, crc=%08x, px=%g, py=%g, vx=%g, vy=%g",
-						m_clients[i]->m_gameSim->m_randomSeed,
-						m_clients[i]->m_gameSim->m_nextPickupSpawnTimeRemaining,
-					#if ENABLE_GAMESTATE_DESYNC_DETECTION
-						m_clients[i]->m_gameSim->calcCRC(),
-					#else
-						-1,
-					#endif
-						m_clients[i]->m_gameSim->m_playerInstanceDatas[0] ? m_clients[i]->m_gameSim->m_playerInstanceDatas[0]->m_player->m_pos[0] : 0.f,
-						m_clients[i]->m_gameSim->m_playerInstanceDatas[0] ? m_clients[i]->m_gameSim->m_playerInstanceDatas[0]->m_player->m_pos[1] : 0.f,
-						m_clients[i]->m_gameSim->m_playerInstanceDatas[0] ? m_clients[i]->m_gameSim->m_playerInstanceDatas[0]->m_player->m_vel[0] : 0.f,
-						m_clients[i]->m_gameSim->m_playerInstanceDatas[0] ? m_clients[i]->m_gameSim->m_playerInstanceDatas[0]->m_player->m_vel[1] : 0.f);
-				}
-			}
-		}
-
-	#if ENABLE_DEVMODE
-		if (/*g_devMode && */keyboard.isDown(SDLK_F1))
-		{
-			setColor(0, 0, 0, 191);
-			drawRect(0, 0, GFX_SX, GFX_SY);
-
-			int x = 50;
-			int y = 100;
-			int sy = 40;
-			int fontSize = 24;
-			setColor(colorWhite);
-			setDebugFont();
-			drawText(x, y += sy, fontSize, +1.f, +1.f, "F1: Show help");
-			drawText(x, y += sy, fontSize, +1.f, +1.f, "F2: Leave Game");
-			drawText(x, y += sy, fontSize, +1.f, +1.f, "F3: Toggle Animation Test Tool");
-			drawText(x, y += sy, fontSize, +1.f, +1.f, "        Left click = test");
-			drawText(x, y += sy, fontSize, +1.f, +1.f, "        Right click = next animation");
-			drawText(x, y += sy, fontSize, +1.f, +1.f, "        Shift + right click = previous animation");
-			drawText(x, y += sy, fontSize, +1.f, +1.f, "F4: Toggle Blast Effect Test Tool");
-			drawText(x, y += sy, fontSize, +1.f, +1.f, "        Left click = test");
-			drawText(x, y += sy, fontSize, +1.f, +1.f, "F5: Toggle Options Menu");
-			drawText(x, y += sy, fontSize, +1.f, +1.f, "F6: Toggle Statistics Menu");
-			drawText(x, y += sy, fontSize, +1.f, +1.f, "F9: (reserved)");
-			drawText(x, y += sy, fontSize, +1.f, +1.f, "F10: Toggle Particle Editor");
-			drawText(x, y += sy, fontSize, +1.f, +1.f, "F11: GIF Capture Tool");
-			drawText(x, y += sy, fontSize, +1.f, +1.f, "F12: New Round");
-			drawText(x, y += sy, fontSize, +1.f, +1.f, "T: Reload Options");
-			drawText(x, y += sy, fontSize, +1.f, +1.f, "Y: Reload sprites and textures");
-			drawText(x, y += sy, fontSize, +1.f, +1.f, "U: Reload sounds");
-			drawText(x, y += sy, fontSize, +1.f, +1.f, "I: Reload shaders");
-		}
-	#endif
-
-		// draw desync notifier
-
-		bool isDesync = false;
-
-		for (size_t i = 0; i < m_clients.size(); ++i)
-			isDesync |= m_clients[i]->m_isDesync;
-
-		if (isDesync)
-		{
-			setColor(colorRed);
-			drawRect(0, 0, GFX_SX, 40);
-			setColor(colorWhite);
-			setDebugFont();
-			drawText(GFX_SX/2, 12, 30, 0.f, 0.f, "DESYNC");
-		}
-
-		//
-
-	#if ENABLE_DEVMODE
-		animationTestDraw();
-		blastEffectTestDraw();
-		particleEditorDraw();
-		gifCaptureTick_PostRender();
-	#endif
-
-		//
-
-	#if ENABLE_OPTIONS
-		if (m_optionMenuIsOpen)
-		{
-			const int sx = 500;
-			const int sy = GFX_SY * 4 / 5;
-			const int x = (GFX_SX - sx) / 2;
-			const int y = (GFX_SY - sy) / 2;
-
-			m_optionMenu->Draw(x, y, sx, sy);
-		}
-	#endif
-
-	#if ENABLE_OPTIONS
-		if (m_statTimerMenuIsOpen)
-		{
-			const int sx = 500;
-			const int sy = GFX_SY / 2;
-			const int x = (GFX_SX - sx) / 2;
-			const int y = (GFX_SY - sy) / 2;
-
-			m_statTimerMenu->Draw(x, y, sx, sy);
-		}
-	#endif
-
-		if (UI_DEBUG_VISIBLE)
-		{
-		#if ENABLE_NETWORKING
-			m_discoveryUi->clear();
-
-			const auto serverList = m_discoveryService->getServerList();
-
-			for (size_t i = 0; i < serverList.size(); ++i)
-			{
-				const auto & serverInfo = serverList[i];
-
-				char name[32];
-				sprintf(name, "connect_%d", i);
-				Dictionary & button = (*m_discoveryUi)[name];
-				char props[1024];
-				sprintf(props, "type:button name:%s x:%d y:0 action:connect address:%s image:button.png image_over:button-over.png image_down:button-down.png text_color:000000 font:calibri.ttf font_size:24",
-					name,
-					i * 300,
-					serverInfo.m_address.ToString(false).c_str(),
-					name);
-				button.parse(props);
-				button.setString("text", serverInfo.m_address.ToString(false).c_str());
-			}
-
-			for (size_t i = 0; i < m_clients.size(); ++i)
-			{
-				Client * client = m_clients[i];
-
-				{
-					char name[32];
-					sprintf(name, "disconnect_%d", i);
-					Dictionary & button = (*m_discoveryUi)[name];
-					char props[1024];
-					sprintf(props, "type:button name:%s x:%d y:00 scale:0.65 action:disconnect client:%d image:button.png image_over:button-over.png image_down:button-down.png text:disconnect text_color:000000 font:calibri.ttf font_size:24",
-						name, GFX_SX + (i - m_clients.size()) * 150,
-						i);
-					button.parse(props);
-				}
-
-				{
-					char name[32];
-					sprintf(name, "view_%d", i);
-					Dictionary & button = (*m_discoveryUi)[name];
-					char props[1024];
-					sprintf(props, "type:button name:%s x:%d y:50 scale:0.65 action:select client:%d image:button.png image_over:button-over.png image_down:button-down.png text:view text_color:000000 font:calibri.ttf font_size:24",
-						name, GFX_SX + (i - m_clients.size()) * 150,
-						i);
-					button.parse(props);
-				}
-			}
-
-			setColor(colorWhite);
-			m_discoveryUi->draw();
-		#endif
-		}
+		debugDraw();
 	}
 	cpuTimingEnd();
 	gpuTimingEnd();
 	TIMER_STOP(g_appDrawTime);
 	framework.endDraw();
+}
+
+void App::debugDraw()
+{
+	if (g_devMode)
+	{
+		setColor(255, 255, 255);
+		setDebugFont();
+		drawText(GFX_SX - 5, GFX_SY - 25, 20, -1.f, -1.f, "build %08x", g_buildId);
+	}
+
+	if (g_devMode)
+	{
+		g_online->debugDraw();
+	}
+
+	if (g_devMode)
+	{
+		setColor(255, 255, 255);
+		setDebugFont();
+		drawText(GFX_SX/2, GFX_SY*4/5, 32, 0.f, 0.f, "NetState: %s", s_netStates[m_netState]);
+	}
+
+	if (g_devMode && g_host)
+	{
+		g_host->debugDraw();
+
+		{
+			int y = 100;
+			setDebugFont();
+			drawText(0, y += 30, 24, +1, +1, "random seed=%08x, next pickup tick=%02.1f, crc=%08x, px=%g, py=%g",
+				g_host->m_gameSim.m_randomSeed,
+				g_host->m_gameSim.m_nextPickupSpawnTimeRemaining,
+			#if ENABLE_GAMESTATE_DESYNC_DETECTION
+				g_host->m_gameSim.calcCRC(),
+			#else
+				-1,
+			#endif
+				g_host->m_gameSim.m_playerInstanceDatas[0] ? g_host->m_gameSim.m_playerInstanceDatas[0]->m_player->m_pos[0] : 0.f,
+				g_host->m_gameSim.m_playerInstanceDatas[0] ? g_host->m_gameSim.m_playerInstanceDatas[0]->m_player->m_pos[1] : 0.f);
+			for (size_t i = 0; i < m_clients.size(); ++i)
+			{
+				drawText(0, y += 30, 24, +1, +1, "random seed=%08x, next pickup tick=%02.1f, crc=%08x, px=%g, py=%g, vx=%g, vy=%g",
+					m_clients[i]->m_gameSim->m_randomSeed,
+					m_clients[i]->m_gameSim->m_nextPickupSpawnTimeRemaining,
+				#if ENABLE_GAMESTATE_DESYNC_DETECTION
+					m_clients[i]->m_gameSim->calcCRC(),
+				#else
+					-1,
+				#endif
+					m_clients[i]->m_gameSim->m_playerInstanceDatas[0] ? m_clients[i]->m_gameSim->m_playerInstanceDatas[0]->m_player->m_pos[0] : 0.f,
+					m_clients[i]->m_gameSim->m_playerInstanceDatas[0] ? m_clients[i]->m_gameSim->m_playerInstanceDatas[0]->m_player->m_pos[1] : 0.f,
+					m_clients[i]->m_gameSim->m_playerInstanceDatas[0] ? m_clients[i]->m_gameSim->m_playerInstanceDatas[0]->m_player->m_vel[0] : 0.f,
+					m_clients[i]->m_gameSim->m_playerInstanceDatas[0] ? m_clients[i]->m_gameSim->m_playerInstanceDatas[0]->m_player->m_vel[1] : 0.f);
+			}
+		}
+	}
+
+#if ENABLE_DEVMODE
+	if (/*g_devMode && */keyboard.isDown(SDLK_F1))
+	{
+		setColor(0, 0, 0, 191);
+		drawRect(0, 0, GFX_SX, GFX_SY);
+
+		int x = 50;
+		int y = 100;
+		int sy = 40;
+		int fontSize = 24;
+		setColor(colorWhite);
+		setDebugFont();
+		drawText(x, y += sy, fontSize, +1.f, +1.f, "F1: Show help");
+		drawText(x, y += sy, fontSize, +1.f, +1.f, "F2: Leave Game");
+		drawText(x, y += sy, fontSize, +1.f, +1.f, "F3: Toggle Animation Test Tool");
+		drawText(x, y += sy, fontSize, +1.f, +1.f, "        Left click = test");
+		drawText(x, y += sy, fontSize, +1.f, +1.f, "        Right click = next animation");
+		drawText(x, y += sy, fontSize, +1.f, +1.f, "        Shift + right click = previous animation");
+		drawText(x, y += sy, fontSize, +1.f, +1.f, "F4: Toggle Blast Effect Test Tool");
+		drawText(x, y += sy, fontSize, +1.f, +1.f, "        Left click = test");
+		drawText(x, y += sy, fontSize, +1.f, +1.f, "F5: Toggle Options Menu");
+		drawText(x, y += sy, fontSize, +1.f, +1.f, "F6: Toggle Statistics Menu");
+		drawText(x, y += sy, fontSize, +1.f, +1.f, "F9: (reserved)");
+		drawText(x, y += sy, fontSize, +1.f, +1.f, "F10: Toggle Particle Editor");
+		drawText(x, y += sy, fontSize, +1.f, +1.f, "F11: GIF Capture Tool");
+		drawText(x, y += sy, fontSize, +1.f, +1.f, "F12: New Round");
+		drawText(x, y += sy, fontSize, +1.f, +1.f, "T: Reload Options");
+		drawText(x, y += sy, fontSize, +1.f, +1.f, "Y: Reload sprites and textures");
+		drawText(x, y += sy, fontSize, +1.f, +1.f, "U: Reload sounds");
+		drawText(x, y += sy, fontSize, +1.f, +1.f, "I: Reload shaders");
+	}
+#endif
+
+	// draw desync notifier
+
+	bool isDesync = false;
+
+	for (size_t i = 0; i < m_clients.size(); ++i)
+		isDesync |= m_clients[i]->m_isDesync;
+
+	if (isDesync)
+	{
+		setColor(colorRed);
+		drawRect(0, 0, GFX_SX, 40);
+		setColor(colorWhite);
+		setDebugFont();
+		drawText(GFX_SX/2, 12, 30, 0.f, 0.f, "DESYNC");
+	}
+
+	//
+
+#if ENABLE_DEVMODE
+	animationTestDraw();
+	blastEffectTestDraw();
+	particleEditorDraw();
+	gifCaptureTick_PostRender();
+#endif
+
+	//
+
+#if ENABLE_OPTIONS
+	if (m_optionMenuIsOpen)
+	{
+		const int sx = 500;
+		const int sy = GFX_SY * 4 / 5;
+		const int x = (GFX_SX - sx) / 2;
+		const int y = (GFX_SY - sy) / 2;
+
+		m_optionMenu->Draw(x, y, sx, sy);
+	}
+#endif
+
+#if ENABLE_OPTIONS
+	if (m_statTimerMenuIsOpen)
+	{
+		const int sx = 500;
+		const int sy = GFX_SY / 2;
+		const int x = (GFX_SX - sx) / 2;
+		const int y = (GFX_SY - sy) / 2;
+
+		m_statTimerMenu->Draw(x, y, sx, sy);
+	}
+#endif
+
+	if (UI_DEBUG_VISIBLE)
+	{
+	#if ENABLE_NETWORKING
+		m_discoveryUi->clear();
+
+		const auto serverList = m_discoveryService->getServerList();
+
+		for (size_t i = 0; i < serverList.size(); ++i)
+		{
+			const auto & serverInfo = serverList[i];
+
+			char name[32];
+			sprintf(name, "connect_%d", i);
+			Dictionary & button = (*m_discoveryUi)[name];
+			char props[1024];
+			sprintf(props, "type:button name:%s x:%d y:0 action:connect address:%s image:button.png image_over:button-over.png image_down:button-down.png text_color:000000 font:calibri.ttf font_size:24",
+				name,
+				i * 300,
+				serverInfo.m_address.ToString(false).c_str(),
+				name);
+			button.parse(props);
+			button.setString("text", serverInfo.m_address.ToString(false).c_str());
+		}
+
+		for (size_t i = 0; i < m_clients.size(); ++i)
+		{
+			Client * client = m_clients[i];
+
+			{
+				char name[32];
+				sprintf(name, "disconnect_%d", i);
+				Dictionary & button = (*m_discoveryUi)[name];
+				char props[1024];
+				sprintf(props, "type:button name:%s x:%d y:00 scale:0.65 action:disconnect client:%d image:button.png image_over:button-over.png image_down:button-down.png text:disconnect text_color:000000 font:calibri.ttf font_size:24",
+					name, GFX_SX + (i - m_clients.size()) * 150,
+					i);
+				button.parse(props);
+			}
+
+			{
+				char name[32];
+				sprintf(name, "view_%d", i);
+				Dictionary & button = (*m_discoveryUi)[name];
+				char props[1024];
+				sprintf(props, "type:button name:%s x:%d y:50 scale:0.65 action:select client:%d image:button.png image_over:button-over.png image_down:button-down.png text:view text_color:000000 font:calibri.ttf font_size:24",
+					name, GFX_SX + (i - m_clients.size()) * 150,
+					i);
+				button.parse(props);
+			}
+		}
+
+		setColor(colorWhite);
+		m_discoveryUi->draw();
+	#endif
+	}
 }
 
 void App::netAction(Channel * channel, NetAction action, uint8_t param1, uint8_t param2, const std::string & param3)
@@ -2985,10 +3249,15 @@ int main(int argc, char * argv[])
 		{
 			g_app->startHosting();
 
-			g_app->m_host->m_gameSim.setGameState(kGameState_OnlineMenus);
+			//g_app->m_host->m_gameSim.setGameState(kGameState_OnlineMenus);
 
 			g_app->findGame();
 		}
+
+	#if ENABLE_NETWORKING_DEBUGS
+		if (g_testSteamMatchmaking)
+			g_app->startHosting();
+	#endif
 
 		//
 
