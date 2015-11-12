@@ -234,6 +234,7 @@ void OnlineSteam::tick()
 				LOG_DBG("OnlineSteam: LobbyJoin success");
 				m_callbacks->OnOnlineLobbyJoinResult(m_currentRequestId, true);
 
+				/*
 				const int numMembers = SteamMatchmaking()->GetNumLobbyMembers(m_lobbyId);
 				LOG_DBG("num lobby members: %d", numMembers);
 				for (int i = 0; i < numMembers; ++i)
@@ -246,6 +247,7 @@ void OnlineSteam::tick()
 						Verify(SteamNetworking()->SendP2PPacket(memberId, &data, dataSize, k_EP2PSendReliable));
 					}
 				}
+				*/
 			}
 			break;
 

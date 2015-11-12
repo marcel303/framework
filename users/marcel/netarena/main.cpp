@@ -1796,7 +1796,7 @@ Client * App::connect(const NetAddress & address)
 
 	m_channelMgr->m_serverVersion = serverVersion;
 
-	LOG_DBG("connect: %s [done]", address);
+	LOG_DBG("connect: %s (%llx) [done]", address.ToString(true).c_str(), address.m_userData);
 
 	LOG_DBG("connect: creating client");
 
@@ -1953,6 +1953,8 @@ bool App::tick()
 
 		if (keyboard.wentDown(SDLK_i))
 			g_online->showInviteFriendsUi();
+		if (keyboard.wentDown(SDLK_j))
+			Verify(findGame());
 	#endif
 	}
 
@@ -2313,6 +2315,7 @@ void App::tickNet()
 			g_online->lobbyCreateBegin();
 			m_isMatchmaking = true;
 			setNetState(NetState_LobbyCreate);
+			break;
 		}
 		break;
 
@@ -2366,8 +2369,6 @@ void App::tickNet()
 				{
 					if (success)
 					{
-						setNetState(NetState_Online);
-
 						m_host->m_gameSim.setGameState(kGameState_OnlineMenus);
 
 						uint64_t lobbyOwnerAddress;
@@ -2378,6 +2379,8 @@ void App::tickNet()
 							netAddress.m_userData = lobbyOwnerAddress;
 							connect(netAddress);
 
+							setNetState(NetState_Online);
+
 						#if ENABLE_NETWORKING_DEBUGS
 							if (g_testSteamMatchmaking)
 								findGame();
@@ -2386,11 +2389,13 @@ void App::tickNet()
 						else
 						{
 							stopHosting();
+							break;
 						}
 					}
 					else
 					{
 						setNetState(NetState_HostDestroy);
+						break;
 					}
 				}
 			}
@@ -2398,6 +2403,7 @@ void App::tickNet()
 			{
 				Assert(false);
 				setNetState(NetState_HostDestroy);
+				break;
 			}
 		}
 		break;
@@ -2410,13 +2416,47 @@ void App::tickNet()
 			{
 				if (isDone)
 				{
-					setNetState(NetState_Online);
+					if (success)
+					{
+						if (!m_channelMgr->IsInitialized())
+						{
+							SharedNetSocket socket(new NetSocketSteam());
+							if (!m_channelMgr->Initialize(m_packetDispatcher, this, socket, false, g_buildId))
+							{
+								setNetState(NetState_LobbyLeave);
+								break;
+							}
+						}
+
+						uint64_t lobbyOwnerAddress;
+						if (g_online->getLobbyOwnerAddress(lobbyOwnerAddress))
+						{
+							NetAddress netAddress;
+							netAddress.SetFromString("127.0.0.1", NET_PORT);
+							netAddress.m_userData = lobbyOwnerAddress;
+							connect(netAddress);
+
+							setNetState(NetState_Online);
+							break;
+						}
+						else
+						{
+							setNetState(NetState_LobbyLeave);
+							break;
+						}
+					}
+					else
+					{
+						setNetState(NetState_Offline);
+						break;
+					}
 				}
 			}
 			else
 			{
 				Assert(false);
 				setNetState(NetState_Offline);
+				break;
 			}
 		}
 		break;
@@ -2430,12 +2470,14 @@ void App::tickNet()
 				if (isDone)
 				{
 					setNetState(NetState_HostDestroy);
+					break;
 				}
 			}
 			else
 			{
 				Assert(false);
 				setNetState(NetState_HostDestroy);
+				break;
 			}
 		}
 		break;
