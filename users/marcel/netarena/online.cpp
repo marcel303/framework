@@ -395,6 +395,30 @@ void OnlineSteam::lobbyFindEnd(OnlineRequestId id)
 	finalizeCall();
 }
 
+OnlineRequestId OnlineSteam::lobbyJoinBegin(uint64_t gameId)
+{
+	assertNewCall();
+
+	LOG_DBG("OnlineSteam: lobbyJoinBegin: gameId=%llx", gameId);
+
+	m_currentRequestId++;
+
+	lobbyJoinBegin(CSteamID(gameId));
+
+	return m_currentRequestId;
+}
+
+void OnlineSteam::lobbyJoinEnd(OnlineRequestId id)
+{
+	Assert(id == m_currentRequestId);
+	Assert(m_currentCallType == kCallType_LobbyJoin);
+	Assert(m_currentCall != k_uAPICallInvalid);
+
+	LOG_DBG("OnlineSteam: lobbyJoinEnd");
+
+	finalizeCall();
+}
+
 OnlineRequestId OnlineSteam::lobbyLeaveBegin()
 {
 	assertNewCall();
@@ -538,6 +562,16 @@ OnlineRequestId OnlineLAN::lobbyFindBegin()
 }
 
 void OnlineLAN::lobbyFindEnd(OnlineRequestId id)
+{
+	Assert(false);
+}
+
+OnlineRequestId OnlineLAN::lobbyJoinBegin(uint64_t gameId)
+{
+	return kOnlineRequestIdInvalid;
+}
+
+void OnlineLAN::lobbyJoinEnd(OnlineRequestId id)
 {
 	Assert(false);
 }

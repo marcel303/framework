@@ -12,6 +12,8 @@
 #include "online.h"
 #include "Options.h"
 
+#include <steam_api.h>
+
 OPTION_EXTERN(bool, g_devMode);
 OPTION_EXTERN(bool, g_monkeyMode);
 OPTION_EXTERN(bool, g_logCRCs);
@@ -154,6 +156,7 @@ public:
 	bool pollMatchmaking(bool & isDone, bool & success);
 
 	bool findGame();
+	bool joinGame(uint64_t gameId);
 	void leaveGame(Client * client);
 
 	Client * connect(const char * address);
@@ -194,6 +197,11 @@ public:
 	std::vector<Client*> getClients() const { return m_clients; }
 
 	static void DialogQuit(void * arg, int dialogId, DialogResult result);
+
+	// Steam integration
+
+	STEAM_CALLBACK_MANUAL(App, OnSteamAvatarImageLoaded, AvatarImageLoaded_t, m_steamAvatarImageLoadedCallback);
+	STEAM_CALLBACK_MANUAL(App, OnSteamGameLobbyJoinRequested, GameLobbyJoinRequested_t, m_steamGameLobbyJoinRequestedCallback);
 };
 
 extern uint32_t g_buildId;

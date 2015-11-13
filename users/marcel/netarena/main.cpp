@@ -97,6 +97,8 @@ OPTION_DECLARE(std::string, g_connect, "");
 OPTION_DEFINE(std::string, g_connect, "App/Direct Connect");
 OPTION_ALIAS(g_connect, "connect");
 
+static CSteamID g_connectLobby;
+
 OPTION_DECLARE(bool, g_pauseOnOptionMenuOption, true);
 OPTION_DEFINE(bool, g_pauseOnOptionMenuOption, "App/Pause On Option Menu");
 
@@ -191,7 +193,7 @@ static void HandleAction(const std::string & action, const Dictionary & args)
 				g_connect = address;
 				g_connectLocal = false;
 
-				g_app->findGame();
+				Verify(g_app->findGame());
 			}
 		}
 	}
@@ -1295,6 +1297,9 @@ bool App::init()
 			if (!SteamAPI_Init())
 				return false;
 
+			m_steamAvatarImageLoadedCallback.Register(this, &App::OnSteamAvatarImageLoaded);
+			m_steamGameLobbyJoinRequestedCallback.Register(this, &App::OnSteamGameLobbyJoinRequested);
+
 			g_online = new OnlineSteam(this);
 		}
 		else
@@ -1541,6 +1546,9 @@ void App::shutdown()
 
 	if (USE_STEAMAPI)
 	{
+		m_steamAvatarImageLoadedCallback.Unregister();
+		m_steamGameLobbyJoinRequestedCallback.Unregister();
+
 		SteamAPI_Shutdown();
 	}
 
@@ -1762,6 +1770,21 @@ bool App::findGame()
 		}
 
 		return true;
+	}
+}
+
+bool App::joinGame(uint64_t gameId)
+{
+	if (USE_STEAMAPI)
+	{
+		g_online->lobbyJoinBegin(gameId);
+		m_isMatchmaking = true;
+		setNetState(NetState_LobbyJoin);
+		return true;
+	}
+	else
+	{
+		return false;
 	}
 }
 
@@ -2391,7 +2414,9 @@ void App::tickNet()
 
 						#if ENABLE_NETWORKING_DEBUGS
 							if (g_testSteamMatchmaking)
-								findGame();
+							{
+								Verify(findGame());
+							}
 						#endif
 						}
 						else
@@ -3168,6 +3193,18 @@ void App::DialogQuit(void * arg, int dialogId, DialogResult result)
 	}
 }
 
+void App::OnSteamAvatarImageLoaded(AvatarImageLoaded_t * arg)
+{
+	logDebug("OnSteamAvatarImageLoaded");
+}
+
+void App::OnSteamGameLobbyJoinRequested(GameLobbyJoinRequested_t * arg)
+{
+	logDebug("OnSteamGameLobbyJoinRequested");
+
+	joinGame(arg->m_steamIDLobby.ConvertToUint64());
+}
+
 static std::vector<std::string> parseMapList(const std::string & list)
 {
 	std::vector<std::string> result;
@@ -3246,6 +3283,18 @@ int main(int argc, char * argv[])
 	changeDirectory("data");
 
 	g_optionManager.LoadFromCommandLine(argc, argv);
+
+	for (int i = 0; i < argc; ++i)
+	{
+		if (!strcmp(argv[i], "+connect_lobby"))
+		{
+			Assert(i + 1 < argc);
+			if (i + 1 < argc)
+			{
+				g_connectLobby.SetFromUint64(_atoi64(argv[i + 1]));
+			}
+		}
+	}
 
 #if 0 // host IP prompt
 	if (!g_devMode && !g_connectLocal && (std::string)g_connect == "")
@@ -3342,12 +3391,17 @@ int main(int argc, char * argv[])
 
 			//g_app->m_host->m_gameSim.setGameState(kGameState_OnlineMenus);
 
-			g_app->findGame();
+			Verify(g_app->findGame());
 		}
-
+		else if (USE_STEAMAPI && g_connectLobby.IsLobby())
+		{
+			Verify(g_app->joinGame(g_connectLobby.ConvertToUint64()));
+		}
 	#if ENABLE_NETWORKING_DEBUGS
-		if (g_testSteamMatchmaking)
+		else if (g_testSteamMatchmaking)
+		{
 			g_app->startHosting();
+		}
 	#endif
 
 		//

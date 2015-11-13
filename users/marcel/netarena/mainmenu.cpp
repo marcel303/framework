@@ -175,7 +175,7 @@ bool MainMenu::tick(float dt)
 	{
 		logDebug("find game!");
 
-		g_app->findGame();
+		Verify(g_app->findGame());
 	}
 	else if (m_customize && m_customize->isClicked())
 	{

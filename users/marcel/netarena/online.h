@@ -33,6 +33,9 @@ public:
 	virtual OnlineRequestId lobbyFindBegin() = 0;
 	virtual void lobbyFindEnd(OnlineRequestId id) = 0;
 
+	virtual OnlineRequestId lobbyJoinBegin(uint64_t gameId) = 0;
+	virtual void lobbyJoinEnd(OnlineRequestId id) = 0;
+
 	virtual OnlineRequestId lobbyLeaveBegin() = 0;
 	virtual void lobbyLeaveEnd(OnlineRequestId id) = 0;
 
@@ -98,6 +101,9 @@ public:
 	virtual OnlineRequestId lobbyFindBegin();
 	virtual void lobbyFindEnd(OnlineRequestId id);
 
+	virtual OnlineRequestId lobbyJoinBegin(uint64_t gameId);
+	virtual void lobbyJoinEnd(OnlineRequestId id);
+
 	virtual OnlineRequestId lobbyLeaveBegin();
 	virtual void lobbyLeaveEnd(OnlineRequestId id);
 
@@ -135,6 +141,9 @@ public:
 
 	virtual OnlineRequestId lobbyFindBegin();
 	virtual void lobbyFindEnd(OnlineRequestId id);
+
+	virtual OnlineRequestId lobbyJoinBegin(uint64_t gameId);
+	virtual void lobbyJoinEnd(OnlineRequestId id);
 
 	virtual OnlineRequestId lobbyLeaveBegin();
 	virtual void lobbyLeaveEnd(OnlineRequestId id);
