@@ -88,6 +88,12 @@ class OnlineSteam : public Online
 	CCallResult<OnlineSteam, LobbyEnter_t> m_lobbyJoinedCallback;
 	void OnLobbyJoined(LobbyEnter_t * lobbyEntered, bool failure);
 
+	CCallbackManual<OnlineSteam, LobbyChatUpdate_t> m_lobbyChatUpdateCallback;
+	void OnLobbyChatUpdate(LobbyChatUpdate_t * lobbyChatUpdate);
+
+	CCallbackManual<OnlineSteam, LobbyKicked_t> m_lobbyKickedCallback;
+	void OnLobbyKicked(LobbyKicked_t * lobbyKicked);
+
 public:
 	OnlineSteam(OnlineCallbacks * callbacks);
 	virtual ~OnlineSteam();

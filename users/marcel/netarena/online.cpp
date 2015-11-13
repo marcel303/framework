@@ -120,6 +120,67 @@ void OnlineSteam::OnLobbyJoined(LobbyEnter_t * lobbyEntered, bool failure)
 	m_currentCallIsDone = true;
 }
 
+void OnlineSteam::OnLobbyChatUpdate(LobbyChatUpdate_t * lobbyChatUpdate)
+{
+	LOG_DBG("OnlineSteam: OnLobbyChatUpdate");
+
+	/*
+	k_EChatMemberStateChangeEntered			= 0x0001,		// This user has joined or is joining the chat room
+	k_EChatMemberStateChangeLeft			= 0x0002,		// This user has left or is leaving the chat room
+	k_EChatMemberStateChangeDisconnected	= 0x0004,		// User disconnected without leaving the chat first
+	k_EChatMemberStateChangeKicked			= 0x0008,		// User kicked
+	k_EChatMemberStateChangeBanned			= 0x0010,		// User kicked and banned
+
+	struct LobbyChatUpdate_t
+	{
+		enum { k_iCallback = k_iSteamMatchmakingCallbacks + 6 };
+
+		uint64 m_ulSteamIDLobby;			// Lobby ID
+		uint64 m_ulSteamIDUserChanged;		// user who's status in the lobby just changed - can be recipient
+		uint64 m_ulSteamIDMakingChange;		// Chat member who made the change (different from SteamIDUserChange if kicking, muting, etc.)
+											// for example, if one user kicks another from the lobby, this will be set to the id of the user who initiated the kick
+		uint32 m_rgfChatMemberStateChange;	// bitfield of EChatMemberStateChange values
+	};
+	*/
+
+	Assert(lobbyChatUpdate->m_ulSteamIDLobby == m_lobbyId.ConvertToUint64());
+
+	if (lobbyChatUpdate->m_ulSteamIDLobby == m_lobbyId.ConvertToUint64())
+	{
+		if (lobbyChatUpdate->m_rgfChatMemberStateChange & k_EChatMemberStateChangeEntered)
+		{
+			m_callbacks->OnOnlineLobbyMemberJoined(lobbyChatUpdate->m_ulSteamIDUserChanged);
+		}
+
+		if (lobbyChatUpdate->m_rgfChatMemberStateChange & k_EChatMemberStateChangeLeft)
+		{
+			m_callbacks->OnOnlineLobbyMemberLeft(lobbyChatUpdate->m_ulSteamIDUserChanged);
+		}
+	}
+}
+
+void OnlineSteam::OnLobbyKicked(LobbyKicked_t * lobbyKicked)
+{
+	LOG_DBG("OnlineSteam: OnLobbyKicked");
+
+	/*
+	struct LobbyKicked_t
+	{
+		enum { k_iCallback = k_iSteamMatchmakingCallbacks + 12 };
+		uint64 m_ulSteamIDLobby;			// Lobby
+		uint64 m_ulSteamIDAdmin;			// User who kicked you - possibly the ID of the lobby itself
+		uint8 m_bKickedDueToDisconnect;		// true if you were kicked from the lobby due to the user losing connection to Steam (currently always true)
+	};
+	*/
+
+	Assert(lobbyKicked->m_ulSteamIDLobby == m_lobbyId.ConvertToUint64());
+
+	if (lobbyKicked->m_ulSteamIDLobby == m_lobbyId.ConvertToUint64())
+	{
+		m_callbacks->OnOnlineLobbyMemberLeft(SteamUser()->GetSteamID().ConvertToUint64());
+	}
+}
+
 //
 
 OnlineSteam::OnlineSteam(OnlineCallbacks * callbacks)
@@ -131,10 +192,15 @@ OnlineSteam::OnlineSteam(OnlineCallbacks * callbacks)
 	, m_currentCallFailure(false)
 	, m_currentCallIsDone(false)
 {
+	m_lobbyChatUpdateCallback.Register(this, &OnlineSteam::OnLobbyChatUpdate);
+	m_lobbyKickedCallback.Register(this, &OnlineSteam::OnLobbyKicked);
 }
 
 OnlineSteam::~OnlineSteam()
 {
+	m_lobbyChatUpdateCallback.Unregister();
+	m_lobbyKickedCallback.Unregister();
+
 	assertNewCall();
 }
 

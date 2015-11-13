@@ -36,7 +36,6 @@
 #include "title.h"
 #include "tools.h"
 #include "uicommon.h"
-
 #include "MemoryStream.h"
 #include "spriter.h"
 #include "StreamWriter.h"
@@ -1297,6 +1296,7 @@ bool App::init()
 			if (!SteamAPI_Init())
 				return false;
 
+			m_steamPersonaStateChangeCallback.Register(this, &App::OnSteamPersonaStateChange);
 			m_steamAvatarImageLoadedCallback.Register(this, &App::OnSteamAvatarImageLoaded);
 			m_steamGameLobbyJoinRequestedCallback.Register(this, &App::OnSteamGameLobbyJoinRequested);
 
@@ -1546,6 +1546,10 @@ void App::shutdown()
 
 	if (USE_STEAMAPI)
 	{
+		delete g_online;
+		g_online = 0;
+
+		m_steamPersonaStateChangeCallback.Unregister();
 		m_steamAvatarImageLoadedCallback.Unregister();
 		m_steamGameLobbyJoinRequestedCallback.Unregister();
 
@@ -3191,6 +3195,11 @@ void App::DialogQuit(void * arg, int dialogId, DialogResult result)
 		else
 			self->leaveGame(self->m_clients.front());
 	}
+}
+
+void App::OnSteamPersonaStateChange(PersonaStateChange_t * arg)
+{
+	logDebug("OnSteamPersonaStateChange");
 }
 
 void App::OnSteamAvatarImageLoaded(AvatarImageLoaded_t * arg)

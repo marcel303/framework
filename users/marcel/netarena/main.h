@@ -200,6 +200,7 @@ public:
 
 	// Steam integration
 
+	STEAM_CALLBACK_MANUAL(App, OnSteamPersonaStateChange, PersonaStateChange_t, m_steamPersonaStateChangeCallback);
 	STEAM_CALLBACK_MANUAL(App, OnSteamAvatarImageLoaded, AvatarImageLoaded_t, m_steamAvatarImageLoadedCallback);
 	STEAM_CALLBACK_MANUAL(App, OnSteamGameLobbyJoinRequested, GameLobbyJoinRequested_t, m_steamGameLobbyJoinRequestedCallback);
 };
