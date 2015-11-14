@@ -115,7 +115,10 @@ void OnlineSteam::OnLobbyJoined(LobbyEnter_t * lobbyEntered, bool failure)
 {
 	LOG_DBG("OnlineSteam: OnLobbyJoined. failure=%d", failure);
 	if (!failure)
+	{
 		m_lobbyEntered = *lobbyEntered;
+		m_lobbyId = lobbyEntered->m_ulSteamIDLobby;
+	}
 	m_currentCallFailure = failure;
 	m_currentCallIsDone = true;
 }

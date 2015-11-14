@@ -1299,6 +1299,7 @@ bool App::init()
 			m_steamPersonaStateChangeCallback.Register(this, &App::OnSteamPersonaStateChange);
 			m_steamAvatarImageLoadedCallback.Register(this, &App::OnSteamAvatarImageLoaded);
 			m_steamGameLobbyJoinRequestedCallback.Register(this, &App::OnSteamGameLobbyJoinRequested);
+			m_steamP2PSessionRequestCallback.Register(this, &App::OnSteamP2PSessionRequest);
 
 			g_online = new OnlineSteam(this);
 		}
@@ -1552,6 +1553,7 @@ void App::shutdown()
 		m_steamPersonaStateChangeCallback.Unregister();
 		m_steamAvatarImageLoadedCallback.Unregister();
 		m_steamGameLobbyJoinRequestedCallback.Unregister();
+		m_steamP2PSessionRequestCallback.Unregister();
 
 		SteamAPI_Shutdown();
 	}
@@ -3212,6 +3214,13 @@ void App::OnSteamGameLobbyJoinRequested(GameLobbyJoinRequested_t * arg)
 	logDebug("OnSteamGameLobbyJoinRequested");
 
 	joinGame(arg->m_steamIDLobby.ConvertToUint64());
+}
+
+void App::OnSteamP2PSessionRequest(P2PSessionRequest_t * arg)
+{
+	logDebug("OnSteamP2PSessionRequest");
+
+	SteamNetworking()->AcceptP2PSessionWithUser(arg->m_steamIDRemote);
 }
 
 static std::vector<std::string> parseMapList(const std::string & list)
