@@ -73,7 +73,7 @@ void Background::draw()
 		if (s_debugBackground)
 		{
 			setColor(colorWhite);
-			drawText(0.f, 100.f, 24, +1.f, +1.f, "background: type=volcano, animTime=%02.2f, fireballIsActive=%d", m_volcanoState.m_spriterState.animTime, m_volcanoState.m_fireBall.active);
+			drawText(0.f, 100.f, 24, +1.f, +1.f, "background: type=volcano, animTime=%02.2f, fireballIsActive=%d", m_volcanoState.m_spriterState.animTime, m_volcanoState.m_fireBall.m_isActive);
 		}
 		break;
 
@@ -125,7 +125,7 @@ Background::VolcanoState::VolcanoState()
 	t2 = true;
 	t3 = true;
 
-	m_fireBall.active = false;
+	m_fireBall.m_isActive = false;
 }
 
 void Background::VolcanoState::tick(GameSim & gameSim, Background & background, float dt)
@@ -200,7 +200,7 @@ void Background::VolcanoState::tick(GameSim & gameSim, Background & background, 
 
 		if (m_fireBall.m_y < -850.f)
 		{
-			if (m_fireBall.active)
+			if (m_fireBall.m_isActive)
 			{
 				gameSim.addFireBall();
 

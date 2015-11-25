@@ -23,7 +23,7 @@ void FireBall::load(const char * name, GameSim & gameSim, int x, int y, float an
 	m_state.angle = angle;
 	m_state.scale = scale;
 
-	active = true;
+	m_isActive = true;
 
 	m_speed = gameSim.RandomFloat(-10.f, 50.f) + FIREBALL_SPEED;
 
@@ -32,7 +32,7 @@ void FireBall::load(const char * name, GameSim & gameSim, int x, int y, float an
 
 void FireBall::tick(GameSim & gameSim, float dt)
 {
-	if (active)
+	if (m_isActive)
 	{
 		const float rad = (m_state.angle / 180.f * M_PI);
 
@@ -61,7 +61,7 @@ void FireBall::tick(GameSim & gameSim, float dt)
 					CollisionShape shape2(info1.min, info1.max);
 					if (shape1.intersects(shape2))
 					{
-						active = false;
+						m_isActive = false;
 
 						other.handleDamage(1.f, Vec2(vx, vy), 0, true);
 					}
@@ -80,7 +80,7 @@ void FireBall::tick(GameSim & gameSim, float dt)
 
 void FireBall::draw()
 {
-	if (active)
+	if (m_isActive)
 	{
 		setColor(colorWhite);
 		FIREBALL_SPRITER.draw(m_state);
@@ -89,7 +89,7 @@ void FireBall::draw()
 
 void FireBall::drawLight()
 {
-	if (active)
+	if (m_isActive)
 	{
 		setColor(colorWhite);
 		Sprite("player-light.png").drawEx(m_state.x, m_state.y, m_state.angle, 2.f, 2.f, false, FILTER_MIPMAP);

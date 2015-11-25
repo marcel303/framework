@@ -29,7 +29,7 @@ public:
 	float m_x;
 	float m_y;
 
-	bool active;
+	bool m_isActive;
 
 	float m_speed;
 };

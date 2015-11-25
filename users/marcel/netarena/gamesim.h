@@ -152,7 +152,7 @@ struct Player
 		m_lastSpawnIndex = -1;
 	}
 
-	void tick(float dt);
+	void tick(GameSim & gameSim, float dt);
 	void draw() const;
 	void drawAt(bool flipX, bool flipY, int x, int y, const SpriterState & spriterState, const spriter::Drawable * drawables, int numDrawables) const;
 	void drawLight() const;
@@ -650,6 +650,23 @@ struct Token : PhysicsActor
 	void drawLight() const;
 };
 
+struct FootBall : PhysicsActor
+{
+	bool m_isDropped;
+	SpriterState m_spriterState;
+
+	FootBall()
+	{
+		memset(this, 0, sizeof(FootBall));
+	}
+
+	void setup(int blockX, int blockY);
+
+	void tick(GameSim & gameSim, float dt);
+	void draw() const;
+	void drawLight() const;
+};
+
 struct Coin : PhysicsActor
 {
 	bool m_isDropped;
@@ -780,7 +797,7 @@ struct Debris : PhysicsActor
 
 struct Light
 {
-	bool m_isAlive;
+	bool m_isActive;
 	Vec2 m_pos;
 	float m_color[4];
 
@@ -833,9 +850,10 @@ struct Portal
 	bool doTeleport(GameSim & gameSim, Portal *& destination, int & destinationId);
 	Vec2 getDestinationPos(Vec2Arg offset) const;
 
+	void tick(GameSim & gameSim, float dt);
 	void draw() const;
 
-	bool m_isAlive;
+	bool m_isActive;
 	int m_x1, m_y1, m_x2, m_y2;
 	int m_key;
 };
@@ -851,7 +869,7 @@ struct PickupSpawner
 	void tick(GameSim & gameSim, float dt);
 	void draw() const;
 
-	bool m_isAlive;
+	bool m_isActive;
 	float m_x, m_y;
 	PickupType m_type;
 	float m_interval;
@@ -874,7 +892,7 @@ struct TileSprite
 
 	bool intersects(int x, int y) const;
 
-	bool m_isAlive;
+	bool m_isActive;
 	int m_pivotX;
 	int m_pivotY;
 	FixedString<32> m_spriter;
@@ -885,7 +903,7 @@ struct TileSprite
 
 struct Decal
 {
-	bool isActive;
+	bool m_isActive;
 	int16_t x;
 	int16_t y;
 	uint8_t color[3];
@@ -897,7 +915,7 @@ struct Decal
 		memset(this, 0, sizeof(Decal));
 	}
 
-	void tick(float dt);
+	void tick(GameSim & gameSim, float dt);
 	void draw() const;
 	void drawAt(int x, int y) const;
 };
@@ -906,7 +924,7 @@ Color getDecalColor(int playerIndex, Vec2Arg direction);
 
 struct ScreenShake
 {
-	bool isActive;
+	bool m_isActive;
 	bool fade;
 	Vec2 pos;
 	Vec2 vel;
@@ -919,11 +937,12 @@ struct ScreenShake
 		memset(this, 0, sizeof(ScreenShake));
 	}
 
-	void tick(float dt);
+	void tick(GameSim & gameSim, float dt);
 };
 
 struct ZoomEffect
 {
+	bool m_isActive;
 	float zoom;
 	float life;
 	float lifeRcp;
@@ -934,7 +953,7 @@ struct ZoomEffect
 		memset(this, 0, sizeof(ZoomEffect));
 	}
 
-	void tick(float dt);
+	void tick(GameSim & gameSim, float dt);
 };
 
 struct LightEffect
@@ -945,6 +964,7 @@ struct LightEffect
 		kType_Lighten
 	};
 
+	bool m_isActive;
 	Type type;
 	float life;
 	float lifeRcp;
@@ -958,7 +978,7 @@ struct LightEffect
 	void setDarken(float time, float amount);
 	void setLighten(float time, float amount);
 
-	void tick(float dt);
+	void tick(GameSim & gameSim, float dt);
 };
 
 struct FloorEffect
@@ -995,6 +1015,7 @@ struct BlindsEffect
 		memset(this, 0, sizeof(BlindsEffect));
 	}
 
+	bool m_isActive;
 	float m_duration;
 	float m_time;
 	int m_x;
@@ -1024,7 +1045,7 @@ struct AnimationFxState
 	FixedString<32> m_fileName;
 	SpriterState m_state;
 
-	void tick(float dt);
+	void tick(GameSim & gameSim, float dt);
 	void draw(DrawLayer layer);
 };
 
@@ -1133,6 +1154,10 @@ struct GameStateData
 	// barrels
 
 	Barrel m_barrels[MAX_BARRELS];
+
+	// footballs
+
+	FootBall m_footBalls[MAX_FOOTBALLS];
 
 	// effects
 
@@ -1272,6 +1297,8 @@ public:
 	void tickMenus();
 	void tickRoundBegin(float dt);
 	void tickPlay();
+	void tickPlayPickupSpawn(float dt);
+	void tickPlayLevelEvents(float dt);
 	void tickRoundComplete(float dt);
 
 	struct CamParams

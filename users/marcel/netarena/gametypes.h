@@ -53,6 +53,7 @@ enum ObjectType
 {
 	kObjectType_Undefined,
 	kObjectType_Axe,
+	kObjectType_FootBall,
 	kObjectType_Bullet,
 	kObjectType_Coin,
 	kObjectType_Pickup,

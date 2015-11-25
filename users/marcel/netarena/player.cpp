@@ -838,12 +838,10 @@ void Player::applyAnim()
 
 //
 
-void Player::tick(float dt)
+void Player::tick(GameSim & gameSim, float dt)
 {
 	if (!m_isActive)
 		return;
-
-	GameSim & gameSim = *GAMESIM;
 
 	// -- emote hack --
 
@@ -1087,7 +1085,7 @@ void Player::tick(float dt)
 
 	//if (m_isAlive)
 	{
-		if (GAMESIM->m_gameState >= kGameState_Play)
+		if (gameSim.m_gameState >= kGameState_Play)
 			m_spawnInvincibilityTime = Calc::Max(0.f, m_spawnInvincibilityTime - dt);
 		m_spawnMarkerTime = Calc::Max(0.f, m_spawnMarkerTime - dt);
 
@@ -1295,9 +1293,9 @@ void Player::tick(float dt)
 
 				for (int i = 0; i < MAX_FIREBALLS; ++i)
 				{
-					FireBall& other = gameSim.m_fireballs[i];
+					FireBall & other = gameSim.m_fireballs[i];
 
-					if (other.active)
+					if (other.m_isActive)
 					{
 						CollisionShape shape1;
 						CollisionShape shape2;
@@ -1305,7 +1303,7 @@ void Player::tick(float dt)
 						if (getAttackCollision(shape1) && other.getCollision(shape2))
 						{
 							if (shape1.intersects(shape2))
-								gameSim.m_fireballs[i].active = false;
+								gameSim.m_fireballs[i].m_isActive = false;
 						}
 					}
 				}
@@ -1827,7 +1825,7 @@ void Player::tick(float dt)
 					Vec2 targetPosition;
 					if (findNinjaDashTarget(targetPosition))
 					{
-						GAMESIM->addAnimationFx(kDrawLayer_Game, "fx/dash/dash.scml", m_pos[0], m_pos[1] + (m_collision.min[1] + m_collision.max[1]) / 2.f, m_facing[0] < 0.f, false);
+						gameSim.addAnimationFx(kDrawLayer_Game, "fx/dash/dash.scml", m_pos[0], m_pos[1] + (m_collision.min[1] + m_collision.max[1]) / 2.f, m_facing[0] < 0.f, false);
 
 						m_pos = targetPosition;
 
@@ -2283,6 +2281,7 @@ void Player::tick(float dt)
 
 		struct CollisionArgs
 		{
+			GameSim * gameSim;
 			Player * self;
 			Vec2 totalVel;
 			uint32_t * dirBlockMask;
@@ -2299,6 +2298,7 @@ void Player::tick(float dt)
 
 		CollisionArgs args;
 
+		args.gameSim = &gameSim;
 		args.self = this;
 		args.totalVel = totalVel;
 		args.dirBlockMask = dirBlockMask;
@@ -2320,6 +2320,7 @@ void Player::tick(float dt)
 			[](PhysicsUpdateInfo & updateInfo)
 			{
 				CollisionArgs * args = (CollisionArgs*)updateInfo.arg;
+				GameSim & gameSim = *args->gameSim;
 				Player * self = args->self;
 				const Vec2 & delta = updateInfo.delta;
 				const Vec2 & totalVel = args->totalVel;
@@ -2343,7 +2344,7 @@ void Player::tick(float dt)
 
 					if (blockAndDistance)
 					{
-						if (blockAndDistance->block->handleDamage(*self->m_instanceData->m_gameSim, blockAndDistance->x, blockAndDistance->y))
+						if (blockAndDistance->block->handleDamage(gameSim, blockAndDistance->x, blockAndDistance->y))
 						{
 							blockAndDistance = 0;
 							result |= kPhysicsUpdateFlag_DontCollide;
@@ -2368,8 +2369,8 @@ void Player::tick(float dt)
 								CollisionShape attackCollision;
 								if (self->getAttackCollision(attackCollision, Vec2(dx * ARENA_SX_PIXELS, dy * ARENA_SY_PIXELS)))
 								{
-									self->m_attack.hitDestructible |= self->m_instanceData->m_gameSim->m_arena.handleDamageShape(
-										*self->m_instanceData->m_gameSim,
+									self->m_attack.hitDestructible |= gameSim.m_arena.handleDamageShape(
+										gameSim,
 										updateInfo.pos[0],
 										updateInfo.pos[1],
 										attackCollision,
@@ -2444,7 +2445,7 @@ void Player::tick(float dt)
 						if (strength > PLAYER_SCREENSHAKE_STRENGTH_THRESHHOLD)
 						{
 							strength = sign * strength / 4.f;
-							self->GAMESIM->addScreenShake(
+							gameSim.addScreenShake(
 								i == 0 ? strength : 0.f,
 								i == 1 ? strength : 0.f,
 								3000.f, .3f,

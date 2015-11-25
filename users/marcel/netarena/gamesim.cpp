@@ -81,6 +81,7 @@ struct PickupSprite
 #define COIN_SPRITE "coin.png"
 #define AXE_SPRITER Spriter("objects/axe/sprite.scml")
 #define PIPEBOMB_SPRITER Spriter("objects/pipebomb/sprite.scml")
+#define FOOTBALL_SPRITER Spriter("objects/football/sprite.scml")
 
 //
 
@@ -299,6 +300,87 @@ void Token::draw() const
 }
 
 void Token::drawLight() const
+{
+	if (m_isDropped)
+	{
+		setColor(colorWhite);
+		Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f, 1.5f, false, FILTER_MIPMAP);
+	}
+}
+
+//
+
+void FootBall::setup(int blockX, int blockY)
+{
+	const int kRadius = 100;
+
+	*static_cast<PhysicsActor*>(this) = PhysicsActor();
+
+	m_isActive = true;
+	m_type = kObjectType_Coin;
+	m_bbMin.Set(-kRadius, -kRadius);
+	m_bbMax.Set(+kRadius, +kRadius);
+	m_pos.Set(
+		(blockX + .5f) * BLOCK_SX,
+		(blockY + .5f) * BLOCK_SY);
+	m_vel.Set(0.f, 0.f);
+	m_doTeleport = true;
+	m_bounciness = FOOTBALL_BOUNCINESS;
+	m_noGravity = false;
+	m_friction = 0.1f;
+	m_airFriction = 0.9f;
+
+	m_isDropped = true;
+	m_spriterState = SpriterState();
+	m_spriterState.startAnim(FOOTBALL_SPRITER, "idle");
+}
+
+void FootBall::tick(GameSim & gameSim, float dt)
+{
+	if (m_isDropped)
+	{
+		PhysicsActorCBs cbs;
+		cbs.onBlockMask = [](PhysicsActorCBs & cbs, PhysicsActor & actor, uint32_t blockMask) 
+		{
+			if (blockMask & kBlockMask_Spike)
+			{
+				if (actor.m_vel[1] > 0.f)
+				{
+					actor.m_vel.Set(g_gameSim->RandomFloat(-FOOTBALL_FLEE_SPEED, +FOOTBALL_FLEE_SPEED), -FOOTBALL_FLEE_SPEED);
+					g_gameSim->playSound("football-bounce.ogg");
+				}
+			}
+			return false;
+		};
+		cbs.onBounce = [](PhysicsActorCBs & cbs, PhysicsActor & actor)
+		{
+			if (std::abs(actor.m_vel[1]) >= FOOTBALL_BOUNCE_SOUND_TRESHOLD)
+				g_gameSim->playSound("football-bounce.ogg");
+		};
+
+		PhysicsActor::tick(gameSim, dt, cbs);
+	}
+}
+
+void FootBall::draw() const
+{
+	if (m_isDropped)
+	{
+		setColor(colorWhite);
+
+		SpriterState spriterState = m_spriterState;
+		spriterState.x = m_pos[0];
+		spriterState.y = m_pos[1];
+		FOOTBALL_SPRITER.draw(spriterState);
+	}
+
+	if (g_devMode)
+	{
+		drawBB();
+	}
+}
+
+void FootBall::drawLight() const
 {
 	if (m_isDropped)
 	{
@@ -852,7 +934,7 @@ void Barrel::drawLight() const
 
 void Light::setup(float x, float y, const Color & color)
 {
-	m_isAlive = true;
+	m_isActive = true;
 	m_pos.Set(x, y);
 	m_color[0] = color.r;
 	m_color[1] = color.g;
@@ -979,7 +1061,7 @@ static const float kPortalSafeZoneSize = 10.f;
 
 void Portal::setup(float x1, float y1, float x2, float y2, int key)
 {
-	m_isAlive = true;
+	m_isActive = true;
 
 	Assert(x1 < x2);
 	Assert(y1 < y2);
@@ -1032,7 +1114,7 @@ bool Portal::doTeleport(GameSim & gameSim, Portal *& destination, int & destinat
 	{
 		Portal & portal = gameSim.m_portals[i];
 
-		if (portal.m_isAlive &&
+		if (portal.m_isActive &&
 			portal.m_key == m_key &&
 			&portal != this)
 		{
@@ -1076,6 +1158,10 @@ Vec2 Portal::getDestinationPos(Vec2Arg offset) const
 		offset[1] + m_y2);
 }
 
+void Portal::tick(GameSim & gameSim, float dt)
+{
+}
+
 void Portal::draw() const
 {
 	if (g_devMode || 1) // fixme
@@ -1100,7 +1186,7 @@ void Portal::draw() const
 
 void PickupSpawner::setup(float x1, float y1, float x2, float y2, PickupType type, float interval)
 {
-	m_isAlive = true;
+	m_isActive = true;
 	m_x = (x1 + x2) / 2.f;
 	m_y = (y1 + y2) / 2.f;
 	m_type = type;
@@ -1147,7 +1233,7 @@ void PickupSpawner::draw() const
 
 void TileSprite::setup(const char * name, int pivotX, int pivotY, int x1, int y1, int x2, int y2)
 {
-	m_isAlive = true;
+	m_isActive = true;
 
 	m_pivotX = pivotX;
 	m_pivotY = pivotY;
@@ -1222,7 +1308,7 @@ bool TileSprite::intersects(int x, int y) const
 
 //
 
-void Decal::tick(float dt)
+void Decal::tick(GameSim & gameSim, float dt)
 {
 }
 
@@ -1261,7 +1347,7 @@ Color getDecalColor(int playerIndex, Vec2Arg direction)
 
 //
 
-void ScreenShake::tick(float dt)
+void ScreenShake::tick(GameSim & gameSim, float dt)
 {
 	Vec2 force = pos * (-stiffness);
 	vel += force * dt;
@@ -1277,15 +1363,21 @@ void ScreenShake::tick(float dt)
 
 //
 
-void ZoomEffect::tick(float dt)
+void ZoomEffect::tick(GameSim & gameSim, float dt)
 {
 	life = Calc::Max(0.f, life - lifeRcp * dt);
+
+	if (life <= 0.f)
+	{
+		*this = ZoomEffect();
+	}
 }
 
 //
 
 void LightEffect::setDarken(float time, float amount)
 {
+	this->m_isActive = true;
 	this->type = kType_Darken;
 	this->life = time;
 	this->lifeRcp = 1.f / time;
@@ -1294,17 +1386,20 @@ void LightEffect::setDarken(float time, float amount)
 
 void LightEffect::setLighten(float time, float amount)
 {
+	this->m_isActive = true;
 	this->type = kType_Lighten;
 	this->life = time;
 	this->lifeRcp = 1.f / time;
 	this->amount = amount;
 }
 
-void LightEffect::tick(float dt)
+void LightEffect::tick(GameSim & gameSim, float dt)
 {
-	if (life > 0.f)
+	life = Calc::Max(0.f, life - dt);
+
+	if (life <= 0.f)
 	{
-		life = Calc::Max(0.f, life - dt);
+		*this = LightEffect();
 	}
 }
 
@@ -1482,6 +1577,7 @@ void FloorEffect::trySpawnAt(GameSim & gameSim, int playerId, int x, int y, int 
 
 void BlindsEffect::setup(float time, int x, int y, int size, bool vertical, const char * text)
 {
+	m_isActive = true;
 	m_duration = time;
 	m_time = time;
 	m_x = x;
@@ -1544,7 +1640,7 @@ void BlindsEffect::drawHud()
 
 //
 
-void AnimationFxState::tick(float dt)
+void AnimationFxState::tick(GameSim & gameSim, float dt)
 {
 	if (m_isActive)
 	{
@@ -2005,7 +2101,7 @@ void GameSim::load(const char * name)
 
 				for (int i = 0; i < MAX_LIGHTS; ++i)
 				{
-					if (!m_lights[i].m_isAlive)
+					if (!m_lights[i].m_isActive)
 					{
 						light = &m_lights[i];
 						break;
@@ -2016,7 +2112,7 @@ void GameSim::load(const char * name)
 					LOG_ERR("too many torches!");
 				else
 				{
-					light->m_isAlive = true;
+					light->m_isActive = true;
 
 					light->m_pos[0] = d.getInt("x", 0);
 					light->m_pos[1] = d.getInt("y", 0);
@@ -2034,7 +2130,7 @@ void GameSim::load(const char * name)
 
 				for (int i = 0; i < MAX_TILE_SPRITES; ++i)
 				{
-					if (!m_tileSprites[i].m_isAlive)
+					if (!m_tileSprites[i].m_isActive)
 					{
 						tileSprite = &m_tileSprites[i];
 						break;
@@ -2103,7 +2199,7 @@ void GameSim::load(const char * name)
 
 				for (int i = 0; i < MAX_PORTALS; ++i)
 				{
-					if (!m_portals[i].m_isAlive)
+					if (!m_portals[i].m_isActive)
 					{
 						portal = &m_portals[i];
 						break;
@@ -2128,7 +2224,7 @@ void GameSim::load(const char * name)
 
 				for (int i = 0; i < MAX_PICKUP_SPAWNERS; ++i)
 				{
-					if (!m_pickupSpawners[i].m_isAlive)
+					if (!m_pickupSpawners[i].m_isActive)
 					{
 						spawner = &m_pickupSpawners[i];
 						break;
@@ -2193,6 +2289,11 @@ void GameSim::resetGameWorld()
 
 	for (int i = 0; i < MAX_PIPEBOMBS; ++i)
 		m_pipebombs[i] = PipeBomb();
+
+	// reset footballs
+
+	for (int i = 0; i < MAX_FOOTBALLS; ++i)
+		m_footBalls[i] = FootBall();
 
 	// reset floor effect
 
@@ -2641,6 +2742,14 @@ void GameSim::tickRoundBegin(float dt)
 	}
 }
 
+template <typename T>
+static void tickObjects(GameSim & gameSim, float dt, T * objects, int numObjects)
+{
+	for (int i = 0; i < numObjects; ++i)
+		if (objects[i].m_isActive)
+			objects[i].tick(gameSim, dt);
+}
+
 void GameSim::tickPlay()
 {
 	const float physicalDt = 1.f / TICKS_PER_SECOND;
@@ -2670,10 +2779,7 @@ void GameSim::tickPlay()
 
 	m_background.tick(*this, dt);
 
-	// fireballs update
-
-	for (int i = 0; i < MAX_FIREBALLS; ++i)
-		m_fireballs[i].tick(*this, dt);
+	tickObjects(*this, dt, m_fireballs, MAX_FIREBALLS);
 
 	// player update
 
@@ -2686,44 +2792,212 @@ void GameSim::tickPlay()
 			if (playerAttackTimeDilation && (m_players[i].m_timeDilationAttack.isActive() || (m_players[i].m_attack.attacking && m_players[i].m_attack.allowCancelTimeDilationAttack)))
 				playerTimeMultiplier /= PLAYER_EFFECT_TIMEDILATION_MULTIPLIER;
 
-			m_playerInstanceDatas[i]->m_player->tick(dt * playerTimeMultiplier);
+			m_playerInstanceDatas[i]->m_player->tick(*this, dt * playerTimeMultiplier);
 		}
 	}
 
-	// pickups
+	tickObjects(*this, dt, m_pickups, MAX_PICKUPS);
+	tickObjects(*this, dt, m_movers, MAX_MOVERS);
+	tickObjects(*this, dt, m_axes, MAX_AXES);
+	tickObjects(*this, dt, m_pipebombs, MAX_PIPEBOMBS);
+	tickObjects(*this, dt, m_footBalls, MAX_FOOTBALLS);
 
-	for (int i = 0; i < MAX_PICKUPS; ++i)
+	tickPlayPickupSpawn(dt);
+	tickPlayLevelEvents(dt);
+
+	// token
+
+	if (m_gameMode == kGameMode_TokenHunt)
 	{
-		if (m_pickups[i].m_isActive)
-			m_pickups[i].tick(*this, dt);
+		m_tokenHunt.m_token.tick(*this, dt);
 	}
 
-	// movers
+	// coins
 
-	for (int i = 0; i < MAX_MOVERS; ++i)
+	if (m_gameMode == kGameMode_CoinCollector && m_gameState == kGameState_Play)
 	{
-		if (m_movers[i].m_isActive)
-			m_movers[i].tick(*this, dt);
+		tickObjects(*this, dt, m_coinCollector.m_coins, MAX_COINS);
+
+		if (tick >= m_coinCollector.m_nextSpawnTick)
+		{
+			if (m_coinCollector.m_nextSpawnTick != 0)
+			{
+				int numCoins = 0;
+
+				for (int i = 0; i < MAX_COINS; ++i)
+					if (m_coinCollector.m_coins[i].m_isDropped)
+						numCoins++;
+
+				for (int i = 0; i < MAX_PLAYERS; ++i)
+					if (m_players[i].m_isAlive)
+						numCoins += m_players[i].m_score;
+
+				if (numCoins < COINCOLLECTOR_COIN_LIMIT)
+				{
+					spawnCoin();
+				}
+			}
+
+			m_coinCollector.m_nextSpawnTick = tick + (COIN_SPAWN_INTERVAL + (Random() % COIN_SPAWN_INTERVAL_VARIANCE)) * TICKS_PER_SECOND;
+		}
 	}
 
-	// axes
+	// floor effect
 
-	for (int i = 0; i < MAX_AXES; ++i)
+	m_floorEffect.tick(*this, dt);
+
+	tickObjects(*this, dt, m_blindsEffects, MAX_BLINDS_EFFECTS);
+	tickObjects(*this, dt, m_lights, MAX_LIGHTS);
+
+	// particle effects
+
+	for (int i = 0; i < MAX_PARTICLE_EFFECTS; ++i)
 	{
-		if (m_axes[i].m_isActive)
-			m_axes[i].tick(*this, dt);
+		if (m_particleEffects[i].m_data.m_isActive)
+		{
+			cpuTimingBlock(particleEffectTick);
+
+			struct UserData
+			{
+				GameSim * gameSim;
+				ParticleEffect * particleEffect;
+			};
+
+			UserData userData;
+			userData.gameSim = this;
+			userData.particleEffect = &m_particleEffects[i];
+
+			ParticleCallbacks cbs;
+			cbs.userData = &userData;
+			cbs.randomInt = [](void * userData, int min, int max) { return min + (rand() % (max - min + 1)); };
+			cbs.randomFloat = [](void * userData, float min, float max) { return min + (rand() & 4095) / 4095.f * (max - min); };
+			//cbs.randomInt = [](void * userData, int min, int max) { return (int)static_cast<UserData*>(userData)->gameSim->RandomInt(min, max); };
+			//cbs.randomFloat = [](void * userData, float min, float max) { return static_cast<UserData*>(userData)->gameSim->RandomFloat(min, max); };
+			cbs.getEmitterByName = [](void * _userData, const char * name, const ParticleEmitterInfo *& pei, const ParticleInfo *& pi, ParticlePool *& pool, ParticleEmitter *& pe)
+			{
+				UserData * userData = static_cast<UserData*>(_userData);
+				for (int i = 0; i < ParticleEffect::kMaxParticleSystems; ++i)
+				{
+					if (!strcmp(userData->particleEffect->m_system[i].emitterInfo.name, name))
+					{
+						pei = &userData->particleEffect->m_system[i].emitterInfo;
+						pi = &userData->particleEffect->m_system[i].particleInfo;
+						pool = &userData->particleEffect->m_system[i].pool;
+						pe = &userData->particleEffect->m_system[i].emitter;
+						return true;
+					}
+				}
+				return false;
+			};
+			// todo : add collision callback
+			//bool (*checkCollision)(void * userData, float x1, float y1, float x2, float y2, float & t, float & nx, float & ny);
+
+			for (int j = 0; j < ParticleEffect::kMaxParticleSystems; ++j)
+			{
+				m_particleEffects[i].m_system[j].tick(cbs, 0.f, GRAVITY, dt);
+			}
+		}
 	}
 
-	// pipebombs
+	tickObjects(*this, dt, m_portals, MAX_PORTALS);
+	tickObjects(*this, dt, m_pickupSpawners, MAX_PICKUP_SPAWNERS);
+	tickObjects(*this, dt, m_tileSprites, MAX_TILE_SPRITES);
+	tickObjects(*this, dt, m_animationEffects, MAX_ANIM_EFFECTS);
+	tickObjects(*this, dt, m_decals, MAX_DECALS);
+	tickObjects(*this, dt, m_screenShakes, MAX_SCREEN_SHAKES);
+	tickObjects(*this, dt, m_zoomEffects, MAX_ZOOM_EFFECTS);
 
-	for (int i = 0; i < MAX_PIPEBOMBS; ++i)
+	tickZoom(dt);
+
+	// light effects
+
+	tickObjects(*this, dt, m_lightEffects, MAX_LIGHT_EFFECTS);
+
+	// particles
+
+	m_particlePool->tick(*this, dt);
+
+	// bullets
+
+	m_bulletPool->tick(*this, dt);
+
+	m_tick++;
+
+	m_roundTime += dt;
+
+	m_physicalRoundTime += physicalDt;
+
+	if (m_gameState == kGameState_Play)
 	{
-		if (m_pipebombs[i].m_isActive)
-			m_pipebombs[i].tick(*this, dt);
+		// check if the round has ended
+
+		bool roundComplete = false;
+
+		if (m_gameMode == kGameMode_FootBrawl)
+		{
+			// todo : check team scores
+		}
+		else if (m_gameMode == kGameMode_DeathMatch)
+		{
+			for (int i = 0; i < MAX_PLAYERS; ++i)
+			{
+				Player & player = m_players[i];
+				if (!player.m_isUsed)
+					continue;
+
+				if (player.m_score >= DEATHMATCH_SCORE_LIMIT)
+				{
+					roundComplete = true;
+				}
+			}
+		}
+		else if (m_gameMode == kGameMode_CoinCollector)
+		{
+			for (int i = 0; i < MAX_PLAYERS; ++i)
+			{
+				Player & player = m_players[i];
+				if (!player.m_isUsed)
+					continue;
+
+				if (player.m_score >= COINCOLLECTOR_SCORE_LIMIT)
+				{
+					roundComplete = true;
+				}
+			}
+		}
+		else if (m_gameMode == kGameMode_TokenHunt)
+		{
+			for (int i = 0; i < MAX_PLAYERS; ++i)
+			{
+				Player & player = m_players[i];
+				if (!player.m_isUsed)
+					continue;
+
+				if (player.m_score >= TOKENHUNT_SCORE_LIMIT)
+				{
+					roundComplete = true;
+				}
+			}
+		}
+		else
+		{
+			fassert(false);
+		}
+
+		if (DEMOMODE && getNumPlayers() < MIN_PLAYER_COUNT)
+		{
+			roundComplete = true;
+		}
+
+		if (roundComplete)
+		{
+			endRound();
+		}
 	}
+}
 
-	// pickup spawning
-
+void GameSim::tickPlayPickupSpawn(float dt)
+{
 	if (m_nextPickupSpawnTimeRemaining > 0.f && m_gameMode != kGameMode_Lobby)
 	{
 		m_nextPickupSpawnTimeRemaining -= dt;
@@ -2790,9 +3064,10 @@ void GameSim::tickPlay()
 
 		m_nextPickupSpawnTimeRemaining = (PICKUP_INTERVAL + (Random() % PICKUP_INTERVAL_VARIANCE)) / multiplier;
 	}
+}
 
-	// level events
-
+void GameSim::tickPlayLevelEvents(float dt)
+{
 	if (m_timeUntilNextLevelEvent > 0.f && PROTO_ENABLE_LEVEL_EVENTS && m_gameMode != kGameMode_Lobby)
 	{
 		m_timeUntilNextLevelEvent = Calc::Max(0.f, m_timeUntilNextLevelEvent - dt);
@@ -2891,277 +3166,6 @@ void GameSim::tickPlay()
 	if (m_levelEvents.nightDayCycle.endTimer.tickActive(dt))
 	{
 		//
-	}
-
-	// token
-
-	if (m_gameMode == kGameMode_TokenHunt)
-	{
-		m_tokenHunt.m_token.tick(*this, dt);
-	}
-
-	// coins
-
-	if (m_gameMode == kGameMode_CoinCollector && m_gameState == kGameState_Play)
-	{
-		for (int i = 0; i < MAX_COINS; ++i)
-		{
-			m_coinCollector.m_coins[i].tick(*this, dt);
-		}
-
-		if (tick >= m_coinCollector.m_nextSpawnTick)
-		{
-			if (m_coinCollector.m_nextSpawnTick != 0)
-			{
-				int numCoins = 0;
-
-				for (int i = 0; i < MAX_COINS; ++i)
-					if (m_coinCollector.m_coins[i].m_isDropped)
-						numCoins++;
-
-				for (int i = 0; i < MAX_PLAYERS; ++i)
-					if (m_players[i].m_isAlive)
-						numCoins += m_players[i].m_score;
-
-				if (numCoins < COINCOLLECTOR_COIN_LIMIT)
-				{
-					spawnCoin();
-				}
-			}
-
-			m_coinCollector.m_nextSpawnTick = tick + (COIN_SPAWN_INTERVAL + (Random() % COIN_SPAWN_INTERVAL_VARIANCE)) * TICKS_PER_SECOND;
-		}
-	}
-
-	// floor effect
-
-	m_floorEffect.tick(*this, dt);
-
-	// blinds effects
-
-	for (int i = 0; i < MAX_BLINDS_EFFECTS; ++i)
-		m_blindsEffects[i].tick(*this, dt);
-
-	// lights
-
-	for (int i = 0; i < MAX_LIGHTS; ++i)
-	{
-		if (m_lights[i].m_isAlive)
-			m_lights[i].tick(*this, dt);
-	}
-
-	// particle effects
-
-	for (int i = 0; i < MAX_PARTICLE_EFFECTS; ++i)
-	{
-		if (m_particleEffects[i].m_data.m_isActive)
-		{
-			cpuTimingBlock(particleEffectTick);
-
-			struct UserData
-			{
-				GameSim * gameSim;
-				ParticleEffect * particleEffect;
-			};
-
-			UserData userData;
-			userData.gameSim = this;
-			userData.particleEffect = &m_particleEffects[i];
-
-			ParticleCallbacks cbs;
-			cbs.userData = &userData;
-			cbs.randomInt = [](void * userData, int min, int max) { return min + (rand() % (max - min + 1)); };
-			cbs.randomFloat = [](void * userData, float min, float max) { return min + (rand() & 4095) / 4095.f * (max - min); };
-			//cbs.randomInt = [](void * userData, int min, int max) { return (int)static_cast<UserData*>(userData)->gameSim->RandomInt(min, max); };
-			//cbs.randomFloat = [](void * userData, float min, float max) { return static_cast<UserData*>(userData)->gameSim->RandomFloat(min, max); };
-			cbs.getEmitterByName = [](void * _userData, const char * name, const ParticleEmitterInfo *& pei, const ParticleInfo *& pi, ParticlePool *& pool, ParticleEmitter *& pe)
-			{
-				UserData * userData = static_cast<UserData*>(_userData);
-				for (int i = 0; i < ParticleEffect::kMaxParticleSystems; ++i)
-				{
-					if (!strcmp(userData->particleEffect->m_system[i].emitterInfo.name, name))
-					{
-						pei = &userData->particleEffect->m_system[i].emitterInfo;
-						pi = &userData->particleEffect->m_system[i].particleInfo;
-						pool = &userData->particleEffect->m_system[i].pool;
-						pe = &userData->particleEffect->m_system[i].emitter;
-						return true;
-					}
-				}
-				return false;
-			};
-			// todo : add collision callback
-			//bool (*checkCollision)(void * userData, float x1, float y1, float x2, float y2, float & t, float & nx, float & ny);
-
-			for (int j = 0; j < ParticleEffect::kMaxParticleSystems; ++j)
-			{
-				m_particleEffects[i].m_system[j].tick(cbs, 0.f, GRAVITY, dt);
-			}
-		}
-	}
-
-	// portals
-
-	{
-	}
-
-	// pickup spawners
-
-	for (int i = 0; i < MAX_PICKUP_SPAWNERS; ++i)
-	{
-		if (m_pickupSpawners[i].m_isAlive)
-			m_pickupSpawners[i].tick(*this, dt);
-	}
-
-	// tile sprites
-
-	for (int i = 0; i < MAX_TILE_SPRITES; ++i)
-	{
-		if (m_tileSprites[i].m_isAlive)
-			m_tileSprites[i].tick(*this, dt);
-	}
-
-	// animation effects
-
-	for (int i = 0; i < MAX_ANIM_EFFECTS; ++i)
-	{
-		m_animationEffects[i].tick(dt);
-	}
-
-	// decals
-
-	for (int i = 0; i < MAX_DECALS; ++i)
-	{
-		m_decals[i].tick(dt);
-	}
-
-	// screen shakes
-
-	for (int i = 0; i < MAX_SCREEN_SHAKES; ++i)
-	{
-		ScreenShake & shake = m_screenShakes[i];
-		if (shake.isActive)
-			shake.tick(dt);
-	}
-
-	// zoom effects
-
-	for (int i = 0; i < MAX_ZOOM_EFFECTS; ++i)
-	{
-		ZoomEffect & zoomEffect = m_zoomEffects[i];
-		zoomEffect.tick(dt);
-	}
-
-	tickZoom(dt);
-
-	// light effects
-
-	for (int i = 0; i < MAX_LIGHT_EFFECTS; ++i)
-	{
-		m_lightEffects[i].tick(dt);
-	}
-
-	// particles
-
-	m_particlePool->tick(*this, dt);
-
-	// bullets
-
-	m_bulletPool->tick(*this, dt);
-
-	m_tick++;
-
-	m_roundTime += dt;
-
-	m_physicalRoundTime += physicalDt;
-
-	if (m_gameState == kGameState_Play)
-	{
-		// check if the round has ended
-
-		bool roundComplete = false;
-
-		if (m_gameMode == kGameMode_FootBrawl)
-		{
-			// todo : check team scores
-		}
-		else if (m_gameMode == kGameMode_DeathMatch)
-		{
-			bool hasWon = false;
-
-			for (int i = 0; i < MAX_PLAYERS; ++i)
-			{
-				Player & player = m_players[i];
-				if (!player.m_isUsed)
-					continue;
-
-				if (player.m_score >= DEATHMATCH_SCORE_LIMIT)
-				{
-					hasWon = true;
-				}
-			}
-
-			if (hasWon)
-			{
-				roundComplete = true;
-			}
-		}
-		else if (m_gameMode == kGameMode_CoinCollector)
-		{
-			bool hasWon = false;
-
-			for (int i = 0; i < MAX_PLAYERS; ++i)
-			{
-				Player & player = m_players[i];
-				if (!player.m_isUsed)
-					continue;
-
-				if (player.m_score >= COINCOLLECTOR_SCORE_LIMIT)
-				{
-					hasWon = true;
-				}
-			}
-
-			if (hasWon)
-			{
-				roundComplete = true;
-			}
-		}
-		else if (m_gameMode == kGameMode_TokenHunt)
-		{
-			bool hasWon = false;
-
-			for (int i = 0; i < MAX_PLAYERS; ++i)
-			{
-				Player & player = m_players[i];
-				if (!player.m_isUsed)
-					continue;
-
-				if (player.m_score >= TOKENHUNT_SCORE_LIMIT)
-				{
-					hasWon = true;
-				}
-			}
-
-			if (hasWon)
-			{
-				roundComplete = true;
-			}
-		}
-		else
-		{
-			fassert(false);
-		}
-
-		if (DEMOMODE && getNumPlayers() < MIN_PLAYER_COUNT)
-		{
-			roundComplete = true;
-		}
-
-		if (roundComplete)
-		{
-			endRound();
-		}
 	}
 }
 
@@ -3387,7 +3391,7 @@ void GameSim::drawPlayColor(const CamParams & camParams)
 	{
 		const Light & light = m_lights[i];
 
-		if (light.m_isAlive)
+		if (light.m_isActive)
 			light.draw();
 	}
 
@@ -3397,7 +3401,7 @@ void GameSim::drawPlayColor(const CamParams & camParams)
 	{
 		const Portal & portal = m_portals[i];
 
-		if (portal.m_isAlive)
+		if (portal.m_isActive)
 			portal.draw();
 	}
 
@@ -3407,7 +3411,7 @@ void GameSim::drawPlayColor(const CamParams & camParams)
 	{
 		const PickupSpawner & spawner = m_pickupSpawners[i];
 
-		if (spawner.m_isAlive)
+		if (spawner.m_isActive)
 			spawner.draw();
 	}
 
@@ -3417,7 +3421,7 @@ void GameSim::drawPlayColor(const CamParams & camParams)
 	{
 		const TileSprite & tileSprite = m_tileSprites[i];
 
-		if (tileSprite.m_isAlive)
+		if (tileSprite.m_isActive)
 			tileSprite.draw(*this);
 	}
 
@@ -3542,7 +3546,7 @@ void GameSim::drawPlayDecal(const CamParams & camParams)
 
 	for (int i = 0; i < MAX_DECALS; ++i)
 	{
-		if (m_decals[i].isActive)
+		if (m_decals[i].m_isActive)
 			m_decals[i].draw();
 	}
 
@@ -3562,7 +3566,7 @@ void GameSim::drawPlayLight(const CamParams & camParams)
 	{
 		const Light & light = m_lights[i];
 
-		if (light.m_isAlive)
+		if (light.m_isActive)
 			light.drawLight();
 	}
 
@@ -3582,7 +3586,7 @@ void GameSim::drawPlayLight(const CamParams & camParams)
 	{
 		const TileSprite & tileSprite = m_tileSprites[i];
 
-		if (tileSprite.m_isAlive)
+		if (tileSprite.m_isActive)
 			tileSprite.drawLight();
 	}
 
@@ -4352,9 +4356,9 @@ void GameSim::addDecal(int x, int y, const Color & color, int sprite, float scal
 	for (int i = 0; i < MAX_DECALS; ++i)
 	{
 		Decal & decal = m_decals[i];
-		if (!decal.isActive)
+		if (!decal.m_isActive)
 		{
-			decal.isActive = true;
+			decal.m_isActive = true;
 			decal.x = x;
 			decal.y = y;
 			decal.color[0] = color.r * 255.f;
@@ -4389,9 +4393,9 @@ void GameSim::addScreenShake(float dx, float dy, float stiffness, float life, bo
 	for (int i = 0; i < MAX_SCREEN_SHAKES; ++i)
 	{
 		ScreenShake & shake = m_screenShakes[i];
-		if (!shake.isActive)
+		if (!shake.m_isActive)
 		{
-			shake.isActive = true;
+			shake.m_isActive = true;
 			shake.fade = fade;
 			shake.life = life;
 			shake.lifeRcp = 1.f / life;
@@ -4418,7 +4422,7 @@ Vec2 GameSim::getScreenShake() const
 	for (int i = 0; i < MAX_SCREEN_SHAKES; ++i)
 	{
 		const ScreenShake & shake = m_screenShakes[i];
-		if (shake.isActive)
+		if (shake.m_isActive)
 			result += shake.pos * (shake.fade ? (shake.life * shake.lifeRcp) : 1.f);
 	}
 
@@ -4441,8 +4445,9 @@ void GameSim::addZoomEffect(float zoom, float life, int player)
 	for (int i = 0; i < MAX_ZOOM_EFFECTS; ++i)
 	{
 		ZoomEffect & zoomEffect = m_zoomEffects[i];
-		if (zoomEffect.life == 0.f)
+		if (!zoomEffect.m_isActive)
 		{
+			zoomEffect.m_isActive = true;
 			zoomEffect.zoom = zoom;
 			zoomEffect.life = life;
 			zoomEffect.lifeRcp = 1.f / life;
@@ -4715,7 +4720,7 @@ Portal * GameSim::findPortal(float x1, float y1, float x2, float y2, bool mustEn
 	{
 		Portal & portal = m_portals[i];
 
-		if (portal.m_isAlive && portal.intersects(x1, y1, x2, y2, mustEncapsulate, applySafeZone))
+		if (portal.m_isActive && portal.intersects(x1, y1, x2, y2, mustEncapsulate, applySafeZone))
 		{
 			id = i;
 			return &m_portals[i];
@@ -4731,7 +4736,7 @@ TileSprite * GameSim::findTileSpriteAtPos(int x, int y)
 	{
 		TileSprite & tileSprite = m_tileSprites[i];
 
-		if (tileSprite.m_isAlive && tileSprite.intersects(x, y))
+		if (tileSprite.m_isActive && tileSprite.intersects(x, y))
 			return &tileSprite;
 	}
 
@@ -4785,7 +4790,7 @@ void GameSim::addFireBall()
 {
 	for (int i = 0; i < MAX_FIREBALLS; ++i)
 	{
-		if (!m_fireballs[i].active)
+		if (!m_fireballs[i].m_isActive)
 		{
 			m_fireballs[i].load("backgrounds/VolcanoTest/Fireball/fireball.scml", *this, (Random() % 1400) + 260, -80, RandomFloat(70.0f, 110.0f), RandomFloat(.2f, .4f));
 			return;
