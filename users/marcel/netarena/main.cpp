@@ -1290,7 +1290,7 @@ bool App::init()
 			{
 				FileStream stream("steam_appid.txt", (OpenMode)(OpenMode_Write | OpenMode_Text));
 				StreamWriter writer(&stream, false);
-				writer.WriteText("480");
+				writer.WriteText("420620");
 			}
 
 			if (!SteamAPI_Init())
@@ -1989,8 +1989,8 @@ bool App::tick()
 
 		if (keyboard.wentDown(SDLK_i))
 			g_online->showInviteFriendsUi();
-		if (keyboard.wentDown(SDLK_j))
-			Verify(findGame());
+		//if (keyboard.wentDown(SDLK_j))
+		//	Verify(findGame());
 	#endif
 	}
 
@@ -3310,6 +3310,7 @@ int main(int argc, char * argv[])
 			if (i + 1 < argc)
 			{
 				g_connectLobby.SetFromUint64(_atoi64(argv[i + 1]));
+				LOG_INF("connect_lobby is set to %llx", g_connectLobby.ConvertToUint64());
 			}
 		}
 	}

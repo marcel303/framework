@@ -52,6 +52,8 @@
 - level editor: add checkboxes for allowed (or disabled?) level events
 - level editor: add text box for map name
 
+- add Steam minidump reporting. see SpaceWar example
+
 - fix spawn kill on round start
 
 + remove torch code
