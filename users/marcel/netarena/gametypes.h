@@ -42,6 +42,7 @@ extern const char * g_gameStateNames[kGameState_COUNT];
 enum GameMode
 {
 	kGameMode_Lobby,
+	kGameMode_FootBrawl,
 	kGameMode_DeathMatch,
 	kGameMode_TokenHunt,
 	kGameMode_CoinCollector,

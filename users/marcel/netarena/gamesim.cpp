@@ -3081,44 +3081,76 @@ void GameSim::tickPlay()
 
 		bool roundComplete = false;
 
-		for (int i = 0; i < MAX_PLAYERS; ++i)
+		if (m_gameMode == kGameMode_FootBrawl)
 		{
-			Player & player = m_players[i];
-			if (!player.m_isUsed)
-				continue;
-
+			// todo : check team scores
+		}
+		else if (m_gameMode == kGameMode_DeathMatch)
+		{
 			bool hasWon = false;
 
-			if (m_gameMode == kGameMode_DeathMatch)
+			for (int i = 0; i < MAX_PLAYERS; ++i)
 			{
+				Player & player = m_players[i];
+				if (!player.m_isUsed)
+					continue;
+
 				if (player.m_score >= DEATHMATCH_SCORE_LIMIT)
 				{
 					hasWon = true;
 				}
-			}
-			else if (m_gameMode == kGameMode_TokenHunt)
-			{
-				if (player.m_score >= TOKENHUNT_SCORE_LIMIT)
-				{
-					hasWon = true;
-				}
-			}
-			else if (m_gameMode == kGameMode_CoinCollector)
-			{
-				if (player.m_score >= COINCOLLECTOR_SCORE_LIMIT)
-				{
-					hasWon = true;
-				}
-			}
-			else
-			{
-				Assert(false);
 			}
 
 			if (hasWon)
 			{
 				roundComplete = true;
 			}
+		}
+		else if (m_gameMode == kGameMode_CoinCollector)
+		{
+			bool hasWon = false;
+
+			for (int i = 0; i < MAX_PLAYERS; ++i)
+			{
+				Player & player = m_players[i];
+				if (!player.m_isUsed)
+					continue;
+
+				if (player.m_score >= COINCOLLECTOR_SCORE_LIMIT)
+				{
+					hasWon = true;
+				}
+			}
+
+			if (hasWon)
+			{
+				roundComplete = true;
+			}
+		}
+		else if (m_gameMode == kGameMode_TokenHunt)
+		{
+			bool hasWon = false;
+
+			for (int i = 0; i < MAX_PLAYERS; ++i)
+			{
+				Player & player = m_players[i];
+				if (!player.m_isUsed)
+					continue;
+
+				if (player.m_score >= TOKENHUNT_SCORE_LIMIT)
+				{
+					hasWon = true;
+				}
+			}
+
+			if (hasWon)
+			{
+				roundComplete = true;
+			}
+		}
+		else
+		{
+			fassert(false);
 		}
 
 		if (DEMOMODE && getNumPlayers() < MIN_PLAYER_COUNT)

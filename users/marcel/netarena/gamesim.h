@@ -1036,7 +1036,8 @@ struct GameStateData
 	{
 		memset(this, 0, sizeof(GameStateData));
 
-		m_desiredGameMode = kGameMode_DeathMatch;
+		//m_desiredGameMode = kGameMode_DeathMatch;
+		m_desiredGameMode = kGameMode_FootBrawl;
 	}
 
 	uint32_t Random();

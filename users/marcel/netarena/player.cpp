@@ -2781,6 +2781,16 @@ void Player::tick(float dt)
 		}
 	}
 
+	// footbrawl game mode
+
+	if ((gameSim.m_gameMode == kGameMode_FootBrawl) && (gameSim.m_gameState == kGameState_Play))
+	{
+		if (m_isAlive)
+		{
+			// todo : check ball collision
+		}
+	}
+
 	// death match game mode
 
 	if ((gameSim.m_gameMode == kGameMode_DeathMatch) && (gameSim.m_gameState == kGameState_Play))
