@@ -74,7 +74,7 @@ Framework::Framework()
 	filedrop = false;
 	windowX = -1;
 	windowY = -1;
-	windowTitle = "GGJ 2014 - Unknown Project";
+	windowTitle.clear();
 	windowIsActive = false;
 	numSoundSources = 32;
 	actionHandler = 0;
