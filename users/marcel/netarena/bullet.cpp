@@ -25,12 +25,12 @@ struct ParticleSprite
 
 static ParticleSprite s_bulletSprites[kBulletType_COUNT] =
 {
-	{ "fire-type-0.png", false, 0, 0 }, // kBulletType_A
-	{ "fire-type-0.png", false, 0, 0 }, // kBulletType_B
+	{ "objects/deathray/deathray.scml", true, 0, 0 }, // kBulletType_Gun
+	{ "objects/freezeray/freezeray.scml", true, 0, 0 }, // kBulletType_Ice
 	{ "objects/grenade/grenade.scml", true, 0, 0 }, // kBulletType_Grenade
 	{ "objects/grenade/grenade-fragment.scml", true, 0, 0 }, // kBulletType_GrenadeA
 	{ "particle-0.png", false, 0, 0 }, // kBulletType_ParticleA
-	{ "fire-type-bubble.png", false, 0, 0 }, // kBulletType_Bubble
+	{ "objects/bubblegun/bubble.scml", true, 0, 0 }, // kBulletType_Bubble
 	{ "particle-blood-0.png", false, 0, 0 } // kBulletType_BloodParticle
 };
 

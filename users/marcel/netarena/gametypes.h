@@ -231,8 +231,8 @@ bool parsePickupType(const char * s, PickupType & type);
 
 enum BulletType
 {
-	kBulletType_A,
-	kBulletType_B,
+	kBulletType_Gun,
+	kBulletType_Ice,
 	kBulletType_Grenade,
 	kBulletType_GrenadeA,
 	kBulletType_ParticleA,

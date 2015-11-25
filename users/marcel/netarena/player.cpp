@@ -22,18 +22,7 @@
 /*
 
 + itch build:
-	+ new splash screen
-		+ logo, [FB] /Riposte-Game, [TW] /DamajoGames
-	+ replace lobby w/ simple art
-	+ only 3 chars, arkthas, stalya, tylly
-	+ disable options menu
-	+ disable netcode
-	+ enable public build macro
-	+ add input screen to main screen/help button
-	+ add Greenlight/KickStarter & Twitter/Facebook buttons
-	+ disable START button in-game
-	# enable inactivity timeout only when: in DEMOMODE or in online multiplayer game
-	+ improve main menu navigation using keyboard/gamepad
+	- add reddit button
 
 - level setting: max zoom factor
 - level setting: zoom restriction near borders. not needed when no level wrap
@@ -52,13 +41,6 @@
 - level editor: add checkboxes for allowed (or disabled?) level events
 - level editor: add text box for map name
 
-- add Steam minidump reporting. see SpaceWar example
-
-- fix spawn kill on round start
-
-+ remove torch code
-+ add light source object type
-
 - pickup that temporarily allows player to move through destructibles transparently
 - add ropes you can grab and hold on to?
 
@@ -69,19 +51,12 @@
 
 - add decal on bullet collision for some types of ammo
 - slowdown and/or zoom on cling?
-- fix dead player not being affected by blast effects
-
-- upgrade bullet sprites to spriter animations
 
 - add small pickup delay on weapon drop. avoids pickup being picked up directly on kill -> adds more randomness
 - experiment with decal color. add history through slightly changing color over time. try rainbow colors (maybe hue based on bullet direction on impact?)
 
 - background animation speed always at 100% regardless of game speed? *should* be affected by time dilation
-+ background parallax effect through less zoom/panning strength
 - allow exploding mine in air. currently when grounded only
-- allow pickup of axe even when already having an axe. allows player to clean up axes of competing players
-- replace pipebomb sounds
-+ clear weapon stack on death. currently only drops percentage
 - disable player light when using invisibility
 - add light effects to grenade explosions and cling (small lighting flash; test effect)
 - try darker ambient on level events
@@ -107,15 +82,7 @@
 
 - zoom in on winning player, wait for a while before transitioning to the next round
 
-+ zoom effects:
-	+ zoom only in center region
-	+ zoom in on kill?
-	+ auto zoom during play
-	# requirements: explicit vs automatic focus point selection, auto zoom factor calculation vs explicit zoom factors (take max zoom of all effects..)
-
 - character portait kill animation. diagonal slice, etc, as discussed with joyce
-
-+ discuss variable level size with david, joyce
 
 - add pipebomb/mine trigger animation
 - add axe throw animation
@@ -127,15 +94,9 @@
 		EmoteFacepalm
 
 - add basic video options to video menu
-+ add basic audio options to audio menu
-+ hook up user sound/music settings
 
-- write particle editor
 - make a list of resources that still need to be done
 
-+ add 'blood' particles and spawn decals on impact
-
-+ fix pickup drop location. seems to get stuck in geometry sometimes
 - why does the bubbled player not bounce correctly, still? fix it!
 
 - for pickup spawn: keep a list of MAX_PICKUPS previous spawn locations, instead of storing recently used x/y in pickups themselves
@@ -144,10 +105,9 @@
 
 - add 'muzzle flash' when firing some weapons
 - add small screen shake when firing?
+- add pickup which allows to repel enemies? rapid fire -> screen shakes~
 - apply color/light effect on player that kills using melee?
 - add spriter FX for bullet hits against wall
-
-- indievelopment explosion 101 video
 
 - add mine radius animation. also makes it more explicit where it's deployed
 
@@ -165,7 +125,6 @@
 - hide player emblem, unless when scoring or when summoned
 - add weapon UI prototype. do some drawings first
 - improve pipebomb art. add clearly visible flash
-+ add deploy animation to pipebomb guy. make it mines instead
 - add killstreaks to screen. do some drawings first
 - 'faster' grapple?
 - add down strike animation effect?
@@ -185,14 +144,12 @@ feedback:
 - jetpack op, boost mustn't be spammable
 - shield shouldn't be spammable, needs cooldown when destroyed
 	cling/cancel melee attack
-+ earth quake sound
 
 todo:
 
 - grapple: swing!
 - napalm pickup
 - freeze gun flow
-+ animated spring
 - fluids
 - humor objects
 - interactive main menu
@@ -286,8 +243,6 @@ todo:
 - prototype barrel drop level event
 - prototype day/night level event
 
-- improve networking reliability layer on resend. trips currently
-
 - gravity well -> make it partially a linear or other kind of curve + more powerful at a distance
 - send client network stats to host so they can be visualized
 
@@ -300,12 +255,52 @@ todo:
 
 - better death feedback
 - team based game mode
-# ammo despawn na x seconds + indicator (?)
 
 - blood particles
 - fill the level with lava
 
 ** DONE **
+
++ itch build:
+	+ new splash screen
+		+ logo, [FB] /Riposte-Game, [TW] /DamajoGames
+	+ replace lobby w/ simple art
+	+ only 3 chars, arkthas, stalya, tylly
+	+ disable options menu
+	+ disable netcode
+	+ enable public build macro
+	+ add input screen to main screen/help button
+	+ add Greenlight/KickStarter & Twitter/Facebook buttons
+	+ disable START button in-game
+	# enable inactivity timeout only when: in DEMOMODE or in online multiplayer game
+	+ improve main menu navigation using keyboard/gamepad
++ add Steam minidump reporting. see SpaceWar example
++ fix spawn kill on round start
++ remove torch code
++ add light source object type
++ fix dead player not being affected by blast effects
++ upgrade bullet sprites to spriter animations
++ background parallax effect through less zoom/panning strength
++ allow pickup of axe even when already having an axe. allows player to clean up axes of competing players
++ clear weapon stack on death. currently only drops percentage
++ zoom effects:
+	+ zoom only in center region
+	+ zoom in on kill?
+	+ auto zoom during play
+	# requirements: explicit vs automatic focus point selection, auto zoom factor calculation vs explicit zoom factors (take max zoom of all effects..)
++ discuss variable level size with david, joyce
++ add basic audio options to audio menu
++ hook up user sound/music settings
++ write particle editor
++ add 'blood' particles and spawn decals on impact
++ fix pickup drop location. seems to get stuck in geometry sometimes
+# indievelopment explosion 101 video
++ add deploy animation to pipebomb guy. make it mines instead
++ earth quake sound
++ animated spring
+# improve networking reliability layer on resend. trips currently
+	+ fixed now we're using Steam
+# ammo despawn na x seconds + indicator (?)
 
 */
 
@@ -1092,7 +1087,9 @@ void Player::tick(float dt)
 
 	//if (m_isAlive)
 	{
-		m_spawnInvincibilityTime = Calc::Max(0.f, m_spawnInvincibilityTime - dt);
+		if (GAMESIM->m_gameState >= kGameState_Play)
+			m_spawnInvincibilityTime = Calc::Max(0.f, m_spawnInvincibilityTime - dt);
+		m_spawnMarkerTime = Calc::Max(0.f, m_spawnMarkerTime - dt);
 
 		bool playerControl = getPlayerControl();
 
@@ -1140,7 +1137,7 @@ void Player::tick(float dt)
 				}
 			}
 
-			if (characterData->m_special == kPlayerSpecial_AxeThrow && !m_axe.hasAxe)
+			if (characterData->m_special == kPlayerSpecial_AxeThrow)
 			{
 				if (m_axe.recoveryTime > 0.f)
 				{
@@ -1424,21 +1421,23 @@ void Player::tick(float dt)
 				if (weaponType == kPlayerWeapon_Gun)
 				{
 					anim = kPlayerAnim_Fire;
-					bulletType = kBulletType_B;
+					bulletType = kBulletType_Gun;
 					m_attack.cooldown = PLAYER_WEAPON_GUN_COOLDOWN;
 					
 					addKnockBack(PLAYER_WEAPON_GUN_KNOCKBACK);
 					gameSim.playSound("gun-fire.ogg");
+					gameSim.addScreenShake_GunFire(m_facing);
 				}
 				else if (weaponType == kPlayerWeapon_Ice)
 				{
 					anim = kPlayerAnim_Fire;
-					bulletType = kBulletType_B;
+					bulletType = kBulletType_Ice;
 					bulletEffect = kBulletEffect_Ice;
 					m_attack.cooldown = PLAYER_WEAPON_ICE_COOLDOWN;
 
 					addKnockBack(PLAYER_WEAPON_ICE_KNOCKBACK);
 					gameSim.playSound("gun-fire-ice.ogg");
+					gameSim.addScreenShake_GunFire(m_facing);
 				}
 				else if (weaponType == kPlayerWeapon_Bubble)
 				{
@@ -1480,6 +1479,7 @@ void Player::tick(float dt)
 						m_facing[1] < 0);
 
 					gameSim.playSound("gun-fire-bubble.ogg");
+					gameSim.addScreenShake_GunFire(m_facing);
 				}
 				else if (weaponType == kPlayerWeapon_Grenade)
 				{
@@ -1489,6 +1489,7 @@ void Player::tick(float dt)
 					
 					addKnockBack(PLAYER_WEAPON_GRENADE_KNOCKBACK);
 					gameSim.playSound("grenade-throw.ogg"); // player throws a grenade
+					gameSim.addScreenShake_GunFire(m_facing);
 				}
 				else if (weaponType == kPlayerWeapon_TimeDilation)
 				{
@@ -1507,6 +1508,7 @@ void Player::tick(float dt)
 
 					m_timeDilationAttack.timeRemaining = PLAYER_EFFECT_TIMEDILATION_TIME;
 					gameSim.playSound("timedilation-activate.ogg"); // sound that occurs when the player activates the time dilation pickup
+					gameSim.addScreenShake_GunFire(m_facing);
 					gameSim.addAnnouncement(colorBlue, "'%s' activated time dilation!", m_displayName.c_str());
 				}
 				else
@@ -2987,9 +2989,9 @@ void Player::draw() const
 
 	// draw invincibility marker
 
-	if (m_spawnInvincibilityTime > 0.f)
+	if (m_spawnMarkerTime > 0.f)
 	{
-		const float t = m_spawnInvincibilityTime / float(PLAYER_RESPAWN_INVINCIBILITY_TIME);
+		const float t = m_spawnMarkerTime / float(PLAYER_RESPAWN_INVINCIBILITY_TIME);
 		setColorf(
 			playerColor.r,
 			playerColor.g,
@@ -3567,6 +3569,7 @@ bool Player::respawn(Vec2 * pos)
 		m_isActive = true;
 
 		m_spawnInvincibilityTime = PLAYER_RESPAWN_INVINCIBILITY_TIME;
+		m_spawnMarkerTime = m_spawnInvincibilityTime;
 
 		m_pos[0] = (float)x;
 		m_pos[1] = (float)y;

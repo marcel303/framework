@@ -1991,6 +1991,18 @@ bool App::tick()
 			g_online->showInviteFriendsUi();
 		//if (keyboard.wentDown(SDLK_j))
 		//	Verify(findGame());
+		if (keyboard.wentDown(SDLK_p))
+		{
+			EXCEPTION_POINTERS ep;
+			
+			CONTEXT c;
+			EXCEPTION_RECORD r;
+			memset(&c, 0, sizeof(c));
+			memset(&r, 0, sizeof(r));
+			ep.ContextRecord = &c;
+			ep.ExceptionRecord = &r;
+			SteamAPI_WriteMiniDump(0, &ep, g_buildId);
+		}
 	#endif
 	}
 
@@ -3282,7 +3294,45 @@ static bool calculateFileCRC(const char * filename, uint32_t & crc)
 
 //
 
+#ifdef _WIN32
+static void MiniDumpFunction(unsigned int exceptionCode, EXCEPTION_POINTERS * exception )
+{
+	SteamAPI_SetMiniDumpComment("minidump for: riposte.exe\n");
+	SteamAPI_WriteMiniDump(exceptionCode, exception, g_buildId);
+}
+#endif
+
+//
+
+static int RealMain(int argc, char * argv[]);
+
 int main(int argc, char * argv[])
+{
+#ifdef _WIN32
+	if (IsDebuggerPresent())
+	{
+		// we don't want to mask exceptions (or report them to Steam!) when debugging
+		return RealMain(argc, argv);
+	}
+	else
+	{
+		_set_se_translator(MiniDumpFunction);
+		try
+		{
+			// this try block allows the SE translator to work
+			return RealMain(argc, argv);
+		}
+		catch(...)
+		{
+			return -1;
+		}
+	}
+#else
+	return RealMain(argc, argv);
+#endif
+}
+
+static int RealMain(int argc, char * argv[])
 {
 #if defined(__WIN32__)
 	_CrtSetDebugFillThreshold(0);

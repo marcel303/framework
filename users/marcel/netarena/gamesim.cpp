@@ -4049,14 +4049,14 @@ uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, BulletType t
 
 		switch (type)
 		{
-		case kBulletType_A:
+		case kBulletType_Gun:
 			velocity = BULLET_TYPE0_SPEED;
 			b.maxWrapCount = BULLET_TYPE0_MAX_WRAP_COUNT;
 			b.maxReflectCount = BULLET_TYPE0_MAX_REFLECT_COUNT;
 			b.maxDistanceTravelled = BULLET_TYPE0_MAX_DISTANCE_TRAVELLED;
 			b.maxDestroyedBlocks = 1;
 			break;
-		case kBulletType_B:
+		case kBulletType_Ice:
 			velocity = BULLET_TYPE0_SPEED;
 			b.maxWrapCount = BULLET_TYPE0_MAX_WRAP_COUNT;
 			b.maxReflectCount = BULLET_TYPE0_MAX_REFLECT_COUNT;
@@ -4269,6 +4269,21 @@ void GameSim::doQuake(float vel)
 		});
 }
 
+static Vec2 calculateBlastVelocity(Vec2Arg center, float radius, const Curve & speedCurve, Vec2Arg position)
+{
+	const Vec2 delta = position - center;
+	const float distance = delta.CalcSize();
+	if (distance != 0.f)
+	{
+		const Vec2 dir = delta / distance;
+		const float t = distance / radius;
+		const float speed = speedCurve.eval(t);
+		return dir * speed;
+	}
+	else
+		return Vec2(0.f, 0.f);
+}
+
 void GameSim::doBlastEffect(Vec2Arg center, float radius, const Curve & speedCurve)
 {
 	const Vec2 extents(radius, radius);
@@ -4291,20 +4306,12 @@ void GameSim::doBlastEffect(Vec2Arg center, float radius, const Curve & speedCur
 		&args,
 		[](const CollisionShape & shape, void * arg, PhysicsActor * actor, BlockAndDistance * block, Player * player)
 		{
-			BlastArgs * blastArgs = (BlastArgs*)arg;
+			const BlastArgs * blastArgs = (BlastArgs*)arg;
 
 			if (actor)
-			{
-				const Vec2 delta = actor->m_pos - blastArgs->center;
-				const float distance = delta.CalcSize();
-				if (distance != 0.f)
-				{
-					const Vec2 dir = delta / distance;
-					const float t = distance / blastArgs->radius;
-					const float speed = blastArgs->speedCurve->eval(t);
-					actor->m_vel += dir * speed;
-				}
-			}
+				actor->m_vel += calculateBlastVelocity(blastArgs->center, blastArgs->radius, *blastArgs->speedCurve, actor->m_pos);
+			if (player)
+				player->m_vel += calculateBlastVelocity(blastArgs->center, blastArgs->radius, *blastArgs->speedCurve, player->m_pos);
 		});
 }
 
@@ -4384,6 +4391,15 @@ Vec2 GameSim::getScreenShake() const
 	}
 
 	return result;
+}
+
+void GameSim::addScreenShake_GunFire(Vec2Arg dir)
+{
+	const float strength = 5.f;
+	addScreenShake(
+		dir[0] * strength,
+		0.f, 2500.f, .3f,
+		true);
 }
 
 void GameSim::addZoomEffect(float zoom, float life, int player)

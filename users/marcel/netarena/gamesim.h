@@ -566,6 +566,7 @@ struct Player
 	bool m_isRespawn; // set after the first respawn. the first spawn is special, as the player doesn't need to press X and isn't allowed to use taunt
 	int m_lastSpawnIndex;
 	float m_spawnInvincibilityTime;
+	float m_spawnMarkerTime;
 
 	bool m_isGrounded; // set when the player is walking on ground
 	bool m_isAttachedToSticky;
@@ -1322,6 +1323,7 @@ public:
 
 	void addScreenShake(float dx, float dy, float stiffness, float life, bool fade);
 	Vec2 getScreenShake() const;
+	void addScreenShake_GunFire(Vec2Arg dir);
 
 	void addZoomEffect(float zoom, float life, int player);
 	void setDesiredZoom(float zoom);
