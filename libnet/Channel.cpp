@@ -437,24 +437,31 @@ bool Channel::SendReliable(const Packet & packet)
 {
 	NetAssert(m_state != ChannelState_Disconnected);
 
-	RTPacket temp;
+	if (m_socket->IsReliable())
+	{
+		return SendUnreliable(packet, false);
+	}
+	else
+	{
+		RTPacket temp;
 
-	temp.m_acknowledged = false;
-	temp.m_id = m_rtSndId;
-	temp.m_lastSend = 0;
-	temp.m_nextSend = 0;
-	temp.m_dataSize = packet.GetSize();
-	packet.CopyTo(temp.m_data, LIBNET_SOCKET_MTU_SIZE);
+		temp.m_acknowledged = false;
+		temp.m_id = m_rtSndId;
+		temp.m_lastSend = 0;
+		temp.m_nextSend = 0;
+		temp.m_dataSize = packet.GetSize();
+		packet.CopyTo(temp.m_data, LIBNET_SOCKET_MTU_SIZE);
 
-	m_rtSndId++;
+		m_rtSndId++;
 
-	m_rtQueue.push_back(temp);
+		m_rtQueue.push_back(temp);
 
-	if (LIBNET_CHANNEL_LOG_RT)
-		LOG_CHANNEL_DBG("RT ENQ: %u",
-			static_cast<uint32_t>(temp.m_id));
+		if (LIBNET_CHANNEL_LOG_RT)
+			LOG_CHANNEL_DBG("RT ENQ: %u",
+				static_cast<uint32_t>(temp.m_id));
 
-	return true;
+		return true;
+	}
 }
 
 bool Channel::SendSelf(const Packet & packet, uint32_t delay, const NetAddress * address)
