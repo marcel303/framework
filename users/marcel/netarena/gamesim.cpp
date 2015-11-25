@@ -2018,6 +2018,14 @@ void GameSim::endRound()
 	setGameState(kGameState_RoundComplete);
 }
 
+template <typename T> T * allocObject(T * objects, int numObjects)
+{
+	for (int i = 0; i < numObjects; ++i)
+		if (!objects[i].m_isActive)
+			return &objects[i];
+	return 0;
+}
+
 void GameSim::load(const char * name)
 {
 	resetGameWorld();
@@ -2070,16 +2078,7 @@ void GameSim::load(const char * name)
 
 			if (type == "mover")
 			{
-				Mover * mover = 0;
-
-				for (int i = 0; i < MAX_MOVERS; ++i)
-				{
-					if (!m_movers[i].m_isActive)
-					{
-						mover = &m_movers[i];
-						break;
-					}
-				}
+				auto * mover = allocObject(m_movers, MAX_MOVERS);
 
 				if (mover == 0)
 					LOG_ERR("too many movers!");
@@ -2097,16 +2096,7 @@ void GameSim::load(const char * name)
 			}
 			else if (type == "light")
 			{
-				Light * light = 0;
-
-				for (int i = 0; i < MAX_LIGHTS; ++i)
-				{
-					if (!m_lights[i].m_isActive)
-					{
-						light = &m_lights[i];
-						break;
-					}
-				}
+				auto * light = allocObject(m_lights, MAX_LIGHTS);
 
 				if (light == 0)
 					LOG_ERR("too many torches!");
@@ -2126,16 +2116,7 @@ void GameSim::load(const char * name)
 			}
 			else if (type == "tilesprite")
 			{
-				TileSprite * tileSprite = 0;
-
-				for (int i = 0; i < MAX_TILE_SPRITES; ++i)
-				{
-					if (!m_tileSprites[i].m_isActive)
-					{
-						tileSprite = &m_tileSprites[i];
-						break;
-					}
-				}
+				auto * tileSprite = allocObject(m_tileSprites, MAX_TILE_SPRITES);
 
 				if (tileSprite == 0)
 					LOG_ERR("too many tile sprites!");
@@ -2195,16 +2176,7 @@ void GameSim::load(const char * name)
 			}
 			else if (type == "portal")
 			{
-				Portal * portal = 0;
-
-				for (int i = 0; i < MAX_PORTALS; ++i)
-				{
-					if (!m_portals[i].m_isActive)
-					{
-						portal = &m_portals[i];
-						break;
-					}
-				}
+				auto * portal = allocObject(m_portals, MAX_PORTALS);
 
 				if (portal == 0)
 					LOG_ERR("too many portals!");
@@ -2220,16 +2192,7 @@ void GameSim::load(const char * name)
 			}
 			else if (type == "pickupspawn")
 			{
-				PickupSpawner * spawner = 0;
-
-				for (int i = 0; i < MAX_PICKUP_SPAWNERS; ++i)
-				{
-					if (!m_pickupSpawners[i].m_isActive)
-					{
-						spawner = &m_pickupSpawners[i];
-						break;
-					}
-				}
+				auto * spawner = allocObject(m_pickupSpawners, MAX_PICKUP_SPAWNERS);
 
 				if (spawner == 0)
 					LOG_ERR("too many pickup spawners!");
@@ -3357,6 +3320,7 @@ void GameSim::drawPlayColor(const CamParams & camParams)
 	drawObjects(m_movers, MAX_MOVERS);
 	drawObjects(m_axes, MAX_AXES);
 	drawObjects(m_pipebombs, MAX_PIPEBOMBS);
+	drawObjects(m_footBalls, MAX_FOOTBALLS);
 
 	// players
 
@@ -3464,6 +3428,7 @@ void GameSim::drawPlayLight(const CamParams & camParams)
 	drawLightObjects(m_coinCollector.m_coins, MAX_COINS);
 	drawLightObjects(m_axes, MAX_AXES);
 	drawLightObjects(m_pipebombs, MAX_PIPEBOMBS);
+	drawLightObjects(m_footBalls, MAX_FOOTBALLS);
 
 	// bullets
 
@@ -3674,34 +3639,21 @@ void GameSim::testCollisionInternal(const CollisionShape & shape, uint32_t typeM
 
 	if (typeMask & kCollisionType_PhysObj)
 	{
-		// pickups
-
 		::testCollision(m_pickups, MAX_PICKUPS, shape, arg, cb);
-
-		// token
 
 		if (m_gameMode == kGameMode_TokenHunt)
 		{
 			::testCollision(&m_tokenHunt.m_token, 1, shape, arg, cb);
 		}
 
-		// coins
-
 		if (m_gameMode == kGameMode_CoinCollector)
 		{
 			::testCollision(m_coinCollector.m_coins, MAX_COINS, shape, arg, cb);
 		}
 
-		// axes
-
 		::testCollision(m_axes, MAX_AXES, shape, arg, cb);
-
-		// pipe bombs
-
 		::testCollision(m_pipebombs, MAX_PIPEBOMBS, shape, arg, cb);
-
-		// barrels
-
+		::testCollision(m_footBalls, MAX_FOOTBALLS, shape, arg, cb);
 		::testCollision(m_barrels, MAX_BARRELS, shape, arg, cb);
 
 		// collide vs movers (?)
@@ -3715,10 +3667,7 @@ void GameSim::testCollisionInternal(const CollisionShape & shape, uint32_t typeM
 
 Pickup * GameSim::allocPickup()
 {
-	for (int i = 0; i < MAX_PICKUPS; ++i)
-		if (!m_pickups[i].m_isActive)
-			return &m_pickups[i];
-	return 0;
+	return allocObject(m_pickups, MAX_PICKUPS);
 }
 
 void GameSim::trySpawnPickup(PickupType type)
@@ -3979,14 +3928,12 @@ uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, BulletType t
 
 void GameSim::spawnAxe(Vec2 pos, Vec2 vel, int playerIndex)
 {
-	for (int i = 0; i < MAX_AXES; ++i)
+	auto * axe = allocObject(m_axes, MAX_AXES);
+
+	if (axe)
 	{
-		if (!m_axes[i].m_isActive)
-		{
-			playSound("objects/axe/throw.ogg");
-			m_axes[i].setup(pos, vel, playerIndex);
-			return;
-		}
+		playSound("objects/axe/throw.ogg");
+		axe->setup(pos, vel, playerIndex);
 	}
 }
 
@@ -4011,14 +3958,12 @@ bool GameSim::grabAxe(const CollisionInfo & collision)
 
 void GameSim::spawnPipeBomb(Vec2 pos, Vec2 vel, int playerIndex)
 {
-	for (int i = 0; i < MAX_PIPEBOMBS; ++i)
+	auto * pipeBomb = allocObject(m_pipebombs, MAX_PIPEBOMBS);
+
+	if (pipeBomb)
 	{
-		if (!m_pipebombs[i].m_isActive)
-		{
-			playSound("objects/pipebomb/throw.ogg");
-			m_pipebombs[i].setup(pos, vel, playerIndex);
-			return;
-		}
+		playSound("objects/pipebomb/throw.ogg");
+		pipeBomb->setup(pos, vel, playerIndex);
 	}
 }
 
@@ -4585,22 +4530,19 @@ TileSprite * GameSim::findTileSpriteAtBlockXY(int blockX, int blockY)
 
 void GameSim::addAnimationFx(DrawLayer layer, const char * fileName, int x, int y, bool flipX, bool flipY)
 {
-	for (int i = 0; i < MAX_ANIM_EFFECTS; ++i)
-	{
-		if (!m_animationEffects[i].m_isActive)
-		{
-			m_animationEffects[i] = AnimationFxState();
-			m_animationEffects[i].m_isActive = true;
-			m_animationEffects[i].m_layer = layer;
-			m_animationEffects[i].m_fileName = fileName;
-			m_animationEffects[i].m_state.x = x;
-			m_animationEffects[i].m_state.y = y;
-			m_animationEffects[i].m_state.flipX = flipX;
-			m_animationEffects[i].m_state.flipY = flipY;
-			m_animationEffects[i].m_state.startAnim(Spriter(fileName), 0);
+	auto * animFx = allocObject(m_animationEffects, MAX_ANIM_EFFECTS);
 
-			break;
-		}
+	if (animFx)
+	{
+		*animFx = AnimationFxState();
+		animFx->m_isActive = true;
+		animFx->m_layer = layer;
+		animFx->m_fileName = fileName;
+		animFx->m_state.x = x;
+		animFx->m_state.y = y;
+		animFx->m_state.flipX = flipX;
+		animFx->m_state.flipY = flipY;
+		animFx->m_state.startAnim(Spriter(fileName), 0);
 	}
 }
 
@@ -4621,13 +4563,11 @@ void GameSim::addAnnouncement(const Color & color, const char * message, ...)
 
 void GameSim::addFireBall()
 {
-	for (int i = 0; i < MAX_FIREBALLS; ++i)
+	auto * fireBall = allocObject(m_fireballs, MAX_FIREBALLS);
+
+	if (fireBall)
 	{
-		if (!m_fireballs[i].m_isActive)
-		{
-			m_fireballs[i].load("backgrounds/VolcanoTest/Fireball/fireball.scml", *this, (Random() % 1400) + 260, -80, RandomFloat(70.0f, 110.0f), RandomFloat(.2f, .4f));
-			return;
-		}
+		fireBall->load("backgrounds/VolcanoTest/Fireball/fireball.scml", *this, (Random() % 1400) + 260, -80, RandomFloat(70.0f, 110.0f), RandomFloat(.2f, .4f));
 	}
 }
 
