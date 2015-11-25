@@ -2256,6 +2256,12 @@ void GameSim::load(const char * name)
 	}
 }
 
+template <typename T> void resetObjects(T * objects, int numObjects)
+{
+	for (int i = 0; i < numObjects; ++i)
+		objects[i] = T();
+}
+
 void GameSim::resetGameWorld()
 {
 	// reset round stuff
@@ -2268,66 +2274,25 @@ void GameSim::resetGameWorld()
 
 	m_arena.reset();
 
-	// reset pickups
-
-	for (int i = 0; i < MAX_PICKUPS; ++i)
-		m_pickups[i] = Pickup();
+	resetObjects(m_pickups, MAX_PICKUPS);
 
 	m_nextPickupSpawnTimeRemaining = 0.f;
 
-	// reset movers
-
-	for (int i = 0; i < MAX_MOVERS; ++i)
-		m_movers[i] = Mover();
-
-	// reset axes
-
-	for (int i = 0; i < MAX_AXES; ++i)
-		m_axes[i] = Axe();
-
-	// reset pipebombs
-
-	for (int i = 0; i < MAX_PIPEBOMBS; ++i)
-		m_pipebombs[i] = PipeBomb();
-
-	// reset footballs
-
-	for (int i = 0; i < MAX_FOOTBALLS; ++i)
-		m_footBalls[i] = FootBall();
+	resetObjects(m_movers, MAX_MOVERS);
+	resetObjects(m_axes, MAX_AXES);
+	resetObjects(m_pipebombs, MAX_PIPEBOMBS);
+	resetObjects(m_footBalls, MAX_FOOTBALLS);
 
 	// reset floor effect
 
 	m_floorEffect = FloorEffect();
 
-	// reset blinds effects
-
-	for (int i = 0; i < MAX_BLINDS_EFFECTS; ++i)
-		m_blindsEffects[i] = BlindsEffect();
-
-	// reset lights
-
-	for (int i = 0; i < MAX_LIGHTS; ++i)
-		m_lights[i] = Light();
-
-	// reset particle effects
-
-	for (int i = 0; i < MAX_PARTICLE_EFFECTS; ++i)
-		m_particleEffects[i] = ParticleEffect();
-
-	// reset portals
-
-	for (int i = 0; i < MAX_PORTALS; ++i)
-		m_portals[i] = Portal();
-
-	// reset pickup spawners
-
-	for (int i = 0; i < MAX_PICKUP_SPAWNERS; ++i)
-		m_pickupSpawners[i] = PickupSpawner();
-
-	// reset tile sprites
-
-	for (int i = 0; i < MAX_TILE_SPRITES; ++i)
-		m_tileSprites[i] = TileSprite();
+	resetObjects(m_blindsEffects, MAX_BLINDS_EFFECTS);
+	resetObjects(m_lights, MAX_LIGHTS);
+	resetObjects(m_particleEffects, MAX_PARTICLE_EFFECTS);
+	resetObjects(m_portals, MAX_PORTALS);
+	resetObjects(m_pickupSpawners, MAX_PICKUP_SPAWNERS);
+	resetObjects(m_tileSprites, MAX_TILE_SPRITES);
 
 	// reset bullets
 
@@ -2340,21 +2305,11 @@ void GameSim::resetGameWorld()
 			m_particlePool->free(i);
 	}
 
-	// reset decals
-
-	for (int i = 0; i < MAX_DECALS; ++i)
-		m_decals[i] = Decal();
+	resetObjects(m_decals, MAX_DECALS);
 	g_decalMap->clear();
 
-	// reset screen shakes
-
-	for (int i = 0; i < MAX_SCREEN_SHAKES; ++i)
-		m_screenShakes[i] = ScreenShake();
-
-	// reset zoom effects
-
-	for (int i = 0; i < MAX_ZOOM_EFFECTS; ++i)
-		m_zoomEffects[i] = ZoomEffect();
+	resetObjects(m_screenShakes, MAX_SCREEN_SHAKES);
+	resetObjects(m_zoomEffects, MAX_ZOOM_EFFECTS);
 
 	m_desiredZoom = 1.f;
 	m_desiredZoomFocus.SetZero();
@@ -2362,15 +2317,8 @@ void GameSim::resetGameWorld()
 	m_effectiveZoom = 1.f;
 	m_effectiveZoomFocus.Set(ARENA_SX_PIXELS/2.f, ARENA_SY_PIXELS/2.f);
 
-	// reset light effects
-
-	for (int i = 0; i < MAX_LIGHT_EFFECTS; ++i)
-		m_lightEffects[i] = LightEffect();
-
-	// reset fireballs
-
-	for (int i = 0; i < MAX_FIREBALLS; i++)
-		m_fireballs[i] = FireBall();
+	resetObjects(m_lightEffects, MAX_LIGHT_EFFECTS);
+	resetObjects(m_fireballs, MAX_FIREBALLS);
 
 	// reset time dilation effects
 

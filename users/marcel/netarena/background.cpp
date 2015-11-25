@@ -68,7 +68,8 @@ void Background::draw()
 	case kBackgroundType_Volcano:
 		setColor(colorWhite);
 		VOLCANO_SPRITER.draw(m_volcanoState.m_spriterState);
-		m_volcanoState.m_fireBall.draw();
+		if (m_volcanoState.m_fireBall.m_isActive)
+			m_volcanoState.m_fireBall.draw();
 
 		if (s_debugBackground)
 		{
@@ -88,7 +89,8 @@ void Background::drawLight()
 	switch (m_type)
 	{
 	case kBackgroundType_Volcano:
-		m_volcanoState.m_fireBall.drawLight();
+		if (m_volcanoState.m_fireBall.m_isActive)
+			m_volcanoState.m_fireBall.drawLight();
 		break;
 	}
 }
