@@ -3211,6 +3211,20 @@ void GameSim::tickRoundComplete(float dt)
 	}
 }
 
+template <typename T> void drawObjects(const T * objects, int numObjects)
+{
+	for (int i = 0; i < numObjects; ++i)
+		if (objects[i].m_isActive)
+			objects[i].draw();
+}
+
+template <typename T> void drawObjects(const GameSim & gameSim, const T * objects, int numObjects)
+{
+	for (int i = 0; i < numObjects; ++i)
+		if (objects[i].m_isActive)
+			objects[i].draw(gameSim);
+}
+
 void GameSim::drawPlay()
 {
 	CamParams camParams;
@@ -3385,90 +3399,16 @@ void GameSim::drawPlayColor(const CamParams & camParams)
 
 	m_floorEffect.draw();
 
-	// lights
-
-	for (int i = 0; i < MAX_LIGHTS; ++i)
-	{
-		const Light & light = m_lights[i];
-
-		if (light.m_isActive)
-			light.draw();
-	}
-
-	// portals
-
-	for (int i = 0; i < MAX_PORTALS; ++i)
-	{
-		const Portal & portal = m_portals[i];
-
-		if (portal.m_isActive)
-			portal.draw();
-	}
-
-	// pickup spawners
-
-	for (int i = 0; i < MAX_PICKUP_SPAWNERS; ++i)
-	{
-		const PickupSpawner & spawner = m_pickupSpawners[i];
-
-		if (spawner.m_isActive)
-			spawner.draw();
-	}
-
-	// tile sprites
-
-	for (int i = 0; i < MAX_TILE_SPRITES; ++i)
-	{
-		const TileSprite & tileSprite = m_tileSprites[i];
-
-		if (tileSprite.m_isActive)
-			tileSprite.draw(*this);
-	}
-
-	// pickups
-
-	for (int i = 0; i < MAX_PICKUPS; ++i)
-	{
-		const Pickup & pickup = m_pickups[i];
-
-		if (pickup.m_isActive)
-			pickup.draw(*this);
-	}
-
-	// token
-
-	m_tokenHunt.m_token.draw();
-
-	// coins
-
-	for (int i = 0; i < MAX_COINS; ++i)
-	{
-		m_coinCollector.m_coins[i].draw();
-	}
-
-	// movers
-
-	for (int i = 0; i < MAX_MOVERS; ++i)
-	{
-		if (m_movers[i].m_isActive)
-			m_movers[i].draw();
-	}
-
-	// axes
-
-	for (int i = 0; i < MAX_AXES; ++i)
-	{
-		if (m_axes[i].m_isActive)
-			m_axes[i].draw();
-	}
-
-	// pipebombs
-
-	for (int i = 0; i < MAX_PIPEBOMBS; ++i)
-	{
-		if (m_pipebombs[i].m_isActive)
-			m_pipebombs[i].draw();
-	}
+	drawObjects(m_lights, MAX_LIGHTS);
+	drawObjects(m_portals, MAX_PORTALS);
+	drawObjects(m_pickupSpawners, MAX_PICKUP_SPAWNERS);
+	drawObjects(*this, m_tileSprites, MAX_TILE_SPRITES);
+	drawObjects(*this, m_pickups, MAX_PICKUPS);
+	drawObjects(&m_tokenHunt.m_token, 1);
+	drawObjects(m_coinCollector.m_coins, MAX_COINS);
+	drawObjects(m_movers, MAX_MOVERS);
+	drawObjects(m_axes, MAX_AXES);
+	drawObjects(m_pipebombs, MAX_PIPEBOMBS);
 
 	// players
 
@@ -3511,12 +3451,7 @@ void GameSim::drawPlayColor(const CamParams & camParams)
 		}
 	}
 
-	// fireballs
-
-	for (int i = 0; i < MAX_FIREBALLS; ++i)
-	{
-		m_fireballs[i].draw();
-	}
+	drawObjects(m_fireballs, MAX_FIREBALLS);
 
 	// foreground blocks
 
@@ -3553,6 +3488,20 @@ void GameSim::drawPlayDecal(const CamParams & camParams)
 	gxPopMatrix();
 }
 
+template <typename T> void drawLightObjects(const T * objects, int numObjects)
+{
+	for (int i = 0; i < numObjects; ++i)
+		if (objects[i].m_isActive)
+			objects[i].drawLight();
+}
+
+template <typename T> void drawLightObjects(const GameSim & gameSim, const T * objects, int numObjects)
+{
+	for (int i = 0; i < numObjects; ++i)
+		if (objects[i].m_isActive)
+			objects[i].drawLight(gameSim);
+}
+
 void GameSim::drawPlayLight(const CamParams & camParams)
 {
 	gxPushMatrix();
@@ -3560,72 +3509,13 @@ void GameSim::drawPlayLight(const CamParams & camParams)
 
 	setBlend(BLEND_ADD);
 
-	// lights
-
-	for (int i = 0; i < MAX_LIGHTS; ++i)
-	{
-		const Light & light = m_lights[i];
-
-		if (light.m_isActive)
-			light.drawLight();
-	}
-
-	// portals
-
-	{
-	}
-
-	// pickup spawners
-
-	{
-	}
-
-	// tile sprites
-
-	for (int i = 0; i < MAX_TILE_SPRITES; ++i)
-	{
-		const TileSprite & tileSprite = m_tileSprites[i];
-
-		if (tileSprite.m_isActive)
-			tileSprite.drawLight();
-	}
-
-	// pickups
-
-	for (int i = 0; i < MAX_PICKUPS; ++i)
-	{
-		const Pickup & pickup = m_pickups[i];
-
-		if (pickup.m_isActive)
-			pickup.drawLight();
-	}
-
-	// token
-
-	m_tokenHunt.m_token.drawLight();
-
-	// coins
-
-	for (int i = 0; i < MAX_COINS; ++i)
-	{
-		m_coinCollector.m_coins[i].drawLight();
-	}
-
-	// axes
-
-	for (int i = 0; i < MAX_AXES; ++i)
-	{
-		if (m_axes[i].m_isActive)
-			m_axes[i].drawLight();
-	}
-
-	// pipebombs
-
-	for (int i = 0; i < MAX_PIPEBOMBS; ++i)
-	{
-		if (m_pipebombs[i].m_isActive)
-			m_pipebombs[i].drawLight();
-	}
+	drawLightObjects(m_lights, MAX_LIGHTS);
+	drawLightObjects(m_tileSprites, MAX_TILE_SPRITES);
+	drawLightObjects(m_pickups, MAX_PICKUPS);
+	drawLightObjects(&m_tokenHunt.m_token, 1);
+	drawLightObjects(m_coinCollector.m_coins, MAX_COINS);
+	drawLightObjects(m_axes, MAX_AXES);
+	drawLightObjects(m_pipebombs, MAX_PIPEBOMBS);
 
 	// bullets
 
@@ -3647,12 +3537,7 @@ void GameSim::drawPlayLight(const CamParams & camParams)
 		}
 	}
 
-	// fireballs
-
-	for (int i = 0; i < MAX_FIREBALLS; ++i)
-	{
-		m_fireballs[i].drawLight();
-	}
+	drawLightObjects(m_fireballs, MAX_FIREBALLS);
 
 	// blinds effects
 

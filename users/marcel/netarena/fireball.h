@@ -17,10 +17,10 @@ public:
 	void load(const char * name, GameSim & gameSim, int x = 600, int y = 0, float angle = 60.0f, float scale = 0.25f);
 
 	void tick(GameSim & gameSim, float dt);
-	void draw();
-	void drawLight();
+	void draw() const;
+	void drawLight() const;
 
-	bool getCollision(CollisionShape& shape);
+	bool getCollision(CollisionShape & shape) const;
 
 public:
 	FixedString<64> m_name;

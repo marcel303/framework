@@ -78,25 +78,23 @@ void FireBall::tick(GameSim & gameSim, float dt)
 	}
 }
 
-void FireBall::draw()
+void FireBall::draw() const
 {
-	if (m_isActive)
-	{
-		setColor(colorWhite);
-		FIREBALL_SPRITER.draw(m_state);
-	}
+	fassert(m_isActive);
+
+	setColor(colorWhite);
+	FIREBALL_SPRITER.draw(m_state);
 }
 
-void FireBall::drawLight()
+void FireBall::drawLight() const
 {
-	if (m_isActive)
-	{
-		setColor(colorWhite);
-		Sprite("player-light.png").drawEx(m_state.x, m_state.y, m_state.angle, 2.f, 2.f, false, FILTER_MIPMAP);
-	}
+	fassert(m_isActive);
+
+	setColor(colorWhite);
+	Sprite("player-light.png").drawEx(m_state.x, m_state.y, m_state.angle, 2.f, 2.f, false, FILTER_MIPMAP);
 }
 
-bool FireBall::getCollision(CollisionShape& shape)
+bool FireBall::getCollision(CollisionShape & shape) const
 {
 	Vec2 points[4];
 
