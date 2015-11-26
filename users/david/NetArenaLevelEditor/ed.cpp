@@ -3,75 +3,37 @@
 #include "includeseditor.h"
 
 #include "EditorView.h"
-#include "gameobject.h"
 #include "SettingsWidget.h"
-#include "main.h"
+#include "pallettes.h"
+#include "grid.h"
+#include "templates.h"
 
-QList<GameObject*> m_gameObjects; //hack
+
+#include "QRadioButton"
 
 void Ed::Initialize()
 {
 	m_mapx = BASEX;
 	m_mapy = BASEY;
 
-	objectPropWindow = 0;
-
 	m_leftbuttonHeld = false;
-
-	m_sceneTemplatePallette = new QGraphicsScene();
 
 	m_settingsWidget = new SettingsWidget();
 
-	bg = 0;
-    undoTemplate = 0;
-    m_currentTemplate = 0;
+	m_grid = new Grid();
+	m_settingsWidget->Create();
 }
 
-EditorScene*& Ed::GetSceneArt()
+void Ed::LoadPallettes()
 {
-	if(m_editorMode == EM_Template)
-		return m_sceneArtTemplate;
+	m_mecPallette = new BasePallette();
+	m_mecPallette->LoadPallette("BlockList.txt");
 
-	return m_sceneArt;
-}
-EditorScene*& Ed::GetSceneMech()
-{
-	if(m_editorMode == EM_Template)
-		return m_sceneMechTemplate;
-
-	return m_sceneMech;
-}
-EditorScene*& Ed::GetSceneCollision()
-{
-	if(m_editorMode == EM_Template)
-		return m_sceneCollisionTemplate;
-
-	return m_sceneCollision;
+	m_colPallette = new BasePallette();
+	m_colPallette->LoadPallette("CollisionList.txt");
 }
 
-int &Ed::GetSceneCounter()
-{
-    return m_sceneCounter;
-}
 
-EditorScene*& Ed::GetCurrentScene()
-{
-    switch (m_sceneCounter)
-    {
-    case SCENEMECH:
-        return GetSceneMech();
-        break;
-    case SCENEART:
-        return GetSceneArt();
-        break;
-    case SCENECOLL:
-		return GetSceneCollision();
-        break;
-    default:
-        return GetSceneMech();
-        break;
-    }
-}
 
 
 EditorView*& Ed::GetView()
@@ -84,77 +46,100 @@ QGraphicsView*& Ed::GetViewPallette()
     return m_viewPallette;
 }
 
-QList<GameObject *> &Ed::GetGameObjects()
-{
-	return m_gameObjects;
-}
-
 SettingsWidget* Ed::GetSettingsWidget()
 {
     return m_settingsWidget;
 }
 
-void Ed::SetEditorMode(EditorMode e)
+
+
+
+
+void Ed::CreateNewMap()
 {
-	m_editorMode = e;
-
-    switch(e)
-    {
-    case EM_Level:
-            qDebug() << "Setting EditorMode to: Level";
-		break;
-    case EM_Template:
-            qDebug() << "Setting EditorMode to: Template";
-        break;
-    }
-
 
 }
 
-void Ed::EditTemplates()
+void Ed::SaveLevel(const QString& filename)
 {
-	SetEditorMode(EM_Template);
+	QDir dir;
+	dir.mkpath(filename);
 
-	m_view->setScene((QGraphicsScene*)(sceneMech));
-    GetCurrentScene()->setBackgroundBrush(Qt::green);
+	//SaveGeneric(filename + '/' + "Mec.txt", sceneMech);
+	//SaveGeneric(filename + '/' + "Col.txt", sceneCollision);
+	//SaveArtFile(filename + '/' + "Art", sceneArt);
 }
 
-void Ed::EditLevels()
+void Ed::LoadLevel(const QString &filename)
 {
-	SetEditorMode(EM_Level);
-
-	m_view->setScene((QGraphicsScene*)(sceneMech));
 }
 
-void CreateNewMapHelper(int x, int y)
+BasePallette* Ed::GetCurrentPallette()
 {
-	sceneMech->setSceneRect(-MAPX*BLOCKSIZE,-MAPY*BLOCKSIZE, MAPX*3*BLOCKSIZE,MAPY*3*BLOCKSIZE); //-MAPX*2*BLOCKSIZE,-MAPY*2*BLOCKSIZE,MAPX*4*BLOCKSIZE,MAPY*4*BLOCKSIZE);
-
-	sceneCounter = SCENEMECH;
-	sceneMech->CreateLevel(x, y);
-	sceneCounter = SCENEART;
-	sceneArt->CreateLevel(x, y);
-	sceneCounter = SCENECOLL;
-	sceneCollision->CreateLevel(x, y);
-	sceneCounter = SCENEMECH;
+	if(m_settingsWidget->m_mech->isChecked())
+	{
+		return m_mecPallette;
+	}
+	if(m_settingsWidget->m_coll->isChecked())
+	{
+		return m_colPallette;
+	}
+	if(m_settingsWidget->m_temp->isChecked())
+	{
+		return 0;
+	}
+	if(m_settingsWidget->m_obj->isChecked())
+	{
+		return 0;
+	}
+	return 0;
 }
 
-void Ed::CreateNewMap(int x, int y)
+void Ed::SetCurrentPallette()
 {
-	EditLevels();
+	if(m_settingsWidget->m_mech->isChecked())
+	{
+		m_viewPallette->setScene(m_mecPallette);
+	}
+	if(m_settingsWidget->m_coll->isChecked())
+	{
+		m_viewPallette->setScene(m_colPallette);
+	}
+	if(m_settingsWidget->m_temp->isChecked())
+	{
+	}
+	if(m_settingsWidget->m_obj->isChecked())
+	{
+	}
+}
 
+void Ed::UpdateTransparancy()
+{
+	m_grid->m_mec->setOpacity(m_settingsWidget->m_mechSlider->value()/100.0);
+	m_grid->m_col->setOpacity(m_settingsWidget->m_collSlider->value()/100.0);
+	m_grid->m_front->setOpacity(m_settingsWidget->m_foreSlider->value()/100.0);
+	m_grid->m_middle->setOpacity(m_settingsWidget->m_middleSlider->value()/100.0);
+	m_grid->m_back->setOpacity(m_settingsWidget->m_backSlider->value()/100.0);
+}
 
-	m_mapx = x;
-	m_mapy = y;
+#include <QFile>
+QList<QString> Ed::GetLinesFromConfigFile(QString filename)
+{
+	QFile file(filename);
+	file.open(QIODevice::ReadOnly | QIODevice::Text);
 
-	LoadPixmaps();
+	QTextStream in(&file);
 
-	m_gameObjects.clear();
+	qDebug() << filename << " open = " << file.isOpen();
 
-	CreateNewMapHelper(x, y);
-	EditTemplates();
-	CreateNewMapHelper(x, y);
-	EditLevels();
+	QList<QString> list;
+	while(!in.atEnd())
+	{
+		QString line = in.readLine();
+		list.push_back(line);
+	}
 
-	m_view->scale((float)MAPY/(float)MAPX,(float)MAPY/(float)MAPX);
+	file.close();
+
+	return list;
 }

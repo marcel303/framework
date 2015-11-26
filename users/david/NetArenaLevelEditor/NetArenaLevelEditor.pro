@@ -21,12 +21,19 @@ SOURCES += main.cpp \
     loaders.cpp \
     ed.cpp \
     editorview.cpp \
-    SettingsWidget.cpp
+    SettingsWidget.cpp \
+    grid.cpp \
+    layers.cpp \
+    pallettes.cpp \
+    templates.cpp
 
 HEADERS += \
-    main.h \
     gameobject.h \
     includeseditor.h \
     ed.h \
     EditorView.h \
-    SettingsWidget.h
+    SettingsWidget.h \
+    grid.h \
+    layers.h \
+    pallettes.h \
+    templates.h
