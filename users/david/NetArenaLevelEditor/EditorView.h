@@ -2,29 +2,6 @@
 
 #include "includeseditor.h"
 
-class QPushButton;
-class NewMapWindow : public QWidget
-{
-	Q_OBJECT
-public:
-	NewMapWindow();
-	~NewMapWindow();
-
-public slots:
-	void NewMap();
-	void CancelNewMap();
-
-
-public:
-
-	QPushButton* ok;
-	QPushButton* cancel;
-
-	QSlider* x;
-	QSlider* y;
-
-};
-
 class EditorViewBasic : public QGraphicsView
 {
 public:
@@ -55,52 +32,21 @@ class EditorView : public EditorViewBasic
     Q_OBJECT
 public:
     EditorView();
-    virtual ~EditorView();
-
-	void ImportTemplate(QString filename);
-
-
-    QSlider* sliderOpacMech;
-    QSlider* sliderOpacArt;
-    QSlider* sliderOpacColl;
-    QSlider* sliderOpacObject;
-
-	QWidget* newMapWindow;
+	virtual ~EditorView();
 
 public slots:
     void Save();
     void SaveAs();
     void SaveTemplate();
     void Load();
-    void New();
-	void SwitchToMech(int s);
-	void SwitchToArt(int s);
-	void SwitchToCollision(int s);
-	void SwitchToObject(int s);
-	void SwitchToTemplates(int s);
-	void SwitchLevelTemplateEdit();
-
-    void SetOpacityMech(int s);
-    void SetOpacityArt(int s);
-	void SetOpacityCollision(int s);
-    void SetOpacityObject(int s);
-
-	void AddNewFolder();
-	void RemoveFolder();
-
-
-	void ImportBackground();
+	void New();
 
     void mousePressEvent(QMouseEvent * e);
-    void mouseReleaseEvent(QMouseEvent * e);
-
-    void ResetSliders();
+	void mouseReleaseEvent(QMouseEvent * e);
 
 private:
-	void CreateAndShowNewMapDialog();
 
 	bool flip;
-
     QString m_filename;
 
 };

@@ -1,12 +1,13 @@
 #include "SettingsWidget.h"
-
 #include "includeseditor.h"
 
-#include "EditorView.h"
+#include "QGroupBox"
+#include "QRadioButton"
+#include "QSlider"
+#include "QVBoxLayout"
+#include "QTextEdit"
 
-#define view view2 //hack
-
-SettingsWidget::SettingsWidget()
+SettingsWidget::SettingsWidget(QWidget *parent) : QWidget(parent)
 {
 }
 
@@ -14,88 +15,113 @@ SettingsWidget::~SettingsWidget()
 {
 }
 
-void SettingsWidget::Initialize() //CreateSettingsWidget()
+
+void SettingsWidget::Create()
 {
-    QGridLayout* grid = new QGridLayout();
+	m_layerBox = new QGroupBox();
+	m_transBox = new QGroupBox();
+	m_templateControls = new QGroupBox();
 
-    QLabel* label = new QLabel("Edit Layer");
-    grid->addWidget(label, 0, 1);
+	m_mech = new QRadioButton(tr("&Mechanical"));
+	m_coll = new QRadioButton(tr("&Collission"));
+	m_temp = new QRadioButton(tr("&Template"));
+	m_obj = new QRadioButton(tr("&Object"));
 
-    label = new QLabel("Mech");
-    grid->addWidget(label, 1, 0);
-    label = new QLabel("Art");
-    grid->addWidget(label, 2, 0);
-    label = new QLabel("Coll");
-    grid->addWidget(label, 3, 0);
-    label = new QLabel("Obj");
-    grid->addWidget(label, 4, 0);
-    label = new QLabel("Tmpl");
-    grid->addWidget(label, 5, 0);
+	m_mech->setChecked(true);
 
 
-    QButtonGroup* bgroup = new QButtonGroup();
-    mech = new QCheckBox();
-    QObject::connect(mech, SIGNAL(stateChanged(int)),
-			view, SLOT(SwitchToMech(int)));
-    grid->addWidget(mech, 1, 1);
-    bgroup->addButton(mech);
+	QVBoxLayout *vbox = new QVBoxLayout;
+	vbox->addWidget(m_mech);
+	vbox->addWidget(m_coll);
+	vbox->addWidget(m_temp);
+	vbox->addWidget(m_obj);
+	vbox->addStretch(1);
 
-    art = new QCheckBox();
-    QObject::connect(art, SIGNAL(stateChanged(int)),
-			view, SLOT(SwitchToArt(int)));
-    grid->addWidget(art, 2, 1);
-    bgroup->addButton(art);
+	m_layerBox->setLayout(vbox);
 
-    coll= new QCheckBox();
-    QObject::connect(coll, SIGNAL(stateChanged(int)),
-			view, SLOT(SwitchToCollision(int)));
-    grid->addWidget(coll, 3, 1);
-    bgroup->addButton(coll);
 
-    object = new QCheckBox();
-    QObject::connect(object, SIGNAL(stateChanged(int)),
-			view, SLOT(SwitchToObject(int)));
-    grid->addWidget(object, 4, 1);
-    bgroup->addButton(object);
+	m_mechSlider = new QSlider(Qt::Horizontal);
+	m_collSlider = new QSlider(Qt::Horizontal);
+	m_foreSlider = new QSlider(Qt::Horizontal);
+	m_middleSlider = new QSlider(Qt::Horizontal);
+	m_backSlider = new QSlider(Qt::Horizontal);
+	m_objSlider = new QSlider(Qt::Horizontal);
 
-    tmpl = new QCheckBox();
-    QObject::connect(tmpl, SIGNAL(stateChanged(int)),
-			view, SLOT(SwitchToTemplates(int)));
-    grid->addWidget(tmpl, 5, 1);
-    bgroup->addButton(tmpl);
+	QGridLayout* gbox = new QGridLayout;
+	QLabel* lbl = new QLabel("mechanics");
+	gbox->addWidget(lbl, 0, 0);
+	lbl = new QLabel("collission");
+	gbox->addWidget(lbl, 1, 0);
+	lbl = new QLabel("foreground");
+	gbox->addWidget(lbl, 2, 0);
+	lbl = new QLabel("middle");
+	gbox->addWidget(lbl, 3, 0);
+	lbl = new QLabel("background");
+	gbox->addWidget(lbl, 4, 0);
+	lbl = new QLabel("objects");
+	gbox->addWidget(lbl, 5, 0);
+	gbox->addWidget(m_mechSlider, 0, 1);
+	gbox->addWidget(m_collSlider, 1, 1);
+	gbox->addWidget(m_foreSlider, 2, 1);
+	gbox->addWidget(m_middleSlider, 3, 1);
+	gbox->addWidget(m_backSlider, 4, 1);
+	gbox->addWidget(m_objSlider, 5, 1);
+	m_transBox->setLayout(gbox);
 
-    bgroup->setExclusive(true);
 
-    label = new QLabel("Transparency");
-    grid->addWidget(label, 0, 2);
+	vbox = new QVBoxLayout;
+	QPushButton* button = new QPushButton("New Template");
+	vbox->addWidget(button);
+	button = new QPushButton("Edit Level");
+	vbox->addWidget(button);
+	button = new QPushButton("Edit Template");
+	vbox->addWidget(button);
 
-    view->sliderOpacMech = new QSlider(Qt::Horizontal);
-    view->sliderOpacMech->setMinimum(0);
-    view->sliderOpacMech->setMaximum(100);
-    view->sliderOpacMech->setTickInterval(1);
-    view->sliderOpacMech->setValue(100);
+	m_templateControls->setLayout(vbox);
 
-    view->sliderOpacArt = new QSlider(view->sliderOpacMech);
-    view->sliderOpacArt->setOrientation(Qt::Horizontal);
-    view->sliderOpacColl = new QSlider(view->sliderOpacMech);
-    view->sliderOpacColl->setOrientation(Qt::Horizontal);
-    view->sliderOpacObject = new QSlider(view->sliderOpacMech);
-    view->sliderOpacObject->setOrientation(Qt::Horizontal);
+	m_objectText = new QTextEdit();
 
-    QObject::connect(view->sliderOpacMech, SIGNAL(valueChanged(int)),
-            view, SLOT(SetOpacityMech(int)));
-    QObject::connect(view->sliderOpacArt, SIGNAL(valueChanged(int)),
-            view, SLOT(SetOpacityArt(int)));
-    QObject::connect(view->sliderOpacColl, SIGNAL(valueChanged(int)),
-			view, SLOT(SetOpacityCollision(int)));
-    QObject::connect(view->sliderOpacObject, SIGNAL(valueChanged(int)),
-            view, SLOT(SetOpacityObject(int)));
+	m_grid = new QGridLayout;
+	m_grid->addWidget(m_layerBox, 0, 0);
+	m_grid->addWidget(m_transBox, 0, 1);
+	m_grid->addWidget(m_templateControls, 1, 0);
+	m_grid->addWidget(m_objectText, 1, 1);
 
-    grid->addWidget(view->sliderOpacMech, 1, 2);
-    grid->addWidget(view->sliderOpacArt, 2, 2);
-    grid->addWidget(view->sliderOpacColl, 3, 2);
-    grid->addWidget(view->sliderOpacObject, 4, 2);
+	setLayout(m_grid);
 
-    setLayout(grid);
+	connect(m_mech, SIGNAL(toggled(bool)), this, SLOT(UpdatePallettes(bool)));
+	connect(m_coll, SIGNAL(toggled(bool)), this, SLOT(UpdatePallettes(bool)));
+	connect(m_temp, SIGNAL(toggled(bool)), this, SLOT(UpdatePallettes(bool)));
+	connect(m_obj, SIGNAL(toggled(bool)), this, SLOT(UpdatePallettes(bool)));
+
+	connect(m_mechSlider, SIGNAL(valueChanged(int)), this, SLOT(UpdateTransparancy(int)));
+	connect(m_collSlider, SIGNAL(valueChanged(int)), this, SLOT(UpdateTransparancy(int)));
+	connect(m_foreSlider, SIGNAL(valueChanged(int)), this, SLOT(UpdateTransparancy(int)));
+	connect(m_middleSlider, SIGNAL(valueChanged(int)), this, SLOT(UpdateTransparancy(int)));
+	connect(m_backSlider, SIGNAL(valueChanged(int)), this, SLOT(UpdateTransparancy(int)));
+	connect(m_objSlider, SIGNAL(valueChanged(int)), this, SLOT(UpdateTransparancy(int)));
 }
+
+void SettingsWidget::UpdatePallettes(bool s)
+{
+	Q_UNUSED(s);
+
+	ed.SetCurrentPallette();
+}
+
+void SettingsWidget::UpdateTransparancy(int s)
+{
+	Q_UNUSED(s);
+
+	ed.UpdateTransparancy();
+}
+
+void SettingsWidget::NewTemplate()
+{
+}
+
+void SettingsWidget::EditTemplate()
+{
+}
+
 
