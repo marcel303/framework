@@ -35,7 +35,8 @@ void MechLayer::CreateLayer(int x, int y)
 	m_x = x;
 	m_y = y;
 
-	m_levelImage = new QImage(x*BLOCKSIZE, y*BLOCKSIZE, QImage::Format_ARGB32_Premultiplied);
+    m_pixmap = new QPixmap(x*BLOCKSIZE, y*BLOCKSIZE);
+    m_pixmap->fill(Qt::transparent);
 }
 
 void MechLayer::SetElement(int x, int y, bool update)
@@ -47,9 +48,6 @@ void MechLayer::SetElement(int x, int y, bool update)
 	QPixmap* image = ed.GetCurrentPallette()->GetImage(m_grid[y][x]);
 	if(image)
 		painter.drawPixmap(x*BLOCKSIZE,y*BLOCKSIZE ,*image);
-
-	//if(update)
-	//	UpdateLayer();
 }
 
 void MechLayer::DeleteElement(int x, int y, bool update)
@@ -67,25 +65,20 @@ void MechLayer::DeleteElement(int x, int y, bool update)
 #include <QImage>
 void MechLayer::UpdateLayer()
 {
-	QImage levelImage(m_x*BLOCKSIZE, m_y*BLOCKSIZE, QImage::Format_ARGB32_Premultiplied);
-	QPainter painter(&levelImage);
-	QPainter painter2(m_pixmap);
+    QPainter painter(m_pixmap);
 
+    if(1)
 	for(int y1 = 0; y1 < m_y; y1++)
 		for(int x1 = 0; x1 < m_x; x1++)
 		{
 			QPixmap* image = ed.GetCurrentPallette()->GetImage(m_grid[y1][x1]);
 			if(image)
 			{
-				painter.drawPixmap(x1*BLOCKSIZE,y1*BLOCKSIZE ,*image);
-				painter2.drawPixmap(x1*BLOCKSIZE,y1*BLOCKSIZE ,*image);
+                painter.drawPixmap(x1*BLOCKSIZE,y1*BLOCKSIZE ,*image);
 			}
 			else
 				qDebug() << "Missing image from pallette with ID:" << (char)m_grid[y1][x1];
 		}
-
-	*m_levelImage = levelImage; //doing this redundant copy because for some reason writing the empty block with value ' ' doesn't update the image.
-
 
 	ed.m_grid->update(); //TODO move somewhere more appropriate
 }
@@ -195,7 +188,7 @@ void ArtLayer::SaveLayer(QString filename)
 	{
 		for (int x = 0; x < MAPX; x++)
 		{
-			temp = m_levelImage->copy(x*BLOCKSIZE, y*BLOCKSIZE, BLOCKSIZE, BLOCKSIZE);
+            temp = m_pixmap->copy(x*BLOCKSIZE, y*BLOCKSIZE, BLOCKSIZE, BLOCKSIZE).toImage();
 			if(!testImageTransparancy(temp))
 			{
 				hitlist.append(count);
@@ -234,7 +227,7 @@ void ArtLayer::LoadLayer(QString filename)
 	QDataStream in(&file);
 	in.setByteOrder(QDataStream::LittleEndian);
 
-	QImage image(filename + "data.png");
+    QPixmap image(filename + "data.png");
 
 	int key = 0;
 	int hitcount = 0;
@@ -247,10 +240,10 @@ void ArtLayer::LoadLayer(QString filename)
 	while(!in.atEnd())
 	{
 		in >> key;
-		QImage p(image.copy((hitcount*BLOCKSIZE)%1920, ((hitcount*BLOCKSIZE)/1920)*BLOCKSIZE, BLOCKSIZE, BLOCKSIZE));
+        QPixmap p(image.copy((hitcount*BLOCKSIZE)%1920, ((hitcount*BLOCKSIZE)/1920)*BLOCKSIZE, BLOCKSIZE, BLOCKSIZE));
 
-		QPainter painter(m_levelImage);
-		painter.drawImage((key%MAPX)*BLOCKSIZE, (key/MAPX)*BLOCKSIZE, image.copy((hitcount*BLOCKSIZE)%1920, ((hitcount*BLOCKSIZE)/1920)*BLOCKSIZE, BLOCKSIZE, BLOCKSIZE));
+        QPainter painter(m_pixmap);
+        painter.drawPixmap((key%MAPX)*BLOCKSIZE, (key/MAPX)*BLOCKSIZE, image.copy((hitcount*BLOCKSIZE)%1920, ((hitcount*BLOCKSIZE)/1920)*BLOCKSIZE, BLOCKSIZE, BLOCKSIZE));
 
 		hitcount++;
 	}

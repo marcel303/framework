@@ -23,7 +23,6 @@ public:
 		int m_x;
 		int m_y;
 
-		QImage* m_levelImage;
 		QPixmap* m_pixmap;
 };
 

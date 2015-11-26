@@ -181,6 +181,8 @@ void Grid::CreateGrid(int x, int y)
 	}
 
 	delete p;
+
+    this->update();
 }
 
 void Grid::CustomMouseEvent ( QGraphicsSceneMouseEvent * e, STile* tile )
@@ -212,12 +214,6 @@ void Grid::dragMoveEvent(QGraphicsSceneDragDropEvent *e)
 
 void Grid::SetCurrentLevel(Template* t)
 {
-	m_front->m_image = t->m_front.m_levelImage;
-	m_middle->m_image = t->m_middle.m_levelImage;
-	m_back->m_image = t->m_back.m_levelImage;
-	m_mec->m_image = t->m_mec.m_levelImage;
-	m_col->m_image = t->m_col.m_levelImage;
-
 	m_front->m_pixmap = t->m_front.m_pixmap;
 	m_middle->m_pixmap = t->m_middle.m_pixmap;
 	m_back->m_pixmap = t->m_back.m_pixmap;

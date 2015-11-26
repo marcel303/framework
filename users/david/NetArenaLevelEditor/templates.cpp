@@ -14,41 +14,22 @@ Template::~Template()
 
 void Template::InitAsLevel()
 {
-	m_front.m_levelImage	= new QImage(1920, 1080, QImage::Format_ARGB32_Premultiplied);
-	m_middle.m_levelImage	= new QImage(1920, 1080, QImage::Format_ARGB32_Premultiplied);
-	m_back.m_levelImage		= new QImage(1920, 1080, QImage::Format_ARGB32_Premultiplied);
-	m_mec.m_levelImage	= new QImage(1920, 1080, QImage::Format_ARGB32_Premultiplied);
-	m_col.m_levelImage		= new QImage(1920, 1080, QImage::Format_ARGB32_Premultiplied);
-	m_front.m_levelImage->	fill(qRgba(0, 0, 0, 255));
-	m_middle.m_levelImage->	fill(qRgba(0, 0, 0, 255));
-	m_back.m_levelImage->	fill(qRgba(0, 0, 0, 255));
-	m_mec.m_levelImage->	fill(qRgba(0, 0, 0, 255));
-	m_col.m_levelImage->	fill(qRgba(0, 0, 0, 255));
+    //m_mec.LoadPallette("BlockList.txt");
+    m_mec.CreateLayer(MAPX, MAPY);
 
-	m_front.m_pixmap = new QPixmap(1920, 1080);
-	m_middle.m_pixmap = new QPixmap(1920, 1080);
-	m_back.m_pixmap = new QPixmap(1920, 1080);
-	m_mec.m_pixmap = new QPixmap(1920, 1080);
-	m_col.m_pixmap = new QPixmap(1920, 1080);
+    //m_col.LoadPallette("CollisionList.txt");
+    m_col.CreateLayer(MAPX, MAPY);
 
-	QPainter painter(m_front.m_pixmap);
-	painter.drawImage(0,0, *m_front.m_levelImage);
 
-	QPainter painter2(m_middle.m_pixmap);
-	painter2.drawImage(0,0, *m_middle.m_levelImage);
-	QPainter painter3(m_back.m_pixmap);
-	painter3.drawImage(0,0, *m_back.m_levelImage);
 
-	QPainter painter4(m_mec.m_pixmap);
-	painter4.drawImage(0,0, *m_mec.m_levelImage);
-	QPainter painter5(m_col.m_pixmap);
-	painter5.drawImage(0,0, *m_col.m_levelImage);
+    m_front.m_pixmap = new QPixmap(MAPX*BLOCKSIZE, MAPY*BLOCKSIZE);
+    m_middle.m_pixmap = new QPixmap(MAPX*BLOCKSIZE, MAPY*BLOCKSIZE);
+    m_back.m_pixmap = new QPixmap(MAPX*BLOCKSIZE, MAPY*BLOCKSIZE);
 
-	//m_mec.LoadPallette("BlockList.txt");
-	m_mec.CreateLayer(MAPX, MAPY);
+    m_front.m_pixmap->fill(Qt::transparent);
+    m_middle.m_pixmap->fill(Qt::transparent);
+    m_back.m_pixmap->fill(Qt::transparent);
 
-	//m_col.LoadPallette("CollisionList.txt");
-	m_col.CreateLayer(MAPX, MAPY);
 }
 
 void Template::CreateNewTemplate()
@@ -60,13 +41,13 @@ void Template::CreateNewTemplate()
 	QString back = QFileDialog::getOpenFileName(0,
 		tr("Select background image"), "", tr("Image Files (*.png *.jpg *.bmp)"));
 
-	QImage m(middle);
-	QImage f(front);
-	QImage b(back);
+    QPixmap m(middle);
+    QPixmap f(front);
+    QPixmap b(back);
 
-	!m.isNull() ? m_middle.m_levelImage = new QImage(m) : m_middle.m_levelImage = new QImage();
-	!f.isNull() ? m_front.m_levelImage	= new QImage(f) : m_front.m_levelImage	= new QImage();
-	!b.isNull() ? m_back.m_levelImage	= new QImage(b) : m_back.m_levelImage	= new QImage();
+    !m.isNull() ? m_middle.m_pixmap = new QPixmap (m) : m_middle.m_pixmap = new QPixmap ();
+    !f.isNull() ? m_front.m_pixmap = new QPixmap (f) : m_front.m_pixmap = new QPixmap ();
+    !b.isNull() ? m_back.m_pixmap = new QPixmap (b) : m_back.m_pixmap = new QPixmap ();
 
 
 	ed.m_level = this;
@@ -80,13 +61,13 @@ void Template::GetMaxXY(int& x, int& y)
 {
 	int x_max, y_max = 0;
 
-	x_max = m_front.m_levelImage->size().width();
-	y_max = m_front.m_levelImage->size().height();
+    x_max = m_front.m_pixmap->size().width();
+    y_max = m_front.m_pixmap->size().height();
 
-	x_max < m_middle.m_levelImage->size().width()	? x_max = m_middle.m_levelImage->size().width()		: x_max = x_max;
-	x_max < m_back.m_levelImage->size().width()		? x_max = m_back.m_levelImage->size().width()		: x_max = x_max;
-	y_max < m_middle.m_levelImage->size().height()	? y_max = m_middle.m_levelImage->size().height()	: y_max = y_max;
-	y_max < m_back.m_levelImage->size().height()	? y_max = m_back.m_levelImage->size().height()		: y_max = y_max;
+    x_max < m_middle.m_pixmap->size().width()	? x_max = m_middle.m_pixmap->size().width()		: x_max = x_max;
+    x_max < m_back.m_pixmap->size().width()		? x_max = m_back.m_pixmap->size().width()		: x_max = x_max;
+    y_max < m_middle.m_pixmap->size().height()	? y_max = m_middle.m_pixmap->size().height()	: y_max = y_max;
+    y_max < m_back.m_pixmap->size().height()	? y_max = m_back.m_pixmap->size().height()		: y_max = y_max;
 
 	x_max = x_max/BLOCKSIZE;
 	y_max = y_max/BLOCKSIZE;
@@ -107,12 +88,12 @@ void Template::StampTo(int x, int y)
 			ed.m_level->m_col.m_grid[i+y][j+x] = m_col.m_grid[i][j];
 		}
 
-	QPainter painter(ed.m_level->m_front.m_levelImage);
-	painter.drawImage(x*BLOCKSIZE, y*BLOCKSIZE, *m_front.m_levelImage);
-	painter.begin(ed.m_level->m_middle.m_levelImage);
-	painter.drawImage(x*BLOCKSIZE, y*BLOCKSIZE, *m_middle.m_levelImage);
-	painter.begin(ed.m_level->m_back.m_levelImage);
-	painter.drawImage(x*BLOCKSIZE, y*BLOCKSIZE, *m_back.m_levelImage);
+    QPainter painter(ed.m_level->m_front.m_pixmap);
+    painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, *m_front.m_pixmap);
+    painter.begin(ed.m_level->m_middle.m_pixmap);
+    painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, *m_middle.m_pixmap);
+    painter.begin(ed.m_level->m_back.m_pixmap);
+    painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, *m_back.m_pixmap);
 }
 
 void Template::Unstamp(int x, int y)
@@ -127,14 +108,14 @@ void Template::Unstamp(int x, int y)
 			ed.m_level->m_col.m_grid[i+y][j+x] = ' ';
 		}
 
-	QImage empty(x_max*BLOCKSIZE, y_max*BLOCKSIZE, QImage::Format_ARGB32_Premultiplied);
-	empty.fill(qRgba(0, 0, 0, 0));
-	QPainter painter(ed.m_level->m_front.m_levelImage);
-	painter.drawImage(x*BLOCKSIZE, y*BLOCKSIZE, empty);
-	painter.begin(ed.m_level->m_middle.m_levelImage);
-	painter.drawImage(x*BLOCKSIZE, y*BLOCKSIZE, empty);
-	painter.begin(ed.m_level->m_back.m_levelImage);
-	painter.drawImage(x*BLOCKSIZE, y*BLOCKSIZE, empty);
+    QPixmap empty(x_max*BLOCKSIZE, y_max*BLOCKSIZE);
+    empty.fill(Qt::transparent);
+    QPainter painter(ed.m_level->m_front.m_pixmap);
+    painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, empty);
+    painter.begin(ed.m_level->m_middle.m_pixmap);
+    painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, empty);
+    painter.begin(ed.m_level->m_back.m_pixmap);
+    painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, empty);
 }
 
 void Template::Load(const QString& filename)
