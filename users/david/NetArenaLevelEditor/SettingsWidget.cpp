@@ -71,6 +71,7 @@ void SettingsWidget::Create()
 
 	vbox = new QVBoxLayout;
 	QPushButton* button = new QPushButton("New Template");
+    connect(button, SIGNAL(clicked()), this, SLOT(NewTemplate()));
 	vbox->addWidget(button);
 	button = new QPushButton("Edit Level");
 	vbox->addWidget(button);
@@ -116,8 +117,11 @@ void SettingsWidget::UpdateTransparancy(int s)
 	ed.UpdateTransparancy();
 }
 
+#include "templates.h"
 void SettingsWidget::NewTemplate()
 {
+    Template* t = new Template();
+    t->CreateNewTemplate();
 }
 
 void SettingsWidget::EditTemplate()

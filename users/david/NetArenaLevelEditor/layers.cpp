@@ -48,6 +48,9 @@ void MechLayer::SetElement(int x, int y, bool update)
 	QPixmap* image = ed.GetCurrentPallette()->GetImage(m_grid[y][x]);
 	if(image)
 		painter.drawPixmap(x*BLOCKSIZE,y*BLOCKSIZE ,*image);
+
+    if(update)
+        ed.m_grid->update();
 }
 
 void MechLayer::DeleteElement(int x, int y, bool update)
@@ -67,7 +70,7 @@ void MechLayer::UpdateLayer()
 {
     QPainter painter(m_pixmap);
 
-    if(1)
+    if(0)
 	for(int y1 = 0; y1 < m_y; y1++)
 		for(int x1 = 0; x1 < m_x; x1++)
 		{

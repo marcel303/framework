@@ -120,10 +120,14 @@ void Template::Unstamp(int x, int y)
 
 void Template::Load(const QString& filename)
 {
+    //load .tmpl file with mec and coll
+    //load fore, back, middle art layers
 }
 
 void Template::Save(const QString& filename)
 {
+    //save .tmpl file with mec and coll
+    //save fore, back, middle art layers
 }
 
 void Template::UpdateLayers()
