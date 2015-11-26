@@ -317,7 +317,7 @@ void Token::drawLight() const
 
 //
 
-void FootBall::setup(int blockX, int blockY)
+void FootBall::setup(int x, int y)
 {
 	const int kRadius = 100;
 
@@ -330,9 +330,7 @@ void FootBall::setup(int blockX, int blockY)
 		Vec2(+kRadius, -kRadius),
 		Vec2(+kRadius, +kRadius),
 		Vec2(-kRadius, +kRadius));
-	m_pos.Set(
-		(blockX + .5f) * BLOCK_SX,
-		(blockY + .5f) * BLOCK_SY);
+	m_pos.Set(x, y);
 	m_vel.Set(0.f, 0.f);
 	m_doTeleport = true;
 	m_bounciness = FOOTBALL_BOUNCINESS;
@@ -340,6 +338,7 @@ void FootBall::setup(int blockX, int blockY)
 	m_friction = 0.1f;
 	m_airFriction = 0.9f;
 
+	m_hasBeenTouched = false;
 	m_isDropped = true;
 	m_spriterState = SpriterState();
 	m_spriterState.startAnim(FOOTBALL_SPRITER, "idle");
@@ -362,13 +361,23 @@ void FootBall::tick(GameSim & gameSim, float dt)
 			}
 			return false;
 		};
+		cbs.onHitPlayer = [](PhysicsActorCBs & cbs, PhysicsActor & actor, Player & player)
+		{
+			FootBall * self = static_cast<FootBall*>(&actor);
+			self->m_hasBeenTouched = true;
+			return false;
+		};
 		cbs.onBounce = [](PhysicsActorCBs & cbs, PhysicsActor & actor)
 		{
 			if (std::abs(actor.m_vel[1]) >= FOOTBALL_BOUNCE_SOUND_TRESHOLD)
 				g_gameSim->playSound("football-bounce.ogg");
 		};
 
+		m_noGravity = !m_hasBeenTouched;
+
 		PhysicsActor::tick(gameSim, dt, cbs);
+
+		m_spriterState.updateAnim(FOOTBALL_SPRITER, dt);
 	}
 }
 
@@ -1950,6 +1959,11 @@ void GameSim::setGameState(::GameState gameState)
 		{
 			// game modes
 
+			if (m_gameMode == kGameMode_FootBrawl)
+			{
+				spawnFootball();
+			}
+
 			if (m_gameMode == kGameMode_TokenHunt)
 			{
 				spawnToken();
@@ -2313,6 +2327,10 @@ void GameSim::resetGameWorld()
 
 	m_levelEvents = LevelEvents();
 	m_timeUntilNextLevelEvent = 0.f;
+
+	// reset footbrawl game mode
+
+	m_foootBrawl = FootBrawl();
 
 	// reset token hunt game mode
 
@@ -3761,6 +3779,18 @@ bool GameSim::grabPickup(int x1, int y1, int x2, int y2, Pickup & grabbedPickup)
 	}
 
 	return false;
+}
+
+void GameSim::spawnFootball()
+{
+	FootBall * footBall = allocObject(m_footBalls, MAX_FOOTBALLS);
+	
+	if (footBall)
+	{
+		footBall->setup(
+			m_foootBrawl.ballSpawnPoint[0],
+			m_foootBrawl.ballSpawnPoint[1]);
+	}
 }
 
 void GameSim::spawnToken()

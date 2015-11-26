@@ -652,6 +652,7 @@ struct Token : PhysicsActor
 
 struct FootBall : PhysicsActor
 {
+	bool m_hasBeenTouched; // ball needs to be touched once for it to be affected by gravity
 	bool m_isDropped;
 	SpriterState m_spriterState;
 
@@ -660,7 +661,7 @@ struct FootBall : PhysicsActor
 		memset(this, 0, sizeof(FootBall));
 	}
 
-	void setup(int blockX, int blockY);
+	void setup(int x, int y);
 
 	void tick(GameSim & gameSim, float dt);
 	void draw() const;
@@ -1133,53 +1134,24 @@ struct GameStateData
 	} m_roundEnd;
 
 	Player m_players[MAX_PLAYERS];
-
-	// pickups
-
 	Pickup m_pickups[MAX_PICKUPS];
 	float m_nextPickupSpawnTimeRemaining;
-
-	// movers
-
 	Mover m_movers[MAX_MOVERS];
-
-	// axes
-
 	Axe m_axes[MAX_AXES];
-
-	// pipe bombs
-
 	PipeBomb m_pipebombs[MAX_PIPEBOMBS];
-
-	// barrels
-
-	Barrel m_barrels[MAX_BARRELS];
-
-	// footballs
-
 	FootBall m_footBalls[MAX_FOOTBALLS];
-
-	// effects
-
+	Barrel m_barrels[MAX_BARRELS];
 	FloorEffect m_floorEffect;
-
 	BlindsEffect m_blindsEffects[MAX_BLINDS_EFFECTS];
-
 	Light m_lights[MAX_LIGHTS];
-
 	Portal m_portals[MAX_PORTALS];
-
 	PickupSpawner m_pickupSpawners[MAX_PICKUP_SPAWNERS];
-
 	TileSprite m_tileSprites[MAX_TILE_SPRITES];
-
 	AnimationFxState m_animationEffects[MAX_ANIM_EFFECTS];
-
 	Decal m_decals[MAX_DECALS];
-
 	ScreenShake m_screenShakes[MAX_SCREEN_SHAKES];
 
-	// todo : reset the on reset
+	// zoom effects
 
 	ZoomEffect m_zoomEffects[MAX_ZOOM_EFFECTS];
 
@@ -1221,6 +1193,17 @@ struct GameStateData
 	FireBall m_fireballs[MAX_FIREBALLS];
 
 	// support for game modes
+
+	struct FootBrawl
+	{
+		FootBrawl()
+		{
+			ballSpawnPoint[0] = ARENA_SX_PIXELS / 2;
+			ballSpawnPoint[1] = ARENA_SY_PIXELS / 2;
+		}
+
+		float ballSpawnPoint[2];
+	} m_foootBrawl;
 
 	struct TokenHunt
 	{
@@ -1326,6 +1309,8 @@ public:
 	void trySpawnPickup(PickupType type);
 	void spawnPickup(Pickup & pickup, PickupType type, int blockX, int blockY);
 	bool grabPickup(int x1, int y1, int x2, int y2, Pickup & pickup);
+
+	void spawnFootball();
 
 	void spawnToken();
 	bool pickupToken(const CollisionInfo & collisionInfo);
