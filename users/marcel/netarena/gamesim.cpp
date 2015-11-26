@@ -139,8 +139,8 @@ void Pickup::setup(PickupType type, float x, float y)
 
 	if (s_pickupSprites[type].isSpriter)
 	{
-		spriteSx = 60;
-		spriteSy = 40;
+		spriteSx = PICKUP_SPRITE_SX;
+		spriteSy = PICKUP_SPRITE_SY;
 	}
 	else
 	{
@@ -162,8 +162,11 @@ void Pickup::setup(PickupType type, float x, float y)
 	m_pos.Set(x, y);
 	m_vel.Set(0.f, 0.f);
 
-	m_bbMin.Set(-spriteSx / 2.f, -spriteSy / 2.f);
-	m_bbMax.Set(+spriteSx / 2.f, +spriteSy / 2.f);
+	m_collisionShape.set(
+		Vec2(-spriteSx / 2.f, -spriteSy / 2.f),
+		Vec2(+spriteSx / 2.f, -spriteSy / 2.f),
+		Vec2(+spriteSx / 2.f, +spriteSy / 2.f),
+		Vec2(-spriteSx / 2.f, +spriteSy / 2.f));
 
 	m_doTeleport = true;
 	m_bounciness = .25f;
@@ -198,19 +201,22 @@ void Pickup::draw(const GameSim & gameSim) const
 		state.startAnim(spriter, 0);
 		state.animTime = gameSim.m_roundTime;
 		state.x = m_pos[0];
-		state.y = m_pos[1] + m_bbMax[1];
+		state.y = m_pos[1] + PICKUP_SPRITE_SY / 2.f;
 
 		setColor(colorWhite);
 		spriter.draw(state);
 	}
 	else
 	{
+		Vec2 min, max;
+		getAABB(min, max);
+
 		const char * filename = s_pickupSprites[m_pickupType].filename;
 
 		Sprite sprite(filename);
 
 		setColor(colorWhite);
-		sprite.drawEx(m_pos[0] + m_bbMin[0], m_pos[1] + m_bbMin[1]);
+		sprite.drawEx(min[0], min[1]);
 	}
 
 	if (g_devMode)
@@ -221,10 +227,8 @@ void Pickup::draw(const GameSim & gameSim) const
 
 void Pickup::drawLight() const
 {
-	const Vec2 pos = m_pos + (m_bbMin + m_bbMax) / 2.f;
-
 	setColor(colorWhite);
-	Sprite("player-light.png").drawEx(pos[0], pos[1], 0.f, 1.f, 1.f, false, FILTER_MIPMAP);
+	Sprite("player-light.png").drawEx(m_pos[0], m_pos[1] + PICKUP_LIGHT_OFFSET_Y, 0.f, 1.f, 1.f, false, FILTER_MIPMAP);
 }
 
 //
@@ -235,8 +239,11 @@ void Token::setup(int blockX, int blockY)
 
 	m_isActive = true;
 	m_type = kObjectType_Token;
-	m_bbMin.Set(-TOKEN_SX / 2.f, -TOKEN_SY / 2.f);
-	m_bbMax.Set(+TOKEN_SX / 2.f, +TOKEN_SY / 2.f);
+	m_collisionShape.set(
+		Vec2(-TOKEN_SX / 2.f, -TOKEN_SY / 2.f),
+		Vec2(+TOKEN_SX / 2.f, -TOKEN_SY / 2.f),
+		Vec2(+TOKEN_SX / 2.f, +TOKEN_SY / 2.f),
+		Vec2(-TOKEN_SX / 2.f, +TOKEN_SY / 2.f));
 	m_pos.Set(
 		(blockX + .5f) * BLOCK_SX,
 		(blockY + .5f) * BLOCK_SY);
@@ -318,8 +325,11 @@ void FootBall::setup(int blockX, int blockY)
 
 	m_isActive = true;
 	m_type = kObjectType_Coin;
-	m_bbMin.Set(-kRadius, -kRadius);
-	m_bbMax.Set(+kRadius, +kRadius);
+	m_collisionShape.set(
+		Vec2(-kRadius, -kRadius),
+		Vec2(+kRadius, -kRadius),
+		Vec2(+kRadius, +kRadius),
+		Vec2(-kRadius, +kRadius));
 	m_pos.Set(
 		(blockX + .5f) * BLOCK_SX,
 		(blockY + .5f) * BLOCK_SY);
@@ -399,8 +409,11 @@ void Coin::setup(int blockX, int blockY)
 
 	m_isActive = true;
 	m_type = kObjectType_Coin;
-	m_bbMin.Set(-sprite.getWidth() / 2.f, -sprite.getHeight() / 2.f);
-	m_bbMax.Set(+sprite.getWidth() / 2.f, +sprite.getHeight() / 2.f);
+	m_collisionShape.set(
+		Vec2(-sprite.getWidth() / 2.f, -sprite.getHeight() / 2.f),
+		Vec2(+sprite.getWidth() / 2.f, -sprite.getHeight() / 2.f),
+		Vec2(+sprite.getWidth() / 2.f, +sprite.getHeight() / 2.f),
+		Vec2(-sprite.getWidth() / 2.f, +sprite.getHeight() / 2.f));
 	m_pos.Set(
 		(blockX + .5f) * BLOCK_SX,
 		(blockY + .5f) * BLOCK_SY);
@@ -614,8 +627,11 @@ void Axe::setup(Vec2Arg pos, Vec2Arg vel, int playerIndex)
 
 	m_isActive = true;
 	m_type = kObjectType_Axe;
-	m_bbMin.Set(-AXE_COLLISION_SX / 2.f, -AXE_COLLISION_SY / 2.f);
-	m_bbMax.Set(+AXE_COLLISION_SX / 2.f, +AXE_COLLISION_SY / 2.f);
+	m_collisionShape.set(
+		Vec2(-AXE_COLLISION_SX / 2.f, -AXE_COLLISION_SY / 2.f),
+		Vec2(+AXE_COLLISION_SX / 2.f, -AXE_COLLISION_SY / 2.f),
+		Vec2(+AXE_COLLISION_SX / 2.f, +AXE_COLLISION_SY / 2.f),
+		Vec2(-AXE_COLLISION_SX / 2.f, +AXE_COLLISION_SY / 2.f));
 	m_pos = pos;
 	m_vel = vel;
 	m_doTeleport = true;
@@ -744,12 +760,15 @@ void Axe::draw() const
 
 	if (g_devMode)
 	{
+		Vec2 min, max;
+		getAABB(min, max);
+
 		setColor(m_hasLanded ? 0 : 255, m_hasLanded ? 255 : 0, 0, 63);
 		drawRectLine(
-			m_pos[0] + m_bbMin[0],
-			m_pos[1] + m_bbMin[1],
-			m_pos[0] + m_bbMax[0],
-			m_pos[1] + m_bbMax[1]);
+			min[0],
+			min[1],
+			max[0],
+			max[1]);
 	}
 }
 
@@ -768,8 +787,11 @@ void PipeBomb::setup(Vec2Arg pos, Vec2Arg vel, int playerIndex)
 
 	m_isActive = true;
 	m_type = kObjectType_PipeBomb;
-	m_bbMin.Set(-PIPEBOMB_COLLISION_SX / 2.f, -PIPEBOMB_COLLISION_SY);
-	m_bbMax.Set(+PIPEBOMB_COLLISION_SX / 2.f, 0.f);
+	m_collisionShape.set(
+		Vec2(-PIPEBOMB_COLLISION_SX / 2.f, -PIPEBOMB_COLLISION_SY / 2.f),
+		Vec2(+PIPEBOMB_COLLISION_SX / 2.f, -PIPEBOMB_COLLISION_SY / 2.f),
+		Vec2(+PIPEBOMB_COLLISION_SX / 2.f, +PIPEBOMB_COLLISION_SY / 2.f),
+		Vec2(-PIPEBOMB_COLLISION_SX / 2.f, +PIPEBOMB_COLLISION_SY / 2.f));
 	m_pos = pos + Vec2(0.f, -1.f);
 	m_vel = vel;
 	m_doTeleport = true;
@@ -3710,11 +3732,12 @@ void GameSim::spawnPickup(Pickup & pickup, PickupType type, int blockX, int bloc
 
 bool GameSim::grabPickup(int x1, int y1, int x2, int y2, Pickup & grabbedPickup)
 {
-	CollisionInfo collisionInfo;
-	collisionInfo.min[0] = x1;
-	collisionInfo.min[1] = y1;
-	collisionInfo.max[0] = x2;
-	collisionInfo.max[1] = y2;
+	CollisionShape collisionShape;
+	collisionShape.set(
+		Vec2(x1, y1),
+		Vec2(x2, y1),
+		Vec2(x2, y2),
+		Vec2(x1, y2));
 
 	for (int i = 0; i < MAX_PICKUPS; ++i)
 	{
@@ -3722,10 +3745,9 @@ bool GameSim::grabPickup(int x1, int y1, int x2, int y2, Pickup & grabbedPickup)
 
 		if (pickup.m_isActive)
 		{
-			CollisionInfo pickupCollision;
-			pickup.getCollisionInfo(pickupCollision);
+			CollisionShape pickupCollision(pickup.m_collisionShape, pickup.m_pos);
 
-			if (collisionInfo.intersects(pickupCollision))
+			if (collisionShape.intersects(pickupCollision))
 			{
 				grabbedPickup = pickup;
 
@@ -3945,6 +3967,7 @@ bool GameSim::grabAxe(const CollisionInfo & collision)
 		{
 			CollisionInfo axeCollision;
 			m_axes[i].getCollisionInfo(axeCollision);
+
 			if (collision.intersects(axeCollision))
 			{
 				playSound("objects/axe/pickup.ogg");

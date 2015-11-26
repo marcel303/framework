@@ -2158,7 +2158,7 @@ bool App::tick()
 
 	if (keyboard.wentDown(SDLK_F10))
 		netDebugAction("newRound", "");
-	if (keyboard.wentDown(SDLK_F12))
+	if (keyboard.wentDown(SDLK_END))
 		netDebugAction("goToLobby", "");
 #endif
 
@@ -2199,7 +2199,7 @@ bool App::tick()
 #endif
 
 #if ENABLE_DEVMODE
-	if (keyboard.wentDown(SDLK_F12))
+	if (keyboard.wentDown(SDLK_END))
 	{
 		netDebugAction("newRound", "");
 	}

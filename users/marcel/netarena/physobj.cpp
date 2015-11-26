@@ -120,8 +120,8 @@ void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 
 		if (m_doTeleport)
 		{
-			const Vec2 min = m_pos + m_bbMin;
-			const Vec2 max = m_pos + m_bbMax;
+			Vec2 min, max;
+			getAABB(min, max);
 
 			if (m_portalCooldown)
 			{
@@ -195,17 +195,63 @@ void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 
 void PhysicsActor::drawBB() const
 {
-	const Vec2 min = m_pos + m_bbMin;
-	const Vec2 max = m_pos + m_bbMax;
+	switch (m_collisionShape.type)
+	{
+	case CollisionShape::kType_Poly:
+		for (int i = 0; i < m_collisionShape.numPoints; ++i)
+		{
+			const Vec2 & p1 = m_pos + m_collisionShape.points[(i + 0) % m_collisionShape.numPoints];
+			const Vec2 & p2 = m_pos + m_collisionShape.points[(i + 1) % m_collisionShape.numPoints];
 
-	setColor(0, 255, 0, 63);
-	drawRect(min[0], min[1], max[0], max[1]);
+			setColor(0, 255, 0, 63);
+			drawRect(p1[0], p1[1], p2[0], p2[1]);
+		}
+		break;
+
+	case CollisionShape::kType_Circle:
+		// todo : draw circle shape
+		break;
+
+	default:
+		Assert(false);
+		break;
+	}
+}
+
+void PhysicsActor::getAABB(Vec2 & min, Vec2 & max) const
+{
+	switch (m_collisionShape.type)
+	{
+	case CollisionShape::kType_Poly:
+		min = m_collisionShape.points[0];
+		max = m_collisionShape.points[0];
+		for (int i = 1; i < m_collisionShape.numPoints; ++i)
+		{
+			min = min.Min(m_collisionShape.points[i]);
+			max = max.Max(m_collisionShape.points[i]);
+		}
+		break;
+
+	case CollisionShape::kType_Circle:
+		min = m_collisionShape.points[0] - Vec2(m_collisionShape.radius, m_collisionShape.radius);
+		max = m_collisionShape.points[0] + Vec2(m_collisionShape.radius, m_collisionShape.radius);
+		break;
+
+	default:
+		Assert(false);
+		break;
+	}
+
+	min += m_pos;
+	max += m_pos;
 }
 
 uint32_t PhysicsActor::getIntersectingBlockMask(GameSim & gameSim, Vec2 pos)
 {
-	Vec2 min = pos + m_bbMin;
-	Vec2 max = pos + m_bbMax;
+	Vec2 min, max;
+	getAABB(min, max);
+
+	// todo : directly intersect collision shape with blocks
 
 	const int x1 = (int(min[0]         )     + ARENA_SX_PIXELS) % ARENA_SX_PIXELS;
 	const int x2 = (int(max[0]         )     + ARENA_SX_PIXELS) % ARENA_SX_PIXELS;
@@ -230,35 +276,18 @@ uint32_t PhysicsActor::getIntersectingBlockMask(GameSim & gameSim, Vec2 pos)
 
 void PhysicsActor::getCollisionInfo(CollisionInfo & collisionInfo)
 {
-	collisionInfo.min = m_pos + m_bbMin;
-	collisionInfo.max = m_pos + m_bbMax;
+	getAABB(collisionInfo.min, collisionInfo.max);
 }
 
 void PhysicsActor::testCollision(const CollisionShape & shape, void * arg, CollisionCB cb)
 {
-	CollisionShape myShape(
-		m_pos + m_bbMin,
-		m_pos + m_bbMax);
+	CollisionShape myShape(m_collisionShape, m_pos);
 
 	if (myShape.intersects(shape))
 	{
 		cb(shape, arg, this, 0, 0);
 	}
 }
-
-/*
-bool PhysicsActor::test(const CollisionBox & box) const
-{
-	const Vec2 min = m_pos + m_bbMin;
-	const Vec2 max = m_pos + m_bbMax;
-
-	return
-		min[0] <= box.max[0] &&
-		min[1] <= box.max[1] &&
-		max[0] >= box.min[0] &&
-		max[1] >= box.min[1];
-}
-*/
 
 //
 

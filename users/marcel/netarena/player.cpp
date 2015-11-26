@@ -4095,10 +4095,12 @@ void Player::dropWeapons(Vec2Arg velocity)
 		#ifdef DEBUG
 			CollisionInfo collisionInfo;
 			getPlayerCollision(collisionInfo);
-			fassert(pickup->m_pos[0] + pickup->m_bbMin[0] >= collisionInfo.min[0]);
-			fassert(pickup->m_pos[1] + pickup->m_bbMin[1] >= collisionInfo.min[1]);
-			fassert(pickup->m_pos[0] + pickup->m_bbMax[0] <= collisionInfo.max[0]);
-			fassert(pickup->m_pos[1] + pickup->m_bbMax[1] <= collisionInfo.max[1]);
+			Vec2 min, max;
+			pickup->getAABB(min, max);
+			fassert(min[0] >= collisionInfo.min[0]);
+			fassert(min[1] >= collisionInfo.min[1]);
+			fassert(max[0] <= collisionInfo.max[0]);
+			fassert(max[1] <= collisionInfo.max[1]);
 		#endif
 		}
 	}

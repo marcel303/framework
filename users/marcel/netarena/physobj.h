@@ -53,8 +53,7 @@ struct PhysicsActor
 	Vec2 m_vel;
 	bool m_isGrounded;
 
-	Vec2 m_bbMin;
-	Vec2 m_bbMax;
+	CollisionShape m_collisionShape;
 
 	bool m_noGravity;
 	float m_gravityMultiplier;
@@ -71,12 +70,11 @@ struct PhysicsActor
 	void tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs);
 	void drawBB() const;
 
+	void getAABB(Vec2 & min, Vec2 & max) const;
 	uint32_t getIntersectingBlockMask(GameSim & gameSim, Vec2 pos);
 	void getCollisionInfo(CollisionInfo & collisionInfo);
 
 	void testCollision(const CollisionShape & shape, void * arg, CollisionCB cb);
-
-	//bool test(const CollisionBox & box) const;
 };
 
 typedef uint8_t PhysicsActorId;

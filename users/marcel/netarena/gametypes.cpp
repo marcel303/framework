@@ -338,30 +338,55 @@ void CollisionShape::translate(float x, float y)
 
 void CollisionShape::getMinMax(Vec2 & min, Vec2 & max) const
 {
-	Assert(numPoints != 0);
-
-	min = points[0];
-	max = points[0];
-
-	for (int i = 1; i < numPoints; ++i)
+	switch (type)
 	{
-		min = min.Min(points[i]);
-		max = max.Max(points[i]);
+	case kType_Poly:
+		Assert(numPoints != 0);
+
+		min = points[0];
+		max = points[0];
+
+		for (int i = 1; i < numPoints; ++i)
+		{
+			min = min.Min(points[i]);
+			max = max.Max(points[i]);
+		}
+		break;
+
+	case kType_Circle:
+		min = points[0] - Vec2(radius, radius);
+		max = points[0] + Vec2(radius, radius);
+		break;
+
+	default:
+		Assert(false);
+		break;
 	}
 }
 
 float CollisionShape::projectedMax(Vec2Arg n) const
 {
-	Assert(numPoints != 0);
+	float result = 0.f;
 
-	float result = n * points[0];
-
-	for (int i = 1; i < numPoints; ++i)
+	switch (type)
 	{
-		const float dot = n * points[i];
+	case kType_Poly:
+		Assert(numPoints != 0);
 
-		if (dot < result)
-			result = dot;
+		result = n * points[0];
+
+		for (int i = 1; i < numPoints; ++i)
+		{
+			const float dot = n * points[i];
+
+			if (dot < result)
+				result = dot;
+		}
+		break;
+
+	case kType_Circle:
+		result = n * points[0] - radius * n.CalcSize();
+		break;
 	}
 
 	return result;
@@ -382,35 +407,76 @@ Vec2 CollisionShape::getSegmentNormal(int idx) const
 
 bool CollisionShape::intersects(const CollisionShape & other) const
 {
-	// perform SAT test
-
-	// evaluate edges from the first shape
-
-	for (int i = 0; i < numPoints; ++i)
+	if (type == kType_Circle)
 	{
-		const Vec2 & p = points[i];
-		const Vec2 pn = getSegmentNormal(i);
-		const float pd = pn * p;
-		const float d = other.projectedMax(pn) - pd;
-
-		if (d >= 0.f)
+		if (other.type == kType_Circle)
+		{
+			const Vec2 delta = points[0] - other.points[0];
+			const float distanceSq = delta.CalcSizeSq();
+			const float radiusSum = radius + other.radius;
+			const float radiusSumSq = radiusSum * radiusSum;
+			return distanceSq <= radiusSumSq;
+		}
+		else if (other.type == kType_Poly)
+		{
+			// todo!
 			return false;
+		}
+		else
+		{
+			Assert(false);
+			return false;
+		}
 	}
-
-	// evaluate edges from the second shape
-
-	for (int i = 0; i < other.numPoints; ++i)
+	else if (type == kType_Poly)
 	{
-		const Vec2 & p = other.points[i];
-		const Vec2 pn = other.getSegmentNormal(i);
-		const float pd = pn * p;
-		const float d = projectedMax(pn) - pd;
+		if (other.type == kType_Circle)
+		{
+			return other.intersects(*this);
+		}
+		else if (other.type == kType_Poly)
+		{
+			// perform SAT test
 
-		if (d >= 0.f)
+			// evaluate edges from the first shape
+
+			for (int i = 0; i < numPoints; ++i)
+			{
+				const Vec2 & p = points[i];
+				const Vec2 pn = getSegmentNormal(i);
+				const float pd = pn * p;
+				const float d = other.projectedMax(pn) - pd;
+
+				if (d >= 0.f)
+					return false;
+			}
+
+			// evaluate edges from the second shape
+
+			for (int i = 0; i < other.numPoints; ++i)
+			{
+				const Vec2 & p = other.points[i];
+				const Vec2 pn = other.getSegmentNormal(i);
+				const float pd = pn * p;
+				const float d = projectedMax(pn) - pd;
+
+				if (d >= 0.f)
+					return false;
+			}
+
+			return true;
+		}
+		else
+		{
+			Assert(false);
 			return false;
+		}
 	}
-
-	return true;
+	else
+	{
+		Assert(false);
+		return false;
+	}
 }
 
 bool CollisionShape::checkCollision(const CollisionShape & other, Vec2Arg delta, float & contactDistance, Vec2 & contactNormal) const

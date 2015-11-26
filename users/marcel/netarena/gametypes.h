@@ -295,16 +295,47 @@ struct CollisionInfo : CollisionBox
 
 struct CollisionShape
 {
-	const static int kMaxPoints = 4;
+	enum Type
+	{
+		kType_Poly,
+		kType_Circle
+	};
 
+	const static int kMaxPoints = 16;
+
+	Type type;
 	Vec2 points[kMaxPoints];
 	int numPoints;
+	float radius;
 
 	//
 
 	CollisionShape()
 	{
 		//memset(this, 0, sizeof(*this));
+	}
+
+	CollisionShape(const CollisionShape & shape, Vec2Arg offset)
+	{
+		type = shape.type;
+		numPoints = shape.numPoints;
+
+		switch (shape.type)
+		{
+		case kType_Poly:
+			for (int i = 0; i < shape.numPoints; ++i)
+				points[i] = shape.points[i] + offset;
+			break;
+
+		case kType_Circle:
+			points[0] = shape.points[0] + offset;
+			radius = shape.radius;
+			break;
+			
+		default:
+			Assert(false);
+			break;
+		}
 	}
 
 	CollisionShape(const CollisionBox & box)
@@ -330,6 +361,8 @@ struct CollisionShape
 
 	void set(Vec2 p1, Vec2 p2, Vec2 p3)
 	{
+		type = kType_Poly;
+
 		points[0] = p1;
 		points[1] = p2;
 		points[2] = p3;
@@ -340,6 +373,8 @@ struct CollisionShape
 
 	void set(Vec2 p1, Vec2 p2, Vec2 p3, Vec2 p4)
 	{
+		type = kType_Poly;
+
 		points[0] = p1;
 		points[1] = p2;
 		points[2] = p3;
@@ -347,6 +382,29 @@ struct CollisionShape
 		numPoints = 4;
 
 		fixup();
+	}
+
+	void setCircle(Vec2Arg p, float radius)
+	{
+	#if 1
+		type = kType_Poly;
+
+		for (int i = 0; i < kMaxPoints; ++i)
+		{
+			const float angle = 2.f * M_PI * float(i) / float(kMaxPoints);
+			points[i][0] = std::cosf(angle) * radius;
+			points[i][1] = std::sinf(angle) * radius;
+		}
+		numPoints = kMaxPoints;
+
+		fixup();
+	#else
+		type = kType_Circle;
+
+		points[0][0] = p[0];
+		points[0][1] = p[1];
+		radius = radius;
+	#endif
 	}
 
 	const CollisionShape & operator=(const CollisionBox & box);
