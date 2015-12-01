@@ -114,8 +114,11 @@ void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 				m_pos[j] = newPos[j];
 			}
 
-			if (cbs.onBlockMask)
-				cbs.onBlockMask(cbs, *this, blockMask);
+			if (blockMask != 0)
+			{
+				if (cbs.onBlockMask)
+					cbs.onBlockMask(cbs, *this, blockMask);
+			}
 		}
 
 		if (m_doTeleport)
@@ -204,7 +207,7 @@ void PhysicsActor::drawBB() const
 			const Vec2 & p2 = m_pos + m_collisionShape.points[(i + 1) % m_collisionShape.numPoints];
 
 			setColor(0, 255, 0, 63);
-			drawRect(p1[0], p1[1], p2[0], p2[1]);
+			drawLine(p1[0], p1[1], p2[0], p2[1]);
 		}
 		break;
 
@@ -219,6 +222,11 @@ void PhysicsActor::drawBB() const
 }
 
 void PhysicsActor::getAABB(Vec2 & min, Vec2 & max) const
+{
+	getAABB(m_pos, min, max);
+}
+
+void PhysicsActor::getAABB(Vec2Arg pos, Vec2 & min, Vec2 & max) const
 {
 	switch (m_collisionShape.type)
 	{
@@ -242,17 +250,41 @@ void PhysicsActor::getAABB(Vec2 & min, Vec2 & max) const
 		break;
 	}
 
-	min += m_pos;
-	max += m_pos;
+	min += pos;
+	max += pos;
 }
 
 uint32_t PhysicsActor::getIntersectingBlockMask(GameSim & gameSim, Vec2 pos)
 {
 	Vec2 min, max;
-	getAABB(min, max);
+	getAABB(pos, min, max);
 
 	// todo : directly intersect collision shape with blocks
 
+#if 1
+	uint32_t result = 0;
+
+	const Arena & arena = gameSim.m_arena;
+
+	const int sx = int(max[0] - min[0]);
+	const int sy = int(max[1] - min[1]);
+	const int numX = 2 + sx / BLOCK_SX;
+	const int numY = 2 + sy / BLOCK_SY;
+
+	for (int xi = 0; xi < numX; ++xi)
+	{
+		const int x = int(min[0]) + sx * xi / (numX - 1);
+
+		for (int yi = 0; yi < numY; ++yi)
+		{
+			const int y = int(min[1]) + sy * yi / (numY - 1);
+
+			result |= arena.getIntersectingBlocksMask(x, y);
+		}
+	}
+
+	return result;
+#else
 	const int x1 = (int(min[0]         )     + ARENA_SX_PIXELS) % ARENA_SX_PIXELS;
 	const int x2 = (int(max[0]         )     + ARENA_SX_PIXELS) % ARENA_SX_PIXELS;
 	const int y1 = (int(min[1]         )     + ARENA_SY_PIXELS) % ARENA_SY_PIXELS;
@@ -272,6 +304,7 @@ uint32_t PhysicsActor::getIntersectingBlockMask(GameSim & gameSim, Vec2 pos)
 	result |= arena.getIntersectingBlocksMask(x2, y3);
 
 	return result;
+#endif
 }
 
 void PhysicsActor::getCollisionInfo(CollisionInfo & collisionInfo)

@@ -325,11 +325,7 @@ void FootBall::setup(int x, int y)
 
 	m_isActive = true;
 	m_type = kObjectType_Coin;
-	m_collisionShape.set(
-		Vec2(-kRadius, -kRadius),
-		Vec2(+kRadius, -kRadius),
-		Vec2(+kRadius, +kRadius),
-		Vec2(-kRadius, +kRadius));
+	m_collisionShape.setCircle(Vec2(0.f, 0.f), kRadius);
 	m_pos.Set(x, y);
 	m_vel.Set(0.f, 0.f);
 	m_doTeleport = true;

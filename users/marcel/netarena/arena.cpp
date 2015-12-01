@@ -1015,7 +1015,7 @@ uint32_t Arena::getIntersectingBlocksMask(int x, int y) const
 			const Block & block = m_blocks[blockX][blockY];
 			const BlockMask & mask = s_blockMasks[block.shape];
 
-			if (mask.test(maskX, maskY))
+			if (block.type != kBlockType_Empty && mask.test(maskX, maskY))
 			{
 				result |= 1 << block.type;
 			}

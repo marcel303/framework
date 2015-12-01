@@ -71,6 +71,7 @@ struct PhysicsActor
 	void drawBB() const;
 
 	void getAABB(Vec2 & min, Vec2 & max) const;
+	void getAABB(Vec2Arg pos, Vec2 & min, Vec2 & max) const;
 	uint32_t getIntersectingBlockMask(GameSim & gameSim, Vec2 pos);
 	void getCollisionInfo(CollisionInfo & collisionInfo);
 
