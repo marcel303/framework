@@ -187,6 +187,7 @@ public:
 	bool getRandomPickupLocations(int * out_x, int * out_y, int & numLocations, void * obj, bool (*reject)(void * obj, int x, int y)) const;
 
 	uint32_t getIntersectingBlocksMask(int x, int y) const;
+	uint32_t getIntersectingBlocksMask(const CollisionShape & shape) const;
 
 	bool getBlockRectFromPixels(int x1, int y1, int x2, int y2, int & out_x1, int & out_y1, int & out_x2, int & out_y2) const;
 	bool getBlocksFromPixels(int x, int y, int x1, int y1, int x2, int y2, bool wrap, BlockAndDistance * out_blocks, int & io_numBlocks);

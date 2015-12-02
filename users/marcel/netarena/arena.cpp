@@ -1025,6 +1025,42 @@ uint32_t Arena::getIntersectingBlocksMask(int x, int y) const
 	return result;
 }
 
+uint32_t Arena::getIntersectingBlocksMask(const CollisionShape & shape) const
+{
+	uint32_t result = 0;
+
+	Vec2 min, max;
+	shape.getMinMax(min, max);
+
+	const int x1 = int(min[0]);
+	const int y1 = int(min[1]);
+	const int x2 = int(max[0]);
+	const int y2 = int(max[1]);
+
+	const int kMaxBlocks = 256;
+	BlockAndDistance blocks[kMaxBlocks];
+	int numBlocks = kMaxBlocks;
+
+	if (const_cast<Arena*>(this)->getBlocksFromPixels(x1, y1, x1, y1, x2, y2, true, blocks, numBlocks))
+	{
+		for (int i = 0; i < numBlocks; ++i)
+		{
+			if (blocks[i].block->type != kBlockType_Empty)
+			{
+				CollisionShape blockShape;
+				Arena::getBlockCollision(blocks[i].block->shape, blockShape, blocks[i].x, blocks[i].y);
+
+				if (blockShape.intersects(shape))
+				{
+					result |= 1 << blocks[i].block->type;
+				}
+			}
+		}
+	}
+
+	return result;
+}
+
 static bool getBlockStripFromPixels(int v1, int v2, int & out_v1, int & out_v2, int stripSize, int blockSize)
 {
 	int temp;
@@ -1231,7 +1267,7 @@ void Arena::getBlockCollision(BlockShape shape, CollisionShape & collisionShape,
 
 void Arena::testCollision(const CollisionShape & shape, void * arg, CollisionCB cb)
 {
-	const int kMaxBlocks = 64;
+	const int kMaxBlocks = 256;
 	BlockAndDistance blocks[kMaxBlocks];
 	int numBlocks = kMaxBlocks;
 
