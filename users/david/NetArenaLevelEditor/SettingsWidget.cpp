@@ -15,7 +15,8 @@ SettingsWidget::~SettingsWidget()
 {
 }
 
-
+#include "templates.h"
+#include <QListView>
 void SettingsWidget::Create()
 {
 	m_layerBox = new QGroupBox();
@@ -88,6 +89,8 @@ void SettingsWidget::Create()
 	m_grid->addWidget(m_templateControls, 1, 0);
 	m_grid->addWidget(m_objectText, 1, 1);
 
+
+
 	setLayout(m_grid);
 
 	connect(m_mech, SIGNAL(toggled(bool)), this, SLOT(UpdatePallettes(bool)));
@@ -124,8 +127,18 @@ void SettingsWidget::NewTemplate()
     t->CreateNewTemplate();
 }
 
+bool editT = false;
 void SettingsWidget::EditTemplate()
 {
+    if(editT)
+    {
+
+    }
+    else
+    {
+
+    }
+    editT = !editT;
 }
 
 

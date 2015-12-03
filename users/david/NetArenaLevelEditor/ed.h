@@ -12,6 +12,7 @@ class BasePallette;
 class LevelLayer;
 class Grid;
 class Template;
+class TemplateScene;
 class Ed
 {
 public:
@@ -35,16 +36,17 @@ public:
 	int GetMapX(){return m_mapx;}
 	int GetMapY(){return m_mapy;}
 
-	void CreateNewMap();
-
 	void LoadLevel(const QString& filename);
 	void SaveLevel(const QString &filename);
 
+    void NewLevel();
 
 	Grid* m_grid;
 
 	Template* m_level;
 	Template* m_currentTemplate;
+    Template* m_levelbackup;
+    TemplateScene* m_templateScene;
 
 
 
@@ -62,7 +64,7 @@ private:
 
 	BasePallette* m_mecPallette;
 	BasePallette* m_colPallette;
-	//TemplatePallette* m_templatePallette;
+    //TemplatePallette* m_templatePallette;
 
 public:
 

@@ -8,8 +8,8 @@
 #include "grid.h"
 #include "templates.h"
 
-
-#include "QRadioButton"
+#include <QListView>
+#include <QRadioButton>
 
 void Ed::Initialize()
 {
@@ -20,8 +20,16 @@ void Ed::Initialize()
 
 	m_settingsWidget = new SettingsWidget();
 
+    m_templateScene = new TemplateScene();
+    m_templateScene->Initialize();
+
 	m_grid = new Grid();
 	m_settingsWidget->Create();
+
+    m_settingsWidget->m_grid->addWidget(m_templateScene->m_listView, 1, 1);
+    m_templateScene->m_listView->hide();
+
+
 }
 
 void Ed::LoadPallettes()
@@ -51,12 +59,16 @@ SettingsWidget* Ed::GetSettingsWidget()
     return m_settingsWidget;
 }
 
-
-
-
-
-void Ed::CreateNewMap()
+void Ed::NewLevel()
 {
+    if(m_level)
+    {
+        delete m_level;
+    }
+
+    m_level = new Template();
+    m_level->InitAsLevel();
+    m_levelbackup = m_level;
 
 }
 
@@ -107,9 +119,13 @@ void Ed::SetCurrentPallette()
 	}
 	if(m_settingsWidget->m_temp->isChecked())
 	{
+        m_settingsWidget->m_objectText->hide();
+        m_templateScene->m_listView->show();
 	}
 	if(m_settingsWidget->m_obj->isChecked())
 	{
+        m_templateScene->m_listView->hide();
+        m_settingsWidget->m_objectText->show();
 	}
 }
 

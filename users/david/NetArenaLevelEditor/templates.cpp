@@ -240,6 +240,7 @@ void TemplateScene::SetCurrentFolder(QString name)
 		m_currentFolder = m_folderMap[name];
 		m_currentFolder->SetCurrentTemplate(); //select top template of this folder.
 
+        //if template..
 		viewPallette->setScene(m_currentFolder->m_pallette);
 	}
 }
