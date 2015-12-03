@@ -56,153 +56,135 @@ void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 	const float wrapSizes[2] = { ARENA_SX_PIXELS, ARENA_SY_PIXELS };
 
 #if 1
-	//for (int i = 0; i < numSteps; ++i)
+	bool collision = false;
+
+	for (int j = 0; j < 2; ++j)
 	{
-		bool collision = false;
-
-		cbs.axis = -1;
-
-		for (int j = 0; j < 2; ++j)
+		if (m_pos[j] < 0.f)
 		{
-			if (m_pos[j] < 0.f)
-			{
-				m_pos[j] = wrapSizes[j];
-				if (cbs.onWrap)
-					cbs.onWrap(cbs, *this);
-			}
-			else if (m_pos[j] > wrapSizes[j])
-			{
-				m_pos[j] = 0.f;
-				if (cbs.onWrap)
-					cbs.onWrap(cbs, *this);
-			}
+			m_pos[j] = wrapSizes[j];
+			if (cbs.onWrap)
+				cbs.onWrap(cbs, *this);
 		}
-
-		const CollisionShape shape(m_collisionShape, m_pos);
-
-		const Arena & arena = gameSim.m_arena;
-
-		struct CollisionArgs
+		else if (m_pos[j] > wrapSizes[j])
 		{
-			PhysicsActor * self;
-			GameSim * gameSim;
-			bool wasInPassthrough;
-			bool enterPassThrough;
-			Vec2 totalVel;
-		};
+			m_pos[j] = 0.f;
+			if (cbs.onWrap)
+				cbs.onWrap(cbs, *this);
+		}
+	}
 
-		CollisionArgs args;
-		args.self = this;
-		args.gameSim = &gameSim;
-		args.wasInPassthrough = m_isInPassthrough;
-		args.enterPassThrough = isInPassthrough;
-		args.totalVel = m_vel;
+	const CollisionShape shape(m_collisionShape, m_pos);
 
-		updatePhysics(gameSim, m_pos, m_vel, dt, m_collisionShape, &args,
-			[](PhysicsUpdateInfo & updateInfo)
+	const Arena & arena = gameSim.m_arena;
+
+	struct CollisionArgs
+	{
+		PhysicsActor * self;
+		GameSim * gameSim;
+		PhysicsActorCBs * cbs;
+		bool wasInPassthrough;
+		bool enterPassThrough;
+		Vec2 totalVel;
+		bool hasBounced;
+	};
+
+	CollisionArgs args;
+	args.self = this;
+	args.gameSim = &gameSim;
+	args.cbs = &cbs;
+	args.wasInPassthrough = m_isInPassthrough;
+	args.enterPassThrough = isInPassthrough;
+	args.totalVel = m_vel;
+	args.hasBounced = false;
+
+	updatePhysics(gameSim, m_pos, m_vel, dt, m_collisionShape, &args,
+		[](PhysicsUpdateInfo & updateInfo)
+		{
+			CollisionArgs * args = (CollisionArgs*)updateInfo.arg;
+			PhysicsActor * self = args->self;
+			GameSim & gameSim = *args->gameSim;
+			PhysicsActorCBs & cbs = *args->cbs;
+			const Vec2 & delta = updateInfo.delta;
+			const Vec2 & totalVel = args->totalVel;
+			const bool enterPassThrough = args->enterPassThrough;
+			const int i = updateInfo.axis;
+
+			updateInfo.contactRestitution = self->m_bounciness;
+
+			cbs.axis = updateInfo.axis;
+
+			if (updateInfo.actor == self || updateInfo.player)
 			{
-				CollisionArgs * args = (CollisionArgs*)updateInfo.arg;
-				GameSim & gameSim = *args->gameSim;
-				PhysicsActor * self = args->self;
-				const Vec2 & delta = updateInfo.delta;
-				const Vec2 & totalVel = args->totalVel;
-				const bool enterPassThrough = args->enterPassThrough;
-				const int i = updateInfo.axis;
+				return kPhysicsUpdateFlag_DontCollide | kPhysicsUpdateFlag_DontUpdateVelocity;
+			}
 
-				updateInfo.contactRestitution = self->m_bounciness;
 
-				//
+			//
 
-				int result = 0;
+			int result = 0;
 
-				//
+			//
 
-				BlockAndDistance * blockAndDistance = updateInfo.blockInfo;
+			BlockAndDistance * blockAndDistance = updateInfo.blockInfo;
 
-				if (blockAndDistance)
+			if (blockAndDistance)
+			{
+				Block * block = blockAndDistance->block;
+
+				if (block)
 				{
-					Block * block = blockAndDistance->block;
-
-					if (block)
+					if ((1 << block->type) & kBlockMask_Passthrough)
 					{
-						const uint32_t mask = (1 << block->type) & ((args->wasInPassthrough || self->m_isInPassthrough || enterPassThrough) ? ~kBlockMask_Passthrough : ~0);
-
-						//args->dirBlockMask[i] |= mask;
-
-						if (updateInfo.contactNormal[0] * updateInfo.contactNormal[1] != 0.f)
+						if (i != 1 || delta[1] < 0.f || (args->wasInPassthrough || self->m_isInPassthrough || enterPassThrough))
 						{
-							//args->dirBlockMask[0] |= mask;
-							//args->dirBlockMask[1] |= mask;
-						}
-
-						if ((1 << block->type) & kBlockMask_Passthrough)
-						{
-							if (i != 1 || delta[1] < 0.f || (args->wasInPassthrough || self->m_isInPassthrough || enterPassThrough))
-							{
-								result |= kPhysicsUpdateFlag_DontCollide;
-
-								self->m_isInPassthrough = true;
-							}
-						}
-
-					#if 0
-						if (block->type == kBlockType_Spring)
-						{
-							if (args->numSpringLocations < args->maxSpringLocations)
-							{
-								args->springLocations[args->numSpringLocations].x = blockAndDistance->x;
-								args->springLocations[args->numSpringLocations].y = blockAndDistance->y;
-								args->numSpringLocations++;
-							}
-						}
-					#endif
-
-						if (((1 << block->type) & kBlockMask_Solid) == 0)
 							result |= kPhysicsUpdateFlag_DontCollide;
-					}
 
-					if (!(result & kPhysicsUpdateFlag_DontCollide))
-					{
-						// screen shake
-
-						const float sign = Calc::Sign(delta[i]);
-						float strength = (Calc::Abs(totalVel[i]) - PLAYER_JUMP_SPEED) / 25.f;
-
-						if (strength > PLAYER_SCREENSHAKE_STRENGTH_THRESHHOLD)
-						{
-							strength = sign * strength / 4.f;
-							gameSim.addScreenShake(
-								i == 0 ? strength : 0.f,
-								i == 1 ? strength : 0.f,
-								3000.f, .3f,
-								true);
+							self->m_isInPassthrough = true;
 						}
 					}
+
+					if (((1 << block->type) & kBlockMask_Solid) == 0)
+						result |= kPhysicsUpdateFlag_DontCollide;
+
+					if (cbs.onBlockMask)
+						cbs.onBlockMask(cbs, *self, 1 << block->type);
 				}
 
-				return result;
-			});
+				if (!(result & kPhysicsUpdateFlag_DontCollide))
+				{
+					// screen shake
 
-		if (m_doTeleport)
-		{
-			tickPortal(gameSim);
-		}
+					const float sign = Calc::Sign(delta[i]);
+					float strength = (Calc::Abs(totalVel[i]) - PLAYER_JUMP_SPEED) / 25.f;
 
-		if (cbs.onMove)
-			cbs.onMove(cbs, *this);
-#if 0
-		// todo : restore onBounce callback
-		if (cbs.onBounce)
-			cbs.onBounce(cbs, *this);
+					if (strength > PLAYER_SCREENSHAKE_STRENGTH_THRESHHOLD)
+					{
+						strength = sign * strength / 4.f;
+						gameSim.addScreenShake(
+							i == 0 ? strength : 0.f,
+							i == 1 ? strength : 0.f,
+							3000.f, .3f,
+							true);
+					}
+				}
+			}
 
-		// todo : restore onBlockMask callback
-		if (blockMask != 0)
-		{
-			if (cbs.onBlockMask)
-				cbs.onBlockMask(cbs, *this, blockMask);
-		}
-#endif
+			args->hasBounced = true;
+
+			return result;
+		});
+
+	if (args.hasBounced && cbs.onBounce)
+		cbs.onBounce(cbs, *this);
+
+	if (m_doTeleport)
+	{
+		tickPortal(gameSim);
 	}
+
+	if (cbs.onMove)
+		cbs.onMove(cbs, *this);
 #else
 	Vec2 delta = m_vel * dt;
 	float deltaLen = delta.CalcSize();

@@ -324,7 +324,7 @@ void FootBall::setup(int x, int y)
 	*static_cast<PhysicsActor*>(this) = PhysicsActor();
 
 	m_isActive = true;
-	m_type = kObjectType_Coin;
+	m_type = kObjectType_FootBall;
 	m_collisionShape.setCircle(Vec2(0.f, 0.f), kRadius);
 	m_pos.Set(x, y);
 	m_vel.Set(0.f, 0.f);
@@ -4644,7 +4644,6 @@ void updatePhysics(GameSim & gameSim, Vec2 & pos, Vec2 & vel, float dt, const Co
 		updateInfo.axis = i;
 		updateInfo.pos = newPos;
 		updateInfo.delta = delta;
-		updateInfo.flags = 0;
 
 		gameSim.testCollision(
 			updateInfo.shape,
@@ -4709,10 +4708,9 @@ void updatePhysics(GameSim & gameSim, Vec2 & pos, Vec2 & vel, float dt, const Co
 						contact.n = contactNormal;
 						contact.d = contactDistance;
 						contact.r = updateInfo.contactRestitution + 1.f;
+						contact.f = flags;
 						updateInfo.contacts.push_back(contact);
 					}
-
-					updateInfo.flags |= flags;
 				}
 			});
 
@@ -4727,7 +4725,7 @@ void updatePhysics(GameSim & gameSim, Vec2 & pos, Vec2 & vel, float dt, const Co
 
 			pos += offset;
 
-			if (!(updateInfo.flags & kPhysicsUpdateFlag_DontUpdateVelocity))
+			if (!(contact->f & kPhysicsUpdateFlag_DontUpdateVelocity))
 			{
 				const float d = vel * contact->n * contact->r;
 

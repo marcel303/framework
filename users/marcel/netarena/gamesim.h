@@ -1377,12 +1377,15 @@ struct ContactInfo
 	Vec2 n;
 	float d;
 	float r;
+	int f;
 
 	bool operator==(const ContactInfo & other) const
 	{
 		return
 			n == other.n &&
-			d == other.d;
+			d == other.d &&
+			r == other.r &&
+			f == other.f;
 	}
 };
 
@@ -1413,7 +1416,6 @@ struct PhysicsUpdateInfo
 	float contactRestitution;
 
 	std::vector<ContactInfo> contacts;
-	int flags;
 };
 
 void updatePhysics(GameSim & gameSim, Vec2 & pos, Vec2 & vel, float dt, const CollisionShape & shape, void * arg, PhysicsUpdateCB cb);
