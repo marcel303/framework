@@ -22,6 +22,9 @@ void Ed::Initialize()
 
 	m_grid = new Grid();
 	m_settingsWidget->Create();
+
+	m_templateFolders = new TemplateScene();
+	m_templateFolders->Initialize();
 }
 
 void Ed::LoadPallettes()
@@ -107,6 +110,7 @@ void Ed::SetCurrentPallette()
 	}
 	if(m_settingsWidget->m_temp->isChecked())
 	{
+		m_viewPallette->setScene(m_templateFolders->GetCurrentFolder()->m_pallette);
 	}
 	if(m_settingsWidget->m_obj->isChecked())
 	{

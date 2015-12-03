@@ -12,6 +12,7 @@ class BasePallette;
 class LevelLayer;
 class Grid;
 class Template;
+class TemplateScene;
 class Ed
 {
 public:
@@ -45,6 +46,7 @@ public:
 
 	Template* m_level;
 	Template* m_currentTemplate;
+	TemplateScene* m_templateFolders;
 
 
 

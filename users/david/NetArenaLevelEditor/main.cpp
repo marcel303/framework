@@ -25,8 +25,9 @@ int main(int argc, char *argv[])
 	QApplication a(argc, argv);
 
 	ed.Initialize();
-	ed.m_grid->CreateGrid(BASEX, BASEY);
 	ed.LoadPallettes();
+	ed.m_grid->CreateGrid(BASEX, BASEY);
+
 
 	Template* level = new Template();
 	level->InitAsLevel();
