@@ -52,6 +52,7 @@ struct PhysicsActor
 	Vec2 m_pos;
 	Vec2 m_vel;
 	bool m_isGrounded;
+	bool m_isInPassthrough;
 
 	CollisionShape m_collisionShape;
 
@@ -68,6 +69,7 @@ struct PhysicsActor
 	PhysicsActor();
 
 	void tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs);
+	void tickPortal(GameSim & gameSim);
 	void drawBB() const;
 
 	void getAABB(Vec2 & min, Vec2 & max) const;

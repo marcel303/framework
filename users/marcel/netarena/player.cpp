@@ -3460,27 +3460,11 @@ void Player::debugDraw() const
 
 uint32_t Player::getIntersectingBlocksMaskInternal(int x, int y, bool doWrap) const
 {
-	const int x1 = (x + (int)m_collision.min[0] + ARENA_SX_PIXELS) % ARENA_SX_PIXELS;
-	const int x2 = (x + (int)m_collision.max[0] + ARENA_SX_PIXELS) % ARENA_SX_PIXELS;
-	const int x3 = (x + (int)(m_collision.min[0] + m_collision.max[0]) / 2 + ARENA_SX_PIXELS) % ARENA_SX_PIXELS;
-	const int y1 = (y + (int)m_collision.min[1] + ARENA_SY_PIXELS) % ARENA_SY_PIXELS;
-	const int y2 = (y + (int)m_collision.max[1] + ARENA_SY_PIXELS) % ARENA_SY_PIXELS;
-	const int y3 = (y + (int)(m_collision.min[1] + m_collision.max[1]) / 2 + ARENA_SY_PIXELS) % ARENA_SY_PIXELS;
-
-	uint32_t result = 0;
-	
 	const Arena & arena = GAMESIM->m_arena;
 
-	result |= arena.getIntersectingBlocksMask(x1, y1);
-	result |= arena.getIntersectingBlocksMask(x2, y1);
-	result |= arena.getIntersectingBlocksMask(x1, y2);
-	result |= arena.getIntersectingBlocksMask(x2, y2);
+	const CollisionShape collisionShape(m_collision);
 
-	result |= arena.getIntersectingBlocksMask(x3, y1);
-	result |= arena.getIntersectingBlocksMask(x3, y2);
-
-	result |= arena.getIntersectingBlocksMask(x1, y3);
-	result |= arena.getIntersectingBlocksMask(x2, y3);
+	uint32_t result = arena.getIntersectingBlocksMask(collisionShape);
 
 #if 1 // mover collision
 	CollisionInfo collisionInfo = m_collision;

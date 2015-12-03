@@ -1199,7 +1199,7 @@ struct GameStateData
 		FootBrawl()
 		{
 			ballSpawnPoint[0] = ARENA_SX_PIXELS / 2;
-			ballSpawnPoint[1] = ARENA_SY_PIXELS / 2;
+			ballSpawnPoint[1] = ARENA_SY_PIXELS / 3;
 		}
 
 		float ballSpawnPoint[2];
@@ -1376,6 +1376,7 @@ struct ContactInfo
 {
 	Vec2 n;
 	float d;
+	float r;
 
 	bool operator==(const ContactInfo & other) const
 	{
@@ -1409,6 +1410,7 @@ struct PhysicsUpdateInfo
 	Player * player;
 	Vec2 contactNormal;
 	float contactDistance;
+	float contactRestitution;
 
 	std::vector<ContactInfo> contacts;
 	int flags;

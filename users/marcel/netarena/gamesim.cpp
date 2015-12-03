@@ -319,7 +319,7 @@ void Token::drawLight() const
 
 void FootBall::setup(int x, int y)
 {
-	const int kRadius = 100;
+	const int kRadius = 60;
 
 	*static_cast<PhysicsActor*>(this) = PhysicsActor();
 
@@ -4693,6 +4693,8 @@ void updatePhysics(GameSim & gameSim, Vec2 & pos, Vec2 & vel, float dt, const Co
 
 				if (collision)
 				{
+					updateInfo.contactRestitution = 0.f;
+
 					if (updateInfo.cb)
 					{
 						updateInfo.contactNormal = contactNormal;
@@ -4706,6 +4708,7 @@ void updatePhysics(GameSim & gameSim, Vec2 & pos, Vec2 & vel, float dt, const Co
 						ContactInfo contact;
 						contact.n = contactNormal;
 						contact.d = contactDistance;
+						contact.r = updateInfo.contactRestitution + 1.f;
 						updateInfo.contacts.push_back(contact);
 					}
 
@@ -4726,7 +4729,7 @@ void updatePhysics(GameSim & gameSim, Vec2 & pos, Vec2 & vel, float dt, const Co
 
 			if (!(updateInfo.flags & kPhysicsUpdateFlag_DontUpdateVelocity))
 			{
-				const float d = vel * contact->n;
+				const float d = vel * contact->n * contact->r;
 
 				if (d > 0.f)
 				{
