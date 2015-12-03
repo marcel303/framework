@@ -14,45 +14,32 @@ Template::~Template()
 
 void Template::InitAsLevel()
 {
-    //m_mec.LoadPallette("BlockList.txt");
-    m_mec.CreateLayer(MAPX, MAPY);
-
-    //m_col.LoadPallette("CollisionList.txt");
-    m_col.CreateLayer(MAPX, MAPY);
-
-
-
-    m_front.m_pixmap = new QPixmap(MAPX*BLOCKSIZE, MAPY*BLOCKSIZE);
-    m_middle.m_pixmap = new QPixmap(MAPX*BLOCKSIZE, MAPY*BLOCKSIZE);
-    m_back.m_pixmap = new QPixmap(MAPX*BLOCKSIZE, MAPY*BLOCKSIZE);
-
-    m_front.m_pixmap->fill(Qt::transparent);
-    m_middle.m_pixmap->fill(Qt::transparent);
-    m_back.m_pixmap->fill(Qt::transparent);
-
+	m_mec.CreateLayer(MAPX, MAPY);
+	m_col.CreateLayer(MAPX, MAPY);
+	m_front.CreateLayer(MAPX, MAPY);
+	m_middle.CreateLayer(MAPX, MAPY);
+	m_back.CreateLayer(MAPX, MAPY);
 }
 
 void Template::CreateNewTemplate()
 {
 	QString middle = QFileDialog::getOpenFileName(0,
-		tr("Select main image"), "", tr("Image Files (*.png *.jpg *.bmp)"));
+		tr("Select main image"), "", tr("Image Files (*.png)"));
 	QString front = QFileDialog::getOpenFileName(0,
-		tr("Select front image"), "", tr("Image Files (*.png *.jpg *.bmp)"));
+		tr("Select front image"), "", tr("Image Files (*.png)"));
 	QString back = QFileDialog::getOpenFileName(0,
-		tr("Select background image"), "", tr("Image Files (*.png *.jpg *.bmp)"));
+		tr("Select background image"), "", tr("Image Files (*.png)"));
 
-    QPixmap m(middle);
-    QPixmap f(front);
-    QPixmap b(back);
+	QPixmap m(middle);
+	QPixmap f(front);
+	QPixmap b(back);
 
-    !m.isNull() ? m_middle.m_pixmap = new QPixmap (m) : m_middle.m_pixmap = new QPixmap ();
-    !f.isNull() ? m_front.m_pixmap = new QPixmap (f) : m_front.m_pixmap = new QPixmap ();
-    !b.isNull() ? m_back.m_pixmap = new QPixmap (b) : m_back.m_pixmap = new QPixmap ();
+	!m.isNull() ? m_middle.m_pixmap = new QPixmap(m) : m_middle.m_pixmap = new QPixmap();
+	!f.isNull() ? m_front.m_pixmap	= new QPixmap(f) : m_front.m_pixmap	= new QPixmap();
+	!b.isNull() ? m_back.m_pixmap	= new QPixmap(b) : m_back.m_pixmap	= new QPixmap();
 
 
 	ed.m_level = this;
-	//edit mec
-	//edit col
 
 	//set ui to reflect template mode
 }
@@ -61,13 +48,13 @@ void Template::GetMaxXY(int& x, int& y)
 {
 	int x_max, y_max = 0;
 
-    x_max = m_front.m_pixmap->size().width();
-    y_max = m_front.m_pixmap->size().height();
+	x_max = m_front.m_pixmap->size().width();
+	y_max = m_front.m_pixmap->size().height();
 
-    x_max < m_middle.m_pixmap->size().width()	? x_max = m_middle.m_pixmap->size().width()		: x_max = x_max;
-    x_max < m_back.m_pixmap->size().width()		? x_max = m_back.m_pixmap->size().width()		: x_max = x_max;
-    y_max < m_middle.m_pixmap->size().height()	? y_max = m_middle.m_pixmap->size().height()	: y_max = y_max;
-    y_max < m_back.m_pixmap->size().height()	? y_max = m_back.m_pixmap->size().height()		: y_max = y_max;
+	x_max < m_middle.m_pixmap->size().width()	? x_max = m_middle.m_pixmap->size().width()		: x_max = x_max;
+	x_max < m_back.m_pixmap->size().width()		? x_max = m_back.m_pixmap->size().width()		: x_max = x_max;
+	y_max < m_middle.m_pixmap->size().height()	? y_max = m_middle.m_pixmap->size().height()	: y_max = y_max;
+	y_max < m_back.m_pixmap->size().height()	? y_max = m_back.m_pixmap->size().height()		: y_max = y_max;
 
 	x_max = x_max/BLOCKSIZE;
 	y_max = y_max/BLOCKSIZE;
@@ -88,12 +75,12 @@ void Template::StampTo(int x, int y)
 			ed.m_level->m_col.m_grid[i+y][j+x] = m_col.m_grid[i][j];
 		}
 
-    QPainter painter(ed.m_level->m_front.m_pixmap);
-    painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, *m_front.m_pixmap);
-    painter.begin(ed.m_level->m_middle.m_pixmap);
-    painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, *m_middle.m_pixmap);
-    painter.begin(ed.m_level->m_back.m_pixmap);
-    painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, *m_back.m_pixmap);
+	QPainter painter(ed.m_level->m_front.m_pixmap);
+	painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, *m_front.m_pixmap);
+	painter.begin(ed.m_level->m_middle.m_pixmap);
+	painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, *m_middle.m_pixmap);
+	painter.begin(ed.m_level->m_back.m_pixmap);
+	painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, *m_back.m_pixmap);
 }
 
 void Template::Unstamp(int x, int y)
@@ -108,26 +95,22 @@ void Template::Unstamp(int x, int y)
 			ed.m_level->m_col.m_grid[i+y][j+x] = ' ';
 		}
 
-    QPixmap empty(x_max*BLOCKSIZE, y_max*BLOCKSIZE);
-    empty.fill(Qt::transparent);
-    QPainter painter(ed.m_level->m_front.m_pixmap);
-    painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, empty);
-    painter.begin(ed.m_level->m_middle.m_pixmap);
-    painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, empty);
-    painter.begin(ed.m_level->m_back.m_pixmap);
-    painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, empty);
+	QPixmap empty(x_max*BLOCKSIZE, y_max*BLOCKSIZE);
+	empty.fill(qRgba(0, 0, 0, 0));
+	QPainter painter(ed.m_level->m_front.m_pixmap);
+	painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, empty);
+	painter.begin(ed.m_level->m_middle.m_pixmap);
+	painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, empty);
+	painter.begin(ed.m_level->m_back.m_pixmap);
+	painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, empty);
 }
 
 void Template::Load(const QString& filename)
 {
-    //load .tmpl file with mec and coll
-    //load fore, back, middle art layers
 }
 
 void Template::Save(const QString& filename)
 {
-    //save .tmpl file with mec and coll
-    //save fore, back, middle art layers
 }
 
 void Template::UpdateLayers()
