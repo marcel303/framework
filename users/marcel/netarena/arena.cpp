@@ -1136,10 +1136,15 @@ bool Arena::getBlocksFromPixels(int baseX, int baseY, int x1, int y1, int x2, in
 				{
 					if (result < io_numBlocks)
 					{
+						Block & block = getBlock(x, y);
+
+						if (block.type == kBlockShape_Empty)
+							continue;
+
 						const float blockX = (x + .5f) * BLOCK_SX;
 						const float blockY = (y + .5f) * BLOCK_SY;
 
-						out_blocks[result].block = &getBlock(x, y);
+						out_blocks[result].block = &block;
 						out_blocks[result].x = x;
 						out_blocks[result].y = y;
 						out_blocks[result].distanceSq = (baseX - blockX) * (baseX - blockX) + (baseY - blockY) * (baseY - blockY);
