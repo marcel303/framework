@@ -319,7 +319,7 @@ void Token::drawLight() const
 
 void FootBall::setup(int x, int y)
 {
-	const int kRadius = 60;
+	const int kRadius = 25;
 
 	*static_cast<PhysicsActor*>(this) = PhysicsActor();
 
@@ -344,6 +344,12 @@ void FootBall::tick(GameSim & gameSim, float dt)
 {
 	if (m_isDropped)
 	{
+		if ((gameSim.m_tick % 120) == 0)
+		{
+			m_vel[0] = gameSim.RandomFloat(-500.f, +500.f);
+			m_vel[1] = gameSim.RandomFloat(-1000.f, 0.f);
+		}
+
 		PhysicsActorCBs cbs;
 		cbs.onBlockMask = [](PhysicsActorCBs & cbs, PhysicsActor & actor, uint32_t blockMask) 
 		{
@@ -365,8 +371,8 @@ void FootBall::tick(GameSim & gameSim, float dt)
 		};
 		cbs.onBounce = [](PhysicsActorCBs & cbs, PhysicsActor & actor)
 		{
-			if (std::abs(actor.m_vel[1]) >= FOOTBALL_BOUNCE_SOUND_TRESHOLD)
-				g_gameSim->playSound("football-bounce.ogg");
+			//if (std::abs(actor.m_vel[1]) >= FOOTBALL_BOUNCE_SOUND_TRESHOLD)
+			//	g_gameSim->playSound("football-bounce.ogg");
 		};
 
 		m_noGravity = !m_hasBeenTouched;
@@ -2512,7 +2518,7 @@ void GameSim::tickMenus()
 
 						if (CharGrid::isValidGridCell(x, y))
 						{
-							player.m_characterIndex = CharGrid::xyToCharacterIndex(x, y);
+							player.m_instanceData->setCharacterIndex(CharGrid::xyToCharacterIndex(x, y));
 
 							playSound("ui/sounds/charselect-change.ogg");
 						}
@@ -3516,16 +3522,22 @@ void GameSim::drawPlayHud(const CamParams & camParams)
 	{
 		applyCamParams(camParams, 1.f, 1.f);
 
-		// todo : draw player HUD elements here
-
 		// animation effects
 
 		for (int i = 0; i < MAX_ANIM_EFFECTS; ++i)
 		{
 			m_animationEffects[i].draw(kDrawLayer_PlayerHUD);
 		}
+
+		// todo : draw player level HUD elements
 	}
 	gxPopMatrix();
+
+	// player screen HUD elements
+
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+		if (m_players[i].m_isUsed && m_players[i].m_isActive)
+			m_players[i].m_statusHud.draw(*this, m_players[i].m_index);
 
 	// animation effects
 

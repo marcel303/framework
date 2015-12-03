@@ -8,6 +8,7 @@
 #include "framework.h"
 #include "gamedefs.h"
 #include "gametypes.h"
+#include "hud.h"
 #include "levelevents.h"
 #include "particle.h"
 #include "physobj.h"
@@ -150,6 +151,8 @@ struct Player
 		m_enableInAirAnim = true;
 
 		m_lastSpawnIndex = -1;
+
+		m_statusHud = PlayerStatusHud();
 	}
 
 	void tick(GameSim & gameSim, float dt);
@@ -615,6 +618,10 @@ struct Player
 
 		bool m_hasToken;
 	} m_tokenHunt;
+
+	// HUD
+
+	PlayerStatusHud m_statusHud;
 };
 
 struct Pickup : PhysicsActor

@@ -843,6 +843,8 @@ void Player::tick(GameSim & gameSim, float dt)
 	if (!m_isActive)
 		return;
 
+	m_statusHud.tick(gameSim, m_index, dt);
+
 	// -- emote hack --
 
 	m_emoteTime = Calc::Max(0.f, m_emoteTime - dt); // fixme : should use phys time
@@ -3514,6 +3516,8 @@ void Player::handleNewRound()
 	m_bubble = BubbleInfo();
 
 	m_tokenHunt = TokenHunt();
+
+	m_statusHud.handleNewRound();
 }
 
 void Player::handleLeave()
@@ -3631,10 +3635,14 @@ bool Player::respawn(Vec2 * pos)
 		if (m_isRespawn)
 		{
 			m_instanceData->playSoundBag("spawn_sounds", 100);
+
+			m_statusHud.handleRespawn();
 		}
 		else
 		{
 			m_isRespawn = true;
+
+			m_statusHud.handleSpawn();
 		}
 	}
 
@@ -3752,6 +3760,8 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 				// item drop
 
 				dropWeapons(velocity);
+
+				m_statusHud.handleDeath();
 
 				const CharacterData * characterData = getCharacterData(m_index);
 
@@ -3961,6 +3971,8 @@ bool Player::handleBubble(Vec2Arg velocity, Player * attacker)
 void Player::awardScore(int score)
 {
 	m_score += score;
+
+	m_statusHud.handleScore();
 }
 
 void Player::handleKill(bool hasScored, bool isFirstKill)
@@ -4007,6 +4019,8 @@ void Player::handleKill(bool hasScored, bool isFirstKill)
 			sprintf_s(name, sizeof(name), "ui/killcounter/%d.scml", Calc::Min(5, m_multiKillCount));
 			GAMESIM->addAnimationFx(kDrawLayer_PlayerHUD, name, m_pos[0] + UI_KILLCOUNTER_OFFSET_X, m_pos[1] + UI_KILLCOUNTER_OFFSET_Y);
 		}
+
+		m_statusHud.handleKill();
 	}
 }
 
@@ -4814,6 +4828,8 @@ void PlayerInstanceData::handleCharacterIndexChange()
 	m_player->m_collision.max[0] = +characterData->m_collisionSx / 2.f;
 	m_player->m_collision.min[1] = -characterData->m_collisionSy / 1.f;
 	m_player->m_collision.max[1] = 0.f;
+
+	m_player->m_statusHud.handleCharacterIndexChange();
 }
 
 void PlayerInstanceData::playSoundBag(const char * name, int volume)

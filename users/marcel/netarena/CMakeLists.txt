@@ -46,6 +46,8 @@ set(GAME_FILES
 	gamesim.h
 	gametypes.cpp
 	gametypes.h
+	hud.cpp
+	hud.h
 	levelevents.cpp
 	main.cpp
 	player.cpp
