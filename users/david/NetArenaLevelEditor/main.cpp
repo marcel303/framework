@@ -19,18 +19,22 @@ QString ArtFolderPath;
 bool placeTemplate = false;
 
 
-
+#include <QSplashScreen>
 int main(int argc, char *argv[])
 {
 	QApplication a(argc, argv);
+
+    QPixmap pixmap("splash.jpg");
+    QSplashScreen splash(pixmap);
+    splash.show();
+
+    a.processEvents();
 
 	ed.Initialize();
 	ed.m_grid->CreateGrid(BASEX, BASEY);
 	ed.LoadPallettes();
 
-	Template* level = new Template();
-	level->InitAsLevel();
-	ed.m_level = level;
+    ed.NewLevel();
 
 	ed.m_grid->SetCurrentLevel(ed.m_level);
 
@@ -43,13 +47,13 @@ int main(int argc, char *argv[])
 	view2 = new EditorView();
 	view2->setMinimumWidth(1200);
 	view2->setScene(ed.m_grid);
-	view2->showMaximized();
+
 
 	viewPallette = new EditorViewBasic;
 	viewPallette->setMinimumWidth(320);
 	viewPallette->setDragMode(QGraphicsView::ScrollHandDrag);
 	viewPallette->setScene(ed.GetCurrentPallette());
-	viewPallette->showNormal();
+
 	viewPallette->resize(430, 600);
 
 	rightside.setLayout(vlayout);
@@ -57,7 +61,15 @@ int main(int argc, char *argv[])
 	hlayout->addWidget(&rightside);
 	vlayout->addWidget(viewPallette);
 	vlayout->addWidget(ed.GetSettingsWidget());
-	hlayout->showMaximized();
+
+
+
+    view2->showMaximized();
+    viewPallette->showNormal();
+    hlayout->showMaximized();
+
+
+    splash.close();
 
 	return a.exec();
 }
