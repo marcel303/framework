@@ -319,7 +319,7 @@ void Token::drawLight() const
 
 void FootBall::setup(int x, int y)
 {
-	const int kRadius = 25;
+	const int kRadius = 50;
 
 	*static_cast<PhysicsActor*>(this) = PhysicsActor();
 
@@ -385,29 +385,70 @@ void FootBall::tick(GameSim & gameSim, float dt)
 
 void FootBall::draw() const
 {
-	if (m_isDropped)
+	for (int ox = -1; ox <= +1; ++ox)
 	{
-		setColor(colorWhite);
+		for (int oy = -1; oy <= +1; ++oy)
+		{
+			gxPushMatrix();
+			gxTranslatef(ox * ARENA_SX_PIXELS, oy * ARENA_SY_PIXELS, 0.f);
 
-		SpriterState spriterState = m_spriterState;
-		spriterState.x = m_pos[0];
-		spriterState.y = m_pos[1];
-		FOOTBALL_SPRITER.draw(spriterState);
-	}
+			if (m_isDropped)
+			{
+				setColor(colorWhite);
 
-	if (g_devMode)
-	{
-		drawBB();
+				SpriterState spriterState = m_spriterState;
+				spriterState.x = m_pos[0];
+				spriterState.y = m_pos[1];
+				FOOTBALL_SPRITER.draw(spriterState);
+			}
+
+			if (g_devMode)
+			{
+				drawBB();
+			}
+
+			gxPopMatrix();
+		}
 	}
 }
 
 void FootBall::drawLight() const
 {
-	if (m_isDropped)
+	for (int ox = -1; ox <= +1; ++ox)
 	{
-		setColor(colorWhite);
-		Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f, 1.5f, false, FILTER_MIPMAP);
+		for (int oy = -1; oy <= +1; ++oy)
+		{
+			gxPushMatrix();
+			gxTranslatef(ox * ARENA_SX_PIXELS, oy * ARENA_SY_PIXELS, 0.f);
+
+			if (m_isDropped)
+			{
+				setColor(colorWhite);
+				Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f, 1.5f, false, FILTER_MIPMAP);
+			}
+
+			gxPopMatrix();
+		}
 	}
+}
+
+//
+
+void FootBallGoal::setup(int x, int y)
+{
+	m_isActive = true;
+}
+
+void FootBallGoal::tick(GameSim & gameSim, float dt)
+{
+}
+
+void FootBallGoal::draw() const
+{
+}
+
+void FootBallGoal::drawLight() const
+{
 }
 
 //
@@ -2249,6 +2290,24 @@ void GameSim::load(const char * name)
 					}
 				}
 			}
+			else if (type == "footballspawn")
+			{
+				m_footBrawl.ballSpawnPoint[0] = (d.getInt("x1", 0) + d.getInt("x2", 0)) / 2;
+				m_footBrawl.ballSpawnPoint[1] = (d.getInt("y1", 0) + d.getInt("y2", 0)) / 2;
+			}
+			else if (type == "footballgoal")
+			{
+				auto * goal = allocObject(m_footBallGoals, MAX_FOOTBALL_GOALS);
+
+				if (goal == 0)
+					LOG_ERR("too many football goals!");
+				else
+				{
+					goal->setup(
+						(d.getInt("x1", 0) + d.getInt("x2", 0)) / 2,
+						(d.getInt("y1", 0) + d.getInt("y2", 0)) / 2);
+				}
+			}
 		}
 	}
 	catch (std::exception & e)
@@ -2283,6 +2342,7 @@ void GameSim::resetGameWorld()
 	resetObjects(m_axes, MAX_AXES);
 	resetObjects(m_pipebombs, MAX_PIPEBOMBS);
 	resetObjects(m_footBalls, MAX_FOOTBALLS);
+	resetObjects(m_footBallGoals, MAX_FOOTBALL_GOALS);
 
 	// reset floor effect
 
@@ -2332,7 +2392,7 @@ void GameSim::resetGameWorld()
 
 	// reset footbrawl game mode
 
-	m_foootBrawl = FootBrawl();
+	m_footBrawl = FootBrawl();
 
 	// reset token hunt game mode
 
@@ -2754,6 +2814,7 @@ void GameSim::tickPlay()
 	tickObjects(*this, dt, m_axes, MAX_AXES);
 	tickObjects(*this, dt, m_pipebombs, MAX_PIPEBOMBS);
 	tickObjects(*this, dt, m_footBalls, MAX_FOOTBALLS);
+	tickObjects(*this, dt, m_footBallGoals, MAX_FOOTBALL_GOALS);
 
 	tickPlayPickupSpawn(dt);
 	tickPlayLevelEvents(dt);
@@ -3363,6 +3424,7 @@ void GameSim::drawPlayColor(const CamParams & camParams)
 	drawObjects(m_axes, MAX_AXES);
 	drawObjects(m_pipebombs, MAX_PIPEBOMBS);
 	drawObjects(m_footBalls, MAX_FOOTBALLS);
+	drawObjects(m_footBallGoals, MAX_FOOTBALL_GOALS);
 
 	// players
 
@@ -3471,6 +3533,7 @@ void GameSim::drawPlayLight(const CamParams & camParams)
 	drawLightObjects(m_axes, MAX_AXES);
 	drawLightObjects(m_pipebombs, MAX_PIPEBOMBS);
 	drawLightObjects(m_footBalls, MAX_FOOTBALLS);
+	drawLightObjects(m_footBalls, MAX_FOOTBALL_GOALS);
 
 	// bullets
 
@@ -3796,8 +3859,8 @@ void GameSim::spawnFootball()
 	if (footBall)
 	{
 		footBall->setup(
-			m_foootBrawl.ballSpawnPoint[0],
-			m_foootBrawl.ballSpawnPoint[1]);
+			m_footBrawl.ballSpawnPoint[0],
+			m_footBrawl.ballSpawnPoint[1]);
 	}
 }
 

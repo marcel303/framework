@@ -380,13 +380,19 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 							LOG_DBG("Random called from kBulletType_Grenade explode");
 						for (int i = 0; i < BULLET_GRENADE_FRAG_COUNT; ++i)
 						{
+							const int angle = gameSim.Random() % 256;
+
 							gameSim.spawnBullet(
 								b.m_pos[0],
 								b.m_pos[1],
-								gameSim.Random() % 256,
+								angle,
 								kBulletType_GrenadeA,
 								kBulletEffect_Damage,
 								b.ownerPlayerId);
+
+							float sx, sy;
+							Bullet::getVelocityXY(angle / 128.f * M_PI, 1.f, sx, sy);
+							gameSim.addScreenShake_GunFire(Vec2(sx, sy));
 						}
 
 						gameSim.playSound("grenade-explode.ogg");
@@ -404,6 +410,15 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 						gameSim.addScreenShake(
 							gameSim.RandomFloat(-strength, +strength),
 							gameSim.RandomFloat(-strength, +strength), 2500.f, .3f,
+							true);
+					}
+					else if (b.type == kBulletType_Gun || b.type == kBulletType_Ice)
+					{
+						const float strength = 5.f;
+						const Vec2 s = b.m_vel.CalcNormalized() * strength;
+						gameSim.addScreenShake(
+							s[0], s[1],
+							2500.f, .3f,
 							true);
 					}
 

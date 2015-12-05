@@ -675,6 +675,22 @@ struct FootBall : PhysicsActor
 	void drawLight() const;
 };
 
+struct FootBallGoal
+{
+	bool m_isActive;
+
+	FootBallGoal()
+	{
+		memset(this, 0, sizeof(FootBallGoal));
+	}
+
+	void setup(int x, int y);
+
+	void tick(GameSim & gameSim, float dt);
+	void draw() const;
+	void drawLight() const;
+};
+
 struct Coin : PhysicsActor
 {
 	bool m_isDropped;
@@ -1147,6 +1163,7 @@ struct GameStateData
 	Axe m_axes[MAX_AXES];
 	PipeBomb m_pipebombs[MAX_PIPEBOMBS];
 	FootBall m_footBalls[MAX_FOOTBALLS];
+	FootBallGoal m_footBallGoals[MAX_FOOTBALL_GOALS];
 	Barrel m_barrels[MAX_BARRELS];
 	FloorEffect m_floorEffect;
 	BlindsEffect m_blindsEffects[MAX_BLINDS_EFFECTS];
@@ -1210,7 +1227,7 @@ struct GameStateData
 		}
 
 		float ballSpawnPoint[2];
-	} m_foootBrawl;
+	} m_footBrawl;
 
 	struct TokenHunt
 	{
