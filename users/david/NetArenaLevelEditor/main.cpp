@@ -31,8 +31,9 @@ int main(int argc, char *argv[])
     a.processEvents();
 
 	ed.Initialize();
-	ed.m_grid->CreateGrid(BASEX, BASEY);
 	ed.LoadPallettes();
+	ed.m_grid->CreateGrid(BASEX, BASEY);
+
 
     ed.NewLevel();
 
