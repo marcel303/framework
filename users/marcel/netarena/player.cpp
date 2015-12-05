@@ -1415,6 +1415,7 @@ void Player::tick(GameSim & gameSim, float dt)
 				bool hasAttackCollision = false;
 				int numBullets = 1;
 				bool randomBulletAngle = false;
+				bool addScreenShake = false;
 
 				PlayerWeapon weaponType = popWeapon();
 
@@ -1426,7 +1427,7 @@ void Player::tick(GameSim & gameSim, float dt)
 					
 					addKnockBack(PLAYER_WEAPON_GUN_KNOCKBACK);
 					gameSim.playSound("gun-fire.ogg");
-					gameSim.addScreenShake_GunFire(m_facing);
+					addScreenShake = true;
 				}
 				else if (weaponType == kPlayerWeapon_Ice)
 				{
@@ -1437,7 +1438,7 @@ void Player::tick(GameSim & gameSim, float dt)
 
 					addKnockBack(PLAYER_WEAPON_ICE_KNOCKBACK);
 					gameSim.playSound("gun-fire-ice.ogg");
-					gameSim.addScreenShake_GunFire(m_facing);
+					addScreenShake = true;
 				}
 				else if (weaponType == kPlayerWeapon_Bubble)
 				{
@@ -1489,7 +1490,7 @@ void Player::tick(GameSim & gameSim, float dt)
 					
 					addKnockBack(PLAYER_WEAPON_GRENADE_KNOCKBACK);
 					gameSim.playSound("grenade-throw.ogg"); // player throws a grenade
-					gameSim.addScreenShake_GunFire(m_facing);
+					addScreenShake = true;
 				}
 				else if (weaponType == kPlayerWeapon_TimeDilation)
 				{
@@ -1546,6 +1547,13 @@ void Player::tick(GameSim & gameSim, float dt)
 								angle = 128;
 							else
 								angle = 0;
+						}
+
+						if (addScreenShake)
+						{
+							float sx, sy;
+							Bullet::getVelocityXY(angle / 128.f * M_PI, 1.f, sx, sy);
+							gameSim.addScreenShake_GunFire(Vec2(sx, sy));
 						}
 
 						Assert(bulletType != kBulletType_COUNT);

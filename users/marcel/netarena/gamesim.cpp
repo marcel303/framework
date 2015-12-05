@@ -4273,7 +4273,8 @@ void GameSim::addScreenShake_GunFire(Vec2Arg dir)
 	const float strength = 5.f;
 	addScreenShake(
 		dir[0] * strength,
-		0.f, 2500.f, .3f,
+		dir[1] * strength,
+		2500.f, .3f,
 		true);
 }
 
