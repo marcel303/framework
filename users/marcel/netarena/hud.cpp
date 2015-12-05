@@ -2,16 +2,25 @@
 #include "gamesim.h"
 #include "hud.h"
 
+OPTION_DECLARE(int, PLAYER_STATUS_OFFSET_X_L, 125);
+OPTION_DECLARE(int, PLAYER_STATUS_OFFSET_X_R, 125);
+OPTION_DECLARE(int, PLAYER_STATUS_OFFSET_Y_T, 150);
+OPTION_DECLARE(int, PLAYER_STATUS_OFFSET_Y_B, 150);
+OPTION_DEFINE(int, PLAYER_STATUS_OFFSET_X_L, "UI/Player Status HUD/Offset X L");
+OPTION_DEFINE(int, PLAYER_STATUS_OFFSET_X_R, "UI/Player Status HUD/Offset X R");
+OPTION_DEFINE(int, PLAYER_STATUS_OFFSET_Y_T, "UI/Player Status HUD/Offset Y T");
+OPTION_DEFINE(int, PLAYER_STATUS_OFFSET_Y_B, "UI/Player Status HUD/Offset Y B");
+
 static Vec2 getPlayerStatusHudLocation(int playerIndex)
 {
 	if (playerIndex >= 0 && playerIndex < MAX_PLAYERS)
 	{
-		static const Vec2 location[MAX_PLAYERS] =
+		const Vec2 location[MAX_PLAYERS] =
 		{
-			Vec2(0.f, 0.f),
-			Vec2(0.f, 0.f),
-			Vec2(0.f, 0.f),
-			Vec2(0.f, 0.f)
+			Vec2(         PLAYER_STATUS_OFFSET_X_L,          PLAYER_STATUS_OFFSET_Y_T),
+			Vec2(GFX_SX - PLAYER_STATUS_OFFSET_X_R,          PLAYER_STATUS_OFFSET_Y_T),
+			Vec2(         PLAYER_STATUS_OFFSET_X_L, GFX_SY - PLAYER_STATUS_OFFSET_Y_B),
+			Vec2(GFX_SX - PLAYER_STATUS_OFFSET_X_R, GFX_SY - PLAYER_STATUS_OFFSET_Y_B)
 		};
 
 		return location[playerIndex];
@@ -59,8 +68,8 @@ static const char * getPlayerStatusHudSpriterAnimName(PlayerStatusHud::State sta
 	case PlayerStatusHud::kState_Kill:
 		return "Idle_Anim";
 	case PlayerStatusHud::kState_Death:
-		//return "Dead";
-		return "Dead_Transition";
+		return "Dead";
+		//return "Dead_Transition";
 	case PlayerStatusHud::kState_Spawn:
 		return "Spawn";
 	case PlayerStatusHud::kState_Score:
@@ -86,8 +95,8 @@ void PlayerStatusHud::draw(const GameSim & gameSim, int playerIndex) const
 		SpriterState spriterState = m_spriterState;
 
 		const Vec2 location = getPlayerStatusHudLocation(playerIndex);
-		spriterState.x = location[0] + GFX_SX/2; // fixme
-		spriterState.y = location[1] + GFX_SY/2; // fixme
+		spriterState.x = location[0];
+		spriterState.y = location[1];
 		spriterState.startAnim(spriter, getPlayerStatusHudSpriterAnimName(state));
 		spriterState.animTime = stateTime;
 
