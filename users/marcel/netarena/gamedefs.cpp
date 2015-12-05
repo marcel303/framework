@@ -347,6 +347,11 @@ OPTION_STEP(COIN_DROP_SPEED_MULTIPLIER, 0, 0, 0.05f);
 OPTION_STEP(COIN_BOUNCINESS, 0, 0, 0.05f);
 OPTION_STEP(COIN_BOUNCE_SOUND_TRESHOLD, 0, 0, 10);
 
+// footbrawl
+
+OPTION_DEFINE(int, FOOTBRAWL_SCORE_LIMIT, "Game Modes/FootBrawl/Score Limit");
+OPTION_DEFINE(int, FOOTBRAWL_TIME_LIMIT, "Game Modes/FootBrawl/Time Limit");
+
 OPTION_DEFINE(int, FOOTBALL_FLEE_SPEED, "Game Objects/FootBall/Flee Speed");
 OPTION_DEFINE(float, FOOTBALL_BOUNCINESS, "Game Objects/FootBall/Bounciness");
 OPTION_DEFINE(int, FOOTBALL_BOUNCE_SOUND_TRESHOLD, "Game Objects/FootBall/Bounce Sound Speed Treshold");

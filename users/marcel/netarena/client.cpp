@@ -337,6 +337,8 @@ void Client::drawQuickLook()
 
 void Client::drawRoundComplete()
 {
+	// todo : move this to GameSim drawPlayHud
+
 #if 0
 	const int numTicks = TICKS_PER_SECOND * GAMESTATE_ROUNDCOMPLETE_TIMEDILATION_TIMER;
 	const float t = 1.f - Calc::Saturate(m_gameSim->m_roundCompleteTimeDilationTicks / float(numTicks));

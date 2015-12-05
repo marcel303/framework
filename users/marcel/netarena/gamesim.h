@@ -678,17 +678,23 @@ struct FootBall : PhysicsActor
 struct FootBallGoal
 {
 	bool m_isActive;
+	int m_x1, m_y1, m_x2, m_y2;
+	int m_team;
+	SpriterState m_spriterState;
 
 	FootBallGoal()
 	{
 		memset(this, 0, sizeof(FootBallGoal));
 	}
 
-	void setup(int x, int y);
+	void setup(int x1, int y1, int x2, int y2, int team);
 
 	void tick(GameSim & gameSim, float dt);
 	void draw() const;
 	void drawLight() const;
+
+	bool intersects(Vec2Arg pos) const;
+	void handleGoal();
 };
 
 struct Coin : PhysicsActor
@@ -1222,11 +1228,14 @@ struct GameStateData
 	{
 		FootBrawl()
 		{
-			ballSpawnPoint[0] = ARENA_SX_PIXELS / 2;
-			ballSpawnPoint[1] = ARENA_SY_PIXELS / 3;
+			memset(this, 0, sizeof(FootBrawl));
 		}
 
+		void handleGoal(GameSim & gameSim, int team);
+		int getWinningTeam() const;
+
 		float ballSpawnPoint[2];
+		int teamScore[2];
 	} m_footBrawl;
 
 	struct TokenHunt

@@ -82,6 +82,7 @@ struct PickupSprite
 #define AXE_SPRITER Spriter("objects/axe/sprite.scml")
 #define PIPEBOMB_SPRITER Spriter("objects/pipebomb/sprite.scml")
 #define FOOTBALL_SPRITER Spriter("objects/football/sprite.scml")
+#define FOOTBALL_GOAL_SPRITER Spriter("objects/football_goal/sprite.scml")
 
 //
 
@@ -128,6 +129,25 @@ LevelEvent GameStateData::getRandomLevelEvent()
 		return getRandomLevelEvent();
 	else
 		return e;
+}
+
+//
+
+void GameStateData::FootBrawl::handleGoal(GameSim & gameSim, int team)
+{
+	fassert(team >= 0 && team <= 1);
+
+	teamScore[team]++;
+}
+
+int GameStateData::FootBrawl::getWinningTeam() const
+{
+	if (teamScore[0] > teamScore[1])
+		return 0;
+	if (teamScore[1] > teamScore[0])
+		return 1;
+
+	return -1;
 }
 
 //
@@ -380,6 +400,20 @@ void FootBall::tick(GameSim & gameSim, float dt)
 		PhysicsActor::tick(gameSim, dt, cbs);
 
 		m_spriterState.updateAnim(FOOTBALL_SPRITER, dt);
+
+		// check if we've hit a goal
+
+		for (int i = 0; i < MAX_FOOTBALL_GOALS; ++i)
+		{
+			auto & goal = gameSim.m_footBallGoals[i];
+
+			if (goal.m_isActive && goal.intersects(m_pos))
+			{
+				goal.handleGoal();
+
+				gameSim.m_footBrawl.handleGoal(gameSim, 1 - goal.m_team);
+			}
+		}
 	}
 }
 
@@ -434,21 +468,55 @@ void FootBall::drawLight() const
 
 //
 
-void FootBallGoal::setup(int x, int y)
+void FootBallGoal::setup(int x1, int y1, int x2, int y2, int team)
 {
+	fassert(team >= 0 && team <= 1);
+
 	m_isActive = true;
+
+	m_x1 = x1;
+	m_y1 = y1;
+	m_x2 = x2;
+	m_y2 = y2;
+	m_team = team;
+
+	m_spriterState = SpriterState();
+	m_spriterState.x = (m_x1 + m_x2) / 2;
+	m_spriterState.y = (m_y1 + m_y2) / 2;
 }
 
 void FootBallGoal::tick(GameSim & gameSim, float dt)
 {
+	if (!m_spriterState.animIsActive)
+	{
+		m_spriterState.startAnim(FOOTBALL_GOAL_SPRITER, "idle");
+	}
+	
+	m_spriterState.updateAnim(FOOTBALL_GOAL_SPRITER, dt);
 }
 
 void FootBallGoal::draw() const
 {
+	setColor(colorWhite);
+	FOOTBALL_GOAL_SPRITER.draw(m_spriterState);
 }
 
 void FootBallGoal::drawLight() const
 {
+}
+
+bool FootBallGoal::intersects(Vec2Arg pos) const
+{
+	return
+		pos[0] >= m_x1 &&
+		pos[1] >= m_y1 &&
+		pos[0] <= m_x2 &&
+		pos[1] <= m_y2;
+}
+
+void FootBallGoal::handleGoal()
+{
+	m_spriterState.startAnim(FOOTBALL_GOAL_SPRITER, "goal");
 }
 
 //
@@ -2304,8 +2372,11 @@ void GameSim::load(const char * name)
 				else
 				{
 					goal->setup(
-						(d.getInt("x1", 0) + d.getInt("x2", 0)) / 2,
-						(d.getInt("y1", 0) + d.getInt("y2", 0)) / 2);
+						d.getInt("x1", 0),
+						d.getInt("y1", 0),
+						d.getInt("x2", 0),
+						d.getInt("y2", 0),
+						d.getInt("team", -1));
 				}
 			}
 		}
@@ -2949,7 +3020,23 @@ void GameSim::tickPlay()
 
 		if (m_gameMode == kGameMode_FootBrawl)
 		{
-			// todo : check team scores
+			// score limit
+
+			if (FOOTBRAWL_SCORE_LIMIT != -1)
+			{
+				for (int i = 0; i < 2; ++i)
+				{
+					if (m_footBrawl.teamScore[i] >= FOOTBRAWL_SCORE_LIMIT)
+						roundComplete = true;
+				}
+			}
+
+			// time limit
+
+			if (m_roundTime >= FOOTBRAWL_TIME_LIMIT)
+			{
+				roundComplete = true;
+			}
 		}
 		else if (m_gameMode == kGameMode_DeathMatch)
 		{
@@ -3533,7 +3620,7 @@ void GameSim::drawPlayLight(const CamParams & camParams)
 	drawLightObjects(m_axes, MAX_AXES);
 	drawLightObjects(m_pipebombs, MAX_PIPEBOMBS);
 	drawLightObjects(m_footBalls, MAX_FOOTBALLS);
-	drawLightObjects(m_footBalls, MAX_FOOTBALL_GOALS);
+	drawLightObjects(m_footBallGoals, MAX_FOOTBALL_GOALS);
 
 	// bullets
 
@@ -3621,6 +3708,14 @@ void GameSim::drawPlayHud(const CamParams & camParams)
 	{
 		setColor(colorWhite);
 		Sprite("ui/controls.png").draw();
+	}
+
+	if (m_gameState == kGameState_RoundComplete && m_roundEnd.m_state == RoundEnd::kState_ShowResults)
+	{
+		// todo : draw team stats and winning team
+
+		setColor(colorWhite);
+		Sprite("itch-game-buttons.png").drawEx(GFX_SX/2, GFX_SY/2); // fixme
 	}
 }
 
