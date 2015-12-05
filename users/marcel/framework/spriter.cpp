@@ -748,8 +748,8 @@ namespace spriter
 			return;
 		}
 
-		fassert(animIndex >= 0 && animIndex < m_animations.size());
-		fassert(characterMap >= 0 && characterMap < m_scene->m_fileCaches.size());
+		fassert(animIndex >= 0 && animIndex < (int)m_animations.size());
+		fassert(characterMap >= 0 && characterMap < (int)m_scene->m_fileCaches.size());
 
 		const Animation * animation = m_animations[animIndex];
 
