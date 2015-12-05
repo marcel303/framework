@@ -2,17 +2,24 @@
 #include "gamesim.h"
 #include "hud.h"
 
+OPTION_DECLARE(int, PLAYER_STATUS_TEST_INDEX, -1);
 OPTION_DECLARE(int, PLAYER_STATUS_OFFSET_X_L, 125);
-OPTION_DECLARE(int, PLAYER_STATUS_OFFSET_X_R, 125);
-OPTION_DECLARE(int, PLAYER_STATUS_OFFSET_Y_T, 150);
-OPTION_DECLARE(int, PLAYER_STATUS_OFFSET_Y_B, 150);
+OPTION_DECLARE(int, PLAYER_STATUS_OFFSET_X_R, 230);
+OPTION_DECLARE(int, PLAYER_STATUS_OFFSET_Y_T, 160);
+OPTION_DECLARE(int, PLAYER_STATUS_OFFSET_Y_B, 75);
+OPTION_DEFINE(int, PLAYER_STATUS_TEST_INDEX, "UI/Player Status HUD/Player Test Index");
 OPTION_DEFINE(int, PLAYER_STATUS_OFFSET_X_L, "UI/Player Status HUD/Offset X L");
 OPTION_DEFINE(int, PLAYER_STATUS_OFFSET_X_R, "UI/Player Status HUD/Offset X R");
 OPTION_DEFINE(int, PLAYER_STATUS_OFFSET_Y_T, "UI/Player Status HUD/Offset Y T");
 OPTION_DEFINE(int, PLAYER_STATUS_OFFSET_Y_B, "UI/Player Status HUD/Offset Y B");
 
+#define PLAYER_STATUS_SPRITER Spriter(getPlayerStatusHudSpriterName(gameSim, playerIndex))
+
 static Vec2 getPlayerStatusHudLocation(int playerIndex)
 {
+	if (PLAYER_STATUS_TEST_INDEX >= 0 && PLAYER_STATUS_TEST_INDEX < MAX_PLAYERS)
+		playerIndex = PLAYER_STATUS_TEST_INDEX;
+
 	if (playerIndex >= 0 && playerIndex < MAX_PLAYERS)
 	{
 		const Vec2 location[MAX_PLAYERS] =
@@ -34,6 +41,9 @@ static Vec2 getPlayerStatusHudLocation(int playerIndex)
 
 static const char * getPlayerStatusHudSpriterName(const GameSim & gameSim, int playerIndex)
 {
+	if (PLAYER_STATUS_TEST_INDEX >= 0 && PLAYER_STATUS_TEST_INDEX < MAX_PLAYERS)
+		playerIndex = PLAYER_STATUS_TEST_INDEX;
+
 	const int characterIndex = gameSim.m_players[playerIndex].m_characterIndex;
 
 	fassert(characterIndex >= 0 && characterIndex < MAX_CHARACTERS);
@@ -68,8 +78,9 @@ static const char * getPlayerStatusHudSpriterAnimName(PlayerStatusHud::State sta
 	case PlayerStatusHud::kState_Kill:
 		return "Idle_Anim";
 	case PlayerStatusHud::kState_Death:
+		return "Dead_Transition";
+	case PlayerStatusHud::kState_DeathLoop:
 		return "Dead";
-		//return "Dead_Transition";
 	case PlayerStatusHud::kState_Spawn:
 		return "Spawn";
 	case PlayerStatusHud::kState_Score:
@@ -84,6 +95,15 @@ static const char * getPlayerStatusHudSpriterAnimName(PlayerStatusHud::State sta
 void PlayerStatusHud::tick(GameSim & gameSim, int playerIndex, float dt)
 {
 	stateTime += dt;
+
+	m_spriterState.startAnim(PLAYER_STATUS_SPRITER, getPlayerStatusHudSpriterAnimName(state));
+	m_spriterState.animTime = stateTime;
+
+	if (state == kState_Death && PLAYER_STATUS_SPRITER.isAnimDoneAtTime(m_spriterState.animIndex, m_spriterState.animTime))
+	{
+		state = kState_DeathLoop;
+		stateTime = 0.f;
+	}
 }
 
 void PlayerStatusHud::draw(const GameSim & gameSim, int playerIndex) const
@@ -91,17 +111,16 @@ void PlayerStatusHud::draw(const GameSim & gameSim, int playerIndex) const
 	fassert(playerIndex >= 0 && playerIndex < MAX_PLAYERS);
 	if (playerIndex >= 0 && playerIndex < MAX_PLAYERS)
 	{
-		Spriter spriter(getPlayerStatusHudSpriterName(gameSim, playerIndex));
 		SpriterState spriterState = m_spriterState;
 
 		const Vec2 location = getPlayerStatusHudLocation(playerIndex);
 		spriterState.x = location[0];
 		spriterState.y = location[1];
-		spriterState.startAnim(spriter, getPlayerStatusHudSpriterAnimName(state));
+		spriterState.startAnim(PLAYER_STATUS_SPRITER, getPlayerStatusHudSpriterAnimName(state));
 		spriterState.animTime = stateTime;
 
 		setColor(colorWhite);
-		spriter.draw(spriterState);
+		PLAYER_STATUS_SPRITER.draw(spriterState);
 	}
 }
 

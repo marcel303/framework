@@ -3972,7 +3972,8 @@ void Player::awardScore(int score)
 {
 	m_score += score;
 
-	m_statusHud.handleScore();
+	if (score > 0)
+		m_statusHud.handleScore();
 }
 
 void Player::handleKill(bool hasScored, bool isFirstKill)

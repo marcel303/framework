@@ -15,6 +15,7 @@ struct PlayerStatusHud
 		kState_Idle,
 		kState_Kill,
 		kState_Death,
+		kState_DeathLoop,
 		kState_Spawn,
 		kState_Score
 	};
