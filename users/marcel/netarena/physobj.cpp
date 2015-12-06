@@ -170,7 +170,10 @@ void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 				}
 			}
 
-			args->hasBounced = true;
+			if (!(result & kPhysicsUpdateFlag_DontCollide) && updateInfo.contactNormal.CalcSizeSq() != 0.f)
+			{
+				args->hasBounced = true;
+			}
 
 			return result;
 		});

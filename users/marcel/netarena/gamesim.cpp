@@ -391,8 +391,8 @@ void FootBall::tick(GameSim & gameSim, float dt)
 		};
 		cbs.onBounce = [](PhysicsActorCBs & cbs, PhysicsActor & actor)
 		{
-			//if (std::abs(actor.m_vel[1]) >= FOOTBALL_BOUNCE_SOUND_TRESHOLD)
-			//	g_gameSim->playSound("football-bounce.ogg");
+			if (std::abs(actor.m_vel[1]) >= FOOTBALL_BOUNCE_SOUND_TRESHOLD)
+				g_gameSim->playSound("football-bounce.ogg");
 		};
 
 		m_noGravity = !m_hasBeenTouched;
