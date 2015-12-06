@@ -53,7 +53,7 @@ void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 
 	// collision
 
-	const float wrapSizes[2] = { ARENA_SX_PIXELS, ARENA_SY_PIXELS };
+	const float wrapSizes[2] = { gameSim.m_arena.m_sxPixels, gameSim.m_arena.m_syPixels };
 
 #if 1
 	bool collision = false;
@@ -393,62 +393,10 @@ void PhysicsActor::getAABB(Vec2Arg pos, Vec2 & min, Vec2 & max) const
 
 uint32_t PhysicsActor::getIntersectingBlockMask(GameSim & gameSim, Vec2 pos)
 {
-#if 1
 	const CollisionShape shape(m_collisionShape, pos);
-
 	const Arena & arena = gameSim.m_arena;
 
 	return arena.getIntersectingBlocksMask(shape);
-#elif 1
-	const int sx = int(max[0] - min[0]);
-	const int sy = int(max[1] - min[1]);
-	const int numX = 2 + sx / BLOCK_SX;
-	const int numY = 2 + sy / BLOCK_SY;
-
-	Vec2 min, max;
-	getAABB(pos, min, max);
-
-	const Arena & arena = gameSim.m_arena;
-
-	uint32_t result = 0;
-
-	for (int xi = 0; xi < numX; ++xi)
-	{
-		const int x = (int(min[0]) + sx * xi / (numX - 1)) % ARENA_SX_PIXELS;
-
-		for (int yi = 0; yi < numY; ++yi)
-		{
-			const int y = (int(min[1]) + sy * yi / (numY - 1)) % ARENA_SY_PIXELS;
-
-			result |= arena.getIntersectingBlocksMask(x, y);
-		}
-	}
-
-	return result;
-#else
-	const int x1 = (int(min[0]         )     + ARENA_SX_PIXELS) % ARENA_SX_PIXELS;
-	const int x2 = (int(max[0]         )     + ARENA_SX_PIXELS) % ARENA_SX_PIXELS;
-	const int y1 = (int(min[1]         )     + ARENA_SY_PIXELS) % ARENA_SY_PIXELS;
-	const int y2 = (int(max[1]         )     + ARENA_SY_PIXELS) % ARENA_SY_PIXELS;
-	const int y3 = (int(min[1] + max[1]) / 2 + ARENA_SY_PIXELS) % ARENA_SY_PIXELS;
-
-	Vec2 min, max;
-	getAABB(pos, min, max);
-
-	const Arena & arena = gameSim.m_arena;
-
-	uint32_t result = 0;
-
-	result |= arena.getIntersectingBlocksMask(x1, y1);
-	result |= arena.getIntersectingBlocksMask(x2, y1);
-	result |= arena.getIntersectingBlocksMask(x2, y2);
-	result |= arena.getIntersectingBlocksMask(x1, y2);
-
-	result |= arena.getIntersectingBlocksMask(x1, y3);
-	result |= arena.getIntersectingBlocksMask(x2, y3);
-
-	return result;
-#endif
 }
 
 void PhysicsActor::getCollisionInfo(CollisionInfo & collisionInfo)

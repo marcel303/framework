@@ -2377,7 +2377,7 @@ void Player::tick(GameSim & gameSim, float dt)
 							for (int dy = -1; dy <= +1 && blockAndDistance; ++dy)
 							{
 								CollisionShape attackCollision;
-								if (self->getAttackCollision(attackCollision, Vec2(dx * ARENA_SX_PIXELS, dy * ARENA_SY_PIXELS)))
+								if (self->getAttackCollision(attackCollision, Vec2(dx * gameSim.m_arena.m_sxPixels, dy * gameSim.m_arena.m_syPixels)))
 								{
 									self->m_attack.hitDestructible |= gameSim.m_arena.handleDamageShape(
 										gameSim,
@@ -2720,7 +2720,7 @@ void Player::tick(GameSim & gameSim, float dt)
 	#if !WRAP_AROUND_TOP_AND_BOTTOM
 		// death by fall
 
-		if (m_pos[1] > ARENA_SY_PIXELS)
+		if (m_pos[1] > gameSim.m_arena.m_syPixels)
 		{
 			if (isAnimOverrideAllowed(kPlayerAnim_Die))
 			{
@@ -2752,16 +2752,15 @@ void Player::tick(GameSim & gameSim, float dt)
 			const Vec2 oldPos = m_pos;
 
 			if (m_pos[0] < 0)
-				m_pos[0] = ARENA_SX_PIXELS;
-			if (m_pos[0] > ARENA_SX_PIXELS)
+				m_pos[0] = gameSim.m_arena.m_sxPixels;
+			if (m_pos[0] > gameSim.m_arena.m_sxPixels)
 				m_pos[0] = 0;
 
 		#if WRAP_AROUND_TOP_AND_BOTTOM
-			if (m_pos[1] > ARENA_SY_PIXELS)
-				m_pos[1] = 0;
-
 			if (m_pos[1] < 0)
-				m_pos[1] = ARENA_SY_PIXELS;
+				m_pos[1] = gameSim.m_arena.m_syPixels;
+			if (m_pos[1] > gameSim.m_arena.m_syPixels)
+				m_pos[1] = 0;
 		#endif
 
 			const Vec2 newPos = m_pos;
@@ -2883,6 +2882,7 @@ void Player::draw() const
 	gpuTimingBlock(playerDraw);
 	cpuTimingBlock(playerDraw);
 
+	const GameSim & gameSim = *GAMESIM;
 	const CharacterData * characterData = getCharacterData(m_characterIndex);
 	const Color playerColor = getPlayerColor(m_index);
 
@@ -2964,10 +2964,10 @@ void Player::draw() const
 			const int offsets[5][2] =
 			{
 				{ 0, 0 },
-				{ -ARENA_SX_PIXELS, 0 },
-				{ +ARENA_SX_PIXELS, 0 },
-				{ 0, -ARENA_SX_PIXELS },
-				{ 0, +ARENA_SX_PIXELS }
+				{ -gameSim.m_arena.m_sxPixels, 0 },
+				{ +gameSim.m_arena.m_sxPixels, 0 },
+				{ 0, -gameSim.m_arena.m_syPixels },
+				{ 0, +gameSim.m_arena.m_syPixels }
 			};
 
 			for (int i = 0; i < 5; ++i)
@@ -2993,13 +2993,13 @@ void Player::draw() const
 
 		// render additional sprites for wrap around
 		if (m_pos[0] < borderSize)
-			drawAt(flipX, flipY, m_pos[0] + ARENA_SX_PIXELS, m_pos[1] - (flipY ? characterData->m_collisionSy : 0), spriterState, drawables, numDrawables);
-		if (m_pos[0] > ARENA_SX_PIXELS - borderSize)
-			drawAt(flipX, flipY, m_pos[0] - ARENA_SX_PIXELS, m_pos[1] - (flipY ? characterData->m_collisionSy : 0), spriterState, drawables, numDrawables);
+			drawAt(flipX, flipY, m_pos[0] + gameSim.m_arena.m_sxPixels, m_pos[1] - (flipY ? characterData->m_collisionSy : 0), spriterState, drawables, numDrawables);
+		if (m_pos[0] > gameSim.m_arena.m_sxPixels - borderSize)
+			drawAt(flipX, flipY, m_pos[0] - gameSim.m_arena.m_sxPixels, m_pos[1] - (flipY ? characterData->m_collisionSy : 0), spriterState, drawables, numDrawables);
 		if (m_pos[1] < borderSize)
-			drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0) + ARENA_SY_PIXELS, spriterState, drawables, numDrawables);
-		if (m_pos[1] > ARENA_SY_PIXELS - borderSize)
-			drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0) - ARENA_SY_PIXELS, spriterState, drawables, numDrawables);
+			drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0) + gameSim.m_arena.m_syPixels, spriterState, drawables, numDrawables);
+		if (m_pos[1] > gameSim.m_arena.m_syPixels - borderSize)
+			drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0) - gameSim.m_arena.m_syPixels, spriterState, drawables, numDrawables);
 
 		if (g_devMode)
 		{
@@ -3362,13 +3362,14 @@ void Player::drawLight() const
 	if (!m_isAlive && !m_isRespawn)
 		return;
 
+	const GameSim & gameSim = *GAMESIM;
 	const float x = m_pos[0] + (m_collision.min[0] + m_collision.max[0]) / 2.f;
 	const float y = m_pos[1] + (m_collision.min[1] + m_collision.max[1]) / 2.f;
 	drawLightAt(x, y);
-	drawLightAt(x - ARENA_SX_PIXELS, y);
-	drawLightAt(x + ARENA_SX_PIXELS, y);
-	drawLightAt(x, y - ARENA_SY_PIXELS);
-	drawLightAt(x, y + ARENA_SY_PIXELS);
+	drawLightAt(x - gameSim.m_arena.m_sxPixels, y);
+	drawLightAt(x + gameSim.m_arena.m_sxPixels, y);
+	drawLightAt(x, y - gameSim.m_arena.m_syPixels);
+	drawLightAt(x, y + gameSim.m_arena.m_syPixels);
 }
 
 void Player::drawLightAt(int x, int y) const
@@ -4367,7 +4368,7 @@ bool Player::findGrappleAnchorPos(Vec2 & anchorPos, float & length) const
 	const int grappleBlockMask =
 		kBlockMask_Solid;
 
-	for (float x = grapplePos[0], y = grapplePos[1]; x >= 0 && x < ARENA_SX_PIXELS && y >= 0 && y < ARENA_SY_PIXELS; x += dx, y += dy)
+	for (float x = grapplePos[0], y = grapplePos[1]; x >= 0 && x < arena.m_sxPixels && y >= 0 && y < arena.m_syPixels; x += dx, y += dy)
 	{
 		if (arena.getIntersectingBlocksMask(x, y) & grappleBlockMask)
 		{
@@ -4482,13 +4483,14 @@ bool Player::findNinjaDashTarget(Vec2 & destination)
 {
 	bool result = false;
 
+	const Arena & arena = GAMESIM->m_arena;
 	const Vec2 oldPos = m_pos;
 
 	for (int d = NINJADASH_DISTANCE_MAX; d >= NINJADASH_DISTANCE_MIN; --d)
 	{
 		// check if this location doesn't intersect with anything that may block
 
-		m_pos[0] = std::fmodf(oldPos[0] + d * m_facing[0] + ARENA_SX_PIXELS, ARENA_SX_PIXELS);
+		m_pos[0] = std::fmodf(oldPos[0] + d * m_facing[0] + arena.m_sxPixels, arena.m_sxPixels);
 
 		CollisionInfo playerCollision;
 		if (getPlayerCollision(playerCollision))

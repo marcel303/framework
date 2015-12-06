@@ -671,8 +671,8 @@ struct FootBall : PhysicsActor
 	void setup(int x, int y);
 
 	void tick(GameSim & gameSim, float dt);
-	void draw() const;
-	void drawLight() const;
+	void draw(const GameSim & gameSim) const;
+	void drawLight(const GameSim & gameSim) const;
 };
 
 struct FootBallGoal
@@ -946,7 +946,7 @@ struct Decal
 	}
 
 	void tick(GameSim & gameSim, float dt);
-	void draw() const;
+	void draw(const GameSim & gameSim) const;
 	void drawAt(int x, int y) const;
 };
 

@@ -118,9 +118,15 @@ struct RegenBlockData
 class Arena
 {
 public:
-	Block m_blocks[ARENA_SX][ARENA_SY];
+	Block m_blocks[MAX_ARENA_SX][MAX_ARENA_SY];
 
 	FixedString<64> m_name;
+
+	int m_sxBlocks;
+	int m_syBlocks;
+	int m_sxPixels;
+	int m_syPixels;
+
 	uint64_t m_texture;
 	int m_textureSx;
 	int m_textureSy;
@@ -133,13 +139,13 @@ public:
 		int m_x2, m_y2;
 		TransitionInfo m_transition;
 
-		void setup(int x1, int y1, int x2, int y2, Dictionary & d)
+		void setup(int x1, int y1, int x2, int y2, const Dictionary & d, int sxPixels, int syPixels)
 		{
 			m_x1 = x1;
 			m_y1 = y1;
 			m_x2 = x2;
 			m_y2 = y2;
-			m_transition.parse(d);
+			m_transition.parse(d, sxPixels, syPixels);
 		}
 
 		bool isActiveAtTime(float transitionTime) const

@@ -1424,10 +1424,10 @@ bool App::init()
 
 		//
 
-		g_colorMap = new Surface(ARENA_SX_PIXELS, ARENA_SY_PIXELS);
-		g_decalMap = new Surface(ARENA_SX_PIXELS, ARENA_SY_PIXELS);
-		g_lightMap = new Surface(ARENA_SX_PIXELS, ARENA_SY_PIXELS);
-		g_finalMap = new Surface(ARENA_SX_PIXELS, ARENA_SY_PIXELS);
+		g_colorMap = new Surface(GFX_SX, GFX_SY);
+		g_decalMap = new Surface(MAX_ARENA_SX_PIXELS, MAX_ARENA_SY_PIXELS);
+		g_lightMap = new Surface(GFX_SX, GFX_SY);
+		g_finalMap = new Surface(GFX_SX, GFX_SY);
 
 		//
 

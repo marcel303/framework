@@ -479,14 +479,14 @@ void BulletPool::anim(GameSim & gameSim, Bullet & b, float dt)
 	float y = b.m_pos[1];
 
 	if (b.m_pos[0] < 0.f)
-		b.m_pos[0] += ARENA_SX_PIXELS;
-	if (b.m_pos[0] > ARENA_SX_PIXELS)
-		b.m_pos[0] -= ARENA_SX_PIXELS;
+		b.m_pos[0] += gameSim.m_arena.m_sxPixels;
+	if (b.m_pos[0] > gameSim.m_arena.m_sxPixels)
+		b.m_pos[0] -= gameSim.m_arena.m_sxPixels;
 
 	if (b.m_pos[1] < 0.f)
-		b.m_pos[1] += ARENA_SY_PIXELS;
-	if (b.m_pos[1] > ARENA_SY_PIXELS)
-		b.m_pos[1] -= ARENA_SY_PIXELS;
+		b.m_pos[1] += gameSim.m_arena.m_syPixels;
+	if (b.m_pos[1] > gameSim.m_arena.m_syPixels)
+		b.m_pos[1] -= gameSim.m_arena.m_syPixels;
 
 	if (x != b.m_pos[0] || y != b.m_pos[1])
 	{

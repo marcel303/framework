@@ -79,7 +79,7 @@ enum TransitionType
 	kTransitionType_SlideFromBottom
 };
 
-Vec2 getTransitionOffset(TransitionType type, float transitionAmount);
+Vec2 getTransitionOffset(TransitionType type, int sxPixels, int syPixels, float transitionAmount);
 
 struct TransitionInfo
 {
@@ -89,11 +89,13 @@ struct TransitionInfo
 	}
 
 	TransitionType m_type;
+	int m_sxPixels;
+	int m_syPixels;
 	float m_time;
 	float m_curve;
 
-	void setup(TransitionType type, float time, float curve);
-	void parse(const class Dictionary & d);
+	void setup(TransitionType type, int sxPixels, int syPixels, float time, float curve);
+	void parse(const class Dictionary & d, int sxPixels, int syPixels);
 	bool isActiveAtTime(float time) const { return time >= 0.f && time <= m_time; }
 	Vec2 eval(float transitionProgress) const;
 };

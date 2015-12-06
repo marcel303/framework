@@ -2,6 +2,7 @@
 #include <tuple>
 #include "arena.h"
 #include "bullet.h"
+#include "Calc.h"
 #include "FileStream.h"
 #include "framework.h"
 #include "gamesim.h"
@@ -148,7 +149,11 @@ bool Block::handleDamage(GameSim & gameSim, int blockX, int blockY)
 //
 
 Arena::Arena()
-	: m_texture(0)
+	: m_sxBlocks(0)
+	, m_syBlocks(0)
+	, m_sxPixels(0)
+	, m_syPixels(0)
+	, m_texture(0)
 	, m_textureSx(0)
 	, m_textureSy(0)
 	, m_numTileTransitions(0)
@@ -169,9 +174,9 @@ void Arena::reset()
 {
 	// clear the arena
 
-	for (int x = 0; x < ARENA_SX; ++x)
+	for (int x = 0; x < MAX_ARENA_SX; ++x)
 	{
-		for (int y = 0; y < ARENA_SY; ++y)
+		for (int y = 0; y < MAX_ARENA_SY; ++y)
 		{
 			m_blocks[x][y].shape = kBlockShape_Opaque;
 			m_blocks[x][y].type = kBlockType_Empty;
@@ -181,6 +186,11 @@ void Arena::reset()
 			m_blocks[x][y].param = 0;
 		}
 	}
+
+	m_sxBlocks = 0;
+	m_syBlocks = 0;
+	m_sxPixels = 0;
+	m_syPixels = 0;
 
 	// clear sprites
 
@@ -200,30 +210,37 @@ void Arena::generate()
 
 	reset();
 
+	// set dimensions
+
+	m_sxBlocks = MAX_ARENA_SX;
+	m_syBlocks = MAX_ARENA_SY;
+	m_sxPixels = m_sxBlocks * BLOCK_SX;
+	m_syPixels = m_syBlocks * BLOCK_SY;
+
 	// generate a border
 
-	for (int x = 0; x < ARENA_SX; ++x)
-		for (int y = 0; y < ARENA_SY; ++y)
-			if (x == 0 || x == ARENA_SX - 1 || y == 0 || y == ARENA_SY - 1)
+	for (int x = 0; x < m_sxBlocks; ++x)
+		for (int y = 0; y < m_syBlocks; ++y)
+			if (x == 0 || x == m_sxBlocks - 1 || y == 0 || y == m_syBlocks - 1)
 				m_blocks[x][y].type = kBlockType_Indestructible;
 
 	// add some random stuff
 
 	for (int i = 0; i < 100; ++i)
 	{
-		const int x = rand() % ARENA_SX;
-		const int y = rand() % ARENA_SY;
+		const int x = rand() % m_sxBlocks;
+		const int y = rand() % m_syBlocks;
 
 		if ((rand() % 3) != 0)
 			m_blocks[x][y].type = kBlockType_Indestructible;
 		else
 			m_blocks[x][y].type = (BlockType)(rand() % kBlockType_COUNT);
 
-		if (x == 0 || x == ARENA_SX - 1)
-			m_blocks[ARENA_SX - 1 - x][y].type = m_blocks[x][y].type;
+		if (x == 0 || x == m_sxBlocks - 1)
+			m_blocks[m_sxBlocks - 1 - x][y].type = m_blocks[x][y].type;
 
-		if (true && (y == 0 || y == ARENA_SY - 1))
-			m_blocks[x][ARENA_SY - 1 - y].type = m_blocks[x][y].type;
+		if (true && (y == 0 || y == m_syBlocks - 1))
+			m_blocks[x][m_syBlocks - 1 - y].type = m_blocks[x][y].type;
 	}
 }
 
@@ -235,8 +252,6 @@ void Arena::load(const char * name)
 
 	m_name = name;
 
-	loadArt(name);
-
 	const std::string baseName = std::string("levels/") + name + "/";
 
 	const std::string mecFilename = baseName + "Mec.txt";
@@ -247,6 +262,14 @@ void Arena::load(const char * name)
 	const std::string artFilenameMG = baseName + "Art.txt";
 	const std::string artFilenameFG = baseName + "ArtFG.txt";
 
+	loadArt(name);
+
+	// load art layers
+
+	//loadArtIndices(artFilenameBG.c_str(), 0);
+	loadArtIndices(artFilenameMG.c_str(), 1);
+	//loadArtIndices(artFilenameFG.c_str(), 2);
+
 	// load block type layer
 
 	try
@@ -256,13 +279,13 @@ void Arena::load(const char * name)
 		StreamReader reader(&stream, false);
 		std::vector<std::string> lines = reader.ReadAllLines();
 
-		const int sy = lines.size() < ARENA_SY ? lines.size() : ARENA_SY;
+		const int sy = (int)lines.size() <= m_syBlocks ? (int)lines.size() : m_syBlocks;
 
 		for (int y = 0; y < sy; ++y)
 		{
 			const std::string & line = lines[y];
 
-			const int sx = line.size() < ARENA_SX ? line.size() : ARENA_SX;
+			const int sx = (int)line.size() <= m_sxBlocks ? (int)line.size() : m_sxBlocks;
 
 			for (int x = 0; x < sx; ++x)
 			{
@@ -348,13 +371,13 @@ void Arena::load(const char * name)
 		StreamReader reader(&stream, false);
 		std::vector<std::string> lines = reader.ReadAllLines();
 
-		const int sy = lines.size() < ARENA_SY ? lines.size() : ARENA_SY;
+		const int sy = (int)lines.size() <= m_syBlocks ? (int)lines.size() : m_syBlocks;
 
 		for (int y = 0; y < sy; ++y)
 		{
 			const std::string & line = lines[y];
 
-			const int sx = line.size() < ARENA_SX ? line.size() : ARENA_SX;
+			const int sx = (int)line.size() <= m_sxBlocks ? (int)line.size() : m_sxBlocks;
 
 			for (int x = 0; x < sx; ++x)
 			{
@@ -444,12 +467,6 @@ void Arena::load(const char * name)
 	{
 		LOG_ERR("failed to open %s: %s", metFilename.c_str(), e.what());
 	}
-
-	// load art layer
-
-	loadArtIndices(artFilenameBG.c_str(), 0);
-	loadArtIndices(artFilenameMG.c_str(), 1);
-	loadArtIndices(artFilenameFG.c_str(), 2);
 }
 
 void Arena::loadArt(const char * name)
@@ -478,34 +495,41 @@ void Arena::loadArtIndices(const char * filename, int layer)
 		stream.Open(filename, OpenMode_Read);
 		StreamReader reader(&stream, false);
 		
-		{
-			const int version = reader.ReadInt32();
-			const int sx = reader.ReadInt32();
-			const int sy = reader.ReadInt32();
-		}
+		const int version = reader.ReadInt32();
+		fassert(version == 1);
 
-		const int sx = ARENA_SX;
-		const int sy = ARENA_SY;
+		const int sxBlocks = reader.ReadInt32();
+		const int syBlocks = reader.ReadInt32();
+		fassert(sxBlocks <= MAX_ARENA_SX);
+		fassert(syBlocks <= MAX_ARENA_SY);
 
-		for (int y = 0; y < sy; ++y)
-			for (int x = 0; x < sx; ++x)
+		fassert(m_sxBlocks == 0 || sxBlocks == m_sxBlocks);
+		fassert(m_syBlocks == 0 || syBlocks == m_syBlocks);
+		m_sxBlocks = Calc::Min(sxBlocks, MAX_ARENA_SX);
+		m_syBlocks = Calc::Min(syBlocks, MAX_ARENA_SY);
+
+		m_sxPixels = m_sxBlocks * BLOCK_SX;
+		m_syPixels = m_syBlocks * BLOCK_SY;
+
+		for (int y = 0; y < MAX_ARENA_SY; ++y)
+			for (int x = 0; x < MAX_ARENA_SX; ++x)
 				m_blocks[x][y].artIndex[layer] = -1;
 
 		//const int numIndices = stream.Length_get() / sizeof(int32_t);
 		const int numIndices = reader.ReadInt32();
 
-		Assert(numIndices <= ARENA_SX * ARENA_SY);
+		Assert(numIndices <= m_sxBlocks * m_syBlocks);
 
 		for (int i = 0; i < numIndices; ++i)
 		{
 			const int index = reader.ReadInt32();
 
-			Assert(index <= ARENA_SX * ARENA_SY);
+			Assert(index <= m_sxBlocks * m_syBlocks);
 
-			const int x = index % ARENA_SX;
-			const int y = index / ARENA_SX;
+			const int x = index % m_sxBlocks;
+			const int y = index / m_sxBlocks;
 
-			if (x < ARENA_SX && y < ARENA_SY)
+			if (x < m_sxBlocks && y < m_syBlocks)
 			{
 				m_blocks[x][y].artIndex[layer] = i;
 			}
@@ -523,9 +547,19 @@ void Arena::loadArtIndices(const char * filename, int layer)
 
 void Arena::serialize(NetSerializationContext & context)
 {
-	for (int x = 0; x < ARENA_SX; ++x)
+	const int size1 = context.GetBitStream().GetDataSize();
+
+	context.Serialize(m_sxBlocks);
+	context.Serialize(m_syBlocks);
+	fassert(m_sxBlocks <= MAX_ARENA_SX);
+	fassert(m_syBlocks <= MAX_ARENA_SY);
+
+	m_sxPixels = m_sxBlocks * BLOCK_SX;
+	m_syPixels = m_syBlocks * BLOCK_SY;
+
+	for (int x = 0; x < m_sxBlocks; ++x)
 	{
-		for (int y = 0; y < ARENA_SY; ++y)
+		for (int y = 0; y < m_syBlocks; ++y)
 		{
 			Block & block = m_blocks[x][y];
 
@@ -593,6 +627,10 @@ void Arena::serialize(NetSerializationContext & context)
 
 	context.Serialize(m_numTileTransitions);
 	context.SerializeBytes(m_tileTransitions, sizeof(m_tileTransitions));
+
+	const int size2 = context.GetBitStream().GetDataSize();
+
+	LOG_DBG("Arena::serialize: size=%d", size2 - size1);
 }
 
 #if ENABLE_GAMESTATE_DESYNC_DETECTION
@@ -617,9 +655,9 @@ void Arena::drawBlocks(const GameSim & gameSim, int layer) const
 	gpuTimingBlock(arenaDrawBlocks);
 	cpuTimingBlock(arenaDrawBlocks);
 
-	float pos[4 * ARENA_SX * ARENA_SY * 2];
-	float uv [4 * ARENA_SX * ARENA_SY * 2];
-	uint32_t c  [4 * ARENA_SX * ARENA_SY * 1];
+	float pos[4 * MAX_ARENA_SX * MAX_ARENA_SY * 2];
+	float uv [4 * MAX_ARENA_SX * MAX_ARENA_SY * 2];
+	uint32_t c  [4 * MAX_ARENA_SX * MAX_ARENA_SY * 1];
 	int numVerts = 0;
 
 	const int ATLAS_TILE_SX = (m_textureSx / BLOCK_SX);
@@ -648,9 +686,9 @@ void Arena::drawBlocks(const GameSim & gameSim, int layer) const
 	for (int i = 0; i < m_numTileTransitions; ++i)
 		hasActiveTransition |= m_tileTransitions[i].isActiveAtTime(transitionTime);
 
-	for (int x = 0; x < ARENA_SX; ++x)
+	for (int x = 0; x < m_sxBlocks; ++x)
 	{
-		for (int y = 0; y < ARENA_SY; ++y)
+		for (int y = 0; y < m_syBlocks; ++y)
 		{
 			const Block & block = m_blocks[x][y];
 
@@ -778,9 +816,9 @@ void Arena::drawBlocks(const GameSim & gameSim, int layer) const
 
 void Arena::tick(GameSim & gameSim)
 {
-	for (int x = 0; x < ARENA_SX; ++x)
+	for (int x = 0; x < m_sxBlocks; ++x)
 	{
-		for (int y = 0; y < ARENA_SY; ++y)
+		for (int y = 0; y < m_syBlocks; ++y)
 		{
 			Block & block = m_blocks[x][y];
 
@@ -873,9 +911,9 @@ bool Arena::getRandomSpawnPoint(GameSim & gameSim, int & out_x, int & out_y, int
 	} candidates[kMaxCandidates];
 	int numCandidates = 0;
 
-	for (int x = 0; x < ARENA_SX; ++x)
+	for (int x = 0; x < m_sxBlocks; ++x)
 	{
-		for (int y = 0; y < ARENA_SY; ++y)
+		for (int y = 0; y < m_syBlocks; ++y)
 		{
 			if (m_blocks[x][y].type == kBlockType_Spawn && numCandidates < kMaxCandidates)
 			{
@@ -949,7 +987,7 @@ bool Arena::isValidPickupLocation(int x, int y, bool grounded) const
 
 	bool result = true;
 
-	if (x < sx || y < sy || x >= ARENA_SX - sx || y >= ARENA_SY - sy - 1)
+	if (x < sx || y < sy || x >= m_sxBlocks - sx || y >= m_syBlocks - sy - 1)
 		result = false;
 	else
 	{
@@ -971,9 +1009,9 @@ bool Arena::getRandomPickupLocations(int * out_x, int * out_y, int & numLocation
 {
 	int numCandidates = 0;
 
-	for (int x = 0; x < ARENA_SX; ++x)
+	for (int x = 0; x < m_sxBlocks; ++x)
 	{
-		for (int y = 0; y < ARENA_SY; ++y)
+		for (int y = 0; y < m_syBlocks; ++y)
 		{
 			if (isValidPickupLocation(x, y, true))
 			{
@@ -1007,7 +1045,7 @@ uint32_t Arena::getIntersectingBlocksMask(int x, int y) const
 		const int blockX = x / BLOCK_SX;
 		const int blockY = y / BLOCK_SY;
 
-		if (blockX < ARENA_SX && blockY < ARENA_SY)
+		if (blockX < m_sxBlocks && blockY < m_syBlocks)
 		{
 			const int maskX = x % BLOCK_SX;
 			const int maskY = y % BLOCK_SY;
@@ -1092,8 +1130,8 @@ static bool getBlockStripFromPixels(int v1, int v2, int & out_v1, int & out_v2, 
 bool Arena::getBlockRectFromPixels(int x1, int y1, int x2, int y2, int & out_x1, int & out_y1, int & out_x2, int & out_y2) const
 {
 	return
-		getBlockStripFromPixels(x1, x2, out_x1, out_x2, ARENA_SX, BLOCK_SX) &&
-		getBlockStripFromPixels(y1, y2, out_y1, out_y2, ARENA_SY, BLOCK_SY);
+		getBlockStripFromPixels(x1, x2, out_x1, out_x2, m_sxBlocks, BLOCK_SX) &&
+		getBlockStripFromPixels(y1, y2, out_y1, out_y2, m_syBlocks, BLOCK_SY);
 }
 
 bool Arena::getBlocksFromPixels(int baseX, int baseY, int x1, int y1, int x2, int y2, bool wrap, BlockAndDistance * out_blocks, int & io_numBlocks)
@@ -1112,12 +1150,12 @@ bool Arena::getBlocksFromPixels(int baseX, int baseY, int x1, int y1, int x2, in
 				int numBlocks = io_numBlocks - result;
 
 				getBlocksFromPixels(
-					baseX + dx * ARENA_SX_PIXELS,
-					baseY + dy * ARENA_SY_PIXELS,
-					x1 + dx * ARENA_SX_PIXELS,
-					y1 + dy * ARENA_SY_PIXELS,
-					x2 + dx * ARENA_SX_PIXELS,
-					y2 + dy * ARENA_SY_PIXELS,
+					baseX + dx * m_sxPixels,
+					baseY + dy * m_syPixels,
+					x1 + dx * m_sxPixels,
+					y1 + dy * m_syPixels,
+					x2 + dx * m_sxPixels,
+					y2 + dy * m_syPixels,
 					false,
 					out_blocks + result,
 					numBlocks);
@@ -1316,7 +1354,7 @@ bool Arena::testCollisionLine(float x1, float y1, float x2, float y2, uint32_t b
 	const float dx = dir[0];
 	const float dy = dir[1];
 
-	for (float x = x1, y = y1, loop = 0; x >= 0 && x < ARENA_SX_PIXELS && y >= 0 && y < ARENA_SY_PIXELS && loop <= numLoops; x += dx, y += dy, loop += 1)
+	for (float x = x1, y = y1, loop = 0; x >= 0 && x < m_sxPixels && y >= 0 && y < m_syPixels && loop <= numLoops; x += dx, y += dy, loop += 1)
 	{
 		if (getIntersectingBlocksMask(x, y) & blockMask)
 		{

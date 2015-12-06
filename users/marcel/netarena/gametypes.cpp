@@ -1,3 +1,4 @@
+#include "arena.h"
 #include "Calc.h"
 #include "Debugging.h"
 #include "framework.h"
@@ -11,20 +12,20 @@
 
 using namespace tinyxml2;
 
-Vec2 getTransitionOffset(TransitionType type, float transitionAmount)
+Vec2 getTransitionOffset(TransitionType type, int sxPixels, int syPixels, float transitionAmount)
 {
 	switch (type)
 	{
 	case kTransitionType_None:
 		return Vec2(0.f, 0.f);
 	case kTransitionType_SlideFromLeft:
-		return Vec2(-ARENA_SX_PIXELS * transitionAmount, 0.f);
+		return Vec2(-sxPixels * transitionAmount, 0.f);
 	case kTransitionType_SlideFromRight:
-		return Vec2(+ARENA_SX_PIXELS * transitionAmount, 0.f);
+		return Vec2(+sxPixels * transitionAmount, 0.f);
 	case kTransitionType_SlideFromTop:
-		return Vec2(0.f, -ARENA_SY_PIXELS * transitionAmount);
+		return Vec2(0.f, -syPixels * transitionAmount);
 	case kTransitionType_SlideFromBottom:
-		return Vec2(0.f, +ARENA_SY_PIXELS * transitionAmount);
+		return Vec2(0.f, +syPixels * transitionAmount);
 	default:
 		Assert(false);
 		break;
@@ -33,15 +34,20 @@ Vec2 getTransitionOffset(TransitionType type, float transitionAmount)
 	return Vec2(0.f, 0.f);
 }
 
-void TransitionInfo::setup(TransitionType type, float time, float curve)
+void TransitionInfo::setup(TransitionType type, int sxPixels, int syPixels, float time, float curve)
 {
 	m_type = type;
+	m_sxPixels = sxPixels;
+	m_syPixels = syPixels;
 	m_time = time;
 	m_curve = curve;
 }
 
-void TransitionInfo::parse(const class Dictionary & d)
+void TransitionInfo::parse(const class Dictionary & d, int sxPixels, int syPixels)
 {
+	m_sxPixels = sxPixels;
+	m_syPixels = syPixels;
+
 	const std::string type = d.getString("transition_type", "");
 
 	if (type == "none")
@@ -70,7 +76,7 @@ Vec2 TransitionInfo::eval(float transitionTime) const
 	{
 		const float transitionProgress = std::powf(1.f - transitionTime / m_time, m_curve);
 
-		return getTransitionOffset(m_type, transitionProgress);
+		return getTransitionOffset(m_type, m_sxPixels, m_syPixels, transitionProgress);
 	}
 	else
 	{

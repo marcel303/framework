@@ -417,14 +417,14 @@ void FootBall::tick(GameSim & gameSim, float dt)
 	}
 }
 
-void FootBall::draw() const
+void FootBall::draw(const GameSim & gameSim) const
 {
 	for (int ox = -1; ox <= +1; ++ox)
 	{
 		for (int oy = -1; oy <= +1; ++oy)
 		{
 			gxPushMatrix();
-			gxTranslatef(ox * ARENA_SX_PIXELS, oy * ARENA_SY_PIXELS, 0.f);
+			gxTranslatef(ox * gameSim.m_arena.m_sxPixels, oy * gameSim.m_arena.m_syPixels, 0.f);
 
 			if (m_isDropped)
 			{
@@ -446,14 +446,14 @@ void FootBall::draw() const
 	}
 }
 
-void FootBall::drawLight() const
+void FootBall::drawLight(const GameSim & gameSim) const
 {
 	for (int ox = -1; ox <= +1; ++ox)
 	{
 		for (int oy = -1; oy <= +1; ++oy)
 		{
 			gxPushMatrix();
-			gxTranslatef(ox * ARENA_SX_PIXELS, oy * ARENA_SY_PIXELS, 0.f);
+			gxTranslatef(ox * gameSim.m_arena.m_sxPixels, oy * gameSim.m_arena.m_syPixels, 0.f);
 
 			if (m_isDropped)
 			{
@@ -1454,16 +1454,16 @@ void Decal::tick(GameSim & gameSim, float dt)
 {
 }
 
-void Decal::draw() const
+void Decal::draw(const GameSim & gameSim) const
 {
 	if (DECAL_ENABLED)
 	{
 		// note: should draw at all combinations of +1/-1, but drawing it four times will do 99% of the time
 		drawAt(x, y);
-		drawAt(x - ARENA_SX_PIXELS, y);
-		drawAt(x + ARENA_SX_PIXELS, y);
-		drawAt(x, y - ARENA_SY_PIXELS);
-		drawAt(x, y + ARENA_SY_PIXELS);
+		drawAt(x - gameSim.m_arena.m_sxPixels, y);
+		drawAt(x + gameSim.m_arena.m_sxPixels, y);
+		drawAt(x, y - gameSim.m_arena.m_syPixels);
+		drawAt(x, y + gameSim.m_arena.m_syPixels);
 	}
 }
 
@@ -1645,7 +1645,7 @@ void FloorEffect::draw()
 
 void FloorEffect::trySpawnAt(GameSim & gameSim, int playerId, int x, int y, int dx, int size, int damageSize)
 {
-	x = (x + ARENA_SX_PIXELS) % ARENA_SX_PIXELS;
+	x = (x + gameSim.m_arena.m_sxPixels) % gameSim.m_arena.m_sxPixels;
 
 	const Arena & arena = gameSim.m_arena;
 
@@ -2181,6 +2181,10 @@ void GameSim::load(const char * name)
 
 	m_arena.load(name);
 
+	// set camera
+
+	m_effectiveZoomFocus.Set(m_arena.m_sxPixels/2.f, m_arena.m_syPixels/2.f);
+
 	// load background
 
 	if (m_gameState == kGameState_OnlineMenus)
@@ -2277,7 +2281,7 @@ void GameSim::load(const char * name)
 						d.getInt("y1", 0),
 						d.getInt("x2", 0),
 						d.getInt("y2", 0));
-					tileSprite->m_transition.parse(d);
+					tileSprite->m_transition.parse(d, m_arena.m_sxPixels, m_arena.m_syPixels);
 				}
 			}
 			else if (type == "tiletransition")
@@ -2291,7 +2295,9 @@ void GameSim::load(const char * name)
 						d.getInt("y1", 0) / BLOCK_SY,
 						d.getInt("x2", 0) / BLOCK_SX,
 						d.getInt("y2", 0) / BLOCK_SY,
-						d);
+						d,
+						m_arena.m_sxPixels,
+						m_arena.m_syPixels);
 				}
 				else
 				{
@@ -2447,7 +2453,7 @@ void GameSim::resetGameWorld()
 	m_desiredZoomFocus.SetZero();
 	m_desiredZoomFocusIsSet = false;
 	m_effectiveZoom = 1.f;
-	m_effectiveZoomFocus.Set(ARENA_SX_PIXELS/2.f, ARENA_SY_PIXELS/2.f);
+	m_effectiveZoomFocus.Set(0.f, 0.f);
 
 	resetObjects(m_lightEffects, MAX_LIGHT_EFFECTS);
 	resetObjects(m_fireballs, MAX_FIREBALLS);
@@ -3334,8 +3340,8 @@ void GameSim::drawPlay()
 	camParams.zoomFocus = m_effectiveZoomFocus;
 
 #if 0 // map scaling test
-	const float asx = ARENA_SX_PIXELS;
-	const float asy = ARENA_SY_PIXELS;
+	const float asx = m_arena.m_sxPixels;
+	const float asy = m_arena.m_syPixels;
 	const float asx2 = asx / 2.f;
 	const float asy2 = asy / 2.f;
 	const float dx = m_players[0].m_pos[0] - asx2;
@@ -3344,9 +3350,9 @@ void GameSim::drawPlay()
 	const float t = d / sqrt(asx2 * asx2 + asy2 * asy2);
 	const float scale = 1.f * t + 1.2f * (1.f - t);
 	
-	gxTranslatef(+ARENA_SX_PIXELS/2.f, +ARENA_SY_PIXELS/2.f, 0.f);
+	gxTranslatef(+m_arena.m_sxPixels/2.f, +m_arena.m_syPixels/2.f, 0.f);
 	gxScalef(scale, scale, 1.f);
-	gxTranslatef(-ARENA_SX_PIXELS/2.f, -ARENA_SY_PIXELS/2.f, 0.f);
+	gxTranslatef(-m_arena.m_sxPixels/2.f, -m_arena.m_syPixels/2.f, 0.f);
 #endif
 
 	pushSurface(g_colorMap);
@@ -3510,7 +3516,7 @@ void GameSim::drawPlayColor(const CamParams & camParams)
 	drawObjects(m_movers, MAX_MOVERS);
 	drawObjects(m_axes, MAX_AXES);
 	drawObjects(m_pipebombs, MAX_PIPEBOMBS);
-	drawObjects(m_footBalls, MAX_FOOTBALLS);
+	drawObjects(*this, m_footBalls, MAX_FOOTBALLS);
 	drawObjects(m_footBallGoals, MAX_FOOTBALL_GOALS);
 
 	// players
@@ -3585,7 +3591,7 @@ void GameSim::drawPlayDecal(const CamParams & camParams)
 	for (int i = 0; i < MAX_DECALS; ++i)
 	{
 		if (m_decals[i].m_isActive)
-			m_decals[i].draw();
+			m_decals[i].draw(*this);
 	}
 
 	gxPopMatrix();
@@ -3619,7 +3625,7 @@ void GameSim::drawPlayLight(const CamParams & camParams)
 	drawLightObjects(m_coinCollector.m_coins, MAX_COINS);
 	drawLightObjects(m_axes, MAX_AXES);
 	drawLightObjects(m_pipebombs, MAX_PIPEBOMBS);
-	drawLightObjects(m_footBalls, MAX_FOOTBALLS);
+	drawLightObjects(*this, m_footBalls, MAX_FOOTBALLS);
 	drawLightObjects(m_footBallGoals, MAX_FOOTBALL_GOALS);
 
 	// bullets
@@ -3797,7 +3803,7 @@ void GameSim::testCollision(const CollisionShape & shape, void * arg, CollisionC
 			{
 				CollisionShape translatedShape = shape;
 
-				translatedShape.translate(dx * ARENA_SX_PIXELS, dy * ARENA_SY_PIXELS);
+				translatedShape.translate(dx * m_arena.m_sxPixels, dy * m_arena.m_syPixels);
 
 				testCollisionInternal(translatedShape, -1, arg, cb);
 			}
@@ -3881,7 +3887,7 @@ void GameSim::trySpawnPickup(PickupType type)
 	Pickup * pickup = allocPickup();
 	if (pickup)
 	{
-		const int kMaxLocations = ARENA_SX * ARENA_SY;
+		const int kMaxLocations = MAX_ARENA_SX * MAX_ARENA_SY;
 		int numLocations = kMaxLocations;
 		int x[kMaxLocations];
 		int y[kMaxLocations];
@@ -3963,7 +3969,7 @@ void GameSim::spawnToken()
 {
 	Token & token = m_tokenHunt.m_token;
 
-	const int kMaxLocations = ARENA_SX * ARENA_SY;
+	const int kMaxLocations = MAX_ARENA_SX * MAX_ARENA_SY;
 	int numLocations = kMaxLocations;
 	int x[kMaxLocations];
 	int y[kMaxLocations];
@@ -4020,7 +4026,7 @@ void GameSim::spawnCoin()
 
 	if (coin)
 	{
-		const int kMaxLocations = ARENA_SX * ARENA_SY;
+		const int kMaxLocations = MAX_ARENA_SX * MAX_ARENA_SY;
 		int numLocations = kMaxLocations;
 		int x[kMaxLocations];
 		int y[kMaxLocations];
@@ -4367,7 +4373,7 @@ void GameSim::addDecal(int x, int y, const Color & color, int sprite, float scal
 			{
 				pushSurface(g_decalMap);
 				{
-					decal.draw();
+					decal.draw(*this);
 				}
 				popSurface();
 			}
@@ -4498,7 +4504,7 @@ float GameSim::calculateEffectiveZoom() const
 			}
 
 
-			const Vec2 delta = m_players[i].m_pos - Vec2(ARENA_SX_PIXELS/2.f, ARENA_SY_PIXELS/2.f);
+			const Vec2 delta = m_players[i].m_pos - Vec2(m_arena.m_sxPixels/2.f, m_arena.m_syPixels/2.f);
 			maxDistanceFromCenter = Calc::Max(maxDistanceFromCenter, delta.CalcSize());
 		}
 	}
@@ -4552,7 +4558,7 @@ Vec2 GameSim::calculateEffectiveZoomFocus() const
 		Vec2 result;
 
 		if (numPlayers == 0)
-			result = Vec2(ARENA_SX_PIXELS / 2.f, ARENA_SY_PIXELS / 2.f);
+			result = Vec2(m_arena.m_sxPixels / 2.f, m_arena.m_syPixels / 2.f);
 		else
 			result = mid / numPlayers;
 
