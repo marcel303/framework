@@ -3,11 +3,13 @@
 #include "hud.h"
 
 OPTION_DECLARE(int, PLAYER_STATUS_TEST_INDEX, -1);
+OPTION_DECLARE(int, PLAYER_STATUS_CHARACTER_TEST_INDEX, -1);
 OPTION_DECLARE(int, PLAYER_STATUS_OFFSET_X_L, 125);
 OPTION_DECLARE(int, PLAYER_STATUS_OFFSET_X_R, 230);
 OPTION_DECLARE(int, PLAYER_STATUS_OFFSET_Y_T, 160);
 OPTION_DECLARE(int, PLAYER_STATUS_OFFSET_Y_B, 75);
 OPTION_DEFINE(int, PLAYER_STATUS_TEST_INDEX, "UI/Player Status HUD/Player Test Index");
+OPTION_DEFINE(int, PLAYER_STATUS_CHARACTER_TEST_INDEX, "UI/Player Status HUD/Character Test Index");
 OPTION_DEFINE(int, PLAYER_STATUS_OFFSET_X_L, "UI/Player Status HUD/Offset X L");
 OPTION_DEFINE(int, PLAYER_STATUS_OFFSET_X_R, "UI/Player Status HUD/Offset X R");
 OPTION_DEFINE(int, PLAYER_STATUS_OFFSET_Y_T, "UI/Player Status HUD/Offset Y T");
@@ -44,21 +46,24 @@ static const char * getPlayerStatusHudSpriterName(const GameSim & gameSim, int p
 	if (PLAYER_STATUS_TEST_INDEX >= 0 && PLAYER_STATUS_TEST_INDEX < MAX_PLAYERS)
 		playerIndex = PLAYER_STATUS_TEST_INDEX;
 
-	const int characterIndex = gameSim.m_players[playerIndex].m_characterIndex;
+	const int characterIndex =
+		PLAYER_STATUS_CHARACTER_TEST_INDEX != -1
+		? PLAYER_STATUS_CHARACTER_TEST_INDEX
+		: gameSim.m_players[playerIndex].m_characterIndex;
 
 	fassert(characterIndex >= 0 && characterIndex < MAX_CHARACTERS);
 	if (characterIndex >= 0 && characterIndex < MAX_CHARACTERS)
 	{
 		const char * filenames[MAX_CHARACTERS] =
 		{
-			"ui/ingame-portraits/TyllyUI/Sprite.scml",
-			"ui/ingame-portraits/TyllyUI/Sprite.scml",
-			"ui/ingame-portraits/TyllyUI/Sprite.scml",
-			"ui/ingame-portraits/TyllyUI/Sprite.scml",
-			"ui/ingame-portraits/TyllyUI/Sprite.scml",
-			"ui/ingame-portraits/TyllyUI/Sprite.scml",
-			"ui/ingame-portraits/TyllyUI/Sprite.scml",
-			"ui/ingame-portraits/TyllyUI/Sprite.scml"
+			"char0/ui/portrait/Sprite.scml",
+			"char1/ui/portrait/Sprite.scml",
+			"char2/ui/portrait/Sprite.scml",
+			"char3/ui/portrait/Sprite.scml",
+			"char4/ui/portrait/Sprite.scml",
+			"char5/ui/portrait/Sprite.scml",
+			"char6/ui/portrait/Sprite.scml",
+			"char7/ui/portrait/Sprite.scml",
 		};
 
 		return filenames[characterIndex];
