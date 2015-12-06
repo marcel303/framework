@@ -277,9 +277,10 @@ void Arena::load(const char * name)
 	{
 		FileStream stream;
 		stream.Open(mecFilename.c_str(), (OpenMode)(OpenMode_Read | OpenMode_Text));
-		MemoryStream memStream;
-		StreamExtensions::StreamTo(&stream, &memStream, 1024*1024);
-		StreamReader reader(&memStream, false);
+		//MemoryStream memStream;
+		//StreamExtensions::StreamTo(&stream, &memStream, 1024*1024);
+		//StreamReader reader(&memStream, false);
+		StreamReader reader(&stream, false);
 		std::vector<std::string> lines = reader.ReadAllLines();
 
 		const int sy = (int)lines.size() <= m_syBlocks ? (int)lines.size() : m_syBlocks;
@@ -371,9 +372,10 @@ void Arena::load(const char * name)
 	{
 		FileStream stream;
 		stream.Open(colFilename.c_str(), (OpenMode)(OpenMode_Read | OpenMode_Text));
-		MemoryStream memStream;
-		StreamExtensions::StreamTo(&stream, &memStream, 1024*1024);
-		StreamReader reader(&memStream, false);
+		//MemoryStream memStream;
+		//StreamExtensions::StreamTo(&stream, &memStream, 1024*1024);
+		//StreamReader reader(&memStream, false);
+		StreamReader reader(&stream, false);
 		std::vector<std::string> lines = reader.ReadAllLines();
 
 		const int sy = (int)lines.size() <= m_syBlocks ? (int)lines.size() : m_syBlocks;
@@ -449,9 +451,10 @@ void Arena::load(const char * name)
 	{
 		FileStream stream;
 		stream.Open(metFilename.c_str(), (OpenMode)(OpenMode_Read | OpenMode_Text));
-		MemoryStream memStream;
-		StreamExtensions::StreamTo(&stream, &memStream, 1024*1024);
-		StreamReader reader(&memStream, false);
+		//MemoryStream memStream;
+		//StreamExtensions::StreamTo(&stream, &memStream, 1024*1024);
+		//StreamReader reader(&memStream, false);
+		StreamReader reader(&stream, false);
 		std::vector<std::string> lines = reader.ReadAllLines();
 
 		for (auto & line : lines)
