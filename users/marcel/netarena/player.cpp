@@ -40,6 +40,9 @@
 - level editor: add setting for ambient lighting
 - level editor: add checkboxes for allowed (or disabled?) level events
 - level editor: add text box for map name
+- level editor: add goal spawn placement
+- level editor: add goal placement
+- level editor: add setting for level size
 
 - pickup that temporarily allows player to move through destructibles transparently
 - add ropes you can grab and hold on to?
