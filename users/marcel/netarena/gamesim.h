@@ -619,6 +619,16 @@ struct Player
 		bool m_hasToken;
 	} m_tokenHunt;
 
+	struct FootBrawl
+	{
+		FootBrawl()
+		{
+			memset(this, 0, sizeof(FootBrawl));
+		}
+
+		bool m_hasBall;
+	} m_footBrawl;
+
 	// HUD
 
 	PlayerStatusHud m_statusHud;
@@ -1343,14 +1353,16 @@ public:
 	void spawnPickup(Pickup & pickup, PickupType type, int blockX, int blockY);
 	bool grabPickup(int x1, int y1, int x2, int y2, Pickup & pickup);
 
-	void spawnFootball();
-
 	void spawnToken();
 	bool pickupToken(const CollisionInfo & collisionInfo);
 
 	Coin * allocCoin();
 	void spawnCoin();
 	bool pickupCoin(const CollisionInfo & collisionInfo);
+
+	FootBall * allocFootBall();
+	void spawnFootBall();
+	bool grabFootBall(const CollisionInfo & collisionInfo, FootBall & footBall);
 
 	uint16_t spawnBullet(int16_t x, int16_t y, uint8_t angle, BulletType type, BulletEffect effect, uint8_t ownerPlayerId);
 	void spawnParticles(const ParticleSpawnInfo & spawnInfo);

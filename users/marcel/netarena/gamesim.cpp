@@ -2072,7 +2072,7 @@ void GameSim::setGameState(::GameState gameState)
 
 			if (m_gameMode == kGameMode_FootBrawl)
 			{
-				spawnFootball();
+				spawnFootBall();
 			}
 
 			if (m_gameMode == kGameMode_TokenHunt)
@@ -3877,6 +3877,8 @@ void GameSim::testCollisionInternal(const CollisionShape & shape, uint32_t typeM
 	}
 }
 
+//
+
 Pickup * GameSim::allocPickup()
 {
 	return allocObject(m_pickups, MAX_PICKUPS);
@@ -3953,17 +3955,7 @@ bool GameSim::grabPickup(int x1, int y1, int x2, int y2, Pickup & grabbedPickup)
 	return false;
 }
 
-void GameSim::spawnFootball()
-{
-	FootBall * footBall = allocObject(m_footBalls, MAX_FOOTBALLS);
-	
-	if (footBall)
-	{
-		footBall->setup(
-			m_footBrawl.ballSpawnPoint[0],
-			m_footBrawl.ballSpawnPoint[1]);
-	}
-}
+//
 
 void GameSim::spawnToken()
 {
@@ -4057,6 +4049,53 @@ bool GameSim::pickupCoin(const CollisionInfo & collisionInfo)
 			{
 				coin = Coin();
 				g_gameSim->playSound("coin-pickup.ogg"); // sound that plays when a coin is picked up by a player
+
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+//
+
+FootBall * GameSim::allocFootBall()
+{
+	return allocObject(m_footBalls, MAX_FOOTBALLS);
+}
+
+void GameSim::spawnFootBall()
+{
+	FootBall * footBall = allocFootBall();
+	
+	if (footBall)
+	{
+		footBall->setup(
+			m_footBrawl.ballSpawnPoint[0],
+			m_footBrawl.ballSpawnPoint[1]);
+	}
+}
+
+bool GameSim::grabFootBall(const CollisionInfo & collisionInfo, FootBall & grabbedFootBall)
+{
+	const CollisionShape collisionShape(collisionInfo);
+
+	for (int i = 0; i < MAX_FOOTBALLS; ++i)
+	{
+		FootBall & footBall = m_footBalls[i];
+
+		if (footBall.m_isActive)
+		{
+			CollisionShape ballCollision(footBall.m_collisionShape, footBall.m_pos);
+
+			if (collisionShape.intersects(ballCollision))
+			{
+				grabbedFootBall = footBall;
+
+				footBall = FootBall();
+
+				playSound("gun-pickup.ogg"); // sound that plays when a player picks up a football. todo : different sounds per type
 
 				return true;
 			}

@@ -2871,6 +2871,35 @@ void Player::tick(GameSim & gameSim, float dt)
 			}
 		}
 	}
+
+	// footbrawl game mode
+
+	if ((gameSim.m_gameMode == kGameMode_FootBrawl) && (gameSim.m_gameState == kGameState_Play))
+	{
+		if (m_isAlive)
+		{
+			CollisionInfo playerCollision;
+			if (getPlayerCollision(playerCollision))
+			{
+				CollisionInfo playerCollision;
+				FootBall ball;
+				if (getPlayerCollision(playerCollision) && gameSim.grabFootBall(playerCollision, ball))
+				{
+					m_footBrawl.m_hasBall = true;
+				}
+			}
+
+			if (m_footBrawl.m_hasBall && (gameSim.GetTick() % 4) == 0)
+			{
+				ParticleSpawnInfo spawnInfo(
+					m_pos[0], m_pos[1],
+					kBulletType_ParticleA, 2,
+					50.f, 100.f, 50.f);
+				spawnInfo.color = 0xffffff80;
+				gameSim.spawnParticles(spawnInfo);
+			}
+		}
+	}
 }
 
 void Player::draw() const
@@ -3162,6 +3191,21 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y, const SpriterState & s
 		setColor(colorWhite);
 	}
 
+	// enable effect when player has the ball
+
+	if (GAMESIM->m_gameMode == kGameMode_FootBrawl)
+	{
+		setColorMode(COLOR_ADD);
+		if (m_footBrawl.m_hasBall)
+			setColorf(1.f, 1.f, 1.f, 1.f, (std::sin(g_TimerRT.Time_get() * 10.f) * .7f + 1.f) / 4.f);
+		else
+			setColorf(0.f, 0.f, 0.f);
+	}
+	else
+	{
+		setColor(colorWhite);
+	}
+
 	// enable ice effect
 
 	if (m_ice.timer > 0.f)
@@ -3229,14 +3273,6 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y, const SpriterState & s
 	}
 
 	//
-
-	/*
-	if (GAMESIM->m_gameMode == kGameMode_TokenHunt && m_tokenHunt.m_hasToken)
-	{
-		setColorf(1.f, 1.f, 1.f, (std::sin(g_TimerRT.Time_get() * 10.f) * .7f + 1.f) / 2.f);
-		drawRect(x - 50, y - 110, x + 50, y - 85);
-	}
-	*/
 
 	if (!RECORDMODE)
 	{
@@ -3528,6 +3564,7 @@ void Player::handleNewRound()
 	m_bubble = BubbleInfo();
 
 	m_tokenHunt = TokenHunt();
+	m_footBrawl = FootBrawl();
 
 	m_statusHud.handleNewRound();
 }
@@ -3888,6 +3925,8 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 
 			// token hunt
 
+			// fixme : should drop stuff in despawn to ensure stuff is dropped on leave as well
+
 			if (GAMESIM->m_gameMode == kGameMode_TokenHunt)
 			{
 				if (m_tokenHunt.m_hasToken)
@@ -3907,6 +3946,8 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 
 			// coin collector
 
+			// fixme : should drop stuff in despawn to ensure stuff is dropped on leave as well
+
 			if (GAMESIM->m_gameMode == kGameMode_CoinCollector)
 			{
 				if (m_score >= 1)
@@ -3914,6 +3955,29 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 					const int numCoins = std::max(1, m_score * COINCOLLECTOR_COIN_DROP_PERCENTAGE / 100);
 
 					dropCoins(numCoins);
+				}
+			}
+
+			// footbrawl
+
+			// fixme : should drop stuff in despawn to ensure stuff is dropped on leave as well
+
+			if (GAMESIM->m_gameMode == kGameMode_FootBrawl)
+			{
+				if (m_footBrawl.m_hasBall)
+				{
+					m_footBrawl.m_hasBall = false;
+
+					FootBall * footBall = GAMESIM->allocFootBall();
+					if (footBall)
+					{
+						footBall->setup(
+							int(m_pos[0]),
+							int(m_pos[1]));
+						footBall->m_vel.Set(velocity[0] * FOOTBALL_DROP_SPEED_MULTIPLIER, -800.f);
+						footBall->m_isDropped = true;
+						GAMESIM->playSound("football-bounce.ogg"); // sound when the ball is dropped
+					}
 				}
 			}
 
