@@ -10,11 +10,12 @@
 #include <set>
 #include <string>
 #include <vector>
+#include "Debugging.h"
 #include "Mat4x4.h"
 #include "Vec3.h"
 
 #if defined(DEBUG)
-	#define fassert assert
+	#define fassert(x) Assert(x)
 #else
 	#define fassert(x) do { } while (false)
 #endif
@@ -24,7 +25,7 @@
 #if defined(DEBUG)
 	#define ENABLE_LOGGING_DBG 1
 	#define ENABLE_LOGGING 1
-	#define ENABLE_PROFILING 1
+	#define ENABLE_PROFILING 0
 #else
 	#define ENABLE_LOGGING_DBG 0 // do not alter
 	#define ENABLE_LOGGING 0 // do not alter
@@ -114,6 +115,17 @@ enum RESOURCE_CACHE
 	CACHE_TEXTURE = 1 << 5
 };
 
+enum INIT_ERROR
+{
+	INIT_ERROR_SDL,
+	INIT_ERROR_VIDEO_MODE,
+	INIT_ERROR_WINDOW,
+	INIT_ERROR_OPENGL,
+	INIT_ERROR_OPENGL_EXTENSIONS,
+	INIT_ERROR_SOUND,
+	INIT_ERROR_FREETYPE
+};
+
 // forward declations
 
 class Color;
@@ -158,6 +170,7 @@ extern Ui ui;
 
 typedef void (*ActionHandler)(const std::string & action, const Dictionary & args);
 typedef void (*FillCachesCallback)(float filePercentage);
+typedef void (*InitErrorHandler)(INIT_ERROR error);
 
 //
 
@@ -204,6 +217,7 @@ public:
 	bool windowIsActive;
 	ActionHandler actionHandler;
 	FillCachesCallback fillCachesCallback;
+	InitErrorHandler initErrorHandler;
 	
 private:
 	typedef std::set<Model*> ModelSet;
@@ -854,6 +868,7 @@ void gxSetTexture(GLuint texture);
 
 void changeDirectory(const char * path);
 std::vector<std::string> listFiles(const char * path, bool recurse);
+void showErrorMessage(const char * caption, const char * format, ...);
 
 // math
 

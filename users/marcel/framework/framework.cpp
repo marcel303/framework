@@ -100,6 +100,8 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	if (SDL_Init(initFlags) < 0)
 	{
 		logError("failed to initialize SDL: %s", SDL_GetError());
+		if (initErrorHandler)
+			initErrorHandler(INIT_ERROR_SDL);
 		return false;
 	}
 
@@ -194,6 +196,8 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 		if (!foundMode)
 		{
 			logError("unable to find suitable display mode");
+			if (initErrorHandler)
+				initErrorHandler(INIT_ERROR_VIDEO_MODE);
 			return false;
 		}
 	}
@@ -209,6 +213,8 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	if (!globals.window)
 	{
 		logError("failed to set video mode (%dx%d @ %dbpp): %s", sx / minification, sy / minification, 32, SDL_GetError());
+		if (initErrorHandler)
+			initErrorHandler(INIT_ERROR_WINDOW);
 		return false;
 	}
 	
@@ -218,6 +224,8 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	if (!globals.glContext)
 	{
 		logError("failed to create OpenGL context: %s", SDL_GetError());
+		if (initErrorHandler)
+			initErrorHandler(INIT_ERROR_OPENGL);
 		return false;
 	}
 	
@@ -229,6 +237,8 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	if (glewStatus != GLEW_OK)
 	{
 		logError("failed to initialize GLEW: %s", glewGetErrorString(glewStatus));
+		if (initErrorHandler)
+			initErrorHandler(INIT_ERROR_OPENGL_EXTENSIONS);
 		return false;
 	}
 
@@ -237,6 +247,9 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	if (!GLEW_VERSION_3_2)
 	{
 		logWarning("OpenGL 3.2 not supported");
+		if (initErrorHandler)
+			initErrorHandler(INIT_ERROR_OPENGL_EXTENSIONS);
+		return false;
 	}
 	
 #if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
@@ -276,6 +289,8 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	if (FT_Init_FreeType(&globals.freeType) != 0)
 	{
 		logError("failed to initialize FreeType");
+		if (initErrorHandler)
+			initErrorHandler(INIT_ERROR_FREETYPE);
 		return false;
 	}
 	
@@ -284,6 +299,8 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	if (!g_soundPlayer.init(numSoundSources))
 	{
 		logError("failed to initialize sound player");
+		//if (initErrorHandler)
+		//	initErrorHandler(INIT_ERROR_SOUND);
 		//return false;
 	}
 
@@ -718,6 +735,17 @@ std::vector<std::string> listFiles(const char * path, bool recurse)
 	}
 	return result;
 #endif
+}
+
+void showErrorMessage(const char * caption, const char * format, ...)
+{
+	char text[1024];
+	va_list args;
+	va_start(args, format);
+	vsprintf_s(text, sizeof(text), format, args);
+	va_end(args);
+
+	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, caption, text, globals.window);
 }
 
 void Framework::fillCachesWithPath(const char * path, bool recurse)
