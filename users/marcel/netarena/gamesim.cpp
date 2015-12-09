@@ -364,7 +364,7 @@ void FootBall::setup(int x, int y, int lastPlayerIndex)
 	m_isDropped = true;
 	m_spriterState = SpriterState();
 	m_spriterState.startAnim(FOOTBALL_SPRITER, "idle");
-	m_pickupTimer = lastPlayerIndex < 0 ? 0.f : 1.f; // todo : make this an option
+	m_pickupTimer = lastPlayerIndex < 0 ? 0.f : .2f; // todo : make this an option
 	m_lastPlayerIndex = lastPlayerIndex;
 }
 
@@ -374,12 +374,6 @@ void FootBall::tick(GameSim & gameSim, float dt)
 
 	if (m_isDropped)
 	{
-		if ((gameSim.m_tick % 120) == 0)
-		{
-			m_vel[0] = gameSim.RandomFloat(-500.f, +500.f);
-			m_vel[1] = gameSim.RandomFloat(-1000.f, 0.f);
-		}
-
 		PhysicsActorCBs cbs;
 		cbs.onBlockMask = [](PhysicsActorCBs & cbs, PhysicsActor & actor, uint32_t blockMask) 
 		{
@@ -422,6 +416,7 @@ void FootBall::tick(GameSim & gameSim, float dt)
 			if (goal.m_isActive && goal.intersects(m_pos))
 			{
 				goal.handleGoal();
+				gameSim.playSound("objects/football_goal/score.ogg");
 
 				gameSim.m_footBrawl.handleGoal(gameSim, 1 - goal.m_team);
 
@@ -538,6 +533,7 @@ bool FootBallGoal::intersects(Vec2Arg pos) const
 void FootBallGoal::handleGoal()
 {
 	m_spriterState.startAnim(FOOTBALL_GOAL_SPRITER, "goal");
+
 }
 
 //
