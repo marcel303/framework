@@ -1,5 +1,6 @@
 #include "Debugging.h"
 #include "gamedefs.h"
+#include "libnet_config.h"
 #include "Log.h"
 #include "online.h"
 
@@ -347,7 +348,7 @@ void OnlineSteam::debugDraw()
 	int x = 50;
 	int y = 200;
 
-	setFont("calibri.ttf");
+	setDebugFont();
 
 	const int numFriends = SteamFriends()->GetFriendCount(k_EFriendFlagImmediate);
 	drawText(x, y += spacing, fontSize, +1.f, +1.f, "steam.friends.numFriends=%d", numFriends);
@@ -559,6 +560,8 @@ NetSocketSteam::~NetSocketSteam()
 
 bool NetSocketSteam::Send(const void * data, uint32_t size, NetAddress * address)
 {
+	Assert(size <= LIBNET_SOCKET_MTU_SIZE);
+
 	const CSteamID remoteId(uint64_t(address->m_userData));
 
 	return SteamNetworking()->SendP2PPacket(remoteId, data, size, k_EP2PSendReliable);

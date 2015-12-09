@@ -138,6 +138,12 @@ void GameStateData::FootBrawl::handleGoal(GameSim & gameSim, int team)
 	fassert(team >= 0 && team <= 1);
 
 	teamScore[team]++;
+
+	gameSim.addAnnouncement(colorBlack, "team %d has scored!", team + 1);
+	gameSim.addAnnouncement(colorBlue, "%d : %d", teamScore[0], teamScore[1]);
+
+	// todo : do animations and stuff and afterwards spawn a new ball
+	gameSim.spawnFootBall();
 }
 
 int GameStateData::FootBrawl::getWinningTeam() const
@@ -337,7 +343,7 @@ void Token::drawLight() const
 
 //
 
-void FootBall::setup(int x, int y)
+void FootBall::setup(int x, int y, int lastPlayerIndex)
 {
 	const int kRadius = 50;
 
@@ -358,10 +364,14 @@ void FootBall::setup(int x, int y)
 	m_isDropped = true;
 	m_spriterState = SpriterState();
 	m_spriterState.startAnim(FOOTBALL_SPRITER, "idle");
+	m_pickupTimer = lastPlayerIndex < 0 ? 0.f : 1.f; // todo : make this an option
+	m_lastPlayerIndex = lastPlayerIndex;
 }
 
 void FootBall::tick(GameSim & gameSim, float dt)
 {
+	m_pickupTimer = Calc::Max(0.f, m_pickupTimer - dt);
+
 	if (m_isDropped)
 	{
 		if ((gameSim.m_tick % 120) == 0)
@@ -403,6 +413,8 @@ void FootBall::tick(GameSim & gameSim, float dt)
 
 		// check if we've hit a goal
 
+		bool hasScored = false;
+
 		for (int i = 0; i < MAX_FOOTBALL_GOALS; ++i)
 		{
 			auto & goal = gameSim.m_footBallGoals[i];
@@ -412,6 +424,9 @@ void FootBall::tick(GameSim & gameSim, float dt)
 				goal.handleGoal();
 
 				gameSim.m_footBrawl.handleGoal(gameSim, 1 - goal.m_team);
+
+				*this = FootBall();
+				return;
 			}
 		}
 	}
@@ -499,6 +514,12 @@ void FootBallGoal::draw() const
 {
 	setColor(colorWhite);
 	FOOTBALL_GOAL_SPRITER.draw(m_spriterState);
+
+	if (g_devMode)
+	{
+		setColor(colorGreen);
+		drawRectLine(m_x1, m_y1, m_x2, m_y2);
+	}
 }
 
 void FootBallGoal::drawLight() const
@@ -4073,11 +4094,12 @@ void GameSim::spawnFootBall()
 	{
 		footBall->setup(
 			m_footBrawl.ballSpawnPoint[0],
-			m_footBrawl.ballSpawnPoint[1]);
+			m_footBrawl.ballSpawnPoint[1],
+			-1);
 	}
 }
 
-bool GameSim::grabFootBall(const CollisionInfo & collisionInfo, FootBall & grabbedFootBall)
+bool GameSim::grabFootBall(const CollisionInfo & collisionInfo, int playerIndex, FootBall & grabbedFootBall)
 {
 	const CollisionShape collisionShape(collisionInfo);
 
@@ -4087,6 +4109,9 @@ bool GameSim::grabFootBall(const CollisionInfo & collisionInfo, FootBall & grabb
 
 		if (footBall.m_isActive)
 		{
+			if (footBall.m_lastPlayerIndex == playerIndex && footBall.m_pickupTimer != 0.f)
+				continue;
+
 			CollisionShape ballCollision(footBall.m_collisionShape, footBall.m_pos);
 
 			if (collisionShape.intersects(ballCollision))

@@ -42,7 +42,7 @@
 
 //
 
-#if PUBLIC_DEMO_BUILD && !defined(DEBUG)
+#if (DEPLOY_BUILD || PUBLIC_DEMO_BUILD) && !defined(DEBUG)
 	#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 #endif
 
@@ -228,6 +228,38 @@ static void HandleFillCachesCallback(float filePercentage)
 		drawText(GFX_SX/2, GFX_SY/2, 24, 0.f, 0.f, "Loading %0.2f%%", filePercentage * 100.f);
 	}
 	framework.endDraw();
+}
+
+static void HandleInitError(INIT_ERROR error)
+{
+	switch (error)
+	{
+	case INIT_ERROR_SDL:
+		showErrorMessage("Startup Error", "Failed to initialize SDL. Error: %08x", (int)error);
+		break;
+	case INIT_ERROR_VIDEO_MODE:
+		showErrorMessage("Startup Error", "Failed to find a suitable video mode. Error: %08x", (int)error);
+		break;
+	case INIT_ERROR_WINDOW:
+		showErrorMessage("Startup Error", "Failed to create the window. Error: %08x", (int)error);
+		break;
+	case INIT_ERROR_OPENGL:
+		showErrorMessage("Startup Error", "Failed to initialize OpenGL. Error: %08x", (int)error);
+		break;
+	case INIT_ERROR_OPENGL_EXTENSIONS:
+		showErrorMessage("Startup Error", "Failed to initialize OpenGL extensions. Error: %08x", (int)error);
+		break;
+	case INIT_ERROR_SOUND:
+		showErrorMessage("Startup Error", "Failed to initialize sound. Error: %08x", (int)error);
+		break;
+	case INIT_ERROR_FREETYPE:
+		showErrorMessage("Startup Error", "Failed to initialize FreeType font library. Error: %08x", (int)error);
+		break;
+
+	default:
+		showErrorMessage("Startup Error", "Failed to initialize the system. Error: %08x", (int)error);
+		break;
+	}
 }
 
 //
@@ -1184,6 +1216,8 @@ bool App::init()
 {
 	Calc::Initialize();
 
+	// todo : add ability to compare loaded options vs default and error on difference
+
 	g_optionManager.Load("options.txt");
 	g_optionManager.Load("gameoptions.txt");
 
@@ -1191,6 +1225,7 @@ bool App::init()
 	DEMOMODE = true;
 #endif
 
+#if ENABLE_DEVMODE
 	if (g_devMode)
 	{
 		LIBNET_CHANNEL_ENABLE_TIMEOUTS = false;
@@ -1202,6 +1237,7 @@ bool App::init()
 		GAMESTATE_ROUNDCOMPLETE_SHOWRESULTS_TIME = 1.f / 60.f;
 		GAMESTATE_ROUNDCOMPLETE_TRANSITION_TIME = 1.f / 60.f;
 	}
+#endif
 
 	if (DEMOMODE)
 	{
@@ -1226,12 +1262,14 @@ bool App::init()
 		MAX_CONSECUTIVE_ROUND_COUNT = 2;
 	}
 
+#if ENABLE_DEVMODE
 	if (RECORDMODE)
 	{
 		UI_DEBUG_VISIBLE = false;
 		LIBNET_CHANNEL_ENABLE_TIMEOUTS = false;
 		VOLCANO_LOOP = true;
 	}
+#endif
 
 	g_mapList = parseMapList(s_mapList);
 	g_mapRotationList = parseMapList(s_mapRotationList);
@@ -1256,13 +1294,16 @@ bool App::init()
 		);
 	}
 
+#if ENABLE_DEVMODE
 	if (g_devMode)
 	{
 		framework.minification = 2;
 		framework.fullscreen = false;
 		//framework.reloadCachesOnActivate = true;
 	}
-	else if (g_windowed)
+	else
+#endif
+	if (g_windowed)
 	{
 		framework.minification = 2;
 		framework.fullscreen = false;
@@ -1281,8 +1322,13 @@ bool App::init()
 	framework.windowIcon = "icon.png";
 	framework.actionHandler = HandleAction;
 	framework.fillCachesCallback = HandleFillCachesCallback;
+	framework.initErrorHandler = HandleInitError;
 
-	if (framework.init(0, 0, GFX_SX, GFX_SY))
+	if (!framework.init(0, 0, GFX_SX, GFX_SY))
+	{
+		return false;
+	}
+	else
 	{
 		if (USE_STEAMAPI)
 		{
@@ -1294,7 +1340,10 @@ bool App::init()
 			}
 
 			if (!SteamAPI_Init())
+			{
+				showErrorMessage("Startup Error", "Failed to initialize the Steam API. Is Steam running?");
 				return false;
+			}
 
 			m_steamPersonaStateChangeCallback.Register(this, &App::OnSteamPersonaStateChange);
 			m_steamAvatarImageLoadedCallback.Register(this, &App::OnSteamAvatarImageLoaded);
@@ -1321,13 +1370,6 @@ bool App::init()
 		//Spriter("char0/sprite/sprite.scml").getSpriterScene()->saveBinary("test.sbin");
 		//spriter::Scene scene;
 		//scene.loadBinary("test.sbin");
-
-		// make sure WinSock is initialised
-
-		if (!USE_STEAMAPI)
-		{
-			NetSocketUDP netSocket; // this will init WSA, since it's the first socket we create..
-		}
 
 		// input the user's display name
 
@@ -1461,8 +1503,6 @@ bool App::init()
 
 		return true;
 	}
-
-	return false;
 }
 
 void App::shutdown()

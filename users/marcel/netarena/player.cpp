@@ -662,6 +662,7 @@ bool Player::getPlayerControl() const
 		m_special.meleeCounter == 0 &&
 		m_attack.m_rocketPunch.isActive == false &&
 		m_attack.m_axeThrow.isActive == false &&
+		m_attack.m_footBall.isActive == false &&
 		GAMESIM->m_gameState != kGameState_RoundBegin &&
 		(GAMESIM->m_gameState != kGameState_RoundComplete || GAMESIM->m_roundEnd.m_state == GameSim::RoundEnd::kState_ShowWinner);
 }
@@ -1394,6 +1395,14 @@ void Player::tick(GameSim & gameSim, float dt)
 			{
 				m_attack.m_zweihander.tick(*this, dt);
 			}
+
+
+			// update football throw attack
+
+			if (m_attack.m_footBall.isActive)
+			{
+				tickFootBall(dt);
+			}
 		}
 
 		// attack cooldown
@@ -1405,7 +1414,7 @@ void Player::tick(GameSim & gameSim, float dt)
 
 		if (playerControl && !m_attack.attacking && m_attack.cooldown <= 0.f/* && (gameSim.m_gameMode != kGameMode_Lobby)*/)
 		{
-			if (m_input.wentDown(INPUT_BUTTON_B) && (m_weaponStackSize > 0 || s_unlimitedAmmo) && isAnimOverrideAllowed(kPlayerAnim_Fire))
+			if (m_input.wentDown(INPUT_BUTTON_B) && (m_weaponStackSize > 0 || s_unlimitedAmmo || m_footBrawl.m_hasBall) && isAnimOverrideAllowed(kPlayerAnim_Fire))
 			{
 				m_attack = AttackInfo();
 
@@ -1420,104 +1429,111 @@ void Player::tick(GameSim & gameSim, float dt)
 				bool randomBulletAngle = false;
 				bool addScreenShake = false;
 
-				PlayerWeapon weaponType = popWeapon();
-
-				if (weaponType == kPlayerWeapon_Gun)
+				if (m_footBrawl.m_hasBall)
 				{
-					anim = kPlayerAnim_Fire;
-					bulletType = kBulletType_Gun;
-					m_attack.cooldown = PLAYER_WEAPON_GUN_COOLDOWN;
-					
-					addKnockBack(PLAYER_WEAPON_GUN_KNOCKBACK);
-					gameSim.playSound("gun-fire.ogg");
-					addScreenShake = true;
-				}
-				else if (weaponType == kPlayerWeapon_Ice)
-				{
-					anim = kPlayerAnim_Fire;
-					bulletType = kBulletType_Ice;
-					bulletEffect = kBulletEffect_Ice;
-					m_attack.cooldown = PLAYER_WEAPON_ICE_COOLDOWN;
-
-					addKnockBack(PLAYER_WEAPON_ICE_KNOCKBACK);
-					gameSim.playSound("gun-fire-ice.ogg");
-					addScreenShake = true;
-				}
-				else if (weaponType == kPlayerWeapon_Bubble)
-				{
-					anim = kPlayerAnim_Fire;
-					m_attack.cooldown = PLAYER_WEAPON_BUBBLE_COOLDOWN;
-
-					const Vec2 playerSpeed = m_lastTotalVel;
-
-					for (int i = 0; i < BULLET_BUBBLE_COUNT; ++i)
-					{
-						const float angle = gameSim.Random() % 256;
-
-						const uint16_t bulletId = gameSim.spawnBullet(
-							x,
-							y,
-							angle,
-							kBulletType_Bubble,
-							kBulletEffect_Bubble,
-							m_index);
-
-						if (bulletId != INVALID_BULLET_ID)
-						{
-							Bullet & b = gameSim.m_bulletPool->m_bullets[bulletId];
-
-							const Vec2 dir = (-m_lastTotalVel * BULLET_BUBBLE_PLAYERSPEED_MULTIPLIER + b.m_vel).CalcNormalized();
-							const float vel = gameSim.RandomFloat(BULLET_BUBBLE_SPEED_MIN, BULLET_BUBBLE_SPEED_MAX);
-
-							b.m_vel = dir * vel;
-							b.m_pos += b.m_vel.CalcNormalized() * BULLET_BUBBLE_SPAWN_DISTANCE;
-						}
-					}
-
-					gameSim.addAnimationFx(
-						kDrawLayer_Game,
-						"fx/Attack_FireBullet.scml",
-						x,
-						y,
-						m_facing[0] < 0,
-						m_facing[1] < 0);
-
-					gameSim.playSound("gun-fire-bubble.ogg");
-					gameSim.addScreenShake_GunFire(m_facing);
-				}
-				else if (weaponType == kPlayerWeapon_Grenade)
-				{
-					anim = kPlayerAnim_Fire;
-					bulletType = kBulletType_Grenade;
-					m_attack.cooldown = PLAYER_WEAPON_GRENADE_COOLDOWN;
-					
-					addKnockBack(PLAYER_WEAPON_GRENADE_KNOCKBACK);
-					gameSim.playSound("grenade-throw.ogg"); // player throws a grenade
-					addScreenShake = true;
-				}
-				else if (weaponType == kPlayerWeapon_TimeDilation)
-				{
-					// update allowCancelTimeDilationAttack flag on players
-					bool wasActive = false;
-					for (int i = 0; i < MAX_PLAYERS; ++i)
-						if (gameSim.m_players[i].m_isUsed && gameSim.m_players[i].m_isAlive && gameSim.m_players[i].m_timeDilationAttack.isActive())
-								wasActive = true;
-
-					if (!wasActive)
-					{
-						for (int i = 0; i < MAX_PLAYERS; ++i)
-							if (gameSim.m_players[i].m_isUsed && gameSim.m_players[i].m_isAlive && gameSim.m_players[i].m_attack.attacking)
-								gameSim.m_players[i].m_attack.allowCancelTimeDilationAttack = true;
-					}
-
-					m_timeDilationAttack.timeRemaining = PLAYER_EFFECT_TIMEDILATION_TIME;
-					gameSim.playSound("timedilation-activate.ogg"); // sound that occurs when the player activates the time dilation pickup
-					gameSim.addScreenShake_GunFire(m_facing);
-					gameSim.addAnnouncement(colorBlue, "'%s' activated time dilation!", m_displayName.c_str());
+					beginFootBall();
 				}
 				else
 				{
-					Assert(false);
+					PlayerWeapon weaponType = popWeapon();
+
+					if (weaponType == kPlayerWeapon_Gun)
+					{
+						anim = kPlayerAnim_Fire;
+						bulletType = kBulletType_Gun;
+						m_attack.cooldown = PLAYER_WEAPON_GUN_COOLDOWN;
+					
+						addKnockBack(PLAYER_WEAPON_GUN_KNOCKBACK);
+						gameSim.playSound("gun-fire.ogg");
+						addScreenShake = true;
+					}
+					else if (weaponType == kPlayerWeapon_Ice)
+					{
+						anim = kPlayerAnim_Fire;
+						bulletType = kBulletType_Ice;
+						bulletEffect = kBulletEffect_Ice;
+						m_attack.cooldown = PLAYER_WEAPON_ICE_COOLDOWN;
+
+						addKnockBack(PLAYER_WEAPON_ICE_KNOCKBACK);
+						gameSim.playSound("gun-fire-ice.ogg");
+						addScreenShake = true;
+					}
+					else if (weaponType == kPlayerWeapon_Bubble)
+					{
+						anim = kPlayerAnim_Fire;
+						m_attack.cooldown = PLAYER_WEAPON_BUBBLE_COOLDOWN;
+
+						const Vec2 playerSpeed = m_lastTotalVel;
+
+						for (int i = 0; i < BULLET_BUBBLE_COUNT; ++i)
+						{
+							const float angle = gameSim.Random() % 256;
+
+							const uint16_t bulletId = gameSim.spawnBullet(
+								x,
+								y,
+								angle,
+								kBulletType_Bubble,
+								kBulletEffect_Bubble,
+								m_index);
+
+							if (bulletId != INVALID_BULLET_ID)
+							{
+								Bullet & b = gameSim.m_bulletPool->m_bullets[bulletId];
+
+								const Vec2 dir = (-m_lastTotalVel * BULLET_BUBBLE_PLAYERSPEED_MULTIPLIER + b.m_vel).CalcNormalized();
+								const float vel = gameSim.RandomFloat(BULLET_BUBBLE_SPEED_MIN, BULLET_BUBBLE_SPEED_MAX);
+
+								b.m_vel = dir * vel;
+								b.m_pos += b.m_vel.CalcNormalized() * BULLET_BUBBLE_SPAWN_DISTANCE;
+							}
+						}
+
+						gameSim.addAnimationFx(
+							kDrawLayer_Game,
+							"fx/Attack_FireBullet.scml",
+							x,
+							y,
+							m_facing[0] < 0,
+							m_facing[1] < 0);
+
+						gameSim.playSound("gun-fire-bubble.ogg");
+						gameSim.addScreenShake_GunFire(m_facing);
+					}
+					else if (weaponType == kPlayerWeapon_Grenade)
+					{
+						anim = kPlayerAnim_Fire;
+						bulletType = kBulletType_Grenade;
+						m_attack.cooldown = PLAYER_WEAPON_GRENADE_COOLDOWN;
+					
+						addKnockBack(PLAYER_WEAPON_GRENADE_KNOCKBACK);
+						gameSim.playSound("grenade-throw.ogg"); // player throws a grenade
+						addScreenShake = true;
+					}
+					else if (weaponType == kPlayerWeapon_TimeDilation)
+					{
+						// update allowCancelTimeDilationAttack flag on players
+						bool wasActive = false;
+						for (int i = 0; i < MAX_PLAYERS; ++i)
+							if (gameSim.m_players[i].m_isUsed && gameSim.m_players[i].m_isAlive && gameSim.m_players[i].m_timeDilationAttack.isActive())
+									wasActive = true;
+
+						if (!wasActive)
+						{
+							for (int i = 0; i < MAX_PLAYERS; ++i)
+								if (gameSim.m_players[i].m_isUsed && gameSim.m_players[i].m_isAlive && gameSim.m_players[i].m_attack.attacking)
+									gameSim.m_players[i].m_attack.allowCancelTimeDilationAttack = true;
+						}
+
+						m_timeDilationAttack.timeRemaining = PLAYER_EFFECT_TIMEDILATION_TIME;
+						gameSim.playSound("timedilation-activate.ogg"); // sound that occurs when the player activates the time dilation pickup
+						gameSim.addScreenShake_GunFire(m_facing);
+						gameSim.addAnnouncement(colorBlue, "'%s' activated time dilation!", m_displayName.c_str());
+					}
+					else
+					{
+						Assert(false);
+					}
 				}
 
 				if (anim != kPlayerAnim_NULL)
@@ -2883,7 +2899,7 @@ void Player::tick(GameSim & gameSim, float dt)
 			{
 				CollisionInfo playerCollision;
 				FootBall ball;
-				if (getPlayerCollision(playerCollision) && gameSim.grabFootBall(playerCollision, ball))
+				if (getPlayerCollision(playerCollision) && gameSim.grabFootBall(playerCollision, m_index, ball))
 				{
 					m_footBrawl.m_hasBall = true;
 				}
@@ -3174,6 +3190,14 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y, const SpriterState & s
 	{
 		m_attack.m_axeThrow.aiming.drawBelow(getAxeThrowPos());
 		m_attack.m_axeThrow.aiming.drawAbove(getAxeThrowPos()); // todo : draw above player sprites
+	}
+
+	// draw football throw direction
+
+	if (m_attack.m_footBall.isActive)
+	{
+		m_attack.m_footBall.aiming.drawBelow(getFootBallThrowPos());
+		m_attack.m_footBall.aiming.drawAbove(getFootBallThrowPos()); // todo : draw above player sprites
 	}
 
 	// enable effect when player has the token
@@ -3502,6 +3526,13 @@ void Player::debugDraw() const
 	{
 		setColor(colorWhite);
 		drawText(m_pos[0], y, 14, 0.f, 0.f, "pipebomb");
+		y += 18.f;
+	}
+
+	if (m_footBrawl.m_hasBall)
+	{
+		setColor(colorWhite);
+		drawText(m_pos[0], y, 14, 0.f, 0.f, "hasBall");
 		y += 18.f;
 	}
 
@@ -3966,18 +3997,11 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 			{
 				if (m_footBrawl.m_hasBall)
 				{
-					m_footBrawl.m_hasBall = false;
-
-					FootBall * footBall = GAMESIM->allocFootBall();
-					if (footBall)
-					{
-						footBall->setup(
-							int(m_pos[0]),
-							int(m_pos[1]));
-						footBall->m_vel.Set(velocity[0] * FOOTBALL_DROP_SPEED_MULTIPLIER, -800.f);
-						footBall->m_isDropped = true;
-						GAMESIM->playSound("football-bounce.ogg"); // sound when the ball is dropped
-					}
+					const Vec2 mid = getFootBallThrowPos();
+					const Vec2 vel(velocity[0] * FOOTBALL_DROP_SPEED_MULTIPLIER, -800.f);
+					throwFootBall(
+						mid,
+						vel);
 				}
 			}
 
@@ -4628,6 +4652,67 @@ void Player::tickPipebomb(float dt)
 	default:
 		Assert(false);
 		break;
+	}
+}
+
+void Player::beginFootBall()
+{
+	m_attack = AttackInfo();
+	m_attack.attacking = true;
+
+	m_attack.m_footBall.isActive = true;
+	m_attack.m_footBall.aiming.begin(AXE_ANALOG_TRESHOLD); // todo : football treshold?
+}
+
+void Player::endFootBall()
+{
+	m_attack = AttackInfo();
+
+	// throw football
+
+	const Vec2 pos = getFootBallThrowPos();
+	const Vec2 dir = m_input.getAnalogDirection().CalcNormalized();
+
+	// todo : throw speed
+	throwFootBall(pos, dir * AXE_THROW_SPEED);
+}
+
+void Player::tickFootBall(float dt)
+{
+	Assert(m_attack.m_footBall.isActive);
+
+	// update direction vector
+
+	m_attack.m_footBall.aiming.tick(*GAMESIM, m_input, dt);
+
+	// throw it?
+
+	if (m_input.wentUp(INPUT_BUTTON_B))
+	{
+		endFootBall();
+	}
+}
+
+Vec2 Player::getFootBallThrowPos() const
+{
+	return m_pos + (m_collision.min + m_collision.max) / 2.f;
+}
+
+void Player::throwFootBall(Vec2Arg pos, Vec2Arg vel)
+{
+	Assert(m_footBrawl.m_hasBall);
+	m_footBrawl.m_hasBall = false;
+
+	FootBall * footBall = GAMESIM->allocFootBall();
+	if (footBall)
+	{
+		footBall->setup(
+			int(pos[0]),
+			int(pos[1]),
+			m_index);
+		footBall->m_vel = vel;
+		footBall->m_isDropped = true;
+		GAMESIM->playSound("football-bounce.ogg"); // sound when the ball is dropped
 	}
 }
 

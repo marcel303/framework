@@ -243,6 +243,13 @@ struct Player
 	void endPipebomb();
 	void tickPipebomb(float dt);
 
+	// special : football
+	void beginFootBall();
+	void endFootBall();
+	void tickFootBall(float dt);
+	Vec2 getFootBallThrowPos() const;
+	void throwFootBall(Vec2Arg pos, Vec2Arg vel);
+
 	// allocation
 	bool m_isUsed;
 
@@ -398,6 +405,17 @@ struct Player
 			State state;
 			float timer;
 		} m_zweihander;
+
+		struct FootBall
+		{
+			FootBall()
+			{
+				memset(this, 0, sizeof(FootBall));
+			}
+
+			bool isActive;
+			PlayerAiming aiming;
+		} m_footBall;
 	} m_attack;
 
 	struct TimeDilationAttack
@@ -671,6 +689,8 @@ struct FootBall : PhysicsActor
 {
 	bool m_hasBeenTouched; // ball needs to be touched once for it to be affected by gravity
 	bool m_isDropped;
+	int m_lastPlayerIndex;
+	float m_pickupTimer;
 	SpriterState m_spriterState;
 
 	FootBall()
@@ -678,7 +698,7 @@ struct FootBall : PhysicsActor
 		memset(this, 0, sizeof(FootBall));
 	}
 
-	void setup(int x, int y);
+	void setup(int x, int y, int lastPlayerIndex);
 
 	void tick(GameSim & gameSim, float dt);
 	void draw(const GameSim & gameSim) const;
@@ -1362,7 +1382,7 @@ public:
 
 	FootBall * allocFootBall();
 	void spawnFootBall();
-	bool grabFootBall(const CollisionInfo & collisionInfo, FootBall & footBall);
+	bool grabFootBall(const CollisionInfo & collisionInfo, int playerIndex, FootBall & footBall);
 
 	uint16_t spawnBullet(int16_t x, int16_t y, uint8_t angle, BulletType type, BulletEffect effect, uint8_t ownerPlayerId);
 	void spawnParticles(const ParticleSpawnInfo & spawnInfo);
