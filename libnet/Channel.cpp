@@ -348,13 +348,15 @@ bool Channel::SendBegin(uint32_t size)
 	const uint32_t newSize1 = OVERHEAD + size;
 	const uint32_t newSize2 = m_sendQueue.GetSize() + newSize1;
 
-	if (newSize1 > LIBNET_SOCKET_MTU_SIZE)
+	// note : adding 4 bytes here because SendUnreliable will add 4 bytes for the trunking protocol
+
+	if (newSize1 + 4 > LIBNET_SOCKET_MTU_SIZE)
 	{
 		NetAssert(false);
 		return false;
 	}
 
-	if (newSize2 > LIBNET_SOCKET_MTU_SIZE)
+	if (newSize2 + 4 > LIBNET_SOCKET_MTU_SIZE)
 		Flush();
 
 	m_txBegun = true;
