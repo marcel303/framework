@@ -7,7 +7,11 @@
 #include "tools.h"
 #include <string>
 
-#include "Timer.h" // fixme
+#define ENABLE_TIMINGS 0
+
+#if ENABLE_TIMINGS
+	#include "Timer.h"
+#endif
 
 #if ENABLE_DEVMODE
 
@@ -391,7 +395,9 @@ void nearest(
 static FIBITMAP * dither(FIBITMAP * src, const RGBQUAD * __restrict palette)
 {
 #if USE_KD_TREE
+#if ENABLE_TIMINGS
 	const float t1 = g_TimerRT.Time_get();
+#endif
 	kd_node_t nodes[256];
 
 	for (int i = 0; i < 256; ++i)
@@ -403,8 +409,10 @@ static FIBITMAP * dither(FIBITMAP * src, const RGBQUAD * __restrict palette)
 	}
 
 	kd_node_t * root = make_tree(nodes, 256, 0);
+#if ENABLE_TIMINGS
 	const float t2 = g_TimerRT.Time_get();
 	printf("t took %03.2fms\n", (t2 - t1) * 1000.f);
+#endif
 #endif
 
 	const int sx = FreeImage_GetWidth(src);
@@ -533,10 +541,14 @@ static FIBITMAP * ditherQuantize(FIBITMAP * src)
 	FIBITMAP * quantized = FreeImage_ColorQuantize(src, FIQ_WUQUANT);
 	const RGBQUAD * palette = FreeImage_GetPalette(quantized);
 	// dither the original image using the palette we just got
+#if ENABLE_TIMINGS
 	const float t1 = g_TimerRT.Time_get();
+#endif
 	FIBITMAP * result = dither(src, palette);
+#if ENABLE_TIMINGS
 	const float t2 = g_TimerRT.Time_get();
 	printf("q took %03.2fms\n", (t2 - t1) * 1000.f);
+#endif
 	FreeImage_Unload(quantized);
 	return result;
 }
@@ -612,10 +624,14 @@ static bool writeGif(const char * filename, const std::vector<FIBITMAP*> & pages
 	FIMULTIBITMAP * bmp = FreeImage_OpenMultiBitmap(FIF_GIF, filename, TRUE, FALSE, TRUE, GIF_DEFAULT);
 	for (size_t i = 0; i < pages.size(); ++i)
 	{
+	#if ENABLE_TIMINGS
 		const float t1 = g_TimerRT.Time_get();
+	#endif
 		FIBITMAP * page = ditherQuantize(pages[i]);
+	#if ENABLE_TIMINGS
 		const float t2 = g_TimerRT.Time_get();
 		printf("dq took %03.2fms\n", (t2 - t1) * 1000.f);
+	#endif
 
 		FITAG * tag = FreeImage_CreateTag();
 		if (tag)

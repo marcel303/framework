@@ -851,7 +851,7 @@ void Player::tick(GameSim & gameSim, float dt)
 
 	// -- emote hack --
 
-	m_emoteTime = Calc::Max(0.f, m_emoteTime - dt); // fixme : should use phys time
+	m_emoteTime = Calc::Max(0.f, m_emoteTime - gameSim.m_physicalTimeStep);
 
 	int emoteIndex = -1;
 	PlayerAnim emoteAnim = kPlayerAnim_NULL;
@@ -3876,15 +3876,6 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 					spawnInfo.color = getDecalColor(m_index, Vec2(0.f, 0.f)).toRGBA();
 
 					GAMESIM->spawnParticles(spawnInfo);
-
-				#if 0
-					// fixme : why was this here?
-					GAMESIM->addDecal(
-						m_pos[0], m_pos[1],
-						getPlayerColor(m_index),
-						GAMESIM->Random() % DECAL_COUNT,
-						GAMESIM->RandomFloat(DECAL_SIZE_MIN, DECAL_SIZE_MAX));
-				#endif
 				}
 
 				if (PROTO_TIMEDILATION_ON_KILL && attacker)
@@ -4311,7 +4302,7 @@ void Player::beginAxeThrow()
 		m_attack.attacking = true;
 
 		m_attack.m_axeThrow.isActive = true;
-		m_attack.m_axeThrow.aiming.begin(AXE_ANALOG_TRESHOLD);
+		m_attack.m_axeThrow.aiming.begin(AIM_ANALOG_TRESHOLD);
 	}
 }
 
@@ -4436,7 +4427,7 @@ void Player::beginGrapple()
 
 	m_grapple.state = GrappleInfo::State_Aiming;
 
-	m_grapple.aiming.begin(AXE_ANALOG_TRESHOLD); // fixme : grapple aiming treshold
+	m_grapple.aiming.begin(AIM_ANALOG_TRESHOLD);
 
 	// todo : change animation to grappling anim (reuse attack anim for now)
 }
@@ -4661,7 +4652,7 @@ void Player::beginFootBall()
 	m_attack.attacking = true;
 
 	m_attack.m_footBall.isActive = true;
-	m_attack.m_footBall.aiming.begin(AXE_ANALOG_TRESHOLD); // todo : football treshold?
+	m_attack.m_footBall.aiming.begin(AIM_ANALOG_TRESHOLD);
 }
 
 void Player::endFootBall()

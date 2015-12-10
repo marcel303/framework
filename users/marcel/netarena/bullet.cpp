@@ -166,18 +166,9 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 
 					if (kill)
 					{
+						// todo : spawn particle emitter instead
 						ParticleSpawnInfo spawnInfo(b.m_pos[0], b.m_pos[1], kBulletType_ParticleA, 10, 50, 200, 20);
 						gameSim.spawnParticles(spawnInfo);
-
-						if (b.ownerPlayerId != -1 && false)
-						{
-							// fixme : add decal on death particle collision..
-							gameSim.addDecal(
-								b.m_pos[0], b.m_pos[1],
-								getDecalColor(b.ownerPlayerId, b.m_vel),
-								gameSim.Random() % DECAL_COUNT,
-								gameSim.RandomFloat(DECAL_SIZE_MIN, DECAL_SIZE_MAX));
-						}
 					}
 
 					if (!kill && b.doBounce)

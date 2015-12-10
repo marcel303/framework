@@ -1385,7 +1385,7 @@ public:
 	bool grabFootBall(const CollisionInfo & collisionInfo, int playerIndex, FootBall & footBall);
 
 	uint16_t spawnBullet(int16_t x, int16_t y, uint8_t angle, BulletType type, BulletEffect effect, uint8_t ownerPlayerId);
-	void spawnParticles(const ParticleSpawnInfo & spawnInfo);
+	void spawnParticles(const ParticleSpawnInfo & spawnInfo); // todo : entirely remove this method and only use particle emitters/effects
 
 	void spawnAxe(Vec2 pos, Vec2 vel, int playerIndex);
 	bool grabAxe(const CollisionInfo & collision);
