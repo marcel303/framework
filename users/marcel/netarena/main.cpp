@@ -230,6 +230,16 @@ static void HandleFillCachesCallback(float filePercentage)
 	framework.endDraw();
 }
 
+static void HandleFillCachesUnknownResourceCallback(const char * filename)
+{
+	if (strstr(filename, ".pfx"))
+	{
+		// todo : load particle effect
+
+		logDebug("particle effect: %s", filename);
+	}
+}
+
 static void HandleInitError(INIT_ERROR error)
 {
 	switch (error)
@@ -1322,6 +1332,7 @@ bool App::init()
 	framework.windowIcon = "icon.png";
 	framework.actionHandler = HandleAction;
 	framework.fillCachesCallback = HandleFillCachesCallback;
+	framework.fillCachesUnknownResourceCallback = HandleFillCachesUnknownResourceCallback;
 	framework.initErrorHandler = HandleInitError;
 
 	if (!framework.init(0, 0, GFX_SX, GFX_SY))
@@ -3274,6 +3285,28 @@ void App::OnSteamP2PSessionRequest(P2PSessionRequest_t * arg)
 
 	SteamNetworking()->AcceptP2PSessionWithUser(arg->m_steamIDRemote);
 }
+
+//
+
+static std::map<std::string, ParticleEffect> s_particleEffects;
+
+const ParticleEffect & getParticleEffect(const char * name)
+{
+	auto i = s_particleEffects.find(name);
+
+	if (i != s_particleEffects.end())
+		return i->second;
+	else
+	{
+		ParticleEffect & e = s_particleEffects[name];
+
+		e.setup(name);
+
+		return e;
+	}
+}
+
+//
 
 static std::vector<std::string> parseMapList(const std::string & list)
 {

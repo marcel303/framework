@@ -24,6 +24,7 @@ class Host;
 class MainMenu;
 class MenuMgr;
 class OptionMenu;
+struct ParticleEffect;
 struct ParticleSpawnInfo;
 struct Player;
 struct PlayerInput;
@@ -205,6 +206,8 @@ public:
 	STEAM_CALLBACK_MANUAL(App, OnSteamGameLobbyJoinRequested, GameLobbyJoinRequested_t, m_steamGameLobbyJoinRequestedCallback);
 	STEAM_CALLBACK_MANUAL(App, OnSteamP2PSessionRequest, P2PSessionRequest_t, m_steamP2PSessionRequestCallback);
 };
+
+const ParticleEffect & getParticleEffect(const char * name);
 
 extern uint32_t g_buildId;
 

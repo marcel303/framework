@@ -894,7 +894,8 @@ struct ParticleEffect
 
 	ParticleSystem m_system[kMaxParticleSystems];
 
-	void setup(const char * filename, int x, int y);
+	void setup(const char * filename);
+	void translate(int x, int y);
 	void draw();
 };
 
@@ -1386,6 +1387,7 @@ public:
 
 	uint16_t spawnBullet(int16_t x, int16_t y, uint8_t angle, BulletType type, BulletEffect effect, uint8_t ownerPlayerId);
 	void spawnParticles(const ParticleSpawnInfo & spawnInfo); // todo : entirely remove this method and only use particle emitters/effects
+	void addParticleEffect(const char * name, int x, int y);
 
 	void spawnAxe(Vec2 pos, Vec2 vel, int playerIndex);
 	bool grabAxe(const CollisionInfo & collision);

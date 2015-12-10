@@ -1130,7 +1130,7 @@ void Light::drawLight() const
 
 //
 
-void ParticleEffect::setup(const char * filename, int x, int y)
+void ParticleEffect::setup(const char * filename)
 {
 	XMLDocument d;
 
@@ -1157,9 +1157,15 @@ void ParticleEffect::setup(const char * filename, int x, int y)
 
 		m_data.m_isActive = true;
 		m_data.m_filename = filename;
-		m_data.m_x = x;
-		m_data.m_y = y;
+		m_data.m_x = 0;
+		m_data.m_y = 0;
 	}
+}
+
+void ParticleEffect::translate(int x, int y)
+{
+	m_data.m_x += x;
+	m_data.m_y += y;
 }
 
 void ParticleEffect::draw()
@@ -1892,7 +1898,7 @@ void GameSim::serialize(NetSerializationContext & context)
 
 		context.SerializeBytes(data, sizeof(GameStateData));
 
-	#if 0 // todo : use zero compression to keep serialization size down
+	#if 1 // todo : use zero compression to keep serialization size down
 		int numZeroes = 0;
 		uint8_t * bytes = (uint8_t*)data;
 		for (int i = 0; i < sizeof(GameStateData); ++i)
@@ -1913,15 +1919,26 @@ void GameSim::serialize(NetSerializationContext & context)
 	m_bulletPool->serialize(context);
 
 	for (int i = 0; i < MAX_PARTICLE_EFFECTS; ++i)
-	{
-		context.SerializeBytes(&m_particleEffects[i].m_data, sizeof(m_particleEffects[i].m_data));
+		m_particleEffects[i].m_data = ParticleEffect::Data();
 
-		if (context.IsRecv() && m_particleEffects[i].m_data.m_isActive)
+	for (int i = 0; i < MAX_PARTICLE_EFFECTS; ++i)
+	{
+		context.Serialize(m_particleEffects[i].m_data.m_isActive);
+
+		if (m_particleEffects[i].m_data.m_isActive)
 		{
-			m_particleEffects[i].setup(
-				m_particleEffects[i].m_data.m_filename.c_str(),
-				m_particleEffects[i].m_data.m_x,
-				m_particleEffects[i].m_data.m_y);
+			context.SerializeBytes(&m_particleEffects[i].m_data, sizeof(m_particleEffects[i].m_data));
+
+			if (context.IsRecv())
+			{
+				const ParticleEffect::Data data = m_particleEffects[i].m_data;
+				m_particleEffects[i] = getParticleEffect(m_particleEffects[i].m_data.m_filename.c_str());
+				m_particleEffects[i].m_data = data;
+			}
+		}
+		else
+		{
+			m_particleEffects[i].m_data = ParticleEffect::Data();
 		}
 	}
 
@@ -2323,26 +2340,10 @@ void GameSim::load(const char * name)
 			}
 			else if (type == "particleeffect")
 			{
-				ParticleEffect * particleEffect = 0;
-
-				for (int i = 0; i < MAX_PARTICLE_EFFECTS; ++i)
-				{
-					if (!m_particleEffects[i].m_data.m_isActive)
-					{
-						particleEffect = &m_particleEffects[i];
-						break;
-					}
-				}
-
-				if (particleEffect == 0)
-					LOG_ERR("too many particle effects!");
-				else
-				{
-					particleEffect->setup(
-						d.getString("file", "").c_str(),
+				addParticleEffect(
+					d.getString("file", "").c_str(),
 						d.getInt("x", 0),
 						d.getInt("y", 0));
-				}
 			}
 			else if (type == "portal")
 			{
@@ -3000,9 +3001,17 @@ void GameSim::tickPlay()
 			// todo : add collision callback
 			//bool (*checkCollision)(void * userData, float x1, float y1, float x2, float y2, float & t, float & nx, float & ny);
 
+			bool isActive = false;
+
 			for (int j = 0; j < ParticleEffect::kMaxParticleSystems; ++j)
 			{
-				m_particleEffects[i].m_system[j].tick(cbs, 0.f, GRAVITY, dt);
+				isActive |= m_particleEffects[i].m_system[j].tick(cbs, 0.f, GRAVITY, dt);
+			}
+
+			if (!isActive)
+			{
+				m_particleEffects[i].m_data = ParticleEffect::Data();
+				fassert(m_particleEffects[i].m_data.m_isActive == false);
 			}
 		}
 	}
@@ -4267,6 +4276,29 @@ void GameSim::spawnParticles(const ParticleSpawnInfo & spawnInfo)
 		initBullet(*this, b, spawnInfo);
 
 		b.doAgeAlpha = true;
+	}
+}
+
+void GameSim::addParticleEffect(const char * name, int x, int y)
+{
+	ParticleEffect * particleEffect = 0;
+
+	for (int i = 0; i < MAX_PARTICLE_EFFECTS; ++i)
+	{
+		if (!m_particleEffects[i].m_data.m_isActive)
+		{
+			particleEffect = &m_particleEffects[i];
+			break;
+		}
+	}
+
+	if (particleEffect == 0)
+		LOG_ERR("too many particle effects!");
+	else
+	{
+		*particleEffect = getParticleEffect(name);
+
+		particleEffect->translate(x, y);
 	}
 }
 
