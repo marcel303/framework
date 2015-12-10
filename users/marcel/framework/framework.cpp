@@ -79,6 +79,8 @@ Framework::Framework()
 	numSoundSources = 32;
 	actionHandler = 0;
 	fillCachesCallback = 0;
+	fillCachesUnknownResourceCallback = 0;
+	initErrorHandler = 0;
 	
 	quitRequested = false;
 	time = 0.f;
@@ -418,7 +420,9 @@ bool Framework::shutdown()
 	windowIsActive = false;
 	actionHandler = 0;
 	fillCachesCallback = 0;
-	
+	fillCachesUnknownResourceCallback = 0;
+	initErrorHandler = 0;
+
 	return result;
 }
 
@@ -796,6 +800,10 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 			std::string name = f;
 			name = name.substr(0, name.rfind('.'));
 			Shader(name.c_str());
+		}
+		else
+		{
+			fillCachesUnknownResourceCallback(f);
 		}
 
 		const uint64_t currentTime = g_TimerRT.TimeMS_get();

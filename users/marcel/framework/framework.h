@@ -170,6 +170,7 @@ extern Ui ui;
 
 typedef void (*ActionHandler)(const std::string & action, const Dictionary & args);
 typedef void (*FillCachesCallback)(float filePercentage);
+typedef void (*FillCachesUnknownResourceCallback)(const char * filename);
 typedef void (*InitErrorHandler)(INIT_ERROR error);
 
 //
@@ -217,6 +218,7 @@ public:
 	bool windowIsActive;
 	ActionHandler actionHandler;
 	FillCachesCallback fillCachesCallback;
+	FillCachesUnknownResourceCallback fillCachesUnknownResourceCallback;
 	InitErrorHandler initErrorHandler;
 	
 private:
