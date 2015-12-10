@@ -954,7 +954,7 @@ ParticleSystem::~ParticleSystem()
 	assert(pool.tail == 0);
 }
 
-void ParticleSystem::tick(const ParticleCallbacks & cbs, const float gravityX, const float gravityY, float dt)
+bool ParticleSystem::tick(const ParticleCallbacks & cbs, const float gravityX, const float gravityY, float dt)
 {
 	for (Particle * p = pool.head; p; )
 		if (!tickParticle(cbs, emitterInfo, particleInfo, dt, gravityX, gravityY, *p))
@@ -962,7 +962,7 @@ void ParticleSystem::tick(const ParticleCallbacks & cbs, const float gravityX, c
 		else
 			p = p->next;
 
-	tickParticleEmitter(cbs, emitterInfo, particleInfo, pool, dt, gravityX, gravityY, emitter);
+	return tickParticleEmitter(cbs, emitterInfo, particleInfo, pool, dt, gravityX, gravityY, emitter);
 }
 
 void ParticleSystem::restart()
@@ -1258,12 +1258,12 @@ float computeParticleRotation(const ParticleEmitterInfo & pei, const ParticleInf
 	return result;
 }
 
-void tickParticleEmitter(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei, const ParticleInfo & pi, ParticlePool & pool, const float timeStep, const float gravityX, const float gravityY, ParticleEmitter & pe)
+bool tickParticleEmitter(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei, const ParticleInfo & pi, ParticlePool & pool, const float timeStep, const float gravityX, const float gravityY, ParticleEmitter & pe)
 {
 	if (pi.rate <= 0.f)
-		return;
+		return false;
 	if (!pei.loop && pe.totalTime >= pei.duration)
-		return;
+		return false;
 
 	pe.time += timeStep;
 	pe.totalTime += timeStep;
@@ -1271,7 +1271,7 @@ void tickParticleEmitter(const ParticleCallbacks & cbs, const ParticleEmitterInf
 	if (pe.delaying)
 	{
 		if (pe.time < pei.startDelay)
-			return;
+			return true;
 		else
 		{
 			pe.time -= pei.startDelay;
@@ -1292,4 +1292,6 @@ void tickParticleEmitter(const ParticleCallbacks & cbs, const ParticleEmitterInf
 	}
 
 	// todo : int maxParticles; // The maximum number of particles in the system at once. Older particles will be removed when the limit is reached.
+
+	return true;
 }

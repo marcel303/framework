@@ -360,7 +360,7 @@ struct ParticleSystem
 
 	~ParticleSystem();
 
-	void tick(const ParticleCallbacks & cbs, const float gravityX, const float gravityY, float dt);
+	bool tick(const ParticleCallbacks & cbs, const float gravityX, const float gravityY, float dt);
 
 	void restart();
 };
@@ -372,6 +372,6 @@ void computeParticleColor(const ParticleEmitterInfo & pei, const ParticleInfo & 
 float computeParticleSize(const ParticleEmitterInfo & pei, const ParticleInfo & pi, const float particleLife, const float particleSpeed);
 float computeParticleRotation(const ParticleEmitterInfo & pei, const ParticleInfo & pi, const float timeStep, const float particleLife, const float particleSpeed, const float particleRotation);
 
-void tickParticleEmitter(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei, const ParticleInfo & pi, ParticlePool & pool, const float timeStep, const float gravityX, const float gravityY, ParticleEmitter & pe);
+bool tickParticleEmitter(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei, const ParticleInfo & pi, ParticlePool & pool, const float timeStep, const float gravityX, const float gravityY, ParticleEmitter & pe);
 
 #pragma pack(pop)
