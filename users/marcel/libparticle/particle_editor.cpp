@@ -976,7 +976,7 @@ static bool stringToValue(const char * src, float & dst)
 }
 
 template <typename T>
-static void doTextBox(T & value, const char * name, float xOffset, float xScale, bool lineBreak, UiElem & elem, EditorTextField & textField, bool & textFieldIsInit)
+static void doTextBox(T & value, const char * name, float xOffset, float xScale, bool lineBreak, UiElem & elem, EditorTextField & textField, bool & textFieldIsInit, float dt)
 {
 	const int kPadding = 5;
 
@@ -1023,7 +1023,7 @@ static void doTextBox(T & value, const char * name, float xOffset, float xScale,
 
 		if (textField.isActive())
 		{
-			textField.tick(1.f / 60.f); // fixme : timeStep
+			textField.tick(dt);
 
 			stringToValue(textField.getText(), value);
 		}
@@ -1469,7 +1469,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, UiElem 
 	static bool sym ## textFieldIsInit = false; \
 	if (g_doActions && g_forceUiRefresh) \
 		sym ## textFieldIsInit = false; \
-	doTextBox(value, name, 0.f, 1.f, true, sym ## elem, sym ## textField, sym ## textFieldIsInit);
+	doTextBox(value, name, 0.f, 1.f, true, sym ## elem, sym ## textField, sym ## textFieldIsInit, dt);
 
 #define DO_TEXTBOX2(sym, value, xOffset, xScale, lineBreak, name) \
 	static UiElem sym ## elem; \
@@ -1477,7 +1477,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, UiElem 
 	static bool sym ## textFieldIsInit = false; \
 	if (g_doActions && g_forceUiRefresh) \
 		sym ## textFieldIsInit = false; \
-	doTextBox(value, name, xOffset, xScale, lineBreak, sym ## elem, sym ## textField, sym ## textFieldIsInit);
+	doTextBox(value, name, xOffset, xScale, lineBreak, sym ## elem, sym ## textField, sym ## textFieldIsInit, dt);
 
 #define DO_CHECKBOX(sym, value, name, isCollapsable) \
 	static UiElem sym ## elem; \
@@ -1505,7 +1505,7 @@ static void refreshUi()
 	g_forceUiRefreshRequested = true;
 }
 
-static void doMenu_LoadSave()
+static void doMenu_LoadSave(float dt)
 {
 	static std::string activeFilename;
 	static UiElem loadElem;
@@ -1614,7 +1614,7 @@ static void doMenu_LoadSave()
 	}
 }
 
-static void doMenu_EmitterSelect()
+static void doMenu_EmitterSelect(float dt)
 {
 	static UiElem uiElems[kMaxParticleInfos];
 	for (int i = 0; i < 6; ++i)
@@ -1629,7 +1629,7 @@ static void doMenu_EmitterSelect()
 	}
 }
 
-static void doMenu_Pi()
+static void doMenu_Pi(float dt)
 {
 	static UiElem copyPiElem;
 	if (doButton("Copy", 0.f, .5f, !g_copyPiIsValid, copyPiElem))
@@ -1780,11 +1780,11 @@ static void doMenu_Pi()
 			if (doCheckBox(g_pi().subEmitters[i].enabled, onEventName[i], true, onEventElem[i]))
 			{
 				ScopedValueAdjust<int> xAdjust(g_drawX, +10);
-				doTextBox(g_pi().subEmitters[i].chance, "Spawn Chance", 0.f, 1.f, true, fields[i][0].elem, fields[i][0].textField, fields[i][0].textFieldIsInit);
-				doTextBox(g_pi().subEmitters[i].count, "Spawn Count", 0.f, 1.f, true, fields[i][1].elem, fields[i][1].textField, fields[i][1].textFieldIsInit);
+				doTextBox(g_pi().subEmitters[i].chance, "Spawn Chance", 0.f, 1.f, true, fields[i][0].elem, fields[i][0].textField, fields[i][0].textFieldIsInit, dt);
+				doTextBox(g_pi().subEmitters[i].count, "Spawn Count", 0.f, 1.f, true, fields[i][1].elem, fields[i][1].textField, fields[i][1].textFieldIsInit, dt);
 
 				std::string emitterName = g_pi().subEmitters[i].emitterName;
-				doTextBox(emitterName, "Emitter Name", 0.f, 1.f, true, fields[i][2].elem, fields[i][2].textField, fields[i][2].textFieldIsInit);
+				doTextBox(emitterName, "Emitter Name", 0.f, 1.f, true, fields[i][2].elem, fields[i][2].textField, fields[i][2].textFieldIsInit, dt);
 				strcpy_s(g_pi().subEmitters[i].emitterName, sizeof(g_pi().subEmitters[i].emitterName), emitterName.c_str());
 			}
 		}
@@ -1804,7 +1804,7 @@ static void doMenu_Pi()
 	DO_ENUM(blendMode, g_pi().blendMode, blendModeValues, "Blend Mode");
 }
 
-static void doMenu_Pei()
+static void doMenu_Pei(float dt)
 {
 	static UiElem copyPeiElem;
 	if (doButton("Copy", 0.f, .5f, !g_copyPeiIsValid, copyPeiElem))
@@ -1843,7 +1843,7 @@ static void doMenu_Pei()
 	strcpy_s(g_pei().materialName, sizeof(g_pei().materialName), materialName.c_str());
 }
 
-static void doMenu_ColorWheel()
+static void doMenu_ColorWheel(float dt)
 {
 	static UiElem colorPickerElem;
 	if (g_activeColor)
@@ -1855,7 +1855,7 @@ static void doMenu_ColorWheel()
 		{
 			colorPickerElem.tick(wheelX, wheelY, wheelX + g_colorWheel.getSx(), wheelY + g_colorWheel.getSy());
 			if (colorPickerElem.isActive)
-				g_colorWheel.tick(mouse.x - wheelX, mouse.y - wheelY, mouse.wentDown(BUTTON_LEFT), mouse.isDown(BUTTON_LEFT), 1.f / 60.f); // fixme : mouseDown and dt
+				g_colorWheel.tick(mouse.x - wheelX, mouse.y - wheelY, mouse.wentDown(BUTTON_LEFT), mouse.isDown(BUTTON_LEFT), dt); // fixme : mouseDown and dt
 			g_colorWheel.toColor(*g_activeColor);
 		}
 
@@ -1873,7 +1873,7 @@ static void doMenu_ColorWheel()
 	}
 }
 
-static void doMenu(bool doActions, bool doDraw, int sx, int sy)
+static void doMenu(bool doActions, bool doDraw, int sx, int sy, float dt)
 {
 	g_doActions = doActions;
 	g_doDraw = doDraw;
@@ -1890,7 +1890,7 @@ static void doMenu(bool doActions, bool doDraw, int sx, int sy)
 	g_drawX = 10;
 	g_drawY = 0;
 
-	doMenu_Pi();
+	doMenu_Pi(dt);
 
 	// right side menu
 
@@ -1898,16 +1898,16 @@ static void doMenu(bool doActions, bool doDraw, int sx, int sy)
 	g_drawX = sx - kMenuWidth - 10;
 	g_drawY = 0;
 
-	doMenu_LoadSave();
+	doMenu_LoadSave(dt);
 	g_drawY += kMenuSpacing;
 
-	doMenu_EmitterSelect();
+	doMenu_EmitterSelect(dt);
 	g_drawY += kMenuSpacing;
 
-	doMenu_Pei();
+	doMenu_Pei(dt);
 	g_drawY += kMenuSpacing;
 
-	doMenu_ColorWheel();
+	doMenu_ColorWheel(dt);
 	g_drawY += kMenuSpacing;
 
 	if (g_doActions)
@@ -1932,7 +1932,7 @@ void particleEditorTick(bool menuActive, float sx, float sy, float dt)
 	}
 
 	if (menuActive)
-		doMenu(true, false, sx, sy);
+		doMenu(true, false, sx, sy, dt);
 
 	for (int i = 0; i < kMaxParticleInfos; ++i)
 	{
@@ -2055,5 +2055,5 @@ void particleEditorDraw(bool menuActive, float sx, float sy)
 	gxPopMatrix();
 
 	if (menuActive)
-		doMenu(false, true, sx, sy);
+		doMenu(false, true, sx, sy, 0.f);
 }

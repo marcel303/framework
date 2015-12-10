@@ -845,13 +845,13 @@ bool ParticleEmitter::emitParticle(const ParticleCallbacks & cbs, const Particle
 		p->life = 1.f;
 		p->lifeRcp = 1.f / pei.startLifetime;
 
-		getParticleSpawnLocation(pi, p->position[0], p->position[1]);
+		getParticleSpawnLocation(cbs, pi, p->position[0], p->position[1]);
 		p->position[0] += positionX;
 		p->position[1] += positionY;
 
 		float speedAngle;
 		if (pi.randomDirection)
-			speedAngle = (rand() % 256) / 255.f * 2.f * M_PI; // fixme : remove all libc random calls
+			speedAngle = cbs.randomFloat(cbs.userData, 0.f, float(2.f * M_PI));
 		else
 			speedAngle = float(M_PI) / 2.f; // todo : add pei.startAngle;
 		p->speed[0] = speedX + cosf(speedAngle) * pei.startSpeed;
@@ -1116,13 +1116,13 @@ void handleSubEmitter(const ParticleCallbacks & cbs, const ParticleInfo & pi, co
 	}
 }
 
-void getParticleSpawnLocation(const ParticleInfo & pi, float & x, float & y)
+void getParticleSpawnLocation(const ParticleCallbacks & cbs, const ParticleInfo & pi, float & x, float & y)
 {
 	switch (pi.shape)
 	{
 	case ParticleInfo::kShapeEdge:
 		{
-			const float t = (rand() % 256) / 255.f; // fixme : random
+			const float t = cbs.randomFloat(cbs.userData, 0.f, 1.f);
 			x = (t - .5f) * 2.f * pi.boxSizeX;
 			y = 0.f;
 		}
@@ -1132,7 +1132,7 @@ void getParticleSpawnLocation(const ParticleInfo & pi, float & x, float & y)
 			if (pi.emitFromShell)
 			{
 				const float s = pi.boxSizeX * 2.f + pi.boxSizeY * 2.f;
-				const float t = (rand() % 1024) / 1023.f * s; // fixme : random
+				const float t = cbs.randomFloat(cbs.userData, 0.f, s);
 
 				const float s1 = pi.boxSizeX;
 				const float s2 = s1 + pi.boxSizeX;
@@ -1164,8 +1164,8 @@ void getParticleSpawnLocation(const ParticleInfo & pi, float & x, float & y)
 			}
 			else
 			{
-				const float tx = (rand() % 256) / 255.f; // fixme : random
-				const float ty = (rand() % 256) / 255.f; // fixme : random
+				const float tx = cbs.randomFloat(cbs.userData, 0.f, 1.f);
+				const float ty = cbs.randomFloat(cbs.userData, 0.f, 1.f);
 				x = (tx - .5f) * 2.f * pi.boxSizeX;
 				y = (ty - .5f) * 2.f * pi.boxSizeY;
 			}
@@ -1175,7 +1175,7 @@ void getParticleSpawnLocation(const ParticleInfo & pi, float & x, float & y)
 		{
 			if (pi.emitFromShell)
 			{
-				const float a = (rand() % 1024) / 1023.f * 2.f * float(M_PI); // fixme : random
+				const float a = cbs.randomFloat(cbs.userData, 0.f, float(2.f * M_PI));
 				x = std::cosf(a) * pi.circleRadius;
 				y = std::sinf(a) * pi.circleRadius;
 			}
@@ -1183,8 +1183,8 @@ void getParticleSpawnLocation(const ParticleInfo & pi, float & x, float & y)
 			{
 				for (;;)
 				{
-					const float tx = (rand() % 256) / 255.f; // fixme : random
-					const float ty = (rand() % 256) / 255.f; // fixme : random
+					const float tx = cbs.randomFloat(cbs.userData, 0.f, 1.f);
+					const float ty = cbs.randomFloat(cbs.userData, 0.f, 1.f);
 					x = (tx - .5f) * 2.f * pi.circleRadius;
 					y = (ty - .5f) * 2.f * pi.circleRadius;
 					const float dSquared = x * x + y * y;
