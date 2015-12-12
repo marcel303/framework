@@ -135,6 +135,15 @@ namespace Calc
 #endif
 	}
 	
+	inline float Min(double v1, double v2)
+	{
+#if USE_PSPVEC
+		return sceVfpuScalarMin(v1, v2);
+#else
+		return v1 < v2 ? v1 : v2;
+#endif
+	}
+
 	inline int Mid(int v, int min, int max)
 	{
 		if (v < min)
