@@ -324,6 +324,9 @@ public:
 	Color hueShift(float shift) const;
 
 	uint32_t toRGBA() const;
+
+	Color addRGB(const Color & other) const;
+	Color mulRGB(float t) const;
 	
 	float r, g, b, a;
 };

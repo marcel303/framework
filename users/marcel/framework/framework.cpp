@@ -803,7 +803,8 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 		}
 		else
 		{
-			fillCachesUnknownResourceCallback(f);
+			if (fillCachesUnknownResourceCallback)
+				fillCachesUnknownResourceCallback(f);
 		}
 
 		const uint64_t currentTime = g_TimerRT.TimeMS_get();
@@ -1532,6 +1533,16 @@ uint32_t Color::toRGBA() const
 	const int ib = b < 0.f ? 0 : b > 1.f ? 255 : int(b * 255.f);
 	const int ia = a < 0.f ? 0 : a > 1.f ? 255 : int(a * 255.f);
 	return (ir << 24) | (ig << 16) | (ib << 8) | (ia << 0);
+}
+
+Color Color::addRGB(const Color & other) const
+{
+	return Color(r + other.r, g + other.g, b + other.b, a);
+}
+
+Color Color::mulRGB(float t) const
+{
+	return Color(r * t, g * t, b * t, a);
 }
 
 // -----
