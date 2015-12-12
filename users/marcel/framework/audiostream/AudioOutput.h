@@ -23,7 +23,7 @@ class AudioOutput_OpenAL : public AudioOutput
 public:
 	AudioOutput_OpenAL();
 	
-	bool Initialize(int numChannels, int sampleRate);
+	bool Initialize(int numChannels, int sampleRate, int bufferSize);
 	bool Shutdown();
 	
 	virtual void Play();
@@ -41,6 +41,7 @@ private:
 	
 	ALuint mFormat;
 	ALuint mSampleRate;
+	int mBufferSize;
 	ALuint mBufferIds[kBufferCount];
 	ALuint mSourceId;
 	

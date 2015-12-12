@@ -444,7 +444,7 @@ bool SoundPlayer::init(int numSources)
 	m_musicStream = new AudioStream_Vorbis;
 	m_musicOutput = new AudioOutput_OpenAL;
 	
-	if (!m_musicOutput->Initialize(2, 44100))
+	if (!m_musicOutput->Initialize(2, 44100, 1 << 14))
 	{
 		logError("failed to initialize OpenAL audio output");
 		return false;

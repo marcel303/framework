@@ -10,6 +10,7 @@
 AudioOutput_OpenAL::AudioOutput_OpenAL()
 	: mFormat(0)
 	, mSampleRate(0)
+	, mBufferSize(0)
 	, mSourceId(0)
 	, mIsPlaying(false)
 	, mHasFinished(true)
@@ -19,12 +20,16 @@ AudioOutput_OpenAL::AudioOutput_OpenAL()
 		mBufferIds[i] = 0;
 }
 
-bool AudioOutput_OpenAL::Initialize(int numChannels, int sampleRate)
+bool AudioOutput_OpenAL::Initialize(int numChannels, int sampleRate, int bufferSize)
 {
 	fassert(numChannels == 1 || numChannels == 2);
 	fassert(mBufferIds[0] == 0);
 	fassert(mBufferIds[1] == 0);
+	fassert(bufferSize <= kBufferSize);
 	
+	if (bufferSize > kBufferSize)
+		bufferSize = kBufferSize;
+
 	if (numChannels == 1)
 		mFormat = AL_FORMAT_MONO16;
 	else if (numChannels == 2)
@@ -36,6 +41,7 @@ bool AudioOutput_OpenAL::Initialize(int numChannels, int sampleRate)
 	}
 	
 	mSampleRate = sampleRate;
+	mBufferSize = bufferSize;
 	
 	alGenBuffers(kBufferCount, mBufferIds);
 	CheckError();
@@ -166,8 +172,8 @@ void AudioOutput_OpenAL::Update(AudioStream* stream)
 		}
 		else if (mIsPlaying)
 		{
-			const int maxSamples = kBufferSize >> 2;
-			AudioSample samples[maxSamples];
+			const int maxSamples = mBufferSize >> 2;
+			AudioSample * samples = (AudioSample*)alloca(sizeof(AudioSample*) * maxSamples);
 			const int numSamples = stream->Provide(maxSamples, samples);
 			
 			if (numSamples > 0)
@@ -241,11 +247,11 @@ bool AudioOutput_OpenAL::HasFinished_get()
 void AudioOutput_OpenAL::SetEmptyBufferData()
 {
 	char bufferData[kBufferSize];
-	memset(bufferData, 0, kBufferSize);
+	memset(bufferData, 0, mBufferSize);
 	
 	for (int i = 0; i < kBufferCount; ++i)
 	{
-		alBufferData(mBufferIds[i], mFormat, bufferData, kBufferSize, mSampleRate);
+		alBufferData(mBufferIds[i], mFormat, bufferData, mBufferSize, mSampleRate);
 		CheckError();
 		logDebug("OpenAL-Stream: set empty buffer data", 0);
 	}
