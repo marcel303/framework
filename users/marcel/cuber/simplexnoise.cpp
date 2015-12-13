@@ -45,11 +45,11 @@ dimension, you can ensure that each gets a unique noise value and they don't
 all look identical.
 */
 
-int fastfloor(const float x);
+static inline int fastfloor( const float x ) { return x > 0.f ? (int) x : (int) x - 1; }
 
-float dot(const int* g, const float x, const float y);
-float dot(const int* g, const float x, const float y, const float z);
-float dot(const int* g, const float x, const float y, const float z, const float w);
+static inline float dot( const int* g, const float x, const float y ) { return g[0]*x + g[1]*y; }
+static inline float dot( const int* g, const float x, const float y, const float z ) { return g[0]*x + g[1]*y + g[2]*z; }
+static inline float dot( const int* g, const float x, const float y, const float z, const float w ) { return g[0]*x + g[1]*y + g[2]*z + g[3]*w; }
 
 
 // The gradients are the midpoints of the vertices of a cube.
@@ -404,10 +404,12 @@ float raw_noise_3d( const float x, const float y, const float z ) {
 
 
 // 4D raw Simplex noise
+const static float SQRT_5 = sqrtf(5.f);
+
 float raw_noise_4d( const float x, const float y, const float z, const float w ) {
     // The skewing and unskewing factors are hairy again for the 4D case
-    float F4 = (sqrtf(5.0)-1.0)/4.0;
-    float G4 = (5.0-sqrtf(5.0))/20.0;
+    float F4 = (SQRT_5-1.f)/4.f;
+    float G4 = (5.f-SQRT_5)/20.f;
     float n0, n1, n2, n3, n4; // Noise contributions from the five corners
 
     // Skew the (x,y,z,w) space to determine which cell of 24 simplices we're in
@@ -472,47 +474,47 @@ float raw_noise_4d( const float x, const float y, const float z, const float w )
     float y1 = y0 - j1 + G4;
     float z1 = z0 - k1 + G4;
     float w1 = w0 - l1 + G4;
-    float x2 = x0 - i2 + 2.0*G4; // Offsets for third corner in (x,y,z,w) coords
-    float y2 = y0 - j2 + 2.0*G4;
-    float z2 = z0 - k2 + 2.0*G4;
-    float w2 = w0 - l2 + 2.0*G4;
-    float x3 = x0 - i3 + 3.0*G4; // Offsets for fourth corner in (x,y,z,w) coords
-    float y3 = y0 - j3 + 3.0*G4;
-    float z3 = z0 - k3 + 3.0*G4;
-    float w3 = w0 - l3 + 3.0*G4;
-    float x4 = x0 - 1.0 + 4.0*G4; // Offsets for last corner in (x,y,z,w) coords
-    float y4 = y0 - 1.0 + 4.0*G4;
-    float z4 = z0 - 1.0 + 4.0*G4;
-    float w4 = w0 - 1.0 + 4.0*G4;
+    float x2 = x0 - i2 + 2.f*G4; // Offsets for third corner in (x,y,z,w) coords
+    float y2 = y0 - j2 + 2.f*G4;
+    float z2 = z0 - k2 + 2.f*G4;
+    float w2 = w0 - l2 + 2.f*G4;
+    float x3 = x0 - i3 + 3.f*G4; // Offsets for fourth corner in (x,y,z,w) coords
+    float y3 = y0 - j3 + 3.f*G4;
+    float z3 = z0 - k3 + 3.f*G4;
+    float w3 = w0 - l3 + 3.f*G4;
+    float x4 = x0 - 1.f + 4.f*G4; // Offsets for last corner in (x,y,z,w) coords
+    float y4 = y0 - 1.f + 4.f*G4;
+    float z4 = z0 - 1.f + 4.f*G4;
+    float w4 = w0 - 1.f + 4.f*G4;
 
     // Work out the hashed gradient indices of the five simplex corners
     int ii = i & 255;
     int jj = j & 255;
     int kk = k & 255;
     int ll = l & 255;
-    int gi0 = perm[ii+perm[jj+perm[kk+perm[ll]]]] % 32;
-    int gi1 = perm[ii+i1+perm[jj+j1+perm[kk+k1+perm[ll+l1]]]] % 32;
-    int gi2 = perm[ii+i2+perm[jj+j2+perm[kk+k2+perm[ll+l2]]]] % 32;
-    int gi3 = perm[ii+i3+perm[jj+j3+perm[kk+k3+perm[ll+l3]]]] % 32;
-    int gi4 = perm[ii+1+perm[jj+1+perm[kk+1+perm[ll+1]]]] % 32;
+    int gi0 = perm[ii+perm[jj+perm[kk+perm[ll]]]] & 31;
+    int gi1 = perm[ii+i1+perm[jj+j1+perm[kk+k1+perm[ll+l1]]]] & 31;
+    int gi2 = perm[ii+i2+perm[jj+j2+perm[kk+k2+perm[ll+l2]]]] & 31;
+    int gi3 = perm[ii+i3+perm[jj+j3+perm[kk+k3+perm[ll+l3]]]] & 31;
+    int gi4 = perm[ii+1+perm[jj+1+perm[kk+1+perm[ll+1]]]] & 31;
 
     // Calculate the contribution from the five corners
-    float t0 = 0.6 - x0*x0 - y0*y0 - z0*z0 - w0*w0;
-    if(t0<0) n0 = 0.0;
+    float t0 = 0.6f - x0*x0 - y0*y0 - z0*z0 - w0*w0;
+    if(t0<0) n0 = 0.f;
     else {
         t0 *= t0;
         n0 = t0 * t0 * dot(grad4[gi0], x0, y0, z0, w0);
     }
 
-    float t1 = 0.6 - x1*x1 - y1*y1 - z1*z1 - w1*w1;
-    if(t1<0) n1 = 0.0;
+    float t1 = 0.6f - x1*x1 - y1*y1 - z1*z1 - w1*w1;
+    if(t1<0) n1 = 0.f;
     else {
         t1 *= t1;
         n1 = t1 * t1 * dot(grad4[gi1], x1, y1, z1, w1);
     }
 
-    float t2 = 0.6 - x2*x2 - y2*y2 - z2*z2 - w2*w2;
-    if(t2<0) n2 = 0.0;
+    float t2 = 0.6f - x2*x2 - y2*y2 - z2*z2 - w2*w2;
+    if(t2<0) n2 = 0.f;
     else {
         t2 *= t2;
         n2 = t2 * t2 * dot(grad4[gi2], x2, y2, z2, w2);
@@ -535,10 +537,3 @@ float raw_noise_4d( const float x, const float y, const float z, const float w )
     // Sum up and scale the result to cover the range [-1,1]
     return 27.0 * (n0 + n1 + n2 + n3 + n4);
 }
-
-
-int fastfloor( const float x ) { return x > 0 ? (int) x : (int) x - 1; }
-
-float dot( const int* g, const float x, const float y ) { return g[0]*x + g[1]*y; }
-float dot( const int* g, const float x, const float y, const float z ) { return g[0]*x + g[1]*y + g[2]*z; }
-float dot( const int* g, const float x, const float y, const float z, const float w ) { return g[0]*x + g[1]*y + g[2]*z + g[3]*w; }
