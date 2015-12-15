@@ -890,6 +890,12 @@ static T saturate(T v)
 }
 
 template <typename T>
+static T lerp(T v1, T v2, T t)
+{
+	return v1 * (1.f - t) + v2 * t;
+}
+
+template <typename T>
 static T sine(T min, T max, float t)
 {
 	t = t * float(M_PI) / 180.f;
