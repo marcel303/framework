@@ -9,11 +9,19 @@
 
 #include <Windows.h>
 
+#define USE_AUDIO_INPUT 1
+
 #define ArraySize(x) (sizeof(x) / sizeof(x[0]))
 
-#define SX 20
-#define SY 20
-#define SZ 20
+#if 0
+	#define SX 30
+	#define SY 30
+	#define SZ 30
+#else
+	#define SX 20
+	#define SY 20
+	#define SZ 20
+#endif
 
 static float min(float x) { return x; }
 static float min(float x, float y) { return x < y ? x : y; }
@@ -39,6 +47,26 @@ static float rand(float min, float max)
 struct Coord
 {
 	float x, y, z;
+
+	Coord()
+	{
+	}
+
+	Coord(float x, float y, float z)
+	{
+		this->x = x;
+		this->y = y;
+		this->z = z;
+	}
+
+	Coord operator+(const Coord & other) const
+	{
+		Coord result;
+		result.x = x + other.x;
+		result.y = y + other.y;
+		result.z = z + other.z;
+		return result;
+	}
 };
 
 class Effect
@@ -383,26 +411,41 @@ float torus88(const Coord & c, float a, float b)
 
 //
 
-/*
-todo : test
-static Coord twist(const Coord & c)
+static Coord twistX(const Coord & c, const float scale)
 {
 	Coord result;
-	const float fc = cosf(20.f * c.y);
-	const float fs = sinf(20.f * c.y);
 	Mat4x4 m;
-	m.MakeIdentity();
-	m(0, 0) = +fc;
-	m(1, 0) = -fs;
-	m(0, 1) = +fs;
-	m(1, 1) = +fc;
-	Vec3 t = m * Vec3(c.x, c.z, 0.f);
+	m.MakeRotationX(-2.f * M_PI * c.y * scale); // -2.f because we want to create an inverse rotation matrix
+	const Vec3 t = m * Vec3(c.x, c.y, c.z);
 	result.x = t[0];
 	result.y = t[1];
-	result.z = c.y;
+	result.z = t[2];
 	return result;
 }
-*/
+
+static Coord twistY(const Coord & c, const float scale)
+{
+	Coord result;
+	Mat4x4 m;
+	m.MakeRotationY(-2.f * M_PI * c.y * scale); // -2.f because we want to create an inverse rotation matrix
+	const Vec3 t = m * Vec3(c.x, c.y, c.z);
+	result.x = t[0];
+	result.y = t[1];
+	result.z = t[2];
+	return result;
+}
+
+static Coord twistZ(const Coord & c, const float scale)
+{
+	Coord result;
+	Mat4x4 m;
+	m.MakeRotationZ(-2.f * M_PI * c.y * scale); // -2.f because we want to create an inverse rotation matrix
+	const Vec3 t = m * Vec3(c.x, c.y, c.z);
+	result.x = t[0];
+	result.y = t[1];
+	result.z = t[2];
+	return result;
+}
 
 //
 
@@ -419,6 +462,18 @@ static float csgSubtraction(float d1, float d2)
 static float csgIntersection(float d1, float d2)
 {
 	return max(d1, d2);
+}
+
+float csgSoftUnion(float a, float b, float k)
+{
+	const float h = clamp(.5f + .5f * (b - a) / k, 0.f, 1.f);
+	return lerp(b, a, h) - k * h * (1.f - h);
+}
+
+float csgSoftIntersection(float a, float b, float k)
+{
+	const float h = clamp(.5f + .5f * (b - a) / k, 0.f, 1.f);
+	return lerp(a, b, h) + k * h * (1.f - h);
 }
 
 //
@@ -483,7 +538,7 @@ static void fftProcess()
 //
 
 static const float kParticleDirInterval = 1.f;
-static const float kParticlePosInterval = .05f;
+static const float kParticlePosInterval = .1f;
 
 class MyEffect : public Effect
 {
@@ -498,6 +553,8 @@ class MyEffect : public Effect
 
 	enum Test
 	{
+		kTest_None,
+		kTest_Calibrate,
 		kTest_MinParticleDistance,
 		kTest_CircleDistance,
 		kTest_SphereDistance,
@@ -577,7 +634,7 @@ class MyEffect : public Effect
 public:
 	MyEffect()
 		: m_time(0.f)
-		, m_test(kTest_MinParticleDistance)
+		, m_test(kTest_None)
 		, m_transform(kTransform_Identity)
 		, m_bucketIndex(0)
 		, m_gameOfLifeUpdateTimer(0.f)
@@ -601,9 +658,9 @@ public:
 			m_bucketIndex = Calc::Min(m_bucketIndex + 1, kFFTBucketCount - 1);
 
 		if (keyboard.wentDown(SDLK_t))
-			m_test = (Test)((m_test + 1) % kTest_COUNT);
+			m_test = (Test)((m_test + (keyboard.isDown(SDLK_LSHIFT) ? -1 : 1) + kTest_COUNT) % kTest_COUNT);
 		if (keyboard.wentDown(SDLK_x))
-			m_transform = (Transform)((m_transform + 1) % kTransform_COUNT);
+			m_transform = (Transform)((m_transform + (keyboard.isDown(SDLK_LSHIFT) ? -1 : 1) + kTransform_COUNT) % kTransform_COUNT);
 
 		m_time += dt;
 
@@ -650,16 +707,16 @@ public:
 		m_pointMatrix1.scale(.2f, .2f, .2f);
 		m_pointMatrix1.rotateY(m_time);
 		m_pointMatrix1.rotateZ(m_time);
-		//m_pointMatrix1.translate(m_time * .1f, 0.f, 0.f);
 
 		m_pointMatrix2.reset();
 		m_pointMatrix2.scale(.2f, .2f, .2f);
 		m_pointMatrix2.rotateZ(m_time);
 		m_pointMatrix2.rotateY(m_time);
-		//m_pointMatrix2.translate(m_time * .1f, 0.f, 0.f);
 
 		m_particleMatrix.reset();
 		m_particleMatrix.rotateX(m_time);
+
+		//
 
 		const float kGameOfLifeUpdateInterval = .2f;
 		m_gameOfLifeUpdateTimer += dt;
@@ -668,6 +725,8 @@ public:
 			m_gameOfLifeUpdateTimer -= kGameOfLifeUpdateInterval;
 			m_gameOfLife.evolve();
 		}
+
+		//
 
 		m_particleBuffer.fadeLinear(.25f, dt);
 
@@ -688,16 +747,82 @@ public:
 
 	virtual float evaluate(const Coord & c)
 	{
-		//const float power = s_fftBuckets[m_bucketIndex];
-		const float power = 1.f;
+		const float controlX = mouse.x / float(800.f);
+		const float controlY = mouse.y / float(800.f);
 
-#if 1
+		const float power = keyboard.isDown(SDLK_p) ? 1.f : s_fftBuckets[m_bucketIndex];
+
+		bool doTestPostEffects = true;
+
 		const Coord testCoord = m_testMatrix.apply(c);
 
 		float d;
 
 		switch (m_test)
 		{
+		case kTest_None:
+			{
+				doTestPostEffects = false;
+
+			#if 0
+				const float s = 10.f;
+				const float t1 = (sinf(framework.time * s / 1.111f) + 1.f) * .25f;
+				const float t2 = (sinf(framework.time * s / 2.333f) + 1.f) * .25f;
+				d = computePlaneDistance(twistZ(twistY(c, t1), t2)) * 2.f;
+				d = (1.f - pow(d, power));
+			#elif 0
+				const float r = .4f + .3f * sinf(framework.time);
+				d = computeCircleHullDistance(repeat(c, 0.f, 0.f, r)) * 3.f;
+				d = 1.f - pow(d, power);
+			#elif 0
+				const Coord c1 = c;
+				const Coord c2 = c + Coord(5.2f, 1.3f, 0.f);
+				const Coord c3(
+					computePerlinNoise(c1, framework.time / 1.111f),
+					computePerlinNoise(c2, framework.time / 1.333f),
+					0.f);
+
+				d = computePerlinNoise(c + c3, framework.time / 5.777f) * 3.f;
+			#elif 0
+				d = computePerlinNoise(c, framework.time) * 3.f;
+			#else
+				auto c1 = m_pointMatrix1.apply(c);
+				auto c2 = m_pointMatrix2.apply(c);
+				//const float d = 1.f - computePointDistance(x, y, z);
+				//const float d = 1.f - pow(computeLineDistance(x, y, z), 4.f);
+				const float d1 = computePlaneDistance(twistY(c1, .05f));
+				const float d2 = computePlaneDistance(twistZ(c2, .03f));
+				const float d3 = computePerlinNoise(testCoord, framework.time) * 2.f + 1.f;
+				const float d4 = computeMinParticleDistance(m_particleMatrix.apply(c), m_particles, kNumParticles) * 4.f;
+				d = min(d1, d2, d3, d4);
+				//d = min(d4);
+				d = (1.f - pow(d, power));
+			#endif
+			}
+			break;
+
+		case kTest_Calibrate:
+			{
+				doTestPostEffects = false;
+
+				BiMatrix topMatrix;
+				topMatrix.translate(0.f, -1.f, 0.f);
+				topMatrix.rotateZ(M_PI/2.f);
+				d = computePlaneDistance(topMatrix.apply(c));
+
+				if (keyboard.isDown(SDLK_LSHIFT))
+				{
+					BiMatrix leftMatrix;
+					leftMatrix.translate(-1.f, 0.f, 0.f);
+					//d = csgUnion(d, computePlaneDistance(leftMatrix.apply(c)));
+					//d = csgSoftUnion(d, computePlaneDistance(leftMatrix.apply(c)), controlY * 4.f);
+					d = csgSoftIntersection(d, computePlaneDistance(leftMatrix.apply(c)), controlY * 4.f);
+				}
+
+				d = 1.f - d * 4.f;
+			}
+			break;
+
 		case kTest_MinParticleDistance:
 			d = computeMinParticleDistance(testCoord, m_particles, kNumParticles) * 2.f;
 			break;
@@ -735,7 +860,7 @@ public:
 			break;
 
 		case kTest_PerlineNoise:
-			d = (computePerlinNoise(testCoord, framework.time) + .2f) * 3.f;
+			d = computePerlinNoise(testCoord, framework.time) + 1.f;
 			break;
 
 		case kTest_Torus82:
@@ -750,28 +875,10 @@ public:
 		if (d < 0.f)
 			d = 0.f;
 
-		return 1.f - pow(d, power);
-#elif 0
-		const float r = .4f + .3f * sinf(framework.time);
-		const float d = computeCircleHullDistance(repeat(c, 0.f, 0.f, r)) * 3.f;
-		return 1.f - pow(d, power);
-#elif 0
-		const float d = computePerlinNoise(c, framework.time) * 3.f;
+		if (doTestPostEffects)
+			d = 1.f - pow(d, power);
 
 		return d;
-#else
-		auto c1 = m_pointMatrix1.apply(c);
-		auto c2 = m_pointMatrix2.apply(c);
-		//const float d = 1.f - computePointDistance(x, y, z);
-		//const float d = 1.f - pow(computeLineDistance(x, y, z), 4.f);
-		const float d1 = computePlaneDistance(c1);
-		const float d2 = computePlaneDistance(c2);
-		const float d3 = computePerlinNoise(c, framework.time) + 1.f;
-		const float d4 = computeMinParticleDistance(m_particleMatrix.apply(c), m_particles, kNumParticles) * 4.f;
-		const float d = min(d1, d2, d3, d4);
-		//const float d = min(d4);
-		return 1.f - pow(d, power);
-#endif
 	}
 
 	void debugDraw()
@@ -817,6 +924,28 @@ static void drawCube(const Cube & cube)
 			-(SY - 1) / 2.f,
 			-(SZ - 1) / 2.f);
 
+	#if 1
+		gxBegin(GL_LINES);
+		{
+			gxColor4f(1.f, 1.f, 1.f, .25f);
+			for (int x1 = 0; x1 <= 1; ++x1)
+				for (int y1 = 0; y1 <= 1; ++y1)
+					for (int z1 = 0; z1 <= 1; ++z1)
+						for (int x2 = 0; x2 <= 1; ++x2)
+							for (int y2 = 0; y2 <= 1; ++y2)
+								for (int z2 = 0; z2 <= 1; ++z2)
+									if (std::abs(x1-x2) + std::abs(y1-y2) + std::abs(z2-z1) == 1)
+									{
+										gxVertex3f(x1 * SX, y1 * SY, z1 * SZ);
+										gxVertex3f(x2 * SX, y2 * SY, z2 * SZ);
+									}
+		}
+		gxEnd();
+	#endif
+
+		glPointSize(2.f);
+		setBlend(BLEND_ADD);
+
 		gxBegin(GL_POINTS);
 		{
 			for (int x = 0; x < SX; ++x)
@@ -834,6 +963,8 @@ static void drawCube(const Cube & cube)
 			}
 		}
 		gxEnd();
+
+		setBlend(BLEND_ALPHA);
 	}
 	gxPopMatrix();
 }
@@ -1026,7 +1157,7 @@ public:
 
 int main(int argc, char * argv[])
 {
-#if 1
+#if USE_AUDIO_INPUT
 	AudioIn audioIn;
 
 	audioIn.init(2, 44100, 4096 * 2);
@@ -1058,6 +1189,7 @@ int main(int argc, char * argv[])
 	{
 		fftInit();
 
+	#if !USE_AUDIO_INPUT
 		AudioStream_Vorbis audioStreamOGG;
 		audioStreamOGG.Open("music1.ogg", true);
 
@@ -1066,7 +1198,8 @@ int main(int argc, char * argv[])
 
 		AudioOutput_OpenAL audioOutput;
 		audioOutput.Initialize(2, audioStreamOGG.mSampleRate, 1 << 14);
-		//audioOutput.Play();
+		audioOutput.Play();
+	#endif
 
 		Cube cube;
 
@@ -1085,14 +1218,12 @@ int main(int argc, char * argv[])
 			if (mouse.isDown(BUTTON_LEFT))
 			{
 				rotation[0] += mouse.dy / 100.f;
-				rotation[1] += mouse.dx / 100.f;
+				rotation[1] -= mouse.dx / 100.f;
 			}
 
 			// process audio
 
-		#if 0
-			audioOutput.Update(&audioStream);
-		#else
+		#if USE_AUDIO_INPUT
 			short buffer[4096 * 2];
 			int sampleCount = 0;
 			if (audioIn.provide(buffer, sampleCount))
@@ -1102,6 +1233,8 @@ int main(int argc, char * argv[])
 					s_fftInputBuffer[i] = buffer[i * 2] * scale;
 				s_fftProvideTime = framework.time;
 			}
+		#else
+			audioOutput.Update(&audioStream);
 		#endif
 
 			// generate FFT
@@ -1128,6 +1261,7 @@ int main(int argc, char * argv[])
 					Mat4x4 t;
 					t.MakePerspectiveGL(M_PI/2.f, 1.f, .1f, 10.f);
 					gxLoadMatrixf(t.m_v);
+					glScalef(1.f, -1.f, 1.f);
 
 					gxMatrixMode(GL_MODELVIEW);
 					gxPushMatrix();
