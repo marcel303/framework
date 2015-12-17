@@ -9,11 +9,12 @@
 
 #include <Windows.h>
 
-#define USE_AUDIO_INPUT 1
+#define VIDEO_RECORDING_MODE 0
+#define USE_AUDIO_INPUT 0
 
 #define ArraySize(x) (sizeof(x) / sizeof(x[0]))
 
-#if 0
+#if VIDEO_RECORDING_MODE
 	#define SX 30
 	#define SY 30
 	#define SZ 30
@@ -590,15 +591,58 @@ class MyEffect : public Effect
 	CubeBuffer m_particleBuffer;
 	struct ShootingStar
 	{
+		enum Randomize
+		{
+			kRandomize_Position = 1 << 0,
+			kRandomize_Direction = 1 << 1
+		};
+
+		enum CollisionResponse
+		{
+			kCollisionResponse_Wrap,
+			kCollisionResponse_Bounce,
+			kCollisionResponse_Respawn
+		};
+
+		int m_randomize;
+		CollisionResponse m_collisionResponse;
+
 		int m_particleDir[3];
 		float m_particleDirTimer;
 		int m_particlePos[3];
 		float m_particlePosTimer;
 
 		ShootingStar()
-			: m_particleDirTimer(kParticleDirInterval)
+			: m_randomize((kRandomize_Direction * 1) | (kRandomize_Position * 0))
+			, m_collisionResponse(kCollisionResponse_Wrap)
+			//, m_collisionResponse(kCollisionResponse_Respawn)
+			//, m_collisionResponse(kCollisionResponse_Bounce)
+			, m_particleDirTimer(kParticleDirInterval)
 			, m_particlePosTimer(kParticlePosInterval)
 		{
+			randomizePosition();
+			randomizeDirection();
+		}
+
+		void getNextPosition(int * xyz) const
+		{
+			for (int i = 0; i < 3; ++i)
+				xyz[i] = m_particlePos[i] + m_particleDir[i];
+		}
+
+		void randomizePosition()
+		{
+			m_particlePos[0] = rand() % SX;
+			m_particlePos[1] = rand() % SY;
+			m_particlePos[2] = rand() % SZ;
+		}
+
+		void randomizeDirection()
+		{
+			m_particleDir[0] = 0;
+			m_particleDir[1] = 0;
+			m_particleDir[2] = 0;
+			m_particleDir[rand() % 3] = (rand() % 2) ? -1 : +1;
 		}
 
 		void tick(float dt, CubeBuffer & buffer)
@@ -607,13 +651,10 @@ class MyEffect : public Effect
 			while (m_particleDirTimer >= kParticleDirInterval)
 			{
 				m_particleDirTimer -= kParticleDirInterval;
-				m_particlePos[0] = rand() % SX;
-				m_particlePos[1] = rand() % SY;
-				m_particlePos[2] = rand() % SZ;
-				m_particleDir[0] = 0;
-				m_particleDir[1] = 0;
-				m_particleDir[2] = 0;
-				m_particleDir[rand() % 3] = (rand() % 2) ? -1 : +1;
+				if (m_randomize & kRandomize_Position)
+					randomizePosition();
+				if (m_randomize & kRandomize_Direction)
+					randomizeDirection();
 			}
 
 			m_particlePosTimer += dt;
@@ -621,9 +662,36 @@ class MyEffect : public Effect
 			{
 				m_particlePosTimer -= kParticlePosInterval;
 				buffer.m_value[m_particlePos[0]][m_particlePos[1]][m_particlePos[2]] = 1.f;
+
 				const int wrapSizes[3] = { SX, SY, SZ };
+
 				for (int i = 0; i < 3; ++i)
-					m_particlePos[i] = (m_particlePos[i] + m_particleDir[i] + wrapSizes[i]) % wrapSizes[i];
+				{
+					if (m_collisionResponse == kCollisionResponse_Wrap)
+						m_particlePos[i] = (m_particlePos[i] + m_particleDir[i] + wrapSizes[i]) % wrapSizes[i];
+					else if (m_collisionResponse == kCollisionResponse_Bounce)
+					{
+						int newPos = m_particlePos[i] + m_particleDir[i];
+						if (newPos < 0 || newPos >= wrapSizes[i])
+						{
+							m_particleDir[i] *= -1;
+							newPos = m_particlePos[i] + m_particleDir[i];
+						}
+						m_particlePos[i] = newPos;
+					}
+					else if (m_collisionResponse == kCollisionResponse_Respawn)
+					{
+						const int newPos = m_particlePos[i] + m_particleDir[i];
+						if (newPos < 0 || newPos >= wrapSizes[i])
+						{
+							randomizePosition();
+							randomizeDirection();
+							break;
+						}
+						else
+							m_particlePos[i] = newPos;
+					}
+				}
 			}
 		}
 	};
@@ -943,7 +1011,9 @@ static void drawCube(const Cube & cube)
 		gxEnd();
 	#endif
 
+	#if VIDEO_RECORDING_MODE
 		glPointSize(2.f);
+	#endif
 		setBlend(BLEND_ADD);
 
 		gxBegin(GL_POINTS);
