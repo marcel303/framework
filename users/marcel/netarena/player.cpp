@@ -2280,6 +2280,9 @@ void Player::tick(GameSim & gameSim, float dt)
 
 		Vec2 totalVel = (m_vel * (m_animVelIsAbsolute ? 0.f : 1.f)) + animVel;
 
+		if (gameSim.m_gameMode == kGameMode_FootBrawl && m_footBrawl.m_hasBall)
+			totalVel *= FOOTBRAWL_BALL_POSSESSION_PLAYER_SPEED_MULTIPLIER;
+
 		m_lastTotalVel = totalVel;
 
 		// input step:
@@ -2512,6 +2515,12 @@ void Player::tick(GameSim & gameSim, float dt)
 
 				return result;
 			});
+
+		if (gameSim.m_gameMode == kGameMode_FootBrawl && m_footBrawl.m_hasBall)
+		{
+			totalVel /= FOOTBRAWL_BALL_POSSESSION_PLAYER_SPEED_MULTIPLIER;
+			newTotalVel /= FOOTBRAWL_BALL_POSSESSION_PLAYER_SPEED_MULTIPLIER;
+		}
 
 		if (m_animVelIsAbsolute)
 			m_vel.SetZero();
@@ -3443,6 +3452,8 @@ void Player::drawLightAt(int x, int y) const
 
 void Player::debugDraw() const
 {
+	setDebugFont();
+
 	const CharacterData * characterData = getCharacterData(m_characterIndex);
 
 	setColor(0, 31, 63, 63);
@@ -3461,7 +3472,6 @@ void Player::debugDraw() const
 
 	if (m_attack.attacking && m_attack.hasCollision)
 	{
-		setDebugFont();
 		setColor(colorWhite);
 		drawText(m_pos[0], y, 14, 0.f, 0.f, "attacking");
 		y += 18.f;
@@ -4695,14 +4705,16 @@ void Player::throwFootBall(Vec2Arg pos, Vec2Arg vel)
 	m_footBrawl.m_hasBall = false;
 
 	FootBall * footBall = GAMESIM->allocFootBall();
+	Assert(footBall);
 	if (footBall)
 	{
 		footBall->setup(
 			int(pos[0]),
 			int(pos[1]),
-			m_index);
+			m_index,
+			0.f);
 		footBall->m_vel = vel;
-		footBall->m_isDropped = true;
+		footBall->m_hasBeenTouched = true;
 		GAMESIM->playSound("football-bounce.ogg"); // sound when the ball is dropped
 	}
 }

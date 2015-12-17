@@ -299,6 +299,7 @@ struct CollisionShape
 {
 	enum Type
 	{
+		kType_None,
 		kType_Poly,
 		kType_Circle
 	};

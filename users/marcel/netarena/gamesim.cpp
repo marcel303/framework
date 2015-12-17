@@ -143,7 +143,7 @@ void GameStateData::FootBrawl::handleGoal(GameSim & gameSim, int team)
 	gameSim.addAnnouncement(colorBlue, "%d : %d", teamScore[0], teamScore[1]);
 
 	// todo : do animations and stuff and afterwards spawn a new ball
-	gameSim.spawnFootBall();
+	gameSim.beginFootBallSpawn();
 }
 
 int GameStateData::FootBrawl::getWinningTeam() const
@@ -343,15 +343,16 @@ void Token::drawLight() const
 
 //
 
-void FootBall::setup(int x, int y, int lastPlayerIndex)
-{
-	const int kRadius = 50;
+const int kFootBallRadius = 50;
 
+void FootBall::setup(int x, int y, int lastPlayerIndex, float spawnTime)
+{
 	*static_cast<PhysicsActor*>(this) = PhysicsActor();
 
 	m_isActive = true;
 	m_type = kObjectType_FootBall;
-	m_collisionShape.setCircle(Vec2(0.f, 0.f), kRadius);
+	if (spawnTime == 0.f)
+		m_collisionShape.setCircle(Vec2(0.f, 0.f), kFootBallRadius);
 	m_pos.Set(x, y);
 	m_vel.Set(0.f, 0.f);
 	m_doTeleport = true;
@@ -360,6 +361,7 @@ void FootBall::setup(int x, int y, int lastPlayerIndex)
 	m_friction = 0.1f;
 	m_airFriction = 0.9f;
 
+	m_spawnTimer = spawnTime;
 	m_hasBeenTouched = false;
 	m_isDropped = true;
 	m_spriterState = SpriterState();
@@ -370,6 +372,13 @@ void FootBall::setup(int x, int y, int lastPlayerIndex)
 
 void FootBall::tick(GameSim & gameSim, float dt)
 {
+	if (m_spawnTimer != 0.f)
+	{
+		m_spawnTimer = Calc::Max(0.f, m_spawnTimer - dt);
+		if (m_spawnTimer == 0.f)
+			m_collisionShape.setCircle(Vec2(0.f, 0.f), kFootBallRadius);
+	}
+
 	m_pickupTimer = Calc::Max(0.f, m_pickupTimer - dt);
 
 	if (m_isDropped)
@@ -438,7 +447,10 @@ void FootBall::draw(const GameSim & gameSim) const
 
 			if (m_isDropped)
 			{
-				setColor(colorWhite);
+				if (m_spawnTimer != 0.f)
+					setColor(255, 255, 255, 63);
+				else
+					setColor(colorWhite);
 
 				SpriterState spriterState = m_spriterState;
 				spriterState.x = m_pos[0];
@@ -1798,6 +1810,7 @@ void BlindsEffect::drawHud()
 	else
 	{
 		setColorf(1.f, 1.f, 1.f, m_time / m_duration * 4.f);
+		setMainFont();
 		drawText(150, m_y - m_size - 20, 40, +1.f, -1.f, "%s", m_text.c_str());
 	}
 }
@@ -2106,7 +2119,7 @@ void GameSim::setGameState(::GameState gameState)
 
 			if (m_gameMode == kGameMode_FootBrawl)
 			{
-				spawnFootBall();
+				beginFootBallSpawn();
 			}
 
 			if (m_gameMode == kGameMode_TokenHunt)
@@ -2951,6 +2964,18 @@ void GameSim::tickPlay()
 		}
 	}
 
+	// footbrawl
+
+	if (m_footBrawl.ballSpawnTime != 0.f)
+	{
+		m_footBrawl.ballSpawnTime = Calc::Max(0.f, m_footBrawl.ballSpawnTime - dt);
+
+		if (m_footBrawl.ballSpawnTime == 0.f)
+		{
+			spawnFootBall();
+		}
+	}
+
 	// floor effect
 
 	m_floorEffect.tick(*this, dt);
@@ -3543,6 +3568,15 @@ void GameSim::drawPlayColor(const CamParams & camParams)
 	drawObjects(m_axes, MAX_AXES);
 	drawObjects(m_pipebombs, MAX_PIPEBOMBS);
 	drawObjects(*this, m_footBalls, MAX_FOOTBALLS);
+	if (m_footBrawl.ballSpawnTime != 0.f)
+	{
+		SpriterState state;
+		state.x = m_footBrawl.ballSpawnPoint[0];
+		state.y = m_footBrawl.ballSpawnPoint[1];
+		state.startAnim(FOOTBALL_SPRITER, "idle");
+		setColor(255, 255, 255, 63);
+		FOOTBALL_SPRITER.draw(state);
+	}
 	drawObjects(m_footBallGoals, MAX_FOOTBALL_GOALS);
 
 	// players
@@ -3726,6 +3760,28 @@ void GameSim::drawPlayHud(const CamParams & camParams)
 	for (int i = 0; i < MAX_ANIM_EFFECTS; ++i)
 	{
 		m_animationEffects[i].draw(kDrawLayer_HUD);
+	}
+
+	// footbrawl HUD
+
+	if (m_gameMode == kGameMode_FootBrawl && m_footBrawl.ballSpawnTime != 0.f)
+	{
+		setColor(colorWhite);
+		setMainFont();
+
+		drawText(GFX_SX/2, GFX_SY- 50, 32, 0, 0, "BALL SPAWN: %02.2f", m_footBrawl.ballSpawnTime);
+	}
+
+	if (m_gameMode == kGameMode_FootBrawl)
+	{
+		const int secondsRemaining = Calc::RoundDown(Calc::Max(0.f, FOOTBRAWL_TIME_LIMIT - m_roundTime));
+
+		setColor(colorWhite);
+		setMainFont();
+
+		drawText(GFX_SX/2, 50, 32, 0, 0, "%02d:%02d",
+			secondsRemaining / 60,
+			secondsRemaining % 60);
 	}
 
 #if ITCHIO_BUILD
@@ -4100,8 +4156,14 @@ void GameSim::spawnFootBall()
 		footBall->setup(
 			m_footBrawl.ballSpawnPoint[0],
 			m_footBrawl.ballSpawnPoint[1],
-			-1);
+			-1,
+			0.f);
 	}
+}
+
+void GameSim::beginFootBallSpawn()
+{
+	m_footBrawl.ballSpawnTime = FOOTBRAWL_BALL_SPANW_TIME;
 }
 
 bool GameSim::grabFootBall(const CollisionInfo & collisionInfo, int playerIndex, FootBall & grabbedFootBall)

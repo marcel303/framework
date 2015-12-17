@@ -687,6 +687,7 @@ struct Token : PhysicsActor
 
 struct FootBall : PhysicsActor
 {
+	float m_spawnTimer;
 	bool m_hasBeenTouched; // ball needs to be touched once for it to be affected by gravity
 	bool m_isDropped;
 	int m_lastPlayerIndex;
@@ -698,7 +699,7 @@ struct FootBall : PhysicsActor
 		memset(this, 0, sizeof(FootBall));
 	}
 
-	void setup(int x, int y, int lastPlayerIndex);
+	void setup(int x, int y, int lastPlayerIndex, float spawnTime);
 
 	void tick(GameSim & gameSim, float dt);
 	void draw(const GameSim & gameSim) const;
@@ -1266,6 +1267,7 @@ struct GameStateData
 		int getWinningTeam() const;
 
 		float ballSpawnPoint[2];
+		float ballSpawnTime;
 		int teamScore[2];
 	} m_footBrawl;
 
@@ -1383,6 +1385,7 @@ public:
 
 	FootBall * allocFootBall();
 	void spawnFootBall();
+	void beginFootBallSpawn();
 	bool grabFootBall(const CollisionInfo & collisionInfo, int playerIndex, FootBall & footBall);
 
 	uint16_t spawnBullet(int16_t x, int16_t y, uint8_t angle, BulletType type, BulletEffect effect, uint8_t ownerPlayerId);

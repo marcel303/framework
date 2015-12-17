@@ -245,6 +245,7 @@ void ButtonLegend::draw(int x, int y)
 			setColor(255, 255, 255);
 		else
 			setColor(255, 255, 255, 255, 227); // todo : make button legend colors configurable somewhere
+		setMainFont();
 		drawText(e.textX, e.textY, UI_BUTTONLEGEND_FONT_SIZE, +1.f, +1.f, "%s", e.text);
 	}
 }
@@ -548,6 +549,7 @@ void SpinButton::draw()
 
 	if (m_localString)
 	{
+		setMainFont();
 		drawText(m_x + m_textX, m_y + m_textY, m_textSize, +1.f, +1.f, "%s", getLocalString(m_localString));
 	}
 
@@ -580,6 +582,7 @@ void SpinButton::draw()
 	if (g_devMode)
 	{
 		setColor(colorWhite);
+		setMainFont();
 		drawText(m_x, m_y, 18, +1.f, +1.f, "min=%d, max=%d, value=%d", m_min, m_max, m_value);
 	}
 }
@@ -825,6 +828,7 @@ void Slider::draw()
 
 	if (m_localString)
 	{
+		setMainFont();
 		drawText(m_x + m_textX, m_y + m_textY, m_textSize, +1.f, +1.f, "%s", getLocalString(m_localString));
 	}
 
@@ -834,6 +838,7 @@ void Slider::draw()
 	if (g_devMode)
 	{
 		setColor(colorWhite);
+		setMainFont();
 		drawText(m_x, m_y, 18, +1.f, +1.f, "min=%d, max=%d, value=%d", m_min, m_max, m_value);
 	}
 }

@@ -413,7 +413,11 @@ Vec2 CollisionShape::getSegmentNormal(int idx) const
 
 bool CollisionShape::intersects(const CollisionShape & other) const
 {
-	if (type == kType_Circle)
+	if (type == kType_None || other.type == kType_None)
+	{
+		return false;
+	}
+	else if (type == kType_Circle)
 	{
 		if (other.type == kType_Circle)
 		{

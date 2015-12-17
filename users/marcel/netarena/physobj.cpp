@@ -340,6 +340,9 @@ void PhysicsActor::drawBB() const
 {
 	switch (m_collisionShape.type)
 	{
+	case CollisionShape::kType_None:
+		break;
+
 	case CollisionShape::kType_Poly:
 		for (int i = 0; i < m_collisionShape.numPoints; ++i)
 		{
