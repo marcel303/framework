@@ -21,10 +21,14 @@ void Template::InitAsLevel()
 	m_back.CreateLayer(MAPX, MAPY);
 }
 
-void Template::CreateNewTemplate()
+bool Template::CreateNewTemplate()
 {
 	QString middle = QFileDialog::getOpenFileName(0,
 		tr("Select main image"), "", tr("Image Files (*.png)"));
+
+	if(middle == "")
+		return false;
+
 	QString front = QFileDialog::getOpenFileName(0,
 		tr("Select front image"), "", tr("Image Files (*.png)"));
 	QString back = QFileDialog::getOpenFileName(0,
@@ -40,6 +44,8 @@ void Template::CreateNewTemplate()
 
 
 	ed.m_level = this;
+
+	return true;
 
 	//set ui to reflect template mode
 }
@@ -152,7 +158,7 @@ void TemplateScene::Initialize()
 
 		QStringList templates = dir.entryList();
 
-		//if(templates.count())
+		if(templates.count())
 		{
 			AddFolder(d);
 			SetCurrentFolder(d);
@@ -286,6 +292,8 @@ void TemplateFolder::LoadTileIntoScene()
 	}
 }
 
+#include "SettingsWidget.h"
+#include "grid.h"
 void TemplateFolder::SetCurrentTemplate()
 {
 	if(m_templateMap.count())
@@ -293,12 +301,12 @@ void TemplateFolder::SetCurrentTemplate()
 
 		m_currentTemplate = m_templateMap.first();
 
-		ed.m_currentTemplate = m_currentTemplate;
+		if(settingsWidget->m_editT)
+			ed.m_grid->SetCurrentTarget(m_currentTemplate);
 	}
 	else
 	{
 		m_currentTemplate = 0;
-		ed.m_currentTemplate = m_currentTemplate;
 	}
 
 
@@ -311,7 +319,8 @@ void TemplateFolder::SetCurrentTemplate(const QString& name)
 		m_currentTemplate = m_templateMap[name];
 		//m_currentTemplate->LoadTemplateIntoScene();
 
-		ed.m_currentTemplate = m_currentTemplate;
+		if(settingsWidget->m_editT)
+			ed.m_grid->SetCurrentTarget(m_currentTemplate);
 	}
 	else
 		SetCurrentTemplate();

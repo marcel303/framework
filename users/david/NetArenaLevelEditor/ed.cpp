@@ -13,6 +13,11 @@
 
 void Ed::Initialize()
 {
+	m_level = 0;
+	m_currentTarget = 0;
+
+	ArtFolderPath = "EditorData//";
+
 	m_mapx = BASEX;
 	m_mapy = BASEY;
 
@@ -27,7 +32,7 @@ void Ed::Initialize()
 	m_settingsWidget->Create();
 
     m_settingsWidget->m_grid->addWidget(m_templateScene->m_listView, 1, 1);
-    m_templateScene->m_listView->hide();
+	//m_templateScene->m_listView->hide();
 
 
 }
@@ -68,7 +73,10 @@ void Ed::NewLevel()
 
     m_level = new Template();
     m_level->InitAsLevel();
-    m_levelbackup = m_level;
+	m_currentTarget = m_level;
+
+	m_grid->SetCurrentTarget(m_level);
+
 
 }
 
@@ -112,10 +120,16 @@ void Ed::SetCurrentPallette()
 	if(m_settingsWidget->m_mech->isChecked())
 	{
 		m_viewPallette->setScene(m_mecPallette);
+
+		m_settingsWidget->m_objectText->hide();
+		m_templateScene->m_listView->show();
 	}
 	if(m_settingsWidget->m_coll->isChecked())
 	{
 		m_viewPallette->setScene(m_colPallette);
+
+		m_settingsWidget->m_objectText->hide();
+		m_templateScene->m_listView->show();
 	}
 	if(m_settingsWidget->m_temp->isChecked())
 	{
@@ -159,3 +173,4 @@ QList<QString> Ed::GetLinesFromConfigFile(QString filename)
 
 	return list;
 }
+

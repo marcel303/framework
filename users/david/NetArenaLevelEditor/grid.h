@@ -57,7 +57,7 @@ public:
 	void dragMoveEvent(QGraphicsSceneDragDropEvent *e);
 
 	void SetLayerFront(QImage *p);
-	void SetCurrentLevel(Template* t);
+	void SetCurrentTarget(Template* t);
 
 	STile** m_tiles;
 

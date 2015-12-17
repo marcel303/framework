@@ -8,6 +8,7 @@ class QGroupBox;
 class QSlider;
 class QTextEdit;
 class QGridLayout;
+class QPushButton;
 class SettingsWidget : public QWidget
 {
 	Q_OBJECT
@@ -39,6 +40,10 @@ public:
 
 	QTextEdit* m_objectText;
 	QGridLayout* m_grid;
+
+	QPushButton* m_editModeButton;
+
+	bool m_editT;
 
 public slots:
 	void UpdatePallettes(bool s);
