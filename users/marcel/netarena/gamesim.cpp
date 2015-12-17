@@ -424,11 +424,8 @@ void FootBall::tick(GameSim & gameSim, float dt)
 
 			if (goal.m_isActive && goal.intersects(m_pos))
 			{
-				goal.handleGoal();
-				gameSim.playSound("objects/football_goal/score.ogg");
-
+				goal.handleGoal(gameSim);
 				gameSim.m_footBrawl.handleGoal(gameSim, 1 - goal.m_team);
-
 				*this = FootBall();
 				return;
 			}
@@ -542,10 +539,16 @@ bool FootBallGoal::intersects(Vec2Arg pos) const
 		pos[1] <= m_y2;
 }
 
-void FootBallGoal::handleGoal()
+bool FootBallGoal::intersects(const CollisionShape & shape) const
+{
+	CollisionShape myShape(Vec2(m_x1, m_y1), Vec2(m_x2, m_y2));
+	return myShape.intersects(shape);
+}
+
+void FootBallGoal::handleGoal(GameSim & gameSim)
 {
 	m_spriterState.startAnim(FOOTBALL_GOAL_SPRITER, "goal");
-
+	gameSim.playSound("objects/football_goal/score.ogg");
 }
 
 //

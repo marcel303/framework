@@ -725,7 +725,8 @@ struct FootBallGoal
 	void drawLight() const;
 
 	bool intersects(Vec2Arg pos) const;
-	void handleGoal();
+	bool intersects(const CollisionShape & shape) const;
+	void handleGoal(GameSim & gameSim);
 };
 
 struct Coin : PhysicsActor

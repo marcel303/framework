@@ -339,6 +339,7 @@ COMMAND_OPTION(s_killPlayers, "Player/Kill Players", []{ g_app->netDebugAction("
 #define BUBBLE_SPRITER Spriter("objects/bubble/sprite.scml")
 #define SHIELDSPECIAL_SPRITER Spriter("objects/shieldspecial/sprite.scml")
 #define EMBLEM_SPRITER Spriter("Player_Emblem/Player_Emblem.scml")
+#define FOOTBALL_SPRITER Spriter("objects/football/sprite.scml")
 
 // todo : m_isGrounded should be true when stickied too. review code and make change!
 
@@ -2912,16 +2913,22 @@ void Player::tick(GameSim & gameSim, float dt)
 				{
 					m_footBrawl.m_hasBall = true;
 				}
-			}
 
-			if (m_footBrawl.m_hasBall && (gameSim.GetTick() % 4) == 0)
-			{
-				ParticleSpawnInfo spawnInfo(
-					m_pos[0], m_pos[1],
-					kBulletType_ParticleA, 2,
-					50.f, 100.f, 50.f);
-				spawnInfo.color = 0xffffff80;
-				gameSim.spawnParticles(spawnInfo);
+				if (m_footBrawl.m_hasBall)
+				{
+					for (int i = 0; i < MAX_FOOTBALL_GOALS; ++i)
+					{
+						auto & goal = gameSim.m_footBallGoals[i];
+
+						if (goal.m_isActive && goal.intersects(playerCollision))
+						{
+							goal.handleGoal(gameSim);
+							gameSim.m_footBrawl.handleGoal(gameSim, 1 - goal.m_team);
+							m_footBrawl.m_hasBall = false;
+							break;
+						}
+					}
+				}
 			}
 		}
 	}
@@ -3326,6 +3333,18 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y, const SpriterState & s
 		setMainFont();
 		setColor(colorWhite);
 		drawText(x, y + UI_PLAYER_EMBLEM_TEXT_OFFSET_Y, 19, 0.f, +1.f, "%d", m_score);
+
+		// draw ball possession
+		if (m_footBrawl.m_hasBall)
+		{
+			SpriterState state;
+			state.x = x;
+			state.y = y + UI_PLAYER_EMBLEM_OFFSET_Y - 100;
+			state.scale = .4f;
+			state.startAnim(FOOTBALL_SPRITER, "idle");
+			setColor(colorWhite);
+			FOOTBALL_SPRITER.draw(state);
+		}
 	}
 
 	// draw player inventory
