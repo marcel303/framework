@@ -352,7 +352,7 @@ void FootBall::setup(int x, int y, int lastPlayerIndex, float spawnTime)
 	m_isActive = true;
 	m_type = kObjectType_FootBall;
 	if (spawnTime == 0.f)
-		m_collisionShape.setCircle(Vec2(0.f, 0.f), kFootBallRadius);
+		m_collisionShape.setCircle(Vec2(0.f, 0.f), kFootBallRadius * FOOTBALL_SCALE);
 	m_pos.Set(x, y);
 	m_vel.Set(0.f, 0.f);
 	m_doTeleport = true;
@@ -376,7 +376,7 @@ void FootBall::tick(GameSim & gameSim, float dt)
 	{
 		m_spawnTimer = Calc::Max(0.f, m_spawnTimer - dt);
 		if (m_spawnTimer == 0.f)
-			m_collisionShape.setCircle(Vec2(0.f, 0.f), kFootBallRadius);
+			m_collisionShape.setCircle(Vec2(0.f, 0.f), kFootBallRadius * FOOTBALL_SCALE);
 	}
 
 	m_pickupTimer = Calc::Max(0.f, m_pickupTimer - dt);
@@ -452,6 +452,7 @@ void FootBall::draw(const GameSim & gameSim) const
 				SpriterState spriterState = m_spriterState;
 				spriterState.x = m_pos[0];
 				spriterState.y = m_pos[1];
+				spriterState.scale = FOOTBALL_SCALE;
 				FOOTBALL_SPRITER.draw(spriterState);
 			}
 
@@ -477,7 +478,7 @@ void FootBall::drawLight(const GameSim & gameSim) const
 			if (m_isDropped)
 			{
 				setColor(colorWhite);
-				Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f, 1.5f, false, FILTER_MIPMAP);
+				Sprite("player-light.png").drawEx(m_pos[0], m_pos[1], 0.f, 1.5f * FOOTBALL_SCALE, 1.5f * FOOTBALL_SCALE, false, FILTER_MIPMAP);
 			}
 
 			gxPopMatrix();
@@ -518,6 +519,9 @@ void FootBallGoal::draw() const
 {
 	setColor(colorWhite);
 	FOOTBALL_GOAL_SPRITER.draw(m_spriterState);
+
+	setColor(m_team == 0 ? colorRed : colorBlue);
+	drawRectLine(m_x1, m_y1, m_x2, m_y2);
 
 	if (g_devMode)
 	{
@@ -2411,11 +2415,13 @@ void GameSim::load(const char * name)
 					LOG_ERR("too many football goals!");
 				else
 				{
+					const int x = (d.getInt("x1", 0) + d.getInt("x2", 0)) / 2;
+					const int y = (d.getInt("y1", 0) + d.getInt("y2", 0)) / 2;
 					goal->setup(
-						d.getInt("x1", 0),
-						d.getInt("y1", 0),
-						d.getInt("x2", 0),
-						d.getInt("y2", 0),
+						x - FOOTBALL_GOAL_SIZE/2,
+						y - FOOTBALL_GOAL_SIZE/2,
+						x + FOOTBALL_GOAL_SIZE/2,
+						y + FOOTBALL_GOAL_SIZE/2,
 						d.getInt("team", -1));
 				}
 			}
@@ -3576,6 +3582,7 @@ void GameSim::drawPlayColor(const CamParams & camParams)
 		SpriterState state;
 		state.x = m_footBrawl.ballSpawnPoint[0];
 		state.y = m_footBrawl.ballSpawnPoint[1];
+		state.scale = FOOTBALL_SCALE;
 		state.startAnim(FOOTBALL_SPRITER, "idle");
 		setColor(255, 255, 255, 63);
 		FOOTBALL_SPRITER.draw(state);
