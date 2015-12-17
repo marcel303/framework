@@ -41,12 +41,13 @@ public:
 
     void NewLevel();
 
+	void SetCurrentTemplate(Template* t);
+
 	Grid* m_grid;
 
 	Template* m_level;
-	Template* m_currentTemplate;
-    Template* m_levelbackup;
-    TemplateScene* m_templateScene;
+	Template* m_currentTarget;
+	TemplateScene* m_templateScene;
 
 
 
@@ -54,7 +55,7 @@ private:
 	Ed(){}
 	~Ed(){}
 
-    SettingsWidget* m_settingsWidget;
+	SettingsWidget* m_settingsWidget;
 
 	int m_mapx;
 	int m_mapy;

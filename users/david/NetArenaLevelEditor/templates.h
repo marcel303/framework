@@ -13,7 +13,7 @@ public:
 	void Load(const QString &filename);
 
 	void InitAsLevel();
-	void CreateNewTemplate();
+	bool CreateNewTemplate();
 
 	void StampTo(int x, int y);
 	void Unstamp(int x, int y);

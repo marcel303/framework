@@ -30,14 +30,16 @@ int main(int argc, char *argv[])
 
     a.processEvents();
 
+	view2 = new EditorView();
+	viewPallette = new EditorViewBasic;
+
 	ed.Initialize();
 	ed.LoadPallettes();
 	ed.m_grid->CreateGrid(BASEX, BASEY);
 
-
     ed.NewLevel();
 
-	ed.m_grid->SetCurrentLevel(ed.m_level);
+
 
 	grid = new QGridLayout();
 	vlayout = new QVBoxLayout();
@@ -45,12 +47,10 @@ int main(int argc, char *argv[])
 
 	QWidget rightside;
 
-	view2 = new EditorView();
+
 	view2->setMinimumWidth(1200);
 	view2->setScene(ed.m_grid);
 
-
-	viewPallette = new EditorViewBasic;
 	viewPallette->setMinimumWidth(320);
 	viewPallette->setDragMode(QGraphicsView::ScrollHandDrag);
 	viewPallette->setScene(ed.GetCurrentPallette());

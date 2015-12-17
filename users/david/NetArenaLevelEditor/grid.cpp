@@ -32,16 +32,16 @@ void STile::mousePressEvent ( QGraphicsSceneMouseEvent * e )
 	if(ed.GetSettingsWidget()->m_mech->isChecked())
 	{
 		if(e->button() == Qt::LeftButton)
-			ed.m_level->m_mec.SetElement(m_x, m_y, true);
+			ed.m_currentTarget->m_mec.SetElement(m_x, m_y, true);
 		if(e->button() == Qt::RightButton)
-			ed.m_level->m_mec.DeleteElement(m_x, m_y, true);
+			ed.m_currentTarget->m_mec.DeleteElement(m_x, m_y, true);
 	}
 	if(ed.GetSettingsWidget()->m_coll->isChecked())
 	{
 		if(e->button() == Qt::LeftButton)
-			ed.m_level->m_col.SetElement(m_x, m_y, true);
+			ed.m_currentTarget->m_col.SetElement(m_x, m_y, true);
 		if(e->button() == Qt::RightButton)
-			ed.m_level->m_col.DeleteElement(m_x, m_y, true);
+			ed.m_currentTarget->m_col.DeleteElement(m_x, m_y, true);
 	}
 	if(ed.GetSettingsWidget()->m_temp->isChecked())
 	{
@@ -212,7 +212,7 @@ void Grid::dragMoveEvent(QGraphicsSceneDragDropEvent *e)
 	e->acceptProposedAction();
 }
 
-void Grid::SetCurrentLevel(Template* t)
+void Grid::SetCurrentTarget(Template* t)
 {
 	m_front->m_pixmap = t->m_front.m_pixmap;
 	m_middle->m_pixmap = t->m_middle.m_pixmap;

@@ -9,6 +9,7 @@
 
 SettingsWidget::SettingsWidget(QWidget *parent) : QWidget(parent)
 {
+	m_editT = false;
 }
 
 SettingsWidget::~SettingsWidget()
@@ -74,10 +75,9 @@ void SettingsWidget::Create()
 	QPushButton* button = new QPushButton("New Template");
     connect(button, SIGNAL(clicked()), this, SLOT(NewTemplate()));
 	vbox->addWidget(button);
-	button = new QPushButton("Edit Level");
-	vbox->addWidget(button);
-	button = new QPushButton("Edit Template");
-	vbox->addWidget(button);
+	m_editModeButton = new QPushButton("Edit Level");
+	connect(m_editModeButton, SIGNAL(clicked()), this, SLOT(EditTemplate()));
+	vbox->addWidget(m_editModeButton);
 
 	m_templateControls->setLayout(vbox);
 
@@ -104,6 +104,9 @@ void SettingsWidget::Create()
 	connect(m_middleSlider, SIGNAL(valueChanged(int)), this, SLOT(UpdateTransparancy(int)));
 	connect(m_backSlider, SIGNAL(valueChanged(int)), this, SLOT(UpdateTransparancy(int)));
 	connect(m_objSlider, SIGNAL(valueChanged(int)), this, SLOT(UpdateTransparancy(int)));
+
+	m_editT = true;
+	EditTemplate();
 }
 
 void SettingsWidget::UpdatePallettes(bool s)
@@ -124,21 +127,33 @@ void SettingsWidget::UpdateTransparancy(int s)
 void SettingsWidget::NewTemplate()
 {
     Template* t = new Template();
-    t->CreateNewTemplate();
+
+	if(t->CreateNewTemplate())
+	{
+	}
 }
 
-bool editT = false;
+
 void SettingsWidget::EditTemplate()
 {
-    if(editT)
-    {
+	QPalette pal = m_editModeButton->palette();
 
+	if(m_editT)
+    {
+		m_editModeButton->setText("Edit Template");
+		pal.setColor(QPalette::Button, QColor(Qt::blue));
     }
     else
     {
-
+		m_editModeButton->setText("Edit Level");
+		pal.setColor(QPalette::Button, QColor(Qt::green));
     }
-    editT = !editT;
+	m_editT = !m_editT;
+
+	m_editModeButton->setFlat(true);
+	m_editModeButton->setAutoFillBackground(true);
+	m_editModeButton->setPalette(pal);
+	m_editModeButton->update();
 }
 
 
