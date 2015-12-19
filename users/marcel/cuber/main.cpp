@@ -4,6 +4,7 @@
 #include "cube.h"
 #include "framework.h"
 #include "GameOfLife.h"
+#include "Path.h"
 #include "script.h"
 #include "simplexnoise.h"
 
@@ -20,11 +21,11 @@ static const int kFFTComplexSize = 513; // n/2+1
 static const int kFFTBucketCount = 32;
 static audiofft::AudioFFT s_fft;
 
-float s_fftInputBuffer[4096];
-float s_fftInput[kFFTSize] = { };
-float s_fftReal[kFFTComplexSize] = { };
-float s_fftImaginary[kFFTComplexSize] = { };
-float s_fftBuckets[kFFTBucketCount] = { };
+static float s_fftInputBuffer[4096];
+static float s_fftInput[kFFTSize] = { };
+static float s_fftReal[kFFTComplexSize] = { };
+static float s_fftImaginary[kFFTComplexSize] = { };
+static float s_fftBuckets[kFFTBucketCount] = { };
 
 static float s_fftProvideTime = 0.f;
 
@@ -87,23 +88,53 @@ int EffectCtxImpl::fftBucketCount() const
 
 //
 
+#include "FileStream.h"
+#include "FileStreamExtends.h"
+#include "MemoryStream.h"
+
+static const char * kDllCopyFilename = "script-copy.dll";
+
 class ScriptEffect : public Effect
 {
+	std::string m_filename;
+
 	HINSTANCE m_scriptInstance;
 
 	CreateFunction m_createFunction;
 	DestroyFunction m_destroyFunction;
 
+	EffectCtx & m_effectCtx;
 	Effect * m_effect;
+
+	//
+
+	HANDLE m_fileChanged;
 
 public:
 	ScriptEffect(EffectCtx & ctx, const char * filename)
 		: m_scriptInstance(NULL)
 		, m_createFunction(nullptr)
 		, m_destroyFunction(nullptr)
+		, m_effectCtx(ctx)
 		, m_effect(nullptr)
 	{
-		m_scriptInstance = LoadLibraryA(filename);
+		init(filename);
+	}
+
+	~ScriptEffect()
+	{
+		shutdown();
+	}
+
+	//
+
+	void init(const char * filename)
+	{
+		m_filename = filename;
+
+		syncDll();
+
+		m_scriptInstance = LoadLibraryA(kDllCopyFilename);
 
 		if (m_scriptInstance != NULL)
 		{
@@ -112,10 +143,16 @@ public:
 		}
 
 		if (m_createFunction)
-			m_effect = m_createFunction(ctx);
+			m_effect = m_createFunction(m_effectCtx);
+
+		//
+
+		const std::string path = Path::GetDirectory(m_filename);
+
+		m_fileChanged = FindFirstChangeNotificationA(path.c_str(), FALSE, FILE_NOTIFY_CHANGE_LAST_WRITE);
 	}
 
-	~ScriptEffect()
+	void shutdown()
 	{
 		if (m_effect && m_destroyFunction)
 		{
@@ -133,10 +170,65 @@ public:
 		}
 	}
 
+	bool hasDllChanged() const
+	{
+		try
+		{
+			FileStream src;
+			FileStream dst;
+			src.Open(m_filename.c_str(), OpenMode_Read);
+			dst.Open(kDllCopyFilename, OpenMode_Read);
+
+			return !FileStreamExtents::ContentsAreEqual(&src, &dst);
+		}
+		catch (std::exception & e)
+		{
+			logError(e.what());
+			return false;
+		}
+	}
+
+	void syncDll() const
+	{
+		try
+		{
+			MemoryStream src;
+			FileStream fileStream;
+			fileStream.Open(m_filename.c_str(), OpenMode_Read);
+			StreamExtensions::StreamTo(&fileStream, &src, 1024*1024);
+
+			FileStreamExtents::OverwriteIfChanged(&src, kDllCopyFilename);
+		}
+		catch (std::exception & e)
+		{
+			logError(e.what());
+		}
+	}
+
+	void reload()
+	{
+		logDebug("reloading script DLL");
+
+		shutdown();
+
+		init(m_filename.c_str());
+	}
+
 	//
 
 	virtual void tick(const float dt)
 	{
+		if (WaitForSingleObject(m_fileChanged, 0) == WAIT_OBJECT_0)
+		{
+			if (hasDllChanged())
+			{
+				reload();
+			}
+
+			BOOL result = FindNextChangeNotification(m_fileChanged);
+			Assert(result == TRUE);
+		}
+
 		if (m_effect)
 		{
 			m_effect->tick( dt);

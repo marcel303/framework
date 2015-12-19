@@ -20,7 +20,7 @@ project(cuber)
 
 # --- cuber ---
 
-file(GLOB_RECURSE source "*.cpp" "*.h")
+file(GLOB source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "*.cpp" "*.h")
 list(REMOVE_ITEM source script.cpp)
 
 add_executable(cuber ${source})
