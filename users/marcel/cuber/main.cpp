@@ -1,481 +1,16 @@
 #include "AudioFFT.h"
 #include "Calc.h"
+#include "config.h"
+#include "cube.h"
 #include "framework.h"
 #include "GameOfLife.h"
+#include "script.h"
 #include "simplexnoise.h"
 
 #include "audiostream/AudioOutput.h"
 #include "audiostream/AudioStreamVorbis.h"
 
 #include <Windows.h>
-
-#define VIDEO_RECORDING_MODE 0
-#define USE_AUDIO_INPUT 0
-
-#define ArraySize(x) (sizeof(x) / sizeof(x[0]))
-
-#if VIDEO_RECORDING_MODE
-	#define SX 30
-	#define SY 30
-	#define SZ 30
-#else
-	#define SX 20
-	#define SY 20
-	#define SZ 20
-#endif
-
-static float min(float x) { return x; }
-static float min(float x, float y) { return x < y ? x : y; }
-static float min(float x, float y, float z) { return min(x, min(y, z)); }
-static float min(float x, float y, float z, float w) { return min(x, min(y, min(z, w))); }
-static float min(float x, float y, float z, float w, float s) { return min(x, min(y, min(z, min(w, s)))); }
-
-static float max(float x, float y)
-{
-	return x > y ? x : y;
-}
-
-static float max(float x, float y, float z)
-{
-	return max(x, max(y, z));
-}
-
-static float rand(float min, float max)
-{
-	return min + (max - min) * (rand() % 1024) / 1023.f;
-}
-
-struct Coord
-{
-	float x, y, z;
-
-	Coord()
-	{
-	}
-
-	Coord(float x, float y, float z)
-	{
-		this->x = x;
-		this->y = y;
-		this->z = z;
-	}
-
-	Coord operator+(const Coord & other) const
-	{
-		Coord result;
-		result.x = x + other.x;
-		result.y = y + other.y;
-		result.z = z + other.z;
-		return result;
-	}
-};
-
-class Effect
-{
-public:
-	virtual void evaluateRaw(int x, int y, int z, float & value) = 0;
-	virtual float evaluate(const Coord & c) = 0;
-};
-
-struct CubeBuffer
-{
-	float m_value[SX][SY][SZ];
-
-	CubeBuffer()
-	{
-		reset();
-	}
-
-	void reset()
-	{
-		memset(m_value, 0, sizeof(m_value));
-	}
-
-	void copyFrom(const CubeBuffer & other)
-	{
-		memcpy(m_value, other.m_value, sizeof(m_value));
-	}
-
-	void fadeLinear(float speed, float dt)
-	{
-		for (int x = 0; x < SX; ++x)
-		{
-			for (int y = 0; y < SY; ++y)
-			{
-				for (int z = 0; z < SZ; ++z)
-				{
-					m_value[x][y][z] = std::max(0.f, m_value[x][y][z] - speed * dt);
-				}
-			}
-		}
-	}
-
-	void fadeIncremental(float lossPerSecond, float dt)
-	{
-		const float loss = std::powf(lossPerSecond, dt);
-
-		for (int x = 0; x < SX; ++x)
-		{
-			for (int y = 0; y < SY; ++y)
-			{
-				for (int z = 0; z < SZ; ++z)
-				{
-					m_value[x][y][z] *= loss;
-				}
-			}
-		}
-	}
-};
-
-struct Cube : CubeBuffer
-{
-	Cube()
-		: CubeBuffer()
-	{
-	}
-};
-
-class BiMatrix
-{
-	Mat4x4 m_matrix;
-	Mat4x4 m_matrixInverse;
-	bool m_dirty;
-
-public:
-	BiMatrix()
-		: m_dirty(false)
-	{
-		m_matrix.MakeIdentity();
-		m_matrixInverse.MakeIdentity();
-	}
-
-	void reset()
-	{
-		matrix().MakeIdentity();
-	}
-
-	void scale(float x, float y, float z)
-	{
-		Mat4x4 tempMatrix;
-		tempMatrix.MakeScaling(x, y, z);
-		matrix() = matrix() * tempMatrix;
-	}
-
-	void translate(float x, float y, float z)
-	{
-		Mat4x4 tempMatrix;
-		tempMatrix.MakeTranslation(x, y, z);
-		matrix() = matrix() * tempMatrix;
-	}
-
-	void rotateX(float r)
-	{
-		Mat4x4 tempMatrix;
-		tempMatrix.MakeRotationX(r);
-		matrix() = matrix() * tempMatrix;
-	}
-
-	void rotateY(float r)
-	{
-		Mat4x4 tempMatrix;
-		tempMatrix.MakeRotationY(r);
-		matrix() = matrix() * tempMatrix;
-	}
-
-	void rotateZ(float r)
-	{
-		Mat4x4 tempMatrix;
-		tempMatrix.MakeRotationZ(r);
-		matrix() = matrix() * tempMatrix;
-	}
-
-	Coord apply(const Coord & c)
-	{
-		const Vec3 v = matrixInverse().Mul4(Vec3(c.x, c.y, c.z));
-		Coord r;
-		r.x = v[0];
-		r.y = v[1];
-		r.z = v[2];
-		return r;
-	}
-
-	Mat4x4 & matrix()
-	{
-		m_dirty = true;
-		return m_matrix;
-	}
-
-	const Mat4x4 & matrixInverse()
-	{
-		if (m_dirty)
-		{
-			m_dirty = false;
-			m_matrixInverse = m_matrix.CalcInv();
-		}
-
-		return m_matrixInverse;
-	}
-};
-
-struct Particle
-{
-	bool active;
-	float x, y, z;
-
-	Particle()
-	{
-		memset(this, 0, sizeof(*this));
-	}
-};
-
-static float computeMinParticleDistance(const Coord & c, const Particle * particles, int numParticles);
-static float computeCircleDistance(const Coord & c);
-static float computeSphereDistance(const Coord & c);
-static float computeCubeDistance(const Coord & c);
-static float computeToroidDistance(const Coord & c, float thickness, float outer);
-static float computeCircleHullDistance(const Coord & c);
-static float computePointDistance(const Coord & c);
-static float computeLineDistance(const Coord & c);
-static float computeLineSegmentDistance(const Coord & c, const float x1, const float x2, float r);
-static float computePerlinNoise(const Coord & c, float w);
-
-static float length1(float x)
-{
-	return sqrtf(x * x);
-}
-
-static float length2(float x, float y)
-{
-	return sqrtf(x * x + y * y);
-}
-
-static float length3(float x, float y, float z)
-{
-	return sqrtf(x * x + y * y + z * z);
-}
-
-static float dot3(float x1, float y1, float z1, float x2, float y2, float z2)
-{
-	return
-		x1 * x2 +
-		y1 * y2 +
-		z1 * z2;
-}
-
-static Coord repeat(const Coord & coord, float repeatX, float repeatY, float repeatZ)
-{
-	Coord result;
-	result.x = repeatX == 0.f ? coord.x : fmodf(coord.x, repeatX);
-	result.y = repeatY == 0.f ? coord.y : fmodf(coord.y, repeatY);
-	result.z = repeatZ == 0.f ? coord.z : fmodf(coord.z, repeatZ);
-	return result;
-}
-
-static float computeMinParticleDistance(const Coord & c, const Particle * particles, int numParticles)
-{
-	float minDistance = std::numeric_limits<float>::max();
-
-	for (int i = 0; i < numParticles; ++i)
-	{
-		if (!particles[i].active)
-			return false;
-
-		const float dx = c.x - particles[i].x;
-		const float dy = c.y - particles[i].y;
-		const float dz = c.z - particles[i].z;
-		const float d = length3(dx, dy, dz);
-
-		if (d < minDistance)
-			minDistance = d;
-	}
-
-	return minDistance;
-}
-
-static float computeCircleDistance(const Coord & c)
-{
-	const float dx = c.x;
-	const float dy = c.y;
-	const float dc = length2(dx, dy);
-	const float d =
-		dc <= 1.f
-		? length1(c.z)
-		: length1(c.z) + dc - 1.f;
-	return d;
-}
-
-static float computeSphereDistance(const Coord & c)
-{
-	return length3(c.x, c.y, c.z) - 1.f;
-}
-
-static float computeCubeDistance(const Coord & c, float sx, float sy, float sz)
-{
-	// actually a round box
-
-	return length3(
-		max(0.f, abs(c.x) - sx),
-		max(0.f, abs(c.y) - sy),
-		max(0.f, abs(c.z) - sz));
-}
-
-static float computeToroidDistance(const Coord & c, float thickness, float outer)
-{
-	const float s = length2(c.x, c.z);
-	const float dx = s - outer;
-	const float dy = c.y;
-	const float d = length2(dx, dy);
-	return d - thickness;
-}
-
-static float computeCircleHullDistance(const Coord & c)
-{
-	const float dx = c.x;
-	const float dy = c.y;
-	const float dc = length2(dx, dy);
-	if (dc == 0.f)
-		return 1.f;
-	else
-	{
-		const float x = dx / dc;
-		const float y = dy / dc;
-		const float z = 0.f;
-		const float dx2 = x - c.x;
-		const float dy2 = y - c.y;
-		const float dz2 = z - c.z;
-		const float d = length3(dx2, dy2, dz2);
-		return d;
-	}
-}
-
-static float computePointDistance(const Coord & c)
-{
-	const float dx = c.x;
-	const float dy = c.y;
-	const float dz = c.z;
-	const float d = length3(dx, dy, dz);
-	return d;
-}
-
-static float computeLineDistance(const Coord & c)
-{
-	const float dx = 0.f;
-	const float dy = c.y;
-	const float dz = c.z;
-	const float d = length3(dx, dy, dz);
-	return d;
-}
-
-static float computePlaneDistance(const Coord & c)
-{
-	return std::abs(c.x);
-}
-
-static float computeLineSegmentDistance(const Coord & c, const float x1, const float x2, float r)
-{
-	const float px = c.x - x1;
-	const float py = c.y - 0.f;
-	const float pz = c.z - 0.f;
-	const float bx = x2 - x1;
-	const float by = 0.f;
-	const float bz = 0.f;
-	const float h = max(0.f, min(1.f, dot3(px, py, pz, bx, by, bz) / dot3(bx, by, bz, bx, by, bz)));
-	const float d = length3(
-		px - bx * h,
-		py - by * h,
-		pz - bz * h);
-	return d - r;
-}
-
-static float computePerlinNoise(const Coord & c, float w)
-{
-	const float value = octave_noise_4d(4.f, .5f, .5f, c.x, c.y, c.z, w);
-
-	return value;
-}
-
-float torus82(const Coord & c, float a, float b)
-{
-	const float dx = (c.x * c.x + c.z * c.z) - a;
-	const float dy = c.y;
-	const float d = dx * dx * dx * dx + dy * dy * dy * dy;
-	return d - b;
-}
-
-float torus88(const Coord & c, float a, float b)
-{
-	const float dx = (c.x * c.x * c.x * c.x + c.z * c.z * c.z * c.z) - a;
-	const float dy = c.y;
-	const float d = dx * dx * dx * dx + dy * dy * dy * dy;
-	return d - b;
-}
-
-//
-
-static Coord twistX(const Coord & c, const float scale)
-{
-	Coord result;
-	Mat4x4 m;
-	m.MakeRotationX(-2.f * M_PI * c.y * scale); // -2.f because we want to create an inverse rotation matrix
-	const Vec3 t = m * Vec3(c.x, c.y, c.z);
-	result.x = t[0];
-	result.y = t[1];
-	result.z = t[2];
-	return result;
-}
-
-static Coord twistY(const Coord & c, const float scale)
-{
-	Coord result;
-	Mat4x4 m;
-	m.MakeRotationY(-2.f * M_PI * c.y * scale); // -2.f because we want to create an inverse rotation matrix
-	const Vec3 t = m * Vec3(c.x, c.y, c.z);
-	result.x = t[0];
-	result.y = t[1];
-	result.z = t[2];
-	return result;
-}
-
-static Coord twistZ(const Coord & c, const float scale)
-{
-	Coord result;
-	Mat4x4 m;
-	m.MakeRotationZ(-2.f * M_PI * c.y * scale); // -2.f because we want to create an inverse rotation matrix
-	const Vec3 t = m * Vec3(c.x, c.y, c.z);
-	result.x = t[0];
-	result.y = t[1];
-	result.z = t[2];
-	return result;
-}
-
-//
-
-static float csgUnion(float d1, float d2)
-{
-	return min(d1, d2);
-}
-
-static float csgSubtraction(float d1, float d2)
-{
-	return max(-d1, d2);
-}
-
-static float csgIntersection(float d1, float d2)
-{
-	return max(d1, d2);
-}
-
-float csgSoftUnion(float a, float b, float k)
-{
-	const float h = clamp(.5f + .5f * (b - a) / k, 0.f, 1.f);
-	return lerp(b, a, h) - k * h * (1.f - h);
-}
-
-float csgSoftIntersection(float a, float b, float k)
-{
-	const float h = clamp(.5f + .5f * (b - a) / k, 0.f, 1.f);
-	return lerp(a, b, h) + k * h * (1.f - h);
-}
 
 //
 
@@ -538,6 +73,99 @@ static void fftProcess()
 
 //
 
+// fixme : move these
+
+float EffectCtxImpl::fftBucketValue(int index) const
+{
+	return s_fftBuckets[index];
+}
+
+int EffectCtxImpl::fftBucketCount() const
+{
+	return kFFTBucketCount;
+}
+
+//
+
+class ScriptEffect : public Effect
+{
+	HINSTANCE m_scriptInstance;
+
+	CreateFunction m_createFunction;
+	DestroyFunction m_destroyFunction;
+
+	Effect * m_effect;
+
+public:
+	ScriptEffect(EffectCtx & ctx, const char * filename)
+		: m_scriptInstance(NULL)
+		, m_createFunction(nullptr)
+		, m_destroyFunction(nullptr)
+		, m_effect(nullptr)
+	{
+		m_scriptInstance = LoadLibraryA(filename);
+
+		if (m_scriptInstance != NULL)
+		{
+			m_createFunction = (CreateFunction)GetProcAddress(m_scriptInstance, "create");
+			m_destroyFunction = (DestroyFunction)GetProcAddress(m_scriptInstance, "destroy");
+		}
+
+		if (m_createFunction)
+			m_effect = m_createFunction(ctx);
+	}
+
+	~ScriptEffect()
+	{
+		if (m_effect && m_destroyFunction)
+		{
+			m_destroyFunction(m_effect);
+			m_effect = nullptr;
+		}
+
+		m_createFunction = nullptr;
+		m_destroyFunction = nullptr;
+
+		if (m_scriptInstance != NULL)
+		{
+			FreeLibrary(m_scriptInstance);
+			m_scriptInstance = NULL;
+		}
+	}
+
+	//
+
+	virtual void tick(const float dt)
+	{
+		if (m_effect)
+		{
+			m_effect->tick( dt);
+		}
+	}
+
+	virtual void evaluateRaw(int x, int y, int z, float & value)
+	{
+		if (m_effect)
+			m_effect->evaluateRaw(x, y, z, value);
+	}
+
+	virtual float evaluate(const Coord & coord)
+	{
+		if (m_effect)
+			return m_effect->evaluate(coord);
+		else
+			return 0.f;
+	}
+
+	virtual void debugDraw()
+	{
+		if (m_effect)
+			m_effect->debugDraw();
+	}
+};
+
+//
+
 static const float kParticleDirInterval = 1.f;
 static const float kParticlePosInterval = .1f;
 
@@ -546,10 +174,10 @@ class MyEffect : public Effect
 	const static int kNumParticles = 10;
 
 	float m_time;
-	BiMatrix m_testMatrix;
-	BiMatrix m_pointMatrix1;
-	BiMatrix m_pointMatrix2;
-	BiMatrix m_particleMatrix;
+	Transform m_testMatrix;
+	Transform m_pointMatrix1;
+	Transform m_pointMatrix2;
+	Transform m_particleMatrix;
 	Particle m_particles[kNumParticles];
 
 	enum Test
@@ -571,17 +199,17 @@ class MyEffect : public Effect
 		kTest_COUNT
 	};
 
-	enum Transform
+	enum TransformMode
 	{
-		kTransform_Identity,
-		kTransform_Scale,
-		kTransform_Rotate,
-		kTransform_Translate,
-		kTransform_COUNT
+		kTransformMode_Identity,
+		kTransformMode_Scale,
+		kTransformMode_Rotate,
+		kTransformMode_Translate,
+		kTransformMode_COUNT
 	};
 
 	Test m_test;
-	Transform m_transform;
+	TransformMode m_transform;
 
 	int m_bucketIndex;
 
@@ -700,10 +328,10 @@ class MyEffect : public Effect
 	ShootingStar m_shootingStars[kNumShootingStars];
 
 public:
-	MyEffect()
+	MyEffect(EffectCtx & ctx)
 		: m_time(0.f)
 		, m_test(kTest_None)
-		, m_transform(kTransform_Identity)
+		, m_transform(kTransformMode_Identity)
 		, m_bucketIndex(0)
 		, m_gameOfLifeUpdateTimer(0.f)
 	{
@@ -718,7 +346,7 @@ public:
 		m_gameOfLife.randomize();
 	}
 
-	void tick(float dt)
+	virtual void tick(EffectCtx & ctx, const float dt)
 	{
 		if (keyboard.wentDown(SDLK_LEFT))
 			m_bucketIndex = Calc::Max(0, m_bucketIndex - 1);
@@ -728,7 +356,7 @@ public:
 		if (keyboard.wentDown(SDLK_t))
 			m_test = (Test)((m_test + (keyboard.isDown(SDLK_LSHIFT) ? -1 : 1) + kTest_COUNT) % kTest_COUNT);
 		if (keyboard.wentDown(SDLK_x))
-			m_transform = (Transform)((m_transform + (keyboard.isDown(SDLK_LSHIFT) ? -1 : 1) + kTransform_COUNT) % kTransform_COUNT);
+			m_transform = (TransformMode)((m_transform + (keyboard.isDown(SDLK_LSHIFT) ? -1 : 1) + kTransformMode_COUNT) % kTransformMode_COUNT);
 
 		m_time += dt;
 
@@ -739,30 +367,30 @@ public:
 
 		switch (m_transform)
 		{
-		case kTransform_Identity:
+		case kTransformMode_Identity:
 			break;
 
-		case kTransform_Scale:
+		case kTransformMode_Scale:
 			{
-				const float s = std::sinf(framework.time);
+				const float s = std::sinf(m_time);
 
 				m_testMatrix.scale(s, s, s);
 			}
 			break;
 
-		case kTransform_Rotate:
+		case kTransformMode_Rotate:
 			{
-				m_testMatrix.rotateX(framework.time / 1.111f);
-				m_testMatrix.rotateY(framework.time / 1.333f);
-				m_testMatrix.rotateZ(framework.time / 1.777f);
+				m_testMatrix.rotateX(m_time / 1.111f);
+				m_testMatrix.rotateY(m_time / 1.333f);
+				m_testMatrix.rotateZ(m_time / 1.777f);
 			}
 			break;
 
-		case kTransform_Translate:
+		case kTransformMode_Translate:
 			{
-				const float dx = std::sinf(framework.time / 1.111f);
-				const float dy = std::sinf(framework.time / 1.333f);
-				const float dz = std::sinf(framework.time / 1.777f);
+				const float dx = std::sinf(m_time / 1.111f);
+				const float dy = std::sinf(m_time / 1.333f);
+				const float dz = std::sinf(m_time / 1.777f);
 
 				m_testMatrix.translate(dx, dy, dz);
 			}
@@ -834,25 +462,25 @@ public:
 
 			#if 0
 				const float s = 10.f;
-				const float t1 = (sinf(framework.time * s / 1.111f) + 1.f) * .25f;
-				const float t2 = (sinf(framework.time * s / 2.333f) + 1.f) * .25f;
+				const float t1 = (sinf(m_time * s / 1.111f) + 1.f) * .25f;
+				const float t2 = (sinf(m_time * s / 2.333f) + 1.f) * .25f;
 				d = computePlaneDistance(twistZ(twistY(c, t1), t2)) * 2.f;
 				d = (1.f - pow(d, power));
 			#elif 0
-				const float r = .4f + .3f * sinf(framework.time);
+				const float r = .4f + .3f * sinf(m_time);
 				d = computeCircleHullDistance(repeat(c, 0.f, 0.f, r)) * 3.f;
 				d = 1.f - pow(d, power);
 			#elif 0
 				const Coord c1 = c;
 				const Coord c2 = c + Coord(5.2f, 1.3f, 0.f);
 				const Coord c3(
-					computePerlinNoise(c1, framework.time / 1.111f),
-					computePerlinNoise(c2, framework.time / 1.333f),
+					computePerlinNoise(c1, m_time / 1.111f),
+					computePerlinNoise(c2, m_time / 1.333f),
 					0.f);
 
-				d = computePerlinNoise(c + c3, framework.time / 5.777f) * 3.f;
+				d = computePerlinNoise(c + c3, m_time / 5.777f) * 3.f;
 			#elif 0
-				d = computePerlinNoise(c, framework.time) * 3.f;
+				d = computePerlinNoise(c, m_time) * 3.f;
 			#else
 				auto c1 = m_pointMatrix1.apply(c);
 				auto c2 = m_pointMatrix2.apply(c);
@@ -860,7 +488,7 @@ public:
 				//const float d = 1.f - pow(computeLineDistance(x, y, z), 4.f);
 				const float d1 = computePlaneDistance(twistY(c1, .05f));
 				const float d2 = computePlaneDistance(twistZ(c2, .03f));
-				const float d3 = computePerlinNoise(testCoord, framework.time) * 2.f + 1.f;
+				const float d3 = computePerlinNoise(testCoord, m_time) * 2.f + 1.f;
 				const float d4 = computeMinParticleDistance(m_particleMatrix.apply(c), m_particles, kNumParticles) * 4.f;
 				d = min(d1, d2, d3, d4);
 				//d = min(d4);
@@ -873,14 +501,14 @@ public:
 			{
 				doTestPostEffects = false;
 
-				BiMatrix topMatrix;
+				Transform topMatrix;
 				topMatrix.translate(0.f, -1.f, 0.f);
 				topMatrix.rotateZ(M_PI/2.f);
 				d = computePlaneDistance(topMatrix.apply(c));
 
 				if (keyboard.isDown(SDLK_LSHIFT))
 				{
-					BiMatrix leftMatrix;
+					Transform leftMatrix;
 					leftMatrix.translate(-1.f, 0.f, 0.f);
 					//d = csgUnion(d, computePlaneDistance(leftMatrix.apply(c)));
 					//d = csgSoftUnion(d, computePlaneDistance(leftMatrix.apply(c)), controlY * 4.f);
@@ -928,15 +556,15 @@ public:
 			break;
 
 		case kTest_PerlineNoise:
-			d = computePerlinNoise(testCoord, framework.time) + 1.f;
+			d = computePerlinNoise(testCoord, m_time) + 1.f;
 			break;
 
 		case kTest_Torus82:
-			d = torus82(testCoord, 1.f, .25f);
+			d = computeTorus82(testCoord, 1.f, .25f);
 			break;
 
 		case kTest_Torus88:
-			d = torus88(testCoord, 1.f, .25f);
+			d = computeTorus88(testCoord, 1.f, .25f);
 			break;
 		}
 
@@ -1273,7 +901,13 @@ int main(int argc, char * argv[])
 
 		Cube cube;
 
-		MyEffect effect;
+		EffectCtxImpl ctx;
+		//MyEffect effect(ctx);
+	#ifdef DEBUG
+		ScriptEffect effect(ctx, "Debug/script.dll");
+	#else
+		ScriptEffect effect(ctx, "Release/script.dll");
+	#endif
 
 		float rotation[3] = { };
 

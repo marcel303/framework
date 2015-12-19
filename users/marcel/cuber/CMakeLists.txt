@@ -21,6 +21,7 @@ project(cuber)
 # --- cuber ---
 
 file(GLOB_RECURSE source "*.cpp" "*.h")
+list(REMOVE_ITEM source script.cpp)
 
 add_executable(cuber ${source})
 
@@ -42,4 +43,21 @@ target_link_libraries(cuber PRIVATE Winmm.lib OpenGL32.lib WSock32.lib)
 
 if (MSVC)
 	set_property(TARGET cuber APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
+endif (MSVC)
+
+# --- script ---
+
+set(WINDOWS_EXPORT_ALL_SYMBOLS, 1)
+
+add_library(script SHARED OpenSimplexNoise.cpp OpenSimplexNoise.h script.cpp script.h simplexnoise.cpp simplexnoise.h)
+
+target_compile_definitions(script PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)
+
+target_include_directories(script PRIVATE "${PROJECT_SOURCE_DIR}")
+target_include_directories(script PRIVATE "${PROJECT_SOURCE_DIR}/../framework/win32/include")
+
+target_link_libraries(script PRIVATE libgg)
+
+if (MSVC)
+	set_property(TARGET script APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
 endif (MSVC)
