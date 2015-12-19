@@ -7,5 +7,5 @@ class FileStreamExtents
 {
 public:
 	static bool ContentsAreEqual(Stream* src, Stream* dst);
-	static void OverwriteIfChanged(MemoryStream* src, const std::string& fileName);
+	static bool OverwriteIfChanged(MemoryStream* src, const std::string& fileName);
 };

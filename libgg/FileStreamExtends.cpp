@@ -35,7 +35,7 @@ bool FileStreamExtents::ContentsAreEqual(Stream* src, Stream* dst)
 	return result;
 }
 
-void FileStreamExtents::OverwriteIfChanged(MemoryStream* src, const std::string& fileName)
+bool FileStreamExtents::OverwriteIfChanged(MemoryStream* src, const std::string& fileName)
 {
 	src->Seek(0, SeekMode_Begin);
 	
@@ -64,5 +64,11 @@ void FileStreamExtents::OverwriteIfChanged(MemoryStream* src, const std::string&
 		dst.Open(fileName.c_str(), OpenMode_Write);
 		
 		src->CopyTo(&dst);
+
+		return true;
+	}
+	else
+	{
+		return false;
 	}
 }
