@@ -68,6 +68,8 @@ public:
 	float life;
 	float lifeTime;
 
+	uint16_t decalSize;
+
 	uint32_t ownerPlayerId;
 	uint8_t playerDamageRadius;
 };

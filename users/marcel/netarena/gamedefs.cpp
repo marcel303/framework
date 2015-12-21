@@ -138,6 +138,9 @@ OPTION_DEFINE(int, KILLINGSPREE_UNSTOPPABLE, "Player/KillingSpree/Unstoppable Ki
 
 OPTION_DEFINE(float, PLAYER_SCREENSHAKE_STRENGTH_THRESHHOLD, "Player/Effects/Screenshake/Threshhold");
 
+OPTION_DEFINE(float, SPRAYWEAPON_INITIAL_FILL, "Player/Attacks/Spray/Initial Fill (Seconds)");
+OPTION_DEFINE(float, SPRAYWEAPON_FIRING_INTERVAL, "Player/Attacks/Spray/Firing Interval (Sec)");
+
 OPTION_DEFINE(float, PLAYER_WEAPON_GUN_COOLDOWN, "Player/Attacks/Gun/Cooldown Time");
 OPTION_DEFINE(float, PLAYER_WEAPON_GUN_KNOCKBACK, "Player/Attacks/Gun/Knockback Speed");
 OPTION_DEFINE(float, PLAYER_WEAPON_ICE_COOLDOWN, "Player/Attacks/Ice/Cooldown Time");
@@ -219,6 +222,8 @@ OPTION_STEP(BLOCKTYPE_REGEN_TIME, 0, 0, 0.1f);
 
 // bullets
 
+OPTION_DEFINE(float, BULLET_DEFAULT_GRAVITY_MULTIPLIER, "Bullets/Default Gravity Multiplier");
+
 OPTION_DEFINE(int,  BULLET_TYPE0_MAX_WRAP_COUNT, "Bullets/Type 0/Max Wrap Count");
 OPTION_DEFINE(int,  BULLET_TYPE0_MAX_REFLECT_COUNT, "Bullets/Type 0/Max Reflect Count");
 OPTION_DEFINE(int,  BULLET_TYPE0_MAX_DISTANCE_TRAVELLED, "Bullets/Type 0/Max Distance Travelled");
@@ -278,6 +283,7 @@ OPTION_DEFINE(float, PICKUP_RATE_MULTIPLIER_2, "Pickups/Scaling/2 Players");
 OPTION_DEFINE(float, PICKUP_RATE_MULTIPLIER_3, "Pickups/Scaling/3 Players");
 OPTION_DEFINE(float, PICKUP_RATE_MULTIPLIER_4, "Pickups/Scaling/4 Players");
 OPTION_DEFINE(int, PICKUP_LIGHT_OFFSET_Y, "Pickups/Draw Offset Y");
+OPTION_DEFINE(float, PICKUP_DROP_DELAY, "Pickups/Pickup Delay On Drop");
 OPTION_STEP(PICKUP_RATE_MULTIPLIER_1, 0, 0, 0.1f);
 OPTION_STEP(PICKUP_RATE_MULTIPLIER_2, 0, 0, 0.1f);
 OPTION_STEP(PICKUP_RATE_MULTIPLIER_3, 0, 0, 0.1f);

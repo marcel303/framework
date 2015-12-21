@@ -210,6 +210,8 @@ void Pickup::tick(GameSim & gameSim, float dt)
 	};
 
 	PhysicsActor::tick(gameSim, dt, cbs);
+
+	m_pickupDelay = Calc::Max(0.f, m_pickupDelay - dt);
 }
 
 void Pickup::draw(const GameSim & gameSim) const
@@ -1511,7 +1513,7 @@ void Decal::draw(const GameSim & gameSim) const
 
 void Decal::drawAt(int x, int y) const
 {
-	setColor(color[0], color[1], color[2]);
+	setColor(color[0], color[1], color[2], color[3]);
 	Sprite sprite("decals/0.png");
 	sprite.drawEx(
 		x - sprite.getWidth() * scale / 2.f,
@@ -4027,7 +4029,7 @@ bool GameSim::grabPickup(int x1, int y1, int x2, int y2, Pickup & grabbedPickup)
 	{
 		Pickup & pickup = m_pickups[i];
 
-		if (pickup.m_isActive)
+		if (pickup.m_isActive && pickup.m_pickupDelay == 0.f)
 		{
 			CollisionShape pickupCollision(pickup.m_collisionShape, pickup.m_pos);
 
@@ -4238,6 +4240,8 @@ uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, BulletType t
 			b.maxReflectCount = BULLET_TYPE0_MAX_REFLECT_COUNT;
 			b.maxDistanceTravelled = BULLET_TYPE0_MAX_DISTANCE_TRAVELLED;
 			b.maxDestroyedBlocks = 1;
+			b.m_noGravity = false;
+			b.gravityModifier = BULLET_DEFAULT_GRAVITY_MULTIPLIER;
 			break;
 		case kBulletType_Ice:
 			velocity = BULLET_TYPE0_SPEED;
@@ -4245,6 +4249,8 @@ uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, BulletType t
 			b.maxReflectCount = BULLET_TYPE0_MAX_REFLECT_COUNT;
 			b.maxDistanceTravelled = BULLET_TYPE0_MAX_DISTANCE_TRAVELLED;
 			b.maxDestroyedBlocks = 1;
+			b.m_noGravity = false;
+			b.gravityModifier = BULLET_DEFAULT_GRAVITY_MULTIPLIER;
 			break;
 		case kBulletType_Grenade:
 			velocity = BULLET_GRENADE_NADE_SPEED;
@@ -4262,6 +4268,16 @@ uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, BulletType t
 			b.maxDistanceTravelled = RandomFloat(BULLET_GRENADE_FRAG_RADIUS_MIN, BULLET_GRENADE_FRAG_RADIUS_MAX);
 			b.maxDestroyedBlocks = 1;
 			b.doDamageOwner = true;
+			break;
+		case kBulletType_SprayCannon:
+			// todo : options for bounce etc
+			velocity = BULLET_GRENADE_NADE_SPEED / 2.f;
+			b.maxWrapCount = 100;
+			b.m_noGravity = false;
+			b.doBounce = true;
+			b.bounceAmount = BULLET_GRENADE_NADE_BOUNCE_AMOUNT;
+			b.noDamageMap = true;
+			b.life = 1.3f;
 			break;
 		case kBulletType_Bubble:
 			velocity = RandomFloat(BULLET_BUBBLE_SPEED_MIN, BULLET_BUBBLE_SPEED_MAX);
@@ -4286,6 +4302,8 @@ uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, BulletType t
 		b.setVel(angle, velocity);
 
 		b.ownerPlayerId = ownerPlayerId;
+
+		b.decalSize = 100;
 	}
 
 	return id;
@@ -4531,6 +4549,7 @@ void GameSim::addDecal(int x, int y, const Color & color, int sprite, float scal
 			decal.color[0] = color.r * 255.f;
 			decal.color[1] = color.g * 255.f;
 			decal.color[2] = color.b * 255.f;
+			decal.color[3] = color.a * 255.f;
 			decal.sprite = sprite;
 			decal.scale = scale;
 			if (g_decalMap)

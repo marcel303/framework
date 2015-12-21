@@ -29,6 +29,7 @@ static ParticleSprite s_bulletSprites[kBulletType_COUNT] =
 	{ "objects/freezeray/freezeray.scml", true, 0, 0 }, // kBulletType_Ice
 	{ "objects/grenade/grenade.scml", true, 0, 0 }, // kBulletType_Grenade
 	{ "objects/grenade/grenade-fragment.scml", true, 0, 0 }, // kBulletType_GrenadeA
+	{ "objects/spraygun/spray.scml", true, 0, 0 }, // kBulletType_Spray
 	{ "particle-0.png", false, 0, 0 }, // kBulletType_ParticleA
 	{ "objects/bubblegun/bubble.scml", true, 0, 0 }, // kBulletType_Bubble
 	{ "particle-blood-0.png", false, 0, 0 } // kBulletType_BloodParticle
@@ -128,6 +129,7 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 				bool kill = false;
 
 				bool doReflection = true;
+				bool doDecal = false;
 
 				if (b.type == kBulletType_Grenade)
 				{
@@ -169,6 +171,8 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 						// todo : spawn particle emitter instead
 						ParticleSpawnInfo spawnInfo(b.m_pos[0], b.m_pos[1], kBulletType_ParticleA, 10, 50, 200, 20);
 						gameSim.spawnParticles(spawnInfo);
+
+						doDecal = true;
 					}
 
 					if (!kill && b.doBounce)
@@ -288,7 +292,7 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 					{
 						Player & player = gameSim.m_players[p];
 
-						if (player.shieldSpecialReflect(b.m_pos, b.m_vel))
+						if (player.shieldSpecialReflect(b.ownerPlayerId, b.m_pos, b.m_vel))
 						{
 							if (b.ownerPlayerId != -1 && b.effect != kBulletEffect_Bubble)
 								b.ownerPlayerId = p;
@@ -324,6 +328,11 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 								case kBulletEffect_Bubble:
 									player.handleBubble(b.m_vel, owner);
 									break;
+								case kBulletEffect_Spray:
+									kill = false;
+									// todo : slowdown players?
+									player.m_vel *= powf(.5f, dt);
+									break;
 
 								default:
 									Assert(false);
@@ -350,6 +359,9 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 						if (b.blocksDestroyed == b.maxDestroyedBlocks)
 							kill = true;
 					}
+
+					if (kill)
+						doDecal = true;
 				}
 
 				if (!kill)
@@ -361,6 +373,16 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 						if (b.life <= 0.f)
 							kill = true;
 					}
+				}
+
+				if (doDecal && b.decalSize != 0)
+				{
+					gameSim.addDecal(
+						b.m_pos[0],
+						b.m_pos[1],
+						Color(0, 0, 0, 100),
+						gameSim.Random() % DECAL_COUNT,
+						b.decalSize / 1000.f);
 				}
 
 				if (kill)

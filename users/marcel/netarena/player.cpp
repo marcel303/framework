@@ -44,6 +44,13 @@
 - level editor: add goal placement
 - level editor: add setting for level size
 
+footbrawl:
+- bounce ball vs swords and such
+- bounce ball vs bullets
+- bounce ball vs axe, pipebomb, etc.. (basically all other object types)
++ add weapon with bullet type that'll only repels the ball and slows down other players, but is otherwise harmless.. defense tactic
+	- add pickup which allows to repel enemies? rapid fire -> screen shakes~
+
 - pickup that temporarily allows player to move through destructibles transparently
 - add ropes you can grab and hold on to?
 
@@ -52,15 +59,15 @@
 - experiment with shader-only based (menu) transition effects
 	- RGB 'twitch' effect where RGB channels are offset separately
 
-- add decal on bullet collision for some types of ammo
++ add decal on bullet collision for some types of ammo
 - slowdown and/or zoom on cling?
 
-- add small pickup delay on weapon drop. avoids pickup being picked up directly on kill -> adds more randomness
++ add small pickup delay on weapon drop. avoids pickup being picked up directly on kill -> adds more randomness
 - experiment with decal color. add history through slightly changing color over time. try rainbow colors (maybe hue based on bullet direction on impact?)
 
 - background animation speed always at 100% regardless of game speed? *should* be affected by time dilation
-- allow exploding mine in air. currently when grounded only
-- disable player light when using invisibility
++ allow exploding mine in air. currently when grounded only
+# disable player light when using invisibility
 - add light effects to grenade explosions and cling (small lighting flash; test effect)
 - try darker ambient on level events
 
@@ -86,6 +93,8 @@
 - zoom in on winning player, wait for a while before transitioning to the next round
 
 - character portait kill animation. diagonal slice, etc, as discussed with joyce
+	- figure out how to retrieve and draw local player profile pics
+	- figure out how to retrieve and draw remote player profile pics
 
 - add pipebomb/mine trigger animation
 - add axe throw animation
@@ -102,13 +111,12 @@
 
 - why does the bubbled player not bounce correctly, still? fix it!
 
-- for pickup spawn: keep a list of MAX_PICKUPS previous spawn locations, instead of storing recently used x/y in pickups themselves
+# for pickup spawn: keep a list of MAX_PICKUPS previous spawn locations, instead of storing recently used x/y in pickups themselves
 
 - add victory dance at the end of the round 'Victory'
 
 - add 'muzzle flash' when firing some weapons
-- add small screen shake when firing?
-- add pickup which allows to repel enemies? rapid fire -> screen shakes~
++ add small screen shake when firing?
 - apply color/light effect on player that kills using melee?
 - add spriter FX for bullet hits against wall
 
@@ -174,7 +182,7 @@ todo:
 	- extra buff ability
 		- destroy jetpack with Y, repel players, need full recharge 
 
-- arc bullets
++ arc bullets
 - grapple auto shorten
 - grapple small speed boost on attach in swing direction
 - diagonal jump pads
@@ -210,6 +218,7 @@ todo:
 	- when another player hits bubble, player gets bubbled
 	=> transforms bubble gun into a sort of snare trap, instead of offensive
 	=> bubbles create temporary shield. they pop after a short while though
+	- let bubbled player spawn additional bubbles?
 
 - prototype invisibility ability
 	charge period
@@ -257,7 +266,7 @@ todo:
 - investigate killing the rambo mode, soldat
 
 - better death feedback
-- team based game mode
++ team based game mode
 
 - blood particles
 - fill the level with lava
@@ -1316,6 +1325,46 @@ void Player::tick(GameSim & gameSim, float dt)
 				}
 			}
 
+			// update spray cannon attack
+
+			if (m_attack.m_sprayCannon.isActive)
+			{
+				if (m_input.wentUp(INPUT_BUTTON_B))
+				{
+					m_attack = AttackInfo();
+				}
+				else
+				{
+					m_attack.m_sprayCannon.charge += dt;
+
+					while (m_attack.m_sprayCannon.charge >= SPRAYWEAPON_FIRING_INTERVAL)
+					{
+						const Vec2 dir = m_input.getAnalogDirection();
+						const float angle = Bullet::toAngle(dir[0], dir[1]);
+
+						const uint16_t bulletId = gameSim.spawnBullet(
+							m_pos[0], // todo : attack pos
+							m_pos[1],
+							angle * 128.f / float(M_PI),
+							kBulletType_SprayCannon,
+							kBulletEffect_Spray,
+							m_index);
+
+						//
+
+						m_attack.m_sprayCannon.charge -= SPRAYWEAPON_FIRING_INTERVAL;
+						m_sprayWeaponFill -= SPRAYWEAPON_FIRING_INTERVAL;
+
+						if (m_sprayWeaponFill <= 0.f)
+						{
+							m_sprayWeaponFill = 0.f;
+
+							m_attack = AttackInfo();
+						}
+					}
+				}
+			}
+
 			// update rocket punch attack
 
 			if (m_attack.m_rocketPunch.isActive)
@@ -1415,7 +1464,7 @@ void Player::tick(GameSim & gameSim, float dt)
 
 		if (playerControl && !m_attack.attacking && m_attack.cooldown <= 0.f/* && (gameSim.m_gameMode != kGameMode_Lobby)*/)
 		{
-			if (m_input.wentDown(INPUT_BUTTON_B) && (m_weaponStackSize > 0 || s_unlimitedAmmo || m_footBrawl.m_hasBall) && isAnimOverrideAllowed(kPlayerAnim_Fire))
+			if (m_input.wentDown(INPUT_BUTTON_B) && (m_weaponStackSize > 0 || s_unlimitedAmmo || m_sprayWeaponFill != 0.f || m_footBrawl.m_hasBall) && isAnimOverrideAllowed(kPlayerAnim_Fire))
 			{
 				m_attack = AttackInfo();
 
@@ -1433,6 +1482,12 @@ void Player::tick(GameSim & gameSim, float dt)
 				if (m_footBrawl.m_hasBall)
 				{
 					beginFootBall();
+				}
+				else if (m_weaponStackSize == 0 && m_sprayWeaponFill != 0.f)
+				{
+					m_attack.attacking = true;
+					m_attack.m_sprayCannon.isActive = true;
+					m_attack.m_sprayCannon.charge = 0.f;
 				}
 				else
 				{
@@ -1671,7 +1726,7 @@ void Player::tick(GameSim & gameSim, float dt)
 					beginGrapple();
 				}
 				else if (characterData->m_special == kPlayerSpecial_Pipebomb &&
-					m_isGrounded &&
+					//m_isGrounded &&
 					m_pipebomb.state == PipebombInfo::State_Inactive &&
 					m_input.wentDown(INPUT_BUTTON_Y) &&
 					isAnimOverrideAllowed(kPlayerAnim_Attack))
@@ -3699,6 +3754,8 @@ bool Player::respawn(Vec2 * pos)
 		m_killingSpree = 0;
 
 		m_weaponStackSize = 0;
+		memset(m_weaponStack, 0, sizeof(m_weaponStack));
+		m_sprayWeaponFill = SPRAYWEAPON_INITIAL_FILL;
 
 		m_attack = AttackInfo();
 		m_timeDilationAttack = TimeDilationAttack();
@@ -4211,6 +4268,8 @@ void Player::dropWeapons(Vec2Arg velocity)
 
 			pickup->m_vel = velocity * 2.f / 3.f; // todo: add pickup drop speed multiplier gamedef
 
+			pickup->m_pickupDelay = PICKUP_DROP_DELAY;
+
 		#ifdef DEBUG
 			CollisionInfo collisionInfo;
 			getPlayerCollision(collisionInfo);
@@ -4423,22 +4482,29 @@ void Player::tickShieldSpecial(float dt)
 	}
 }
 
-bool Player::shieldSpecialReflect(Vec2Arg pos, Vec2 & dir) const
+bool Player::shieldSpecialReflect(int ownerPlayerId, Vec2Arg pos, Vec2 & dir) const
 {
 	if (m_shieldSpecial.isActive())
 	{
 		const Vec2 delta = getPlayerCenter() - pos;
 
-		if (delta * dir < 0.f)
+		//if (delta * dir < 0.f)
+		//	return false;
+		if (ownerPlayerId == m_index)
 			return false;
-		if (delta.CalcSize() < 4.f)
-			return false;
+		//if (delta.CalcSize() < 4.f)
+		//	return false;
 		if (delta.CalcSize() > SHIELDSPECIAL_RADIUS)
 			return false;
 
 		const Vec2 n = delta.CalcNormalized();
 		const float d = n * dir;
 		dir = dir - n * d * 2.f;
+
+		const float vel = dir.CalcSize();
+		// todo : add option for analog stick amount
+		dir = (m_input.getAnalogDirection() * 100.f + dir).CalcNormalized();
+		dir *= vel;
 
 		GAMESIM->playSound("objects/shieldspecial/reflect.ogg");
 

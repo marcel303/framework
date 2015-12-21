@@ -239,6 +239,7 @@ enum BulletType
 	kBulletType_Ice,
 	kBulletType_Grenade,
 	kBulletType_GrenadeA,
+	kBulletType_SprayCannon,
 	kBulletType_ParticleA,
 	kBulletType_Bubble,
 	kBulletType_BloodParticle,
@@ -250,7 +251,8 @@ enum BulletEffect
 	kBulletEffect_None,
 	kBulletEffect_Damage,
 	kBulletEffect_Ice,
-	kBulletEffect_Bubble
+	kBulletEffect_Bubble,
+	kBulletEffect_Spray
 };
 
 enum CollisionType

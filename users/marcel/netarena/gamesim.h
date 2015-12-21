@@ -225,7 +225,7 @@ struct Player
 	void beginShieldSpecial();
 	void endShieldSpecial();
 	void tickShieldSpecial(float dt);
-	bool shieldSpecialReflect(Vec2Arg pos, Vec2 & dir) const;
+	bool shieldSpecialReflect(int ownerPlayerId, Vec2Arg pos, Vec2 & dir) const;
 
 	// special : grapple
 	void beginGrapple();
@@ -306,6 +306,8 @@ struct Player
 	PlayerWeapon m_weaponStack[MAX_WEAPON_STACK_SIZE];
 	uint8_t m_weaponStackSize;
 
+	float m_sprayWeaponFill;
+
 	//
 
 	struct SpecialInfo
@@ -347,6 +349,17 @@ struct Player
 		Vec2 attackVel;
 		float cooldown; // this timer needs to hit zero before the player can attack again. it's decremented AFTER the attack animation has finished
 		bool allowCancelTimeDilationAttack;
+
+		struct SprayCannon
+		{
+			SprayCannon()
+			{
+				memset(this, 0, sizeof(SprayCannon));
+			}
+
+			bool isActive;
+			float charge;
+		} m_sprayCannon;
 
 		struct RocketPunch
 		{
@@ -655,6 +668,7 @@ struct Player
 struct Pickup : PhysicsActor
 {
 	PickupType m_pickupType;
+	float m_pickupDelay;
 
 	Pickup()
 	{
@@ -969,7 +983,7 @@ struct Decal
 	bool m_isActive;
 	int16_t x;
 	int16_t y;
-	uint8_t color[3];
+	uint8_t color[4];
 	uint8_t sprite;
 	float scale;
 
