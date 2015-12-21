@@ -45,7 +45,10 @@ void STile::mousePressEvent ( QGraphicsSceneMouseEvent * e )
 	}
 	if(ed.GetSettingsWidget()->m_temp->isChecked())
 	{
-		ed.m_level;
+		if(e->button() == Qt::LeftButton)
+			ed.m_templateScene->m_currentFolder->m_currentTemplate->StampTo(m_x, m_y);
+		if(e->button() == Qt::RightButton)
+			ed.m_templateScene->m_currentFolder->m_currentTemplate->Unstamp(m_x, m_y);
 	}
 	if(ed.GetSettingsWidget()->m_obj->isChecked())
 	{
@@ -99,7 +102,7 @@ GridLayer::~GridLayer()
 
 QRectF GridLayer::boundingRect() const
 {
-	return QRectF(0, 0, 1920, 1080);
+	return QRectF(0, 0, MAPX*BLOCKSIZE, MAPY*BLOCKSIZE);
 }
 
 void GridLayer::paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget)

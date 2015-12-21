@@ -103,6 +103,7 @@ void Template::GetMaxXY(int& x, int& y)
 	y = y_max;
 }
 
+#include "grid.h"
 void Template::StampTo(int x, int y)
 {
 	int x_max, y_max;
@@ -111,8 +112,11 @@ void Template::StampTo(int x, int y)
 	for(int i = 0; i < y_max; i++)
 		for(int j = 0; j < x_max; j++)
 		{
-			ed.m_level->m_mec.m_grid[i+y][j+x] = m_mec.m_grid[i][j];
-			ed.m_level->m_col.m_grid[i+y][j+x] = m_col.m_grid[i][j];
+			if(i+y < MAPY && j+x < MAPX)
+			{
+				ed.m_level->m_mec.m_grid[i+y][j+x] = m_mec.m_grid[i][j];
+				ed.m_level->m_col.m_grid[i+y][j+x] = m_col.m_grid[i][j];
+			}
 		}
 
 	QPainter painter(ed.m_level->m_front.m_pixmap);
@@ -121,6 +125,8 @@ void Template::StampTo(int x, int y)
 	painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, *m_middle.m_pixmap);
 	painter.begin(ed.m_level->m_back.m_pixmap);
 	painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, *m_back.m_pixmap);
+
+	ed.m_grid->update();
 }
 
 void Template::Unstamp(int x, int y)
@@ -131,8 +137,11 @@ void Template::Unstamp(int x, int y)
 	for(int i = 0; i < y_max; i++)
 		for(int j = 0; j < x_max; j++)
 		{
-			ed.m_level->m_mec.m_grid[i+y][j+x] = ' ';
-			ed.m_level->m_col.m_grid[i+y][j+x] = ' ';
+			if(i+y < MAPY && j+x < MAPX)
+			{
+				ed.m_level->m_mec.m_grid[i+y][j+x] = ' ';
+				ed.m_level->m_col.m_grid[i+y][j+x] = ' ';
+			}
 		}
 
 	QPixmap empty(x_max*BLOCKSIZE, y_max*BLOCKSIZE);
@@ -143,6 +152,8 @@ void Template::Unstamp(int x, int y)
 	painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, empty);
 	painter.begin(ed.m_level->m_back.m_pixmap);
 	painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, empty);
+
+	ed.m_grid->update();
 }
 
 void Template::Load(QString filename)
@@ -154,12 +165,15 @@ void Template::Load(QString filename)
 
 	QPixmap p(filename+"thumb.png");
 	m_thumb.setPixmap(p);
+	m_thumb.m_template = this;
 
 	m_mec.CreateLayer(MAPX, MAPY);
 	m_col.CreateLayer(MAPX, MAPY);
 
 	m_mec.LoadLayer(filename + "mec");
 	m_col.LoadLayer(filename + "col");
+
+	m_name = filename.split('\\').back();
 }
 
 void Template::Save(QString filename)

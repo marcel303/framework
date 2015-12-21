@@ -49,7 +49,11 @@ void Ed::LoadPallettes()
 	m_colPallette->LoadPallette("CollisionList.txt");
 }
 
-
+void Ed::SetMapXY(int x, int y)
+{
+	m_mapx = x;
+	m_mapy = y;
+}
 
 
 EditorView* Ed::GetView()
@@ -73,6 +77,8 @@ void Ed::NewLevel()
     {
         delete m_level;
     }
+
+	m_grid->CreateGrid(m_mapx, m_mapy);
 
     m_level = new Template();
     m_level->InitAsLevel();
@@ -184,6 +190,8 @@ void Ed::SetCurrentTemplate(Template* t)
 
 void Ed::ReturnToLevel()
 {
+	m_currentTarget = m_level;
+
 	m_grid->SetCurrentTarget(m_level);
 }
 

@@ -36,9 +36,6 @@ EditorView::EditorView() : EditorViewBasic()
     newAct4->setStatusTip(tr("Load from file"));
     connect(newAct4, SIGNAL(triggered()), this, SLOT(Load()));
 
-
-
-
 	bar->addAction(newAct1);
 	bar->addAction(newAct2);
 	bar->addAction(newAct3);
@@ -99,6 +96,30 @@ void EditorView::Load()
 void EditorView::New()
 {
     m_filename = "";
+
+	bool ok;
+	QString text = QInputDialog::getText((QWidget*)ed.GetSettingsWidget(), tr("Map Name"),
+											tr("Map Name:"), QLineEdit::Normal,
+											QDir::home().dirName(), &ok);
+	if (ok && !text.isEmpty())
+	{
+		m_filename = text;
+	}
+
+	int x = QInputDialog::getInt((QWidget*)ed.GetSettingsWidget(), tr("Map Width"),
+									 tr("Map Size X(64-128):"), 64, 64, 128, 1, &ok);
+	if (!ok)
+	{
+	}
+
+	int y = QInputDialog::getInt((QWidget*)ed.GetSettingsWidget(), tr("Map Height"),
+									 tr("Map Size Y(36-72):"), 36, 36, 72, 1, &ok);
+	if (!ok)
+	{
+	}
+
+	ed.SetMapXY(x, y);
+	ed.NewLevel();
 }
 
 

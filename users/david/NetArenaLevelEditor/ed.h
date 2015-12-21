@@ -36,6 +36,8 @@ public:
 	int GetMapX(){return m_mapx;}
 	int GetMapY(){return m_mapy;}
 
+	void SetMapXY(int x, int y);
+
 	void LoadLevel(const QString& filename);
 	void SaveLevel(const QString &filename);
 

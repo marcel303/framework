@@ -61,9 +61,6 @@ public:
 
 	STile** m_tiles;
 
-	int m_mapx;
-	int m_mapy;
-
 	GridLayer* m_front;
 	GridLayer* m_middle;
 	GridLayer* m_back;
