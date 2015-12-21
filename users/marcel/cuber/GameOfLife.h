@@ -1,6 +1,10 @@
 #pragma once
 
+#define GAME_OF_LIFE_ENABLE_DEBUG_PRINT 0
+
+#if GAME_OF_LIFE_ENABLE_DEBUG_PRINT
 #include <stdlib.h>
+#endif
 
 template<int sx, int sy, int sz>
 class GameOfLife
@@ -108,6 +112,7 @@ public:
 
 	void print()
 	{
+	#if GAME_OF_LIFE_ENABLE_DEBUG_PRINT
 		// draw
 
 		for (int y = 0; y < sy; ++y)
@@ -119,5 +124,6 @@ public:
 			printf("\n");
 		}
 		fflush(stdout);
+	#endif
 	}
 };

@@ -1,6 +1,6 @@
 #include "cube.h"
 #include "script.h"
-#include <Windows.h>
+#include <stdlib.h>
 
 //
 
@@ -329,8 +329,8 @@ public:
 				auto c2 = m_pointMatrix2.apply(c);
 				//const float d = 1.f - computePointDistance(x, y, z);
 				//const float d = 1.f - pow(computeLineDistance(x, y, z), 4.f);
-				const float d1 = computePlaneDistance(twistY(c1, .05f));
-				const float d2 = computePlaneDistance(twistZ(c2, .03f));
+				const float d1 = computePlaneDistance(twistY(c1, .05f + controlX / 10.f));
+				const float d2 = computePlaneDistance(twistZ(c2, .03f + controlY / 10.f));
 				const float d3 = computePerlinNoise(testCoord, m_time) * 2.f + 1.f;
 				const float d4 = computeMinParticleDistance(m_particleMatrix.apply(c), m_particles, kNumParticles) * 4.f;
 				d = min(d1, d2, d3, d4);
@@ -349,16 +349,14 @@ public:
 				topMatrix.rotateZ((float)M_PI/2.f);
 				d = computePlaneDistance(topMatrix.apply(c));
 
-			#if 0 // todo
-				if (keyboard.isDown(SDLK_LSHIFT))
+				if (m_ctx.keyIsDown(SDLK_LSHIFT))
 				{
 					Transform leftMatrix;
 					leftMatrix.translate(-1.f, 0.f, 0.f);
 					//d = csgUnion(d, computePlaneDistance(leftMatrix.apply(c)));
-					//d = csgSoftUnion(d, computePlaneDistance(leftMatrix.apply(c)), controlY * 4.f);
-					d = csgSoftIntersection(d, computePlaneDistance(leftMatrix.apply(c)), controlY * 4.f);
+					d = csgSoftUnion(d, computePlaneDistance(leftMatrix.apply(c)), controlY * 4.f);
+					//d = csgSoftIntersection(d, computePlaneDistance(leftMatrix.apply(c)), controlY * 4.f);
 				}
-			#endif
 
 				d = 1.f - d * 4.f;
 			}
