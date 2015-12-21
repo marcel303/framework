@@ -36,7 +36,7 @@ public:
 			m_v[2] * m_v[2] +
 			m_v[3] * m_v[3];
 		
-		return std::sqrt(sq);
+		return std::sqrtf(sq);
 	}
 
 	inline float CalcSizeSq() const

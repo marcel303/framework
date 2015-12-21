@@ -1,6 +1,6 @@
 #pragma once
 
-#include <math.h>
+#include <cmath>
 #include "Vec3.h"
 #include "Vec4.h"
 
@@ -70,17 +70,17 @@ public:
 		
 		if (left)
 		{
-			m_v[INDEX(1, 1)] = +cosf(angle);
-			m_v[INDEX(2, 1)] = +sinf(angle);
-			m_v[INDEX(1, 2)] = -sinf(angle);
-			m_v[INDEX(2, 2)] = +cosf(angle);
+			m_v[INDEX(1, 1)] = +std::cosf(angle);
+			m_v[INDEX(2, 1)] = +std::sinf(angle);
+			m_v[INDEX(1, 2)] = -std::sinf(angle);
+			m_v[INDEX(2, 2)] = +std::cosf(angle);
 		}
 		else
 		{
-			m_v[INDEX(1, 1)] = +cosf(angle);
-			m_v[INDEX(2, 1)] = -sinf(angle);
-			m_v[INDEX(1, 2)] = +sinf(angle);
-			m_v[INDEX(2, 2)] = +cosf(angle);
+			m_v[INDEX(1, 1)] = +std::cosf(angle);
+			m_v[INDEX(2, 1)] = -std::sinf(angle);
+			m_v[INDEX(1, 2)] = +std::sinf(angle);
+			m_v[INDEX(2, 2)] = +std::cosf(angle);
 		}
 	}
 	
@@ -90,17 +90,17 @@ public:
 		
 		if (left)
 		{
-			m_v[INDEX(0, 0)] = +cosf(angle);
-			m_v[INDEX(2, 0)] = -sinf(angle);
-			m_v[INDEX(0, 2)] = +sinf(angle);
-			m_v[INDEX(2, 2)] = +cosf(angle);
+			m_v[INDEX(0, 0)] = +std::cosf(angle);
+			m_v[INDEX(2, 0)] = -std::sinf(angle);
+			m_v[INDEX(0, 2)] = +std::sinf(angle);
+			m_v[INDEX(2, 2)] = +std::cosf(angle);
 		}
 		else
 		{
-			m_v[INDEX(0, 0)] = +cosf(angle);
-			m_v[INDEX(2, 0)] = +sinf(angle);
-			m_v[INDEX(0, 2)] = -sinf(angle);
-			m_v[INDEX(2, 2)] = +cosf(angle);
+			m_v[INDEX(0, 0)] = +std::cosf(angle);
+			m_v[INDEX(2, 0)] = +std::sinf(angle);
+			m_v[INDEX(0, 2)] = -std::sinf(angle);
+			m_v[INDEX(2, 2)] = +std::cosf(angle);
 		}
 	}
 	
@@ -110,17 +110,17 @@ public:
 		
 		if (left)
 		{
-			m_v[INDEX(0, 0)] = +cosf(angle);
-			m_v[INDEX(1, 0)] = +sinf(angle);
-			m_v[INDEX(0, 1)] = -sinf(angle);
-			m_v[INDEX(1, 1)] = +cosf(angle);
+			m_v[INDEX(0, 0)] = +std::cosf(angle);
+			m_v[INDEX(1, 0)] = +std::sinf(angle);
+			m_v[INDEX(0, 1)] = -std::sinf(angle);
+			m_v[INDEX(1, 1)] = +std::cosf(angle);
 		}
 		else
 		{
-			m_v[INDEX(0, 0)] = +cosf(angle);
-			m_v[INDEX(1, 0)] = -sinf(angle);
-			m_v[INDEX(0, 1)] = +sinf(angle);
-			m_v[INDEX(1, 1)] = +cosf(angle);
+			m_v[INDEX(0, 0)] = +std::cosf(angle);
+			m_v[INDEX(1, 0)] = -std::sinf(angle);
+			m_v[INDEX(0, 1)] = +std::sinf(angle);
+			m_v[INDEX(1, 1)] = +std::cosf(angle);
 		}
 	}
 	
