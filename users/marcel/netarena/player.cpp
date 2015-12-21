@@ -1342,10 +1342,12 @@ void Player::tick(GameSim & gameSim, float dt)
 						const float x = m_pos[0] + mirrorX(0.f);
 						const float y = m_pos[1] - mirrorY(44.f);
 					#if 1
+						const int d1 = 0;
+						const int d2 = 32;
 						const int angle = 
 							m_facing[0] < 0
-							? 128 - 32
-							: 0   + 32;
+							? 128 - gameSim.RandomInt(d1, d2)
+							: 0   + gameSim.RandomInt(d1, d2);
 					#else
 						const Vec2 dir = m_input.getAnalogDirection();
 						const int angle = Bullet::toAngle(dir[0], dir[1]) * 128.f / float(M_PI);

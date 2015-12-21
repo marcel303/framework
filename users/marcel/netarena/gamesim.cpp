@@ -368,7 +368,7 @@ void FootBall::setup(int x, int y, int lastPlayerIndex, float spawnTime)
 	m_isDropped = true;
 	m_spriterState = SpriterState();
 	m_spriterState.startAnim(FOOTBALL_SPRITER, "idle");
-	m_pickupTimer = lastPlayerIndex < 0 ? 0.f : .2f; // todo : make this an option
+	m_pickupTimer = lastPlayerIndex < 0 ? 0.f : FOOTBALL_DROP_DELAY;
 	m_lastPlayerIndex = lastPlayerIndex;
 }
 
@@ -4270,14 +4270,13 @@ uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, BulletType t
 			b.doDamageOwner = true;
 			break;
 		case kBulletType_SprayCannon:
-			// todo : options for bounce etc
-			velocity = BULLET_GRENADE_NADE_SPEED / 1.6f;
+			velocity = BULLET_SPRAY_SPEED;
 			b.maxWrapCount = 100;
 			b.m_noGravity = false;
 			b.doBounce = true;
-			b.bounceAmount = BULLET_GRENADE_NADE_BOUNCE_AMOUNT;
+			b.bounceAmount = BULLET_SPRAY_BOUNCE_AMOUNT;
 			b.noDamageMap = true;
-			b.life = 1.f;
+			b.life = BULLET_SPRAY_LIFE;
 			break;
 		case kBulletType_Bubble:
 			velocity = RandomFloat(BULLET_BUBBLE_SPEED_MIN, BULLET_BUBBLE_SPEED_MAX);

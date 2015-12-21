@@ -277,6 +277,10 @@ OPTION_STEP(BULLET_BLOOD_LIFE, 0, 0, 0.1f);
 OPTION_STEP(BULLET_BLOOD_SPEED_MIN, 0, 0, 5);
 OPTION_STEP(BULLET_BLOOD_SPEED_MAX, 0, 0, 5);
 
+OPTION_DEFINE(float, BULLET_SPRAY_SPEED, "Bullets/Spray/Speed"););
+OPTION_DEFINE(float, BULLET_SPRAY_BOUNCE_AMOUNT, "Bullets/Spray/Bounce Amount");
+OPTION_DEFINE(float, BULLET_SPRAY_LIFE, "Bullets/Spray/Life");
+
 OPTION_DEFINE(int, PICKUP_INTERVAL, "Pickups/Spawn Interval (Sec)");
 OPTION_DEFINE(int, PICKUP_INTERVAL_VARIANCE, "Pickups/Spawn Interval Random (Sec)");
 OPTION_DEFINE(int, MAX_PICKUP_COUNT, "Pickups/Maximum Pickup Count");
@@ -372,6 +376,7 @@ OPTION_DEFINE(int, FOOTBALL_FLEE_SPEED, "Game Objects/FootBall/Flee Speed");
 OPTION_DEFINE(float, FOOTBALL_DROP_SPEED_MULTIPLIER, "Game Objects/FootBall/Player Drop Speed Multiplier");
 OPTION_DEFINE(float, FOOTBALL_BOUNCINESS, "Game Objects/FootBall/Bounciness");
 OPTION_DEFINE(int, FOOTBALL_BOUNCE_SOUND_TRESHOLD, "Game Objects/FootBall/Bounce Sound Speed Treshold");
+OPTION_DEFINE(float, FOOTBALL_DROP_DELAY, "Game Objects/FootBall/Pickup Delay On Drop");
 OPTION_STEP(FOOTBALL_SCALE, 0, 0, .05f);
 OPTION_STEP(FOOTBALL_DROP_SPEED_MULTIPLIER, 0, 0, 0.05f);
 OPTION_STEP(FOOTBALL_BOUNCINESS, 0, 0, 0.05f);
