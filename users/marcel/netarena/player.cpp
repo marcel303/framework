@@ -1339,13 +1339,21 @@ void Player::tick(GameSim & gameSim, float dt)
 
 					while (m_attack.m_sprayCannon.charge >= SPRAYWEAPON_FIRING_INTERVAL)
 					{
+						const float x = m_pos[0] + mirrorX(0.f);
+						const float y = m_pos[1] - mirrorY(44.f);
+					#if 1
+						const int angle = 
+							m_facing[0] < 0
+							? 128 - 32
+							: 0   + 32;
+					#else
 						const Vec2 dir = m_input.getAnalogDirection();
-						const float angle = Bullet::toAngle(dir[0], dir[1]);
+						const int angle = Bullet::toAngle(dir[0], dir[1]) * 128.f / float(M_PI);
+					#endif
 
 						const uint16_t bulletId = gameSim.spawnBullet(
-							m_pos[0], // todo : attack pos
-							m_pos[1],
-							angle * 128.f / float(M_PI),
+							x, y,
+							angle,
 							kBulletType_SprayCannon,
 							kBulletEffect_Spray,
 							m_index);

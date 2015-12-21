@@ -4271,13 +4271,13 @@ uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, BulletType t
 			break;
 		case kBulletType_SprayCannon:
 			// todo : options for bounce etc
-			velocity = BULLET_GRENADE_NADE_SPEED / 2.f;
+			velocity = BULLET_GRENADE_NADE_SPEED / 1.6f;
 			b.maxWrapCount = 100;
 			b.m_noGravity = false;
 			b.doBounce = true;
 			b.bounceAmount = BULLET_GRENADE_NADE_BOUNCE_AMOUNT;
 			b.noDamageMap = true;
-			b.life = 1.3f;
+			b.life = 1.f;
 			break;
 		case kBulletType_Bubble:
 			velocity = RandomFloat(BULLET_BUBBLE_SPEED_MIN, BULLET_BUBBLE_SPEED_MAX);
@@ -4556,6 +4556,7 @@ void GameSim::addDecal(int x, int y, const Color & color, int sprite, float scal
 			{
 				pushSurface(g_decalMap);
 				{
+					setBlend(BLEND_ALPHA);
 					decal.draw(*this);
 				}
 				popSurface();

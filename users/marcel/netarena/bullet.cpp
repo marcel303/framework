@@ -45,7 +45,7 @@ void Bullet::getVelocityXY(float angle, float velocity, float & x, float & y)
 
 float Bullet::toAngle(float dx, float dy)
 {
-	return std::atan2f(dy, dx);
+	return std::atan2f(-dy, dx);
 }
 
 void Bullet::mirrorAngle(float & angle, float x, float y)
@@ -380,7 +380,7 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 					gameSim.addDecal(
 						b.m_pos[0],
 						b.m_pos[1],
-						Color(0, 0, 0, 100),
+						Color(0, 0, 0, 128),
 						gameSim.Random() % DECAL_COUNT,
 						b.decalSize / 1000.f);
 				}
