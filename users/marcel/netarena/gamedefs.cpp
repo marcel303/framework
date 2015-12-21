@@ -140,6 +140,8 @@ OPTION_DEFINE(float, PLAYER_SCREENSHAKE_STRENGTH_THRESHHOLD, "Player/Effects/Scr
 
 OPTION_DEFINE(float, SPRAYWEAPON_INITIAL_FILL, "Player/Attacks/Spray/Initial Fill (Seconds)");
 OPTION_DEFINE(float, SPRAYWEAPON_FIRING_INTERVAL, "Player/Attacks/Spray/Firing Interval (Sec)");
+OPTION_DEFINE(float, SPRAYWEAPON_PUSH_AMOUNT, "Player/Attacks/Spray/Push Amount");
+OPTION_STEP(SPRAYWEAPON_PUSH_AMOUNT, 0, 1, .01f);
 
 OPTION_DEFINE(float, PLAYER_WEAPON_GUN_COOLDOWN, "Player/Attacks/Gun/Cooldown Time");
 OPTION_DEFINE(float, PLAYER_WEAPON_GUN_KNOCKBACK, "Player/Attacks/Gun/Knockback Speed");

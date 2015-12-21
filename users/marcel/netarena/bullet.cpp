@@ -333,9 +333,19 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 									player.handleBubble(b.m_vel, owner);
 									break;
 								case kBulletEffect_Spray:
-									kill = false;
-									// todo : slowdown players?
-									player.m_vel *= powf(.5f, dt);
+									{
+										kill = false;
+
+										Vec2 & vel = player.m_vel;
+										for (int a = 0; a < 2; ++a)
+										{
+											if ((Calc::Sign(b.m_vel[a]) != Calc::Sign(vel[a])) || (Calc::Abs(b.m_vel[a]) > Calc::Abs(vel[a])))
+											{
+												const float delta = b.m_vel[a] - vel[a];
+												vel[a] += delta * (1.f - powf(1.f - SPRAYWEAPON_PUSH_AMOUNT, dt));
+											}
+										}
+									}
 									break;
 
 								default:
