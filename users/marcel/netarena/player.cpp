@@ -2564,17 +2564,15 @@ void Player::tick(GameSim & gameSim, float dt)
 							// ice does horizontal reflection
 
 							if (updateInfo.axis == 0)
-								updateInfo.contactRestitution = 1.f;
+								updateInfo.contactRestitution = .5f;
 							else
 								updateInfo.contactRestitution = .25f;
-							//result |= kPhysicsUpdateFlag_DontUpdateVelocity;
 						}
 						if (self->m_bubble.timer != 0.f)
 						{
 							// bubble causes the player to bounce around
 
-							updateInfo.contactRestitution = 1.f;
-							//result |= kPhysicsUpdateFlag_DontUpdateVelocity;
+							updateInfo.contactRestitution = .75f;
 						}
 
 						if (i == 1)
@@ -2657,27 +2655,6 @@ void Player::tick(GameSim & gameSim, float dt)
 						tileSprite->startAnim("Activate");
 				}
 			}
-
-			// effects
-
-#if 0 // todo : move multipliers to restitution in collision code above
-			else if (m_ice.timer != 0.f && (dirBlockMask[i] & kBlockMask_Solid))
-			{
-				if (m_ice.bounceFrames[i] == 0)
-				{
-					m_ice.bounceFrames[i] = 2;
-					m_vel[i] *= -.5f;
-				}
-			}
-			else if (m_bubble.timer != 0.f && (dirBlockMask[i] & kBlockMask_Solid))
-			{
-				if (m_bubble.bounceFrames[i] == 0)
-				{
-					m_bubble.bounceFrames[i] = 2;
-					m_vel[i] *= -.75f;
-				}
-			}
-#endif
 
 			// wall slide effects
 
