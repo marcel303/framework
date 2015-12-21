@@ -185,6 +185,8 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 
 						if (blockMask & kBlockMask_Solid)
 						{
+							gameSim.addScreenShake_GunFire(Vec2(b.m_vel.CalcNormalized()[0], 0.f));
+
 							b.m_vel[0] *= -b.bounceAmount;
 							b.m_pos[0] = oldPos[0];
 
@@ -203,6 +205,8 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 								b.m_noGravity = true;
 								b.life = BULLET_GRENADE_NADE_LIFE_AFTER_SETTLE;
 							}
+
+							gameSim.addScreenShake_GunFire(Vec2(0.f, b.m_vel.CalcNormalized()[1]));
 
 							b.m_vel[0] *= +b.bounceAmount;
 							b.m_vel[1] *= -b.bounceAmount;
