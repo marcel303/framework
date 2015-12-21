@@ -26,8 +26,8 @@ public:
 	void LoadPallettes();
 
 
-    EditorView*& GetView();
-    QGraphicsView*& GetViewPallette();
+	EditorView* GetView();
+	QGraphicsView* GetViewPallette();
 
 
     SettingsWidget* GetSettingsWidget();
@@ -36,12 +36,15 @@ public:
 	int GetMapX(){return m_mapx;}
 	int GetMapY(){return m_mapy;}
 
+	void SetMapXY(int x, int y);
+
 	void LoadLevel(const QString& filename);
 	void SaveLevel(const QString &filename);
 
     void NewLevel();
 
 	void SetCurrentTemplate(Template* t);
+	void ReturnToLevel();
 
 	Grid* m_grid;
 

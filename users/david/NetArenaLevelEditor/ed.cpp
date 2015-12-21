@@ -13,10 +13,13 @@
 
 void Ed::Initialize()
 {
+	m_view = new EditorView();
+	m_viewPallette = new EditorViewBasic;
+
 	m_level = 0;
 	m_currentTarget = 0;
 
-	ArtFolderPath = "EditorData//";
+	ArtFolderPath = QDir::currentPath() + "\\EditorData\\";
 
 	m_mapx = BASEX;
 	m_mapy = BASEY;
@@ -25,16 +28,16 @@ void Ed::Initialize()
 
 	m_settingsWidget = new SettingsWidget();
 
-    m_templateScene = new TemplateScene();
-    m_templateScene->Initialize();
+	LoadPallettes();
 
 	m_grid = new Grid();
 	m_settingsWidget->Create();
 
-    m_settingsWidget->m_grid->addWidget(m_templateScene->m_listView, 1, 1);
-	//m_templateScene->m_listView->hide();
 
+	m_templateScene = new TemplateScene();
+	m_templateScene->Initialize();
 
+	m_settingsWidget->m_grid->addWidget(m_templateScene->m_listView, 1, 1);
 }
 
 void Ed::LoadPallettes()
@@ -46,15 +49,19 @@ void Ed::LoadPallettes()
 	m_colPallette->LoadPallette("CollisionList.txt");
 }
 
+void Ed::SetMapXY(int x, int y)
+{
+	m_mapx = x;
+	m_mapy = y;
+}
 
 
-
-EditorView*& Ed::GetView()
+EditorView* Ed::GetView()
 {
     return m_view;
 }
 
-QGraphicsView*& Ed::GetViewPallette()
+QGraphicsView* Ed::GetViewPallette()
 {
     return m_viewPallette;
 }
@@ -70,6 +77,8 @@ void Ed::NewLevel()
     {
         delete m_level;
     }
+
+	m_grid->CreateGrid(m_mapx, m_mapy);
 
     m_level = new Template();
     m_level->InitAsLevel();
@@ -120,27 +129,25 @@ void Ed::SetCurrentPallette()
 	if(m_settingsWidget->m_mech->isChecked())
 	{
 		m_viewPallette->setScene(m_mecPallette);
-
-		m_settingsWidget->m_objectText->hide();
-		m_templateScene->m_listView->show();
 	}
 	if(m_settingsWidget->m_coll->isChecked())
 	{
 		m_viewPallette->setScene(m_colPallette);
-
-		m_settingsWidget->m_objectText->hide();
-		m_templateScene->m_listView->show();
 	}
 	if(m_settingsWidget->m_temp->isChecked())
 	{
-        m_settingsWidget->m_objectText->hide();
-        m_templateScene->m_listView->show();
+		m_viewPallette->setScene(m_templateScene->m_currentFolder->m_pallette);
 	}
 	if(m_settingsWidget->m_obj->isChecked())
 	{
         m_templateScene->m_listView->hide();
         m_settingsWidget->m_objectText->show();
+
+		return;
 	}
+
+	m_settingsWidget->m_objectText->hide();
+	m_templateScene->m_listView->show();
 }
 
 void Ed::UpdateTransparancy()
@@ -172,5 +179,19 @@ QList<QString> Ed::GetLinesFromConfigFile(QString filename)
 	file.close();
 
 	return list;
+}
+
+void Ed::SetCurrentTemplate(Template* t)
+{
+	m_currentTarget = t;
+
+	m_grid->SetCurrentTarget(t);
+}
+
+void Ed::ReturnToLevel()
+{
+	m_currentTarget = m_level;
+
+	m_grid->SetCurrentTarget(m_level);
 }
 

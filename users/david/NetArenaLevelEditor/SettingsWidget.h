@@ -42,6 +42,7 @@ public:
 	QGridLayout* m_grid;
 
 	QPushButton* m_editModeButton;
+	QPushButton* m_saveTemplateButton;
 
 	bool m_editT;
 
@@ -50,4 +51,5 @@ public slots:
 	void UpdateTransparancy(int s);
 	void NewTemplate();
 	void EditTemplate();
+	void SaveTemplate();
 };

@@ -3,9 +3,26 @@
 #include "ed.h"
 
 #include <QFileDialog>
+#include "QInputDialog"
+
+TemplateThumb::TemplateThumb()
+{
+}
+
+TemplateThumb::~TemplateThumb()
+{
+}
+
+void TemplateThumb::mousePressEvent(QGraphicsSceneMouseEvent* e)
+{
+	ed.m_templateScene->GetCurrentFolder()->SetCurrentTemplate(m_template->m_name);
+}
+
+
 
 Template::Template()
 {
+	m_name = "";
 }
 
 Template::~Template()
@@ -23,6 +40,10 @@ void Template::InitAsLevel()
 
 bool Template::CreateNewTemplate()
 {
+	m_mec.CreateLayer(MAPX, MAPY);
+	m_col.CreateLayer(MAPX, MAPY);
+
+
 	QString middle = QFileDialog::getOpenFileName(0,
 		tr("Select main image"), "", tr("Image Files (*.png)"));
 
@@ -42,12 +63,25 @@ bool Template::CreateNewTemplate()
 	!f.isNull() ? m_front.m_pixmap	= new QPixmap(f) : m_front.m_pixmap	= new QPixmap();
 	!b.isNull() ? m_back.m_pixmap	= new QPixmap(b) : m_back.m_pixmap	= new QPixmap();
 
+	QPixmap thumb = b.scaled(THUMBSIZE, THUMBSIZE);
+	QPainter painter(&thumb);
+	painter.drawPixmap(0, 0, THUMBSIZE, THUMBSIZE, m.scaled(THUMBSIZE, THUMBSIZE));
+	painter.drawPixmap(0, 0, THUMBSIZE, THUMBSIZE, f.scaled(THUMBSIZE, THUMBSIZE));
 
-	ed.m_level = this;
+	m_thumb.setPixmap(thumb);
+	m_thumb.m_template = this;
 
-	return true;
+	bool ok;
+	QString text = QInputDialog::getText((QWidget*)ed.GetSettingsWidget(), tr("Template Name Dialog"),
+											tr("Template Name:"), QLineEdit::Normal,
+											QDir::home().dirName(), &ok);
+	if (ok && !text.isEmpty())
+	{
+		m_name = text;
+		return true;
+	}
 
-	//set ui to reflect template mode
+	return false;
 }
 
 void Template::GetMaxXY(int& x, int& y)
@@ -69,6 +103,7 @@ void Template::GetMaxXY(int& x, int& y)
 	y = y_max;
 }
 
+#include "grid.h"
 void Template::StampTo(int x, int y)
 {
 	int x_max, y_max;
@@ -77,8 +112,11 @@ void Template::StampTo(int x, int y)
 	for(int i = 0; i < y_max; i++)
 		for(int j = 0; j < x_max; j++)
 		{
-			ed.m_level->m_mec.m_grid[i+y][j+x] = m_mec.m_grid[i][j];
-			ed.m_level->m_col.m_grid[i+y][j+x] = m_col.m_grid[i][j];
+			if(i+y < MAPY && j+x < MAPX)
+			{
+				ed.m_level->m_mec.m_grid[i+y][j+x] = m_mec.m_grid[i][j];
+				ed.m_level->m_col.m_grid[i+y][j+x] = m_col.m_grid[i][j];
+			}
 		}
 
 	QPainter painter(ed.m_level->m_front.m_pixmap);
@@ -87,6 +125,8 @@ void Template::StampTo(int x, int y)
 	painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, *m_middle.m_pixmap);
 	painter.begin(ed.m_level->m_back.m_pixmap);
 	painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, *m_back.m_pixmap);
+
+	ed.m_grid->update();
 }
 
 void Template::Unstamp(int x, int y)
@@ -97,8 +137,11 @@ void Template::Unstamp(int x, int y)
 	for(int i = 0; i < y_max; i++)
 		for(int j = 0; j < x_max; j++)
 		{
-			ed.m_level->m_mec.m_grid[i+y][j+x] = ' ';
-			ed.m_level->m_col.m_grid[i+y][j+x] = ' ';
+			if(i+y < MAPY && j+x < MAPX)
+			{
+				ed.m_level->m_mec.m_grid[i+y][j+x] = ' ';
+				ed.m_level->m_col.m_grid[i+y][j+x] = ' ';
+			}
 		}
 
 	QPixmap empty(x_max*BLOCKSIZE, y_max*BLOCKSIZE);
@@ -109,14 +152,63 @@ void Template::Unstamp(int x, int y)
 	painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, empty);
 	painter.begin(ed.m_level->m_back.m_pixmap);
 	painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, empty);
+
+	ed.m_grid->update();
 }
 
-void Template::Load(const QString& filename)
+void Template::Load(QString filename)
 {
+	filename.chop(5);
+	m_front.m_pixmap = new QPixmap(filename + "front.png");
+	m_back.m_pixmap = new QPixmap(filename + "back.png");
+	m_middle.m_pixmap = new QPixmap(filename + "middle.png");
+
+	QPixmap p(filename+"thumb.png");
+	m_thumb.setPixmap(p);
+	m_thumb.m_template = this;
+
+	m_mec.CreateLayer(MAPX, MAPY);
+	m_col.CreateLayer(MAPX, MAPY);
+
+	m_mec.LoadLayer(filename + "mec");
+	m_col.LoadLayer(filename + "col");
+
+	m_name = filename.split('\\').back();
 }
 
-void Template::Save(const QString& filename)
+void Template::Save(QString filename)
 {
+	m_front.m_pixmap->save(filename + "Front.png");
+	m_back.m_pixmap->save(filename + "Back.png");
+	m_middle.m_pixmap->save(filename + "Middle.png");
+	m_thumb.pixmap().save(filename + "Thumb.png");
+
+	m_mec.SaveLayer(filename + "Mec.txt");
+	m_col.SaveLayer(filename + "Col.txt");
+
+	QFile file(filename + ".tmpl");
+	file.open(QIODevice::WriteOnly);
+	file.close();
+}
+
+
+void Template::Save()
+{
+	if(m_name != "")
+		Save(ed.ArtFolderPath + "templates\\" + ed.m_templateScene->GetCurrentFolder()->m_folderName + "\\" + m_name);
+	else
+	{
+		bool ok;
+		QString text = QInputDialog::getText((QWidget*)ed.GetSettingsWidget(), tr("Template Name Dialog"),
+												tr("Template Name:"), QLineEdit::Normal,
+												QDir::home().dirName(), &ok);
+		if (ok && !text.isEmpty())
+		{
+			m_name = text;
+
+			Save(ed.ArtFolderPath + ed.m_templateScene->GetCurrentFolder()->m_folderName + "\\" + m_name);
+		}
+	}
 }
 
 void Template::UpdateLayers()
@@ -158,7 +250,7 @@ void TemplateScene::Initialize()
 
 		QStringList templates = dir.entryList();
 
-		if(templates.count())
+		//if(templates.count())
 		{
 			AddFolder(d);
 			SetCurrentFolder(d);
@@ -166,11 +258,11 @@ void TemplateScene::Initialize()
 
 		foreach(QString filename, templates)
 		{
-			QFile file(dir.path() + "//" + dir.dirName() + "//" + filename);
+			QFile file(dir.path() + "\\" + dir.dirName() + "\\" + filename);
 			file.open(QIODevice::ReadOnly | QIODevice::Text);
 
 			Template* t = new Template();
-			t->Load(dir.path() + "/" + filename);
+			t->Load(dir.path() + "\\" + filename);
 
 			m_currentFolder->AddTemplate(t);
 		}
@@ -285,8 +377,8 @@ void TemplateFolder::LoadTileIntoScene()
 			y++;
 		}
 
-//		m_pallette->addItem(t);
-//		t->setPos(x*THUMBSIZE+2, y*THUMBSIZE+2);
+		m_pallette->addItem(&t->m_thumb);
+		t->m_thumb.setPos(x*THUMBSIZE+2, y*THUMBSIZE+2);
 
 		x++;
 	}
@@ -317,7 +409,6 @@ void TemplateFolder::SetCurrentTemplate(const QString& name)
 	if(m_templateMap.contains(name))
 	{
 		m_currentTemplate = m_templateMap[name];
-		//m_currentTemplate->LoadTemplateIntoScene();
 
 		if(settingsWidget->m_editT)
 			ed.m_grid->SetCurrentTarget(m_currentTemplate);
@@ -360,7 +451,8 @@ Template *TemplateFolder::GetCurrentTemplate()
 
 QString GetPath()
 {
-//	return ed.ArtFolderPath + "templates\\" + ed.m_templatePallette->GetCurrentFolderName() + "\\";
+
+	return ed.ArtFolderPath + "templates\\" + ed.m_templateScene->GetCurrentFolder()->m_folderName + "\\";
 }
 
 

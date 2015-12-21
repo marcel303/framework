@@ -35,7 +35,7 @@
 #define BASEX 64
 #define BASEY 36
 
-#define BLOCKSIZE 30//32//32
+#define BLOCKSIZE 30
 #define THUMBSIZE 60
 
 #define ZOOMSPEED 12
