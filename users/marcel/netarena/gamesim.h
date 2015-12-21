@@ -1488,6 +1488,7 @@ struct PhysicsUpdateInfo
 	CollisionShape shape;
 	void * arg;
 	PhysicsUpdateCB cb;
+	void * exclude;
 
 	int axis;
 	Vec2 pos;
@@ -1503,4 +1504,4 @@ struct PhysicsUpdateInfo
 	std::vector<ContactInfo> contacts;
 };
 
-void updatePhysics(GameSim & gameSim, Vec2 & pos, Vec2 & vel, float dt, const CollisionShape & shape, void * arg, PhysicsUpdateCB cb);
+void updatePhysics(GameSim & gameSim, Vec2 & pos, Vec2 & vel, float dt, const CollisionShape & shape, void * arg, void * exclude, PhysicsUpdateCB cb);

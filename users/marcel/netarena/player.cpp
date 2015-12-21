@@ -2415,6 +2415,7 @@ void Player::tick(GameSim & gameSim, float dt)
 			dt,
 			shape,
 			&args,
+			this,
 			[](PhysicsUpdateInfo & updateInfo)
 			{
 				CollisionArgs * args = (CollisionArgs*)updateInfo.arg;
@@ -2558,11 +2559,22 @@ void Player::tick(GameSim & gameSim, float dt)
 
 						// effects
 
-						if (self->m_ice.timer != 0.f || self->m_bubble.timer != 0.f)
+						if (self->m_ice.timer != 0.f)
 						{
-							// ice and bubble effects do their own collision handling (reflect)
+							// ice does horizontal reflection
 
-							result |= kPhysicsUpdateFlag_DontUpdateVelocity;
+							if (updateInfo.axis == 0)
+								updateInfo.contactRestitution = 1.f;
+							else
+								updateInfo.contactRestitution = .25f;
+							//result |= kPhysicsUpdateFlag_DontUpdateVelocity;
+						}
+						if (self->m_bubble.timer != 0.f)
+						{
+							// bubble causes the player to bounce around
+
+							updateInfo.contactRestitution = 1.f;
+							//result |= kPhysicsUpdateFlag_DontUpdateVelocity;
 						}
 
 						if (i == 1)
@@ -2576,6 +2588,16 @@ void Player::tick(GameSim & gameSim, float dt)
 
 							result |= kPhysicsUpdateFlag_DontUpdateVelocity;
 						}
+					}
+				}
+
+				if (updateInfo.player)
+				{
+					if (updateInfo.axis == 0)
+					{
+						updateInfo.contactDistance *= .5f;
+						updateInfo.player->m_pos -= updateInfo.contactNormal * updateInfo.contactDistance;
+						result |= kPhysicsUpdateFlag_DontUpdateVelocity;
 					}
 				}
 
@@ -2638,6 +2660,7 @@ void Player::tick(GameSim & gameSim, float dt)
 
 			// effects
 
+#if 0 // todo : move multipliers to restitution in collision code above
 			else if (m_ice.timer != 0.f && (dirBlockMask[i] & kBlockMask_Solid))
 			{
 				if (m_ice.bounceFrames[i] == 0)
@@ -2654,6 +2677,7 @@ void Player::tick(GameSim & gameSim, float dt)
 					m_vel[i] *= -.75f;
 				}
 			}
+#endif
 
 			// wall slide effects
 
@@ -4115,9 +4139,18 @@ bool Player::handleIce(Vec2Arg velocity, Player * attacker)
 		{
 			handleImpact(velocity * PLAYER_EFFECT_ICE_IMPACT_MULTIPLIER);
 
-			setAnim(kPlayerAnim_Walk, true, true);
-			m_isAnimDriven = true;
-			m_enableInAirAnim = false;
+			if (m_ice.timer == 0.f)
+			{
+				setAnim(kPlayerAnim_Walk, true, true);
+				m_isAnimDriven = true;
+				m_enableInAirAnim = false;
+			}
+			else
+			{
+				fassert(m_anim == kPlayerAnim_Walk);
+				fassert(m_isAnimDriven == true);
+				fassert(m_enableInAirAnim == false);
+			}
 
 			m_ice.timer = PLAYER_EFFECT_ICE_TIME;
 		}

@@ -99,6 +99,7 @@ void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 	args.hasBounced = false;
 
 	updatePhysics(gameSim, m_pos, m_vel, dt, m_collisionShape, &args,
+		this,
 		[](PhysicsUpdateInfo & updateInfo)
 		{
 			CollisionArgs * args = (CollisionArgs*)updateInfo.arg;

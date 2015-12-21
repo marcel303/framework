@@ -4982,7 +4982,7 @@ void GameSim::addFireBall()
 
 //
 
-void updatePhysics(GameSim & gameSim, Vec2 & pos, Vec2 & vel, float dt, const CollisionShape & shape, void * arg, PhysicsUpdateCB cb)
+void updatePhysics(GameSim & gameSim, Vec2 & pos, Vec2 & vel, float dt, const CollisionShape & shape, void * arg, void * exclude, PhysicsUpdateCB cb)
 {
 	for (int i = 0; i < 2; ++i)
 	{
@@ -5000,6 +5000,7 @@ void updatePhysics(GameSim & gameSim, Vec2 & pos, Vec2 & vel, float dt, const Co
 		updateInfo.cb = cb;
 		updateInfo.shape = shape;
 		updateInfo.shape.translate(newPos[0], newPos[1]);
+		updateInfo.exclude = exclude;
 
 		updateInfo.axis = i;
 		updateInfo.pos = newPos;
@@ -5024,28 +5025,47 @@ void updatePhysics(GameSim & gameSim, Vec2 & pos, Vec2 & vel, float dt, const Co
 
 				if (blockInfo)
 				{
-					Block * block = blockInfo->block;
-
-					if (!((1 << block->type) & kBlockMask_Solid))
-						flags |= kPhysicsUpdateFlag_DontCollide;
-
-					CollisionShape blockShape;
-					Arena::getBlockCollision(
-						block->shape,
-						blockShape,
-						blockInfo->x,
-						blockInfo->y);
-
-					if (shape.checkCollision(blockShape, updateInfo.delta, contactDistance, contactNormal))
+					if (blockInfo->block != updateInfo.exclude)
 					{
-						collision = true;
+						Block * block = blockInfo->block;
+
+						if (!((1 << block->type) & kBlockMask_Solid))
+							flags |= kPhysicsUpdateFlag_DontCollide;
+
+						CollisionShape blockShape;
+						Arena::getBlockCollision(
+							block->shape,
+							blockShape,
+							blockInfo->x,
+							blockInfo->y);
+
+						if (shape.checkCollision(blockShape, updateInfo.delta, contactDistance, contactNormal))
+						{
+							collision = true;
+						}
+					}
+				}
+				else if (player)
+				{
+					if (player != updateInfo.exclude)
+					{
+						CollisionInfo playerCollision;
+						if (player->getPlayerCollision(playerCollision))
+						{
+							CollisionShape playerCollisionShape(playerCollision);
+						
+							if (shape.checkCollision(playerCollisionShape, updateInfo.delta, contactDistance, contactNormal))
+							{
+								collision = true;
+							}
+						}
 					}
 				}
 				else
 				{
 					collision = true;
 
-					// todo : contact info for player/actor
+					// todo : contact info for actor
 					contactDistance = 0.f;
 					contactNormal.Set(0.f, 0.f);
 				}
@@ -5060,6 +5080,9 @@ void updatePhysics(GameSim & gameSim, Vec2 & pos, Vec2 & vel, float dt, const Co
 						updateInfo.contactDistance = contactDistance;
 
 						flags |= updateInfo.cb(updateInfo);
+
+						contactNormal = updateInfo.contactNormal;
+						contactDistance = updateInfo.contactDistance;
 					}
 
 					if (!(flags & kPhysicsUpdateFlag_DontCollide))
