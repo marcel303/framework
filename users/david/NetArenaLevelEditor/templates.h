@@ -3,14 +3,27 @@
 #include "includeseditor.h"
 #include "layers.h"
 
+class Template;
+class TemplateThumb : public QGraphicsPixmapItem
+{
+public:
+	TemplateThumb();
+	virtual ~TemplateThumb();
+
+	virtual void mousePressEvent ( QGraphicsSceneMouseEvent * e );
+
+	Template* m_template;
+};
+
 class Template : public QGraphicsScene
 {
 public:
 	Template();
 	~Template();
 
-	void Save(const QString& filename);
-	void Load(const QString &filename);
+	void Save();
+	void Save(QString filename);
+	void Load(QString filename);
 
 	void InitAsLevel();
 	bool CreateNewTemplate();
@@ -31,6 +44,8 @@ public:
 	MechLayer m_col;
 
 	QString m_name;
+
+	TemplateThumb m_thumb;
 };
 
 

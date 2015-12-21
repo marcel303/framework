@@ -61,6 +61,7 @@ void SettingsWidget::Create()
 	lbl = new QLabel("background");
 	gbox->addWidget(lbl, 4, 0);
 	lbl = new QLabel("objects");
+
 	gbox->addWidget(lbl, 5, 0);
 	gbox->addWidget(m_mechSlider, 0, 1);
 	gbox->addWidget(m_collSlider, 1, 1);
@@ -75,9 +76,14 @@ void SettingsWidget::Create()
 	QPushButton* button = new QPushButton("New Template");
     connect(button, SIGNAL(clicked()), this, SLOT(NewTemplate()));
 	vbox->addWidget(button);
+
 	m_editModeButton = new QPushButton("Edit Level");
 	connect(m_editModeButton, SIGNAL(clicked()), this, SLOT(EditTemplate()));
 	vbox->addWidget(m_editModeButton);
+
+	m_saveTemplateButton = new QPushButton("Save Template");
+	connect(m_saveTemplateButton, SIGNAL(clicked()), this, SLOT(SaveTemplate()));
+	vbox->addWidget(m_saveTemplateButton);
 
 	m_templateControls->setLayout(vbox);
 
@@ -130,6 +136,11 @@ void SettingsWidget::NewTemplate()
 
 	if(t->CreateNewTemplate())
 	{
+		ed.m_templateScene->m_currentFolder->AddTemplate(t);
+		ed.m_templateScene->m_currentFolder->SetCurrentTemplate(t->m_name);
+
+		m_editT = false;
+		EditTemplate();
 	}
 }
 
@@ -142,11 +153,19 @@ void SettingsWidget::EditTemplate()
     {
 		m_editModeButton->setText("Edit Template");
 		pal.setColor(QPalette::Button, QColor(Qt::blue));
+
+		m_saveTemplateButton->hide();
+
+		ed.ReturnToLevel();
     }
     else
     {
 		m_editModeButton->setText("Edit Level");
 		pal.setColor(QPalette::Button, QColor(Qt::green));
+
+		m_saveTemplateButton->show();
+
+		ed.SetCurrentTemplate(ed.m_templateScene->m_currentFolder->m_currentTemplate);
     }
 	m_editT = !m_editT;
 
@@ -154,6 +173,11 @@ void SettingsWidget::EditTemplate()
 	m_editModeButton->setAutoFillBackground(true);
 	m_editModeButton->setPalette(pal);
 	m_editModeButton->update();
+}
+
+void SettingsWidget::SaveTemplate()
+{
+	ed.m_currentTarget->Save();
 }
 
 

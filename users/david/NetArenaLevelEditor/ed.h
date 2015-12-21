@@ -26,8 +26,8 @@ public:
 	void LoadPallettes();
 
 
-    EditorView*& GetView();
-    QGraphicsView*& GetViewPallette();
+	EditorView* GetView();
+	QGraphicsView* GetViewPallette();
 
 
     SettingsWidget* GetSettingsWidget();
@@ -42,6 +42,7 @@ public:
     void NewLevel();
 
 	void SetCurrentTemplate(Template* t);
+	void ReturnToLevel();
 
 	Grid* m_grid;
 

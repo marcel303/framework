@@ -30,11 +30,8 @@ int main(int argc, char *argv[])
 
     a.processEvents();
 
-	view2 = new EditorView();
-	viewPallette = new EditorViewBasic;
-
 	ed.Initialize();
-	ed.LoadPallettes();
+	//ed.LoadPallettes();
 	ed.m_grid->CreateGrid(BASEX, BASEY);
 
     ed.NewLevel();

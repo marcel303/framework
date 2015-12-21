@@ -98,16 +98,16 @@ void MechLayer::SaveLayer(QString filename)
 	QFile file(filename);
 	file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate);
 
-	QTextStream in(&file);
+	QTextStream out(&file);
 
 	for(int y = 0; y < MAPY; y++)
 	{
 		for (int x = 0; x < MAPX; x++)
 		{
-			in << (char)(m_grid[y][x]);
+			out << (char)(m_grid[y][x]);
 		}
 		if(y < (MAPY -1))
-				in << endl;
+				out << endl;
 	}
 	file.close();
 }
