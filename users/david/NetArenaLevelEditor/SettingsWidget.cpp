@@ -144,7 +144,7 @@ void SettingsWidget::NewTemplate()
 	}
 }
 
-
+#include "grid.h"
 void SettingsWidget::EditTemplate()
 {
 	QPalette pal = m_editModeButton->palette();
@@ -173,6 +173,8 @@ void SettingsWidget::EditTemplate()
 	m_editModeButton->setAutoFillBackground(true);
 	m_editModeButton->setPalette(pal);
 	m_editModeButton->update();
+
+	ed.m_grid->update();
 }
 
 void SettingsWidget::SaveTemplate()

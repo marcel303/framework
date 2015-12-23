@@ -5,6 +5,11 @@
 #include <QFileDialog>
 #include "QInputDialog"
 
+#include "grid.h"
+
+
+
+
 TemplateThumb::TemplateThumb()
 {
 }
@@ -16,11 +21,15 @@ TemplateThumb::~TemplateThumb()
 void TemplateThumb::mousePressEvent(QGraphicsSceneMouseEvent* e)
 {
 	ed.m_templateScene->GetCurrentFolder()->SetCurrentTemplate(m_template->m_name);
+
+	ed.m_preview->setPixmap(*m_template->m_middle.m_pixmap);
+
+	e->accept();
 }
 
 
 
-Template::Template()
+Template::Template() : m_mec(ed.m_mecPallette), m_col(ed.m_colPallette)
 {
 	m_name = "";
 }
@@ -68,8 +77,7 @@ bool Template::CreateNewTemplate()
 	painter.drawPixmap(0, 0, THUMBSIZE, THUMBSIZE, m.scaled(THUMBSIZE, THUMBSIZE));
 	painter.drawPixmap(0, 0, THUMBSIZE, THUMBSIZE, f.scaled(THUMBSIZE, THUMBSIZE));
 
-	m_thumb.setPixmap(thumb);
-	m_thumb.m_template = this;
+	m_thumb = new QPixmap(thumb);
 
 	bool ok;
 	QString text = QInputDialog::getText((QWidget*)ed.GetSettingsWidget(), tr("Template Name Dialog"),
@@ -121,10 +129,12 @@ void Template::StampTo(int x, int y)
 
 	QPainter painter(ed.m_level->m_front.m_pixmap);
 	painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, *m_front.m_pixmap);
-	painter.begin(ed.m_level->m_middle.m_pixmap);
-	painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, *m_middle.m_pixmap);
-	painter.begin(ed.m_level->m_back.m_pixmap);
-	painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, *m_back.m_pixmap);
+	QPainter painter2(ed.m_level->m_middle.m_pixmap);
+	painter2.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, *m_middle.m_pixmap);
+	QPainter painter3(ed.m_level->m_back.m_pixmap);
+	painter3.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, *m_back.m_pixmap);
+
+	UpdateLayers();
 
 	ed.m_grid->update();
 }
@@ -145,13 +155,21 @@ void Template::Unstamp(int x, int y)
 		}
 
 	QPixmap empty(x_max*BLOCKSIZE, y_max*BLOCKSIZE);
-	empty.fill(qRgba(0, 0, 0, 0));
+	empty.fill(QColor(Qt::transparent));
+
 	QPainter painter(ed.m_level->m_front.m_pixmap);
+	painter.setCompositionMode(QPainter::CompositionMode_Source);
 	painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, empty);
-	painter.begin(ed.m_level->m_middle.m_pixmap);
-	painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, empty);
-	painter.begin(ed.m_level->m_back.m_pixmap);
-	painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, empty);
+
+	QPainter painter2(ed.m_level->m_middle.m_pixmap);
+	painter2.setCompositionMode(QPainter::CompositionMode_Source);
+	painter2.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, empty);
+
+	QPainter painter3(ed.m_level->m_back.m_pixmap);
+	painter3.setCompositionMode(QPainter::CompositionMode_Source);
+	painter3.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, empty);
+
+	UpdateLayers();
 
 	ed.m_grid->update();
 }
@@ -164,14 +182,13 @@ void Template::Load(QString filename)
 	m_middle.m_pixmap = new QPixmap(filename + "middle.png");
 
 	QPixmap p(filename+"thumb.png");
-	m_thumb.setPixmap(p);
-	m_thumb.m_template = this;
+	m_thumb = new QPixmap(p);
 
 	m_mec.CreateLayer(MAPX, MAPY);
 	m_col.CreateLayer(MAPX, MAPY);
 
-	m_mec.LoadLayer(filename + "mec");
-	m_col.LoadLayer(filename + "col");
+	m_mec.LoadLayer(filename + "Mec");
+	m_col.LoadLayer(filename + "Col");
 
 	m_name = filename.split('\\').back();
 }
@@ -181,10 +198,10 @@ void Template::Save(QString filename)
 	m_front.m_pixmap->save(filename + "Front.png");
 	m_back.m_pixmap->save(filename + "Back.png");
 	m_middle.m_pixmap->save(filename + "Middle.png");
-	m_thumb.pixmap().save(filename + "Thumb.png");
+	m_thumb->save(filename + "Thumb.png");
 
-	m_mec.SaveLayer(filename + "Mec.txt");
-	m_col.SaveLayer(filename + "Col.txt");
+	m_mec.SaveLayer(filename + "Mec");
+	m_col.SaveLayer(filename + "Col");
 
 	QFile file(filename + ".tmpl");
 	file.open(QIODevice::WriteOnly);
@@ -215,6 +232,33 @@ void Template::UpdateLayers()
 {
 	m_mec.UpdateLayer();
 	m_col.UpdateLayer();
+}
+
+void Template::LoadLevel(QString filename)
+{
+	m_front.LoadLayer(filename + "ArtFG");
+	m_middle.LoadLayer(filename + "Art");
+	m_back.LoadLayer(filename + "ArtBG");
+
+	m_mec.LoadLayer(filename + "Mec");
+	m_col.LoadLayer(filename + "Col");
+}
+
+void Template::SaveLevel(QString filename)
+{
+	m_front.SaveLayer(filename + "ArtFG");
+	m_middle.SaveLayer(filename + "Art");
+	m_back.SaveLayer(filename + "ArtBG");
+
+	m_mec.SaveLayer(filename + "Mec");
+	m_col.SaveLayer(filename + "Col");
+
+	QPixmap thumb = m_back.m_pixmap->scaled(THUMBSIZE, THUMBSIZE);
+	QPainter painter(&thumb);
+	painter.drawPixmap(0, 0, THUMBSIZE, THUMBSIZE, m_middle.m_pixmap->scaled(THUMBSIZE, THUMBSIZE));
+	painter.drawPixmap(0, 0, THUMBSIZE, THUMBSIZE, m_front.m_pixmap->scaled(THUMBSIZE, THUMBSIZE));
+
+	thumb.save(filename + "Thu.png");
 }
 
 
@@ -377,8 +421,11 @@ void TemplateFolder::LoadTileIntoScene()
 			y++;
 		}
 
-		m_pallette->addItem(&t->m_thumb);
-		t->m_thumb.setPos(x*THUMBSIZE+2, y*THUMBSIZE+2);
+		TemplateThumb* tt = new TemplateThumb;
+		tt->setPixmap(*t->m_thumb);
+		tt->m_template = t;
+		m_pallette->addItem(tt);
+		tt->setPos(x*THUMBSIZE+2, y*THUMBSIZE+2);
 
 		x++;
 	}
@@ -456,11 +503,6 @@ QString GetPath()
 }
 
 
-
-
-
-
-
 Template* Template::GetMirror()
 {
 	Template* t = new Template();
@@ -472,34 +514,3 @@ Template* Template::GetMirror()
 
 	return t;
 }
-
-
-
-
-
-
-QList<QGraphicsItem*> previewList;
-void displayPreview(int x, int y)
-{
-	{
-		//preview
-	}
-}
-
-
-
-/*
-
-
-#include <QGraphicsItem>
-void Tile::hoverEnterEvent ( QGraphicsSceneHoverEvent * e )
-{
-	if(leftbuttonHeld)
-			SetSelectedBlock(selectedTile);
-	else
-		displayPreview(pos().x(), pos().y());
-
-
-	e->accept();
-}
-*/

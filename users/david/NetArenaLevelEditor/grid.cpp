@@ -8,7 +8,7 @@
 
 #include <QGraphicsItem>
 
-STile::STile()
+Tile::Tile()
 {
 	this->setOpacity(1.0);
 
@@ -20,14 +20,14 @@ STile::STile()
 	m_y = 0;
 }
 
-STile::~STile()
+Tile::~Tile()
 {
 }
 
 #include "SettingsWidget.h"
 #include "QRadioButton"
 
-void STile::mousePressEvent ( QGraphicsSceneMouseEvent * e )
+void Tile::mousePressEvent ( QGraphicsSceneMouseEvent * e )
 {
 	if(ed.GetSettingsWidget()->m_mech->isChecked())
 	{
@@ -60,29 +60,33 @@ void STile::mousePressEvent ( QGraphicsSceneMouseEvent * e )
 	e->accept();
 }
 
-void STile::mouseReleaseEvent ( QGraphicsSceneMouseEvent * e )
+void Tile::mouseReleaseEvent ( QGraphicsSceneMouseEvent * e )
 {
 	e->accept();
 }
 
-void STile::hoverEnterEvent ( QGraphicsSceneHoverEvent * e )
+void Tile::hoverEnterEvent ( QGraphicsSceneHoverEvent * e )
 {
 	if(ed.m_leftbuttonHeld)
 	{
 		if(ed.GetSettingsWidget()->m_mech->isChecked())
 		{
-			ed.m_level->m_mec.SetElement(m_x, m_y, false);
+			ed.m_currentTarget->m_mec.SetElement(m_x, m_y, false);
 		}
 		if(ed.GetSettingsWidget()->m_coll->isChecked())
 		{
-			ed.m_level->m_col.SetElement(m_x, m_y, false);
+			ed.m_currentTarget->m_col.SetElement(m_x, m_y, false);
 		}
+	}
+	else if(ed.GetSettingsWidget()->m_temp->isChecked())
+	{
+		ed.UpdatePreview(m_x*BLOCKSIZE, m_y*BLOCKSIZE);
 	}
 
 	e->accept();
 }
 
-void STile::SetPos(int x, int y)
+void Tile::SetPos(int x, int y)
 {
 	m_x = x;
 	m_y = y;
@@ -163,9 +167,9 @@ void Grid::CreateGrid(int x, int y)
 
 	SetupLevelImages();
 
-	m_tiles = new STile*[y];
+	m_tiles = new Tile*[y];
 	for(int i = 0; i < y; ++i)
-		m_tiles[i] = new STile[x];
+		m_tiles[i] = new Tile[x];
 
 	QPixmap* p = new QPixmap("EditorData\\tile.png");
 
@@ -184,33 +188,6 @@ void Grid::CreateGrid(int x, int y)
 	delete p;
 
     this->update();
-}
-
-void Grid::CustomMouseEvent ( QGraphicsSceneMouseEvent * e, STile* tile )
-{
-	Q_UNUSED(tile)
-	e->accept();
-}
-
-void Grid::dragEnterEvent(QGraphicsSceneDragDropEvent *e)
-{
-	if (e->mimeData()->hasUrls())
-		e->acceptProposedAction();
-}
-
-void Grid::dropEvent(QGraphicsSceneDragDropEvent *e)
-{
-	foreach (const QUrl &url, e->mimeData()->urls())
-	{
-		QString filename = url.toLocalFile();
-
-		//view->ImportTemplate(filename);
-	}
-}
-
-void Grid::dragMoveEvent(QGraphicsSceneDragDropEvent *e)
-{
-	e->acceptProposedAction();
 }
 
 void Grid::SetCurrentTarget(Template* t)

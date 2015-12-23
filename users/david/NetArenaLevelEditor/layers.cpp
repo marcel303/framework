@@ -12,8 +12,9 @@ LevelLayer::LevelLayer()
 	m_x = m_y = 0;
 }
 
-MechLayer::MechLayer() : LevelLayer()
+MechLayer::MechLayer(BasePallette *bp) : LevelLayer()
 {
+	m_bp = bp;
 }
 MechLayer::~MechLayer()
 {
@@ -38,7 +39,9 @@ void MechLayer::CreateLayer(int x, int y)
 		{
 			m_grid[y1][x1] = ' ';
 
-			image = ed.GetCurrentPallette()->GetImage(m_grid[y1][x1]);
+			ed.m_mecPallette;
+
+			image = m_bp->GetImage(m_grid[y1][x1]);
 			if(image)
 				painter.drawPixmap(x*BLOCKSIZE,y*BLOCKSIZE ,*image);
 		}
@@ -51,9 +54,9 @@ void MechLayer::SetElement(int x, int y, bool update)
 {
 	m_grid[y][x] = ed.GetCurrentPallette()->m_selectedID;
 
-
 	QPainter painter(m_pixmap);
-	QPixmap* image = ed.GetCurrentPallette()->GetImage(m_grid[y][x]);
+	painter.setCompositionMode(QPainter::CompositionMode_Source);
+	QPixmap* image = m_bp->GetImage(m_grid[y][x]);
 	if(image)
 		painter.drawPixmap(x*BLOCKSIZE,y*BLOCKSIZE ,*image);
 
@@ -65,11 +68,16 @@ void MechLayer::DeleteElement(int x, int y, bool update)
 {
 	m_grid[y][x] = ' ';
 
+	QPainter painter(m_pixmap);
+	painter.setCompositionMode(QPainter::CompositionMode_Source);
+	QPixmap* image = m_bp->GetImage(m_grid[y][x]);
+
+	if(image)
+		painter.drawPixmap(x*BLOCKSIZE,y*BLOCKSIZE ,*image);
+
 	if(update)
 		UpdateLayer();
 }
-
-
 
 
 
@@ -77,11 +85,12 @@ void MechLayer::DeleteElement(int x, int y, bool update)
 void MechLayer::UpdateLayer()
 {
 	QPainter painter(m_pixmap);
+	painter.setCompositionMode(QPainter::CompositionMode_Source);
 
 	for(int y1 = 0; y1 < m_y; y1++)
 		for(int x1 = 0; x1 < m_x; x1++)
 		{
-			QPixmap* image = ed.GetCurrentPallette()->GetImage(m_grid[y1][x1]);
+			QPixmap* image = m_bp->GetImage(m_grid[y1][x1]);
 			if(image)
 			{
 				painter.drawPixmap(x1*BLOCKSIZE,y1*BLOCKSIZE ,*image);
@@ -95,7 +104,7 @@ void MechLayer::UpdateLayer()
 
 void MechLayer::SaveLayer(QString filename)
 {
-	QFile file(filename);
+	QFile file(filename + ".txt");
 	file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate);
 
 	QTextStream out(&file);
@@ -150,12 +159,18 @@ void ArtLayer::CreateLayer(int x, int y)
 
 void ArtLayer::SetElement(int x, int y, bool update)
 {
+	Q_UNUSED(x);
+	Q_UNUSED(y);
+
 	if(update)
 		UpdateLayer();
 }
 
 void ArtLayer::DeleteElement(int x, int y, bool update)
 {
+	Q_UNUSED(x);
+	Q_UNUSED(y);
+
 	if(update)
 		UpdateLayer();
 }
@@ -212,13 +227,16 @@ void ArtLayer::SaveLayer(QString filename)
 	out << hitlist.size();
 
 	count = 0;
-	QImage artImage(1920, (((hitlist.size()*BLOCKSIZE)/1920)*BLOCKSIZE)+BLOCKSIZE, QImage::Format_ARGB32_Premultiplied);
+	int levelsize = MAPX*BLOCKSIZE;
+	qDebug() << "levelsize calculated at " + levelsize;
+
+	QImage artImage(levelsize, (((hitlist.size()*BLOCKSIZE)/levelsize)*BLOCKSIZE)+BLOCKSIZE, QImage::Format_ARGB32_Premultiplied);
 	QPainter painter(&artImage);
 
 	while(!hitlist.empty())
 	{
 		int key = hitlist.front();
-		painter.drawImage((count*BLOCKSIZE)%1920, ((count*BLOCKSIZE)/1920)*BLOCKSIZE, templevel.front());
+		painter.drawImage((count*BLOCKSIZE)%levelsize, ((count*BLOCKSIZE)/levelsize)*BLOCKSIZE, templevel.front());
 
 		count++;
 		out << key;
@@ -248,13 +266,16 @@ void ArtLayer::LoadLayer(QString filename)
 	in >> key; //mapy
 	in >> key; //count
 
+	int levelsize = MAPX*BLOCKSIZE;
+	qDebug() << "levelsize calculated at " + levelsize;
+
 	while(!in.atEnd())
 	{
 		in >> key;
-		QPixmap p(image.copy((hitcount*BLOCKSIZE)%1920, ((hitcount*BLOCKSIZE)/1920)*BLOCKSIZE, BLOCKSIZE, BLOCKSIZE));
+		QPixmap p(image.copy((hitcount*BLOCKSIZE)%levelsize, ((hitcount*BLOCKSIZE)/levelsize)*BLOCKSIZE, BLOCKSIZE, BLOCKSIZE));
 
 		QPainter painter(m_pixmap);
-		painter.drawPixmap((key%MAPX)*BLOCKSIZE, (key/MAPX)*BLOCKSIZE, image.copy((hitcount*BLOCKSIZE)%1920, ((hitcount*BLOCKSIZE)/1920)*BLOCKSIZE, BLOCKSIZE, BLOCKSIZE));
+		painter.drawPixmap((key%MAPX)*BLOCKSIZE, (key/MAPX)*BLOCKSIZE, image.copy((hitcount*BLOCKSIZE)%levelsize, ((hitcount*BLOCKSIZE)/levelsize)*BLOCKSIZE, BLOCKSIZE, BLOCKSIZE));
 
 		hitcount++;
 	}

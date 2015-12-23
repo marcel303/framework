@@ -36,8 +36,7 @@ public:
 
 public slots:
     void Save();
-    void SaveAs();
-    void SaveTemplate();
+	void SaveAs();
     void Load();
 	void New();
 
