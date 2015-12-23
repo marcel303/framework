@@ -267,9 +267,9 @@ void Arena::load(const char * name)
 
 	// load art layers
 
-	//loadArtIndices(artFilenameBG.c_str(), 0);
+	loadArtIndices(artFilenameBG.c_str(), 0);
 	loadArtIndices(artFilenameMG.c_str(), 1);
-	//loadArtIndices(artFilenameFG.c_str(), 2);
+	loadArtIndices(artFilenameFG.c_str(), 2);
 
 	// load block type layer
 
