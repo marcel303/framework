@@ -45,7 +45,7 @@
 - level editor: add setting for level size
 
 footbrawl:
-- bounce ball vs swords and such
++ bounce ball vs swords and such
 - bounce ball vs bullets
 - bounce ball vs axe, pipebomb, etc.. (basically all other object types)
 + add weapon with bullet type that'll only repels the ball and slows down other players, but is otherwise harmless.. defense tactic
