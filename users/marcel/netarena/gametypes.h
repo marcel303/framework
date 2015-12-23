@@ -306,7 +306,7 @@ struct CollisionShape
 		kType_Circle
 	};
 
-	const static int kMaxPoints = 16;
+	const static int kMaxPoints = 4;
 
 	Type type;
 	Vec2 points[kMaxPoints];
@@ -396,7 +396,8 @@ struct CollisionShape
 
 		for (int i = 0; i < kMaxPoints; ++i)
 		{
-			const float angle = 2.f * M_PI * float(i) / float(kMaxPoints);
+			const float angleOffset = 2.f * M_PI / float(kMaxPoints) / 2.f;
+			const float angle = angleOffset + 2.f * M_PI * float(i) / float(kMaxPoints);
 			points[i][0] = std::cosf(angle) * radius;
 			points[i][1] = std::sinf(angle) * radius;
 		}

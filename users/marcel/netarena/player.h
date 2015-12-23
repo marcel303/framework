@@ -129,3 +129,4 @@ const CharacterData * getCharacterData(int characterIndex);
 char * makeCharacterFilename(int characterIndex, const char * filename);
 Color getCharacterColor(int characterIndex);
 Color getPlayerColor(int playerIndex);
+Color getTeamColor(int teamIndex);

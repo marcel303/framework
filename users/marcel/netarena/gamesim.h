@@ -139,6 +139,7 @@ struct Player
 		memset(this, 0, sizeof(Player));
 
 		m_index = index;
+		m_team = 0;
 		m_owningChannelId = owningChannelId;
 
 		m_characterIndex = -1;
@@ -157,7 +158,7 @@ struct Player
 
 	void tick(GameSim & gameSim, float dt);
 	void draw() const;
-	void drawAt(bool flipX, bool flipY, int x, int y, const SpriterState & spriterState, const spriter::Drawable * drawables, int numDrawables) const;
+	void drawAt(const GameSim & gameSim, bool flipX, bool flipY, int x, int y, const SpriterState & spriterState, const spriter::Drawable * drawables, int numDrawables) const;
 	void drawLight() const;
 	void drawLightAt(int x, int y) const;
 	void debugDraw() const;
@@ -254,6 +255,7 @@ struct Player
 	bool m_isUsed;
 
 	uint8_t m_index;
+	uint8_t m_team;
 	uint16_t m_owningChannelId;
 
 	// character select

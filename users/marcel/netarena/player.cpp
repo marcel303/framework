@@ -1724,6 +1724,35 @@ void Player::tick(GameSim & gameSim, float dt)
 				m_attack.hasCollision = true;
 
 				endGrapple();
+
+				if (gameSim.m_gameMode == kGameMode_FootBrawl)
+				{
+					// apply velocity to ball
+
+					const Vec2 velocity = m_vel + Vec2(
+						m_attackDirection[0] * PLAYER_SWORD_BALLHITSPEED_X,
+						m_attackDirection[1] * PLAYER_SWORD_BALLHITSPEED_Y);
+
+					for (int i = 0; i < MAX_FOOTBALLS; ++i)
+					{
+						FootBall & ball = gameSim.m_footBalls[i];
+
+						if (!ball.m_isActive)
+							continue;
+
+						const float x = m_pos[0] + mirrorX(0.f);
+						const float y = m_pos[1] - mirrorY(44.f);
+						const float distance = (Vec2(x, y) - ball.m_pos).CalcSize();
+
+						if (distance < 180.f)
+						{
+							ball.m_vel = velocity;
+							ball.m_hasBeenTouched = true;
+							ball.m_lastPlayerIndex = m_index;
+							ball.m_pickupTimer = FOOTBALL_DROP_DELAY;
+						}
+					}
+				}
 			}
 
 			if (!s_noSpecial && (gameSim.m_gameMode != kGameMode_Lobby))
@@ -2975,9 +3004,19 @@ void Player::tick(GameSim & gameSim, float dt)
 			{
 				CollisionInfo playerCollision;
 				FootBall ball;
-				if (getPlayerCollision(playerCollision) && gameSim.grabFootBall(playerCollision, m_index, ball))
+				if (getPlayerCollision(playerCollision))
 				{
-					m_footBrawl.m_hasBall = true;
+				#if 1
+					const Vec2 mid = (playerCollision.min + playerCollision.max) / 2.f;
+					playerCollision.min = mid;
+					playerCollision.max = mid;
+				#else
+					const Vec2 edge(10.f, 10.f);
+					playerCollision.min += edge;
+					playerCollision.max -= edge;
+				#endif
+					if (gameSim.grabFootBall(playerCollision, m_index, ball))
+						m_footBrawl.m_hasBall = true;
 				}
 
 				if (m_footBrawl.m_hasBall)
@@ -3066,7 +3105,7 @@ void Player::draw() const
 		pushSurface(&surface1);
 		{
 			surface1.clear();
-			drawAt(flipX, flipY, sx/2, oy - (flipY ? characterData->m_collisionSy : 0), spriterState, drawables, numDrawables);
+			drawAt(gameSim, flipX, flipY, sx/2, oy - (flipY ? characterData->m_collisionSy : 0), spriterState, drawables, numDrawables);
 		}
 		popSurface();
 
@@ -3117,19 +3156,19 @@ void Player::draw() const
 		const bool flipX = m_facing[0] > 0 ? true : false;
 		const bool flipY = m_facing[1] < 0 ? true : false;
 
-		drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0), spriterState, drawables, numDrawables);
+		drawAt(gameSim, flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0), spriterState, drawables, numDrawables);
 
 		const int borderSize = 300;
 
 		// render additional sprites for wrap around
 		if (m_pos[0] < borderSize)
-			drawAt(flipX, flipY, m_pos[0] + gameSim.m_arena.m_sxPixels, m_pos[1] - (flipY ? characterData->m_collisionSy : 0), spriterState, drawables, numDrawables);
+			drawAt(gameSim, flipX, flipY, m_pos[0] + gameSim.m_arena.m_sxPixels, m_pos[1] - (flipY ? characterData->m_collisionSy : 0), spriterState, drawables, numDrawables);
 		if (m_pos[0] > gameSim.m_arena.m_sxPixels - borderSize)
-			drawAt(flipX, flipY, m_pos[0] - gameSim.m_arena.m_sxPixels, m_pos[1] - (flipY ? characterData->m_collisionSy : 0), spriterState, drawables, numDrawables);
+			drawAt(gameSim, flipX, flipY, m_pos[0] - gameSim.m_arena.m_sxPixels, m_pos[1] - (flipY ? characterData->m_collisionSy : 0), spriterState, drawables, numDrawables);
 		if (m_pos[1] < borderSize)
-			drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0) + gameSim.m_arena.m_syPixels, spriterState, drawables, numDrawables);
+			drawAt(gameSim, flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0) + gameSim.m_arena.m_syPixels, spriterState, drawables, numDrawables);
 		if (m_pos[1] > gameSim.m_arena.m_syPixels - borderSize)
-			drawAt(flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0) - gameSim.m_arena.m_syPixels, spriterState, drawables, numDrawables);
+			drawAt(gameSim, flipX, flipY, m_pos[0], m_pos[1] - (flipY ? characterData->m_collisionSy : 0) - gameSim.m_arena.m_syPixels, spriterState, drawables, numDrawables);
 
 		if (g_devMode)
 		{
@@ -3176,12 +3215,13 @@ void Player::draw() const
 	}
 }
 
-void Player::drawAt(bool flipX, bool flipY, int x, int y, const SpriterState & spriterState, const spriter::Drawable * drawables, int numDrawables) const
+void Player::drawAt(const GameSim & gameSim, bool flipX, bool flipY, int x, int y, const SpriterState & spriterState, const spriter::Drawable * drawables, int numDrawables) const
 {
 	cpuTimingBlock(playerDrawAt);
 
 	const CharacterData * characterData = getCharacterData(m_characterIndex);
 	const Color playerColor = getPlayerColor(m_index);
+	const Color teamColor = getTeamColor(m_team);
 
 	if (JETPACK_NEW_STEERING && m_jetpack.isActive)
 	{
@@ -3193,7 +3233,7 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y, const SpriterState & s
 
 	if (UI_PLAYER_BACKDROP_ALPHA != 0)
 	{
-		Color color = playerColor;
+		Color color = (gameSim.m_gameMode == kGameMode_FootBrawl) ? teamColor : playerColor;
 		color.a = UI_PLAYER_BACKDROP_ALPHA / 100.f;
 		setColor(color);
 		const float px = x + (m_collision.min[0] + m_collision.max[0]) / 2.f;
@@ -3389,16 +3429,20 @@ void Player::drawAt(bool flipX, bool flipY, int x, int y, const SpriterState & s
 		state.x = x;
 		state.y = y + UI_PLAYER_EMBLEM_OFFSET_Y;
 		state.animIndex = 2;
-		setColor(playerColor);
+		const Color color = (gameSim.m_gameMode == kGameMode_FootBrawl) ? teamColor : playerColor;
+		setColor(color);
 		EMBLEM_SPRITER.draw(state);
 		state.animIndex = 0;
 		setColor(colorWhite);
 		EMBLEM_SPRITER.draw(state);
 
-		// draw score
-		setMainFont();
-		setColor(colorWhite);
-		drawText(x, y + UI_PLAYER_EMBLEM_TEXT_OFFSET_Y, 19, 0.f, +1.f, "%d", m_score);
+		if (gameSim.m_gameMode == kGameMode_DeathMatch)
+		{
+			// draw score
+			setMainFont();
+			setColor(colorWhite);
+			drawText(x, y + UI_PLAYER_EMBLEM_TEXT_OFFSET_Y, 19, 0.f, +1.f, "%d", m_score);
+		}
 
 		// draw ball possession
 		if (m_footBrawl.m_hasBall)
@@ -5181,6 +5225,22 @@ Color getPlayerColor(int playerIndex)
 		return colors[playerIndex];
 	else
 		return colors[MAX_PLAYERS];
+}
+
+Color getTeamColor(int teamIndex)
+{
+	static const Color colors[MAX_PLAYERS + 1] =
+	{
+		Color(255, 0,   0,   255),
+		Color(0,   0,   255, 255),
+		Color(50,  50,  50,  255)
+	};
+
+	Assert(teamIndex >= 0 && teamIndex < 2);
+	if (teamIndex >= 0 && teamIndex < 2)
+		return colors[teamIndex];
+	else
+		return colors[2];
 }
 
 #undef GAMESIM

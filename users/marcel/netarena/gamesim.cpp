@@ -4188,7 +4188,10 @@ bool GameSim::grabFootBall(const CollisionInfo & collisionInfo, int playerIndex,
 
 		if (footBall.m_isActive)
 		{
-			if (footBall.m_lastPlayerIndex == playerIndex && footBall.m_pickupTimer != 0.f)
+			// todo : separate timers for exclude all and exclude last player only
+
+			//if (footBall.m_lastPlayerIndex == playerIndex && footBall.m_pickupTimer != 0.f)
+			if (footBall.m_pickupTimer != 0.f)
 				continue;
 
 			CollisionShape ballCollision(footBall.m_collisionShape, footBall.m_pos);
