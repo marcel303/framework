@@ -153,6 +153,8 @@ struct Game
 			}
 			if (keyboard.wentDown(SDLK_SPACE) || keyboard.wentDown(SDLK_RETURN))
 			{
+				Sound("select.ogg").play();
+
 				m_state = kState_Play;
 				m_stateTime = 0.f;
 			}
@@ -336,7 +338,7 @@ struct Game
 			gxTranslatef(0.f, -64.f, 0.f);
 			drawText(gsx/2, gsy/2, 20, 0, 0, "After collecting so many hearts..");
 			drawText(gsx/2, gsy/2 + 32, 20, 0, 0, "..they were ready..");
-			drawText(gsx/2, gsy/2 + 64, 32, 0, 0, "And they got married!");
+			drawText(gsx/2, gsy/2 + 64, 32, 0, 0, "And got married!");
 			drawText(gsx/2, gsy/2 + 96, 20, 0, 0, "(the end)");
 			gxPopMatrix();
 			break;
@@ -344,13 +346,22 @@ struct Game
 	}
 };
 
+static INIT_ERROR s_initError = INIT_ERROR_SDL;
+
+static void HandleInitError(INIT_ERROR error)
+{
+	s_initError = error;
+}
+
 int main(int argc, char * argv[])
 {
 	framework.fullscreen = false;
+	framework.basicOpenGL = true;
+	framework.initErrorHandler = HandleInitError;
 
 	if (!framework.init(0, 0, gsx, gsy))
 	{
-		showErrorMessage("Startup Error", "Failed to initialize framework.");
+		showErrorMessage("Startup Error", "Failed to initialize framework (%d).", s_initError);
 	}
 	else
 	{
