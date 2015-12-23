@@ -2737,6 +2737,17 @@ void App::draw()
 	framework.endDraw();
 }
 
+// todo : move this to somewhere else
+
+struct SteamUserAvatarInfo
+{
+	GLuint texture;
+	int sx;
+	int sy;
+};
+
+static std::map<CSteamID, SteamUserAvatarInfo> s_textureForSteamUser;
+
 void App::debugDraw()
 {
 	if (g_devMode)
@@ -2756,6 +2767,70 @@ void App::debugDraw()
 		setColor(255, 255, 255);
 		setDebugFont();
 		drawText(GFX_SX/2, GFX_SY*4/5, 32, 0.f, 0.f, "NetState: %s", s_netStates[m_netState]);
+	}
+
+	if (g_devMode)
+	{
+		const int numFriends = SteamFriends()->GetFriendCount(k_EFriendFlagImmediate);
+
+		int x = 0;
+
+		for (int i = 0; i < numFriends; ++i)
+		{
+			const CSteamID friendId = SteamFriends()->GetFriendByIndex(i, k_EFriendFlagImmediate);
+			if (friendId.IsValid())
+			{
+				if (s_textureForSteamUser.count(friendId) == 0)
+				{
+					const int avatarId = SteamFriends()->GetMediumFriendAvatar(friendId);
+					if (avatarId != 0)
+					{
+						uint32_t sx, sy;
+
+						if (SteamUtils()->GetImageSize(avatarId, &sx, &sy))
+						{
+							const int bufferSize = sx * sy * 4;
+							uint8_t * buffer = (uint8_t*)alloca(bufferSize);
+
+							if (SteamUtils()->GetImageRGBA(avatarId, buffer, bufferSize))
+							{
+								logDebug("got RGBA data for %llx. size=%ux%u", friendId.ConvertToUint64(), sx, sy);
+
+								uint32_t * source = (uint32_t*)buffer;
+								void * temp = alloca(sx * 4);
+
+								for (int y = 0; y < sy/2; ++y)
+								{
+									const int y1 = y;
+									const int y2 = sy - 1 - y;
+									memcpy(temp,             source + sx * y1, sx * 4);
+									memcpy(source + sx * y1, source + sx * y2, sx * 4);
+									memcpy(source + sx * y2, temp,             sx * 4);
+								}
+
+								auto & info = s_textureForSteamUser[friendId];
+
+								info.texture = createTextureFromRGBA8(buffer, sx, sy);
+								info.sx = sx;
+								info.sy = sy;
+							}
+						}
+					}
+				}
+
+				auto & info = s_textureForSteamUser[friendId];
+
+				if (info.texture != 0)
+				{
+					gxSetTexture(info.texture);
+					setColor(colorWhite);
+					drawRect(x, 0, x + info.sx, info.sy);
+					gxSetTexture(0);
+
+					x += info.sx;
+				}
+			}
+		}
 	}
 
 	if (g_devMode && g_host)
