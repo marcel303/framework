@@ -69,8 +69,8 @@ struct LevelEvent_SpikeWalls
 		kState_Open
 	};
 
-	CollisionBox getWallCollision(int side, float move) const;
-	CollisionBox getWallCollision(int side) const;
+	CollisionBox getWallCollision(const GameSim & gameSim, int side, float move) const;
+	CollisionBox getWallCollision(const GameSim & gameSim, int side) const;
 
 	void start(bool left, bool right);
 	void tick(GameSim & gameSim, float dt);
@@ -78,7 +78,7 @@ struct LevelEvent_SpikeWalls
 	void doCollision(GameSim & gameSim, const CollisionBox & box, int dir);
 	void doCollision(GameSim & gameSim);
 
-	void draw() const;
+	void draw(const GameSim & gameSim) const;
 
 	bool isActive() const { return m_state != kState_Idle; }
 

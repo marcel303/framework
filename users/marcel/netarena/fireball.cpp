@@ -70,7 +70,7 @@ void FireBall::tick(GameSim & gameSim, float dt)
 		}
 	}
 
-	if (m_y > GFX_SY + 200)
+	if (m_y > gameSim.m_arena.m_syPixels + 200)
 	{
 		// ball is definitely invisible now and can be reused.
 

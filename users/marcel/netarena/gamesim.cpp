@@ -3640,7 +3640,7 @@ void GameSim::drawPlayColor(const CamParams & camParams)
 
 	// spike walls
 
-	m_levelEvents.spikeWalls.draw();
+	m_levelEvents.spikeWalls.draw(*this);
 
 	if (g_devMode && m_gameMode == kGameMode_Lobby)
 	{
@@ -3817,6 +3817,19 @@ void GameSim::drawPlayHud(const CamParams & camParams)
 		setColor(colorWhite);
 		Sprite("itch-game-buttons.png").drawEx(GFX_SX/2, GFX_SY/2); // fixme
 	}
+
+	if (g_devMode)
+	{
+		setDebugFont();
+		setColor(colorWhite);
+
+		const float effectiveZoom = calculateEffectiveZoom();
+		const Vec2 effectiveZoomFocus = calculateEffectiveZoomFocus();
+
+		drawText(GFX_SX/2, GFX_SY/2, 32, 0, 0, "zoom: (%g, %g) @ %g -> (%g, %g) @ %g",
+			effectiveZoomFocus[0], effectiveZoomFocus[1], effectiveZoom,
+			m_effectiveZoomFocus[0], m_effectiveZoomFocus[1], m_effectiveZoom);
+	}
 }
 
 void GameSim::applyCamParams(const CamParams & camParams, float zoomFactor, float shakeFactor) const
@@ -3824,8 +3837,8 @@ void GameSim::applyCamParams(const CamParams & camParams, float zoomFactor, floa
 	gxTranslatef(camParams.shake[0] * shakeFactor, camParams.shake[1] * shakeFactor, 0.f);
 	const float zoom = Calc::Lerp(1.f, camParams.zoom, zoomFactor);
 	const Vec2 zoomFocus(
-		Calc::Lerp(GFX_SX/2.f, camParams.zoomFocus[0], zoomFactor),
-		Calc::Lerp(GFX_SY/2.f, camParams.zoomFocus[1], zoomFactor));
+		Calc::Lerp(m_arena.m_sxPixels/2.f, camParams.zoomFocus[0], zoomFactor),
+		Calc::Lerp(m_arena.m_syPixels/2.f, camParams.zoomFocus[1], zoomFactor));
 #if 1
 	gxTranslatef(GFX_SX/2.f, GFX_SY/2.f, 0.f);
 	gxScalef(zoom, zoom, 1.f);
@@ -4409,8 +4422,8 @@ void GameSim::triggerLevelEvent(LevelEvent e)
 	case kLevelEvent_GravityWell:
 		memset(&m_levelEvents.gravityWell, 0, sizeof(m_levelEvents.gravityWell));
 		m_levelEvents.gravityWell.endTimer = EVENT_GRAVITYWELL_DURATION;
-		m_levelEvents.gravityWell.m_x = GFX_SX / 2;
-		m_levelEvents.gravityWell.m_y = GFX_SY / 2;
+		m_levelEvents.gravityWell.m_x = m_arena.m_sxPixels / 2;
+		m_levelEvents.gravityWell.m_y = m_arena.m_syPixels / 2;
 		name = "Gravity Well";
 		break;
 
@@ -4463,7 +4476,7 @@ void GameSim::triggerLevelEvent(LevelEvent e)
 
 void GameSim::doQuake(float vel)
 {
-	const CollisionShape shape(Vec2(0.f, 0.f), Vec2(GFX_SX, GFX_SY));
+	const CollisionShape shape(Vec2(0.f, 0.f), Vec2(m_arena.m_sxPixels, m_arena.m_syPixels));
 
 	struct QuakeArgs
 	{
@@ -4670,6 +4683,8 @@ float GameSim::calculateEffectiveZoom() const
 	if (ZOOM_FACTOR != 1.f)
 		return ZOOM_FACTOR;
 
+	const float baseZoom = .5f;
+
 	Vec2 min, max;
 	bool hasMinMax = false;
 	float maxDistanceFromCenter = 0.f;
@@ -4695,25 +4710,25 @@ float GameSim::calculateEffectiveZoom() const
 		}
 	}
 
-	float zoom = 1.f;
+	float zoom = baseZoom;
 
 	if (hasMinMax)
 	{
 		const float dx = max[0] - min[0];
 		const float dy = max[1] - min[1];
 
-		const float scaleX = (GFX_SX - 200.f) / (dx + .0001f);
-		const float scaleY = (GFX_SY - 200.f) / (dy + .0001f);
+		const float scaleX = (m_arena.m_sxPixels - 200.f) / (dx + .0001f);
+		const float scaleY = (m_arena.m_syPixels - 200.f) / (dy + .0001f);
 
 		const float strength = Calc::Clamp(1.f - maxDistanceFromCenter / ZOOM_PLAYER_MAX_DISTANCE, 0.f, 1.f);
 		const float playerZoom = Calc::Clamp(Calc::Min(scaleX, scaleY), ZOOM_FACTOR_MIN, ZOOM_FACTOR_MAX);
 
-		zoom = Calc::Max(zoom, Calc::Lerp(1.f, playerZoom, strength));
+		zoom = Calc::Max(zoom, Calc::Lerp(baseZoom, playerZoom, strength));
 	}
 
 	for (int i = 0; i < MAX_ZOOM_EFFECTS; ++i)
 	{
-		zoom = Calc::Max(zoom, Calc::Lerp(1.f, m_zoomEffects[i].zoom, m_zoomEffects[i].life));
+		zoom = Calc::Max(zoom, Calc::Lerp(baseZoom, m_zoomEffects[i].zoom, m_zoomEffects[i].life));
 	}
 
 	return zoom;
@@ -4790,7 +4805,7 @@ void GameSim::tickZoom(float dt)
 void GameSim::restrictZoomParams(float & zoom, Vec2 & zoomFocus) const
 {
 	Vec2 screenMin(0.f, 0.f);
-	Vec2 screenMax(GFX_SX, GFX_SY);
+	Vec2 screenMax(m_arena.m_sxPixels, m_arena.m_syPixels);
 
 	Vec2 min = zoomFocus - screenMax / zoom / 2.f;
 	Vec2 max = zoomFocus + screenMax / zoom / 2.f;
@@ -4802,7 +4817,7 @@ void GameSim::restrictZoomParams(float & zoom, Vec2 & zoomFocus) const
 			const float delta = screenMin[i] - min[i];
 			min[i] += delta;
 			max[i] += delta;
-		}	
+		}
 
 		if (max[i] > screenMax[i])
 		{
@@ -4811,6 +4826,11 @@ void GameSim::restrictZoomParams(float & zoom, Vec2 & zoomFocus) const
 			max[i] += delta;
 		}
 	}
+
+	min[0] = Calc::Max(0.f, min[0]);
+	min[1] = Calc::Max(0.f, min[1]);
+	max[0] = Calc::Min((float)m_arena.m_sxPixels, max[0]);
+	max[1] = Calc::Min((float)m_arena.m_syPixels, max[1]);
 
 	zoom = zoom;
 	zoomFocus = (min + max) / 2.f;
