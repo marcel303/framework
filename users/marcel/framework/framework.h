@@ -812,6 +812,8 @@ void drawText(float x, float y, int size, float alignX, float alignY, const char
 void drawTextArea(float x, float y, float sx, int size, const char * format, ...);
 void drawTextArea(float x, float y, float sx, float sy, int size, float alignX, float alignY, const char * format, ...);
 
+GLuint createTextureFromRGBA8(const void * source, int sx, int sy);
+
 void debugDrawText(float x, float y, int size, float alignX, float alignY, const char * format, ...);
 
 // OpenGL legacy mode drawing

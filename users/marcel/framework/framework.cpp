@@ -3638,6 +3638,52 @@ void drawTextArea(float x, float y, float sx, float sy, int size, float alignX, 
 	}
 }
 
+GLuint createTextureFromRGBA8(const void * source, int sx, int sy)
+{
+	GLuint texture;
+
+	glGenTextures(1, &texture);
+
+	if (texture)
+	{
+		GLuint restoreTexture;
+		glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+		GLint restoreUnpackAlignment;
+		glGetIntegerv(GL_UNPACK_ALIGNMENT, &restoreUnpackAlignment);
+		GLint restoreUnpackRowLength;
+		glGetIntegerv(GL_UNPACK_ROW_LENGTH, &restoreUnpackRowLength);
+
+		// copy image data
+
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+		glPixelStorei(GL_UNPACK_ROW_LENGTH, sx);
+		glTexImage2D(
+			GL_TEXTURE_2D,
+			0,
+			GL_RGBA,
+			sx,
+			sy,
+			0,
+			GL_RGBA,
+			GL_UNSIGNED_BYTE,
+			source);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+		// restore previous OpenGL states
+
+		glBindTexture(GL_TEXTURE_2D, restoreTexture);
+		glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpackAlignment);
+		glPixelStorei(GL_UNPACK_ROW_LENGTH, restoreUnpackRowLength);
+	}
+
+	return texture;
+}
+
 void debugDrawText(float x, float y, int size, float alignX, float alignY, const char * format, ...)
 {
 	if (globals.debugDraw.numLines < globals.debugDraw.kMaxLines)
