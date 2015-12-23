@@ -3534,6 +3534,7 @@ void GameSim::drawPlayColor(const CamParams & camParams)
 			cpuTimingBlock(drawPlayColorBackground);
 
 			//setBlend(BLEND_OPAQUE);
+			gxScalef(1.f / m_arena.getBaseZoom(), 1.f / m_arena.getBaseZoom(), 1.f);
 			m_background.draw();
 			//setBlend(BLEND_ALPHA);
 		}
@@ -4683,7 +4684,7 @@ float GameSim::calculateEffectiveZoom() const
 	if (ZOOM_FACTOR != 1.f)
 		return ZOOM_FACTOR;
 
-	const float baseZoom = .5f;
+	const float baseZoom = m_arena.getBaseZoom();
 
 	Vec2 min, max;
 	bool hasMinMax = false;
@@ -4720,7 +4721,7 @@ float GameSim::calculateEffectiveZoom() const
 		const float scaleX = (m_arena.m_sxPixels - 200.f) / (dx + .0001f);
 		const float scaleY = (m_arena.m_syPixels - 200.f) / (dy + .0001f);
 
-		const float strength = Calc::Clamp(1.f - maxDistanceFromCenter / ZOOM_PLAYER_MAX_DISTANCE, 0.f, 1.f);
+		const float strength = Calc::Clamp(1.f - maxDistanceFromCenter * baseZoom / ZOOM_PLAYER_MAX_DISTANCE, 0.f, 1.f);
 		const float playerZoom = Calc::Clamp(Calc::Min(scaleX, scaleY), ZOOM_FACTOR_MIN, ZOOM_FACTOR_MAX);
 
 		zoom = Calc::Max(zoom, Calc::Lerp(baseZoom, playerZoom, strength));

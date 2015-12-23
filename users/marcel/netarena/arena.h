@@ -127,6 +127,8 @@ public:
 	int m_sxPixels;
 	int m_syPixels;
 
+	inline float getBaseZoom() const { return GFX_SX / float(m_sxPixels); }
+
 	uint64_t m_texture;
 	int m_textureSx;
 	int m_textureSy;
