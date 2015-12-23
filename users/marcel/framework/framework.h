@@ -207,6 +207,7 @@ public:
 	
 	bool fullscreen;
 	bool useClosestDisplayMode;
+	bool basicOpenGL;
 	int minification;
 	bool reloadCachesOnActivate;
 	bool filedrop;

@@ -69,6 +69,7 @@ Framework::Framework()
 {
 	fullscreen = false;
 	useClosestDisplayMode = false;
+	basicOpenGL = false;
 	minification = 1;
 	reloadCachesOnActivate = false;
 	filedrop = false;
@@ -231,27 +232,30 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 		return false;
 	}
 	
-	glewExperimental = GL_TRUE; // force GLEW to resolve all supported extension methods
-	
-	const int glewStatus = glewInit();
-	checkErrorGL();
-
-	if (glewStatus != GLEW_OK)
+	if (!basicOpenGL)
 	{
-		logError("failed to initialize GLEW: %s", glewGetErrorString(glewStatus));
-		if (initErrorHandler)
-			initErrorHandler(INIT_ERROR_OPENGL_EXTENSIONS);
-		return false;
-	}
-
-	log("using OpenGL %s, GLEW %s", glGetString(GL_VERSION), glewGetString(GLEW_VERSION));
+		glewExperimental = GL_TRUE; // force GLEW to resolve all supported extension methods
 	
-	if (!GLEW_VERSION_3_2)
-	{
-		logWarning("OpenGL 3.2 not supported");
-		if (initErrorHandler)
-			initErrorHandler(INIT_ERROR_OPENGL_EXTENSIONS);
-		return false;
+		const int glewStatus = glewInit();
+		checkErrorGL();
+
+		if (glewStatus != GLEW_OK)
+		{
+			logError("failed to initialize GLEW: %s", glewGetErrorString(glewStatus));
+			if (initErrorHandler)
+				initErrorHandler(INIT_ERROR_OPENGL_EXTENSIONS);
+			return false;
+		}
+
+		log("using OpenGL %s, GLEW %s", glGetString(GL_VERSION), glewGetString(GLEW_VERSION));
+	
+		if (!GLEW_VERSION_3_2)
+		{
+			logWarning("OpenGL 3.2 not supported");
+			if (initErrorHandler)
+				initErrorHandler(INIT_ERROR_OPENGL_EXTENSIONS);
+			return false;
+		}
 	}
 	
 #if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
@@ -410,6 +414,7 @@ bool Framework::shutdown()
 
 	fullscreen = false;
 	useClosestDisplayMode = false;
+	basicOpenGL = false;
 	minification = 1;
 	reloadCachesOnActivate = false;
 	filedrop = false;
@@ -3208,27 +3213,33 @@ void setBlend(BLEND_MODE blendMode)
 		break;
 	case BLEND_ALPHA:
 		glEnable(GL_BLEND);
-		glBlendEquation(GL_FUNC_ADD);
+		if (glBlendEquation)
+			glBlendEquation(GL_FUNC_ADD);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		break;
 	case BLEND_ADD:
 		glEnable(GL_BLEND);
-		glBlendEquation(GL_FUNC_ADD);
+		if (glBlendEquation)
+			glBlendEquation(GL_FUNC_ADD);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 		break;
 	case BLEND_SUBTRACT:
 		glEnable(GL_BLEND);
-		glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
+		fassert(glBlendEquation);
+		if (glBlendEquation)
+			glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 		break;
 	case BLEND_INVERT:
 		glEnable(GL_BLEND);
-		glBlendEquation(GL_FUNC_ADD);
+		if (glBlendEquation)
+			glBlendEquation(GL_FUNC_ADD);
 		glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ZERO);
 		break;
 	case BLEND_MUL:
 		glEnable(GL_BLEND);
-		glBlendEquation(GL_FUNC_ADD);
+		if (glBlendEquation)
+			glBlendEquation(GL_FUNC_ADD);
 		glBlendFunc(GL_ZERO, GL_SRC_COLOR);
 		break;
 	default:
