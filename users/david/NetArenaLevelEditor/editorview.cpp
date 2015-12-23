@@ -77,10 +77,6 @@ void EditorView::SaveAs()
 }
 
 
-void EditorView::SaveTemplate()
-{
-}
-
 void EditorView::Load()
 {
 	QString fileName = QFileDialog::getOpenFileName(this, tr("Open file"));

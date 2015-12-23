@@ -31,7 +31,7 @@ class QPainter;
 class MechLayer : public LevelLayer
 {
 public:
-		MechLayer();
+		MechLayer(BasePallette* bp);
 		virtual ~MechLayer();
 
 		virtual void CreateLayer(int x, int y);
@@ -41,6 +41,8 @@ public:
 
 		virtual void SaveLayer(QString filename);
 		virtual void LoadLayer(QString filename);
+
+		BasePallette* m_bp;
 };
 
 class ArtLayer: public LevelLayer
