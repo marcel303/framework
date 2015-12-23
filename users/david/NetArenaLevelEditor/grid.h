@@ -5,11 +5,11 @@
 #include <QMimeData>
 
 
-class STile : public QGraphicsPixmapItem
+class Tile : public QGraphicsPixmapItem
 {
 public:
-	STile();
-	virtual ~STile();
+	Tile();
+	virtual ~Tile();
 
 	virtual void mousePressEvent ( QGraphicsSceneMouseEvent * e );
 	virtual void mouseReleaseEvent ( QGraphicsSceneMouseEvent * e );
@@ -49,17 +49,11 @@ public:
 
 	void SetupLevelImages();
 	void CreateGrid(int x, int y);
-	virtual void CustomMouseEvent (QGraphicsSceneMouseEvent * e , STile *tile);
-
-
-	void dragEnterEvent(QGraphicsSceneDragDropEvent *e);
-	void dropEvent(QGraphicsSceneDragDropEvent *e);
-	void dragMoveEvent(QGraphicsSceneDragDropEvent *e);
 
 	void SetLayerFront(QImage *p);
 	void SetCurrentTarget(Template* t);
 
-	STile** m_tiles;
+	Tile** m_tiles;
 
 	GridLayer* m_front;
 	GridLayer* m_middle;

@@ -503,11 +503,6 @@ QString GetPath()
 }
 
 
-
-
-
-
-
 Template* Template::GetMirror()
 {
 	Template* t = new Template();
