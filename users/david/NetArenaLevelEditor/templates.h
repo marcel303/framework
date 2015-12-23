@@ -25,8 +25,13 @@ public:
 	void Save(QString filename);
 	void Load(QString filename);
 
+	void LoadLevel(QString filename);
+	void SaveLevel(QString filename);
+
 	void InitAsLevel();
 	bool CreateNewTemplate();
+
+
 
 	void StampTo(int x, int y);
 	void Unstamp(int x, int y);
@@ -45,7 +50,8 @@ public:
 
 	QString m_name;
 
-	TemplateThumb m_thumb;
+	QPixmap* m_thumb;
+	//TemplateThumb m_thumb;
 };
 
 

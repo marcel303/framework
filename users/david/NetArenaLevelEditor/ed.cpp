@@ -94,13 +94,52 @@ void Ed::SaveLevel(const QString& filename)
 	QDir dir;
 	dir.mkpath(filename);
 
-	//SaveGeneric(filename + '/' + "Mec.txt", sceneMech);
-	//SaveGeneric(filename + '/' + "Col.txt", sceneCollision);
-	//SaveArtFile(filename + '/' + "Art", sceneArt);
+	m_level->SaveLevel(filename + '/');
+
+	SaveConfig(filename + '/');
+}
+
+void Ed::SaveConfig(const QString& filename)
+{
+	QFile file(filename + "cfg.txt");
+	file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate);
+
+	QTextStream out(&file);
+
+
+	out << "Version: " << 1 << endl;
+	out << "MAPX: " << MAPX << endl;
+	out << "MAPY: " << MAPY << endl;
+
+	file.close();
+}
+
+void Ed::LoadConfig(const QString& filename)
+{
+	QList<QString> lines = GetLinesFromConfigFile(filename + "cfg.txt");
+
+	QMap<QString, QString> splits = SplitLines(lines);
+
+	//int version = splits["Version"].toInt();
+	//switch on version if ever applicable
+	//case version 1:
+	{
+
+		SetMapXY(splits["MAPX"].toInt(), splits["MAPY"].toInt());
+		NewLevel();
+
+
+
+
+	}
+
 }
 
 void Ed::LoadLevel(const QString &filename)
 {
+	LoadConfig(filename);
+
+	m_level->LoadLevel(filename);
 }
 
 BasePallette* Ed::GetCurrentPallette()
@@ -179,6 +218,18 @@ QList<QString> Ed::GetLinesFromConfigFile(QString filename)
 	file.close();
 
 	return list;
+}
+
+QMap<QString, QString> Ed::SplitLines(const QList<QString>& lines)
+{
+	QMap<QString, QString> splits;
+	foreach(const QString& a, lines)
+	{
+		QStringList t = a.split(':');
+		splits[t.first()] = t.last();
+	}
+
+	return splits;
 }
 
 void Ed::SetCurrentTemplate(Template* t)

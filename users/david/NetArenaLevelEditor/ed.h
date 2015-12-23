@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QString>
+#include <QMap>
 
 
 class EditorView;
@@ -40,6 +41,8 @@ public:
 
 	void LoadLevel(const QString& filename);
 	void SaveLevel(const QString &filename);
+	void SaveConfig(const QString& filename);
+	void LoadConfig(const QString& filename);
 
     void NewLevel();
 
@@ -51,6 +54,9 @@ public:
 	Template* m_level;
 	Template* m_currentTarget;
 	TemplateScene* m_templateScene;
+
+	BasePallette* m_mecPallette;
+	BasePallette* m_colPallette;
 
 
 
@@ -66,8 +72,7 @@ private:
 	EditorView* m_view;
 	QGraphicsView* m_viewPallette;
 
-	BasePallette* m_mecPallette;
-	BasePallette* m_colPallette;
+
     //TemplatePallette* m_templatePallette;
 
 public:
@@ -79,6 +84,7 @@ public:
 
 
 	QList<QString> GetLinesFromConfigFile(QString filename);
+	QMap<QString, QString> SplitLines(const QList<QString>& lines);
 
 	BasePallette* GetCurrentPallette();
 
