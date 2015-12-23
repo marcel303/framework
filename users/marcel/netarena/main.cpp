@@ -2782,7 +2782,18 @@ void App::debugDraw()
 			{
 				if (s_textureForSteamUser.count(friendId) == 0)
 				{
-					const int avatarId = SteamFriends()->GetMediumFriendAvatar(friendId);
+					int avatarId = 0;
+
+					if (avatarId == 0)
+						avatarId = SteamFriends()->GetLargeFriendAvatar(friendId);
+					if (avatarId < 0)
+						continue;
+
+					if (avatarId == 0)
+						avatarId = SteamFriends()->GetMediumFriendAvatar(friendId);
+					if (avatarId < 0)
+						continue;
+
 					if (avatarId != 0)
 					{
 						uint32_t sx, sy;
