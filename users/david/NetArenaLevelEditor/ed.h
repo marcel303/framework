@@ -49,6 +49,8 @@ public:
 	void SetCurrentTemplate(Template* t);
 	void ReturnToLevel();
 
+	void UpdatePreview(int x, int y);
+
 	Grid* m_grid;
 
 	Template* m_level;
@@ -57,6 +59,8 @@ public:
 
 	BasePallette* m_mecPallette;
 	BasePallette* m_colPallette;
+
+	QGraphicsPixmapItem* m_preview;
 
 
 

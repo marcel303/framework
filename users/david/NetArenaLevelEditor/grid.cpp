@@ -78,6 +78,10 @@ void STile::hoverEnterEvent ( QGraphicsSceneHoverEvent * e )
 			ed.m_level->m_col.SetElement(m_x, m_y, false);
 		}
 	}
+	else if(ed.GetSettingsWidget()->m_temp->isChecked())
+	{
+		ed.UpdatePreview(m_x*BLOCKSIZE, m_y*BLOCKSIZE);
+	}
 
 	e->accept();
 }

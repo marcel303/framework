@@ -54,8 +54,8 @@ void MechLayer::SetElement(int x, int y, bool update)
 {
 	m_grid[y][x] = ed.GetCurrentPallette()->m_selectedID;
 
-
 	QPainter painter(m_pixmap);
+	painter.setCompositionMode(QPainter::CompositionMode_Source);
 	QPixmap* image = m_bp->GetImage(m_grid[y][x]);
 	if(image)
 		painter.drawPixmap(x*BLOCKSIZE,y*BLOCKSIZE ,*image);
@@ -68,6 +68,13 @@ void MechLayer::DeleteElement(int x, int y, bool update)
 {
 	m_grid[y][x] = ' ';
 
+	QPainter painter(m_pixmap);
+	painter.setCompositionMode(QPainter::CompositionMode_Source);
+	QPixmap* image = m_bp->GetImage(m_grid[y][x]);
+
+	if(image)
+		painter.drawPixmap(x*BLOCKSIZE,y*BLOCKSIZE ,*image);
+
 	if(update)
 		UpdateLayer();
 }
@@ -78,6 +85,7 @@ void MechLayer::DeleteElement(int x, int y, bool update)
 void MechLayer::UpdateLayer()
 {
 	QPainter painter(m_pixmap);
+	painter.setCompositionMode(QPainter::CompositionMode_Source);
 
 	for(int y1 = 0; y1 < m_y; y1++)
 		for(int x1 = 0; x1 < m_x; x1++)
@@ -151,12 +159,18 @@ void ArtLayer::CreateLayer(int x, int y)
 
 void ArtLayer::SetElement(int x, int y, bool update)
 {
+	Q_UNUSED(x);
+	Q_UNUSED(y);
+
 	if(update)
 		UpdateLayer();
 }
 
 void ArtLayer::DeleteElement(int x, int y, bool update)
 {
+	Q_UNUSED(x);
+	Q_UNUSED(y);
+
 	if(update)
 		UpdateLayer();
 }

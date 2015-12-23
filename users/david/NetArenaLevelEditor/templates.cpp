@@ -5,6 +5,11 @@
 #include <QFileDialog>
 #include "QInputDialog"
 
+#include "grid.h"
+
+
+
+
 TemplateThumb::TemplateThumb()
 {
 }
@@ -16,6 +21,10 @@ TemplateThumb::~TemplateThumb()
 void TemplateThumb::mousePressEvent(QGraphicsSceneMouseEvent* e)
 {
 	ed.m_templateScene->GetCurrentFolder()->SetCurrentTemplate(m_template->m_name);
+
+	ed.m_preview->setPixmap(*m_template->m_middle.m_pixmap);
+
+	e->accept();
 }
 
 
@@ -510,34 +519,3 @@ Template* Template::GetMirror()
 
 	return t;
 }
-
-
-
-
-
-
-QList<QGraphicsItem*> previewList;
-void displayPreview(int x, int y)
-{
-	{
-		//preview
-	}
-}
-
-
-
-/*
-
-
-#include <QGraphicsItem>
-void Tile::hoverEnterEvent ( QGraphicsSceneHoverEvent * e )
-{
-	if(leftbuttonHeld)
-			SetSelectedBlock(selectedTile);
-	else
-		displayPreview(pos().x(), pos().y());
-
-
-	e->accept();
-}
-*/

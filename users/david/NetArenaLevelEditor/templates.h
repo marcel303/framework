@@ -51,6 +51,7 @@ public:
 	QString m_name;
 
 	QPixmap* m_thumb;
+	//QPixmap* m_preview;
 	//TemplateThumb m_thumb;
 };
 

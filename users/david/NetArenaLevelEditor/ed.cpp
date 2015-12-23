@@ -87,6 +87,9 @@ void Ed::NewLevel()
 	m_grid->SetCurrentTarget(m_level);
 
 
+	m_preview = new QGraphicsPixmapItem();
+	ed.m_grid->addItem(m_preview);
+
 }
 
 void Ed::SaveLevel(const QString& filename)
@@ -246,3 +249,8 @@ void Ed::ReturnToLevel()
 	m_grid->SetCurrentTarget(m_level);
 }
 
+void Ed::UpdatePreview(int x, int y)
+{
+	m_preview->setPos(x, y);
+	m_preview->setOpacity(0.4);
+}
