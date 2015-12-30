@@ -3,6 +3,10 @@
 #include <string.h>
 #include <xmmintrin.h>
 
+#ifdef WIN32
+	#include <time.h>
+#endif
+
 #define FIXEDSHIFT 0
 
 template <typename K, typename V, unsigned int S, unsigned int BITS>
@@ -142,7 +146,7 @@ void testRadixSort()
 	
 	for (unsigned int i = 0; i < N; ++i)
 	{
-		sorter->elem[i].key = rand();
+		sorter->elem[i].key = rand() + rand() * RAND_MAX;
 		//sorter->elem[i].key = rand() % N;
 		//sorter->elem[i].key = rand() % (N / 4);
 		//sorter->elem[i].key = i;
