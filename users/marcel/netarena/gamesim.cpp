@@ -1798,13 +1798,13 @@ void BlindsEffect::drawLight()
 			setColorf(.8f, .8f, .8f, m_time / m_duration * 4.f);
 			if (m_vertical)
 			{
-				drawRect(-kBorderSize, -kBorderSize, m_x - m_size, GFX_SY + kBorderSize);
-				drawRect(m_x + m_size, -kBorderSize, GFX_SX + kBorderSize, GFX_SY + kBorderSize);
+				drawRect(-kBorderSize, -kBorderSize, m_x - m_size, MAX_ARENA_SY_PIXELS + kBorderSize);
+				drawRect(m_x + m_size, -kBorderSize, MAX_ARENA_SX_PIXELS + kBorderSize, MAX_ARENA_SY_PIXELS + kBorderSize);
 			}
 			else
 			{
-				drawRect(-kBorderSize, -kBorderSize, GFX_SX + kBorderSize, m_y - m_size);
-				drawRect(-kBorderSize, m_y + m_size, GFX_SX + kBorderSize, GFX_SY + kBorderSize);
+				drawRect(-kBorderSize, -kBorderSize, MAX_ARENA_SX_PIXELS + kBorderSize, m_y - m_size);
+				drawRect(-kBorderSize, m_y + m_size, MAX_ARENA_SX_PIXELS + kBorderSize, MAX_ARENA_SY_PIXELS + kBorderSize);
 			}
 		}
 		setBlend(BLEND_ADD);
@@ -4796,7 +4796,7 @@ void GameSim::tickZoom(float dt)
 
 	restrictZoomParams(effectiveZoom, effectiveZoomFocus);
 
-	const float convergeSpeed = ZOOM_CONVERGE_SPEED;
+	const float convergeSpeed = powf(ZOOM_CONVERGE_SPEED, m_arena.getBaseZoom());
 	const float a = 1.f - convergeSpeed;
 	const float b = convergeSpeed;
 	m_effectiveZoom = m_effectiveZoom * a + effectiveZoom * b;

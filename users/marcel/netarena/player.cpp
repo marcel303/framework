@@ -3189,7 +3189,7 @@ void Player::draw() const
 			t);
 		drawRect(
 			m_pos[0] + m_collision.min[0], 0,
-			m_pos[0] + m_collision.max[0], GFX_SY);
+			m_pos[0] + m_collision.max[0], MAX_ARENA_SY_PIXELS);
 	}
 
 	// draw text chat
