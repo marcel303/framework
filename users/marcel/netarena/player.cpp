@@ -3449,7 +3449,9 @@ void Player::drawAt(const GameSim & gameSim, bool flipX, bool flipY, int x, int 
 		const FootBall & footBall = gameSim.m_footBalls[m_footballGrappleInfo.ballIndex];
 
 		setColorf(1.f, 1.f, 1.f, getFootBallGrappleStrength(m_footballGrappleInfo.initialDistance));
-		drawLine(m_pos[0], m_pos[1], footBall.m_pos[0], footBall.m_pos[1]);
+		const Vec2 p1 = getFootBallGrapplePos();
+		const Vec2 p2 = footBall.m_pos;
+		drawLine(p1[0], p1[1], p2[0], p2[1]);
 	}
 
 	if (g_devMode && (m_anim == kPlayerAnim_Attack || m_anim == kPlayerAnim_AttackUp || m_anim == kPlayerAnim_AttackDown))
@@ -4942,7 +4944,10 @@ void Player::endFootBallGrapple()
 
 Vec2 Player::getFootBallGrapplePos() const
 {
-	return m_pos + (m_collision.min + m_collision.max) / 2.f;
+	//return m_pos + (m_collision.min + m_collision.max) / 2.f;
+	return m_pos
+		+ m_collision.min * .8f
+		+ m_collision.max * .2f;
 }
 
 OPTION_DECLARE(float, BALLGRAPPLE_D1, 200.f);
