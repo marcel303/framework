@@ -43,7 +43,7 @@ public:
 
 
 	ArtLayer m_front;
-	ArtLayer m_back;
+    //ArtLayer m_back;
 	ArtLayer m_middle;
 	MechLayer m_mec;
 	MechLayer m_col;

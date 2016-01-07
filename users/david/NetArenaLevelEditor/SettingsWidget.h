@@ -44,6 +44,8 @@ public:
 	QPushButton* m_editModeButton;
 	QPushButton* m_saveTemplateButton;
 
+    QCheckBox* m_displaygrid;
+
 	bool m_editT;
 
 public slots:
@@ -52,4 +54,6 @@ public slots:
 	void NewTemplate();
 	void EditTemplate();
 	void SaveTemplate();
+
+    void ToggleDisplayGrid();
 };

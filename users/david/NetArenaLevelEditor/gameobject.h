@@ -14,6 +14,6 @@ class EditorObject : public QGraphicsRectItem //resizable super rectangle deluxe
 	virtual void hoverEnterEvent ( QGraphicsSceneHoverEvent * e );
 
 	virtual QRectF boundingRect() const;
-	//virtual void paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget = 0);
+    virtual void paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget = 0);
 
 };

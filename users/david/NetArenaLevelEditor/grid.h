@@ -53,11 +53,16 @@ public:
 	void SetLayerFront(QImage *p);
 	void SetCurrentTarget(Template* t);
 
+    void SetGrid(bool b);
+
 	Tile** m_tiles;
+
+    int m_x;
+    int m_y;
 
 	GridLayer* m_front;
 	GridLayer* m_middle;
-	GridLayer* m_back;
+    //GridLayer* m_back;
 	GridLayer* m_col;
 	GridLayer* m_mec;
 
