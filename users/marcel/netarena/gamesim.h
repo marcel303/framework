@@ -251,6 +251,12 @@ struct Player
 	Vec2 getFootBallThrowPos() const;
 	void throwFootBall(Vec2Arg pos, Vec2Arg vel);
 
+	// football grapple
+	void beginFootBallGrapple(int ballIndex);
+	void endFootBallGrapple();
+	Vec2 getFootBallGrapplePos() const;
+	void tickFootBallGrapple(float dt);
+
 	// allocation
 	bool m_isUsed;
 
@@ -594,6 +600,18 @@ struct Player
 		float cooldown;
 		SpriterState spriterState;
 	} m_shieldSpecial;
+
+	struct FootballGrappleInfo
+	{
+		FootballGrappleInfo()
+		{
+			memset(this, 0, sizeof(FootballGrappleInfo));
+		}
+
+		bool isActive;
+		float initialDistance;
+		int ballIndex;
+	} m_footballGrappleInfo;
 
 	float m_respawnTimer; // when this timer counts to zero, the player is automatically respawn
 	float m_respawnTimerRcp;

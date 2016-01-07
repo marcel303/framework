@@ -11,11 +11,16 @@
 #include "Timer.h"
 
 #define ENABLE_CHARACTER_OUTLINE 1
+#define ENABLE_FOOTBALL_PICKUP 0
+#define ENABLE_FOOTBALL_HIT 0
 
 #define AUTO_RESPAWN 1
 
 #define MIN_PLAYER_SX 62
 #define MIN_PLAYER_SY 42
+
+#define PLAYER_BUTTON_FIRE INPUT_BUTTON_B
+#define PLAYER_BUTTON_GRABBAL INPUT_BUTTON_R1
 
 //#pragma optimize("", off)
 
@@ -385,6 +390,8 @@ struct PlayerAnimInfo
 	{ "sprite.scml", "Spawn",              6 },
 	{ "sprite.scml", "Die",                7 }
 };
+
+static float getFootBallGrappleStrength(float initialDistance); // todo : make member function
 
 //
 
@@ -1329,7 +1336,7 @@ void Player::tick(GameSim & gameSim, float dt)
 
 			if (m_attack.m_sprayCannon.isActive)
 			{
-				if (m_input.wentUp(INPUT_BUTTON_B))
+				if (m_input.wentUp(PLAYER_BUTTON_FIRE))
 				{
 					m_attack = AttackInfo();
 				}
@@ -1474,7 +1481,7 @@ void Player::tick(GameSim & gameSim, float dt)
 
 		if (playerControl && !m_attack.attacking && m_attack.cooldown <= 0.f/* && (gameSim.m_gameMode != kGameMode_Lobby)*/)
 		{
-			if (m_input.wentDown(INPUT_BUTTON_B) && (m_weaponStackSize > 0 || s_unlimitedAmmo || m_sprayWeaponFill != 0.f || m_footBrawl.m_hasBall) && isAnimOverrideAllowed(kPlayerAnim_Fire))
+			if (m_input.wentDown(PLAYER_BUTTON_FIRE) && (m_weaponStackSize > 0 || s_unlimitedAmmo || m_sprayWeaponFill != 0.f || m_footBrawl.m_hasBall) && isAnimOverrideAllowed(kPlayerAnim_Fire))
 			{
 				m_attack = AttackInfo();
 
@@ -1725,6 +1732,7 @@ void Player::tick(GameSim & gameSim, float dt)
 
 				endGrapple();
 
+			#if ENABLE_FOOTBALL_HIT
 				if (gameSim.m_gameMode == kGameMode_FootBrawl)
 				{
 					// apply velocity to ball
@@ -1753,6 +1761,31 @@ void Player::tick(GameSim & gameSim, float dt)
 						}
 					}
 				}
+			#endif
+			}
+
+			if (gameSim.m_gameMode == kGameMode_FootBrawl)
+			{
+				if (m_input.wentDown(PLAYER_BUTTON_GRABBAL))
+				{
+					for (int i = 0; i < MAX_FOOTBALLS; ++i)
+					{
+						if (gameSim.m_footBalls[i].m_isActive)
+						{
+							// fixme
+							if (!gameSim.m_footBalls[i].m_hasBeenTouched)
+							{
+								gameSim.m_footBalls[i].m_hasBeenTouched = true;
+								gameSim.m_footBalls[i].m_isDropped = true;
+							}
+
+							beginFootBallGrapple(i);
+							break;
+						}
+					}
+				}
+
+				tickFootBallGrapple(dt);
 			}
 
 			if (!s_noSpecial && (gameSim.m_gameMode != kGameMode_Lobby))
@@ -3003,6 +3036,7 @@ void Player::tick(GameSim & gameSim, float dt)
 			CollisionInfo playerCollision;
 			if (getPlayerCollision(playerCollision))
 			{
+			#if ENABLE_FOOTBALL_PICKUP
 				CollisionInfo playerCollision;
 				FootBall ball;
 				if (getPlayerCollision(playerCollision))
@@ -3019,6 +3053,7 @@ void Player::tick(GameSim & gameSim, float dt)
 					if (gameSim.grabFootBall(playerCollision, m_index, ball))
 						m_footBrawl.m_hasBall = true;
 				}
+			#endif
 
 				if (m_footBrawl.m_hasBall)
 				{
@@ -3407,6 +3442,14 @@ void Player::drawAt(const GameSim & gameSim, bool flipX, bool flipY, int x, int 
 		state.flipY = flipY;
 		setColor(colorWhite);
 		BUBBLE_SPRITER.draw(state);
+	}
+
+	if (m_footballGrappleInfo.isActive)
+	{
+		const FootBall & footBall = gameSim.m_footBalls[m_footballGrappleInfo.ballIndex];
+
+		setColorf(1.f, 1.f, 1.f, getFootBallGrappleStrength(m_footballGrappleInfo.initialDistance));
+		drawLine(m_pos[0], m_pos[1], footBall.m_pos[0], footBall.m_pos[1]);
 	}
 
 	if (g_devMode && (m_anim == kPlayerAnim_Attack || m_anim == kPlayerAnim_AttackUp || m_anim == kPlayerAnim_AttackDown))
@@ -3824,6 +3867,7 @@ bool Player::respawn(Vec2 * pos)
 		m_pipebomb = PipebombInfo();
 		m_axe = AxeInfo();
 		m_shieldSpecial = ShieldSpecial();
+		m_footballGrappleInfo = FootballGrappleInfo();
 
 		m_blockMask = 0;
 
@@ -4845,7 +4889,7 @@ void Player::tickFootBall(float dt)
 
 	// throw it?
 
-	if (m_input.wentUp(INPUT_BUTTON_B))
+	if (m_input.wentUp(PLAYER_BUTTON_FIRE))
 	{
 		endFootBall();
 	}
@@ -4873,6 +4917,84 @@ void Player::throwFootBall(Vec2Arg pos, Vec2Arg vel)
 		footBall->m_vel = vel;
 		footBall->m_hasBeenTouched = true;
 		GAMESIM->playSound("football-bounce.ogg"); // sound when the ball is dropped
+	}
+}
+
+void Player::beginFootBallGrapple(int ballIndex)
+{
+	logDebug("beginFootBallGrapple. ballIndex=%d", ballIndex);
+	Assert(!m_footballGrappleInfo.isActive);
+
+	const FootBall & footBall = GAMESIM->m_footBalls[ballIndex];
+
+	m_footballGrappleInfo.isActive = true;
+	m_footballGrappleInfo.ballIndex = ballIndex;
+	m_footballGrappleInfo.initialDistance = (footBall.m_pos - getFootBallGrapplePos()).CalcSize();
+}
+
+void Player::endFootBallGrapple()
+{
+	logDebug("endFootBallGrapple");
+	Assert(m_footballGrappleInfo.isActive);
+
+	m_footballGrappleInfo = FootballGrappleInfo();
+}
+
+Vec2 Player::getFootBallGrapplePos() const
+{
+	return m_pos + (m_collision.min + m_collision.max) / 2.f;
+}
+
+OPTION_DECLARE(float, BALLGRAPPLE_D1, 200.f);
+OPTION_DECLARE(float, BALLGRAPPLE_A1, 5000.f);
+OPTION_DECLARE(float, BALLGRAPPLE_D2, 2000.f);
+OPTION_DECLARE(float, BALLGRAPPLE_A2, 0.f);
+OPTION_DECLARE(bool, BALLGRAPPLE_AUTODETACH, false);
+
+OPTION_DEFINE(float, BALLGRAPPLE_D1, "Game Objects/FootBall/Grapple/1: Distance");
+OPTION_DEFINE(float, BALLGRAPPLE_A1, "Game Objects/FootBall/Grapple/1: Acceleration");
+OPTION_DEFINE(float, BALLGRAPPLE_D2, "Game Objects/FootBall/Grapple/2: Distance");
+OPTION_DEFINE(float, BALLGRAPPLE_A2, "Game Objects/FootBall/Grapple/2: Acceleration");
+OPTION_DEFINE(bool, BALLGRAPPLE_AUTODETACH, "Game Objects/FootBall/Grapple/Auto Detach");
+OPTION_STEP(BALLGRAPPLE_D1, 0, 4000, 10);
+OPTION_STEP(BALLGRAPPLE_A1, 0, 0, 100);
+OPTION_STEP(BALLGRAPPLE_D2, 0, 4000, 100);
+OPTION_STEP(BALLGRAPPLE_A2, 0, 0, 100);
+
+static float getFootBallGrappleStrength(float initialDistance)
+{
+	return Calc::Clamp(1.f - (initialDistance - BALLGRAPPLE_D1) / (BALLGRAPPLE_D2 - BALLGRAPPLE_D1), 0.f, 1.f);
+}
+
+void Player::tickFootBallGrapple(float dt)
+{
+	if (!m_footballGrappleInfo.isActive)
+		return;
+
+	GameSim & gameSim = *GAMESIM;
+
+	FootBall & footBall = gameSim.m_footBalls[m_footballGrappleInfo.ballIndex];
+
+	if (!m_input.isDown(PLAYER_BUTTON_GRABBAL) || !footBall.m_isActive)
+	{
+		endFootBallGrapple();
+	}
+	else
+	{
+		const Vec2 p1 = getFootBallGrapplePos();
+		const Vec2 p2 = footBall.m_pos;
+		const float distance = (p2 - p1).CalcSize();
+		if (BALLGRAPPLE_AUTODETACH && distance >= m_footballGrappleInfo.initialDistance * 2.f) // todo : make this an options
+		{
+			endFootBallGrapple();
+		}
+		else
+		{
+			// move the ball based on the direction and the strength as computed
+			const float s = getFootBallGrappleStrength(m_footballGrappleInfo.initialDistance);
+			const float a = BALLGRAPPLE_A2 + s * (BALLGRAPPLE_A1 - BALLGRAPPLE_A2);
+			footBall.m_vel += (p1 - p2).CalcNormalized() * a * dt;
+		}
 	}
 }
 
