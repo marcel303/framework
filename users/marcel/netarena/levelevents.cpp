@@ -90,18 +90,18 @@ void LevelEvent_EarthQuake::tick(GameSim & gameSim, float dt)
 
 //
 
-CollisionBox LevelEvent_SpikeWalls::getWallCollision(int side, float move) const
+CollisionBox LevelEvent_SpikeWalls::getWallCollision(const GameSim & gameSim, int side, float move) const
 {
-	const float sx = GFX_SX * SPIKEWALLS_COVERAGE / 100 / 2;
+	const float sx = gameSim.m_arena.m_sxPixels * SPIKEWALLS_COVERAGE / 100 / 2;
 
 	CollisionBox box;
 	box.min = Vec2(0.f, 0.f);
-	box.max = Vec2(sx, GFX_SY);
+	box.max = Vec2(sx, gameSim.m_arena.m_sxPixels);
 
 	const float offset =
 		side == 0
-		?    -sx + move * sx
-		: GFX_SX - move * sx;
+		?                        -sx + move * sx
+		: gameSim.m_arena.m_sxPixels - move * sx;
 
 	const Vec2 offsetVec(offset, 0.f);
 	box.min += offsetVec;
@@ -110,7 +110,7 @@ CollisionBox LevelEvent_SpikeWalls::getWallCollision(int side, float move) const
 	return box;
 }
 
-CollisionBox LevelEvent_SpikeWalls::getWallCollision(int side) const
+CollisionBox LevelEvent_SpikeWalls::getWallCollision(const GameSim & gameSim, int side) const
 {
 	float move = 0.f;
 
@@ -133,7 +133,7 @@ CollisionBox LevelEvent_SpikeWalls::getWallCollision(int side) const
 		break;
 	}
 
-	return getWallCollision(side, move);
+	return getWallCollision(gameSim, side, move);
 }
 
 void LevelEvent_SpikeWalls::start(bool left, bool right)
@@ -230,13 +230,13 @@ void LevelEvent_SpikeWalls::doCollision(GameSim & gameSim, const CollisionBox & 
 void LevelEvent_SpikeWalls::doCollision(GameSim & gameSim)
 {
 	if (m_left)
-		doCollision(gameSim, getWallCollision(0), +1);
+		doCollision(gameSim, getWallCollision(gameSim, 0), +1);
 
 	if (m_right)
-		doCollision(gameSim, getWallCollision(1), -1);
+		doCollision(gameSim, getWallCollision(gameSim, 1), -1);
 }
 
-void LevelEvent_SpikeWalls::draw() const
+void LevelEvent_SpikeWalls::draw(const GameSim & gameSim) const
 {
 	const Color colorWall(127, 0, 0, 127);
 
@@ -247,7 +247,7 @@ void LevelEvent_SpikeWalls::draw() const
 		if (i == 1 && !m_right)
 			continue;
 
-		const CollisionBox box = getWallCollision(i);
+		const CollisionBox box = getWallCollision(gameSim, i);
 
 		switch (m_state)
 		{
