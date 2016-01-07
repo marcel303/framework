@@ -27,6 +27,8 @@ Tile::~Tile()
 #include "SettingsWidget.h"
 #include "QRadioButton"
 
+#include "QGraphicsRectItem"
+
 void Tile::mousePressEvent ( QGraphicsSceneMouseEvent * e )
 {
 	if(ed.GetSettingsWidget()->m_mech->isChecked())
@@ -52,7 +54,14 @@ void Tile::mousePressEvent ( QGraphicsSceneMouseEvent * e )
 	}
 	if(ed.GetSettingsWidget()->m_obj->isChecked())
 	{
-		ed.m_level;
+		if(e->button() == Qt::LeftButton)
+		{
+			QGraphicsRectItem* p = new QGraphicsRectItem(m_x*BLOCKSIZE, m_y*BLOCKSIZE,45, 45);
+
+			p->setAcceptTouchEvents(true);
+
+			ed.m_grid->addItem(p);
+		}
 	}
 
 

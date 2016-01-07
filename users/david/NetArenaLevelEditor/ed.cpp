@@ -11,6 +11,19 @@
 #include <QListView>
 #include <QRadioButton>
 
+PreviewItem::PreviewItem()
+{
+}
+
+PreviewItem::~PreviewItem()
+{
+}
+
+//QRectF PreviewItem::boundingRect() const
+//{
+//	return QRectF();
+//}
+
 void Ed::Initialize()
 {
 	m_view = new EditorView();
@@ -87,7 +100,7 @@ void Ed::NewLevel()
 	m_grid->SetCurrentTarget(m_level);
 
 
-	m_preview = new QGraphicsPixmapItem();
+	m_preview = new PreviewItem();
 	ed.m_grid->addItem(m_preview);
 
 }

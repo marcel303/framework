@@ -3,6 +3,17 @@
 #include <QString>
 #include <QMap>
 
+#include "QGraphicsPixmapItem"
+
+class PreviewItem : public QGraphicsPixmapItem
+{
+public:
+	PreviewItem();
+	~PreviewItem();
+
+	//virtual QRectF boundingRect() const;
+};
+
 
 class EditorView;
 class QGraphicsView;
@@ -60,7 +71,7 @@ public:
 	BasePallette* m_mecPallette;
 	BasePallette* m_colPallette;
 
-	QGraphicsPixmapItem* m_preview;
+	PreviewItem* m_preview;
 
 
 
@@ -76,14 +87,10 @@ private:
 	EditorView* m_view;
 	QGraphicsView* m_viewPallette;
 
-
-    //TemplatePallette* m_templatePallette;
-
 public:
 
 	bool m_leftbuttonHeld;
 
-	QString ObjectPath; //the directory for all object textures
 	QString ArtFolderPath; //the root directory for all art and template textures
 
 
