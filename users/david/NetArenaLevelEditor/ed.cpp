@@ -11,6 +11,19 @@
 #include <QListView>
 #include <QRadioButton>
 
+PreviewItem::PreviewItem()
+{
+}
+
+PreviewItem::~PreviewItem()
+{
+}
+
+//QRectF PreviewItem::boundingRect() const
+//{
+//	return QRectF();
+//}
+
 void Ed::Initialize()
 {
 	m_view = new EditorView();
@@ -87,7 +100,7 @@ void Ed::NewLevel()
 	m_grid->SetCurrentTarget(m_level);
 
 
-	m_preview = new QGraphicsPixmapItem();
+	m_preview = new PreviewItem();
 	ed.m_grid->addItem(m_preview);
 
 }
@@ -198,7 +211,7 @@ void Ed::UpdateTransparancy()
 	m_grid->m_col->setOpacity(m_settingsWidget->m_collSlider->value()/100.0);
 	m_grid->m_front->setOpacity(m_settingsWidget->m_foreSlider->value()/100.0);
 	m_grid->m_middle->setOpacity(m_settingsWidget->m_middleSlider->value()/100.0);
-	m_grid->m_back->setOpacity(m_settingsWidget->m_backSlider->value()/100.0);
+    //m_grid->m_back->setOpacity(m_settingsWidget->m_backSlider->value()/100.0);
 }
 
 #include <QFile>

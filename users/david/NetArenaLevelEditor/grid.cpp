@@ -27,6 +27,8 @@ Tile::~Tile()
 #include "SettingsWidget.h"
 #include "QRadioButton"
 
+#include "QGraphicsRectItem"
+
 void Tile::mousePressEvent ( QGraphicsSceneMouseEvent * e )
 {
 	if(ed.GetSettingsWidget()->m_mech->isChecked())
@@ -52,7 +54,14 @@ void Tile::mousePressEvent ( QGraphicsSceneMouseEvent * e )
 	}
 	if(ed.GetSettingsWidget()->m_obj->isChecked())
 	{
-		ed.m_level;
+		if(e->button() == Qt::LeftButton)
+		{
+			QGraphicsRectItem* p = new QGraphicsRectItem(m_x*BLOCKSIZE, m_y*BLOCKSIZE,45, 45);
+
+			p->setAcceptTouchEvents(true);
+
+			ed.m_grid->addItem(p);
+		}
 	}
 
 
@@ -114,7 +123,7 @@ void GridLayer::paint(QPainter* painter, const QStyleOptionGraphicsItem* option,
 	Q_UNUSED(widget);
 	Q_UNUSED(option);
 
-	if(m_pixmap)
+    if(m_pixmap)
 		painter->drawPixmap(0, 0, *m_pixmap);
 }
 
@@ -142,11 +151,11 @@ void Grid::SetupLevelImages()
 	m_middle->setAcceptHoverEvents(false);
 	m_middle->setAcceptedMouseButtons(0);
 
-	m_back = new GridLayer();
-	addItem(m_back);
-	m_back->setZValue(-3.0);
-	m_back->setAcceptHoverEvents(false);
-	m_back->setAcceptedMouseButtons(0);
+    //m_back = new GridLayer();
+    //addItem(m_back);
+    //m_back->setZValue(-3.0);
+    //m_back->setAcceptHoverEvents(false);
+    //m_back->setAcceptedMouseButtons(0);
 
 	m_mec = new GridLayer();
 	addItem(m_mec);
@@ -164,6 +173,9 @@ void Grid::SetupLevelImages()
 void Grid::CreateGrid(int x, int y)
 {
 	this->clear();
+
+    m_x = x;
+    m_y = y;
 
 	SetupLevelImages();
 
@@ -190,6 +202,14 @@ void Grid::CreateGrid(int x, int y)
     this->update();
 }
 
+void Grid::SetGrid(bool b)
+{
+    for(int y = 0; y < m_y; y++)
+        for(int x = 0; x < m_x; x++)
+            m_tiles[y][x].setOpacity((b? 100 : 0));
+
+}
+
 void Grid::SetCurrentTarget(Template* t)
 {
 	if(!t)
@@ -197,7 +217,7 @@ void Grid::SetCurrentTarget(Template* t)
 
 	m_front->m_pixmap = t->m_front.m_pixmap;
 	m_middle->m_pixmap = t->m_middle.m_pixmap;
-	m_back->m_pixmap = t->m_back.m_pixmap;
+    //m_back->m_pixmap = t->m_back.m_pixmap;
 	m_mec->m_pixmap = t->m_mec.m_pixmap;
 	m_col->m_pixmap = t->m_col.m_pixmap;
 }
