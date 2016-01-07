@@ -210,7 +210,7 @@ struct Player
 	PlayerWeapon popWeapon();
 	void addKnockBack(float strength);
 
-	void handleJumpCollision();
+	bool handleJumpCollision();
 
 	// special : rocket punch
 	void beginRocketPunch();

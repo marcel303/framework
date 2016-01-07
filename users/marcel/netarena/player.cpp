@@ -2611,9 +2611,10 @@ void Player::tick(GameSim & gameSim, float dt)
 
 						if (i == 1 && delta[1] < 0.f && gravity >= 0.f)
 						{
-							self->handleJumpCollision();
-
-							result |= kPhysicsUpdateFlag_DontUpdateVelocity;
+							if (self->handleJumpCollision())
+							{
+								result |= kPhysicsUpdateFlag_DontUpdateVelocity;
+							}
 						}
 					}
 				}
@@ -4174,6 +4175,7 @@ bool Player::handleIce(Vec2Arg velocity, Player * attacker)
 			}
 
 			m_ice.timer = PLAYER_EFFECT_ICE_TIME;
+			m_jump.cancelled = true;
 		}
 	}
 
@@ -4203,6 +4205,7 @@ bool Player::handleBubble(Vec2Arg velocity, Player * attacker)
 
 			m_bubble.timer = PLAYER_EFFECT_BUBBLE_TIME;
 			m_bubble.spriterState.startAnim(BUBBLE_SPRITER, "begin");
+			m_jump.cancelled = true;
 		}
 	}
 
@@ -4382,8 +4385,11 @@ void Player::addKnockBack(float strength)
 	m_vel[0] -= m_facing[0] * strength;
 }
 
-void Player::handleJumpCollision()
+bool Player::handleJumpCollision()
 {
+	if (m_jump.cancelled)
+		return false;
+
 	if (!m_jump.cancelStarted)
 	{
 		m_jump.cancelStarted = true;
@@ -4403,6 +4409,8 @@ void Player::handleJumpCollision()
 			m_vel[1] = 0.f;
 		}
 	}
+
+	return m_jump.cancelled;
 }
 
 void Player::beginRocketPunch()

@@ -2057,6 +2057,7 @@ void GameSim::setGameState(::GameState gameState)
 				Player * player = m_playerInstanceDatas[i]->m_player;
 
 				player->m_isActive = false;
+				player->m_isAlive = false;
 				player->m_isReadyUpped = false;
 			}
 		}
@@ -4692,7 +4693,7 @@ float GameSim::calculateEffectiveZoom() const
 
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		if (m_players[i].m_isUsed && m_players[i].m_isActive)
+		if (m_players[i].m_isUsed && m_players[i].m_isAlive)
 		{
 			if (!hasMinMax)
 			{
@@ -4737,7 +4738,7 @@ float GameSim::calculateEffectiveZoom() const
 
 Vec2 GameSim::calculateEffectiveZoomFocus() const
 {
-	if (ZOOM_PLAYER >= 0 && ZOOM_PLAYER < MAX_PLAYERS && m_players[ZOOM_PLAYER].m_isUsed && m_players[ZOOM_PLAYER].m_isActive)
+	if (ZOOM_PLAYER >= 0 && ZOOM_PLAYER < MAX_PLAYERS && m_players[ZOOM_PLAYER].m_isUsed && m_players[ZOOM_PLAYER].m_isAlive)
 		return m_players[ZOOM_PLAYER].m_pos;
 	else if (m_desiredZoomFocusIsSet)
 		return m_desiredZoomFocus;
@@ -4750,7 +4751,7 @@ Vec2 GameSim::calculateEffectiveZoomFocus() const
 
 		for (int i = 0; i < MAX_PLAYERS; ++i)
 		{
-			if (m_players[i].m_isUsed && m_players[i].m_isActive)
+			if (m_players[i].m_isUsed && m_players[i].m_isAlive)
 			{
 				numPlayers++;
 				mid += m_players[i].m_pos;
@@ -4772,7 +4773,7 @@ Vec2 GameSim::calculateEffectiveZoomFocus() const
 		for (int i = 0; i < MAX_ZOOM_EFFECTS; ++i)
 		{
 			const int p = m_zoomEffects[i].player;
-			if (p != -1 && m_players[p].m_isUsed && m_players[p].m_isActive)
+			if (p != -1 && m_players[p].m_isUsed && m_players[p].m_isAlive)
 			{
 				playerWeight += m_zoomEffects[i].life;
 				playerPos += m_players[p].m_pos * m_zoomEffects[i].life;
@@ -5116,7 +5117,13 @@ void updatePhysics(GameSim & gameSim, Vec2 & pos, Vec2 & vel, float dt, const Co
 						contact.d = contactDistance;
 						contact.r = updateInfo.contactRestitution + 1.f;
 						contact.f = flags;
-						updateInfo.contacts.push_back(contact);
+						// filter duplicate contacts; this is a quick work around for players not bouncing properly when bubbled or frozen
+						bool isDuplicate = false;
+						for (auto & c : updateInfo.contacts)
+							if (contact == c)
+								isDuplicate = true;
+						if (!isDuplicate)
+							updateInfo.contacts.push_back(contact);
 					}
 				}
 			});
