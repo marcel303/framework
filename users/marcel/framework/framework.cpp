@@ -3410,6 +3410,22 @@ void drawRectGradient(float x1, float y1, float x2, float y2)
 	setColorf(oldColor[0], oldColor[1], oldColor[2], oldColor[3]);
 }
 
+void drawCircle(float x, float y, float radius, int numSegments)
+{
+	gxBegin(GL_LINE_LOOP);
+	{
+		for (int i = 0; i < numSegments; ++i)
+		{
+			const float angle = i * (M_PI * 2.f / numSegments);
+
+			gxVertex2f(
+				x + std::cosf(angle) * radius,
+				y + std::sinf(angle) * radius);
+		}
+	}
+	gxEnd();
+}
+
 static void measureText(FT_Face face, int size, const char * _text, float & sx, float & sy)
 {
 #if ENABLE_UTF8_SUPPORT
