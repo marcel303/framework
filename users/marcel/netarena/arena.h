@@ -168,6 +168,8 @@ public:
 	} m_tileTransitions[MAX_TILE_TRANSITIONS];
 	int m_numTileTransitions;
 
+	LevelTheme m_levelTheme;
+
 public:
 	Arena();
 	~Arena();

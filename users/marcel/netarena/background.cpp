@@ -16,13 +16,13 @@ OPTION_DEFINE(bool, s_debugBackground, "Debug/Debug Background");
 
 std::vector<Theme> g_themes;
 
-static const char * getThemeName(BackgroundType type)
+static const char * getThemeName(LevelTheme type)
 {
-	if (type == kBackgroundType_Volcano)
+	if (type == kLevelTheme_Volcano)
 		return "volcano";
-	else if (type == kBackgroundType_Lobby)
+	else if (type == kLevelTheme_Lobby)
 		return "ice";
-	else if (type == kBackgroundType_Ice)
+	else if (type == kLevelTheme_Ice)
 		return "lobby";
 	else
 	{
@@ -41,7 +41,7 @@ static const Theme * getTheme(const char * name)
 
 //
 
-void Background::load(BackgroundType type, GameSim & gameSim)
+void Background::load(LevelTheme type, GameSim & gameSim)
 {
 	memset(this, 0, sizeof(Background));
 
@@ -49,15 +49,15 @@ void Background::load(BackgroundType type, GameSim & gameSim)
 
 	switch (m_type)
 	{
-	case kBackgroundType_Lobby:
+	case kLevelTheme_Lobby:
 		m_lobbyState = LobbyState();
 		break;
 
-	case kBackgroundType_Volcano:
+	case kLevelTheme_Volcano:
 		m_volcanoState = VolcanoState();
 		break;
 
-	case kBackgroundType_Ice:
+	case kLevelTheme_Ice:
 		m_iceState = IceState();
 		break;
 
@@ -71,11 +71,11 @@ void Background::tick(GameSim & gameSim, float dt)
 {
 	switch (m_type)
 	{
-	case kBackgroundType_Lobby:
+	case kLevelTheme_Lobby:
 		m_lobbyState.tick(gameSim, *this, dt);
 		break;
 
-	case kBackgroundType_Volcano:
+	case kLevelTheme_Volcano:
 		m_volcanoState.tick(gameSim, *this, dt);
 		break;
 
@@ -96,7 +96,7 @@ void Background::draw(const GameSim & gameSim, const CamParams & camParams)
 
 	switch (m_type)
 	{
-	case kBackgroundType_Lobby:
+	case kLevelTheme_Lobby:
 		gxPushMatrix();
 		gameSim.applyCamParams(camParams, theme->parallax1, BACKGROUND_SCREENSHAKE_MULTIPLIER);
 		{
@@ -114,7 +114,7 @@ void Background::draw(const GameSim & gameSim, const CamParams & camParams)
 		}
 		break;
 
-	case kBackgroundType_Volcano:
+	case kLevelTheme_Volcano:
 		gxPushMatrix();
 		gameSim.applyCamParams(camParams, theme->parallax1, BACKGROUND_SCREENSHAKE_MULTIPLIER);
 		{
@@ -134,7 +134,7 @@ void Background::draw(const GameSim & gameSim, const CamParams & camParams)
 		}
 		break;
 
-	case kBackgroundType_Ice:
+	case kLevelTheme_Ice:
 		gxPushMatrix();
 		gameSim.applyCamParams(camParams, theme->parallax1, BACKGROUND_SCREENSHAKE_MULTIPLIER);
 		{
@@ -164,7 +164,7 @@ void Background::drawLight()
 {
 	switch (m_type)
 	{
-	case kBackgroundType_Volcano:
+	case kLevelTheme_Volcano:
 		if (m_volcanoState.m_fireBall.m_isActive)
 			m_volcanoState.m_fireBall.drawLight();
 		break;
@@ -272,7 +272,7 @@ void Background::VolcanoState::tick(GameSim & gameSim, Background & background, 
 	{
 		if (VOLCANO_LOOP)
 		{
-			background.load(kBackgroundType_Volcano, gameSim);
+			background.load(kLevelTheme_Volcano, gameSim);
 			return;
 		}
 

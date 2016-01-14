@@ -12,14 +12,6 @@ class GameSim;
 #pragma pack(push)
 #pragma pack(1)
 
-enum BackgroundType
-{
-	kBackgroundType_Volcano,
-	kBackgroundType_Ice,
-	kBackgroundType_Lobby,
-	kBackgroundType_COUNT
-};
-
 struct Background
 {
 	Background()
@@ -27,7 +19,7 @@ struct Background
 		memset(this, 0, sizeof(Background));
 	}
 
-	void load(BackgroundType type, GameSim & gameSim);
+	void load(LevelTheme theme, GameSim & gameSim);
 
 	void tick(GameSim & gameSim, float dt);
 	void draw(const GameSim & gameSim, const CamParams & camParams);
@@ -80,7 +72,7 @@ struct Background
 
 	//
 
-	BackgroundType m_type;
+	LevelTheme m_type;
 
 	LobbyState m_lobbyState;
 	VolcanoState m_volcanoState;

@@ -158,6 +158,7 @@ Arena::Arena()
 	, m_textureSx(0)
 	, m_textureSy(0)
 	, m_numTileTransitions(0)
+	, m_levelTheme(kLevelTheme_Volcano)
 {
 }
 
@@ -201,6 +202,8 @@ void Arena::reset()
 
 	memset(m_tileTransitions, 0, sizeof(m_tileTransitions));
 	m_numTileTransitions = 0;
+
+	m_levelTheme = kLevelTheme_Volcano;
 }
 
 void Arena::generate()
@@ -469,6 +472,20 @@ void Arena::load(const char * name)
 
 				if (key == "name")
 					m_displayName = value.c_str();
+				else if (key == "theme")
+				{
+					if (value ==  "volcano")
+						m_levelTheme = kLevelTheme_Volcano;
+					else if (value == "ice")
+						m_levelTheme = kLevelTheme_Ice;
+					else if (value == "lobby")
+						m_levelTheme = kLevelTheme_Lobby;
+					else
+					{
+						m_levelTheme = kLevelTheme_Volcano;
+						LOG_ERR("unknown level theme: %s", value.c_str());
+					}
+				}
 				else
 					LOG_ERR("unknown key: %s", key.c_str());
 			}
@@ -638,6 +655,10 @@ void Arena::serialize(NetSerializationContext & context)
 
 	context.Serialize(m_numTileTransitions);
 	context.SerializeBytes(m_tileTransitions, sizeof(m_tileTransitions));
+
+	int theme = m_levelTheme;
+	context.Serialize(theme);
+	m_levelTheme = (LevelTheme)theme;
 
 	const int size2 = context.GetBitStream().GetDataSize();
 

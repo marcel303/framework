@@ -2245,10 +2245,7 @@ void GameSim::load(const char * name)
 
 	// load background
 
-	if (m_gameState == kGameState_OnlineMenus)
-		m_background.load(kBackgroundType_Lobby, *this);
-	else
-		m_background.load(kBackgroundType_Volcano, *this);
+	m_background.load(m_arena.m_levelTheme, *this);
 
 	// load objects
 

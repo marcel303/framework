@@ -255,6 +255,14 @@ enum BulletEffect
 	kBulletEffect_Spray
 };
 
+enum LevelTheme
+{
+	kLevelTheme_Volcano,
+	kLevelTheme_Ice,
+	kLevelTheme_Lobby,
+	kLevelTheme_COUNT
+};
+
 enum CollisionType
 {
 	kCollisionType_Block = 1 << 0,
