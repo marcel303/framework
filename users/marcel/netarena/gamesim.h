@@ -678,6 +678,7 @@ struct Player
 		}
 
 		bool m_hasBall;
+		float m_shockTimer;
 	} m_footBrawl;
 
 	// HUD
