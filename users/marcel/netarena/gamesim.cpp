@@ -360,6 +360,7 @@ void FootBall::setup(int x, int y, int lastPlayerIndex, float spawnTime)
 	m_doTeleport = true;
 	m_bounciness = FOOTBALL_BOUNCINESS;
 	m_noGravity = false;
+	m_gravityMultiplier = .1f;
 	m_friction = 0.1f;
 	m_airFriction = 0.9f;
 
@@ -3528,18 +3529,10 @@ void GameSim::drawPlayColor(const CamParams & camParams)
 {
 	if (m_gameMode != kGameMode_Lobby)
 	{
-		gxPushMatrix();
-		applyCamParams(camParams, BACKGROUND_ZOOM_MULTIPLIER, BACKGROUND_SCREENSHAKE_MULTIPLIER);
-		{
-			gpuTimingBlock(drawPlayColorBackground);
-			cpuTimingBlock(drawPlayColorBackground);
+		gpuTimingBlock(drawPlayColorBackground);
+		cpuTimingBlock(drawPlayColorBackground);
 
-			//setBlend(BLEND_OPAQUE);
-			gxScalef(1.f / m_arena.getBaseZoom(), 1.f / m_arena.getBaseZoom(), 1.f);
-			m_background.draw();
-			//setBlend(BLEND_ALPHA);
-		}
-		gxPopMatrix();
+		m_background.draw(*this, camParams);
 	}
 
 	gxPushMatrix();

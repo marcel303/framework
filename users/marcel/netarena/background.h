@@ -4,7 +4,9 @@
 #include "gamedefs.h"
 #include "gametypes.h"
 #include "fireball.h"
+#include <vector>
 
+struct CamParams;
 class GameSim;
 
 #pragma pack(push)
@@ -13,6 +15,7 @@ class GameSim;
 enum BackgroundType
 {
 	kBackgroundType_Volcano,
+	kBackgroundType_Ice,
 	kBackgroundType_Lobby,
 	kBackgroundType_COUNT
 };
@@ -27,7 +30,7 @@ struct Background
 	void load(BackgroundType type, GameSim & gameSim);
 
 	void tick(GameSim & gameSim, float dt);
-	void draw();
+	void draw(const GameSim & gameSim, const CamParams & camParams);
 	void drawLight();
 
 	struct LobbyState
@@ -54,7 +57,7 @@ struct Background
 		} m_state;
 
 		SpriterState m_spriterState;
-	
+
 		FireBall m_fireBall;
 		bool m_isTriggered;
 
@@ -65,12 +68,32 @@ struct Background
 		bool t3;
 	};
 
+	struct IceState
+	{
+		IceState();
+
+		void tick(GameSim & gameSim, Background & background, float dt);
+
+		SpriterState m_spriterState1;
+		SpriterState m_spriterState2;
+	};
+
 	//
 
 	BackgroundType m_type;
 
 	LobbyState m_lobbyState;
 	VolcanoState m_volcanoState;
+	IceState m_iceState;
 };
 
 #pragma pack(pop)
+
+struct Theme
+{
+	std::string name;
+	float parallax1;
+	float parallax2;
+};
+
+extern std::vector<Theme> g_themes;

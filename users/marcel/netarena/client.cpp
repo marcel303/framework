@@ -237,7 +237,7 @@ void Client::draw()
 	case kGameState_OnlineMenus:
 		{
 			drawMenus();
-			GameSim::CamParams camParams;
+			CamParams camParams;
 			camParams.shake.SetZero();
 			camParams.zoom = 1.f;
 			camParams.zoomFocus.Set(GFX_SX/2.f, GFX_SY/2.f);

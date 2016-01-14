@@ -1146,6 +1146,13 @@ struct AnimationFxState
 	void draw(DrawLayer layer);
 };
 
+struct CamParams
+{
+	Vec2 shake;
+	Vec2 zoomFocus;
+	float zoom;
+};
+
 //
 
 struct GameStateData
@@ -1384,13 +1391,6 @@ public:
 	void tickPlayPickupSpawn(float dt);
 	void tickPlayLevelEvents(float dt);
 	void tickRoundComplete(float dt);
-
-	struct CamParams
-	{
-		Vec2 shake;
-		Vec2 zoomFocus;
-		float zoom;
-	};
 
 	void drawPlay();
 	void drawPlayColor(const CamParams & camParams);

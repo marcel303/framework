@@ -1380,6 +1380,41 @@ bool Arena::testCollisionLine(float x1, float y1, float x2, float y2, uint32_t b
 
 void initArenaData()
 {
+	// load theme data
+
+	try
+	{
+		FileStream stream("themes/themes.txt", (OpenMode)(OpenMode_Read | OpenMode_Text));
+		StreamReader reader(&stream, false);
+		std::vector<std::string> lines = reader.ReadAllLines();
+		for (auto i = lines.begin(); i != lines.end(); ++i)
+		{
+			const std::string & line = *i;
+			Dictionary d;
+			if (!d.parse(line))
+			{
+				logError("invalid theme definition: %s", line.c_str());
+				continue;
+			}
+
+			const std::string name = d.getString("theme", "");
+			if (name.empty())
+			{
+				logError("invalid theme definition: %s", line.c_str());
+				continue;
+			}
+
+			Theme theme;
+			theme.name = name;
+			theme.parallax1 = d.getInt("parallax1", 100) / 100.f;
+			theme.parallax2 = d.getInt("parallax2", 100) / 100.f;
+			g_themes.push_back(theme);
+		}
+	}
+	catch (std::exception & e)
+	{
+		logError(e.what());
+	}
 }
 
 void shutArenaData()
