@@ -210,7 +210,7 @@ struct Player
 	PlayerWeapon popWeapon();
 	void addKnockBack(float strength);
 
-	void handleJumpCollision();
+	bool handleJumpCollision();
 
 	// special : rocket punch
 	void beginRocketPunch();
@@ -250,6 +250,12 @@ struct Player
 	void tickFootBall(float dt);
 	Vec2 getFootBallThrowPos() const;
 	void throwFootBall(Vec2Arg pos, Vec2Arg vel);
+
+	// football grapple
+	void beginFootBallGrapple(int ballIndex);
+	void endFootBallGrapple();
+	Vec2 getFootBallGrapplePos() const;
+	void tickFootBallGrapple(float dt);
 
 	// allocation
 	bool m_isUsed;
@@ -595,6 +601,18 @@ struct Player
 		SpriterState spriterState;
 	} m_shieldSpecial;
 
+	struct FootballGrappleInfo
+	{
+		FootballGrappleInfo()
+		{
+			memset(this, 0, sizeof(FootballGrappleInfo));
+		}
+
+		bool isActive;
+		float initialDistance;
+		int ballIndex;
+	} m_footballGrappleInfo;
+
 	float m_respawnTimer; // when this timer counts to zero, the player is automatically respawn
 	float m_respawnTimerRcp;
 	bool m_canRespawn; // set when the player is allowed to respawn, which is after the death animation is done
@@ -660,6 +678,7 @@ struct Player
 		}
 
 		bool m_hasBall;
+		float m_shockTimer;
 	} m_footBrawl;
 
 	// HUD
@@ -1128,6 +1147,13 @@ struct AnimationFxState
 	void draw(DrawLayer layer);
 };
 
+struct CamParams
+{
+	Vec2 shake;
+	Vec2 zoomFocus;
+	float zoom;
+};
+
 //
 
 struct GameStateData
@@ -1366,13 +1392,6 @@ public:
 	void tickPlayPickupSpawn(float dt);
 	void tickPlayLevelEvents(float dt);
 	void tickRoundComplete(float dt);
-
-	struct CamParams
-	{
-		Vec2 shake;
-		Vec2 zoomFocus;
-		float zoom;
-	};
 
 	void drawPlay();
 	void drawPlayColor(const CamParams & camParams);

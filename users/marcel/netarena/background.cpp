@@ -9,8 +9,39 @@ OPTION_DEFINE(bool, s_debugBackground, "Debug/Debug Background");
 
 #define LOBBY_SPRITER Spriter("backgrounds/lobby/background.scml")
 #define VOLCANO_SPRITER Spriter("backgrounds/VolcanoTest/background.scml")
+#define ICE_SPRITER1 Spriter("backgrounds/ice/layer1.scml") // todo
+#define ICE_SPRITER2 Spriter("backgrounds/ice/layer2.scml")
 
-void Background::load(BackgroundType type, GameSim & gameSim)
+//
+
+std::vector<Theme> g_themes;
+
+static const char * getThemeName(LevelTheme type)
+{
+	if (type == kLevelTheme_Volcano)
+		return "volcano";
+	else if (type == kLevelTheme_Lobby)
+		return "ice";
+	else if (type == kLevelTheme_Ice)
+		return "lobby";
+	else
+	{
+		Assert(false);
+		return "";
+	}
+}
+
+static const Theme * getTheme(const char * name)
+{
+	for (int i = 0; i < g_themes.size(); ++i)
+		if (g_themes[i].name == name)
+			return &g_themes[i];
+	return 0;
+}
+
+//
+
+void Background::load(LevelTheme type, GameSim & gameSim)
 {
 	memset(this, 0, sizeof(Background));
 
@@ -18,12 +49,16 @@ void Background::load(BackgroundType type, GameSim & gameSim)
 
 	switch (m_type)
 	{
-	case kBackgroundType_Lobby:
+	case kLevelTheme_Lobby:
 		m_lobbyState = LobbyState();
 		break;
 
-	case kBackgroundType_Volcano:
+	case kLevelTheme_Volcano:
 		m_volcanoState = VolcanoState();
+		break;
+
+	case kLevelTheme_Ice:
+		m_iceState = IceState();
 		break;
 
 	default:
@@ -36,11 +71,11 @@ void Background::tick(GameSim & gameSim, float dt)
 {
 	switch (m_type)
 	{
-	case kBackgroundType_Lobby:
+	case kLevelTheme_Lobby:
 		m_lobbyState.tick(gameSim, *this, dt);
 		break;
 
-	case kBackgroundType_Volcano:
+	case kLevelTheme_Volcano:
 		m_volcanoState.tick(gameSim, *this, dt);
 		break;
 
@@ -50,13 +85,27 @@ void Background::tick(GameSim & gameSim, float dt)
 	}
 }
 
-void Background::draw()
+void Background::draw(const GameSim & gameSim, const CamParams & camParams)
 {
+	const char * themeName = getThemeName(m_type);
+	const Theme * theme = getTheme(themeName);
+	Assert(theme);
+
+	if (!theme)
+		return;
+
 	switch (m_type)
 	{
-	case kBackgroundType_Lobby:
-		setColor(colorWhite);
-		LOBBY_SPRITER.draw(m_lobbyState.m_spriterState);
+	case kLevelTheme_Lobby:
+		gxPushMatrix();
+		gameSim.applyCamParams(camParams, theme->parallax1, BACKGROUND_SCREENSHAKE_MULTIPLIER);
+		{
+			//setBlend(BLEND_OPAQUE);
+			gxScalef(1.f / gameSim.m_arena.getBaseZoom(), 1.f / gameSim.m_arena.getBaseZoom(), 1.f);
+			setColor(colorWhite);
+			LOBBY_SPRITER.draw(m_lobbyState.m_spriterState);
+		}
+		gxPopMatrix();
 
 		if (s_debugBackground)
 		{
@@ -65,17 +114,44 @@ void Background::draw()
 		}
 		break;
 
-	case kBackgroundType_Volcano:
-		setColor(colorWhite);
-		VOLCANO_SPRITER.draw(m_volcanoState.m_spriterState);
-		if (m_volcanoState.m_fireBall.m_isActive)
-			m_volcanoState.m_fireBall.draw();
+	case kLevelTheme_Volcano:
+		gxPushMatrix();
+		gameSim.applyCamParams(camParams, theme->parallax1, BACKGROUND_SCREENSHAKE_MULTIPLIER);
+		{
+			//setBlend(BLEND_OPAQUE);
+			gxScalef(1.f / gameSim.m_arena.getBaseZoom(), 1.f / gameSim.m_arena.getBaseZoom(), 1.f);
+			setColor(colorWhite);
+			VOLCANO_SPRITER.draw(m_volcanoState.m_spriterState);
+			if (m_volcanoState.m_fireBall.m_isActive)
+				m_volcanoState.m_fireBall.draw();
+		}
+		gxPopMatrix();
 
 		if (s_debugBackground)
 		{
 			setColor(colorWhite);
 			drawText(0.f, 100.f, 24, +1.f, +1.f, "background: type=volcano, animTime=%02.2f, fireballIsActive=%d", m_volcanoState.m_spriterState.animTime, m_volcanoState.m_fireBall.m_isActive);
 		}
+		break;
+
+	case kLevelTheme_Ice:
+		gxPushMatrix();
+		gameSim.applyCamParams(camParams, theme->parallax1, BACKGROUND_SCREENSHAKE_MULTIPLIER);
+		{
+			gxScalef(1.f / gameSim.m_arena.getBaseZoom(), 1.f / gameSim.m_arena.getBaseZoom(), 1.f);
+			setColor(colorWhite);
+			ICE_SPRITER1.draw(m_volcanoState.m_spriterState);
+		}
+		gxPopMatrix();
+
+		gxPushMatrix();
+		gameSim.applyCamParams(camParams, theme->parallax2, BACKGROUND_SCREENSHAKE_MULTIPLIER);
+		{
+			gxScalef(1.f / gameSim.m_arena.getBaseZoom(), 1.f / gameSim.m_arena.getBaseZoom(), 1.f);
+			setColor(colorWhite);
+			ICE_SPRITER2.draw(m_volcanoState.m_spriterState);
+		}
+		gxPopMatrix();
 		break;
 
 	default:
@@ -88,7 +164,7 @@ void Background::drawLight()
 {
 	switch (m_type)
 	{
-	case kBackgroundType_Volcano:
+	case kLevelTheme_Volcano:
 		if (m_volcanoState.m_fireBall.m_isActive)
 			m_volcanoState.m_fireBall.drawLight();
 		break;
@@ -196,7 +272,7 @@ void Background::VolcanoState::tick(GameSim & gameSim, Background & background, 
 	{
 		if (VOLCANO_LOOP)
 		{
-			background.load(kBackgroundType_Volcano, gameSim);
+			background.load(kLevelTheme_Volcano, gameSim);
 			return;
 		}
 
@@ -230,4 +306,23 @@ void Background::VolcanoState::doEvent(GameSim & gameSim)
 	m_state = VC_ERUPT;
 
 	m_fireBall.load("backgrounds/VolcanoTest/Fireball/fireball.scml", gameSim, 1300, 340, -100, 0.15f);
+}
+
+//
+
+Background::IceState::IceState()
+{
+	memset(this, 0, sizeof(*this));
+
+	m_spriterState1 = SpriterState();
+	m_spriterState1.startAnim(ICE_SPRITER1, "Idle");
+
+	m_spriterState2 = SpriterState();
+	m_spriterState2.startAnim(ICE_SPRITER2, "Idle");
+}
+
+void Background::IceState::tick(GameSim & gameSim, Background & background, float dt)
+{
+	m_spriterState1.updateAnim(ICE_SPRITER1, dt);
+	m_spriterState2.updateAnim(ICE_SPRITER2, dt);
 }

@@ -360,6 +360,7 @@ void FootBall::setup(int x, int y, int lastPlayerIndex, float spawnTime)
 	m_doTeleport = true;
 	m_bounciness = FOOTBALL_BOUNCINESS;
 	m_noGravity = false;
+	m_gravityMultiplier = .1f;
 	m_friction = 0.1f;
 	m_airFriction = 0.9f;
 
@@ -1798,13 +1799,13 @@ void BlindsEffect::drawLight()
 			setColorf(.8f, .8f, .8f, m_time / m_duration * 4.f);
 			if (m_vertical)
 			{
-				drawRect(-kBorderSize, -kBorderSize, m_x - m_size, GFX_SY + kBorderSize);
-				drawRect(m_x + m_size, -kBorderSize, GFX_SX + kBorderSize, GFX_SY + kBorderSize);
+				drawRect(-kBorderSize, -kBorderSize, m_x - m_size, MAX_ARENA_SY_PIXELS + kBorderSize);
+				drawRect(m_x + m_size, -kBorderSize, MAX_ARENA_SX_PIXELS + kBorderSize, MAX_ARENA_SY_PIXELS + kBorderSize);
 			}
 			else
 			{
-				drawRect(-kBorderSize, -kBorderSize, GFX_SX + kBorderSize, m_y - m_size);
-				drawRect(-kBorderSize, m_y + m_size, GFX_SX + kBorderSize, GFX_SY + kBorderSize);
+				drawRect(-kBorderSize, -kBorderSize, MAX_ARENA_SX_PIXELS + kBorderSize, m_y - m_size);
+				drawRect(-kBorderSize, m_y + m_size, MAX_ARENA_SX_PIXELS + kBorderSize, MAX_ARENA_SY_PIXELS + kBorderSize);
 			}
 		}
 		setBlend(BLEND_ADD);
@@ -2057,6 +2058,7 @@ void GameSim::setGameState(::GameState gameState)
 				Player * player = m_playerInstanceDatas[i]->m_player;
 
 				player->m_isActive = false;
+				player->m_isAlive = false;
 				player->m_isReadyUpped = false;
 			}
 		}
@@ -2243,10 +2245,7 @@ void GameSim::load(const char * name)
 
 	// load background
 
-	if (m_gameState == kGameState_OnlineMenus)
-		m_background.load(kBackgroundType_Lobby, *this);
-	else
-		m_background.load(kBackgroundType_Volcano, *this);
+	m_background.load(m_arena.m_levelTheme, *this);
 
 	// load objects
 
@@ -3527,18 +3526,10 @@ void GameSim::drawPlayColor(const CamParams & camParams)
 {
 	if (m_gameMode != kGameMode_Lobby)
 	{
-		gxPushMatrix();
-		applyCamParams(camParams, BACKGROUND_ZOOM_MULTIPLIER, BACKGROUND_SCREENSHAKE_MULTIPLIER);
-		{
-			gpuTimingBlock(drawPlayColorBackground);
-			cpuTimingBlock(drawPlayColorBackground);
+		gpuTimingBlock(drawPlayColorBackground);
+		cpuTimingBlock(drawPlayColorBackground);
 
-			//setBlend(BLEND_OPAQUE);
-			gxScalef(1.f / m_arena.getBaseZoom(), 1.f / m_arena.getBaseZoom(), 1.f);
-			m_background.draw();
-			//setBlend(BLEND_ALPHA);
-		}
-		gxPopMatrix();
+		m_background.draw(*this, camParams);
 	}
 
 	gxPushMatrix();
@@ -4692,7 +4683,7 @@ float GameSim::calculateEffectiveZoom() const
 
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		if (m_players[i].m_isUsed && m_players[i].m_isActive)
+		if (m_players[i].m_isUsed && m_players[i].m_isAlive)
 		{
 			if (!hasMinMax)
 			{
@@ -4737,7 +4728,7 @@ float GameSim::calculateEffectiveZoom() const
 
 Vec2 GameSim::calculateEffectiveZoomFocus() const
 {
-	if (ZOOM_PLAYER >= 0 && ZOOM_PLAYER < MAX_PLAYERS && m_players[ZOOM_PLAYER].m_isUsed && m_players[ZOOM_PLAYER].m_isActive)
+	if (ZOOM_PLAYER >= 0 && ZOOM_PLAYER < MAX_PLAYERS && m_players[ZOOM_PLAYER].m_isUsed && m_players[ZOOM_PLAYER].m_isAlive)
 		return m_players[ZOOM_PLAYER].m_pos;
 	else if (m_desiredZoomFocusIsSet)
 		return m_desiredZoomFocus;
@@ -4750,7 +4741,7 @@ Vec2 GameSim::calculateEffectiveZoomFocus() const
 
 		for (int i = 0; i < MAX_PLAYERS; ++i)
 		{
-			if (m_players[i].m_isUsed && m_players[i].m_isActive)
+			if (m_players[i].m_isUsed && m_players[i].m_isAlive)
 			{
 				numPlayers++;
 				mid += m_players[i].m_pos;
@@ -4772,7 +4763,7 @@ Vec2 GameSim::calculateEffectiveZoomFocus() const
 		for (int i = 0; i < MAX_ZOOM_EFFECTS; ++i)
 		{
 			const int p = m_zoomEffects[i].player;
-			if (p != -1 && m_players[p].m_isUsed && m_players[p].m_isActive)
+			if (p != -1 && m_players[p].m_isUsed && m_players[p].m_isAlive)
 			{
 				playerWeight += m_zoomEffects[i].life;
 				playerPos += m_players[p].m_pos * m_zoomEffects[i].life;
@@ -4796,7 +4787,7 @@ void GameSim::tickZoom(float dt)
 
 	restrictZoomParams(effectiveZoom, effectiveZoomFocus);
 
-	const float convergeSpeed = ZOOM_CONVERGE_SPEED;
+	const float convergeSpeed = powf(ZOOM_CONVERGE_SPEED, m_arena.getBaseZoom());
 	const float a = 1.f - convergeSpeed;
 	const float b = convergeSpeed;
 	m_effectiveZoom = m_effectiveZoom * a + effectiveZoom * b;
@@ -5116,7 +5107,13 @@ void updatePhysics(GameSim & gameSim, Vec2 & pos, Vec2 & vel, float dt, const Co
 						contact.d = contactDistance;
 						contact.r = updateInfo.contactRestitution + 1.f;
 						contact.f = flags;
-						updateInfo.contacts.push_back(contact);
+						// filter duplicate contacts; this is a quick work around for players not bouncing properly when bubbled or frozen
+						bool isDuplicate = false;
+						for (auto & c : updateInfo.contacts)
+							if (contact == c)
+								isDuplicate = true;
+						if (!isDuplicate)
+							updateInfo.contacts.push_back(contact);
 					}
 				}
 			});
