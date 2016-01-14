@@ -25,7 +25,8 @@ SOURCES += main.cpp \
     grid.cpp \
     layers.cpp \
     pallettes.cpp \
-    templates.cpp
+    templates.cpp \
+    levelprops.cpp
 
 HEADERS += \
     gameobject.h \
@@ -36,4 +37,5 @@ HEADERS += \
     grid.h \
     layers.h \
     pallettes.h \
-    templates.h
+    templates.h \
+    levelprops.h

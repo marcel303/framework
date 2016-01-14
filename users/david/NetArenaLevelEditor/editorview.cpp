@@ -36,10 +36,15 @@ EditorView::EditorView() : EditorViewBasic()
     newAct4->setStatusTip(tr("Load from file"));
     connect(newAct4, SIGNAL(triggered()), this, SLOT(Load()));
 
+    QAction* newAct5 = new QAction(tr("&Properties"), this);
+    newAct4->setStatusTip(tr("Edit level properties"));
+    connect(newAct4, SIGNAL(triggered()), this, SLOT(Properties()));
+
 	bar->addAction(newAct1);
 	bar->addAction(newAct2);
 	bar->addAction(newAct3);
     bar->addAction(newAct4);
+    bar->addAction(newAct5);
 
 
 	bar->showNormal();
@@ -87,6 +92,11 @@ void EditorView::Load()
 
 		ed.LoadLevel(m_filename);
     }
+}
+
+void EditorView::Properties()
+{
+   m_levelprops.show();
 }
 
 void EditorView::New()

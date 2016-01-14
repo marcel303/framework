@@ -64,17 +64,14 @@ void SettingsWidget::Create()
 	lbl = new QLabel("foreground");
 	gbox->addWidget(lbl, 2, 0);
 	lbl = new QLabel("middle");
-	gbox->addWidget(lbl, 3, 0);
-    //lbl = new QLabel("background");
-    //gbox->addWidget(lbl, 4, 0);
+    gbox->addWidget(lbl, 3, 0);
 	lbl = new QLabel("objects");
     gbox->addWidget(lbl, 4, 0);
 
 	gbox->addWidget(m_mechSlider, 0, 1);
 	gbox->addWidget(m_collSlider, 1, 1);
 	gbox->addWidget(m_foreSlider, 2, 1);
-	gbox->addWidget(m_middleSlider, 3, 1);
-    //gbox->addWidget(m_backSlider, 4, 1);
+    gbox->addWidget(m_middleSlider, 3, 1);
     gbox->addWidget(m_objSlider, 4, 1);
 	m_transBox->setLayout(gbox);
 
@@ -114,8 +111,7 @@ void SettingsWidget::Create()
 	connect(m_mechSlider, SIGNAL(valueChanged(int)), this, SLOT(UpdateTransparancy(int)));
 	connect(m_collSlider, SIGNAL(valueChanged(int)), this, SLOT(UpdateTransparancy(int)));
 	connect(m_foreSlider, SIGNAL(valueChanged(int)), this, SLOT(UpdateTransparancy(int)));
-	connect(m_middleSlider, SIGNAL(valueChanged(int)), this, SLOT(UpdateTransparancy(int)));
-    //connect(m_backSlider, SIGNAL(valueChanged(int)), this, SLOT(UpdateTransparancy(int)));
+    connect(m_middleSlider, SIGNAL(valueChanged(int)), this, SLOT(UpdateTransparancy(int)));
 	connect(m_objSlider, SIGNAL(valueChanged(int)), this, SLOT(UpdateTransparancy(int)));
 
 	m_editT = true;
