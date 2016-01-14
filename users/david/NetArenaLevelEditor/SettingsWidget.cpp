@@ -68,8 +68,8 @@ void SettingsWidget::Create()
     //lbl = new QLabel("background");
     //gbox->addWidget(lbl, 4, 0);
 	lbl = new QLabel("objects");
-
     gbox->addWidget(lbl, 4, 0);
+
 	gbox->addWidget(m_mechSlider, 0, 1);
 	gbox->addWidget(m_collSlider, 1, 1);
 	gbox->addWidget(m_foreSlider, 2, 1);

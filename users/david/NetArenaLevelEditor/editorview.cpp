@@ -204,18 +204,21 @@ void EditorViewBasic::keyPressEvent(QKeyEvent *e)
 	if(e->key() == Qt::Key_D)
 		if(templateScene->GetCurrentFolder())
 			templateScene->GetCurrentFolder()->SelectNextTemplate();
-
+    */
 	if(e->key() == Qt::Key_S && !e->isAutoRepeat())
-	   if(templateScene->GetCurrentFolder())
+       if(ed.m_templateScene->GetCurrentFolder())
 	   {
-			ed.m_currentTemplate = templateScene->GetCurrentTemplate()->GetMirror();
+            Template* t = ed.m_templateScene->GetCurrentTemplate()->GetMirror();
+            ed.m_templateScene->GetCurrentFolder()->SetTempTemplate(t);
+
+            ed.m_preview->setPixmap(*t->m_middle.m_pixmap);
 
 			e->accept();
 		}
 
 		e->accept();
-	}
-	*/
+
+
 }
 
 void EditorViewBasic::keyReleaseEvent(QKeyEvent *e)

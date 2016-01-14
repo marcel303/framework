@@ -22,7 +22,7 @@ void TemplateThumb::mousePressEvent(QGraphicsSceneMouseEvent* e)
 {
 	ed.m_templateScene->GetCurrentFolder()->SetCurrentTemplate(m_template->m_name);
 
-	ed.m_preview->setPixmap(*m_template->m_middle.m_pixmap);
+    ed.m_preview->setPixmap(*m_template->m_middle.m_pixmap);
 
 	e->accept();
 }
@@ -43,8 +43,7 @@ void Template::InitAsLevel()
 	m_mec.CreateLayer(MAPX, MAPY);
 	m_col.CreateLayer(MAPX, MAPY);
 	m_front.CreateLayer(MAPX, MAPY);
-	m_middle.CreateLayer(MAPX, MAPY);
-    //m_back.CreateLayer(MAPX, MAPY);
+    m_middle.CreateLayer(MAPX, MAPY);
 }
 
 bool Template::CreateNewTemplate()
@@ -61,20 +60,15 @@ bool Template::CreateNewTemplate()
 
 	QString front = QFileDialog::getOpenFileName(0,
 		tr("Select front image"), "", tr("Image Files (*.png)"));
-    //QString back = QFileDialog::getOpenFileName(0,
-    //	tr("Select background image"), "", tr("Image Files (*.png)"));
 
 	QPixmap m(middle);
 	QPixmap f(front);
-    //QPixmap b(back);
 
 	!m.isNull() ? m_middle.m_pixmap = new QPixmap(m) : m_middle.m_pixmap = new QPixmap();
 	!f.isNull() ? m_front.m_pixmap	= new QPixmap(f) : m_front.m_pixmap	= new QPixmap();
-    //!b.isNull() ? m_back.m_pixmap	= new QPixmap(b) : m_back.m_pixmap	= new QPixmap();
 
     QPixmap thumb = m.scaled(THUMBSIZE, THUMBSIZE);
 	QPainter painter(&thumb);
-    //painter.drawPixmap(0, 0, THUMBSIZE, THUMBSIZE, m.scaled(THUMBSIZE, THUMBSIZE));
 	painter.drawPixmap(0, 0, THUMBSIZE, THUMBSIZE, f.scaled(THUMBSIZE, THUMBSIZE));
 
 	m_thumb = new QPixmap(thumb);
@@ -100,9 +94,7 @@ void Template::GetMaxXY(int& x, int& y)
 	y_max = m_front.m_pixmap->size().height();
 
 	x_max < m_middle.m_pixmap->size().width()	? x_max = m_middle.m_pixmap->size().width()		: x_max = x_max;
-    //x_max < m_back.m_pixmap->size().width()		? x_max = m_back.m_pixmap->size().width()		: x_max = x_max;
 	y_max < m_middle.m_pixmap->size().height()	? y_max = m_middle.m_pixmap->size().height()	: y_max = y_max;
-    //y_max < m_back.m_pixmap->size().height()	? y_max = m_back.m_pixmap->size().height()		: y_max = y_max;
 
 	x_max = x_max/BLOCKSIZE;
 	y_max = y_max/BLOCKSIZE;
@@ -131,8 +123,6 @@ void Template::StampTo(int x, int y)
 	painter.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, *m_front.m_pixmap);
 	QPainter painter2(ed.m_level->m_middle.m_pixmap);
 	painter2.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, *m_middle.m_pixmap);
-    //QPainter painter3(ed.m_level->m_back.m_pixmap);
-    //painter3.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, *m_back.m_pixmap);
 
 	UpdateLayers();
 
@@ -165,10 +155,6 @@ void Template::Unstamp(int x, int y)
 	painter2.setCompositionMode(QPainter::CompositionMode_Source);
 	painter2.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, empty);
 
-    //QPainter painter3(ed.m_level->m_back.m_pixmap);
-    //painter3.setCompositionMode(QPainter::CompositionMode_Source);
-    //painter3.drawPixmap(x*BLOCKSIZE, y*BLOCKSIZE, empty);
-
 	UpdateLayers();
 
 	ed.m_grid->update();
@@ -178,7 +164,6 @@ void Template::Load(QString filename)
 {
 	filename.chop(5);
 	m_front.m_pixmap = new QPixmap(filename + "front.png");
-    //m_back.m_pixmap = new QPixmap(filename + "back.png");
 	m_middle.m_pixmap = new QPixmap(filename + "middle.png");
 
 	QPixmap p(filename+"thumb.png");
@@ -196,7 +181,6 @@ void Template::Load(QString filename)
 void Template::Save(QString filename)
 {
 	m_front.m_pixmap->save(filename + "Front.png");
-    //m_back.m_pixmap->save(filename + "Back.png");
 	m_middle.m_pixmap->save(filename + "Middle.png");
 	m_thumb->save(filename + "Thumb.png");
 
@@ -238,7 +222,6 @@ void Template::LoadLevel(QString filename)
 {
 	m_front.LoadLayer(filename + "ArtFG");
 	m_middle.LoadLayer(filename + "Art");
-    //m_back.LoadLayer(filename + "ArtBG");
 
 	m_mec.LoadLayer(filename + "Mec");
 	m_col.LoadLayer(filename + "Col");
@@ -248,18 +231,40 @@ void Template::SaveLevel(QString filename)
 {
 	m_front.SaveLayer(filename + "ArtFG");
 	m_middle.SaveLayer(filename + "Art");
-    //m_back.SaveLayer(filename + "ArtBG");
 
 	m_mec.SaveLayer(filename + "Mec");
 	m_col.SaveLayer(filename + "Col");
 
     QPixmap thumb = m_middle.m_pixmap->scaled(THUMBSIZE, THUMBSIZE);
 	QPainter painter(&thumb);
-    //painter.drawPixmap(0, 0, THUMBSIZE, THUMBSIZE, m_middle.m_pixmap->scaled(THUMBSIZE, THUMBSIZE));
 	painter.drawPixmap(0, 0, THUMBSIZE, THUMBSIZE, m_front.m_pixmap->scaled(THUMBSIZE, THUMBSIZE));
 
 	thumb.save(filename + "Thu.png");
 }
+
+Template* Template::GetMirror()
+{
+    Template* t = new Template();
+
+    t->m_middle.m_pixmap = new QPixmap(m_middle.m_pixmap->transformed(QTransform().scale(-1, 1)));
+    t->m_front.m_pixmap  = new QPixmap(m_front.m_pixmap->transformed(QTransform().scale(-1, 1)));
+
+    int x, y;
+    t->GetMaxXY(x, y);
+
+    t->m_mec.CreateLayer(x, y);
+    t->m_col.CreateLayer(x, y);
+
+    for(int j = 0; j < y; j++)
+        for(int i = 0; i < x; i++)
+        {
+            t->m_mec.m_grid[j][i] = m_mec.m_grid[y-j][x-i];
+            t->m_col.m_grid[j][i] = m_mec.m_grid[y-j][x-i];
+        }
+
+    return t;
+}
+
 
 
 
@@ -294,7 +299,6 @@ void TemplateScene::Initialize()
 
 		QStringList templates = dir.entryList();
 
-		//if(templates.count())
 		{
 			AddFolder(d);
 			SetCurrentFolder(d);
@@ -451,6 +455,11 @@ void TemplateFolder::SetCurrentTemplate()
 
 }
 
+void TemplateFolder::SetTempTemplate(Template* t)
+{
+    m_currentTemplate = t;
+}
+
 void TemplateFolder::SetCurrentTemplate(const QString& name)
 {
 	if(m_templateMap.contains(name))
@@ -503,14 +512,4 @@ QString GetPath()
 }
 
 
-Template* Template::GetMirror()
-{
-	Template* t = new Template();
 
-	//QPixmap* pixmap_reflect = new QPixmap(this->pixmap().transformed(QTransform().scale(-1, 1)));
-
-	//?? profit!
-
-
-	return t;
-}
