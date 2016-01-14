@@ -1775,6 +1775,8 @@ void Player::tick(GameSim & gameSim, float dt)
 
 				endGrapple();
 
+				endFootBallGrapple();
+
 			#if ENABLE_FOOTBALL_HIT
 				if (gameSim.m_gameMode == kGameMode_FootBrawl)
 				{
@@ -2138,6 +2140,8 @@ void Player::tick(GameSim & gameSim, float dt)
 						m_teleport.lastPortalId = destinationId;
 
 						endGrapple();
+
+						endFootBallGrapple();
 					}
 				}
 			}
@@ -3013,6 +3017,8 @@ void Player::tick(GameSim & gameSim, float dt)
 			if (newPos != oldPos)
 			{
 				endGrapple();
+
+				endFootBallGrapple();
 			}
 		}
 	}
@@ -4037,6 +4043,8 @@ void Player::despawn(bool willRespawn)
 
 	endGrapple();
 
+	endFootBallGrapple();
+
 	// make sure pipe bombs are cleaned up
 
 	for (int i = 0; i < MAX_PIPEBOMBS; ++i)
@@ -4072,6 +4080,8 @@ void Player::handleImpact(Vec2Arg velocity)
 	}
 
 	endGrapple();
+
+	endFootBallGrapple();
 }
 
 bool Player::shieldAbsorb(float amount)
@@ -4350,6 +4360,8 @@ bool Player::handleBubble(Vec2Arg velocity, Player * attacker)
 			m_bubble.timer = PLAYER_EFFECT_BUBBLE_TIME;
 			m_bubble.spriterState.startAnim(BUBBLE_SPRITER, "begin");
 			m_jump.cancelled = true;
+
+			endFootBallGrapple();
 		}
 	}
 
