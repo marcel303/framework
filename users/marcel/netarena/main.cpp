@@ -1310,6 +1310,7 @@ bool App::init()
 		framework.minification = 2;
 		framework.fullscreen = false;
 		//framework.reloadCachesOnActivate = true;
+		framework.cacheResourceData = true;
 	}
 	else
 #endif
@@ -1916,8 +1917,7 @@ void App::destroyClient(int index)
 
 		LOG_DBG("destroyClient: index=%d, client=%p", index, client);
 
-		if (client->m_channel->m_state != ChannelState_Disconnected)
-			client->m_channel->Disconnect();
+		Assert(client->m_channel->m_state == ChannelState_Disconnected);
 
 		while (!client->m_players.empty())
 		{
@@ -3344,7 +3344,10 @@ void App::DialogQuit(void * arg, int dialogId, DialogResult result)
 		if (self->m_clients.empty())
 			self->quit();
 		else
-			self->leaveGame(self->m_clients.front());
+		{
+			if (self->getSelectedClient()->m_channel->m_state >= ChannelState_Connecting)
+				self->getSelectedClient()->m_channel->Disconnect();
+		}
 	}
 }
 
