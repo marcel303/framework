@@ -5046,10 +5046,11 @@ void Player::beginFootBallGrapple(int ballIndex)
 
 void Player::endFootBallGrapple()
 {
-	logDebug("endFootBallGrapple");
-	Assert(m_footballGrappleInfo.isActive);
-
-	m_footballGrappleInfo = FootballGrappleInfo();
+	if (m_footballGrappleInfo.isActive)
+	{
+		logDebug("endFootBallGrapple");
+		m_footballGrappleInfo = FootballGrappleInfo();
+	}
 }
 
 Vec2 Player::getFootBallGrapplePos() const
@@ -5316,13 +5317,6 @@ void CharacterData::load(int characterIndex)
 		m_traits |= kPlayerTrait_AirDash;
 	if (traitsStr.find("ninja_dash") != std::string::npos)
 		m_traits |= kPlayerTrait_NinjaDash;
-
-	//
-
-	m_numSkins = 0;
-
-	while (getSpriter()->hasCharacterMap(m_numSkins))
-		m_numSkins++;
 }
 
 bool CharacterData::hasTrait(PlayerTrait trait) const
@@ -5339,6 +5333,17 @@ Spriter * CharacterData::getSpriter() const
 	}
 
 	return m_spriter;
+}
+
+int CharacterData::getNumSkins() const
+{
+	if (m_numSkins == 0)
+	{
+		while (getSpriter()->hasCharacterMap(m_numSkins))
+			m_numSkins++;
+	}
+
+	return m_numSkins;
 }
 
 //
