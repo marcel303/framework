@@ -213,7 +213,6 @@
 - level editor: add particle emitter placement
 - level editor: add moving platform placement
 - level editor: add pickup spawner placement
-- level editor: add foreground layer support
 - level editor: add ability to set map name. perhaps description
 - level editor: add setting for ambient lighting
 - level editor: add checkboxes for allowed (or disabled?) level events

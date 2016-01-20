@@ -71,6 +71,9 @@ public:
 	void SelectNextTemplate();
 	void SelectPreviousTemplate();
 
+
+    void SetTempTemplate(Template* t);
+
 	Template* GetCurrentTemplate();
 
 	QString m_folderName;

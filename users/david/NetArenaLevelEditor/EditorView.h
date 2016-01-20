@@ -40,6 +40,8 @@ public slots:
     void Load();
 	void New();
 
+    void Properties();
+
     void mousePressEvent(QMouseEvent * e);
 	void mouseReleaseEvent(QMouseEvent * e);
 
@@ -47,5 +49,7 @@ private:
 
 	bool flip;
     QString m_filename;
+
+    QWidget m_levelprops;
 
 };
