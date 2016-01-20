@@ -72,6 +72,7 @@ Framework::Framework()
 	basicOpenGL = false;
 	minification = 1;
 	reloadCachesOnActivate = false;
+	cacheResourceData = false;
 	filedrop = false;
 	windowX = -1;
 	windowY = -1;
@@ -417,6 +418,7 @@ bool Framework::shutdown()
 	basicOpenGL = false;
 	minification = 1;
 	reloadCachesOnActivate = false;
+	cacheResourceData = false;
 	filedrop = false;
 	numSoundSources = 32;
 	windowX = -1;

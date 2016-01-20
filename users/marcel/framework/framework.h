@@ -210,6 +210,7 @@ public:
 	bool basicOpenGL;
 	int minification;
 	bool reloadCachesOnActivate;
+	bool cacheResourceData;
 	bool filedrop;
 	int numSoundSources;
 	int windowX;
