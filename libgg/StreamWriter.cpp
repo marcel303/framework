@@ -54,6 +54,11 @@ void StreamWriter::WriteFloat(float v)
 	m_Stream->Write(&v, sizeof(v));
 }
 
+void StreamWriter::WriteBytes(const void* bytes, uint32_t byteCount)
+{
+	m_Stream->Write(bytes, byteCount);
+}
+
 void StreamWriter::WriteText(const char* str)
 {
 	m_Stream->Write(str, (int)strlen(str));
