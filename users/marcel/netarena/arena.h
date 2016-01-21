@@ -169,6 +169,7 @@ public:
 	int m_numTileTransitions;
 
 	LevelTheme m_levelTheme;
+	bool m_wrapAround;
 
 public:
 	Arena();

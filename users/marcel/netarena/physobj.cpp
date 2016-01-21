@@ -53,24 +53,25 @@ void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 
 	// collision
 
+#if 1
 	const float wrapSizes[2] = { gameSim.m_arena.m_sxPixels, gameSim.m_arena.m_syPixels };
 
-#if 1
-	bool collision = false;
-
-	for (int j = 0; j < 2; ++j)
+	if (gameSim.m_arena.m_wrapAround)
 	{
-		if (m_pos[j] < 0.f)
+		for (int j = 0; j < 2; ++j)
 		{
-			m_pos[j] = wrapSizes[j];
-			if (cbs.onWrap)
-				cbs.onWrap(cbs, *this);
-		}
-		else if (m_pos[j] > wrapSizes[j])
-		{
-			m_pos[j] = 0.f;
-			if (cbs.onWrap)
-				cbs.onWrap(cbs, *this);
+			if (m_pos[j] < 0.f)
+			{
+				m_pos[j] = wrapSizes[j];
+				if (cbs.onWrap)
+					cbs.onWrap(cbs, *this);
+			}
+			else if (m_pos[j] > wrapSizes[j])
+			{
+				m_pos[j] = 0.f;
+				if (cbs.onWrap)
+					cbs.onWrap(cbs, *this);
+			}
 		}
 	}
 
@@ -190,6 +191,8 @@ void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 	if (cbs.onMove)
 		cbs.onMove(cbs, *this);
 #else
+	bool collision = false;
+
 	Vec2 delta = m_vel * dt;
 	float deltaLen = delta.CalcSize();
 

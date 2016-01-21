@@ -2966,20 +2966,21 @@ void Player::tick(GameSim & gameSim, float dt)
 				setAnim(kPlayerAnim_Jump, true, false);
 		}
 
-	#if !WRAP_AROUND_TOP_AND_BOTTOM
-		// death by fall
-
-		if (m_pos[1] > gameSim.m_arena.m_syPixels)
+		if (!WRAP_AROUND_TOP_AND_BOTTOM || !gameSim.m_arena.m_wrapAround)
 		{
-			if (isAnimOverrideAllowed(kPlayerAnim_Die))
-			{
-				setAnim(kPlayerAnim_Die, true, true);
-				m_isAnimDriven = true;
+			// death by fall
 
-				awardScore(-1);
+			if (m_pos[1] > gameSim.m_arena.m_syPixels)
+			{
+				if (isAnimOverrideAllowed(kPlayerAnim_Die))
+				{
+					setAnim(kPlayerAnim_Die, true, true);
+					m_isAnimDriven = true;
+
+					awardScore(-1);
+				}
 			}
 		}
-	#endif
 
 		// facing
 
@@ -2997,6 +2998,7 @@ void Player::tick(GameSim & gameSim, float dt)
 
 		// wrapping
 
+		if (gameSim.m_arena.m_wrapAround)
 		{
 			const Vec2 oldPos = m_pos;
 
