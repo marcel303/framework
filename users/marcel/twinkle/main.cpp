@@ -26,6 +26,10 @@ int activeAudioSet = 0;
 OPTION_DECLARE(bool, DEBUG_DRAW, false);
 OPTION_DEFINE(bool, DEBUG_DRAW, "Debug Draw");
 
+OPTION_DECLARE(int, SUN_DISTANCE, 700);
+OPTION_DEFINE(int, SUN_DISTANCE, "Sun/Distance");
+OPTION_STEP(SUN_DISTANCE, 0, 1000, 50);
+
 struct SoundInfo
 {
 	std::string fmt;
@@ -112,6 +116,8 @@ public:
 
 	void tick(float dt)
 	{
+		distance = SUN_DISTANCE;
+
 		angle += dt * speed;
 		spriteState.updateAnim(SUN_SPRITE, dt);
 
