@@ -1,5 +1,7 @@
 #include "Calc.h"
 #include "framework.h"
+#include "OptionMenu.h"
+#include "Options.h"
 
 #include "audio.h"
 #include "audiostream/AudioOutput.h"
@@ -16,6 +18,9 @@
 #define HEART_SPRITE Spriter("Art Assets/Animation/Planet_heart/Heart_Life.scml")
 #define PLAYER_SPRITE Spriter("Art Assets/Animation/Shoon/Shoon_anim_000.scml")
 #define SUN_SPRITE Spriter("Art Assets/Animation/Planet_heart/Heart_Life.scml")
+
+OPTION_DECLARE(bool, DEBUG_DRAW, false);
+OPTION_DEFINE(bool, DEBUG_DRAW, "Debug Draw");
 
 struct SoundInfo
 {
@@ -232,11 +237,15 @@ Sun sun;
 
 int main(int argc, char * argv[])
 {
-	framework.fullscreen = true;
-	//framework.minification = 2;
+#ifdef DEBUG
+	//framework.fullscreen = true;
+	framework.minification = 2;
+#endif
 
 	if (framework.init(0, 0, SX, SY))
 	{
+		OptionMenu optionsMenu;
+
 		AudioOutput_OpenAL ao;
 		MyAudioStream mas;
 		mas.Open("Sound Assets/Music/Loops/Music_Layer_%02d_Loop.ogg", "Sound Assets/Music/Loops/Choir_Layer_%02d_Loop.ogg", "Sound Assets/AMB/AMB_STATE_%02d_LOOP.ogg");
@@ -281,6 +290,8 @@ int main(int argc, char * argv[])
 
 		while (!stop)
 		{
+			const float dt = 1.f / 60.f;
+
 			// process
 
 			framework.process();
@@ -288,6 +299,36 @@ int main(int argc, char * argv[])
 			asc.mTime = framework.time;
 			ao.Update(&asc);
 			fftProcess(framework.time);
+
+			static bool doOptions = false;
+
+			if (keyboard.wentDown(SDLK_F5))
+				doOptions = !doOptions;
+
+			if (doOptions)
+			{
+				OptionMenu * menu = &optionsMenu;
+
+				menu->Update();
+
+				if (keyboard.isDown(SDLK_UP) || gamepad[0].isDown(DPAD_UP))
+					menu->HandleAction(OptionMenu::Action_NavigateUp, dt);
+				if (keyboard.isDown(SDLK_DOWN) || gamepad[0].isDown(DPAD_DOWN))
+					menu->HandleAction(OptionMenu::Action_NavigateDown, dt);
+				if (keyboard.wentDown(SDLK_RETURN) || gamepad[0].wentDown(GAMEPAD_A))
+					menu->HandleAction(OptionMenu::Action_NavigateSelect);
+				if (keyboard.wentDown(SDLK_BACKSPACE) || gamepad[0].wentDown(GAMEPAD_B))
+				{
+					if (menu->HasNavParent())
+						menu->HandleAction(OptionMenu::Action_NavigateBack);
+					else
+						doOptions = false;
+				}
+				if (keyboard.isDown(SDLK_LEFT) || gamepad[0].isDown(DPAD_LEFT))
+					menu->HandleAction(OptionMenu::Action_ValueDecrement, dt);
+				if (keyboard.isDown(SDLK_RIGHT) || gamepad[0].isDown(DPAD_RIGHT))
+					menu->HandleAction(OptionMenu::Action_ValueIncrement, dt);
+			}
 
 			// input
 
@@ -312,9 +353,6 @@ int main(int argc, char * argv[])
 				playSound("pickup");
 
 			// logic
-
-
-			const float dt = 1.f / 60.f;
 
 			heartState.updateAnim(HEART_SPRITE, dt);
 
@@ -376,6 +414,18 @@ int main(int argc, char * argv[])
 
 				gxPopMatrix();
 			}
+
+			if (DEBUG_DRAW)
+			{
+				setFont("calibri.ttf");
+				setColor(colorWhite);
+
+				drawText(10, 10, 24, +1, +1, "Debug Draw!");
+			}
+
+			if (doOptions)
+				optionsMenu.Draw(100, 100, 400, 600);
+
 			framework.endDraw();
 		}
 
