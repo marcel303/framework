@@ -14,9 +14,9 @@
 	#define SY 30
 	#define SZ 30
 #else
-	#define SX 20
-	#define SY 20
-	#define SZ 20
+	#define SX 12
+	#define SY 21
+	#define SZ 24
 #endif
 
 #define ArraySize(x) (sizeof(x) / sizeof(x[0]))

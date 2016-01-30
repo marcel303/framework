@@ -258,6 +258,8 @@ public:
 
 static void evalCube(Cube & cube, Effect * effect)
 {
+	const float coordScale = 1.f / (SX - 1.f);
+
 	for (int x = 0; x < SX; ++x)
 	{
 		for (int y = 0; y < SY; ++y)
@@ -266,9 +268,12 @@ static void evalCube(Cube & cube, Effect * effect)
 			{
 				Coord c;
 
-				c.x = (x / (SX - 1.f) - .5f) * 2.f;
-				c.y = (y / (SY - 1.f) - .5f) * 2.f;
-				c.z = (z / (SZ - 1.f) - .5f) * 2.f;
+				//c.x = (x / (SX - 1.f) - .5f) * 2.f;
+				//c.y = (y / (SY - 1.f) - .5f) * 2.f;
+				//c.z = (z / (SZ - 1.f) - .5f) * 2.f;
+				c.x = (x - (SX - 1) / 2.f) * coordScale;
+				c.y = (y - (SY - 1) / 2.f) * coordScale;
+				c.z = (z - (SZ - 1) / 2.f) * coordScale;
 
 				cube.m_value[x][y][z] = effect->evaluate(c);
 
@@ -338,6 +343,93 @@ static void drawCube(const Cube & cube)
 		setBlend(BLEND_ALPHA);
 	}
 	gxPopMatrix();
+}
+
+SDL_Window * getWindow();
+
+static void drawCubeSlices(const Cube & cube)
+{
+	uint8_t * slices = new uint8_t[SX * SY * SZ * 4];
+
+	const int sx = SX * SZ;
+	const int sy = SY;
+
+	const int pitch = sx;
+
+	for (int x = 0; x < SX; ++x)
+	{
+		for (int y = 0; y < SY; ++y)
+		{
+			for (int z = 0; z < SZ; ++z)
+			{
+				float value = cube.m_value[x][y][z];
+
+				//value += z / float(SZ);
+
+				const float cx = x / float(SX - 1) - .5f;
+				const float cy = y / float(SY - 1) - .5f;
+				const float cz = z / float(SZ - 1) - .5f;
+
+				const Coord c(cx, cy, cz);
+
+				const float r = value + powf(computePerlinNoise(c, x + framework.time), 3.f);
+				const float g = value + powf(computePerlinNoise(c, y + framework.time), 3.f);
+				const float b = value + powf(computePerlinNoise(c, z + framework.time), 3.f);
+
+				const int tx = x + z * SX;
+				const int ty = y;
+
+				const int index = (tx + ty * pitch) * 4;
+
+				slices[index + 0] = clamp(int(r * 255.f), 0, 255);
+				slices[index + 1] = clamp(int(g * 255.f), 0, 255);
+				slices[index + 2] = clamp(int(b * 255.f), 0, 255);
+				slices[index + 3] = 255;
+			}
+		}
+	}
+
+#if ENABLE_OPENGL
+	GLuint texture = createTextureFromRGBA8(slices, SX * SZ, SY);
+
+	if (texture)
+	{
+		gxSetTexture(texture);
+		gxPushMatrix();
+		{
+			gxTranslatef(73, 52, 0);
+			gxColor4f(1.f, 1.f, 1.f, 1.f);
+			drawRect(0, 0, SX * SZ, SY);
+		}
+		gxPopMatrix();
+
+		glDeleteTextures(1, &texture);
+	}
+#else
+	SDL_Surface * surface = getWindowSurface();
+
+	if (SDL_LockSurface(surface) == 0)
+	{
+		uint8_t * pixels = (uint8_t*)surface->pixels;
+
+		//for (int x = 0; x < sx; ++x)
+		//{
+			for (int y = 0; y < sy; ++y)
+			{
+				const int tx = 52;
+				const int ty = 73 + y;
+
+				memcpy(pixels + surface->pitch * ty + tx * 4, slices + y * pitch * 4, pitch * 4);
+			}
+		//}
+
+		SDL_UnlockSurface(surface);
+	}
+
+	SDL_UpdateWindowSurface(getWindow());
+#endif
+
+	delete [] slices;
 }
 
 class AudioStream_Capture : public AudioStream
@@ -517,6 +609,9 @@ int main(int argc, char * argv[])
 	audioIn.init(2, 44100, 4096 * 2);
 #endif
 
+	framework.windowX = 0;
+	framework.windowY = 0;
+
 	if (!framework.init(0, 0, 800, 800))
 	{
 		showErrorMessage("Startup Error", "Failed to initialise framework.");
@@ -557,6 +652,9 @@ int main(int argc, char * argv[])
 
 			// process input
 
+			if (keyboard.isDown(SDLK_ESCAPE))
+				stop = true;
+
 			if (mouse.isDown(BUTTON_LEFT))
 			{
 				rotation[0] += mouse.dy / 100.f;
@@ -593,6 +691,7 @@ int main(int argc, char * argv[])
 
 			framework.beginDraw(0, 0, 0, 0);
 			{
+			#if ENABLE_OPENGL
 				// draw debug visualisation
 
 				setFont("calibri.ttf");
@@ -661,6 +760,9 @@ int main(int argc, char * argv[])
 				gxPopMatrix();
 
 				effect.debugDraw();
+			#endif
+
+				drawCubeSlices(cube);
 			}
 			framework.endDraw();
 		}
