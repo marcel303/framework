@@ -32,11 +32,15 @@
 	#define ENABLE_PROFILING 0 // do not alter
 #endif
 
+#define ENABLE_OPENGL 1
+
+/*
 #ifdef DEBUG
 	#define ENABLE_OPENGL 1
 #else
 	#define ENABLE_OPENGL 0
 #endif
+*/
 
 #define USE_LEGACY_OPENGL 1
 #define ENABLE_MIDI_INPUT 0
