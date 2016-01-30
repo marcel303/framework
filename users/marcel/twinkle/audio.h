@@ -6,7 +6,7 @@
 class MyAudioStream : public AudioStream
 {
 public:
-	const static int numStreams = 8;
+	const static int numStreams = 12;
 
 	MyAudioStream()
 	{
@@ -24,9 +24,9 @@ public:
 	float volume[numStreams];
 	float step;
 
-	void Open(const char * musicFilename, const char * choirFilename)
+	void Open(const char * musicFilename, const char * choirFilename, const char * ambFilename)
 	{
-		for (int i = 0; i < numStreams / 2; ++i)
+		for (int i = 0; i < 4; ++i)
 		{
 			char s[1024];
 			sprintf(s, musicFilename, i + 1);
@@ -34,12 +34,20 @@ public:
 			source[i].Open(s, true);
 		}
 
-		for (int i = 0; i < numStreams / 2; ++i)
+		for (int i = 0; i < 4; ++i)
 		{
 			char s[1024];
 			sprintf(s, choirFilename, i + 1);
 
-			source[i + numStreams / 2].Open(s, true);
+			source[i + 4].Open(s, true);
+		}
+
+		for (int i = 0; i < 4; ++i)
+		{
+			char s[1024];
+			sprintf(s, ambFilename, i + 1);
+
+			source[i + 8].Open(s, true);
 		}
 	}
 
@@ -52,6 +60,9 @@ public:
 
 		for (int c = 0; c < numStreams; ++c)
 		{
+			if (!source[c].IsOpen_get())
+				continue;
+
 			int s = source[c].Provide(numSamples, buffer);
 			if (s < result)
 				result = s;

@@ -203,19 +203,19 @@ int main(int argc, char * argv[])
 	{
 		AudioOutput_OpenAL ao;
 		MyAudioStream mas;
-		mas.Open("Sound Assets/Music/Loops/Music_Layer_%02d_Loop.ogg", "Sound Assets/Music/Loops/Choir_Layer_%02d_Loop.ogg");
+		mas.Open("Sound Assets/Music/Loops/Music_Layer_%02d_Loop.ogg", "Sound Assets/Music/Loops/Choir_Layer_%02d_Loop.ogg", "Sound Assets/AMB/AMB_STATE_%02d_LOOP.ogg");
 		ao.Initialize(2, 48000, 1 << 14);
 		ao.Play();
 
 		struct AudioSet
 		{
-			float volume[8];
+			float volume[12];
 		} audioSets[4] =
 		{
-			{ 1, 0, 0, 0,  1, 0, 0, 0 },
-			{ 1, 1, 0, 0,  1, 1, 0, 0 },
-			{ 1, 1, 1, 0,  1, 1, 1, 0 },
-			{ 0, 0, 1, 1,  1, 1, 1, 1 }
+			{ 1, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0 },
+			{ 1, 1, 0, 0,  1, 1, 0, 0,  0, 1, 0, 0 },
+			{ 1, 1, 1, 0,  1, 1, 1, 0,  0, 0, 1, 0 },
+			{ 0, 0, 1, 1,  1, 1, 1, 1,  0, 0, 0, 1 }
 		};
 
 		int activeAudioSet = 0;
@@ -261,8 +261,8 @@ int main(int argc, char * argv[])
 			if (keyboard.wentDown(SDLK_r))
 				activeAudioSet = 3;
 
-			for (int c = 0; c < 8; ++c)
-				mas.targetVolume[c] = audioSets[activeAudioSet].volume[c] / 4.f;
+			for (int c = 0; c < 12; ++c)
+				mas.targetVolume[c] = audioSets[activeAudioSet].volume[c] / 8.f;
 
 			// logic
 
