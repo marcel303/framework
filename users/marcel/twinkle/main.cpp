@@ -206,6 +206,10 @@ int main(int argc, char * argv[])
 		mas.Open("Sound Assets/Music/Loops/Music_Layer_%02d_Loop.ogg", "Sound Assets/Music/Loops/Choir_Layer_%02d_Loop.ogg", "Sound Assets/AMB/AMB_STATE_%02d_LOOP.ogg");
 		ao.Initialize(2, 48000, 1 << 14);
 		ao.Play();
+		AudioStream_Capture asc;
+		asc.mSource = &mas;
+
+		fftInit();
 
 		struct AudioSet
 		{
@@ -243,7 +247,9 @@ int main(int argc, char * argv[])
 
 			framework.process();
 
-			ao.Update(&mas);
+			asc.mTime = framework.time;
+			ao.Update(&asc);
+			fftProcess(framework.time);
 
 			// input
 
@@ -301,6 +307,24 @@ int main(int argc, char * argv[])
 				earth.drawEx(-earth.getWidth() / 2, -earth.getHeight() / 2, 0.0, 1.0, 1.0, true, FILTER_POINT);
 
 				HEART_SPRITE.draw(heartState);
+
+				glBegin(GL_LINE_LOOP);
+				{
+					int n = Calc::Min(50, kFFTComplexSize);
+					float a = 0.f;
+					float s = 1.f / n * 2.f * M_PI;
+
+					gxColor4f(1.f, 0.f, 0.f, 1.f);
+
+					for (int i = 0; i < n; ++i, a += s)
+					{
+						float v = fftPowerValue(i) * 5.f + 200.f;
+						float x = cosf(a) * v;
+						float y = sinf(a) * v;
+						gxVertex2f(x, y);
+					}
+				}
+				glEnd();
 
 				for (int i = 0; i < MAX_LEMMINGS; ++i)
 					if (lemmings[i].isActive)

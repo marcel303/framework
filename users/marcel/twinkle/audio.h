@@ -2,6 +2,7 @@
 
 #include "audiostream/AudioStream.h"
 #include "audiostream/AudioStreamVorbis.h"
+#include "Calc.h"
 
 class MyAudioStream : public AudioStream
 {
@@ -95,4 +96,59 @@ public:
 
 		return result;
 	}
+};
+
+// FFT
+
+static const int kFFTBufferSize = 4096;
+static const int kFFTSize = 1024;
+static const int kFFTComplexSize = 513; // n/2+1
+static const int kFFTBucketCount = 32;
+
+extern float s_fftInputBuffer[4096];
+extern float s_fftInput[kFFTSize];
+extern float s_fftReal[kFFTComplexSize];
+extern float s_fftImaginary[kFFTComplexSize];
+extern float s_fftBuckets[kFFTBucketCount];
+
+extern float s_fftProvideTime;
+
+void fftInit();
+float fftPowerValue(int i);
+void fftProcess(float time);
+
+class AudioStream_Capture : public AudioStream
+{
+public:
+	AudioStream_Capture()
+		: mSource(0)
+		, mTime(0.f)
+	{
+	}
+
+	virtual int Provide(int numSamples, AudioSample* __restrict buffer)
+	{
+		if (mSource)
+		{
+			const int result = mSource->Provide(numSamples, buffer);
+			const int copySize = Calc::Min(result, kFFTBufferSize);
+			const float scale = 2.f / 65536.f;
+
+			for (int i = 0; i < copySize; ++i)
+				s_fftInputBuffer[i] = buffer[i].channel[0] * scale;
+			for (int i = copySize; i < kFFTBufferSize; ++i)
+				s_fftInputBuffer[i] = 0.f;
+
+			s_fftProvideTime = mTime;
+
+			return result;
+		}
+		else
+		{
+			return 0;
+		}
+	}
+
+	AudioStream * mSource;
+	float mTime;
 };
