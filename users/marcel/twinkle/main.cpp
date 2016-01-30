@@ -1,6 +1,9 @@
 #include "Calc.h"
 #include "framework.h"
 
+#include "audio.h"
+#include "audiostream/AudioOutput.h"
+
 #define SX 1920
 #define SY 1080
 
@@ -198,6 +201,25 @@ int main(int argc, char * argv[])
 
 	if (framework.init(0, 0, SX, SY))
 	{
+		AudioOutput_OpenAL ao;
+		MyAudioStream mas;
+		mas.Open("Sound Assets/Music/Loops/Music_Layer_%02d_Loop.ogg", "Sound Assets/Music/Loops/Choir_Layer_%02d_Loop.ogg");
+		ao.Initialize(2, 48000, 1 << 14);
+		ao.Play();
+
+		struct AudioSet
+		{
+			float volume[8];
+		} audioSets[4] =
+		{
+			{ 1, 0, 0, 0,  1, 0, 0, 0 },
+			{ 1, 1, 0, 0,  1, 1, 0, 0 },
+			{ 1, 1, 1, 0,  1, 1, 1, 0 },
+			{ 0, 0, 1, 1,  1, 1, 1, 1 }
+		};
+
+		int activeAudioSet = 0;
+
 		SpriterState heartState;
 		heartState.x = WORLD_X;
 		heartState.y = WORLD_Y;
@@ -221,12 +243,26 @@ int main(int argc, char * argv[])
 
 			framework.process();
 
+			ao.Update(&mas);
+
 			// input
 
 			if (keyboard.wentDown(SDLK_ESCAPE))
 			{
 				stop = true;
 			}
+
+			if (keyboard.wentDown(SDLK_q))
+				activeAudioSet = 0;
+			if (keyboard.wentDown(SDLK_w))
+				activeAudioSet = 1;
+			if (keyboard.wentDown(SDLK_e))
+				activeAudioSet = 2;
+			if (keyboard.wentDown(SDLK_r))
+				activeAudioSet = 3;
+
+			for (int c = 0; c < 8; ++c)
+				mas.targetVolume[c] = audioSets[activeAudioSet].volume[c] / 4.f;
 
 			// logic
 
