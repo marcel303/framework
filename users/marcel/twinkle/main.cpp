@@ -17,6 +17,42 @@
 #define PLAYER_SPRITE Spriter("Art Assets/Animation/Shoon/Shoon_anim_000.scml")
 #define SUN_SPRITE Spriter("Art Assets/Animation/Planet_heart/Heart_Life.scml")
 
+struct SoundInfo
+{
+	std::string fmt;
+	int count;
+	float volume;
+};
+
+static std::map<std::string, SoundInfo> s_sounds;
+
+static void addSound(const char * name, const char * fmt, int count, float volume = 1.f)
+{
+	SoundInfo & s = s_sounds[name];
+	s.fmt = fmt;
+	s.count = count;
+	s.volume = volume;
+}
+
+static void initSound()
+{
+	addSound("pickup", "Sound Assets/Effects/Test/jump%02d.ogg", 4, .05f);
+}
+
+static void playSound(const char * name)
+{
+	if (s_sounds.count(name) == 0)
+	{
+		logError("sound not found: %s", name);
+		return;
+	}
+
+	SoundInfo & s = s_sounds[name];
+	char temp[256];
+	sprintf(temp, s.fmt.c_str(), rand() % s.count);
+	Sound(temp).play(s.volume * 100);
+}
+
 class Sun
 {
 public:
@@ -224,6 +260,8 @@ int main(int argc, char * argv[])
 
 		int activeAudioSet = 0;
 
+		initSound();
+
 		SpriterState heartState;
 		heartState.x = WORLD_X;
 		heartState.y = WORLD_Y;
@@ -269,6 +307,9 @@ int main(int argc, char * argv[])
 
 			for (int c = 0; c < 12; ++c)
 				mas.targetVolume[c] = audioSets[activeAudioSet].volume[c] / 8.f;
+
+			if (keyboard.wentDown(SDLK_s))
+				playSound("pickup");
 
 			// logic
 
