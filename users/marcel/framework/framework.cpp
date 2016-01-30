@@ -114,6 +114,9 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 		SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
 	}
 	
+	int flags = 0;
+
+#if ENABLE_OPENGL
 #if USE_LEGACY_OPENGL
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
@@ -146,13 +149,16 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	
 	// todo: ensure VSYNC is enabled
 	
-	int flags = SDL_WINDOW_OPENGL;
+	flags |= SDL_WINDOW_OPENGL;
+#endif
 	
 	if (fullscreen && minification == 1)
 	{
 		flags |= SDL_WINDOW_FULLSCREEN;
 		
+	#if ENABLE_OPENGL
 		SDL_GL_SetSwapInterval(1);
+	#endif
 	}
 
 	int actualSx = sx / minification;
@@ -160,6 +166,19 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 
 	bool foundMode = false;
 
+#ifndef DEBUG
+	if (false)
+	{
+		SDL_DisplayMode desired;
+		foundMode = SDL_GetCurrentDisplayMode(0, &desired) == 0;
+		actualSx = desired.w;
+		actualSy = desired.h;
+		sx = actualSx;
+		sy = actualSy;
+		flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+	}
+	else
+#endif
 	if (fullscreen && useClosestDisplayMode)
 	{
 		for (int i = 0; i < 3; ++i)
@@ -222,6 +241,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 		return false;
 	}
 	
+#if ENABLE_OPENGL
 	globals.glContext = SDL_GL_CreateContext(globals.window);
 	checkErrorGL();
 	
@@ -266,6 +286,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 		glDebugMessageCallbackARB(debugOutputGL, stderr);
 		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
 	}
+#endif
 #endif
 	
 	globals.displaySize[0] = sx;
@@ -836,6 +857,7 @@ void Framework::setFullscreen(bool fullscreen)
 
 void Framework::beginDraw(int r, int g, int b, int a)
 {
+#if ENABLE_OPENGL
 	// clear back buffer
 	
 	glClearColor(r/255.f, g/255.f, b/255.f, a/255.f);
@@ -857,12 +879,14 @@ void Framework::beginDraw(int r, int g, int b, int a)
 	
 	applyTransform();
 	setBlend(BLEND_ALPHA);
+#endif
 }
 
 void Framework::endDraw()
 {
+#if ENABLE_OPENGL
 	// process debug draw
-	
+
 	setTransform(TRANSFORM_SCREEN);
 	setBlend(BLEND_ALPHA);
 	
@@ -885,10 +909,13 @@ void Framework::endDraw()
 	// check for errors
 	
 	checkErrorGL();
-			
+	
 	// flip back buffers
 	
 	SDL_GL_SwapWindow(globals.window);
+#else
+	
+#endif
 }
 
 void Framework::blinkTaskbarIcon(int count)
@@ -3727,7 +3754,19 @@ void debugDrawText(float x, float y, int size, float alignX, float alignY, const
 	}
 }
 
-#if !USE_LEGACY_OPENGL
+#if !ENABLE_OPENGL
+
+	SDL_Window * getWindow()
+	{
+		return globals.window;
+	}
+
+	SDL_Surface * getWindowSurface()
+	{
+		return SDL_GetWindowSurface(globals.window);
+	}
+
+#elif !USE_LEGACY_OPENGL
 
 class GxMatrixStack
 {
