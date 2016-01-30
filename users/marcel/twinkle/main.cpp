@@ -19,16 +19,25 @@
 #define PARTICLE_SPRITE Spriter("Art Assets/Animation/Particules/Particules.scml")
 #define DIAMOND_SPRITE Spriter("Art Assets/Animation/Diamonds/Diamond.scml")
 
+int activeAudioSet = 0;
+
 class Sun
 {
 public:
+	enum Emotion
+	{
+		kEmotion_Happy,
+		kEmotion_Neutral,
+		kEmotion_Sad
+	};
+
 	Sun()
 	{
 		angle = 0.0f;
-		distance = 300.0f;
-		speed = 0.05f;
-		sun_state = 1;
+		distance = 700.0f;
+		speed = 0.1f;
 		prays_needed = 2;
+		emotion = kEmotion_Neutral;
 	}
 
 	void spawn()
@@ -39,12 +48,24 @@ public:
 		targetColor = color;
 	}
 
-	void change_color_to(Color new_color)
+	void tickEmotion()
 	{
-		targetColor = new_color;
-		//color.r += (new_color.r > color.r ? 00.1 : -00.1);
-		//color.g += (new_color.g > color.g ? 00.1 : -00.1);
-		//color.b += (new_color.b > color.b ? 00.1 : -00.1);
+		if (emotion == kEmotion_Happy)
+		{
+			targetColor = colorRed;
+			activeAudioSet = 3;
+		}
+		else if (emotion == kEmotion_Neutral)
+		{
+			targetColor = colorYellow;
+			activeAudioSet = 2;
+		}
+		else if (emotion == kEmotion_Sad)
+		{
+			targetColor = colorBlue;
+			activeAudioSet = 1;
+		}
+
 		color = color.interp(targetColor, 0.01f);
 	}
 
@@ -52,27 +73,22 @@ public:
 	{
 		angle += dt * speed;
 		spriteState.updateAnim(SUN_SPRITE, dt);
+
 		if (prays_needed > 0)
-			sun_state = 0;
-		if (prays_needed < 0)
-			sun_state = 2;
-		if (!prays_needed)
-			sun_state = 1;
-		if (sun_state == 2)
-			change_color_to(colorRed);
-		if (sun_state == 0)
-			change_color_to(colorBlue);
-		if (sun_state == 1)
-			change_color_to(colorYellow);
-		//if(keyboard.wentDown(SDLK_SPACE))
-			//sun_state = (sun_state + 1) % 3;
+			emotion = kEmotion_Sad;
+		else if (prays_needed < 0)
+			emotion = kEmotion_Happy;
+		else
+			emotion = kEmotion_Neutral;
+
+		tickEmotion();
 	}
 
 	void draw()
 	{
 		spriteState.x = WORLD_X + cosf(angle) * (WORLD_RADIUS + distance);
 		spriteState.y = WORLD_Y + sinf(angle) * (WORLD_RADIUS + distance);
-		spriteState.scale = 0.5f;
+		spriteState.scale = 1.5f;
 		setColor(color);
 		SUN_SPRITE.draw(spriteState);
 	}
@@ -83,6 +99,7 @@ public:
 	float speed;
 	int sun_state; // 0 not happy, 1 it's okey, 2, too happy
 	int prays_needed;
+	Emotion emotion;
 	Color color;
 	Color targetColor;
 };
@@ -129,7 +146,7 @@ public:
 	{
 		spriteState.x = WORLD_X + cosf(angle) * WORLD_RADIUS;
 		spriteState.y = WORLD_Y + sinf(angle) * WORLD_RADIUS;
-		spriteState.scale = 0.7f;
+		spriteState.scale = 0.4f;
 		spriteState.angle = angle * Calc::rad2deg + 90;
 		setColor(colorWhite);
 		LEMMING_SPRITE.draw(spriteState);
@@ -137,13 +154,13 @@ public:
 		{
 			spriteStateParticles.x = WORLD_X + cosf(angle) * (WORLD_RADIUS + 100);
 			spriteStateParticles.y = WORLD_Y + sinf(angle) * (WORLD_RADIUS + 100);
-			spriteStateParticles.scale = 0.7f;
+			spriteStateParticles.scale = 0.4f;
 			spriteStateParticles.angle = angle * Calc::rad2deg + 90;
 			setColor(colorWhite);
 			PARTICLE_SPRITE.draw(spriteStateParticles);
 			spriteStateDiamond.x = WORLD_X + cosf(angle) * (WORLD_RADIUS + 200);
 			spriteStateDiamond.y = WORLD_Y + sinf(angle) * (WORLD_RADIUS + 200);
-			spriteStateDiamond.scale = 0.7f;
+			spriteStateDiamond.scale = 0.4f;
 			spriteStateDiamond.angle = angle * Calc::rad2deg + 90;
 			setColor(colorWhite);
 			DIAMOND_SPRITE.draw(spriteStateDiamond);
@@ -180,7 +197,7 @@ public:
 
 	Player()
 	{
-		max_speed = 1.0;
+		max_speed = 0.6;
 		speed = 0.0;
 		angle = 0.0;
 	}
@@ -229,7 +246,7 @@ public:
 	{
 		spriteState.x = WORLD_X + cosf(angle) * WORLD_RADIUS;
 		spriteState.y = WORLD_Y + sinf(angle) * WORLD_RADIUS;
-		spriteState.scale = 0.7f;
+		spriteState.scale = 0.6f;
 		spriteState.angle = angle * Calc::rad2deg + 90;
 		setColor(colorWhite);
 		PLAYER_SPRITE.draw(spriteState);
@@ -302,10 +319,11 @@ int check_collision_sun(Sun sun, Lemming lemmings[], int nbr_lem)
 Player player;
 Lemming lemmings[MAX_LEMMINGS];
 Sun sun;
+float cam = 0.0;
 
 int main(int argc, char * argv[])
 {
-	if (1 == 2)
+	if (1 == 1)
 	{
 		framework.fullscreen = false;
 		framework.minification = 2;
@@ -333,8 +351,6 @@ int main(int argc, char * argv[])
 			{ 1, 1, 1, 0,  1, 1, 1, 0,  0, 0, 1, 0 },
 			{ 0, 0, 1, 1,  1, 1, 1, 1,  0, 0, 0, 1 }
 		};
-
-		int activeAudioSet = 0;
 
 		SpriterState heartState;
 		heartState.x = WORLD_X;
@@ -427,9 +443,67 @@ int main(int argc, char * argv[])
 				background.drawEx(0, 0);
 
 				gxTranslatef(SX/2, SY/2, 0);
+				//gxTranslatef((SX/2)-player.spriteState.x, SY/2-player.spriteState.y, 0);
 
-				gxScalef(0.7f, 0.7f, 1);
+				static float targetZoom = 1.f;
+				static float zoom = 1.f;
+
+				/*if (sun.spriteState.x + sun.spriteState.scaleX > SX || sun.spriteState.y + sun.spriteState.scaleY > SY)
+					targetZoom -= 0.1f;
+				else if (sun.spriteState.x + sun.spriteState.scaleX < SX - 5.0 || sun.spriteState.y + sun.spriteState.scaleY < SY - 5)
+					targetZoom += 0.1f;*/
+
+				const int PLAYER_SIZE = 200;
+				const float px1 = player.spriteState.x - PLAYER_SIZE;
+				const float py1 = player.spriteState.y - PLAYER_SIZE;
+				const float px2 = player.spriteState.x + PLAYER_SIZE;
+				const float py2 = player.spriteState.y + PLAYER_SIZE;
+
+				const int SUN_SIZE = 400;
+				const float sx1 = sun.spriteState.x - SUN_SIZE;
+				const float sy1 = sun.spriteState.y - SUN_SIZE;
+				const float sx2 = sun.spriteState.x + SUN_SIZE;
+				const float sy2 = sun.spriteState.y + SUN_SIZE;
+
+				const float vx1 = Calc::Min(px1, sx1);
+				const float vy1 = Calc::Min(py1, sy1);
+				const float vx2 = Calc::Max(px2, sx2);
+				const float vy2 = Calc::Max(py2, sy2);
+
+				const float midX = (vx1 + vx2) / 2.f;
+				const float midY = (vy1 + vy2) / 2.f;
+
+				//targetZoom = 1.0 / (abs((sun.spriteState.x - player.spriteState.x)));
+				const float boxSizeX = vx2 - vx1;
+				const float boxSizeY = vy2 - vy1;
+				const float scaleX = SX / boxSizeX;
+				const float scaleY = SY / boxSizeY;
+
+				targetZoom = Calc::Min(scaleX, scaleY);
+
+				if (keyboard.wentDown(SDLK_1))
+					targetZoom = .25f;
+				if (keyboard.wentDown(SDLK_2))
+					targetZoom = .5;
+				if (keyboard.wentDown(SDLK_3))
+					targetZoom = 1.f;
+				const float t = powf(.05f, dt);
+				zoom = t * zoom + (1.f - t) * targetZoom;
+
+				gxScalef(zoom, zoom, 1);
+				gxTranslatef(-midX, -midY, 0.f);
+
+				static Color earth_color = colorWhite;
+				Color earth_target_color = colorWhite;
+				if (sun.emotion == sun.kEmotion_Happy)
+					earth_target_color = Color::fromHex("510a42");
+				else if (sun.emotion == sun.kEmotion_Neutral)
+					earth_target_color = Color::fromHex("ab5a10");
+				else
+					earth_target_color = Color::fromHex("9cc4d1");
 				Sprite earth("Art Assets/planete.png");
+				earth_color = earth_color.interp(earth_target_color, 0.02f);
+				setColor(earth_color);
 				earth.drawEx(-earth.getWidth() / 2, -earth.getHeight() / 2, 0.0, 1.0, 1.0, true, FILTER_POINT);
 
 				HEART_SPRITE.draw(heartState);
