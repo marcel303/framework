@@ -1,5 +1,7 @@
 #include "Calc.h"
 #include "framework.h"
+#include "OptionMenu.h"
+#include "Options.h"
 
 #include "audio.h"
 #include "audiostream/AudioOutput.h"
@@ -20,6 +22,45 @@
 #define DIAMOND_SPRITE Spriter("Art Assets/Animation/Diamonds/Diamond.scml")
 
 int activeAudioSet = 0;
+
+OPTION_DECLARE(bool, DEBUG_DRAW, false);
+OPTION_DEFINE(bool, DEBUG_DRAW, "Debug Draw");
+
+struct SoundInfo
+{
+	std::string fmt;
+	int count;
+	float volume;
+};
+
+static std::map<std::string, SoundInfo> s_sounds;
+
+static void addSound(const char * name, const char * fmt, int count, float volume = 1.f)
+{
+	SoundInfo & s = s_sounds[name];
+	s.fmt = fmt;
+	s.count = count;
+	s.volume = volume;
+}
+
+static void initSound()
+{
+	addSound("pickup", "Sound Assets/Effects/Test/jump%02d.ogg", 4, .05f);
+}
+
+static void playSound(const char * name)
+{
+	if (s_sounds.count(name) == 0)
+	{
+		logError("sound not found: %s", name);
+		return;
+	}
+
+	SoundInfo & s = s_sounds[name];
+	char temp[256];
+	sprintf(temp, s.fmt.c_str(), rand() % s.count);
+	Sound(temp).play(s.volume * 100);
+}
 
 class Sun
 {
@@ -335,11 +376,17 @@ int main(int argc, char * argv[])
 
 	if (framework.init(0, 0, SX, SY))
 	{
+		OptionMenu optionsMenu;
+
 		AudioOutput_OpenAL ao;
 		MyAudioStream mas;
 		mas.Open("Sound Assets/Music/Loops/Music_Layer_%02d_Loop.ogg", "Sound Assets/Music/Loops/Choir_Layer_%02d_Loop.ogg", "Sound Assets/AMB/AMB_STATE_%02d_LOOP.ogg");
 		ao.Initialize(2, 48000, 1 << 14);
 		ao.Play();
+		AudioStream_Capture asc;
+		asc.mSource = &mas;
+
+		fftInit();
 
 		struct AudioSet
 		{
@@ -351,6 +398,8 @@ int main(int argc, char * argv[])
 			{ 1, 1, 1, 0,  1, 1, 1, 0,  0, 0, 1, 0 },
 			{ 0, 0, 1, 1,  1, 1, 1, 1,  0, 0, 0, 1 }
 		};
+
+		initSound();
 
 		SpriterState heartState;
 		heartState.x = WORLD_X;
@@ -371,11 +420,45 @@ int main(int argc, char * argv[])
 
 		while (!stop)
 		{
+			const float dt = 1.f / 60.f;
+
 			// process
 
 			framework.process();
 
-			ao.Update(&mas);
+			asc.mTime = framework.time;
+			ao.Update(&asc);
+			fftProcess(framework.time);
+
+			static bool doOptions = false;
+
+			if (keyboard.wentDown(SDLK_F5))
+				doOptions = !doOptions;
+
+			if (doOptions)
+			{
+				OptionMenu * menu = &optionsMenu;
+
+				menu->Update();
+
+				if (keyboard.isDown(SDLK_UP) || gamepad[0].isDown(DPAD_UP))
+					menu->HandleAction(OptionMenu::Action_NavigateUp, dt);
+				if (keyboard.isDown(SDLK_DOWN) || gamepad[0].isDown(DPAD_DOWN))
+					menu->HandleAction(OptionMenu::Action_NavigateDown, dt);
+				if (keyboard.wentDown(SDLK_RETURN) || gamepad[0].wentDown(GAMEPAD_A))
+					menu->HandleAction(OptionMenu::Action_NavigateSelect);
+				if (keyboard.wentDown(SDLK_BACKSPACE) || gamepad[0].wentDown(GAMEPAD_B))
+				{
+					if (menu->HasNavParent())
+						menu->HandleAction(OptionMenu::Action_NavigateBack);
+					else
+						doOptions = false;
+				}
+				if (keyboard.isDown(SDLK_LEFT) || gamepad[0].isDown(DPAD_LEFT))
+					menu->HandleAction(OptionMenu::Action_ValueDecrement, dt);
+				if (keyboard.isDown(SDLK_RIGHT) || gamepad[0].isDown(DPAD_RIGHT))
+					menu->HandleAction(OptionMenu::Action_ValueIncrement, dt);
+			}
 
 			// input
 
@@ -396,10 +479,10 @@ int main(int argc, char * argv[])
 			for (int c = 0; c < 12; ++c)
 				mas.targetVolume[c] = audioSets[activeAudioSet].volume[c] / 8.f;
 
+			if (keyboard.wentDown(SDLK_s))
+				playSound("pickup");
+
 			// logic
-
-
-			const float dt = 1.f / 60.f;
 
 			heartState.updateAnim(HEART_SPRITE, dt);
 
@@ -508,6 +591,24 @@ int main(int argc, char * argv[])
 
 				HEART_SPRITE.draw(heartState);
 
+				glBegin(GL_LINE_LOOP);
+				{
+					int n = Calc::Min(50, kFFTComplexSize);
+					float a = 0.f;
+					float s = 1.f / n * 2.f * M_PI;
+
+					gxColor4f(1.f, 0.f, 0.f, 1.f);
+
+					for (int i = 0; i < n; ++i, a += s)
+					{
+						float v = fftPowerValue(i) * 5.f + 200.f;
+						float x = cosf(a) * v;
+						float y = sinf(a) * v;
+						gxVertex2f(x, y);
+					}
+				}
+				glEnd();
+
 				for (int i = 0; i < MAX_LEMMINGS; ++i)
 					if (lemmings[i].isActive)
 						lemmings[i].draw();
@@ -517,6 +618,18 @@ int main(int argc, char * argv[])
 
 				gxPopMatrix();
 			}
+
+			if (DEBUG_DRAW)
+			{
+				setFont("calibri.ttf");
+				setColor(colorWhite);
+
+				drawText(10, 10, 24, +1, +1, "Debug Draw!");
+			}
+
+			if (doOptions)
+				optionsMenu.Draw(100, 100, 400, 600);
+
 			framework.endDraw();
 		}
 
