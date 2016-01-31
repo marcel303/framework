@@ -81,6 +81,7 @@ static void initSound()
 	addSound("earth_transition_cold", "Sound Assets/SFX/SFX_Earth_Transition_to_Cold.ogg", 1);
 	addSound("earth_transition_warm", "Sound Assets/SFX/SFX_Earth_Transition_to_Warm.ogg", 1);
 	addSound("earth_transition_hot", "Sound Assets/SFX/SFX_Earth_Transition_to_Hot.ogg", 1);
+	addSound("earth_explode", "Sound Assets/SFX/SFX_Earth_Explodes.ogg", 1);
 
 	// sun
 	addSound("sun_transition_depressed", "Sound Assets/SFX/SFX_Sun_Depressed.ogg", 1);
@@ -294,7 +295,7 @@ public:
 		sunHitProcessed = false;
 		distance = 0.0f;
 		real_distance = 0.0f;
-		diamond_distance = 150.0f;
+		diamond_distance = 100.0f;
 		diamond = true;
 	}
 
@@ -852,14 +853,26 @@ int main(int argc, char * argv[])
 				}
 			}
 
-			earth_happiness += sun.happiness * 0.1f * dt;
+			if (earth_happiness != 50.f)
+			{
+				earth_happiness += sun.happiness * 0.1f * dt;
+				earth_happiness = Calc::Clamp(earth_happiness, -50.f, +50.f);
+
+				if (earth_happiness == 50.f)
+				{
+					playSound("earth_explode");
+				}
+			}
 
 			sun.happiness -= 1.f * dt;
+			sun.happiness = Calc::Clamp(sun.happiness, -50.f, +50.f);
 
 			timer += dt;
 
 			if (timer >= 1.0f)
 			{
+				timer = 0.f;
+
 				for (int i = 0; i < MAX_LEMMINGS; ++i)
 				{
 					if (!lemmings[i].isActive)
