@@ -6,6 +6,8 @@
 #include "audio.h"
 #include "audiostream/AudioOutput.h"
 
+#include <Windows.h>
+
 #define SX 1920
 #define SY 1080
 
@@ -16,19 +18,33 @@
 
 #define LEMMING_SPRITE Spriter("Art Assets/Animation/Shoon/Shoon_anim_000.scml")
 #define HEART_SPRITE Spriter("Art Assets/Animation/Planet_heart/Heart_Life.scml")
+#define HEART_FACE_SPRITE Spriter("Art Assets/Animation/Faces_Earth/Earth_Faces_000.scml")
 #define PLAYER_SPRITE Spriter("Art Assets/Animation/Shoon/Shoon_anim_000.scml")
 #define SUN_SPRITE Spriter("Art Assets/Animation/Planet_heart/Heart_Life.scml")
+#define SUN_FACE_SPRITE Spriter("Art Assets/Sun/Sun_animations.scml")
 #define PARTICLE_SPRITE Spriter("Art Assets/Animation/Particules/Particules.scml")
 #define DIAMOND_SPRITE Spriter("Art Assets/Animation/Diamonds/Diamond.scml")
 
 int activeAudioSet = 0;
 
-OPTION_DECLARE(bool, DEBUG_DRAW, false);
+OPTION_DECLARE(bool, DEBUG_DRAW, true);
 OPTION_DEFINE(bool, DEBUG_DRAW, "Debug Draw");
 
 OPTION_DECLARE(int, SUN_DISTANCE, 700);
 OPTION_DEFINE(int, SUN_DISTANCE, "Sun/Distance");
 OPTION_STEP(SUN_DISTANCE, 0, 1000, 50);
+
+OPTION_DECLARE(float, H, 1.0f);
+OPTION_DEFINE(float, H, "H");
+OPTION_STEP(H, 0.0f, 1.0f, 0.01f);
+
+OPTION_DECLARE(float, S, 1.0f);
+OPTION_DEFINE(float, S, "S");
+OPTION_STEP(S, 0.0f, 1.0f, 0.01f);
+
+OPTION_DECLARE(float, L, 1.0f);
+OPTION_DEFINE(float, L, "L");
+OPTION_STEP(L, 0.0f, 1.0f, 0.01f);
 
 struct SoundInfo
 {
@@ -49,7 +65,7 @@ static void addSound(const char * name, const char * fmt, int count, float volum
 
 static void initSound()
 {
-	addSound("pickup", "Sound Assets/Effects/Test/jump%02d.ogg", 4, .05f);
+	addSound("pickup", "Sound Assets/SFX/SFX_Worshiper_Picked_Up_%02d.ogg", 4, 1.f);
 }
 
 static void playSound(const char * name)
@@ -62,7 +78,7 @@ static void playSound(const char * name)
 
 	SoundInfo & s = s_sounds[name];
 	char temp[256];
-	sprintf(temp, s.fmt.c_str(), rand() % s.count);
+	sprintf(temp, s.fmt.c_str(), 1 + (rand() % s.count));
 	Sound(temp).play(s.volume * 100);
 }
 
@@ -83,11 +99,14 @@ public:
 		speed = 0.1f;
 		prays_needed = 2;
 		emotion = kEmotion_Neutral;
+		face = 0;
+		actual_face = 0;
 	}
 
 	void spawn()
 	{
 		spriteState.startAnim(SUN_SPRITE, 0);
+		spriteFaceState.startAnim(SUN_FACE_SPRITE, actual_face);
 
 		color = colorYellow;
 		targetColor = color;
@@ -95,20 +114,28 @@ public:
 
 	void tickEmotion()
 	{
+		if (face != actual_face)
+		{
+			actual_face = face;
+			spriteFaceState.startAnim(SUN_FACE_SPRITE, actual_face);
+		}
 		if (emotion == kEmotion_Happy)
 		{
 			targetColor = colorRed;
 			activeAudioSet = 3;
+			face = 2;
 		}
 		else if (emotion == kEmotion_Neutral)
 		{
 			targetColor = colorYellow;
 			activeAudioSet = 2;
+			face = 1;
 		}
 		else if (emotion == kEmotion_Sad)
 		{
 			targetColor = colorBlue;
 			activeAudioSet = 1;
+			face = 1;
 		}
 
 		color = color.interp(targetColor, 0.01f);
@@ -120,6 +147,7 @@ public:
 
 		angle += dt * speed;
 		spriteState.updateAnim(SUN_SPRITE, dt);
+		spriteFaceState.updateAnim(SUN_FACE_SPRITE, dt);
 
 		if (prays_needed > 0)
 			emotion = kEmotion_Sad;
@@ -138,9 +166,15 @@ public:
 		spriteState.scale = 1.5f;
 		setColor(color);
 		SUN_SPRITE.draw(spriteState);
+		spriteFaceState.x = WORLD_X + cosf(angle) * (WORLD_RADIUS + distance);
+		spriteFaceState.y = WORLD_Y + sinf(angle) * (WORLD_RADIUS + distance);
+		spriteFaceState.scale = 0.4f;
+		setColor(color);
+		SUN_FACE_SPRITE.draw(spriteFaceState);
 	}
 
 	SpriterState spriteState;
+	SpriterState spriteFaceState;
 	float angle;
 	float distance;
 	float speed;
@@ -149,6 +183,42 @@ public:
 	Emotion emotion;
 	Color color;
 	Color targetColor;
+	int face;
+	int actual_face;
+};
+
+
+class Heart_Faces
+{
+public:
+	Heart_Faces()
+	{
+		animation = 0;
+	}
+
+	void update_animation(int anim)
+	{
+		if (animation != anim)
+			spriteState.startAnim(HEART_FACE_SPRITE, anim);
+		animation = anim;
+	}
+
+	void tick(float dt)
+	{
+		spriteState.updateAnim(HEART_FACE_SPRITE, dt);
+	}
+
+	void draw(Color color)
+	{
+		spriteState.x = WORLD_X;
+		spriteState.y = WORLD_Y;
+		spriteState.scale = 1.0f;
+		setColor(color);
+		HEART_FACE_SPRITE.draw(spriteState);
+	}
+
+	SpriterState spriteState;
+	int animation;
 };
 
 class Lemming
@@ -159,9 +229,14 @@ public:
 		isActive = false;
 		pray = false;
 		angle = 0.0f;
+		speed = 0.0f;
 		state = 2;
 		sunHit = false;
 		sunHitProcessed = false;
+		distance = 0.0f;
+		real_distance = 0.0f;
+		diamond_distance = 150.0f;
+		diamond = true;
 	}
 
 	void spawn()
@@ -173,6 +248,7 @@ public:
 
 	void tick(float dt)
 	{
+		real_distance += (distance - real_distance) * dt * 10.0f;
 		bool animIsDone = spriteState.updateAnim(LEMMING_SPRITE, dt);
 		if (animIsDone)
 		{
@@ -184,33 +260,50 @@ public:
 		}
 		if (state == 1)
 		{
-			spriteStateDiamond.updateAnim(DIAMOND_SPRITE, dt);
+			if (diamond)
+				spriteStateDiamond.updateAnim(DIAMOND_SPRITE, dt);
 			spriteStateParticles.updateAnim(PARTICLE_SPRITE, dt);
+			if (sunHit)
+				diamond_distance += 200.0f * dt;
+			if (!sunHit && diamond_distance > 150.0f && diamond)
+				diamond_distance -= 400.0f * dt;
+			if (diamond_distance > 450.0f)
+			{
+				state = 3;
+				spriteStateDiamond.stopAnim(DIAMOND_SPRITE);
+				diamond = false;
+			}
 		}
+
+		angle += speed * dt;
+		speed = speed * powf(0.01f, dt);
 	}
 
 	void draw()
 	{
-		spriteState.x = WORLD_X + cosf(angle) * WORLD_RADIUS;
-		spriteState.y = WORLD_Y + sinf(angle) * WORLD_RADIUS;
+		spriteState.x = WORLD_X + cosf(angle) * (WORLD_RADIUS + real_distance);
+		spriteState.y = WORLD_Y + sinf(angle) * (WORLD_RADIUS + real_distance);
 		spriteState.scale = 0.4f;
 		spriteState.angle = angle * Calc::rad2deg + 90;
 		setColor(colorWhite);
 		LEMMING_SPRITE.draw(spriteState);
 		if (state == 1)
 		{
-			spriteStateParticles.x = WORLD_X + cosf(angle) * (WORLD_RADIUS + 100);
-			spriteStateParticles.y = WORLD_Y + sinf(angle) * (WORLD_RADIUS + 100);
+			spriteStateParticles.x = WORLD_X + cosf(angle) * (WORLD_RADIUS + real_distance + 50);
+			spriteStateParticles.y = WORLD_Y + sinf(angle) * (WORLD_RADIUS + real_distance + 50);
 			spriteStateParticles.scale = 0.4f;
 			spriteStateParticles.angle = angle * Calc::rad2deg + 90;
 			setColor(colorWhite);
 			PARTICLE_SPRITE.draw(spriteStateParticles);
-			spriteStateDiamond.x = WORLD_X + cosf(angle) * (WORLD_RADIUS + 200);
-			spriteStateDiamond.y = WORLD_Y + sinf(angle) * (WORLD_RADIUS + 200);
-			spriteStateDiamond.scale = 0.4f;
-			spriteStateDiamond.angle = angle * Calc::rad2deg + 90;
-			setColor(colorWhite);
-			DIAMOND_SPRITE.draw(spriteStateDiamond);
+			if (diamond)
+			{
+				spriteStateDiamond.x = WORLD_X + cosf(angle) * (WORLD_RADIUS + real_distance + diamond_distance);
+				spriteStateDiamond.y = WORLD_Y + sinf(angle) * (WORLD_RADIUS + real_distance + diamond_distance);
+				spriteStateDiamond.scale = 0.4f;
+				spriteStateDiamond.angle = angle * Calc::rad2deg + 90;
+				setColor(colorWhite);
+				DIAMOND_SPRITE.draw(spriteStateDiamond);
+			}
 		}
 	}
 
@@ -226,10 +319,15 @@ public:
 	SpriterState spriteStateParticles;
 	SpriterState spriteStateDiamond;
 	float angle;
+	float speed;
 	bool pray;
 	int state;
 	bool sunHit;
 	bool sunHitProcessed;
+	float diamond_distance;
+	bool diamond;
+	float distance;
+	float real_distance;
 };
 
 class Player
@@ -266,7 +364,14 @@ public:
 		if (keyboard.isDown(SDLK_LEFT))
 			currentAccel -= accel;
 		if (keyboard.wentUp(SDLK_SPACE))
+		{
+			if (selected_lemming)
+			{
+				selected_lemming->distance = 0.0f;
+				selected_lemming->speed = speed * 2.f;
+			}
 			selected_lemming = 0;
+		}
 
 		speed += dt * currentAccel;
 
@@ -282,6 +387,7 @@ public:
 		if (selected_lemming)
 		{
 			selected_lemming->angle = angle;
+			selected_lemming->distance = 50.0f;
 		}
 		spriteState.updateAnim(PLAYER_SPRITE, dt);
 
@@ -366,11 +472,11 @@ int check_collision_sun(Sun sun, Lemming lemmings[], int nbr_lem)
 Player player;
 Lemming lemmings[MAX_LEMMINGS];
 Sun sun;
-float cam = 0.0;
+Heart_Faces heart_faces;
 
 int main(int argc, char * argv[])
 {
-	if (1 == 1)
+	if (1 == 2)
 	{
 		framework.fullscreen = false;
 		framework.minification = 2;
@@ -379,6 +485,8 @@ int main(int argc, char * argv[])
 	{
 		framework.fullscreen = true;
 	}
+
+	srand(GetTickCount());
 
 	if (framework.init(0, 0, SX, SY))
 	{
@@ -408,6 +516,7 @@ int main(int argc, char * argv[])
 		initSound();
 
 		SpriterState heartState;
+
 		heartState.x = WORLD_X;
 		heartState.y = WORLD_Y;
 		heartState.animSpeed = 0.1f;
@@ -420,7 +529,9 @@ int main(int argc, char * argv[])
 			lemmings[i].spawn();
 		}
 		sun.spawn();
+		sun.angle = random(0.f, 1.f) * 2.f * M_PI;
 		player.spawn();
+		player.angle = random(0.f, 1.f) * 2.f * M_PI;
 
 		bool stop = false;
 
@@ -491,7 +602,14 @@ int main(int argc, char * argv[])
 			// logic
 
 			heartState.updateAnim(HEART_SPRITE, dt);
-
+			
+			if (sun.emotion == sun.kEmotion_Happy)
+				heart_faces.update_animation(3);
+			else if (sun.emotion == sun.kEmotion_Neutral)
+				heart_faces.update_animation(1);
+			else if (sun.emotion == sun.kEmotion_Sad)
+				heart_faces.update_animation(2);
+			heart_faces.tick(dt);
 			player.tick(dt);
 			sun.tick(dt);
 
@@ -502,7 +620,10 @@ int main(int argc, char * argv[])
 			if (le)
 			{
 				if (keyboard.wentDown(SDLK_SPACE))
+				{
 					player.selected_lemming = le;
+					playSound("pickup");
+				}
 				if (keyboard.wentDown(SDLK_UP))
 					le->doPray();
 			}
@@ -513,7 +634,7 @@ int main(int argc, char * argv[])
 			{
 				if (!lemmings[i].isActive)
 					continue;
-				if (!lemmings[i].sunHitProcessed && lemmings[i].sunHit)
+				if (!lemmings[i].sunHitProcessed && lemmings[i].sunHit && lemmings[i].diamond_distance >= 450.0f)
 				{
 					--sun.prays_needed;
 					lemmings[i].sunHitProcessed = true;
@@ -537,12 +658,7 @@ int main(int argc, char * argv[])
 				static float targetZoom = 1.f;
 				static float zoom = 1.f;
 
-				/*if (sun.spriteState.x + sun.spriteState.scaleX > SX || sun.spriteState.y + sun.spriteState.scaleY > SY)
-					targetZoom -= 0.1f;
-				else if (sun.spriteState.x + sun.spriteState.scaleX < SX - 5.0 || sun.spriteState.y + sun.spriteState.scaleY < SY - 5)
-					targetZoom += 0.1f;*/
-
-				const int PLAYER_SIZE = 200;
+				const int PLAYER_SIZE = 250;
 				const float px1 = player.spriteState.x - PLAYER_SIZE;
 				const float py1 = player.spriteState.y - PLAYER_SIZE;
 				const float px2 = player.spriteState.x + PLAYER_SIZE;
@@ -570,35 +686,32 @@ int main(int argc, char * argv[])
 
 				targetZoom = Calc::Min(scaleX, scaleY);
 
-				if (keyboard.wentDown(SDLK_1))
-					targetZoom = .25f;
-				if (keyboard.wentDown(SDLK_2))
-					targetZoom = .5;
-				if (keyboard.wentDown(SDLK_3))
-					targetZoom = 1.f;
 				const float t = powf(.05f, dt);
 				zoom = t * zoom + (1.f - t) * targetZoom;
 
 				gxScalef(zoom, zoom, 1);
 				gxTranslatef(-midX, -midY, 0.f);
-
 				static Color earth_color = colorWhite;
 				Color earth_target_color = colorWhite;
 				if (sun.emotion == sun.kEmotion_Happy)
-					earth_target_color = Color::fromHex("510a42");
+					earth_target_color = Color::fromHSL(1.000f, 0.920f, 0.480f);
 				else if (sun.emotion == sun.kEmotion_Neutral)
-					earth_target_color = Color::fromHex("ab5a10");
-				else
-					earth_target_color = Color::fromHex("9cc4d1");
+					earth_target_color = Color::fromHSL(0.320f, 1.000f, 0.710f);
+				else if (sun.emotion == sun.kEmotion_Sad)
+					earth_target_color = Color::fromHSL(0.520f, 1.000f, 0.620f);
 				Sprite earth("Art Assets/planete.png");
-				earth_color = earth_color.interp(earth_target_color, 0.02f);
+				earth_color = earth_color.interp(earth_target_color, 0.004f);
 				setColor(earth_color);
 				earth.drawEx(-earth.getWidth() / 2, -earth.getHeight() / 2, 0.0, 1.0, 1.0, true, FILTER_POINT);
-
+				setColor(earth_color);
 				HEART_SPRITE.draw(heartState);
-
+				heart_faces.draw(earth_color);
+				/*
 				glBegin(GL_LINE_LOOP);
 				{
+
+				}
+
 					int n = Calc::Min(50, kFFTComplexSize);
 					float a = 0.f;
 					float s = 1.f / n * 2.f * M_PI;
@@ -614,6 +727,7 @@ int main(int argc, char * argv[])
 					}
 				}
 				glEnd();
+				*/
 
 				for (int i = 0; i < MAX_LEMMINGS; ++i)
 					if (lemmings[i].isActive)
