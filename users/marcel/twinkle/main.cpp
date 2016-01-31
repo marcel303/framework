@@ -22,6 +22,7 @@
 #define HEART_SPRITE Spriter("Art Assets/Animation/Planet_heart/Heart_Life.scml")
 #define HEART_FACE_SPRITE Spriter("Art Assets/Animation/Faces_Earth/Earth_Faces_000.scml")
 #define PLAYER_SPRITE Spriter("Art Assets/Animation/Shoon/Shoon_anim_000.scml")
+#define PLAYER2_SPRITE Spriter("Art Assets/Animation/Shoon/Shoon_anim_000.scml")
 #define SUN_SPRITE Spriter("Art Assets/Animation/Planet_heart/Heart_Life.scml")
 #define SUN_FACE_SPRITE Spriter("Art Assets/Sun/Sun_animations.scml")
 #define PARTICLE_SPRITE Spriter("Art Assets/Animation/Particules/Particules.scml")
@@ -307,6 +308,16 @@ public:
 
 	void spawn()
 	{
+		pray = false;
+		angle = 0.0f;
+		speed = 0.0f;
+		state = 2;
+		sunHit = false;
+		sunHitProcessed = false;
+		distance = 0.0f;
+		real_distance = 0.0f;
+		diamond_distance = 100.0f;
+		diamond = true;
 		spriteState.startAnim(LEMMING_SPRITE, state);
 		spriteStateDiamond.startAnim(DIAMOND_SPRITE, 0);
 		spriteStateParticles.startAnim(PARTICLE_SPRITE, 0);
@@ -496,7 +507,110 @@ public:
 
 };
 
+class Player2
+{
+public:
+	SpriterState spriteState;
+	float angle;
+	float max_speed;
+	float speed;
+	Lemming *selected_lemming;
+
+
+	Player2()
+	{
+		max_speed = 0.6;
+		speed = 0.0;
+		angle = 0.0;
+	}
+
+	void spawn()
+	{
+		spriteState.startAnim(PLAYER2_SPRITE, 0);
+	}
+
+	void tick(float dt)
+	{
+		// input
+
+		float accel = 2;
+		float currentAccel = 0;
+
+		if (keyboard.isDown(SDLK_d) || gamepad[1].getAnalog(0, ANALOG_X) > +.5f)
+			currentAccel += accel;
+		if (keyboard.isDown(SDLK_q) || gamepad[0].getAnalog(0, ANALOG_X) < -.5f)
+			currentAccel -= accel;
+		if (keyboard.wentUp(SDLK_l) || gamepad[0].wentUp(GAMEPAD_A))
+		{
+			if (selected_lemming)
+			{
+				selected_lemming->distance = 0.0f;
+				selected_lemming->speed = speed * 7.5f;
+
+				playSound("throw");
+			}
+			selected_lemming = 0;
+		}
+
+		speed += dt * currentAccel;
+
+		if (speed < -max_speed)
+			speed = -max_speed;
+		if (speed > max_speed)
+			speed = max_speed;
+
+		if (currentAccel == 0)
+			speed = speed * powf(0.01f, dt);
+
+		angle += speed * dt;
+		if (selected_lemming)
+		{
+			selected_lemming->angle = angle;
+			selected_lemming->distance = 50.0f;
+		}
+		spriteState.updateAnim(PLAYER2_SPRITE, dt);
+
+		// lemmings
+
+	}
+
+	void draw()
+	{
+		spriteState.x = WORLD_X + cosf(angle) * WORLD_RADIUS;
+		spriteState.y = WORLD_Y + sinf(angle) * WORLD_RADIUS;
+		spriteState.scale = 0.6f;
+		spriteState.angle = angle * Calc::rad2deg + 90;
+		setColor(colorWhite);
+		PLAYER2_SPRITE.draw(spriteState);
+	}
+
+};
+
 Lemming	*check_collision_player(Player player, Lemming lemmings[], int nbr_lem)
+{
+	Lemming	* result = 0;
+	int nearest = INT_MAX;
+
+	int dx;
+	int dy;
+	for (int i = 0; i < nbr_lem; ++i)
+	{
+		if (!lemmings[i].isActive)
+			continue;
+
+		dx = player.spriteState.x - lemmings[i].spriteState.x;
+		dy = player.spriteState.y - lemmings[i].spriteState.y;
+		int d = sqrtf(dx * dx + dy * dy);
+		if (d < 100 && d < nearest)
+		{
+			result = (&lemmings[i]);
+			nearest = d;
+		}
+	}
+	return (result);
+}
+
+Lemming	*check_collision_player2(Player2 player, Lemming lemmings[], int nbr_lem)
 {
 	Lemming	* result = 0;
 	int nearest = INT_MAX;
@@ -559,6 +673,7 @@ int check_collision_sun(Sun sun, Lemming lemmings[], int nbr_lem)
 }
 
 Player player;
+Player2 player2;
 Lemming lemmings[MAX_LEMMINGS];
 Sun sun;
 Heart_Faces heart_faces;
@@ -743,14 +858,16 @@ int main(int argc, char * argv[])
 		for (int i = 0; i < 4; ++i)
 		{
 			lemmings[i].isActive = true;
-			lemmings[i].angle = random(0.f, 1.f) * 2.f * M_PI;
 			lemmings[i].spawn();
+			lemmings[i].angle = random(0.f, 1.f) * 2.f * M_PI;
 		}
 
 		sun.spawn();
 		sun.angle = random(0.f, 1.f) * 2.f * M_PI;
 		player.spawn();
 		player.angle = random(0.f, 1.f) * 2.f * M_PI;
+		player2.spawn();
+		player2.angle = random(0.f, 1.f) * 2.f * M_PI;
 
 		bool stop = false;
 
@@ -836,6 +953,7 @@ int main(int argc, char * argv[])
 				heart_faces.update_animation(2);
 			heart_faces.tick(dt);
 			player.tick(dt);
+			player2.tick(dt);
 			sun.tick(dt);
 
 			for (int i = 0; i < MAX_LEMMINGS; ++i)
@@ -850,6 +968,23 @@ int main(int argc, char * argv[])
 					playSound("pickup");
 				}
 				if (keyboard.wentDown(SDLK_UP) || gamepad[0].wentDown(GAMEPAD_B))
+				{
+					le->doPray();
+					if (le->pray)
+						playSound("pray");
+					else
+						playSound("stop_prayer_hit");
+				}
+			}
+			le = check_collision_player2(player2, lemmings, MAX_LEMMINGS);
+			if (le)
+			{
+				if (keyboard.wentDown(SDLK_l) || gamepad[1].wentDown(GAMEPAD_A))
+				{
+					player2.selected_lemming = le;
+					playSound("pickup");
+				}
+				if (keyboard.wentDown(SDLK_z) || gamepad[1].wentDown(GAMEPAD_B))
 				{
 					le->doPray();
 					if (le->pray)
@@ -918,8 +1053,8 @@ int main(int argc, char * argv[])
 							if (!lemmings[i].isActive)
 							{
 								lemmings[i].isActive = (rand() % 2 ? true : false);
-								lemmings[i].angle = random(0.f, 1.f) * 2.f * M_PI;
 								lemmings[i].spawn();
+								lemmings[i].angle = random(0.f, 1.f) * 2.f * M_PI;
 								break;
 							}
 						}
@@ -940,6 +1075,7 @@ int main(int argc, char * argv[])
 									if (n == kill)
 									{
 										lemmings[i].isActive = false;
+										//lemmings[i].spawn();
 										break;
 									}
 									else
@@ -963,10 +1099,10 @@ int main(int argc, char * argv[])
 				static float zoom = -1.f;
 
 				const int PLAYER_SIZE = 250;
-				const float px1 = player.spriteState.x - PLAYER_SIZE;
-				const float py1 = player.spriteState.y - PLAYER_SIZE;
-				const float px2 = player.spriteState.x + PLAYER_SIZE;
-				const float py2 = player.spriteState.y + PLAYER_SIZE;
+				const float px1 = Calc::Min(player.spriteState.x, player2.spriteState.x) - PLAYER_SIZE;
+				const float py1 = Calc::Min(player.spriteState.y, player2.spriteState.y) - PLAYER_SIZE;
+				const float px2 = Calc::Max(player.spriteState.x, player2.spriteState.x) + PLAYER_SIZE;
+				const float py2 = Calc::Max(player.spriteState.y, player2.spriteState.y) + PLAYER_SIZE;
 
 				const int SUN_SIZE = 400;
 				const float sx1 = sun.spriteState.x - SUN_SIZE;
@@ -1073,6 +1209,7 @@ int main(int argc, char * argv[])
 						lemmings[i].draw();
 
 				player.draw();
+				player2.draw();
 				sun.draw();
 
 				gxPopMatrix();
