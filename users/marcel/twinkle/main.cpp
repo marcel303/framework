@@ -926,7 +926,7 @@ Lemming * getRandomLemming()
 int main(int argc, char * argv[])
 {
 #ifdef DEBUG
-	if (1 == 1)
+	if (1 == 2)
 	{
 		framework.fullscreen = false;
 		framework.minification = 2;
@@ -1353,7 +1353,7 @@ int main(int argc, char * argv[])
 				}
 				else
 				{
-					//EXPLOSION_SPRITE.draw(explosion);
+					EXPLOSION_SPRITE.draw(explosion);
 				}
 
 				/*
@@ -1375,13 +1375,15 @@ int main(int argc, char * argv[])
 				}
 				glEnd();
 				*/
+				if (!earth_dead)
+				{
+					for (int i = 0; i < MAX_LEMMINGS; ++i)
+						if (lemmings[i].isActive)
+							lemmings[i].draw();
 
-				for (int i = 0; i < MAX_LEMMINGS; ++i)
-					if (lemmings[i].isActive)
-						lemmings[i].draw();
-
-				player.draw();
-				player2.draw();
+					player.draw();
+					player2.draw();
+				}
 				sun.draw();
 
 				gxPopMatrix();
