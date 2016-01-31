@@ -16,7 +16,7 @@
 #define WORLD_Y 0
 #define MAX_LEMMINGS 100
 
-#define SPAWN_DEATH_CLAMP 50.f
+#define SPAWN_DEATH_CLAMP 5.f
 
 #define LEMMING_SPRITE Spriter("Art Assets/Animation/Shoon/Shoon_anim_000.scml")
 #define HEART_SPRITE Spriter("Art Assets/Animation/Planet_heart/Heart_Life.scml")
@@ -39,7 +39,7 @@ OPTION_DECLARE(float, SUN_LOSS_PER_SEC, 1.f);
 OPTION_DEFINE(float, SUN_LOSS_PER_SEC, "Sun/Loss Per Sec");
 OPTION_STEP(SUN_LOSS_PER_SEC, 0, 0, 0.01f);
 
-OPTION_DECLARE(float, EARTH_XFER_PER_SEC, .1f);
+OPTION_DECLARE(float, EARTH_XFER_PER_SEC, .05f);
 OPTION_DEFINE(float, EARTH_XFER_PER_SEC, "Earth/Xfer Per Sec");
 OPTION_STEP(EARTH_XFER_PER_SEC, 0, 0, 0.01f);
 
@@ -219,7 +219,13 @@ public:
 
 		angle += dt * speed;
 		spriteState.updateAnim(SUN_SPRITE, dt);
-		spriteFaceState.updateAnim(*faces[emotion], dt);
+		const bool isDone = spriteFaceState.updateAnim(*faces[emotion], dt);
+
+		if (isDone)
+		{
+			face = actual_face = rand() % 3;
+			spriteFaceState.startAnim(*faces[emotion], actual_face);
+		}
 
 		if (happiness > -50 && happiness < -25)
 			emotion = kEmotion_Depressed;
@@ -609,6 +615,7 @@ enum EarthState
 };
 
 float spawn_timer = 0.0;
+float pray_timer = 0.0;
 
 static bool getSunDead(float warmth)
 {
@@ -690,7 +697,7 @@ static void doTitleScreen()
 
 		wasInside = inside;
 
-		if (stopTime == 0.f && mouse.wentDown(BUTTON_LEFT) && inside)
+		if (stopTime == 0.f && ((mouse.wentDown(BUTTON_LEFT) && inside) || gamepad[0].wentDown(GAMEPAD_A)))
 		{
 			stopTime = 1.f;
 
@@ -718,6 +725,28 @@ static void doTitleScreen()
 		}
 		framework.endDraw();
 	}
+}
+
+Lemming * getRandomLemming()
+{
+	int numActive = 0;
+	for (int i = 0; i < MAX_LEMMINGS; ++i)
+		if (lemmings[i].isActive)
+			numActive++;
+	if (numActive > 1)
+	{
+		const int c = rand() % numActive;
+		for (int i = 0, n = 0; i < MAX_LEMMINGS; ++i)
+		{
+			if (lemmings[i].isActive)
+			{
+				if (n == c)
+					return &lemmings[i];
+				n++;
+			}
+		}
+	}
+	return 0;
 }
 
 int main(int argc, char * argv[])
@@ -954,6 +983,8 @@ int main(int argc, char * argv[])
 				}
 			}
 
+			// randomly spawn
+
 			spawn_timer += dt;
 
 			if (spawn_timer >= 5.0f)
@@ -977,29 +1008,23 @@ int main(int argc, char * argv[])
 					}
 					else if (earth_happiness <= -SPAWN_DEATH_CLAMP)
 					{
-						int numActive = 0;
-						for (int i = 0; i < MAX_LEMMINGS; ++i)
-							if (lemmings[i].isActive)
-								numActive++;
-						if (numActive > 1)
-						{
-							const int kill = rand() % numActive;
-							for (int i = 0, n = 0; i < MAX_LEMMINGS; ++i)
-							{
-								if (lemmings[i].isActive)
-								{
-									if (n == kill)
-									{
-										lemmings[i].doDie();
-										break;
-									}
-									else
-										n++;
-								}
-							}
-						}
+						Lemming * le = getRandomLemming();
+						if (le)
+							le->doDie();
 					}
 				}
+			}
+
+			// randomly activate pray
+
+			pray_timer += dt;
+			if (pray_timer >= 5.f)
+			{
+				pray_timer = 0.f;
+
+				Lemming * le = getRandomLemming();
+				if (le && le->state == 2)
+					le->doPray();
 			}
 
 			// draw
