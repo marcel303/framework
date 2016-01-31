@@ -65,11 +65,32 @@ static void addSound(const char * name, const char * fmt, int count, float volum
 
 static void initSound()
 {
-	addSound("pickup", "Sound Assets/SFX/SFX_Worshiper_Picked_Up_%02d.ogg", 4, 1.f);
+	// worshipper
+	addSound("pray", "Sound Assets/SFX/SFX_Chief_Convert_to Prayer.ogg", 1);
+	addSound("pray_complete", "Sound Assets/SFX/SFX_Worshipper_Prayer_Complete.ogg", 1);
+	addSound("pray_pickup", "Sound Assets/SFX/SFX_Prayer_PickUp.ogg", 1);
+	addSound("stop_prayer_hit", "Sound Assets/SFX/SFX_Chief_Stop_Prayer_Hit_%02d.ogg", 4);
+
+	addSound("pickup", "Sound Assets/SFX/SFX_Worshiper_Picked_Up_%02d.ogg", 4);
+	addSound("throw", "Sound Assets/SFX/SFX_Worshipper_Throw_%02d.ogg", 5);
+
+	// earth
+	addSound("earth_transition_frozen", "Sound Assets/SFX/SFX_Earth_Transition_to_Frozen.ogg", 1);
+	addSound("earth_transition_cold", "Sound Assets/SFX/SFX_Earth_Transition_to_Cold.ogg", 1);
+	addSound("earth_transition_warm", "Sound Assets/SFX/SFX_Earth_Transition_to_Warm.ogg", 1);
+	addSound("earth_transition_hot", "Sound Assets/SFX/SFX_Earth_Transition_to_Hot.ogg", 1);
+
+	// sun
+	addSound("sun_transition_depressed", "Sound Assets/SFX/SFX_Sun_Depressed.ogg", 1);
+	addSound("sun_transition_unhappy", "Sound Assets/SFX/SFX_Sun_Unhappy.ogg", 1);
+	addSound("sun_transition_happy", "Sound Assets/SFX/SFX_Sun_Happy_New.ogg", 1);
+	addSound("sun_transition_manichappy", "Sound Assets/SFX/SFX_Sun_Maniac_Happy.ogg", 1);
 }
 
 static void playSound(const char * name)
 {
+	log("playSound: %s", name);
+
 	if (s_sounds.count(name) == 0)
 	{
 		logError("sound not found: %s", name);
@@ -81,6 +102,8 @@ static void playSound(const char * name)
 	sprintf(temp, s.fmt.c_str(), 1 + (rand() % s.count));
 	Sound(temp).play(s.volume * 100);
 }
+
+//
 
 class Sun
 {
@@ -116,6 +139,25 @@ public:
 
 	void tickEmotion()
 	{
+		static Emotion lastEmotion = kEmotion_Neutral;
+
+		if (emotion != lastEmotion)
+		{
+			lastEmotion = emotion;
+
+		#ifndef DEBUG
+			if (emotion == kEmotion_Sad)
+				playSound("sun_transition_depressed");
+			if (emotion == kEmotion_Neutral)
+				playSound("sun_transition_unhappy");
+			if (emotion == kEmotion_Happy)
+				playSound("sun_transition_happy");
+			// todo
+			//if (emotion == kEmotion_Lucide)
+			//	playSound("sun_transition_manichappy");
+		#endif
+		}
+
 		if (face != actual_face)
 		{
 			actual_face = face;
@@ -264,6 +306,8 @@ public:
 
 	void tick(float dt)
 	{
+		const int oldState = state;
+
 		real_distance += (distance - real_distance) * dt * 10.0f;
 		bool animIsDone = spriteState.updateAnim(LEMMING_SPRITE, dt);
 		if (animIsDone)
@@ -289,6 +333,12 @@ public:
 				spriteStateDiamond.stopAnim(DIAMOND_SPRITE);
 				diamond = false;
 			}
+		}
+
+		if (state != oldState)
+		{
+			if (state == 1)
+				playSound("pray_complete");
 		}
 
 		angle += speed * dt;
@@ -375,16 +425,18 @@ public:
 		float accel = 2;
 		float currentAccel = 0;
 
-		if (keyboard.isDown(SDLK_RIGHT))
+		if (keyboard.isDown(SDLK_RIGHT) || gamepad[0].getAnalog(0, ANALOG_X) > +.5f)
 			currentAccel += accel;
-		if (keyboard.isDown(SDLK_LEFT))
+		if (keyboard.isDown(SDLK_LEFT) || gamepad[0].getAnalog(0, ANALOG_X) < -.5f)
 			currentAccel -= accel;
-		if (keyboard.wentUp(SDLK_SPACE))
+		if (keyboard.wentUp(SDLK_SPACE) || gamepad[0].wentUp(GAMEPAD_A))
 		{
 			if (selected_lemming)
 			{
 				selected_lemming->distance = 0.0f;
 				selected_lemming->speed = speed * 2.f;
+
+				playSound("throw");
 			}
 			selected_lemming = 0;
 		}
@@ -493,6 +545,70 @@ int earth_happiness = 0;
 float timer = 0.0;
 int nbr_lemmings = 0;
 
+static void doTitleScreen()
+{
+	Sprite background("Art Assets/Wallpaper.jpg");
+	background.drawEx(0, 0);
+
+	Spriter spriter("Art Assets/Sun/Sun_Animations.scml");
+	SpriterState spriterState;
+	spriterState.startAnim(spriter, 0);
+	spriterState.x = SX/2;
+	spriterState.y = SY/2;
+	spriterState.scale = .5f;
+	
+	bool stop = false;
+	float stopTime = 0.f;
+	bool wasInside = false;
+
+	while (!stop)
+	{
+		framework.process();
+
+		const float dt = framework.timeStep;
+
+		int dx = mouse.x - SX/2;
+		int dy = mouse.y - SY/2;
+		int d = sqrtf(dx * dx + dy * dy);
+		bool inside = d <= 400;
+
+		if (inside && !wasInside)
+			spriterState.startAnim(spriter, rand() % spriter.getAnimCount());
+		if (!inside)
+			spriterState.stopAnim(spriter);
+
+		wasInside = inside;
+
+		if (stopTime == 0.f && mouse.wentDown(BUTTON_LEFT) && inside)
+		{
+			stopTime = 1.f;
+
+			spriterState.animSpeed = 1.5f;
+		}
+
+		if (stopTime > 0.f)
+		{
+			stopTime -= dt;
+
+			if (stopTime <= 0.f)
+				stop = true;
+		}
+
+		spriterState.updateAnim(spriter, dt);
+
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			setColorMode(COLOR_ADD);
+			{
+				setColor(inside ? Color(63, 31, 15) : colorBlack);
+				spriter.draw(spriterState);
+			}
+			setColorMode(COLOR_MUL);
+		}
+		framework.endDraw();
+	}
+}
+
 int main(int argc, char * argv[])
 {
 	if (1 == 2)
@@ -509,6 +625,15 @@ int main(int argc, char * argv[])
 
 	if (framework.init(0, 0, SX, SY))
 	{
+	#if !defined(DEBUG)
+		framework.fillCachesWithPath("Art Assets", true);
+		framework.fillCachesWithPath("Sound Assets", true);
+	#endif
+
+	#ifndef DEBUG
+		doTitleScreen();
+	#endif
+
 		OptionMenu optionsMenu;
 
 		AudioOutput_OpenAL ao;
@@ -552,6 +677,8 @@ int main(int argc, char * argv[])
 		player.angle = random(0.f, 1.f) * 2.f * M_PI;
 
 		bool stop = false;
+
+		int frameStart = 2;
 
 		while (!stop)
 		{
@@ -602,6 +729,7 @@ int main(int argc, char * argv[])
 				stop = true;
 			}
 
+		#ifdef DEBUG
 			if (keyboard.wentDown(SDLK_q))
 				activeAudioSet = 0;
 			if (keyboard.wentDown(SDLK_w))
@@ -610,12 +738,15 @@ int main(int argc, char * argv[])
 				activeAudioSet = 2;
 			if (keyboard.wentDown(SDLK_r))
 				activeAudioSet = 3;
+		#endif
 
 			for (int c = 0; c < 12; ++c)
 				mas.targetVolume[c] = audioSets[activeAudioSet].volume[c] / 8.f;
 
+		#ifdef DEBUG
 			if (keyboard.wentDown(SDLK_s))
 				playSound("pickup");
+		#endif
 
 			// logic
 
@@ -637,13 +768,19 @@ int main(int argc, char * argv[])
 			Lemming *le = check_collision_player(player, lemmings, MAX_LEMMINGS);
 			if (le)
 			{
-				if (keyboard.wentDown(SDLK_SPACE))
+				if (keyboard.wentDown(SDLK_SPACE) || gamepad[0].wentDown(GAMEPAD_A))
 				{
 					player.selected_lemming = le;
 					playSound("pickup");
 				}
-				if (keyboard.wentDown(SDLK_UP))
+				if (keyboard.wentDown(SDLK_UP) || gamepad[0].wentDown(GAMEPAD_B))
+				{
 					le->doPray();
+					if (le->pray)
+						playSound("pray");
+					else
+						playSound("stop_prayer_hit");
+				}
 			}
 
 			check_collision_sun(sun, lemmings, MAX_LEMMINGS);
@@ -656,6 +793,7 @@ int main(int argc, char * argv[])
 				{
 					sun.happiness += 10;;
 					lemmings[i].sunHitProcessed = true;
+					playSound("pray_pickup");
 				}
 			}
 
@@ -681,14 +819,8 @@ int main(int argc, char * argv[])
 
 				gxPushMatrix();
 
-				Sprite background("Art Assets/Wallpaper.jpg");
-				background.drawEx(0, 0);
-
-				gxTranslatef(SX/2, SY/2, 0);
-				//gxTranslatef((SX/2)-player.spriteState.x, SY/2-player.spriteState.y, 0);
-
 				static float targetZoom = 1.f;
-				static float zoom = 1.f;
+				static float zoom = -1.f;
 
 				const int PLAYER_SIZE = 250;
 				const float px1 = player.spriteState.x - PLAYER_SIZE;
@@ -718,9 +850,33 @@ int main(int argc, char * argv[])
 
 				targetZoom = Calc::Min(scaleX, scaleY);
 
-				const float t = powf(.05f, dt);
-				zoom = t * zoom + (1.f - t) * targetZoom;
+				frameStart--;
 
+				if (frameStart > 0)
+					zoom = targetZoom;
+				else
+				{
+					const float t = powf(.05f, dt);
+					zoom = t * zoom + (1.f - t) * targetZoom;
+				}
+
+				gxPushMatrix();
+				{
+					const float zoomMin = .5f;
+					const float zoomMax = 1.2f;
+					const float zoomAmount = .25f;
+					const float backgroundZoom = Calc::Clamp(zoom / zoomMin * zoomAmount + (1.f - zoomAmount), 1.f, 2.f);
+
+					gxTranslatef(SX/2, SY/2, 0.f);
+					gxScalef(backgroundZoom, backgroundZoom, 1.f);
+					gxTranslatef(-SX/2, -SY/2, 0.f);
+					Sprite background("Art Assets/Wallpaper.jpg");
+					background.filter = FILTER_LINEAR;
+					background.draw();
+				}
+				gxPopMatrix();
+
+				gxTranslatef(SX/2, SY/2, 0);
 				gxScalef(zoom, zoom, 1);
 				gxTranslatef(-midX, -midY, 0.f);
 				static Color earth_color = colorWhite;
@@ -740,12 +896,10 @@ int main(int argc, char * argv[])
 				setColor(earth_color);
 				HEART_SPRITE.draw(heartState);
 				heart_faces.draw(earth_color);
+
 				/*
 				glBegin(GL_LINE_LOOP);
 				{
-
-				}
-
 					int n = Calc::Min(50, kFFTComplexSize);
 					float a = 0.f;
 					float s = 1.f / n * 2.f * M_PI;
@@ -773,12 +927,24 @@ int main(int argc, char * argv[])
 				gxPopMatrix();
 			}
 
+			if (frameStart > 0)
+			{
+				setColor(colorBlack);
+				drawRect(0, 0, SX, SY);
+			}
+
 			if (DEBUG_DRAW)
 			{
 				setFont("calibri.ttf");
 				setColor(colorWhite);
 
 				drawText(10, 10, 24, +1, +1, "Debug Draw!");
+
+				for (int i = 0; i < 12; ++i)
+				{
+					setColorf(1.f, 1.f, 1.f, .25f + 4.f * mas.volume[i]);
+					drawText(10, 40 + 30 * i, 24, +1, +1, mas.source[i].FileName_get());
+				}
 			}
 
 			if (doOptions)
