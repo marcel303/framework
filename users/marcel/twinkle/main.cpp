@@ -87,9 +87,10 @@ class Sun
 public:
 	enum Emotion
 	{
+		kEmotion_Depressed,
+		kEmotion_Sad,
 		kEmotion_Happy,
-		kEmotion_Neutral,
-		kEmotion_Sad
+		kEmotion_Lucid
 	};
 
 	Sun()
@@ -97,10 +98,11 @@ public:
 		angle = 0.0f;
 		distance = 700.0f;
 		speed = 0.1f;
-		prays_needed = 2;
-		emotion = kEmotion_Neutral;
+		emotion = kEmotion_Happy;
 		face = 0;
 		actual_face = 0;
+		happiness = 0;
+		timer = 0.0f;
 	}
 
 	void spawn()
@@ -119,23 +121,29 @@ public:
 			actual_face = face;
 			spriteFaceState.startAnim(SUN_FACE_SPRITE, actual_face);
 		}
-		if (emotion == kEmotion_Happy)
+		if (emotion == kEmotion_Lucid)
 		{
 			targetColor = colorRed;
 			activeAudioSet = 3;
-			face = 2;
+			face = rand() % 3;
 		}
-		else if (emotion == kEmotion_Neutral)
+		else if (emotion == kEmotion_Happy)
 		{
 			targetColor = colorYellow;
 			activeAudioSet = 2;
-			face = 1;
+			face = 3 + (rand() % 3);
 		}
 		else if (emotion == kEmotion_Sad)
 		{
 			targetColor = colorBlue;
 			activeAudioSet = 1;
-			face = 1;
+			face = 6 + (rand() % 3);
+		}
+		else if (emotion == kEmotion_Depressed)
+		{
+			targetColor = colorBlue;
+			activeAudioSet = 1;
+			face = 9 + (rand() % 3);
 		}
 
 		color = color.interp(targetColor, 0.01f);
@@ -143,18 +151,26 @@ public:
 
 	void tick(float dt)
 	{
+		timer += dt;
+		if (timer > 1.0)
+		{
+			--happiness;
+			timer = 0.0f;
+		}
 		distance = SUN_DISTANCE;
 
 		angle += dt * speed;
 		spriteState.updateAnim(SUN_SPRITE, dt);
 		spriteFaceState.updateAnim(SUN_FACE_SPRITE, dt);
 
-		if (prays_needed > 0)
+		if (happiness > -50 && happiness < -25)
+			emotion = kEmotion_Depressed;
+		if (happiness > -25 && happiness < 0)
 			emotion = kEmotion_Sad;
-		else if (prays_needed < 0)
+		if (happiness > 0 && happiness < 25)
 			emotion = kEmotion_Happy;
-		else
-			emotion = kEmotion_Neutral;
+		if (happiness > 25 && happiness < 50)
+			emotion = kEmotion_Lucid;
 
 		tickEmotion();
 	}
@@ -178,13 +194,13 @@ public:
 	float angle;
 	float distance;
 	float speed;
-	int sun_state; // 0 not happy, 1 it's okey, 2, too happy
-	int prays_needed;
 	Emotion emotion;
 	Color color;
 	Color targetColor;
 	int face;
 	int actual_face;
+	int happiness;
+	float timer;
 };
 
 
@@ -473,6 +489,9 @@ Player player;
 Lemming lemmings[MAX_LEMMINGS];
 Sun sun;
 Heart_Faces heart_faces;
+int earth_happiness = 0;
+float timer = 0.0;
+int nbr_lemmings = 0;
 
 int main(int argc, char * argv[])
 {
@@ -522,12 +541,11 @@ int main(int argc, char * argv[])
 		heartState.animSpeed = 0.1f;
 		heartState.startAnim(HEART_SPRITE, 0);
 
-		for (int i = 0; i < MAX_LEMMINGS / 10; ++i)
-		{
-			lemmings[i].isActive = true;
-			lemmings[i].angle = random(0.f, 1.f) * 2.f * M_PI;
-			lemmings[i].spawn();
-		}
+		lemmings[nbr_lemmings].isActive = true;
+		lemmings[nbr_lemmings].angle = random(0.f, 1.f) * 2.f * M_PI;
+		lemmings[nbr_lemmings].spawn();
+
+		nbr_lemmings++;
 		sun.spawn();
 		sun.angle = random(0.f, 1.f) * 2.f * M_PI;
 		player.spawn();
@@ -603,9 +621,9 @@ int main(int argc, char * argv[])
 
 			heartState.updateAnim(HEART_SPRITE, dt);
 			
-			if (sun.emotion == sun.kEmotion_Happy)
+			if (sun.emotion == sun.kEmotion_Lucid)
 				heart_faces.update_animation(3);
-			else if (sun.emotion == sun.kEmotion_Neutral)
+			else if (sun.emotion == sun.kEmotion_Happy)
 				heart_faces.update_animation(1);
 			else if (sun.emotion == sun.kEmotion_Sad)
 				heart_faces.update_animation(2);
@@ -636,10 +654,24 @@ int main(int argc, char * argv[])
 					continue;
 				if (!lemmings[i].sunHitProcessed && lemmings[i].sunHit && lemmings[i].diamond_distance >= 450.0f)
 				{
-					--sun.prays_needed;
+					sun.happiness += 10;;
 					lemmings[i].sunHitProcessed = true;
 				}
 			}
+
+			timer += dt;
+			if (timer >= 1.0f)
+			{
+				earth_happiness += sun.happiness / 0.1;
+				if (nbr_lemmings < MAX_LEMMINGS)
+				{
+					lemmings[nbr_lemmings].isActive = (rand() % 2 ? true : false);
+					lemmings[nbr_lemmings].angle = random(0.f, 1.f) * 2.f * M_PI;
+					lemmings[nbr_lemmings].spawn();
+					nbr_lemmings++;
+				}
+			}
+				timer = 0.0f;
 
 			// draw
 
@@ -693,12 +725,14 @@ int main(int argc, char * argv[])
 				gxTranslatef(-midX, -midY, 0.f);
 				static Color earth_color = colorWhite;
 				Color earth_target_color = colorWhite;
-				if (sun.emotion == sun.kEmotion_Happy)
-					earth_target_color = Color::fromHSL(1.000f, 0.920f, 0.480f);
-				else if (sun.emotion == sun.kEmotion_Neutral)
-					earth_target_color = Color::fromHSL(0.320f, 1.000f, 0.710f);
-				else if (sun.emotion == sun.kEmotion_Sad)
+				if (earth_happiness > -50.0 && earth_happiness < -25.0)
 					earth_target_color = Color::fromHSL(0.520f, 1.000f, 0.620f);
+				else if (earth_happiness > -25 && earth_happiness < 0)
+					earth_target_color = Color::fromHSL(0.520f, 1.000f, 0.620f);
+				else if (earth_happiness > 0 && earth_happiness < 25)
+					earth_target_color = Color::fromHSL(0.320f, 1.000f, 0.710f);
+				else if (earth_happiness > 25 && earth_happiness < 50)
+					earth_target_color = Color::fromHSL(1.000f, 0.920f, 0.480f);
 				Sprite earth("Art Assets/planete.png");
 				earth_color = earth_color.interp(earth_target_color, 0.004f);
 				setColor(earth_color);
