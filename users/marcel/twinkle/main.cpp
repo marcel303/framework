@@ -65,7 +65,15 @@ static void addSound(const char * name, const char * fmt, int count, float volum
 
 static void initSound()
 {
-	addSound("pickup", "Sound Assets/SFX/SFX_Worshiper_Picked_Up_%02d.ogg", 4, 1.f);
+	addSound("pray", "Sound Assets/SFX/SFX_Chief_Convert_to Prayer.ogg", 1);
+	addSound("stop_prayer_hit", "Sound Assets/SFX/SFX_Chief_Stop_Prayer_Hit_%02d.ogg", 4);
+	addSound("throw", "Sound Assets/SFX/SFX_Worshipper_Throw_%02d.ogg", 5);
+
+	addSound("pickup", "Sound Assets/SFX/SFX_Worshiper_Picked_Up_%02d.ogg", 4);
+	addSound("transition_frozen", "Sound Assets/SFX/SFX_Earth_Transition_to_Frozen.ogg", 1);
+	addSound("transition_cold", "Sound Assets/SFX/SFX_Earth_Transition_to_Cold.ogg", 1);
+	addSound("transition_warm", "Sound Assets/SFX/SFX_Earth_Transition_to_Warm.ogg", 1);
+	addSound("transition_hot", "Sound Assets/SFX/SFX_Earth_Transition_to_Hot.ogg", 1);
 }
 
 static void playSound(const char * name)
@@ -116,6 +124,23 @@ public:
 
 	void tickEmotion()
 	{
+		static Emotion lastEmotion = kEmotion_Neutral;
+
+		if (emotion != lastEmotion)
+		{
+			lastEmotion = emotion;
+
+			if (emotion == kEmotion_Sad)
+				playSound("transition_frozen");
+			if (emotion == kEmotion_Neutral)
+				playSound("transition_cold");
+			if (emotion == kEmotion_Happy)
+				playSound("transition_warm");
+			// todo
+			//if (emotion == kEmotion_Lucide)
+			//	playSound("transition_hot");
+		}
+
 		if (face != actual_face)
 		{
 			actual_face = face;
@@ -371,6 +396,8 @@ public:
 			{
 				selected_lemming->distance = 0.0f;
 				selected_lemming->speed = speed * 2.f;
+
+				playSound("throw");
 			}
 			selected_lemming = 0;
 		}
@@ -701,7 +728,13 @@ int main(int argc, char * argv[])
 					playSound("pickup");
 				}
 				if (keyboard.wentDown(SDLK_UP) || gamepad[0].wentDown(GAMEPAD_B))
+				{
 					le->doPray();
+					if (le->pray)
+						playSound("pray");
+					else
+						playSound("stop_prayer_hit");
+				}
 			}
 
 			check_collision_sun(sun, lemmings, MAX_LEMMINGS);
