@@ -907,7 +907,7 @@ static void doTitleScreen()
 
 		wasInside = inside;
 
-		if (stopTime == 0.f && ((mouse.wentDown(BUTTON_LEFT) && inside) || gamepad[0].wentDown(GAMEPAD_A) || animIsDone))
+		if (stopTime == 0.f && ((mouse.wentDown(BUTTON_LEFT) && inside) || !keyboard.isIdle() || gamepad[0].wentDown(GAMEPAD_A) || animIsDone))
 		{
 			stopTime = 1.f;
 
@@ -983,6 +983,7 @@ int main(int argc, char * argv[])
 #endif
 	{
 		framework.fullscreen = true;
+		framework.useClosestDisplayMode = true;
 	}
 
 	srand(GetTickCount());
@@ -1061,7 +1062,8 @@ int main(int argc, char * argv[])
 			if (keyboard.wentDown(SDLK_l) && dtMul > 1)
 				dtMul--;
 
-			const float dt = dtMul / 60.f;
+			//const float dt = dtMul / 60.f;
+			const float dt = Calc::Min(1.f / 30.f, framework.timeStep) * dtMul;
 
 			// process
 
