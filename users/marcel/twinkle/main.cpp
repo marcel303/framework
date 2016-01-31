@@ -340,10 +340,10 @@ public:
 		bool animIsDone = spriteState.updateAnim(LEMMING_SPRITE, dt);
 		if (animIsDone)
 		{
-			if (!state)
+			if (state == 0)
 				state = 1;
 			if (state == 3)
-				state = 2;
+				isActive = false;
 			spriteState.startAnim(LEMMING_SPRITE, state);
 		}
 		if (state == 1)
@@ -399,12 +399,23 @@ public:
 				DIAMOND_SPRITE.draw(spriteStateDiamond);
 			}
 		}
+
+		if (DEBUG_DRAW)
+		{
+			drawCircle(spriteState.x, spriteState.y, 10, 10);
+		}
 	}
 
 	void doPray()
 	{
 		pray = (pray ? false : true);
-		state = (pray ? 0 : 3);
+		state = (pray ? 0 : 2);
+		spriteState.startAnim(LEMMING_SPRITE, state);
+	}
+
+	void doDie()
+	{
+		state = 3;
 		spriteState.startAnim(LEMMING_SPRITE, state);
 	}
 
@@ -765,7 +776,13 @@ int main(int argc, char * argv[])
 
 		while (!stop)
 		{
-			const float dt = 1.f / 60.f;
+			static int dtMul = 1;
+			if (keyboard.wentDown(SDLK_k))
+				dtMul++;
+			if (keyboard.wentDown(SDLK_l) && dtMul > 1)
+				dtMul--;
+
+			const float dt = dtMul / 60.f;
 
 			// process
 
@@ -929,7 +946,7 @@ int main(int argc, char * argv[])
 						{
 							if (!lemmings[i].isActive)
 							{
-								lemmings[i].isActive = (rand() % 2 ? true : false);
+								lemmings[i].isActive = true;
 								lemmings[i].angle = random(0.f, 1.f) * 2.f * M_PI;
 								lemmings[i].spawn();
 								break;
@@ -951,7 +968,7 @@ int main(int argc, char * argv[])
 								{
 									if (n == kill)
 									{
-										lemmings[i].isActive = false;
+										lemmings[i].doDie();
 										break;
 									}
 									else
