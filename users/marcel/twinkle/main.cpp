@@ -23,7 +23,6 @@
 #define HEART_FACE_SPRITE Spriter("Art Assets/Animation/Faces_Earth/Earth_Faces_000.scml")
 #define PLAYER_SPRITE Spriter("Art Assets/Animation/Shoon/Shoon_anim_000.scml")
 #define SUN_SPRITE Spriter("Art Assets/Animation/Planet_heart/Heart_Life.scml")
-#define SUN_FACE_SPRITE Spriter("Art Assets/Sun/Sun_animations.scml")
 #define PARTICLE_SPRITE Spriter("Art Assets/Animation/Particules/Particules.scml")
 #define DIAMOND_SPRITE Spriter("Art Assets/Animation/Diamonds/Diamond.scml")
 
@@ -125,6 +124,8 @@ static void playSound(const char * name)
 class Sun
 {
 public:
+	Spriter * faces[4];
+
 	enum Emotion
 	{
 		kEmotion_Depressed,
@@ -147,10 +148,15 @@ public:
 	void spawn()
 	{
 		spriteState.startAnim(SUN_SPRITE, 0);
-		spriteFaceState.startAnim(SUN_FACE_SPRITE, actual_face);
+		spriteFaceState.startAnim(*faces[emotion], actual_face);
 
 		color = colorYellow;
 		targetColor = color;
+
+		faces[kEmotion_Depressed] = new Spriter("Art Assets/Sun/Sun_animations_depressed.scml");
+		faces[kEmotion_Sad] = new Spriter("Art Assets/Sun/Sun_animations_unhappy.scml");
+		faces[kEmotion_Happy] = new Spriter("Art Assets/Sun/Sun_animations_happy.scml");
+		faces[kEmotion_Lucid] = new Spriter("Art Assets/Sun/Sun_animations_insane.scml");
 	}
 
 	void tickEmotion()
@@ -173,11 +179,6 @@ public:
 		#endif
 		}
 
-		if (face != actual_face)
-		{
-			actual_face = face;
-			spriteFaceState.startAnim(SUN_FACE_SPRITE, actual_face);
-		}
 		if (emotion == kEmotion_Lucid)
 		{
 			targetColor = colorRed;
@@ -203,6 +204,12 @@ public:
 			face = rand() % 3;
 		}
 
+		if (face != actual_face)
+		{
+			actual_face = face;
+			spriteFaceState.startAnim(*faces[emotion], actual_face);
+		}
+
 		color = color.interp(targetColor, 0.01f);
 	}
 
@@ -212,7 +219,7 @@ public:
 
 		angle += dt * speed;
 		spriteState.updateAnim(SUN_SPRITE, dt);
-		spriteFaceState.updateAnim(SUN_FACE_SPRITE, dt);
+		spriteFaceState.updateAnim(*faces[emotion], dt);
 
 		if (happiness > -50 && happiness < -25)
 			emotion = kEmotion_Depressed;
@@ -237,7 +244,7 @@ public:
 		spriteFaceState.y = WORLD_Y + sinf(angle) * (WORLD_RADIUS + distance);
 		spriteFaceState.scale = 0.4f;
 		setColor(color);
-		SUN_FACE_SPRITE.draw(spriteFaceState);
+		faces[emotion]->draw(spriteFaceState);
 	}
 
 	SpriterState spriteState;
@@ -685,7 +692,7 @@ static void doTitleScreen()
 
 int main(int argc, char * argv[])
 {
-	if (0)//(1 == 1)
+	if (1 == 2)
 	{
 		framework.fullscreen = false;
 		framework.minification = 2;
@@ -814,6 +821,11 @@ int main(int argc, char * argv[])
 				activeAudioSet = 2;
 			if (keyboard.wentDown(SDLK_r))
 				activeAudioSet = 3;
+
+			if (keyboard.wentDown(SDLK_o))
+				sun.happiness += 10.f;
+			if (keyboard.wentDown(SDLK_p))
+				sun.happiness -= 10.f;
 		#endif
 
 			for (int c = 0; c < 12; ++c)
