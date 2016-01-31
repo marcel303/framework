@@ -874,6 +874,8 @@ static void doTitleScreen()
 
 		const float dt = framework.timeStep;
 
+		bool animIsDone = spriterState.updateAnim(spriter, dt);
+
 	#if CINE
 		bool inside = true;
 	#else
@@ -890,7 +892,7 @@ static void doTitleScreen()
 
 		wasInside = inside;
 
-		if (stopTime == 0.f && ((mouse.wentDown(BUTTON_LEFT) && inside) || gamepad[0].wentDown(GAMEPAD_A)))
+		if (stopTime == 0.f && ((mouse.wentDown(BUTTON_LEFT) && inside) || gamepad[0].wentDown(GAMEPAD_A) || animIsDone))
 		{
 			stopTime = 1.f;
 
@@ -906,8 +908,6 @@ static void doTitleScreen()
 
 			music.setVolume(100 * stopTime);
 		}
-
-		spriterState.updateAnim(spriter, dt);
 
 		framework.beginDraw(0, 0, 0, 0);
 		{
