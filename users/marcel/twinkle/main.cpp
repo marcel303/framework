@@ -566,6 +566,11 @@ enum EarthState
 };
 float timer = 0.0;
 
+static bool getSunDead(float warmth)
+{
+	return warmth == -50.f || warmth == +50.f;
+}
+
 static bool getEarthDead(float warmth)
 {
 	return warmth == -50.f || warmth == +50.f;
@@ -873,8 +878,20 @@ int main(int argc, char * argv[])
 				}
 			}
 
-			sun.happiness -= 1.f * dt;
-			sun.happiness = Calc::Clamp(sun.happiness, -50.f, +50.f);
+			bool sun_dead = getSunDead(sun.happiness);
+
+			if (!sun_dead)
+			{
+				sun.happiness -= 1.f * dt;
+				sun.happiness = Calc::Clamp(sun.happiness, -50.f, +50.f);
+
+				// did we die?
+				sun_dead = getSunDead(sun.happiness);
+				if (sun_dead)
+				{
+					// todo
+				}
+			}
 
 			timer += dt;
 
