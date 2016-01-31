@@ -177,37 +177,37 @@ public:
 			if (emotion == kEmotion_Lucid)
 				playSound("sun_transition_manichappy");
 		#endif
-		}
 
-		if (emotion == kEmotion_Lucid)
-		{
-			targetColor = colorRed;
-			activeAudioSet = 3;
-			face = rand() % 3;
-		}
-		else if (emotion == kEmotion_Happy)
-		{
-			targetColor = colorYellow;
-			activeAudioSet = 2;
-			face = rand() % 3;
-		}
-		else if (emotion == kEmotion_Sad)
-		{
-			targetColor = colorBlue;
-			activeAudioSet = 1;
-			face = rand() % 3;
-		}
-		else if (emotion == kEmotion_Depressed)
-		{
-			targetColor = colorBlue;
-			activeAudioSet = 1;
-			face = rand() % 3;
-		}
+			if (emotion == kEmotion_Lucid)
+			{
+				targetColor = colorRed;
+				activeAudioSet = 3;
+				face = rand() % 3;
+			}
+			else if (emotion == kEmotion_Happy)
+			{
+				targetColor = colorYellow;
+				activeAudioSet = 2;
+				face = rand() % 3;
+			}
+			else if (emotion == kEmotion_Sad)
+			{
+				targetColor = colorBlue;
+				activeAudioSet = 1;
+				face = rand() % 3;
+			}
+			else if (emotion == kEmotion_Depressed)
+			{
+				targetColor = colorBlue;
+				activeAudioSet = 1;
+				face = rand() % 3;
+			}
 
-		if (face != actual_face)
-		{
-			actual_face = face;
-			spriteFaceState.startAnim(*faces[emotion], actual_face);
+			if (face != actual_face)
+			{
+				actual_face = face;
+				spriteFaceState.startAnim(*faces[emotion], actual_face);
+			}
 		}
 
 		color = color.interp(targetColor, 0.01f);
