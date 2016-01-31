@@ -27,6 +27,7 @@
 #define PARTICLE_SPRITE Spriter("Art Assets/Animation/Particules/Particules.scml")
 #define DIAMOND_SPRITE Spriter("Art Assets/Animation/Diamonds/Diamond.scml")
 #define EXPLOSION_SPRITE Spriter("Art Assets/Animation/Explosion/Explosion.scml")
+#define RAY_SPRITE Spriter("Art Assets/Animation/Ray/SunRay.scml")
 
 int activeAudioSet = 0;
 
@@ -151,7 +152,7 @@ public:
 	{
 		spriteState.startAnim(SUN_SPRITE, 0);
 		spriteFaceState.startAnim(*faces[emotion], actual_face);
-
+		spriteStateRay.startAnim(RAY_SPRITE, 0);
 		color = colorYellow;
 		targetColor = color;
 
@@ -221,6 +222,7 @@ public:
 
 		angle += dt * speed;
 		spriteState.updateAnim(SUN_SPRITE, dt);
+		spriteStateRay.updateAnim(RAY_SPRITE, dt);
 		const bool isDone = spriteFaceState.updateAnim(*faces[emotion], dt);
 
 		if (isDone)
@@ -243,11 +245,23 @@ public:
 
 	void draw()
 	{
+		setBlend(BLEND_ADD);
+
+		spriteStateRay.x = WORLD_X + cosf(angle) * (WORLD_RADIUS + distance);
+		spriteStateRay.y = WORLD_Y + sinf(angle) * (WORLD_RADIUS + distance);
+		spriteStateRay.scale = 1.3f;
+		spriteStateRay.angle = atan2f(spriteState.y, spriteState.x) * Calc::rad2deg + 90;
+		setColor(color);
+		RAY_SPRITE.draw(spriteStateRay);
+
+		setBlend(BLEND_ALPHA);
+
 		spriteState.x = WORLD_X + cosf(angle) * (WORLD_RADIUS + distance);
 		spriteState.y = WORLD_Y + sinf(angle) * (WORLD_RADIUS + distance);
 		spriteState.scale = 1.5f;
 		setColor(color);
 		SUN_SPRITE.draw(spriteState);
+
 		spriteFaceState.x = WORLD_X + cosf(angle) * (WORLD_RADIUS + distance);
 		spriteFaceState.y = WORLD_Y + sinf(angle) * (WORLD_RADIUS + distance);
 		spriteFaceState.scale = 0.4f;
@@ -257,6 +271,7 @@ public:
 
 	SpriterState spriteState;
 	SpriterState spriteFaceState;
+	SpriterState spriteStateRay;
 	float angle;
 	float distance;
 	float speed;
@@ -531,7 +546,7 @@ public:
 			if (selected_lemming)
 			{
 				selected_lemming->distance = 0.0f;
-				selected_lemming->speed = speed * 6.0f;
+				selected_lemming->speed = speed * 12.0f;
 
 				playSound("throw");
 			}
@@ -552,7 +567,7 @@ public:
 		if (selected_lemming)
 		{
 			selected_lemming->angle = angle;
-			selected_lemming->distance = 50.0f;
+			selected_lemming->distance = 120.0f;
 		}
 		spriteState.updateAnim(PLAYER_SPRITE, dt);
 
@@ -564,7 +579,7 @@ public:
 	{
 		spriteState.x = WORLD_X + cosf(angle) * WORLD_RADIUS;
 		spriteState.y = WORLD_Y + sinf(angle) * WORLD_RADIUS;
-		spriteState.scale = 0.2f * scale;
+		spriteState.scale = 0.3f;
 		spriteState.angle = angle * Calc::rad2deg + 90;
 		if (!direction_right)
 			spriteState.flipX = true;
@@ -642,7 +657,7 @@ public:
 			if (selected_lemming)
 			{
 				selected_lemming->distance = 0.0f;
-				selected_lemming->speed = speed * 7.5f;
+				selected_lemming->speed = speed * 12.0f;
 
 				playSound("throw");
 			}
@@ -663,7 +678,7 @@ public:
 		if (selected_lemming)
 		{
 			selected_lemming->angle = angle;
-			selected_lemming->distance = 50.0f;
+			selected_lemming->distance = 120.0f;
 		}
 		spriteState.updateAnim(PLAYER2_SPRITE, dt);
 
@@ -675,7 +690,7 @@ public:
 	{
 		spriteState.x = WORLD_X + cosf(angle) * WORLD_RADIUS;
 		spriteState.y = WORLD_Y + sinf(angle) * WORLD_RADIUS;
-		spriteState.scale = 0.2f * scale;
+		spriteState.scale = 0.3f;
 		spriteState.angle = angle * Calc::rad2deg + 90;
 		if (!direction_right)
 			spriteState.flipX = true;
