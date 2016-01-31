@@ -31,8 +31,10 @@
 
 int activeAudioSet = 0;
 
+#ifdef DEBUG
 OPTION_DECLARE(bool, DEBUG_DRAW, true);
 OPTION_DEFINE(bool, DEBUG_DRAW, "Debug Draw");
+#endif
 
 OPTION_DECLARE(int, SUN_DISTANCE, 700);
 OPTION_DEFINE(int, SUN_DISTANCE, "Sun/Distance");
@@ -435,10 +437,10 @@ public:
 			}
 		}
 
+	#ifdef DEBUG
 		if (DEBUG_DRAW)
-		{
 			drawCircle(spriteState.x, spriteState.y, 10, 10);
-		}
+	#endif
 	}
 
 	void doPray(bool v)
@@ -587,10 +589,10 @@ public:
 			spriteState.flipX = false;
 		setColor(colorWhite);
 		PLAYER_SPRITE.draw(spriteState);
+	#ifdef DEBUG
 		if (DEBUG_DRAW)
-		{
 			drawCircle(spriteState.x, spriteState.y, 10, 10);
-		}
+	#endif
 	}
 
 };
@@ -1121,7 +1123,7 @@ int main(int argc, char * argv[])
 				activeAudioSet = 3;
 		#endif
 
-			const float masVolumeMultiplier = 1.f / 4.f;
+			const float masVolumeMultiplier = 1.f / 2.f;
 			for (int c = 0; c < 8; ++c)
 				mas.targetVolume[c] = audioSets[activeAudioSet].volume[c] * masVolumeMultiplier;
 
