@@ -143,7 +143,7 @@ public:
 		emotion = kEmotion_Happy;
 		face = 0;
 		actual_face = 0;
-		happiness = 0.f;
+		happiness = 7.f;
 	}
 
 	void spawn()
@@ -780,6 +780,9 @@ static Color getEarthColor(EarthState state)
 
 static void doTitleScreen()
 {
+	Music music("Sound Assets/Music/Twinkle_Menu_Theme_Loop.ogg");
+	music.play();
+
 	Sprite background("Art Assets/Wallpaper.jpg");
 	background.drawEx(0, 0);
 
@@ -840,6 +843,8 @@ static void doTitleScreen()
 		}
 		framework.endDraw();
 	}
+
+	music.stop();
 }
 
 Lemming * getRandomLemming()
@@ -1007,15 +1012,11 @@ int main(int argc, char * argv[])
 				activeAudioSet = 2;
 			if (keyboard.wentDown(SDLK_r))
 				activeAudioSet = 3;
-
-			if (keyboard.wentDown(SDLK_o))
-				sun.happiness += 10.f;
-			if (keyboard.wentDown(SDLK_p))
-				sun.happiness -= 10.f;
 		#endif
 
-			for (int c = 0; c < 12; ++c)
-				mas.targetVolume[c] = audioSets[activeAudioSet].volume[c] / 8.f;
+			const float masVolumeMultiplier = 1.f / 8.f;
+			for (int c = 0; c < 8; ++c)
+				mas.targetVolume[c] = audioSets[activeAudioSet].volume[c] * masVolumeMultiplier;
 
 		#ifdef DEBUG
 			if (keyboard.wentDown(SDLK_s))
@@ -1089,6 +1090,10 @@ int main(int argc, char * argv[])
 				}
 			}
 
+			//
+
+			const float oldSunHappiness = sun.happiness;
+
 			bool earth_dead = getEarthDead(earth_happiness);
 
 			if (!earth_dead)
@@ -1117,6 +1122,13 @@ int main(int argc, char * argv[])
 				{
 					// todo
 				}
+
+			#ifdef DEBUG
+				if (keyboard.wentDown(SDLK_o))
+					sun.happiness += 10.f;
+				if (keyboard.wentDown(SDLK_p))
+					sun.happiness -= 10.f;
+			#endif
 			}
 
 			// randomly spawn
@@ -1151,6 +1163,22 @@ int main(int argc, char * argv[])
 					}
 				}
 			}
+
+			//
+
+			const float newSunHappiness = sun.happiness;
+			const float sunChange = newSunHappiness - oldSunHappiness;
+
+			static volatile float sunRate = 0.f;
+			sunRate += sunChange;
+			sunRate = sunRate * powf(.5f, dt);
+
+			const float sunVec1 = Calc::Clamp(sun.happiness / 25.f, -1.f, 1.f);
+			const float sunVec2 = Calc::Clamp(sunRate, -1.f, 1.f);
+			const float choirValue = Calc::Clamp(sunVec1 * sunVec2, 0.f, 1.f);
+
+			for (int i = 8; i < 12; ++i)
+				mas.targetVolume[i] = choirValue * audioSets[activeAudioSet].volume[i] * masVolumeMultiplier;
 
 			// randomly activate pray
 
@@ -1316,6 +1344,10 @@ int main(int argc, char * argv[])
 				setColor(colorWhite);
 				drawText(10, y += 30, 24, +1, +1, "earth happiness %f", earth_happiness);
 				drawText(10, y += 30, 24, +1, +1, "sun happiness %f", sun.happiness);
+
+				drawText(10, y += 30, 24, +1, +1, "sun vec1 %f", sunVec1);
+				drawText(10, y += 30, 24, +1, +1, "sun vec2 %f / %f", sunVec2, sunRate);
+				drawText(10, y += 30, 24, +1, +1, "sun choir %f", choirValue);
 
 				if (getSunDead(sun.happiness))
 					drawText(10, y += 60, 48, +1, +1, "SUN DEAD");
