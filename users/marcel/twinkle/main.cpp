@@ -16,7 +16,7 @@
 #define WORLD_Y 0
 #define MAX_LEMMINGS 100
 
-#define SPAWN_DEATH_CLAMP 50.f
+#define SPAWN_DEATH_CLAMP 5.f
 
 #define LEMMING_SPRITE Spriter("Art Assets/Animation/Shoon/Shoon_anim_000.scml")
 #define HEART_SPRITE Spriter("Art Assets/Animation/Planet_heart/Heart_Life.scml")
@@ -40,7 +40,7 @@ OPTION_DECLARE(float, SUN_LOSS_PER_SEC, 1.f);
 OPTION_DEFINE(float, SUN_LOSS_PER_SEC, "Sun/Loss Per Sec");
 OPTION_STEP(SUN_LOSS_PER_SEC, 0, 0, 0.01f);
 
-OPTION_DECLARE(float, EARTH_XFER_PER_SEC, .1f);
+OPTION_DECLARE(float, EARTH_XFER_PER_SEC, .05f);
 OPTION_DEFINE(float, EARTH_XFER_PER_SEC, "Earth/Xfer Per Sec");
 OPTION_STEP(EARTH_XFER_PER_SEC, 0, 0, 0.01f);
 
@@ -220,7 +220,13 @@ public:
 
 		angle += dt * speed;
 		spriteState.updateAnim(SUN_SPRITE, dt);
-		spriteFaceState.updateAnim(*faces[emotion], dt);
+		const bool isDone = spriteFaceState.updateAnim(*faces[emotion], dt);
+
+		if (isDone)
+		{
+			face = actual_face = rand() % 3;
+			spriteFaceState.startAnim(*faces[emotion], actual_face);
+		}
 
 		if (happiness > -50 && happiness < -25)
 			emotion = kEmotion_Depressed;
@@ -351,10 +357,10 @@ public:
 		bool animIsDone = spriteState.updateAnim(LEMMING_SPRITE, dt);
 		if (animIsDone)
 		{
-			if (!state)
+			if (state == 0)
 				state = 1;
 			if (state == 3)
-				state = 2;
+				isActive = false;
 			spriteState.startAnim(LEMMING_SPRITE, state);
 		}
 		if (state == 1)
@@ -368,9 +374,10 @@ public:
 				diamond_distance -= 400.0f * dt;
 			if (diamond_distance > 450.0f)
 			{
-				state = 3;
 				spriteStateDiamond.stopAnim(DIAMOND_SPRITE);
 				diamond = false;
+
+				doPray(false);
 			}
 		}
 
@@ -410,12 +417,36 @@ public:
 				DIAMOND_SPRITE.draw(spriteStateDiamond);
 			}
 		}
+
+		if (DEBUG_DRAW)
+		{
+			drawCircle(spriteState.x, spriteState.y, 10, 10);
+		}
+	}
+
+	void doPray(bool v)
+	{
+		pray = v;
+		state = (pray ? 0 : 2);
+		spriteState.startAnim(LEMMING_SPRITE, state);
+
+		if (pray)
+		{
+			sunHit = false;
+			sunHitProcessed = false;
+			diamond_distance = 100.0f;
+			diamond = true;
+		}
 	}
 
 	void doPray()
 	{
-		pray = (pray ? false : true);
-		state = (pray ? 0 : 3);
+		doPray(!pray);
+	}
+
+	void doDie()
+	{
+		state = 3;
 		spriteState.startAnim(LEMMING_SPRITE, state);
 	}
 
@@ -447,7 +478,7 @@ public:
 
 	Player()
 	{
-		max_speed = 0.6;
+		max_speed = 1.f;
 		speed = 0.0;
 		angle = 0.0;
 	}
@@ -461,7 +492,7 @@ public:
 	{
 		// input
 
-		float accel = 2;
+		float accel = 2.5f;
 		float currentAccel = 0;
 
 		if (keyboard.isDown(SDLK_RIGHT) || gamepad[0].getAnalog(0, ANALOG_X) > +.5f)
@@ -473,7 +504,7 @@ public:
 			if (selected_lemming)
 			{
 				selected_lemming->distance = 0.0f;
-				selected_lemming->speed = speed * 7.5f;
+				selected_lemming->speed = speed * 6.0f;
 
 				playSound("throw");
 			}
@@ -510,6 +541,11 @@ public:
 		spriteState.angle = angle * Calc::rad2deg + 90;
 		setColor(colorWhite);
 		PLAYER_SPRITE.draw(spriteState);
+
+		if (DEBUG_DRAW)
+		{
+			drawCircle(spriteState.x, spriteState.y, 10, 10);
+		}
 	}
 
 };
@@ -694,6 +730,7 @@ enum EarthState
 };
 
 float spawn_timer = 0.0;
+float pray_timer = 0.0;
 
 static bool getSunDead(float warmth)
 {
@@ -775,7 +812,7 @@ static void doTitleScreen()
 
 		wasInside = inside;
 
-		if (stopTime == 0.f && mouse.wentDown(BUTTON_LEFT) && inside)
+		if (stopTime == 0.f && ((mouse.wentDown(BUTTON_LEFT) && inside) || gamepad[0].wentDown(GAMEPAD_A)))
 		{
 			stopTime = 1.f;
 
@@ -805,9 +842,31 @@ static void doTitleScreen()
 	}
 }
 
+Lemming * getRandomLemming()
+{
+	int numActive = 0;
+	for (int i = 0; i < MAX_LEMMINGS; ++i)
+		if (lemmings[i].isActive)
+			numActive++;
+	if (numActive > 1)
+	{
+		const int c = rand() % numActive;
+		for (int i = 0, n = 0; i < MAX_LEMMINGS; ++i)
+		{
+			if (lemmings[i].isActive)
+			{
+				if (n == c)
+					return &lemmings[i];
+				n++;
+			}
+		}
+	}
+	return 0;
+}
+
 int main(int argc, char * argv[])
 {
-	if (1 == 2)
+	if (1 == 1)
 	{
 		framework.fullscreen = false;
 		framework.minification = 2;
@@ -862,11 +921,13 @@ int main(int argc, char * argv[])
 		heartState.animSpeed = 0.1f;
 		heartState.startAnim(HEART_SPRITE, 0);
 
-		for (int i = 0; i < 4; ++i)
+		for (int i = 0; i < 8; ++i)
 		{
 			lemmings[i].isActive = true;
 			lemmings[i].spawn();
 			lemmings[i].angle = random(0.f, 1.f) * 2.f * M_PI;
+			if (rand() % 2)
+				lemmings[i].doPray();
 		}
 
 		sun.spawn();
@@ -882,7 +943,13 @@ int main(int argc, char * argv[])
 
 		while (!stop)
 		{
-			const float dt = 1.f / 60.f;
+			static int dtMul = 1;
+			if (keyboard.wentDown(SDLK_k))
+				dtMul++;
+			if (keyboard.wentDown(SDLK_l) && dtMul > 1)
+				dtMul--;
+
+			const float dt = dtMul / 60.f;
 
 			// process
 
@@ -1050,6 +1117,8 @@ int main(int argc, char * argv[])
 				}
 			}
 
+			// randomly spawn
+
 			spawn_timer += dt;
 
 			if (spawn_timer >= 5.0f)
@@ -1058,45 +1127,39 @@ int main(int argc, char * argv[])
 				const float diceValue = random(0.f, 1.f);
 				if((fabsf(earth_happiness) * SHOON_SPAWN_CHANCE) >= diceValue)
 				{
-					if (earth_happiness >= SPAWN_DEATH_CLAMP)
+					if (earth_happiness >= +SPAWN_DEATH_CLAMP)
 					{
 						for (int i = 0; i < MAX_LEMMINGS; ++i)
 						{
 							if (!lemmings[i].isActive)
 							{
-								lemmings[i].isActive = (rand() % 2 ? true : false);
+								lemmings[i].isActive = true;
 								lemmings[i].spawn();
 								lemmings[i].angle = random(0.f, 1.f) * 2.f * M_PI;
 								break;
 							}
 						}
 					}
-					else if(earth_happiness <= -SPAWN_DEATH_CLAMP)
+					else if (earth_happiness <= -SPAWN_DEATH_CLAMP)
 					{
-						int numActive = 0;
-						for (int i = 0; i < MAX_LEMMINGS; ++i)
-							if (lemmings[i].isActive)
-								numActive++;
-						if (numActive > 1)
-						{
-							const int kill = rand() % numActive;
-							for (int i = 0, n = 0; i < MAX_LEMMINGS; ++i)
-							{
-								if (lemmings[i].isActive)
-								{
-									if (n == kill)
-									{
-										lemmings[i].isActive = false;
+						Lemming * le = getRandomLemming();
+						if (le)
+							le->doDie();
 										//lemmings[i].spawn();
-										break;
-									}
-									else
-										n++;
-								}
-							}
-						}
 					}
 				}
+			}
+
+			// randomly activate pray
+
+			pray_timer += dt;
+			if (pray_timer >= 5.f)
+			{
+				pray_timer = 0.f;
+
+				Lemming * le = getRandomLemming();
+				if (le && le->state == 2)
+					le->doPray();
 			}
 
 			// draw
