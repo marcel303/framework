@@ -139,7 +139,7 @@ public:
 
 	void tickEmotion()
 	{
-		static Emotion lastEmotion = kEmotion_Neutral;
+		static Emotion lastEmotion = kEmotion_Happy;
 
 		if (emotion != lastEmotion)
 		{
