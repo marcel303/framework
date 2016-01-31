@@ -924,8 +924,8 @@ int main(int argc, char * argv[])
 		for (int i = 0; i < 8; ++i)
 		{
 			lemmings[i].isActive = true;
-			lemmings[i].angle = random(0.f, 1.f) * 2.f * M_PI;
 			lemmings[i].spawn();
+			lemmings[i].angle = random(0.f, 1.f) * 2.f * M_PI;
 			if (rand() % 2)
 				lemmings[i].doPray();
 		}
