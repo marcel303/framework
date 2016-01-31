@@ -26,6 +26,7 @@
 #define SUN_SPRITE Spriter("Art Assets/Animation/Planet_heart/Heart_Life.scml")
 #define PARTICLE_SPRITE Spriter("Art Assets/Animation/Particules/Particules.scml")
 #define DIAMOND_SPRITE Spriter("Art Assets/Animation/Diamonds/Diamond.scml")
+#define EXPLOSION_SPRITE Spriter("Art Assets/Animation/Explosion/Explosion.scml")
 
 int activeAudioSet = 0;
 
@@ -473,6 +474,7 @@ public:
 	float angle;
 	float max_speed;
 	float speed;
+	bool direction_right;
 	Lemming *selected_lemming;
 
 
@@ -481,6 +483,7 @@ public:
 		max_speed = 1.f;
 		speed = 0.0;
 		angle = 0.0;
+		direction_right = true;
 	}
 
 	void spawn()
@@ -494,11 +497,32 @@ public:
 
 		float accel = 2.5f;
 		float currentAccel = 0;
-
+		if (!keyboard.isDown(SDLK_RIGHT) && !keyboard.isDown(SDLK_LEFT))
+			spriteState.startAnim(PLAYER_SPRITE, 0);
+		if (keyboard.wentDown(SDLK_RIGHT))
+		{
+			if (selected_lemming)
+				spriteState.startAnim(PLAYER_SPRITE, 3);
+			else
+				spriteState.startAnim(PLAYER_SPRITE, 4);
+		}
+		if (keyboard.wentDown(SDLK_LEFT))
+		{
+			if (selected_lemming)
+				spriteState.startAnim(PLAYER_SPRITE, 3);
+			else
+				spriteState.startAnim(PLAYER_SPRITE, 4);
+		}
 		if (keyboard.isDown(SDLK_RIGHT) || gamepad[0].getAnalog(0, ANALOG_X) > +.5f)
+		{
 			currentAccel += accel;
+			direction_right = true;
+		}
 		if (keyboard.isDown(SDLK_LEFT) || gamepad[0].getAnalog(0, ANALOG_X) < -.5f)
+		{
 			currentAccel -= accel;
+			direction_right = false;
+		}
 		if (keyboard.wentUp(SDLK_SPACE) || gamepad[0].wentUp(GAMEPAD_A))
 		{
 			if (selected_lemming)
@@ -537,11 +561,14 @@ public:
 	{
 		spriteState.x = WORLD_X + cosf(angle) * WORLD_RADIUS;
 		spriteState.y = WORLD_Y + sinf(angle) * WORLD_RADIUS;
-		spriteState.scale = 0.6f;
+		spriteState.scale = 0.2f;
 		spriteState.angle = angle * Calc::rad2deg + 90;
+		if (!direction_right)
+			spriteState.flipX = true;
+		else
+			spriteState.flipX = false;
 		setColor(colorWhite);
 		PLAYER_SPRITE.draw(spriteState);
-
 		if (DEBUG_DRAW)
 		{
 			drawCircle(spriteState.x, spriteState.y, 10, 10);
@@ -558,6 +585,7 @@ public:
 	float max_speed;
 	float speed;
 	Lemming *selected_lemming;
+	bool direction_right;
 
 
 	Player2()
@@ -565,6 +593,7 @@ public:
 		max_speed = 0.6;
 		speed = 0.0;
 		angle = 0.0;
+		direction_right = true;
 	}
 
 	void spawn()
@@ -578,12 +607,33 @@ public:
 
 		float accel = 2;
 		float currentAccel = 0;
-
+		if (!keyboard.isDown(SDLK_d) && !keyboard.isDown(SDLK_q))
+			spriteState.startAnim(PLAYER2_SPRITE, 0);
+		if (keyboard.wentDown(SDLK_d))
+		{
+			if (selected_lemming)
+				spriteState.startAnim(PLAYER2_SPRITE, 3);
+			else
+				spriteState.startAnim(PLAYER2_SPRITE, 4);
+		}
+		if (keyboard.wentDown(SDLK_q))
+		{
+			if (selected_lemming)
+				spriteState.startAnim(PLAYER2_SPRITE, 3);
+			else
+				spriteState.startAnim(PLAYER2_SPRITE, 4);
+		}
 		if (keyboard.isDown(SDLK_d) || gamepad[1].getAnalog(0, ANALOG_X) > +.5f)
+		{
 			currentAccel += accel;
-		if (keyboard.isDown(SDLK_q) || gamepad[0].getAnalog(0, ANALOG_X) < -.5f)
+			direction_right = true;
+		}
+		if (keyboard.isDown(SDLK_q) || gamepad[1].getAnalog(0, ANALOG_X) < -.5f)
+		{
 			currentAccel -= accel;
-		if (keyboard.wentUp(SDLK_l) || gamepad[0].wentUp(GAMEPAD_A))
+			direction_right = false;
+		}
+		if (keyboard.wentUp(SDLK_l) || gamepad[1].wentUp(GAMEPAD_A))
 		{
 			if (selected_lemming)
 			{
@@ -621,8 +671,12 @@ public:
 	{
 		spriteState.x = WORLD_X + cosf(angle) * WORLD_RADIUS;
 		spriteState.y = WORLD_Y + sinf(angle) * WORLD_RADIUS;
-		spriteState.scale = 0.6f;
+		spriteState.scale = 0.2f;
 		spriteState.angle = angle * Calc::rad2deg + 90;
+		if (!direction_right)
+			spriteState.flipX = true;
+		else
+			spriteState.flipX = false;
 		setColor(colorWhite);
 		PLAYER2_SPRITE.draw(spriteState);
 	}
@@ -915,7 +969,10 @@ int main(int argc, char * argv[])
 		initSound();
 
 		SpriterState heartState;
-
+		SpriterState explosion;
+		explosion.x = WORLD_X;
+		explosion.y = WORLD_Y;
+		explosion.animSpeed = 1.f;
 		heartState.x = WORLD_X;
 		heartState.y = WORLD_Y;
 		heartState.animSpeed = 0.1f;
@@ -1023,7 +1080,6 @@ int main(int argc, char * argv[])
 			// logic
 
 			heartState.updateAnim(HEART_SPRITE, dt);
-			
 			if (sun.emotion == sun.kEmotion_Lucid)
 				heart_faces.update_animation(3);
 			else if (sun.emotion == sun.kEmotion_Happy)
@@ -1098,9 +1154,12 @@ int main(int argc, char * argv[])
 				earth_dead = getEarthDead(earth_happiness);
 				if (earth_dead)
 				{
+					explosion.startAnim("EXPLOSION_SPRITE", 0);
 					playSound("earth_explode");
 				}
 			}
+			if (earth_dead)
+				explosion.updateAnim(EXPLOSION_SPRITE, dt);
 
 			bool sun_dead = getSunDead(sun.happiness);
 
@@ -1161,7 +1220,6 @@ int main(int argc, char * argv[])
 				if (le && le->state == 2)
 					le->doPray();
 			}
-
 			// draw
 
 			framework.beginDraw(0, 0, 0, 0);
@@ -1250,14 +1308,21 @@ int main(int argc, char * argv[])
 					else if (earth_state == kEarthState_Hot)
 						playSound("earth_transition_hot");
 				}
-
 				Sprite earth("Art Assets/planete.png");
 				earth_color = earth_color.interp(earth_target_color, 0.004f);
 				setColor(earth_color);
-				earth.drawEx(-earth.getWidth() / 2, -earth.getHeight() / 2, 0.0, 1.0, 1.0, true, FILTER_POINT);
-				setColor(earth_color);
-				HEART_SPRITE.draw(heartState);
-				heart_faces.draw(earth_color);
+				if(!earth_dead)
+				{
+					
+					earth.drawEx(-earth.getWidth() / 2, -earth.getHeight() / 2, 0.0, 1.0, 1.0, true, FILTER_POINT);
+					setColor(earth_color);
+					HEART_SPRITE.draw(heartState);
+					heart_faces.draw(earth_color);
+				}
+				else
+				{
+					//EXPLOSION_SPRITE.draw(explosion);
+				}
 
 				/*
 				glBegin(GL_LINE_LOOP);
