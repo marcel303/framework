@@ -126,7 +126,7 @@ public:
 		emotion = kEmotion_Happy;
 		face = 0;
 		actual_face = 0;
-		happiness = 0;
+		happiness = 0.f;
 		timer = 0.0f;
 	}
 
@@ -242,7 +242,7 @@ public:
 	Color targetColor;
 	int face;
 	int actual_face;
-	int happiness;
+	float happiness;
 	float timer;
 };
 
@@ -555,7 +555,7 @@ Player player;
 Lemming lemmings[MAX_LEMMINGS];
 Sun sun;
 Heart_Faces heart_faces;
-int earth_happiness = 0;
+float earth_happiness = 0;
 enum EarthState
 {
 	kEarthState_Frozen,
@@ -564,7 +564,6 @@ enum EarthState
 	kEarthState_Hot
 };
 float timer = 0.0;
-int nbr_lemmings = 0;
 
 static EarthState getEarthState(float warmth)
 {
@@ -668,7 +667,7 @@ static void doTitleScreen()
 
 int main(int argc, char * argv[])
 {
-	if (1 == 2)
+	if (1 == 1)
 	{
 		framework.fullscreen = false;
 		framework.minification = 2;
@@ -723,11 +722,10 @@ int main(int argc, char * argv[])
 		heartState.animSpeed = 0.1f;
 		heartState.startAnim(HEART_SPRITE, 0);
 
-		lemmings[nbr_lemmings].isActive = true;
-		lemmings[nbr_lemmings].angle = random(0.f, 1.f) * 2.f * M_PI;
-		lemmings[nbr_lemmings].spawn();
+		lemmings[0].isActive = true;
+		lemmings[0].angle = random(0.f, 1.f) * 2.f * M_PI;
+		lemmings[0].spawn();
 
-		nbr_lemmings++;
 		sun.spawn();
 		sun.angle = random(0.f, 1.f) * 2.f * M_PI;
 		player.spawn();
@@ -848,22 +846,29 @@ int main(int argc, char * argv[])
 					continue;
 				if (!lemmings[i].sunHitProcessed && lemmings[i].sunHit && lemmings[i].diamond_distance >= 450.0f)
 				{
-					sun.happiness += 10;;
+					sun.happiness += 10.f;
 					lemmings[i].sunHitProcessed = true;
 					playSound("pray_pickup");
 				}
 			}
 
+			earth_happiness += sun.happiness * 0.1f * dt;
+
+			sun.happiness -= 1.f * dt;
+
 			timer += dt;
+
 			if (timer >= 1.0f)
 			{
-				earth_happiness += sun.happiness / 0.1;
-				if (nbr_lemmings < MAX_LEMMINGS)
+				for (int i = 0; i < MAX_LEMMINGS; ++i)
 				{
-					lemmings[nbr_lemmings].isActive = (rand() % 2 ? true : false);
-					lemmings[nbr_lemmings].angle = random(0.f, 1.f) * 2.f * M_PI;
-					lemmings[nbr_lemmings].spawn();
-					nbr_lemmings++;
+					if (!lemmings[i].isActive)
+					{
+						lemmings[i].isActive = (rand() % 2 ? true : false);
+						lemmings[i].angle = random(0.f, 1.f) * 2.f * M_PI;
+						lemmings[i].spawn();
+						break;
+					}
 				}
 			}
 				timer = 0.0f;
@@ -1004,15 +1009,21 @@ int main(int argc, char * argv[])
 			if (DEBUG_DRAW)
 			{
 				setFont("calibri.ttf");
-				setColor(colorWhite);
 
-				drawText(10, 10, 24, +1, +1, "Debug Draw!");
+				int y = 10;
+
+				setColor(colorWhite);
+				drawText(10, y += 30, 24, +1, +1, "Debug Draw!");
 
 				for (int i = 0; i < 12; ++i)
 				{
 					setColorf(1.f, 1.f, 1.f, .25f + 4.f * mas.volume[i]);
-					drawText(10, 40 + 30 * i, 24, +1, +1, mas.source[i].FileName_get());
+					drawText(10, y += 30, 24, +1, +1, mas.source[i].FileName_get());
 				}
+
+				setColor(colorWhite);
+				drawText(10, y += 30, 24, +1, +1, "earth happiness %f", earth_happiness);
+				drawText(10, y += 30, 24, +1, +1, "sun happiness %f", sun.happiness);
 			}
 
 			if (doOptions)
