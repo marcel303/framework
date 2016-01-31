@@ -332,6 +332,7 @@ public:
 		real_distance = 0.0f;
 		diamond_distance = 100.0f;
 		diamond = true;
+		scale = 1.f;
 		spriteState.startAnim(LEMMING_SPRITE, state);
 		spriteStateDiamond.startAnim(DIAMOND_SPRITE, 0);
 		spriteStateParticles.startAnim(PARTICLE_SPRITE, 0);
@@ -396,7 +397,7 @@ public:
 	{
 		spriteState.x = WORLD_X + cosf(angle) * (WORLD_RADIUS + real_distance);
 		spriteState.y = WORLD_Y + sinf(angle) * (WORLD_RADIUS + real_distance);
-		spriteState.scale = 0.4f;
+		spriteState.scale = 0.4f * scale;
 		spriteState.angle = angle * Calc::rad2deg + 90;
 		setColor(colorWhite);
 		LEMMING_SPRITE.draw(spriteState);
@@ -465,6 +466,7 @@ public:
 	bool diamond;
 	float distance;
 	float real_distance;
+	float scale;
 };
 
 class Player
@@ -476,7 +478,7 @@ public:
 	float speed;
 	bool direction_right;
 	Lemming *selected_lemming;
-
+	float scale;
 
 	Player()
 	{
@@ -484,6 +486,7 @@ public:
 		speed = 0.0;
 		angle = 0.0;
 		direction_right = true;
+		scale = 1.f;
 	}
 
 	void spawn()
@@ -561,7 +564,7 @@ public:
 	{
 		spriteState.x = WORLD_X + cosf(angle) * WORLD_RADIUS;
 		spriteState.y = WORLD_Y + sinf(angle) * WORLD_RADIUS;
-		spriteState.scale = 0.2f;
+		spriteState.scale = 0.2f * scale;
 		spriteState.angle = angle * Calc::rad2deg + 90;
 		if (!direction_right)
 			spriteState.flipX = true;
@@ -586,13 +589,14 @@ public:
 	float speed;
 	Lemming *selected_lemming;
 	bool direction_right;
-
+	float scale;
 
 	Player2()
 	{
 		max_speed = 0.6;
 		speed = 0.0;
 		angle = 0.0;
+		scale = 1.f;
 		direction_right = true;
 	}
 
@@ -671,7 +675,7 @@ public:
 	{
 		spriteState.x = WORLD_X + cosf(angle) * WORLD_RADIUS;
 		spriteState.y = WORLD_Y + sinf(angle) * WORLD_RADIUS;
-		spriteState.scale = 0.2f;
+		spriteState.scale = 0.2f * scale;
 		spriteState.angle = angle * Calc::rad2deg + 90;
 		if (!direction_right)
 			spriteState.flipX = true;
@@ -775,6 +779,7 @@ Lemming lemmings[MAX_LEMMINGS];
 Sun sun;
 Heart_Faces heart_faces;
 float earth_happiness = 0;
+//float earth_happiness = -45;
 enum EarthState
 {
 	kEarthState_Frozen,
@@ -834,18 +839,30 @@ static Color getEarthColor(EarthState state)
 
 static void doTitleScreen()
 {
+#define CINE 1
 	Music music("Sound Assets/Music/Twinkle_Menu_Theme_Loop.ogg");
 	music.play();
 
 	Sprite background("Art Assets/Wallpaper.jpg");
 	background.drawEx(0, 0);
 
+#if CINE
+	Spriter spriter("Cinematic/Cinematic.scml");
+#else
 	Spriter spriter("Art Assets/Sun/Sun_Animations.scml");
+#endif
+	
 	SpriterState spriterState;
 	spriterState.startAnim(spriter, 0);
+#if CINE
+	spriterState.x = SX/2;
+	spriterState.y = SY/2;
+	spriterState.scale = .14f;
+#else
 	spriterState.x = SX/2;
 	spriterState.y = SY/2;
 	spriterState.scale = .5f;
+#endif
 	
 	bool stop = false;
 	float stopTime = 0.f;
@@ -857,6 +874,9 @@ static void doTitleScreen()
 
 		const float dt = framework.timeStep;
 
+	#if CINE
+		bool inside = true;
+	#else
 		int dx = mouse.x - SX/2;
 		int dy = mouse.y - SY/2;
 		int d = sqrtf(dx * dx + dy * dy);
@@ -866,6 +886,7 @@ static void doTitleScreen()
 			spriterState.startAnim(spriter, rand() % spriter.getAnimCount());
 		if (!inside)
 			spriterState.stopAnim(spriter);
+	#endif
 
 		wasInside = inside;
 
@@ -878,10 +899,12 @@ static void doTitleScreen()
 
 		if (stopTime > 0.f)
 		{
-			stopTime -= dt;
+			stopTime = Calc::Max(0.f, stopTime - dt);
 
-			if (stopTime <= 0.f)
+			if (stopTime == 0.f)
 				stop = true;
+
+			music.setVolume(100 * stopTime);
 		}
 
 		spriterState.updateAnim(spriter, dt);
@@ -890,10 +913,20 @@ static void doTitleScreen()
 		{
 			setColorMode(COLOR_ADD);
 			{
+			#if CINE
+				setColor(colorBlack);
+			#else
 				setColor(inside ? Color(63, 31, 15) : colorBlack);
+			#endif
 				spriter.draw(spriterState);
 			}
 			setColorMode(COLOR_MUL);
+
+			if (stopTime > 0.f || stop)
+			{
+				setColorf(0.f, 0.f, 0.f, 1.f - stopTime);
+				drawRect(0, 0, SX, SY);
+			}
 		}
 		framework.endDraw();
 	}
@@ -1071,7 +1104,7 @@ int main(int argc, char * argv[])
 				activeAudioSet = 3;
 		#endif
 
-			const float masVolumeMultiplier = 1.f / 8.f;
+			const float masVolumeMultiplier = 1.f / 4.f;
 			for (int c = 0; c < 8; ++c)
 				mas.targetVolume[c] = audioSets[activeAudioSet].volume[c] * masVolumeMultiplier;
 
@@ -1140,7 +1173,7 @@ int main(int argc, char * argv[])
 					continue;
 				if (!lemmings[i].sunHitProcessed && lemmings[i].sunHit && lemmings[i].diamond_distance >= 450.0f)
 				{
-					sun.happiness += 10.f;
+					sun.happiness += 5.f;
 					lemmings[i].sunHitProcessed = true;
 					lemmings[i].doPray(false);
 
@@ -1163,10 +1196,11 @@ int main(int argc, char * argv[])
 				earth_dead = getEarthDead(earth_happiness);
 				if (earth_dead)
 				{
-					explosion.startAnim("EXPLOSION_SPRITE", 0);
+					explosion.startAnim(EXPLOSION_SPRITE, 0);
 					playSound("earth_explode");
 				}
 			}
+
 			if (earth_dead)
 				explosion.updateAnim(EXPLOSION_SPRITE, dt);
 
@@ -1220,7 +1254,6 @@ int main(int argc, char * argv[])
 						Lemming * le = getRandomLemming();
 						if (le)
 							le->doDie();
-										//lemmings[i].spawn();
 					}
 				}
 			}
@@ -1345,14 +1378,14 @@ int main(int argc, char * argv[])
 				setColor(earth_color);
 				if(!earth_dead)
 				{
-					
-					earth.drawEx(-earth.getWidth() / 2, -earth.getHeight() / 2, 0.0, 1.0, 1.0, true, FILTER_POINT);
+					earth.drawEx(-earth.getWidth() / 2, -earth.getHeight() / 2, 0.0, 1.0, 1.0, true, FILTER_LINEAR);
 					setColor(earth_color);
 					HEART_SPRITE.draw(heartState);
 					heart_faces.draw(earth_color);
 				}
 				else
 				{
+					setColor(earth_color);
 					EXPLOSION_SPRITE.draw(explosion);
 				}
 
@@ -1375,7 +1408,22 @@ int main(int argc, char * argv[])
 				}
 				glEnd();
 				*/
-				if (!earth_dead)
+
+				if (earth_dead)
+				{
+					for (int i = 0; i < MAX_LEMMINGS; ++i)
+					{
+						if (lemmings[i].isActive)
+						{
+							lemmings[i].distance += 100.f * dt;
+							lemmings[i].scale = Calc::Max(0.f, lemmings[i].scale - dt / 3.f);
+						}
+					}
+					player.scale = Calc::Max(0.f, player.scale - dt / 3.f);
+					player2.scale = Calc::Max(0.f, player2.scale - dt / 3.f);
+				}
+
+				//if (!earth_dead)
 				{
 					for (int i = 0; i < MAX_LEMMINGS; ++i)
 						if (lemmings[i].isActive)
@@ -1395,6 +1443,7 @@ int main(int argc, char * argv[])
 				drawRect(0, 0, SX, SY);
 			}
 
+		#ifdef DEBUG
 			if (DEBUG_DRAW)
 			{
 				setFont("calibri.ttf");
@@ -1423,6 +1472,7 @@ int main(int argc, char * argv[])
 				if (getEarthDead(earth_happiness))
 					drawText(10, y += 60, 48, +1, +1, "EARTH DEAD");
 			}
+		#endif
 
 			if (doOptions)
 				optionsMenu.Draw(100, 100, 400, 600);
