@@ -866,12 +866,14 @@ Lemming * getRandomLemming()
 
 int main(int argc, char * argv[])
 {
+#ifdef DEBUG
 	if (1 == 1)
 	{
 		framework.fullscreen = false;
 		framework.minification = 2;
 	}
 	else
+#endif
 	{
 		framework.fullscreen = true;
 	}
@@ -1254,7 +1256,7 @@ int main(int argc, char * argv[])
 				Sprite earth("Art Assets/planete.png");
 				earth_color = earth_color.interp(earth_target_color, 0.004f);
 				setColor(earth_color);
-				earth.drawEx(-earth.getWidth() / 2, -earth.getHeight() / 2, 0.0, 1.0, 1.0, true, FILTER_POINT);
+				earth.drawEx(-earth.getWidth() / 2, -earth.getHeight() / 2, 0.0, 1.0, 1.0, true, FILTER_LINEAR);
 				setColor(earth_color);
 				HEART_SPRITE.draw(heartState);
 				heart_faces.draw(earth_color);
