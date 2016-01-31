@@ -357,9 +357,10 @@ public:
 				diamond_distance -= 400.0f * dt;
 			if (diamond_distance > 450.0f)
 			{
-				state = 3;
 				spriteStateDiamond.stopAnim(DIAMOND_SPRITE);
 				diamond = false;
+
+				doPray(false);
 			}
 		}
 
@@ -406,11 +407,24 @@ public:
 		}
 	}
 
-	void doPray()
+	void doPray(bool v)
 	{
-		pray = (pray ? false : true);
+		pray = v;
 		state = (pray ? 0 : 2);
 		spriteState.startAnim(LEMMING_SPRITE, state);
+
+		if (pray)
+		{
+			sunHit = false;
+			sunHitProcessed = false;
+			diamond_distance = 100.0f;
+			diamond = true;
+		}
+	}
+
+	void doPray()
+	{
+		doPray(!pray);
 	}
 
 	void doDie()
@@ -447,7 +461,7 @@ public:
 
 	Player()
 	{
-		max_speed = 0.6;
+		max_speed = 1.f;
 		speed = 0.0;
 		angle = 0.0;
 	}
@@ -461,7 +475,7 @@ public:
 	{
 		// input
 
-		float accel = 2;
+		float accel = 2.5f;
 		float currentAccel = 0;
 
 		if (keyboard.isDown(SDLK_RIGHT) || gamepad[0].getAnalog(0, ANALOG_X) > +.5f)
@@ -473,7 +487,7 @@ public:
 			if (selected_lemming)
 			{
 				selected_lemming->distance = 0.0f;
-				selected_lemming->speed = speed * 7.5f;
+				selected_lemming->speed = speed * 6.0f;
 
 				playSound("throw");
 			}
@@ -510,6 +524,11 @@ public:
 		spriteState.angle = angle * Calc::rad2deg + 90;
 		setColor(colorWhite);
 		PLAYER_SPRITE.draw(spriteState);
+
+		if (DEBUG_DRAW)
+		{
+			drawCircle(spriteState.x, spriteState.y, 10, 10);
+		}
 	}
 
 };
@@ -703,7 +722,7 @@ static void doTitleScreen()
 
 int main(int argc, char * argv[])
 {
-	if (1 == 2)
+	if (1 == 1)
 	{
 		framework.fullscreen = false;
 		framework.minification = 2;
@@ -758,11 +777,14 @@ int main(int argc, char * argv[])
 		heartState.animSpeed = 0.1f;
 		heartState.startAnim(HEART_SPRITE, 0);
 
-		for (int i = 0; i < 4; ++i)
+		for (int i = 0; i < 8; ++i)
 		{
 			lemmings[i].isActive = true;
 			lemmings[i].angle = random(0.f, 1.f) * 2.f * M_PI;
 			lemmings[i].spawn();
+
+			if (rand() % 2)
+				lemmings[i].doPray();
 		}
 
 		sun.spawn();
@@ -940,7 +962,7 @@ int main(int argc, char * argv[])
 				const float diceValue = random(0.f, 1.f);
 				if((fabsf(earth_happiness) * SHOON_SPAWN_CHANCE) >= diceValue)
 				{
-					if (earth_happiness >= SPAWN_DEATH_CLAMP)
+					if (earth_happiness >= +SPAWN_DEATH_CLAMP)
 					{
 						for (int i = 0; i < MAX_LEMMINGS; ++i)
 						{
@@ -953,7 +975,7 @@ int main(int argc, char * argv[])
 							}
 						}
 					}
-					else if(earth_happiness <= -SPAWN_DEATH_CLAMP)
+					else if (earth_happiness <= -SPAWN_DEATH_CLAMP)
 					{
 						int numActive = 0;
 						for (int i = 0; i < MAX_LEMMINGS; ++i)
