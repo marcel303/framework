@@ -377,7 +377,7 @@ public:
 				spriteStateDiamond.stopAnim(DIAMOND_SPRITE);
 				diamond = false;
 
-				doPray(false);
+				//doPray(false);
 			}
 		}
 
@@ -1086,6 +1086,8 @@ int main(int argc, char * argv[])
 				{
 					sun.happiness += 10.f;
 					lemmings[i].sunHitProcessed = true;
+					lemmings[i].doPray(false);
+
 					playSound("pray_pickup");
 				}
 			}
