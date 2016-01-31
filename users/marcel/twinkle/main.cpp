@@ -65,15 +65,26 @@ static void addSound(const char * name, const char * fmt, int count, float volum
 
 static void initSound()
 {
+	// worshipper
 	addSound("pray", "Sound Assets/SFX/SFX_Chief_Convert_to Prayer.ogg", 1);
+	addSound("pray_complete", "Sound Assets/SFX/SFX_Worshipper_Prayer_Complete.ogg", 1);
+	addSound("pray_pickup", "Sound Assets/SFX/SFX_Prayer_PickUp.ogg", 1);
 	addSound("stop_prayer_hit", "Sound Assets/SFX/SFX_Chief_Stop_Prayer_Hit_%02d.ogg", 4);
-	addSound("throw", "Sound Assets/SFX/SFX_Worshipper_Throw_%02d.ogg", 5);
 
 	addSound("pickup", "Sound Assets/SFX/SFX_Worshiper_Picked_Up_%02d.ogg", 4);
-	addSound("transition_frozen", "Sound Assets/SFX/SFX_Earth_Transition_to_Frozen.ogg", 1);
-	addSound("transition_cold", "Sound Assets/SFX/SFX_Earth_Transition_to_Cold.ogg", 1);
-	addSound("transition_warm", "Sound Assets/SFX/SFX_Earth_Transition_to_Warm.ogg", 1);
-	addSound("transition_hot", "Sound Assets/SFX/SFX_Earth_Transition_to_Hot.ogg", 1);
+	addSound("throw", "Sound Assets/SFX/SFX_Worshipper_Throw_%02d.ogg", 5);
+
+	// earth
+	addSound("earth_transition_frozen", "Sound Assets/SFX/SFX_Earth_Transition_to_Frozen.ogg", 1);
+	addSound("earth_transition_cold", "Sound Assets/SFX/SFX_Earth_Transition_to_Cold.ogg", 1);
+	addSound("earth_transition_warm", "Sound Assets/SFX/SFX_Earth_Transition_to_Warm.ogg", 1);
+	addSound("earth_transition_hot", "Sound Assets/SFX/SFX_Earth_Transition_to_Hot.ogg", 1);
+
+	// sun
+	addSound("sun_transition_depressed", "Sound Assets/SFX/SFX_Sun_Depressed.ogg", 1);
+	addSound("sun_transition_unhappy", "Sound Assets/SFX/SFX_Sun_Unhappy.ogg", 1);
+	addSound("sun_transition_happy", "Sound Assets/SFX/SFX_Sun_Happy_New.ogg", 1);
+	addSound("sun_transition_manichappy", "Sound Assets/SFX/SFX_Sun_Maniac_Happy.ogg", 1);
 }
 
 static void playSound(const char * name)
@@ -131,14 +142,14 @@ public:
 			lastEmotion = emotion;
 
 			if (emotion == kEmotion_Sad)
-				playSound("transition_frozen");
+				playSound("sun_transition_depressed");
 			if (emotion == kEmotion_Neutral)
-				playSound("transition_cold");
+				playSound("sun_transition_unhappy");
 			if (emotion == kEmotion_Happy)
-				playSound("transition_warm");
+				playSound("sun_transition_happy");
 			// todo
 			//if (emotion == kEmotion_Lucide)
-			//	playSound("transition_hot");
+			//	playSound("sun_transition_manichappy");
 		}
 
 		if (face != actual_face)
@@ -747,6 +758,7 @@ int main(int argc, char * argv[])
 				{
 					--sun.prays_needed;
 					lemmings[i].sunHitProcessed = true;
+					playSound("pray_pickup");
 				}
 			}
 
