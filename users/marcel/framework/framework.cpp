@@ -97,6 +97,10 @@ Framework::~Framework()
 
 bool Framework::init(int argc, const char * argv[], int sx, int sy)
 {
+#ifdef WIN32
+	SetProcessDPIAware();
+#endif
+
 	// initialize SDL
 	
 	const int initFlags = SDL_INIT_NOPARACHUTE | SDL_INIT_TIMER | SDL_INIT_VIDEO;
