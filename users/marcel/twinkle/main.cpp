@@ -73,6 +73,8 @@ static void initSound()
 
 	addSound("pickup", "Sound Assets/SFX/SFX_Worshiper_Picked_Up_%02d.ogg", 4);
 	addSound("throw", "Sound Assets/SFX/SFX_Worshipper_Throw_%02d.ogg", 5);
+	addSound("land", "Sound Assets/SFX/SFX_Worshiper_Landing_%02d.ogg", 4);
+	addSound("death", "Sound Assets/SFX/SFX_Worshiper_Death_%02d.ogg", 3);
 
 	// earth
 	addSound("earth_transition_frozen", "Sound Assets/SFX/SFX_Earth_Transition_to_Frozen.ogg", 1);
@@ -307,7 +309,20 @@ public:
 	{
 		const int oldState = state;
 
-		real_distance += (distance - real_distance) * dt * 10.0f;
+		if (real_distance != distance)
+		{
+			const float dropSpeed = 100.f;
+			const float liftSpeed = 100.f;
+			if (real_distance < distance)
+				real_distance = Calc::Min(real_distance + liftSpeed * dt, distance);
+			if (real_distance > distance)
+				real_distance = Calc::Max(real_distance - dropSpeed * dt, distance);
+			if (real_distance == distance)
+			{
+				if (distance == 0.f)
+					playSound("land");
+			}
+		}
 		bool animIsDone = spriteState.updateAnim(LEMMING_SPRITE, dt);
 		if (animIsDone)
 		{
@@ -548,9 +563,44 @@ enum EarthState
 	kEarthState_Warm,
 	kEarthState_Hot
 };
-EarthState earth_state = kEarthState_Warm;
 float timer = 0.0;
 int nbr_lemmings = 0;
+
+static EarthState getEarthState(float warmth)
+{
+	fassert(warmth >= -50 && warmth <= +50);
+
+	if (warmth < -25.0)
+		return kEarthState_Frozen;
+	else if (warmth < 0)
+		return kEarthState_Cold;
+	else if (warmth < 25)
+		return kEarthState_Warm;
+	else if (warmth < 50)
+		return kEarthState_Hot;
+	else
+	{
+		fassert(false);
+		return kEarthState_Hot;
+	}
+}
+
+static Color getEarthColor(EarthState state)
+{
+	if (state == kEarthState_Frozen)
+		return Color::fromHSL(0.520f, 1.000f, 0.620f);
+	else if (state == kEarthState_Cold)
+		return Color::fromHSL(0.520f, 1.000f, 0.620f);
+	else if (state == kEarthState_Warm)
+		return Color::fromHSL(0.320f, 1.000f, 0.710f);
+	else if (state == kEarthState_Hot)
+		return Color::fromHSL(1.000f, 0.920f, 0.480f);
+	else
+	{
+		fassert(false);
+		return colorWhite;
+	}
+}
 
 static void doTitleScreen()
 {
@@ -887,29 +937,11 @@ int main(int argc, char * argv[])
 				gxScalef(zoom, zoom, 1);
 				gxTranslatef(-midX, -midY, 0.f);
 
-				static Color earth_color = colorWhite;
-				Color earth_target_color = colorWhite;
+				const EarthState earth_state = getEarthState(earth_happiness);
 				static EarthState oldEarthState = earth_state;
-				if (earth_happiness > -50.0 && earth_happiness < -25.0)
-				{
-					earth_target_color = Color::fromHSL(0.520f, 1.000f, 0.620f);
-					earth_state = kEarthState_Frozen;
-				}
-				else if (earth_happiness > -25 && earth_happiness < 0)
-				{
-					earth_target_color = Color::fromHSL(0.520f, 1.000f, 0.620f);
-					earth_state = kEarthState_Cold;
-				}
-				else if (earth_happiness > 0 && earth_happiness < 25)
-				{
-					earth_target_color = Color::fromHSL(0.320f, 1.000f, 0.710f);
-					earth_state = kEarthState_Warm;
-				}
-				else if (earth_happiness > 25 && earth_happiness < 50)
-				{
-					earth_target_color = Color::fromHSL(1.000f, 0.920f, 0.480f);
-					earth_state = kEarthState_Hot;
-				}
+
+				const Color earth_target_color = getEarthColor(earth_state);
+				static Color earth_color = earth_target_color;
 
 				if (earth_state != oldEarthState)
 				{
