@@ -579,7 +579,7 @@ public:
 	{
 		spriteState.x = WORLD_X + cosf(angle) * WORLD_RADIUS;
 		spriteState.y = WORLD_Y + sinf(angle) * WORLD_RADIUS;
-		spriteState.scale = 0.3f;
+		spriteState.scale = 0.3f * scale;
 		spriteState.angle = angle * Calc::rad2deg + 90;
 		if (!direction_right)
 			spriteState.flipX = true;
@@ -690,7 +690,7 @@ public:
 	{
 		spriteState.x = WORLD_X + cosf(angle) * WORLD_RADIUS;
 		spriteState.y = WORLD_Y + sinf(angle) * WORLD_RADIUS;
-		spriteState.scale = 0.3f;
+		spriteState.scale = 0.3f * scale;
 		spriteState.angle = angle * Calc::rad2deg + 90;
 		if (!direction_right)
 			spriteState.flipX = true;
