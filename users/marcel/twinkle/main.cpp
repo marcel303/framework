@@ -89,6 +89,8 @@ static void initSound()
 
 static void playSound(const char * name)
 {
+	log("playSound: %s", name);
+
 	if (s_sounds.count(name) == 0)
 	{
 		logError("sound not found: %s", name);
@@ -141,6 +143,7 @@ public:
 		{
 			lastEmotion = emotion;
 
+		#ifndef DEBUG
 			if (emotion == kEmotion_Sad)
 				playSound("sun_transition_depressed");
 			if (emotion == kEmotion_Neutral)
@@ -150,6 +153,7 @@ public:
 			// todo
 			//if (emotion == kEmotion_Lucide)
 			//	playSound("sun_transition_manichappy");
+		#endif
 		}
 
 		if (face != actual_face)
@@ -286,6 +290,8 @@ public:
 
 	void tick(float dt)
 	{
+		const int oldState = state;
+
 		real_distance += (distance - real_distance) * dt * 10.0f;
 		bool animIsDone = spriteState.updateAnim(LEMMING_SPRITE, dt);
 		if (animIsDone)
@@ -311,6 +317,12 @@ public:
 				spriteStateDiamond.stopAnim(DIAMOND_SPRITE);
 				diamond = false;
 			}
+		}
+
+		if (state != oldState)
+		{
+			if (state == 1)
+				playSound("pray_complete");
 		}
 
 		angle += speed * dt;
@@ -594,6 +606,11 @@ int main(int argc, char * argv[])
 
 	if (framework.init(0, 0, SX, SY))
 	{
+	#if !defined(DEBUG)
+		framework.fillCachesWithPath("Art Assets", true);
+		framework.fillCachesWithPath("Sound Assets", true);
+	#endif
+
 	#ifndef DEBUG
 		doTitleScreen();
 	#endif
