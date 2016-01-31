@@ -34,6 +34,14 @@ OPTION_DECLARE(int, SUN_DISTANCE, 700);
 OPTION_DEFINE(int, SUN_DISTANCE, "Sun/Distance");
 OPTION_STEP(SUN_DISTANCE, 0, 1000, 50);
 
+OPTION_DECLARE(float, SUN_LOSS_PER_SEC, 1.f);
+OPTION_DEFINE(float, SUN_LOSS_PER_SEC, "Sun/Loss Per Sec");
+OPTION_STEP(SUN_LOSS_PER_SEC, 0, 0, 0.01f);
+
+OPTION_DECLARE(float, EARTH_XFER_PER_SEC, .1f);
+OPTION_DEFINE(float, EARTH_XFER_PER_SEC, "Earth/Xfer Per Sec");
+OPTION_STEP(EARTH_XFER_PER_SEC, 0, 0, 0.01f);
+
 OPTION_DECLARE(float, H, 1.0f);
 OPTION_DEFINE(float, H, "H");
 OPTION_STEP(H, 0.0f, 1.0f, 0.01f);
@@ -128,7 +136,6 @@ public:
 		face = 0;
 		actual_face = 0;
 		happiness = 0.f;
-		timer = 0.0f;
 	}
 
 	void spawn()
@@ -195,12 +202,6 @@ public:
 
 	void tick(float dt)
 	{
-		timer += dt;
-		if (timer > 1.0)
-		{
-			--happiness;
-			timer = 0.0f;
-		}
 		distance = SUN_DISTANCE;
 
 		angle += dt * speed;
@@ -244,7 +245,6 @@ public:
 	int face;
 	int actual_face;
 	float happiness;
-	float timer;
 };
 
 
@@ -564,7 +564,8 @@ enum EarthState
 	kEarthState_Warm,
 	kEarthState_Hot
 };
-float timer = 0.0;
+
+float spawn_timer = 0.0;
 
 static bool getSunDead(float warmth)
 {
@@ -867,7 +868,7 @@ int main(int argc, char * argv[])
 
 			if (!earth_dead)
 			{
-				earth_happiness += sun.happiness * 0.1f * dt;
+				earth_happiness += sun.happiness * EARTH_XFER_PER_SEC * dt;
 				earth_happiness = Calc::Clamp(earth_happiness, -50.f, +50.f);
 
 				// did we die?
@@ -882,7 +883,7 @@ int main(int argc, char * argv[])
 
 			if (!sun_dead)
 			{
-				sun.happiness -= 1.f * dt;
+				sun.happiness -= SUN_LOSS_PER_SEC * dt;
 				sun.happiness = Calc::Clamp(sun.happiness, -50.f, +50.f);
 
 				// did we die?
@@ -893,11 +894,11 @@ int main(int argc, char * argv[])
 				}
 			}
 
-			timer += dt;
+			spawn_timer += dt;
 
-			if (timer >= 1.0f)
+			if (spawn_timer >= 1.0f)
 			{
-				timer = 0.f;
+				spawn_timer = 0.f;
 
 				for (int i = 0; i < MAX_LEMMINGS; ++i)
 				{
