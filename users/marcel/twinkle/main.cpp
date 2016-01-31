@@ -16,6 +16,8 @@
 #define WORLD_Y 0
 #define MAX_LEMMINGS 100
 
+#define SPAWN_DEATH_CLAMP 50.f
+
 #define LEMMING_SPRITE Spriter("Art Assets/Animation/Shoon/Shoon_anim_000.scml")
 #define HEART_SPRITE Spriter("Art Assets/Animation/Planet_heart/Heart_Life.scml")
 #define HEART_FACE_SPRITE Spriter("Art Assets/Animation/Faces_Earth/Earth_Faces_000.scml")
@@ -53,6 +55,10 @@ OPTION_STEP(S, 0.0f, 1.0f, 0.01f);
 OPTION_DECLARE(float, L, 1.0f);
 OPTION_DEFINE(float, L, "L");
 OPTION_STEP(L, 0.0f, 1.0f, 0.01f);
+
+OPTION_DECLARE(float, SHOON_SPAWN_CHANCE, 0.02f);
+OPTION_DEFINE(float, SHOON_SPAWN_CHANCE, "Shoon Spawn Chance");
+OPTION_STEP(SHOON_SPAWN_CHANCE, 0.01f, 20.0f, 0.01f);
 
 struct SoundInfo
 {
@@ -182,19 +188,19 @@ public:
 		{
 			targetColor = colorYellow;
 			activeAudioSet = 2;
-			face = 3 + (rand() % 3);
+			face = rand() % 3;
 		}
 		else if (emotion == kEmotion_Sad)
 		{
 			targetColor = colorBlue;
 			activeAudioSet = 1;
-			face = 6 + (rand() % 3);
+			face = rand() % 3;
 		}
 		else if (emotion == kEmotion_Depressed)
 		{
 			targetColor = colorBlue;
 			activeAudioSet = 1;
-			face = 9 + (rand() % 3);
+			face = rand() % 3;
 		}
 
 		color = color.interp(targetColor, 0.01f);
@@ -449,7 +455,7 @@ public:
 			if (selected_lemming)
 			{
 				selected_lemming->distance = 0.0f;
-				selected_lemming->speed = speed * 2.f;
+				selected_lemming->speed = speed * 7.5f;
 
 				playSound("throw");
 			}
@@ -587,7 +593,7 @@ static EarthState getEarthState(float warmth)
 		return kEarthState_Cold;
 	else if (warmth < 25)
 		return kEarthState_Warm;
-	else if (warmth < 50)
+	else if (warmth <= 50)
 		return kEarthState_Hot;
 	else
 	{
@@ -679,7 +685,7 @@ static void doTitleScreen()
 
 int main(int argc, char * argv[])
 {
-	if (1 == 1)
+	if (0)//(1 == 1)
 	{
 		framework.fullscreen = false;
 		framework.minification = 2;
@@ -734,9 +740,12 @@ int main(int argc, char * argv[])
 		heartState.animSpeed = 0.1f;
 		heartState.startAnim(HEART_SPRITE, 0);
 
-		lemmings[0].isActive = true;
-		lemmings[0].angle = random(0.f, 1.f) * 2.f * M_PI;
-		lemmings[0].spawn();
+		for (int i = 0; i < 4; ++i)
+		{
+			lemmings[i].isActive = true;
+			lemmings[i].angle = random(0.f, 1.f) * 2.f * M_PI;
+			lemmings[i].spawn();
+		}
 
 		sun.spawn();
 		sun.angle = random(0.f, 1.f) * 2.f * M_PI;
@@ -896,18 +905,48 @@ int main(int argc, char * argv[])
 
 			spawn_timer += dt;
 
-			if (spawn_timer >= 1.0f)
+			if (spawn_timer >= 5.0f)
 			{
 				spawn_timer = 0.f;
-
-				for (int i = 0; i < MAX_LEMMINGS; ++i)
+				const float diceValue = random(0.f, 1.f);
+				if((fabsf(earth_happiness) * SHOON_SPAWN_CHANCE) >= diceValue)
 				{
-					if (!lemmings[i].isActive)
+					if (earth_happiness >= SPAWN_DEATH_CLAMP)
 					{
-						lemmings[i].isActive = (rand() % 2 ? true : false);
-						lemmings[i].angle = random(0.f, 1.f) * 2.f * M_PI;
-						lemmings[i].spawn();
-						break;
+						for (int i = 0; i < MAX_LEMMINGS; ++i)
+						{
+							if (!lemmings[i].isActive)
+							{
+								lemmings[i].isActive = (rand() % 2 ? true : false);
+								lemmings[i].angle = random(0.f, 1.f) * 2.f * M_PI;
+								lemmings[i].spawn();
+								break;
+							}
+						}
+					}
+					else if(earth_happiness <= -SPAWN_DEATH_CLAMP)
+					{
+						int numActive = 0;
+						for (int i = 0; i < MAX_LEMMINGS; ++i)
+							if (lemmings[i].isActive)
+								numActive++;
+						if (numActive > 1)
+						{
+							const int kill = rand() % numActive;
+							for (int i = 0, n = 0; i < MAX_LEMMINGS; ++i)
+							{
+								if (lemmings[i].isActive)
+								{
+									if (n == kill)
+									{
+										lemmings[i].isActive = false;
+										break;
+									}
+									else
+										n++;
+								}
+							}
+						}
 					}
 				}
 			}
@@ -1063,6 +1102,11 @@ int main(int argc, char * argv[])
 				setColor(colorWhite);
 				drawText(10, y += 30, 24, +1, +1, "earth happiness %f", earth_happiness);
 				drawText(10, y += 30, 24, +1, +1, "sun happiness %f", sun.happiness);
+
+				if (getSunDead(sun.happiness))
+					drawText(10, y += 60, 48, +1, +1, "SUN DEAD");
+				if (getEarthDead(earth_happiness))
+					drawText(10, y += 60, 48, +1, +1, "EARTH DEAD");
 			}
 
 			if (doOptions)
