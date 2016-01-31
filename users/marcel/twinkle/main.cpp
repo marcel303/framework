@@ -139,22 +139,21 @@ public:
 
 	void tickEmotion()
 	{
-		static Emotion lastEmotion = kEmotion_Neutral;
+		static Emotion lastEmotion = kEmotion_Happy;
 
 		if (emotion != lastEmotion)
 		{
 			lastEmotion = emotion;
 
-		#ifndef DEBUG
-			if (emotion == kEmotion_Sad)
+		#if !defined(DEBUG) || 1
+			if (emotion == kEmotion_Depressed)
 				playSound("sun_transition_depressed");
-			if (emotion == kEmotion_Neutral)
+			if (emotion == kEmotion_Sad)
 				playSound("sun_transition_unhappy");
 			if (emotion == kEmotion_Happy)
 				playSound("sun_transition_happy");
-			// todo
-			//if (emotion == kEmotion_Lucide)
-			//	playSound("sun_transition_manichappy");
+			if (emotion == kEmotion_Lucid)
+				playSound("sun_transition_manichappy");
 		#endif
 		}
 
@@ -542,6 +541,14 @@ Lemming lemmings[MAX_LEMMINGS];
 Sun sun;
 Heart_Faces heart_faces;
 int earth_happiness = 0;
+enum EarthState
+{
+	kEarthState_Frozen,
+	kEarthState_Cold,
+	kEarthState_Warm,
+	kEarthState_Hot
+};
+EarthState earth_state = kEarthState_Warm;
 float timer = 0.0;
 int nbr_lemmings = 0;
 
@@ -879,16 +886,45 @@ int main(int argc, char * argv[])
 				gxTranslatef(SX/2, SY/2, 0);
 				gxScalef(zoom, zoom, 1);
 				gxTranslatef(-midX, -midY, 0.f);
+
 				static Color earth_color = colorWhite;
 				Color earth_target_color = colorWhite;
+				static EarthState oldEarthState = earth_state;
 				if (earth_happiness > -50.0 && earth_happiness < -25.0)
+				{
 					earth_target_color = Color::fromHSL(0.520f, 1.000f, 0.620f);
+					earth_state = kEarthState_Frozen;
+				}
 				else if (earth_happiness > -25 && earth_happiness < 0)
+				{
 					earth_target_color = Color::fromHSL(0.520f, 1.000f, 0.620f);
+					earth_state = kEarthState_Cold;
+				}
 				else if (earth_happiness > 0 && earth_happiness < 25)
+				{
 					earth_target_color = Color::fromHSL(0.320f, 1.000f, 0.710f);
+					earth_state = kEarthState_Warm;
+				}
 				else if (earth_happiness > 25 && earth_happiness < 50)
+				{
 					earth_target_color = Color::fromHSL(1.000f, 0.920f, 0.480f);
+					earth_state = kEarthState_Hot;
+				}
+
+				if (earth_state != oldEarthState)
+				{
+					oldEarthState = earth_state;
+
+					if (earth_state == kEarthState_Frozen)
+						playSound("earth_transition_frozen");
+					else if (earth_state == kEarthState_Cold)
+						playSound("earth_transition_cold");
+					else if (earth_state == kEarthState_Warm)
+						playSound("earth_transition_warm");
+					else if (earth_state == kEarthState_Hot)
+						playSound("earth_transition_hot");
+				}
+
 				Sprite earth("Art Assets/planete.png");
 				earth_color = earth_color.interp(earth_target_color, 0.004f);
 				setColor(earth_color);
