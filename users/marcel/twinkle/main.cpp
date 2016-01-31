@@ -807,6 +807,7 @@ int main(int argc, char * argv[])
 			timer += dt;
 			if (timer >= 1.0f)
 			{
+				timer = 0.0f;
 				earth_happiness += sun.happiness / 0.1;
 				if (nbr_lemmings < MAX_LEMMINGS)
 				{
@@ -816,7 +817,6 @@ int main(int argc, char * argv[])
 					nbr_lemmings++;
 				}
 			}
-				timer = 0.0f;
 
 			// draw
 
