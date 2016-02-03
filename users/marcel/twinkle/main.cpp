@@ -204,7 +204,7 @@ public:
 			else if (emotion == kEmotion_Depressed)
 			{
 				targetColor = colorBlue;
-				activeAudioSet = 1;
+				activeAudioSet = 0;
 				face = rand() % 3;
 			}
 
@@ -976,7 +976,7 @@ Lemming * getRandomLemming()
 int main(int argc, char * argv[])
 {
 #ifdef DEBUG
-	if (1 == 2)
+	if (1 == 1)
 	{
 		framework.fullscreen = false;
 		framework.minification = 2;
@@ -992,6 +992,8 @@ int main(int argc, char * argv[])
 
 	if (framework.init(0, 0, SX, SY))
 	{
+		mouse.showCursor(false);
+
 	#if !defined(DEBUG)
 		framework.fillCachesWithPath("Art Assets", true);
 		framework.fillCachesWithPath("Sound Assets", true);
@@ -1124,7 +1126,9 @@ int main(int argc, char * argv[])
 		#endif
 
 			const float masVolumeMultiplier = 1.f / 2.f;
-			for (int c = 0; c < 8; ++c)
+			for (int c = 0; c < 4; ++c)
+				mas.targetVolume[c] = audioSets[activeAudioSet].volume[c] * masVolumeMultiplier;
+			for (int c = 8; c < 12; ++c)
 				mas.targetVolume[c] = audioSets[activeAudioSet].volume[c] * masVolumeMultiplier;
 
 		#ifdef DEBUG
@@ -1290,7 +1294,7 @@ int main(int argc, char * argv[])
 			const float sunVec2 = Calc::Clamp(sunRate, -1.f, 1.f);
 			const float choirValue = Calc::Clamp(sunVec1 * sunVec2, 0.f, 1.f);
 
-			for (int i = 8; i < 12; ++i)
+			for (int i = 4; i < 8; ++i)
 				mas.targetVolume[i] = choirValue * audioSets[activeAudioSet].volume[i] * masVolumeMultiplier;
 
 			// randomly activate pray
