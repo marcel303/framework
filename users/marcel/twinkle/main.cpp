@@ -31,8 +31,13 @@
 
 int activeAudioSet = 0;
 
+#define ENABLE_DEBUG_DRAW 1
+#if ENABLE_DEBUG_DRAW
 #ifdef DEBUG
 OPTION_DECLARE(bool, DEBUG_DRAW, true);
+#else
+OPTION_DECLARE(bool, DEBUG_DRAW, false);
+#endif
 OPTION_DEFINE(bool, DEBUG_DRAW, "Debug Draw");
 #endif
 
@@ -63,6 +68,10 @@ OPTION_STEP(L, 0.0f, 1.0f, 0.01f);
 OPTION_DECLARE(float, SHOON_SPAWN_CHANCE, 0.02f);
 OPTION_DEFINE(float, SHOON_SPAWN_CHANCE, "Shoon Spawn Chance");
 OPTION_STEP(SHOON_SPAWN_CHANCE, 0.01f, 20.0f, 0.01f);
+
+OPTION_DECLARE(float, LEMMING_THROW_SPEED, 8.f);
+OPTION_DEFINE(float, LEMMING_THROW_SPEED, "Shoon Throw Speed");
+OPTION_STEP(LEMMING_THROW_SPEED, 0, 0, 0.1f);
 
 struct SoundInfo
 {
@@ -133,6 +142,7 @@ public:
 
 	enum Emotion
 	{
+		kEmotion_Undefined = -1,
 		kEmotion_Depressed,
 		kEmotion_Sad,
 		kEmotion_Happy,
@@ -166,22 +176,23 @@ public:
 
 	void tickEmotion()
 	{
-		static Emotion lastEmotion = kEmotion_Happy;
+		static Emotion lastEmotion = kEmotion_Undefined;
 
 		if (emotion != lastEmotion)
 		{
-			lastEmotion = emotion;
+			if (lastEmotion != kEmotion_Undefined)
+			{
+				if (emotion == kEmotion_Depressed)
+					playSound("sun_transition_depressed");
+				if (emotion == kEmotion_Sad)
+					playSound("sun_transition_unhappy");
+				if (emotion == kEmotion_Happy)
+					playSound("sun_transition_happy");
+				if (emotion == kEmotion_Lucid)
+					playSound("sun_transition_manichappy");
+			}
 
-		#if !defined(DEBUG) || 1
-			if (emotion == kEmotion_Depressed)
-				playSound("sun_transition_depressed");
-			if (emotion == kEmotion_Sad)
-				playSound("sun_transition_unhappy");
-			if (emotion == kEmotion_Happy)
-				playSound("sun_transition_happy");
-			if (emotion == kEmotion_Lucid)
-				playSound("sun_transition_manichappy");
-		#endif
+			lastEmotion = emotion;
 
 			if (emotion == kEmotion_Lucid)
 			{
@@ -437,7 +448,7 @@ public:
 			}
 		}
 
-	#ifdef DEBUG
+	#if ENABLE_DEBUG_DRAW
 		if (DEBUG_DRAW)
 			drawCircle(spriteState.x, spriteState.y, 10, 10);
 	#endif
@@ -548,7 +559,7 @@ public:
 			if (selected_lemming)
 			{
 				selected_lemming->distance = 0.0f;
-				selected_lemming->speed = speed * 12.0f;
+				selected_lemming->speed = speed * LEMMING_THROW_SPEED;
 
 				playSound("throw");
 			}
@@ -589,7 +600,7 @@ public:
 			spriteState.flipX = false;
 		setColor(colorWhite);
 		PLAYER_SPRITE.draw(spriteState);
-	#ifdef DEBUG
+	#if ENABLE_DEBUG_DRAW
 		if (DEBUG_DRAW)
 			drawCircle(spriteState.x, spriteState.y, 10, 10);
 	#endif
@@ -610,9 +621,9 @@ public:
 
 	Player2()
 	{
-		max_speed = 0.6;
-		speed = 0.0;
-		angle = 0.0;
+		max_speed = 0.6f;
+		speed = 0.f;
+		angle = 0.f;
 		scale = 1.f;
 		direction_right = true;
 	}
@@ -659,7 +670,7 @@ public:
 			if (selected_lemming)
 			{
 				selected_lemming->distance = 0.0f;
-				selected_lemming->speed = speed * 12.0f;
+				selected_lemming->speed = speed * LEMMING_THROW_SPEED;
 
 				playSound("throw");
 			}
@@ -994,6 +1005,15 @@ int main(int argc, char * argv[])
 	{
 		mouse.showCursor(false);
 
+		// flip a few empty frame so we won't show a non-responsive desktop while caching resource
+
+		for (int i = 0; i < 10; ++i)
+		{
+			framework.beginDraw(0, 0, 0, 0);
+			framework.process();
+			framework.endDraw();
+		}
+
 	#if !defined(DEBUG)
 		framework.fillCachesWithPath("Art Assets", true);
 		framework.fillCachesWithPath("Sound Assets", true);
@@ -1020,7 +1040,7 @@ int main(int argc, char * argv[])
 			float volume[12];
 		} audioSets[4] =
 		{
-			{ 1, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0 },
+			{ 1, 0, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0 },
 			{ 1, 1, 0, 0,  1, 1, 0, 0,  0, 1, 0, 0 },
 			{ 1, 1, 1, 0,  1, 1, 1, 0,  0, 0, 1, 0 },
 			{ 0, 0, 1, 1,  1, 1, 1, 1,  0, 0, 0, 1 }
@@ -1057,6 +1077,9 @@ int main(int argc, char * argv[])
 		bool stop = false;
 
 		int frameStart = 2;
+
+		float fadeTime = .6f;
+		float fadeTimeRcp = 1.f / fadeTime;
 
 		while (!stop)
 		{
@@ -1308,6 +1331,7 @@ int main(int argc, char * argv[])
 				if (le && le->state == 2)
 					le->doPray();
 			}
+
 			// draw
 
 			framework.beginDraw(0, 0, 0, 0);
@@ -1355,6 +1379,8 @@ int main(int argc, char * argv[])
 				{
 					const float t = powf(.05f, dt);
 					zoom = t * zoom + (1.f - t) * targetZoom;
+
+					fadeTime = Calc::Max(0.f, fadeTime - dt);
 				}
 
 				gxPushMatrix();
@@ -1465,8 +1491,13 @@ int main(int argc, char * argv[])
 				setColor(colorBlack);
 				drawRect(0, 0, SX, SY);
 			}
+			else if (fadeTime > 0.f)
+			{
+				setColorf(0.f, 0.f, 0.f, fadeTime * fadeTimeRcp);
+				drawRect(0, 0, SX, SY);
+			}
 
-		#ifdef DEBUG
+		#if ENABLE_DEBUG_DRAW
 			if (DEBUG_DRAW)
 			{
 				setFont("calibri.ttf");
@@ -1475,6 +1506,9 @@ int main(int argc, char * argv[])
 
 				setColor(colorWhite);
 				drawText(10, y += 30, 24, +1, +1, "Debug Draw!");
+
+				setColor(colorWhite);
+				drawText(10, y += 30, 24, +1, +1, "audio set %d", activeAudioSet);
 
 				for (int i = 0; i < 12; ++i)
 				{
