@@ -1775,6 +1775,8 @@ void Player::tick(GameSim & gameSim, float dt)
 
 				endGrapple();
 
+				endFootBallGrapple();
+
 			#if ENABLE_FOOTBALL_HIT
 				if (gameSim.m_gameMode == kGameMode_FootBrawl)
 				{
@@ -2138,6 +2140,8 @@ void Player::tick(GameSim & gameSim, float dt)
 						m_teleport.lastPortalId = destinationId;
 
 						endGrapple();
+
+						endFootBallGrapple();
 					}
 				}
 			}
@@ -2962,20 +2966,21 @@ void Player::tick(GameSim & gameSim, float dt)
 				setAnim(kPlayerAnim_Jump, true, false);
 		}
 
-	#if !WRAP_AROUND_TOP_AND_BOTTOM
-		// death by fall
-
-		if (m_pos[1] > gameSim.m_arena.m_syPixels)
+		if (!WRAP_AROUND_TOP_AND_BOTTOM || !gameSim.m_arena.m_wrapAround)
 		{
-			if (isAnimOverrideAllowed(kPlayerAnim_Die))
-			{
-				setAnim(kPlayerAnim_Die, true, true);
-				m_isAnimDriven = true;
+			// death by fall
 
-				awardScore(-1);
+			if (m_pos[1] > gameSim.m_arena.m_syPixels)
+			{
+				if (isAnimOverrideAllowed(kPlayerAnim_Die))
+				{
+					setAnim(kPlayerAnim_Die, true, true);
+					m_isAnimDriven = true;
+
+					awardScore(-1);
+				}
 			}
 		}
-	#endif
 
 		// facing
 
@@ -2993,6 +2998,7 @@ void Player::tick(GameSim & gameSim, float dt)
 
 		// wrapping
 
+		if (gameSim.m_arena.m_wrapAround)
 		{
 			const Vec2 oldPos = m_pos;
 
@@ -3013,6 +3019,8 @@ void Player::tick(GameSim & gameSim, float dt)
 			if (newPos != oldPos)
 			{
 				endGrapple();
+
+				endFootBallGrapple();
 			}
 		}
 	}
@@ -4037,6 +4045,8 @@ void Player::despawn(bool willRespawn)
 
 	endGrapple();
 
+	endFootBallGrapple();
+
 	// make sure pipe bombs are cleaned up
 
 	for (int i = 0; i < MAX_PIPEBOMBS; ++i)
@@ -4072,6 +4082,8 @@ void Player::handleImpact(Vec2Arg velocity)
 	}
 
 	endGrapple();
+
+	endFootBallGrapple();
 }
 
 bool Player::shieldAbsorb(float amount)
@@ -4350,6 +4362,8 @@ bool Player::handleBubble(Vec2Arg velocity, Player * attacker)
 			m_bubble.timer = PLAYER_EFFECT_BUBBLE_TIME;
 			m_bubble.spriterState.startAnim(BUBBLE_SPRITER, "begin");
 			m_jump.cancelled = true;
+
+			endFootBallGrapple();
 		}
 	}
 
@@ -5034,10 +5048,11 @@ void Player::beginFootBallGrapple(int ballIndex)
 
 void Player::endFootBallGrapple()
 {
-	logDebug("endFootBallGrapple");
-	Assert(m_footballGrappleInfo.isActive);
-
-	m_footballGrappleInfo = FootballGrappleInfo();
+	if (m_footballGrappleInfo.isActive)
+	{
+		logDebug("endFootBallGrapple");
+		m_footballGrappleInfo = FootballGrappleInfo();
+	}
 }
 
 Vec2 Player::getFootBallGrapplePos() const
@@ -5304,13 +5319,6 @@ void CharacterData::load(int characterIndex)
 		m_traits |= kPlayerTrait_AirDash;
 	if (traitsStr.find("ninja_dash") != std::string::npos)
 		m_traits |= kPlayerTrait_NinjaDash;
-
-	//
-
-	m_numSkins = 0;
-
-	while (getSpriter()->hasCharacterMap(m_numSkins))
-		m_numSkins++;
 }
 
 bool CharacterData::hasTrait(PlayerTrait trait) const
@@ -5327,6 +5335,17 @@ Spriter * CharacterData::getSpriter() const
 	}
 
 	return m_spriter;
+}
+
+int CharacterData::getNumSkins() const
+{
+	if (m_numSkins == 0)
+	{
+		while (getSpriter()->hasCharacterMap(m_numSkins))
+			m_numSkins++;
+	}
+
+	return m_numSkins;
 }
 
 //

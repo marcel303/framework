@@ -5,6 +5,18 @@
 #include "internal.h"
 #include "spriter.h"
 
+#if defined(WIN32)
+	#include <Windows.h>
+	#include <Pathcch.h>
+	#include "FileStream.h"
+	#include "StreamReader.h"
+	#include "StreamWriter.h"
+#endif
+
+#if defined(DEBUG)
+	#include "Timer.h"
+#endif
+
 Globals globals;
 
 TextureCache g_textureCache;
@@ -96,6 +108,36 @@ void __stdcall debugOutputGL(
 
 //
 
+class ScopedLoadTimer
+{
+public:
+#if defined(DEBUG)
+	const char * m_filename;
+	uint64_t m_startTime;
+
+	ScopedLoadTimer(const char * filename)
+		: m_filename(filename)
+	{
+		logDebug("load %s [begin]", m_filename);
+
+		m_startTime = g_TimerRT.TimeUS_get();
+	}
+
+	~ScopedLoadTimer()
+	{
+		const uint64_t endTime = g_TimerRT.TimeUS_get();
+
+		logDebug("load %s [end] took %02.2fms", m_filename, (endTime - m_startTime) / 1000.f);
+	}
+#else
+	ScopedLoadTimer(const char * filename)
+	{
+	}
+#endif
+};
+
+//
+
 void bindVsInputs(const VsInput * vsInputs, int numVsInputs, int stride)
 {
 	checkErrorGL();
@@ -136,13 +178,125 @@ void TextureCacheElem::free()
 	}
 }
 
+#ifdef WIN32
+static std::string getCacheFilename(const char * filename, bool forRead)
+{
+	const int kPathSize = 256;
+	char tempPath[kPathSize];
+
+	if (GetTempPathA(kPathSize, tempPath) > 0)
+	{
+		uint32_t hash = 0;
+		for (int i = 0; filename[i]; ++i)
+			hash = hash * 13 + filename[i];
+		char hashName[32];
+		sprintf_s(hashName, sizeof(hashName), "fwc%08x.bin", hash);
+		strcat_s(tempPath, sizeof(tempPath), hashName);
+
+		if (forRead)
+		{
+			// check timestamp on both files
+			bool outdated = false;
+			const HANDLE file1 = CreateFile(filename, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+			const HANDLE file2 = CreateFile(tempPath, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+			if (file1 == INVALID_HANDLE_VALUE || file2 == INVALID_HANDLE_VALUE)
+				outdated = true;
+			else
+			{
+				FILETIME fileTime1;
+				FILETIME fileTime2;
+				if (!GetFileTime(file1, NULL, NULL, &fileTime1) ||
+					!GetFileTime(file2, NULL, NULL, &fileTime2) ||
+					CompareFileTime(&fileTime1, &fileTime2) == 1)
+					outdated = true;
+			}
+			if (file1 != INVALID_HANDLE_VALUE)
+				CloseHandle(file1);
+			if (file2 != INVALID_HANDLE_VALUE)
+				CloseHandle(file2);
+			if (outdated)
+				return "";
+		}
+
+		return tempPath;
+	}
+
+	return "";
+}
+#endif
+
 void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 {
+	ScopedLoadTimer loadTimer(filename);
+
 	free();
 	
 	name = filename;
 	
-	ImageData * imageData = loadImage(filename);
+	ImageData * imageData = 0;
+
+#ifdef WIN32
+	if (framework.cacheResourceData)
+	{
+		std::string cacheFilename = getCacheFilename(filename, true);
+
+		if (FileStream::Exists(cacheFilename.c_str()))
+		{
+			try
+			{
+				FileStream stream(cacheFilename.c_str(), OpenMode_Read);
+				StreamReader reader(&stream, false);
+
+				const uint32_t version = reader.ReadUInt32();
+
+				if (version == 0)
+				{
+					const uint32_t sx = reader.ReadUInt32();
+					const uint32_t sy = reader.ReadUInt32();
+
+					imageData = new ImageData(sx, sy);
+
+					reader.ReadBytes(imageData->imageData, imageData->sx * imageData->sy * sizeof(ImageData::Pixel));
+				}
+			}
+			catch (std::exception & e)
+			{
+				logError("failed to read cache data: %s", e.what());
+
+				delete imageData;
+				imageData = 0;
+			}
+		}
+	}
+#endif
+
+	if (!imageData)
+	{
+		imageData = loadImage(filename);
+
+	#ifdef WIN32
+		if (framework.cacheResourceData && imageData)
+		{
+			std::string cacheFilename = getCacheFilename(filename, false);
+
+			try
+			{
+				FileStream stream(cacheFilename.c_str(), OpenMode_Write);
+				StreamWriter writer(&stream, false);
+
+				writer.WriteUInt32(0); // version number
+				writer.WriteUInt32(imageData->sx);
+				writer.WriteUInt32(imageData->sy);
+
+				writer.WriteBytes(imageData->imageData, imageData->sx * imageData->sy * sizeof(ImageData::Pixel));
+			}
+			catch (std::exception & e)
+			{
+				logError("failed to write cache data: %s", e.what());
+			}
+		}
+	#endif
+	}
 	
 	if (!imageData)
 	{
@@ -500,6 +654,8 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type)
 
 void ShaderCacheElem::load(const char * filename)
 {
+	ScopedLoadTimer loadTimer(filename);
+
 	free();
 	
 	bool result = true;
@@ -726,6 +882,8 @@ void splitString(const std::string & str, std::vector<std::string> & result, cha
 
 void AnimCacheElem::load(const char * filename)
 {
+	ScopedLoadTimer loadTimer(filename);
+
 	free();
 	
 	FileReader r;
@@ -963,12 +1121,15 @@ void SpriterCacheElem::free()
 
 void SpriterCacheElem::load(const char * filename)
 {
+	ScopedLoadTimer loadTimer(filename);
+
 	free();
 	
 	m_scene = new spriter::Scene();
 	
 	if (m_scene->load(filename))
 	{
+		log("loaded spriter %s", filename);
 	}
 	else
 	{
@@ -1037,6 +1198,8 @@ void SoundCacheElem::free()
 
 void SoundCacheElem::load(const char * filename)
 {
+	ScopedLoadTimer loadTimer(filename);
+
 	free();
 	
 	SoundData * soundData = loadSound(filename);
@@ -1166,6 +1329,8 @@ void FontCacheElem::free()
 
 void FontCacheElem::load(const char * filename)
 {
+	ScopedLoadTimer loadTimer(filename);
+
 	free();
 	
 	if (FT_New_Face(globals.freeType, filename, 0, &face) != 0)
@@ -1347,6 +1512,8 @@ void UiCacheElem::free()
 
 void UiCacheElem::load(const char * filename)
 {
+	ScopedLoadTimer loadTimer(filename);
+
 	free();
 	
 	FileReader r;

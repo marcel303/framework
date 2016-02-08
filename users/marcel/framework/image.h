@@ -11,6 +11,16 @@ public:
 	{
 		memset(this, 0, sizeof(ImageData));
 	}
+
+	ImageData(int sx, int sy)
+	{
+		memset(this, 0, sizeof(ImageData));
+
+		this->sx = sx;
+		this->sy = sy;
+
+		imageData = new Pixel[sx * sy];
+	}
 	
 	~ImageData()
 	{

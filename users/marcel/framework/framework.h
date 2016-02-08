@@ -32,6 +32,16 @@
 	#define ENABLE_PROFILING 0 // do not alter
 #endif
 
+#define ENABLE_OPENGL 1
+
+/*
+#ifdef DEBUG
+	#define ENABLE_OPENGL 1
+#else
+	#define ENABLE_OPENGL 0
+#endif
+*/
+
 #define USE_LEGACY_OPENGL 1
 #define ENABLE_MIDI_INPUT 0
 #define ENABLE_UTF8_SUPPORT 0
@@ -210,6 +220,7 @@ public:
 	bool basicOpenGL;
 	int minification;
 	bool reloadCachesOnActivate;
+	bool cacheResourceData;
 	bool filedrop;
 	int numSoundSources;
 	int windowX;
@@ -819,7 +830,35 @@ void debugDrawText(float x, float y, int size, float alignX, float alignY, const
 
 // OpenGL legacy mode drawing
 
-#if !USE_LEGACY_OPENGL
+#if !ENABLE_OPENGL
+
+SDL_Surface * getWindowSurface();
+
+static void gxMatrixMode(GLenum mode) { }
+static void gxPopMatrix() { }
+static void gxPushMatrix() { }
+static void gxLoadIdentity() { }
+static void gxLoadMatrixf(const float * m) { }
+static void gxGetMatrixf(GLenum mode, float * m) { }
+static void gxTranslatef(float x, float y, float z) { }
+static void gxRotatef(float angle, float x, float y, float z) { }
+static void gxScalef(float x, float y, float z) { }
+static void gxValidateMatrices() { }
+
+static void gxInitialize() { }
+static void gxShutdown() { }
+static void gxBegin(int primitiveType) { }
+static void gxEnd() { }
+static void gxColor4f(float r, float g, float b, float a) { }
+static void gxColor4fv(const float * rgba) { }
+static void gxColor3ub(int r, int g, int b) { }
+static void gxTexCoord2f(float u, float v) { }
+static void gxNormal3f(float x, float y, float z) { }
+static void gxVertex2f(float x, float y) { }
+static void gxVertex3f(float x, float y, float z) { }
+static void gxSetTexture(GLuint texture) { }
+
+#elif !USE_LEGACY_OPENGL
 
 void gxMatrixMode(GLenum mode);
 void gxPopMatrix();

@@ -59,6 +59,7 @@ public:
 class CharacterData
 {
 	mutable Spriter * m_spriter;
+	mutable int m_numSkins;
 
 public:
 	int m_characterIndex;
@@ -71,7 +72,6 @@ public:
 	float m_meleeCooldown;
 	PlayerSpecial m_special;
 	int m_traits; // PlayerTrait
-	int m_numSkins;
 	std::map<std::string, SoundBag> m_sounds;
 
 	//
@@ -83,6 +83,7 @@ public:
 
 	bool hasTrait(PlayerTrait trait) const;
 	Spriter * getSpriter() const;
+	int getNumSkins() const;
 };
 
 class PlayerInstanceData

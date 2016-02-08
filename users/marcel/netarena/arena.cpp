@@ -11,6 +11,7 @@
 #include "Log.h"
 #include "main.h"
 #include "MemoryStream.h"
+#include "Parse.h"
 #include "Path.h"
 #include "player.h"
 #include "StreamReader.h"
@@ -159,6 +160,7 @@ Arena::Arena()
 	, m_textureSy(0)
 	, m_numTileTransitions(0)
 	, m_levelTheme(kLevelTheme_Volcano)
+	, m_wrapAround(true)
 {
 }
 
@@ -204,6 +206,8 @@ void Arena::reset()
 	m_numTileTransitions = 0;
 
 	m_levelTheme = kLevelTheme_Volcano;
+
+	m_wrapAround = true;
 }
 
 void Arena::generate()
@@ -486,6 +490,10 @@ void Arena::load(const char * name)
 						LOG_ERR("unknown level theme: %s", value.c_str());
 					}
 				}
+				else if (key == "wrap")
+				{
+					m_wrapAround = Parse::Bool(value);
+				}
 				else
 					LOG_ERR("unknown key: %s", key.c_str());
 			}
@@ -659,6 +667,8 @@ void Arena::serialize(NetSerializationContext & context)
 	int theme = m_levelTheme;
 	context.Serialize(theme);
 	m_levelTheme = (LevelTheme)theme;
+
+	context.Serialize(m_wrapAround);
 
 	const int size2 = context.GetBitStream().GetDataSize();
 
@@ -1173,7 +1183,7 @@ bool Arena::getBlocksFromPixels(int baseX, int baseY, int x1, int y1, int x2, in
 
 	int result = 0;
 
-	if (wrap)
+	if (wrap && m_wrapAround)
 	{
 		for (int dx = -1; dx <= +1; ++dx)
 		{

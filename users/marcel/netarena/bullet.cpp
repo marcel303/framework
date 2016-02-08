@@ -13,8 +13,6 @@
 #include "main.h"
 #include "player.h"
 
-#define WRAP_AROUND 1
-
 struct ParticleSprite
 {
 	const char * filename;
@@ -519,7 +517,7 @@ void BulletPool::anim(GameSim & gameSim, Bullet & b, float dt)
 	{
 		b.wrapCount++;
 
-		if (b.wrapCount > b.maxWrapCount)
+		if (b.wrapCount > b.maxWrapCount || !gameSim.m_arena.m_wrapAround)
 		{
 			b.m_pos[0] = x;
 			b.m_pos[1] = y;

@@ -21,9 +21,9 @@ static const char * getThemeName(LevelTheme type)
 	if (type == kLevelTheme_Volcano)
 		return "volcano";
 	else if (type == kLevelTheme_Lobby)
-		return "ice";
-	else if (type == kLevelTheme_Ice)
 		return "lobby";
+	else if (type == kLevelTheme_Ice)
+		return "ice";
 	else
 	{
 		Assert(false);
@@ -77,6 +77,10 @@ void Background::tick(GameSim & gameSim, float dt)
 
 	case kLevelTheme_Volcano:
 		m_volcanoState.tick(gameSim, *this, dt);
+		break;
+
+	case kLevelTheme_Ice:
+		m_iceState.tick(gameSim, *this, dt);
 		break;
 
 	default:
@@ -140,7 +144,7 @@ void Background::draw(const GameSim & gameSim, const CamParams & camParams)
 		{
 			gxScalef(1.f / gameSim.m_arena.getBaseZoom(), 1.f / gameSim.m_arena.getBaseZoom(), 1.f);
 			setColor(colorWhite);
-			ICE_SPRITER1.draw(m_volcanoState.m_spriterState);
+			ICE_SPRITER1.draw(m_iceState.m_spriterState1);
 		}
 		gxPopMatrix();
 
@@ -149,7 +153,7 @@ void Background::draw(const GameSim & gameSim, const CamParams & camParams)
 		{
 			gxScalef(1.f / gameSim.m_arena.getBaseZoom(), 1.f / gameSim.m_arena.getBaseZoom(), 1.f);
 			setColor(colorWhite);
-			ICE_SPRITER2.draw(m_volcanoState.m_spriterState);
+			ICE_SPRITER2.draw(m_iceState.m_spriterState2);
 		}
 		gxPopMatrix();
 		break;
@@ -315,10 +319,10 @@ Background::IceState::IceState()
 	memset(this, 0, sizeof(*this));
 
 	m_spriterState1 = SpriterState();
-	m_spriterState1.startAnim(ICE_SPRITER1, "Idle");
+	m_spriterState1.startAnim(ICE_SPRITER1, 0);
 
 	m_spriterState2 = SpriterState();
-	m_spriterState2.startAnim(ICE_SPRITER2, "Idle");
+	m_spriterState2.startAnim(ICE_SPRITER2, 0);
 }
 
 void Background::IceState::tick(GameSim & gameSim, Background & background, float dt)

@@ -4670,6 +4670,23 @@ void GameSim::setDesiredZoomFocus(Vec2Arg focus)
 	m_desiredZoomFocusIsSet = true;
 }
 
+static void integratePosition(const Vec2 & pos, bool & hasMinMax, Vec2 & min, Vec2 & max, const Arena & arena, float & maxDistanceFromCenter)
+{
+	if (!hasMinMax)
+	{
+		min = max = pos;
+		hasMinMax = true;
+	}
+	else
+	{
+		min = min.Min(pos);
+		max = max.Max(pos);
+	}
+
+	const Vec2 delta = pos - Vec2(arena.m_sxPixels/2.f, arena.m_syPixels/2.f);
+	maxDistanceFromCenter = Calc::Max(maxDistanceFromCenter, delta.CalcSize());
+}
+
 float GameSim::calculateEffectiveZoom() const
 {
 	if (ZOOM_FACTOR != 1.f)
@@ -4685,20 +4702,15 @@ float GameSim::calculateEffectiveZoom() const
 	{
 		if (m_players[i].m_isUsed && m_players[i].m_isAlive)
 		{
-			if (!hasMinMax)
-			{
-				min = max = m_players[i].m_pos;
-				hasMinMax = true;
-			}
-			else
-			{
-				min = min.Min(m_players[i].m_pos);
-				max = max.Max(m_players[i].m_pos);
-			}
+			integratePosition(m_players[i].m_pos, hasMinMax, min, max, m_arena, maxDistanceFromCenter);
+		}
+	}
 
-
-			const Vec2 delta = m_players[i].m_pos - Vec2(m_arena.m_sxPixels/2.f, m_arena.m_syPixels/2.f);
-			maxDistanceFromCenter = Calc::Max(maxDistanceFromCenter, delta.CalcSize());
+	for (int i = 0; i < MAX_FOOTBALLS; ++i)
+	{
+		if (m_footBalls[i].m_isActive)
+		{
+			integratePosition(m_footBalls[i].m_pos, hasMinMax, min, max, m_arena, maxDistanceFromCenter);
 		}
 	}
 
@@ -4712,7 +4724,7 @@ float GameSim::calculateEffectiveZoom() const
 		const float scaleX = (m_arena.m_sxPixels - 200.f) / (dx + .0001f);
 		const float scaleY = (m_arena.m_syPixels - 200.f) / (dy + .0001f);
 
-		const float strength = Calc::Clamp(1.f - maxDistanceFromCenter * baseZoom / ZOOM_PLAYER_MAX_DISTANCE, 0.f, 1.f);
+		const float strength = m_arena.m_wrapAround ? Calc::Clamp(1.f - maxDistanceFromCenter * baseZoom / ZOOM_PLAYER_MAX_DISTANCE, 0.f, 1.f) : 1.f;
 		const float playerZoom = Calc::Clamp(Calc::Min(scaleX, scaleY), ZOOM_FACTOR_MIN, ZOOM_FACTOR_MAX);
 
 		zoom = Calc::Max(zoom, Calc::Lerp(baseZoom, playerZoom, strength));
@@ -4796,6 +4808,9 @@ void GameSim::tickZoom(float dt)
 
 void GameSim::restrictZoomParams(float & zoom, Vec2 & zoomFocus) const
 {
+	if (!m_arena.m_wrapAround)
+		return;
+
 	Vec2 screenMin(0.f, 0.f);
 	Vec2 screenMax(m_arena.m_sxPixels, m_arena.m_syPixels);
 

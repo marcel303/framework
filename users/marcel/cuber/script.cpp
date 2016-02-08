@@ -201,7 +201,13 @@ public:
 		if (m_ctx.keyWentDown(SDLK_x))
 			m_transform = (TransformMode)((m_transform + (m_ctx.keyIsDown(SDLK_LSHIFT) ? -1 : 1) + kTransformMode_COUNT) % kTransformMode_COUNT);
 
-		m_time += dt;
+		static int timeScale = 0;
+		if (m_ctx.keyWentDown(SDLK_s))
+		{
+			timeScale = (timeScale + 1) % 5;
+		}
+
+		m_time += dt / (timeScale + 1.f);
 
 		//
 
@@ -303,40 +309,51 @@ public:
 			{
 				doTestPostEffects = false;
 
-			#if 0
-				const float s = 10.f;
-				const float t1 = (sinf(framework.time * s / 1.111f) + 1.f) * .25f;
-				const float t2 = (sinf(framework.time * s / 2.333f) + 1.f) * .25f;
-				d = computePlaneDistance(twistZ(twistY(c, t1), t2)) * 2.f;
-				d = (1.f - pow(d, power));
-			#elif 0
-				const float r = .4f + .3f * sinf(framework.time);
-				d = computeCircleHullDistance(repeat(c, 0.f, 0.f, r)) * 3.f;
-				d = 1.f - pow(d, power);
-			#elif 0
-				const Coord c1 = c;
-				const Coord c2 = c + Coord(5.2f, 1.3f, 0.f);
-				const Coord c3(
-					computePerlinNoise(c1, framework.time / 1.111f),
-					computePerlinNoise(c2, framework.time / 1.333f),
-					0.f);
+				const int mode = int(m_time / 4.f) % 5;
+			
+				if (mode == 0)
+				{
+					const float s = 10.f;
+					const float t1 = (sinf(m_time * s / 1.111f) + 1.f) * .25f;
+					const float t2 = (sinf(m_time * s / 2.333f) + 1.f) * .25f;
+					d = computePlaneDistance(twistZ(twistY(c, t1), t2)) * 2.f;
+					d = (1.f - pow(d, power));
+				}
+				else if (mode == 1)
+				{
+					const float r = .4f + .3f * sinf(m_time);
+					d = computeCircleHullDistance(repeat(c, 0.f, 0.f, r)) * 3.f;
+					d = 1.f - pow(d, power);
+				}
+				else if (mode == 2)
+				{
+					const Coord c1 = c;
+					const Coord c2 = c + Coord(5.2f, 1.3f, 0.f);
+					const Coord c3(
+						computePerlinNoise(c1, m_time / 1.111f),
+						computePerlinNoise(c2, m_time / 1.333f),
+						0.f);
 
-				d = computePerlinNoise(c + c3, framework.time / 5.777f) * 3.f;
-			#elif 0
-				d = computePerlinNoise(c, framework.time) * 3.f;
-			#else
-				auto c1 = m_pointMatrix1.apply(c);
-				auto c2 = m_pointMatrix2.apply(c);
-				//const float d = 1.f - computePointDistance(x, y, z);
-				//const float d = 1.f - pow(computeLineDistance(x, y, z), 4.f);
-				const float d1 = computePlaneDistance(twistY(c1, .05f + controlX / 10.f));
-				const float d2 = computePlaneDistance(twistZ(c2, .03f + controlY / 10.f));
-				const float d3 = computePerlinNoise(testCoord, m_time) * 2.f + 1.f;
-				const float d4 = computeMinParticleDistance(m_particleMatrix.apply(c), m_particles, kNumParticles) * 4.f;
-				d = min(d1, d2, d3, d4);
-				//d = min(d4);
-				d = (1.f - pow(d, power));
-			#endif
+					d = computePerlinNoise(c + c3, m_time / 5.777f) * 3.f;
+				}
+				else if (mode == 3)
+				{
+					d = computePerlinNoise(c, m_time) * 3.f;
+				}
+				else
+				{
+					auto c1 = m_pointMatrix1.apply(c);
+					auto c2 = m_pointMatrix2.apply(c);
+					//const float d = 1.f - computePointDistance(x, y, z);
+					//const float d = 1.f - pow(computeLineDistance(x, y, z), 4.f);
+					const float d1 = computePlaneDistance(twistY(c1, .05f + controlX / 10.f));
+					const float d2 = computePlaneDistance(twistZ(c2, .03f + controlY / 10.f));
+					const float d3 = computePerlinNoise(testCoord, m_time) * 2.f + 1.f;
+					const float d4 = computeMinParticleDistance(m_particleMatrix.apply(c), m_particles, kNumParticles) * 4.f;
+					d = min(d1, d2, d3, d4);
+					//d = min(d4);
+					d = (1.f - pow(d, power));
+				}
 			}
 			break;
 

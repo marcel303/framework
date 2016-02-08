@@ -17,6 +17,7 @@ public:
 	void WriteUInt16(uint16_t v);
 	void WriteUInt32(uint32_t v);
 	void WriteFloat(float v);
+	void WriteBytes(const void* bytes, uint32_t byteCount);
 
 	// todo: endianness
 

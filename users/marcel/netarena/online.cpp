@@ -496,6 +496,7 @@ OnlineRequestId OnlineSteam::lobbyLeaveBegin()
 
 	LOG_DBG("OnlineSteam: lobbyLeaveBegin");
 	SteamMatchmaking()->LeaveLobby(m_lobbyId);
+	m_currentCall = k_uAPICallInvalid + 1; // fixme : only here to silence asserts. LeaveLobby isn't actually async!
 	m_currentRequestId++;
 	m_currentCallType = kCallType_LobbyLeave;
 

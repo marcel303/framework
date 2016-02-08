@@ -17,6 +17,9 @@ public:
 	void Close();
 	int Position_get();
 	bool HasLooped_get();
+
+	bool IsOpen_get() const { return mFile != 0; }
+	const char * FileName_get() const { return mFileName.c_str(); }
 	
 	int mSampleRate;
 	
