@@ -25,19 +25,29 @@ const float pi2 = M_PI * 2.f;
 
 :: todo :: OSC
 
--
+	-
 
 :: todo :: configuration
 
-- 
+	- prompt for MIDI controller at startup. or select by name in XML config file?
+	- prompt for audio input device at startup. or select by name in XML config file?
+	- add XML settings file
+	- define scene XML representation
+	- discuss with Max what would be needed for life act
 
 :: todo :: projector output
 
-- 
+	- add brightness control
+	- add border blends to hide projector seam. unless eg MadMapper already does this, it may be necessary to do it ourselvess
+
+:: todo :: utility functions
+
+	- add PCM capture
+	- add FFT calculation PCM data
 
 :: todo :: post processing and graphics quality
 
-- smooth line drawing with high AA. use a post process pass to blur the result ?
+	- smooth line drawing with high AA. use a post process pass to blur the result ?
 
 :: todo :: visuals tech 2D
 
@@ -45,31 +55,33 @@ const float pi2 = M_PI * 2.f;
 
 :: todo :: visuals tech 3D
 
-- virtual camera positioning
+	- virtual camera positioning
+
+	- compute virtual camera matrices
 
 :: todo :: effects
 
-- particle effect : sea
+	- particle effect : sea
 
-- particle effect : rain
+	- particle effect : rain
 
-- particle effect : bouncy (sort of like rain, but with bounce effect + ability to control with sensor input)
+	- particle effect : bouncy (sort of like rain, but with bounce effect + ability to control with sensor input)
 
-- cloth simulation
+	- cloth simulation
 
-- particle effect :: star cluster
+	- particle effect :: star cluster
 
 :: todo :: particle system
 
-- ability to toggle particle trails
+	- ability to toggle particle trails
 
 :: todo :: color controls
 
-- 
+	- 
 
 :: notes
 
-- seamless transitions between scenes
+	- seamless transitions between scenes
 
 */
 
@@ -1278,8 +1290,9 @@ int main(int argc, char * argv[])
 	//recvSocket.Run();
 
 	framework.fullscreen = false;
-	framework.minification = 2;
 	framework.enableDepthBuffer = true;
+	framework.minification = 2;
+	framework.enableMidi = true;
 
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
@@ -1557,19 +1570,20 @@ int main(int argc, char * argv[])
 
 				Camera cameras[kNumScreens];
 
-				const float depth = -1.f; // todo : rotate the screen instead of hacking their positions
+				const float dx = +sqrtf(2.f) / 2.f; // todo : rotate the screen instead of hacking their positions
+				const float dz = -sqrtf(2.f) / 2.f; // todo : rotate the screen instead of hacking their positions
 
 				Vec3 _screenCorners[8] =
 				{
-					Vec3(-1.5f, 0.f, depth),
-					Vec3(-0.5f, 0.f, 0.f),
-					Vec3(+0.5f, 0.f, 0.f),
-					Vec3(+1.5f, 0.f, depth),
+					Vec3(-0.5f - dx, 0.f,  dz),
+					Vec3(-0.5f,      0.f, 0.f),
+					Vec3(+0.5f,      0.f, 0.f),
+					Vec3(+0.5f + dx, 0.f,  dz),
 
-					Vec3(-1.5f, 1.f, depth),
-					Vec3(-0.5f, 1.f, 0.f),
-					Vec3(+0.5f, 1.f, 0.f),
-					Vec3(+1.5f, 1.f, depth),
+					Vec3(-0.5f - dx, 1.f,  dz),
+					Vec3(-0.5f,      1.f, 0.f),
+					Vec3(+0.5f,      1.f, 0.f),
+					Vec3(+0.5f + dx, 1.f,  dz),
 				};
 
 				Vec3 screenCorners[kNumScreens][4];
