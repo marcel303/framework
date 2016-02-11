@@ -101,23 +101,57 @@ int main(int argc, char* argv[])
 		const int pixelIndex = pixelX + (size[1] - 1 - pixelY) * size[0];
 		const ImageData::Pixel & pixel = image->imageData[pixelIndex];
 
-		const int freq1 = pixel.r;
-		const int freq2 = pixel.g;
-		const int freq3 = pixel.b;
+		const float freq1 = pixel.r;
+		const float freq2 = pixel.g;
+		//const float freq3 = pixel.b;
+		const float freq3 = 255;
 
 		// update network
 
 		char buffer[OUTPUT_BUFFER_SIZE];
-		osc::OutboundPacketStream p(buffer, OUTPUT_BUFFER_SIZE);
 
-		p
-			<< osc::BeginBundleImmediate
-			<< osc::BeginMessage("/chat")
-			<< freq1 << freq2 << freq3 << 4
-			<< osc::EndMessage
-			<< osc::EndBundle;
+		static int spriteAllocator;
+		if (((spriteAllocator++) % 10) == 0)
+		{
+			osc::OutboundPacketStream p(buffer, OUTPUT_BUFFER_SIZE);
 
-		transmitSocket.Send(p.Data(), p.Size());
+			p
+				<< osc::BeginBundleImmediate
+				<< osc::BeginMessage("/sprite")
+				<< "test" << freq1 << freq2 << freq3
+				<< osc::EndMessage
+				<< osc::EndBundle;
+
+			transmitSocket.Send(p.Data(), p.Size());
+		}
+
+		if (keyboard.wentDown(SDLK_t))
+		{
+			osc::OutboundPacketStream p(buffer, OUTPUT_BUFFER_SIZE);
+
+			p
+				<< osc::BeginBundleImmediate
+				<< osc::BeginMessage("/timedilation")
+				<< 1.f << .25f
+				<< osc::EndMessage
+				<< osc::EndBundle;
+
+			transmitSocket.Send(p.Data(), p.Size());
+		}
+
+		if (keyboard.wentDown(SDLK_v))
+		{
+			osc::OutboundPacketStream p(buffer, OUTPUT_BUFFER_SIZE);
+
+			p
+				<< osc::BeginBundleImmediate
+				<< osc::BeginMessage("/video")
+				<< "test.mp4" << 0.f << 0.f << 1.f
+				<< osc::EndMessage
+				<< osc::EndBundle;
+
+			transmitSocket.Send(p.Data(), p.Size());
+		}
 
 		// draw
 
