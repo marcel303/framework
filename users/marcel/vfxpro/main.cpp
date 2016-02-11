@@ -1225,8 +1225,20 @@ static void drawCamera(const Camera & camera)
 
 static void drawScreen(const Vec3 * screenPoints, GLuint surfaceTexture, int screenId)
 {
-	setBlend(BLEND_OPAQUE);
-	gxColor4f(1.f, 1.f, 1.f, 1.f);
+	const bool translucent = false;
+
+	if (translucent)
+	{
+		gxColor4f(1.f, 1.f, 1.f, .5f);
+		glDisable(GL_DEPTH_TEST);
+
+		setBlend(BLEND_ADD);
+	}
+	else
+	{
+		setBlend(BLEND_OPAQUE);
+	}
+
 	gxSetTexture(surfaceTexture);
 	{
 		gxBegin(GL_QUADS);
@@ -1239,6 +1251,8 @@ static void drawScreen(const Vec3 * screenPoints, GLuint surfaceTexture, int scr
 		gxEnd();
 	}
 	gxSetTexture(0);
+
+	glEnable(GL_DEPTH_TEST);
 	setBlend(BLEND_ALPHA);
 
 	gxColor4f(1.f, 1.f, 1.f, 1.f);
@@ -1265,6 +1279,7 @@ int main(int argc, char * argv[])
 
 	framework.fullscreen = false;
 	framework.minification = 2;
+	framework.enableDepthBuffer = true;
 
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
@@ -1280,6 +1295,8 @@ int main(int argc, char * argv[])
 		bool drawCloth = true;
 		bool drawSprites = true;
 		bool drawVideo = true;
+
+		bool drawProjectorSetup = false;
 
 		Effect_Rain rain(10000);
 
@@ -1326,7 +1343,7 @@ int main(int argc, char * argv[])
 				framework.reloadCachesOnActivate = true;
 			}
 
-			if (keyboard.wentDown(SDLK_s))
+			if (keyboard.wentDown(SDLK_a))
 			{
 				spriteSystem.addSprite("Diamond.scml", 0, rand() % GFX_SX, rand() % GFX_SY, 0.f, 1.f);
 			}
@@ -1348,6 +1365,9 @@ int main(int argc, char * argv[])
 				drawSprites = !drawSprites;
 			if (keyboard.wentDown(SDLK_5))
 				drawVideo = !drawVideo;
+
+			if (keyboard.wentDown(SDLK_s))
+				drawProjectorSetup = !drawProjectorSetup;
 
 			const float dtReal = Calc::Min(1.f / 30.f, framework.timeStep);
 
@@ -1531,7 +1551,7 @@ int main(int argc, char * argv[])
 
 			drawableList.sort();
 
-			framework.beginDraw(0, 0, 0, 0, false);
+			framework.beginDraw(0, 0, 0, 0, true);
 			{
 				// camera setup
 
@@ -1572,7 +1592,7 @@ int main(int argc, char * argv[])
 
 				if (clearScreen)
 				{
-					glClearColor(0.f, 0.f, 0.f, 0.f);
+					glClearColor(0.f, 0.f, 0.f, 1.f);
 					glClear(GL_COLOR_BUFFER_BIT);
 				}
 				else
@@ -1685,61 +1705,72 @@ int main(int argc, char * argv[])
 				gxSetTexture(0);
 			#endif
 
-				if (debugDraw)
+				if (debugDraw && drawProjectorSetup)
 				{
+					glClearColor(0.25f, .5f, 1.f, 0.f);
+					glClear(GL_COLOR_BUFFER_BIT);
+
 					setBlend(BLEND_ALPHA);
 
+				#if 0 // todo : move to camera viewport rendering ?
 					// draw projector bounds
 
 					setColorf(1.f, 1.f, 1.f, .25f);
 					for (int i = 0; i < kNumScreens; ++i)
 						drawRectLine(virtualToScreenX(-150 + i * 100), virtualToScreenY(0.f), virtualToScreenX(-150 + (i + 1) * 100), virtualToScreenY(100));
+				#endif
 
 					// draw 3D projector setup
 
-					Mat4x4 projection;
-					projection.MakePerspectiveLH(90.f * Calc::deg2rad, float(GFX_SY) / float(GFX_SX), 0.01f, 100.f);
-					gxMatrixMode(GL_PROJECTION);
-					gxPushMatrix();
-					gxLoadMatrixf(projection.m_v);
+					glEnable(GL_DEPTH_TEST);
+
+					glDepthFunc(GL_LESS);
 					{
-						gxMatrixMode(GL_MODELVIEW);
+						Mat4x4 projection;
+						projection.MakePerspectiveLH(90.f * Calc::deg2rad, float(GFX_SY) / float(GFX_SX), 0.01f, 100.f);
+						gxMatrixMode(GL_PROJECTION);
 						gxPushMatrix();
-						gxLoadMatrixf(cameraMatrix.m_v);
+						gxLoadMatrixf(projection.m_v);
 						{
-							// draw ground
-
-							drawGroundPlane(0.f);
-
-							// draw the projector screens
-
-							for (int c = 0; c < kNumScreens; ++c)
+							gxMatrixMode(GL_MODELVIEW);
+							gxPushMatrix();
+							gxLoadMatrixf(cameraMatrix.m_v);
 							{
-								drawScreen(screenCorners[c], surfaceTexture, c);
+								// draw ground
+
+								drawGroundPlane(0.f);
+
+								// draw the projector screens
+
+								for (int c = 0; c < kNumScreens; ++c)
+								{
+									drawScreen(screenCorners[c], surfaceTexture, c);
+								}
+
+								// draw test objects
+
+								drawTestObjects();
+
+								// draw the cameras
+
+								//for (int c = 0; c < kNumScreens; ++c)
+								{
+									int c = activeCamera;
+
+									const Camera & camera = cameras[c];
+
+									drawCamera(camera);
+								}
 							}
-
-							// draw test objects
-
-							drawTestObjects();
-
-							// draw the cameras
-
-							//for (int c = 0; c < kNumScreens; ++c)
-							{
-								int c = activeCamera;
-
-								const Camera & camera = cameras[c];
-
-								drawCamera(camera);
-							}
+							gxMatrixMode(GL_MODELVIEW);
+							gxPopMatrix();
 						}
-						gxMatrixMode(GL_MODELVIEW);
+						gxMatrixMode(GL_PROJECTION);
 						gxPopMatrix();
-					}
-					gxMatrixMode(GL_PROJECTION);
-					gxPopMatrix();
 
-					gxMatrixMode(GL_MODELVIEW);
+						gxMatrixMode(GL_MODELVIEW);
+					}
+					glDisable(GL_DEPTH_TEST);
 				}
 			}
 			framework.endDraw();
