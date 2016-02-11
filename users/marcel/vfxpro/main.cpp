@@ -1159,7 +1159,7 @@ static void drawTestObjects()
 
 static void drawGroundPlane(const float y)
 {
-	gxColor4f(.5f, .5f, .5f, 1.f);
+	gxColor4f(.1f, .1f, .1f, 1.f);
 	gxBegin(GL_QUADS);
 	{
 		gxVertex3f(-100.f, y, -100.f);
@@ -1225,11 +1225,11 @@ static void drawCamera(const Camera & camera)
 
 static void drawScreen(const Vec3 * screenPoints, GLuint surfaceTexture, int screenId)
 {
-	const bool translucent = false;
+	const bool translucent = true;
 
 	if (translucent)
 	{
-		gxColor4f(1.f, 1.f, 1.f, .5f);
+		gxColor4f(1.f, 1.f, 1.f, 1.f);
 		glDisable(GL_DEPTH_TEST);
 
 		setBlend(BLEND_ADD);
@@ -1597,7 +1597,13 @@ int main(int argc, char * argv[])
 				}
 				else
 				{
-					setBlend(BLEND_SUBTRACT);
+					// basically BLEND_SUBTRACT, but keep the alpha channel in-tact
+					glEnable(GL_BLEND);
+					fassert(glBlendEquation);
+					if (glBlendEquation)
+						glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
+					glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
+
 					setColor(4, 2, 1, 255);
 					drawRect(0, 0, GFX_SX, GFX_SY);
 				}
@@ -1707,7 +1713,7 @@ int main(int argc, char * argv[])
 
 				if (debugDraw && drawProjectorSetup)
 				{
-					glClearColor(0.25f, .5f, 1.f, 0.f);
+					glClearColor(0.05f, 0.05, 0.05, 0.f);
 					glClear(GL_COLOR_BUFFER_BIT);
 
 					setBlend(BLEND_ALPHA);
