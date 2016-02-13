@@ -1093,52 +1093,57 @@ struct Camera
 	Mat4x4 cameraToView;
 	float fovX;
 
-	void setup(Vec3Arg position, Vec3 * screenCorners, int numScreenCorners)
+	void setup(Vec3Arg position, Vec3 * screenCorners, int numScreenCorners, int cameraIndex)
 	{
-		Vec3 screenCenter(0.f, 0.f, 0.f);
-
-		for (int i = 0; i < numScreenCorners; ++i)
-			screenCenter += screenCorners[i];
-		screenCenter /= numScreenCorners;
-
-		const Vec3 upVector(0.f, 1.f, 0.f);
-
 		Mat4x4 lookatMatrix;
-		lookatMatrix.MakeLookat(position, screenCenter, upVector);
+
+		{
+			const Vec3 d1a = screenCorners[0] - position;
+			const Vec3 d2a = screenCorners[1] - position;
+			const Vec3 d1 = Vec3(d1a[0], 0.f, d1a[2]).CalcNormalized();
+			const Vec3 d2 = Vec3(d2a[0], 0.f, d2a[2]).CalcNormalized();
+			const Vec3 d = ((d1 + d2) / 2.f).CalcNormalized();
+
+			const Vec3 upVector(0.f, 1.f, 0.f);
+
+			lookatMatrix.MakeLookat(position, position + d, upVector);
+		}
+
+		Mat4x4 invLookatMatrix = lookatMatrix.CalcInv();
 
 		Vec3 * screenCornersInCameraSpace = (Vec3*)alloca(numScreenCorners * sizeof(Vec3));
-		Mat4x4 invLookatMatrix = lookatMatrix.CalcInv();
 
 		for (int i = 0; i < numScreenCorners; ++i)
 			screenCornersInCameraSpace[i] = lookatMatrix * screenCorners[i];
 
-		Vec3 minCorner = screenCornersInCameraSpace[0];
-		Vec3 maxCorner = screenCornersInCameraSpace[0];
+		float fovX;
 
-		for (int i = 0; i < numScreenCorners; ++i)
 		{
-			for (int a = 0; a < 3; ++a)
-			{
-				if (screenCornersInCameraSpace[i][a] < minCorner[a])
-					minCorner[a] = screenCornersInCameraSpace[i][a];
-				if (screenCornersInCameraSpace[i][a] > maxCorner[a])
-					maxCorner[a] = screenCornersInCameraSpace[i][a];
-			}
+			const Vec3 d1a = screenCornersInCameraSpace[0];
+			const Vec3 d2a = screenCornersInCameraSpace[1];
+			const Vec3 d1 = Vec3(d1a[0], 0.f, d1a[2]).CalcNormalized();
+			const Vec3 d2 = Vec3(d2a[0], 0.f, d2a[2]).CalcNormalized();
+			const float dot = d1 * d2;
+			fovX = acosf(dot);
 		}
 
-		const float sx = maxCorner[0] - minCorner[1];
-		const float sy = maxCorner[1] - minCorner[1];
+		float fovY;
 
-		// todo : calculate horizontal and vertical fov. setup projection matrix
+		{
+			const Vec3 d1a = screenCornersInCameraSpace[cameraIndex == 0 ? 1 : 0];
+			const Vec3 d2a = screenCornersInCameraSpace[cameraIndex == 0 ? 2 : 3];
+			const Vec3 d1 = Vec3(0.f, d1a[1], d1a[2]).CalcNormalized();
+			const Vec3 d2 = Vec3(0.f, d2a[1], d2a[2]).CalcNormalized();
+			const float dot = d1 * d2;
+			fovY = acosf(dot);
+		}
 
-		const Vec3 delta = screenCenter - position;
-		const float distanceToScreen = delta.CalcSize();
+		// calculate horizontal and vertical fov and setup projection matrix
 
-		const float fovX = 2.0f * atan2f(sy / 2.f, distanceToScreen);
-		const float fovY = 2.0f * atan2f(sx / 2.f, distanceToScreen);
+		const float aspect = cosf(fovX) / cosf(fovY);
 
 		Mat4x4 projection;
-		projection.MakePerspectiveLH(fovX, sy / sx, .001f, 10.f);
+		projection.MakePerspectiveLH(fovY, aspect, .001f, 10.f);
 
 		//
 
@@ -1154,14 +1159,23 @@ static void drawTestObjects()
 	{
 		gxPushMatrix();
 		{
-			gxTranslatef((k - 1) / 1.1f, .5f + (k - 1) / 4.f, +1.f);
-			gxScalef(.5f, .5f, .5f);
+			const float dx = sinf(framework.time / (k + 4.f));
+			const float dy = sinf(framework.time / (k + 8.f)) / 2.f;
+			const float dz = cosf(framework.time / (k + 4.f) * 2.f) * 2.f;
 
-			gxBegin(GL_LINES);
+			gxTranslatef(
+				dx + (k - 1) / 1.1f,
+				dy + .5f + (k - 1) / 4.f, dz + 2.f);
+			gxScalef(.5f, .5f, .5f);
+			gxRotatef(framework.time / (k + 1.123f) * Calc::rad2deg, 1.f, 0.f, 0.f);
+			gxRotatef(framework.time / (k + 1.234f) * Calc::rad2deg, 0.f, 1.f, 0.f);
+			gxRotatef(framework.time / (k + 1.345f) * Calc::rad2deg, 0.f, 0.f, 1.f);
+
+			gxBegin(GL_TRIANGLES);
 			{
-				gxColor4f(1.f, 0.f, 0.f, 1.f); gxVertex3f(-1.f,  0.f,  0.f); gxVertex3f(+1.f,  0.f,  0.f);
-				gxColor4f(0.f, 1.f, 0.f, 1.f); gxVertex3f( 0.f, -1.f,  0.f); gxVertex3f( 0.f, +1.f,  0.f);
-				gxColor4f(0.f, 0.f, 1.f, 1.f); gxVertex3f( 0.f,  0.f, -1.f); gxVertex3f( 0.f,  0.f, +1.f);
+				gxColor4f(1.f, 0.f, 0.f, 1.f); gxVertex3f(-1.f,  0.f,  0.f); gxVertex3f(+1.f,  0.f,  0.f); gxVertex3f(+1.f, 0.3f, 0.2f);
+				gxColor4f(0.f, 1.f, 0.f, 1.f); gxVertex3f( 0.f, -1.f,  0.f); gxVertex3f( 0.f, +1.f,  0.f); gxVertex3f(0.4f, +1.f, 0.4f);
+				gxColor4f(0.f, 0.f, 1.f, 1.f); gxVertex3f( 0.f,  0.f, -1.f); gxVertex3f( 0.f,  0.f, +1.f); gxVertex3f(0.1f, 0.2f, +1.f);
 			}
 			gxEnd();
 		}
@@ -1171,7 +1185,7 @@ static void drawTestObjects()
 
 static void drawGroundPlane(const float y)
 {
-	gxColor4f(.1f, .1f, .1f, 1.f);
+	gxColor4f(.2f, .2f, .2f, 1.f);
 	gxBegin(GL_QUADS);
 	{
 		gxVertex3f(-100.f, y, -100.f);
@@ -1182,7 +1196,7 @@ static void drawGroundPlane(const float y)
 	gxEnd();
 }
 
-static void drawCamera(const Camera & camera)
+static void drawCamera(const Camera & camera, const float alpha)
 {
 	// draw local axis
 
@@ -1196,9 +1210,9 @@ static void drawCamera(const Camera & camera)
 			gxScalef(.2f, .2f, .2f);
 			gxBegin(GL_LINES);
 			{
-				gxColor4f(1.f, 0.f, 0.f, 1.f); gxVertex3f(0.f, 0.f, 0.f); gxVertex3f(1.f, 0.f, 0.f);
-				gxColor4f(0.f, 1.f, 0.f, 1.f); gxVertex3f(0.f, 0.f, 0.f); gxVertex3f(0.f, 1.f, 0.f);
-				gxColor4f(0.f, 0.f, 1.f, 1.f); gxVertex3f(0.f, 0.f, 0.f); gxVertex3f(0.f, 0.f, 1.f);
+				gxColor4f(1.f, 0.f, 0.f, alpha); gxVertex3f(0.f, 0.f, 0.f); gxVertex3f(1.f, 0.f, 0.f);
+				gxColor4f(0.f, 1.f, 0.f, alpha); gxVertex3f(0.f, 0.f, 0.f); gxVertex3f(0.f, 1.f, 0.f);
+				gxColor4f(0.f, 0.f, 1.f, alpha); gxVertex3f(0.f, 0.f, 0.f); gxVertex3f(0.f, 0.f, 1.f);
 			}
 			gxEnd();
 		}
@@ -1220,9 +1234,9 @@ static void drawCamera(const Camera & camera)
 			gxScalef(1.f, 1.f, 1.f);
 			gxBegin(GL_LINES);
 			{
-				for (int i = 0; i < 5; ++i)
+				for (int i = 0; i < 4; ++i)
 				{
-					gxColor4f(1.f, 1.f, 1.f, 1.f);
+					gxColor4f(1.f, 1.f, 1.f, alpha);
 					gxVertex3f(0.f, 0.f, 0.f);
 					gxVertex3f(p[i][0], p[i][1], p[i][2]);
 				}
@@ -1241,16 +1255,17 @@ static void drawScreen(const Vec3 * screenPoints, GLuint surfaceTexture, int scr
 
 	if (translucent)
 	{
-		gxColor4f(1.f, 1.f, 1.f, 1.f);
-		glDisable(GL_DEPTH_TEST);
+		//gxColor4f(1.f, 1.f, 1.f, 1.f);
+		//glDisable(GL_DEPTH_TEST);
 
-		setBlend(BLEND_ADD);
+		//setBlend(BLEND_ADD);
 	}
 	else
 	{
 		setBlend(BLEND_OPAQUE);
 	}
 
+	setColor(colorWhite);
 	gxSetTexture(surfaceTexture);
 	{
 		gxBegin(GL_QUADS);
@@ -1264,10 +1279,10 @@ static void drawScreen(const Vec3 * screenPoints, GLuint surfaceTexture, int scr
 	}
 	gxSetTexture(0);
 
-	glEnable(GL_DEPTH_TEST);
-	setBlend(BLEND_ALPHA);
+	//glEnable(GL_DEPTH_TEST);
+	//setBlend(BLEND_ALPHA);
 
-	gxColor4f(1.f, 1.f, 1.f, 1.f);
+	setColor(colorWhite);
 	gxBegin(GL_LINE_LOOP);
 	{
 		for (int i = 0; i < 4; ++i)
@@ -1296,19 +1311,23 @@ int main(int argc, char * argv[])
 
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
+		framework.fillCachesWithPath(".", true);
+
 		std::list<TimeDilationEffect> timeDilationEffects;
 
 		bool clearScreen = true;
-		bool debugDraw = true;
-		bool cameraControl = true;
+		bool debugDraw = false;
+		bool cameraControl = false;
 		bool postProcess = false;
 
 		bool drawRain = true;
 		bool drawStarCluster = true;
-		bool drawCloth = true;
+		bool drawCloth = false;
 		bool drawSprites = true;
 		bool drawVideo = true;
 
+		bool drawHelp = true;
+		bool drawScreenIds = false;
 		bool drawProjectorSetup = false;
 
 		Effect_Rain rain(10000);
@@ -1326,12 +1345,12 @@ int main(int argc, char * argv[])
 
 		Shader jitterShader("jitter");
 
-		Vec3 cameraPosition(0.f, .75f, -1.5f);
+		Vec3 cameraPosition(0.f, .5f, -1.f);
 		Vec3 cameraRotation(0.f, 0.f, 0.f);
 		Mat4x4 cameraMatrix;
 		cameraMatrix.MakeIdentity();
 
-		int activeCamera = 0;
+		int activeCamera = kNumScreens;
 
 		bool stop = false;
 
@@ -1365,6 +1384,8 @@ int main(int argc, char * argv[])
 				clearScreen = !clearScreen;
 			if (keyboard.wentDown(SDLK_d))
 				debugDraw = !debugDraw;
+			if (keyboard.wentDown(SDLK_RSHIFT))
+				cameraControl = !cameraControl;
 			if (keyboard.wentDown(SDLK_p))
 				postProcess = !postProcess;
 
@@ -1379,21 +1400,30 @@ int main(int argc, char * argv[])
 			if (keyboard.wentDown(SDLK_5))
 				drawVideo = !drawVideo;
 
+			if (keyboard.wentDown(SDLK_F1))
+				drawHelp = !drawHelp;
+			if (keyboard.wentDown(SDLK_i))
+				drawScreenIds = !drawScreenIds;
 			if (keyboard.wentDown(SDLK_s))
 				drawProjectorSetup = !drawProjectorSetup;
+
+			if (keyboard.wentDown(SDLK_o))
+			{
+				cameraPosition = Vec3(0.f, .5f, -1.f);
+				cameraRotation.SetZero();
+			}
+
+			SDL_SetRelativeMouseMode(cameraControl ? SDL_TRUE : SDL_FALSE);
 
 			const float dtReal = Calc::Min(1.f / 30.f, framework.timeStep);
 
 			Mat4x4 cameraPositionMatrix;
 			Mat4x4 cameraRotationMatrix;
 
-			if (cameraControl)
+			if (cameraControl && drawProjectorSetup)
 			{
-				if (keyboard.isDown(SDLK_RSHIFT))
-				{
-					cameraRotation[0] -= mouse.dy / 100.f;
-					cameraRotation[1] -= mouse.dx / 100.f;
-				}
+				cameraRotation[0] -= mouse.dy / 100.f;
+				cameraRotation[1] -= mouse.dx / 100.f;
 
 				Vec3 speed;
 
@@ -1408,10 +1438,8 @@ int main(int argc, char * argv[])
 
 				cameraPosition += cameraMatrix.CalcInv().Mul3(speed) * dtReal;
 
-				if (keyboard.wentDown(SDLK_HOME))
-					cameraRotation.SetZero();
 				if (keyboard.wentDown(SDLK_END))
-					activeCamera = (activeCamera + 1) % kNumScreens;
+					activeCamera = (activeCamera + 1) % (kNumScreens + 1);
 			}
 
 			{
@@ -1564,7 +1592,7 @@ int main(int argc, char * argv[])
 
 			drawableList.sort();
 
-			framework.beginDraw(0, 0, 0, 0, true);
+			framework.beginDraw(0, 0, 0, 0);
 			{
 				// camera setup
 
@@ -1588,7 +1616,7 @@ int main(int argc, char * argv[])
 
 				Vec3 screenCorners[kNumScreens][4];
 
-				const Vec3 cameraPosition(0.f, 0.5f, -1.f);
+				const Vec3 cameraPosition(0.f, .5f, -1.f);
 
 				for (int c = 0; c < kNumScreens; ++c)
 				{
@@ -1599,7 +1627,7 @@ int main(int argc, char * argv[])
 					screenCorners[c][2] = _screenCorners[c + 1 + 4],
 					screenCorners[c][3] = _screenCorners[c + 0 + 4],
 
-					camera.setup(cameraPosition, screenCorners[c], 4);
+					camera.setup(cameraPosition, screenCorners[c], 4, c);
 				}
 
 				pushSurface(&surface);
@@ -1621,6 +1649,8 @@ int main(int argc, char * argv[])
 					setColor(4, 2, 1, 255);
 					drawRect(0, 0, GFX_SX, GFX_SY);
 				}
+
+				setBlend(BLEND_ALPHA);
 
 			#if 1
 				const bool testCameraProjection = true;
@@ -1679,6 +1709,15 @@ int main(int argc, char * argv[])
 								drawTestObjects();
 							}
 						#endif
+
+							if (drawScreenIds)
+							{
+								applyTransformWithViewportSize(sx, sy);
+
+								setFont("calibri.ttf");
+								setColor(colorWhite);
+								drawText(sx/2, sy/2, 250, 0.f, 0.f, "%d", c + 1);
+							}
 						}
 						gxMatrixMode(GL_MODELVIEW);
 						gxPopMatrix();
@@ -1725,7 +1764,7 @@ int main(int argc, char * argv[])
 				gxSetTexture(0);
 			#endif
 
-				if (debugDraw && drawProjectorSetup)
+				if (drawProjectorSetup)
 				{
 					glClearColor(0.05f, 0.05, 0.05, 0.f);
 					glClear(GL_COLOR_BUFFER_BIT);
@@ -1742,9 +1781,9 @@ int main(int argc, char * argv[])
 
 					// draw 3D projector setup
 
-					glEnable(GL_DEPTH_TEST);
+					//glEnable(GL_DEPTH_TEST);
+					//glDepthFunc(GL_LESS);
 
-					glDepthFunc(GL_LESS);
 					{
 						Mat4x4 projection;
 						projection.MakePerspectiveLH(90.f * Calc::deg2rad, float(GFX_SY) / float(GFX_SX), 0.01f, 100.f);
@@ -1756,6 +1795,8 @@ int main(int argc, char * argv[])
 							gxPushMatrix();
 							gxLoadMatrixf(cameraMatrix.m_v);
 							{
+								setBlend(BLEND_ADD);
+
 								// draw ground
 
 								drawGroundPlane(0.f);
@@ -1769,18 +1810,24 @@ int main(int argc, char * argv[])
 
 								// draw test objects
 
-								drawTestObjects();
+								if (debugDraw && keyboard.isDown(SDLK_LSHIFT))
+								{
+									drawTestObjects();
+								}
 
 								// draw the cameras
 
-								//for (int c = 0; c < kNumScreens; ++c)
+								for (int c = 0; c < kNumScreens; ++c)
 								{
-									int c = activeCamera;
+									if (c < kNumScreens)
+									{
+										const Camera & camera = cameras[c];
 
-									const Camera & camera = cameras[c];
-
-									drawCamera(camera);
+										drawCamera(camera, c == activeCamera ? 1.f : .1f);
+									}
 								}
+
+								setBlend(BLEND_ALPHA);
 							}
 							gxMatrixMode(GL_MODELVIEW);
 							gxPopMatrix();
@@ -1791,6 +1838,47 @@ int main(int argc, char * argv[])
 						gxMatrixMode(GL_MODELVIEW);
 					}
 					glDisable(GL_DEPTH_TEST);
+				}
+
+				if (drawHelp)
+				{
+					setFont("calibri.ttf");
+					setColor(colorWhite);
+					const int spacingY = 28;
+					const int fontSize = 24;
+					int x = 20;
+					int y = 20;
+					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "Press F1 to toggle help");
+					x += 50;
+					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "");
+					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "1: toggle rain effect");
+					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "2: toggle star cluster effect");
+					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "3: toggle cloth effect");
+					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "4: toggle sprite effects");
+					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "5: toggle video effects");
+					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "");
+					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "I: identify screens");
+					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "S: toggle project setup view");
+					x += 50;
+					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "RIGHT SHIFT: enable camera controls in project setup view");
+					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "ARROW KEYS: move the camera around in project setup view");
+					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "END: change the active virtual camera in project setup view");
+					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "LEFT SHIFT: when pressed, draw test objects in 3D space");
+					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "");
+					x -= 50;
+					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "A: spawn a Spriter effect");
+					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "G: when pressed, enables gravity on cloth");
+					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "");
+					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "R: reload data caches");
+					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "C: disable screen clear and enable a fade effect instead");
+					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "P: toggle fullscreen shader effect");
+					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "D: toggle debug draw");
+					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "");
+					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "ESCAPE: quit");
+
+					//
+
+					drawText(GFX_SX/2, GFX_SY/2, 32, 0.f, 0.f, "Listening for OSC messages on port %d", OSC_RECV_PORT);
 				}
 			}
 			framework.endDraw();
