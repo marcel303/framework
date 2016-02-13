@@ -9,16 +9,25 @@ void CALLBACK HandleMidiMessage(HMIDIIN handle, UINT uMsg, DWORD dwInstance, DWO
 
 static HMIDIIN s_midiHandle = 0;
 
-void initMidi()
+bool initMidi()
 {
 	if (midiInOpen(&s_midiHandle, 0, (DWORD)HandleMidiMessage, 0, CALLBACK_FUNCTION) != S_OK)
+	{
 		logDebug("failed to open MIDI input");
+		return false;
+	}
 	else
 	{
 		if (midiInStart(s_midiHandle) != S_OK)
+		{
 			logError("failed to start MIDI input");
+			return false;
+		}
 		else
+		{
 			midi.isConnected = true;
+			return true;
+		}
 	}
 }
 
@@ -71,7 +80,7 @@ void CALLBACK HandleMidiMessage(HMIDIIN handle, UINT uMsg, DWORD dwInstance, DWO
 
 #else
 
-void initMidi()
+bool initMidi()
 {
 }
 

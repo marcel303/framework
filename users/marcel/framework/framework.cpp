@@ -38,10 +38,8 @@
 #include "utf8rewind.h"
 #endif
 
-#if ENABLE_MIDI_INPUT
-extern void initMidi();
+extern bool initMidi();
 extern void shutMidi();
-#endif
 
 // -----
 
@@ -70,7 +68,9 @@ Framework::Framework()
 	fullscreen = false;
 	useClosestDisplayMode = false;
 	basicOpenGL = false;
+	enableDepthBuffer = false;
 	minification = 1;
+	enableMidi = false;
 	reloadCachesOnActivate = false;
 	cacheResourceData = false;
 	filedrop = false;
@@ -137,10 +137,11 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
 #endif
 	
-#if 0
-	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-#endif
+	if (enableDepthBuffer)
+	{
+		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+		SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+	}
 	
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	
@@ -312,9 +313,16 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	rmt_BindOpenGL();
 #endif
 
-#if ENABLE_MIDI_INPUT
-	initMidi();
-#endif
+	if (enableMidi)
+	{
+		if (!initMidi())
+		{
+			logWarning("MIDI intialisation failed");
+			if (initErrorHandler)
+				initErrorHandler(INIT_ERROR_MIDI);
+			//return false;
+		}
+	}
 
 	// initialize FreeType
 	
@@ -393,9 +401,10 @@ bool Framework::shutdown()
 	}
 	globals.freeType = 0;
 	
-#if ENABLE_MIDI_INPUT
-	shutMidi();
-#endif
+	if (enableMidi)
+	{
+		shutMidi();
+	}
 
 #if ENABLE_PROFILING
 	rmt_UnbindOpenGL();
@@ -441,7 +450,9 @@ bool Framework::shutdown()
 	fullscreen = false;
 	useClosestDisplayMode = false;
 	basicOpenGL = false;
+	enableDepthBuffer = false;
 	minification = 1;
+	enableMidi = false;
 	reloadCachesOnActivate = false;
 	cacheResourceData = false;
 	filedrop = false;
@@ -865,7 +876,7 @@ void Framework::beginDraw(int r, int g, int b, int a)
 	// clear back buffer
 	
 	glClearColor(r/255.f, g/255.f, b/255.f, a/255.f);
-	glClear(GL_COLOR_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
 	// initialize viewport and OpenGL matrices
 	
@@ -1389,7 +1400,7 @@ void Shader::setTextureUnit(GLint index, int unit)
 	checkErrorGL();
 }
 
-void Shader::setTexture(const char * name, int unit, GLuint texture, bool filtered)
+void Shader::setTexture(const char * name, int unit, GLuint texture, bool filtered, bool clamped)
 {
 	SET_UNIFORM(name, glUniform1i(index, unit));
 	checkErrorGL();
@@ -1397,6 +1408,8 @@ void Shader::setTexture(const char * name, int unit, GLuint texture, bool filter
 	glBindTexture(GL_TEXTURE_2D, texture);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filtered ? GL_LINEAR : GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filtered ? GL_LINEAR : GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamped ? GL_CLAMP : GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clamped ? GL_CLAMP : GL_REPEAT);
 	glActiveTexture(GL_TEXTURE0);
 }
 
@@ -2404,6 +2417,8 @@ bool Spriter::isAnimDoneAtTime(int animIndex, float time) const
 	if (animIndex == -1)
 		return true;
 	fassert(!m_spriter->m_scene->m_entities.empty());
+	if (m_spriter->m_scene->m_entities.empty())
+		return true;
 	if (m_spriter->m_scene->m_entities[0]->isAnimLooped(animIndex))
 		return false;
 	return time >= getAnimLength(animIndex) / 1000.f;
@@ -3078,14 +3093,17 @@ void setTransform(TRANSFORM transform)
 
 void applyTransform()
 {
+	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : 0;
+	const float sx = surface ? surface->getWidth() : globals.displaySize[0];
+	const float sy = surface ? surface->getHeight() : globals.displaySize[1];
+	applyTransformWithViewportSize(sx, sy);
+}
+
+void applyTransformWithViewportSize(const float sx, const float sy)
+{
 	// calculate screen matrix (we need it to transform vertices to screen space)
 	{
 		gxMatrixMode(GL_PROJECTION);
-		
-		Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : 0;
-		const float sx = surface ? surface->getWidth() : globals.displaySize[0];
-		const float sy = surface ? surface->getHeight() : globals.displaySize[1];
-		
 		gxPushMatrix();
 		{
 			gxLoadIdentity();
@@ -3597,7 +3615,7 @@ void drawText(float x, float y, int size, float alignX, float alignY, const char
 		measureText(globals.font->face, size, text, sx, sy);
 		
 		x += sx * (alignX - 1.f) / 2.f;
-		y += sy * (alignY - 1.f) / 2.f;
+		y += sy * (alignY - 2.f) / 2.f;
 		//y += size * (alignY - 1.f) / 2.f;
 
  		gxTranslatef(x, y, 0.f);

@@ -43,7 +43,6 @@
 */
 
 #define USE_LEGACY_OPENGL 1
-#define ENABLE_MIDI_INPUT 0
 #define ENABLE_UTF8_SUPPORT 0
 
 static const int MAX_GAMEPAD = 4;
@@ -133,6 +132,7 @@ enum INIT_ERROR
 	INIT_ERROR_OPENGL,
 	INIT_ERROR_OPENGL_EXTENSIONS,
 	INIT_ERROR_SOUND,
+	INIT_ERROR_MIDI,
 	INIT_ERROR_FREETYPE
 };
 
@@ -218,7 +218,9 @@ public:
 	bool fullscreen;
 	bool useClosestDisplayMode;
 	bool basicOpenGL;
+	bool enableDepthBuffer;
 	int minification;
+	bool enableMidi;
 	bool reloadCachesOnActivate;
 	bool cacheResourceData;
 	bool filedrop;
@@ -315,7 +317,7 @@ public:
 	void setImmediateMatrix4x4(GLint index, const float * matrix);
 	void setTextureUnit(const char * name, int unit); // bind <name> to GL_TEXTURE0 + unit
 	void setTextureUnit(GLint index, int unit); // bind <name> to GL_TEXTURE0 + unit
-	void setTexture(const char * name, int unit, GLuint texture, bool filtered);
+	void setTexture(const char * name, int unit, GLuint texture, bool filtered, bool clamp = true);
 
 	const ShaderCacheElem & getCacheElem() const { return *m_shader; }
 };
@@ -793,6 +795,7 @@ void clearCaches(int caches);
 
 void setTransform(TRANSFORM transform);
 void applyTransform();
+void applyTransformWithViewportSize(const float sx, const float sy);
 void setTransform2d(const Mat4x4 & transform);
 void setTransform3d(const Mat4x4 & transform);
 Vec2 transformToScreen(const Vec3 & v);
@@ -907,7 +910,9 @@ void gxBegin(int primitiveType);
 #define gxTexCoord2f glTexCoord2f
 #define gxNormal3f glNormal3f
 #define gxVertex2f glVertex2f
+#define gxVertex2fv glVertex2fv
 #define gxVertex3f glVertex3f
+#define gxVertex3fv glVertex3fv
 void gxSetTexture(GLuint texture);
 
 #endif
