@@ -221,6 +221,7 @@ public:
 	bool enableDepthBuffer;
 	int minification;
 	bool enableMidi;
+	int midiDeviceIndex;
 	bool reloadCachesOnActivate;
 	bool cacheResourceData;
 	bool filedrop;

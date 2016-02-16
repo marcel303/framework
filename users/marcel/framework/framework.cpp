@@ -38,7 +38,7 @@
 #include "utf8rewind.h"
 #endif
 
-extern bool initMidi();
+extern bool initMidi(int deviceIndex);
 extern void shutMidi();
 
 // MIDI processing lock. required since MIDI events arrive asynchronously
@@ -75,6 +75,7 @@ Framework::Framework()
 	enableDepthBuffer = false;
 	minification = 1;
 	enableMidi = false;
+	midiDeviceIndex = 0;
 	reloadCachesOnActivate = false;
 	cacheResourceData = false;
 	filedrop = false;
@@ -319,7 +320,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 
 	if (enableMidi)
 	{
-		if (!initMidi())
+		if (!initMidi(midiDeviceIndex))
 		{
 			logWarning("MIDI intialisation failed");
 			if (initErrorHandler)
@@ -457,6 +458,7 @@ bool Framework::shutdown()
 	enableDepthBuffer = false;
 	minification = 1;
 	enableMidi = false;
+	midiDeviceIndex = 0;
 	reloadCachesOnActivate = false;
 	cacheResourceData = false;
 	filedrop = false;
