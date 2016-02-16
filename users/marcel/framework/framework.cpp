@@ -41,6 +41,10 @@
 extern bool initMidi();
 extern void shutMidi();
 
+// MIDI processing lock. required since MIDI events arrive asynchronously
+extern void lockMidi();
+extern void unlockMidi();
+
 // -----
 
 Color colorBlack(0, 0, 0, 255);
@@ -477,8 +481,8 @@ void Framework::process()
 	const int tstamp2 = SDL_GetTicks();
 	int delta = tstamp2 - tstamp1;
 	tstamp1 = tstamp2;
-	if (delta == 0)
-		delta = 1;
+	//if (delta == 0)
+	//	delta = 1;
 	timeStep = delta / 1000.f;
 
 	time += timeStep;
@@ -492,7 +496,14 @@ void Framework::process()
 	globals.keyChangeCount = 0;
 	globals.keyRepeatCount = 0;
 	memset(globals.mouseChange, 0, sizeof(globals.mouseChange));
-	memset(globals.midiChange, 0, sizeof(globals.midiChange));
+
+	lockMidi();
+	{
+		memcpy(globals.midiDown, globals.midiDownAsync, sizeof(globals.midiDown));
+		memcpy(globals.midiChange, globals.midiChangeAsync, sizeof(globals.midiChange));
+		memset(globals.midiChangeAsync, 0, sizeof(globals.midiChangeAsync));
+	}
+	unlockMidi();
 	
 	const int oldMouseX = mouse.x;
 	const int oldMouseY = mouse.y;

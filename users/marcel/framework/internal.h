@@ -78,7 +78,9 @@ public:
 	int keyRepeatCount;
 	int xinputGamepadIdx;
 	bool midiDown[256];
+	bool midiDownAsync[256];
 	bool midiChange[256];
+	bool midiChangeAsync[256];
 	float midiValue[256];
 	Shader * shader;
 	TRANSFORM transform;
