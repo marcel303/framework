@@ -6,6 +6,19 @@ struct Config
 {
 	static const int kMaxMidiMappings = 256;
 
+	struct Midi
+	{
+		Midi()
+		{
+			memset(this, 0, sizeof(*this));
+			memset(mapping, -1, sizeof(mapping));
+		}
+
+		bool enabled;
+		int deviceIndex;
+		int mapping[kMaxMidiMappings];
+	};
+
 	struct AudioIn
 	{
 		AudioIn()
@@ -20,9 +33,7 @@ struct Config
 		float volume;
 	};
 
-	bool midiEnabled;
-	int midiMapping[kMaxMidiMappings];
-
+	Midi midi;
 	AudioIn audioIn;
 
 	Config();

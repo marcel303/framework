@@ -11,10 +11,8 @@ Config::Config()
 
 void Config::reset()
 {
+	midi = Midi();
 	audioIn = AudioIn();
-
-	midiEnabled = false;
-	memset(midiMapping, -1, sizeof(midiMapping));
 }
 
 // tinyxml helper functions
@@ -83,7 +81,8 @@ bool Config::load(const char * filename)
 			}
 			else
 			{
-				midiEnabled = boolAttrib(xmlMidi, "enabled", true);
+				midi.enabled = boolAttrib(xmlMidi, "enabled", true);
+				midi.deviceIndex = intAttrib(xmlMidi, "device_index", 0);
 
 				for (const XMLElement * xmlMap = xmlMidi->FirstChildElement("map"); xmlMap; xmlMap = xmlMap->NextSiblingElement("map"))
 				{
@@ -96,7 +95,7 @@ bool Config::load(const char * filename)
 					}
 					else
 					{
-						midiMapping[id] = externalId;
+						midi.mapping[id] = externalId;
 					}
 				}
 			}
@@ -127,11 +126,11 @@ bool Config::load(const char * filename)
 
 bool Config::midiIsMapped(int id) const
 {
-	if (!midiEnabled)
+	if (!midi.enabled)
 		return false;
 	if (id < 0 || id >= kMaxMidiMappings)
 		return false;
-	if (midiMapping[id] == -1)
+	if (midi.mapping[id] == -1)
 		return false;
 	return true;
 }
@@ -140,26 +139,26 @@ bool Config::midiIsDown(int id) const
 {
 	if (!midiIsMapped(id))
 		return false;
-	return midi.isDown(midiMapping[id]);
+	return ::midi.isDown(midi.mapping[id]);
 }
 
 bool Config::midiWentDown(int id) const
 {
 	if (!midiIsMapped(id))
 		return false;
-	return midi.wentDown(midiMapping[id]);
+	return ::midi.wentDown(midi.mapping[id]);
 }
 
 bool Config::midiWentUp(int id) const
 {
 	if (!midiIsMapped(id))
 		return false;
-	return midi.wentUp(midiMapping[id]);
+	return ::midi.wentUp(midi.mapping[id]);
 }
 
 float Config::midiGetValue(int id, float _default) const
 {
 	if (!midiIsMapped(id))
 		return _default;
-	return midi.getValue(midiMapping[id]);
+	return ::midi.getValue(midi.mapping[id]);
 }

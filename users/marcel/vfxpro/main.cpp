@@ -1322,6 +1322,28 @@ int main(int argc, char * argv[])
 		return -1;
 	}
 
+	const int numMidiDevices = midiInGetNumDevs();
+
+	if (numMidiDevices > 0)
+	{
+		printf("MIDI devices:\n");
+
+		for (int i = 0; i < numMidiDevices; ++i)
+		{
+			MIDIINCAPS caps;
+			memset(&caps, 0, sizeof(caps));
+
+			if (midiInGetDevCaps(i, &caps, sizeof(caps)) == MMSYSERR_NOERROR)
+			{
+				printf("device_index=%d, driver_version=%03d.%03d, name=%s\n",
+					i,
+					(caps.vDriverVersion & 0xff00) >> 8,
+					(caps.vDriverVersion & 0x00ff) >> 0,
+					caps.szPname);
+			}
+		}
+	}
+
 	TweenFloat tween(10.f);
 	tween.to(0.f, 1.f);
 	tween.to(5.f, 1.f);
@@ -1370,6 +1392,7 @@ int main(int argc, char * argv[])
 	framework.enableDepthBuffer = true;
 	framework.minification = 2;
 	framework.enableMidi = true;
+	framework.midiDeviceIndex = config.midi.deviceIndex;
 
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
