@@ -1,4 +1,5 @@
 #include "audioin.h"
+#include "Debugging.h"
 
 AudioIn::AudioIn()
 	: m_waveIn(nullptr)
@@ -75,53 +76,74 @@ bool AudioIn::init(int channelCount, int sampleRate, int bufferSampleCount)
 
 void AudioIn::shutdown()
 {
-	MMRESULT mmResult = MMSYSERR_NOERROR;
-
-	if (m_waveHeader.dwFlags & WHDR_PREPARED)
+	if (m_waveIn != nullptr)
 	{
-		mmResult = waveInReset(m_waveIn);
-		Assert(mmResult == MMSYSERR_NOERROR);
+		MMRESULT mmResult = MMSYSERR_NOERROR;
 
-		mmResult = waveInUnprepareHeader(m_waveIn, &m_waveHeader, sizeof(m_waveHeader));
-		Assert(mmResult == MMSYSERR_NOERROR);
+		if (m_waveHeader.dwFlags & WHDR_PREPARED)
+		{
+			mmResult = waveInReset(m_waveIn);
+			Assert(mmResult == MMSYSERR_NOERROR);
+
+			mmResult = waveInUnprepareHeader(m_waveIn, &m_waveHeader, sizeof(m_waveHeader));
+			Assert(mmResult == MMSYSERR_NOERROR);
+		}
+
+		if (m_waveIn)
+		{
+			mmResult = waveInClose(m_waveIn);
+			Assert(mmResult == MMSYSERR_NOERROR);
+
+			m_waveIn = nullptr;
+		}
+
+		delete [] m_buffer;
+		m_buffer = nullptr;
 	}
-
-	if (m_waveIn)
-	{
-		mmResult = waveInClose(m_waveIn);
-		Assert(mmResult == MMSYSERR_NOERROR);
-
-		m_waveIn = nullptr;
-	}
-
-	delete [] m_buffer;
-	m_buffer = nullptr;
 }
 
 bool AudioIn::provide(short * buffer, int & sampleCount)
 {
-	MMRESULT mmResult = MMSYSERR_NOERROR;
-
-#if 0
-	printf("wave header flags: %08x (prepared:%d, inqueue:%d, done:%d)\n",
-		m_waveHeader.dwFlags,
-		(m_waveHeader.dwFlags & WHDR_PREPARED) ? 1 : 0,
-		(m_waveHeader.dwFlags & WHDR_INQUEUE) ? 1 : 0,
-		(m_waveHeader.dwFlags & WHDR_DONE) ? 1 : 0);
-#endif
-
-	if (m_waveHeader.dwFlags & WHDR_DONE)
+	if (m_waveIn == nullptr)
 	{
-		memcpy(buffer, m_buffer, m_waveHeader.dwBytesRecorded);
-		sampleCount = m_waveHeader.dwBytesRecorded / sizeof(short);
+		sampleCount = 0;
 
-		mmResult = waveInAddBuffer(m_waveIn, &m_waveHeader, sizeof(m_waveHeader));
-		Assert(mmResult == MMSYSERR_NOERROR);
-
-		return true;
+		return false;
 	}
 	else
 	{
-		return false;
+		MMRESULT mmResult = MMSYSERR_NOERROR;
+
+	#if 0
+		printf("wave header flags: %08x (prepared:%d, inqueue:%d, done:%d)\n",
+			m_waveHeader.dwFlags,
+			(m_waveHeader.dwFlags & WHDR_PREPARED) ? 1 : 0,
+			(m_waveHeader.dwFlags & WHDR_INQUEUE) ? 1 : 0,
+			(m_waveHeader.dwFlags & WHDR_DONE) ? 1 : 0);
+	#endif
+
+		if (m_waveHeader.dwFlags & WHDR_DONE)
+		{
+			memcpy(buffer, m_buffer, m_waveHeader.dwBytesRecorded);
+			sampleCount = m_waveHeader.dwBytesRecorded / sizeof(short);
+
+			mmResult = waveInAddBuffer(m_waveIn, &m_waveHeader, sizeof(m_waveHeader));
+			Assert(mmResult == MMSYSERR_NOERROR);
+
+			if (mmResult != MMSYSERR_NOERROR)
+			{
+				sampleCount = 0;
+
+				return false;
+			}
+			else
+			{
+				return true;
+			}
+		}
+		else
+		{
+			return false;
+		}
 	}
 }

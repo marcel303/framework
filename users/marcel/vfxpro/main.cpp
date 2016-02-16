@@ -1,8 +1,11 @@
 #include "ip/UdpSocket.h"
 #include "osc/OscOutboundPacketStream.h"
 #include "osc/OscPacketListener.h"
+#include "audioin.h"
 #include "Calc.h"
+#include "config.h"
 #include "framework.h"
+#include "types.h"
 #include <algorithm>
 #include <list>
 #include <Windows.h>
@@ -20,6 +23,8 @@ const static int kNumScreens = 3;
 
 const float eps = 1e-10f;
 const float pi2 = M_PI * 2.f;
+
+static Config config;
 
 /*
 
@@ -85,56 +90,8 @@ const float pi2 = M_PI * 2.f;
 
 */
 
-template <typename T>
-bool isValidIndex(const T & value) { return value != ((T)-1); }
-
-template <typename T>
-struct Array
-{
-	T * data;
-
-	Array()
-		: data(nullptr)
-	{
-	}
-
-	Array(int numElements)
-		: data(nullptr)
-	{
-		resize(numElements);
-	}
-
-	~Array()
-	{
-		resize(0, false);
-	}
-
-	void resize(int numElements, bool zeroMemory)
-	{
-		if (data != nullptr)
-		{
-			delete [] data;
-			data = nullptr;
-		}
-
-		if (numElements != 0)
-		{
-			data = new T[numElements];
-
-			if (zeroMemory)
-			{
-				memset(data, 0, sizeof(T) * numElements);
-			}
-		}
-	}
-
-	T & operator[](int index)
-	{
-		assert(index >= 0);
-
-		return data[index];
-	}
-};
+struct Drawable;
+struct Effect;
 
 struct Drawable
 {
@@ -221,6 +178,10 @@ void operator delete(void * p, DrawableList & list)
 	free(p);
 }
 
+static void registerEffect(const char * name, Effect * effect);
+static void unregisterEffect(Effect * effect);
+static Effect * getEffect(const char * name);
+
 struct Effect
 {
 	bool is3D; // when set to 3D, the effect is rendered using a separate virtual camera to each screen. when false, it will use simple 1:1 mapping onto screen coordinates
@@ -231,7 +192,7 @@ struct Effect
 	float scaleY;
 	float z;
 
-	Effect()
+	Effect(const char * name)
 		: is3D(false)
 		, screenX(0.f)
 		, screenY(0.f)
@@ -240,10 +201,16 @@ struct Effect
 		, z(0.f)
 	{
 		transform.MakeIdentity();
+
+		if (name != nullptr)
+		{
+			registerEffect(name, this);
+		}
 	}
 
 	virtual ~Effect()
 	{
+		unregisterEffect(this);
 	}
 
 	Vec2 screenToLocal(Vec2Arg v) const
@@ -312,6 +279,41 @@ struct EffectDrawable : Drawable
 	}
 };
 
+//
+
+static std::map<std::string, Effect*> g_effectsByName;
+
+static void registerEffect(const char * name, Effect * effect)
+{
+	Assert(g_effectsByName.count(name) == 0);
+
+	g_effectsByName[name] = effect;
+}
+
+static void unregisterEffect(Effect * effect)
+{
+	for (auto i = g_effectsByName.begin(); i != g_effectsByName.end(); ++i)
+	{
+		if (i->second == effect)
+		{
+			g_effectsByName.erase(i);
+			break;
+		}
+	}
+}
+
+static Effect * getEffect(const char * name)
+{
+	auto i = g_effectsByName.find(name);
+
+	if (i == g_effectsByName.end())
+		return nullptr;
+	else
+		return i->second;
+}
+
+//
+
 struct ParticleSystem : Effect
 {
 	int numParticles;
@@ -334,8 +336,9 @@ struct ParticleSystem : Effect
 	Array<float> lifeRcp;
 	Array<bool> hasLife;
 
-	ParticleSystem(int numElements)
-		: numParticles(0)
+	ParticleSystem(const char * name, int numElements)
+		: Effect(name)
+		, numParticles(0)
 		, numFree(0)
 	{
 		resize(numElements);
@@ -382,6 +385,8 @@ struct ParticleSystem : Effect
 		{
 			id = freeList[--numFree];
 
+			fassert(!alive[id]);
+
 			alive[id] = true;
 			autoKill[id] = _autoKill;
 
@@ -412,15 +417,15 @@ struct ParticleSystem : Effect
 		}
 	}
 
-	void free(int & id)
+	void free(const int id)
 	{
 		if (isValidIndex(id))
 		{
+			fassert(alive[id]);
+
 			alive[id] = false;
 
 			freeList[numFree++] = id;
-
-			id = -1;
 		}
 	}
 
@@ -441,11 +446,9 @@ struct ParticleSystem : Effect
 
 					if (autoKill[i])
 					{
-						int id = i;
+						free(i);
 
-						free(id);
-
-						break;
+						continue;
 					}
 				}
 
@@ -480,10 +483,15 @@ struct ParticleSystem : Effect
 					const float sx_2 = sx[i] * .5f;
 					const float sy_2 = sy[i] * .5f;
 
-					gxTexCoord2f(0.f, 1.f); gxVertex2f(x[i] + (- c * sx_2 - s * sy_2), y[i] + (+ s * sx_2 - c * sy_2));
-					gxTexCoord2f(1.f, 1.f); gxVertex2f(x[i] + (+ c * sx_2 - s * sy_2), y[i] + (- s * sx_2 - c * sy_2));
-					gxTexCoord2f(1.f, 0.f); gxVertex2f(x[i] + (+ c * sx_2 + s * sy_2), y[i] + (- s * sx_2 + c * sy_2));
-					gxTexCoord2f(0.f, 0.f); gxVertex2f(x[i] + (- c * sx_2 + s * sy_2), y[i] + (+ s * sx_2 + c * sy_2));
+					const float s_sx_2 = s * sx_2;
+					const float s_sy_2 = s * sy_2;
+					const float c_sx_2 = c * sx_2;
+					const float c_sy_2 = c * sy_2;
+
+					gxTexCoord2f(0.f, 1.f); gxVertex2f(x[i] + (- c_sx_2 - s_sy_2), y[i] + (+ s_sx_2 - c_sy_2));
+					gxTexCoord2f(1.f, 1.f); gxVertex2f(x[i] + (+ c_sx_2 - s_sy_2), y[i] + (- s_sx_2 - c_sy_2));
+					gxTexCoord2f(1.f, 0.f); gxVertex2f(x[i] + (+ c_sx_2 + s_sy_2), y[i] + (- s_sx_2 + c_sy_2));
+					gxTexCoord2f(0.f, 0.f); gxVertex2f(x[i] + (- c_sx_2 + s_sy_2), y[i] + (+ s_sx_2 + c_sy_2));
 				}
 			}
 		}
@@ -495,9 +503,11 @@ struct Effect_Rain : Effect
 {
 	ParticleSystem m_particleSystem;
 	Array<float> m_particleSizes;
+	EffectTimer m_spawnTimer;
 
-	Effect_Rain(int numRainDrops)
-		: m_particleSystem(numRainDrops)
+	Effect_Rain(const char * name, int numRainDrops)
+		: Effect(name)
+		, m_particleSystem(nullptr, numRainDrops)
 	{
 		m_particleSizes.resize(numRainDrops, true);
 	}
@@ -515,7 +525,9 @@ struct Effect_Rain : Effect
 
 		// spawn particles
 
-		for (int i = 0; i < 2; ++i)
+		m_spawnTimer.tick(dt);
+
+		while (m_spawnTimer.consume((1.f + config.midiGetValue(101, 1.f) * 9.f) / 1000.f))
 		{
 			int id;
 
@@ -523,13 +535,11 @@ struct Effect_Rain : Effect
 				continue;
 
 			m_particleSystem.x[id] = rand() % GFX_SX;
-			m_particleSystem.y[id] = 0.f;
+			m_particleSystem.y[id] = -50.f;
 			m_particleSystem.vx[id] = 0.f;
-			m_particleSystem.vy[id] = 50.f;
-			//m_particleSystem.sx[id] = 5.f;
-			//m_particleSystem.sy[id] = 15.f;
-			m_particleSystem.sx[id] = sprite.getWidth() / 4.f;
-			m_particleSystem.sy[id] = sprite.getHeight() / 4.f;
+			m_particleSystem.vy[id] = 0.f;
+			m_particleSystem.sx[id] = 1.f;
+			m_particleSystem.sy[id] = 1.f;
 			//m_particleSystem.vangle[id] = 1.f;
 
 			m_particleSizes[id] = random(.1f, 1.f) * .25f;
@@ -567,7 +577,7 @@ struct Effect_Rain : Effect
 
 			// check if the particle is dead
 
-			if (m_particleSystem.life[i] == 0.f || m_particleSystem.y[i] < 0.f)
+			if (m_particleSystem.life[i] == 0.f)
 			{
 				m_particleSystem.free(i);
 			}
@@ -595,8 +605,9 @@ struct Effect_StarCluster : Effect
 {
 	ParticleSystem m_particleSystem;
 
-	Effect_StarCluster(int numStars)
-		: m_particleSystem(numStars)
+	Effect_StarCluster(const char * name, int numStars)
+		: Effect(name)
+		, m_particleSystem(nullptr, numStars)
 	{
 		for (int i = 0; i < numStars; ++i)
 		{
@@ -690,7 +701,8 @@ struct ClothPiece : Effect
 	int sy;
 	Vertex vertices[CLOTHPIECE_MAX_SX][CLOTHPIECE_MAX_SY];
 
-	ClothPiece()
+	ClothPiece(const char * name)
+		: Effect(name)
 	{
 		sx = 0;
 		sy = 0;
@@ -734,7 +746,7 @@ struct ClothPiece : Effect
 	virtual void tick(const float dt) override
 	{
 		const float gravityX = 0.f;
-		const float gravityY = keyboard.isDown(SDLK_g) ? 2.f : 0.f;
+		const float gravityY = keyboard.isDown(SDLK_g) ? 10.f : 0.f;
 
 		const float springConstant = 100.f;
 		const float falloff = .9f;
@@ -773,13 +785,16 @@ struct ClothPiece : Effect
 					const float dy = other->y - v.y;
 					const float ds = sqrtf(dx * dx + dy * dy);
 
-					const float a = (ds - 1.f) * springConstant;
+					if (ds > 1.f)
+					{
+						const float a = (ds - 1.f) * springConstant;
 
-					const float ax = gravityX + dx / (ds + eps) * a;
-					const float ay = gravityY + dy / (ds + eps) * a;
+						const float ax = gravityX + dx / (ds + eps) * a;
+						const float ay = gravityY + dy / (ds + eps) * a;
 
-					v.vx += ax * dt;
-					v.vy += ay * dt;
+						v.vx += ax * dt;
+						v.vy += ay * dt;
+					}
 				}
 			}
 		}
@@ -818,9 +833,10 @@ struct ClothPiece : Effect
 	{
 		gxPushMatrix();
 		{
-			gxScalef(20.f, 20.f, 1.f);
+			gxScalef(40.f, 40.f, 1.f);
 
-			for (int i = 3; i >= 1; --i)
+			//for (int i = 3; i >= 1; --i)
+			for (int i = 1; i >= 1; --i)
 			{
 				glLineWidth(i);
 				doDraw();
@@ -898,6 +914,11 @@ struct SpriteSystem : Effect
 	};
 
 	SpriteInfo m_sprites[kMaxSprites];
+
+	SpriteSystem(const char * name)
+		: Effect(name)
+	{
+	}
 
 	virtual void tick(const float dt) override
 	{
@@ -1295,6 +1316,47 @@ int main(int argc, char * argv[])
 {
 	changeDirectory("data");
 
+	if (!config.load("settings.xml"))
+	{
+		logError("failed to load settings.xml");
+		return -1;
+	}
+
+	TweenFloat tween(10.f);
+	tween.to(0.f, 1.f);
+	tween.to(5.f, 1.f);
+	tween.to(0.f, 1.f);
+	tween.to(100.f, 1.f);
+
+	while (!tween.isDone())
+	{
+		printf("tween value: %g\n", (float)tween);
+
+		tween.tick(1.f / 9.f);
+	}
+
+	printf("tween value: %g\n", (float)tween);
+
+	AudioIn audioIn;
+
+	float audioInProvideTime = 0.f;
+	int audioInHistoryMaxSize = 0;
+	int audioInHistorySize = 0;
+	short * audioInHistory = nullptr;
+
+	if (config.audioIn.enabled)
+	{
+		if (!audioIn.init(config.audioIn.numChannels, config.audioIn.sampleRate, config.audioIn.bufferLength))
+		{
+			logError("failed to initialise audio in!");
+		}
+		else
+		{
+			audioInHistoryMaxSize = config.audioIn.numChannels * config.audioIn.bufferLength;
+			audioInHistory = new short[audioInHistoryMaxSize];
+		}
+	}
+
 	// initialise OSC
 
 	InitializeCriticalSectionAndSpinCount(&s_oscMessageMtx, 256);
@@ -1329,17 +1391,18 @@ int main(int argc, char * argv[])
 		bool drawHelp = true;
 		bool drawScreenIds = false;
 		bool drawProjectorSetup = false;
+		bool drawActiveEffects = false;
 
-		Effect_Rain rain(10000);
+		Effect_Rain rain("rain", 10000);
 
-		Effect_StarCluster starCluster(100);
+		Effect_StarCluster starCluster("stars", 100);
 		starCluster.screenX = virtualToScreenX(0);
 		starCluster.screenY = virtualToScreenY(50);
 
-		ClothPiece clothPiece;
+		ClothPiece clothPiece("cloth");
 		clothPiece.setup(CLOTHPIECE_MAX_SX, CLOTHPIECE_MAX_SY);
 
-		SpriteSystem spriteSystem;
+		SpriteSystem spriteSystem("sprites");
 
 		Surface surface(GFX_SX, GFX_SY);
 
@@ -1359,6 +1422,57 @@ int main(int argc, char * argv[])
 			// process
 
 			framework.process();
+
+			// todo : process audio input
+
+			short * samplesThisFrame = nullptr;
+			int numSamplesThisFrame = 0;
+
+			if (config.audioIn.enabled)
+			{
+				audioInHistorySize = audioInHistorySize;
+
+				while (audioIn.provide(audioInHistory, audioInHistorySize))
+				{
+					logDebug("got audio data! numSamples=%04d", audioInHistorySize);
+
+					audioInHistorySize /= config.audioIn.numChannels;
+					audioInProvideTime = framework.time;
+				}
+
+				numSamplesThisFrame = Calc::Min(config.audioIn.sampleRate / 60, audioInHistorySize);
+				Assert(audioInHistorySize >= numSamplesThisFrame);
+
+				// todo : secure this code
+
+				samplesThisFrame = new short[numSamplesThisFrame];
+
+				int offset = (framework.time - audioInProvideTime) * config.audioIn.sampleRate;
+				Assert(offset >= 0);
+
+				if (offset + numSamplesThisFrame > audioInHistorySize)
+					offset = audioInHistorySize - numSamplesThisFrame;
+
+				offset *= config.audioIn.numChannels;
+
+				const short * src = audioInHistory + offset;
+				      short * dst = samplesThisFrame;
+
+				for (int i = 0; i < numSamplesThisFrame; ++i)
+				{
+					*dst = 0;
+
+					for (int c = 0; c < config.audioIn.numChannels; ++c)
+					{
+						*dst += *src++;
+					}
+
+					++dst;
+
+					Assert(src <= audioInHistory + audioInHistorySize * config.audioIn.numChannels);
+					Assert(dst <= samplesThisFrame + numSamplesThisFrame);
+				}
+			}
 
 			// todo : process OSC input
 
@@ -1386,7 +1500,7 @@ int main(int argc, char * argv[])
 				debugDraw = !debugDraw;
 			if (keyboard.wentDown(SDLK_RSHIFT))
 				cameraControl = !cameraControl;
-			if (keyboard.wentDown(SDLK_p))
+			if (keyboard.wentDown(SDLK_p) || config.midiWentDown(64))
 				postProcess = !postProcess;
 
 			if (keyboard.wentDown(SDLK_1))
@@ -1406,6 +1520,8 @@ int main(int argc, char * argv[])
 				drawScreenIds = !drawScreenIds;
 			if (keyboard.wentDown(SDLK_s))
 				drawProjectorSetup = !drawProjectorSetup;
+			if (keyboard.wentDown(SDLK_e))
+				drawActiveEffects = !drawActiveEffects;
 
 			if (keyboard.wentDown(SDLK_o))
 			{
@@ -1415,7 +1531,7 @@ int main(int argc, char * argv[])
 
 			SDL_SetRelativeMouseMode(cameraControl ? SDL_TRUE : SDL_FALSE);
 
-			const float dtReal = Calc::Min(1.f / 30.f, framework.timeStep);
+			const float dtReal = Calc::Min(1.f / 30.f, framework.timeStep) * config.midiGetValue(100, 1.f);
 
 			Mat4x4 cameraPositionMatrix;
 			Mat4x4 cameraRotationMatrix;
@@ -1516,6 +1632,7 @@ int main(int argc, char * argv[])
 
 			float timeDilationMultiplier = 1.f;
 
+		#if 1
 			for (auto i = timeDilationEffects.begin(); i != timeDilationEffects.end(); )
 			{
 				TimeDilationEffect & e = *i;
@@ -1532,6 +1649,7 @@ int main(int argc, char * argv[])
 				else
 					++i;
 			}
+		#endif
 
 			const float dt = dtReal * timeDilationMultiplier;
 
@@ -1555,8 +1673,8 @@ int main(int argc, char * argv[])
 
 			if (mouse.isDown(BUTTON_LEFT))
 			{
-				const float mouseX = mouse.x / 20.f;
-				const float mouseY = mouse.y / 20.f;
+				const float mouseX = mouse.x / 40.f;
+				const float mouseY = mouse.y / 40.f;
 
 				for (int x = 0; x < clothPiece.sx; ++x)
 				{
@@ -1646,7 +1764,7 @@ int main(int argc, char * argv[])
 						glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
 					glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
 
-					setColor(4, 2, 1, 255);
+					setColorf(config.midiGetValue(102, 1.f), config.midiGetValue(102, 1.f)/2.f, config.midiGetValue(102, 1.f)/4.f, 1.f);
 					drawRect(0, 0, GFX_SX, GFX_SY);
 				}
 
@@ -1718,6 +1836,28 @@ int main(int argc, char * argv[])
 								setColor(colorWhite);
 								drawText(sx/2, sy/2, 250, 0.f, 0.f, "%d", c + 1);
 							}
+
+						#if 1
+							if ((c == 0) || (c == 2) && audioInHistorySize > 0)
+							{
+								applyTransformWithViewportSize(sx, sy);
+
+								setColor(colorWhite);
+
+								gxBegin(GL_LINES);
+								{
+									const float scaleX = GFX_SX / float(numSamplesThisFrame - 2);
+									const float scaleY = 300.f / float(1 << 15);
+
+									for (int i = 0; i < numSamplesThisFrame - 1; ++i)
+									{
+										gxVertex2f((i + 0) * scaleX, GFX_SY/2.f + samplesThisFrame[i + 0] * scaleY);
+										gxVertex2f((i + 1) * scaleX, GFX_SY/2.f + samplesThisFrame[i + 1] * scaleY);
+									}
+								}
+								gxEnd();
+							}
+						#endif
 						}
 						gxMatrixMode(GL_MODELVIEW);
 						gxPopMatrix();
@@ -1840,6 +1980,22 @@ int main(int argc, char * argv[])
 					glDisable(GL_DEPTH_TEST);
 				}
 
+				if (drawActiveEffects)
+				{
+					setFont("VeraMono.ttf");
+					setColor(colorWhite);
+					const int spacingY = 28;
+					const int fontSize = 24;
+					int x = 20;
+					int y = 20;
+					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "effects list:");
+					x += 50;
+					for (auto i = g_effectsByName.begin(); i != g_effectsByName.end(); ++i)
+					{
+						drawText(x, y += spacingY, fontSize, +1.f, +1.f, "%-40s : %p", i->first.c_str(), i->second);
+					}
+				}
+
 				if (drawHelp)
 				{
 					setFont("calibri.ttf");
@@ -1881,6 +2037,10 @@ int main(int argc, char * argv[])
 					drawText(GFX_SX/2, GFX_SY/2, 32, 0.f, 0.f, "Listening for OSC messages on port %d", OSC_RECV_PORT);
 				}
 			}
+
+			delete [] samplesThisFrame;
+			samplesThisFrame = nullptr;
+
 			framework.endDraw();
 		}
 
@@ -1893,6 +2053,17 @@ int main(int argc, char * argv[])
 
 	delete s_oscReceiveSocket;
 	s_oscReceiveSocket = nullptr;
+
+	//
+
+	delete [] audioInHistory;
+	audioInHistory = nullptr;
+	audioInHistorySize = 0;
+	audioInHistoryMaxSize = 0;
+
+	audioIn.shutdown();
+
+	//
 
 	return 0;
 }

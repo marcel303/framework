@@ -116,6 +116,7 @@ struct Coord
 struct CubeBuffer
 {
 	float m_value[SX][SY][SZ];
+	float m_color[SX][SY][SZ][3];
 
 	CubeBuffer()
 	{
@@ -125,11 +126,13 @@ struct CubeBuffer
 	void reset()
 	{
 		memset(m_value, 0, sizeof(m_value));
+		memset(m_color, 0, sizeof(m_color));
 	}
 
 	void copyFrom(const CubeBuffer & other)
 	{
 		memcpy(m_value, other.m_value, sizeof(m_value));
+		memcpy(m_color, other.m_color, sizeof(m_color));
 	}
 
 	void fadeLinear(const float speed, const float dt)
