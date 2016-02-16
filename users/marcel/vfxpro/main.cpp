@@ -573,7 +573,7 @@ struct Effect_Rain : Effect
 
 			const float size = m_particleSystem.life[i] * m_particleSystem.lifeRcp[i] * m_particleSizes[i];
 			m_particleSystem.sx[i] = size * spriteSx;
-			m_particleSystem.sy[i] = size * spriteSy;
+			m_particleSystem.sy[i] = size * spriteSy * m_particleSystem.vy[i] / 100.f;
 
 			// check if the particle is dead
 
@@ -979,6 +979,167 @@ struct SpriteSystem : Effect
 		logWarning("failed to find a free sprite! cannot play %s", filename);
 	}
 };
+
+struct Effect_Boxes : Effect
+{
+	struct Box
+	{
+		TweenFloat m_tx;
+		TweenFloat m_ty;
+		TweenFloat m_tz;
+
+		TweenFloat m_sx;
+		TweenFloat m_sy;
+		TweenFloat m_sz;
+
+		TweenFloat m_rx;
+		TweenFloat m_ry;
+		TweenFloat m_rz;
+
+		int m_axis;
+
+		bool tick(const float dt)
+		{
+			m_tx.tick(dt);
+			m_ty.tick(dt);
+			m_tz.tick(dt);
+
+			m_sx.tick(dt);
+			m_sy.tick(dt);
+			m_sz.tick(dt);
+
+			m_rx.tick(dt);
+			m_ry.tick(dt);
+			m_rz.tick(dt);
+
+			return true;
+		}
+	};
+
+	std::list<Box> m_boxes;
+
+	Effect_Boxes(const char * name)
+		: Effect(name)
+	{
+	}
+
+	Box * addBox(
+		const float tx, const float ty, const float tz,
+		const float sx, const float sy, const float sz,
+		const int axis)
+	{
+		m_boxes.push_back(Box());
+
+		Box & b = m_boxes.back();
+
+		b.m_tx = tx;
+		b.m_ty = ty;
+		b.m_tz = tz;
+
+		b.m_sx = sx;
+		b.m_sy = sy;
+		b.m_sz = sz;
+
+		b.m_axis = axis;
+
+		return &b;
+	}
+
+	virtual void tick(const float dt) override
+	{
+		for (auto i = m_boxes.begin(); i != m_boxes.end(); )
+		{
+			Box & b = *i;
+
+			if (!b.tick(dt))
+			{
+				i = m_boxes.erase(i);
+			}
+			else
+			{
+				++i;
+			}
+		}
+	}
+
+	virtual void draw(DrawableList & list) override
+	{
+		new (list) EffectDrawable(this);
+	}
+
+	virtual void draw() override
+	{
+		for (auto i = m_boxes.begin(); i != m_boxes.end(); ++i)
+		{
+			Box & b = *i;
+
+			setColor(colorWhite);
+
+			gxPushMatrix();
+			{
+				gxTranslatef(b.m_tx, b.m_ty, b.m_tz);
+
+				gxRotatef(b.m_rx * Calc::rad2deg, 1.f, 0.f, 0.f);
+				gxRotatef(b.m_ry * Calc::rad2deg, 0.f, 1.f, 0.f);
+				gxRotatef(b.m_rz * Calc::rad2deg, 0.f, 0.f, 1.f);
+
+				gxScalef(b.m_sx, b.m_sy, b.m_sz);
+
+				glEnable(GL_LIGHTING);
+				glEnable(GL_LIGHT0);
+
+				gxBegin(GL_QUADS);
+				{
+					gxNormal3f(0.f, 0.f, +1.f);
+					gxVertex3f(-1.f, -1.f, -1.f);
+					gxVertex3f(+1.f, -1.f, -1.f);
+					gxVertex3f(+1.f, +1.f, -1.f);
+					gxVertex3f(-1.f, +1.f, -1.f);
+
+					gxNormal3f(0.f, 0.f, -1.f);
+					gxVertex3f(-1.f, -1.f, +1.f);
+					gxVertex3f(+1.f, -1.f, +1.f);
+					gxVertex3f(+1.f, +1.f, +1.f);
+					gxVertex3f(-1.f, +1.f, +1.f);
+
+					gxNormal3f(+1.f, 0.f, 0.f);
+					gxVertex3f(-1.f, -1.f, -1.f);
+					gxVertex3f(-1.f, +1.f, -1.f);
+					gxVertex3f(-1.f, +1.f, +1.f);
+					gxVertex3f(-1.f, -1.f, +1.f);
+
+					gxNormal3f(-1.f, 0.f, 0.f);
+					gxVertex3f(+1.f, -1.f, -1.f);
+					gxVertex3f(+1.f, +1.f, -1.f);
+					gxVertex3f(+1.f, +1.f, +1.f);
+					gxVertex3f(+1.f, -1.f, +1.f);
+				}
+				gxEnd();
+
+				glDisable(GL_LIGHT0);
+				glDisable(GL_LIGHTING);
+			}
+			gxPopMatrix();
+		}
+	}
+};
+
+struct Effect_Video : Effect
+{
+	virtual void tick(const float dt) override
+	{
+	}
+
+	virtual void draw(DrawableList & list) override
+	{
+	}
+
+	virtual void draw() override
+	{
+	}
+};
+
+//
 
 static CRITICAL_SECTION s_oscMessageMtx;
 static HANDLE s_oscMessageThread = INVALID_HANDLE_VALUE;
@@ -1409,6 +1570,7 @@ int main(int argc, char * argv[])
 		bool drawStarCluster = true;
 		bool drawCloth = false;
 		bool drawSprites = true;
+		bool drawBoxes = true;
 		bool drawVideo = true;
 
 		bool drawHelp = true;
@@ -1426,6 +1588,33 @@ int main(int argc, char * argv[])
 		clothPiece.setup(CLOTHPIECE_MAX_SX, CLOTHPIECE_MAX_SY);
 
 		SpriteSystem spriteSystem("sprites");
+
+		Effect_Boxes boxes("boxes");
+		for (int b = 0; b < 2; ++b)
+		{
+			const float boxScale = 2.5f;
+			Effect_Boxes::Box * box = boxes.addBox(0.f, 0.f, 0.f, boxScale, boxScale / 8.f, boxScale, 0);
+			for (int i = 0; i < 1000; ++i)
+			{
+				if ((rand() % 3) <= 1)
+				{
+					box->m_rx.to(random(-2.f, +2.f), .25f);
+					box->m_ry.to(random(-2.f, +2.f), .25f);
+					//box->m_rz.to(random(-2.f, +2.f), .25f);
+				}
+				else
+				{
+					box->m_rx.to(box->m_rx.getFinalValue(), .25f);
+					box->m_ry.to(box->m_ry.getFinalValue(), .25f);
+					//box->m_rz.to(box->m_rz.getFinalValue(), .25f);
+				}
+
+				if ((rand() % 4) <= 0)
+					box->m_sy.to(random(0.f, boxScale / 4.f), .25f);
+				else
+					box->m_sy.to(box->m_sy.getFinalValue(), .25f);
+			}
+		}
 
 		Surface surface(GFX_SX, GFX_SY);
 
@@ -1687,6 +1876,8 @@ int main(int argc, char * argv[])
 
 			spriteSystem.tick(dt);
 
+			boxes.tick(dt);
+
 		#if 0
 			if ((rand() % 30) == 0)
 			{
@@ -1834,6 +2025,8 @@ int main(int argc, char * argv[])
 								sy);
 						#endif
 
+							setBlend(BLEND_ADD);
+
 						#if 0
 							if (debugDraw && !testCameraProjection)
 							{
@@ -1844,6 +2037,7 @@ int main(int argc, char * argv[])
 							}
 						#endif
 
+
 						#if 1
 							if (debugDraw && testCameraProjection)
 							{
@@ -1851,14 +2045,14 @@ int main(int argc, char * argv[])
 							}
 						#endif
 
-							if (drawScreenIds)
-							{
-								applyTransformWithViewportSize(sx, sy);
+							DrawableList drawableList;
 
-								setFont("calibri.ttf");
-								setColor(colorWhite);
-								drawText(sx/2, sy/2, 250, 0.f, 0.f, "%d", c + 1);
-							}
+							if (drawBoxes)
+								boxes.draw(drawableList);
+
+							drawableList.sort();
+
+							drawableList.draw();
 
 						#if 1
 							if ((c == 0) || (c == 2) && audioInHistorySize > 0)
@@ -1881,6 +2075,17 @@ int main(int argc, char * argv[])
 								gxEnd();
 							}
 						#endif
+
+							setBlend(BLEND_ALPHA);
+
+							if (drawScreenIds)
+							{
+								applyTransformWithViewportSize(sx, sy);
+
+								setFont("calibri.ttf");
+								setColor(colorWhite);
+								drawText(sx/2, sy/2, 250, 0.f, 0.f, "%d", c + 1);
+							}
 						}
 						gxMatrixMode(GL_MODELVIEW);
 						gxPopMatrix();
@@ -1973,10 +2178,21 @@ int main(int argc, char * argv[])
 
 								// draw test objects
 
+								// todo : add drawScene function. this code is getting duplicated with viewport render
+
 								if (debugDraw && keyboard.isDown(SDLK_LSHIFT))
 								{
 									drawTestObjects();
 								}
+
+								DrawableList drawableList;
+
+								if (drawBoxes)
+									boxes.draw(drawableList);
+
+								drawableList.sort();
+
+								drawableList.draw();
 
 								// draw the cameras
 

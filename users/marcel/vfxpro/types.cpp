@@ -18,7 +18,7 @@ TweenFloat::TweenFloat()
 	, m_prev(nullptr)
 	, m_next(nullptr)
 {
-	RegisterTweenFloat(this);
+	//RegisterTweenFloat(this);
 }
 
 TweenFloat::TweenFloat(const float value)
@@ -28,12 +28,12 @@ TweenFloat::TweenFloat(const float value)
 	, m_prev(nullptr)
 	, m_next(nullptr)
 {
-	RegisterTweenFloat(this);
+	//RegisterTweenFloat(this);
 }
 
 TweenFloat::~TweenFloat()
 {
-	UnregisterTweenFloat(this);
+	//UnregisterTweenFloat(this);
 }
 
 void TweenFloat::to(const float value, const float time)
@@ -96,6 +96,14 @@ void TweenFloat::tick(const float dt)
 			}
 		}
 	}
+}
+
+float TweenFloat::getFinalValue() const
+{
+	if (m_animValues.empty())
+		return m_value;
+	else
+		return m_animValues.back().value;
 }
 
 //

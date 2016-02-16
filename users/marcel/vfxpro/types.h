@@ -116,6 +116,8 @@ public:
 	bool isDone() const;
 	void tick(const float dt);
 
+	float getFinalValue() const;
+
 	void operator=(const float value)
 	{
 		clear();
