@@ -160,5 +160,5 @@ float Config::midiGetValue(int id, float _default) const
 {
 	if (!midiIsMapped(id))
 		return _default;
-	return ::midi.getValue(midi.mapping[id]);
+	return ::midi.getValue(midi.mapping[id], _default);
 }

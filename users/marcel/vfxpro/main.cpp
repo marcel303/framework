@@ -1069,6 +1069,10 @@ struct Effect_Boxes : Effect
 
 	virtual void draw() override
 	{
+		glEnable(GL_LIGHTING);
+		glEnable(GL_LIGHT0);
+		glEnable(GL_NORMALIZE);
+
 		for (auto i = m_boxes.begin(); i != m_boxes.end(); ++i)
 		{
 			Box & b = *i;
@@ -1085,42 +1089,39 @@ struct Effect_Boxes : Effect
 
 				gxScalef(b.m_sx, b.m_sy, b.m_sz);
 
-				glEnable(GL_LIGHTING);
-				glEnable(GL_LIGHT0);
-
 				gxBegin(GL_QUADS);
 				{
-					gxNormal3f(0.f, 0.f, +1.f);
+					gxNormal3f( 0.f,  0.f, -1.f);
 					gxVertex3f(-1.f, -1.f, -1.f);
 					gxVertex3f(+1.f, -1.f, -1.f);
 					gxVertex3f(+1.f, +1.f, -1.f);
 					gxVertex3f(-1.f, +1.f, -1.f);
 
-					gxNormal3f(0.f, 0.f, -1.f);
+					gxNormal3f( 0.f,  0.f, +1.f);
 					gxVertex3f(-1.f, -1.f, +1.f);
 					gxVertex3f(+1.f, -1.f, +1.f);
 					gxVertex3f(+1.f, +1.f, +1.f);
 					gxVertex3f(-1.f, +1.f, +1.f);
 
-					gxNormal3f(+1.f, 0.f, 0.f);
+					gxNormal3f(-1.f,  0.f,  0.f);
 					gxVertex3f(-1.f, -1.f, -1.f);
 					gxVertex3f(-1.f, +1.f, -1.f);
 					gxVertex3f(-1.f, +1.f, +1.f);
 					gxVertex3f(-1.f, -1.f, +1.f);
 
-					gxNormal3f(-1.f, 0.f, 0.f);
+					gxNormal3f(+1.f,  0.f,  0.f);
 					gxVertex3f(+1.f, -1.f, -1.f);
 					gxVertex3f(+1.f, +1.f, -1.f);
 					gxVertex3f(+1.f, +1.f, +1.f);
 					gxVertex3f(+1.f, -1.f, +1.f);
 				}
 				gxEnd();
-
-				glDisable(GL_LIGHT0);
-				glDisable(GL_LIGHTING);
 			}
 			gxPopMatrix();
 		}
+
+		glDisable(GL_LIGHT0);
+		glDisable(GL_LIGHTING);
 	}
 };
 
@@ -1505,6 +1506,7 @@ int main(int argc, char * argv[])
 		}
 	}
 
+#if 0
 	TweenFloat tween(10.f);
 	tween.to(0.f, 1.f);
 	tween.to(5.f, 1.f);
@@ -1519,6 +1521,7 @@ int main(int argc, char * argv[])
 	}
 
 	printf("tween value: %g\n", (float)tween);
+#endif
 
 	AudioIn audioIn;
 
@@ -1594,25 +1597,26 @@ int main(int argc, char * argv[])
 		{
 			const float boxScale = 2.5f;
 			Effect_Boxes::Box * box = boxes.addBox(0.f, 0.f, 0.f, boxScale, boxScale / 8.f, boxScale, 0);
+			const float boxTimeStep = 1.f;
 			for (int i = 0; i < 1000; ++i)
 			{
 				if ((rand() % 3) <= 1)
 				{
-					box->m_rx.to(random(-2.f, +2.f), .25f);
-					box->m_ry.to(random(-2.f, +2.f), .25f);
-					//box->m_rz.to(random(-2.f, +2.f), .25f);
+					box->m_rx.to(random(-2.f, +2.f), boxTimeStep);
+					box->m_ry.to(random(-2.f, +2.f), boxTimeStep);
+					//box->m_rz.to(random(-2.f, +2.f), boxTimeStep);
 				}
 				else
 				{
-					box->m_rx.to(box->m_rx.getFinalValue(), .25f);
-					box->m_ry.to(box->m_ry.getFinalValue(), .25f);
-					//box->m_rz.to(box->m_rz.getFinalValue(), .25f);
+					box->m_rx.to(box->m_rx.getFinalValue(), boxTimeStep);
+					box->m_ry.to(box->m_ry.getFinalValue(), boxTimeStep);
+					//box->m_rz.to(box->m_rz.getFinalValue(), boxTimeStep);
 				}
 
 				if ((rand() % 4) <= 0)
-					box->m_sy.to(random(0.f, boxScale / 4.f), .25f);
+					box->m_sy.to(random(0.f, boxScale / 4.f), boxTimeStep);
 				else
-					box->m_sy.to(box->m_sy.getFinalValue(), .25f);
+					box->m_sy.to(box->m_sy.getFinalValue(), boxTimeStep);
 			}
 		}
 
@@ -1627,6 +1631,9 @@ int main(int argc, char * argv[])
 
 		int activeCamera = kNumScreens;
 
+		float time = 0.f;
+		float timeReal = 0.f;
+
 		bool stop = false;
 
 		while (!stop)
@@ -1637,7 +1644,7 @@ int main(int argc, char * argv[])
 
 			// todo : process audio input
 
-			short * samplesThisFrame = nullptr;
+			int * samplesThisFrame = nullptr;
 			int numSamplesThisFrame = 0;
 
 			if (config.audioIn.enabled)
@@ -1657,7 +1664,7 @@ int main(int argc, char * argv[])
 
 				// todo : secure this code
 
-				samplesThisFrame = new short[numSamplesThisFrame];
+				samplesThisFrame = new int[numSamplesThisFrame];
 
 				int offset = (framework.time - audioInProvideTime) * config.audioIn.sampleRate;
 				Assert(offset >= 0);
@@ -1665,21 +1672,23 @@ int main(int argc, char * argv[])
 				if (offset + numSamplesThisFrame > audioInHistorySize)
 					offset = audioInHistorySize - numSamplesThisFrame;
 
+				//logDebug("offset = %04d/%04d (numSamplesThisFrame=%04d)", offset, audioInHistorySize, numSamplesThisFrame);
+
 				offset *= config.audioIn.numChannels;
 
-				const short * src = audioInHistory + offset;
-				      short * dst = samplesThisFrame;
+				const short * __restrict src = audioInHistory + offset;
+				      int   * __restrict dst = samplesThisFrame;
 
 				for (int i = 0; i < numSamplesThisFrame; ++i)
 				{
-					*dst = 0;
+					int value = 0;
 
 					for (int c = 0; c < config.audioIn.numChannels; ++c)
 					{
-						*dst += *src++;
+						value += *src++;
 					}
 
-					++dst;
+					*dst++ = value;
 
 					Assert(src <= audioInHistory + audioInHistorySize * config.audioIn.numChannels);
 					Assert(dst <= samplesThisFrame + numSamplesThisFrame);
@@ -2055,7 +2064,7 @@ int main(int argc, char * argv[])
 							drawableList.draw();
 
 						#if 1
-							if ((c == 0) || (c == 2) && audioInHistorySize > 0)
+							if (((c == 0) || (c == 2)) && audioInHistorySize > 0)
 							{
 								applyTransformWithViewportSize(sx, sy);
 
@@ -2113,7 +2122,7 @@ int main(int argc, char * argv[])
 					jitterShader.setTexture("colormap", 0, surface.getTexture(), true, false);
 					jitterShader.setTexture("jittermap", 1, 0, true, true);
 					jitterShader.setImmediate("jitterStrength", 1.f);
-					jitterShader.setImmediate("time", framework.time);
+					jitterShader.setImmediate("time", time);
 					surface.postprocess(jitterShader);
 				}
 
@@ -2183,16 +2192,16 @@ int main(int argc, char * argv[])
 								if (debugDraw && keyboard.isDown(SDLK_LSHIFT))
 								{
 									drawTestObjects();
+
+									DrawableList drawableList;
+
+									if (drawBoxes)
+										boxes.draw(drawableList);
+
+									drawableList.sort();
+
+									drawableList.draw();
 								}
-
-								DrawableList drawableList;
-
-								if (drawBoxes)
-									boxes.draw(drawableList);
-
-								drawableList.sort();
-
-								drawableList.draw();
 
 								// draw the cameras
 
@@ -2281,6 +2290,9 @@ int main(int argc, char * argv[])
 			samplesThisFrame = nullptr;
 
 			framework.endDraw();
+
+			time += dt;
+			timeReal += dtReal;
 		}
 
 		framework.shutdown();
