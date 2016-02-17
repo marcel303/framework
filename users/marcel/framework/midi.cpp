@@ -127,6 +127,7 @@ void CALLBACK HandleMidiMessage(HMIDIIN handle, UINT uMsg, DWORD dwInstance, DWO
 				globals.midiChangeAsync[key] = true;
 			}
 			globals.midiValue[key] = volume / 127.f;
+			globals.midiIsSetAsync[key] = true;
 			//logDebug("MIDI data: key=%03d, isDown=%d, value=%03d", key, isDown, volume);
 		}
 		break;

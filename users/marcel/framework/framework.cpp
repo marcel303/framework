@@ -501,6 +501,7 @@ void Framework::process()
 
 	lockMidi();
 	{
+		memcpy(globals.midiIsSet, globals.midiIsSetAsync, sizeof(globals.midiIsSet));
 		memcpy(globals.midiDown, globals.midiDownAsync, sizeof(globals.midiDown));
 		memcpy(globals.midiChange, globals.midiChangeAsync, sizeof(globals.midiChange));
 		memset(globals.midiChangeAsync, 0, sizeof(globals.midiChangeAsync));
@@ -2744,12 +2745,12 @@ bool Midi::wentUp(int key) const
 		return false;
 }
 
-float Midi::getValue(int key) const
+float Midi::getValue(int key, float _default) const
 {
-	if (isDown(key))
+	if (globals.midiIsSet[key] && isDown(key))
 		return globals.midiValue[key];
 	else
-		return 0.f;
+		return _default;
 }
 
 // -----

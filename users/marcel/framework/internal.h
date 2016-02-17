@@ -14,6 +14,8 @@
 	#define FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT 1
 #endif
 
+#define MAX_MIDI_KEYS 256
+
 #ifndef WIN32
 static int fopen_s(FILE ** file, const char * filename, const char * mode)
 {
@@ -77,11 +79,13 @@ public:
 	int keyRepeat[256];
 	int keyRepeatCount;
 	int xinputGamepadIdx;
-	bool midiDown[256];
-	bool midiDownAsync[256];
-	bool midiChange[256];
-	bool midiChangeAsync[256];
-	float midiValue[256];
+	bool midiIsSet[MAX_MIDI_KEYS];
+	bool midiIsSetAsync[MAX_MIDI_KEYS];
+	bool midiDown[MAX_MIDI_KEYS];
+	bool midiDownAsync[MAX_MIDI_KEYS];
+	bool midiChange[MAX_MIDI_KEYS];
+	bool midiChangeAsync[MAX_MIDI_KEYS];
+	float midiValue[MAX_MIDI_KEYS];
 	Shader * shader;
 	TRANSFORM transform;
 	Mat4x4 transformScreen;

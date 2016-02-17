@@ -717,7 +717,7 @@ public:
 	bool isDown(int key) const;
 	bool wentDown(int key) const;
 	bool wentUp(int key) const;
-	float getValue(int key) const;
+	float getValue(int key, float _default) const;
 };
 
 //
