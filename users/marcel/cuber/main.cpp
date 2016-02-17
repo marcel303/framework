@@ -260,6 +260,7 @@ static void evalCube(Cube & cube, Effect * effect)
 {
 	const float coordScale = 1.f / (SX - 1.f);
 
+	#pragma omp parallel for
 	for (int x = 0; x < SX; ++x)
 	{
 		for (int y = 0; y < SY; ++y)
@@ -277,6 +278,15 @@ static void evalCube(Cube & cube, Effect * effect)
 
 				cube.m_value[x][y][z] = effect->evaluate(c);
 
+				const float d = 0.05f;
+				const float c0 = (effect->evaluate(c + Coord(+d, 0.f, 0.f)) - effect->evaluate(c + Coord(-d, 0.f, 0.f)));
+				const float c1 = (effect->evaluate(c + Coord(0.f, +d, 0.f)) - effect->evaluate(c + Coord(0.f, -d, 0.f)));
+				const float c2 = (effect->evaluate(c + Coord(0.f, 0.f, +d)) - effect->evaluate(c + Coord(0.f, 0.f, -d)));
+				const float cs = sqrtf(c0 * c0 + c1 * c1 + c2 * c2);
+				cube.m_color[x][y][z][0] = ((c0 / cs) + 1.f) * .5f;
+				cube.m_color[x][y][z][1] = ((c1 / cs) + 1.f) * .5f;
+				cube.m_color[x][y][z][2] = ((c2 / cs) + 1.f) * .5f;
+
 				effect->evaluateRaw(x, y, z, cube.m_value[x][y][z]);
 			}
 		}
@@ -285,12 +295,14 @@ static void evalCube(Cube & cube, Effect * effect)
 
 static void drawCube(const Cube & cube)
 {
+	const float coordScale = 1.f / SX;
+
 	gxPushMatrix();
 	{
 		gxScalef(
-			1.f / SX,
-			1.f / SY,
-			1.f / SZ);
+			coordScale,
+			coordScale,
+			coordScale);
 
 		gxTranslatef(
 			-(SX - 1) / 2.f,
@@ -320,6 +332,7 @@ static void drawCube(const Cube & cube)
 	#if VIDEO_RECORDING_MODE
 		glPointSize(2.f);
 	#endif
+		glPointSize(2.f);
 		setBlend(BLEND_ADD);
 
 		gxBegin(GL_POINTS);
@@ -332,7 +345,11 @@ static void drawCube(const Cube & cube)
 					{
 						const float value = cube.m_value[x][y][z];
 
-						gxColor4f(value, value, value, 1.f);
+						//gxColor4f(value, value, value, 1.f);
+						gxColor4f(
+							value * cube.m_color[x][y][z][0],
+							value * cube.m_color[x][y][z][1],
+							value * cube.m_color[x][y][z][2], 1.f);
 						gxVertex3f(x, y, z);
 					}
 				}
@@ -372,9 +389,13 @@ static void drawCubeSlices(const Cube & cube)
 
 				const Coord c(cx, cy, cz);
 
-				const float r = value + powf(computePerlinNoise(c, x + framework.time), 3.f);
-				const float g = value + powf(computePerlinNoise(c, y + framework.time), 3.f);
-				const float b = value + powf(computePerlinNoise(c, z + framework.time), 3.f);
+				const float r = value * cube.m_color[x][y][z][0];
+				const float g = value * cube.m_color[x][y][z][1];
+				const float b = value * cube.m_color[x][y][z][2];
+
+				//const float r = value + powf(computePerlinNoise(c, x + framework.time), 3.f);
+				//const float g = value + powf(computePerlinNoise(c, y + framework.time), 3.f);
+				//const float b = value + powf(computePerlinNoise(c, z + framework.time), 3.f);
 
 				const int tx = x + z * SX;
 				const int ty = y;
