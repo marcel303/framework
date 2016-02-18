@@ -28,6 +28,8 @@ project(vfxpro)
 file(GLOB_RECURSE source "*.cpp" "*.h")
 file(GLOB_RECURSE excluded_source "mediaplayer/*.*")
 list(REMOVE_ITEM source ${excluded_source})
+file(GLOB_RECURSE excluded_source "ffmpeg/*.*")
+list(REMOVE_ITEM source ${excluded_source})
 
 set(GAME_FILES
 	main.cpp)
@@ -38,6 +40,7 @@ add_executable(vfxpro ${source})
 target_compile_definitions(vfxpro PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)
 
 target_include_directories(vfxpro PRIVATE "${PROJECT_SOURCE_DIR}")
+target_include_directories(vfxpro PRIVATE "${PROJECT_SOURCE_DIR}/ffmpeg")
 
 target_link_libraries(vfxpro PRIVATE framework)
 target_link_libraries(vfxpro PRIVATE libnet)
