@@ -494,7 +494,7 @@ static bool fileExists(const char * filename)
 	}
 }
 
-static bool loadFileContents(const char * filename, char *& bytes, int & numBytes)
+static bool loadFileContents(const char * filename, bool normalizeLineEndings, char *& bytes, int & numBytes)
 {
 	bool result = true;
 	
@@ -525,7 +525,16 @@ static bool loadFileContents(const char * filename, char *& bytes, int & numByte
 		fclose(file);
 	}
 	
-	if (!result)
+	if (result)
+	{
+		if (normalizeLineEndings)
+		{
+			for (int i = 0; i < numBytes; ++i)
+				if (bytes[i] == '\r')
+					bytes[i] = '\n';
+		}
+	}
+	else
 	{
 		if (bytes)
 		{
@@ -560,7 +569,7 @@ static bool preprocessShader(const std::string & source, std::string & destinati
 			char * bytes;
 			int numBytes;
 			
-			if (!loadFileContents(filename, bytes, numBytes))
+			if (!loadFileContents(filename, true, bytes, numBytes))
 			{
 				logError("failed to load include file %s", filename);
 				result = false;
@@ -596,7 +605,7 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type)
 	char * bytes;
 	int numBytes;
 	
-	if (!loadFileContents(filename, bytes, numBytes))
+	if (!loadFileContents(filename, true, bytes, numBytes))
 	{
 		result = false;
 	}

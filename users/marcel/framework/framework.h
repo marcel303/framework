@@ -26,10 +26,16 @@
 	#define ENABLE_LOGGING_DBG 1
 	#define ENABLE_LOGGING 1
 	#define ENABLE_PROFILING 0
+
+	#define FRAMEWORK_ENABLE_GL_ERROR_LOG 1
+	#define FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT 1
 #else
 	#define ENABLE_LOGGING_DBG 0 // do not alter
 	#define ENABLE_LOGGING 0 // do not alter
 	#define ENABLE_PROFILING 0 // do not alter
+
+	#define FRAMEWORK_ENABLE_GL_ERROR_LOG 0 // do not alter
+	#define FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT 0 // do not alter
 #endif
 
 #define ENABLE_OPENGL 1
@@ -916,6 +922,13 @@ void gxBegin(int primitiveType);
 #define gxVertex3fv glVertex3fv
 void gxSetTexture(GLuint texture);
 
+#endif
+
+#if FRAMEWORK_ENABLE_GL_ERROR_LOG
+	void checkErrorGL_internal(const char * function, int line);
+	#define checkErrorGL() checkErrorGL_internal(__FUNCTION__, __LINE__)
+#else
+	#define checkErrorGL() do { } while (false)
 #endif
 
 // utility

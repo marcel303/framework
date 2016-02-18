@@ -9,11 +9,6 @@
 #include <string>
 #include "framework.h"
 
-#ifdef DEBUG
-	#define FRAMEWORK_ENABLE_GL_ERROR_LOG 1
-	#define FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT 1
-#endif
-
 #define MAX_MIDI_KEYS 256
 
 #ifndef WIN32
@@ -28,13 +23,6 @@ static int fopen_s(FILE ** file, const char * filename, const char * mode)
 
 void splitString(const std::string & str, std::vector<std::string> & result);
 void splitString(const std::string & str, std::vector<std::string> & result, char c);
-
-#if FRAMEWORK_ENABLE_GL_ERROR_LOG
-	void checkErrorGL_internal(const char * function, int line);
-	#define checkErrorGL() checkErrorGL_internal(__FUNCTION__, __LINE__)
-#else
-	#define checkErrorGL() do { } while (false)
-#endif
 
 #if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
 	void __stdcall debugOutputGL(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar*, GLvoid*);

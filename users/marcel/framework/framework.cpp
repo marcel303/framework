@@ -1355,7 +1355,9 @@ GLint Shader::getAttribute(const char * name)
 #define SET_UNIFORM(name, op) \
 	setShader(*this); \
 	const GLint index = glGetUniformLocation(getProgram(), name); \
-	if (index != -1) \
+	if (index == -1) \
+		logDebug("couldn't find shader uniform %s", name); \
+	else \
 	{ \
 		op; \
 	}
