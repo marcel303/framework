@@ -26,6 +26,8 @@ project(vfxpro)
 # --- twinkle ---
 
 file(GLOB_RECURSE source "*.cpp" "*.h")
+file(GLOB_RECURSE excluded_source "mediaplayer/*.*")
+list(REMOVE_ITEM source ${excluded_source})
 
 set(GAME_FILES
 	main.cpp)
