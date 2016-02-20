@@ -2,8 +2,9 @@
 
 #include "MPAudioBuffer.h"
 #include "MPPacketQueue.h"
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
+
+struct AVCodec;
+struct AVCodecContext;
 
 namespace MP
 {

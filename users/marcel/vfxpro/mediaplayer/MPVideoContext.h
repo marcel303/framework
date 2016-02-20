@@ -3,8 +3,10 @@
 #include "MPPacketQueue.h"
 #include "MPVideoBuffer.h"
 #include "Types.h"
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
+
+struct AVCodec;
+struct AVFrame;
+struct AVPacket;
 
 namespace MP
 {

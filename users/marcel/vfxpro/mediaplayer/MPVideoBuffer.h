@@ -1,7 +1,8 @@
 #pragma once
 
 #include "types.h"
-#include <libavcodec/avcodec.h>
+
+struct AVFrame;
 
 namespace MP
 {

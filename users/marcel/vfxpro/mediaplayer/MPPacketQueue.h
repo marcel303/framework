@@ -1,7 +1,11 @@
 #pragma once
 
 #include <deque>
-#include <libavformat/avformat.h>
+
+extern "C"
+{
+	#include <libavformat/avformat.h>
+}
 
 namespace MP
 {

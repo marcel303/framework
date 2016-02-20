@@ -3,6 +3,11 @@
 #include <algorithm>
 #include <vector>
 
+extern "C"
+{
+	#include <libavcodec/avcodec.h>
+}
+
 #define STREAM_NOT_FOUND 0xFFFF
 
 namespace MP
@@ -260,7 +265,7 @@ namespace MP
 		out_videoStreamIndex = STREAM_NOT_FOUND;
 
 		// Get stream info.
-		if (avformat_find_stream_info(m_formatContext) < 0)
+		if (avformat_find_stream_info(m_formatContext, nullptr) < 0)
 		{
 			Assert(0);
 			return false;

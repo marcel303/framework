@@ -3,12 +3,19 @@
 #include "MPDebug.h"
 #include "MPUtil.h"
 
+extern "C"
+{
+	#include <libavcodec/avcodec.h>
+	#include <libavformat/avformat.h>
+}
+
 #define QUEUE_SIZE (4 * 3 * 10)
 
-#define BUFFER_SIZE (AVCODEC_MAX_AUDIO_FRAME_SIZE / 2 * 2) // Maximum buffer size. If the buffer grows larger than this, audio artefacts will manifest.
+//#define BUFFER_SIZE (AVCODEC_MAX_AUDIO_FRAME_SIZE / 2 * 2) // Maximum buffer size. If the buffer grows larger than this, audio artefacts will manifest.
+#define BUFFER_SIZE 48000*2
 
 // todo : move audio buffer to member. use aligned alloc
-int16_t g_audioBuffer[AVCODEC_MAX_AUDIO_FRAME_SIZE / 2];
+//int16_t g_audioBuffer[AVCODEC_MAX_AUDIO_FRAME_SIZE / 2];
 
 namespace MP
 {
@@ -76,7 +83,7 @@ namespace MP
 		const int output_rate     = 44100;
 
 		// TODO: Maintain pointer to resampler, and apply resampling.
-		ReSampleContext* resampler = av_audio_resample_init(output_channels, input_channels, output_rate, input_rate);
+		ReSampleContext* resampler = av_audio_resample_init(output_channels, input_channels, output_rate, input_rate, AV_SAMPLE_FMT_S16, m_codecContext->sample_fmt, 1024, 0, 0, 1.0);
 		//int audio_resample(ReSampleContext *s, short *output, short *input, int nb_samples);
 		audio_resample_close(resampler);
 
@@ -201,23 +208,25 @@ namespace MP
 		bytesRemaining = packet.size;
 		packetData = packet.data;
 
+		AVFrame* decodedFrame = av_frame_alloc();
+
 		// Decode packet.
 		while (bytesRemaining > 0)
 		{
 			// Decode data.
-			int frameSize = 0;
+			//int frameSize = 0;
 
 			AVPacket packet2;
 			packet2.size = bytesRemaining;
 			packet2.data = packetData;
 
+			int gotFrame = 0;
+
 			int bytesDecoded = avcodec_decode_audio4(
 				m_codecContext,
-				g_audioBuffer,
-				&frameSize,
+				decodedFrame,
+				&gotFrame,
 				&packet2);
-				//packetData,
-				//bytesRemaining);
 
 			// Error?
 			if (bytesDecoded < 0)
@@ -234,19 +243,37 @@ namespace MP
 				Assert(bytesDecoded >= 0);
 				Assert(bytesRemaining >= 0);
 
-				if (frameSize > 0)
+				if (gotFrame)
 				{
 					if (m_codecContext->channels != 0)
 					{
-						size_t frameCount = frameSize / (m_codecContext->channels * sizeof(int16_t));
+						Assert(m_codecContext->sample_fmt == AV_SAMPLE_FMT_S16P);
+						if (m_codecContext->sample_fmt == AV_SAMPLE_FMT_S16P)
+						{
+							Assert(av_get_bytes_per_sample(m_codecContext->sample_fmt) == 2);
+							const int frameCount = decodedFrame->nb_samples;
+							const int channelCount = m_codecContext->channels;
+							const int dataSize = sizeof(int16_t) * frameCount * channelCount;
 
-						m_audioBuffer.WriteSamples(g_audioBuffer, frameCount * m_codecContext->channels);
+							int16_t * data = (int16_t*)alloca(dataSize);
+							int16_t * dataPtr = data;
 
-						m_availableFrameCount += frameCount;
+							for (int i = 0; i < frameCount; ++i)
+							{
+								for (int c = 0; c < m_codecContext->channels; ++c)
+								{
+									*dataPtr++ = ((int16_t*)decodedFrame->data[c])[i];
+								}
+							}
 
-						Assert(frameCount * (m_codecContext->channels * sizeof(int16_t)) == frameSize);
+							m_audioBuffer.WriteSamples(data, dataSize / sizeof(int16_t));
 
-						Debug::Print("\t\tAUDIO: Decoded frame. Got %d frames.", int(frameCount));
+							m_availableFrameCount += frameCount;
+
+							Assert(frameCount * (m_codecContext->channels * sizeof(int16_t)) == dataSize);
+
+							Debug::Print("\t\tAUDIO: Decoded frame. Got %d frames.", int(frameCount));
+						}
 					}
 				}
 				else
@@ -258,7 +285,9 @@ namespace MP
 
 		// Free current packet.
 		if (packet.data)
-			av_free_packet(&packet);
+			av_packet_unref(&packet);
+
+		av_frame_free(&decodedFrame);
 
 		return true;
 	}

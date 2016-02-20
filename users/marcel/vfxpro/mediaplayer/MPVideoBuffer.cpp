@@ -2,6 +2,11 @@
 #include "MPDebug.h"
 #include "MPVideoBuffer.h"
 
+extern "C"
+{
+	#include <libavcodec/avcodec.h>
+}
+
 //#define BUFFER_SIZE (3)
 #define BUFFER_SIZE (10)
 

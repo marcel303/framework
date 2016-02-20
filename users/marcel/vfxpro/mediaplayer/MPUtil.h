@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libavcodec/avcodec.h>
+struct AVCodecContext;
 
 namespace MP
 {

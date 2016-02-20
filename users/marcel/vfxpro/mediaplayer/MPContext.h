@@ -3,7 +3,6 @@
 #include "MPAudioContext.h"
 #include "MPVideoContext.h"
 #include "Types.h"
-#include <libavcodec/avcodec.h>
 #include <stdint.h>
 
 namespace MP
@@ -33,7 +32,7 @@ namespace MP
 
 		bool SeekToStart();
 
-		AVFormatContext* GetFormatContext();
+		struct AVFormatContext* GetFormatContext();
 
 	//private:
 		bool ReadFormatContext();
@@ -42,7 +41,7 @@ namespace MP
 		bool ProcessPacket(AVPacket& packet);
 		bool ReadPacket(AVPacket& out_packet);
 
-		AVFormatContext* m_formatContext;
+		struct AVFormatContext* m_formatContext;
 		AudioContext* m_audioContext;
 		VideoContext* m_videoContext;
 

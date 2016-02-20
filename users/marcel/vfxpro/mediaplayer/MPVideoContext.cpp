@@ -4,6 +4,13 @@
 #include "MPUtil.h"
 #include "MPVideoContext.h"
 
+extern "C"
+{
+	#include <libavcodec/avcodec.h>
+	#include <libavformat/avformat.h>
+	#include <libavutil/imgutils.h>
+}
+
 //#define QUEUE_SIZE (4 * 10)
 #define QUEUE_SIZE (4 * 30)
 //#define QUEUE_SIZE (4)
@@ -282,7 +289,7 @@ namespace MP
 
 		// Free current packet.
 		if (packet.data)
-			av_free_packet(&packet);
+			av_packet_unref(&packet);
 
 		return true;
 	}
@@ -300,12 +307,13 @@ namespace MP
 	{
 		bool result = true;
 
-		img_convert((AVPicture *)out_frame->m_frame, AV_PIX_FMT_RGB24, (AVPicture*)m_tempFrame, 
-			m_codecContext->pix_fmt,
-			m_codecContext->width,
-			m_codecContext->height);
+		//av_image_copy_to_buffer
+		//img_convert((AVPicture *)out_frame->m_frame, AV_PIX_FMT_RGB24, (AVPicture*)m_tempFrame,
+		//	m_codecContext->pix_fmt,
+		//	m_codecContext->width,
+		//	m_codecContext->height);
 
-        if (m_tempFrame->pts != AV_NOPTS_VALUE)
+		if (m_tempFrame->pts != AV_NOPTS_VALUE)
 		{
 			// m_tempFrame->pts * 1345.2944 << Magic number.
 			m_time = av_q2d(m_codecContext->time_base) * m_tempFrame->pts;

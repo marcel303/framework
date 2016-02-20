@@ -1,5 +1,10 @@
 #include "MPUtil.h"
 
+extern "C"
+{
+	#include <libavcodec/avcodec.h>
+}
+
 namespace MP
 {
 	namespace Util
