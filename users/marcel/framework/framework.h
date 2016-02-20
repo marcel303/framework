@@ -156,6 +156,7 @@ class Model;
 class Mouse;
 class Music;
 class Shader;
+class ShaderBuffer;
 class Sound;
 class Sprite;
 class Spriter;
@@ -325,8 +326,25 @@ public:
 	void setTextureUnit(const char * name, int unit); // bind <name> to GL_TEXTURE0 + unit
 	void setTextureUnit(GLint index, int unit); // bind <name> to GL_TEXTURE0 + unit
 	void setTexture(const char * name, int unit, GLuint texture, bool filtered, bool clamp = true);
+	void setBuffer(const char * name, const ShaderBuffer & buffer);
+	void setBuffer(GLint index, const ShaderBuffer & buffer);
 
 	const ShaderCacheElem & getCacheElem() const { return *m_shader; }
+};
+
+//
+
+class ShaderBuffer
+{
+	GLuint m_buffer;
+
+public:
+	ShaderBuffer();
+	~ShaderBuffer();
+
+	GLuint getBuffer() const;
+
+	void setData(const void * bytes, int numBytes);
 };
 
 //

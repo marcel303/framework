@@ -1431,6 +1431,63 @@ void Shader::setTexture(const char * name, int unit, GLuint texture, bool filter
 
 #undef SET_UNIFORM
 
+void Shader::setBuffer(const char * name, const ShaderBuffer & buffer)
+{
+	const GLuint index = glGetUniformBlockIndex(getProgram(), name);
+	checkErrorGL();
+
+	if (index == -1) // todo : index is -1 on failure to find it ?
+		logWarning("unable to find block index for %s", name);
+	else
+		setBuffer(index, buffer);
+}
+
+void Shader::setBuffer(GLint index, const ShaderBuffer & buffer)
+{
+	fassert(globals.shader == this);
+
+	glBindBufferBase(GL_UNIFORM_BUFFER, index, buffer.getBuffer());
+	checkErrorGL();
+}
+
+// -----
+
+ShaderBuffer::ShaderBuffer()
+	: m_buffer(0)
+{
+	glGenBuffers(1, &m_buffer);
+	checkErrorGL();
+}
+
+ShaderBuffer::~ShaderBuffer()
+{
+	if (m_buffer)
+	{
+		glDeleteBuffers(1, &m_buffer);
+		checkErrorGL();
+		m_buffer = 0;
+	}
+}
+
+GLuint ShaderBuffer::getBuffer() const
+{
+	return m_buffer;
+}
+
+void ShaderBuffer::setData(const void * bytes, int numBytes)
+{
+	fassert(m_buffer);
+
+	if (m_buffer)
+	{
+		glBindBuffer(GL_UNIFORM_BUFFER, m_buffer);
+		checkErrorGL();
+
+		glBufferData(GL_UNIFORM_BUFFER, numBytes, bytes, GL_DYNAMIC_DRAW);
+		checkErrorGL();
+	}
+}
+
 // -----
 
 Color::Color()
