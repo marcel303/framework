@@ -15,6 +15,7 @@ TweenFloat::TweenFloat()
 	: m_value(0.f)
 	, m_from(0.f)
 	, m_timeElapsed(0.f)
+	, m_timeWait(0.f)
 	, m_prev(nullptr)
 	, m_next(nullptr)
 {
@@ -25,6 +26,7 @@ TweenFloat::TweenFloat(const float value)
 	: m_value(value)
 	, m_from(value)
 	, m_timeElapsed(0.f)
+	, m_timeWait(0.f)
 	, m_prev(nullptr)
 	, m_next(nullptr)
 {
@@ -36,11 +38,13 @@ TweenFloat::~TweenFloat()
 	//UnregisterTweenFloat(this);
 }
 
-void TweenFloat::to(const float value, const float time)
+void TweenFloat::to(const float value, const float time, const EaseType easeType, const float easeParam)
 {
 	AnimValue animValue;
 	animValue.value = value;
 	animValue.time = time;
+	animValue.easeType = easeType;
+	animValue.easeParam = easeParam;
 	m_animValues.push_back(animValue);
 }
 
@@ -57,8 +61,21 @@ bool TweenFloat::isDone() const
 	return m_animValues.empty();
 }
 
-void TweenFloat::tick(const float dt)
+void TweenFloat::tick(const float _dt)
 {
+	float dt = _dt;
+
+	if (m_timeWait > 0.f)
+	{
+		m_timeWait -= dt;
+
+		if (m_timeWait < 0.f)
+		{
+			dt -= m_timeWait;
+			m_timeWait = 0.f;
+		}
+	}
+
 	if (m_animValues.empty())
 	{
 		Assert(m_timeElapsed == 0.f);
@@ -73,7 +90,7 @@ void TweenFloat::tick(const float dt)
 
 			const float timeElapsed = Calc::Min(m_timeElapsed, v.time);
 
-			m_value = interp(m_from, v.value, timeElapsed / v.time);
+			m_value = interp(m_from, v.value, evalEase(timeElapsed / v.time, v.easeType, v.easeParam));
 
 			if (m_timeElapsed >= v.time)
 			{

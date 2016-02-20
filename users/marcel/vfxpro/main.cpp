@@ -1,4 +1,6 @@
+#include "data/lighting.inc"
 #include "ip/UdpSocket.h"
+#include "mediaplayer/MPContext.h"
 #include "osc/OscOutboundPacketStream.h"
 #include "osc/OscPacketListener.h"
 #include "audioin.h"
@@ -22,7 +24,7 @@ const static int kNumScreens = 3;
 #define OSC_RECV_PORT 1121
 
 const float eps = 1e-10f;
-const float pi2 = M_PI * 2.f;
+const float pi2 = float(M_PI) * 2.f;
 
 static Config config;
 
@@ -34,21 +36,25 @@ static Config config;
 
 :: todo :: configuration
 
-	- prompt for MIDI controller at startup. or select by name in XML config file?
-	- prompt for audio input device at startup. or select by name in XML config file?
-	- add XML settings file
+	# prompt for MIDI controller at startup. or select by name in XML config file?
+		+ defined in settings.xml instead
+	# prompt for audio input device at startup. or select by name in XML config file?
+		+ defined in settings xml instead
+	+ add XML settings file
 	- define scene XML representation
 	- discuss with Max what would be needed for life act
 
 :: todo :: projector output
 
 	- add brightness control
+		- write shader which does a lookup based on the luminance of the input and transforms the input
 	- add border blends to hide projector seam. unless eg MadMapper already does this, it may be necessary to do it ourselvess
 
 :: todo :: utility functions
 
-	- add PCM capture
+	+ add PCM capture
 	- add FFT calculation PCM data
+	- add loudness calculation PCM data
 
 :: todo :: post processing and graphics quality
 
@@ -56,13 +62,23 @@ static Config config;
 
 :: todo :: visuals tech 2D
 
--
+	- add a box blur shader. allow it to darken the output too
+
+	- integrate Box2D ?
+
+	- add flow map shader
+
+		- use an input texture to warp/distort the previous frame
 
 :: todo :: visuals tech 3D
 
 	- virtual camera positioning
+		- allow positioning of the virtual camera based on settings XML
+		- allow tweens on the virtual camera position ?
 
-	- compute virtual camera matrices
+	+ compute virtual camera matrices
+
+	- add lighting shader code
 
 :: todo :: effects
 
@@ -1069,9 +1085,16 @@ struct Effect_Boxes : Effect
 
 	virtual void draw() override
 	{
-		glEnable(GL_LIGHTING);
-		glEnable(GL_LIGHT0);
-		glEnable(GL_NORMALIZE);
+		Light lights[kMaxLights];
+
+		lights[0].setup(kLightType_Omni, 0.f, 0.f, 0.f, .25f, .5f, 1.f, config.midiGetValue(100, 1.f) * 50.f);
+
+		Shader shader("basic_lit");
+		setShader(shader);
+
+		ShaderBuffer buffer;
+		buffer.setData(lights, sizeof(lights));
+		shader.setBuffer("lightsBlock", buffer);
 
 		for (auto i = m_boxes.begin(); i != m_boxes.end(); ++i)
 		{
@@ -1120,8 +1143,7 @@ struct Effect_Boxes : Effect
 			gxPopMatrix();
 		}
 
-		glDisable(GL_LIGHT0);
-		glDisable(GL_LIGHTING);
+		clearShader();
 	}
 };
 
@@ -1403,7 +1425,7 @@ static void drawCamera(const Camera & camera, const float alpha)
 
 		const Mat4x4 invView = camera.cameraToView.CalcInv();
 		
-		const const Vec3 p[5] =
+		const Vec3 p[5] =
 		{
 			invView * Vec3(-1.f, -1.f, 0.f),
 			invView * Vec3(+1.f, -1.f, 0.f),
@@ -1532,7 +1554,7 @@ int main(int argc, char * argv[])
 
 	if (config.audioIn.enabled)
 	{
-		if (!audioIn.init(config.audioIn.numChannels, config.audioIn.sampleRate, config.audioIn.bufferLength))
+		if (!audioIn.init(config.audioIn.deviceIndex, config.audioIn.numChannels, config.audioIn.sampleRate, config.audioIn.bufferLength))
 		{
 			logError("failed to initialise audio in!");
 		}
@@ -1560,7 +1582,32 @@ int main(int argc, char * argv[])
 
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
-		framework.fillCachesWithPath(".", true);
+		//framework.fillCachesWithPath(".", true);
+
+		MP::Context mpContext;
+		mpContext.Begin("test.mpg");
+		if (mpContext.FillBuffers())
+		{
+			for (;;)
+			{
+				mpContext.FillBuffers();
+
+				const int frameCount = 1024;
+				int16_t samples[1024 * 2];
+				bool gotAudio = false;
+				mpContext.RequestAudio(samples, frameCount, gotAudio);
+				if (gotAudio)
+					logDebug("gotAudio");
+
+				double time = mpContext.m_audioContext->m_time;
+				MP::VideoFrame * videoFrame = nullptr;
+				bool gotVideo = false;
+				mpContext.RequestVideo(time, &videoFrame, gotVideo);
+				if (gotVideo)
+					logDebug("gotVideo. t=%06dms", int(time * 1000.0));
+			}
+		}
+		mpContext.End();
 
 		std::list<TimeDilationEffect> timeDilationEffects;
 
@@ -1602,25 +1649,32 @@ int main(int argc, char * argv[])
 			{
 				if ((rand() % 3) <= 1)
 				{
-					box->m_rx.to(random(-2.f, +2.f), boxTimeStep);
-					box->m_ry.to(random(-2.f, +2.f), boxTimeStep);
-					//box->m_rz.to(random(-2.f, +2.f), boxTimeStep);
+					box->m_rx.to(random(-2.f, +2.f), boxTimeStep, (EaseType)(rand() % kEaseType_Count), random(0.f, 2.f));
+					box->m_ry.to(random(-2.f, +2.f), boxTimeStep, (EaseType)(rand() % kEaseType_Count), random(0.f, 2.f));
+					//box->m_rz.to(random(-2.f, +2.f), boxTimeStep, (EaseType)(rand() % kEaseType_Count), random(0.f, 2.f));
 				}
 				else
 				{
-					box->m_rx.to(box->m_rx.getFinalValue(), boxTimeStep);
-					box->m_ry.to(box->m_ry.getFinalValue(), boxTimeStep);
-					//box->m_rz.to(box->m_rz.getFinalValue(), boxTimeStep);
+					box->m_rx.to(box->m_rx.getFinalValue(), boxTimeStep, (EaseType)(rand() % kEaseType_Count), random(0.f, 2.f));
+					box->m_ry.to(box->m_ry.getFinalValue(), boxTimeStep, (EaseType)(rand() % kEaseType_Count), random(0.f, 2.f));
+					//box->m_rz.to(box->m_rz.getFinalValue(), boxTimeStep, (EaseType)(rand() % kEaseType_Count), random(0.f, 2.f));
 				}
 
 				if ((rand() % 4) <= 0)
-					box->m_sy.to(random(0.f, boxScale / 4.f), boxTimeStep);
+					box->m_sy.to(random(0.f, boxScale / 4.f), boxTimeStep, (EaseType)(rand() % kEaseType_Count), random(0.f, 2.f));
 				else
-					box->m_sy.to(box->m_sy.getFinalValue(), boxTimeStep);
+					box->m_sy.to(box->m_sy.getFinalValue(), boxTimeStep, (EaseType)(rand() % kEaseType_Count), random(0.f, 2.f));
 			}
 		}
 
 		Surface surface(GFX_SX, GFX_SY);
+
+	#if 0
+		Shader basicLitShader("basic_lit");
+		setShader(basicLitShader);
+		clearShader();
+		exit(0);
+	#endif
 
 		Shader jitterShader("jitter");
 
@@ -1646,6 +1700,8 @@ int main(int argc, char * argv[])
 
 			int * samplesThisFrame = nullptr;
 			int numSamplesThisFrame = 0;
+
+			float loudnessThisFrame = 0.f;
 
 			if (config.audioIn.enabled)
 			{
@@ -1693,6 +1749,13 @@ int main(int argc, char * argv[])
 					Assert(src <= audioInHistory + audioInHistorySize * config.audioIn.numChannels);
 					Assert(dst <= samplesThisFrame + numSamplesThisFrame);
 				}
+
+				// calculate loudness
+
+				int total = 0;
+				for (int i = 0; i < numSamplesThisFrame; ++i)
+					total += samplesThisFrame[i];
+				loudnessThisFrame = sqrtf(total / float(numSamplesThisFrame) / float(1 << 15));
 			}
 
 			// todo : process OSC input
@@ -2114,6 +2177,9 @@ int main(int argc, char * argv[])
 				setBlend(BLEND_ADD);
 				drawableList.draw();
 
+				setColorf(.25f, .5f, 1.f, loudnessThisFrame / 8.f);
+				drawRect(0, 0, GFX_SX, GFX_SY);
+
 				// test effect
 
 				if (postProcess)
@@ -2143,7 +2209,7 @@ int main(int argc, char * argv[])
 
 				if (drawProjectorSetup)
 				{
-					glClearColor(0.05f, 0.05, 0.05, 0.f);
+					glClearColor(0.05f, 0.05f, 0.05f, 0.f);
 					glClear(GL_COLOR_BUFFER_BIT);
 
 					setBlend(BLEND_ALPHA);
@@ -2283,6 +2349,13 @@ int main(int argc, char * argv[])
 					//
 
 					drawText(GFX_SX/2, GFX_SY/2, 32, 0.f, 0.f, "Listening for OSC messages on port %d", OSC_RECV_PORT);
+
+					static int easeFunction = 0;
+					if (keyboard.wentDown(SDLK_SPACE))
+						easeFunction = (easeFunction + 1) % kEaseType_Count;
+					setColor(colorWhite);
+					for (int i = 0; i <= 100; ++i)
+						drawCircle(GFX_SX/2 + i, GFX_SY/2 + evalEase(i / 100.f, (EaseType)easeFunction, mouse.y / float(GFX_SY) * 2.f) * 100.f, 5.f, 4);
 				}
 			}
 

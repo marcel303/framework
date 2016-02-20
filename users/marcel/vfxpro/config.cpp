@@ -111,6 +111,7 @@ bool Config::load(const char * filename)
 			else
 			{
 				audioIn.enabled = boolAttrib(xmlAudioIn, "enabled", true);
+				audioIn.deviceIndex = intAttrib(xmlAudioIn, "device_index", -1);
 				audioIn.numChannels = intAttrib(xmlAudioIn, "num_channels", 2);
 				audioIn.sampleRate = intAttrib(xmlAudioIn, "sample_rate", 48000);
 				audioIn.bufferLength = intAttrib(xmlAudioIn, "buffer_length", 2048);

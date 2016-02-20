@@ -26,14 +26,17 @@ project(vfxpro)
 # --- twinkle ---
 
 file(GLOB_RECURSE source "*.cpp" "*.h")
-file(GLOB_RECURSE excluded_source "mediaplayer/*.*")
-list(REMOVE_ITEM source ${excluded_source})
-file(GLOB_RECURSE excluded_source "ffmpeg/*.*")
-list(REMOVE_ITEM source ${excluded_source})
+file(GLOB_RECURSE source_mediaplayer "mediaplayer/*.*")
+#list(REMOVE_ITEM source ${source_mediaplayer})
+file(GLOB_RECURSE source_ffmpeg "ffmpeg/*.*")
+#list(REMOVE_ITEM source ${source_ffmpeg})
+list(REMOVE_ITEM source "${PROJECT_SOURCE_DIR}/mediaplayer/MediaPlayer.cpp")
 
 set(GAME_FILES
 	main.cpp)
 source_group("Game Files" FILES ${GAME_FILES})
+source_group("mediaplayer" FILES ${source_mediaplayer})
+source_group("ffmpeg" FILES ${source_ffmpeg})
 
 add_executable(vfxpro ${source})
 
@@ -46,6 +49,9 @@ target_link_libraries(vfxpro PRIVATE framework)
 target_link_libraries(vfxpro PRIVATE libnet)
 target_link_libraries(vfxpro PRIVATE libgg)
 
+target_link_libraries(vfxpro PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/avcodec.lib)
+target_link_libraries(vfxpro PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/avformat.lib)
+target_link_libraries(vfxpro PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/avutil.lib)
 target_link_libraries(vfxpro PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/FreeImage.lib)
 target_link_libraries(vfxpro PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/freetype252.lib)
 target_link_libraries(vfxpro PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/glew32.lib)

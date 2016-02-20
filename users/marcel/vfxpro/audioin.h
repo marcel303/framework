@@ -13,7 +13,7 @@ public:
 	AudioIn();
 	~AudioIn();
 
-	bool init(int channelCount, int sampleRate, int bufferSampleCount);
+	bool init(int deviceIndex, int channelCount, int sampleRate, int bufferSampleCount);
 	void shutdown();
 
 	bool provide(short * buffer, int & sampleCount);

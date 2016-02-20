@@ -24,9 +24,12 @@ struct Config
 		AudioIn()
 		{
 			memset(this, 0, sizeof(*this));
+
+			deviceIndex = -1;
 		}
 
 		bool enabled;
+		int deviceIndex;
 		int numChannels;
 		int sampleRate;
 		int bufferLength;

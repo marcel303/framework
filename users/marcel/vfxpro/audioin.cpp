@@ -14,7 +14,7 @@ AudioIn::~AudioIn()
 	shutdown();
 }
 
-bool AudioIn::init(int channelCount, int sampleRate, int bufferSampleCount)
+bool AudioIn::init(int deviceIndex, int channelCount, int sampleRate, int bufferSampleCount)
 {
 	Assert((bufferSampleCount % channelCount) == 0);
 	bufferSampleCount /= channelCount;
@@ -34,7 +34,7 @@ bool AudioIn::init(int channelCount, int sampleRate, int bufferSampleCount)
 	m_waveFormat.nAvgBytesPerSec = m_waveFormat.nSamplesPerSec * m_waveFormat.nBlockAlign;
 	m_waveFormat.cbSize = 0;
 
-	mmResult = waveInOpen(&m_waveIn, WAVE_MAPPER, &m_waveFormat, 0, 0, CALLBACK_NULL);
+	mmResult = waveInOpen(&m_waveIn, deviceIndex < 0 ? WAVE_MAPPER : deviceIndex, &m_waveFormat, 0, 0, CALLBACK_NULL);
 	Assert(mmResult == MMSYSERR_NOERROR);
 
 	if (mmResult == MMSYSERR_NOERROR)
