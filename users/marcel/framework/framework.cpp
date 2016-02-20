@@ -3778,13 +3778,13 @@ void drawTextArea(float x, float y, float sx, float sy, int size, float alignX, 
 	}
 }
 
-GLuint createTextureFromRGBA8(const void * source, int sx, int sy)
+static GLuint createTexture(const void * source, int sx, int sy, GLenum format)
 {
 	GLuint texture;
 
 	glGenTextures(1, &texture);
 
-	if (texture)
+		if (texture)
 	{
 		GLuint restoreTexture;
 		glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
@@ -3801,11 +3801,11 @@ GLuint createTextureFromRGBA8(const void * source, int sx, int sy)
 		glTexImage2D(
 			GL_TEXTURE_2D,
 			0,
-			GL_RGBA,
+			format,
 			sx,
 			sy,
 			0,
-			GL_RGBA,
+			format,
 			GL_UNSIGNED_BYTE,
 			source);
 
@@ -3822,6 +3822,16 @@ GLuint createTextureFromRGBA8(const void * source, int sx, int sy)
 	}
 
 	return texture;
+}
+
+GLuint createTextureFromRGB8(const void * source, int sx, int sy)
+{
+	return createTexture(source, sx, sy, GL_RGB);
+}
+
+GLuint createTextureFromRGBA8(const void * source, int sx, int sy)
+{
+	return createTexture(source, sx, sy, GL_RGBA);
 }
 
 void debugDrawText(float x, float y, int size, float alignX, float alignY, const char * format, ...)
