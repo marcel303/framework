@@ -1,12 +1,14 @@
 #include "data/lighting.inc"
 #include "ip/UdpSocket.h"
-#include "mediaplayer/MPContext.h"
+#include "mediaplayer_old/MPContext.h"
 #include "osc/OscOutboundPacketStream.h"
 #include "osc/OscPacketListener.h"
+#include "audiostream/AudioOutput.h"
 #include "audioin.h"
 #include "Calc.h"
 #include "config.h"
 #include "framework.h"
+#include "Timer.h"
 #include "types.h"
 #include <algorithm>
 #include <list>
@@ -1576,7 +1578,7 @@ int main(int argc, char * argv[])
 
 	framework.fullscreen = false;
 	framework.enableDepthBuffer = true;
-	framework.minification = 2;
+	framework.minification = 1;
 	framework.enableMidi = true;
 	framework.midiDeviceIndex = config.midi.deviceIndex;
 
@@ -1584,27 +1586,84 @@ int main(int argc, char * argv[])
 	{
 		//framework.fillCachesWithPath(".", true);
 
+		AudioOutput_OpenAL audioOutput;
+		audioOutput.Initialize(2, 48000, 4096 * 2);
+		audioOutput.Play();
+
+		struct MyAudioStream : AudioStream
+		{
+			MP::Context * mpContext;
+
+			virtual int Provide(int numSamples, AudioSample* __restrict buffer)
+			{
+				bool gotAudio = false;
+
+				mpContext->RequestAudio((int16_t*)buffer, numSamples, gotAudio);
+
+				if (gotAudio)
+					return numSamples;
+				else
+					return 0;
+			}
+		};
+
 		MP::Context mpContext;
-		mpContext.Begin("test.mpg");
+		//mpContext.Begin("test.mpg");
+		mpContext.Begin("waitsee.avi");
+
+		MyAudioStream audioStream;
+		audioStream.mpContext = &mpContext;
+
+		GLuint texture = 0;
+
+		//double startTime = framework.time;
+		double videoPts;
+		double startTime = SDL_GetTicks();
+
 		if (mpContext.FillBuffers())
 		{
 			for (;;)
 			{
-				mpContext.FillBuffers();
+				if (!mpContext.FillBuffers())
+					break;
 
-				const int frameCount = 1024;
-				int16_t samples[1024 * 2];
-				bool gotAudio = false;
-				mpContext.RequestAudio(samples, frameCount, gotAudio);
-				if (gotAudio)
-					logDebug("gotAudio");
+				audioOutput.Update(&audioStream);
 
-				double time = mpContext.m_audioContext->m_time;
+				double time = mpContext.m_audioContext->GetTime();
 				MP::VideoFrame * videoFrame = nullptr;
 				bool gotVideo = false;
+				int sx, sy;
 				mpContext.RequestVideo(time, &videoFrame, gotVideo);
 				if (gotVideo)
-					logDebug("gotVideo. t=%06dms", int(time * 1000.0));
+				{
+					if (texture)
+						glDeleteTextures(1, &texture);
+					texture = createTextureFromRGB8(videoFrame->m_frameBuffer, videoFrame->m_width, videoFrame->m_height);
+					sx = videoFrame->m_width;
+					sy = videoFrame->m_height;
+					while ((SDL_GetTicks() - startTime) / 1000.0 < videoFrame->m_time);
+						SDL_Delay(1);
+					//logDebug("gotVideo. t=%06dms", int(time * 1000.0));
+				}
+
+				framework.process();
+
+				//while (GetTime() < m_state.m_videoPts);
+
+				framework.beginDraw(0, 0, 0, 0);
+				{
+					if (texture)
+					{
+						const float scaleX = GFX_SX / float(sx);
+						const float scaleY = GFX_SY / float(sy);
+						const float scale = Calc::Min(scaleX, scaleY);
+						gxSetTexture(texture);
+						setColor(colorWhite);
+						drawRect(0, sy * scale, sx * scale, 0);
+						gxSetTexture(0);
+					}
+				}
+				framework.endDraw();
 			}
 		}
 		mpContext.End();
