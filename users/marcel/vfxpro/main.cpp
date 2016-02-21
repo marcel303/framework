@@ -14,8 +14,7 @@
 #include <list>
 #include <Windows.h>
 
-#include "data/lighting.inc"
-#include "data/luminance.inc"
+#include "data/ShaderConstants.h"
 
 const static int kNumScreens = 3;
 
@@ -62,14 +61,15 @@ static float virtualToScreenY(float y)
 :: todo :: projector output
 
 	- add brightness control
-		- write shader which does a lookup based on the luminance of the input and transforms the input
+		+ write shader which does a lookup based on the luminance of the input and transforms the input
+		- add ability to change the setting
 	- add border blends to hide projector seam. unless eg MadMapper already does this, it may be necessary to do it ourselvess
 
 :: todo :: utility functions
 
 	+ add PCM capture
 	- add FFT calculation PCM data
-	- add loudness calculation PCM data
+	+ add loudness calculation PCM data
 
 :: todo :: post processing and graphics quality
 
@@ -1747,6 +1747,7 @@ int main(int argc, char * argv[])
 	#endif
 
 		Shader jitterShader("jitter");
+		Shader flowmapShader("flowmap");
 		Shader luminanceShader("luminance");
 
 		Vec3 cameraPosition(0.f, .5f, -1.f);
@@ -2266,25 +2267,42 @@ int main(int argc, char * argv[])
 				if (postProcess)
 				{
 					setBlend(BLEND_OPAQUE);
-					jitterShader.setTexture("colormap", 0, surface.getTexture(), true, false);
-					jitterShader.setTexture("jittermap", 1, 0, true, true);
-					jitterShader.setImmediate("jitterStrength", 1.f);
-					jitterShader.setImmediate("time", time);
-					surface.postprocess(jitterShader);
+					Shader & shader = jitterShader;
+					shader.setTexture("colormap", 0, surface.getTexture(), true, false);
+					shader.setTexture("jittermap", 1, 0, true, true);
+					shader.setImmediate("jitterStrength", 1.f);
+					shader.setImmediate("time", time);
+					surface.postprocess(shader);
 				}
 
 				if (true)
 				{
 					setBlend(BLEND_OPAQUE);
-					setShader(luminanceShader);
-					luminanceShader.setTexture("colormap", 0, surface.getTexture(), true, false);
-					ShaderBuffer luminanceDataBuffer;
-					LuminanceData luminanceData;
-					luminanceData.power = cosf(framework.time) + 1.f;
-					luminanceData.scale = 1.f;
-					luminanceDataBuffer.setData(&luminanceData, sizeof(luminanceData));
-					luminanceShader.setBuffer("LuminanceBlock", luminanceDataBuffer);
-					surface.postprocess(luminanceShader);
+					Shader & shader = luminanceShader;
+					setShader(shader);
+					shader.setTexture("colormap", 0, surface.getTexture(), true, false);
+					ShaderBuffer buffer;
+					LuminanceData data;
+					data.power = cosf(framework.time) + 1.f;
+					data.scale = 1.f;
+					buffer.setData(&data, sizeof(data));
+					shader.setBuffer("LuminanceBlock", buffer);
+					surface.postprocess(shader);
+				}
+
+				if (true)
+				{
+					setBlend(BLEND_OPAQUE);
+					Shader & shader = flowmapShader;
+					setShader(shader);
+					shader.setTexture("colormap", 0, surface.getTexture(), true, false);
+					shader.setTexture("flowmap", 0, surface.getTexture(), true, false); // todo
+					ShaderBuffer buffer;
+					FlowmapData data;
+					data.strength = cosf(framework.time);
+					buffer.setData(&data, sizeof(data));
+					shader.setBuffer("FlowmapBlock", buffer);
+					surface.postprocess(shader);
 				}
 
 				popSurface();
