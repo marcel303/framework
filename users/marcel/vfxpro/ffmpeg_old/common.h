@@ -65,7 +65,7 @@
 #endif
 
 #ifndef EMULATE_INTTYPES
-#   include <inttypes.h>
+#   include <stdint.h>
 #else
     typedef signed char  int8_t;
     typedef signed short int16_t;
