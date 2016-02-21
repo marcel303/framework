@@ -78,7 +78,7 @@ static float virtualToScreenY(float y)
 
 :: todo :: visuals tech 2D
 
-	- add a box blur shader. allow it to darken the output too
+	+ add a box blur shader. allow it to darken the output too
 
 	- integrate Box2D ?
 
@@ -1121,7 +1121,8 @@ struct Effect_Boxes : Effect
 	{
 		Light lights[kMaxLights];
 
-		lights[0].setup(kLightType_Omni, 0.f, 0.f, 0.f, .25f, .5f, 1.f, config.midiGetValue(100, 1.f) * 50.f);
+		lights[0].setup(kLightType_Omni, 0.f, 0.f, 0.f, .25f, .5f, 1.f, config.midiGetValue(100, 1.f) * 5.f);
+		//lights[1].setup(kLightType_Omni, -1.f, 0.f, 0.f, 1.f, 1.f, .125f, config.midiGetValue(100, 1.f) * 5.f);
 
 		Shader shader("basic_lit");
 		setShader(shader);
@@ -1773,6 +1774,7 @@ int main(int argc, char * argv[])
 		Shader boxblurShader("boxblur");
 		Shader flowmapShader("flowmap");
 		Shader luminanceShader("luminance");
+		Shader fxaaShader("fxaa");
 
 		Vec3 cameraPosition(0.f, .5f, -1.f);
 		Vec3 cameraRotation(0.f, 0.f, 0.f);
@@ -2175,13 +2177,16 @@ int main(int argc, char * argv[])
 					gxPushMatrix();
 					{
 						if (testCameraProjection)
+						{
 							gxLoadMatrixf(camera.cameraToView.m_v);
+							glMultMatrixf(camera.worldToCamera.m_v);
+						}
 
 						gxMatrixMode(GL_MODELVIEW);
 						gxPushMatrix();
 						{
-							if (testCameraProjection)
-								gxLoadMatrixf(camera.worldToCamera.m_v);
+							//if (testCameraProjection)
+							//	gxLoadMatrixf(camera.worldToCamera.m_v);
 
 							const int x1 = virtualToScreenX(-150 + (c + 0) * 100);
 							const int y1 = virtualToScreenY(-50);
@@ -2241,6 +2246,7 @@ int main(int argc, char * argv[])
 
 								setColor(colorWhite);
 
+								glLineWidth(1.5f);
 								gxBegin(GL_LINES);
 								{
 									const float scaleX = GFX_SX / float(numSamplesThisFrame - 2);
@@ -2253,6 +2259,7 @@ int main(int argc, char * argv[])
 									}
 								}
 								gxEnd();
+								glLineWidth(1.f);
 							}
 						#endif
 
@@ -2302,8 +2309,9 @@ int main(int argc, char * argv[])
 				}
 
 				static volatile bool doBoxblur = false;
-				static volatile bool doLuminance = true;
+				static volatile bool doLuminance = false;
 				static volatile bool doFlowmap = true;
+				static volatile bool doFxaa = true;
 
 				if (doBoxblur)
 				{
@@ -2329,7 +2337,7 @@ int main(int argc, char * argv[])
 					shader.setTexture("colormap", 0, surface.getTexture(), true, false);
 					ShaderBuffer buffer;
 					LuminanceData data;
-					data.power = cosf(framework.time) * config.midiGetValue(104, 1.f) + 1.f;
+					data.power = cosf(framework.time) + 1.f + config.midiGetValue(104, 1.f / 8.f) * 8.f;
 					data.scale = 1.f * config.midiGetValue(103, 1.f);
 					buffer.setData(&data, sizeof(data));
 					shader.setBuffer("LuminanceBlock", buffer);
@@ -2349,6 +2357,16 @@ int main(int argc, char * argv[])
 					data.strength *= .5f; // shader optimize
 					buffer.setData(&data, sizeof(data));
 					shader.setBuffer("FlowmapBlock", buffer);
+					surface.postprocess(shader);
+				}
+
+				if (doFxaa)
+				{
+					setBlend(BLEND_OPAQUE);
+					Shader & shader = fxaaShader;
+					setShader(shader);
+					shader.setTexture("colormap", 0, surface.getTexture(), true, false);
+					shader.setImmediate("inverseVP", 1.f / (surface.getWidth() / framework.minification), 1.f / (surface.getHeight() / framework.minification));
 					surface.postprocess(shader);
 				}
 
