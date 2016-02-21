@@ -303,8 +303,8 @@ namespace MP
         if (m_tempFrame->pts != AV_NOPTS_VALUE)
 		{
 			// m_tempFrame->pts * 1345.2944 << Magic number.
-			//m_time = av_q2d(m_codecContext->time_base) * m_tempFrame->pts;
-			m_time = m_tempFrame->pts / 1000.0;
+			m_time = av_q2d(m_codecContext->time_base) * m_tempFrame->pts;
+			//m_time = m_tempFrame->pts / 1000.0;
 		}
 		else
 		{

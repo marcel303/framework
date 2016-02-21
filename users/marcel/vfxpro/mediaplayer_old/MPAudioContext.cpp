@@ -136,7 +136,7 @@ namespace MP
 				frameCount -= framesToRead;
 				m_availableFrameCount -= framesToRead;
 				m_frameTime += framesToRead;
-				//m_time = m_frameTime / (double)m_codecContext->sample_rate;
+				m_time = m_frameTime / (double)m_codecContext->sample_rate;
 
 				Debug::Print("\tAUDIO: Read from buffer. Time = %03.3f", m_time);
 
@@ -154,7 +154,7 @@ namespace MP
 
 					AVPacket& packet = m_packetQueue.GetPacket();
 
-					m_time = packet.pts / 1000000.0;
+					//m_time = packet.pts / 1000000.0;
 					//m_time = av_q2d(m_codecContext->time_base) * packet.pts;
 
 					if (ProcessPacket(packet) != true)
