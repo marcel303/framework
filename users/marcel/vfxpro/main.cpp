@@ -81,9 +81,8 @@ static float virtualToScreenY(float y)
 
 	- integrate Box2D ?
 
-	- add flow map shader
-
-		- use an input texture to warp/distort the previous frame
+	+ add flow map shader
+		+ use an input texture to warp/distort the previous frame
 
 :: todo :: visuals tech 3D
 
@@ -1689,6 +1688,7 @@ int main(int argc, char * argv[])
 		bool drawSprites = true;
 		bool drawBoxes = true;
 		bool drawVideo = true;
+		bool drawPCM = true;
 
 		bool drawHelp = true;
 		bool drawScreenIds = false;
@@ -1747,6 +1747,7 @@ int main(int argc, char * argv[])
 	#endif
 
 		Shader jitterShader("jitter");
+		Shader boxblurShader("boxblur");
 		Shader flowmapShader("flowmap");
 		Shader luminanceShader("luminance");
 
@@ -1871,6 +1872,8 @@ int main(int argc, char * argv[])
 				drawBoxes = !drawBoxes;
 			if (keyboard.wentDown(SDLK_6))
 				drawVideo = !drawVideo;
+			if (keyboard.wentDown(SDLK_7))
+				drawPCM = !drawPCM;
 
 			if (keyboard.wentDown(SDLK_F1))
 				drawHelp = !drawHelp;
@@ -2209,7 +2212,7 @@ int main(int argc, char * argv[])
 							drawableList.draw();
 
 						#if 1
-							if (((c == 0) || (c == 2)) && audioInHistorySize > 0)
+							if (drawPCM && ((c == 0) || (c == 2)) && audioInHistorySize > 0)
 							{
 								applyTransformWithViewportSize(sx, sy);
 
@@ -2275,7 +2278,27 @@ int main(int argc, char * argv[])
 					surface.postprocess(shader);
 				}
 
-				if (true)
+				static volatile bool doBoxblur = false;
+				static volatile bool doLuminance = true;
+				static volatile bool doFlowmap = true;
+
+				if (doBoxblur)
+				{
+					setBlend(BLEND_OPAQUE);
+					Shader & shader = boxblurShader;
+					setShader(shader);
+					shader.setTexture("colormap", 0, surface.getTexture(), true, false);
+					ShaderBuffer buffer;
+					BoxblurData data;
+					const float radius = 2.f;
+					data.radiusX = radius * (1.f / GFX_SX);
+					data.radiusY = radius * (1.f / GFX_SY);
+					buffer.setData(&data, sizeof(data));
+					shader.setBuffer("BoxblurBlock", buffer);
+					surface.postprocess(shader);
+				}
+
+				if (doLuminance)
 				{
 					setBlend(BLEND_OPAQUE);
 					Shader & shader = luminanceShader;
@@ -2290,7 +2313,7 @@ int main(int argc, char * argv[])
 					surface.postprocess(shader);
 				}
 
-				if (true)
+				if (doFlowmap)
 				{
 					setBlend(BLEND_OPAQUE);
 					Shader & shader = flowmapShader;
@@ -2299,7 +2322,8 @@ int main(int argc, char * argv[])
 					shader.setTexture("flowmap", 0, surface.getTexture(), true, false); // todo
 					ShaderBuffer buffer;
 					FlowmapData data;
-					data.strength = cosf(framework.time);
+					data.strength = cosf(framework.time) * .1f;
+					data.strength *= .5f; // shader optimize
 					buffer.setData(&data, sizeof(data));
 					shader.setBuffer("FlowmapBlock", buffer);
 					surface.postprocess(shader);

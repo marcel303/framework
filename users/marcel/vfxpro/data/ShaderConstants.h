@@ -47,6 +47,23 @@ layout (std140) uniform lightsBlock
 
 #endif
 
+// boxblur post process
+
+struct BoxblurData
+{
+	float radiusX;
+	float radiusY;
+};
+
+#if _SHADER_
+
+layout (std140) uniform BoxblurBlock
+{
+	BoxblurData boxblurData;
+};
+
+#endif
+
 // flowmap effect
 
 struct FlowmapData
