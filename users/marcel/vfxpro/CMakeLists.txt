@@ -31,12 +31,17 @@ file(GLOB_RECURSE source_mediaplayer "mediaplayer/*.*")
 list(REMOVE_ITEM source ${source_mediaplayer})
 list(REMOVE_ITEM source "${PROJECT_SOURCE_DIR}/mediaplayer/MediaPlayer.cpp")
 
-#file(GLOB_RECURSE source_mediaplayer_old "mediaplayer_old/*.*")
+file(GLOB_RECURSE source_mediaplayer_old "mediaplayer_old/*.*")
 #list(REMOVE_ITEM source ${source_mediaplayer_old})
 list(REMOVE_ITEM source "${PROJECT_SOURCE_DIR}/mediaplayer_old/MediaPlayer.cpp")
 
-#file(GLOB_RECURSE source_ffmpeg "ffmpeg/*.*")
-#list(REMOVE_ITEM source ${source_ffmpeg})
+file(GLOB_RECURSE source_ffmpeg "ffmpeg/*.*")
+list(REMOVE_ITEM source ${source_ffmpeg})
+
+file(GLOB_RECURSE source_osc "ip/*.*" "osc/*.*")
+
+file(GLOB_RECURSE source_ffmpeg_old "ffmpeg_old/*.*")
+#list(REMOVE_ITEM source ${source_ffmpeg_old})
 
 set(GAME_FILES
 	main.cpp)
@@ -44,6 +49,8 @@ source_group("Game Files" FILES ${GAME_FILES})
 source_group("mediaplayer" FILES ${source_mediaplayer})
 source_group("mediaplayer_old" FILES ${source_mediaplayer_old})
 source_group("ffmpeg" FILES ${source_ffmpeg})
+source_group("ffmpeg_old" FILES ${source_ffmpeg_old})
+source_group("osc" FILES ${source_osc})
 
 add_executable(vfxpro ${source})
 

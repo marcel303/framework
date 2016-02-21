@@ -1,4 +1,3 @@
-#include "data/lighting.inc"
 #include "ip/UdpSocket.h"
 #include "mediaplayer_old/MPContext.h"
 #include "osc/OscOutboundPacketStream.h"
@@ -10,9 +9,13 @@
 #include "framework.h"
 #include "Timer.h"
 #include "types.h"
+#include "video.h"
 #include <algorithm>
 #include <list>
 #include <Windows.h>
+
+#include "data/lighting.inc"
+#include "data/luminance.inc"
 
 const static int kNumScreens = 3;
 
@@ -29,6 +32,16 @@ const float eps = 1e-10f;
 const float pi2 = float(M_PI) * 2.f;
 
 static Config config;
+
+static float virtualToScreenX(float x)
+{
+	return ((x / 100.f) + 1.5f) * SCREEN_SX;
+}
+
+static float virtualToScreenY(float y)
+{
+	return (y / 100.f + .5f) * SCREEN_SY;
+}
 
 /*
 
@@ -1151,16 +1164,81 @@ struct Effect_Boxes : Effect
 
 struct Effect_Video : Effect
 {
+	std::string m_filename;
+	TweenFloat m_x;
+	TweenFloat m_y;
+	TweenFloat m_scale;
+	bool m_centered;
+
+	MediaPlayer m_mediaPlayer;
+
+	Effect_Video(const char * name)
+		: Effect(name)
+		, m_x(0.f)
+		, m_y(0.f)
+		, m_scale(1.f)
+		, m_centered(true)
+	{
+	}
+
+	void setup(const char * filename, float x, float y, float scale, bool centered)
+	{
+		m_filename = filename;
+		m_x = x;
+		m_y = y;
+		m_scale = scale;
+		m_centered = centered;
+
+		m_scale.to(3.f, 10.f, kEaseType_PowIn, 2.f);
+
+		if (!m_mediaPlayer.open(filename))
+		{
+			logWarning("failed to open %s", filename);
+		}
+	}
+
 	virtual void tick(const float dt) override
 	{
+		m_x.tick(dt);
+		m_y.tick(dt);
+		m_scale.tick(dt);
+
+		m_mediaPlayer.tick(dt);
+
+		if (!m_mediaPlayer.isActive())
+		{
+			m_mediaPlayer.close();
+		}
 	}
 
 	virtual void draw(DrawableList & list) override
 	{
+		new (list) EffectDrawable(this);
 	}
 
 	virtual void draw() override
 	{
+		if (m_mediaPlayer.texture)
+		{
+			gxPushMatrix();
+			{
+				const int sx = m_mediaPlayer.sx;
+				const int sy = m_mediaPlayer.sy;
+				const float scaleX = SCREEN_SX / float(sx);
+				const float scaleY = SCREEN_SY / float(sy);
+				const float scale = Calc::Min(scaleX, scaleY);
+
+				gxTranslatef(virtualToScreenX(m_x), virtualToScreenY(m_y), 0.f);
+				gxScalef(m_scale, m_scale, 1.f);
+				gxScalef(scale, scale, 1.f);
+				if (m_centered)
+					gxTranslatef(-sx/2.f, -sy/2.f, 0.f);
+
+				setColor(colorWhite);
+				m_mediaPlayer.draw();
+			}
+			gxPopMatrix();
+		}
 	}
 };
 
@@ -1269,16 +1347,6 @@ static DWORD WINAPI ExecuteOscThread(LPVOID pParam)
 	s_oscReceiveSocket = new UdpListeningReceiveSocket(IpEndpointName(IpEndpointName::ANY_ADDRESS, OSC_RECV_PORT), &s_oscListener);
 	s_oscReceiveSocket->Run();
 	return 0;
-}
-
-static float virtualToScreenX(float x)
-{
-	return ((x / 100.f) + 1.5f) * SCREEN_SX;
-}
-
-static float virtualToScreenY(float y)
-{
-	return (y / 100.f) * SCREEN_SY;
 }
 
 struct TimeDilationEffect
@@ -1578,7 +1646,7 @@ int main(int argc, char * argv[])
 
 	framework.fullscreen = false;
 	framework.enableDepthBuffer = true;
-	framework.minification = 1;
+	framework.minification = 2;
 	framework.enableMidi = true;
 	framework.midiDeviceIndex = config.midi.deviceIndex;
 
@@ -1586,87 +1654,27 @@ int main(int argc, char * argv[])
 	{
 		//framework.fillCachesWithPath(".", true);
 
-		AudioOutput_OpenAL audioOutput;
-		audioOutput.Initialize(2, 48000, 4096 * 2);
-		audioOutput.Play();
-
-		struct MyAudioStream : AudioStream
+		while (false)
 		{
-			MP::Context * mpContext;
+			//const auto endTick = SDL_GetTicks() + (rand() % 10000);
+			const auto endTick = SDL_GetTicks() + (rand() % 1000);
 
-			virtual int Provide(int numSamples, AudioSample* __restrict buffer)
+			MediaPlayer mp;
+			mp.open("doa.avi");
+
+			while (mp.isActive() && SDL_GetTicks() < endTick)
 			{
-				bool gotAudio = false;
-
-				mpContext->RequestAudio((int16_t*)buffer, numSamples, gotAudio);
-
-				if (gotAudio)
-					return numSamples;
-				else
-					return 0;
-			}
-		};
-
-		MP::Context mpContext;
-		//mpContext.Begin("test.mpg");
-		mpContext.Begin("waitsee.avi");
-
-		MyAudioStream audioStream;
-		audioStream.mpContext = &mpContext;
-
-		GLuint texture = 0;
-
-		//double startTime = framework.time;
-		double videoPts;
-		double startTime = SDL_GetTicks();
-
-		if (mpContext.FillBuffers())
-		{
-			for (;;)
-			{
-				if (!mpContext.FillBuffers())
-					break;
-
-				audioOutput.Update(&audioStream);
-
-				double time = mpContext.m_audioContext->GetTime();
-				MP::VideoFrame * videoFrame = nullptr;
-				bool gotVideo = false;
-				int sx, sy;
-				mpContext.RequestVideo(time, &videoFrame, gotVideo);
-				if (gotVideo)
-				{
-					if (texture)
-						glDeleteTextures(1, &texture);
-					texture = createTextureFromRGB8(videoFrame->m_frameBuffer, videoFrame->m_width, videoFrame->m_height);
-					sx = videoFrame->m_width;
-					sy = videoFrame->m_height;
-					while ((SDL_GetTicks() - startTime) / 1000.0 < videoFrame->m_time);
-						SDL_Delay(1);
-					//logDebug("gotVideo. t=%06dms", int(time * 1000.0));
-				}
-
 				framework.process();
 
-				//while (GetTime() < m_state.m_videoPts);
+				mp.tick(framework.timeStep);
 
 				framework.beginDraw(0, 0, 0, 0);
 				{
-					if (texture)
-					{
-						const float scaleX = GFX_SX / float(sx);
-						const float scaleY = GFX_SY / float(sy);
-						const float scale = Calc::Min(scaleX, scaleY);
-						gxSetTexture(texture);
-						setColor(colorWhite);
-						drawRect(0, sy * scale, sx * scale, 0);
-						gxSetTexture(0);
-					}
+					mp.draw();
 				}
 				framework.endDraw();
 			}
 		}
-		mpContext.End();
 
 		std::list<TimeDilationEffect> timeDilationEffects;
 
@@ -1691,7 +1699,7 @@ int main(int argc, char * argv[])
 
 		Effect_StarCluster starCluster("stars", 100);
 		starCluster.screenX = virtualToScreenX(0);
-		starCluster.screenY = virtualToScreenY(50);
+		starCluster.screenY = virtualToScreenY(0);
 
 		ClothPiece clothPiece("cloth");
 		clothPiece.setup(CLOTHPIECE_MAX_SX, CLOTHPIECE_MAX_SY);
@@ -1726,6 +1734,9 @@ int main(int argc, char * argv[])
 			}
 		}
 
+		Effect_Video video("video");
+		video.setup("doa.avi", 0.f, 0.f, 1.f, true);
+
 		Surface surface(GFX_SX, GFX_SY);
 
 	#if 0
@@ -1736,6 +1747,7 @@ int main(int argc, char * argv[])
 	#endif
 
 		Shader jitterShader("jitter");
+		Shader luminanceShader("luminance");
 
 		Vec3 cameraPosition(0.f, .5f, -1.f);
 		Vec3 cameraRotation(0.f, 0.f, 0.f);
@@ -1768,7 +1780,7 @@ int main(int argc, char * argv[])
 
 				while (audioIn.provide(audioInHistory, audioInHistorySize))
 				{
-					logDebug("got audio data! numSamples=%04d", audioInHistorySize);
+					//logDebug("got audio data! numSamples=%04d", audioInHistorySize);
 
 					audioInHistorySize /= config.audioIn.numChannels;
 					audioInProvideTime = framework.time;
@@ -1855,6 +1867,8 @@ int main(int argc, char * argv[])
 			if (keyboard.wentDown(SDLK_4))
 				drawSprites = !drawSprites;
 			if (keyboard.wentDown(SDLK_5))
+				drawBoxes = !drawBoxes;
+			if (keyboard.wentDown(SDLK_6))
 				drawVideo = !drawVideo;
 
 			if (keyboard.wentDown(SDLK_F1))
@@ -1932,16 +1946,19 @@ int main(int argc, char * argv[])
 					case kOscMessageType_Sprite:
 						{
 							spriteSystem.addSprite(
-							"Diamond.scml",
-							0,
-							virtualToScreenX(message.param[0]),
-							virtualToScreenY(message.param[1]),
-							0.f, message.param[2] / 100.f);
+								"Diamond.scml",
+								0,
+								virtualToScreenX(message.param[0]),
+								virtualToScreenY(message.param[1]),
+								0.f, message.param[2] / 100.f);
 							//spriteSystem.addSprite(message.str.c_str(), 0, message.param[0], message.param[1], 0.f, message.param[2]);
 						}
 						break;
 
 					case kOscMessageType_Video:
+						{
+							video.setup(message.str.c_str(), message.param[0], message.param[1], 1.f, true);
+						}
 						break;
 
 						//
@@ -2009,6 +2026,8 @@ int main(int argc, char * argv[])
 
 			boxes.tick(dt);
 
+			video.tick(dt);
+
 		#if 0
 			if ((rand() % 30) == 0)
 			{
@@ -2052,6 +2071,9 @@ int main(int argc, char * argv[])
 
 			if (drawSprites)
 				spriteSystem.draw(drawableList);
+
+			if (drawVideo)
+				video.draw(drawableList);
 
 			drawableList.sort();
 
@@ -2135,9 +2157,9 @@ int main(int argc, char * argv[])
 								gxLoadMatrixf(camera.worldToCamera.m_v);
 
 							const int x1 = virtualToScreenX(-150 + (c + 0) * 100);
-							const int y1 = virtualToScreenY(0);
+							const int y1 = virtualToScreenY(-50);
 							const int x2 = virtualToScreenX(-150 + (c + 1) * 100);
-							const int y2 = virtualToScreenY(100);
+							const int y2 = virtualToScreenY(+50);
 
 							const int sx = x2 - x1;
 							const int sy = y2 - y1;
@@ -2249,6 +2271,20 @@ int main(int argc, char * argv[])
 					jitterShader.setImmediate("jitterStrength", 1.f);
 					jitterShader.setImmediate("time", time);
 					surface.postprocess(jitterShader);
+				}
+
+				if (true)
+				{
+					setBlend(BLEND_OPAQUE);
+					setShader(luminanceShader);
+					luminanceShader.setTexture("colormap", 0, surface.getTexture(), true, false);
+					ShaderBuffer luminanceDataBuffer;
+					LuminanceData luminanceData;
+					luminanceData.power = cosf(framework.time) + 1.f;
+					luminanceData.scale = 1.f;
+					luminanceDataBuffer.setData(&luminanceData, sizeof(luminanceData));
+					luminanceShader.setBuffer("LuminanceBlock", luminanceDataBuffer);
+					surface.postprocess(luminanceShader);
 				}
 
 				popSurface();
