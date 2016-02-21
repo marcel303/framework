@@ -14,6 +14,7 @@ AudioOutput_OpenAL::AudioOutput_OpenAL()
 	, mSourceId(0)
 	, mIsPlaying(false)
 	, mHasFinished(true)
+	, mPlaybackPosition(0.0)
 	, mVolume(1.0f)
 {
 	for (int i = 0; i < kBufferCount; ++i)
@@ -123,6 +124,7 @@ void AudioOutput_OpenAL::Play()
 		logDebug("OpenAL-Stream: play", 0);
 		
 		mIsPlaying = true;
+		mPlaybackPosition = 0.0;
 	}
 }
 
@@ -172,6 +174,8 @@ void AudioOutput_OpenAL::Update(AudioStream* stream)
 		}
 		else if (mIsPlaying)
 		{
+			mPlaybackPosition += (mBufferSize >> 2) / double(mSampleRate);
+
 			const int maxSamples = mBufferSize >> 2;
 			AudioSample * samples = (AudioSample*)alloca(sizeof(AudioSample*) * maxSamples);
 			const int numSamples = stream->Provide(maxSamples, samples);
@@ -242,6 +246,18 @@ void AudioOutput_OpenAL::Volume_set(float volume)
 bool AudioOutput_OpenAL::HasFinished_get()
 {
 	return mHasFinished;
+}
+
+double AudioOutput_OpenAL::PlaybackPosition_get()
+{
+	if (mSourceId == 0)
+		return 0.0;
+
+	ALfloat offset = 0.f;
+	alGetSourcef(mSourceId, AL_SEC_OFFSET, &offset);
+	CheckError();
+
+	return mPlaybackPosition + offset;
 }
 
 void AudioOutput_OpenAL::SetEmptyBufferData()

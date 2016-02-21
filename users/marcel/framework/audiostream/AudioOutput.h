@@ -14,6 +14,7 @@ public:
 	virtual void Update(AudioStream* stream) = 0;
 	virtual void Volume_set(float volume) = 0;
 	virtual bool HasFinished_get() = 0;
+	virtual double PlaybackPosition_get() = 0;
 };
 
 #include <OpenAL/AL.h>
@@ -31,6 +32,7 @@ public:
 	virtual void Update(AudioStream* stream);
 	virtual void Volume_set(float volume);
 	virtual bool HasFinished_get();
+	virtual double PlaybackPosition_get();
 	
 private:
 	const static int kBufferSize = 8192 * 2;
@@ -47,5 +49,6 @@ private:
 	
 	bool mIsPlaying;
 	bool mHasFinished;
+	double mPlaybackPosition;
 	float mVolume;
 };
