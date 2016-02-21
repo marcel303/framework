@@ -12,6 +12,7 @@
 #include "video.h"
 #include <algorithm>
 #include <list>
+#include <map>
 #include <Windows.h>
 
 #include "data/ShaderConstants.h"
@@ -222,6 +223,8 @@ struct Effect
 	float scaleY;
 	float z;
 
+	std::map<std::string, TweenFloat*> m_tweenVars;
+
 	Effect(const char * name)
 		: is3D(false)
 		, screenX(0.f)
@@ -241,6 +244,23 @@ struct Effect
 	virtual ~Effect()
 	{
 		unregisterEffect(this);
+	}
+
+	void addVar(const char * name, TweenFloat & var)
+	{
+		m_tweenVars[name] = &var;
+	}
+
+	void tweenTo(const char * name, const float value, const float time, const EaseType easeType, const float easeParam)
+	{
+		auto i = m_tweenVars.find(name);
+
+		if (i != m_tweenVars.end())
+		{
+			TweenFloat * v = i->second;
+
+			v->to(value, time, easeType, easeParam);
+		}
 	}
 
 	Vec2 screenToLocal(Vec2Arg v) const
@@ -1178,6 +1198,9 @@ struct Effect_Video : Effect
 		, m_scale(1.f)
 		, m_centered(true)
 	{
+		addVar("x", m_x);
+		addVar("y", m_y);
+		addVar("scale", m_scale);
 	}
 
 	void setup(const char * filename, float x, float y, float scale, bool centered)
@@ -1187,8 +1210,6 @@ struct Effect_Video : Effect
 		m_y = y;
 		m_scale = scale;
 		m_centered = centered;
-
-		m_scale.to(3.f, 10.f, kEaseType_PowIn, 2.f);
 
 		if (!m_mediaPlayer.open(filename))
 		{
@@ -1736,6 +1757,8 @@ int main(int argc, char * argv[])
 
 		Effect_Video video("video");
 		video.setup("doa.avi", 0.f, 0.f, 1.f, true);
+
+		video.tweenTo("scale", 3.f, 10.f, kEaseType_PowIn, 2.f);
 
 		Surface surface(GFX_SX, GFX_SY);
 
@@ -2306,8 +2329,8 @@ int main(int argc, char * argv[])
 					shader.setTexture("colormap", 0, surface.getTexture(), true, false);
 					ShaderBuffer buffer;
 					LuminanceData data;
-					data.power = cosf(framework.time) + 1.f;
-					data.scale = 1.f;
+					data.power = cosf(framework.time) * config.midiGetValue(104, 1.f) + 1.f;
+					data.scale = 1.f * config.midiGetValue(103, 1.f);
 					buffer.setData(&data, sizeof(data));
 					shader.setBuffer("LuminanceBlock", buffer);
 					surface.postprocess(shader);
@@ -2322,7 +2345,7 @@ int main(int argc, char * argv[])
 					shader.setTexture("flowmap", 0, surface.getTexture(), true, false); // todo
 					ShaderBuffer buffer;
 					FlowmapData data;
-					data.strength = cosf(framework.time) * .1f;
+					data.strength = cosf(framework.time) * .2f;
 					data.strength *= .5f; // shader optimize
 					buffer.setData(&data, sizeof(data));
 					shader.setBuffer("FlowmapBlock", buffer);
