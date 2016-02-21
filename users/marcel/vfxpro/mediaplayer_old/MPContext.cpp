@@ -107,7 +107,7 @@ namespace MP
 		return result;
 	}
 
-	bool Context::HasAudioStream()
+	bool Context::HasAudioStream() const
 	{
 		if (m_audioContext != 0)
 			return true;
@@ -115,7 +115,7 @@ namespace MP
 			return false;
 	}
 
-	bool Context::HasVideoStream()
+	bool Context::HasVideoStream() const
 	{
 		if (m_videoContext != 0)
 			return true;
@@ -123,12 +123,12 @@ namespace MP
 			return false;
 	}
 
-	bool Context::HasReachedEOF()
+	bool Context::HasReachedEOF() const
 	{
 		return m_eof;
 	}
 
-	size_t Context::GetVideoWidth()
+	size_t Context::GetVideoWidth() const
 	{
 		Assert(m_begun == true);
 
@@ -138,7 +138,7 @@ namespace MP
 			return 0;
 	}
 
-	size_t Context::GetVideoHeight()
+	size_t Context::GetVideoHeight() const
 	{
 		Assert(m_begun == true);
 
@@ -148,7 +148,7 @@ namespace MP
 			return 0;
 	}
 
-	size_t Context::GetAudioFrameRate()
+	size_t Context::GetAudioFrameRate() const
 	{
 		Assert(m_begun == true);
 
@@ -158,7 +158,7 @@ namespace MP
 			return 0;
 	}
 
-	size_t Context::GetAudioChannelCount()
+	size_t Context::GetAudioChannelCount() const
 	{
 		Assert(m_begun == true);
 
@@ -166,6 +166,14 @@ namespace MP
 			return m_audioContext->m_codecContext->channels;
 		else
 			return 0;
+	}
+
+	double Context::GetAudioTime() const
+	{
+		if (m_audioContext)
+			return m_audioContext->GetTime();
+		else
+			return 0.0;
 	}
 
 	bool Context::RequestAudio(int16_t* out_samples, size_t frameCount, bool& out_gotAudio)

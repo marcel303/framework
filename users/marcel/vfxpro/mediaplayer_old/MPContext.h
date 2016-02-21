@@ -16,15 +16,18 @@ namespace MP
 		bool Begin(const std::string& filename);
 		bool End();
 
-		bool HasAudioStream();
-		bool HasVideoStream(); // TODO: Make media player check these flags. Use them to determine master clock.
-		bool HasReachedEOF();
+		bool HasBegun() const { return m_begun; }
 
-		size_t GetVideoWidth();
-		size_t GetVideoHeight();
+		bool HasAudioStream() const;
+		bool HasVideoStream() const; // TODO: Make media player check these flags. Use them to determine master clock.
+		bool HasReachedEOF() const;
 
-		size_t GetAudioFrameRate();
-		size_t GetAudioChannelCount();
+		size_t GetVideoWidth() const;
+		size_t GetVideoHeight() const;
+
+		size_t GetAudioFrameRate() const;
+		size_t GetAudioChannelCount() const;
+		double GetAudioTime() const;
 
 		bool RequestAudio(int16_t* out_samples, size_t frameCount, bool& out_gotAudio);
 		bool RequestVideo(double time, VideoFrame** out_frame, bool& out_gotVideo);
@@ -35,7 +38,7 @@ namespace MP
 
 		AVFormatContext* GetFormatContext();
 
-	//private:
+	private:
 		bool ReadFormatContext();
 		bool GetStreamIndices(size_t& out_audioStreamIndex, size_t& out_videoStreamIndex);
 		bool NextPacket();
