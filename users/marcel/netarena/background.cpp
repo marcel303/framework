@@ -7,10 +7,20 @@
 OPTION_DECLARE(bool, s_debugBackground, false);
 OPTION_DEFINE(bool, s_debugBackground, "Debug/Debug Background");
 
-#define LOBBY_SPRITER Spriter("backgrounds/lobby/background.scml")
-#define VOLCANO_SPRITER Spriter("backgrounds/VolcanoTest/background.scml")
-#define ICE_SPRITER1 Spriter("backgrounds/ice/layer1.scml") // todo
-#define ICE_SPRITER2 Spriter("backgrounds/ice/layer2.scml")
+static char s_tempFilename[256];
+static const char * makeTempFilename(const char * format, ...)
+{
+	va_list args;
+	va_start(args, format);
+	vsprintf_s(s_tempFilename, sizeof(s_tempFilename), format, args);
+	va_end(args);
+	return s_tempFilename;
+}
+
+//#define LOBBY_SPRITER Spriter("backgrounds/lobby/background.scml")
+//#define VOLCANO_SPRITER Spriter("backgrounds/VolcanoTest/background.scml")
+//#define ICE_SPRITER(i) Spriter(makeTempFilename("backgrounds/ice/layer%d.scml", i + 1))
+#define BACKGROUND_SPRITER(bg, i) Spriter(makeTempFilename((bg).backgroundBaseName, i + 1))
 
 //
 
@@ -33,7 +43,7 @@ static const char * getThemeName(LevelTheme type)
 
 static const Theme * getTheme(const char * name)
 {
-	for (int i = 0; i < g_themes.size(); ++i)
+	for (size_t i = 0; i < g_themes.size(); ++i)
 		if (g_themes[i].name == name)
 			return &g_themes[i];
 	return 0;
@@ -47,18 +57,33 @@ void Background::load(LevelTheme type, GameSim & gameSim)
 
 	m_type = type;
 
+	const char * themeName = getThemeName(m_type);
+	const Theme * theme = getTheme(themeName);
+	Assert(theme);
+
+	if (!theme)
+		return;
+
+	for (int i = 0; i < Theme::kMaxBackgroundLayers; ++i)
+		m_backgroundLayers[i] = SpriterState();
+
+	strcpy_s(backgroundBaseName, sizeof(backgroundBaseName), theme->backgroundBaseName.c_str());
+
 	switch (m_type)
 	{
 	case kLevelTheme_Lobby:
 		m_lobbyState = LobbyState();
+		m_lobbyState.init(*this);
 		break;
 
 	case kLevelTheme_Volcano:
 		m_volcanoState = VolcanoState();
+		m_volcanoState.init(*this);
 		break;
 
 	case kLevelTheme_Ice:
 		m_iceState = IceState();
+		m_iceState.init(*this);
 		break;
 
 	default:
@@ -98,69 +123,55 @@ void Background::draw(const GameSim & gameSim, const CamParams & camParams)
 	if (!theme)
 		return;
 
+	// draw background layers
+	for (int i = 0; i < theme->numBackgroundLayers; ++i)
+	{
+		gxPushMatrix();
+		gameSim.applyCamParams(camParams, theme->backgroundParallax[i], BACKGROUND_SCREENSHAKE_MULTIPLIER);
+		{
+			gxScalef(1.f / gameSim.m_arena.getBaseZoom(), 1.f / gameSim.m_arena.getBaseZoom(), 1.f);
+			setColor(colorWhite);
+			BACKGROUND_SPRITER(*this, i).draw(m_backgroundLayers[i]);
+		}
+		gxPopMatrix();
+	}
+
 	switch (m_type)
 	{
 	case kLevelTheme_Lobby:
-		gxPushMatrix();
-		gameSim.applyCamParams(camParams, theme->parallax1, BACKGROUND_SCREENSHAKE_MULTIPLIER);
-		{
-			//setBlend(BLEND_OPAQUE);
-			gxScalef(1.f / gameSim.m_arena.getBaseZoom(), 1.f / gameSim.m_arena.getBaseZoom(), 1.f);
-			setColor(colorWhite);
-			LOBBY_SPRITER.draw(m_lobbyState.m_spriterState);
-		}
-		gxPopMatrix();
-
-		if (s_debugBackground)
-		{
-			setColor(colorWhite);
-			drawText(0.f, 100.f, 24, +1.f, +1.f, "background: type=lobby, animTime=%02.2f", m_lobbyState.m_spriterState.animTime);
-		}
 		break;
 
 	case kLevelTheme_Volcano:
 		gxPushMatrix();
-		gameSim.applyCamParams(camParams, theme->parallax1, BACKGROUND_SCREENSHAKE_MULTIPLIER);
+		gameSim.applyCamParams(camParams, theme->backgroundParallax[0], BACKGROUND_SCREENSHAKE_MULTIPLIER);
 		{
 			//setBlend(BLEND_OPAQUE);
 			gxScalef(1.f / gameSim.m_arena.getBaseZoom(), 1.f / gameSim.m_arena.getBaseZoom(), 1.f);
 			setColor(colorWhite);
-			VOLCANO_SPRITER.draw(m_volcanoState.m_spriterState);
 			if (m_volcanoState.m_fireBall.m_isActive)
 				m_volcanoState.m_fireBall.draw();
 		}
 		gxPopMatrix();
-
-		if (s_debugBackground)
-		{
-			setColor(colorWhite);
-			drawText(0.f, 100.f, 24, +1.f, +1.f, "background: type=volcano, animTime=%02.2f, fireballIsActive=%d", m_volcanoState.m_spriterState.animTime, m_volcanoState.m_fireBall.m_isActive);
-		}
 		break;
 
 	case kLevelTheme_Ice:
-		gxPushMatrix();
-		gameSim.applyCamParams(camParams, theme->parallax1, BACKGROUND_SCREENSHAKE_MULTIPLIER);
-		{
-			gxScalef(1.f / gameSim.m_arena.getBaseZoom(), 1.f / gameSim.m_arena.getBaseZoom(), 1.f);
-			setColor(colorWhite);
-			ICE_SPRITER1.draw(m_iceState.m_spriterState1);
-		}
-		gxPopMatrix();
-
-		gxPushMatrix();
-		gameSim.applyCamParams(camParams, theme->parallax2, BACKGROUND_SCREENSHAKE_MULTIPLIER);
-		{
-			gxScalef(1.f / gameSim.m_arena.getBaseZoom(), 1.f / gameSim.m_arena.getBaseZoom(), 1.f);
-			setColor(colorWhite);
-			ICE_SPRITER2.draw(m_iceState.m_spriterState2);
-		}
-		gxPopMatrix();
 		break;
 
 	default:
 		Assert(false);
 		break;
+	}
+
+	if (s_debugBackground)
+	{
+		for (int i = 0; i < theme->numBackgroundLayers; ++i)
+		{
+			setColor(colorWhite);
+			drawText(0.f, 100.f, 24, +1.f, +1.f, "background: type=%d, layer=%d, animTime=%02.2f", m_type, i, m_backgroundLayers[i].animTime);
+
+			if (m_type == kLevelTheme_Volcano) 
+				drawText(0.f, 100.f, 24, +1.f, +1.f, "background: fireballIsActive=%d", m_volcanoState.m_fireBall.m_isActive);
+		}
 	}
 }
 
@@ -179,27 +190,33 @@ void Background::drawLight()
 
 Background::LobbyState::LobbyState()
 {
+}
+
+void Background::LobbyState::init(Background & background)
+{
 	memset(this, 0, sizeof(*this));
 
-	m_spriterState = SpriterState();
-	m_spriterState.startAnim(LOBBY_SPRITER, "Idle");
+	background.m_backgroundLayers[0].startAnim(BACKGROUND_SPRITER(background, 0), "Idle");
 }
 
 void Background::LobbyState::tick(GameSim & gameSim, Background & background, float dt)
 {
-	m_spriterState.updateAnim(LOBBY_SPRITER, dt);
+	background.m_backgroundLayers[0].updateAnim(BACKGROUND_SPRITER(background, 0), dt);
 }
 
 //
 
 Background::VolcanoState::VolcanoState()
 {
+}
+
+void Background::VolcanoState::init(Background & background)
+{
 	memset(this, 0, sizeof(*this));
 
 	m_state = VC_IDLE;
 
-	m_spriterState = SpriterState();
-	m_spriterState.startAnim(VOLCANO_SPRITER, "Idle");
+	background.m_backgroundLayers[0].startAnim(BACKGROUND_SPRITER(background, 0), "Idle");
 
 	m_startErupt = 0;
 
@@ -242,20 +259,22 @@ void Background::VolcanoState::tick(GameSim & gameSim, Background & background, 
 
 	if (!m_isTriggered && gameSim.m_roundTime >= m_startErupt)
 	{
-		doEvent(gameSim);
+		doEvent(gameSim, background);
 	}
 
-	if (m_spriterState.updateAnim(VOLCANO_SPRITER, dt))
+	SpriterState & spriterState = background.m_backgroundLayers[0];
+
+	if (spriterState.updateAnim(BACKGROUND_SPRITER(background, 0), dt))
 	{
 		if (m_isTriggered)
 		{
-			m_spriterState.startAnim(VOLCANO_SPRITER, "IdleErupted");
+			spriterState.startAnim(BACKGROUND_SPRITER(background, 0), "IdleErupted");
 			if (m_state == VC_ERUPT)
 				m_state = VC_AFTER;
 		}
 		else
 		{
-			m_spriterState.startAnim(VOLCANO_SPRITER, "Idle");
+			spriterState.startAnim(BACKGROUND_SPRITER(background, 0), "Idle");
 		}
 	}
 
@@ -299,9 +318,9 @@ void Background::VolcanoState::tick(GameSim & gameSim, Background & background, 
 	}
 }
 
-void Background::VolcanoState::doEvent(GameSim & gameSim)
+void Background::VolcanoState::doEvent(GameSim & gameSim, Background & background)
 {
-	m_spriterState.startAnim(VOLCANO_SPRITER, "Erupt");
+	background.m_backgroundLayers[0].startAnim(BACKGROUND_SPRITER(background, 0), "Erupt");
 
 	gameSim.playSound("volcano-eruption.ogg");
 	gameSim.addScreenShake(-5.5f, 5.5f, 7500.f, 5.f, true);
@@ -316,17 +335,18 @@ void Background::VolcanoState::doEvent(GameSim & gameSim)
 
 Background::IceState::IceState()
 {
+}
+
+void Background::IceState::init(Background & background)
+{
 	memset(this, 0, sizeof(*this));
 
-	m_spriterState1 = SpriterState();
-	m_spriterState1.startAnim(ICE_SPRITER1, 0);
-
-	m_spriterState2 = SpriterState();
-	m_spriterState2.startAnim(ICE_SPRITER2, 0);
+	background.m_backgroundLayers[0].startAnim(BACKGROUND_SPRITER(background, 0), 0);
+	background.m_backgroundLayers[1].startAnim(BACKGROUND_SPRITER(background, 1), 0);
 }
 
 void Background::IceState::tick(GameSim & gameSim, Background & background, float dt)
 {
-	m_spriterState1.updateAnim(ICE_SPRITER1, dt);
-	m_spriterState2.updateAnim(ICE_SPRITER2, dt);
+	background.m_backgroundLayers[0].updateAnim(BACKGROUND_SPRITER(background, 0), dt);
+	background.m_backgroundLayers[1].updateAnim(BACKGROUND_SPRITER(background, 1), dt);
 }

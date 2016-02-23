@@ -1435,10 +1435,23 @@ void initArenaData()
 				continue;
 			}
 
+			const std::string backgroundBaseName = d.getString("background_file", "");
+			if (backgroundBaseName.empty())
+			{
+				logError("invalid theme definition: %s", line.c_str());
+				continue;
+			}
+
 			Theme theme;
 			theme.name = name;
-			theme.parallax1 = d.getInt("parallax1", 100) / 100.f;
-			theme.parallax2 = d.getInt("parallax2", 100) / 100.f;
+			theme.backgroundBaseName = backgroundBaseName;
+			for (int i = 0; i < Theme::kMaxBackgroundLayers; ++i)
+			{
+				char name[32];
+				sprintf_s(name, sizeof(name), "parallax%d", i + 1);
+				theme.backgroundParallax[i] = d.getInt(name, 100) / 100.f;
+			}
+			theme.numBackgroundLayers = d.getInt("background_layers", 0);
 			g_themes.push_back(theme);
 		}
 	}

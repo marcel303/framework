@@ -2815,10 +2815,10 @@ void App::debugDraw()
 								uint32_t * source = (uint32_t*)buffer;
 								void * temp = alloca(sx * 4);
 
-								for (int y = 0; y < sy/2; ++y)
+								for (uint32_t y = 0; y < sy/2; ++y)
 								{
-									const int y1 = y;
-									const int y2 = sy - 1 - y;
+									const uint32_t y1 = y;
+									const uint32_t y2 = sy - 1 - y;
 									memcpy(temp,             source + sx * y1, sx * 4);
 									memcpy(source + sx * y1, source + sx * y2, sx * 4);
 									memcpy(source + sx * y2, temp,             sx * 4);

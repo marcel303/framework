@@ -9,6 +9,25 @@
 struct CamParams;
 class GameSim;
 
+struct Theme
+{
+	static const int kMaxBackgroundLayers = 5;
+
+	Theme()
+	{
+		for (int i = 0; i < numBackgroundLayers; ++i)
+			backgroundParallax[i] = 1.f;
+		numBackgroundLayers = 0;
+	}
+
+	std::string name;
+	std::string backgroundBaseName;
+	float backgroundParallax[kMaxBackgroundLayers];
+	int numBackgroundLayers;
+};
+
+extern std::vector<Theme> g_themes;
+
 #pragma pack(push)
 #pragma pack(1)
 
@@ -29,17 +48,17 @@ struct Background
 	{
 		LobbyState();
 		
+		void init(Background & background);
 		void tick(GameSim & gameSim, Background & background, float dt);
-
-		SpriterState m_spriterState;
 	};
 
 	struct VolcanoState
 	{
 		VolcanoState();
 
+		void init(Background & background);
 		void tick(GameSim & gameSim, Background & background, float dt);
-		void doEvent(GameSim & gameSim);
+		void doEvent(GameSim & gameSim, Background & background);
 
 		enum State
 		{
@@ -47,8 +66,6 @@ struct Background
 			VC_ERUPT,
 			VC_AFTER,
 		} m_state;
-
-		SpriterState m_spriterState;
 
 		FireBall m_fireBall;
 		bool m_isTriggered;
@@ -64,28 +81,21 @@ struct Background
 	{
 		IceState();
 
+		void init(Background & background);
 		void tick(GameSim & gameSim, Background & background, float dt);
-
-		SpriterState m_spriterState1;
-		SpriterState m_spriterState2;
 	};
 
 	//
 
 	LevelTheme m_type;
+	char backgroundBaseName[128];
 
 	LobbyState m_lobbyState;
 	VolcanoState m_volcanoState;
 	IceState m_iceState;
+
+	SpriterState m_backgroundLayers[Theme::kMaxBackgroundLayers];
+	int m_numBackgroundLayers;
 };
 
 #pragma pack(pop)
-
-struct Theme
-{
-	std::string name;
-	float parallax1;
-	float parallax2;
-};
-
-extern std::vector<Theme> g_themes;
