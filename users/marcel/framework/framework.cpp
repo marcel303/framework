@@ -428,7 +428,6 @@ bool Framework::shutdown()
 	{
 		SDL_GL_DeleteContext(globals.glContext);
 		globals.glContext = 0;
-		checkErrorGL();
 	}
 	
 	// destroy SDL window
@@ -3688,7 +3687,8 @@ void drawText(float x, float y, int size, float alignX, float alignY, const char
 		measureText(globals.font->face, size, text, sx, sy);
 		
 		x += sx * (alignX - 1.f) / 2.f;
-		y += sy * (alignY - 2.f) / 2.f;
+		y += sy * (alignY - 1.f) / 2.f;
+		//y += sy * (alignY - 2.f) / 2.f;
 		//y += size * (alignY - 1.f) / 2.f;
 
  		gxTranslatef(x, y, 0.f);
@@ -3778,13 +3778,13 @@ void drawTextArea(float x, float y, float sx, float sy, int size, float alignX, 
 	}
 }
 
-static GLuint createTexture(const void * source, int sx, int sy, GLenum format)
+static GLuint createTexture(const void * source, int sx, int sy, bool filter, bool clamp, GLenum format)
 {
 	GLuint texture;
 
 	glGenTextures(1, &texture);
 
-		if (texture)
+	if (texture)
 	{
 		GLuint restoreTexture;
 		glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
@@ -3809,10 +3809,12 @@ static GLuint createTexture(const void * source, int sx, int sy, GLenum format)
 			GL_UNSIGNED_BYTE,
 			source);
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		// set filtering
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter ? GL_LINEAR : GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter ? GL_LINEAR : GL_NEAREST);
 
 		// restore previous OpenGL states
 
@@ -3824,14 +3826,14 @@ static GLuint createTexture(const void * source, int sx, int sy, GLenum format)
 	return texture;
 }
 
-GLuint createTextureFromRGB8(const void * source, int sx, int sy)
+GLuint createTextureFromRGB8(const void * source, int sx, int sy, bool filter, bool clamp)
 {
-	return createTexture(source, sx, sy, GL_RGB);
+	return createTexture(source, sx, sy, filter, clamp, GL_RGB);
 }
 
-GLuint createTextureFromRGBA8(const void * source, int sx, int sy)
+GLuint createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp)
 {
-	return createTexture(source, sx, sy, GL_RGBA);
+	return createTexture(source, sx, sy, filter, clamp, GL_RGBA);
 }
 
 void debugDrawText(float x, float y, int size, float alignX, float alignY, const char * format, ...)

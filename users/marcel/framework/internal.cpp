@@ -170,6 +170,7 @@ void TextureCacheElem::free()
 		const int numTextures = gridSx * gridSy;
 		glDeleteTextures(numTextures, textures);
 		delete [] textures;
+		checkErrorGL();
 		
 		name.clear();
 		textures = 0;
@@ -1408,6 +1409,7 @@ void GlyphCache::clear()
 		if (i->second.texture != 0)
 		{
 			glDeleteTextures(1, &i->second.texture);
+			checkErrorGL();
 		}
 	}
 	
@@ -1449,7 +1451,8 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 			
 			elem.g = *face->glyph;
 			glGenTextures(1, &elem.texture);
-			
+			checkErrorGL();
+
 		#if USE_LEGACY_OPENGL
 			glBindTexture(GL_TEXTURE_2D, elem.texture);
 			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
