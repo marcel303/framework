@@ -602,6 +602,185 @@ bool NetSocketSteam::Receive(void * out_data, uint32_t maxSize, uint32_t * out_s
 
 //
 
+OnlineLocal::OnlineLocal(OnlineCallbacks * callbacks)
+	: Online(callbacks)
+	, m_callbacks(callbacks)
+	, m_currentRequestId(0)
+	, m_currentCallType(kCallType_None)
+{
+}
+
+OnlineLocal::~OnlineLocal()
+{
+	m_callbacks = nullptr;
+}
+
+void OnlineLocal::tick()
+{
+	switch (m_currentCallType)
+	{
+	case kCallType_None:
+		break;
+
+	case kCallType_LobbyCreate:
+		m_callbacks->OnOnlineLobbyCreateResult(m_currentRequestId, true);
+		break;
+
+	case kCallType_LobbyList:
+		//m_callbacks->OnOnlineLobbyListResult(m_currentRequestId, true);
+		break;
+
+	case kCallType_LobbyJoin:
+		m_callbacks->OnOnlineLobbyJoinResult(m_currentRequestId, true);
+		break;
+
+	case kCallType_LobbyLeave:
+		m_callbacks->OnOnlineLobbyLeaveResult(m_currentRequestId, true);
+		break;
+
+	default:
+		Assert(false);
+		break;
+	}
+
+	Assert(m_currentCallType == kCallType_None);
+	m_currentCallType = kCallType_None;
+}
+
+void OnlineLocal::debugDraw()
+{
+}
+
+OnlineRequestId OnlineLocal::lobbyCreateBegin()
+{
+	Assert(m_currentCallType == kCallType_None);
+	m_currentRequestId++;
+	m_currentCallType = kCallType_LobbyCreate;
+	return m_currentRequestId;
+}
+
+void OnlineLocal::lobbyCreateEnd(OnlineRequestId id)
+{
+	Assert(id == m_currentRequestId);
+	m_currentCallType = kCallType_None;
+}
+
+OnlineRequestId OnlineLocal::lobbyFindBegin()
+{
+	Assert(m_currentCallType == kCallType_None);
+	m_currentRequestId++;
+	//m_currentCallType == kCallType_LobbyFind;
+	Assert(false);
+	return m_currentRequestId;
+}
+
+void OnlineLocal::lobbyFindEnd(OnlineRequestId id)
+{
+	Assert(id == m_currentRequestId);
+	m_currentCallType = kCallType_None;
+}
+
+OnlineRequestId OnlineLocal::lobbyJoinBegin(uint64_t gameId)
+{
+	Assert(m_currentCallType == kCallType_None);
+	m_currentRequestId++;
+	m_currentCallType == kCallType_LobbyJoin;
+	return m_currentRequestId;
+}
+
+void OnlineLocal::lobbyJoinEnd(OnlineRequestId id)
+{
+	Assert(id == m_currentRequestId);
+	m_currentCallType = kCallType_None;
+}
+
+OnlineRequestId OnlineLocal::lobbyLeaveBegin()
+{
+	Assert(m_currentCallType == kCallType_None);
+	m_currentRequestId++;
+	m_currentCallType == kCallType_LobbyLeave;
+	return m_currentRequestId;
+}
+
+void OnlineLocal::lobbyLeaveEnd(OnlineRequestId id)
+{
+	Assert(id == m_currentRequestId);
+	m_currentCallType = kCallType_None;
+}
+
+bool OnlineLocal::getLobbyOwnerAddress(uint64_t & lobbyOwnerAddress)
+{
+	lobbyOwnerAddress = 0;
+	return true;
+}
+
+void OnlineLocal::showInviteFriendsUi()
+{
+}
+
+NetSocketLocal::NetSocketLocal()
+	: m_firstPacket(nullptr)
+{
+}
+
+NetSocketLocal::~NetSocketLocal()
+{
+	while (m_firstPacket)
+	{
+		Packet * nextPacket = m_firstPacket->next;
+		delete m_firstPacket;
+		m_firstPacket = nextPacket;
+	}
+}
+
+bool NetSocketLocal::Send(const void * data, uint32_t size, NetAddress * address)
+{
+	if (size == 0)
+		return true;
+
+	Packet * packet = new Packet;
+	packet->data = new uint8_t[size];
+	packet->size = size;
+	packet->next = nullptr;
+	memcpy(packet->data, data, size);
+
+	Packet ** insertAt = &m_firstPacket;
+
+	while (*insertAt)
+		insertAt = &(*insertAt)->next;
+
+	*insertAt = packet;
+
+	return true;
+}
+
+bool NetSocketLocal::Receive(void * out_data, uint32_t maxSize, uint32_t * out_size, NetAddress * out_address)
+{
+	if (m_firstPacket)
+	{
+		Assert(m_firstPacket->size <= maxSize);
+		const uint32 copySize = m_firstPacket->size <= maxSize ? m_firstPacket->size : maxSize;
+
+		memcpy(out_data, m_firstPacket->data, copySize);
+		*out_size = copySize;
+
+		out_address->Set(127, 0, 0, 1, 666);
+		out_address->m_userData = 0;
+
+		Packet * nextPacket = m_firstPacket->next;
+		delete m_firstPacket;
+		m_firstPacket = nextPacket;
+
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+//
+
 OnlineLAN::OnlineLAN(OnlineCallbacks * callbacks)
 	: Online(callbacks)
 {

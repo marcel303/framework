@@ -134,6 +134,80 @@ public:
 
 #endif
 
+//
+
+class OnlineLocal : public Online
+{
+	enum CallType
+	{
+		kCallType_None,
+		kCallType_LobbyCreate,
+		kCallType_LobbyList,
+		kCallType_LobbyJoin,
+		kCallType_LobbyLeave
+	};
+
+	OnlineCallbacks * m_callbacks;
+	OnlineRequestId m_currentRequestId;
+	CallType m_currentCallType;
+
+public:
+	OnlineLocal(OnlineCallbacks * callbacks);
+	virtual ~OnlineLocal();
+
+	virtual void tick();
+	virtual void debugDraw();
+
+	virtual OnlineRequestId lobbyCreateBegin();
+	virtual void lobbyCreateEnd(OnlineRequestId id);
+
+	virtual OnlineRequestId lobbyFindBegin();
+	virtual void lobbyFindEnd(OnlineRequestId id);
+
+	virtual OnlineRequestId lobbyJoinBegin(uint64_t gameId);
+	virtual void lobbyJoinEnd(OnlineRequestId id);
+
+	virtual OnlineRequestId lobbyLeaveBegin();
+	virtual void lobbyLeaveEnd(OnlineRequestId id);
+
+	virtual bool getLobbyOwnerAddress(uint64_t & lobbyOwnerAddress);
+
+	virtual void showInviteFriendsUi();
+};
+
+class NetSocketLocal : public NetSocket
+{
+	struct Packet
+	{
+		~Packet()
+		{
+			delete [] data;
+			data = nullptr;
+
+			size = 0;
+
+			next = nullptr;
+		}
+
+		uint8_t * data;
+		uint32_t size;
+
+		Packet * next;
+	};
+
+	Packet * m_firstPacket;
+
+public:
+	NetSocketLocal();
+	virtual ~NetSocketLocal();
+
+	virtual bool Send(const void * data, uint32_t size, NetAddress * address);
+	virtual bool Receive(void * out_data, uint32_t maxSize, uint32_t * out_size, NetAddress * out_address);
+	virtual bool IsReliable() { return true; }
+};
+
+//
+
 class OnlineLAN : public Online
 {
 public:

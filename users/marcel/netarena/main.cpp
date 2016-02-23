@@ -1366,7 +1366,8 @@ bool App::init()
 		}
 		else
 		{
-			g_online = new OnlineLAN(this);
+			//g_online = new OnlineLAN(this);
+			g_online = new OnlineLocal(this);
 		}
 
 		SDL_ShowCursor(0);
@@ -1597,11 +1598,11 @@ void App::shutdown()
 	delete m_packetDispatcher;
 	m_packetDispatcher = 0;
 
+	delete g_online;
+	g_online = 0;
+
 	if (USE_STEAMAPI)
 	{
-		delete g_online;
-		g_online = 0;
-
 		m_steamPersonaStateChangeCallback.Unregister();
 		m_steamAvatarImageLoadedCallback.Unregister();
 		m_steamGameLobbyJoinRequestedCallback.Unregister();
@@ -1796,7 +1797,7 @@ bool App::pollMatchmaking(bool & isDone, bool & success)
 
 bool App::findGame()
 {
-	if (USE_STEAMAPI)
+	if (g_online)
 	{
 		g_online->lobbyFindBegin();
 		m_isMatchmaking = true;
@@ -1833,7 +1834,7 @@ bool App::findGame()
 
 bool App::joinGame(uint64_t gameId)
 {
-	if (USE_STEAMAPI)
+	if (g_online)
 	{
 		g_online->lobbyJoinBegin(gameId);
 		m_isMatchmaking = true;
@@ -2350,6 +2351,10 @@ void App::tickNet()
 				NetSocketSteam * socketSteam = new NetSocketSteam();
 				socket = SharedNetSocket(socketSteam);
 			}
+			else if (true)
+			{
+				socket = new NetSocketLocal();
+			}
 			else
 			{
 				NetSocketUDP * socketUDP = new NetSocketUDP();
@@ -2769,7 +2774,7 @@ void App::debugDraw()
 		drawText(GFX_SX/2, GFX_SY*4/5, 32, 0.f, 0.f, "NetState: %s", s_netStates[m_netState]);
 	}
 
-	if (g_devMode)
+	if (g_devMode && USE_STEAMAPI)
 	{
 		const int numFriends = SteamFriends()->GetFriendCount(k_EFriendFlagImmediate);
 
@@ -2821,7 +2826,7 @@ void App::debugDraw()
 
 								auto & info = s_textureForSteamUser[friendId];
 
-								info.texture = createTextureFromRGBA8(buffer, sx, sy);
+								info.texture = createTextureFromRGBA8(buffer, sx, sy, false, true);
 								info.sx = sx;
 								info.sy = sy;
 							}
