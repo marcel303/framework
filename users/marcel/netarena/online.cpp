@@ -617,11 +617,11 @@ OnlineLocal::~OnlineLocal()
 
 void OnlineLocal::tick()
 {
+	if (m_currentCallType == kCallType_None)
+		return;
+
 	switch (m_currentCallType)
 	{
-	case kCallType_None:
-		break;
-
 	case kCallType_LobbyCreate:
 		m_callbacks->OnOnlineLobbyCreateResult(m_currentRequestId, true);
 		break;
@@ -684,7 +684,7 @@ OnlineRequestId OnlineLocal::lobbyJoinBegin(uint64_t gameId)
 {
 	Assert(m_currentCallType == kCallType_None);
 	m_currentRequestId++;
-	m_currentCallType == kCallType_LobbyJoin;
+	m_currentCallType = kCallType_LobbyJoin;
 	return m_currentRequestId;
 }
 
@@ -698,7 +698,7 @@ OnlineRequestId OnlineLocal::lobbyLeaveBegin()
 {
 	Assert(m_currentCallType == kCallType_None);
 	m_currentRequestId++;
-	m_currentCallType == kCallType_LobbyLeave;
+	m_currentCallType = kCallType_LobbyLeave;
 	return m_currentRequestId;
 }
 
