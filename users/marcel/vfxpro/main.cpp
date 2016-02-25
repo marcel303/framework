@@ -7,15 +7,20 @@
 #include "Calc.h"
 #include "config.h"
 #include "framework.h"
+#include "Path.h"
 #include "Timer.h"
+#include "tinyxml2.h"
 #include "types.h"
 #include "video.h"
+#include "xml.h"
 #include <algorithm>
 #include <list>
 #include <map>
 #include <Windows.h>
 
 #include "data/ShaderConstants.h"
+
+using namespace tinyxml2;
 
 const static int kNumScreens = 3;
 
@@ -84,6 +89,8 @@ static float virtualToScreenY(float y)
 
 	+ add flow map shader
 		+ use an input texture to warp/distort the previous frame
+
+	- add film grain shader
 
 :: todo :: visuals tech 3D
 
@@ -209,11 +216,37 @@ void operator delete(void * p, DrawableList & list)
 	free(p);
 }
 
+//
+
+struct TweenFloatCollection
+{
+	std::map<std::string, TweenFloat*> m_tweenVars;
+
+	void addVar(const char * name, TweenFloat & var)
+	{
+		m_tweenVars[name] = &var;
+	}
+
+	void tweenTo(const char * name, const float value, const float time, const EaseType easeType, const float easeParam)
+	{
+		auto i = m_tweenVars.find(name);
+
+		if (i != m_tweenVars.end())
+		{
+			TweenFloat * v = i->second;
+
+			v->to(value, time, easeType, easeParam);
+		}
+	}
+};
+
+//
+
 static void registerEffect(const char * name, Effect * effect);
 static void unregisterEffect(Effect * effect);
 static Effect * getEffect(const char * name);
 
-struct Effect
+struct Effect : TweenFloatCollection
 {
 	bool is3D; // when set to 3D, the effect is rendered using a separate virtual camera to each screen. when false, it will use simple 1:1 mapping onto screen coordinates
 	Mat4x4 transform; // transformation matrix for 3D effects
@@ -222,8 +255,6 @@ struct Effect
 	float scaleX;
 	float scaleY;
 	float z;
-
-	std::map<std::string, TweenFloat*> m_tweenVars;
 
 	Effect(const char * name)
 		: is3D(false)
@@ -244,23 +275,6 @@ struct Effect
 	virtual ~Effect()
 	{
 		unregisterEffect(this);
-	}
-
-	void addVar(const char * name, TweenFloat & var)
-	{
-		m_tweenVars[name] = &var;
-	}
-
-	void tweenTo(const char * name, const float value, const float time, const EaseType easeType, const float easeParam)
-	{
-		auto i = m_tweenVars.find(name);
-
-		if (i != m_tweenVars.end())
-		{
-			TweenFloat * v = i->second;
-
-			v->to(value, time, easeType, easeParam);
-		}
 	}
 
 	Vec2 screenToLocal(Vec2Arg v) const
@@ -328,8 +342,6 @@ struct EffectDrawable : Drawable
 		gxPopMatrix();
 	}
 };
-
-//
 
 static std::map<std::string, Effect*> g_effectsByName;
 
@@ -1265,6 +1277,513 @@ struct Effect_Video : Effect
 
 //
 
+struct SceneEffect;
+struct SceneAction;
+struct SceneEvent;
+struct SceneLayer;
+struct Scene;
+
+struct SceneEffect
+{
+	std::string m_name;
+	Effect * m_effect;
+
+	SceneEffect()
+		: m_effect(nullptr)
+	{
+	}
+
+	~SceneEffect()
+	{
+		delete m_effect;
+		m_effect = nullptr;
+	}
+
+	bool load(const XMLElement * xmlEffect)
+	{
+		m_name = stringAttrib(xmlEffect, "name", "");
+
+		const std::string type = stringAttrib(xmlEffect, "type", "");
+
+		if (type == "rain")
+		{
+			const int numRaindrops = intAttrib(xmlEffect, "num_raindrops", 0);
+
+			if (numRaindrops == 0)
+			{
+				logWarning("num_raindrops is 0. skipping effect");
+			}
+			else
+			{
+				m_effect = new Effect_Rain(m_name.c_str(), numRaindrops);
+			}
+
+			return true;
+		}
+		else
+		{
+			logError("unknown effect type: %s", type.c_str());
+			return false;
+		}
+	}
+};
+
+struct SceneLayer
+{
+	enum BlendMode
+	{
+		kBlendMode_Add,
+		kBlendMode_Subtract,
+		kBlendMode_Alpha,
+		kBlendMode_Opaque
+	};
+
+	std::string m_name;
+	BlendMode m_blendMode;
+	bool m_autoClear;
+
+	std::vector<SceneEffect*> m_effects;
+
+	SceneLayer()
+		: m_blendMode(kBlendMode_Add)
+		, m_autoClear(true)
+	{
+	}
+
+	~SceneLayer()
+	{
+		for (auto i = m_effects.begin(); i != m_effects.end(); ++i)
+		{
+			SceneEffect * effect = *i;
+
+			delete effect;
+		}
+
+		m_effects.clear();
+	}
+
+	void load(const XMLElement * xmlLayer)
+	{
+		m_name = stringAttrib(xmlLayer, "name", "");
+
+		std::string blend = stringAttrib(xmlLayer, "blend", "add");
+
+		m_blendMode = kBlendMode_Add;
+
+		if (blend == "add")
+			m_blendMode = kBlendMode_Add;
+		else if (blend == "subtract")
+			m_blendMode = kBlendMode_Subtract;
+		else if (blend == "alpha")
+			m_blendMode = kBlendMode_Alpha;
+		else if (blend == "opaque")
+			m_blendMode = kBlendMode_Opaque;
+		else
+			logWarning("unknown blend type: %s", blend.c_str());
+
+		m_autoClear = boolAttrib(xmlLayer, "auto_clear", true);
+
+		//
+
+		for (const XMLElement * xmlEffect = xmlLayer->FirstChildElement("effect"); xmlEffect; xmlEffect = xmlEffect->NextSiblingElement("effect"))
+		{
+			SceneEffect * effect = new SceneEffect();
+
+			if (!effect->load(xmlEffect))
+			{
+				delete effect;
+				effect = nullptr;
+			}
+			else
+			{
+				m_effects.push_back(effect);
+			}
+		}
+	}
+
+	void tick(const float dt)
+	{
+		for (auto i = m_effects.begin(); i != m_effects.end(); ++i)
+		{
+			SceneEffect * effect = *i;
+
+			effect->m_effect->tick(dt);
+		}
+	}
+
+	void draw(DrawableList & drawableList)
+	{
+		// todo : compose
+
+		for (auto i = m_effects.begin(); i != m_effects.end(); ++i)
+		{
+			SceneEffect * effect = *i;
+
+			effect->m_effect->draw(drawableList);
+		}
+	}
+};
+
+struct SceneAction
+{
+	enum ActionType
+	{
+		kActionType_None,
+		kActionType_Tween
+	};
+
+	ActionType m_type;
+
+	struct Tween
+	{
+		enum TargetType
+		{
+			kTargetType_Layer,
+			kTargetType_Effect
+		};
+
+		TargetType m_targetType;
+		std::string m_targetName;
+		std::string m_varName;
+		float m_tweenTo;
+		float m_tweenTime;
+		EaseType m_easeType;
+		float m_easeParam;
+		bool m_replaceTween;
+	} m_tween;
+
+	SceneAction()
+		: m_type(kActionType_None)
+	{
+	}
+
+	bool load(const XMLElement * xmlAction)
+	{
+		const std::string type = xmlAction->Name();
+
+		if (type == "tween")
+		{
+			m_type = kActionType_Tween;
+
+			const std::string layer = stringAttrib(xmlAction, "layer", "");
+			const std::string effect = stringAttrib(xmlAction, "effect", "");
+
+			if (!layer.empty() + !effect.empty() > 1)
+			{
+				logError("more than one target type set on effect action!");
+				return false;
+			}
+
+			if (!layer.empty())
+			{
+				m_tween.m_targetType = Tween::kTargetType_Layer;
+				m_tween.m_targetName = layer;
+			}
+			else if (!effect.empty())
+			{
+				m_tween.m_targetType = Tween::kTargetType_Effect;
+				m_tween.m_targetName = effect;
+			}
+
+			m_tween.m_varName = stringAttrib(xmlAction, "var", "");
+			m_tween.m_tweenTo = floatAttrib(xmlAction, "to", 0.f);
+			m_tween.m_tweenTime = floatAttrib(xmlAction, "time", 1.f);
+
+			const std::string easeType = stringAttrib(xmlAction, "ease", "linear");
+			m_tween.m_easeType = kEaseType_Linear;
+			if (easeType == "linear")
+				m_tween.m_easeType = kEaseType_Linear;
+			else if (easeType == "pow_in")
+				m_tween.m_easeType = kEaseType_PowIn;
+			else if (easeType == "pow_out")
+				m_tween.m_easeType = kEaseType_PowOut;
+			else
+				logError("unknown ease type: %s", easeType.c_str());
+			m_tween.m_easeParam = floatAttrib(xmlAction, "ease_param", 1.f);
+			m_tween.m_replaceTween = boolAttrib(xmlAction, "replace", false);
+
+			return true;
+		}
+		else
+		{
+			logError("unknown event action: %s", type.c_str());
+			return false;
+		}
+	}
+};
+
+struct SceneEvent
+{
+	std::string m_name;
+	std::vector<SceneAction*> m_actions;
+
+	SceneEvent()
+	{
+	}
+
+	~SceneEvent()
+	{
+		for (auto i = m_actions.begin(); i != m_actions.end(); ++i)
+		{
+			SceneAction * action = *i;
+
+			delete action;
+		}
+
+		m_actions.clear();
+	}
+
+	void execute(Scene & scene)
+	{
+#if 0
+		for (auto i = m_actions.begin(); i != m_actions.end(); ++i)
+		{
+			SceneAction * action = *i;
+
+			switch (action->m_type)
+			{
+			case SceneAction::kActionType_Tween:
+				{
+					TweenFloatCollection * varCollection = nullptr;
+
+					switch (action->m_tween.m_targetType)
+					{
+					case SceneAction::Tween::kTargetType_Layer:
+						{
+							for (auto l = scene.m_layers.begin(); l != scene.m_layers.end(); ++l)
+							{
+								SceneLayer * layer = *l;
+
+								if (layer->m_name == action->m_tween.m_targetName)
+								{
+									varCollection = layer;
+								}
+							}
+						}
+						break;
+
+					case SceneAction::Tween::kTargetType_Effect:
+						{
+						}
+						break;
+
+					default:
+						Assert(false);
+						break;
+					}
+
+					if (varCollection == 0)
+					{
+						logWarning("couldn't find tween target by name. name=%s", action->m_tween.m_targetName.c_str());
+					}
+					else
+					{
+						TweenFloat * var = varCollection->getVar(action->m_tween.m_varName.c_str());
+
+						if (var == 0)
+						{
+							logWarning("couldn't find tween value by name. name=%s", action->m_tween.m_varName.c_str());
+						}
+						else
+						{
+							var->to(
+								action->m_tween.m_tweenTo,
+								action->m_tween.m_tweenTime,
+								action->m_tween.m_easeType,
+								action->m_tween.m_easeParam);
+						}
+					}
+				}
+				break;
+
+			default:
+				Assert(false);
+				break;
+			}
+		}
+#endif
+	}
+
+	void load(const XMLElement * xmlEvent)
+	{
+		m_name = stringAttrib(xmlEvent, "name", "");
+
+		for (const XMLElement * xmlAction = xmlEvent->FirstChildElement(); xmlAction; xmlAction = xmlAction->NextSiblingElement())
+		{
+			SceneAction * action = new SceneAction();
+
+			if (!action->load(xmlAction))
+			{
+				delete action;
+			}
+			else
+			{
+				m_actions.push_back(action);
+			}
+		}
+	}
+};
+
+struct Scene
+{
+	std::string m_name;
+	std::vector<SceneLayer*> m_layers;
+	std::vector<SceneEvent*> m_events;
+
+	Scene()
+	{
+	}
+
+	~Scene()
+	{
+		for (auto i = m_layers.begin(); i != m_layers.end(); ++i)
+		{
+			SceneLayer * layer = *i;
+
+			delete layer;
+		}
+
+		m_layers.clear();
+
+		//
+
+		for (auto i = m_events.begin(); i != m_events.end(); ++i)
+		{
+			SceneEvent * event = *i;
+
+			delete event;
+		}
+
+		m_events.clear();
+	}
+
+	void tick(const float dt)
+	{
+		for (auto i = m_layers.begin(); i != m_layers.end(); ++i)
+		{
+			SceneLayer * layer = *i;
+
+			layer->tick(dt);
+		}
+	}
+
+	void draw(DrawableList & drawableList)
+	{
+		for (auto i = m_layers.begin(); i != m_layers.end(); ++i)
+		{
+			SceneLayer * layer = *i;
+
+			layer->draw(drawableList);
+		}
+	}
+
+	void triggerEvent(const char * name)
+	{
+		for (auto i = m_events.begin(); i != m_events.end(); ++i)
+		{
+			SceneEvent * event = *i;
+
+			if (event->m_name == name)
+			{
+				event->execute(*this);
+			}
+		}
+	}
+
+	bool load(const char * filename)
+	{
+		bool result = true;
+
+		tinyxml2::XMLDocument xmlDoc;
+
+		if (xmlDoc.LoadFile(filename) != XML_NO_ERROR)
+		{
+			logError("failed to load %s", filename);
+
+			result = false;
+		}
+		else
+		{
+			const XMLElement * xmlScene = xmlDoc.FirstChildElement("scene");
+
+			if (xmlScene == 0)
+			{
+				logError("missing <scene> element");
+
+				result = false;
+			}
+			else
+			{
+				m_name = stringAttrib(xmlScene, "name", "");
+
+				if (m_name.empty())
+				{
+					logWarning("scene name not set!");
+				}
+
+				//
+
+				const XMLElement * xmlLayers = xmlScene->FirstChildElement("layers");
+
+				if (xmlLayers == 0)
+				{
+					logWarning("no layers found in scene!");
+				}
+				else
+				{
+					for (const XMLElement * xmlLayer = xmlLayers->FirstChildElement("layer"); xmlLayer; xmlLayer = xmlLayer->NextSiblingElement("layer"))
+					{
+						SceneLayer * layer = new SceneLayer();
+
+						layer->load(xmlLayer);
+
+						m_layers.push_back(layer);
+					}
+				}
+
+				//
+
+				const XMLElement * xmlEvents = xmlScene->FirstChildElement("events");
+
+				if (xmlEvents == 0)
+				{
+					logDebug("scene doesn't have any events");
+				}
+				else
+				{
+					for (const XMLElement * xmlEvent = xmlEvents->FirstChildElement("event"); xmlEvent; xmlEvent = xmlEvent->NextSiblingElement("event"))
+					{
+						SceneEvent * event = new SceneEvent();
+
+						event->load(xmlEvent);
+
+						m_events.push_back(event);
+					}
+				}
+			}
+
+			//
+
+			const XMLElement * xmlMidi = xmlScene->FirstChildElement("midi");
+
+			if (xmlMidi == 0)
+			{
+				logDebug("scene doesn't have any MIDI mappings");
+			}
+			else
+			{
+				for (const XMLElement * xmlMidiMap = xmlMidi->FirstChildElement("map"); xmlMidiMap; xmlMidiMap = xmlMidiMap->NextSiblingElement("map"))
+				{
+				}
+			}
+		}
+
+		return result;
+	}
+};
+
+//
+
 static CRITICAL_SECTION s_oscMessageMtx;
 static HANDLE s_oscMessageThread = INVALID_HANDLE_VALUE;
 
@@ -1446,6 +1965,43 @@ struct Camera
 		cameraToWorld = invLookatMatrix;
 		worldToCamera = lookatMatrix;
 		cameraToView = projection;
+	}
+
+	void beginView(int c, int & sx, int & sy) const
+	{
+		gxMatrixMode(GL_PROJECTION);
+		gxPushMatrix();
+		gxLoadMatrixf(cameraToView.m_v);
+		glMultMatrixf(worldToCamera.m_v);
+
+		gxMatrixMode(GL_MODELVIEW);
+		gxPushMatrix();
+		const int x1 = virtualToScreenX(-150 + (c + 0) * 100);
+		const int y1 = virtualToScreenY(-50);
+		const int x2 = virtualToScreenX(-150 + (c + 1) * 100);
+		const int y2 = virtualToScreenY(+50);
+
+		sx = x2 - x1;
+		sy = y2 - y1;
+
+		glViewport(
+			x1 / framework.minification,
+			y1 / framework.minification,
+			sx / framework.minification,
+			sy / framework.minification);
+	}
+
+	void endView() const
+	{
+		gxMatrixMode(GL_PROJECTION);
+		gxPopMatrix();
+		gxMatrixMode(GL_MODELVIEW);
+		gxPopMatrix();
+
+		// dirty hack to restore viewport
+
+		pushSurface(nullptr);
+		popSurface();
 	}
 };
 
@@ -1663,9 +2219,10 @@ int main(int argc, char * argv[])
 	s_oscMessageThread = CreateThread(NULL, 64 * 1024, ExecuteOscThread, NULL, CREATE_SUSPENDED, NULL);
 	ResumeThread(s_oscMessageThread);
 
-	//recvSocket.Run();
+	// initialise framework
 
 	framework.fullscreen = false;
+	framework.windowBorder = false;
 	framework.enableDepthBuffer = true;
 	framework.minification = 2;
 	framework.enableMidi = true;
@@ -1673,29 +2230,12 @@ int main(int argc, char * argv[])
 
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
-		//framework.fillCachesWithPath(".", true);
-
-		while (false)
-		{
-			//const auto endTick = SDL_GetTicks() + (rand() % 10000);
-			const auto endTick = SDL_GetTicks() + (rand() % 1000);
-
-			MediaPlayer mp;
-			mp.open("doa.avi");
-
-			while (mp.isActive() && SDL_GetTicks() < endTick)
-			{
-				framework.process();
-
-				mp.tick(framework.timeStep);
-
-				framework.beginDraw(0, 0, 0, 0);
-				{
-					mp.draw();
-				}
-				framework.endDraw();
-			}
-		}
+		changeDirectory("C:/gg-code-hg/users/marcel/vfxpro/data");
+		framework.fillCachesWithPath(".", true);
+		changeDirectory("C:/Temp/cmake/vfxpro/data");
+	#ifndef DEBUG
+		framework.fillCachesWithPath(".", true);
+	#endif
 
 		std::list<TimeDilationEffect> timeDilationEffects;
 
@@ -1716,6 +2256,11 @@ int main(int argc, char * argv[])
 		bool drawScreenIds = false;
 		bool drawProjectorSetup = false;
 		bool drawActiveEffects = false;
+
+		Scene * scene = new Scene();
+		scene->load("scene.xml");
+
+		scene->triggerEvent("fade_rain");
 
 		Effect_Rain rain("rain", 10000);
 
@@ -1772,8 +2317,9 @@ int main(int argc, char * argv[])
 
 		Shader jitterShader("jitter");
 		Shader boxblurShader("boxblur");
-		Shader flowmapShader("flowmap");
 		Shader luminanceShader("luminance");
+		Shader flowmapShader("flowmap");
+		Shader distortionBarsShader("distortion_bars");
 		Shader fxaaShader("fxaa");
 
 		Vec3 cameraPosition(0.f, .5f, -1.f);
@@ -2044,6 +2590,8 @@ int main(int argc, char * argv[])
 
 			// process effects
 
+			scene->tick(dt);
+
 			rain.tick(dt);
 
 			starCluster.tick(dt);
@@ -2088,6 +2636,8 @@ int main(int argc, char * argv[])
 			// draw
 
 			DrawableList drawableList;
+
+			scene->draw(drawableList);
 
 			if (drawRain)
 				rain.draw(drawableList);
@@ -2160,133 +2710,67 @@ int main(int argc, char * argv[])
 						glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
 					glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
 
-					setColorf(config.midiGetValue(102, 1.f), config.midiGetValue(102, 1.f)/2.f, config.midiGetValue(102, 1.f)/4.f, 1.f);
+					//setColorf(config.midiGetValue(102, 1.f), config.midiGetValue(102, 1.f)/2.f, config.midiGetValue(102, 1.f)/4.f, 1.f);
+					setColor(2, 2, 2, 255);
 					drawRect(0, 0, GFX_SX, GFX_SY);
 				}
 
 				setBlend(BLEND_ALPHA);
 
 			#if 1
-				const bool testCameraProjection = true;
-
 				for (int c = 0; c < kNumScreens; ++c)
 				{
 					const Camera & camera = cameras[c];
 
-					gxMatrixMode(GL_PROJECTION);
-					gxPushMatrix();
+					int sx;
+					int sy;
+
+					camera.beginView(c, sx, sy);
 					{
-						if (testCameraProjection)
+						setBlend(BLEND_ADD);
+
+						if (debugDraw)
 						{
-							gxLoadMatrixf(camera.cameraToView.m_v);
-							glMultMatrixf(camera.worldToCamera.m_v);
+							drawTestObjects();
 						}
 
-						gxMatrixMode(GL_MODELVIEW);
-						gxPushMatrix();
+						DrawableList drawableList;
+
+						if (drawBoxes)
+							boxes.draw(drawableList);
+
+						drawableList.sort();
+
+						drawableList.draw();
+
+					#if 1
+						if (drawPCM && ((c == 0) || (c == 2)) && audioInHistorySize > 0)
 						{
-							//if (testCameraProjection)
-							//	gxLoadMatrixf(camera.worldToCamera.m_v);
+							applyTransformWithViewportSize(sx, sy);
 
-							const int x1 = virtualToScreenX(-150 + (c + 0) * 100);
-							const int y1 = virtualToScreenY(-50);
-							const int x2 = virtualToScreenX(-150 + (c + 1) * 100);
-							const int y2 = virtualToScreenY(+50);
+							setColor(colorWhite);
 
-							const int sx = x2 - x1;
-							const int sy = y2 - y1;
-
-						#if 1
-							glViewport(
-								x1 / framework.minification,
-								y1 / framework.minification,
-								sx / framework.minification,
-								sy / framework.minification);
-						#else
-							glViewport(
-								x1,
-								y1,
-								sx,
-								sy);
-						#endif
-
-							setBlend(BLEND_ADD);
-
-						#if 0
-							if (debugDraw && !testCameraProjection)
+							glLineWidth(1.5f);
+							gxBegin(GL_LINES);
 							{
-								applyTransformWithViewportSize(sx, sy);
+								const float scaleX = GFX_SX / float(numSamplesThisFrame - 2);
+								const float scaleY = 300.f / float(1 << 15);
 
-								setColorf(1.f, 0.f, 0.f, .5f);
-								drawRect(50, 50, sx - 50, sy - 50);
-							}
-						#endif
-
-
-						#if 1
-							if (debugDraw && testCameraProjection)
-							{
-								drawTestObjects();
-							}
-						#endif
-
-							DrawableList drawableList;
-
-							if (drawBoxes)
-								boxes.draw(drawableList);
-
-							drawableList.sort();
-
-							drawableList.draw();
-
-						#if 1
-							if (drawPCM && ((c == 0) || (c == 2)) && audioInHistorySize > 0)
-							{
-								applyTransformWithViewportSize(sx, sy);
-
-								setColor(colorWhite);
-
-								glLineWidth(1.5f);
-								gxBegin(GL_LINES);
+								for (int i = 0; i < numSamplesThisFrame - 1; ++i)
 								{
-									const float scaleX = GFX_SX / float(numSamplesThisFrame - 2);
-									const float scaleY = 300.f / float(1 << 15);
-
-									for (int i = 0; i < numSamplesThisFrame - 1; ++i)
-									{
-										gxVertex2f((i + 0) * scaleX, GFX_SY/2.f + samplesThisFrame[i + 0] * scaleY);
-										gxVertex2f((i + 1) * scaleX, GFX_SY/2.f + samplesThisFrame[i + 1] * scaleY);
-									}
+									gxVertex2f((i + 0) * scaleX, GFX_SY/2.f + samplesThisFrame[i + 0] * scaleY);
+									gxVertex2f((i + 1) * scaleX, GFX_SY/2.f + samplesThisFrame[i + 1] * scaleY);
 								}
-								gxEnd();
-								glLineWidth(1.f);
 							}
-						#endif
-
-							setBlend(BLEND_ALPHA);
-
-							if (drawScreenIds)
-							{
-								applyTransformWithViewportSize(sx, sy);
-
-								setFont("calibri.ttf");
-								setColor(colorWhite);
-								drawText(sx/2, sy/2, 250, 0.f, 0.f, "%d", c + 1);
-							}
+							gxEnd();
+							glLineWidth(1.f);
 						}
-						gxMatrixMode(GL_MODELVIEW);
-						gxPopMatrix();
+					#endif
+
+						setBlend(BLEND_ALPHA);
 					}
-					gxMatrixMode(GL_PROJECTION);
-					gxPopMatrix();
-
-					gxMatrixMode(GL_MODELVIEW);
+					camera.endView();
 				}
-
-				// dirty hack to restore viewport
-
-				pushSurface(nullptr);
-				popSurface();
 			#endif
 
 				setBlend(BLEND_ADD);
@@ -2310,8 +2794,9 @@ int main(int argc, char * argv[])
 
 				static volatile bool doBoxblur = false;
 				static volatile bool doLuminance = false;
-				static volatile bool doFlowmap = true;
-				static volatile bool doFxaa = true;
+				static volatile bool doFlowmap = false;
+				static volatile bool doDistortionBars = false;
+				static volatile bool doFxaa = false;
 
 				if (doBoxblur)
 				{
@@ -2351,12 +2836,39 @@ int main(int argc, char * argv[])
 					setShader(shader);
 					shader.setTexture("colormap", 0, surface.getTexture(), true, false);
 					shader.setTexture("flowmap", 0, surface.getTexture(), true, false); // todo
+					shader.setImmediate("time", framework.time);
 					ShaderBuffer buffer;
 					FlowmapData data;
-					data.strength = cosf(framework.time) * .2f;
-					data.strength *= .5f; // shader optimize
+					data.strength = cosf(framework.time) * 200.f;
 					buffer.setData(&data, sizeof(data));
 					shader.setBuffer("FlowmapBlock", buffer);
+					surface.postprocess(shader);
+				}
+
+				if (doDistortionBars)
+				{
+					setBlend(BLEND_OPAQUE);
+					Shader & shader = distortionBarsShader;
+					setShader(shader);
+					shader.setTexture("colormap", 0, surface.getTexture(), true, false);
+					ShaderBuffer buffer;
+					DistortionBarsData data;
+					Mat4x4 matR;
+					Mat4x4 matT;
+					matR.MakeRotationZ(framework.time * .1f);
+					//matT.MakeTranslation(GFX_SX/2.f, GFX_SY/2.f, 0.f);
+					matT.MakeTranslation(mouse.x, GFX_SY - mouse.y, 0.f);
+					Mat4x4 mat = matT * matR;
+					data.px = mat(0, 0);
+					data.py = mat(0, 1);
+					data.pd = mat(3, 0) * data.px + mat(3, 1) * data.py;
+					data.pScale = .1f;
+					data.qx = mat(1, 0);
+					data.qy = mat(1, 1);
+					data.qd = mat(3, 0) * data.qx + mat(3, 1) * data.qy;
+					data.qScale = 1.f / 200.f;
+					buffer.setData(&data, sizeof(data));
+					shader.setBuffer("DistotionBarsBlock", buffer); // fixme : block name
 					surface.postprocess(shader);
 				}
 
@@ -2365,7 +2877,7 @@ int main(int argc, char * argv[])
 					setBlend(BLEND_OPAQUE);
 					Shader & shader = fxaaShader;
 					setShader(shader);
-					shader.setTexture("colormap", 0, surface.getTexture(), true, false);
+					shader.setTexture("colormap", 0, surface.getTexture(), true, true);
 					shader.setImmediate("inverseVP", 1.f / (surface.getWidth() / framework.minification), 1.f / (surface.getHeight() / framework.minification));
 					surface.postprocess(shader);
 				}
@@ -2472,6 +2984,29 @@ int main(int argc, char * argv[])
 					glDisable(GL_DEPTH_TEST);
 				}
 
+				if (drawScreenIds)
+				{
+					for (int c = 0; c < kNumScreens; ++c)
+					{
+						const Camera & camera = cameras[c];
+
+						int sx;
+						int sy;
+
+						camera.beginView(c, sx, sy);
+						{
+							setBlend(BLEND_ADD);
+
+							applyTransformWithViewportSize(sx, sy);
+
+							setFont("calibri.ttf");
+							setColor(colorWhite);
+							drawText(sx/2, sy/2, 250, 0.f, 0.f, "%d", c + 1);
+						}
+						camera.endView();
+					}
+				}
+
 				if (drawActiveEffects)
 				{
 					setFont("VeraMono.ttf");
@@ -2545,6 +3080,9 @@ int main(int argc, char * argv[])
 			time += dt;
 			timeReal += dtReal;
 		}
+
+		delete scene;
+		scene = nullptr;
 
 		framework.shutdown();
 	}

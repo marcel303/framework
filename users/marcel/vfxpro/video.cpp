@@ -160,7 +160,7 @@ void MediaPlayer::tick(const float dt)
 			glDeleteTextures(1, &texture);
 			texture = 0;
 		}
-		texture = createTextureFromRGB8(videoFrame->m_frameBuffer, videoFrame->m_width, videoFrame->m_height);
+		texture = createTextureFromRGB8(videoFrame->m_frameBuffer, videoFrame->m_width, videoFrame->m_height, true, true);
 		sx = videoFrame->m_width;
 		sy = videoFrame->m_height;
 		//logDebug("gotVideo. t=%06dms", int(time * 1000.0));
