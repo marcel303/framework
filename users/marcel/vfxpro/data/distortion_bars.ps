@@ -1,0 +1,34 @@
+include ShaderConstants.h
+
+// todo : do output value correction based on incoming luminance and a lookup table
+
+uniform sampler2D colormap;
+varying vec2 texcoord;
+
+void main()
+{
+	vec2 screenCoord = texcoord * vec2(1024*3, 768); // todo
+	
+	vec2 pDir = vec2(distortionBarsData.px, distortionBarsData.py);
+	vec2 qDir = vec2(distortionBarsData.qx, distortionBarsData.qy);
+	
+	float p = dot(vec3(pDir, distortionBarsData.pd), vec3(screenCoord.x, screenCoord.y, -1.f));
+	float q = dot(vec3(qDir, distortionBarsData.qd), vec3(screenCoord.x, screenCoord.y, -1.f));
+	
+	p = abs(p);
+	q = abs(q);
+	
+	float strength = (cos(p * distortionBarsData.pScale) + 1.f) * .5f;
+	strength *= strength;
+	strength *= strength;
+	
+	strength *= clamp(1.f - q * distortionBarsData.qScale / 2.f, 0.f, 1.f);
+	
+	vec2 sampleCoord = texcoord - qDir * strength / 10.f;
+	
+	vec4 color = texture2D(colormap, sampleCoord);
+	
+	color += vec4(strength);
+	
+	gl_FragColor = color;
+}

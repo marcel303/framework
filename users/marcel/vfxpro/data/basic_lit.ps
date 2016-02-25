@@ -1,0 +1,19 @@
+include lighting.inc
+
+varying vec2 texcoord;
+varying vec3 position;
+varying vec3 normal;
+
+void main()
+{
+	vec3 diffuse;
+	vec3 specular;
+	
+	computeLighting(position, normal, diffuse, specular);
+	
+	vec3 color = diffuse;
+	float alpha = 1.f;
+	
+	gl_FragColor = vec4(color, alpha);
+	//gl_FragColor = vec4(1.f, 1.f, 1.f, 1.f);
+}

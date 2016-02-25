@@ -96,3 +96,26 @@ layout (std140) uniform LuminanceBlock
 };
 
 #endif
+
+// distortion bars post process
+
+struct DistortionBarsData
+{
+	float px;
+	float py;
+	float pd;
+	float qx;
+	float qy;
+	float qd;
+	float pScale;
+	float qScale;
+};
+
+#if _SHADER_
+
+layout (std140) uniform DistotionBarsBlock
+{
+	DistortionBarsData distortionBarsData;
+};
+
+#endif

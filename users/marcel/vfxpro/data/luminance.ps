@@ -1,0 +1,15 @@
+include ShaderConstants.h
+
+// todo : do output value correction based on incoming luminance and a lookup table
+
+uniform sampler2D colormap;
+varying vec2 texcoord;
+
+void main()
+{
+	vec4 color = texture2D(colormap, texcoord);
+	
+	color.rgb = pow(color.rgb, vec3(luminanceData.power)) * luminanceData.scale;
+	
+	gl_FragColor = color;
+}

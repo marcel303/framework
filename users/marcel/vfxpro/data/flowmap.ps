@@ -1,0 +1,51 @@
+include ShaderConstants.h
+
+// todo : do output value correction based on incoming luminance and a lookup table
+
+uniform sampler2D colormap;
+uniform sampler2D flowmap;
+uniform float time;
+varying vec2 texcoord;
+
+float circleDistance(vec2 pos)
+{
+	vec2 colormapSize = textureSize(colormap, 0);
+	
+	return length(pos - colormapSize / 2.f);
+}
+
+void main()
+{
+	vec2 colormapSize = textureSize(colormap, 0);
+	vec2 colormapSizeRcp = rcp(colormapSize);
+	
+#if 1
+	vec2 flowValue = (texture2D(flowmap, texcoord) - .5f).xy * 2.f;
+#else
+	vec2 flowCoord = texcoord * colormapSize;
+	vec2 flowValue;
+	//flowValue.x = sin((flowCoord.y) / 43.f) * .25f;
+	//flowValue.y = sin((flowCoord.x) / 63.f) + sin((flowCoord.y) / 63.f);
+	
+	flowValue.x = sin((flowCoord.y) / 31.f);
+	flowValue.y = sin((flowCoord.x) / 13.f) + sin((flowCoord.y / 63.f) / 63.f);
+	
+	//flowValue += vec2(2.0, 0.0);
+	//flowValue /= 100.f;
+	flowValue *= 100.f;
+#endif
+	//flowValue *= flowmapData.strength;
+	flowValue *= colormapSizeRcp;
+	
+	vec4 color = texture2D(colormap, texcoord + flowValue);
+	
+	//color = flowValue.xyxy;
+	//color = vec4(flowValue.xy + .5f, 0.f, 1.f);
+	
+	//float dist = circleDistance(flowCoord + flowValue * sin((time * 1.f + flowValue.x) * 2.f) * 100.f);
+	//bool inside = dist >= 95.f && dist <= 100.f;
+	//color = inside ? color + 1.f : color * .7f;
+	color = color * .9f;
+	
+	gl_FragColor = color;
+}

@@ -1,0 +1,31 @@
+include ShaderConstants.h
+
+uniform sampler2D colormap;
+uniform sampler2D jittermap;
+uniform float jitterStrength;
+uniform float time;
+
+varying vec2 texcoord;
+
+void main()
+{
+	vec4 jitter = texture2D(jittermap, vec2(texcoord.y, 0.0));
+	
+	float timeAmount = 0.8;
+	
+	{
+		float strength = (sin(time) + 1.0) / 2.0 - (1.0 - timeAmount);
+		strength = strength < 0.0 ? 0.0 : (strength / timeAmount);
+		jitter.x += sin(time * 10.0 + texcoord.y * 100.0) * 0.2 * strength * strength;
+	}
+	
+	{
+		float strength = (cos(time) + 1.0) / 2.0 - (1.0 - timeAmount);
+		strength = strength < 0.0 ? 0.0 : (strength / timeAmount);
+		jitter.y += cos(time * 10.0 + texcoord.x * 100.0) * 0.2 * strength * strength;
+	}
+	
+	vec4 color = texture2D(colormap, texcoord + jitter.xy * jitterStrength);
+	
+	gl_FragColor = color;
+}

@@ -1,0 +1,25 @@
+include ShaderConstants.h
+
+uniform sampler2D colormap;
+varying vec2 texcoord;
+
+vec4 sampleColormap(in vec4 color, in vec2 offset)
+{
+	return color + texture2D(colormap, texcoord + offset * vec2(boxblurData.radiusX, boxblurData.radiusY));
+}
+
+void main()
+{
+	// todo : add simple boxblur with integer offsets for texcoords
+	
+	vec4 color = vec4(0.0f);
+	
+	color = sampleColormap(color, vec2( 0, -1));
+	color = sampleColormap(color, vec2(-1,  0));
+	color = sampleColormap(color, vec2(+1,  0));
+	color = sampleColormap(color, vec2( 0, +1));
+	
+	color *= 0.25f;
+	
+	gl_FragColor = color;
+}
