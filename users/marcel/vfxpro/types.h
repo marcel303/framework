@@ -2,6 +2,8 @@
 
 #include "Debugging.h"
 #include <list>
+#include <map>
+#include <string>
 
 //
 
@@ -252,6 +254,48 @@ public:
 	operator float() const
 	{
 		return m_value;
+	}
+};
+
+struct TweenFloatCollection
+{
+	std::map<std::string, TweenFloat*> m_tweenVars;
+
+	void addVar(const char * name, TweenFloat & var)
+	{
+		m_tweenVars[name] = &var;
+	}
+
+	TweenFloat * getVar(const char * name)
+	{
+		auto i = m_tweenVars.find(name);
+
+		if (i == m_tweenVars.end())
+			return nullptr;
+		else
+			return i->second;
+	}
+
+	void tweenTo(const char * name, const float value, const float time, const EaseType easeType, const float easeParam)
+	{
+		auto i = m_tweenVars.find(name);
+
+		if (i != m_tweenVars.end())
+		{
+			TweenFloat * v = i->second;
+
+			v->to(value, time, easeType, easeParam);
+		}
+	}
+
+	void tick(const float dt)
+	{
+		for (auto i = m_tweenVars.begin(); i != m_tweenVars.end(); ++i)
+		{
+			TweenFloat * var = i->second;
+
+			var->tick(dt);
+		}
 	}
 };
 

@@ -6,8 +6,10 @@
 #include "audioin.h"
 #include "Calc.h"
 #include "config.h"
+#include "drawable.h"
 #include "framework.h"
 #include "Path.h"
+#include "scene.h"
 #include "Timer.h"
 #include "tinyxml2.h"
 #include "types.h"
@@ -128,117 +130,7 @@ static float virtualToScreenY(float y)
 
 */
 
-struct Drawable;
 struct Effect;
-
-struct Drawable
-{
-	float m_z;
-
-	Drawable(float z)
-		: m_z(z)
-	{
-	}
-
-	virtual ~Drawable()
-	{
-		// nop
-	}
-
-	virtual void draw() = 0;
-
-	bool operator<(const Drawable * other) const
-	{
-		return m_z > other->m_z;
-	}
-};
-
-struct DrawableList
-{
-	static const int kMaxDrawables = 1024;
-
-	int numDrawables;
-	Drawable * drawables[kMaxDrawables];
-
-	DrawableList()
-		: numDrawables(0)
-	{
-	}
-
-	~DrawableList()
-	{
-		// todo : use a transient allocator instead of malloc/free
-
-		for (int i = 0; i < numDrawables; ++i)
-		{
-			delete drawables[i];
-			drawables[i] = nullptr;
-		}
-
-		numDrawables = 0;
-	}
-
-	void add(Drawable * drawable)
-	{
-		assert(numDrawables < kMaxDrawables);
-
-		if (numDrawables < kMaxDrawables)
-		{
-			drawables[numDrawables++] = drawable;
-		}
-	}
-
-	void sort()
-	{
-		std::sort(drawables, drawables + numDrawables);
-	}
-
-	void draw()
-	{
-		for (int i = 0; i < numDrawables; ++i)
-		{
-			drawables[i]->draw();
-		}
-	}
-};
-
-void * operator new(size_t size, DrawableList & list)
-{
-	Drawable * drawable = (Drawable*)malloc(size);
-
-	list.add(drawable);
-
-	return drawable;
-}
-
-void operator delete(void * p, DrawableList & list)
-{
-	free(p);
-}
-
-//
-
-struct TweenFloatCollection
-{
-	std::map<std::string, TweenFloat*> m_tweenVars;
-
-	void addVar(const char * name, TweenFloat & var)
-	{
-		m_tweenVars[name] = &var;
-	}
-
-	void tweenTo(const char * name, const float value, const float time, const EaseType easeType, const float easeParam)
-	{
-		auto i = m_tweenVars.find(name);
-
-		if (i != m_tweenVars.end())
-		{
-			TweenFloat * v = i->second;
-
-			v->to(value, time, easeType, easeParam);
-		}
-	}
-};
 
 //
 
@@ -1277,510 +1169,470 @@ struct Effect_Video : Effect
 
 //
 
-struct SceneEffect;
-struct SceneAction;
-struct SceneEvent;
-struct SceneLayer;
-struct Scene;
-
-struct SceneEffect
+SceneEffect::SceneEffect()
+	: m_effect(nullptr)
 {
-	std::string m_name;
-	Effect * m_effect;
+}
 
-	SceneEffect()
-		: m_effect(nullptr)
+SceneEffect::~SceneEffect()
+{
+	delete m_effect;
+	m_effect = nullptr;
+}
+
+bool SceneEffect::load(const XMLElement * xmlEffect)
+{
+	m_name = stringAttrib(xmlEffect, "name", "");
+
+	const std::string type = stringAttrib(xmlEffect, "type", "");
+
+	if (type == "rain")
 	{
-	}
+		const int numRaindrops = intAttrib(xmlEffect, "num_raindrops", 0);
 
-	~SceneEffect()
-	{
-		delete m_effect;
-		m_effect = nullptr;
-	}
-
-	bool load(const XMLElement * xmlEffect)
-	{
-		m_name = stringAttrib(xmlEffect, "name", "");
-
-		const std::string type = stringAttrib(xmlEffect, "type", "");
-
-		if (type == "rain")
+		if (numRaindrops == 0)
 		{
-			const int numRaindrops = intAttrib(xmlEffect, "num_raindrops", 0);
-
-			if (numRaindrops == 0)
-			{
-				logWarning("num_raindrops is 0. skipping effect");
-			}
-			else
-			{
-				m_effect = new Effect_Rain(m_name.c_str(), numRaindrops);
-			}
-
-			return true;
+			logWarning("num_raindrops is 0. skipping effect");
 		}
 		else
 		{
-			logError("unknown effect type: %s", type.c_str());
-			return false;
+			m_effect = new Effect_Rain(m_name.c_str(), numRaindrops);
 		}
-	}
-};
 
-struct SceneLayer
+		return true;
+	}
+	else
+	{
+		logError("unknown effect type: %s", type.c_str());
+		return false;
+	}
+}
+
+SceneLayer::SceneLayer()
+	: m_blendMode(kBlendMode_Add)
+	, m_autoClear(true)
+	, m_opacity(1.f)
 {
-	enum BlendMode
+	addVar("opacity", m_opacity);
+}
+
+SceneLayer::~SceneLayer()
+{
+	for (auto i = m_effects.begin(); i != m_effects.end(); ++i)
 	{
-		kBlendMode_Add,
-		kBlendMode_Subtract,
-		kBlendMode_Alpha,
-		kBlendMode_Opaque
-	};
+		SceneEffect * effect = *i;
 
-	std::string m_name;
-	BlendMode m_blendMode;
-	bool m_autoClear;
-
-	std::vector<SceneEffect*> m_effects;
-
-	SceneLayer()
-		: m_blendMode(kBlendMode_Add)
-		, m_autoClear(true)
-	{
+		delete effect;
 	}
 
-	~SceneLayer()
-	{
-		for (auto i = m_effects.begin(); i != m_effects.end(); ++i)
-		{
-			SceneEffect * effect = *i;
+	m_effects.clear();
+}
 
-			delete effect;
-		}
+void SceneLayer::load(const XMLElement * xmlLayer)
+{
+	m_name = stringAttrib(xmlLayer, "name", "");
 
-		m_effects.clear();
-	}
+	std::string blend = stringAttrib(xmlLayer, "blend", "add");
 
-	void load(const XMLElement * xmlLayer)
-	{
-		m_name = stringAttrib(xmlLayer, "name", "");
+	m_blendMode = kBlendMode_Add;
 
-		std::string blend = stringAttrib(xmlLayer, "blend", "add");
-
+	if (blend == "add")
 		m_blendMode = kBlendMode_Add;
+	else if (blend == "subtract")
+		m_blendMode = kBlendMode_Subtract;
+	else if (blend == "alpha")
+		m_blendMode = kBlendMode_Alpha;
+	else if (blend == "opaque")
+		m_blendMode = kBlendMode_Opaque;
+	else
+		logWarning("unknown blend type: %s", blend.c_str());
 
-		if (blend == "add")
-			m_blendMode = kBlendMode_Add;
-		else if (blend == "subtract")
-			m_blendMode = kBlendMode_Subtract;
-		else if (blend == "alpha")
-			m_blendMode = kBlendMode_Alpha;
-		else if (blend == "opaque")
-			m_blendMode = kBlendMode_Opaque;
+	m_autoClear = boolAttrib(xmlLayer, "auto_clear", true);
+
+	//
+
+	for (const XMLElement * xmlEffect = xmlLayer->FirstChildElement("effect"); xmlEffect; xmlEffect = xmlEffect->NextSiblingElement("effect"))
+	{
+		SceneEffect * effect = new SceneEffect();
+
+		if (!effect->load(xmlEffect))
+		{
+			delete effect;
+			effect = nullptr;
+		}
 		else
-			logWarning("unknown blend type: %s", blend.c_str());
-
-		m_autoClear = boolAttrib(xmlLayer, "auto_clear", true);
-
-		//
-
-		for (const XMLElement * xmlEffect = xmlLayer->FirstChildElement("effect"); xmlEffect; xmlEffect = xmlEffect->NextSiblingElement("effect"))
 		{
-			SceneEffect * effect = new SceneEffect();
-
-			if (!effect->load(xmlEffect))
-			{
-				delete effect;
-				effect = nullptr;
-			}
-			else
-			{
-				m_effects.push_back(effect);
-			}
+			m_effects.push_back(effect);
 		}
 	}
+}
 
-	void tick(const float dt)
-	{
-		for (auto i = m_effects.begin(); i != m_effects.end(); ++i)
-		{
-			SceneEffect * effect = *i;
-
-			effect->m_effect->tick(dt);
-		}
-	}
-
-	void draw(DrawableList & drawableList)
-	{
-		// todo : compose
-
-		for (auto i = m_effects.begin(); i != m_effects.end(); ++i)
-		{
-			SceneEffect * effect = *i;
-
-			effect->m_effect->draw(drawableList);
-		}
-	}
-};
-
-struct SceneAction
+void SceneLayer::tick(const float dt)
 {
-	enum ActionType
+	TweenFloatCollection::tick(dt);
+
+	for (auto i = m_effects.begin(); i != m_effects.end(); ++i)
 	{
-		kActionType_None,
-		kActionType_Tween
+		SceneEffect * effect = *i;
+
+		effect->m_effect->tick(dt);
+	}
+}
+
+void SceneLayer::draw(DrawableList & drawableList)
+{
+	struct SceneLayerDrawable : Drawable
+	{
+		SceneLayer * m_layer;
+
+		SceneLayerDrawable(float z, SceneLayer * layer)
+			: Drawable(z)
+			, m_layer(layer)
+		{
+		}
+
+		virtual void draw() override
+		{
+			m_layer->draw();
+		}
 	};
 
-	ActionType m_type;
+	new (drawableList) SceneLayerDrawable(0.f, this);
+}
 
-	struct Tween
+void SceneLayer::draw()
+{
+	// todo : compose
+
+	setColorf(1.f, 1.f, 1.f, m_opacity);
+	drawRect(0, 0, GFX_SX, GFX_SY);
+
+	DrawableList drawableList;
+
+	for (auto i = m_effects.begin(); i != m_effects.end(); ++i)
 	{
-		enum TargetType
-		{
-			kTargetType_Layer,
-			kTargetType_Effect
-		};
+		SceneEffect * effect = *i;
 
-		TargetType m_targetType;
-		std::string m_targetName;
-		std::string m_varName;
-		float m_tweenTo;
-		float m_tweenTime;
-		EaseType m_easeType;
-		float m_easeParam;
-		bool m_replaceTween;
-	} m_tween;
-
-	SceneAction()
-		: m_type(kActionType_None)
-	{
+		effect->m_effect->draw(drawableList);
 	}
 
-	bool load(const XMLElement * xmlAction)
+	drawableList.sort();
+	drawableList.draw();
+}
+
+SceneAction::SceneAction()
+	: m_type(kActionType_None)
+{
+}
+
+bool SceneAction::load(const XMLElement * xmlAction)
+{
+	const std::string type = xmlAction->Name();
+
+	if (type == "tween")
 	{
-		const std::string type = xmlAction->Name();
+		m_type = kActionType_Tween;
 
-		if (type == "tween")
+		const std::string layer = stringAttrib(xmlAction, "layer", "");
+		const std::string effect = stringAttrib(xmlAction, "effect", "");
+
+		if (!layer.empty() + !effect.empty() > 1)
 		{
-			m_type = kActionType_Tween;
-
-			const std::string layer = stringAttrib(xmlAction, "layer", "");
-			const std::string effect = stringAttrib(xmlAction, "effect", "");
-
-			if (!layer.empty() + !effect.empty() > 1)
-			{
-				logError("more than one target type set on effect action!");
-				return false;
-			}
-
-			if (!layer.empty())
-			{
-				m_tween.m_targetType = Tween::kTargetType_Layer;
-				m_tween.m_targetName = layer;
-			}
-			else if (!effect.empty())
-			{
-				m_tween.m_targetType = Tween::kTargetType_Effect;
-				m_tween.m_targetName = effect;
-			}
-
-			m_tween.m_varName = stringAttrib(xmlAction, "var", "");
-			m_tween.m_tweenTo = floatAttrib(xmlAction, "to", 0.f);
-			m_tween.m_tweenTime = floatAttrib(xmlAction, "time", 1.f);
-
-			const std::string easeType = stringAttrib(xmlAction, "ease", "linear");
-			m_tween.m_easeType = kEaseType_Linear;
-			if (easeType == "linear")
-				m_tween.m_easeType = kEaseType_Linear;
-			else if (easeType == "pow_in")
-				m_tween.m_easeType = kEaseType_PowIn;
-			else if (easeType == "pow_out")
-				m_tween.m_easeType = kEaseType_PowOut;
-			else
-				logError("unknown ease type: %s", easeType.c_str());
-			m_tween.m_easeParam = floatAttrib(xmlAction, "ease_param", 1.f);
-			m_tween.m_replaceTween = boolAttrib(xmlAction, "replace", false);
-
-			return true;
-		}
-		else
-		{
-			logError("unknown event action: %s", type.c_str());
+			logError("more than one target type set on effect action!");
 			return false;
 		}
-	}
-};
 
-struct SceneEvent
-{
-	std::string m_name;
-	std::vector<SceneAction*> m_actions;
-
-	SceneEvent()
-	{
-	}
-
-	~SceneEvent()
-	{
-		for (auto i = m_actions.begin(); i != m_actions.end(); ++i)
+		if (!layer.empty())
 		{
-			SceneAction * action = *i;
-
-			delete action;
+			m_tween.m_targetType = Tween::kTargetType_Layer;
+			m_tween.m_targetName = layer;
+		}
+		else if (!effect.empty())
+		{
+			m_tween.m_targetType = Tween::kTargetType_Effect;
+			m_tween.m_targetName = effect;
 		}
 
-		m_actions.clear();
+		m_tween.m_varName = stringAttrib(xmlAction, "var", "");
+		m_tween.m_tweenTo = floatAttrib(xmlAction, "to", 0.f);
+		m_tween.m_tweenTime = floatAttrib(xmlAction, "time", 1.f);
+
+		const std::string easeType = stringAttrib(xmlAction, "ease", "linear");
+		m_tween.m_easeType = kEaseType_Linear;
+		if (easeType == "linear")
+			m_tween.m_easeType = kEaseType_Linear;
+		else if (easeType == "pow_in")
+			m_tween.m_easeType = kEaseType_PowIn;
+		else if (easeType == "pow_out")
+			m_tween.m_easeType = kEaseType_PowOut;
+		else
+			logError("unknown ease type: %s", easeType.c_str());
+		m_tween.m_easeParam = floatAttrib(xmlAction, "ease_param", 1.f);
+		m_tween.m_replaceTween = boolAttrib(xmlAction, "replace", false);
+
+		return true;
+	}
+	else
+	{
+		logError("unknown event action: %s", type.c_str());
+		return false;
+	}
+}
+
+SceneEvent::SceneEvent()
+{
+}
+
+SceneEvent::~SceneEvent()
+{
+	for (auto i = m_actions.begin(); i != m_actions.end(); ++i)
+	{
+		SceneAction * action = *i;
+
+		delete action;
 	}
 
-	void execute(Scene & scene)
+	m_actions.clear();
+}
+
+void SceneEvent::execute(Scene & scene)
+{
+	for (auto i = m_actions.begin(); i != m_actions.end(); ++i)
 	{
-#if 0
-		for (auto i = m_actions.begin(); i != m_actions.end(); ++i)
+		SceneAction * action = *i;
+
+		switch (action->m_type)
 		{
-			SceneAction * action = *i;
-
-			switch (action->m_type)
+		case SceneAction::kActionType_Tween:
 			{
-			case SceneAction::kActionType_Tween:
+				TweenFloatCollection * varCollection = nullptr;
+
+				switch (action->m_tween.m_targetType)
 				{
-					TweenFloatCollection * varCollection = nullptr;
-
-					switch (action->m_tween.m_targetType)
+				case SceneAction::Tween::kTargetType_Layer:
 					{
-					case SceneAction::Tween::kTargetType_Layer:
+						for (auto l = scene.m_layers.begin(); l != scene.m_layers.end(); ++l)
 						{
-							for (auto l = scene.m_layers.begin(); l != scene.m_layers.end(); ++l)
-							{
-								SceneLayer * layer = *l;
+							SceneLayer * layer = *l;
 
-								if (layer->m_name == action->m_tween.m_targetName)
-								{
-									varCollection = layer;
-								}
+							if (layer->m_name == action->m_tween.m_targetName)
+							{
+								varCollection = layer;
 							}
 						}
-						break;
-
-					case SceneAction::Tween::kTargetType_Effect:
-						{
-						}
-						break;
-
-					default:
-						Assert(false);
-						break;
 					}
+					break;
 
-					if (varCollection == 0)
+				case SceneAction::Tween::kTargetType_Effect:
 					{
-						logWarning("couldn't find tween target by name. name=%s", action->m_tween.m_targetName.c_str());
+					}
+					break;
+
+				default:
+					Assert(false);
+					break;
+				}
+
+				if (varCollection == 0)
+				{
+					logWarning("couldn't find tween target by name. name=%s", action->m_tween.m_targetName.c_str());
+				}
+				else
+				{
+					TweenFloat * var = varCollection->getVar(action->m_tween.m_varName.c_str());
+
+					if (var == 0)
+					{
+						logWarning("couldn't find tween value by name. name=%s", action->m_tween.m_varName.c_str());
 					}
 					else
 					{
-						TweenFloat * var = varCollection->getVar(action->m_tween.m_varName.c_str());
-
-						if (var == 0)
-						{
-							logWarning("couldn't find tween value by name. name=%s", action->m_tween.m_varName.c_str());
-						}
-						else
-						{
-							var->to(
-								action->m_tween.m_tweenTo,
-								action->m_tween.m_tweenTime,
-								action->m_tween.m_easeType,
-								action->m_tween.m_easeParam);
-						}
+						var->to(
+							action->m_tween.m_tweenTo,
+							action->m_tween.m_tweenTime,
+							action->m_tween.m_easeType,
+							action->m_tween.m_easeParam);
 					}
 				}
-				break;
-
-			default:
-				Assert(false);
-				break;
 			}
-		}
-#endif
-	}
+			break;
 
-	void load(const XMLElement * xmlEvent)
-	{
-		m_name = stringAttrib(xmlEvent, "name", "");
-
-		for (const XMLElement * xmlAction = xmlEvent->FirstChildElement(); xmlAction; xmlAction = xmlAction->NextSiblingElement())
-		{
-			SceneAction * action = new SceneAction();
-
-			if (!action->load(xmlAction))
-			{
-				delete action;
-			}
-			else
-			{
-				m_actions.push_back(action);
-			}
+		default:
+			Assert(false);
+			break;
 		}
 	}
-};
+}
 
-struct Scene
+void SceneEvent::load(const XMLElement * xmlEvent)
 {
-	std::string m_name;
-	std::vector<SceneLayer*> m_layers;
-	std::vector<SceneEvent*> m_events;
+	m_name = stringAttrib(xmlEvent, "name", "");
 
-	Scene()
+	for (const XMLElement * xmlAction = xmlEvent->FirstChildElement(); xmlAction; xmlAction = xmlAction->NextSiblingElement())
 	{
-	}
+		SceneAction * action = new SceneAction();
 
-	~Scene()
-	{
-		for (auto i = m_layers.begin(); i != m_layers.end(); ++i)
+		if (!action->load(xmlAction))
 		{
-			SceneLayer * layer = *i;
-
-			delete layer;
+			delete action;
 		}
-
-		m_layers.clear();
-
-		//
-
-		for (auto i = m_events.begin(); i != m_events.end(); ++i)
+		else
 		{
-			SceneEvent * event = *i;
-
-			delete event;
-		}
-
-		m_events.clear();
-	}
-
-	void tick(const float dt)
-	{
-		for (auto i = m_layers.begin(); i != m_layers.end(); ++i)
-		{
-			SceneLayer * layer = *i;
-
-			layer->tick(dt);
+			m_actions.push_back(action);
 		}
 	}
+}
 
-	void draw(DrawableList & drawableList)
+Scene::Scene()
+{
+}
+
+Scene::~Scene()
+{
+	for (auto i = m_layers.begin(); i != m_layers.end(); ++i)
 	{
-		for (auto i = m_layers.begin(); i != m_layers.end(); ++i)
-		{
-			SceneLayer * layer = *i;
+		SceneLayer * layer = *i;
 
-			layer->draw(drawableList);
-		}
+		delete layer;
 	}
 
-	void triggerEvent(const char * name)
-	{
-		for (auto i = m_events.begin(); i != m_events.end(); ++i)
-		{
-			SceneEvent * event = *i;
+	m_layers.clear();
 
-			if (event->m_name == name)
-			{
-				event->execute(*this);
-			}
-		}
+	//
+
+	for (auto i = m_events.begin(); i != m_events.end(); ++i)
+	{
+		SceneEvent * event = *i;
+
+		delete event;
 	}
 
-	bool load(const char * filename)
+	m_events.clear();
+}
+
+void Scene::tick(const float dt)
+{
+	for (auto i = m_layers.begin(); i != m_layers.end(); ++i)
 	{
-		bool result = true;
+		SceneLayer * layer = *i;
 
-		tinyxml2::XMLDocument xmlDoc;
+		layer->tick(dt);
+	}
+}
 
-		if (xmlDoc.LoadFile(filename) != XML_NO_ERROR)
+void Scene::draw(DrawableList & drawableList)
+{
+	for (auto i = m_layers.begin(); i != m_layers.end(); ++i)
+	{
+		SceneLayer * layer = *i;
+
+		layer->draw(drawableList);
+	}
+}
+
+void Scene::triggerEvent(const char * name)
+{
+	for (auto i = m_events.begin(); i != m_events.end(); ++i)
+	{
+		SceneEvent * event = *i;
+
+		if (event->m_name == name)
 		{
-			logError("failed to load %s", filename);
+			event->execute(*this);
+		}
+	}
+}
+
+bool Scene::load(const char * filename)
+{
+	bool result = true;
+
+	tinyxml2::XMLDocument xmlDoc;
+
+	if (xmlDoc.LoadFile(filename) != XML_NO_ERROR)
+	{
+		logError("failed to load %s", filename);
+
+		result = false;
+	}
+	else
+	{
+		const XMLElement * xmlScene = xmlDoc.FirstChildElement("scene");
+
+		if (xmlScene == 0)
+		{
+			logError("missing <scene> element");
 
 			result = false;
 		}
 		else
 		{
-			const XMLElement * xmlScene = xmlDoc.FirstChildElement("scene");
+			m_name = stringAttrib(xmlScene, "name", "");
 
-			if (xmlScene == 0)
+			if (m_name.empty())
 			{
-				logError("missing <scene> element");
+				logWarning("scene name not set!");
+			}
 
-				result = false;
+			//
+
+			const XMLElement * xmlLayers = xmlScene->FirstChildElement("layers");
+
+			if (xmlLayers == 0)
+			{
+				logWarning("no layers found in scene!");
 			}
 			else
 			{
-				m_name = stringAttrib(xmlScene, "name", "");
-
-				if (m_name.empty())
+				for (const XMLElement * xmlLayer = xmlLayers->FirstChildElement("layer"); xmlLayer; xmlLayer = xmlLayer->NextSiblingElement("layer"))
 				{
-					logWarning("scene name not set!");
-				}
+					SceneLayer * layer = new SceneLayer();
 
-				//
+					layer->load(xmlLayer);
 
-				const XMLElement * xmlLayers = xmlScene->FirstChildElement("layers");
-
-				if (xmlLayers == 0)
-				{
-					logWarning("no layers found in scene!");
-				}
-				else
-				{
-					for (const XMLElement * xmlLayer = xmlLayers->FirstChildElement("layer"); xmlLayer; xmlLayer = xmlLayer->NextSiblingElement("layer"))
-					{
-						SceneLayer * layer = new SceneLayer();
-
-						layer->load(xmlLayer);
-
-						m_layers.push_back(layer);
-					}
-				}
-
-				//
-
-				const XMLElement * xmlEvents = xmlScene->FirstChildElement("events");
-
-				if (xmlEvents == 0)
-				{
-					logDebug("scene doesn't have any events");
-				}
-				else
-				{
-					for (const XMLElement * xmlEvent = xmlEvents->FirstChildElement("event"); xmlEvent; xmlEvent = xmlEvent->NextSiblingElement("event"))
-					{
-						SceneEvent * event = new SceneEvent();
-
-						event->load(xmlEvent);
-
-						m_events.push_back(event);
-					}
+					m_layers.push_back(layer);
 				}
 			}
 
 			//
 
-			const XMLElement * xmlMidi = xmlScene->FirstChildElement("midi");
+			const XMLElement * xmlEvents = xmlScene->FirstChildElement("events");
 
-			if (xmlMidi == 0)
+			if (xmlEvents == 0)
 			{
-				logDebug("scene doesn't have any MIDI mappings");
+				logDebug("scene doesn't have any events");
 			}
 			else
 			{
-				for (const XMLElement * xmlMidiMap = xmlMidi->FirstChildElement("map"); xmlMidiMap; xmlMidiMap = xmlMidiMap->NextSiblingElement("map"))
+				for (const XMLElement * xmlEvent = xmlEvents->FirstChildElement("event"); xmlEvent; xmlEvent = xmlEvent->NextSiblingElement("event"))
 				{
+					SceneEvent * event = new SceneEvent();
+
+					event->load(xmlEvent);
+
+					m_events.push_back(event);
 				}
 			}
 		}
 
-		return result;
+		//
+
+		const XMLElement * xmlMidi = xmlScene->FirstChildElement("midi");
+
+		if (xmlMidi == 0)
+		{
+			logDebug("scene doesn't have any MIDI mappings");
+		}
+		else
+		{
+			for (const XMLElement * xmlMidiMap = xmlMidi->FirstChildElement("map"); xmlMidiMap; xmlMidiMap = xmlMidiMap->NextSiblingElement("map"))
+			{
+			}
+		}
 	}
-};
+
+	return result;
+}
 
 //
 
