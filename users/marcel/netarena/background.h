@@ -15,7 +15,7 @@ struct Theme
 
 	Theme()
 	{
-		for (int i = 0; i < numBackgroundLayers; ++i)
+		for (int i = 0; i < kMaxBackgroundLayers; ++i)
 			backgroundParallax[i] = 1.f;
 		numBackgroundLayers = 0;
 	}

@@ -1452,6 +1452,7 @@ void initArenaData()
 				theme.backgroundParallax[i] = d.getInt(name, 100) / 100.f;
 			}
 			theme.numBackgroundLayers = d.getInt("background_layers", 0);
+			Assert(theme.numBackgroundLayers <= Theme::kMaxBackgroundLayers);
 			g_themes.push_back(theme);
 		}
 	}
