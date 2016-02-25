@@ -235,6 +235,7 @@ public:
 	int numSoundSources;
 	int windowX;
 	int windowY;
+	bool windowBorder;
 	std::string windowTitle;
 	std::string windowIcon;
 	bool windowIsActive;

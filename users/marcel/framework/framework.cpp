@@ -81,6 +81,7 @@ Framework::Framework()
 	filedrop = false;
 	windowX = -1;
 	windowY = -1;
+	windowBorder = true;
 	windowTitle.clear();
 	windowIsActive = false;
 	numSoundSources = 32;
@@ -234,6 +235,9 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 			return false;
 		}
 	}
+
+	if (!windowBorder)
+		flags |= SDL_WINDOW_BORDERLESS;
 
 	globals.window = SDL_CreateWindow(
 		windowTitle.c_str(),
@@ -464,6 +468,7 @@ bool Framework::shutdown()
 	numSoundSources = 32;
 	windowX = -1;
 	windowY = -1;
+	windowBorder = true;
 	windowTitle.clear();
 	windowIsActive = false;
 	actionHandler = 0;
