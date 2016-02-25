@@ -130,6 +130,36 @@ static float virtualToScreenY(float y)
 
 */
 
+//
+
+Scene * g_currentScene = nullptr;
+SceneLayer * g_currentSceneLayer = nullptr;
+Surface * g_currentSurface = nullptr;
+
+template <typename T, T * R>
+struct ScopedBlock
+{
+	T m_oldValue;
+
+	ScopedBlock(T value)
+	{
+		m_oldValue = *R;
+
+		*R = value;
+	}
+
+	~ScopedBlock()
+	{
+		*R = m_oldValue;
+	}
+};
+
+typedef ScopedBlock<Scene*, &g_currentScene> ScopedSceneBlock;
+typedef ScopedBlock<SceneLayer*, &g_currentSceneLayer> ScopedSceneLayerBlock;
+typedef ScopedBlock<Surface*, &g_currentSurface> ScopedSurfaceBlock;
+
+//
+
 struct Effect;
 
 //
@@ -634,10 +664,10 @@ struct Effect_StarCluster : Effect
 	}
 };
 
-#define CLOTHPIECE_MAX_SX 16
-#define CLOTHPIECE_MAX_SY 16
+#define CLOTH_MAX_SX 16
+#define CLOTH_MAX_SY 16
 
-struct ClothPiece : Effect
+struct Effect_Cloth : Effect
 {
 	struct Vertex
 	{
@@ -653,9 +683,9 @@ struct ClothPiece : Effect
 
 	int sx;
 	int sy;
-	Vertex vertices[CLOTHPIECE_MAX_SX][CLOTHPIECE_MAX_SY];
+	Vertex vertices[CLOTH_MAX_SX][CLOTH_MAX_SY];
 
-	ClothPiece(const char * name)
+	Effect_Cloth(const char * name)
 		: Effect(name)
 	{
 		sx = 0;
@@ -832,7 +862,7 @@ struct ClothPiece : Effect
 	}
 };
 
-struct SpriteSystem : Effect
+struct Effect_SpriteSystem : Effect
 {
 	static const int kMaxSprites = 128;
 
@@ -869,7 +899,7 @@ struct SpriteSystem : Effect
 
 	SpriteInfo m_sprites[kMaxSprites];
 
-	SpriteSystem(const char * name)
+	Effect_SpriteSystem(const char * name)
 		: Effect(name)
 	{
 	}
@@ -1167,6 +1197,50 @@ struct Effect_Video : Effect
 	}
 };
 
+struct Effect_Flowmap : Effect
+{
+	std::string m_map;
+	float m_strength;
+	float m_darken;
+
+	Effect_Flowmap(const char * name, const char * map, const float strength, const float darken)
+		: Effect(name)
+	{
+		m_map = map;
+		m_strength = strength;
+		m_darken = darken;
+	}
+
+	virtual void tick(const float dt) override
+	{
+	}
+
+	virtual void draw(DrawableList & list) override
+	{
+		new (list) EffectDrawable(this);
+	}
+
+	virtual void draw() override
+	{
+		setBlend(BLEND_OPAQUE);
+
+		Shader shader("flowmap");
+		setShader(shader);
+		shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
+		shader.setTexture("flowmap", 0, g_currentSurface->getTexture(), true, false); // todo
+		//shader.setImmediate("time", g_currentScene->m_time);
+		shader.setImmediate("time", framework.time); // todo
+		ShaderBuffer buffer;
+		FlowmapData data;
+		data.strength = m_strength;
+		buffer.setData(&data, sizeof(data));
+		shader.setBuffer("FlowmapBlock", buffer);
+		g_currentSurface->postprocess(shader);
+
+		setBlend(BLEND_ADD);
+	}
+};
+
 //
 
 SceneEffect::SceneEffect()
@@ -1197,6 +1271,23 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 		else
 		{
 			m_effect = new Effect_Rain(m_name.c_str(), numRaindrops);
+		}
+
+		return true;
+	}
+	else if (type == "flowmap")
+	{
+		const std::string map = stringAttrib(xmlEffect, "map", "");
+		const float strength = floatAttrib(xmlEffect, "strength", 1.f);
+		const float darken = floatAttrib(xmlEffect, "darken", 0.f);
+
+		if (map.empty())
+		{
+			logWarning("map not set. skipping effect");
+		}
+		else
+		{
+			m_effect = new Effect_Flowmap(m_name.c_str(), map.c_str(), strength, darken);
 		}
 
 		return true;
@@ -1269,6 +1360,8 @@ void SceneLayer::load(const XMLElement * xmlLayer)
 
 void SceneLayer::tick(const float dt)
 {
+	ScopedSceneLayerBlock block(this);
+
 	TweenFloatCollection::tick(dt);
 
 	for (auto i = m_effects.begin(); i != m_effects.end(); ++i)
@@ -1279,7 +1372,7 @@ void SceneLayer::tick(const float dt)
 	}
 }
 
-void SceneLayer::draw(DrawableList & drawableList)
+void SceneLayer::draw(DrawableList & list)
 {
 	struct SceneLayerDrawable : Drawable
 	{
@@ -1297,11 +1390,13 @@ void SceneLayer::draw(DrawableList & drawableList)
 		}
 	};
 
-	new (drawableList) SceneLayerDrawable(0.f, this);
+	new (list) SceneLayerDrawable(0.f, this);
 }
 
 void SceneLayer::draw()
 {
+	ScopedSceneLayerBlock block(this);
+
 	// todo : compose
 
 	setColorf(1.f, 1.f, 1.f, m_opacity);
@@ -1484,6 +1579,7 @@ void SceneEvent::load(const XMLElement * xmlEvent)
 }
 
 Scene::Scene()
+	: m_time(0.f)
 {
 }
 
@@ -1512,21 +1608,27 @@ Scene::~Scene()
 
 void Scene::tick(const float dt)
 {
+	ScopedSceneBlock block(this);
+
 	for (auto i = m_layers.begin(); i != m_layers.end(); ++i)
 	{
 		SceneLayer * layer = *i;
 
 		layer->tick(dt);
 	}
+
+	m_time += dt;
 }
 
-void Scene::draw(DrawableList & drawableList)
+void Scene::draw(DrawableList & list)
 {
+	ScopedSceneBlock block(this);
+
 	for (auto i = m_layers.begin(); i != m_layers.end(); ++i)
 	{
 		SceneLayer * layer = *i;
 
-		layer->draw(drawableList);
+		layer->draw(list);
 	}
 }
 
@@ -2112,18 +2214,16 @@ int main(int argc, char * argv[])
 		Scene * scene = new Scene();
 		scene->load("scene.xml");
 
-		scene->triggerEvent("fade_rain");
-
 		Effect_Rain rain("rain", 10000);
 
 		Effect_StarCluster starCluster("stars", 100);
 		starCluster.screenX = virtualToScreenX(0);
 		starCluster.screenY = virtualToScreenY(0);
 
-		ClothPiece clothPiece("cloth");
-		clothPiece.setup(CLOTHPIECE_MAX_SX, CLOTHPIECE_MAX_SY);
+		Effect_Cloth cloth("cloth");
+		cloth.setup(CLOTH_MAX_SX, CLOTH_MAX_SY);
 
-		SpriteSystem spriteSystem("sprites");
+		Effect_SpriteSystem spriteSystem("sprites");
 
 		Effect_Boxes boxes("boxes");
 		for (int b = 0; b < 2; ++b)
@@ -2313,6 +2413,9 @@ int main(int argc, char * argv[])
 				cameraRotation.SetZero();
 			}
 
+			if (keyboard.wentDown(SDLK_g))
+				scene->triggerEvent("fade_rain");
+
 			SDL_SetRelativeMouseMode(cameraControl ? SDL_TRUE : SDL_FALSE);
 
 			const float dtReal = Calc::Min(1.f / 30.f, framework.timeStep) * config.midiGetValue(100, 1.f);
@@ -2449,7 +2552,7 @@ int main(int argc, char * argv[])
 			starCluster.tick(dt);
 
 			for (int i = 0; i < 10; ++i)
-				clothPiece.tick(dt / 10.f);
+				cloth.tick(dt / 10.f);
 
 			spriteSystem.tick(dt);
 
@@ -2460,7 +2563,7 @@ int main(int argc, char * argv[])
 		#if 0
 			if ((rand() % 30) == 0)
 			{
-				clothPiece.vertices[rand() % clothPiece.sx][rand() % clothPiece.sy].vx += 20.f;
+				cloth.vertices[rand() % cloth.sx][rand() % cloth.sy].vx += 20.f;
 			}
 		#endif
 
@@ -2469,16 +2572,16 @@ int main(int argc, char * argv[])
 				const float mouseX = mouse.x / 40.f;
 				const float mouseY = mouse.y / 40.f;
 
-				for (int x = 0; x < clothPiece.sx; ++x)
+				for (int x = 0; x < cloth.sx; ++x)
 				{
-					const int y = clothPiece.sy - 1;
+					const int y = cloth.sy - 1;
 
-					ClothPiece::Vertex & v = clothPiece.vertices[x][y];
+					Effect_Cloth::Vertex & v = cloth.vertices[x][y];
 
 					const float dx = mouseX - v.x;
 					const float dy = mouseY - v.y;
 
-					const float a = x / float(clothPiece.sx - 1) * 30.f;
+					const float a = x / float(cloth.sx - 1) * 30.f;
 
 					v.vx += a * dx * dt;
 					v.vy += a * dy * dt;
@@ -2498,7 +2601,7 @@ int main(int argc, char * argv[])
 				starCluster.draw(drawableList);
 
 			if (drawCloth)
-				clothPiece.draw(drawableList);
+				cloth.draw(drawableList);
 
 			if (drawSprites)
 				spriteSystem.draw(drawableList);
@@ -2547,193 +2650,195 @@ int main(int argc, char * argv[])
 				}
 
 				pushSurface(&surface);
-
-				if (clearScreen)
 				{
-					glClearColor(0.f, 0.f, 0.f, 1.f);
-					glClear(GL_COLOR_BUFFER_BIT);
-				}
-				else
-				{
-					// basically BLEND_SUBTRACT, but keep the alpha channel in-tact
-					glEnable(GL_BLEND);
-					fassert(glBlendEquation);
-					if (glBlendEquation)
-						glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
-					glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
+					ScopedSurfaceBlock scopedBlock(&surface);
 
-					//setColorf(config.midiGetValue(102, 1.f), config.midiGetValue(102, 1.f)/2.f, config.midiGetValue(102, 1.f)/4.f, 1.f);
-					setColor(2, 2, 2, 255);
-					drawRect(0, 0, GFX_SX, GFX_SY);
-				}
-
-				setBlend(BLEND_ALPHA);
-
-			#if 1
-				for (int c = 0; c < kNumScreens; ++c)
-				{
-					const Camera & camera = cameras[c];
-
-					int sx;
-					int sy;
-
-					camera.beginView(c, sx, sy);
+					if (clearScreen)
 					{
-						setBlend(BLEND_ADD);
-
-						if (debugDraw)
-						{
-							drawTestObjects();
-						}
-
-						DrawableList drawableList;
-
-						if (drawBoxes)
-							boxes.draw(drawableList);
-
-						drawableList.sort();
-
-						drawableList.draw();
-
-					#if 1
-						if (drawPCM && ((c == 0) || (c == 2)) && audioInHistorySize > 0)
-						{
-							applyTransformWithViewportSize(sx, sy);
-
-							setColor(colorWhite);
-
-							glLineWidth(1.5f);
-							gxBegin(GL_LINES);
-							{
-								const float scaleX = GFX_SX / float(numSamplesThisFrame - 2);
-								const float scaleY = 300.f / float(1 << 15);
-
-								for (int i = 0; i < numSamplesThisFrame - 1; ++i)
-								{
-									gxVertex2f((i + 0) * scaleX, GFX_SY/2.f + samplesThisFrame[i + 0] * scaleY);
-									gxVertex2f((i + 1) * scaleX, GFX_SY/2.f + samplesThisFrame[i + 1] * scaleY);
-								}
-							}
-							gxEnd();
-							glLineWidth(1.f);
-						}
-					#endif
-
-						setBlend(BLEND_ALPHA);
+						glClearColor(0.f, 0.f, 0.f, 1.f);
+						glClear(GL_COLOR_BUFFER_BIT);
 					}
-					camera.endView();
+					else
+					{
+						// basically BLEND_SUBTRACT, but keep the alpha channel in-tact
+						glEnable(GL_BLEND);
+						fassert(glBlendEquation);
+						if (glBlendEquation)
+							glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
+						glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
+
+						//setColorf(config.midiGetValue(102, 1.f), config.midiGetValue(102, 1.f)/2.f, config.midiGetValue(102, 1.f)/4.f, 1.f);
+						setColor(2, 2, 2, 255);
+						drawRect(0, 0, GFX_SX, GFX_SY);
+					}
+
+					setBlend(BLEND_ALPHA);
+
+				#if 1
+					for (int c = 0; c < kNumScreens; ++c)
+					{
+						const Camera & camera = cameras[c];
+
+						int sx;
+						int sy;
+
+						camera.beginView(c, sx, sy);
+						{
+							setBlend(BLEND_ADD);
+
+							if (debugDraw)
+							{
+								drawTestObjects();
+							}
+
+							DrawableList drawableList;
+
+							if (drawBoxes)
+								boxes.draw(drawableList);
+
+							drawableList.sort();
+
+							drawableList.draw();
+
+						#if 1
+							if (drawPCM && ((c == 0) || (c == 2)) && audioInHistorySize > 0)
+							{
+								applyTransformWithViewportSize(sx, sy);
+
+								setColor(colorWhite);
+
+								glLineWidth(1.5f);
+								gxBegin(GL_LINES);
+								{
+									const float scaleX = GFX_SX / float(numSamplesThisFrame - 2);
+									const float scaleY = 300.f / float(1 << 15);
+
+									for (int i = 0; i < numSamplesThisFrame - 1; ++i)
+									{
+										gxVertex2f((i + 0) * scaleX, GFX_SY/2.f + samplesThisFrame[i + 0] * scaleY);
+										gxVertex2f((i + 1) * scaleX, GFX_SY/2.f + samplesThisFrame[i + 1] * scaleY);
+									}
+								}
+								gxEnd();
+								glLineWidth(1.f);
+							}
+						#endif
+
+							setBlend(BLEND_ALPHA);
+						}
+						camera.endView();
+					}
+				#endif
+
+					setBlend(BLEND_ADD);
+					drawableList.draw();
+
+					setColorf(.25f, .5f, 1.f, loudnessThisFrame / 8.f);
+					drawRect(0, 0, GFX_SX, GFX_SY);
+
+					// test effect
+
+					if (postProcess)
+					{
+						setBlend(BLEND_OPAQUE);
+						Shader & shader = jitterShader;
+						shader.setTexture("colormap", 0, surface.getTexture(), true, false);
+						shader.setTexture("jittermap", 1, 0, true, true);
+						shader.setImmediate("jitterStrength", 1.f);
+						shader.setImmediate("time", time);
+						surface.postprocess(shader);
+					}
+
+					static volatile bool doBoxblur = false;
+					static volatile bool doLuminance = false;
+					static volatile bool doFlowmap = false;
+					static volatile bool doDistortionBars = false;
+					static volatile bool doFxaa = false;
+
+					if (doBoxblur)
+					{
+						setBlend(BLEND_OPAQUE);
+						Shader & shader = boxblurShader;
+						setShader(shader);
+						shader.setTexture("colormap", 0, surface.getTexture(), true, false);
+						ShaderBuffer buffer;
+						BoxblurData data;
+						const float radius = 2.f;
+						data.radiusX = radius * (1.f / GFX_SX);
+						data.radiusY = radius * (1.f / GFX_SY);
+						buffer.setData(&data, sizeof(data));
+						shader.setBuffer("BoxblurBlock", buffer);
+						surface.postprocess(shader);
+					}
+
+					if (doLuminance)
+					{
+						setBlend(BLEND_OPAQUE);
+						Shader & shader = luminanceShader;
+						setShader(shader);
+						shader.setTexture("colormap", 0, surface.getTexture(), true, false);
+						ShaderBuffer buffer;
+						LuminanceData data;
+						data.power = cosf(framework.time) + 1.f + config.midiGetValue(104, 1.f / 8.f) * 8.f;
+						data.scale = 1.f * config.midiGetValue(103, 1.f);
+						buffer.setData(&data, sizeof(data));
+						shader.setBuffer("LuminanceBlock", buffer);
+						surface.postprocess(shader);
+					}
+
+					if (doFlowmap)
+					{
+						setBlend(BLEND_OPAQUE);
+						Shader & shader = flowmapShader;
+						setShader(shader);
+						shader.setTexture("colormap", 0, surface.getTexture(), true, false);
+						shader.setTexture("flowmap", 0, surface.getTexture(), true, false); // todo
+						shader.setImmediate("time", framework.time);
+						ShaderBuffer buffer;
+						FlowmapData data;
+						data.strength = cosf(framework.time) * 200.f;
+						buffer.setData(&data, sizeof(data));
+						shader.setBuffer("FlowmapBlock", buffer);
+						surface.postprocess(shader);
+					}
+
+					if (doDistortionBars)
+					{
+						setBlend(BLEND_OPAQUE);
+						Shader & shader = distortionBarsShader;
+						setShader(shader);
+						shader.setTexture("colormap", 0, surface.getTexture(), true, false);
+						ShaderBuffer buffer;
+						DistortionBarsData data;
+						Mat4x4 matR;
+						Mat4x4 matT;
+						matR.MakeRotationZ(framework.time * .1f);
+						//matT.MakeTranslation(GFX_SX/2.f, GFX_SY/2.f, 0.f);
+						matT.MakeTranslation(mouse.x, GFX_SY - mouse.y, 0.f);
+						Mat4x4 mat = matT * matR;
+						data.px = mat(0, 0);
+						data.py = mat(0, 1);
+						data.pd = mat(3, 0) * data.px + mat(3, 1) * data.py;
+						data.pScale = .1f;
+						data.qx = mat(1, 0);
+						data.qy = mat(1, 1);
+						data.qd = mat(3, 0) * data.qx + mat(3, 1) * data.qy;
+						data.qScale = 1.f / 200.f;
+						buffer.setData(&data, sizeof(data));
+						shader.setBuffer("DistotionBarsBlock", buffer); // fixme : block name
+						surface.postprocess(shader);
+					}
+
+					if (doFxaa)
+					{
+						setBlend(BLEND_OPAQUE);
+						Shader & shader = fxaaShader;
+						setShader(shader);
+						shader.setTexture("colormap", 0, surface.getTexture(), true, true);
+						shader.setImmediate("inverseVP", 1.f / (surface.getWidth() / framework.minification), 1.f / (surface.getHeight() / framework.minification));
+						surface.postprocess(shader);
+					}
 				}
-			#endif
-
-				setBlend(BLEND_ADD);
-				drawableList.draw();
-
-				setColorf(.25f, .5f, 1.f, loudnessThisFrame / 8.f);
-				drawRect(0, 0, GFX_SX, GFX_SY);
-
-				// test effect
-
-				if (postProcess)
-				{
-					setBlend(BLEND_OPAQUE);
-					Shader & shader = jitterShader;
-					shader.setTexture("colormap", 0, surface.getTexture(), true, false);
-					shader.setTexture("jittermap", 1, 0, true, true);
-					shader.setImmediate("jitterStrength", 1.f);
-					shader.setImmediate("time", time);
-					surface.postprocess(shader);
-				}
-
-				static volatile bool doBoxblur = false;
-				static volatile bool doLuminance = false;
-				static volatile bool doFlowmap = false;
-				static volatile bool doDistortionBars = false;
-				static volatile bool doFxaa = false;
-
-				if (doBoxblur)
-				{
-					setBlend(BLEND_OPAQUE);
-					Shader & shader = boxblurShader;
-					setShader(shader);
-					shader.setTexture("colormap", 0, surface.getTexture(), true, false);
-					ShaderBuffer buffer;
-					BoxblurData data;
-					const float radius = 2.f;
-					data.radiusX = radius * (1.f / GFX_SX);
-					data.radiusY = radius * (1.f / GFX_SY);
-					buffer.setData(&data, sizeof(data));
-					shader.setBuffer("BoxblurBlock", buffer);
-					surface.postprocess(shader);
-				}
-
-				if (doLuminance)
-				{
-					setBlend(BLEND_OPAQUE);
-					Shader & shader = luminanceShader;
-					setShader(shader);
-					shader.setTexture("colormap", 0, surface.getTexture(), true, false);
-					ShaderBuffer buffer;
-					LuminanceData data;
-					data.power = cosf(framework.time) + 1.f + config.midiGetValue(104, 1.f / 8.f) * 8.f;
-					data.scale = 1.f * config.midiGetValue(103, 1.f);
-					buffer.setData(&data, sizeof(data));
-					shader.setBuffer("LuminanceBlock", buffer);
-					surface.postprocess(shader);
-				}
-
-				if (doFlowmap)
-				{
-					setBlend(BLEND_OPAQUE);
-					Shader & shader = flowmapShader;
-					setShader(shader);
-					shader.setTexture("colormap", 0, surface.getTexture(), true, false);
-					shader.setTexture("flowmap", 0, surface.getTexture(), true, false); // todo
-					shader.setImmediate("time", framework.time);
-					ShaderBuffer buffer;
-					FlowmapData data;
-					data.strength = cosf(framework.time) * 200.f;
-					buffer.setData(&data, sizeof(data));
-					shader.setBuffer("FlowmapBlock", buffer);
-					surface.postprocess(shader);
-				}
-
-				if (doDistortionBars)
-				{
-					setBlend(BLEND_OPAQUE);
-					Shader & shader = distortionBarsShader;
-					setShader(shader);
-					shader.setTexture("colormap", 0, surface.getTexture(), true, false);
-					ShaderBuffer buffer;
-					DistortionBarsData data;
-					Mat4x4 matR;
-					Mat4x4 matT;
-					matR.MakeRotationZ(framework.time * .1f);
-					//matT.MakeTranslation(GFX_SX/2.f, GFX_SY/2.f, 0.f);
-					matT.MakeTranslation(mouse.x, GFX_SY - mouse.y, 0.f);
-					Mat4x4 mat = matT * matR;
-					data.px = mat(0, 0);
-					data.py = mat(0, 1);
-					data.pd = mat(3, 0) * data.px + mat(3, 1) * data.py;
-					data.pScale = .1f;
-					data.qx = mat(1, 0);
-					data.qy = mat(1, 1);
-					data.qd = mat(3, 0) * data.qx + mat(3, 1) * data.qy;
-					data.qScale = 1.f / 200.f;
-					buffer.setData(&data, sizeof(data));
-					shader.setBuffer("DistotionBarsBlock", buffer); // fixme : block name
-					surface.postprocess(shader);
-				}
-
-				if (doFxaa)
-				{
-					setBlend(BLEND_OPAQUE);
-					Shader & shader = fxaaShader;
-					setShader(shader);
-					shader.setTexture("colormap", 0, surface.getTexture(), true, true);
-					shader.setImmediate("inverseVP", 1.f / (surface.getWidth() / framework.minification), 1.f / (surface.getHeight() / framework.minification));
-					surface.postprocess(shader);
-				}
-
 				popSurface();
 
 				const GLuint surfaceTexture = surface.getTexture();

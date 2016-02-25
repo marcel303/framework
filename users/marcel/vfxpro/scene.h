@@ -109,6 +109,8 @@ struct Scene
 	std::vector<SceneLayer*> m_layers;
 	std::vector<SceneEvent*> m_events;
 
+	float m_time;
+
 	Scene();
 	~Scene();
 
