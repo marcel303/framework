@@ -1,4 +1,4 @@
-include engine/ShaderCommon.txt
+include engine/ShaderPS.txt
 include lighting.inc
 
 shader_in vec2 texcoord;
@@ -15,6 +15,6 @@ void main()
 	vec3 color = diffuse;
 	float alpha = 1.f;
 	
-	gl_FragColor = vec4(color, alpha);
-	//gl_FragColor = vec4(1.f, 1.f, 1.f, 1.f);
+	shader_fragColor = vec4(color, alpha);
+	//shader_fragColor = vec4(1.f, 1.f, 1.f, 1.f);
 }

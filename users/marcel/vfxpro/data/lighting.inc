@@ -16,9 +16,9 @@ void computeLight(in Light light, in vec3 surfacePosition, in vec3 surfaceNormal
 	}
 	else if (light.type == kLightType_Omni)
 	{
-		const vec3 delta = vec3(light.x, light.y, light.z) - surfacePosition;
-		const float distance = length(delta);
-		const vec3 direction = normalize(delta);
+		vec3 delta = vec3(light.x, light.y, light.z) - surfacePosition;
+		float distance = length(delta);
+		vec3 direction = normalize(delta);
 		float falloff = saturate(1.f - distance * light.falloffRcp);
 
 		diffuseIntensity = abs(dot(direction, surfaceNormal)) * falloff;

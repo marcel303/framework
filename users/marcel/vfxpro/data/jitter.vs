@@ -1,10 +1,10 @@
-include engine/ShaderCommon.txt
+include engine/ShaderVS.txt
 
 shader_out vec2 texcoord;
 
 void main()
 {
-	gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+	gl_Position = ModelViewProjectionMatrix * in_position4;
 	
-	texcoord = vec2(gl_MultiTexCoord0);
+	texcoord = vec2(in_texcoord);
 }

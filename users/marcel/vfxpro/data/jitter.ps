@@ -1,4 +1,4 @@
-include engine/ShaderCommon.txt
+include engine/ShaderPS.txt
 include ShaderConstants.h
 
 uniform sampler2D colormap;
@@ -28,5 +28,5 @@ void main()
 	
 	vec4 color = texture2D(colormap, texcoord + jitter.xy * jitterStrength);
 	
-	gl_FragColor = color;
+	shader_fragColor = color;
 }

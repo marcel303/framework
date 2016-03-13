@@ -1,4 +1,4 @@
-include engine/ShaderCommon.txt
+include engine/ShaderPS.txt
 include ShaderConstants.h
 
 // todo : do output value correction based on incoming luminance and a lookup table
@@ -12,5 +12,5 @@ void main()
 	
 	color.rgb = pow(color.rgb, vec3(luminanceData.power)) * luminanceData.scale;
 	
-	gl_FragColor = color;
+	shader_fragColor = color;
 }

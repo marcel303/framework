@@ -1,4 +1,4 @@
-include engine/ShaderCommon.txt
+include engine/ShaderPS.txt
 include ShaderConstants.h
 
 uniform sampler2D colormap;
@@ -22,5 +22,5 @@ void main()
 	
 	color *= 0.25f;
 	
-	gl_FragColor = color;
+	shader_fragColor = color;
 }

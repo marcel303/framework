@@ -1,4 +1,4 @@
-include engine/ShaderCommon.txt
+include engine/ShaderPS.txt
 include ShaderConstants.h
 
 // todo : do output value correction based on incoming luminance and a lookup table
@@ -18,7 +18,7 @@ float circleDistance(vec2 pos)
 void main()
 {
 	vec2 colormapSize = textureSize(colormap, 0);
-	vec2 colormapSizeRcp = rcp(colormapSize);
+	vec2 colormapSizeRcp = 1.f / colormapSize;
 	
 #if 1
 	vec2 flowValue = (texture2D(flowmap, texcoord) - .5f).xy * 2.f;
@@ -48,5 +48,5 @@ void main()
 	//color = inside ? color + 1.f : color * .7f;
 	//color = color * .9f;
 	
-	gl_FragColor = color;
+	shader_fragColor = color;
 }

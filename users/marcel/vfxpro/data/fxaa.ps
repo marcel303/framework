@@ -1,4 +1,4 @@
-include engine/ShaderCommon.txt
+include engine/ShaderPS.txt
 
 // todo : use textureOffset
 
@@ -110,5 +110,5 @@ shader_in vec2 texcoord;
 
 void main()
 {
-	gl_FragColor = fxaa(colormap, texcoord, inverseVP);
+	shader_fragColor = fxaa(colormap, texcoord, inverseVP);
 }
