@@ -236,7 +236,7 @@ public:
 	void WriteString(const std::string & s)
 	{
 		Assert(s.length() <= 65535);
-		const uint16_t size = s.length();
+		const uint16_t size = (uint16_t)s.length();
 
 		const bool smallSize = size < 32;
 		WriteBit(smallSize);
