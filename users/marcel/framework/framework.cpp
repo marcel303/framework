@@ -2078,12 +2078,10 @@ void Sprite::drawEx(float x, float y, float angle, float scaleX, float scaleY, b
 		#endif
 
 			checkErrorGL();
-
-		#if USE_LEGACY_OPENGL
-			gxSetTexture(0);
-		#endif
 		}
 		gxPopMatrix();
+
+		gxSetTexture(0);
 	}
 }
 
@@ -3663,9 +3661,7 @@ static void drawTextInternal(FT_Face face, int size, const char * _text)
 		}
 	}
 
-#if USE_LEGACY_OPENGL
 	gxSetTexture(0);
-#endif
 }
 
 void measureText(int size, float & sx, float & sy, const char * format, ...)
