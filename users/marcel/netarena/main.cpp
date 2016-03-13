@@ -3005,8 +3005,7 @@ void App::debugDraw()
 				name,
 				i * 300,
 				serverInfo.m_address.ToString(false).c_str(),
-				serverInfo.m_address.m_userData,
-				name);
+				serverInfo.m_address.m_userData);
 			button.parse(props);
 			button.setString("text", serverInfo.m_address.ToString(false).c_str());
 		}
