@@ -1,4 +1,6 @@
-varying vec2 texcoord;
+include engine/ShaderCommon.txt
+
+shader_out vec2 texcoord;
 
 void main()
 {

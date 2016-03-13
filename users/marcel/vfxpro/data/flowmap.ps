@@ -1,3 +1,4 @@
+include engine/ShaderCommon.txt
 include ShaderConstants.h
 
 // todo : do output value correction based on incoming luminance and a lookup table
@@ -5,7 +6,7 @@ include ShaderConstants.h
 uniform sampler2D colormap;
 uniform sampler2D flowmap;
 uniform float time;
-varying vec2 texcoord;
+shader_in vec2 texcoord;
 
 float circleDistance(vec2 pos)
 {

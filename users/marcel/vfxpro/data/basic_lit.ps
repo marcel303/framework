@@ -1,8 +1,9 @@
+include engine/ShaderCommon.txt
 include lighting.inc
 
-varying vec2 texcoord;
-varying vec3 position;
-varying vec3 normal;
+shader_in vec2 texcoord;
+shader_in vec3 position;
+shader_in vec3 normal;
 
 void main()
 {

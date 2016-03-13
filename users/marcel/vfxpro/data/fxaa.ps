@@ -1,3 +1,5 @@
+include engine/ShaderCommon.txt
+
 // todo : use textureOffset
 
 /**
@@ -104,7 +106,7 @@ vec4 fxaa(sampler2D tex, vec2 fragCoord, vec2 inverseVP)
 
 uniform sampler2D colormap;
 uniform vec2 inverseVP;
-varying vec2 texcoord;
+shader_in vec2 texcoord;
 
 void main()
 {

@@ -1,7 +1,8 @@
+include engine/ShaderCommon.txt
 include ShaderConstants.h
 
 uniform sampler2D colormap;
-varying vec2 texcoord;
+shader_in vec2 texcoord;
 
 vec4 sampleColormap(in vec4 color, in vec2 offset)
 {

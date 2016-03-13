@@ -1,6 +1,9 @@
-varying vec2 texcoord;
-varying vec3 position;
-varying vec3 normal;
+include engine/ShaderCommon.txt
+include ShaderConstants.h
+
+shader_out vec2 texcoord;
+shader_out vec3 position;
+shader_out vec3 normal;
 
 void main()
 {

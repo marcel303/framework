@@ -1,3 +1,7 @@
+#if _SHADER_
+include engine/ShaderCommon.txt
+#endif
+
 // lighting
 
 const int kMaxLights = 4;
