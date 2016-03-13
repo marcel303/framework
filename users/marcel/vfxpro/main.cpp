@@ -1158,11 +1158,14 @@ struct Effect_Video : Effect
 		m_y.tick(dt);
 		m_scale.tick(dt);
 
-		m_mediaPlayer.tick(dt);
-
-		if (!m_mediaPlayer.isActive())
+		if (m_mediaPlayer.isActive())
 		{
-			m_mediaPlayer.close();
+			m_mediaPlayer.tick(dt);
+
+			if (!m_mediaPlayer.isActive())
+			{
+				m_mediaPlayer.close();
+			}
 		}
 	}
 
@@ -2178,15 +2181,15 @@ int main(int argc, char * argv[])
 	framework.fullscreen = false;
 	framework.windowBorder = false;
 	framework.enableDepthBuffer = true;
-	framework.minification = 2;
+	framework.minification = 1;
 	framework.enableMidi = true;
 	framework.midiDeviceIndex = config.midi.deviceIndex;
 
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
-		changeDirectory("C:/gg-code-hg/users/marcel/vfxpro/data");
+		changeDirectory("D:/gg-code-hg/users/marcel/vfxpro/data");
 		framework.fillCachesWithPath(".", true);
-		changeDirectory("C:/Temp/cmake/vfxpro/data");
+		changeDirectory("D:/vfx/data");
 	#ifndef DEBUG
 		framework.fillCachesWithPath(".", true);
 	#endif

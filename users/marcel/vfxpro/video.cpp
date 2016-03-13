@@ -96,9 +96,12 @@ bool MediaPlayer::open(const char * filename)
 		audioStream->audioOutput = audioOutput;
 	}
 
-	if (!mpContext.FillBuffers())
+	if (result)
 	{
-		result = false;
+		if (!mpContext.FillBuffers())
+		{
+			result = false;
+		}
 	}
 
 	if (result)
