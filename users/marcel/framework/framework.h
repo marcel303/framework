@@ -48,7 +48,7 @@
 #endif
 */
 
-#define USE_LEGACY_OPENGL 1
+#define USE_LEGACY_OPENGL 0
 #define ENABLE_UTF8_SUPPORT 0
 
 static const int MAX_GAMEPAD = 4;
@@ -870,6 +870,7 @@ static void gxPushMatrix() { }
 static void gxLoadIdentity() { }
 static void gxLoadMatrixf(const float * m) { }
 static void gxGetMatrixf(GLenum mode, float * m) { }
+static void gxMultMatrixf(const float * m) { }
 static void gxTranslatef(float x, float y, float z) { }
 static void gxRotatef(float angle, float x, float y, float z) { }
 static void gxScalef(float x, float y, float z) { }
@@ -896,6 +897,7 @@ void gxPushMatrix();
 void gxLoadIdentity();
 void gxLoadMatrixf(const float * m);
 void gxGetMatrixf(GLenum mode, float * m);
+void gxMultMatrixf(const float * m);
 void gxTranslatef(float x, float y, float z);
 void gxRotatef(float angle, float x, float y, float z);
 void gxScalef(float x, float y, float z);
@@ -912,6 +914,7 @@ void gxTexCoord2f(float u, float v);
 void gxNormal3f(float x, float y, float z);
 void gxVertex2f(float x, float y);
 void gxVertex3f(float x, float y, float z);
+void gxVertex3fv(const float * v);
 void gxSetTexture(GLuint texture);
 
 #else
@@ -922,6 +925,7 @@ void gxSetTexture(GLuint texture);
 #define gxLoadIdentity glLoadIdentity
 #define gxLoadMatrixf glLoadMatrixf
 void gxGetMatrixf(GLenum mode, float * m);
+#define gxMultMatrixf glMultMatrixf
 #define gxTranslatef glTranslatef
 #define gxRotatef glRotatef
 #define gxScalef glScalef

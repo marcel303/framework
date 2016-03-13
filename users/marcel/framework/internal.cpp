@@ -448,7 +448,7 @@ void ShaderCacheElem::free()
 	memset(params, -1, sizeof(params));
 }
 
-static void showShaderInfoLog(GLuint shader)
+static void showShaderInfoLog(GLuint shader, const char * source)
 {
 	GLint logSize = 0;
 	
@@ -458,7 +458,28 @@ static void showShaderInfoLog(GLuint shader)
 	
 	glGetShaderInfoLog(shader, logSize, &logSize, log);
 	
-	logError("OpenGL shader compile failed:\n%s", log);
+	bool newLine = true;
+
+	for (int line = 1; *source; )
+	{
+		if (newLine)
+		{
+			printf("%04d: ", line);
+			newLine = false;
+		}
+
+		if (*source == '\n' || *source == '\r')
+		{
+			newLine = true;
+			line++;
+		}
+
+		printf("%c", *source);
+
+		source++;
+	}
+
+	logError("OpenGL shader compile failed:\n%s\n----\n%s", source, log);
 	
 	delete [] log;
 	log = 0;
@@ -625,9 +646,11 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type)
 			
 			shader = glCreateShader(type);
 			
-			const GLchar * version = "#version 120\n#define _SHADER_ 1\n";
-//			const GLchar * version = "#version 150\n#define _SHADER_ 1\n";
-//			const GLchar * version = "#version 320\n#define _SHADER_ 1\n";
+		#if USE_LEGACY_OPENGL
+			const GLchar * version = "#version 120\n#define _SHADER_ 1\n#define LEGACY_GL 1\n";
+		#else
+			const GLchar * version = "#version 150\n#define _SHADER_ 1\n#define LEGACY_GL 0\n";
+		#endif
 			const GLchar * sourceData = (const GLchar*)source.c_str();
 			const GLchar * sources[] = { version, sourceData };
 			
@@ -649,7 +672,7 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type)
 			{
 				result = false;
 				
-				showShaderInfoLog(shader);
+				showShaderInfoLog(shader, source.c_str());
 			}
 		}
 	}
@@ -657,6 +680,10 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type)
 	if (result)
 	{
 		log("loaded shader %s", filename);
+	}
+	else
+	{
+		logError("failed to load shader %s", filename);
 	}
 	
 	return result;

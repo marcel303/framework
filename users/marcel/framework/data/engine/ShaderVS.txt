@@ -9,6 +9,8 @@ shader_attrib vec2 in_texcoord;
 shader_attrib vec4 in_skinningBlendIndices;
 shader_attrib vec4 in_skinningBlendWeights;
 
+#define in_position4 vec4(in_position, 1.f)
+
 // OpenGL constants
 
 #if VS_USE_LEGACY_MATRICES

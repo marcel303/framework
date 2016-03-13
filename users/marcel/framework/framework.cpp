@@ -45,6 +45,8 @@ extern void shutMidi();
 extern void lockMidi();
 extern void unlockMidi();
 
+static void gxFlush(bool endOfBatch);
+
 // -----
 
 Color colorBlack(0, 0, 0, 255);
@@ -3985,6 +3987,14 @@ void gxGetMatrixf(GLenum mode, float * m)
 	}
 }
 
+void gxMultMatrixf(const float * _m)
+{
+	Mat4x4 m;
+	memcpy(m.m_v, _m, sizeof(m.m_v));
+
+	s_gxMatrixStack->getRw() = s_gxMatrixStack->get() * m;
+}
+
 void gxTranslatef(float x, float y, float z)
 {
 	Mat4x4 m;
@@ -4060,7 +4070,7 @@ struct GxVertex
 #define GX_USE_BUFFER_RENAMING 0
 #define GX_BUFFER_DRAW_MODE GL_DYNAMIC_DRAW
 //#define GX_BUFFER_DRAW_MODE GL_STREAM_DRAW
-#define GX_USE_ELEMENT_ARRAY_BUFFER 1
+#define GX_USE_ELEMENT_ARRAY_BUFFER 0
 #define GX_VAO_COUNT 1
 
 static Shader s_gxShader;
@@ -4180,7 +4190,11 @@ static void gxFlush(bool endOfBatch)
 {
 	if (s_gxVertexCount)
 	{
-		setShader(s_gxShader);
+		const int primitiveType = s_gxPrimitiveType;
+
+		Shader & shader = globals.shader ? *globals.shader : s_gxShader;
+
+		setShader(shader);
 		
 		gxValidateMatrices();
 		
@@ -4227,6 +4241,7 @@ static void gxFlush(bool endOfBatch)
 		}
 	#endif
 
+	#if 1
 		if (s_gxPrimitiveType == GL_QUADS)
 		{
 			fassert(s_gxVertexCount < 65536);
@@ -4282,22 +4297,29 @@ static void gxFlush(bool endOfBatch)
 			
 			indexed = true;
 		}
+	#endif
 		
 		glBindVertexArray(s_gxVertexArrayObject[vaoIndex]);
 		checkErrorGL();
 		
-		const ShaderCacheElem & shaderElem = s_gxShader.getCacheElem();
+		const ShaderCacheElem & shaderElem = shader.getCacheElem();
 		
-		s_gxShader.setImmediate(
-			shaderElem.params[ShaderCacheElem::kSp_Params].index,
-			s_gxTextureEnabled ? 1 : 0,
-			globals.colorMode,
-			0,
-			0);
-		
+		if (shaderElem.params[ShaderCacheElem::kSp_Params].index != -1)
+		{
+			shader.setImmediate(
+				shaderElem.params[ShaderCacheElem::kSp_Params].index,
+				s_gxTextureEnabled ? 1 : 0,
+				globals.colorMode,
+				0,
+				0);
+		}
+
 		if (globals.gxShaderIsDirty)
-			s_gxShader.setTextureUnit(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0);
-		
+		{
+			if (shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
+				shader.setTextureUnit(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0);
+		}
+
 		if (indexed)
 		{
 			#if GX_USE_UBERBUFFER
@@ -4343,6 +4365,8 @@ static void gxFlush(bool endOfBatch)
 		}
 		
 		globals.gxShaderIsDirty = false;
+
+		s_gxPrimitiveType = primitiveType;
 	}
 	
 	if (endOfBatch)
@@ -4432,6 +4456,11 @@ void gxVertex3f(float x, float y, float z)
 	s_gxVertex.pw = 1.f;
 	
 	gxEmitVertex();
+}
+
+void gxVertex3fv(const float * v)
+{
+	gxVertex3f(v[0], v[1], v[2]);
 }
 
 void gxEmitVertex()
@@ -4572,7 +4601,7 @@ void logError(const char * format, ...)
 	if (logLevel > 3)
 		return;
 
-	char text[4096];
+	char text[1 << 16];
 	va_list args;
 	va_start(args, format);
 	vsprintf_s(text, sizeof(text), format, args);
