@@ -1452,26 +1452,47 @@ void Shader::setBuffer(GLint index, const ShaderBuffer & buffer)
 {
 	fassert(globals.shader == this);
 
+	glUniformBlockBinding(getProgram(), index, index);
 	glBindBufferBase(GL_UNIFORM_BUFFER, index, buffer.getBuffer());
+
 	checkErrorGL();
 }
 
 // -----
 
+static std::vector<GLuint> s_bufferPool;
+static bool s_useBufferPool = false;
+
 ShaderBuffer::ShaderBuffer()
 	: m_buffer(0)
 {
-	glGenBuffers(1, &m_buffer);
-	checkErrorGL();
+	if (!s_useBufferPool || s_bufferPool.empty())
+	{
+		glGenBuffers(1, &m_buffer);
+		checkErrorGL();
+	}
+	else
+	{
+		m_buffer = s_bufferPool.back();
+		s_bufferPool.pop_back();
+	}
 }
 
 ShaderBuffer::~ShaderBuffer()
 {
 	if (m_buffer)
 	{
-		glDeleteBuffers(1, &m_buffer);
-		checkErrorGL();
-		m_buffer = 0;
+		if (s_useBufferPool)
+		{
+			s_bufferPool.push_back(m_buffer);
+			m_buffer = 0;
+		}
+		else
+		{
+			glDeleteBuffers(1, &m_buffer);
+			m_buffer = 0;
+			checkErrorGL();
+		}
 	}
 }
 
@@ -4027,6 +4048,7 @@ void gxValidateMatrices()
 	glMatrixMode(GL_MODELVIEW);
 	glLoadMatrixf(s_gxModelView.get().m_v);
 #else
+	
 	if (globals.shader)
 	{
 		const ShaderCacheElem & shaderElem = globals.shader->getCacheElem();
