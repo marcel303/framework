@@ -99,10 +99,13 @@ void __stdcall debugOutputGL(
 	const GLchar * message,
 	GLvoid * userParam)
 {
-	FILE * file = (FILE*)userParam;
-	char formattedMessage[4096];
-	formatDebugOutputGL(formattedMessage, sizeof(formattedMessage), source, type, id, severity, message);
-	fprintf(file, "%s\n", formattedMessage);
+	if (severity != GL_DEBUG_SEVERITY_NOTIFICATION)
+	{
+		FILE * file = (FILE*)userParam;
+		char formattedMessage[4096];
+		formatDebugOutputGL(formattedMessage, sizeof(formattedMessage), source, type, id, severity, message);
+		fprintf(file, "%s\n", formattedMessage);
+	}
 }
 #endif
 
