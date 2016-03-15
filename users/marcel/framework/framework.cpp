@@ -3372,6 +3372,12 @@ void setBlend(BLEND_MODE blendMode)
 			glBlendEquation(GL_FUNC_ADD);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 		break;
+	case BLEND_ADD_OPAQUE:
+		glEnable(GL_BLEND);
+		if (glBlendEquation)
+			glBlendEquation(GL_FUNC_ADD);
+		glBlendFunc(GL_ONE, GL_ONE);
+		break;
 	case BLEND_SUBTRACT:
 		glEnable(GL_BLEND);
 		fassert(glBlendEquation);
@@ -4048,7 +4054,6 @@ void gxValidateMatrices()
 	glMatrixMode(GL_MODELVIEW);
 	glLoadMatrixf(s_gxModelView.get().m_v);
 #else
-	
 	if (globals.shader)
 	{
 		const ShaderCacheElem & shaderElem = globals.shader->getCacheElem();
