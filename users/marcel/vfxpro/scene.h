@@ -39,6 +39,8 @@ struct SceneLayer : TweenFloatCollection
 		kBlendMode_Opaque
 	};
 
+	Scene * m_scene;
+
 	std::string m_name;
 	BlendMode m_blendMode;
 	bool m_autoClear;
@@ -47,7 +49,9 @@ struct SceneLayer : TweenFloatCollection
 
 	std::vector<SceneEffect*> m_effects;
 
-	SceneLayer();
+	Surface * m_surface;
+
+	SceneLayer(Scene * scene);
 	~SceneLayer();
 
 	void load(const tinyxml2::XMLElement * xmlLayer);

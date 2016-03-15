@@ -16,9 +16,9 @@ struct Drawable
 
 	virtual void draw() = 0;
 
-	bool operator<(const Drawable * other) const
+	bool operator<(const Drawable & other) const
 	{
-		return m_z > other->m_z;
+		return m_z > other.m_z;
 	}
 };
 
@@ -59,7 +59,7 @@ struct DrawableList
 
 	void sort()
 	{
-		std::sort(drawables, drawables + numDrawables);
+		std::stable_sort(drawables, drawables + numDrawables, [](const Drawable * d1, const Drawable * d2) { return (*d1) < (*d2); });
 	}
 
 	void draw()

@@ -26,8 +26,8 @@ using namespace tinyxml2;
 
 const static int kNumScreens = 3;
 
-#define SCREEN_SX 1024
-#define SCREEN_SY 768
+#define SCREEN_SX (1920/kNumScreens)
+#define SCREEN_SY 1080
 
 #define GFX_SX (SCREEN_SX * kNumScreens)
 #define GFX_SY (SCREEN_SY * 1)
@@ -255,7 +255,7 @@ struct EffectDrawable : Drawable
 		gxPushMatrix();
 		{
 			if (m_effect->is3D)
-				glMultMatrixf(m_effect->transform.m_v); // fixme : use gx call
+				gxMultMatrixf(m_effect->transform.m_v);
 			else
 				gxTranslatef(m_effect->screenX, m_effect->screenY, 0.f);
 
@@ -1116,6 +1116,75 @@ struct Effect_Boxes : Effect
 	}
 };
 
+struct Effect_Picture : Effect
+{
+	std::string m_filename;
+	TweenFloat m_x;
+	TweenFloat m_y;
+	TweenFloat m_scale;
+	bool m_centered;
+
+	Effect_Picture(const char * name, const char * filename = nullptr, float x = 0.f, float y = 0.f, float scale = 1.f, bool centered = true)
+		: Effect(name)
+		, m_x(0.f)
+		, m_y(0.f)
+		, m_scale(1.f)
+		, m_centered(true)
+	{
+		addVar("x", m_x);
+		addVar("y", m_y);
+		addVar("scale", m_scale);
+
+		if (filename != nullptr)
+			setup(filename, x, y, scale, centered);
+	}
+
+	void setup(const char * filename, float x, float y, float scale, bool centered)
+	{
+		m_filename = filename;
+		m_x = x;
+		m_y = y;
+		m_scale = scale;
+		m_centered = centered;
+	}
+
+	virtual void tick(const float dt) override
+	{
+		m_x.tick(dt);
+		m_y.tick(dt);
+		m_scale.tick(dt);
+	}
+
+	virtual void draw(DrawableList & list) override
+	{
+		new (list)EffectDrawable(this);
+	}
+
+	virtual void draw() override
+	{
+		gxPushMatrix();
+		{
+			Sprite sprite(m_filename.c_str());
+
+			const int sx = sprite.getWidth();
+			const int sy = sprite.getHeight();
+			const float scaleX = SCREEN_SX / float(sx);
+			const float scaleY = SCREEN_SY / float(sy);
+			const float scale = Calc::Min(scaleX, scaleY);
+
+			gxTranslatef(virtualToScreenX(m_x), virtualToScreenY(m_y), 0.f);
+			gxScalef(m_scale, m_scale, 1.f);
+			gxScalef(scale, scale, 1.f);
+			if (m_centered)
+				gxTranslatef(-sx / 2.f, -sy / 2.f, 0.f);
+
+			setColor(colorWhite);
+			sprite.draw();
+		}
+		gxPopMatrix();
+	}
+};
+
 struct Effect_Video : Effect
 {
 	std::string m_filename;
@@ -1126,7 +1195,7 @@ struct Effect_Video : Effect
 
 	MediaPlayer m_mediaPlayer;
 
-	Effect_Video(const char * name)
+	Effect_Video(const char * name, const char * filename = nullptr, float x = 0.f, float y = 0.f, float scale = 1.f, bool centered = true)
 		: Effect(name)
 		, m_x(0.f)
 		, m_y(0.f)
@@ -1136,6 +1205,9 @@ struct Effect_Video : Effect
 		addVar("x", m_x);
 		addVar("y", m_y);
 		addVar("scale", m_scale);
+
+		if (filename != nullptr)
+			setup(filename, x, y, scale, centered);
 	}
 
 	void setup(const char * filename, float x, float y, float scale, bool centered)
@@ -1231,8 +1303,7 @@ struct Effect_Flowmap : Effect
 		setShader(shader);
 		shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
 		shader.setTexture("flowmap", 0, g_currentSurface->getTexture(), true, false); // todo
-		//shader.setImmediate("time", g_currentScene->m_time);
-		shader.setImmediate("time", framework.time); // todo
+		shader.setImmediate("time", g_currentScene->m_time);
 		ShaderBuffer buffer;
 		FlowmapData data;
 		data.strength = m_strength;
@@ -1270,13 +1341,13 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 		if (numRaindrops == 0)
 		{
 			logWarning("num_raindrops is 0. skipping effect");
+			return false;
 		}
 		else
 		{
 			m_effect = new Effect_Rain(m_name.c_str(), numRaindrops);
+			return true;
 		}
-
-		return true;
 	}
 	else if (type == "flowmap")
 	{
@@ -1287,13 +1358,51 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 		if (map.empty())
 		{
 			logWarning("map not set. skipping effect");
+			return false;
 		}
 		else
 		{
 			m_effect = new Effect_Flowmap(m_name.c_str(), map.c_str(), strength, darken);
+			return true;
 		}
+	}
+	else if (type == "video")
+	{
+		const std::string file = stringAttrib(xmlEffect, "file", "");
+		const float x = floatAttrib(xmlEffect, "x", 0.f);
+		const float y = floatAttrib(xmlEffect, "y", 0.f);
+		const float scale = floatAttrib(xmlEffect, "scale", 1.f);
+		const bool centered = boolAttrib(xmlEffect, "centered", true);
 
-		return true;
+		if (file.empty())
+		{
+			logWarning("file not set. skipping effect");
+			return false;
+		}
+		else
+		{
+			m_effect = new Effect_Video(m_name.c_str(), file.c_str(), x, y, scale, centered);
+			return true;
+		}
+	}
+	else if (type == "picture")
+	{
+		const std::string file = stringAttrib(xmlEffect, "file", "");
+		const float x = floatAttrib(xmlEffect, "x", 0.f);
+		const float y = floatAttrib(xmlEffect, "y", 0.f);
+		const float scale = floatAttrib(xmlEffect, "scale", 1.f);
+		const bool centered = boolAttrib(xmlEffect, "centered", true);
+
+		if (file.empty())
+		{
+			logWarning("file not set. skipping effect");
+			return false;
+		}
+		else
+		{
+			m_effect = new Effect_Picture(m_name.c_str(), file.c_str(), x, y, scale, centered);
+			return true;
+		}
 	}
 	else
 	{
@@ -1302,12 +1411,16 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 	}
 }
 
-SceneLayer::SceneLayer()
-	: m_blendMode(kBlendMode_Add)
+SceneLayer::SceneLayer(Scene * scene)
+	: m_scene(scene)
+	, m_blendMode(kBlendMode_Add)
 	, m_autoClear(true)
 	, m_opacity(1.f)
+	, m_surface(nullptr)
 {
 	addVar("opacity", m_opacity);
+
+	m_surface = new Surface(GFX_SX, GFX_SY);
 }
 
 SceneLayer::~SceneLayer()
@@ -1320,6 +1433,9 @@ SceneLayer::~SceneLayer()
 	}
 
 	m_effects.clear();
+
+	delete m_surface;
+	m_surface = nullptr;
 }
 
 void SceneLayer::load(const XMLElement * xmlLayer)
@@ -1398,12 +1514,8 @@ void SceneLayer::draw(DrawableList & list)
 
 void SceneLayer::draw()
 {
-	ScopedSceneLayerBlock block(this);
-
-	// todo : compose
-
-	setColorf(1.f, 1.f, 1.f, m_opacity);
-	drawRect(0, 0, GFX_SX, GFX_SY);
+	ScopedSceneBlock sceneBlock(m_scene);
+	ScopedSceneLayerBlock sceneLayerBlock(this);
 
 	DrawableList drawableList;
 
@@ -1415,7 +1527,52 @@ void SceneLayer::draw()
 	}
 
 	drawableList.sort();
-	drawableList.draw();
+
+	// render the effects
+
+	pushSurface(m_surface);
+	{
+		ScopedSurfaceBlock surfaceBlock(m_surface);
+
+		if (m_autoClear)
+			m_surface->clear();
+
+		setColor(colorWhite);
+		setBlend(BLEND_ADD);
+
+		drawableList.draw();
+	}
+	popSurface();
+
+	// compose
+
+	gxSetTexture(m_surface->getTexture());
+	{
+		switch (m_blendMode)
+		{
+		case kBlendMode_Add:
+			setBlend(BLEND_ADD_OPAQUE);
+			break;
+		case kBlendMode_Subtract:
+			setBlend(BLEND_SUBTRACT);
+			break;
+		case kBlendMode_Alpha:
+			setBlend(BLEND_ALPHA);
+			break;
+		case kBlendMode_Opaque:
+			setBlend(BLEND_OPAQUE);
+			break;
+		default:
+			Assert(false);
+			break;
+		}
+
+		setColorf(1.f, 1.f, 1.f, m_opacity);
+		drawRect(0, 0, GFX_SX, GFX_SY);
+
+		setBlend(BLEND_ADD);
+	}
+	gxSetTexture(0);
 }
 
 SceneAction::SceneAction()
@@ -1691,7 +1848,7 @@ bool Scene::load(const char * filename)
 			{
 				for (const XMLElement * xmlLayer = xmlLayers->FirstChildElement("layer"); xmlLayer; xmlLayer = xmlLayer->NextSiblingElement("layer"))
 				{
-					SceneLayer * layer = new SceneLayer();
+					SceneLayer * layer = new SceneLayer(this);
 
 					layer->load(xmlLayer);
 
@@ -1929,7 +2086,7 @@ struct Camera
 		gxMatrixMode(GL_PROJECTION);
 		gxPushMatrix();
 		gxLoadMatrixf(cameraToView.m_v);
-		glMultMatrixf(worldToCamera.m_v);
+		gxMultMatrixf(worldToCamera.m_v);
 
 		gxMatrixMode(GL_MODELVIEW);
 		gxPushMatrix();
@@ -2012,7 +2169,8 @@ static void drawCamera(const Camera & camera, const float alpha)
 	gxMatrixMode(GL_MODELVIEW);
 	gxPushMatrix();
 	{
-		glMatrixMultfEXT(GL_MODELVIEW, camera.cameraToWorld.m_v);
+		gxMultMatrixf(camera.cameraToWorld.m_v);
+		//glMatrixMultfEXT(GL_MODELVIEW, camera.cameraToWorld.m_v);
 
 		gxPushMatrix();
 		{
@@ -2067,7 +2225,7 @@ static void drawScreen(const Vec3 * screenPoints, GLuint surfaceTexture, int scr
 		//gxColor4f(1.f, 1.f, 1.f, 1.f);
 		//glDisable(GL_DEPTH_TEST);
 
-		//setBlend(BLEND_ADD);
+		setBlend(BLEND_ADD_OPAQUE);
 	}
 	else
 	{
@@ -2089,7 +2247,7 @@ static void drawScreen(const Vec3 * screenPoints, GLuint surfaceTexture, int scr
 	gxSetTexture(0);
 
 	//glEnable(GL_DEPTH_TEST);
-	//setBlend(BLEND_ALPHA);
+	setBlend(BLEND_ADD);
 
 	setColor(colorWhite);
 	gxBegin(GL_LINE_LOOP);
@@ -2184,6 +2342,8 @@ int main(int argc, char * argv[])
 	framework.minification = 1;
 	framework.enableMidi = true;
 	framework.midiDeviceIndex = config.midi.deviceIndex;
+
+	changeDirectory("D:/gg-code-hg/users/marcel/vfxpro/data");
 
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
@@ -2597,6 +2757,7 @@ int main(int argc, char * argv[])
 
 			scene->draw(drawableList);
 
+		#if 1
 			if (drawRain)
 				rain.draw(drawableList);
 
@@ -2611,6 +2772,7 @@ int main(int argc, char * argv[])
 
 			if (drawVideo)
 				video.draw(drawableList);
+		#endif
 
 			drawableList.sort();
 
@@ -2671,7 +2833,8 @@ int main(int argc, char * argv[])
 						glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
 
 						//setColorf(config.midiGetValue(102, 1.f), config.midiGetValue(102, 1.f)/2.f, config.midiGetValue(102, 1.f)/4.f, 1.f);
-						setColor(2, 2, 2, 255);
+						//setColor(2, 2, 2, 255);
+						setColor(63, 31, 15, 255);
 						drawRect(0, 0, GFX_SX, GFX_SY);
 					}
 
