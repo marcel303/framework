@@ -24,12 +24,12 @@
 
 using namespace tinyxml2;
 
-const static int kNumScreens = 3;
+#define NUM_SCREENS 1
 
-#define SCREEN_SX (1920/kNumScreens)
+#define SCREEN_SX (1920/NUM_SCREENS)
 #define SCREEN_SY 1080
 
-#define GFX_SX (SCREEN_SX * kNumScreens)
+#define GFX_SX (SCREEN_SX * NUM_SCREENS)
 #define GFX_SY (SCREEN_SY * 1)
 
 #define OSC_ADDRESS "127.0.0.1"
@@ -42,7 +42,11 @@ static Config config;
 
 static float virtualToScreenX(float x)
 {
+#if NUM_SCREENS == 1
+	return ((x / 100.f) + 1.5f) * SCREEN_SX / 3.f;
+#elif NUM_SCREENS == 3
 	return ((x / 100.f) + 1.5f) * SCREEN_SX;
+#endif
 }
 
 static float virtualToScreenY(float y)
@@ -1552,22 +1556,25 @@ void SceneLayer::draw()
 		{
 		case kBlendMode_Add:
 			setBlend(BLEND_ADD_OPAQUE);
+			setColorf(1.f, 1.f, 1.f, 1.f, m_opacity);
 			break;
 		case kBlendMode_Subtract:
 			setBlend(BLEND_SUBTRACT);
+			setColorf(1.f, 1.f, 1.f, m_opacity);
 			break;
 		case kBlendMode_Alpha:
 			setBlend(BLEND_ALPHA);
+			setColorf(1.f, 1.f, 1.f, m_opacity);
 			break;
 		case kBlendMode_Opaque:
 			setBlend(BLEND_OPAQUE);
+			setColorf(1.f, 1.f, 1.f, 1.f, m_opacity);
 			break;
 		default:
 			Assert(false);
 			break;
 		}
 
-		setColorf(1.f, 1.f, 1.f, m_opacity);
 		drawRect(0, 0, GFX_SX, GFX_SY);
 
 		setBlend(BLEND_ADD);
@@ -2090,10 +2097,17 @@ struct Camera
 
 		gxMatrixMode(GL_MODELVIEW);
 		gxPushMatrix();
+	#if NUM_SCREENS == 1
+		const int x1 = virtualToScreenX(-150);
+		const int y1 = virtualToScreenY(-50);
+		const int x2 = virtualToScreenX(+150);
+		const int y2 = virtualToScreenY(+50);
+	#elif NUM_SCREENS == 3
 		const int x1 = virtualToScreenX(-150 + (c + 0) * 100);
 		const int y1 = virtualToScreenY(-50);
 		const int x2 = virtualToScreenX(-150 + (c + 1) * 100);
 		const int y2 = virtualToScreenY(+50);
+	#endif
 
 		sx = x2 - x1;
 		sy = y2 - y1;
@@ -2337,7 +2351,7 @@ int main(int argc, char * argv[])
 	// initialise framework
 
 	framework.fullscreen = false;
-	framework.windowBorder = false;
+	//framework.windowBorder = false;
 	framework.enableDepthBuffer = true;
 	framework.minification = 1;
 	framework.enableMidi = true;
@@ -2442,7 +2456,7 @@ int main(int argc, char * argv[])
 		Mat4x4 cameraMatrix;
 		cameraMatrix.MakeIdentity();
 
-		int activeCamera = kNumScreens;
+		int activeCamera = NUM_SCREENS;
 
 		float time = 0.f;
 		float timeReal = 0.f;
@@ -2605,7 +2619,7 @@ int main(int argc, char * argv[])
 				cameraPosition += cameraMatrix.CalcInv().Mul3(speed) * dtReal;
 
 				if (keyboard.wentDown(SDLK_END))
-					activeCamera = (activeCamera + 1) % (kNumScreens + 1);
+					activeCamera = (activeCamera + 1) % (NUM_SCREENS + 1);
 			}
 
 			{
@@ -2780,11 +2794,20 @@ int main(int argc, char * argv[])
 			{
 				// camera setup
 
-				Camera cameras[kNumScreens];
+				Camera cameras[NUM_SCREENS];
 
 				const float dx = +sqrtf(2.f) / 2.f; // todo : rotate the screen instead of hacking their positions
 				const float dz = -sqrtf(2.f) / 2.f; // todo : rotate the screen instead of hacking their positions
 
+			#if NUM_SCREENS == 1
+				Vec3 _screenCorners[4] =
+				{
+					Vec3(-1.5f,      0.f, 0.f),
+					Vec3(+1.5f,      0.f, 0.f),
+					Vec3(-1.5f,      1.f, 0.f),
+					Vec3(+1.5f,      1.f, 0.f)
+				};
+			#elif NUM_SCREENS == 3
 				Vec3 _screenCorners[8] =
 				{
 					Vec3(-0.5f - dx, 0.f,  dz),
@@ -2797,19 +2820,21 @@ int main(int argc, char * argv[])
 					Vec3(+0.5f,      1.f, 0.f),
 					Vec3(+0.5f + dx, 1.f,  dz),
 				};
+			#endif
+				const int screenCornerStride = sizeof(_screenCorners) / sizeof(_screenCorners[0]) / 2;
 
-				Vec3 screenCorners[kNumScreens][4];
+				Vec3 screenCorners[NUM_SCREENS][4];
 
 				const Vec3 cameraPosition(0.f, .5f, -1.f);
 
-				for (int c = 0; c < kNumScreens; ++c)
+				for (int c = 0; c < NUM_SCREENS; ++c)
 				{
 					Camera & camera = cameras[c];
 
 					screenCorners[c][0] = _screenCorners[c + 0 + 0],
 					screenCorners[c][1] = _screenCorners[c + 1 + 0],
-					screenCorners[c][2] = _screenCorners[c + 1 + 4],
-					screenCorners[c][3] = _screenCorners[c + 0 + 4],
+					screenCorners[c][2] = _screenCorners[c + 1 + screenCornerStride],
+					screenCorners[c][3] = _screenCorners[c + 0 + screenCornerStride],
 
 					camera.setup(cameraPosition, screenCorners[c], 4, c);
 				}
@@ -2841,7 +2866,7 @@ int main(int argc, char * argv[])
 					setBlend(BLEND_ALPHA);
 
 				#if 1
-					for (int c = 0; c < kNumScreens; ++c)
+					for (int c = 0; c < NUM_SCREENS; ++c)
 					{
 						const Camera & camera = cameras[c];
 
@@ -3031,7 +3056,7 @@ int main(int argc, char * argv[])
 					// draw projector bounds
 
 					setColorf(1.f, 1.f, 1.f, .25f);
-					for (int i = 0; i < kNumScreens; ++i)
+					for (int i = 0; i < NUM_SCREENS; ++i)
 						drawRectLine(virtualToScreenX(-150 + i * 100), virtualToScreenY(0.f), virtualToScreenX(-150 + (i + 1) * 100), virtualToScreenY(100));
 				#endif
 
@@ -3059,7 +3084,7 @@ int main(int argc, char * argv[])
 
 								// draw the projector screens
 
-								for (int c = 0; c < kNumScreens; ++c)
+								for (int c = 0; c < NUM_SCREENS; ++c)
 								{
 									drawScreen(screenCorners[c], surfaceTexture, c);
 								}
@@ -3084,9 +3109,9 @@ int main(int argc, char * argv[])
 
 								// draw the cameras
 
-								for (int c = 0; c < kNumScreens; ++c)
+								for (int c = 0; c < NUM_SCREENS; ++c)
 								{
-									if (c < kNumScreens)
+									if (c < NUM_SCREENS)
 									{
 										const Camera & camera = cameras[c];
 
@@ -3109,7 +3134,7 @@ int main(int argc, char * argv[])
 
 				if (drawScreenIds)
 				{
-					for (int c = 0; c < kNumScreens; ++c)
+					for (int c = 0; c < NUM_SCREENS; ++c)
 					{
 						const Camera & camera = cameras[c];
 
