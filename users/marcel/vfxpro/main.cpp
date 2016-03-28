@@ -24,6 +24,8 @@
 
 using namespace tinyxml2;
 
+#define DEMODATA 0
+
 #define NUM_SCREENS 1
 
 #define SCREEN_SX (1920/NUM_SCREENS)
@@ -138,6 +140,7 @@ static float virtualToScreenY(float y)
 
 Scene * g_currentScene = nullptr;
 SceneLayer * g_currentSceneLayer = nullptr;
+Surface * g_previousSurface = nullptr;
 Surface * g_currentSurface = nullptr;
 
 template <typename T, T * R>
@@ -1161,7 +1164,7 @@ struct Effect_Picture : Effect
 
 	virtual void draw(DrawableList & list) override
 	{
-		new (list)EffectDrawable(this);
+		new (list) EffectDrawable(this);
 	}
 
 	virtual void draw() override
@@ -1276,22 +1279,141 @@ struct Effect_Video : Effect
 	}
 };
 
-struct Effect_Flowmap : Effect
-{
-	std::string m_map;
-	float m_strength;
-	float m_darken;
+//
 
-	Effect_Flowmap(const char * name, const char * map, const float strength, const float darken)
+struct Effect_Luminance : Effect
+{
+	TweenFloat m_power;
+	TweenFloat m_scale;
+
+	Effect_Luminance(const char * name, const float power, const float scale)
 		: Effect(name)
+		, m_power(1.f)
+		, m_scale(1.f)
 	{
-		m_map = map;
-		m_strength = strength;
-		m_darken = darken;
+		addVar("power", m_power);
+		addVar("scale", m_scale);
+
+		m_power = power;
+		m_scale = scale;
 	}
 
 	virtual void tick(const float dt) override
 	{
+		TweenFloatCollection::tick(dt);
+	}
+
+	virtual void draw(DrawableList & list) override
+	{
+		new (list)EffectDrawable(this);
+	}
+
+	virtual void draw() override
+	{
+		setBlend(BLEND_OPAQUE);
+
+		Shader shader("luminance");
+		setShader(shader);
+		shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
+		ShaderBuffer buffer;
+		LuminanceData data;
+		data.power = m_power;
+		data.scale = m_scale;
+		//logDebug("p=%g, s=%g", (float)m_power, (float)m_scale);
+		buffer.setData(&data, sizeof(data));
+		shader.setBuffer("LuminanceBlock", buffer);
+		g_currentSurface->postprocess(shader);
+
+		setBlend(BLEND_ADD);
+	}
+};
+
+//
+
+struct Effect_ColorLut2D : Effect
+{
+	Sprite * m_lutSprite;
+	TweenFloat m_lutStart;
+	TweenFloat m_lutEnd;
+	TweenFloat m_numTaps;
+
+	Effect_ColorLut2D(const char * name, const char * lut, const float lutStart, const float lutEnd, const float numTaps)
+		: Effect(name)
+		, m_lutSprite(nullptr)
+		, m_numTaps(1.f)
+	{
+		addVar("lut_start", m_lutStart);
+		addVar("lut_end", m_lutEnd);
+		addVar("num_taps", m_numTaps);
+
+		m_lutSprite = new Sprite(lut);
+		m_lutStart = lutStart;
+		m_lutEnd = lutEnd;
+		m_numTaps = numTaps;
+	}
+
+	virtual void tick(const float dt) override
+	{
+		TweenFloatCollection::tick(dt);
+	}
+
+	virtual void draw(DrawableList & list) override
+	{
+		new (list)EffectDrawable(this);
+	}
+
+	virtual void draw() override
+	{
+		setBlend(BLEND_OPAQUE);
+
+		Shader shader("colorlut2d");
+		setShader(shader);
+		shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
+		shader.setTexture("lut", 1, m_lutSprite->getTexture(), true, false);
+		ShaderBuffer buffer;
+		ColorLut2DData data;
+		data.lutStart = m_lutStart;
+		data.lutEnd = m_lutEnd;
+		data.numTaps = m_numTaps;
+		buffer.setData(&data, sizeof(data));
+		shader.setBuffer("ColorLut2DBlock", buffer);
+		g_currentSurface->postprocess(shader);
+
+		setBlend(BLEND_ADD);
+	}
+};
+
+//
+
+struct Effect_Flowmap : Effect
+{
+	std::string m_map;
+	Sprite * m_mapSprite;
+	TweenFloat m_flowStrength;
+	TweenFloat m_darken;
+
+	Effect_Flowmap(const char * name, const char * map, const float flowStrength, const float darken)
+		: Effect(name)
+		, m_mapSprite(nullptr)
+	{
+		addVar("flow_strength", m_flowStrength);
+		addVar("darken", m_darken);
+
+		m_map = map;
+		m_mapSprite = new Sprite(map);
+		m_flowStrength = flowStrength;
+		m_darken = darken;
+	}
+
+	virtual ~Effect_Flowmap()
+	{
+		delete m_mapSprite;
+		m_mapSprite = nullptr;
+	}
+
+	virtual void tick(const float dt) override
+	{
+		TweenFloatCollection::tick(dt);
 	}
 
 	virtual void draw(DrawableList & list) override
@@ -1306,11 +1428,12 @@ struct Effect_Flowmap : Effect
 		Shader shader("flowmap");
 		setShader(shader);
 		shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
-		shader.setTexture("flowmap", 0, g_currentSurface->getTexture(), true, false); // todo
+		shader.setTexture("flowmap", 1, m_mapSprite->getTexture(), true, false); // todo
 		shader.setImmediate("time", g_currentScene->m_time);
 		ShaderBuffer buffer;
 		FlowmapData data;
-		data.strength = m_strength;
+		data.strength = m_flowStrength;
+		data.darken = m_darken;
 		buffer.setData(&data, sizeof(data));
 		shader.setBuffer("FlowmapBlock", buffer);
 		g_currentSurface->postprocess(shader);
@@ -1323,11 +1446,14 @@ struct Effect_Flowmap : Effect
 
 SceneEffect::SceneEffect()
 	: m_effect(nullptr)
+	, m_strength(1.f)
 {
 }
 
 SceneEffect::~SceneEffect()
 {
+	m_strength = 0.f;
+
 	delete m_effect;
 	m_effect = nullptr;
 }
@@ -1335,6 +1461,7 @@ SceneEffect::~SceneEffect()
 bool SceneEffect::load(const XMLElement * xmlEffect)
 {
 	m_name = stringAttrib(xmlEffect, "name", "");
+	m_strength = floatAttrib(xmlEffect, "strength", 1.f);
 
 	const std::string type = stringAttrib(xmlEffect, "type", "");
 
@@ -1356,7 +1483,7 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 	else if (type == "flowmap")
 	{
 		const std::string map = stringAttrib(xmlEffect, "map", "");
-		const float strength = floatAttrib(xmlEffect, "strength", 1.f);
+		const float flowStrength = floatAttrib(xmlEffect, "flow_strength", 1.f);
 		const float darken = floatAttrib(xmlEffect, "darken", 0.f);
 
 		if (map.empty())
@@ -1366,7 +1493,33 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 		}
 		else
 		{
-			m_effect = new Effect_Flowmap(m_name.c_str(), map.c_str(), strength, darken);
+			m_effect = new Effect_Flowmap(m_name.c_str(), map.c_str(), flowStrength, darken);
+			return true;
+		}
+	}
+	else if (type == "luminance")
+	{
+		const float power = floatAttrib(xmlEffect, "power", 1.f);
+		const float scale = floatAttrib(xmlEffect, "scale", 1.f);
+
+		m_effect = new Effect_Luminance(m_name.c_str(), power, scale);
+		return true;
+	}
+	else if (type == "colorlut2d")
+	{
+		const std::string lut = stringAttrib(xmlEffect, "lut", "");
+		const float lutStart = floatAttrib(xmlEffect, "lut_start", 0.f);
+		const float lutEnd = floatAttrib(xmlEffect, "lut_end", 1.f);
+		const float numTaps = floatAttrib(xmlEffect, "num_taps", 1000.f);
+
+		if (lut.empty())
+		{
+			logWarning("lut not set. skipping effect");
+			return false;
+		}
+		else
+		{
+			m_effect = new Effect_ColorLut2D(m_name.c_str(), lut.c_str(), lutStart, lutEnd, numTaps);
 			return true;
 		}
 	}
@@ -1419,6 +1572,7 @@ SceneLayer::SceneLayer(Scene * scene)
 	: m_scene(scene)
 	, m_blendMode(kBlendMode_Add)
 	, m_autoClear(true)
+	, m_copyPreviousLayer(false)
 	, m_opacity(1.f)
 	, m_surface(nullptr)
 {
@@ -1462,6 +1616,7 @@ void SceneLayer::load(const XMLElement * xmlLayer)
 		logWarning("unknown blend type: %s", blend.c_str());
 
 	m_autoClear = boolAttrib(xmlLayer, "auto_clear", true);
+	m_copyPreviousLayer = boolAttrib(xmlLayer, "copy", false);
 
 	//
 
@@ -1538,8 +1693,21 @@ void SceneLayer::draw()
 	{
 		ScopedSurfaceBlock surfaceBlock(m_surface);
 
-		if (m_autoClear)
+		if (m_copyPreviousLayer)
+		{
+			if (g_previousSurface)
+			{
+				g_previousSurface->blitTo(g_currentSurface);
+			}
+			else
+			{
+				m_surface->clear();
+			}
+		}
+		else if (m_autoClear)
+		{
 			m_surface->clear();
+		}
 
 		setColor(colorWhite);
 		setBlend(BLEND_ADD);
@@ -1580,6 +1748,8 @@ void SceneLayer::draw()
 		setBlend(BLEND_ADD);
 	}
 	gxSetTexture(0);
+
+	g_previousSurface = m_surface;
 }
 
 SceneAction::SceneAction()
@@ -1687,6 +1857,20 @@ void SceneEvent::execute(Scene & scene)
 
 				case SceneAction::Tween::kTargetType_Effect:
 					{
+						for (auto l = scene.m_layers.begin(); l != scene.m_layers.end(); ++l)
+						{
+							SceneLayer * layer = *l;
+
+							for (auto e = layer->m_effects.begin(); e != layer->m_effects.end(); ++e)
+							{
+								SceneEffect * effect = *e;
+
+								if (effect->m_name == action->m_tween.m_targetName)
+								{
+									varCollection = effect->m_effect;
+								}
+							}
+						}
 					}
 					break;
 
@@ -1709,6 +1893,11 @@ void SceneEvent::execute(Scene & scene)
 					}
 					else
 					{
+						if (action->m_tween.m_replaceTween)
+						{
+							var->clear();
+						}
+
 						var->to(
 							action->m_tween.m_tweenTo,
 							action->m_tween.m_tweenTime,
@@ -1752,25 +1941,7 @@ Scene::Scene()
 
 Scene::~Scene()
 {
-	for (auto i = m_layers.begin(); i != m_layers.end(); ++i)
-	{
-		SceneLayer * layer = *i;
-
-		delete layer;
-	}
-
-	m_layers.clear();
-
-	//
-
-	for (auto i = m_events.begin(); i != m_events.end(); ++i)
-	{
-		SceneEvent * event = *i;
-
-		delete event;
-	}
-
-	m_events.clear();
+	clear();
 }
 
 void Scene::tick(const float dt)
@@ -1815,6 +1986,8 @@ void Scene::triggerEvent(const char * name)
 bool Scene::load(const char * filename)
 {
 	bool result = true;
+
+	m_filename = filename;
 
 	tinyxml2::XMLDocument xmlDoc;
 
@@ -1903,6 +2076,45 @@ bool Scene::load(const char * filename)
 	return result;
 }
 
+void Scene::clear()
+{
+	m_filename.clear();
+	m_name.clear();
+
+	for (auto i = m_layers.begin(); i != m_layers.end(); ++i)
+	{
+		SceneLayer * layer = *i;
+
+		delete layer;
+	}
+
+	m_layers.clear();
+
+	//
+
+	for (auto i = m_events.begin(); i != m_events.end(); ++i)
+	{
+		SceneEvent * event = *i;
+
+		delete event;
+	}
+
+	m_events.clear();
+
+	//
+
+	m_time = 0.f;
+}
+
+bool Scene::reload()
+{
+	std::string filename = m_filename;
+
+	clear();
+
+	return load(filename.c_str());
+}
+
 //
 
 static CRITICAL_SECTION s_oscMessageMtx;
@@ -1962,8 +2174,16 @@ protected:
 				// filename, x, y, scale
 				message.type = kOscMessageType_Sprite;
 				const char * str;
-				args >> str >> message.param[0] >> message.param[1] >> message.param[2];
+				osc::int32 x;
+				osc::int32 y;
+				osc::int32 scale;
+				//args >> str >> message.param[0] >> message.param[1] >> message.param[2];
+				args >> str >> x >> y >> scale;
 				message.str = str;
+
+				message.param[0] = x;
+				message.param[1] = y;
+				message.param[2] = scale;
 			}
 			else if (strcmp(m.AddressPattern(), "/video") == 0)
 			{
@@ -2272,9 +2492,26 @@ static void drawScreen(const Vec3 * screenPoints, GLuint surfaceTexture, int scr
 	gxEnd();
 }
 
+enum DebugMode
+{
+	kDebugMode_None,
+	kDebugMode_Camera,
+	kDebugMode_Events
+};
+
+static DebugMode s_debugMode = kDebugMode_None;
+
+static void setDebugMode(DebugMode mode)
+{
+	if (mode == s_debugMode)
+		s_debugMode = kDebugMode_None;
+	else
+		s_debugMode = mode;
+}
+
 int main(int argc, char * argv[])
 {
-	changeDirectory("data");
+	//changeDirectory("data");
 
 	if (!config.load("settings.xml"))
 	{
@@ -2303,23 +2540,6 @@ int main(int argc, char * argv[])
 			}
 		}
 	}
-
-#if 0
-	TweenFloat tween(10.f);
-	tween.to(0.f, 1.f);
-	tween.to(5.f, 1.f);
-	tween.to(0.f, 1.f);
-	tween.to(100.f, 1.f);
-
-	while (!tween.isDone())
-	{
-		printf("tween value: %g\n", (float)tween);
-
-		tween.tick(1.f / 9.f);
-	}
-
-	printf("tween value: %g\n", (float)tween);
-#endif
 
 	AudioIn audioIn;
 
@@ -2357,22 +2577,20 @@ int main(int argc, char * argv[])
 	framework.enableMidi = true;
 	framework.midiDeviceIndex = config.midi.deviceIndex;
 
-	changeDirectory("D:/gg-code-hg/users/marcel/vfxpro/data");
+#ifdef DEBUG
+	framework.reloadCachesOnActivate = true;
+#endif
 
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
-		changeDirectory("D:/gg-code-hg/users/marcel/vfxpro/data");
 		framework.fillCachesWithPath(".", true);
-		changeDirectory("D:/vfx/data");
-	#ifndef DEBUG
-		framework.fillCachesWithPath(".", true);
-	#endif
 
 		std::list<TimeDilationEffect> timeDilationEffects;
 
 		bool clearScreen = true;
 		bool debugDraw = false;
-		bool cameraControl = false;
+
+	#if DEMODATA
 		bool postProcess = false;
 
 		bool drawRain = true;
@@ -2382,6 +2600,7 @@ int main(int argc, char * argv[])
 		bool drawBoxes = true;
 		bool drawVideo = true;
 		bool drawPCM = true;
+	#endif
 
 		bool drawHelp = true;
 		bool drawScreenIds = false;
@@ -2391,6 +2610,7 @@ int main(int argc, char * argv[])
 		Scene * scene = new Scene();
 		scene->load("scene.xml");
 
+	#if DEMODATA
 		Effect_Rain rain("rain", 10000);
 
 		Effect_StarCluster starCluster("stars", 100);
@@ -2434,21 +2654,18 @@ int main(int argc, char * argv[])
 		video.setup("doa.avi", 0.f, 0.f, 1.f, true);
 
 		video.tweenTo("scale", 3.f, 10.f, kEaseType_PowIn, 2.f);
+	#endif
 
 		Surface surface(GFX_SX, GFX_SY);
 
-	#if 0
-		Shader basicLitShader("basic_lit");
-		setShader(basicLitShader);
-		clearShader();
-		exit(0);
-	#endif
-
+	#if DEMODATA
 		Shader jitterShader("jitter");
 		Shader boxblurShader("boxblur");
 		Shader luminanceShader("luminance");
 		Shader flowmapShader("flowmap");
 		Shader distortionBarsShader("distortion_bars");
+	#endif
+
 		Shader fxaaShader("fxaa");
 
 		Vec3 cameraPosition(0.f, .5f, -1.f);
@@ -2542,21 +2759,24 @@ int main(int argc, char * argv[])
 
 			if (keyboard.wentDown(SDLK_r))
 			{
-				framework.reloadCaches();
-				framework.reloadCachesOnActivate = true;
+				scene->reload();
 			}
 
+		#if DEMODATA
 			if (keyboard.wentDown(SDLK_a))
 			{
 				spriteSystem.addSprite("Diamond.scml", 0, rand() % GFX_SX, rand() % GFX_SY, 0.f, 1.f);
 			}
+		#endif
 
 			if (keyboard.wentDown(SDLK_c))
 				clearScreen = !clearScreen;
 			if (keyboard.wentDown(SDLK_d))
 				debugDraw = !debugDraw;
 			if (keyboard.wentDown(SDLK_RSHIFT))
-				cameraControl = !cameraControl;
+				setDebugMode(kDebugMode_Camera);
+
+		#if DEMODATA
 			if (keyboard.wentDown(SDLK_p) || config.midiWentDown(64))
 				postProcess = !postProcess;
 
@@ -2574,9 +2794,12 @@ int main(int argc, char * argv[])
 				drawVideo = !drawVideo;
 			if (keyboard.wentDown(SDLK_7))
 				drawPCM = !drawPCM;
+		#endif
 
 			if (keyboard.wentDown(SDLK_F1))
 				drawHelp = !drawHelp;
+			if (keyboard.wentDown(SDLK_e))
+				setDebugMode(kDebugMode_Events);
 			if (keyboard.wentDown(SDLK_i))
 				drawScreenIds = !drawScreenIds;
 			if (keyboard.wentDown(SDLK_s))
@@ -2584,23 +2807,40 @@ int main(int argc, char * argv[])
 			if (keyboard.wentDown(SDLK_e))
 				drawActiveEffects = !drawActiveEffects;
 
-			if (keyboard.wentDown(SDLK_o))
+			if (s_debugMode == kDebugMode_None)
 			{
-				cameraPosition = Vec3(0.f, .5f, -1.f);
-				cameraRotation.SetZero();
+			}
+			else if (s_debugMode == kDebugMode_Camera)
+			{
+				if (keyboard.wentDown(SDLK_o))
+				{
+					cameraPosition = Vec3(0.f, .5f, -1.f);
+					cameraRotation.SetZero();
+				}
+
+			}
+			else if (s_debugMode == kDebugMode_Events)
+			{
+				for (int i = 0; i < 10 && i < scene->m_events.size(); ++i)
+				{
+					if (keyboard.wentDown((SDLKey)(SDLK_0 + i)))
+					{
+						scene->triggerEvent(scene->m_events[i]->m_name.c_str());
+					}
+				}
 			}
 
 			if (keyboard.wentDown(SDLK_g))
 				scene->triggerEvent("fade_rain");
 
-			SDL_SetRelativeMouseMode(cameraControl ? SDL_TRUE : SDL_FALSE);
+			SDL_SetRelativeMouseMode(s_debugMode == kDebugMode_Camera ? SDL_TRUE : SDL_FALSE);
 
 			const float dtReal = Calc::Min(1.f / 30.f, framework.timeStep) * config.midiGetValue(100, 1.f);
 
 			Mat4x4 cameraPositionMatrix;
 			Mat4x4 cameraRotationMatrix;
 
-			if (cameraControl && drawProjectorSetup)
+			if (s_debugMode == kDebugMode_Camera && drawProjectorSetup)
 			{
 				cameraRotation[0] -= mouse.dy / 100.f;
 				cameraRotation[1] -= mouse.dx / 100.f;
@@ -2650,6 +2890,7 @@ int main(int argc, char * argv[])
 
 						//
 
+				#if 0 // todo : look up sprite system and video in current scene
 					case kOscMessageType_Sprite:
 						{
 							spriteSystem.addSprite(
@@ -2667,6 +2908,7 @@ int main(int argc, char * argv[])
 							video.setup(message.str.c_str(), message.param[0], message.param[1], 1.f, true);
 						}
 						break;
+				#endif
 
 						//
 
@@ -2699,7 +2941,6 @@ int main(int argc, char * argv[])
 
 			float timeDilationMultiplier = 1.f;
 
-		#if 1
 			for (auto i = timeDilationEffects.begin(); i != timeDilationEffects.end(); )
 			{
 				TimeDilationEffect & e = *i;
@@ -2716,7 +2957,6 @@ int main(int argc, char * argv[])
 				else
 					++i;
 			}
-		#endif
 
 			const float dt = dtReal * timeDilationMultiplier;
 
@@ -2724,6 +2964,7 @@ int main(int argc, char * argv[])
 
 			scene->tick(dt);
 
+		#if DEMODATA
 			rain.tick(dt);
 
 			starCluster.tick(dt);
@@ -2736,13 +2977,6 @@ int main(int argc, char * argv[])
 			boxes.tick(dt);
 
 			video.tick(dt);
-
-		#if 0
-			if ((rand() % 30) == 0)
-			{
-				cloth.vertices[rand() % cloth.sx][rand() % cloth.sy].vx += 20.f;
-			}
-		#endif
 
 			if (mouse.isDown(BUTTON_LEFT))
 			{
@@ -2764,6 +2998,7 @@ int main(int argc, char * argv[])
 					v.vy += a * dy * dt;
 				}
 			}
+		#endif
 
 			// draw
 
@@ -2771,7 +3006,7 @@ int main(int argc, char * argv[])
 
 			scene->draw(drawableList);
 
-		#if 1
+		#if DEMODATA
 			if (drawRain)
 				rain.draw(drawableList);
 
@@ -2859,7 +3094,7 @@ int main(int argc, char * argv[])
 
 						//setColorf(config.midiGetValue(102, 1.f), config.midiGetValue(102, 1.f)/2.f, config.midiGetValue(102, 1.f)/4.f, 1.f);
 						//setColor(2, 2, 2, 255);
-						setColor(63, 31, 15, 255);
+						setColor(4, 5, 31, 255);
 						drawRect(0, 0, GFX_SX, GFX_SY);
 					}
 
@@ -2884,14 +3119,18 @@ int main(int argc, char * argv[])
 
 							DrawableList drawableList;
 
+						#if DEMODATA
 							if (drawBoxes)
 								boxes.draw(drawableList);
+						#endif
 
 							drawableList.sort();
 
 							drawableList.draw();
 
-						#if 1
+						#if DEMODATA
+							// todo : make PCM effect
+
 							if (drawPCM && ((c == 0) || (c == 2)) && audioInHistorySize > 0)
 							{
 								applyTransformWithViewportSize(sx, sy);
@@ -2927,8 +3166,15 @@ int main(int argc, char * argv[])
 					setColorf(.25f, .5f, 1.f, loudnessThisFrame / 8.f);
 					drawRect(0, 0, GFX_SX, GFX_SY);
 
-					// test effect
+				#if DEMODATA
+					static volatile bool doBoxblur = false;
+					static volatile bool doLuminance = false;
+					static volatile bool doFlowmap = false;
+					static volatile bool doDistortionBars = false;
+				#endif
+					static volatile bool doFxaa = false;
 
+				#if DEMODATA
 					if (postProcess)
 					{
 						setBlend(BLEND_OPAQUE);
@@ -2939,12 +3185,6 @@ int main(int argc, char * argv[])
 						shader.setImmediate("time", time);
 						surface.postprocess(shader);
 					}
-
-					static volatile bool doBoxblur = false;
-					static volatile bool doLuminance = false;
-					static volatile bool doFlowmap = false;
-					static volatile bool doDistortionBars = false;
-					static volatile bool doFxaa = false;
 
 					if (doBoxblur)
 					{
@@ -3019,6 +3259,7 @@ int main(int argc, char * argv[])
 						shader.setBuffer("DistotionBarsBlock", buffer); // fixme : block name
 						surface.postprocess(shader);
 					}
+				#endif
 
 					if (doFxaa)
 					{
@@ -3032,9 +3273,10 @@ int main(int argc, char * argv[])
 				}
 				popSurface();
 
+				// blit result to back buffer
+
 				const GLuint surfaceTexture = surface.getTexture();
 
-			#if 1
 				gxSetTexture(surfaceTexture);
 				{
 					setBlend(BLEND_OPAQUE);
@@ -3043,7 +3285,6 @@ int main(int argc, char * argv[])
 					setBlend(BLEND_ALPHA);
 				}
 				gxSetTexture(0);
-			#endif
 
 				if (drawProjectorSetup)
 				{
@@ -3099,8 +3340,10 @@ int main(int argc, char * argv[])
 
 									DrawableList drawableList;
 
+								#if DEMODATA
 									if (drawBoxes)
 										boxes.draw(drawableList);
+								#endif
 
 									drawableList.sort();
 
@@ -3155,39 +3398,63 @@ int main(int argc, char * argv[])
 					}
 				}
 
+				setFont("VeraMono.ttf");
+				setColor(colorWhite);
+				const int spacingY = 28;
+				const int fontSize = 24;
+				int x = 20;
+				int y = 20;
+
 				if (drawActiveEffects)
 				{
-					setFont("VeraMono.ttf");
-					setColor(colorWhite);
-					const int spacingY = 28;
-					const int fontSize = 24;
-					int x = 20;
-					int y = 20;
 					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "effects list:");
 					x += 50;
+
 					for (auto i = g_effectsByName.begin(); i != g_effectsByName.end(); ++i)
 					{
 						drawText(x, y += spacingY, fontSize, +1.f, +1.f, "%-40s : %p", i->first.c_str(), i->second);
 					}
+
+					y += spacingY;
+					x -= 50;
+				}
+
+				if (s_debugMode == kDebugMode_None)
+				{
+				}
+				else if (s_debugMode == kDebugMode_Camera)
+				{
+				}
+				else if (s_debugMode == kDebugMode_Events)
+				{
+					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "events list:");
+					x += 50;
+
+					for (int i = 0; i < scene->m_events.size(); ++i)
+					{
+						drawText(x, y += spacingY, fontSize, +1.f, +1.f, "%02d: %-40s", i, scene->m_events[i]->m_name.c_str());
+					}
+
+					y += spacingY;
+					x -= 50;
 				}
 
 				if (drawHelp)
 				{
-					setFont("calibri.ttf");
-					setColor(colorWhite);
-					const int spacingY = 28;
-					const int fontSize = 24;
-					int x = 20;
-					int y = 20;
 					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "Press F1 to toggle help");
 					x += 50;
 					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "");
+
+				#if DEMODATA
 					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "1: toggle rain effect");
 					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "2: toggle star cluster effect");
 					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "3: toggle cloth effect");
 					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "4: toggle sprite effects");
 					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "5: toggle video effects");
 					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "");
+				#endif
+
+					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "E: toggle events list");
 					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "I: identify screens");
 					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "S: toggle project setup view");
 					x += 50;

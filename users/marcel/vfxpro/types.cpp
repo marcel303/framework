@@ -90,7 +90,10 @@ void TweenFloat::tick(const float _dt)
 
 			const float timeElapsed = Calc::Min(m_timeElapsed, v.time);
 
-			m_value = interp(m_from, v.value, evalEase(timeElapsed / v.time, v.easeType, v.easeParam));
+			if (v.time > 0.f)
+				m_value = interp(m_from, v.value, evalEase(timeElapsed / v.time, v.easeType, v.easeParam));
+			else
+				m_value = v.value;
 
 			if (m_timeElapsed >= v.time)
 			{

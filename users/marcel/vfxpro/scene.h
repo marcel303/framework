@@ -21,6 +21,7 @@ struct Scene;
 struct SceneEffect
 {
 	std::string m_name;
+	float m_strength;
 	Effect * m_effect;
 
 	SceneEffect();
@@ -44,6 +45,7 @@ struct SceneLayer : TweenFloatCollection
 	std::string m_name;
 	BlendMode m_blendMode;
 	bool m_autoClear;
+	bool m_copyPreviousLayer;
 
 	TweenFloat m_opacity;
 
@@ -109,6 +111,7 @@ struct SceneEvent
 
 struct Scene
 {
+	std::string m_filename;
 	std::string m_name;
 	std::vector<SceneLayer*> m_layers;
 	std::vector<SceneEvent*> m_events;
@@ -124,4 +127,7 @@ struct Scene
 	void triggerEvent(const char * name);
 
 	bool load(const char * filename);
+
+	void clear();
+	bool reload();
 };
