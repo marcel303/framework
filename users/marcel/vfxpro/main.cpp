@@ -1125,29 +1125,33 @@ struct Effect_Boxes : Effect
 
 struct Effect_Picture : Effect
 {
+	TweenFloat m_alpha;
 	std::string m_filename;
 	TweenFloat m_x;
 	TweenFloat m_y;
 	TweenFloat m_scale;
 	bool m_centered;
 
-	Effect_Picture(const char * name, const char * filename = nullptr, float x = 0.f, float y = 0.f, float scale = 1.f, bool centered = true)
+	Effect_Picture(const char * name, const float alpha = 1.f, const char * filename = nullptr, float x = 0.f, float y = 0.f, float scale = 1.f, bool centered = true)
 		: Effect(name)
+		, m_alpha(1.f)
 		, m_x(0.f)
 		, m_y(0.f)
 		, m_scale(1.f)
 		, m_centered(true)
 	{
+		addVar("alpha", m_alpha);
 		addVar("x", m_x);
 		addVar("y", m_y);
 		addVar("scale", m_scale);
 
 		if (filename != nullptr)
-			setup(filename, x, y, scale, centered);
+			setup(alpha, filename, x, y, scale, centered);
 	}
 
-	void setup(const char * filename, float x, float y, float scale, bool centered)
+	void setup(const float alpha, const char * filename, float x, float y, float scale, bool centered)
 	{
+		m_alpha = alpha;
 		m_filename = filename;
 		m_x = x;
 		m_y = y;
@@ -1185,7 +1189,7 @@ struct Effect_Picture : Effect
 			if (m_centered)
 				gxTranslatef(-sx / 2.f, -sy / 2.f, 0.f);
 
-			setColor(colorWhite);
+			setColorf(1.f, 1.f, 1.f, m_alpha);
 			sprite.draw();
 		}
 		gxPopMatrix();
@@ -1194,6 +1198,7 @@ struct Effect_Picture : Effect
 
 struct Effect_Video : Effect
 {
+	TweenFloat m_alpha;
 	std::string m_filename;
 	TweenFloat m_x;
 	TweenFloat m_y;
@@ -1202,23 +1207,26 @@ struct Effect_Video : Effect
 
 	MediaPlayer m_mediaPlayer;
 
-	Effect_Video(const char * name, const char * filename = nullptr, float x = 0.f, float y = 0.f, float scale = 1.f, bool centered = true)
+	Effect_Video(const char * name, const float alpha = 1.f, const char * filename = nullptr, float x = 0.f, float y = 0.f, float scale = 1.f, bool centered = true)
 		: Effect(name)
+		, m_alpha(1.f)
 		, m_x(0.f)
 		, m_y(0.f)
 		, m_scale(1.f)
 		, m_centered(true)
 	{
+		addVar("alpha", m_alpha);
 		addVar("x", m_x);
 		addVar("y", m_y);
 		addVar("scale", m_scale);
 
 		if (filename != nullptr)
-			setup(filename, x, y, scale, centered);
+			setup(alpha, filename, x, y, scale, centered);
 	}
 
-	void setup(const char * filename, float x, float y, float scale, bool centered)
+	void setup(const float alpha, const char * filename, float x, float y, float scale, bool centered)
 	{
+		m_alpha = alpha;
 		m_filename = filename;
 		m_x = x;
 		m_y = y;
@@ -1233,9 +1241,7 @@ struct Effect_Video : Effect
 
 	virtual void tick(const float dt) override
 	{
-		m_x.tick(dt);
-		m_y.tick(dt);
-		m_scale.tick(dt);
+		TweenFloatCollection::tick(dt);
 
 		if (m_mediaPlayer.isActive())
 		{
@@ -1271,7 +1277,7 @@ struct Effect_Video : Effect
 				if (m_centered)
 					gxTranslatef(-sx/2.f, -sy/2.f, 0.f);
 
-				setColor(colorWhite);
+				setColorf(1.f, 1.f, 1.f, m_alpha);
 				m_mediaPlayer.draw();
 			}
 			gxPopMatrix();
@@ -1283,19 +1289,27 @@ struct Effect_Video : Effect
 
 struct Effect_Luminance : Effect
 {
+	TweenFloat m_alpha;
 	TweenFloat m_power;
 	TweenFloat m_scale;
+	TweenFloat m_darken;
 
-	Effect_Luminance(const char * name, const float power, const float scale)
+	Effect_Luminance(const char * name, const float alpha, const float power, const float scale, const float darken)
 		: Effect(name)
+		, m_alpha(1.f)
 		, m_power(1.f)
 		, m_scale(1.f)
+		, m_darken(0.f)
 	{
+		addVar("alpha", m_alpha);
 		addVar("power", m_power);
 		addVar("scale", m_scale);
+		addVar("darken", m_darken);
 
+		m_alpha = alpha;
 		m_power = power;
 		m_scale = scale;
+		m_darken = darken;
 	}
 
 	virtual void tick(const float dt) override
@@ -1310,15 +1324,21 @@ struct Effect_Luminance : Effect
 
 	virtual void draw() override
 	{
-		setBlend(BLEND_OPAQUE);
+		if (m_alpha == 1.f)
+			setBlend(BLEND_OPAQUE);
+		else
+			setBlend(BLEND_ALPHA);
+		setColorf(1.f, 1.f, 1.f, m_alpha);
 
 		Shader shader("luminance");
 		setShader(shader);
 		shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
 		ShaderBuffer buffer;
 		LuminanceData data;
+		data.alpha = m_alpha;
 		data.power = m_power;
 		data.scale = m_scale;
+		data.darken = m_darken;
 		//logDebug("p=%g, s=%g", (float)m_power, (float)m_scale);
 		buffer.setData(&data, sizeof(data));
 		shader.setBuffer("LuminanceBlock", buffer);
@@ -1332,20 +1352,24 @@ struct Effect_Luminance : Effect
 
 struct Effect_ColorLut2D : Effect
 {
+	TweenFloat m_alpha;
 	Sprite * m_lutSprite;
 	TweenFloat m_lutStart;
 	TweenFloat m_lutEnd;
 	TweenFloat m_numTaps;
 
-	Effect_ColorLut2D(const char * name, const char * lut, const float lutStart, const float lutEnd, const float numTaps)
+	Effect_ColorLut2D(const char * name, const float alpha, const char * lut, const float lutStart, const float lutEnd, const float numTaps)
 		: Effect(name)
+		, m_alpha(1.f)
 		, m_lutSprite(nullptr)
 		, m_numTaps(1.f)
 	{
+		addVar("alpha", m_alpha);
 		addVar("lut_start", m_lutStart);
 		addVar("lut_end", m_lutEnd);
 		addVar("num_taps", m_numTaps);
 
+		m_alpha = alpha;
 		m_lutSprite = new Sprite(lut);
 		m_lutStart = lutStart;
 		m_lutEnd = lutEnd;
@@ -1364,7 +1388,11 @@ struct Effect_ColorLut2D : Effect
 
 	virtual void draw() override
 	{
-		setBlend(BLEND_OPAQUE);
+		if (m_alpha == 1.f)
+			setBlend(BLEND_OPAQUE);
+		else
+			setBlend(BLEND_ALPHA);
+		setColorf(1.f, 1.f, 1.f, m_alpha);
 
 		Shader shader("colorlut2d");
 		setShader(shader);
@@ -1372,6 +1400,7 @@ struct Effect_ColorLut2D : Effect
 		shader.setTexture("lut", 1, m_lutSprite->getTexture(), true, false);
 		ShaderBuffer buffer;
 		ColorLut2DData data;
+		data.alpha = m_alpha;
 		data.lutStart = m_lutStart;
 		data.lutEnd = m_lutEnd;
 		data.numTaps = m_numTaps;
@@ -1387,21 +1416,24 @@ struct Effect_ColorLut2D : Effect
 
 struct Effect_Flowmap : Effect
 {
+	TweenFloat m_alpha;
 	std::string m_map;
 	Sprite * m_mapSprite;
-	TweenFloat m_flowStrength;
+	TweenFloat m_strength;
 	TweenFloat m_darken;
 
-	Effect_Flowmap(const char * name, const char * map, const float flowStrength, const float darken)
+	Effect_Flowmap(const char * name, const float alpha, const char * map, const float strength, const float darken)
 		: Effect(name)
 		, m_mapSprite(nullptr)
 	{
-		addVar("flow_strength", m_flowStrength);
+		addVar("alpha", m_alpha);
+		addVar("strength", m_strength);
 		addVar("darken", m_darken);
 
+		m_alpha = alpha;
 		m_map = map;
 		m_mapSprite = new Sprite(map);
-		m_flowStrength = flowStrength;
+		m_strength = strength;
 		m_darken = darken;
 	}
 
@@ -1423,7 +1455,11 @@ struct Effect_Flowmap : Effect
 
 	virtual void draw() override
 	{
-		setBlend(BLEND_OPAQUE);
+		if (m_alpha == 1.f)
+			setBlend(BLEND_OPAQUE);
+		else
+			setBlend(BLEND_ALPHA);
+		setColorf(1.f, 1.f, 1.f, m_alpha);
 
 		Shader shader("flowmap");
 		setShader(shader);
@@ -1432,10 +1468,64 @@ struct Effect_Flowmap : Effect
 		shader.setImmediate("time", g_currentScene->m_time);
 		ShaderBuffer buffer;
 		FlowmapData data;
-		data.strength = m_flowStrength;
+		data.alpha = m_alpha;
+		data.strength = m_strength;
 		data.darken = m_darken;
 		buffer.setData(&data, sizeof(data));
 		shader.setBuffer("FlowmapBlock", buffer);
+		g_currentSurface->postprocess(shader);
+
+		setBlend(BLEND_ADD);
+	}
+};
+
+//
+
+struct Effect_Vignette : Effect
+{
+	TweenFloat m_alpha;
+	TweenFloat m_innerRadius;
+	TweenFloat m_distance;
+
+	Effect_Vignette(const char * name, const float alpha, const float innerRadius, const float distance)
+		: Effect(name)
+		, m_alpha(1.f)
+		, m_innerRadius(0.f)
+		, m_distance(100.f)
+	{
+		addVar("alpha", m_alpha);
+		addVar("inner", m_innerRadius);
+		addVar("distance", m_distance);
+
+		m_alpha = alpha;
+		m_innerRadius = innerRadius;
+		m_distance = distance;
+	}
+
+	virtual void tick(const float dt) override
+	{
+		TweenFloatCollection::tick(dt);
+	}
+
+	virtual void draw(DrawableList & list) override
+	{
+		new (list)EffectDrawable(this);
+	}
+
+	virtual void draw() override
+	{
+		setBlend(BLEND_OPAQUE);
+
+		Shader shader("vignette");
+		setShader(shader);
+		shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
+		ShaderBuffer buffer;
+		VignetteData data;
+		data.alpha = m_alpha;
+		data.innerRadius = m_innerRadius;
+		data.distanceRcp = 1.f / m_distance;
+		buffer.setData(&data, sizeof(data));
+		shader.setBuffer("VignetteBlock", buffer);
 		g_currentSurface->postprocess(shader);
 
 		setBlend(BLEND_ADD);
@@ -1461,7 +1551,8 @@ SceneEffect::~SceneEffect()
 bool SceneEffect::load(const XMLElement * xmlEffect)
 {
 	m_name = stringAttrib(xmlEffect, "name", "");
-	m_strength = floatAttrib(xmlEffect, "strength", 1.f);
+	
+	const float alpha = floatAttrib(xmlEffect, "alpha", 1.f);
 
 	const std::string type = stringAttrib(xmlEffect, "type", "");
 
@@ -1483,7 +1574,7 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 	else if (type == "flowmap")
 	{
 		const std::string map = stringAttrib(xmlEffect, "map", "");
-		const float flowStrength = floatAttrib(xmlEffect, "flow_strength", 1.f);
+		const float strength = floatAttrib(xmlEffect, "strength", 1.f);
 		const float darken = floatAttrib(xmlEffect, "darken", 0.f);
 
 		if (map.empty())
@@ -1493,7 +1584,7 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 		}
 		else
 		{
-			m_effect = new Effect_Flowmap(m_name.c_str(), map.c_str(), flowStrength, darken);
+			m_effect = new Effect_Flowmap(m_name.c_str(), alpha, map.c_str(), strength, darken);
 			return true;
 		}
 	}
@@ -1501,8 +1592,9 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 	{
 		const float power = floatAttrib(xmlEffect, "power", 1.f);
 		const float scale = floatAttrib(xmlEffect, "scale", 1.f);
+		const float darken = floatAttrib(xmlEffect, "darken", 0.f);
 
-		m_effect = new Effect_Luminance(m_name.c_str(), power, scale);
+		m_effect = new Effect_Luminance(m_name.c_str(), alpha, power, scale, darken);
 		return true;
 	}
 	else if (type == "colorlut2d")
@@ -1519,7 +1611,23 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 		}
 		else
 		{
-			m_effect = new Effect_ColorLut2D(m_name.c_str(), lut.c_str(), lutStart, lutEnd, numTaps);
+			m_effect = new Effect_ColorLut2D(m_name.c_str(), alpha, lut.c_str(), lutStart, lutEnd, numTaps);
+			return true;
+		}
+	}
+	else if (type == "vignette")
+	{
+		const float innerRadius = floatAttrib(xmlEffect, "inner_radius", 0.f);
+		const float distance = floatAttrib(xmlEffect, "distance", 0.f);
+
+		if (distance == 0.f)
+		{
+			logWarning("distance not set. skipping effect");
+			return false;
+		}
+		else
+		{
+			m_effect = new Effect_Vignette(m_name.c_str(), alpha, innerRadius, distance);
 			return true;
 		}
 	}
@@ -1538,7 +1646,7 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 		}
 		else
 		{
-			m_effect = new Effect_Video(m_name.c_str(), file.c_str(), x, y, scale, centered);
+			m_effect = new Effect_Video(m_name.c_str(), alpha, file.c_str(), x, y, scale, centered);
 			return true;
 		}
 	}
@@ -1557,7 +1665,7 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 		}
 		else
 		{
-			m_effect = new Effect_Picture(m_name.c_str(), file.c_str(), x, y, scale, centered);
+			m_effect = new Effect_Picture(m_name.c_str(), alpha, file.c_str(), x, y, scale, centered);
 			return true;
 		}
 	}
