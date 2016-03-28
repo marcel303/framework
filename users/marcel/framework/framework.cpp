@@ -1362,7 +1362,9 @@ GLint Shader::getAttribute(const char * name)
 	setShader(*this); \
 	const GLint index = glGetUniformLocation(getProgram(), name); \
 	if (index == -1) \
-		logDebug("couldn't find shader uniform %s", name); \
+	{ \
+		/*logDebug("couldn't find shader uniform %s", name);*/ \
+	} \
 	else \
 	{ \
 		op; \
