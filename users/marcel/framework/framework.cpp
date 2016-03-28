@@ -1230,11 +1230,11 @@ void Surface::postprocess(Shader & shader)
 		setShader(shader);
 		{
 			const int bufferId = (m_bufferId + 1) % 2;
-			gxSetTexture(m_texture[bufferId]);
+			//gxSetTexture(m_texture[bufferId]);
 			{
 				drawRect(0.f, 0.f, m_size[0], m_size[1]);
 			}
-			gxSetTexture(0);
+			//gxSetTexture(0);
 		}
 		clearShader();
 	}
