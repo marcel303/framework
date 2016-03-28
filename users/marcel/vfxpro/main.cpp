@@ -762,6 +762,8 @@ struct Effect_Cloth : Effect
 
 	virtual void tick(const float dt) override
 	{
+		TweenFloatCollection::tick(dt);
+
 		const float gravityX = 0.f;
 		const float gravityY = keyboard.isDown(SDLK_g) ? 10.f : 0.f;
 
@@ -939,6 +941,8 @@ struct Effect_SpriteSystem : Effect
 
 	virtual void tick(const float dt) override
 	{
+		TweenFloatCollection::tick(dt);
+
 		for (int i = 0; i < kMaxSprites; ++i)
 		{
 			SpriteInfo & s = m_sprites[i];
@@ -1064,6 +1068,8 @@ struct Effect_Boxes : Effect
 
 	virtual void tick(const float dt) override
 	{
+		TweenFloatCollection::tick(dt);
+
 		for (auto i = m_boxes.begin(); i != m_boxes.end(); )
 		{
 			Box & b = *i;
@@ -1153,32 +1159,29 @@ struct Effect_Picture : Effect
 {
 	TweenFloat m_alpha;
 	std::string m_filename;
-	TweenFloat m_scale;
 	bool m_centered;
 
 	Effect_Picture(const char * name, const float alpha = 1.f, const char * filename = nullptr, float x = 0.f, float y = 0.f, float scale = 1.f, bool centered = true)
 		: Effect(name)
 		, m_alpha(1.f)
-		, m_scale(1.f)
 		, m_centered(true)
 	{
 		is2D = true;
 
 		addVar("alpha", m_alpha);
-		addVar("scale", m_scale);
 
 		if (filename != nullptr)
 			setup(alpha, filename, x, y, scale, centered);
 	}
 
-	void setup(const float alpha, const char * filename, float x, float y, float scale, bool centered)
+	void setup(const float alpha, const char * filename, float x, float y, float _scale, bool centered)
 	{
 		screenX = x;
 		screenY = y;
+		scale = _scale;
 
 		m_alpha = alpha;
 		m_filename = filename;
-		m_scale = scale;
 		m_centered = centered;
 	}
 
@@ -1204,7 +1207,6 @@ struct Effect_Picture : Effect
 			const float scaleY = SCREEN_SY / float(sy);
 			const float scale = Calc::Min(scaleX, scaleY);
 
-			gxScalef(m_scale, m_scale, 1.f);
 			gxScalef(scale, scale, 1.f);
 			if (m_centered)
 				gxTranslatef(-sx / 2.f, -sy / 2.f, 0.f);
@@ -1220,7 +1222,6 @@ struct Effect_Video : Effect
 {
 	TweenFloat m_alpha;
 	std::string m_filename;
-	TweenFloat m_scale;
 	bool m_centered;
 
 	MediaPlayer m_mediaPlayer;
@@ -1228,26 +1229,24 @@ struct Effect_Video : Effect
 	Effect_Video(const char * name, const float alpha = 1.f, const char * filename = nullptr, const float x = 0.f, const float y = 0.f, const float scale = 1.f, const bool centered = true, const bool play = false)
 		: Effect(name)
 		, m_alpha(1.f)
-		, m_scale(1.f)
 		, m_centered(true)
 	{
 		is2D = true;
 
 		addVar("alpha", m_alpha);
-		addVar("scale", m_scale);
 
 		if (filename != nullptr)
 			setup(alpha, filename, x, y, scale, centered, play);
 	}
 
-	void setup(const float alpha, const char * filename, const float x, const float y, const float scale, const bool centered, const bool play)
+	void setup(const float alpha, const char * filename, const float x, const float y, const float _scale, const bool centered, const bool play)
 	{
 		screenX = x;
 		screenY = y;
+		scale = _scale;
 
 		m_alpha = alpha;
 		m_filename = filename;
-		m_scale = scale;
 		m_centered = centered;
 
 		if (play)
@@ -1288,7 +1287,6 @@ struct Effect_Video : Effect
 				const float scaleY = SCREEN_SY / float(sy);
 				const float scale = Calc::Min(scaleX, scaleY);
 
-				gxScalef(m_scale, m_scale, 1.f);
 				gxScalef(scale, scale, 1.f);
 				if (m_centered)
 					gxTranslatef(-sx/2.f, -sy/2.f, 0.f);
@@ -1318,24 +1316,24 @@ struct Effect_Luminance : Effect
 {
 	TweenFloat m_alpha;
 	TweenFloat m_power;
-	TweenFloat m_scale;
+	TweenFloat m_mul;
 	TweenFloat m_darken;
 
-	Effect_Luminance(const char * name, const float alpha, const float power, const float scale, const float darken)
+	Effect_Luminance(const char * name, const float alpha, const float power, const float mul, const float darken)
 		: Effect(name)
 		, m_alpha(1.f)
 		, m_power(1.f)
-		, m_scale(1.f)
+		, m_mul(1.f)
 		, m_darken(0.f)
 	{
 		addVar("alpha", m_alpha);
 		addVar("power", m_power);
-		addVar("scale", m_scale);
+		addVar("mul", m_mul);
 		addVar("darken", m_darken);
 
 		m_alpha = alpha;
 		m_power = power;
-		m_scale = scale;
+		m_mul = mul;
 		m_darken = darken;
 	}
 
@@ -1360,9 +1358,9 @@ struct Effect_Luminance : Effect
 		LuminanceData data;
 		data.alpha = m_alpha;
 		data.power = m_power;
-		data.scale = m_scale;
+		data.scale = m_mul;
 		data.darken = m_darken;
-		//logDebug("p=%g, s=%g", (float)m_power, (float)m_scale);
+		//logDebug("p=%g, m=%g", (float)m_power, (float)m_mul);
 		buffer.setData(&data, sizeof(data));
 		shader.setBuffer("LuminanceBlock", buffer);
 		g_currentSurface->postprocess(shader);
@@ -1918,6 +1916,22 @@ bool SceneAction::load(const XMLElement * xmlAction)
 			m_tween.m_easeType = kEaseType_PowIn;
 		else if (easeType == "pow_out")
 			m_tween.m_easeType = kEaseType_PowOut;
+		else if (easeType == "sine_in")
+			m_tween.m_easeType = kEaseType_SineIn;
+		else if (easeType == "sine_out")
+			m_tween.m_easeType = kEaseType_SineOut;
+		else if (easeType == "sine_inout")
+			m_tween.m_easeType = kEaseType_SineInOut;
+		else if (easeType == "back_in")
+			m_tween.m_easeType = kEaseType_BackIn;
+		else if (easeType == "back_out")
+			m_tween.m_easeType = kEaseType_BackOut;
+		else if (easeType == "bounce_in")
+			m_tween.m_easeType = kEaseType_BounceIn;
+		else if (easeType == "bounce_out")
+			m_tween.m_easeType = kEaseType_BounceOut;
+		else if (easeType == "bounce_inout")
+			m_tween.m_easeType = kEaseType_BounceOut;
 		else
 			logError("unknown ease type: %s", easeType.c_str());
 		m_tween.m_easeParam = floatAttrib(xmlAction, "ease_param", 1.f);
