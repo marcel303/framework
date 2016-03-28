@@ -140,7 +140,6 @@ static float virtualToScreenY(float y)
 
 Scene * g_currentScene = nullptr;
 SceneLayer * g_currentSceneLayer = nullptr;
-Surface * g_previousSurface = nullptr;
 Surface * g_currentSurface = nullptr;
 
 template <typename T, T * R>
@@ -179,20 +178,31 @@ struct Effect : TweenFloatCollection
 {
 	bool is3D; // when set to 3D, the effect is rendered using a separate virtual camera to each screen. when false, it will use simple 1:1 mapping onto screen coordinates
 	Mat4x4 transform; // transformation matrix for 3D effects
-	float screenX;
-	float screenY;
-	float scaleX;
-	float scaleY;
-	float z;
+	bool is2D;
+	TweenFloat screenX;
+	TweenFloat screenY;
+	TweenFloat scaleX;
+	TweenFloat scaleY;
+	TweenFloat scale;
+	TweenFloat z;
 
 	Effect(const char * name)
 		: is3D(false)
+		, is2D(false)
 		, screenX(0.f)
 		, screenY(0.f)
 		, scaleX(1.f)
 		, scaleY(1.f)
+		, scale(1.f)
 		, z(0.f)
 	{
+		addVar("x", screenX);
+		addVar("y", screenY);
+		addVar("scale_x", scaleX);
+		addVar("scale_y", scaleY);
+		addVar("scale", scale);
+		addVar("z", z);
+
 		transform.MakeIdentity();
 
 		if (name != nullptr)
@@ -245,6 +255,7 @@ struct Effect : TweenFloatCollection
 	virtual void tick(const float dt) = 0;
 	virtual void draw(DrawableList & list) = 0;
 	virtual void draw() = 0;
+	virtual void handleSignal(const std::string & name) { }
 };
 
 struct EffectDrawable : Drawable
@@ -263,8 +274,11 @@ struct EffectDrawable : Drawable
 		{
 			if (m_effect->is3D)
 				gxMultMatrixf(m_effect->transform.m_v);
-			else
-				gxTranslatef(m_effect->screenX, m_effect->screenY, 0.f);
+			else if (m_effect->is2D)
+			{
+				gxTranslatef(virtualToScreenX(m_effect->screenX), virtualToScreenY(m_effect->screenY), 0.f);
+				gxScalef(m_effect->scaleX * m_effect->scale, m_effect->scaleY * m_effect->scale, 1.f);
+			}
 
 			m_effect->draw();
 		}
@@ -305,7 +319,7 @@ static Effect * getEffect(const char * name)
 
 //
 
-struct ParticleSystem : Effect
+struct ParticleSystem
 {
 	int numParticles;
 
@@ -327,19 +341,18 @@ struct ParticleSystem : Effect
 	Array<float> lifeRcp;
 	Array<bool> hasLife;
 
-	ParticleSystem(const char * name, int numElements)
-		: Effect(name)
-		, numParticles(0)
+	ParticleSystem(const int numElements)
+		: numParticles(0)
 		, numFree(0)
 	{
 		resize(numElements);
 	}
 
-	virtual ~ParticleSystem()
+	~ParticleSystem()
 	{
 	}
 
-	void resize(int numElements)
+	void resize(const int numElements)
 	{
 		numParticles = numElements;
 
@@ -420,7 +433,7 @@ struct ParticleSystem : Effect
 		}
 	}
 
-	virtual void tick(const float dt) override
+	void tick(const float dt)
 	{
 		for (int i = 0; i < numParticles; ++i)
 		{
@@ -451,12 +464,7 @@ struct ParticleSystem : Effect
 		}
 	}
 
-	virtual void draw(DrawableList & list) override
-	{
-		new (list) EffectDrawable(this);
-	}
-
-	virtual void draw() override
+	void draw(const float alpha)
 	{
 		gxBegin(GL_QUADS);
 		{
@@ -466,7 +474,7 @@ struct ParticleSystem : Effect
 				{
 					const float value = life[i] * lifeRcp[i];
 
-					gxColor4f(1.f, 1.f, 1.f, value);
+					gxColor4f(1.f, 1.f, 1.f, alpha * value);
 
 					const float s = std::sinf(angle[i]);
 					const float c = std::cosf(angle[i]);
@@ -495,16 +503,23 @@ struct Effect_Rain : Effect
 	ParticleSystem m_particleSystem;
 	Array<float> m_particleSizes;
 	EffectTimer m_spawnTimer;
+	TweenFloat m_alpha;
 
-	Effect_Rain(const char * name, int numRainDrops)
+	Effect_Rain(const char * name, const float alpha, const int numRainDrops)
 		: Effect(name)
-		, m_particleSystem(nullptr, numRainDrops)
+		, m_particleSystem(numRainDrops)
 	{
+		addVar("alpha", m_alpha);
+
+		m_alpha = alpha;
+
 		m_particleSizes.resize(numRainDrops, true);
 	}
 
 	virtual void tick(const float dt) override
 	{
+		TweenFloatCollection::tick(dt);
+
 		const float gravityY = 400.f;
 		//const float falloff = .9f;
 		const float falloff = 1.f;
@@ -586,7 +601,7 @@ struct Effect_Rain : Effect
 	{
 		gxSetTexture(Sprite("rain.png").getTexture());
 		{
-			m_particleSystem.draw();
+			m_particleSystem.draw(m_alpha);
 		}
 		gxSetTexture(0);
 	}
@@ -595,11 +610,18 @@ struct Effect_Rain : Effect
 struct Effect_StarCluster : Effect
 {
 	ParticleSystem m_particleSystem;
+	TweenFloat m_alpha;
 
-	Effect_StarCluster(const char * name, int numStars)
+	Effect_StarCluster(const char * name, const float alpha, const int numStars)
 		: Effect(name)
-		, m_particleSystem(nullptr, numStars)
+		, m_particleSystem(numStars)
 	{
+		is2D = true;
+
+		addVar("alpha", m_alpha);
+
+		m_alpha = alpha;
+
 		for (int i = 0; i < numStars; ++i)
 		{
 			int id;
@@ -625,6 +647,8 @@ struct Effect_StarCluster : Effect
 
 	virtual void tick(const float dt) override
 	{
+		TweenFloatCollection::tick(dt);
+
 		// affect stars based on force from center
 
 		for (int i = 0; i < m_particleSystem.numParticles; ++i)
@@ -665,7 +689,7 @@ struct Effect_StarCluster : Effect
 	{
 		gxSetTexture(Sprite("prayer.png").getTexture());
 		{
-			m_particleSystem.draw();
+			m_particleSystem.draw(m_alpha);
 		}
 		gxSetTexture(0);
 	}
@@ -695,6 +719,8 @@ struct Effect_Cloth : Effect
 	Effect_Cloth(const char * name)
 		: Effect(name)
 	{
+		// todo : set is2D (?)
+
 		sx = 0;
 		sy = 0;
 
@@ -1127,22 +1153,18 @@ struct Effect_Picture : Effect
 {
 	TweenFloat m_alpha;
 	std::string m_filename;
-	TweenFloat m_x;
-	TweenFloat m_y;
 	TweenFloat m_scale;
 	bool m_centered;
 
 	Effect_Picture(const char * name, const float alpha = 1.f, const char * filename = nullptr, float x = 0.f, float y = 0.f, float scale = 1.f, bool centered = true)
 		: Effect(name)
 		, m_alpha(1.f)
-		, m_x(0.f)
-		, m_y(0.f)
 		, m_scale(1.f)
 		, m_centered(true)
 	{
+		is2D = true;
+
 		addVar("alpha", m_alpha);
-		addVar("x", m_x);
-		addVar("y", m_y);
 		addVar("scale", m_scale);
 
 		if (filename != nullptr)
@@ -1151,19 +1173,18 @@ struct Effect_Picture : Effect
 
 	void setup(const float alpha, const char * filename, float x, float y, float scale, bool centered)
 	{
+		screenX = x;
+		screenY = y;
+
 		m_alpha = alpha;
 		m_filename = filename;
-		m_x = x;
-		m_y = y;
 		m_scale = scale;
 		m_centered = centered;
 	}
 
 	virtual void tick(const float dt) override
 	{
-		m_x.tick(dt);
-		m_y.tick(dt);
-		m_scale.tick(dt);
+		TweenFloatCollection::tick(dt);
 	}
 
 	virtual void draw(DrawableList & list) override
@@ -1183,14 +1204,13 @@ struct Effect_Picture : Effect
 			const float scaleY = SCREEN_SY / float(sy);
 			const float scale = Calc::Min(scaleX, scaleY);
 
-			gxTranslatef(virtualToScreenX(m_x), virtualToScreenY(m_y), 0.f);
 			gxScalef(m_scale, m_scale, 1.f);
 			gxScalef(scale, scale, 1.f);
 			if (m_centered)
 				gxTranslatef(-sx / 2.f, -sy / 2.f, 0.f);
 
 			setColorf(1.f, 1.f, 1.f, m_alpha);
-			sprite.draw();
+			sprite.drawEx(0.f, 0.f, 0.f, 1.f, 1.f, false, FILTER_LINEAR);
 		}
 		gxPopMatrix();
 	}
@@ -1200,42 +1220,39 @@ struct Effect_Video : Effect
 {
 	TweenFloat m_alpha;
 	std::string m_filename;
-	TweenFloat m_x;
-	TweenFloat m_y;
 	TweenFloat m_scale;
 	bool m_centered;
 
 	MediaPlayer m_mediaPlayer;
 
-	Effect_Video(const char * name, const float alpha = 1.f, const char * filename = nullptr, float x = 0.f, float y = 0.f, float scale = 1.f, bool centered = true)
+	Effect_Video(const char * name, const float alpha = 1.f, const char * filename = nullptr, const float x = 0.f, const float y = 0.f, const float scale = 1.f, const bool centered = true, const bool play = false)
 		: Effect(name)
 		, m_alpha(1.f)
-		, m_x(0.f)
-		, m_y(0.f)
 		, m_scale(1.f)
 		, m_centered(true)
 	{
+		is2D = true;
+
 		addVar("alpha", m_alpha);
-		addVar("x", m_x);
-		addVar("y", m_y);
 		addVar("scale", m_scale);
 
 		if (filename != nullptr)
-			setup(alpha, filename, x, y, scale, centered);
+			setup(alpha, filename, x, y, scale, centered, play);
 	}
 
-	void setup(const float alpha, const char * filename, float x, float y, float scale, bool centered)
+	void setup(const float alpha, const char * filename, const float x, const float y, const float scale, const bool centered, const bool play)
 	{
+		screenX = x;
+		screenY = y;
+
 		m_alpha = alpha;
 		m_filename = filename;
-		m_x = x;
-		m_y = y;
 		m_scale = scale;
 		m_centered = centered;
 
-		if (!m_mediaPlayer.open(filename))
+		if (play)
 		{
-			logWarning("failed to open %s", filename);
+			handleSignal("start");
 		}
 	}
 
@@ -1271,7 +1288,6 @@ struct Effect_Video : Effect
 				const float scaleY = SCREEN_SY / float(sy);
 				const float scale = Calc::Min(scaleX, scaleY);
 
-				gxTranslatef(virtualToScreenX(m_x), virtualToScreenY(m_y), 0.f);
 				gxScalef(m_scale, m_scale, 1.f);
 				gxScalef(scale, scale, 1.f);
 				if (m_centered)
@@ -1281,6 +1297,17 @@ struct Effect_Video : Effect
 				m_mediaPlayer.draw();
 			}
 			gxPopMatrix();
+		}
+	}
+
+	virtual void handleSignal(const std::string & name)
+	{
+		if (name == "start" && !m_mediaPlayer.isActive())
+		{
+			if (!m_mediaPlayer.open(m_filename.c_str()))
+			{
+				logWarning("failed to open %s", m_filename.c_str());
+			}
 		}
 	}
 };
@@ -1319,16 +1346,12 @@ struct Effect_Luminance : Effect
 
 	virtual void draw(DrawableList & list) override
 	{
-		new (list)EffectDrawable(this);
+		new (list) EffectDrawable(this);
 	}
 
 	virtual void draw() override
 	{
-		if (m_alpha == 1.f)
-			setBlend(BLEND_OPAQUE);
-		else
-			setBlend(BLEND_ALPHA);
-		setColorf(1.f, 1.f, 1.f, m_alpha);
+		setBlend(BLEND_OPAQUE);
 
 		Shader shader("luminance");
 		setShader(shader);
@@ -1383,16 +1406,12 @@ struct Effect_ColorLut2D : Effect
 
 	virtual void draw(DrawableList & list) override
 	{
-		new (list)EffectDrawable(this);
+		new (list) EffectDrawable(this);
 	}
 
 	virtual void draw() override
 	{
-		if (m_alpha == 1.f)
-			setBlend(BLEND_OPAQUE);
-		else
-			setBlend(BLEND_ALPHA);
-		setColorf(1.f, 1.f, 1.f, m_alpha);
+		setBlend(BLEND_OPAQUE);
 
 		Shader shader("colorlut2d");
 		setShader(shader);
@@ -1455,11 +1474,7 @@ struct Effect_Flowmap : Effect
 
 	virtual void draw() override
 	{
-		if (m_alpha == 1.f)
-			setBlend(BLEND_OPAQUE);
-		else
-			setBlend(BLEND_ALPHA);
-		setColorf(1.f, 1.f, 1.f, m_alpha);
+		setBlend(BLEND_OPAQUE);
 
 		Shader shader("flowmap");
 		setShader(shader);
@@ -1494,7 +1509,7 @@ struct Effect_Vignette : Effect
 		, m_distance(100.f)
 	{
 		addVar("alpha", m_alpha);
-		addVar("inner", m_innerRadius);
+		addVar("inner_radius", m_innerRadius);
 		addVar("distance", m_distance);
 
 		m_alpha = alpha;
@@ -1509,7 +1524,7 @@ struct Effect_Vignette : Effect
 
 	virtual void draw(DrawableList & list) override
 	{
-		new (list)EffectDrawable(this);
+		new (list) EffectDrawable(this);
 	}
 
 	virtual void draw() override
@@ -1552,9 +1567,9 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 {
 	m_name = stringAttrib(xmlEffect, "name", "");
 	
-	const float alpha = floatAttrib(xmlEffect, "alpha", 1.f);
-
 	const std::string type = stringAttrib(xmlEffect, "type", "");
+
+	Effect * effect = nullptr;
 
 	if (type == "rain")
 	{
@@ -1563,115 +1578,115 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 		if (numRaindrops == 0)
 		{
 			logWarning("num_raindrops is 0. skipping effect");
-			return false;
 		}
 		else
 		{
-			m_effect = new Effect_Rain(m_name.c_str(), numRaindrops);
-			return true;
+			effect = new Effect_Rain(m_name.c_str(), 1.f, numRaindrops);
+		}
+	}
+	else if (type == "stars")
+	{
+		const int numStars = intAttrib(xmlEffect, "num_stars", 0);
+
+		if (numStars == 0)
+		{
+			logWarning("num_stars is 0. skipping effect");
+		}
+		else
+		{
+			effect = new Effect_StarCluster(m_name.c_str(), 1.f, numStars);
 		}
 	}
 	else if (type == "flowmap")
 	{
 		const std::string map = stringAttrib(xmlEffect, "map", "");
-		const float strength = floatAttrib(xmlEffect, "strength", 1.f);
-		const float darken = floatAttrib(xmlEffect, "darken", 0.f);
 
 		if (map.empty())
 		{
 			logWarning("map not set. skipping effect");
-			return false;
 		}
 		else
 		{
-			m_effect = new Effect_Flowmap(m_name.c_str(), alpha, map.c_str(), strength, darken);
-			return true;
+			effect = new Effect_Flowmap(m_name.c_str(), 1.f, map.c_str(), 1.f, 0.f);
 		}
 	}
 	else if (type == "luminance")
 	{
-		const float power = floatAttrib(xmlEffect, "power", 1.f);
-		const float scale = floatAttrib(xmlEffect, "scale", 1.f);
-		const float darken = floatAttrib(xmlEffect, "darken", 0.f);
-
-		m_effect = new Effect_Luminance(m_name.c_str(), alpha, power, scale, darken);
-		return true;
+		effect = new Effect_Luminance(m_name.c_str(), 1.f, 1.f, 1.f, 0.f);
 	}
 	else if (type == "colorlut2d")
 	{
 		const std::string lut = stringAttrib(xmlEffect, "lut", "");
-		const float lutStart = floatAttrib(xmlEffect, "lut_start", 0.f);
-		const float lutEnd = floatAttrib(xmlEffect, "lut_end", 1.f);
-		const float numTaps = floatAttrib(xmlEffect, "num_taps", 1000.f);
 
 		if (lut.empty())
 		{
 			logWarning("lut not set. skipping effect");
-			return false;
 		}
 		else
 		{
-			m_effect = new Effect_ColorLut2D(m_name.c_str(), alpha, lut.c_str(), lutStart, lutEnd, numTaps);
-			return true;
+			effect = new Effect_ColorLut2D(m_name.c_str(), 1.f, lut.c_str(), 0.f, 1.f, 256.f);
 		}
 	}
 	else if (type == "vignette")
 	{
-		const float innerRadius = floatAttrib(xmlEffect, "inner_radius", 0.f);
-		const float distance = floatAttrib(xmlEffect, "distance", 0.f);
-
-		if (distance == 0.f)
-		{
-			logWarning("distance not set. skipping effect");
-			return false;
-		}
-		else
-		{
-			m_effect = new Effect_Vignette(m_name.c_str(), alpha, innerRadius, distance);
-			return true;
-		}
+		effect = new Effect_Vignette(m_name.c_str(), 1.f, 0.f, 100.f);
 	}
 	else if (type == "video")
 	{
 		const std::string file = stringAttrib(xmlEffect, "file", "");
-		const float x = floatAttrib(xmlEffect, "x", 0.f);
-		const float y = floatAttrib(xmlEffect, "y", 0.f);
-		const float scale = floatAttrib(xmlEffect, "scale", 1.f);
 		const bool centered = boolAttrib(xmlEffect, "centered", true);
 
 		if (file.empty())
 		{
 			logWarning("file not set. skipping effect");
-			return false;
 		}
 		else
 		{
-			m_effect = new Effect_Video(m_name.c_str(), alpha, file.c_str(), x, y, scale, centered);
-			return true;
+			effect = new Effect_Video(m_name.c_str(), 1.f, file.c_str(), 0.f, 0.f, 1.f, centered);
 		}
 	}
 	else if (type == "picture")
 	{
 		const std::string file = stringAttrib(xmlEffect, "file", "");
-		const float x = floatAttrib(xmlEffect, "x", 0.f);
-		const float y = floatAttrib(xmlEffect, "y", 0.f);
-		const float scale = floatAttrib(xmlEffect, "scale", 1.f);
 		const bool centered = boolAttrib(xmlEffect, "centered", true);
 
 		if (file.empty())
 		{
 			logWarning("file not set. skipping effect");
-			return false;
 		}
 		else
 		{
-			m_effect = new Effect_Picture(m_name.c_str(), alpha, file.c_str(), x, y, scale, centered);
-			return true;
+			effect = new Effect_Picture(m_name.c_str(), 1.f, file.c_str(), 0.f, 0.f, 1.f, centered);
 		}
 	}
 	else
 	{
 		logError("unknown effect type: %s", type.c_str());
+	}
+
+	if (effect != nullptr)
+	{
+		for (const XMLAttribute * xmlAttrib = xmlEffect->FirstAttribute(); xmlAttrib; xmlAttrib = xmlAttrib->Next())
+		{
+			TweenFloat * var = effect->getVar(xmlAttrib->Name());
+
+			if (var != nullptr)
+			{
+				float value;
+
+				if (xmlAttrib->QueryFloatValue(&value) == XML_SUCCESS)
+				{
+					*var = value;
+				}
+			}
+		}
+
+		m_effect = effect;
+
+		return true;
+	}
+	else
+	{
 		return false;
 	}
 }
@@ -1797,25 +1812,25 @@ void SceneLayer::draw()
 
 	// render the effects
 
-	pushSurface(m_surface);
+	if (m_copyPreviousLayer)
 	{
-		ScopedSurfaceBlock surfaceBlock(m_surface);
-
-		if (m_copyPreviousLayer)
+		if (g_currentSurface)
 		{
-			if (g_previousSurface)
-			{
-				g_previousSurface->blitTo(g_currentSurface);
-			}
-			else
-			{
-				m_surface->clear();
-			}
+			g_currentSurface->blitTo(m_surface);
 		}
-		else if (m_autoClear)
+		else
 		{
 			m_surface->clear();
 		}
+	}
+	else if (m_autoClear)
+	{
+		m_surface->clear();
+	}
+
+	pushSurface(m_surface);
+	{
+		ScopedSurfaceBlock surfaceBlock(m_surface);
 
 		setColor(colorWhite);
 		setBlend(BLEND_ADD);
@@ -1856,8 +1871,6 @@ void SceneLayer::draw()
 		setBlend(BLEND_ADD);
 	}
 	gxSetTexture(0);
-
-	g_previousSurface = m_surface;
 }
 
 SceneAction::SceneAction()
@@ -1909,6 +1922,24 @@ bool SceneAction::load(const XMLElement * xmlAction)
 			logError("unknown ease type: %s", easeType.c_str());
 		m_tween.m_easeParam = floatAttrib(xmlAction, "ease_param", 1.f);
 		m_tween.m_replaceTween = boolAttrib(xmlAction, "replace", false);
+
+		return true;
+	}
+	else if (type == "signal")
+	{
+		m_type = kActionType_Signal;
+
+		const std::string effect = stringAttrib(xmlAction, "effect", "");
+		const std::string message = stringAttrib(xmlAction, "message", "");
+
+		if (effect.empty() || message.empty())
+		{
+			logError("effect or message not set!");
+			return false;
+		}
+
+		m_signal.m_targetName = effect;
+		m_signal.m_message = message;
 
 		return true;
 	}
@@ -1965,19 +1996,11 @@ void SceneEvent::execute(Scene & scene)
 
 				case SceneAction::Tween::kTargetType_Effect:
 					{
-						for (auto l = scene.m_layers.begin(); l != scene.m_layers.end(); ++l)
+						SceneEffect * effect = scene.findEffectByName(action->m_tween.m_targetName.c_str());
+
+						if (effect)
 						{
-							SceneLayer * layer = *l;
-
-							for (auto e = layer->m_effects.begin(); e != layer->m_effects.end(); ++e)
-							{
-								SceneEffect * effect = *e;
-
-								if (effect->m_name == action->m_tween.m_targetName)
-								{
-									varCollection = effect->m_effect;
-								}
-							}
+							varCollection = effect->m_effect;
 						}
 					}
 					break;
@@ -2012,6 +2035,17 @@ void SceneEvent::execute(Scene & scene)
 							action->m_tween.m_easeType,
 							action->m_tween.m_easeParam);
 					}
+				}
+			}
+			break;
+
+		case SceneAction::kActionType_Signal:
+			{
+				SceneEffect * effect = scene.findEffectByName(action->m_signal.m_targetName.c_str());
+
+				if (effect)
+				{
+					effect->m_effect->handleSignal(action->m_signal.m_message);
 				}
 			}
 			break;
@@ -2076,6 +2110,26 @@ void Scene::draw(DrawableList & list)
 
 		layer->draw(list);
 	}
+}
+
+SceneEffect * Scene::findEffectByName(const char * name)
+{
+	for (auto l = m_layers.begin(); l != m_layers.end(); ++l)
+	{
+		SceneLayer * layer = *l;
+
+		for (auto e = layer->m_effects.begin(); e != layer->m_effects.end(); ++e)
+		{
+			SceneEffect * effect = *e;
+
+			if (effect->m_name == name)
+			{
+				return effect;
+			}
+		}
+	}
+
+	return nullptr;
 }
 
 void Scene::triggerEvent(const char * name)
@@ -2579,10 +2633,10 @@ static void drawScreen(const Vec3 * screenPoints, GLuint surfaceTexture, int scr
 	{
 		gxBegin(GL_QUADS);
 		{
-			gxTexCoord2f(1.f / 3.f * (screenId + 0), 0.f); gxVertex3f(screenPoints[0][0], screenPoints[0][1], screenPoints[0][2]);
-			gxTexCoord2f(1.f / 3.f * (screenId + 1), 0.f); gxVertex3f(screenPoints[1][0], screenPoints[1][1], screenPoints[1][2]);
-			gxTexCoord2f(1.f / 3.f * (screenId + 1), 1.f); gxVertex3f(screenPoints[2][0], screenPoints[2][1], screenPoints[2][2]);
-			gxTexCoord2f(1.f / 3.f * (screenId + 0), 1.f); gxVertex3f(screenPoints[3][0], screenPoints[3][1], screenPoints[3][2]);
+			gxTexCoord2f(1.f / NUM_SCREENS * (screenId + 0), 0.f); gxVertex3f(screenPoints[0][0], screenPoints[0][1], screenPoints[0][2]);
+			gxTexCoord2f(1.f / NUM_SCREENS * (screenId + 1), 0.f); gxVertex3f(screenPoints[1][0], screenPoints[1][1], screenPoints[1][2]);
+			gxTexCoord2f(1.f / NUM_SCREENS * (screenId + 1), 1.f); gxVertex3f(screenPoints[2][0], screenPoints[2][1], screenPoints[2][2]);
+			gxTexCoord2f(1.f / NUM_SCREENS * (screenId + 0), 1.f); gxVertex3f(screenPoints[3][0], screenPoints[3][1], screenPoints[3][2]);
 		}
 		gxEnd();
 	}
@@ -2710,7 +2764,7 @@ int main(int argc, char * argv[])
 		bool drawPCM = true;
 	#endif
 
-		bool drawHelp = true;
+		bool drawHelp = false;
 		bool drawScreenIds = false;
 		bool drawProjectorSetup = false;
 		bool drawActiveEffects = false;
@@ -2929,7 +2983,7 @@ int main(int argc, char * argv[])
 			}
 			else if (s_debugMode == kDebugMode_Events)
 			{
-				for (int i = 0; i < 10 && i < scene->m_events.size(); ++i)
+				for (size_t i = 0; i < 10 && i < scene->m_events.size(); ++i)
 				{
 					if (keyboard.wentDown((SDLKey)(SDLK_0 + i)))
 					{
@@ -3002,7 +3056,7 @@ int main(int argc, char * argv[])
 					case kOscMessageType_Sprite:
 						{
 							spriteSystem.addSprite(
-								"Diamond.scml",
+								message.str.c_str(),
 								0,
 								virtualToScreenX(message.param[0]),
 								virtualToScreenY(message.param[1]),
@@ -3145,10 +3199,10 @@ int main(int argc, char * argv[])
 			#if NUM_SCREENS == 1
 				Vec3 _screenCorners[4] =
 				{
-					Vec3(-1.5f,      0.f, 0.f),
-					Vec3(+1.5f,      0.f, 0.f),
-					Vec3(-1.5f,      1.f, 0.f),
-					Vec3(+1.5f,      1.f, 0.f)
+					Vec3(-.66f, 0.f, 0.f),
+					Vec3(+.66f, 0.f, 0.f),
+					Vec3(-.66f, 1.f, 0.f),
+					Vec3(+.66f, 1.f, 0.f)
 				};
 			#elif NUM_SCREENS == 3
 				Vec3 _screenCorners[8] =
@@ -3538,7 +3592,7 @@ int main(int argc, char * argv[])
 					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "events list:");
 					x += 50;
 
-					for (int i = 0; i < scene->m_events.size(); ++i)
+					for (size_t i = 0; i < scene->m_events.size(); ++i)
 					{
 						drawText(x, y += spacingY, fontSize, +1.f, +1.f, "%02d: %-40s", i, scene->m_events[i]->m_name.c_str());
 					}

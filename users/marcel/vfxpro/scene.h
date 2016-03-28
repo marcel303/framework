@@ -68,7 +68,8 @@ struct SceneAction
 	enum ActionType
 	{
 		kActionType_None,
-		kActionType_Tween
+		kActionType_Tween,
+		kActionType_Signal
 	};
 
 	ActionType m_type;
@@ -90,6 +91,12 @@ struct SceneAction
 		float m_easeParam;
 		bool m_replaceTween;
 	} m_tween;
+
+	struct Signal
+	{
+		std::string m_targetName;
+		std::string m_message;
+	} m_signal;
 
 	SceneAction();
 
@@ -123,6 +130,8 @@ struct Scene
 
 	void tick(const float dt);
 	void draw(DrawableList & drawableList);
+
+	SceneEffect * findEffectByName(const char * name);
 
 	void triggerEvent(const char * name);
 

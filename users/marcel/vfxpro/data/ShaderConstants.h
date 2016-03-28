@@ -72,7 +72,9 @@ layout (std140) uniform BoxblurBlock
 
 struct FlowmapData
 {
+	float alpha;
 	float strength;
+	float darken;
 };
 
 #if _SHADER_
@@ -88,8 +90,10 @@ layout (std140) uniform FlowmapBlock
 
 struct LuminanceData
 {
+	float alpha;
 	float power;
 	float scale;
+	float darken;
 };
 
 #if _SHADER_
@@ -97,6 +101,43 @@ struct LuminanceData
 layout (std140) uniform LuminanceBlock
 {
 	LuminanceData luminanceData;
+};
+
+#endif
+
+// 2D color lut post process
+
+struct ColorLut2DData
+{
+	float alpha;
+	float lutStart;
+	float lutEnd;
+	float numTaps;
+};
+
+#if _SHADER_
+
+layout (std140) uniform ColorLut2DBlock
+{
+	ColorLut2DData colorLut2DData;
+};
+
+#endif
+
+// vignette effect post process
+
+struct VignetteData
+{
+	float alpha;
+	float innerRadius;
+	float distanceRcp;
+};
+
+#if _SHADER_
+
+layout (std140) uniform VignetteBlock
+{
+	VignetteData vignetteData;
 };
 
 #endif
