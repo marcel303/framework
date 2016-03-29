@@ -72,6 +72,7 @@ Ui ui;
 Framework::Framework()
 {
 	fullscreen = false;
+	exclusiveFullscreen = true;
 	useClosestDisplayMode = false;
 	basicOpenGL = false;
 	enableDepthBuffer = false;
@@ -194,7 +195,10 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 #endif
 	if (fullscreen && useClosestDisplayMode)
 	{
-		for (int i = 0; i < 3; ++i)
+		int start = exclusiveFullscreen ? 0 : 1;
+		int end = exclusiveFullscreen ? 2 : 1;
+
+		for (int i = start; i <= end; ++i)
 		{
 			if (i == 2)
 			{
@@ -215,7 +219,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 				foundMode = SDL_GetClosestDisplayMode(0, &desired, &closest) != NULL;
 			else if (i == 1)
 				foundMode = SDL_GetCurrentDisplayMode(0, &closest) == 0;
-			else if (i == 0)
+			else if (i == 2)
 				foundMode = SDL_GetClosestDisplayMode(0, &desired, &closest) != NULL;
 
 			if (foundMode)
@@ -294,7 +298,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 			return false;
 		}
 	}
-	
+
 #if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
 	if (GLEW_ARB_debug_output)
 	{
@@ -458,6 +462,7 @@ bool Framework::shutdown()
 	time = 0.f;
 
 	fullscreen = false;
+	exclusiveFullscreen = true;
 	useClosestDisplayMode = false;
 	basicOpenGL = false;
 	enableDepthBuffer = false;

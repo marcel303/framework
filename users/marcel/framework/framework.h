@@ -225,6 +225,7 @@ public:
 	
 	bool fullscreen;
 	bool useClosestDisplayMode;
+	bool exclusiveFullscreen;
 	bool basicOpenGL;
 	bool enableDepthBuffer;
 	int minification;
