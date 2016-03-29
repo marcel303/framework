@@ -1,6 +1,6 @@
 include engine/ShaderCommon.txt
 
-#if 0
+#if LEGACY_GL
 	#define shader_fragColor gl_FragColor
 #else
 	out vec4 shader_fragColor;

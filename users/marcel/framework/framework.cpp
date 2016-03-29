@@ -4140,6 +4140,12 @@ void gxInitialize()
 {
 	s_gxShader.load("engine/Generic");
 	
+	memset(&s_gxVertex, 0, sizeof(s_gxVertex));
+	s_gxVertex.cx = 1.f;
+	s_gxVertex.cy = 1.f;
+	s_gxVertex.cz = 1.f;
+	s_gxVertex.cw = 1.f;
+
 	fassert(s_gxVertexBufferObject[0] == 0);
 	glGenBuffers(GX_VAO_COUNT, s_gxVertexBufferObject);
 #if GX_USE_UBERBUFFER
