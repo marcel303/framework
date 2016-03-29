@@ -72,6 +72,10 @@ OPTION_DECLARE(bool, g_windowed, false);
 OPTION_DEFINE(bool, g_windowed, "App/Windowed Mode");
 OPTION_ALIAS(g_windowed, "windowed");
 
+OPTION_DECLARE(int, g_scale, 0);
+OPTION_DEFINE(int, g_scale, "App/Window Scale");
+OPTION_ALIAS(g_scale, "scale");
+
 OPTION_DECLARE(std::string, s_mapList, "testArena");
 OPTION_DEFINE(std::string, s_mapList, "App/Map List");
 OPTION_ALIAS(s_mapList, "maps");
@@ -1317,6 +1321,12 @@ bool App::init()
 		framework.fullscreen = true;
 	}
 
+	if (g_scale >= 1)
+	{
+		framework.minification = g_scale;
+	}
+
+	framework.exclusiveFullscreen = false;
 	framework.useClosestDisplayMode = true;
 #if PUBLIC_DEMO_BUILD
 	framework.windowTitle = "Riposte (Public Demo Build)";
