@@ -3512,12 +3512,10 @@ void GameSim::drawPlay()
 
 		setBlend(BLEND_OPAQUE);
 		setColor(255, 255, 255);
-		glEnable(GL_TEXTURE_2D);
-		{
-			glBindTexture(GL_TEXTURE_2D, g_finalMap->getTexture());
-			drawRect(0, 0, g_finalMap->getWidth(), g_finalMap->getHeight());
-		}
-		glDisable(GL_TEXTURE_2D);
+		gxSetTexture(g_finalMap->getTexture());
+		drawRect(0, 0, g_finalMap->getWidth(), g_finalMap->getHeight());
+		gxSetTexture(0);
+
 		setBlend(BLEND_ALPHA);
 	}
 }

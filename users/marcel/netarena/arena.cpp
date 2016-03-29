@@ -799,6 +799,7 @@ void Arena::drawBlocks(const GameSim & gameSim, int layer) const
 	glScalef(1.f / m_textureSx, 1.f / m_textureSy, 1.f);
 #endif
 
+#if USE_LEGACY_OPENGL
 	glVertexPointer(2, GL_FLOAT, 0, pos);
 	glColorPointer(4, GL_UNSIGNED_BYTE, 0, c);
 	glTexCoordPointer(2, GL_FLOAT, 0, uv);
@@ -812,6 +813,23 @@ void Arena::drawBlocks(const GameSim & gameSim, int layer) const
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_COLOR_ARRAY);
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+#else
+	gxBegin(GL_QUADS);
+	{
+		float * uvItr = uv;
+		uint8_t * cItr = (uint8_t*)c;
+		float * posItr = pos;
+
+
+		for (int i = 0; i < numVerts; ++i)
+		{
+			gxTexCoord2f(*uvItr++, *uvItr++);
+			gxColor4ub(*cItr++, *cItr++, *cItr++, *cItr++);
+			gxVertex2f(*posItr++, *posItr++);
+		}
+	}
+	gxEnd();
+#endif
 
 #if USE_TILE_SHADER
 	shader.setTexture("colormap", 0, 0, false);

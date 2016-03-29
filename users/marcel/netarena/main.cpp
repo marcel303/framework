@@ -309,11 +309,6 @@ void applyLightMap(Surface & colormap, Surface & lightmap, Surface & dest)
 		lightShader.setTexture("lightmap", 1, 0, false);
 
 		clearShader();
-
-		glActiveTexture(GL_TEXTURE0 + 1);
-		glDisable(GL_TEXTURE_2D);
-		glActiveTexture(GL_TEXTURE0 + 0);
-		glDisable(GL_TEXTURE_2D);
 	}
 	popSurface();
 	setBlend(BLEND_ALPHA);
@@ -1316,7 +1311,7 @@ bool App::init()
 #endif
 	if (g_windowed)
 	{
-		framework.minification = 2;
+		framework.minification = 1;
 		framework.fullscreen = false;
 	}
 	else
