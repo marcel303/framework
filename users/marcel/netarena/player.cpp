@@ -50,6 +50,13 @@
 - level editor: add goal placement
 - level editor: add setting for level size
 
+A-maze build:
+- update main menu
+	-> make it a spriter
+- update move set
+- update lobby
+
+
 footbrawl:
 + bounce ball vs swords and such
 - bounce ball vs bullets

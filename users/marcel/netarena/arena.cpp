@@ -817,15 +817,24 @@ void Arena::drawBlocks(const GameSim & gameSim, int layer) const
 	gxBegin(GL_QUADS);
 	{
 		float * uvItr = uv;
-		uint8_t * cItr = (uint8_t*)c;
+		uint32_t * cItr = c;
 		float * posItr = pos;
-
 
 		for (int i = 0; i < numVerts; ++i)
 		{
-			gxTexCoord2f(*uvItr++, *uvItr++);
-			gxColor4ub(*cItr++, *cItr++, *cItr++, *cItr++);
-			gxVertex2f(*posItr++, *posItr++);
+			const float u = uvItr[0];
+			const float v = uvItr[1];
+			const float x = posItr[0];
+			const float y = posItr[1];
+			const int a = (cItr[0] >> 24) & 0xff;
+
+			gxTexCoord2f(u, v);
+			gxColor4ub(255, 255, 255, a);
+			gxVertex2f(x, y);
+
+			uvItr += 2;
+			cItr += 1;
+			posItr += 2;
 		}
 	}
 	gxEnd();
