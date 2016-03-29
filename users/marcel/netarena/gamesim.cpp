@@ -2405,25 +2405,31 @@ void GameSim::load(const char * name)
 			}
 			else if (type == "footballspawn")
 			{
-				m_footBrawl.ballSpawnPoint[0] = (d.getInt("x1", 0) + d.getInt("x2", 0)) / 2;
-				m_footBrawl.ballSpawnPoint[1] = (d.getInt("y1", 0) + d.getInt("y2", 0)) / 2;
+				if (m_gameMode == kGameMode_FootBrawl)
+				{
+					m_footBrawl.ballSpawnPoint[0] = (d.getInt("x1", 0) + d.getInt("x2", 0)) / 2;
+					m_footBrawl.ballSpawnPoint[1] = (d.getInt("y1", 0) + d.getInt("y2", 0)) / 2;
+				}
 			}
 			else if (type == "footballgoal")
 			{
-				auto * goal = allocObject(m_footBallGoals, MAX_FOOTBALL_GOALS);
-
-				if (goal == 0)
-					LOG_ERR("too many football goals!");
-				else
+				if (m_gameMode == kGameMode_FootBrawl)
 				{
-					const int x = (d.getInt("x1", 0) + d.getInt("x2", 0)) / 2;
-					const int y = (d.getInt("y1", 0) + d.getInt("y2", 0)) / 2;
-					goal->setup(
-						x - FOOTBALL_GOAL_SIZE/2,
-						y - FOOTBALL_GOAL_SIZE/2,
-						x + FOOTBALL_GOAL_SIZE/2,
-						y + FOOTBALL_GOAL_SIZE/2,
-						d.getInt("team", -1));
+					auto * goal = allocObject(m_footBallGoals, MAX_FOOTBALL_GOALS);
+
+					if (goal == 0)
+						LOG_ERR("too many football goals!");
+					else
+					{
+						const int x = (d.getInt("x1", 0) + d.getInt("x2", 0)) / 2;
+						const int y = (d.getInt("y1", 0) + d.getInt("y2", 0)) / 2;
+						goal->setup(
+							x - FOOTBALL_GOAL_SIZE / 2,
+							y - FOOTBALL_GOAL_SIZE / 2,
+							x + FOOTBALL_GOAL_SIZE / 2,
+							y + FOOTBALL_GOAL_SIZE / 2,
+							d.getInt("team", -1));
+					}
 				}
 			}
 		}
