@@ -1931,7 +1931,7 @@ bool SceneAction::load(const XMLElement * xmlAction)
 		else if (easeType == "bounce_out")
 			m_tween.m_easeType = kEaseType_BounceOut;
 		else if (easeType == "bounce_inout")
-			m_tween.m_easeType = kEaseType_BounceOut;
+			m_tween.m_easeType = kEaseType_BounceInOut;
 		else
 			logError("unknown ease type: %s", easeType.c_str());
 		m_tween.m_easeParam = floatAttrib(xmlAction, "ease_param", 1.f);
