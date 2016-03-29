@@ -225,6 +225,7 @@ static void HandleFillCachesCallback(float filePercentage)
 	framework.beginDraw(0, 0, 0, 0);
 	{
 		setMainFont();
+		setColor(colorWhite);
 		drawText(GFX_SX/2, GFX_SY/2, 24, 0.f, 0.f, "Loading %0.2f%%", filePercentage * 100.f);
 	}
 	framework.endDraw();
@@ -300,13 +301,10 @@ void applyLightMap(Surface & colormap, Surface & lightmap, Surface & dest)
 		Shader lightShader("lightmap");
 		setShader(lightShader);
 
-		lightShader.setTexture("colormap", 0, colormap.getTexture(), false);
-		lightShader.setTexture("lightmap", 1, lightmap.getTexture(), false);
+		lightShader.setTexture("colormap", 0, colormap.getTexture(), false, true);
+		lightShader.setTexture("lightmap", 1, lightmap.getTexture(), false, true);
 
 		drawRect(0, 0, colormap.getWidth(), colormap.getHeight());
-
-		lightShader.setTexture("colormap", 0, 0, false);
-		lightShader.setTexture("lightmap", 1, 0, false);
 
 		clearShader();
 	}
@@ -1311,7 +1309,7 @@ bool App::init()
 #endif
 	if (g_windowed)
 	{
-		framework.minification = 1;
+		framework.minification = 2;
 		framework.fullscreen = false;
 	}
 	else
