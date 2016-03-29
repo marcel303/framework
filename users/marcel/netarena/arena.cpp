@@ -155,7 +155,6 @@ Arena::Arena()
 	, m_syBlocks(0)
 	, m_sxPixels(0)
 	, m_syPixels(0)
-	, m_texture(0)
 	, m_textureSx(0)
 	, m_textureSy(0)
 	, m_numTileTransitions(0)
@@ -511,14 +510,12 @@ void Arena::loadArt(const char * name)
 
 	const std::string atlasName = std::string("levels/") + name + "/Artdata.png";
 	const Sprite atlasSprite(atlasName.c_str());
-	m_texture = atlasSprite.getTexture();
 	m_textureSx = atlasSprite.getWidth();
 	m_textureSy = atlasSprite.getHeight();
 }
 
 void Arena::freeArt()
 {
-	m_texture = 0;
 	m_textureSx = 0;
 	m_textureSy = 0;
 }
@@ -778,18 +775,22 @@ void Arena::drawBlocks(const GameSim & gameSim, int layer) const
 
 #define USE_TILE_SHADER 1
 
+	const std::string atlasName = std::string("levels/") + m_name.c_str() + "/Artdata.png";
+	const Sprite atlasSprite(atlasName.c_str());
+	GLuint texture = atlasSprite.getTexture();
+
 #if USE_TILE_SHADER
 	Shader shader("maptiles");
 	setShader(shader);
-	shader.setTexture("colormap", 0, m_texture, false);
-	shader.setTexture("decalmap", 1, g_decalMap->getTexture(), false);
+	shader.setTexture("colormap", 0, texture, false, true);
+	shader.setTexture("decalmap", 1, g_decalMap->getTexture(), false, true);
 	shader.setImmediate("colormapScale", 1.f / m_textureSx, 1.f / m_textureSy);
 	shader.setImmediate("decalmapScale",
 		1.f / float(g_decalMap->getWidth()),
 		1.f / float(g_decalMap->getHeight()));
 #else
 	// fixme : set texture filter when using shader too
-	gxSetTexture(m_texture);
+	gxSetTexture(texture);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
@@ -841,8 +842,6 @@ void Arena::drawBlocks(const GameSim & gameSim, int layer) const
 #endif
 
 #if USE_TILE_SHADER
-	shader.setTexture("colormap", 0, 0, false);
-	shader.setTexture("decalmap", 0, 0, false);
 	clearShader();
 #else
 	glPopMatrix();
