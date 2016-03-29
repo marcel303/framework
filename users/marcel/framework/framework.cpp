@@ -3409,6 +3409,7 @@ void setColorMode(COLOR_MODE colorMode)
 {
 	globals.colorMode = colorMode;
 	
+#if USE_LEGACY_OPENGL
 	switch (colorMode)
 	{
 	case COLOR_MUL:
@@ -3427,6 +3428,7 @@ void setColorMode(COLOR_MODE colorMode)
 		fassert(false);
 		break;
 	}
+#endif
 }
 
 void setColor(const Color & color)
@@ -4453,6 +4455,15 @@ void gxColor3ub(int r, int g, int b)
 		g / 255.f,
 		b / 255.f,
 		1.f);
+}
+
+void gxColor4ub(int r, int g, int b, int a)
+{
+	gxColor4f(
+		r / 255.f,
+		g / 255.f,
+		b / 255.f,
+		a / 255.f);
 }
 
 void gxTexCoord2f(float u, float v)

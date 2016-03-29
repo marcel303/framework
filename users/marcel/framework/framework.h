@@ -911,6 +911,7 @@ void gxEnd();
 void gxColor4f(float r, float g, float b, float a);
 void gxColor4fv(const float * rgba);
 void gxColor3ub(int r, int g, int b);
+void gxColor4ub(int r, int g, int b, int a);
 void gxTexCoord2f(float u, float v);
 void gxNormal3f(float x, float y, float z);
 void gxVertex2f(float x, float y);
@@ -939,6 +940,7 @@ void gxBegin(int primitiveType);
 #define gxColor4f glColor4f
 #define gxColor4fv glColor4fv
 #define gxColor3ub glColor3ub
+#define gxColor4ub glColor4ub
 #define gxTexCoord2f glTexCoord2f
 #define gxNormal3f glNormal3f
 #define gxVertex2f glVertex2f
