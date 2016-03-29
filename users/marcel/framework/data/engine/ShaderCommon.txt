@@ -1,6 +1,6 @@
 #if _SHADER_
 
-#if 1
+#if LEGACY_GL
 	#define shader_attrib attribute
 	#define shader_in varying
 	#define shader_out varying
