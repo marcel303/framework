@@ -1,5 +1,7 @@
 #if _SHADER_
 include engine/ShaderCommon.txt
+#else
+#pragma once
 #endif
 
 // lighting

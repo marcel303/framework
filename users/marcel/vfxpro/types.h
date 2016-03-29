@@ -300,3 +300,38 @@ struct TweenFloatCollection
 };
 
 void TickTweenFloats(const float dt);
+
+//
+
+struct ParticleSystem
+{
+	int numParticles;
+
+	Array<int> freeList;
+	int numFree;
+
+	Array<bool> alive;
+	Array<bool> autoKill;
+
+	Array<float> x;
+	Array<float> y;
+	Array<float> vx;
+	Array<float> vy;
+	Array<float> sx;
+	Array<float> sy;
+	Array<float> angle;
+	Array<float> vangle;
+	Array<float> life;
+	Array<float> lifeRcp;
+	Array<bool> hasLife;
+
+	ParticleSystem(const int numElements);
+	~ParticleSystem();
+
+	void resize(const int numElements);
+	bool alloc(const bool _autoKill, float _life, int & id);
+	void free(const int id);
+
+	void tick(const float dt);
+	void draw(const float alpha);
+};

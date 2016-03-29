@@ -1,6 +1,9 @@
 #pragma once
 
-#include "tinyxml2.h"
+namespace tinyxml2
+{
+	class XMLElement;
+}
 
 // tinyxml helper functions
 

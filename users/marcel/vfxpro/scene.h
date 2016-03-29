@@ -18,6 +18,40 @@ struct SceneEvent;
 struct SceneLayer;
 struct Scene;
 
+class Surface;
+
+//
+
+extern Scene * g_currentScene;
+extern SceneLayer * g_currentSceneLayer;
+extern Surface * g_currentSurface;
+
+//
+
+template <typename T, T * R>
+struct ScopedBlock
+{
+	T m_oldValue;
+
+	ScopedBlock(T value)
+	{
+		m_oldValue = *R;
+
+		*R = value;
+	}
+
+	~ScopedBlock()
+	{
+		*R = m_oldValue;
+	}
+};
+
+typedef ScopedBlock<Scene*, &g_currentScene> ScopedSceneBlock;
+typedef ScopedBlock<SceneLayer*, &g_currentSceneLayer> ScopedSceneLayerBlock;
+typedef ScopedBlock<Surface*, &g_currentSurface> ScopedSurfaceBlock;
+
+//
+
 struct SceneEffect
 {
 	std::string m_name;
@@ -29,6 +63,8 @@ struct SceneEffect
 
 	bool load(const tinyxml2::XMLElement * xmlEffect);
 };
+
+//
 
 struct SceneLayer : TweenFloatCollection
 {
@@ -62,6 +98,8 @@ struct SceneLayer : TweenFloatCollection
 	void draw(DrawableList & drawableList);
 	void draw();
 };
+
+//
 
 struct SceneAction
 {
@@ -103,6 +141,8 @@ struct SceneAction
 	bool load(const tinyxml2::XMLElement * xmlAction);
 };
 
+//
+
 struct SceneEvent
 {
 	std::string m_name;
@@ -115,6 +155,8 @@ struct SceneEvent
 
 	void load(const tinyxml2::XMLElement * xmlEvent);
 };
+
+//
 
 struct Scene
 {

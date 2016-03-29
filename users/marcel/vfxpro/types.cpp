@@ -1,5 +1,6 @@
 #include "Calc.h"
 #include "Debugging.h"
+#include "framework.h"
 #include "types.h"
 
 static void RegisterTweenFloat(TweenFloat * tween);
@@ -166,4 +167,162 @@ void TickTweenFloats(const float dt)
 	{
 		tween->tick(dt);
 	}
+}
+
+//
+
+ParticleSystem::ParticleSystem(const int numElements)
+	: numParticles(0)
+	, numFree(0)
+{
+	resize(numElements);
+}
+
+ParticleSystem::~ParticleSystem()
+{
+}
+
+void ParticleSystem::resize(const int numElements)
+{
+	numParticles = numElements;
+
+	freeList.resize(numElements, true);
+	for (int i = 0; i < numElements; ++i)
+		freeList[i] = i;
+	numFree = numElements;
+
+	alive.resize(numElements, true);
+	autoKill.resize(numElements, true);
+
+	x.resize(numElements, true);
+	y.resize(numElements, true);
+	vx.resize(numElements, true);
+	vy.resize(numElements, true);
+	sx.resize(numElements, true);
+	sy.resize(numElements, true);
+	angle.resize(numElements, true);
+	vangle.resize(numElements, true);
+	life.resize(numElements, true);
+	lifeRcp.resize(numElements, true);
+	hasLife.resize(numElements, true);
+}
+
+bool ParticleSystem::alloc(const bool _autoKill, float _life, int & id)
+{
+	if (numFree == 0)
+	{
+		id = -1;
+
+		return false;
+	}
+	else
+	{
+		id = freeList[--numFree];
+
+		fassert(!alive[id]);
+
+		alive[id] = true;
+		autoKill[id] = _autoKill;
+
+		x[id] = 0.f;
+		y[id] = 0.f;
+		vx[id] = 0.f;
+		vy[id] = 0.f;
+		sx[id] = 1.f;
+		sy[id] = 1.f;
+
+		angle[id] = 0.f;
+		vangle[id] = 0.f;
+
+		if (_life == 0.f)
+		{
+			life[id] = 1.f;
+			lifeRcp[id] = 1.f;
+			hasLife[id] = false;
+		}
+		else
+		{
+			life[id] = _life;
+			lifeRcp[id] = 1.f / _life;
+			hasLife[id] = true;
+		}
+
+		return true;
+	}
+}
+
+void ParticleSystem::free(const int id)
+{
+	if (isValidIndex(id))
+	{
+		fassert(alive[id]);
+
+		alive[id] = false;
+
+		freeList[numFree++] = id;
+	}
+}
+
+void ParticleSystem::tick(const float dt)
+{
+	for (int i = 0; i < numParticles; ++i)
+	{
+		if (alive[i])
+		{
+			if (hasLife[i])
+			{
+				life[i] = life[i] - dt;
+			}
+
+			if (life[i] < 0.f)
+			{
+				life[i] = 0.f;
+
+				if (autoKill[i])
+				{
+					free(i);
+
+					continue;
+				}
+			}
+
+			x[i] += vx[i] * dt;
+			y[i] += vy[i] * dt;
+
+			angle[i] += vangle[i] * dt;
+		}
+	}
+}
+
+void ParticleSystem::draw(const float alpha)
+{
+	gxBegin(GL_QUADS);
+	{
+		for (int i = 0; i < numParticles; ++i)
+		{
+			if (alive[i])
+			{
+				const float value = life[i] * lifeRcp[i];
+
+				gxColor4f(1.f, 1.f, 1.f, alpha * value);
+
+				const float s = std::sinf(angle[i]);
+				const float c = std::cosf(angle[i]);
+
+				const float sx_2 = sx[i] * .5f;
+				const float sy_2 = sy[i] * .5f;
+
+				const float s_sx_2 = s * sx_2;
+				const float s_sy_2 = s * sy_2;
+				const float c_sx_2 = c * sx_2;
+				const float c_sy_2 = c * sy_2;
+
+				gxTexCoord2f(0.f, 1.f); gxVertex2f(x[i] + (-c_sx_2 - s_sy_2), y[i] + (+s_sx_2 - c_sy_2));
+				gxTexCoord2f(1.f, 1.f); gxVertex2f(x[i] + (+c_sx_2 - s_sy_2), y[i] + (-s_sx_2 - c_sy_2));
+				gxTexCoord2f(1.f, 0.f); gxVertex2f(x[i] + (+c_sx_2 + s_sy_2), y[i] + (-s_sx_2 + c_sy_2));
+				gxTexCoord2f(0.f, 0.f); gxVertex2f(x[i] + (-c_sx_2 + s_sy_2), y[i] + (+s_sx_2 + c_sy_2));
+			}
+		}
+	}
+	gxEnd();
 }

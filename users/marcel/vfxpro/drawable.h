@@ -1,5 +1,9 @@
 #pragma once
 
+#include "framework.h"
+#include <algorithm>
+#include <malloc.h>
+
 struct Drawable
 {
 	float m_z;
@@ -49,7 +53,7 @@ struct DrawableList
 
 	void add(Drawable * drawable)
 	{
-		assert(numDrawables < kMaxDrawables);
+		fassert(numDrawables < kMaxDrawables);
 
 		if (numDrawables < kMaxDrawables)
 		{
@@ -71,7 +75,7 @@ struct DrawableList
 	}
 };
 
-void * operator new(size_t size, DrawableList & list)
+static void * operator new(size_t size, DrawableList & list)
 {
 	Drawable * drawable = (Drawable*)malloc(size);
 
@@ -80,7 +84,7 @@ void * operator new(size_t size, DrawableList & list)
 	return drawable;
 }
 
-void operator delete(void * p, DrawableList & list)
+static void operator delete(void * p, DrawableList & list)
 {
 	free(p);
 }
