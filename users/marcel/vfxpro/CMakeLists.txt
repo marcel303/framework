@@ -44,7 +44,11 @@ file(GLOB_RECURSE source_ffmpeg_old "ffmpeg_old/*.*")
 #list(REMOVE_ITEM source ${source_ffmpeg_old})
 
 set(GAME_FILES
-	main.cpp)
+	main.cpp
+	effect.h
+	effect.cpp
+	scene.h
+	scene.cpp)
 source_group("Game Files" FILES ${GAME_FILES})
 source_group("mediaplayer" FILES ${source_mediaplayer})
 source_group("mediaplayer_old" FILES ${source_mediaplayer_old})
