@@ -517,7 +517,8 @@ enum DebugMode
 	kDebugMode_Help,
 	kDebugMode_Camera,
 	kDebugMode_EventList,
-	kDebugMode_EffectList
+	kDebugMode_EffectList,
+	kDebugMode_LayerList
 };
 
 static DebugMode s_debugMode = kDebugMode_None;
@@ -837,6 +838,9 @@ int main(int argc, char * argv[])
 					setDebugMode(kDebugMode_EventList);
 			}
 
+			if (keyboard.wentDown(SDLK_l))
+				setDebugMode(kDebugMode_LayerList);
+
 			if (keyboard.wentDown(SDLK_i))
 				drawScreenIds = !drawScreenIds;
 			if (keyboard.wentDown(SDLK_s))
@@ -885,6 +889,23 @@ int main(int argc, char * argv[])
 					if (keyboard.wentDown((SDLKey)(SDLK_0 + i - base)))
 					{
 						scene->triggerEvent(scene->m_events[i]->m_name.c_str());
+					}
+				}
+			}
+			else if (s_debugMode == kDebugMode_LayerList)
+			{
+				const int base = keyboard.isDown(SDLK_LSHIFT) ? 10 : 0;
+
+				for (int i = 0; i < scene->m_layers.size(); ++i)
+				{
+					if (i - base < 0 || i - base > 9)
+						continue;
+
+					if (keyboard.wentDown((SDLKey)(SDLK_0 + i - base)))
+					{
+						SceneLayer * layer = scene->m_layers[i];
+
+						layer->m_debugEnabled = !layer->m_debugEnabled;
 					}
 				}
 			}
@@ -1483,7 +1504,7 @@ int main(int argc, char * argv[])
 						Effect * effect = i->second;
 
 						char temp[1024];
-						sprintf_s(temp, sizeof(temp), "%d %-20s", index, effectName.c_str(), effect);
+						sprintf_s(temp, sizeof(temp), "%d %-20s", index, effectName.c_str());
 
 						float sx, sy;
 						measureText(fontSize, sx, sy, "%s", temp);
@@ -1535,6 +1556,27 @@ int main(int argc, char * argv[])
 					for (size_t i = 0; i < scene->m_events.size(); ++i)
 					{
 						drawText(x, y, fontSize, +1.f, +1.f, "%02d: %-40s", i, scene->m_events[i]->m_name.c_str());
+						y += spacingY;
+					}
+
+					y += spacingY;
+					x -= 50;
+				}
+				else if (s_debugMode == kDebugMode_LayerList)
+				{
+					drawText(x, y, fontSize, +1.f, +1.f, "layer list:");
+					x += 50;
+					y += spacingY;
+
+					for (int i = 0; i < scene->m_layers.size(); ++i)
+					{
+						SceneLayer * layer = scene->m_layers[i];
+
+						char temp[1024];
+						sprintf_s(temp, sizeof(temp), "%d %-20s", i, layer->m_name.c_str());
+
+						setColor(layer->m_debugEnabled ? colorWhite : colorRed);
+						drawText(x, y, fontSize, +1.f, +1.f, "%s", temp);
 						y += spacingY;
 					}
 

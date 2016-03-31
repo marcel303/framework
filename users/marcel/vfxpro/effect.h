@@ -1194,7 +1194,7 @@ struct Effect_Flowmap : Effect
 		Shader shader("flowmap");
 		setShader(shader);
 		shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
-		shader.setTexture("flowmap", 1, m_mapSprite->getTexture(), true, false); // todo
+		shader.setTexture("flowmap", 1, m_mapSprite->getTexture(), true, false);
 		shader.setImmediate("time", g_currentScene->m_time);
 		ShaderBuffer buffer;
 		FlowmapData data;

@@ -187,6 +187,7 @@ SceneLayer::SceneLayer(Scene * scene)
 	, m_copyPreviousLayer(false)
 	, m_opacity(1.f)
 	, m_surface(nullptr)
+	, m_debugEnabled(true)
 {
 	addVar("opacity", m_opacity);
 
@@ -280,7 +281,10 @@ void SceneLayer::draw(DrawableList & list)
 		}
 	};
 
-	new (list)SceneLayerDrawable(0.f, this);
+	if (m_debugEnabled)
+	{
+		new (list) SceneLayerDrawable(0.f, this);
+	}
 }
 
 void SceneLayer::draw()

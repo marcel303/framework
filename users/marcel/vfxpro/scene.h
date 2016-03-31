@@ -89,6 +89,8 @@ struct SceneLayer : TweenFloatCollection
 
 	Surface * m_surface;
 
+	bool m_debugEnabled;
+
 	SceneLayer(Scene * scene);
 	~SceneLayer();
 
