@@ -128,6 +128,7 @@ struct SceneAction
 		EaseType m_easeType;
 		float m_easeParam;
 		bool m_replaceTween;
+		bool m_addTween;
 	} m_tween;
 
 	struct Signal

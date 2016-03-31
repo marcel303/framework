@@ -43,7 +43,20 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 
 	Effect * effect = nullptr;
 
-	if (type == "rain")
+	if (type == "fsfx")
+	{
+		const std::string shader = stringAttrib(xmlEffect, "shader", "");
+		
+		if (shader.empty())
+		{
+			logWarning("shader not set. skipping effect");
+		}
+		else
+		{
+			effect = new Effect_Fsfx(m_name.c_str(), shader.c_str());
+		}
+	}
+	else if (type == "rain")
 	{
 		const int numRaindrops = intAttrib(xmlEffect, "num_raindrops", 0);
 
@@ -414,6 +427,7 @@ bool SceneAction::load(const XMLElement * xmlAction)
 			logError("unknown ease type: %s", easeType.c_str());
 		m_tween.m_easeParam = floatAttrib(xmlAction, "ease_param", 1.f);
 		m_tween.m_replaceTween = boolAttrib(xmlAction, "replace", false);
+		m_tween.m_addTween = boolAttrib(xmlAction, "add", false);
 
 		return true;
 	}
@@ -523,8 +537,15 @@ void SceneEvent::execute(Scene & scene)
 						var->clear();
 					}
 
+					float to =  action->m_tween.m_tweenTo;
+
+					if (action->m_tween.m_addTween)
+					{
+						to += var->getFinalValue();
+					}
+
 					var->to(
-						action->m_tween.m_tweenTo,
+						to,
 						action->m_tween.m_tweenTime,
 						action->m_tween.m_easeType,
 						action->m_tween.m_easeParam);

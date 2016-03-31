@@ -157,6 +157,69 @@ struct EffectDrawable : Drawable
 
 //
 
+//
+
+struct Effect_Fsfx : Effect
+{
+	std::string m_shader;
+	TweenFloat m_alpha;
+	TweenFloat m_param1;
+	TweenFloat m_param2;
+	TweenFloat m_param3;
+	TweenFloat m_param4;
+
+	Effect_Fsfx(const char * name, const char * shader)
+		: Effect(name)
+		, m_alpha(1.f)
+		, m_param1(0.f)
+		, m_param2(0.f)
+		, m_param3(0.f)
+		, m_param4(0.f)
+	{
+		addVar("alpha", m_alpha);
+		addVar("param1", m_param1);
+		addVar("param2", m_param2);
+		addVar("param3", m_param3);
+		addVar("param4", m_param4);
+
+		m_shader = shader;
+	}
+
+	virtual void tick(const float dt) override
+	{
+		TweenFloatCollection::tick(dt);
+	}
+
+	virtual void draw(DrawableList & list) override
+	{
+		new (list) EffectDrawable(this);
+	}
+
+	virtual void draw() override
+	{
+		setBlend(BLEND_OPAQUE);
+
+		Shader shader(m_shader.c_str(), "fsfx.vs", m_shader.c_str());
+		setShader(shader);
+		shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
+		ShaderBuffer buffer;
+		FsfxData data;
+		data.alpha = m_alpha;
+		data.time = g_currentScene->m_time;
+		data.param1 = m_param1;
+		data.param2 = m_param2;
+		data.param3 = m_param3;
+		data.param4 = m_param4;
+		buffer.setData(&data, sizeof(data));
+		shader.setBuffer("FsfxBlock", buffer);
+		g_currentSurface->postprocess(shader);
+
+		setBlend(BLEND_ADD);
+	}
+};
+
+//
+
 struct Effect_Rain : Effect
 {
 	ParticleSystem m_particleSystem;
