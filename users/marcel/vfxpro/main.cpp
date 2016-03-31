@@ -615,18 +615,13 @@ int main(int argc, char * argv[])
 
 		std::list<TimeDilationEffect> timeDilationEffects;
 
-		bool clearScreen = true;
 		bool debugDraw = false;
 
 	#if DEMODATA
 		bool postProcess = false;
 
-		bool drawRain = true;
-		bool drawStarCluster = true;
 		bool drawCloth = false;
-		bool drawSprites = true;
 		bool drawBoxes = true;
-		bool drawVideo = true;
 		bool drawPCM = true;
 	#endif
 
@@ -637,16 +632,8 @@ int main(int argc, char * argv[])
 		scene->load("scene.xml");
 
 	#if DEMODATA
-		Effect_Rain rain("rain", 10000);
-
-		Effect_StarCluster starCluster("stars", 100);
-		starCluster.screenX = virtualToScreenX(0);
-		starCluster.screenY = virtualToScreenY(0);
-
 		Effect_Cloth cloth("cloth");
 		cloth.setup(CLOTH_MAX_SX, CLOTH_MAX_SY);
-
-		Effect_SpriteSystem spriteSystem("sprites");
 
 		Effect_Boxes boxes("boxes");
 		for (int b = 0; b < 2; ++b)
@@ -675,11 +662,6 @@ int main(int argc, char * argv[])
 					box->m_sy.to(box->m_sy.getFinalValue(), boxTimeStep, (EaseType)(rand() % kEaseType_Count), random(0.f, 2.f));
 			}
 		}
-
-		Effect_Video video("video");
-		video.setup("doa.avi", 0.f, 0.f, 1.f, true);
-
-		video.tweenTo("scale", 3.f, 10.f, kEaseType_PowIn, 2.f);
 	#endif
 
 		Surface surface(GFX_SX, GFX_SY);
@@ -687,8 +669,6 @@ int main(int argc, char * argv[])
 	#if DEMODATA
 		Shader jitterShader("jitter");
 		Shader boxblurShader("boxblur");
-		Shader luminanceShader("luminance");
-		Shader flowmapShader("flowmap");
 		Shader distortionBarsShader("distortion_bars");
 	#endif
 
@@ -788,15 +768,6 @@ int main(int argc, char * argv[])
 				scene->reload();
 			}
 
-		#if DEMODATA
-			if (keyboard.wentDown(SDLK_a))
-			{
-				spriteSystem.addSprite("Diamond.scml", 0, rand() % GFX_SX, rand() % GFX_SY, 0.f, 1.f);
-			}
-		#endif
-
-			if (keyboard.wentDown(SDLK_c))
-				clearScreen = !clearScreen;
 			if (keyboard.wentDown(SDLK_d))
 				debugDraw = !debugDraw;
 			if (keyboard.wentDown(SDLK_RSHIFT))
@@ -807,18 +778,10 @@ int main(int argc, char * argv[])
 				postProcess = !postProcess;
 
 			if (keyboard.wentDown(SDLK_1))
-				drawRain = !drawRain;
-			if (keyboard.wentDown(SDLK_2))
-				drawStarCluster = !drawStarCluster;
-			if (keyboard.wentDown(SDLK_3))
 				drawCloth = !drawCloth;
-			if (keyboard.wentDown(SDLK_4))
-				drawSprites = !drawSprites;
-			if (keyboard.wentDown(SDLK_5))
+			if (keyboard.wentDown(SDLK_2))
 				drawBoxes = !drawBoxes;
-			if (keyboard.wentDown(SDLK_6))
-				drawVideo = !drawVideo;
-			if (keyboard.wentDown(SDLK_7))
+			if (keyboard.wentDown(SDLK_3))
 				drawPCM = !drawPCM;
 		#endif
 
@@ -1045,18 +1008,10 @@ int main(int argc, char * argv[])
 			scene->tick(dt);
 
 		#if DEMODATA
-			rain.tick(dt);
-
-			starCluster.tick(dt);
-
 			for (int i = 0; i < 10; ++i)
 				cloth.tick(dt / 10.f);
 
-			spriteSystem.tick(dt);
-
 			boxes.tick(dt);
-
-			video.tick(dt);
 
 			if (mouse.isDown(BUTTON_LEFT))
 			{
@@ -1087,20 +1042,8 @@ int main(int argc, char * argv[])
 			scene->draw(drawableList);
 
 		#if DEMODATA
-			if (drawRain)
-				rain.draw(drawableList);
-
-			if (drawStarCluster)
-				starCluster.draw(drawableList);
-
 			if (drawCloth)
 				cloth.draw(drawableList);
-
-			if (drawSprites)
-				spriteSystem.draw(drawableList);
-
-			if (drawVideo)
-				video.draw(drawableList);
 		#endif
 
 			drawableList.sort();
@@ -1158,25 +1101,8 @@ int main(int argc, char * argv[])
 				{
 					ScopedSurfaceBlock scopedBlock(&surface);
 
-					if (clearScreen)
-					{
-						glClearColor(0.f, 0.f, 0.f, 1.f);
-						glClear(GL_COLOR_BUFFER_BIT);
-					}
-					else
-					{
-						// basically BLEND_SUBTRACT, but keep the alpha channel in-tact
-						glEnable(GL_BLEND);
-						fassert(glBlendEquation);
-						if (glBlendEquation)
-							glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
-						glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
-
-						//setColorf(config.midiGetValue(102, 1.f), config.midiGetValue(102, 1.f)/2.f, config.midiGetValue(102, 1.f)/4.f, 1.f);
-						//setColor(2, 2, 2, 255);
-						setColor(4, 5, 31, 255);
-						drawRect(0, 0, GFX_SX, GFX_SY);
-					}
+					glClearColor(0.f, 0.f, 0.f, 1.f);
+					glClear(GL_COLOR_BUFFER_BIT);
 
 					setBlend(BLEND_ALPHA);
 
@@ -1279,37 +1205,6 @@ int main(int argc, char * argv[])
 						data.radiusY = radius * (1.f / GFX_SY);
 						buffer.setData(&data, sizeof(data));
 						shader.setBuffer("BoxblurBlock", buffer);
-						surface.postprocess(shader);
-					}
-
-					if (doLuminance)
-					{
-						setBlend(BLEND_OPAQUE);
-						Shader & shader = luminanceShader;
-						setShader(shader);
-						shader.setTexture("colormap", 0, surface.getTexture(), true, false);
-						ShaderBuffer buffer;
-						LuminanceData data;
-						data.power = cosf(framework.time) + 1.f + config.midiGetValue(104, 1.f / 8.f) * 8.f;
-						data.scale = 1.f * config.midiGetValue(103, 1.f);
-						buffer.setData(&data, sizeof(data));
-						shader.setBuffer("LuminanceBlock", buffer);
-						surface.postprocess(shader);
-					}
-
-					if (doFlowmap)
-					{
-						setBlend(BLEND_OPAQUE);
-						Shader & shader = flowmapShader;
-						setShader(shader);
-						shader.setTexture("colormap", 0, surface.getTexture(), true, false);
-						shader.setTexture("flowmap", 0, surface.getTexture(), true, false); // todo
-						shader.setImmediate("time", framework.time);
-						ShaderBuffer buffer;
-						FlowmapData data;
-						data.strength = cosf(framework.time) * 200.f;
-						buffer.setData(&data, sizeof(data));
-						shader.setBuffer("FlowmapBlock", buffer);
 						surface.postprocess(shader);
 					}
 
