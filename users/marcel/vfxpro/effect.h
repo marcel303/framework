@@ -53,6 +53,8 @@ struct Effect : TweenFloatCollection
 	TweenFloat scale;
 	TweenFloat z;
 
+	bool debugEnabled;
+
 	Effect(const char * name)
 		: is3D(false)
 		, is2D(false)
@@ -62,6 +64,7 @@ struct Effect : TweenFloatCollection
 		, scaleY(1.f)
 		, scale(1.f)
 		, z(0.f)
+		, debugEnabled(true)
 	{
 		addVar("x", screenX);
 		addVar("y", screenY);
@@ -139,6 +142,9 @@ struct EffectDrawable : Drawable
 
 	virtual void draw() override
 	{
+		if (!m_effect->debugEnabled)
+			return;
+
 		gxPushMatrix();
 		{
 			if (m_effect->is3D)
@@ -197,6 +203,9 @@ struct Effect_Fsfx : Effect
 
 	virtual void draw() override
 	{
+		if (m_alpha <= 0.f)
+			return;
+
 		setBlend(BLEND_OPAQUE);
 
 		Shader shader(m_shader.c_str(), "fsfx.vs", m_shader.c_str());

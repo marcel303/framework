@@ -854,11 +854,35 @@ int main(int argc, char * argv[])
 				}
 
 			}
-			else if (s_debugMode == kDebugMode_EffectList || s_debugMode == kDebugMode_EventList)
+			else if (s_debugMode == kDebugMode_EffectList)
 			{
+				const int base = keyboard.isDown(SDLK_LSHIFT) ? 10 : 0;
+
+				int index = 0;
+
+				for (auto i = g_effectsByName.begin(); i != g_effectsByName.end(); ++i, ++index)
+				{
+					if (index - base < 0 || index - base > 9)
+						continue;
+
+					if (keyboard.wentDown((SDLKey)(SDLK_0 + index - base)))
+					{
+						Effect * effect = i->second;
+
+						effect->debugEnabled = !effect->debugEnabled;
+					}
+				}
+			}
+			else if (s_debugMode == kDebugMode_EventList)
+			{
+				const int base = keyboard.isDown(SDLK_LSHIFT) ? 10 : 0;
+
 				for (size_t i = 0; i < 10 && i < scene->m_events.size(); ++i)
 				{
-					if (keyboard.wentDown((SDLKey)(SDLK_0 + i)))
+					if (i - base < 0 || i - base > 9)
+						continue;
+
+					if (keyboard.wentDown((SDLKey)(SDLK_0 + i - base)))
 					{
 						scene->triggerEvent(scene->m_events[i]->m_name.c_str());
 					}
@@ -1449,7 +1473,9 @@ int main(int argc, char * argv[])
 					x += 50;
 					y += spacingY;
 
-					for (auto i = g_effectsByName.begin(); i != g_effectsByName.end(); ++i)
+					int index = 0;
+
+					for (auto i = g_effectsByName.begin(); i != g_effectsByName.end(); ++i, ++index)
 					{
 						float xOld = x;
 
@@ -1457,11 +1483,12 @@ int main(int argc, char * argv[])
 						Effect * effect = i->second;
 
 						char temp[1024];
-						sprintf_s(temp, sizeof(temp), "%-20s", effectName.c_str(), effect);
+						sprintf_s(temp, sizeof(temp), "%d %-20s", index, effectName.c_str(), effect);
 
 						float sx, sy;
 						measureText(fontSize, sx, sy, "%s", temp);
 
+						setColor(effect->debugEnabled ? colorWhite : colorRed);
 						drawText(x, y, fontSize, +1.f, +1.f, "%s", temp);
 
 						x += sx;
@@ -1476,6 +1503,7 @@ int main(int argc, char * argv[])
 							const std::string & varName = j.first;
 							TweenFloat & var = *j.second;
 
+							setColor(colorWhite);
 							drawText(x, y, fontSize, +1.f, +1.f, "%-8s", varName.c_str());
 							y += spacingY;
 							
