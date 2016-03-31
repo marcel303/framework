@@ -1426,12 +1426,51 @@ int main(int argc, char * argv[])
 
 				if (drawActiveEffects)
 				{
-					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "effects list:");
+					drawText(x, y, fontSize, +1.f, +1.f, "effects list:");
 					x += 50;
+					y += spacingY;
 
 					for (auto i = g_effectsByName.begin(); i != g_effectsByName.end(); ++i)
 					{
-						drawText(x, y += spacingY, fontSize, +1.f, +1.f, "%-40s : %p", i->first.c_str(), i->second);
+						float xOld = x;
+
+						const std::string & effectName = i->first;
+						Effect * effect = i->second;
+
+						char temp[1024];
+						sprintf_s(temp, sizeof(temp), "%-20s", effectName.c_str(), effect);
+
+						float sx, sy;
+						measureText(fontSize, sx, sy, "%s", temp);
+
+						drawText(x, y, fontSize, +1.f, +1.f, "%s", temp);
+
+						x += sx;
+						x += 4.f;
+
+						float yNew = y;
+
+						for (auto j : effect->m_tweenVars)
+						{
+							float yOld = y;
+
+							const std::string & varName = j.first;
+							TweenFloat & var = *j.second;
+
+							drawText(x, y, fontSize, +1.f, +1.f, "%-8s", varName.c_str());
+							y += spacingY;
+							
+							setColor(var.isActive() ? colorYellow : colorWhite);
+							drawText(x, y, fontSize, +1.f, +1.f, "%.2f", (float)var);
+							y += spacingY;
+
+							x += 150.f;
+							yNew = y;
+							y = yOld;
+						}
+
+						x = xOld;
+						y = yNew;
 					}
 
 					y += spacingY;
@@ -1446,12 +1485,14 @@ int main(int argc, char * argv[])
 				}
 				else if (s_debugMode == kDebugMode_Events)
 				{
-					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "events list:");
+					drawText(x, y, fontSize, +1.f, +1.f, "events list:");
 					x += 50;
+					y += spacingY;
 
 					for (size_t i = 0; i < scene->m_events.size(); ++i)
 					{
-						drawText(x, y += spacingY, fontSize, +1.f, +1.f, "%02d: %-40s", i, scene->m_events[i]->m_name.c_str());
+						drawText(x, y, fontSize, +1.f, +1.f, "%02d: %-40s", i, scene->m_events[i]->m_name.c_str());
+						y += spacingY;
 					}
 
 					y += spacingY;
@@ -1460,38 +1501,38 @@ int main(int argc, char * argv[])
 
 				if (drawHelp)
 				{
-					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "Press F1 to toggle help");
+					drawText(x, y, fontSize, +1.f, +1.f, "Press F1 to toggle help"); y += spacingY;
 					x += 50;
-					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "");
+					drawText(x, y, fontSize, +1.f, +1.f, ""); y += spacingY;
 
 				#if DEMODATA
-					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "1: toggle rain effect");
-					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "2: toggle star cluster effect");
-					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "3: toggle cloth effect");
-					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "4: toggle sprite effects");
-					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "5: toggle video effects");
-					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "");
+					drawText(x, y, fontSize, +1.f, +1.f, "1: toggle rain effect"); y += spacingY;
+					drawText(x, y, fontSize, +1.f, +1.f, "2: toggle star cluster effect"); y += spacingY;
+					drawText(x, y, fontSize, +1.f, +1.f, "3: toggle cloth effect"); y += spacingY;
+					drawText(x, y, fontSize, +1.f, +1.f, "4: toggle sprite effects"); y += spacingY;
+					drawText(x, y, fontSize, +1.f, +1.f, "5: toggle video effects"); y += spacingY;
+					drawText(x, y, fontSize, +1.f, +1.f, "");
 				#endif
 
-					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "E: toggle events list");
-					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "I: identify screens");
-					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "S: toggle project setup view");
+					drawText(x, y, fontSize, +1.f, +1.f, "E: toggle events list"); y += spacingY;
+					drawText(x, y, fontSize, +1.f, +1.f, "I: identify screens"); y += spacingY;
+					drawText(x, y, fontSize, +1.f, +1.f, "S: toggle project setup view"); y += spacingY;
 					x += 50;
-					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "RIGHT SHIFT: enable camera controls in project setup view");
-					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "ARROW KEYS: move the camera around in project setup view");
-					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "END: change the active virtual camera in project setup view");
-					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "LEFT SHIFT: when pressed, draw test objects in 3D space");
-					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "");
+					drawText(x, y, fontSize, +1.f, +1.f, "RIGHT SHIFT: enable camera controls in project setup view"); y += spacingY;
+					drawText(x, y, fontSize, +1.f, +1.f, "ARROW KEYS: move the camera around in project setup view"); y += spacingY;
+					drawText(x, y, fontSize, +1.f, +1.f, "END: change the active virtual camera in project setup view"); y += spacingY;
+					drawText(x, y, fontSize, +1.f, +1.f, "LEFT SHIFT: when pressed, draw test objects in 3D space"); y += spacingY;
+					drawText(x, y, fontSize, +1.f, +1.f, ""); y += spacingY;
 					x -= 50;
-					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "A: spawn a Spriter effect");
-					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "G: when pressed, enables gravity on cloth");
-					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "");
-					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "R: reload data caches");
-					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "C: disable screen clear and enable a fade effect instead");
-					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "P: toggle fullscreen shader effect");
-					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "D: toggle debug draw");
-					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "");
-					drawText(x, y += spacingY, fontSize, +1.f, +1.f, "ESCAPE: quit");
+					drawText(x, y, fontSize, +1.f, +1.f, "A: spawn a Spriter effect"); y += spacingY;
+					drawText(x, y, fontSize, +1.f, +1.f, "G: when pressed, enables gravity on cloth"); y += spacingY;
+					drawText(x, y, fontSize, +1.f, +1.f, ""); y += spacingY;
+					drawText(x, y, fontSize, +1.f, +1.f, "R: reload data caches"); y += spacingY;
+					drawText(x, y, fontSize, +1.f, +1.f, "C: disable screen clear and enable a fade effect instead"); y += spacingY;
+					drawText(x, y, fontSize, +1.f, +1.f, "P: toggle fullscreen shader effect"); y += spacingY;
+					drawText(x, y, fontSize, +1.f, +1.f, "D: toggle debug draw"); y += spacingY;
+					drawText(x, y, fontSize, +1.f, +1.f, ""); y += spacingY;
+					drawText(x, y, fontSize, +1.f, +1.f, "ESCAPE: quit"); y += spacingY;
 
 					//
 
