@@ -13,6 +13,8 @@ using namespace tinyxml2;
 extern const int GFX_SX;
 extern const int GFX_SY;
 
+extern Config config;
+
 //
 
 Scene * g_currentScene = nullptr;
@@ -429,6 +431,9 @@ bool SceneAction::load(const XMLElement * xmlAction)
 		m_tween.m_replaceTween = boolAttrib(xmlAction, "replace", false);
 		m_tween.m_addTween = boolAttrib(xmlAction, "add", false);
 
+		m_tween.m_preDelay = floatAttrib(xmlAction, "pre_delay", 0.f);
+		m_tween.m_postDelay = floatAttrib(xmlAction, "post_delay", 0.f);
+
 		return true;
 	}
 	else if (type == "signal")
@@ -537,6 +542,11 @@ void SceneEvent::execute(Scene & scene)
 						var->clear();
 					}
 
+					if (action->m_tween.m_preDelay > 0.f)
+					{
+						var->to(var->getFinalValue(), action->m_tween.m_preDelay, kEaseType_Linear, 0.f);
+					}
+
 					float to =  action->m_tween.m_tweenTo;
 
 					if (action->m_tween.m_addTween)
@@ -549,6 +559,11 @@ void SceneEvent::execute(Scene & scene)
 						action->m_tween.m_tweenTime,
 						action->m_tween.m_easeType,
 						action->m_tween.m_easeParam);
+
+					if (action->m_tween.m_postDelay > 0.f)
+					{
+						var->to(var->getFinalValue(), action->m_tween.m_postDelay, kEaseType_Linear, 0.f);
+					}
 				}
 			}
 		}
@@ -615,6 +630,51 @@ void Scene::tick(const float dt)
 	}
 
 	m_time += dt;
+
+	// process MIDI input
+
+	for (auto & map : m_midiMaps)
+	{
+		const bool g_live = false; // todo : add a global live variable
+
+		if (g_live && !map.liveEnabled)
+			continue;
+
+		if (map.type == SceneMidiMap::kMapType_Event)
+		{
+			if (config.midiWentDown(map.id))
+			{
+				for (auto i = m_events.begin(); i != m_events.end(); ++i)
+				{
+					SceneEvent * event = *i;
+
+					if (event->m_name == map.event)
+					{
+						event->execute(*this);
+					}
+				}
+			}
+		}
+		else if (map.type == SceneMidiMap::kMapType_EffectVar)
+		{
+			if (config.midiIsDown(map.id))
+			{
+				SceneEffect * effect = findEffectByName(map.effect.c_str());
+
+				if (effect != nullptr)
+				{
+					TweenFloat * var = effect->m_effect->getVar(map.var.c_str());
+
+					if (var != nullptr && !var->isActive())
+					{
+						const float value = config.midiGetValue(map.id, 0.f);
+
+						*var = value;
+					}
+				}
+			}
+		}
+	}
 }
 
 void Scene::draw(DrawableList & list)
@@ -748,6 +808,33 @@ bool Scene::load(const char * filename)
 		{
 			for (const XMLElement * xmlMidiMap = xmlMidi->FirstChildElement("map"); xmlMidiMap; xmlMidiMap = xmlMidiMap->NextSiblingElement("map"))
 			{
+				SceneMidiMap map;
+
+				map.id = intAttrib(xmlMidiMap, "id", -1);
+
+				if (map.id < 0)
+					continue;
+
+				map.liveEnabled = boolAttrib(xmlMidiMap, "live", false);
+
+				map.event = stringAttrib(xmlMidiMap, "event", "");
+				map.effect = stringAttrib(xmlMidiMap, "effect", "");
+				map.var = stringAttrib(xmlMidiMap, "var", "");
+
+				if (!map.effect.empty() && !map.var.empty())
+				{
+					map.type = SceneMidiMap::kMapType_EffectVar;
+				}
+				else if (!map.event.empty())
+				{
+					map.type = SceneMidiMap::kMapType_Event;
+				}
+				else
+				{
+					continue;
+				}
+
+				m_midiMaps.push_back(map);
 			}
 		}
 	}

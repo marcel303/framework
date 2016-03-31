@@ -333,7 +333,10 @@ struct Effect_Rain : Effect
 struct Effect_StarCluster : Effect
 {
 	ParticleSystem m_particleSystem;
+	bool m_localSpace;
 	TweenFloat m_alpha;
+	TweenFloat m_gravityX;
+	TweenFloat m_gravityY;
 
 	Effect_StarCluster(const char * name, const int numStars)
 		: Effect(name)
@@ -343,6 +346,8 @@ struct Effect_StarCluster : Effect
 		is2D = true;
 
 		addVar("alpha", m_alpha);
+		addVar("gravity_x", m_gravityX);
+		addVar("gravity_y", m_gravityY);
 
 		for (int i = 0; i < numStars; ++i)
 		{
@@ -378,8 +383,8 @@ struct Effect_StarCluster : Effect
 			if (!m_particleSystem.alive[i])
 				continue;
 
-			const float dx = m_particleSystem.x[i];
-			const float dy = m_particleSystem.y[i];
+			const float dx = m_particleSystem.x[i] - m_gravityX;
+			const float dy = m_particleSystem.y[i] - m_gravityY;
 			const float ds = sqrtf(dx * dx + dy * dy) + eps;
 
 #if 0

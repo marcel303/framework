@@ -514,8 +514,10 @@ static void drawScreen(const Vec3 * screenPoints, GLuint surfaceTexture, int scr
 enum DebugMode
 {
 	kDebugMode_None,
+	kDebugMode_Help,
 	kDebugMode_Camera,
-	kDebugMode_Events
+	kDebugMode_EventList,
+	kDebugMode_EffectList
 };
 
 static DebugMode s_debugMode = kDebugMode_None;
@@ -589,8 +591,14 @@ int main(int argc, char * argv[])
 
 	// initialise framework
 
+#if 0
+	framework.fullscreen = true;
+	framework.exclusiveFullscreen = false;
+	framework.useClosestDisplayMode = true;
+#else
 	framework.fullscreen = false;
-	//framework.windowBorder = false;
+	framework.windowBorder = false;
+#endif
 	framework.enableDepthBuffer = true;
 	framework.minification = 1;
 	framework.enableMidi = true;
@@ -621,10 +629,8 @@ int main(int argc, char * argv[])
 		bool drawPCM = true;
 	#endif
 
-		bool drawHelp = false;
 		bool drawScreenIds = false;
 		bool drawProjectorSetup = false;
-		bool drawActiveEffects = false;
 
 		Scene * scene = new Scene();
 		scene->load("scene.xml");
@@ -816,15 +822,25 @@ int main(int argc, char * argv[])
 		#endif
 
 			if (keyboard.wentDown(SDLK_F1))
-				drawHelp = !drawHelp;
+			{
+				if (s_debugMode == kDebugMode_Help)
+					setDebugMode(kDebugMode_None);
+				else
+					setDebugMode(kDebugMode_Help);
+			}
+
 			if (keyboard.wentDown(SDLK_e))
-				setDebugMode(kDebugMode_Events);
+			{
+				if (s_debugMode == kDebugMode_EventList)
+					setDebugMode(kDebugMode_EffectList);
+				else
+					setDebugMode(kDebugMode_EventList);
+			}
+
 			if (keyboard.wentDown(SDLK_i))
 				drawScreenIds = !drawScreenIds;
 			if (keyboard.wentDown(SDLK_s))
 				drawProjectorSetup = !drawProjectorSetup;
-			if (keyboard.wentDown(SDLK_e))
-				drawActiveEffects = !drawActiveEffects;
 
 			if (s_debugMode == kDebugMode_None)
 			{
@@ -838,7 +854,7 @@ int main(int argc, char * argv[])
 				}
 
 			}
-			else if (s_debugMode == kDebugMode_Events)
+			else if (s_debugMode == kDebugMode_EffectList || s_debugMode == kDebugMode_EventList)
 			{
 				for (size_t i = 0; i < 10 && i < scene->m_events.size(); ++i)
 				{
@@ -1424,7 +1440,10 @@ int main(int argc, char * argv[])
 				int x = 20;
 				int y = 20;
 
-				if (drawActiveEffects)
+				if (s_debugMode == kDebugMode_None)
+				{
+				}
+				else if (s_debugMode == kDebugMode_EffectList)
 				{
 					drawText(x, y, fontSize, +1.f, +1.f, "effects list:");
 					x += 50;
@@ -1476,14 +1495,10 @@ int main(int argc, char * argv[])
 					y += spacingY;
 					x -= 50;
 				}
-
-				if (s_debugMode == kDebugMode_None)
-				{
-				}
 				else if (s_debugMode == kDebugMode_Camera)
 				{
 				}
-				else if (s_debugMode == kDebugMode_Events)
+				else if (s_debugMode == kDebugMode_EventList)
 				{
 					drawText(x, y, fontSize, +1.f, +1.f, "events list:");
 					x += 50;
@@ -1498,8 +1513,7 @@ int main(int argc, char * argv[])
 					y += spacingY;
 					x -= 50;
 				}
-
-				if (drawHelp)
+				else if (s_debugMode == kDebugMode_Help)
 				{
 					drawText(x, y, fontSize, +1.f, +1.f, "Press F1 to toggle help"); y += spacingY;
 					x += 50;

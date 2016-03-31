@@ -129,6 +129,8 @@ struct SceneAction
 		float m_easeParam;
 		bool m_replaceTween;
 		bool m_addTween;
+		float m_preDelay;
+		float m_postDelay;
 	} m_tween;
 
 	struct Signal
@@ -159,12 +161,32 @@ struct SceneEvent
 
 //
 
+struct SceneMidiMap
+{
+	enum MapType
+	{
+		kMapType_Event,
+		kMapType_EffectVar
+	};
+
+	int id;
+	MapType type;
+	bool liveEnabled; // if true, the MIDI map is active during live performances. otherwise, the mapping is ignored
+
+	std::string event;
+	std::string effect;
+	std::string var;
+};
+
+//
+
 struct Scene
 {
 	std::string m_filename;
 	std::string m_name;
 	std::vector<SceneLayer*> m_layers;
 	std::vector<SceneEvent*> m_events;
+	std::vector<SceneMidiMap> m_midiMaps;
 
 	float m_time;
 
