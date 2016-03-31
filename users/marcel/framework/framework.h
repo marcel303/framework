@@ -310,9 +310,10 @@ class Shader
 public:
 	Shader();
 	Shader(const char * filename);
+	Shader(const char * name, const char * filenameVs, const char * filenamePs);
 	~Shader();
 	
-	void load(const char * filename);
+	void load(const char * name, const char * filenameVs, const char * filenamePs);
 	bool isValid() const { return m_shader != 0; }
 	GLuint getProgram() const;
 	

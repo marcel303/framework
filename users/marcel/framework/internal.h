@@ -176,6 +176,9 @@ public:
 		kSp_MAX
 	};
 
+	std::string vs;
+	std::string ps;
+
 	GLuint program;
 
 	struct
@@ -190,7 +193,7 @@ public:
 
 	ShaderCacheElem();
 	void free();
-	void load(const char * filename);
+	void load(const char * name, const char * filenameVs, const char * filenamePs);
 };
 
 class ShaderCache
@@ -202,7 +205,7 @@ public:
 	
 	void clear();
 	void reload();
-	ShaderCacheElem & findOrCreate(const char * name);
+	ShaderCacheElem & findOrCreate(const char * name, const char * filenameVs, const char * filenamePs);
 };
 
 //

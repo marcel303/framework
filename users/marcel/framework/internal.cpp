@@ -692,16 +692,16 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type)
 	return result;
 }
 
-void ShaderCacheElem::load(const char * filename)
+void ShaderCacheElem::load(const char * name, const char * filenameVs, const char * filenamePs)
 {
-	ScopedLoadTimer loadTimer(filename);
+	ScopedLoadTimer loadTimer(name);
 
 	free();
 	
 	bool result = true;
 	
-	std::string vs = std::string(filename) + ".vs";
-	std::string ps = std::string(filename) + ".ps";
+	vs = filenameVs;
+	ps = filenamePs;
 	
 	bool hasVs = fileExists(vs.c_str());
 	bool hasPs = fileExists(ps.c_str());
@@ -787,11 +787,11 @@ void ShaderCacheElem::load(const char * filename)
 	
 	if (result)
 	{
-		log("loaded shader program %s", filename);
+		log("loaded shader program %s", name);
 	}
 	else
 	{
-		logError("failed to load shader program %s", filename);
+		logError("failed to load shader program %s", name);
 		
 		free();
 	}
@@ -811,11 +811,11 @@ void ShaderCache::reload()
 {
 	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
 	{
-		i->second.load(i->first.c_str());
+		i->second.load(i->first.c_str(), i->second.vs.c_str(), i->second.ps.c_str());
 	}
 }
 
-ShaderCacheElem & ShaderCache::findOrCreate(const char * name)
+ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * filenameVs, const char * filenamePs)
 {
 	Map::iterator i = m_map.find(name);
 	
@@ -827,7 +827,7 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name)
 	{
 		ShaderCacheElem elem;
 		
-		elem.load(name);
+		elem.load(name, filenameVs, filenamePs);
 		
 		i = m_map.insert(Map::value_type(name, elem)).first;
 		

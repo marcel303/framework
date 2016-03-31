@@ -1333,8 +1333,18 @@ Shader::Shader()
 Shader::Shader(const char * filename)
 {
 	m_shader = 0;
-	
-	load(filename);
+
+	const std::string vs = std::string(filename) + ".vs";
+	const std::string ps = std::string(filename) + ".ps";
+
+	load(filename, vs.c_str(), ps.c_str());
+}
+
+Shader::Shader(const char * name, const char * filenameVs, const char * filenamePs)
+{
+	m_shader = 0;
+
+	load(name, filenameVs, filenamePs);
 }
 
 Shader::~Shader()
@@ -1343,9 +1353,9 @@ Shader::~Shader()
 		clearShader();
 }
 
-void Shader::load(const char * filename)
+void Shader::load(const char * name, const char * filenameVs, const char * filenamePs)
 {
-	m_shader = &g_shaderCache.findOrCreate(filename);
+	m_shader = &g_shaderCache.findOrCreate(name, filenameVs, filenamePs);
 }
 
 GLuint Shader::getProgram() const
@@ -4143,7 +4153,7 @@ void gxEmitVertex();
 
 void gxInitialize()
 {
-	s_gxShader.load("engine/Generic");
+	s_gxShader.load("engine/Generic", "engine/Generic.vs", "engine/Generic.ps");
 	
 	memset(&s_gxVertex, 0, sizeof(s_gxVertex));
 	s_gxVertex.cx = 1.f;
