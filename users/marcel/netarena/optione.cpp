@@ -13,10 +13,10 @@ OptioneMenu::OptioneMenu()
 	, m_menuNav(0)
 	, m_buttonLegend(0)
 {
-	m_back = new Button(0, 0, "mainmenu-button.png", 0, MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
-	m_audio = new Button(GFX_SX/2, GFX_SY/3, "mainmenu-button.png", "menu-audio", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
-	m_display = new Button(GFX_SX/2, GFX_SY/3 + 150, "mainmenu-button.png", "menu-display", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
-	m_video = new Button(GFX_SX/2, GFX_SY/3 + 300, "mainmenu-button.png", "menu-video", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_back = new Button(0, 0, "mainmenu-button.png", "mainmenu-button.png", 0, MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE, MAINMENU_BUTTON_TEXT_COLOR);
+	m_audio = new Button(GFX_SX/2, GFX_SY/3, "mainmenu-button.png", "mainmenu-button.png", "menu-audio", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE, MAINMENU_BUTTON_TEXT_COLOR);
+	m_display = new Button(GFX_SX/2, GFX_SY/3 + 150, "mainmenu-button.png", "mainmenu-button.png", "menu-display", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE, MAINMENU_BUTTON_TEXT_COLOR);
+	m_video = new Button(GFX_SX/2, GFX_SY/3 + 300, "mainmenu-button.png", "mainmenu-button.png", "menu-video", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE, MAINMENU_BUTTON_TEXT_COLOR);
 
 	m_menuNav = new MenuNav();
 	m_menuNav->addElem(m_audio);
@@ -100,7 +100,7 @@ OptioneAudioMenu::OptioneAudioMenu()
 	, m_menuNav(0)
 	, m_buttonLegend(0)
 {
-	m_back = new Button(0, 0, "mainmenu-button.png", 0, MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_back = new Button(0, 0, "mainmenu-button.png", "mainmenu-button.png", 0, MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE, MAINMENU_BUTTON_TEXT_COLOR);
 	m_musicEnabled = new CheckButton(GFX_SX/3, GFX_SY/3, g_app->m_userSettings->audio.musicEnabled, "mainmenu-button.png", "menu-music-enabled", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 	m_musicVolume = new Slider(GFX_SX/3 + 650, GFX_SY/3, 0.f, 1.f, g_app->m_userSettings->audio.musicVolume, "mainmenu-button.png", "menu-music-volume", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 	m_soundEnabled = new CheckButton(GFX_SX/3, GFX_SY/3 + 150, g_app->m_userSettings->audio.soundEnabled, "mainmenu-button.png", "menu-sound-enabled", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
@@ -195,7 +195,7 @@ OptioneDisplayMenu::OptioneDisplayMenu()
 	, m_menuNav(0)
 	, m_buttonLegend(0)
 {
-	m_back = new Button(0, 0, "mainmenu-button.png", 0, MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_back = new Button(0, 0, "mainmenu-button.png", "mainmenu-button.png", 0, MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE, MAINMENU_BUTTON_TEXT_COLOR);
 
 	m_menuNav = new MenuNav();
 
@@ -252,7 +252,7 @@ OptioneVideoMenu::OptioneVideoMenu()
 	, m_menuNav(0)
 	, m_buttonLegend(0)
 {
-	m_back = new Button(0, 0, "mainmenu-button.png", 0, MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_back = new Button(0, 0, "mainmenu-button.png", "mainmenu-button.png", 0, MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE, MAINMENU_BUTTON_TEXT_COLOR);
 
 	m_menuNav = new MenuNav();
 

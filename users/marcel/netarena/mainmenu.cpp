@@ -92,16 +92,16 @@ MainMenu::MainMenu()
 	const int stepX = 0;
 	const int stepY = 110;
 
-	m_newGame = new Button(x, y, "ui/menus/menu-main-button-back.png", "menu-newgame", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_newGame = new Button(x, y, "ui/menus/menu-main-button-back.png", "ui/menus/menu-main-button-selected.png", "menu-newgame", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE, MAINMENU_BUTTON_TEXT_COLOR);
 	x += stepX; y += stepY;
 
-	m_customize = new Button(x, y, "ui/menus/menu-main-button-back.png", "menu-customize", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_customize = new Button(x, y, "ui/menus/menu-main-button-back.png", "ui/menus/menu-main-button-selected.png", "menu-customize", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE, MAINMENU_BUTTON_TEXT_COLOR);
 	x += stepX; y += stepY;
 
-	m_options = new Button(x, y, "ui/menus/menu-main-button-back.png", "menu-options", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_options = new Button(x, y, "ui/menus/menu-main-button-back.png", "ui/menus/menu-main-button-selected.png", "menu-options", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE, MAINMENU_BUTTON_TEXT_COLOR);
 	x += stepX; y += stepY;
 
-	m_quitApp = new Button(x, y, "ui/menus/menu-main-button-back.png", "menu-quit", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_quitApp = new Button(x, y, "ui/menus/menu-main-button-back.png", "ui/menus/menu-main-button-selected.png", "menu-quit", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE, MAINMENU_BUTTON_TEXT_COLOR);
 	x += stepX; y += stepY;
 #endif
 
@@ -479,7 +479,7 @@ HelpMenu::HelpMenu()
 	, m_menuNav(0)
 	, m_buttonLegend(0)
 {
-	m_back = new Button(0, 0, "mainmenu-button.png", 0, MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_back = new Button(0, 0, "mainmenu-button.png", "mainmenu-button.png", 0, MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE, MAINMENU_BUTTON_TEXT_COLOR);
 
 	m_menuNav = new MenuNav();
 

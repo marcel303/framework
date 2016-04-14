@@ -91,7 +91,8 @@ public:
 class Button : public MenuNavElem
 {
 public:
-	Sprite * m_sprite;
+	Sprite * m_idleSprite;
+	Sprite * m_overSprite;
 	int m_x;
 	int m_y;
 	bool m_isMouseDown;
@@ -102,6 +103,7 @@ public:
 	int m_textX;
 	int m_textY;
 	int m_textSize;
+	Color m_textColor;
 
 	int m_moveX;
 	int m_moveY;
@@ -110,7 +112,7 @@ public:
 	float m_moveTimeStart;
 
 public:
-	Button(int x, int y, const char * filename, const char * localString, const char * textFont, int textX, int textY, int textSize);
+	Button(int x, int y, const char * idleFilename, const char * overFilename, const char * localString, const char * textFont, int textX, int textY, int textSize, const Color & textColor);
 	~Button();
 
 	void setPosition(int x, int y);

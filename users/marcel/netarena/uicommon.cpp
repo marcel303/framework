@@ -322,8 +322,9 @@ std::vector<ButtonLegend::DrawElem> ButtonLegend::getDrawElems(int x, int y)
 
 //
 
-Button::Button(int x, int y, const char * filename, const char * localString, const char * textFont, int textX, int textY, int textSize)
-	: m_sprite(new Sprite(filename))
+Button::Button(int x, int y, const char * idleFilename, const char * overFilename, const char * localString, const char * textFont, int textX, int textY, int textSize, const Color & textColor)
+	: m_idleSprite(new Sprite(idleFilename))
+	, m_overSprite(new Sprite(overFilename))
 	, m_isMouseDown(false)
 	, m_x(0)
 	, m_y(0)
@@ -333,6 +334,7 @@ Button::Button(int x, int y, const char * filename, const char * localString, co
 	, m_textX(textX)
 	, m_textY(textY)
 	, m_textSize(textSize)
+	, m_textColor(textColor)
 	, m_moveX(0)
 	, m_moveY(0)
 	, m_startOpacity(0.f)
@@ -344,8 +346,11 @@ Button::Button(int x, int y, const char * filename, const char * localString, co
 
 Button::~Button()
 {
-	delete m_sprite;
-	m_sprite = 0;
+	delete m_idleSprite;
+	m_idleSprite = 0;
+
+	delete m_overSprite;
+	m_overSprite = 0;
 }
 
 void Button::setPosition(int x, int y)
@@ -354,8 +359,8 @@ void Button::setPosition(int x, int y)
 	m_x = x;
 	m_y = y;
 #else
-	m_x = x - m_sprite->getWidth() / 2;
-	m_y = y - m_sprite->getHeight() / 2;
+	m_x = x - m_idleSprite->getWidth() / 2;
+	m_y = y - m_idleSprite->getHeight() / 2;
 #endif
 }
 
@@ -405,6 +410,7 @@ void Button::draw()
 		gxTranslatef(m_moveX * (animT - 1.f), m_moveY * (animT - 1.f), 0.f);
 
 	#if 0
+	#if 0
 		if (m_hasFocus)
 			setColorf(1.f, 1.f, 1.f, opacity);
 		else
@@ -416,16 +422,25 @@ void Button::draw()
 		else
 			setColorf(0.f, 0.f, 0.f, opacity * .9f);
 	#endif
+	#else
+		setColor(colorWhite);
+	#endif
 
-		m_sprite->drawEx(m_x, m_y);
+		Sprite * sprite = m_hasFocus ? m_overSprite : m_idleSprite;
 
-		if (m_hasFocus)
-			setColorf(1.f, 1.f, 1.f, opacity);
-		else
-			setColorf(1.f, 1.f, 1.f, opacity, .75f);
+		sprite->drawEx(m_x, m_y);
 
 		if (m_localString)
 		{
+		#if 0
+			if (m_hasFocus)
+				setColorf(1.f, 1.f, 1.f, opacity);
+			else
+				setColorf(1.f, 1.f, 1.f, opacity, .75f);
+		#else
+			setColor(m_textColor);
+		#endif
+
 			setFont(m_textFont);
 			drawText(m_x + m_textX, m_y + m_textY, m_textSize, +1.f, +1.f, "%s", getLocalString(m_localString));
 
@@ -456,8 +471,8 @@ void Button::getPosition(int & x, int & y) const
 
 void Button::getSize(int & sx, int & sy) const
 {
-	sx = m_sprite->getWidth();
-	sy = m_sprite->getHeight();
+	sx = m_idleSprite->getWidth();
+	sy = m_idleSprite->getHeight();
 }
 
 bool Button::hitTest(int x, int y) const
@@ -465,8 +480,8 @@ bool Button::hitTest(int x, int y) const
 	return
 		x >= m_x &&
 		y >= m_y &&
-		x < m_x + m_sprite->getWidth() &&
-		y < m_y + m_sprite->getHeight();
+		x < m_x + m_idleSprite->getWidth() &&
+		y < m_y + m_idleSprite->getHeight();
 }
 
 void Button::onFocusChange(bool hasFocus, bool isAutomaticSelection)
