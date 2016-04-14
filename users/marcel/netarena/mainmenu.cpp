@@ -225,11 +225,19 @@ bool MainMenu::tick(float dt)
 	}
 	else if (m_customize && m_customize->isClicked())
 	{
+	#if ITCHIO_BUILD
+		g_app->playSound("ui/sounds/menu-back.ogg");
+	#else
 		g_app->m_menuMgr->push(new CustomizeMenu());
+	#endif
 	}
 	else if (m_options && m_options->isClicked())
 	{
+	#if ITCHIO_BUILD
+		g_app->playSound("ui/sounds/menu-back.ogg");
+	#else
 		g_app->m_menuMgr->push(new OptioneMenu());
+	#endif
 	}
 	else if (m_quitApp && m_quitApp->isClicked())
 	{
