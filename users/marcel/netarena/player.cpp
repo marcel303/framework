@@ -2038,7 +2038,8 @@ void Player::tick(GameSim & gameSim, float dt)
 		{
 			// none of that special traits stuff onboard the enterprise!
 		}
-		else if (characterData->hasTrait(kPlayerTrait_AirDash))
+
+		if (characterData->hasTrait(kPlayerTrait_AirDash))
 		{
 			if (playerControl && m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && m_input.wentDown(INPUT_BUTTON_A))
 			{
@@ -2054,7 +2055,8 @@ void Player::tick(GameSim & gameSim, float dt)
 				}
 			}
 		}
-		else if (characterData->hasTrait(kPlayerTrait_DoubleJump))
+		
+		if (characterData->hasTrait(kPlayerTrait_DoubleJump))
 		{
 			if (playerControl && m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && !m_isWallSliding && (m_grapple.state == GrappleInfo::State_Inactive) && m_input.wentDown(INPUT_BUTTON_A))
 			{
@@ -2069,9 +2071,10 @@ void Player::tick(GameSim & gameSim, float dt)
 				}
 			}
 		}
-		else if (characterData->hasTrait(kPlayerTrait_NinjaDash))
+
+		if (characterData->hasTrait(kPlayerTrait_NinjaDash))
 		{
-			if (playerControl && m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && !m_isWallSliding && (m_grapple.state == GrappleInfo::State_Inactive) && m_input.wentDown(INPUT_BUTTON_A))
+			if (playerControl && m_isAirDashCharged && !m_isGrounded && !m_isAttachedToSticky && !m_isWallSliding && (m_grapple.state == GrappleInfo::State_Inactive) && m_input.wentDown(INPUT_BUTTON_L1))
 			{
 				if (isAnimOverrideAllowed(kPlayerAnim_AirDash))
 				{

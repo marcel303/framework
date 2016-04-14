@@ -461,7 +461,7 @@ void MainMenu::draw()
 		m_campaignKs->draw();
 #endif
 
-#if ITCHIO_BUILD
+#if ITCHIO_BUILD && DRAW_BACK_V1
 	const float offset = framework.time * .2f;
 	const float scale = 1.f / 70.f;
 	const float size = 8.f;
