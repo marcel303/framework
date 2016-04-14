@@ -3972,7 +3972,11 @@ bool Player::respawn(Vec2 * pos)
 
 		m_weaponStackSize = 0;
 		memset(m_weaponStack, 0, sizeof(m_weaponStack));
+	#if 0
 		m_sprayWeaponFill = SPRAYWEAPON_INITIAL_FILL;
+	#else
+		m_sprayWeaponFill = 0.f;
+	#endif
 
 		m_attack = AttackInfo();
 		m_timeDilationAttack = TimeDilationAttack();
@@ -4700,12 +4704,12 @@ void Player::tickShieldSpecial(float dt)
 	switch (m_shieldSpecial.state)
 	{
 	case ShieldSpecial::State_Inactive:
-		if (m_isAlive && characterData->m_special == kPlayerSpecial_Shield)
+		if (m_isAlive/* && characterData->m_special == kPlayerSpecial_Shield*/)
 		{
 			m_shieldSpecial.cooldown = Calc::Max(0.f, m_shieldSpecial.cooldown - dt);
 			m_shieldSpecial.charge = Calc::Min(SHIELDSPECIAL_CHARGE_MAX, m_shieldSpecial.charge + SHIELDSPECIAL_CHARGE_SPEED * dt);
 
-			if (m_input.wentDown(INPUT_BUTTON_Y) &&
+			if (m_input.wentDown(INPUT_BUTTON_R1) &&
 				isAnimOverrideAllowed(kPlayerAnim_Attack) &&
 				m_shieldSpecial.cooldown == 0.f)
 			{
