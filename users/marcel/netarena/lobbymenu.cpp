@@ -155,8 +155,8 @@ bool CharGrid::isValidGridCell(int x, int y)
 LobbyMenu::LobbyMenu(Client * client)
 	: m_client(client)
 	, m_charGrid(0)
-	, m_prevGameMode(new Button(50,  GFX_SY - 80, "charselect-prev.png", 0, 0, 0, 0))
-	, m_nextGameMode(new Button(150, GFX_SY - 80, "charselect-next.png", 0, 0, 0, 0))
+	, m_prevGameMode(new Button(50,  GFX_SY - 80, "charselect-prev.png", 0, 0, 0, 0, 0))
+	, m_nextGameMode(new Button(150, GFX_SY - 80, "charselect-next.png", 0, 0, 0, 0, 0))
 {
 	m_charGrid = new CharGrid(client, this);
 }
@@ -250,7 +250,7 @@ void LobbyMenu::draw()
 		}
 	}
 
-	const int baseX = 840;
+	const int baseX = 1040;
 	const int baseY = 140;
 	const int dy = 45;
 	const int fontSize = 30;

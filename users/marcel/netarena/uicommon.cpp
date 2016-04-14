@@ -322,13 +322,14 @@ std::vector<ButtonLegend::DrawElem> ButtonLegend::getDrawElems(int x, int y)
 
 //
 
-Button::Button(int x, int y, const char * filename, const char * localString, int textX, int textY, int textSize)
+Button::Button(int x, int y, const char * filename, const char * localString, const char * textFont, int textX, int textY, int textSize)
 	: m_sprite(new Sprite(filename))
 	, m_isMouseDown(false)
 	, m_x(0)
 	, m_y(0)
 	, m_hasBeenSelected(false)
 	, m_localString(localString)
+	, m_textFont(textFont)
 	, m_textX(textX)
 	, m_textY(textY)
 	, m_textSize(textSize)
@@ -349,8 +350,13 @@ Button::~Button()
 
 void Button::setPosition(int x, int y)
 {
+#if 1
+	m_x = x;
+	m_y = y;
+#else
 	m_x = x - m_sprite->getWidth() / 2;
 	m_y = y - m_sprite->getHeight() / 2;
+#endif
 }
 
 void Button::setAnimation(int moveX, int moveY, float startOpacity, float time)
@@ -420,8 +426,10 @@ void Button::draw()
 
 		if (m_localString)
 		{
-			setMainFont();
+			setFont(m_textFont);
 			drawText(m_x + m_textX, m_y + m_textY, m_textSize, +1.f, +1.f, "%s", getLocalString(m_localString));
+
+			setMainFont();
 		}
 
 		setColorMode(COLOR_MUL);

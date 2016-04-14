@@ -1,10 +1,10 @@
 #pragma once
 
 #ifdef DEBUG
-	#define ITCHIO_BUILD 0
+	#define ITCHIO_BUILD 1
 	#define DEPLOY_BUILD 0
 #else
-	#define ITCHIO_BUILD 0
+	#define ITCHIO_BUILD 1
 	#define DEPLOY_BUILD 0
 #endif
 
@@ -29,6 +29,16 @@
 	#define ENABLE_NETWORKING_DISCOVERY 0
 	#define ENABLE_OPTIONS 1
 	#define ENABLE_DEVMODE 1
+#endif
+
+#if ITCHIO_BUILD
+	#define ITCHIO_SHOW_URLS 0
+	#define ITCHIO_SHOW_KICKSTARTER 0
+	#define ITCHIO_SHOW_BANNER 0
+#else
+	#define ITCHIO_SHOW_URLS 0
+	#define ITCHIO_SHOW_KICKSTARTER 0
+	#define ITCHIO_SHOW_BANNER 0
 #endif
 
 #if !DEPLOY_BUILD && !PUBLIC_DEMO_BUILD

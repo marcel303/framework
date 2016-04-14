@@ -2717,7 +2717,7 @@ void App::draw()
 
 		m_dialogMgr->draw();
 
-	#if ITCHIO_BUILD
+	#if ITCHIO_SHOW_BANNER
 		if (m_menuMgr->getActiveMenuId() != kMenuId_IntroScreen)
 		{
 			// draw itch.io badge
@@ -2973,10 +2973,13 @@ void App::debugDraw()
 
 	if (UI_DEBUG_VISIBLE)
 	{
+	#if ENABLE_NETWORKING
 		std::vector<NetSessionDiscovery::ServerInfo> serverList;
+	#endif
 
 		if (USE_STEAMAPI)
 		{
+		#if ENABLE_NETWORKING
 			uint64_t lobbyOwnerAddress;
 			if (g_online->getLobbyOwnerAddress(lobbyOwnerAddress))
 			{
@@ -2985,13 +2988,14 @@ void App::debugDraw()
 				serverInfo.m_address.m_userData = lobbyOwnerAddress;
 				serverList.push_back(serverInfo);
 			}
+		#endif
 		}
-	#if ENABLE_NETWORKING_DISCOVERY
 		else
 		{
+		#if ENABLE_NETWORKING_DISCOVERY
 			serverList = m_discoveryService->getServerList();
+		#endif
 		}
-	#endif
 
 	#if ENABLE_NETWORKING
 		m_discoveryUi->clear();

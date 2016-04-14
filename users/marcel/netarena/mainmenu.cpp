@@ -1,6 +1,7 @@
 #include "Channel.h"
 #include "client.h"
 #include "customize.h"
+#include "Ease.h"
 #include "framework.h"
 #include "gamedefs.h"
 #include "host.h"
@@ -9,6 +10,9 @@
 #include "optione.h"
 #include "title.h"
 #include "uicommon.h"
+
+#define DRAW_BACK_V1 0
+#define DRAW_BACK_V2 1
 
 #ifdef WIN32
 #include <Shellapi.h>
@@ -35,22 +39,27 @@ MainMenu::MainMenu()
 	, m_quitApp(0)
 	, m_menuNav(0)
 	, m_controls(0)
+#if ITCHIO_SHOW_URLS
 	, m_socialFb(0)
 	, m_socialTw(0)
+#endif
+#if ITCHIO_SHOW_KICKSTARTER
 	, m_campaignGl(0)
 	, m_campaignKs(0)
+#endif
 {
+#if DRAW_BACK_V1
 	if (!PUBLIC_DEMO_BUILD || ((std::string)g_connect).empty())
-		m_newGame = new Button(GFX_SX/2, GFX_SY/3, "mainmenu-button.png", "menu-newgame", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+		m_newGame = new Button(GFX_SX/2, GFX_SY/3, "mainmenu-button.png", "menu-newgame", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 #if ENABLE_NETWORKING
 	if (!PUBLIC_DEMO_BUILD || !((std::string)g_connect).empty())
-		m_findGame = new Button(GFX_SX/2, GFX_SY/3 + 150, "mainmenu-button.png", "menu-findgame", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+		m_findGame = new Button(GFX_SX/2, GFX_SY/3 + 150, "mainmenu-button.png", "menu-findgame", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 #endif
 #if ENABLE_OPTIONS
-	m_customize = new Button(GFX_SX/2, GFX_SY/3 + 300, "mainmenu-button.png", "menu-customize", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
-	m_options = new Button(GFX_SX/2, GFX_SY/3 + 450, "mainmenu-button.png", "menu-options", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_customize = new Button(GFX_SX/2, GFX_SY/3 + 300, "mainmenu-button.png", "menu-customize", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_options = new Button(GFX_SX/2, GFX_SY/3 + 450, "mainmenu-button.png", "menu-options", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 #endif
-	m_quitApp = new Button(GFX_SX/2, GFX_SY/3 + 600, "mainmenu-button.png", "menu-quit", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_quitApp = new Button(GFX_SX/2, GFX_SY/3 + 600, "mainmenu-button.png", "menu-quit", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 
 #if ITCHIO_BUILD
 	m_newGame->setPosition(670 + m_newGame->m_sprite->getWidth()/2, 610 + m_newGame->m_sprite->getHeight()/2);
@@ -61,14 +70,39 @@ MainMenu::MainMenu()
 	const int glSy = 171;
 	const int ksSx = 300;
 	const int ksSy = 86;
-	m_controls = new Button(1340, 1010, "mainmenu-button-small.png", "Controls", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y/2, MAINMENU_BUTTON_TEXT_SIZE/2);
-	m_socialFb = new Button(165 + socialSx/2, 925 + socialSy/2, "itch-social-fb.png", "", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
-	m_socialTw = new Button(165 + socialSx/2, 830 + socialSy/2, "itch-social-tw.png", "", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
-	m_campaignGl = new Button(1501 + glSx/2, 821 + glSy/2, "itch-campaign-gl.png", "", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
-	m_campaignKs = new Button(1501 + ksSx/2, 721 + ksSy/2, "itch-campaign-ks.png", "", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
-
-	m_campaignKs->m_moveSet[std::pair<int, int>(-1, 0)] = m_newGame;
+	
+	m_controls = new Button(1340, 1010, "mainmenu-button-small.png", "Controls", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y/2, MAINMENU_BUTTON_TEXT_SIZE/2);
 	m_controls->m_moveSet[std::pair<int, int>(0, -1)] = m_quitApp;
+#if ITCHIO_SHOW_URLS
+	m_socialFb = new Button(165 + socialSx/2, 925 + socialSy/2, "itch-social-fb.png", "", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_socialTw = new Button(165 + socialSx/2, 830 + socialSy/2, "itch-social-tw.png", "", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+#endif
+
+#if ITCHIO_SHOW_KICKSTARTER
+	m_campaignGl = new Button(1501 + glSx/2, 821 + glSy/2, "itch-campaign-gl.png", "", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_campaignKs = new Button(1501 + ksSx/2, 721 + ksSy/2, "itch-campaign-ks.png", "", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_campaignKs->m_moveSet[std::pair<int, int>(-1, 0)] = m_newGame;
+#endif
+#endif
+#endif
+
+#if DRAW_BACK_V2
+	int x = 1510;
+	int y = 420;
+	const int stepX = 0;
+	const int stepY = 110;
+
+	m_newGame = new Button(x, y, "ui/menus/menu-main-button-back.png", "menu-newgame", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	x += stepX; y += stepY;
+
+	m_customize = new Button(x, y, "ui/menus/menu-main-button-back.png", "menu-customize", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	x += stepX; y += stepY;
+
+	m_options = new Button(x, y, "ui/menus/menu-main-button-back.png", "menu-options", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	x += stepX; y += stepY;
+
+	m_quitApp = new Button(x, y, "ui/menus/menu-main-button-back.png", "menu-quit", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	x += stepX; y += stepY;
 #endif
 
 	m_menuNav = new MenuNav();
@@ -86,14 +120,18 @@ MainMenu::MainMenu()
 
 	if (m_controls)
 		m_menuNav->addElem(m_controls);
+#if ITCHIO_SHOW_URLS
 	if (m_socialFb)
 		m_menuNav->addElem(m_socialFb);
 	if (m_socialTw)
 		m_menuNav->addElem(m_socialTw);
+#endif
+#if ITCHIO_SHOW_KICKSTARTER
 	if (m_campaignGl)
 		m_menuNav->addElem(m_campaignGl);
 	if (m_campaignKs)
 		m_menuNav->addElem(m_campaignKs);
+#endif
 }
 
 MainMenu::~MainMenu()
@@ -107,10 +145,14 @@ MainMenu::~MainMenu()
 	delete m_quitApp;
 
 	delete m_controls;
+#if ITCHIO_SHOW_URLS
 	delete m_socialFb;
 	delete m_socialTw;
+#endif
+#if ITCHIO_SHOW_KICKSTARTER
 	delete m_campaignGl;
 	delete m_campaignKs;
+#endif
 }
 
 void MainMenu::onEnter()
@@ -121,9 +163,13 @@ void MainMenu::onEnter()
 	s_lastMouse = mouse;
 	s_lastGamepad = gamepad[0];
 
+#if DRAW_BACK_V1
 	const int animX = 100;
-	m_newGame->setAnimation(animX, 0, 0.f, .4f);
-	m_quitApp->setAnimation(animX, 0, 0.f, .4f);
+	if (m_newGame)
+		m_newGame->setAnimation(animX, 0, 0.f, .4f);
+	if (m_quitApp)
+		m_quitApp->setAnimation(animX, 0, 0.f, .4f);
+#endif
 
 	g_tileTransition->begin(.5f);
 }
@@ -185,7 +231,7 @@ bool MainMenu::tick(float dt)
 	{
 		g_app->m_menuMgr->push(new OptioneMenu());
 	}
-	else if (m_quitApp->isClicked())
+	else if (m_quitApp && m_quitApp->isClicked())
 	{
 		logDebug("exit game!");
 
@@ -195,6 +241,7 @@ bool MainMenu::tick(float dt)
 	{
 		g_app->m_menuMgr->push(new HelpMenu());
 	}
+#if ITCHIO_SHOW_URLS
 	else if (m_socialFb && m_socialFb->isClicked())
 	{
 		openBrowserWithUrl("https://www.facebook.com/ripostegame");
@@ -203,6 +250,8 @@ bool MainMenu::tick(float dt)
 	{
 		openBrowserWithUrl("https://twitter.com/damajogames");
 	}
+#endif
+#if ITCHIO_SHOW_KICKSTARTER
 	else if (m_campaignGl && m_campaignGl->isClicked())
 	{
 		openBrowserWithUrl("http://steamcommunity.com/sharedfiles/filedetails/?id=499076298");
@@ -211,6 +260,7 @@ bool MainMenu::tick(float dt)
 	{
 		openBrowserWithUrl("https://www.kickstarter.com/projects/1766566023/riposte");
 	}
+#endif
 #if !ITCHIO_BUILD
 	else if (m_inactivityTime >= (g_devMode ? 5.f : kMaxInactivityTime))
 	{
@@ -329,6 +379,7 @@ static void drawSexyScroller(float x1, float y1, float x2, float y2, float xOffs
 
 void MainMenu::draw()
 {
+#if DRAW_BACK_V1
 	const float kBackFadeinTime = .2f;
 	const float kLogoFadeinTime = .5f;
 	const float kBallFloatTime = 10.f;
@@ -356,6 +407,31 @@ void MainMenu::draw()
 	setColor(colorWhite);
 	Sprite("mainmenu-back.png").draw();
 #endif
+#endif
+
+#if DRAW_BACK_V2
+	const float kBackFadeinTime = .4f;
+	const float kCharFadeinTime = 1.f;
+	const float kLogoFadeinTime = .6f;
+
+	const float kCharOffsetX = -150.f;
+
+	const float backOpacity = saturate(m_animTime / kBackFadeinTime);
+	const float charOpacity = saturate(m_animTime / kCharFadeinTime);
+	const float logoOpacity = saturate(m_animTime / kLogoFadeinTime);
+
+	setColorf(1.f, 1.f, 1.f, backOpacity);
+	Sprite("ui/menus/menu-background.png").draw();
+
+	setColorf(1.f, 1.f, 1.f, backOpacity);
+	Sprite("ui/menus/menu-sidepanels.png").draw();
+
+	setColorf(1.f, 1.f, 1.f, charOpacity);
+	Sprite("ui/menus/menu-main-char.png").drawEx(kCharOffsetX * EvalEase(1.f - charOpacity, kEaseType_SineIn, 0.f), 0.f);
+
+	setColorf(1.f, 1.f, 1.f, logoOpacity);
+	Sprite("ui/menus/menu-main-logo.png").draw();
+#endif
 
 	setColor(colorWhite);
 
@@ -372,14 +448,18 @@ void MainMenu::draw()
 
 	if (m_controls)
 		m_controls->draw();
+#if ITCHIO_SHOW_URLS
 	if (m_socialFb)
 		m_socialFb->draw();
 	if (m_socialTw)
 		m_socialTw->draw();
+#endif
+#if ITCHIO_SHOW_KICKSTARTER
 	if (m_campaignGl)
 		m_campaignGl->draw();
 	if (m_campaignKs)
 		m_campaignKs->draw();
+#endif
 
 #if ITCHIO_BUILD
 	const float offset = framework.time * .2f;
@@ -399,7 +479,7 @@ HelpMenu::HelpMenu()
 	, m_menuNav(0)
 	, m_buttonLegend(0)
 {
-	m_back = new Button(0, 0, "mainmenu-button.png", 0, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_back = new Button(0, 0, "mainmenu-button.png", 0, MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 
 	m_menuNav = new MenuNav();
 

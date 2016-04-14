@@ -13,7 +13,7 @@ CustomizeMenu::CustomizeMenu()
 {
 	m_menuNav = new MenuNav();
 
-	m_back = new Button(0, 0, "mainmenu-button.png", 0, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_back = new Button(0, 0, "mainmenu-button.png", 0, MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 
 	for (int i = 0; i < MAX_CHARACTERS; ++i)
 	{
@@ -26,7 +26,7 @@ CustomizeMenu::CustomizeMenu()
 		char portraitName[64];
 		sprintf_s(portraitName, sizeof(portraitName), "ui/characters/%02d-portrait.png", i);
 
-		m_characters[i] = new Button(x, y, portraitName, 0, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+		m_characters[i] = new Button(x, y, portraitName, 0, MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 
 		m_menuNav->addElem(m_characters[i]);
 	}
@@ -135,11 +135,11 @@ CharacterMenu::CharacterMenu(int characterIndex)
 
 	const int buttonPosX = GFX_SX*1/4;
 
-	m_back = new Button(0, 0, "mainmenu-button.png", 0, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
-	m_effects = new Button(buttonPosX, GFX_SY/3, "mainmenu-button.png", "menu-char-effects", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_back = new Button(0, 0, "mainmenu-button.png", 0, MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_effects = new Button(buttonPosX, GFX_SY/3, "mainmenu-button.png", "menu-char-effects", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 	m_skin = new SpinButton(buttonPosX, GFX_SY/3 + 150, 0, numSkins - 1, m_charSettings.skin, "mainmenu-button.png", "menu-char-skin", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 	m_emblem = new SpinButton(buttonPosX, GFX_SY/3 + 300, 0, numEmblems - 1, m_charSettings.emblem, "mainmenu-button.png", "menu-char-emblem", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
-	m_testGame = new Button(buttonPosX, GFX_SY/3 + 450, "mainmenu-button.png", "menu-char-test", MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
+	m_testGame = new Button(buttonPosX, GFX_SY/3 + 450, "mainmenu-button.png", "menu-char-test", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE);
 
 	m_menuNav = new MenuNav();
 

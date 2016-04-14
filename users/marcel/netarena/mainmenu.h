@@ -1,5 +1,6 @@
 #pragma once
 
+#include "config.h"
 #include "gamedefs.h"
 #include "menu.h"
 
@@ -17,10 +18,14 @@ class MainMenu : public Menu
 	MenuNav * m_menuNav;
 
 	Button * m_controls;
+#if ITCHIO_SHOW_URLS
 	Button * m_socialFb;
 	Button * m_socialTw;
+#endif
+#if ITCHIO_SHOW_KICKSTARTER
 	Button * m_campaignGl;
 	Button * m_campaignKs;
+#endif
 
 	float m_animTime;
 	float m_inactivityTime;

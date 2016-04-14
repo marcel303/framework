@@ -98,6 +98,7 @@ public:
 	bool m_hasBeenSelected;
 
 	const char * m_localString;
+	const char * m_textFont;
 	int m_textX;
 	int m_textY;
 	int m_textSize;
@@ -109,7 +110,7 @@ public:
 	float m_moveTimeStart;
 
 public:
-	Button(int x, int y, const char * filename, const char * localString, int textX, int textY, int textSize);
+	Button(int x, int y, const char * filename, const char * localString, const char * textFont, int textX, int textY, int textSize);
 	~Button();
 
 	void setPosition(int x, int y);
