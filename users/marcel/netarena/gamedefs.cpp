@@ -141,6 +141,8 @@ OPTION_DEFINE(float, MULTIKILL_TIMER, "Player/MultiKill/MultiKill Timer");
 OPTION_DEFINE(int, KILLINGSPREE_START, "Player/KillingSpree/Spree Start Kill Count");
 OPTION_DEFINE(int, KILLINGSPREE_UNSTOPPABLE, "Player/KillingSpree/Unstoppable Kill Count");
 
+OPTION_DEFINE(bool, PLAYER_VS_PLAYER_COLLISION, "Player/Collision/Player Vs Player");
+
 OPTION_DEFINE(float, PLAYER_SCREENSHAKE_STRENGTH_THRESHHOLD, "Player/Effects/Screenshake/Threshhold");
 
 OPTION_DEFINE(float, SPRAYWEAPON_INITIAL_FILL, "Player/Attacks/Spray/Initial Fill (Seconds)");

@@ -125,7 +125,7 @@ LevelEvent GameStateData::getRandomLevelEvent()
 {
 	LevelEvent e = (LevelEvent)(Random() % kLevelEvent_COUNT);
 
-	if ((DEMOMODE || RECORDMODE) && e == kLevelEvent_GravityWell)
+	if ((DEMOMODE || RECORDMODE) && (e == kLevelEvent_GravityWell || e == kLevelEvent_SpikeWalls))
 		return getRandomLevelEvent();
 	else
 		return e;
@@ -3792,7 +3792,7 @@ void GameSim::drawPlayHud(const CamParams & camParams)
 			secondsRemaining % 60);
 	}
 
-#if ITCHIO_BUILD
+#if ITCHIO_BUILD && 0
 	if (m_gameState >= kGameState_RoundBegin)
 	{
 		setColor(colorWhite);
@@ -3810,8 +3810,8 @@ void GameSim::drawPlayHud(const CamParams & camParams)
 	{
 		// todo : draw team stats and winning team
 
-		setColor(colorWhite);
-		Sprite("itch-game-buttons.png").drawEx(GFX_SX/2, GFX_SY/2); // fixme
+		//setColor(colorWhite);
+		//Sprite("itch-game-buttons.png").drawEx(GFX_SX/2, GFX_SY/2); // fixme
 	}
 
 	if (g_devMode)
@@ -4252,7 +4252,7 @@ uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, BulletType t
 			b.maxReflectCount = BULLET_TYPE0_MAX_REFLECT_COUNT;
 			b.maxDistanceTravelled = BULLET_TYPE0_MAX_DISTANCE_TRAVELLED;
 			b.maxDestroyedBlocks = 1;
-			b.m_noGravity = false;
+			b.m_noGravity = BULLET_DEFAULT_GRAVITY_MULTIPLIER == 0.f;
 			b.gravityModifier = BULLET_DEFAULT_GRAVITY_MULTIPLIER;
 			break;
 		case kBulletType_Ice:
@@ -4261,7 +4261,7 @@ uint16_t GameSim::spawnBullet(int16_t x, int16_t y, uint8_t _angle, BulletType t
 			b.maxReflectCount = BULLET_TYPE0_MAX_REFLECT_COUNT;
 			b.maxDistanceTravelled = BULLET_TYPE0_MAX_DISTANCE_TRAVELLED;
 			b.maxDestroyedBlocks = 1;
-			b.m_noGravity = false;
+			b.m_noGravity = BULLET_DEFAULT_GRAVITY_MULTIPLIER == 0.f;
 			b.gravityModifier = BULLET_DEFAULT_GRAVITY_MULTIPLIER;
 			break;
 		case kBulletType_Grenade:

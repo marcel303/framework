@@ -6,7 +6,7 @@
 
 Online * g_online = 0;
 
-#if 1
+#if ENABLE_STEAM
 
 #include "framework.h"
 #include "steam_gameserver.h"
@@ -759,7 +759,7 @@ bool NetSocketLocal::Receive(void * out_data, uint32_t maxSize, uint32_t * out_s
 	if (m_firstPacket)
 	{
 		Assert(m_firstPacket->size <= maxSize);
-		const uint32 copySize = m_firstPacket->size <= maxSize ? m_firstPacket->size : maxSize;
+		const uint32_t copySize = m_firstPacket->size <= maxSize ? m_firstPacket->size : maxSize;
 
 		memcpy(out_data, m_firstPacket->data, copySize);
 		*out_size = copySize;

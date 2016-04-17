@@ -12,7 +12,9 @@
 #include "online.h"
 #include "Options.h"
 
-#include <steam_api.h>
+#if ENABLE_STEAM
+	#include <steam_api.h>
+#endif
 
 OPTION_EXTERN(bool, g_devMode);
 OPTION_EXTERN(bool, g_monkeyMode);
@@ -199,12 +201,14 @@ public:
 
 	static void DialogQuit(void * arg, int dialogId, DialogResult result);
 
+#if ENABLE_STEAM
 	// Steam integration
 
 	STEAM_CALLBACK_MANUAL(App, OnSteamPersonaStateChange, PersonaStateChange_t, m_steamPersonaStateChangeCallback);
 	STEAM_CALLBACK_MANUAL(App, OnSteamAvatarImageLoaded, AvatarImageLoaded_t, m_steamAvatarImageLoadedCallback);
 	STEAM_CALLBACK_MANUAL(App, OnSteamGameLobbyJoinRequested, GameLobbyJoinRequested_t, m_steamGameLobbyJoinRequestedCallback);
 	STEAM_CALLBACK_MANUAL(App, OnSteamP2PSessionRequest, P2PSessionRequest_t, m_steamP2PSessionRequestCallback);
+#endif
 };
 
 const ParticleEffect & getParticleEffect(const char * name);

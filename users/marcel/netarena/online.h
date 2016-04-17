@@ -1,5 +1,6 @@
 #pragma once
 
+#include "config.h"
 #include <stdint.h>
 
 typedef int OnlineRequestId;
@@ -44,8 +45,9 @@ public:
 	virtual void showInviteFriendsUi() = 0;
 };
 
-#if 1
+#if ENABLE_STEAM
 
+#include "NetSocket.h"
 #include "steam_api.h"
 
 class OnlineSteam : public Online
@@ -118,8 +120,6 @@ public:
 	virtual void showInviteFriendsUi();
 };
 
-#include "NetSocket.h"
-
 class NetSocketSteam : public NetSocket
 {
 public:
@@ -174,6 +174,8 @@ public:
 
 	virtual void showInviteFriendsUi();
 };
+
+#include "NetSocket.h"
 
 class NetSocketLocal : public NetSocket
 {

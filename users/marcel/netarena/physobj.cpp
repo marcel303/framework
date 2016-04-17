@@ -75,33 +75,40 @@ void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 		}
 	}
 
-	const CollisionShape shape(m_collisionShape, m_pos);
+	const Vec2 totalVel = m_vel;
+	const Vec2 delta = totalVel * dt;
+	const float maxDelta = 5.0;
+	const int numSteps = Calc::Max(std::ceil(std::abs(delta[0]) / maxDelta), std::ceil(std::abs(delta[1]) / maxDelta));
 
-	const Arena & arena = gameSim.m_arena;
-
-	struct CollisionArgs
+	for (int s = 0; s < numSteps && m_isActive; ++s)
 	{
-		PhysicsActor * self;
-		GameSim * gameSim;
-		PhysicsActorCBs * cbs;
-		bool wasInPassthrough;
-		bool enterPassThrough;
-		Vec2 totalVel;
-		bool hasBounced;
-	};
+		const CollisionShape shape(m_collisionShape, m_pos);
 
-	CollisionArgs args;
-	args.self = this;
-	args.gameSim = &gameSim;
-	args.cbs = &cbs;
-	args.wasInPassthrough = m_isInPassthrough;
-	args.enterPassThrough = isInPassthrough;
-	args.totalVel = m_vel;
-	args.hasBounced = false;
+		const Arena & arena = gameSim.m_arena;
 
-	updatePhysics(gameSim, m_pos, m_vel, dt, m_collisionShape, &args,
-		this,
-		[](PhysicsUpdateInfo & updateInfo)
+		struct CollisionArgs
+		{
+			PhysicsActor * self;
+			GameSim * gameSim;
+			PhysicsActorCBs * cbs;
+			bool wasInPassthrough;
+			bool enterPassThrough;
+			Vec2 totalVel;
+			bool hasBounced;
+		};
+
+		CollisionArgs args;
+		args.self = this;
+		args.gameSim = &gameSim;
+		args.cbs = &cbs;
+		args.wasInPassthrough = m_isInPassthrough;
+		args.enterPassThrough = isInPassthrough;
+		args.totalVel = totalVel;
+		args.hasBounced = false;
+
+		updatePhysics(gameSim, m_pos, m_vel, dt / numSteps, m_collisionShape, &args,
+			this,
+			[](PhysicsUpdateInfo & updateInfo)
 		{
 			CollisionArgs * args = (CollisionArgs*)updateInfo.arg;
 			PhysicsActor * self = args->self;
@@ -180,8 +187,9 @@ void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 			return result;
 		});
 
-	if (args.hasBounced && cbs.onBounce)
-		cbs.onBounce(cbs, *this);
+		if (args.hasBounced && cbs.onBounce)
+			cbs.onBounce(cbs, *this);
+	}
 
 	if (m_doTeleport)
 	{

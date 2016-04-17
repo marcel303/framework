@@ -27,8 +27,10 @@
 #include "settings.h"
 #include "StatTimerMenu.h"
 #include "StatTimers.h"
-#include "steam_api.h"
-#include "steam_gameserver.h"
+#if ENABLE_STEAM
+	#include "steam_api.h"
+	#include "steam_gameserver.h"
+#endif
 #include "StreamReader.h"
 #include "StringBuilder.h"
 #include "textfield.h"
@@ -56,9 +58,11 @@ OPTION_DECLARE(bool, g_monkeyMode, false);
 OPTION_DEFINE(bool, g_monkeyMode, "App/Monkey Mode");
 OPTION_ALIAS(g_monkeyMode, "monkeymode");
 
-OPTION_DECLARE(bool, g_testSteamMatchmaking, false);
-OPTION_DEFINE(bool, g_testSteamMatchmaking, "App/Test Steam Matchmaking");
-OPTION_ALIAS(g_testSteamMatchmaking, "debugSteam");
+#if ENABLE_STEAM
+	OPTION_DECLARE(bool, g_testSteamMatchmaking, false);
+	OPTION_DEFINE(bool, g_testSteamMatchmaking, "App/Test Steam Matchmaking");
+	OPTION_ALIAS(g_testSteamMatchmaking, "debugSteam");
+#endif
 
 OPTION_DECLARE(bool, g_precacheResources, true);
 OPTION_DEFINE(bool, g_precacheResources, "App/Precache Resources");
@@ -100,7 +104,9 @@ OPTION_DECLARE(std::string, g_connect, "");
 OPTION_DEFINE(std::string, g_connect, "App/Direct Connect");
 OPTION_ALIAS(g_connect, "connect");
 
+#if ENABLE_STEAM
 static CSteamID g_connectLobby;
+#endif
 
 OPTION_DECLARE(bool, g_pauseOnOptionMenuOption, true);
 OPTION_DEFINE(bool, g_pauseOnOptionMenuOption, "App/Pause On Option Menu");
@@ -132,6 +138,7 @@ OPTION_ALIAS(s_noBgm, "nobgm");
 OPTION_EXTERN(int, g_playerCharacterIndex);
 OPTION_EXTERN(bool, g_noSound);
 
+#if ENABLE_STEAM
 OPTION_DECLARE(int, STEAM_AUTHENTICATION_PORT, 22768);
 OPTION_DECLARE(int, STEAM_SERVER_PORT, 22769);
 OPTION_DECLARE(int, STEAM_MASTER_SERVER_UPDATER_PORT, 22770);
@@ -140,6 +147,7 @@ OPTION_DEFINE(int, STEAM_AUTHENTICATION_PORT, "Steam/Authentication Port");
 OPTION_DEFINE(int, STEAM_SERVER_PORT, "Steam/Server Port");
 OPTION_DEFINE(int, STEAM_MASTER_SERVER_UPDATER_PORT, "Steam/Master Service Updater Port");
 OPTION_DEFINE(std::string, STEAM_SERVER_VERSION, "Steam/Server Version");
+#endif
 
 //
 
@@ -184,6 +192,7 @@ static void HandleAction(const std::string & action, const Dictionary & args)
 
 		if (!address.empty())
 		{
+		#if ENABLE_STEAM
 			if (USE_STEAMAPI)
 			{
 				NetAddress netAddress;
@@ -192,6 +201,7 @@ static void HandleAction(const std::string & action, const Dictionary & args)
 				g_app->connect(netAddress);
 			}
 			else
+		#endif
 			{
 				g_connect = address;
 				g_connectLocal = false;
@@ -1345,6 +1355,7 @@ bool App::init()
 	}
 	else
 	{
+	#if ENABLE_STEAM
 		if (USE_STEAMAPI)
 		{
 			if (!FileStream::Exists("steam_appid.txt"))
@@ -1368,6 +1379,7 @@ bool App::init()
 			g_online = new OnlineSteam(this);
 		}
 		else
+	#endif
 		{
 			//g_online = new OnlineLAN(this);
 			g_online = new OnlineLocal(this);
@@ -1397,10 +1409,12 @@ bool App::init()
 		{
 			m_displayName = "Riposte";
 		}
+	#if ENABLE_STEAM
 		else if (USE_STEAMAPI)
 		{
 			m_displayName = SteamFriends()->GetPersonaName();
 		}
+	#endif
 		else if (g_devMode)
 		{
 			m_displayName = "Developer";
@@ -1604,6 +1618,7 @@ void App::shutdown()
 	delete g_online;
 	g_online = 0;
 
+#if ENABLE_STEAM
 	if (USE_STEAMAPI)
 	{
 		m_steamPersonaStateChangeCallback.Unregister();
@@ -1613,6 +1628,7 @@ void App::shutdown()
 
 		SteamAPI_Shutdown();
 	}
+#endif
 
 	framework.shutdown();
 }
@@ -2025,6 +2041,7 @@ bool App::tick()
 
 	framework.process();
 
+#if ENABLE_STEAM
 	// steam update
 
 	if (USE_STEAMAPI)
@@ -2034,6 +2051,7 @@ bool App::tick()
 		if (m_isHost)
 			SteamGameServer_RunCallbacks();
 	}
+#endif
 
 	if (g_online)
 	{
@@ -2046,6 +2064,7 @@ bool App::tick()
 			g_online->showInviteFriendsUi();
 		//if (keyboard.wentDown(SDLK_j))
 		//	Verify(findGame());
+	#if ENABLE_STEAM
 		if (keyboard.wentDown(SDLK_p))
 		{
 			EXCEPTION_POINTERS ep;
@@ -2058,6 +2077,7 @@ bool App::tick()
 			ep.ExceptionRecord = &r;
 			SteamAPI_WriteMiniDump(0, &ep, g_buildId);
 		}
+	#endif
 	#endif
 	}
 
@@ -2349,12 +2369,15 @@ void App::tickNet()
 
 			SharedNetSocket socket;
 
+		#if ENABLE_STEAM
 			if (USE_STEAMAPI)
 			{
 				NetSocketSteam * socketSteam = new NetSocketSteam();
 				socket = SharedNetSocket(socketSteam);
 			}
-			else if (true)
+			else
+		#endif
+			if (true)
 			{
 				socket = new NetSocketLocal();
 			}
@@ -2375,6 +2398,7 @@ void App::tickNet()
 				break;
 			}
 
+		#if ENABLE_STEAM
 			if (USE_STEAMAPI)
 			{
 				if (!SteamGameServer_Init(INADDR_ANY, STEAM_AUTHENTICATION_PORT, STEAM_SERVER_PORT, STEAM_MASTER_SERVER_UPDATER_PORT, eServerModeAuthenticationAndSecure, ((std::string)STEAM_SERVER_VERSION).c_str()))
@@ -2384,6 +2408,7 @@ void App::tickNet()
 					break;
 				}
 			}
+		#endif
 
 			//
 
@@ -2401,6 +2426,7 @@ void App::tickNet()
 
 			//
 
+		#if ENABLE_STEAM
 			if (USE_STEAMAPI)
 			{
 				SteamGameServer()->SetModDir("riposte");
@@ -2417,6 +2443,7 @@ void App::tickNet()
 				SteamGameServer()->SetBotPlayerCount(0);
 				SteamGameServer()->SetMapName("Highlands");
 			}
+		#endif
 
 			//
 
@@ -2430,12 +2457,14 @@ void App::tickNet()
 	case NetState_HostDestroy:
 		if (m_isHost)
 		{
+		#if ENABLE_STEAM
 			if (USE_STEAMAPI)
 			{
 				SteamGameServer()->EnableHeartbeats(false);
 				SteamGameServer()->LogOff();
 				SteamGameServer_Shutdown();
 			}
+		#endif
 
 			//
 
@@ -2489,7 +2518,7 @@ void App::tickNet()
 
 							setNetState(NetState_Online);
 
-						#if ENABLE_NETWORKING_DEBUGS
+						#if ENABLE_STEAM && ENABLE_NETWORKING_DEBUGS
 							if (g_testSteamMatchmaking)
 							{
 								Verify(findGame());
@@ -2530,12 +2559,14 @@ void App::tickNet()
 					{
 						if (!m_channelMgr->IsInitialized())
 						{
+						#if ENABLE_STEAM
 							SharedNetSocket socket(new NetSocketSteam());
 							if (!m_channelMgr->Initialize(m_packetDispatcher, this, socket, false, g_buildId))
 							{
 								setNetState(NetState_LobbyLeave);
 								break;
 							}
+						#endif
 						}
 
 						uint64_t lobbyOwnerAddress;
@@ -2745,6 +2776,7 @@ void App::draw()
 	framework.endDraw();
 }
 
+#if ENABLE_STEAM
 // todo : move this to somewhere else
 
 struct SteamUserAvatarInfo
@@ -2755,6 +2787,7 @@ struct SteamUserAvatarInfo
 };
 
 static std::map<CSteamID, SteamUserAvatarInfo> s_textureForSteamUser;
+#endif
 
 void App::debugDraw()
 {
@@ -2777,6 +2810,7 @@ void App::debugDraw()
 		drawText(GFX_SX/2, GFX_SY*4/5, 32, 0.f, 0.f, "NetState: %s", s_netStates[m_netState]);
 	}
 
+#if ENABLE_STEAM
 	if (g_devMode && USE_STEAMAPI)
 	{
 		const int numFriends = SteamFriends()->GetFriendCount(k_EFriendFlagImmediate);
@@ -2851,6 +2885,7 @@ void App::debugDraw()
 			}
 		}
 	}
+#endif
 
 	if (g_devMode && g_host)
 	{
@@ -3362,6 +3397,8 @@ void App::DialogQuit(void * arg, int dialogId, DialogResult result)
 	}
 }
 
+#if ENABLE_STEAM
+
 void App::OnSteamPersonaStateChange(PersonaStateChange_t * arg)
 {
 	logDebug("OnSteamPersonaStateChange");
@@ -3385,6 +3422,8 @@ void App::OnSteamP2PSessionRequest(P2PSessionRequest_t * arg)
 
 	SteamNetworking()->AcceptP2PSessionWithUser(arg->m_steamIDRemote);
 }
+
+#endif
 
 //
 
@@ -3467,12 +3506,14 @@ static bool calculateFileCRC(const char * filename, uint32_t & crc)
 
 //
 
+#if ENABLE_STEAM
 #ifdef _WIN32
 static void MiniDumpFunction(unsigned int exceptionCode, EXCEPTION_POINTERS * exception )
 {
 	SteamAPI_SetMiniDumpComment("minidump for: riposte.exe\n");
 	SteamAPI_WriteMiniDump(exceptionCode, exception, g_buildId);
 }
+#endif
 #endif
 
 //
@@ -3489,7 +3530,9 @@ int main(int argc, char * argv[])
 	}
 	else
 	{
+	#if ENABLE_STEAM
 		_set_se_translator(MiniDumpFunction);
+	#endif
 		try
 		{
 			// this try block allows the SE translator to work
@@ -3527,6 +3570,7 @@ static int RealMain(int argc, char * argv[])
 
 	for (int i = 0; i < argc; ++i)
 	{
+	#if ENABLE_STEAM
 		if (!strcmp(argv[i], "+connect_lobby"))
 		{
 			Assert(i + 1 < argc);
@@ -3536,6 +3580,7 @@ static int RealMain(int argc, char * argv[])
 				LOG_INF("connect_lobby is set to %llx", g_connectLobby.ConvertToUint64());
 			}
 		}
+	#endif
 	}
 
 #if 0 // host IP prompt
@@ -3635,6 +3680,7 @@ static int RealMain(int argc, char * argv[])
 
 			Verify(g_app->findGame());
 		}
+	#if ENABLE_STEAM
 		else if (USE_STEAMAPI && g_connectLobby.IsLobby())
 		{
 			Verify(g_app->joinGame(g_connectLobby.ConvertToUint64()));
@@ -3644,6 +3690,7 @@ static int RealMain(int argc, char * argv[])
 		{
 			g_app->startHosting();
 		}
+	#endif
 	#endif
 
 		//

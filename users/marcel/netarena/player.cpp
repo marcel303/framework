@@ -2755,11 +2755,18 @@ void Player::tick(GameSim & gameSim, float dt)
 
 				if (updateInfo.player)
 				{
-					if (updateInfo.axis == 0)
+					if (PLAYER_VS_PLAYER_COLLISION)
 					{
-						updateInfo.contactDistance *= .5f;
-						updateInfo.player->m_pos -= updateInfo.contactNormal * updateInfo.contactDistance;
-						result |= kPhysicsUpdateFlag_DontUpdateVelocity;
+						if (updateInfo.axis == 0)
+						{
+							updateInfo.contactDistance *= .5f;
+							updateInfo.player->m_pos -= updateInfo.contactNormal * updateInfo.contactDistance;
+							result |= kPhysicsUpdateFlag_DontUpdateVelocity;
+						}
+					}
+					else
+					{
+						result |= kPhysicsUpdateFlag_DontCollide;
 					}
 				}
 
@@ -4640,16 +4647,19 @@ void Player::beginAxeThrow()
 
 void Player::endAxeThrow()
 {
-	m_attack = AttackInfo();
-
 	// throw axe
 
-	const Vec2 pos = getAxeThrowPos();
-	const Vec2 dir = m_input.getAnalogDirection().CalcNormalized();
+	if (m_attack.m_axeThrow.aiming.aimIsValid)
+	{
+		const Vec2 pos = getAxeThrowPos();
+		const Vec2 dir = m_attack.m_axeThrow.aiming.aim;
 
-	GAMESIM->spawnAxe(pos, dir * AXE_THROW_SPEED, m_index);
+		GAMESIM->spawnAxe(pos, dir * AXE_THROW_SPEED, m_index);
 
-	m_axe = AxeInfo();
+		m_axe = AxeInfo();
+	}
+
+	m_attack = AttackInfo();
 }
 
 void Player::tickAxeThrow(float dt)
@@ -4902,6 +4912,7 @@ float Player::getGrappleLength() const
 
 bool Player::findNinjaDashTarget(Vec2 & destination)
 {
+#if 0
 	bool result = false;
 
 	const Arena & arena = GAMESIM->m_arena;
@@ -4940,6 +4951,49 @@ bool Player::findNinjaDashTarget(Vec2 & destination)
 	m_pos = oldPos;
 
 	return result;
+#else
+	bool result = false;
+
+	const Arena & arena = GAMESIM->m_arena;
+	const Vec2 oldPos = m_pos;
+
+	for (int d = NINJADASH_DISTANCE_MIN; d <= NINJADASH_DISTANCE_MAX; ++d)
+	{
+		// check if this location doesn't intersect with anything that may block
+
+		m_pos[0] = std::fmodf(oldPos[0] + d * m_facing[0] + arena.m_sxPixels, arena.m_sxPixels);
+
+		CollisionInfo playerCollision;
+		if (getPlayerCollision(playerCollision))
+		{
+			bool collision = false;
+
+			GAMESIM->testCollision(playerCollision, &collision, [](const CollisionShape & shape, void * arg, PhysicsActor * actor, BlockAndDistance * blockAndDistance, Player * player)
+			{
+				if (blockAndDistance && ((1 << blockAndDistance->block->type) & kBlockMask_Solid))
+				{
+					bool * collision = (bool*)arg;
+
+					*collision = true;
+				}
+			});
+
+			if (collision)
+			{
+				break;
+			}
+			else
+			{
+				result = true;
+				destination = m_pos;
+			}
+		}
+	}
+
+	m_pos = oldPos;
+
+	return result;
+#endif
 }
 
 void Player::beginPipebomb()
