@@ -1,7 +1,7 @@
 #pragma once
 
 #ifdef DEBUG
-	#define ITCHIO_BUILD 1
+	#define ITCHIO_BUILD 0
 	#define DEPLOY_BUILD 0
 #else
 	#define ITCHIO_BUILD 1
@@ -18,12 +18,12 @@
 	#define ENABLE_STEAM 1
 #elif ITCHIO_BUILD
 	#define PUBLIC_DEMO_BUILD 1
-	#define ENABLE_NETWORKING 0
+	#define ENABLE_NETWORKING 1
 	#define ENABLE_NETWORKING_DEBUGS 1
 	#define ENABLE_NETWORKING_DISCOVERY 0
-	#define ENABLE_OPTIONS 0
-	#define ENABLE_DEVMODE 0
-	#define ENABLE_STEAM 0
+	#define ENABLE_OPTIONS 1
+	#define ENABLE_DEVMODE 1
+	#define ENABLE_STEAM 1
 #else
 	#define PUBLIC_DEMO_BUILD 0
 	#define ENABLE_NETWORKING 1
