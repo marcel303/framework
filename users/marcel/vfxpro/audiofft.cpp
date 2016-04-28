@@ -2,6 +2,7 @@
 #include "AudioFFTLib.h"
 #include "audiostream/AudioStream.h"
 #include "Calc.h"
+#include "Debugging.h"
 
 static audiofft::AudioFFT s_fft;
 
@@ -33,6 +34,8 @@ void fftShutdown()
 
 float fftPowerValue(int i)
 {
+	Assert(i >= 0 && i < kFFTComplexSize);
+
 	float p = s_fftReal[i] * s_fftReal[i] + s_fftImaginary[i] * s_fftImaginary[i];
 #if 1
 	p = sqrtf(p);
@@ -69,7 +72,7 @@ void fftProcess(float time)
 	}
 }
 
-void fftProvide(AudioSample * __restrict samples, int numSamples, float provideTime)
+void fftProvide(const AudioSample * __restrict samples, int numSamples, float provideTime)
 {
 	const int copySize = Calc::Min(numSamples, kFFTBufferSize);
 	const float scale = 2.f / 65536.f / 2.f; // divide by two to compensate for stereo samples

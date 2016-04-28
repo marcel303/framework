@@ -1,4 +1,5 @@
 #include "audioin.h"
+#include "audiostream/AudioStream.h"
 #include "Debugging.h"
 
 AudioIn::AudioIn()
@@ -16,9 +17,6 @@ AudioIn::~AudioIn()
 
 bool AudioIn::init(int deviceIndex, int channelCount, int sampleRate, int bufferSampleCount)
 {
-	Assert((bufferSampleCount % channelCount) == 0);
-	bufferSampleCount /= channelCount;
-
 	// todo : let the user select a device
 
 	//const int numDevices = waveInGetNumDevs();
@@ -102,7 +100,7 @@ void AudioIn::shutdown()
 	}
 }
 
-bool AudioIn::provide(short * buffer, int & sampleCount)
+bool AudioIn::provide(AudioSample * __restrict buffer, int & sampleCount)
 {
 	if (m_waveIn == nullptr)
 	{
@@ -124,8 +122,32 @@ bool AudioIn::provide(short * buffer, int & sampleCount)
 
 		if (m_waveHeader.dwFlags & WHDR_DONE)
 		{
-			memcpy(buffer, m_buffer, m_waveHeader.dwBytesRecorded);
-			sampleCount = m_waveHeader.dwBytesRecorded / sizeof(short);
+			Assert(sampleCount == m_waveHeader.dwBytesRecorded / sizeof(short) / m_waveFormat.nChannels);
+
+			if (m_waveFormat.nChannels == 1)
+			{
+				sampleCount = m_waveHeader.dwBytesRecorded / sizeof(short);
+
+				for (int i = 0; i < sampleCount; ++i)
+				{
+					buffer[i].channel[0] = m_buffer[i * 1 + 0];
+					buffer[i].channel[1] = m_buffer[i * 1 + 0];
+				}
+			}
+			else if (m_waveFormat.nChannels == 2)
+			{
+				sampleCount = m_waveHeader.dwBytesRecorded / sizeof(short) / 2;
+
+				for (int i = 0; i < sampleCount; ++i)
+				{
+					buffer[i].channel[0] = m_buffer[i * 2 + 0];
+					buffer[i].channel[1] = m_buffer[i * 2 + 1];
+				}
+			}
+			else
+			{
+				Assert(m_waveFormat.nChannels == 1 || m_waveFormat.nChannels == 2);
+			}
 
 			mmResult = waveInAddBuffer(m_waveIn, &m_waveHeader, sizeof(m_waveHeader));
 			Assert(mmResult == MMSYSERR_NOERROR);

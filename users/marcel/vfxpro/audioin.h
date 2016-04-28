@@ -2,6 +2,8 @@
 
 #include <Windows.h>
 
+struct AudioSample;
+
 class AudioIn
 {
 	HWAVEIN m_waveIn;
@@ -16,5 +18,5 @@ public:
 	bool init(int deviceIndex, int channelCount, int sampleRate, int bufferSampleCount);
 	void shutdown();
 
-	bool provide(short * buffer, int & sampleCount);
+	bool provide(AudioSample * __restrict buffer, int & sampleCount);
 };

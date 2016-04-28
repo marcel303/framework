@@ -21,4 +21,4 @@ void fftInit();
 void fftShutdown();
 float fftPowerValue(int i);
 void fftProcess(float time);
-void fftProvide(AudioSample * __restrict samples, int numSamples, float provideTime);
+void fftProvide(const AudioSample * __restrict samples, int numSamples, float provideTime);
