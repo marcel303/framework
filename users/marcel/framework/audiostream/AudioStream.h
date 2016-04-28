@@ -2,10 +2,10 @@
 
 // Copyright (C) 2013 Grannies Games - All rights reserved
 
-typedef struct
+struct AudioSample
 {
 	short channel[2];
-} AudioSample;
+};
 
 class AudioStream
 {
