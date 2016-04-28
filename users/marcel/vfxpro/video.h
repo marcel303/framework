@@ -23,7 +23,10 @@ struct MediaPlayer
 
 	~MediaPlayer()
 	{
-		close();
+		if (isActive())
+		{
+			close();
+		}
 	}
 
 	bool open(const char * filename);

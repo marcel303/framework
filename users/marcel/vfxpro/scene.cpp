@@ -23,6 +23,25 @@ Surface * g_currentSurface = nullptr;
 
 //
 
+static SceneLayer::BlendMode parseBlendMode(const std::string & blend)
+{
+	if (blend == "add")
+		return SceneLayer::kBlendMode_Add;
+	else if (blend == "subtract")
+		return SceneLayer::kBlendMode_Subtract;
+	else if (blend == "alpha")
+		return SceneLayer::kBlendMode_Alpha;
+	else if (blend == "opaque")
+		return SceneLayer::kBlendMode_Opaque;
+	else
+	{
+		logWarning("unknown blend type: %s", blend.c_str());
+		return SceneLayer::kBlendMode_Add;
+	}
+}
+
+//
+
 SceneEffect::SceneEffect()
 	: m_effect(nullptr)
 	, m_strength(1.f)
@@ -43,6 +62,8 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 
 	const std::string type = stringAttrib(xmlEffect, "type", "");
 
+	std::string typeName = type;
+
 	Effect * effect = nullptr;
 
 	if (type == "fsfx")
@@ -56,6 +77,8 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 		else
 		{
 			effect = new Effect_Fsfx(m_name.c_str(), shader.c_str());
+
+			typeName = shader;
 		}
 	}
 	else if (type == "rain")
@@ -146,6 +169,19 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 			effect = new Effect_Picture(m_name.c_str(), file.c_str(), centered);
 		}
 	}
+	else if (type == "draw_picture")
+	{
+		const std::string file = stringAttrib(xmlEffect, "file", "");
+
+		if (file.empty())
+		{
+			logWarning("file not set. skipping effect");
+		}
+		else
+		{
+			effect = new Effect_DrawPicture(m_name.c_str(), file.c_str());
+		}
+	}
 	else
 	{
 		logError("unknown effect type: %s", type.c_str());
@@ -153,9 +189,12 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 
 	if (effect != nullptr)
 	{
+		auto effectInfo = g_effectInfosByName.find(m_name);
+
 		for (const XMLAttribute * xmlAttrib = xmlEffect->FirstAttribute(); xmlAttrib; xmlAttrib = xmlAttrib->Next())
 		{
-			TweenFloat * var = effect->getVar(xmlAttrib->Name());
+			std::string name = nameToEffectParam(typeName, xmlAttrib->Name());
+			TweenFloat * var = effect->getVar(name.c_str());
 
 			if (var != nullptr)
 			{
@@ -166,6 +205,16 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 					*var = value;
 				}
 			}
+		}
+
+		//effect->blendMode = parseBlendMode(stringAttrib(xmlEffect, "blend", "add"));
+
+		const bool enabled = boolAttrib(xmlEffect, "enabled", true);
+
+		if (!enabled)
+		{
+			delete effect;
+			return false;
 		}
 
 		m_effect = effect;
@@ -215,19 +264,7 @@ void SceneLayer::load(const XMLElement * xmlLayer)
 
 	std::string blend = stringAttrib(xmlLayer, "blend", "add");
 
-	m_blendMode = kBlendMode_Add;
-
-	if (blend == "add")
-		m_blendMode = kBlendMode_Add;
-	else if (blend == "subtract")
-		m_blendMode = kBlendMode_Subtract;
-	else if (blend == "alpha")
-		m_blendMode = kBlendMode_Alpha;
-	else if (blend == "opaque")
-		m_blendMode = kBlendMode_Opaque;
-	else
-		logWarning("unknown blend type: %s", blend.c_str());
-
+	m_blendMode = parseBlendMode(blend);
 	m_autoClear = boolAttrib(xmlLayer, "auto_clear", true);
 	m_copyPreviousLayer = boolAttrib(xmlLayer, "copy", false);
 
@@ -648,6 +685,8 @@ void Scene::tick(const float dt)
 		{
 			if (config.midiWentDown(map.id))
 			{
+				bool found = false;
+
 				for (auto i = m_events.begin(); i != m_events.end(); ++i)
 				{
 					SceneEvent * event = *i;
@@ -655,7 +694,14 @@ void Scene::tick(const float dt)
 					if (event->m_name == map.event)
 					{
 						event->execute(*this);
+
+						found = true;
 					}
+				}
+
+				if (!found)
+				{
+					logWarning("unable to find event %s", map.event.c_str());
 				}
 			}
 		}
@@ -669,15 +715,38 @@ void Scene::tick(const float dt)
 				{
 					TweenFloat * var = effect->m_effect->getVar(map.var.c_str());
 
-					if (var != nullptr && !var->isActive())
+					if (var != nullptr)
 					{
-						const float value = config.midiGetValue(map.id, 0.f);
+						if (!var->isActive())
+						{
+							const float value = config.midiGetValue(map.id, 0.f);
 
-						*var = value;
+							*var = map.min + (map.max - map.min) * value;
+						}
 					}
+					else
+					{
+						logWarning("unable to find effect variable %s", map.var.c_str());
+					}
+				}
+				else
+				{
+					logWarning("unable to find effect %s", map.effect.c_str());
 				}
 			}
 		}
+	}
+
+	// process debug text
+
+	for (auto i = m_debugTexts.begin(); i != m_debugTexts.end(); )
+	{
+		DebugText & t = *i;
+
+		if (m_time >= t.endTime)
+			i = m_debugTexts.erase(i);
+		else
+			++i;
 	}
 }
 
@@ -690,6 +759,21 @@ void Scene::draw(DrawableList & list)
 		SceneLayer * layer = *i;
 
 		layer->draw(list);
+	}
+
+	// draw debug text
+
+	setFont("calibri.ttf");
+	setColor(colorWhite);
+
+	float x = GFX_SX / 2.f;
+	float y = GFX_SY / 2.f;
+
+	for (auto i = m_debugTexts.begin(); i != m_debugTexts.end(); ++i)
+	{
+		drawText(x, y, 24, 0.f, 0.f, i->text.c_str());
+
+		y += 30.f;
 	}
 }
 
@@ -722,8 +806,19 @@ void Scene::triggerEvent(const char * name)
 		if (event->m_name == name)
 		{
 			event->execute(*this);
+
+			addDebugText(name);
 		}
 	}
+}
+
+void Scene::addDebugText(const char * text)
+{
+	DebugText t;
+	t.text = text;
+	t.endTime = m_time + 4.f;
+
+	m_debugTexts.push_back(t);
 }
 
 bool Scene::load(const char * filename)
@@ -824,6 +919,8 @@ bool Scene::load(const char * filename)
 				map.event = stringAttrib(xmlMidiMap, "event", "");
 				map.effect = stringAttrib(xmlMidiMap, "effect", "");
 				map.var = stringAttrib(xmlMidiMap, "var", "");
+				map.min = floatAttrib(xmlMidiMap, "min", 0.f);
+				map.max = floatAttrib(xmlMidiMap, "max", 1.f);
 
 				if (!map.effect.empty() && !map.var.empty())
 				{
@@ -873,7 +970,15 @@ void Scene::clear()
 
 	//
 
+	m_midiMaps.clear();
+
+	//
+
 	m_time = 0.f;
+
+	//
+
+	m_debugTexts.clear();
 }
 
 bool Scene::reload()

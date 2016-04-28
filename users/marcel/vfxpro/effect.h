@@ -23,9 +23,31 @@ extern const int GFX_SY;
 
 extern Config config;
 
+extern GLuint g_pcmTexture;
+extern GLuint g_fftTexture;
+
 //
 
 struct Effect;
+struct EffectInfo;
+
+//
+
+struct EffectInfo
+{
+	std::string imageName;
+	std::string paramName[4];
+};
+
+struct EffectInfosByName : public std::map<std::string, EffectInfo>
+{
+	bool load(const char * filename);
+};
+
+extern EffectInfosByName g_effectInfosByName;
+
+extern std::string effectParamToName(const std::string & effectName, const std::string & param);
+extern std::string nameToEffectParam(const std::string & effectName, const std::string & name);
 
 //
 
@@ -122,6 +144,13 @@ struct Effect : TweenFloatCollection
 			return transform.Mul3(v);
 	}
 
+	void setTextures(Shader & shader)
+	{
+		shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
+		shader.setTexture("pcm", 1, g_pcmTexture, true, false);
+		shader.setTexture("fft", 2, g_fftTexture, true, false);
+	}
+
 	virtual void tick(const float dt) = 0;
 	virtual void draw(DrawableList & list) = 0;
 	virtual void draw() = 0;
@@ -210,7 +239,7 @@ struct Effect_Fsfx : Effect
 
 		Shader shader(m_shader.c_str(), "fsfx.vs", m_shader.c_str());
 		setShader(shader);
-		shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
+		setTextures(shader);
 		ShaderBuffer buffer;
 		FsfxData data;
 		data.alpha = m_alpha;
@@ -235,13 +264,31 @@ struct Effect_Rain : Effect
 	Array<float> m_particleSizes;
 	EffectTimer m_spawnTimer;
 	TweenFloat m_alpha;
+	TweenFloat m_gravity;
+	TweenFloat m_falloff;
+	TweenFloat m_spawnRate;
+	TweenFloat m_spawnLife;
+	TweenFloat m_spawnY;
+	TweenFloat m_bounce;
 
 	Effect_Rain(const char * name, const int numRainDrops)
 		: Effect(name)
 		, m_particleSystem(numRainDrops)
 		, m_alpha(1.f)
+		, m_gravity(100.f)
+		, m_falloff(0.f)
+		, m_spawnRate(1.f)
+		, m_spawnLife(1.f)
+		, m_spawnY(0.f)
+		, m_bounce(1.f)
 	{
 		addVar("alpha", m_alpha);
+		addVar("gravity", m_gravity);
+		addVar("falloff", m_falloff);
+		addVar("spawn_rate", m_spawnRate);
+		addVar("spawn_life", m_spawnLife);
+		addVar("spawn_y", m_spawnY);
+		addVar("bounce", m_bounce);
 
 		m_particleSizes.resize(numRainDrops, true);
 	}
@@ -250,9 +297,8 @@ struct Effect_Rain : Effect
 	{
 		TweenFloatCollection::tick(dt);
 
-		const float gravityY = 400.f;
-		//const float falloff = .9f;
-		const float falloff = 1.f;
+		const float gravityY = m_gravity;
+		const float falloff = Calc::Max(0.f, 1.f - m_falloff);
 		const float falloffThisTick = powf(falloff, dt);
 
 		const Sprite sprite("rain.png");
@@ -263,15 +309,15 @@ struct Effect_Rain : Effect
 
 		m_spawnTimer.tick(dt);
 
-		while (m_spawnTimer.consume((1.f + config.midiGetValue(101, 1.f) * 9.f) / 1000.f))
+		while (m_spawnRate != 0.f && m_spawnTimer.consume(1.f / m_spawnRate))
 		{
 			int id;
 
-			if (!m_particleSystem.alloc(false, 5.f, id))
+			if (!m_particleSystem.alloc(false, m_spawnLife, id))
 				continue;
 
 			m_particleSystem.x[id] = rand() % GFX_SX;
-			m_particleSystem.y[id] = -50.f;
+			m_particleSystem.y[id] = m_spawnY;
 			m_particleSystem.vx[id] = 0.f;
 			m_particleSystem.vy[id] = 0.f;
 			m_particleSystem.sx[id] = 1.f;
@@ -297,7 +343,7 @@ struct Effect_Rain : Effect
 			if (m_particleSystem.y[i] > GFX_SY)
 			{
 				m_particleSystem.y[i] = GFX_SY;
-				m_particleSystem.vy[i] *= -.5f;
+				m_particleSystem.vy[i] *= -m_bounce;
 			}
 
 			// velocity falloff
@@ -1131,7 +1177,7 @@ struct Effect_ColorLut2D : Effect
 		Shader shader("colorlut2d");
 		setShader(shader);
 		shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
-		shader.setTexture("lut", 1, m_lutSprite->getTexture(), true, false);
+		shader.setTexture("lut", 1, m_lutSprite->getTexture(), true, true);
 		ShaderBuffer buffer;
 		ColorLut2DData data;
 		data.alpha = m_alpha;
@@ -1159,7 +1205,6 @@ struct Effect_Flowmap : Effect
 	Effect_Flowmap(const char * name, const char * map)
 		: Effect(name)
 		, m_alpha(1.f)
-		, m_mapSprite(nullptr)
 		, m_strength(0.f)
 		, m_darken(0.f)
 	{
@@ -1168,13 +1213,6 @@ struct Effect_Flowmap : Effect
 		addVar("darken", m_darken);
 
 		m_map = map;
-		m_mapSprite = new Sprite(map);
-	}
-
-	virtual ~Effect_Flowmap()
-	{
-		delete m_mapSprite;
-		m_mapSprite = nullptr;
 	}
 
 	virtual void tick(const float dt) override
@@ -1191,10 +1229,12 @@ struct Effect_Flowmap : Effect
 	{
 		setBlend(BLEND_OPAQUE);
 
+		Sprite mapSprite(m_map.c_str());
+
 		Shader shader("flowmap");
 		setShader(shader);
 		shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
-		shader.setTexture("flowmap", 1, m_mapSprite->getTexture(), true, false);
+		shader.setTexture("flowmap", 1, mapSprite.getTexture(), true, false);
 		shader.setImmediate("time", g_currentScene->m_time);
 		ShaderBuffer buffer;
 		FlowmapData data;
@@ -1255,5 +1295,167 @@ struct Effect_Vignette : Effect
 		g_currentSurface->postprocess(shader);
 
 		setBlend(BLEND_ADD);
+	}
+};
+
+//
+
+struct Effect_Clockwork : Effect
+{
+	TweenFloat m_alpha;
+	TweenFloat m_innerRadius;
+	TweenFloat m_distance;
+
+	Effect_Clockwork(const char * name)
+		: Effect(name)
+		, m_alpha(1.f)
+		, m_innerRadius(0.f)
+		, m_distance(100.f)
+	{
+		addVar("alpha", m_alpha);
+		addVar("inner_radius", m_innerRadius);
+		addVar("distance", m_distance);
+	}
+
+	virtual void tick(const float dt) override
+	{
+		TweenFloatCollection::tick(dt);
+	}
+
+	virtual void draw(DrawableList & list) override
+	{
+		new (list) EffectDrawable(this);
+	}
+
+	virtual void draw() override
+	{
+		setBlend(BLEND_OPAQUE);
+
+		Shader shader("vignette");
+		setShader(shader);
+		shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
+		ShaderBuffer buffer;
+		VignetteData data;
+		data.alpha = m_alpha;
+		data.innerRadius = m_innerRadius;
+		data.distanceRcp = 1.f / m_distance;
+		buffer.setData(&data, sizeof(data));
+		shader.setBuffer("VignetteBlock", buffer);
+		g_currentSurface->postprocess(shader);
+
+		setBlend(BLEND_ADD);
+	}
+};
+
+//
+
+struct Effect_DrawPicture : Effect
+{
+	TweenFloat m_alpha;
+	TweenFloat m_step;
+	std::string m_map;
+
+	bool m_draw;
+
+	struct Coord
+	{
+		float x;
+		float y;
+	};
+
+	float m_distance;
+
+	std::vector<Coord> m_coords;
+	Coord m_lastCoord;
+
+	Effect_DrawPicture(const char * name, const char * map)
+		: Effect(name)
+		, m_alpha(1.f)
+		, m_step(10.f)
+		, m_draw(false)
+		, m_distance(0.f)
+	{
+		addVar("alpha", m_alpha);
+		addVar("step", m_step);
+
+		m_map = map;
+	}
+
+	virtual void tick(const float dt) override
+	{
+		TweenFloatCollection::tick(dt);
+
+		const bool draw = mouse.isDown(BUTTON_LEFT);
+
+		if (draw)
+		{
+			Coord coord;
+			coord.x = mouse.x;
+			coord.y = mouse.y;
+
+			if (m_draw)
+			{
+				const float dx = coord.x - m_lastCoord.x;
+				const float dy = coord.y - m_lastCoord.y;
+				const float ds = sqrtf(dx * dx + dy * dy);
+
+				if (ds > 0.f)
+				{
+					float distance = m_distance + ds;
+
+					while (distance >= m_step)
+					{
+						distance -= m_step;
+						m_lastCoord.x += dx / ds * m_step;
+						m_lastCoord.y += dy / ds * m_step;
+						m_coords.push_back(m_lastCoord);
+					}
+
+					const float dx = coord.x - m_lastCoord.x;
+					const float dy = coord.y - m_lastCoord.y;
+					const float ds = sqrtf(dx * dx + dy * dy);
+					m_distance = ds;
+				}
+			}
+			else
+			{
+				m_lastCoord = coord;
+				m_coords.push_back(m_lastCoord);
+			}
+		}
+		else
+		{
+		}
+
+		m_draw = draw;
+	}
+
+	virtual void draw(DrawableList & list) override
+	{
+		new (list) EffectDrawable(this);
+	}
+
+	virtual void draw() override
+	{
+		if (!m_coords.empty())
+		{
+			Sprite sprite(m_map.c_str());
+
+			const int sx = sprite.getWidth();
+			const int sy = sprite.getHeight();
+
+			gxPushMatrix();
+			{
+				gxTranslatef(-sx / 2.f * scale, -sy / 2.f * scale, 0.f);
+
+				for (auto coord : m_coords)
+				{
+					sprite.drawEx(coord.x, coord.y, 0.f, scale, scale, false, FILTER_LINEAR);
+				}
+			}
+			gxPopMatrix();
+
+			m_coords.clear();
+		}
 	}
 };

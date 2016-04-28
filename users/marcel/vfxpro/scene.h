@@ -178,6 +178,8 @@ struct SceneMidiMap
 	std::string event;
 	std::string effect;
 	std::string var;
+	float min;
+	float max;
 };
 
 //
@@ -192,6 +194,14 @@ struct Scene
 
 	float m_time;
 
+	struct DebugText
+	{
+		std::string text;
+		float endTime;
+	};
+
+	std::vector<DebugText> m_debugTexts;
+
 	Scene();
 	~Scene();
 
@@ -201,6 +211,7 @@ struct Scene
 	SceneEffect * findEffectByName(const char * name);
 
 	void triggerEvent(const char * name);
+	void addDebugText(const char * text);
 
 	bool load(const char * filename);
 

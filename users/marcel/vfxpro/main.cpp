@@ -3,6 +3,7 @@
 #include "osc/OscOutboundPacketStream.h"
 #include "osc/OscPacketListener.h"
 #include "audiostream/AudioOutput.h"
+#include "audiofft.h"
 #include "audioin.h"
 #include "Calc.h"
 #include "config.h"
@@ -19,6 +20,7 @@
 #include <algorithm>
 #include <list>
 #include <map>
+#include <sys/stat.h>
 #include <Windows.h>
 
 #include "data/ShaderConstants.h"
@@ -39,6 +41,11 @@ const int GFX_SY = (SCREEN_SY * 1);
 #define OSC_RECV_PORT 1121
 
 Config config;
+
+Scene * g_scene = nullptr;
+
+GLuint g_pcmTexture = 0;
+GLuint g_fftTexture = 0;
 
 float virtualToScreenX(const float x)
 {
@@ -67,7 +74,7 @@ float virtualToScreenY(const float y)
 	# prompt for audio input device at startup. or select by name in XML config file?
 		+ defined in settings xml instead
 	+ add XML settings file
-	- define scene XML representation
+	+ define scene XML representation
 	- discuss with Max what would be needed for life act
 
 :: todo :: projector output
@@ -86,6 +93,7 @@ float virtualToScreenY(const float y)
 :: todo :: post processing and graphics quality
 
 	- smooth line drawing with high AA. use a post process pass to blur the result ?
+	+ add FXAA post process
 
 :: todo :: visuals tech 2D
 
@@ -98,6 +106,14 @@ float virtualToScreenY(const float y)
 
 	- add film grain shader
 
+	- picture effect : add blend mode parameter. mul mode will allow us to mask parts
+
+	- mask effect : add an FSFX shader that generates a mask
+
+	- circle effect : draw concentric circles. increase in size depending on beat and audio volume
+
+	- laser line rendering
+
 :: todo :: visuals tech 3D
 
 	- virtual camera positioning
@@ -106,7 +122,7 @@ float virtualToScreenY(const float y)
 
 	+ compute virtual camera matrices
 
-	- add lighting shader code
+	+ add lighting shader code
 
 :: todo :: effects
 
@@ -131,6 +147,12 @@ float virtualToScreenY(const float y)
 :: notes
 
 	- seamless transitions between scenes
+
+:: shaders
+
+	- add power tween value to vignette falloff
+	- rename vignette distance to falloff and inner_radius to radius
+
 
 */
 
@@ -518,6 +540,7 @@ enum DebugMode
 	kDebugMode_Camera,
 	kDebugMode_EventList,
 	kDebugMode_EffectList,
+	kDebugMode_EffectListCondensed,
 	kDebugMode_LayerList
 };
 
@@ -531,6 +554,94 @@ static void setDebugMode(DebugMode mode)
 		s_debugMode = mode;
 }
 
+static void handleAction(const std::string & action, const Dictionary & args)
+{
+	if (action == "filedrop")
+	{
+		const std::string filename = args.getString("file", "");
+
+		//
+
+		delete g_scene;
+		g_scene = nullptr;
+
+		//
+
+		g_scene = new Scene();
+
+		if (!g_scene->load(filename.c_str()))
+		{
+			delete g_scene;
+			g_scene = nullptr;
+
+			g_scene = new Scene();
+		}
+	}
+}
+
+//
+
+struct FileInfo
+{
+	std::string filename;
+	time_t time;
+};
+
+static std::vector<FileInfo> s_fileInfos;
+
+static void initFileMonitor()
+{
+	std::vector<std::string> files = listFiles(".", true);
+
+	for (auto & file : files)
+	{
+		FILE * f = fopen(file.c_str(), "rb");
+		if (f)
+		{
+			struct _stat s;
+			if (_fstat(fileno(f), &s) == 0)
+			{
+				FileInfo fi;
+				fi.filename = file;
+				fi.time = s.st_mtime;
+
+				s_fileInfos.push_back(fi);
+			}
+
+			fclose(f);
+			f = 0;
+		}
+	}
+}
+
+static void tickFileMonitor()
+{
+	for (auto & fi: s_fileInfos)
+	{
+		FILE * f = fopen(fi.filename.c_str(), "rb");
+		if (f)
+		{
+			struct _stat s;
+			if (_fstat(fileno(f), &s) == 0)
+			{
+				if (fi.time < s.st_mtime)
+				{
+					// file has changed!
+
+					logDebug("%s has changed!", fi.filename.c_str());
+
+					fi.time = s.st_mtime;
+				}
+			}
+
+			fclose(f);
+			f = 0;
+		}
+	}
+}
+
+//
+
 int main(int argc, char * argv[])
 {
 	//changeDirectory("data");
@@ -538,6 +649,12 @@ int main(int argc, char * argv[])
 	if (!config.load("settings.xml"))
 	{
 		logError("failed to load settings.xml");
+		return -1;
+	}
+
+	if (!g_effectInfosByName.load("effects_meta.xml"))
+	{
+		logError("failed to load effects_meta.xml");
 		return -1;
 	}
 
@@ -568,7 +685,7 @@ int main(int argc, char * argv[])
 	float audioInProvideTime = 0.f;
 	int audioInHistoryMaxSize = 0;
 	int audioInHistorySize = 0;
-	short * audioInHistory = nullptr;
+	AudioSample * audioInHistory = nullptr;
 
 	if (config.audioIn.enabled)
 	{
@@ -578,10 +695,14 @@ int main(int argc, char * argv[])
 		}
 		else
 		{
-			audioInHistoryMaxSize = config.audioIn.numChannels * config.audioIn.bufferLength;
-			audioInHistory = new short[audioInHistoryMaxSize];
+			audioInHistoryMaxSize = config.audioIn.bufferLength;
+			audioInHistory = new AudioSample[audioInHistoryMaxSize];
 		}
 	}
+	
+	// initialise FFT
+
+	fftInit();
 
 	// initialise OSC
 
@@ -609,9 +730,14 @@ int main(int argc, char * argv[])
 	framework.reloadCachesOnActivate = true;
 #endif
 
+	framework.filedrop = true;
+	framework.actionHandler = handleAction;
+
+	//framework.highPrecisionRT = true;
+
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
-		framework.fillCachesWithPath(".", true);
+		//framework.fillCachesWithPath(".", true);
 
 		std::list<TimeDilationEffect> timeDilationEffects;
 
@@ -628,8 +754,9 @@ int main(int argc, char * argv[])
 		bool drawScreenIds = false;
 		bool drawProjectorSetup = false;
 
-		Scene * scene = new Scene();
-		scene->load("scene.xml");
+		g_scene = new Scene();
+		//g_scene->load("scene_healer.xml");
+		g_scene->load("scene.xml");
 
 	#if DEMODATA
 		Effect_Cloth cloth("cloth");
@@ -694,29 +821,29 @@ int main(int argc, char * argv[])
 
 			// todo : process audio input
 
-			int * samplesThisFrame = nullptr;
+			float * samplesThisFrame = nullptr;
 			int numSamplesThisFrame = 0;
 
 			float loudnessThisFrame = 0.f;
 
 			if (config.audioIn.enabled)
 			{
-				audioInHistorySize = audioInHistorySize;
+				audioInHistorySize = audioInHistoryMaxSize;
 
 				while (audioIn.provide(audioInHistory, audioInHistorySize))
 				{
 					//logDebug("got audio data! numSamples=%04d", audioInHistorySize);
 
-					audioInHistorySize /= config.audioIn.numChannels;
 					audioInProvideTime = framework.time;
 				}
 
+				// todo : increment depending on time passed, not not 1/60 assuming 60 fps
 				numSamplesThisFrame = Calc::Min(config.audioIn.sampleRate / 60, audioInHistorySize);
 				Assert(audioInHistorySize >= numSamplesThisFrame);
 
 				// todo : secure this code
 
-				samplesThisFrame = new int[numSamplesThisFrame];
+				samplesThisFrame = new float[numSamplesThisFrame];
 
 				int offset = (framework.time - audioInProvideTime) * config.audioIn.sampleRate;
 				Assert(offset >= 0);
@@ -726,33 +853,45 @@ int main(int argc, char * argv[])
 
 				//logDebug("offset = %04d/%04d (numSamplesThisFrame=%04d)", offset, audioInHistorySize, numSamplesThisFrame);
 
-				offset *= config.audioIn.numChannels;
+				const AudioSample * __restrict src = audioInHistory + offset;
+				float             * __restrict dst = samplesThisFrame;
 
-				const short * __restrict src = audioInHistory + offset;
-				      int   * __restrict dst = samplesThisFrame;
+				fftProvide(src, numSamplesThisFrame, framework.time);
+
+				const float sampleToFloat = 1.f / (1 << 15) / 2.f * 10.f;
 
 				for (int i = 0; i < numSamplesThisFrame; ++i)
 				{
 					int value = 0;
 
-					for (int c = 0; c < config.audioIn.numChannels; ++c)
-					{
-						value += *src++;
-					}
+					value += src->channel[0];
+					value += src->channel[1];
+					++src;
 
-					*dst++ = value;
+					*dst++ = value * sampleToFloat;
 
-					Assert(src <= audioInHistory + audioInHistorySize * config.audioIn.numChannels);
+					Assert(src <= audioInHistory + audioInHistorySize);
 					Assert(dst <= samplesThisFrame + numSamplesThisFrame);
 				}
+			}
 
-				// calculate loudness
+			// calculate loudness
 
-				int total = 0;
+			if (numSamplesThisFrame > 0)
+			{
+				float total = 0;
 				for (int i = 0; i < numSamplesThisFrame; ++i)
 					total += samplesThisFrame[i];
-				loudnessThisFrame = sqrtf(total / float(numSamplesThisFrame) / float(1 << 15));
+				loudnessThisFrame = sqrtf(total / float(numSamplesThisFrame));
 			}
+			else
+			{
+				loudnessThisFrame = 0.f;
+			}
+
+			// process FFT
+
+			fftProcess(framework.time);
 
 			// todo : process OSC input
 
@@ -765,7 +904,7 @@ int main(int argc, char * argv[])
 
 			if (keyboard.wentDown(SDLK_r))
 			{
-				scene->reload();
+				g_scene->reload();
 			}
 
 			if (keyboard.wentDown(SDLK_d))
@@ -777,12 +916,15 @@ int main(int argc, char * argv[])
 			if (keyboard.wentDown(SDLK_p) || config.midiWentDown(64))
 				postProcess = !postProcess;
 
-			if (keyboard.wentDown(SDLK_1))
-				drawCloth = !drawCloth;
-			if (keyboard.wentDown(SDLK_2))
-				drawBoxes = !drawBoxes;
-			if (keyboard.wentDown(SDLK_3))
-				drawPCM = !drawPCM;
+			if (s_debugMode == kDebugMode_Help)
+			{
+				if (keyboard.wentDown(SDLK_1))
+					drawCloth = !drawCloth;
+				if (keyboard.wentDown(SDLK_2))
+					drawBoxes = !drawBoxes;
+				if (keyboard.wentDown(SDLK_3))
+					drawPCM = !drawPCM;
+			}
 		#endif
 
 			if (keyboard.wentDown(SDLK_F1))
@@ -797,6 +939,8 @@ int main(int argc, char * argv[])
 			{
 				if (s_debugMode == kDebugMode_EventList)
 					setDebugMode(kDebugMode_EffectList);
+				else if (s_debugMode == kDebugMode_EffectList)
+					setDebugMode(kDebugMode_EffectListCondensed);
 				else
 					setDebugMode(kDebugMode_EventList);
 			}
@@ -821,7 +965,7 @@ int main(int argc, char * argv[])
 				}
 
 			}
-			else if (s_debugMode == kDebugMode_EffectList)
+			else if (s_debugMode == kDebugMode_EffectList || s_debugMode == kDebugMode_EffectListCondensed)
 			{
 				const int base = keyboard.isDown(SDLK_LSHIFT) ? 10 : 0;
 
@@ -844,14 +988,14 @@ int main(int argc, char * argv[])
 			{
 				const int base = keyboard.isDown(SDLK_LSHIFT) ? 10 : 0;
 
-				for (size_t i = 0; i < 10 && i < scene->m_events.size(); ++i)
+				for (size_t i = 0; i < 10 && i < g_scene->m_events.size(); ++i)
 				{
 					if (i - base < 0 || i - base > 9)
 						continue;
 
 					if (keyboard.wentDown((SDLKey)(SDLK_0 + i - base)))
 					{
-						scene->triggerEvent(scene->m_events[i]->m_name.c_str());
+						g_scene->triggerEvent(g_scene->m_events[i]->m_name.c_str());
 					}
 				}
 			}
@@ -859,14 +1003,14 @@ int main(int argc, char * argv[])
 			{
 				const int base = keyboard.isDown(SDLK_LSHIFT) ? 10 : 0;
 
-				for (int i = 0; i < scene->m_layers.size(); ++i)
+				for (int i = 0; i < g_scene->m_layers.size(); ++i)
 				{
 					if (i - base < 0 || i - base > 9)
 						continue;
 
 					if (keyboard.wentDown((SDLKey)(SDLK_0 + i - base)))
 					{
-						SceneLayer * layer = scene->m_layers[i];
+						SceneLayer * layer = g_scene->m_layers[i];
 
 						layer->m_debugEnabled = !layer->m_debugEnabled;
 					}
@@ -874,7 +1018,7 @@ int main(int argc, char * argv[])
 			}
 
 			if (keyboard.wentDown(SDLK_g))
-				scene->triggerEvent("fade_rain");
+				g_scene->triggerEvent("fade_rain");
 
 			SDL_SetRelativeMouseMode(s_debugMode == kDebugMode_Camera ? SDL_TRUE : SDL_FALSE);
 
@@ -1005,7 +1149,7 @@ int main(int argc, char * argv[])
 
 			// process effects
 
-			scene->tick(dt);
+			g_scene->tick(dt);
 
 		#if DEMODATA
 			for (int i = 0; i < 10; ++i)
@@ -1037,9 +1181,39 @@ int main(int argc, char * argv[])
 
 			// draw
 
+			// todo : convert loudness to shader input
+
+			// todo : convert PCM data to shader input texture
+
+			Assert(g_pcmTexture == 0);
+			glGenTextures(1, &g_pcmTexture);
+			glBindTexture(GL_TEXTURE_2D, g_pcmTexture);
+			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, numSamplesThisFrame, 1, 0, GL_RED, GL_FLOAT, samplesThisFrame);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glBindTexture(GL_TEXTURE_2D, 0);
+			checkErrorGL();
+
+			// todo : convert FFT data to shader input texture
+
+			glGenTextures(1, &g_fftTexture);
+			glBindTexture(GL_TEXTURE_2D, g_fftTexture);
+			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+			fftPowerValue(0);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, kFFTComplexSize, 1, 0, GL_RED, GL_FLOAT, s_fftReal);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glBindTexture(GL_TEXTURE_2D, 0);
+			checkErrorGL();
+
 			DrawableList drawableList;
 
-			scene->draw(drawableList);
+			g_scene->draw(drawableList);
 
 		#if DEMODATA
 			if (drawCloth)
@@ -1147,7 +1321,7 @@ int main(int argc, char * argv[])
 								gxBegin(GL_LINES);
 								{
 									const float scaleX = GFX_SX / float(numSamplesThisFrame - 2);
-									const float scaleY = 300.f / float(1 << 15);
+									const float scaleY = 300.f;
 
 									for (int i = 0; i < numSamplesThisFrame - 1; ++i)
 									{
@@ -1169,8 +1343,9 @@ int main(int argc, char * argv[])
 					setBlend(BLEND_ADD);
 					drawableList.draw();
 
-					setColorf(.25f, .5f, 1.f, loudnessThisFrame / 8.f);
-					drawRect(0, 0, GFX_SX, GFX_SY);
+					// todo : remove this loudness test
+					//setColorf(.25f, .5f, 1.f, loudnessThisFrame);
+					//drawRect(0, 0, GFX_SX, GFX_SY);
 
 				#if DEMODATA
 					static volatile bool doBoxblur = false;
@@ -1383,9 +1558,9 @@ int main(int argc, char * argv[])
 				if (s_debugMode == kDebugMode_None)
 				{
 				}
-				else if (s_debugMode == kDebugMode_EffectList)
+				else if (s_debugMode == kDebugMode_EffectList || s_debugMode == kDebugMode_EffectListCondensed)
 				{
-					drawText(x, y, fontSize, +1.f, +1.f, "effects list:");
+					drawText(x, y, fontSize, +1.f, +1.f, (s_debugMode == kDebugMode_EffectList) ? "effects list:" : "effects list (condensed):");
 					x += 50;
 					y += spacingY;
 
@@ -1397,6 +1572,8 @@ int main(int argc, char * argv[])
 
 						const std::string & effectName = i->first;
 						Effect * effect = i->second;
+
+						const EffectInfo & info = g_effectInfosByName[effectName];
 
 						char temp[1024];
 						sprintf_s(temp, sizeof(temp), "%d %-20s", index, effectName.c_str());
@@ -1410,26 +1587,45 @@ int main(int argc, char * argv[])
 						x += sx;
 						x += 4.f;
 
+						bool anyActive = false;
+
+						if (s_debugMode != kDebugMode_EffectListCondensed)
+						{
+							for (auto j : effect->m_tweenVars)
+								anyActive |= j.second->isActive();
+						}
+						else
+						{
+							anyActive |= !effect->m_tweenVars.empty();
+						}
+
 						float yNew = y;
 
-						for (auto j : effect->m_tweenVars)
+						if (anyActive)
 						{
-							float yOld = y;
+							for (auto j : effect->m_tweenVars)
+							{
+								float yOld = y;
 
-							const std::string & varName = j.first;
-							TweenFloat & var = *j.second;
+								std::string varName = effectParamToName(effectName, j.first);
+								TweenFloat & var = *j.second;
 
-							setColor(colorWhite);
-							drawText(x, y, fontSize, +1.f, +1.f, "%-8s", varName.c_str());
-							y += spacingY;
-							
-							setColor(var.isActive() ? colorYellow : colorWhite);
-							drawText(x, y, fontSize, +1.f, +1.f, "%.2f", (float)var);
-							y += spacingY;
+								setColor(colorWhite);
+								drawText(x, y, fontSize, +1.f, +1.f, "%-8s", varName.c_str());
+								y += spacingY;
 
-							x += 150.f;
-							yNew = y;
-							y = yOld;
+								setColor(var.isActive() ? colorYellow : colorWhite);
+								drawText(x, y, fontSize, +1.f, +1.f, "%.2f", (float)var);
+								y += spacingY;
+
+								x += 150.f;
+								yNew = y;
+								y = yOld;
+							}
+						}
+						else
+						{
+							yNew += spacingY;
 						}
 
 						x = xOld;
@@ -1448,9 +1644,9 @@ int main(int argc, char * argv[])
 					x += 50;
 					y += spacingY;
 
-					for (size_t i = 0; i < scene->m_events.size(); ++i)
+					for (size_t i = 0; i < g_scene->m_events.size(); ++i)
 					{
-						drawText(x, y, fontSize, +1.f, +1.f, "%02d: %-40s", i, scene->m_events[i]->m_name.c_str());
+						drawText(x, y, fontSize, +1.f, +1.f, "%02d: %-40s", i, g_scene->m_events[i]->m_name.c_str());
 						y += spacingY;
 					}
 
@@ -1463,9 +1659,9 @@ int main(int argc, char * argv[])
 					x += 50;
 					y += spacingY;
 
-					for (int i = 0; i < scene->m_layers.size(); ++i)
+					for (int i = 0; i < g_scene->m_layers.size(); ++i)
 					{
-						SceneLayer * layer = scene->m_layers[i];
+						SceneLayer * layer = g_scene->m_layers[i];
 
 						char temp[1024];
 						sprintf_s(temp, sizeof(temp), "%d %-20s", i, layer->m_name.c_str());
@@ -1522,8 +1718,18 @@ int main(int argc, char * argv[])
 						easeFunction = (easeFunction + 1) % kEaseType_Count;
 					setColor(colorWhite);
 					for (int i = 0; i <= 100; ++i)
-						drawCircle(GFX_SX/2 + i, GFX_SY/2 + evalEase(i / 100.f, (EaseType)easeFunction, mouse.y / float(GFX_SY) * 2.f) * 100.f, 5.f, 4);
+						drawCircle(GFX_SX/2 + i, GFX_SY/2 + EvalEase(i / 100.f, (EaseType)easeFunction, mouse.y / float(GFX_SY) * 2.f) * 100.f, 5.f, 4);
 				}
+
+				// fixme : remove
+
+				setBlend(BLEND_ADD);
+				setColor(colorWhite);
+				//gxSetTexture(g_pcmTexture);
+				gxSetTexture(g_fftTexture);
+				drawRect(0, 0, GFX_SX, GFX_SY);
+				gxSetTexture(0);
+				setBlend(BLEND_ALPHA);
 			}
 
 			delete [] samplesThisFrame;
@@ -1531,15 +1737,31 @@ int main(int argc, char * argv[])
 
 			framework.endDraw();
 
+			//
+
+			glDeleteTextures(1, &g_fftTexture);
+			g_fftTexture = 0;
+
+			glDeleteTextures(1, &g_pcmTexture);
+			g_pcmTexture = 0;
+
+			//
+
 			time += dt;
 			timeReal += dtReal;
 		}
 
-		delete scene;
-		scene = nullptr;
+		delete g_scene;
+		g_scene = nullptr;
 
 		framework.shutdown();
 	}
+
+	//
+
+	fftShutdown();
+
+	//
 
 	s_oscReceiveSocket->AsynchronousBreak();
 	WaitForSingleObject(s_oscMessageThread, INFINITE);
