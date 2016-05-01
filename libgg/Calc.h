@@ -399,6 +399,11 @@ namespace Calc
 	}
 #endif
 
+	inline float Scale(float t, float min, float max)
+	{
+		return min + (max - min) * t;
+	}
+
 	// angles
 	
 	const static float deg2rad = 1.745329251994e-02f;
