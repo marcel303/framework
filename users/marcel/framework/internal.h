@@ -129,6 +129,7 @@ public:
 	TextureCacheElem();
 	void free();
 	void load(const char * filename, int gridSx, int gridSy);
+	void reload();
 };
 
 class TextureCache
@@ -176,6 +177,7 @@ public:
 		kSp_MAX
 	};
 
+	std::string name;
 	std::string vs;
 	std::string ps;
 
@@ -194,6 +196,7 @@ public:
 	ShaderCacheElem();
 	void free();
 	void load(const char * name, const char * filenameVs, const char * filenamePs);
+	void reload();
 };
 
 class ShaderCache

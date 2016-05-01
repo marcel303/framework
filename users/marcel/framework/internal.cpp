@@ -388,6 +388,17 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 	}
 }
 
+void TextureCacheElem::reload()
+{
+	const std::string oldName = name;
+	const int oldGridSx = gridSx;
+	const int oldGridSy = gridSy;
+
+	free();
+
+	load(oldName.c_str(), oldGridSx, oldGridSy);
+}
+
 void TextureCache::clear()
 {
 	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
@@ -692,14 +703,15 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type)
 	return result;
 }
 
-void ShaderCacheElem::load(const char * name, const char * filenameVs, const char * filenamePs)
+void ShaderCacheElem::load(const char * _name, const char * filenameVs, const char * filenamePs)
 {
-	ScopedLoadTimer loadTimer(name);
+	ScopedLoadTimer loadTimer(_name);
 
 	free();
 	
 	bool result = true;
 	
+	name = name;
 	vs = filenameVs;
 	ps = filenamePs;
 	
@@ -795,6 +807,15 @@ void ShaderCacheElem::load(const char * name, const char * filenameVs, const cha
 		
 		free();
 	}
+}
+
+void ShaderCacheElem::reload()
+{
+	const std::string oldName = name;
+	const std::string oldVs = vs;
+	const std::string oldPs = ps;
+
+	load(oldName.c_str(), oldVs.c_str(), oldPs.c_str());
 }
 
 void ShaderCache::clear()

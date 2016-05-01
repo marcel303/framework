@@ -334,6 +334,7 @@ public:
 	void setBuffer(GLint index, const ShaderBuffer & buffer);
 
 	const ShaderCacheElem & getCacheElem() const { return *m_shader; }
+	void reload();
 };
 
 //
@@ -433,6 +434,8 @@ public:
 	Sprite(const char * filename, float pivotX = 0.f, float pivotY = 0.f, const char * spritesheet = 0, bool autoUpdate = false, bool hasSpriteSheet = true);
 	~Sprite();
 	
+	void reload();
+
 	void update(float dt); // only needs to be called if autoUpdate is false!
 	void draw();
 	void drawEx(float x, float y, float angle = 0.f, float scaleX = 1.f, float scaleY = FLT_MAX, bool pixelpos = true, TEXTURE_FILTER filter = FILTER_POINT);

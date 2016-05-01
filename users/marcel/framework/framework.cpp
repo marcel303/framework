@@ -1106,6 +1106,8 @@ bool Surface::init(int sx, int sy)
 		
 		glBindTexture(GL_TEXTURE_2D, m_texture[i]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sx, sy, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+		//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, sx, sy, 0, GL_RGBA, GL_HALF_FLOAT, 0);
+		
 		checkErrorGL();
 		
 		// set filtering
@@ -1475,6 +1477,11 @@ void Shader::setBuffer(GLint index, const ShaderBuffer & buffer)
 	checkErrorGL();
 }
 
+void Shader::reload()
+{
+	m_shader->reload();
+}
+
 // -----
 
 static std::vector<GLuint> s_bufferPool;
@@ -1595,7 +1602,7 @@ Color Color::fromHSL(float hue, float sat, float lum)
 	{
 		if (hue < 2.0f)
 		{
-			if(hue < 1.0f)
+			if (hue < 1.0f)
 			{
 				r = m2;
 				g = m1 + (m2 - m1) * hue;
@@ -1990,6 +1997,11 @@ Sprite::~Sprite()
 {
 	if (m_autoUpdate)
 		framework.unregisterSprite(this);
+}
+
+void Sprite::reload()
+{
+	m_texture->reload();
 }
 
 void Sprite::update(float dt)
@@ -3462,11 +3474,13 @@ void setColorf(float r, float g, float b, float a, float rgbMul)
 	g *= rgbMul;
 	b *= rgbMul;
 	
+#if 1
 	r = clamp(r, 0.f, 1.f);
 	g = clamp(g, 0.f, 1.f);
 	b = clamp(b, 0.f, 1.f);
 	a = clamp(a, 0.f, 1.f);
-	
+#endif
+
 	globals.color.r = r;
 	globals.color.g = g;
 	globals.color.b = b;
