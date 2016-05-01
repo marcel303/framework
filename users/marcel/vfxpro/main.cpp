@@ -12,6 +12,7 @@
 #include "framework.h"
 #include "Path.h"
 #include "scene.h"
+#include "StringEx.h"
 #include "Timer.h"
 #include "tinyxml2.h"
 #include "types.h"
@@ -581,6 +582,49 @@ static void handleAction(const std::string & action, const Dictionary & args)
 
 //
 
+static void handleFileChange(const std::string & filename)
+{
+	if (filename == "settings.xml")
+		config.load(filename.c_str());
+	else if (filename == "effects_meta.xml")
+		g_effectInfosByName.load(filename.c_str());
+	else if (filename == g_scene->m_filename)
+		g_scene->reload();
+	else
+	{
+		const std::string baseName = Path::GetBaseName(filename);
+		const std::string extension = Path::GetExtension(filename);
+
+		if (extension == "vs")
+		{
+			Shader(baseName.c_str()).reload();
+		}
+		else if (extension == "ps")
+		{
+			if (String::StartsWith(filename, "fsfx_"))
+			{
+				Shader(filename.c_str(), "fsfx.vs", filename.c_str()).reload();
+			}
+			else
+			{
+				Shader(baseName.c_str()).reload();
+			}
+		}
+		else if (extension == "inc")
+		{
+			clearCaches(CACHE_SHADER);
+		}
+		else if (extension == "png" || extension == "jpg")
+		{
+			Sprite(baseName.c_str()).reload();
+		}
+	}
+}
+
+//
+
+#ifdef DEBUG
+
 struct FileInfo
 {
 	std::string filename;
@@ -631,6 +675,8 @@ static void tickFileMonitor()
 					logDebug("%s has changed!", fi.filename.c_str());
 
 					fi.time = s.st_mtime;
+
+					handleFileChange(fi.filename);
 				}
 			}
 
@@ -640,11 +686,25 @@ static void tickFileMonitor()
 	}
 }
 
+#else
+
+static void initFileMonitor()
+{
+}
+
+static void tickFileMonitor()
+{
+}
+
+#endif
+
 //
 
 int main(int argc, char * argv[])
 {
 	//changeDirectory("data");
+
+	initFileMonitor();
 
 	if (!config.load("settings.xml"))
 	{
@@ -727,7 +787,7 @@ int main(int argc, char * argv[])
 	framework.midiDeviceIndex = config.midi.deviceIndex;
 
 #ifdef DEBUG
-	framework.reloadCachesOnActivate = true;
+	//framework.reloadCachesOnActivate = true;
 #endif
 
 	framework.filedrop = true;
@@ -819,6 +879,8 @@ int main(int argc, char * argv[])
 
 			framework.process();
 
+			tickFileMonitor();
+
 			// todo : process audio input
 
 			float * samplesThisFrame = nullptr;
@@ -847,7 +909,8 @@ int main(int argc, char * argv[])
 
 				int offset = (framework.time - audioInProvideTime) * config.audioIn.sampleRate;
 				Assert(offset >= 0);
-
+				if (offset < 0)
+					offset = 0;
 				if (offset + numSamplesThisFrame > audioInHistorySize)
 					offset = audioInHistorySize - numSamplesThisFrame;
 

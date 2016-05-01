@@ -207,6 +207,7 @@ struct Scene
 
 	void tick(const float dt);
 	void draw(DrawableList & drawableList);
+	void debugDraw();
 
 	SceneEffect * findEffectByName(const char * name);
 

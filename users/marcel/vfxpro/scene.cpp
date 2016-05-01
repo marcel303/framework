@@ -761,19 +761,44 @@ void Scene::draw(DrawableList & list)
 		layer->draw(list);
 	}
 
+	//
+
+	struct SceneDebugDrawable : Drawable
+	{
+		Scene * m_scene;
+
+		SceneDebugDrawable(float z, Scene * scene)
+			: Drawable(z)
+			, m_scene(scene)
+		{
+		}
+
+		virtual void draw() override
+		{
+			m_scene->debugDraw();
+		}
+	};
+
+	new (list) SceneDebugDrawable(0.f, this);
+}
+
+void Scene::debugDraw()
+{
 	// draw debug text
 
 	setFont("calibri.ttf");
 	setColor(colorWhite);
+	setBlend(BLEND_ALPHA);
 
 	float x = GFX_SX / 2.f;
 	float y = GFX_SY / 2.f;
+	const int fontSize = 48;
 
 	for (auto i = m_debugTexts.begin(); i != m_debugTexts.end(); ++i)
 	{
-		drawText(x, y, 24, 0.f, 0.f, i->text.c_str());
+		drawText(x, y, fontSize, 0.f, 0.f, i->text.c_str());
 
-		y += 30.f;
+		y += fontSize + 6;
 	}
 }
 
@@ -983,7 +1008,7 @@ void Scene::clear()
 
 bool Scene::reload()
 {
-	std::string filename = m_filename;
+	const std::string filename = m_filename;
 
 	clear();
 
