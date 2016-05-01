@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 2.6)
 
 set(HAS_LIBGG 0)
-set(HAS_LIBNET 0)
 set(HAS_FRAMEWORK 0)
 
 # --- dependencies ---
@@ -10,10 +9,6 @@ if (NOT HAS_LIBGG)
 	message("including libgg")
 	add_subdirectory(../../../libgg libgg)
 endif (NOT HAS_LIBGG)
-if (NOT HAS_LIBNET)
-	message("including libnet")
-	add_subdirectory(../../../libnet libnet)
-endif (NOT HAS_LIBNET)
 if (NOT HAS_FRAMEWORK)
 	message("including framework")
 	add_subdirectory(../framework framework)
@@ -65,7 +60,6 @@ target_include_directories(vfxpro PRIVATE "${PROJECT_SOURCE_DIR}")
 target_include_directories(vfxpro PRIVATE "${PROJECT_SOURCE_DIR}/ffmpeg_old")
 
 target_link_libraries(vfxpro PRIVATE framework)
-target_link_libraries(vfxpro PRIVATE libnet)
 target_link_libraries(vfxpro PRIVATE libgg)
 
 #target_link_libraries(vfxpro PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/avcodec.lib)
