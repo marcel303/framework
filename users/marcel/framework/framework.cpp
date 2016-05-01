@@ -71,6 +71,7 @@ Ui ui;
 
 Framework::Framework()
 {
+	waitForEvents = false;
 	fullscreen = false;
 	exclusiveFullscreen = true;
 	useClosestDisplayMode = false;
@@ -461,6 +462,7 @@ bool Framework::shutdown()
 	quitRequested = false;
 	time = 0.f;
 
+	waitForEvents = false;
 	fullscreen = false;
 	exclusiveFullscreen = true;
 	useClosestDisplayMode = false;
@@ -524,8 +526,30 @@ void Framework::process()
 
 	SDL_Event e;
 	
-	while (SDL_PollEvent(&e))
+	bool hasWaited = false;
+
+	for (;;)
 	{
+		if (waitForEvents)
+		{
+			if (!hasWaited)
+			{
+				if (!SDL_WaitEvent(&e))
+					break;
+				hasWaited = true;
+			}
+			else
+			{
+				if (!SDL_PollEvent(&e))
+					break;
+			}
+		}
+		else
+		{
+			if (!SDL_PollEvent(&e))
+				break;
+		}
+
 		if (e.type == SDL_KEYDOWN)
 		{
 			bool isRepeat = false;

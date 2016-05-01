@@ -223,6 +223,7 @@ public:
 	float time;
 	float timeStep;
 	
+	bool waitForEvents;
 	bool fullscreen;
 	bool useClosestDisplayMode;
 	bool exclusiveFullscreen;

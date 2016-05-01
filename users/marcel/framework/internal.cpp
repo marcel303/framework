@@ -413,7 +413,7 @@ void TextureCache::reload()
 {
 	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
 	{
-		i->second.load(i->first.name.c_str(), i->first.gridSx, i->first.gridSy);
+		i->second.reload();
 	}
 }
 
@@ -832,7 +832,7 @@ void ShaderCache::reload()
 {
 	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
 	{
-		i->second.load(i->first.c_str(), i->second.vs.c_str(), i->second.ps.c_str());
+		i->second.reload();
 	}
 }
 
