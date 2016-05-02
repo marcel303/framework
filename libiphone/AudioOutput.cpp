@@ -194,7 +194,7 @@ void AudioOutput_OpenAL::Update(AudioStream* stream)
 
 				memset(samples, 0, sizeof(samples));
 
-				alBufferData(bufferId, mFormat, samples, maxSamples, mSampleRate);
+				alBufferData(bufferId, mFormat, samples, sizeof(samples), mSampleRate);
 				CheckError();
 
 				alSourceQueueBuffers(mSourceId, 1, &bufferId);

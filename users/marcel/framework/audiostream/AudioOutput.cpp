@@ -200,9 +200,9 @@ void AudioOutput_OpenAL::Update(AudioStream* stream)
 
 				// emit silence
 
-				memset(samples, 0, sizeof(samples));
+				memset(samples, 0, sizeof(AudioSample) * maxSamples);
 
-				alBufferData(bufferId, mFormat, samples, maxSamples, mSampleRate);
+				alBufferData(bufferId, mFormat, samples, sizeof(AudioSample) * maxSamples, mSampleRate);
 				CheckError();
 
 				alSourceQueueBuffers(mSourceId, 1, &bufferId);
