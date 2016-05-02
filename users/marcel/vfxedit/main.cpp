@@ -1,3 +1,4 @@
+#include "audiostream/AudioOutput.h"
 #include "audiostream/AudioStreamVorbis.h"
 #include "Calc.h"
 #include "framework.h"
@@ -13,17 +14,39 @@
 
 #define UIZONE_SY 32
 
-struct AudioFile
+struct AudioFile : public AudioStream
 {
 	std::string m_filename;
-	std::vector<float> m_pcmData;
+	std::vector<AudioSample> m_pcmData;
+	int m_sampleRate;
 	double m_duration;
+	int m_provideOffset;
+	SDL_mutex * m_mutex;
+
+	AudioFile()
+		: m_duration(0.0)
+		, m_provideOffset(0)
+		, m_mutex(nullptr)
+	{
+		m_mutex = SDL_CreateMutex();
+	}
+
+	~AudioFile()
+	{
+		SDL_DestroyMutex(m_mutex);
+		m_mutex = nullptr;
+	}
 
 	void reset()
 	{
-		m_filename.clear();
-		m_pcmData.clear();
-		m_duration = 0.0;
+		SDL_LockMutex(m_mutex);
+		{
+			m_filename.clear();
+			m_pcmData.clear();
+			m_duration = 0.0;
+			m_provideOffset = 0;
+		}
+		SDL_UnlockMutex(m_mutex);
 	}
 
 	void load(const char * filename)
@@ -32,7 +55,7 @@ struct AudioFile
 
 		try
 		{
-			m_filename = filename;
+			std::vector<AudioSample> pcmData;
 
 			AudioStream_Vorbis audioStream;
 
@@ -45,22 +68,24 @@ struct AudioFile
 			{
 				const int numSamples = audioStream.Provide(sampleBufferSize, sampleBuffer);
 
-				const int offset = m_pcmData.size();
+				const int offset = pcmData.size();
 
-				m_pcmData.resize(m_pcmData.size() + numSamples);
+				pcmData.resize(pcmData.size() + numSamples);
 
-				for (int i = 0; i < numSamples; ++i)
-				{
-					const float value = (sampleBuffer[i].channel[0] + sampleBuffer[i].channel[1]) / 2.f / (1 << 15);
-
-					m_pcmData[offset + i] = value;
-				}
+				memcpy(&pcmData[offset], sampleBuffer, sizeof(AudioSample) * numSamples);
 
 				if (numSamples != sampleBufferSize)
 					break;
 			}
 
-			m_duration = m_pcmData.size() / double(audioStream.mSampleRate);
+			SDL_LockMutex(m_mutex);
+			{
+				m_filename = filename;
+				m_pcmData = pcmData;
+				m_sampleRate = audioStream.mSampleRate;
+				m_duration = pcmData.size() / double(audioStream.mSampleRate);
+			}
+			SDL_UnlockMutex(m_mutex);
 		}
 		catch (std::exception & e)
 		{
@@ -68,6 +93,33 @@ struct AudioFile
 
 			reset();
 		}
+	}
+	
+	void seek(double time)
+	{
+		SDL_LockMutex(m_mutex);
+		{
+			m_provideOffset = time * m_sampleRate;
+		}
+		SDL_UnlockMutex(m_mutex);
+	}
+
+	virtual int Provide(int numSamples, AudioSample* __restrict buffer) override
+	{
+		SDL_LockMutex(m_mutex);
+		{
+			const int available = m_pcmData.size() - m_provideOffset;
+			numSamples = Calc::Clamp(available, 0, numSamples);
+
+			if (numSamples > 0)
+			{
+				memcpy(buffer, &m_pcmData[m_provideOffset], sizeof(AudioSample) * numSamples);
+				m_provideOffset += numSamples;
+			}
+		}
+		SDL_UnlockMutex(m_mutex);
+
+		return numSamples;
 	}
 };
 
@@ -77,17 +129,26 @@ static Surface * g_audioFileSurface = nullptr;
 
 //
 
+double g_playbackMarker = 0.0;
+
+//
+
 struct EventMarker
 {
+	EventMarker()
+		: time(0.0)
+		, eventId(0)
+	{
+	}
+
 	double time;
-	int id;
+	int eventId;
 };
 
 std::list<EventMarker> g_eventMarkers;
 
 EventMarker * g_selectedEventMarker = nullptr;
-
-int g_eventMarkerSelectionX = 0;
+double g_selectedEventMarkerTimeOffset = 0.0;
 
 const int markerSizeDraw = 3;
 const int markerSizeSelect = 30;
@@ -120,14 +181,27 @@ static void deleteEventMarker(EventMarker * eventMarker)
 
 //
 
+enum MouseInteract
+{
+	kMouseInteract_None,
+	kMouseInteract_MoveEventMarker,
+	kMouseInteract_MovePlaybackMarker
+};
+
+static MouseInteract g_mouseInteract = kMouseInteract_None;
+
+//
+
 int main(int argc, char * argv[])
 {
 	int scale = 2;
 
-	framework.waitForEvents = true;
+	//framework.waitForEvents = true;
 
 	if (framework.init(0, nullptr, GFX_SX * scale, GFX_SY * scale))
 	{
+		AudioOutput_OpenAL * audioOutput = nullptr;
+
 		bool stop = false;
 
 		while (!stop)
@@ -135,6 +209,11 @@ int main(int argc, char * argv[])
 			// process framework
 
 			framework.process();
+
+			if (audioOutput != nullptr)
+			{
+				audioOutput->Update(&g_audioFile);
+			}
 
 			const int mouseX = mouse.x / scale;
 			const int mouseY = mouse.y / scale;
@@ -151,19 +230,40 @@ int main(int argc, char * argv[])
 
 			if (keyboard.wentDown(SDLK_l))
 			{
+				if (audioOutput != nullptr)
+				{
+					audioOutput->Stop();
+					audioOutput->Shutdown();
+
+					delete audioOutput;
+					audioOutput = nullptr;
+				}
+
 				g_audioFile.load("tracks/heroes.ogg");
+
+				audioOutput = new AudioOutput_OpenAL();
+				audioOutput->Initialize(2, g_audioFile.m_sampleRate, 1 << 12); // todo : sample rate;
+				audioOutput->Play();
 
 				delete g_audioFileSurface;
 				g_audioFileSurface = nullptr;
+
+				g_eventMarkers.clear();
+				g_selectedEventMarker = nullptr;
+				g_selectedEventMarkerTimeOffset = 0.0;
+				g_playbackMarker = 0.0;
+				g_mouseInteract = kMouseInteract_None;
 			}
 
 			if (mouse.wentDown(BUTTON_LEFT))
 			{
-				EventMarker * selectedEventMarker = nullptr;
+				g_mouseInteract = kMouseInteract_None;
 
 				if (!g_audioFile.m_pcmData.empty()) // todo : this should be the box surrounding all markers
 				{
 					// hit test event markers
+
+					EventMarker * selectedEventMarker = nullptr;
 
 					int bestDistance = -1;
 
@@ -184,15 +284,31 @@ int main(int argc, char * argv[])
 						const double time = screenXToTime(mouseX);
 
 						EventMarker eventMarker;
-						eventMarker.id = 0;
+						eventMarker.eventId = 0;
 						eventMarker.time = time;
 
 						g_eventMarkers.push_back(eventMarker);
 						g_selectedEventMarker = &g_eventMarkers.back();
+						g_selectedEventMarkerTimeOffset = 0.0;
+
+						g_mouseInteract = kMouseInteract_MoveEventMarker;
 					}
 					else if (mouseY >= SELECT_Y - UIZONE_SY/2 && mouseY <= SELECT_Y + UIZONE_SY/2)
 					{
-						g_selectedEventMarker = selectedEventMarker;
+						if (selectedEventMarker == nullptr)
+						{
+							g_selectedEventMarker = nullptr;
+							g_selectedEventMarkerTimeOffset = 0.0;
+						}
+						else
+						{
+							const double time = screenXToTime(mouseX);
+
+							g_selectedEventMarker = selectedEventMarker;
+							g_selectedEventMarkerTimeOffset = selectedEventMarker->time - time;
+
+							g_mouseInteract = kMouseInteract_MoveEventMarker;
+						}
 					}
 					else if (mouseY >= DELETE_Y - UIZONE_SY/2 && mouseY <= DELETE_Y + UIZONE_SY/2)
 					{
@@ -202,13 +318,15 @@ int main(int argc, char * argv[])
 						}
 
 						g_selectedEventMarker = nullptr;
+						g_selectedEventMarkerTimeOffset = 0.0;
 					}
 					else
 					{
 						g_selectedEventMarker = nullptr;
+						g_selectedEventMarkerTimeOffset = 0.0;
+						
+						g_mouseInteract = kMouseInteract_MovePlaybackMarker;
 					}
-
-					g_eventMarkerSelectionX = mouseX;
 				}
 
 				if (g_selectedEventMarker == nullptr)
@@ -216,28 +334,67 @@ int main(int argc, char * argv[])
 					// todo : hit test stuff behind event markers
 				}
 			}
+			else if (mouse.wentUp(BUTTON_LEFT))
+			{
+				g_mouseInteract = kMouseInteract_None;
+			}
 
-			if (g_selectedEventMarker != nullptr)
+			if (g_mouseInteract == kMouseInteract_MoveEventMarker)
 			{
 				if (mouse.isDown(BUTTON_LEFT))
 				{
-					//if (mouseY >= SELECT_Y - UIZONE_SY/2 && mouseY <= SELECT_Y + UIZONE_SY/2)
+					if (g_selectedEventMarker != nullptr)
 					{
-						g_selectedEventMarker->time = screenXToTime(mouseX);
+						g_selectedEventMarker->time = screenXToTime(mouseX) + g_selectedEventMarkerTimeOffset;
 					}
 				}
+				else
+				{
+					g_mouseInteract = kMouseInteract_None;
+				}
+			}
+			else if (g_mouseInteract == kMouseInteract_MovePlaybackMarker)
+			{
+				if (mouse.isDown(BUTTON_LEFT))
+				{
+					const double time = screenXToTime(mouseX);
 
+					if (g_playbackMarker != time)
+					{
+						g_playbackMarker = time;
+
+						g_audioFile.seek(time);
+					}
+				}
+				else
+				{
+					g_mouseInteract = kMouseInteract_None;
+				}
+			}
+			else
+			{
+				//
+			}
+
+			if (g_selectedEventMarker != nullptr)
+			{
 				if (keyboard.wentDown(SDLK_LEFT) || keyboard.keyRepeat(SDLK_LEFT))
 				{
 					g_selectedEventMarker->time = Calc::Max(0.0, g_selectedEventMarker->time - 0.1);
 				}
-
-				if (keyboard.wentDown(SDLK_RIGHT) || keyboard.keyRepeat(SDLK_RIGHT))
+				else if (keyboard.wentDown(SDLK_RIGHT) || keyboard.keyRepeat(SDLK_RIGHT))
 				{
 					g_selectedEventMarker->time = Calc::Min(g_audioFile.m_duration, g_selectedEventMarker->time + 0.1);
 				}
-
-				if (keyboard.wentDown(SDLK_DELETE))
+				else if (keyboard.wentDown(SDLK_UP) || keyboard.keyRepeat(SDLK_UP))
+				{
+					g_selectedEventMarker->eventId = Calc::Min(50, g_selectedEventMarker->eventId + 1);
+				}
+				else if (keyboard.wentDown(SDLK_DOWN) || keyboard.keyRepeat(SDLK_DOWN))
+				{
+					g_selectedEventMarker->eventId = Calc::Max(0, g_selectedEventMarker->eventId - 1);
+				}
+				else if (keyboard.wentDown(SDLK_DELETE))
 				{
 					deleteEventMarker(g_selectedEventMarker);
 				}
@@ -269,20 +426,23 @@ int main(int argc, char * argv[])
 								const size_t i1 = (x + 0ull) * g_audioFile.m_pcmData.size() / GFX_SX;
 								const size_t i2 = (x + 1ull) * g_audioFile.m_pcmData.size() / GFX_SX;
 
-								Assert(i1 >= 0 && i1 < g_audioFile.m_pcmData.size());
+								Assert(i1 >= 0 && i1 <  g_audioFile.m_pcmData.size());
 								Assert(i2 >= 0 && i2 <= g_audioFile.m_pcmData.size());
 
-								float min = g_audioFile.m_pcmData[i1];
-								float max = g_audioFile.m_pcmData[i1];
+								short min = g_audioFile.m_pcmData[i1].channel[0];
+								short max = g_audioFile.m_pcmData[i1].channel[1];
 
 								for (size_t i = i1 + 1; i < i2; ++i)
 								{
-									min = Calc::Min(min, g_audioFile.m_pcmData[i]);
-									max = Calc::Max(max, g_audioFile.m_pcmData[i]);
+									min = Calc::Min(min, g_audioFile.m_pcmData[i].channel[0]);
+									min = Calc::Min(min, g_audioFile.m_pcmData[i].channel[1]);
+
+									max = Calc::Max(max, g_audioFile.m_pcmData[i].channel[0]);
+									max = Calc::Max(max, g_audioFile.m_pcmData[i].channel[1]);
 								}
 
-								gxVertex2f(x, Calc::Scale((min + 1.f) / 2.f, 0, GFX_SY));
-								gxVertex2f(x, Calc::Scale((max + 1.f) / 2.f, 0, GFX_SY));
+								gxVertex2f(x, Calc::Scale((min / double(1 << 15) + 1.f) / 2.f, 0, GFX_SY));
+								gxVertex2f(x, Calc::Scale((max / double(1 << 15) + 1.f) / 2.f, 0, GFX_SY));
 							}
 						}
 						gxEnd();
@@ -297,6 +457,17 @@ int main(int argc, char * argv[])
 					drawRect(0, 0, GFX_SX, GFX_SY);
 					gxSetTexture(0);
 				}
+
+				if (g_mouseInteract != kMouseInteract_None)
+				{
+					setColor(255, 255, 255, 31);
+					drawRect(0, 0, GFX_SX, GFX_SY);
+				}
+
+				// draw playback marker
+
+				setColor(colorWhite);
+				drawLine(timeToScreenX(g_playbackMarker), 0, timeToScreenX(g_playbackMarker), GFX_SY);
 
 				// draw UI zones
 
@@ -325,6 +496,8 @@ int main(int argc, char * argv[])
 
 				// draw event markers
 
+				int drawPosition = 0;
+
 				for (auto & eventMarker : g_eventMarkers)
 				{
 					setColor(&eventMarker == g_selectedEventMarker ? colorYellow : colorWhite);
@@ -333,6 +506,17 @@ int main(int argc, char * argv[])
 						0,
 						timeToScreenX(eventMarker.time) + markerSizeDraw,
 						GFX_SY);
+
+					setFont("calibri.ttf");
+					setColor(colorWhite);
+					drawText(
+						timeToScreenX(eventMarker.time) + markerSizeDraw + 5.f,
+						GFX_SY/4 + drawPosition * 20,
+						16,
+						+1, +1,
+						"eventId: %d", eventMarker.eventId);
+
+					drawPosition = (drawPosition + 1) % 8;
 				}
 			}
 			framework.endDraw();
