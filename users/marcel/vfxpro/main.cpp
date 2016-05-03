@@ -26,6 +26,10 @@
 
 #include "data/ShaderConstants.h"
 
+#if !defined(DEBUG)
+	#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
+#endif
+
 using namespace tinyxml2;
 
 #define DEMODATA 0
@@ -76,7 +80,7 @@ float virtualToScreenY(const float y)
 		+ defined in settings xml instead
 	+ add XML settings file
 	+ define scene XML representation
-	- discuss with Max what would be needed for life act
+	+ discuss with Max what would be needed for life act
 
 :: todo :: projector output
 
@@ -88,7 +92,7 @@ float virtualToScreenY(const float y)
 :: todo :: utility functions
 
 	+ add PCM capture
-	- add FFT calculation PCM data
+	+ add FFT calculation PCM data
 	+ add loudness calculation PCM data
 
 :: todo :: post processing and graphics quality
@@ -114,6 +118,8 @@ float virtualToScreenY(const float y)
 	- circle effect : draw concentric circles. increase in size depending on beat and audio volume
 
 	- laser line rendering
+
+	- UV displacement flow map thingy
 
 :: todo :: visuals tech 3D
 
