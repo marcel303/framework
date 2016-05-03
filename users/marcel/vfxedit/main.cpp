@@ -2,8 +2,17 @@
 #include "audiostream/AudioStreamVorbis.h"
 #include "Calc.h"
 #include "framework.h"
+#include "tinyxml2.h"
+#include "xml.h"
 #include <algorithm>
 #include <list>
+
+// todo : send OSC messages
+// todo : load confirmation
+// todo : combined PCM and sequence data load
+// todo : playback pause/resume
+
+using namespace tinyxml2;
 
 #define GFX_SX 1000
 #define GFX_SY 400
@@ -99,9 +108,22 @@ struct AudioFile : public AudioStream
 	{
 		SDL_LockMutex(m_mutex);
 		{
-			m_provideOffset = time * m_sampleRate;
+			m_provideOffset = Calc::Clamp(int(time * m_sampleRate), 0, m_pcmData.size());
 		}
 		SDL_UnlockMutex(m_mutex);
+	}
+
+	double getTime() const
+	{
+		double result;
+
+		SDL_LockMutex(m_mutex);
+		{
+			result = m_provideOffset / double(m_sampleRate);
+		}
+		SDL_UnlockMutex(m_mutex);
+
+		return result;
 	}
 
 	virtual int Provide(int numSamples, AudioSample* __restrict buffer) override
@@ -150,8 +172,8 @@ std::list<EventMarker> g_eventMarkers;
 EventMarker * g_selectedEventMarker = nullptr;
 double g_selectedEventMarkerTimeOffset = 0.0;
 
-const int markerSizeDraw = 3;
-const int markerSizeSelect = 30;
+const int markerSizeDraw = 1;
+const int markerSizeSelect = 50;
 
 static double timeToScreenX(double time)
 {
@@ -192,6 +214,84 @@ static MouseInteract g_mouseInteract = kMouseInteract_None;
 
 //
 
+void clearSequence()
+{
+	g_eventMarkers.clear();
+	g_selectedEventMarker = nullptr;
+	g_selectedEventMarkerTimeOffset = 0.0;
+	g_playbackMarker = 0.0;
+	g_mouseInteract = kMouseInteract_None;
+}
+
+bool saveSequence(const char * filename)
+{
+	bool result = true;
+
+	XMLPrinter p;
+
+	p.OpenElement("sequence");
+	{
+		for (EventMarker & eventMarker : g_eventMarkers)
+		{
+			p.OpenElement("marker");
+			{
+				p.PushAttribute("time", eventMarker.time);
+				p.PushAttribute("eventId", eventMarker.eventId);
+			}
+			p.CloseElement();
+		}
+	}
+	p.CloseElement();
+
+	FILE * f = fopen(filename, "wt");
+
+	if (f == nullptr)
+	{
+		result = false;
+	}
+	else
+	{
+		fprintf_s(f, "%s", p.CStr());
+		fclose(f);
+	}
+
+	return result;
+}
+
+bool loadSequence(const char * filename)
+{
+	bool result = true;
+
+	clearSequence();
+
+	XMLDocument xmlDoc;
+
+	if (xmlDoc.LoadFile(filename) != XML_NO_ERROR)
+	{
+		logError("failed to load %s", filename);
+
+		result = false;
+	}
+	else
+	{
+		for (XMLElement * sequenceXml = xmlDoc.FirstChildElement("sequence"); sequenceXml; sequenceXml = sequenceXml->NextSiblingElement("sequence"))
+		{
+			for (XMLElement * eventMarkerXml = sequenceXml->FirstChildElement("marker"); eventMarkerXml; eventMarkerXml = eventMarkerXml->NextSiblingElement("marker"))
+			{
+				EventMarker eventMarker;
+				eventMarker.time = floatAttrib(eventMarkerXml, "time", 0.f);
+				eventMarker.eventId = intAttrib(eventMarkerXml, "eventId", -1);
+
+				g_eventMarkers.push_back(eventMarker);
+			}
+		}
+	}
+
+	return result;
+}
+
+//
+
 int main(int argc, char * argv[])
 {
 	int scale = 2;
@@ -228,6 +328,12 @@ int main(int argc, char * argv[])
 			if (keyboard.wentDown(SDLK_ESCAPE))
 				stop = true;
 
+			if (keyboard.wentDown(SDLK_w))
+				saveSequence("heroes-seq.xml");
+
+			if (keyboard.wentDown(SDLK_r))
+				loadSequence("heroes-seq.xml");
+
 			if (keyboard.wentDown(SDLK_l))
 			{
 				if (audioOutput != nullptr)
@@ -242,17 +348,13 @@ int main(int argc, char * argv[])
 				g_audioFile.load("tracks/heroes.ogg");
 
 				audioOutput = new AudioOutput_OpenAL();
-				audioOutput->Initialize(2, g_audioFile.m_sampleRate, 1 << 12); // todo : sample rate;
+				audioOutput->Initialize(2, g_audioFile.m_sampleRate, 1 << 13); // todo : sample rate;
 				audioOutput->Play();
 
 				delete g_audioFileSurface;
 				g_audioFileSurface = nullptr;
 
-				g_eventMarkers.clear();
-				g_selectedEventMarker = nullptr;
-				g_selectedEventMarkerTimeOffset = 0.0;
-				g_playbackMarker = 0.0;
-				g_mouseInteract = kMouseInteract_None;
+				clearSequence();
 			}
 
 			if (mouse.wentDown(BUTTON_LEFT))
@@ -322,11 +424,15 @@ int main(int argc, char * argv[])
 					}
 					else
 					{
-						g_selectedEventMarker = nullptr;
 						g_selectedEventMarkerTimeOffset = 0.0;
-						
+
 						g_mouseInteract = kMouseInteract_MovePlaybackMarker;
 					}
+				}
+				else
+				{
+					Assert(g_selectedEventMarker == nullptr);
+					Assert(g_selectedEventMarkerTimeOffset == 0.0);
 				}
 
 				if (g_selectedEventMarker == nullptr)
@@ -465,6 +571,10 @@ int main(int argc, char * argv[])
 				}
 
 				// draw playback marker
+
+				const double playbackTime = g_audioFile.getTime();
+				setColor(255, 255, 255, 127);
+				drawLine(timeToScreenX(playbackTime), 0, timeToScreenX(playbackTime), GFX_SY);
 
 				setColor(colorWhite);
 				drawLine(timeToScreenX(g_playbackMarker), 0, timeToScreenX(g_playbackMarker), GFX_SY);
