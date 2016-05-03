@@ -243,6 +243,11 @@ void AudioOutput_OpenAL::Volume_set(float volume)
 	}
 }
 
+bool AudioOutput_OpenAL::IsPlaying_get()
+{
+	return mIsPlaying;
+}
+
 bool AudioOutput_OpenAL::HasFinished_get()
 {
 	return mHasFinished;
