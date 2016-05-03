@@ -2,6 +2,9 @@
 #include "audiostream/AudioStreamVorbis.h"
 #include "Calc.h"
 #include "framework.h"
+#include "ip/UdpSocket.h"
+#include "osc/OscOutboundPacketStream.h"
+#include "osc/OscPacketListener.h"
 #include "tinyxml2.h"
 #include "xml.h"
 #include <algorithm>
@@ -22,6 +25,10 @@ using namespace tinyxml2;
 #define DELETE_Y (GFX_SY/2 + 100)
 
 #define UIZONE_SY 32
+
+#define OSC_BUFFER_SIZE 1000
+#define OSC_DEST_ADDRESS "127.0.0.1"
+#define OSC_DEST_PORT 1121
 
 struct AudioFile : public AudioStream
 {
@@ -149,9 +156,11 @@ static AudioFile g_audioFile;
 
 static Surface * g_audioFileSurface = nullptr;
 
+static double g_lastAudioTime = 0.0;
+
 //
 
-double g_playbackMarker = 0.0;
+static double g_playbackMarker = 0.0;
 
 //
 
@@ -296,7 +305,11 @@ int main(int argc, char * argv[])
 {
 	int scale = 2;
 
+	UdpTransmitSocket transmitSocket(IpEndpointName(OSC_DEST_ADDRESS, OSC_DEST_PORT));
+
 	//framework.waitForEvents = true;
+
+	framework.windowY = 100;
 
 	if (framework.init(0, nullptr, GFX_SX * scale, GFX_SY * scale))
 	{
@@ -323,6 +336,33 @@ int main(int argc, char * argv[])
 			if (framework.quitRequested)
 				stop = true;
 
+			double audioTime1 = g_lastAudioTime;
+			double audioTime2 = g_audioFile.getTime();
+
+			for (EventMarker & eventMarker : g_eventMarkers)
+			{
+				if (eventMarker.time >= audioTime1 && eventMarker.time < audioTime2)
+				{
+					logDebug("trigger event %d", eventMarker.eventId);
+
+					char buffer[OSC_BUFFER_SIZE];
+
+					osc::OutboundPacketStream p(buffer, OSC_BUFFER_SIZE);
+
+					p
+						<< osc::BeginBundleImmediate
+						<< osc::BeginMessage("/event")
+						<< ""
+						<< (osc::int32)eventMarker.eventId
+						<< osc::EndMessage
+						<< osc::EndBundle;
+
+					transmitSocket.Send(p.Data(), p.Size());
+				}
+			}
+
+			g_lastAudioTime = audioTime2;
+
 			// process input
 
 			if (keyboard.wentDown(SDLK_ESCAPE))
@@ -343,6 +383,8 @@ int main(int argc, char * argv[])
 
 					delete audioOutput;
 					audioOutput = nullptr;
+
+					g_lastAudioTime = 0.0;
 				}
 
 				g_audioFile.load("tracks/heroes.ogg");
@@ -470,6 +512,7 @@ int main(int argc, char * argv[])
 						g_playbackMarker = time;
 
 						g_audioFile.seek(time);
+						g_lastAudioTime = time;
 					}
 				}
 				else
