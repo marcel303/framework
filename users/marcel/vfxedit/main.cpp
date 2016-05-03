@@ -167,13 +167,28 @@ static double g_lastAudioTime = 0.0;
 static SDL_Thread * g_audioThread = nullptr;
 static volatile bool g_stopAudioThread = false;
 static AudioOutput_OpenAL * g_audioOutput = nullptr;
+static bool g_wantsAudioPlayback = false;
+static uint32_t g_audioUpdateEvent = -1;
 
 static int SDLCALL ExecuteAudioThread(void * arg)
 {
 	while (!g_stopAudioThread)
 	{
+		if (g_wantsAudioPlayback && !g_audioOutput->IsPlaying_get())
+			g_audioOutput->Play();
+		if (!g_wantsAudioPlayback && g_audioOutput->IsPlaying_get())
+			g_audioOutput->Stop();
+
 		g_audioOutput->Update(&g_audioFile);
 		SDL_Delay(10);
+
+		if (g_audioOutput->IsPlaying_get())
+		{
+			SDL_Event e;
+			memset(&e, 0, sizeof (e));
+			e.type = g_audioUpdateEvent;
+			SDL_PushEvent(&e);
+		}
 	}
 
 	return 0;
@@ -262,6 +277,8 @@ void clearAudio()
 		g_audioOutput = nullptr;
 	}
 
+	g_wantsAudioPlayback = false;
+
 	g_lastAudioTime = 0.0;
 
 	delete g_audioFileSurface;
@@ -275,8 +292,7 @@ void loadAudio(const char * filename)
 	Assert(g_audioOutput == nullptr);
 	Assert(g_lastAudioTime == 0.0);
 	g_audioOutput = new AudioOutput_OpenAL();
-	g_audioOutput->Initialize(2, g_audioFile.m_sampleRate, 1 << 13); // todo : sample rate;
-	g_audioOutput->Play();
+	g_audioOutput->Initialize(2, g_audioFile.m_sampleRate, 1 << 12); // todo : sample rate;
 
 	Assert(g_audioThread == nullptr);
 	Assert(!g_stopAudioThread);
@@ -369,12 +385,14 @@ int main(int argc, char * argv[])
 
 	UdpTransmitSocket transmitSocket(IpEndpointName(OSC_DEST_ADDRESS, OSC_DEST_PORT));
 
-	//framework.waitForEvents = true;
+	framework.waitForEvents = true;
 
 	framework.windowY = 100;
 
 	if (framework.init(0, nullptr, GFX_SX * scale, GFX_SY * scale))
 	{
+		g_audioUpdateEvent = SDL_RegisterEvents(1);
+
 		bool stop = false;
 
 		while (!stop)
@@ -438,6 +456,11 @@ int main(int argc, char * argv[])
 				//
 
 				loadAudio("tracks/heroes.ogg");
+			}
+
+			if (keyboard.wentDown(SDLK_SPACE))
+			{
+				g_wantsAudioPlayback = !g_wantsAudioPlayback;
 			}
 
 			if (mouse.wentDown(BUTTON_LEFT))
