@@ -164,6 +164,23 @@ static double g_lastAudioTime = 0.0;
 
 //
 
+static SDL_Thread * g_audioThread = nullptr;
+static volatile bool g_stopAudioThread = false;
+static AudioOutput_OpenAL * g_audioOutput = nullptr;
+
+static int SDLCALL ExecuteAudioThread(void * arg)
+{
+	while (!g_stopAudioThread)
+	{
+		g_audioOutput->Update(&g_audioFile);
+		SDL_Delay(10);
+	}
+
+	return 0;
+}
+
+//
+
 static double g_playbackMarker = 0.0;
 
 //
@@ -224,6 +241,47 @@ enum MouseInteract
 };
 
 static MouseInteract g_mouseInteract = kMouseInteract_None;
+
+//
+
+void clearAudio()
+{
+	if (g_audioThread != nullptr)
+	{
+		g_stopAudioThread = true;
+		SDL_WaitThread(g_audioThread, nullptr);
+		g_audioThread = nullptr;
+		g_stopAudioThread = false;
+	}
+
+	if (g_audioOutput != nullptr)
+	{
+		g_audioOutput->Stop();
+		g_audioOutput->Shutdown();
+		delete g_audioOutput;
+		g_audioOutput = nullptr;
+	}
+
+	g_lastAudioTime = 0.0;
+
+	delete g_audioFileSurface;
+	g_audioFileSurface = nullptr;
+}
+
+void loadAudio(const char * filename)
+{
+	g_audioFile.load(filename);
+
+	Assert(g_audioOutput == nullptr);
+	Assert(g_lastAudioTime == 0.0);
+	g_audioOutput = new AudioOutput_OpenAL();
+	g_audioOutput->Initialize(2, g_audioFile.m_sampleRate, 1 << 13); // todo : sample rate;
+	g_audioOutput->Play();
+
+	Assert(g_audioThread == nullptr);
+	Assert(!g_stopAudioThread);
+	g_audioThread = SDL_CreateThread(ExecuteAudioThread, "AudioThread", nullptr);
+}
 
 //
 
@@ -317,8 +375,6 @@ int main(int argc, char * argv[])
 
 	if (framework.init(0, nullptr, GFX_SX * scale, GFX_SY * scale))
 	{
-		AudioOutput_OpenAL * audioOutput = nullptr;
-
 		bool stop = false;
 
 		while (!stop)
@@ -326,11 +382,6 @@ int main(int argc, char * argv[])
 			// process framework
 
 			framework.process();
-
-			if (audioOutput != nullptr)
-			{
-				audioOutput->Update(&g_audioFile);
-			}
 
 			const int mouseX = mouse.x / scale;
 			const int mouseY = mouse.y / scale;
@@ -380,27 +431,13 @@ int main(int argc, char * argv[])
 
 			if (keyboard.wentDown(SDLK_l))
 			{
-				if (audioOutput != nullptr)
-				{
-					audioOutput->Stop();
-					audioOutput->Shutdown();
-
-					delete audioOutput;
-					audioOutput = nullptr;
-
-					g_lastAudioTime = 0.0;
-				}
-
-				g_audioFile.load("tracks/heroes.ogg");
-
-				audioOutput = new AudioOutput_OpenAL();
-				audioOutput->Initialize(2, g_audioFile.m_sampleRate, 1 << 13); // todo : sample rate;
-				audioOutput->Play();
-
-				delete g_audioFileSurface;
-				g_audioFileSurface = nullptr;
+				clearAudio();
 
 				clearSequence();
+
+				//
+
+				loadAudio("tracks/heroes.ogg");
 			}
 
 			if (mouse.wentDown(BUTTON_LEFT))
@@ -678,6 +715,10 @@ int main(int argc, char * argv[])
 			}
 			framework.endDraw();
 		}
+
+		clearAudio();
+
+		clearSequence();
 
 		framework.shutdown();
 	}
