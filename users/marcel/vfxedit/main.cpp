@@ -1,10 +1,12 @@
 #include "audiostream/AudioOutput.h"
 #include "audiostream/AudioStreamVorbis.h"
 #include "Calc.h"
+#include "FileStream.h"
 #include "framework.h"
 #include "ip/UdpSocket.h"
 #include "osc/OscOutboundPacketStream.h"
 #include "osc/OscPacketListener.h"
+#include "Path.h"
 #include "tinyxml2.h"
 #include "xml.h"
 #include <algorithm>
@@ -14,10 +16,10 @@
 	#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 #endif
 
-// todo : send OSC messages
-// todo : load confirmation
-// todo : combined PCM and sequence data load
-// todo : playback pause/resume
+// todo : + send OSC messages
+// todo : - load confirmation
+// todo : - combined PCM and sequence data load
+// todo : + playback pause/resume
 
 using namespace tinyxml2;
 
@@ -156,7 +158,7 @@ struct AudioFile : public AudioStream
 	}
 };
 
-static AudioFile g_audioFile;
+static AudioFile * g_audioFile = nullptr;
 
 static Surface * g_audioFileSurface = nullptr;
 
@@ -179,7 +181,7 @@ static int SDLCALL ExecuteAudioThread(void * arg)
 		if (!g_wantsAudioPlayback && g_audioOutput->IsPlaying_get())
 			g_audioOutput->Stop();
 
-		g_audioOutput->Update(&g_audioFile);
+		g_audioOutput->Update(g_audioFile);
 		SDL_Delay(10);
 
 		if (g_audioOutput->IsPlaying_get())
@@ -208,6 +210,11 @@ struct EventMarker
 	{
 	}
 
+	bool operator<(const EventMarker & other) const
+	{
+		return time < other.time;
+	}
+
 	double time;
 	int eventId;
 };
@@ -222,12 +229,18 @@ const int markerSizeSelect = 50;
 
 static double timeToScreenX(double time)
 {
-	return time / g_audioFile.m_duration * GFX_SX;
+	if (g_audioFile)
+		return time / g_audioFile->m_duration * GFX_SX;
+	else
+		return 0.0;
 }
 
 static double screenXToTime(double x)
 {
-	return x / double(GFX_SX) * g_audioFile.m_duration;
+	if (g_audioFile)
+		return x / double(GFX_SX) * g_audioFile->m_duration;
+	else
+		return 0.0;
 }
 
 static void deleteEventMarker(EventMarker * eventMarker)
@@ -248,11 +261,30 @@ static void deleteEventMarker(EventMarker * eventMarker)
 
 //
 
+struct CommentRegion
+{
+	CommentRegion()
+		: time1(0.0)
+		, time2(0.0)
+	{
+	}
+
+	double time1;
+	double time2;
+};
+
+std::list<CommentRegion> g_commentRegions;
+
+CommentRegion * g_selectedCommentRegion = nullptr;
+
+//
+
 enum MouseInteract
 {
 	kMouseInteract_None,
 	kMouseInteract_MoveEventMarker,
-	kMouseInteract_MovePlaybackMarker
+	kMouseInteract_MovePlaybackMarker,
+	kMouseInteract_ModifyCommentRegion
 };
 
 static MouseInteract g_mouseInteract = kMouseInteract_None;
@@ -281,18 +313,29 @@ void clearAudio()
 
 	g_lastAudioTime = 0.0;
 
-	delete g_audioFileSurface;
-	g_audioFileSurface = nullptr;
+	if (g_audioFile != nullptr)
+	{
+		delete g_audioFile;
+		g_audioFile = nullptr;
+	}
+
+	if (g_audioFileSurface != nullptr)
+	{
+		delete g_audioFileSurface;
+		g_audioFileSurface = nullptr;
+	}
 }
 
 void loadAudio(const char * filename)
 {
-	g_audioFile.load(filename);
+	Assert(g_audioFile == nullptr);
+	g_audioFile = new AudioFile();
+	g_audioFile->load(filename);
 
 	Assert(g_audioOutput == nullptr);
 	Assert(g_lastAudioTime == 0.0);
 	g_audioOutput = new AudioOutput_OpenAL();
-	g_audioOutput->Initialize(2, g_audioFile.m_sampleRate, 1 << 12); // todo : sample rate;
+	g_audioOutput->Initialize(2, g_audioFile->m_sampleRate, 1 << 12); // todo : sample rate;
 
 	Assert(g_audioThread == nullptr);
 	Assert(!g_stopAudioThread);
@@ -306,6 +349,8 @@ void clearSequence()
 	g_eventMarkers.clear();
 	g_selectedEventMarker = nullptr;
 	g_selectedEventMarkerTimeOffset = 0.0;
+	g_commentRegions.clear();
+	g_selectedCommentRegion = nullptr;
 	g_playbackMarker = 0.0;
 	g_mouseInteract = kMouseInteract_None;
 }
@@ -409,32 +454,35 @@ int main(int argc, char * argv[])
 			if (framework.quitRequested)
 				stop = true;
 
-			double audioTime1 = g_lastAudioTime;
-			double audioTime2 = g_audioFile.getTime();
-
-			for (EventMarker & eventMarker : g_eventMarkers)
+			if (g_audioFile != nullptr)
 			{
-				if (eventMarker.time >= audioTime1 && eventMarker.time < audioTime2)
+				double audioTime1 = g_lastAudioTime;
+				double audioTime2 = g_audioFile->getTime();
+
+				for (EventMarker & eventMarker : g_eventMarkers)
 				{
-					logDebug("trigger event %d", eventMarker.eventId);
+					if (eventMarker.time >= audioTime1 && eventMarker.time < audioTime2)
+					{
+						logDebug("trigger event %d", eventMarker.eventId);
 
-					char buffer[OSC_BUFFER_SIZE];
+						char buffer[OSC_BUFFER_SIZE];
 
-					osc::OutboundPacketStream p(buffer, OSC_BUFFER_SIZE);
+						osc::OutboundPacketStream p(buffer, OSC_BUFFER_SIZE);
 
-					p
-						<< osc::BeginBundleImmediate
-						<< osc::BeginMessage("/event")
-						<< ""
-						<< (osc::int32)eventMarker.eventId
-						<< osc::EndMessage
-						<< osc::EndBundle;
+						p
+							<< osc::BeginBundleImmediate
+							<< osc::BeginMessage("/event")
+							<< ""
+							<< (osc::int32)eventMarker.eventId
+							<< osc::EndMessage
+							<< osc::EndBundle;
 
-					transmitSocket.Send(p.Data(), p.Size());
+						transmitSocket.Send(p.Data(), p.Size());
+					}
 				}
-			}
 
-			g_lastAudioTime = audioTime2;
+				g_lastAudioTime = audioTime2;
+			}
 
 			// process input
 
@@ -442,32 +490,108 @@ int main(int argc, char * argv[])
 				stop = true;
 
 			if (keyboard.wentDown(SDLK_w))
-				saveSequence("heroes-seq.xml");
+			{
+				if (g_audioFile != nullptr)
+				{
+					const std::string sequenceFilename = Path::ReplaceExtension(g_audioFile->m_filename, "xml");
+
+					saveSequence(sequenceFilename.c_str());
+				}
+			}
 
 			if (keyboard.wentDown(SDLK_r))
-				loadSequence("heroes-seq.xml");
+				loadSequence("tracks/heroes.xml");
 
 			if (keyboard.wentDown(SDLK_l))
 			{
-				clearAudio();
+				auto files = listFiles("tracks", false);
+				for (auto i = files.begin(); i != files.end(); )
+				{
+					if (Path::GetExtension(*i) != "ogg")
+						i = files.erase(i);
+					else
+						++i;
+				}
 
-				clearSequence();
+				bool done = false;
+				int selection = 0;
+				bool accept = false;
 
-				//
+				if (files.empty())
+					done = true;
 
-				loadAudio("tracks/heroes.ogg");
+				while (!done)
+				{
+					framework.beginDraw(0, 0, 0, 0);
+					{
+						gxScalef(scale, scale, 1);
+
+						for (size_t i = 0; i < files.size(); ++i)
+						{
+							setFont("calibri.ttf");
+							if (i == selection)
+								setColor(colorYellow);
+							else
+								setColor(colorWhite);
+							drawText(GFX_SX/2, 40 + i * 20, 16, 0, 0, "%s", files[i].c_str());
+						}
+					}
+					framework.endDraw();
+
+					framework.process();
+
+					if (keyboard.wentDown(SDLK_UP))
+						selection = (selection - 1 + files.size()) % files.size();
+					if (keyboard.wentDown(SDLK_DOWN))
+						selection = (selection + 1 + files.size()) % files.size();
+					if (keyboard.wentDown(SDLK_RETURN))
+					{
+						done = true;
+						accept = true;
+					}
+					if (keyboard.wentDown(SDLK_ESCAPE))
+						done = true;
+				}
+
+				if (accept)
+				{
+					clearAudio();
+
+					clearSequence();
+
+					//
+
+					loadAudio(files[selection].c_str());
+
+					//
+
+					const std::string sequenceFilename = Path::ReplaceExtension(files[selection], "xml");
+
+					if (FileStream::Exists(sequenceFilename.c_str()))
+					{
+						loadSequence(sequenceFilename.c_str());
+					}
+				}
 			}
 
-			if (keyboard.wentDown(SDLK_SPACE))
+			if (keyboard.wentDown(SDLK_SPACE) && g_audioFile != nullptr)
 			{
-				g_wantsAudioPlayback = !g_wantsAudioPlayback;
+				if (keyboard.isDown(SDLK_LSHIFT))
+				{
+					g_audioFile->seek(g_playbackMarker);
+					g_wantsAudioPlayback = true;
+				}
+				else
+				{
+					g_wantsAudioPlayback = !g_wantsAudioPlayback;
+				}
 			}
 
 			if (mouse.wentDown(BUTTON_LEFT))
 			{
 				g_mouseInteract = kMouseInteract_None;
 
-				if (!g_audioFile.m_pcmData.empty()) // todo : this should be the box surrounding all markers
+				if (g_audioFile != nullptr)
 				{
 					// hit test event markers
 
@@ -487,7 +611,20 @@ int main(int argc, char * argv[])
 						}
 					}
 
-					if (mouseY >= INSERT_Y - UIZONE_SY/2 && mouseY <= INSERT_Y + UIZONE_SY/2)
+					if (mouseY >= 0 && mouseY < 100)
+					{
+						const double time = screenXToTime(mouseX);
+
+						CommentRegion region;
+						region.time1 = time - 5.0;
+						region.time2 = time + 5.0;
+
+						g_commentRegions.push_back(region);
+						g_selectedCommentRegion = &g_commentRegions.back();
+
+						g_mouseInteract = kMouseInteract_ModifyCommentRegion;
+					}
+					else if (mouseY >= INSERT_Y - UIZONE_SY/2 && mouseY <= INSERT_Y + UIZONE_SY/2)
 					{
 						const double time = screenXToTime(mouseX);
 
@@ -567,7 +704,9 @@ int main(int argc, char * argv[])
 			}
 			else if (g_mouseInteract == kMouseInteract_MovePlaybackMarker)
 			{
-				if (mouse.isDown(BUTTON_LEFT))
+				Assert(g_audioFile != nullptr);
+
+				if (mouse.isDown(BUTTON_LEFT) && g_audioFile != nullptr)
 				{
 					const double time = screenXToTime(mouseX);
 
@@ -575,7 +714,7 @@ int main(int argc, char * argv[])
 					{
 						g_playbackMarker = time;
 
-						g_audioFile.seek(time);
+						g_audioFile->seek(time);
 						g_lastAudioTime = time;
 					}
 				}
@@ -597,7 +736,10 @@ int main(int argc, char * argv[])
 				}
 				else if (keyboard.wentDown(SDLK_RIGHT) || keyboard.keyRepeat(SDLK_RIGHT))
 				{
-					g_selectedEventMarker->time = Calc::Min(g_audioFile.m_duration, g_selectedEventMarker->time + 0.1);
+					if (g_audioFile != nullptr)
+					{
+						g_selectedEventMarker->time = Calc::Min(g_audioFile->m_duration, g_selectedEventMarker->time + 0.1);
+					}
 				}
 				else if (keyboard.wentDown(SDLK_UP) || keyboard.keyRepeat(SDLK_UP))
 				{
@@ -621,7 +763,7 @@ int main(int argc, char * argv[])
 
 				// draw PCM data
 
-				if (g_audioFileSurface == nullptr && !g_audioFile.m_pcmData.empty())
+				if (g_audioFileSurface == nullptr && g_audioFile != nullptr && !g_audioFile->m_pcmData.empty())
 				{
 					g_audioFileSurface = new Surface(GFX_SX, GFX_SY);
 
@@ -636,22 +778,22 @@ int main(int argc, char * argv[])
 						{
 							for (int x = 0; x < GFX_SX; ++x)
 							{
-								const size_t i1 = (x + 0ull) * g_audioFile.m_pcmData.size() / GFX_SX;
-								const size_t i2 = (x + 1ull) * g_audioFile.m_pcmData.size() / GFX_SX;
+								const size_t i1 = (x + 0ull) * g_audioFile->m_pcmData.size() / GFX_SX;
+								const size_t i2 = (x + 1ull) * g_audioFile->m_pcmData.size() / GFX_SX;
 
-								Assert(i1 >= 0 && i1 <  g_audioFile.m_pcmData.size());
-								Assert(i2 >= 0 && i2 <= g_audioFile.m_pcmData.size());
+								Assert(i1 >= 0 && i1 <  g_audioFile->m_pcmData.size());
+								Assert(i2 >= 0 && i2 <= g_audioFile->m_pcmData.size());
 
-								short min = g_audioFile.m_pcmData[i1].channel[0];
-								short max = g_audioFile.m_pcmData[i1].channel[1];
+								short min = g_audioFile->m_pcmData[i1].channel[0];
+								short max = g_audioFile->m_pcmData[i1].channel[1];
 
 								for (size_t i = i1 + 1; i < i2; ++i)
 								{
-									min = Calc::Min(min, g_audioFile.m_pcmData[i].channel[0]);
-									min = Calc::Min(min, g_audioFile.m_pcmData[i].channel[1]);
+									min = Calc::Min(min, g_audioFile->m_pcmData[i].channel[0]);
+									min = Calc::Min(min, g_audioFile->m_pcmData[i].channel[1]);
 
-									max = Calc::Max(max, g_audioFile.m_pcmData[i].channel[0]);
-									max = Calc::Max(max, g_audioFile.m_pcmData[i].channel[1]);
+									max = Calc::Max(max, g_audioFile->m_pcmData[i].channel[0]);
+									max = Calc::Max(max, g_audioFile->m_pcmData[i].channel[1]);
 								}
 
 								gxVertex2f(x, Calc::Scale((min / double(1 << 15) + 1.f) / 2.f, 0, GFX_SY));
@@ -677,14 +819,39 @@ int main(int argc, char * argv[])
 					drawRect(0, 0, GFX_SX, GFX_SY);
 				}
 
+				// draw comment regions
+
+				if (g_audioFile != nullptr)
+				{
+					setBlend(BLEND_ADD);
+					for (const auto & commentRegion : g_commentRegions)
+					{
+						const double hue = commentRegion.time1 * 1.5 / g_audioFile->m_duration;
+						const Color color = Color::fromHSL(hue, 1.0, 0.5);
+						setColorf(color.r, color.g, color.b, .6f);
+
+						const double x1 = timeToScreenX(commentRegion.time1);
+						const double x2 = timeToScreenX(commentRegion.time2);
+						drawRect(x1, 0.0, x2, 25);
+
+						//const Color borderColor = Color::fromHSL(hue, 0.5, 0.5);
+						//setColorf(borderColor.r, borderColor.g, borderColor.b, .4f);
+						//drawRectLine(x1, 0, x2, GFX_SY);
+					}
+					setBlend(BLEND_ALPHA);
+				}
+
 				// draw playback marker
 
-				const double playbackTime = g_audioFile.getTime();
-				setColor(255, 255, 255, 127);
-				drawLine(timeToScreenX(playbackTime), 0, timeToScreenX(playbackTime), GFX_SY);
+				if (g_audioFile != nullptr)
+				{
+					const double playbackTime = g_audioFile->getTime();
+					setColor(255, 255, 255, 127);
+					drawLine(timeToScreenX(playbackTime), 0, timeToScreenX(playbackTime), GFX_SY);
 
-				setColor(colorWhite);
-				drawLine(timeToScreenX(g_playbackMarker), 0, timeToScreenX(g_playbackMarker), GFX_SY);
+					setColor(255, 255, 255, 191);
+					drawLine(timeToScreenX(g_playbackMarker), 0, timeToScreenX(g_playbackMarker), GFX_SY);
+				}
 
 				// draw UI zones
 
@@ -694,19 +861,16 @@ int main(int argc, char * argv[])
 
 					setFont("calibri.ttf");
 
-					setColor(255, 255, 0, alpha);
-					drawRect(0, SELECT_Y - UIZONE_SY/2, GFX_SX, SELECT_Y + UIZONE_SY/2);
-					//setColor(colorWhite);
-					drawText(GFX_SX / 2, SELECT_Y, 16, 0, 0, "<-- select -->");
-
 					setColor(0, 255, 0, alpha);
 					drawRect(0, INSERT_Y - UIZONE_SY/2, GFX_SX, INSERT_Y + UIZONE_SY/2);
-					//setColor(colorWhite);
 					drawText(GFX_SX / 2, INSERT_Y, 16, 0, 0, "<-- insert -->");
+
+					setColor(255, 255, 0, alpha);
+					drawRect(0, SELECT_Y - UIZONE_SY/2, GFX_SX, SELECT_Y + UIZONE_SY/2);
+					drawText(GFX_SX / 2, SELECT_Y, 16, 0, 0, "<-- select -->");
 
 					setColor(255, 0, 0, alpha);
 					drawRect(0, DELETE_Y - UIZONE_SY/2, GFX_SX, DELETE_Y + UIZONE_SY/2);
-					//setColor(colorWhite);
 					drawText(GFX_SX / 2, DELETE_Y, 16, 0, 0, "<-- delete -->");
 				}
 				setBlend(BLEND_ALPHA);
@@ -715,25 +879,28 @@ int main(int argc, char * argv[])
 
 				int drawPosition = 0;
 
+				g_eventMarkers.sort();
+
 				for (auto & eventMarker : g_eventMarkers)
 				{
-					setColor(&eventMarker == g_selectedEventMarker ? colorYellow : colorWhite);
-					drawRect(
-						timeToScreenX(eventMarker.time) - markerSizeDraw,
-						0,
-						timeToScreenX(eventMarker.time) + markerSizeDraw,
-						GFX_SY);
+					if (&eventMarker == g_selectedEventMarker)
+						setColor(255, 255, 0, 191);
+					else
+						setColor(255, 255, 255, 191);
+
+					const int x = timeToScreenX(eventMarker.time);
+					drawRect(x - markerSizeDraw, GFX_SY*0/11, x + markerSizeDraw, GFX_SY* 5/11);
+					drawRect(x - markerSizeDraw, GFX_SY*6/11, x + markerSizeDraw, GFX_SY*11/11);
 
 					setFont("calibri.ttf");
-					setColor(colorWhite);
 					drawText(
 						timeToScreenX(eventMarker.time) + markerSizeDraw + 5.f,
 						GFX_SY/4 + drawPosition * 20,
 						16,
 						+1, +1,
-						"eventId: %d", eventMarker.eventId);
+						"# %d", eventMarker.eventId);
 
-					drawPosition = (drawPosition + 1) % 8;
+					drawPosition = (drawPosition + 1) % 10;
 				}
 			}
 			framework.endDraw();
