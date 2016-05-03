@@ -10,6 +10,10 @@
 #include <algorithm>
 #include <list>
 
+#if !defined(DEBUG)
+	#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
+#endif
+
 // todo : send OSC messages
 // todo : load confirmation
 // todo : combined PCM and sequence data load
@@ -17,8 +21,8 @@
 
 using namespace tinyxml2;
 
-#define GFX_SX 1000
-#define GFX_SY 400
+#define GFX_SX 1700
+#define GFX_SY 300
 
 #define INSERT_Y (GFX_SY/2 - 100)
 #define SELECT_Y (GFX_SY/2)
