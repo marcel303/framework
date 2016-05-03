@@ -50,10 +50,12 @@ SceneEffect::SceneEffect()
 
 SceneEffect::~SceneEffect()
 {
-	m_strength = 0.f;
+	m_name.clear();
 
 	delete m_effect;
 	m_effect = nullptr;
+
+	m_strength = 0.f;
 }
 
 bool SceneEffect::load(const XMLElement * xmlEffect)
@@ -214,6 +216,8 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 		if (!enabled)
 		{
 			delete effect;
+			effect = nullptr;
+
 			return false;
 		}
 
@@ -250,6 +254,7 @@ SceneLayer::~SceneLayer()
 		SceneEffect * effect = *i;
 
 		delete effect;
+		effect = nullptr;
 	}
 
 	m_effects.clear();
@@ -505,16 +510,21 @@ bool SceneAction::load(const XMLElement * xmlAction)
 //
 
 SceneEvent::SceneEvent()
+	: m_oscId(-1)
 {
 }
 
 SceneEvent::~SceneEvent()
 {
+	m_name.clear();
+	m_oscId = -1;
+
 	for (auto i = m_actions.begin(); i != m_actions.end(); ++i)
 	{
 		SceneAction * action = *i;
 
 		delete action;
+		action = nullptr;
 	}
 
 	m_actions.clear();
@@ -631,6 +641,7 @@ void SceneEvent::execute(Scene & scene)
 void SceneEvent::load(const XMLElement * xmlEvent)
 {
 	m_name = stringAttrib(xmlEvent, "name", "");
+	m_oscId = intAttrib(xmlEvent, "osc_id", -1);
 
 	for (const XMLElement * xmlAction = xmlEvent->FirstChildElement(); xmlAction; xmlAction = xmlAction->NextSiblingElement())
 	{
@@ -639,6 +650,7 @@ void SceneEvent::load(const XMLElement * xmlEvent)
 		if (!action->load(xmlAction))
 		{
 			delete action;
+			action = nullptr;
 		}
 		else
 		{
@@ -832,7 +844,22 @@ void Scene::triggerEvent(const char * name)
 		{
 			event->execute(*this);
 
-			addDebugText(name);
+			addDebugText(event->m_name.c_str());
+		}
+	}
+}
+
+void Scene::triggerEventByOscId(int oscId)
+{
+	for (auto i = m_events.begin(); i != m_events.end(); ++i)
+	{
+		SceneEvent * event = *i;
+
+		if (event->m_oscId == oscId)
+		{
+			event->execute(*this);
+
+			addDebugText(event->m_name.c_str());
 		}
 	}
 }
@@ -978,6 +1005,7 @@ void Scene::clear()
 		SceneLayer * layer = *i;
 
 		delete layer;
+		layer = nullptr;
 	}
 
 	m_layers.clear();
@@ -989,6 +1017,7 @@ void Scene::clear()
 		SceneEvent * event = *i;
 
 		delete event;
+		event = nullptr;
 	}
 
 	m_events.clear();

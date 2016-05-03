@@ -167,6 +167,8 @@ enum OscMessageType
 	kOscMessageType_None,
 	// scene :: constantly reinforced
 	kOscMessageType_SetScene,
+	// events
+	kOscMessageType_Event,
 	// visual effects
 	kOscMessageType_Box3D,
 	kOscMessageType_Sprite,
@@ -203,26 +205,43 @@ protected:
 
 			OscMessage message;
 
-			if (strcmp(m.AddressPattern(), "/box") == 0)
+			if (strcmp(m.AddressPattern(), "/event") == 0)
 			{
-				// width, angle1, angle2
-				message.type = kOscMessageType_Sprite;
+				// NULL, eventId
 				const char * str;
-				args >> str >> message.param[0] >> message.param[1] >> message.param[2];
+				osc::int32 eventId;
+				args >> str >> eventId;
+				
+				message.type = kOscMessageType_Event;
+				message.param[0] = eventId;
+			}
+			else if (strcmp(m.AddressPattern(), "/box") == 0)
+			{
+				// NULL, width, angle1, angle2
+				const char * str;
+				osc::int32 width;
+				osc::int32 angle1;
+				osc::int32 angle2;
+				
+				args >> str >> width >> angle1 >> angle2;
+				
+				message.type = kOscMessageType_Sprite;
 				message.str = str;
+				message.param[0] = width;
+				message.param[1] = angle1;
+				message.param[2] = angle2;
 			}
 			else if (strcmp(m.AddressPattern(), "/sprite") == 0)
 			{
 				// filename, x, y, scale
-				message.type = kOscMessageType_Sprite;
 				const char * str;
 				osc::int32 x;
 				osc::int32 y;
 				osc::int32 scale;
-				//args >> str >> message.param[0] >> message.param[1] >> message.param[2];
 				args >> str >> x >> y >> scale;
+				
+				message.type = kOscMessageType_Sprite;
 				message.str = str;
-
 				message.param[0] = x;
 				message.param[1] = y;
 				message.param[2] = scale;
@@ -230,10 +249,17 @@ protected:
 			else if (strcmp(m.AddressPattern(), "/video") == 0)
 			{
 				// filename, x, y, scale
-				message.type = kOscMessageType_Video;
 				const char * str;
-				args >> str >> message.param[0] >> message.param[1] >> message.param[2];
+				osc::int32 x;
+				osc::int32 y;
+				osc::int32 scale;
+				args >> str >> x >> y >> scale;
+				
+				message.type = kOscMessageType_Video;
 				message.str = str;
+				message.param[0] = x;
+				message.param[1] = y;
+				message.param[2] = scale;
 			}
 			else if (strcmp(m.AddressPattern(), "/timedilation") == 0)
 			{
@@ -779,8 +805,9 @@ int main(int argc, char * argv[])
 	framework.useClosestDisplayMode = true;
 #else
 	framework.fullscreen = false;
-	framework.windowBorder = false;
+	framework.windowY = 950;
 #endif
+
 	framework.enableDepthBuffer = true;
 	framework.minification = 1;
 	framework.enableMidi = true;
@@ -1136,6 +1163,12 @@ int main(int argc, char * argv[])
 					switch (message.type)
 					{
 					case kOscMessageType_SetScene:
+						break;
+
+						//
+
+					case kOscMessageType_Event:
+						g_scene->triggerEventByOscId(message.param[0]);
 						break;
 
 						//

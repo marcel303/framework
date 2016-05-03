@@ -151,6 +151,7 @@ struct SceneAction
 struct SceneEvent
 {
 	std::string m_name;
+	int m_oscId;
 	std::vector<SceneAction*> m_actions;
 
 	SceneEvent();
@@ -212,6 +213,7 @@ struct Scene
 	SceneEffect * findEffectByName(const char * name);
 
 	void triggerEvent(const char * name);
+	void triggerEventByOscId(int oscId);
 	void addDebugText(const char * text);
 
 	bool load(const char * filename);
