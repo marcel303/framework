@@ -7,6 +7,7 @@
 #include "osc/OscOutboundPacketStream.h"
 #include "osc/OscPacketListener.h"
 #include "Path.h"
+#include "StringEx.h"
 #include "tinyxml2.h"
 #include "xml.h"
 #include <algorithm>
@@ -17,20 +18,27 @@
 #endif
 
 // todo : + send OSC messages
-// todo : - load confirmation
-// todo : - combined PCM and sequence data load
+// todo : # load confirmation
+// todo : + combined PCM and sequence data load
 // todo : + playback pause/resume
 
 using namespace tinyxml2;
 
 #define GFX_SX 1700
 #define GFX_SY 300
+#define SCALE 2
 
-#define INSERT_Y (GFX_SY/2 - 100)
+#define INSERT_Y (GFX_SY/2 - 70)
 #define SELECT_Y (GFX_SY/2)
-#define DELETE_Y (GFX_SY/2 + 100)
+#define DELETE_Y (GFX_SY/2 + 70)
 
 #define UIZONE_SY 32
+
+#define COMMENTREGION_Y 5
+#define COMMENTREGION_SY (GFX_SY - COMMENTREGION_Y * 2)
+#define COMMENTREGION_ALPHA .2f
+#define COMMENTREGION_SELECT_Y COMMENTREGION_Y
+#define COMMENTREGION_SELECT_SY 25
 
 #define OSC_BUFFER_SIZE 1000
 #define OSC_DEST_ADDRESS "127.0.0.1"
@@ -83,7 +91,7 @@ struct AudioFile : public AudioStream
 
 			audioStream.Open(filename, false);
 
-			const int sampleBufferSize = 4096;
+			const int sampleBufferSize = 1 << 16;
 			AudioSample sampleBuffer[sampleBufferSize];
 
 			for (;;)
@@ -264,18 +272,49 @@ static void deleteEventMarker(EventMarker * eventMarker)
 struct CommentRegion
 {
 	CommentRegion()
-		: time1(0.0)
-		, time2(0.0)
+		: time(0.0)
+		, duration(0.0)
 	{
 	}
 
-	double time1;
-	double time2;
+	double time;
+	double duration;
+	std::string text;
 };
 
-std::list<CommentRegion> g_commentRegions;
+enum CommentRegionEdit
+{
+	kCommentRegionEdit_None,
+	kCommentRegionEdit_Move,
+	kCommentRegionEdit_SizeL,
+	kCommentRegionEdit_SizeR,
+};
 
-CommentRegion * g_selectedCommentRegion = nullptr;
+static std::list<CommentRegion> g_commentRegions;
+
+static CommentRegion * g_selectedCommentRegion = nullptr;
+static CommentRegionEdit g_commentRegionEdit = kCommentRegionEdit_None;
+static double g_commentRegionEditOffset = 0.0;
+
+static CommentRegion * hittestCommentRegion(double x, double y)
+{
+	CommentRegion * result = nullptr;
+
+	if (y >= COMMENTREGION_SELECT_Y && y < (COMMENTREGION_SELECT_Y + COMMENTREGION_SELECT_SY))
+	{
+		const double time = screenXToTime(x);
+
+		for (CommentRegion & commentRegion : g_commentRegions)
+		{
+			if (time >= commentRegion.time && time < commentRegion.time + commentRegion.duration)
+			{
+				result = &commentRegion;
+			}
+		}
+	}
+
+	return result;
+}
 
 //
 
@@ -349,8 +388,12 @@ void clearSequence()
 	g_eventMarkers.clear();
 	g_selectedEventMarker = nullptr;
 	g_selectedEventMarkerTimeOffset = 0.0;
+	
 	g_commentRegions.clear();
 	g_selectedCommentRegion = nullptr;
+	g_commentRegionEdit = kCommentRegionEdit_None;
+	g_commentRegionEditOffset = 0.0;
+	
 	g_playbackMarker = 0.0;
 	g_mouseInteract = kMouseInteract_None;
 }
@@ -369,6 +412,17 @@ bool saveSequence(const char * filename)
 			{
 				p.PushAttribute("time", eventMarker.time);
 				p.PushAttribute("eventId", eventMarker.eventId);
+			}
+			p.CloseElement();
+		}
+
+		for (CommentRegion & commentRegion : g_commentRegions)
+		{
+			p.OpenElement("comment");
+			{
+				p.PushAttribute("time", commentRegion.time);
+				p.PushAttribute("duration", commentRegion.duration);
+				p.PushAttribute("text", commentRegion.text.c_str());
 			}
 			p.CloseElement();
 		}
@@ -416,6 +470,16 @@ bool loadSequence(const char * filename)
 
 				g_eventMarkers.push_back(eventMarker);
 			}
+
+			for (XMLElement * commentXml = sequenceXml->FirstChildElement("comment"); commentXml; commentXml = commentXml->NextSiblingElement("comment"))
+			{
+				CommentRegion commentRegion;
+				commentRegion.time = floatAttrib(commentXml, "time", 0.f);
+				commentRegion.duration = floatAttrib(commentXml, "duration", 0.f);
+				commentRegion.text = stringAttrib(commentXml, "text", "");
+
+				g_commentRegions.push_back(commentRegion);
+			}
 		}
 	}
 
@@ -424,19 +488,166 @@ bool loadSequence(const char * filename)
 
 //
 
+static bool doFileDialog(const std::string & extension, std::string & filename)
+{
+	filename.clear();
+
+	//
+
+	auto files = listFiles("tracks", false);
+	for (auto i = files.begin(); i != files.end(); )
+	{
+		if (Path::GetExtension(*i) != extension)
+			i = files.erase(i);
+		else
+			++i;
+	}
+
+	bool done = false;
+	int selection = 0;
+	bool accept = false;
+
+	if (files.empty())
+		done = true;
+
+	while (!done)
+	{
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			gxScalef(SCALE, SCALE, 1);
+
+			for (size_t i = 0; i < files.size(); ++i)
+			{
+				setFont("calibri.ttf");
+				if (i == selection)
+					setColor(colorYellow);
+				else
+					setColor(colorWhite);
+				drawText(GFX_SX/2, 40 + i * 20, 16, 0, 0, "%s", files[i].c_str());
+			}
+		}
+		framework.endDraw();
+
+		framework.process();
+
+		if (keyboard.wentDown(SDLK_UP))
+			selection = (selection - 1 + files.size()) % files.size();
+		if (keyboard.wentDown(SDLK_DOWN))
+			selection = (selection + 1 + files.size()) % files.size();
+		if (keyboard.wentDown(SDLK_RETURN))
+		{
+			done = true;
+			accept = true;
+		}
+		if (keyboard.wentDown(SDLK_ESCAPE))
+			done = true;
+	}
+
+	if (accept)
+	{
+		filename = files[selection];
+	}
+
+	return accept;
+}
+
+//
+
+static bool isChar(char c)
+{
+	return
+		(c >= 'a' && c <= 'z') ||
+		(c >= 'A' && c <= 'Z') ||
+		(c >= '0' && c <= '9') ||
+		(c == ' ' || c == '.' || c == ',' || c == '!' || c == '(' || c == ')');
+}
+
+static bool doTextDialog(std::string & text)
+{
+	bool done = false;
+	int selection = 0;
+	bool accept = false;
+
+	while (!done)
+	{
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			gxScalef(SCALE, SCALE, 1);
+
+			setFont("calibri.ttf");
+			setColor(colorWhite);
+			drawText(GFX_SX/2, GFX_SY/2, 16, 0, 0, "%s", text.c_str());
+		}
+		framework.endDraw();
+
+		framework.process();
+
+		if (keyboard.wentDown(SDLK_BACKSPACE))
+		{
+			if (text.size() > 0)
+				text.pop_back();
+		}
+
+		if (keyboard.wentDown(SDLK_DELETE))
+		{
+			if (text.size() > 0)
+				text.pop_back();
+		}
+
+		for (int i = 0; i < 256; ++i)
+			if (keyboard.wentDown((SDLKey)i) && isChar((SDLKey)i))
+				text.push_back(i);
+
+		if (keyboard.wentDown(SDLK_RETURN))
+		{
+			done = true;
+			accept = true;
+		}
+		if (keyboard.wentDown(SDLK_ESCAPE))
+			done = true;
+	}
+
+	if (!accept)
+	{
+		text.clear();
+	}
+
+	return accept;
+}
+
+//
+
 int main(int argc, char * argv[])
 {
-	int scale = 2;
-
 	UdpTransmitSocket transmitSocket(IpEndpointName(OSC_DEST_ADDRESS, OSC_DEST_PORT));
 
 	framework.waitForEvents = true;
 
 	framework.windowY = 100;
 
-	if (framework.init(0, nullptr, GFX_SX * scale, GFX_SY * scale))
+	if (framework.init(0, nullptr, GFX_SX * SCALE, GFX_SY * SCALE))
 	{
 		g_audioUpdateEvent = SDL_RegisterEvents(1);
+
+		//
+
+		if (argc >= 2)
+		{
+			const std::string filename = argv[1];
+
+			loadAudio(filename.c_str());
+
+			//
+
+			const std::string sequenceFilename = Path::ReplaceExtension(filename, "xml");
+
+			if (FileStream::Exists(sequenceFilename.c_str()))
+			{
+				loadSequence(sequenceFilename.c_str());
+			}
+		}
+
+		//
 
 		bool stop = false;
 
@@ -446,8 +657,8 @@ int main(int argc, char * argv[])
 
 			framework.process();
 
-			const int mouseX = mouse.x / scale;
-			const int mouseY = mouse.y / scale;
+			const int mouseX = mouse.x / SCALE;
+			const int mouseY = mouse.y / SCALE;
 
 			// process events
 
@@ -504,56 +715,9 @@ int main(int argc, char * argv[])
 
 			if (keyboard.wentDown(SDLK_l))
 			{
-				auto files = listFiles("tracks", false);
-				for (auto i = files.begin(); i != files.end(); )
-				{
-					if (Path::GetExtension(*i) != "ogg")
-						i = files.erase(i);
-					else
-						++i;
-				}
+				std::string filename;
 
-				bool done = false;
-				int selection = 0;
-				bool accept = false;
-
-				if (files.empty())
-					done = true;
-
-				while (!done)
-				{
-					framework.beginDraw(0, 0, 0, 0);
-					{
-						gxScalef(scale, scale, 1);
-
-						for (size_t i = 0; i < files.size(); ++i)
-						{
-							setFont("calibri.ttf");
-							if (i == selection)
-								setColor(colorYellow);
-							else
-								setColor(colorWhite);
-							drawText(GFX_SX/2, 40 + i * 20, 16, 0, 0, "%s", files[i].c_str());
-						}
-					}
-					framework.endDraw();
-
-					framework.process();
-
-					if (keyboard.wentDown(SDLK_UP))
-						selection = (selection - 1 + files.size()) % files.size();
-					if (keyboard.wentDown(SDLK_DOWN))
-						selection = (selection + 1 + files.size()) % files.size();
-					if (keyboard.wentDown(SDLK_RETURN))
-					{
-						done = true;
-						accept = true;
-					}
-					if (keyboard.wentDown(SDLK_ESCAPE))
-						done = true;
-				}
-
-				if (accept)
+				if (doFileDialog("ogg", filename))
 				{
 					clearAudio();
 
@@ -561,15 +725,28 @@ int main(int argc, char * argv[])
 
 					//
 
-					loadAudio(files[selection].c_str());
+					loadAudio(filename.c_str());
 
 					//
 
-					const std::string sequenceFilename = Path::ReplaceExtension(files[selection], "xml");
+					const std::string sequenceFilename = Path::ReplaceExtension(filename, "xml");
 
 					if (FileStream::Exists(sequenceFilename.c_str()))
 					{
 						loadSequence(sequenceFilename.c_str());
+					}
+				}
+			}
+
+			if (keyboard.wentDown(SDLK_t))
+			{
+				if (g_selectedCommentRegion != nullptr)
+				{
+					std::string text = g_selectedCommentRegion->text;
+
+					if (doTextDialog(text))
+					{
+						g_selectedCommentRegion->text = text;
 					}
 				}
 			}
@@ -587,10 +764,10 @@ int main(int argc, char * argv[])
 				}
 			}
 
-			if (mouse.wentDown(BUTTON_LEFT))
-			{
-				g_mouseInteract = kMouseInteract_None;
+			// determine mouse interaction
 
+			if (g_mouseInteract == kMouseInteract_None && mouse.wentDown(BUTTON_LEFT))
+			{
 				if (g_audioFile != nullptr)
 				{
 					// hit test event markers
@@ -611,18 +788,50 @@ int main(int argc, char * argv[])
 						}
 					}
 
-					if (mouseY >= 0 && mouseY < 100)
+					if (mouseY >= COMMENTREGION_SELECT_Y && mouseY < (COMMENTREGION_SELECT_Y + COMMENTREGION_SELECT_SY))
 					{
+						// hit test comment regions
+
 						const double time = screenXToTime(mouseX);
 
-						CommentRegion region;
-						region.time1 = time - 5.0;
-						region.time2 = time + 5.0;
+						g_selectedCommentRegion = hittestCommentRegion(mouseX, mouseY);
 
-						g_commentRegions.push_back(region);
-						g_selectedCommentRegion = &g_commentRegions.back();
+						if (g_selectedCommentRegion != nullptr)
+						{
+							const int edgeSize = 10;
 
-						g_mouseInteract = kMouseInteract_ModifyCommentRegion;
+							if (timeToScreenX(time) < timeToScreenX(g_selectedCommentRegion->time) + edgeSize)
+							{
+								g_commentRegionEdit = kCommentRegionEdit_SizeL;
+								g_commentRegionEditOffset = g_selectedCommentRegion->time - time;
+							}
+							else if (timeToScreenX(time) > timeToScreenX(g_selectedCommentRegion->time + g_selectedCommentRegion->duration) - edgeSize)
+							{
+								g_commentRegionEdit = kCommentRegionEdit_SizeR;
+								g_commentRegionEditOffset = (g_selectedCommentRegion->time + g_selectedCommentRegion->duration) - time;
+							}
+							else
+							{
+								g_commentRegionEdit = kCommentRegionEdit_Move;
+								g_commentRegionEditOffset = g_selectedCommentRegion->time - time;
+							}
+
+							g_mouseInteract = kMouseInteract_ModifyCommentRegion;
+						}
+
+						if (g_selectedCommentRegion == nullptr)
+						{
+							CommentRegion region;
+							region.time = time;
+							region.duration = 0.0;
+
+							g_commentRegions.push_back(region);
+							g_selectedCommentRegion = &g_commentRegions.back();
+
+							g_mouseInteract = kMouseInteract_ModifyCommentRegion;
+							g_commentRegionEdit = kCommentRegionEdit_SizeR;
+							g_commentRegionEditOffset = 0.0;
+						}
 					}
 					else if (mouseY >= INSERT_Y - UIZONE_SY/2 && mouseY <= INSERT_Y + UIZONE_SY/2)
 					{
@@ -677,36 +886,36 @@ int main(int argc, char * argv[])
 					Assert(g_selectedEventMarker == nullptr);
 					Assert(g_selectedEventMarkerTimeOffset == 0.0);
 				}
+			}
 
-				if (g_selectedEventMarker == nullptr)
+			// process mouse interaction
+
+			if (g_mouseInteract == kMouseInteract_None)
+			{
+			}
+			else if (g_mouseInteract == kMouseInteract_MoveEventMarker)
+			{
+				if (mouse.wentUp(BUTTON_LEFT))
 				{
-					// todo : hit test stuff behind event markers
+					g_mouseInteract = kMouseInteract_None;
 				}
-			}
-			else if (mouse.wentUp(BUTTON_LEFT))
-			{
-				g_mouseInteract = kMouseInteract_None;
-			}
-
-			if (g_mouseInteract == kMouseInteract_MoveEventMarker)
-			{
-				if (mouse.isDown(BUTTON_LEFT))
+				else
 				{
 					if (g_selectedEventMarker != nullptr)
 					{
 						g_selectedEventMarker->time = screenXToTime(mouseX) + g_selectedEventMarkerTimeOffset;
 					}
 				}
-				else
-				{
-					g_mouseInteract = kMouseInteract_None;
-				}
 			}
 			else if (g_mouseInteract == kMouseInteract_MovePlaybackMarker)
 			{
 				Assert(g_audioFile != nullptr);
 
-				if (mouse.isDown(BUTTON_LEFT) && g_audioFile != nullptr)
+				if (mouse.wentUp(BUTTON_LEFT))
+				{
+					g_mouseInteract = kMouseInteract_None;
+				}
+				else if (g_audioFile != nullptr)
 				{
 					const double time = screenXToTime(mouseX);
 
@@ -718,15 +927,50 @@ int main(int argc, char * argv[])
 						g_lastAudioTime = time;
 					}
 				}
-				else
+			}
+			else if (g_mouseInteract == kMouseInteract_ModifyCommentRegion)
+			{
+				Assert(g_selectedCommentRegion != nullptr);
+
+				if (mouse.wentUp(BUTTON_LEFT))
 				{
 					g_mouseInteract = kMouseInteract_None;
+				}
+				else if (g_selectedCommentRegion != nullptr)
+				{
+					const double time = screenXToTime(mouseX) + g_commentRegionEditOffset;
+
+					if (g_commentRegionEdit == kCommentRegionEdit_Move)
+					{
+						g_selectedCommentRegion->time = time;
+					}
+					else if (g_commentRegionEdit == kCommentRegionEdit_SizeL)
+					{
+						const double delta = g_selectedCommentRegion->time - time;
+						g_selectedCommentRegion->time -= delta;
+						g_selectedCommentRegion->duration += delta;
+					}
+					else if (g_commentRegionEdit == kCommentRegionEdit_SizeR)
+					{
+						g_selectedCommentRegion->duration = time - g_selectedCommentRegion->time;
+					}
+					else
+					{
+						Assert(false);
+					}
+
+					if (g_selectedCommentRegion->duration < 0.1)
+					{
+						g_selectedCommentRegion->duration = 0.1;
+					}
 				}
 			}
 			else
 			{
-				//
+				Assert(false);
 			}
+
+			// process keyboard interaction
 
 			if (g_selectedEventMarker != nullptr)
 			{
@@ -759,35 +1003,38 @@ int main(int argc, char * argv[])
 
 			framework.beginDraw(0, 0, 0, 0);
 			{
-				gxScalef(scale, scale, 1);
+				gxScalef(SCALE, SCALE, 1);
 
 				// draw PCM data
 
 				if (g_audioFileSurface == nullptr && g_audioFile != nullptr && !g_audioFile->m_pcmData.empty())
 				{
-					g_audioFileSurface = new Surface(GFX_SX, GFX_SY);
+					const int sx = GFX_SX * SCALE;
+					const int sy = GFX_SY * SCALE;
+
+					g_audioFileSurface = new Surface(sx, sy);
 
 					pushSurface(g_audioFileSurface);
 					{
 						glClearColor(0.f, 0.f, 0.f, 0.f);
 						glClear(GL_COLOR_BUFFER_BIT);
 
-						setColor(colorBlue);
+						setColor(colorWhite);
 
 						gxBegin(GL_LINES);
 						{
-							for (int x = 0; x < GFX_SX; ++x)
+							for (int x = 0; x < sx; ++x)
 							{
-								const size_t i1 = (x + 0ull) * g_audioFile->m_pcmData.size() / GFX_SX;
-								const size_t i2 = (x + 1ull) * g_audioFile->m_pcmData.size() / GFX_SX;
+								const size_t i1 = (x + 0ull) * g_audioFile->m_pcmData.size() / sx;
+								const size_t i2 = (x + 1ull) * g_audioFile->m_pcmData.size() / sx;
 
 								Assert(i1 >= 0 && i1 <  g_audioFile->m_pcmData.size());
 								Assert(i2 >= 0 && i2 <= g_audioFile->m_pcmData.size());
 
 								short min = g_audioFile->m_pcmData[i1].channel[0];
-								short max = g_audioFile->m_pcmData[i1].channel[1];
+								short max = g_audioFile->m_pcmData[i1].channel[0];
 
-								for (size_t i = i1 + 1; i < i2; ++i)
+								for (size_t i = i1; i < i2; ++i)
 								{
 									min = Calc::Min(min, g_audioFile->m_pcmData[i].channel[0]);
 									min = Calc::Min(min, g_audioFile->m_pcmData[i].channel[1]);
@@ -796,8 +1043,8 @@ int main(int argc, char * argv[])
 									max = Calc::Max(max, g_audioFile->m_pcmData[i].channel[1]);
 								}
 
-								gxVertex2f(x, Calc::Scale((min / double(1 << 15) + 1.f) / 2.f, 0, GFX_SY));
-								gxVertex2f(x, Calc::Scale((max / double(1 << 15) + 1.f) / 2.f, 0, GFX_SY));
+								gxVertex2f(x, Calc::Scale((min / double(1 << 15) + 1.f) / 2.f, 0, sy));
+								gxVertex2f(x, Calc::Scale((max / double(1 << 15) + 1.f) / 2.f, 0, sy));
 							}
 						}
 						gxEnd();
@@ -805,10 +1052,58 @@ int main(int argc, char * argv[])
 					popSurface();
 				}
 
+				// draw comment regions
+
+				if (g_audioFile != nullptr)
+				{
+					setColor(255, 255, 255, 127);
+					drawRect(0, COMMENTREGION_SELECT_Y, GFX_SX, COMMENTREGION_SELECT_Y + COMMENTREGION_SELECT_SY);
+
+					setBlend(BLEND_ADD);
+
+					CommentRegion * focusCommentRegion = hittestCommentRegion(mouseX, mouseY);
+
+					for (const auto & commentRegion : g_commentRegions)
+					{
+						double alphaMultiplier = 1.0;
+						double alphaMultiplierOutline = 1.0;
+
+						if (&commentRegion == focusCommentRegion || &commentRegion == g_selectedCommentRegion)
+						{
+							alphaMultiplier = 1.2;
+							alphaMultiplierOutline = 2.0;
+						}
+						else
+						{
+							alphaMultiplier = 1.0;
+							alphaMultiplierOutline = 1.0;
+						}
+
+						const double hue = (commentRegion.time + commentRegion.duration) * 1.5 / g_audioFile->m_duration;
+						const Color color = Color::fromHSL(hue, 1.0, 0.5);
+						setColorf(color.r, color.g, color.b, COMMENTREGION_ALPHA * alphaMultiplier);
+
+						const double x1 = timeToScreenX(commentRegion.time);
+						const double x2 = timeToScreenX(commentRegion.time + commentRegion.duration);
+						drawRect(x1, COMMENTREGION_Y, x2, COMMENTREGION_Y + COMMENTREGION_SY);
+
+						const Color borderColor = Color::fromHSL(hue, 0.5, 0.5);
+						setColorf(borderColor.r, borderColor.g, borderColor.b, COMMENTREGION_ALPHA * alphaMultiplierOutline);
+						drawRectLine(x1, COMMENTREGION_Y, x2, COMMENTREGION_Y + COMMENTREGION_SY);
+
+						setFont("calibri.ttf");
+						setColorf(1.f, 1.f, 1.f, COMMENTREGION_ALPHA * alphaMultiplierOutline * 2.f);
+						drawText(x1, COMMENTREGION_Y, 16, +1, +1, "%s", commentRegion.text.c_str());
+					}
+					setBlend(BLEND_ALPHA);
+				}
+
 				if (g_audioFileSurface != nullptr)
 				{
 					gxSetTexture(g_audioFileSurface->getTexture());
-					setColor(colorWhite);
+					const int c = 127;
+					//setColor(c, c, c, 255);
+					setColor(colorBlue);
 					drawRect(0, 0, GFX_SX, GFX_SY);
 					gxSetTexture(0);
 				}
@@ -817,28 +1112,6 @@ int main(int argc, char * argv[])
 				{
 					setColor(255, 255, 255, 31);
 					drawRect(0, 0, GFX_SX, GFX_SY);
-				}
-
-				// draw comment regions
-
-				if (g_audioFile != nullptr)
-				{
-					setBlend(BLEND_ADD);
-					for (const auto & commentRegion : g_commentRegions)
-					{
-						const double hue = commentRegion.time1 * 1.5 / g_audioFile->m_duration;
-						const Color color = Color::fromHSL(hue, 1.0, 0.5);
-						setColorf(color.r, color.g, color.b, .6f);
-
-						const double x1 = timeToScreenX(commentRegion.time1);
-						const double x2 = timeToScreenX(commentRegion.time2);
-						drawRect(x1, 0.0, x2, 25);
-
-						//const Color borderColor = Color::fromHSL(hue, 0.5, 0.5);
-						//setColorf(borderColor.r, borderColor.g, borderColor.b, .4f);
-						//drawRectLine(x1, 0, x2, GFX_SY);
-					}
-					setBlend(BLEND_ALPHA);
 				}
 
 				// draw playback marker
@@ -857,7 +1130,7 @@ int main(int argc, char * argv[])
 
 				setBlend(BLEND_ADD);
 				{
-					const int alpha = 127;
+					const int alpha = 63;
 
 					setFont("calibri.ttf");
 
