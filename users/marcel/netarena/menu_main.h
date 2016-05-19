@@ -26,7 +26,6 @@ class MainMenu : public Menu
 	Button * m_campaignKs;
 #endif
 
-	float m_animTime;
 	float m_inactivityTime;
 
 public:

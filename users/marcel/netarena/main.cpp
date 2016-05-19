@@ -37,6 +37,7 @@
 #include "textfield.h"
 #include "Timer.h"
 #include "tools.h"
+#include "uibackground.h"
 #include "uicommon.h"
 #include "MemoryStream.h"
 #include "spriter.h"
@@ -1480,6 +1481,8 @@ bool App::init()
 
 		m_menuMgr = new MenuMgr();
 
+		g_uiBackground = new UiBackground();
+
 		m_userSettings = new UserSettings();
 
 		//
@@ -1585,6 +1588,9 @@ void App::shutdown()
 
 	delete m_userSettings;
 	m_userSettings = 0;
+
+	delete g_uiBackground;
+	g_uiBackground = 0;
 
 	delete m_menuMgr;
 	m_menuMgr = 0;
@@ -2132,6 +2138,8 @@ bool App::tick()
 	// update menus
 
 	m_menuMgr->tick(dt);
+
+	g_uiBackground->tick(dt);
 
 	// update networking
 
@@ -2746,6 +2754,8 @@ void App::draw()
 		}
 
 		// draw menus
+
+		g_uiBackground->draw();
 
 		m_menuMgr->draw();
 

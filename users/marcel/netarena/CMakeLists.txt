@@ -54,7 +54,7 @@ set(GAME_FILES
 	player.h)
 source_group("Game Files" FILES ${GAME_FILES})
 
-file(GLOB MENU_FILES "menu*")
+file(GLOB MENU_FILES "menu*.*")
 source_group("Menu Files" FILES ${MENU_FILES})
 
 add_executable(riposte ${source})

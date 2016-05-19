@@ -9,9 +9,9 @@ Menu_NewGame::Menu_NewGame()
 {
 	m_menuNav = new MenuNav();
 
-	m_local = new Button(0, 0, "mainmenu-button.png", "mainmenu-button.png", "menu-newgame-local", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE, MAINMENU_BUTTON_TEXT_COLOR);
-	m_onlinePublic = new Button(0, 0, "mainmenu-button.png", "mainmenu-button.png", "menu-newgame-online-public", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE, MAINMENU_BUTTON_TEXT_COLOR);
-	m_onlinePrivate = new Button(0, 0, "mainmenu-button.png", "mainmenu-button.png", "menu-newgame-online-private", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE, MAINMENU_BUTTON_TEXT_COLOR);
+	m_local = new Button(400, 400, "mainmenu-button.png", "mainmenu-button.png", "menu-newgame-local", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE, MAINMENU_BUTTON_TEXT_COLOR);
+	m_onlinePublic = new Button(400, 600, "mainmenu-button.png", "mainmenu-button.png", "menu-newgame-online-public", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE, MAINMENU_BUTTON_TEXT_COLOR);
+	m_onlinePrivate = new Button(400, 800, "mainmenu-button.png", "mainmenu-button.png", "menu-newgame-online-private", MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE, MAINMENU_BUTTON_TEXT_COLOR);
 	
 	m_menuNav->addElem(m_local);
 	m_menuNav->addElem(m_onlinePublic);

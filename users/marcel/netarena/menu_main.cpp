@@ -11,6 +11,7 @@
 #include "menu_newgame.h"
 #include "menu_options.h"
 #include "menu_title.h"
+#include "uibackground.h"
 #include "uicommon.h"
 
 #define DRAW_BACK_V1 0
@@ -159,7 +160,7 @@ MainMenu::~MainMenu()
 
 void MainMenu::onEnter()
 {
-	m_animTime = 0.f;
+	g_uiBackground->setState(UiBackground::kState_Visible);
 
 	m_inactivityTime = 0.f;
 	s_lastMouse = mouse;
@@ -182,8 +183,6 @@ void MainMenu::onExit()
 
 bool MainMenu::tick(float dt)
 {
-	m_animTime += dt;
-
 	// inactivity check
 
 	const bool isInactive =
@@ -426,30 +425,6 @@ void MainMenu::draw()
 	setColor(colorWhite);
 	Sprite("mainmenu-back.png").draw();
 #endif
-#endif
-
-#if DRAW_BACK_V2
-	const float kBackFadeinTime = .4f;
-	const float kCharFadeinTime = 1.f;
-	const float kLogoFadeinTime = .6f;
-
-	const float kCharOffsetX = -150.f;
-
-	const float backOpacity = saturate(m_animTime / kBackFadeinTime);
-	const float charOpacity = saturate(m_animTime / kCharFadeinTime);
-	const float logoOpacity = saturate(m_animTime / kLogoFadeinTime);
-
-	setColorf(1.f, 1.f, 1.f, backOpacity);
-	Sprite("ui/menus/menu-background.png").draw();
-
-	setColorf(1.f, 1.f, 1.f, backOpacity);
-	Sprite("ui/menus/menu-sidepanels.png").draw();
-
-	setColorf(1.f, 1.f, 1.f, charOpacity);
-	Sprite("ui/menus/menu-main-char.png").drawEx(kCharOffsetX * EvalEase(1.f - charOpacity, kEaseType_SineIn, 0.f), 0.f);
-
-	setColorf(1.f, 1.f, 1.f, logoOpacity);
-	Sprite("ui/menus/menu-main-logo.png").draw();
 #endif
 
 	setColor(colorWhite);
