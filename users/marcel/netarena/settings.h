@@ -12,9 +12,9 @@ public:
 class SettingsMenu : public Menu
 {
 public:
-	virtual void onEnter() { }
-	virtual void onExit() { }
+	virtual void onEnter() override { }
+	virtual void onExit() override { }
 
-	virtual bool tick(float dt);
-	virtual void draw();
+	virtual bool tick(float dt) override;
+	virtual void draw() override;
 };

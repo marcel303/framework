@@ -35,7 +35,7 @@ project(riposte)
 
 # --- riposte ---
 
-file(GLOB source "*.cpp" "*.h")
+file(GLOB source "*.cpp" "*.c" "*.h")
 
 set(GAME_FILES
 	bullet.cpp
@@ -53,6 +53,9 @@ set(GAME_FILES
 	player.cpp
 	player.h)
 source_group("Game Files" FILES ${GAME_FILES})
+
+file(GLOB MENU_FILES "menu*")
+source_group("Menu Files" FILES ${MENU_FILES})
 
 add_executable(riposte ${source})
 

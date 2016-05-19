@@ -7,8 +7,8 @@
 
 class StatTimerMenu : public MultiLevelMenuBase
 {
-	virtual std::vector<void*> GetMenuItems();
-	virtual const char * GetPath(void * menuItem);
+	virtual std::vector<void*> GetMenuItems() override;
+	virtual const char * GetPath(void * menuItem) override;
 
 public:
 	StatTimerMenu();

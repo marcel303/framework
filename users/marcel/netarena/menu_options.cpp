@@ -1,6 +1,6 @@
 #include "framework.h"
 #include "gamedefs.h"
-#include "optione.h"
+#include "menu_options.h"
 #include "uicommon.h"
 
 #include "main.h" // fixme : remove. needed for escape = quit hack for now

@@ -10,11 +10,11 @@ class OptionBase;
 class OptionMenu : public MultiLevelMenuBase
 {
 	// MultiLevelMenuBase
-	virtual std::vector<void*> GetMenuItems();
-	virtual const char * GetPath(void * menuItem);
-	virtual void Select(void * menuItem);
-	virtual void Increment(void * menuItem);
-	virtual void Decrement(void * menuItem);
+	virtual std::vector<void*> GetMenuItems() override;
+	virtual const char * GetPath(void * menuItem) override;
+	virtual void Select(void * menuItem) override;
+	virtual void Increment(void * menuItem) override;
+	virtual void Decrement(void * menuItem) override;
 
 public:
 	OptionMenu();

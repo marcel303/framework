@@ -1,7 +1,6 @@
 #pragma once
 
 #include "config.h"
-#include "gamedefs.h"
 #include "menu.h"
 
 class Button;
@@ -32,28 +31,11 @@ class MainMenu : public Menu
 
 public:
 	MainMenu();
-	~MainMenu();
+	virtual ~MainMenu() override;
 
-	virtual void onEnter();
-	virtual void onExit();
+	virtual void onEnter() override;
+	virtual void onExit() override;
 
-	virtual bool tick(float dt);
-	virtual void draw();
-};
-
-class HelpMenu : public Menu
-{
-	Button * m_back;
-	MenuNav * m_menuNav;
-	ButtonLegend * m_buttonLegend;
-
-public:
-	HelpMenu();
-	~HelpMenu();
-
-	virtual void onEnter();
-	virtual void onExit();
-
-	virtual bool tick(float dt);
-	virtual void draw();
+	virtual bool tick(float dt) override;
+	virtual void draw() override;
 };

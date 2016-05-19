@@ -11,11 +11,11 @@ class Title : public Menu
 	float m_logoFlash;
 
 public:
-	virtual void onEnter();
-	virtual void onExit();
+	virtual void onEnter() override;
+	virtual void onExit() override;
 
-	virtual bool tick(float dt);
-	virtual void draw();
+	virtual bool tick(float dt) override;
+	virtual void draw() override;
 };
 
 class SplashScreen : public Menu
@@ -32,9 +32,9 @@ class SplashScreen : public Menu
 public:
 	SplashScreen(const char * filename, float duration, float fadeInDuration, float fadeOutDuration);
 
-	virtual void onEnter();
-	virtual void onExit();
+	virtual void onEnter() override;
+	virtual void onExit() override;
 
-	virtual bool tick(float dt);
-	virtual void draw();
+	virtual bool tick(float dt) override;
+	virtual void draw() override;
 };

@@ -121,18 +121,18 @@ public:
 	void broadcastPlayerInputs();
 
 	// ChannelHandler
-	virtual void SV_OnChannelConnect(Channel * channel);
-	virtual void SV_OnChannelDisconnect(Channel * channel);
-	virtual void CL_OnChannelConnect(Channel * channel) { }
-	virtual void CL_OnChannelDisconnect(Channel * channel);
+	virtual void SV_OnChannelConnect(Channel * channel) override;
+	virtual void SV_OnChannelDisconnect(Channel * channel) override;
+	virtual void CL_OnChannelConnect(Channel * channel) override { }
+	virtual void CL_OnChannelDisconnect(Channel * channel) override;
 
 	// OnlineCallbacks
-	virtual void OnOnlineLobbyCreateResult(OnlineRequestId requestId, bool success);
-	virtual void OnOnlineLobbyJoinResult(OnlineRequestId requestId, bool success);
-	virtual void OnOnlineLobbyLeaveResult(OnlineRequestId requestId, bool success);
+	virtual void OnOnlineLobbyCreateResult(OnlineRequestId requestId, bool success) override;
+	virtual void OnOnlineLobbyJoinResult(OnlineRequestId requestId, bool success) override;
+	virtual void OnOnlineLobbyLeaveResult(OnlineRequestId requestId, bool success) override;
 
-	virtual void OnOnlineLobbyMemberJoined(OnlineLobbyMemberId memberId);
-	virtual void OnOnlineLobbyMemberLeft(OnlineLobbyMemberId memberId);
+	virtual void OnOnlineLobbyMemberJoined(OnlineLobbyMemberId memberId) override;
+	virtual void OnOnlineLobbyMemberLeft(OnlineLobbyMemberId memberId) override;
 
 	// RpcHandler
 	static void handleRpc(Channel * channel, uint32_t method, BitStream & bitStream);

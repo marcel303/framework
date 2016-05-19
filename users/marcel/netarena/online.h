@@ -98,37 +98,37 @@ class OnlineSteam : public Online
 
 public:
 	OnlineSteam(OnlineCallbacks * callbacks);
-	virtual ~OnlineSteam();
+	virtual ~OnlineSteam() override;
 
-	virtual void tick();
-	virtual void debugDraw();
+	virtual void tick() override;
+	virtual void debugDraw() override;
 
-	virtual OnlineRequestId lobbyCreateBegin();
-	virtual void lobbyCreateEnd(OnlineRequestId id);
+	virtual OnlineRequestId lobbyCreateBegin() override;
+	virtual void lobbyCreateEnd(OnlineRequestId id) override;
 
-	virtual OnlineRequestId lobbyFindBegin();
-	virtual void lobbyFindEnd(OnlineRequestId id);
+	virtual OnlineRequestId lobbyFindBegin() override;
+	virtual void lobbyFindEnd(OnlineRequestId id) override;
 
-	virtual OnlineRequestId lobbyJoinBegin(uint64_t gameId);
-	virtual void lobbyJoinEnd(OnlineRequestId id);
+	virtual OnlineRequestId lobbyJoinBegin(uint64_t gameId) override;
+	virtual void lobbyJoinEnd(OnlineRequestId id) override;
 
-	virtual OnlineRequestId lobbyLeaveBegin();
-	virtual void lobbyLeaveEnd(OnlineRequestId id);
+	virtual OnlineRequestId lobbyLeaveBegin() override;
+	virtual void lobbyLeaveEnd(OnlineRequestId id) override;
 
-	virtual bool getLobbyOwnerAddress(uint64_t & lobbyOwnerAddress);
+	virtual bool getLobbyOwnerAddress(uint64_t & lobbyOwnerAddress) override;
 
-	virtual void showInviteFriendsUi();
+	virtual void showInviteFriendsUi() override;
 };
 
 class NetSocketSteam : public NetSocket
 {
 public:
 	NetSocketSteam();
-	virtual ~NetSocketSteam();
+	virtual ~NetSocketSteam() override;
 
-	virtual bool Send(const void * data, uint32_t size, NetAddress * address);
-	virtual bool Receive(void * out_data, uint32_t maxSize, uint32_t * out_size, NetAddress * out_address);
-	virtual bool IsReliable() { return true; }
+	virtual bool Send(const void * data, uint32_t size, NetAddress * address) override;
+	virtual bool Receive(void * out_data, uint32_t maxSize, uint32_t * out_size, NetAddress * out_address) override;
+	virtual bool IsReliable() override { return true; }
 };
 
 
@@ -153,26 +153,26 @@ class OnlineLocal : public Online
 
 public:
 	OnlineLocal(OnlineCallbacks * callbacks);
-	virtual ~OnlineLocal();
+	virtual ~OnlineLocal() override;
 
-	virtual void tick();
-	virtual void debugDraw();
+	virtual void tick() override;
+	virtual void debugDraw() override;
 
-	virtual OnlineRequestId lobbyCreateBegin();
-	virtual void lobbyCreateEnd(OnlineRequestId id);
+	virtual OnlineRequestId lobbyCreateBegin() override;
+	virtual void lobbyCreateEnd(OnlineRequestId id) override;
 
-	virtual OnlineRequestId lobbyFindBegin();
-	virtual void lobbyFindEnd(OnlineRequestId id);
+	virtual OnlineRequestId lobbyFindBegin() override;
+	virtual void lobbyFindEnd(OnlineRequestId id) override;
 
-	virtual OnlineRequestId lobbyJoinBegin(uint64_t gameId);
-	virtual void lobbyJoinEnd(OnlineRequestId id);
+	virtual OnlineRequestId lobbyJoinBegin(uint64_t gameId) override;
+	virtual void lobbyJoinEnd(OnlineRequestId id) override;
 
-	virtual OnlineRequestId lobbyLeaveBegin();
-	virtual void lobbyLeaveEnd(OnlineRequestId id);
+	virtual OnlineRequestId lobbyLeaveBegin() override;
+	virtual void lobbyLeaveEnd(OnlineRequestId id) override;
 
-	virtual bool getLobbyOwnerAddress(uint64_t & lobbyOwnerAddress);
+	virtual bool getLobbyOwnerAddress(uint64_t & lobbyOwnerAddress) override;
 
-	virtual void showInviteFriendsUi();
+	virtual void showInviteFriendsUi() override;
 };
 
 #include "NetSocket.h"
@@ -201,11 +201,11 @@ class NetSocketLocal : public NetSocket
 
 public:
 	NetSocketLocal();
-	virtual ~NetSocketLocal();
+	virtual ~NetSocketLocal() override;
 
-	virtual bool Send(const void * data, uint32_t size, NetAddress * address);
-	virtual bool Receive(void * out_data, uint32_t maxSize, uint32_t * out_size, NetAddress * out_address);
-	virtual bool IsReliable() { return true; }
+	virtual bool Send(const void * data, uint32_t size, NetAddress * address) override;
+	virtual bool Receive(void * out_data, uint32_t maxSize, uint32_t * out_size, NetAddress * out_address) override;
+	virtual bool IsReliable() override { return true; }
 };
 
 //
@@ -214,26 +214,26 @@ class OnlineLAN : public Online
 {
 public:
 	OnlineLAN(OnlineCallbacks * callbacks);
-	virtual ~OnlineLAN();
+	virtual ~OnlineLAN() override;
 
-	virtual void tick();
-	virtual void debugDraw();
+	virtual void tick() override;
+	virtual void debugDraw() override;
 
-	virtual OnlineRequestId lobbyCreateBegin();
-	virtual void lobbyCreateEnd(OnlineRequestId id);
+	virtual OnlineRequestId lobbyCreateBegin() override;
+	virtual void lobbyCreateEnd(OnlineRequestId id) override;
 
-	virtual OnlineRequestId lobbyFindBegin();
-	virtual void lobbyFindEnd(OnlineRequestId id);
+	virtual OnlineRequestId lobbyFindBegin() override;
+	virtual void lobbyFindEnd(OnlineRequestId id) override;
 
-	virtual OnlineRequestId lobbyJoinBegin(uint64_t gameId);
-	virtual void lobbyJoinEnd(OnlineRequestId id);
+	virtual OnlineRequestId lobbyJoinBegin(uint64_t gameId) override;
+	virtual void lobbyJoinEnd(OnlineRequestId id) override;
 
-	virtual OnlineRequestId lobbyLeaveBegin();
-	virtual void lobbyLeaveEnd(OnlineRequestId id);
+	virtual OnlineRequestId lobbyLeaveBegin() override;
+	virtual void lobbyLeaveEnd(OnlineRequestId id) override;
 
-	virtual bool getLobbyOwnerAddress(uint64_t & lobbyOwnerAddress);
+	virtual bool getLobbyOwnerAddress(uint64_t & lobbyOwnerAddress) override;
 
-	virtual void showInviteFriendsUi();
+	virtual void showInviteFriendsUi() override;
 };
 
 extern Online * g_online;

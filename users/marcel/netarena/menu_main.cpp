@@ -6,9 +6,11 @@
 #include "gamedefs.h"
 #include "host.h"
 #include "main.h"
-#include "mainmenu.h"
-#include "optione.h"
-#include "title.h"
+#include "menu_controls.h"
+#include "menu_main.h"
+#include "menu_newgame.h"
+#include "menu_options.h"
+#include "menu_title.h"
 #include "uicommon.h"
 
 #define DRAW_BACK_V1 0
@@ -215,12 +217,16 @@ bool MainMenu::tick(float dt)
 	{
 		logDebug("new game!");
 
+#if 1
+		g_app->m_menuMgr->push(new Menu_NewGame());
+#else
 	#if ITCHIO_BUILD
 		// fixme : this is a hack to 'fix' automatically selecting a character in the lobby screen
 		SDL_Delay(250);
 	#endif
 
 		g_app->startHosting();
+#endif
 	}
 	else if (m_findGame && m_findGame->isClicked())
 	{
@@ -483,70 +489,4 @@ void MainMenu::draw()
 	drawSexyScroller(0.f,           0.f, GFX_SX,   size, +offset, -offset * .5f, scale, 1.f, 1.f);
 	drawSexyScroller(0.f, GFX_SY - size, GFX_SX, GFX_SY, +offset, -offset * .5f, scale, 1.f, 1.f);
 #endif
-}
-
-//
-
-HelpMenu::HelpMenu()
-	: m_back(0)
-	, m_menuNav(0)
-	, m_buttonLegend(0)
-{
-	m_back = new Button(0, 0, "mainmenu-button.png", "mainmenu-button.png", 0, MAINMENU_BUTTON_FONT, MAINMENU_BUTTON_TEXT_X, MAINMENU_BUTTON_TEXT_Y, MAINMENU_BUTTON_TEXT_SIZE, MAINMENU_BUTTON_TEXT_COLOR);
-
-	m_menuNav = new MenuNav();
-
-	m_buttonLegend = new ButtonLegend();
-	m_buttonLegend->addElem(ButtonLegend::kButtonId_B, m_back, "ui-legend-back");
-	m_buttonLegend->addElem(ButtonLegend::kButtonId_ESCAPE, m_back, "ui-legend-back");
-}
-
-HelpMenu::~HelpMenu()
-{
-	delete m_buttonLegend;
-
-	delete m_menuNav;
-
-	delete m_back;
-}
-
-void HelpMenu::onEnter()
-{
-	inputLockAcquire(); // fixme : remove. needed for escape = quit hack for now
-}
-
-void HelpMenu::onExit()
-{
-	g_app->saveUserSettings();
-
-	inputLockRelease(); // fixme : remove. needed for escape = quit hack for now
-}
-
-bool HelpMenu::tick(float dt)
-{
-	m_menuNav->tick(dt);
-
-	m_buttonLegend->tick(dt, UI_BUTTONLEGEND_X, UI_BUTTONLEGEND_Y);
-
-	//
-
-	if (m_back->isClicked() || gamepad[0].wentDown(GAMEPAD_B) || keyboard.wentDown(SDLK_ESCAPE)) // fixme : generalize and remove hardcoded gamepad index
-	{
-		g_app->playSound("ui/sounds/menu-back.ogg");
-		return true;
-	}
-
-	return false;
-}
-
-void HelpMenu::draw()
-{
-	setColor(colorWhite);
-#if ITCHIO_BUILD
-	Sprite("itch-controls.png").draw();
-#else
-	Sprite("ui/controls.png").draw();
-#endif
-
-	m_buttonLegend->draw(UI_BUTTONLEGEND_X, UI_BUTTONLEGEND_Y);
 }

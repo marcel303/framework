@@ -19,13 +19,13 @@ class OptioneMenu : public Menu
 
 public:
 	OptioneMenu();
-	~OptioneMenu();
+	virtual ~OptioneMenu() override;
 
-	virtual void onEnter();
-	virtual void onExit();
+	virtual void onEnter() override;
+	virtual void onExit() override;
 
-	virtual bool tick(float dt);
-	virtual void draw();
+	virtual bool tick(float dt) override;
+	virtual void draw() override;
 };
 
 class OptioneAudioMenu : public Menu
@@ -42,13 +42,13 @@ class OptioneAudioMenu : public Menu
 
 public:
 	OptioneAudioMenu();
-	~OptioneAudioMenu();
+	virtual ~OptioneAudioMenu() override;
 
-	virtual void onEnter();
-	virtual void onExit();
+	virtual void onEnter() override;
+	virtual void onExit() override;
 
-	virtual bool tick(float dt);
-	virtual void draw();
+	virtual bool tick(float dt) override;
+	virtual void draw() override;
 };
 
 class OptioneDisplayMenu : public Menu
@@ -59,13 +59,13 @@ class OptioneDisplayMenu : public Menu
 
 public:
 	OptioneDisplayMenu();
-	~OptioneDisplayMenu();
+	virtual ~OptioneDisplayMenu() override;
 
-	virtual void onEnter();
-	virtual void onExit();
+	virtual void onEnter() override;
+	virtual void onExit() override;
 
-	virtual bool tick(float dt);
-	virtual void draw();
+	virtual bool tick(float dt) override;
+	virtual void draw() override;
 };
 
 class OptioneVideoMenu : public Menu
@@ -76,11 +76,11 @@ class OptioneVideoMenu : public Menu
 
 public:
 	OptioneVideoMenu();
-	~OptioneVideoMenu();
+	virtual ~OptioneVideoMenu() override;
 
-	virtual void onEnter();
-	virtual void onExit();
+	virtual void onEnter() override;
+	virtual void onExit() override;
 
-	virtual bool tick(float dt);
-	virtual void draw();
+	virtual bool tick(float dt) override;
+	virtual void draw() override;
 };

@@ -24,6 +24,8 @@ public:
 	{
 	}
 
+	virtual ~Menu() { }
+
 	virtual void onEnter() { }
 	virtual void onExit() { }
 

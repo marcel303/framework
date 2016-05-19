@@ -1,5 +1,6 @@
 #pragma once
 
+#include "framework.h" // Color
 #include <map>
 #include <vector>
 
@@ -121,11 +122,11 @@ public:
 	bool isClicked();
 	void draw();
 
-	virtual void getPosition(int & x, int & y) const;
-	virtual void getSize(int & sx, int & sy) const;
-	virtual bool hitTest(int x, int y) const;
-	virtual void onFocusChange(bool hasFocus, bool isAutomaticSelection);
-	virtual void onSelect();
+	virtual void getPosition(int & x, int & y) const override;
+	virtual void getSize(int & sx, int & sy) const override;
+	virtual bool hitTest(int x, int y) const override;
+	virtual void onFocusChange(bool hasFocus, bool isAutomaticSelection) override;
+	virtual void onSelect() override;
 };
 
 class SpinButton : public MenuNavElem
@@ -153,11 +154,11 @@ public:
 	bool hasChanged();
 	void draw();
 
-	virtual void getPosition(int & x, int & y) const;
-	virtual void getSize(int & sx, int & sy) const;
-	virtual bool hitTest(int x, int y) const;
-	virtual void onFocusChange(bool hasFocus, bool isAutomaticSelection);
-	virtual void onSelect();
+	virtual void getPosition(int & x, int & y) const override;
+	virtual void getSize(int & sx, int & sy) const override;
+	virtual bool hitTest(int x, int y) const override;
+	virtual void onFocusChange(bool hasFocus, bool isAutomaticSelection) override;
+	virtual void onSelect() override;
 };
 
 class CheckButton : public MenuNavElem
@@ -184,11 +185,11 @@ public:
 	bool isClicked();
 	void draw();
 
-	virtual void getPosition(int & x, int & y) const;
-	virtual void getSize(int & sx, int & sy) const;
-	virtual bool hitTest(int x, int y) const;
-	virtual void onFocusChange(bool hasFocus, bool isAutomaticSelection);
-	virtual void onSelect();
+	virtual void getPosition(int & x, int & y) const override;
+	virtual void getSize(int & sx, int & sy) const override;
+	virtual bool hitTest(int x, int y) const override;
+	virtual void onFocusChange(bool hasFocus, bool isAutomaticSelection) override;
+	virtual void onSelect() override;
 };
 
 class Slider : public MenuNavElem
@@ -217,11 +218,11 @@ public:
 	bool hasChanged();
 	void draw();
 
-	virtual void getPosition(int & x, int & y) const;
-	virtual void getSize(int & sx, int & sy) const;
-	virtual bool hitTest(int x, int y) const;
-	virtual void onFocusChange(bool hasFocus, bool isAutomaticSelection);
-	virtual void onSelect();
+	virtual void getPosition(int & x, int & y) const override;
+	virtual void getSize(int & sx, int & sy) const override;
+	virtual bool hitTest(int x, int y) const override;
+	virtual void onFocusChange(bool hasFocus, bool isAutomaticSelection) override;
+	virtual void onSelect() override;
 };
 
 void setLocal(const char * local);

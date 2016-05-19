@@ -2,8 +2,8 @@
 #include "client.h"
 #include "framework.h"
 #include "host.h"
-#include "lobbymenu.h"
 #include "main.h"
+#include "menu_lobby.h"
 #include "player.h"
 #include "Timer.h" // for character anim time
 #include "uicommon.h"

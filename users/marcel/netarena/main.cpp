@@ -16,7 +16,8 @@
 #include "gamesim.h"
 #include "host.h"
 #include "main.h"
-#include "mainmenu.h"
+#include "menu_main.h"
+#include "menu_title.h"
 #include "NetProtocols.h"
 #include "online.h"
 #include "OptionMenu.h"
@@ -35,7 +36,6 @@
 #include "StringBuilder.h"
 #include "textfield.h"
 #include "Timer.h"
-#include "title.h"
 #include "tools.h"
 #include "uicommon.h"
 #include "MemoryStream.h"
@@ -1393,6 +1393,11 @@ bool App::init()
 				HandleFillCachesCallback(0.f);
 
 			framework.fillCachesWithPath(".", true);
+		}
+
+		if (true)
+		{
+			//framework.optimizeAssetsWithPath(".", true);
 		}
 
 		//Spriter("char0/sprite/sprite.scml").getSpriterScene()->saveBinary("test.sbin");
@@ -2762,8 +2767,8 @@ void App::draw()
 			gpuTimingBlock(tileTransitionDraw);
 			cpuTimingBlock(tileTransitionDraw);
 
-			g_tileTransition->tick(framework.timeStep); // todo : move to tick
-			g_tileTransition->draw();
+			//g_tileTransition->tick(framework.timeStep); // todo : move to tick
+			//g_tileTransition->draw();
 		}
 
 		// draw debug stuff
@@ -2811,7 +2816,8 @@ void App::debugDraw()
 	}
 
 #if ENABLE_STEAM
-	if (g_devMode && USE_STEAMAPI)
+	// Steam avatar debug draw
+	if (g_devMode && USE_STEAMAPI && false)
 	{
 		const int numFriends = SteamFriends()->GetFriendCount(k_EFriendFlagImmediate);
 

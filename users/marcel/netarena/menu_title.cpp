@@ -3,7 +3,7 @@
 #include "gamesim.h"
 #include "gametypes.h"
 #include "main.h"
-#include "title.h"
+#include "menu_title.h"
 
 OPTION_EXTERN(bool, g_noSound);
 

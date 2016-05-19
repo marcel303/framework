@@ -18,13 +18,13 @@ class CustomizeMenu : public Menu
 
 public:
 	CustomizeMenu();
-	~CustomizeMenu();
+	virtual ~CustomizeMenu() override;
 
-	virtual void onEnter();
-	virtual void onExit();
+	virtual void onEnter() override;
+	virtual void onExit() override;
 
-	virtual bool tick(float dt);
-	virtual void draw();
+	virtual bool tick(float dt) override;
+	virtual void draw() override;
 };
 
 class CharacterMenu : public Menu
@@ -42,11 +42,11 @@ class CharacterMenu : public Menu
 
 public:
 	CharacterMenu(int characterIndex);
-	~CharacterMenu();
+	virtual ~CharacterMenu() override;
 
-	virtual void onEnter();
-	virtual void onExit();
+	virtual void onEnter() override;
+	virtual void onExit() override;
 
-	virtual bool tick(float dt);
-	virtual void draw();
+	virtual bool tick(float dt) override;
+	virtual void draw() override;
 };
