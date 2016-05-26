@@ -848,8 +848,8 @@ int main(int argc, char * argv[])
 		bool drawProjectorSetup = false;
 
 		g_scene = new Scene();
-		//g_scene->load("scene_healer.xml");
-		g_scene->load("scene.xml");
+		g_scene->load("scene_healer.xml");
+		//g_scene->load("scene.xml");
 
 	#if DEMODATA
 		Effect_Cloth cloth("cloth");
@@ -1420,6 +1420,8 @@ int main(int argc, char * argv[])
 								setColor(colorWhite);
 
 								glLineWidth(1.5f);
+								glEnable(GL_LINE_SMOOTH);
+								glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
 								gxBegin(GL_LINES);
 								{
 									const float scaleX = GFX_SX / float(numSamplesThisFrame - 2);
@@ -1432,6 +1434,7 @@ int main(int argc, char * argv[])
 									}
 								}
 								gxEnd();
+								glDisable(GL_LINE_SMOOTH);
 								glLineWidth(1.f);
 							}
 						#endif
@@ -1825,6 +1828,7 @@ int main(int argc, char * argv[])
 
 				// fixme : remove
 
+			#if 0
 				setBlend(BLEND_ADD);
 				setColor(colorWhite);
 				//gxSetTexture(g_pcmTexture);
@@ -1832,6 +1836,7 @@ int main(int argc, char * argv[])
 				drawRect(0, 0, GFX_SX, GFX_SY);
 				gxSetTexture(0);
 				setBlend(BLEND_ALPHA);
+			#endif
 			}
 
 			delete [] samplesThisFrame;

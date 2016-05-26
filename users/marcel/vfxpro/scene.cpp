@@ -23,25 +23,6 @@ Surface * g_currentSurface = nullptr;
 
 //
 
-static SceneLayer::BlendMode parseBlendMode(const std::string & blend)
-{
-	if (blend == "add")
-		return SceneLayer::kBlendMode_Add;
-	else if (blend == "subtract")
-		return SceneLayer::kBlendMode_Subtract;
-	else if (blend == "alpha")
-		return SceneLayer::kBlendMode_Alpha;
-	else if (blend == "opaque")
-		return SceneLayer::kBlendMode_Opaque;
-	else
-	{
-		logWarning("unknown blend type: %s", blend.c_str());
-		return SceneLayer::kBlendMode_Add;
-	}
-}
-
-//
-
 SceneEffect::SceneEffect()
 	: m_effect(nullptr)
 	, m_strength(1.f)
@@ -209,17 +190,9 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 			}
 		}
 
-		//effect->blendMode = parseBlendMode(stringAttrib(xmlEffect, "blend", "add"));
+		effect->enabled = boolAttrib(xmlEffect, "enabled", true);
 
-		const bool enabled = boolAttrib(xmlEffect, "enabled", true);
-
-		if (!enabled)
-		{
-			delete effect;
-			effect = nullptr;
-
-			return false;
-		}
+		effect->blendMode = parseBlendMode(stringAttrib(xmlEffect, "blend", "add"));
 
 		m_effect = effect;
 
@@ -238,10 +211,12 @@ SceneLayer::SceneLayer(Scene * scene)
 	, m_blendMode(kBlendMode_Add)
 	, m_autoClear(true)
 	, m_copyPreviousLayer(false)
+	, m_copyPreviousLayerAlpha(1.f)
 	, m_opacity(1.f)
 	, m_surface(nullptr)
 	, m_debugEnabled(true)
 {
+	addVar("copy_alpha", m_copyPreviousLayerAlpha);
 	addVar("opacity", m_opacity);
 
 	m_surface = new Surface(GFX_SX, GFX_SY);
@@ -272,6 +247,7 @@ void SceneLayer::load(const XMLElement * xmlLayer)
 	m_blendMode = parseBlendMode(blend);
 	m_autoClear = boolAttrib(xmlLayer, "auto_clear", true);
 	m_copyPreviousLayer = boolAttrib(xmlLayer, "copy", false);
+	m_copyPreviousLayerAlpha = floatAttrib(xmlLayer, "copy_alpha", 1.f);
 
 	//
 
@@ -351,7 +327,23 @@ void SceneLayer::draw()
 	{
 		if (g_currentSurface)
 		{
-			g_currentSurface->blitTo(m_surface);
+			if (m_copyPreviousLayerAlpha > 0.f)
+			{
+				pushSurface(m_surface);
+				{
+					if (m_copyPreviousLayerAlpha == 1.f)
+						setBlend(BLEND_OPAQUE);
+					else
+						setBlend(BLEND_ALPHA);
+					gxSetTexture(g_currentSurface->getTexture());
+					gxColor4f(1.f, 1.f, 1.f, m_copyPreviousLayerAlpha);
+					drawRect(0, 0, m_surface->getWidth(), m_surface->getHeight());
+					gxSetTexture(0);
+				}
+				popSurface();
+			}
+
+			//g_currentSurface->blitTo(m_surface);
 		}
 		else
 		{

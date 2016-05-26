@@ -65,9 +65,11 @@ const static float pi2 = float(M_PI) * 2.f;
 
 struct Effect : TweenFloatCollection
 {
+	TweenFloat enabled;
 	bool is3D; // when set to 3D, the effect is rendered using a separate virtual camera to each screen. when false, it will use simple 1:1 mapping onto screen coordinates
 	Mat4x4 transform; // transformation matrix for 3D effects
 	bool is2D;
+	BlendMode blendMode;
 	TweenFloat screenX;
 	TweenFloat screenY;
 	TweenFloat scaleX;
@@ -78,8 +80,10 @@ struct Effect : TweenFloatCollection
 	bool debugEnabled;
 
 	Effect(const char * name)
-		: is3D(false)
+		: enabled(1.f)
+		, is3D(false)
 		, is2D(false)
+		, blendMode(kBlendMode_Add)
 		, screenX(0.f)
 		, screenY(0.f)
 		, scaleX(1.f)
@@ -88,6 +92,7 @@ struct Effect : TweenFloatCollection
 		, z(0.f)
 		, debugEnabled(true)
 	{
+		addVar("enabled", enabled);
 		addVar("x", screenX);
 		addVar("y", screenY);
 		addVar("scale_x", scaleX);
@@ -173,6 +178,8 @@ struct EffectDrawable : Drawable
 	{
 		if (!m_effect->debugEnabled)
 			return;
+		if (!m_effect->enabled)
+			return;
 
 		gxPushMatrix();
 		{
@@ -184,7 +191,32 @@ struct EffectDrawable : Drawable
 				gxScalef(m_effect->scaleX * m_effect->scale, m_effect->scaleY * m_effect->scale, 1.f);
 			}
 
+			switch (m_effect->blendMode)
+			{
+			case kBlendMode_Add:
+				setBlend(BLEND_ADD);
+				break;
+			case kBlendMode_Subtract:
+				setBlend(BLEND_SUBTRACT);
+				break;
+			case kBlendMode_Alpha:
+				setBlend(BLEND_ALPHA);
+				break;
+			case kBlendMode_Opaque:
+				//setBlend(BLEND_OPAQUE);
+				glEnable(GL_BLEND);
+				if (glBlendEquation)
+					glBlendEquation(GL_FUNC_ADD);
+				glBlendFunc(GL_SRC_ALPHA, GL_ZERO);
+				break;
+			default:
+				Assert(false);
+				break;
+			}
+
 			m_effect->draw();
+
+			setBlend(BLEND_ADD);
 		}
 		gxPopMatrix();
 	}

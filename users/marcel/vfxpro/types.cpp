@@ -326,3 +326,22 @@ void ParticleSystem::draw(const float alpha)
 	}
 	gxEnd();
 }
+
+//
+
+BlendMode parseBlendMode(const std::string & blend)
+{
+	if (blend == "add")
+		return kBlendMode_Add;
+	else if (blend == "subtract")
+		return kBlendMode_Subtract;
+	else if (blend == "alpha")
+		return kBlendMode_Alpha;
+	else if (blend == "opaque")
+		return kBlendMode_Opaque;
+	else
+	{
+		logWarning("unknown blend type: %s", blend.c_str());
+		return kBlendMode_Add;
+	}
+}

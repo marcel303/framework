@@ -237,3 +237,15 @@ struct ParticleSystem
 	void tick(const float dt);
 	void draw(const float alpha);
 };
+
+//
+
+enum BlendMode
+{
+	kBlendMode_Add,
+	kBlendMode_Subtract,
+	kBlendMode_Alpha,
+	kBlendMode_Opaque
+};
+
+BlendMode parseBlendMode(const std::string & blend);

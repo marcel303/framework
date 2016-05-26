@@ -68,20 +68,13 @@ struct SceneEffect
 
 struct SceneLayer : TweenFloatCollection
 {
-	enum BlendMode
-	{
-		kBlendMode_Add,
-		kBlendMode_Subtract,
-		kBlendMode_Alpha,
-		kBlendMode_Opaque
-	};
-
 	Scene * m_scene;
 
 	std::string m_name;
 	BlendMode m_blendMode;
 	bool m_autoClear;
 	bool m_copyPreviousLayer;
+	TweenFloat m_copyPreviousLayerAlpha;
 
 	TweenFloat m_opacity;
 
