@@ -263,8 +263,8 @@ namespace MP
 				{
 					VideoFrame* frame = m_videoBuffer.AllocateFrame();
 
-					if (m_tempFrame->pts == 0)
-						m_tempFrame->pts = packet.pts;
+					//if (m_tempFrame->pts == 0)
+					//	m_tempFrame->pts = packet.pts;
 
 					ConvertAndStore(frame);
 
@@ -300,7 +300,7 @@ namespace MP
 			m_codecContext->width,
 			m_codecContext->height);
 
-        if (m_tempFrame->pts != AV_NOPTS_VALUE)
+        if (m_tempFrame->pts != 0 && m_tempFrame->pts != AV_NOPTS_VALUE)
 		{
 			// m_tempFrame->pts * 1345.2944 << Magic number.
 			m_time = av_q2d(m_codecContext->time_base) * m_tempFrame->pts;
