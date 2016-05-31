@@ -76,6 +76,7 @@ struct SceneLayer : TweenFloatCollection
 	bool m_copyPreviousLayer;
 	TweenFloat m_copyPreviousLayerAlpha;
 
+	TweenFloat m_visible;
 	TweenFloat m_opacity;
 
 	std::vector<SceneEffect*> m_effects;
@@ -107,14 +108,46 @@ struct SceneAction
 
 	ActionType m_type;
 
+	enum TweenTargetType
+	{
+		kTweenTargetType_Layer,
+		kTweenTargetType_Effect
+	};
+
 	struct Tween
 	{
-		enum TargetType
+		TweenTargetType m_targetType;
+		std::string m_targetName;
+
+		bool m_replaceTweens;
+		bool m_addTweens;
+
+		struct TweenSet
 		{
-			kTargetType_Layer,
-			kTargetType_Effect
+			float m_tweenTime;
+
+			EaseType m_easeType;
+			float m_easeParam;
+
+			float m_preDelay;
+			float m_postDelay;
+
+			struct TweenVar
+			{
+				std::string m_varName;
+				float m_tweenTo;
+				float m_preDelay;
+			};
+
+			std::vector<TweenVar> m_vars;
 		};
 
+		std::vector<TweenSet> m_tweens;
+	} m_tween;
+
+	/*
+	struct Tween
+	{
 		TargetType m_targetType;
 		std::string m_targetName;
 		std::string m_varName;
@@ -127,6 +160,7 @@ struct SceneAction
 		float m_preDelay;
 		float m_postDelay;
 	} m_tween;
+	*/
 
 	struct Signal
 	{
@@ -203,6 +237,7 @@ struct Scene
 	void draw(DrawableList & drawableList);
 	void debugDraw();
 
+	SceneLayer * findLayerByName(const char * name);
 	SceneEffect * findEffectByName(const char * name);
 
 	void triggerEvent(const char * name);

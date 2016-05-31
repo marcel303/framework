@@ -3,6 +3,22 @@
 #include "framework.h"
 #include "video.h"
 
+static int ExecMediaPlayerThread(void * param)
+{
+	MediaPlayer * self = (MediaPlayer*)param;
+
+	while (!self->stopMpThread)
+	{
+		const int delayMS = 10;
+
+		SDL_Delay(delayMS);
+
+		self->tick(delayMS / 1000.f);
+	}
+
+	return 0;
+}
+
 struct MyAudioStream : AudioStream
 {
 	AudioOutput * audioOutput;
@@ -87,6 +103,10 @@ bool MediaPlayer::open(const char * filename)
 		{
 			result = false;
 		}
+		else
+		{
+			audioOutputOpenAL->Volume_set(0.f);
+		}
 	}
 
 	if (result)
@@ -107,6 +127,8 @@ bool MediaPlayer::open(const char * filename)
 	if (result)
 	{
 		audioOutput->Play();
+
+		startMediaPlayerThread();
 	}
 
 	if (!result)
@@ -119,6 +141,11 @@ bool MediaPlayer::open(const char * filename)
 
 void MediaPlayer::close()
 {
+	if (mpThread)
+	{
+		stopMediaPlayerThread();
+	}
+
 	if (texture)
 	{
 		glDeleteTextures(1, &texture);
@@ -151,30 +178,35 @@ void MediaPlayer::tick(const float dt)
 
 	audioOutput->Update(audioStream);
 
-	//double time = mpContext.GetAudioTime();
 	double time = audioStream->GetTime();
 	MP::VideoFrame * videoFrame = nullptr;
 	bool gotVideo = false;
 	mpContext.RequestVideo(time, &videoFrame, gotVideo);
 	if (gotVideo)
 	{
-		if (texture)
+		SDL_LockMutex(textureMutex);
 		{
-			glDeleteTextures(1, &texture);
-			texture = 0;
+			delete [] videoData;
+			videoData;
+
+			videoData = new uint8_t[videoFrame->m_width * videoFrame->m_height * 3];
+			memcpy(videoData, videoFrame->m_frameBuffer, videoFrame->m_width * videoFrame->m_height * 3);
+			videoSx = videoFrame->m_width;
+			videoSy = videoFrame->m_height;
+			videoIsDirty = true;
+			
+			sx = videoFrame->m_width;
+			sy = videoFrame->m_height;
 		}
-		texture = createTextureFromRGB8(videoFrame->m_frameBuffer, videoFrame->m_width, videoFrame->m_height, true, true);
-		sx = videoFrame->m_width;
-		sy = videoFrame->m_height;
+		SDL_UnlockMutex(textureMutex);
 		//logDebug("gotVideo. t=%06dms", int(time * 1000.0));
 	}
-
-//	while (videoFrame && videoFrame->m_time > audioStream->GetTime())
-//		SDL_Delay(1);
 }
 
 void MediaPlayer::draw()
 {
+	const uint32_t texture = getTexture();
+
 	if (texture)
 	{
 		gxSetTexture(texture);
@@ -186,4 +218,55 @@ void MediaPlayer::draw()
 bool MediaPlayer::isActive() const
 {
 	return mpContext.HasBegun();
+}
+
+uint32_t MediaPlayer::getTexture()
+{
+	if (videoIsDirty)
+	{
+		SDL_LockMutex(textureMutex);
+		{
+			videoIsDirty = false;
+
+			if (texture)
+				glDeleteTextures(1, &texture);
+			texture = createTextureFromRGB8(videoData, videoSx, videoSy, true, true);
+		}
+		SDL_UnlockMutex(textureMutex);
+	}
+
+	return texture;
+}
+
+void MediaPlayer::startMediaPlayerThread()
+{
+	Assert(mpThread == nullptr);
+
+	if (mpThread == nullptr)
+	{
+		textureMutex = SDL_CreateMutex();
+
+		mpThread = SDL_CreateThread(ExecMediaPlayerThread, "MediaPlayerThread", this);
+	}
+}
+
+void MediaPlayer::stopMediaPlayerThread()
+{
+	Assert(mpThread != nullptr);
+
+	if (mpThread != nullptr)
+	{
+		stopMpThread = true;
+
+		SDL_WaitThread(mpThread, nullptr);
+		mpThread = nullptr;
+
+		stopMpThread = false;
+	}
+
+	if (textureMutex != nullptr)
+	{
+		SDL_DestroyMutex(textureMutex);
+		textureMutex = nullptr;
+	}
 }

@@ -209,6 +209,12 @@ struct EffectDrawable : Drawable
 					glBlendEquation(GL_FUNC_ADD);
 				glBlendFunc(GL_SRC_ALPHA, GL_ZERO);
 				break;
+			case kBlendMode_AlphaTest:
+				glDisable(GL_BLEND);
+				glEnable(GL_ALPHA_TEST);
+				glAlphaFunc(GL_GREATER, 0.f);
+				checkErrorGL();
+				break;
 			default:
 				Assert(false);
 				break;
@@ -217,6 +223,7 @@ struct EffectDrawable : Drawable
 			m_effect->draw();
 
 			setBlend(BLEND_ADD);
+			glDisable(GL_ALPHA_TEST);
 		}
 		gxPopMatrix();
 	}
@@ -1063,7 +1070,7 @@ struct Effect_Video : Effect
 
 		if (m_mediaPlayer.isActive())
 		{
-			m_mediaPlayer.tick(dt);
+			//m_mediaPlayer.tick(dt);
 
 			if (!m_mediaPlayer.isActive())
 			{
@@ -1079,7 +1086,7 @@ struct Effect_Video : Effect
 
 	virtual void draw() override
 	{
-		if (m_mediaPlayer.texture)
+		if (m_mediaPlayer.getTexture())
 		{
 			gxPushMatrix();
 			{
@@ -1489,5 +1496,74 @@ struct Effect_DrawPicture : Effect
 
 			m_coords.clear();
 		}
+	}
+};
+
+//
+
+struct Effect_Blit : Effect
+{
+	TweenFloat m_alpha;
+	TweenFloat m_centered;
+	TweenFloat m_sx;
+	TweenFloat m_sy;
+	std::string m_layer;
+
+	Effect_Blit(const char * name, const char * layer)
+		: Effect(name)
+		, m_alpha(1.f)
+		, m_centered(1.f)
+		, m_sx(0.f)
+		, m_sy(0.f)
+		, m_layer(layer)
+	{
+		addVar("alpha", m_alpha);
+		addVar("centered", m_centered);
+		addVar("sx", m_sx);
+		addVar("sy", m_sy);
+	}
+
+	virtual void tick(const float dt) override
+	{
+		TweenFloatCollection::tick(dt);
+	}
+
+	virtual void draw(DrawableList & list) override
+	{
+		new (list) EffectDrawable(this);
+	}
+
+	virtual void draw() override
+	{
+		if (m_alpha <= 0.f)
+			return;
+		if (m_sx <= 0.f || m_sy <= 0.f)
+			return;
+
+		const SceneLayer * layer = g_currentScene->findLayerByName(m_layer.c_str());
+
+		gxColor4f(1.f, 1.f, 1.f, m_alpha);
+		gxSetTexture(layer->m_surface->getTexture());
+		{
+			gxBegin(GL_QUADS);
+			{
+				const float x1 = virtualToScreenX(screenX - ((m_centered > 0.f) ? m_sx / 2.f :  0.f));
+				const float y1 = virtualToScreenY(screenY - ((m_centered > 0.f) ? m_sy / 2.f :  0.f));
+				const float x2 = virtualToScreenX(screenX + ((m_centered > 0.f) ? m_sx / 2.f : m_sx));
+				const float y2 = virtualToScreenY(screenY + ((m_centered > 0.f) ? m_sy / 2.f : m_sy));
+
+				const float u1 =       x1 / SCREEN_SX;
+				const float v1 = 1.f - y1 / SCREEN_SY;
+				const float u2 =       x2 / SCREEN_SX;
+				const float v2 = 1.f - y2 / SCREEN_SY;
+
+				gxTexCoord2f(u1, v1); gxVertex2f(x1, y1);
+				gxTexCoord2f(u2, v1); gxVertex2f(x2, y1);
+				gxTexCoord2f(u2, v2); gxVertex2f(x2, y2);
+				gxTexCoord2f(u1, v2); gxVertex2f(x1, y2);
+			}
+			gxEnd();
+		}
+		gxSetTexture(0);
 	}
 };

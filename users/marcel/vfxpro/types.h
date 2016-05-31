@@ -151,6 +151,7 @@ public:
 		clear();
 
 		m_value = value;
+		m_from = value;
 	}
 
 	operator float() const
@@ -201,8 +202,6 @@ struct TweenFloatCollection
 	}
 };
 
-void TickTweenFloats(const float dt);
-
 //
 
 struct ParticleSystem
@@ -245,7 +244,8 @@ enum BlendMode
 	kBlendMode_Add,
 	kBlendMode_Subtract,
 	kBlendMode_Alpha,
-	kBlendMode_Opaque
+	kBlendMode_Opaque,
+	kBlendMode_AlphaTest
 };
 
 BlendMode parseBlendMode(const std::string & blend);

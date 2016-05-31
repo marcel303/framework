@@ -848,7 +848,7 @@ int main(int argc, char * argv[])
 		bool drawProjectorSetup = false;
 
 		g_scene = new Scene();
-		g_scene->load("scene_healer.xml");
+		g_scene->load("healer/scene.xml");
 		//g_scene->load("scene.xml");
 
 	#if DEMODATA

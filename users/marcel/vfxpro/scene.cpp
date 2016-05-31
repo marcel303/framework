@@ -165,6 +165,12 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 			effect = new Effect_DrawPicture(m_name.c_str(), file.c_str());
 		}
 	}
+	else if (type == "blit")
+	{
+		const std::string layer = stringAttrib(xmlEffect, "layer", "");
+
+		effect = new Effect_Blit(m_name.c_str(), layer.c_str());
+	}
 	else
 	{
 		logError("unknown effect type: %s", type.c_str());
@@ -212,11 +218,13 @@ SceneLayer::SceneLayer(Scene * scene)
 	, m_autoClear(true)
 	, m_copyPreviousLayer(false)
 	, m_copyPreviousLayerAlpha(1.f)
+	, m_visible(1.f)
 	, m_opacity(1.f)
 	, m_surface(nullptr)
 	, m_debugEnabled(true)
 {
 	addVar("copy_alpha", m_copyPreviousLayerAlpha);
+	addVar("visible", m_visible);
 	addVar("opacity", m_opacity);
 
 	m_surface = new Surface(GFX_SX, GFX_SY);
@@ -248,6 +256,8 @@ void SceneLayer::load(const XMLElement * xmlLayer)
 	m_autoClear = boolAttrib(xmlLayer, "auto_clear", true);
 	m_copyPreviousLayer = boolAttrib(xmlLayer, "copy", false);
 	m_copyPreviousLayerAlpha = floatAttrib(xmlLayer, "copy_alpha", 1.f);
+	m_opacity = floatAttrib(xmlLayer, "opacity", 1.f);
+	m_visible = floatAttrib(xmlLayer, "visible", 1.f);
 
 	//
 
@@ -366,41 +376,83 @@ void SceneLayer::draw()
 	}
 	popSurface();
 
-	// compose
-
-	gxSetTexture(m_surface->getTexture());
+	if (m_visible > 0.f)
 	{
-		switch (m_blendMode)
+		// compose
+
+		gxSetTexture(m_surface->getTexture());
 		{
-		case kBlendMode_Add:
-			setBlend(BLEND_ADD_OPAQUE);
-			setColorf(1.f, 1.f, 1.f, 1.f, m_opacity);
-			break;
-		case kBlendMode_Subtract:
-			setBlend(BLEND_SUBTRACT);
-			setColorf(1.f, 1.f, 1.f, m_opacity);
-			break;
-		case kBlendMode_Alpha:
-			setBlend(BLEND_ALPHA);
-			setColorf(1.f, 1.f, 1.f, m_opacity);
-			break;
-		case kBlendMode_Opaque:
-			setBlend(BLEND_OPAQUE);
-			setColorf(1.f, 1.f, 1.f, 1.f, m_opacity);
-			break;
-		default:
-			Assert(false);
-			break;
+			switch (m_blendMode)
+			{
+			case kBlendMode_Add:
+				setBlend(BLEND_ADD_OPAQUE);
+				setColorf(1.f, 1.f, 1.f, 1.f, m_opacity);
+				break;
+			case kBlendMode_Subtract:
+				setBlend(BLEND_SUBTRACT);
+				setColorf(1.f, 1.f, 1.f, m_opacity);
+				break;
+			case kBlendMode_Alpha:
+				setBlend(BLEND_ALPHA);
+				setColorf(1.f, 1.f, 1.f, m_opacity);
+				break;
+			case kBlendMode_Opaque:
+				setBlend(BLEND_OPAQUE);
+				setColorf(1.f, 1.f, 1.f, 1.f, m_opacity);
+				break;
+			case kBlendMode_AlphaTest:
+				glDisable(GL_BLEND);
+				glEnable(GL_ALPHA_TEST);
+				glAlphaFunc(GL_GREATER, 0.f);
+				checkErrorGL();
+				break;
+			default:
+				Assert(false);
+				break;
+			}
+
+			drawRect(0, 0, GFX_SX, GFX_SY);
+
+			setBlend(BLEND_ADD);
+			glDisable(GL_ALPHA_TEST);
 		}
-
-		drawRect(0, 0, GFX_SX, GFX_SY);
-
-		setBlend(BLEND_ADD);
+		gxSetTexture(0);
 	}
-	gxSetTexture(0);
 }
 
 //
+
+static EaseType parseEaseType(const std::string & easeType)
+{
+	EaseType result = kEaseType_Linear;
+
+	if (easeType == "linear")
+		result = kEaseType_Linear;
+	else if (easeType == "pow_in")
+		result = kEaseType_PowIn;
+	else if (easeType == "pow_out")
+		result = kEaseType_PowOut;
+	else if (easeType == "sine_in")
+		result = kEaseType_SineIn;
+	else if (easeType == "sine_out")
+		result = kEaseType_SineOut;
+	else if (easeType == "sine_inout")
+		result = kEaseType_SineInOut;
+	else if (easeType == "back_in")
+		result = kEaseType_BackIn;
+	else if (easeType == "back_out")
+		result = kEaseType_BackOut;
+	else if (easeType == "bounce_in")
+		result = kEaseType_BounceIn;
+	else if (easeType == "bounce_out")
+		result = kEaseType_BounceOut;
+	else if (easeType == "bounce_inout")
+		result = kEaseType_BounceInOut;
+	else
+		logError("unknown ease type: %s", easeType.c_str());
+
+	return result;
+}
 
 SceneAction::SceneAction()
 	: m_type(kActionType_None)
@@ -426,51 +478,79 @@ bool SceneAction::load(const XMLElement * xmlAction)
 
 		if (!layer.empty())
 		{
-			m_tween.m_targetType = Tween::kTargetType_Layer;
+			m_tween.m_targetType = kTweenTargetType_Layer;
 			m_tween.m_targetName = layer;
 		}
 		else if (!effect.empty())
 		{
-			m_tween.m_targetType = Tween::kTargetType_Effect;
+			m_tween.m_targetType = kTweenTargetType_Effect;
 			m_tween.m_targetName = effect;
 		}
 
-		m_tween.m_varName = stringAttrib(xmlAction, "var", "");
-		m_tween.m_tweenTo = floatAttrib(xmlAction, "to", 0.f);
-		m_tween.m_tweenTime = floatAttrib(xmlAction, "time", 1.f);
+		m_tween.m_replaceTweens = boolAttrib(xmlAction, "replace", false);
+		m_tween.m_addTweens = boolAttrib(xmlAction, "add", false);
 
-		const std::string easeType = stringAttrib(xmlAction, "ease", "linear");
-		m_tween.m_easeType = kEaseType_Linear;
-		if (easeType == "linear")
-			m_tween.m_easeType = kEaseType_Linear;
-		else if (easeType == "pow_in")
-			m_tween.m_easeType = kEaseType_PowIn;
-		else if (easeType == "pow_out")
-			m_tween.m_easeType = kEaseType_PowOut;
-		else if (easeType == "sine_in")
-			m_tween.m_easeType = kEaseType_SineIn;
-		else if (easeType == "sine_out")
-			m_tween.m_easeType = kEaseType_SineOut;
-		else if (easeType == "sine_inout")
-			m_tween.m_easeType = kEaseType_SineInOut;
-		else if (easeType == "back_in")
-			m_tween.m_easeType = kEaseType_BackIn;
-		else if (easeType == "back_out")
-			m_tween.m_easeType = kEaseType_BackOut;
-		else if (easeType == "bounce_in")
-			m_tween.m_easeType = kEaseType_BounceIn;
-		else if (easeType == "bounce_out")
-			m_tween.m_easeType = kEaseType_BounceOut;
-		else if (easeType == "bounce_inout")
-			m_tween.m_easeType = kEaseType_BounceInOut;
-		else
-			logError("unknown ease type: %s", easeType.c_str());
-		m_tween.m_easeParam = floatAttrib(xmlAction, "ease_param", 1.f);
-		m_tween.m_replaceTween = boolAttrib(xmlAction, "replace", false);
-		m_tween.m_addTween = boolAttrib(xmlAction, "add", false);
+		//
 
-		m_tween.m_preDelay = floatAttrib(xmlAction, "pre_delay", 0.f);
-		m_tween.m_postDelay = floatAttrib(xmlAction, "post_delay", 0.f);
+		Tween::TweenSet tweenSet;
+
+		tweenSet.m_tweenTime = 0.f;
+		tweenSet.m_easeType = kEaseType_Linear;
+		tweenSet.m_easeParam = 0.f;
+
+		tweenSet.m_preDelay = floatAttrib(xmlAction, "pre_delay", 0.f);
+		tweenSet.m_postDelay = floatAttrib(xmlAction, "post_delay", 0.f);
+
+		for (const XMLAttribute * xmlAttrib = xmlAction->FirstAttribute(); xmlAttrib; xmlAttrib = xmlAttrib->Next())
+		{
+			if (!strcmp(xmlAttrib->Name(), "effect") || !strcmp(xmlAttrib->Name(), "layer"))
+			{
+			}
+			else if (!strcmp(xmlAttrib->Name(), "time"))
+			{
+				const float time = xmlAttrib->FloatValue();
+
+				tweenSet.m_tweenTime = time;
+
+				m_tween.m_tweens.push_back(tweenSet);
+
+				tweenSet = Tween::TweenSet();
+			}
+			else if (!strcmp(xmlAttrib->Name(), "ease"))
+			{
+				tweenSet.m_easeType = parseEaseType(xmlAttrib->Value());
+			}
+			else if (!strcmp(xmlAttrib->Name(), "ease_param"))
+			{
+				tweenSet.m_easeParam = xmlAttrib->FloatValue();
+			}
+			else
+			{
+				// must be a variable
+
+				Tween::TweenSet::TweenVar var;
+
+				var.m_varName = xmlAttrib->Name();
+				var.m_tweenTo = xmlAttrib->FloatValue();
+				var.m_preDelay = 0.f;
+
+				for (const Tween::TweenSet & tweenSet : m_tween.m_tweens)
+				{
+					bool found = false;
+
+					for (const Tween::TweenSet::TweenVar & tweenVar : tweenSet.m_vars)
+						if (tweenVar.m_varName == var.m_varName)
+							found = true;
+
+					if (found)
+						var.m_preDelay = 0.f;
+					else
+						var.m_preDelay += tweenSet.m_tweenTime;
+				}
+
+				tweenSet.m_vars.push_back(var);
+			}
+		}
 
 		return true;
 	}
@@ -536,7 +616,7 @@ void SceneEvent::execute(Scene & scene)
 
 			switch (action->m_tween.m_targetType)
 			{
-			case SceneAction::Tween::kTargetType_Layer:
+			case SceneAction::kTweenTargetType_Layer:
 			{
 				for (auto l = scene.m_layers.begin(); l != scene.m_layers.end(); ++l)
 				{
@@ -550,7 +630,7 @@ void SceneEvent::execute(Scene & scene)
 			}
 			break;
 
-			case SceneAction::Tween::kTargetType_Effect:
+			case SceneAction::kTweenTargetType_Effect:
 			{
 				SceneEffect * effect = scene.findEffectByName(action->m_tween.m_targetName.c_str());
 
@@ -572,40 +652,50 @@ void SceneEvent::execute(Scene & scene)
 			}
 			else
 			{
-				TweenFloat * var = varCollection->getVar(action->m_tween.m_varName.c_str());
+				const SceneAction::Tween & tween = action->m_tween;
 
-				if (var == 0)
+				for (const SceneAction::Tween::TweenSet & tweenSet : tween.m_tweens)
 				{
-					logWarning("couldn't find tween value by name. name=%s", action->m_tween.m_varName.c_str());
-				}
-				else
-				{
-					if (action->m_tween.m_replaceTween)
+					for (const SceneAction::Tween::TweenSet::TweenVar & tweenVar : tweenSet.m_vars)
 					{
-						var->clear();
-					}
+						TweenFloat * var = varCollection->getVar(tweenVar.m_varName.c_str());
 
-					if (action->m_tween.m_preDelay > 0.f)
-					{
-						var->to(var->getFinalValue(), action->m_tween.m_preDelay, kEaseType_Linear, 0.f);
-					}
+						if (var == 0)
+						{
+							logWarning("couldn't find tween value by name. name=%s", tweenVar.m_varName.c_str());
+						}
+						else
+						{
+							if (tween.m_replaceTweens)
+							{
+								var->clear();
+							}
 
-					float to =  action->m_tween.m_tweenTo;
+							const float preDelay = tweenSet.m_preDelay + tweenVar.m_preDelay;
 
-					if (action->m_tween.m_addTween)
-					{
-						to += var->getFinalValue();
-					}
+							if (preDelay > 0.f)
+							{
+								var->to(var->getFinalValue(), preDelay, kEaseType_Linear, 0.f);
+							}
 
-					var->to(
-						to,
-						action->m_tween.m_tweenTime,
-						action->m_tween.m_easeType,
-						action->m_tween.m_easeParam);
+							float to =  tweenVar.m_tweenTo;
 
-					if (action->m_tween.m_postDelay > 0.f)
-					{
-						var->to(var->getFinalValue(), action->m_tween.m_postDelay, kEaseType_Linear, 0.f);
+							if (tween.m_addTweens)
+							{
+								to += var->getFinalValue();
+							}
+
+							var->to(
+								to,
+								tweenSet.m_tweenTime,
+								tweenSet.m_easeType,
+								tweenSet.m_easeParam);
+
+							if (tweenSet.m_postDelay > 0.f)
+							{
+								var->to(var->getFinalValue(), tweenSet.m_postDelay, kEaseType_Linear, 0.f);
+							}
+						}
 					}
 				}
 			}
@@ -804,6 +894,19 @@ void Scene::debugDraw()
 
 		y += fontSize + 6;
 	}
+}
+
+SceneLayer * Scene::findLayerByName(const char * name)
+{
+	for (auto l = m_layers.begin(); l != m_layers.end(); ++l)
+	{
+		SceneLayer * layer = *l;
+
+		if (layer->m_name == name)
+			return layer;
+	}
+
+	return nullptr;
 }
 
 SceneEffect * Scene::findEffectByName(const char * name)
