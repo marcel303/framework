@@ -10,6 +10,8 @@ static float interp(const float from, const float to, const float time)
 
 TweenFloat::TweenFloat()
 	: m_value(0.f)
+	, m_valueWithModifier(0.f)
+	, m_modifier(nullptr)
 	, m_from(0.f)
 	, m_timeElapsed(0.f)
 	, m_timeWait(0.f)
@@ -20,6 +22,8 @@ TweenFloat::TweenFloat()
 
 TweenFloat::TweenFloat(const float value)
 	: m_value(value)
+	, m_valueWithModifier(0.f)
+	, m_modifier(nullptr)
 	, m_from(value)
 	, m_timeElapsed(0.f)
 	, m_timeWait(0.f)
@@ -110,6 +114,8 @@ void TweenFloat::tick(const float _dt)
 			}
 		}
 	}
+
+	applyModifiers();
 }
 
 float TweenFloat::getFinalValue() const
@@ -118,6 +124,18 @@ float TweenFloat::getFinalValue() const
 		return m_value;
 	else
 		return m_animValues.back().value;
+}
+
+void TweenFloat::addModifier(TweenFloatModifier * modifier)
+{
+	Assert(m_modifier == nullptr);
+
+	m_modifier = modifier;
+}
+
+void TweenFloat::applyModifiers()
+{
+	m_valueWithModifier = m_modifier ? m_modifier->applyModifier(this, m_value) : m_value;
 }
 
 //
@@ -288,6 +306,8 @@ BlendMode parseBlendMode(const std::string & blend)
 		return kBlendMode_Subtract;
 	else if (blend == "alpha")
 		return kBlendMode_Alpha;
+	else if (blend == "premultiplied_alpha" || blend == "pre_alpha")
+		return kBlendMode_PremultipliedAlpha;
 	else if (blend == "opaque")
 		return kBlendMode_Opaque;
 	else if (blend == "alpha_test")

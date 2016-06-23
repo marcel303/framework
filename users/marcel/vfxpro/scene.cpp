@@ -1,12 +1,16 @@
 #include "drawable.h"
 #include "effect.h"
 #include "framework.h"
+#include "Parse.h"
 #include "scene.h" 
 #include "tinyxml2.h"
 #include "types.h"
 #include "xml.h"
 
 using namespace tinyxml2;
+
+// from internal.h
+void splitString(const std::string & str, std::vector<std::string> & result, char c);
 
 //
 
@@ -228,6 +232,7 @@ SceneLayer::SceneLayer(Scene * scene)
 	addVar("opacity", m_opacity);
 
 	m_surface = new Surface(GFX_SX, GFX_SY);
+	m_surface->clear(0, 0, 0, 0);
 }
 
 SceneLayer::~SceneLayer()
@@ -357,12 +362,12 @@ void SceneLayer::draw()
 		}
 		else
 		{
-			m_surface->clear();
+			m_surface->clear(0, 0, 0, 0);
 		}
 	}
 	else if (m_autoClear)
 	{
-		m_surface->clear();
+		m_surface->clear(0, 0, 0, 0);
 	}
 
 	pushSurface(m_surface);
@@ -382,6 +387,8 @@ void SceneLayer::draw()
 
 		gxSetTexture(m_surface->getTexture());
 		{
+			Shader alphaTestShader("layer_compose_alphatest");
+
 			switch (m_blendMode)
 			{
 			case kBlendMode_Add:
@@ -396,14 +403,20 @@ void SceneLayer::draw()
 				setBlend(BLEND_ALPHA);
 				setColorf(1.f, 1.f, 1.f, m_opacity);
 				break;
+			case kBlendMode_PremultipliedAlpha:
+				setBlend(BLEND_PREMULTIPLIED_ALPHA);
+				setColorf(m_opacity, m_opacity, m_opacity, m_opacity);
+				break;
 			case kBlendMode_Opaque:
 				setBlend(BLEND_OPAQUE);
 				setColorf(1.f, 1.f, 1.f, 1.f, m_opacity);
 				break;
 			case kBlendMode_AlphaTest:
-				glDisable(GL_BLEND);
-				glEnable(GL_ALPHA_TEST);
-				glAlphaFunc(GL_GREATER, 0.f);
+				setBlend(BLEND_OPAQUE);
+				alphaTestShader.setImmediate("alphaRef", 0.f);
+				alphaTestShader.setTexture("srcColormap", 0, m_surface->getTexture(), false, true);
+				alphaTestShader.setTexture("dstColormap", 0, g_currentSurface->getTexture(), false, true);
+				setShader(alphaTestShader);
 				checkErrorGL();
 				break;
 			default:
@@ -414,7 +427,8 @@ void SceneLayer::draw()
 			drawRect(0, 0, GFX_SX, GFX_SY);
 
 			setBlend(BLEND_ADD);
-			glDisable(GL_ALPHA_TEST);
+
+			clearShader();
 		}
 		gxSetTexture(0);
 	}
@@ -745,7 +759,11 @@ void SceneEvent::load(const XMLElement * xmlEvent)
 
 Scene::Scene()
 	: m_time(0.f)
+	, m_varTime(0.f)
+	, m_varPcmVolume(0.f)
 {
+	addVar("time", m_varTime);
+	addVar("pcm_volume", m_varPcmVolume);
 }
 
 Scene::~Scene()
@@ -757,14 +775,23 @@ void Scene::tick(const float dt)
 {
 	ScopedSceneBlock block(this);
 
+	// process global variables
+
+	m_varTime = m_time;
+	m_varPcmVolume = g_pcmVolume;
+
+	// process tween variables
+
+	TweenFloatCollection::tick(dt);
+
+	// process layers
+
 	for (auto i = m_layers.begin(); i != m_layers.end(); ++i)
 	{
 		SceneLayer * layer = *i;
 
 		layer->tick(dt);
 	}
-
-	m_time += dt;
 
 	// process MIDI input
 
@@ -830,6 +857,10 @@ void Scene::tick(const float dt)
 			}
 		}
 	}
+
+	//
+
+	m_time += dt;
 
 	// process debug text
 
@@ -1040,49 +1071,134 @@ bool Scene::load(const char * filename)
 					m_events.push_back(event);
 				}
 			}
-		}
 
-		//
+			//
 
-		const XMLElement * xmlMidi = xmlScene->FirstChildElement("midi");
+			const XMLElement * xmlModifiers = xmlScene->FirstChildElement("modifiers");
 
-		if (xmlMidi == 0)
-		{
-			logDebug("scene doesn't have any MIDI mappings");
-		}
-		else
-		{
-			for (const XMLElement * xmlMidiMap = xmlMidi->FirstChildElement("map"); xmlMidiMap; xmlMidiMap = xmlMidiMap->NextSiblingElement("map"))
+			if (xmlModifiers == 0)
 			{
-				SceneMidiMap map;
-
-				map.id = intAttrib(xmlMidiMap, "id", -1);
-
-				if (map.id < 0)
-					continue;
-
-				map.liveEnabled = boolAttrib(xmlMidiMap, "live", false);
-
-				map.event = stringAttrib(xmlMidiMap, "event", "");
-				map.effect = stringAttrib(xmlMidiMap, "effect", "");
-				map.var = stringAttrib(xmlMidiMap, "var", "");
-				map.min = floatAttrib(xmlMidiMap, "min", 0.f);
-				map.max = floatAttrib(xmlMidiMap, "max", 1.f);
-
-				if (!map.effect.empty() && !map.var.empty())
+				logDebug("scene doesn't have any modifiers");
+			}
+			else
+			{
+				for (const XMLElement * xmlModifier = xmlModifiers->FirstChildElement("modifier"); xmlModifier; xmlModifier = xmlModifier->NextSiblingElement("modifier"))
 				{
-					map.type = SceneMidiMap::kMapType_EffectVar;
-				}
-				else if (!map.event.empty())
-				{
-					map.type = SceneMidiMap::kMapType_Event;
-				}
-				else
-				{
-					continue;
-				}
+					const bool enabled = boolAttrib(xmlModifier, "enabled", true);
 
-				m_midiMaps.push_back(map);
+					const std::string layerName  = stringAttrib(xmlModifier, "layer",  "");
+					const std::string effectName = stringAttrib(xmlModifier, "effect", "");
+					const std::string varName    = stringAttrib(xmlModifier, "var",    "");
+					const std::string modName    = stringAttrib(xmlModifier, "mod",    "");
+					const std::string op         = stringAttrib(xmlModifier, "op",     "");
+					const std::string range      = stringAttrib(xmlModifier, "range",  "");
+
+					TweenFloat * var = nullptr;
+					
+					if (!layerName.empty())
+					{
+						SceneLayer * layer = findLayerByName(layerName.c_str());
+						if (layer)
+							var = layer->getVar(varName.c_str());
+					}
+					else if (!effectName.empty())
+					{
+						SceneEffect * effect = findEffectByName(effectName.c_str());
+						if (effect)
+							var = effect->m_effect->getVar(varName.c_str());
+					}
+
+					if (var == nullptr)
+					{
+						logError("could not find var value");
+					}
+					else
+					{
+						TweenFloat * mod = getVar(modName.c_str());
+
+						if (mod == nullptr)
+						{
+							logError("could not find global value");
+						}
+						else
+						{
+							Modifier modifier;
+							modifier.var = var;
+							modifier.mod = mod;
+							modifier.str = floatAttrib(xmlModifier, "strength", 1.f);
+
+							if (!range.empty())
+							{
+								std::vector<std::string> values;
+								splitString(range, values, ',');
+
+								if (values.size() != 4)
+								{
+									logError("invalid ranges");
+								}
+								else
+								{
+									modifier.hasRange = true;
+									modifier.range[0] = Parse::Float(values[0]);
+									modifier.range[1] = Parse::Float(values[1]);
+									modifier.range[2] = Parse::Float(values[2]);
+									modifier.range[3] = Parse::Float(values[3]);
+								}
+							}
+
+							if (enabled)
+							{
+								var->addModifier(this);
+
+								m_modifiers.push_back(modifier);
+							}
+						}
+					}
+				}
+			}
+
+			//
+
+			const XMLElement * xmlMidi = xmlScene->FirstChildElement("midi");
+
+			if (xmlMidi == 0)
+			{
+				logDebug("scene doesn't have any MIDI mappings");
+			}
+			else
+			{
+				for (const XMLElement * xmlMidiMap = xmlMidi->FirstChildElement("map"); xmlMidiMap; xmlMidiMap = xmlMidiMap->NextSiblingElement("map"))
+				{
+					SceneMidiMap map;
+
+					map.id = intAttrib(xmlMidiMap, "id", -1);
+
+					if (map.id < 0)
+						continue;
+
+					map.liveEnabled = boolAttrib(xmlMidiMap, "live", false);
+
+					map.event = stringAttrib(xmlMidiMap, "event", "");
+					map.effect = stringAttrib(xmlMidiMap, "effect", "");
+					map.var = stringAttrib(xmlMidiMap, "var", "");
+					map.min = floatAttrib(xmlMidiMap, "min", 0.f);
+					map.max = floatAttrib(xmlMidiMap, "max", 1.f);
+
+					if (!map.effect.empty() && !map.var.empty())
+					{
+						map.type = SceneMidiMap::kMapType_EffectVar;
+					}
+					else if (!map.event.empty())
+					{
+						map.type = SceneMidiMap::kMapType_Event;
+					}
+					else
+					{
+						continue;
+					}
+
+					m_midiMaps.push_back(map);
+				}
 			}
 		}
 	}
@@ -1137,4 +1253,17 @@ bool Scene::reload()
 	clear();
 
 	return load(filename.c_str());
+}
+
+float Scene::applyModifier(TweenFloat * tweenFloat, float value)
+{
+	for (Modifier & modifier : m_modifiers)
+	{
+		if (modifier.var == tweenFloat)
+		{
+			value = modifier.apply(value);
+		}
+	}
+
+	return value;
 }

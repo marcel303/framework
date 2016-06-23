@@ -10,6 +10,7 @@
 #include "drawable.h"
 #include "effect.h"
 #include "framework.h"
+#include "leap/Leap.h"
 #include "Path.h"
 #include "scene.h"
 #include "StringEx.h"
@@ -43,12 +44,13 @@ const int GFX_SX = (SCREEN_SX * NUM_SCREENS);
 const int GFX_SY = (SCREEN_SY * 1);
 
 #define OSC_ADDRESS "127.0.0.1"
-#define OSC_RECV_PORT 1121
+#define OSC_RECV_PORT 8000
 
 Config config;
 
 Scene * g_scene = nullptr;
 
+float g_pcmVolume = 0.f;
 GLuint g_pcmTexture = 0;
 GLuint g_fftTexture = 0;
 
@@ -64,6 +66,20 @@ float virtualToScreenX(const float x)
 float virtualToScreenY(const float y)
 {
 	return (y / 100.f + .5f) * SCREEN_SY;
+}
+
+float screenXToVirtual(const float x)
+{
+#if NUM_SCREENS == 1
+	return (x * 3.f / SCREEN_SX - 1.5f) * 100.f;
+#elif NUM_SCREENS == 3
+	return (x / SCREEN_SX - 1.5f) * 100.f;
+#endif
+}
+
+float screenYToVirtual(const float y)
+{
+	return (y / SCREEN_SY - .5f) * 100.f;
 }
 
 /*
@@ -211,8 +227,16 @@ protected:
 
 			OscMessage message;
 
-			if (strcmp(m.AddressPattern(), "/event") == 0)
+			if (strcmp(m.AddressPattern(), "/event") == 0 || true)
 			{
+			#if 1
+				// eventId
+				osc::int32 eventId;
+				args >> eventId;
+
+				message.type = kOscMessageType_Event;
+				message.param[0] = eventId;
+			#else
 				// NULL, eventId
 				const char * str;
 				osc::int32 eventId;
@@ -220,6 +244,7 @@ protected:
 				
 				message.type = kOscMessageType_Event;
 				message.param[0] = eventId;
+			#endif
 			}
 			else if (strcmp(m.AddressPattern(), "/box") == 0)
 			{
@@ -624,22 +649,27 @@ static void handleFileChange(const std::string & filename)
 		g_scene->reload();
 	else
 	{
-		const std::string baseName = Path::GetBaseName(filename);
 		const std::string extension = Path::GetExtension(filename);
 
 		if (extension == "vs")
 		{
-			Shader(baseName.c_str()).reload();
+			const std::string name = Path::StripExtension(filename);
+
+			Shader(name.c_str()).reload();
 		}
 		else if (extension == "ps")
 		{
-			if (String::StartsWith(filename, "fsfx_"))
+			const std::string baseName = Path::GetBaseName(filename);
+
+			if (String::StartsWith(baseName, "fsfx_"))
 			{
 				Shader(filename.c_str(), "fsfx.vs", filename.c_str()).reload();
 			}
 			else
 			{
-				Shader(baseName.c_str()).reload();
+				const std::string name = Path::StripExtension(filename);
+
+				Shader(name.c_str()).reload();
 			}
 		}
 		else if (extension == "inc")
@@ -648,7 +678,7 @@ static void handleFileChange(const std::string & filename)
 		}
 		else if (extension == "png" || extension == "jpg")
 		{
-			Sprite(baseName.c_str()).reload();
+			Sprite(filename.c_str()).reload();
 		}
 	}
 }
@@ -732,6 +762,59 @@ static void tickFileMonitor()
 
 //
 
+struct LeapState
+{
+	Leap::Vector palmPosition;
+};
+
+class LeapListener : public Leap::Listener
+{
+	SDL_mutex * mutex;
+	LeapState shadowState;
+
+public:
+	LeapState state;
+
+	LeapListener()
+		: mutex(nullptr)
+	{
+		mutex = SDL_CreateMutex();
+	}
+
+	~LeapListener()
+	{
+		SDL_DestroyMutex(mutex);
+		mutex = nullptr;
+	}
+
+	void tick()
+	{
+		SDL_LockMutex(mutex);
+		{
+			state = shadowState;
+		}
+		SDL_UnlockMutex(mutex);
+	}
+
+	virtual void onFrame(const Leap::Controller & controller)
+	{
+		SDL_LockMutex(mutex);
+		{
+			auto frame = controller.frame(0);
+			auto hands = frame.hands();
+			if (!hands.isEmpty())
+			{
+				auto & hand = *hands.begin();
+
+				shadowState.palmPosition = hand.palmPosition();
+			}
+		}
+		SDL_UnlockMutex(mutex);
+	}
+};
+
+//
+
 int main(int argc, char * argv[])
 {
 	//changeDirectory("data");
@@ -791,7 +874,15 @@ int main(int argc, char * argv[])
 			audioInHistory = new AudioSample[audioInHistoryMaxSize];
 		}
 	}
-	
+
+	// initialise LeapMotion controller
+
+	Leap::Controller leapController;
+	leapController.setPolicy(Leap::Controller::POLICY_BACKGROUND_FRAMES);
+
+	LeapListener * leapListener = new LeapListener;
+	leapController.addListener(*leapListener);
+
 	// initialise FFT
 
 	fftInit();
@@ -811,11 +902,13 @@ int main(int argc, char * argv[])
 	framework.useClosestDisplayMode = true;
 #else
 	framework.fullscreen = false;
-	framework.windowY = 950;
+	//framework.windowY = 950;
+	framework.windowX = 0;
+	framework.windowY = 0;
 #endif
 
 	framework.enableDepthBuffer = true;
-	framework.minification = 1;
+	framework.minification = 2;
 	framework.enableMidi = true;
 	framework.midiDeviceIndex = config.midi.deviceIndex;
 
@@ -848,8 +941,9 @@ int main(int argc, char * argv[])
 		bool drawProjectorSetup = false;
 
 		g_scene = new Scene();
-		g_scene->load("healer/scene.xml");
+		//g_scene->load("healer/scene.xml");
 		//g_scene->load("scene.xml");
+		g_scene->load("tracks/cesitest.scene.xml");
 
 	#if DEMODATA
 		Effect_Cloth cloth("cloth");
@@ -977,13 +1071,15 @@ int main(int argc, char * argv[])
 			{
 				float total = 0;
 				for (int i = 0; i < numSamplesThisFrame; ++i)
-					total += samplesThisFrame[i];
+					total += std::abs(samplesThisFrame[i]);
 				loudnessThisFrame = sqrtf(total / float(numSamplesThisFrame));
 			}
 			else
 			{
 				loudnessThisFrame = 0.f;
 			}
+
+			g_pcmVolume = loudnessThisFrame;
 
 			// process FFT
 
@@ -992,6 +1088,10 @@ int main(int argc, char * argv[])
 			// todo : process OSC input
 
 			// todo : process direct MIDI input
+
+			// process LeapMotion input
+
+			leapListener->tick();
 
 			// input
 
@@ -1837,12 +1937,46 @@ int main(int argc, char * argv[])
 				gxSetTexture(0);
 				setBlend(BLEND_ALPHA);
 			#endif
+
+			#if 1
+				setFont("VeraMono.ttf");
+				setColor(colorWhite);
+				drawText(mouse.x, mouse.y, 24, 0, -1, "(%d, %d)", (int)screenXToVirtual(mouse.x), (int)screenYToVirtual(mouse.y));
+			#endif
+
+			#if 1
+				setFont("VeraMono.ttf");
+				setColor(colorWhite);
+				drawText(5, 5, 24, +1, +1, "LeapMotion connected: %d, hasFocus: %d", (int)leapController.isConnected(), (int)leapController.hasFocus());
+
+				if (leapController.isConnected() && leapController.hasFocus())
+				{
+					//leapController.frame();
+					//leapController.now();
+					//leapController.frame().images();
+
+					drawText(5, 35, 24, +1, +1, "LeapMotion palm position: (%03d, %03d, %03d)",
+						(int)leapListener->state.palmPosition.x,
+						(int)leapListener->state.palmPosition.y,
+						(int)leapListener->state.palmPosition.z);
+				}
+			#endif
+
+			#if 0
+				setColor(255, 127, 0, 255);
+				drawRect(0, 0, GFX_SX, GFX_SY);
+				setColor(colorWhite);
+				setBlend(BLEND_ALPHA);
+				Sprite("cesitest/cesilines-wave.png").drawEx(100, 100);
+				Sprite("cesitest/cesilines-wave2.png").draw();
+			#endif
 			}
+			framework.endDraw();
+
+			//
 
 			delete [] samplesThisFrame;
 			samplesThisFrame = nullptr;
-
-			framework.endDraw();
 
 			//
 
@@ -1863,6 +1997,13 @@ int main(int argc, char * argv[])
 
 		framework.shutdown();
 	}
+
+	//
+
+	leapController.removeListener(*leapListener);
+
+	delete leapListener;
+	leapListener = nullptr;
 
 	//
 

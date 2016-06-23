@@ -8,6 +8,10 @@
 
 //
 
+class TweenFloat;
+
+//
+
 template <typename T>
 bool isValidIndex(const T & value) { return value != ((T)-1); }
 
@@ -108,6 +112,12 @@ struct EffectTimer
 
 // todo : groups of tween values .to(...) :: set multiple targets at once, easier to chain and sync tweens
 
+class TweenFloatModifier
+{
+public:
+	virtual float applyModifier(TweenFloat * tweenFloat, float value) = 0;
+};
+
 class TweenFloat
 {
 	struct AnimValue
@@ -126,6 +136,9 @@ class TweenFloat
 	float m_timeElapsed;
 
 	float m_timeWait;
+
+	TweenFloatModifier * m_modifier;
+	float m_valueWithModifier;
 
 	std::list<AnimValue> m_animValues;
 
@@ -146,17 +159,22 @@ public:
 
 	float getFinalValue() const;
 
+	void addModifier(TweenFloatModifier * modifier);
+	void applyModifiers();
+
 	void operator=(const float value)
 	{
 		clear();
 
 		m_value = value;
 		m_from = value;
+
+		applyModifiers();
 	}
 
 	operator float() const
 	{
-		return m_value;
+		return m_valueWithModifier;
 	}
 };
 
@@ -244,6 +262,7 @@ enum BlendMode
 	kBlendMode_Add,
 	kBlendMode_Subtract,
 	kBlendMode_Alpha,
+	kBlendMode_PremultipliedAlpha,
 	kBlendMode_Opaque,
 	kBlendMode_AlphaTest
 };

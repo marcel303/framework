@@ -53,6 +53,27 @@ layout (std140) uniform lightsBlock
 
 #endif
 
+// FSFX post process
+
+struct FsfxData
+{
+	float alpha;
+	float time;
+	float param1;
+	float param2;
+	float param3;
+	float param4;
+};
+
+#if _SHADER_
+
+layout (std140) uniform FsfxBlock
+{
+	FsfxData fsfxData;
+};
+
+#endif
+
 // boxblur post process
 
 struct BoxblurData
@@ -96,6 +117,7 @@ struct LuminanceData
 	float power;
 	float scale;
 	float darken;
+	float darkenAlpha;
 };
 
 #if _SHADER_

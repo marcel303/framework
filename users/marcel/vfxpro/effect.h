@@ -14,6 +14,8 @@
 
 extern float virtualToScreenX(const float x);
 extern float virtualToScreenY(const float y);
+extern float screenXToVirtual(const float x);
+extern float screenYToVirtual(const float y);
 
 extern const int SCREEN_SX;
 extern const int SCREEN_SY;
@@ -23,6 +25,7 @@ extern const int GFX_SY;
 
 extern Config config;
 
+extern float g_pcmVolume;
 extern GLuint g_pcmTexture;
 extern GLuint g_fftTexture;
 
@@ -202,18 +205,15 @@ struct EffectDrawable : Drawable
 			case kBlendMode_Alpha:
 				setBlend(BLEND_ALPHA);
 				break;
+			case kBlendMode_PremultipliedAlpha:
+				setBlend(BLEND_PREMULTIPLIED_ALPHA);
+				break;
 			case kBlendMode_Opaque:
 				//setBlend(BLEND_OPAQUE);
 				glEnable(GL_BLEND);
 				if (glBlendEquation)
 					glBlendEquation(GL_FUNC_ADD);
 				glBlendFunc(GL_SRC_ALPHA, GL_ZERO);
-				break;
-			case kBlendMode_AlphaTest:
-				glDisable(GL_BLEND);
-				glEnable(GL_ALPHA_TEST);
-				glAlphaFunc(GL_GREATER, 0.f);
-				checkErrorGL();
 				break;
 			default:
 				Assert(false);
@@ -223,7 +223,6 @@ struct EffectDrawable : Drawable
 			m_effect->draw();
 
 			setBlend(BLEND_ADD);
-			glDisable(GL_ALPHA_TEST);
 		}
 		gxPopMatrix();
 	}
@@ -987,17 +986,20 @@ struct Effect_Boxes : Effect
 struct Effect_Picture : Effect
 {
 	TweenFloat m_alpha;
+	TweenFloat m_angle;
 	std::string m_filename;
 	bool m_centered;
 
 	Effect_Picture(const char * name, const char * filename, bool centered)
 		: Effect(name)
 		, m_alpha(1.f)
+		, m_angle(0.f)
 		, m_centered(true)
 	{
 		is2D = true;
 
 		addVar("alpha", m_alpha);
+		addVar("angle", m_angle);
 
 		m_filename = filename;
 		m_centered = centered;
@@ -1025,6 +1027,7 @@ struct Effect_Picture : Effect
 			const float scaleY = SCREEN_SY / float(sy);
 			const float scale = Calc::Min(scaleX, scaleY);
 
+			gxRotatef(m_angle, 0.f, 0.f, 1.f);
 			gxScalef(scale, scale, 1.f);
 			if (m_centered)
 				gxTranslatef(-sx / 2.f, -sy / 2.f, 0.f);
@@ -1127,6 +1130,7 @@ struct Effect_Luminance : Effect
 	TweenFloat m_power;
 	TweenFloat m_mul;
 	TweenFloat m_darken;
+	TweenFloat m_darkenAlpha;
 
 	Effect_Luminance(const char * name)
 		: Effect(name)
@@ -1134,11 +1138,13 @@ struct Effect_Luminance : Effect
 		, m_power(1.f)
 		, m_mul(1.f)
 		, m_darken(0.f)
+		, m_darkenAlpha(0.f)
 	{
 		addVar("alpha", m_alpha);
 		addVar("power", m_power);
 		addVar("mul", m_mul);
 		addVar("darken", m_darken);
+		addVar("darken_alpha", m_darkenAlpha);
 	}
 
 	virtual void tick(const float dt) override
@@ -1164,6 +1170,7 @@ struct Effect_Luminance : Effect
 		data.power = m_power;
 		data.scale = m_mul;
 		data.darken = m_darken;
+		data.darkenAlpha = m_darkenAlpha;
 		//logDebug("p=%g, m=%g", (float)m_power, (float)m_mul);
 		buffer.setData(&data, sizeof(data));
 		shader.setBuffer("LuminanceBlock", buffer);

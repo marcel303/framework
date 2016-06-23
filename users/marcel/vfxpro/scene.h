@@ -212,15 +212,111 @@ struct SceneMidiMap
 
 //
 
-struct Scene
+struct Scene : public TweenFloatCollection, public TweenFloatModifier
 {
+	struct Modifier
+	{
+		enum Op
+		{
+			kOp_Mul,
+			kOp_Add,
+			kOp_Sub,
+			kOp_Min,
+			kOp_Max
+		};
+
+		static Op parseOp(const std::string & op)
+		{
+			if (op == "mul")
+				return kOp_Mul;
+			if (op == "add")
+				return kOp_Add;
+			if (op == "sub")
+				return kOp_Sub;
+			if (op == "min")
+				return kOp_Min;
+			if (op == "max")
+				return kOp_Max;
+		}
+
+		TweenFloat * var;
+		TweenFloat * mod;
+		TweenFloat str;
+		
+		Op op;
+
+		bool hasRange;
+		float range[4]; // input/output ranges
+
+		Modifier()
+			: var(nullptr)
+			, mod(nullptr)
+			, str(1.f)
+			, op(kOp_Mul)
+			, hasRange(false)
+		{
+			range[0] = range[1] = range[2] = range[3] = 0.f;
+		}
+
+		float applyRange(const float value) const
+		{
+			if (hasRange)
+			{
+				const float t = (value - range[0]) / (range[1] - range[0]);
+				const float r = range[2] + (range[3] - range[2]) * t;
+				return r;
+			}
+			else
+			{
+				return value;
+			}
+		}
+
+		float applyOp(const float value1, const float value2) const
+		{
+			switch (op)
+			{
+			case kOp_Mul:
+				return value1 * value2;
+			case kOp_Add:
+				return value1 + value2;
+			case kOp_Sub:
+				return value1 - value2;
+			case kOp_Min:
+				return std::min(value1, value2);
+			case kOp_Max:
+				return std::max(value1, value2);
+			default:
+				Assert(false);
+				return value1;
+			}
+		}
+
+		float apply(const float value) const
+		{
+			const float v1 = applyOp(value, applyRange(*mod));
+			const float v2 = value;
+			
+			const float t1 = str;
+			const float t2 = 1.f - t1;
+
+			const float result = v1 * t1 + v2 * t2;
+
+			return result;
+		}
+	};
+
 	std::string m_filename;
 	std::string m_name;
 	std::vector<SceneLayer*> m_layers;
 	std::vector<SceneEvent*> m_events;
+	std::vector<Modifier> m_modifiers;
 	std::vector<SceneMidiMap> m_midiMaps;
 
 	float m_time;
+
+	TweenFloat m_varPcmVolume;
+	TweenFloat m_varTime;
 
 	struct DebugText
 	{
@@ -248,4 +344,8 @@ struct Scene
 
 	void clear();
 	bool reload();
+
+	// TweenFloatModifier
+
+	virtual float applyModifier(TweenFloat * tweenFloat, float value) override;
 };
