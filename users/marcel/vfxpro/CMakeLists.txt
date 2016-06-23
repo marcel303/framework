@@ -68,6 +68,7 @@ target_link_libraries(vfxpro PRIVATE libgg)
 target_link_libraries(vfxpro PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/ffmpeg_old/avcodec-51.lib)
 target_link_libraries(vfxpro PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/ffmpeg_old/avformat-50.lib)
 target_link_libraries(vfxpro PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/ffmpeg_old/avutil-49.lib)
+target_link_libraries(vfxpro PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/Leap.lib)
 
 target_link_libraries(vfxpro PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/FreeImage.lib)
 target_link_libraries(vfxpro PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/freetype252.lib)
