@@ -3419,6 +3419,13 @@ void setBlend(BLEND_MODE blendMode)
 			glBlendEquation(GL_FUNC_ADD);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		break;
+	case BLEND_PREMULTIPLIED_ALPHA:
+		glEnable(GL_BLEND);
+		if (glBlendEquation)
+			glBlendEquation(GL_FUNC_ADD);
+		if (glBlendFuncSeparate)
+			glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+		break;
 	case BLEND_ADD:
 		glEnable(GL_BLEND);
 		if (glBlendEquation)
@@ -3867,7 +3874,9 @@ void drawTextArea(float x, float y, float sx, float sy, int size, float alignX, 
 
 static GLuint createTexture(const void * source, int sx, int sy, bool filter, bool clamp, GLenum format)
 {
-	GLuint texture;
+	checkErrorGL();
+
+	GLuint texture = 0;
 
 	glGenTextures(1, &texture);
 
@@ -3909,6 +3918,8 @@ static GLuint createTexture(const void * source, int sx, int sy, bool filter, bo
 		glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpackAlignment);
 		glPixelStorei(GL_UNPACK_ROW_LENGTH, restoreUnpackRowLength);
 	}
+
+	checkErrorGL();
 
 	return texture;
 }
