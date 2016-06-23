@@ -73,6 +73,7 @@ struct SceneLayer : TweenFloatCollection
 	std::string m_name;
 	BlendMode m_blendMode;
 	bool m_autoClear;
+	Color m_clearColor;
 	bool m_copyPreviousLayer;
 	TweenFloat m_copyPreviousLayerAlpha;
 
@@ -88,7 +89,7 @@ struct SceneLayer : TweenFloatCollection
 	SceneLayer(Scene * scene);
 	~SceneLayer();
 
-	void load(const tinyxml2::XMLElement * xmlLayer);
+	bool load(const tinyxml2::XMLElement * xmlLayer);
 
 	void tick(const float dt);
 	void draw(DrawableList & drawableList);
@@ -262,8 +263,9 @@ struct Scene : public TweenFloatCollection, public TweenFloatModifier
 		{
 			if (hasRange)
 			{
-				const float t = (value - range[0]) / (range[1] - range[0]);
-				const float r = range[2] + (range[3] - range[2]) * t;
+				const float t1 = (value - range[0]) / (range[1] - range[0]);
+				const float t2 = t1 < 0.f ? 0.f : t1 > 1.f ? 1.f : t1;
+				const float r = range[2] + (range[3] - range[2]) * t2;
 				return r;
 			}
 			else

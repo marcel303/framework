@@ -1931,7 +1931,15 @@ int main(int argc, char * argv[])
 			#if 0
 				setBlend(BLEND_ADD);
 				setColor(colorWhite);
-				//gxSetTexture(g_pcmTexture);
+				gxSetTexture(g_pcmTexture);
+				drawRect(0, 0, GFX_SX, GFX_SY);
+				gxSetTexture(0);
+				setBlend(BLEND_ALPHA);
+			#endif
+
+			#if 0
+				setBlend(BLEND_ADD);
+				setColor(colorWhite);
 				gxSetTexture(g_fftTexture);
 				drawRect(0, 0, GFX_SX, GFX_SY);
 				gxSetTexture(0);

@@ -220,6 +220,7 @@ SceneLayer::SceneLayer(Scene * scene)
 	: m_scene(scene)
 	, m_blendMode(kBlendMode_Add)
 	, m_autoClear(true)
+	, m_clearColor(0.f, 0.f, 0.f, 0.f)
 	, m_copyPreviousLayer(false)
 	, m_copyPreviousLayerAlpha(1.f)
 	, m_visible(1.f)
@@ -232,7 +233,6 @@ SceneLayer::SceneLayer(Scene * scene)
 	addVar("opacity", m_opacity);
 
 	m_surface = new Surface(GFX_SX, GFX_SY);
-	m_surface->clear(0, 0, 0, 0);
 }
 
 SceneLayer::~SceneLayer()
@@ -251,8 +251,10 @@ SceneLayer::~SceneLayer()
 	m_surface = nullptr;
 }
 
-void SceneLayer::load(const XMLElement * xmlLayer)
+bool SceneLayer::load(const XMLElement * xmlLayer)
 {
+	bool enabled = boolAttrib(xmlLayer, "enabled", true);
+
 	m_name = stringAttrib(xmlLayer, "name", "");
 
 	std::string blend = stringAttrib(xmlLayer, "blend", "add");
@@ -263,6 +265,13 @@ void SceneLayer::load(const XMLElement * xmlLayer)
 	m_copyPreviousLayerAlpha = floatAttrib(xmlLayer, "copy_alpha", 1.f);
 	m_opacity = floatAttrib(xmlLayer, "opacity", 1.f);
 	m_visible = floatAttrib(xmlLayer, "visible", 1.f);
+
+	const std::string clearColor = stringAttrib(xmlLayer, "clear_color", "");
+
+	if (!clearColor.empty())
+		m_clearColor = Color::fromHex(clearColor.c_str());
+
+	m_surface->clearf(m_clearColor.r, m_clearColor.g, m_clearColor.b, m_clearColor.a);
 
 	//
 
@@ -280,6 +289,8 @@ void SceneLayer::load(const XMLElement * xmlLayer)
 			m_effects.push_back(effect);
 		}
 	}
+
+	return enabled;
 }
 
 void SceneLayer::tick(const float dt)
@@ -362,12 +373,12 @@ void SceneLayer::draw()
 		}
 		else
 		{
-			m_surface->clear(0, 0, 0, 0);
+			m_surface->clearf(m_clearColor.r, m_clearColor.g, m_clearColor.b, m_clearColor.a);
 		}
 	}
 	else if (m_autoClear)
 	{
-		m_surface->clear(0, 0, 0, 0);
+		m_surface->clearf(m_clearColor.r, m_clearColor.g, m_clearColor.b, m_clearColor.a);
 	}
 
 	pushSurface(m_surface);
@@ -1046,9 +1057,14 @@ bool Scene::load(const char * filename)
 				{
 					SceneLayer * layer = new SceneLayer(this);
 
-					layer->load(xmlLayer);
-
-					m_layers.push_back(layer);
+					if (!layer->load(xmlLayer))
+					{
+						delete layer;
+					}
+					else
+					{
+						m_layers.push_back(layer);
+					}
 				}
 			}
 
