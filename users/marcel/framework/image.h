@@ -52,3 +52,5 @@ public:
 };
 
 ImageData * loadImage(const char * filename);
+ImageData * imagePremultiplyAlpha(ImageData * image);
+ImageData * imageFixAlphaFilter(ImageData * image);
