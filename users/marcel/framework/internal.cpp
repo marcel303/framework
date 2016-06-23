@@ -38,7 +38,7 @@ void checkErrorGL_internal(const char * function, int line)
 	if (error != GL_NO_ERROR)
 	{
 		logError("%s: %d: OpenGL error: %x", function, line, error);
-		
+
 		#if 1
 		static int skipCount = 1;
 		if (skipCount-- <= 0)
@@ -277,6 +277,18 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 	if (!imageData)
 	{
 		imageData = loadImage(filename);
+
+#if 1
+		ImageData * temp = imageFixAlphaFilter(imageData);
+		delete imageData;
+		imageData = temp;
+#endif
+
+#if 0
+		ImageData * temp = imagePremultiplyAlpha(imageData);
+		delete imageData;
+		imageData = temp;
+#endif
 
 	#ifdef WIN32
 		if (framework.cacheResourceData && imageData)
@@ -799,11 +811,11 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 	
 	if (result)
 	{
-		log("loaded shader program %s", name);
+		log("loaded shader program %s", name.c_str());
 	}
 	else
 	{
-		logError("failed to load shader program %s", name);
+		logError("failed to load shader program %s", name.c_str());
 		
 		free();
 	}
