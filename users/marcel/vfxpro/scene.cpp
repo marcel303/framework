@@ -56,14 +56,17 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 	if (type == "fsfx")
 	{
 		const std::string shader = stringAttrib(xmlEffect, "shader", "");
-		
+		const std::string imageFiles = stringAttrib(xmlEffect, "images", "");
+		std::vector<std::string> images;
+		splitString(imageFiles, images, ',');
+
 		if (shader.empty())
 		{
 			logWarning("shader not set. skipping effect");
 		}
 		else
 		{
-			effect = new Effect_Fsfx(m_name.c_str(), shader.c_str());
+			effect = new Effect_Fsfx(m_name.c_str(), shader.c_str(), images);
 
 			typeName = shader;
 		}
@@ -1116,17 +1119,21 @@ bool Scene::load(const char * filename)
 						SceneLayer * layer = findLayerByName(layerName.c_str());
 						if (layer)
 							var = layer->getVar(varName.c_str());
+						if (var == nullptr)
+							logError("could not find var value %s:%s", layerName.c_str(), varName.c_str());
 					}
 					else if (!effectName.empty())
 					{
 						SceneEffect * effect = findEffectByName(effectName.c_str());
 						if (effect)
 							var = effect->m_effect->getVar(varName.c_str());
+						if (var == nullptr)
+							logError("could not find var value %s:%s", effectName.c_str(), varName.c_str());
 					}
 
 					if (var == nullptr)
 					{
-						logError("could not find var value");
+						//
 					}
 					else
 					{
@@ -1134,7 +1141,7 @@ bool Scene::load(const char * filename)
 
 						if (mod == nullptr)
 						{
-							logError("could not find global value");
+							logError("could not find global value %s", modName.c_str());
 						}
 						else
 						{
@@ -1142,6 +1149,7 @@ bool Scene::load(const char * filename)
 							modifier.var = var;
 							modifier.mod = mod;
 							modifier.str = floatAttrib(xmlModifier, "strength", 1.f);
+							modifier.op = Modifier::parseOp(op);
 
 							if (!range.empty())
 							{
