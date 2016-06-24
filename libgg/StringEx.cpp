@@ -33,7 +33,7 @@ std::string String::TrimLeft(const std::string& text)
 
 	for (; start < text.length(); ++start)
 	{
-		if (text[start] != '\t' && text[start] != ' ' && text[start] != '\0')
+		if (text[start] != '\r' && text[start] != '\n' && text[start] != '\t' && text[start] != ' ' && text[start] != '\0')
 			break;
 	}
 
@@ -46,7 +46,7 @@ std::string String::TrimRight(const std::string& text)
 
 	for (; end >= 0; --end)
 	{
-		if (text[end] != '\t' && text[end] != ' ' && text[end] != '\0')
+		if (text[end] != '\r' && text[end] != '\n' && text[end] != '\t' && text[end] != ' ' && text[end] != '\0')
 			break;
 	}
 
