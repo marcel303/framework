@@ -72,6 +72,12 @@ layout (std140) uniform FsfxBlock
 	FsfxData fsfxData;
 };
 
+#define time fsfxData.time
+#define param1 fsfxData.param1
+#define param2 fsfxData.param2
+#define param3 fsfxData.param3
+#define param4 fsfxData.param4
+
 #endif
 
 // boxblur post process
@@ -117,6 +123,10 @@ struct LuminanceData
 	float power;
 	float scale;
 	float darken;
+};
+
+struct LuminanceData2
+{
 	float darkenAlpha;
 };
 
@@ -125,6 +135,11 @@ struct LuminanceData
 layout (std140) uniform LuminanceBlock
 {
 	LuminanceData luminanceData;
+};
+
+layout (std140) uniform LuminanceBlock2
+{
+	LuminanceData2 luminanceData2;
 };
 
 #endif

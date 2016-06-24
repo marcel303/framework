@@ -433,6 +433,9 @@ void SceneLayer::draw()
 				setShader(alphaTestShader);
 				checkErrorGL();
 				break;
+			case kBlendMode_Multiply:
+				setBlend(BLEND_MUL);
+				break;
 			default:
 				Assert(false);
 				break;
@@ -489,6 +492,11 @@ SceneAction::SceneAction()
 
 bool SceneAction::load(const XMLElement * xmlAction)
 {
+	const bool enabled = boolAttrib(xmlAction, "enabled", true);
+
+	if (!enabled)
+		return false;
+
 	const std::string type = xmlAction->Name();
 
 	if (type == "tween")

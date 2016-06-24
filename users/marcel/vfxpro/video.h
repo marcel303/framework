@@ -15,6 +15,8 @@ struct MediaPlayer
 	// threading related
 	SDL_mutex * textureMutex;
 	SDL_Thread * mpThread;
+	SDL_cond * mpTickEvent;
+	SDL_mutex * mpTickMutex;
 	volatile bool stopMpThread;
 	uint8_t * videoData;
 	int videoSx;
@@ -30,6 +32,8 @@ struct MediaPlayer
 		// threading related
 		, textureMutex(0)
 		, mpThread(0)
+		, mpTickEvent(0)
+		, mpTickMutex(0)
 		, stopMpThread(false)
 		, videoData(0)
 		, videoSx(0)

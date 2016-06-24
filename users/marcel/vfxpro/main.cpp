@@ -28,7 +28,7 @@
 #include "data/ShaderConstants.h"
 
 #if !defined(DEBUG)
-	#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
+	//#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 #endif
 
 using namespace tinyxml2;
@@ -819,6 +819,92 @@ public:
 
 //
 
+#if 0
+
+float evalPoint(float n1, float n2, float t)
+{
+	float diff = n2 - n1;
+
+	return n1 + (diff * t);
+}    
+
+static void testBezier()
+{
+	static float _x1;
+	static float _y1;
+	static float _x2;
+	static float _y2;
+	static float _x3;
+	static float _y3;
+
+	static float dx;
+	static float dy;
+
+	static int frame = 0;
+
+	if ((frame % 20) == 0)
+	{
+		_x1 = random(-1.f, +1.f);
+		_y1 = random(-1.f, +1.f);
+		_x2 = random(-1.f, +1.f);
+		_y2 = random(-1.f, +1.f);
+		_x3 = random(-1.f, +1.f);
+		_y3 = random(-1.f, +1.f);
+
+		dx = random(-1.f, +1.f) * .3f;
+		dy = random(-1.f, +1.f) * .3f;
+	}
+
+	const float t = (frame % 20) / 20.f;
+
+	frame++;
+
+	gxPushMatrix();
+	{
+		gxTranslatef(GFX_SX/2, GFX_SY/2, 0.f);
+		gxScalef(600.f, 600.f, 1.f);
+
+		gxColor4f(1.f, 1.f, 1.f, 1.f);
+
+		for (float ja = -1.f; ja <= +1.f; ja += 2.f / 10.f)
+		{
+			const float j = ja * t;
+
+			gxBegin(GL_LINE_STRIP);
+			{
+				for (float i = 0.f; i <= 1.f; i += 0.01f)
+				{
+					float x1 = _x1;
+					float y1 = _y1;
+					float x2 = _x2;
+					float y2 = _y2;
+					float x3 = _x3;
+					float y3 = _y3;
+
+					x2 += dx * j;
+					y2 += dx * j;
+
+					const float xa = evalPoint(x1, x2, i);
+					const float ya = evalPoint(y1, y2, i);
+					const float xb = evalPoint(x2, x3, i);
+					const float yb = evalPoint(y2, y3, i);
+
+					const float x = evalPoint(xa, xb, i);
+					const float y = evalPoint(ya, yb, i);
+
+					gxVertex2f(x, y);
+				}
+			}
+			gxEnd();
+		}
+	}
+	gxPopMatrix();
+}
+
+#endif
+
+//
+
 int main(int argc, char * argv[])
 {
 	//changeDirectory("data");
@@ -900,11 +986,11 @@ int main(int argc, char * argv[])
 
 	// initialise framework
 
-#if ENABLE_WINDOWED_MODE
+#if ENABLE_WINDOWED_MODE || 1
 	framework.fullscreen = false;
-	framework.minification = 2;
+	framework.minification = 1;
 	framework.windowX = 0;
-	framework.windowY = 0;
+	//framework.windowY = 0;
 #else
 	framework.fullscreen = true;
 	framework.exclusiveFullscreen = false;
@@ -1980,6 +2066,10 @@ int main(int argc, char * argv[])
 						(int)leapListener->state.palmPosition.y,
 						(int)leapListener->state.palmPosition.z);
 				}
+			#endif
+
+			#if 0
+				testBezier();
 			#endif
 			}
 			framework.endDraw();

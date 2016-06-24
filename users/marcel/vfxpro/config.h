@@ -1,10 +1,10 @@
 #pragma once
 
 #ifdef DEBUG
-	#define ENABLE_DEBUG_TEXT 1
-	#define ENABLE_WINDOWED_MODE 1
+	#define ENABLE_DEBUG_TEXT 0
+	#define ENABLE_WINDOWED_MODE 0
 	#define ENABLE_DEBUG_MENUS 1
-	#define ENABLE_DEBUG_INFOS 1
+	#define ENABLE_DEBUG_INFOS 0
 #else
 	#define ENABLE_DEBUG_TEXT 0
 	#define ENABLE_WINDOWED_MODE 0

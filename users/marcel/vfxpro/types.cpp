@@ -312,6 +312,8 @@ BlendMode parseBlendMode(const std::string & blend)
 		return kBlendMode_Opaque;
 	else if (blend == "alpha_test")
 		return kBlendMode_AlphaTest;
+	else if (blend == "multiply")
+		return kBlendMode_Multiply;
 	else
 	{
 		logWarning("unknown blend type: %s", blend.c_str());

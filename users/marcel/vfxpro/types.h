@@ -264,7 +264,8 @@ enum BlendMode
 	kBlendMode_Alpha,
 	kBlendMode_PremultipliedAlpha,
 	kBlendMode_Opaque,
-	kBlendMode_AlphaTest
+	kBlendMode_AlphaTest,
+	kBlendMode_Multiply
 };
 
 BlendMode parseBlendMode(const std::string & blend);

@@ -7,13 +7,15 @@ static int ExecMediaPlayerThread(void * param)
 {
 	MediaPlayer * self = (MediaPlayer*)param;
 
+	SDL_LockMutex(self->mpTickMutex);
+
 	while (!self->stopMpThread)
 	{
 		const int delayMS = 10;
 
-		SDL_Delay(delayMS);
-
 		self->tick(delayMS / 1000.f);
+
+		SDL_CondWaitTimeout(self->mpTickEvent, self->mpTickMutex, delayMS);
 	}
 
 	return 0;
@@ -146,6 +148,20 @@ void MediaPlayer::close()
 		stopMediaPlayerThread();
 	}
 
+	if (mpTickEvent)
+	{
+		SDL_DestroyCond(mpTickEvent);
+		mpTickEvent = nullptr;
+	}
+
+	if (mpTickMutex)
+	{
+		SDL_DestroyMutex(mpTickMutex);
+		mpTickMutex = nullptr;
+	}
+
+	const int t1 = SDL_GetTicks();
+
 	if (texture)
 	{
 		glDeleteTextures(1, &texture);
@@ -158,13 +174,23 @@ void MediaPlayer::close()
 		audioStream = nullptr;
 	}
 
+	const int t2 = SDL_GetTicks();
+
 	if (audioOutput)
 	{
 		delete audioOutput;
 		audioOutput = nullptr;
 	}
 
+	const int t3 = SDL_GetTicks();
+
 	mpContext.End();
+
+	const int t4 = SDL_GetTicks();
+
+	logDebug("MP texture delete took %dms", t2 - t1);
+	logDebug("MP audio output delete took %dms", t3 - t2);
+	logDebug("MP context end took %dms", t4 - t3);
 }
 
 void MediaPlayer::tick(const float dt)
@@ -241,6 +267,13 @@ uint32_t MediaPlayer::getTexture()
 void MediaPlayer::startMediaPlayerThread()
 {
 	Assert(mpThread == nullptr);
+	Assert(mpTickEvent == nullptr);
+	Assert(mpTickMutex == nullptr);
+
+	if (mpTickEvent == nullptr)
+		mpTickEvent = SDL_CreateCond();
+	if (mpTickMutex == nullptr)
+		mpTickMutex = SDL_CreateMutex();
 
 	if (mpThread == nullptr)
 	{
@@ -254,15 +287,19 @@ void MediaPlayer::stopMediaPlayerThread()
 {
 	Assert(mpThread != nullptr);
 
+	const int t1 = SDL_GetTicks();
 	if (mpThread != nullptr)
 	{
 		stopMpThread = true;
+		SDL_CondSignal(mpTickEvent);
 
 		SDL_WaitThread(mpThread, nullptr);
 		mpThread = nullptr;
 
 		stopMpThread = false;
 	}
+	const int t2 = SDL_GetTicks();
+	logDebug("MP thread shutdown took %dms", t2 - t1);
 
 	if (textureMutex != nullptr)
 	{
