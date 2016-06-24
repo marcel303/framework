@@ -876,6 +876,7 @@ void Scene::tick(const float dt)
 
 	m_time += dt;
 
+#if ENABLE_DEBUG_TEXT
 	// process debug text
 
 	for (auto i = m_debugTexts.begin(); i != m_debugTexts.end(); )
@@ -887,6 +888,7 @@ void Scene::tick(const float dt)
 		else
 			++i;
 	}
+#endif
 }
 
 void Scene::draw(DrawableList & list)
@@ -923,6 +925,7 @@ void Scene::draw(DrawableList & list)
 
 void Scene::debugDraw()
 {
+#if ENABLE_DEBUG_TEXT
 	// draw debug text
 
 	setFont("calibri.ttf");
@@ -939,6 +942,7 @@ void Scene::debugDraw()
 
 		y += fontSize + 6;
 	}
+#endif
 }
 
 SceneLayer * Scene::findLayerByName(const char * name)
@@ -1006,11 +1010,13 @@ void Scene::triggerEventByOscId(int oscId)
 
 void Scene::addDebugText(const char * text)
 {
+#if ENABLE_DEBUG_TEXT
 	DebugText t;
 	t.text = text;
 	t.endTime = m_time + 4.f;
 
 	m_debugTexts.push_back(t);
+#endif
 }
 
 bool Scene::load(const char * filename)
@@ -1267,7 +1273,9 @@ void Scene::clear()
 
 	//
 
+#if ENABLE_DEBUG_TEXT
 	m_debugTexts.clear();
+#endif
 }
 
 bool Scene::reload()

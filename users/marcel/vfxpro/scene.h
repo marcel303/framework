@@ -1,5 +1,6 @@
 #pragma once
 
+#include "config.h"
 #include "types.h"
 #include <string>
 #include <vector>
@@ -320,6 +321,7 @@ struct Scene : public TweenFloatCollection, public TweenFloatModifier
 	TweenFloat m_varPcmVolume;
 	TweenFloat m_varTime;
 
+#if ENABLE_DEBUG_TEXT
 	struct DebugText
 	{
 		std::string text;
@@ -327,6 +329,7 @@ struct Scene : public TweenFloatCollection, public TweenFloatModifier
 	};
 
 	std::vector<DebugText> m_debugTexts;
+#endif
 
 	Scene();
 	~Scene();

@@ -2,6 +2,18 @@
 
 #include <string.h>
 
+#ifdef DEBUG
+	#define ENABLE_DEBUG_TEXT 1
+	#define ENABLE_WINDOWED_MODE 1
+	#define ENABLE_DEBUG_MENUS 1
+	#define ENABLE_DEBUG_INFOS 1
+#else
+	#define ENABLE_DEBUG_TEXT 0
+	#define ENABLE_WINDOWED_MODE 0
+	#define ENABLE_DEBUG_MENUS 0
+	#define ENABLE_DEBUG_INFOS 0
+#endif
+
 struct Config
 {
 	static const int kMaxMidiMappings = 256;

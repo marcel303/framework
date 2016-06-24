@@ -591,6 +591,8 @@ static void drawScreen(const Vec3 * screenPoints, GLuint surfaceTexture, int scr
 	gxEnd();
 }
 
+#if ENABLE_DEBUG_MENUS
+
 enum DebugMode
 {
 	kDebugMode_None,
@@ -611,6 +613,8 @@ static void setDebugMode(DebugMode mode)
 	else
 		s_debugMode = mode;
 }
+
+#endif
 
 static void handleAction(const std::string & action, const Dictionary & args)
 {
@@ -896,19 +900,18 @@ int main(int argc, char * argv[])
 
 	// initialise framework
 
-#if 0
+#if ENABLE_WINDOWED_MODE
+	framework.fullscreen = false;
+	framework.minification = 2;
+	framework.windowX = 0;
+	framework.windowY = 0;
+#else
 	framework.fullscreen = true;
 	framework.exclusiveFullscreen = false;
 	framework.useClosestDisplayMode = true;
-#else
-	framework.fullscreen = false;
-	//framework.windowY = 950;
-	framework.windowX = 0;
-	framework.windowY = 0;
 #endif
 
 	framework.enableDepthBuffer = true;
-	framework.minification = 2;
 	framework.enableMidi = true;
 	framework.midiDeviceIndex = config.midi.deviceIndex;
 
@@ -1105,8 +1108,10 @@ int main(int argc, char * argv[])
 
 			if (keyboard.wentDown(SDLK_d))
 				debugDraw = !debugDraw;
+		#if ENABLE_DEBUG_MENUS
 			if (keyboard.wentDown(SDLK_RSHIFT))
 				setDebugMode(kDebugMode_Camera);
+		#endif
 
 		#if DEMODATA
 			if (keyboard.wentDown(SDLK_p) || config.midiWentDown(64))
@@ -1123,6 +1128,7 @@ int main(int argc, char * argv[])
 			}
 		#endif
 
+		#if ENABLE_DEBUG_MENUS
 			if (keyboard.wentDown(SDLK_F1))
 			{
 				if (s_debugMode == kDebugMode_Help)
@@ -1212,17 +1218,20 @@ int main(int argc, char * argv[])
 					}
 				}
 			}
+		#endif
 
-			if (keyboard.wentDown(SDLK_g))
-				g_scene->triggerEvent("fade_rain");
-
+		#if ENABLE_DEBUG_MENUS
 			SDL_SetRelativeMouseMode(s_debugMode == kDebugMode_Camera ? SDL_TRUE : SDL_FALSE);
+		#else
+			SDL_SetRelativeMouseMode(SDL_FALSE);
+		#endif
 
 			const float dtReal = Calc::Min(1.f / 30.f, framework.timeStep) * config.midiGetValue(100, 1.f);
 
 			Mat4x4 cameraPositionMatrix;
 			Mat4x4 cameraRotationMatrix;
 
+		#if ENABLE_DEBUG_MENUS
 			if (s_debugMode == kDebugMode_Camera && drawProjectorSetup)
 			{
 				cameraRotation[0] -= mouse.dy / 100.f;
@@ -1244,6 +1253,7 @@ int main(int argc, char * argv[])
 				if (keyboard.wentDown(SDLK_END))
 					activeCamera = (activeCamera + 1) % (NUM_SCREENS + 1);
 			}
+		#endif
 
 			{
 				Mat4x4 rotX;
@@ -1753,6 +1763,7 @@ int main(int argc, char * argv[])
 					}
 				}
 
+			#if ENABLE_DEBUG_MENUS
 				setFont("VeraMono.ttf");
 				setColor(colorWhite);
 				const int spacingY = 28;
@@ -1925,6 +1936,7 @@ int main(int argc, char * argv[])
 					for (int i = 0; i <= 100; ++i)
 						drawCircle(GFX_SX/2 + i, GFX_SY/2 + EvalEase(i / 100.f, (EaseType)easeFunction, mouse.y / float(GFX_SY) * 2.f) * 100.f, 5.f, 4);
 				}
+			#endif
 
 				// fixme : remove
 
@@ -1946,13 +1958,13 @@ int main(int argc, char * argv[])
 				setBlend(BLEND_ALPHA);
 			#endif
 
-			#if 1
+			#if 1 && ENABLE_DEBUG_INFOS
 				setFont("VeraMono.ttf");
 				setColor(colorWhite);
 				drawText(mouse.x, mouse.y, 24, 0, -1, "(%d, %d)", (int)screenXToVirtual(mouse.x), (int)screenYToVirtual(mouse.y));
 			#endif
 
-			#if 1
+			#if 1 && ENABLE_DEBUG_INFOS
 				setFont("VeraMono.ttf");
 				setColor(colorWhite);
 				drawText(5, 5, 24, +1, +1, "LeapMotion connected: %d, hasFocus: %d", (int)leapController.isConnected(), (int)leapController.hasFocus());
@@ -1968,15 +1980,6 @@ int main(int argc, char * argv[])
 						(int)leapListener->state.palmPosition.y,
 						(int)leapListener->state.palmPosition.z);
 				}
-			#endif
-
-			#if 0
-				setColor(255, 127, 0, 255);
-				drawRect(0, 0, GFX_SX, GFX_SY);
-				setColor(colorWhite);
-				setBlend(BLEND_ALPHA);
-				Sprite("cesitest/cesilines-wave.png").drawEx(100, 100);
-				Sprite("cesitest/cesilines-wave2.png").draw();
 			#endif
 			}
 			framework.endDraw();
