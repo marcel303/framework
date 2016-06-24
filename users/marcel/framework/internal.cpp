@@ -278,18 +278,6 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 	{
 		imageData = loadImage(filename);
 
-#if 1
-		ImageData * temp = imageFixAlphaFilter(imageData);
-		delete imageData;
-		imageData = temp;
-#endif
-
-#if 0
-		ImageData * temp = imagePremultiplyAlpha(imageData);
-		delete imageData;
-		imageData = temp;
-#endif
-
 	#ifdef WIN32
 		if (framework.cacheResourceData && imageData)
 		{
@@ -320,6 +308,18 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 	}
 	else
 	{
+	#if 1
+		ImageData * temp = imageFixAlphaFilter(imageData);
+		delete imageData;
+		imageData = temp;
+	#endif
+
+	#if 0
+		ImageData * temp = imagePremultiplyAlpha(imageData);
+		delete imageData;
+		imageData = temp;
+	#endif
+
 		if ((imageData->sx % gridSx) != 0 || (imageData->sy % gridSy) != 0)
 		{
 			logError("image size (%d, %d) must be a multiple of the grid size (%d, %d)",
