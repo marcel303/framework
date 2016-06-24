@@ -2,8 +2,28 @@
 #include "framework.h"
 #include "tinyxml2.h"
 #include "xml.h"
+#include <string.h>
+
+//
 
 using namespace tinyxml2;
+
+//
+
+Config::Midi::Midi()
+{
+	memset(this, 0, sizeof(*this));
+	memset(mapping, -1, sizeof(mapping));
+}
+
+Config::AudioIn::AudioIn()
+{
+	memset(this, 0, sizeof(*this));
+
+	deviceIndex = -1;
+}
+
+//
 
 Config::Config()
 {

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <string.h>
-
 #ifdef DEBUG
 	#define ENABLE_DEBUG_TEXT 1
 	#define ENABLE_WINDOWED_MODE 1
@@ -20,11 +18,7 @@ struct Config
 
 	struct Midi
 	{
-		Midi()
-		{
-			memset(this, 0, sizeof(*this));
-			memset(mapping, -1, sizeof(mapping));
-		}
+		Midi();
 
 		bool enabled;
 		int deviceIndex;
@@ -33,12 +27,7 @@ struct Config
 
 	struct AudioIn
 	{
-		AudioIn()
-		{
-			memset(this, 0, sizeof(*this));
-
-			deviceIndex = -1;
-		}
+		AudioIn();
 
 		bool enabled;
 		int deviceIndex;

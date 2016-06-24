@@ -147,23 +147,6 @@ struct SceneAction
 		std::vector<TweenSet> m_tweens;
 	} m_tween;
 
-	/*
-	struct Tween
-	{
-		TargetType m_targetType;
-		std::string m_targetName;
-		std::string m_varName;
-		float m_tweenTo;
-		float m_tweenTime;
-		EaseType m_easeType;
-		float m_easeParam;
-		bool m_replaceTween;
-		bool m_addTween;
-		float m_preDelay;
-		float m_postDelay;
-	} m_tween;
-	*/
-
 	struct Signal
 	{
 		std::string m_targetName;
