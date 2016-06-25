@@ -229,7 +229,7 @@ Effect_Fsfx::Effect_Fsfx(const char * name, const char * shader, const std::vect
 	if (!images.empty())
 	{
 		auto filenames = images;
-		for (int i = 0; i < images.size(); ++i)
+		for (size_t i = 0; i < images.size(); ++i)
 			filenames[i] = String::Trim(images[i]);
 
 		const Sprite baseSprite(filenames[0].c_str());
@@ -256,7 +256,7 @@ Effect_Fsfx::Effect_Fsfx(const char * name, const char * shader, const std::vect
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo[1]);
 		checkErrorGL();
 
-		for (int i = 0; i < images.size(); ++i)
+		for (size_t i = 0; i < images.size(); ++i)
 		{
 			const Sprite sprite(filenames[i].c_str());
 

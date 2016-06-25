@@ -689,7 +689,7 @@ static void handleFileChange(const std::string & filename)
 
 //
 
-#ifdef DEBUG
+#if ENABLE_REALTIME_EDITING
 
 struct FileInfo
 {

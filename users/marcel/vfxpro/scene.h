@@ -222,6 +222,8 @@ struct Scene : public TweenFloatCollection, public TweenFloatModifier
 				return kOp_Min;
 			if (op == "max")
 				return kOp_Max;
+			logError("unknown modifier op: %s", op.c_str());
+			return kOp_Mul;
 		}
 
 		TweenFloat * var;
