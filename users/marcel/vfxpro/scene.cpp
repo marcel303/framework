@@ -45,7 +45,16 @@ SceneEffect::~SceneEffect()
 
 bool SceneEffect::load(const XMLElement * xmlEffect)
 {
+	static int nonameCount = 0;
+
 	m_name = stringAttrib(xmlEffect, "name", "");
+
+	if (m_name.empty())
+	{
+		nonameCount++;
+
+		m_name = String::FormatC("noname_%d", nonameCount);
+	}
 
 	const std::string type = stringAttrib(xmlEffect, "type", "");
 
@@ -178,6 +187,20 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 
 		effect = new Effect_Blit(m_name.c_str(), layer.c_str());
 	}
+	else if (type == "blocks")
+	{
+		effect = new Effect_Blocks(m_name.c_str());
+	}
+	else if (type == "lines")
+	{
+		const int numLines = intAttrib(xmlEffect, "num_lines", 1);
+
+		effect = new Effect_Lines(m_name.c_str(), numLines);
+	}
+	else if (type == "bars")
+	{
+		effect = new Effect_Bars(m_name.c_str());
+	}
 	else
 	{
 		logError("unknown effect type: %s", type.c_str());
@@ -203,7 +226,7 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 			}
 		}
 
-		effect->enabled = boolAttrib(xmlEffect, "enabled", true);
+		effect->visible = boolAttrib(xmlEffect, "visible", true);
 
 		effect->blendMode = parseBlendMode(stringAttrib(xmlEffect, "blend", "add"));
 
@@ -539,7 +562,10 @@ bool SceneAction::load(const XMLElement * xmlAction)
 
 		for (const XMLAttribute * xmlAttrib = xmlAction->FirstAttribute(); xmlAttrib; xmlAttrib = xmlAttrib->Next())
 		{
-			if (!strcmp(xmlAttrib->Name(), "effect") || !strcmp(xmlAttrib->Name(), "layer"))
+			if (!strcmp(xmlAttrib->Name(), "enabled"))
+			{
+			}
+			else if (!strcmp(xmlAttrib->Name(), "effect") || !strcmp(xmlAttrib->Name(), "layer"))
 			{
 			}
 			else if (!strcmp(xmlAttrib->Name(), "time"))
@@ -942,13 +968,13 @@ void Scene::debugDraw()
 
 	float x = GFX_SX / 2.f;
 	float y = GFX_SY / 2.f;
-	const int fontSize = 48;
+	const int fontSize = 24;
 
 	for (auto i = m_debugTexts.begin(); i != m_debugTexts.end(); ++i)
 	{
 		drawText(x, y, fontSize, 0.f, 0.f, i->text.c_str());
 
-		y += fontSize + 6;
+		y += fontSize + 4;
 	}
 #endif
 }

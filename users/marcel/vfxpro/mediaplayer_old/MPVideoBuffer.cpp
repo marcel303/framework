@@ -78,6 +78,8 @@ namespace MP
 
 	// VideBuffer
 	VideoBuffer::VideoBuffer()
+		: m_writePosition(-1)
+		, m_readPosition(-1)
 	{
 		m_initialized = false;
 	}

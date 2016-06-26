@@ -70,7 +70,7 @@ const static float pi2 = float(M_PI) * 2.f;
 
 struct Effect : TweenFloatCollection
 {
-	TweenFloat enabled;
+	TweenFloat visible;
 	bool is3D; // when set to 3D, the effect is rendered using a separate virtual camera to each screen. when false, it will use simple 1:1 mapping onto screen coordinates
 	Mat4x4 transform; // transformation matrix for 3D effects
 	bool is2D;
@@ -85,7 +85,7 @@ struct Effect : TweenFloatCollection
 	bool debugEnabled;
 
 	Effect(const char * name)
-		: enabled(1.f)
+		: visible(1.f)
 		, is3D(false)
 		, is2D(false)
 		, blendMode(kBlendMode_Add)
@@ -97,7 +97,7 @@ struct Effect : TweenFloatCollection
 		, z(0.f)
 		, debugEnabled(true)
 	{
-		addVar("enabled", enabled);
+		addVar("visible", visible);
 		addVar("x", screenX);
 		addVar("y", screenY);
 		addVar("scale_x", scaleX);
@@ -976,11 +976,11 @@ struct Effect_Video : Effect
 	{
 		TweenFloatCollection::tick(dt);
 
-		if (m_mediaPlayer.isActive())
+		if (m_mediaPlayer.isActive(m_mediaPlayer.context))
 		{
 			//m_mediaPlayer.tick(dt);
 
-			if (!m_mediaPlayer.isActive())
+			if (!m_mediaPlayer.isActive(m_mediaPlayer.context))
 			{
 				m_mediaPlayer.close();
 			}
@@ -1019,7 +1019,7 @@ struct Effect_Video : Effect
 	{
 		if (name == "start")
 		{
-			if (m_mediaPlayer.isActive())
+			if (m_mediaPlayer.isActive(m_mediaPlayer.context))
 			{
 				m_mediaPlayer.close();
 			}
@@ -1488,3 +1488,111 @@ struct Effect_Blit : Effect
 		gxSetTexture(0);
 	}
 };
+
+//
+
+struct Effect_Blocks : public Effect
+{
+	struct Block
+	{
+		Block();
+
+		float x;
+		float y;
+		float size;
+		float speed;
+		float value;
+	};
+
+	TweenFloat m_alpha;
+	TweenFloat m_numBlocks;
+	TweenFloat m_minSpeed;
+	TweenFloat m_maxSpeed;
+	TweenFloat m_minSize;
+	TweenFloat m_maxSize;
+
+	std::vector<Block> m_blocks;
+
+	Effect_Blocks(const char * name);
+
+	void spawnBlock();
+
+	virtual void tick(const float dt) override;
+	virtual void draw(DrawableList & list) override;
+	virtual void draw() override;
+};
+
+//
+
+struct Effect_Lines : public Effect
+{
+	struct Line
+	{
+		Line();
+
+		bool active;
+		float x;
+		float y;
+		float sx;
+		float sy;
+		float speedX;
+		float speedY;
+		float c;
+	};
+
+	TweenFloat m_alpha;
+	TweenFloat m_spawnRate;
+	TweenFloat m_minSpeed;
+	TweenFloat m_maxSpeed;
+	TweenFloat m_minSize;
+	TweenFloat m_maxSize;
+	TweenFloat m_color1;
+	TweenFloat m_color2;
+	TweenFloat m_thickness;
+	TweenFloat m_spawnTimer;
+
+	std::vector<Line> m_lines;
+
+	Effect_Lines(const char * name, const int numLines);
+
+	void spawnLine();
+
+	virtual void tick(const float dt) override;
+	virtual void draw(DrawableList & list) override;
+	virtual void draw() override;
+};
+
+//
+
+struct Effect_Bars : public Effect
+{
+	struct Bar
+	{
+		Bar();
+
+		float size;
+		int color;
+	};
+
+	TweenFloat m_alpha;
+	TweenFloat m_shuffleRate;
+	TweenFloat m_shuffleTimer;
+	TweenFloat m_shuffle;
+	TweenFloat m_minSize;
+	TweenFloat m_maxSize;
+	TweenFloat m_sizePow;
+	TweenFloat m_topAlpha;
+	TweenFloat m_bottomAlpha;
+
+	std::vector<Bar> m_bars;
+
+	Effect_Bars(const char * name);
+
+	void initializeBars();
+	void shuffleBar();
+
+	virtual void tick(const float dt) override;
+	virtual void draw(DrawableList & list) override;
+	virtual void draw() override;
+};
+

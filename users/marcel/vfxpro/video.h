@@ -5,9 +5,38 @@
 
 struct MediaPlayer
 {
+	struct Context
+	{
+		Context()
+			: mpTickEvent(nullptr)
+			, mpTickMutex(nullptr)
+		{
+		}
+
+		~Context()
+		{
+			if (mpTickEvent)
+			{
+				SDL_DestroyCond(mpTickEvent);
+				mpTickEvent = nullptr;
+			}
+
+			if (mpTickMutex)
+			{
+				SDL_DestroyMutex(mpTickMutex);
+				mpTickMutex = nullptr;
+			}
+		}
+
+		MP::Context mpContext;
+		SDL_cond * mpTickEvent;
+		SDL_mutex * mpTickMutex;
+	};
+
+	Context * context;
+
 	class AudioOutput * audioOutput;
 	struct MyAudioStream * audioStream;
-	MP::Context mpContext;
 	int sx;
 	int sy;
 	uint32_t texture;
@@ -15,16 +44,16 @@ struct MediaPlayer
 	// threading related
 	SDL_mutex * textureMutex;
 	SDL_Thread * mpThread;
-	SDL_cond * mpTickEvent;
-	SDL_mutex * mpTickMutex;
 	volatile bool stopMpThread;
+	volatile bool stopMpThreadDone;
 	uint8_t * videoData;
 	int videoSx;
 	int videoSy;
 	bool videoIsDirty;
 
 	MediaPlayer()
-		: audioOutput(nullptr)
+		: context(nullptr)
+		, audioOutput(nullptr)
 		, audioStream(nullptr)
 		, sx(0)
 		, sy(0)
@@ -32,9 +61,8 @@ struct MediaPlayer
 		// threading related
 		, textureMutex(0)
 		, mpThread(0)
-		, mpTickEvent(0)
-		, mpTickMutex(0)
 		, stopMpThread(false)
+		, stopMpThreadDone(false)
 		, videoData(0)
 		, videoSx(0)
 		, videoSy(0)
@@ -44,18 +72,15 @@ struct MediaPlayer
 
 	~MediaPlayer()
 	{
-		if (isActive())
-		{
-			close();
-		}
+		close();
 	}
 
 	bool open(const char * filename);
 	void close();
-	void tick(const float dt);
+	void tick(Context * context, const float dt);
 	void draw();
 
-	bool isActive() const;
+	bool isActive(Context * context) const;
 
 	uint32_t getTexture();
 

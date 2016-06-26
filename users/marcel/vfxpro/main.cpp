@@ -57,7 +57,8 @@ GLuint g_fftTexture = 0;
 float virtualToScreenX(const float x)
 {
 #if NUM_SCREENS == 1
-	return ((x / 100.f) + 1.5f) * SCREEN_SX / 3.f;
+	//return ((x / 100.f) + 1.5f) * SCREEN_SX / 3.f;
+	return x + GFX_SX/2;
 #elif NUM_SCREENS == 3
 	return ((x / 100.f) + 1.5f) * SCREEN_SX;
 #endif
@@ -65,13 +66,15 @@ float virtualToScreenX(const float x)
 
 float virtualToScreenY(const float y)
 {
-	return (y / 100.f + .5f) * SCREEN_SY;
+	//return (y / 100.f + .5f) * SCREEN_SY;
+	return y + GFX_SY/2;
 }
 
 float screenXToVirtual(const float x)
 {
 #if NUM_SCREENS == 1
-	return (x * 3.f / SCREEN_SX - 1.5f) * 100.f;
+	return x - GFX_SX/2;
+	//return (x * 3.f / SCREEN_SX - 1.5f) * 100.f;
 #elif NUM_SCREENS == 3
 	return (x / SCREEN_SX - 1.5f) * 100.f;
 #endif
@@ -79,7 +82,8 @@ float screenXToVirtual(const float x)
 
 float screenYToVirtual(const float y)
 {
-	return (y / SCREEN_SY - .5f) * 100.f;
+	return y - GFX_SY/2;
+	//return (y / SCREEN_SY - .5f) * 100.f;
 }
 
 /*
@@ -990,7 +994,7 @@ int main(int argc, char * argv[])
 	framework.fullscreen = false;
 	framework.minification = 1;
 	framework.windowX = 0;
-	//framework.windowY = 0;
+	framework.windowY = 60;
 #else
 	framework.fullscreen = true;
 	framework.exclusiveFullscreen = false;

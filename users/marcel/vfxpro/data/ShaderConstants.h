@@ -58,11 +58,11 @@ layout (std140) uniform lightsBlock
 struct FsfxData
 {
 	float alpha;
-	float time;
-	float param1;
-	float param2;
-	float param3;
-	float param4;
+	float _time;
+	float _param1;
+	float _param2;
+	float _param3;
+	float _param4;
 };
 
 #if _SHADER_
@@ -72,11 +72,11 @@ layout (std140) uniform FsfxBlock
 	FsfxData fsfxData;
 };
 
-#define time fsfxData.time
-#define param1 fsfxData.param1
-#define param2 fsfxData.param2
-#define param3 fsfxData.param3
-#define param4 fsfxData.param4
+#define time fsfxData._time
+#define param1 fsfxData._param1
+#define param2 fsfxData._param2
+#define param3 fsfxData._param3
+#define param4 fsfxData._param4
 
 #endif
 

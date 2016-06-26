@@ -7,15 +7,34 @@ static int ExecMediaPlayerThread(void * param)
 {
 	MediaPlayer * self = (MediaPlayer*)param;
 
-	SDL_LockMutex(self->mpTickMutex);
+	MediaPlayer::Context * context = self->context;
+
+	SDL_LockMutex(context->mpTickMutex);
 
 	while (!self->stopMpThread)
 	{
 		const int delayMS = 10;
 
-		self->tick(delayMS / 1000.f);
+		self->tick(context, delayMS / 1000.f);
 
-		SDL_CondWaitTimeout(self->mpTickEvent, self->mpTickMutex, delayMS);
+		SDL_CondWaitTimeout(context->mpTickEvent, context->mpTickMutex, delayMS);
+	}
+
+	SDL_MemoryBarrierRelease();
+	self->stopMpThreadDone = true;
+
+	if (context)
+	{
+		const int t1 = SDL_GetTicks();
+
+		context->mpContext.End();
+
+		delete context;
+		context = nullptr;
+
+		const int t2 = SDL_GetTicks();
+
+		logDebug("MP context end took %dms", t2 - t1);
 	}
 
 	return 0;
@@ -86,22 +105,30 @@ struct MyAudioStream : AudioStream
 
 bool MediaPlayer::open(const char * filename)
 {
+	Assert(context == nullptr);
+
 	bool result = true;
+
+	const int t1 = SDL_GetTicks();
 
 	if (result)
 	{
-		if (!mpContext.Begin(filename))
+		context = new Context();
+
+		if (!context->mpContext.Begin(filename))
 		{
 			result = false;
 		}
 	}
+
+	const int t2 = SDL_GetTicks();
 
 	if (result)
 	{
 		AudioOutput_OpenAL * audioOutputOpenAL = new AudioOutput_OpenAL();
 		audioOutput = audioOutputOpenAL;
 
-		if (!audioOutputOpenAL->Initialize(2, mpContext.GetAudioFrameRate(), 1 << 13))
+		if (!audioOutputOpenAL->Initialize(2, context->mpContext.GetAudioFrameRate(), 1 << 13))
 		{
 			result = false;
 		}
@@ -111,20 +138,24 @@ bool MediaPlayer::open(const char * filename)
 		}
 	}
 
+	const int t3 = SDL_GetTicks();
+
 	if (result)
 	{
 		audioStream = new MyAudioStream();
-		audioStream->mpContext = &mpContext;
+		audioStream->mpContext = &context->mpContext;
 		audioStream->audioOutput = audioOutput;
 	}
 
 	if (result)
 	{
-		if (!mpContext.FillBuffers())
+		if (!context->mpContext.FillBuffers())
 		{
 			result = false;
 		}
 	}
+
+	const int t4 = SDL_GetTicks();
 
 	if (result)
 	{
@@ -132,6 +163,13 @@ bool MediaPlayer::open(const char * filename)
 
 		startMediaPlayerThread();
 	}
+
+	const int t5 = SDL_GetTicks();
+
+	logDebug("MP begin took %dms", t2 - t1);
+	logDebug("audio output init took %dms", t3 - t2);
+	logDebug("MP fill took %dms", t4 - t3);
+	logDebug("MP thread start took %dms", t5 - t4);
 
 	if (!result)
 	{
@@ -147,18 +185,15 @@ void MediaPlayer::close()
 	{
 		stopMediaPlayerThread();
 	}
-
-	if (mpTickEvent)
+	else
 	{
-		SDL_DestroyCond(mpTickEvent);
-		mpTickEvent = nullptr;
+		if (context)
+		{
+			delete context;
+		}
 	}
 
-	if (mpTickMutex)
-	{
-		SDL_DestroyMutex(mpTickMutex);
-		mpTickMutex = nullptr;
-	}
+	context = nullptr;
 
 	const int t1 = SDL_GetTicks();
 
@@ -184,22 +219,17 @@ void MediaPlayer::close()
 
 	const int t3 = SDL_GetTicks();
 
-	mpContext.End();
-
-	const int t4 = SDL_GetTicks();
-
 	logDebug("MP texture delete took %dms", t2 - t1);
 	logDebug("MP audio output delete took %dms", t3 - t2);
-	logDebug("MP context end took %dms", t4 - t3);
 }
 
-void MediaPlayer::tick(const float dt)
+void MediaPlayer::tick(Context * context, const float dt)
 {
-	if (!isActive())
+	if (!isActive(context))
 		return;
 
 	//logDebug("PlaybackPosition: %g", (float)audioOutput->PlaybackPosition_get());
-	if (!mpContext.FillBuffers())
+	if (!context->mpContext.FillBuffers())
 		return; // todo : check if all packets have been consumed!
 
 	audioOutput->Update(audioStream);
@@ -207,7 +237,7 @@ void MediaPlayer::tick(const float dt)
 	double time = audioStream->GetTime();
 	MP::VideoFrame * videoFrame = nullptr;
 	bool gotVideo = false;
-	mpContext.RequestVideo(time, &videoFrame, gotVideo);
+	context->mpContext.RequestVideo(time, &videoFrame, gotVideo);
 	if (gotVideo)
 	{
 		SDL_LockMutex(textureMutex);
@@ -241,9 +271,9 @@ void MediaPlayer::draw()
 	}
 }
 
-bool MediaPlayer::isActive() const
+bool MediaPlayer::isActive(Context * context) const
 {
-	return mpContext.HasBegun();
+	return context && context->mpContext.HasBegun();
 }
 
 uint32_t MediaPlayer::getTexture()
@@ -267,19 +297,20 @@ uint32_t MediaPlayer::getTexture()
 void MediaPlayer::startMediaPlayerThread()
 {
 	Assert(mpThread == nullptr);
-	Assert(mpTickEvent == nullptr);
-	Assert(mpTickMutex == nullptr);
+	Assert(context->mpTickEvent == nullptr);
+	Assert(context->mpTickMutex == nullptr);
 
-	if (mpTickEvent == nullptr)
-		mpTickEvent = SDL_CreateCond();
-	if (mpTickMutex == nullptr)
-		mpTickMutex = SDL_CreateMutex();
+	if (context->mpTickEvent == nullptr)
+		context->mpTickEvent = SDL_CreateCond();
+	if (context->mpTickMutex == nullptr)
+		context->mpTickMutex = SDL_CreateMutex();
 
 	if (mpThread == nullptr)
 	{
 		textureMutex = SDL_CreateMutex();
 
 		mpThread = SDL_CreateThread(ExecMediaPlayerThread, "MediaPlayerThread", this);
+		//SDL_DetachThread(mpThread);
 	}
 }
 
@@ -288,17 +319,29 @@ void MediaPlayer::stopMediaPlayerThread()
 	Assert(mpThread != nullptr);
 
 	const int t1 = SDL_GetTicks();
+
 	if (mpThread != nullptr)
 	{
+		Assert(stopMpThread == false);
+		Assert(stopMpThreadDone == false);
+		
 		stopMpThread = true;
-		SDL_CondSignal(mpTickEvent);
+		SDL_CondSignal(context->mpTickEvent);
+
+		while (!stopMpThreadDone)
+		{
+			SDL_Delay(0);
+		}
 
 		SDL_WaitThread(mpThread, nullptr);
 		mpThread = nullptr;
 
 		stopMpThread = false;
+		stopMpThreadDone = false;
 	}
+
 	const int t2 = SDL_GetTicks();
+
 	logDebug("MP thread shutdown took %dms", t2 - t1);
 
 	if (textureMutex != nullptr)
