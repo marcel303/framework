@@ -1,3 +1,4 @@
+#include "audiofft.h"
 #include "drawable.h"
 #include "effect.h"
 #include "framework.h"
@@ -841,6 +842,45 @@ void Scene::tick(const float dt)
 		layer->tick(dt);
 	}
 
+	// process FFT input
+
+	for (int i = 0; i < kMaxFftBuckets; ++i)
+	{
+		FftBucket & b = m_fftBuckets[i];
+
+		if (b.isActive)
+		{
+			const int begin = std::max(b.rangeBegin, 0);
+			const int end = std::min(b.rangeEnd, kFFTComplexSize-1);
+
+			double power = 0.0;
+
+			if (end >= begin)
+			{
+				for (int j = begin; j <= end; ++j)
+					power += fftPowerValue(j);
+
+				power /= (end - begin + 1);
+			}
+
+			const bool wasBelow = b.lastValue < b.treshold;
+			b.lastValue = power;
+			const bool isBelow = b.lastValue < b.treshold;
+
+			if (wasBelow && !isBelow)
+			{
+				if (!b.onUp.empty())
+					triggerEvent(b.onUp.c_str());
+			}
+
+			if (!wasBelow && isBelow)
+			{
+				if (!b.onDown.empty())
+					triggerEvent(b.onDown.c_str());
+			}
+		}
+	}
+
 	// process MIDI input
 
 	for (auto & map : m_midiMaps)
@@ -1128,6 +1168,52 @@ bool Scene::load(const char * filename)
 					event->load(xmlEvent);
 
 					m_events.push_back(event);
+				}
+			}
+
+			//
+
+			const XMLElement * xmlFft = xmlScene->FirstChildElement("fft");
+
+			if (xmlFft == 0)
+			{
+				logDebug("scene doesn't have any FFT settings");
+			}
+			else
+			{
+				for (const XMLElement * xmlBucket = xmlFft->FirstChildElement("bucket"); xmlBucket; xmlBucket = xmlBucket->NextSiblingElement("bucket"))
+				{
+					const int id = intAttrib(xmlBucket, "id", -1);
+					const std::string range = stringAttrib(xmlBucket, "range", "");
+					const float treshold = floatAttrib(xmlBucket, "treshold", .5f);
+					const std::string onUp = stringAttrib(xmlBucket, "on_up", "");
+					const std::string onDown = stringAttrib(xmlBucket, "on_down", "");
+					
+					if (id >= kMaxFftBuckets)
+					{
+						logError("fft bucket id is out of range. id=%d, max=%d", id, kMaxFftBuckets-1);
+					}
+					else
+					{
+						std::vector<std::string> rangeElems;
+						splitString(range, rangeElems, ',');
+
+						if (rangeElems.size() != 2)
+						{
+							logError("range doesn't have two elements");
+						}
+						else
+						{
+							FftBucket & b = m_fftBuckets[id];
+
+							b.isActive = true;
+							b.rangeBegin = Parse::Int32(rangeElems[0]);
+							b.rangeEnd = Parse::Int32(rangeElems[1]);
+							b.treshold = treshold;
+							b.onUp = onUp;
+							b.onDown = onDown;
+						}
+					}
 				}
 			}
 

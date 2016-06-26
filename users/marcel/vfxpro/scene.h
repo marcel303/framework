@@ -199,6 +199,25 @@ struct SceneMidiMap
 
 struct Scene : public TweenFloatCollection, public TweenFloatModifier
 {
+	const static int kMaxFftBuckets = 10;
+
+	struct FftBucket
+	{
+		FftBucket()
+		{
+			isActive = false;
+		}
+
+		bool isActive;
+		int rangeBegin;
+		int rangeEnd;
+		double treshold;
+		std::string onUp;
+		std::string onDown;
+
+		double lastValue;
+	};
+
 	struct Modifier
 	{
 		enum Op
@@ -298,6 +317,7 @@ struct Scene : public TweenFloatCollection, public TweenFloatModifier
 	std::string m_name;
 	std::vector<SceneLayer*> m_layers;
 	std::vector<SceneEvent*> m_events;
+	FftBucket m_fftBuckets[kMaxFftBuckets];
 	std::vector<Modifier> m_modifiers;
 	std::vector<SceneMidiMap> m_midiMaps;
 

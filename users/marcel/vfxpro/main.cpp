@@ -1505,8 +1505,10 @@ int main(int argc, char * argv[])
 			glGenTextures(1, &g_fftTexture);
 			glBindTexture(GL_TEXTURE_2D, g_fftTexture);
 			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-			fftPowerValue(0);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, kFFTComplexSize, 1, 0, GL_RED, GL_FLOAT, s_fftReal);
+			 float powerValues[kFFTComplexSize];
+			for (int i = 0; i < kFFTComplexSize; ++i)
+				powerValues[i] = fftPowerValue(i);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, kFFTComplexSize, 1, 0, GL_RED, GL_FLOAT, powerValues);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -2040,13 +2042,35 @@ int main(int argc, char * argv[])
 				setBlend(BLEND_ALPHA);
 			#endif
 
-			#if 0
-				setBlend(BLEND_ADD);
-				setColor(colorWhite);
-				gxSetTexture(g_fftTexture);
-				drawRect(0, 0, GFX_SX, GFX_SY);
-				gxSetTexture(0);
-				setBlend(BLEND_ALPHA);
+			#if ENABLE_DEBUG_FFTTEX
+				{
+					const int sx = 800;
+					const int sy = 100;
+					const int x = 5;
+					const int y = GFX_SY - sy - 5;
+					const float s = 1.f/4.f;
+					const float w = .1f;
+
+					setBlend(BLEND_OPAQUE);
+					setColorf(s, s, s, 1.f);
+					gxSetTexture(g_fftTexture);
+					gxBegin(GL_QUADS);
+					{
+						gxTexCoord2f(0.f, 0.f); gxVertex2f(x,      y     );
+						gxTexCoord2f(w,   0.f); gxVertex2f(x + sx, y     );
+						gxTexCoord2f(w,   1.f); gxVertex2f(x + sx, y + sy);
+						gxTexCoord2f(0.f, 1.f); gxVertex2f(x,      y + sy);
+					}
+					gxEnd();
+					gxSetTexture(0);
+
+					setBlend(BLEND_ALPHA);
+
+					setFont("calibri.ttf");
+					setColor(colorWhite);
+					for (int i = 0; i <= 5; ++i)
+						drawText(x + sx/5.f*i, y, 24, 0.f, -1.f, "%d", int(kFFTComplexSize*w/5.f*i));
+				}
 			#endif
 
 			#if 1 && ENABLE_DEBUG_INFOS

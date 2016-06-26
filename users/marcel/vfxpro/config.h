@@ -1,17 +1,20 @@
 #pragma once
 
 #ifdef DEBUG
-	#define ENABLE_DEBUG_TEXT 0
+	#define ENABLE_DEBUG_TEXT 1
 	#define ENABLE_WINDOWED_MODE 0
 	#define ENABLE_DEBUG_MENUS 1
 	#define ENABLE_DEBUG_INFOS 0
 	#define ENABLE_REALTIME_EDITING 1
+	#define ENABLE_DEBUG_PCMTEX 0
+	#define ENABLE_DEBUG_FFTTEX 1
 #else
 	#define ENABLE_DEBUG_TEXT 1
 	#define ENABLE_WINDOWED_MODE 0
 	#define ENABLE_DEBUG_MENUS 0
 	#define ENABLE_DEBUG_INFOS 0
 	#define ENABLE_REALTIME_EDITING 1
+	#define ENABLE_DEBUG_FFTTEX 0
 #endif
 
 struct Config
