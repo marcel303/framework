@@ -966,13 +966,13 @@ void Scene::debugDraw()
 	setColor(colorWhite);
 	setBlend(BLEND_ALPHA);
 
-	float x = GFX_SX / 2.f;
-	float y = GFX_SY / 2.f;
+	float x = GFX_SX - 10;
+	float y = 10;
 	const int fontSize = 24;
 
-	for (auto i = m_debugTexts.begin(); i != m_debugTexts.end(); ++i)
+	for (auto i = m_debugTexts.rbegin(); i != m_debugTexts.rend(); ++i)
 	{
-		drawText(x, y, fontSize, 0.f, 0.f, i->text.c_str());
+		drawText(x, y, fontSize, -1, 0.f, i->text.c_str());
 
 		y += fontSize + 4;
 	}

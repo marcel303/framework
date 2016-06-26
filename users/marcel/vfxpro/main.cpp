@@ -1316,7 +1316,8 @@ int main(int argc, char * argv[])
 			SDL_SetRelativeMouseMode(SDL_FALSE);
 		#endif
 
-			const float dtReal = Calc::Min(1.f / 30.f, framework.timeStep) * config.midiGetValue(100, 1.f);
+			//const float dtReal = Calc::Min(1.f / 30.f, framework.timeStep) * config.midiGetValue(100, 1.f);
+			const float dtReal = framework.timeStep * config.midiGetValue(100, 1.f);
 
 			Mat4x4 cameraPositionMatrix;
 			Mat4x4 cameraRotationMatrix;
