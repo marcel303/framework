@@ -338,6 +338,122 @@ void Effect_Fsfx::draw()
 
 //
 
+Effect_Blit::Effect_Blit(const char * name, const char * layer)
+	: Effect(name)
+	, m_alpha(1.f)
+	, m_centered(0.f)
+	, m_absolute(1.f)
+	, m_srcX(-1.f)
+	, m_srcY(-1.f)
+	, m_srcSx(0.f)
+	, m_srcSy(0.f)
+	, m_layer(layer)
+{
+	addVar("alpha", m_alpha);
+	addVar("centered", m_centered);
+	addVar("absolute", m_absolute);
+	addVar("src_x", m_srcX);
+	addVar("src_y", m_srcY);
+	addVar("src_sx", m_srcSx);
+	addVar("src_sy", m_srcSy);
+}
+
+void Effect_Blit::transformCoords(float x, float y, bool addSize, float & out_x, float & out_y, float & out_u, float & out_v)
+{
+	float srcX = m_srcX;
+	float srcY = m_srcY;
+
+	float dstX = 0.f;
+	float dstY = 0.f;
+
+	if (addSize)
+	{
+		srcX += m_srcSx;
+		srcY += m_srcSy;
+
+		if (m_centered > 0.f)
+		{
+			dstX += m_srcSx / 2.f;
+			dstY += m_srcSy / 2.f;
+		}
+		else
+		{
+			dstX += m_srcSx;
+			dstY += m_srcSy;
+		}
+	}
+	else
+	{
+		if (m_centered > 0.f)
+		{
+			dstX -= m_srcSx / 2.f;
+			dstY -= m_srcSy / 2.f;
+		}
+	}
+
+	dstX *= scale;
+	dstY *= scale;
+
+	dstX += screenX;
+	dstY += screenY;
+
+	if (m_absolute <= 0.f)
+	{
+		srcX = virtualToScreenX(srcX);
+		srcY = virtualToScreenY(srcY);
+		dstX = virtualToScreenX(dstX);
+		dstY = virtualToScreenY(dstY);
+	}
+
+	out_u =       srcX / SCREEN_SX;
+	out_v = 1.f - srcY / SCREEN_SY;
+
+	out_x = dstX;
+	out_y = dstY;
+}
+
+void Effect_Blit::tick(const float dt)
+{
+	TweenFloatCollection::tick(dt);
+}
+
+void Effect_Blit::draw(DrawableList & list)
+{
+	new (list) EffectDrawable(this);
+}
+
+void Effect_Blit::draw()
+{
+	if (m_alpha <= 0.f)
+		return;
+	if (m_srcSx <= 0.f || m_srcSy <= 0.f)
+		return;
+
+	const SceneLayer * layer = g_currentScene->findLayerByName(m_layer.c_str());
+
+	gxColor4f(1.f, 1.f, 1.f, m_alpha);
+	gxSetTexture(layer->m_surface->getTexture());
+	{
+		gxBegin(GL_QUADS);
+		{
+			float x1, y1, x2, y2;
+			float u1, v1, u2, v2;
+
+			transformCoords(0.f, 0.f, false, x1, y1, u1, v1);
+			transformCoords(0.f, 0.f, true,  x2, y2, u2, v2);
+
+			gxTexCoord2f(u1, v1); gxVertex2f(x1, y1);
+			gxTexCoord2f(u2, v1); gxVertex2f(x2, y1);
+			gxTexCoord2f(u2, v2); gxVertex2f(x2, y2);
+			gxTexCoord2f(u1, v2); gxVertex2f(x1, y2);
+		}
+		gxEnd();
+	}
+	gxSetTexture(0);
+}
+
+//
+
 Effect_Blocks::Block::Block()
 {
 	memset(this, 0, sizeof(*this));
@@ -553,6 +669,19 @@ void Effect_Lines::draw()
 
 //
 
+const static Color s_colorBarColors[] =
+{
+	Color::fromHex("000000"),
+	Color::fromHex("ffffff"),
+	Color::fromHex("a94801"),
+	Color::fromHex("9c9c9c"),
+	Color::fromHex("c78b06"), // ?
+	Color::fromHex("f7c600"),
+	Color::fromHex("575556"),
+	Color::fromHex("1e1e1e")
+};
+const static int s_numColorBarColors = sizeof(s_colorBarColors) / sizeof(s_colorBarColors[0]);
+
 Effect_Bars::Bar::Bar()
 {
 	memset(this, 0, sizeof(*this));
@@ -572,6 +701,7 @@ Effect_Bars::Effect_Bars(const char * name)
 	addVar("shuffle_rate", m_shuffleRate);
 	addVar("shuffle_timer", m_shuffleTimer);
 	addVar("shuffle", m_shuffle);
+	addVar("base_size", m_baseSize);
 	addVar("min_size", m_minSize);
 	addVar("max_size", m_maxSize);
 	addVar("size_pow", m_sizePow);
@@ -581,34 +711,54 @@ Effect_Bars::Effect_Bars(const char * name)
 
 void Effect_Bars::initializeBars()
 {
-	float x = 0.f;
-
-	while (x < GFX_SX)
+	for (int layer = 0; layer < kNumLayers; ++layer)
 	{
-		const float t = std::powf(random(0.f, 1.f), m_sizePow);
+		float x = 0.f;
 
-		Bar bar;
-		bar.size = Calc::Lerp(m_minSize, m_maxSize, t);
-		bar.color = rand() % 4;
+		while (x < GFX_SX)
+		{
+			const float t = std::powf(random(0.f, 1.f), m_sizePow);
 
-		m_bars.push_back(bar);
+			Bar bar;
 
-		x += bar.size;
+			if (layer == 0)
+			{
+				bar.skipSize = m_baseSize;
+				bar.drawSize = m_baseSize;
+			}
+			else
+			{
+				const float s = 1.f / std::powf(layer + 1.f, m_sizePow);
+
+				bar.skipSize = m_baseSize * s;
+				bar.drawSize = Calc::Lerp(m_minSize, m_maxSize, t) * s;
+
+				//bar.skipSize = m_maxSize / (layer + 1.f);
+				//bar.drawSize = Calc::Lerp(m_minSize, m_maxSize, t) / (layer + 1.f);
+				//bar.drawSize = m_maxSize / std::powf(layer + 1.f, m_sizePow);
+			}
+
+			bar.color = rand() % s_numColorBarColors;
+
+			m_bars[layer].push_back(bar);
+
+			x += bar.skipSize;
+		}
 	}
 }
 
-void Effect_Bars::shuffleBar()
+void Effect_Bars::shuffleBar(int layer)
 {
-	if (m_bars.size() >= 2)
+	if (m_bars[layer].size() >= 2)
 	{
 		for (;;)
 		{
-			const int index1 = rand() % m_bars.size();
-			const int index2 = rand() % m_bars.size();
+			const int index1 = rand() % m_bars[layer].size();
+			const int index2 = rand() % m_bars[layer].size();
 
 			if (index1 != index2)
 			{
-				std::swap(m_bars[index1], m_bars[index2]);
+				std::swap(m_bars[layer][index1], m_bars[layer][index2]);
 
 				break;
 			}
@@ -618,7 +768,7 @@ void Effect_Bars::shuffleBar()
 
 void Effect_Bars::tick(const float dt)
 {
-	if (m_bars.empty())
+	if (m_bars[0].empty())
 		initializeBars();
 
 	TweenFloatCollection::tick(dt);
@@ -643,7 +793,8 @@ void Effect_Bars::tick(const float dt)
 	{
 		m_shuffle = m_shuffle - 1;
 
-		shuffleBar();
+		for (int i = 0; i < kNumLayers; ++i)
+			shuffleBar(i);
 	}
 }
 
@@ -657,30 +808,29 @@ void Effect_Bars::draw()
 	if (m_alpha <= 0.f)
 		return;
 
-	float x = 0.f;
-
 	gxBegin(GL_QUADS);
 	{
-		for (size_t i = 0; i < m_bars.size(); ++i)
+		for (int layer = 0; layer < kNumLayers; ++layer)
 		{
-			const static Color colors[4] =
+			float x = 0.f;
+
+			for (size_t i = 0; i < m_bars[layer].size(); ++i)
 			{
-				Color(0,0,0),
-				Color(255,255,255),
-				Color(255, 255,0),
-				Color(0, 0, 255)
-			};
+				const Bar & b = m_bars[layer][i];
 
-			const Color & color = m_bars[i].color < 4 ? colors[m_bars[i].color] : colorWhite;
+				const Color & color = s_colorBarColors[b.color];
 
-			gxColor4f(color.r, color.g, color.b, m_topAlpha * m_alpha);
-			gxVertex2f(x, 0.f);
-			gxVertex2f(x + m_bars[i].size, 0.f);
-			gxColor4f(color.r, color.g, color.b, m_bottomAlpha * m_alpha);
-			gxVertex2f(x + m_bars[i].size, GFX_SY);
-			gxVertex2f(x, GFX_SY);
+				x += b.skipSize/2.f;
 
-			x += m_bars[i].size;
+				gxColor4f(color.r, color.g, color.b, m_topAlpha * m_alpha);
+				gxVertex2f(x - b.drawSize/2.f, 0.f);
+				gxVertex2f(x + b.drawSize/2.f, 0.f);
+				gxColor4f(color.r, color.g, color.b, m_bottomAlpha * m_alpha);
+				gxVertex2f(x + b.drawSize/2.f, GFX_SY);
+				gxVertex2f(x - b.drawSize/2.f, GFX_SY);
+
+				x += b.skipSize/2.f;
+			}
 		}
 	}
 	gxEnd();

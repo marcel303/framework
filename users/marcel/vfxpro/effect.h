@@ -1426,67 +1426,20 @@ struct Effect_Blit : Effect
 {
 	TweenFloat m_alpha;
 	TweenFloat m_centered;
-	TweenFloat m_sx;
-	TweenFloat m_sy;
+	TweenFloat m_absolute;
+	TweenFloat m_srcX;
+	TweenFloat m_srcY;
+	TweenFloat m_srcSx;
+	TweenFloat m_srcSy;
 	std::string m_layer;
 
-	Effect_Blit(const char * name, const char * layer)
-		: Effect(name)
-		, m_alpha(1.f)
-		, m_centered(1.f)
-		, m_sx(0.f)
-		, m_sy(0.f)
-		, m_layer(layer)
-	{
-		addVar("alpha", m_alpha);
-		addVar("centered", m_centered);
-		addVar("sx", m_sx);
-		addVar("sy", m_sy);
-	}
+	Effect_Blit(const char * name, const char * layer);
 
-	virtual void tick(const float dt) override
-	{
-		TweenFloatCollection::tick(dt);
-	}
+	void transformCoords(float x, float y, bool addSize, float & out_x, float & out_y, float & out_u, float & out_v);
 
-	virtual void draw(DrawableList & list) override
-	{
-		new (list) EffectDrawable(this);
-	}
-
-	virtual void draw() override
-	{
-		if (m_alpha <= 0.f)
-			return;
-		if (m_sx <= 0.f || m_sy <= 0.f)
-			return;
-
-		const SceneLayer * layer = g_currentScene->findLayerByName(m_layer.c_str());
-
-		gxColor4f(1.f, 1.f, 1.f, m_alpha);
-		gxSetTexture(layer->m_surface->getTexture());
-		{
-			gxBegin(GL_QUADS);
-			{
-				const float x1 = virtualToScreenX(screenX - ((m_centered > 0.f) ? m_sx / 2.f :  0.f));
-				const float y1 = virtualToScreenY(screenY - ((m_centered > 0.f) ? m_sy / 2.f :  0.f));
-				const float x2 = virtualToScreenX(screenX + ((m_centered > 0.f) ? m_sx / 2.f : m_sx));
-				const float y2 = virtualToScreenY(screenY + ((m_centered > 0.f) ? m_sy / 2.f : m_sy));
-
-				const float u1 =       x1 / SCREEN_SX;
-				const float v1 = 1.f - y1 / SCREEN_SY;
-				const float u2 =       x2 / SCREEN_SX;
-				const float v2 = 1.f - y2 / SCREEN_SY;
-
-				gxTexCoord2f(u1, v1); gxVertex2f(x1, y1);
-				gxTexCoord2f(u2, v1); gxVertex2f(x2, y1);
-				gxTexCoord2f(u2, v2); gxVertex2f(x2, y2);
-				gxTexCoord2f(u1, v2); gxVertex2f(x1, y2);
-			}
-			gxEnd();
-		}
-		gxSetTexture(0);
-	}
+	virtual void tick(const float dt) override;
+	virtual void draw(DrawableList & list) override;
+	virtual void draw() override;
 };
 
 //
@@ -1566,11 +1519,14 @@ struct Effect_Lines : public Effect
 
 struct Effect_Bars : public Effect
 {
+	static const int kNumLayers = 3;
+
 	struct Bar
 	{
 		Bar();
 
-		float size;
+		float skipSize;
+		float drawSize;
 		int color;
 	};
 
@@ -1578,18 +1534,19 @@ struct Effect_Bars : public Effect
 	TweenFloat m_shuffleRate;
 	TweenFloat m_shuffleTimer;
 	TweenFloat m_shuffle;
+	TweenFloat m_baseSize;
 	TweenFloat m_minSize;
 	TweenFloat m_maxSize;
 	TweenFloat m_sizePow;
 	TweenFloat m_topAlpha;
 	TweenFloat m_bottomAlpha;
 
-	std::vector<Bar> m_bars;
+	std::vector<Bar> m_bars[kNumLayers];
 
 	Effect_Bars(const char * name);
 
 	void initializeBars();
-	void shuffleBar();
+	void shuffleBar(int layer);
 
 	virtual void tick(const float dt) override;
 	virtual void draw(DrawableList & list) override;

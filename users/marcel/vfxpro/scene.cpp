@@ -563,7 +563,11 @@ bool SceneAction::load(const XMLElement * xmlAction)
 
 		for (const XMLAttribute * xmlAttrib = xmlAction->FirstAttribute(); xmlAttrib; xmlAttrib = xmlAttrib->Next())
 		{
-			if (!strcmp(xmlAttrib->Name(), "enabled"))
+			if (!strcmp(xmlAttrib->Name(), "enabled") ||
+				!strcmp(xmlAttrib->Name(), "replace") ||
+				!strcmp(xmlAttrib->Name(), "add") ||
+				!strcmp(xmlAttrib->Name(), "pre_delay") ||
+				!strcmp(xmlAttrib->Name(), "post_delay"))
 			{
 			}
 			else if (!strcmp(xmlAttrib->Name(), "effect") || !strcmp(xmlAttrib->Name(), "layer"))

@@ -1099,7 +1099,11 @@ int main(int argc, char * argv[])
 
 			framework.process();
 
-			tickFileMonitor();
+			static bool doTickFileMonitor = true;
+			if (keyboard.wentDown(SDLK_f))
+				doTickFileMonitor = !doTickFileMonitor;
+			if (doTickFileMonitor)
+				tickFileMonitor();
 
 			// todo : process audio input
 
@@ -1611,8 +1615,11 @@ int main(int argc, char * argv[])
 
 							drawableList.sort();
 
-							drawableList.draw();
-
+							{
+								gpuTimingBlock(drawableList);
+								drawableList.draw();
+							}
+							
 						#if DEMODATA
 							// todo : make PCM effect
 
@@ -1648,8 +1655,11 @@ int main(int argc, char * argv[])
 					}
 				#endif
 
-					setBlend(BLEND_ADD);
-					drawableList.draw();
+					{
+						gpuTimingBlock(drawableList);
+						setBlend(BLEND_ADD);
+						drawableList.draw();
+					}
 
 					// todo : remove this loudness test
 					//setColorf(.25f, .5f, 1.f, loudnessThisFrame);
@@ -1721,6 +1731,7 @@ int main(int argc, char * argv[])
 
 					if (doFxaa)
 					{
+						gpuTimingBlock(fxaa);
 						setBlend(BLEND_OPAQUE);
 						Shader & shader = fxaaShader;
 						setShader(shader);
@@ -1737,6 +1748,7 @@ int main(int argc, char * argv[])
 
 				gxSetTexture(surfaceTexture);
 				{
+					gpuTimingBlock(blitToBackBuffer);
 					setBlend(BLEND_OPAQUE);
 					setColor(colorWhite);
 					drawRect(0, 0, GFX_SX, GFX_SY);
@@ -2033,7 +2045,13 @@ int main(int argc, char * argv[])
 
 				// fixme : remove
 
-			#if 0
+			#if ENABLE_REALTIME_EDITING
+				setFont("calibri.ttf");
+				setColor(colorWhite);
+				drawText(5, 5, 24, +1.f, +1.f, "file monitor: %s", doTickFileMonitor ? "enabled" : "disabled");
+			#endif
+
+			#if ENABLE_DEBUG_PCMTEX
 				setBlend(BLEND_ADD);
 				setColor(colorWhite);
 				gxSetTexture(g_pcmTexture);
@@ -2051,8 +2069,8 @@ int main(int argc, char * argv[])
 					const float s = 1.f/4.f;
 					const float w = .1f;
 
-					setBlend(BLEND_OPAQUE);
-					setColorf(s, s, s, 1.f);
+					setBlend(BLEND_ALPHA);
+					setColorf(s, s, s, .5f);
 					gxSetTexture(g_fftTexture);
 					gxBegin(GL_QUADS);
 					{
@@ -2073,13 +2091,17 @@ int main(int argc, char * argv[])
 				}
 			#endif
 
-			#if 1 && ENABLE_DEBUG_INFOS
+			#if ENABLE_DEBUG_INFOS && 1
 				setFont("VeraMono.ttf");
+				setColor(colorBlack);
+				drawRect(mouse.x-100, mouse.y-10, mouse.x+100, mouse.y+20);
 				setColor(colorWhite);
-				drawText(mouse.x, mouse.y, 24, 0, -1, "(%d, %d)", (int)screenXToVirtual(mouse.x), (int)screenYToVirtual(mouse.y));
+				drawText(mouse.x, mouse.y, 24, 0, 0, "(%d, %d)",
+					mouse.isDown(BUTTON_LEFT) ? (int)screenXToVirtual(mouse.x) : mouse.x,
+					mouse.isDown(BUTTON_LEFT) ? (int)screenYToVirtual(mouse.y) : mouse.y);
 			#endif
 
-			#if 1 && ENABLE_DEBUG_INFOS
+			#if ENABLE_DEBUG_INFOS && 1
 				setFont("VeraMono.ttf");
 				setColor(colorWhite);
 				drawText(5, 5, 24, +1, +1, "LeapMotion connected: %d, hasFocus: %d", (int)leapController.isConnected(), (int)leapController.hasFocus());
