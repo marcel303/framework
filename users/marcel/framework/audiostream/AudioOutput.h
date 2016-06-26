@@ -24,7 +24,8 @@ class AudioOutput_OpenAL : public AudioOutput
 {
 public:
 	AudioOutput_OpenAL();
-	
+	virtual ~AudioOutput_OpenAL();
+
 	bool Initialize(int numChannels, int sampleRate, int bufferSize);
 	bool Shutdown();
 	

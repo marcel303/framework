@@ -21,6 +21,11 @@ AudioOutput_OpenAL::AudioOutput_OpenAL()
 		mBufferIds[i] = 0;
 }
 
+AudioOutput_OpenAL::~AudioOutput_OpenAL()
+{
+	Shutdown();
+}
+
 bool AudioOutput_OpenAL::Initialize(int numChannels, int sampleRate, int bufferSize)
 {
 	fassert(numChannels == 1 || numChannels == 2);
