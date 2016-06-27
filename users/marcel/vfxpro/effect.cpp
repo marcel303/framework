@@ -732,10 +732,6 @@ void Effect_Bars::initializeBars()
 
 				bar.skipSize = m_baseSize * s;
 				bar.drawSize = Calc::Lerp(m_minSize, m_maxSize, t) * s;
-
-				//bar.skipSize = m_maxSize / (layer + 1.f);
-				//bar.drawSize = Calc::Lerp(m_minSize, m_maxSize, t) / (layer + 1.f);
-				//bar.drawSize = m_maxSize / std::powf(layer + 1.f, m_sizePow);
 			}
 
 			bar.color = rand() % s_numColorBarColors;

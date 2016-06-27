@@ -66,11 +66,13 @@ struct MyAudioStream : AudioStream
 
 	virtual int Provide(int numSamples, AudioSample* __restrict buffer)
 	{
-		UpdateTiming(mpContext->GetAudioTime());
+		if (mpContext->HasAudioStream())
+			UpdateTiming(mpContext->GetAudioTime());
 
 		bool gotAudio = false;
 
-		mpContext->RequestAudio((int16_t*)buffer, numSamples, gotAudio);
+		if (mpContext->HasAudioStream())
+			mpContext->RequestAudio((int16_t*)buffer, numSamples, gotAudio);
 
 		if (gotAudio)
 			return numSamples;
@@ -128,7 +130,9 @@ bool MediaPlayer::open(const char * filename)
 		AudioOutput_OpenAL * audioOutputOpenAL = new AudioOutput_OpenAL();
 		audioOutput = audioOutputOpenAL;
 
-		if (!audioOutputOpenAL->Initialize(2, context->mpContext.GetAudioFrameRate(), 1 << 13))
+		const int sampleRate = context->mpContext.HasAudioStream() ? context->mpContext.GetAudioFrameRate() : 11000;
+
+		if (!audioOutputOpenAL->Initialize(2, sampleRate, 1 << 13))
 		{
 			result = false;
 		}
@@ -234,7 +238,7 @@ void MediaPlayer::tick(Context * context, const float dt)
 
 	audioOutput->Update(audioStream);
 
-	double time = audioStream->GetTime();
+	double time = audioStream->GetTime() * speed;
 	MP::VideoFrame * videoFrame = nullptr;
 	bool gotVideo = false;
 	context->mpContext.RequestVideo(time, &videoFrame, gotVideo);

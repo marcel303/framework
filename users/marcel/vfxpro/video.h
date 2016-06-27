@@ -40,6 +40,7 @@ struct MediaPlayer
 	int sx;
 	int sy;
 	uint32_t texture;
+	float speed;
 
 	// threading related
 	SDL_mutex * textureMutex;
@@ -58,6 +59,7 @@ struct MediaPlayer
 		, sx(0)
 		, sy(0)
 		, texture(0)
+		, speed(1.f)
 		// threading related
 		, textureMutex(0)
 		, mpThread(0)

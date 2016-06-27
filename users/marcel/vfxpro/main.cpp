@@ -990,7 +990,7 @@ int main(int argc, char * argv[])
 
 	// initialise framework
 
-#if ENABLE_WINDOWED_MODE || 1
+#if ENABLE_WINDOWED_MODE && 1
 	framework.fullscreen = false;
 	framework.minification = 1;
 	framework.windowX = 0;

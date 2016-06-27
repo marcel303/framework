@@ -950,20 +950,25 @@ struct Effect_Video : Effect
 {
 	TweenFloat m_alpha;
 	std::string m_filename;
+	std::string m_shader;
 	bool m_centered;
+	TweenFloat m_speed;
 
 	MediaPlayer m_mediaPlayer;
 
-	Effect_Video(const char * name, const char * filename, const bool centered, const bool play)
+	Effect_Video(const char * name, const char * filename, const char * shader, const bool centered, const bool play)
 		: Effect(name)
 		, m_alpha(1.f)
 		, m_centered(true)
+		, m_speed(1.f)
 	{
 		is2D = true;
 
 		addVar("alpha", m_alpha);
+		addVar("speed", m_speed);
 
 		m_filename = filename;
+		m_shader = shader;
 		m_centered = centered;
 
 		if (play)
@@ -978,6 +983,7 @@ struct Effect_Video : Effect
 
 		if (m_mediaPlayer.isActive(m_mediaPlayer.context))
 		{
+			m_mediaPlayer.speed = m_speed;
 			//m_mediaPlayer.tick(dt);
 
 			if (!m_mediaPlayer.isActive(m_mediaPlayer.context))
@@ -1008,8 +1014,22 @@ struct Effect_Video : Effect
 				if (m_centered)
 					gxTranslatef(-sx / 2.f, -sy / 2.f, 0.f);
 
-				setColorf(1.f, 1.f, 1.f, m_alpha);
-				m_mediaPlayer.draw();
+				if (!m_shader.empty())
+				{
+					Shader shader(m_shader.c_str());
+					shader.setTexture("colormap", 0, m_mediaPlayer.getTexture(), true, true);
+
+					setShader(shader);
+					{
+						drawRect(0, m_mediaPlayer.sy, m_mediaPlayer.sx, 0);
+					}
+					clearShader();
+				}
+				else
+				{
+					setColorf(1.f, 1.f, 1.f, m_alpha);
+					m_mediaPlayer.draw();
+				}
 			}
 			gxPopMatrix();
 		}

@@ -144,7 +144,9 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 	else if (type == "video")
 	{
 		const std::string file = stringAttrib(xmlEffect, "file", "");
+		const std::string shader = stringAttrib(xmlEffect, "shader", "");
 		const bool centered = boolAttrib(xmlEffect, "centered", true);
+		const bool play = boolAttrib(xmlEffect, "play", false);
 
 		if (file.empty())
 		{
@@ -152,7 +154,7 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 		}
 		else
 		{
-			effect = new Effect_Video(m_name.c_str(), file.c_str(), centered, false);
+			effect = new Effect_Video(m_name.c_str(), file.c_str(), shader.c_str(), centered, play);
 		}
 	}
 	else if (type == "picture")
