@@ -188,8 +188,10 @@ struct Effect_Fsfx : Effect
 	TweenFloat m_param2;
 	TweenFloat m_param3;
 	TweenFloat m_param4;
+	TweenFloat m_timeMultiplier;
 	std::vector<std::string> m_images;
 	GLuint m_textureArray;
+	float m_time;
 
 	Effect_Fsfx(const char * name, const char * shader, const std::vector<std::string> & images);
 	virtual ~Effect_Fsfx() override;
@@ -895,53 +897,11 @@ struct Effect_Picture : Effect
 	std::string m_filename;
 	bool m_centered;
 
-	Effect_Picture(const char * name, const char * filename, bool centered)
-		: Effect(name)
-		, m_alpha(1.f)
-		, m_angle(0.f)
-		, m_centered(true)
-	{
-		is2D = true;
+	Effect_Picture(const char * name, const char * filename, bool centered);
 
-		addVar("alpha", m_alpha);
-		addVar("angle", m_angle);
-
-		m_filename = filename;
-		m_centered = centered;
-	}
-
-	virtual void tick(const float dt) override
-	{
-		TweenFloatCollection::tick(dt);
-	}
-
-	virtual void draw(DrawableList & list) override
-	{
-		new (list) EffectDrawable(this);
-	}
-
-	virtual void draw() override
-	{
-		gxPushMatrix();
-		{
-			Sprite sprite(m_filename.c_str());
-
-			const int sx = sprite.getWidth();
-			const int sy = sprite.getHeight();
-			const float scaleX = SCREEN_SX / float(sx);
-			const float scaleY = SCREEN_SY / float(sy);
-			const float scale = Calc::Min(scaleX, scaleY);
-
-			gxRotatef(m_angle, 0.f, 0.f, 1.f);
-			gxScalef(scale, scale, 1.f);
-			if (m_centered)
-				gxTranslatef(-sx / 2.f, -sy / 2.f, 0.f);
-
-			setColorf(1.f, 1.f, 1.f, m_alpha);
-			sprite.drawEx(0.f, 0.f, 0.f, 1.f, 1.f, false, FILTER_LINEAR);
-		}
-		gxPopMatrix();
-	}
+	virtual void tick(const float dt) override;
+	virtual void draw(DrawableList & list) override;
+	virtual void draw() override;
 };
 
 //
@@ -949,6 +909,7 @@ struct Effect_Picture : Effect
 struct Effect_Video : Effect
 {
 	TweenFloat m_alpha;
+	TweenFloat m_angle;
 	std::string m_filename;
 	std::string m_shader;
 	bool m_centered;
@@ -956,100 +917,13 @@ struct Effect_Video : Effect
 
 	MediaPlayer m_mediaPlayer;
 
-	Effect_Video(const char * name, const char * filename, const char * shader, const bool centered, const bool play)
-		: Effect(name)
-		, m_alpha(1.f)
-		, m_centered(true)
-		, m_speed(1.f)
-	{
-		is2D = true;
+	Effect_Video(const char * name, const char * filename, const char * shader, const bool centered, const bool play);
 
-		addVar("alpha", m_alpha);
-		addVar("speed", m_speed);
+	virtual void tick(const float dt) override;
+	virtual void draw(DrawableList & list) override;
+	virtual void draw() override;
 
-		m_filename = filename;
-		m_shader = shader;
-		m_centered = centered;
-
-		if (play)
-		{
-			handleSignal("start");
-		}
-	}
-
-	virtual void tick(const float dt) override
-	{
-		TweenFloatCollection::tick(dt);
-
-		if (m_mediaPlayer.isActive(m_mediaPlayer.context))
-		{
-			m_mediaPlayer.speed = m_speed;
-			//m_mediaPlayer.tick(dt);
-
-			if (!m_mediaPlayer.isActive(m_mediaPlayer.context))
-			{
-				m_mediaPlayer.close();
-			}
-		}
-	}
-
-	virtual void draw(DrawableList & list) override
-	{
-		new (list) EffectDrawable(this);
-	}
-
-	virtual void draw() override
-	{
-		if (m_mediaPlayer.getTexture())
-		{
-			gxPushMatrix();
-			{
-				const int sx = m_mediaPlayer.sx;
-				const int sy = m_mediaPlayer.sy;
-				const float scaleX = SCREEN_SX / float(sx);
-				const float scaleY = SCREEN_SY / float(sy);
-				const float scale = Calc::Min(scaleX, scaleY);
-
-				gxScalef(scale, scale, 1.f);
-				if (m_centered)
-					gxTranslatef(-sx / 2.f, -sy / 2.f, 0.f);
-
-				if (!m_shader.empty())
-				{
-					Shader shader(m_shader.c_str());
-					shader.setTexture("colormap", 0, m_mediaPlayer.getTexture(), true, true);
-
-					setShader(shader);
-					{
-						drawRect(0, m_mediaPlayer.sy, m_mediaPlayer.sx, 0);
-					}
-					clearShader();
-				}
-				else
-				{
-					setColorf(1.f, 1.f, 1.f, m_alpha);
-					m_mediaPlayer.draw();
-				}
-			}
-			gxPopMatrix();
-		}
-	}
-
-	virtual void handleSignal(const std::string & name)
-	{
-		if (name == "start")
-		{
-			if (m_mediaPlayer.isActive(m_mediaPlayer.context))
-			{
-				m_mediaPlayer.close();
-			}
-
-			if (!m_mediaPlayer.open(m_filename.c_str()))
-			{
-				logWarning("failed to open %s", m_filename.c_str());
-			}
-		}
-	}
+	virtual void handleSignal(const std::string & name);
 };
 
 //
@@ -1445,6 +1319,7 @@ struct Effect_DrawPicture : Effect
 struct Effect_Blit : Effect
 {
 	TweenFloat m_alpha;
+	TweenFloat m_angle;
 	TweenFloat m_centered;
 	TweenFloat m_absolute;
 	TweenFloat m_srcX;
@@ -1539,7 +1414,7 @@ struct Effect_Lines : public Effect
 
 struct Effect_Bars : public Effect
 {
-	static const int kNumLayers = 3;
+	static const int kNumLayers = 1;
 
 	struct Bar
 	{

@@ -1189,6 +1189,7 @@ bool Scene::load(const char * filename)
 			{
 				for (const XMLElement * xmlBucket = xmlFft->FirstChildElement("bucket"); xmlBucket; xmlBucket = xmlBucket->NextSiblingElement("bucket"))
 				{
+					const bool enabled = boolAttrib(xmlBucket, "enabled", true);
 					const int id = intAttrib(xmlBucket, "id", -1);
 					const std::string range = stringAttrib(xmlBucket, "range", "");
 					const float treshold = floatAttrib(xmlBucket, "treshold", .5f);
@@ -1210,14 +1211,17 @@ bool Scene::load(const char * filename)
 						}
 						else
 						{
-							FftBucket & b = m_fftBuckets[id];
+							if (enabled)
+							{
+								FftBucket & b = m_fftBuckets[id];
 
-							b.isActive = true;
-							b.rangeBegin = Parse::Int32(rangeElems[0]);
-							b.rangeEnd = Parse::Int32(rangeElems[1]);
-							b.treshold = treshold;
-							b.onUp = onUp;
-							b.onDown = onDown;
+								b.isActive = true;
+								b.rangeBegin = Parse::Int32(rangeElems[0]);
+								b.rangeEnd = Parse::Int32(rangeElems[1]);
+								b.treshold = treshold;
+								b.onUp = onUp;
+								b.onDown = onDown;
+							}
 						}
 					}
 				}

@@ -213,14 +213,17 @@ Effect_Fsfx::Effect_Fsfx(const char * name, const char * shader, const std::vect
 	, m_param2(0.f)
 	, m_param3(0.f)
 	, m_param4(0.f)
+	, m_timeMultiplier(1.f)
 	, m_images(images)
 	, m_textureArray(0)
+	, m_time(0.f)
 {
 	addVar("alpha", m_alpha);
 	addVar("param1", m_param1);
 	addVar("param2", m_param2);
 	addVar("param3", m_param3);
 	addVar("param4", m_param4);
+	addVar("time_multiplier", m_timeMultiplier);
 
 	m_shader = shader;
 
@@ -303,6 +306,8 @@ Effect_Fsfx::~Effect_Fsfx()
 void Effect_Fsfx::tick(const float dt)
 {
 	TweenFloatCollection::tick(dt);
+
+	m_time += dt * m_timeMultiplier;
 }
 
 void Effect_Fsfx::draw(DrawableList & list)
@@ -323,7 +328,8 @@ void Effect_Fsfx::draw()
 	ShaderBuffer buffer;
 	FsfxData data;
 	data.alpha = m_alpha;
-	data._time = g_currentScene->m_time;
+	//data._time = g_currentScene->m_time;
+	data._time = m_time;
 	data._param1 = m_param1;
 	data._param2 = m_param2;
 	data._param3 = m_param3;
@@ -338,9 +344,161 @@ void Effect_Fsfx::draw()
 
 //
 
+Effect_Picture::Effect_Picture(const char * name, const char * filename, bool centered)
+	: Effect(name)
+	, m_alpha(1.f)
+	, m_angle(0.f)
+	, m_centered(true)
+{
+	is2D = true;
+
+	addVar("alpha", m_alpha);
+	addVar("angle", m_angle);
+
+	m_filename = filename;
+	m_centered = centered;
+}
+
+void Effect_Picture::tick(const float dt)
+{
+	TweenFloatCollection::tick(dt);
+}
+
+void Effect_Picture::draw(DrawableList & list)
+{
+	new (list) EffectDrawable(this);
+}
+
+void Effect_Picture::draw()
+{
+	gxPushMatrix();
+	{
+		Sprite sprite(m_filename.c_str());
+
+		const int sx = sprite.getWidth();
+		const int sy = sprite.getHeight();
+		const float scaleX = SCREEN_SX / float(sx);
+		const float scaleY = SCREEN_SY / float(sy);
+		const float scale = Calc::Min(scaleX, scaleY);
+
+		gxRotatef(m_angle, 0.f, 0.f, 1.f);
+		gxScalef(scale, scale, 1.f);
+		if (m_centered)
+			gxTranslatef(-sx / 2.f, -sy / 2.f, 0.f);
+
+		setColorf(1.f, 1.f, 1.f, m_alpha);
+		sprite.drawEx(0.f, 0.f, 0.f, 1.f, 1.f, false, FILTER_LINEAR);
+	}
+	gxPopMatrix();
+}
+
+//
+
+Effect_Video::Effect_Video(const char * name, const char * filename, const char * shader, const bool centered, const bool play)
+	: Effect(name)
+	, m_alpha(1.f)
+	, m_angle(0.f)
+	, m_centered(true)
+	, m_speed(1.f)
+{
+	is2D = true;
+
+	addVar("alpha", m_alpha);
+	addVar("angle", m_angle);
+	addVar("speed", m_speed);
+
+	m_filename = filename;
+	m_shader = shader;
+	m_centered = centered;
+
+	if (play)
+	{
+		handleSignal("start");
+	}
+}
+
+void Effect_Video::tick(const float dt)
+{
+	TweenFloatCollection::tick(dt);
+
+	if (m_mediaPlayer.isActive(m_mediaPlayer.context))
+	{
+		m_mediaPlayer.speed = m_speed;
+		//m_mediaPlayer.tick(dt);
+
+		if (!m_mediaPlayer.isActive(m_mediaPlayer.context))
+		{
+			m_mediaPlayer.close();
+		}
+	}
+}
+
+void Effect_Video::draw(DrawableList & list)
+{
+	new (list) EffectDrawable(this);
+}
+
+void Effect_Video::draw()
+{
+	if (m_mediaPlayer.getTexture())
+	{
+		gxPushMatrix();
+		{
+			const int sx = m_mediaPlayer.sx;
+			const int sy = m_mediaPlayer.sy;
+			const float scaleX = SCREEN_SX / float(sx);
+			const float scaleY = SCREEN_SY / float(sy);
+			const float scale = Calc::Min(scaleX, scaleY);
+
+			gxRotatef(m_angle, 0.f, 0.f, 1.f);
+			gxScalef(scale, scale, 1.f);
+			if (m_centered)
+				gxTranslatef(-sx / 2.f, -sy / 2.f, 0.f);
+
+			if (!m_shader.empty())
+			{
+				Shader shader(m_shader.c_str());
+				shader.setTexture("colormap", 0, m_mediaPlayer.getTexture(), true, true);
+
+				setShader(shader);
+				{
+					setColorf(1.f, 1.f, 1.f, m_alpha);
+					drawRect(0, m_mediaPlayer.sy, m_mediaPlayer.sx, 0);
+				}
+				clearShader();
+			}
+			else
+			{
+				setColorf(1.f, 1.f, 1.f, m_alpha);
+				m_mediaPlayer.draw();
+			}
+		}
+		gxPopMatrix();
+	}
+}
+
+void Effect_Video::handleSignal(const std::string & name)
+{
+	if (name == "start")
+	{
+		if (m_mediaPlayer.isActive(m_mediaPlayer.context))
+		{
+			m_mediaPlayer.close();
+		}
+
+		if (!m_mediaPlayer.open(m_filename.c_str()))
+		{
+			logWarning("failed to open %s", m_filename.c_str());
+		}
+	}
+}
+
+//
+
 Effect_Blit::Effect_Blit(const char * name, const char * layer)
 	: Effect(name)
 	, m_alpha(1.f)
+	, m_angle(0.f)
 	, m_centered(0.f)
 	, m_absolute(1.f)
 	, m_srcX(-1.f)
@@ -349,7 +507,10 @@ Effect_Blit::Effect_Blit(const char * name, const char * layer)
 	, m_srcSy(0.f)
 	, m_layer(layer)
 {
+	//is2D = true;
+
 	addVar("alpha", m_alpha);
+	addVar("angle", m_angle);
 	addVar("centered", m_centered);
 	addVar("absolute", m_absolute);
 	addVar("src_x", m_srcX);
@@ -371,38 +532,14 @@ void Effect_Blit::transformCoords(float x, float y, bool addSize, float & out_x,
 		srcX += m_srcSx;
 		srcY += m_srcSy;
 
-		if (m_centered > 0.f)
-		{
-			dstX += m_srcSx / 2.f;
-			dstY += m_srcSy / 2.f;
-		}
-		else
-		{
-			dstX += m_srcSx;
-			dstY += m_srcSy;
-		}
+		dstX += m_srcSx;
+		dstY += m_srcSy;
 	}
-	else
-	{
-		if (m_centered > 0.f)
-		{
-			dstX -= m_srcSx / 2.f;
-			dstY -= m_srcSy / 2.f;
-		}
-	}
-
-	dstX *= scale;
-	dstY *= scale;
-
-	dstX += screenX;
-	dstY += screenY;
 
 	if (m_absolute <= 0.f)
 	{
 		srcX = virtualToScreenX(srcX);
 		srcY = virtualToScreenY(srcY);
-		dstX = virtualToScreenX(dstX);
-		dstY = virtualToScreenY(dstY);
 	}
 
 	out_u =       srcX / SCREEN_SX;
@@ -431,25 +568,39 @@ void Effect_Blit::draw()
 
 	const SceneLayer * layer = g_currentScene->findLayerByName(m_layer.c_str());
 
-	gxColor4f(1.f, 1.f, 1.f, m_alpha);
-	gxSetTexture(layer->m_surface->getTexture());
+	gxPushMatrix();
 	{
-		gxBegin(GL_QUADS);
+		if (m_absolute > 0.f)
+			gxTranslatef(screenX, screenY, 0.f);
+		else
+			gxTranslatef(virtualToScreenX(screenX), virtualToScreenY(screenY), 0.f);
+		gxScalef(scaleX * scale, scaleY * scale, 1.f);
+
+		gxRotatef(m_angle, 0.f, 0.f, 1.f);
+		if (m_centered)
+			gxTranslatef(-m_srcSx / 2.f, -m_srcSy / 2.f, 0.f);
+
+		gxColor4f(1.f, 1.f, 1.f, m_alpha);
+		gxSetTexture(layer->m_surface->getTexture());
 		{
-			float x1, y1, x2, y2;
-			float u1, v1, u2, v2;
+			gxBegin(GL_QUADS);
+			{
+				float x1, y1, x2, y2;
+				float u1, v1, u2, v2;
 
-			transformCoords(0.f, 0.f, false, x1, y1, u1, v1);
-			transformCoords(0.f, 0.f, true,  x2, y2, u2, v2);
+				transformCoords(0.f, 0.f, false, x1, y1, u1, v1);
+				transformCoords(0.f, 0.f, true,  x2, y2, u2, v2);
 
-			gxTexCoord2f(u1, v1); gxVertex2f(x1, y1);
-			gxTexCoord2f(u2, v1); gxVertex2f(x2, y1);
-			gxTexCoord2f(u2, v2); gxVertex2f(x2, y2);
-			gxTexCoord2f(u1, v2); gxVertex2f(x1, y2);
+				gxTexCoord2f(u1, v1); gxVertex2f(x1, y1);
+				gxTexCoord2f(u2, v1); gxVertex2f(x2, y1);
+				gxTexCoord2f(u2, v2); gxVertex2f(x2, y2);
+				gxTexCoord2f(u1, v2); gxVertex2f(x1, y2);
+			}
+			gxEnd();
 		}
-		gxEnd();
+		gxSetTexture(0);
 	}
-	gxSetTexture(0);
+	gxPopMatrix();
 }
 
 //
@@ -531,10 +682,19 @@ void Effect_Blocks::draw()
 			const float sx = scale * b.size / 2.f;
 			const float sy = scale * b.size / 2.f;
 
-			gxColor4f(0.f, 0.f, 1.f, alpha); gxVertex2f(b.x - sx, b.y - sy);
-			gxColor4f(1.f, 0.f, 1.f, alpha); gxVertex2f(b.x + sx, b.y - sy);
-			gxColor4f(1.f, 1.f, 1.f, alpha); gxVertex2f(b.x + sx, b.y + sy);
-			gxColor4f(0.f, 1.f, 1.f, alpha); gxVertex2f(b.x - sx, b.y + sy);
+			const static Color colors[4] =
+			{
+				Color::fromHex("000000"),
+				//Color::fromHex("ffffff"),
+				Color::fromHex("9c9c9c"),
+				Color::fromHex("1e1e1e"),
+				Color::fromHex("575556")
+			};
+
+			gxColor4f(colors[0].r, colors[0].g, colors[0].b, alpha); gxVertex2f(b.x - sx, b.y - sy);
+			gxColor4f(colors[1].r, colors[1].g, colors[1].b, alpha); gxVertex2f(b.x + sx, b.y - sy);
+			gxColor4f(colors[2].r, colors[2].g, colors[2].b, alpha); gxVertex2f(b.x + sx, b.y + sy);
+			gxColor4f(colors[3].r, colors[3].g, colors[3].b, alpha); gxVertex2f(b.x - sx, b.y + sy);
 		}
 	}
 	gxEnd();
@@ -669,6 +829,18 @@ void Effect_Lines::draw()
 
 //
 
+#if 1
+const static Color s_colorBarColors[] =
+{
+	Color::fromHex("000000"),
+	Color::fromHex("ffffff"),
+	//Color::fromHex("000000"),
+	//Color::fromHex("808080"),
+	Color::fromHex("9c9c9c"),
+	Color::fromHex("1e1e1e"),
+	Color::fromHex("575556"),
+};
+#else
 const static Color s_colorBarColors[] =
 {
 	Color::fromHex("000000"),
@@ -680,6 +852,7 @@ const static Color s_colorBarColors[] =
 	Color::fromHex("575556"),
 	Color::fromHex("1e1e1e")
 };
+#endif
 const static int s_numColorBarColors = sizeof(s_colorBarColors) / sizeof(s_colorBarColors[0]);
 
 Effect_Bars::Bar::Bar()
@@ -721,6 +894,10 @@ void Effect_Bars::initializeBars()
 
 			Bar bar;
 
+		#if 1
+			bar.skipSize = Calc::Lerp(m_minSize, m_maxSize, t);
+			bar.drawSize = bar.skipSize;
+		#else
 			if (layer == 0)
 			{
 				bar.skipSize = m_baseSize;
@@ -733,6 +910,7 @@ void Effect_Bars::initializeBars()
 				bar.skipSize = m_baseSize * s;
 				bar.drawSize = Calc::Lerp(m_minSize, m_maxSize, t) * s;
 			}
+		#endif
 
 			bar.color = rand() % s_numColorBarColors;
 
