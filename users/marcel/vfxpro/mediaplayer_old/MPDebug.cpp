@@ -12,14 +12,14 @@ namespace MP
 	{
 		void Print(const char* format, ...)
 		{
-			#if defined(DEBUG) && defined(DEBUG_MEDIAPLAYER)
+			#if DEBUG_MEDIAPLAYER
 			static char string[4096];
 
 			va_list list;
 			va_start(list, format);
 			vsprintf(string, format, list);
 
-			std::cerr << string << std::endl;
+			fprintf(stderr, "%s\n", string);
 
 			#if defined(SYSTEM_WINDOWS)
 			strcat(string, "\n");

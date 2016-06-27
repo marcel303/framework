@@ -39,7 +39,7 @@ namespace MP
 		// Open file using AV codec.
 		if (av_open_input_file(&m_formatContext, filename.c_str(), 0, 0, 0) != 0)
 		{
-			Assert(0);
+			Debug::Print("Failed to open input file: %s.", filename.c_str());
 			return false;
 		}
 
@@ -48,19 +48,26 @@ namespace MP
 
 		if (GetStreamIndices(audioStreamIndex, videoStreamIndex) != true)
 		{
-			// TODO.
-			Assert(0);
+			Debug::Print("Failed to get stream indices.");
 			return false;
 		}
 
-		if (audioStreamIndex != STREAM_NOT_FOUND)
+		if (audioStreamIndex == STREAM_NOT_FOUND)
+		{
+			Debug::Print("No audio stream index found.");
+		}
+		else
 		{
 			// Initialize audio stream/context.
 			m_audioContext = new AudioContext;
 			m_audioContext->Initialize(this, audioStreamIndex);
 		}
 
-		if (videoStreamIndex != STREAM_NOT_FOUND)
+		if (videoStreamIndex == STREAM_NOT_FOUND)
+		{
+			Debug::Print("No video stream index found.");
+		}
+		else
 		{
 			// Initialize video stream/context.
 			m_videoContext = new VideoContext;
@@ -84,6 +91,8 @@ namespace MP
 		// Destroy audio context.
 		if (m_audioContext)
 		{
+			Debug::Print("Destroying audio context.");
+
 			m_audioContext->Destroy();
 			delete m_audioContext;
 			m_audioContext = 0;
@@ -92,6 +101,8 @@ namespace MP
 		// Destroy video context.
 		if (m_videoContext)
 		{
+			Debug::Print("Destroying video context.");
+
 			m_videoContext->Destroy();
 			delete m_videoContext;
 			m_videoContext = 0;
@@ -100,6 +111,8 @@ namespace MP
 		// Close file using AV codec.
 		if (m_formatContext)
 		{
+			Debug::Print("Closing input file.");
+
 			av_close_input_file(m_formatContext);
 			m_formatContext = 0;
 		}
@@ -183,7 +196,9 @@ namespace MP
 
 		bool result = true;
 
-		if (m_audioContext->RequestAudio(out_samples, frameCount, out_gotAudio) != true)
+		if (m_audioContext == 0)
+			result = false;
+		else if (m_audioContext->RequestAudio(out_samples, frameCount, out_gotAudio) != true)
 			result = false;
 
 		return result;
@@ -272,7 +287,7 @@ namespace MP
 		// Get stream info.
 		if (av_find_stream_info(m_formatContext) < 0)
 		{
-			Assert(0);
+			Debug::Print("unable to get stream info");
 			return false;
 		}
 
