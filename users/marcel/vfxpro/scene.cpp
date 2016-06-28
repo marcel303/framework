@@ -204,6 +204,15 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 	{
 		effect = new Effect_Bars(m_name.c_str());
 	}
+	else if (type == "text")
+	{
+		const std::string colorText = stringAttrib(xmlEffect, "color", "000000");
+		const std::string font = stringAttrib(xmlEffect, "font", "calibri.ttf");
+		const int fontSize = intAttrib(xmlEffect, "font_size", 12);
+		const std::string text = stringAttrib(xmlEffect, "text", "???");
+
+		effect = new Effect_Text(m_name.c_str(), Color::fromHex(colorText.c_str()), font.c_str(), fontSize, text.c_str());
+	}
 	else
 	{
 		logError("unknown effect type: %s", type.c_str());
@@ -779,6 +788,11 @@ void SceneEvent::execute(Scene & scene)
 			{
 				effect->m_effect->handleSignal(action->m_signal.m_message);
 			}
+
+			if (action->m_signal.m_message == "reload")
+			{
+				scene.m_wantsReload = true;
+			}
 		}
 		break;
 
@@ -816,6 +830,7 @@ Scene::Scene()
 	: m_time(0.f)
 	, m_varTime(0.f)
 	, m_varPcmVolume(0.f)
+	, m_wantsReload(false)
 {
 	addVar("time", m_varTime);
 	addVar("pcm_volume", m_varPcmVolume);
@@ -1071,6 +1086,15 @@ void Scene::triggerEvent(const char * name)
 			addDebugText(event->m_name.c_str());
 		}
 	}
+
+	//
+
+	if (m_wantsReload)
+	{
+		m_wantsReload = false;
+
+		reload();
+	}
 }
 
 void Scene::triggerEventByOscId(int oscId)
@@ -1085,6 +1109,15 @@ void Scene::triggerEventByOscId(int oscId)
 
 			addDebugText(event->m_name.c_str());
 		}
+	}
+
+	//
+
+	if (m_wantsReload)
+	{
+		m_wantsReload = false;
+
+		reload();
 	}
 }
 
@@ -1395,11 +1428,23 @@ void Scene::clear()
 
 	//
 
+	for (int i = 0; i < kMaxFftBuckets; ++i)
+		m_fftBuckets[i] = FftBucket();
+
+	//
+
+	m_modifiers.clear();
+
+	//
+
 	m_midiMaps.clear();
 
 	//
 
 	m_time = 0.f;
+
+	m_varPcmVolume = 0.f;
+	m_varTime = 0.f;
 
 	//
 

@@ -326,6 +326,8 @@ struct Scene : public TweenFloatCollection, public TweenFloatModifier
 	TweenFloat m_varPcmVolume;
 	TweenFloat m_varTime;
 
+	bool m_wantsReload;
+
 #if ENABLE_DEBUG_TEXT
 	struct DebugText
 	{

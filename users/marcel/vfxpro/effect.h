@@ -157,8 +157,9 @@ struct Effect : TweenFloatCollection
 	void setTextures(Shader & shader)
 	{
 		shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
-		shader.setTexture("pcm", 1, g_pcmTexture, true, false);
-		shader.setTexture("fft", 2, g_fftTexture, true, false);
+		shader.setTexture("colormap_clamp", 1, g_currentSurface->getTexture(), true, true);
+		shader.setTexture("pcm", 2, g_pcmTexture, true, false);
+		shader.setTexture("fft", 3, g_fftTexture, true, false);
 	}
 
 	virtual void tick(const float dt) = 0;
@@ -320,6 +321,9 @@ struct Effect_Rain : Effect
 
 	virtual void draw() override
 	{
+		if (m_alpha <= 0.f)
+			return;
+
 		gxSetTexture(Sprite("rain.png").getTexture());
 		{
 			m_particleSystem.draw(m_alpha);
@@ -414,6 +418,9 @@ struct Effect_StarCluster : Effect
 
 	virtual void draw() override
 	{
+		if (m_alpha <= 0.f)
+			return;
+
 		gxSetTexture(Sprite("prayer.png").getTexture());
 		{
 			m_particleSystem.draw(m_alpha);
@@ -699,7 +706,7 @@ struct Effect_SpriteSystem : Effect
 			if (!s.alive)
 				continue;
 
-			new (list)SpriteDrawable(&s);
+			new (list) SpriteDrawable(&s);
 		}
 	}
 
@@ -1081,6 +1088,9 @@ struct Effect_Flowmap : Effect
 
 	virtual void draw() override
 	{
+		if (m_alpha <= 0.f)
+			return;
+
 		setBlend(BLEND_OPAQUE);
 
 		Sprite mapSprite(m_map.c_str());
@@ -1089,7 +1099,7 @@ struct Effect_Flowmap : Effect
 		setShader(shader);
 		shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
 		shader.setTexture("flowmap", 1, mapSprite.getTexture(), true, false);
-		shader.setImmediate("time", g_currentScene->m_time);
+		shader.setImmediate("flow_time", g_currentScene->m_time);
 		ShaderBuffer buffer;
 		FlowmapData data;
 		data.alpha = m_alpha;
@@ -1134,6 +1144,9 @@ struct Effect_Vignette : Effect
 
 	virtual void draw() override
 	{
+		if (m_alpha <= 0.f)
+			return;
+
 		setBlend(BLEND_OPAQUE);
 
 		Shader shader("vignette");
@@ -1183,6 +1196,9 @@ struct Effect_Clockwork : Effect
 
 	virtual void draw() override
 	{
+		if (m_alpha <= 0.f)
+			return;
+
 		setBlend(BLEND_OPAQUE);
 
 		Shader shader("vignette");
@@ -1448,3 +1464,21 @@ struct Effect_Bars : public Effect
 	virtual void draw() override;
 };
 
+//
+
+struct Effect_Text : public Effect
+{
+	TweenFloat m_alpha;
+	Color m_color;
+	std::string m_font;
+	int m_fontSize;
+	std::string m_text;
+	TweenFloat m_textAlignX;
+	TweenFloat m_textAlignY;
+
+	Effect_Text(const char * name, const Color & color, const char * font, const int fontSize, const char * text);
+
+	virtual void tick(const float dt) override;
+	virtual void draw(DrawableList & list) override;
+	virtual void draw() override;
+};

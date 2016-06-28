@@ -371,6 +371,9 @@ void Effect_Picture::draw(DrawableList & list)
 
 void Effect_Picture::draw()
 {
+	if (m_alpha <= 0.f)
+		return;
+
 	gxPushMatrix();
 	{
 		Sprite sprite(m_filename.c_str());
@@ -440,6 +443,9 @@ void Effect_Video::draw(DrawableList & list)
 
 void Effect_Video::draw()
 {
+	if (m_alpha <= 0.f)
+		return;
+
 	if (m_mediaPlayer.getTexture())
 	{
 		gxPushMatrix();
@@ -458,9 +464,9 @@ void Effect_Video::draw()
 			if (!m_shader.empty())
 			{
 				Shader shader(m_shader.c_str());
+				setShader(shader);
 				shader.setTexture("colormap", 0, m_mediaPlayer.getTexture(), true, true);
 
-				setShader(shader);
 				{
 					setColorf(1.f, 1.f, 1.f, m_alpha);
 					drawRect(0, m_mediaPlayer.sy, m_mediaPlayer.sx, 0);
@@ -651,7 +657,7 @@ void Effect_Blocks::tick(const float dt)
 		b.value += b.speed * dt;
 	}
 
-	const int numBlocks = (int)m_numBlocks;
+	const size_t numBlocks = (size_t)m_numBlocks;
 
 	while (m_blocks.size() > numBlocks)
 		m_blocks.pop_back();
@@ -1008,4 +1014,41 @@ void Effect_Bars::draw()
 		}
 	}
 	gxEnd();
+}
+
+//
+
+Effect_Text::Effect_Text(const char * name, const Color & color, const char * font, const int fontSize, const char * text)
+	: Effect(name)
+	, m_alpha(1.f)
+	, m_color(color)
+	, m_font(font)
+	, m_fontSize(fontSize)
+	, m_text(text)
+	, m_textAlignX(0.f)
+	, m_textAlignY(0.f)
+{
+	addVar("alpha", m_alpha);
+	addVar("align_x", m_textAlignX);
+	addVar("align_y", m_textAlignY);
+}
+
+void Effect_Text::tick(const float dt)
+{
+	TweenFloatCollection::tick(dt);
+}
+
+void Effect_Text::draw(DrawableList & list)
+{
+	new (list) EffectDrawable(this);
+}
+
+void Effect_Text::draw()
+{
+	if (m_alpha <= 0.f)
+		return;
+
+	setColorf(m_color.r, m_color.g, m_color.b, m_color.a * m_alpha);
+	setFont(m_font.c_str());
+	drawText(screenX, screenY, m_fontSize, m_textAlignX, m_textAlignY, "%s", m_text.c_str());
 }

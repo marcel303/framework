@@ -1016,7 +1016,11 @@ int main(int argc, char * argv[])
 
 	if (framework.init(0, 0, GFX_SX, GFX_SY))
 	{
-		//framework.fillCachesWithPath(".", true);
+	#if !defined(DEBUG)
+		framework.fillCachesWithPath(".", true);
+		if (framework.fullscreen)
+			SDL_ShowCursor(0);
+	#endif
 
 		std::list<TimeDilationEffect> timeDilationEffects;
 
@@ -1681,7 +1685,7 @@ int main(int argc, char * argv[])
 						shader.setTexture("colormap", 0, surface.getTexture(), true, false);
 						shader.setTexture("jittermap", 1, 0, true, true);
 						shader.setImmediate("jitterStrength", 1.f);
-						shader.setImmediate("time", time);
+						shader.setImmediate("jitterTime", time);
 						surface.postprocess(shader);
 					}
 
@@ -1751,7 +1755,13 @@ int main(int argc, char * argv[])
 					gpuTimingBlock(blitToBackBuffer);
 					setBlend(BLEND_OPAQUE);
 					setColor(colorWhite);
-					drawRect(0, 0, GFX_SX, GFX_SY);
+					static bool flipH = false;
+					if (keyboard.wentDown(SDLK_m))
+						flipH = !flipH;
+					if (flipH)
+						drawRect(GFX_SX, 0, 0, GFX_SY);
+					else
+						drawRect(0, 0, GFX_SX, GFX_SY);
 					setBlend(BLEND_ALPHA);
 				}
 				gxSetTexture(0);
