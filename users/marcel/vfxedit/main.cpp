@@ -24,9 +24,10 @@
 
 using namespace tinyxml2;
 
-#define GFX_SX 1700
+//#define GFX_SX 1700
+#define GFX_SX 1000
 #define GFX_SY 300
-#define SCALE 2
+#define SCALE 1
 
 #define INSERT_Y (GFX_SY/2 - 70)
 #define SELECT_Y (GFX_SY/2)
@@ -42,7 +43,31 @@ using namespace tinyxml2;
 
 #define OSC_BUFFER_SIZE 1000
 #define OSC_DEST_ADDRESS "127.0.0.1"
-#define OSC_DEST_PORT 1121
+#define OSC_DEST_PORT 8000
+
+//
+
+UdpTransmitSocket * transmitSocket = 0;
+
+static void sendEvent(const char * name, int eventId)
+{
+	logDebug("trigger event %s/%d", name, eventId);
+
+	char buffer[OSC_BUFFER_SIZE];
+
+	osc::OutboundPacketStream p(buffer, OSC_BUFFER_SIZE);
+
+	p
+		<< osc::BeginBundleImmediate
+		<< osc::BeginMessage(name)
+		<< (osc::int32)eventId
+		<< osc::EndMessage
+		<< osc::EndBundle;
+
+	transmitSocket->Send(p.Data(), p.Size());
+}
+
+//
 
 struct AudioFile : public AudioStream
 {
@@ -207,6 +232,10 @@ static int SDLCALL ExecuteAudioThread(void * arg)
 //
 
 static double g_playbackMarker = 0.0;
+
+//
+
+static double g_bpm = 0.0;
 
 //
 
@@ -406,6 +435,8 @@ bool saveSequence(const char * filename)
 
 	p.OpenElement("sequence");
 	{
+		p.PushAttribute("bpm", g_bpm);
+
 		for (EventMarker & eventMarker : g_eventMarkers)
 		{
 			p.OpenElement("marker");
@@ -462,6 +493,8 @@ bool loadSequence(const char * filename)
 	{
 		for (XMLElement * sequenceXml = xmlDoc.FirstChildElement("sequence"); sequenceXml; sequenceXml = sequenceXml->NextSiblingElement("sequence"))
 		{
+			g_bpm = floatAttrib(sequenceXml, "bpm", 0);
+
 			for (XMLElement * eventMarkerXml = sequenceXml->FirstChildElement("marker"); eventMarkerXml; eventMarkerXml = eventMarkerXml->NextSiblingElement("marker"))
 			{
 				EventMarker eventMarker;
@@ -469,6 +502,7 @@ bool loadSequence(const char * filename)
 				eventMarker.eventId = intAttrib(eventMarkerXml, "eventId", -1);
 
 				g_eventMarkers.push_back(eventMarker);
+				g_eventMarkers.sort();
 			}
 
 			for (XMLElement * commentXml = sequenceXml->FirstChildElement("comment"); commentXml; commentXml = commentXml->NextSiblingElement("comment"))
@@ -484,6 +518,66 @@ bool loadSequence(const char * filename)
 	}
 
 	return result;
+}
+
+static void seekSequence(double time)
+{
+	sendEvent("/scene_reload", 0);
+
+	for (EventMarker & eventMarker : g_eventMarkers)
+	{
+		if (eventMarker.time <= time)
+		{
+			logDebug("trigger event %d", eventMarker.eventId);
+
+			sendEvent("/scene_advance_to", eventMarker.time * 1000.0);
+
+			sendEvent("/event_replay", eventMarker.eventId);
+		}
+	}
+
+	sendEvent("/scene_advance_to", time * 1000.0);
+}
+
+static double beatToTime(int beat)
+{
+	return beat * 60.0 / g_bpm;
+}
+
+static int getFloorBeat(double time)
+{
+	if (g_bpm == 0.0)
+	{
+		return 0;
+	}
+	else
+	{
+		return (int)std::floorf(time / 60.0 * g_bpm);
+	}
+}
+
+static int getNearestBeat(double time)
+{
+	if (g_bpm == 0.0)
+	{
+		return 0;
+	}
+	else
+	{
+		return (int)std::round(time / 60.0 * g_bpm);
+	}
+}
+
+static int roundTimeToBeat(double time)
+{
+	if (g_bpm == 0.0)
+	{
+		return 0;
+	}
+	else
+	{
+		return std::round(time * g_bpm / 60.0);
+	}
 }
 
 //
@@ -619,7 +713,7 @@ static bool doTextDialog(std::string & text)
 
 int main(int argc, char * argv[])
 {
-	UdpTransmitSocket transmitSocket(IpEndpointName(OSC_DEST_ADDRESS, OSC_DEST_PORT));
+	transmitSocket = new UdpTransmitSocket(IpEndpointName(OSC_DEST_ADDRESS, OSC_DEST_PORT));
 
 	framework.waitForEvents = true;
 
@@ -644,6 +738,8 @@ int main(int argc, char * argv[])
 			if (FileStream::Exists(sequenceFilename.c_str()))
 			{
 				loadSequence(sequenceFilename.c_str());
+
+				sendEvent("/scene_reload", 0);
 			}
 		}
 
@@ -676,20 +772,18 @@ int main(int argc, char * argv[])
 					{
 						logDebug("trigger event %d", eventMarker.eventId);
 
-						char buffer[OSC_BUFFER_SIZE];
-
-						osc::OutboundPacketStream p(buffer, OSC_BUFFER_SIZE);
-
-						p
-							<< osc::BeginBundleImmediate
-							<< osc::BeginMessage("/event")
-							<< ""
-							<< (osc::int32)eventMarker.eventId
-							<< osc::EndMessage
-							<< osc::EndBundle;
-
-						transmitSocket.Send(p.Data(), p.Size());
+						sendEvent("/healer", eventMarker.eventId);
 					}
+				}
+
+				// hack! automated beat output
+
+				const int beat1 = getFloorBeat(audioTime1) / 4;
+				const int beat2 = getFloorBeat(audioTime2) / 4;
+
+				if (beat1 != beat2)
+				{
+					sendEvent("/event", 2);
 				}
 
 				g_lastAudioTime = audioTime2;
@@ -707,11 +801,17 @@ int main(int argc, char * argv[])
 					const std::string sequenceFilename = Path::ReplaceExtension(g_audioFile->m_filename, "xml");
 
 					saveSequence(sequenceFilename.c_str());
+
+					sendEvent("/event", 100);
 				}
 			}
 
 			if (keyboard.wentDown(SDLK_r))
-				loadSequence("tracks/heroes.xml");
+			{
+				loadSequence("tracks/Healer.xml");
+
+				sendEvent("/scene_reload", 0);
+			}
 
 			if (keyboard.wentDown(SDLK_l))
 			{
@@ -734,6 +834,8 @@ int main(int argc, char * argv[])
 					if (FileStream::Exists(sequenceFilename.c_str()))
 					{
 						loadSequence(sequenceFilename.c_str());
+
+						sendEvent("/scene_reload", 0);
 					}
 				}
 			}
@@ -756,6 +858,19 @@ int main(int argc, char * argv[])
 				if (keyboard.isDown(SDLK_LSHIFT))
 				{
 					g_audioFile->seek(g_playbackMarker);
+					seekSequence(g_playbackMarker);
+					g_lastAudioTime = g_playbackMarker;
+
+					g_wantsAudioPlayback = true;
+				}
+				else if (keyboard.isDown(SDLK_LCTRL))
+				{
+					g_playbackMarker = 0.0;
+
+					g_audioFile->seek(g_playbackMarker);
+					seekSequence(g_playbackMarker);
+					g_lastAudioTime = g_playbackMarker;
+
 					g_wantsAudioPlayback = true;
 				}
 				else
@@ -776,16 +891,34 @@ int main(int argc, char * argv[])
 
 					int bestDistance = -1;
 
+					std::vector<EventMarker*> potentialEventMarkers;
+
 					for (auto & eventMarker : g_eventMarkers)
 					{
 						const int x = timeToScreenX(eventMarker.time);
 						const int distance = Calc::Abs(mouseX - x);
 
-						if (distance < markerSizeSelect && (bestDistance == -1 || distance < bestDistance))
+						if (distance < markerSizeSelect && (bestDistance == -1 || distance <= bestDistance))
 						{
-							bestDistance = distance;
-							selectedEventMarker = &eventMarker;
+							if (bestDistance == -1 || distance < bestDistance)
+							{
+								bestDistance = distance;
+								potentialEventMarkers.clear();
+							}
+
+							potentialEventMarkers.push_back(&eventMarker);
 						}
+					}
+
+					if (!potentialEventMarkers.empty())
+					{
+						int currentIndex = -1;
+
+						for (size_t i = 0; i < potentialEventMarkers.size(); ++i)
+							if (potentialEventMarkers[i] == g_selectedEventMarker)
+								currentIndex = i;
+
+						selectedEventMarker = potentialEventMarkers[(currentIndex + 1) % potentialEventMarkers.size()];
 					}
 
 					if (mouseY >= COMMENTREGION_SELECT_Y && mouseY < (COMMENTREGION_SELECT_Y + COMMENTREGION_SELECT_SY))
@@ -839,10 +972,12 @@ int main(int argc, char * argv[])
 
 						EventMarker eventMarker;
 						eventMarker.eventId = 0;
-						eventMarker.time = time;
+						eventMarker.time = beatToTime(roundTimeToBeat(time));
 
 						g_eventMarkers.push_back(eventMarker);
 						g_selectedEventMarker = &g_eventMarkers.back();
+						g_eventMarkers.sort();
+
 						g_selectedEventMarkerTimeOffset = 0.0;
 
 						g_mouseInteract = kMouseInteract_MoveEventMarker;
@@ -903,7 +1038,14 @@ int main(int argc, char * argv[])
 				{
 					if (g_selectedEventMarker != nullptr)
 					{
-						g_selectedEventMarker->time = screenXToTime(mouseX) + g_selectedEventMarkerTimeOffset;
+						double time = screenXToTime(mouseX) + g_selectedEventMarkerTimeOffset;
+
+						if (!keyboard.isDown(SDLK_LSHIFT) && !keyboard.isDown(SDLK_RSHIFT))
+						{
+							time = beatToTime(roundTimeToBeat(time));
+						}
+
+						g_selectedEventMarker->time = time;
 					}
 				}
 			}
@@ -913,6 +1055,12 @@ int main(int argc, char * argv[])
 
 				if (mouse.wentUp(BUTTON_LEFT))
 				{
+					const double time = g_playbackMarker;
+
+					g_audioFile->seek(time);
+					seekSequence(time);
+					g_lastAudioTime = time;
+
 					g_mouseInteract = kMouseInteract_None;
 				}
 				else if (g_audioFile != nullptr)
@@ -922,9 +1070,6 @@ int main(int argc, char * argv[])
 					if (g_playbackMarker != time)
 					{
 						g_playbackMarker = time;
-
-						g_audioFile->seek(time);
-						g_lastAudioTime = time;
 					}
 				}
 			}
@@ -976,13 +1121,27 @@ int main(int argc, char * argv[])
 			{
 				if (keyboard.wentDown(SDLK_LEFT) || keyboard.keyRepeat(SDLK_LEFT))
 				{
-					g_selectedEventMarker->time = Calc::Max(0.0, g_selectedEventMarker->time - 0.1);
+					double time = g_selectedEventMarker->time;
+
+					if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
+						time = beatToTime(roundTimeToBeat(time * 4) - 1);
+					else
+						time = beatToTime(roundTimeToBeat(time * 1) - 1);
+
+					g_selectedEventMarker->time = Calc::Max(0.0, time);
 				}
 				else if (keyboard.wentDown(SDLK_RIGHT) || keyboard.keyRepeat(SDLK_RIGHT))
 				{
 					if (g_audioFile != nullptr)
 					{
-						g_selectedEventMarker->time = Calc::Min(g_audioFile->m_duration, g_selectedEventMarker->time + 0.1);
+						double time = g_selectedEventMarker->time;
+
+						if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
+							time = beatToTime(roundTimeToBeat(time * 4) + 1);
+						else
+							time = beatToTime(roundTimeToBeat(time * 1) + 1);
+
+						g_selectedEventMarker->time = Calc::Min(g_audioFile->m_duration, time);
 					}
 				}
 				else if (keyboard.wentDown(SDLK_UP) || keyboard.keyRepeat(SDLK_UP))
@@ -1004,6 +1163,30 @@ int main(int argc, char * argv[])
 			framework.beginDraw(0, 0, 0, 0);
 			{
 				gxScalef(SCALE, SCALE, 1);
+
+				// draw beat markers
+
+				if (g_bpm > 0.0)
+				{
+					gxBegin(GL_LINES);
+					{
+						gxColor4f(1.f, 1.f, 1.f, .2f);
+
+						for (int i = 0; true; ++i)
+						{
+							const double time = 60.0 / g_bpm * i;
+
+							if (time > g_audioFile->m_duration)
+								break;
+
+							const double x = timeToScreenX(time);
+
+							gxVertex2f(x, 0.f   );
+							gxVertex2f(x, GFX_SY);
+						}
+					}
+					gxEnd();
+				}
 
 				// draw PCM data
 
@@ -1152,8 +1335,6 @@ int main(int argc, char * argv[])
 
 				int drawPosition = 0;
 
-				g_eventMarkers.sort();
-
 				for (auto & eventMarker : g_eventMarkers)
 				{
 					if (&eventMarker == g_selectedEventMarker)
@@ -1171,7 +1352,7 @@ int main(int argc, char * argv[])
 						GFX_SY/4 + drawPosition * 20,
 						16,
 						+1, +1,
-						"# %d", eventMarker.eventId);
+						"# %d (beat %d)", eventMarker.eventId, getNearestBeat(eventMarker.time));
 
 					drawPosition = (drawPosition + 1) % 10;
 				}
