@@ -1462,6 +1462,20 @@ bool Scene::reload()
 	return load(filename.c_str());
 }
 
+void Scene::advanceTo(const float time)
+{
+	double dt = time - m_time;
+
+	while (dt > 0.f)
+	{
+		const double step = std::min(dt, 1.0 / 15.0);
+		
+		tick(step);
+
+		dt -= step;
+	}
+}
+
 float Scene::applyModifier(TweenFloat * tweenFloat, float value)
 {
 	for (Modifier & modifier : m_modifiers)

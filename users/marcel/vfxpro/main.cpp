@@ -37,8 +37,11 @@ using namespace tinyxml2;
 
 #define NUM_SCREENS 1
 
-const int SCREEN_SX = (1920 / NUM_SCREENS);
-const int SCREEN_SY = 1080;
+//const int SCREEN_SX = (1920 / NUM_SCREENS);
+//const int SCREEN_SY = 1080;
+
+const int SCREEN_SX = (1024 / NUM_SCREENS);
+const int SCREEN_SY = 768;
 
 const int GFX_SX = (SCREEN_SX * NUM_SCREENS);
 const int GFX_SY = (SCREEN_SY * 1);
@@ -193,8 +196,11 @@ enum OscMessageType
 	kOscMessageType_None,
 	// scene :: constantly reinforced
 	kOscMessageType_SetScene,
+	kOscMessageType_SceneReload,
+	kOscMessageType_SceneAdvanceTo,
 	// events
 	kOscMessageType_Event,
+	kOscMessageType_ReplayEvent,
 	// visual effects
 	kOscMessageType_Box3D,
 	kOscMessageType_Sprite,
@@ -231,7 +237,29 @@ protected:
 
 			OscMessage message;
 
-			if (strcmp(m.AddressPattern(), "/event") == 0 || true)
+			if (strcmp(m.AddressPattern(), "/scene_reload") == 0)
+			{
+				message.type = kOscMessageType_SceneReload;
+			}
+			else if (strcmp(m.AddressPattern(), "/scene_advance_to") == 0)
+			{
+				// timeMs
+				osc::int32 timeMs;
+				args >> timeMs;
+
+				message.type = kOscMessageType_SceneAdvanceTo;
+				message.param[0] = timeMs;
+			}
+			else if (strcmp(m.AddressPattern(), "/event_replay") == 0)
+			{
+				// eventId
+				osc::int32 eventId;
+				args >> eventId;
+
+				message.type = kOscMessageType_ReplayEvent;
+				message.param[0] = eventId;
+			}
+			else if (strcmp(m.AddressPattern(), "/event") == 0 || true)
 			{
 			#if 1
 				// eventId
@@ -311,6 +339,8 @@ protected:
 			{
 				EnterCriticalSection(&s_oscMessageMtx);
 				{
+					logDebug("enqueue OSC message. type=%d, id=%d", message.type, (int)message.param[0]);
+
 					s_oscMessages.push_back(message);
 				}
 				LeaveCriticalSection(&s_oscMessageMtx);
@@ -990,7 +1020,7 @@ int main(int argc, char * argv[])
 
 	// initialise framework
 
-#if ENABLE_WINDOWED_MODE && 1
+#if ENABLE_WINDOWED_MODE || 1 // && 1
 	framework.fullscreen = false;
 	framework.minification = 1;
 	framework.windowX = 0;
@@ -1380,10 +1410,24 @@ int main(int argc, char * argv[])
 					case kOscMessageType_SetScene:
 						break;
 
+					case kOscMessageType_SceneReload:
+						g_scene->reload();
+						break;
+
+					case kOscMessageType_SceneAdvanceTo:
+						g_scene->advanceTo(message.param[0] / 1000.f);
+						break;
+
 						//
 
 					case kOscMessageType_Event:
 						g_scene->triggerEventByOscId(message.param[0]);
+						break;
+
+					case kOscMessageType_ReplayEvent:
+						g_isReplay = true;
+						g_scene->triggerEventByOscId(message.param[0]);
+						g_isReplay = false;
 						break;
 
 						//

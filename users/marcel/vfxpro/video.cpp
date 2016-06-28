@@ -138,7 +138,7 @@ bool MediaPlayer::open(const char * filename)
 		}
 		else
 		{
-			audioOutputOpenAL->Volume_set(0.f);
+			//audioOutputOpenAL->Volume_set(0.f);
 		}
 	}
 

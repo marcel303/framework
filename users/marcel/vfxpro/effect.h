@@ -31,6 +31,8 @@ extern float g_pcmVolume;
 extern GLuint g_pcmTexture;
 extern GLuint g_fftTexture;
 
+extern bool g_isReplay;
+
 //
 
 struct Effect;

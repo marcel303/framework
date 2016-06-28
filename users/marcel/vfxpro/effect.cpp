@@ -8,6 +8,10 @@ using namespace tinyxml2;
 
 //
 
+bool g_isReplay = false;
+
+//
+
 EffectInfosByName g_effectInfosByName;
 
 bool EffectInfosByName::load(const char * filename)
@@ -487,6 +491,9 @@ void Effect_Video::handleSignal(const std::string & name)
 {
 	if (name == "start")
 	{
+		if (g_isReplay)
+			return;
+
 		if (m_mediaPlayer.isActive(m_mediaPlayer.context))
 		{
 			m_mediaPlayer.close();

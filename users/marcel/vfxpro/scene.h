@@ -357,6 +357,8 @@ struct Scene : public TweenFloatCollection, public TweenFloatModifier
 	void clear();
 	bool reload();
 
+	void advanceTo(const float time);
+
 	// TweenFloatModifier
 
 	virtual float applyModifier(TweenFloat * tweenFloat, float value) override;
