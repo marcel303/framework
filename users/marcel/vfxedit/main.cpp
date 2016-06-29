@@ -24,8 +24,8 @@
 
 using namespace tinyxml2;
 
-//#define GFX_SX 1700
 #define GFX_SX 1000
+//#define GFX_SX 1000
 #define GFX_SY 300
 #define SCALE 1
 
@@ -537,6 +537,8 @@ static void seekSequence(double time)
 	}
 
 	sendEvent("/scene_advance_to", time * 1000.0);
+
+	sendEvent("/scene_sync_time", time * 1000.0);
 }
 
 static double beatToTime(int beat)
@@ -1170,8 +1172,6 @@ int main(int argc, char * argv[])
 				{
 					gxBegin(GL_LINES);
 					{
-						gxColor4f(1.f, 1.f, 1.f, .2f);
-
 						for (int i = 0; true; ++i)
 						{
 							const double time = 60.0 / g_bpm * i;
@@ -1180,6 +1180,9 @@ int main(int argc, char * argv[])
 								break;
 
 							const double x = timeToScreenX(time);
+
+							gxColor4f(1.f, 1.f, 1.f, (i % 4) == 0 ? .5f : .25f);
+
 
 							gxVertex2f(x, 0.f   );
 							gxVertex2f(x, GFX_SY);
@@ -1346,12 +1349,17 @@ int main(int argc, char * argv[])
 					drawRect(x - markerSizeDraw, GFX_SY*0/11, x + markerSizeDraw, GFX_SY* 5/11);
 					drawRect(x - markerSizeDraw, GFX_SY*6/11, x + markerSizeDraw, GFX_SY*11/11);
 
+					int textX = timeToScreenX(eventMarker.time);
+					float align = +1.f;
+					if (textX > GFX_SX - 200)
+						align = -1.f;
+
 					setFont("calibri.ttf");
 					drawText(
-						timeToScreenX(eventMarker.time) + markerSizeDraw + 5.f,
+						timeToScreenX(eventMarker.time) + (align * markerSizeDraw + 5.f),
 						GFX_SY/4 + drawPosition * 20,
 						16,
-						+1, +1,
+						align, +1,
 						"# %d (beat %d)", eventMarker.eventId, getNearestBeat(eventMarker.time));
 
 					drawPosition = (drawPosition + 1) % 10;
