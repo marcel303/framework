@@ -269,3 +269,18 @@ enum BlendMode
 };
 
 BlendMode parseBlendMode(const std::string & blend);
+
+//
+
+struct LeapState
+{
+	LeapState()
+	{
+		memset(this, 0, sizeof(*this));
+	}
+
+	bool hasPalm;
+	float palmX;
+	float palmY;
+	float palmZ;
+};

@@ -274,6 +274,37 @@ namespace MP
 		return result;
 	}
 
+	bool Context::SeekToTime(double time)
+	{
+		bool result = true;
+
+		int streamIndex = -1;
+
+		if (false)
+		{
+			if (m_videoContext)
+				streamIndex = m_videoContext->GetStreamIndex();
+			else if (m_audioContext)
+				streamIndex = m_audioContext->GetStreamIndex();
+		}
+
+		if (av_seek_frame(m_formatContext, streamIndex, time * AV_TIME_BASE, (0*AVSEEK_FLAG_BYTE) | (1*AVSEEK_FLAG_ANY)) < 0)
+			result = false;
+
+		if (m_audioContext)
+		{
+			m_audioContext->m_packetQueue.Clear();
+			avcodec_flush_buffers(m_audioContext->m_codecContext);
+		}
+		if (m_videoContext)
+		{
+			m_videoContext->m_packetQueue.Clear();
+			avcodec_flush_buffers(m_videoContext->m_codecContext);
+		}
+		
+		return result;
+	}
+
 	AVFormatContext* Context::GetFormatContext()
 	{
 		return m_formatContext;
@@ -350,17 +381,30 @@ namespace MP
 	{
 		bool result = true;
 
+		bool captured = false;
+
 		if (m_audioContext != 0)
+		{
 			if (packet.stream_index == m_audioContext->GetStreamIndex())
-				m_audioContext->AddPacket(packet);
+			{
+				result &= m_audioContext->AddPacket(packet);
+				captured = true;
+			}
+		}
 
 		if (m_videoContext != 0)
+		{
 			if (packet.stream_index == m_videoContext->GetStreamIndex())
-				m_videoContext->AddPacket(packet);
+			{
+				result &= m_videoContext->AddPacket(packet);
+				captured = true;
+			}
+		}
 
-		// FIXME: Is this required?
-		// Free packet.
-		//av_free_packet(&packet);
+		if (!captured)
+		{
+			av_free_packet(&packet);
+		}
 
 		return result;
 	}

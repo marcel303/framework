@@ -323,8 +323,11 @@ struct Scene : public TweenFloatCollection, public TweenFloatModifier
 
 	float m_time;
 
-	TweenFloat m_varPcmVolume;
 	TweenFloat m_varTime;
+	TweenFloat m_varPalmX;
+	TweenFloat m_varPalmY;
+	TweenFloat m_varPalmZ;
+	TweenFloat m_varPcmVolume;
 
 	bool m_wantsReload;
 
@@ -358,6 +361,7 @@ struct Scene : public TweenFloatCollection, public TweenFloatModifier
 	bool reload();
 
 	void advanceTo(const float time);
+	void syncTime(const float time);
 
 	// TweenFloatModifier
 

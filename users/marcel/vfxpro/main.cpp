@@ -198,6 +198,7 @@ enum OscMessageType
 	kOscMessageType_SetScene,
 	kOscMessageType_SceneReload,
 	kOscMessageType_SceneAdvanceTo,
+	kOscMessageType_SceneSyncTime,
 	// events
 	kOscMessageType_Event,
 	kOscMessageType_ReplayEvent,
@@ -240,6 +241,15 @@ protected:
 			if (strcmp(m.AddressPattern(), "/scene_reload") == 0)
 			{
 				message.type = kOscMessageType_SceneReload;
+			}
+			else if (strcmp(m.AddressPattern(), "/scene_sync_time") == 0)
+			{
+				// timeMs
+				osc::int32 timeMs;
+				args >> timeMs;
+
+				message.type = kOscMessageType_SceneSyncTime;
+				message.param[0] = timeMs;
 			}
 			else if (strcmp(m.AddressPattern(), "/scene_advance_to") == 0)
 			{
@@ -800,10 +810,7 @@ static void tickFileMonitor()
 
 //
 
-struct LeapState
-{
-	Leap::Vector palmPosition;
-};
+LeapState g_leapState;
 
 class LeapListener : public Leap::Listener
 {
@@ -811,8 +818,6 @@ class LeapListener : public Leap::Listener
 	LeapState shadowState;
 
 public:
-	LeapState state;
-
 	LeapListener()
 		: mutex(nullptr)
 	{
@@ -829,7 +834,7 @@ public:
 	{
 		SDL_LockMutex(mutex);
 		{
-			state = shadowState;
+			g_leapState = shadowState;
 		}
 		SDL_UnlockMutex(mutex);
 	}
@@ -842,9 +847,18 @@ public:
 			auto hands = frame.hands();
 			if (!hands.isEmpty())
 			{
-				auto & hand = *hands.begin();
+				// todo : track whether it's the same hand ?
 
-				shadowState.palmPosition = hand.palmPosition();
+				auto & hand = *hands.begin();
+				auto palmPosition = hand.palmPosition();
+				shadowState.hasPalm = true;
+				shadowState.palmX = palmPosition.x;
+				shadowState.palmY = palmPosition.y;
+				shadowState.palmZ = palmPosition.z;
+			}
+			else
+			{
+				shadowState.hasPalm = false;
 			}
 		}
 		SDL_UnlockMutex(mutex);
@@ -1070,7 +1084,8 @@ int main(int argc, char * argv[])
 		g_scene = new Scene();
 		//g_scene->load("healer/scene.xml");
 		//g_scene->load("scene.xml");
-		g_scene->load("tracks/cesitest.scene.xml");
+		//g_scene->load("tracks/healer.scene.xml");
+		g_scene->load("tracks/o2.scene.xml");
 
 	#if DEMODATA
 		Effect_Cloth cloth("cloth");
@@ -1416,6 +1431,10 @@ int main(int argc, char * argv[])
 
 					case kOscMessageType_SceneAdvanceTo:
 						g_scene->advanceTo(message.param[0] / 1000.f);
+						break;
+
+					case kOscMessageType_SceneSyncTime:
+						g_scene->syncTime(message.param[0] / 1000.f);
 						break;
 
 						//
@@ -2162,14 +2181,10 @@ int main(int argc, char * argv[])
 
 				if (leapController.isConnected() && leapController.hasFocus())
 				{
-					//leapController.frame();
-					//leapController.now();
-					//leapController.frame().images();
-
 					drawText(5, 35, 24, +1, +1, "LeapMotion palm position: (%03d, %03d, %03d)",
-						(int)leapListener->state.palmPosition.x,
-						(int)leapListener->state.palmPosition.y,
-						(int)leapListener->state.palmPosition.z);
+						(int)leapListener->state.palmX,
+						(int)leapListener->state.palmY,
+						(int)leapListener->state.palmZ);
 				}
 			#endif
 

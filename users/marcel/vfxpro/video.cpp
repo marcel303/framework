@@ -138,7 +138,7 @@ bool MediaPlayer::open(const char * filename)
 		}
 		else
 		{
-			//audioOutputOpenAL->Volume_set(0.f);
+			audioOutputOpenAL->Volume_set(0.f);
 		}
 	}
 
@@ -232,6 +232,13 @@ void MediaPlayer::tick(Context * context, const float dt)
 	if (!isActive(context))
 		return;
 
+	if (seekTime >= 0.f)
+	{
+		context->mpContext.SeekToTime(seekTime);
+
+		seekTime = -1.f;
+	}
+
 	//logDebug("PlaybackPosition: %g", (float)audioOutput->PlaybackPosition_get());
 	if (!context->mpContext.FillBuffers())
 		return; // todo : check if all packets have been consumed!
@@ -278,6 +285,17 @@ void MediaPlayer::draw()
 bool MediaPlayer::isActive(Context * context) const
 {
 	return context && context->mpContext.HasBegun();
+}
+
+void MediaPlayer::seek(const float time)
+{
+	SDL_LockMutex(context->mpTickMutex);
+	{
+		seekTime = time;
+
+		SDL_CondSignal(context->mpTickEvent);
+	}
+	SDL_UnlockMutex(context->mpTickMutex);
 }
 
 uint32_t MediaPlayer::getTexture()

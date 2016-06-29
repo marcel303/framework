@@ -340,7 +340,7 @@ void Effect_Fsfx::draw()
 	data._param4 = m_param4;
 	buffer.setData(&data, sizeof(data));
 	shader.setBuffer("FsfxBlock", buffer);
-	shader.setTextureArray("textures", 3, m_textureArray, true, false);
+	shader.setTextureArray("textures", 4, m_textureArray, true, false);
 	g_currentSurface->postprocess(shader);
 
 	setBlend(BLEND_ADD);
@@ -491,9 +491,6 @@ void Effect_Video::handleSignal(const std::string & name)
 {
 	if (name == "start")
 	{
-		if (g_isReplay)
-			return;
-
 		if (m_mediaPlayer.isActive(m_mediaPlayer.context))
 		{
 			m_mediaPlayer.close();
@@ -502,6 +499,23 @@ void Effect_Video::handleSignal(const std::string & name)
 		if (!m_mediaPlayer.open(m_filename.c_str()))
 		{
 			logWarning("failed to open %s", m_filename.c_str());
+		}
+		else
+		{
+			m_startTime = g_currentScene->m_time;
+		}
+	}
+}
+
+void Effect_Video::syncTime(const float time)
+{
+	if (m_mediaPlayer.isActive(m_mediaPlayer.context))
+	{
+		const float videoTime = time - m_startTime;
+
+		if (videoTime >= 0.f)
+		{
+			m_mediaPlayer.seek(videoTime);
 		}
 	}
 }

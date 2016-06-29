@@ -35,6 +35,7 @@ namespace MP
 		bool FillBuffers();
 
 		bool SeekToStart();
+		bool SeekToTime(double time);
 
 		AVFormatContext* GetFormatContext();
 

@@ -159,7 +159,9 @@ struct Effect : TweenFloatCollection
 	void setTextures(Shader & shader)
 	{
 		shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
-		shader.setTexture("colormap_clamp", 1, g_currentSurface->getTexture(), true, true);
+	// fixme : setting colormap_clamp will override sampler settings colormap
+		//shader.setTexture("colormap_clamp", 1, g_currentSurface->getTexture(), true, true);
+		shader.setTexture("colormap_clamp", 1, g_currentSurface->getTexture(), true, false);
 		shader.setTexture("pcm", 2, g_pcmTexture, true, false);
 		shader.setTexture("fft", 3, g_fftTexture, true, false);
 	}
@@ -168,6 +170,7 @@ struct Effect : TweenFloatCollection
 	virtual void draw(DrawableList & list) = 0;
 	virtual void draw() = 0;
 	virtual void handleSignal(const std::string & name) { }
+	virtual void syncTime(const float time) { }
 };
 
 //
@@ -925,6 +928,7 @@ struct Effect_Video : Effect
 	TweenFloat m_speed;
 
 	MediaPlayer m_mediaPlayer;
+	float m_startTime;
 
 	Effect_Video(const char * name, const char * filename, const char * shader, const bool centered, const bool play);
 
@@ -932,7 +936,8 @@ struct Effect_Video : Effect
 	virtual void draw(DrawableList & list) override;
 	virtual void draw() override;
 
-	virtual void handleSignal(const std::string & name);
+	virtual void handleSignal(const std::string & name) override;
+	virtual void syncTime(const float time) override;
 };
 
 //

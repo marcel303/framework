@@ -20,6 +20,8 @@ extern const int GFX_SY;
 
 extern Config config;
 
+extern LeapState g_leapState;
+
 //
 
 Scene * g_currentScene = nullptr;
@@ -829,10 +831,16 @@ void SceneEvent::load(const XMLElement * xmlEvent)
 Scene::Scene()
 	: m_time(0.f)
 	, m_varTime(0.f)
+	, m_varPalmX(0.f)
+	, m_varPalmY(0.f)
+	, m_varPalmZ(0.f)
 	, m_varPcmVolume(0.f)
 	, m_wantsReload(false)
 {
 	addVar("time", m_varTime);
+	addVar("palm_x", m_varPalmX);
+	addVar("palm_y", m_varPalmY);
+	addVar("palm_z", m_varPalmZ);
 	addVar("pcm_volume", m_varPcmVolume);
 }
 
@@ -848,6 +856,9 @@ void Scene::tick(const float dt)
 	// process global variables
 
 	m_varTime = m_time;
+	m_varPalmX = g_leapState.palmX;
+	m_varPalmY = g_leapState.palmY;
+	m_varPalmZ = g_leapState.palmZ;
 	m_varPcmVolume = g_pcmVolume;
 
 	// process tween variables
@@ -1075,6 +1086,8 @@ SceneEffect * Scene::findEffectByName(const char * name)
 
 void Scene::triggerEvent(const char * name)
 {
+	ScopedSceneBlock sceneBlock(this);
+
 	for (auto i = m_events.begin(); i != m_events.end(); ++i)
 	{
 		SceneEvent * event = *i;
@@ -1099,6 +1112,8 @@ void Scene::triggerEvent(const char * name)
 
 void Scene::triggerEventByOscId(int oscId)
 {
+	ScopedSceneBlock sceneBlock(this);
+
 	for (auto i = m_events.begin(); i != m_events.end(); ++i)
 	{
 		SceneEvent * event = *i;
@@ -1473,6 +1488,22 @@ void Scene::advanceTo(const float time)
 		tick(step);
 
 		dt -= step;
+	}
+}
+
+void Scene::syncTime(const float time)
+{
+	ScopedSceneBlock sceneBlock(this);
+
+	for (SceneLayer * layer : m_layers)
+	{
+		for (SceneEffect * effect : layer->m_effects)
+		{
+			if (effect->m_effect)
+			{
+				effect->m_effect->syncTime(time);
+			}
+		}
 	}
 }
 

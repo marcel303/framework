@@ -51,6 +51,7 @@ struct MediaPlayer
 	int videoSx;
 	int videoSy;
 	bool videoIsDirty;
+	float seekTime;
 
 	MediaPlayer()
 		: context(nullptr)
@@ -69,6 +70,7 @@ struct MediaPlayer
 		, videoSx(0)
 		, videoSy(0)
 		, videoIsDirty(false)
+		, seekTime(-1.f)
 	{
 	}
 
@@ -83,6 +85,7 @@ struct MediaPlayer
 	void draw();
 
 	bool isActive(Context * context) const;
+	void seek(const float time);
 
 	uint32_t getTexture();
 
