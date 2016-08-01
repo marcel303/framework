@@ -22,7 +22,7 @@ TweenFloat::TweenFloat()
 
 TweenFloat::TweenFloat(const float value)
 	: m_value(value)
-	, m_valueWithModifier(0.f)
+	, m_valueWithModifier(value)
 	, m_modifier(nullptr)
 	, m_from(value)
 	, m_timeElapsed(0.f)

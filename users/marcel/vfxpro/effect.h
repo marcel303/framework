@@ -72,6 +72,7 @@ const static float pi2 = float(M_PI) * 2.f;
 
 struct Effect : TweenFloatCollection
 {
+	std::string typeName;
 	TweenFloat visible;
 	bool is3D; // when set to 3D, the effect is rendered using a separate virtual camera to each screen. when false, it will use simple 1:1 mapping onto screen coordinates
 	Mat4x4 transform; // transformation matrix for 3D effects
@@ -171,6 +172,10 @@ struct Effect : TweenFloatCollection
 	virtual void draw() = 0;
 	virtual void handleSignal(const std::string & name) { }
 	virtual void syncTime(const float time) { }
+
+	// TweenFloatCollection
+
+	virtual TweenFloat * getVar(const char * name) override;
 };
 
 //

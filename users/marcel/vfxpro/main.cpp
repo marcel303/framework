@@ -27,6 +27,8 @@
 
 #include "data/ShaderConstants.h"
 
+#include "BezierPath.h" // fixme
+
 #if !defined(DEBUG)
 	//#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 #endif
@@ -867,86 +869,165 @@ public:
 
 //
 
-#if 0
+#if 1
 
 float evalPoint(float n1, float n2, float t)
 {
 	float diff = n2 - n1;
 
 	return n1 + (diff * t);
-}    
+}
 
-static void testBezier()
+static void doFxaa(Surface & surface)
 {
-	static float _x1;
-	static float _y1;
-	static float _x2;
-	static float _y2;
-	static float _x3;
-	static float _y3;
+	gpuTimingBlock(fxaa);
+	setBlend(BLEND_OPAQUE);
+	Shader shader("fxaa");
+	setShader(shader);
+	shader.setTexture("colormap", 0, surface.getTexture(), true, true);
+	shader.setImmediate("inverseVP", 1.f / (surface.getWidth() / framework.minification), 1.f / (surface.getHeight() / framework.minification));
+	surface.postprocess(shader);
+}
 
-	static float dx;
-	static float dy;
+// todo : simulate control points based on gravity, gravity well, sin/cos, ..
 
-	static int frame = 0;
+struct BezierTest
+{
+	const static int kNumNodes = 7;
+	const static int kNumFrames = 60;
 
-	if ((frame % 20) == 0)
+	BezierNode nodes[kNumNodes];
+
+	float movementVectorsP[kNumNodes][2];
+	float movementVectorsT[kNumNodes][2];
+
+	Color color;
+
+	int frame;
+
+	BezierTest()
+		: frame(0)
+		, color(colorWhite)
 	{
-		_x1 = random(-1.f, +1.f);
-		_y1 = random(-1.f, +1.f);
-		_x2 = random(-1.f, +1.f);
-		_y2 = random(-1.f, +1.f);
-		_x3 = random(-1.f, +1.f);
-		_y3 = random(-1.f, +1.f);
-
-		dx = random(-1.f, +1.f) * .3f;
-		dy = random(-1.f, +1.f) * .3f;
+		memset(movementVectorsP, 0, sizeof(movementVectorsP));
+		memset(movementVectorsT, 0, sizeof(movementVectorsT));
 	}
 
-	const float t = (frame % 20) / 20.f;
-
-	frame++;
-
-	gxPushMatrix();
+	void tick(const float dt)
 	{
-		gxTranslatef(GFX_SX/2, GFX_SY/2, 0.f);
-		gxScalef(600.f, 600.f, 1.f);
-
-		gxColor4f(1.f, 1.f, 1.f, 1.f);
-
-		for (float ja = -1.f; ja <= +1.f; ja += 2.f / 10.f)
+		if ((frame % kNumFrames) == 0)
 		{
-			const float j = ja * t;
+			color = Color::fromHSL(random(0.f, 1.f), 1.f, .5f);
 
-			gxBegin(GL_LINE_STRIP);
+			for (int i = 0; i < kNumNodes; ++i)
 			{
-				for (float i = 0.f; i <= 1.f; i += 0.01f)
+				const float s = .4f;
+				const float t = .4f;
+
+				nodes[i].m_Position[0] = random(-s, +s) + .3f;
+				nodes[i].m_Position[1] = random(-s, +s);
+
+				if (i == 0)
+					nodes[i].m_Position[0] -= 1.f;
+
+				nodes[i].m_Tangent[0][0] = random(-t, +t);
+				nodes[i].m_Tangent[0][1] = random(-t, +t);
+				nodes[i].m_Tangent[1][0] = random(-t, +t);
+				nodes[i].m_Tangent[1][1] = random(-t, +t);
+				nodes[i].m_Tangent[1][0] = -nodes[i].m_Tangent[0][0];
+				nodes[i].m_Tangent[1][1] = -nodes[i].m_Tangent[0][1];
+
+				if (i > 0)
 				{
-					float x1 = _x1;
-					float y1 = _y1;
-					float x2 = _x2;
-					float y2 = _y2;
-					float x3 = _x3;
-					float y3 = _y3;
-
-					x2 += dx * j;
-					y2 += dx * j;
-
-					const float xa = evalPoint(x1, x2, i);
-					const float ya = evalPoint(y1, y2, i);
-					const float xb = evalPoint(x2, x3, i);
-					const float yb = evalPoint(y2, y3, i);
-
-					const float x = evalPoint(xa, xb, i);
-					const float y = evalPoint(ya, yb, i);
-
-					gxVertex2f(x, y);
+					nodes[i].m_Position[0] += nodes[i - 1].m_Position[0];
+					nodes[i].m_Position[1] += nodes[i - 1].m_Position[1];
 				}
 			}
-			gxEnd();
+
+			for (int i = 0; i < kNumNodes; ++i)
+			{
+				const float vP = .5f / 10.f;
+				const float vT = .8f / 10.f;
+
+				movementVectorsP[i][0] = random(-vP, +vP);
+				movementVectorsP[i][1] = random(-vP, +vP);
+
+				movementVectorsT[i][0] = random(-vT, +vT);
+				movementVectorsT[i][1] = random(-vT, +vT);
+			}
 		}
+
+		frame++;
 	}
-	gxPopMatrix();
+
+	void draw(const float alpha) const
+	{
+		const float t = (frame % kNumFrames) / (kNumFrames - 1.f);
+		
+		const float a = pow(sin(t * Calc::mPI), .5f) * alpha;
+
+		gxPushMatrix();
+		{
+			gxTranslatef(GFX_SX/2, GFX_SY/2, 0.f);
+			gxScalef(500.f, 500.f, 1.f);
+			gxColor4f(color.r, color.g, color.b, a);
+
+			for (float ja = -1.f; ja <= +1.f; ja += 2.f / 10.f)
+			{
+				const float j = ja * t + .5f;
+
+				BezierNode nodes2[kNumNodes];
+
+				for (int i = 0; i < kNumNodes; ++i)
+				{
+					nodes2[i] = nodes[i];
+					
+					if (true)
+					{
+						nodes2[i].m_Position[0] += movementVectorsP[i][0] * j;
+						nodes2[i].m_Position[1] += movementVectorsP[i][1] * j;
+					}
+					
+					if (true)
+					{
+						nodes2[i].m_Tangent[0][0] += movementVectorsT[i][0] * j;
+						nodes2[i].m_Tangent[0][1] += movementVectorsT[i][1] * j;
+						nodes2[i].m_Tangent[1][0] = -nodes2[i].m_Tangent[0][0];
+						nodes2[i].m_Tangent[1][1] = -nodes2[i].m_Tangent[0][1];
+					}
+				}
+
+				BezierPath path;
+				path.ConstructFromNodes(nodes2, kNumNodes);
+
+				glEnable(GL_LINE_SMOOTH);
+				glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+
+				gxBegin(GL_LINE_STRIP);
+				{
+					for (float i = 0.f; i <= kNumNodes; i += 0.01f)
+					{
+						const Vec2F p = path.Interpolate(i);
+
+						gxVertex2f(p[0], p[1]);
+					}
+				}
+				gxEnd();
+
+				glDisable(GL_LINE_SMOOTH);
+			}
+		}
+		gxPopMatrix();
+	}
+};
+
+static void testBezier(float alpha)
+{
+	static BezierTest test;
+
+	test.tick(framework.timeStep);
+
+	test.draw(alpha);
 }
 
 #endif
@@ -955,19 +1036,17 @@ static void testBezier()
 
 int main(int argc, char * argv[])
 {
-	//changeDirectory("data");
-
 	initFileMonitor();
 
 	if (!config.load("settings.xml"))
 	{
-		logError("failed to load settings.xml");
+		logError("failed to load: settings.xml");
 		return -1;
 	}
 
 	if (!g_effectInfosByName.load("effects_meta.xml"))
 	{
-		logError("failed to load effects_meta.xml");
+		logError("failed to load: effects_meta.xml");
 		return -1;
 	}
 
@@ -1034,7 +1113,7 @@ int main(int argc, char * argv[])
 
 	// initialise framework
 
-#if ENABLE_WINDOWED_MODE || 1 // && 1
+#if ENABLE_WINDOWED_MODE && 1 // && 1
 	framework.fullscreen = false;
 	framework.minification = 1;
 	framework.windowX = 0;
@@ -1084,8 +1163,8 @@ int main(int argc, char * argv[])
 		g_scene = new Scene();
 		//g_scene->load("healer/scene.xml");
 		//g_scene->load("scene.xml");
-		//g_scene->load("tracks/healer.scene.xml");
-		g_scene->load("tracks/o2.scene.xml");
+		g_scene->load("tracks/healer.scene.xml");
+		//g_scene->load("tracks/o2.scene.xml");
 
 	#if DEMODATA
 		Effect_Cloth cloth("cloth");
@@ -1728,10 +1807,6 @@ int main(int argc, char * argv[])
 						drawableList.draw();
 					}
 
-					// todo : remove this loudness test
-					//setColorf(.25f, .5f, 1.f, loudnessThisFrame);
-					//drawRect(0, 0, GFX_SX, GFX_SY);
-
 				#if DEMODATA
 					static volatile bool doBoxblur = false;
 					static volatile bool doLuminance = false;
@@ -2182,14 +2257,77 @@ int main(int argc, char * argv[])
 				if (leapController.isConnected() && leapController.hasFocus())
 				{
 					drawText(5, 35, 24, +1, +1, "LeapMotion palm position: (%03d, %03d, %03d)",
-						(int)leapListener->state.palmX,
-						(int)leapListener->state.palmY,
-						(int)leapListener->state.palmZ);
+						(int)g_leapState.palmX,
+						(int)g_leapState.palmY,
+						(int)g_leapState.palmZ);
 				}
 			#endif
 
 			#if 0
-				testBezier();
+				static Surface * bezierSurface = nullptr;
+				
+				bool clearEachFrame = true;
+
+				if (bezierSurface == nullptr)
+				{
+					bezierSurface = new Surface(GFX_SX, GFX_SY);
+					bezierSurface->clear(0, 0, 0, 0);
+				}
+
+				if (clearEachFrame)
+				{
+					bezierSurface->clear(0, 0, 0, 0);
+				}
+
+				pushSurface(bezierSurface);
+				{
+					//for (int i = 0; i < 100; ++i)
+					{
+						if (true)
+						{
+							ScopedSurfaceBlock surfaceBlock(bezierSurface);
+
+							std::vector<std::string> images;
+							Effect_Fsfx effect("fsfx", "cesitest/fsfx_blur.ps", images);
+							effect.m_alpha = .05f;
+							effect.m_param1 = 10.f;
+							effect.draw();
+						}
+
+						if (true)
+						{
+							static int f = 0;
+							//if (((f++) % 4) == 0)
+							{
+								ScopedSurfaceBlock surfaceBlock(bezierSurface);
+
+								std::vector<std::string> images;
+								Effect_Fsfx effect("fsfx", "fsfx_luminance.ps", images);
+								effect.m_alpha = 1.f;
+								effect.m_param1 = 1.f;
+								effect.m_param2 = 1.f;
+								float s = pow((sin(f / 100.f) + 1.f) / 2.f, 4.f);
+								effect.m_param3 = s * (1.f / 20.f);
+								effect.m_param4 = s * (1.f / 20.f);
+								effect.draw();
+							}
+						}
+
+						setBlend(BLEND_ADD);
+						testBezier(clearEachFrame ? 1.f : (1.f / 20.f));
+						setBlend(BLEND_ALPHA);
+					}
+				}
+				popSurface();
+				
+				gxSetTexture(bezierSurface->getTexture());
+				{
+					setBlend(BLEND_OPAQUE);
+					setColor(colorWhite);
+					drawRect(0, 0, GFX_SX, GFX_SY);
+					setBlend(BLEND_ALPHA);
+				}
+				gxSetTexture(0);
 			#endif
 			}
 			framework.endDraw();

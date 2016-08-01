@@ -187,7 +187,7 @@ struct TweenFloatCollection
 		m_tweenVars[name] = &var;
 	}
 
-	TweenFloat * getVar(const char * name)
+	virtual TweenFloat * getVar(const char * name)
 	{
 		auto i = m_tweenVars.find(name);
 

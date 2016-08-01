@@ -44,7 +44,7 @@ bool Config::load(const char * filename)
 		
 	if (xmlDoc.LoadFile(filename) != XML_NO_ERROR)
 	{
-		logError("failed to load %s", filename);
+		logError("failed to load config: %s", filename);
 
 		result = false;
 	}

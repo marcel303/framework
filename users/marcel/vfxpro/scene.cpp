@@ -224,10 +224,11 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 	{
 		auto effectInfo = g_effectInfosByName.find(m_name);
 
+		effect->typeName = typeName;
+
 		for (const XMLAttribute * xmlAttrib = xmlEffect->FirstAttribute(); xmlAttrib; xmlAttrib = xmlAttrib->Next())
 		{
-			std::string name = nameToEffectParam(typeName, xmlAttrib->Name());
-			TweenFloat * var = effect->getVar(name.c_str());
+			TweenFloat * var = effect->getVar(xmlAttrib->Name());
 
 			if (var != nullptr)
 			{
@@ -1157,7 +1158,7 @@ bool Scene::load(const char * filename)
 
 	if (xmlDoc.LoadFile(filename) != XML_NO_ERROR)
 	{
-		logError("failed to load %s", filename);
+		logError("failed to load scene: %s", filename);
 
 		result = false;
 	}

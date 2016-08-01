@@ -24,7 +24,7 @@ bool EffectInfosByName::load(const char * filename)
 
 	if (xmlDoc.LoadFile(filename) != XML_NO_ERROR)
 	{
-		logError("failed to load %s", filename);
+		logError("failed to load effect infos by name: %s", filename);
 
 		result = false;
 	}
@@ -145,6 +145,15 @@ void unregisterEffect(Effect * effect)
 			break;
 		}
 	}
+}
+
+//
+
+TweenFloat * Effect::getVar(const char * name)
+{
+	const std::string resolvedName = nameToEffectParam(typeName, name);
+
+	return TweenFloatCollection::getVar(resolvedName.c_str());
 }
 
 //
