@@ -11,6 +11,7 @@
 #include "ImageLoader_Photoshop.h"
 #include "KlodderSystem.h"
 #include "LayerMgr.h"
+#include "Log.h"
 #include "Parse.h"
 #include "Path.h"
 #if USE_QUICKTIME

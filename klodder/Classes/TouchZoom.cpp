@@ -1,4 +1,5 @@
 #include "Debugging.h"
+#include "Log.h"
 #include "TouchZoom.h"
 
 TouchZoom::TouchZoom()

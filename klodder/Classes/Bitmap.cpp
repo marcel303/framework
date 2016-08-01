@@ -181,7 +181,7 @@ void Bitmap::Blit(Bitmap* bmp) const
 	Blit(bmp, 0, 0, mSx, mSy, 0, 0);
 }
 
-int Bitmap::SampleAA(float x, float y, const Rgba** out_values, float* out_w) const
+int Bitmap::SampleAA(float x, float y, const Rgba *__restrict * __restrict out_values, float * __restrict out_w) const
 {
 	const int ix1 = (int)floorf(x);
 	const int iy1 = (int)floorf(y);

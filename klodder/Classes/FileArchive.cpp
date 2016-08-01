@@ -1,5 +1,6 @@
 #include "Exception.h"
 #include "FileArchive.h"
+#include "Log.h"
 #include "StreamReader.h"
 #include "StreamWriter.h"
 

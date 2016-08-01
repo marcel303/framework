@@ -8,6 +8,7 @@
 #include "FileStream.h"
 #include "Image.h"
 #include "ImageLoader_FreeImage.h"
+#include "Log.h"
 #include "Parse.h"
 #include "Settings.h"
 #include "StreamReader.h"

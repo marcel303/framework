@@ -1,3 +1,4 @@
+#include "Log.h"
 #include "StreamReader.h"
 #include "StreamWriter.h"
 #include "Swatch.h"

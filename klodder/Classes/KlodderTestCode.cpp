@@ -1,5 +1,6 @@
 #include "ImageLoader_Photoshop.h"
 #include "KlodderTestCode.h"
+#include "Log.h"
 
 // test code
 #include "BrushLibrary.h"

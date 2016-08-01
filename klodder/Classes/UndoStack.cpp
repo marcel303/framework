@@ -1,4 +1,5 @@
 #include "ImageConversion.h"
+#include "Log.h"
 #include "UndoStack.h"
 
 #define VALIDATE_LOCATION(location) Assert(location >= 0 && location <= mUndoStack.size())

@@ -1,6 +1,7 @@
 #include <map>
 #include "ExceptionLogger.h"
 #include "ImageDescription.h"
+#include "Log.h"
 #include "MemoryStream.h"
 #include "StreamReader.h"
 #include "StringEx.h"
