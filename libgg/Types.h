@@ -495,6 +495,17 @@ inline BaseVec<float> BaseVec<float>::ToF() const
 	return *this;
 }
 
+namespace Calc
+{
+	template <typename T>
+	inline BaseVec<T> Lerp(const BaseVec<T> & v1, const BaseVec<T> & v2, const float t)
+	{
+		return BaseVec<T>(
+			Calc::Lerp(v1[0], v2[0], t),
+			Calc::Lerp(v1[1], v2[1], t));
+	}
+}
+
 // --------------------
 
 typedef BaseVec<int> Vec2I;

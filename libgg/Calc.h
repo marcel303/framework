@@ -135,7 +135,7 @@ namespace Calc
 #endif
 	}
 	
-	inline float Min(double v1, double v2)
+	inline double Min(double v1, double v2)
 	{
 #if USE_PSPVEC
 		return sceVfpuScalarMin(v1, v2);

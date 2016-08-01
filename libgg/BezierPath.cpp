@@ -53,9 +53,7 @@ void BezierPath::Allocate(int curveCount)
 	
 	if (curveCount > 0)
 	{
-		m_Curves.reserve(curveCount);
-		for (int i = 0; i < curveCount; ++i)
-			m_Curves.push_back(BezierCurve());
+		m_Curves.resize(curveCount);
 		m_CurveCount = curveCount;
 	}
 }
