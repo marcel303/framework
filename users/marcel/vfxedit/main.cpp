@@ -4,6 +4,7 @@
 #include "FileStream.h"
 #include "framework.h"
 #include "ip/UdpSocket.h"
+#include "midiio.h"
 #include "osc/OscOutboundPacketStream.h"
 #include "osc/OscPacketListener.h"
 #include "Path.h"
@@ -233,9 +234,7 @@ static int SDLCALL ExecuteAudioThread(void * arg)
 
 static double g_playbackMarker = 0.0;
 
-//
-
-static double g_bpm = 0.0;
+void clearSequence();
 
 //
 
@@ -256,13 +255,203 @@ struct EventMarker
 	int eventId;
 };
 
-std::list<EventMarker> g_eventMarkers;
+struct CommentRegion
+{
+	CommentRegion()
+		: time(0.0)
+		, duration(0.0)
+	{
+	}
 
-EventMarker * g_selectedEventMarker = nullptr;
-double g_selectedEventMarkerTimeOffset = 0.0;
+	double time;
+	double duration;
+	std::string text;
+};
 
-const int markerSizeDraw = 1;
-const int markerSizeSelect = 50;
+struct Sequence
+{
+	double bpm = 0.0;
+
+	std::list<EventMarker> eventMarkers;
+
+	std::list<CommentRegion> commentRegions;
+
+	Sequence()
+		: bpm(0.0)
+	{
+	}
+
+	bool save(const char * filename)
+	{
+		bool result = true;
+
+		XMLPrinter p;
+
+		p.OpenElement("sequence");
+		{
+			p.PushAttribute("bpm", bpm);
+
+			for (EventMarker & eventMarker : eventMarkers)
+			{
+				p.OpenElement("marker");
+				{
+					p.PushAttribute("time", eventMarker.time);
+					p.PushAttribute("eventId", eventMarker.eventId);
+				}
+				p.CloseElement();
+			}
+
+			for (CommentRegion & commentRegion : commentRegions)
+			{
+				p.OpenElement("comment");
+				{
+					p.PushAttribute("time", commentRegion.time);
+					p.PushAttribute("duration", commentRegion.duration);
+					p.PushAttribute("text", commentRegion.text.c_str());
+				}
+				p.CloseElement();
+			}
+		}
+		p.CloseElement();
+
+		FILE * f = fopen(filename, "wt");
+
+		if (f == nullptr)
+		{
+			result = false;
+		}
+		else
+		{
+			fprintf_s(f, "%s", p.CStr());
+			fclose(f);
+		}
+
+		return result;
+	}
+
+	bool saveAsMidi(const char * filename)
+	{
+		std::vector<MidiNote> notes;
+
+		for (const EventMarker & e : eventMarkers)
+		{
+			MidiNote note;
+			note.value = e.eventId;
+			note.time = e.time;
+			notes.push_back(note);
+		}
+
+		return midiWrite(filename, notes.empty() ? nullptr : &notes.front(), notes.size());
+	}
+
+	bool load(const char * filename)
+	{
+		bool result = true;
+
+		clearSequence();
+
+		XMLDocument xmlDoc;
+
+		if (xmlDoc.LoadFile(filename) != XML_NO_ERROR)
+		{
+			logError("failed to load %s", filename);
+
+			result = false;
+		}
+		else
+		{
+			for (XMLElement * sequenceXml = xmlDoc.FirstChildElement("sequence"); sequenceXml; sequenceXml = sequenceXml->NextSiblingElement("sequence"))
+			{
+				bpm = floatAttrib(sequenceXml, "bpm", 0);
+
+				for (XMLElement * eventMarkerXml = sequenceXml->FirstChildElement("marker"); eventMarkerXml; eventMarkerXml = eventMarkerXml->NextSiblingElement("marker"))
+				{
+					EventMarker eventMarker;
+					eventMarker.time = floatAttrib(eventMarkerXml, "time", 0.f);
+					eventMarker.eventId = intAttrib(eventMarkerXml, "eventId", -1);
+
+					eventMarkers.push_back(eventMarker);
+					eventMarkers.sort();
+				}
+
+				for (XMLElement * commentXml = sequenceXml->FirstChildElement("comment"); commentXml; commentXml = commentXml->NextSiblingElement("comment"))
+				{
+					CommentRegion commentRegion;
+					commentRegion.time = floatAttrib(commentXml, "time", 0.f);
+					commentRegion.duration = floatAttrib(commentXml, "duration", 0.f);
+					commentRegion.text = stringAttrib(commentXml, "text", "");
+
+					commentRegions.push_back(commentRegion);
+				}
+			}
+		}
+
+		return result;
+	}
+};
+
+struct MarkerEditing
+{
+	MarkerEditing()
+	{
+		memset(this, 0, sizeof(*this));
+	}
+
+	EventMarker * g_selectedEventMarker;
+	double g_selectedEventMarkerTimeOffset;
+};
+
+enum CommentRegionEdit
+{
+	kCommentRegionEdit_None,
+	kCommentRegionEdit_Move,
+	kCommentRegionEdit_SizeL,
+	kCommentRegionEdit_SizeR,
+};
+
+struct CommentEditing
+{
+	CommentEditing()
+	{
+		memset(this, 0, sizeof(*this));
+	}
+
+	CommentRegion * g_selectedCommentRegion;
+	CommentRegionEdit g_commentRegionEdit;
+	double g_commentRegionEditOffset;
+};
+
+enum MouseInteract
+{
+	kMouseInteract_None,
+	kMouseInteract_MoveEventMarker,
+	kMouseInteract_MovePlaybackMarker,
+	kMouseInteract_ModifyCommentRegion
+};
+
+struct Editing
+{
+	Editing()
+		: mouseInteract(kMouseInteract_None)
+	{
+	}
+
+	MarkerEditing marker;
+	CommentEditing comment;
+
+	MouseInteract mouseInteract;
+};
+
+//
+
+static Sequence g_sequence;
+
+static Editing g_editing;
+
+//
+
+static const int markerSizeDraw = 1;
+static const int markerSizeSelect = 50;
 
 static double timeToScreenX(double time)
 {
@@ -282,48 +471,21 @@ static double screenXToTime(double x)
 
 static void deleteEventMarker(EventMarker * eventMarker)
 {
-	for (auto i = g_eventMarkers.begin(); i != g_eventMarkers.end(); ++i)
+	for (auto i = g_sequence.eventMarkers.begin(); i != g_sequence.eventMarkers.end(); ++i)
 	{
 		EventMarker & eventMarkerItr = *i;
 
 		if (&eventMarkerItr == eventMarker)
 		{
-			g_eventMarkers.erase(i);
+			g_sequence.eventMarkers.erase(i);
 			break;
 		}
 	}
 
-	g_selectedEventMarker = nullptr;
+	g_editing.marker.g_selectedEventMarker = nullptr;
 }
 
 //
-
-struct CommentRegion
-{
-	CommentRegion()
-		: time(0.0)
-		, duration(0.0)
-	{
-	}
-
-	double time;
-	double duration;
-	std::string text;
-};
-
-enum CommentRegionEdit
-{
-	kCommentRegionEdit_None,
-	kCommentRegionEdit_Move,
-	kCommentRegionEdit_SizeL,
-	kCommentRegionEdit_SizeR,
-};
-
-static std::list<CommentRegion> g_commentRegions;
-
-static CommentRegion * g_selectedCommentRegion = nullptr;
-static CommentRegionEdit g_commentRegionEdit = kCommentRegionEdit_None;
-static double g_commentRegionEditOffset = 0.0;
 
 static CommentRegion * hittestCommentRegion(double x, double y)
 {
@@ -333,7 +495,7 @@ static CommentRegion * hittestCommentRegion(double x, double y)
 	{
 		const double time = screenXToTime(x);
 
-		for (CommentRegion & commentRegion : g_commentRegions)
+		for (CommentRegion & commentRegion : g_sequence.commentRegions)
 		{
 			if (time >= commentRegion.time && time < commentRegion.time + commentRegion.duration)
 			{
@@ -344,18 +506,6 @@ static CommentRegion * hittestCommentRegion(double x, double y)
 
 	return result;
 }
-
-//
-
-enum MouseInteract
-{
-	kMouseInteract_None,
-	kMouseInteract_MoveEventMarker,
-	kMouseInteract_MovePlaybackMarker,
-	kMouseInteract_ModifyCommentRegion
-};
-
-static MouseInteract g_mouseInteract = kMouseInteract_None;
 
 //
 
@@ -414,117 +564,18 @@ void loadAudio(const char * filename)
 
 void clearSequence()
 {
-	g_eventMarkers.clear();
-	g_selectedEventMarker = nullptr;
-	g_selectedEventMarkerTimeOffset = 0.0;
-	
-	g_commentRegions.clear();
-	g_selectedCommentRegion = nullptr;
-	g_commentRegionEdit = kCommentRegionEdit_None;
-	g_commentRegionEditOffset = 0.0;
+	g_sequence = Sequence();
+
+	g_editing = Editing();
 	
 	g_playbackMarker = 0.0;
-	g_mouseInteract = kMouseInteract_None;
-}
-
-bool saveSequence(const char * filename)
-{
-	bool result = true;
-
-	XMLPrinter p;
-
-	p.OpenElement("sequence");
-	{
-		p.PushAttribute("bpm", g_bpm);
-
-		for (EventMarker & eventMarker : g_eventMarkers)
-		{
-			p.OpenElement("marker");
-			{
-				p.PushAttribute("time", eventMarker.time);
-				p.PushAttribute("eventId", eventMarker.eventId);
-			}
-			p.CloseElement();
-		}
-
-		for (CommentRegion & commentRegion : g_commentRegions)
-		{
-			p.OpenElement("comment");
-			{
-				p.PushAttribute("time", commentRegion.time);
-				p.PushAttribute("duration", commentRegion.duration);
-				p.PushAttribute("text", commentRegion.text.c_str());
-			}
-			p.CloseElement();
-		}
-	}
-	p.CloseElement();
-
-	FILE * f = fopen(filename, "wt");
-
-	if (f == nullptr)
-	{
-		result = false;
-	}
-	else
-	{
-		fprintf_s(f, "%s", p.CStr());
-		fclose(f);
-	}
-
-	return result;
-}
-
-bool loadSequence(const char * filename)
-{
-	bool result = true;
-
-	clearSequence();
-
-	XMLDocument xmlDoc;
-
-	if (xmlDoc.LoadFile(filename) != XML_NO_ERROR)
-	{
-		logError("failed to load %s", filename);
-
-		result = false;
-	}
-	else
-	{
-		for (XMLElement * sequenceXml = xmlDoc.FirstChildElement("sequence"); sequenceXml; sequenceXml = sequenceXml->NextSiblingElement("sequence"))
-		{
-			g_bpm = floatAttrib(sequenceXml, "bpm", 0);
-
-			for (XMLElement * eventMarkerXml = sequenceXml->FirstChildElement("marker"); eventMarkerXml; eventMarkerXml = eventMarkerXml->NextSiblingElement("marker"))
-			{
-				EventMarker eventMarker;
-				eventMarker.time = floatAttrib(eventMarkerXml, "time", 0.f);
-				eventMarker.eventId = intAttrib(eventMarkerXml, "eventId", -1);
-
-				g_eventMarkers.push_back(eventMarker);
-				g_eventMarkers.sort();
-			}
-
-			for (XMLElement * commentXml = sequenceXml->FirstChildElement("comment"); commentXml; commentXml = commentXml->NextSiblingElement("comment"))
-			{
-				CommentRegion commentRegion;
-				commentRegion.time = floatAttrib(commentXml, "time", 0.f);
-				commentRegion.duration = floatAttrib(commentXml, "duration", 0.f);
-				commentRegion.text = stringAttrib(commentXml, "text", "");
-
-				g_commentRegions.push_back(commentRegion);
-			}
-		}
-	}
-
-	return result;
 }
 
 static void seekSequence(double time)
 {
 	sendEvent("/scene_reload", 0);
 
-	for (EventMarker & eventMarker : g_eventMarkers)
+	for (EventMarker & eventMarker : g_sequence.eventMarkers)
 	{
 		if (eventMarker.time <= time)
 		{
@@ -543,42 +594,42 @@ static void seekSequence(double time)
 
 static double beatToTime(int beat)
 {
-	return beat * 60.0 / g_bpm;
+	return beat * 60.0 / g_sequence.bpm;
 }
 
 static int getFloorBeat(double time)
 {
-	if (g_bpm == 0.0)
+	if (g_sequence.bpm == 0.0)
 	{
 		return 0;
 	}
 	else
 	{
-		return (int)std::floorf(time / 60.0 * g_bpm);
+		return (int)std::floorf(time / 60.0 * g_sequence.bpm);
 	}
 }
 
 static int getNearestBeat(double time)
 {
-	if (g_bpm == 0.0)
+	if (g_sequence.bpm == 0.0)
 	{
 		return 0;
 	}
 	else
 	{
-		return (int)std::round(time / 60.0 * g_bpm);
+		return (int)std::round(time / 60.0 * g_sequence.bpm);
 	}
 }
 
 static int roundTimeToBeat(double time)
 {
-	if (g_bpm == 0.0)
+	if (g_sequence.bpm == 0.0)
 	{
 		return 0;
 	}
 	else
 	{
-		return std::round(time * g_bpm / 60.0);
+		return std::round(time * g_sequence.bpm / 60.0);
 	}
 }
 
@@ -719,6 +770,7 @@ int main(int argc, char * argv[])
 
 	framework.waitForEvents = true;
 
+	framework.windowTitle = "vfx.edit";
 	framework.windowY = 100;
 
 	if (framework.init(0, nullptr, GFX_SX * SCALE, GFX_SY * SCALE))
@@ -739,7 +791,7 @@ int main(int argc, char * argv[])
 
 			if (FileStream::Exists(sequenceFilename.c_str()))
 			{
-				loadSequence(sequenceFilename.c_str());
+				g_sequence.load(sequenceFilename.c_str());
 
 				sendEvent("/scene_reload", 0);
 			}
@@ -768,7 +820,7 @@ int main(int argc, char * argv[])
 				double audioTime1 = g_lastAudioTime;
 				double audioTime2 = g_audioFile->getTime();
 
-				for (EventMarker & eventMarker : g_eventMarkers)
+				for (EventMarker & eventMarker : g_sequence.eventMarkers)
 				{
 					if (eventMarker.time >= audioTime1 && eventMarker.time < audioTime2)
 					{
@@ -801,8 +853,11 @@ int main(int argc, char * argv[])
 				if (g_audioFile != nullptr)
 				{
 					const std::string sequenceFilename = Path::ReplaceExtension(g_audioFile->m_filename, "xml");
+					const std::string midiFilename = Path::ReplaceExtension(g_audioFile->m_filename, "mid");
 
-					saveSequence(sequenceFilename.c_str());
+					g_sequence.save(sequenceFilename.c_str());
+
+					g_sequence.saveAsMidi(midiFilename.c_str());
 
 					sendEvent("/event", 100);
 				}
@@ -810,7 +865,7 @@ int main(int argc, char * argv[])
 
 			if (keyboard.wentDown(SDLK_r))
 			{
-				loadSequence("tracks/Healer.xml");
+				g_sequence.load("tracks/Healer.xml");
 
 				sendEvent("/scene_reload", 0);
 			}
@@ -835,7 +890,7 @@ int main(int argc, char * argv[])
 
 					if (FileStream::Exists(sequenceFilename.c_str()))
 					{
-						loadSequence(sequenceFilename.c_str());
+						g_sequence.load(sequenceFilename.c_str());
 
 						sendEvent("/scene_reload", 0);
 					}
@@ -844,13 +899,13 @@ int main(int argc, char * argv[])
 
 			if (keyboard.wentDown(SDLK_t))
 			{
-				if (g_selectedCommentRegion != nullptr)
+				if (g_editing.comment.g_selectedCommentRegion != nullptr)
 				{
-					std::string text = g_selectedCommentRegion->text;
+					std::string text = g_editing.comment.g_selectedCommentRegion->text;
 
 					if (doTextDialog(text))
 					{
-						g_selectedCommentRegion->text = text;
+						g_editing.comment.g_selectedCommentRegion->text = text;
 					}
 				}
 			}
@@ -883,7 +938,7 @@ int main(int argc, char * argv[])
 
 			// determine mouse interaction
 
-			if (g_mouseInteract == kMouseInteract_None && mouse.wentDown(BUTTON_LEFT))
+			if (g_editing.mouseInteract == kMouseInteract_None && mouse.wentDown(BUTTON_LEFT))
 			{
 				if (g_audioFile != nullptr)
 				{
@@ -895,7 +950,7 @@ int main(int argc, char * argv[])
 
 					std::vector<EventMarker*> potentialEventMarkers;
 
-					for (auto & eventMarker : g_eventMarkers)
+					for (auto & eventMarker : g_sequence.eventMarkers)
 					{
 						const int x = timeToScreenX(eventMarker.time);
 						const int distance = Calc::Abs(mouseX - x);
@@ -917,7 +972,7 @@ int main(int argc, char * argv[])
 						int currentIndex = -1;
 
 						for (size_t i = 0; i < potentialEventMarkers.size(); ++i)
-							if (potentialEventMarkers[i] == g_selectedEventMarker)
+							if (potentialEventMarkers[i] == g_editing.marker.g_selectedEventMarker)
 								currentIndex = i;
 
 						selectedEventMarker = potentialEventMarkers[(currentIndex + 1) % potentialEventMarkers.size()];
@@ -929,43 +984,43 @@ int main(int argc, char * argv[])
 
 						const double time = screenXToTime(mouseX);
 
-						g_selectedCommentRegion = hittestCommentRegion(mouseX, mouseY);
+						g_editing.comment.g_selectedCommentRegion = hittestCommentRegion(mouseX, mouseY);
 
-						if (g_selectedCommentRegion != nullptr)
+						if (g_editing.comment.g_selectedCommentRegion != nullptr)
 						{
 							const int edgeSize = 10;
 
-							if (timeToScreenX(time) < timeToScreenX(g_selectedCommentRegion->time) + edgeSize)
+							if (timeToScreenX(time) < timeToScreenX(g_editing.comment.g_selectedCommentRegion->time) + edgeSize)
 							{
-								g_commentRegionEdit = kCommentRegionEdit_SizeL;
-								g_commentRegionEditOffset = g_selectedCommentRegion->time - time;
+								g_editing.comment.g_commentRegionEdit = kCommentRegionEdit_SizeL;
+								g_editing.comment.g_commentRegionEditOffset = g_editing.comment.g_selectedCommentRegion->time - time;
 							}
-							else if (timeToScreenX(time) > timeToScreenX(g_selectedCommentRegion->time + g_selectedCommentRegion->duration) - edgeSize)
+							else if (timeToScreenX(time) > timeToScreenX(g_editing.comment.g_selectedCommentRegion->time + g_editing.comment.g_selectedCommentRegion->duration) - edgeSize)
 							{
-								g_commentRegionEdit = kCommentRegionEdit_SizeR;
-								g_commentRegionEditOffset = (g_selectedCommentRegion->time + g_selectedCommentRegion->duration) - time;
+								g_editing.comment.g_commentRegionEdit = kCommentRegionEdit_SizeR;
+								g_editing.comment.g_commentRegionEditOffset = (g_editing.comment.g_selectedCommentRegion->time + g_editing.comment.g_selectedCommentRegion->duration) - time;
 							}
 							else
 							{
-								g_commentRegionEdit = kCommentRegionEdit_Move;
-								g_commentRegionEditOffset = g_selectedCommentRegion->time - time;
+								g_editing.comment.g_commentRegionEdit = kCommentRegionEdit_Move;
+								g_editing.comment.g_commentRegionEditOffset = g_editing.comment.g_selectedCommentRegion->time - time;
 							}
 
-							g_mouseInteract = kMouseInteract_ModifyCommentRegion;
+							g_editing.mouseInteract = kMouseInteract_ModifyCommentRegion;
 						}
 
-						if (g_selectedCommentRegion == nullptr)
+						if (g_editing.comment.g_selectedCommentRegion == nullptr)
 						{
 							CommentRegion region;
 							region.time = time;
 							region.duration = 0.0;
 
-							g_commentRegions.push_back(region);
-							g_selectedCommentRegion = &g_commentRegions.back();
+							g_sequence.commentRegions.push_back(region);
+							g_editing.comment.g_selectedCommentRegion = &g_sequence.commentRegions.back();
 
-							g_mouseInteract = kMouseInteract_ModifyCommentRegion;
-							g_commentRegionEdit = kCommentRegionEdit_SizeR;
-							g_commentRegionEditOffset = 0.0;
+							g_editing.mouseInteract = kMouseInteract_ModifyCommentRegion;
+							g_editing.comment.g_commentRegionEdit = kCommentRegionEdit_SizeR;
+							g_editing.comment.g_commentRegionEditOffset = 0.0;
 						}
 					}
 					else if (mouseY >= INSERT_Y - UIZONE_SY/2 && mouseY <= INSERT_Y + UIZONE_SY/2)
@@ -976,29 +1031,29 @@ int main(int argc, char * argv[])
 						eventMarker.eventId = 0;
 						eventMarker.time = beatToTime(roundTimeToBeat(time));
 
-						g_eventMarkers.push_back(eventMarker);
-						g_selectedEventMarker = &g_eventMarkers.back();
-						g_eventMarkers.sort();
+						g_sequence.eventMarkers.push_back(eventMarker);
+						g_editing.marker.g_selectedEventMarker = &g_sequence.eventMarkers.back();
+						g_sequence.eventMarkers.sort();
 
-						g_selectedEventMarkerTimeOffset = 0.0;
+						g_editing.marker.g_selectedEventMarkerTimeOffset = 0.0;
 
-						g_mouseInteract = kMouseInteract_MoveEventMarker;
+						g_editing.mouseInteract = kMouseInteract_MoveEventMarker;
 					}
 					else if (mouseY >= SELECT_Y - UIZONE_SY/2 && mouseY <= SELECT_Y + UIZONE_SY/2)
 					{
 						if (selectedEventMarker == nullptr)
 						{
-							g_selectedEventMarker = nullptr;
-							g_selectedEventMarkerTimeOffset = 0.0;
+							g_editing.marker.g_selectedEventMarker = nullptr;
+							g_editing.marker.g_selectedEventMarkerTimeOffset = 0.0;
 						}
 						else
 						{
 							const double time = screenXToTime(mouseX);
 
-							g_selectedEventMarker = selectedEventMarker;
-							g_selectedEventMarkerTimeOffset = selectedEventMarker->time - time;
+							g_editing.marker.g_selectedEventMarker = selectedEventMarker;
+							g_editing.marker.g_selectedEventMarkerTimeOffset = selectedEventMarker->time - time;
 
-							g_mouseInteract = kMouseInteract_MoveEventMarker;
+							g_editing.mouseInteract = kMouseInteract_MoveEventMarker;
 						}
 					}
 					else if (mouseY >= DELETE_Y - UIZONE_SY/2 && mouseY <= DELETE_Y + UIZONE_SY/2)
@@ -1008,50 +1063,50 @@ int main(int argc, char * argv[])
 							deleteEventMarker(selectedEventMarker);
 						}
 
-						g_selectedEventMarker = nullptr;
-						g_selectedEventMarkerTimeOffset = 0.0;
+						g_editing.marker.g_selectedEventMarker = nullptr;
+						g_editing.marker.g_selectedEventMarkerTimeOffset = 0.0;
 					}
 					else
 					{
-						g_selectedEventMarkerTimeOffset = 0.0;
+						g_editing.marker.g_selectedEventMarkerTimeOffset = 0.0;
 
-						g_mouseInteract = kMouseInteract_MovePlaybackMarker;
+						g_editing.mouseInteract = kMouseInteract_MovePlaybackMarker;
 					}
 				}
 				else
 				{
-					Assert(g_selectedEventMarker == nullptr);
-					Assert(g_selectedEventMarkerTimeOffset == 0.0);
+					Assert(g_editing.marker.g_selectedEventMarker == nullptr);
+					Assert(g_editing.marker.g_selectedEventMarkerTimeOffset == 0.0);
 				}
 			}
 
 			// process mouse interaction
 
-			if (g_mouseInteract == kMouseInteract_None)
+			if (g_editing.mouseInteract == kMouseInteract_None)
 			{
 			}
-			else if (g_mouseInteract == kMouseInteract_MoveEventMarker)
+			else if (g_editing.mouseInteract == kMouseInteract_MoveEventMarker)
 			{
 				if (mouse.wentUp(BUTTON_LEFT))
 				{
-					g_mouseInteract = kMouseInteract_None;
+					g_editing.mouseInteract = kMouseInteract_None;
 				}
 				else
 				{
-					if (g_selectedEventMarker != nullptr)
+					if (g_editing.marker.g_selectedEventMarker != nullptr)
 					{
-						double time = screenXToTime(mouseX) + g_selectedEventMarkerTimeOffset;
+						double time = screenXToTime(mouseX) + g_editing.marker.g_selectedEventMarkerTimeOffset;
 
 						if (!keyboard.isDown(SDLK_LSHIFT) && !keyboard.isDown(SDLK_RSHIFT))
 						{
 							time = beatToTime(roundTimeToBeat(time));
 						}
 
-						g_selectedEventMarker->time = time;
+						g_editing.marker.g_selectedEventMarker->time = time;
 					}
 				}
 			}
-			else if (g_mouseInteract == kMouseInteract_MovePlaybackMarker)
+			else if (g_editing.mouseInteract == kMouseInteract_MovePlaybackMarker)
 			{
 				Assert(g_audioFile != nullptr);
 
@@ -1063,7 +1118,7 @@ int main(int argc, char * argv[])
 					seekSequence(time);
 					g_lastAudioTime = time;
 
-					g_mouseInteract = kMouseInteract_None;
+					g_editing.mouseInteract = kMouseInteract_None;
 				}
 				else if (g_audioFile != nullptr)
 				{
@@ -1075,40 +1130,40 @@ int main(int argc, char * argv[])
 					}
 				}
 			}
-			else if (g_mouseInteract == kMouseInteract_ModifyCommentRegion)
+			else if (g_editing.mouseInteract == kMouseInteract_ModifyCommentRegion)
 			{
-				Assert(g_selectedCommentRegion != nullptr);
+				Assert(g_editing.comment.g_selectedCommentRegion != nullptr);
 
 				if (mouse.wentUp(BUTTON_LEFT))
 				{
-					g_mouseInteract = kMouseInteract_None;
+					g_editing.mouseInteract = kMouseInteract_None;
 				}
-				else if (g_selectedCommentRegion != nullptr)
+				else if (g_editing.comment.g_selectedCommentRegion != nullptr)
 				{
-					const double time = screenXToTime(mouseX) + g_commentRegionEditOffset;
+					const double time = screenXToTime(mouseX) + g_editing.comment.g_commentRegionEditOffset;
 
-					if (g_commentRegionEdit == kCommentRegionEdit_Move)
+					if (g_editing.comment.g_commentRegionEdit == kCommentRegionEdit_Move)
 					{
-						g_selectedCommentRegion->time = time;
+						g_editing.comment.g_selectedCommentRegion->time = time;
 					}
-					else if (g_commentRegionEdit == kCommentRegionEdit_SizeL)
+					else if (g_editing.comment.g_commentRegionEdit == kCommentRegionEdit_SizeL)
 					{
-						const double delta = g_selectedCommentRegion->time - time;
-						g_selectedCommentRegion->time -= delta;
-						g_selectedCommentRegion->duration += delta;
+						const double delta = g_editing.comment.g_selectedCommentRegion->time - time;
+						g_editing.comment.g_selectedCommentRegion->time -= delta;
+						g_editing.comment.g_selectedCommentRegion->duration += delta;
 					}
-					else if (g_commentRegionEdit == kCommentRegionEdit_SizeR)
+					else if (g_editing.comment.g_commentRegionEdit == kCommentRegionEdit_SizeR)
 					{
-						g_selectedCommentRegion->duration = time - g_selectedCommentRegion->time;
+						g_editing.comment.g_selectedCommentRegion->duration = time - g_editing.comment.g_selectedCommentRegion->time;
 					}
 					else
 					{
 						Assert(false);
 					}
 
-					if (g_selectedCommentRegion->duration < 0.1)
+					if (g_editing.comment.g_selectedCommentRegion->duration < 0.1)
 					{
-						g_selectedCommentRegion->duration = 0.1;
+						g_editing.comment.g_selectedCommentRegion->duration = 0.1;
 					}
 				}
 			}
@@ -1119,44 +1174,44 @@ int main(int argc, char * argv[])
 
 			// process keyboard interaction
 
-			if (g_selectedEventMarker != nullptr)
+			if (g_editing.marker.g_selectedEventMarker != nullptr)
 			{
 				if (keyboard.wentDown(SDLK_LEFT) || keyboard.keyRepeat(SDLK_LEFT))
 				{
-					double time = g_selectedEventMarker->time;
+					double time = g_editing.marker.g_selectedEventMarker->time;
 
 					if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
 						time = beatToTime(roundTimeToBeat(time * 4) - 1);
 					else
 						time = beatToTime(roundTimeToBeat(time * 1) - 1);
 
-					g_selectedEventMarker->time = Calc::Max(0.0, time);
+					g_editing.marker.g_selectedEventMarker->time = Calc::Max(0.0, time);
 				}
 				else if (keyboard.wentDown(SDLK_RIGHT) || keyboard.keyRepeat(SDLK_RIGHT))
 				{
 					if (g_audioFile != nullptr)
 					{
-						double time = g_selectedEventMarker->time;
+						double time = g_editing.marker.g_selectedEventMarker->time;
 
 						if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
 							time = beatToTime(roundTimeToBeat(time * 4) + 1);
 						else
 							time = beatToTime(roundTimeToBeat(time * 1) + 1);
 
-						g_selectedEventMarker->time = Calc::Min(g_audioFile->m_duration, time);
+						g_editing.marker.g_selectedEventMarker->time = Calc::Min(g_audioFile->m_duration, time);
 					}
 				}
 				else if (keyboard.wentDown(SDLK_UP) || keyboard.keyRepeat(SDLK_UP))
 				{
-					g_selectedEventMarker->eventId = Calc::Min(50, g_selectedEventMarker->eventId + 1);
+					g_editing.marker.g_selectedEventMarker->eventId = Calc::Min(50, g_editing.marker.g_selectedEventMarker->eventId + 1);
 				}
 				else if (keyboard.wentDown(SDLK_DOWN) || keyboard.keyRepeat(SDLK_DOWN))
 				{
-					g_selectedEventMarker->eventId = Calc::Max(0, g_selectedEventMarker->eventId - 1);
+					g_editing.marker.g_selectedEventMarker->eventId = Calc::Max(0, g_editing.marker.g_selectedEventMarker->eventId - 1);
 				}
 				else if (keyboard.wentDown(SDLK_DELETE))
 				{
-					deleteEventMarker(g_selectedEventMarker);
+					deleteEventMarker(g_editing.marker.g_selectedEventMarker);
 				}
 			}
 			
@@ -1168,21 +1223,20 @@ int main(int argc, char * argv[])
 
 				// draw beat markers
 
-				if (g_bpm > 0.0)
+				if (g_sequence.bpm > 0.0)
 				{
 					gxBegin(GL_LINES);
 					{
 						for (int i = 0; true; ++i)
 						{
-							const double time = 60.0 / g_bpm * i;
+							const double time = 60.0 / g_sequence.bpm * i;
 
 							if (time > g_audioFile->m_duration)
 								break;
 
 							const double x = timeToScreenX(time);
 
-							gxColor4f(1.f, 1.f, 1.f, (i % 4) == 0 ? .5f : .25f);
-
+							gxColor4f(1.f, 1.f, 1.f, (i % 4) == 0 ? .4f : .2f);
 
 							gxVertex2f(x, 0.f   );
 							gxVertex2f(x, GFX_SY);
@@ -1249,12 +1303,12 @@ int main(int argc, char * argv[])
 
 					CommentRegion * focusCommentRegion = hittestCommentRegion(mouseX, mouseY);
 
-					for (const auto & commentRegion : g_commentRegions)
+					for (const auto & commentRegion : g_sequence.commentRegions)
 					{
 						double alphaMultiplier = 1.0;
 						double alphaMultiplierOutline = 1.0;
 
-						if (&commentRegion == focusCommentRegion || &commentRegion == g_selectedCommentRegion)
+						if (&commentRegion == focusCommentRegion || &commentRegion == g_editing.comment.g_selectedCommentRegion)
 						{
 							alphaMultiplier = 1.2;
 							alphaMultiplierOutline = 2.0;
@@ -1294,7 +1348,7 @@ int main(int argc, char * argv[])
 					gxSetTexture(0);
 				}
 
-				if (g_mouseInteract != kMouseInteract_None)
+				if (g_editing.mouseInteract != kMouseInteract_None)
 				{
 					setColor(255, 255, 255, 31);
 					drawRect(0, 0, GFX_SX, GFX_SY);
@@ -1338,9 +1392,9 @@ int main(int argc, char * argv[])
 
 				int drawPosition = 0;
 
-				for (auto & eventMarker : g_eventMarkers)
+				for (auto & eventMarker : g_sequence.eventMarkers)
 				{
-					if (&eventMarker == g_selectedEventMarker)
+					if (&eventMarker == g_editing.marker.g_selectedEventMarker)
 						setColor(255, 255, 0, 191);
 					else
 						setColor(255, 255, 255, 191);

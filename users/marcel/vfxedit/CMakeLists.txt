@@ -26,6 +26,9 @@ set(GAME_FILES
 	main.cpp)
 source_group("Game Files" FILES ${GAME_FILES})
 
+file(GLOB_RECURSE source_midifile "midifile/*.*")
+source_group("midifile" FILES ${source_midifile})
+
 add_executable(vfxedit ${source})
 
 target_compile_definitions(vfxedit PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)
