@@ -3,7 +3,7 @@
 #include "midiio.h"
 #include "StreamWriter.h"
 
-bool midiWrite(const char * filename, const MidiNote * notes, int numNotes)
+bool midiWrite(const char * filename, const MidiNote * notes, int numNotes, int bpm)
 {
 	MidiFile file;
 	file.absoluteTicks();
@@ -13,7 +13,7 @@ bool midiWrite(const char * filename, const MidiNote * notes, int numNotes)
 
 	for (int i = 0; i < numNotes; ++i)
 	{
-		int tick = int(double(notes[i].time) * tpq * 2);
+		int tick = int(double(notes[i].time * bpm / 60.0) * tpq);
 
 		file.addNoteOn(0, tick, 0, notes[i].value, 100);
 		file.addNoteOff(0, tick + 1, 0, notes[i].value, 100);

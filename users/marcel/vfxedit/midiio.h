@@ -6,4 +6,4 @@ struct MidiNote
 	float time;
 };
 
-bool midiWrite(const char * filename, const MidiNote * notes, int numNotes);
+bool midiWrite(const char * filename, const MidiNote * notes, int numNotes, int bpm);

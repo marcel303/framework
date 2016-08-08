@@ -28,7 +28,7 @@ using namespace tinyxml2;
 #define GFX_SX 1000
 //#define GFX_SX 1000
 #define GFX_SY 300
-#define SCALE 1
+#define SCALE 2
 
 #define INSERT_Y (GFX_SY/2 - 70)
 #define SELECT_Y (GFX_SY/2)
@@ -333,6 +333,8 @@ struct Sequence
 	{
 		std::vector<MidiNote> notes;
 
+		// authored events
+
 		for (const EventMarker & e : eventMarkers)
 		{
 			MidiNote note;
@@ -341,7 +343,19 @@ struct Sequence
 			notes.push_back(note);
 		}
 
-		return midiWrite(filename, notes.empty() ? nullptr : &notes.front(), notes.size());
+		// automatic beat events
+
+		double timeStep = 60.0 / bpm * 4.0;
+
+		for (double time = 0.0; time < g_audioFile->m_duration; time += timeStep)
+		{
+			MidiNote note;
+			note.value = 2;
+			note.time = time;
+			notes.push_back(note);
+		}
+
+		return midiWrite(filename, notes.empty() ? nullptr : &notes.front(), notes.size(), bpm);
 	}
 
 	bool load(const char * filename)
