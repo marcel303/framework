@@ -171,6 +171,8 @@ struct Effect : TweenFloatCollection
 		shader.setTexture("fft", 3, g_fftTexture, true, false);
 	}
 
+	void applyBlendMode() const;
+
 	void tickBase(const float dt)
 	{
 		const float timeStep = dt * timeMultiplier;
@@ -346,6 +348,8 @@ struct Effect_Rain : Effect
 
 		gxSetTexture(Sprite("rain.png").getTexture());
 		{
+			setColor(colorWhite);
+
 			m_particleSystem.draw(m_alpha);
 		}
 		gxSetTexture(0);
@@ -441,6 +445,8 @@ struct Effect_StarCluster : Effect
 
 		gxSetTexture(Sprite("prayer.png").getTexture());
 		{
+			setColor(colorWhite);
+
 			m_particleSystem.draw(m_alpha);
 		}
 		gxSetTexture(0);
@@ -985,6 +991,7 @@ struct Effect_Luminance : Effect
 	virtual void draw() override
 	{
 		setBlend(BLEND_OPAQUE);
+		setColor(colorWhite);
 
 		Shader shader("luminance");
 		setShader(shader);
@@ -1047,6 +1054,7 @@ struct Effect_ColorLut2D : Effect
 	virtual void draw() override
 	{
 		setBlend(BLEND_OPAQUE);
+		setColor(colorWhite);
 
 		Shader shader("colorlut2d");
 		setShader(shader);
@@ -1104,6 +1112,7 @@ struct Effect_Flowmap : Effect
 			return;
 
 		setBlend(BLEND_OPAQUE);
+		setColor(colorWhite);
 
 		Sprite mapSprite(m_map.c_str());
 
@@ -1159,6 +1168,7 @@ struct Effect_Vignette : Effect
 			return;
 
 		setBlend(BLEND_OPAQUE);
+		setColor(colorWhite);
 
 		Shader shader("vignette");
 		setShader(shader);
@@ -1210,6 +1220,7 @@ struct Effect_Clockwork : Effect
 			return;
 
 		setBlend(BLEND_OPAQUE);
+		setColor(colorWhite);
 
 		Shader shader("vignette");
 		setShader(shader);
@@ -1325,6 +1336,7 @@ struct Effect_DrawPicture : Effect
 			gxPushMatrix();
 			{
 				gxTranslatef(-sx / 2.f * scale, -sy / 2.f * scale, 0.f);
+				gxColor4f(1.f, 1.f, 1.f, 1.f);
 
 				for (auto coord : m_coords)
 				{
@@ -1363,7 +1375,7 @@ struct Effect_Blit : Effect
 
 //
 
-struct Effect_Blocks : public Effect
+struct Effect_Blocks : Effect
 {
 	struct Block
 	{
@@ -1397,7 +1409,7 @@ struct Effect_Blocks : public Effect
 
 //
 
-struct Effect_Lines : public Effect
+struct Effect_Lines : Effect
 {
 	struct Line
 	{
@@ -1437,7 +1449,7 @@ struct Effect_Lines : public Effect
 
 //
 
-struct Effect_Bars : public Effect
+struct Effect_Bars : Effect
 {
 	static const int kNumLayers = 1;
 
@@ -1475,7 +1487,7 @@ struct Effect_Bars : public Effect
 
 //
 
-struct Effect_Text : public Effect
+struct Effect_Text : Effect
 {
 	TweenFloat m_alpha;
 	Color m_color;
@@ -1494,7 +1506,7 @@ struct Effect_Text : public Effect
 
 //
 
-struct Effect_Bezier : public Effect
+struct Effect_Bezier : Effect
 {
 	struct Node
 	{
@@ -1527,4 +1539,23 @@ struct Effect_Bezier : public Effect
 	virtual void handleSignal(const std::string & name) override;
 
 	void generateSegment(const Vec2F & p1, const Vec2F & p2, const float posSpeed, const float tanSpeed, const float posVary, const float tanVary, const int numNodes, const int numGhosts, const float ghostSize, const Color & color, const float duration);
+};
+
+//
+
+struct Effect_Smoke : Effect
+{
+	Surface * surface;
+	bool capture;
+
+	Effect_Smoke(const char * name);
+	virtual ~Effect_Smoke();
+
+	virtual void tick(const float dt) override;
+	virtual void draw(DrawableList & list) override;
+	virtual void draw() override;
+
+	virtual void handleSignal(const std::string & name) override;
+
+	void captureSurface();
 };

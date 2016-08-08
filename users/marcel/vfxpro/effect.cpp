@@ -153,6 +153,38 @@ void unregisterEffect(Effect * effect)
 
 //
 
+void Effect::applyBlendMode() const
+{
+	switch (blendMode)
+	{
+	case kBlendMode_Add:
+		setBlend(BLEND_ADD);
+		break;
+	case kBlendMode_Subtract:
+		setBlend(BLEND_SUBTRACT);
+		break;
+	case kBlendMode_Alpha:
+		setBlend(BLEND_ALPHA);
+		break;
+	case kBlendMode_PremultipliedAlpha:
+		setBlend(BLEND_PREMULTIPLIED_ALPHA);
+		break;
+	case kBlendMode_Opaque:
+		//setBlend(BLEND_OPAQUE);
+		glEnable(GL_BLEND);
+		if (glBlendEquation)
+			glBlendEquation(GL_FUNC_ADD);
+		glBlendFunc(GL_SRC_ALPHA, GL_ZERO);
+		break;
+	case kBlendMode_Multiply:
+		setBlend(BLEND_MUL);
+		break;
+	default:
+		Assert(false);
+		break;
+	}
+}
+
 TweenFloat * Effect::getVar(const char * name)
 {
 	const std::string resolvedName = nameToEffectParam(typeName, name);
@@ -185,34 +217,7 @@ void EffectDrawable::draw()
 			gxScalef(m_effect->scaleX * m_effect->scale, m_effect->scaleY * m_effect->scale, 1.f);
 		}
 
-		switch (m_effect->blendMode)
-		{
-		case kBlendMode_Add:
-			setBlend(BLEND_ADD);
-			break;
-		case kBlendMode_Subtract:
-			setBlend(BLEND_SUBTRACT);
-			break;
-		case kBlendMode_Alpha:
-			setBlend(BLEND_ALPHA);
-			break;
-		case kBlendMode_PremultipliedAlpha:
-			setBlend(BLEND_PREMULTIPLIED_ALPHA);
-			break;
-		case kBlendMode_Opaque:
-			//setBlend(BLEND_OPAQUE);
-			glEnable(GL_BLEND);
-			if (glBlendEquation)
-				glBlendEquation(GL_FUNC_ADD);
-			glBlendFunc(GL_SRC_ALPHA, GL_ZERO);
-			break;
-		case kBlendMode_Multiply:
-			setBlend(BLEND_MUL);
-			break;
-		default:
-			Assert(false);
-			break;
-		}
+		m_effect->applyBlendMode();
 
 		m_effect->draw();
 
@@ -334,6 +339,7 @@ void Effect_Fsfx::draw()
 		return;
 
 	setBlend(BLEND_OPAQUE);
+	setColor(colorWhite);
 
 	Shader shader(m_shader.c_str(), "fsfx.vs", m_shader.c_str());
 	setShader(shader);
@@ -1302,4 +1308,99 @@ void Effect_Bezier::generateSegment(const Vec2F & p1, const Vec2F & p2, const fl
 	}
 
 	segments.push_back(segment);
+}
+
+//
+
+Effect_Smoke::Effect_Smoke(const char * name)
+	: Effect(name)
+	, surface(nullptr)
+	, capture(false)
+{
+	surface = new Surface(GFX_SX, GFX_SY);
+	surface->clear();
+}
+
+Effect_Smoke::~Effect_Smoke()
+{
+	delete surface;
+	surface = nullptr;
+}
+
+void Effect_Smoke::tick(const float dt)
+{
+}
+
+void Effect_Smoke::draw(DrawableList & list)
+{
+	new (list) EffectDrawable(this);
+}
+
+void Effect_Smoke::draw()
+{
+	if (capture)
+	{
+		capture = false;
+		captureSurface();
+	}
+
+	// draw the current surface
+
+	setColor(colorWhite);
+	gxSetTexture(surface->getTexture());
+	drawRect(0, 0, g_currentSurface->getWidth(), g_currentSurface->getHeight());
+	gxSetTexture(0);
+
+	// apply flow map to current surface contents
+
+	pushSurface(surface);
+	{
+		ScopedSurfaceBlock surfaceScope(surface);
+
+		setBlend(BLEND_OPAQUE);
+		setColor(colorWhite);
+
+		// todo : effect parameters
+
+		Shader shader("flowmap");
+		setShader(shader);
+		shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
+		shader.setTexture("flowmap", 1, 0, true, false);
+		shader.setImmediate("flow_time", g_currentScene->m_time);
+		ShaderBuffer buffer;
+		FlowmapData data;
+		data.alpha = .9f;
+		data.strength = 2.f;
+		data.darken = .01f;
+		buffer.setData(&data, sizeof(data));
+		shader.setBuffer("FlowmapBlock", buffer);
+		g_currentSurface->postprocess(shader);
+
+		setBlend(BLEND_ADD);
+	}
+	popSurface();
+}
+
+void Effect_Smoke::handleSignal(const std::string & name)
+{
+	if (name == "capture")
+	{
+		capture = true;
+	}
+}
+
+void Effect_Smoke::captureSurface()
+{
+	setBlend(BLEND_OPAQUE);
+	setColor(colorWhite);
+
+	pushSurface(surface);
+	{
+		gxSetTexture(g_currentSceneLayer->m_surface->getTexture());
+		drawRect(0, 0, surface->getWidth(), surface->getHeight());
+		gxSetTexture(0);
+	}
+	popSurface();
+
+	applyBlendMode();
 }

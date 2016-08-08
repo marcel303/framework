@@ -349,7 +349,7 @@ struct Scene : public TweenFloatCollection, public TweenFloatModifier
 	void debugDraw();
 
 	SceneLayer * findLayerByName(const char * name);
-	SceneEffect * findEffectByName(const char * name);
+	SceneEffect * findEffectByName(const char * name, SceneLayer ** out_layer);
 
 	void triggerEvent(const char * name);
 	void triggerEventByOscId(int oscId);

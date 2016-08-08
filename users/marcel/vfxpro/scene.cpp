@@ -221,6 +221,10 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 
 		effect = new Effect_Bezier(m_name.c_str(), colors.c_str());
 	}
+	else if (type == "smoke")
+	{
+		effect = new Effect_Smoke(m_name.c_str());
+	}
 	else
 	{
 		logError("unknown effect type: %s", type.c_str());
@@ -724,7 +728,7 @@ void SceneEvent::execute(Scene & scene)
 
 			case SceneAction::kTweenTargetType_Effect:
 			{
-				SceneEffect * effect = scene.findEffectByName(action->m_tween.m_targetName.c_str());
+				SceneEffect * effect = scene.findEffectByName(action->m_tween.m_targetName.c_str(), nullptr);
 
 				if (effect)
 				{
@@ -796,10 +800,14 @@ void SceneEvent::execute(Scene & scene)
 
 		case SceneAction::kActionType_Signal:
 		{
-			SceneEffect * effect = scene.findEffectByName(action->m_signal.m_targetName.c_str());
+			SceneLayer * effectLayer;
+			SceneEffect * effect = scene.findEffectByName(action->m_signal.m_targetName.c_str(), &effectLayer);
 
 			if (effect)
 			{
+				ScopedSceneBlock sceneBlock(&scene);
+				ScopedSceneLayerBlock layerBlock(effectLayer);
+
 				effect->m_effect->handleSignal(action->m_signal.m_message);
 			}
 
@@ -962,7 +970,7 @@ void Scene::tick(const float dt)
 		{
 			if (config.midiIsDown(map.id))
 			{
-				SceneEffect * effect = findEffectByName(map.effect.c_str());
+				SceneEffect * effect = findEffectByName(map.effect.c_str(), nullptr);
 
 				if (effect != nullptr)
 				{
@@ -1076,8 +1084,11 @@ SceneLayer * Scene::findLayerByName(const char * name)
 	return nullptr;
 }
 
-SceneEffect * Scene::findEffectByName(const char * name)
+SceneEffect * Scene::findEffectByName(const char * name, SceneLayer ** out_layer)
 {
+	if (out_layer)
+		*out_layer = nullptr;
+
 	for (auto l = m_layers.begin(); l != m_layers.end(); ++l)
 	{
 		SceneLayer * layer = *l;
@@ -1088,6 +1099,9 @@ SceneEffect * Scene::findEffectByName(const char * name)
 
 			if (effect->m_name == name)
 			{
+				if (out_layer)
+					*out_layer = layer;
+
 				return effect;
 			}
 		}
@@ -1322,7 +1336,7 @@ bool Scene::load(const char * filename)
 					}
 					else if (!effectName.empty())
 					{
-						SceneEffect * effect = findEffectByName(effectName.c_str());
+						SceneEffect * effect = findEffectByName(effectName.c_str(), nullptr);
 						if (effect)
 							var = effect->m_effect->getVar(varName.c_str());
 						if (var == nullptr)
