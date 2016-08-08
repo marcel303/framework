@@ -287,6 +287,13 @@ bool MediaPlayer::isActive(Context * context) const
 	return context && context->mpContext.HasBegun();
 }
 
+bool MediaPlayer::presentedLastFrame(Context * context) const
+{
+	// todo : actually check if the frame was presented
+
+	return context && context->mpContext.HasBegun() && context->mpContext.Depleted();
+}
+
 void MediaPlayer::seek(const float time)
 {
 	SDL_LockMutex(context->mpTickMutex);

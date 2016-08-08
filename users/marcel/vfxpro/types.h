@@ -2,6 +2,7 @@
 
 #include "Debugging.h"
 #include "Ease.h"
+#include "framework.h"
 #include <list>
 #include <map>
 #include <string>
@@ -269,6 +270,38 @@ enum BlendMode
 };
 
 BlendMode parseBlendMode(const std::string & blend);
+
+//
+
+struct ColorCurve
+{
+	static const int kMaxKeys = 10;
+
+	struct Key
+	{
+		float t;
+		Color color;
+
+		Key();
+
+		bool operator<(const Key & other) const;
+		bool operator==(const Key & other) const;
+		bool operator!=(const Key & other) const;
+	};
+
+	Key keys[kMaxKeys];
+	int numKeys;
+
+	ColorCurve();
+
+	bool allocKey(Key *& key);
+	void freeKey(Key *& key);
+	void clearKeys();
+	Key * sortKeys(Key * keyToReturn = 0);
+	void setLinear(const Color & v1, const Color & v2);
+	void setLinearAlpha(float v1, float v2);
+	void sample(const float t, Color & result) const;
+};
 
 //
 

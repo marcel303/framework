@@ -1,10 +1,14 @@
 #include "effect.h"
+#include "Parse.h"
 #include "tinyxml2.h"
 #include "xml.h"
 
 //
 
 using namespace tinyxml2;
+
+// from internal.h
+void splitString(const std::string & str, std::vector<std::string> & result, char c);
 
 //
 
@@ -226,7 +230,6 @@ Effect_Fsfx::Effect_Fsfx(const char * name, const char * shader, const std::vect
 	, m_param2(0.f)
 	, m_param3(0.f)
 	, m_param4(0.f)
-	, m_timeMultiplier(1.f)
 	, m_images(images)
 	, m_textureArray(0)
 	, m_time(0.f)
@@ -236,7 +239,6 @@ Effect_Fsfx::Effect_Fsfx(const char * name, const char * shader, const std::vect
 	addVar("param2", m_param2);
 	addVar("param3", m_param3);
 	addVar("param4", m_param4);
-	addVar("time_multiplier", m_timeMultiplier);
 
 	m_shader = shader;
 
@@ -318,9 +320,7 @@ Effect_Fsfx::~Effect_Fsfx()
 
 void Effect_Fsfx::tick(const float dt)
 {
-	TweenFloatCollection::tick(dt);
-
-	m_time += dt * m_timeMultiplier;
+	m_time += dt;
 }
 
 void Effect_Fsfx::draw(DrawableList & list)
@@ -374,7 +374,6 @@ Effect_Picture::Effect_Picture(const char * name, const char * filename, bool ce
 
 void Effect_Picture::tick(const float dt)
 {
-	TweenFloatCollection::tick(dt);
 }
 
 void Effect_Picture::draw(DrawableList & list)
@@ -416,12 +415,14 @@ Effect_Video::Effect_Video(const char * name, const char * filename, const char 
 	, m_angle(0.f)
 	, m_centered(true)
 	, m_speed(1.f)
+	, m_hideWhenDone(0.f)
 {
 	is2D = true;
 
 	addVar("alpha", m_alpha);
 	addVar("angle", m_angle);
 	addVar("speed", m_speed);
+	addVar("hide_when_done", m_hideWhenDone);
 
 	m_filename = filename;
 	m_shader = shader;
@@ -435,14 +436,11 @@ Effect_Video::Effect_Video(const char * name, const char * filename, const char 
 
 void Effect_Video::tick(const float dt)
 {
-	TweenFloatCollection::tick(dt);
-
 	if (m_mediaPlayer.isActive(m_mediaPlayer.context))
 	{
 		m_mediaPlayer.speed = m_speed;
-		//m_mediaPlayer.tick(dt);
 
-		if (!m_mediaPlayer.isActive(m_mediaPlayer.context))
+		if (m_hideWhenDone && m_mediaPlayer.presentedLastFrame(m_mediaPlayer.context))
 		{
 			m_mediaPlayer.close();
 		}
@@ -457,6 +455,8 @@ void Effect_Video::draw(DrawableList & list)
 void Effect_Video::draw()
 {
 	if (m_alpha <= 0.f)
+		return;
+	if (!m_mediaPlayer.isActive(m_mediaPlayer.context))
 		return;
 
 	if (m_mediaPlayer.getTexture())
@@ -587,7 +587,6 @@ void Effect_Blit::transformCoords(float x, float y, bool addSize, float & out_x,
 
 void Effect_Blit::tick(const float dt)
 {
-	TweenFloatCollection::tick(dt);
 }
 
 void Effect_Blit::draw(DrawableList & list)
@@ -678,13 +677,18 @@ void Effect_Blocks::spawnBlock()
 
 void Effect_Blocks::tick(const float dt)
 {
-	TweenFloatCollection::tick(dt);
-
 	for (size_t i = 0; i < m_blocks.size(); ++i)
 	{
 		Block & b = m_blocks[i];
 
+		const int oldValue = int(b.value);
+
 		b.value += b.speed * dt;
+
+		const int newValue = int(b.value);
+
+		if (oldValue != newValue)
+			b.picture = (newValue & 1) ? 0 : Sprite("hue.png").getTexture();
 	}
 
 	const size_t numBlocks = (size_t)m_numBlocks;
@@ -705,12 +709,14 @@ void Effect_Blocks::draw()
 	if (m_alpha <= 0.f)
 		return;
 
-	gxBegin(GL_QUADS);
+	for (size_t i = 0; i < m_blocks.size(); ++i)
 	{
-		for (size_t i = 0; i < m_blocks.size(); ++i)
-		{
-			const Block & b = m_blocks[i];
+		const Block & b = m_blocks[i];
 
+		gxSetTexture(b.picture);
+
+		gxBegin(GL_QUADS);
+		{
 			const float t = (std::sin(b.value * 2.f * M_PI) + 1.f) / 2.f;
 			const float scale = Calc::Lerp(1.f, 1.5f, t);
 			const float alpha = Calc::Lerp(.2f, .5f, t) * m_alpha;
@@ -718,6 +724,15 @@ void Effect_Blocks::draw()
 			const float sx = scale * b.size / 2.f;
 			const float sy = scale * b.size / 2.f;
 
+		#if 0
+			const static Color colors[4] =
+			{
+				Color::fromHex("ffffff"),
+				Color::fromHex("ffffff"),
+				Color::fromHex("ffffff"),
+				Color::fromHex("ffffff")
+			};
+		#else
 			const static Color colors[4] =
 			{
 				Color::fromHex("000000"),
@@ -726,14 +741,17 @@ void Effect_Blocks::draw()
 				Color::fromHex("1e1e1e"),
 				Color::fromHex("575556")
 			};
+		#endif
 
-			gxColor4f(colors[0].r, colors[0].g, colors[0].b, alpha); gxVertex2f(b.x - sx, b.y - sy);
-			gxColor4f(colors[1].r, colors[1].g, colors[1].b, alpha); gxVertex2f(b.x + sx, b.y - sy);
-			gxColor4f(colors[2].r, colors[2].g, colors[2].b, alpha); gxVertex2f(b.x + sx, b.y + sy);
-			gxColor4f(colors[3].r, colors[3].g, colors[3].b, alpha); gxVertex2f(b.x - sx, b.y + sy);
+			gxTexCoord2f(0.f, 0.f); gxColor4f(colors[0].r, colors[0].g, colors[0].b, alpha); gxVertex2f(b.x - sx, b.y - sy);
+			gxTexCoord2f(1.f, 0.f); gxColor4f(colors[1].r, colors[1].g, colors[1].b, alpha); gxVertex2f(b.x + sx, b.y - sy);
+			gxTexCoord2f(1.f, 1.f); gxColor4f(colors[2].r, colors[2].g, colors[2].b, alpha); gxVertex2f(b.x + sx, b.y + sy);
+			gxTexCoord2f(0.f, 1.f); gxColor4f(colors[3].r, colors[3].g, colors[3].b, alpha); gxVertex2f(b.x - sx, b.y + sy);
 		}
+		gxEnd();
+
+		gxSetTexture(0);
 	}
-	gxEnd();
 }
 
 //
@@ -796,8 +814,6 @@ void Effect_Lines::spawnLine()
 
 void Effect_Lines::tick(const float dt)
 {
-	TweenFloatCollection::tick(dt);
-
 	const float spawnRate = m_spawnRate;
 
 	if (spawnRate > 0)
@@ -981,8 +997,6 @@ void Effect_Bars::tick(const float dt)
 	if (m_bars[0].empty())
 		initializeBars();
 
-	TweenFloatCollection::tick(dt);
-	
 	const float shuffleRate = m_shuffleRate;
 
 	if (shuffleRate > 0)
@@ -1065,7 +1079,6 @@ Effect_Text::Effect_Text(const char * name, const Color & color, const char * fo
 
 void Effect_Text::tick(const float dt)
 {
-	TweenFloatCollection::tick(dt);
 }
 
 void Effect_Text::draw(DrawableList & list)
@@ -1081,4 +1094,212 @@ void Effect_Text::draw()
 	setColorf(m_color.r, m_color.g, m_color.b, m_color.a * m_alpha);
 	setFont(m_font.c_str());
 	drawText(screenX, screenY, m_fontSize, m_textAlignX, m_textAlignY, "%s", m_text.c_str());
+}
+
+//
+
+Effect_Bezier::Effect_Bezier(const char * name, const char * colors)
+	: Effect(name)
+{
+	is2D = true;
+
+	//
+
+	std::vector<std::string> colorArgs;
+	splitString(colors, colorArgs, ',');
+	if (colorArgs.empty())
+		colorArgs.push_back("ffffffff");
+
+	for (size_t i = 0; i < colorArgs.size(); ++i)
+	{
+		ColorCurve::Key * key;
+		if (colorCurve.allocKey(key))
+		{
+			key->t = i / float(colorArgs.size() - 1);
+			key->color = Color::fromHex(colorArgs[i].c_str());
+		}
+	}
+
+	colorCurve.sortKeys();
+}
+
+void Effect_Bezier::tick(const float dt)
+{
+	// evolve bezier paths
+
+	for (auto si = segments.begin(); si != segments.end();)
+	{
+		auto & s = *si;
+
+		s.time -= dt;
+
+		if (s.time < 0.f)
+		{
+			si = segments.erase(si);
+		}
+		else
+		{
+			for (auto & n : s.nodes)
+			{
+				n.bezierNode.m_Position += n.positionSpeed * dt;
+				n.bezierNode.m_Tangent[0] += n.tangentSpeed * dt;
+			}
+
+			++si;
+		}
+	}
+}
+
+void Effect_Bezier::draw(DrawableList & list)
+{
+	new (list) EffectDrawable(this);
+}
+
+void Effect_Bezier::draw()
+{
+	for (auto & s : segments)
+	{
+		const float a = s.time * s.timeRcp;
+		const float t = 1.f - a;
+
+		Color baseColor;
+		colorCurve.sample(t, baseColor);
+
+		std::vector<BezierNode> nodes;
+		nodes.resize(s.nodes.size());
+
+		const int numLoops = s.numGhosts * 2 + 1;
+
+		for (int g = 0; g < numLoops; ++g)
+		{
+			const float jt = numLoops >= 2 ? (g / float(numLoops - 1)) : .5f;
+			const float ja = lerp(-1.f, +1.f, jt);
+			const float jb = ja * t * s.ghostSize;
+
+			for (size_t i = 0; i < s.nodes.size(); ++i)
+			{
+				nodes[i] = s.nodes[i].bezierNode;
+
+				nodes[i].m_Position += s.nodes[i].positionSpeed * jb;
+				nodes[i].m_Tangent[0] += s.nodes[i].tangentSpeed * jb;
+
+				nodes[i].m_Tangent[1] = - nodes[i].m_Tangent[0];
+			}
+
+			BezierPath path;
+			path.ConstructFromNodes(&nodes.front(), nodes.size());
+
+			glEnable(GL_LINE_SMOOTH);
+			glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+
+			gxBegin(GL_LINE_STRIP);
+			{
+				const Color color = baseColor.mulRGBA(s.color);
+
+				gxColor4f(color.r, color.g, color.b, color.a * a);
+
+				for (float i = 0.f; i <= nodes.size(); i += 0.01f)
+				{
+					const Vec2F p = path.Interpolate(i);
+
+					gxVertex2f(p[0], p[1]);
+				}
+			}
+			gxEnd();
+
+			glDisable(GL_LINE_SMOOTH);
+		}
+	}
+}
+
+void Effect_Bezier::handleSignal(const std::string & name)
+{
+	if (String::StartsWith(name, "addpart"))
+	{
+		std::vector<std::string> args;
+		splitString(name, args, ',');
+
+		if (args.size() < 2)
+		{
+			logError("missing segment parameters! %s", name.c_str());
+		}
+		else
+		{
+			Dictionary d;
+			d.parse(args[1]);
+
+			const float x1 = d.getFloat("x1", 0.f);
+			const float y1 = d.getFloat("y1", 0.f);
+			const float x2 = d.getFloat("x2", 0.f);
+			const float y2 = d.getFloat("y2", 0.f);
+
+			const std::string colorHex = d.getString("color", "");
+			const Color color = colorHex.empty() ? colorWhite : Color::fromHex(colorHex.c_str());
+			const int numSegments = Calc::Max(2, d.getInt("num_segments", 2));
+			const int numGhosts = Calc::Max(0, d.getInt("num_ghosts", 0));
+			const float ghostSize = d.getFloat("ghost_size", 1.f);
+			const float lifeTime = d.getFloat("life", 1.f);
+
+			const float posSpeed = d.getFloat("pos_speed", 0.f);
+			const float tanSpeed = d.getFloat("tan_speed", 0.f);
+			const float posVary = d.getFloat("pos_vary", 0.f);
+			const float tanVary = d.getFloat("tan_vary", 0.f);
+
+			generateSegment(Vec2F(x1, y1), Vec2F(x2, y2), posSpeed, tanSpeed, posVary, tanVary, numSegments, numGhosts, ghostSize, color, lifeTime);
+		}
+	}
+	else if (name == "part1")
+	{
+		for (auto & s : segments)
+			s.time = 1.f / s.timeRcp;
+	}
+	else if (name == "part2")
+	{
+	}
+	else if (name == "part3")
+	{
+	}
+}
+
+void Effect_Bezier::generateSegment(const Vec2F & p1, const Vec2F & p2, const float posSpeed, const float tanSpeed, const float posVary, const float tanVary, const int numNodes, const int numGhosts, const float ghostSize, const Color & color, const float duration)
+{
+	const float mS = GFX_SY / 10.f;
+
+	Segment segment;
+
+	segment.color = color;
+	segment.time = duration;
+	segment.timeRcp = 1.f / duration;
+	segment.numGhosts = numGhosts;
+	segment.ghostSize = ghostSize;
+
+	for (int i = 0; i < numNodes; ++i)
+	{
+		const float v = i / float(numNodes - 1.f);
+		
+		Vec2F p = lerp(p1, p2, v);
+
+		if (i != 0 && i != numNodes - 1)
+		{
+			p[0] += random(-posVary/2.f, +posVary/2.f);
+			p[1] += random(-posVary/2.f, +posVary/2.f);
+		}
+
+		Node node;
+
+		node.bezierNode.m_Position = p;
+		node.bezierNode.m_Tangent[0][0] = random(-tanVary/2.f, +tanVary/2.f);
+		node.bezierNode.m_Tangent[0][1] = random(-tanVary/2.f, +tanVary/2.f);
+		node.bezierNode.m_Tangent[1] = - node.bezierNode.m_Tangent[0];
+
+		node.positionSpeed[0] = random(-posSpeed/2.f, +posSpeed/2.f);
+		node.positionSpeed[1] = random(-posSpeed/2.f, +posSpeed/2.f);
+
+		node.tangentSpeed[0] = random(-tanSpeed/2.f, +tanSpeed/2.f);
+		node.tangentSpeed[1] = random(-tanSpeed/2.f, +tanSpeed/2.f);
+
+		segment.nodes.push_back(node);
+	}
+
+	segments.push_back(segment);
 }

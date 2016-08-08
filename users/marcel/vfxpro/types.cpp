@@ -320,3 +320,162 @@ BlendMode parseBlendMode(const std::string & blend)
 		return kBlendMode_Add;
 	}
 }
+
+//
+
+ColorCurve::Key::Key()
+	: t(0.f)
+{
+}
+
+bool ColorCurve::Key::operator<(const Key & other) const
+{
+	return t < other.t;
+}
+
+bool ColorCurve::Key::operator==(const Key & other) const
+{
+	return memcmp(this, &other, sizeof(Key)) == 0;
+}
+
+bool ColorCurve::Key::operator!=(const Key & other) const
+{
+	return !(*this == other);
+}
+
+//
+
+ColorCurve::ColorCurve()
+	: numKeys(0)
+{
+}
+
+bool ColorCurve::allocKey(Key *& key)
+{
+	if (numKeys == kMaxKeys)
+		return false;
+	else
+	{
+		key = &keys[numKeys++];
+		return true;
+	}
+}
+
+void ColorCurve::freeKey(Key *& key)
+{
+	const int index = key - keys;
+	for (int i = index + 1; i < numKeys; ++i)
+		keys[i - 1] = keys[i];
+	numKeys--;
+}
+
+void ColorCurve::clearKeys()
+{
+	for (int i = 0; i < numKeys; ++i)
+		keys[i] = Key();
+
+	numKeys = 0;
+}
+
+ColorCurve::Key * ColorCurve::sortKeys(Key * keyToReturn)
+{
+	Key * result = 0;
+
+	if (keyToReturn)
+	{
+		Key keyValues[kMaxKeys];
+		memcpy(keyValues, keys, sizeof(Key) * numKeys);
+		Key * keysForSorting[kMaxKeys];
+		for (int i = 0; i < numKeys; ++i)
+			keysForSorting[i] = &keys[i];
+		std::sort(keysForSorting, keysForSorting + numKeys, [](Key * k1, Key * k2) { return k1->t < k2->t; });
+		for (int i = 0; i < numKeys; ++i)
+		{
+			if (keysForSorting[i] == keyToReturn)
+				result = &keys[i];
+			const int index = keysForSorting[i] - keys;
+			keys[i] = keyValues[index];
+		}
+	}
+	else
+	{
+		std::sort(keys, keys + numKeys);
+	}
+
+	return result;
+}
+
+void ColorCurve::setLinear(const Color & v1, const Color & v2)
+{
+	clearKeys();
+
+	Key * k1;
+	if (allocKey(k1))
+	{
+		k1->t = 0.f;
+		k1->color = v1;
+	}
+
+	Key * k2;
+	if (allocKey(k2))
+	{
+		k2->t = 1.f;
+		k2->color = v2;
+	}
+
+	sortKeys();
+}
+
+void ColorCurve::setLinearAlpha(float v1, float v2)
+{
+	clearKeys();
+
+	Key * k1;
+	if (allocKey(k1))
+	{
+		k1->t = 0.f;
+		k1->color.set(1.f, 1.f, 1.f, v1);
+	}
+
+	Key * k2;
+	if (allocKey(k2))
+	{
+		k2->t = 1.f;
+		k2->color.set(1.f, 1.f, 1.f, v2);
+	}
+
+	sortKeys();
+}
+
+void ColorCurve::sample(const float t, Color & result) const
+{
+	if (numKeys == 0)
+		result.set(1.f, 1.f, 1.f, 1.f);
+	else if (numKeys == 1)
+		result = keys[0].color;
+	else
+	{
+		int endKey = 0;
+
+		while (endKey < numKeys)
+		{
+			if (t < keys[endKey].t)
+				break;
+			else
+				++endKey;
+		}
+
+		if (endKey == 0)
+			result = keys[0].color;
+		else if (endKey == numKeys)
+			result = keys[numKeys - 1].color;
+		else
+		{
+			const int startKey = endKey - 1;
+			const Color & c1 = keys[startKey].color;
+			const Color & c2 = keys[endKey].color;
+			const float t2 = (t - keys[startKey].t) / (keys[endKey].t - keys[startKey].t);
+			result = c1.interp(c2, t2);
+		}
+	}
+}

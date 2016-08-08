@@ -47,6 +47,9 @@ const int SCREEN_SY = 768;
 
 const int GFX_SX = (SCREEN_SX * NUM_SCREENS);
 const int GFX_SY = (SCREEN_SY * 1);
+const int GFX_SCALE = 2;
+const int GFX_SX_SCALED = GFX_SX * GFX_SCALE;
+const int GFX_SY_SCALED = GFX_SY * GFX_SCALE;
 
 #define OSC_ADDRESS "127.0.0.1"
 #define OSC_RECV_PORT 8000
@@ -232,10 +235,19 @@ static std::list<OscMessage> s_oscMessages;
 class MyOscPacketListener : public osc::OscPacketListener
 {
 protected:
-	virtual void ProcessMessage(const osc::ReceivedMessage & m, const IpEndpointName & remoteEndpoint)
+	virtual void ProcessBundle(const osc::ReceivedBundle & b, const IpEndpointName & remoteEndpoint) override
+	{
+		logDebug("ProcessBundle: timeTag=%llu", b.TimeTag());
+
+		osc::OscPacketListener::ProcessBundle(b, remoteEndpoint);
+	}
+
+	virtual void ProcessMessage(const osc::ReceivedMessage & m, const IpEndpointName & remoteEndpoint) override
 	{
 		try
 		{
+			logDebug("ProcessMessage");
+
 			osc::ReceivedMessageArgumentStream args = m.ArgumentStream();
 
 			OscMessage message;
@@ -871,13 +883,6 @@ public:
 
 #if 1
 
-float evalPoint(float n1, float n2, float t)
-{
-	float diff = n2 - n1;
-
-	return n1 + (diff * t);
-}
-
 static void doFxaa(Surface & surface)
 {
 	gpuTimingBlock(fxaa);
@@ -894,7 +899,7 @@ static void doFxaa(Surface & surface)
 struct BezierTest
 {
 	const static int kNumNodes = 7;
-	const static int kNumFrames = 60;
+	const static int kNumFrames = 160;
 
 	BezierNode nodes[kNumNodes];
 
@@ -946,8 +951,8 @@ struct BezierTest
 
 			for (int i = 0; i < kNumNodes; ++i)
 			{
-				const float vP = .5f / 10.f;
-				const float vT = .8f / 10.f;
+				const float vP = .5f / 3.f;
+				const float vT = .8f / 3.f;
 
 				movementVectorsP[i][0] = random(-vP, +vP);
 				movementVectorsP[i][1] = random(-vP, +vP);
@@ -1113,7 +1118,7 @@ int main(int argc, char * argv[])
 
 	// initialise framework
 
-#if ENABLE_WINDOWED_MODE && 1 // && 1
+#if ENABLE_WINDOWED_MODE || 1 // && 1
 	framework.fullscreen = false;
 	framework.minification = 1;
 	framework.windowX = 0;
@@ -1137,7 +1142,7 @@ int main(int argc, char * argv[])
 
 	//framework.highPrecisionRT = true;
 
-	if (framework.init(0, 0, GFX_SX, GFX_SY))
+	if (framework.init(0, 0, GFX_SX * GFX_SCALE, GFX_SY * GFX_SCALE))
 	{
 	#if !defined(DEBUG)
 		framework.fillCachesWithPath(".", true);
@@ -1165,6 +1170,7 @@ int main(int argc, char * argv[])
 		//g_scene->load("scene.xml");
 		g_scene->load("tracks/healer.scene.xml");
 		//g_scene->load("tracks/o2.scene.xml");
+		//g_scene->load("tracks/cesitest.scene.xml");
 
 	#if DEMODATA
 		Effect_Cloth cloth("cloth");
@@ -1412,7 +1418,7 @@ int main(int argc, char * argv[])
 			{
 				const int base = keyboard.isDown(SDLK_LSHIFT) ? 10 : 0;
 
-				for (size_t i = 0; i < 10 && i < g_scene->m_events.size(); ++i)
+				for (size_t i = 0; i < g_scene->m_events.size(); ++i)
 				{
 					if (i - base < 0 || i - base > 9)
 						continue;
@@ -1897,9 +1903,9 @@ int main(int argc, char * argv[])
 					if (keyboard.wentDown(SDLK_m))
 						flipH = !flipH;
 					if (flipH)
-						drawRect(GFX_SX, 0, 0, GFX_SY);
+						drawRect(GFX_SX_SCALED, 0, 0, GFX_SY_SCALED);
 					else
-						drawRect(0, 0, GFX_SX, GFX_SY);
+						drawRect(0, 0, GFX_SX_SCALED, GFX_SY_SCALED);
 					setBlend(BLEND_ALPHA);
 				}
 				gxSetTexture(0);
@@ -2289,7 +2295,7 @@ int main(int argc, char * argv[])
 
 							std::vector<std::string> images;
 							Effect_Fsfx effect("fsfx", "cesitest/fsfx_blur.ps", images);
-							effect.m_alpha = .05f;
+							effect.m_alpha = .02f;
 							effect.m_param1 = 10.f;
 							effect.draw();
 						}
@@ -2324,7 +2330,7 @@ int main(int argc, char * argv[])
 				{
 					setBlend(BLEND_OPAQUE);
 					setColor(colorWhite);
-					drawRect(0, 0, GFX_SX, GFX_SY);
+					drawRect(0, 0, GFX_SX_SCALED, GFX_SY_SCALED);
 					setBlend(BLEND_ALPHA);
 				}
 				gxSetTexture(0);

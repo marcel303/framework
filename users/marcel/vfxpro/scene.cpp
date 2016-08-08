@@ -215,6 +215,12 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 
 		effect = new Effect_Text(m_name.c_str(), Color::fromHex(colorText.c_str()), font.c_str(), fontSize, text.c_str());
 	}
+	else if (type == "bezier")
+	{
+		const std::string colors = stringAttrib(xmlEffect, "colors", "");
+
+		effect = new Effect_Bezier(m_name.c_str(), colors.c_str());
+	}
 	else
 	{
 		logError("unknown effect type: %s", type.c_str());
@@ -318,6 +324,11 @@ bool SceneLayer::load(const XMLElement * xmlLayer)
 
 	for (const XMLElement * xmlEffect = xmlLayer->FirstChildElement("effect"); xmlEffect; xmlEffect = xmlEffect->NextSiblingElement("effect"))
 	{
+		const bool enabled = boolAttrib(xmlEffect, "enabled", true);
+
+		if (!enabled)
+			continue;
+
 		SceneEffect * effect = new SceneEffect();
 
 		if (!effect->load(xmlEffect))
@@ -344,7 +355,7 @@ void SceneLayer::tick(const float dt)
 	{
 		SceneEffect * effect = *i;
 
-		effect->m_effect->tick(dt);
+		effect->m_effect->tickBase(dt);
 	}
 }
 
@@ -1088,6 +1099,8 @@ SceneEffect * Scene::findEffectByName(const char * name)
 void Scene::triggerEvent(const char * name)
 {
 	ScopedSceneBlock sceneBlock(this);
+
+	logDebug("triggerEvent: %s", name);
 
 	for (auto i = m_events.begin(); i != m_events.end(); ++i)
 	{

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "BezierPath.h"
 #include "Calc.h"
 #include "config.h"
 #include "data/ShaderConstants.h"
@@ -84,6 +85,7 @@ struct Effect : TweenFloatCollection
 	TweenFloat scaleY;
 	TweenFloat scale;
 	TweenFloat z;
+	TweenFloat timeMultiplier;
 
 	bool debugEnabled;
 
@@ -98,6 +100,7 @@ struct Effect : TweenFloatCollection
 		, scaleY(1.f)
 		, scale(1.f)
 		, z(0.f)
+		, timeMultiplier(1.f)
 		, debugEnabled(true)
 	{
 		addVar("visible", visible);
@@ -107,6 +110,7 @@ struct Effect : TweenFloatCollection
 		addVar("scale_y", scaleY);
 		addVar("scale", scale);
 		addVar("z", z);
+		addVar("time_multiplier", timeMultiplier);
 
 		transform.MakeIdentity();
 
@@ -167,6 +171,15 @@ struct Effect : TweenFloatCollection
 		shader.setTexture("fft", 3, g_fftTexture, true, false);
 	}
 
+	void tickBase(const float dt)
+	{
+		const float timeStep = dt * timeMultiplier;
+
+		TweenFloatCollection::tick(timeStep);
+
+		tick(timeStep);
+	}
+
 	virtual void tick(const float dt) = 0;
 	virtual void draw(DrawableList & list) = 0;
 	virtual void draw() = 0;
@@ -199,7 +212,6 @@ struct Effect_Fsfx : Effect
 	TweenFloat m_param2;
 	TweenFloat m_param3;
 	TweenFloat m_param4;
-	TweenFloat m_timeMultiplier;
 	std::vector<std::string> m_images;
 	GLuint m_textureArray;
 	float m_time;
@@ -251,8 +263,6 @@ struct Effect_Rain : Effect
 
 	virtual void tick(const float dt) override
 	{
-		TweenFloatCollection::tick(dt);
-
 		const float gravityY = m_gravity;
 		const float falloff = Calc::Max(0.f, 1.f - m_falloff);
 		const float falloffThisTick = powf(falloff, dt);
@@ -388,8 +398,6 @@ struct Effect_StarCluster : Effect
 
 	virtual void tick(const float dt) override
 	{
-		TweenFloatCollection::tick(dt);
-
 		// affect stars based on force from center
 
 		for (int i = 0; i < m_particleSystem.numParticles; ++i)
@@ -508,8 +516,6 @@ struct Effect_Cloth : Effect
 
 	virtual void tick(const float dt) override
 	{
-		TweenFloatCollection::tick(dt);
-
 		const float gravityX = 0.f;
 		const float gravityY = keyboard.isDown(SDLK_g) ? 10.f : 0.f;
 
@@ -689,8 +695,6 @@ struct Effect_SpriteSystem : Effect
 
 	virtual void tick(const float dt) override
 	{
-		TweenFloatCollection::tick(dt);
-
 		for (int i = 0; i < kMaxSprites; ++i)
 		{
 			SpriteInfo & s = m_sprites[i];
@@ -818,8 +822,6 @@ struct Effect_Boxes : Effect
 
 	virtual void tick(const float dt) override
 	{
-		TweenFloatCollection::tick(dt);
-
 		for (auto i = m_boxes.begin(); i != m_boxes.end();)
 		{
 			Box & b = *i;
@@ -931,6 +933,7 @@ struct Effect_Video : Effect
 	std::string m_shader;
 	bool m_centered;
 	TweenFloat m_speed;
+	TweenFloat m_hideWhenDone;
 
 	MediaPlayer m_mediaPlayer;
 	float m_startTime;
@@ -972,7 +975,6 @@ struct Effect_Luminance : Effect
 
 	virtual void tick(const float dt) override
 	{
-		TweenFloatCollection::tick(dt);
 	}
 
 	virtual void draw(DrawableList & list) override
@@ -1035,7 +1037,6 @@ struct Effect_ColorLut2D : Effect
 
 	virtual void tick(const float dt) override
 	{
-		TweenFloatCollection::tick(dt);
 	}
 
 	virtual void draw(DrawableList & list) override
@@ -1090,7 +1091,6 @@ struct Effect_Flowmap : Effect
 
 	virtual void tick(const float dt) override
 	{
-		TweenFloatCollection::tick(dt);
 	}
 
 	virtual void draw(DrawableList & list) override
@@ -1146,7 +1146,6 @@ struct Effect_Vignette : Effect
 
 	virtual void tick(const float dt) override
 	{
-		TweenFloatCollection::tick(dt);
 	}
 
 	virtual void draw(DrawableList & list) override
@@ -1198,7 +1197,6 @@ struct Effect_Clockwork : Effect
 
 	virtual void tick(const float dt) override
 	{
-		TweenFloatCollection::tick(dt);
 	}
 
 	virtual void draw(DrawableList & list) override
@@ -1265,8 +1263,6 @@ struct Effect_DrawPicture : Effect
 
 	virtual void tick(const float dt) override
 	{
-		TweenFloatCollection::tick(dt);
-
 		const bool draw = mouse.isDown(BUTTON_LEFT);
 
 		if (draw)
@@ -1378,6 +1374,7 @@ struct Effect_Blocks : public Effect
 		float size;
 		float speed;
 		float value;
+		GLuint picture;
 	};
 
 	TweenFloat m_alpha;
@@ -1493,4 +1490,41 @@ struct Effect_Text : public Effect
 	virtual void tick(const float dt) override;
 	virtual void draw(DrawableList & list) override;
 	virtual void draw() override;
+};
+
+//
+
+struct Effect_Bezier : public Effect
+{
+	struct Node
+	{
+		BezierNode bezierNode;
+		Vec2F tangentSpeed;
+		Vec2F positionSpeed;
+	};
+
+	struct Segment
+	{
+		Color color;
+		float time;
+		float timeRcp;
+		int numGhosts;
+		float ghostSize;
+
+		std::vector<Node> nodes;
+	};
+
+	std::vector<Segment> segments;
+
+	ColorCurve colorCurve;
+
+	Effect_Bezier(const char * name, const char * colors);
+
+	virtual void tick(const float dt) override;
+	virtual void draw(DrawableList & list) override;
+	virtual void draw() override;
+
+	virtual void handleSignal(const std::string & name) override;
+
+	void generateSegment(const Vec2F & p1, const Vec2F & p2, const float posSpeed, const float tanSpeed, const float posVary, const float tanVary, const int numNodes, const int numGhosts, const float ghostSize, const Color & color, const float duration);
 };

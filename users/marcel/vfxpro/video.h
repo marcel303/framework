@@ -85,6 +85,7 @@ struct MediaPlayer
 	void draw();
 
 	bool isActive(Context * context) const;
+	bool presentedLastFrame(Context * context) const;
 	void seek(const float time);
 
 	uint32_t getTexture();
