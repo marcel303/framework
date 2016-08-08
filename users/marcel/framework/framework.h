@@ -372,7 +372,9 @@ public:
 
 	uint32_t toRGBA() const;
 
+	void set(const float r, const float g, const float b, const float a);
 	Color addRGB(const Color & other) const;
+	Color mulRGBA(const Color & other) const;
 	Color mulRGB(float t) const;
 	
 	float r, g, b, a;
@@ -987,7 +989,13 @@ static T saturate(T v)
 }
 
 template <typename T>
-static T lerp(T v1, T v2, T t)
+static T lerp(T v1, T v2, float t)
+{
+	return v1 * (1.f - t) + v2 * t;
+}
+
+template <typename T>
+static T lerp(T v1, T v2, double t)
 {
 	return v1 * (1.f - t) + v2 * t;
 }

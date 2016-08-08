@@ -476,6 +476,7 @@ void ShaderCacheElem::free()
 
 static void showShaderInfoLog(GLuint shader, const char * source)
 {
+#if FRAMEWORK_ENABLE_GL_ERROR_LOG
 	GLint logSize = 0;
 	
 	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logSize);
@@ -509,6 +510,7 @@ static void showShaderInfoLog(GLuint shader, const char * source)
 	
 	delete [] log;
 	log = 0;
+#endif
 }
 
 static void showProgramInfoLog(GLuint program)
@@ -693,7 +695,8 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type)
 			GLint success = GL_FALSE;
 			
 			glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-			
+			checkErrorGL();
+
 			if (success != GL_TRUE)
 			{
 				result = false;

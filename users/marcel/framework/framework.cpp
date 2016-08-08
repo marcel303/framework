@@ -156,7 +156,6 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-	//SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
 
 #if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
@@ -581,6 +580,8 @@ void Framework::process()
 		}
 		else if (e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP)
 		{
+			logError("mouse %d / %d", e.type, e.button.button);
+
 			const int index = e.button.button == SDL_BUTTON_LEFT ? 0 : e.button.button == SDL_BUTTON_RIGHT ? 1 : -1;
 			if (index >= 0)
 			{
@@ -922,6 +923,8 @@ void Framework::setFullscreen(bool fullscreen)
 void Framework::beginDraw(int r, int g, int b, int a)
 {
 #if ENABLE_OPENGL
+	gpuTimingBegin(frameworkDraw);
+
 	// clear back buffer
 	
 	glClearColor(r/255.f, g/255.f, b/255.f, a/255.f);
@@ -970,6 +973,8 @@ void Framework::endDraw()
 	
 	globals.debugDraw.numLines = 0;
 	
+	gpuTimingEnd();
+
 	// check for errors
 	
 	checkErrorGL();
@@ -1747,9 +1752,22 @@ uint32_t Color::toRGBA() const
 	return (ir << 24) | (ig << 16) | (ib << 8) | (ia << 0);
 }
 
+void Color::set(const float r, const float g, const float b, const float a)
+{
+	this->r = r;
+	this->g = g;
+	this->b = b;
+	this->a = a;
+}
+
 Color Color::addRGB(const Color & other) const
 {
 	return Color(r + other.r, g + other.g, b + other.b, a);
+}
+
+Color Color::mulRGBA(const Color & other) const
+{
+	return Color(r * other.r, g * other.g, b * other.b, a * other.a);
 }
 
 Color Color::mulRGB(float t) const
@@ -4469,6 +4487,10 @@ static void gxFlush(bool endOfBatch)
 					s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 1];
 					s_gxVertexCount = 1;
 					break;
+				case GL_LINE_STRIP:
+					s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 1];
+					s_gxVertexCount = 1;
+					break;
 				default:
 					s_gxVertexCount = 0;
 			}
@@ -4501,6 +4523,9 @@ void gxBegin(int primitiveType)
 			s_gxPrimitiveSize = 2;
 			break;
 		case GL_LINE_LOOP:
+			s_gxPrimitiveSize = 1;
+			break;
+		case GL_LINE_STRIP:
 			s_gxPrimitiveSize = 1;
 			break;
 		case GL_POINTS:

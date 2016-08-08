@@ -873,7 +873,7 @@ namespace spriter
 		
 		if (xmlModelDoc.LoadFile(filename) != XML_NO_ERROR)
 		{
-			logError("failed to load %s", filename);
+			logError("failed to load spriter: %s", filename);
 
 			result = false;
 		}
