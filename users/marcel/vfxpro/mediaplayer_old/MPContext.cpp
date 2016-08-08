@@ -246,6 +246,17 @@ namespace MP
 		return result;
 	}
 
+	bool Context::Depleted() const
+	{
+		if (!HasReachedEOF())
+			return false;
+		if (m_audioContext && !m_audioContext->Depleted())
+			return false;
+		if (m_videoContext && !m_videoContext->Depleted())
+			return false;
+		return true;
+	}
+
 	bool Context::SeekToStart()
 	{
 		bool result = true;

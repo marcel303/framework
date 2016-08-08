@@ -291,6 +291,11 @@ namespace MP
 		return true;
 	}
 
+	bool VideoContext::Depleted() const
+	{
+		return m_videoBuffer.Depleted() && (m_packetQueue.GetSize() == 0);
+	}
+
 	bool VideoContext::ConvertAndStore(VideoFrame* out_frame)
 	{
 		bool result = true;

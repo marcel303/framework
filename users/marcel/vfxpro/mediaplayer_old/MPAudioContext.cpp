@@ -260,4 +260,9 @@ namespace MP
 
 		return true;
 	}
+
+	bool AudioContext::Depleted() const
+	{
+		return (m_availableFrameCount == 0) && (m_packetQueue.GetSize() == 0);
+	}
 };

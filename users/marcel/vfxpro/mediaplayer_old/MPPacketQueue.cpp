@@ -32,7 +32,7 @@ namespace MP
 		m_packets.pop_front();
 	}
 
-	size_t PacketQueue::GetSize()
+	size_t PacketQueue::GetSize() const
 	{
 		return m_packets.size();
 	}

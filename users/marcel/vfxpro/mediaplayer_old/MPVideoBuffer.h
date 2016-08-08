@@ -36,6 +36,7 @@ namespace MP
 		VideoFrame* AllocateFrame(); ///< Allocate new frame.
 		VideoFrame* GetCurrentFrame(); ///< Get current frame.
 		void AdvanceToTime(double time); ///< Move to next frame.
+		bool Depleted() const;
 
 	private:
 		Array<VideoFrame> m_buffer; ///< Queued video frames. TODO: Create video buffer class with reusable video frames.

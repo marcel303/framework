@@ -33,6 +33,7 @@ namespace MP
 		bool RequestVideo(double time, VideoFrame** out_frame, bool& out_gotVideo);
 
 		bool FillBuffers();
+		bool Depleted() const;
 
 		bool SeekToStart();
 		bool SeekToTime(double time);
@@ -40,7 +41,6 @@ namespace MP
 		AVFormatContext* GetFormatContext();
 
 	private:
-		bool ReadFormatContext();
 		bool GetStreamIndices(size_t& out_audioStreamIndex, size_t& out_videoStreamIndex);
 		bool NextPacket();
 		bool ProcessPacket(AVPacket& packet);

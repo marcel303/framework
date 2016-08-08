@@ -26,6 +26,7 @@ namespace MP
 		bool IsQueueFull();
 		bool AddPacket(AVPacket& packet);
 		bool ProcessPacket(AVPacket& packet);
+		bool Depleted() const;
 
 	//private: // FIXME.
 		PacketQueue m_packetQueue;

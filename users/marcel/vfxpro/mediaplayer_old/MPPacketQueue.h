@@ -14,7 +14,7 @@ namespace MP
 		void PushBack(AVPacket packet);
 		void PopFront();
 
-		size_t GetSize();
+		size_t GetSize() const;
 		AVPacket& GetPacket();
 
 		void Clear();

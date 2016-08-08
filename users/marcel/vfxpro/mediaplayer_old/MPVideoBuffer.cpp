@@ -172,4 +172,9 @@ namespace MP
 			Debug::Print("VIDEO: Warning: Skipped %d frames.", skipCount - 1);
 		}
 	}
+
+	bool VideoBuffer::Depleted() const
+	{
+		return m_readPosition == m_writePosition;
+	}
 };
