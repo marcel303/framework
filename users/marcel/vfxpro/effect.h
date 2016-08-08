@@ -1545,10 +1545,15 @@ struct Effect_Bezier : Effect
 
 struct Effect_Smoke : Effect
 {
-	Surface * surface;
-	bool capture;
+	Surface * m_surface;
+	bool m_capture;
+	std::string m_layer;
 
-	Effect_Smoke(const char * name);
+	TweenFloat m_alpha;
+	TweenFloat m_strength;
+	TweenFloat m_darken;
+
+	Effect_Smoke(const char * name, const char * layer);
 	virtual ~Effect_Smoke();
 
 	virtual void tick(const float dt) override;

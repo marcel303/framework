@@ -1312,19 +1312,27 @@ void Effect_Bezier::generateSegment(const Vec2F & p1, const Vec2F & p2, const fl
 
 //
 
-Effect_Smoke::Effect_Smoke(const char * name)
+Effect_Smoke::Effect_Smoke(const char * name, const char * layer)
 	: Effect(name)
-	, surface(nullptr)
-	, capture(false)
+	, m_surface(nullptr)
+	, m_capture(false)
+	, m_layer(layer)
+	, m_alpha(1.f)
+	, m_strength(0.f)
+	, m_darken(0.f)
 {
-	surface = new Surface(GFX_SX, GFX_SY);
-	surface->clear();
+	addVar("alpha", m_alpha);
+	addVar("strength", m_strength);
+	addVar("darken", m_darken);
+
+	m_surface = new Surface(GFX_SX, GFX_SY);
+	m_surface->clear();
 }
 
 Effect_Smoke::~Effect_Smoke()
 {
-	delete surface;
-	surface = nullptr;
+	delete m_surface;
+	m_surface = nullptr;
 }
 
 void Effect_Smoke::tick(const float dt)
@@ -1338,45 +1346,48 @@ void Effect_Smoke::draw(DrawableList & list)
 
 void Effect_Smoke::draw()
 {
-	if (capture)
+	if (m_capture)
 	{
-		capture = false;
+		m_capture = false;
 		captureSurface();
 	}
 
-	// draw the current surface
+	if (m_alpha > 0.f)
+	{
+		// draw the current surface
 
-	setColor(colorWhite);
-	gxSetTexture(surface->getTexture());
-	drawRect(0, 0, g_currentSurface->getWidth(), g_currentSurface->getHeight());
-	gxSetTexture(0);
+		setColorf(1.f, 1.f, 1.f, m_alpha);
+		gxSetTexture(m_surface->getTexture());
+		drawRect(0, 0, g_currentSurface->getWidth(), g_currentSurface->getHeight());
+		gxSetTexture(0);
+	}
 
 	// apply flow map to current surface contents
 
-	pushSurface(surface);
+	pushSurface(m_surface);
 	{
-		ScopedSurfaceBlock surfaceScope(surface);
+		ScopedSurfaceBlock surfaceScope(m_surface);
 
 		setBlend(BLEND_OPAQUE);
 		setColor(colorWhite);
 
 		// todo : effect parameters
 
-		Shader shader("flowmap");
+		Shader shader("smoke");
 		setShader(shader);
 		shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
 		shader.setTexture("flowmap", 1, 0, true, false);
 		shader.setImmediate("flow_time", g_currentScene->m_time);
 		ShaderBuffer buffer;
 		FlowmapData data;
-		data.alpha = .9f;
-		data.strength = 2.f;
-		data.darken = .01f;
+		data.alpha = 1.f;
+		data.strength = m_strength;
+		data.darken = m_darken;
 		buffer.setData(&data, sizeof(data));
 		shader.setBuffer("FlowmapBlock", buffer);
 		g_currentSurface->postprocess(shader);
 
-		setBlend(BLEND_ADD);
+		applyBlendMode();
 	}
 	popSurface();
 }
@@ -1385,7 +1396,7 @@ void Effect_Smoke::handleSignal(const std::string & name)
 {
 	if (name == "capture")
 	{
-		capture = true;
+		m_capture = true;
 	}
 }
 
@@ -1394,13 +1405,18 @@ void Effect_Smoke::captureSurface()
 	setBlend(BLEND_OPAQUE);
 	setColor(colorWhite);
 
-	pushSurface(surface);
+	SceneLayer * layer = m_layer.empty() ? g_currentSceneLayer : g_currentScene->findLayerByName(m_layer.c_str());
+
+	if (layer)
 	{
-		gxSetTexture(g_currentSceneLayer->m_surface->getTexture());
-		drawRect(0, 0, surface->getWidth(), surface->getHeight());
-		gxSetTexture(0);
+		pushSurface(m_surface);
+		{
+			gxSetTexture(layer->m_surface->getTexture());
+			drawRect(0, 0, m_surface->getWidth(), m_surface->getHeight());
+			gxSetTexture(0);
+		}
+		popSurface();
 	}
-	popSurface();
 
 	applyBlendMode();
 }

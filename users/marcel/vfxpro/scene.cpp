@@ -223,7 +223,9 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 	}
 	else if (type == "smoke")
 	{
-		effect = new Effect_Smoke(m_name.c_str());
+		const char * layer = stringAttrib(xmlEffect, "layer", "");
+
+		effect = new Effect_Smoke(m_name.c_str(), layer);
 	}
 	else
 	{
