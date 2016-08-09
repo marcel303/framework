@@ -115,6 +115,26 @@ layout (std140) uniform FlowmapBlock
 
 #endif
 
+// smoke effect
+
+struct SmokeData
+{
+	float alpha;
+	float strength;
+	float darken;
+	float darkenAlpha;
+	float mul;
+};
+
+#if _SHADER_
+
+layout (std140) uniform SmokeBlock
+{
+	SmokeData smokeData;
+};
+
+#endif
+
 // luminance post process
 
 struct LuminanceData
