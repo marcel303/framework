@@ -272,6 +272,8 @@ struct Sequence
 {
 	double bpm = 0.0;
 
+	std::string name;
+
 	std::list<EventMarker> eventMarkers;
 
 	std::list<CommentRegion> commentRegions;
@@ -363,6 +365,8 @@ struct Sequence
 		bool result = true;
 
 		clearSequence();
+
+		name = Path::StripExtension(filename);
 
 		XMLDocument xmlDoc;
 
@@ -461,6 +465,11 @@ struct Editing
 static Sequence g_sequence;
 
 static Editing g_editing;
+
+static std::string oscEventName()
+{
+	return std::string("/") + g_sequence.name;
+}
 
 //
 
@@ -587,6 +596,8 @@ void clearSequence()
 
 static void seekSequence(double time)
 {
+	sendEvent(oscEventName().c_str(), -1000);
+
 	sendEvent("/scene_reload", 0);
 
 	for (EventMarker & eventMarker : g_sequence.eventMarkers)
@@ -807,6 +818,8 @@ int main(int argc, char * argv[])
 			{
 				g_sequence.load(sequenceFilename.c_str());
 
+				sendEvent(oscEventName().c_str(), -1000);
+
 				sendEvent("/scene_reload", 0);
 			}
 		}
@@ -840,7 +853,7 @@ int main(int argc, char * argv[])
 					{
 						logDebug("trigger event %d", eventMarker.eventId);
 
-						sendEvent("/healer", eventMarker.eventId);
+						sendEvent(oscEventName().c_str(), eventMarker.eventId);
 					}
 				}
 
@@ -851,7 +864,7 @@ int main(int argc, char * argv[])
 
 				if (beat1 != beat2)
 				{
-					sendEvent("/event", 2);
+					sendEvent(oscEventName().c_str(), 2);
 				}
 
 				g_lastAudioTime = audioTime2;
@@ -873,15 +886,8 @@ int main(int argc, char * argv[])
 
 					g_sequence.saveAsMidi(midiFilename.c_str());
 
-					sendEvent("/event", 100);
+					sendEvent(oscEventName().c_str(), 100);
 				}
-			}
-
-			if (keyboard.wentDown(SDLK_r))
-			{
-				g_sequence.load("tracks/Healer.xml");
-
-				sendEvent("/scene_reload", 0);
 			}
 
 			if (keyboard.wentDown(SDLK_l))
@@ -905,6 +911,8 @@ int main(int argc, char * argv[])
 					if (FileStream::Exists(sequenceFilename.c_str()))
 					{
 						g_sequence.load(sequenceFilename.c_str());
+
+						sendEvent(oscEventName().c_str(), -1000);
 
 						sendEvent("/scene_reload", 0);
 					}
