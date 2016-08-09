@@ -657,15 +657,17 @@ bool SceneAction::load(const XMLElement * xmlAction)
 		m_type = kActionType_Signal;
 
 		const std::string effect = stringAttrib(xmlAction, "effect", "");
+		const std::string event = stringAttrib(xmlAction, "event", "");
 		const std::string message = stringAttrib(xmlAction, "message", "");
 
-		if (effect.empty() || message.empty())
+		if ((effect.empty() && event.empty()) || message.empty())
 		{
 			logError("effect or message not set!");
 			return false;
 		}
 
 		m_signal.m_targetName = effect;
+		m_signal.m_eventName = event;
 		m_signal.m_message = message;
 
 		return true;
@@ -680,7 +682,8 @@ bool SceneAction::load(const XMLElement * xmlAction)
 //
 
 SceneEvent::SceneEvent()
-	: m_oscId(-1)
+	: m_enabled(true)
+	, m_oscId(-1)
 {
 }
 
@@ -702,6 +705,9 @@ SceneEvent::~SceneEvent()
 
 void SceneEvent::execute(Scene & scene)
 {
+	if (!m_enabled)
+		return;
+
 	for (auto i = m_actions.begin(); i != m_actions.end(); ++i)
 	{
 		SceneAction * action = *i;
@@ -803,14 +809,28 @@ void SceneEvent::execute(Scene & scene)
 		case SceneAction::kActionType_Signal:
 		{
 			SceneLayer * effectLayer;
-			SceneEffect * effect = scene.findEffectByName(action->m_signal.m_targetName.c_str(), &effectLayer);
 
-			if (effect)
+			if (!action->m_signal.m_targetName.empty())
 			{
-				ScopedSceneBlock sceneBlock(&scene);
-				ScopedSceneLayerBlock layerBlock(effectLayer);
+				SceneEffect * effect = scene.findEffectByName(action->m_signal.m_targetName.c_str(), &effectLayer);
 
-				effect->m_effect->handleSignal(action->m_signal.m_message);
+				if (effect)
+				{
+					ScopedSceneBlock sceneBlock(&scene);
+					ScopedSceneLayerBlock layerBlock(effectLayer);
+
+					effect->m_effect->handleSignal(action->m_signal.m_message);
+				}
+			}
+
+			if (!action->m_signal.m_eventName.empty())
+			{
+				SceneEvent * event = scene.findEventByName(action->m_signal.m_eventName.c_str());
+
+				if (event)
+				{
+					event->handleSignal(action->m_signal.m_message);
+				}
 			}
 
 			if (action->m_signal.m_message == "reload")
@@ -827,8 +847,17 @@ void SceneEvent::execute(Scene & scene)
 	}
 }
 
+void SceneEvent::handleSignal(const std::string & message)
+{
+	if (message == "enable")
+		m_enabled = true;
+	if (message == "disable")
+		m_enabled = false;
+}
+
 void SceneEvent::load(const XMLElement * xmlEvent)
 {
+	m_enabled = boolAttrib(xmlEvent, "enabled", true);
 	m_name = stringAttrib(xmlEvent, "name", "");
 	m_oscId = intAttrib(xmlEvent, "osc_id", -1);
 
@@ -1107,6 +1136,19 @@ SceneEffect * Scene::findEffectByName(const char * name, SceneLayer ** out_layer
 				return effect;
 			}
 		}
+	}
+
+	return nullptr;
+}
+
+SceneEvent * Scene::findEventByName(const char * name)
+{
+	for (auto i = m_events.begin(); i != m_events.end(); ++i)
+	{
+		SceneEvent * event = *i;
+
+		if (event->m_name == name)
+			return event;
 	}
 
 	return nullptr;

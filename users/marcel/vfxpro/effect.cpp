@@ -153,6 +153,89 @@ void unregisterEffect(Effect * effect)
 
 //
 
+Effect::Effect(const char * name)
+	: visible(1.f)
+	, is3D(false)
+	, is2D(false)
+	, is2DAbsolute(false)
+	, blendMode(kBlendMode_Add)
+	, screenX(0.f)
+	, screenY(0.f)
+	, scaleX(1.f)
+	, scaleY(1.f)
+	, scale(1.f)
+	, z(0.f)
+	, timeMultiplier(1.f)
+	, debugEnabled(true)
+{
+	addVar("visible", visible);
+	addVar("x", screenX);
+	addVar("y", screenY);
+	addVar("scale_x", scaleX);
+	addVar("scale_y", scaleY);
+	addVar("scale", scale);
+	addVar("z", z);
+	addVar("time_multiplier", timeMultiplier);
+
+	transform.MakeIdentity();
+
+	if (name != nullptr)
+	{
+		registerEffect(name, this);
+	}
+}
+
+Effect::~Effect()
+{
+	unregisterEffect(this);
+}
+
+Vec2 Effect::screenToLocal(Vec2Arg v) const
+{
+	return Vec2(
+		(v[0] - screenX) / scaleX,
+		(v[1] - screenY) / scaleY);
+}
+
+Vec2 Effect::localToScreen(Vec2Arg v) const
+{
+	return Vec2(
+		v[0] * scaleX + screenX,
+		v[1] * scaleY + screenY);
+}
+
+Vec3 Effect::worldToLocal(Vec3Arg v, const bool withTranslation) const
+{
+	fassert(is3D);
+
+	const Mat4x4 invTransform = transform.CalcInv();
+
+	if (withTranslation)
+		return invTransform.Mul4(v);
+	else
+		return invTransform.Mul3(v);
+}
+
+Vec3 Effect::localToWorld(Vec3Arg v, const bool withTranslation) const
+{
+	fassert(is3D);
+
+	if (withTranslation)
+		return transform.Mul4(v);
+	else
+		return transform.Mul3(v);
+}
+
+void Effect::setTextures(Shader & shader)
+{
+	shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
+	// fixme : setting colormap_clamp will override sampler settings colormap
+	//shader.setTexture("colormap_clamp", 1, g_currentSurface->getTexture(), true, true);
+	shader.setTexture("colormap_clamp", 1, g_currentSurface->getTexture(), true, false);
+	shader.setTexture("pcm", 2, g_pcmTexture, true, false);
+	shader.setTexture("fft", 3, g_fftTexture, true, false);
+}
+
 void Effect::applyBlendMode() const
 {
 	switch (blendMode)
@@ -183,6 +266,15 @@ void Effect::applyBlendMode() const
 		Assert(false);
 		break;
 	}
+}
+
+void Effect::tickBase(const float dt)
+{
+	const float timeStep = dt * timeMultiplier;
+
+	TweenFloatCollection::tick(timeStep);
+
+	tick(timeStep);
 }
 
 TweenFloat * Effect::getVar(const char * name)
@@ -216,6 +308,11 @@ void EffectDrawable::draw()
 			gxTranslatef(virtualToScreenX(m_effect->screenX), virtualToScreenY(m_effect->screenY), 0.f);
 			gxScalef(m_effect->scaleX * m_effect->scale, m_effect->scaleY * m_effect->scale, 1.f);
 		}
+		else if (m_effect->is2DAbsolute)
+		{
+			gxTranslatef(m_effect->screenX, m_effect->screenY, 0.f);
+			gxScalef(m_effect->scaleX * m_effect->scale, m_effect->scaleY * m_effect->scale, 1.f);
+		}
 
 		m_effect->applyBlendMode();
 
@@ -224,6 +321,274 @@ void EffectDrawable::draw()
 		setBlend(BLEND_ADD);
 	}
 	gxPopMatrix();
+}
+
+//
+
+Effect_StarCluster::Effect_StarCluster(const char * name, const int numStars)
+	: Effect(name)
+	, m_particleSystem(numStars)
+	, m_alpha(1.f)
+{
+	is2D = true;
+
+	addVar("alpha", m_alpha);
+	addVar("gravity_x", m_gravityX);
+	addVar("gravity_y", m_gravityY);
+
+	for (int i = 0; i < numStars; ++i)
+	{
+		int id;
+
+		if (m_particleSystem.alloc(false, 0.f, id))
+		{
+			const float angle = random(0.f, pi2);
+			const float radius = random(10.f, 200.f);
+			//const float arcSpeed = radius / 10.f;
+			const float arcSpeed = radius / 1.f;
+
+			m_particleSystem.x[id] = cosf(angle) * radius;
+			m_particleSystem.y[id] = sinf(angle) * radius;
+			//m_particleSystem.vx[id] = cosf(angle + pi2/4.f) * arcSpeed;
+			//m_particleSystem.vy[id] = sinf(angle + pi2/4.f) * arcSpeed;
+			m_particleSystem.vx[id] = random(-arcSpeed, +arcSpeed);
+			m_particleSystem.vy[id] = random(-arcSpeed, +arcSpeed);
+			m_particleSystem.sx[id] = 10.f;
+			m_particleSystem.sy[id] = 10.f;
+		}
+	}
+}
+
+void Effect_StarCluster::tick(const float dt)
+{
+	// affect stars based on force from center
+
+	for (int i = 0; i < m_particleSystem.numParticles; ++i)
+	{
+		if (!m_particleSystem.alive[i])
+			continue;
+
+		const float dx = m_particleSystem.x[i] - m_gravityX;
+		const float dy = m_particleSystem.y[i] - m_gravityY;
+		const float ds = sqrtf(dx * dx + dy * dy) + eps;
+
+#if 0
+		const float as = 100.f;
+		const float ax = -dx / ds * as;
+		const float ay = -dy / ds * as;
+#else
+		const float ax = -dx;
+		const float ay = -dy;
+#endif
+
+		m_particleSystem.vx[i] += ax * dt;
+		m_particleSystem.vy[i] += ay * dt;
+
+		const float size = ds / 10.f;
+		m_particleSystem.sx[i] = size;
+		m_particleSystem.sy[i] = size;
+	}
+
+	m_particleSystem.tick(dt);
+}
+
+void Effect_StarCluster::draw(DrawableList & list)
+{
+	new (list) EffectDrawable(this);
+}
+
+void Effect_StarCluster::draw()
+{
+	if (m_alpha <= 0.f)
+		return;
+
+	gxSetTexture(Sprite("prayer.png").getTexture());
+	{
+		setColor(colorWhite);
+
+		m_particleSystem.draw(m_alpha);
+	}
+	gxSetTexture(0);
+}
+
+//
+
+Effect_Cloth::Effect_Cloth(const char * name)
+	: Effect(name)
+{
+	// todo : set is2D (?)
+
+	sx = 0;
+	sy = 0;
+
+	memset(vertices, 0, sizeof(vertices));
+}
+
+void Effect_Cloth::setup(int _sx, int _sy)
+{
+	sx = _sx;
+	sy = _sy;
+
+	for (int x = 0; x < sx; ++x)
+	{
+		for (int y = 0; y < sy; ++y)
+		{
+			Vertex & v = vertices[x][y];
+
+			//v.isFixed = (y == 0) || (y == sy - 1);
+			v.isFixed = (y == 0);
+
+			v.x = x;
+			v.y = y;
+			v.vx = 0.f;
+			v.vy = 0.f;
+
+			v.baseX = v.x;
+			v.baseY = v.y;
+		}
+	}
+}
+
+Effect_Cloth::Vertex * Effect_Cloth::getVertex(int x, int y)
+{
+	if (x >= 0 && x < sx && y >= 0 && y < sy)
+		return &vertices[x][y];
+	else
+		return nullptr;
+}
+
+void Effect_Cloth::tick(const float dt)
+{
+	const float gravityX = 0.f;
+	const float gravityY = keyboard.isDown(SDLK_g) ? 10.f : 0.f;
+
+	const float springConstant = 100.f;
+	const float falloff = .9f;
+	//const float falloff = .3f;
+	const float falloffThisTick = powf(1.f - falloff, dt);
+	const float rigidity = .9f;
+	const float rigidityThisTick = powf(1.f - rigidity, dt);
+
+	// update constraints
+
+	const int offsets[4][2] =
+	{
+		{ -1, 0 },
+		{ +1, 0 },
+		{ 0, -1 },
+		{ 0, +1 }
+	};
+
+	for (int x = 0; x < sx; ++x)
+	{
+		for (int y = 0; y < sy; ++y)
+		{
+			Vertex & v = vertices[x][y];
+
+			if (v.isFixed)
+				continue;
+
+			for (int i = 0; i < 4; ++i)
+			{
+				const Vertex * other = getVertex(x + offsets[i][0], y + offsets[i][1]);
+
+				if (other == nullptr)
+					continue;
+
+				const float dx = other->x - v.x;
+				const float dy = other->y - v.y;
+				const float ds = sqrtf(dx * dx + dy * dy);
+
+				if (ds > 1.f)
+				{
+					const float a = (ds - 1.f) * springConstant;
+
+					const float ax = gravityX + dx / (ds + eps) * a;
+					const float ay = gravityY + dy / (ds + eps) * a;
+
+					v.vx += ax * dt;
+					v.vy += ay * dt;
+				}
+			}
+		}
+	}
+
+	// integrate velocity
+
+	for (int x = 0; x < sx; ++x)
+	{
+		for (int y = 0; y < sy; ++y)
+		{
+			Vertex & v = vertices[x][y];
+
+			if (v.isFixed)
+				continue;
+
+			v.x += v.vx * dt;
+			v.y += v.vy * dt;
+
+			v.x = v.x * rigidityThisTick + v.baseX * (1.f - rigidityThisTick);
+			v.y = v.y * rigidityThisTick + v.baseY * (1.f - rigidityThisTick);
+
+			v.vx *= falloffThisTick;
+			v.vy *= falloffThisTick;
+		}
+	}
+}
+
+void Effect_Cloth::draw(DrawableList & list)
+{
+	new (list) EffectDrawable(this);
+}
+
+// todo : make the transform a part of the drawable or effect
+
+void Effect_Cloth::draw()
+{
+	gxPushMatrix();
+	{
+		gxScalef(40.f, 40.f, 1.f);
+
+		//for (int i = 3; i >= 1; --i)
+		for (int i = 1; i >= 1; --i)
+		{
+			glLineWidth(i);
+			doDraw();
+		}
+	}
+	gxPopMatrix();
+}
+
+void Effect_Cloth::doDraw()
+{
+	gxColor4f(1.f, 1.f, 1.f, .2f);
+
+	gxBegin(GL_LINES);
+	{
+		for (int x = 0; x < sx - 1; ++x)
+		{
+			for (int y = 0; y < sy - 1; ++y)
+			{
+				const Vertex & v00 = vertices[x + 0][y + 0];
+				const Vertex & v10 = vertices[x + 1][y + 0];
+				const Vertex & v11 = vertices[x + 1][y + 1];
+				const Vertex & v01 = vertices[x + 0][y + 1];
+
+				gxVertex2f(v00.x, v00.y);
+				gxVertex2f(v10.x, v10.y);
+
+				gxVertex2f(v10.x, v10.y);
+				gxVertex2f(v11.x, v11.y);
+
+				gxVertex2f(v11.x, v11.y);
+				gxVertex2f(v01.x, v01.y);
+
+				gxVertex2f(v01.x, v01.y);
+				gxVertex2f(v00.x, v00.y);
+			}
+		}
+	}
+	gxEnd();
 }
 
 //
@@ -887,32 +1252,6 @@ void Effect_Lines::draw()
 
 //
 
-#if 1
-const static Color s_colorBarColors[] =
-{
-	Color::fromHex("000000"),
-	Color::fromHex("ffffff"),
-	//Color::fromHex("000000"),
-	//Color::fromHex("808080"),
-	Color::fromHex("9c9c9c"),
-	Color::fromHex("1e1e1e"),
-	Color::fromHex("575556"),
-};
-#else
-const static Color s_colorBarColors[] =
-{
-	Color::fromHex("000000"),
-	Color::fromHex("ffffff"),
-	Color::fromHex("a94801"),
-	Color::fromHex("9c9c9c"),
-	Color::fromHex("c78b06"), // ?
-	Color::fromHex("f7c600"),
-	Color::fromHex("575556"),
-	Color::fromHex("1e1e1e")
-};
-#endif
-const static int s_numColorBarColors = sizeof(s_colorBarColors) / sizeof(s_colorBarColors[0]);
-
 Effect_Bars::Bar::Bar()
 {
 	memset(this, 0, sizeof(*this));
@@ -938,6 +1277,28 @@ Effect_Bars::Effect_Bars(const char * name)
 	addVar("size_pow", m_sizePow);
 	addVar("top_alpha", m_topAlpha);
 	addVar("bottom_alpha", m_bottomAlpha);
+
+#if 1
+	m_colorBarColors.push_back(Color::fromHex("000000"));
+	m_colorBarColors.push_back(Color::fromHex("ffffff"));
+	//m_colorBarColors.push_back(Color::fromHex("000000"));
+	//m_colorBarColors.push_back(Color::fromHex("808080"));
+	m_colorBarColors.push_back(Color::fromHex("9c9c9c"));
+	m_colorBarColors.push_back(Color::fromHex("1e1e1e"));
+	m_colorBarColors.push_back(Color::fromHex("575556"));
+#else
+	const static Color s_colorBarColors[] =
+	{
+		Color::fromHex("000000"),
+		Color::fromHex("ffffff"),
+		Color::fromHex("a94801"),
+		Color::fromHex("9c9c9c"),
+		Color::fromHex("c78b06"), // ?
+		Color::fromHex("f7c600"),
+		Color::fromHex("575556"),
+		Color::fromHex("1e1e1e")
+	};
+#endif
 }
 
 void Effect_Bars::initializeBars()
@@ -970,7 +1331,7 @@ void Effect_Bars::initializeBars()
 			}
 		#endif
 
-			bar.color = rand() % s_numColorBarColors;
+			bar.color = rand() % m_colorBarColors.size();
 
 			m_bars[layer].push_back(bar);
 
@@ -1048,7 +1409,7 @@ void Effect_Bars::draw()
 			{
 				const Bar & b = m_bars[layer][i];
 
-				const Color & color = s_colorBarColors[b.color];
+				const Color & color = m_colorBarColors[b.color];
 
 				x += b.skipSize/2.f;
 
@@ -1064,6 +1425,24 @@ void Effect_Bars::draw()
 		}
 	}
 	gxEnd();
+}
+
+void Effect_Bars::handleSignal(const std::string & message)
+{
+	if (String::StartsWith(message, "replace_color"))
+	{
+		std::vector<std::string> args;
+		splitString(message, args, ',');
+
+		if (args.size() == 3)
+		{
+			const int index = Parse::Int32(args[1]);
+			const Color color = Color::fromHex(args[2].c_str());
+
+			if (index >= 0 && index < m_colorBarColors.size())
+				m_colorBarColors[index] = color;
+		}
+	}
 }
 
 //
@@ -1107,7 +1486,7 @@ void Effect_Text::draw()
 Effect_Bezier::Effect_Bezier(const char * name, const char * colors)
 	: Effect(name)
 {
-	is2D = true;
+	is2DAbsolute = true;
 
 	//
 
@@ -1145,10 +1524,24 @@ void Effect_Bezier::tick(const float dt)
 		}
 		else
 		{
+			s.growTime -= dt;
+			
+			if (s.growTime < 0.f)
+				s.growTime = 0.f;
+
 			for (auto & n : s.nodes)
 			{
-				n.bezierNode.m_Position += n.positionSpeed * dt;
-				n.bezierNode.m_Tangent[0] += n.tangentSpeed * dt;
+				n.moveDelay -= dt;
+
+				if (n.moveDelay <= 0.f)
+				{
+					n.moveDelay = 0.f;
+					
+					n.time += dt;
+
+					n.bezierNode.m_Position += n.positionSpeed * dt;
+					n.bezierNode.m_Tangent[0] += n.tangentSpeed * dt;
+				}
 			}
 
 			++si;
@@ -1161,12 +1554,29 @@ void Effect_Bezier::draw(DrawableList & list)
 	new (list) EffectDrawable(this);
 }
 
+static float mixValue(const float t1, const float t2, const float o, const float t)
+{
+	const float o1 = t1 - o;
+	const float o2 = t2 + o;
+
+	if (t < o1)
+		return 0.f;
+	if (t > o2)
+		return 0.f;
+
+	const float v = (t - o1) / (o2 - o1);
+
+	return (1.f - std::cosf(v * Calc::m2PI)) / 2.f;
+}
+
 void Effect_Bezier::draw()
 {
 	for (auto & s : segments)
 	{
 		const float a = s.time * s.timeRcp;
 		const float t = 1.f - a;
+
+		const float l = 1.f - (s.growTime * s.growTimeRcp);
 
 		Color baseColor;
 		colorCurve.sample(t, baseColor);
@@ -1180,10 +1590,12 @@ void Effect_Bezier::draw()
 		{
 			const float jt = numLoops >= 2 ? (g / float(numLoops - 1)) : .5f;
 			const float ja = lerp(-1.f, +1.f, jt);
-			const float jb = ja * t * s.ghostSize;
+			//const float jb = ja * t * s.ghostSize;
 
 			for (size_t i = 0; i < s.nodes.size(); ++i)
 			{
+				const float jb = ja * s.nodes[i].time * s.timeRcp * s.ghostSize;
+
 				nodes[i] = s.nodes[i].bezierNode;
 
 				nodes[i].m_Position += s.nodes[i].positionSpeed * jb;
@@ -1204,7 +1616,9 @@ void Effect_Bezier::draw()
 
 				gxColor4f(color.r, color.g, color.b, color.a * a);
 
-				for (float i = 0.f; i <= nodes.size(); i += 0.01f)
+				const float end = nodes.size() * l;
+
+				for (float i = 0.f; i <= end; i += 0.01f)
 				{
 					const Vec2F p = path.Interpolate(i);
 
@@ -1245,37 +1659,165 @@ void Effect_Bezier::handleSignal(const std::string & name)
 			const int numGhosts = Calc::Max(0, d.getInt("num_ghosts", 0));
 			const float ghostSize = d.getFloat("ghost_size", 1.f);
 			const float lifeTime = d.getFloat("life", 1.f);
+			const float growTime = d.getFloat("grow_time", 0.f);
+			const bool fixedEnds = d.getBool("fixed_ends", false);
 
 			const float posSpeed = d.getFloat("pos_speed", 0.f);
 			const float tanSpeed = d.getFloat("tan_speed", 0.f);
 			const float posVary = d.getFloat("pos_vary", 0.f);
 			const float tanVary = d.getFloat("tan_vary", 0.f);
 
-			generateSegment(Vec2F(x1, y1), Vec2F(x2, y2), posSpeed, tanSpeed, posVary, tanVary, numSegments, numGhosts, ghostSize, color, lifeTime);
+			generateSegment(Vec2F(x1, y1), Vec2F(x2, y2), posSpeed, tanSpeed, posVary, tanVary, numSegments, numGhosts, ghostSize, color, lifeTime, growTime, fixedEnds);
 		}
 	}
-	else if (name == "part1")
+	else if (name == "addthrow")
 	{
-		for (auto & s : segments)
-			s.time = 1.f / s.timeRcp;
+		generateThrow();
 	}
-	else if (name == "part2")
+	else
 	{
-	}
-	else if (name == "part3")
-	{
+		logError("unknown signal: %s", name.c_str());
 	}
 }
 
-void Effect_Bezier::generateSegment(const Vec2F & p1, const Vec2F & p2, const float posSpeed, const float tanSpeed, const float posVary, const float tanVary, const int numNodes, const int numGhosts, const float ghostSize, const Color & color, const float duration)
+Vec2F sampleThrowPoint(const float t)
 {
-	const float mS = GFX_SY / 10.f;
+	const float o = .1;
+
+	const float d0 = 0.f;
+	const float d1 = 1.f;
+	const float d2 = 3.f;
+	const float d3 = 4.f;
+
+	const float h = 100.f;
+
+	const float mt = t * 4.f;
+
+	float x[3];
+	float y[3];
+	float w[3];
+
+	// right -> center
+	x[0] = 500.f - (mt - d0) * 500.f;
+	y[0] = + std::cosf((mt - d0 + 0.f) * Calc::mPI) * h;
+	w[0] = mixValue(d0, d1, o, mt);
+
+	// center circle
+	x[1] = - std::sinf((mt - d1) * Calc::mPI) * h;
+	y[1] = - std::cosf((mt - d1) * Calc::mPI) * h;
+	w[1] = mixValue(d1, d2, o, mt);
+
+	// center -> left
+	x[2] = - (mt - d2) * 500.f;
+	y[2] = + std::cosf((mt - d2 + 1.f) * Calc::mPI) * h;
+	w[2] = mixValue(d2, d3, o, mt);
+
+	// sample
+	float wt = 0.f;
+	for (int j = 0; j < 3; ++j)
+		wt += w[j];
+
+	Assert(wt != 0.f);
+	if (wt == 0.f)
+		return Vec2F(0.f, 0.f);
+
+	float wx = 0.f;
+	float wy = 0.f;
+
+	for (int j = 0; j < 3; ++j)
+	{
+		wx += x[j] * w[j] / wt;
+		wy += y[j] * w[j] / wt;
+	}
+
+	return Vec2F(wx, wy);
+}
+
+void generateThrowPoints(Vec2F * points, const int numPoints)
+{
+	for (int i = 0; i < numPoints; ++i)
+	{
+		const float t = i / float(numPoints - 1);
+
+		points[i] = sampleThrowPoint(t);
+	}
+}
+
+void Effect_Bezier::generateThrow()
+{
+	const int numPoints = 9;
+
+	const Color color = colorWhite;
+	const float duration = 8.f;
+	const float growTime = 4.f;
+	const int numGhosts = 2;
+	const float ghostSize = 20.f;
+
+	const bool fixedEnds = false;
+	const float posVary = 0.f;
+	const float tanVary = 0.f;
+	const float posSpeed = 5.f;
+	const float tanSpeed = 20.f;
 
 	Segment segment;
 
 	segment.color = color;
 	segment.time = duration;
 	segment.timeRcp = 1.f / duration;
+	segment.growTime = growTime;
+	segment.growTimeRcp = growTime != 0.f ? 1.f / growTime : 0.f;
+	segment.numGhosts = numGhosts;
+	segment.ghostSize = ghostSize;
+
+	for (int i = 0; i < numPoints; ++i)
+	{
+		const float t = i / float(numPoints - 1);
+
+		const float eps = .01f;
+
+		const Vec2F p1 = sampleThrowPoint(t - eps);
+		const Vec2F p2 = sampleThrowPoint(t + eps);
+
+		Vec2F p = (p1 + p2) / 2.f + Vec2F(GFX_SX/2.f, GFX_SY/2.f);
+
+		if (!fixedEnds || (i != 0 && i != numPoints - 1))
+		{
+			p[0] += random(-posVary/2.f, +posVary/2.f);
+			p[1] += random(-posVary/2.f, +posVary/2.f);
+		}
+
+		const Vec2F d = - (p2 - p1) / eps * .02f;
+
+		Node node;
+
+		node.bezierNode.m_Position = p;
+		node.bezierNode.m_Tangent[0][0] = d[0] + random(-tanVary/2.f, +tanVary/2.f);
+		node.bezierNode.m_Tangent[0][1] = d[1] + random(-tanVary/2.f, +tanVary/2.f);
+		node.bezierNode.m_Tangent[1] = - node.bezierNode.m_Tangent[0];
+
+		node.positionSpeed[0] = random(-posSpeed/2.f, +posSpeed/2.f);
+		node.positionSpeed[1] = random(-posSpeed/2.f, +posSpeed/2.f);
+
+		node.tangentSpeed[0] = random(-tanSpeed/2.f, +tanSpeed/2.f);
+		node.tangentSpeed[1] = random(-tanSpeed/2.f, +tanSpeed/2.f);
+
+		node.moveDelay = t * growTime;
+
+		segment.nodes.push_back(node);
+	}
+
+	segments.push_back(segment);
+}
+
+void Effect_Bezier::generateSegment(const Vec2F & p1, const Vec2F & p2, const float posSpeed, const float tanSpeed, const float posVary, const float tanVary, const int numNodes, const int numGhosts, const float ghostSize, const Color & color, const float duration, const float growTime, const bool fixedEnds)
+{
+	Segment segment;
+
+	segment.color = color;
+	segment.time = duration;
+	segment.timeRcp = 1.f / duration;
+	segment.growTime = growTime;
+	segment.growTimeRcp = growTime != 0.f ? 1.f / growTime : 0.f;
 	segment.numGhosts = numGhosts;
 	segment.ghostSize = ghostSize;
 
@@ -1285,7 +1827,7 @@ void Effect_Bezier::generateSegment(const Vec2F & p1, const Vec2F & p2, const fl
 		
 		Vec2F p = lerp(p1, p2, v);
 
-		if (i != 0 && i != numNodes - 1)
+		if (!fixedEnds || (i != 0 && i != numNodes - 1))
 		{
 			p[0] += random(-posVary/2.f, +posVary/2.f);
 			p[1] += random(-posVary/2.f, +posVary/2.f);
@@ -1304,6 +1846,8 @@ void Effect_Bezier::generateSegment(const Vec2F & p1, const Vec2F & p2, const fl
 		node.tangentSpeed[0] = random(-tanSpeed/2.f, +tanSpeed/2.f);
 		node.tangentSpeed[1] = random(-tanSpeed/2.f, +tanSpeed/2.f);
 
+		node.moveDelay = 0.f;
+
 		segment.nodes.push_back(node);
 	}
 
@@ -1320,10 +1864,14 @@ Effect_Smoke::Effect_Smoke(const char * name, const char * layer)
 	, m_alpha(1.f)
 	, m_strength(0.f)
 	, m_darken(0.f)
+	, m_darkenAlpha(0.f)
+	, m_multiply(1.f)
 {
 	addVar("alpha", m_alpha);
 	addVar("strength", m_strength);
 	addVar("darken", m_darken);
+	addVar("darken_alpha", m_darkenAlpha);
+	addVar("multiply", m_multiply);
 
 	m_surface = new Surface(GFX_SX, GFX_SY);
 	m_surface->clear();
@@ -1375,16 +1923,18 @@ void Effect_Smoke::draw()
 
 		Shader shader("smoke");
 		setShader(shader);
-		shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
+		shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, true);
 		shader.setTexture("flowmap", 1, 0, true, false);
 		shader.setImmediate("flow_time", g_currentScene->m_time);
 		ShaderBuffer buffer;
-		FlowmapData data;
+		SmokeData data;
 		data.alpha = 1.f;
 		data.strength = m_strength;
 		data.darken = m_darken;
+		data.darkenAlpha = m_darkenAlpha;
+		data.mul = m_multiply;
 		buffer.setData(&data, sizeof(data));
-		shader.setBuffer("FlowmapBlock", buffer);
+		shader.setBuffer("SmokeBlock", buffer);
 		g_currentSurface->postprocess(shader);
 
 		applyBlendMode();
@@ -1397,6 +1947,12 @@ void Effect_Smoke::handleSignal(const std::string & name)
 	if (name == "capture")
 	{
 		m_capture = true;
+	}
+
+	if (m_capture)
+	{
+		m_capture = false;
+		captureSurface();
 	}
 }
 

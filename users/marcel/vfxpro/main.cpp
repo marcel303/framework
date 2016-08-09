@@ -237,7 +237,7 @@ class MyOscPacketListener : public osc::OscPacketListener
 protected:
 	virtual void ProcessBundle(const osc::ReceivedBundle & b, const IpEndpointName & remoteEndpoint) override
 	{
-		logDebug("ProcessBundle: timeTag=%llu", b.TimeTag());
+		//logDebug("ProcessBundle: timeTag=%llu", b.TimeTag());
 
 		osc::OscPacketListener::ProcessBundle(b, remoteEndpoint);
 	}
@@ -246,7 +246,7 @@ protected:
 	{
 		try
 		{
-			logDebug("ProcessMessage");
+			//logDebug("ProcessMessage");
 
 			osc::ReceivedMessageArgumentStream args = m.ArgumentStream();
 
@@ -285,74 +285,13 @@ protected:
 			}
 			else if (strcmp(m.AddressPattern(), "/event") == 0 || true)
 			{
-			#if 1
 				// eventId
 				osc::int32 eventId;
 				args >> eventId;
 
 				message.type = kOscMessageType_Event;
 				message.param[0] = eventId;
-			#else
-				// NULL, eventId
-				const char * str;
-				osc::int32 eventId;
-				args >> str >> eventId;
-				
-				message.type = kOscMessageType_Event;
-				message.param[0] = eventId;
-			#endif
-			}
-			else if (strcmp(m.AddressPattern(), "/box") == 0)
-			{
-				// NULL, width, angle1, angle2
-				const char * str;
-				osc::int32 width;
-				osc::int32 angle1;
-				osc::int32 angle2;
-				
-				args >> str >> width >> angle1 >> angle2;
-				
-				message.type = kOscMessageType_Sprite;
-				message.str = str;
-				message.param[0] = width;
-				message.param[1] = angle1;
-				message.param[2] = angle2;
-			}
-			else if (strcmp(m.AddressPattern(), "/sprite") == 0)
-			{
-				// filename, x, y, scale
-				const char * str;
-				osc::int32 x;
-				osc::int32 y;
-				osc::int32 scale;
-				args >> str >> x >> y >> scale;
-				
-				message.type = kOscMessageType_Sprite;
-				message.str = str;
-				message.param[0] = x;
-				message.param[1] = y;
-				message.param[2] = scale;
-			}
-			else if (strcmp(m.AddressPattern(), "/video") == 0)
-			{
-				// filename, x, y, scale
-				const char * str;
-				osc::int32 x;
-				osc::int32 y;
-				osc::int32 scale;
-				args >> str >> x >> y >> scale;
-				
-				message.type = kOscMessageType_Video;
-				message.str = str;
-				message.param[0] = x;
-				message.param[1] = y;
-				message.param[2] = scale;
-			}
-			else if (strcmp(m.AddressPattern(), "/timedilation") == 0)
-			{
-				// filename, x, y, scale
-				message.type = kOscMessageType_TimeDilation;
-				args >> message.param[0] >> message.param[1];
+				message.str = std::string(m.AddressPattern()).substr(1);
 			}
 			else
 			{
@@ -1168,8 +1107,10 @@ int main(int argc, char * argv[])
 		g_scene = new Scene();
 		//g_scene->load("healer/scene.xml");
 		//g_scene->load("scene.xml");
-		g_scene->load("tracks/healer.scene.xml");
+		g_scene->load("tracks/intro.scene.xml");
+		//g_scene->load("tracks/healer.scene.xml");
 		//g_scene->load("tracks/o2.scene.xml");
+		//g_scene->load("tracks/heroes.scene.xml");
 		//g_scene->load("tracks/cesitest.scene.xml");
 
 	#if DEMODATA
@@ -1454,8 +1395,8 @@ int main(int argc, char * argv[])
 			SDL_SetRelativeMouseMode(SDL_FALSE);
 		#endif
 
-			//const float dtReal = Calc::Min(1.f / 30.f, framework.timeStep) * config.midiGetValue(100, 1.f);
-			const float dtReal = framework.timeStep * config.midiGetValue(100, 1.f);
+			const float dtReal = Calc::Min(1.f / 30.f, framework.timeStep) * config.midiGetValue(100, 1.f);
+			//const float dtReal = framework.timeStep * config.midiGetValue(100, 1.f);
 
 			Mat4x4 cameraPositionMatrix;
 			Mat4x4 cameraRotationMatrix;
@@ -1525,7 +1466,22 @@ int main(int argc, char * argv[])
 						//
 
 					case kOscMessageType_Event:
-						g_scene->triggerEventByOscId(message.param[0]);
+						{
+							const std::string filename = message.str + ".scene.xml";
+							
+							if (filename != g_scene->m_filename)
+							{
+								logDebug("scene change detected. transitioning from %s to %s", g_scene->m_filename.c_str(), filename.c_str());
+
+								delete g_scene;
+								g_scene = nullptr;
+
+								g_scene = new Scene();
+								g_scene->load(filename.c_str());
+							}
+
+							g_scene->triggerEventByOscId(message.param[0]);
+						}
 						break;
 
 					case kOscMessageType_ReplayEvent:
@@ -2121,6 +2077,7 @@ int main(int argc, char * argv[])
 
 					for (size_t i = 0; i < g_scene->m_events.size(); ++i)
 					{
+						setColor(g_scene->m_events[i]->m_enabled ? colorWhite : colorRed);
 						drawText(x, y, fontSize, +1.f, +1.f, "%02d: %-40s", i, g_scene->m_events[i]->m_name.c_str());
 						y += spacingY;
 					}

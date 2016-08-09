@@ -150,6 +150,7 @@ struct SceneAction
 	struct Signal
 	{
 		std::string m_targetName;
+		std::string m_eventName;
 		std::string m_message;
 	} m_signal;
 
@@ -162,6 +163,7 @@ struct SceneAction
 
 struct SceneEvent
 {
+	bool m_enabled;
 	std::string m_name;
 	int m_oscId;
 	std::vector<SceneAction*> m_actions;
@@ -170,6 +172,7 @@ struct SceneEvent
 	~SceneEvent();
 
 	void execute(Scene & scene);
+	void handleSignal(const std::string & message);
 
 	void load(const tinyxml2::XMLElement * xmlEvent);
 };
@@ -350,6 +353,7 @@ struct Scene : public TweenFloatCollection, public TweenFloatModifier
 
 	SceneLayer * findLayerByName(const char * name);
 	SceneEffect * findEffectByName(const char * name, SceneLayer ** out_layer);
+	SceneEvent * findEventByName(const char * name);
 
 	void triggerEvent(const char * name);
 	void triggerEventByOscId(int oscId);

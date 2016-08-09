@@ -10,6 +10,7 @@
 #include "types.h"
 #include "video.h"
 #include <map>
+#include <vector>
 
 #include "StringEx.h" // todo : to cpp
 
@@ -78,6 +79,7 @@ struct Effect : TweenFloatCollection
 	bool is3D; // when set to 3D, the effect is rendered using a separate virtual camera to each screen. when false, it will use simple 1:1 mapping onto screen coordinates
 	Mat4x4 transform; // transformation matrix for 3D effects
 	bool is2D;
+	bool is2DAbsolute;
 	BlendMode blendMode;
 	TweenFloat screenX;
 	TweenFloat screenY;
@@ -89,98 +91,18 @@ struct Effect : TweenFloatCollection
 
 	bool debugEnabled;
 
-	Effect(const char * name)
-		: visible(1.f)
-		, is3D(false)
-		, is2D(false)
-		, blendMode(kBlendMode_Add)
-		, screenX(0.f)
-		, screenY(0.f)
-		, scaleX(1.f)
-		, scaleY(1.f)
-		, scale(1.f)
-		, z(0.f)
-		, timeMultiplier(1.f)
-		, debugEnabled(true)
-	{
-		addVar("visible", visible);
-		addVar("x", screenX);
-		addVar("y", screenY);
-		addVar("scale_x", scaleX);
-		addVar("scale_y", scaleY);
-		addVar("scale", scale);
-		addVar("z", z);
-		addVar("time_multiplier", timeMultiplier);
+	Effect(const char * name);
+	virtual ~Effect();
 
-		transform.MakeIdentity();
+	Vec2 screenToLocal(Vec2Arg v) const;
+	Vec2 localToScreen(Vec2Arg v) const;
+	Vec3 worldToLocal(Vec3Arg v, const bool withTranslation) const;
+	Vec3 localToWorld(Vec3Arg v, const bool withTranslation) const;
 
-		if (name != nullptr)
-		{
-			registerEffect(name, this);
-		}
-	}
-
-	virtual ~Effect()
-	{
-		unregisterEffect(this);
-	}
-
-	Vec2 screenToLocal(Vec2Arg v) const
-	{
-		return Vec2(
-			(v[0] - screenX) / scaleX,
-			(v[1] - screenY) / scaleY);
-	}
-
-	Vec2 localToScreen(Vec2Arg v) const
-	{
-		return Vec2(
-			v[0] * scaleX + screenX,
-			v[1] * scaleY + screenY);
-	}
-
-	Vec3 worldToLocal(Vec3Arg v, const bool withTranslation) const
-	{
-		fassert(is3D);
-
-		const Mat4x4 invTransform = transform.CalcInv();
-
-		if (withTranslation)
-			return invTransform.Mul4(v);
-		else
-			return invTransform.Mul3(v);
-	}
-
-	Vec3 localToWorld(Vec3Arg v, const bool withTranslation) const
-	{
-		fassert(is3D);
-
-		if (withTranslation)
-			return transform.Mul4(v);
-		else
-			return transform.Mul3(v);
-	}
-
-	void setTextures(Shader & shader)
-	{
-		shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
-	// fixme : setting colormap_clamp will override sampler settings colormap
-		//shader.setTexture("colormap_clamp", 1, g_currentSurface->getTexture(), true, true);
-		shader.setTexture("colormap_clamp", 1, g_currentSurface->getTexture(), true, false);
-		shader.setTexture("pcm", 2, g_pcmTexture, true, false);
-		shader.setTexture("fft", 3, g_fftTexture, true, false);
-	}
-
+	void setTextures(Shader & shader);
 	void applyBlendMode() const;
 
-	void tickBase(const float dt)
-	{
-		const float timeStep = dt * timeMultiplier;
-
-		TweenFloatCollection::tick(timeStep);
-
-		tick(timeStep);
-	}
+	void tickBase(const float dt);
 
 	virtual void tick(const float dt) = 0;
 	virtual void draw(DrawableList & list) = 0;
@@ -366,91 +288,11 @@ struct Effect_StarCluster : Effect
 	TweenFloat m_gravityX;
 	TweenFloat m_gravityY;
 
-	Effect_StarCluster(const char * name, const int numStars)
-		: Effect(name)
-		, m_particleSystem(numStars)
-		, m_alpha(1.f)
-	{
-		is2D = true;
+	Effect_StarCluster(const char * name, const int numStars);
 
-		addVar("alpha", m_alpha);
-		addVar("gravity_x", m_gravityX);
-		addVar("gravity_y", m_gravityY);
-
-		for (int i = 0; i < numStars; ++i)
-		{
-			int id;
-
-			if (m_particleSystem.alloc(false, 0.f, id))
-			{
-				const float angle = random(0.f, pi2);
-				const float radius = random(10.f, 200.f);
-				//const float arcSpeed = radius / 10.f;
-				const float arcSpeed = radius / 1.f;
-
-				m_particleSystem.x[id] = cosf(angle) * radius;
-				m_particleSystem.y[id] = sinf(angle) * radius;
-				//m_particleSystem.vx[id] = cosf(angle + pi2/4.f) * arcSpeed;
-				//m_particleSystem.vy[id] = sinf(angle + pi2/4.f) * arcSpeed;
-				m_particleSystem.vx[id] = random(-arcSpeed, +arcSpeed);
-				m_particleSystem.vy[id] = random(-arcSpeed, +arcSpeed);
-				m_particleSystem.sx[id] = 10.f;
-				m_particleSystem.sy[id] = 10.f;
-			}
-		}
-	}
-
-	virtual void tick(const float dt) override
-	{
-		// affect stars based on force from center
-
-		for (int i = 0; i < m_particleSystem.numParticles; ++i)
-		{
-			if (!m_particleSystem.alive[i])
-				continue;
-
-			const float dx = m_particleSystem.x[i] - m_gravityX;
-			const float dy = m_particleSystem.y[i] - m_gravityY;
-			const float ds = sqrtf(dx * dx + dy * dy) + eps;
-
-#if 0
-			const float as = 100.f;
-			const float ax = -dx / ds * as;
-			const float ay = -dy / ds * as;
-#else
-			const float ax = -dx;
-			const float ay = -dy;
-#endif
-
-			m_particleSystem.vx[i] += ax * dt;
-			m_particleSystem.vy[i] += ay * dt;
-
-			const float size = ds / 10.f;
-			m_particleSystem.sx[i] = size;
-			m_particleSystem.sy[i] = size;
-		}
-
-		m_particleSystem.tick(dt);
-	}
-
-	virtual void draw(DrawableList & list) override
-	{
-		new (list) EffectDrawable(this);
-	}
-
-	virtual void draw() override
-	{
-		if (m_alpha <= 0.f)
-			return;
-
-		gxSetTexture(Sprite("prayer.png").getTexture());
-		{
-			setColor(colorWhite);
-
-			m_particleSystem.draw(m_alpha);
-		}
-		gxSetTexture(0);
-	}
+	virtual void tick(const float dt) override;
+	virtual void draw(DrawableList & list) override;
+	virtual void draw() override;
 };
 
 //
@@ -476,183 +318,17 @@ struct Effect_Cloth : Effect
 	int sy;
 	Vertex vertices[CLOTH_MAX_SX][CLOTH_MAX_SY];
 
-	Effect_Cloth(const char * name)
-		: Effect(name)
-	{
-		// todo : set is2D (?)
+	Effect_Cloth(const char * name);
 
-		sx = 0;
-		sy = 0;
+	void setup(int _sx, int _sy);
 
-		memset(vertices, 0, sizeof(vertices));
-	}
+	Vertex * getVertex(int x, int y);
 
-	void setup(int _sx, int _sy)
-	{
-		sx = _sx;
-		sy = _sy;
+	virtual void tick(const float dt) override;
+	virtual void draw(DrawableList & list) override;
+	virtual void draw() override;
 
-		for (int x = 0; x < sx; ++x)
-		{
-			for (int y = 0; y < sy; ++y)
-			{
-				Vertex & v = vertices[x][y];
-
-				//v.isFixed = (y == 0) || (y == sy - 1);
-				v.isFixed = (y == 0);
-
-				v.x = x;
-				v.y = y;
-				v.vx = 0.f;
-				v.vy = 0.f;
-
-				v.baseX = v.x;
-				v.baseY = v.y;
-			}
-		}
-	}
-
-	Vertex * getVertex(int x, int y)
-	{
-		if (x >= 0 && x < sx && y >= 0 && y < sy)
-			return &vertices[x][y];
-		else
-			return nullptr;
-	}
-
-	virtual void tick(const float dt) override
-	{
-		const float gravityX = 0.f;
-		const float gravityY = keyboard.isDown(SDLK_g) ? 10.f : 0.f;
-
-		const float springConstant = 100.f;
-		const float falloff = .9f;
-		//const float falloff = .3f;
-		const float falloffThisTick = powf(1.f - falloff, dt);
-		const float rigidity = .9f;
-		const float rigidityThisTick = powf(1.f - rigidity, dt);
-
-		// update constraints
-
-		const int offsets[4][2] =
-		{
-			{ -1, 0 },
-			{ +1, 0 },
-			{ 0, -1 },
-			{ 0, +1 }
-		};
-
-		for (int x = 0; x < sx; ++x)
-		{
-			for (int y = 0; y < sy; ++y)
-			{
-				Vertex & v = vertices[x][y];
-
-				if (v.isFixed)
-					continue;
-
-				for (int i = 0; i < 4; ++i)
-				{
-					const Vertex * other = getVertex(x + offsets[i][0], y + offsets[i][1]);
-
-					if (other == nullptr)
-						continue;
-
-					const float dx = other->x - v.x;
-					const float dy = other->y - v.y;
-					const float ds = sqrtf(dx * dx + dy * dy);
-
-					if (ds > 1.f)
-					{
-						const float a = (ds - 1.f) * springConstant;
-
-						const float ax = gravityX + dx / (ds + eps) * a;
-						const float ay = gravityY + dy / (ds + eps) * a;
-
-						v.vx += ax * dt;
-						v.vy += ay * dt;
-					}
-				}
-			}
-		}
-
-		// integrate velocity
-
-		for (int x = 0; x < sx; ++x)
-		{
-			for (int y = 0; y < sy; ++y)
-			{
-				Vertex & v = vertices[x][y];
-
-				if (v.isFixed)
-					continue;
-
-				v.x += v.vx * dt;
-				v.y += v.vy * dt;
-
-				v.x = v.x * rigidityThisTick + v.baseX * (1.f - rigidityThisTick);
-				v.y = v.y * rigidityThisTick + v.baseY * (1.f - rigidityThisTick);
-
-				v.vx *= falloffThisTick;
-				v.vy *= falloffThisTick;
-			}
-		}
-	}
-
-	virtual void draw(DrawableList & list) override
-	{
-		new (list) EffectDrawable(this);
-	}
-
-	// todo : make the transform a part of the drawable or effect
-
-	virtual void draw() override
-	{
-		gxPushMatrix();
-		{
-			gxScalef(40.f, 40.f, 1.f);
-
-			//for (int i = 3; i >= 1; --i)
-			for (int i = 1; i >= 1; --i)
-			{
-				glLineWidth(i);
-				doDraw();
-			}
-		}
-		gxPopMatrix();
-	}
-
-	void doDraw()
-	{
-		gxColor4f(1.f, 1.f, 1.f, .2f);
-
-		gxBegin(GL_LINES);
-		{
-			for (int x = 0; x < sx - 1; ++x)
-			{
-				for (int y = 0; y < sy - 1; ++y)
-				{
-					const Vertex & v00 = vertices[x + 0][y + 0];
-					const Vertex & v10 = vertices[x + 1][y + 0];
-					const Vertex & v11 = vertices[x + 1][y + 1];
-					const Vertex & v01 = vertices[x + 0][y + 1];
-
-					gxVertex2f(v00.x, v00.y);
-					gxVertex2f(v10.x, v10.y);
-
-					gxVertex2f(v10.x, v10.y);
-					gxVertex2f(v11.x, v11.y);
-
-					gxVertex2f(v11.x, v11.y);
-					gxVertex2f(v01.x, v01.y);
-
-					gxVertex2f(v01.x, v01.y);
-					gxVertex2f(v00.x, v00.y);
-				}
-			}
-		}
-		gxEnd();
-	}
+	void doDraw();
 };
 
 //
@@ -1475,6 +1151,8 @@ struct Effect_Bars : Effect
 
 	std::vector<Bar> m_bars[kNumLayers];
 
+	std::vector<Color> m_colorBarColors;
+
 	Effect_Bars(const char * name);
 
 	void initializeBars();
@@ -1483,6 +1161,8 @@ struct Effect_Bars : Effect
 	virtual void tick(const float dt) override;
 	virtual void draw(DrawableList & list) override;
 	virtual void draw() override;
+
+	virtual void handleSignal(const std::string & message) override;
 };
 
 //
@@ -1510,9 +1190,17 @@ struct Effect_Bezier : Effect
 {
 	struct Node
 	{
+		Node()
+			: moveDelay(0.f)
+			, time(0.f)
+		{
+		}
+
 		BezierNode bezierNode;
 		Vec2F tangentSpeed;
 		Vec2F positionSpeed;
+		float moveDelay;
+		float time;
 	};
 
 	struct Segment
@@ -1520,6 +1208,8 @@ struct Effect_Bezier : Effect
 		Color color;
 		float time;
 		float timeRcp;
+		float growTime;
+		float growTimeRcp;
 		int numGhosts;
 		float ghostSize;
 
@@ -1538,7 +1228,8 @@ struct Effect_Bezier : Effect
 
 	virtual void handleSignal(const std::string & name) override;
 
-	void generateSegment(const Vec2F & p1, const Vec2F & p2, const float posSpeed, const float tanSpeed, const float posVary, const float tanVary, const int numNodes, const int numGhosts, const float ghostSize, const Color & color, const float duration);
+	void generateThrow();
+	void generateSegment(const Vec2F & p1, const Vec2F & p2, const float posSpeed, const float tanSpeed, const float posVary, const float tanVary, const int numNodes, const int numGhosts, const float ghostSize, const Color & color, const float duration, const float growTime, const bool fixedEnds);
 };
 
 //
@@ -1552,6 +1243,8 @@ struct Effect_Smoke : Effect
 	TweenFloat m_alpha;
 	TweenFloat m_strength;
 	TweenFloat m_darken;
+	TweenFloat m_darkenAlpha;
+	TweenFloat m_multiply;
 
 	Effect_Smoke(const char * name, const char * layer);
 	virtual ~Effect_Smoke();
