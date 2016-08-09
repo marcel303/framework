@@ -207,6 +207,11 @@ void MediaPlayer::close()
 		texture = 0;
 	}
 
+	delete [] videoData;
+	videoData = nullptr;
+	
+	videoIsDirty = false;
+
 	if (audioStream)
 	{
 		delete audioStream;
@@ -254,7 +259,7 @@ void MediaPlayer::tick(Context * context, const float dt)
 		SDL_LockMutex(textureMutex);
 		{
 			delete [] videoData;
-			videoData;
+			videoData = nullptr;
 
 			videoData = new uint8_t[videoFrame->m_width * videoFrame->m_height * 3];
 			memcpy(videoData, videoFrame->m_frameBuffer, videoFrame->m_width * videoFrame->m_height * 3);
