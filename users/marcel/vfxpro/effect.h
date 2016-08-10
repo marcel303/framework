@@ -86,6 +86,7 @@ struct Effect : TweenFloatCollection
 	TweenFloat scaleX;
 	TweenFloat scaleY;
 	TweenFloat scale;
+	TweenFloat angle;
 	TweenFloat z;
 	TweenFloat timeMultiplier;
 
@@ -212,7 +213,6 @@ struct Effect_Rain : Effect
 			m_particleSystem.vy[id] = 0.f;
 			m_particleSystem.sx[id] = 1.f;
 			m_particleSystem.sy[id] = 1.f;
-			//m_particleSystem.vangle[id] = 1.f;
 
 			m_particleSizes[id] = random(.1f, 1.f) * .25f;
 		}
@@ -594,7 +594,6 @@ struct Effect_Boxes : Effect
 struct Effect_Picture : Effect
 {
 	TweenFloat m_alpha;
-	TweenFloat m_angle;
 	std::string m_filename;
 	bool m_centered;
 
@@ -610,7 +609,6 @@ struct Effect_Picture : Effect
 struct Effect_Video : Effect
 {
 	TweenFloat m_alpha;
-	TweenFloat m_angle;
 	std::string m_filename;
 	std::string m_shader;
 	bool m_centered;
@@ -1031,7 +1029,6 @@ struct Effect_DrawPicture : Effect
 struct Effect_Blit : Effect
 {
 	TweenFloat m_alpha;
-	TweenFloat m_angle;
 	TweenFloat m_centered;
 	TweenFloat m_absolute;
 	TweenFloat m_srcX;

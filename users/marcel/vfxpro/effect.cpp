@@ -164,6 +164,7 @@ Effect::Effect(const char * name)
 	, scaleX(1.f)
 	, scaleY(1.f)
 	, scale(1.f)
+	, angle(0.f)
 	, z(0.f)
 	, timeMultiplier(1.f)
 	, debugEnabled(true)
@@ -174,6 +175,7 @@ Effect::Effect(const char * name)
 	addVar("scale_x", scaleX);
 	addVar("scale_y", scaleY);
 	addVar("scale", scale);
+	addVar("angle", angle);
 	addVar("z", z);
 	addVar("time_multiplier", timeMultiplier);
 
@@ -307,11 +309,13 @@ void EffectDrawable::draw()
 		{
 			gxTranslatef(virtualToScreenX(m_effect->screenX), virtualToScreenY(m_effect->screenY), 0.f);
 			gxScalef(m_effect->scaleX * m_effect->scale, m_effect->scaleY * m_effect->scale, 1.f);
+			gxRotatef(m_effect->angle, 0.f, 0.f, 1.f);
 		}
 		else if (m_effect->is2DAbsolute)
 		{
 			gxTranslatef(m_effect->screenX, m_effect->screenY, 0.f);
 			gxScalef(m_effect->scaleX * m_effect->scale, m_effect->scaleY * m_effect->scale, 1.f);
+			gxRotatef(m_effect->angle, 0.f, 0.f, 1.f);
 		}
 
 		m_effect->applyBlendMode();
@@ -731,13 +735,11 @@ void Effect_Fsfx::draw()
 Effect_Picture::Effect_Picture(const char * name, const char * filename, bool centered)
 	: Effect(name)
 	, m_alpha(1.f)
-	, m_angle(0.f)
 	, m_centered(true)
 {
 	is2D = true;
 
 	addVar("alpha", m_alpha);
-	addVar("angle", m_angle);
 
 	m_filename = filename;
 	m_centered = centered;
@@ -767,7 +769,6 @@ void Effect_Picture::draw()
 		const float scaleY = SCREEN_SY / float(sy);
 		const float scale = Calc::Min(scaleX, scaleY);
 
-		gxRotatef(m_angle, 0.f, 0.f, 1.f);
 		gxScalef(scale, scale, 1.f);
 		if (m_centered)
 			gxTranslatef(-sx / 2.f, -sy / 2.f, 0.f);
@@ -783,7 +784,6 @@ void Effect_Picture::draw()
 Effect_Video::Effect_Video(const char * name, const char * filename, const char * shader, const bool centered, const bool play)
 	: Effect(name)
 	, m_alpha(1.f)
-	, m_angle(0.f)
 	, m_centered(true)
 	, m_speed(1.f)
 	, m_hideWhenDone(0.f)
@@ -791,7 +791,6 @@ Effect_Video::Effect_Video(const char * name, const char * filename, const char 
 	is2D = true;
 
 	addVar("alpha", m_alpha);
-	addVar("angle", m_angle);
 	addVar("speed", m_speed);
 	addVar("hide_when_done", m_hideWhenDone);
 
@@ -840,7 +839,6 @@ void Effect_Video::draw()
 			const float scaleY = SCREEN_SY / float(sy);
 			const float scale = Calc::Min(scaleX, scaleY);
 
-			gxRotatef(m_angle, 0.f, 0.f, 1.f);
 			gxScalef(scale, scale, 1.f);
 			if (m_centered)
 				gxTranslatef(-sx / 2.f, -sy / 2.f, 0.f);
@@ -905,7 +903,6 @@ void Effect_Video::syncTime(const float time)
 Effect_Blit::Effect_Blit(const char * name, const char * layer)
 	: Effect(name)
 	, m_alpha(1.f)
-	, m_angle(0.f)
 	, m_centered(0.f)
 	, m_absolute(1.f)
 	, m_srcX(-1.f)
@@ -914,10 +911,7 @@ Effect_Blit::Effect_Blit(const char * name, const char * layer)
 	, m_srcSy(0.f)
 	, m_layer(layer)
 {
-	//is2D = true;
-
 	addVar("alpha", m_alpha);
-	addVar("angle", m_angle);
 	addVar("centered", m_centered);
 	addVar("absolute", m_absolute);
 	addVar("src_x", m_srcX);
@@ -982,7 +976,8 @@ void Effect_Blit::draw()
 			gxTranslatef(virtualToScreenX(screenX), virtualToScreenY(screenY), 0.f);
 		gxScalef(scaleX * scale, scaleY * scale, 1.f);
 
-		gxRotatef(m_angle, 0.f, 0.f, 1.f);
+		gxRotatef(angle, 0.f, 0.f, 1.f);
+
 		if (m_centered)
 			gxTranslatef(-m_srcSx / 2.f, -m_srcSy / 2.f, 0.f);
 
@@ -1745,6 +1740,8 @@ void generateThrowPoints(Vec2F * points, const int numPoints)
 
 void Effect_Bezier::generateThrow()
 {
+	logDebug("generateThrow. sceneTime=%f", g_currentScene->m_time);
+
 	const int numPoints = 9;
 
 	const Color color = colorWhite;
@@ -1778,7 +1775,7 @@ void Effect_Bezier::generateThrow()
 		const Vec2F p1 = sampleThrowPoint(t - eps);
 		const Vec2F p2 = sampleThrowPoint(t + eps);
 
-		Vec2F p = (p1 + p2) / 2.f + Vec2F(GFX_SX/2.f, GFX_SY/2.f);
+		Vec2F p = (p1 + p2) / 2.f;
 
 		if (!fixedEnds || (i != 0 && i != numPoints - 1))
 		{

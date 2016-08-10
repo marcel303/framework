@@ -38,6 +38,7 @@ using namespace tinyxml2;
 #define DEMODATA 0
 
 #define NUM_SCREENS 1
+#define ENABLE_3D 0
 
 //const int SCREEN_SX = (1920 / NUM_SCREENS);
 //const int SCREEN_SY = 1080;
@@ -57,10 +58,35 @@ const int GFX_SY_SCALED = GFX_SY * GFX_SCALE;
 Config config;
 
 Scene * g_scene = nullptr;
+Scene * g_prevScene = nullptr;
+float g_prevSceneTime = 0.f;
+float g_prevSceneTimeRcp = 0.f;
 
 float g_pcmVolume = 0.f;
 GLuint g_pcmTexture = 0;
 GLuint g_fftTexture = 0;
+
+void nextScene(const char * filename)
+{
+	delete g_prevScene;
+	g_prevScene = nullptr;
+
+	g_prevScene = g_scene;
+	g_scene = nullptr;
+
+	g_scene = new Scene();
+	if (!g_scene->load(filename))
+	{
+		delete g_scene;
+		g_scene = nullptr;
+
+		g_scene = new Scene();
+	}
+
+	const float kTransitionTime = 4.f;
+	g_prevSceneTime = kTransitionTime;
+	g_prevSceneTimeRcp = 1.f / kTransitionTime;
+}
 
 float virtualToScreenX(const float x)
 {
@@ -619,22 +645,7 @@ static void handleAction(const std::string & action, const Dictionary & args)
 	{
 		const std::string filename = args.getString("file", "");
 
-		//
-
-		delete g_scene;
-		g_scene = nullptr;
-
-		//
-
-		g_scene = new Scene();
-
-		if (!g_scene->load(filename.c_str()))
-		{
-			delete g_scene;
-			g_scene = nullptr;
-
-			g_scene = new Scene();
-		}
+		nextScene(filename.c_str());
 	}
 }
 
@@ -1104,6 +1115,8 @@ int main(int argc, char * argv[])
 		bool drawScreenIds = false;
 		bool drawProjectorSetup = false;
 
+		g_prevScene = new Scene();
+
 		g_scene = new Scene();
 		//g_scene->load("healer/scene.xml");
 		//g_scene->load("scene.xml");
@@ -1146,6 +1159,7 @@ int main(int argc, char * argv[])
 		}
 	#endif
 
+		Surface prevSurface(GFX_SX, GFX_SY);
 		Surface surface(GFX_SX, GFX_SY);
 
 	#if DEMODATA
@@ -1473,11 +1487,7 @@ int main(int argc, char * argv[])
 							{
 								logDebug("scene change detected. transitioning from %s to %s", g_scene->m_filename.c_str(), filename.c_str());
 
-								delete g_scene;
-								g_scene = nullptr;
-
-								g_scene = new Scene();
-								g_scene->load(filename.c_str());
+								nextScene(filename.c_str());
 							}
 
 							g_scene->triggerEventByOscId(message.param[0]);
@@ -1564,6 +1574,12 @@ int main(int argc, char * argv[])
 
 			// process effects
 
+			g_prevScene->tick(dt);
+
+			g_prevSceneTime -= dt;
+			if (g_prevSceneTime < 0.f)
+				g_prevSceneTime = 0.f;
+
 			g_scene->tick(dt);
 
 		#if DEMODATA
@@ -1628,15 +1644,12 @@ int main(int argc, char * argv[])
 			glBindTexture(GL_TEXTURE_2D, 0);
 			checkErrorGL();
 
+			DrawableList prevDrawableList;
+			g_prevScene->draw(prevDrawableList);
+			prevDrawableList.sort();
+
 			DrawableList drawableList;
-
 			g_scene->draw(drawableList);
-
-		#if DEMODATA
-			if (drawCloth)
-				cloth.draw(drawableList);
-		#endif
-
 			drawableList.sort();
 
 			framework.beginDraw(0, 0, 0, 0);
@@ -1688,6 +1701,19 @@ int main(int argc, char * argv[])
 					camera.setup(cameraPosition, screenCorners[c], 4, c);
 				}
 
+				pushSurface(&prevSurface);
+				{
+					ScopedSurfaceBlock scopedBlock(&prevSurface);
+
+					glClearColor(0.f, 0.f, 0.f, 0.f);
+					glClear(GL_COLOR_BUFFER_BIT);
+
+					gpuTimingBlock(prevDrawableList);
+					setBlend(BLEND_ADD);
+					prevDrawableList.draw();
+				}
+				popSurface();
+
 				pushSurface(&surface);
 				{
 					ScopedSurfaceBlock scopedBlock(&surface);
@@ -1697,7 +1723,7 @@ int main(int argc, char * argv[])
 
 					setBlend(BLEND_ALPHA);
 
-				#if 1
+				#if ENABLE_3D
 					for (int c = 0; c < NUM_SCREENS; ++c)
 					{
 						const Camera & camera = cameras[c];
@@ -1865,6 +1891,29 @@ int main(int argc, char * argv[])
 					setBlend(BLEND_ALPHA);
 				}
 				gxSetTexture(0);
+
+				{
+					gpuTimingBlock(blitToBackBuffer);
+					
+					setBlend(BLEND_ALPHA);
+					const float a = keyboard.isDown(SDLK_j) ? 1.f : (g_prevSceneTime * g_prevSceneTimeRcp);
+
+					Shader shader("layer_compose_alpha");
+					setShader(shader);
+					shader.setImmediate("alpha", a);
+					shader.setTexture("colormap", 0, prevSurface.getTexture(), false, true);
+
+					static bool flipH = false;
+					if (keyboard.wentDown(SDLK_m))
+						flipH = !flipH;
+					if (flipH)
+						drawRect(GFX_SX_SCALED, 0, 0, GFX_SY_SCALED);
+					else
+						drawRect(0, 0, GFX_SX_SCALED, GFX_SY_SCALED);
+
+					clearShader();
+					setBlend(BLEND_ALPHA);
+				}
 
 				if (drawProjectorSetup)
 				{
@@ -2316,6 +2365,9 @@ int main(int argc, char * argv[])
 
 		delete g_scene;
 		g_scene = nullptr;
+
+		delete g_prevScene;
+		g_prevScene = nullptr;
 
 		framework.shutdown();
 	}
