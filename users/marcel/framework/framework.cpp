@@ -380,6 +380,8 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 		delete iconData;
 	}
 
+	SDL_DisableScreenSaver();
+
 	return true;
 }
 

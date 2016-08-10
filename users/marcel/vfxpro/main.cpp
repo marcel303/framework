@@ -723,7 +723,8 @@ static void initFileMonitor()
 				fi.filename = file;
 				fi.time = s.st_mtime;
 
-				s_fileInfos.push_back(fi);
+				if (String::EndsWith(file, ".ps") || String::EndsWith(file, ".xml"))
+					s_fileInfos.push_back(fi);
 			}
 
 			fclose(f);
