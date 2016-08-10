@@ -600,7 +600,22 @@ static void seekSequence(double time)
 
 	sendEvent("/scene_reload", 0);
 
-	for (EventMarker & eventMarker : g_sequence.eventMarkers)
+	std::list<EventMarker> eventMarkers = g_sequence.eventMarkers;
+
+	double timeStep = 60.0 / g_sequence.bpm * 4.0;
+
+	for (double time = 0.0; time < g_audioFile->m_duration; time += timeStep)
+	{
+		EventMarker e;
+		e.time = time;
+		e.eventId = 2;
+		
+		eventMarkers.push_back(e);
+	}
+
+	eventMarkers.sort();
+
+	for (EventMarker & eventMarker : eventMarkers)
 	{
 		if (eventMarker.time <= time)
 		{
