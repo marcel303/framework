@@ -285,7 +285,7 @@ SceneLayer::SceneLayer(Scene * scene)
 	addVar("visible", m_visible);
 	addVar("opacity", m_opacity);
 
-	m_surface = new Surface(GFX_SX, GFX_SY);
+	m_surface = new Surface(GFX_SX, GFX_SY, true);
 }
 
 SceneLayer::~SceneLayer()

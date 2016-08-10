@@ -1854,7 +1854,7 @@ Effect_Smoke::Effect_Smoke(const char * name, const char * layer)
 	addVar("darken_alpha", m_darkenAlpha);
 	addVar("multiply", m_multiply);
 
-	m_surface = new Surface(GFX_SX, GFX_SY);
+	m_surface = new Surface(GFX_SX, GFX_SY, true);
 	m_surface->clear();
 }
 

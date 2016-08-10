@@ -30,7 +30,7 @@
 #include "BezierPath.h" // fixme
 
 #if !defined(DEBUG)
-	//#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
+	#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 #endif
 
 using namespace tinyxml2;
@@ -1160,8 +1160,8 @@ int main(int argc, char * argv[])
 		}
 	#endif
 
-		Surface prevSurface(GFX_SX, GFX_SY);
-		Surface surface(GFX_SX, GFX_SY);
+		Surface prevSurface(GFX_SX, GFX_SY, true);
+		Surface surface(GFX_SX, GFX_SY, true);
 
 	#if DEMODATA
 		Shader jitterShader("jitter");
