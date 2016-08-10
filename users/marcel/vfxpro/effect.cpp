@@ -1047,14 +1047,7 @@ void Effect_Blocks::tick(const float dt)
 	{
 		Block & b = m_blocks[i];
 
-		const int oldValue = int(b.value);
-
 		b.value += b.speed * dt;
-
-		const int newValue = int(b.value);
-
-		if (oldValue != newValue)
-			b.picture = (newValue & 1) ? 0 : Sprite("hue.png").getTexture();
 	}
 
 	const size_t numBlocks = (size_t)m_numBlocks;
@@ -1075,49 +1068,40 @@ void Effect_Blocks::draw()
 	if (m_alpha <= 0.f)
 		return;
 
+	const GLuint image1 = Sprite("track-healer/block01.png").getTexture();
+	const GLuint image2 = Sprite("track-healer/block02.png").getTexture();
+
+	Shader shader("blocks");
+	setShader(shader);
+
 	for (size_t i = 0; i < m_blocks.size(); ++i)
 	{
 		const Block & b = m_blocks[i];
 
-		gxSetTexture(b.picture);
+		const float t = (std::sin(b.value * 2.f * M_PI) + 1.f) / 2.f;
+		const float scale = Calc::Lerp(1.f, 1.5f, t);
+		const float alpha = Calc::Lerp(.2f, .5f, t) * m_alpha;
+		const float imageAlpha = t;
+
+		const float sx = scale * b.size / 2.f;
+		const float sy = scale * b.size / 2.f;
+
+		shader.setTexture("image1", 0, image1, true, true);
+		shader.setTexture("image2", 1, image2, true, true);
+		shader.setImmediate("imageAlpha", imageAlpha);
+		shader.setImmediate("alpha", alpha);
 
 		gxBegin(GL_QUADS);
 		{
-			const float t = (std::sin(b.value * 2.f * M_PI) + 1.f) / 2.f;
-			const float scale = Calc::Lerp(1.f, 1.5f, t);
-			const float alpha = Calc::Lerp(.2f, .5f, t) * m_alpha;
-
-			const float sx = scale * b.size / 2.f;
-			const float sy = scale * b.size / 2.f;
-
-		#if 0
-			const static Color colors[4] =
-			{
-				Color::fromHex("ffffff"),
-				Color::fromHex("ffffff"),
-				Color::fromHex("ffffff"),
-				Color::fromHex("ffffff")
-			};
-		#else
-			const static Color colors[4] =
-			{
-				Color::fromHex("000000"),
-				//Color::fromHex("ffffff"),
-				Color::fromHex("9c9c9c"),
-				Color::fromHex("1e1e1e"),
-				Color::fromHex("575556")
-			};
-		#endif
-
-			gxTexCoord2f(0.f, 0.f); gxColor4f(colors[0].r, colors[0].g, colors[0].b, alpha); gxVertex2f(b.x - sx, b.y - sy);
-			gxTexCoord2f(1.f, 0.f); gxColor4f(colors[1].r, colors[1].g, colors[1].b, alpha); gxVertex2f(b.x + sx, b.y - sy);
-			gxTexCoord2f(1.f, 1.f); gxColor4f(colors[2].r, colors[2].g, colors[2].b, alpha); gxVertex2f(b.x + sx, b.y + sy);
-			gxTexCoord2f(0.f, 1.f); gxColor4f(colors[3].r, colors[3].g, colors[3].b, alpha); gxVertex2f(b.x - sx, b.y + sy);
+			gxTexCoord2f(0.f, 1.f); gxVertex2f(b.x - sx, b.y - sy);
+			gxTexCoord2f(1.f, 1.f); gxVertex2f(b.x + sx, b.y - sy);
+			gxTexCoord2f(1.f, 0.f); gxVertex2f(b.x + sx, b.y + sy);
+			gxTexCoord2f(0.f, 0.f); gxVertex2f(b.x - sx, b.y + sy);
 		}
 		gxEnd();
-
-		gxSetTexture(0);
 	}
+
+	clearShader();
 }
 
 //
