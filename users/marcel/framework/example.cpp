@@ -63,7 +63,7 @@ int main(int argc, char * argv[])
 	
 	mouse.showCursor(false);
 	
-	Surface surface(sx, sy);
+	Surface surface(sx, sy, false);
 	
 	bool down = false;
 	float x = sx/2.f;

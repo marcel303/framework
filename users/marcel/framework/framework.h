@@ -275,12 +275,12 @@ class Surface
 	
 public:
 	Surface();
-	Surface(int sx, int sy);
+	Surface(int sx, int sy, bool highPrecision);
 	~Surface();
 	
 	void swapBuffers();
 
-	bool init(int sx, int sy);
+	bool init(int sx, int sy, bool highPrecision);
 	GLuint getFramebuffer() const;
 	GLuint getTexture() const;
 	int getWidth() const;

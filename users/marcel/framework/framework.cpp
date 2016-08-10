@@ -1095,11 +1095,11 @@ Surface::Surface()
 	construct();
 }
 
-Surface::Surface(int sx, int sy)
+Surface::Surface(int sx, int sy, bool highPrecision)
 {
 	construct();
 	
-	init(sx, sy);
+	init(sx, sy, highPrecision);
 }
 
 Surface::~Surface()
@@ -1107,7 +1107,7 @@ Surface::~Surface()
 	destruct();
 }
 
-bool Surface::init(int sx, int sy)
+bool Surface::init(int sx, int sy, bool highPrecision)
 {
 	fassert(m_buffer[0] == 0);
 	
@@ -1136,8 +1136,10 @@ bool Surface::init(int sx, int sy)
 		checkErrorGL();
 		
 		glBindTexture(GL_TEXTURE_2D, m_texture[i]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sx, sy, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
-		//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, sx, sy, 0, GL_RGBA, GL_HALF_FLOAT, 0);
+		if (highPrecision)
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, sx, sy, 0, GL_RGBA, GL_HALF_FLOAT, 0);
+		else
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sx, sy, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
 		
 		checkErrorGL();
 		
