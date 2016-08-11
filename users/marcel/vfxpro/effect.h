@@ -486,9 +486,11 @@ struct Effect_Boxes : Effect
 		bool tick(const float dt);
 	};
 
+	std::string m_shader;
 	std::list<Box*> m_boxes;
+	TweenFloat m_outline;
 
-	Effect_Boxes(const char * name);
+	Effect_Boxes(const char * name, const bool screenSpace, const char * shader);
 	virtual ~Effect_Boxes() override;
 
 	Box * addBox(

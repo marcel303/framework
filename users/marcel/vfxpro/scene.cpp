@@ -67,7 +67,10 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 
 	if (type == "boxes")
 	{
-		effect = new Effect_Boxes(m_name.c_str());
+		const bool screenSpace = boolAttrib(xmlEffect, "screen_space", true);
+		const std::string shader = stringAttrib(xmlEffect, "shader", "");
+
+		effect = new Effect_Boxes(m_name.c_str(), screenSpace, shader.c_str());
 	}
 	else if (type == "fsfx")
 	{

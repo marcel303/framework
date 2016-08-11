@@ -755,9 +755,15 @@ bool Effect_Boxes::Box::tick(const float dt)
 	return true;
 }
 
-Effect_Boxes::Effect_Boxes(const char * name)
+Effect_Boxes::Effect_Boxes(const char * name, const bool screenSpace, const char * shader)
 	: Effect(name)
+	, m_shader(shader)
+	, m_outline(0.f)
 {
+	if (screenSpace)
+		is2DAbsolute = true;
+
+	addVar("outline", m_outline);
 }
 
 Effect_Boxes::~Effect_Boxes()
@@ -774,6 +780,8 @@ Effect_Boxes::Box * Effect_Boxes::addBox(
 	const int axis)
 {
 	Box * b = new Box();
+
+	b->m_name = name;
 
 	b->m_tx = tx;
 	b->m_ty = ty;
@@ -851,19 +859,25 @@ void Effect_Boxes::draw(DrawableList & list)
 
 void Effect_Boxes::draw()
 {
+	if (m_outline)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
 	gxPushMatrix();
 	{
 		Light lights[kMaxLights];
 
-		lights[0].setup(kLightType_Omni, 0.f, 0.f, 0.f, .25f, .5f, 1.f, config.midiGetValue(100, 1.f) * 5.f);
+		lights[0].setup(kLightType_Omni, 0.f, 0.f, 0.f, .25f, .5f, 1.f, 500.f);
+		//lights[0].setup(kLightType_Omni, 0.f, 0.f, 0.f, .25f, .5f, 1.f, config.midiGetValue(100, 1.f) * 5.f);
 		//lights[1].setup(kLightType_Omni, -1.f, 0.f, 0.f, 1.f, 1.f, .125f, config.midiGetValue(100, 1.f) * 5.f);
 
-		Shader shader("basic_lit");
-		setShader(shader);
+		Shader shader(m_shader.empty() ? "basic_lit" : m_shader.c_str());
 
-		ShaderBuffer buffer;
-		buffer.setData(lights, sizeof(lights));
-		shader.setBuffer("lightsBlock", buffer);
+		if (!m_shader.empty())
+			setShader(shader);
+
+		//ShaderBuffer buffer;
+		//buffer.setData(lights, sizeof(lights));
+		//shader.setBuffer("lightsBlock", buffer);
 
 		for (auto i = m_boxes.begin(); i != m_boxes.end(); ++i)
 		{
@@ -873,13 +887,22 @@ void Effect_Boxes::draw()
 
 			gxPushMatrix();
 			{
+				gxScalef(1.f, 1.f, 0.f);
+
 				gxTranslatef(b.m_tx, b.m_ty, b.m_tz);
 
-				gxRotatef(b.m_rx * Calc::rad2deg, 1.f, 0.f, 0.f);
-				gxRotatef(b.m_ry * Calc::rad2deg, 0.f, 1.f, 0.f);
-				gxRotatef(b.m_rz * Calc::rad2deg, 0.f, 0.f, 1.f);
+				gxRotatef(b.m_rx, 1.f, 0.f, 0.f);
+				gxRotatef(b.m_ry, 0.f, 1.f, 0.f);
+				gxRotatef(b.m_rz, 0.f, 0.f, 1.f);
 
 				gxScalef(b.m_sx, b.m_sy, b.m_sz);
+
+				if (b.m_axis == 0)
+					gxRotatef(90, 0, 1, 0);
+				//else if (b.m_axis == 1)
+				//	gxRotatef(90, 0, 0, 1);
+				else if (b.m_axis == 2)
+					gxRotatef(90, 1, 0, 0);
 
 				gxBegin(GL_QUADS);
 				{
@@ -915,6 +938,8 @@ void Effect_Boxes::draw()
 		clearShader();
 	}
 	gxPopMatrix();
+
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 void Effect_Boxes::handleSignal(const std::string & message)
