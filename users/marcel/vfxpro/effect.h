@@ -168,138 +168,11 @@ struct Effect_Rain : Effect
 	TweenFloat m_size1;
 	TweenFloat m_size2;
 
-	Effect_Rain(const char * name, const int numRainDrops)
-		: Effect(name)
-		, m_particleSystem(numRainDrops)
-		, m_alpha(1.f)
-		, m_gravity(100.f)
-		, m_falloff(0.f)
-		, m_spawnRate(1.f)
-		, m_spawnLife(1.f)
-		, m_spawnY(0.f)
-		, m_bounce(1.f)
-		, m_size1(1.f)
-		, m_size2(1.f)
-		, m_speedScaleX(0.f)
-		, m_speedScaleY(0.f)
-	{
-		is2DAbsolute = true;
+	Effect_Rain(const char * name, const int numRainDrops);
 
-		addVar("alpha", m_alpha);
-		addVar("gravity", m_gravity);
-		addVar("falloff", m_falloff);
-		addVar("spawn_rate", m_spawnRate);
-		addVar("spawn_life", m_spawnLife);
-		addVar("spawn_y", m_spawnY);
-		addVar("bounce", m_bounce);
-		addVar("size1", m_size1);
-		addVar("size2", m_size2);
-		addVar("speed_scale_x", m_speedScaleX);
-		addVar("speed_scale_y", m_speedScaleY);
-
-		m_particleSizes.resize(numRainDrops, true);
-	}
-
-	virtual void tick(const float dt) override
-	{
-		const float gravityY = m_gravity;
-		const float falloff = Calc::Max(0.f, 1.f - m_falloff);
-		const float falloffThisTick = powf(falloff, dt);
-
-		const Sprite sprite("rain.png");
-		const float spriteSx = sprite.getWidth();
-		const float spriteSy = sprite.getHeight();
-
-		// spawn particles
-
-		m_spawnTimer.tick(dt);
-
-		while (m_spawnRate != 0.f && m_spawnTimer.consume(1.f / m_spawnRate))
-		{
-			int id;
-
-			if (!m_particleSystem.alloc(false, m_spawnLife, id))
-				continue;
-
-			m_particleSystem.x[id] = rand() % GFX_SX;
-			m_particleSystem.y[id] = m_spawnY;
-			m_particleSystem.vx[id] = 0.f;
-			m_particleSystem.vy[id] = 0.f;
-			m_particleSystem.sx[id] = 1.f;
-			m_particleSystem.sy[id] = 1.f;
-
-			m_particleSizes[id] = random(.1f, 1.f) * .25f;
-		}
-
-		// update particles
-
-		for (int i = 0; i < m_particleSystem.numParticles; ++i)
-		{
-			if (!m_particleSystem.alive[i])
-				continue;
-
-			// integrate gravity
-
-			m_particleSystem.vy[i] += gravityY * dt;
-
-			// collision and bounce
-
-			if (m_particleSystem.y[i] > GFX_SY)
-			{
-				m_particleSystem.y[i] = GFX_SY;
-				m_particleSystem.vy[i] *= -m_bounce;
-			}
-
-			// velocity falloff
-
-			m_particleSystem.vx[i] *= falloffThisTick;
-			m_particleSystem.vy[i] *= falloffThisTick;
-
-			// size
-
-			const float life = m_particleSystem.life[i] * m_particleSystem.lifeRcp[i];
-			
-			float size = m_particleSizes[i];
-
-			size *= lerp((float)m_size2, (float)m_size1, life);
-
-			m_particleSystem.sx[i] = size * spriteSx;
-			m_particleSystem.sy[i] = size * spriteSy;
-
-			if (m_speedScaleX != 0.f)
-				m_particleSystem.sx[i] *= m_particleSystem.vx[i] * m_speedScaleX;
-			if (m_speedScaleY != 0.f)
-				m_particleSystem.sy[i] *= m_particleSystem.vy[i] * m_speedScaleY;
-
-			// check if the particle is dead
-
-			if (m_particleSystem.life[i] == 0.f)
-			{
-				m_particleSystem.free(i);
-			}
-		}
-
-		m_particleSystem.tick(dt);
-	}
-
-	virtual void draw(DrawableList & list) override
-	{
-		new (list) EffectDrawable(this);
-	}
-
-	virtual void draw() override
-	{
-		if (m_alpha <= 0.f)
-			return;
-
-		gxSetTexture(Sprite("rain.png").getTexture());
-		{
-			setColor(colorWhite);
-
-			m_particleSystem.draw(m_alpha);
-		}
-		gxSetTexture(0);
-	}
+	virtual void tick(const float dt) override;
+	virtual void draw(DrawableList & list) override;
+	virtual void draw() override;
 };
 
 //
@@ -363,10 +236,7 @@ struct Effect_SpriteSystem : Effect
 
 	struct SpriteInfo
 	{
-		SpriteInfo()
-			: alive(false)
-		{
-		}
+		SpriteInfo();
 
 		bool alive;
 		std::string filename;
@@ -378,85 +248,20 @@ struct Effect_SpriteSystem : Effect
 	{
 		SpriteInfo * m_spriteInfo;
 
-		SpriteDrawable(SpriteInfo * spriteInfo)
-			: Drawable(spriteInfo->z)
-			, m_spriteInfo(spriteInfo)
-		{
-		}
+		SpriteDrawable(SpriteInfo * spriteInfo);
 
-		virtual void draw() override
-		{
-			setColorf(1.f, 1.f, 1.f, 1.f);
-
-			Spriter(m_spriteInfo->filename.c_str()).draw(m_spriteInfo->spriterState);
-		}
+		virtual void draw() override;
 	};
 
 	SpriteInfo m_sprites[kMaxSprites];
 
-	Effect_SpriteSystem(const char * name)
-		: Effect(name)
-	{
-	}
+	Effect_SpriteSystem(const char * name);
 
-	virtual void tick(const float dt) override
-	{
-		for (int i = 0; i < kMaxSprites; ++i)
-		{
-			SpriteInfo & s = m_sprites[i];
+	virtual void tick(const float dt) override;
+	virtual void draw(DrawableList & list) override;
+	virtual void draw() override;
 
-			if (!s.alive)
-				continue;
-
-			if (s.spriterState.updateAnim(Spriter(s.filename.c_str()), dt))
-			{
-				// the animation is done. clear the sprite
-
-				s = SpriteInfo();
-			}
-		}
-	}
-
-	virtual void draw(DrawableList & list) override
-	{
-		for (int i = 0; i < kMaxSprites; ++i)
-		{
-			SpriteInfo & s = m_sprites[i];
-
-			if (!s.alive)
-				continue;
-
-			new (list) SpriteDrawable(&s);
-		}
-	}
-
-	virtual void draw() override
-	{
-		// nop
-	}
-
-	void addSprite(const char * filename, const int animIndex, const float x, const float y, const float z, const float scale)
-	{
-		for (int i = 0; i < kMaxSprites; ++i)
-		{
-			SpriteInfo & s = m_sprites[i];
-
-			if (s.alive)
-				continue;
-
-			s.alive = true;
-			s.filename = filename;
-			s.spriterState.x = x;
-			s.spriterState.y = y;
-			s.spriterState.scale = scale;
-
-			s.spriterState.startAnim(Spriter(filename), animIndex);
-
-			return;
-		}
-
-		logWarning("failed to find a free sprite! cannot play %s", filename);
-	}
+	void addSprite(const char * filename, const int animIndex, const float x, const float y, const float z, const float scale);
 };
 
 //
@@ -561,56 +366,11 @@ struct Effect_Luminance : Effect
 	TweenFloat m_darken;
 	TweenFloat m_darkenAlpha;
 
-	Effect_Luminance(const char * name)
-		: Effect(name)
-		, m_alpha(1.f)
-		, m_power(1.f)
-		, m_mul(1.f)
-		, m_darken(0.f)
-		, m_darkenAlpha(0.f)
-	{
-		addVar("alpha", m_alpha);
-		addVar("power", m_power);
-		addVar("mul", m_mul);
-		addVar("darken", m_darken);
-		addVar("darken_alpha", m_darkenAlpha);
-	}
+	Effect_Luminance(const char * name);
 
-	virtual void tick(const float dt) override
-	{
-	}
-
-	virtual void draw(DrawableList & list) override
-	{
-		new (list) EffectDrawable(this);
-	}
-
-	virtual void draw() override
-	{
-		setBlend(BLEND_OPAQUE);
-		setColor(colorWhite);
-
-		Shader shader("luminance");
-		setShader(shader);
-		shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
-		ShaderBuffer buffer;
-		ShaderBuffer buffer2;
-		LuminanceData data;
-		data.alpha = m_alpha;
-		data.power = m_power;
-		data.scale = m_mul;
-		data.darken = m_darken;
-		LuminanceData2 data2;
-		data2.darkenAlpha = m_darkenAlpha;
-		//logDebug("p=%g, m=%g", (float)m_power, (float)m_mul);
-		buffer.setData(&data, sizeof(data));
-		shader.setBuffer("LuminanceBlock", buffer);
-		buffer2.setData(&data2, sizeof(data2));
-		shader.setBuffer("LuminanceBlock2", buffer2);
-		g_currentSurface->postprocess(shader);
-
-		setBlend(BLEND_ADD);
-	}
+	virtual void tick(const float dt) override;
+	virtual void draw(DrawableList & list) override;
+	virtual void draw() override;
 };
 
 //
@@ -623,52 +383,11 @@ struct Effect_ColorLut2D : Effect
 	TweenFloat m_lutEnd;
 	TweenFloat m_numTaps;
 
-	Effect_ColorLut2D(const char * name, const char * lut)
-		: Effect(name)
-		, m_alpha(1.f)
-		, m_lutSprite(nullptr)
-		, m_lutStart(0.f)
-		, m_lutEnd(1.f)
-		, m_numTaps(1.f)
-	{
-		addVar("alpha", m_alpha);
-		addVar("lut_start", m_lutStart);
-		addVar("lut_end", m_lutEnd);
-		addVar("num_taps", m_numTaps);
+	Effect_ColorLut2D(const char * name, const char * lut);
 
-		m_lutSprite = new Sprite(lut);
-	}
-
-	virtual void tick(const float dt) override
-	{
-	}
-
-	virtual void draw(DrawableList & list) override
-	{
-		new (list) EffectDrawable(this);
-	}
-
-	virtual void draw() override
-	{
-		setBlend(BLEND_OPAQUE);
-		setColor(colorWhite);
-
-		Shader shader("colorlut2d");
-		setShader(shader);
-		shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
-		shader.setTexture("lut", 1, m_lutSprite->getTexture(), true, true);
-		ShaderBuffer buffer;
-		ColorLut2DData data;
-		data.alpha = m_alpha;
-		data.lutStart = m_lutStart;
-		data.lutEnd = m_lutEnd;
-		data.numTaps = m_numTaps;
-		buffer.setData(&data, sizeof(data));
-		shader.setBuffer("ColorLut2DBlock", buffer);
-		g_currentSurface->postprocess(shader);
-
-		setBlend(BLEND_ADD);
-	}
+	virtual void tick(const float dt) override;
+	virtual void draw(DrawableList & list) override;
+	virtual void draw() override;
 };
 
 //
@@ -681,54 +400,11 @@ struct Effect_Flowmap : Effect
 	TweenFloat m_strength;
 	TweenFloat m_darken;
 
-	Effect_Flowmap(const char * name, const char * map)
-		: Effect(name)
-		, m_alpha(1.f)
-		, m_strength(0.f)
-		, m_darken(0.f)
-	{
-		addVar("alpha", m_alpha);
-		addVar("strength", m_strength);
-		addVar("darken", m_darken);
+	Effect_Flowmap(const char * name, const char * map);
 
-		m_map = map;
-	}
-
-	virtual void tick(const float dt) override
-	{
-	}
-
-	virtual void draw(DrawableList & list) override
-	{
-		new (list) EffectDrawable(this);
-	}
-
-	virtual void draw() override
-	{
-		if (m_alpha <= 0.f)
-			return;
-
-		setBlend(BLEND_OPAQUE);
-		setColor(colorWhite);
-
-		Sprite mapSprite(m_map.c_str());
-
-		Shader shader("flowmap");
-		setShader(shader);
-		shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
-		shader.setTexture("flowmap", 1, mapSprite.getTexture(), true, false);
-		shader.setImmediate("flow_time", g_currentScene->m_time);
-		ShaderBuffer buffer;
-		FlowmapData data;
-		data.alpha = m_alpha;
-		data.strength = m_strength;
-		data.darken = m_darken;
-		buffer.setData(&data, sizeof(data));
-		shader.setBuffer("FlowmapBlock", buffer);
-		g_currentSurface->postprocess(shader);
-
-		setBlend(BLEND_ADD);
-	}
+	virtual void tick(const float dt) override;
+	virtual void draw(DrawableList & list) override;
+	virtual void draw() override;
 };
 
 //
@@ -739,48 +415,11 @@ struct Effect_Vignette : Effect
 	TweenFloat m_innerRadius;
 	TweenFloat m_distance;
 
-	Effect_Vignette(const char * name)
-		: Effect(name)
-		, m_alpha(1.f)
-		, m_innerRadius(0.f)
-		, m_distance(100.f)
-	{
-		addVar("alpha", m_alpha);
-		addVar("inner_radius", m_innerRadius);
-		addVar("distance", m_distance);
-	}
+	Effect_Vignette(const char * name);
 
-	virtual void tick(const float dt) override
-	{
-	}
-
-	virtual void draw(DrawableList & list) override
-	{
-		new (list) EffectDrawable(this);
-	}
-
-	virtual void draw() override
-	{
-		if (m_alpha <= 0.f)
-			return;
-
-		setBlend(BLEND_OPAQUE);
-		setColor(colorWhite);
-
-		Shader shader("vignette");
-		setShader(shader);
-		shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
-		ShaderBuffer buffer;
-		VignetteData data;
-		data.alpha = m_alpha;
-		data.innerRadius = m_innerRadius;
-		data.distanceRcp = 1.f / m_distance;
-		buffer.setData(&data, sizeof(data));
-		shader.setBuffer("VignetteBlock", buffer);
-		g_currentSurface->postprocess(shader);
-
-		setBlend(BLEND_ADD);
-	}
+	virtual void tick(const float dt) override;
+	virtual void draw(DrawableList & list) override;
+	virtual void draw() override;
 };
 
 //
@@ -791,48 +430,11 @@ struct Effect_Clockwork : Effect
 	TweenFloat m_innerRadius;
 	TweenFloat m_distance;
 
-	Effect_Clockwork(const char * name)
-		: Effect(name)
-		, m_alpha(1.f)
-		, m_innerRadius(0.f)
-		, m_distance(100.f)
-	{
-		addVar("alpha", m_alpha);
-		addVar("inner_radius", m_innerRadius);
-		addVar("distance", m_distance);
-	}
+	Effect_Clockwork(const char * name);
 
-	virtual void tick(const float dt) override
-	{
-	}
-
-	virtual void draw(DrawableList & list) override
-	{
-		new (list) EffectDrawable(this);
-	}
-
-	virtual void draw() override
-	{
-		if (m_alpha <= 0.f)
-			return;
-
-		setBlend(BLEND_OPAQUE);
-		setColor(colorWhite);
-
-		Shader shader("vignette");
-		setShader(shader);
-		shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
-		ShaderBuffer buffer;
-		VignetteData data;
-		data.alpha = m_alpha;
-		data.innerRadius = m_innerRadius;
-		data.distanceRcp = 1.f / m_distance;
-		buffer.setData(&data, sizeof(data));
-		shader.setBuffer("VignetteBlock", buffer);
-		g_currentSurface->postprocess(shader);
-
-		setBlend(BLEND_ADD);
-	}
+	virtual void tick(const float dt) override;
+	virtual void draw(DrawableList & list) override;
+	virtual void draw() override;
 };
 
 //
@@ -856,95 +458,11 @@ struct Effect_DrawPicture : Effect
 	std::vector<Coord> m_coords;
 	Coord m_lastCoord;
 
-	Effect_DrawPicture(const char * name, const char * map)
-		: Effect(name)
-		, m_alpha(1.f)
-		, m_step(10.f)
-		, m_draw(false)
-		, m_distance(0.f)
-	{
-		addVar("alpha", m_alpha);
-		addVar("step", m_step);
+	Effect_DrawPicture(const char * name, const char * map);
 
-		m_map = map;
-	}
-
-	virtual void tick(const float dt) override
-	{
-		const bool draw = mouse.isDown(BUTTON_LEFT);
-
-		if (draw)
-		{
-			Coord coord;
-			coord.x = mouse.x;
-			coord.y = mouse.y;
-
-			if (m_draw)
-			{
-				const float dx = coord.x - m_lastCoord.x;
-				const float dy = coord.y - m_lastCoord.y;
-				const float ds = sqrtf(dx * dx + dy * dy);
-
-				if (ds > 0.f)
-				{
-					float distance = m_distance + ds;
-
-					while (distance >= m_step)
-					{
-						distance -= m_step;
-						m_lastCoord.x += dx / ds * m_step;
-						m_lastCoord.y += dy / ds * m_step;
-						m_coords.push_back(m_lastCoord);
-					}
-
-					const float dx = coord.x - m_lastCoord.x;
-					const float dy = coord.y - m_lastCoord.y;
-					const float ds = sqrtf(dx * dx + dy * dy);
-					m_distance = ds;
-				}
-			}
-			else
-			{
-				m_lastCoord = coord;
-				m_coords.push_back(m_lastCoord);
-			}
-		}
-		else
-		{
-		}
-
-		m_draw = draw;
-	}
-
-	virtual void draw(DrawableList & list) override
-	{
-		new (list) EffectDrawable(this);
-	}
-
-	virtual void draw() override
-	{
-		if (!m_coords.empty())
-		{
-			Sprite sprite(m_map.c_str());
-
-			const int sx = sprite.getWidth();
-			const int sy = sprite.getHeight();
-
-			gxPushMatrix();
-			{
-				gxTranslatef(-sx / 2.f * scale, -sy / 2.f * scale, 0.f);
-				gxColor4f(1.f, 1.f, 1.f, 1.f);
-
-				for (auto coord : m_coords)
-				{
-					sprite.drawEx(coord.x, coord.y, 0.f, scale, scale, false, FILTER_LINEAR);
-				}
-			}
-			gxPopMatrix();
-
-			m_coords.clear();
-		}
-	}
+	virtual void tick(const float dt) override;
+	virtual void draw(DrawableList & list) override;
+	virtual void draw() override;
 };
 
 //

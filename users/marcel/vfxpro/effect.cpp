@@ -733,6 +733,226 @@ void Effect_Fsfx::draw()
 
 //
 
+Effect_Rain::Effect_Rain(const char * name, const int numRainDrops)
+	: Effect(name)
+	, m_particleSystem(numRainDrops)
+	, m_alpha(1.f)
+	, m_gravity(100.f)
+	, m_falloff(0.f)
+	, m_spawnRate(1.f)
+	, m_spawnLife(1.f)
+	, m_spawnY(0.f)
+	, m_bounce(1.f)
+	, m_size1(1.f)
+	, m_size2(1.f)
+	, m_speedScaleX(0.f)
+	, m_speedScaleY(0.f)
+{
+	is2DAbsolute = true;
+
+	addVar("alpha", m_alpha);
+	addVar("gravity", m_gravity);
+	addVar("falloff", m_falloff);
+	addVar("spawn_rate", m_spawnRate);
+	addVar("spawn_life", m_spawnLife);
+	addVar("spawn_y", m_spawnY);
+	addVar("bounce", m_bounce);
+	addVar("size1", m_size1);
+	addVar("size2", m_size2);
+	addVar("speed_scale_x", m_speedScaleX);
+	addVar("speed_scale_y", m_speedScaleY);
+
+	m_particleSizes.resize(numRainDrops, true);
+}
+
+void Effect_Rain::tick(const float dt)
+{
+	const float gravityY = m_gravity;
+	const float falloff = Calc::Max(0.f, 1.f - m_falloff);
+	const float falloffThisTick = powf(falloff, dt);
+
+	const Sprite sprite("rain.png");
+	const float spriteSx = sprite.getWidth();
+	const float spriteSy = sprite.getHeight();
+
+	// spawn particles
+
+	m_spawnTimer.tick(dt);
+
+	while (m_spawnRate != 0.f && m_spawnTimer.consume(1.f / m_spawnRate))
+	{
+		int id;
+
+		if (!m_particleSystem.alloc(false, m_spawnLife, id))
+			continue;
+
+		m_particleSystem.x[id] = rand() % GFX_SX;
+		m_particleSystem.y[id] = m_spawnY;
+		m_particleSystem.vx[id] = 0.f;
+		m_particleSystem.vy[id] = 0.f;
+		m_particleSystem.sx[id] = 1.f;
+		m_particleSystem.sy[id] = 1.f;
+
+		m_particleSizes[id] = random(.1f, 1.f) * .25f;
+	}
+
+	// update particles
+
+	for (int i = 0; i < m_particleSystem.numParticles; ++i)
+	{
+		if (!m_particleSystem.alive[i])
+			continue;
+
+		// integrate gravity
+
+		m_particleSystem.vy[i] += gravityY * dt;
+
+		// collision and bounce
+
+		if (m_particleSystem.y[i] > GFX_SY)
+		{
+			m_particleSystem.y[i] = GFX_SY;
+			m_particleSystem.vy[i] *= -m_bounce;
+		}
+
+		// velocity falloff
+
+		m_particleSystem.vx[i] *= falloffThisTick;
+		m_particleSystem.vy[i] *= falloffThisTick;
+
+		// size
+
+		const float life = m_particleSystem.life[i] * m_particleSystem.lifeRcp[i];
+
+		float size = m_particleSizes[i];
+
+		size *= lerp((float)m_size2, (float)m_size1, life);
+
+		m_particleSystem.sx[i] = size * spriteSx;
+		m_particleSystem.sy[i] = size * spriteSy;
+
+		if (m_speedScaleX != 0.f)
+			m_particleSystem.sx[i] *= m_particleSystem.vx[i] * m_speedScaleX;
+		if (m_speedScaleY != 0.f)
+			m_particleSystem.sy[i] *= m_particleSystem.vy[i] * m_speedScaleY;
+
+		// check if the particle is dead
+
+		if (m_particleSystem.life[i] == 0.f)
+		{
+			m_particleSystem.free(i);
+		}
+	}
+
+	m_particleSystem.tick(dt);
+}
+
+void Effect_Rain::draw(DrawableList & list)
+{
+	new (list) EffectDrawable(this);
+}
+
+void Effect_Rain::draw()
+{
+	if (m_alpha <= 0.f)
+		return;
+
+	gxSetTexture(Sprite("rain.png").getTexture());
+	{
+		setColor(colorWhite);
+
+		m_particleSystem.draw(m_alpha);
+	}
+	gxSetTexture(0);
+}
+
+//
+
+Effect_SpriteSystem::SpriteInfo::SpriteInfo()
+	: alive(false)
+	, z(0.f)
+{
+}
+
+Effect_SpriteSystem::SpriteDrawable::SpriteDrawable(SpriteInfo * spriteInfo)
+		: Drawable(spriteInfo->z)
+		, m_spriteInfo(spriteInfo)
+{
+}
+
+void Effect_SpriteSystem::SpriteDrawable::draw()
+{
+	setColorf(1.f, 1.f, 1.f, 1.f);
+
+	Spriter(m_spriteInfo->filename.c_str()).draw(m_spriteInfo->spriterState);
+}
+
+Effect_SpriteSystem::Effect_SpriteSystem(const char * name)
+	: Effect(name)
+{
+}
+
+void Effect_SpriteSystem::tick(const float dt)
+{
+	for (int i = 0; i < kMaxSprites; ++i)
+	{
+		SpriteInfo & s = m_sprites[i];
+
+		if (!s.alive)
+			continue;
+
+		if (s.spriterState.updateAnim(Spriter(s.filename.c_str()), dt))
+		{
+			// the animation is done. clear the sprite
+
+			s = SpriteInfo();
+		}
+	}
+}
+
+void Effect_SpriteSystem::draw(DrawableList & list)
+{
+	for (int i = 0; i < kMaxSprites; ++i)
+	{
+		SpriteInfo & s = m_sprites[i];
+
+		if (!s.alive)
+			continue;
+
+		new (list) SpriteDrawable(&s);
+	}
+}
+
+void Effect_SpriteSystem::draw()
+{
+	// nop
+}
+
+void Effect_SpriteSystem::addSprite(const char * filename, const int animIndex, const float x, const float y, const float z, const float scale)
+{
+	for (int i = 0; i < kMaxSprites; ++i)
+	{
+		SpriteInfo & s = m_sprites[i];
+
+		if (s.alive)
+			continue;
+
+		s.alive = true;
+		s.filename = filename;
+		s.spriterState.x = x;
+		s.spriterState.y = y;
+		s.spriterState.scale = scale;
+
+		s.spriterState.startAnim(Spriter(filename), animIndex);
+
+		return;
+	}
+
+	logWarning("failed to find a free sprite! cannot play %s", filename);
+}
+
+//
+
 Effect_Boxes::Box::Box()
 {
 	addVar("x", m_tx);
@@ -1187,6 +1407,341 @@ void Effect_Video::syncTime(const float time)
 		{
 			m_mediaPlayer.seek(videoTime);
 		}
+	}
+}
+
+//
+
+Effect_Luminance::Effect_Luminance(const char * name)
+	: Effect(name)
+	, m_alpha(1.f)
+	, m_power(1.f)
+	, m_mul(1.f)
+	, m_darken(0.f)
+	, m_darkenAlpha(0.f)
+{
+	addVar("alpha", m_alpha);
+	addVar("power", m_power);
+	addVar("mul", m_mul);
+	addVar("darken", m_darken);
+	addVar("darken_alpha", m_darkenAlpha);
+}
+
+void Effect_Luminance::tick(const float dt)
+{
+}
+
+void Effect_Luminance::draw(DrawableList & list)
+{
+	new (list) EffectDrawable(this);
+}
+
+void Effect_Luminance::draw()
+{
+	setBlend(BLEND_OPAQUE);
+	setColor(colorWhite);
+
+	Shader shader("luminance");
+	setShader(shader);
+	shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
+	ShaderBuffer buffer;
+	ShaderBuffer buffer2;
+	LuminanceData data;
+	data.alpha = m_alpha;
+	data.power = m_power;
+	data.scale = m_mul;
+	data.darken = m_darken;
+	LuminanceData2 data2;
+	data2.darkenAlpha = m_darkenAlpha;
+	//logDebug("p=%g, m=%g", (float)m_power, (float)m_mul);
+	buffer.setData(&data, sizeof(data));
+	shader.setBuffer("LuminanceBlock", buffer);
+	buffer2.setData(&data2, sizeof(data2));
+	shader.setBuffer("LuminanceBlock2", buffer2);
+	g_currentSurface->postprocess(shader);
+
+	setBlend(BLEND_ADD);
+}
+
+//
+
+Effect_ColorLut2D::Effect_ColorLut2D(const char * name, const char * lut)
+	: Effect(name)
+	, m_alpha(1.f)
+	, m_lutSprite(nullptr)
+	, m_lutStart(0.f)
+	, m_lutEnd(1.f)
+	, m_numTaps(1.f)
+{
+	addVar("alpha", m_alpha);
+	addVar("lut_start", m_lutStart);
+	addVar("lut_end", m_lutEnd);
+	addVar("num_taps", m_numTaps);
+
+	m_lutSprite = new Sprite(lut);
+}
+
+void Effect_ColorLut2D::tick(const float dt)
+{
+}
+
+void Effect_ColorLut2D::draw(DrawableList & list)
+{
+	new (list) EffectDrawable(this);
+}
+
+void Effect_ColorLut2D::draw()
+{
+	setBlend(BLEND_OPAQUE);
+	setColor(colorWhite);
+
+	Shader shader("colorlut2d");
+	setShader(shader);
+	shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
+	shader.setTexture("lut", 1, m_lutSprite->getTexture(), true, true);
+	ShaderBuffer buffer;
+	ColorLut2DData data;
+	data.alpha = m_alpha;
+	data.lutStart = m_lutStart;
+	data.lutEnd = m_lutEnd;
+	data.numTaps = m_numTaps;
+	buffer.setData(&data, sizeof(data));
+	shader.setBuffer("ColorLut2DBlock", buffer);
+	g_currentSurface->postprocess(shader);
+
+	setBlend(BLEND_ADD);
+}
+
+//
+
+Effect_Flowmap::Effect_Flowmap(const char * name, const char * map)
+	: Effect(name)
+	, m_alpha(1.f)
+	, m_strength(0.f)
+	, m_darken(0.f)
+{
+	addVar("alpha", m_alpha);
+	addVar("strength", m_strength);
+	addVar("darken", m_darken);
+
+	m_map = map;
+}
+
+void Effect_Flowmap::tick(const float dt)
+{
+}
+
+void Effect_Flowmap::draw(DrawableList & list)
+{
+	new (list) EffectDrawable(this);
+}
+
+void Effect_Flowmap::draw()
+{
+	if (m_alpha <= 0.f)
+		return;
+
+	setBlend(BLEND_OPAQUE);
+	setColor(colorWhite);
+
+	Sprite mapSprite(m_map.c_str());
+
+	Shader shader("flowmap");
+	setShader(shader);
+	shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
+	shader.setTexture("flowmap", 1, mapSprite.getTexture(), true, false);
+	shader.setImmediate("flow_time", g_currentScene->m_time);
+	ShaderBuffer buffer;
+	FlowmapData data;
+	data.alpha = m_alpha;
+	data.strength = m_strength;
+	data.darken = m_darken;
+	buffer.setData(&data, sizeof(data));
+	shader.setBuffer("FlowmapBlock", buffer);
+	g_currentSurface->postprocess(shader);
+
+	setBlend(BLEND_ADD);
+}
+
+//
+
+Effect_Vignette::Effect_Vignette(const char * name)
+	: Effect(name)
+	, m_alpha(1.f)
+	, m_innerRadius(0.f)
+	, m_distance(100.f)
+{
+	addVar("alpha", m_alpha);
+	addVar("inner_radius", m_innerRadius);
+	addVar("distance", m_distance);
+}
+
+void Effect_Vignette::tick(const float dt)
+{
+}
+
+void Effect_Vignette::draw(DrawableList & list)
+{
+	new (list) EffectDrawable(this);
+}
+
+void Effect_Vignette::draw()
+{
+	if (m_alpha <= 0.f)
+		return;
+
+	setBlend(BLEND_OPAQUE);
+	setColor(colorWhite);
+
+	Shader shader("vignette");
+	setShader(shader);
+	shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
+	ShaderBuffer buffer;
+	VignetteData data;
+	data.alpha = m_alpha;
+	data.innerRadius = m_innerRadius;
+	data.distanceRcp = 1.f / m_distance;
+	buffer.setData(&data, sizeof(data));
+	shader.setBuffer("VignetteBlock", buffer);
+	g_currentSurface->postprocess(shader);
+
+	setBlend(BLEND_ADD);
+}
+
+//
+
+Effect_Clockwork::Effect_Clockwork(const char * name)
+	: Effect(name)
+	, m_alpha(1.f)
+	, m_innerRadius(0.f)
+	, m_distance(100.f)
+{
+	addVar("alpha", m_alpha);
+	addVar("inner_radius", m_innerRadius);
+	addVar("distance", m_distance);
+}
+
+void Effect_Clockwork::tick(const float dt)
+{
+}
+
+void Effect_Clockwork::draw(DrawableList & list)
+{
+	new (list) EffectDrawable(this);
+}
+
+void Effect_Clockwork::draw()
+{
+	if (m_alpha <= 0.f)
+		return;
+
+	setBlend(BLEND_OPAQUE);
+	setColor(colorWhite);
+
+	Shader shader("vignette");
+	setShader(shader);
+	shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
+	ShaderBuffer buffer;
+	VignetteData data;
+	data.alpha = m_alpha;
+	data.innerRadius = m_innerRadius;
+	data.distanceRcp = 1.f / m_distance;
+	buffer.setData(&data, sizeof(data));
+	shader.setBuffer("VignetteBlock", buffer);
+	g_currentSurface->postprocess(shader);
+
+	setBlend(BLEND_ADD);
+}
+
+//
+
+Effect_DrawPicture::Effect_DrawPicture(const char * name, const char * map)
+	: Effect(name)
+	, m_alpha(1.f)
+	, m_step(10.f)
+	, m_draw(false)
+	, m_distance(0.f)
+{
+	addVar("alpha", m_alpha);
+	addVar("step", m_step);
+
+	m_map = map;
+}
+
+void Effect_DrawPicture::tick(const float dt)
+{
+	const bool draw = mouse.isDown(BUTTON_LEFT);
+
+	if (draw)
+	{
+		Coord coord;
+		coord.x = mouse.x;
+		coord.y = mouse.y;
+
+		if (m_draw)
+		{
+			const float dx = coord.x - m_lastCoord.x;
+			const float dy = coord.y - m_lastCoord.y;
+			const float ds = sqrtf(dx * dx + dy * dy);
+
+			if (ds > 0.f)
+			{
+				float distance = m_distance + ds;
+
+				while (distance >= m_step)
+				{
+					distance -= m_step;
+					m_lastCoord.x += dx / ds * m_step;
+					m_lastCoord.y += dy / ds * m_step;
+					m_coords.push_back(m_lastCoord);
+				}
+
+				const float dx = coord.x - m_lastCoord.x;
+				const float dy = coord.y - m_lastCoord.y;
+				const float ds = sqrtf(dx * dx + dy * dy);
+				m_distance = ds;
+			}
+		}
+		else
+		{
+			m_lastCoord = coord;
+			m_coords.push_back(m_lastCoord);
+		}
+	}
+	else
+	{
+	}
+
+	m_draw = draw;
+}
+
+void Effect_DrawPicture::draw(DrawableList & list)
+{
+	new (list) EffectDrawable(this);
+}
+
+void Effect_DrawPicture::draw()
+{
+	if (!m_coords.empty())
+	{
+		Sprite sprite(m_map.c_str());
+
+		const int sx = sprite.getWidth();
+		const int sy = sprite.getHeight();
+
+		gxPushMatrix();
+		{
+			gxTranslatef(-sx / 2.f * scale, -sy / 2.f * scale, 0.f);
+			gxColor4f(1.f, 1.f, 1.f, 1.f);
+
+			for (auto coord : m_coords)
+			{
+				sprite.drawEx(coord.x, coord.y, 0.f, scale, scale, false, FILTER_LINEAR);
+			}
+		}
+		gxPopMatrix();
+
+		m_coords.clear();
 	}
 }
 
