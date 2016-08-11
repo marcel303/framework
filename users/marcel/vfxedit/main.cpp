@@ -270,7 +270,8 @@ struct CommentRegion
 
 struct Sequence
 {
-	double bpm = 0.0;
+	double bpm;
+	int bpmDiv;
 
 	std::string name;
 
@@ -280,6 +281,7 @@ struct Sequence
 
 	Sequence()
 		: bpm(0.0)
+		, bpmDiv(4)
 	{
 	}
 
@@ -292,6 +294,7 @@ struct Sequence
 		p.OpenElement("sequence");
 		{
 			p.PushAttribute("bpm", bpm);
+			p.PushAttribute("bpm_div", bpmDiv);
 
 			for (EventMarker & eventMarker : eventMarkers)
 			{
@@ -347,7 +350,7 @@ struct Sequence
 
 		// automatic beat events
 
-		double timeStep = 60.0 / bpm * 4.0;
+		double timeStep = 60.0 / bpm * bpmDiv;
 
 		for (double time = 0.0; time < g_audioFile->m_duration; time += timeStep)
 		{
@@ -381,6 +384,7 @@ struct Sequence
 			for (XMLElement * sequenceXml = xmlDoc.FirstChildElement("sequence"); sequenceXml; sequenceXml = sequenceXml->NextSiblingElement("sequence"))
 			{
 				bpm = floatAttrib(sequenceXml, "bpm", 0);
+				bpmDiv = intAttrib(sequenceXml, "bpm_div", 4);
 
 				for (XMLElement * eventMarkerXml = sequenceXml->FirstChildElement("marker"); eventMarkerXml; eventMarkerXml = eventMarkerXml->NextSiblingElement("marker"))
 				{
@@ -874,8 +878,8 @@ int main(int argc, char * argv[])
 
 				// hack! automated beat output
 
-				const int beat1 = getFloorBeat(audioTime1) / 4;
-				const int beat2 = getFloorBeat(audioTime2) / 4;
+				const int beat1 = getFloorBeat(audioTime1) / g_sequence.bpmDiv;
+				const int beat2 = getFloorBeat(audioTime2) / g_sequence.bpmDiv;
 
 				if (beat1 != beat2)
 				{
@@ -1289,7 +1293,7 @@ int main(int argc, char * argv[])
 					const int sx = GFX_SX * SCALE;
 					const int sy = GFX_SY * SCALE;
 
-					g_audioFileSurface = new Surface(sx, sy);
+					g_audioFileSurface = new Surface(sx, sy, false);
 
 					pushSurface(g_audioFileSurface);
 					{
