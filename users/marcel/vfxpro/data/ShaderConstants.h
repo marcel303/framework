@@ -63,6 +63,7 @@ struct FsfxData
 	float _param2;
 	float _param3;
 	float _param4;
+	float _pcmVolume;
 };
 
 #if _SHADER_
@@ -77,6 +78,7 @@ layout (std140) uniform FsfxBlock
 #define param2 fsfxData._param2
 #define param3 fsfxData._param3
 #define param4 fsfxData._param4
+#define pcmVolume fsfxData._pcmVolume
 
 #endif
 

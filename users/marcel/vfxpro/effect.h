@@ -163,6 +163,10 @@ struct Effect_Rain : Effect
 	TweenFloat m_spawnLife;
 	TweenFloat m_spawnY;
 	TweenFloat m_bounce;
+	TweenFloat m_speedScaleX;
+	TweenFloat m_speedScaleY;
+	TweenFloat m_size1;
+	TweenFloat m_size2;
 
 	Effect_Rain(const char * name, const int numRainDrops)
 		: Effect(name)
@@ -174,7 +178,13 @@ struct Effect_Rain : Effect
 		, m_spawnLife(1.f)
 		, m_spawnY(0.f)
 		, m_bounce(1.f)
+		, m_size1(1.f)
+		, m_size2(1.f)
+		, m_speedScaleX(0.f)
+		, m_speedScaleY(0.f)
 	{
+		is2DAbsolute = true;
+
 		addVar("alpha", m_alpha);
 		addVar("gravity", m_gravity);
 		addVar("falloff", m_falloff);
@@ -182,6 +192,10 @@ struct Effect_Rain : Effect
 		addVar("spawn_life", m_spawnLife);
 		addVar("spawn_y", m_spawnY);
 		addVar("bounce", m_bounce);
+		addVar("size1", m_size1);
+		addVar("size2", m_size2);
+		addVar("speed_scale_x", m_speedScaleX);
+		addVar("speed_scale_y", m_speedScaleY);
 
 		m_particleSizes.resize(numRainDrops, true);
 	}
@@ -243,9 +257,19 @@ struct Effect_Rain : Effect
 
 			// size
 
-			const float size = m_particleSystem.life[i] * m_particleSystem.lifeRcp[i] * m_particleSizes[i];
+			const float life = m_particleSystem.life[i] * m_particleSystem.lifeRcp[i];
+			
+			float size = m_particleSizes[i];
+
+			size *= lerp((float)m_size2, (float)m_size1, life);
+
 			m_particleSystem.sx[i] = size * spriteSx;
-			m_particleSystem.sy[i] = size * spriteSy * m_particleSystem.vy[i] / 100.f;
+			m_particleSystem.sy[i] = size * spriteSy;
+
+			if (m_speedScaleX != 0.f)
+				m_particleSystem.sx[i] *= m_particleSystem.vx[i] * m_speedScaleX;
+			if (m_speedScaleY != 0.f)
+				m_particleSystem.sy[i] *= m_particleSystem.vy[i] * m_speedScaleY;
 
 			// check if the particle is dead
 
@@ -439,8 +463,10 @@ struct Effect_SpriteSystem : Effect
 
 struct Effect_Boxes : Effect
 {
-	struct Box
+	struct Box : TweenFloatCollection
 	{
+		std::string m_name;
+
 		TweenFloat m_tx;
 		TweenFloat m_ty;
 		TweenFloat m_tz;
@@ -455,138 +481,33 @@ struct Effect_Boxes : Effect
 
 		int m_axis;
 
-		bool tick(const float dt)
-		{
-			m_tx.tick(dt);
-			m_ty.tick(dt);
-			m_tz.tick(dt);
+		Box();
 
-			m_sx.tick(dt);
-			m_sy.tick(dt);
-			m_sz.tick(dt);
-
-			m_rx.tick(dt);
-			m_ry.tick(dt);
-			m_rz.tick(dt);
-
-			return true;
-		}
+		bool tick(const float dt);
 	};
 
-	std::list<Box> m_boxes;
+	std::list<Box*> m_boxes;
 
-	Effect_Boxes(const char * name)
-		: Effect(name)
-	{
-	}
+	Effect_Boxes(const char * name);
+	virtual ~Effect_Boxes() override;
 
 	Box * addBox(
+		const char * name,
 		const float tx, const float ty, const float tz,
 		const float sx, const float sy, const float sz,
-		const int axis)
-	{
-		m_boxes.push_back(Box());
+		const int axis);
+	Box * findBoxByName(const char * name);
 
-		Box & b = m_boxes.back();
+	//
 
-		b.m_tx = tx;
-		b.m_ty = ty;
-		b.m_tz = tz;
+	virtual TweenFloat * getVar(const char * name) override;
 
-		b.m_sx = sx;
-		b.m_sy = sy;
-		b.m_sz = sz;
+	//
 
-		b.m_axis = axis;
-
-		return &b;
-	}
-
-	virtual void tick(const float dt) override
-	{
-		for (auto i = m_boxes.begin(); i != m_boxes.end();)
-		{
-			Box & b = *i;
-
-			if (!b.tick(dt))
-			{
-				i = m_boxes.erase(i);
-			}
-			else
-			{
-				++i;
-			}
-		}
-	}
-
-	virtual void draw(DrawableList & list) override
-	{
-		new (list) EffectDrawable(this);
-	}
-
-	virtual void draw() override
-	{
-		Light lights[kMaxLights];
-
-		lights[0].setup(kLightType_Omni, 0.f, 0.f, 0.f, .25f, .5f, 1.f, config.midiGetValue(100, 1.f) * 5.f);
-		//lights[1].setup(kLightType_Omni, -1.f, 0.f, 0.f, 1.f, 1.f, .125f, config.midiGetValue(100, 1.f) * 5.f);
-
-		Shader shader("basic_lit");
-		setShader(shader);
-
-		ShaderBuffer buffer;
-		buffer.setData(lights, sizeof(lights));
-		shader.setBuffer("lightsBlock", buffer);
-
-		for (auto i = m_boxes.begin(); i != m_boxes.end(); ++i)
-		{
-			Box & b = *i;
-
-			setColor(colorWhite);
-
-			gxPushMatrix();
-			{
-				gxTranslatef(b.m_tx, b.m_ty, b.m_tz);
-
-				gxRotatef(b.m_rx * Calc::rad2deg, 1.f, 0.f, 0.f);
-				gxRotatef(b.m_ry * Calc::rad2deg, 0.f, 1.f, 0.f);
-				gxRotatef(b.m_rz * Calc::rad2deg, 0.f, 0.f, 1.f);
-
-				gxScalef(b.m_sx, b.m_sy, b.m_sz);
-
-				gxBegin(GL_QUADS);
-				{
-					gxNormal3f(0.f, 0.f, -1.f);
-					gxVertex3f(-1.f, -1.f, -1.f);
-					gxVertex3f(+1.f, -1.f, -1.f);
-					gxVertex3f(+1.f, +1.f, -1.f);
-					gxVertex3f(-1.f, +1.f, -1.f);
-
-					gxNormal3f(0.f, 0.f, +1.f);
-					gxVertex3f(-1.f, -1.f, +1.f);
-					gxVertex3f(+1.f, -1.f, +1.f);
-					gxVertex3f(+1.f, +1.f, +1.f);
-					gxVertex3f(-1.f, +1.f, +1.f);
-
-					gxNormal3f(-1.f, 0.f, 0.f);
-					gxVertex3f(-1.f, -1.f, -1.f);
-					gxVertex3f(-1.f, +1.f, -1.f);
-					gxVertex3f(-1.f, +1.f, +1.f);
-					gxVertex3f(-1.f, -1.f, +1.f);
-
-					gxNormal3f(+1.f, 0.f, 0.f);
-					gxVertex3f(+1.f, -1.f, -1.f);
-					gxVertex3f(+1.f, +1.f, -1.f);
-					gxVertex3f(+1.f, +1.f, +1.f);
-					gxVertex3f(+1.f, -1.f, +1.f);
-				}
-				gxEnd();
-			}
-			gxPopMatrix();
-		}
-
-		clearShader();
-	}
+	virtual void tick(const float dt) override;
+	virtual void draw(DrawableList & list) override;
+	virtual void draw() override;
+	virtual void handleSignal(const std::string & message) override;
 };
 
 //

@@ -722,12 +722,279 @@ void Effect_Fsfx::draw()
 	data._param2 = m_param2;
 	data._param3 = m_param3;
 	data._param4 = m_param4;
+	data._pcmVolume = g_pcmVolume;
 	buffer.setData(&data, sizeof(data));
 	shader.setBuffer("FsfxBlock", buffer);
 	shader.setTextureArray("textures", 4, m_textureArray, true, false);
 	g_currentSurface->postprocess(shader);
 
 	setBlend(BLEND_ADD);
+}
+
+//
+
+Effect_Boxes::Box::Box()
+{
+	addVar("x", m_tx);
+	addVar("y", m_ty);
+	addVar("z", m_tz);
+
+	addVar("sx", m_sx);
+	addVar("sy", m_sy);
+	addVar("sz", m_sz);
+
+	addVar("rx", m_rx);
+	addVar("ry", m_ry);
+	addVar("rz", m_rz);
+}
+
+bool Effect_Boxes::Box::tick(const float dt)
+{
+	TweenFloatCollection::tick(dt);
+
+	return true;
+}
+
+Effect_Boxes::Effect_Boxes(const char * name)
+	: Effect(name)
+{
+}
+
+Effect_Boxes::~Effect_Boxes()
+{
+	for (Box * box : m_boxes)
+		delete box;
+	m_boxes.clear();
+}
+
+Effect_Boxes::Box * Effect_Boxes::addBox(
+	const char * name,
+	const float tx, const float ty, const float tz,
+	const float sx, const float sy, const float sz,
+	const int axis)
+{
+	Box * b = new Box();
+
+	b->m_tx = tx;
+	b->m_ty = ty;
+	b->m_tz = tz;
+
+	b->m_sx = sx;
+	b->m_sy = sy;
+	b->m_sz = sz;
+
+	b->m_axis = axis;
+
+	m_boxes.push_back(b);
+
+	return b;
+}
+
+Effect_Boxes::Box * Effect_Boxes::findBoxByName(const char * name)
+{
+	for (auto b : m_boxes)
+		if (b->m_name == name)
+			return b;
+
+	return nullptr;
+}
+
+TweenFloat * Effect_Boxes::getVar(const char * name)
+{
+	TweenFloat * var = Effect::getVar(name);
+
+	if (var)
+		return var;
+
+	std::vector<std::string> parts;
+	splitString(name, parts, '.');
+
+	if (parts.size() == 2)
+	{
+		Box * box = findBoxByName(parts[0].c_str());
+
+		if (box)
+			return box->getVar(parts[1].c_str());
+		else
+			return nullptr;
+	}
+	else
+	{
+		return nullptr;
+	}
+}
+
+void Effect_Boxes::tick(const float dt)
+{
+	for (auto i = m_boxes.begin(); i != m_boxes.end();)
+	{
+		Box * b = *i;
+
+		if (!b->tick(dt))
+		{
+			delete b;
+			b = nullptr;
+
+			i = m_boxes.erase(i);
+		}
+		else
+		{
+			++i;
+		}
+	}
+}
+
+void Effect_Boxes::draw(DrawableList & list)
+{
+	new (list) EffectDrawable(this);
+}
+
+void Effect_Boxes::draw()
+{
+	gxPushMatrix();
+	{
+		Light lights[kMaxLights];
+
+		lights[0].setup(kLightType_Omni, 0.f, 0.f, 0.f, .25f, .5f, 1.f, config.midiGetValue(100, 1.f) * 5.f);
+		//lights[1].setup(kLightType_Omni, -1.f, 0.f, 0.f, 1.f, 1.f, .125f, config.midiGetValue(100, 1.f) * 5.f);
+
+		Shader shader("basic_lit");
+		setShader(shader);
+
+		ShaderBuffer buffer;
+		buffer.setData(lights, sizeof(lights));
+		shader.setBuffer("lightsBlock", buffer);
+
+		for (auto i = m_boxes.begin(); i != m_boxes.end(); ++i)
+		{
+			Box & b = **i;
+
+			setColor(colorWhite);
+
+			gxPushMatrix();
+			{
+				gxTranslatef(b.m_tx, b.m_ty, b.m_tz);
+
+				gxRotatef(b.m_rx * Calc::rad2deg, 1.f, 0.f, 0.f);
+				gxRotatef(b.m_ry * Calc::rad2deg, 0.f, 1.f, 0.f);
+				gxRotatef(b.m_rz * Calc::rad2deg, 0.f, 0.f, 1.f);
+
+				gxScalef(b.m_sx, b.m_sy, b.m_sz);
+
+				gxBegin(GL_QUADS);
+				{
+					gxNormal3f(0.f, 0.f, -1.f);
+					gxVertex3f(-1.f, -1.f, -1.f);
+					gxVertex3f(+1.f, -1.f, -1.f);
+					gxVertex3f(+1.f, +1.f, -1.f);
+					gxVertex3f(-1.f, +1.f, -1.f);
+
+					gxNormal3f(0.f, 0.f, +1.f);
+					gxVertex3f(-1.f, -1.f, +1.f);
+					gxVertex3f(+1.f, -1.f, +1.f);
+					gxVertex3f(+1.f, +1.f, +1.f);
+					gxVertex3f(-1.f, +1.f, +1.f);
+
+					gxNormal3f(-1.f, 0.f, 0.f);
+					gxVertex3f(-1.f, -1.f, -1.f);
+					gxVertex3f(-1.f, +1.f, -1.f);
+					gxVertex3f(-1.f, +1.f, +1.f);
+					gxVertex3f(-1.f, -1.f, +1.f);
+
+					gxNormal3f(+1.f, 0.f, 0.f);
+					gxVertex3f(+1.f, -1.f, -1.f);
+					gxVertex3f(+1.f, +1.f, -1.f);
+					gxVertex3f(+1.f, +1.f, +1.f);
+					gxVertex3f(+1.f, -1.f, +1.f);
+				}
+				gxEnd();
+			}
+			gxPopMatrix();
+		}
+
+		clearShader();
+	}
+	gxPopMatrix();
+}
+
+void Effect_Boxes::handleSignal(const std::string & message)
+{
+	if (String::StartsWith(message, "addbox"))
+	{
+		std::vector<std::string> args;
+		splitString(message, args, ',');
+
+		if (args.size() < 2)
+		{
+			logError("missing parameters! %s", message.c_str());
+		}
+		else
+		{
+			Dictionary d;
+			d.parse(args[1]);
+
+			Box * box = addBox(
+				d.getString("name", "").c_str(),
+				d.getFloat("x", 0.f),
+				d.getFloat("y", 0.f),
+				d.getFloat("z", 0.f),
+				d.getFloat("sx", 1.f),
+				d.getFloat("sy", 1.f),
+				d.getFloat("sz", 1.f),
+				d.getInt("axis", 0.f));
+		}
+	}
+	if (String::StartsWith(message, "transform"))
+	{
+		std::vector<std::string> args;
+		splitString(message, args, ',');
+
+		if (args.size() < 2)
+		{
+			logError("missing parameters! %s", message.c_str());
+		}
+		else
+		{
+			Dictionary d;
+			d.parse(args[1]);
+
+			const std::string name = d.getString("name", "");
+
+			Box * box = findBoxByName(name.c_str());
+
+			if (!box)
+			{
+				logError("box not found: %s", name.c_str());
+			}
+			else
+			{
+				const float time = d.getFloat("time", 0.f);
+				const EaseType easeType = kEaseType_Linear;
+				const float easeParam = 0.f;
+
+				if (d.contains("x"))
+					box->m_tx.to(d.getFloat("x", 0.f), time, easeType, easeParam);
+				if (d.contains("y"))
+					box->m_ty.to(d.getFloat("y", 0.f), time, easeType, easeParam);
+				if (d.contains("z"))
+					box->m_tz.to(d.getFloat("z", 0.f), time, easeType, easeParam);
+
+				if (d.contains("sx"))
+					box->m_sx.to(d.getFloat("sx", 0.f), time, easeType, easeParam);
+				if (d.contains("sy"))
+					box->m_sy.to(d.getFloat("sy", 0.f), time, easeType, easeParam);
+				if (d.contains("sz"))
+					box->m_sz.to(d.getFloat("sz", 0.f), time, easeType, easeParam);
+
+				if (d.contains("rx"))
+					box->m_rx.to(d.getFloat("rx", 0.f), time, easeType, easeParam);
+				if (d.contains("ry"))
+					box->m_ry.to(d.getFloat("ry", 0.f), time, easeType, easeParam);
+				if (d.contains("rz"))
+					box->m_rz.to(d.getFloat("rz", 0.f), time, easeType, easeParam);
+			}
+		}
+	}
 }
 
 //
@@ -1593,7 +1860,7 @@ void Effect_Bezier::draw()
 			{
 				const Color color = baseColor.mulRGBA(s.color);
 
-				gxColor4f(color.r, color.g, color.b, color.a * a);
+				gxColor4f(color.r, color.g, color.b, color.a);
 
 				const float end = nodes.size() * l;
 

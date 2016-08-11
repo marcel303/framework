@@ -65,7 +65,11 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 
 	Effect * effect = nullptr;
 
-	if (type == "fsfx")
+	if (type == "boxes")
+	{
+		effect = new Effect_Boxes(m_name.c_str());
+	}
+	else if (type == "fsfx")
 	{
 		const std::string shader = stringAttrib(xmlEffect, "shader", "");
 		const std::string imageFiles = stringAttrib(xmlEffect, "images", "");
