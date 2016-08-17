@@ -915,6 +915,10 @@ int main(int argc, char * argv[])
 
 				if (doFileDialog("ogg", filename))
 				{
+					const bool wantsAudioPlayback = g_wantsAudioPlayback;
+
+					//
+
 					clearAudio();
 
 					clearSequence();
@@ -935,6 +939,10 @@ int main(int argc, char * argv[])
 
 						sendEvent("/scene_reload", 0);
 					}
+
+					//
+
+					g_wantsAudioPlayback = wantsAudioPlayback;
 				}
 			}
 
