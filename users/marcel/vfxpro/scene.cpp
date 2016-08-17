@@ -234,6 +234,14 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 
 		effect = new Effect_Smoke(m_name.c_str(), layer);
 	}
+	else if (type == "beams")
+	{
+		effect = new Effect_Beams(m_name.c_str());
+	}
+	else if (type == "fxaa")
+	{
+		effect = new Effect_FXAA(m_name.c_str());
+	}
 	else
 	{
 		logError("unknown effect type: %s", type.c_str());

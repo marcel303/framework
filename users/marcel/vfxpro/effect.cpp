@@ -743,10 +743,12 @@ Effect_Rain::Effect_Rain(const char * name, const int numRainDrops)
 	, m_spawnLife(1.f)
 	, m_spawnY(0.f)
 	, m_bounce(1.f)
-	, m_size1(1.f)
-	, m_size2(1.f)
+	, m_sizeX(1.f)
+	, m_sizeY(1.f)
 	, m_speedScaleX(0.f)
 	, m_speedScaleY(0.f)
+	, m_size1(1.f)
+	, m_size2(1.f)
 {
 	is2DAbsolute = true;
 
@@ -757,10 +759,12 @@ Effect_Rain::Effect_Rain(const char * name, const int numRainDrops)
 	addVar("spawn_life", m_spawnLife);
 	addVar("spawn_y", m_spawnY);
 	addVar("bounce", m_bounce);
-	addVar("size1", m_size1);
-	addVar("size2", m_size2);
+	addVar("size_x", m_sizeX);
+	addVar("size_y", m_sizeY);
 	addVar("speed_scale_x", m_speedScaleX);
 	addVar("speed_scale_y", m_speedScaleY);
+	addVar("size1", m_size1);
+	addVar("size2", m_size2);
 
 	m_particleSizes.resize(numRainDrops, true);
 }
@@ -793,7 +797,8 @@ void Effect_Rain::tick(const float dt)
 		m_particleSystem.sx[id] = 1.f;
 		m_particleSystem.sy[id] = 1.f;
 
-		m_particleSizes[id] = random(.1f, 1.f) * .25f;
+		//m_particleSizes[id] = random(.1f, 1.f) * .25f;
+		m_particleSizes[id] = 1.f;
 	}
 
 	// update particles
@@ -828,8 +833,8 @@ void Effect_Rain::tick(const float dt)
 
 		size *= lerp((float)m_size2, (float)m_size1, life);
 
-		m_particleSystem.sx[i] = size * spriteSx;
-		m_particleSystem.sy[i] = size * spriteSy;
+		m_particleSystem.sx[i] = size * spriteSx * m_sizeX;
+		m_particleSystem.sy[i] = size * spriteSy * m_sizeY;
 
 		if (m_speedScaleX != 0.f)
 			m_particleSystem.sx[i] *= m_particleSystem.vx[i] * m_speedScaleX;
@@ -2107,8 +2112,6 @@ Effect_Bars::Effect_Bars(const char * name)
 #if 1
 	m_colorBarColors.push_back(Color::fromHex("000000"));
 	m_colorBarColors.push_back(Color::fromHex("ffffff"));
-	//m_colorBarColors.push_back(Color::fromHex("000000"));
-	//m_colorBarColors.push_back(Color::fromHex("808080"));
 	m_colorBarColors.push_back(Color::fromHex("9c9c9c"));
 	m_colorBarColors.push_back(Color::fromHex("1e1e1e"));
 	m_colorBarColors.push_back(Color::fromHex("575556"));
@@ -2311,8 +2314,11 @@ void Effect_Text::draw()
 
 Effect_Bezier::Effect_Bezier(const char * name, const char * colors)
 	: Effect(name)
+	, m_alpha(1.f)
 {
 	is2DAbsolute = true;
+
+	addVar("alpha", m_alpha);
 
 	//
 
@@ -2397,6 +2403,9 @@ static float mixValue(const float t1, const float t2, const float o, const float
 
 void Effect_Bezier::draw()
 {
+	if (m_alpha <= 0.f)
+		return;
+
 	for (auto & s : segments)
 	{
 		const float a = s.time * s.timeRcp;
@@ -2406,6 +2415,7 @@ void Effect_Bezier::draw()
 
 		Color baseColor;
 		colorCurve.sample(t, baseColor);
+		baseColor.a *= m_alpha;
 
 		std::vector<BezierNode> nodes;
 		nodes.resize(s.nodes.size());
@@ -2803,4 +2813,173 @@ void Effect_Smoke::captureSurface()
 	}
 
 	applyBlendMode();
+}
+
+//
+
+Effect_Beams::Effect_Beams(const char * name)
+	: Effect(name)
+	, m_alpha(1.f)
+	, m_beamTime(0.f)
+	, m_beamTimer(0.f)
+	, m_beamTimerRcp(0.f)
+	, m_beamSpeed(1.f)
+	, m_beamSize1(0.f)
+	, m_beamSize2(100.f)
+	, m_beamOffset(0.f)
+{
+	is2DAbsolute = true;
+
+	addVar("alpha", m_alpha);
+	addVar("beam_time", m_beamTime);
+	addVar("beam_speed", m_beamSpeed);
+	addVar("beam_size1", m_beamSize1);
+	addVar("beam_size2", m_beamSize2);
+	addVar("beam_offset", m_beamOffset);
+}
+
+Effect_Beams::~Effect_Beams()
+{
+}
+
+void Effect_Beams::tick(const float dt)
+{
+	m_beamTimer = m_beamTimer - dt;
+	if (m_beamTimer < 0.f)
+		m_beamTimer = 0.f;
+
+	if (m_beamTimer == 0.f)
+	{
+		if (m_beamTimerRcp != 0.f)
+		{
+			// add a beam
+			Beam b;
+			const float as = Calc::mPI * 3/4;
+			b.angle = random(-as/2, +as/2);
+			b.thickness = random(2.f, 15.f);
+			b.offsetX = random(-m_beamOffset, +m_beamOffset);
+			b.offsetY = random(-m_beamOffset, +m_beamOffset);
+			b.length2Speed = random(.8f, 1.f);
+			m_beams.push_back(b);
+		}
+
+		if (m_beamTime > 0.f)
+		{
+			// next beam
+			const float duration = lerp(m_beamTime/2.f, (float)m_beamTime, random(0.f, 1.f));
+			m_beamTimer = duration;
+			m_beamTimerRcp = 1.f / duration;
+		}
+		else
+		{
+			m_beamTimer = 0.f;
+			m_beamTimerRcp = 0.f;
+		}
+	}
+
+	for (auto & b : m_beams)
+	{
+		b.length += dt * m_beamSpeed * b.length1Speed;
+		if (b.length > 1.f)
+			b.length = 1.f;
+
+		if (m_beamTimerRcp == 0.f)
+		{
+			b.length2 += dt * m_beamSpeed * b.length2Speed;
+			if (b.length2 > 1.f)
+				b.length2 = 1.f;
+		}
+	}
+}
+
+void Effect_Beams::draw(DrawableList & list)
+{
+	new (list) EffectDrawable(this);
+}
+
+void Effect_Beams::draw()
+{
+	if (m_alpha <= 0.f)
+		return;
+
+	const float size1 = m_beamSize1;
+	const float size2 = m_beamSize2;
+
+	setColorf(1, 1, 1, m_alpha);
+
+	for (auto & b : m_beams)
+	{
+		if (b.length2 >= b.length)
+			continue;
+
+		const float length1 = lerp(size1, size2, b.length2);
+		const float length2 = lerp(size1, size2, b.length);
+
+		for (int i = -1; i <= +1; i += 2)
+		{
+			gxPushMatrix();
+			{
+				gxScalef(i, 1.f, 1.f);
+				gxTranslatef(b.offsetX, b.offsetY, 0.f);
+				gxRotatef(Calc::RadToDeg(b.angle), 0.f, 0.f, 1.f);
+				drawRect(-b.thickness/2.f, length1, +b.thickness/2.f, length2);
+			}
+			gxPopMatrix();
+		}
+	}
+}
+
+void Effect_Beams::handleSignal(const std::string & name)
+{
+	if (String::StartsWith(name, "addline"))
+	{
+		std::vector<std::string> args;
+		splitString(name, args, ',');
+
+		if (args.size() < 2)
+		{
+			logError("missing segment parameters! %s", name.c_str());
+		}
+		else
+		{
+			Dictionary d;
+			d.parse(args[1]);
+
+			Beam b;
+			b.angle = d.getFloat("angle", 0.f);
+			b.thickness = d.getFloat("thickness", 1.f);
+			b.length1Speed = d.getFloat("speed1", 1.f);
+			b.length2Speed = d.getFloat("speed2", 1.f);
+			m_beams.push_back(b);
+		}
+	}
+}
+
+//
+
+Effect_FXAA::Effect_FXAA(const char * name)
+	: Effect(name)
+{
+}
+
+void Effect_FXAA::tick(const float dt)
+{
+}
+
+void Effect_FXAA::draw(DrawableList & list)
+{
+	new (list) EffectDrawable(this);
+}
+
+void Effect_FXAA::draw()
+{
+	setBlend(BLEND_OPAQUE);
+
+	Shader shader("fxaa");
+	setShader(shader);
+	shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, true);
+	shader.setImmediate("inverseVP", 1.f / (g_currentSurface->getWidth() / framework.minification), 1.f / (g_currentSurface->getHeight() / framework.minification));
+	g_currentSurface->postprocess(shader);
+
+	setBlend(BLEND_ADD);
 }

@@ -163,6 +163,8 @@ struct Effect_Rain : Effect
 	TweenFloat m_spawnLife;
 	TweenFloat m_spawnY;
 	TweenFloat m_bounce;
+	TweenFloat m_sizeX;
+	TweenFloat m_sizeY;
 	TweenFloat m_speedScaleX;
 	TweenFloat m_speedScaleY;
 	TweenFloat m_size1;
@@ -654,6 +656,8 @@ struct Effect_Bezier : Effect
 		std::vector<Node> nodes;
 	};
 
+	TweenFloat m_alpha;
+
 	std::vector<Segment> segments;
 
 	ColorCurve colorCurve;
@@ -694,4 +698,60 @@ struct Effect_Smoke : Effect
 	virtual void handleSignal(const std::string & name) override;
 
 	void captureSurface();
+};
+
+//
+
+struct Effect_Beams : Effect
+{
+	struct Beam
+	{
+		Beam()
+		{
+			memset(this, 0, sizeof(*this));
+
+			length1Speed = 1.f;
+			length2Speed = 1.f;
+		}
+
+		float angle;
+		float length;
+		float length2;
+		float length1Speed;
+		float length2Speed;
+		float thickness;
+		float offsetX;
+		float offsetY;
+	};
+
+	TweenFloat m_alpha;
+	TweenFloat m_beamTime;
+	float m_beamTimer;
+	float m_beamTimerRcp;
+	TweenFloat m_beamSpeed;
+	TweenFloat m_beamSize1;
+	TweenFloat m_beamSize2;
+	TweenFloat m_beamOffset;
+
+	std::vector<Beam> m_beams;
+
+	Effect_Beams(const char * name);
+	virtual ~Effect_Beams();
+
+	virtual void tick(const float dt) override;
+	virtual void draw(DrawableList & list) override;
+	virtual void draw() override;
+
+	virtual void handleSignal(const std::string & name) override;
+};
+
+//
+
+struct Effect_FXAA : Effect
+{
+	Effect_FXAA(const char * name);
+
+	virtual void tick(const float dt) override;
+	virtual void draw(DrawableList & list) override;
+	virtual void draw() override;
 };
