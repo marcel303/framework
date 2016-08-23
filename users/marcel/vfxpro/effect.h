@@ -32,6 +32,7 @@ extern Config config;
 extern float g_pcmVolume;
 extern GLuint g_pcmTexture;
 extern GLuint g_fftTexture;
+extern GLuint g_fftTextureWithFade;
 
 extern bool g_isReplay;
 
@@ -325,9 +326,11 @@ struct Effect_Picture : Effect
 {
 	TweenFloat m_alpha;
 	std::string m_filename;
+	std::string m_filename2;
+	std::string m_shader;
 	bool m_centered;
 
-	Effect_Picture(const char * name, const char * filename, bool centered);
+	Effect_Picture(const char * name, const char * filename, const char * filename2, const char * shader, bool centered);
 
 	virtual void tick(const float dt) override;
 	virtual void draw(DrawableList & list) override;
@@ -750,6 +753,49 @@ struct Effect_Beams : Effect
 struct Effect_FXAA : Effect
 {
 	Effect_FXAA(const char * name);
+
+	virtual void tick(const float dt) override;
+	virtual void draw(DrawableList & list) override;
+	virtual void draw() override;
+};
+
+//
+
+struct Effect_Fireworks : Effect
+{
+	const static int PS = 20000;
+
+	enum PT
+	{
+		kPT_Root,
+		kPT_Child1,
+		kPT_Child2,
+	};
+
+	struct P
+	{
+		float x;
+		float y;
+		float oldX;
+		float oldY;
+		float vx;
+		float vy;
+		float life;
+		float lifeRcp;
+		int type;
+		Color color;
+	};
+
+	P ps[PS];
+
+	float spawnValue;
+	TweenFloat spawnRate;
+
+	int nextParticleIndex;
+
+	Effect_Fireworks(const char * name);
+
+	P * nextParticle();
 
 	virtual void tick(const float dt) override;
 	virtual void draw(DrawableList & list) override;

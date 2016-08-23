@@ -236,6 +236,7 @@ void Effect::setTextures(Shader & shader)
 	shader.setTexture("colormap_clamp", 1, g_currentSurface->getTexture(), true, false);
 	shader.setTexture("pcm", 2, g_pcmTexture, true, false);
 	shader.setTexture("fft", 3, g_fftTexture, true, false);
+	shader.setTexture("fft_faded", 4, g_fftTextureWithFade, true, false);
 }
 
 void Effect::applyBlendMode() const
@@ -725,7 +726,7 @@ void Effect_Fsfx::draw()
 	data._pcmVolume = g_pcmVolume;
 	buffer.setData(&data, sizeof(data));
 	shader.setBuffer("FsfxBlock", buffer);
-	shader.setTextureArray("textures", 4, m_textureArray, true, false);
+	shader.setTextureArray("textures", 5, m_textureArray, true, false);
 	g_currentSurface->postprocess(shader);
 
 	setBlend(BLEND_ADD);
@@ -1249,7 +1250,7 @@ void Effect_Boxes::handleSignal(const std::string & message)
 
 //
 
-Effect_Picture::Effect_Picture(const char * name, const char * filename, bool centered)
+Effect_Picture::Effect_Picture(const char * name, const char * filename, const char * filename2, const char * shader, bool centered)
 	: Effect(name)
 	, m_alpha(1.f)
 	, m_centered(true)
@@ -1259,6 +1260,8 @@ Effect_Picture::Effect_Picture(const char * name, const char * filename, bool ce
 	addVar("alpha", m_alpha);
 
 	m_filename = filename;
+	m_filename2 = filename2;
+	m_shader = shader;
 	m_centered = centered;
 }
 
@@ -1275,6 +1278,19 @@ void Effect_Picture::draw()
 {
 	if (m_alpha <= 0.f)
 		return;
+
+	Shader shader;
+
+	if (!m_shader.empty())
+	{
+		shader = Shader(m_shader.c_str());
+		setShader(shader);
+
+		shader.setTexture("image", 0, Sprite(m_filename.c_str()).getTexture(), true, true);
+
+		if (!m_filename2.empty())
+			shader.setTexture("image2", 1, Sprite(m_filename2.c_str()).getTexture(), true, true);	
+	}
 
 	gxPushMatrix();
 	{
@@ -1294,6 +1310,9 @@ void Effect_Picture::draw()
 		sprite.drawEx(0.f, 0.f, 0.f, 1.f, 1.f, false, FILTER_LINEAR);
 	}
 	gxPopMatrix();
+
+	if (!m_shader.empty())
+		clearShader();
 }
 
 //
@@ -2856,7 +2875,7 @@ void Effect_Beams::tick(const float dt)
 			Beam b;
 			const float as = Calc::mPI * 3/4;
 			b.angle = random(-as/2, +as/2);
-			b.thickness = random(2.f, 15.f);
+			b.thickness = random(2.f, 3.f);
 			b.offsetX = random(-m_beamOffset, +m_beamOffset);
 			b.offsetY = random(-m_beamOffset, +m_beamOffset);
 			b.length2Speed = random(.8f, 1.f);
@@ -2982,4 +3001,175 @@ void Effect_FXAA::draw()
 	g_currentSurface->postprocess(shader);
 
 	setBlend(BLEND_ADD);
+}
+
+//
+
+Effect_Fireworks::Effect_Fireworks(const char * name)
+	: Effect(name)
+	, spawnValue(0.f)
+	, spawnRate(1.f)
+	, nextParticleIndex(0)
+{
+	is2DAbsolute = true;
+
+	addVar("spawn_rate", spawnRate);
+
+	memset(ps, 0, sizeof(ps));
+}
+
+Effect_Fireworks::P * Effect_Fireworks::nextParticle()
+{
+	P * p = &ps[nextParticleIndex];
+
+	nextParticleIndex = (nextParticleIndex + 1) % PS;
+
+	return p;
+}
+
+void Effect_Fireworks::tick(const float dt)
+{
+	if (spawnRate == 0.f)
+	{
+		spawnValue = 0.f;
+	}
+	else
+	{
+		spawnValue += dt;
+		
+		const float spawnInterval = 1.f / spawnRate;
+
+		while (spawnValue >= spawnInterval)
+		{
+			spawnValue -= spawnInterval;
+
+			P & p = *nextParticle();
+
+			const float h = pow(random(0.f, 1.f), .5f);
+			const float r = Calc::DegToRad(35);
+			const float a = Calc::m2PI*3/4 + random(-r/2, +r/2);
+			const float v = lerp(160.f, 700.f, h);
+
+			p.type = kPT_Root;
+			p.x = GFX_SX/2.f + random(-80.f, +80.f);
+			p.y = GFX_SY;
+			p.oldX = p.x;
+			p.oldY = p.y;
+			p.life = 1.f;
+			p.lifeRcp = 1.f / p.life;
+			p.vx = std::cos(a) * v;
+			p.vy = std::sin(a) * v;
+			p.color = Color::fromHSL(.5f + random(0.f, .3f), .5f, .5f);
+		}
+	}
+
+	for (int i = 0; i < PS; ++i)
+	{
+		P & p = ps[i];
+
+		if (p.life > 0.f)
+		{
+			p.life -= dt;
+
+			p.oldX = p.x;
+			p.oldY = p.y;
+
+			p.x += p.vx * dt;
+			p.y += p.vy * dt;
+
+			p.vy += 40.f * dt;
+
+			if (p.life <= 0.f)
+			{
+				if (p.type == kPT_Root)
+				{
+					for (int i = 0; i < 200; ++i)
+					{
+						P & pc = *nextParticle();
+
+						const float a = random(0.f, Calc::m2PI);
+						const float v = random(60.f, 80.f);
+
+						const float pv = .05f;
+
+						pc.type = kPT_Child1;
+						pc.x = p.x;
+						pc.y = p.y;
+						pc.oldX = pc.x;
+						pc.oldY = pc.y;
+						pc.life = 2.f;
+						pc.lifeRcp = 1.f / pc.life;
+						pc.vx = std::cos(a) * v + p.vx * pv;
+						pc.vy = std::sin(a) * v + p.vy * pv;
+						pc.color = p.color;
+
+						P & pm = *nextParticle();
+						pm = pc;
+						pm.vx *= -1.f;
+					}
+				}
+
+				if (p.type == kPT_Child1)
+				{
+					if ((rand() % 20) == 0)
+					{
+						for (int i = 0; i < 10; ++i)
+						{
+							P & pc = *nextParticle();
+
+							const float a = random(0.f, Calc::m2PI);
+							const float v = random(16.f, 26.f);
+
+							const float pv = 0.f;
+
+							pc.type = kPT_Child2;
+							pc.x = p.x;
+							pc.y = p.y;
+							pc.oldX = pc.x;
+							pc.oldY = pc.y;
+							pc.life = 1.f;
+							pc.lifeRcp = 1.f / pc.life;
+							pc.vx = std::cos(a) * v;
+							pc.vy = std::sin(a) * v - 10.f;
+							pc.color = p.color;
+
+							P & pm = *nextParticle();
+							pm = pc;
+							pm.vx *= -1.f;
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+void Effect_Fireworks::draw(DrawableList & list)
+{
+	new (list) EffectDrawable(this);
+}
+
+void Effect_Fireworks::draw()
+{
+	glEnable(GL_LINE_SMOOTH);
+	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+
+	gxBegin(GL_LINES);
+	{
+		for (int i = 0; i < PS; ++i)
+		{
+			const P & p = ps[i];
+
+			if (p.life != 0.f)
+			{
+				gxColor4f(p.color.r, p.color.g, p.color.b, p.life * p.lifeRcp);
+
+				gxVertex2f(+p.oldX, p.oldY);
+				gxVertex2f(+p.x,    p.y);
+			}
+		}
+	}
+	gxEnd();
+
+	glDisable(GL_LINE_SMOOTH);
 }

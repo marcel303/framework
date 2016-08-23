@@ -65,6 +65,7 @@ float g_prevSceneTimeRcp = 0.f;
 float g_pcmVolume = 0.f;
 GLuint g_pcmTexture = 0;
 GLuint g_fftTexture = 0;
+GLuint g_fftTextureWithFade = 0;
 
 void nextScene(const char * filename)
 {
@@ -707,8 +708,24 @@ struct FileInfo
 
 static std::vector<FileInfo> s_fileInfos;
 
+#ifdef WIN32
+static HANDLE s_fileWatcher = INVALID_HANDLE_VALUE;
+#endif
+
 static void initFileMonitor()
 {
+	s_fileInfos.clear();
+
+#ifdef WIN32
+	if (s_fileWatcher != INVALID_HANDLE_VALUE)
+	{
+		BOOL result = FindCloseChangeNotification(s_fileWatcher);
+		Assert(result);
+
+		s_fileWatcher = INVALID_HANDLE_VALUE;
+	}
+#endif
+
 	std::vector<std::string> files = listFiles(".", true);
 
 	for (auto & file : files)
@@ -723,7 +740,7 @@ static void initFileMonitor()
 				fi.filename = file;
 				fi.time = s.st_mtime;
 
-				if (String::EndsWith(file, ".ps") || String::EndsWith(file, ".xml"))
+				if (String::EndsWith(file, ".ps") || String::EndsWith(file, ".xml") || String::EndsWith(file, ".png") || String::EndsWith(file, ".jpg"))
 					s_fileInfos.push_back(fi);
 			}
 
@@ -731,15 +748,37 @@ static void initFileMonitor()
 			f = 0;
 		}
 	}
+
+#if defined(WIN32) && 1
+	Assert(s_fileWatcher == INVALID_HANDLE_VALUE);
+	s_fileWatcher = FindFirstChangeNotificationA(".", TRUE, FILE_NOTIFY_CHANGE_LAST_WRITE);
+	Assert(s_fileWatcher != INVALID_HANDLE_VALUE);
+	if (s_fileWatcher == INVALID_HANDLE_VALUE)
+		logError("failed to find first change notification");
+#endif
 }
 
 static void tickFileMonitor()
 {
+#if defined(WIN32)
+	if (s_fileWatcher != INVALID_HANDLE_VALUE)
+	{
+		if (WaitForSingleObject(s_fileWatcher, 0) != WAIT_OBJECT_0)
+		{
+			return;
+		}
+
+		Sleep(100);
+	}
+#endif
+
 	for (auto & fi: s_fileInfos)
 	{
 		FILE * f = fopen(fi.filename.c_str(), "rb");
 		if (f)
 		{
+			bool changed = false;
+
 			struct _stat s;
 			if (_fstat(fileno(f), &s) == 0)
 			{
@@ -751,14 +790,32 @@ static void tickFileMonitor()
 
 					fi.time = s.st_mtime;
 
-					handleFileChange(fi.filename);
+					changed = true;
 				}
 			}
 
 			fclose(f);
 			f = 0;
+
+			if (changed)
+			{
+				handleFileChange(fi.filename);
+			}
 		}
 	}
+
+#ifdef WIN32
+	if (s_fileWatcher != INVALID_HANDLE_VALUE)
+	{
+		BOOL result = FindNextChangeNotification(s_fileWatcher);
+		Assert(result);
+
+		if (!result)
+		{
+			logError("failed to watch for next file change notification");
+		}
+	}
+#endif
 }
 
 #else
@@ -1091,8 +1148,6 @@ int main(int argc, char * argv[])
 	framework.filedrop = true;
 	framework.actionHandler = handleAction;
 
-	//framework.highPrecisionRT = true;
-
 	if (framework.init(0, 0, GFX_SX * GFX_SCALE, GFX_SY * GFX_SCALE))
 	{
 	#if !defined(DEBUG)
@@ -1100,6 +1155,15 @@ int main(int argc, char * argv[])
 		if (framework.fullscreen)
 			SDL_ShowCursor(0);
 	#endif
+
+		Assert(g_pcmTexture == 0);
+		glGenTextures(1, &g_pcmTexture);
+
+		Assert(g_fftTexture == 0);
+		glGenTextures(1, &g_fftTexture);
+		
+		Assert(g_fftTextureWithFade == 0);
+		glGenTextures(1, &g_fftTextureWithFade);
 
 		std::list<TimeDilationEffect> timeDilationEffects;
 
@@ -1119,13 +1183,26 @@ int main(int argc, char * argv[])
 		g_prevScene = new Scene();
 
 		g_scene = new Scene();
+
+	#if defined(DEBUG) || 1
 		//g_scene->load("healer/scene.xml");
 		//g_scene->load("scene.xml");
-		g_scene->load("tracks/intro.scene.xml");
-		//g_scene->load("tracks/healer.scene.xml");
-		//g_scene->load("tracks/o2.scene.xml");
-		//g_scene->load("tracks/heroes.scene.xml");
+		for (int i = 0; i < 1000000 * 0 + 0; ++i)
+		{
+			const int c1 = GetAllocState().allocationCount;
+			g_scene->load("tracks/intro.scene.xml");
+			delete g_scene;
+			g_scene = new Scene();
+			const int c2 = GetAllocState().allocationCount;
+		}
+		//g_scene->load("tracks/Healer.scene.xml");
+		//g_scene->load("tracks/Oxygen.scene.xml");
+		//g_scene->load("tracks/Heroes.scene.xml");
 		//g_scene->load("tracks/cesitest.scene.xml");
+		//g_scene->load("tracks/ElevateLove.scene.xml");
+		//g_scene->load("tracks/Sarayani.scene.xml");
+		g_scene->load("tracks/ChangeItAll.scene.xml");
+	#endif
 
 	#if DEMODATA
 		Effect_Cloth cloth("cloth");
@@ -1191,7 +1268,11 @@ int main(int argc, char * argv[])
 
 			static bool doTickFileMonitor = true;
 			if (keyboard.wentDown(SDLK_f))
+			{
 				doTickFileMonitor = !doTickFileMonitor;
+				if (doTickFileMonitor)
+					initFileMonitor();
+			}
 			if (doTickFileMonitor)
 				tickFileMonitor();
 
@@ -1617,8 +1698,6 @@ int main(int argc, char * argv[])
 
 			// todo : convert PCM data to shader input texture
 
-			Assert(g_pcmTexture == 0);
-			glGenTextures(1, &g_pcmTexture);
 			glBindTexture(GL_TEXTURE_2D, g_pcmTexture);
 			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, numSamplesThisFrame, 1, 0, GL_RED, GL_FLOAT, samplesThisFrame);
@@ -1631,10 +1710,9 @@ int main(int argc, char * argv[])
 
 			// todo : convert FFT data to shader input texture
 
-			glGenTextures(1, &g_fftTexture);
 			glBindTexture(GL_TEXTURE_2D, g_fftTexture);
 			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-			 float powerValues[kFFTComplexSize];
+			float powerValues[kFFTComplexSize];
 			for (int i = 0; i < kFFTComplexSize; ++i)
 				powerValues[i] = fftPowerValue(i);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, kFFTComplexSize, 1, 0, GL_RED, GL_FLOAT, powerValues);
@@ -1644,6 +1722,22 @@ int main(int argc, char * argv[])
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			glBindTexture(GL_TEXTURE_2D, 0);
 			checkErrorGL();
+
+			glBindTexture(GL_TEXTURE_2D, g_fftTextureWithFade);
+			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+			static float powerValuesWithFade[kFFTComplexSize] = { };
+			const float fftFadeA = std::pow(.5f, dt);
+			for (int i = 0; i < kFFTComplexSize; ++i)
+				powerValuesWithFade[i] = std::max(powerValuesWithFade[i] * fftFadeA, powerValues[i]);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, kFFTComplexSize, 1, 0, GL_RED, GL_FLOAT, powerValuesWithFade);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glBindTexture(GL_TEXTURE_2D, 0);
+			checkErrorGL();
+
+			//
 
 			DrawableList prevDrawableList;
 			g_prevScene->draw(prevDrawableList);
@@ -2204,14 +2298,6 @@ int main(int argc, char * argv[])
 				}
 			#endif
 
-				// fixme : remove
-
-			#if ENABLE_REALTIME_EDITING
-				setFont("calibri.ttf");
-				setColor(colorWhite);
-				drawText(5, 5, 24, +1.f, +1.f, "file monitor: %s", doTickFileMonitor ? "enabled" : "disabled");
-			#endif
-
 			#if ENABLE_DEBUG_PCMTEX
 				setBlend(BLEND_ADD);
 				setColor(colorWhite);
@@ -2263,16 +2349,28 @@ int main(int argc, char * argv[])
 			#endif
 
 			#if ENABLE_DEBUG_INFOS && 1
-				setFont("VeraMono.ttf");
-				setColor(colorWhite);
-				drawText(5, 5, 24, +1, +1, "LeapMotion connected: %d, hasFocus: %d", (int)leapController.isConnected(), (int)leapController.hasFocus());
-
-				if (leapController.isConnected() && leapController.hasFocus())
 				{
-					drawText(5, 35, 24, +1, +1, "LeapMotion palm position: (%03d, %03d, %03d)",
-						(int)g_leapState.palmX,
-						(int)g_leapState.palmY,
-						(int)g_leapState.palmZ);
+					setFont("VeraMono.ttf");
+					setColor(colorWhite);
+
+					int y = 5;
+
+				#if ENABLE_REALTIME_EDITING
+					drawText(5, y, 24, +1.f, +1.f, "FileMonitor: %s", doTickFileMonitor ? "enabled" : "disabled");
+					y += 30;
+				#endif
+
+					drawText(5, y, 24, +1, +1, "LeapMotion connected: %d, hasFocus: %d", (int)leapController.isConnected(), (int)leapController.hasFocus());
+					y += 30;
+
+					if (leapController.isConnected() && leapController.hasFocus())
+					{
+						drawText(5, y, 24, +1, +1, "LeapMotion palm position: (%03d, %03d, %03d)",
+							(int)g_leapState.palmX,
+							(int)g_leapState.palmY,
+							(int)g_leapState.palmZ);
+						y += 30;
+					}
 				}
 			#endif
 
@@ -2352,14 +2450,6 @@ int main(int argc, char * argv[])
 
 			//
 
-			glDeleteTextures(1, &g_fftTexture);
-			g_fftTexture = 0;
-
-			glDeleteTextures(1, &g_pcmTexture);
-			g_pcmTexture = 0;
-
-			//
-
 			time += dt;
 			timeReal += dtReal;
 		}
@@ -2369,6 +2459,15 @@ int main(int argc, char * argv[])
 
 		delete g_prevScene;
 		g_prevScene = nullptr;
+
+		glDeleteTextures(1, &g_fftTextureWithFade);
+		g_fftTextureWithFade = 0;
+
+		glDeleteTextures(1, &g_fftTexture);
+		g_fftTexture = 0;
+
+		glDeleteTextures(1, &g_pcmTexture);
+		g_pcmTexture = 0;
 
 		framework.shutdown();
 	}

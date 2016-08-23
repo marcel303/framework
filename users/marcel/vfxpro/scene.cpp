@@ -135,7 +135,7 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 	}
 	else if (type == "colorlut2d")
 	{
-		const std::string lut = stringAttrib(xmlEffect, "lut", "");
+		const std::string lut = stringAttrib(xmlEffect, "file", "");
 
 		if (lut.empty())
 		{
@@ -169,6 +169,8 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 	else if (type == "picture")
 	{
 		const std::string file = stringAttrib(xmlEffect, "file", "");
+		const std::string file2 = stringAttrib(xmlEffect, "file2", "");
+		const std::string shader = stringAttrib(xmlEffect, "shader", "");
 		const bool centered = boolAttrib(xmlEffect, "centered", true);
 
 		if (file.empty())
@@ -177,7 +179,7 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 		}
 		else
 		{
-			effect = new Effect_Picture(m_name.c_str(), file.c_str(), centered);
+			effect = new Effect_Picture(m_name.c_str(), file.c_str(), file2.c_str(), shader.c_str(), centered);
 		}
 	}
 	else if (type == "draw_picture")
@@ -241,6 +243,10 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 	else if (type == "fxaa")
 	{
 		effect = new Effect_FXAA(m_name.c_str());
+	}
+	else if (type == "fireworks")
+	{
+		effect=  new Effect_Fireworks(m_name.c_str());
 	}
 	else
 	{
