@@ -27,6 +27,8 @@
 #include "KlodderTestCode.h"
 #include "MouseMgr.h"
 
+extern "C" { FILE __iob_func[3] = { *stdin,*stdout,*stderr }; }
+
 #define FRAME_SKIP 5
 
 #define DEFAULT_LAYERCOUNT 3

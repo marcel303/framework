@@ -50,7 +50,7 @@ void TouchDelegator::Register(int prio, TouchListener listener)
 {
 	Assert(!m_Registrations[prio].m_IsSet);
 
-	const bool enabled = m_Registrations[prio].m_Enabled;
+	const bool enabled = m_Registrations[prio].m_Enabled != 0;
 
 	m_Registrations[prio] = listener;
 

@@ -31,6 +31,7 @@ set(source ../Classes/BlitTransform.cpp ../Classes/BrushLibrary.cpp ../Classes/B
 add_library(libklodder ${source})
 
 target_compile_definitions(libklodder PRIVATE _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS)
+target_compile_definitions(libklodder PUBLIC SETTINGS_FILESYSTEM USE_AGG USE_CXIMAGE)
 target_compile_definitions(libklodder PUBLIC $<$<CONFIG:Debug>:DEBUG>)
 target_include_directories(libklodder PUBLIC "${PROJECT_SOURCE_DIR}")
 target_include_directories(libklodder PUBLIC "${PROJECT_SOURCE_DIR}/../../libgg") # because CMake sucks and only imports the PUBLIC include directories if you're DIRECTLY linking
