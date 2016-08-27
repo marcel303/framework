@@ -14,6 +14,7 @@
 #include "ImageLoader_Photoshop.h"
 #include "ImageLoader_Tiff.h"
 #include "KlodderSystem.h"
+#include "Log.h"
 #include "StreamReader.h"
 #include "TestCode_iPhone.h"
 #include "Timer.h"
