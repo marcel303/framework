@@ -954,7 +954,7 @@ TileTransition::TileTransition()
 	, m_time(0.f)
 	, m_timeRcp(1.f)
 {
-	m_surface = new Surface(GFX_SX, GFX_SY);
+	m_surface = new Surface(GFX_SX, GFX_SY, false);
 }
 
 TileTransition::~TileTransition()

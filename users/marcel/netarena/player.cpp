@@ -3260,7 +3260,7 @@ void Player::draw() const
 		int sy = 256;
 		int oy = (sy + characterData->m_collisionSy) / 2;
 
-		static Surface surface1(sx, sy);
+		static Surface surface1(sx, sy, false);
 		pushSurface(&surface1);
 		{
 			surface1.clear();
@@ -3268,7 +3268,7 @@ void Player::draw() const
 		}
 		popSurface();
 
-		static Surface surface2(256, 256);
+		static Surface surface2(256, 256, false);
 		pushSurface(&surface2);
 		{
 			setBlend(BLEND_OPAQUE);
