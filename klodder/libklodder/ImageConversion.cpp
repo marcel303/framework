@@ -6,7 +6,7 @@
 #include "ImageConversion.h"
 #include "MacImage.h"
 
-void BitmapToMacImage(const Bitmap* bitmap, MacImage* image)
+void BitmapToMacImage(const Bitmap * bitmap, MacImage * image)
 {
 	Assert(bitmap->Sx_get() == image->Sx_get());
 	Assert(bitmap->Sy_get() == image->Sy_get());
@@ -18,8 +18,8 @@ void BitmapToMacImage(const Bitmap* bitmap, MacImage* image)
 
 		for (uint32_t y = 0; y < sy; ++y)
 		{
-			const Rgba* srcLine = bitmap->Line_get(y);
-			MacRgba* dstLine = image->Line_get(y);
+			const    Rgba * __restrict srcLine = bitmap->Line_get(y);
+			      MacRgba * __restrict dstLine = image->Line_get(y);
 
 #ifdef __ARM_NEON__
 			// 0.023 sec @ 1024x768 (iPad2)
@@ -158,10 +158,9 @@ void MacImageToBitmap(const MacImage * __restrict image, Bitmap * __restrict bit
 		
 		for (uint32_t y = 0; y < sy; ++y)
 		{
-			const MacRgba* srcLine = image->Line_get(y);
-			Rgba* dstLine = bitmap->Line_get(y);
+			const MacRgba * __restrict srcLine = image->Line_get(y);
+			         Rgba * __restrict dstLine = bitmap->Line_get(y);
 
-//			for (int x = 0; x < sx; ++x)
 			for (uint32_t x = sx; x != 0; --x)
 			{
 				for (int i = 0; i < 4; ++i)
@@ -176,7 +175,7 @@ void MacImageToBitmap(const MacImage * __restrict image, Bitmap * __restrict bit
 	UsingEnd()
 }
 
-void BitmapToMacImage(Bitmap* src, MacImage* dst, int _x, int _y, int sx, int sy)
+void BitmapToMacImage(const Bitmap * src, MacImage * dst, const int _x, const int _y, const int sx, const int sy)
 {
 	Assert(sx > 0);
 	Assert(sy > 0);
@@ -192,8 +191,8 @@ void BitmapToMacImage(Bitmap* src, MacImage* dst, int _x, int _y, int sx, int sy
 		
 		for (int y = y1; y <= y2; ++y)
 		{
-			const Rgba* srcLine = src->Line_get(y) + x1;
-			MacRgba* dstLine = dst->Line_get(y - y1);
+			const    Rgba * __restrict srcLine = src->Line_get(y) + x1;
+			      MacRgba * __restrict dstLine = dst->Line_get(y - y1);
 			
 			for (int x = x1; x <= x2; ++x)
 			{
@@ -210,7 +209,7 @@ void BitmapToMacImage(Bitmap* src, MacImage* dst, int _x, int _y, int sx, int sy
 	UsingEnd()
 }
 
-void MacImageToBitmap(MacImage* src, Bitmap* dst, int _x, int _y)
+void MacImageToBitmap(const MacImage * src, Bitmap * dst, const int _x, const int _y)
 {
 	UsingBegin(Benchmark bm("MacImageToBitmap (offsetted)"))
 	{
@@ -224,8 +223,8 @@ void MacImageToBitmap(MacImage* src, Bitmap* dst, int _x, int _y)
 		
 		for (int y = y1; y <= y2; ++y)
 		{
-			const MacRgba* srcLine = src->Line_get(y - y1);
-			Rgba* dstLine = dst->Line_get(y) + x1;
+			const MacRgba * __restrict srcLine = src->Line_get(y - y1);
+			         Rgba * __restrict dstLine = dst->Line_get(y) + x1;
 			
 			for (int x = x1; x <= x2; ++x)
 			{
