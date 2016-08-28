@@ -1,6 +1,6 @@
 #include "Bezier.h"
 
-void BezierCurve::Setup_RelativeTangents(const Vec2F* p)
+void BezierCurve::Setup_RelativeTangents(const Vec2F * p)
 {
 	mPoints[0] = p[0];
 	mPoints[1] = p[0] + p[1];
@@ -8,9 +8,9 @@ void BezierCurve::Setup_RelativeTangents(const Vec2F* p)
 	mPoints[3] = p[3];
 }
 
-Vec2F BezierCurve::Interpolate(float t) const
+Vec2F BezierCurve::Interpolate(const float t) const
 {
-	const Vec2F* points = mPoints;
+	const Vec2F * points = mPoints;
 	
 	const float t1 = 1.0f - t;
 	const float t2 = t;
@@ -45,7 +45,7 @@ void BezierPath::Initialize()
 	mCurveCount = 0;
 }
 
-void BezierPath::Allocate(int curveCount)
+void BezierPath::Allocate(const int curveCount)
 {
 	mCurves.clear();
 	mCurveCount = 0;
@@ -59,7 +59,7 @@ void BezierPath::Allocate(int curveCount)
 	}
 }
 
-void BezierPath::ConstructFromNodes(const BezierNode* nodes, int nodeCount)
+void BezierPath::ConstructFromNodes(const BezierNode * nodes, const int nodeCount)
 {
 	const int curveCount = nodeCount - 1;
 	
@@ -67,8 +67,8 @@ void BezierPath::ConstructFromNodes(const BezierNode* nodes, int nodeCount)
 	
 	for (int i = 0; i < curveCount; ++i)
 	{
-		const BezierNode& node1 = nodes[i + 0];
-		const BezierNode& node2 = nodes[i + 1];
+		const BezierNode & node1 = nodes[i + 0];
+		const BezierNode & node2 = nodes[i + 1];
 		
 		mCurves[i].mPoints[0] = node1.mPosition;
 		mCurves[i].mPoints[1] = node1.mPosition + node1.mTangent[1];
@@ -77,14 +77,14 @@ void BezierPath::ConstructFromNodes(const BezierNode* nodes, int nodeCount)
 	}
 }
 
-Vec2F BezierPath::Interpolate(float t) const
+Vec2F BezierPath::Interpolate(const float _t) const
 {
-	int curveIndex = (int)floorf(t);
+	int curveIndex = (int)floorf(_t);
 	
 	if (curveIndex >= mCurveCount)
 		curveIndex = mCurveCount - 1;
 	
-	t = t - curveIndex;
+	float t = _t - curveIndex;
 	
 	if (t > 1.0f)
 		t = 1.0f;
@@ -92,7 +92,7 @@ Vec2F BezierPath::Interpolate(float t) const
 	return mCurves[curveIndex].Interpolate(t);
 }
 
-std::vector<Vec2F> BezierPath::Sample(int resolution, bool exclusive) const
+std::vector<Vec2F> BezierPath::Sample(const int resolution, const bool exclusive) const
 {
 	std::vector<Vec2F> result;
 	

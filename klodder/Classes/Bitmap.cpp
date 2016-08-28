@@ -13,7 +13,7 @@
 
 Bitmap::Bitmap()
 {
-	mData = 0;
+	mData = nullptr;
 	mSx = 0;
 	mSy = 0;
 }
@@ -23,18 +23,18 @@ Bitmap::~Bitmap()
 	Size_set(0, 0, false);
 }
 
-void Bitmap::Load(Stream* stream)
+void Bitmap::Load(Stream * stream)
 {
 	StreamReader reader(stream, false);
 
-	uint32_t version = reader.ReadUInt32();
+	const uint32_t version = reader.ReadUInt32();
 
 	switch (version)
 	{
 	case 1:
 		{
-			uint32_t sx = reader.ReadUInt32();
-			uint32_t sy = reader.ReadUInt32();
+			const uint32_t sx = reader.ReadUInt32();
+			const uint32_t sy = reader.ReadUInt32();
 
 			if (sx > IO_MAX_SIZE || sy > IO_MAX_SIZE)
 				throw ExceptionVA("bitmap size too large: %dx%d", (int)sx, (int)sy);
@@ -51,7 +51,7 @@ void Bitmap::Load(Stream* stream)
 	}
 }
 
-void Bitmap::Save(Stream* stream) const
+void Bitmap::Save(Stream * stream) const
 {
 	StreamWriter writer(stream, false);
 
@@ -61,7 +61,7 @@ void Bitmap::Save(Stream* stream) const
 	stream->Write(mData, mSx * mSy * sizeof(Rgba));
 }
 
-void Bitmap::ToMacImage(MacImage& image) const
+void Bitmap::ToMacImage(MacImage & image) const
 {
 	image.Size_set(mSx, mSy, false);
 
@@ -71,8 +71,8 @@ void Bitmap::ToMacImage(MacImage& image) const
 	
 	for (int y = 0; y < mSy; ++y)
 	{
-		const Rgba* src = Line_get(y);
-		MacRgba* dst = image.Line_get(y);
+		const    Rgba * src = Line_get(y);
+		      MacRgba * dst = image.Line_get(y);
 		
 		for (int x = 0; x < mSx; ++x)
 		{
@@ -94,7 +94,7 @@ void Bitmap::ToMacImage(MacImage& image) const
 	}
 }
 
-void Bitmap::ToMacImage_GrayScale(MacImage& image) const
+void Bitmap::ToMacImage_GrayScale(MacImage & image) const
 {
 	image.Size_set(mSx, mSy, false);
 
@@ -102,14 +102,14 @@ void Bitmap::ToMacImage_GrayScale(MacImage& image) const
 
 	for (int y = 0; y < mSy; ++y)
 	{
-		const Rgba* src = Line_get(y);
-		MacRgba* dst = image.Line_get(y);
+		const    Rgba * src = Line_get(y);
+		      MacRgba * dst = image.Line_get(y);
 		
 		for (int x = 0; x < mSx; ++x)
 		{
 			const float v = src[x].rgb[0] + src[x].rgb[1] + src[x].rgb[2];
 
-			uint8_t c = (uint8_t)(v * scale * 255.0f);
+			const uint8_t c = (uint8_t)(v * scale * 255.0f);
 
 			dst[x].rgba[0] = c;
 			dst[x].rgba[1] = c;
@@ -119,7 +119,7 @@ void Bitmap::ToMacImage_GrayScale(MacImage& image) const
 	}
 }
 
-void Bitmap::ToMacImage_GrayAlpha(MacImage& image) const
+void Bitmap::ToMacImage_GrayAlpha(MacImage & image) const
 {
 	image.Size_set(mSx, mSy, false);
 
@@ -127,14 +127,14 @@ void Bitmap::ToMacImage_GrayAlpha(MacImage& image) const
 
 	for (int y = 0; y < mSy; ++y)
 	{
-		const Rgba* src = Line_get(y);
-		MacRgba* dst = image.Line_get(y);
+		const    Rgba * src = Line_get(y);
+		      MacRgba * dst = image.Line_get(y);
 		
 		for (int x = 0; x < mSx; ++x)
 		{
 			const float v = src[x].rgb[0] + src[x].rgb[1] + src[x].rgb[2];
 
-			uint8_t c = (uint8_t)(v * scale);
+			const uint8_t c = (uint8_t)(v * scale);
 
 			dst[x].rgba[0] = 255;
 			dst[x].rgba[1] = 255;
@@ -144,7 +144,7 @@ void Bitmap::ToMacImage_GrayAlpha(MacImage& image) const
 	}
 }
 
-void Bitmap::ExtractTo(Bitmap* bmp, int _x, int _y, int sx, int sy) const
+void Bitmap::ExtractTo(Bitmap * bmp, const int _x, const int _y, const int sx, const int sy) const
 {
 	Assert(_x + sx <= mSx);
 	Assert(_y + sy <= mSy);
@@ -154,13 +154,13 @@ void Bitmap::ExtractTo(Bitmap* bmp, int _x, int _y, int sx, int sy) const
 	for (int y = 0; y < sy; ++y)
 	{
 		const Rgba * __restrict src = Line_get(y + _y) + _x;
-		Rgba * __restrict dst = bmp->Line_get(y);
+		      Rgba * __restrict dst = bmp->Line_get(y);
 
 		Mem::Copy(src, dst, sx * sizeof(Rgba));
 	}
 }
 
-void Bitmap::Blit(Bitmap* bmp, int spx, int spy, int sx, int sy, int dpx, int dpy) const
+void Bitmap::Blit(Bitmap * bmp, const int spx, const int spy, const int sx, const int sy, const int dpx, const int dpy) const
 {
 	Assert(spx + sx <= mSx);
 	Assert(spy + sy <= mSy);
@@ -170,18 +170,18 @@ void Bitmap::Blit(Bitmap* bmp, int spx, int spy, int sx, int sy, int dpx, int dp
 	for (int y = 0; y < sy; ++y)
 	{
 		const Rgba * __restrict src = Line_get(spy + y) + spx;
-		Rgba * __restrict dst = bmp->Line_get(dpy + y) + dpx;
+		      Rgba * __restrict dst = bmp->Line_get(dpy + y) + dpx;
 		
 		Mem::Copy(src, dst, sx * sizeof(Rgba));
 	}
 }
 
-void Bitmap::Blit(Bitmap* bmp) const
+void Bitmap::Blit(Bitmap * bmp) const
 {
 	Blit(bmp, 0, 0, mSx, mSy, 0, 0);
 }
 
-int Bitmap::SampleAA(float x, float y, const Rgba *__restrict * __restrict out_values, float * __restrict out_w) const
+int Bitmap::SampleAA(const float x, const float y, const Rgba *__restrict * __restrict out_values, float * __restrict out_w) const
 {
 	const int ix1 = (int)floorf(x);
 	const int iy1 = (int)floorf(y);
@@ -246,7 +246,7 @@ int Bitmap::SampleAA(float x, float y, const Rgba *__restrict * __restrict out_v
 
 #ifdef __ARM_NEON__
 
-void Bitmap::SampleAA(float x, float y, Rgba& out_value) const
+void Bitmap::SampleAA(const float x, const float y, Rgba & out_value) const
 {
 	float32_t p[2] = { x, y };
 	float32x2_t vp = vld1_f32(p);
@@ -255,7 +255,7 @@ void Bitmap::SampleAA(float x, float y, Rgba& out_value) const
 
 #else
 
-void Bitmap::SampleAA(float x, float y, Rgba& out_value) const
+void Bitmap::SampleAA(const float x, const float y, Rgba & out_value) const
 {
 	const float ix1f = floorf(x);
 	const float iy1f = floorf(y);
@@ -278,11 +278,11 @@ void Bitmap::SampleAA(float x, float y, Rgba& out_value) const
 	
 	const int correct = ix1 < 0 || iy1 < 0 || ix2 >= mSx || iy2 >= mSy;
 
-	const Rgba* out_values[4];
+	const Rgba * out_values[4];
 	
 	if (!correct)
 	{
-		const Rgba* base = Line_get(iy1) + ix1;
+		const Rgba * base = Line_get(iy1) + ix1;
 		
 		out_values[0] = base;
 		out_values[1] = base + 1;
@@ -309,7 +309,7 @@ void Bitmap::SampleAA(float x, float y, Rgba& out_value) const
 
 #endif
 
-void Bitmap::Clear(Rgba color)
+void Bitmap::Clear(const Rgba & color)
 {
 	const int count = mSx * mSy;
 	
@@ -317,17 +317,17 @@ void Bitmap::Clear(Rgba color)
 	for (int i = 0; i < count; ++i)
 		mData[i] = color;
 #else
-	Rgba* ptr = mData;
+	Rgba * ptr = mData;
 
 	for (int i = count; i != 0; --i)
 		*ptr++ = color;
 #endif
 }
 
-void Bitmap::Size_set(int sx, int sy, bool clear)
+void Bitmap::Size_set(const int sx, const int sy, const bool clear)
 {
-	delete[] mData;
-	mData = 0;
+	delete [] mData;
+	mData = nullptr;
 	mSx = 0;
 	mSy = 0;
 	
@@ -336,6 +336,7 @@ void Bitmap::Size_set(int sx, int sy, bool clear)
 		mData = new Rgba[sx * sy];
 		mSx = sx;
 		mSy = sy;
+
 		if (clear)
 		{
 			Clear(Rgba_Make(0.0f, 0.0f, 0.0f, 0.0f));

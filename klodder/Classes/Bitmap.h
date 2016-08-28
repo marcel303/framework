@@ -13,7 +13,7 @@ typedef struct Rgba
 	float rgb[4];
 } Rgba;
 
-static inline Rgba Rgba_Make(float r, float g, float b)
+static inline Rgba Rgba_Make(const float r, const float g, const float b)
 {
 	Assert(r >= 0.0f && r <= 1.0f);
 	Assert(g >= 0.0f && g <= 1.0f);
@@ -24,7 +24,7 @@ static inline Rgba Rgba_Make(float r, float g, float b)
 	return result;
 }
 
-static inline Rgba Rgba_Make(float r, float g, float b, float a)
+static inline Rgba Rgba_Make(const float r, const float g, const float b, const float a)
 {
 	Assert(r >= 0.0f && r <= 1.0f);
 	Assert(g >= 0.0f && g <= 1.0f);
@@ -36,7 +36,7 @@ static inline Rgba Rgba_Make(float r, float g, float b, float a)
 	return result;
 }
 
-static inline bool Rgba_Equals(const Rgba& color1, const Rgba& color2)
+static inline bool Rgba_Equals(const Rgba & color1, const Rgba & color2)
 {
 	for (int i = 0; i < 4; ++i)
 		if (color1.rgb[i] != color2.rgb[i])
@@ -51,44 +51,44 @@ public:
 	Bitmap();
 	~Bitmap();
 	
-	void Load(Stream* stream);
-	void Save(Stream* stream) const;
+	void Load(Stream * stream);
+	void Save(Stream * stream) const;
 
-	void ToMacImage(MacImage& image) const;
-	void ToMacImage_GrayScale(MacImage& image) const;
-	void ToMacImage_GrayAlpha(MacImage& image) const;
+	void ToMacImage(MacImage & image) const;
+	void ToMacImage_GrayScale(MacImage & image) const;
+	void ToMacImage_GrayAlpha(MacImage & image) const;
 	
-	void ExtractTo(Bitmap* bmp, int x, int y, int sx, int sy) const;
-	void Blit(Bitmap* bmp, int spx, int spy, int sx, int sy, int dpx, int dpy) const;
-	void Blit(Bitmap* bmp) const;
+	void ExtractTo(Bitmap * bmp, const int x, const int y, const int sx, const int sy) const;
+	void Blit(Bitmap * bmp, const int spx, const int spy, const int sx, const int sy, const int dpx, const int dpy) const;
+	void Blit(Bitmap * bmp) const;
 
-	inline void Sample(int x, int y, Rgba & __restrict out_value) const __restrict;
-	inline const Rgba* Sample_Ref(int x, int y) const;
-	inline int Sample_Safe(int x, int y, Rgba & __restrict out_value) const __restrict;
-	inline void Sample_Clamped(int x, int y, Rgba & __restrict out_value) const __restrict;
-	inline const Rgba* Sample_Clamped_Ref(int x, int y) const;
-	inline void Sample_Border(int x, int y, Rgba & __restrict out_value) const __restrict;
-	int SampleAA(float x, float y, const Rgba * __restrict * __restrict out_values, float * __restrict out_w) const __restrict;
-	void SampleAA(float x, float y, Rgba & __restrict out_value) const __restrict;
+	inline void Sample(const int x, const int y, Rgba & __restrict out_value) const __restrict;
+	inline const Rgba * Sample_Ref(const int x, const int y) const;
+	inline int Sample_Safe(const int x, const int y, Rgba & __restrict out_value) const __restrict;
+	inline void Sample_Clamped(const int x, const int y, Rgba & __restrict out_value) const __restrict;
+	inline const Rgba * Sample_Clamped_Ref(const int x, const int y) const;
+	inline void Sample_Border(const int x, const int y, Rgba & __restrict out_value) const __restrict;
+	int SampleAA(const float x, const float y, const Rgba * __restrict * __restrict out_values, float * __restrict out_w) const __restrict;
+	void SampleAA(const float x, const float y, Rgba & __restrict out_value) const __restrict;
 #ifdef __ARM_NEON__
-	inline void SampleAA(float32x2_t s, Rgba & __restrict out_value) const __restrict;
+	inline void SampleAA(const float32x2_t s, Rgba & __restrict out_value) const __restrict;
 #endif
-	void Clear(Rgba color);
+	void Clear(const Rgba & color);
 
-	void Size_set(int sx, int sy, bool clear);
-	inline Rgba* Line_get(int y);
-	inline const Rgba* Line_get(int y) const;
+	void Size_set(const int sx, const int sy, const bool clear);
+	inline Rgba * Line_get(const int y);
+	inline const Rgba * Line_get(const int y) const;
 	inline int Sx_get() const;
 	inline int Sy_get() const;
 	AreaI Area_get() const;
 	
 private:
-	Rgba* mData;
+	Rgba * mData;
 	int mSx;
 	int mSy;
 };
 
-inline void Bitmap::Sample(int x, int y, Rgba& out_value) const
+inline void Bitmap::Sample(const int x, const int y, Rgba & out_value) const
 {
 	Assert(x >= 0 && x < mSx);
 	Assert(y >= 0 && y < mSy);
@@ -96,7 +96,7 @@ inline void Bitmap::Sample(int x, int y, Rgba& out_value) const
 	out_value = mData[x + y * mSx];
 }
 
-inline const Rgba* Bitmap::Sample_Ref(int x, int y) const
+inline const Rgba * Bitmap::Sample_Ref(const int x, const int y) const
 {
 	Assert(x >= 0 && x < mSx);
 	Assert(y >= 0 && y < mSy);
@@ -104,7 +104,7 @@ inline const Rgba* Bitmap::Sample_Ref(int x, int y) const
 	return mData + x + y * mSx;
 }
 
-inline int Bitmap::Sample_Safe(int x, int y, Rgba& out_value) const
+inline int Bitmap::Sample_Safe(const int x, const int y, Rgba & out_value) const
 {
 	if (x < 0 || y < 0 || x >= mSx || y >= mSy)
 	{
@@ -118,35 +118,23 @@ inline int Bitmap::Sample_Safe(int x, int y, Rgba& out_value) const
 	}
 }
 
-inline void Bitmap::Sample_Clamped(int x, int y, Rgba& out_value) const
+inline void Bitmap::Sample_Clamped(const int _x, const int _y, Rgba & out_value) const
 {
-	if (x < 0)
-		x = 0;
-	if (y < 0)
-		y = 0;
-	if (x >= mSx)
-		x = mSx - 1;
-	if (y >= mSy)
-		y = mSy - 1;
+	const int x = _x < 0 ? 0 : _x >= mSx ? mSx - 1 : _x;
+	const int y = _y < 0 ? 0 : _y >= mSy ? mSy - 1 : _y;
 
 	Sample(x, y, out_value);
 }
 
-inline const Rgba* Bitmap::Sample_Clamped_Ref(int x, int y) const
+inline const Rgba * Bitmap::Sample_Clamped_Ref(const int _x, const int _y) const
 {
-	if (x < 0)
-		x = 0;
-	if (y < 0)
-		y = 0;
-	if (x >= mSx)
-		x = mSx - 1;
-	if (y >= mSy)
-		y = mSy - 1;
+	const int x = _x < 0 ? 0 : _x >= mSx ? mSx - 1 : _x;
+	const int y = _y < 0 ? 0 : _y >= mSy ? mSy - 1 : _y;
 
 	return Sample_Ref(x, y);
 }
 
-inline void Bitmap::Sample_Border(int x, int y, Rgba& out_value) const
+inline void Bitmap::Sample_Border(const int x, const int y, Rgba & out_value) const
 {
 	if (x < 0 || y < 0 || x >= mSx || y >= mSy)
 		out_value = Rgba_Make(0.0f, 0.0f, 0.0f);
@@ -155,7 +143,7 @@ inline void Bitmap::Sample_Border(int x, int y, Rgba& out_value) const
 }
 
 #ifdef __ARM_NEON__
-inline void Bitmap::SampleAA(float32x2_t v, Rgba& out_value) const __restrict
+inline void Bitmap::SampleAA(const float32x2_t v, Rgba & out_value) const __restrict
 {
 	// calculate w = v - floor(v), assuming v >= 0
 	
@@ -228,12 +216,12 @@ inline void Bitmap::SampleAA(float32x2_t v, Rgba& out_value) const __restrict
 }
 #endif
 
-inline Rgba* Bitmap::Line_get(int y)
+inline Rgba * Bitmap::Line_get(const int y)
 {
 	return mData + y * mSx;
 }
 
-inline const Rgba* Bitmap::Line_get(int y) const
+inline const Rgba * Bitmap::Line_get(const int y) const
 {
 	return mData + y * mSx;
 }

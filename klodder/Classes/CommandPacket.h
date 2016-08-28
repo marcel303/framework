@@ -45,8 +45,8 @@ public:
 		mCommandType = CommandType_Undefined;
 	}
 	
-	void Write(StreamWriter& writer) const;
-	void Read(StreamReader& reader);
+	void Write(StreamWriter & writer) const;
+	void Read(StreamReader & reader);
 	
 	int8_t mCommandType;
 	int8_t mCommandVersion;
@@ -172,25 +172,25 @@ public:
 		} stroke_move;
 	};
 	
-	static CommandPacket Make_ColorSelect(float r, float g, float b, float a);
-	static CommandPacket Make_ImageSize(int layerCount, int sx, int sy);
-	static CommandPacket Make_DataLayerBlit(int index, const BlitTransform& transform);
-	static CommandPacket Make_DataLayerClear(int index, float r, float g, float b, float a);
-	static CommandPacket Make_DataLayerMerge(int index1, int index2);
-	static CommandPacket Make_DataLayerOpacity(int index, float opacity);
-	static CommandPacket Make_LayerOrder(int* layerOrder, int layerCount);
-	static CommandPacket Make_DataLayerSelect(int index);
-//	static CommandPacket Make_LayerSwap(int layer1, int layer2);
-	static CommandPacket Make_DataLayerVisibility(int index, bool visibility);
-	static CommandPacket Make_StrokeBegin(int index, bool smooth, bool mirrorX, float x, float y);
+	static CommandPacket Make_ColorSelect(const float r, const float g, const float b, const float a);
+	static CommandPacket Make_ImageSize(const int layerCount, const int sx, const int sy);
+	static CommandPacket Make_DataLayerBlit(const int index, const BlitTransform & transform);
+	static CommandPacket Make_DataLayerClear(const int index, const float r, const float g, const float b, const float a);
+	static CommandPacket Make_DataLayerMerge(const int index1, const int index2);
+	static CommandPacket Make_DataLayerOpacity(const int index, const float opacity);
+	static CommandPacket Make_LayerOrder(const int * layerOrder, const int layerCount);
+	static CommandPacket Make_DataLayerSelect(const int index);
+//	static CommandPacket Make_LayerSwap(const int layer1, const int layer2);
+	static CommandPacket Make_DataLayerVisibility(const int index, const bool visibility);
+	static CommandPacket Make_StrokeBegin(const int index, const bool smooth, const bool mirrorX, const float x, const float y);
 	static CommandPacket Make_StrokeEnd();
-	static CommandPacket Make_StrokeMove(float x, float y);
-	static CommandPacket Make_ToolSelect_SoftBrush(int diameter, float hardness, float spacing);
-	static CommandPacket Make_ToolSelect_PatternBrush(int patternId, int diameter, float spacing);
-	static CommandPacket Make_ToolSelect_SoftBrushDirect(int diameter, float hardness, float spacing);
-	static CommandPacket Make_ToolSelect_PatternBrushDirect(int patternId, int diameter, float spacing);
-	static CommandPacket Make_ToolSelect_SoftSmudge(int diameter, float hardness, float spacing, float strength);
-	static CommandPacket Make_ToolSelect_PatternSmudge(int patternId, int diameter, float spacing, float strength);
-	static CommandPacket Make_ToolSelect_SoftEraser(int diameter, float hardness, float spacing);
-	static CommandPacket Make_ToolSelect_PatternEraser(int patternId, int diameter, float spacing);
+	static CommandPacket Make_StrokeMove(const float x, const float y);
+	static CommandPacket Make_ToolSelect_SoftBrush(const int diameter, const float hardness, const float spacing);
+	static CommandPacket Make_ToolSelect_PatternBrush(const int patternId, const int diameter, const float spacing);
+	static CommandPacket Make_ToolSelect_SoftBrushDirect(const int diameter, const float hardness, const float spacing);
+	static CommandPacket Make_ToolSelect_PatternBrushDirect(const int patternId, const int diameter, const float spacing);
+	static CommandPacket Make_ToolSelect_SoftSmudge(const int diameter, const float hardness, const float spacing, const float strength);
+	static CommandPacket Make_ToolSelect_PatternSmudge(const int patternId, const int diameter, const float spacing, const float strength);
+	static CommandPacket Make_ToolSelect_SoftEraser(const int diameter, const float hardness, const float spacing);
+	static CommandPacket Make_ToolSelect_PatternEraser(const int patternId, const int diameter, const float spacing);
 };

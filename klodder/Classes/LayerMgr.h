@@ -64,8 +64,8 @@ public:
 	Bitmap* EditingBuffer_get();
 	const Bitmap* EditingBuffer_get() const;
 	Filter* EditingBrush_get();
-	Rgba BrushColor_get() const;
-	void BrushColor_set(Rgba color);
+	const Rgba & BrushColor_get() const;
+	void BrushColor_set(const Rgba & color);
 	float BrushOpacity_get() const;
 	void BrushOpacity_set(float opacity);
 	MacRgba BackColor1_get() const;

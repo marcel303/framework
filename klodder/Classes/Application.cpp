@@ -26,11 +26,11 @@
 #include "XmlWriter.h"
 
 #if defined(IPAD)
-#define MAX_UNDO_BYTES (1024 * 1024 * 32)
+	#define MAX_UNDO_BYTES (1024 * 1024 * 32)
 #elif defined(IPHONEOS)
-#define MAX_UNDO_BYTES (1024 * 1024 * 4 * (scale > 1 ? 6 : 1))
+	#define MAX_UNDO_BYTES (1024 * 1024 * 4 * (scale > 1 ? 6 : 1))
 #else
-#define MAX_UNDO_BYTES (1024 * 1024 * 32)
+	#define MAX_UNDO_BYTES (1024 * 1024 * 32)
 #endif
 #define MAX_SWATCHES 100
 
@@ -38,7 +38,7 @@ Application::Application()
 {
 	// setup
 	mIsSetup = false;
-	mStreamProvider = 0;
+	mStreamProvider = nullptr;
 	mScale = 1;
 	mBackColor1 = Rgba_Make(0.0f, 0.0f, 0.0f);
 	mBackColor2 = Rgba_Make(0.2f, 0.0f, 0.0f);
@@ -57,7 +57,7 @@ Application::Application()
 	// editing
 	mToolType = ToolType_Undefined;
 	mToolActive = false;
-	mBezierTraveller.Setup(1.0f, HandleBezierTravel, 0, this);
+	mBezierTraveller.Setup(1.0f, HandleBezierTravel, nullptr, this);
 	mTraveller.Setup(1.0f, HandleTravel, this);
 	mStrokeSmooth = false;
 	mStrokeMirrorX = false;
@@ -74,7 +74,7 @@ Application::Application()
 	mBrushLibrarySet.Add(&mBrushLibrary_Standard, false);
 	mBrushLibrarySet.Add(&mBrushLibrary_Custom, false);
 	mBrushLibrarySet.Add(&mBrushLibrary_Image, false);
-	mBrushPattern = 0;
+	mBrushPattern = nullptr;
 	
 	// swatches
 	mSwatchMgr.Capacity_set(MAX_SWATCHES);
@@ -85,32 +85,38 @@ Application::Application()
 	mWriteEnabled = false;
 	
 	// streams
-	mCommandStream = 0;
+	mCommandStream = nullptr;
 	mCommandStreamPosition = 0;
-	mCommandStreamWriter = 0;
-	mDataStream = 0;
+	mCommandStreamWriter = nullptr;
+	mDataStream = nullptr;
 	mDataStreamPosition = 0;
-	mDataStreamReader = 0;
-	mDataStreamWriter = 0;
+	mDataStreamReader = nullptr;
+	mDataStreamWriter = nullptr;
 }
 
 Application::~Application()
 {
 	Assert(!mIsActive);
 	Assert(!mToolActive);
-	Assert(mPacketList.size() == 0);
+	Assert(mPacketList.empty());
 	
 	delete mLayerMgr;
-	mLayerMgr = 0;
+	mLayerMgr = nullptr;
 	
-	Assert(mCommandStream == 0);
-	Assert(mCommandStreamWriter == 0);
-	Assert(mDataStream == 0);
-	Assert(mDataStreamReader == 0);
-	Assert(mDataStreamWriter == 0);
+	Assert(mCommandStream == nullptr);
+	Assert(mCommandStreamWriter == nullptr);
+	Assert(mDataStream == nullptr);
+	Assert(mDataStreamReader == nullptr);
+	Assert(mDataStreamWriter == nullptr);
 }
 
-void Application::Setup(StreamProvider* streamProvider, const char* brushLibraryStandard, const char* brushLibraryCustom, int scale, Rgba backColor1, Rgba backColor2)
+void Application::Setup(
+	StreamProvider * streamProvider,
+	const char * brushLibraryStandard,
+	const char * brushLibraryCustom,
+	const int scale,
+	const Rgba & backColor1,
+	const Rgba & backColor2)
 {
 	mIsSetup = true;
 	mStreamProvider = streamProvider;
@@ -138,9 +144,9 @@ void Application::SignalChange(ChangeType type)
 	}
 }
 
-void Application::HandleTouchZoomStateChange(void* obj, void* arg)
+void Application::HandleTouchZoomStateChange(void * obj, void * arg)
 {
-	TouchZoomEvent* e = (TouchZoomEvent*)arg;
+	const TouchZoomEvent * e = (const TouchZoomEvent *)arg;
 	
 	switch (e->oldState)
 	{
@@ -171,7 +177,7 @@ void Application::HandleTouchZoomStateChange(void* obj, void* arg)
 // Canvas
 // ------
 
-LayerMgr* Application::LayerMgr_get()
+LayerMgr * Application::LayerMgr_get()
 {
 	return mLayerMgr;
 }
@@ -180,7 +186,7 @@ LayerMgr* Application::LayerMgr_get()
 // Command execution
 // -----------------
 
-void Application::Execute(const CommandPacket& packet)
+void Application::Execute(const CommandPacket & packet)
 {
 	Assert(mIsSetup);
 	Assert(mIsActive);
@@ -380,7 +386,7 @@ void Application::ExecuteAndSave(const CommandPacket& packet)
 	{
 		Execute(packet);
 	}
-	catch (std::exception& e)
+	catch (std::exception & e)
 	{
 		mPacketList.pop_back();
 		
@@ -423,7 +429,7 @@ void Application::ExecutionDiscard()
 		mPacketList.clear();
 }
 
-void Application::ExecuteColorSelect(float r, float g, float b, float a)
+void Application::ExecuteColorSelect(const float r, const float g, const float b, const float a)
 {
 	LOG_DBG("exec: colorSelect: %f, %f, %f, %f", r, g, b, a);
 	
@@ -439,7 +445,7 @@ void Application::ExecuteColorSelect(float r, float g, float b, float a)
 	SignalChange(ChangeType_Color);
 }
 
-void Application::ExecuteImageSize(int layerCount, int sx, int sy)
+void Application::ExecuteImageSize(const int layerCount, const int sx, const int sy)
 {	
 	LOG_DBG("exec: imageSize: %d @ %dx%d", layerCount, sx, sy);
 	
@@ -453,7 +459,7 @@ void Application::ExecuteImageSize(int layerCount, int sx, int sy)
 	Invalidate();
 }
 
-void Application::ExecuteDataLayerBlit(int index, const BlitTransform& transform)
+void Application::ExecuteDataLayerBlit(const int index, const BlitTransform & transform)
 {
 	LOG_DBG("exec: layerBlit: %d", index);
 	
@@ -463,11 +469,11 @@ void Application::ExecuteDataLayerBlit(int index, const BlitTransform& transform
 	
 	// blit
 	
-	Vec2I size = mLayerMgr->Size_get();
+	const Vec2I size = mLayerMgr->Size_get();
 	
-	UndoBuffer* undo = new UndoBuffer();
+	UndoBuffer * undo = new UndoBuffer();
 	
-	MacImage* dst = mLayerMgr->DataLayer_get(index);
+	MacImage * dst = mLayerMgr->DataLayer_get(index);
 	
 	if (mUndoEnabled)
 		undo->mPrev.SetDataLayerImage(index, dst, 0, 0, size[0], size[1]);
@@ -481,9 +487,10 @@ void Application::ExecuteDataLayerBlit(int index, const BlitTransform& transform
 	
 	DataStreamOpen();
 	DataHeader header = mDataStreamReader->ReadHeader();
-	DataSegment* segment = mDataStreamReader->ReadSegment(header);
+	DataSegment * segment = mDataStreamReader->ReadSegment(header);
 	image.Load(&segment->mData);
 	delete segment;
+	segment = nullptr;
 	DataStreamClose();
 	
 	mLayerMgr->DataLayerAcquireWithTransform(index, &image, transform);
@@ -503,27 +510,28 @@ void Application::ExecuteDataLayerBlit(int index, const BlitTransform& transform
 	Invalidate();
 }
 
-void Application::ExecuteDataLayerClear(int index, float r, float g, float b, float a)
+void Application::ExecuteDataLayerClear(const int index, const float _r, const float _g, const float _b, const float _a)
 {
-	LOG_DBG("exec: layerClear: %d @ %f, %f, %f, %f", index, r, g, b, a);
+	LOG_DBG("exec: layerClear: %d @ %f, %f, %f, %f", index, _r, _g, _b, _a);
 	
 	Assert(mIsActive);
-	Assert(r >= 0.0f && r <= 1.0f);
-	Assert(g >= 0.0f && g <= 1.0f);
-	Assert(b >= 0.0f && b <= 1.0f);
-	Assert(a >= 0.0f && a <= 1.0f);
+	Assert(_r >= 0.0f && _r <= 1.0f);
+	Assert(_g >= 0.0f && _g <= 1.0f);
+	Assert(_b >= 0.0f && _b <= 1.0f);
+	Assert(_a >= 0.0f && _a <= 1.0f);
 	
 	// convert RGB to premultiplied values
 
-	r *= a;
-	g *= a;
-	b *= a;
+	const float r = _r * _a;
+	const float g = _b * _a;
+	const float b = _b * _a;
+	const float a = _a;
 
 	//
 	
-	Vec2I size = mLayerMgr->Size_get();
+	const Vec2I size = mLayerMgr->Size_get();
 
-	UndoBuffer* undo = new UndoBuffer();
+	UndoBuffer * undo = new UndoBuffer();
 	
 	if (mWriteEnabled)
 		undo->mPrev.SetCommandStreamLocation(mCommandStream->Position_get());
@@ -533,7 +541,7 @@ void Application::ExecuteDataLayerClear(int index, float r, float g, float b, fl
 	
 	//
 	
-	Rgba color = Rgba_Make(r, g, b, a);
+	const Rgba color = Rgba_Make(r, g, b, a);
 	
 	mLayerMgr->DataLayerClear(index, color);
 	
@@ -553,7 +561,7 @@ void Application::ExecuteDataLayerClear(int index, float r, float g, float b, fl
 	Invalidate();
 }
 
-void Application::ExecuteDataLayerMerge(int index1, int index2)
+void Application::ExecuteDataLayerMerge(const int index1, const int index2)
 {
 	LOG_DBG("exec: dataLayerMerge: %d + %d", index1, index2);
 
@@ -562,7 +570,7 @@ void Application::ExecuteDataLayerMerge(int index1, int index2)
 	Assert(index2 >= 0 && index2 < mLayerMgr->LayerCount_get());
 	Assert(index1 != index2);
 	
-	UndoBuffer* undo = new UndoBuffer();
+	UndoBuffer * undo = new UndoBuffer();
 
 	if (mWriteEnabled)
 		undo->mPrev.SetCommandStreamLocation(mCommandStream->Position_get());
@@ -588,14 +596,14 @@ void Application::ExecuteDataLayerMerge(int index1, int index2)
 	Invalidate();
 }
 
-void Application::ExecuteDataLayerSelect(int index)
+void Application::ExecuteDataLayerSelect(const int index)
 {
 	LOG_DBG("exec: dataLayerSelect: %d", index);
 	
 	Assert(mIsActive);
 	Assert(index >= 0 && index < mLayerMgr->LayerCount_get());
 
-	UndoBuffer* undo = new UndoBuffer();
+	UndoBuffer * undo = new UndoBuffer();
 	
 	if (mWriteEnabled)
 		undo->mPrev.SetCommandStreamLocation(mCommandStream->Position_get());
@@ -616,7 +624,7 @@ void Application::ExecuteDataLayerSelect(int index)
 	undo->mNext.DBG_SetActiveDataLayer(mLayerMgr->ActiveDataLayer_get());
 	
 	delete undo;
-	undo = 0;
+	undo = nullptr;
 	//CommitUndoBuffer(undo);
 	
 	//
@@ -624,13 +632,13 @@ void Application::ExecuteDataLayerSelect(int index)
 	Invalidate();
 }
 
-void Application::ExecuteDataLayerOpacity(int index, float opacity)
+void Application::ExecuteDataLayerOpacity(const int index, const float opacity)
 {
 	LOG_DBG("exec: layerOpacity: %d = %f", index, opacity);
 
 	Assert(mIsActive);
 	
-	UndoBuffer* undo = new UndoBuffer();
+	UndoBuffer * undo = new UndoBuffer();
 	
 	if (mWriteEnabled)
 		undo->mPrev.SetCommandStreamLocation(mCommandStream->Position_get());
@@ -655,7 +663,7 @@ void Application::ExecuteDataLayerOpacity(int index, float opacity)
 	Invalidate();
 }
 
-void Application::ExecuteLayerOrder(std::vector<int> layerOrder)
+void Application::ExecuteLayerOrder(const std::vector<int> & layerOrder)
 {
 	LOG_DBG("exec: layerOrder: %lu", layerOrder.size());
 	for (size_t i = 0; i < layerOrder.size(); ++i)
@@ -664,7 +672,7 @@ void Application::ExecuteLayerOrder(std::vector<int> layerOrder)
 	Assert(mIsActive);
 	Assert((int)layerOrder.size() == mLayerMgr->LayerCount_get());
 
-	UndoBuffer* undo = new UndoBuffer();
+	UndoBuffer * undo = new UndoBuffer();
 	
 	if (mWriteEnabled)
 		undo->mPrev.SetCommandStreamLocation(mCommandStream->Position_get());
@@ -689,13 +697,13 @@ void Application::ExecuteLayerOrder(std::vector<int> layerOrder)
 	Invalidate();
 }
 
-void Application::ExecuteDataLayerVisibility(int index, bool visibility)
+void Application::ExecuteDataLayerVisibility(const int index, const bool visibility)
 {
 	LOG_DBG("exec: layerVisibility: %d = %d", index, visibility ? 1 : 0);
 
 	Assert(mIsActive);
 	
-	UndoBuffer* undo = new UndoBuffer();
+	UndoBuffer * undo = new UndoBuffer();
 	
 	if (mWriteEnabled)
 		undo->mPrev.SetCommandStreamLocation(mCommandStream->Position_get());
@@ -720,7 +728,7 @@ void Application::ExecuteDataLayerVisibility(int index, bool visibility)
 	Invalidate();
 }
 
-void Application::ExecuteStrokeBegin(int index, bool smooth, bool mirrorX, float x, float y)
+void Application::ExecuteStrokeBegin(const int index, const bool smooth, const bool mirrorX, const float x, const float y)
 {
 	LOG_DBG("exec: strokeBegin: %d @ %f, %f", index, x, y);
 	
@@ -764,7 +772,7 @@ void Application::ExecuteStrokeEnd()
 	
 	// create undo buffer
 	
-	UndoBuffer* undo = new UndoBuffer();
+	UndoBuffer * undo = new UndoBuffer();
 	
 	if (mDirtyArea_Total.IsSet_get())
 	{
@@ -805,7 +813,7 @@ void Application::ExecuteStrokeEnd()
 	CommitUndoBuffer(undo);
 }
 
-void Application::ExecuteStrokeMove(float x, float y)
+void Application::ExecuteStrokeMove(const float x, const float y)
 {
 	LOG_DBG("exec: strokeMove: %f, %f", x, y);
 	
@@ -818,7 +826,7 @@ void Application::ExecuteStrokeMove(float x, float y)
 		mTraveller.Update(x, y);
 }
 
-void Application::ExecuteToolSelect_SoftBrush(int diameter, float hardness, float spacing)
+void Application::ExecuteToolSelect_SoftBrush(const int diameter, const float hardness, const float spacing)
 {
 	LOG_DBG("exec: toolSelect_SoftBrush: %d, %f, %f", diameter, hardness, spacing);
 	
@@ -835,7 +843,7 @@ void Application::ExecuteToolSelect_SoftBrush(int diameter, float hardness, floa
 	StrokeIsOriented_set(false);
 }
 
-void Application::ExecuteToolSelect_PatternBrush(int diameter, uint32_t patternId, float spacing)
+void Application::ExecuteToolSelect_PatternBrush(const int diameter, const uint32_t patternId, const float spacing)
 {
 	LOG_DBG("exec: toolSelect_PatternBrush: %d, %lu, %f", diameter, patternId, spacing);
 	
@@ -852,7 +860,7 @@ void Application::ExecuteToolSelect_PatternBrush(int diameter, uint32_t patternI
 	StrokeIsOriented_set(mBrushPattern->mIsOriented);
 }
 
-void Application::ExecuteToolSelect_SoftBrushDirect(int diameter, float hardness, float spacing)
+void Application::ExecuteToolSelect_SoftBrushDirect(const int diameter, const float hardness, const float spacing)
 {
 	LOG_DBG("exec: toolSelect_SoftBrushDirect: %d, %f, %f", diameter, hardness, spacing);
 	
@@ -869,7 +877,7 @@ void Application::ExecuteToolSelect_SoftBrushDirect(int diameter, float hardness
 	StrokeIsOriented_set(false);
 }
 
-void Application::ExecuteToolSelect_PatternBrushDirect(int diameter, uint32_t patternId, float spacing)
+void Application::ExecuteToolSelect_PatternBrushDirect(const int diameter, const uint32_t patternId, const float spacing)
 {
 	LOG_DBG("exec: toolSelect_PatternBrushDirect: %d, %lu, %f", diameter, patternId, spacing);
 	
@@ -886,7 +894,7 @@ void Application::ExecuteToolSelect_PatternBrushDirect(int diameter, uint32_t pa
 	StrokeIsOriented_set(mBrushPattern->mIsOriented);
 }
 
-void Application::ExecuteToolSelect_SoftSmudge(int diameter, float hardness, float spacing, float strength)
+void Application::ExecuteToolSelect_SoftSmudge(const int diameter, const float hardness, const float spacing, const float strength)
 {
 	LOG_DBG("exec: toolSelect_SoftSmudge: %d, %f, %f %f", diameter, hardness, spacing, strength);
 	
@@ -905,7 +913,7 @@ void Application::ExecuteToolSelect_SoftSmudge(int diameter, float hardness, flo
 	StrokeIsOriented_set(false);
 }
 
-void Application::ExecuteToolSelect_PatternSmudge(int diameter, uint32_t patternId, float spacing, float strength)
+void Application::ExecuteToolSelect_PatternSmudge(const int diameter, const uint32_t patternId, const float spacing, const float strength)
 {
 	LOG_DBG("exec: toolSelect_PatternSmudge: %d, %lu, %f, %f", diameter, patternId, spacing, strength);
 	
@@ -924,7 +932,7 @@ void Application::ExecuteToolSelect_PatternSmudge(int diameter, uint32_t pattern
 	StrokeIsOriented_set(mBrushPattern->mIsOriented);
 }
 
-void Application::ExecuteToolSelect_SoftEraser(int diameter, float hardness, float spacing)
+void Application::ExecuteToolSelect_SoftEraser(const int diameter, const float hardness, const float spacing)
 {
 	LOG_DBG("exec: toolSelect_SoftEraser: %d, %f, %f", diameter, hardness, spacing);
 	
@@ -941,7 +949,7 @@ void Application::ExecuteToolSelect_SoftEraser(int diameter, float hardness, flo
 	StrokeIsOriented_set(false);
 }
 
-void Application::ExecuteToolSelect_PatternEraser(int diameter, uint32_t patternId, float spacing)
+void Application::ExecuteToolSelect_PatternEraser(const int diameter, const uint32_t patternId, const float spacing)
 {
 	LOG_DBG("exec: toolSelect_PatternEraser: %d, %lu, %f", diameter, patternId, spacing);
 	
@@ -967,7 +975,7 @@ ToolType Application::ToolType_get() const
 	return mToolType;
 }
 
-void Application::ToolType_set(ToolType type)
+void Application::ToolType_set(const ToolType type)
 {
 	mToolType = type;
 
@@ -995,9 +1003,9 @@ void Application::ToolType_set(ToolType type)
 	}
 }
 
-void Application::HandleBezierTravel(void* obj, BezierTravellerState state, float x, float y)
+void Application::HandleBezierTravel(void * obj, const BezierTravellerState state, const float x, const float y)
 {
-	Application* self = (Application*)obj;
+	Application * self = (Application *)obj;
 	
 	if (state == BezierTravellerState_Update)
 		self->mTraveller.Update(x, y);
@@ -1007,9 +1015,9 @@ void Application::HandleBezierTravel(void* obj, BezierTravellerState state, floa
 		self->mTraveller.End(x, y);
 }
 
-void Application::HandleTravel(void* obj, const TravelEvent& e)
+void Application::HandleTravel(void * obj, const TravelEvent & e)
 {
-	Application* self = (Application*)obj;
+	Application * self = (Application *)obj;
 
 	self->DoPaint(e.x, e.y, e.dx, e.dy);
 	
@@ -1019,7 +1027,7 @@ void Application::HandleTravel(void* obj, const TravelEvent& e)
 	}
 }
 
-void Application::StrokeBegin(int index, bool smooth, bool mirrorX, float x, float y)
+void Application::StrokeBegin(const int index, const bool smooth, const bool mirrorX, const float x, const float y)
 {
 #ifdef DEBUG
 //	smooth = false;
@@ -1042,7 +1050,7 @@ void Application::StrokeEnd()
 	ExecuteAndSave(packet);
 }
 
-void Application::StrokeMove(float x, float y)
+void Application::StrokeMove(const float x, const float y)
 {
 	CommandPacket packet = CommandPacket::Make_StrokeMove(x, y);
 	
@@ -1094,7 +1102,7 @@ void Application::Invalidate()
 	Invalidate(0, 0, size[0], size[1]);
 }
 
-void Application::Invalidate(int x, int y, int sx, int sy)
+void Application::Invalidate(const int x, const int y, const int sx, const int sy)
 {
 	if (sx == 0 || sy == 0)
 		return;
@@ -1108,11 +1116,11 @@ void Application::Invalidate(int x, int y, int sx, int sy)
 	mDirtyArea_Total.Merge(area);
 }
 
-void Application::DoPaint(float x, float y, float dx, float dy)
+void Application::DoPaint(const float x, const float y, const float dx, const float dy)
 {
 //	LOG_DBG("doPaint: %f, %f - %f, %f", x, y, dx, dy);
 	
-	ITool* tool = Tool_get(mToolType);
+	ITool * tool = Tool_get(mToolType);
 	
 	switch (mToolType)
 	{
@@ -1165,9 +1173,9 @@ void Application::DoPaint(float x, float y, float dx, float dy)
 // Undo
 // ----
 
-void Application::CommitUndoBuffer(UndoBuffer* undo)
+void Application::CommitUndoBuffer(UndoBuffer * undo)
 {
-	Assert(mPacketList.size() == 0);
+	Assert(mPacketList.empty());
 	
 	if (mUndoEnabled)
 	{
@@ -1178,11 +1186,11 @@ void Application::CommitUndoBuffer(UndoBuffer* undo)
 	else
 	{
 		delete undo;
-		undo = 0;
+		undo = nullptr;
 	}
 }
 
-void Application::UndoEnabled_set(bool enabled)
+void Application::UndoEnabled_set(const bool enabled)
 {
 	mUndoEnabled = enabled;
 }
@@ -1207,12 +1215,12 @@ void Application::Undo()
 	
 	LOG_DBG("undo", 0);
 	
-	bool isEditing = mLayerMgr->EditingIsEnabled_get();
+	const bool isEditing = mLayerMgr->EditingIsEnabled_get();
 	
 //	if (isEditing)
 //		mLayerMgr->EditingEnd();
 	
-	UndoBuffer* buffer = mUndoStack.GetPrevBuffer();
+	UndoBuffer * buffer = mUndoStack.GetPrevBuffer();
 	
 	bool rebuildCaches = false;
 	
@@ -1220,7 +1228,7 @@ void Application::Undo()
 	{
 		// restore bitmap data
 		
-		MacImage* prev = &buffer->mPrev.mImage;
+		MacImage * prev = &buffer->mPrev.mImage;
 		
 		LOG_DBG("undo: update bitmap data: %dx%d", prev->Sx_get(), prev->Sy_get());
 
@@ -1255,10 +1263,10 @@ void Application::Undo()
 	{
 		// restore bitmap data
 		
-		MacImage* prev1 = &buffer->mPrev.mDualImage1;
-		MacImage* prev2 = &buffer->mPrev.mDualImage2;
-		int index1 = buffer->mPrev.mDualImageDataLayer1;
-		int index2 = buffer->mPrev.mDualImageDataLayer2;
+		MacImage * prev1 = &buffer->mPrev.mDualImage1;
+		MacImage * prev2 = &buffer->mPrev.mDualImage2;
+		const int index1 = buffer->mPrev.mDualImageDataLayer1;
+		const int index2 = buffer->mPrev.mDualImageDataLayer2;
 		
 		LOG_DBG("undo: update bitmap data: %dx%d -> %d", prev1->Sx_get(), prev1->Sy_get(), index1);
 		LOG_DBG("undo: update bitmap data: %dx%d -> %d", prev2->Sx_get(), prev2->Sy_get(), index2);
@@ -1371,14 +1379,14 @@ void Application::Redo()
 	
 	LOG_DBG("redo", 0);
 	
-	bool isEditing = mLayerMgr->EditingIsEnabled_get();
+	const bool isEditing = mLayerMgr->EditingIsEnabled_get();
 	
 //	if (isEditing)
 //		mLayerMgr->EditingEnd();
 	
 	mUndoStack.Seek(+1);
 	
-	UndoBuffer* buffer = mUndoStack.GetPrevBuffer();
+	UndoBuffer * buffer = mUndoStack.GetPrevBuffer();
 	
 	Assert(buffer != 0);
 	
@@ -1388,7 +1396,7 @@ void Application::Redo()
 	{
 		// restore bitmap data
 		
-		MacImage* curr = &buffer->mNext.mImage;
+		MacImage * curr = &buffer->mNext.mImage;
 		
 		LOG_DBG("redo: update bitmap data: %dx%d", curr->Sx_get(), curr->Sy_get());
 		
@@ -1423,7 +1431,7 @@ void Application::Redo()
 	{
 		mUndoEnabled = false;
 		
-		Rgba color = buffer->mNext.mLayerClearColor;
+		const Rgba color = buffer->mNext.mLayerClearColor;
 		
 		ExecuteDataLayerClear(buffer->mNext.mLayerClearDataLayer, color.rgb[0], color.rgb[1], color.rgb[2], color.rgb[3]);
 		
@@ -1529,9 +1537,9 @@ void Application::Redo()
 // Tools
 // -----
 
-void Application::ColorSelect(float r, float g, float b, float a)
+void Application::ColorSelect(const float r, const float g, const float b, const float a)
 {
-	CommandPacket packet = CommandPacket::Make_ColorSelect(r, g, b, a);
+	const CommandPacket packet = CommandPacket::Make_ColorSelect(r, g, b, a);
 	
 	ExecuteAndSave(packet);
 }
@@ -1618,11 +1626,11 @@ void Application::SwitchErazorBrush()
 	}
 }
 
-void Application::ImageInitialize(int layerCount, int sx, int sy)
+void Application::ImageInitialize(const int layerCount, const int sx, const int sy)
 {
 	Assert(!mLayerMgr->EditingIsEnabled_get());
 	
-	bool undoEnabled = mUndoEnabled;
+	const bool undoEnabled = mUndoEnabled;
 	
 	UndoEnabled_set(false);
 
@@ -1642,14 +1650,14 @@ void Application::ImageInitialize(int layerCount, int sx, int sy)
 	UndoEnabled_set(undoEnabled);
 }
 
-void Application::ImageSize(int layerCount, int sx, int sy)
+void Application::ImageSize(const int layerCount, const int sx, const int sy)
 {
-	CommandPacket packet = CommandPacket::Make_ImageSize(layerCount, sx, sy);
+	const CommandPacket packet = CommandPacket::Make_ImageSize(layerCount, sx, sy);
 
 	ExecuteAndSave(packet);
 }
 
-void Application::DataLayerBlit(int index, MacImage* src, const BlitTransform& transform)
+void Application::DataLayerBlit(const int index, const MacImage * src, const BlitTransform & transform)
 {
 	LOG_DBG("dataLayerBlit: %d", index);
 	
@@ -1658,11 +1666,12 @@ void Application::DataLayerBlit(int index, MacImage* src, const BlitTransform& t
 	DataStreamOpen();
 	MemoryStream stream;
 	src->Save(&stream);
-	uint8_t* bytes = 0;
+	uint8_t* bytes = nullptr;
 	int byteCount = 0;
 	stream.ToArray(&bytes, &byteCount);
 	mDataStreamWriter->WriteSegment("image_raw", "", bytes, byteCount, false);
 	delete[] bytes;
+	bytes = nullptr;
 	DataStreamClose();
 
 	//
@@ -1672,113 +1681,113 @@ void Application::DataLayerBlit(int index, MacImage* src, const BlitTransform& t
 	ExecuteAndSave(packet);
 }
 
-void Application::DataLayerClear(int index, float r, float g, float b, float a)
+void Application::DataLayerClear(const int index, const float r, const float g, const float b, const float a)
 {
-	CommandPacket packet = CommandPacket::Make_DataLayerClear(index, r, g, b, a);
+	const CommandPacket packet = CommandPacket::Make_DataLayerClear(index, r, g, b, a);
 
 	ExecuteAndSave(packet);
 }
 
-void Application::DataLayerMerge(int index1, int index2)
+void Application::DataLayerMerge(const int index1, const int index2)
 {
-	CommandPacket packet = CommandPacket::Make_DataLayerMerge(index1, index2);
+	const CommandPacket packet = CommandPacket::Make_DataLayerMerge(index1, index2);
 
 	ExecuteAndSave(packet);
 }
 
-void Application::DataLayerOpacity(int index, float opacity)
+void Application::DataLayerOpacity(const int index, const float opacity)
 {
-	CommandPacket packet = CommandPacket::Make_DataLayerOpacity(index, opacity);
+	const CommandPacket packet = CommandPacket::Make_DataLayerOpacity(index, opacity);
 	
 	ExecuteAndSave(packet);
 }
 
-void Application::LayerOrder(std::vector<int> layerOrder)
+void Application::LayerOrder(const std::vector<int> & layerOrder)
 {
-	CommandPacket packet = CommandPacket::Make_LayerOrder(&layerOrder[0], layerOrder.size());
+	const CommandPacket packet = CommandPacket::Make_LayerOrder(&layerOrder[0], layerOrder.size());
 	
 	ExecuteAndSave(packet);
 }
 
-void Application::DataLayerSelect(int index)
+void Application::DataLayerSelect(const int index)
 {
-	CommandPacket packet = CommandPacket::Make_DataLayerSelect(index);
+	const CommandPacket packet = CommandPacket::Make_DataLayerSelect(index);
 
 	ExecuteAndSave(packet);
 }
 
-void Application::DataLayerVisibility(int index, bool visibility)
+void Application::DataLayerVisibility(const int index, const bool visibility)
 {	
-	CommandPacket packet = CommandPacket::Make_DataLayerVisibility(index, visibility);
+	const CommandPacket packet = CommandPacket::Make_DataLayerVisibility(index, visibility);
 	
 	ExecuteAndSave(packet);
 }
 
-void Application::ToolSelect_BrushSoft(ToolSettings_BrushSoft settings)
+void Application::ToolSelect_BrushSoft(const ToolSettings_BrushSoft & settings)
 {
-	CommandPacket packet = CommandPacket::Make_ToolSelect_SoftBrush(settings.diameter, settings.hardness, settings.spacing);
+	const CommandPacket packet = CommandPacket::Make_ToolSelect_SoftBrush(settings.diameter, settings.hardness, settings.spacing);
 	
 	ExecuteAndSave(packet);
 }
 
-void Application::ToolSelect_BrushPattern(ToolSettings_BrushPattern settings)
+void Application::ToolSelect_BrushPattern(const ToolSettings_BrushPattern & settings)
 {
-	CommandPacket packet = CommandPacket::Make_ToolSelect_PatternBrush(settings.patternId, settings.diameter, settings.spacing);
+	const CommandPacket packet = CommandPacket::Make_ToolSelect_PatternBrush(settings.patternId, settings.diameter, settings.spacing);
 
 	ExecuteAndSave(packet);
 }
 
-void Application::ToolSelect_BrushSoftDirect(ToolSettings_BrushSoftDirect settings)
+void Application::ToolSelect_BrushSoftDirect(const ToolSettings_BrushSoftDirect & settings)
 {
-	CommandPacket packet = CommandPacket::Make_ToolSelect_SoftBrushDirect(settings.diameter, settings.hardness, settings.spacing);
+	const CommandPacket packet = CommandPacket::Make_ToolSelect_SoftBrushDirect(settings.diameter, settings.hardness, settings.spacing);
 	
 	ExecuteAndSave(packet);
 }
 
-void Application::ToolSelect_BrushPatternDirect(ToolSettings_BrushPatternDirect settings)
+void Application::ToolSelect_BrushPatternDirect(const ToolSettings_BrushPatternDirect & settings)
 {
-	CommandPacket packet = CommandPacket::Make_ToolSelect_PatternBrushDirect(settings.patternId, settings.diameter, settings.spacing);
+	const CommandPacket packet = CommandPacket::Make_ToolSelect_PatternBrushDirect(settings.patternId, settings.diameter, settings.spacing);
 
 	ExecuteAndSave(packet);
 }
 
-void Application::ToolSelect_EraserSoft(ToolSettings_EraserSoft settings)
+void Application::ToolSelect_EraserSoft(const ToolSettings_EraserSoft & settings)
 {
-	CommandPacket packet = CommandPacket::Make_ToolSelect_SoftEraser(settings.diameter, settings.hardness, settings.spacing);
+	const CommandPacket packet = CommandPacket::Make_ToolSelect_SoftEraser(settings.diameter, settings.hardness, settings.spacing);
 	
 	ExecuteAndSave(packet);
 }
 
-void Application::ToolSelect_EraserPattern(ToolSettings_EraserPattern settings)
+void Application::ToolSelect_EraserPattern(const ToolSettings_EraserPattern & settings)
 {
-	CommandPacket packet = CommandPacket::Make_ToolSelect_PatternEraser(settings.patternId, settings.diameter, settings.spacing);
+	const CommandPacket packet = CommandPacket::Make_ToolSelect_PatternEraser(settings.patternId, settings.diameter, settings.spacing);
 	
 	ExecuteAndSave(packet);
 }
 
-void Application::ToolSelect_SmudgeSoft(ToolSettings_SmudgeSoft settings)
+void Application::ToolSelect_SmudgeSoft(const ToolSettings_SmudgeSoft & settings)
 {
-	CommandPacket packet = CommandPacket::Make_ToolSelect_SoftSmudge(settings.diameter, settings.hardness, settings.spacing, settings.strength);
+	const CommandPacket packet = CommandPacket::Make_ToolSelect_SoftSmudge(settings.diameter, settings.hardness, settings.spacing, settings.strength);
 	
 	ExecuteAndSave(packet);
 }
 
-void Application::ToolSelect_SmudgePattern(ToolSettings_SmudgePattern settings)
+void Application::ToolSelect_SmudgePattern(const ToolSettings_SmudgePattern & settings)
 {
-	CommandPacket packet = CommandPacket::Make_ToolSelect_PatternSmudge(settings.patternId, settings.diameter, settings.spacing, settings.strength);
+	const CommandPacket packet = CommandPacket::Make_ToolSelect_PatternSmudge(settings.patternId, settings.diameter, settings.spacing, settings.strength);
 	
 	ExecuteAndSave(packet);
 }
 
-void Application::BrushPattern_set(uint32_t patternId)
+void Application::BrushPattern_set(const uint32_t patternId)
 {
-	Brush_Pattern* pattern;
+	Brush_Pattern  * pattern = nullptr;
 
 	if (!FindPattern(patternId, &pattern))
 	{
 		// add brush to image library
 
-		Brush_Pattern* temp = pattern->Duplicate();
+		Brush_Pattern * temp = pattern->Duplicate();
 
 		mBrushLibrary_Image.Append(temp, true);
 
@@ -1802,10 +1811,9 @@ uint32_t Application::BrushPattern_get() const
 	return mBrushPattern->mPatternId;
 }
 
-void Application::StrokeInterval_set(float interval)
+void Application::StrokeInterval_set(const float _interval)
 {
-	if (interval < 0.5f)
-		interval = 0.5f;
+	const float interval = Calc::Max(0.5f, _interval);
 	
 	mTraveller.m_Step = interval;
 	
@@ -1817,9 +1825,9 @@ float Application::StrokeInterval_get() const
 	return mStrokeInterval;
 }
 
-bool Application::FindPattern(uint32_t patternId, Brush_Pattern** out_pattern)
+bool Application::FindPattern(const uint32_t patternId, Brush_Pattern ** out_pattern)
 {
-	Brush_Pattern* brush = 0;
+	Brush_Pattern * brush = nullptr;
 
 	*out_pattern = mBrushLibrary_Image.Find(patternId);
 
@@ -1838,18 +1846,18 @@ bool Application::FindPattern(uint32_t patternId, Brush_Pattern** out_pattern)
 	if (*out_pattern)
 		return false;
 
-	if (brush == 0)
+	if (brush == nullptr)
 		throw ExceptionVA("brush not found: %lu", patternId);
 
 	return false;
 }
 
-Rgba Application::BrushColor_get() const
+const Rgba & Application::BrushColor_get() const
 {
 	return mLayerMgr->BrushColor_get();
 }
 
-void Application::BrushColor_set(Rgba color)
+void Application::BrushColor_set(const Rgba & color)
 {
 	mLayerMgr->BrushColor_set(color);
 }
@@ -1859,19 +1867,19 @@ float Application::BrushOpacity_get() const
 	return mLayerMgr->BrushOpacity_get();
 }
 
-void Application::BrushOpacity_set(float opacity)
+void Application::BrushOpacity_set(const float opacity)
 {
 	mLayerMgr->BrushOpacity_set(opacity);
 }
 
-void Application::StrokeIsOriented_set(bool isOriented)
+void Application::StrokeIsOriented_set(const bool isOriented)
 {
 	mToolBrush.IsOriented_set(isOriented);
 	mToolBrushDirect.IsOriented_set(isOriented);
 	mTraveller.m_Lag = isOriented;
 }
 
-ITool* Application::Tool_get(ToolType type)
+ITool * Application::Tool_get(const ToolType type)
 {
 	switch (type)
 	{
@@ -1896,7 +1904,7 @@ ITool* Application::Tool_get(ToolType type)
 	}
 }
 
-BrushLibrarySet* Application::BrushLibrarySet_get()
+BrushLibrarySet * Application::BrushLibrarySet_get()
 {
 	return &mBrushLibrarySet;
 }
@@ -1905,7 +1913,7 @@ BrushLibrarySet* Application::BrushLibrarySet_get()
 // Brushes
 // -------
 
-void Application::SetupBrushLibraries(const char* standardFileName, const char* customFileName)
+void Application::SetupBrushLibraries(const char * standardFileName, const char * customFileName)
 {
 	mBrushLibrary_Standard_FileName = standardFileName;
 	mBrushLibrary_Custom_FileName = customFileName;
@@ -1937,7 +1945,7 @@ void Application::SetupBrushLibraries(const char* standardFileName, const char* 
 	}
 }
 
-void Application::AddBrush(Brush_Pattern* brush)
+void Application::AddBrush(Brush_Pattern * brush)
 {
 	// todo: create scaled down version of brush
 	
@@ -1950,7 +1958,7 @@ void Application::AddBrush(Brush_Pattern* brush)
 // Eyedropper
 // ----------
 
-Rgba Application::GetColorAtLocation(Vec2F location) const
+Rgba Application::GetColorAtLocation(const Vec2F & location) const
 {
 	Rgba result;
 	mLayerMgr->EditingBuffer_get()->SampleAA(location[0], location[1], result);
@@ -1961,7 +1969,7 @@ Rgba Application::GetColorAtLocation(Vec2F location) const
 // Swatches
 // --------
 
-SwatchMgr* Application::SwatchMgr_get()
+SwatchMgr * Application::SwatchMgr_get()
 {
 	return &mSwatchMgr;
 }
@@ -1975,9 +1983,9 @@ ImageId Application::AllocateImageId()
 #if KLODDER_LITE==0
 	while (true)
 	{
-		int id = gSettings.GetInt32("curr_image_id", 0);
+		const int id = gSettings.GetInt32("curr_image_id", 0);
 
-		ImageId imageId(String::Format("%03d", id).c_str());
+		const ImageId imageId(String::Format("%03d", id).c_str());
 
 		if (!ImageExists(imageId))
 			return imageId;
@@ -1985,35 +1993,35 @@ ImageId Application::AllocateImageId()
 			gSettings.SetInt32("curr_image_id", id + 1);
 	}
 #else
-	int id = 0;
+	const int id = 0;
 	
 	return ImageId(String::Format("%03d", id).c_str());
 #endif
 }
 
-bool Application::ImageExists(ImageId imageId)
+bool Application::ImageExists(const ImageId & imageId)
 {
-	std::string path = gSystem.GetDocumentPath(imageId.mName.c_str());
+	const std::string path = gSystem.GetDocumentPath(imageId.mName.c_str());
 
-	std::string fileName = path + ".xml";
+	const std::string fileName = path + ".xml";
 	
 	LOG_DBG("imageExists: %s", fileName.c_str());
 
 	return FileStream::Exists(fileName.c_str());
 }
 
-void Application::ImageDelete(ImageId imageId)
+void Application::ImageDelete(const ImageId & imageId)
 {
-	std::string path = gSystem.GetDocumentPath(imageId.mName.c_str());
+	const std::string path = gSystem.GetDocumentPath(imageId.mName.c_str());
 	
-	std::string fileName = path + ".xml";
+	const std::string fileName = path + ".xml";
 	
 	LOG_DBG("imageDelete: %s", fileName.c_str());
 	
 	FileStream::Delete(fileName.c_str());
 }
 
-void Application::ImageReset(ImageId imageId)
+void Application::ImageReset(const ImageId & imageId)
 {
 	Assert(!mImageId.IsSet_get());
 	Assert(mCommandStreamPosition == 0);
@@ -2033,7 +2041,7 @@ void Application::ImageReset(ImageId imageId)
 	mSwatchMgr.Clear();
 }
 
-void Application::ImageDuplicate(ImageId srcId, ImageId dstId)
+void Application::ImageDuplicate(const ImageId & srcId, const ImageId & dstId)
 {	
 	LoadImage(srcId);
 	
@@ -2044,8 +2052,8 @@ void Application::ImageDuplicate(ImageId srcId, ImageId dstId)
 	// manually copy command and data streams
 	
 	{
-		std::string src = GetPath_CommandStream(srcId);
-		std::string dst = GetPath_CommandStream(dstId);
+		const std::string src = GetPath_CommandStream(srcId);
+		const std::string dst = GetPath_CommandStream(dstId);
 		
 		FileStream srcStream;
 		FileStream dstStream;
@@ -2057,8 +2065,8 @@ void Application::ImageDuplicate(ImageId srcId, ImageId dstId)
 	}
 	
 	{
-		std::string src = GetPath_DataStream(srcId);
-		std::string dst = GetPath_DataStream(dstId);
+		const std::string src = GetPath_DataStream(srcId);
+		const std::string dst = GetPath_DataStream(dstId);
 		
 		FileStream srcStream;
 		FileStream dstStream;
@@ -2070,7 +2078,7 @@ void Application::ImageDuplicate(ImageId srcId, ImageId dstId)
 	}
 }
 
-void Application::ImageActivate(bool writeEnabled)
+void Application::ImageActivate(const bool writeEnabled)
 {
 	if (mIsActive)
 		throw ExceptionVA("image already active");
@@ -2132,7 +2140,7 @@ void Application::SaveImage()
 	if (!mImageId.IsSet_get())
 		throw ExceptionVA("image ID not set");
 	
-	std::string path = gSystem.GetDocumentPath(mImageId.mName.c_str());
+	const std::string path = gSystem.GetDocumentPath(mImageId.mName.c_str());
 	
 	MacImage merged;
 	mLayerMgr->RenderMergedFinal(merged);
@@ -2144,11 +2152,11 @@ void Application::SaveImage()
 	SaveImageBrushes(path);
 }
 
-void Application::SaveImageXml(const std::string& path)
+void Application::SaveImageXml(const std::string & path)
 {
 	volatile Benchmark bm("save image xml");
 	
-	std::string fileName = path + ".xml";
+	const std::string fileName = path + ".xml";
 	
 	FileStream stream;
 	
@@ -2195,7 +2203,8 @@ void Application::SaveImageXml(const std::string& path)
 					writer.WriteAttribute_Int32("order", i);
 					writer.WriteAttribute_Int32("visibility", mLayerMgr->DataLayerVisibility_get(index) ? 1 : 0);
 					writer.WriteAttribute_Int32("opacity", int(mLayerMgr->DataLayerOpacity_get(index) * 100.0f));
-					std::string dataLayerFileName = Path::GetFileName(path + String::Format("_layer%d.bin", index));
+
+					const std::string dataLayerFileName = Path::GetFileName(path + String::Format("_layer%d.bin", index));
 					writer.WriteAttribute("file", dataLayerFileName.c_str());
 				}
 				writer.EndNode();
@@ -2210,11 +2219,12 @@ void Application::SaveImageXml(const std::string& path)
 				MemoryStream packetStream;
 				StreamWriter streamWriter(&packetStream, false);
 				mLastColorCommand.Write(streamWriter);
-				uint8_t* bytes;
+				uint8_t * bytes;
 				int byteCount;
 				packetStream.ToArray(&bytes, &byteCount);
 				writer.WriteAttribute_Bytes("data", bytes, byteCount);
-				delete[] bytes;
+				delete [] bytes;
+				bytes = nullptr;
 			}
 			writer.EndNode();
 
@@ -2223,11 +2233,12 @@ void Application::SaveImageXml(const std::string& path)
 				MemoryStream packetStream;
 				StreamWriter streamWriter(&packetStream, false);
 				mLastToolSelectCommand.Write(streamWriter);
-				uint8_t* bytes;
+				uint8_t * bytes;
 				int byteCount;
 				packetStream.ToArray(&bytes, &byteCount);
 				writer.WriteAttribute_Bytes("data", bytes, byteCount);
-				delete[] bytes;
+				delete [] bytes;
+				bytes = nullptr;
 			}
 			writer.EndNode();
 			
@@ -2235,11 +2246,12 @@ void Application::SaveImageXml(const std::string& path)
 			{
 				MemoryStream swatchesStream;
 				mSwatchMgr.Write(&swatchesStream);
-				uint8_t* bytes;
+				uint8_t * bytes;
 				int byteCount;
 				swatchesStream.ToArray(&bytes, &byteCount);
 				writer.WriteAttribute_Bytes("data", bytes, byteCount);
-				delete[] bytes;
+				delete [] bytes;
+				bytes = nullptr;
 			}
 			writer.EndNode();
 		}
@@ -2252,19 +2264,19 @@ void Application::SaveImageXml(const std::string& path)
 	stream.Close();
 }
 
-void Application::SaveImageData(const std::string& path)
+void Application::SaveImageData(const std::string & path)
 {
 	volatile Benchmark bm("save image data");
 	
 	for (int i = 0; i < mLayerMgr->LayerCount_get(); ++i)
 	{
-		std::string fileName = path + String::Format("_layer%d.bin", i);
+		const std::string fileName = path + String::Format("_layer%d.bin", i);
 		
 		FileStream stream;
 		
 		stream.Open(fileName.c_str(), OpenMode_Write);
 		
-		MacImage* image = mLayerMgr->DataLayer_get(i);
+		const MacImage * image = mLayerMgr->DataLayer_get(i);
 		
 		image->Save(&stream);
 		
@@ -2272,11 +2284,11 @@ void Application::SaveImageData(const std::string& path)
 	}
 }
 
-void Application::SaveImagePreview(const std::string& path, MacImage* merged)
+void Application::SaveImagePreview(const std::string & path, const MacImage * merged)
 {
 	volatile Benchmark bm("save image preview");
 	
-	std::string fileName = path + "_preview.bin";
+	const std::string fileName = path + "_preview.bin";
 	
 	FileStream stream;
 	
@@ -2287,7 +2299,7 @@ void Application::SaveImagePreview(const std::string& path, MacImage* merged)
 	stream.Close();
 }
 
-void Application::SaveImageThumbnail(const std::string& path, MacImage* merged)
+void Application::SaveImageThumbnail(const std::string & path, const MacImage * merged)
 {
 	volatile Benchmark bm("save image thumbnail");
 	
@@ -2297,7 +2309,7 @@ void Application::SaveImageThumbnail(const std::string& path, MacImage* merged)
 	
 #if 1
 	{
-		std::string fileName = path + "_thumbnail.png";
+		const std::string fileName = path + "_thumbnail.png";
 
 		gSystem.SaveAsPng(thumbnail, fileName.c_str());
 	}
@@ -2305,7 +2317,7 @@ void Application::SaveImageThumbnail(const std::string& path, MacImage* merged)
 	
 #if 1
 	{
-		std::string fileName = path + "_thumbnail.bin";
+		const std::string fileName = path + "_thumbnail.bin";
 		
 		FileStream stream;
 		stream.Open(fileName.c_str(), OpenMode_Write);
@@ -2315,14 +2327,14 @@ void Application::SaveImageThumbnail(const std::string& path, MacImage* merged)
 #endif
 }
 
-void Application::SaveImageBrushes(const std::string& path)
+void Application::SaveImageBrushes(const std::string & path)
 {
 	volatile Benchmark bm("save image brushes");
 	
 	if (!mImageId.IsSet_get())
 		throw ExceptionVA("image ID not set");
 	
-	std::string fileName = path + ".brushes";
+	const std::string fileName = path + ".brushes";
 
 	FileStream stream;
 
@@ -2336,25 +2348,25 @@ static std::string GetPath()
 	return gSystem.GetDocumentPath("") + "/";
 }
 
-static std::string GetPath(ImageId id)
+static std::string GetPath(const ImageId & id)
 {
 	return gSystem.GetDocumentPath(id.mName.c_str());
 }
 
-void Application::LoadImage(ImageId id)
+void Application::LoadImage(const ImageId & id)
 {
 	if (!id.IsSet_get())
 		throw ExceptionVA("image ID not set");
 	
 	ImageReset(id);
 	
-	std::string path = GetPath(id);
+	const std::string path = GetPath(id);
 	
 	LoadImageXml(path);
 	LoadImageData(path);
 }
 
-void Application::LoadImageXml(const std::string& path)
+void Application::LoadImageXml(const std::string & path)
 {
 	volatile Benchmark bm("load image xml");
 	
@@ -2394,15 +2406,15 @@ void Application::LoadImageXml(const std::string& path)
 		mSwatchMgr.Add(description.swatches.Swatch_get(i));
 }
 
-void Application::LoadImageData(const std::string& path)
+void Application::LoadImageData(const std::string & path)
 {
 	volatile Benchmark bm("load image data");
 	
 	for (int i = 0; i < mLayerMgr->LayerCount_get(); ++i)
 	{
-		std::string fileName = Path::GetFileName(GetPath(mImageId) + String::Format("_layer%d.bin", i));
+		const std::string fileName = Path::GetFileName(GetPath(mImageId) + String::Format("_layer%d.bin", i));
 		
-		MacImage* image = mLayerMgr->DataLayer_get(i);
+		MacImage * image = mLayerMgr->DataLayer_get(i);
 		
 		LoadImageDataLayer(fileName, image);
 	}
@@ -2410,13 +2422,13 @@ void Application::LoadImageData(const std::string& path)
 	Invalidate();
 }
 
-kdImageDescription Application::LoadImageDescription(ImageId id)
+kdImageDescription Application::LoadImageDescription(const ImageId & id)
 {
 	volatile Benchmark bm("load image description");
 	
-	std::string path = GetPath(id);
+	const std::string path = GetPath(id);
 	
-	std::string fileName = path + ".xml";
+	const std::string fileName = path + ".xml";
 	
 	FileStream stream;
 	
@@ -2429,11 +2441,11 @@ kdImageDescription Application::LoadImageDescription(ImageId id)
 	return description;
 }
 
-void Application::LoadImageDataLayer(const std::string& _fileName, MacImage* dst)
+void Application::LoadImageDataLayer(const std::string & _fileName, MacImage * dst)
 {
-	std::string path = GetPath();
+	const std::string path = GetPath();
 	
-	std::string fileName = path + _fileName;
+	const std::string fileName = path + _fileName;
 	
 	FileStream stream;
 	
@@ -2444,13 +2456,13 @@ void Application::LoadImageDataLayer(const std::string& _fileName, MacImage* dst
 	stream.Close();
 }
 
-void Application::LoadImagePreview(ImageId imageId, MacImage& image)
+void Application::LoadImagePreview(const ImageId & imageId, MacImage & image)
 {
 	volatile Benchmark bm("load image preview");
 	
 	const std::string path = GetPath(imageId);
 	
-	std::string fileName = path + "_preview.bin";
+	const std::string fileName = path + "_preview.bin";
 	
 	FileStream stream;
 	
@@ -2461,13 +2473,13 @@ void Application::LoadImagePreview(ImageId imageId, MacImage& image)
 	stream.Close();
 }
 
-void Application::LoadImageThumbnail(ImageId id, MacImage& image, bool flipY)
+void Application::LoadImageThumbnail(const ImageId & id, MacImage & image, const bool flipY)
 {
 	volatile Benchmark bm("load image thumbnail");
 	
 	const std::string path = GetPath(id);
 
-	std::string fileName = path + "_thumbnail.bin";
+	const std::string fileName = path + "_thumbnail.bin";
 	
 	FileStream stream;
 	
@@ -2478,18 +2490,18 @@ void Application::LoadImageThumbnail(ImageId id, MacImage& image, bool flipY)
 	stream.Close();
 }
 
-void Application::SaveImageArchive(ImageId imageId, Stream* stream)
+void Application::SaveImageArchive(const ImageId & imageId, Stream * stream)
 {
 	// pack multiple resources into one archive and return result
 	
-	kdImageDescription description = LoadImageDescription(imageId);
+	const kdImageDescription description = LoadImageDescription(imageId);
 	
-	std::string baseName = GetPath(imageId);
+	const std::string baseName = GetPath(imageId);
 	
-	std::string fileNameCommandStream = baseName + ".rec";
-	std::string fileNameBrushes = baseName + ".brushes";
-	std::string fileNamePreview = baseName + "_preview.bin";
-	std::string fileNameDataStream = baseName + ".dat";
+	const std::string fileNameCommandStream = baseName + ".rec";
+	const std::string fileNameBrushes = baseName + ".brushes";
+	const std::string fileNamePreview = baseName + "_preview.bin";
+	const std::string fileNameDataStream = baseName + ".dat";
 	
 	// open streams
 	
@@ -2515,17 +2527,17 @@ void Application::SaveImageArchive(ImageId imageId, Stream* stream)
 	archive.SaveEnd(stream);
 }
 
-std::string Application::GetPath_CommandStream(ImageId imageId)
+std::string Application::GetPath_CommandStream(const ImageId & imageId)
 {
 	return GetPath(imageId) + ".rec";
 }
 
-std::string Application::GetPath_DataStream(ImageId imageId)
+std::string Application::GetPath_DataStream(const ImageId & imageId)
 {
 	return GetPath(imageId) + ".dat";
 }
 
-ImageId Application::ImageId_get() const
+const ImageId & Application::ImageId_get() const
 {
 	return mImageId;
 }
@@ -2536,8 +2548,10 @@ ImageId Application::ImageId_get() const
 
 void Application::CommandStreamOpen()
 {
-	std::string fileName = GetPath_CommandStream(mImageId);
+	const std::string fileName = GetPath_CommandStream(mImageId);
 	
+	Assert(mCommandStream == nullptr);
+	Assert(mCommandStreamWriter == nullptr);
 	mCommandStream = new FileStream(fileName.c_str(), (OpenMode)(OpenMode_Write | OpenMode_Append));
 	mCommandStreamWriter = new CommandStreamWriter(mCommandStream, false);
 	
@@ -2553,19 +2567,21 @@ void Application::CommandStreamClose()
 	LOG_DBG("command stream close: position: %d", mCommandStreamPosition);
 	
 	delete mCommandStreamWriter;
-	mCommandStreamWriter = 0;
+	mCommandStreamWriter = nullptr;
 	
 	mCommandStream->Close();
 	delete mCommandStream;
-	mCommandStream = 0;
+	mCommandStream = nullptr;
 }
 
 void Application::DataStreamOpen()
 {
-	Assert(mDataStream == 0);
+	Assert(mDataStream == nullptr);
+	Assert(mDataStreamReader == nullptr);
+	Assert(mDataStreamWriter == nullptr);
 
-	std::string path = gSystem.GetDocumentPath(mImageId.mName.c_str());
-	std::string fileName = path + ".dat";
+	const std::string path = gSystem.GetDocumentPath(mImageId.mName.c_str());
+	const std::string fileName = path + ".dat";
 	
 	if (mStreamProvider)
 		mDataStream = mStreamProvider->OpenStream(StreamType_Data);
@@ -2584,21 +2600,21 @@ void Application::DataStreamClose()
 	mDataStreamPosition = mDataStream->Position_get();
 	
 	delete mDataStreamReader;
-	mDataStreamReader = 0;
+	mDataStreamReader = nullptr;
 	
 	delete mDataStreamWriter;
-	mDataStreamWriter = 0;
+	mDataStreamWriter = nullptr;
 	
 	if (mStreamProvider)
 	{
 		mStreamProvider->CloseStream(StreamType_Data, mDataStream);
-		mDataStream = 0;
+		mDataStream = nullptr;
 	}
 	else
 	{
 		mDataStream->Close();
 		delete mDataStream;
-		mDataStream = 0;
+		mDataStream = nullptr;
 	}
 }
 
@@ -2606,15 +2622,15 @@ void Application::DataStreamClose()
 // Debugging
 // ---------
 
-void Application::DBG_PaintAt(float x, float y, float dx, float dy)
+void Application::DBG_PaintAt(const float x, const float y, const float dx, const float dy)
 {
 	DoPaint(x, y, dx, dy);
 }
 
-void Application::DBG_ValidateCommandStream(ImageId imageId)
+void Application::DBG_ValidateCommandStream(const ImageId & imageId)
 {
-	std::string path = gSystem.GetDocumentPath(imageId.mName.c_str());
-	std::string fileName = path + ".rec";
+	const std::string path = gSystem.GetDocumentPath(imageId.mName.c_str());
+	const std::string fileName = path + ".rec";
 	
 	FileStream stream(fileName.c_str(), OpenMode_Read);
 	

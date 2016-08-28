@@ -4,20 +4,20 @@
 
 #define FACTOR 0.25f
 
-static void MakeCurve(const BezierCapturePoint& p1, const BezierCapturePoint& p2, BezierCurve& out_Curve);
+static void MakeCurve(const BezierCapturePoint & p1, const BezierCapturePoint & p2, BezierCurve & out_Curve);
 
 BezierTraveller::BezierTraveller()
 {
 	mMaxStep = 1.0f;
-	mTravelCB = 0;
-	mTangentCB = 0;
-	mObj = 0;
+	mTravelCB = nullptr;
+	mTangentCB = nullptr;
+	mObj = nullptr;
 
 	mHistoryCursor = 0;
 	mHistorySize = 0;
 }
 
-void BezierTraveller::Setup(float maxStep, BezierTravelCB travelCB, BezierTangentCB tangentCB, void* obj)
+void BezierTraveller::Setup(const float maxStep, const BezierTravelCB travelCB, const BezierTangentCB tangentCB, void * obj)
 {
 	mMaxStep = maxStep;
 	mTravelCB = travelCB;
@@ -25,7 +25,7 @@ void BezierTraveller::Setup(float maxStep, BezierTravelCB travelCB, BezierTangen
 	mObj = obj;
 }
 
-void BezierTraveller::Begin(float x, float y)
+void BezierTraveller::Begin(const float x, const float y)
 {
 	mLastLocation.Set(x, y);
 	
@@ -34,7 +34,7 @@ void BezierTraveller::Begin(float x, float y)
 	AddPoint(Vec2F(x, y));
 }
 
-void BezierTraveller::End(float x, float y)
+void BezierTraveller::End(const float x, const float y)
 {
 	if (x != mLastLocation[0] || y != mLastLocation[1])
 	{
@@ -73,7 +73,7 @@ void BezierTraveller::End(float x, float y)
 		mHistory[i].hasTangent = false;
 }
 
-void BezierTraveller::Update(float x, float y)
+void BezierTraveller::Update(const float x, const float y)
 {
 	if (x != mLastLocation[0] || y != mLastLocation[1])
 	{
@@ -96,8 +96,8 @@ void BezierTraveller::EmitLeft() const
 	{
 		BezierCurve curve;
 		
-		const BezierCapturePoint& p1 = GetPoint(0);
-		const BezierCapturePoint& p2 = GetPoint(1);
+		const BezierCapturePoint & p1 = GetPoint(0);
+		const BezierCapturePoint & p2 = GetPoint(1);
 		
 		MakeCurve(p1, p2, curve);
 		
@@ -111,8 +111,8 @@ void BezierTraveller::EmitRight() const
 	{
 		BezierCurve curve;
 		
-		const BezierCapturePoint& p1 = GetPoint(1);
-		const BezierCapturePoint& p2 = GetPoint(2);
+		const BezierCapturePoint & p1 = GetPoint(1);
+		const BezierCapturePoint & p2 = GetPoint(2);
 		
 		MakeCurve(p1, p2, curve);
 		
@@ -126,8 +126,8 @@ void BezierTraveller::EmitStraight() const
 	{
 		BezierCurve curve;
 		
-		const BezierCapturePoint& p1 = GetPoint(0);
-		const BezierCapturePoint& p2 = GetPoint(1);
+		const BezierCapturePoint & p1 = GetPoint(0);
+		const BezierCapturePoint & p2 = GetPoint(1);
 		
 		MakeCurve(p1, p2, curve);
 		
@@ -138,18 +138,19 @@ void BezierTraveller::EmitStraight() const
 class SampleState
 {
 public:
-	inline SampleState(const BezierCurve& _curve) : curve(_curve)
+	inline SampleState(const BezierCurve & _curve)
+		: curve(_curve)
 	{
 	}
 	
-	const BezierCurve& curve;
+	const BezierCurve & curve;
 	float maxDistanceSq;
 	BezierTravellerState state;
 	BezierTravelCB travelCB;
-	void* obj;
+	void * obj;
 };
 
-static void Sample(const SampleState& state, float t1, float t2)
+static void Sample(const SampleState & state, const float t1, const float t2)
 {
 	const Vec2F p1 = state.curve.Interpolate(t1);
 	const Vec2F p2 = state.curve.Interpolate(t2);
@@ -173,7 +174,7 @@ static void Sample(const SampleState& state, float t1, float t2)
 	}
 }
 
-void BezierTraveller::Sample(const BezierCurve& curve) const
+void BezierTraveller::Sample(const BezierCurve & curve) const
 {
 	Assert(mTravelCB != 0);
 	
@@ -189,7 +190,7 @@ void BezierTraveller::Sample(const BezierCurve& curve) const
 		mTangentCB(mObj, curve);
 }
 
-void BezierTraveller::AddPoint(const Vec2F& point)
+void BezierTraveller::AddPoint(const Vec2F & point)
 {
 	mHistory[mHistoryCursor] = BezierCapturePoint(point);
 	
@@ -204,10 +205,10 @@ void BezierTraveller::AddPoint(const Vec2F& point)
 	
 	if (mHistorySize == 2)
 	{
-		BezierCapturePoint& p1 = GetPoint(0);
-		const BezierCapturePoint& p2 = GetPoint(1);
+		      BezierCapturePoint & p1 = GetPoint(0);
+		const BezierCapturePoint & p2 = GetPoint(1);
 		
-		Vec2F delta = p2.position - p1.position;
+		const Vec2F delta = p2.position - p1.position;
 		p1.tangent = delta.Normal();
 		p1.hasTangent = true;
 	}
@@ -216,9 +217,9 @@ void BezierTraveller::AddPoint(const Vec2F& point)
 	{
 		// calculate tangent for mid-point
 		
-		const BezierCapturePoint& p1 = GetPoint(0);
-		BezierCapturePoint& p2 = GetPoint(1);
-		const BezierCapturePoint& p3 = GetPoint(2);
+		const BezierCapturePoint & p1 = GetPoint(0);
+		      BezierCapturePoint & p2 = GetPoint(1);
+		const BezierCapturePoint & p3 = GetPoint(2);
 		
 #if 0
 		p2.tangent = p3.position - p1.position;
@@ -233,7 +234,7 @@ void BezierTraveller::AddPoint(const Vec2F& point)
 		const Vec2F direction2 = delta2.Normal();
 		
 		//Vec2F delta = (delta1 + delta2).Normal();
-		Vec2F delta = direction1 / delta1.Length_get() + direction2 / delta2.Length_get();
+		const Vec2F delta = direction1 / delta1.Length_get() + direction2 / delta2.Length_get();
 //		Assert(delta.Length_get() > 0.0f);
 		Vec2F tangent;
 		if (delta.LengthSq_get() > 0)
@@ -247,25 +248,25 @@ void BezierTraveller::AddPoint(const Vec2F& point)
 	}
 }
 
-int BezierTraveller::GetPointIndex(int index) const
+int BezierTraveller::GetPointIndex(const int index) const
 {
 	return (mHistoryCursor + 3 - mHistorySize + index) % 3;
 }
 
-BezierCapturePoint& BezierTraveller::GetPoint(int index)
+BezierCapturePoint & BezierTraveller::GetPoint(const int index)
 {
 	return mHistory[GetPointIndex(index)];
 }
 
-const BezierCapturePoint& BezierTraveller::GetPoint(int index) const
+const BezierCapturePoint & BezierTraveller::GetPoint(const int index) const
 {
 	return mHistory[GetPointIndex(index)];
 }
 
 static void MakeCurve(
-	const BezierCapturePoint& p1,
-	const BezierCapturePoint& p2,
-	BezierCurve& out_Curve)
+	const BezierCapturePoint & p1,
+	const BezierCapturePoint & p2,
+	BezierCurve & out_Curve)
 {	
 #if 1
 //	const float factor = 1.0f;

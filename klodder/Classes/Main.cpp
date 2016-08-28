@@ -687,7 +687,7 @@ static void InteractivePaint(SDL_Surface* screen)
 
 	const ImageId imageId = application.AllocateImageId();
 
-	CreateApplication(application, imageId, DEFAULT_LAYERCOUNT, DEFAULT_SX, DEFAULT_SY, true, true, 0);
+	CreateApplication(application, imageId, DEFAULT_LAYERCOUNT, screen->w, screen->h, true, true, 0);
 
 	MouseMgr mouseMgr;
 
@@ -726,7 +726,7 @@ static void InteractivePaint(SDL_Surface* screen)
 					ToolSettings_SmudgeSoft settings(
 						Calc::Random(30) * 2 + 1,
 						Calc::RandomMin0Max1(),
-						Calc::RandomMin0Max1(),
+						powf(Calc::RandomMin0Max1(), 2.f),
 						Calc::RandomMin0Max1());
 					application.ToolSelect_SmudgeSoft(settings);
 				}

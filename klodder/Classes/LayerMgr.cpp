@@ -568,12 +568,12 @@ Filter* LayerMgr::EditingBrush_get()
 	return &mBmpBrush;
 }
 
-Rgba LayerMgr::BrushColor_get() const
+const Rgba & LayerMgr::BrushColor_get() const
 {
 	return mBrushColor;
 }
 
-void LayerMgr::BrushColor_set(Rgba color)
+void LayerMgr::BrushColor_set(const Rgba & color)
 {
 	mBrushColor = color;
 	mBrushColor.rgb[3] = 1.0f;

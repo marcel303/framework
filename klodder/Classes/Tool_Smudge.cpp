@@ -40,8 +40,8 @@ void Tool_Smudge::Apply(Bitmap* bmp, const Filter* filter, float _x, float _y, f
 //	dx = (int)dx;
 //	dy = (int)dy;
 
-	x -= (filter->Sx_get() - 1) / 2;
-	y -= (filter->Sx_get() - 1) / 2;
+	x -= (filter->Sx_get() - 1) / 2.f;
+	y -= (filter->Sy_get() - 1) / 2.f;
 
 	AreaI area;
 	area.m_Min[0] = x;
@@ -90,7 +90,8 @@ void Tool_Smudge::Apply(Bitmap* bmp, const Filter* filter, float _x, float _y, f
 		
 		for (uint32_t px = 0; px < filterSx; ++px)
 		{
-			bmp->SampleAA(x + px, y + py, *cpix1);
+			const float s = *bpix;
+			bmp->SampleAA(x + px - s * dx, y + py - s * dy, *cpix1);
 			
 			bpix++;
 			cpix1++;
@@ -111,9 +112,6 @@ void Tool_Smudge::Apply(Bitmap* bmp, const Filter* filter, float _x, float _y, f
 		Rgba * __restrict cpix = bmp->Line_get(py) + area.x1;
 
  		memcpy(cpix, tpix, sx);
-
-		tpix += sx;
-		cpix += sx;
 	}
 
 	//

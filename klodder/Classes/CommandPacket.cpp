@@ -7,7 +7,7 @@
 #define EX_VERSION ExceptionVA("unknown command version: %d. command type=%d", (int)mCommandVersion, (int)mCommandType)
 #define EX_TYPE ExceptionVA("unknown command type: %d", (int)mCommandType)
 
-static inline float FloatToPercentage(float value, bool clamp)
+static inline float FloatToPercentage(const float value, const bool clamp)
 {
 	if (clamp)
 		return Calc::Mid(value, 0.0f, 1.0f);
@@ -17,13 +17,13 @@ static inline float FloatToPercentage(float value, bool clamp)
 		//return (uint8_t)Calc::Mid(value * 100.0f, 0.0f, 255.0f);
 }
 
-static inline float FloatToColor(float value)
+static inline float FloatToColor(const float value)
 {
 	//return (uint8_t)Calc::Mid(value * 255.0f, 0.0f, 255.0f);
 	return Calc::Mid(value, 0.0f, 1.0f);
 }
 
-void CommandPacket::Write(StreamWriter& writer) const
+void CommandPacket::Write(StreamWriter & writer) const
 {
 	writer.WriteInt8(mCommandType);
 	
@@ -156,7 +156,7 @@ void CommandPacket::Write(StreamWriter& writer) const
 	}
 }
 
-void CommandPacket::Read(StreamReader& reader)
+void CommandPacket::Read(StreamReader & reader)
 {
 	mCommandType = (CommandType)reader.ReadInt8();
 	mCommandVersion = reader.ReadInt8();
@@ -414,7 +414,7 @@ void CommandPacket::Read(StreamReader& reader)
 	}
 }
 
-CommandPacket CommandPacket::Make_ColorSelect(float r, float g, float b, float a)
+CommandPacket CommandPacket::Make_ColorSelect(const float r, const float g, const float b, const float a)
 {
 	CommandPacket result;
 	
@@ -428,7 +428,7 @@ CommandPacket CommandPacket::Make_ColorSelect(float r, float g, float b, float a
 	return result;
 }
 
-CommandPacket CommandPacket::Make_ImageSize(int layerCount, int sx, int sy)
+CommandPacket CommandPacket::Make_ImageSize(const int layerCount, const int sx, const int sy)
 {
 	CommandPacket result;
 
@@ -441,7 +441,7 @@ CommandPacket CommandPacket::Make_ImageSize(int layerCount, int sx, int sy)
 	return result;
 }
 
-CommandPacket CommandPacket::Make_DataLayerBlit(int index, const BlitTransform& transform)
+CommandPacket CommandPacket::Make_DataLayerBlit(const int index, const BlitTransform & transform)
 {
 	CommandPacket result;
 
@@ -458,7 +458,7 @@ CommandPacket CommandPacket::Make_DataLayerBlit(int index, const BlitTransform& 
 	return result;
 }
 
-CommandPacket CommandPacket::Make_DataLayerClear(int index, float r, float g, float b, float a)
+CommandPacket CommandPacket::Make_DataLayerClear(const int index, const float r, const float g, const float b, const float a)
 {
 	CommandPacket result;
 
@@ -473,7 +473,7 @@ CommandPacket CommandPacket::Make_DataLayerClear(int index, float r, float g, fl
 	return result;
 }
 
-CommandPacket CommandPacket::Make_DataLayerMerge(int index1, int index2)
+CommandPacket CommandPacket::Make_DataLayerMerge(const int index1, const int index2)
 {
 	CommandPacket result;
 
@@ -485,7 +485,7 @@ CommandPacket CommandPacket::Make_DataLayerMerge(int index1, int index2)
 	return result;
 }
 
-CommandPacket CommandPacket::Make_DataLayerOpacity(int index, float opacity)
+CommandPacket CommandPacket::Make_DataLayerOpacity(const int index, const float opacity)
 {
 	Assert(index < MAX_LAYERS_V1);
 	
@@ -499,7 +499,7 @@ CommandPacket CommandPacket::Make_DataLayerOpacity(int index, float opacity)
 	return result;
 }
 
-CommandPacket CommandPacket::Make_LayerOrder(int* layerOrder, int layerCount)
+CommandPacket CommandPacket::Make_LayerOrder(const int * layerOrder, const int layerCount)
 {
 	Assert(layerCount <= MAX_LAYERS_V1);
 	
@@ -514,7 +514,7 @@ CommandPacket CommandPacket::Make_LayerOrder(int* layerOrder, int layerCount)
 	return result;
 }
 
-CommandPacket CommandPacket::Make_DataLayerSelect(int index)
+CommandPacket CommandPacket::Make_DataLayerSelect(const int index)
 {
 	CommandPacket result;
 
@@ -525,7 +525,7 @@ CommandPacket CommandPacket::Make_DataLayerSelect(int index)
 	return result;
 }
 
-CommandPacket CommandPacket::Make_DataLayerVisibility(int index, bool visibility)
+CommandPacket CommandPacket::Make_DataLayerVisibility(const int index, const bool visibility)
 {
 	CommandPacket result;
 	
@@ -537,7 +537,7 @@ CommandPacket CommandPacket::Make_DataLayerVisibility(int index, bool visibility
 	return result;
 }
 
-CommandPacket CommandPacket::Make_StrokeBegin(int index, bool smooth, bool mirrorX, float x, float y)
+CommandPacket CommandPacket::Make_StrokeBegin(const int index, const bool smooth, const bool mirrorX, const float x, const float y)
 {
 	CommandPacket result;
 	
@@ -565,7 +565,7 @@ CommandPacket CommandPacket::Make_StrokeEnd()
 	return result;
 }
 
-CommandPacket CommandPacket::Make_StrokeMove(float x, float y)
+CommandPacket CommandPacket::Make_StrokeMove(const float x, const float y)
 {
 	CommandPacket result;
 	
@@ -577,7 +577,7 @@ CommandPacket CommandPacket::Make_StrokeMove(float x, float y)
 	return result;
 }
 
-CommandPacket CommandPacket::Make_ToolSelect_SoftBrush(int diameter, float hardness, float spacing)
+CommandPacket CommandPacket::Make_ToolSelect_SoftBrush(const int diameter, const float hardness, const float spacing)
 {
 	CommandPacket result;
 	
@@ -590,7 +590,7 @@ CommandPacket CommandPacket::Make_ToolSelect_SoftBrush(int diameter, float hardn
 	return result;
 }
 
-CommandPacket CommandPacket::Make_ToolSelect_PatternBrush(int patternId, int diameter, float spacing)
+CommandPacket CommandPacket::Make_ToolSelect_PatternBrush(const int patternId, const int diameter, const float spacing)
 {
 	CommandPacket result;
 
@@ -603,7 +603,7 @@ CommandPacket CommandPacket::Make_ToolSelect_PatternBrush(int patternId, int dia
 	return result;
 }
 
-CommandPacket CommandPacket::Make_ToolSelect_SoftBrushDirect(int diameter, float hardness, float spacing)
+CommandPacket CommandPacket::Make_ToolSelect_SoftBrushDirect(const int diameter, const float hardness, const float spacing)
 {
 	CommandPacket result;
 	
@@ -616,7 +616,7 @@ CommandPacket CommandPacket::Make_ToolSelect_SoftBrushDirect(int diameter, float
 	return result;
 }
 
-CommandPacket CommandPacket::Make_ToolSelect_PatternBrushDirect(int patternId, int diameter, float spacing)
+CommandPacket CommandPacket::Make_ToolSelect_PatternBrushDirect(const int patternId, const int diameter, const float spacing)
 {
 	CommandPacket result;
 
@@ -629,7 +629,7 @@ CommandPacket CommandPacket::Make_ToolSelect_PatternBrushDirect(int patternId, i
 	return result;
 }
 
-CommandPacket CommandPacket::Make_ToolSelect_SoftSmudge(int diameter, float hardness, float spacing, float strength)
+CommandPacket CommandPacket::Make_ToolSelect_SoftSmudge(const int diameter, const float hardness, const float spacing, const float strength)
 {
 	CommandPacket result;
 	
@@ -643,7 +643,7 @@ CommandPacket CommandPacket::Make_ToolSelect_SoftSmudge(int diameter, float hard
 	return result;
 }
 
-CommandPacket CommandPacket::Make_ToolSelect_PatternSmudge(int patternId, int diameter, float spacing, float strength)
+CommandPacket CommandPacket::Make_ToolSelect_PatternSmudge(const int patternId, const int diameter, const float spacing, const float strength)
 {
 	CommandPacket result;
 	
@@ -657,7 +657,7 @@ CommandPacket CommandPacket::Make_ToolSelect_PatternSmudge(int patternId, int di
 	return result;
 }
 
-CommandPacket CommandPacket::Make_ToolSelect_SoftEraser(int diameter, float hardness, float spacing)
+CommandPacket CommandPacket::Make_ToolSelect_SoftEraser(const int diameter, const float hardness, const float spacing)
 {
 	CommandPacket result;
 	
@@ -670,7 +670,7 @@ CommandPacket CommandPacket::Make_ToolSelect_SoftEraser(int diameter, float hard
 	return result;
 }
 
-CommandPacket CommandPacket::Make_ToolSelect_PatternEraser(int patternId, int diameter, float spacing)
+CommandPacket CommandPacket::Make_ToolSelect_PatternEraser(const int patternId, const int diameter, const float spacing)
 {
 	CommandPacket result;
 	

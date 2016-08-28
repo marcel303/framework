@@ -24,12 +24,18 @@ public:
 	Application();
 	~Application();
 	
-	void Setup(StreamProvider* streamProvider, const char* brushLibraryStandard, const char* brushLibraryCustom, int scale, Rgba backColor1, Rgba backColor2);
+	void Setup(
+		StreamProvider * streamProvider,
+		const char * brushLibraryStandard,
+		const char * brushLibraryCustom,
+		const int scale,
+		const Rgba & backColor1,
+		const Rgba & backColor2);
 	
 private:
 	// setup
 	bool mIsSetup;
-	StreamProvider* mStreamProvider;
+	StreamProvider * mStreamProvider;
 	int mScale;
 	Rgba mBackColor1;
 	Rgba mBackColor2;
@@ -42,47 +48,47 @@ public:
 	
 private:
 	void SignalChange(ChangeType type);
-	static void HandleTouchZoomStateChange(void* obj, void* arg);
+	static void HandleTouchZoomStateChange(void * obj, void * arg);
 	
 	// ------
 	// Canvas
 	// ------
 public:
-	LayerMgr* LayerMgr_get();
+	LayerMgr * LayerMgr_get();
 	
 private:
-	LayerMgr* mLayerMgr;
+	LayerMgr * mLayerMgr;
 	
 	// -----------------
 	// Command execution
 	// -----------------
 public:
-	void Execute(const CommandPacket& packet);
-	void ExecuteAndSave(const CommandPacket& packet);
+	void Execute(const CommandPacket & packet);
+	void ExecuteAndSave(const CommandPacket & packet);
 	void ExecutionCommit();
 	void ExecutionDiscard();
 	
-	void ExecuteColorSelect(float r, float g, float b, float a);
-	void ExecuteImageSize(int layerCount, int sx, int sy);
-	void ExecuteDataLayerBlit(int index, const BlitTransform& transform);
-	void ExecuteDataLayerClear(int index, float r, float g, float b, float a);
-	void ExecuteDataLayerMerge(int index1, int index2);
-	void ExecuteDataLayerSelect(int index);
-//	void ExecuteLayerSwap(int layer1, int layer2);
-	void ExecuteDataLayerOpacity(int index, float opacity);
-	void ExecuteLayerOrder(std::vector<int> layerOrder);
-	void ExecuteDataLayerVisibility(int index, bool visibility);
-	void ExecuteStrokeBegin(int index, bool smooth, bool mirrorX, float x, float y);
+	void ExecuteColorSelect(const float r, const float g, const float b, const float a);
+	void ExecuteImageSize(const int layerCount, const int sx, const int sy);
+	void ExecuteDataLayerBlit(const int index, const BlitTransform & transform);
+	void ExecuteDataLayerClear(const int index, const float r, const float g, const float b, const float a);
+	void ExecuteDataLayerMerge(const int index1, const int index2);
+	void ExecuteDataLayerSelect(const int index);
+//	void ExecuteLayerSwap(const int layer1, const int layer2);
+	void ExecuteDataLayerOpacity(const int index, const float opacity);
+	void ExecuteLayerOrder(const std::vector<int> & layerOrder);
+	void ExecuteDataLayerVisibility(const int index, const bool visibility);
+	void ExecuteStrokeBegin(const int index, const bool smooth, const bool mirrorX, const float x, const float y);
 	void ExecuteStrokeEnd();
-	void ExecuteStrokeMove(float x, float y);
-	void ExecuteToolSelect_SoftBrush(int diameter, float hardness, float spacing);
-	void ExecuteToolSelect_PatternBrush(int diameter, uint32_t patternId, float spacing);
-	void ExecuteToolSelect_SoftBrushDirect(int diameter, float hardness, float spacing);
-	void ExecuteToolSelect_PatternBrushDirect(int diameter, uint32_t patternId, float spacing);
-	void ExecuteToolSelect_SoftSmudge(int diameter, float hardness, float spacing, float strength);
-	void ExecuteToolSelect_PatternSmudge(int diameter, uint32_t patternId, float spacing, float strength);
-	void ExecuteToolSelect_SoftEraser(int diameter, float hardness, float spacing);
-	void ExecuteToolSelect_PatternEraser(int diameter, uint32_t patternId, float spacing);
+	void ExecuteStrokeMove(const float x, const float y);
+	void ExecuteToolSelect_SoftBrush(const int diameter, const float hardness, const float spacing);
+	void ExecuteToolSelect_PatternBrush(const int diameter, const uint32_t patternId, const float spacing);
+	void ExecuteToolSelect_SoftBrushDirect(const int diameter, const float hardness, const float spacing);
+	void ExecuteToolSelect_PatternBrushDirect(const int diameter, const uint32_t patternId, const float spacing);
+	void ExecuteToolSelect_SoftSmudge(const int diameter, const float hardness, const float spacing, const float strength);
+	void ExecuteToolSelect_PatternSmudge(const int diameter, const uint32_t patternId, const float spacing, const float strength);
+	void ExecuteToolSelect_SoftEraser(const int diameter, const float hardness, const float spacing);
+	void ExecuteToolSelect_PatternEraser(const int diameter, const uint32_t patternId, const float spacing);
 	
 private:
 	CommandPacket mLastColorCommand;
@@ -95,21 +101,21 @@ private:
 public:
 	ToolType ToolType_get() const;
 private:
-	void ToolType_set(ToolType type);
+	void ToolType_set(const ToolType type);
 public:
 	
-	void StrokeBegin(int index, bool smooth, bool mirrorX, float x, float y);
+	void StrokeBegin(const int index, const bool smooth, const bool mirrorX, const float x, const float y);
 	void StrokeEnd();
-	void StrokeMove(float x, float y);
+	void StrokeMove(const float x, const float y);
 	void StrokeCancel();
 	
 	void Invalidate();
-	void Invalidate(int x, int y, int sx, int sy);
+	void Invalidate(const int x, const int y, const int sx, const int sy);
 	
 private:
-	static void HandleBezierTravel(void* obj, BezierTravellerState state, float x, float y);
-	static void HandleTravel(void* obj, const TravelEvent& e);
-	void DoPaint(float x, float y, float dx, float dy);
+	static void HandleBezierTravel(void * obj, const BezierTravellerState state, const float x, const float y);
+	static void HandleTravel(void * obj, const TravelEvent & e);
+	void DoPaint(const float x, const float y, const float dx, const float dy);
 
 	ToolType mToolType;
 	bool mToolActive;
@@ -123,13 +129,13 @@ private:
 	// Undo
 	// ----
 private:
-	void CommitUndoBuffer(UndoBuffer* undo);
+	void CommitUndoBuffer(UndoBuffer * undo);
 	
 	UndoStack mUndoStack;
 	bool mUndoEnabled;
 	
 public:
-	void UndoEnabled_set(bool enabled);
+	void UndoEnabled_set(const bool enabled);
 	bool HasUndo_get() const;
 	bool HasRedo_get() const;
 	void Undo();
@@ -139,50 +145,50 @@ public:
 	// Tools
 	// -----
 public:
-	void ColorSelect(float r, float g, float b, float a);
-	void ImageInitialize(int layerCount, int sx, int sy); // execute some commands to get image into an initialized state
-	void ImageSize(int layerCount, int sx, int sy);
-	void DataLayerBlit(int index, MacImage* src, const BlitTransform& transform);
-	void DataLayerClear(int index, float r, float g, float b, float a);
-	void DataLayerMerge(int index1, int index2);
-	void DataLayerOpacity(int index, float opacity);
-	void LayerOrder(std::vector<int> order);
-	void DataLayerSelect(int index);
-	void DataLayerVisibility(int index, bool visibility);
-	void ToolSelect_BrushSoft(ToolSettings_BrushSoft settings);
-	void ToolSelect_BrushPattern(ToolSettings_BrushPattern settings);
-	void ToolSelect_BrushSoftDirect(ToolSettings_BrushSoftDirect settings);
-	void ToolSelect_BrushPatternDirect(ToolSettings_BrushPatternDirect settings);
-	void ToolSelect_SmudgeSoft(ToolSettings_SmudgeSoft settings);
-	void ToolSelect_SmudgePattern(ToolSettings_SmudgePattern settings);
-	void ToolSelect_EraserSoft(ToolSettings_EraserSoft settings);
-	void ToolSelect_EraserPattern(ToolSettings_EraserPattern settings);
+	void ColorSelect(const float r, const float g, const float b, const float a);
+	void ImageInitialize(const int layerCount, const int sx, const int sy); // execute some commands to get image into an initialized state
+	void ImageSize(const int layerCount, const int sx, const int sy);
+	void DataLayerBlit(const int index, const MacImage * src, const BlitTransform & transform);
+	void DataLayerClear(const int index, const float r, const float g, const float b, const float a);
+	void DataLayerMerge(const int index1, const int index2);
+	void DataLayerOpacity(const int index, const float opacity);
+	void LayerOrder(const std::vector<int> & order);
+	void DataLayerSelect(const int index);
+	void DataLayerVisibility(const int index, const bool visibility);
+	void ToolSelect_BrushSoft(const ToolSettings_BrushSoft & settings);
+	void ToolSelect_BrushPattern(const ToolSettings_BrushPattern & settings);
+	void ToolSelect_BrushSoftDirect(const ToolSettings_BrushSoftDirect & settings);
+	void ToolSelect_BrushPatternDirect(const ToolSettings_BrushPatternDirect & settings);
+	void ToolSelect_SmudgeSoft(const ToolSettings_SmudgeSoft & settings);
+	void ToolSelect_SmudgePattern(const ToolSettings_SmudgePattern & settings);
+	void ToolSelect_EraserSoft(const ToolSettings_EraserSoft & settings);
+	void ToolSelect_EraserPattern(const ToolSettings_EraserPattern & settings);
 	void SwitchErazorBrush();
 	
 private:
-	void BrushPattern_set(uint32_t patternId);
+	void BrushPattern_set(const uint32_t patternId);
 public:
 	uint32_t BrushPattern_get() const;
 private:
-	void StrokeInterval_set(float interval);
+	void StrokeInterval_set(const float interval);
 public:
 	float StrokeInterval_get() const;
 private:
-	bool FindPattern(uint32_t patternId, Brush_Pattern** out_pattern);
+	bool FindPattern(const uint32_t patternId, Brush_Pattern ** out_pattern);
 public:
-	Rgba BrushColor_get() const;
+	const Rgba & BrushColor_get() const;
 private:
-	void BrushColor_set(Rgba color);
+	void BrushColor_set(const Rgba & color);
 public:
 	float BrushOpacity_get() const;
 private:
-	void BrushOpacity_set(float opacity);
-	void StrokeIsOriented_set(bool isOriented);
+	void BrushOpacity_set(const float opacity);
+	void StrokeIsOriented_set(const bool isOriented);
 	
 private:
-	ITool* Tool_get(ToolType type);
+	ITool * Tool_get(const ToolType type);
 public:
-	BrushLibrarySet* BrushLibrarySet_get();
+	BrushLibrarySet * BrushLibrarySet_get();
 	
 	ToolSettings_BrushSoft mToolSettings_BrushSoft;
 	ToolSettings_BrushPattern mToolSettings_BrushPattern;
@@ -206,8 +212,8 @@ private:
 	// Brushes
 	// -------	
 private:
-	void SetupBrushLibraries(const char* standardFileName, const char* customFileName);
-	void AddBrush(Brush_Pattern* brush);
+	void SetupBrushLibraries(const char * standardFileName, const char * customFileName);
+	void AddBrush(Brush_Pattern * brush);
 	
 	BrushLibrary mBrushLibrary_Standard;
 	std::string mBrushLibrary_Standard_FileName;
@@ -216,19 +222,19 @@ private:
 	BrushLibrary mBrushLibrary_Image;
 	BrushLibrarySet mBrushLibrarySet;
 
-	Brush_Pattern* mBrushPattern;
+	Brush_Pattern * mBrushPattern;
 
 	// ----------
 	// Eyedropper
 	// ----------
 public:
-	Rgba GetColorAtLocation(Vec2F location) const;
+	Rgba GetColorAtLocation(const Vec2F & location) const;
 	
 	// --------
 	// Swatches
 	// --------
 public:
-	SwatchMgr* SwatchMgr_get();
+	SwatchMgr * SwatchMgr_get();
 	
 private:
 	SwatchMgr mSwatchMgr;
@@ -238,36 +244,36 @@ private:
 	// --
 public:
 	ImageId AllocateImageId();
-	bool ImageExists(ImageId imageId); // return true if the image exists
-	void ImageDelete(ImageId imageId); // removes an image
-	void ImageReset(ImageId imageId); // reset some state to prepare for a new image
-	void ImageDuplicate(ImageId srcId, ImageId dstId); // duplicate an image
+	bool ImageExists(const ImageId & imageId); // return true if the image exists
+	void ImageDelete(const ImageId & imageId); // removes an image
+	void ImageReset(const ImageId & imageId); // reset some state to prepare for a new image
+	void ImageDuplicate(const ImageId & srcId, const ImageId & dstId); // duplicate an image
 	
-	void ImageActivate(bool writeEnabled);
+	void ImageActivate(const bool writeEnabled);
 	void ImageDeactivate();
 	bool ImageIsActive_get() const;
 	
 	void SaveImage();
-	void SaveImageXml(const std::string& path);
-	void SaveImageData(const std::string& path);
-	void SaveImagePreview(const std::string& path, MacImage* merged);
-	void SaveImageThumbnail(const std::string& path, MacImage* merged);
-	void SaveImageBrushes(const std::string& path);
-	void LoadImage(ImageId id);
-	void LoadImageXml(const std::string& path);
-	void LoadImageData(const std::string& path);
+	void SaveImageXml(const std::string & path);
+	void SaveImageData(const std::string & path);
+	void SaveImagePreview(const std::string & path, const MacImage * merged);
+	void SaveImageThumbnail(const std::string & path, const MacImage * merged);
+	void SaveImageBrushes(const std::string & path);
+	void LoadImage(const ImageId & id);
+	void LoadImageXml(const std::string & path);
+	void LoadImageData(const std::string & path);
 	
-	static kdImageDescription LoadImageDescription(ImageId id);
-	static void LoadImageDataLayer(const std::string& fileName, MacImage* dst);
-	static void LoadImagePreview(ImageId id, MacImage& image);
-	static void LoadImageThumbnail(ImageId id, MacImage& image, bool flipY);
+	static kdImageDescription LoadImageDescription(const ImageId & id);
+	static void LoadImageDataLayer(const std::string & fileName, MacImage * dst);
+	static void LoadImagePreview(const ImageId & id, MacImage & image);
+	static void LoadImageThumbnail(const ImageId & id, MacImage & image, const bool flipY);
 	
-	static void SaveImageArchive(ImageId id, Stream* stream);
+	static void SaveImageArchive(const ImageId & id, Stream * stream);
 
-	static std::string GetPath_CommandStream(ImageId imageId);
-	static std::string GetPath_DataStream(ImageId imageId);
+	static std::string GetPath_CommandStream(const ImageId & imageId);
+	static std::string GetPath_DataStream(const ImageId & imageId);
 	
-	ImageId ImageId_get() const;
+	const ImageId & ImageId_get() const;
 	
 private:
 	ImageId mImageId;
@@ -283,19 +289,19 @@ private:
 	void DataStreamOpen();
 	void DataStreamClose();
 	
-	Stream* mCommandStream;
+	Stream * mCommandStream;
 	int mCommandStreamPosition;
-	CommandStreamWriter* mCommandStreamWriter;
+	CommandStreamWriter * mCommandStreamWriter;
 	
-	Stream* mDataStream;
+	Stream * mDataStream;
 	int mDataStreamPosition;
-	DataStreamWriter* mDataStreamWriter;
-	DataStreamReader* mDataStreamReader;
+	DataStreamWriter * mDataStreamWriter;
+	DataStreamReader * mDataStreamReader;
 	
 	// ---------
 	// Debugging
 	// ---------
 public:
-	void DBG_PaintAt(float x, float y, float dx, float dy);
-	static void DBG_ValidateCommandStream(ImageId imageId);
+	void DBG_PaintAt(const float x, const float y, const float dx, const float dy);
+	static void DBG_ValidateCommandStream(const ImageId & imageId);
 };

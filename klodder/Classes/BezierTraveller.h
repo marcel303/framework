@@ -11,8 +11,8 @@ enum BezierTravellerState
 	BezierTravellerState_Update
 };
 
-typedef void (*BezierTravelCB)(void* obj, BezierTravellerState state, float x, float y);
-typedef void (*BezierTangentCB)(void* obj, const BezierCurve& curve);
+typedef void (*BezierTravelCB)(void * obj, const BezierTravellerState state, const float x, const float y);
+typedef void (*BezierTangentCB)(void * obj, const BezierCurve & curve);
 
 class BezierCapturePoint
 {
@@ -21,7 +21,8 @@ public:
 	{
 		hasTangent = false;
 	}
-	BezierCapturePoint(const Vec2F& _position)
+
+	BezierCapturePoint(const Vec2F & _position)
 	{
 		hasTangent = false;
 		position = _position;
@@ -36,11 +37,11 @@ class BezierTraveller
 {
 public:
 	BezierTraveller();
-	void Setup(float maxStep, BezierTravelCB travelCB, BezierTangentCB tangentCB, void* obj);
+	void Setup(const float maxStep, const BezierTravelCB travelCB, const BezierTangentCB tangentCB, void * obj);
 	
-	void Begin(float x, float y);
-	void End(float x, float y);
-	void Update(float x, float y);
+	void Begin(const float x, const float y);
+	void End(const float x, const float y);
+	void Update(const float x, const float y);
 	
 	Vec2F LastLocation_get() const;
 
@@ -48,12 +49,12 @@ private:
 	void EmitLeft() const;
 	void EmitRight() const;
 	void EmitStraight() const;
-	void Sample(const BezierCurve& curve) const;
+	void Sample(const BezierCurve & curve) const;
 	
-	void AddPoint(const Vec2F& point);
-	int GetPointIndex(int index) const;
-	BezierCapturePoint& GetPoint(int index);
-	const BezierCapturePoint& GetPoint(int index) const;
+	void AddPoint(const Vec2F & point);
+	int GetPointIndex(const int index) const;
+	BezierCapturePoint & GetPoint(const int index);
+	const BezierCapturePoint & GetPoint(const int index) const;
 	
 	int mHistorySize;
 	int mHistoryCursor;
@@ -64,5 +65,5 @@ private:
 	float mMaxStep;
 	BezierTravelCB mTravelCB;
 	BezierTangentCB mTangentCB;
-	void* mObj;
+	void * mObj;
 };
