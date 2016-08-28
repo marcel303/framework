@@ -1,6 +1,6 @@
 #pragma once
 
-#include "klodder_forward.h"
+#include "libklodder_forward.h"
 
 class ImageResampling
 {

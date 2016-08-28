@@ -4,8 +4,8 @@
 	#include <CoreGraphics/CGImage.h>
 #endif
 #include <stdint.h>
-#include "klodder_forward.h"
 #include "libgg_forward.h"
+#include "libklodder_forward.h"
 #include "Types.h"
 
 typedef struct MacRgba

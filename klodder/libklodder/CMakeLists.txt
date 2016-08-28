@@ -26,7 +26,7 @@ project(libklodder)
 
 # --- libklodder ---
 
-set(source Bezier.cpp Bezier.h BezierTraveller.cpp BezierTraveller.h BlitTransform.cpp BlitTransform.h ChangeType.cpp ChangeType.h CommandPacket.cpp CommandPacket.h ../Classes/BrushLibrary.cpp ../Classes/Brush_Pattern.cpp ../Classes/Filter.cpp ../Classes/ImageResampling.cpp ../Classes/MacImage.cpp ../Classes/BrushLibrary.h ../Classes/Brush_Pattern.h ../Classes/Filter.h ../Classes/ImageResampling.h ../Classes/MacImage.h)
+set(source Bezier.cpp Bezier.h BezierTraveller.cpp BezierTraveller.h BlitTransform.cpp BlitTransform.h ChangeType.cpp ChangeType.h CommandPacket.cpp CommandPacket.h ImageResampling.cpp ImageResampling.cpp MacImage.cpp MacImage.h Util_Mem.cpp Util_Mem.h ../Classes/BrushLibrary.cpp ../Classes/Brush_Pattern.cpp ../Classes/Filter.cpp ../Classes/BrushLibrary.h ../Classes/Brush_Pattern.h ../Classes/Filter.h)
 
 add_library(libklodder ${source})
 
