@@ -4,8 +4,8 @@
 	#include <arm_neon.h>
 #endif
 #include "Debugging.h"
-#include "klodder_forward.h"
 #include "libgg_forward.h"
+#include "libklodder_forward.h"
 #include "Types.h"
 
 typedef struct Rgba

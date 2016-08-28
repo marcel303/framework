@@ -4,8 +4,8 @@
 	#include <arm_neon.h>
 #endif
 #include "Hash.h"
-#include "klodder_forward.h"
 #include "libgg_forward.h"
+#include "libklodder_forward.h"
 #include "Types.h"
 
 static inline void SampleAA_Prepare(const float x, const float y, float * out_w)
