@@ -6,12 +6,13 @@
 
 XmlReader::XmlReader()
 {
-	mRootNode = 0;
+	mRootNode = nullptr;
 }
 
 XmlReader::~XmlReader()
 {
 	delete mRootNode;
+	mRootNode = nullptr;
 }
 
 static void Load(XmlNode* p, TiXmlElement* e)

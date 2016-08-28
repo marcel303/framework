@@ -5,11 +5,11 @@
 #include "Log.h"
 #include "StreamWriter.h"
 
-void ExceptionLogger::Log(const std::exception& e)
+void ExceptionLogger::Log(const std::exception & e)
 {
 	LOG_ERR("error: %s", e.what());
 	
-	std::string fileName = gSystem.GetDocumentPath("exception.log");
+	const std::string fileName = gSystem.GetDocumentPath("exception.log");
 	
 	FileStream stream;
 	
@@ -17,9 +17,9 @@ void ExceptionLogger::Log(const std::exception& e)
 	
 	StreamWriter writer(&stream, false);
 	
-	time_t t = time(0);
+	const time_t t = time(0);
 	
-	std::string dateString = asctime(localtime(&t));
+	const std::string dateString = asctime(localtime(&t));
 	
 	writer.WriteLine(dateString + e.what());
 }

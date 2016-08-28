@@ -7,16 +7,16 @@
 class CommandStreamWriter
 {
 public:
-	CommandStreamWriter(Stream* stream, bool takeOwnership);
+	CommandStreamWriter(Stream * stream, const bool takeOwnership);
 	~CommandStreamWriter();
 	
-	void Record(const CommandPacket& packet);
+	void Record(const CommandPacket & packet);
 	
-	static void DBG_TestDeserialization(Stream* stream);
+	static void DBG_TestDeserialization(Stream * stream);
 	static void DBG_TestSerialization();
 	
 private:
-	Stream* mStream;
+	Stream * mStream;
 	bool mTakeOwnership;
 	StreamWriter* mStreamWriter;
 };

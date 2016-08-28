@@ -11,7 +11,7 @@ BlitTransform::BlitTransform()
 	y = 0.0f;
 }
 
-void BlitTransform::ToMatrix(Mat3x2& out_Matrix) const
+void BlitTransform::ToMatrix(Mat3x2 & out_Matrix) const
 {
 	Mat3x2 matT1;
 	Mat3x2 matR;

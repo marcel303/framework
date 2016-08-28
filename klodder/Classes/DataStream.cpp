@@ -10,14 +10,14 @@ DataHeader::DataHeader()
 	mDataLength = 0;
 }
 
-DataHeader::DataHeader(const char* type, const char* name)
+DataHeader::DataHeader(const char * type, const char * name)
 {
 	mType = type;
 	mName = name;
 	mSegmentLength = 0;
 }
 
-void DataHeader::Read(Stream* stream)
+void DataHeader::Read(Stream * stream)
 {
 	StreamReader reader(stream, false);
 	
@@ -29,9 +29,9 @@ void DataHeader::Read(Stream* stream)
 	mDataLength = mSegmentLength - (mDataStreamPosition - mStreamPosition);
 }
 
-void DataHeader::Write(Stream* stream, int byteCount)
+void DataHeader::Write(Stream * stream, const int byteCount)
 {
-	uint32_t position1 = stream->Position_get();
+	const uint32_t position1 = stream->Position_get();
 	
 	StreamWriter writer(stream, false);
 	
@@ -39,7 +39,7 @@ void DataHeader::Write(Stream* stream, int byteCount)
 	writer.WriteText_Binary(mType);
 	writer.WriteText_Binary(mName);
 	
-	uint32_t position2 = stream->Position_get();
+	const uint32_t position2 = stream->Position_get();
 	
 	mSegmentLength = position2 - position1 + byteCount;
 	
@@ -52,7 +52,7 @@ void DataHeader::Write(Stream* stream, int byteCount)
 
 //
 
-DataStreamWriter::DataStreamWriter(Stream* stream, bool takeOwnership)
+DataStreamWriter::DataStreamWriter(Stream * stream, const bool takeOwnership)
 {
 	mStream = stream;
 	mTakeOwnership = takeOwnership;
@@ -62,11 +62,12 @@ DataStreamWriter::~DataStreamWriter()
 {
 	if (mTakeOwnership)
 		delete mStream;
+	mStream = nullptr;
 }
 
-void DataStreamWriter::WriteSegment(const char* type, const char* name, void* bytes, int byteCount, bool updateStreamPosition)
+void DataStreamWriter::WriteSegment(const char * type, const char * name, const void * bytes, const int byteCount, const bool updateStreamPosition)
 {
-	int position = mStream->Position_get();
+	const int position = mStream->Position_get();
 	
 	DataHeader header(type, name);
 	
@@ -80,7 +81,7 @@ void DataStreamWriter::WriteSegment(const char* type, const char* name, void* by
 
 //
 
-DataStreamReader::DataStreamReader(Stream* stream, bool takeOwnership)
+DataStreamReader::DataStreamReader(Stream * stream, const bool takeOwnership)
 {
 	mStream = stream;
 	mTakeOwnership = takeOwnership;
@@ -90,6 +91,7 @@ DataStreamReader::~DataStreamReader()
 {
 	if (mTakeOwnership)
 		delete mStream;
+	mStream = nullptr;
 }
 
 DataHeader DataStreamReader::ReadHeader()
@@ -101,14 +103,14 @@ DataHeader DataStreamReader::ReadHeader()
 	return header;
 }
 
-void DataStreamReader::SkipSegment(DataHeader header)
+void DataStreamReader::SkipSegment(const DataHeader & header)
 {
 	mStream->Seek(header.mStreamPosition + header.mSegmentLength, SeekMode_Begin);
 }
 
-DataSegment* DataStreamReader::ReadSegment(DataHeader header)
+DataSegment * DataStreamReader::ReadSegment(const DataHeader & header)
 {
-	DataSegment* result = new DataSegment();
+	DataSegment * result = new DataSegment();
 	
 	mStream->Seek(header.mDataStreamPosition, SeekMode_Begin);
 	

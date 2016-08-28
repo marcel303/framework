@@ -7,10 +7,10 @@ class DataHeader
 {
 public:
 	DataHeader();
-	DataHeader(const char* type, const char* name);
+	DataHeader(const char * type, const char * name);
 	
-	void Read(Stream* stream);
-	void Write(Stream* stream, int byteCount);
+	void Read(Stream * stream);
+	void Write(Stream * stream, const int byteCount);
 	
 	std::string mType;
 	std::string mName;
@@ -30,27 +30,27 @@ public:
 class DataStreamWriter
 {
 public:
-	DataStreamWriter(Stream* stream, bool takeOwnership);
+	DataStreamWriter(Stream * stream, const bool takeOwnership);
 	~DataStreamWriter();
 	
-	void WriteSegment(const char* type, const char* name, void* bytes, int byteCount, bool updateStreamPosition);
+	void WriteSegment(const char * type, const char * name, const void * bytes, const int byteCount, const bool updateStreamPosition);
 	
 private:
-	Stream* mStream;
+	Stream * mStream;
 	bool mTakeOwnership;
 };
 
 class DataStreamReader
 {
 public:
-	DataStreamReader(Stream* stream, bool takeOwnership);
+	DataStreamReader(Stream * stream, const bool takeOwnership);
 	~DataStreamReader();
 	
 	DataHeader ReadHeader();
-	void SkipSegment(DataHeader header);
-	DataSegment* ReadSegment(DataHeader header);
+	void SkipSegment(const DataHeader & header);
+	DataSegment * ReadSegment(const DataHeader & header);
 	
 private:
-	Stream* mStream;
+	Stream * mStream;
 	bool mTakeOwnership;
 };

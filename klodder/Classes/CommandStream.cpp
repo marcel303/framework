@@ -9,7 +9,7 @@
 #include "Calc.h"
 #include "MemoryStream.h" // dbg
 
-CommandStreamWriter::CommandStreamWriter(Stream* stream, bool takeOwnership)
+CommandStreamWriter::CommandStreamWriter(Stream * stream, const bool takeOwnership)
 {
 //	LOG_DBG("command packet size: %d", sizeof(CommandPacket));
 	
@@ -21,20 +21,20 @@ CommandStreamWriter::CommandStreamWriter(Stream* stream, bool takeOwnership)
 CommandStreamWriter::~CommandStreamWriter()
 {
 	delete mStreamWriter;
-	mStreamWriter = 0;
+	mStreamWriter = nullptr;
 	if (mTakeOwnership)
 		delete mStream;
-	mStream = 0;
+	mStream = nullptr;
 }
 
-void CommandStreamWriter::Record(const CommandPacket& packet)
+void CommandStreamWriter::Record(const CommandPacket & packet)
 {
 	packet.Write(*mStreamWriter);
 	
 //	LOG_DBG("packet recorded. stream size: %d, cursor: %d", mStream->Length_get(), mStream->Position_get());
 }
 
-void CommandStreamWriter::DBG_TestDeserialization(Stream* stream)
+void CommandStreamWriter::DBG_TestDeserialization(Stream * stream)
 {
 	int count = 0;
 	
@@ -59,9 +59,9 @@ void CommandStreamWriter::DBG_TestSerialization()
 	
 	for (int i = 0; i < 10000; ++i)
 	{
-#define R1 Calc::Random(1.0f)
+	#define R1 Calc::Random(1.0f)
 		
-#define CASE(x, y) \
+	#define CASE(x, y) \
 		if (rand() % 100 == 0) \
 		{ \
 			CommandPacket packet = CommandPacket::x y; \
