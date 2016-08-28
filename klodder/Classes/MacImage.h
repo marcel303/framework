@@ -3,11 +3,6 @@
 #ifdef IPHONEOS
 	#include <CoreGraphics/CGImage.h>
 #endif
-#ifdef WIN32
-#if 0
-	#include <allegro.h>
-#endif
-#endif
 #include <stdint.h>
 #include "klodder_forward.h"
 #include "libgg_forward.h"
@@ -18,7 +13,7 @@ typedef struct MacRgba
 	uint8_t rgba[4];
 } MacRgba;
 
-inline MacRgba MacRgba_Make(uint8_t r, uint8_t g, uint8_t b, uint8_t a)
+inline MacRgba MacRgba_Make(const uint8_t r, const uint8_t g, const uint8_t b, const uint8_t a)
 {
 	MacRgba result = { { r, g, b, a } };
 	
@@ -31,35 +26,35 @@ public:
 	MacImage();
 	~MacImage();
 	
-	void Clear(MacRgba color);
-	void ExtractTo(MacImage* dst, int x, int y, int sx, int sy) const;
-	void Blit(MacImage* dst) const;
-	void Blit(MacImage* dst, int dpx, int dpy) const;
-	void Blit(MacImage* dst, int spx, int spy, int dpx, int dpy, int sx, int sy) const;
-	void BlitAlpha(MacImage* dst, int opacity) const;
-	void BlitAlpha(MacImage* dst, int spx, int spy, int dpx, int dpy, int sx, int sy) const;
-	void BlitAlpha(MacImage* dst, int opacity, int spx, int spy, int dpx, int dpy, int sx, int sy) const;
+	void Clear(const MacRgba & color);
+	void ExtractTo(MacImage * dst, const int x, const int y, const int sx, const int sy) const;
+	void Blit(MacImage * dst) const;
+	void Blit(MacImage * dst, const int dpx, const int dpy) const;
+	void Blit(MacImage * dst, const int spx, const int spy, const int dpx, const int dpy, const int sx, const int sy) const;
+	void BlitAlpha(MacImage * dst, const int opacity) const;
+	void BlitAlpha(MacImage * dst, const int spx, const int spy, const int dpx, const int dpy, const int sx, const int sy) const;
+	void BlitAlpha(MacImage * dst, const int opacity, const int spx, const int spy, const int dpx, const int dpy, const int sx, const int sy) const;
 #ifdef USE_CXIMAGE
-	void Blit_Resampled(MacImage* dst, bool includeAlpha) const;
+	void Blit_Resampled(MacImage * dst, const bool includeAlpha) const;
 #endif
 #if USE_AGG
-	void Blit_Transformed(MacImage* dst, const BlitTransform& transform);
+	void Blit_Transformed(MacImage * dst, const BlitTransform & transform);
 #endif
-	void Downsample(MacImage* dst, int scale) const;
-	MacImage* FlipY() const;
+	void Downsample(MacImage * dst, const int scale) const;
+	MacImage * FlipY() const;
 	void FlipY_InPlace();
 	
-	void Save(Stream* stream) const;
-	void Load(Stream* stream);
+	void Save(Stream * stream) const;
+	void Load(Stream * stream);
 
-	void Size_set(int sx, int sy, bool clear);
+	void Size_set(const int sx, const int sy, const bool clear);
 	Vec2I Size_get() const;
 	
-	inline MacRgba* Line_get(int y);
-	inline const MacRgba* Line_get(int y) const;
+	inline MacRgba * Line_get(const int y);
+	inline const MacRgba * Line_get(const int y) const;
 	inline int Sx_get() const;
 	inline int Sy_get() const;
-	inline MacRgba* Data_get();
+	inline MacRgba * Data_get();
 
 #ifdef IPHONEOS
 	CGImageRef Image_get();
@@ -71,7 +66,7 @@ private:
 	CGImageRef CreateImage();
 #endif
 	
-	MacRgba* mData;
+	MacRgba * mData;
 	int mSx;
 	int mSy;
 #ifdef IPHONEOS
@@ -79,12 +74,12 @@ private:
 #endif
 };
 
-inline MacRgba* MacImage::Line_get(int y)
+inline MacRgba * MacImage::Line_get(const int y)
 {
 	return mData + mSx * (mSy - 1 - y);
 }
 
-inline const MacRgba* MacImage::Line_get(int y) const
+inline const MacRgba * MacImage::Line_get(const int y) const
 {
 	return mData + mSx * (mSy - 1 - y);
 }
@@ -99,7 +94,7 @@ inline int MacImage::Sy_get() const
 	return mSy;
 }
 
-inline MacRgba* MacImage::Data_get()
+inline MacRgba * MacImage::Data_get()
 {
 	return mData;
 }

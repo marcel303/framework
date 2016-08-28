@@ -42,7 +42,7 @@ public:
 	agg::rendering_buffer mRenderingBuffer;
 };
 
-void ImageResampling::Blit_Transformed(MacImage& src, MacImage& dst, const BlitTransform& blitTransform)
+void ImageResampling::Blit_Transformed(MacImage & src, MacImage & dst, const BlitTransform & blitTransform)
 {
 	Mat3x2 matrix;
 	

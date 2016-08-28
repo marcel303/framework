@@ -13,17 +13,17 @@
 #include "Util_Mem.h"
 
 #if USE_CXIMAGE
-#include "ximage.h"
+	#include "ximage.h"
 #endif
 
 MacImage::MacImage()
 {
-	mData = 0;
+	mData = nullptr;
 	mSx = 0;
 	mSy = 0;
 	
 #ifdef IPHONEOS
-	mImage = 0;
+	mImage = nullptr;
 #endif
 }
 
@@ -32,7 +32,7 @@ MacImage::~MacImage()
 	Size_set(0, 0, false);
 }
 
-void MacImage::Clear(MacRgba color)
+void MacImage::Clear(const MacRgba & color)
 {
 	const int count = mSx * mSy;
 	
@@ -40,7 +40,7 @@ void MacImage::Clear(MacRgba color)
 		mData[i] = color;
 }
 
-void MacImage::ExtractTo(MacImage* dst, int _x, int _y, int sx, int sy) const
+void MacImage::ExtractTo(MacImage * dst, const int _x, const int _y, const int sx, const int sy) const
 {
 	Assert(_x + sx <= mSx);
 	Assert(_y + sy <= mSy);
@@ -50,13 +50,13 @@ void MacImage::ExtractTo(MacImage* dst, int _x, int _y, int sx, int sy) const
 	for (int y = 0; y < sy; ++y)
 	{
 		const MacRgba * __restrict srcLine = Line_get(y + _y) + _x;
-		MacRgba * __restrict dstLine = dst->Line_get(y);
+		      MacRgba * __restrict dstLine = dst->Line_get(y);
 
 		Mem::Copy(srcLine, dstLine, sx * sizeof(MacRgba));
 	}
 }
 
-void MacImage::Blit(MacImage* dst) const
+void MacImage::Blit(MacImage * dst) const
 {
 	Assert(dst->Sx_get() == Sx_get());
 	Assert(dst->Sy_get() == Sy_get());
@@ -66,13 +66,13 @@ void MacImage::Blit(MacImage* dst) const
 
 	const int byteCount = Sx_get() * Sy_get() * sizeof(MacRgba);
 
-	void * __restrict srcData = mData;
-	void * __restrict dstData = dst->mData;
+	const void * __restrict srcData = mData;
+	      void * __restrict dstData = dst->mData;
 	
 	Mem::Copy(srcData, dstData, byteCount);
 }
 
-void MacImage::Blit(MacImage* dst, int dpx, int dpy) const
+void MacImage::Blit(MacImage * dst, const int dpx, const int dpy) const
 {
 	Assert(dpx >= 0);
 	Assert(dpy >= 0);
@@ -84,13 +84,13 @@ void MacImage::Blit(MacImage* dst, int dpx, int dpy) const
 	for (int y = 0; y < Sy_get(); ++y)
 	{
 		const MacRgba * __restrict srcLine = Line_get(y);
-		MacRgba * __restrict dstLine = dst->Line_get(dpy + y) + dpx;
+		      MacRgba * __restrict dstLine = dst->Line_get(dpy + y) + dpx;
 
 		Mem::Copy(srcLine, dstLine, byteCount);
 	}
 }
 
-void MacImage::Blit(MacImage* dst, int spx, int spy, int dpx, int dpy, int sx, int sy) const
+void MacImage::Blit(MacImage * dst, const int spx, const int spy, const int dpx, const int dpy, const int sx, const int sy) const
 {
 	Assert(spx >= 0);
 	Assert(spy >= 0);
@@ -106,13 +106,13 @@ void MacImage::Blit(MacImage* dst, int spx, int spy, int dpx, int dpy, int sx, i
 	for (int y = 0; y < sy; ++y)
 	{
 		const MacRgba * __restrict srcLine = Line_get(spy + y) + spx;
-		MacRgba * __restrict dstLine = dst->Line_get(dpy + y) + dpx;
+		      MacRgba * __restrict dstLine = dst->Line_get(dpy + y) + dpx;
 
 		Mem::Copy(srcLine, dstLine, byteCount);
 	}
 }
 
-void MacImage::BlitAlpha(MacImage* dst, int opacity) const
+void MacImage::BlitAlpha(MacImage * dst, const int opacity) const
 {
 	Assert(Sx_get() == dst->Sx_get());
 	Assert(Sy_get() == dst->Sy_get());
@@ -121,8 +121,8 @@ void MacImage::BlitAlpha(MacImage* dst, int opacity) const
 	
 	for (int y = 0; y < mSy; ++y)
 	{
-		const MacRgba* srcLine = Line_get(y);
-		MacRgba* dstLine = dst->Line_get(y);
+		const MacRgba * __restrict srcLine = Line_get(y);
+		      MacRgba * __restrict dstLine = dst->Line_get(y);
 		
 #if defined(__ARM_NEON__) && 1
 		const uint16x4_t srcOpacity_x4 = vdup_n_u16(opacity);
@@ -233,7 +233,7 @@ void MacImage::BlitAlpha(MacImage* dst, int opacity) const
 	}
 }
 
-void MacImage::BlitAlpha(MacImage* dst, int spx, int spy, int dpx, int dpy, int sx, int sy) const
+void MacImage::BlitAlpha(MacImage * dst, const int spx, const int spy, const int dpx, const int dpy, const int sx, const int sy) const
 {
 	Assert(spx >= 0);
 	Assert(spy >= 0);
@@ -246,8 +246,8 @@ void MacImage::BlitAlpha(MacImage* dst, int spx, int spy, int dpx, int dpy, int 
 	
 	for (int y = 0; y < sy; ++y)
 	{
-		const MacRgba* srcLine = Line_get(spy + y) + spx;
-		MacRgba* dstLine = dst->Line_get(dpy + y) + dpx;
+		const MacRgba * __restrict srcLine = Line_get(spy + y) + spx;
+		      MacRgba * __restrict dstLine = dst->Line_get(dpy + y) + dpx;
 		
 		for (int x = 0; x < sx; ++x)
 		{
@@ -266,7 +266,7 @@ void MacImage::BlitAlpha(MacImage* dst, int spx, int spy, int dpx, int dpy, int 
 	}
 }
 
-void MacImage::BlitAlpha(MacImage* dst, int opacity, int spx, int spy, int dpx, int dpy, int sx, int sy) const
+void MacImage::BlitAlpha(MacImage * dst, const int opacity, const int spx, const int spy, const int dpx, const int dpy, const int sx, const int sy) const
 {
 	Assert(spx >= 0);
 	Assert(spy >= 0);
@@ -279,8 +279,8 @@ void MacImage::BlitAlpha(MacImage* dst, int opacity, int spx, int spy, int dpx, 
 	
 	for (int y = 0; y < sy; ++y)
 	{
-		const MacRgba* srcLine = Line_get(spy + y) + spx;
-		MacRgba* dstLine = dst->Line_get(dpy + y) + dpx;
+		const MacRgba * __restrict srcLine = Line_get(spy + y) + spx;
+		      MacRgba * __restrict dstLine = dst->Line_get(dpy + y) + dpx;
 		
 		for (int x = 0; x < sx; ++x)
 		{
@@ -299,7 +299,7 @@ void MacImage::BlitAlpha(MacImage* dst, int opacity, int spx, int spy, int dpx, 
 	}
 }
 
-void MacImage::Downsample(MacImage* dst, int scale) const
+void MacImage::Downsample(MacImage * dst, const int scale) const
 {
 	Assert(scale >= 1);
 	
@@ -310,7 +310,7 @@ void MacImage::Downsample(MacImage* dst, int scale) const
 	
 	for (int y = 0; y < sy; ++y)
 	{
-		MacRgba* dstLine = dst->Line_get(y);
+		MacRgba * __restrict dstLine = dst->Line_get(y);
 		
 		for (int x = 0; x < sx; ++x)
 		{
@@ -328,7 +328,7 @@ void MacImage::Downsample(MacImage* dst, int scale) const
 			
 			for (int py = y1; py <= y2; ++py)
 			{
-				const MacRgba* srcLine = Line_get(py);
+				const MacRgba * __restrict srcLine = Line_get(py);
 				
 				for (int px = x1; px <= x2; ++px)
 				{
@@ -347,7 +347,7 @@ void MacImage::Downsample(MacImage* dst, int scale) const
 
 #ifdef USE_CXIMAGE
 
-void MacImage::Blit_Resampled(MacImage* dst, bool includeAlpha) const
+void MacImage::Blit_Resampled(MacImage * dst, const bool includeAlpha) const
 {
 	if (includeAlpha)
 	{
@@ -357,8 +357,8 @@ void MacImage::Blit_Resampled(MacImage* dst, bool includeAlpha) const
 			
 			for (int y = 0; y < mSy; ++y)
 			{
-				const MacRgba* srcLine = Line_get(y);
-				BYTE* dstLine = image.GetBits(y);
+				const MacRgba * __restrict srcLine = Line_get(y);
+				         BYTE * __restrict dstLine = image.GetBits(y);
 				
 				for (int x = 0; x < mSx; ++x)
 				{
@@ -371,8 +371,8 @@ void MacImage::Blit_Resampled(MacImage* dst, bool includeAlpha) const
 			
 			for (int y = 0; y < dst->mSy; ++y)
 			{
-				const BYTE * __restrict srcLine = image.GetBits(y);
-				MacRgba * __restrict dstLine = dst->Line_get(y);
+				const    BYTE * __restrict srcLine = image.GetBits(y);
+				      MacRgba * __restrict dstLine = dst->Line_get(y);
 				
 				for (int x = 0; x < dst->mSx; ++x)
 				{
@@ -391,7 +391,7 @@ void MacImage::Blit_Resampled(MacImage* dst, bool includeAlpha) const
 	for (int y = 0; y < mSy; ++y)
 	{
 		const MacRgba * __restrict srcLine = Line_get(y);
-		BYTE * __restrict dstLine = image.GetBits(y);
+		         BYTE * __restrict dstLine = image.GetBits(y);
 
 #if 1
 		for (int x = 0; x < mSx; ++x)
@@ -410,8 +410,8 @@ void MacImage::Blit_Resampled(MacImage* dst, bool includeAlpha) const
 
 	for (int y = 0; y < dst->Sy_get(); ++y)
 	{
-		const BYTE * __restrict srcLine = image.GetBits(y);
-		MacRgba * __restrict dstLine = dst->Line_get(y);
+		const    BYTE * __restrict srcLine = image.GetBits(y);
+		      MacRgba * __restrict dstLine = dst->Line_get(y);
 
 #if 1
 		for (int x = 0; x < dst->Sx_get(); ++x)
@@ -435,22 +435,22 @@ void MacImage::Blit_Resampled(MacImage* dst, bool includeAlpha) const
 #endif
 
 #if USE_AGG
-void MacImage::Blit_Transformed(MacImage* dst, const BlitTransform& transform)
+void MacImage::Blit_Transformed(MacImage * dst, const BlitTransform & transform)
 {
 	ImageResampling::Blit_Transformed(*this, *dst, transform);
 }
 #endif
 
-MacImage* MacImage::FlipY() const
+MacImage * MacImage::FlipY() const
 {
-	MacImage* result = new MacImage();
+	MacImage * result = new MacImage();
 	
 	result->Size_set(Sx_get(), Sy_get(), false);
 	
 	for (int y = 0; y < Sy_get(); ++y)
 	{
 		const MacRgba * __restrict src = Line_get(y);
-		MacRgba * __restrict dst = result->Line_get(Sy_get() - 1 - y);
+		      MacRgba * __restrict dst = result->Line_get(Sy_get() - 1 - y);
 		
 		Mem::Copy(src, dst, Sx_get() * sizeof(MacRgba));
 	}
@@ -460,16 +460,17 @@ MacImage* MacImage::FlipY() const
 
 void MacImage::FlipY_InPlace()
 {
-	MacImage* temp = FlipY();
+	MacImage * temp = FlipY();
 	temp->Blit(this);
 	delete temp;
+	temp = nullptr;
 }
 
-void MacImage::Save(Stream* stream) const
+void MacImage::Save(Stream * stream) const
 {
 	StreamWriter writer(stream, false);
 	
-	uint8_t version = 1;
+	const uint8_t version = 1;
 	
 	writer.WriteUInt8(version);
 	
@@ -492,25 +493,25 @@ void MacImage::Save(Stream* stream) const
 	}
 }
 
-void MacImage::Load(Stream* stream)
+void MacImage::Load(Stream * stream)
 {
 	StreamReader reader(stream, false);
 	
-	uint8_t version = reader.ReadUInt8();
+	const uint8_t version = reader.ReadUInt8();
 	
 	switch (version)
 	{
 		case 1:
 		{
-			int sx = reader.ReadInt32();
-			int sy = reader.ReadInt32();
+			const int sx = reader.ReadInt32();
+			const int sy = reader.ReadInt32();
 			
 			Assert(sx >= 0);
 			Assert(sy >= 0);
 			
 			Size_set(sx, sy, false);
 			
-			int byteCount = sx * sy * 4;
+			const int byteCount = sx * sy * 4;
 			
 			stream->Read(mData, byteCount);
 			
@@ -522,10 +523,10 @@ void MacImage::Load(Stream* stream)
 	}
 }
 
-void MacImage::Size_set(int sx, int sy, bool clear)
+void MacImage::Size_set(const int sx, const int sy, const bool clear)
 {
 	delete[] mData;
-	mData = 0;
+	mData = nullptr;
 	mSx = 0;
 	mSy = 0;
 	
