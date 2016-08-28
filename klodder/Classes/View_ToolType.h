@@ -1,6 +1,6 @@
 #import <UIKit/UIView.h>
 #import "klodder_forward_objc.h"
-#import "ITool.h"
+#import "Tool.h"
 
 // displays a clickable button for each tool view type
 

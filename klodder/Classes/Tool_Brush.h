@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Filter.h"
-#include "ITool.h"
+#include "Tool.h"
 
 class ToolSettings_BrushSoft
 {
@@ -135,7 +135,7 @@ public:
 	float spacing;
 };
 
-class Tool_Brush : public ITool
+class Tool_Brush : public Tool
 {
 public:
 	Tool_Brush();
@@ -165,7 +165,7 @@ private:
 	Filter mFilter;
 };
 
-class Tool_BrushDirect : public ITool
+class Tool_BrushDirect : public Tool
 {
 public:
 	Tool_BrushDirect();

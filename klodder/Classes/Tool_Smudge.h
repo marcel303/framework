@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ITool.h"
+#include "Tool.h"
 
 class ToolSettings_SmudgeSoft
 {
@@ -52,7 +52,7 @@ public:
 	float strength;
 };
 
-class Tool_Smudge : public ITool
+class Tool_Smudge : public Tool
 {
 public:
 	Tool_Smudge();

@@ -1120,7 +1120,7 @@ void Application::DoPaint(const float x, const float y, const float dx, const fl
 {
 //	LOG_DBG("doPaint: %f, %f - %f, %f", x, y, dx, dy);
 	
-	ITool * tool = Tool_get(mToolType);
+	Tool * tool = Tool_get(mToolType);
 	
 	switch (mToolType)
 	{
@@ -1879,7 +1879,7 @@ void Application::StrokeIsOriented_set(const bool isOriented)
 	mTraveller.m_Lag = isOriented;
 }
 
-ITool * Application::Tool_get(const ToolType type)
+Tool * Application::Tool_get(const ToolType type)
 {
 	switch (type)
 	{

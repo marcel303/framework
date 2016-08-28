@@ -1,8 +1,8 @@
 #pragma once
 
 #include <vector>
-#include "ITool.h"
 #include "klodder_forward.h"
+#include "Tool.h"
 
 extern int gMaxBrushRadius;
 extern int gMinBrushSpacing;

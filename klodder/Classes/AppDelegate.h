@@ -2,9 +2,9 @@
 #import "ChangeType.h"
 #import "ColorPickerState.h"
 #import "FBConnect/FBConnect.h"
-#import "ITool.h"
 #import "klodder_forward.h"
 #import "klodder_forward_objc.h"
+#import "Tool.h"
 #import "ViewBase.h"
 
 #ifdef IPAD

@@ -25,10 +25,10 @@ enum ToolType
 	ToolType_PatternEraser
 };
 
-class ITool
+class Tool
 {
 public:
-	virtual ~ITool();
+	virtual ~Tool();
 	
 	virtual void Apply(Bitmap* bmp, const Filter* filter, float x, float y, float dx, float dy, AreaI& dirty);
 	virtual void ApplyFilter(Filter* bmp, const Filter* filter, float x, float y, float dx, float dy, AreaI& dirty);

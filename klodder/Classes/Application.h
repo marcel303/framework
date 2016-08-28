@@ -186,7 +186,7 @@ private:
 	void StrokeIsOriented_set(const bool isOriented);
 	
 private:
-	ITool * Tool_get(const ToolType type);
+	Tool * Tool_get(const ToolType type);
 public:
 	BrushLibrarySet * BrushLibrarySet_get();
 	

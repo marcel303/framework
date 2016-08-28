@@ -1,10 +1,10 @@
 #include "Brush_Pattern.h"
 #include "BrushSettingsLibrary.h"
 #include "Calc.h"
-#include "ITool.h"
 #include "Log.h"
 #include "Settings.h"
 #include "StringEx.h"
+#include "Tool.h"
 
 #if 1
 int gMaxBrushRadius = MAX_BRUSH_RADIUS;

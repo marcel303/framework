@@ -1,7 +1,7 @@
 #pragma once
 
-#include "ITool.h"
+#include "Tool.h"
 
-class Tool_Sharpen : public ITool
+class Tool_Sharpen : public Tool
 {
 };
