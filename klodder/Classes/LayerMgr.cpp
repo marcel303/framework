@@ -9,7 +9,7 @@
 #include "Log.h"
 #include "Util_Mem.h"
 
-void RenderCheckerBoard(MacImage & __restrict dst, MacRgba backColor1, MacRgba backColor2, uint32_t size)
+void RenderCheckerBoard(MacImage & __restrict dst, const MacRgba & backColor1, const MacRgba & backColor2, const uint32_t size)
 {
 	UsingBegin(Benchmark bm("RenderCheckerBoard"))
 	{
@@ -80,7 +80,7 @@ LayerMgr::LayerMgr()
 	mEditingDirty.Reset();
 }
 
-void LayerMgr::Setup(int layerCount, int sx, int sy, Rgba backColor1, Rgba backColor2)
+void LayerMgr::Setup(const int layerCount, const int sx, const int sy, const Rgba & backColor1, const Rgba & backColor2)
 {
 	Assert(layerCount == MAX_LAYERS);
 
@@ -142,7 +142,7 @@ void LayerMgr::Setup(int layerCount, int sx, int sy, Rgba backColor1, Rgba backC
 	UsingEnd()
 }
 
-void LayerMgr::RenderMerged(MacImage& dst, MacRgba backColor1, MacRgba backColor2, int layerBegin, int layerEnd)
+void LayerMgr::RenderMerged(MacImage & __restrict dst, const MacRgba & backColor1, const MacRgba & backColor2, const int layerBegin, const int layerEnd)
 {
 	if (dst.Sx_get() != mMerged.Sx_get() || dst.Sy_get() != mMerged.Sy_get())
 	{
@@ -170,7 +170,7 @@ void LayerMgr::RenderMerged(MacImage& dst, MacRgba backColor1, MacRgba backColor
 	}
 }
 
-void LayerMgr::RenderMergedFinal(MacImage& dst)
+void LayerMgr::RenderMergedFinal(MacImage & dst)
 {
 	RenderMerged(dst, mBackColor1, mBackColor2, 0, mLayerCount - 1);
 }
@@ -196,7 +196,7 @@ void LayerMgr::SetMode_Direct()
 	mMode = LayerMode_Direct;
 }
 
-void LayerMgr::FlattenBrush(RectI rect)
+void LayerMgr::FlattenBrush(const RectI & rect)
 {
 	UsingBegin(Benchmark bm("LayerMgr::FlattenBrush"))
 	{
@@ -220,8 +220,8 @@ void LayerMgr::FlattenBrush(RectI rect)
 
 		for (int y = y1; y <= y2; ++y)
 		{
-			Rgba* lineBack = mEditingBuffer.Line_get(y) + x1;
-			const float* lineBrush = mBmpBrush.Line_get(y) + x1;
+			       Rgba * __restrict lineBack = mEditingBuffer.Line_get(y) + x1;
+			const float * __restrict lineBrush = mBmpBrush.Line_get(y) + x1;
 
 			for (int x = x1; x <= x2; ++x)
 			{
@@ -243,7 +243,7 @@ void LayerMgr::FlattenBrush(RectI rect)
 	UsingEnd()
 }
 
-void LayerMgr::FlattenEraser(RectI rect)
+void LayerMgr::FlattenEraser(const RectI & rect)
 {
 	UsingBegin(Benchmark bm("LayerMgr::FlattenEraser"))
 	{
@@ -267,12 +267,12 @@ void LayerMgr::FlattenEraser(RectI rect)
 
 		for (int y = y1; y <= y2; ++y)
 		{
-			Rgba* lineBack = mEditingBuffer.Line_get(y);
-			float* lineBrush = mBmpBrush.Line_get(y);
+			 Rgba * __restrict lineBack = mEditingBuffer.Line_get(y);
+			float * __restrict lineBrush = mBmpBrush.Line_get(y);
 
 			for (int x = x1; x <= x2; ++x)
 			{
-				Rgba& pixBack = lineBack[x];
+				Rgba & pixBack = lineBack[x];
 				
 				const float aBrush = lineBrush[x] * mBrushOpacity;
 				const float aBack = 1.0f - aBrush;
@@ -289,7 +289,7 @@ void LayerMgr::FlattenEraser(RectI rect)
 	UsingEnd()
 }
 
-void LayerMgr::ClearBrushOverlay(RectI rect)
+void LayerMgr::ClearBrushOverlay(const RectI & rect)
 {
 	UsingBegin(Benchmark bm("LayerMgr::ClearBrushOverlay"))
 	{
@@ -304,7 +304,7 @@ void LayerMgr::ClearBrushOverlay(RectI rect)
 
 		for (int y = y1; y <= y2; ++y)
 		{
-			float* line = mBmpBrush.Line_get(y);
+			float * __restrict line = mBmpBrush.Line_get(y);
 
 			ClearMemory(line + rect.m_Position[0], rect.m_Size[0] * sizeof(float));
 		}
@@ -312,11 +312,11 @@ void LayerMgr::ClearBrushOverlay(RectI rect)
 	UsingEnd()
 }
 
-void LayerMgr::DataLayerAcquire(int index, const MacImage* image)
+void LayerMgr::DataLayerAcquire(const int index, const MacImage * image)
 {
 	UsingBegin(Benchmark bm("LayerMgr::LayerAcquire"))
 	{
-		MacImage* dst = DataLayer_get(index);
+		MacImage * dst = DataLayer_get(index);
 		
 		Assert(image->Sx_get() == dst->Sx_get());
 		Assert(image->Sy_get() == dst->Sy_get());
@@ -334,11 +334,11 @@ void LayerMgr::DataLayerAcquire(int index, const MacImage* image)
 	UsingEnd()
 }
 
-void LayerMgr::DataLayerAcquireWithTransform(int index, MacImage* image, const BlitTransform& transform)
+void LayerMgr::DataLayerAcquireWithTransform(const int index, MacImage * image, const BlitTransform & transform)
 {
 	UsingBegin(Benchmark bm("LayerMgr::LayerAcquire"))
 	{
-		MacImage* dst = DataLayer_get(index);
+		MacImage * dst = DataLayer_get(index);
 		
 		MacImage temp;
 		
@@ -354,11 +354,11 @@ void LayerMgr::DataLayerAcquireWithTransform(int index, MacImage* image, const B
 	UsingEnd()
 }
 
-void LayerMgr::DataLayerClear(int index, Rgba color)
+void LayerMgr::DataLayerClear(const int index, const Rgba & color)
 {
 	UsingBegin(Benchmark bm("LayerMgr::LayerClear"))
 	{
-		bool isEditing = mEditingEnabled;
+		const bool isEditing = mEditingEnabled;
 		
 		if (isEditing)
 			EditingEnd();
@@ -380,11 +380,11 @@ void LayerMgr::DataLayerClear(int index, Rgba color)
 	UsingEnd()
 }
 
-void LayerMgr::DataLayerMerge(int index1, int index2)
+void LayerMgr::DataLayerMerge(const int index1, const int index2)
 {
 	UsingBegin(Benchmark bm("LayerMgr::DataLayerMerge"))
 	{
-		bool isEditing = mEditingEnabled;
+		const bool isEditing = mEditingEnabled;
 		
 		if (isEditing)
 			EditingEnd();
@@ -406,12 +406,12 @@ void LayerMgr::DataLayerMerge(int index1, int index2)
 	UsingEnd()
 }
 
-void LayerMgr::Invalidate(int x, int y, int sx, int sy)
+void LayerMgr::Invalidate(const int x, const int y, const int sx, const int sy)
 {
 	if (sx == 0 || sy == 0)
 		return;
 	
-	AreaI area(Vec2I(x, y), Vec2I(x + sx - 1, y + sy - 1));
+	const AreaI area(Vec2I(x, y), Vec2I(x + sx - 1, y + sy - 1));
 
 	mEditingDirty.Merge(area);
 }
@@ -439,14 +439,14 @@ Vec2I LayerMgr::Size_get() const
 	return Vec2I(mMerged.Sx_get(), mMerged.Sy_get());
 }
 
-MacImage* LayerMgr::DataLayer_get(int index)
+MacImage* LayerMgr::DataLayer_get(const int index)
 {
 	Assert(index >= 0 && index < mLayerCount);
 	
 	return mLayerList + index;
 }
 
-MacImage* LayerMgr::Layer_get(int layer)
+MacImage* LayerMgr::Layer_get(const int layer)
 {
 	Assert(layer >= 0 && layer < mLayerCount);
 	
@@ -460,13 +460,13 @@ int LayerMgr::LayerCount_get() const
 	return mLayerCount;
 }
 
-void LayerMgr::LayerOrder_set(std::vector<int> order)
+void LayerMgr::LayerOrder_set(const std::vector<int> & order)
 {
 	UsingBegin(Benchmark bm("LayerMgr::LayerOrder_set"))
 	{
 		Assert((int)order.size() == mLayerCount);
 
-		bool isEditing = mEditingEnabled;
+		const bool isEditing = mEditingEnabled;
 		
 		if (isEditing)
 			EditingEnd();
@@ -490,21 +490,21 @@ std::vector<int> LayerMgr::LayerOrder_get() const
 	return result;
 }
 
-int LayerMgr::LayerOrder_get(int layer) const
+int LayerMgr::LayerOrder_get(const int layer) const
 {
 	return mLayerOrder[layer];
 }
 
-void LayerMgr::DataLayerOpacity_set(int index, float opacity)
+void LayerMgr::DataLayerOpacity_set(const int index, const float _opacity)
 {
 	UsingBegin(Benchmark bm("LayerMgr::LayerOpacity_set"))
 	{
-		bool isEditing = mEditingEnabled;
+		const bool isEditing = mEditingEnabled;
 		
 		if (isEditing)
 			EditingEnd();
 
-		opacity = Calc::Mid(opacity, 0.0f, 1.0f);
+		const float opacity = Calc::Mid(_opacity, 0.0f, 1.0f);
 		
 		const int opacity255 = Calc::Mid((int)Calc::RoundUp(opacity * 255.0f), 0, 255);
 		
@@ -516,16 +516,16 @@ void LayerMgr::DataLayerOpacity_set(int index, float opacity)
 	UsingEnd()
 }
 
-float LayerMgr::DataLayerOpacity_get(int index) const
+float LayerMgr::DataLayerOpacity_get(const int index) const
 {
 	return mLayerOpacity[index] / 255.0f;
 }
 
-void LayerMgr::DataLayerVisibility_set(int index, bool visibility)
+void LayerMgr::DataLayerVisibility_set(const int index, const bool visibility)
 {
 	UsingBegin(Benchmark bm("LayerMgr::LayerVisibility_set"))
 	{
-		bool isEditing = mEditingEnabled;
+		const bool isEditing = mEditingEnabled;
 		
 		if (isEditing)
 			EditingEnd();
@@ -538,7 +538,7 @@ void LayerMgr::DataLayerVisibility_set(int index, bool visibility)
 	UsingEnd()
 }
 
-bool LayerMgr::DataLayerVisibility_get(int index) const
+bool LayerMgr::DataLayerVisibility_get(const int index) const
 {
 	return mLayerVisibility[index];
 }
@@ -548,22 +548,22 @@ bool LayerMgr::DataLayerVisibility_get(int index) const
 	return &mCacheBack;
 }*/
 
-MacImage* LayerMgr::Merged_get()
+MacImage * LayerMgr::Merged_get()
 {
 	return &mMerged;
 }
 
-Bitmap* LayerMgr::EditingBuffer_get()
+Bitmap * LayerMgr::EditingBuffer_get()
 {
 	return &mEditingBuffer;
 }
 
-const Bitmap* LayerMgr::EditingBuffer_get() const
+const Bitmap * LayerMgr::EditingBuffer_get() const
 {
 	return &mEditingBuffer;
 }
 
-Filter* LayerMgr::EditingBrush_get()
+Filter * LayerMgr::EditingBrush_get()
 {
 	return &mBmpBrush;
 }
@@ -584,9 +584,9 @@ float LayerMgr::BrushOpacity_get() const
 	return mBrushOpacity;
 }
 
-void LayerMgr::BrushOpacity_set(float opacity)
+void LayerMgr::BrushOpacity_set(const float _opacity)
 {
-	opacity = Calc::Mid(opacity, 0.0f, 1.0f);
+	const float opacity = Calc::Mid(_opacity, 0.0f, 1.0f);
 	const int opacity255 = Calc::Mid((int)Calc::RoundUp(opacity * 255.0f), 0, 255);
 	
 	mBrushOpacity = opacity;
@@ -604,7 +604,7 @@ MacRgba LayerMgr::BackColor2_get() const
 	return mBackColor2;
 }
 
-void LayerMgr::ValidateVisible(int _x, int _y, int sx, int sy)
+void LayerMgr::ValidateVisible(const int _x, const int _y, const int sx, const int sy)
 {
 	UsingBegin(Benchmark bm("LayerMgr::ValidateVisible"))
 
@@ -644,8 +644,8 @@ void LayerMgr::ValidateVisible(int _x, int _y, int sx, int sy)
 			
 			for (int y = y1; y <= y2; ++y)
 			{
-				const MacRgba* srcEditLine = srcEdit->Line_get(y) + x1;
-				const float* srcBrushLine = mBmpBrush.Line_get(y) + x1;
+				const MacRgba * __restrict srcEditLine = srcEdit->Line_get(y) + x1;
+				const   float * __restrict srcBrushLine = mBmpBrush.Line_get(y) + x1;
 				MacRgba* dstLine = mMerged.Line_get(y) + x1;
 
 				for (int xi = sx; xi != 0; --xi)
@@ -653,7 +653,7 @@ void LayerMgr::ValidateVisible(int _x, int _y, int sx, int sy)
 					const int alphaBrush = int((*srcBrushLine) * mBrushOpacity255f);
 					const int alphaBrushInv = 255 - alphaBrush;
 					
-					uint8_t* dst = dstLine->rgba;
+					uint8_t * __restrict dst = dstLine->rgba;
 					
 					int temp[4];
 					
@@ -683,22 +683,22 @@ void LayerMgr::ValidateVisible(int _x, int _y, int sx, int sy)
 			
 			const int alphaLayer = mLayerOpacity[ActiveDataLayer_get()];
 			
-			const MacImage* srcEdit = DataLayer_get(mActiveDataLayer);
+			const MacImage * srcEdit = DataLayer_get(mActiveDataLayer);
 			
 			mCacheBack.Blit(&mMerged, x1, y1, x1, y1, sx, sy);
 			
 			for (int y = y1; y <= y2; ++y)
 			{
-				const MacRgba* srcEditLine2 = srcEdit->Line_get(y) + x1;
-				const float* srcBrushLine = mBmpBrush.Line_get(y) + x1;
-				MacRgba* dstLine = mMerged.Line_get(y) + x1;
+				const MacRgba * __restrict srcEditLine2 = srcEdit->Line_get(y) + x1;
+				const   float * __restrict srcBrushLine = mBmpBrush.Line_get(y) + x1;
+				      MacRgba * __restrict dstLine = mMerged.Line_get(y) + x1;
 
 				for (int x = x1; x <= x2; ++x)
 				{
 					const int alphaBrush = int((*srcBrushLine) * mBrushOpacity255f);
 					const int alphaBrushInv = 255 - alphaBrush;
 					
-					uint8_t* dst = dstLine->rgba;
+					uint8_t * __restrict dst = dstLine->rgba;
 					
 					int temp[4];
 					
@@ -730,14 +730,14 @@ void LayerMgr::ValidateVisible(int _x, int _y, int sx, int sy)
 			
 			for (int y = y1; y <= y2; ++y)
 			{
-				const MacRgba* srcBackLine = mCacheBack.Line_get(y) + x1;
-				const Rgba* srcEditLine = mEditingBuffer.Line_get(y) + x1;
-				MacRgba* dstLine = mMerged.Line_get(y) + x1;
+				const MacRgba * __restrict srcBackLine = mCacheBack.Line_get(y) + x1;
+				const    Rgba * __restrict srcEditLine = mEditingBuffer.Line_get(y) + x1;
+				      MacRgba * __restrict dstLine = mMerged.Line_get(y) + x1;
 
 				for (int x = x1; x <= x2; ++x)
 				{
-					const uint8_t* srcBack = srcBackLine->rgba;
-					const float* srcEdit = srcEditLine->rgb;
+					const uint8_t * __restrict srcBack = srcBackLine->rgba;
+					const   float * __restrict srcEdit = srcEditLine->rgb;
 					
 					const int alphaEditInv = 255 - int(srcEdit[3] * alphaLayer);
 					
@@ -776,7 +776,7 @@ void LayerMgr::ValidateVisible(int _x, int _y, int sx, int sy)
 	UsingEnd()
 }
 
-void LayerMgr::ValidateLayer(int _x, int _y, int sx, int sy)
+void LayerMgr::ValidateLayer(const int _x, const int _y, const int sx, const int sy)
 {
 	UsingBegin(Benchmark bm("LayerMgr::ValidateLayer"))
 
@@ -792,12 +792,12 @@ void LayerMgr::ValidateLayer(int _x, int _y, int sx, int sy)
 	Assert(x2 >= 0 && x2 < mEditingBuffer.Sx_get());
 	Assert(y2 >= 0 && y2 < mEditingBuffer.Sy_get());
 	
-	MacImage* dst = DataLayer_get(mActiveDataLayer);
+	MacImage * dst = DataLayer_get(mActiveDataLayer);
 	
 	for (int y = y1; y <= y2; ++y)
 	{
-		const Rgba * __restrict srcLine = mEditingBuffer.Line_get(y);
-		MacRgba * __restrict dstLine = dst->Line_get(y);
+		const    Rgba * __restrict srcLine = mEditingBuffer.Line_get(y);
+		      MacRgba * __restrict dstLine = dst->Line_get(y);
 		
 #if defined(__ARM_NEON__) && 1
 		// 0.036 sec @ 1024x768 (iPad2)
@@ -843,12 +843,12 @@ void LayerMgr::ValidateLayer(int _x, int _y, int sx, int sy)
 	UsingEnd()
 }
 
-void LayerMgr::CopyLayerToEditingBuffer(int x, int y, int sx, int sy)
+void LayerMgr::CopyLayerToEditingBuffer(const int x, const int y, const int sx, const int sy)
 {
 	MacImageToBitmap(DataLayer_get(mActiveDataLayer), &mEditingBuffer);
 }
 
-void LayerMgr::CopyEditingBufferToLayer(int x, int y, int sx, int sy)
+void LayerMgr::CopyEditingBufferToLayer(const int x, const int y, const int sx, const int sy)
 {
 	BitmapToMacImage(&mEditingBuffer, DataLayer_get(mActiveDataLayer), x, y, sx, sy);
 }
@@ -858,9 +858,9 @@ int LayerMgr::ActiveDataLayer_get() const
 	return mActiveDataLayer;
 }
 
-void LayerMgr::ActiveDataLayer_set(int index)
+void LayerMgr::ActiveDataLayer_set(const int index)
 {
-	bool isEditing = mEditingEnabled;
+	const bool isEditing = mEditingEnabled;
 	
 	if (isEditing)
 		EditingEnd();
@@ -892,8 +892,8 @@ void LayerMgr::RebuildBack()
 {
 	UsingBegin(Benchmark bm("LayerMgr::RebuildBack"))
 	{
-		int layer1 = 0;
-		int layer2 = IndexToLayer(mActiveDataLayer) - 1;
+		const int layer1 = 0;
+		const int layer2 = IndexToLayer(mActiveDataLayer) - 1;
 		
 		RenderMerged(mCacheBack, mBackColor1, mBackColor2, layer1, layer2);
 	}
@@ -904,17 +904,17 @@ void LayerMgr::RebuildFront()
 {
 	UsingBegin(Benchmark bm("LayerMgr::RebuildFront"))
 	{
-		MacRgba color = MacRgba_Make(0, 0, 0, 0);
+		const MacRgba color = MacRgba_Make(0, 0, 0, 0);
 		
-		int layer1 = IndexToLayer(mActiveDataLayer) + 1;
-		int layer2 = mLayerCount - 1;
+		const int layer1 = IndexToLayer(mActiveDataLayer) + 1;
+		const int layer2 = mLayerCount - 1;
 		
 		RenderMerged(mCacheFront, color, color, layer1, layer2);
 	}
 	UsingEnd()
 }
 
-void LayerMgr::EditingBegin(bool rebuildCaches)
+void LayerMgr::EditingBegin(const bool rebuildCaches)
 {
 	Assert(!mEditingEnabled);
 	
@@ -973,7 +973,7 @@ bool LayerMgr::EditingIsEnabled_get() const
 	return mEditingDirty;
 }*/
 
-int LayerMgr::IndexToLayer(int index) const
+int LayerMgr::IndexToLayer(const int index) const
 {
 	Assert(index >= 0 && index < mLayerCount);
 	
@@ -984,7 +984,7 @@ int LayerMgr::IndexToLayer(int index) const
 	throw ExceptionNA();
 }
 
-int LayerMgr::LayerToIndex(int layer) const
+int LayerMgr::LayerToIndex(const int layer) const
 {
 	return mLayerOrder[layer];
 }
