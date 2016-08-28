@@ -13,7 +13,7 @@
 
 Filter::Filter()
 {
-	mData = 0;
+	mData = nullptr;
 	mSx = 0;
 	mSy = 0;
 }
@@ -23,18 +23,18 @@ Filter::~Filter()
 	Size_set(0, 0);
 }
 
-void Filter::Load(Stream* stream)
+void Filter::Load(Stream * stream)
 {
 	StreamReader reader(stream, false);
 
-	uint32_t version = reader.ReadUInt32();
+	const uint32_t version = reader.ReadUInt32();
 
 	switch (version)
 	{
 	case 1:
 		{
-			uint32_t sx = reader.ReadUInt32();
-			uint32_t sy = reader.ReadUInt32();
+			const uint32_t sx = reader.ReadUInt32();
+			const uint32_t sy = reader.ReadUInt32();
 
 			if (sx > IO_MAX_SIZE || sy > IO_MAX_SIZE)
 				throw ExceptionVA("brush size too large: %dx%d", (int)sx, (int)sy);
@@ -51,7 +51,7 @@ void Filter::Load(Stream* stream)
 	}
 }
 
-void Filter::Save(Stream* stream) const
+void Filter::Save(Stream * stream) const
 {
 	StreamWriter writer(stream, false);
 
@@ -62,15 +62,15 @@ void Filter::Save(Stream* stream) const
 }
 
 
-void Filter::Multiply(float value)
+void Filter::Multiply(const float value)
 {
-	int area = mSx * mSy;
+	const int area = mSx * mSy;
 	
 	for (int i = 0; i < area; ++i)
 		mData[i] *= value;
 }
 
-void Filter::MakeSoft(int diameter, float hardness)
+void Filter::MakeSoft(const int diameter, const float hardness)
 {
 //	LOG_DBG("createFilter: %d, %f", diameter, 3);
 	
@@ -83,7 +83,7 @@ void Filter::MakeSoft(int diameter, float hardness)
 
 	for (int y = 0; y < diameter; ++y)
 	{
-		float* line = Line_get(y);
+		float * line = Line_get(y);
 		
 		for (int x = 0; x < diameter; ++x)
 		{
@@ -119,7 +119,7 @@ void Filter::MakeSoft(int diameter, float hardness)
 
 #ifndef FILTER_STANDALONE
 
-void Filter::ToMacImage(MacImage& image, const Rgba& color) const
+void Filter::ToMacImage(MacImage & image, const Rgba & color) const
 {
 	Assert(image.Sx_get() == mSx);
 	Assert(image.Sy_get() == mSy);
@@ -134,8 +134,8 @@ void Filter::ToMacImage(MacImage& image, const Rgba& color) const
 	
 	for (int y = 0; y < mSy; ++y)
 	{
-		const float* srcLine = Line_get(y);
-		MacRgba* dstLine = image.Line_get(y);
+		const   float * __restrict srcLine = Line_get(y);
+		      MacRgba * __restrict dstLine = image.Line_get(y);
 		
 		for (int x = 0; x < mSx; ++x)
 		{
@@ -154,7 +154,7 @@ void Filter::ToMacImage(MacImage& image, const Rgba& color) const
 
 #endif
 
-void Filter::Blit(Filter* filter) const
+void Filter::Blit(Filter * filter) const
 {
 	Assert(filter->Sx_get() == mSx);
 	Assert(filter->Sy_get() == mSy);
@@ -162,7 +162,7 @@ void Filter::Blit(Filter* filter) const
 	for (int y = 0; y < mSy; ++y)
 	{
 		const float * __restrict srcLine = Line_get(y);
-		float * __restrict dstLine = filter->Line_get(y);
+		      float * __restrict dstLine = filter->Line_get(y);
 
 		Mem::Copy(srcLine, dstLine, mSx * sizeof(float));
 
@@ -171,7 +171,7 @@ void Filter::Blit(Filter* filter) const
 	}
 }
 
-void Filter::Blit_Resampled(Filter* filter) const
+void Filter::Blit_Resampled(Filter * filter) const
 {
 	CxImage image(mSx, mSy, 24);
 
@@ -219,7 +219,7 @@ void Filter::Blit_Resampled(Filter* filter) const
 	for (int y = 0; y < mSy; ++y)
 	{
 		const float * __restrict srcLine = Line_get(y);
-		BYTE * __restrict dstLine = image.GetBits(y);
+		       BYTE * __restrict dstLine = image.GetBits(y);
 
 		for (int x = 0; x < mSx; ++x)
 		{
@@ -233,8 +233,8 @@ void Filter::Blit_Resampled(Filter* filter) const
 
 	for (int y = 0; y < filter->Sy_get(); ++y)
 	{
-		const BYTE* srcLine = image.GetBits(y);
-		float* dstLine = filter->Line_get(y);
+		const  BYTE * __restrict srcLine = image.GetBits(y);
+		      float * __restrict dstLine = filter->Line_get(y);
 
 		const float scale = 1.0f / 255.0f;
 
@@ -249,7 +249,7 @@ void Filter::Blit_Resampled(Filter* filter) const
 //#define floorf(v) (int)v;
 #define floorf2i(v) (int)floorf(v)
 
-int Filter::SampleAA(float x, float y, float* __restrict out_value, float* __restrict out_w) const __restrict
+int Filter::SampleAA(const float x, const float y, float * __restrict out_value, float * __restrict out_w) const __restrict
 {
 	const float ix1f = floorf(x);
 	const float iy1f = floorf(y);
@@ -262,7 +262,7 @@ int Filter::SampleAA(float x, float y, float* __restrict out_value, float* __res
 
 	if (!correct)
 	{
-		const float* base = Line_get(iy1) + ix1;
+		const float * base = Line_get(iy1) + ix1;
 		
 		out_value[0] = *(base);
 		out_value[1] = *(base + 1);
@@ -309,7 +309,7 @@ int Filter::SampleAA(float x, float y, float* __restrict out_value, float* __res
 		value[3] * w[3];
 }*/
 
-float Filter::SampleAA(float x, float y) const
+float Filter::SampleAA(const float x, const float y) const
 {
 	const float ix1f = floorf(x);
 	const float iy1f = floorf(y);
@@ -334,7 +334,7 @@ float Filter::SampleAA(float x, float y) const
 
 	if (!correct)
 	{
-		const float* base = Line_get(iy1) + ix1;
+		const float * base = Line_get(iy1) + ix1;
 		
 		return
 			out_w[0] * *(base) +
@@ -352,7 +352,7 @@ float Filter::SampleAA(float x, float y) const
 	}
 }
 
-void Filter::Size_set(int sx, int sy)
+void Filter::Size_set(const int sx, const int sy)
 {
 	if (sx == mSx && sy == mSy)
 	{
@@ -363,8 +363,8 @@ void Filter::Size_set(int sx, int sy)
 	}
 	else
 	{
-		delete[] mData;
-		mData = 0;
+		delete [] mData;
+		mData = nullptr;
 		mSx = 0;
 		mSy = 0;
 		

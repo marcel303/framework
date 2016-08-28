@@ -8,7 +8,7 @@
 #include "libgg_forward.h"
 #include "Types.h"
 
-static inline void SampleAA_Prepare(float x, float y, float* out_w)
+static inline void SampleAA_Prepare(const float x, const float y, float * out_w)
 {
 	const float xf = floorf(x);
 	const float yf = floorf(y);
@@ -30,40 +30,40 @@ public:
 	Filter();
 	~Filter();
 	
-	void Load(Stream* stream);
-	void Save(Stream* stream) const;
+	void Load(Stream * stream);
+	void Save(Stream * stream) const;
 
-	void Multiply(float value);
-	void MakeSoft(int diameter, float hardness);
+	void Multiply(const float value);
+	void MakeSoft(const int diameter, const float hardness);
 #ifndef FILTER_STANDALONE
-	void ToMacImage(MacImage& image, const Rgba& color) const;
+	void ToMacImage(MacImage & image, const Rgba & color) const;
 #endif
-	void Blit(Filter* filter) const;
-	void Blit_Resampled(Filter* filter) const;
+	void Blit(Filter * filter) const;
+	void Blit_Resampled(Filter * filter) const;
 	
-	inline float Sample(int x, int y) const;
-	inline int Sample_Safe(int x, int y, float & __restrict out_value) const __restrict;
-	inline float Sample_Clamped(int x, int y) const;
-	inline float Sample_Border(int x, int y) const;
-	int SampleAA(float x, float y, float * __restrict out_value, float * __restrict out_w) const __restrict;
-	float SampleAA(float x, float y) const;
-	inline float SampleAA(int x, int y, const float * __restrict weights) const __restrict;
+	inline float Sample(const int x, const int y) const;
+	inline int Sample_Safe(const int x, const int y, float & __restrict out_value) const __restrict;
+	inline float Sample_Clamped(const int x, const int y) const;
+	inline float Sample_Border(const int x, const int y) const;
+	int SampleAA(const float x, const float y, float * __restrict out_value, float * __restrict out_w) const __restrict;
+	float SampleAA(const float x, const float y) const;
+	inline float SampleAA(const int x, const int y, const float * __restrict weights) const __restrict;
 
-	void Size_set(int sx, int sy);
-	inline float* Line_get(int y);
-	inline const float* Line_get(int y) const;
+	void Size_set(const int sx, const int sy);
+	inline float * Line_get(const int y);
+	inline const float * Line_get(const int y) const;
 	inline int Sx_get() const;
 	inline int Sy_get() const;
 	AreaI Area_get() const;
 	Hash Hash_get() const;
 	
 private:
-	float* mData;
+	float * mData;
 	int mSx;
 	int mSy;
 };
 
-inline float Filter::Sample(int x, int y) const
+inline float Filter::Sample(const int x, const int y) const
 {
 	Assert(x >= 0 && x < mSx);
 	Assert(y >= 0 && y < mSy);
@@ -71,7 +71,7 @@ inline float Filter::Sample(int x, int y) const
 	return mData[x + y * mSx];
 }
 
-inline int Filter::Sample_Safe(int x, int y, float & __restrict out_value) const __restrict
+inline int Filter::Sample_Safe(const int x, const int y, float & __restrict out_value) const __restrict
 {
 	if (x < 0 || y < 0 || x >= mSx || y >= mSy)
 	{
@@ -85,21 +85,15 @@ inline int Filter::Sample_Safe(int x, int y, float & __restrict out_value) const
 	}
 }
 
-inline float Filter::Sample_Clamped(int x, int y) const
+inline float Filter::Sample_Clamped(const int _x, const int _y) const
 {
-	if (x < 0)
-		x = 0;
-	if (y < 0)
-		y = 0;
-	if (x >= mSx)
-		x = mSx - 1;
-	if (y >= mSy)
-		y = mSy - 1;
-
+	const int x = _x < 0 ? 0 : _x >= mSx ? mSx - 1 : _x;
+	const int y = _y < 0 ? 0 : _y >= mSy ? mSy - 1 : _y;
+	
 	return Sample(x, y);
 }
 
-inline float Filter::Sample_Border(int x, int y) const
+inline float Filter::Sample_Border(const int x, const int y) const
 {
 	if (x < 0 || y < 0 || x >= mSx || y >= mSy)
 		return 0.0f;
@@ -107,7 +101,7 @@ inline float Filter::Sample_Border(int x, int y) const
 		return Sample(x, y);
 }
 
-inline float Filter::SampleAA(int x, int y, const float * __restrict weights) const __restrict
+inline float Filter::SampleAA(const int x, const int y, const float * __restrict weights) const __restrict
 {
 	const int correct = x < 0 || y < 0 || x + 1 >= mSx || y + 1 >= mSy;
 	
@@ -131,12 +125,12 @@ inline float Filter::SampleAA(int x, int y, const float * __restrict weights) co
 	}
 }
 
-inline float* Filter::Line_get(int y)
+inline float * Filter::Line_get(const int y)
 {
 	return mData + mSx * y;
 }
 
-inline const float* Filter::Line_get(int y) const
+inline const float * Filter::Line_get(const int y) const
 {
 	return mData + mSx * y;
 }
