@@ -1,7 +1,7 @@
 #pragma once
 
-#include "klodder_forward.h"
 #include "libgg_forward.h"
+#include "libklodder_forward.h"
 #include "Types.h"
 
 enum BezierTravellerState
