@@ -28,12 +28,12 @@ Tool_Smudge::Tool_Smudge()
 	Setup(1.0f);
 }
 
-void Tool_Smudge::Setup(float strength)
+void Tool_Smudge::Setup(const float strength)
 {
 	mStrength = strength;
 }
 
-void Tool_Smudge::Apply(Bitmap* bmp, const Filter* filter, float _x, float _y, float dx, float dy, AreaI& dirty)
+void Tool_Smudge::Apply(Bitmap * bmp, const Filter * filter, const float _x, const float _y, const float _dx, const float _dy, AreaI & dirty)
 {
 	int x = (int)floorf(_x);
 	int y = (int)floorf(_y);
@@ -52,8 +52,8 @@ void Tool_Smudge::Apply(Bitmap* bmp, const Filter* filter, float _x, float _y, f
 	const uint32_t filterSx = filter->Sx_get();
 	const uint32_t filterSy = filter->Sy_get();
 	
-	dx *= mStrength;
-	dy *= mStrength;
+	const float dx = _dx * mStrength;
+	const float dy = _dy * mStrength;
 
 #ifdef __ARM_NEON__
 	const float32_t s_dxdy[2] = { dx,   dy   };
@@ -86,7 +86,7 @@ void Tool_Smudge::Apply(Bitmap* bmp, const Filter* filter, float _x, float _y, f
 	for (uint32_t py = 0; py < filterSy; ++py)
 	{
 		const float * __restrict bpix = filter->Line_get(py);
-		Rgba * __restrict cpix1 = &gTempBuf[py][0];
+		       Rgba * __restrict cpix1 = &gTempBuf[py][0];
 		
 		for (uint32_t px = 0; px < filterSx; ++px)
 		{
@@ -109,7 +109,7 @@ void Tool_Smudge::Apply(Bitmap* bmp, const Filter* filter, float _x, float _y, f
 	for (int py = area.y1; py <= area.y2; ++py)
 	{
 		const Rgba * __restrict tpix = &gTempBuf[py - y][area.x1 - x];
-		Rgba * __restrict cpix = bmp->Line_get(py) + area.x1;
+		      Rgba * __restrict cpix = bmp->Line_get(py) + area.x1;
 
  		memcpy(cpix, tpix, sx);
 	}

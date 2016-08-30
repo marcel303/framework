@@ -12,7 +12,7 @@ Tool_Brush::Tool_Brush()
 	Setup(1, 1.0f, false);
 }
 
-void Tool_Brush::Setup(int diameter, float hardness, bool isOriented)
+void Tool_Brush::Setup(const int diameter, const float hardness, const bool isOriented)
 {
 	Assert(diameter > 0);
 	//Assert(diameter % 2 == 1);
@@ -28,7 +28,7 @@ void Tool_Brush::Setup(int diameter, float hardness, bool isOriented)
 	}
 }
 
-void Tool_Brush::Setup_Pattern(int diameter, Filter* filter, bool isOriented)
+void Tool_Brush::Setup_Pattern(const int diameter, const Filter * filter, const bool isOriented)
 {
 	Assert(diameter > 0);
 	//Assert(diameter % 2 == 1);
@@ -44,12 +44,12 @@ void Tool_Brush::Setup_Pattern(int diameter, Filter* filter, bool isOriented)
 	filter->Blit_Resampled(&mFilter);
 }
 
-void Tool_Brush::ApplyFilter(Filter* bmp, const Filter* filter, float _x, float _y, float _dx, float _dy, AreaI& dirty)
+void Tool_Brush::ApplyFilter(Filter * bmp, const Filter * filter, const float ___x, const float ___y, const float _dx, const float _dy, AreaI & dirty)
 {
 	if (mIsOriented)
 	{
 		const float angle = Vec2F::ToAngle(Vec2F(_dx, _dy));
-		ApplyFilter_Rotated(bmp, filter, _x, _y, angle, dirty);
+		ApplyFilter_Rotated(bmp, filter, ___x, ___y, angle, dirty);
 		return;
 	}
 	
@@ -57,8 +57,8 @@ void Tool_Brush::ApplyFilter(Filter* bmp, const Filter* filter, float _x, float 
 
 //	_x -= (mDiameter - 1) / 2;
 //	_y -= (mDiameter - 1) / 2;
-	_x -= (mDiameter - 1) / 2.0f;
-	_y -= (mDiameter - 1) / 2.0f;
+	const float _x = ___x - (mDiameter - 1) / 2.0f;
+	const float _y = ___y - (mDiameter - 1) / 2.0f;
 
 	int __x = (int)floorf(_x);
 	int __y = (int)floorf(_y);
@@ -88,11 +88,11 @@ void Tool_Brush::ApplyFilter(Filter* bmp, const Filter* filter, float _x, float 
 	
 	for (int y = y1; y <= y2; ++y)
 	{
-		float* line = bmp->Line_get(y);
+		float * __restrict line = bmp->Line_get(y);
 		
 		for (int x = x1; x <= x2; ++x)
 		{
-			float& aBmp = line[x];
+			float & __restrict aBmp = line[x];
 			const float aFilter = mFilter.SampleAA(x - __x, y - __y, weights);
 
 			aBmp = aFilter + aBmp * (1.0f - aFilter);
@@ -105,20 +105,15 @@ void Tool_Brush::ApplyFilter(Filter* bmp, const Filter* filter, float _x, float 
 	dirty.Merge(area);
 }
 
-void Tool_Brush::ApplyFilter_Rotated(Filter* bmp, const Filter* filter, float _x, float _y, float angle, AreaI& dirty)
+void Tool_Brush::ApplyFilter_Rotated(Filter * bmp, const Filter * filter, const float __x, const float __y, const float angle, AreaI & dirty)
 {
 //	LOG_DBG("brush: rotated", 0);
 	
 	const int radius = (mDiameter - 1) / 2;
-
-//	_x -= radius;
-//	_y -= radius;
-
-//	const int size = (int)ceilf(radius * 1.5f);
 	const int size = radius;
 
-	_x -= size;
-	_y -= size;
+	const float _x = __x - size;
+	const float _y = __y - size;
 	
 	const int diameter = size * 2 + 1;
 	
@@ -147,7 +142,7 @@ void Tool_Brush::ApplyFilter_Rotated(Filter* bmp, const Filter* filter, float _x
 
 	for (int y = y1; y <= y2; ++y)
 	{
-		float* line = bmp->Line_get(y);
+		float * __restrict line = bmp->Line_get(y);
 
 		const float dy = y - _y - size;
 		
@@ -158,7 +153,7 @@ void Tool_Brush::ApplyFilter_Rotated(Filter* bmp, const Filter* filter, float _x
 			const float px = dirX[0] * dx + dirX[1] * dy + radius;
 			const float py = dirY[0] * dx + dirY[1] * dy + radius;
 
-			float& aBmp = line[x];
+			float & __restrict aBmp = line[x];
 			const float aFilter = filter->SampleAA(px, py);
 
 			aBmp = aFilter + aBmp * (1.0f - aFilter);
@@ -171,12 +166,12 @@ void Tool_Brush::ApplyFilter_Rotated(Filter* bmp, const Filter* filter, float _x
 	dirty.Merge(area);
 }
 
-void Tool_Brush::ApplyFilter_Cheap(Filter* bmp, const Filter* filter, float _x, float _y, float _dx, float _dy, AreaI& dirty)
+void Tool_Brush::ApplyFilter_Cheap(Filter * bmp, const Filter * filter, const float ___x, const float ___y, const float _dx, const float _dy, AreaI & dirty)
 {
 	const int radius = (mDiameter - 1) / 2;
 	
-	_x -= radius;
-	_y -= radius;
+	const float _x = ___x - radius;
+	const float _y = ___y - radius;
 
 	int __x = (int)floorf(_x);
 	int __y = (int)floorf(_y);
@@ -203,12 +198,12 @@ void Tool_Brush::ApplyFilter_Cheap(Filter* bmp, const Filter* filter, float _x, 
 	
 	for (int y = y1; y <= y2; ++y)
 	{
-		float* line = bmp->Line_get(y);
-		const float* filterLine = filter->Line_get(y - __y) + x1 - __x;
+		      float * __restrict line = bmp->Line_get(y);
+		const float * __restrict filterLine = filter->Line_get(y - __y) + x1 - __x;
 		
 		for (int x = x1; x <= x2; ++x, ++filterLine)
 		{
-			float& aBmp = line[x];
+			float & __restrict aBmp = line[x];
 			const float aFilter = *filterLine;
 
 			aBmp = aFilter + aBmp * (1.0f - aFilter);
@@ -221,7 +216,7 @@ void Tool_Brush::ApplyFilter_Cheap(Filter* bmp, const Filter* filter, float _x, 
 	dirty.Merge(area);
 }
 
-void Tool_Brush::LoadBrush(Stream* stream)
+void Tool_Brush::LoadBrush(Stream * stream)
 {
 	mFilter.Load(stream);
 	
@@ -238,17 +233,17 @@ float Tool_Brush::Hardness_get() const
 	return mHardness;
 }
 
-void Tool_Brush::IsOriented_set(bool isOriented)
+void Tool_Brush::IsOriented_set(const bool isOriented)
 {
 	mIsOriented = isOriented;
 }
 
-const Filter* Tool_Brush::Filter_get() const
+const Filter * Tool_Brush::Filter_get() const
 {
 	return &mFilter;
 }
 
-Filter* Tool_Brush::Filter_getRW()
+Filter * Tool_Brush::Filter_getRW()
 {
 	return &mFilter;
 }
@@ -265,7 +260,7 @@ Tool_BrushDirect::Tool_BrushDirect()
 	Setup(1, 1.0f, false);
 }
 
-void Tool_BrushDirect::Setup(int diameter, float hardness, bool isOriented)
+void Tool_BrushDirect::Setup(const int diameter, const float hardness, const bool isOriented)
 {
 	Assert(diameter > 0);
 	//Assert(diameter % 2 == 1);
@@ -281,7 +276,7 @@ void Tool_BrushDirect::Setup(int diameter, float hardness, bool isOriented)
 	}
 }
 
-void Tool_BrushDirect::Setup_Pattern(int diameter, Filter* filter, bool isOriented)
+void Tool_BrushDirect::Setup_Pattern(const int diameter, const Filter * filter, const bool isOriented)
 {
 	Assert(diameter > 0);
 	//Assert(diameter % 2 == 1);
@@ -297,7 +292,7 @@ void Tool_BrushDirect::Setup_Pattern(int diameter, Filter* filter, bool isOrient
 	filter->Blit_Resampled(&mFilter);
 }
 
-void Tool_BrushDirect::ApplyFilter(Bitmap* bmp, const Filter* filter, float _x, float _y, float _dx, float _dy, const Rgba& _color, AreaI& dirty)
+void Tool_BrushDirect::ApplyFilter(Bitmap * bmp, const Filter * filter, const float __x, const float __y, const float _dx, const float _dy, const Rgba & _color, AreaI & dirty)
 {
 	Rgba color;
 	for (int i = 0; i < 4; ++i)
@@ -306,7 +301,7 @@ void Tool_BrushDirect::ApplyFilter(Bitmap* bmp, const Filter* filter, float _x, 
 	if (mIsOriented)
 	{
 		const float angle = Vec2F::ToAngle(Vec2F(_dx, _dy));
-		ApplyFilter_Rotated(bmp, filter, _x, _y, angle, color, dirty);
+		ApplyFilter_Rotated(bmp, filter, __x, __y, angle, color, dirty);
 		return;
 	}
 	
@@ -314,8 +309,8 @@ void Tool_BrushDirect::ApplyFilter(Bitmap* bmp, const Filter* filter, float _x, 
 
 //	_x -= (mDiameter - 1) / 2;
 //	_y -= (mDiameter - 1) / 2;
-	_x -= (mDiameter - 1) / 2.0f;
-	_y -= (mDiameter - 1) / 2.0f;
+	const float _x = __x - (mDiameter - 1) / 2.0f;
+	const float _y = __y - (mDiameter - 1) / 2.0f;
 
 	int xFloor = (int)floorf(_x);
 	int yFloor = (int)floorf(_y);
@@ -347,11 +342,11 @@ void Tool_BrushDirect::ApplyFilter(Bitmap* bmp, const Filter* filter, float _x, 
 	
 	for (int y = y1; y <= y2; ++y)
 	{
-		Rgba* line = bmp->Line_get(y);
+		Rgba * __restrict line = bmp->Line_get(y);
 		
 		for (int x = x1; x <= x2; ++x)
 		{
-			Rgba& cBmp = line[x];
+			Rgba & __restrict cBmp = line[x];
 			const float aFilter = mFilter.SampleAA(x - xCeil, y - yCeil,  weights);
 			const float aBmp = 1.0f - aFilter * color.rgb[3];
 
@@ -381,7 +376,7 @@ void Tool_BrushDirect::ApplyFilter(Bitmap* bmp, const Filter* filter, float _x, 
 	dirty.Merge(area);
 }
 
-void Tool_BrushDirect::ApplyFilter_Rotated(Bitmap* bmp, const Filter* filter, float _x, float _y, float angle, const Rgba& color, AreaI& dirty)
+void Tool_BrushDirect::ApplyFilter_Rotated(Bitmap * bmp, const Filter * filter, const float __x, const float __y, const float angle, const Rgba & color, AreaI & dirty)
 {
 //	LOG_DBG("brush: rotated", 0);
 	
@@ -393,8 +388,8 @@ void Tool_BrushDirect::ApplyFilter_Rotated(Bitmap* bmp, const Filter* filter, fl
 //	const int size = (int)ceilf(radius * 1.5f);
 	const int size = radius;
 
-	_x -= size;
-	_y -= size;
+	const float _x = __x - size;
+	const float _y = __y - size;
 	
 	const int diameter = size * 2 + 1;
 	
@@ -423,7 +418,7 @@ void Tool_BrushDirect::ApplyFilter_Rotated(Bitmap* bmp, const Filter* filter, fl
 
 	for (int y = y1; y <= y2; ++y)
 	{
-		Rgba* line = bmp->Line_get(y);
+		Rgba * __restrict line = bmp->Line_get(y);
 
 		const float dy = y - _y - size;
 		
@@ -434,7 +429,7 @@ void Tool_BrushDirect::ApplyFilter_Rotated(Bitmap* bmp, const Filter* filter, fl
 			const float px = dirX[0] * dx + dirX[1] * dy + radius;
 			const float py = dirY[0] * dx + dirY[1] * dy + radius;
 
-			Rgba& aBmp = line[x];
+			Rgba & __restrict aBmp = line[x];
 			
 #if 0
 #warning
@@ -468,17 +463,17 @@ float Tool_BrushDirect::Hardness_get() const
 	return mHardness;
 }
 
-void Tool_BrushDirect::IsOriented_set(bool isOriented)
+void Tool_BrushDirect::IsOriented_set(const bool isOriented)
 {
 	mIsOriented = isOriented;
 }
 
-const Filter* Tool_BrushDirect::Filter_get() const
+const Filter * Tool_BrushDirect::Filter_get() const
 {
 	return &mFilter;
 }
 
-Filter* Tool_BrushDirect::Filter_getRW()
+Filter * Tool_BrushDirect::Filter_getRW()
 {
 	return &mFilter;
 }

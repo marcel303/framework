@@ -13,7 +13,7 @@ public:
 		spacing = 0.05f;
 	}
 	
-	ToolSettings_BrushSoft(int _diameter, float _hardness, float _spacing)
+	ToolSettings_BrushSoft(const int _diameter, const float _hardness, const float _spacing)
 	{
 		diameter = _diameter;
 		hardness = _hardness;
@@ -35,7 +35,7 @@ public:
 		spacing = 0.05f;
 	}
 	
-	ToolSettings_BrushPattern(int _diameter, uint32_t _patternId, float _spacing)
+	ToolSettings_BrushPattern(const int _diameter, const uint32_t _patternId, const float _spacing)
 	{
 		diameter = _diameter;
 		patternId = _patternId;
@@ -57,7 +57,7 @@ public:
 		spacing = 0.05f;
 	}
 	
-	ToolSettings_BrushSoftDirect(int _diameter, float _hardness, float _spacing)
+	ToolSettings_BrushSoftDirect(const int _diameter, const float _hardness, const float _spacing)
 	{
 		diameter = _diameter;
 		hardness = _hardness;
@@ -79,7 +79,7 @@ public:
 		spacing = 0.05f;
 	}
 	
-	ToolSettings_BrushPatternDirect(int _diameter, uint32_t _patternId, float _spacing)
+	ToolSettings_BrushPatternDirect(const int _diameter, const uint32_t _patternId, const float _spacing)
 	{
 		diameter = _diameter;
 		patternId = _patternId;
@@ -101,7 +101,7 @@ public:
 		spacing = 0.05f;
 	}
 	
-	ToolSettings_EraserSoft(int _diameter, float _hardness, float _spacing)
+	ToolSettings_EraserSoft(const int _diameter, const float _hardness, const float _spacing)
 	{
 		diameter = _diameter;
 		hardness = _hardness;
@@ -123,7 +123,7 @@ public:
 		spacing = 0.05f;
 	}
 	
-	ToolSettings_EraserPattern(int _diameter, uint32_t _patternId, float _spacing)
+	ToolSettings_EraserPattern(const int _diameter, const uint32_t _patternId, const float _spacing)
 	{
 		diameter = _diameter;
 		patternId = _patternId;
@@ -140,20 +140,20 @@ class Tool_Brush : public Tool
 public:
 	Tool_Brush();
 
-	void Setup(int diameter, float hardness, bool isOriented);
-	void Setup_Pattern(int diameter, Filter* filter, bool isOriented);
+	void Setup(const int diameter, const float hardness, const bool isOriented);
+	void Setup_Pattern(const int diameter, const Filter * filter, const bool isOriented);
 
-	void ApplyFilter(Filter* bmp, const Filter* filter, float x, float y, float dx, float dy, AreaI& dirty);
-	void ApplyFilter_Rotated(Filter* bmp, const Filter* filter, float x, float y, float angle, AreaI& dirty);
-	void ApplyFilter_Cheap(Filter* bmp, const Filter* filter, float x, float y, float dx, float dy, AreaI& dirty);
+	virtual void ApplyFilter(Filter * bmp, const Filter * filter, const float x, const float y, const float dx, const float dy, AreaI & dirty) override;
+	void ApplyFilter_Rotated(Filter * bmp, const Filter * filter, const float x, const float y, const float angle, AreaI & dirty);
+	void ApplyFilter_Cheap(Filter * bmp, const Filter * filter, const float x, const float y, const float dx, const float dy, AreaI & dirty);
 
-	void LoadBrush(Stream* stream);
+	void LoadBrush(Stream * stream);
 
 	int Diameter_get() const;
 	float Hardness_get() const;
-	void IsOriented_set(bool isOriented);
-	const Filter* Filter_get() const;
-	Filter* Filter_getRW();
+	void IsOriented_set(const bool isOriented);
+	const Filter * Filter_get() const;
+	Filter * Filter_getRW();
 
 private:
 	void CreateFilter();
@@ -170,17 +170,17 @@ class Tool_BrushDirect : public Tool
 public:
 	Tool_BrushDirect();
 
-	void Setup(int diameter, float hardness, bool isOriented);
-	void Setup_Pattern(int diameter, Filter* filter, bool isOriented);
+	void Setup(const int diameter, const float hardness, const bool isOriented);
+	void Setup_Pattern(const int diameter, const Filter * filter, const bool isOriented);
 
-	void ApplyFilter(Bitmap* bmp, const Filter* filter, float x, float y, float dx, float dy, const Rgba& color, AreaI& dirty);
-	void ApplyFilter_Rotated(Bitmap* bmp, const Filter* filter, float x, float y, float angle, const Rgba& color, AreaI& dirty);
+	virtual void ApplyFilter(Bitmap * bmp, const Filter * filter, const float x, const float y, const float dx, const float dy, const Rgba & color, AreaI & dirty) override;
+	void ApplyFilter_Rotated(Bitmap * bmp, const Filter * filter, const float x, const float y, const float angle, const Rgba & color, AreaI & dirty);
 
 	int Diameter_get() const;
 	float Hardness_get() const;
 	void IsOriented_set(bool isOriented);
-	const Filter* Filter_get() const;
-	Filter* Filter_getRW();
+	const Filter * Filter_get() const;
+	Filter * Filter_getRW();
 
 private:
 	void CreateFilter();

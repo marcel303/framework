@@ -30,7 +30,7 @@ class Tool
 public:
 	virtual ~Tool();
 	
-	virtual void Apply(Bitmap* bmp, const Filter* filter, float x, float y, float dx, float dy, AreaI& dirty);
-	virtual void ApplyFilter(Filter* bmp, const Filter* filter, float x, float y, float dx, float dy, AreaI& dirty);
-	virtual void ApplyFilter(Bitmap* bmp, const Filter* filter, float x, float y, float dx, float dy, const Rgba& color, AreaI& dirty);
+	virtual void Apply(Bitmap * bmp, const Filter * filter, const float x, const float y, const float dx, const float dy, AreaI & dirty);
+	virtual void ApplyFilter(Filter * bmp, const Filter * filter, const float x, const float y, const float dx, const float dy, AreaI & dirty);
+	virtual void ApplyFilter(Bitmap * bmp, const Filter * filter, const float x, const float y, const float dx, const float dy, const Rgba & color, AreaI & dirty);
 };

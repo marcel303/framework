@@ -6,17 +6,17 @@ Tool::~Tool()
 {
 }
 
-void Tool::Apply(Bitmap* bmp, const Filter* filter, float x, float y, float dx, float dy, AreaI& dirty)
+void Tool::Apply(Bitmap * bmp, const Filter * filter, const float x, const float y, const float dx, const float dy, AreaI & dirty)
 {
 	throw ExceptionNA();
 }
 
-void Tool::ApplyFilter(Filter* bmp, const Filter* filter, float x, float y, float dx, float dy, AreaI& dirty)
+void Tool::ApplyFilter(Filter * bmp, const Filter * filter, const float x, const float y, const float dx, const float dy, AreaI & dirty)
 {
 	throw ExceptionNA();
 }
 
-void Tool::ApplyFilter(Bitmap* bmp, const Filter* filter, float x, float y, float dx, float dy, const Rgba& color, AreaI& dirty)
+void Tool::ApplyFilter(Bitmap * bmp, const Filter * filter, const float x, const float y, const float dx, const float dy, const Rgba & color, AreaI & dirty)
 {
 	throw ExceptionNA();
 }

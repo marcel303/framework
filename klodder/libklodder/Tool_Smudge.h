@@ -13,7 +13,7 @@ public:
 		strength = 1.0f;
 	}
 	
-	ToolSettings_SmudgeSoft(int _diameter, float _hardness, float _spacing, float _strength)
+	ToolSettings_SmudgeSoft(const int _diameter, const float _hardness, const float _spacing, const float _strength)
 	{
 		diameter = _diameter;
 		hardness = _hardness;
@@ -38,7 +38,7 @@ public:
 		strength = 1.0f;
 	}
 	
-	ToolSettings_SmudgePattern(int _diameter, uint32_t _patternId, float _spacing, float _strength)
+	ToolSettings_SmudgePattern(const int _diameter, const uint32_t _patternId, const float _spacing, const float _strength)
 	{
 		diameter = _diameter;
 		patternId = _patternId;
@@ -57,9 +57,9 @@ class Tool_Smudge : public Tool
 public:
 	Tool_Smudge();
 
-	void Setup(float strength);
+	void Setup(const float strength);
 
-	void Apply(Bitmap* bmp, const Filter* filter, float x, float y, float dx, float dy, AreaI& dirty);
+	virtual void Apply(Bitmap * bmp, const Filter * filter, const float x, const float y, const float dx, const float dy, AreaI & dirty) override;
 
 private:
 	float mStrength;
