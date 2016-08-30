@@ -411,7 +411,7 @@ static void drawCubeSlices(const Cube & cube)
 	}
 
 #if ENABLE_OPENGL
-	GLuint texture = createTextureFromRGBA8(slices, SX * SZ, SY);
+	GLuint texture = createTextureFromRGBA8(slices, SX * SZ, SY, true, true);
 
 	if (texture)
 	{
@@ -423,6 +423,7 @@ static void drawCubeSlices(const Cube & cube)
 			drawRect(0, 0, SX * SZ, SY);
 		}
 		gxPopMatrix();
+		gxSetTexture(0);
 
 		glDeleteTextures(1, &texture);
 	}
@@ -724,7 +725,7 @@ int main(int argc, char * argv[])
 					Mat4x4 t;
 					t.MakePerspectiveGL(M_PI/2.f, 1.f, .1f, 10.f);
 					gxLoadMatrixf(t.m_v);
-					glScalef(1.f, -1.f, 1.f);
+					gxScalef(1.f, -1.f, 1.f);
 
 					gxMatrixMode(GL_MODELVIEW);
 					gxPushMatrix();
