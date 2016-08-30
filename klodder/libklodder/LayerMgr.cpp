@@ -66,12 +66,12 @@ LayerMgr::LayerMgr()
 {
 	// layers
 	mLayerCount = 0;
-	mActiveDataLayer = 0;
 	mBackColor1 = MacRgba_Make(0, 0, 0, 0);
 	mBackColor2 = MacRgba_Make(255, 255, 255, 255);
 	
 	// editing
 	mEditingEnabled = false;
+	mEditingDataLayer = 0;
 	mMode = LayerMode_Undefined;
 	mBrushColor = Rgba_Make(1.0f, 1.0f, 1.0f);
 	mBrushOpacity = 1.0f;
@@ -102,7 +102,6 @@ void LayerMgr::Setup(const int layerCount, const int sx, const int sy, const Rgb
 		// create
 
 		mLayerCount = layerCount;
-		mActiveDataLayer = 0;
 
 		for (int i = 0; i < layerCount; ++i)
 		{
@@ -112,6 +111,7 @@ void LayerMgr::Setup(const int layerCount, const int sx, const int sy, const Rgb
 			mLayerVisibility[i] = true;
 		}
 		
+		mEditingDataLayer = 0;
 		mEditingBuffer.Size_set(sx, sy, false);
 		mBmpBrush.Size_set(sx, sy);
 
@@ -329,7 +329,7 @@ void LayerMgr::DataLayerAcquire(const int index, const MacImage * image)
 		image->Blit(dst);
 		
 		if (isEditing)
-			EditingBegin(index != ActiveDataLayer_get());
+			EditingBegin(index != mEditingDataLayer);
 	}
 	UsingEnd()
 }
@@ -375,7 +375,7 @@ void LayerMgr::DataLayerClear(const int index, const Rgba & color)
 		dst->Clear(color2);
 
 		if (isEditing)
-			EditingBegin(index != ActiveDataLayer_get());
+			EditingBegin(index != mEditingDataLayer);
 	}
 	UsingEnd()
 }
@@ -628,6 +628,7 @@ void LayerMgr::ValidateVisible(const int _x, const int _y, const int sx, const i
 	switch (mMode)
 	{
 	case LayerMode_Undefined:
+		Assert(false);
 	case LayerMode_Brush:
 		{
 //			LOG_DBG("-> brush", 0);
@@ -638,15 +639,15 @@ void LayerMgr::ValidateVisible(const int _x, const int _y, const int sx, const i
 			for (int i = 0; i < 4; ++i)
 				color.rgba[i] = (uint8_t)(mBrushColor.rgb[i] * 255.0f);
 			
-			const MacImage* srcEdit = DataLayer_get(mActiveDataLayer);
+			const MacImage * srcEdit = DataLayer_get(mEditingDataLayer);
 			
-			const int alphaLayer = mLayerOpacity[mActiveDataLayer];
+			const int alphaLayer = mLayerOpacity[mEditingDataLayer];
 			
 			for (int y = y1; y <= y2; ++y)
 			{
 				const MacRgba * __restrict srcEditLine = srcEdit->Line_get(y) + x1;
 				const   float * __restrict srcBrushLine = mBmpBrush.Line_get(y) + x1;
-				MacRgba* dstLine = mMerged.Line_get(y) + x1;
+				      MacRgba * __restrict dstLine = mMerged.Line_get(y) + x1;
 
 				for (int xi = sx; xi != 0; --xi)
 				{
@@ -681,10 +682,10 @@ void LayerMgr::ValidateVisible(const int _x, const int _y, const int sx, const i
 		{
 //			LOG_DBG("-> eraser", 0);
 			
-			const int alphaLayer = mLayerOpacity[ActiveDataLayer_get()];
+			const MacImage * srcEdit = DataLayer_get(mEditingDataLayer);
 			
-			const MacImage * srcEdit = DataLayer_get(mActiveDataLayer);
-			
+			const int alphaLayer = mLayerOpacity[mEditingDataLayer];
+
 			mCacheBack.Blit(&mMerged, x1, y1, x1, y1, sx, sy);
 			
 			for (int y = y1; y <= y2; ++y)
@@ -726,7 +727,7 @@ void LayerMgr::ValidateVisible(const int _x, const int _y, const int sx, const i
 		{
 //			LOG_DBG("-> direct", 0);
 
-			const float alphaLayer = (float)mLayerOpacity[ActiveDataLayer_get()];
+			const float alphaLayer = (float)mLayerOpacity[mEditingDataLayer];
 			
 			for (int y = y1; y <= y2; ++y)
 			{
@@ -792,7 +793,7 @@ void LayerMgr::ValidateLayer(const int _x, const int _y, const int sx, const int
 	Assert(x2 >= 0 && x2 < mEditingBuffer.Sx_get());
 	Assert(y2 >= 0 && y2 < mEditingBuffer.Sy_get());
 	
-	MacImage * dst = DataLayer_get(mActiveDataLayer);
+	MacImage * dst = DataLayer_get(mEditingDataLayer);
 	
 	for (int y = y1; y <= y2; ++y)
 	{
@@ -845,27 +846,27 @@ void LayerMgr::ValidateLayer(const int _x, const int _y, const int sx, const int
 
 void LayerMgr::CopyLayerToEditingBuffer(const int x, const int y, const int sx, const int sy)
 {
-	MacImageToBitmap(DataLayer_get(mActiveDataLayer), &mEditingBuffer);
+	MacImageToBitmap(DataLayer_get(mEditingDataLayer), &mEditingBuffer);
 }
 
 void LayerMgr::CopyEditingBufferToLayer(const int x, const int y, const int sx, const int sy)
 {
-	BitmapToMacImage(&mEditingBuffer, DataLayer_get(mActiveDataLayer), x, y, sx, sy);
+	BitmapToMacImage(&mEditingBuffer, DataLayer_get(mEditingDataLayer), x, y, sx, sy);
 }
 
-int LayerMgr::ActiveDataLayer_get() const
+int LayerMgr::EditingDataLayer_get() const
 {
-	return mActiveDataLayer;
+	return mEditingDataLayer;
 }
 
-void LayerMgr::ActiveDataLayer_set(const int index)
+void LayerMgr::EditingDataLayer_set(const int index)
 {
 	const bool isEditing = mEditingEnabled;
 	
 	if (isEditing)
 		EditingEnd();
 	
-	mActiveDataLayer = index;
+	mEditingDataLayer = index;
 	
 	if (isEditing)
 		EditingBegin(true);
@@ -893,7 +894,7 @@ void LayerMgr::RebuildBack()
 	UsingBegin(Benchmark bm("LayerMgr::RebuildBack"))
 	{
 		const int layer1 = 0;
-		const int layer2 = IndexToLayer(mActiveDataLayer) - 1;
+		const int layer2 = IndexToLayer(mEditingDataLayer) - 1;
 		
 		RenderMerged(mCacheBack, mBackColor1, mBackColor2, layer1, layer2);
 	}
@@ -906,7 +907,7 @@ void LayerMgr::RebuildFront()
 	{
 		const MacRgba color = MacRgba_Make(0, 0, 0, 0);
 		
-		const int layer1 = IndexToLayer(mActiveDataLayer) + 1;
+		const int layer1 = IndexToLayer(mEditingDataLayer) + 1;
 		const int layer2 = mLayerCount - 1;
 		
 		RenderMerged(mCacheFront, color, color, layer1, layer2);
@@ -931,7 +932,7 @@ void LayerMgr::EditingBegin(const bool rebuildCaches)
 		
 		// copy active layer to FP buffer
 		
-		MacImageToBitmap(&mLayerList[mActiveDataLayer], &mEditingBuffer);
+		MacImageToBitmap(&mLayerList[mEditingDataLayer], &mEditingBuffer);
 		
 		if (rebuildCaches)
 		{
@@ -958,7 +959,7 @@ void LayerMgr::EditingEnd()
 
 		// copy FP buffer to active layer
 
-		BitmapToMacImage(&mEditingBuffer, &mLayerList[mActiveDataLayer]);
+		BitmapToMacImage(&mEditingBuffer, &mLayerList[mEditingDataLayer]);
 	}
 	UsingEnd()
 }

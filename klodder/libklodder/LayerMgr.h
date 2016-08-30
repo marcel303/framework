@@ -75,8 +75,8 @@ public:
 	void ValidateLayer(const int x, const int y, const int sx, const int sy);
 	void CopyLayerToEditingBuffer(const int x, const int y, const int sx, const int sy);
 	void CopyEditingBufferToLayer(const int x, const int y, const int sx, const int sy);
-	void ActiveDataLayer_set(const int index);
-	int ActiveDataLayer_get() const;
+	void EditingDataLayer_set(const int index);
+	int EditingDataLayer_get() const;
 //	void SwapLayerOrder(int layer1, int layer2);
 private:// helpers
 	void RebuildCaches();
@@ -94,7 +94,6 @@ private:
 	
 	// layers
 	int mLayerCount;
-	int mActiveDataLayer;
 	MacImage mLayerList[MAX_LAYERS];
 	int mLayerOpacity[MAX_LAYERS];
 	int mLayerOrder[MAX_LAYERS];
@@ -106,6 +105,7 @@ private:
 
 	// editing
 	bool mEditingEnabled;
+	int mEditingDataLayer;
 	LayerMode mMode;
 	MacImage mMerged;
 	Bitmap mEditingBuffer;
