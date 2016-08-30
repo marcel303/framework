@@ -633,7 +633,8 @@ int main(int argc, char * argv[])
 	framework.windowX = 0;
 	framework.windowY = 0;
 
-	if (!framework.init(0, 0, 800, 800))
+	//if (!framework.init(0, 0, 800, 800))
+	if (!framework.init(0, 0, 1600, 1600))
 	{
 		showErrorMessage("Startup Error", "Failed to initialise framework.");
 	}
