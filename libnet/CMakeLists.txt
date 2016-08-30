@@ -31,11 +31,11 @@ add_dependencies(libnet libgg)
 
 # --- test application ---
 
-file(GLOB source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/test.cpp")
-
-add_executable(libnet_test ${source})
-
-target_include_directories(libnet_test PRIVATE "${PROJECT_SOURCE_DIR}/test")
-target_link_libraries(libnet_test PRIVATE libnet)
-target_link_libraries(libnet_test PRIVATE libgg)
-target_link_libraries(libnet_test PRIVATE SDL.lib SDLmain.lib WSock32.lib)
+#file(GLOB source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/test.cpp")
+#
+#add_executable(libnet_test ${source})
+#
+#target_include_directories(libnet_test PRIVATE "${PROJECT_SOURCE_DIR}/test")
+#target_link_libraries(libnet_test PRIVATE libnet)
+#target_link_libraries(libnet_test PRIVATE libgg)
+#target_link_libraries(libnet_test PRIVATE SDL.lib SDLmain.lib WSock32.lib)

@@ -47,42 +47,42 @@ endif (MSVC)
 
 # --- test application ---
 
-file(GLOB source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/example.cpp")
-
-add_executable(framework_test ${source})
-
-target_include_directories(framework_test PRIVATE "${PROJECT_SOURCE_DIR}/win32/include")
-
-target_link_libraries(framework_test PRIVATE framework)
-target_link_libraries(framework_test PRIVATE libgg)
-target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/FreeImage.lib)
-target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/freetype252.lib)
-target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/glew32.lib)
-target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/OpenAL32.lib)
-target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/SDL2.lib)
-target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/SDL2main.lib)
-target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/XInput9_1_0.lib)
-target_link_libraries(framework_test PRIVATE OpenGL32.lib Winmm.lib)
-
-if (MSVC)
-	set_property(TARGET framework_test APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
-endif (MSVC)
+#file(GLOB source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/example.cpp")
+#
+#add_executable(framework_test ${source})
+#
+#target_include_directories(framework_test PRIVATE "${PROJECT_SOURCE_DIR}/win32/include")
+#
+#target_link_libraries(framework_test PRIVATE framework)
+#target_link_libraries(framework_test PRIVATE libgg)
+#target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/FreeImage.lib)
+#target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/freetype252.lib)
+#target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/glew32.lib)
+#target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/OpenAL32.lib)
+#target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/SDL2.lib)
+#target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/SDL2main.lib)
+#target_link_libraries(framework_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/XInput9_1_0.lib)
+#target_link_libraries(framework_test PRIVATE OpenGL32.lib Winmm.lib)
+#
+#if (MSVC)
+#	set_property(TARGET framework_test APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
+#endif (MSVC)
 
 # --- animation player ---
 
-file(GLOB source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/aniplay.cpp")
-
-add_executable(aniplay ${source})
-
-target_include_directories(framework_test PRIVATE "${PROJECT_SOURCE_DIR}/win32/include")
-
-target_link_libraries(aniplay PRIVATE framework)
-target_link_libraries(aniplay PRIVATE libgg)
-target_link_libraries(aniplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/FreeImage.lib)
-target_link_libraries(aniplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/freetype252.lib)
-target_link_libraries(aniplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/glew32.lib)
-target_link_libraries(aniplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/OpenAL32.lib)
-target_link_libraries(aniplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/SDL2.lib)
-target_link_libraries(aniplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/SDL2main.lib)
-target_link_libraries(aniplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/XInput9_1_0.lib)
-target_link_libraries(aniplay PRIVATE OpenGL32.lib Winmm.lib)
+#file(GLOB source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/aniplay.cpp")
+#
+#add_executable(aniplay ${source})
+#
+#target_include_directories(framework_test PRIVATE "${PROJECT_SOURCE_DIR}/win32/include")
+#
+#target_link_libraries(aniplay PRIVATE framework)
+#target_link_libraries(aniplay PRIVATE libgg)
+#target_link_libraries(aniplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/FreeImage.lib)
+#target_link_libraries(aniplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/freetype252.lib)
+#target_link_libraries(aniplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/glew32.lib)
+#target_link_libraries(aniplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/OpenAL32.lib)
+#target_link_libraries(aniplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/SDL2.lib)
+#target_link_libraries(aniplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/SDL2main.lib)
+#target_link_libraries(aniplay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/lib/XInput9_1_0.lib)
+#target_link_libraries(aniplay PRIVATE OpenGL32.lib Winmm.lib)
