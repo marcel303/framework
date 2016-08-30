@@ -1,6 +1,3 @@
-#if defined(WIN32)
-#include "Precompiled.h"
-#endif
 #include <algorithm>
 #include "Debugging.h"
 #include "EventManager.h"
