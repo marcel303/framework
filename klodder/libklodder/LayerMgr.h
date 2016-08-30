@@ -37,9 +37,7 @@ public:
 	void FlattenBrush(const RectI & rect);
 	void FlattenEraser(const RectI & rect);
 	void ClearBrushOverlay(const RectI & rect);
-private:
 	void DataLayerAcquire(const int index, const MacImage * image);
-public:
 	void DataLayerAcquireWithTransform(const int index, MacImage * image, const BlitTransform & transform);
 	void DataLayerClear(const int index, const Rgba & color);
 	void DataLayerMerge(const int index1, const int index2); // merges layer1 atop of layer2 and stores the result int layer2. layer1 gets cleared
@@ -73,11 +71,11 @@ public:
 
 	void ValidateVisible(const int x, const int y, const int sx, const int sy);
 	void ValidateLayer(const int x, const int y, const int sx, const int sy);
+
 	void CopyLayerToEditingBuffer(const int x, const int y, const int sx, const int sy);
 	void CopyEditingBufferToLayer(const int x, const int y, const int sx, const int sy);
 	void EditingDataLayer_set(const int index);
 	int EditingDataLayer_get() const;
-//	void SwapLayerOrder(int layer1, int layer2);
 private:// helpers
 	void RebuildCaches();
 	void RebuildBack();

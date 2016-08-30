@@ -321,7 +321,7 @@ void LayerMgr::DataLayerAcquire(const int index, const MacImage * image)
 		Assert(image->Sx_get() == dst->Sx_get());
 		Assert(image->Sy_get() == dst->Sy_get());
 		
-		bool isEditing = mEditingEnabled;
+		const bool isEditing = mEditingEnabled;
 		
 		if (isEditing)
 			EditingEnd();
@@ -347,6 +347,7 @@ void LayerMgr::DataLayerAcquireWithTransform(const int index, MacImage * image, 
 		
 		image->Blit_Transformed(&temp, transform);
 		
+		// fixme : avoid flip from occurring in the first place
 		temp.FlipY_InPlace();
 		
 		DataLayerAcquire(index, &temp);
@@ -363,14 +364,13 @@ void LayerMgr::DataLayerClear(const int index, const Rgba & color)
 		if (isEditing)
 			EditingEnd();
 		
-		MacImage* dst = DataLayer_get(index);
+		MacImage * dst = DataLayer_get(index);
 		
 		MacRgba color2;
-		
-		color2.rgba[0] = (uint8_t)(color.rgb[0] * 255.0f);
-		color2.rgba[1] = (uint8_t)(color.rgb[1] * 255.0f);
-		color2.rgba[2] = (uint8_t)(color.rgb[2] * 255.0f);
-		color2.rgba[3] = (uint8_t)(color.rgb[3] * 255.0f);
+		color2.rgba[0] = uint8_t(color.rgb[0] * 255.0f);
+		color2.rgba[1] = uint8_t(color.rgb[1] * 255.0f);
+		color2.rgba[2] = uint8_t(color.rgb[2] * 255.0f);
+		color2.rgba[3] = uint8_t(color.rgb[3] * 255.0f);
 		
 		dst->Clear(color2);
 
@@ -389,11 +389,9 @@ void LayerMgr::DataLayerMerge(const int index1, const int index2)
 		if (isEditing)
 			EditingEnd();
 		
-		MacImage* src = DataLayer_get(index1);
-		MacImage* dst = DataLayer_get(index2);
+		MacImage * src = DataLayer_get(index1);
+		MacImage * dst = DataLayer_get(index2);
 		
-//		const int index = mLayerOrder[layer1];
-
 		const int opacity = mLayerOpacity[index1];
 		
 		src->BlitAlpha(dst, opacity);
@@ -418,7 +416,7 @@ void LayerMgr::Invalidate(const int x, const int y, const int sx, const int sy)
 
 AreaI LayerMgr::Validate()
 {
-	AreaI result = mEditingDirty;
+	const AreaI result = mEditingDirty;
 
 	if (mEditingDirty.IsSet_get())
 	{
@@ -439,14 +437,14 @@ Vec2I LayerMgr::Size_get() const
 	return Vec2I(mMerged.Sx_get(), mMerged.Sy_get());
 }
 
-MacImage* LayerMgr::DataLayer_get(const int index)
+MacImage * LayerMgr::DataLayer_get(const int index)
 {
 	Assert(index >= 0 && index < mLayerCount);
 	
 	return mLayerList + index;
 }
 
-MacImage* LayerMgr::Layer_get(const int layer)
+MacImage * LayerMgr::Layer_get(const int layer)
 {
 	Assert(layer >= 0 && layer < mLayerCount);
 	
@@ -542,11 +540,6 @@ bool LayerMgr::DataLayerVisibility_get(const int index) const
 {
 	return mLayerVisibility[index];
 }
-
-/*MacImage* LayerMgr::Back_get()
-{
-	return &mCacheBack;
-}*/
 
 MacImage * LayerMgr::Merged_get()
 {
@@ -872,17 +865,6 @@ void LayerMgr::EditingDataLayer_set(const int index)
 		EditingBegin(true);
 }
 
-/*void LayerMgr::SwapLayerOrder(int layer1, int layer2)
-{
-	Assert(layer1 >= 0 && layer1 < mLayerCount);
-	Assert(layer2 >= 0 && layer2 < mLayerCount);
-
-	std::vector<int> order = LayerOrder_get();
-	std::swap(order[layer1], order[layer2]);
-
-	LayerOrder_set(order);
-}*/
-
 void LayerMgr::RebuildCaches()
 {
 	RebuildBack();
@@ -944,7 +926,6 @@ void LayerMgr::EditingBegin(const bool rebuildCaches)
 		// update merged layer
 
 		Invalidate(0, 0, mMerged.Sx_get(), mMerged.Sy_get());
-//		ValidateVisible(0, 0, mMerged.Sx_get(), mMerged.Sy_get());
 	}
 	UsingEnd()
 }
@@ -968,11 +949,6 @@ bool LayerMgr::EditingIsEnabled_get() const
 {
 	return mEditingEnabled;
 }
-
-/*AreaI& LayerMgr::EditingDirty_get()
-{
-	return mEditingDirty;
-}*/
 
 int LayerMgr::IndexToLayer(const int index) const
 {
