@@ -598,7 +598,7 @@ void Effect_Cloth::doDraw()
 
 //
 
-Effect_Fsfx::Effect_Fsfx(const char * name, const char * shader, const std::vector<std::string> & images)
+Effect_Fsfx::Effect_Fsfx(const char * name, const char * shader, const std::vector<std::string> & images, const std::vector<Color> & colors)
 	: Effect(name)
 	, m_alpha(1.f)
 	, m_param1(0.f)
@@ -606,6 +606,7 @@ Effect_Fsfx::Effect_Fsfx(const char * name, const char * shader, const std::vect
 	, m_param3(0.f)
 	, m_param4(0.f)
 	, m_images(images)
+	, m_colors(colors)
 	, m_textureArray(0)
 	, m_time(0.f)
 {
@@ -727,6 +728,13 @@ void Effect_Fsfx::draw()
 	buffer.setData(&data, sizeof(data));
 	shader.setBuffer("FsfxBlock", buffer);
 	shader.setTextureArray("textures", 5, m_textureArray, true, false);
+	for (size_t i = 0; i < m_colors.size(); ++i)
+	{
+		char name[64];
+		sprintf_s(name, sizeof(name), "color%d", i + 1);
+		const Color & c = m_colors[i];
+		shader.setImmediate(name, c.r, c.g, c.b, c.a);
+	}
 	g_currentSurface->postprocess(shader);
 
 	setBlend(BLEND_ADD);
@@ -834,7 +842,7 @@ void Effect_Rain::tick(const float dt)
 
 		size *= lerp((float)m_size2, (float)m_size1, life);
 
-		m_particleSystem.sx[i] = size * spriteSx * m_sizeX;
+		m_particleSystem.sx[i] = /*size * */ spriteSx * m_sizeX;
 		m_particleSystem.sy[i] = size * spriteSy * m_sizeY;
 
 		if (m_speedScaleX != 0.f)
@@ -1323,6 +1331,9 @@ Effect_Video::Effect_Video(const char * name, const char * filename, const char 
 	, m_centered(true)
 	, m_speed(1.f)
 	, m_hideWhenDone(0.f)
+	, m_playing(false)
+	, m_time(0.f)
+	, m_startTime(0.f)
 {
 	is2D = true;
 
@@ -1334,6 +1345,18 @@ Effect_Video::Effect_Video(const char * name, const char * filename, const char 
 	m_shader = shader;
 	m_centered = centered;
 
+	if (true)
+	{
+		if (!m_mediaPlayer.open(m_filename.c_str()))
+		{
+			logWarning("failed to open %s", m_filename.c_str());
+		}
+		else
+		{
+			m_mediaPlayer.presentTime = 0.f;
+		}
+	}
+
 	if (play)
 	{
 		handleSignal("start");
@@ -1342,13 +1365,22 @@ Effect_Video::Effect_Video(const char * name, const char * filename, const char 
 
 void Effect_Video::tick(const float dt)
 {
-	if (m_mediaPlayer.isActive(m_mediaPlayer.context))
+	if (m_playing)
+	{
+		m_time += dt;
+	}
+
+	if (m_playing && m_mediaPlayer.isActive(m_mediaPlayer.context))
 	{
 		m_mediaPlayer.speed = m_speed;
+
+		m_mediaPlayer.presentTime = m_time;
 
 		if (m_hideWhenDone && m_mediaPlayer.presentedLastFrame(m_mediaPlayer.context))
 		{
 			m_mediaPlayer.close();
+
+			m_playing = false;
 		}
 	}
 }
@@ -1405,6 +1437,7 @@ void Effect_Video::handleSignal(const std::string & name)
 {
 	if (name == "start")
 	{
+		/*
 		if (m_mediaPlayer.isActive(m_mediaPlayer.context))
 		{
 			m_mediaPlayer.close();
@@ -1415,8 +1448,11 @@ void Effect_Video::handleSignal(const std::string & name)
 			logWarning("failed to open %s", m_filename.c_str());
 		}
 		else
+		*/
 		{
 			m_startTime = g_currentScene->m_time;
+			m_time = 0.f;
+			m_playing = true;
 		}
 	}
 }
@@ -1425,11 +1461,13 @@ void Effect_Video::syncTime(const float time)
 {
 	if (m_mediaPlayer.isActive(m_mediaPlayer.context))
 	{
-		const float videoTime = time - m_startTime;
+		const float videoTime = (time - m_startTime) * timeMultiplier;
 
 		if (videoTime >= 0.f)
 		{
 			m_mediaPlayer.seek(videoTime);
+
+			m_time = videoTime;
 		}
 	}
 }
@@ -2537,7 +2575,7 @@ void Effect_Bezier::handleSignal(const std::string & name)
 
 Vec2F sampleThrowPoint(const float t)
 {
-	const float o = .1;
+	const float o = .1f;
 
 	const float d0 = 0.f;
 	const float d1 = 1.f;
@@ -2873,7 +2911,8 @@ void Effect_Beams::tick(const float dt)
 		{
 			// add a beam
 			Beam b;
-			const float as = Calc::mPI * 3/4;
+			//const float as = Calc::mPI * 3/4;
+			const float as = Calc::mPI * 4/4;
 			b.angle = random(-as/2, +as/2);
 			b.thickness = random(2.f, 3.f);
 			b.offsetX = random(-m_beamOffset, +m_beamOffset);
@@ -3010,10 +3049,28 @@ Effect_Fireworks::Effect_Fireworks(const char * name)
 	, spawnValue(0.f)
 	, spawnRate(1.f)
 	, nextParticleIndex(0)
+	, m_rootSpeed(160.f)
+	, m_rootSpeedVar(540.f)
+	, m_rootLife(1.f)
+	, m_child1Speed(50.f)
+	, m_child1SpeedVar(15.f)
+	, m_child1Life(1.5f)
+	, m_child2Speed(16.f)
+	, m_child2SpeedVar(10.f)
+	, m_child2Life(1.f)
 {
 	is2DAbsolute = true;
 
-	addVar("spawn_rate", spawnRate);
+	addVar("spawn_rate",       spawnRate);
+	addVar("root_speed",       m_rootSpeed);
+	addVar("root_speed_var",   m_rootSpeedVar);
+	addVar("root_life",        m_rootLife);
+	addVar("child1_speed",     m_child1Speed);
+	addVar("child1_speed_var", m_child1SpeedVar);
+	addVar("child1_life",      m_child1Life);
+	addVar("child2_speed",     m_child2Speed);
+	addVar("child2_speed_var", m_child2SpeedVar);
+	addVar("child2_life",      m_child2SpeedVar);
 
 	memset(ps, 0, sizeof(ps));
 }
@@ -3048,14 +3105,14 @@ void Effect_Fireworks::tick(const float dt)
 			const float h = pow(random(0.f, 1.f), .5f);
 			const float r = Calc::DegToRad(35);
 			const float a = Calc::m2PI*3/4 + random(-r/2, +r/2);
-			const float v = lerp(160.f, 700.f, h);
+			const float v = lerp(float(m_rootSpeed), float(m_rootSpeed + m_rootSpeedVar), h);
 
 			p.type = kPT_Root;
 			p.x = GFX_SX/2.f + random(-80.f, +80.f);
 			p.y = GFX_SY;
 			p.oldX = p.x;
 			p.oldY = p.y;
-			p.life = 1.f;
+			p.life = m_rootLife;
 			p.lifeRcp = 1.f / p.life;
 			p.vx = std::cos(a) * v;
 			p.vy = std::sin(a) * v;
@@ -3081,6 +3138,8 @@ void Effect_Fireworks::tick(const float dt)
 
 			if (p.life <= 0.f)
 			{
+				p.life = 0.f;
+
 				if (p.type == kPT_Root)
 				{
 					for (int i = 0; i < 200; ++i)
@@ -3088,7 +3147,7 @@ void Effect_Fireworks::tick(const float dt)
 						P & pc = *nextParticle();
 
 						const float a = random(0.f, Calc::m2PI);
-						const float v = random(60.f, 80.f);
+						const float v = random(float(m_child1Speed), float(m_child1Speed + m_child1SpeedVar));
 
 						const float pv = .05f;
 
@@ -3097,7 +3156,7 @@ void Effect_Fireworks::tick(const float dt)
 						pc.y = p.y;
 						pc.oldX = pc.x;
 						pc.oldY = pc.y;
-						pc.life = 2.f;
+						pc.life = m_child1Life;
 						pc.lifeRcp = 1.f / pc.life;
 						pc.vx = std::cos(a) * v + p.vx * pv;
 						pc.vy = std::sin(a) * v + p.vy * pv;
@@ -3118,7 +3177,7 @@ void Effect_Fireworks::tick(const float dt)
 							P & pc = *nextParticle();
 
 							const float a = random(0.f, Calc::m2PI);
-							const float v = random(16.f, 26.f);
+							const float v = random(float(m_child2Speed), float(m_child2Speed + m_child2SpeedVar));
 
 							const float pv = 0.f;
 
@@ -3127,7 +3186,7 @@ void Effect_Fireworks::tick(const float dt)
 							pc.y = p.y;
 							pc.oldX = pc.x;
 							pc.oldY = pc.y;
-							pc.life = 1.f;
+							pc.life = m_child2Life;
 							pc.lifeRcp = 1.f / pc.life;
 							pc.vx = std::cos(a) * v;
 							pc.vy = std::sin(a) * v - 10.f;
@@ -3162,7 +3221,7 @@ void Effect_Fireworks::draw()
 
 			if (p.life != 0.f)
 			{
-				gxColor4f(p.color.r, p.color.g, p.color.b, p.life * p.lifeRcp);
+				gxColor4f(p.color.r, p.color.g, p.color.b, std::powf(p.life * p.lifeRcp, .25f));
 
 				gxVertex2f(+p.oldX, p.oldY);
 				gxVertex2f(+p.x,    p.y);

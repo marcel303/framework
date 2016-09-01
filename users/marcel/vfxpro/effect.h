@@ -139,10 +139,11 @@ struct Effect_Fsfx : Effect
 	TweenFloat m_param3;
 	TweenFloat m_param4;
 	std::vector<std::string> m_images;
+	std::vector<Color> m_colors;
 	GLuint m_textureArray;
 	float m_time;
 
-	Effect_Fsfx(const char * name, const char * shader, const std::vector<std::string> & images);
+	Effect_Fsfx(const char * name, const char * shader, const std::vector<std::string> & images, const std::vector<Color> & colors);
 	virtual ~Effect_Fsfx() override;
 
 	virtual void tick(const float dt) override;
@@ -349,7 +350,9 @@ struct Effect_Video : Effect
 	TweenFloat m_hideWhenDone;
 
 	MediaPlayer m_mediaPlayer;
-	float m_startTime;
+	bool m_playing;
+	double m_time;
+	double m_startTime;
 
 	Effect_Video(const char * name, const char * filename, const char * shader, const bool centered, const bool play);
 
@@ -792,6 +795,16 @@ struct Effect_Fireworks : Effect
 	TweenFloat spawnRate;
 
 	int nextParticleIndex;
+
+	TweenFloat m_rootSpeed;
+	TweenFloat m_rootSpeedVar;
+	TweenFloat m_rootLife;
+	TweenFloat m_child1Speed;
+	TweenFloat m_child1SpeedVar;
+	TweenFloat m_child1Life;
+	TweenFloat m_child2Speed;
+	TweenFloat m_child2SpeedVar;
+	TweenFloat m_child2Life;
 
 	Effect_Fireworks(const char * name);
 
