@@ -621,7 +621,7 @@ static void seekSequence(double time)
 
 	for (EventMarker & eventMarker : eventMarkers)
 	{
-		if (eventMarker.time <= time)
+		if (eventMarker.time < time)
 		{
 			logDebug("trigger event %d", eventMarker.eventId);
 
