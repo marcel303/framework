@@ -1255,9 +1255,6 @@ int main(int argc, char * argv[])
 
 		int activeCamera = NUM_SCREENS;
 
-		float time = 0.f;
-		float timeReal = 0.f;
-
 		bool stop = false;
 
 		while (!stop)
@@ -1491,8 +1488,7 @@ int main(int argc, char * argv[])
 			SDL_SetRelativeMouseMode(SDL_FALSE);
 		#endif
 
-			const float dtReal = Calc::Min(1.f / 30.f, framework.timeStep) * config.midiGetValue(100, 1.f);
-			//const float dtReal = framework.timeStep * config.midiGetValue(100, 1.f);
+			const float dtReal = framework.timeStep;
 
 			Mat4x4 cameraPositionMatrix;
 			Mat4x4 cameraRotationMatrix;
@@ -1563,7 +1559,12 @@ int main(int argc, char * argv[])
 
 					case kOscMessageType_Event:
 						{
-							const std::string filename = message.str + ".scene.xml";
+							const bool isFullname = message.str.find('/') != std::string::npos;
+
+							const std::string filename =
+								isFullname
+								? message.str + ".scene.xml"
+								: std::string("tracks/") + message.str + ".scene.xml";
 							
 							if (filename != g_scene->m_filename)
 							{
@@ -1652,17 +1653,37 @@ int main(int argc, char * argv[])
 					++i;
 			}
 
-			const float dt = dtReal * timeDilationMultiplier;
+			float dtTodo = dtReal;
 
-			// process effects
+			while (dtTodo > 0.f)
+			{
+				const float dtMin = 1.f / 30.f;
 
-			g_prevScene->tick(dt);
+				float dt;
 
-			g_prevSceneTime -= dt;
-			if (g_prevSceneTime < 0.f)
-				g_prevSceneTime = 0.f;
+				if (dtTodo > dtMin)
+				{
+					dt = dtMin;
+					dtTodo -= dt;
+				}
+				else
+				{
+					dt = dtTodo;
+					dtTodo = 0.f;
+				}
 
-			g_scene->tick(dt);
+				dt *= timeDilationMultiplier;
+
+				// process effects
+
+				g_prevScene->tick(dt);
+
+				g_prevSceneTime -= dt;
+				if (g_prevSceneTime < 0.f)
+					g_prevSceneTime = 0.f;
+
+				g_scene->tick(dt);
+			}
 
 		#if DEMODATA
 			for (int i = 0; i < 10; ++i)
@@ -1726,7 +1747,7 @@ int main(int argc, char * argv[])
 			glBindTexture(GL_TEXTURE_2D, g_fftTextureWithFade);
 			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 			static float powerValuesWithFade[kFFTComplexSize] = { };
-			const float fftFadeA = std::pow(.5f, dt);
+			const float fftFadeA = std::powf(g_scene->m_fftFade, dtReal);
 			for (int i = 0; i < kFFTComplexSize; ++i)
 				powerValuesWithFade[i] = std::max(powerValuesWithFade[i] * fftFadeA, powerValues[i]);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, kFFTComplexSize, 1, 0, GL_RED, GL_FLOAT, powerValuesWithFade);
@@ -2447,11 +2468,6 @@ int main(int argc, char * argv[])
 
 			delete [] samplesThisFrame;
 			samplesThisFrame = nullptr;
-
-			//
-
-			time += dt;
-			timeReal += dtReal;
 		}
 
 		delete g_scene;

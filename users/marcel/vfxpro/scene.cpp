@@ -78,6 +78,12 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 		const std::string imageFiles = stringAttrib(xmlEffect, "images", "");
 		std::vector<std::string> images;
 		splitString(imageFiles, images, ',');
+		const std::string colorsStr = stringAttrib(xmlEffect, "colors", "");
+		std::vector<std::string> colorsHex;
+		splitString(colorsStr, colorsHex, ',');
+		std::vector<Color> colors;
+		for (auto & hex : colorsHex)
+			colors.push_back(Color::fromHex(hex.c_str()));
 
 		if (shader.empty())
 		{
@@ -85,7 +91,7 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 		}
 		else
 		{
-			effect = new Effect_Fsfx(m_name.c_str(), shader.c_str(), images);
+			effect = new Effect_Fsfx(m_name.c_str(), shader.c_str(), images, colors);
 
 			typeName = shader;
 		}
@@ -181,6 +187,10 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 		{
 			effect = new Effect_Picture(m_name.c_str(), file.c_str(), file2.c_str(), shader.c_str(), centered);
 		}
+	}
+	else if (type == "circles")
+	{
+		effect= new Effect_Clockwork(m_name.c_str());
 	}
 	else if (type == "draw_picture")
 	{
@@ -901,15 +911,19 @@ void SceneEvent::load(const XMLElement * xmlEvent)
 //
 
 Scene::Scene()
-	: m_time(0.f)
+	: m_fftFade(.5f)
+	, m_time(0.f)
 	, m_varTime(0.f)
+	, m_varTimeStep(0.f)
 	, m_varPalmX(0.f)
 	, m_varPalmY(0.f)
 	, m_varPalmZ(0.f)
 	, m_varPcmVolume(0.f)
 	, m_wantsReload(false)
 {
+	addVar("fft_fade", m_fftFade);
 	addVar("time", m_varTime);
+	addVar("time_step", m_varTimeStep);
 	addVar("palm_x", m_varPalmX);
 	addVar("palm_y", m_varPalmY);
 	addVar("palm_z", m_varPalmZ);
@@ -928,6 +942,7 @@ void Scene::tick(const float dt)
 	// process global variables
 
 	m_varTime = m_time;
+	m_varTimeStep = m_varTimeStep + dt;
 	m_varPalmX = g_leapState.palmX;
 	m_varPalmY = g_leapState.palmY;
 	m_varPalmZ = g_leapState.palmZ;
@@ -1095,6 +1110,8 @@ void Scene::draw(DrawableList & list)
 		virtual void draw() override
 		{
 			m_scene->debugDraw();
+
+			m_scene->m_varTimeStep = 0.f;
 		}
 	};
 
@@ -1242,6 +1259,8 @@ void Scene::addDebugText(const char * text)
 
 bool Scene::load(const char * filename)
 {
+	ScopedSceneBlock sceneScope(this);
+
 	bool result = true;
 
 	m_filename = filename;
@@ -1272,6 +1291,8 @@ bool Scene::load(const char * filename)
 			{
 				logWarning("scene name not set!");
 			}
+
+			m_fftFade = floatAttrib(xmlScene, "fft_fade", .5f);
 
 			//
 
@@ -1549,10 +1570,13 @@ void Scene::clear()
 
 	//
 
+	m_fftFade = .5f;
+
 	m_time = 0.f;
 
 	m_varPcmVolume = 0.f;
 	m_varTime = 0.f;
+	m_varTimeStep = 0.f;
 
 	//
 

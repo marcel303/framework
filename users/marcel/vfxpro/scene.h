@@ -229,7 +229,8 @@ struct Scene : public TweenFloatCollection, public TweenFloatModifier
 			kOp_Add,
 			kOp_Sub,
 			kOp_Min,
-			kOp_Max
+			kOp_Max,
+			kOp_Pow
 		};
 
 		static Op parseOp(const std::string & op)
@@ -244,6 +245,8 @@ struct Scene : public TweenFloatCollection, public TweenFloatModifier
 				return kOp_Min;
 			if (op == "max")
 				return kOp_Max;
+			if (op == "pow")
+				return kOp_Pow;
 			logError("unknown modifier op: %s", op.c_str());
 			return kOp_Mul;
 		}
@@ -296,6 +299,8 @@ struct Scene : public TweenFloatCollection, public TweenFloatModifier
 				return std::min(value1, value2);
 			case kOp_Max:
 				return std::max(value1, value2);
+			case kOp_Pow:
+				return std::powf(value1, value2);
 			default:
 				Assert(false);
 				return value1;
@@ -323,10 +328,12 @@ struct Scene : public TweenFloatCollection, public TweenFloatModifier
 	FftBucket m_fftBuckets[kMaxFftBuckets];
 	std::vector<Modifier> m_modifiers;
 	std::vector<SceneMidiMap> m_midiMaps;
+	TweenFloat m_fftFade;
 
 	float m_time;
 
 	TweenFloat m_varTime;
+	TweenFloat m_varTimeStep;
 	TweenFloat m_varPalmX;
 	TweenFloat m_varPalmY;
 	TweenFloat m_varPalmZ;
