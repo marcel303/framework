@@ -3,6 +3,22 @@
 #include "framework.h"
 #include "video.h"
 
+/*
+
+todo : ideal processing
+
+codec thread:
+	fill buffers
+	decode as many video frames as possible, store in video buffer
+	decode as much audio as possible (deplete packet queue), consume immediately
+	when video buffers are full, wait until a frame is consumed
+
+main thread
+	update media time
+	consume or reuse video buffer. create new texture on change
+
+*/
+
 static int ExecMediaPlayerThread(void * param)
 {
 	MediaPlayer * self = (MediaPlayer*)param;
@@ -250,7 +266,8 @@ void MediaPlayer::tick(Context * context, const float dt)
 
 	audioOutput->Update(audioStream);
 
-	double time = audioStream->GetTime() * speed;
+	double time = presentTime >= 0.f ? presentTime : (audioStream->GetTime() * speed);
+
 	MP::VideoFrame * videoFrame = nullptr;
 	bool gotVideo = false;
 	context->mpContext.RequestVideo(time, &videoFrame, gotVideo);
