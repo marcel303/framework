@@ -4,8 +4,8 @@
 #include "MPUtil.h"
 #include "MPVideoContext.h"
 
-//#define QUEUE_SIZE (4 * 10)
-#define QUEUE_SIZE (4 * 30)
+#define QUEUE_SIZE (4 * 10)
+//#define QUEUE_SIZE (4 * 30)
 //#define QUEUE_SIZE (4)
 
 namespace MP
@@ -141,6 +141,10 @@ namespace MP
 		out_gotVideo = false;
 		bool stop = false;
 
+		bool _newFrame;
+		while (!m_videoBuffer.IsFull() && !m_packetQueue.IsEmpty() && ProcessPacket(m_packetQueue.GetPacket(), _newFrame))
+			m_packetQueue.PopFront();
+
 		// Check if the frame is in the buffer.
 		VideoFrame* oldFrame = m_videoBuffer.GetCurrentFrame();
 		m_videoBuffer.AdvanceToTime(time);
@@ -182,20 +186,13 @@ namespace MP
 				if (AdvanceToTime(time, out_frame) != true)
 					result = false;
 
-				if ((*out_frame)/* && (*out_frame)->m_time >= time*/)
+				//if ((*out_frame)/* && (*out_frame)->m_time >= time*/)
+				if ((*out_frame) && (*out_frame)->m_time >= time)
 				{
 					Debug::Print("VIDEO: Request frame. Time = %f (requested = %f).", (*out_frame)->m_time, time);
 					out_gotVideo = true;
 					stop = true;
 				}
-
-				/*
-				if (time > (*out_frame)->m_time)
-				{
-					Debug::Print("Decoded skip frame.");
-					stop = true;
-				}
-				*/
 			}
 
 			m_packetQueue.PopFront();

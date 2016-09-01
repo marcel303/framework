@@ -274,6 +274,7 @@ namespace MP
 			streams.push_back(m_videoContext->GetStreamIndex());
 			m_videoContext->m_packetQueue.Clear();
 			//m_videoContext->m_videoBuffer.Clear();
+			m_videoContext->m_time = 0.0;
 		}
 
 		for (size_t i = 0; i < streams.size(); ++i)
@@ -310,6 +311,7 @@ namespace MP
 		if (m_videoContext)
 		{
 			m_videoContext->m_packetQueue.Clear();
+			m_videoContext->m_time = time;
 			avcodec_flush_buffers(m_videoContext->m_codecContext);
 		}
 		

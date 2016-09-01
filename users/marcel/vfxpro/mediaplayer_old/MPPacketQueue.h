@@ -15,6 +15,7 @@ namespace MP
 		void PopFront();
 
 		size_t GetSize() const;
+		bool IsEmpty() const;
 		AVPacket& GetPacket();
 
 		void Clear();

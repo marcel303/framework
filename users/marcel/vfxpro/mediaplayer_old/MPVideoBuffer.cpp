@@ -177,4 +177,9 @@ namespace MP
 	{
 		return m_readPosition == m_writePosition;
 	}
+
+	bool VideoBuffer::IsFull() const
+	{
+		return (m_writePosition + 1) % m_buffer.getSize() == m_readPosition;
+	}
 };

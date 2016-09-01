@@ -37,6 +37,11 @@ namespace MP
 		return m_packets.size();
 	}
 
+	bool PacketQueue::IsEmpty() const
+	{
+		return m_packets.empty();
+	}
+
 	AVPacket& PacketQueue::GetPacket()
 	{
 		Assert(m_packets.size() > 0);
