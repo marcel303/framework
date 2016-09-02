@@ -23,7 +23,7 @@ namespace MP
 	bool AudioBuffer::WriteSamples(int16_t* samples, size_t sampleCount)
 	{
 		Assert(m_samples.getSize() > 0);
-		Assert(m_sampleCount + sampleCount <= m_samples.getSize());
+		Assert(m_sampleCount + sampleCount <= (size_t)m_samples.getSize());
 
 #if 1
 		m_sampleCount += sampleCount;
@@ -31,7 +31,7 @@ namespace MP
 		while (sampleCount > 0)
 		{
 			size_t numSamples = sampleCount;
-			if (m_writePosition + numSamples >= m_samples.getSize())
+			if (m_writePosition + numSamples >= (size_t)m_samples.getSize())
 				numSamples = m_samples.getSize() - m_writePosition;
 
 			memcpy(&m_samples[m_writePosition], samples, numSamples * sizeof(int16_t));
@@ -60,7 +60,7 @@ namespace MP
 		m_sampleCount += sampleCount;
 #endif
 
-		Assert(m_sampleCount < m_samples.getSize());
+		Assert(m_sampleCount < (size_t)m_samples.getSize());
 
 		return true;
 	}
@@ -76,7 +76,7 @@ namespace MP
 		while (sampleCount > 0)
 		{
 			size_t numSamples = sampleCount;
-			if (m_readPosition + numSamples >= m_samples.getSize())
+			if (m_readPosition + numSamples >= (size_t)m_samples.getSize())
 				numSamples = m_samples.getSize() - m_readPosition;
 
 			memcpy(samples, &m_samples[m_readPosition], numSamples * sizeof(int16_t));

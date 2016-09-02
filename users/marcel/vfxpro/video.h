@@ -75,13 +75,15 @@ struct MediaPlayer
 
 	bool open(const char * filename);
 	void close();
-	void tick(Context * context, const double dt);
+	void tickAsync(Context * context);
+	void tick(Context * context);
 
 	bool isActive(Context * context) const;
 	bool presentedLastFrame(Context * context) const;
 	void seek(const double time);
 
-	uint32_t updateTexture();
+	void updateTexture();
+	uint32_t getTexture() const;
 
 	void startMediaPlayerThread();
 	void stopMediaPlayerThread();

@@ -96,7 +96,7 @@ namespace MP
 
 		m_buffer[0].m_time = 0.0;
 
-		for (size_t i = 0; i < m_buffer.getSize(); ++i)
+		for (int i = 0; i < m_buffer.getSize(); ++i)
 			m_buffer[i].Initialize(width, height);
 
 		m_writePosition = 0;
@@ -113,7 +113,7 @@ namespace MP
 
 		m_initialized = false;
 
-		for (size_t i = 0; i < m_buffer.getSize(); ++i)
+		for (int i = 0; i < m_buffer.getSize(); ++i)
 			m_buffer[i].Destroy();
 
 		m_buffer.setSize(0);
@@ -127,7 +127,7 @@ namespace MP
 
 		++m_writePosition;
 
-		if (m_writePosition >= m_buffer.getSize())
+		if (m_writePosition >= (size_t)m_buffer.getSize())
 			m_writePosition = 0;
 
 		if (m_writePosition == m_readPosition)
@@ -159,7 +159,7 @@ namespace MP
 		{
 			++m_readPosition;
 
-			if (m_readPosition >= m_buffer.getSize())
+			if (m_readPosition >= (size_t)m_buffer.getSize())
 				m_readPosition = 0;
 
 			++skipCount;

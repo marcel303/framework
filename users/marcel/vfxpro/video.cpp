@@ -13,7 +13,7 @@ static int ExecMediaPlayerThread(void * param)
 	{
 		const int delayMS = 10;
 
-		self->tick(context, delayMS / 1000.0);
+		self->tickAsync(context);
 
 		SDL_CondWaitTimeout(context->mpTickEvent, context->mpTickMutex, delayMS);
 	}
@@ -104,7 +104,7 @@ void MediaPlayer::close()
 	logDebug("MP texture delete took %dms", t2 - t1);
 }
 
-void MediaPlayer::tick(Context * context, const double dt)
+void MediaPlayer::tickAsync(Context * context)
 {
 	if (!isActive(context))
 		return;
@@ -133,6 +133,11 @@ void MediaPlayer::tick(Context * context, const double dt)
 	SDL_UnlockMutex(context->mpBufferLock);
 }
 
+void MediaPlayer::tick(Context * context)
+{
+	updateTexture();
+}
+
 bool MediaPlayer::isActive(Context * context) const
 {
 	return context && context->mpContext.HasBegun();
@@ -156,7 +161,7 @@ void MediaPlayer::seek(const double time)
 	SDL_UnlockMutex(context->mpTickMutex);
 }
 
-uint32_t MediaPlayer::updateTexture()
+void MediaPlayer::updateTexture()
 {
 	Assert(context->mpContext.HasBegun());
 
@@ -186,7 +191,10 @@ uint32_t MediaPlayer::updateTexture()
 		}
 	}
 	SDL_UnlockMutex(context->mpBufferLock);
+}
 
+uint32_t MediaPlayer::getTexture() const
+{
 	return texture;
 }
 

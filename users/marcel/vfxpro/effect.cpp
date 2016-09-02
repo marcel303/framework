@@ -1374,6 +1374,8 @@ void Effect_Video::tick(const float dt)
 	{
 		m_mediaPlayer.presentTime = m_time;
 
+		m_mediaPlayer.tick(m_mediaPlayer.context);
+
 		if (m_hideWhenDone && m_mediaPlayer.presentedLastFrame(m_mediaPlayer.context))
 		{
 			m_mediaPlayer.close();
@@ -1397,7 +1399,7 @@ void Effect_Video::draw()
 	if (!m_playing)
 		return;
 
-	const uint32_t texture = m_mediaPlayer.updateTexture();
+	const uint32_t texture = m_mediaPlayer.getTexture();
 
 	if (texture != 0)
 	{
@@ -2334,7 +2336,7 @@ void Effect_Bars::handleSignal(const std::string & message)
 			const int index = Parse::Int32(args[1]);
 			const Color color = Color::fromHex(args[2].c_str());
 
-			if (index >= 0 && index < m_colorBarColors.size())
+			if (index >= 0 && index < (int)m_colorBarColors.size())
 				m_colorBarColors[index] = color;
 		}
 	}

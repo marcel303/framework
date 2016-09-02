@@ -1467,7 +1467,7 @@ int main(int argc, char * argv[])
 			{
 				const int base = keyboard.isDown(SDLK_LSHIFT) ? 10 : 0;
 
-				for (int i = 0; i < g_scene->m_layers.size(); ++i)
+				for (int i = 0; i < (int)g_scene->m_layers.size(); ++i)
 				{
 					if (i - base < 0 || i - base > 9)
 						continue;
@@ -2256,7 +2256,7 @@ int main(int argc, char * argv[])
 					x += 50;
 					y += spacingY;
 
-					for (int i = 0; i < g_scene->m_layers.size(); ++i)
+					for (int i = 0; i < (int)g_scene->m_layers.size(); ++i)
 					{
 						SceneLayer * layer = g_scene->m_layers[i];
 
