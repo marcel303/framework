@@ -407,6 +407,8 @@ namespace MP
 
 		bool captured = false;
 
+		Debug::Print("ProcessPacket: stream_index=%d.", packet.stream_index);
+
 		if (m_audioContext != nullptr)
 		{
 			if (packet.stream_index == m_audioContext->GetStreamIndex())
@@ -438,7 +440,9 @@ namespace MP
 		// Read packet.
 		out_packet.data = 0;
 
-		if (av_read_frame(m_formatContext, &out_packet) < 0)
+		const int readResult = av_read_frame(m_formatContext, &out_packet);
+
+		if (readResult < 0)
 			return false;
 
 		if (out_packet.data == 0)

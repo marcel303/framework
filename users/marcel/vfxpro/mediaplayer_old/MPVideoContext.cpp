@@ -11,14 +11,20 @@
 namespace MP
 {
 	VideoContext::VideoContext()
+		: m_packetQueue()
+		, m_codecContext(nullptr)
+		, m_codec(nullptr)
+		, m_tempFrame(nullptr)
+		, m_tempFrameBuffer(nullptr)
+		, m_videoBuffer()
+		, m_streamIndex(-1)
+		, m_time(0.0)
+		, m_frameCount(0)
+		, m_initialized(false)
 	{
-		m_initialized = false;
-
-		m_codecContext = 0;
-		m_codec = 0;
 	}
 
-	bool VideoContext::Initialize(Context* context, size_t streamIndex)
+	bool VideoContext::Initialize(Context * context, const size_t streamIndex)
 	{
 		Assert(m_initialized == false);
 
@@ -31,12 +37,14 @@ namespace MP
 		m_frameCount = 0;
 
 		// Get codec context for video stream.
+		Assert(m_codecContext == nullptr);
 		if (m_streamIndex != -1)
 			m_codecContext = context->GetFormatContext()->streams[m_streamIndex]->codec;
 
 		Util::SetDefaultCodecContextOptions(m_codecContext);
 
 		// Get codec for video stream.
+		Assert(m_codec == nullptr);
 		m_codec = avcodec_find_decoder(m_codecContext->codec_id);
 		if (!m_codec)
 		{
@@ -60,6 +68,7 @@ namespace MP
 				Debug::Print("Video: bitrate: %d.", m_codecContext->bit_rate);
 
 				// Create frame.
+				Assert(m_tempFrame == nullptr);
 				m_tempFrame = avcodec_alloc_frame();
 
 				if (!m_tempFrame)
@@ -69,11 +78,12 @@ namespace MP
 				else
 				{
 					// Allocate buffer to use for frame.
-					int frameBufferSize = avpicture_get_size(
+					const int frameBufferSize = avpicture_get_size(
 						PIX_FMT_RGB24,
 						m_codecContext->width,
 						m_codecContext->height);
 
+					Assert(m_tempFrameBuffer == nullptr);
 					m_tempFrameBuffer = new uint8_t[frameBufferSize];
 
 					// Assign buffer to frame.
@@ -106,41 +116,41 @@ namespace MP
 		if (m_tempFrame)
 		{
 			av_free(m_tempFrame);
-			m_tempFrame = 0;
+			m_tempFrame = nullptr;
 		}
 
 		if (m_tempFrameBuffer)
 		{
-			delete[] m_tempFrameBuffer;
-			m_tempFrameBuffer = 0;
+			delete [] m_tempFrameBuffer;
+			m_tempFrameBuffer = nullptr;
 		}
 
 		// Close video codec context.
-		if (m_codecContext)
+		if (m_codecContext != nullptr)
 			avcodec_close(m_codecContext);
 
 		return result;
 	}
 
-	size_t VideoContext::GetStreamIndex()
+	size_t VideoContext::GetStreamIndex() const
 	{
 		return m_streamIndex;
 	}
 
-	double VideoContext::GetTime()
+	double VideoContext::GetTime() const
 	{
 		return m_time;
 	}
 
 	void VideoContext::FillVideoBuffer()
 	{
-		bool _newFrame;
+		bool newFrame;
 
-		while (!m_videoBuffer.IsFull() && !m_packetQueue.IsEmpty() && ProcessPacket(m_packetQueue.GetPacket(), _newFrame))
+		while (!m_videoBuffer.IsFull() && !m_packetQueue.IsEmpty() && ProcessPacket(m_packetQueue.GetPacket(), newFrame))
 			m_packetQueue.PopFront();
 	}
 
-	bool VideoContext::RequestVideo(double time, VideoFrame** out_frame, bool& out_gotVideo)
+	bool VideoContext::RequestVideo(const double time, VideoFrame ** out_frame, bool & out_gotVideo)
 	{
 		Assert(out_frame);
 
@@ -152,32 +162,27 @@ namespace MP
 		FillVideoBuffer();
 
 		// Check if the frame is in the buffer.
-		VideoFrame* oldFrame = m_videoBuffer.GetCurrentFrame();
+		VideoFrame * oldFrame = m_videoBuffer.GetCurrentFrame();
 		m_videoBuffer.AdvanceToTime(time);
-		VideoFrame* newFrame = m_videoBuffer.GetCurrentFrame();
-
-		static bool first = true;
+		VideoFrame * newFrame = m_videoBuffer.GetCurrentFrame();
 
 		if (newFrame != oldFrame)
 		{
 			*out_frame = newFrame;
 			Debug::Print("Got buffered video.");
-			if (first == true)
-				first = false;
-			else
-				out_gotVideo = true;
+			out_gotVideo = true;
 			return true;
 		}
 
 		return result;
 	}
 
-	bool VideoContext::IsQueueFull()
+	bool VideoContext::IsQueueFull() const
 	{
-		return m_packetQueue.GetSize() > QUEUE_SIZE;
+		return m_packetQueue.GetSize() >= QUEUE_SIZE;
 	}
 
-	bool VideoContext::AddPacket(AVPacket& packet)
+	bool VideoContext::AddPacket(const AVPacket & packet)
 	{
 		m_packetQueue.PushBack(packet);
 
@@ -186,14 +191,14 @@ namespace MP
 		return true;
 	}
 
-	bool VideoContext::ProcessPacket(AVPacket& packet, bool& out_newFrame)
+	bool VideoContext::ProcessPacket(AVPacket & packet, bool & out_newFrame)
 	{
 		out_newFrame = false;
 
-		int      bytesRemaining = 0;
-		uint8_t* packetData     = 0;
-		int      bytesDecoded   = 0;
-		int      frameFinished  = 0;
+		int       bytesRemaining = 0;
+		uint8_t * packetData     = nullptr;
+		int       bytesDecoded   = 0;
+		int       frameFinished  = 0;
 
 		Assert(packet.data);
 		Assert(packet.size >= 0);
@@ -229,18 +234,13 @@ namespace MP
 				// Video frame finished?
 				if (frameFinished)
 				{
-					VideoFrame* frame = m_videoBuffer.AllocateFrame();
-
-					//if (m_tempFrame->pts == 0)
-					//	m_tempFrame->pts = packet.pts;
+					VideoFrame * frame = m_videoBuffer.AllocateFrame();
 
 					ConvertAndStore(frame);
 
 					out_newFrame = true;
 				}
-
 			}
-
 		}
 
 		// Free current packet.
@@ -250,7 +250,7 @@ namespace MP
 		return true;
 	}
 
-	bool VideoContext::AdvanceToTime(double time, VideoFrame** out_currentFrame)
+	bool VideoContext::AdvanceToTime(const double time, VideoFrame ** out_currentFrame)
 	{
 		m_videoBuffer.AdvanceToTime(time);
 
@@ -264,7 +264,7 @@ namespace MP
 		return m_videoBuffer.Depleted() && (m_packetQueue.GetSize() == 0);
 	}
 
-	bool VideoContext::ConvertAndStore(VideoFrame* out_frame)
+	bool VideoContext::ConvertAndStore(VideoFrame * out_frame)
 	{
 		bool result = true;
 
@@ -275,16 +275,14 @@ namespace MP
 
         if (m_tempFrame->pts != 0 && m_tempFrame->pts != AV_NOPTS_VALUE)
 		{
-			// m_tempFrame->pts * 1345.2944 << Magic number.
 			m_time = av_q2d(m_codecContext->time_base) * m_tempFrame->pts;
-			//m_time = m_tempFrame->pts / 1000.0;
 		}
 		else
 		{
-			double frame_delay = av_q2d(m_codecContext->time_base);
-			frame_delay += m_tempFrame->repeat_pict * (frame_delay * 0.5f);
+			double frameDelay = av_q2d(m_codecContext->time_base);
+			frameDelay += m_tempFrame->repeat_pict * (frameDelay * 0.5);
 
-			m_time += frame_delay;
+			m_time += frameDelay;
 		}
 
 		out_frame->m_time = m_time;

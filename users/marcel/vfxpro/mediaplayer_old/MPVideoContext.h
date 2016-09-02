@@ -15,30 +15,30 @@ namespace MP
 	public:
 		VideoContext();
 
-		bool Initialize(Context* context, size_t streamIndex);
+		bool Initialize(Context * context, const size_t streamIndex);
 		bool Destroy();
 
-		size_t GetStreamIndex();
-		double GetTime();
+		size_t GetStreamIndex() const;
+		double GetTime() const;
 
 		void FillVideoBuffer();
 
-		bool RequestVideo(double time, VideoFrame** out_frame, bool& out_gotVideo);
+		bool RequestVideo(const double time, VideoFrame ** out_frame, bool & out_gotVideo);
 
-		bool IsQueueFull();
-		bool AddPacket(AVPacket& packet);
-		bool ProcessPacket(AVPacket& packet, bool& out_newFrame);
-		bool AdvanceToTime(double time, VideoFrame** out_currentFrame);
+		bool IsQueueFull() const;
+		bool AddPacket(const AVPacket & packet);
+		bool ProcessPacket(AVPacket & packet, bool & out_newFrame);
+		bool AdvanceToTime(const double time, VideoFrame ** out_currentFrame);
 		bool Depleted() const;
 
 	//private:
-		bool ConvertAndStore(VideoFrame* out_frame);
+		bool ConvertAndStore(VideoFrame * out_frame);
 
 		PacketQueue m_packetQueue;
-		AVCodecContext* m_codecContext;
-		AVCodec* m_codec;
-		AVFrame* m_tempFrame; ///< Temporary frame for decoder. The results stored in this frame are converted to RGB and stored in the final frame.
-		uint8_t* m_tempFrameBuffer; ///< Frame buffer for temp frame.
+		AVCodecContext * m_codecContext;
+		AVCodec * m_codec;
+		AVFrame * m_tempFrame; ///< Temporary frame for decoder. The results stored in this frame are converted to RGB and stored in the final frame.
+		uint8_t * m_tempFrameBuffer; ///< Frame buffer for temp frame.
 		VideoBuffer m_videoBuffer; // TODO: Init/destroy.
 
 		size_t m_streamIndex;
