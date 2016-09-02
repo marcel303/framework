@@ -1285,13 +1285,6 @@ bool Scene::load(const char * filename)
 		}
 		else
 		{
-			m_name = stringAttrib(xmlScene, "name", "");
-
-			if (m_name.empty())
-			{
-				logWarning("scene name not set!");
-			}
-
 			m_fftFade = floatAttrib(xmlScene, "fft_fade", .5f);
 
 			//
@@ -1531,7 +1524,6 @@ bool Scene::load(const char * filename)
 void Scene::clear()
 {
 	m_filename.clear();
-	m_name.clear();
 
 	for (auto i = m_layers.begin(); i != m_layers.end(); ++i)
 	{

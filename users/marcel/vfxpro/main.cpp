@@ -11,6 +11,7 @@
 #include "effect.h"
 #include "framework.h"
 #include "leap/Leap.h"
+#include "mediaplayer_old/MPUtil.h"
 #include "Path.h"
 #include "scene.h"
 #include "StringEx.h"
@@ -1123,6 +1124,10 @@ int main(int argc, char * argv[])
 
 	s_oscMessageThread = CreateThread(NULL, 64 * 1024, ExecuteOscThread, NULL, CREATE_SUSPENDED, NULL);
 	ResumeThread(s_oscMessageThread);
+
+	// initialize avcodec
+
+	MP::Util::InitializeLibAvcodec();
 
 	// initialise framework
 

@@ -1,9 +1,26 @@
 #include "MPUtil.h"
+#include <ffmpeg_old/avformat.h>
 
 namespace MP
 {
 	namespace Util
 	{
+		static bool s_avcodecInitialized = false;
+
+		void InitializeLibAvcodec()
+		{
+			if (s_avcodecInitialized == false)
+			{
+				s_avcodecInitialized = true;
+
+				// Initialize libavcodec by registering all codecs.
+				av_register_all();
+			#if !defined(DEBUG)
+				av_log_set_level(AV_LOG_QUIET);
+			#endif
+			}
+		}
+
 		void SetDefaultCodecContextOptions(AVCodecContext* codecContext)
 		{
 			// Define options.

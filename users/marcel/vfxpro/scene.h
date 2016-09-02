@@ -322,7 +322,6 @@ struct Scene : public TweenFloatCollection, public TweenFloatModifier
 	};
 
 	std::string m_filename;
-	std::string m_name;
 	std::vector<SceneLayer*> m_layers;
 	std::vector<SceneEvent*> m_events;
 	FftBucket m_fftBuckets[kMaxFftBuckets];
