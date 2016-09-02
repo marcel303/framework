@@ -35,6 +35,8 @@ namespace MP
 		bool FillBuffers();
 		bool Depleted() const;
 
+		void FillVideoBuffer();
+
 		bool SeekToStart();
 		bool SeekToTime(const double time);
 

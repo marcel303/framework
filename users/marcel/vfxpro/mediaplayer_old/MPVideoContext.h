@@ -21,6 +21,8 @@ namespace MP
 		size_t GetStreamIndex();
 		double GetTime();
 
+		void FillVideoBuffer();
+
 		bool RequestVideo(double time, VideoFrame** out_frame, bool& out_gotVideo);
 
 		bool IsQueueFull();

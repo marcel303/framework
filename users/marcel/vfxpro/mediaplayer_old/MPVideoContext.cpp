@@ -132,6 +132,14 @@ namespace MP
 		return m_time;
 	}
 
+	void VideoContext::FillVideoBuffer()
+	{
+		bool _newFrame;
+
+		while (!m_videoBuffer.IsFull() && !m_packetQueue.IsEmpty() && ProcessPacket(m_packetQueue.GetPacket(), _newFrame))
+			m_packetQueue.PopFront();
+	}
+
 	bool VideoContext::RequestVideo(double time, VideoFrame** out_frame, bool& out_gotVideo)
 	{
 		Assert(out_frame);
@@ -141,9 +149,7 @@ namespace MP
 		out_gotVideo = false;
 		bool stop = false;
 
-		bool _newFrame;
-		while (!m_videoBuffer.IsFull() && !m_packetQueue.IsEmpty() && ProcessPacket(m_packetQueue.GetPacket(), _newFrame))
-			m_packetQueue.PopFront();
+		FillVideoBuffer();
 
 		// Check if the frame is in the buffer.
 		VideoFrame* oldFrame = m_videoBuffer.GetCurrentFrame();
@@ -161,41 +167,6 @@ namespace MP
 			else
 				out_gotVideo = true;
 			return true;
-		}
-
-		// FIXME: Uncomment.
-#if 1
-		if (newFrame->m_time >= time)
-		{
-			//Debug::Print("No new video frame. Time = %f vs %f.", time, newFrame->m_time);
-			return true;
-		}
-#endif
-
-		while (m_packetQueue.GetSize() > 0 && stop == false)
-		{
-			AVPacket& packet = m_packetQueue.GetPacket();
-
-			bool newFrame;
-
-			if (ProcessPacket(packet, newFrame) != true)
-				result = false;
-
-			if (newFrame)
-			{
-				if (AdvanceToTime(time, out_frame) != true)
-					result = false;
-
-				//if ((*out_frame)/* && (*out_frame)->m_time >= time*/)
-				if ((*out_frame) && (*out_frame)->m_time >= time)
-				{
-					Debug::Print("VIDEO: Request frame. Time = %f (requested = %f).", (*out_frame)->m_time, time);
-					out_gotVideo = true;
-					stop = true;
-				}
-			}
-
-			m_packetQueue.PopFront();
 		}
 
 		return result;

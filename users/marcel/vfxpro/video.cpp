@@ -260,10 +260,12 @@ void MediaPlayer::tick(Context * context, const float dt)
 		seekTime = -1.f;
 	}
 
-	//logDebug("PlaybackPosition: %g", (float)audioOutput->PlaybackPosition_get());
-	if (!context->mpContext.FillBuffers())
-		return; // todo : check if all packets have been consumed!
+	if (presentedLastFrame(context))
+		return;
 
+	context->mpContext.FillBuffers();
+
+	//logDebug("PlaybackPosition: %g", (float)audioOutput->PlaybackPosition_get());
 	audioOutput->Update(audioStream);
 
 	double time = presentTime >= 0.f ? presentTime : (audioStream->GetTime() * speed);

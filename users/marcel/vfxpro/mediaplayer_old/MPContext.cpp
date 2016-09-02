@@ -258,6 +258,12 @@ namespace MP
 		return true;
 	}
 
+	void Context::FillVideoBuffer()
+	{
+		if (m_videoContext)
+			m_videoContext->FillVideoBuffer();
+	}
+
 	bool Context::SeekToStart()
 	{
 		bool result = true;
