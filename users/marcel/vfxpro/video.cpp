@@ -1,8 +1,9 @@
 #include "framework.h"
 #include "video.h"
+#include <atomic>
 
 static SDL_mutex * s_avcodecMutex = nullptr;
-static volatile int s_numVideoThreads = 0;
+static std::atomic_int s_numVideoThreads;
 static const int kMaxVideoThreads = 64;
 
 static int ExecMediaPlayerThread(void * param)
@@ -200,7 +201,11 @@ void MediaPlayer::startMediaPlayerThread()
 	Assert(context->mpTickMutex == nullptr);
 
 	if (s_avcodecMutex == nullptr)
+	{
 		s_avcodecMutex = SDL_CreateMutex();
+
+		std::atomic_init(&s_numVideoThreads, 0);
+	}
 
 	if (context->mpTickEvent == nullptr)
 		context->mpTickEvent = SDL_CreateCond();
