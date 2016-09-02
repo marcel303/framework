@@ -839,7 +839,7 @@ int main(int argc, char * argv[])
 
 				sendEvent(oscEventName().c_str(), -1000);
 
-				sendEvent("/scene_reload", 0);
+				//sendEvent("/scene_reload", 0);
 			}
 		}
 
@@ -937,7 +937,7 @@ int main(int argc, char * argv[])
 
 						sendEvent(oscEventName().c_str(), -1000);
 
-						sendEvent("/scene_reload", 0);
+						//sendEvent("/scene_reload", 0);
 					}
 
 					//
