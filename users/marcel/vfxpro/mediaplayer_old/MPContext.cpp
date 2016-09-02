@@ -274,14 +274,14 @@ namespace MP
 		{
 			streams.push_back(m_audioContext->GetStreamIndex());
 			m_audioContext->m_packetQueue.Clear();
-			//m_audioContext->m_audioBuffer.Clear();
+			m_audioContext->m_audioBuffer.Clear();
 		}
 
 		if (m_videoContext != nullptr)
 		{
 			streams.push_back(m_videoContext->GetStreamIndex());
 			m_videoContext->m_packetQueue.Clear();
-			//m_videoContext->m_videoBuffer.Clear();
+			m_videoContext->m_videoBuffer.Clear();
 			m_videoContext->m_time = 0.0;
 		}
 
