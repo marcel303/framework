@@ -11,6 +11,7 @@ struct MediaPlayer
 			: mpTickEvent(nullptr)
 			, mpTickMutex(nullptr)
 			, mpBufferLock(nullptr)
+			, hasBegun(false)
 		{
 		}
 
@@ -35,10 +36,18 @@ struct MediaPlayer
 			}
 		}
 
+		struct OpenParams
+		{
+			std::string filename;
+		};
+
+		OpenParams openParams;
+
 		MP::Context mpContext;
 		SDL_cond * mpTickEvent;
 		SDL_mutex * mpTickMutex;
 		SDL_mutex * mpBufferLock;
+		bool hasBegun;
 	};
 
 	Context * context;
@@ -73,7 +82,7 @@ struct MediaPlayer
 		close();
 	}
 
-	bool open(const char * filename);
+	void openAsync(const char * filename);
 	void close();
 	void tickAsync(Context * context);
 	void tick(Context * context);

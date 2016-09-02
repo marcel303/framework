@@ -1,5 +1,6 @@
 #include "MPContext.h"
 #include "MPDebug.h"
+#include "MPUtil.h"
 #include <algorithm>
 #include <vector>
 
@@ -28,52 +29,62 @@ namespace MP
 		m_eof = false;
 		m_time = 0.0;
 
-		// Initialize libavcodec by registering all codecs.
-		av_register_all();
-		#if !defined(DEBUG)
-		av_log_set_level(AV_LOG_QUIET);
-		#endif
+		Util::InitializeLibAvcodec();
 
 		// Display libavcodec info.
 		Debug::Print("libavcodec: version: %x.", avcodec_version());
 		Debug::Print("libavcodec: build: %x.", LIBAVCODEC_BUILD);
 
-		// Open file using AV codec.
-		if (av_open_input_file(&m_formatContext, filename.c_str(), 0, 0, 0) != 0)
+		if (result)
 		{
-			Debug::Print("Failed to open input file: %s.", filename.c_str());
-			return false;
+			// Open file using AV codec.
+			if (av_open_input_file(&m_formatContext, filename.c_str(), 0, 0, 0) != 0)
+			{
+				Debug::Print("Failed to open input file: %s.", filename.c_str());
+				result &= false;
+			}
 		}
 
-		size_t audioStreamIndex;
-		size_t videoStreamIndex;
+		size_t audioStreamIndex = STREAM_NOT_FOUND;
+		size_t videoStreamIndex = STREAM_NOT_FOUND;
 
-		if (GetStreamIndices(audioStreamIndex, videoStreamIndex) != true)
+		if (result)
 		{
-			Debug::Print("Failed to get stream indices.");
-			return false;
-		}
-
-		if (audioStreamIndex == STREAM_NOT_FOUND)
-		{
-			Debug::Print("No audio stream index found.");
-		}
-		else if (enableAudioStream)
-		{
-			// Initialize audio stream/context.
-			m_audioContext = new AudioContext;
-			m_audioContext->Initialize(this, audioStreamIndex);
+			if (GetStreamIndices(audioStreamIndex, videoStreamIndex) != true)
+			{
+				Debug::Print("Failed to get stream indices.");
+				result &= false;
+			}
 		}
 
-		if (videoStreamIndex == STREAM_NOT_FOUND)
+		if (result)
 		{
-			Debug::Print("No video stream index found.");
+			if (audioStreamIndex == STREAM_NOT_FOUND)
+			{
+				Debug::Print("No audio stream index found.");
+			}
+			else if (enableAudioStream)
+			{
+				// Initialize audio stream/context.
+				m_audioContext = new AudioContext;
+				if (!m_audioContext->Initialize(this, audioStreamIndex))
+					result &= false;
+			}
 		}
-		else if (enableVideoStream)
+
+		if (result)
 		{
-			// Initialize video stream/context.
-			m_videoContext = new VideoContext;
-			m_videoContext->Initialize(this, videoStreamIndex);
+			if (videoStreamIndex == STREAM_NOT_FOUND)
+			{
+				Debug::Print("No video stream index found.");
+			}
+			else if (enableVideoStream)
+			{
+				// Initialize video stream/context.
+				m_videoContext = new VideoContext;
+				if (!m_videoContext->Initialize(this, videoStreamIndex))
+					result &= false;
+			}
 		}
 
 		return result;

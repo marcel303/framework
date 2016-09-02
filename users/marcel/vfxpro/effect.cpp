@@ -132,11 +132,13 @@ std::string nameToEffectParam(const std::string & effectName, const std::string 
 
 std::map<std::string, Effect*> g_effectsByName;
 
-void registerEffect(const char * name, Effect * effect)
+void registerEffect(const char * sceneName, const char * name, Effect * effect)
 {
-	Assert(g_effectsByName.count(name) == 0);
+	std::string fullName = std::string(sceneName) + "." + name;
 
-	g_effectsByName[name] = effect;
+	Assert(g_effectsByName.count(fullName) == 0);
+
+	g_effectsByName[fullName] = effect;
 }
 
 void unregisterEffect(Effect * effect)
@@ -183,7 +185,7 @@ Effect::Effect(const char * name)
 
 	if (name != nullptr)
 	{
-		registerEffect(name, this);
+		registerEffect(g_currentScene->m_filename.c_str(), name, this);
 	}
 }
 
@@ -1347,14 +1349,7 @@ Effect_Video::Effect_Video(const char * name, const char * filename, const char 
 
 	if (kVideoPreload)
 	{
-		if (!m_mediaPlayer.open(m_filename.c_str()))
-		{
-			logWarning("failed to open %s", m_filename.c_str());
-		}
-		else
-		{
-			m_mediaPlayer.presentTime = 0.f;
-		}
+		m_mediaPlayer.openAsync(m_filename.c_str());
 	}
 
 	if (play)
@@ -1447,22 +1442,12 @@ void Effect_Video::handleSignal(const std::string & name)
 				m_mediaPlayer.close();
 			}
 
-			if (!m_mediaPlayer.open(m_filename.c_str()))
-			{
-				logWarning("failed to open %s", m_filename.c_str());
-			}
-			else
-			{
-				m_mediaPlayer.presentTime = 0.f;
-			}
+			m_mediaPlayer.openAsync(m_filename.c_str());
 		}
 
-		if (m_mediaPlayer.isActive(m_mediaPlayer.context))
-		{
-			m_startTime = g_currentScene->m_time;
-			m_time = 0.f;
-			m_playing = true;
-		}
+		m_startTime = g_currentScene->m_time;
+		m_time = 0.0;
+		m_playing = true;
 	}
 }
 
@@ -1470,9 +1455,9 @@ void Effect_Video::syncTime(const float time)
 {
 	if (m_playing && m_mediaPlayer.isActive(m_mediaPlayer.context))
 	{
-		const float videoTime = (time - m_startTime) * timeMultiplier;
+		const double videoTime = (time - m_startTime) * timeMultiplier;
 
-		if (videoTime >= 0.f)
+		if (videoTime >= 0.0)
 		{
 			m_mediaPlayer.presentTime = -1.0;
 			m_mediaPlayer.seek(videoTime);

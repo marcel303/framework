@@ -1,6 +1,8 @@
 #include "framework.h"
 #include "video.h"
 
+static SDL_mutex * s_avcodecMutex = nullptr;
+
 static int ExecMediaPlayerThread(void * param)
 {
 	MediaPlayer * self = (MediaPlayer*)param;
@@ -9,11 +11,20 @@ static int ExecMediaPlayerThread(void * param)
 
 	SDL_LockMutex(context->mpTickMutex);
 
+	SDL_LockMutex(s_avcodecMutex);
+	{
+		context->hasBegun = context->mpContext.Begin(context->openParams.filename, false, true);
+	}
+	SDL_UnlockMutex(s_avcodecMutex);
+
 	while (!self->stopMpThread)
 	{
 		const int delayMS = 10;
 
-		self->tickAsync(context);
+		if (context->hasBegun)
+		{
+			self->tickAsync(context);
+		}
 
 		SDL_CondWaitTimeout(context->mpTickEvent, context->mpTickMutex, delayMS);
 	}
@@ -25,7 +36,11 @@ static int ExecMediaPlayerThread(void * param)
 	{
 		const int t1 = SDL_GetTicks();
 
-		context->mpContext.End();
+		SDL_LockMutex(s_avcodecMutex);
+		{
+			context->mpContext.End();
+		}
+		SDL_UnlockMutex(s_avcodecMutex);
 
 		delete context;
 		context = nullptr;
@@ -38,42 +53,24 @@ static int ExecMediaPlayerThread(void * param)
 	return 0;
 }
 
-bool MediaPlayer::open(const char * filename)
+void MediaPlayer::openAsync(const char * filename)
 {
 	Assert(context == nullptr);
 
-	bool result = true;
-
 	const int t1 = SDL_GetTicks();
 
-	if (result)
-	{
-		context = new Context();
+	context = new Context();
 
-		if (!context->mpContext.Begin(filename, false, true))
-		{
-			result = false;
-		}
-	}
+	context->openParams.filename = filename;
 
 	const int t2 = SDL_GetTicks();
 
-	if (result)
-	{
-		startMediaPlayerThread();
-	}
+	startMediaPlayerThread();
 
 	const int t3 = SDL_GetTicks();
 
 	logDebug("MP begin took %dms", t2 - t1);
 	logDebug("MP thread start took %dms", t3 - t2);
-
-	if (!result)
-	{
-		close();
-	}
-
-	return result;
 }
 
 void MediaPlayer::close()
@@ -81,14 +78,6 @@ void MediaPlayer::close()
 	if (mpThread)
 	{
 		stopMediaPlayerThread();
-	}
-	else
-	{
-		if (context)
-		{
-			delete context;
-			context = nullptr;
-		}
 	}
 
 	const int t1 = SDL_GetTicks();
@@ -140,7 +129,7 @@ void MediaPlayer::tick(Context * context)
 
 bool MediaPlayer::isActive(Context * context) const
 {
-	return context && context->mpContext.HasBegun();
+	return context != nullptr;
 }
 
 bool MediaPlayer::presentedLastFrame(Context * context) const
@@ -163,6 +152,12 @@ void MediaPlayer::seek(const double time)
 
 void MediaPlayer::updateTexture()
 {
+	if (!context->hasBegun)
+	{
+		Assert(texture == 0);
+		return;
+	}
+
 	Assert(context->mpContext.HasBegun());
 
 	SDL_LockMutex(context->mpBufferLock);
@@ -203,6 +198,9 @@ void MediaPlayer::startMediaPlayerThread()
 	Assert(mpThread == nullptr);
 	Assert(context->mpTickEvent == nullptr);
 	Assert(context->mpTickMutex == nullptr);
+
+	if (s_avcodecMutex == nullptr)
+		s_avcodecMutex = SDL_CreateMutex();
 
 	if (context->mpTickEvent == nullptr)
 		context->mpTickEvent = SDL_CreateCond();

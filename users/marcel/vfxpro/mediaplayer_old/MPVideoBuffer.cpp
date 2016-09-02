@@ -10,16 +10,18 @@ namespace MP
 {
 	// VideoFrame
 	VideoFrame::VideoFrame()
+		: m_width(0)
+		, m_height(0)
+		, m_frame(nullptr)
+		, m_frameBuffer(nullptr)
+		, m_time(0.0)
+		, m_initialized(false)
 	{
-		m_frame = 0;
-		m_frameBuffer = 0;
-
-		m_initialized = false;
 	}
 
 	VideoFrame::~VideoFrame()
 	{
-		Assert(m_frame == 0);
+		Assert(m_initialized == false);
 	}
 
 	void VideoFrame::Initialize(size_t width, size_t height)
@@ -41,7 +43,7 @@ namespace MP
 		}
 
 		// Allocate buffer to use for RGB frame.
-		int frameBufferSize = avpicture_get_size(
+		const int frameBufferSize = avpicture_get_size(
 			PIX_FMT_RGB24,
 			static_cast<int>(width),
 			static_cast<int>(height));
@@ -66,22 +68,29 @@ namespace MP
 		if (m_frame)
 		{
 			av_free(m_frame);
-			m_frame = 0;
+			m_frame = nullptr;
 		}
 
 		if (m_frameBuffer)
 		{
-			delete[] m_frameBuffer;
-			m_frameBuffer = 0;
+			delete [] m_frameBuffer;
+			m_frameBuffer = nullptr;
 		}
 	}
 
 	// VideBuffer
 	VideoBuffer::VideoBuffer()
-		: m_writePosition(-1)
-		, m_readPosition(-1)
+		: m_buffer()
+		, m_writePosition(0)
+		, m_writeSize(0)
+		, m_readPosition(0)
+		, m_initialized(false)
 	{
-		m_initialized = false;
+	}
+
+	VideoBuffer::~VideoBuffer()
+	{
+		Assert(m_initialized == false);
 	}
 
 	bool VideoBuffer::Initialize(size_t width, size_t height)
@@ -94,12 +103,11 @@ namespace MP
 
 		m_buffer.setSize(BUFFER_SIZE);
 
-		m_buffer[0].m_time = 0.0;
-
 		for (int i = 0; i < m_buffer.getSize(); ++i)
 			m_buffer[i].Initialize(width, height);
 
 		m_writePosition = 0;
+		m_writeSize = 0;
 		m_readPosition = 0;
 
 		return result;
@@ -118,32 +126,42 @@ namespace MP
 
 		m_buffer.setSize(0);
 
+		m_writePosition = 0;
+		m_writeSize = 0;
+		m_readPosition = 0;
+
 		return result;
 	}
 
-	VideoFrame* VideoBuffer::AllocateFrame()
+	VideoFrame * VideoBuffer::AllocateFrame()
 	{
 		Assert(m_buffer.getSize() > 0);
 
-		++m_writePosition;
-
-		if (m_writePosition >= (size_t)m_buffer.getSize())
-			m_writePosition = 0;
-
-		if (m_writePosition == m_readPosition)
+		if (m_writeSize == m_buffer.getSize())
 		{
 			Debug::Print("Warning: Write position equals read position.");
 			Assert(0);
 		}
 
-		return &m_buffer[m_writePosition];
+		const int position = m_writePosition;
+
+		++m_writePosition;
+		++m_writeSize;
+
+		if (m_writePosition >= (size_t)m_buffer.getSize())
+			m_writePosition = 0;
+
+		return &m_buffer[position];
 	}
 
-	VideoFrame* VideoBuffer::GetCurrentFrame()
+	VideoFrame * VideoBuffer::GetCurrentFrame()
 	{
 		Assert(m_buffer.getSize() > 0);
 
-		return &m_buffer[m_readPosition];
+		if (m_writeSize == 0)
+			return nullptr;
+		else
+			return &m_buffer[m_readPosition];
 	}
 
 	void VideoBuffer::AdvanceToTime(double time)
@@ -155,9 +173,10 @@ namespace MP
 
 		int skipCount = 0;
 
-		while (m_buffer[m_readPosition].m_time < time && m_readPosition != m_writePosition)
+		while (m_writeSize >= 1 && m_buffer[m_readPosition].m_time < time)
 		{
 			++m_readPosition;
+			--m_writeSize;
 
 			if (m_readPosition >= (size_t)m_buffer.getSize())
 				m_readPosition = 0;
@@ -175,17 +194,18 @@ namespace MP
 
 	bool VideoBuffer::Depleted() const
 	{
-		return m_readPosition == m_writePosition;
+		return m_writeSize == 0;
 	}
 
 	bool VideoBuffer::IsFull() const
 	{
-		return (m_writePosition + 1) % m_buffer.getSize() == m_readPosition;
+		return m_writeSize == (size_t)m_buffer.getSize();
 	}
 
 	void VideoBuffer::Clear()
 	{
 		m_writePosition = 0;
+		m_writeSize = 0;
 		m_readPosition = 0;
 	}
 };

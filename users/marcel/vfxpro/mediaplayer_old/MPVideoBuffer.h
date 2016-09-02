@@ -29,6 +29,7 @@ namespace MP
 	{
 	public:
 		VideoBuffer();
+		~VideoBuffer();
 
 		bool Initialize(size_t width, size_t height);
 		bool Destroy();
@@ -44,6 +45,7 @@ namespace MP
 		Array<VideoFrame> m_buffer; ///< Queued video frames. TODO: Create video buffer class with reusable video frames.
 
 		size_t m_writePosition;
+		size_t m_writeSize;
 		size_t m_readPosition;
 
 	public: // FIXME: Write accessor.

@@ -61,7 +61,7 @@ extern std::string nameToEffectParam(const std::string & effectName, const std::
 
 //
 
-extern void registerEffect(const char * name, Effect * effect);
+extern void registerEffect(const char * sceneName, const char * name, Effect * effect);
 extern void unregisterEffect(Effect * effect);
 
 extern std::map<std::string, Effect*> g_effectsByName;
