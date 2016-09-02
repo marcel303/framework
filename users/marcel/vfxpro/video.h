@@ -35,8 +35,6 @@ struct MediaPlayer
 
 	Context * context;
 
-	class AudioOutput * audioOutput;
-	struct MyAudioStream * audioStream;
 	int sx;
 	int sy;
 	uint32_t texture;
@@ -56,8 +54,6 @@ struct MediaPlayer
 
 	MediaPlayer()
 		: context(nullptr)
-		, audioOutput(nullptr)
-		, audioStream(nullptr)
 		, sx(0)
 		, sy(0)
 		, texture(0)

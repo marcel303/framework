@@ -1,5 +1,3 @@
-#include "audiostream/AudioOutput.h"
-#include "audiostream/AudioStream.h"
 #include "framework.h"
 #include "video.h"
 
@@ -56,71 +54,6 @@ static int ExecMediaPlayerThread(void * param)
 	return 0;
 }
 
-struct MyAudioStream : AudioStream
-{
-	AudioOutput * audioOutput;
-	MP::Context * mpContext;
-
-	struct TimingInfo
-	{
-		TimingInfo()
-		{
-			memset(this, 0, sizeof(*this));
-		}
-
-		double timeAudio;  ///< Time of decoder (audio PTS).
-		double timeStream; ///< Time of stream sound.
-	} m_timing[3];
-
-	double m_timeCorrection;
-
-	MyAudioStream()
-		: AudioStream()
-	{
-		m_timeCorrection = 0.0;
-	}
-
-	virtual int Provide(int numSamples, AudioSample* __restrict buffer)
-	{
-		if (mpContext->HasAudioStream())
-			UpdateTiming(mpContext->GetAudioTime());
-
-		bool gotAudio = false;
-
-		if (mpContext->HasAudioStream())
-			mpContext->RequestAudio((int16_t*)buffer, numSamples, gotAudio);
-
-		if (gotAudio)
-			return numSamples;
-		else
-			return 0;
-	}
-
-	void UpdateTiming(double timeAudio)
-	{
-		m_timing[2] = m_timing[1];
-		m_timing[1] = m_timing[0];
-
-		m_timing[0].timeAudio = timeAudio;
-		m_timing[0].timeStream = audioOutput->PlaybackPosition_get();
-
-		m_timeCorrection = m_timing[2].timeAudio - m_timing[0].timeStream;
-
-	#if 0
-		logDebug("sync = %03.3f. phys = %03.3f. correction = %+03.3f",
-			(float)m_timing[0].timeAudio,
-			(float)m_timing[0].timeStream,
-			(float)m_timeCorrection);
-	#endif
-	}
-
-	double GetTime() const
-	{
-		return audioOutput->PlaybackPosition_get() + m_timeCorrection;
-	}
-};
-
-
 bool MediaPlayer::open(const char * filename)
 {
 	Assert(context == nullptr);
@@ -143,18 +76,9 @@ bool MediaPlayer::open(const char * filename)
 
 	if (result)
 	{
-		AudioOutput_OpenAL * audioOutputOpenAL = new AudioOutput_OpenAL();
-		audioOutput = audioOutputOpenAL;
-
-		const int sampleRate = context->mpContext.HasAudioStream() ? context->mpContext.GetAudioFrameRate() : 11000;
-
-		if (!audioOutputOpenAL->Initialize(2, sampleRate, 1 << 13))
+		if (!context->mpContext.FillBuffers())
 		{
 			result = false;
-		}
-		else
-		{
-			audioOutputOpenAL->Volume_set(0.f);
 		}
 	}
 
@@ -162,34 +86,14 @@ bool MediaPlayer::open(const char * filename)
 
 	if (result)
 	{
-		audioStream = new MyAudioStream();
-		audioStream->mpContext = &context->mpContext;
-		audioStream->audioOutput = audioOutput;
-	}
-
-	if (result)
-	{
-		if (!context->mpContext.FillBuffers())
-		{
-			result = false;
-		}
+		startMediaPlayerThread();
 	}
 
 	const int t4 = SDL_GetTicks();
 
-	if (result)
-	{
-		audioOutput->Play();
-
-		startMediaPlayerThread();
-	}
-
-	const int t5 = SDL_GetTicks();
-
 	logDebug("MP begin took %dms", t2 - t1);
-	logDebug("audio output init took %dms", t3 - t2);
-	logDebug("MP fill took %dms", t4 - t3);
-	logDebug("MP thread start took %dms", t5 - t4);
+	logDebug("MP fill took %dms", t3 - t2);
+	logDebug("MP thread start took %dms", t4 - t3);
 
 	if (!result)
 	{
@@ -228,24 +132,9 @@ void MediaPlayer::close()
 	
 	videoIsDirty = false;
 
-	if (audioStream)
-	{
-		delete audioStream;
-		audioStream = nullptr;
-	}
-
 	const int t2 = SDL_GetTicks();
 
-	if (audioOutput)
-	{
-		delete audioOutput;
-		audioOutput = nullptr;
-	}
-
-	const int t3 = SDL_GetTicks();
-
 	logDebug("MP texture delete took %dms", t2 - t1);
-	logDebug("MP audio output delete took %dms", t3 - t2);
 }
 
 void MediaPlayer::tick(Context * context, const float dt)
@@ -265,10 +154,7 @@ void MediaPlayer::tick(Context * context, const float dt)
 
 	context->mpContext.FillBuffers();
 
-	//logDebug("PlaybackPosition: %g", (float)audioOutput->PlaybackPosition_get());
-	audioOutput->Update(audioStream);
-
-	double time = presentTime >= 0.f ? presentTime : (audioStream->GetTime() * speed);
+	const double time = presentTime >= 0.0 ? presentTime : 0.0;
 
 	MP::VideoFrame * videoFrame = nullptr;
 	bool gotVideo = false;
