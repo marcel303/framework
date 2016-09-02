@@ -173,7 +173,7 @@ namespace MP
 
 		int skipCount = 0;
 
-		while (m_writeSize >= 1 && m_buffer[m_readPosition].m_time < time)
+		while (m_writeSize >= 2 && m_buffer[m_readPosition].m_time < time)
 		{
 			++m_readPosition;
 			--m_writeSize;
@@ -194,7 +194,7 @@ namespace MP
 
 	bool VideoBuffer::Depleted() const
 	{
-		return m_writeSize == 0;
+		return m_writeSize <= 1;
 	}
 
 	bool VideoBuffer::IsFull() const

@@ -384,8 +384,8 @@ struct Effect_Luminance : Effect
 
 struct Effect_ColorLut2D : Effect
 {
+	std::string m_lut;
 	TweenFloat m_alpha;
-	Sprite * m_lutSprite;
 	TweenFloat m_lutStart;
 	TweenFloat m_lutEnd;
 	TweenFloat m_numTaps;

@@ -66,7 +66,6 @@ struct MediaPlayer
 	int textureSx;
 	int textureSy;
 	double presentTime;
-	double seekTime;
 
 	// threading related
 	SDL_Thread * mpThread;

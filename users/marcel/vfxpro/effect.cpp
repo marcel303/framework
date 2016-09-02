@@ -1525,8 +1525,8 @@ void Effect_Luminance::draw()
 
 Effect_ColorLut2D::Effect_ColorLut2D(const char * name, const char * lut)
 	: Effect(name)
+	, m_lut(lut)
 	, m_alpha(1.f)
-	, m_lutSprite(nullptr)
 	, m_lutStart(0.f)
 	, m_lutEnd(1.f)
 	, m_numTaps(1.f)
@@ -1535,8 +1535,6 @@ Effect_ColorLut2D::Effect_ColorLut2D(const char * name, const char * lut)
 	addVar("lut_start", m_lutStart);
 	addVar("lut_end", m_lutEnd);
 	addVar("num_taps", m_numTaps);
-
-	m_lutSprite = new Sprite(lut);
 }
 
 void Effect_ColorLut2D::tick(const float dt)
@@ -1553,10 +1551,12 @@ void Effect_ColorLut2D::draw()
 	setBlend(BLEND_OPAQUE);
 	setColor(colorWhite);
 
+	const GLuint lutTexture = Sprite(m_lut.c_str()).getTexture();
+
 	Shader shader("colorlut2d");
 	setShader(shader);
 	shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
-	shader.setTexture("lut", 1, m_lutSprite->getTexture(), true, true);
+	shader.setTexture("lut", 1, lutTexture, true, true);
 	ShaderBuffer buffer;
 	ColorLut2DData data;
 	data.alpha = m_alpha;
