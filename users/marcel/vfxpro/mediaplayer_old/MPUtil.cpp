@@ -15,7 +15,7 @@ namespace MP
 
 				// Initialize libavcodec by registering all codecs.
 				av_register_all();
-			#if !defined(DEBUG)
+			#if !defined(DEBUG) || 1
 				av_log_set_level(AV_LOG_QUIET);
 			#endif
 			}

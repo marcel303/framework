@@ -1207,22 +1207,32 @@ int main(int argc, char * argv[])
 		g_scene = new Scene();
 
 	#if defined(DEBUG) || 1
-		//g_scene->load("healer/scene.xml");
-		//g_scene->load("scene.xml");
-		for (int i = 0; i < 1000000 * 0 + 0; ++i)
+		const char * filenames[] =
 		{
+			"tracks/ChangeItAll.scene.xml",
+			"tracks/ElevateLove.scene.xml",
+			"tracks/Healer.scene.xml",
+			"tracks/Heroes.scene.xml",
+			"tracks/intro.scene.xml",
+			"tracks/LetMeBe.scene.xml",
+			"tracks/OnTopOfYou.scene.xml",
+			"tracks/Oxygen.scene.xml",
+			"tracks/Sarayani.scene.xml",
+			"tracks/WhereAreYouNow.scene.xml"
+		};
+
+		for (int i = 0; i < 1000000 * 1 + 0; ++i)
+		{
+			framework.process();
+
 			const int c1 = GetAllocState().allocationCount;
-			g_scene->load("tracks/intro.scene.xml");
+			g_scene->load(filenames[rand() % (sizeof(filenames) / sizeof(filenames[0]))]);
+			//g_scene->load(filenames[i % (sizeof(filenames) / sizeof(filenames[0]))]);
 			delete g_scene;
 			g_scene = new Scene();
 			const int c2 = GetAllocState().allocationCount;
 		}
-		//g_scene->load("tracks/Healer.scene.xml");
-		//g_scene->load("tracks/Oxygen.scene.xml");
-		//g_scene->load("tracks/Heroes.scene.xml");
-		//g_scene->load("tracks/cesitest.scene.xml");
-		//g_scene->load("tracks/ElevateLove.scene.xml");
-		//g_scene->load("tracks/Sarayani.scene.xml");
+
 		g_scene->load("tracks/ChangeItAll.scene.xml");
 	#endif
 

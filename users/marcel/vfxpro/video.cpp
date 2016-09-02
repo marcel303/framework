@@ -2,6 +2,8 @@
 #include "video.h"
 
 static SDL_mutex * s_avcodecMutex = nullptr;
+static volatile int s_numVideoThreads = 0;
+static const int kMaxVideoThreads = 64;
 
 static int ExecMediaPlayerThread(void * param)
 {
@@ -46,6 +48,8 @@ static int ExecMediaPlayerThread(void * param)
 
 		logDebug("MP context end took %dms", t2 - t1);
 	}
+
+	s_numVideoThreads--;
 
 	return 0;
 }
@@ -205,6 +209,13 @@ void MediaPlayer::startMediaPlayerThread()
 
 	if (mpThread == nullptr)
 	{
+		while (s_numVideoThreads == kMaxVideoThreads)
+		{
+			SDL_Delay(0);
+		}
+
+		s_numVideoThreads++;
+
 		mpThread = SDL_CreateThread(ExecMediaPlayerThread, "MediaPlayerThread", this);
 		SDL_DetachThread(mpThread);
 	}
