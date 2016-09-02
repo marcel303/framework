@@ -133,7 +133,7 @@ bool MediaPlayer::open(const char * filename)
 	{
 		context = new Context();
 
-		if (!context->mpContext.Begin(filename))
+		if (!context->mpContext.Begin(filename, false, true))
 		{
 			result = false;
 		}

@@ -5,7 +5,7 @@ namespace MP
 {
 	AudioBuffer::AudioBuffer()
 	{
-		Clear();
+		Free();
 	}
 
 	size_t AudioBuffer::GetBufferSize()
@@ -15,7 +15,7 @@ namespace MP
 
 	void AudioBuffer::SetBufferSize(size_t size)
 	{
-		Clear();
+		Free();
 
 		m_samples.setSize(size);
 	}
@@ -113,6 +113,13 @@ namespace MP
 	}
 
 	void AudioBuffer::Clear()
+	{
+		m_writePosition = 0;
+		m_readPosition = 0;
+		m_sampleCount = 0;
+	}
+
+	void AudioBuffer::Free()
 	{
 		m_samples.setSize(0);
 

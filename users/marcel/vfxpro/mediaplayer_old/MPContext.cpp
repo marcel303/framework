@@ -8,15 +8,16 @@
 namespace MP
 {
 	Context::Context()
+		: m_begun(false)
+		, m_eof(false)
+		, m_time(0.0)
+		, m_formatContext(nullptr)
+		, m_audioContext(nullptr)
+		, m_videoContext(nullptr)
 	{
-		m_begun = false;
-
-		m_formatContext = 0;
-		m_audioContext = 0;
-		m_videoContext = 0;
 	}
 
-	bool Context::Begin(const std::string& filename)
+	bool Context::Begin(const std::string & filename, const bool enableAudioStream, const bool enableVideoStream)
 	{
 		Assert(m_begun == false);
 
@@ -25,6 +26,7 @@ namespace MP
 		m_begun = true;
 		m_filename = filename;
 		m_eof = false;
+		m_time = 0.0;
 
 		// Initialize libavcodec by registering all codecs.
 		av_register_all();
@@ -56,7 +58,7 @@ namespace MP
 		{
 			Debug::Print("No audio stream index found.");
 		}
-		else
+		else if (enableAudioStream)
 		{
 			// Initialize audio stream/context.
 			m_audioContext = new AudioContext;
@@ -67,15 +69,12 @@ namespace MP
 		{
 			Debug::Print("No video stream index found.");
 		}
-		else
+		else if (enableVideoStream)
 		{
 			// Initialize video stream/context.
 			m_videoContext = new VideoContext;
 			m_videoContext->Initialize(this, videoStreamIndex);
 		}
-
-		// Reset time.
-		m_time = 0.0;
 
 		return result;
 	}
@@ -95,7 +94,7 @@ namespace MP
 
 			m_audioContext->Destroy();
 			delete m_audioContext;
-			m_audioContext = 0;
+			m_audioContext = nullptr;
 		}
 
 		// Destroy video context.
@@ -105,7 +104,7 @@ namespace MP
 
 			m_videoContext->Destroy();
 			delete m_videoContext;
-			m_videoContext = 0;
+			m_videoContext = nullptr;
 		}
 
 		// Close file using AV codec.
@@ -114,7 +113,7 @@ namespace MP
 			Debug::Print("Closing input file.");
 
 			av_close_input_file(m_formatContext);
-			m_formatContext = 0;
+			m_formatContext = nullptr;
 		}
 
 		return result;
@@ -122,7 +121,7 @@ namespace MP
 
 	bool Context::HasAudioStream() const
 	{
-		if (m_audioContext != 0)
+		if (m_audioContext != nullptr)
 			return true;
 		else
 			return false;
@@ -130,7 +129,7 @@ namespace MP
 
 	bool Context::HasVideoStream() const
 	{
-		if (m_videoContext != 0)
+		if (m_videoContext != nullptr)
 			return true;
 		else
 			return false;
@@ -189,14 +188,14 @@ namespace MP
 			return 0.0;
 	}
 
-	bool Context::RequestAudio(int16_t* out_samples, size_t frameCount, bool& out_gotAudio)
+	bool Context::RequestAudio(int16_t * __restrict out_samples, const size_t frameCount, bool & out_gotAudio)
 	{
 		Assert(m_begun == true);
 		Assert(m_audioContext);
 
 		bool result = true;
 
-		if (m_audioContext == 0)
+		if (m_audioContext == nullptr)
 			result = false;
 		else if (m_audioContext->RequestAudio(out_samples, frameCount, out_gotAudio) != true)
 			result = false;
@@ -204,14 +203,16 @@ namespace MP
 		return result;
 	}
 
-	bool Context::RequestVideo(double time, VideoFrame** out_frame, bool& out_gotVideo)
+	bool Context::RequestVideo(const double time, VideoFrame ** out_frame, bool & out_gotVideo)
 	{
 		Assert(m_begun == true);
 		Assert(m_videoContext);
 
 		bool result = true;
 
-		if (m_videoContext->RequestVideo(time, out_frame, out_gotVideo) != true)
+		if (m_videoContext == nullptr)
+			result = false;
+		else if (m_videoContext->RequestVideo(time, out_frame, out_gotVideo) != true)
 			result = false;
 
 		return result;
@@ -225,11 +226,11 @@ namespace MP
 		
 		do
 		{
-			if (m_audioContext)
+			if (m_audioContext != nullptr)
 				if (m_audioContext->IsQueueFull())
 					full = true;
 
-			if (m_videoContext)
+			if (m_videoContext != nullptr)
 				if (m_videoContext->IsQueueFull())
 					full = true;
 
@@ -263,13 +264,14 @@ namespace MP
 
 		std::vector<size_t> streams;
 
-		if (m_audioContext)
+		if (m_audioContext != nullptr)
 		{
 			streams.push_back(m_audioContext->GetStreamIndex());
 			m_audioContext->m_packetQueue.Clear();
 			//m_audioContext->m_audioBuffer.Clear();
 		}
-		if (m_videoContext)
+
+		if (m_videoContext != nullptr)
 		{
 			streams.push_back(m_videoContext->GetStreamIndex());
 			m_videoContext->m_packetQueue.Clear();
@@ -286,7 +288,7 @@ namespace MP
 		return result;
 	}
 
-	bool Context::SeekToTime(double time)
+	bool Context::SeekToTime(const double time)
 	{
 		bool result = true;
 
@@ -300,17 +302,20 @@ namespace MP
 				streamIndex = m_audioContext->GetStreamIndex();
 		}
 
-		if (av_seek_frame(m_formatContext, streamIndex, time * AV_TIME_BASE, (0*AVSEEK_FLAG_BYTE) | (1*AVSEEK_FLAG_ANY)) < 0)
+		if (av_seek_frame(m_formatContext, streamIndex, time * AV_TIME_BASE, (1*AVSEEK_FLAG_ANY)) < 0)
 			result = false;
 
-		if (m_audioContext)
+		if (m_audioContext != nullptr)
 		{
 			m_audioContext->m_packetQueue.Clear();
+			//m_audioContext->m_audioBuffer.Clear();
 			avcodec_flush_buffers(m_audioContext->m_codecContext);
 		}
-		if (m_videoContext)
+
+		if (m_videoContext != nullptr)
 		{
 			m_videoContext->m_packetQueue.Clear();
+			//m_videoContext->m_videoBuffer.Clear();
 			m_videoContext->m_time = time;
 			avcodec_flush_buffers(m_videoContext->m_codecContext);
 		}
@@ -318,12 +323,12 @@ namespace MP
 		return result;
 	}
 
-	AVFormatContext* Context::GetFormatContext()
+	AVFormatContext * Context::GetFormatContext()
 	{
 		return m_formatContext;
 	}
 
-	bool Context::GetStreamIndices(size_t& out_audioStreamIndex, size_t& out_videoStreamIndex)
+	bool Context::GetStreamIndices(size_t & out_audioStreamIndex, size_t & out_videoStreamIndex)
 	{
 		out_audioStreamIndex = STREAM_NOT_FOUND;
 		out_videoStreamIndex = STREAM_NOT_FOUND;
@@ -390,13 +395,13 @@ namespace MP
 		return result;
 	}
 
-	bool Context::ProcessPacket(AVPacket& packet)
+	bool Context::ProcessPacket(AVPacket & packet)
 	{
 		bool result = true;
 
 		bool captured = false;
 
-		if (m_audioContext != 0)
+		if (m_audioContext != nullptr)
 		{
 			if (packet.stream_index == m_audioContext->GetStreamIndex())
 			{
@@ -405,7 +410,7 @@ namespace MP
 			}
 		}
 
-		if (m_videoContext != 0)
+		if (m_videoContext != nullptr)
 		{
 			if (packet.stream_index == m_videoContext->GetStreamIndex())
 			{
@@ -422,7 +427,7 @@ namespace MP
 		return result;
 	}
 
-	bool Context::ReadPacket(AVPacket& out_packet)
+	bool Context::ReadPacket(AVPacket & out_packet)
 	{
 		// Read packet.
 		out_packet.data = 0;

@@ -13,7 +13,7 @@ namespace MP
 	public:
 		Context();
 
-		bool Begin(const std::string& filename);
+		bool Begin(const std::string & filename, const bool enableAudioStream = true, const bool enableVideoStream = true);
 		bool End();
 
 		bool HasBegun() const { return m_begun; }
@@ -29,30 +29,30 @@ namespace MP
 		size_t GetAudioChannelCount() const;
 		double GetAudioTime() const;
 
-		bool RequestAudio(int16_t* out_samples, size_t frameCount, bool& out_gotAudio);
-		bool RequestVideo(double time, VideoFrame** out_frame, bool& out_gotVideo);
+		bool RequestAudio(int16_t * __restrict out_samples, const size_t frameCount, bool & out_gotAudio);
+		bool RequestVideo(const double time, VideoFrame ** out_frame, bool & out_gotVideo);
 
 		bool FillBuffers();
 		bool Depleted() const;
 
 		bool SeekToStart();
-		bool SeekToTime(double time);
+		bool SeekToTime(const double time);
 
-		AVFormatContext* GetFormatContext();
+		AVFormatContext * GetFormatContext();
 
 	private:
-		bool GetStreamIndices(size_t& out_audioStreamIndex, size_t& out_videoStreamIndex);
+		bool GetStreamIndices(size_t & out_audioStreamIndex, size_t & out_videoStreamIndex);
 		bool NextPacket();
-		bool ProcessPacket(AVPacket& packet);
-		bool ReadPacket(AVPacket& out_packet);
-
-		AVFormatContext* m_formatContext;
-		AudioContext* m_audioContext;
-		VideoContext* m_videoContext;
+		bool ProcessPacket(AVPacket & packet);
+		bool ReadPacket(AVPacket & out_packet);
 
 		bool m_begun;
 		std::string m_filename;
 		bool m_eof;
 		double m_time;
+
+		AVFormatContext * m_formatContext;
+		AudioContext * m_audioContext;
+		VideoContext * m_videoContext;
 	};
 };

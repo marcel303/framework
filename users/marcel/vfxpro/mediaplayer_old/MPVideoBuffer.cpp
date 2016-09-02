@@ -182,4 +182,10 @@ namespace MP
 	{
 		return (m_writePosition + 1) % m_buffer.getSize() == m_readPosition;
 	}
+
+	void VideoBuffer::Clear()
+	{
+		m_writePosition = 0;
+		m_readPosition = 0;
+	}
 };

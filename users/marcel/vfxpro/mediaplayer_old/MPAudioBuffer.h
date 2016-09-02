@@ -18,8 +18,10 @@ namespace MP
 
 		size_t GetSampleCount();
 
-	private:
 		void Clear();
+
+	private:
+		void Free();
 
 		Array<int16_t> m_samples;
 

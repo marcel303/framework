@@ -38,6 +38,7 @@ namespace MP
 		void AdvanceToTime(double time); ///< Move to next frame.
 		bool Depleted() const;
 		bool IsFull() const;
+		void Clear();
 
 	private:
 		Array<VideoFrame> m_buffer; ///< Queued video frames. TODO: Create video buffer class with reusable video frames.

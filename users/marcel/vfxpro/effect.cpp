@@ -1325,6 +1325,8 @@ void Effect_Picture::draw()
 
 //
 
+const bool kVideoPreload = true;
+
 Effect_Video::Effect_Video(const char * name, const char * filename, const char * shader, const bool centered, const bool play)
 	: Effect(name)
 	, m_alpha(1.f)
@@ -1345,7 +1347,7 @@ Effect_Video::Effect_Video(const char * name, const char * filename, const char 
 	m_shader = shader;
 	m_centered = centered;
 
-	if (true)
+	if (kVideoPreload)
 	{
 		if (!m_mediaPlayer.open(m_filename.c_str()))
 		{
@@ -1396,6 +1398,8 @@ void Effect_Video::draw()
 		return;
 	if (!m_mediaPlayer.isActive(m_mediaPlayer.context))
 		return;
+	if (!m_playing)
+		return;
 
 	if (m_mediaPlayer.getTexture())
 	{
@@ -1437,18 +1441,24 @@ void Effect_Video::handleSignal(const std::string & name)
 {
 	if (name == "start")
 	{
-		/*
-		if (m_mediaPlayer.isActive(m_mediaPlayer.context))
+		if (!kVideoPreload)
 		{
-			m_mediaPlayer.close();
+			if (m_mediaPlayer.isActive(m_mediaPlayer.context))
+			{
+				m_mediaPlayer.close();
+			}
+
+			if (!m_mediaPlayer.open(m_filename.c_str()))
+			{
+				logWarning("failed to open %s", m_filename.c_str());
+			}
+			else
+			{
+				m_mediaPlayer.presentTime = 0.f;
+			}
 		}
 
-		if (!m_mediaPlayer.open(m_filename.c_str()))
-		{
-			logWarning("failed to open %s", m_filename.c_str());
-		}
-		else
-		*/
+		if (m_mediaPlayer.isActive(m_mediaPlayer.context))
 		{
 			m_startTime = g_currentScene->m_time;
 			m_time = 0.f;
