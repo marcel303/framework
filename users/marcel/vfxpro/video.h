@@ -13,6 +13,7 @@ struct MediaPlayer
 			, mpBufferLock(nullptr)
 			, hasBegun(false)
 			, stopMpThread(false)
+			, seekTime(-1.0)
 		{
 		}
 
@@ -37,6 +38,10 @@ struct MediaPlayer
 			}
 		}
 
+		void tick();
+
+		bool presentedLastFrame() const;
+
 		struct OpenParams
 		{
 			std::string filename;
@@ -52,6 +57,7 @@ struct MediaPlayer
 		// hacky messaging between threads
 		volatile bool hasBegun;
 		volatile bool stopMpThread;
+		volatile double seekTime;
 	};
 
 	Context * context;
@@ -71,7 +77,6 @@ struct MediaPlayer
 		, textureSx(0)
 		, textureSy(0)
 		, presentTime(-1.0)
-		, seekTime(-1.0)
 		// threading related
 		, mpThread(0)
 	{
@@ -84,7 +89,6 @@ struct MediaPlayer
 
 	void openAsync(const char * filename);
 	void close();
-	void tickAsync(Context * context);
 	void tick(Context * context);
 
 	bool isActive(Context * context) const;

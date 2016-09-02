@@ -8,9 +8,7 @@ static const int kMaxVideoThreads = 64;
 
 static int ExecMediaPlayerThread(void * param)
 {
-	MediaPlayer * self = (MediaPlayer*)param;
-
-	MediaPlayer::Context * context = self->context;
+	MediaPlayer::Context * context = (MediaPlayer::Context*)param;
 
 	SDL_LockMutex(context->mpTickMutex);
 
@@ -26,7 +24,7 @@ static int ExecMediaPlayerThread(void * param)
 
 		if (context->hasBegun)
 		{
-			self->tickAsync(context);
+			context->tick();
 		}
 
 		SDL_CondWaitTimeout(context->mpTickEvent, context->mpTickMutex, delayMS);
@@ -54,6 +52,42 @@ static int ExecMediaPlayerThread(void * param)
 
 	return 0;
 }
+
+void MediaPlayer::Context::tick()
+{
+	if (seekTime >= 0.0)
+	{
+		SDL_LockMutex(mpBufferLock);
+		{
+			mpContext.SeekToTime(seekTime);
+		}
+		SDL_UnlockMutex(mpBufferLock);
+
+		// fixme : this isn't safe when the main thread is trying to change it meanwhile.. todo : use atomic exchange
+		seekTime = -1.0;
+	}
+
+	if (presentedLastFrame())
+		return;
+
+	mpContext.FillBuffers();
+
+	// todo : should be more fine grained. reduce the lock to insertion into the buffer only
+	SDL_LockMutex(mpBufferLock);
+	{
+		mpContext.FillVideoBuffer();
+	}
+	SDL_UnlockMutex(mpBufferLock);
+}
+
+bool MediaPlayer::Context::presentedLastFrame() const
+{
+	// todo : actually check if the frame was presented
+
+	return mpContext.HasBegun() && mpContext.Depleted();
+}
+
+//
 
 void MediaPlayer::openAsync(const char * filename)
 {
@@ -95,35 +129,6 @@ void MediaPlayer::close()
 	logDebug("MP texture delete took %dms", t2 - t1);
 }
 
-void MediaPlayer::tickAsync(Context * context)
-{
-	if (!isActive(context))
-		return;
-
-	if (seekTime >= 0.0)
-	{
-		SDL_LockMutex(context->mpBufferLock);
-		{
-			context->mpContext.SeekToTime(seekTime);
-		}
-		SDL_UnlockMutex(context->mpBufferLock);
-
-		seekTime = -1.0;
-	}
-
-	if (presentedLastFrame(context))
-		return;
-
-	context->mpContext.FillBuffers();
-
-	// todo : should be more fine grained. reduce the lock to insertion into the buffer only
-	SDL_LockMutex(context->mpBufferLock);
-	{
-		context->mpContext.FillVideoBuffer();
-	}
-	SDL_UnlockMutex(context->mpBufferLock);
-}
-
 void MediaPlayer::tick(Context * context)
 {
 	updateTexture();
@@ -136,16 +141,14 @@ bool MediaPlayer::isActive(Context * context) const
 
 bool MediaPlayer::presentedLastFrame(Context * context) const
 {
-	// todo : actually check if the frame was presented
-
-	return context && context->mpContext.HasBegun() && context->mpContext.Depleted();
+	return context && context->presentedLastFrame();
 }
 
 void MediaPlayer::seek(const double time)
 {
 	SDL_LockMutex(context->mpTickMutex);
 	{
-		seekTime = time;
+		context->seekTime = time;
 
 		SDL_CondSignal(context->mpTickEvent);
 	}
@@ -221,7 +224,7 @@ void MediaPlayer::startMediaPlayerThread()
 
 		s_numVideoThreads++;
 
-		mpThread = SDL_CreateThread(ExecMediaPlayerThread, "MediaPlayerThread", this);
+		mpThread = SDL_CreateThread(ExecMediaPlayerThread, "MediaPlayerThread", context);
 		SDL_DetachThread(mpThread);
 	}
 }
