@@ -1469,13 +1469,15 @@ void Effect_Video::handleSignal(const std::string & name)
 
 void Effect_Video::syncTime(const float time)
 {
-	if (m_mediaPlayer.isActive(m_mediaPlayer.context))
+	if (m_playing && m_mediaPlayer.isActive(m_mediaPlayer.context))
 	{
 		const float videoTime = (time - m_startTime) * timeMultiplier;
 
 		if (videoTime >= 0.f)
 		{
+			m_mediaPlayer.presentTime = -1.0;
 			m_mediaPlayer.seek(videoTime);
+			m_mediaPlayer.presentTime = videoTime;
 
 			m_time = videoTime;
 		}
