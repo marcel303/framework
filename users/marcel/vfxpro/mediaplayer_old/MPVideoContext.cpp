@@ -157,21 +157,17 @@ namespace MP
 		bool result = true;
 
 		out_gotVideo = false;
-		bool stop = false;
-
-		FillVideoBuffer();
 
 		// Check if the frame is in the buffer.
 		VideoFrame * oldFrame = m_videoBuffer.GetCurrentFrame();
 		m_videoBuffer.AdvanceToTime(time);
 		VideoFrame * newFrame = m_videoBuffer.GetCurrentFrame();
 
+		*out_frame = newFrame;
+
 		if (newFrame != oldFrame)
 		{
-			*out_frame = newFrame;
-			Debug::Print("Got buffered video.");
 			out_gotVideo = true;
-			return true;
 		}
 
 		return result;

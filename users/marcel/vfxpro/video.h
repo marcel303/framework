@@ -10,6 +10,7 @@ struct MediaPlayer
 		Context()
 			: mpTickEvent(nullptr)
 			, mpTickMutex(nullptr)
+			, mpBufferLock(nullptr)
 		{
 		}
 
@@ -26,49 +27,44 @@ struct MediaPlayer
 				SDL_DestroyMutex(mpTickMutex);
 				mpTickMutex = nullptr;
 			}
+
+			if (mpBufferLock)
+			{
+				SDL_DestroyMutex(mpBufferLock);
+				mpBufferLock = nullptr;
+			}
 		}
 
 		MP::Context mpContext;
 		SDL_cond * mpTickEvent;
 		SDL_mutex * mpTickMutex;
+		SDL_mutex * mpBufferLock;
 	};
 
 	Context * context;
 
-	int sx;
-	int sy;
 	uint32_t texture;
-	float speed;
-	float presentTime;
+	int textureSx;
+	int textureSy;
+	double presentTime;
+	double seekTime;
 
 	// threading related
-	SDL_mutex * textureMutex;
 	SDL_Thread * mpThread;
 	volatile bool stopMpThread;
 	volatile bool stopMpThreadDone;
-	uint8_t * videoData;
-	int videoSx;
-	int videoSy;
-	bool videoIsDirty;
-	float seekTime;
 
 	MediaPlayer()
 		: context(nullptr)
-		, sx(0)
-		, sy(0)
 		, texture(0)
-		, speed(1.f)
-		, presentTime(-1.f)
+		, textureSx(0)
+		, textureSy(0)
+		, presentTime(-1.0)
+		, seekTime(-1.0)
 		// threading related
-		, textureMutex(0)
 		, mpThread(0)
 		, stopMpThread(false)
 		, stopMpThreadDone(false)
-		, videoData(0)
-		, videoSx(0)
-		, videoSy(0)
-		, videoIsDirty(false)
-		, seekTime(-1.f)
 	{
 	}
 
@@ -79,14 +75,13 @@ struct MediaPlayer
 
 	bool open(const char * filename);
 	void close();
-	void tick(Context * context, const float dt);
-	void draw();
+	void tick(Context * context, const double dt);
 
 	bool isActive(Context * context) const;
 	bool presentedLastFrame(Context * context) const;
-	void seek(const float time);
+	void seek(const double time);
 
-	uint32_t getTexture();
+	uint32_t updateTexture();
 
 	void startMediaPlayerThread();
 	void stopMediaPlayerThread();

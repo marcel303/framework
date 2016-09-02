@@ -1331,7 +1331,6 @@ Effect_Video::Effect_Video(const char * name, const char * filename, const char 
 	: Effect(name)
 	, m_alpha(1.f)
 	, m_centered(true)
-	, m_speed(1.f)
 	, m_hideWhenDone(0.f)
 	, m_playing(false)
 	, m_time(0.f)
@@ -1340,7 +1339,6 @@ Effect_Video::Effect_Video(const char * name, const char * filename, const char 
 	is2D = true;
 
 	addVar("alpha", m_alpha);
-	addVar("speed", m_speed);
 	addVar("hide_when_done", m_hideWhenDone);
 
 	m_filename = filename;
@@ -1374,8 +1372,6 @@ void Effect_Video::tick(const float dt)
 
 	if (m_playing && m_mediaPlayer.isActive(m_mediaPlayer.context))
 	{
-		m_mediaPlayer.speed = m_speed;
-
 		m_mediaPlayer.presentTime = m_time;
 
 		if (m_hideWhenDone && m_mediaPlayer.presentedLastFrame(m_mediaPlayer.context))
@@ -1401,12 +1397,14 @@ void Effect_Video::draw()
 	if (!m_playing)
 		return;
 
-	if (m_mediaPlayer.getTexture())
+	const uint32_t texture = m_mediaPlayer.updateTexture();
+
+	if (texture != 0)
 	{
 		gxPushMatrix();
 		{
-			const int sx = m_mediaPlayer.sx;
-			const int sy = m_mediaPlayer.sy;
+			const int sx = m_mediaPlayer.textureSx;
+			const int sy = m_mediaPlayer.textureSy;
 			const float scaleX = SCREEN_SX / float(sx);
 			const float scaleY = SCREEN_SY / float(sy);
 			const float scale = Calc::Min(scaleX, scaleY);
@@ -1419,18 +1417,17 @@ void Effect_Video::draw()
 			{
 				Shader shader(m_shader.c_str());
 				setShader(shader);
-				shader.setTexture("colormap", 0, m_mediaPlayer.getTexture(), true, true);
-
-				{
-					setColorf(1.f, 1.f, 1.f, m_alpha);
-					drawRect(0, m_mediaPlayer.sy, m_mediaPlayer.sx, 0);
-				}
+				shader.setTexture("colormap", 0, texture, true, true);
+				setColorf(1.f, 1.f, 1.f, m_alpha);
+				drawRect(0, m_mediaPlayer.textureSy, m_mediaPlayer.textureSx, 0);
 				clearShader();
 			}
 			else
 			{
 				setColorf(1.f, 1.f, 1.f, m_alpha);
-				m_mediaPlayer.draw();
+				gxSetTexture(texture);
+				drawRect(0, m_mediaPlayer.textureSy, m_mediaPlayer.textureSx, 0);
+				gxSetTexture(0);
 			}
 		}
 		gxPopMatrix();

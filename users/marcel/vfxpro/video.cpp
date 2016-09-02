@@ -1,22 +1,6 @@
 #include "framework.h"
 #include "video.h"
 
-/*
-
-todo : ideal processing
-
-codec thread:
-	fill buffers
-	decode as many video frames as possible, store in video buffer
-	decode as much audio as possible (deplete packet queue), consume immediately
-	when video buffers are full, wait until a frame is consumed
-
-main thread
-	update media time
-	consume or reuse video buffer. create new texture on change
-
-*/
-
 static int ExecMediaPlayerThread(void * param)
 {
 	MediaPlayer * self = (MediaPlayer*)param;
@@ -29,7 +13,7 @@ static int ExecMediaPlayerThread(void * param)
 	{
 		const int delayMS = 10;
 
-		self->tick(context, delayMS / 1000.f);
+		self->tick(context, delayMS / 1000.0);
 
 		SDL_CondWaitTimeout(context->mpTickEvent, context->mpTickMutex, delayMS);
 	}
@@ -76,24 +60,13 @@ bool MediaPlayer::open(const char * filename)
 
 	if (result)
 	{
-		if (!context->mpContext.FillBuffers())
-		{
-			result = false;
-		}
+		startMediaPlayerThread();
 	}
 
 	const int t3 = SDL_GetTicks();
 
-	if (result)
-	{
-		startMediaPlayerThread();
-	}
-
-	const int t4 = SDL_GetTicks();
-
 	logDebug("MP begin took %dms", t2 - t1);
-	logDebug("MP fill took %dms", t3 - t2);
-	logDebug("MP thread start took %dms", t4 - t3);
+	logDebug("MP thread start took %dms", t3 - t2);
 
 	if (!result)
 	{
@@ -114,10 +87,9 @@ void MediaPlayer::close()
 		if (context)
 		{
 			delete context;
+			context = nullptr;
 		}
 	}
-
-	context = nullptr;
 
 	const int t1 = SDL_GetTicks();
 
@@ -127,26 +99,25 @@ void MediaPlayer::close()
 		texture = 0;
 	}
 
-	delete [] videoData;
-	videoData = nullptr;
-	
-	videoIsDirty = false;
-
 	const int t2 = SDL_GetTicks();
 
 	logDebug("MP texture delete took %dms", t2 - t1);
 }
 
-void MediaPlayer::tick(Context * context, const float dt)
+void MediaPlayer::tick(Context * context, const double dt)
 {
 	if (!isActive(context))
 		return;
 
-	if (seekTime >= 0.f)
+	if (seekTime >= 0.0)
 	{
-		context->mpContext.SeekToTime(seekTime);
+		SDL_LockMutex(context->mpBufferLock);
+		{
+			context->mpContext.SeekToTime(seekTime);
+		}
+		SDL_UnlockMutex(context->mpBufferLock);
 
-		seekTime = -1.f;
+		seekTime = -1.0;
 	}
 
 	if (presentedLastFrame(context))
@@ -154,42 +125,12 @@ void MediaPlayer::tick(Context * context, const float dt)
 
 	context->mpContext.FillBuffers();
 
-	const double time = presentTime >= 0.0 ? presentTime : 0.0;
-
-	MP::VideoFrame * videoFrame = nullptr;
-	bool gotVideo = false;
-	context->mpContext.RequestVideo(time, &videoFrame, gotVideo);
-	if (gotVideo)
+	// todo : should be more fine grained. reduce the lock to insertion into the buffer only
+	SDL_LockMutex(context->mpBufferLock);
 	{
-		SDL_LockMutex(textureMutex);
-		{
-			delete [] videoData;
-			videoData = nullptr;
-
-			videoData = new uint8_t[videoFrame->m_width * videoFrame->m_height * 3];
-			memcpy(videoData, videoFrame->m_frameBuffer, videoFrame->m_width * videoFrame->m_height * 3);
-			videoSx = videoFrame->m_width;
-			videoSy = videoFrame->m_height;
-			videoIsDirty = true;
-			
-			sx = videoFrame->m_width;
-			sy = videoFrame->m_height;
-		}
-		SDL_UnlockMutex(textureMutex);
-		//logDebug("gotVideo. t=%06dms", int(time * 1000.0));
+		context->mpContext.FillVideoBuffer();
 	}
-}
-
-void MediaPlayer::draw()
-{
-	const uint32_t texture = getTexture();
-
-	if (texture)
-	{
-		gxSetTexture(texture);
-		drawRect(0, sy, sx, 0);
-		gxSetTexture(0);
-	}
+	SDL_UnlockMutex(context->mpBufferLock);
 }
 
 bool MediaPlayer::isActive(Context * context) const
@@ -204,7 +145,7 @@ bool MediaPlayer::presentedLastFrame(Context * context) const
 	return context && context->mpContext.HasBegun() && context->mpContext.Depleted();
 }
 
-void MediaPlayer::seek(const float time)
+void MediaPlayer::seek(const double time)
 {
 	SDL_LockMutex(context->mpTickMutex);
 	{
@@ -215,20 +156,36 @@ void MediaPlayer::seek(const float time)
 	SDL_UnlockMutex(context->mpTickMutex);
 }
 
-uint32_t MediaPlayer::getTexture()
+uint32_t MediaPlayer::updateTexture()
 {
-	if (videoIsDirty)
+	Assert(context->mpContext.HasBegun());
+
+	SDL_LockMutex(context->mpBufferLock);
 	{
-		SDL_LockMutex(textureMutex);
+		const double time = presentTime >= 0.0 ? presentTime : 0.0;
+
+		MP::VideoFrame * videoFrame = nullptr;
+		bool gotVideo = false;
+		context->mpContext.RequestVideo(time, &videoFrame, gotVideo);
+
+		//if (gotVideo)
+		if (videoFrame)
 		{
-			videoIsDirty = false;
+			textureSx = videoFrame->m_width;
+			textureSy = videoFrame->m_height;
+
+			//logDebug("gotVideo. t=%06dms, sx=%d, sy=%d", int(time * 1000.0), textureSx, textureSy);
 
 			if (texture)
+			{
 				glDeleteTextures(1, &texture);
-			texture = createTextureFromRGB8(videoData, videoSx, videoSy, true, true);
+				texture = 0;
+			}
+
+			texture = createTextureFromRGB8(videoFrame->m_frameBuffer, videoFrame->m_width, videoFrame->m_height, true, true);
 		}
-		SDL_UnlockMutex(textureMutex);
 	}
+	SDL_UnlockMutex(context->mpBufferLock);
 
 	return texture;
 }
@@ -246,8 +203,6 @@ void MediaPlayer::startMediaPlayerThread()
 
 	if (mpThread == nullptr)
 	{
-		textureMutex = SDL_CreateMutex();
-
 		mpThread = SDL_CreateThread(ExecMediaPlayerThread, "MediaPlayerThread", this);
 		//SDL_DetachThread(mpThread);
 	}
@@ -282,10 +237,4 @@ void MediaPlayer::stopMediaPlayerThread()
 	const int t2 = SDL_GetTicks();
 
 	logDebug("MP thread shutdown took %dms", t2 - t1);
-
-	if (textureMutex != nullptr)
-	{
-		SDL_DestroyMutex(textureMutex);
-		textureMutex = nullptr;
-	}
 }

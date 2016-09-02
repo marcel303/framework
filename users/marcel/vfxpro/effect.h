@@ -346,7 +346,6 @@ struct Effect_Video : Effect
 	std::string m_filename;
 	std::string m_shader;
 	bool m_centered;
-	TweenFloat m_speed;
 	TweenFloat m_hideWhenDone;
 
 	MediaPlayer m_mediaPlayer;
