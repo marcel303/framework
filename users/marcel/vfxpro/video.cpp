@@ -29,9 +29,6 @@ static int ExecMediaPlayerThread(void * param)
 		SDL_CondWaitTimeout(context->mpTickEvent, context->mpTickMutex, delayMS);
 	}
 
-	SDL_MemoryBarrierRelease();
-	self->stopMpThreadDone = true;
-
 	if (context)
 	{
 		const int t1 = SDL_GetTicks();
@@ -222,7 +219,6 @@ void MediaPlayer::stopMediaPlayerThread()
 	if (mpThread != nullptr)
 	{
 		Assert(context->stopMpThread == false);
-		Assert(stopMpThreadDone == false);
 		
 		context->stopMpThread = true;
 		SDL_CondSignal(context->mpTickEvent);
@@ -230,16 +226,9 @@ void MediaPlayer::stopMediaPlayerThread()
 		context = nullptr;
 		mpThread = nullptr;
 
-		while (!stopMpThreadDone)
-		{
-			SDL_Delay(0);
-		}
-
 		// fixme : since we don't wait for the close operation to complete, we may run into trouble opening the same movie again
 		//         if very little time passes between close and open. todo : ensure close has completed before allowing open operation
 		//         or : fix avcodec so it can share opened files
-
-		stopMpThreadDone = false;
 	}
 
 	const int t2 = SDL_GetTicks();

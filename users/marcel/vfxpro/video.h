@@ -64,7 +64,6 @@ struct MediaPlayer
 
 	// threading related
 	SDL_Thread * mpThread;
-	volatile bool stopMpThreadDone;
 
 	MediaPlayer()
 		: context(nullptr)
@@ -75,7 +74,6 @@ struct MediaPlayer
 		, seekTime(-1.0)
 		// threading related
 		, mpThread(0)
-		, stopMpThreadDone(false)
 	{
 	}
 
