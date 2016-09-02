@@ -17,7 +17,7 @@ static int ExecMediaPlayerThread(void * param)
 	}
 	SDL_UnlockMutex(s_avcodecMutex);
 
-	while (!self->stopMpThread)
+	while (!context->stopMpThread)
 	{
 		const int delayMS = 10;
 
@@ -168,8 +168,7 @@ void MediaPlayer::updateTexture()
 		bool gotVideo = false;
 		context->mpContext.RequestVideo(time, &videoFrame, gotVideo);
 
-		//if (gotVideo)
-		if (videoFrame)
+		if (gotVideo)
 		{
 			textureSx = videoFrame->m_width;
 			textureSy = videoFrame->m_height;
@@ -210,7 +209,7 @@ void MediaPlayer::startMediaPlayerThread()
 	if (mpThread == nullptr)
 	{
 		mpThread = SDL_CreateThread(ExecMediaPlayerThread, "MediaPlayerThread", this);
-		//SDL_DetachThread(mpThread);
+		SDL_DetachThread(mpThread);
 	}
 }
 
@@ -222,21 +221,24 @@ void MediaPlayer::stopMediaPlayerThread()
 
 	if (mpThread != nullptr)
 	{
-		Assert(stopMpThread == false);
+		Assert(context->stopMpThread == false);
 		Assert(stopMpThreadDone == false);
 		
-		stopMpThread = true;
+		context->stopMpThread = true;
 		SDL_CondSignal(context->mpTickEvent);
+
+		context = nullptr;
+		mpThread = nullptr;
 
 		while (!stopMpThreadDone)
 		{
 			SDL_Delay(0);
 		}
 
-		SDL_WaitThread(mpThread, nullptr);
-		mpThread = nullptr;
+		// fixme : since we don't wait for the close operation to complete, we may run into trouble opening the same movie again
+		//         if very little time passes between close and open. todo : ensure close has completed before allowing open operation
+		//         or : fix avcodec so it can share opened files
 
-		stopMpThread = false;
 		stopMpThreadDone = false;
 	}
 

@@ -165,7 +165,7 @@ namespace MP
 
 		*out_frame = newFrame;
 
-		if (newFrame != oldFrame)
+		if (newFrame && newFrame != oldFrame)
 		{
 			out_gotVideo = true;
 		}

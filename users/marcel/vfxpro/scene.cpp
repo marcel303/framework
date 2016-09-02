@@ -28,6 +28,8 @@ Scene * g_currentScene = nullptr;
 SceneLayer * g_currentSceneLayer = nullptr;
 Surface * g_currentSurface = nullptr;
 
+SceneSurfacePool * g_sceneSurfacePool = nullptr;
+
 //
 
 SceneEffect::SceneEffect()
@@ -48,6 +50,8 @@ SceneEffect::~SceneEffect()
 
 bool SceneEffect::load(const XMLElement * xmlEffect)
 {
+	const auto t1_attributes = loadtimer();
+
 	static int nonameCount = 0;
 
 	m_name = stringAttrib(xmlEffect, "name", "");
@@ -60,6 +64,8 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 	}
 
 	const std::string type = stringAttrib(xmlEffect, "type", "");
+
+	const auto t2_type = loadtimer();
 
 	std::string typeName = type;
 
@@ -256,12 +262,14 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 	}
 	else if (type == "fireworks")
 	{
-		effect=  new Effect_Fireworks(m_name.c_str());
+		effect = new Effect_Fireworks(m_name.c_str());
 	}
 	else
 	{
 		logError("unknown effect type: %s", type.c_str());
 	}
+
+	const auto t3_typeAttributes = loadtimer();
 
 	if (effect != nullptr)
 	{
@@ -290,6 +298,12 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 
 		m_effect = effect;
 
+		const auto t4_end = loadtimer();
+
+		logLoadtime(t2_type           - t1_attributes,     "SceneEffect::load::attributes");
+		logLoadtime(t3_typeAttributes - t2_type,           "SceneEffect::load::type(%s)", typeName.c_str());
+		logLoadtime(t4_end            - t3_typeAttributes, "SceneEffect::load::typeAttributes(%s)", typeName.c_str());
+
 		return true;
 	}
 	else
@@ -316,11 +330,16 @@ SceneLayer::SceneLayer(Scene * scene)
 	addVar("visible", m_visible);
 	addVar("opacity", m_opacity);
 
-	m_surface = new Surface(GFX_SX, GFX_SY, true);
+	const auto t1 = loadtimer();
+	m_surface = g_sceneSurfacePool->alloc();
+	const auto t2 = loadtimer();
+	logLoadtime(t2 - t1, "SceneLayer::surface");
 }
 
 SceneLayer::~SceneLayer()
 {
+	const auto t1_effects = loadtimer();
+
 	for (auto i = m_effects.begin(); i != m_effects.end(); ++i)
 	{
 		SceneEffect * effect = *i;
@@ -331,12 +350,21 @@ SceneLayer::~SceneLayer()
 
 	m_effects.clear();
 
-	delete m_surface;
+	const auto t2_surface = loadtimer();
+
+	g_sceneSurfacePool->free(m_surface);
 	m_surface = nullptr;
+
+	const auto t3_end = loadtimer();
+
+	logLoadtime(t2_surface - t1_effects, "~SceneLayer::effects");
+	logLoadtime(t3_end     - t2_surface, "~SceneLayer::surface");
 }
 
 bool SceneLayer::load(const XMLElement * xmlLayer)
 {
+	const auto t1_attributes = loadtimer();
+
 	bool enabled = boolAttrib(xmlLayer, "enabled", true);
 
 	m_name = stringAttrib(xmlLayer, "name", "");
@@ -355,9 +383,13 @@ bool SceneLayer::load(const XMLElement * xmlLayer)
 	if (!clearColor.empty())
 		m_clearColor = Color::fromHex(clearColor.c_str());
 
+	const auto t2_surfaceClear = loadtimer();
+
 	m_surface->clearf(m_clearColor.r, m_clearColor.g, m_clearColor.b, m_clearColor.a);
 
 	//
+
+	const auto t3_effects = loadtimer();
 
 	for (const XMLElement * xmlEffect = xmlLayer->FirstChildElement("effect"); xmlEffect; xmlEffect = xmlEffect->NextSiblingElement("effect"))
 	{
@@ -378,6 +410,12 @@ bool SceneLayer::load(const XMLElement * xmlLayer)
 			m_effects.push_back(effect);
 		}
 	}
+
+	const auto t4_end = loadtimer();
+
+	logLoadtime(t2_surfaceClear - t1_attributes, "SceneLayer::load::attributes");
+	logLoadtime(t3_effects - t2_surfaceClear, "SceneLayer::load::surfaceClear");
+	logLoadtime(t4_end - t3_effects, "SceneLayer::load::effects");
 
 	return enabled;
 }
@@ -1267,6 +1305,8 @@ bool Scene::load(const char * filename)
 
 	tinyxml2::XMLDocument xmlDoc;
 
+	const auto t1_loadDocument = loadtimer();
+
 	if (xmlDoc.LoadFile(filename) != XML_NO_ERROR)
 	{
 		logError("failed to load scene: %s", filename);
@@ -1288,6 +1328,8 @@ bool Scene::load(const char * filename)
 			m_fftFade = floatAttrib(xmlScene, "fft_fade", .5f);
 
 			//
+
+			const auto t2_layers = loadtimer();
 
 			const XMLElement * xmlLayers = xmlScene->FirstChildElement("layers");
 
@@ -1314,6 +1356,8 @@ bool Scene::load(const char * filename)
 
 			//
 
+			const auto t3_events = loadtimer();
+
 			const XMLElement * xmlEvents = xmlScene->FirstChildElement("events");
 
 			if (xmlEvents == 0)
@@ -1333,6 +1377,8 @@ bool Scene::load(const char * filename)
 			}
 
 			//
+
+			const auto t4_fft = loadtimer();
 
 			const XMLElement * xmlFft = xmlScene->FirstChildElement("fft");
 
@@ -1383,6 +1429,8 @@ bool Scene::load(const char * filename)
 			}
 
 			//
+
+			const auto t5_modifiers = loadtimer();
 
 			const XMLElement * xmlModifiers = xmlScene->FirstChildElement("modifiers");
 
@@ -1474,6 +1522,8 @@ bool Scene::load(const char * filename)
 
 			//
 
+			const auto t6_midi = loadtimer();
+
 			const XMLElement * xmlMidi = xmlScene->FirstChildElement("midi");
 
 			if (xmlMidi == 0)
@@ -1515,6 +1565,15 @@ bool Scene::load(const char * filename)
 					m_midiMaps.push_back(map);
 				}
 			}
+
+			const auto t7_end = loadtimer();
+
+			logLoadtime(t2_layers    - t1_loadDocument, "Scene::load::document");
+			logLoadtime(t3_events    - t2_layers,       "Scene::load::layers");
+			logLoadtime(t4_fft       - t3_events,       "Scene::load::events");
+			logLoadtime(t5_modifiers - t4_fft,          "Scene::load::fft");
+			logLoadtime(t6_midi      - t5_modifiers,    "Scene::load::midi");
+			logLoadtime(t7_end       - t6_midi,         "Scene::load::modifiers");
 		}
 	}
 
@@ -1628,3 +1687,57 @@ float Scene::applyModifier(TweenFloat * tweenFloat, float value)
 
 	return value;
 }
+
+//
+
+SceneSurfacePool::SceneSurfacePool(const int capacity)
+{
+	for (int i = 0; i < capacity; ++i)
+		m_surfaces.push_back(new Surface(GFX_SX, GFX_SY, true));
+}
+
+Surface * SceneSurfacePool::alloc()
+{
+	Surface * result = nullptr;
+
+	if (m_surfaces.empty())
+	{
+		logWarning("surface pool depleted. allocating new surface!");
+
+		result = new Surface(GFX_SX, GFX_SY, true);
+	}
+	else
+	{
+		result = m_surfaces.back();
+
+		m_surfaces.pop_back();
+	}
+
+	return result;
+}
+
+void SceneSurfacePool::free(Surface * surface)
+{
+	m_surfaces.push_back(surface);
+}
+
+//
+
+#if ENABLE_LOADTIME_PROFILING
+#include "Timer.h"
+#include <stdarg.h>
+void logLoadtime(const uint64_t time, const char * format, ...)
+{
+	char text[1024];
+	va_list args;
+	va_start(args, format);
+	vsprintf_s(text, sizeof(text), format, args);
+	va_end(args);
+
+	printf("loadtime: %03.2fms :: %s\n", time / 1000.f, text);
+}
+uint64_t loadtimer()
+{
+	return g_TimerRT.TimeUS_get();
+}
+#endif

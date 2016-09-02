@@ -30,7 +30,7 @@
 
 #include "BezierPath.h" // fixme
 
-#if !defined(DEBUG)
+#if !defined(DEBUG) && !ENABLE_LOADTIME_PROFILING
 	#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 #endif
 
@@ -70,13 +70,22 @@ GLuint g_fftTextureWithFade = 0;
 
 void nextScene(const char * filename)
 {
+	logLoadtime(0, "----------------------------------------");
+
+	const uint64_t t1_delete = loadtimer();
+
 	delete g_prevScene;
 	g_prevScene = nullptr;
 
 	g_prevScene = g_scene;
 	g_scene = nullptr;
 
+	const uint64_t t2_new = loadtimer();
+
 	g_scene = new Scene();
+
+	const uint64_t t3_load = loadtimer();
+
 	if (!g_scene->load(filename))
 	{
 		delete g_scene;
@@ -84,6 +93,12 @@ void nextScene(const char * filename)
 
 		g_scene = new Scene();
 	}
+
+	const uint64_t t4_end = loadtimer();
+
+	logLoadtime(t2_new  - t1_delete, "Scene::delete");
+	logLoadtime(t3_load - t2_new,    "Scene::new");
+	logLoadtime(t4_end  - t3_load,   "Scene::load");
 
 	const float kTransitionTime = 4.f;
 	g_prevSceneTime = kTransitionTime;
@@ -1161,6 +1176,8 @@ int main(int argc, char * argv[])
 			SDL_ShowCursor(0);
 	#endif
 
+		g_sceneSurfacePool = new SceneSurfacePool(16);
+
 		Assert(g_pcmTexture == 0);
 		glGenTextures(1, &g_pcmTexture);
 
@@ -1681,11 +1698,19 @@ int main(int argc, char * argv[])
 
 				// process effects
 
-				g_prevScene->tick(dt);
+				if (g_prevScene != nullptr)
+				{
+					g_prevScene->tick(dt);
 
-				g_prevSceneTime -= dt;
-				if (g_prevSceneTime < 0.f)
-					g_prevSceneTime = 0.f;
+					g_prevSceneTime -= dt;
+					if (g_prevSceneTime < 0.f)
+					{
+						g_prevSceneTime = 0.f;
+						
+						delete g_prevScene;
+						g_prevScene = nullptr;
+					}
+				}
 
 				g_scene->tick(dt);
 			}
@@ -1766,7 +1791,8 @@ int main(int argc, char * argv[])
 			//
 
 			DrawableList prevDrawableList;
-			g_prevScene->draw(prevDrawableList);
+			if (g_prevScene != nullptr)
+				g_prevScene->draw(prevDrawableList);
 			prevDrawableList.sort();
 
 			DrawableList drawableList;
@@ -2480,6 +2506,9 @@ int main(int argc, char * argv[])
 
 		delete g_prevScene;
 		g_prevScene = nullptr;
+
+		delete g_sceneSurfacePool;
+		g_sceneSurfacePool = nullptr;
 
 		glDeleteTextures(1, &g_fftTextureWithFade);
 		g_fftTextureWithFade = 0;

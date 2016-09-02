@@ -17,6 +17,7 @@ struct SceneEffect;
 struct SceneAction;
 struct SceneEvent;
 struct SceneLayer;
+class SceneSurfacePool;
 struct Scene;
 
 class Surface;
@@ -26,6 +27,7 @@ class Surface;
 extern Scene * g_currentScene;
 extern SceneLayer * g_currentSceneLayer;
 extern Surface * g_currentSurface;
+extern SceneSurfacePool * g_sceneSurfacePool;
 
 //
 
@@ -377,3 +379,26 @@ struct Scene : public TweenFloatCollection, public TweenFloatModifier
 
 	virtual float applyModifier(TweenFloat * tweenFloat, float value) override;
 };
+
+//
+
+class SceneSurfacePool
+{
+	std::list<Surface*> m_surfaces;
+
+public:
+	SceneSurfacePool(const int capacity);
+
+	Surface * alloc();
+	void free(Surface * surface);
+};
+
+//
+
+#if ENABLE_LOADTIME_PROFILING
+extern void logLoadtime(const uint64_t time, const char * format, ...);
+extern uint64_t loadtimer();
+#else
+static void logLoadtime(const uint64_t time, const char * format, ...) { }
+static uint64_t loadtimer() { return 0; }
+#endif

@@ -12,6 +12,7 @@ struct MediaPlayer
 			, mpTickMutex(nullptr)
 			, mpBufferLock(nullptr)
 			, hasBegun(false)
+			, stopMpThread(false)
 		{
 		}
 
@@ -47,7 +48,10 @@ struct MediaPlayer
 		SDL_cond * mpTickEvent;
 		SDL_mutex * mpTickMutex;
 		SDL_mutex * mpBufferLock;
-		bool hasBegun;
+
+		// hacky messaging between threads
+		volatile bool hasBegun;
+		volatile bool stopMpThread;
 	};
 
 	Context * context;
@@ -60,7 +64,6 @@ struct MediaPlayer
 
 	// threading related
 	SDL_Thread * mpThread;
-	volatile bool stopMpThread;
 	volatile bool stopMpThreadDone;
 
 	MediaPlayer()
@@ -72,7 +75,6 @@ struct MediaPlayer
 		, seekTime(-1.0)
 		// threading related
 		, mpThread(0)
-		, stopMpThread(false)
 		, stopMpThreadDone(false)
 	{
 	}
