@@ -731,7 +731,7 @@ namespace spriter
 	int Entity::getAnimLength(int index) const
 	{
 		Assert(index >= 0 && index < (int)m_animations.size());
-		if (index < 0 || index >= m_animations.size())
+		if (index < 0 || index >= (int)m_animations.size())
 			return 0;
 		return m_animations[index]->length;
 	}
@@ -739,7 +739,7 @@ namespace spriter
 	bool Entity::isAnimLooped(int index) const
 	{
 		Assert(index >= 0 && index < (int)m_animations.size());
-		if (index < 0 || index >= m_animations.size())
+		if (index < 0 || index >= (int)m_animations.size())
 			return false;
 		return m_animations[index]->loopType != kLoopType_NoLooping;
 	}
@@ -755,7 +755,7 @@ namespace spriter
 		fassert(animIndex >= 0 && animIndex < (int)m_animations.size());
 		fassert(characterMap >= 0 && characterMap < (int)m_scene->m_fileCaches.size());
 
-		if (animIndex < 0 || animIndex >= m_animations.size())
+		if (animIndex < 0 || animIndex >= (int)m_animations.size())
 		{
 			numDrawables = 0;
 			return;
