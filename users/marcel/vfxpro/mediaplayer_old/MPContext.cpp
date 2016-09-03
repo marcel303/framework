@@ -325,14 +325,14 @@ namespace MP
 		if (m_audioContext != nullptr)
 		{
 			m_audioContext->m_packetQueue.Clear();
-			//m_audioContext->m_audioBuffer.Clear();
+			m_audioContext->m_audioBuffer.Clear();
 			avcodec_flush_buffers(m_audioContext->m_codecContext);
 		}
 
 		if (m_videoContext != nullptr)
 		{
 			m_videoContext->m_packetQueue.Clear();
-			//m_videoContext->m_videoBuffer.Clear();
+			m_videoContext->m_videoBuffer.Clear();
 			m_videoContext->m_time = time;
 			avcodec_flush_buffers(m_videoContext->m_codecContext);
 		}

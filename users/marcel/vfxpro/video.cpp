@@ -214,6 +214,8 @@ void MediaPlayer::startMediaPlayerThread()
 		context->mpTickEvent = SDL_CreateCond();
 	if (context->mpTickMutex == nullptr)
 		context->mpTickMutex = SDL_CreateMutex();
+	if (context->mpBufferLock == nullptr)
+		context->mpBufferLock = SDL_CreateMutex();
 
 	if (mpThread == nullptr)
 	{

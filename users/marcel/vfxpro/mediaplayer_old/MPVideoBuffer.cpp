@@ -24,7 +24,7 @@ namespace MP
 		Assert(m_initialized == false);
 	}
 
-	void VideoFrame::Initialize(size_t width, size_t height)
+	void VideoFrame::Initialize(const size_t width, const size_t height)
 	{
 		Assert(m_initialized == false);
 
@@ -80,10 +80,9 @@ namespace MP
 
 	// VideBuffer
 	VideoBuffer::VideoBuffer()
-		: m_buffer()
-		, m_writePosition(0)
-		, m_writeSize(0)
-		, m_readPosition(0)
+		: m_freeList()
+		, m_consumeList()
+		, m_currentFrame(nullptr)
 		, m_initialized(false)
 	{
 	}
@@ -93,7 +92,7 @@ namespace MP
 		Assert(m_initialized == false);
 	}
 
-	bool VideoBuffer::Initialize(size_t width, size_t height)
+	bool VideoBuffer::Initialize(const size_t width, const size_t height)
 	{
 		Assert(m_initialized == false);
 
@@ -101,14 +100,16 @@ namespace MP
 
 		m_initialized = true;
 
-		m_buffer.setSize(BUFFER_SIZE);
+		for (int i = 0; i < BUFFER_SIZE; ++i)
+		{
+			VideoFrame * frame = new VideoFrame();
 
-		for (int i = 0; i < m_buffer.getSize(); ++i)
-			m_buffer[i].Initialize(width, height);
+			frame->Initialize(width, height);
 
-		m_writePosition = 0;
-		m_writeSize = 0;
-		m_readPosition = 0;
+			m_freeList.push_back(frame);
+		}
+
+		m_currentFrame = nullptr;
 
 		return result;
 	}
@@ -121,65 +122,64 @@ namespace MP
 
 		m_initialized = false;
 
-		for (int i = 0; i < m_buffer.getSize(); ++i)
-			m_buffer[i].Destroy();
+		Clear();
 
-		m_buffer.setSize(0);
+		for (auto frame : m_freeList)
+		{
+			frame->Destroy();
 
-		m_writePosition = 0;
-		m_writeSize = 0;
-		m_readPosition = 0;
+			delete frame;
+			frame = nullptr;
+		}
+
+		m_freeList.clear();
 
 		return result;
 	}
 
 	VideoFrame * VideoBuffer::AllocateFrame()
 	{
-		Assert(m_buffer.getSize() > 0);
+		Assert(!IsFull());
 
-		if (m_writeSize == m_buffer.getSize())
+		if (IsFull())
 		{
-			Debug::Print("Warning: Write position equals read position.");
-			Assert(0);
+			return nullptr;
 		}
 
-		const int position = m_writePosition;
+		VideoFrame * frame = m_freeList.front();
+		m_freeList.pop_front();
 
-		++m_writePosition;
-		++m_writeSize;
+		Assert(frame != m_currentFrame);
 
-		if (m_writePosition >= (size_t)m_buffer.getSize())
-			m_writePosition = 0;
+		m_consumeList.push_back(frame);
 
-		return &m_buffer[position];
+		//memset(frame->m_frameBuffer, 0xcc, frame->m_width * frame->m_height * 3);
+
+		return frame;
 	}
 
 	VideoFrame * VideoBuffer::GetCurrentFrame()
 	{
-		Assert(m_buffer.getSize() > 0);
-
-		if (m_writeSize == 0)
-			return nullptr;
-		else
-			return &m_buffer[m_readPosition];
+		return m_currentFrame;
 	}
 
 	void VideoBuffer::AdvanceToTime(double time)
 	{
-		Assert(m_buffer.getSize() > 0);
-
 		// Skip as many frame necessary to reach the specified time.
 		// Stop moving forward until the current write position (last written frame) is reached.
 
 		int skipCount = 0;
 
-		while (m_writeSize >= 2 && m_buffer[m_readPosition].m_time < time)
+		while (!m_consumeList.empty() && m_consumeList.front()->m_time < time)
 		{
-			++m_readPosition;
-			--m_writeSize;
+			if (m_currentFrame != nullptr)
+			{
+				m_freeList.push_back(m_currentFrame);
+				m_currentFrame = nullptr;
+			}
 
-			if (m_readPosition >= (size_t)m_buffer.getSize())
-				m_readPosition = 0;
+			m_currentFrame = m_consumeList.front();
+			m_consumeList.pop_front();
 
 			++skipCount;
 
@@ -194,18 +194,26 @@ namespace MP
 
 	bool VideoBuffer::Depleted() const
 	{
-		return m_writeSize <= 1;
+		return m_consumeList.empty();
 	}
 
 	bool VideoBuffer::IsFull() const
 	{
-		return m_writeSize == (size_t)m_buffer.getSize();
+		return m_freeList.empty();
 	}
 
 	void VideoBuffer::Clear()
 	{
-		m_writePosition = 0;
-		m_writeSize = 0;
-		m_readPosition = 0;
+		if (m_currentFrame != nullptr)
+		{
+			m_freeList.push_back(m_currentFrame);
+			m_currentFrame = nullptr;
+		}
+
+		for (auto frame : m_consumeList)
+			m_freeList.push_back(frame);
+		m_consumeList.clear();
+
+		m_currentFrame = nullptr;
 	}
 };

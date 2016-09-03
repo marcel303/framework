@@ -2,6 +2,7 @@
 
 #include "types.h"
 #include <ffmpeg_old/avcodec.h>
+#include <list>
 
 namespace MP
 {
@@ -12,14 +13,14 @@ namespace MP
 		VideoFrame();
 		~VideoFrame();
 
-		void Initialize(size_t width, size_t height);
+		void Initialize(const size_t width, const size_t height);
 		void Destroy();
 
 		size_t m_width;
 		size_t m_height;
 
-		AVFrame* m_frame;
-		uint8_t* m_frameBuffer;
+		AVFrame * m_frame;
+		uint8_t * m_frameBuffer;
 		double m_time; // Time at which the frame should be presented.
 
 		bool m_initialized;
@@ -31,22 +32,21 @@ namespace MP
 		VideoBuffer();
 		~VideoBuffer();
 
-		bool Initialize(size_t width, size_t height);
+		bool Initialize(const size_t width, const size_t height);
 		bool Destroy();
 
-		VideoFrame* AllocateFrame(); ///< Allocate new frame.
-		VideoFrame* GetCurrentFrame(); ///< Get current frame.
+		VideoFrame * AllocateFrame(); ///< Allocate new frame.
+		VideoFrame * GetCurrentFrame(); ///< Get current frame.
 		void AdvanceToTime(double time); ///< Move to next frame.
 		bool Depleted() const;
 		bool IsFull() const;
 		void Clear();
 
 	private:
-		Array<VideoFrame> m_buffer; ///< Queued video frames. TODO: Create video buffer class with reusable video frames.
+		std::list<VideoFrame*> m_freeList;
+		std::list<VideoFrame*> m_consumeList;
 
-		size_t m_writePosition;
-		size_t m_writeSize;
-		size_t m_readPosition;
+		VideoFrame * m_currentFrame;
 
 	public: // FIXME: Write accessor.
 		bool m_initialized;
