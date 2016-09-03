@@ -49,7 +49,7 @@ const int SCREEN_SY = 768;
 
 const int GFX_SX = (SCREEN_SX * NUM_SCREENS);
 const int GFX_SY = (SCREEN_SY * 1);
-const int GFX_SCALE = 2;
+const int GFX_SCALE = ENABLE_UPSCALING ? 2 : 1;
 const int GFX_SX_SCALED = GFX_SX * GFX_SCALE;
 const int GFX_SY_SCALED = GFX_SY * GFX_SCALE;
 
@@ -907,17 +907,6 @@ public:
 
 #if 1
 
-static void doFxaa(Surface & surface)
-{
-	gpuTimingBlock(fxaa);
-	setBlend(BLEND_OPAQUE);
-	Shader shader("fxaa");
-	setShader(shader);
-	shader.setTexture("colormap", 0, surface.getTexture(), true, true);
-	shader.setImmediate("inverseVP", 1.f / (surface.getWidth() / framework.minification), 1.f / (surface.getHeight() / framework.minification));
-	surface.postprocess(shader);
-}
-
 // todo : simulate control points based on gravity, gravity well, sin/cos, ..
 
 struct BezierTest
@@ -1221,13 +1210,58 @@ int main(int argc, char * argv[])
 			"tracks/WhereAreYouNow.scene.xml"
 		};
 
-		for (int i = 0; i < 1000000 * 1 + 0; ++i)
+		for (int i = 0; i < 1000000 * 0 + 0; ++i)
 		{
-			framework.process();
+			//framework.process();
 
 			const int c1 = GetAllocState().allocationCount;
 			g_scene->load(filenames[rand() % (sizeof(filenames) / sizeof(filenames[0]))]);
 			//g_scene->load(filenames[i % (sizeof(filenames) / sizeof(filenames[0]))]);
+
+			for (int i = 0; i < 32; ++i)
+				g_scene->triggerEventByOscId(i);
+
+		#if 1
+			const double step = 1.0 / 60.0;
+			double time = 0.0;
+			double drawTime = 0.0;
+
+			while (time < 180.0)
+			{
+				g_scene->tick(step);
+
+				time += step;
+
+				if (drawTime > 10.0)
+				{
+					drawTime = 0.0;
+
+					DrawableList drawableList;
+
+					g_scene->draw(drawableList);
+
+					drawableList.sort();
+
+					framework.process();
+
+					framework.beginDraw(0, 0, 0, 0);
+					{
+						gxPushMatrix();
+						{
+							gxScalef(GFX_SCALE, GFX_SCALE, 1.f);
+
+							setBlend(BLEND_ADD);
+							drawableList.draw();
+						}
+						gxPopMatrix();
+					}
+					framework.endDraw();
+				}
+
+				drawTime += step;
+			}
+		#endif
+
 			delete g_scene;
 			g_scene = new Scene();
 			const int c2 = GetAllocState().allocationCount;
@@ -1953,14 +1987,6 @@ int main(int argc, char * argv[])
 					}
 
 				#if DEMODATA
-					static volatile bool doBoxblur = false;
-					static volatile bool doLuminance = false;
-					static volatile bool doFlowmap = false;
-					static volatile bool doDistortionBars = false;
-				#endif
-					static volatile bool doFxaa = false;
-
-				#if DEMODATA
 					if (postProcess)
 					{
 						setBlend(BLEND_OPAQUE);
@@ -1971,61 +1997,7 @@ int main(int argc, char * argv[])
 						shader.setImmediate("jitterTime", time);
 						surface.postprocess(shader);
 					}
-
-					if (doBoxblur)
-					{
-						setBlend(BLEND_OPAQUE);
-						Shader & shader = boxblurShader;
-						setShader(shader);
-						shader.setTexture("colormap", 0, surface.getTexture(), true, false);
-						ShaderBuffer buffer;
-						BoxblurData data;
-						const float radius = 2.f;
-						data.radiusX = radius * (1.f / GFX_SX);
-						data.radiusY = radius * (1.f / GFX_SY);
-						buffer.setData(&data, sizeof(data));
-						shader.setBuffer("BoxblurBlock", buffer);
-						surface.postprocess(shader);
-					}
-
-					if (doDistortionBars)
-					{
-						setBlend(BLEND_OPAQUE);
-						Shader & shader = distortionBarsShader;
-						setShader(shader);
-						shader.setTexture("colormap", 0, surface.getTexture(), true, false);
-						ShaderBuffer buffer;
-						DistortionBarsData data;
-						Mat4x4 matR;
-						Mat4x4 matT;
-						matR.MakeRotationZ(framework.time * .1f);
-						//matT.MakeTranslation(GFX_SX/2.f, GFX_SY/2.f, 0.f);
-						matT.MakeTranslation(mouse.x, GFX_SY - mouse.y, 0.f);
-						Mat4x4 mat = matT * matR;
-						data.px = mat(0, 0);
-						data.py = mat(0, 1);
-						data.pd = mat(3, 0) * data.px + mat(3, 1) * data.py;
-						data.pScale = .1f;
-						data.qx = mat(1, 0);
-						data.qy = mat(1, 1);
-						data.qd = mat(3, 0) * data.qx + mat(3, 1) * data.qy;
-						data.qScale = 1.f / 200.f;
-						buffer.setData(&data, sizeof(data));
-						shader.setBuffer("DistotionBarsBlock", buffer); // fixme : block name
-						surface.postprocess(shader);
-					}
 				#endif
-
-					if (doFxaa)
-					{
-						gpuTimingBlock(fxaa);
-						setBlend(BLEND_OPAQUE);
-						Shader & shader = fxaaShader;
-						setShader(shader);
-						shader.setTexture("colormap", 0, surface.getTexture(), true, true);
-						shader.setImmediate("inverseVP", 1.f / (surface.getWidth() / framework.minification), 1.f / (surface.getHeight() / framework.minification));
-						surface.postprocess(shader);
-					}
 				}
 				popSurface();
 
@@ -2049,6 +2021,7 @@ int main(int argc, char * argv[])
 				}
 				gxSetTexture(0);
 
+				if (g_prevScene)
 				{
 					gpuTimingBlock(blitToBackBuffer);
 					
