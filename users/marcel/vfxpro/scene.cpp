@@ -7,6 +7,7 @@
 #include "tinyxml2.h"
 #include "types.h"
 #include "xml.h"
+#include <stdarg.h>
 
 using namespace tinyxml2;
 
@@ -1270,7 +1271,7 @@ void Scene::triggerEventByOscId(int oscId)
 		{
 			event->execute(*this);
 
-			addDebugText(event->m_name.c_str());
+			addDebugText("%s [id=%02d, time=%06.2f]", event->m_name.c_str(), oscId, m_time);
 		}
 	}
 
@@ -1284,12 +1285,18 @@ void Scene::triggerEventByOscId(int oscId)
 	}
 }
 
-void Scene::addDebugText(const char * text)
+void Scene::addDebugText(const char * format, ...)
 {
 #if ENABLE_DEBUG_TEXT
+	char text[1024];
+	va_list args;
+	va_start(args, format);
+	vsprintf_s(text, sizeof(text), format, args);
+	va_end(args);
+
 	DebugText t;
 	t.text = text;
-	t.endTime = m_time + 4.f;
+	t.endTime = m_time + 5.5f;
 
 	m_debugTexts.push_back(t);
 #endif
@@ -1725,7 +1732,6 @@ void SceneSurfacePool::free(Surface * surface)
 
 #if ENABLE_LOADTIME_PROFILING
 #include "Timer.h"
-#include <stdarg.h>
 void logLoadtime(const uint64_t time, const char * format, ...)
 {
 	char text[1024];

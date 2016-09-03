@@ -365,7 +365,7 @@ struct Scene : public TweenFloatCollection, public TweenFloatModifier
 
 	void triggerEvent(const char * name);
 	void triggerEventByOscId(int oscId);
-	void addDebugText(const char * text);
+	void addDebugText(const char * format, ...);
 
 	bool load(const char * filename);
 
