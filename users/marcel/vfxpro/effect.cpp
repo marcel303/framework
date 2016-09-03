@@ -2910,7 +2910,7 @@ void Effect_Beams::tick(const float dt)
 			//const float as = Calc::mPI * 3/4;
 			const float as = Calc::mPI * 4/4;
 			b.angle = random(-as/2, +as/2);
-			b.thickness = random(2.f, 3.f);
+			b.thickness = random(3.f, 6.f);
 			b.offsetX = random(-m_beamOffset, +m_beamOffset);
 			b.offsetY = random(-m_beamOffset, +m_beamOffset);
 			b.length2Speed = random(.8f, 1.f);
@@ -3124,9 +3124,6 @@ void Effect_Fireworks::tick(const float dt)
 		{
 			p.life -= dt;
 
-			p.oldX = p.x;
-			p.oldY = p.y;
-
 			p.x += p.vx * dt;
 			p.y += p.vy * dt;
 
@@ -3213,7 +3210,7 @@ void Effect_Fireworks::draw()
 	{
 		for (int i = 0; i < PS; ++i)
 		{
-			const P & p = ps[i];
+			P & p = ps[i];
 
 			if (p.life != 0.f)
 			{
@@ -3221,6 +3218,9 @@ void Effect_Fireworks::draw()
 
 				gxVertex2f(+p.oldX, p.oldY);
 				gxVertex2f(+p.x,    p.y);
+
+				p.oldX = p.x;
+				p.oldY = p.y;
 			}
 		}
 	}
