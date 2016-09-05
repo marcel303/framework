@@ -692,6 +692,24 @@ static void handleAction(const std::string & action, const Dictionary & args)
 
 //
 
+static void fillCachesCallback(float filePercentage)
+{
+	framework.process();
+
+	framework.beginDraw(0, 0, 0, 0);
+	{
+		setColor(31, 31, 31);
+		drawRect(0, 0, GFX_SX * filePercentage, GFX_SY);
+
+		setColor(colorWhite);
+		setFont("calibri.ttf");
+		drawText(GFX_SX/2, GFX_SY/2, 32, 0.f, 0.f, "loading.. %d%%", (int)std::round(filePercentage * 100.f));
+	}
+	framework.endDraw();
+}
+
+//
+
 static void preloadResourceFiles()
 {
 	const std::vector<std::string> files = listFiles(".", true);
@@ -1117,9 +1135,28 @@ int main(int argc, char * argv[])
 	if (framework.init(0, 0, GFX_SX * GFX_SCALE, GFX_SY * GFX_SCALE))
 	{
 	#if ENABLE_RESOURCE_PRECACHE
+		framework.fillCachesCallback = fillCachesCallback;
 		framework.fillCachesWithPath(".", true);
 		preloadResourceFiles();
 		//preloadSceneFiles();
+
+		while (keyboard.isIdle())
+		{
+			framework.process();
+
+			framework.beginDraw(0, 0, 0, 0);
+			{
+				setColor(0, 31, 31);
+				drawRect(0, 0, GFX_SX, GFX_SY);
+
+				setColor(colorWhite);
+				setFont("calibri.ttf");
+				drawText(GFX_SX/2, GFX_SY/2, 32, 0.f, 0.f, "done!");
+				if (std::fmodf(framework.time, 1.f) < .5f)
+					drawText(GFX_SX/2, GFX_SY/2 + 32, 32, 0.f, 0.f, "press any key to start visualizing");
+			}
+			framework.endDraw();
+		}
 	#endif
 
 	#if !ENABLE_DEBUG_INFOS
