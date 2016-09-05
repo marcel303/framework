@@ -21,7 +21,9 @@ extern const int GFX_SY;
 
 extern Config config;
 
+#if ENABLE_LEAPMOTION
 extern LeapState g_leapState;
+#endif
 
 //
 
@@ -982,9 +984,13 @@ void Scene::tick(const float dt)
 
 	m_varTime = m_time;
 	m_varTimeStep = m_varTimeStep + dt;
+
+#if ENABLE_LEAPMOTION
 	m_varPalmX = g_leapState.palmX;
 	m_varPalmY = g_leapState.palmY;
 	m_varPalmZ = g_leapState.palmZ;
+#endif
+
 	m_varPcmVolume = g_pcmVolume;
 
 	// process tween variables

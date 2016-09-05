@@ -36,13 +36,8 @@
 
 using namespace tinyxml2;
 
-#define DEMODATA 0
-
 #define NUM_SCREENS 1
 #define ENABLE_3D 0
-
-//const int SCREEN_SX = (1920 / NUM_SCREENS);
-//const int SCREEN_SY = 1080;
 
 const int SCREEN_SX = (1024 / NUM_SCREENS);
 const int SCREEN_SY = 768;
@@ -381,6 +376,8 @@ struct TimeDilationEffect
 	float multiplier;
 };
 
+#if ENABLE_3D
+
 struct Camera
 {
 	Mat4x4 worldToCamera;
@@ -491,6 +488,10 @@ struct Camera
 		popSurface();
 	}
 };
+
+#endif
+
+#if ENABLE_3D
 
 static void drawTestObjects()
 {
@@ -631,13 +632,17 @@ static void drawScreen(const Vec3 * screenPoints, GLuint surfaceTexture, int scr
 	gxEnd();
 }
 
+#endif
+
 #if ENABLE_DEBUG_MENUS
 
 enum DebugMode
 {
 	kDebugMode_None,
 	kDebugMode_Help,
+#if ENABLE_3D
 	kDebugMode_Camera,
+#endif
 	kDebugMode_EventList,
 	kDebugMode_EffectList,
 	kDebugMode_EffectListCondensed,
@@ -667,6 +672,8 @@ static void handleAction(const std::string & action, const Dictionary & args)
 }
 
 //
+
+#if ENABLE_REALTIME_EDITING
 
 static void handleFileChange(const std::string & filename)
 {
@@ -711,6 +718,8 @@ static void handleFileChange(const std::string & filename)
 		}
 	}
 }
+
+#endif
 
 //
 
@@ -765,7 +774,7 @@ static void initFileMonitor()
 		}
 	}
 
-#if defined(WIN32) && 1
+#if defined(WIN32)
 	Assert(s_fileWatcher == INVALID_HANDLE_VALUE);
 	s_fileWatcher = FindFirstChangeNotificationA(".", TRUE, FILE_NOTIFY_CHANGE_LAST_WRITE);
 	Assert(s_fileWatcher != INVALID_HANDLE_VALUE);
@@ -834,19 +843,11 @@ static void tickFileMonitor()
 #endif
 }
 
-#else
-
-static void initFileMonitor()
-{
-}
-
-static void tickFileMonitor()
-{
-}
-
 #endif
 
 //
+
+#if ENABLE_LEAPMOTION
 
 LeapState g_leapState;
 
@@ -903,158 +904,15 @@ public:
 	}
 };
 
-//
-
-#if 1
-
-// todo : simulate control points based on gravity, gravity well, sin/cos, ..
-
-struct BezierTest
-{
-	const static int kNumNodes = 7;
-	const static int kNumFrames = 160;
-
-	BezierNode nodes[kNumNodes];
-
-	float movementVectorsP[kNumNodes][2];
-	float movementVectorsT[kNumNodes][2];
-
-	Color color;
-
-	int frame;
-
-	BezierTest()
-		: frame(0)
-		, color(colorWhite)
-	{
-		memset(movementVectorsP, 0, sizeof(movementVectorsP));
-		memset(movementVectorsT, 0, sizeof(movementVectorsT));
-	}
-
-	void tick(const float dt)
-	{
-		if ((frame % kNumFrames) == 0)
-		{
-			color = Color::fromHSL(random(0.f, 1.f), 1.f, .5f);
-
-			for (int i = 0; i < kNumNodes; ++i)
-			{
-				const float s = .4f;
-				const float t = .4f;
-
-				nodes[i].m_Position[0] = random(-s, +s) + .3f;
-				nodes[i].m_Position[1] = random(-s, +s);
-
-				if (i == 0)
-					nodes[i].m_Position[0] -= 1.f;
-
-				nodes[i].m_Tangent[0][0] = random(-t, +t);
-				nodes[i].m_Tangent[0][1] = random(-t, +t);
-				nodes[i].m_Tangent[1][0] = random(-t, +t);
-				nodes[i].m_Tangent[1][1] = random(-t, +t);
-				nodes[i].m_Tangent[1][0] = -nodes[i].m_Tangent[0][0];
-				nodes[i].m_Tangent[1][1] = -nodes[i].m_Tangent[0][1];
-
-				if (i > 0)
-				{
-					nodes[i].m_Position[0] += nodes[i - 1].m_Position[0];
-					nodes[i].m_Position[1] += nodes[i - 1].m_Position[1];
-				}
-			}
-
-			for (int i = 0; i < kNumNodes; ++i)
-			{
-				const float vP = .5f / 3.f;
-				const float vT = .8f / 3.f;
-
-				movementVectorsP[i][0] = random(-vP, +vP);
-				movementVectorsP[i][1] = random(-vP, +vP);
-
-				movementVectorsT[i][0] = random(-vT, +vT);
-				movementVectorsT[i][1] = random(-vT, +vT);
-			}
-		}
-
-		frame++;
-	}
-
-	void draw(const float alpha) const
-	{
-		const float t = (frame % kNumFrames) / (kNumFrames - 1.f);
-		
-		const float a = pow(sin(t * Calc::mPI), .5f) * alpha;
-
-		gxPushMatrix();
-		{
-			gxTranslatef(GFX_SX/2, GFX_SY/2, 0.f);
-			gxScalef(500.f, 500.f, 1.f);
-			gxColor4f(color.r, color.g, color.b, a);
-
-			for (float ja = -1.f; ja <= +1.f; ja += 2.f / 10.f)
-			{
-				const float j = ja * t + .5f;
-
-				BezierNode nodes2[kNumNodes];
-
-				for (int i = 0; i < kNumNodes; ++i)
-				{
-					nodes2[i] = nodes[i];
-					
-					if (true)
-					{
-						nodes2[i].m_Position[0] += movementVectorsP[i][0] * j;
-						nodes2[i].m_Position[1] += movementVectorsP[i][1] * j;
-					}
-					
-					if (true)
-					{
-						nodes2[i].m_Tangent[0][0] += movementVectorsT[i][0] * j;
-						nodes2[i].m_Tangent[0][1] += movementVectorsT[i][1] * j;
-						nodes2[i].m_Tangent[1][0] = -nodes2[i].m_Tangent[0][0];
-						nodes2[i].m_Tangent[1][1] = -nodes2[i].m_Tangent[0][1];
-					}
-				}
-
-				BezierPath path;
-				path.ConstructFromNodes(nodes2, kNumNodes);
-
-				glEnable(GL_LINE_SMOOTH);
-				glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-
-				gxBegin(GL_LINE_STRIP);
-				{
-					for (float i = 0.f; i <= kNumNodes; i += 0.01f)
-					{
-						const Vec2F p = path.Interpolate(i);
-
-						gxVertex2f(p[0], p[1]);
-					}
-				}
-				gxEnd();
-
-				glDisable(GL_LINE_SMOOTH);
-			}
-		}
-		gxPopMatrix();
-	}
-};
-
-static void testBezier(float alpha)
-{
-	static BezierTest test;
-
-	test.tick(framework.timeStep);
-
-	test.draw(alpha);
-}
-
 #endif
 
 //
 
 int main(int argc, char * argv[])
 {
+#if ENABLE_REALTIME_EDITING
 	initFileMonitor();
+#endif
 
 	if (!config.load("settings.xml"))
 	{
@@ -1068,6 +926,7 @@ int main(int argc, char * argv[])
 		return -1;
 	}
 
+#if ENABLE_MIDI
 	const int numMidiDevices = midiInGetNumDevs();
 
 	if (numMidiDevices > 0)
@@ -1089,6 +948,7 @@ int main(int argc, char * argv[])
 			}
 		}
 	}
+#endif
 
 	AudioIn audioIn;
 
@@ -1110,6 +970,7 @@ int main(int argc, char * argv[])
 		}
 	}
 
+#if ENABLE_LEAPMOTION
 	// initialise LeapMotion controller
 
 	Leap::Controller leapController;
@@ -1117,6 +978,7 @@ int main(int argc, char * argv[])
 
 	LeapListener * leapListener = new LeapListener;
 	leapController.addListener(*leapListener);
+#endif
 
 	// initialise FFT
 
@@ -1135,19 +997,22 @@ int main(int argc, char * argv[])
 
 	// initialise framework
 
-#if ENABLE_WINDOWED_MODE || 1 // && 1
+#if ENABLE_WINDOWED_MODE || 1
 	framework.fullscreen = false;
 	framework.minification = 1;
 	framework.windowX = 0;
 	framework.windowY = 60;
 #else
 	framework.fullscreen = true;
-	framework.exclusiveFullscreen = false;
+	framework.exclusiveFullscreen = true;
 	framework.useClosestDisplayMode = true;
 #endif
 
+#if ENABLE_3D
 	framework.enableDepthBuffer = true;
-	framework.enableMidi = true;
+#endif
+
+	framework.enableMidi = ENABLE_MIDI;
 	framework.midiDeviceIndex = config.midi.deviceIndex;
 
 #ifdef DEBUG
@@ -1159,8 +1024,11 @@ int main(int argc, char * argv[])
 
 	if (framework.init(0, 0, GFX_SX * GFX_SCALE, GFX_SY * GFX_SCALE))
 	{
-	#if !defined(DEBUG)
+	#if ENABLE_RESOURCE_PRECACHE
 		framework.fillCachesWithPath(".", true);
+	#endif
+
+	#if !ENABLE_DEBUG_INFOS
 		if (framework.fullscreen)
 			SDL_ShowCursor(0);
 	#endif
@@ -1180,14 +1048,7 @@ int main(int argc, char * argv[])
 
 		bool debugDraw = false;
 
-	#if DEMODATA
-		bool postProcess = false;
-
-		bool drawCloth = false;
-		bool drawBoxes = true;
-		bool drawPCM = true;
-	#endif
-
+		bool flipH = false;
 		bool drawScreenIds = false;
 		bool drawProjectorSetup = false;
 
@@ -1195,7 +1056,7 @@ int main(int argc, char * argv[])
 
 		g_scene = new Scene();
 
-	#if defined(DEBUG) || 1
+	#if ENABLE_STRESS_TEST
 		const char * filenames[] =
 		{
 			"tracks/ChangeItAll.scene.xml",
@@ -1212,13 +1073,13 @@ int main(int argc, char * argv[])
 
 		for (int i = 0; i < 1000000 * 0 + 0; ++i)
 		{
-			//framework.process();
+			framework.process();
 
 			const int c1 = GetAllocState().allocationCount;
 			g_scene->load(filenames[rand() % (sizeof(filenames) / sizeof(filenames[0]))]);
 			//g_scene->load(filenames[i % (sizeof(filenames) / sizeof(filenames[0]))]);
 
-			for (int i = 0; i < 32; ++i)
+			for (int i = 0; i < 1; ++i)
 				g_scene->triggerEventByOscId(i);
 
 		#if 1
@@ -1228,11 +1089,18 @@ int main(int argc, char * argv[])
 
 			while (time < 180.0)
 			{
+				if (keyboard.wentDown(SDLK_SPACE))
+					break;
+
+				if ((rand() % 200) == 0)
+					g_scene->triggerEventByOscId(rand() % 32);
+
 				g_scene->tick(step);
 
 				time += step;
 
-				if (drawTime > 10.0)
+				//if (drawTime >= 10.0)
+				//if (drawTime >= 0.5)
 				{
 					drawTime = 0.0;
 
@@ -1266,60 +1134,19 @@ int main(int argc, char * argv[])
 			g_scene = new Scene();
 			const int c2 = GetAllocState().allocationCount;
 		}
-
-		g_scene->load("tracks/ChangeItAll.scene.xml");
-	#endif
-
-	#if DEMODATA
-		Effect_Cloth cloth("cloth");
-		cloth.setup(CLOTH_MAX_SX, CLOTH_MAX_SY);
-
-		Effect_Boxes boxes("boxes");
-		for (int b = 0; b < 2; ++b)
-		{
-			const float boxScale = 2.5f;
-			Effect_Boxes::Box * box = boxes.addBox(0.f, 0.f, 0.f, boxScale, boxScale / 8.f, boxScale, 0);
-			const float boxTimeStep = 1.f;
-			for (int i = 0; i < 1000; ++i)
-			{
-				if ((rand() % 3) <= 1)
-				{
-					box->m_rx.to(random(-2.f, +2.f), boxTimeStep, (EaseType)(rand() % kEaseType_Count), random(0.f, 2.f));
-					box->m_ry.to(random(-2.f, +2.f), boxTimeStep, (EaseType)(rand() % kEaseType_Count), random(0.f, 2.f));
-					//box->m_rz.to(random(-2.f, +2.f), boxTimeStep, (EaseType)(rand() % kEaseType_Count), random(0.f, 2.f));
-				}
-				else
-				{
-					box->m_rx.to(box->m_rx.getFinalValue(), boxTimeStep, (EaseType)(rand() % kEaseType_Count), random(0.f, 2.f));
-					box->m_ry.to(box->m_ry.getFinalValue(), boxTimeStep, (EaseType)(rand() % kEaseType_Count), random(0.f, 2.f));
-					//box->m_rz.to(box->m_rz.getFinalValue(), boxTimeStep, (EaseType)(rand() % kEaseType_Count), random(0.f, 2.f));
-				}
-
-				if ((rand() % 4) <= 0)
-					box->m_sy.to(random(0.f, boxScale / 4.f), boxTimeStep, (EaseType)(rand() % kEaseType_Count), random(0.f, 2.f));
-				else
-					box->m_sy.to(box->m_sy.getFinalValue(), boxTimeStep, (EaseType)(rand() % kEaseType_Count), random(0.f, 2.f));
-			}
-		}
 	#endif
 
 		Surface prevSurface(GFX_SX, GFX_SY, true);
 		Surface surface(GFX_SX, GFX_SY, true);
 
-	#if DEMODATA
-		Shader jitterShader("jitter");
-		Shader boxblurShader("boxblur");
-		Shader distortionBarsShader("distortion_bars");
-	#endif
-
-		Shader fxaaShader("fxaa");
-
+	#if ENABLE_3D
 		Vec3 cameraPosition(0.f, .5f, -1.f);
 		Vec3 cameraRotation(0.f, 0.f, 0.f);
 		Mat4x4 cameraMatrix;
 		cameraMatrix.MakeIdentity();
 
 		int activeCamera = NUM_SCREENS;
+	#endif
 
 		bool stop = false;
 
@@ -1329,6 +1156,7 @@ int main(int argc, char * argv[])
 
 			framework.process();
 
+		#if ENABLE_REALTIME_EDITING
 			static bool doTickFileMonitor = true;
 			if (keyboard.wentDown(SDLK_f))
 			{
@@ -1338,8 +1166,9 @@ int main(int argc, char * argv[])
 			}
 			if (doTickFileMonitor)
 				tickFileMonitor();
+		#endif
 
-			// todo : process audio input
+			// process audio input
 
 			float * samplesThisFrame = nullptr;
 			int numSamplesThisFrame = 0;
@@ -1416,18 +1245,21 @@ int main(int argc, char * argv[])
 
 			fftProcess(framework.time);
 
-			// todo : process OSC input
-
-			// todo : process direct MIDI input
-
+		#if ENABLE_LEAPMOTION
 			// process LeapMotion input
 
 			leapListener->tick();
+		#endif
 
 			// input
 
+		#if defined(DEBUG)
 			if (keyboard.wentDown(SDLK_ESCAPE))
 				stop = true;
+		#else
+			if (keyboard.wentDown(SDLK_ESCAPE) && keyboard.isDown(SDLK_RSHIFT))
+				stop = true;
+		#endif
 
 			if (keyboard.wentDown(SDLK_r))
 			{
@@ -1436,24 +1268,13 @@ int main(int argc, char * argv[])
 
 			if (keyboard.wentDown(SDLK_d))
 				debugDraw = !debugDraw;
-		#if ENABLE_DEBUG_MENUS
+
+			if (keyboard.wentDown(SDLK_m))
+				flipH = !flipH;
+
+		#if ENABLE_DEBUG_MENUS && ENABLE_3D
 			if (keyboard.wentDown(SDLK_RSHIFT))
 				setDebugMode(kDebugMode_Camera);
-		#endif
-
-		#if DEMODATA
-			if (keyboard.wentDown(SDLK_p) || config.midiWentDown(64))
-				postProcess = !postProcess;
-
-			if (s_debugMode == kDebugMode_Help)
-			{
-				if (keyboard.wentDown(SDLK_1))
-					drawCloth = !drawCloth;
-				if (keyboard.wentDown(SDLK_2))
-					drawBoxes = !drawBoxes;
-				if (keyboard.wentDown(SDLK_3))
-					drawPCM = !drawPCM;
-			}
 		#endif
 
 		#if ENABLE_DEBUG_MENUS
@@ -1471,6 +1292,8 @@ int main(int argc, char * argv[])
 					setDebugMode(kDebugMode_EffectList);
 				else if (s_debugMode == kDebugMode_EffectList)
 					setDebugMode(kDebugMode_EffectListCondensed);
+				else if (s_debugMode == kDebugMode_EffectListCondensed)
+					setDebugMode(kDebugMode_None);
 				else
 					setDebugMode(kDebugMode_EventList);
 			}
@@ -1486,6 +1309,7 @@ int main(int argc, char * argv[])
 			if (s_debugMode == kDebugMode_None)
 			{
 			}
+		#if ENABLE_3D
 			else if (s_debugMode == kDebugMode_Camera)
 			{
 				if (keyboard.wentDown(SDLK_o))
@@ -1495,6 +1319,7 @@ int main(int argc, char * argv[])
 				}
 
 			}
+		#endif
 			else if (s_debugMode == kDebugMode_EffectList || s_debugMode == kDebugMode_EffectListCondensed)
 			{
 				const int base = keyboard.isDown(SDLK_LSHIFT) ? 10 : 0;
@@ -1548,7 +1373,7 @@ int main(int argc, char * argv[])
 			}
 		#endif
 
-		#if ENABLE_DEBUG_MENUS
+		#if ENABLE_DEBUG_MENUS && ENABLE_3D
 			SDL_SetRelativeMouseMode(s_debugMode == kDebugMode_Camera ? SDL_TRUE : SDL_FALSE);
 		#else
 			SDL_SetRelativeMouseMode(SDL_FALSE);
@@ -1556,10 +1381,12 @@ int main(int argc, char * argv[])
 
 			const float dtReal = framework.timeStep;
 
+		#if ENABLE_3D
 			Mat4x4 cameraPositionMatrix;
 			Mat4x4 cameraRotationMatrix;
+		#endif
 
-		#if ENABLE_DEBUG_MENUS
+		#if ENABLE_DEBUG_MENUS && ENABLE_3D
 			if (s_debugMode == kDebugMode_Camera && drawProjectorSetup)
 			{
 				cameraRotation[0] -= mouse.dy / 100.f;
@@ -1583,6 +1410,7 @@ int main(int argc, char * argv[])
 			}
 		#endif
 
+		#if ENABLE_3D
 			{
 				Mat4x4 rotX;
 				Mat4x4 rotY;
@@ -1595,6 +1423,7 @@ int main(int argc, char * argv[])
 				Mat4x4 invCameraMatrix = cameraPositionMatrix * cameraRotationMatrix;
 				cameraMatrix = invCameraMatrix.CalcInv();
 			}
+		#endif
 
 			// update network input
 
@@ -1649,45 +1478,6 @@ int main(int argc, char * argv[])
 						g_isReplay = false;
 						break;
 
-						//
-
-				#if 0 // todo : look up sprite system and video in current scene
-					case kOscMessageType_Sprite:
-						{
-							spriteSystem.addSprite(
-								message.str.c_str(),
-								0,
-								virtualToScreenX(message.param[0]),
-								virtualToScreenY(message.param[1]),
-								0.f, message.param[2] / 100.f);
-							//spriteSystem.addSprite(message.str.c_str(), 0, message.param[0], message.param[1], 0.f, message.param[2]);
-						}
-						break;
-
-					case kOscMessageType_Video:
-						{
-							video.setup(message.str.c_str(), message.param[0], message.param[1], 1.f, true);
-						}
-						break;
-				#endif
-
-						//
-
-					case kOscMessageType_TimeDilation:
-						{
-							TimeDilationEffect effect;
-							effect.duration = message.param[0];
-							effect.durationRcp = 1.f / effect.duration;
-							effect.multiplier = message.param[1];
-							timeDilationEffects.push_back(effect);
-						}
-						break;
-
-						//
-
-					case kOscMessageType_Swipe:
-						break;
-
 					default:
 						fassert(false);
 						break;
@@ -1698,6 +1488,9 @@ int main(int argc, char * argv[])
 			}
 			LeaveCriticalSection(&s_oscMessageMtx);
 
+		#if 1
+			const float timeDilationMultiplier = 1.f;
+		#else
 			// figure out time dilation
 
 			float timeDilationMultiplier = 1.f;
@@ -1718,6 +1511,7 @@ int main(int argc, char * argv[])
 				else
 					++i;
 			}
+		#endif
 
 			float dtTodo = dtReal;
 
@@ -1759,39 +1553,9 @@ int main(int argc, char * argv[])
 				g_scene->tick(dt);
 			}
 
-		#if DEMODATA
-			for (int i = 0; i < 10; ++i)
-				cloth.tick(dt / 10.f);
-
-			boxes.tick(dt);
-
-			if (mouse.isDown(BUTTON_LEFT))
-			{
-				const float mouseX = mouse.x / 40.f;
-				const float mouseY = mouse.y / 40.f;
-
-				for (int x = 0; x < cloth.sx; ++x)
-				{
-					const int y = cloth.sy - 1;
-
-					Effect_Cloth::Vertex & v = cloth.vertices[x][y];
-
-					const float dx = mouseX - v.x;
-					const float dy = mouseY - v.y;
-
-					const float a = x / float(cloth.sx - 1) * 30.f;
-
-					v.vx += a * dx * dt;
-					v.vy += a * dy * dt;
-				}
-			}
-		#endif
-
 			// draw
 
-			// todo : convert loudness to shader input
-
-			// todo : convert PCM data to shader input texture
+			// convert PCM data to shader input texture
 
 			glBindTexture(GL_TEXTURE_2D, g_pcmTexture);
 			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -1803,7 +1567,7 @@ int main(int argc, char * argv[])
 			glBindTexture(GL_TEXTURE_2D, 0);
 			checkErrorGL();
 
-			// todo : convert FFT data to shader input texture
+			// convert FFT data to shader input texture
 
 			glBindTexture(GL_TEXTURE_2D, g_fftTexture);
 			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -1845,6 +1609,7 @@ int main(int argc, char * argv[])
 
 			framework.beginDraw(0, 0, 0, 0);
 			{
+			#if ENABLE_3D
 				// camera setup
 
 				Camera cameras[NUM_SCREENS];
@@ -1891,6 +1656,7 @@ int main(int argc, char * argv[])
 
 					camera.setup(cameraPosition, screenCorners[c], 4, c);
 				}
+			#endif
 
 				pushSurface(&prevSurface);
 				{
@@ -1899,9 +1665,11 @@ int main(int argc, char * argv[])
 					glClearColor(0.f, 0.f, 0.f, 0.f);
 					glClear(GL_COLOR_BUFFER_BIT);
 
-					gpuTimingBlock(prevDrawableList);
-					setBlend(BLEND_ADD);
-					prevDrawableList.draw();
+					{
+						gpuTimingBlock(prevDrawableList);
+						setBlend(BLEND_ADD);
+						prevDrawableList.draw();
+					}
 				}
 				popSurface();
 
@@ -1931,49 +1699,6 @@ int main(int argc, char * argv[])
 								drawTestObjects();
 							}
 
-							DrawableList drawableList;
-
-						#if DEMODATA
-							if (drawBoxes)
-								boxes.draw(drawableList);
-						#endif
-
-							drawableList.sort();
-
-							{
-								gpuTimingBlock(drawableList);
-								drawableList.draw();
-							}
-							
-						#if DEMODATA
-							// todo : make PCM effect
-
-							if (drawPCM && ((c == 0) || (c == 2)) && audioInHistorySize > 0)
-							{
-								applyTransformWithViewportSize(sx, sy);
-
-								setColor(colorWhite);
-
-								glLineWidth(1.5f);
-								glEnable(GL_LINE_SMOOTH);
-								glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-								gxBegin(GL_LINES);
-								{
-									const float scaleX = GFX_SX / float(numSamplesThisFrame - 2);
-									const float scaleY = 300.f;
-
-									for (int i = 0; i < numSamplesThisFrame - 1; ++i)
-									{
-										gxVertex2f((i + 0) * scaleX, GFX_SY/2.f + samplesThisFrame[i + 0] * scaleY);
-										gxVertex2f((i + 1) * scaleX, GFX_SY/2.f + samplesThisFrame[i + 1] * scaleY);
-									}
-								}
-								gxEnd();
-								glDisable(GL_LINE_SMOOTH);
-								glLineWidth(1.f);
-							}
-						#endif
-
 							setBlend(BLEND_ALPHA);
 						}
 						camera.endView();
@@ -1985,19 +1710,6 @@ int main(int argc, char * argv[])
 						setBlend(BLEND_ADD);
 						drawableList.draw();
 					}
-
-				#if DEMODATA
-					if (postProcess)
-					{
-						setBlend(BLEND_OPAQUE);
-						Shader & shader = jitterShader;
-						shader.setTexture("colormap", 0, surface.getTexture(), true, false);
-						shader.setTexture("jittermap", 1, 0, true, true);
-						shader.setImmediate("jitterStrength", 1.f);
-						shader.setImmediate("jitterTime", time);
-						surface.postprocess(shader);
-					}
-				#endif
 				}
 				popSurface();
 
@@ -2010,9 +1722,6 @@ int main(int argc, char * argv[])
 					gpuTimingBlock(blitToBackBuffer);
 					setBlend(BLEND_OPAQUE);
 					setColor(colorWhite);
-					static bool flipH = false;
-					if (keyboard.wentDown(SDLK_m))
-						flipH = !flipH;
 					if (flipH)
 						drawRect(GFX_SX_SCALED, 0, 0, GFX_SY_SCALED);
 					else
@@ -2026,16 +1735,13 @@ int main(int argc, char * argv[])
 					gpuTimingBlock(blitToBackBuffer);
 					
 					setBlend(BLEND_ALPHA);
-					const float a = keyboard.isDown(SDLK_j) ? 1.f : (g_prevSceneTime * g_prevSceneTimeRcp);
+					const float alpha = g_prevSceneTime * g_prevSceneTimeRcp;
 
 					Shader shader("layer_compose_alpha");
 					setShader(shader);
-					shader.setImmediate("alpha", a);
+					shader.setImmediate("alpha", alpha);
 					shader.setTexture("colormap", 0, prevSurface.getTexture(), false, true);
 
-					static bool flipH = false;
-					if (keyboard.wentDown(SDLK_m))
-						flipH = !flipH;
 					if (flipH)
 						drawRect(GFX_SX_SCALED, 0, 0, GFX_SY_SCALED);
 					else
@@ -2045,6 +1751,7 @@ int main(int argc, char * argv[])
 					setBlend(BLEND_ALPHA);
 				}
 
+			#if ENABLE_3D
 				if (drawProjectorSetup)
 				{
 					glClearColor(0.05f, 0.05f, 0.05f, 0.f);
@@ -2089,26 +1796,6 @@ int main(int argc, char * argv[])
 									drawScreen(screenCorners[c], surfaceTexture, c);
 								}
 
-								// draw test objects
-
-								// todo : add drawScene function. this code is getting duplicated with viewport render
-
-								if (debugDraw && keyboard.isDown(SDLK_LSHIFT))
-								{
-									drawTestObjects();
-
-									DrawableList drawableList;
-
-								#if DEMODATA
-									if (drawBoxes)
-										boxes.draw(drawableList);
-								#endif
-
-									drawableList.sort();
-
-									drawableList.draw();
-								}
-
 								// draw the cameras
 
 								for (int c = 0; c < NUM_SCREENS; ++c)
@@ -2133,7 +1820,9 @@ int main(int argc, char * argv[])
 					}
 					glDisable(GL_DEPTH_TEST);
 				}
+			#endif
 
+			#if ENABLE_3D
 				if (drawScreenIds)
 				{
 					for (int c = 0; c < NUM_SCREENS; ++c)
@@ -2156,6 +1845,7 @@ int main(int argc, char * argv[])
 						camera.endView();
 					}
 				}
+			#endif
 
 			#if ENABLE_DEBUG_MENUS
 				setFont("VeraMono.ttf");
@@ -2245,9 +1935,11 @@ int main(int argc, char * argv[])
 					y += spacingY;
 					x -= 50;
 				}
+			#if ENABLE_3D
 				else if (s_debugMode == kDebugMode_Camera)
 				{
 				}
+			#endif
 				else if (s_debugMode == kDebugMode_EventList)
 				{
 					drawText(x, y, fontSize, +1.f, +1.f, "events list:");
@@ -2290,15 +1982,6 @@ int main(int argc, char * argv[])
 					drawText(x, y, fontSize, +1.f, +1.f, "Press F1 to toggle help"); y += spacingY;
 					x += 50;
 					drawText(x, y, fontSize, +1.f, +1.f, ""); y += spacingY;
-
-				#if DEMODATA
-					drawText(x, y, fontSize, +1.f, +1.f, "1: toggle rain effect"); y += spacingY;
-					drawText(x, y, fontSize, +1.f, +1.f, "2: toggle star cluster effect"); y += spacingY;
-					drawText(x, y, fontSize, +1.f, +1.f, "3: toggle cloth effect"); y += spacingY;
-					drawText(x, y, fontSize, +1.f, +1.f, "4: toggle sprite effects"); y += spacingY;
-					drawText(x, y, fontSize, +1.f, +1.f, "5: toggle video effects"); y += spacingY;
-					drawText(x, y, fontSize, +1.f, +1.f, "");
-				#endif
 
 					drawText(x, y, fontSize, +1.f, +1.f, "E: toggle events list"); y += spacingY;
 					drawText(x, y, fontSize, +1.f, +1.f, "I: identify screens"); y += spacingY;
@@ -2373,7 +2056,7 @@ int main(int argc, char * argv[])
 				}
 			#endif
 
-			#if ENABLE_DEBUG_INFOS && 1
+			#if ENABLE_DEBUG_INFOS
 				setFont("VeraMono.ttf");
 				setColor(colorBlack);
 				drawRect(mouse.x-100, mouse.y-10, mouse.x+100, mouse.y+20);
@@ -2383,7 +2066,7 @@ int main(int argc, char * argv[])
 					mouse.isDown(BUTTON_LEFT) ? (int)screenYToVirtual(mouse.y) : mouse.y);
 			#endif
 
-			#if ENABLE_DEBUG_INFOS && 1
+			#if ENABLE_DEBUG_INFOS
 				{
 					setFont("VeraMono.ttf");
 					setColor(colorWhite);
@@ -2395,6 +2078,7 @@ int main(int argc, char * argv[])
 					y += 30;
 				#endif
 
+				#if ENABLE_LEAPMOTION
 					drawText(5, y, 24, +1, +1, "LeapMotion connected: %d, hasFocus: %d", (int)leapController.isConnected(), (int)leapController.hasFocus());
 					y += 30;
 
@@ -2406,74 +2090,8 @@ int main(int argc, char * argv[])
 							(int)g_leapState.palmZ);
 						y += 30;
 					}
+				#endif
 				}
-			#endif
-
-			#if 0
-				static Surface * bezierSurface = nullptr;
-				
-				bool clearEachFrame = true;
-
-				if (bezierSurface == nullptr)
-				{
-					bezierSurface = new Surface(GFX_SX, GFX_SY);
-					bezierSurface->clear(0, 0, 0, 0);
-				}
-
-				if (clearEachFrame)
-				{
-					bezierSurface->clear(0, 0, 0, 0);
-				}
-
-				pushSurface(bezierSurface);
-				{
-					//for (int i = 0; i < 100; ++i)
-					{
-						if (true)
-						{
-							ScopedSurfaceBlock surfaceBlock(bezierSurface);
-
-							std::vector<std::string> images;
-							Effect_Fsfx effect("fsfx", "cesitest/fsfx_blur.ps", images);
-							effect.m_alpha = .02f;
-							effect.m_param1 = 10.f;
-							effect.draw();
-						}
-
-						if (true)
-						{
-							static int f = 0;
-							//if (((f++) % 4) == 0)
-							{
-								ScopedSurfaceBlock surfaceBlock(bezierSurface);
-
-								std::vector<std::string> images;
-								Effect_Fsfx effect("fsfx", "fsfx_luminance.ps", images);
-								effect.m_alpha = 1.f;
-								effect.m_param1 = 1.f;
-								effect.m_param2 = 1.f;
-								float s = pow((sin(f / 100.f) + 1.f) / 2.f, 4.f);
-								effect.m_param3 = s * (1.f / 20.f);
-								effect.m_param4 = s * (1.f / 20.f);
-								effect.draw();
-							}
-						}
-
-						setBlend(BLEND_ADD);
-						testBezier(clearEachFrame ? 1.f : (1.f / 20.f));
-						setBlend(BLEND_ALPHA);
-					}
-				}
-				popSurface();
-				
-				gxSetTexture(bezierSurface->getTexture());
-				{
-					setBlend(BLEND_OPAQUE);
-					setColor(colorWhite);
-					drawRect(0, 0, GFX_SX_SCALED, GFX_SY_SCALED);
-					setBlend(BLEND_ALPHA);
-				}
-				gxSetTexture(0);
 			#endif
 			}
 			framework.endDraw();
@@ -2507,10 +2125,12 @@ int main(int argc, char * argv[])
 
 	//
 
+#if ENABLE_LEAPMOTION
 	leapController.removeListener(*leapListener);
 
 	delete leapListener;
 	leapListener = nullptr;
+#endif
 
 	//
 
