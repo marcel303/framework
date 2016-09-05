@@ -340,8 +340,6 @@ struct Scene : public TweenFloatCollection, public TweenFloatModifier
 	TweenFloat m_varPalmZ;
 	TweenFloat m_varPcmVolume;
 
-	bool m_wantsReload;
-
 #if ENABLE_DEBUG_TEXT
 	struct DebugText
 	{
@@ -370,7 +368,6 @@ struct Scene : public TweenFloatCollection, public TweenFloatModifier
 	bool load(const char * filename);
 
 	void clear();
-	bool reload();
 
 	void advanceTo(const float time);
 	void syncTime(const float time);

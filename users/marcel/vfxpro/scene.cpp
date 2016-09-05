@@ -14,6 +14,9 @@ using namespace tinyxml2;
 // from internal.h
 void splitString(const std::string & str, std::vector<std::string> & result, char c);
 
+// from main.cpp
+bool getSceneFileContents(const std::string & filename, Array<uint8_t> *& out_bytes);
+
 //
 
 extern const int GFX_SX;
@@ -904,11 +907,6 @@ void SceneEvent::execute(Scene & scene)
 					event->handleSignal(action->m_signal.m_message);
 				}
 			}
-
-			if (action->m_signal.m_message == "reload")
-			{
-				scene.m_wantsReload = true;
-			}
 		}
 		break;
 
@@ -960,7 +958,6 @@ Scene::Scene()
 	, m_varPalmY(0.f)
 	, m_varPalmZ(0.f)
 	, m_varPcmVolume(0.f)
-	, m_wantsReload(false)
 {
 	addVar("fft_fade", m_fftFade);
 	addVar("time", m_varTime);
@@ -1254,15 +1251,6 @@ void Scene::triggerEvent(const char * name)
 			addDebugText(event->m_name.c_str());
 		}
 	}
-
-	//
-
-	if (m_wantsReload)
-	{
-		m_wantsReload = false;
-
-		reload();
-	}
 }
 
 void Scene::triggerEventByOscId(int oscId)
@@ -1279,15 +1267,6 @@ void Scene::triggerEventByOscId(int oscId)
 
 			addDebugText("%s [id=%02d, time=%06.2f]", event->m_name.c_str(), oscId, m_time);
 		}
-	}
-
-	//
-
-	if (m_wantsReload)
-	{
-		m_wantsReload = false;
-
-		reload();
 	}
 }
 
@@ -1320,13 +1299,26 @@ bool Scene::load(const char * filename)
 
 	const auto t1_loadDocument = loadtimer();
 
-	if (xmlDoc.LoadFile(filename) != XML_NO_ERROR)
+	bool readSuccess = true;
+
+	Array<uint8_t> * fileContents = nullptr;
+	if (getSceneFileContents(filename, fileContents))
+	{
+		if (xmlDoc.Parse((const char *)fileContents->data, fileContents->size) != XML_NO_ERROR)
+		{
+			logError("failed to parse scene: %s", filename);
+
+			result = false;
+		}
+	}
+	else if (xmlDoc.LoadFile(filename) != XML_NO_ERROR)
 	{
 		logError("failed to load scene: %s", filename);
 
 		result = false;
 	}
-	else
+
+	if (result)
 	{
 		const XMLElement * xmlScene = xmlDoc.FirstChildElement("scene");
 
@@ -1647,15 +1639,6 @@ void Scene::clear()
 #if ENABLE_DEBUG_TEXT
 	m_debugTexts.clear();
 #endif
-}
-
-bool Scene::reload()
-{
-	const std::string filename = m_filename;
-
-	clear();
-
-	return load(filename.c_str());
 }
 
 void Scene::advanceTo(const float time)

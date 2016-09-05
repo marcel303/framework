@@ -9,6 +9,7 @@
 #include "config.h"
 #include "drawable.h"
 #include "effect.h"
+#include "FileStream.h"
 #include "framework.h"
 #include "leap/Leap.h"
 #include "mediaplayer_old/MPUtil.h"
@@ -98,6 +99,24 @@ void nextScene(const char * filename)
 	const float kTransitionTime = 4.f;
 	g_prevSceneTime = kTransitionTime;
 	g_prevSceneTimeRcp = 1.f / kTransitionTime;
+}
+
+void reloadScene()
+{
+	const std::string filename = g_scene->m_filename;
+
+	delete g_scene;
+	g_scene = nullptr;
+
+	g_scene = new Scene();
+
+	if (!g_scene->load(filename.c_str()))
+	{
+		delete g_scene;
+		g_scene = nullptr;
+
+		g_scene = new Scene();
+	}
 }
 
 float virtualToScreenX(const float x)
@@ -673,6 +692,79 @@ static void handleAction(const std::string & action, const Dictionary & args)
 
 //
 
+static void preloadResourceFiles()
+{
+	const std::vector<std::string> files = listFiles(".", true);
+
+	for (const auto & filename : files)
+	{
+		const std::string baseName = Path::GetFileName(filename);
+
+		if (String::StartsWith(baseName, "fsfx_") && String::EndsWith(baseName, ".ps"))
+		{
+			Shader(filename.c_str(), "fsfx.vs", filename.c_str());
+		}
+	}
+}
+
+//
+
+static std::map<std::string, Array<uint8_t>> s_sceneFiles;
+
+static void preloadSceneFiles()
+{
+	const std::vector<std::string> files = listFiles("tracks", false);
+
+	for (auto & filename : files)
+	{
+		if (String::EndsWith(filename, ".scene.xml"))
+		{
+			try
+			{
+				FileStream stream(filename.c_str(), OpenMode_Read);
+				const int length = stream.Length_get();
+
+				const std::string name = String::ToLower(Path::GetFileName(filename));
+				Array<uint8_t> & bytes = s_sceneFiles[name];
+
+				bytes.resize(length, false);
+				if (stream.Read(bytes.data, length) != length)
+				{
+					logError("failed to read file contents for %s", filename.c_str());
+
+					s_sceneFiles.erase(name);
+				}
+			}
+			catch (std::exception & e)
+			{
+				logError("%s", e.what());
+			}
+		}
+	}
+}
+
+bool getSceneFileContents(const std::string & filename, Array<uint8_t> *& out_bytes)
+{
+	const std::string name = String::ToLower(Path::GetFileName(filename));
+
+	const auto i = s_sceneFiles.find(name);
+
+	if (i == s_sceneFiles.end())
+	{
+		out_bytes = nullptr;
+
+		return false;
+	}
+	else
+	{
+		out_bytes = &i->second;
+
+		return true;
+	}
+}
+
+//
+
 #if ENABLE_REALTIME_EDITING
 
 static void handleFileChange(const std::string & filename)
@@ -682,7 +774,7 @@ static void handleFileChange(const std::string & filename)
 	else if (filename == "effects_meta.xml")
 		g_effectInfosByName.load(filename.c_str());
 	else if (filename == g_scene->m_filename)
-		g_scene->reload();
+		reloadScene();
 	else
 	{
 		const std::string extension = Path::GetExtension(filename);
@@ -997,14 +1089,14 @@ int main(int argc, char * argv[])
 
 	// initialise framework
 
-#if ENABLE_WINDOWED_MODE || 1
+#if ENABLE_WINDOWED_MODE || 0
 	framework.fullscreen = false;
 	framework.minification = 1;
 	framework.windowX = 0;
 	framework.windowY = 60;
 #else
 	framework.fullscreen = true;
-	framework.exclusiveFullscreen = true;
+	framework.exclusiveFullscreen = false;
 	framework.useClosestDisplayMode = true;
 #endif
 
@@ -1026,6 +1118,8 @@ int main(int argc, char * argv[])
 	{
 	#if ENABLE_RESOURCE_PRECACHE
 		framework.fillCachesWithPath(".", true);
+		preloadResourceFiles();
+		//preloadSceneFiles();
 	#endif
 
 	#if !ENABLE_DEBUG_INFOS
@@ -1071,7 +1165,7 @@ int main(int argc, char * argv[])
 			"tracks/WhereAreYouNow.scene.xml"
 		};
 
-		for (int i = 0; i < 1000000 * 0 + 0; ++i)
+		for (int i = 0; i < 1000000 * 1 + 0; ++i)
 		{
 			framework.process();
 
@@ -1082,25 +1176,30 @@ int main(int argc, char * argv[])
 			for (int i = 0; i < 1; ++i)
 				g_scene->triggerEventByOscId(i);
 
-		#if 1
 			const double step = 1.0 / 60.0;
-			double time = 0.0;
+			double trackTime = 0.0;
+			double eventTime = 0.0;
 			double drawTime = 0.0;
 
-			while (time < 180.0)
+			while (trackTime < 180.0)
 			{
 				if (keyboard.wentDown(SDLK_SPACE))
 					break;
 
-				if ((rand() % 200) == 0)
-					g_scene->triggerEventByOscId(rand() % 32);
+				trackTime += step;
+				eventTime += step;
+				drawTime += step;
 
 				g_scene->tick(step);
 
-				time += step;
+				if (eventTime >= 1.0)
+				{
+					eventTime = 0.0;
 
-				//if (drawTime >= 10.0)
-				//if (drawTime >= 0.5)
+					g_scene->triggerEventByOscId(rand() % 32);
+				}
+
+				if (drawTime >= 0.5)
 				{
 					drawTime = 0.0;
 
@@ -1125,10 +1224,7 @@ int main(int argc, char * argv[])
 					}
 					framework.endDraw();
 				}
-
-				drawTime += step;
 			}
-		#endif
 
 			delete g_scene;
 			g_scene = new Scene();
@@ -1263,7 +1359,7 @@ int main(int argc, char * argv[])
 
 			if (keyboard.wentDown(SDLK_r))
 			{
-				g_scene->reload();
+				reloadScene();
 			}
 
 			if (keyboard.wentDown(SDLK_d))
@@ -1439,7 +1535,7 @@ int main(int argc, char * argv[])
 						break;
 
 					case kOscMessageType_SceneReload:
-						g_scene->reload();
+						reloadScene();
 						break;
 
 					case kOscMessageType_SceneAdvanceTo:
