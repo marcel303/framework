@@ -4,9 +4,22 @@
 #include <ffmpeg_old/avcodec.h>
 #include <list>
 
+#include <SDL2/SDL.h> // fixme : abstract away
+
 namespace MP
 {
-	// TODO: Move to cpp/h.
+	class Mutex
+	{
+		SDL_mutex * mutex;
+
+	public:
+		Mutex();
+		~Mutex();
+
+		void Lock();
+		void Unlock();
+	};
+
 	class VideoFrame
 	{
 	public:
@@ -36,6 +49,7 @@ namespace MP
 		bool Destroy();
 
 		VideoFrame * AllocateFrame(); ///< Allocate new frame.
+		void StoreFrame(VideoFrame * frame); ///< Add frame to consume list
 		VideoFrame * GetCurrentFrame(); ///< Get current frame.
 		void AdvanceToTime(double time); ///< Move to next frame.
 		bool Depleted() const;
@@ -43,6 +57,8 @@ namespace MP
 		void Clear();
 
 	private:
+		Mutex m_mutex;
+
 		std::list<VideoFrame*> m_freeList;
 		std::list<VideoFrame*> m_consumeList;
 

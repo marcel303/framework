@@ -10,10 +10,10 @@ struct MediaPlayer
 		Context()
 			: mpTickEvent(nullptr)
 			, mpTickMutex(nullptr)
-			, mpBufferLock(nullptr)
+			, mpThreadId(-1)
 			, hasBegun(false)
 			, stopMpThread(false)
-			, seekTime(-1.0)
+			, hasPresentedLastFrame(false)
 		{
 		}
 
@@ -29,12 +29,6 @@ struct MediaPlayer
 			{
 				SDL_DestroyMutex(mpTickMutex);
 				mpTickMutex = nullptr;
-			}
-
-			if (mpBufferLock)
-			{
-				SDL_DestroyMutex(mpBufferLock);
-				mpBufferLock = nullptr;
 			}
 		}
 
@@ -52,12 +46,12 @@ struct MediaPlayer
 		MP::Context mpContext;
 		SDL_cond * mpTickEvent;
 		SDL_mutex * mpTickMutex;
-		SDL_mutex * mpBufferLock;
+		SDL_threadID mpThreadId;
 
 		// hacky messaging between threads
 		volatile bool hasBegun;
 		volatile bool stopMpThread;
-		volatile double seekTime;
+		volatile bool hasPresentedLastFrame;
 	};
 
 	Context * context;

@@ -8,6 +8,32 @@
 
 namespace MP
 {
+	// Mutex
+
+	Mutex::Mutex()
+		: mutex(nullptr)
+	{
+		mutex = SDL_CreateMutex();
+	}
+
+	Mutex::~Mutex()
+	{
+		SDL_DestroyMutex(mutex);
+		mutex = nullptr;
+	}
+
+	void Mutex::Lock()
+	{
+		SDL_LockMutex(mutex);
+	}
+
+	void Mutex::Unlock()
+	{
+		SDL_UnlockMutex(mutex);
+	}
+
+	//
+
 	// VideoFrame
 	VideoFrame::VideoFrame()
 		: m_width(0)
@@ -146,16 +172,29 @@ namespace MP
 			return nullptr;
 		}
 
-		VideoFrame * frame = m_freeList.front();
-		m_freeList.pop_front();
+		VideoFrame * frame = nullptr;
 
-		Assert(frame != m_currentFrame);
+		m_mutex.Lock();
+		{
+			frame = m_freeList.front();
+			m_freeList.pop_front();
 
-		m_consumeList.push_back(frame);
+			Assert(frame != m_currentFrame);
 
-		//memset(frame->m_frameBuffer, 0xcc, frame->m_width * frame->m_height * 3);
+			//memset(frame->m_frameBuffer, 0xcc, frame->m_width * frame->m_height * 3);
+		}
+		m_mutex.Unlock();
 
 		return frame;
+	}
+
+	void VideoBuffer::StoreFrame(VideoFrame * frame)
+	{
+		m_mutex.Lock();
+		{
+			m_consumeList.push_back(frame);
+		}
+		m_mutex.Unlock();
 	}
 
 	VideoFrame * VideoBuffer::GetCurrentFrame()
@@ -165,6 +204,8 @@ namespace MP
 
 	void VideoBuffer::AdvanceToTime(double time)
 	{
+		m_mutex.Lock();
+
 		// Skip as many frame necessary to reach the specified time.
 		// Stop moving forward until the current write position (last written frame) is reached.
 
@@ -185,6 +226,8 @@ namespace MP
 
 			Debug::Print("Advancing frame.");
 		}
+
+		m_mutex.Unlock();
 
 		if (skipCount > 1)
 		{

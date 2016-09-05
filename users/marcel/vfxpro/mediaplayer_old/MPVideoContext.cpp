@@ -144,9 +144,7 @@ namespace MP
 
 	void VideoContext::FillVideoBuffer()
 	{
-		bool newFrame;
-
-		while (!m_videoBuffer.IsFull() && !m_packetQueue.IsEmpty() && ProcessPacket(m_packetQueue.GetPacket(), newFrame))
+		while (!m_videoBuffer.IsFull() && !m_packetQueue.IsEmpty() && ProcessPacket(m_packetQueue.GetPacket()))
 			m_packetQueue.PopFront();
 	}
 
@@ -187,10 +185,8 @@ namespace MP
 		return true;
 	}
 
-	bool VideoContext::ProcessPacket(AVPacket & packet, bool & out_newFrame)
+	bool VideoContext::ProcessPacket(AVPacket & packet)
 	{
-		out_newFrame = false;
-
 		int       bytesRemaining = 0;
 		uint8_t * packetData     = nullptr;
 		int       bytesDecoded   = 0;
@@ -232,9 +228,9 @@ namespace MP
 				{
 					VideoFrame * frame = m_videoBuffer.AllocateFrame();
 
-					ConvertAndStore(frame);
+					Convert(frame);
 
-					out_newFrame = true;
+					m_videoBuffer.StoreFrame(frame);
 				}
 			}
 		}
@@ -260,7 +256,7 @@ namespace MP
 		return m_videoBuffer.Depleted() && (m_packetQueue.GetSize() == 0);
 	}
 
-	bool VideoContext::ConvertAndStore(VideoFrame * out_frame)
+	bool VideoContext::Convert(VideoFrame * out_frame)
 	{
 		bool result = true;
 
