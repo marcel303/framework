@@ -10,8 +10,8 @@
 	#define ENABLE_DEBUG_FFTTEX 0
 	#define ENABLE_LOADTIME_PROFILING 0
 	#define ENABLE_UPSCALING 1
-	#define ENABLE_STRESS_TEST 1
-	#define ENABLE_RESOURCE_PRECACHE 1
+	#define ENABLE_STRESS_TEST 0
+	#define ENABLE_RESOURCE_PRECACHE 0
 	#define ENABLE_LEAPMOTION 0
 	#define ENABLE_MIDI 0
 #else
@@ -55,8 +55,26 @@ struct Config
 		float volume;
 	};
 
+	struct Display
+	{
+		Display();
+
+		bool fullscreen;
+		bool showTestImage;
+		bool showScaleOverlay;
+		float gamma;
+		bool mirror;
+	};
+
+	struct Debug
+	{
+		bool showMessages;
+	};
+
 	Midi midi;
 	AudioIn audioIn;
+	Display display;
+	Debug debug;
 
 	Config();
 

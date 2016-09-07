@@ -23,6 +23,14 @@ Config::AudioIn::AudioIn()
 	deviceIndex = -1;
 }
 
+Config::Display::Display()
+	: fullscreen(false)
+	, showTestImage(false)
+	, showScaleOverlay(false)
+	, gamma(1.f)
+{
+}
+
 //
 
 Config::Config()
@@ -34,6 +42,7 @@ void Config::reset()
 {
 	midi = Midi();
 	audioIn = AudioIn();
+	display = Display();
 }
 
 bool Config::load(const char * filename)
@@ -105,6 +114,37 @@ bool Config::load(const char * filename)
 				audioIn.volume = intAttrib(xmlAudioIn, "volume", 100) / 100.f;
 
 				audioIn.bufferLength *= audioIn.numChannels;
+			}
+
+			//
+
+			const XMLElement * xmlDisplay = xmlSettings->FirstChildElement("display");
+
+			if (xmlDisplay == nullptr)
+			{
+				logWarning("missing <display> element");
+			}
+			else
+			{
+				display.fullscreen = boolAttrib(xmlDisplay, "fullscreen", false);
+				display.showTestImage = boolAttrib(xmlDisplay, "show_testimage", false);
+				display.showScaleOverlay = boolAttrib(xmlDisplay, "show_scaleoverlay", false);
+				display.gamma = floatAttrib(xmlDisplay, "gamma", 1.f);
+				display.mirror = boolAttrib(xmlDisplay, "mirror", false);
+			}
+
+
+			//
+
+			const XMLElement * xmlDebug = xmlSettings->FirstChildElement("debug");
+
+			if (xmlDebug == nullptr)
+			{
+				logWarning("missing <debug> element");
+			}
+			else
+			{
+				debug.showMessages = boolAttrib(xmlDebug, "show_messages", false);
 			}
 		}
 	}

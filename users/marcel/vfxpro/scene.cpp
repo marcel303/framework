@@ -1163,6 +1163,9 @@ void Scene::draw(DrawableList & list)
 void Scene::debugDraw()
 {
 #if ENABLE_DEBUG_TEXT
+	if (!config.debug.showMessages)
+		return;
+
 	// draw debug text
 
 	setFont("calibri.ttf");

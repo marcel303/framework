@@ -68,33 +68,34 @@ void nextScene(const char * filename)
 {
 	logLoadtime(0, "----------------------------------------");
 
-	const uint64_t t1_delete = loadtimer();
+	const uint64_t t1_new = loadtimer();
 
-	delete g_prevScene;
-	g_prevScene = nullptr;
+	Scene * scene = new Scene();
 
-	g_prevScene = g_scene;
-	g_scene = nullptr;
+	const uint64_t t2_load = loadtimer();
 
-	const uint64_t t2_new = loadtimer();
-
-	g_scene = new Scene();
-
-	const uint64_t t3_load = loadtimer();
-
-	if (!g_scene->load(filename))
+	if (!scene->load(filename))
 	{
-		delete g_scene;
-		g_scene = nullptr;
+		delete scene;
+		scene = nullptr;
+	}
+	
+	const uint64_t t3_delete = loadtimer();
 
-		g_scene = new Scene();
+	if (scene)
+	{
+		delete g_prevScene;
+		g_prevScene = nullptr;
+
+		g_prevScene = g_scene;
+		g_scene = scene;
 	}
 
 	const uint64_t t4_end = loadtimer();
 
-	logLoadtime(t2_new  - t1_delete, "Scene::delete");
-	logLoadtime(t3_load - t2_new,    "Scene::new");
-	logLoadtime(t4_end  - t3_load,   "Scene::load");
+	logLoadtime(t2_load   - t1_new,    "Scene::new");
+	logLoadtime(t3_delete - t2_load,   "Scene::load");
+	logLoadtime(t4_end    - t3_delete, "Scene::delete");
 
 	const float kTransitionTime = 4.f;
 	g_prevSceneTime = kTransitionTime;
@@ -1139,24 +1140,6 @@ int main(int argc, char * argv[])
 		framework.fillCachesWithPath(".", true);
 		preloadResourceFiles();
 		//preloadSceneFiles();
-
-		while (keyboard.isIdle())
-		{
-			framework.process();
-
-			framework.beginDraw(0, 0, 0, 0);
-			{
-				setColor(0, 31, 31);
-				drawRect(0, 0, GFX_SX, GFX_SY);
-
-				setColor(colorWhite);
-				setFont("calibri.ttf");
-				drawText(GFX_SX/2, GFX_SY/2, 32, 0.f, 0.f, "done!");
-				if (std::fmodf(framework.time, 1.f) < .5f)
-					drawText(GFX_SX/2, GFX_SY/2 + 32, 32, 0.f, 0.f, "press any key to start visualizing");
-			}
-			framework.endDraw();
-		}
 	#endif
 
 	#if !ENABLE_DEBUG_INFOS
@@ -1179,15 +1162,45 @@ int main(int argc, char * argv[])
 
 		bool debugDraw = false;
 
-		bool flipH = false;
 		bool drawScreenIds = false;
 		bool drawProjectorSetup = false;
 
+		while (keyboard.isIdle())
+		{
+			framework.process();
+
+			framework.beginDraw(0, 0, 0, 0);
+			{
+				gxPushMatrix();
+				gxScalef(GFX_SCALE, GFX_SCALE, 1.f);
+
+				gxTranslatef(+GFX_SX/2, 0.f, 0.f);
+				gxScalef(config.display.mirror ? -1.f : +1.f, 1.f, 1.f);
+				gxTranslatef(-GFX_SX/2, 0.f, 0.f);
+
+				setBlend(BLEND_ALPHA);
+
+				setColor(colorWhite);
+				Sprite("testimage.jpg").draw();
+
+				setColor(0, 31, 31);
+				drawRect(0, GFX_SY/2-30, GFX_SX, GFX_SY/2+30);
+
+				setColor(colorWhite);
+				setFont("calibri.ttf");
+				if (std::fmodf(framework.time, 1.f) < .5f)
+					drawText(GFX_SX/2, GFX_SY/2-8, 32, 0.f, 0.f, "press any key to start visualizing");
+
+				gxPopMatrix();
+			}
+			framework.endDraw();
+		}
+		
 		g_prevScene = new Scene();
 
 		g_scene = new Scene();
 
-	#if ENABLE_STRESS_TEST
+	#if ENABLE_STRESS_TEST || 0
 		const char * filenames[] =
 		{
 			"tracks/ChangeItAll.scene.xml",
@@ -1202,7 +1215,7 @@ int main(int argc, char * argv[])
 			"tracks/WhereAreYouNow.scene.xml"
 		};
 
-		for (int i = 0; i < 1000000 * 1 + 0; ++i)
+		for (int i = 0; i < 1000000 * 1 + 0 && !keyboard.wentDown(SDLK_RSHIFT); ++i)
 		{
 			framework.process();
 
@@ -1218,7 +1231,7 @@ int main(int argc, char * argv[])
 			double eventTime = 0.0;
 			double drawTime = 0.0;
 
-			while (trackTime < 180.0)
+			while (trackTime < 180.0 && !keyboard.wentDown(SDLK_RSHIFT))
 			{
 				if (keyboard.wentDown(SDLK_SPACE))
 					break;
@@ -1236,7 +1249,7 @@ int main(int argc, char * argv[])
 					g_scene->triggerEventByOscId(rand() % 32);
 				}
 
-				if (drawTime >= 0.5)
+				if (drawTime >= 0.25)
 				{
 					drawTime = 0.0;
 
@@ -1403,7 +1416,7 @@ int main(int argc, char * argv[])
 				debugDraw = !debugDraw;
 
 			if (keyboard.wentDown(SDLK_m))
-				flipH = !flipH;
+				config.display.mirror = !config.display.mirror;
 
 		#if ENABLE_DEBUG_MENUS && ENABLE_3D
 			if (keyboard.wentDown(SDLK_RSHIFT))
@@ -1597,6 +1610,12 @@ int main(int argc, char * argv[])
 							if (filename != g_scene->m_filename)
 							{
 								logDebug("scene change detected. transitioning from %s to %s", g_scene->m_filename.c_str(), filename.c_str());
+
+								nextScene(filename.c_str());
+							}
+							else if (message.param[0] == 0 && g_scene->m_time >= 1.f)
+							{
+								logDebug("scene restart detected. transitioning from %s to %s", g_scene->m_filename.c_str(), filename.c_str());
 
 								nextScene(filename.c_str());
 							}
@@ -1848,20 +1867,26 @@ int main(int argc, char * argv[])
 
 				// blit result to back buffer
 
-				const GLuint surfaceTexture = surface.getTexture();
-
-				gxSetTexture(surfaceTexture);
 				{
 					gpuTimingBlock(blitToBackBuffer);
+
 					setBlend(BLEND_OPAQUE);
-					setColor(colorWhite);
-					if (flipH)
+
+					// fixme : apply gamma at the end ?
+
+					Shader shader("gamma");
+					setShader(shader);
+					shader.setImmediate("gamma", config.display.gamma);
+					shader.setTexture("colormap", 0, surface.getTexture(), false, true);
+
+					if (config.display.mirror)
 						drawRect(GFX_SX_SCALED, 0, 0, GFX_SY_SCALED);
 					else
 						drawRect(0, 0, GFX_SX_SCALED, GFX_SY_SCALED);
+
+					clearShader();
 					setBlend(BLEND_ALPHA);
 				}
-				gxSetTexture(0);
 
 				if (g_prevScene)
 				{
@@ -1870,18 +1895,30 @@ int main(int argc, char * argv[])
 					setBlend(BLEND_ALPHA);
 					const float alpha = g_prevSceneTime * g_prevSceneTimeRcp;
 
-					Shader shader("layer_compose_alpha");
+					Shader shader("gamma_prev");
 					setShader(shader);
+					shader.setImmediate("gamma", config.display.gamma);
 					shader.setImmediate("alpha", alpha);
 					shader.setTexture("colormap", 0, prevSurface.getTexture(), false, true);
 
-					if (flipH)
+					if (config.display.mirror)
 						drawRect(GFX_SX_SCALED, 0, 0, GFX_SY_SCALED);
 					else
 						drawRect(0, 0, GFX_SX_SCALED, GFX_SY_SCALED);
 
 					clearShader();
 					setBlend(BLEND_ALPHA);
+				}
+
+				if (config.display.showScaleOverlay)
+				{
+					gxPushMatrix();
+					gxScalef(GFX_SCALE, GFX_SCALE, 1.f);
+
+					setBlend(BLEND_ADD);
+					Sprite("scaleoverlay.jpg").draw();
+
+					gxPopMatrix();
 				}
 
 			#if ENABLE_3D
