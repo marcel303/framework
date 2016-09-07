@@ -912,6 +912,9 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 				process();
 		}
 	}
+
+	if (fillCachesCallback)
+		fillCachesCallback(1.f);
 }
 
 void Framework::setFullscreen(bool fullscreen)
