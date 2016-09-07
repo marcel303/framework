@@ -738,6 +738,13 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 	
 	if (hasVs)
 		result &= loadShader(vs.c_str(), shaderVs, GL_VERTEX_SHADER);
+	else
+	{
+		logWarning("shader %s doesn't have a vertex shader. cannot load", _name);
+
+		result &= false;
+	}
+
 	if (hasPs)
 		result &= loadShader(ps.c_str(), shaderPs, GL_FRAGMENT_SHADER);
 	
