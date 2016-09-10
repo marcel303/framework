@@ -39,6 +39,7 @@ struct MediaPlayer
 		struct OpenParams
 		{
 			std::string filename;
+			bool yuv;
 		};
 
 		OpenParams openParams;
@@ -80,7 +81,7 @@ struct MediaPlayer
 		close();
 	}
 
-	void openAsync(const char * filename);
+	void openAsync(const char * filename, const bool yuv);
 	void close();
 	void tick(Context * context);
 

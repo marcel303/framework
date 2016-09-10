@@ -15,7 +15,7 @@ namespace MP
 	public:
 		VideoContext();
 
-		bool Initialize(Context * context, const size_t streamIndex);
+		bool Initialize(Context * context, const size_t streamIndex, const bool outputYuv);
 		bool Destroy();
 
 		size_t GetStreamIndex() const;
@@ -42,6 +42,7 @@ namespace MP
 		VideoBuffer m_videoBuffer; // TODO: Init/destroy.
 
 		size_t m_streamIndex;
+		bool m_outputYuv;
 		double m_time;
 		size_t m_frameCount;
 

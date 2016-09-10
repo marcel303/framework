@@ -1329,9 +1329,10 @@ void Effect_Picture::draw()
 
 const bool kVideoPreload = true;
 
-Effect_Video::Effect_Video(const char * name, const char * filename, const char * shader, const bool centered, const bool play)
+Effect_Video::Effect_Video(const char * name, const char * filename, const char * shader, const bool yuv,const bool centered, const bool play)
 	: Effect(name)
 	, m_alpha(1.f)
+	, m_yuv(false)
 	, m_centered(true)
 	, m_hideWhenDone(0.f)
 	, m_playing(false)
@@ -1345,11 +1346,12 @@ Effect_Video::Effect_Video(const char * name, const char * filename, const char 
 
 	m_filename = filename;
 	m_shader = shader;
+	m_yuv = yuv;
 	m_centered = centered;
 
 	if (kVideoPreload)
 	{
-		m_mediaPlayer.openAsync(m_filename.c_str());
+		m_mediaPlayer.openAsync(m_filename.c_str(), m_yuv);
 	}
 
 	if (play)
@@ -1442,7 +1444,7 @@ void Effect_Video::handleSignal(const std::string & name)
 				m_mediaPlayer.close();
 			}
 
-			m_mediaPlayer.openAsync(m_filename.c_str());
+			m_mediaPlayer.openAsync(m_filename.c_str(), m_yuv);
 		}
 
 		m_startTime = g_currentScene->m_time;
@@ -3112,7 +3114,8 @@ void Effect_Fireworks::tick(const float dt)
 			p.lifeRcp = 1.f / p.life;
 			p.vx = std::cos(a) * v;
 			p.vy = std::sin(a) * v;
-			p.color = Color::fromHSL(.5f + random(0.f, .3f), .5f, .5f);
+			///p.color = Color::fromHSL(.5f + random(0.f, .3f), .5f, .5f);
+			p.color = Color::fromHSL(.5f + random(0.f, .3f) + g_currentScene->m_time * .5f, .5f, .5f);
 		}
 	}
 
@@ -3163,7 +3166,8 @@ void Effect_Fireworks::tick(const float dt)
 
 				if (p.type == kPT_Child1)
 				{
-					if ((rand() % 20) == 0)
+					//if ((rand() % 20) == 0)
+					if (false)
 					{
 						for (int i = 0; i < 10; ++i)
 						{

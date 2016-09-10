@@ -345,6 +345,7 @@ struct Effect_Video : Effect
 	TweenFloat m_alpha;
 	std::string m_filename;
 	std::string m_shader;
+	bool m_yuv;
 	bool m_centered;
 	TweenFloat m_hideWhenDone;
 
@@ -353,7 +354,7 @@ struct Effect_Video : Effect
 	double m_time;
 	double m_startTime;
 
-	Effect_Video(const char * name, const char * filename, const char * shader, const bool centered, const bool play);
+	Effect_Video(const char * name, const char * filename, const char * shader, const bool yuv, const bool centered, const bool play);
 
 	virtual void tick(const float dt) override;
 	virtual void draw(DrawableList & list) override;

@@ -152,6 +152,14 @@ float screenYToVirtual(const float y)
 	//return (y / SCREEN_SY - .5f) * 100.f;
 }
 
+static void applyGfxTransform()
+{
+	gxScalef(GFX_SCALE, GFX_SCALE, 1.f);
+	gxTranslatef(+GFX_SX/2, 0.f, 0.f);
+	gxScalef(config.display.mirror ? -1.f : +1.f, 1.f, 0.f);
+	gxTranslatef(-GFX_SX/2, 0.f, 0.f);
+}
+
 /*
 
 :: todo :: OSC
@@ -1019,6 +1027,179 @@ public:
 
 //
 
+static void showTestImage()
+{
+	while (keyboard.isIdle())
+	{
+		framework.process();
+
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			gxPushMatrix();
+			{
+				applyGfxTransform();
+
+				setBlend(BLEND_ALPHA);
+
+				//setColor(colorWhite);
+				//Sprite("testimage.jpg").draw();
+
+				setColor(0, 31, 31);
+				drawRect(0, GFX_SY/2-30, GFX_SX, GFX_SY/2+30);
+
+				setColor(colorWhite);
+				setFont("calibri.ttf");
+				if (std::fmodf(framework.time, 1.f) < .5f)
+					drawText(GFX_SX/2, GFX_SY/2-8 + 250, 32, 0.f, 0.f, "press any key to start visualizing");
+			}
+			gxPopMatrix();
+
+			//
+
+			Mat4x4 matP;
+			matP.MakePerspectiveLH(Calc::RadToDeg(90.f), GFX_SY/float(GFX_SX), .01f, 10000.f);
+
+			setTransform3d(matP);
+			setTransform(TRANSFORM_3D);
+
+			gxPushMatrix();
+			{
+				glEnable(GL_LINE_SMOOTH);
+				glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+
+				Sprite sprite("testimage.jpg");
+
+				sprite.pivotX = sprite.getWidth()/2;
+				sprite.pivotY = sprite.getHeight()/2;
+
+				gxTranslatef(0.f, 0.f, 1000.f);
+
+				for (int i = 0; i < 200; ++i)
+				{
+					gxPushMatrix();
+					{
+						gxTranslatef(i * 10, i * 10, i * 10);
+
+						const float rotOffset = i * 3;
+						const float rotSpeed = 2.f;// * std::sinf(framework.time);
+						const float scale = 1.f - i / 100.f / 2.f;
+
+						gxRotatef(rotOffset + framework.time * rotSpeed * 1.234f, 1, 0, 0);
+						gxRotatef(rotOffset + framework.time * rotSpeed * 2.345f, 0, 1, 0);
+						gxRotatef(rotOffset + framework.time * rotSpeed * 3.456f, 0, 0, 1);
+						gxScalef(scale, scale, scale);
+
+						setBlend(BLEND_ALPHA);
+
+						setColor(colorWhite);
+
+						gxScalef(400, 400, 400);
+						drawRectLine(-1, -1, +1, +1);
+					}
+					gxPopMatrix();
+				}
+
+				glDisable(GL_LINE_SMOOTH);
+			}
+			gxPopMatrix();
+
+			setTransform(TRANSFORM_SCREEN);
+		}
+		framework.endDraw();
+	}
+}
+
+//
+
+#if ENABLE_STRESS_TEST
+
+static void doStressTest()
+{
+	const char * filenames[] =
+	{
+		"tracks/ChangeItAll.scene.xml",
+		"tracks/ElevateLove.scene.xml",
+		"tracks/Healer.scene.xml",
+		"tracks/Heroes.scene.xml",
+		"tracks/intro.scene.xml",
+		"tracks/LetMeBe.scene.xml",
+		"tracks/OnTopOfYou.scene.xml",
+		"tracks/Oxygen.scene.xml",
+		"tracks/Sarayani.scene.xml",
+		"tracks/WhereAreYouNow.scene.xml"
+	};
+
+	for (int i = 0; i < 1000000 * 1 + 0 && !keyboard.wentDown(SDLK_RSHIFT); ++i)
+	{
+		framework.process();
+
+		const int c1 = GetAllocState().allocationCount;
+		g_scene->load(filenames[rand() % (sizeof(filenames) / sizeof(filenames[0]))]);
+		//g_scene->load(filenames[i % (sizeof(filenames) / sizeof(filenames[0]))]);
+
+		for (int i = 0; i < 1; ++i)
+			g_scene->triggerEventByOscId(i);
+
+		const double step = 1.0 / 60.0;
+		double trackTime = 0.0;
+		double eventTime = 0.0;
+		double drawTime = 0.0;
+
+		while (trackTime < 180.0 && !keyboard.wentDown(SDLK_RSHIFT))
+		{
+			if (keyboard.wentDown(SDLK_SPACE))
+				break;
+
+			trackTime += step;
+			eventTime += step;
+			drawTime += step;
+
+			g_scene->tick(step);
+
+			if (eventTime >= 1.0)
+			{
+				eventTime = 0.0;
+
+				g_scene->triggerEventByOscId(rand() % 32);
+			}
+
+			if (drawTime >= 0.25)
+			{
+				drawTime = 0.0;
+
+				DrawableList drawableList;
+
+				g_scene->draw(drawableList);
+
+				drawableList.sort();
+
+				framework.process();
+
+				framework.beginDraw(0, 0, 0, 0);
+				{
+					gxPushMatrix();
+					{
+						gxScalef(GFX_SCALE, GFX_SCALE, 1.f);
+
+						setBlend(BLEND_ADD);
+						drawableList.draw();
+					}
+					gxPopMatrix();
+				}
+				framework.endDraw();
+			}
+		}
+
+		delete g_scene;
+		g_scene = new Scene();
+		const int c2 = GetAllocState().allocationCount;
+	}
+}
+
+#endif
+
+//
+
 int main(int argc, char * argv[])
 {
 #if ENABLE_REALTIME_EDITING
@@ -1165,121 +1346,19 @@ int main(int argc, char * argv[])
 		bool drawScreenIds = false;
 		bool drawProjectorSetup = false;
 
-		while (keyboard.isIdle())
-		{
-			framework.process();
+	#if ENABLE_REALTIME_EDITING
+		bool fileMonitorEnabled = true;
+	#endif
 
-			framework.beginDraw(0, 0, 0, 0);
-			{
-				gxPushMatrix();
-				gxScalef(GFX_SCALE, GFX_SCALE, 1.f);
-
-				gxTranslatef(+GFX_SX/2, 0.f, 0.f);
-				gxScalef(config.display.mirror ? -1.f : +1.f, 1.f, 1.f);
-				gxTranslatef(-GFX_SX/2, 0.f, 0.f);
-
-				setBlend(BLEND_ALPHA);
-
-				setColor(colorWhite);
-				Sprite("testimage.jpg").draw();
-
-				setColor(0, 31, 31);
-				drawRect(0, GFX_SY/2-30, GFX_SX, GFX_SY/2+30);
-
-				setColor(colorWhite);
-				setFont("calibri.ttf");
-				if (std::fmodf(framework.time, 1.f) < .5f)
-					drawText(GFX_SX/2, GFX_SY/2-8, 32, 0.f, 0.f, "press any key to start visualizing");
-
-				gxPopMatrix();
-			}
-			framework.endDraw();
-		}
+		if (config.display.showTestImage)
+			showTestImage();
 		
 		g_prevScene = new Scene();
 
 		g_scene = new Scene();
 
 	#if ENABLE_STRESS_TEST || 0
-		const char * filenames[] =
-		{
-			"tracks/ChangeItAll.scene.xml",
-			"tracks/ElevateLove.scene.xml",
-			"tracks/Healer.scene.xml",
-			"tracks/Heroes.scene.xml",
-			"tracks/intro.scene.xml",
-			"tracks/LetMeBe.scene.xml",
-			"tracks/OnTopOfYou.scene.xml",
-			"tracks/Oxygen.scene.xml",
-			"tracks/Sarayani.scene.xml",
-			"tracks/WhereAreYouNow.scene.xml"
-		};
-
-		for (int i = 0; i < 1000000 * 1 + 0 && !keyboard.wentDown(SDLK_RSHIFT); ++i)
-		{
-			framework.process();
-
-			const int c1 = GetAllocState().allocationCount;
-			g_scene->load(filenames[rand() % (sizeof(filenames) / sizeof(filenames[0]))]);
-			//g_scene->load(filenames[i % (sizeof(filenames) / sizeof(filenames[0]))]);
-
-			for (int i = 0; i < 1; ++i)
-				g_scene->triggerEventByOscId(i);
-
-			const double step = 1.0 / 60.0;
-			double trackTime = 0.0;
-			double eventTime = 0.0;
-			double drawTime = 0.0;
-
-			while (trackTime < 180.0 && !keyboard.wentDown(SDLK_RSHIFT))
-			{
-				if (keyboard.wentDown(SDLK_SPACE))
-					break;
-
-				trackTime += step;
-				eventTime += step;
-				drawTime += step;
-
-				g_scene->tick(step);
-
-				if (eventTime >= 1.0)
-				{
-					eventTime = 0.0;
-
-					g_scene->triggerEventByOscId(rand() % 32);
-				}
-
-				if (drawTime >= 0.25)
-				{
-					drawTime = 0.0;
-
-					DrawableList drawableList;
-
-					g_scene->draw(drawableList);
-
-					drawableList.sort();
-
-					framework.process();
-
-					framework.beginDraw(0, 0, 0, 0);
-					{
-						gxPushMatrix();
-						{
-							gxScalef(GFX_SCALE, GFX_SCALE, 1.f);
-
-							setBlend(BLEND_ADD);
-							drawableList.draw();
-						}
-						gxPopMatrix();
-					}
-					framework.endDraw();
-				}
-			}
-
-			delete g_scene;
-			g_scene = new Scene();
-			const int c2 = GetAllocState().allocationCount;
-		}
+		doStressTest();
 	#endif
 
 		Surface prevSurface(GFX_SX, GFX_SY, true);
@@ -1303,14 +1382,13 @@ int main(int argc, char * argv[])
 			framework.process();
 
 		#if ENABLE_REALTIME_EDITING
-			static bool doTickFileMonitor = true;
 			if (keyboard.wentDown(SDLK_f))
 			{
-				doTickFileMonitor = !doTickFileMonitor;
-				if (doTickFileMonitor)
+				fileMonitorEnabled = !fileMonitorEnabled;
+				if (fileMonitorEnabled)
 					initFileMonitor();
 			}
-			if (doTickFileMonitor)
+			if (fileMonitorEnabled)
 				tickFileMonitor();
 		#endif
 
@@ -1417,6 +1495,8 @@ int main(int argc, char * argv[])
 
 			if (keyboard.wentDown(SDLK_m))
 				config.display.mirror = !config.display.mirror;
+			if (keyboard.wentDown(SDLK_n))
+				config.display.showScaleOverlay = !config.display.showScaleOverlay;
 
 		#if ENABLE_DEBUG_MENUS && ENABLE_3D
 			if (keyboard.wentDown(SDLK_RSHIFT))
@@ -1867,12 +1947,33 @@ int main(int argc, char * argv[])
 
 				// blit result to back buffer
 
+				if (g_prevScene)
+				{
+					gpuTimingBlock(blitToBackBuffer);
+					
+					setBlend(BLEND_OPAQUE);
+					const float alpha = g_prevSceneTime * g_prevSceneTimeRcp;
+
+					Shader shader("gamma_prev");
+					setShader(shader);
+					shader.setImmediate("gamma", config.display.gamma);
+					shader.setImmediate("alpha", alpha);
+					shader.setTexture("prevColormap", 0, prevSurface.getTexture(), false, true);
+					shader.setTexture("currColormap", 1, surface.getTexture(), false, true);
+
+					if (config.display.mirror)
+						drawRect(GFX_SX_SCALED, 0, 0, GFX_SY_SCALED);
+					else
+						drawRect(0, 0, GFX_SX_SCALED, GFX_SY_SCALED);
+
+					clearShader();
+					setBlend(BLEND_ALPHA);
+				}
+				else
 				{
 					gpuTimingBlock(blitToBackBuffer);
 
 					setBlend(BLEND_OPAQUE);
-
-					// fixme : apply gamma at the end ?
 
 					Shader shader("gamma");
 					setShader(shader);
@@ -1888,36 +1989,29 @@ int main(int argc, char * argv[])
 					setBlend(BLEND_ALPHA);
 				}
 
-				if (g_prevScene)
-				{
-					gpuTimingBlock(blitToBackBuffer);
-					
-					setBlend(BLEND_ALPHA);
-					const float alpha = g_prevSceneTime * g_prevSceneTimeRcp;
-
-					Shader shader("gamma_prev");
-					setShader(shader);
-					shader.setImmediate("gamma", config.display.gamma);
-					shader.setImmediate("alpha", alpha);
-					shader.setTexture("colormap", 0, prevSurface.getTexture(), false, true);
-
-					if (config.display.mirror)
-						drawRect(GFX_SX_SCALED, 0, 0, GFX_SY_SCALED);
-					else
-						drawRect(0, 0, GFX_SX_SCALED, GFX_SY_SCALED);
-
-					clearShader();
-					setBlend(BLEND_ALPHA);
-				}
-
 				if (config.display.showScaleOverlay)
 				{
 					gxPushMatrix();
-					gxScalef(GFX_SCALE, GFX_SCALE, 1.f);
+					{
+						const float height = 3.f;
+						const float lift = 30.f / 100.f;
+					#define HEIGHT_TO_SCREEN(h) (1.f - ((h/100.f - lift)/height)) * GFX_SY
 
-					setBlend(BLEND_ADD);
-					Sprite("scaleoverlay.jpg").draw();
+						applyGfxTransform();
 
+						setBlend(BLEND_ALPHA);
+
+						//setColor(colorWhite);
+						//Sprite("scaleoverlay.png").draw();
+
+						setColor(colorWhite);
+						setFont("calibri.ttf");
+						for (int y = 0; y <= 350; y += 50)
+						{
+							drawText(GFX_SX - 5, HEIGHT_TO_SCREEN(y), 16, -1, -3, "%.2fcm", y / 100.f);
+							drawLine(0, HEIGHT_TO_SCREEN(y), GFX_SX, HEIGHT_TO_SCREEN(y));
+						}
+					}
 					gxPopMatrix();
 				}
 
@@ -2023,7 +2117,7 @@ int main(int argc, char * argv[])
 				const int spacingY = 28;
 				const int fontSize = 24;
 				int x = 20;
-				int y = 20;
+				int y = 45;
 
 				if (s_debugMode == kDebugMode_None)
 				{
@@ -2226,7 +2320,7 @@ int main(int argc, char * argv[])
 				}
 			#endif
 
-			#if ENABLE_DEBUG_INFOS
+			#if ENABLE_DEBUG_INFOS && 0
 				setFont("VeraMono.ttf");
 				setColor(colorBlack);
 				drawRect(mouse.x-100, mouse.y-10, mouse.x+100, mouse.y+20);
@@ -2244,7 +2338,7 @@ int main(int argc, char * argv[])
 					int y = 5;
 
 				#if ENABLE_REALTIME_EDITING
-					drawText(5, y, 24, +1.f, +1.f, "FileMonitor: %s", doTickFileMonitor ? "enabled" : "disabled");
+					drawText(5, y, 24, +1.f, +1.f, "FileMonitor: %s", fileMonitorEnabled ? "enabled" : "disabled");
 					y += 30;
 				#endif
 

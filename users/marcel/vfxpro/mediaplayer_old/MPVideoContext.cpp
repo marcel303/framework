@@ -18,13 +18,14 @@ namespace MP
 		, m_tempFrameBuffer(nullptr)
 		, m_videoBuffer()
 		, m_streamIndex(-1)
+		, m_outputYuv(false)
 		, m_time(0.0)
 		, m_frameCount(0)
 		, m_initialized(false)
 	{
 	}
 
-	bool VideoContext::Initialize(Context * context, const size_t streamIndex)
+	bool VideoContext::Initialize(Context * context, const size_t streamIndex, const bool outputYuv)
 	{
 		Assert(m_initialized == false);
 
@@ -33,6 +34,7 @@ namespace MP
 		m_initialized = true;
 
 		m_streamIndex = streamIndex;
+		m_outputYuv = outputYuv;
 		m_time = 0.0;
 		m_frameCount = 0;
 
@@ -260,10 +262,45 @@ namespace MP
 	{
 		bool result = true;
 
-		img_convert((AVPicture *)out_frame->m_frame, PIX_FMT_RGB24, (AVPicture*)m_tempFrame, 
-			m_codecContext->pix_fmt,
-			m_codecContext->width,
-			m_codecContext->height);
+		const AVPicture * src = (const AVPicture*)m_tempFrame;
+		      AVPicture * dst = (AVPicture*)out_frame->m_frame;
+
+		if (m_outputYuv)
+		{
+			const uint8_t * __restrict srcYLine = src->data[0];
+			const uint8_t * __restrict srcULine = src->data[1];
+			const uint8_t * __restrict srcVLine = src->data[2];
+			uint8_t * __restrict dstLine  = dst->data[0];
+
+			const int sx = m_codecContext->width;
+			const int sy = m_codecContext->height;
+
+			for (int y = 0; y < sy; ++y)
+			{
+				const uint8_t * __restrict srcY   = srcYLine + src->linesize[0] * (y     );
+				const uint8_t * __restrict srcU   = srcULine + src->linesize[1] * (y >> 1);
+				const uint8_t * __restrict srcV   = srcVLine + src->linesize[2] * (y >> 1);
+				uint8_t * __restrict dstRGB = dstLine  + dst->linesize[0] * (y     );
+
+				for (int x = 0; x < sx; ++x, dstRGB += 3)
+				{
+					const int y = srcY[x];
+					const int u = srcU[x >> 1];
+					const int v = srcV[x >> 1];
+
+					dstRGB[0] = y;
+					dstRGB[1] = u;
+					dstRGB[2] = v;
+				}
+			}
+		}
+		else
+		{
+			img_convert((AVPicture *)out_frame->m_frame, PIX_FMT_RGB24, src, 
+				m_codecContext->pix_fmt,
+				m_codecContext->width,
+				m_codecContext->height);
+		}
 
         if (m_tempFrame->pts != 0 && m_tempFrame->pts != AV_NOPTS_VALUE)
 		{

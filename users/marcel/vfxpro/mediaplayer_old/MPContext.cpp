@@ -18,7 +18,7 @@ namespace MP
 	{
 	}
 
-	bool Context::Begin(const std::string & filename, const bool enableAudioStream, const bool enableVideoStream)
+	bool Context::Begin(const std::string & filename, const bool enableAudioStream, const bool enableVideoStream, const bool outputYuv)
 	{
 		Assert(m_begun == false);
 
@@ -82,7 +82,7 @@ namespace MP
 			{
 				// Initialize video stream/context.
 				m_videoContext = new VideoContext;
-				if (!m_videoContext->Initialize(this, videoStreamIndex))
+				if (!m_videoContext->Initialize(this, videoStreamIndex, outputYuv))
 					result &= false;
 			}
 		}

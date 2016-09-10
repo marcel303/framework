@@ -16,7 +16,7 @@ static int ExecMediaPlayerThread(void * param)
 
 	SDL_LockMutex(s_avcodecMutex);
 	{
-		context->hasBegun = context->mpContext.Begin(context->openParams.filename, false, true);
+		context->hasBegun = context->mpContext.Begin(context->openParams.filename, false, true, context->openParams.yuv);
 	}
 	SDL_UnlockMutex(s_avcodecMutex);
 
@@ -85,7 +85,7 @@ bool MediaPlayer::Context::presentedLastFrame() const
 
 //
 
-void MediaPlayer::openAsync(const char * filename)
+void MediaPlayer::openAsync(const char * filename, const bool yuv)
 {
 	Assert(context == nullptr);
 
@@ -94,6 +94,7 @@ void MediaPlayer::openAsync(const char * filename)
 	context = new Context();
 
 	context->openParams.filename = filename;
+	context->openParams.yuv = yuv;
 
 	const int t2 = SDL_GetTicks();
 
@@ -172,13 +173,54 @@ void MediaPlayer::updateTexture()
 
 		//logDebug("gotVideo. t=%06dms, sx=%d, sy=%d", int(time * 1000.0), textureSx, textureSy);
 
+#if 1
 		if (texture)
 		{
 			glDeleteTextures(1, &texture);
 			texture = 0;
 		}
+#endif
 
-		texture = createTextureFromRGB8(videoFrame->m_frameBuffer, videoFrame->m_width, videoFrame->m_height, true, true);
+		if (texture)
+		{
+			const void * source = videoFrame->m_frameBuffer;
+			const int sx = videoFrame->m_width;
+			const int sy = videoFrame->m_height;
+			const GLenum format = GL_RGB;
+
+			GLuint restoreTexture;
+			glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+			GLint restoreUnpackAlignment;
+			glGetIntegerv(GL_UNPACK_ALIGNMENT, &restoreUnpackAlignment);
+			GLint restoreUnpackRowLength;
+			glGetIntegerv(GL_UNPACK_ROW_LENGTH, &restoreUnpackRowLength);
+
+			// copy image data
+
+			glBindTexture(GL_TEXTURE_2D, texture);
+			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+			glPixelStorei(GL_UNPACK_ROW_LENGTH, sx);
+			glTexImage2D(
+				GL_TEXTURE_2D,
+				0,
+				format,
+				sx,
+				sy,
+				0,
+				format,
+				GL_UNSIGNED_BYTE,
+				source);
+
+			// restore previous OpenGL states
+
+			glBindTexture(GL_TEXTURE_2D, restoreTexture);
+			glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpackAlignment);
+			glPixelStorei(GL_UNPACK_ROW_LENGTH, restoreUnpackRowLength);
+		}
+		else
+		{
+			texture = createTextureFromRGB8(videoFrame->m_frameBuffer, videoFrame->m_width, videoFrame->m_height, true, true);
+		}
 	}
 }
 
