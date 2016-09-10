@@ -714,7 +714,7 @@ static bool doFileDialog(const std::string & extension, std::string & filename)
 					setColor(colorYellow);
 				else
 					setColor(colorWhite);
-				drawText(GFX_SX/2, 40 + i * 20, 16, 0, 0, "%s", files[i].c_str());
+				drawText(GFX_SX/2, 5 + i * 18, 14, 0, 0, "%s", files[i].c_str());
 			}
 		}
 		framework.endDraw();
