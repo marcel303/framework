@@ -2422,17 +2422,6 @@ GLuint Sprite::getTexture() const
 
 // -----
 
-Image::Image(const char * name)
-{
-	Sprite sprite(name);
-
-	width = sprite.getWidth();
-	height = sprite.getHeight();
-	texture = sprite.getTexture();
-}
-
-// -----
-
 SpriterState::SpriterState()
 {
 	memset(this, 0, sizeof(SpriterState));
@@ -4538,11 +4527,6 @@ static void gxFlush(bool endOfBatch)
 		{
 			switch (s_gxPrimitiveType)
 			{
-				case GL_QUAD_STRIP:
-					s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 2];
-					s_gxVertices[1] = s_gxVertices[s_gxVertexCount - 1];
-					s_gxVertexCount = 2;
-					break;
 				case GL_LINE_LOOP:
 					s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 1];
 					s_gxVertexCount = 1;
@@ -4578,9 +4562,6 @@ void gxBegin(int primitiveType)
 			break;
 		case GL_QUADS:
 			s_gxPrimitiveSize = 4;
-			break;
-		case GL_QUAD_STRIP:
-			s_gxPrimitiveSize = 2;
 			break;
 		case GL_LINES:
 			s_gxPrimitiveSize = 2;
