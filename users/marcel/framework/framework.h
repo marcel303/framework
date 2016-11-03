@@ -49,7 +49,7 @@
 */
 
 #define USE_LEGACY_OPENGL 0
-#define ENABLE_UTF8_SUPPORT 0
+#define ENABLE_UTF8_SUPPORT 1
 
 static const int MAX_GAMEPAD = 4;
 
@@ -505,6 +505,17 @@ private:
 	void processAnimationFrameChange(int frame1, int frame2);
 	void processAnimationTriggersForFrame(int frame, int event);
 	int calculateLoopedFrameIndex(int frame) const;
+};
+
+//
+
+struct Image
+{
+	Image(const char * name);
+
+	int width;
+	int height;
+	GLuint texture;
 };
 
 //
