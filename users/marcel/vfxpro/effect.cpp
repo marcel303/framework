@@ -130,31 +130,6 @@ std::string nameToEffectParam(const std::string & effectName, const std::string 
 
 //
 
-std::map<std::string, Effect*> g_effectsByName;
-
-void registerEffect(const char * sceneName, const char * name, Effect * effect)
-{
-	std::string fullName = std::string(sceneName) + "." + name;
-
-	Assert(g_effectsByName.count(fullName) == 0);
-
-	g_effectsByName[fullName] = effect;
-}
-
-void unregisterEffect(Effect * effect)
-{
-	for (auto i = g_effectsByName.begin(); i != g_effectsByName.end(); ++i)
-	{
-		if (i->second == effect)
-		{
-			g_effectsByName.erase(i);
-			break;
-		}
-	}
-}
-
-//
-
 Effect::Effect(const char * name)
 	: visible(1.f)
 	, is3D(false)
@@ -182,16 +157,10 @@ Effect::Effect(const char * name)
 	addVar("time_multiplier", timeMultiplier);
 
 	transform.MakeIdentity();
-
-	if (name != nullptr)
-	{
-		registerEffect(g_currentScene->m_filename.c_str(), name, this);
-	}
 }
 
 Effect::~Effect()
 {
-	unregisterEffect(this);
 }
 
 Vec2 Effect::screenToLocal(Vec2Arg v) const
@@ -600,13 +569,14 @@ void Effect_Cloth::doDraw()
 
 //
 
-Effect_Fsfx::Effect_Fsfx(const char * name, const char * shader, const std::vector<std::string> & images, const std::vector<Color> & colors)
+Effect_Fsfx::Effect_Fsfx(const char * name, const char * shader, const char * image, const std::vector<std::string> & images, const std::vector<Color> & colors)
 	: Effect(name)
 	, m_alpha(1.f)
 	, m_param1(0.f)
 	, m_param2(0.f)
 	, m_param3(0.f)
 	, m_param4(0.f)
+	, m_image(image)
 	, m_images(images)
 	, m_colors(colors)
 	, m_textureArray(0)
@@ -685,6 +655,8 @@ Effect_Fsfx::Effect_Fsfx(const char * name, const char * shader, const std::vect
 		glDeleteFramebuffers(2, fbo);
 		checkErrorGL();
 	}
+
+	applyTransform();
 }
 
 Effect_Fsfx::~Effect_Fsfx()
@@ -729,7 +701,9 @@ void Effect_Fsfx::draw()
 	data._pcmVolume = g_pcmVolume;
 	buffer.setData(&data, sizeof(data));
 	shader.setBuffer("FsfxBlock", buffer);
-	shader.setTextureArray("textures", 5, m_textureArray, true, false);
+	if (!m_image.empty())
+		shader.setTexture("image", 5, Sprite(m_image.c_str()).getTexture(), true, false);
+	shader.setTextureArray("textures", 6, m_textureArray, true, false);
 	for (size_t i = 0; i < m_colors.size(); ++i)
 	{
 		char name[64];
@@ -3231,4 +3205,106 @@ void Effect_Fireworks::draw()
 	gxEnd();
 
 	glDisable(GL_LINE_SMOOTH);
+}
+
+//
+
+Effect_Sparklies::Effect_Sparklies(const char * name)
+	: Effect(name)
+	, m_particleSystem(4096)
+	, m_alpha(1.f)
+{
+	addVar("alpha", m_alpha);
+}
+
+void Effect_Sparklies::tick(const float dt)
+{
+	static float m_spawnTimer = 0.f;
+	float m_spawnInterval = .005f;
+	float m_life = 6.f;
+	float m_size = 15.f;
+	float m_speed = 10.f;
+	
+	m_particleSystem.tick(dt);
+
+	if (m_spawnInterval > 0.f)
+	{
+		m_spawnTimer += dt;
+
+		while (m_spawnTimer >= m_spawnInterval)
+		{
+			m_spawnTimer -= m_spawnInterval;
+
+			int id;
+
+			if (m_particleSystem.alloc(true, m_life, id))
+			{
+				const float speedAngle = random(0.f, Calc::m2PI);
+				m_particleSystem.x[id] = random(0.f, (float)GFX_SX);
+				m_particleSystem.y[id] = random(0.f, (float)GFX_SY);
+				m_particleSystem.sx[id] = m_size;
+				m_particleSystem.sy[id] = m_size;
+				m_particleSystem.vx[id] = std::cosf(speedAngle) * m_speed;
+				m_particleSystem.vy[id] = std::sinf(speedAngle) * m_speed;
+			}
+		}
+	}
+}
+
+void Effect_Sparklies::draw(DrawableList & list)
+{
+	new (list) EffectDrawable(this);
+}
+
+void Effect_Sparklies::draw()
+{
+	std::string m_shader = "sparklies";
+	std::string m_image = "track-intro/explosion_mask.png";
+
+	{
+		setBlend(BLEND_OPAQUE);
+		Shader copyShader("copy");
+		copyShader.setTexture("colormap", 0, g_currentSurface->getTexture(), false, true);
+		g_currentSurface->postprocess(copyShader);
+		applyBlendMode();
+	}
+
+	Shader shader(m_shader.c_str());
+	setTextures(shader);
+	setShader(shader);
+	shader.setTexture("image", 5, Sprite(m_image.c_str()).getTexture(), true, true);
+
+	gxBegin(GL_QUADS);
+	{
+		for (int i = 0; i < m_particleSystem.numParticles; ++i)
+		{
+			if (m_particleSystem.alive[i])
+			{
+				const float value = m_particleSystem.life[i] * m_particleSystem.lifeRcp[i];
+				const float x = m_particleSystem.x[i];
+				const float y = m_particleSystem.y[i];
+
+				gxColor4f(x, y, 1.f, (1.f - std::cosf(value * Calc::m2PI)) / 2.f * m_alpha);
+
+				const float s = std::sinf(m_particleSystem.angle[i]);
+				const float c = std::cosf(m_particleSystem.angle[i]);
+
+				const float sx_2 = m_particleSystem.sx[i] * .5f;
+				const float sy_2 = m_particleSystem.sy[i] * .5f;
+
+				const float s_sx_2 = s * sx_2;
+				const float s_sy_2 = s * sy_2;
+				const float c_sx_2 = c * sx_2;
+				const float c_sy_2 = c * sy_2;
+
+				gxTexCoord2f(0.f, 1.f); gxVertex2f(x + (-c_sx_2 - s_sy_2), y + (+s_sx_2 - c_sy_2));
+				gxTexCoord2f(1.f, 1.f); gxVertex2f(x + (+c_sx_2 - s_sy_2), y + (-s_sx_2 - c_sy_2));
+				gxTexCoord2f(1.f, 0.f); gxVertex2f(x + (+c_sx_2 + s_sy_2), y + (-s_sx_2 + c_sy_2));
+				gxTexCoord2f(0.f, 0.f); gxVertex2f(x + (-c_sx_2 + s_sy_2), y + (+s_sx_2 + c_sy_2));
+			}
+		}
+	}
+	gxEnd();
+
+	clearShader();
 }

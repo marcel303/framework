@@ -225,3 +225,24 @@ layout (std140) uniform DistotionBarsBlock
 };
 
 #endif
+
+// particle system
+
+struct ShaderParticle
+{
+	float value;
+	float angle;
+	float x;
+	float y;
+	float sx;
+	float sy;
+};
+
+#if _SHADER_
+
+layout (std140) uniform ShaderParticleBlock
+{
+	ShaderParticle shaderParticles[];
+};
+
+#endif

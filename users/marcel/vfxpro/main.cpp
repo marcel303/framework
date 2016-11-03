@@ -160,6 +160,23 @@ static void applyGfxTransform()
 	gxTranslatef(-GFX_SX/2, 0.f, 0.f);
 }
 
+static std::vector<SceneEffect*> buildEffectsList()
+{
+	std::vector<SceneEffect*> result;
+
+	for (auto layer : g_scene->m_layers)
+	{
+		for (auto effect : layer->m_effects)
+		{
+			result.push_back(effect);
+		}
+	}
+
+	std::sort(result.begin(), result.end(), [](SceneEffect * e1, SceneEffect * e2) { return e1->m_name < e2->m_name; });
+
+	return result;
+}
+
 /*
 
 :: todo :: OSC
@@ -266,21 +283,17 @@ enum OscMessageType
 {
 	kOscMessageType_None,
 	// scene :: constantly reinforced
-	kOscMessageType_SetScene,
 	kOscMessageType_SceneReload,
 	kOscMessageType_SceneAdvanceTo,
 	kOscMessageType_SceneSyncTime,
 	// events
 	kOscMessageType_Event,
 	kOscMessageType_ReplayEvent,
-	// visual effects
-	kOscMessageType_Box3D,
-	kOscMessageType_Sprite,
-	kOscMessageType_Video,
 	// time effect
 	kOscMessageType_TimeDilation,
-	// sensors
-	kOscMessageType_Swipe
+	// vfxedit
+	kOscMessageType_AudioBegin,
+	kOscMessageType_AudioEnd
 };
 
 struct OscMessage
@@ -339,6 +352,14 @@ protected:
 
 				message.type = kOscMessageType_SceneAdvanceTo;
 				message.param[0] = timeMs;
+			}
+			else if (strcmp(m.AddressPattern(), "/audio_begin") == 0)
+			{
+				message.type = kOscMessageType_AudioBegin;
+			}
+			else if (strcmp(m.AddressPattern(), "/audio_end") == 0)
+			{
+				message.type = kOscMessageType_AudioEnd;
 			}
 			else if (strcmp(m.AddressPattern(), "/event_replay") == 0)
 			{
@@ -1111,9 +1132,9 @@ static void showTestImage()
 
 //
 
-#if ENABLE_STRESS_TEST
+#if defined(DEBUG)
 
-static void doStressTest()
+static const char * getRandomSceneName(int rng)
 {
 	const char * filenames[] =
 	{
@@ -1129,13 +1150,26 @@ static void doStressTest()
 		"tracks/WhereAreYouNow.scene.xml"
 	};
 
+	const int numScenes = (sizeof(filenames) / sizeof(filenames[0]));
+
+	const int index = rng % numScenes;
+
+	return filenames[index];
+}
+
+#endif
+
+#if ENABLE_STRESS_TEST
+
+static void doStressTest()
+{
 	for (int i = 0; i < 1000000 * 1 + 0 && !keyboard.wentDown(SDLK_RSHIFT); ++i)
 	{
 		framework.process();
 
 		const int c1 = GetAllocState().allocationCount;
-		g_scene->load(filenames[rand() % (sizeof(filenames) / sizeof(filenames[0]))]);
-		//g_scene->load(filenames[i % (sizeof(filenames) / sizeof(filenames[0]))]);
+		g_scene->load(getRandomSceneName(rand()));
+		//g_scene->load(getRandomSceneName(i));
 
 		for (int i = 0; i < 1; ++i)
 			g_scene->triggerEventByOscId(i);
@@ -1375,11 +1409,20 @@ int main(int argc, char * argv[])
 
 		bool stop = false;
 
+		bool showCredits = false;
+		float showCreditsAlpha = 0.f;
+
 		while (!stop)
 		{
 			// process
 
 			framework.process();
+
+			if (keyboard.wentDown(SDLK_b))
+			{
+				showCredits = !showCredits;
+				showCreditsAlpha = 0.f;
+			}
 
 		#if ENABLE_REALTIME_EDITING
 			if (keyboard.wentDown(SDLK_f))
@@ -1477,7 +1520,7 @@ int main(int argc, char * argv[])
 
 			// input
 
-		#if defined(DEBUG)
+		#if defined(DEBUG) || 1
 			if (keyboard.wentDown(SDLK_ESCAPE))
 				stop = true;
 		#else
@@ -1489,6 +1532,13 @@ int main(int argc, char * argv[])
 			{
 				reloadScene();
 			}
+
+		#if defined(DEBUG)
+			if (keyboard.wentDown(SDLK_t))
+			{
+				nextScene(getRandomSceneName(rand()));
+			}
+		#endif
 
 			if (keyboard.wentDown(SDLK_d))
 				debugDraw = !debugDraw;
@@ -1552,14 +1602,16 @@ int main(int argc, char * argv[])
 
 				int index = 0;
 
-				for (auto i = g_effectsByName.begin(); i != g_effectsByName.end(); ++i, ++index)
+				const auto effects = buildEffectsList();
+
+				for (auto i = effects.begin(); i != effects.end(); ++i, ++index)
 				{
 					if (index - base < 0 || index - base > 9)
 						continue;
 
 					if (keyboard.wentDown((SDLKey)(SDLK_0 + index - base)))
 					{
-						Effect * effect = i->second;
+						Effect * effect = (*i)->m_effect;
 
 						effect->debugEnabled = !effect->debugEnabled;
 					}
@@ -1661,9 +1713,6 @@ int main(int argc, char * argv[])
 
 					switch (message.type)
 					{
-					case kOscMessageType_SetScene:
-						break;
-
 					case kOscMessageType_SceneReload:
 						reloadScene();
 						break;
@@ -1709,6 +1758,34 @@ int main(int argc, char * argv[])
 						g_scene->triggerEventByOscId(message.param[0]);
 						g_isReplay = false;
 						break;
+
+						/*
+					case kOscMessageType_AudioBegin:
+						{
+							INPUT in;
+							memset(&in, 0, sizeof(in));
+							in.type = INPUT_KEYBOARD;
+							in.ki.wVk = VK_F12;
+							SendInput(1, &in, sizeof(in));
+
+							in.ki.dwFlags = KEYEVENTF_KEYUP;
+							SendInput(1, &in, sizeof(in));
+						}
+						break;
+
+					case kOscMessageType_AudioEnd:
+						{
+							INPUT in;
+							memset(&in, 0, sizeof(in));
+							in.type = INPUT_KEYBOARD;
+							in.ki.wVk = VK_F12;
+							SendInput(1, &in, sizeof(in));
+
+							in.ki.dwFlags = KEYEVENTF_KEYUP;
+							SendInput(1, &in, sizeof(in));
+						}
+						break;
+						*/
 
 					default:
 						fassert(false);
@@ -2130,12 +2207,14 @@ int main(int argc, char * argv[])
 
 					int index = 0;
 
-					for (auto i = g_effectsByName.begin(); i != g_effectsByName.end(); ++i, ++index)
+					const auto effects = buildEffectsList();
+
+					for (auto i = effects.begin(); i != effects.end(); ++i, ++index)
 					{
 						float xOld = x;
 
-						const std::string & effectName = i->first;
-						Effect * effect = i->second;
+						const std::string & effectName = (*i)->m_name;
+						Effect * effect = (*i)->m_effect;
 
 						const EffectInfo & info = g_effectInfosByName[effectName];
 
@@ -2289,7 +2368,8 @@ int main(int argc, char * argv[])
 				setBlend(BLEND_ALPHA);
 			#endif
 
-			#if ENABLE_DEBUG_FFTTEX
+			#if ENABLE_DEBUG_FFTTEX || 1
+				if (keyboard.isDown(SDLK_f))
 				{
 					const int sx = 800;
 					const int sy = 100;
@@ -2357,6 +2437,22 @@ int main(int argc, char * argv[])
 				#endif
 				}
 			#endif
+
+				if (showCredits)
+				{
+					gxPushMatrix();
+					{
+						showCreditsAlpha += dtReal;
+						if (showCreditsAlpha > 1.f)
+							showCreditsAlpha = 1.f;
+
+						applyGfxTransform();
+						setBlend(BLEND_ALPHA);
+						setColorf(1.f, 1.f, 1.f, showCreditsAlpha);
+						Sprite("track-credits/Credits.png").draw();
+					}
+					gxPopMatrix();
+				}
 			}
 			framework.endDraw();
 

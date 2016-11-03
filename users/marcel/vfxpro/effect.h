@@ -61,13 +61,6 @@ extern std::string nameToEffectParam(const std::string & effectName, const std::
 
 //
 
-extern void registerEffect(const char * sceneName, const char * name, Effect * effect);
-extern void unregisterEffect(Effect * effect);
-
-extern std::map<std::string, Effect*> g_effectsByName;
-
-//
-
 const static float eps = 1e-10f;
 const static float pi2 = float(M_PI) * 2.f;
 
@@ -138,12 +131,13 @@ struct Effect_Fsfx : Effect
 	TweenFloat m_param2;
 	TweenFloat m_param3;
 	TweenFloat m_param4;
+	std::string m_image;
 	std::vector<std::string> m_images;
 	std::vector<Color> m_colors;
 	GLuint m_textureArray;
 	float m_time;
 
-	Effect_Fsfx(const char * name, const char * shader, const std::vector<std::string> & images, const std::vector<Color> & colors);
+	Effect_Fsfx(const char * name, const char * shader, const char * image, const std::vector<std::string> & images, const std::vector<Color> & colors);
 	virtual ~Effect_Fsfx() override;
 
 	virtual void tick(const float dt) override;
@@ -809,6 +803,20 @@ struct Effect_Fireworks : Effect
 	Effect_Fireworks(const char * name);
 
 	P * nextParticle();
+
+	virtual void tick(const float dt) override;
+	virtual void draw(DrawableList & list) override;
+	virtual void draw() override;
+};
+
+//
+
+struct Effect_Sparklies : Effect
+{
+	ParticleSystem m_particleSystem;
+	TweenFloat m_alpha;
+
+	Effect_Sparklies(const char * name);
 
 	virtual void tick(const float dt) override;
 	virtual void draw(DrawableList & list) override;

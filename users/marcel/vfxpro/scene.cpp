@@ -87,6 +87,7 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 	else if (type == "fsfx")
 	{
 		const std::string shader = stringAttrib(xmlEffect, "shader", "");
+		const std::string image = stringAttrib(xmlEffect, "image", "");
 		const std::string imageFiles = stringAttrib(xmlEffect, "images", "");
 		std::vector<std::string> images;
 		splitString(imageFiles, images, ',');
@@ -103,7 +104,7 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 		}
 		else
 		{
-			effect = new Effect_Fsfx(m_name.c_str(), shader.c_str(), images, colors);
+			effect = new Effect_Fsfx(m_name.c_str(), shader.c_str(), image.c_str(), images, colors);
 
 			typeName = shader;
 		}
@@ -270,6 +271,10 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 	else if (type == "fireworks")
 	{
 		effect = new Effect_Fireworks(m_name.c_str());
+	}
+	else if (type == "sparklies")
+	{
+		effect = new Effect_Sparklies(m_name.c_str());
 	}
 	else
 	{
