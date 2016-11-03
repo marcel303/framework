@@ -82,7 +82,7 @@ typedef struct AllocInfo
 	size_t size;
 } AllocInfo;
 
-static inline uintptr_t PadAddr(uintptr_t addr, uintptr_t align) { (addr + align - 1) & ~align; }
+static inline uintptr_t PadAddr(uintptr_t addr, uintptr_t align) { return (addr + align - 1) & ~(align - 1); }
 static const int kAllocFront = PadAddr(sizeof(AllocInfo) + 4, 16);
 static const int kAllocBack = 4;
 
