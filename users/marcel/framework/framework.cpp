@@ -1313,7 +1313,7 @@ void Surface::invertAlpha()
 	glColorMask(1, 1, 1, 1);
 }
 
-void Surface::blitTo(Surface * surface)
+void Surface::blitTo(Surface * surface) const
 {
 	int oldReadBuffer = 0;
 	int oldDrawBuffer = 0;
@@ -1412,15 +1412,18 @@ GLint Shader::getAttribute(const char * name)
 }
 
 #define SET_UNIFORM(name, op) \
-	setShader(*this); \
-	const GLint index = glGetUniformLocation(getProgram(), name); \
-	if (index == -1) \
+	if (getProgram()) \
 	{ \
-		/*logDebug("couldn't find shader uniform %s", name);*/ \
-	} \
-	else \
-	{ \
-		op; \
+		setShader(*this); \
+		const GLint index = glGetUniformLocation(getProgram(), name); \
+		if (index == -1) \
+		{ \
+			/*logDebug("couldn't find shader uniform %s", name);*/ \
+		} \
+		else \
+		{ \
+			op; \
+		} \
 	}
 		
 void Shader::setImmediate(const char * name, float x)
@@ -1507,7 +1510,10 @@ void Shader::setTextureArray(const char * name, int unit, GLuint texture, bool f
 
 void Shader::setBuffer(const char * name, const ShaderBuffer & buffer)
 {
-	const GLuint index = glGetUniformBlockIndex(getProgram(), name);
+	const GLuint program = getProgram();
+	if (!program)
+		return;
+	const GLuint index = glGetUniformBlockIndex(program, name);
 	checkErrorGL();
 
 	if (index == -1) // todo : index is -1 on failure to find it ?
@@ -3475,6 +3481,13 @@ void setBlend(BLEND_MODE blendMode)
 		if (glBlendFuncSeparate)
 			glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 		break;
+	case BLEND_PREMULTIPLIED_ALPHA_DRAW:
+		glEnable(GL_BLEND);
+		if (glBlendEquation)
+			glBlendEquation(GL_FUNC_ADD);
+		if (glBlendFuncSeparate)
+			glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+		break;
 	case BLEND_ADD:
 		glEnable(GL_BLEND);
 		if (glBlendEquation)
@@ -3689,6 +3702,30 @@ void drawCircle(float x, float y, float radius, int numSegments)
 			gxVertex2f(
 				x + std::cosf(angle) * radius,
 				y + std::sinf(angle) * radius);
+		}
+	}
+	gxEnd();
+}
+
+void fillCircle(float x, float y, float radius, int numSegments)
+{
+	gxBegin(GL_TRIANGLES);
+	{
+		for (int i = 0; i < numSegments; ++i)
+		{
+			const float angle1 = (i + 0) * (M_PI * 2.f / numSegments);
+			const float angle2 = (i + 1) * (M_PI * 2.f / numSegments);
+
+			gxVertex2f(
+				x,
+				y);
+
+			gxVertex2f(
+				x + std::cosf(angle1) * radius,
+				y + std::sinf(angle1) * radius);
+			gxVertex2f(
+				x + std::cosf(angle2) * radius,
+				y + std::sinf(angle2) * radius);
 		}
 	}
 	gxEnd();

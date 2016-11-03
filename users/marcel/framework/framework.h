@@ -60,6 +60,7 @@ enum BLEND_MODE // setBlend
 	BLEND_OPAQUE,
 	BLEND_ALPHA,
 	BLEND_PREMULTIPLIED_ALPHA,
+	BLEND_PREMULTIPLIED_ALPHA_DRAW,
 	BLEND_ADD,
 	BLEND_ADD_OPAQUE,
 	BLEND_SUBTRACT,
@@ -298,7 +299,7 @@ public:
 	void invert();
 	void invertColor();
 	void invertAlpha();
-	void blitTo(Surface * surface);
+	void blitTo(Surface * surface) const;
 };
 
 void blitBackBufferToSurface(Surface * surface);
@@ -870,6 +871,7 @@ void drawRect(float x1, float y1, float x2, float y2);
 void drawRectLine(float x1, float y1, float x2, float y2);
 void drawRectGradient(float x1, float y1, float x2, float y2);
 void drawCircle(float x, float y, float radius, int numSegments);
+void fillCircle(float x, float y, float radius, int numSegments);
 void measureText(int size, float & sx, float & sy, const char * format, ...);
 void drawText(float x, float y, int size, float alignX, float alignY, const char * format, ...);
 void drawTextArea(float x, float y, float sx, int size, const char * format, ...);
