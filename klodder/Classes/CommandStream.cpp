@@ -5,9 +5,11 @@
 #include "StreamReader.h"
 #include "StreamWriter.h"
 
-#include "BlitTransform.h"
-#include "Calc.h"
-#include "MemoryStream.h" // dbg
+#if KLODDER_LITE==0
+	#include "BlitTransform.h"
+	#include "Calc.h"
+	#include "MemoryStream.h" // dbg
+#endif
 
 CommandStreamWriter::CommandStreamWriter(Stream * stream, const bool takeOwnership)
 {
@@ -33,6 +35,8 @@ void CommandStreamWriter::Record(const CommandPacket & packet)
 	
 //	LOG_DBG("packet recorded. stream size: %d, cursor: %d", mStream->Length_get(), mStream->Position_get());
 }
+
+#if KLODDER_LITE==0
 
 void CommandStreamWriter::DBG_TestDeserialization(Stream * stream)
 {
@@ -92,3 +96,5 @@ void CommandStreamWriter::DBG_TestSerialization()
 	
 	DBG_TestDeserialization(&stream);
 }
+
+#endif

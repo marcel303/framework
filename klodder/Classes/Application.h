@@ -129,8 +129,15 @@ private:
 	// Undo
 	// ----
 private:
+	void UndoBegin(const bool doReplay, const int dirtyLayerIndex, const RectI & dirtyLayerRect);
+	void UndoEnd(const int dirtyLayerIndex, const RectI & dirtyLayerRect);
 	void CommitUndoBuffer(UndoBuffer * undo);
 	
+	UndoBuffer * mUndoBuffer;
+	RectI mDirtyLayerRect;
+	int mDirtyCommandStreamPosition;
+	int mDirtyDataStreamPosition;
+
 	UndoStack mUndoStack;
 	bool mUndoEnabled;
 	
@@ -298,10 +305,12 @@ private:
 	DataStreamWriter * mDataStreamWriter;
 	DataStreamReader * mDataStreamReader;
 	
+#if KLODDER_LITE==0
 	// ---------
 	// Debugging
 	// ---------
 public:
 	void DBG_PaintAt(const float x, const float y, const float dx, const float dy);
 	static void DBG_ValidateCommandStream(const ImageId & imageId);
+#endif
 };

@@ -42,7 +42,6 @@ project(klodder)
 # --- klodder ---
 
 file(GLOB source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "*.cpp" "*.h")
-#list(REMOVE_ITEM source script.cpp)
 
 add_executable(klodder ${source})
 
@@ -67,3 +66,38 @@ target_link_libraries(klodder PRIVATE Winmm.lib)
 if (MSVC)
 	set_property(TARGET klodder APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
 endif (MSVC)
+
+# --- klodder_ios ---
+
+set(CMAKE_OSX_SYSROOT iphoneos4.3)
+set(CMAKE_OSX_ARCHITECTURES "armv6;armv7;i386")
+set(CMAKE_XCODE_EFFECTIVE_PLATFORMS "-iphoneos;-iphonesimulator")
+
+file(GLOB source_ios RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "*.cpp" "*.h" "*.mm" "*.m")
+file(GLOB resource_ios RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "*.xib" "../*.xib")
+
+add_executable(klodder_ios MACOSX_BUNDLE ${source_ios} ${resource_ios})
+
+target_include_directories(klodder_ios PRIVATE "${PROJECT_SOURCE_DIR}")
+
+target_link_libraries(klodder_ios PRIVATE libgg)
+target_link_libraries(klodder_ios PRIVATE libgg_freeimage)
+target_link_libraries(klodder_ios PRIVATE libagg)
+target_link_libraries(klodder_ios PRIVATE libcximage)
+target_link_libraries(klodder_ios PRIVATE libiphone)
+target_link_libraries(klodder_ios PRIVATE libklodder)
+target_link_libraries(klodder_ios PRIVATE libtinyxml)
+
+target_link_libraries(klodder_ios PRIVATE "-framework CoreGraphics" "-framework Foundation" "-framework UIKit")
+
+set_target_properties(klodder_ios PROPERTIES
+	MACOSX_BUNDLE_GUI_IDENTIFIER "com.granniesgames.klodder"
+	MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/../klodder-Info.plist
+	RESOURCE "${resource_ios}"
+	XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "iPhone Developer"
+	XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym"
+	XCODE_ATTRIBUTE_GCC_PRECOMPILE_PREFIX_HEADER YES
+	XCODE_ATTRIBUTE_GCC_PREFIX_HEADER ${CMAKE_CURRENT_LIST_DIR}/klodder.pch
+	XCODE_ATTRIBUTE_INFOPLIST_PREPROCESS NO
+	XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET 3.0
+	)

@@ -27,6 +27,10 @@
 #include "KlodderTestCode.h"
 #include "MouseMgr.h"
 
+#if !defined(DEBUG)
+	#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
+#endif
+
 extern "C" { FILE __iob_func[3] = { *stdin,*stdout,*stderr }; }
 
 #define FRAME_SKIP 5
@@ -705,12 +709,14 @@ static void InteractivePaint(SDL_Surface* screen)
 		{
 			if (e.type == SDL_KEYDOWN)
 			{
+				const float randomBrushSpacing = powf(Calc::RandomMin0Max1(), 4.f);
+
 				if (e.key.keysym.sym == SDLK_1)
 				{
 					ToolSettings_BrushSoft settings(
 						Calc::Random(30) * 2 + 1,
 						Calc::RandomMin0Max1(),
-						Calc::RandomMin0Max1());
+						randomBrushSpacing);
 					application.ToolSelect_BrushSoft(settings);
 				}
 				if (e.key.keysym.sym == SDLK_2)
@@ -718,7 +724,7 @@ static void InteractivePaint(SDL_Surface* screen)
 					ToolSettings_BrushPattern settings(
 						Calc::Random(30) * 2 + 1,
 						1000,
-						Calc::RandomMin0Max1());
+						randomBrushSpacing);
 					application.ToolSelect_BrushPattern(settings);
 				}
 				if (e.key.keysym.sym == SDLK_3)
@@ -726,7 +732,7 @@ static void InteractivePaint(SDL_Surface* screen)
 					ToolSettings_SmudgeSoft settings(
 						Calc::Random(30) * 2 + 1,
 						Calc::RandomMin0Max1(),
-						powf(Calc::RandomMin0Max1(), 2.f),
+						randomBrushSpacing,
 						Calc::RandomMin0Max1());
 					application.ToolSelect_SmudgeSoft(settings);
 				}
@@ -735,7 +741,7 @@ static void InteractivePaint(SDL_Surface* screen)
 					ToolSettings_SmudgePattern settings(
 						31,
 						1000,
-						Calc::RandomMin0Max1(),
+						randomBrushSpacing,
 						Calc::RandomMin0Max1());
 					application.ToolSelect_SmudgePattern(settings);
 				}
@@ -744,7 +750,7 @@ static void InteractivePaint(SDL_Surface* screen)
 					ToolSettings_EraserSoft settings(
 						Calc::Random(30) * 2 + 1,
 						Calc::RandomMin0Max1(),
-						Calc::RandomMin0Max1());
+						randomBrushSpacing);
 					application.ToolSelect_EraserSoft(settings);
 				}
 				if (e.key.keysym.sym == SDLK_6)
@@ -752,7 +758,7 @@ static void InteractivePaint(SDL_Surface* screen)
 					ToolSettings_EraserPattern settings(
 						Calc::Random(30) * 2 + 1,
 						1000,
-						Calc::RandomMin0Max1());
+						randomBrushSpacing);
 					application.ToolSelect_EraserPattern(settings);
 				}
 				if (e.key.keysym.sym == SDLK_7)
@@ -760,7 +766,7 @@ static void InteractivePaint(SDL_Surface* screen)
 					ToolSettings_BrushSoftDirect settings(
 						Calc::Random(30) * 2 + 1,
 						Calc::RandomMin0Max1(),
-						Calc::RandomMin0Max1());
+						randomBrushSpacing);
 					application.ToolSelect_BrushSoftDirect(settings);
 				}
 				if (e.key.keysym.sym == SDLK_8)
@@ -768,7 +774,7 @@ static void InteractivePaint(SDL_Surface* screen)
 					ToolSettings_BrushPatternDirect settings(
 						Calc::Random(30) * 2 + 1,
 						1000,
-						Calc::RandomMin0Max1());
+						randomBrushSpacing);
 					application.ToolSelect_BrushPatternDirect(settings);
 				}
 				if (e.key.keysym.sym == SDLK_F1)
@@ -813,11 +819,11 @@ static void InteractivePaint(SDL_Surface* screen)
 				}
 				if (e.key.keysym.sym == SDLK_m)
 				{
-					application.DataLayerMerge(0, 1);
+					application.DataLayerMerge(1, 0);
 				}
 				if (e.key.keysym.sym == SDLK_c)
 				{
-					application.DataLayerClear(application.LayerMgr_get()->ActiveDataLayer_get(), Calc::Random(1.0f), Calc::Random(1.0f), Calc::Random(1.0f), Calc::Random(1.0f));
+					application.DataLayerClear(application.LayerMgr_get()->EditingDataLayer_get(), Calc::Random(1.0f), Calc::Random(1.0f), Calc::Random(1.0f), Calc::Random(1.0f));
 				}
 				if (e.key.keysym.sym == SDLK_p)
 				{
@@ -872,7 +878,7 @@ static void InteractivePaint(SDL_Surface* screen)
 				{
 					// move layer down
 
-					//int index = application.LayerMgr_get()->ActiveDataLayer_get();
+					//int index = application.LayerMgr_get()->EditingDataLayer_get();
 
 					//if (layer - 1 >= 0)
 					//	application.LayerSwap(layer, layer - 1);
@@ -881,7 +887,7 @@ static void InteractivePaint(SDL_Surface* screen)
 				{
 					// move layer up
 
-					//int index = application.LayerMgr_get()->ActiveDataLayer_get();
+					//int index = application.LayerMgr_get()->EditingDataLayer_get();
 
 					//if (layer + 1 < application.LayerMgr_get()->LayerCount_get())
 					//	application.LayerSwap(layer, layer + 1);
@@ -1177,6 +1183,8 @@ int main(int argc, char* argv[])
 			}
 		}
 
+		SDL_Quit();
+
 		return 0;
 	}
 	catch (std::exception& e)
@@ -1192,7 +1200,7 @@ static void HandleTouchBegin(void* obj, void* arg)
 	Application* app = (Application*)obj;
 	TouchInfo* ti = (TouchInfo*)arg;
 
-	app->StrokeBegin(app->LayerMgr_get()->ActiveDataLayer_get(), true, false, ti->m_Location[0], ti->m_Location[1]);
+	app->StrokeBegin(app->LayerMgr_get()->EditingDataLayer_get(), true, false, ti->m_Location[0], ti->m_Location[1]);
 }
 
 static void HandleTouchEnd(void* obj, void* arg)

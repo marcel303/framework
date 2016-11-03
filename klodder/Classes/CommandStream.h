@@ -12,9 +12,11 @@ public:
 	
 	void Record(const CommandPacket & packet);
 	
+#if KLODDER_LITE==0
 	static void DBG_TestDeserialization(Stream * stream);
 	static void DBG_TestSerialization();
-	
+#endif
+
 private:
 	Stream * mStream;
 	bool mTakeOwnership;

@@ -15,31 +15,37 @@ class UndoState
 public:
 	UndoState();
 	
-	void SetDataLayerImage(int index, MacImage* image, int x, int y, int sx, int sy);
-	void SetDataLayerDualImage(int index1, MacImage* image1, int index2, MacImage* image2);
+	void SetReplay();
+	void SetDataLayerImage(int imageIndex, int index, const MacImage* image, int x, int y, int sx, int sy);
 	void SetCommandStreamLocation(size_t location);
 	void SetDataStreamLocation(size_t location);
 	void SetDataLayerOpacity(int index, float opacity);
 	void SetLayerOrder(std::vector<int> order);
-	void SetActiveDataLayer(int index);
+	void SetEditingDataLayer(int index);
 	void SetDataLayerClear(int index, Rgba color);
 	void SetDataLayerMerge(int index1, int index2);
 	void SetDataLayerVisibility(int index, bool visibility);
-	void DBG_SetActiveDataLayer(int index);
+
+#if KLODDER_LITE==0
+	void DBG_SetEditingDataLayer(int index);
+#else
+	void DBG_SetEditingDataLayer(int index) { }
+#endif
 	
 	int EstimateByteCount_get() const;
 	
-	bool mHasImage;
-	int mImageDataLayer;
-	MacImage mImage;
-	Vec2I mImageLocation;
-	
-	bool mHasDualImage;
-	int mDualImageDataLayer1;
-	MacImage mDualImage1;
-	int mDualImageDataLayer2;
-	MacImage mDualImage2;
-	
+	bool mHasReplay;
+
+	struct DataLayerImage
+	{
+		bool mHasImage;
+		int mImageDataLayer;
+		MacImage mImage;
+		Vec2I mImageLocation;
+	};
+
+	DataLayerImage mDataLayerImage[2];
+
 	bool mHasCommandStreamLocation;
 	size_t mCommandStreamLocation;
 	
@@ -49,8 +55,8 @@ public:
 	bool mHasLayerOrder;
 	std::vector<int> mLayerOrder;
 	
-	bool mHasActiveDataLayer;
-	int mActiveDataLayer;
+	bool mHasEditingDataLayer;
+	int mEditingDataLayer;
 	
 	bool mHasLayerClear;
 	int mLayerClearDataLayer;
@@ -68,8 +74,10 @@ public:
 	int mLayerVisibilityIndex;
 	bool mLayerVisibilityValue;
 	
-	bool mHasDbgActiveDataLayer;
-	int mDbgActiveDataLayer;
+#if KLODDER_LITE==0
+	bool mHasDbgEditingDataLayer;
+	int mDbgEditingDataLayer;
+#endif
 };
 
 class UndoBuffer

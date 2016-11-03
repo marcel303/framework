@@ -6,12 +6,13 @@
 
 UndoState::UndoState()
 {
-	mHasImage = false;
-	mImageDataLayer = 0;
-	
-	mHasDualImage = false;
-	mDualImageDataLayer1 = 0;
-	mDualImageDataLayer2 = 0;
+	mHasReplay = false;
+
+	for (int i = 0; i < 2; ++i)
+	{
+		mDataLayerImage[i].mHasImage = false;
+		mDataLayerImage[i].mImageDataLayer = 0;
+	}
 	
 	mHasCommandStreamLocation = false;
 	mCommandStreamLocation = 0;
@@ -21,8 +22,8 @@ UndoState::UndoState()
 	
 	mHasLayerOrder = false;
 	
-	mHasActiveDataLayer = false;
-	mActiveDataLayer = 0;
+	mHasEditingDataLayer = false;
+	mEditingDataLayer = 0;
 	
 	mHasLayerClear = false;
 	mLayerClearDataLayer = 0;
@@ -39,37 +40,27 @@ UndoState::UndoState()
 	mLayerVisibilityIndex = 0;
 	mLayerVisibilityValue = false;
 	
-	mHasDbgActiveDataLayer = false;
-	mDbgActiveDataLayer = 0;
+	mHasDbgEditingDataLayer = false;
+	mDbgEditingDataLayer = 0;
 }
 
-void UndoState::SetDataLayerImage(int index, MacImage* image, int x, int y, int sx, int sy)
+void UndoState::SetReplay()
 {
-	Assert(!mHasImage);
+	mHasReplay = true;
+}
+
+void UndoState::SetDataLayerImage(int imageIndex, int index, const MacImage* image, int x, int y, int sx, int sy)
+{
+	DataLayerImage & m = mDataLayerImage[imageIndex];
+
+	Assert(!m.mHasImage);
 	Assert(sx > 0);
 	Assert(sy > 0);
-	mHasImage = true;
-	mImageDataLayer = index;
-	//BitmapToMacImage(image, &mImage, x, y, sx, sy);
-	mImage.Size_set(sx, sy, false);
-	image->ExtractTo(&mImage, x, y, sx, sy);
-	mImageLocation.Set(x, y);
-}
-
-void UndoState::SetDataLayerDualImage(int index1, MacImage* image1, int index2, MacImage* image2)
-{
-	Assert(!mHasDualImage);
-	mHasDualImage = true;
-	Assert(index1 >= 0);
-	Assert(index2 >= 0);
-	Assert(image1->Sx_get() == image2->Sx_get());
-	Assert(image1->Sy_get() == image2->Sy_get());
-	mDualImageDataLayer1 = index1;
-	mDualImage1.Size_set(image1->Sx_get(), image1->Sy_get(), false);
-	image1->Blit(&mDualImage1);
-	mDualImageDataLayer2 = index2;
-	mDualImage2.Size_set(image2->Sx_get(), image2->Sy_get(), false);
-	image2->Blit(&mDualImage2);
+	m.mHasImage = true;
+	m.mImageDataLayer = index;
+	m.mImage.Size_set(sx, sy, false);
+	image->ExtractTo(&m.mImage, x, y, sx, sy);
+	m.mImageLocation.Set(x, y);
 }
 
 void UndoState::SetCommandStreamLocation(size_t location)
@@ -101,11 +92,11 @@ void UndoState::SetLayerOrder(std::vector<int> order)
 	mLayerOrder = order;
 }
 
-void UndoState::SetActiveDataLayer(int index)
+void UndoState::SetEditingDataLayer(int index)
 {
-	Assert(!mHasActiveDataLayer);
-	mHasActiveDataLayer = true;
-	mActiveDataLayer = index;
+	Assert(!mHasEditingDataLayer);
+	mHasEditingDataLayer = true;
+	mEditingDataLayer = index;
 }
 
 void UndoState::SetDataLayerClear(int index, Rgba color)
@@ -132,24 +123,27 @@ void UndoState::SetDataLayerVisibility(int index, bool visibility)
 	mLayerVisibilityValue = visibility;
 }
 
-void UndoState::DBG_SetActiveDataLayer(int index)
+#if KLODDER_LITE==0
+
+void UndoState::DBG_SetEditingDataLayer(int index)
 {
-	Assert(!mHasDbgActiveDataLayer);
-	mHasDbgActiveDataLayer = true;
-	mDbgActiveDataLayer = index;
+	Assert(!mHasDbgEditingDataLayer);
+	mHasDbgEditingDataLayer = true;
+	mDbgEditingDataLayer = index;
 }
+
+#endif
 
 int UndoState::EstimateByteCount_get() const
 {
 	int result = sizeof(UndoState) + 1000;
 	
-	if (mHasImage)
-		result += mImage.Sx_get() * mImage.Sy_get() * sizeof(MacRgba);
-	
-	if (mHasDualImage)
+	for (int i = 0; i < 2; ++i)
 	{
-		result += mDualImage1.Sx_get() * mDualImage1.Sy_get() * sizeof(MacRgba);
-		result += mDualImage1.Sx_get() * mDualImage1.Sy_get() * sizeof(MacRgba);
+		const DataLayerImage & m = mDataLayerImage[i];
+
+		if (m.mHasImage)
+			result += m.mImage.Sx_get() * m.mImage.Sy_get() * sizeof(MacRgba);
 	}
 	
 	return result;

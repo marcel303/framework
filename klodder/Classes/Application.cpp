@@ -467,46 +467,31 @@ void Application::ExecuteDataLayerBlit(const int index, const BlitTransform & tr
 	
 	MacImage image;
 	
+	DataStreamOpen();
+
 	// blit
 	
 	const Vec2I size = mLayerMgr->Size_get();
+	const RectI rect(Vec2I(0, 0), size);
 	
-	UndoBuffer * undo = new UndoBuffer();
-	
-	MacImage * dst = mLayerMgr->DataLayer_get(index);
-	
-	if (mUndoEnabled)
-		undo->mPrev.SetDataLayerImage(index, dst, 0, 0, size[0], size[1]);
-	if (mWriteEnabled)
-		undo->mPrev.SetCommandStreamLocation(mCommandStream->Position_get());
-	if (mWriteEnabled)
-		undo->mPrev.SetDataStreamLocation(mDataStreamPosition);
-	undo->mPrev.DBG_SetActiveDataLayer(mLayerMgr->ActiveDataLayer_get());
-	
+	UndoBegin(false, index, rect);
+
 	// load image data from data stream
 	
-	DataStreamOpen();
 	DataHeader header = mDataStreamReader->ReadHeader();
 	DataSegment * segment = mDataStreamReader->ReadSegment(header);
 	image.Load(&segment->mData);
 	delete segment;
 	segment = nullptr;
-	DataStreamClose();
 	
 	mLayerMgr->DataLayerAcquireWithTransform(index, &image, transform);
 	
 	ExecutionCommit();
+
+	UndoEnd(index, rect);
 	
-	if (mUndoEnabled)
-		undo->mNext.SetDataLayerImage(index, dst, 0, 0, size[0], size[1]);
-	if (mWriteEnabled)
-		undo->mNext.SetCommandStreamLocation(mCommandStream->Position_get());
-	if (mWriteEnabled)
-		undo->mNext.SetDataStreamLocation(mDataStreamPosition);
-	undo->mNext.DBG_SetActiveDataLayer(mLayerMgr->ActiveDataLayer_get());
-	
-	CommitUndoBuffer(undo);
-	
+	DataStreamClose();
+
 	Invalidate();
 }
 
@@ -530,14 +515,9 @@ void Application::ExecuteDataLayerClear(const int index, const float _r, const f
 	//
 	
 	const Vec2I size = mLayerMgr->Size_get();
+	const RectI rect(Vec2I(0, 0), size);
 
-	UndoBuffer * undo = new UndoBuffer();
-	
-	if (mWriteEnabled)
-		undo->mPrev.SetCommandStreamLocation(mCommandStream->Position_get());
-	if (mUndoEnabled)
-		undo->mPrev.SetDataLayerImage(index, mLayerMgr->DataLayer_get(index), 0, 0, size[0], size[1]);
-	undo->mPrev.DBG_SetActiveDataLayer(mLayerMgr->ActiveDataLayer_get());
+	UndoBegin(true, index, rect);
 	
 	//
 	
@@ -549,12 +529,7 @@ void Application::ExecuteDataLayerClear(const int index, const float _r, const f
 
 	//
 	
-	if (mWriteEnabled)
-		undo->mNext.SetCommandStreamLocation(mCommandStream->Position_get());
-	undo->mNext.SetDataLayerClear(index, color);
-	undo->mNext.DBG_SetActiveDataLayer(mLayerMgr->ActiveDataLayer_get());
-	
-	CommitUndoBuffer(undo);
+	UndoEnd(-1, RectI());
 	
 	//
 	
@@ -570,13 +545,16 @@ void Application::ExecuteDataLayerMerge(const int index1, const int index2)
 	Assert(index2 >= 0 && index2 < mLayerMgr->LayerCount_get());
 	Assert(index1 != index2);
 	
-	UndoBuffer * undo = new UndoBuffer();
+	UndoBegin(true, -1, RectI());
 
-	if (mWriteEnabled)
-		undo->mPrev.SetCommandStreamLocation(mCommandStream->Position_get());
 	if (mUndoEnabled)
-		undo->mPrev.SetDataLayerDualImage(index1, mLayerMgr->DataLayer_get(index1), index2, mLayerMgr->DataLayer_get(index2));
-	undo->mPrev.DBG_SetActiveDataLayer(mLayerMgr->ActiveDataLayer_get());
+	{
+		const MacImage * image1 = mLayerMgr->DataLayer_get(index1);
+		const MacImage * image2 = mLayerMgr->DataLayer_get(index2);
+
+		mUndoBuffer->mPrev.SetDataLayerImage(0, index1, image1, 0, 0, image1->Sx_get(), image1->Sy_get());
+		mUndoBuffer->mPrev.SetDataLayerImage(1, index2, image2, 0, 0, image2->Sx_get(), image2->Sy_get());
+	}
 
 	mLayerMgr->DataLayerMerge(index1, index2);
 	
@@ -584,12 +562,7 @@ void Application::ExecuteDataLayerMerge(const int index1, const int index2)
 
 	//
 	
-	if (mWriteEnabled)
-		undo->mNext.SetCommandStreamLocation(mCommandStream->Position_get());
-	undo->mNext.SetDataLayerMerge(index1, index2);
-	undo->mNext.DBG_SetActiveDataLayer(mLayerMgr->ActiveDataLayer_get());
-
-	CommitUndoBuffer(undo);
+	UndoEnd(-1, RectI());
 
 	//
 	
@@ -603,28 +576,28 @@ void Application::ExecuteDataLayerSelect(const int index)
 	Assert(mIsActive);
 	Assert(index >= 0 && index < mLayerMgr->LayerCount_get());
 
-	UndoBuffer * undo = new UndoBuffer();
+	//UndoBuffer * undo = new UndoBuffer();
 	
-	if (mWriteEnabled)
-		undo->mPrev.SetCommandStreamLocation(mCommandStream->Position_get());
-	undo->mPrev.SetActiveDataLayer(mLayerMgr->ActiveDataLayer_get());
-	undo->mPrev.DBG_SetActiveDataLayer(mLayerMgr->ActiveDataLayer_get());
+	//if (mWriteEnabled)
+	//	undo->mPrev.SetCommandStreamLocation(mCommandStream->Position_get());
+	//undo->mPrev.SetEditingDataLayer(mLayerMgr->EditingDataLayer_get());
+	//undo->mPrev.DBG_SetEditingDataLayer(mLayerMgr->EditingDataLayer_get());
 	
 	//
 	
-	mLayerMgr->ActiveDataLayer_set(index);
+	mLayerMgr->EditingDataLayer_set(index);
 	
 	ExecutionCommit();
 
 	//
 	
-	if (mWriteEnabled)
-		undo->mNext.SetCommandStreamLocation(mCommandStream->Position_get());
-	undo->mNext.SetActiveDataLayer(mLayerMgr->ActiveDataLayer_get());
-	undo->mNext.DBG_SetActiveDataLayer(mLayerMgr->ActiveDataLayer_get());
+	//if (mWriteEnabled)
+	//	undo->mNext.SetCommandStreamLocation(mCommandStream->Position_get());
+	//undo->mNext.SetEditingDataLayer(mLayerMgr->EditingDataLayer_get());
+	//undo->mNext.DBG_SetEditingDataLayer(mLayerMgr->EditingDataLayer_get());
 	
-	delete undo;
-	undo = nullptr;
+	//delete undo;
+	//undo = nullptr;
 	//CommitUndoBuffer(undo);
 	
 	//
@@ -638,25 +611,15 @@ void Application::ExecuteDataLayerOpacity(const int index, const float opacity)
 
 	Assert(mIsActive);
 	
-	UndoBuffer * undo = new UndoBuffer();
-	
-	if (mWriteEnabled)
-		undo->mPrev.SetCommandStreamLocation(mCommandStream->Position_get());
-	undo->mPrev.SetDataLayerOpacity(index, mLayerMgr->DataLayerOpacity_get(index));
-	undo->mPrev.DBG_SetActiveDataLayer(mLayerMgr->ActiveDataLayer_get());
+	UndoBegin(true, -1, RectI());
 
 	//
-	
+
 	mLayerMgr->DataLayerOpacity_set(index, opacity);
 
 	ExecutionCommit();
 	
-	if (mWriteEnabled)
-		undo->mNext.SetCommandStreamLocation(mCommandStream->Position_get());
-	undo->mNext.SetDataLayerOpacity(index, mLayerMgr->DataLayerOpacity_get(index));
-	undo->mNext.DBG_SetActiveDataLayer(mLayerMgr->ActiveDataLayer_get());
-	
-	CommitUndoBuffer(undo);
+	UndoEnd(-1, RectI());
 	
 	//
 	
@@ -672,12 +635,9 @@ void Application::ExecuteLayerOrder(const std::vector<int> & layerOrder)
 	Assert(mIsActive);
 	Assert((int)layerOrder.size() == mLayerMgr->LayerCount_get());
 
-	UndoBuffer * undo = new UndoBuffer();
-	
-	if (mWriteEnabled)
-		undo->mPrev.SetCommandStreamLocation(mCommandStream->Position_get());
-	undo->mPrev.SetLayerOrder(mLayerMgr->LayerOrder_get());
-	undo->mPrev.DBG_SetActiveDataLayer(mLayerMgr->ActiveDataLayer_get());
+	UndoBegin(true, -1, RectI());
+
+	mUndoBuffer->mPrev.SetLayerOrder(mLayerMgr->LayerOrder_get());
 
 	//
 	
@@ -685,12 +645,7 @@ void Application::ExecuteLayerOrder(const std::vector<int> & layerOrder)
 
 	ExecutionCommit();
 	
-	if (mWriteEnabled)
-		undo->mNext.SetCommandStreamLocation(mCommandStream->Position_get());
-	undo->mNext.SetLayerOrder(mLayerMgr->LayerOrder_get());
-	undo->mNext.DBG_SetActiveDataLayer(mLayerMgr->ActiveDataLayer_get());
-	
-	CommitUndoBuffer(undo);
+	UndoEnd(-1, RectI());
 	
 	//
 	
@@ -703,12 +658,9 @@ void Application::ExecuteDataLayerVisibility(const int index, const bool visibil
 
 	Assert(mIsActive);
 	
-	UndoBuffer * undo = new UndoBuffer();
-	
-	if (mWriteEnabled)
-		undo->mPrev.SetCommandStreamLocation(mCommandStream->Position_get());
-	undo->mPrev.SetDataLayerVisibility(index, mLayerMgr->DataLayerVisibility_get(index));
-	undo->mPrev.DBG_SetActiveDataLayer(mLayerMgr->ActiveDataLayer_get());
+	UndoBegin(true, -1, RectI());
+
+	mUndoBuffer->mPrev.SetDataLayerVisibility(index, mLayerMgr->DataLayerVisibility_get(index));
 
 	//
 	
@@ -716,12 +668,7 @@ void Application::ExecuteDataLayerVisibility(const int index, const bool visibil
 
 	ExecutionCommit();
 	
-	if (mWriteEnabled)
-		undo->mNext.SetCommandStreamLocation(mCommandStream->Position_get());
-	undo->mNext.SetDataLayerVisibility(index, mLayerMgr->DataLayerVisibility_get(index));
-	undo->mNext.DBG_SetActiveDataLayer(mLayerMgr->ActiveDataLayer_get());
-	
-	CommitUndoBuffer(undo);
+	UndoEnd(-1, RectI());
 	
 	//
 	
@@ -734,12 +681,12 @@ void Application::ExecuteStrokeBegin(const int index, const bool smooth, const b
 	
 	Assert(mIsActive);
 	Assert(!mToolActive);
-	Assert(mLayerMgr->ActiveDataLayer_get() == index);
+	Assert(mLayerMgr->EditingDataLayer_get() == index);
 	
-	if (mLayerMgr->ActiveDataLayer_get() != index)
+	if (mLayerMgr->EditingDataLayer_get() != index)
 	{
 		Assert(false);
-		mLayerMgr->ActiveDataLayer_set(index);
+		mLayerMgr->EditingDataLayer_set(index);
 	}
 	
 	mStrokeSmooth = smooth;
@@ -767,20 +714,18 @@ void Application::ExecuteStrokeEnd()
 	else
 		mTraveller.End(mTraveller.m_Coord[0], mTraveller.m_Coord[1]);
 	
-//	const int layer = mLayerMgr->ActiveLayer_get();
-	const int index = mLayerMgr->ActiveDataLayer_get();
+	const int index = mLayerMgr->EditingDataLayer_get();
 	
-	// create undo buffer
-	
-	UndoBuffer * undo = new UndoBuffer();
-	
-	if (mDirtyArea_Total.IsSet_get())
+	const AreaI area = mDirtyArea_Total;
+
+	mDirtyArea_Total.Reset();
+
+	if (area.IsSet_get())
 	{
-		RectI rect = mDirtyArea_Total.ToRectI();
+		const RectI rect = area.ToRectI();
 		
-		if (mUndoEnabled)
-			undo->mPrev.SetDataLayerImage(index, mLayerMgr->DataLayer_get(index), rect.m_Position[0], rect.m_Position[1], rect.m_Size[0], rect.m_Size[1]);
-		
+		UndoBegin(false, index, rect);
+
 		// update primary bitmap
 		
 		if (mToolType == ToolType_SoftBrush || mToolType == ToolType_PatternBrush)
@@ -793,24 +738,24 @@ void Application::ExecuteStrokeEnd()
 		}
 		
 		LayerMgr_get()->ValidateLayer(rect.m_Position[0], rect.m_Position[1], rect.m_Size[0], rect.m_Size[1]);
-		
-		if (mUndoEnabled)
-			undo->mNext.SetDataLayerImage(index, mLayerMgr->DataLayer_get(index), rect.m_Position[0], rect.m_Position[1], rect.m_Size[0], rect.m_Size[1]);
-		
-		mDirtyArea_Total.Reset();
 	}
-	
-	if (mWriteEnabled)
-		undo->mPrev.SetCommandStreamLocation(mCommandStream->Position_get());
-	undo->mPrev.DBG_SetActiveDataLayer(index);
-	
+	else
+	{
+		UndoBegin(false, -1, RectI());
+	}
+
 	ExecutionCommit();
 	
-	if (mWriteEnabled)
-		undo->mNext.SetCommandStreamLocation(mCommandStream->Position_get());
-	undo->mNext.DBG_SetActiveDataLayer(index);
-	
-	CommitUndoBuffer(undo);
+	if (area.IsSet_get())
+	{
+		const RectI rect = area.ToRectI();
+
+		UndoEnd(index, rect);
+	}
+	else
+	{
+		UndoEnd(-1, RectI());
+	}
 }
 
 void Application::ExecuteStrokeMove(const float x, const float y)
@@ -1173,6 +1118,62 @@ void Application::DoPaint(const float x, const float y, const float dx, const fl
 // Undo
 // ----
 
+void Application::UndoBegin(const bool doReplay, const int dirtyLayerIndex, const RectI & dirtyLayerRect)
+{
+	Assert(mUndoBuffer == nullptr);
+	mUndoBuffer = new UndoBuffer();
+
+	if (doReplay)
+		mUndoBuffer->mNext.SetReplay();
+
+	mDirtyCommandStreamPosition = mCommandStream->Position_get();
+	if (mDataStream != nullptr)
+		mDirtyDataStreamPosition = mDataStream->Position_get();
+
+	if (mUndoEnabled && dirtyLayerIndex >= 0)
+	{
+		MacImage * image = mLayerMgr->DataLayer_get(dirtyLayerIndex);
+		mUndoBuffer->mPrev.SetDataLayerImage(0, dirtyLayerIndex, image, dirtyLayerRect.m_Position[0], dirtyLayerRect.m_Position[1], dirtyLayerRect.m_Size[0], dirtyLayerRect.m_Size[1]);
+	}
+}
+
+void Application::UndoEnd(const int dirtyLayerIndex, const RectI & dirtyLayerRect)
+{
+	Assert(mUndoBuffer != nullptr);
+
+	if (mWriteEnabled)
+	{
+		const int commandStreamPosition = mCommandStream->Position_get();
+		if (commandStreamPosition != mDirtyCommandStreamPosition)
+		{
+			mUndoBuffer->mPrev.SetCommandStreamLocation(mDirtyCommandStreamPosition);
+			mUndoBuffer->mNext.SetCommandStreamLocation(commandStreamPosition);
+		}
+	}
+
+	if (mWriteEnabled && mDataStream != nullptr)
+	{
+		const int dataStreamPosition = mDataStream->Position_get();
+		if (dataStreamPosition != mDirtyDataStreamPosition)
+		{
+			mUndoBuffer->mPrev.SetDataStreamLocation(mDirtyDataStreamPosition);
+			mUndoBuffer->mNext.SetDataStreamLocation(dataStreamPosition);
+		}
+	}
+
+	if (mUndoEnabled && dirtyLayerIndex >= 0)
+	{
+		MacImage * image = mLayerMgr->DataLayer_get(dirtyLayerIndex);
+		mUndoBuffer->mNext.SetDataLayerImage(0, dirtyLayerIndex, image, dirtyLayerRect.m_Position[0], dirtyLayerRect.m_Position[1], dirtyLayerRect.m_Size[0], dirtyLayerRect.m_Size[1]);
+	}
+
+	mUndoBuffer->mNext.DBG_SetEditingDataLayer(mLayerMgr->EditingDataLayer_get());
+
+	CommitUndoBuffer(mUndoBuffer);
+
+	mUndoBuffer = nullptr;
+}
+
 void Application::CommitUndoBuffer(UndoBuffer * undo)
 {
 	Assert(mPacketList.empty());
@@ -1224,61 +1225,44 @@ void Application::Undo()
 	
 	bool rebuildCaches = false;
 	
-	if (buffer->mPrev.mHasImage)
+	for (int i = 0; i < 2; ++i)
 	{
-		// restore bitmap data
-		
-		MacImage * prev = &buffer->mPrev.mImage;
-		
-		LOG_DBG("undo: update bitmap data: %dx%d", prev->Sx_get(), prev->Sy_get());
+		UndoState::DataLayerImage & m = buffer->mPrev.mDataLayerImage[i];
 
-		// update layer
+		if (m.mHasImage)
+		{
+			// restore bitmap data
+		
+			MacImage * prev = &m.mImage;
+		
+			LOG_DBG("undo: update bitmap data: %dx%d", prev->Sx_get(), prev->Sy_get());
 
-		// todo: use (optimized) editing begin/end (with only a partial editing buffer update). code beneath is just hackish
+			// update layer
+
+			// todo: use (optimized) editing begin/end (with only a partial editing buffer update). code beneath is just hackish
 		
-		buffer->mPrev.mImage.Blit(
-			mLayerMgr->DataLayer_get(buffer->mPrev.mImageDataLayer),
-			buffer->mPrev.mImageLocation[0],
-			buffer->mPrev.mImageLocation[1]);
+			m.mImage.Blit(
+				mLayerMgr->DataLayer_get(m.mImageDataLayer),
+				m.mImageLocation[0],
+				m.mImageLocation[1]);
 		
-		if (buffer->mPrev.mImageDataLayer != mLayerMgr->ActiveDataLayer_get())
-		{
-			rebuildCaches = true;
-		}
-		else
-		{
-			// copy layer to editing surface
+			if (m.mImageDataLayer != mLayerMgr->EditingDataLayer_get())
+			{
+				rebuildCaches = true;
+			}
+			else
+			{
+				// copy layer to editing surface
  			
-			mLayerMgr->CopyLayerToEditingBuffer(
-				buffer->mPrev.mImageLocation[0],
-				buffer->mPrev.mImageLocation[1],
-				buffer->mPrev.mImage.Sx_get(),
-				buffer->mPrev.mImage.Sy_get());
+				mLayerMgr->CopyLayerToEditingBuffer(
+					m.mImageLocation[0],
+					m.mImageLocation[1],
+					m.mImage.Sx_get(),
+					m.mImage.Sy_get());
+			}
+		
+			Invalidate(m.mImageLocation[0], m.mImageLocation[1], prev->Sx_get(), prev->Sy_get());
 		}
-		
-		Invalidate(buffer->mPrev.mImageLocation[0], buffer->mPrev.mImageLocation[1], prev->Sx_get(), prev->Sy_get());
-	}
-	
-	if (buffer->mPrev.mHasDualImage)
-	{
-		// restore bitmap data
-		
-		MacImage * prev1 = &buffer->mPrev.mDualImage1;
-		MacImage * prev2 = &buffer->mPrev.mDualImage2;
-		const int index1 = buffer->mPrev.mDualImageDataLayer1;
-		const int index2 = buffer->mPrev.mDualImageDataLayer2;
-		
-		LOG_DBG("undo: update bitmap data: %dx%d -> %d", prev1->Sx_get(), prev1->Sy_get(), index1);
-		LOG_DBG("undo: update bitmap data: %dx%d -> %d", prev2->Sx_get(), prev2->Sy_get(), index2);
-		
-		// update layers
-		
-		prev1->Blit(mLayerMgr->DataLayer_get(index1));
-		prev2->Blit(mLayerMgr->DataLayer_get(index2));
-		
-		rebuildCaches = true;
-		
-		Invalidate();
 	}
 	
 	Assert(buffer->mPrev.mHasLayerClear == false);
@@ -1320,11 +1304,11 @@ void Application::Undo()
 		Invalidate();
 	}
 	
-	if (buffer->mPrev.mHasActiveDataLayer)
+	if (buffer->mPrev.mHasEditingDataLayer)
 	{
-		LOG_DBG("undo: layer select: %d", buffer->mPrev.mActiveDataLayer);
+		LOG_DBG("undo: layer select: %d", buffer->mPrev.mEditingDataLayer);
 		
-		mLayerMgr->ActiveDataLayer_set(buffer->mPrev.mActiveDataLayer);
+		mLayerMgr->EditingDataLayer_set(buffer->mPrev.mEditingDataLayer);
 		
 		Invalidate();
 	}
@@ -1349,9 +1333,9 @@ void Application::Undo()
 		mDataStreamPosition = location;
 	}
 	
-/*	if (buffer->mPrev.mHasDbgActiveDataLayer)
+/*	if (buffer->mPrev.mHasDbgEditingDataLayer)
 	{
-		if (buffer->mPrev.mDbgActiveDataLayer != mLayerMgr->ActiveDataLayer_get())
+		if (buffer->mPrev.mDbgEditingDataLayer != mLayerMgr->EditingDataLayer_get())
 			throw ExceptionVA("undo: active layer mismatch");
 	}*/
 
@@ -1392,41 +1376,65 @@ void Application::Redo()
 	
 	bool rebuildCaches = false;
 	
-	if (buffer->mNext.mHasImage)
+	if (buffer->mNext.mHasReplay)
 	{
-		// restore bitmap data
-		
-		MacImage * curr = &buffer->mNext.mImage;
-		
-		LOG_DBG("redo: update bitmap data: %dx%d", curr->Sx_get(), curr->Sy_get());
-		
-		// update layer
+		while (mCommandStream->Position_get() != buffer->mNext.mCommandStreamLocation)
+		{
+			CommandPacket packet;
+			StreamReader reader(mCommandStream, false);
+			packet.Read(reader);
 
-		buffer->mNext.mImage.Blit(
-			mLayerMgr->DataLayer_get(buffer->mNext.mImageDataLayer),
-			buffer->mNext.mImageLocation[0],
-			buffer->mNext.mImageLocation[1]);
-		
-		if (buffer->mNext.mImageDataLayer != mLayerMgr->ActiveDataLayer_get())
-		{
-			rebuildCaches = true;
+			const bool undoEnabled = mUndoEnabled;
+			const bool writeEnabled = mWriteEnabled;
+
+			mUndoEnabled = false;
+			mWriteEnabled = false;
+
+			Execute(packet);
+
+			mUndoEnabled = undoEnabled;
+			mWriteEnabled = writeEnabled;
 		}
-		else
-		{
-			// copy layer to editing surface
- 			
-			mLayerMgr->CopyLayerToEditingBuffer(
-				buffer->mNext.mImageLocation[0],
-				buffer->mNext.mImageLocation[1],
-				buffer->mNext.mImage.Sx_get(),
-				buffer->mNext.mImage.Sy_get());
-		}
-		
-		Invalidate(buffer->mNext.mImageLocation[0], buffer->mNext.mImageLocation[1], curr->Sx_get(), curr->Sy_get());
 	}
-	
-	Assert(buffer->mNext.mHasDualImage == false);
-	
+
+	for (int i = 0; i < 2; ++i)
+	{
+		UndoState::DataLayerImage & m = buffer->mNext.mDataLayerImage[i];
+
+		if (m.mHasImage)
+		{
+			// restore bitmap data
+		
+			MacImage * curr = &m.mImage;
+		
+			LOG_DBG("redo: update bitmap data: %dx%d", curr->Sx_get(), curr->Sy_get());
+		
+			// update layer
+
+			m.mImage.Blit(
+				mLayerMgr->DataLayer_get(m.mImageDataLayer),
+				m.mImageLocation[0],
+				m.mImageLocation[1]);
+		
+			if (m.mImageDataLayer != mLayerMgr->EditingDataLayer_get())
+			{
+				rebuildCaches = true;
+			}
+			else
+			{
+				// copy layer to editing surface
+ 			
+				mLayerMgr->CopyLayerToEditingBuffer(
+					m.mImageLocation[0],
+					m.mImageLocation[1],
+					m.mImage.Sx_get(),
+					m.mImage.Sy_get());
+			}
+		
+			Invalidate(m.mImageLocation[0], m.mImageLocation[1], curr->Sx_get(), curr->Sy_get());
+		}
+	}
+
 	if (buffer->mNext.mHasLayerClear)
 	{
 		mUndoEnabled = false;
@@ -1486,11 +1494,11 @@ void Application::Redo()
 		Invalidate();
 	}
 	
-	if (buffer->mNext.mHasActiveDataLayer)
+	if (buffer->mNext.mHasEditingDataLayer)
 	{
-		LOG_DBG("redo: layer select: %d", buffer->mNext.mActiveDataLayer);
+		LOG_DBG("redo: layer select: %d", buffer->mNext.mEditingDataLayer);
 		
-		mLayerMgr->ActiveDataLayer_set(buffer->mNext.mActiveDataLayer);
+		mLayerMgr->EditingDataLayer_set(buffer->mNext.mEditingDataLayer);
 
 		Invalidate();
 	}
@@ -1515,10 +1523,10 @@ void Application::Redo()
 		mDataStreamPosition = location;
 	}
 	
-/*	if (buffer->mNext.mHasDbgActiveDataLayer)
+/*	if (buffer->mNext.mHasDbgEditingDataLayer)
 	{
-		if (buffer->mNext.mDbgActiveDataLayer != mLayerMgr->ActiveDataLayer_get())
-			throw ExceptionVA("redo: active layer mismatch");
+		if (buffer->mNext.mDbgEditingDataLayer != mLayerMgr->EditingDataLayer_get())
+			throw ExceptionVA("redo: editing layer mismatch");
 	}*/
 
 	if (isEditing)
@@ -1636,7 +1644,7 @@ void Application::ImageInitialize(const int layerCount, const int sx, const int 
 
 	ImageSize(layerCount, sx, sy);
 //	mLayerMgr->EditingBegin(false);
-	DataLayerClear(mLayerMgr->ActiveDataLayer_get(), 1.0f, 1.0f, 1.0f, 1.0f);
+//	DataLayerClear(mLayerMgr->EditingDataLayer_get(), 1.0f, 1.0f, 1.0f, 1.0f);
 	ExecutionCommit();
 	ColorSelect(0.1f, 0.1f, 0.5f, 1.0f);
 	ToolSettings_BrushSoft settings(7, 0.5f, 0.05f);
@@ -2191,7 +2199,7 @@ void Application::SaveImageXml(const std::string & path)
 		writer.BeginNode("layers");
 		{
 			writer.WriteAttribute_Int32("count", mLayerMgr->LayerCount_get());
-			writer.WriteAttribute_Int32("active", mLayerMgr->ActiveDataLayer_get());
+			writer.WriteAttribute_Int32("active", mLayerMgr->EditingDataLayer_get());
 			
 			for (int i = 0; i < mLayerMgr->LayerCount_get(); ++i)
 			{
@@ -2394,7 +2402,7 @@ void Application::LoadImageXml(const std::string & path)
 	}
 	
 	mLayerMgr->LayerOrder_set(description.layerOrder);
-	mLayerMgr->ActiveDataLayer_set(description.activeLayer);
+	mLayerMgr->EditingDataLayer_set(description.activeLayer);
 	
 	if (description.hasLastColorCommand)
 		mLastColorCommand = description.lastColorCommand;
@@ -2618,6 +2626,8 @@ void Application::DataStreamClose()
 	}
 }
 
+#if KLODDER_LITE==0
+
 // ---------
 // Debugging
 // ---------
@@ -2639,3 +2649,5 @@ void Application::DBG_ValidateCommandStream(const ImageId & imageId)
 	// fixme
 	CommandStreamWriter::DBG_TestSerialization();
 }
+
+#endif
