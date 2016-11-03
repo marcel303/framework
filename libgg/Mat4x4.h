@@ -30,6 +30,13 @@ public:
 	{
 	}
 	
+
+	inline Mat4x4(const bool initializeToIdentity)
+	{
+		if (initializeToIdentity)
+			MakeIdentity();
+	}
+
 	inline Mat4x4(
 		float v00, float v10, float v20, float v30,
 		float v01, float v11, float v21, float v31,
@@ -361,6 +368,16 @@ public:
 		return r;
 	}
 	
+	inline Mat4x4 operator*(const float v) const
+	{
+		Mat4x4 result;
+
+		for (int i = 0; i < 16; ++i)
+			result.m_v[i] = m_v[i] * v;
+
+		return result;
+	}
+
 	inline Vec3 operator*(const Vec3 & vec) const
 	{
 		return Mul4(vec);
@@ -374,6 +391,22 @@ public:
 	inline Mat4x4 operator*(const Mat4x4 & mat) const
 	{
 		return Mul(mat);
+	}
+
+	inline Mat4x4 operator+(const Mat4x4 & mat) const
+	{
+		Mat4x4 result;
+
+		for (int i = 0; i < 16; ++i)
+			result.m_v[i] = m_v[i] + mat.m_v[i];
+
+		return result;
+	}
+
+	inline void operator*=(const float v)
+	{
+		for (int i = 0; i < 16; ++i)
+			m_v[i] *= v;
 	}
 	
 	inline void operator*=(const Mat4x4 & mat)
@@ -391,6 +424,34 @@ public:
 		return m_v[INDEX(x, y)];
 	}
 	
+	//
+
+	inline Mat4x4 Translate(const float x, const float y, const float z) const
+	{
+		Mat4x4 t;
+		t.MakeTranslation(x, y, z);
+		return (*this) * t;
+	}
+
+	inline Mat4x4 Scale(const float x, const float y, const float z) const
+	{
+		Mat4x4 t;
+		t.MakeScaling(x, y, z);
+		return (*this) * t;
+	}
+
+	inline Mat4x4 RotateZ(const float angle, const bool left = true) const
+	{
+		Mat4x4 t;
+		t.MakeRotationZ(angle, left);
+		return (*this) * t;
+	}
+
+	inline Mat4x4 Invert() const
+	{
+		return CalcInv();
+	}
+
 	float m_v[16];
 };
 
