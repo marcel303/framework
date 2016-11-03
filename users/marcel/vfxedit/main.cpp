@@ -886,6 +886,16 @@ int main(int argc, char * argv[])
 					sendEvent(oscEventName().c_str(), 2);
 				}
 
+				// hack! audio end event
+
+				const bool hasEnded1 = audioTime1 >= g_audioFile->m_duration;
+				const bool hasEnded2 = audioTime2 >= g_audioFile->m_duration;
+
+				if (!hasEnded1 && hasEnded2)
+				{
+					sendEvent("/audio_end", 0);
+				}
+
 				g_lastAudioTime = audioTime2;
 			}
 
@@ -943,6 +953,11 @@ int main(int argc, char * argv[])
 					//
 
 					g_wantsAudioPlayback = wantsAudioPlayback;
+
+					if (g_wantsAudioPlayback)
+					{
+						sendEvent("/audio_begin", 0);
+					}
 				}
 			}
 
@@ -961,13 +976,15 @@ int main(int argc, char * argv[])
 
 			if (keyboard.wentDown(SDLK_SPACE) && g_audioFile != nullptr)
 			{
+				bool wantsAudioPlayback = false;
+
 				if (keyboard.isDown(SDLK_LSHIFT))
 				{
 					g_audioFile->seek(g_playbackMarker);
 					seekSequence(g_playbackMarker);
 					g_lastAudioTime = g_playbackMarker;
 
-					g_wantsAudioPlayback = true;
+					wantsAudioPlayback = true;
 				}
 				else if (keyboard.isDown(SDLK_LCTRL))
 				{
@@ -977,11 +994,23 @@ int main(int argc, char * argv[])
 					seekSequence(g_playbackMarker);
 					g_lastAudioTime = g_playbackMarker;
 
-					g_wantsAudioPlayback = true;
+					wantsAudioPlayback = true;
 				}
 				else
 				{
-					g_wantsAudioPlayback = !g_wantsAudioPlayback;
+					wantsAudioPlayback = !g_wantsAudioPlayback;
+				}
+
+				if (g_wantsAudioPlayback)
+				{
+					sendEvent("/audio_end", 0);
+				}
+
+				g_wantsAudioPlayback = wantsAudioPlayback;
+
+				if (g_wantsAudioPlayback)
+				{
+					sendEvent("/audio_begin", 0);
 				}
 			}
 
