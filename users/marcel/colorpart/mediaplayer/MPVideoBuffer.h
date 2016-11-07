@@ -1,24 +1,11 @@
 #pragma once
 
+#include "MPMutex.h"
 #include <ffmpeg/avcodec.h>
 #include <list>
 
-#include <SDL2/SDL.h> // fixme : abstract away
-
 namespace MP
 {
-	class Mutex
-	{
-		SDL_mutex * mutex;
-
-	public:
-		Mutex();
-		~Mutex();
-
-		void Lock();
-		void Unlock();
-	};
-
 	class VideoFrame
 	{
 	public:

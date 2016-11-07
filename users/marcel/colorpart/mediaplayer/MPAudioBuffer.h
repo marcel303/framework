@@ -1,33 +1,41 @@
 #pragma once
 
 #include "ColArray.h"
+#include "MPMutex.h"
+#include <ffmpeg/avcodec.h>
+#include <list>
 #include <stdint.h>
-#include <vector>
 
 namespace MP
 {
+	class AudioBufferSegment
+	{
+	public:
+		AudioBufferSegment()
+			: m_numSamples(0)
+			, m_readOffset(0)
+		{
+		}
+
+		int16_t m_samples[AVCODEC_MAX_AUDIO_FRAME_SIZE/2];
+		int m_numSamples;
+		int m_readOffset;
+	};
+
 	class AudioBuffer
 	{
 	public:
 		AudioBuffer();
 
-		size_t GetBufferSize();
-		void SetBufferSize(size_t size);
+		void AddSegment(const AudioBufferSegment & segment);
+		bool ReadSamples(int16_t * __restrict samples, size_t & sampleCount);
 
-		bool WriteSamples(int16_t* samples, size_t sampleCount);
-		bool ReadSamples(int16_t* samples, size_t sampleCount);
-
-		size_t GetSampleCount();
-
+		bool Depleted() const;
 		void Clear();
 
 	private:
-		void Free();
+		mutable Mutex m_mutex;
 
-		Col::Array<int16_t> m_samples;
-
-		size_t m_writePosition;
-		size_t m_readPosition;
-		size_t m_sampleCount;
+		std::list<AudioBufferSegment> m_segments;
 	};
 };

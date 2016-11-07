@@ -269,6 +269,12 @@ namespace MP
 		return true;
 	}
 
+	void Context::FillAudioBuffer()
+	{
+		if (m_audioContext)
+			m_audioContext->FillAudioBuffer();
+	}
+
 	void Context::FillVideoBuffer()
 	{
 		if (m_videoContext)
