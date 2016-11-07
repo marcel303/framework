@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include "Vec2.h"
 #include "Vec3.h"
 #include "Vec4.h"
 
@@ -59,16 +60,16 @@ public:
 	
 	inline void MakeScaling(float x, float y, float z)
 	{
-		MakeScaling(Vec3(x, y, z));
+		MakeIdentity();
+
+		m_v[INDEX(0, 0)] = x;
+		m_v[INDEX(1, 1)] = y;
+		m_v[INDEX(2, 2)] = z;
 	}
 	
 	inline void MakeScaling(const Vec3 & scale)
 	{
-		MakeIdentity();
-		
-		m_v[INDEX(0, 0)] = scale[0];
-		m_v[INDEX(1, 1)] = scale[1];
-		m_v[INDEX(2, 2)] = scale[2];
+		MakeScaling(scale[0], scale[1], scale[2]);
 	}
 	
 	inline void MakeRotationX(float angle, bool left = true)
@@ -133,16 +134,16 @@ public:
 	
 	inline void MakeTranslation(float x, float y, float z)
 	{
-		MakeTranslation(Vec3(x, y, z));
+		MakeIdentity();
+
+		m_v[INDEX(3, 0)] = x;
+		m_v[INDEX(3, 1)] = y;
+		m_v[INDEX(3, 2)] = z;
 	}
 	
 	inline void MakeTranslation(const Vec3 & position)
 	{
-		MakeIdentity();
-		
-		m_v[INDEX(3, 0)] = position[0];
-		m_v[INDEX(3, 1)] = position[1];
-		m_v[INDEX(3, 2)] = position[2];
+		MakeTranslation(position[0], position[1], position[2]);
 	}
 	
 	void MakePerspectiveLH(float fov, float aspect, float nearCP, float farCP)
@@ -223,14 +224,14 @@ public:
 	
 	void SetTranslation(float x, float y, float z)
 	{
-		SetTranslation(Vec3(x, y, z));
+		m_v[INDEX(3, 0)] = x;
+		m_v[INDEX(3, 1)] = y;
+		m_v[INDEX(3, 2)] = z;
 	}
 	
 	void SetTranslation(const Vec3 & v)
 	{
-		m_v[INDEX(3, 0)] = v[0];
-		m_v[INDEX(3, 1)] = v[1];
-		m_v[INDEX(3, 2)] = v[2];
+		SetTranslation(v[0], v[1], v[2]);
 	}
 	
 	Vec3 GetTranslation() const
@@ -296,6 +297,35 @@ public:
 		return r;
 	}
 	
+	inline Vec2 Mul(const Vec2 & vec) const
+	{
+		Vec2 r;
+
+		for (int i = 0; i < 3; ++i)
+		{
+			r[i] =
+				m_v[INDEX(0, i)] * vec[0] +
+				m_v[INDEX(1, i)] * vec[1];
+		}
+
+		return r;
+	}
+
+	inline Vec2 Mul4(const Vec2 & vec) const
+	{
+		Vec2 r;
+
+		for (int i = 0; i < 2; ++i)
+		{
+			r[i] =
+				m_v[INDEX(0, i)] * vec[0] +
+				m_v[INDEX(1, i)] * vec[1] +
+				m_v[INDEX(3, i)];
+		}
+
+		return r;
+	}
+
 	inline Vec3 Mul(const Vec3 & vec) const
 	{
 		Vec3 r;
@@ -376,6 +406,11 @@ public:
 			result.m_v[i] = m_v[i] * v;
 
 		return result;
+	}
+
+	inline Vec2 operator*(const Vec2 & vec) const
+	{
+		return Mul4(vec);
 	}
 
 	inline Vec3 operator*(const Vec3 & vec) const
