@@ -47,6 +47,12 @@ extern void unlockMidi();
 
 static void gxFlush(bool endOfBatch);
 
+static float scale255(const float v)
+{
+	static const float m = 1.f / 255.f;
+	return v * m;
+}
+
 // -----
 
 Color colorBlack(0, 0, 0, 255);
@@ -932,7 +938,7 @@ void Framework::beginDraw(int r, int g, int b, int a)
 
 	// clear back buffer
 	
-	glClearColor(r/255.f, g/255.f, b/255.f, a/255.f);
+	glClearColor(scale255(r), scale255(g), scale255(b), scale255(a));
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
 	// initialize viewport and OpenGL matrices
@@ -1215,7 +1221,7 @@ int Surface::getHeight() const
 
 void Surface::clear(int r, int g, int b, int a)
 {
-	clearf(r/255.f, g/255.f, b/255.f, a/255.f);
+	clearf(scale255(r), scale255(g), scale255(b), scale255(a));
 }
 
 void Surface::clearf(float r, float g, float b, float a)
@@ -1235,7 +1241,7 @@ void Surface::clearAlpha()
 
 void Surface::setAlpha(int a)
 {
-	setAlphaf(a/255.f);
+	setAlphaf(scale255(a));
 }
 
 void Surface::setAlphaf(float a)
@@ -1603,10 +1609,10 @@ Color::Color()
 
 Color::Color(int r, int g, int b, int a)
 {
-	this->r = r / 255.f;
-	this->g = g / 255.f;
-	this->b = b / 255.f;
-	this->a = a / 255.f;
+	this->r = scale255(r);
+	this->g = scale255(g);
+	this->b = scale255(b);
+	this->a = scale255(a);
 }
 
 Color::Color(float r, float g, float b, float a)
@@ -1622,19 +1628,19 @@ Color Color::fromHex(const char * str)
 	if (strlen(str) == 6)
 	{
 		const uint32_t hex = std::stoul(str, 0, 16);
-		const float r = ((hex >> 16) & 0xff) / 255.f;
-		const float g = ((hex >>  8) & 0xff) / 255.f;
-		const float b = ((hex >>  0) & 0xff) / 255.f;
+		const float r = scale255((hex >> 16) & 0xff);
+		const float g = scale255((hex >>  8) & 0xff);
+		const float b = scale255((hex >>  0) & 0xff);
 		const float a = 1.f;
 		return Color(r, g, b, a);
 	}
 	else
 	{
 		const uint32_t hex = std::stoul(str, 0, 16);
-		const float r = ((hex >> 24) & 0xff) / 255.f;
-		const float g = ((hex >> 16) & 0xff) / 255.f;
-		const float b = ((hex >>  8) & 0xff) / 255.f;
-		const float a = ((hex >>  0) & 0xff) / 255.f;
+		const float r = scale255((hex >> 24) & 0xff);
+		const float g = scale255((hex >> 16) & 0xff);
+		const float b = scale255((hex >>  8) & 0xff);
+		const float a = scale255((hex >>  0) & 0xff);
 		return Color(r, g, b, a);
 	}
 }
@@ -3547,7 +3553,7 @@ void setColor(const Color & color)
 
 void setColor(int r, int g, int b, int a, int rgbMul)
 {
-	setColorf(r/255.f, g/255.f, b/255.f, a/255.f, rgbMul/255.f);
+	setColorf(scale255(r), scale255(g), scale255(b), scale255(a), scale255(rgbMul));
 }
 
 void setColorf(float r, float g, float b, float a, float rgbMul)
@@ -3573,6 +3579,16 @@ void setColorf(float r, float g, float b, float a, float rgbMul)
 	#else
 	gxColor4f(r, g, b, a);
 	#endif
+}
+
+void setAlpha(int a)
+{
+	globals.color.a = scale255(a);
+}
+
+void setAlphaf(float a)
+{
+	globals.color.a = a;
 }
 
 void setGradientf(float x1, float y1, const Color & color1, float x2, float y2, const Color & color2)
@@ -4243,7 +4259,7 @@ static Shader s_gxShader;
 static GLuint s_gxVertexArrayObject[GX_VAO_COUNT] = { };
 static GLuint s_gxVertexBufferObject[GX_VAO_COUNT] = { };
 static GLuint s_gxIndexBufferObject[GX_VAO_COUNT] = { };
-static GxVertex s_gxVertexBuffer[1024];
+static GxVertex s_gxVertexBuffer[1024*16];
 
 #if GX_USE_RINGBUFFER
 static GLuint s_gxVertexBufferRing = 0;
@@ -4597,25 +4613,28 @@ void gxColor4f(float r, float g, float b, float a)
 
 void gxColor4fv(const float * rgba)
 {
-	gxColor4f(rgba[0], rgba[1], rgba[2], rgba[3]);
+	s_gxVertex.cx = rgba[0];
+	s_gxVertex.cy = rgba[1];
+	s_gxVertex.cz = rgba[2];
+	s_gxVertex.cw = rgba[3];
 }
 
 void gxColor3ub(int r, int g, int b)
 {
 	gxColor4f(
-		r / 255.f,
-		g / 255.f,
-		b / 255.f,
+		scale255(r),
+		scale255(g),
+		scale255(b),
 		1.f);
 }
 
 void gxColor4ub(int r, int g, int b, int a)
 {
 	gxColor4f(
-		r / 255.f,
-		g / 255.f,
-		b / 255.f,
-		a / 255.f);
+		scale255(r),
+		scale255(g),
+		scale255(b),
+		scale255(a));
 }
 
 void gxTexCoord2f(float u, float v)
@@ -4655,10 +4674,12 @@ void gxEmitVertex()
 {
 	s_gxVertices[s_gxVertexCount++] = s_gxVertex;
 	
-	if (s_gxVertexCount % s_gxPrimitiveSize == 0)
+	if (s_gxVertexCount + s_gxPrimitiveSize > s_gxMaxVertexCount)
 	{
-		if (s_gxVertexCount + s_gxPrimitiveSize > s_gxMaxVertexCount)
+		if (s_gxVertexCount % s_gxPrimitiveSize == 0)
+		{
 			gxFlush(false);
+		}
 	}
 }
 
