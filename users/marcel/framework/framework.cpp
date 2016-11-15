@@ -624,8 +624,15 @@ void Framework::process()
 		}
 	}
 
-	mouse.dx = mouse.x - oldMouseX;
-	mouse.dy = mouse.y - oldMouseY;
+	if (globals.hasOldMousePosition)
+	{
+		mouse.dx = mouse.x - oldMouseX;
+		mouse.dy = mouse.y - oldMouseY;
+	}
+	else
+	{
+		globals.hasOldMousePosition = true;
+	}
 
 #ifdef __WIN32__
 	// use XInput to poll gamepad state
@@ -2857,6 +2864,12 @@ bool Mouse::wentUp(BUTTON button) const
 void Mouse::showCursor(bool enabled)
 {
 	SDL_ShowCursor(enabled ? 1 : 0);
+}
+
+void Mouse::setRelative(bool isRelative)
+{
+	SDL_SetRelativeMouseMode(isRelative ? SDL_TRUE : SDL_FALSE);
+	SDL_CaptureMouse(isRelative ? SDL_TRUE : SDL_FALSE);
 }
 
 // -----

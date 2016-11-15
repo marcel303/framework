@@ -60,6 +60,7 @@ public:
 	FontCacheElem * font;
 	bool mouseDown[BUTTON_MAX];
 	bool mouseChange[BUTTON_MAX];
+	bool hasOldMousePosition;
 	int keyDown[256];
 	int keyDownCount;
 	int keyChange[256];

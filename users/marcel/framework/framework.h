@@ -716,6 +716,7 @@ public:
 	bool wentDown(BUTTON button) const;
 	bool wentUp(BUTTON button) const;
 	void showCursor(bool enabled);
+	void setRelative(bool isRelative);
 };
 
 class Keyboard
