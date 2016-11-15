@@ -468,10 +468,29 @@ public:
 		return (*this) * t;
 	}
 
+	inline Mat4x4 Translate(Vec3Arg vec) const
+	{
+		return Translate(vec[0], vec[1], vec[2]);
+	}
+
 	inline Mat4x4 Scale(const float x, const float y, const float z) const
 	{
 		Mat4x4 t;
 		t.MakeScaling(x, y, z);
+		return (*this) * t;
+	}
+
+	inline Mat4x4 RotateX(const float angle, const bool left = true) const
+	{
+		Mat4x4 t;
+		t.MakeRotationX(angle, left);
+		return (*this) * t;
+	}
+
+	inline Mat4x4 RotateY(const float angle, const bool left = true) const
+	{
+		Mat4x4 t;
+		t.MakeRotationY(angle, left);
 		return (*this) * t;
 	}
 
