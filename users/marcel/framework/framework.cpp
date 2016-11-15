@@ -1069,6 +1069,7 @@ void Surface::construct()
 	m_buffer[1] = 0;
 	m_texture[0] = 0;
 	m_texture[1] = 0;
+	m_depthTexture = 0;
 }
 
 void Surface::destruct()
@@ -1104,11 +1105,11 @@ Surface::Surface()
 	construct();
 }
 
-Surface::Surface(int sx, int sy, bool highPrecision)
+Surface::Surface(int sx, int sy, bool highPrecision, bool withDepthBuffer)
 {
 	construct();
 	
-	init(sx, sy, highPrecision);
+	init(sx, sy, highPrecision, withDepthBuffer);
 }
 
 Surface::~Surface()
@@ -1116,7 +1117,7 @@ Surface::~Surface()
 	destruct();
 }
 
-bool Surface::init(int sx, int sy, bool highPrecision)
+bool Surface::init(int sx, int sy, bool highPrecision, bool withDepthBuffer)
 {
 	fassert(m_buffer[0] == 0);
 	
@@ -1151,7 +1152,7 @@ bool Surface::init(int sx, int sy, bool highPrecision)
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sx, sy, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
 		
 		checkErrorGL();
-		
+
 		// set filtering
 		
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -1159,6 +1160,27 @@ bool Surface::init(int sx, int sy, bool highPrecision)
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		checkErrorGL();
+
+		if (withDepthBuffer)
+		{
+			glGenTextures(1, &m_depthTexture);
+			result &= m_depthTexture != 0;
+			checkErrorGL();
+
+			glBindTexture(GL_TEXTURE_2D, m_depthTexture);
+			checkErrorGL();
+
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, sx, sy, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
+			checkErrorGL();
+
+			// set filtering
+
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			checkErrorGL();
+		}
 		
 		// create attachment
 		
@@ -1169,6 +1191,12 @@ bool Surface::init(int sx, int sy, bool highPrecision)
 		glBindFramebuffer(GL_FRAMEBUFFER, m_buffer[i]);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_texture[i], 0);
 		checkErrorGL();
+		
+		if (withDepthBuffer)
+		{
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_depthTexture, 0);
+			checkErrorGL();
+		}
 		
 		// check if all went well
 		
@@ -1209,6 +1237,11 @@ GLuint Surface::getTexture() const
 	return m_texture[m_bufferId];
 }
 
+GLuint Surface::getDepthTexture() const
+{
+	return m_depthTexture;
+}
+
 int Surface::getWidth() const
 {
 	return m_size[0];
@@ -1230,6 +1263,16 @@ void Surface::clearf(float r, float g, float b, float a)
 	{
 		glClearColor(r, g, b, a);
 		glClear(GL_COLOR_BUFFER_BIT);
+	}
+	popSurface();
+}
+
+void Surface::clearDepth(float d)
+{
+	pushSurface(this);
+	{
+		glClearDepth(d);
+		glClear(GL_DEPTH_BUFFER_BIT);
 	}
 	popSurface();
 }

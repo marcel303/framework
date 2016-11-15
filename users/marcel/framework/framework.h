@@ -270,25 +270,28 @@ class Surface
 	int m_bufferId;
 	GLuint m_buffer[2];
 	GLuint m_texture[2];
+	GLuint m_depthTexture;
 	
 	void construct();
 	void destruct();
 	
 public:
 	Surface();
-	Surface(int sx, int sy, bool highPrecision);
+	Surface(int sx, int sy, bool highPrecision, bool withDepthBuffer = false);
 	~Surface();
 	
 	void swapBuffers();
 
-	bool init(int sx, int sy, bool highPrecision);
+	bool init(int sx, int sy, bool highPrecision, bool withDepthBuffer);
 	GLuint getFramebuffer() const;
 	GLuint getTexture() const;
+	GLuint getDepthTexture() const;
 	int getWidth() const;
 	int getHeight() const;
 	
 	void clear(int r = 0, int g = 0, int b = 0, int a = 0);
 	void clearf(float r = 0.f, float g = 0.f, float b = 0.f, float a = 0.f);
+	void clearDepth(float d);
 	void clearAlpha();
 	void setAlpha(int a);
 	void setAlphaf(float a);
@@ -534,14 +537,17 @@ public:
 	Vec3 axis;
 	float angle;
 	float scale;
+	Shader * overrideShader;
 	
-	bool animIsActive;
+	// fixme : remove mutable qualifiers
+	mutable bool animIsActive;
 	bool animIsPaused;
-	float animTime;
-	int animLoop;
-	int animLoopCount;
+	mutable float animTime;
+	mutable int animLoop;
+	mutable int animLoopCount;
 	float animSpeed;
 	Vec3 animRootMotion;
+	bool animRootMotionEnabled;
 	
 	Model(const char * filename);
 	Model(class ModelCacheElem & cacheElem);
@@ -552,10 +558,14 @@ public:
 	void pauseAnim() { animIsPaused = true; }
 	void resumeAnim() { animIsPaused = false; }
 	std::vector<std::string> getAnimList() const;
+	const char * getAnimName() const;
 	
-	void draw(int drawFlags = DrawMesh);
-	void drawEx(Vec3 position, Vec3 axis, float angle = 0.f, float scale = 1.f, int drawFlags = DrawMesh);
-	void drawEx(const Mat4x4 & matrix, int drawFlags = DrawMesh);
+	void draw(const int drawFlags = DrawMesh) const;
+	void drawEx(Vec3Arg position, Vec3Arg axis, const float angle = 0.f, const float scale = 1.f, const int drawFlags = DrawMesh) const;
+	void drawEx(const Mat4x4 & matrix, const int drawFlags = DrawMesh) const;
+
+	void calculateTransform(Mat4x4 & matrix) const;
+	static void calculateTransform(Vec3Arg position, Vec3Arg axis, const float angle, const float scale, Mat4x4 & matrix);
 	
 private:
 	void ctor();

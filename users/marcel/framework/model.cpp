@@ -682,6 +682,7 @@ void Model::ctor()
 	axis = Vec3(1.f, 0.f, 0.f);
 	angle = 0.f;
 	scale = 1.f;
+	overrideShader = nullptr;
 	
 	// animation
 	m_animSegment = 0;
@@ -692,6 +693,7 @@ void Model::ctor()
 	animLoop = 0;
 	animLoopCount = 0;
 	animSpeed = 1.f;
+	animRootMotionEnabled = true;
 	
 	framework.registerModel(this);
 }
@@ -741,41 +743,28 @@ std::vector<std::string> Model::getAnimList() const
 	return result;
 }
 
-void Model::draw(int drawFlags)
+const char * Model::getAnimName() const
+{
+	return m_animSegmentName.c_str();
+}
+
+void Model::draw(const int drawFlags) const
 {
 	drawEx(Vec3(x, y, z), axis, angle, scale, drawFlags);
 }
 
-void Model::drawEx(Vec3 position, Vec3 axis, float angle, float scale, int drawFlags)
+void Model::drawEx(Vec3Arg position, Vec3Arg axis, const float angle, const float scale, const int drawFlags) const
 {
 	// build transformation matrix
 	 
-	Quat rotation;
-	rotation.fromAxisAngle(axis, angle);
-	
 	Mat4x4 matrix;
-	rotation.toMatrix3x3(matrix);
-	
-	matrix(0, 3) = 0.f;
-	matrix(1, 3) = 0.f;
-	matrix(2, 3) = 0.f;
-	
-	matrix(3, 0) = position[0];
-	matrix(3, 1) = position[1];
-	matrix(3, 2) = position[2];
-	matrix(3, 3) = 1.f;
-	
-	if (scale != 1.f)
-	{
-		for (int i = 0; i < 3; ++i)
-			for (int j = 0; j < 3; ++j)
-				matrix(i, j) *= scale;
-	}
-	
+
+	calculateTransform(position, axis, angle, scale, matrix);
+
 	drawEx(matrix, drawFlags);
 }
 
-void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
+void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 {
 	// calculate transforms in local bone space
 	
@@ -902,7 +891,7 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 				continue;
 			
 			Mesh * mesh = m_model->meshSet->m_meshes[i];
-			Shader & shader = mesh->m_material.shader;
+			Shader & shader = (overrideShader != nullptr) ? *overrideShader : mesh->m_material.shader;
 			
 			setShader(shader);
 			
@@ -1055,6 +1044,36 @@ void Model::drawEx(const Mat4x4 & matrix, int drawFlags)
 	}
 }
 
+void Model::calculateTransform(Mat4x4 & matrix) const
+{
+	calculateTransform(Vec3(x, y, z), axis, angle, scale, matrix);
+}
+
+void Model::calculateTransform(Vec3Arg position, Vec3Arg axis, const float angle, const float scale, Mat4x4 & matrix)
+{
+	Quat rotation;
+	rotation.fromAxisAngle(axis, angle);
+
+	//Mat4x4 matrix;
+	rotation.toMatrix3x3(matrix);
+
+	matrix(0, 3) = 0.f;
+	matrix(1, 3) = 0.f;
+	matrix(2, 3) = 0.f;
+
+	matrix(3, 0) = position[0];
+	matrix(3, 1) = position[1];
+	matrix(3, 2) = position[2];
+	matrix(3, 3) = 1.f;
+
+	if (scale != 1.f)
+	{
+		for (int i = 0; i < 3; ++i)
+			for (int j = 0; j < 3; ++j)
+				matrix(i, j) *= scale;
+	}
+}
+
 void Model::updateAnimationSegment()
 {
 	if (m_isAnimStarted && !m_animSegmentName.empty())
@@ -1093,7 +1112,7 @@ void Model::updateAnimation(float timeStep)
 	
 	if (anim)
 	{
-		if (anim->m_rootMotion)
+		if (animRootMotionEnabled && anim->m_rootMotion)
 		{
 			int boneIndex = m_model->boneSet->findBone(m_model->rootNode);
 			
