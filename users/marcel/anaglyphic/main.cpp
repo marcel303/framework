@@ -80,14 +80,70 @@ struct Pisu
 	float vy;
 };
 
+struct Camera
+{
+	Vec3 position;
+	Vec3 rotation;
+
+	void tick(const float dt)
+	{
+		rotation[0] -= mouse.dy / 100.f;
+		rotation[1] -= mouse.dx / 100.f;
+
+		Mat4x4 mat;
+
+		calculateTransform(0.f, mat);
+
+		const Vec3 xAxis(mat(0, 0), mat(0, 1), mat(0, 2));
+		const Vec3 zAxis(mat(2, 0), mat(2, 1), mat(2, 2));
+
+		Vec3 direction;
+
+		if (keyboard.isDown(SDLK_UP))
+			direction += zAxis;
+		if (keyboard.isDown(SDLK_DOWN))
+			direction -= zAxis;
+		if (keyboard.isDown(SDLK_LEFT))
+			direction -= xAxis;
+		if (keyboard.isDown(SDLK_RIGHT))
+			direction += xAxis;
+
+		const float speed = 200.f;
+
+		position += direction * speed * dt;
+	}
+
+	void calculateTransform(const float eyeOffset, Mat4x4 & matrix) const
+	{
+		// todo : use the correct eye position when we're trying to do head mounted VR
+		// right now the anatomy looks like this:
+		//
+		//      L----O----R
+		//           |
+		//           |
+		//           |
+		//
+		// where L is the left eye, R is the right eye and O is where the head rotates around the axis
+		// in real life, the head and eyes rotate a little more complicated..
+
+		matrix = Mat4x4(true).Translate(position).RotateY(rotation[1]).RotateX(rotation[0]).Translate(eyeOffset, 0.f, 0.f);
+	}
+};
+
 struct Scene
 {
+	Camera camera;
+
 	Shader modelShader;
 	std::list<Model*> models;
 
 	Scene()
-		: modelShader("model-lit")
+		: camera()
+		, modelShader("model-lit")
+		, models()
 	{
+		camera.position = Vec3(0.f, 170.f, -180.f);
+
 		for (int x = -2; x <= +2; ++x)
 		{
 			for (int z = 0; z <= +2; ++z)
@@ -123,6 +179,8 @@ static Scene * scene = nullptr;
 
 void Scene::tick(const float dt)
 {
+	camera.tick(dt);
+
 	for (Model * model : models)
 	{
 		model->axis = Vec3(0.f, -1.f, 0.f);
@@ -153,7 +211,8 @@ void Scene::draw(Surface * surface, const float eye) const
 		matP.MakePerspectiveLH(Calc::DegToRad(60.f), surface->getHeight() / float(surface->getWidth()), .1f, 10000.f);
 
 		Mat4x4 matC(true);
-		matC = matC.Translate(68.f/10.f/2.f * eye, 170.f, -180.f).Invert();
+		camera.calculateTransform(68.f/10.f/2.f * eye, matC);
+		matC = matC.Invert();
 
 		gxMatrixMode(GL_PROJECTION);
 		gxPushMatrix();
@@ -229,6 +288,9 @@ int main(int argc, char * argv[])
 
 	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
 	{
+		mouse.showCursor(false);
+		mouse.setRelative(true);
+
 		Surface * surface = new Surface(GFX_SX, GFX_SY, true);
 		Surface * surfaceL = new Surface(GFX_SX, GFX_SY, true, true);
 		Surface * surfaceR = new Surface(GFX_SX, GFX_SY, true, true);
