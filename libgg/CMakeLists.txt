@@ -11,7 +11,7 @@ project(libgg)
 
 # --- libgg ---
 
-file(GLOB source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "*.cpp" "*.h")
+file(GLOB_RECURSE source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "*.cpp" "*.h")
 list(REMOVE_ITEM source Directory.cpp ImageLoader_FreeImage.cpp test_tga.cpp)
 
 add_library(libgg ${source})
