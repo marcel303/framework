@@ -799,6 +799,8 @@ void Framework::reloadCaches()
 	}
 }
 
+//
+
 std::vector<std::string> listFiles(const char * path, bool recurse)
 {
 #ifdef WIN32
@@ -2043,6 +2045,18 @@ void * Dictionary::getPtr(const char * name, void * _default) const
 std::string & Dictionary::operator[](const char * name)
 {
 	return m_map[name];
+}
+
+// -----
+
+GLuint getTexture(const char * filename)
+{
+	const TextureCacheElem & elem = g_textureCache.findOrCreate(filename, 1, 1);
+
+	if (elem.textures)
+		return elem.textures[0];
+	else
+		return 0;
 }
 
 // -----

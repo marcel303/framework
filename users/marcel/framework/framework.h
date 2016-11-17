@@ -220,7 +220,7 @@ public:
 	void endDraw();
 
 	void blinkTaskbarIcon(int count);
-	
+
 	bool quitRequested;
 	float time;
 	float timeStep;
@@ -432,6 +432,10 @@ public:
 	
 	std::string & operator[](const char * name);
 };
+
+//
+
+GLuint getTexture(const char * filename);
 
 //
 
