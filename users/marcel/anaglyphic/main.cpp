@@ -4,7 +4,7 @@
 #include <list>
 
 #define ENABLE_MEDIA_FOUNDATION 0
-#define ENABLE_VIDEO_FOR_WINDOWS 1
+#define ENABLE_VIDEO_FOR_WINDOWS 0
 #define ENABLE_FACE_DETECTION 1
 
 #define GFX_SX 1920
@@ -21,6 +21,7 @@
 #endif
 
 #if ENABLE_VIDEO_FOR_WINDOWS
+	#include <Windows.h>
 	#include <Vfw.h>
 	#pragma comment(lib, "Vfw32.lib")
 #endif
