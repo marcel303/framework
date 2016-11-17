@@ -35,6 +35,10 @@ target_include_directories(anaglyphic PRIVATE "${PROJECT_SOURCE_DIR}")
 target_link_libraries(anaglyphic PRIVATE framework)
 target_link_libraries(anaglyphic PRIVATE libgg)
 
+target_link_libraries(anaglyphic PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/ffmpeg/avcodec-51.lib)
+target_link_libraries(anaglyphic PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/ffmpeg/avformat-50.lib)
+target_link_libraries(anaglyphic PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/win32/ffmpeg/avutil-49.lib)
+
 target_link_libraries(anaglyphic PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/FreeImage.lib)
 target_link_libraries(anaglyphic PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/freetype252.lib)
 target_link_libraries(anaglyphic PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/glew32.lib)
