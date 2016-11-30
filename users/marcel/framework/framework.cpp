@@ -28,6 +28,7 @@
 #include "image.h"
 #include "internal.h"
 #include "model.h"
+#include "rte.h"
 #include "spriter.h"
 
 #include "Timer.h"
@@ -88,6 +89,7 @@ Framework::Framework()
 	midiDeviceIndex = 0;
 	reloadCachesOnActivate = false;
 	cacheResourceData = false;
+	enableRealTimeEditing = false;
 	filedrop = false;
 	windowX = -1;
 	windowY = -1;
@@ -141,8 +143,8 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
 #else
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 #endif
 	
 #if 1
@@ -365,6 +367,13 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 		//return false;
 	}
 
+	// initialize real time editing
+
+	if (enableRealTimeEditing)
+	{
+		initRealTimeEditing();
+	}
+
 	// load settings
 
 	settings.load("settings.txt");
@@ -395,6 +404,10 @@ bool Framework::shutdown()
 {
 	bool result = true;
 	
+	// shut down real time editing
+
+	shutRealTimeEditing();
+
 	// shut down sound player
 	
 	if (!g_soundPlayer.shutdown())
@@ -480,6 +493,7 @@ bool Framework::shutdown()
 	midiDeviceIndex = 0;
 	reloadCachesOnActivate = false;
 	cacheResourceData = false;
+	enableRealTimeEditing = false;
 	filedrop = false;
 	numSoundSources = 32;
 	windowX = -1;
@@ -509,6 +523,11 @@ void Framework::process()
 
 	time += timeStep;
 	
+	if (enableRealTimeEditing)
+	{
+		tickRealTimeEditing();
+	}
+
 	g_soundPlayer.process();
 	
 	bool doReload = false;
@@ -739,6 +758,8 @@ void Framework::process()
 	{
 		reloadCaches();
 	}
+
+	tickRealTimeEditing();
 
 	for (Sprite * sprite = m_sprites; sprite; sprite = sprite->m_next)
 	{
@@ -1542,6 +1563,7 @@ void Shader::setTexture(const char * name, int unit, GLuint texture, bool filter
 {
 	SET_UNIFORM(name, glUniform1i(index, unit));
 	checkErrorGL();
+
 	glActiveTexture(GL_TEXTURE0 + unit);
 	glBindTexture(GL_TEXTURE_2D, texture);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filtered ? GL_LINEAR : GL_NEAREST);
@@ -1549,12 +1571,14 @@ void Shader::setTexture(const char * name, int unit, GLuint texture, bool filter
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamped ? GL_CLAMP_TO_EDGE : GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clamped ? GL_CLAMP_TO_EDGE : GL_REPEAT);
 	glActiveTexture(GL_TEXTURE0);
+	checkErrorGL();
 }
 
 void Shader::setTextureArray(const char * name, int unit, GLuint texture, bool filtered, bool clamped)
 {
 	SET_UNIFORM(name, glUniform1i(index, unit));
 	checkErrorGL();
+
 	glActiveTexture(GL_TEXTURE0 + unit);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, texture);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, filtered ? GL_LINEAR : GL_NEAREST);
@@ -1562,6 +1586,7 @@ void Shader::setTextureArray(const char * name, int unit, GLuint texture, bool f
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, clamped ? GL_CLAMP_TO_EDGE : GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, clamped ? GL_CLAMP_TO_EDGE : GL_REPEAT);
 	glActiveTexture(GL_TEXTURE0);
+	checkErrorGL();
 }
 
 #undef SET_UNIFORM
@@ -1591,6 +1616,231 @@ void Shader::setBuffer(GLint index, const ShaderBuffer & buffer)
 }
 
 void Shader::reload()
+{
+	m_shader->reload();
+}
+
+// -----
+
+ComputeShader::ComputeShader()
+{
+	m_shader = 0;
+}
+
+ComputeShader::ComputeShader(const char * filename)
+{
+	m_shader = 0;
+
+	load(filename);
+}
+
+ComputeShader::~ComputeShader()
+{
+	if (globals.shader == this)
+		clearShader();
+}
+
+void ComputeShader::load(const char * filename)
+{
+	m_shader = &g_computeShaderCache.findOrCreate(filename);
+}
+
+GLuint ComputeShader::getProgram() const
+{
+	return m_shader ? m_shader->program : 0;
+}
+
+int ComputeShader::getGroupSx() const
+{
+	return m_shader ? m_shader->groupSx : 0;
+}
+
+int ComputeShader::getGroupSy() const
+{
+	return m_shader ? m_shader->groupSy : 0;
+}
+
+int ComputeShader::getGroupSz() const
+{
+	return m_shader ? m_shader->groupSz : 0;
+}
+
+static int calcThreadSize(const int dispatchSize, const int groupSize)
+{
+	if (groupSize > 0)
+		return (dispatchSize + groupSize - 1) / groupSize;
+	else
+		return 0;
+}
+
+int ComputeShader::toThreadSx(const int sx) const
+{
+	return calcThreadSize(sx, getGroupSx());
+}
+
+int ComputeShader::toThreadSy(const int sy) const
+{
+	return calcThreadSize(sy, getGroupSy());
+}
+
+int ComputeShader::toThreadSz(const int sz) const
+{
+	return calcThreadSize(sz, getGroupSz());
+}
+
+GLint ComputeShader::getImmediate(const char * name)
+{
+	return glGetUniformLocation(getProgram(), name);
+}
+
+GLint ComputeShader::getAttribute(const char * name)
+{
+	return glGetAttribLocation(getProgram(), name);
+}
+
+#define SET_UNIFORM(name, op) \
+	if (getProgram()) \
+	{ \
+		setShader(*this); \
+		const GLint index = glGetUniformLocation(getProgram(), name); \
+		if (index == -1) \
+		{ \
+			/*logDebug("couldn't find shader uniform %s", name);*/ \
+		} \
+		else \
+		{ \
+			op; \
+		} \
+	}
+
+void ComputeShader::setImmediate(const char * name, float x)
+{
+	SET_UNIFORM(name, glUniform1f(index, x));
+	checkErrorGL();
+}
+
+void ComputeShader::setImmediate(const char * name, float x, float y)
+{
+	SET_UNIFORM(name, glUniform2f(index, x, y));
+	checkErrorGL();
+}
+
+void ComputeShader::setImmediate(const char * name, float x, float y, float z)
+{
+	SET_UNIFORM(name, glUniform3f(index, x, y, z));
+	checkErrorGL();
+}
+
+void ComputeShader::setImmediate(const char * name, float x, float y, float z, float w)
+{
+	SET_UNIFORM(name, glUniform4f(index, x, y, z, w));
+	checkErrorGL();
+}
+
+void ComputeShader::setImmediate(GLint index, float x, float y, float z, float w)
+{
+	fassert(index != -1);
+	fassert(globals.shader == this);
+	glUniform4f(index, x, y, z, w);
+	checkErrorGL();
+}
+
+void ComputeShader::setImmediateMatrix4x4(const char * name, const float * matrix)
+{
+	SET_UNIFORM(name, glUniformMatrix4fv(index, 1, GL_FALSE, matrix));
+	checkErrorGL();
+}
+
+void ComputeShader::setImmediateMatrix4x4(GLint index, const float * matrix)
+{
+	fassert(index != -1);
+	fassert(globals.shader == this);
+	glUniformMatrix4fv(index, 1, GL_FALSE, matrix);
+	checkErrorGL();
+}
+
+void ComputeShader::setTexture(const char * name, int unit, GLuint texture, bool filtered, bool clamped)
+{
+	SET_UNIFORM(name, glUniform1i(index, unit));
+	checkErrorGL();
+
+	glActiveTexture(GL_TEXTURE0 + unit);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filtered ? GL_LINEAR : GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filtered ? GL_LINEAR : GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamped ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clamped ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+	glActiveTexture(GL_TEXTURE0);
+	checkErrorGL();
+}
+
+void ComputeShader::setTextureArray(const char * name, int unit, GLuint texture, bool filtered, bool clamped)
+{
+	SET_UNIFORM(name, glUniform1i(index, unit));
+	checkErrorGL();
+
+	glActiveTexture(GL_TEXTURE0 + unit);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, texture);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, filtered ? GL_LINEAR : GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, filtered ? GL_LINEAR : GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, clamped ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, clamped ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+	glActiveTexture(GL_TEXTURE0);
+	checkErrorGL();
+}
+
+void ComputeShader::setTextureRw(const char * name, int unit, GLuint texture, GLuint format, bool filtered, bool clamp)
+{
+	SET_UNIFORM(name, glUniform1i(index, unit));
+	checkErrorGL();
+
+	glBindImageTexture(unit, texture, 0, false, 0, GL_READ_WRITE, GL_RGBA8);
+	checkErrorGL();
+}
+
+#undef SET_UNIFORM
+
+void ComputeShader::setBuffer(const char * name, const ShaderBuffer & buffer)
+{
+	const GLuint program = getProgram();
+	if (!program)
+		return;
+	const GLuint index = glGetUniformBlockIndex(program, name);
+	checkErrorGL();
+
+	if (index == -1) // todo : index is -1 on failure to find it ?
+		logWarning("unable to find block index for %s", name);
+	else
+		setBuffer(index, buffer);
+}
+
+void ComputeShader::setBuffer(GLint index, const ShaderBuffer & buffer)
+{
+	fassert(globals.shader == this);
+
+	glUniformBlockBinding(getProgram(), index, index);
+	glBindBufferBase(GL_UNIFORM_BUFFER, index, buffer.getBuffer());
+
+	checkErrorGL();
+}
+
+void ComputeShader::dispatch(const int dispatchSx, const int dispatchSy, const int dispatchSz)
+{
+	fassert(globals.shader == this);
+
+	const int threadSx = toThreadSx(dispatchSx);
+	const int threadSy = toThreadSy(dispatchSy);
+	const int threadSz = toThreadSz(dispatchSz);
+
+	glDispatchCompute(threadSx, threadSy, threadSz);
+	checkErrorGL();
+
+	// fixme : let application insert barriers
+	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+	checkErrorGL();
+}
+
+void ComputeShader::reload()
 {
 	m_shader->reload();
 }
@@ -3681,11 +3931,11 @@ void setFont(const char * font)
 	setFont(Font(font));
 }
 
-void setShader(const Shader & shader)
+void setShader(const ShaderBase & shader)
 {
 	if (&shader != globals.shader)
 	{
-		globals.shader = const_cast<Shader*>(&shader);
+		globals.shader = const_cast<ShaderBase*>(&shader);
 	
 		glUseProgram(shader.getProgram());
 		
@@ -4273,6 +4523,8 @@ void gxScalef(float x, float y, float z)
 
 void gxValidateMatrices()
 {
+	fassert(!globals.shader || globals.shader->getType() == SHADER_VSPS);
+
 	// todo: check if matrices are dirty
 	
 	//printf("validate1\n");
@@ -4283,23 +4535,25 @@ void gxValidateMatrices()
 	glMatrixMode(GL_MODELVIEW);
 	glLoadMatrixf(s_gxModelView.get().m_v);
 #else
-	if (globals.shader)
+	if (globals.shader && globals.shader->getType() == SHADER_VSPS)
 	{
-		const ShaderCacheElem & shaderElem = globals.shader->getCacheElem();
+		Shader * shader = static_cast<Shader*>(globals.shader);
+
+		const ShaderCacheElem & shaderElem = shader->getCacheElem();
 		
 		if ((globals.gxShaderIsDirty || s_gxModelView.isDirty) && shaderElem.params[ShaderCacheElem::kSp_ModelViewMatrix].index >= 0)
 		{
-			globals.shader->setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_ModelViewMatrix].index, s_gxModelView.get().m_v);
+			shader->setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_ModelViewMatrix].index, s_gxModelView.get().m_v);
 			//printf("validate2\n");
 		}
 		if ((globals.gxShaderIsDirty || s_gxModelView.isDirty || s_gxProjection.isDirty) && shaderElem.params[ShaderCacheElem::kSp_ModelViewProjectionMatrix].index >= 0)
 		{
-			globals.shader->setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_ModelViewProjectionMatrix].index, (s_gxProjection.get() * s_gxModelView.get()).m_v);
+			shader->setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_ModelViewProjectionMatrix].index, (s_gxProjection.get() * s_gxModelView.get()).m_v);
 			//printf("validate3\n");
 		}
 		if ((globals.gxShaderIsDirty || s_gxProjection.isDirty) && shaderElem.params[ShaderCacheElem::kSp_ProjectionMatrix].index >= 0)
 		{
-			globals.shader->setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_ProjectionMatrix].index, s_gxProjection.get().m_v);
+			shader->setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_ProjectionMatrix].index, s_gxProjection.get().m_v);
 			//printf("validate4\n");
 		}
 	}
@@ -4446,11 +4700,13 @@ void gxShutdown()
 
 static void gxFlush(bool endOfBatch)
 {
+	fassert(!globals.shader || globals.shader->getType() == SHADER_VSPS);
+
 	if (s_gxVertexCount)
 	{
 		const int primitiveType = s_gxPrimitiveType;
 
-		Shader & shader = globals.shader ? *globals.shader : s_gxShader;
+		Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : s_gxShader;
 
 		setShader(shader);
 		

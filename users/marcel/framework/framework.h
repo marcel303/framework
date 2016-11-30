@@ -49,6 +49,7 @@
 */
 
 #define USE_LEGACY_OPENGL 0
+#define OPENGL_VERSION 430
 #define ENABLE_UTF8_SUPPORT 0
 
 static const int MAX_GAMEPAD = 4;
@@ -121,6 +122,12 @@ enum TRANSFORM
 	TRANSFORM_SCREEN, // pixel based coordinate system
 	TRANSFORM_2D,     // use transform set through setTransform2d
 	TRANSFORM_3D      // use transform set through setTransform3d
+};
+
+enum SHADER_TYPE
+{
+	SHADER_VSPS,
+	SHADER_CS
 };
 
 enum RESOURCE_CACHE
@@ -236,6 +243,7 @@ public:
 	int midiDeviceIndex;
 	bool reloadCachesOnActivate;
 	bool cacheResourceData;
+	bool enableRealTimeEditing;
 	bool filedrop;
 	int numSoundSources;
 	int windowX;
@@ -309,7 +317,16 @@ void blitBackBufferToSurface(Surface * surface);
 
 //
 
-class Shader
+class ShaderBase
+{
+public:
+	virtual GLuint getProgram() const = 0;
+	virtual SHADER_TYPE getType() const = 0;
+};
+
+//
+
+class Shader : public ShaderBase
 {
 	class ShaderCacheElem * m_shader;
 
@@ -321,7 +338,8 @@ public:
 	
 	void load(const char * name, const char * filenameVs, const char * filenamePs);
 	bool isValid() const { return m_shader != 0; }
-	GLuint getProgram() const;
+	virtual GLuint getProgram() const override;
+	virtual SHADER_TYPE getType() const override { return SHADER_VSPS; }
 	
 	GLint getImmediate(const char * name);
 	GLint getAttribute(const char * name);
@@ -341,6 +359,52 @@ public:
 	void setBuffer(GLint index, const ShaderBuffer & buffer);
 
 	const ShaderCacheElem & getCacheElem() const { return *m_shader; }
+	void reload();
+};
+
+//
+
+class ComputeShader : public ShaderBase
+{
+public:
+	class ComputeShaderCacheElem * m_shader;
+
+public:
+	ComputeShader();
+	ComputeShader(const char * filename);
+	~ComputeShader();
+
+	void load(const char * filename);
+	bool isValid() const { return m_shader != 0; }
+	virtual GLuint getProgram() const override;
+	virtual SHADER_TYPE getType() const override { return SHADER_CS; }
+
+	int getGroupSx() const;
+	int getGroupSy() const;
+	int getGroupSz() const;
+	int toThreadSx(const int sx) const;
+	int toThreadSy(const int sy) const;
+	int toThreadSz(const int sz) const;
+
+	GLint getImmediate(const char * name);
+	GLint getAttribute(const char * name);
+
+	void setImmediate(const char * name, float x);	
+	void setImmediate(const char * name, float x, float y);
+	void setImmediate(const char * name, float x, float y, float z);
+	void setImmediate(const char * name, float x, float y, float z, float w);
+	void setImmediate(GLint index, float x, float y, float z, float w);
+	void setImmediateMatrix4x4(const char * name, const float * matrix);
+	void setImmediateMatrix4x4(GLint index, const float * matrix);
+	void setTexture(const char * name, int unit, GLuint texture, bool filtered, bool clamp = true);
+	void setTextureArray(const char * name, int unit, GLuint texture, bool filtered, bool clamp = true);
+	void setTextureRw(const char * name, int unit, GLuint texture, GLuint format, bool filtered, bool clamp = true);
+	void setBuffer(const char * name, const ShaderBuffer & buffer);
+	void setBuffer(GLint index, const ShaderBuffer & buffer);
+
+	void dispatch(const int dispatchSx, const int dispatchSy, const int dispatchSz);
+
+	const ComputeShaderCacheElem & getCacheElem() const { return *m_shader; }
 	void reload();
 };
 
@@ -869,7 +933,7 @@ void setGradientf(float x1, float y1, const Color & color1, float x2, float y2, 
 void setGradientf(float x1, float y1, float r1, float g1, float b1, float a1, float x2, float y2, float r2, float g2, float b2, float a2);
 void setFont(const Font & font);
 void setFont(const char * font);
-void setShader(const Shader & shader);
+void setShader(const ShaderBase & shader);
 void clearShader();
 
 void drawLine(float x1, float y1, float x2, float y2);

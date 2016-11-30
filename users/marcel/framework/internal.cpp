@@ -21,6 +21,7 @@ Globals globals;
 
 TextureCache g_textureCache;
 ShaderCache g_shaderCache;
+ComputeShaderCache g_computeShaderCache;
 AnimCache g_animCache;
 SpriterCache g_spriterCache;
 SoundCache g_soundCache;
@@ -456,35 +457,17 @@ TextureCacheElem & TextureCache::findOrCreate(const char * name, int gridSx, int
 
 // -----
 
-ShaderCacheElem::ShaderCacheElem()
-{
-	program = 0;
-
-	memset(params, -1, sizeof(params));
-}
-
-void ShaderCacheElem::free()
-{
-	if (program)
-	{
-		glDeleteProgram(program);
-		program = 0;
-	}
-
-	memset(params, -1, sizeof(params));
-}
-
 static void showShaderInfoLog(GLuint shader, const char * source)
 {
 #if FRAMEWORK_ENABLE_GL_ERROR_LOG
 	GLint logSize = 0;
-	
+
 	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logSize);
 
 	char * log = new char[logSize];
-	
+
 	glGetShaderInfoLog(shader, logSize, &logSize, log);
-	
+
 	bool newLine = true;
 
 	for (int line = 1; *source; )
@@ -507,7 +490,7 @@ static void showShaderInfoLog(GLuint shader, const char * source)
 	}
 
 	logError("OpenGL shader compile failed:\n%s\n----\n%s", source, log);
-	
+
 	delete [] log;
 	log = 0;
 #endif
@@ -516,15 +499,15 @@ static void showShaderInfoLog(GLuint shader, const char * source)
 static void showProgramInfoLog(GLuint program)
 {
 	GLint logSize = 0;
-	
+
 	glGetProgramiv(program, GL_INFO_LOG_LENGTH, &logSize);
-	
+
 	char * log = new char[logSize];
-	
+
 	glGetProgramInfoLog(program, logSize, &logSize, log);
-	
+
 	logError("OpenGL program link failed:\n%s", log);
-	
+
 	delete [] log;
 	log = 0;
 }
@@ -532,7 +515,7 @@ static void showProgramInfoLog(GLuint program)
 static bool fileExists(const char * filename)
 {
 	FILE * file;
-	
+
 	if (fopen_s(&file, filename, "rb") == 0)
 	{
 		fclose(file);
@@ -547,12 +530,12 @@ static bool fileExists(const char * filename)
 static bool loadFileContents(const char * filename, bool normalizeLineEndings, char *& bytes, int & numBytes)
 {
 	bool result = true;
-	
+
 	bytes = 0;
 	numBytes = 0;
-	
+
 	FILE * file = 0;
-	
+
 	if (fopen_s(&file, filename, "rb") != 0)
 	{
 		result = false;
@@ -560,21 +543,21 @@ static bool loadFileContents(const char * filename, bool normalizeLineEndings, c
 	else
 	{
 		// load source from file
-		
+
 		fseek(file, 0, SEEK_END);
 		numBytes = ftell(file);
 		fseek(file, 0, SEEK_SET);
-		
+
 		bytes = new char[numBytes];
-		
+
 		if (fread(bytes, 1, numBytes, file) != (size_t)numBytes)
 		{
 			result = false;
 		}
-		
+
 		fclose(file);
 	}
-	
+
 	if (result)
 	{
 		if (normalizeLineEndings)
@@ -591,34 +574,34 @@ static bool loadFileContents(const char * filename, bool normalizeLineEndings, c
 			delete [] bytes;
 			bytes = 0;
 		}
-		
+
 		numBytes = 0;
 	}
-	
+
 	return result;
 }
 
 static bool preprocessShader(const std::string & source, std::string & destination)
 {
 	bool result = true;
-	
+
 	std::vector<std::string> lines;
-	
+
 	splitString(source, lines, '\n');
-	
+
 	for (size_t i = 0; i < lines.size(); ++i)
 	{
 		const std::string & line = lines[i];
-		
+
 		const char * includeStr = "include ";
-		
+
 		if (strstr(line.c_str(), includeStr) == line.c_str())
 		{
 			const char * filename = line.c_str() + strlen(includeStr);
-			
+
 			char * bytes;
 			int numBytes;
-			
+
 			if (!loadFileContents(filename, true, bytes, numBytes))
 			{
 				logError("failed to load include file %s", filename);
@@ -627,12 +610,12 @@ static bool preprocessShader(const std::string & source, std::string & destinati
 			else
 			{
 				std::string temp(bytes, numBytes);
-				
+
 				if (!preprocessShader(temp, destination))
 				{
 					result = false;
 				}
-				
+
 				delete [] bytes;
 				bytes = 0;
 				numBytes = 0;
@@ -644,17 +627,17 @@ static bool preprocessShader(const std::string & source, std::string & destinati
 			destination.append("\n");
 		}
 	}
-	
+
 	return result;
 }
 
-static bool loadShader(const char * filename, GLuint & shader, GLuint type)
+static bool loadShader(const char * filename, GLuint & shader, GLuint type, const char * defines)
 {
 	bool result = true;
-	
+
 	char * bytes;
 	int numBytes;
-	
+
 	if (!loadFileContents(filename, true, bytes, numBytes))
 	{
 		result = false;
@@ -663,7 +646,7 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type)
 	{
 		std::string source;
 		std::string temp(bytes, numBytes);
-		
+
 		if (!preprocessShader(temp, source))
 		{
 			result = false;
@@ -671,41 +654,43 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type)
 		else
 		{
 			//logDebug("shader source: %s", source.c_str());
-			
+
 			shader = glCreateShader(type);
-			
+
 		#if USE_LEGACY_OPENGL
-			const GLchar * version = "#version 120\n#define _SHADER_ 1\n#define LEGACY_GL 1\n";
+			const GLchar * version = "#version 120\n#define _SHADER_ 1\n#define LEGACY_GL 1\n#define GLSL_VERSION 120";
+		#elif OPENGL_VERSION == 430
+			const GLchar * version = "#version 430\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
 		#else
-			const GLchar * version = "#version 150\n#define _SHADER_ 1\n#define LEGACY_GL 0\n";
+			const GLchar * version = "#version 150\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 150";
 		#endif
 			const GLchar * sourceData = (const GLchar*)source.c_str();
-			const GLchar * sources[] = { version, sourceData };
-			
-			glShaderSource(shader, 2, sources, 0);
+			const GLchar * sources[] = { version, defines, sourceData };
+
+			glShaderSource(shader, 3, sources, 0);
 			checkErrorGL();
-			
+
 			delete [] bytes;
 			bytes = 0;
 			numBytes = 0;
-			
+
 			glCompileShader(shader);
 			checkErrorGL();
-			
+
 			GLint success = GL_FALSE;
-			
+
 			glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
 			checkErrorGL();
 
 			if (success != GL_TRUE)
 			{
 				result = false;
-				
+
 				showShaderInfoLog(shader, source.c_str());
 			}
 		}
 	}
-	
+
 	if (result)
 	{
 		log("loaded shader %s", filename);
@@ -714,8 +699,28 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type)
 	{
 		logError("failed to load shader %s", filename);
 	}
-	
+
 	return result;
+}
+
+// -----
+
+ShaderCacheElem::ShaderCacheElem()
+{
+	program = 0;
+
+	memset(params, -1, sizeof(params));
+}
+
+void ShaderCacheElem::free()
+{
+	if (program)
+	{
+		glDeleteProgram(program);
+		program = 0;
+	}
+
+	memset(params, -1, sizeof(params));
 }
 
 void ShaderCacheElem::load(const char * _name, const char * filenameVs, const char * filenamePs)
@@ -737,7 +742,7 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 	GLuint shaderPs = 0;
 	
 	if (hasVs)
-		result &= loadShader(vs.c_str(), shaderVs, GL_VERTEX_SHADER);
+		result &= loadShader(vs.c_str(), shaderVs, GL_VERTEX_SHADER, "");
 	else
 	{
 		logWarning("shader %s doesn't have a vertex shader. cannot load", _name);
@@ -746,7 +751,7 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 	}
 
 	if (hasPs)
-		result &= loadShader(ps.c_str(), shaderPs, GL_FRAGMENT_SHADER);
+		result &= loadShader(ps.c_str(), shaderPs, GL_FRAGMENT_SHADER, "");
 	
 	if (result)
 	{
@@ -874,6 +879,141 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 		
 		i = m_map.insert(Map::value_type(name, elem)).first;
 		
+		return i->second;
+	}
+}
+
+// -----
+
+ComputeShaderCacheElem::ComputeShaderCacheElem()
+{
+	groupSx = 0;
+	groupSy = 0;
+	groupSz = 0;
+
+	program = 0;
+}
+
+void ComputeShaderCacheElem::free()
+{
+	if (program)
+	{
+		glDeleteProgram(program);
+		program = 0;
+	}
+}
+
+void ComputeShaderCacheElem::load(const char * _name, const int _groupSx, const int _groupSy, const int _groupSz)
+{
+	ScopedLoadTimer loadTimer(_name);
+
+	free();
+
+	bool result = true;
+
+	name = _name;
+	groupSx = _groupSx;
+	groupSy = _groupSy;
+	groupSz = _groupSz;
+
+	GLuint shaderCs = 0;
+
+	char defines[1024];
+	sprintf_s(defines, sizeof(defines), "#define LOCAL_SIZE_X %d\n#define LOCAL_SIZE_Y %d\n#define LOCAL_SIZE_Z %d\n",
+		groupSx,
+		groupSy,
+		groupSz);
+
+	result &= loadShader(name.c_str(), shaderCs, GL_COMPUTE_SHADER, defines);
+
+	if (result)
+	{
+		program = glCreateProgram();
+
+		glAttachShader(program, shaderCs);
+		checkErrorGL();
+
+		glLinkProgram(program);
+		checkErrorGL();
+
+		glDetachShader(program, shaderCs);
+		checkErrorGL();
+
+		GLint success = GL_FALSE;
+
+		glGetProgramiv(program, GL_LINK_STATUS, &success);
+
+		if (success != GL_TRUE)
+		{
+			result = false;
+
+			showProgramInfoLog(program);
+		}
+		else
+		{
+			// yay!
+		}
+	}
+
+	if (shaderCs)
+	{
+		glDeleteShader(shaderCs);
+		shaderCs = 0;
+	}
+
+	if (result)
+	{
+		log("loaded shader program %s", name.c_str());
+	}
+	else
+	{
+		logError("failed to load shader program %s", name.c_str());
+
+		free();
+	}
+}
+
+void ComputeShaderCacheElem::reload()
+{
+	const std::string oldName = name;
+
+	load(oldName.c_str(), groupSx, groupSy, groupSz);
+}
+
+void ComputeShaderCache::clear()
+{
+	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
+	{
+		i->second.free();
+	}
+
+	m_map.clear();
+}
+
+void ComputeShaderCache::reload()
+{
+	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
+	{
+		i->second.reload();
+	}
+}
+
+ComputeShaderCacheElem & ComputeShaderCache::findOrCreate(const char * name)
+{
+	Map::iterator i = m_map.find(name);
+
+	if (i != m_map.end())
+	{
+		return i->second;
+	}
+	else
+	{
+		ComputeShaderCacheElem elem;
+
+		elem.load(name, 8, 8, 1);
+
+		i = m_map.insert(Map::value_type(name, elem)).first;
+
 		return i->second;
 	}
 }

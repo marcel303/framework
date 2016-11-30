@@ -1,0 +1,37 @@
+include engine/ShaderCommon.txt
+
+/*
+
+const uvec3 gl_WorkGroupSize;
+
+in uvec3 gl_NumWorkGroups; // This variable contains the number of work groups passed to the dispatch function.
+in uvec3 gl_WorkGroupID; // This is the current work group for this shader invocation. Each of the XYZ components will be on the half-open range [0, gl_NumWorkGroups.XYZ).
+in uvec3 gl_LocalInvocationID; // This is the current invocation of the shader within the work group. Each of the XYZ components will be on the half-open range [0, gl_WorkGroupSize.XYZ?).
+in uvec3 gl_GlobalInvocationID; // This value uniquely identifies this particular invocation of the compute shader among all invocations of this compute dispatch call. It's a short-hand for the math computation:
+in uint gl_LocalInvocationIndex; // This is a 1D version of gl_LocalInvocationID?. It identifies this invocation's index within the work group. It is short-hand for this math computation:
+
+//
+
+gl_GlobalInvocationID =
+	gl_WorkGroupID * gl_WorkGroupSize + gl_LocalInvocationID;
+
+gl_LocalInvocationIndex =
+	gl_LocalInvocationID.z * gl_WorkGroupSize.x * gl_WorkGroupSize.y +
+	gl_LocalInvocationID.y * gl_WorkGroupSize.x + 
+	gl_LocalInvocationID.x;
+
+nint atomic***(inout nint mem?, nint data?)
+	atomicAdd,
+	atomicMin,
+	atomicMax,
+	atomicAnd,
+	atomicOr,
+	atomicXor,
+	atomicExchange
+nint atomicCompSwap(inout nint mem?, nint compare?, nint data?)
+
+layout(local_size_x = X?, local_size_y = Y?, local_size_z = Z?) in;
+
+*/
+
+layout(local_size_x = LOCAL_SIZE_X, local_size_y = LOCAL_SIZE_Y, local_size_z = LOCAL_SIZE_Z) in;

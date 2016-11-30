@@ -75,7 +75,7 @@ public:
 	bool midiChange[MAX_MIDI_KEYS];
 	bool midiChangeAsync[MAX_MIDI_KEYS];
 	float midiValue[MAX_MIDI_KEYS];
-	Shader * shader;
+	ShaderBase * shader;
 	TRANSFORM transform;
 	Mat4x4 transformScreen;
 	Mat4x4 transform2d;
@@ -210,6 +210,36 @@ public:
 	void clear();
 	void reload();
 	ShaderCacheElem & findOrCreate(const char * name, const char * filenameVs, const char * filenamePs);
+};
+
+//
+
+class ComputeShaderCacheElem
+{
+public:
+	std::string name;
+	int groupSx;
+	int groupSy;
+	int groupSz;
+
+	GLuint program;
+
+	ComputeShaderCacheElem();
+	void free();
+	void load(const char * filename, const int groupSx, const int groupSy, const int groupSz);
+	void reload();
+};
+
+class ComputeShaderCache
+{
+public:
+	typedef std::map<std::string, ComputeShaderCacheElem> Map;
+
+	Map m_map;
+
+	void clear();
+	void reload();
+	ComputeShaderCacheElem & findOrCreate(const char * filename);
 };
 
 //
@@ -492,6 +522,7 @@ extern Globals globals;
 
 extern TextureCache g_textureCache;
 extern ShaderCache g_shaderCache;
+extern ComputeShaderCache g_computeShaderCache;
 extern AnimCache g_animCache;
 extern SpriterCache g_spriterCache;
 extern SoundCache g_soundCache;
