@@ -1,9 +1,15 @@
 #include "Calc.h"
 #include "framework.h"
+#include "image.h"
 #include "Noise.h"
+#include "Timer.h"
 
 #define GFX_SX 1600
 #define GFX_SY 1200
+
+#define DO_FUNKYCAT 1
+#define DO_RGBSPACE 1
+#define DO_INTEGRALIMAGE 0
 
 struct Camera
 {
@@ -18,8 +24,13 @@ struct Camera
 
 	void tick(const float dt)
 	{
-		rotation[0] -= mouse.dy / 100.f;
-		rotation[1] -= mouse.dx / 100.f;
+	#if defined(DEBUG)
+		if (keyboard.isDown(SDLK_LSHIFT))
+	#endif
+		{
+			rotation[0] -= mouse.dy / 100.f;
+			rotation[1] -= mouse.dx / 100.f;
+		}
 
 		if (gamepad[0].isConnected)
 		{
@@ -158,9 +169,17 @@ static void drawPicture(const Mat4x4 & pictureTransform, const Mat4x4 & lineTran
 
 int main(int argc, char * argv[])
 {
+#if defined(DEBUG)
+	framework.enableRealTimeEditing = true;
+	framework.windowX = 0;
+	framework.windowY = 0;
+#endif
+
 	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
 	{
+	#if !defined(DEBUG)
 		mouse.setRelative(true);
+	#endif
 
 		Surface surface(GFX_SX, GFX_SY, false, true);
 
@@ -177,6 +196,118 @@ int main(int argc, char * argv[])
 		Vec3 lineCoords[kMaxLines * 2];
 
 		int mode = -1;
+
+	#if DO_RGBSPACE
+		//const char * rgbFilenames[] = { "andra.jpg", "herfst.png" };
+		const char * rgbFilenames[] = { "herfst.png" };
+		//const char * rgbFilenames[] = { "andra.jpg" };
+		const int numRgbImages = sizeof(rgbFilenames) / sizeof(rgbFilenames[0]);
+
+		int rgbSx = 0;
+		int rgbSy = 0;
+
+		for (int i = 0; i < numRgbImages; ++i)
+		{
+			Sprite sprite(rgbFilenames[i]);
+			rgbSx = std::max(rgbSx, sprite.getWidth());
+			rgbSy = std::max(rgbSy, sprite.getHeight());
+		}
+
+		Surface rgbSurface(rgbSx, rgbSy, false);
+
+		float donutStr = 0.f;
+		float colorStr = 0.f;
+		
+		float donutStrTarget = 0.f;
+		float colorStrTarget = 0.f;
+	#endif
+
+	#if DO_INTEGRALIMAGE
+		ImageData * integralImage = loadImage("herfst.png");
+
+		int64_t * integralValues = new int64_t[integralImage->sx * integralImage->sy];
+		
+		const uint64_t t1 = g_TimerRT.TimeUS_get();
+
+		for (int y = 0; y < integralImage->sy; ++y)
+		{
+			const ImageData::Pixel * __restrict srcLine = integralImage->getLine(y);
+			               int64_t * __restrict dstLine = integralValues + y * integralImage->sx;
+
+			for (int x = integralImage->sx; x != 0; --x)
+			{
+				const int value = (srcLine->r + (srcLine->g << 1) + srcLine->b) >> 2;
+
+				*dstLine = value;
+
+				srcLine++;
+				dstLine++;
+			}
+		}
+
+		for (int y = 0; y < integralImage->sy; ++y)
+		{
+			int64_t          *            valueLine0 = integralValues + (y - 1) * integralImage->sx - 1;
+			int64_t          *            valueLine1 = integralValues + (y - 0) * integralImage->sx - 1;
+
+			ImageData::Pixel * __restrict dstPixelLine = integralImage->getLine(y);
+
+			for (int x = 0; x < integralImage->sx; ++x)
+			{
+				int64_t value = 0;
+
+				if ((x > 0) & (y > 0))
+				{
+					value =
+						- valueLine0[0]
+						+ valueLine0[1]
+						+ valueLine1[0]
+						+ valueLine1[1];
+				}
+				else
+				{
+					for (int dx = -1; dx <= 0; ++dx)
+					{
+						for (int dy = -1; dy <= 0; ++dy)
+						{
+							const int px = x + dx;
+							const int py = y + dy;
+
+							if (px >= 0 && py >= 0)
+							{
+								const int64_t * srcLine = integralValues + py * integralImage->sx;
+								const int64_t srcValue = (dx < 0 && dy < 0) ? -srcLine[px] : +srcLine[px];
+							
+								value += srcValue;
+							}
+						}
+					}
+				}
+
+				valueLine0++;
+				valueLine1++;
+
+				valueLine1[0] = value;
+
+				dstPixelLine->r = (value >>  0) & 0xff;
+				dstPixelLine->g = (value >>  8) & 0xff;
+				dstPixelLine->b = (value >> 16) & 0xff;
+				dstPixelLine->a = (value >> 24) & 0xff;
+				dstPixelLine++;
+			}
+		}
+
+		const int64_t totalValue = integralValues[(integralImage->sx - 1) * (integralImage->sy - 1)];
+
+		const uint64_t t2 = g_TimerRT.TimeUS_get();
+
+		delete[] integralValues;
+		integralValues = nullptr;
+
+		printf("integral image calculation took %gms\n", (t2 - t1) / 1000.f);
+
+		GLuint integralTexture = createTextureFromRGBA8(integralImage->imageData, integralImage->sx, integralImage->sy, true, true);
+	#endif
 
 		while (!framework.quitRequested)
 		{
@@ -198,6 +329,13 @@ int main(int argc, char * argv[])
 				mode = 2;
 			if (keyboard.wentDown(SDLK_4))
 				mode = 3;
+
+		#if DO_RGBSPACE
+			if (keyboard.wentDown(SDLK_1))
+				donutStrTarget = 1.f - donutStrTarget;
+			if (keyboard.wentDown(SDLK_2))
+				colorStrTarget = 1.f - colorStrTarget;
+		#endif
 
 			//
 
@@ -271,13 +409,38 @@ int main(int argc, char * argv[])
 				}
 			}
 
+		#if DO_RGBSPACE
+			const float amount = 1.f - std::pow(.5f, framework.timeStep);
+
+			donutStr = Calc::Lerp(donutStr, donutStrTarget, amount);
+			colorStr = Calc::Lerp(colorStr, colorStrTarget, amount);
+		#endif
+
 			framework.beginDraw(0, 0, 0, 0);
 			{
+			#if DO_RGBSPACE
+				pushSurface(&rgbSurface);
+				{
+					rgbSurface.clear();
+					for (int i = 0; i < numRgbImages; ++i)
+					{
+						setBlend(BLEND_ALPHA);
+						const float a = 1.f / (i + 1.f);
+						setColorf(255, 255, 255, a);
+						Sprite sprite(rgbFilenames[i]);
+						sprite.drawEx(0, 0);
+						setColor(colorWhite);
+						setBlend(BLEND_OPAQUE);
+					}
+				}
+				popSurface();
+			#endif
+
+				surface.clear(0, 0, 0);
+				surface.clearDepth(1.f);
+
 				pushSurface(&surface);
 				{
-					surface.clear(0, 0, 0);
-					surface.clearDepth(1.f);
-
 					glEnable(GL_DEPTH_TEST);
 					glDepthFunc(GL_LESS);
 
@@ -324,8 +487,7 @@ int main(int argc, char * argv[])
 							}
 							gxPopMatrix();
 
-							//
-
+						#if DO_FUNKYCAT
 							const float scale1 = 300.f;
 							const float scale2 = 200.f;
 
@@ -414,6 +576,92 @@ int main(int argc, char * argv[])
 								gxEnd();
 							}
 							clearShader();
+						#endif
+
+					#if DO_RGBSPACE
+							{
+								const float scale = 100.f;
+								gxScalef(scale, scale, scale);
+
+								Shader shader("colordots");
+								shader.setTexture("texture", 0, rgbSurface.getTexture(), false, true);
+								shader.setImmediate("time", time);
+								shader.setImmediate("donutStr", donutStr);
+								shader.setImmediate("colorStr", colorStr);
+								setShader(shader);
+								if (true)
+								{
+									gxBegin(GL_POINTS);
+									//gxBegin(GL_LINES);
+									{
+										for (int y = 0; y < rgbSy; ++y)
+											for (int x = 0; x < rgbSx; ++x)
+												gxVertex2f(x, y);
+									}
+									gxEnd();
+								}
+								clearShader();
+
+								setColor(colorWhite);
+								gxBegin(GL_LINES);
+								{
+									auto dist = [](double x) { return 0.5 * erfc(-x * M_SQRT1_2); };
+
+									const float step = .05f;
+									const float eps = .01f;
+									float dt = 0.f;
+									for (float x = -10.f; x <= 10.f; x += step)
+									{
+										const float x1 = x - step/2.f;
+										const float x2 = x + step/2.f;
+										const float d1 = dist(x1);
+										const float d2 = dist(x2);
+										const float dd = d2 - d1;
+										gxVertex2f(x1, dd);
+										gxVertex2f(x2, dd);
+										gxVertex2f(x1, dd/step);
+										gxVertex2f(x2, dd/step);
+										
+										const float dt1 = dt;
+										dt += dd;
+										const float dt2 = dt;
+
+										gxVertex2f(x1, dt1);
+										gxVertex2f(x2, dt2);
+									}
+								}
+								gxEnd();
+							}
+						#endif
+
+						#if DO_INTEGRALIMAGE
+							{
+								Shader shader("integralimage");
+								shader.setTexture("texture", 0, integralTexture, false, true);
+								shader.setImmediate("maxValue", totalValue);
+								shader.setImmediate("windowSize", (1.f - std::cos(time * .5f)) / 2.f * 40.f);
+								setShader(shader);
+								{
+									const float scale = .001f;
+									gxScalef(scale, scale, scale);
+
+									const float x1 = 0.f;
+									const float y1 = 0.f;
+									const float x2 = integralImage->sx;
+									const float y2 = integralImage->sy;
+
+									gxBegin(GL_QUADS);
+									{
+										gxVertex2f(x1, y1);
+										gxVertex2f(x2, y1);
+										gxVertex2f(x2, y2);
+										gxVertex2f(x1, y2);
+									}
+									gxEnd();
+								}
+								clearShader();
+							}
+						#endif
 						}
 						gxMatrixMode(GL_MODELVIEW);
 						gxPopMatrix();
@@ -425,22 +673,25 @@ int main(int argc, char * argv[])
 
 					//
 
-					gxPushMatrix();
+					if (false)
 					{
-						gxTranslatef(surface.getWidth()/2.f, surface.getHeight()/2.f, 0.f);
-						gxScalef(100.f, 100.f, 100.f);
-						gxRotatef(Calc::RadToDeg(rotator.angle), 0.f, 0.f, 1.f);
-
-						setColor(colorWhite);
-						drawRect(-1.f, -1.f, +1.f, +1.f);
-						for (int i = 0; i < 10; ++i)
+						gxPushMatrix();
 						{
-							gxScalef(.9f, .9f, .9f);
-							setColor(colorBlack);
-							drawRectLine(-1.f, -1.f, +1.f, +1.f);
+							gxTranslatef(surface.getWidth()/2.f, surface.getHeight()/2.f, 0.f);
+							gxScalef(100.f, 100.f, 100.f);
+							gxRotatef(Calc::RadToDeg(rotator.angle), 0.f, 0.f, 1.f);
+
+							setColor(colorWhite);
+							drawRect(-1.f, -1.f, +1.f, +1.f);
+							for (int i = 0; i < 10; ++i)
+							{
+								gxScalef(.9f, .9f, .9f);
+								setColor(colorBlack);
+								drawRectLine(-1.f, -1.f, +1.f, +1.f);
+							}
 						}
+						gxPopMatrix();
 					}
-					gxPopMatrix();
 				}
 				popSurface();
 
