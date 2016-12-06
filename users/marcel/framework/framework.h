@@ -167,6 +167,7 @@ class Mouse;
 class Music;
 class Shader;
 class ShaderBuffer;
+class ShaderBufferRw;
 class Sound;
 class Sprite;
 class Spriter;
@@ -357,6 +358,8 @@ public:
 	void setTextureArray(const char * name, int unit, GLuint texture, bool filtered, bool clamp = true);
 	void setBuffer(const char * name, const ShaderBuffer & buffer);
 	void setBuffer(GLint index, const ShaderBuffer & buffer);
+	void setBufferRw(const char * name, const ShaderBufferRw & buffer);
+	void setBufferRw(GLint index, const ShaderBufferRw & buffer);
 
 	const ShaderCacheElem & getCacheElem() const { return *m_shader; }
 	void reload();
@@ -370,11 +373,16 @@ public:
 	class ComputeShaderCacheElem * m_shader;
 
 public:
+	// assuming a 64-lane wavefront, 8x8x1 is good thread distribution for common shaders
+	static const int kDefaultGroupSx = 8;
+	static const int kDefaultGroupSy = 8;
+	static const int kDefaultGroupSz = 1;
+
 	ComputeShader();
-	ComputeShader(const char * filename);
+	ComputeShader(const char * filename, const int groupSx = kDefaultGroupSx, const int groupSy = kDefaultGroupSy, const int groupSz = kDefaultGroupSz);
 	~ComputeShader();
 
-	void load(const char * filename);
+	void load(const char * filename, const int groupSx = kDefaultGroupSx, const int groupSy = kDefaultGroupSy, const int groupSz = kDefaultGroupSz);
 	bool isValid() const { return m_shader != 0; }
 	virtual GLuint getProgram() const override;
 	virtual SHADER_TYPE getType() const override { return SHADER_CS; }
@@ -401,6 +409,8 @@ public:
 	void setTextureRw(const char * name, int unit, GLuint texture, GLuint format, bool filtered, bool clamp = true);
 	void setBuffer(const char * name, const ShaderBuffer & buffer);
 	void setBuffer(GLint index, const ShaderBuffer & buffer);
+	void setBufferRw(const char * name, const ShaderBufferRw & buffer);
+	void setBufferRw(GLint index, const ShaderBufferRw & buffer);
 
 	void dispatch(const int dispatchSx, const int dispatchSy, const int dispatchSz);
 
@@ -424,6 +434,25 @@ public:
 };
 
 //
+
+class ShaderBufferRw
+{
+	GLuint m_buffer;
+
+public:
+	ShaderBufferRw();
+	~ShaderBufferRw();
+
+	GLuint getBuffer() const;
+
+	void setDataRaw(const void * bytes, int numBytes);
+
+	template <typename T>
+	void setData(const T * elements, int numElements)
+	{
+		setDataRaw(elements, sizeof(T) * numElements);
+	}
+};
 
 class Color
 {
@@ -1001,6 +1030,7 @@ void gxInitialize();
 void gxShutdown();
 void gxBegin(int primitiveType);
 void gxEnd();
+void gxEmitVertices(int primitiveType, int numVertices);
 void gxColor4f(float r, float g, float b, float a);
 void gxColor4fv(const float * rgba);
 void gxColor3ub(int r, int g, int b);

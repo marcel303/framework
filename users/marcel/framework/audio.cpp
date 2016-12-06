@@ -644,6 +644,8 @@ void SoundPlayer::playMusic(const char * filename, bool loop)
 	MutexScope scope(m_musicMutex);
 	if (m_musicStream && m_musicOutput)
 	{
+		Assert(m_musicStream->mSampleRate == 44100); // fixme : handle different sample rates?
+
 		m_musicStream->Open(filename, loop);
 		m_musicOutput->Play();
 	}

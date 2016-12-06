@@ -1615,6 +1615,30 @@ void Shader::setBuffer(GLint index, const ShaderBuffer & buffer)
 	checkErrorGL();
 }
 
+void Shader::setBufferRw(const char * name, const ShaderBufferRw & buffer)
+{
+	const GLuint program = getProgram();
+	if (!program)
+		return;
+	const GLuint index = glGetProgramResourceIndex(program, GL_SHADER_STORAGE_BLOCK, name);
+	checkErrorGL();
+
+	if (index == -1) // todo : index is -1 on failure to find it ?
+		logWarning("unable to find block index for %s", name);
+	else
+		setBufferRw(index, buffer);
+}
+
+void Shader::setBufferRw(GLint index, const ShaderBufferRw & buffer)
+{
+	fassert(globals.shader == this);
+
+	glShaderStorageBlockBinding(getProgram(), index, index);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, index, buffer.getBuffer());
+
+	checkErrorGL();
+}
+
 void Shader::reload()
 {
 	m_shader->reload();
@@ -1627,11 +1651,11 @@ ComputeShader::ComputeShader()
 	m_shader = 0;
 }
 
-ComputeShader::ComputeShader(const char * filename)
+ComputeShader::ComputeShader(const char * filename, const int groupSx, const int groupSy, const int groupSz)
 {
 	m_shader = 0;
 
-	load(filename);
+	load(filename, groupSx, groupSy, groupSz);
 }
 
 ComputeShader::~ComputeShader()
@@ -1640,9 +1664,9 @@ ComputeShader::~ComputeShader()
 		clearShader();
 }
 
-void ComputeShader::load(const char * filename)
+void ComputeShader::load(const char * filename, const int groupSx, const int groupSy, const int groupSz)
 {
-	m_shader = &g_computeShaderCache.findOrCreate(filename);
+	m_shader = &g_computeShaderCache.findOrCreate(filename, groupSx, groupSy, groupSz);
 }
 
 GLuint ComputeShader::getProgram() const
@@ -1794,7 +1818,7 @@ void ComputeShader::setTextureRw(const char * name, int unit, GLuint texture, GL
 	SET_UNIFORM(name, glUniform1i(index, unit));
 	checkErrorGL();
 
-	glBindImageTexture(unit, texture, 0, false, 0, GL_READ_WRITE, GL_RGBA8);
+	glBindImageTexture(unit, texture, 0, false, 0, GL_READ_WRITE, format);
 	checkErrorGL();
 }
 
@@ -1824,6 +1848,30 @@ void ComputeShader::setBuffer(GLint index, const ShaderBuffer & buffer)
 	checkErrorGL();
 }
 
+void ComputeShader::setBufferRw(const char * name, const ShaderBufferRw & buffer)
+{
+	const GLuint program = getProgram();
+	if (!program)
+		return;
+	const GLuint index = glGetProgramResourceIndex(program, GL_SHADER_STORAGE_BLOCK, name);
+	checkErrorGL();
+
+	if (index == -1) // todo : index is -1 on failure to find it ?
+		logWarning("unable to find block index for %s", name);
+	else
+		setBufferRw(index, buffer);
+}
+
+void ComputeShader::setBufferRw(GLint index, const ShaderBufferRw & buffer)
+{
+	fassert(globals.shader == this);
+
+	glShaderStorageBlockBinding(getProgram(), index, index);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, index, buffer.getBuffer());
+
+	checkErrorGL();
+}
+
 void ComputeShader::dispatch(const int dispatchSx, const int dispatchSy, const int dispatchSz)
 {
 	fassert(globals.shader == this);
@@ -1835,8 +1883,9 @@ void ComputeShader::dispatch(const int dispatchSx, const int dispatchSy, const i
 	glDispatchCompute(threadSx, threadSy, threadSz);
 	checkErrorGL();
 
-	// fixme : let application insert barriers
-	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+	// todo : let application insert barriers
+	//glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+	glMemoryBarrier(GL_ALL_BARRIER_BITS);
 	checkErrorGL();
 }
 
@@ -1898,6 +1947,44 @@ void ShaderBuffer::setData(const void * bytes, int numBytes)
 		checkErrorGL();
 
 		glBufferData(GL_UNIFORM_BUFFER, numBytes, bytes, GL_DYNAMIC_DRAW);
+		checkErrorGL();
+	}
+}
+
+//
+
+ShaderBufferRw::ShaderBufferRw()
+	: m_buffer(0)
+{
+	glGenBuffers(1, &m_buffer);
+	checkErrorGL();
+}
+
+ShaderBufferRw::~ShaderBufferRw()
+{
+	if (m_buffer)
+	{
+		glDeleteBuffers(1, &m_buffer);
+		m_buffer = 0;
+		checkErrorGL();
+	}
+}
+
+GLuint ShaderBufferRw::getBuffer() const
+{
+	return m_buffer;
+}
+
+void ShaderBufferRw::setDataRaw(const void * bytes, int numBytes)
+{
+	fassert(m_buffer);
+
+	if (m_buffer)
+	{
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_buffer);
+		checkErrorGL();
+
+		glBufferData(GL_SHADER_STORAGE_BUFFER, numBytes, bytes, GL_DYNAMIC_DRAW);
 		checkErrorGL();
 	}
 }
@@ -4927,6 +5014,48 @@ void gxBegin(int primitiveType)
 void gxEnd()
 {
 	gxFlush(true);
+}
+
+void gxEmitVertices(int primitiveType, int numVertices)
+{
+	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : s_gxShader;
+
+	setShader(shader);
+
+	gxValidateMatrices();
+
+	//
+
+	const int vaoIndex = 0;
+	glBindVertexArray(s_gxVertexArrayObject[vaoIndex]);
+	checkErrorGL();
+
+	//
+
+	const ShaderCacheElem & shaderElem = shader.getCacheElem();
+
+	if (shaderElem.params[ShaderCacheElem::kSp_Params].index != -1)
+	{
+		shader.setImmediate(
+			shaderElem.params[ShaderCacheElem::kSp_Params].index,
+			s_gxTextureEnabled ? 1 : 0,
+			globals.colorMode,
+			0,
+			0);
+	}
+
+	if (globals.gxShaderIsDirty)
+	{
+		if (shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
+			shader.setTextureUnit(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0);
+	}
+
+	//
+
+	glDrawArrays(primitiveType, 0, numVertices);
+	checkErrorGL();
+
+	globals.gxShaderIsDirty = false;
 }
 
 void gxColor4f(float r, float g, float b, float a)

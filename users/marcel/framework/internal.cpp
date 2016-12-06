@@ -998,7 +998,7 @@ void ComputeShaderCache::reload()
 	}
 }
 
-ComputeShaderCacheElem & ComputeShaderCache::findOrCreate(const char * name)
+ComputeShaderCacheElem & ComputeShaderCache::findOrCreate(const char * name, const int groupSx, const int groupSy, const int groupSz)
 {
 	Map::iterator i = m_map.find(name);
 
@@ -1010,7 +1010,7 @@ ComputeShaderCacheElem & ComputeShaderCache::findOrCreate(const char * name)
 	{
 		ComputeShaderCacheElem elem;
 
-		elem.load(name, 8, 8, 1);
+		elem.load(name, groupSx, groupSy, groupSz);
 
 		i = m_map.insert(Map::value_type(name, elem)).first;
 

@@ -239,7 +239,7 @@ public:
 
 	void clear();
 	void reload();
-	ComputeShaderCacheElem & findOrCreate(const char * filename);
+	ComputeShaderCacheElem & findOrCreate(const char * filename, const int groupSx, const int groupSy, const int groupSz);
 };
 
 //
