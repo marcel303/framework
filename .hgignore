@@ -46,3 +46,4 @@ users/marcel/framework/ExampleRelease/*
 *.vcxproj.filters
 users/marcel/kdreams/game/*
 *.dll
+klodder/Resources/*.*
