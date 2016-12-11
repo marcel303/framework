@@ -3,12 +3,15 @@ static const char * s_hqCommon = R"SHADER(
 #if _SHADER_DEBUGGING_
 	uniform float disableOptimizations;
 	uniform float disableAA;
+	uniform float _debugHq;
 	
 	#define enableOptimizations (disableOptimizations == 0.0)
 	#define enableAA (disableAA == 0.0)
+	#define debugHq (_debugHq != 0.0)
 #else
 	#define enableOptimizations true
 	#define enableAA true
+	#define debugHq false
 #endif
 
 float computeDistance(vec2 p);
@@ -38,6 +41,19 @@ float sampleDistanceFunction(vec2 p)
 	}
 	
 	return v;
+}
+
+vec4 hqColor(float v)
+{
+	vec4 color = vec4(vec3(1), v);
+	
+	if (debugHq)
+	{
+		color.a = clamp(color.a + 0.2, 0.0, 1.0);
+		color.r = color.a;
+	}
+	
+	return color;
 }
 
 )SHADER";

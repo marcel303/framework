@@ -46,14 +46,7 @@ void main()
 		v = sampleDistanceFunction(v_p);
 	}
 
-	vec4 color = vec4(vec3(1), v);
-	
-	if (false)
-	{
-		//color = vec4(0.0, 1.0, 1.0, 1.0);
-		color.a += 0.2;
-		color.r = color.a;
-	}
+	vec4 color = hqColor(v);
 	
 	color = color * v_color;
 	

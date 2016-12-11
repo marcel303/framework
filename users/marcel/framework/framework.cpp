@@ -6033,6 +6033,7 @@ void hqBegin(HQ_TYPE type, bool useScreenSize)
 
 		shader->setImmediate("disableOptimizations", 0.f);
 		shader->setImmediate("disableAA", 0.f);
+		shader->setImmediate("_debugHq", 1.f);
 	}
 }
 
