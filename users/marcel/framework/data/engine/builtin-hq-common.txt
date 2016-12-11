@@ -1,0 +1,43 @@
+static const char * s_hqCommon = R"SHADER(
+
+#if _SHADER_DEBUGGING_
+	uniform float disableOptimizations;
+	uniform float disableAA;
+	
+	#define enableOptimizations (disableOptimizations == 0.0)
+	#define enableAA (disableAA == 0.0)
+#else
+	#define enableOptimizations true
+	#define enableAA true
+#endif
+
+float computeDistance(vec2 p);
+float distanceFade(float distance);
+
+float sampleDistanceFunction(vec2 p)
+{
+	float v = 0.0;
+	
+	if (enableAA)
+	{
+		for (int ox = -2; ox <= +2; ++ox)
+		{
+			for (int oy = -2; oy <= +2; ++oy)
+			{
+				vec2 offset = vec2(ox, oy) * 0.25;
+				
+				v += distanceFade(computeDistance(p + offset));
+			}
+		}
+		
+		v /= 25.0;
+	}
+	else
+	{
+		v = distanceFade(computeDistance(p));
+	}
+	
+	return v;
+}
+
+)SHADER";

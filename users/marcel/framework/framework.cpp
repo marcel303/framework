@@ -6027,6 +6027,12 @@ void hqBegin(HQ_TYPE type, bool useScreenSize)
 		Shader * shader = static_cast<Shader*>(globals.shader);
 
 		shader->setImmediate("useScreenSize", useScreenSize ? 1.f : 0.f);
+
+		//shader->setImmediate("disableOptimizations", cos(framework.time * 6.28f) < 0.f ? 0.f : 1.f);
+		//shader->setImmediate("disableAA", cos(framework.time) < 0.f ? 0.f : 1.f);
+
+		shader->setImmediate("disableOptimizations", 0.f);
+		shader->setImmediate("disableAA", 0.f);
 	}
 }
 

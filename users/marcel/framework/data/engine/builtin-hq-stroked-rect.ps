@@ -1,6 +1,7 @@
 static const char * s_hqStrokedRectPs = R"SHADER(
 
 include engine/ShaderPS.txt
+include engine/builtin-hq-common.txt
 
 shader_in vec2 v_p;
 shader_in vec3 v_edgePlane1;
@@ -31,30 +32,18 @@ float distanceFade(float distance)
 
 void main()
 {
-#if 0
-	float v = distanceFade(computeDistance(v_p));
-#else
 	float v = 0.0;
 	
 	float d = abs(computeDistance(v_p));
 	
-	if (d > v_strokeSize + 1.0)
+	if (d > v_strokeSize + 1.0 && enableOptimizations)
 	{
 		v = 0.0;
 	}
 	else
 	{
-		for (int ox = -2; ox <= +2; ++ox)
-		{
-			for (int oy = -2; oy <= +2; ++oy)
-			{
-				v += distanceFade(computeDistance(v_p + vec2(ox, oy) * 0.25));
-			}
-		}
-		
-		v /= 25.0;
+		v = sampleDistanceFunction(v_p);
 	}
-#endif
 
 	vec4 color = vec4(vec3(1), v);
 	

@@ -10,6 +10,7 @@
 #include "data/engine/ShaderCS.txt"
 #include "data/engine/ShaderUtil.txt"
 
+#include "data/engine/builtin-hq-common.txt"
 #include "data/engine/builtin-hq-filled-circle.ps"
 #include "data/engine/builtin-hq-filled-circle.vs"
 #include "data/engine/builtin-hq-filled-rect.ps"
@@ -64,18 +65,19 @@ void registerBuiltinShaders()
 
 	shaderSource("engine/ShaderUtil.txt", s_shaderUtil);
 
-	shaderSource("builtin-hq-filled-circle.ps", s_hqFilledCirclePs);
-	shaderSource("builtin-hq-filled-circle.vs", s_hqFilledCircleVs);
-	shaderSource("builtin-hq-filled-rect.ps", s_hqFilledRectPs);
-	shaderSource("builtin-hq-filled-rect.vs", s_hqFilledRectVs);
-	shaderSource("builtin-hq-filled-triangle.ps", s_hqFilledTrianglePs);
-	shaderSource("builtin-hq-filled-triangle.vs", s_hqFilledTriangleVs);
-	shaderSource("builtin-hq-line.ps", s_hqLinePs);
-	shaderSource("builtin-hq-line.vs", s_hqLineVs);
-	shaderSource("builtin-hq-stroked-circle.ps", s_hqStrokedCirclePs);
-	shaderSource("builtin-hq-stroked-circle.vs", s_hqStrokedCircleVs);
-	shaderSource("builtin-hq-stroked-rect.ps", s_hqStrokedRectPs);
-	shaderSource("builtin-hq-stroked-rect.vs", s_hqStrokedRectVs);
-	shaderSource("builtin-hq-stroked-triangle.ps", s_hqStrokedTrianglePs);
-	shaderSource("builtin-hq-stroked-triangle.vs", s_hqStrokedTriangleVs);
+	shaderSource("engine/builtin-hq-common.txt", s_hqCommon);
+	shaderSource("engine/builtin-hq-filled-circle.ps", s_hqFilledCirclePs);
+	shaderSource("engine/builtin-hq-filled-circle.vs", s_hqFilledCircleVs);
+	shaderSource("engine/builtin-hq-filled-rect.ps", s_hqFilledRectPs);
+	shaderSource("engine/builtin-hq-filled-rect.vs", s_hqFilledRectVs);
+	shaderSource("engine/builtin-hq-filled-triangle.ps", s_hqFilledTrianglePs);
+	shaderSource("engine/builtin-hq-filled-triangle.vs", s_hqFilledTriangleVs);
+	shaderSource("engine/builtin-hq-line.ps", s_hqLinePs);
+	shaderSource("engine/builtin-hq-line.vs", s_hqLineVs);
+	shaderSource("engine/builtin-hq-stroked-circle.ps", s_hqStrokedCirclePs);
+	shaderSource("engine/builtin-hq-stroked-circle.vs", s_hqStrokedCircleVs);
+	shaderSource("engine/builtin-hq-stroked-rect.ps", s_hqStrokedRectPs);
+	shaderSource("engine/builtin-hq-stroked-rect.vs", s_hqStrokedRectVs);
+	shaderSource("engine/builtin-hq-stroked-triangle.ps", s_hqStrokedTrianglePs);
+	shaderSource("engine/builtin-hq-stroked-triangle.vs", s_hqStrokedTriangleVs);
 }

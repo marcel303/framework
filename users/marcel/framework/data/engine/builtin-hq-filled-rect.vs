@@ -14,7 +14,7 @@ uniform float useScreenSize;
 vec3 calculatePlane(vec2 p1, vec2 p2)
 {
 	vec2 pd = p2 - p1;
-	vec2 planeNormal = normalize(vec2(+pd.y, -pd.x));
+	vec2 planeNormal = normalize(vec2(-pd.y, pd.x));
 	float planeDistance = dot(planeNormal, p1);
 	return vec3(planeNormal, -planeDistance);
 }

@@ -689,10 +689,17 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 		#else
 			const GLchar * version = "#version 150\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 150";
 		#endif
-			const GLchar * sourceData = (const GLchar*)source.c_str();
-			const GLchar * sources[] = { version, defines, sourceData };
 
-			glShaderSource(shader, 3, sources, 0);
+		#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
+			const GLchar * debugs = "#define _SHADER_DEBUGGING_ 1\n";
+		#else
+			const GLchar * debugs = "#define _SHADER_DEBUGGING_ 0\n";
+		#endif
+
+			const GLchar * sourceData = (const GLchar*)source.c_str();
+			const GLchar * sources[] = { version, debugs, defines, sourceData };
+
+			glShaderSource(shader, sizeof(sources) / sizeof(sources[0]), sources, 0);
 			checkErrorGL();
 
 			delete [] bytes;
@@ -1847,12 +1854,12 @@ UiCacheElem & UiCache::findOrCreate(const char * filename)
 //
 
 BuiltinShaders::BuiltinShaders()
-	: hqLine("builtin-hq-line")
-	, hqFilledTriangle("builtin-hq-filled-triangle")
-	, hqFilledCircle("builtin-hq-filled-circle")
-	, hqFilledRect("builtin-hq-filled-rect")
-	, hqStrokeTriangle("builtin-hq-stroked-triangle")
-	, hqStrokedCircle("builtin-hq-stroked-circle")
-	, hqStrokedRect("builtin-hq-stroked-rect")
+	: hqLine("engine/builtin-hq-line")
+	, hqFilledTriangle("engine/builtin-hq-filled-triangle")
+	, hqFilledCircle("engine/builtin-hq-filled-circle")
+	, hqFilledRect("engine/builtin-hq-filled-rect")
+	, hqStrokeTriangle("engine/builtin-hq-stroked-triangle")
+	, hqStrokedCircle("engine/builtin-hq-stroked-circle")
+	, hqStrokedRect("engine/builtin-hq-stroked-rect")
 {
 }
