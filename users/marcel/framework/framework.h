@@ -13,6 +13,7 @@
 #include "Debugging.h"
 #include "Mat4x4.h"
 #include "Vec3.h"
+#include "Vec4.h"
 
 #if defined(DEBUG)
 	#define fassert(x) Assert(x)
@@ -50,7 +51,7 @@
 
 #define USE_LEGACY_OPENGL 0
 #define OPENGL_VERSION 430
-#define ENABLE_UTF8_SUPPORT 0
+#define ENABLE_UTF8_SUPPORT 1 // todo : remove redundant conversions and make this enabled by default
 
 static const int MAX_GAMEPAD = 4;
 
@@ -227,6 +228,10 @@ public:
 	void beginDraw(int r, int g, int b, int a);
 	void endDraw();
 
+	void registerShaderSource(const char * name, const char * text);
+	void unregisterShaderSource(const char * name);
+	bool tryGetShaderSource(const char * name, const char *& text) const;
+
 	void blinkTaskbarIcon(int count);
 
 	bool quitRequested;
@@ -264,6 +269,8 @@ private:
 	Sprite * m_sprites;
 	ModelSet m_models;
 	
+	std::map<std::string, std::string> m_shaderSources;
+
 	void registerSprite(Sprite * sprite);
 	void unregisterSprite(Sprite * sprite);
 	
@@ -306,6 +313,7 @@ public:
 	void setAlphaf(float a);
 	void mulf(float r, float g, float b, float a = 1.f);
 	
+	void postprocess();
 	void postprocess(Shader & shader);
 	
 	void invert();
@@ -797,6 +805,114 @@ private:
 
 //
 
+class Path2d
+{
+	enum ELEM_TYPE
+	{
+		ELEM_LINE,
+		ELEM_CURVE,
+		ELEM_ARC
+	};
+
+	struct Vertex
+	{
+		float x;
+		float y;
+
+		float dot(const Vertex & v) const
+		{
+			return x * v.x + y * v.y;
+		}
+
+		float len() const
+		{
+			return std::sqrt(x * x + y * y);
+		}
+
+		Vertex operator-(const Vertex & v) const
+		{
+			Vertex r;
+			r.x = x - v.x;
+			r.y = y - v.y;
+			return r;
+		}
+
+		Vertex operator+(const Vertex & v) const
+		{
+			Vertex r;
+			r.x = x + v.x;
+			r.y = y + v.y;
+			return r;
+		}
+
+		Vertex operator*(const float v) const
+		{
+			Vertex r;
+			r.x = x * v;
+			r.y = y * v;
+			return r;
+		}
+
+		Vertex operator/(const float v) const
+		{
+			Vertex r;
+			r.x = x / v;
+			r.y = y / v;
+			return r;
+		}
+	};
+
+	struct PathElem
+	{
+		ELEM_TYPE type;
+
+		Vertex v1;
+		Vertex v2;
+		Vertex v3;
+		Vertex v4;
+
+		void lineHeading(float & x, float & y) const;
+		void curveHeading(float & x, float & y, const float t) const;
+
+		void curveEval(float & x, float & y, const float t) const;
+		void curveSubdiv(const float t1, const float t2, float *& xy, float *& hxy, int & numPoints) const;
+		void curveSubdiv(const Vertex & v1, const Vertex & v2, const Vertex & v3, float *& xy, float *& hxy, int & numPoints) const;
+	};
+
+	std::vector<PathElem> elems;
+
+	float x;
+	float y;
+	bool hasMove;
+
+	PathElem & allocElem()
+	{
+		elems.resize(elems.size() + 1);
+
+		return elems.back();
+	}
+
+public:
+	Path2d()
+		: x(0.f)
+		, y(0.f)
+		, hasMove(false)
+	{
+	}
+
+	void moveTo(const float x, const float y);
+	void lineTo(const float x, const float y);
+	void line(const float dx, const float dy);
+	void curveTo(const float x, const float y, const float tx1, const float ty1, const float tx2, const float ty2);
+	void curve(const float dx, const float dy, const float tx1, const float ty1, const float tx2, const float ty2);
+	void arc(const float angle, const float radius);
+	void close();
+
+	void generatePoints(float * xy, float * hxy, const int maxPoints, const float curveFlatness, int & numPoints) const;
+};
+
+//
+
 class Mouse
 {
 public:
@@ -964,7 +1080,9 @@ void setFont(const Font & font);
 void setFont(const char * font);
 void setShader(const ShaderBase & shader);
 void clearShader();
+void shaderSource(const char * filename, const char * text);
 
+void drawPoint(float x, float y);
 void drawLine(float x1, float y1, float x2, float y2);
 void drawRect(float x1, float y1, float x2, float y2);
 void drawRectLine(float x1, float y1, float x2, float y2);
@@ -975,6 +1093,7 @@ void measureText(int size, float & sx, float & sy, const char * format, ...);
 void drawText(float x, float y, int size, float alignX, float alignY, const char * format, ...);
 void drawTextArea(float x, float y, float sx, int size, const char * format, ...);
 void drawTextArea(float x, float y, float sx, float sy, int size, float alignX, float alignY, const char * format, ...);
+void drawPath(const Path2d & path);
 
 GLuint createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp);
 GLuint createTextureFromRGB8(const void * source, int sx, int sy, bool filter, bool clamp);
@@ -1040,6 +1159,7 @@ void gxNormal3f(float x, float y, float z);
 void gxVertex2f(float x, float y);
 void gxVertex3f(float x, float y, float z);
 void gxVertex3fv(const float * v);
+void gxVertex4f(float x, float y, float z, float w);
 void gxSetTexture(GLuint texture);
 
 #else
@@ -1086,6 +1206,53 @@ void gxSetTexture(GLuint texture);
 void changeDirectory(const char * path);
 std::vector<std::string> listFiles(const char * path, bool recurse);
 void showErrorMessage(const char * caption, const char * format, ...);
+
+// builtin shaders
+
+void setShader_GaussianBlurH(const GLuint source, const int kernelSize);
+void setShader_GaussianBlurV(const GLuint source, const int kernelSize);
+void setShader_Invert(const GLuint source);
+void setShader_TresholdLumi(const GLuint source, const float lumi, const Color & failColor, const Color & passColor);
+void setShader_TresholdLumiFail(const GLuint source, const float lumi, const Color & failColor);
+void setShader_TresholdLumiPass(const GLuint source, const float lumi, const Color & passColor);
+void setShader_TresholdValue(const GLuint source, const Color & value, const Color & failColor, const Color & passColor);
+void setShader_GrayscaleLumi(const GLuint source);
+void setShader_GrayscaleWeights(const GLuint source, const Vec3 & weights);
+void setShader_Colorize(const GLuint source, const float hue);
+void setShader_HueShift(const GLuint source, const float hue);
+void setShader_Compositie(const GLuint source1, const GLuint source2);
+void setShader_CompositiePremultiplied(const GLuint source1, const GLuint source2);
+void setShader_Premultiply(const GLuint source);
+
+// high quality rendering
+
+enum HQ_TYPE
+{
+	HQ_LINES,
+	HQ_FILLED_TRIANGLES,
+	HQ_FILLED_CIRCLES,
+	HQ_FILLED_RECTS,
+	HQ_STROKED_TRIANGLES,
+	HQ_STROKED_CIRCLES,
+	HQ_STROKED_RECTS
+
+	// todo : rounded rectangle, ellipse, curve (?), arc (?)
+};
+
+void hqBegin(HQ_TYPE type, bool useScreenSize = false);
+void hqEnd();
+
+void hqLine(float x1, float y1, float strokeSize1, float x2, float y2, float strokeSize2);
+
+void hqFillTriangle(float x1, float y1, float x2, float y2, float x3, float y3);
+void hqFillCircle(float x, float y, float radius);
+void hqFillRect(float x1, float y1, float x2, float y2);
+
+void hqStrokeTriangle(float x1, float y1, float x2, float y2, float x3, float y3, float stroke);
+void hqStrokeCircle(float x, float y, float radius, float stroke);
+void hqStrokeRect(float x1, float y1, float x2, float y2, float stroke);
+
+void hqDrawPath(const Path2d & path);
 
 // math
 

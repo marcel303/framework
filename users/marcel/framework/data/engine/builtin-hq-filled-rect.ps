@@ -1,0 +1,72 @@
+static const char * s_hqFilledRectPs = R"SHADER(
+
+include engine/ShaderPS.txt
+
+shader_in vec2 v_p;
+shader_in vec3 v_edgePlane1;
+shader_in vec3 v_edgePlane2;
+shader_in vec3 v_edgePlane3;
+shader_in vec3 v_edgePlane4;
+shader_in vec4 v_color;
+
+uniform sampler2D source;
+
+float computeDistance(vec2 p)
+{
+	float d1 = dot(v_edgePlane1, vec3(p, 1.0));
+	float d2 = dot(v_edgePlane2, vec3(p, 1.0));
+	float d3 = dot(v_edgePlane3, vec3(p, 1.0));
+	float d4 = dot(v_edgePlane4, vec3(p, 1.0));
+	
+	float d = max(max(max(d1, d2), d3), d4);
+	
+	return d;
+}
+
+float distanceFade(float distance)
+{
+	return clamp(- distance, 0.0, 1.0);
+}
+
+void main()
+{
+#if 0
+	float v = distanceFade(computeDistance(v_p));
+#else
+	float v = 0.0;
+	
+	float d = - computeDistance(v_p);
+	
+	if (d > 1.0)
+	{
+		v = 1.0;
+	}
+	else
+	{
+		for (int ox = -2; ox <= +2; ++ox)
+		{
+			for (int oy = -2; oy <= +2; ++oy)
+			{
+				v += distanceFade(computeDistance(v_p + vec2(ox, oy) * 0.25));
+			}
+		}
+		
+		v /= 25.0;
+	}
+#endif
+
+	vec4 color = vec4(vec3(1), v);
+	
+	if (false)
+	{
+		//color = vec4(0.0, 1.0, 1.0, 1.0);
+		color.a += 0.2;
+		color.r = color.a;
+	}
+	
+	color = color * v_color;
+	
+	shader_fragColor = color;
+}
+
+)SHADER";

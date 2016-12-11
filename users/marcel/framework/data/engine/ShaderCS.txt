@@ -1,3 +1,5 @@
+static const char * s_shaderCs = R"SHADER(
+
 include engine/ShaderCommon.txt
 
 /*
@@ -35,3 +37,5 @@ layout(local_size_x = X?, local_size_y = Y?, local_size_z = Z?) in;
 */
 
 layout(local_size_x = LOCAL_SIZE_X, local_size_y = LOCAL_SIZE_Y, local_size_z = LOCAL_SIZE_Z) in;
+
+)SHADER";

@@ -1,0 +1,139 @@
+static const char * s_shaderUtil = R"SHADER(
+
+float makeTaps(float v, float min, float max, float numTaps)
+{
+	numTaps -= 1.0;
+	return round((v - min) / (max - min) * numTaps) / numTaps;
+}
+
+vec3 makeTaps(vec3 v, float min, float max, float numTaps)
+{
+	return vec3(
+		makeTaps(v.x, min, max, numTaps),
+		makeTaps(v.y, min, max, numTaps),
+		makeTaps(v.z, min, max, numTaps));
+}
+
+float rgbLuminance(vec3 rgb)
+{
+	return
+		rgb.r * 0.30 +
+		rgb.g * 0.59 +
+		rgb.b * 0.11;
+}
+
+vec3 colorFromHSL(vec3 hsl)
+{
+	float hue = mod(hsl.x, 1.0);
+	float sat = clamp(hsl.y, 0.0, 1.0);
+	float lum = clamp(hsl.z, 0.0, 1.0);
+
+	float r, g, b;
+
+	float m2 = (lum <= .5) ? (lum + (lum * sat)) : (lum + sat - lum * sat);
+	float m1 = lum + lum - m2;
+
+	hue = hue * 6.0;
+
+	if (hue < 0.0)
+	{
+		hue += 6.0;
+	}
+
+	if (hue < 3.0)
+	{
+		if (hue < 2.0)
+		{
+			if (hue < 1.0)
+			{
+				r = m2;
+				g = m1 + (m2 - m1) * hue;
+				b = m1;
+			}
+			else
+			{
+				r = (m1 + (m2 - m1) * (2.0 - hue));
+				g = m2;
+				b = m1;
+			}
+		}
+		else
+		{
+			r = m1;
+			g = m2;
+			b = (m1 + (m2 - m1) * (hue - 2.0));
+		}
+	}
+	else
+	{
+		if (hue < 5.0)
+		{
+			if (hue < 4.0)
+			{
+				r = m1;
+				g = (m1 + (m2 - m1) * (4.0 - hue));
+				b = m2;
+			}
+			else
+			{
+				r = (m1 + (m2 - m1) * (hue - 4.0));
+				g = m1;
+				b = m2;
+			}
+		}
+		else
+		{
+			r = m2;
+			g = m1;
+			b = (m1 + (m2 - m1) * (6.0 - hue));
+		}
+	}
+
+	return vec3(r, g, b);
+}
+
+vec3 colorToHSL(vec3 rgb)
+{
+	float eps = 1.192092896e-07;
+
+	float r = clamp(rgb.r, 0.0, 1.0);
+	float g = clamp(rgb.g, 0.0, 1.0);
+	float b = clamp(rgb.b, 0.0, 1.0);
+
+	float hue;
+	float sat;
+	float lum;
+
+	float _max = max(r, max(g, b));
+	float _min = min(r, min(g, b));
+
+	lum = (_max + _min) / 2.0;
+
+	float delta = _max - _min;
+
+	if (delta < eps)
+	{
+		sat = 0.0;
+		hue = 0.0;
+	}
+	else
+	{
+		sat = (lum <= 0.5) ? (delta / (_max + _min)) : (delta / (2.0 - (_max + _min)));
+
+		if (r == _max)
+			hue = (g - b) / delta;
+		else if (g == _max)
+			hue = 2.0 + (b - r) / delta;
+		else
+			hue = 4.0 + (r - g) / delta;
+
+		if (hue < 0.0)
+			hue += 6.0;
+
+		hue /= 6.0;
+	}
+
+	return vec3(hue, sat, lum);
+}
+
+)SHADER";

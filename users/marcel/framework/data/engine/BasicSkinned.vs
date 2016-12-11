@@ -1,3 +1,5 @@
+static const char * s_basicSkinnedVs = R"SHADER(
+
 include engine/ShaderVS.txt
 
 shader_out vec4 v_color;
@@ -46,3 +48,5 @@ void main()
 	v_color = color;
 	v_texcoord0 = texcoord;
 }
+
+)SHADER";

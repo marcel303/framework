@@ -1,3 +1,5 @@
+static const char * s_basicSkinnedPs = R"SHADER(
+
 include engine/ShaderPS.txt
 
 shader_in vec4 v_color;
@@ -6,3 +8,5 @@ void main()
 {
 	shader_fragColor = v_color;
 }
+
+)SHADER";

@@ -30,6 +30,10 @@ void splitString(const std::string & str, std::vector<std::string> & result, cha
 
 //
 
+class BuiltinShaders;
+
+//
+
 class Globals
 {
 public:
@@ -81,6 +85,7 @@ public:
 	Mat4x4 transform2d;
 	Mat4x4 transform3d;
 	bool gxShaderIsDirty;
+	BuiltinShaders * builtinShaders;
 	
 	struct DebugDraw
 	{
@@ -514,6 +519,22 @@ public:
 	}
 	
 	FILE * file;
+};
+
+//
+
+class BuiltinShaders
+{
+public:
+	BuiltinShaders();
+
+	Shader hqLine;
+	Shader hqFilledTriangle;
+	Shader hqFilledCircle;
+	Shader hqFilledRect;
+	Shader hqStrokeTriangle;
+	Shader hqStrokedCircle;
+	Shader hqStrokedRect;
 };
 
 //

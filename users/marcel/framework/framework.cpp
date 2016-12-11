@@ -29,6 +29,7 @@
 #include "internal.h"
 #include "model.h"
 #include "rte.h"
+#include "shaders.h"
 #include "spriter.h"
 
 #include "Timer.h"
@@ -286,6 +287,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 		glewExperimental = GL_TRUE; // force GLEW to resolve all supported extension methods
 	
 		const int glewStatus = glewInit();
+		glGetError(); // fixme : GLEW generates an error code and we're not interested in trapping it..
 		checkErrorGL();
 
 		if (glewStatus != GLEW_OK)
@@ -335,6 +337,8 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 		return false;
 	rmt_BindOpenGL();
 #endif
+
+	globals.builtinShaders = new BuiltinShaders();
 
 	if (enableMidi)
 	{
@@ -441,6 +445,9 @@ bool Framework::shutdown()
 	{
 		shutMidi();
 	}
+
+	delete globals.builtinShaders;
+	globals.builtinShaders = nullptr;
 
 #if ENABLE_PROFILING
 	rmt_UnbindOpenGL();
@@ -932,6 +939,12 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 			name = name.substr(0, name.rfind('.'));
 			Shader(name.c_str());
 		}
+		else if (strstr(f, ".cs") == f + fl - 3)
+		{
+			std::string name = f;
+			name = name.substr(0, name.rfind('.'));
+			ComputeShader(name.c_str());
+		}
 		else
 		{
 			if (fillCachesUnknownResourceCallback)
@@ -1026,6 +1039,35 @@ void Framework::endDraw()
 #else
 	
 #endif
+}
+
+void Framework::registerShaderSource(const char * name, const char * text)
+{
+	m_shaderSources[name] = text;
+}
+
+void Framework::unregisterShaderSource(const char * name)
+{
+	auto i = m_shaderSources.find(name);
+
+	fassert(i != m_shaderSources.end());
+	if (i != m_shaderSources.end())
+		m_shaderSources.erase(i);
+}
+
+bool Framework::tryGetShaderSource(const char * name, const char *& text) const
+{
+	auto i = m_shaderSources.find(name);
+
+	if (i != m_shaderSources.end())
+	{
+		text = i->second.c_str();
+		return true;
+	}
+	else
+	{
+		return false;
+	}
 }
 
 void Framework::blinkTaskbarIcon(int count)
@@ -1343,6 +1385,17 @@ void Surface::mulf(float r, float g, float b, float a)
 	popSurface();
 }
 
+void Surface::postprocess()
+{
+	swapBuffers();
+
+	pushSurface(this);
+	{
+		drawRect(0.f, 0.f, m_size[0], m_size[1]);
+	}
+	popSurface();	
+}
+
 void Surface::postprocess(Shader & shader)
 {
 	swapBuffers();
@@ -1351,12 +1404,7 @@ void Surface::postprocess(Shader & shader)
 	{
 		setShader(shader);
 		{
-			const int bufferId = (m_bufferId + 1) % 2;
-			//gxSetTexture(m_texture[bufferId]);
-			{
-				drawRect(0.f, 0.f, m_size[0], m_size[1]);
-			}
-			//gxSetTexture(0);
+			drawRect(0.f, 0.f, m_size[0], m_size[1]);
 		}
 		clearShader();
 	}
@@ -3174,6 +3222,427 @@ Font::Font(const char * filename)
 
 // -----
 
+void Path2d::PathElem::lineHeading(float & x, float & y) const
+{
+	x = v2.x - v1.x;
+	y = v2.y - v1.y;
+}
+
+void Path2d::PathElem::curveHeading(float & x, float & y, const float t) const
+{
+	// taken from libcinder
+
+	const float t1 = 1.f - t;
+	const float t2 = t;
+
+	const float w0 = -3.f * t1 * t1;
+	const float w1 = +3.f * t1 * t1 - 6.f * t2 * t1;
+	const float w2 = -3.f * t2 * t2 + 6.f * t2 * t1;
+	const float w3 = +3.f * t2 * t2;
+
+	x = w0 * v1.x + w1 * v2.x + w2 * v3.x + w3 * v4.x;
+	y = w0 * v1.y + w1 * v2.y + w2 * v3.y + w3 * v4.y;
+}
+
+void Path2d::PathElem::curveEval(float & x, float & y, const float t) const
+{
+	const float t1 = 1.f - t;
+	const float t2 =       t;
+
+	const float a = t1 * t1 * t1;
+	const float b = t1 * t1 * t2 * 3.f;
+	const float c = t1 * t2 * t2 * 3.f;
+	const float d = t2 * t2 * t2;
+
+	x =
+		v1.x * a +
+		v2.x * b +
+		v3.x * c +
+		v4.x * d;
+
+	y =
+		v1.y * a +
+		v2.y * b +
+		v3.y * c +
+		v4.y * d;
+}
+
+void Path2d::PathElem::curveSubdiv(const float t1, const float t2, float *& xy, float *& hxy, int & numPoints) const
+{
+	const float eps = .1f;
+
+	const float tm = (t1 + t2) * .5f;
+	
+	float px1;
+	float py1;
+	float px2;
+	float py2;
+	float px3;
+	float py3;
+
+	curveEval(px1, py1, t1);
+	curveEval(px2, py2, tm);
+	curveEval(px3, py3, t2);
+
+	const float dx = px3 - px1;
+	const float dy = py3 - py1;
+	const float ds = std::hypot(dx, dy);
+
+	bool needsSubdiv = true;
+
+	if (ds <= eps)
+		needsSubdiv = false;
+
+	if (needsSubdiv)
+	{
+		const float nx = +dy / ds;
+		const float ny = -dx / ds;
+
+		const float d1 = px1 * nx + py1 * ny;
+		const float d2 = px2 * nx + py2 * ny;
+		const float d3 = px3 * nx + py3 * ny;
+
+		const float dd = d2 - d1;
+
+		if (std::abs(dd) <= eps)
+			needsSubdiv = false;
+	}
+
+	if (needsSubdiv)
+	{
+		curveSubdiv(t1, tm, xy, hxy, numPoints);
+
+		if (numPoints >= 1)
+		{
+			*xy++ = px2;
+			*xy++ = py2;
+
+			if (hxy != nullptr)
+			{
+				curveHeading(hxy[0], hxy[1], tm);
+				hxy += 2;
+			}
+
+			numPoints -= 1;
+		}
+
+		curveSubdiv(tm, t2, xy, hxy, numPoints);
+	}
+	else
+	{
+		if (numPoints >= 1)
+		{
+			*xy++ = px3;
+			*xy++ = py3;
+
+			if (hxy != nullptr)
+			{
+				curveHeading(hxy[0], hxy[1], t2);
+				hxy += 2;
+			}
+
+			numPoints -= 1;
+		}
+	}
+}
+
+void Path2d::PathElem::curveSubdiv(const Path2d::Vertex & v1, const Path2d::Vertex & v2, const Path2d::Vertex & v3, float *& xy, float *& hxy, int & numPoints) const
+{
+#if 1
+	const float eps = 1.f;
+
+	Vertex v12 = (v1 + v2) * .5f;
+	Vertex v23 = (v2 + v3) * .5f;
+
+	Vertex vm = (v12 + v23) * .5f;
+
+	Vertex d = v3 - v1;
+
+	const float ds = d.len();
+
+	bool needsSubdiv = true;
+
+	if (ds <= eps)
+		needsSubdiv = false;
+
+	if (needsSubdiv)
+	{
+		Vertex n = d / ds;
+
+		const float d1 = n.dot(v1);
+		const float d2 = n.dot(v2);
+		const float d3 = n.dot(v3);
+
+		const float dd = d2 - d1;
+
+		if (std::abs(dd) <= eps)
+			needsSubdiv = false;
+	}
+
+	if (needsSubdiv)
+	{
+		curveSubdiv(v1, v12, vm, xy, hxy, numPoints);
+		curveSubdiv(vm, v23, v3, xy, hxy, numPoints);
+	}
+	else
+	{
+		if (numPoints >= 1)
+		{
+			*xy++ = vm.x;
+			*xy++ = vm.y;
+
+			if (hxy != nullptr)
+			{
+				hxy[0] = 0.f;
+				hxy[1] = 0.f;
+
+				hxy += 2;
+			}
+
+			numPoints -= 1;
+		}
+	}
+#endif
+}
+
+//
+
+void Path2d::moveTo(const float x, const float y)
+{
+	fassert(hasMove == false);
+
+	this->x = x;
+	this->y = y;
+	this->hasMove = true;
+}
+
+void Path2d::lineTo(const float x, const float y)
+{
+	fassert(hasMove);
+
+	PathElem & elem = allocElem();
+	elem.type = ELEM_LINE;
+
+	elem.v1.x = this->x;
+	elem.v1.y = this->y;
+
+	this->x = x;
+	this->y = y;
+
+	elem.v2.x = this->x;
+	elem.v2.y = this->y;
+}
+
+void Path2d::line(const float dx, const float dy)
+{
+	fassert(hasMove);
+
+	PathElem & elem = allocElem();
+	elem.type = ELEM_LINE;
+
+	elem.v1.x = this->x;
+	elem.v1.y = this->y;
+
+	this->x += dx;
+	this->y += dy;
+
+	elem.v2.x = this->x;
+	elem.v2.y = this->y;
+}
+
+void Path2d::curveTo(const float x, const float y, const float tx1, const float ty1, const float tx2, const float ty2)
+{
+	fassert(hasMove);
+
+	PathElem & elem = allocElem();
+	elem.type = ELEM_CURVE;
+
+	const float x1 = this->x;
+	const float y1 = this->y;
+	const float x2 = x;
+	const float y2 = y;
+
+	elem.v1.x = x1;
+	elem.v1.y = y1;
+
+	elem.v2.x = x1 + tx1;
+	elem.v2.y = y1 + ty1;
+
+	elem.v3.x = x2 + tx2;
+	elem.v3.y = y2 + ty2;
+
+	elem.v4.x = x2;
+	elem.v4.y = y2;
+
+	this->x = x2;
+	this->y = y2;
+}
+
+void Path2d::curve(const float dx, const float dy, const float tx1, const float ty1, const float tx2, const float ty2)
+{
+	curveTo(x + dx, y + dy, tx1, ty1, tx2, ty2);
+	/*
+	fassert(hasMove);
+
+	PathElem & elem = allocElem();
+	elem.type = ELEM_CURVE;
+
+	const float x1 = this->x;
+	const float y1 = this->y;
+	const float x2 = x1 + dx;
+	const float y2 = y1 + dy;
+
+	elem.x1 = x1;
+	elem.y1 = y1;
+
+	elem.x2 = x1 + tx1;
+	elem.y2 = y1 + ty1;
+
+	elem.x3 = x2 + tx2;
+	elem.y3 = y2 + ty2;
+
+	elem.x4 = x2;
+	elem.y4 = y2;
+
+	this->x = x2;
+	this->y = y2;
+	*/
+}
+
+void Path2d::arc(const float angle, const float radius)
+{
+}
+
+void Path2d::close()
+{
+	if (elems.size() > 0)
+	{
+		const PathElem & e = elems.front();
+
+		lineTo(e.v1.x, e.v1.y);
+	}
+}
+
+void Path2d::generatePoints(float * xy, float * hxy, const int maxPoints, const float curveFlatness, int & numPoints) const
+{
+	numPoints = 0;
+
+	for (const PathElem & elem : elems)
+	{
+		if (elem.type == ELEM_LINE)
+		{
+			if (numPoints + 2 <= maxPoints)
+			{
+				*xy++ = elem.v1.x;
+				*xy++ = elem.v1.y;
+				*xy++ = elem.v2.x;
+				*xy++ = elem.v2.y;
+
+				if (hxy != nullptr)
+				{
+					elem.lineHeading(hxy[0], hxy[1]);
+					hxy += 2;
+
+					elem.lineHeading(hxy[0], hxy[1]);
+					hxy += 2;
+				}
+
+				numPoints += 2;
+			}
+			else
+			{
+				break;
+			}
+		}
+		else if (elem.type == ELEM_CURVE)
+		{
+#if 1
+			int todoPoints = maxPoints - numPoints;
+
+			if (todoPoints >= 1)
+			{
+				elem.curveEval(xy[0], xy[1], 0.f);
+				xy += 2;
+				
+				elem.curveHeading(hxy[0], hxy[1], 0.f);
+				hxy += 2;
+				
+				todoPoints--;
+			}
+
+			elem.curveSubdiv(0.f, 1.f, xy, hxy, todoPoints);
+
+			numPoints = maxPoints - todoPoints;
+#elif 0
+			float t = 0.f;
+
+			while (t < 1.f && numPoints < maxPoints)
+			{
+				elem.curveEval(xy[0], xy[1], t);
+				xy += 2;
+
+				float hx;
+				float hy;
+				elem.curveHeading(hx, hy, t);
+
+				if (hxy != nullptr)
+				{
+					hxy[0] = hx;
+					hxy[1] = hy;
+					hxy += 2;
+				}
+
+				numPoints++;
+
+				const float hs = std::sqrt(hx * hx + hy * hy);
+				const float dt = std::sqrt(hs) / 1000.f;
+
+				t += dt;
+			}
+#else
+			const int kNumPoints = 100;
+
+			const Vertex v1 = (elem.v1 + elem.v2) * .5f;
+			const Vertex v2 = (elem.v3 + elem.v4) * .5f;
+			const Vertex vm = (v1 + v2) * .5f;
+			const Vertex d1 = vm - elem.v1;
+			const Vertex d2 = vm - elem.v4;
+			const float l1 = d1.len();
+			const float l2 = d2.len();
+			const float lengthEstimate = l1 + l2;
+
+			if (numPoints + kNumPoints <= maxPoints)
+			{
+				for (int i = 0; i < kNumPoints; ++i)
+				{
+					const float t = i / (kNumPoints - 1.f);
+
+					elem.curveEval(xy[0], xy[1], t);
+					xy += 2;
+
+					if (hxy != nullptr)
+					{
+						elem.curveHeading(hxy[0], hxy[1], t);
+						hxy += 2;
+					}
+				}
+
+				numPoints += kNumPoints;
+			}
+			else
+			{
+				break;
+			}
+#endif
+		}
+		else if (elem.type == ELEM_ARC)
+		{
+		}
+	}
+}
+
+// -----
+
 static int getButtonIndex(BUTTON button)
 {
 	switch (button)
@@ -4040,6 +4509,20 @@ void clearShader()
 	}
 }
 
+void shaderSource(const char * filename, const char * text)
+{
+	framework.registerShaderSource(filename, text);
+}
+
+void drawPoint(float x, float y)
+{
+	gxBegin(GL_POINTS);
+	{
+		gxVertex2f(x, y);
+	}
+	gxEnd();
+}
+
 void drawLine(float x1, float y1, float x2, float y2)
 {
 	gxBegin(GL_LINES);
@@ -4368,6 +4851,78 @@ void drawTextArea(float x, float y, float sx, float sy, int size, float alignX, 
 		drawText(x, y, size, alignX, alignY, lines[i]);
 		y += size;
 	}
+}
+
+void drawPath(const Path2d & path)
+{
+	const int kMaxPoints = 16 * 1024;
+
+	float pxyStorage[kMaxPoints * 2];
+	float hxyStorage[kMaxPoints * 2];
+
+	float * pxy = pxyStorage;
+	float * hxy = hxyStorage;
+
+	int numPoints = 0;
+	path.generatePoints(pxy, hxy, kMaxPoints, 1.f, numPoints);
+
+	glLineWidth(3.f);
+
+	gxBegin(GL_LINES);
+	{
+		for (int i = 0; i < numPoints - 1; ++i)
+		{
+			gxVertex2f(pxy[0], pxy[1]);
+			gxVertex2f(pxy[2], pxy[3]);
+
+			pxy += 2;
+			hxy += 2;
+		}
+	}
+	gxEnd();
+
+#if 0
+	pxy = pxyStorage;
+	hxy = hxyStorage;
+
+	glLineWidth(1.f);
+
+	gxBegin(GL_LINES);
+	{
+		for (int i = 0; i < numPoints; ++i)
+		{
+			const float tx = hxy[0];
+			const float ty = hxy[1];
+			const float ts = std::hypot(tx, ty);
+
+			gxVertex2f(pxy[0],          pxy[1]         );
+			gxVertex2f(pxy[0] + hxy[0], pxy[1] + hxy[1]);
+
+			pxy += 2;
+			hxy += 2;
+		}
+	}
+	gxEnd();
+#endif
+
+#if 0
+	pxy = pxyStorage;
+
+	glPointSize(10.f);
+
+	gxBegin(GL_POINTS);
+	{
+		for (int i = 0; i < numPoints; ++i)
+		{
+			gxVertex2f(pxy[0], pxy[1]);
+
+			pxy += 2;
+		}
+	}
+	gxEnd();
+
+	glPointSize(1.f);
+#endif
 }
 
 static GLuint createTexture(const void * source, int sx, int sy, bool filter, bool clamp, GLenum format)
@@ -4704,6 +5259,8 @@ void gxEmitVertex();
 
 void gxInitialize()
 {
+	registerBuiltinShaders();
+
 	s_gxShader.load("engine/Generic", "engine/Generic.vs", "engine/Generic.ps");
 	
 	memset(&s_gxVertex, 0, sizeof(s_gxVertex));
@@ -5107,7 +5664,12 @@ void gxNormal3f(float x, float y, float z)
 
 void gxVertex2f(float x, float y)
 {
-	gxVertex3f(x, y, 0.f);
+	s_gxVertex.px = x;
+	s_gxVertex.py = y;
+	s_gxVertex.pz = 0.f;
+	s_gxVertex.pw = 1.f;
+
+	gxEmitVertex();
 }
 
 void gxVertex3f(float x, float y, float z)
@@ -5117,6 +5679,16 @@ void gxVertex3f(float x, float y, float z)
 	s_gxVertex.pz = z;
 	s_gxVertex.pw = 1.f;
 	
+	gxEmitVertex();
+}
+
+void gxVertex4f(float x, float y, float z, float w)
+{
+	s_gxVertex.px = x;
+	s_gxVertex.py = y;
+	s_gxVertex.pz = z;
+	s_gxVertex.pw = w;
+
 	gxEmitVertex();
 }
 
@@ -5202,6 +5774,418 @@ void gxSetTexture(GLuint texture)
 }
 
 #endif
+
+// builtin shaders
+
+// todo : move these shaders to BuiltinShaders and supply shader source
+
+void setShader_GaussianBlurH(const GLuint source, const float kernelSize)
+{
+	Shader shader("builtin-gaussian-v");
+	setShader(shader);
+
+	// todo : calculate seperable gaussian blur kernel weights
+	ShaderBuffer kernel;
+
+	shader.setTexture("source", 0, source, true, true);
+	shader.setImmediate("kernelSize", kernelSize);
+	shader.setBuffer("kernel", kernel);
+}
+
+void setShader_GaussianBlurV(const GLuint source, const float kernelSize)
+{
+	Shader shader("builtin-gaussian-v");
+	setShader(shader);
+	
+	// todo : calculate seperable gaussian blur kernel weights
+	ShaderBuffer kernel;
+
+	shader.setTexture("source", 0, source, true, true);
+	shader.setImmediate("kernelSize", kernelSize);
+	shader.setBuffer("kernel", kernel);
+}
+
+void setShader_Invert(const GLuint source)
+{
+	static Shader shader("builtin-invert", "builtin-effect.vs", "builtin-invert.ps");
+	setShader(shader);
+
+	shader.setTexture("source", 0, source, true, true);
+}
+
+static void setShader_TresholdLumiEx(
+	const GLuint source,
+	const float treshold,
+	const Vec4 weights,
+	bool doFailReplacement,
+	bool doPassReplacement,
+	const Color & failColor,
+	const Color & passColor)
+{
+	static Shader shader("builtin-treshold-ex", "builtin-effect.vs", "builtin-treshold-ex.ps");
+	setShader(shader);
+
+	shader.setTexture("source", 0, source, true, true);
+	shader.setImmediate("settings", treshold, doFailReplacement, doPassReplacement);
+	shader.setImmediate("weights", weights[0], weights[1], weights[2], weights[3]);
+	shader.setImmediate("failValue", failColor.r, failColor.g, failColor.b, failColor.a);
+	shader.setImmediate("passValue", passColor.r, passColor.g, passColor.b, passColor.a);
+}
+
+static const Vec4 lumiVec(.30f, .59f, .11f, 0.f);
+
+void setShader_TresholdLumi(const GLuint source, const float lumi, const Color & failColor, const Color & passColor)
+{
+	static Shader shader("builtin-treshold-lumi", "builtin-effect.vs", "builtin-treshold-lumi.ps");
+	setShader(shader);
+
+	shader.setTexture("source", 0, source, true, true);
+	shader.setImmediate("treshold", lumi);
+	shader.setImmediate("failColor", failColor.r, failColor.g, failColor.b);
+	shader.setImmediate("passColor", passColor.r, passColor.g, passColor.b);
+}
+
+void setShader_TresholdLumiFail(const GLuint source, const float lumi, const Color & failColor)
+{
+	setShader_TresholdLumiEx(
+		source,
+		lumi,
+		lumiVec,
+		true,
+		false,
+		failColor,
+		colorWhite);
+}
+
+void setShader_TresholdLumiPass(const GLuint source, const float lumi, const Color & passColor)
+{
+	setShader_TresholdLumiEx(
+		source,
+		lumi,
+		lumiVec,
+		false,
+		true,
+		colorWhite,
+		passColor);
+}
+
+void setShader_TresholdValue(const GLuint source, const Color & value, const Color & failColor, const Color & passColor)
+{
+	static Shader shader("builtin-treshold-value", "builtin-effect.vs", "builtin-treshold-value.ps");
+	setShader(shader);
+
+	shader.setTexture("source", 0, source, true, true);
+	shader.setImmediate("treshold", value.r, value.g, value.b, value.a);
+	shader.setImmediate("failValue", failColor.r, failColor.g, failColor.b, failColor.a);
+	shader.setImmediate("passValue", passColor.r, passColor.g, passColor.b, passColor.a);
+}
+
+void setShader_GrayscaleLumi(const GLuint source)
+{
+	static Shader shader("builtin-grayscale-lumi", "builtin-effect.vs", "builtin-grayscale-lumi.ps");
+	setShader(shader);
+
+	shader.setTexture("source", 0, source, true, true);
+}
+
+void setShader_GrayscaleWeights(const GLuint source, const Vec3 & weights)
+{
+	static Shader shader("builtin-grayscale-weights", "builtin-effect.vs", "builtin-grayscale-weights.ps");
+	setShader(shader);
+
+	shader.setTexture("source", 0, source, true, true);
+	shader.setImmediate("weights", weights[0], weights[1], weights[2]);
+}
+
+void setShader_Colorize(const GLuint source, const float hue)
+{
+	static Shader shader("builtin-hue-assign", "builtin-effect.vs", "builtin-hue-assign.ps");
+	setShader(shader);
+
+	shader.setTexture("source", 0, source, true, true);
+	shader.setImmediate("hue", hue);
+}
+
+void setShader_HueShift(const GLuint source, const float hue)
+{
+	static Shader shader("builtin-hue-shift", "builtin-effect.vs", "builtin-hue-shift.ps");
+	setShader(shader);
+
+	shader.setTexture("source", 0, source, true, true);
+	shader.setImmediate("hueShift", hue);
+}
+
+void setShader_Compositie(const GLuint source1, const GLuint source2)
+{
+	Shader shader("builtin-composite-alpha");
+	setShader(shader);
+
+	shader.setTexture("source1", 0, source1, true, true);
+	shader.setTexture("source2", 1, source2, true, true);
+}
+
+void setShader_CompositiePremultiplied(const GLuint source1, const GLuint source2)
+{
+	Shader shader("builtin-composite-alpha-premultiplied");
+	setShader(shader);
+
+	shader.setTexture("source1", 0, source1, true, true);
+	shader.setTexture("source2", 1, source2, true, true);
+}
+
+void setShader_Premultiply(const GLuint source)
+{
+	Shader shader("builtin-premultiply-alpha");
+	setShader(shader);
+
+	shader.setTexture("source", 0, source, true, true);
+}
+
+//
+
+static void setShader_HqLines()
+{
+	setShader(globals.builtinShaders->hqLine);
+}
+
+static void setShader_HqFilledTriangles()
+{
+	setShader(globals.builtinShaders->hqFilledTriangle);
+}
+
+static void setShader_HqFilledCircles()
+{
+	setShader(globals.builtinShaders->hqFilledCircle);
+}
+
+static void setShader_HqFilledRects()
+{
+	setShader(globals.builtinShaders->hqFilledRect);
+}
+
+static void setShader_HqStrokedTriangles()
+{
+	setShader(globals.builtinShaders->hqStrokeTriangle);
+}
+
+static void setShader_HqStrokedCircles()
+{
+	setShader(globals.builtinShaders->hqStrokedCircle);
+}
+
+static void setShader_HqStrokedRects()
+{
+	setShader(globals.builtinShaders->hqStrokedRect);
+}
+
+void hqBegin(HQ_TYPE type, bool useScreenSize)
+{
+	switch (type)
+	{
+	case HQ_LINES:
+		gxBegin(GL_QUADS);
+		setShader_HqLines();
+		break;
+
+	case HQ_FILLED_TRIANGLES:
+		gxBegin(GL_TRIANGLES);
+		setShader_HqFilledTriangles();
+		break;
+
+	case HQ_FILLED_CIRCLES:
+		gxBegin(GL_QUADS);
+		setShader_HqFilledCircles();
+		break;
+
+	case HQ_FILLED_RECTS:
+		gxBegin(GL_QUADS);
+		setShader_HqFilledRects();
+		break;
+
+	case HQ_STROKED_TRIANGLES:
+		gxBegin(GL_TRIANGLES);
+		setShader_HqStrokedTriangles();
+		break;
+
+	case HQ_STROKED_CIRCLES:
+		gxBegin(GL_QUADS);
+		setShader_HqStrokedCircles();
+		break;
+
+	case HQ_STROKED_RECTS:
+		gxBegin(GL_QUADS);
+		setShader_HqStrokedRects();
+		break;
+
+	default:
+		fassert(false);
+		break;
+	}
+
+	if (globals.shader != nullptr && globals.shader->getType() == SHADER_VSPS)
+	{
+		Shader * shader = static_cast<Shader*>(globals.shader);
+
+		shader->setImmediate("useScreenSize", useScreenSize ? 1.f : 0.f);
+	}
+}
+
+void hqEnd()
+{
+	gxEnd();
+
+	clearShader();
+}
+
+void hqLine(float x1, float y1, float strokeSize1, float x2, float y2, float strokeSize2)
+{
+	gxNormal3f(strokeSize1, strokeSize2, 0.f);
+	for (int i = 0; i < 4; ++i)
+		gxVertex4f(x1, y1, x2, y2);
+}
+
+void hqFillTriangle(float x1, float y1, float x2, float y2, float x3, float y3)
+{
+	gxNormal3f(x3, y3, 0.f);
+	for (int i = 0; i < 3; ++i)
+		gxVertex4f(x1, y1, x2, y2);
+}
+
+void hqFillCircle(float x, float y, float radius)
+{
+	gxNormal3f(radius, 0.f, 0.f);
+	for (int i = 0; i < 4; ++i)
+		gxVertex2f(x, y);
+}
+
+void hqFillRect(float x1, float y1, float x2, float y2)
+{
+	for (int i = 0; i < 4; ++i)
+		gxVertex4f(x1, y1, x2, y2);
+}
+
+void hqStrokeTriangle(float x1, float y1, float x2, float y2, float x3, float y3, float stroke)
+{
+	gxNormal3f(x3, y3, stroke);
+	for (int i = 0; i < 3; ++i)
+		gxVertex4f(x1, y1, x2, y2);
+}
+
+void hqStrokeCircle(float x, float y, float radius, float stroke)
+{
+	gxNormal3f(radius, stroke, 0.f);
+	for (int i = 0; i < 4; ++i)
+		gxVertex2f(x, y);
+}
+
+void hqStrokeRect(float x1, float y1, float x2, float y2, float stroke)
+{
+	gxNormal3f(stroke, 0.f, 0.f);
+	for (int i = 0; i < 4; ++i)
+		gxVertex4f(x1, y1, x2, y2);
+}
+
+void hqDrawPath(const Path2d & path)
+{
+	const int kMaxPoints = 16 * 1024;
+
+	float pxyStorage[kMaxPoints * 2];
+	float hxyStorage[kMaxPoints * 2];
+
+	float * pxy = pxyStorage;
+	float * hxy = hxyStorage;
+
+	int numPoints = 0;
+	path.generatePoints(pxy, hxy, kMaxPoints, 1.f, numPoints);
+
+	hqBegin(HQ_LINES);
+	{
+		for (int i = 0; i < numPoints - 1; ++i)
+		{
+			hqLine(pxy[0], pxy[1], 1.f, pxy[2], pxy[3], 1.f);
+
+			pxy += 2;
+			hxy += 2;
+		}
+	}
+	hqEnd();
+
+#if 0
+	pxy = pxyStorage;
+	hxy = hxyStorage;
+
+	hqBegin(HQ_LINES);
+	{
+		for (int i = 0; i < numPoints; ++i)
+		{
+			const float tx = hxy[0];
+			const float ty = hxy[1];
+			//const float ts = std::hypot(tx, ty);
+
+			hqLine(
+				pxy[0],          pxy[1],          1.f,
+				pxy[0] + hxy[0], pxy[1] + hxy[1], 1.f);
+
+			pxy += 2;
+			hxy += 2;
+		}
+	}
+	hqEnd();
+#endif
+
+#if 0
+	pxy = pxyStorage;
+
+	static bool useScreenSpace = false;
+	static int mode = 0;
+
+	if (keyboard.wentDown(SDLK_a))
+		useScreenSpace = !useScreenSpace;
+	if (keyboard.wentDown(SDLK_s))
+		mode = (mode + 1) % 4;
+
+	if (mode == 0)
+		hqBegin(HQ_FILLED_RECTS, useScreenSpace);
+	if (mode == 1)
+		hqBegin(HQ_FILLED_CIRCLES, useScreenSpace);
+	if (mode == 2)
+		hqBegin(HQ_STROKED_RECTS, useScreenSpace);
+	if (mode == 3)
+		hqBegin(HQ_STROKED_CIRCLES, useScreenSpace);
+	{
+		for (int i = 0; i < numPoints; ++i)
+		{
+			if (mode == 0)
+			{
+				hqFillRect(
+					pxy[0] - 5.f, pxy[1] - 5.f,
+					pxy[0] + 5.f, pxy[1] + 5.f);
+			}
+
+			if (mode == 1)
+			{
+				hqFillCircle(pxy[0], pxy[1], 5.f);
+			}
+
+			if (mode == 2)
+			{
+				hqStrokeRect(
+					pxy[0] - 5.f, pxy[1] - 5.f,
+					pxy[0] + 5.f, pxy[1] + 5.f,
+					2.f);
+			}
+
+			if (mode == 3)
+			{
+				hqStrokeCircle(pxy[0], pxy[1], 5.f, 2.f);
+			}
+
+			pxy += 2;
+		}
+	}
+	hqEnd();
+#endif
+}
 
 //
 

@@ -1,3 +1,5 @@
+static const char * s_genericVs = R"SHADER(
+
 include engine/ShaderVS.txt
 
 shader_out vec3 v_normal;
@@ -24,3 +26,5 @@ void main()
 	v_color = color;
 	v_texcoord0 = texcoord;
 }
+
+)SHADER";

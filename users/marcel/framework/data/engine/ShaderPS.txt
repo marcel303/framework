@@ -1,3 +1,5 @@
+static const char * s_shaderPs = R"SHADER(
+
 include engine/ShaderCommon.txt
 
 #if LEGACY_GL
@@ -5,3 +7,5 @@ include engine/ShaderCommon.txt
 #else
 	out vec4 shader_fragColor;
 #endif
+
+)SHADER";

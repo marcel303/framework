@@ -1,3 +1,6 @@
+
+static const char * s_genericPs = R"SHADER(
+
 include engine/ShaderPS.txt
 
 uniform vec4 params;
@@ -51,3 +54,5 @@ void main()
 	
 	shader_fragColor = result;
 }
+
+)SHADER";

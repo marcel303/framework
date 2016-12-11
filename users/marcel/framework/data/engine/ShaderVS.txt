@@ -1,15 +1,17 @@
+static const char * s_shaderVs = R"SHADER(
+
 include engine/ShaderCommon.txt
 
 // vertex streams
 
-shader_attrib vec3 in_position;
+shader_attrib vec4 in_position4;
 shader_attrib vec3 in_normal;
 shader_attrib vec4 in_color;
 shader_attrib vec2 in_texcoord;
 shader_attrib vec4 in_skinningBlendIndices;
 shader_attrib vec4 in_skinningBlendWeights;
 
-#define in_position4 vec4(in_position, 1.f)
+#define in_position in_position4.xyz
 
 // OpenGL constants
 
@@ -104,3 +106,5 @@ bool drawColorBlendWeights()
 {
 	return drawColor.w != 0.0;
 }
+
+)SHADER";

@@ -4,6 +4,7 @@
 #include "image.h"
 #include "internal.h"
 #include "spriter.h"
+#include "StringEx.h"
 
 #if defined(WIN32)
 	#include <Windows.h>
@@ -514,16 +515,25 @@ static void showProgramInfoLog(GLuint program)
 
 static bool fileExists(const char * filename)
 {
-	FILE * file;
+	const char * text = nullptr;
 
-	if (fopen_s(&file, filename, "rb") == 0)
+	if (framework.tryGetShaderSource(filename, text))
 	{
-		fclose(file);
 		return true;
 	}
 	else
 	{
-		return false;
+		FILE * file;
+
+		if (fopen_s(&file, filename, "rb") == 0)
+		{
+			fclose(file);
+			return true;
+		}
+		else
+		{
+			return false;
+		}
 	}
 }
 
@@ -534,28 +544,42 @@ static bool loadFileContents(const char * filename, bool normalizeLineEndings, c
 	bytes = 0;
 	numBytes = 0;
 
-	FILE * file = 0;
+	const char * text = nullptr;
 
-	if (fopen_s(&file, filename, "rb") != 0)
+	if (framework.tryGetShaderSource(filename, text))
 	{
-		result = false;
+		const size_t textLength = strlen(text);
+
+		bytes = new char[textLength];
+		numBytes = textLength;
+
+		memcpy(bytes, text, textLength * sizeof(char));
 	}
 	else
 	{
-		// load source from file
+		FILE * file = 0;
 
-		fseek(file, 0, SEEK_END);
-		numBytes = ftell(file);
-		fseek(file, 0, SEEK_SET);
-
-		bytes = new char[numBytes];
-
-		if (fread(bytes, 1, numBytes, file) != (size_t)numBytes)
+		if (fopen_s(&file, filename, "rb") != 0)
 		{
 			result = false;
 		}
+		else
+		{
+			// load source from file
 
-		fclose(file);
+			fseek(file, 0, SEEK_END);
+			numBytes = ftell(file);
+			fseek(file, 0, SEEK_SET);
+
+			bytes = new char[numBytes];
+
+			if (fread(bytes, 1, numBytes, file) != (size_t)numBytes)
+			{
+				result = false;
+			}
+
+			fclose(file);
+		}
 	}
 
 	if (result)
@@ -592,12 +616,13 @@ static bool preprocessShader(const std::string & source, std::string & destinati
 	for (size_t i = 0; i < lines.size(); ++i)
 	{
 		const std::string & line = lines[i];
+		const std::string trimmedLine = String::TrimLeft(lines[i]);
 
 		const char * includeStr = "include ";
 
-		if (strstr(line.c_str(), includeStr) == line.c_str())
+		if (strstr(trimmedLine.c_str(), includeStr) == trimmedLine.c_str())
 		{
-			const char * filename = line.c_str() + strlen(includeStr);
+			const char * filename = trimmedLine.c_str() + strlen(includeStr);
 
 			char * bytes;
 			int numBytes;
@@ -731,7 +756,7 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 	
 	bool result = true;
 	
-	name = name;
+	name = _name;
 	vs = filenameVs;
 	ps = filenamePs;
 	
@@ -768,7 +793,7 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 			checkErrorGL();
 		}
 		
-		glBindAttribLocation(program, VS_POSITION,      "in_position");
+		glBindAttribLocation(program, VS_POSITION,      "in_position4");
 		glBindAttribLocation(program, VS_NORMAL,        "in_normal");
 		glBindAttribLocation(program, VS_COLOR,         "in_color");
 		glBindAttribLocation(program, VS_TEXCOORD,      "in_texcoord");
@@ -1817,4 +1842,17 @@ UiCacheElem & UiCache::findOrCreate(const char * filename)
 		
 		return i->second;
 	}
+}
+
+//
+
+BuiltinShaders::BuiltinShaders()
+	: hqLine("builtin-hq-line")
+	, hqFilledTriangle("builtin-hq-filled-triangle")
+	, hqFilledCircle("builtin-hq-filled-circle")
+	, hqFilledRect("builtin-hq-filled-rect")
+	, hqStrokeTriangle("builtin-hq-stroked-triangle")
+	, hqStrokedCircle("builtin-hq-stroked-circle")
+	, hqStrokedRect("builtin-hq-stroked-rect")
+{
 }
