@@ -20,7 +20,7 @@ project(anaglyphic)
 
 # --- anaglyphic ---
 
-file(GLOB_RECURSE source "*.cpp" "*.h")
+file(GLOB_RECURSE source "*.c" "*.cpp" "*.h")
 
 set(GAME_FILES
 	main.cpp)
