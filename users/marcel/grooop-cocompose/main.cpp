@@ -10,6 +10,14 @@
 #include "types.h"
 #include <vector>
 
+#define DO_COCREATE 0
+#define DO_GAUSSIAN_BLUR 0
+#define DO_COMPUTE_PARTICLES 1
+#define DO_LIGHT_PROPAGATION 0
+#define DO_FLOCKING 0
+#define DO_HQ_PRIMITIVES 0
+#define DO_BUILTIN_SHADER 0
+
 /*
 
 cocompose v1 todo:
@@ -34,8 +42,20 @@ cocompose v2 todo:
 
 */
 
-#define GFX_SX 1500
-#define GFX_SY 1000
+#if 1
+	#if defined(DEBUG)
+		#define GFX_SX 1500
+		#define GFX_SY 900
+	#else
+		#define GFX_SX 1920
+		#define GFX_SY 1080
+	#endif
+#else
+	#define GFX_SX (1920*2)
+	#define GFX_SY (1080*2)
+#endif
+
+#if DO_COCREATE
 
 #define kAnimTransitionTime 1.f
 
@@ -1265,6 +1285,15 @@ struct Picture : Editable
 					sprite.draw();
 				}
 				popSurface();
+
+				ComputeShader cs("randomize.cs");
+				setShader(cs);
+				{
+					cs.setImmediate("value", .2f);
+					cs.setTextureRw("image", 0, image->getTexture(), GL_RGBA8, false, false);
+					cs.dispatch(image->getWidth(), image->getHeight(), 1);
+				}
+				clearShader();
 			}
 		}
 
@@ -1869,20 +1898,481 @@ static void createAudioCache()
 	}
 }
 
+#endif
+
+#if DO_COMPUTE_PARTICLES
+
+struct Particle
+{
+	float px;
+	float py;
+	float pz;
+
+	float vx;
+	float vy;
+	float vz;
+};
+
+static void randomizeParticles(ShaderBufferRw & particleBuffer, const int particleCount)
+{
+	Particle * particleArray = new Particle[particleCount];
+	memset(particleArray, 0, sizeof(Particle) * particleCount);
+
+	for (int i = 0; i < particleCount; ++i)
+	{
+		const float baseRadius = random(0.f, Calc::m2PI);
+
+		{
+			const float radius = random(.1f, .5f);
+			//const float angle = random(0.f, Calc::m2PI);
+			const float angle = baseRadius;
+
+			particleArray[i].px = std::cos(angle) * radius;
+			particleArray[i].py = std::sin(angle) * radius;
+			particleArray[i].pz = random(-1.f, +1.f);
+		}
+
+		{
+			const float speed = std::pow(random(0.f, 1.f), 4.f) * 1.f;
+			//const float angle = random(0.f, Calc::m2PI);
+			const float angle = baseRadius + Calc::mPI2;
+
+			particleArray[i].vx = std::cos(angle) * speed;
+			particleArray[i].vy = std::sin(angle) * speed;
+			particleArray[i].vz = random(-1.f, +1.f);
+		}
+	}
+
+	particleBuffer.setDataRaw(particleArray, sizeof(Particle) * particleCount);
+
+	delete[] particleArray;
+}
+
+#endif
+
+#if DO_LIGHT_PROPAGATION
+
+struct LightVertex
+{
+	LightVertex()
+	{
+		memset(this, 0, sizeof(*this));
+	}
+
+	float px;
+	float py;
+
+	Vec3 light;
+	Vec3 lightIn;
+	Vec3 lightOut;
+
+	Vec3 lightVel;
+	Vec3 lightForce;
+	int numLightForce;
+};
+
+struct LightEdge
+{
+	int vertex1;
+	int vertex2;
+
+	int distance;
+};
+
+struct LightMesh
+{
+	std::vector<LightVertex> vertices;
+	std::vector<LightEdge> edges;
+
+	void addLight(const int vertex, const Vec3 amount)
+	{
+		//vertices[vertex].light += amount * 10.f;
+		vertices[vertex].light += amount * 2.f;
+	}
+
+	void tick(const float dt)
+	{
+#if 0
+		const float amount = 25.f;
+
+		for (int i = edges.size() - 1; i >= 0; --i)
+		{
+			const LightEdge & e = edges[i];
+
+			LightVertex & v1 = vertices[e.vertex1];
+			LightVertex & v2 = vertices[e.vertex2];
+
+			const Vec3 delta = v2.light - v1.light;
+
+			v1.lightForce += delta * amount;
+			v2.lightForce -= delta * amount;
+			v1.numLightForce++;
+			v2.numLightForce++;
+		}
+
+		const float falloff = std::pow(.95f, dt);
+
+		for (LightVertex & v : vertices)
+		{
+			if (true)
+			{
+				v.lightForce -= v.light * amount;
+				v.numLightForce++;
+			}
+
+			if (v.numLightForce != 0)
+			{
+				v.lightVel += (v.lightForce / v.numLightForce) * dt;
+			
+				v.lightForce.SetZero();
+				v.numLightForce = 0;
+			}
+
+			v.light += v.lightVel * dt;
+
+			v.lightVel *= falloff;
+		}
+#else
+		for (int i = edges.size() - 1; i >= 0; --i)
+		{
+			const LightEdge & e = edges[i];
+
+			LightVertex & v1 = vertices[e.vertex1];
+			LightVertex & v2 = vertices[e.vertex2];
+
+			const float x = Calc::Min(1.f, dt * 15.f);
+			//const float x = 1.f;
+
+			//const Vec3 amount = v1.light * x;
+			const Vec3 amount = Vec3(
+				v1.light[0] * x / 1.0f,
+				v1.light[1] * x / 1.1f,
+				v1.light[2] * x / 1.2f);
+			
+			v2.lightIn += amount;
+			v1.lightOut = amount;
+		}
+
+		for (LightVertex & v : vertices)
+		{
+			v.light += v.lightIn;
+			v.light -= v.lightOut;
+			v.lightIn.SetZero();
+			//v.lightIn -= v.
+		}
+#endif
+	}
+};
+
+static void subdivideLightMesh(const LightMesh & in, LightMesh & out, const float maxDistance)
+{
+	out = LightMesh();
+	out.vertices = in.vertices;
+
+	for (const LightEdge & e : in.edges)
+	{
+		const LightVertex & v1 = in.vertices[e.vertex1];
+		const LightVertex & v2 = in.vertices[e.vertex2];
+
+		const float dx = v2.px - v1.px;
+		const float dy = v2.py - v1.py;
+		const float ds = std::hypot(dx, dy);
+
+		const int numSteps = int(std::ceil(ds / maxDistance)) + 1;
+
+		const float sx = dx / (numSteps - 1);
+		const float sy = dy / (numSteps - 1);
+
+		int vi1 = e.vertex1;
+
+		for (int i = 0; i < numSteps; ++i)
+		{
+			int vi2;
+
+			if (i == numSteps - 1)
+			{
+				vi2 = e.vertex2;
+			}
+			else
+			{
+				const float px = v1.px + sx * i;
+				const float py = v1.py + sy * i;
+
+				LightVertex v;
+				v.px = px;
+				v.py = py;
+
+				out.vertices.push_back(v);
+
+				vi2 = out.vertices.size() - 1;
+			}
+
+			LightEdge se;
+			se.vertex1 = vi1;
+			se.vertex2 = vi2;
+			out.edges.push_back(se);
+
+			vi1 = vi2;
+		}
+	}
+}
+
+static void createLightMesh(LightMesh & out)
+{
+	LightMesh mesh;
+
+	LightVertex vertex;
+	vertex.px = GFX_SX/2.f;
+	vertex.py = GFX_SY;
+	mesh.vertices.push_back(vertex);
+
+	for (int i = 0; i < 20; ++i)
+	{
+		if (false)
+		{
+			LightVertex vertex;
+			vertex.px = random(0.f, float(GFX_SX));
+			vertex.py = random(0.f, float(GFX_SY));
+			mesh.vertices.push_back(vertex);
+		}
+
+		//if (mesh.vertices.size() >= 2)
+		{
+			int vertex1;
+			
+			if (rand() % 2)
+				vertex1 = rand() % mesh.vertices.size();
+			else
+				vertex1 = (mesh.vertices.size() - 1);
+
+			//const int numBranches = random(1, 4);
+			//const int numBranches = 1;
+			const int numBranches = 4;
+
+			for (int i = 0; i < numBranches; ++i)
+			{
+				int vertex2;
+
+				{
+					const float s = 300.f;
+					const float sy = 200.f;
+
+					LightVertex vertex = mesh.vertices[vertex1];
+					vertex.px += random(-s*3.f/4.f, +s*3.f/4.f);
+					vertex.py += random(-sy, -sy*2.f/4.f);
+
+					mesh.vertices.push_back(vertex);
+					vertex2 = (mesh.vertices.size() - 1);
+				}
+
+				LightEdge edge;
+				edge.vertex1 = vertex1;
+				edge.vertex2 = vertex2;
+
+				mesh.edges.push_back(edge);
+			}
+		}
+	}
+
+	subdivideLightMesh(mesh, out, 10.f);
+}
+
+#endif
+
+#if DO_FLOCKING
+
+struct FlockElem
+{
+	float px;
+	float py;
+	float pxOld;
+	float pyOld;
+	float vx;
+	float vy;
+};
+
+struct Flock
+{
+	const static int kNumFlockElems = 200;
+
+	FlockElem elems[kNumFlockElems];
+
+	void randomize()
+	{
+		for (FlockElem & e : elems)
+		{
+			e.px = GFX_SX/2 + random(-GFX_SX/4, +GFX_SX/4);
+			e.py = random(0, GFX_SY);
+
+			e.vx = 0.f;
+			e.vy = 0.f;
+		}
+	}
+
+	void tick(const float dt)
+	{
+		float mx = 0.f;
+		float my = 0.f;
+
+		for (const FlockElem & e : elems)
+		{
+			mx += e.px;
+			my += e.py;
+		}
+
+		mx /= kNumFlockElems;
+		my /= kNumFlockElems;
+
+		mx = GFX_SX/2;
+		my = GFX_SY/2;
+
+		mx += std::cos(framework.time * 2.f / 3.45f) * 200.f;
+		my += std::sin(framework.time * 2.f / 3.21f) * 200.f;
+
+		//
+
+		const float falloff = std::pow(.2f, dt);
+
+		for (FlockElem & e : elems)
+		{
+			float md = 0.f;
+			const FlockElem * me = nullptr;
+
+			for (const FlockElem & other : elems)
+			{
+				if (&other == &e)
+					continue;
+
+				const float dx = other.px - e.px;
+				const float dy = other.py - e.py;
+				const float ds = std::hypot(dx, dy);
+
+				if (false)
+				{
+					if (ds > 0.f)
+					{
+						const float dc = ds - 50.f;
+						const float dcs = std::abs(dc);
+
+						const float strength = 1.f / (dcs + .1f) * 4000.f;
+
+						//const float strength = Calc::Saturate(Calc::Lerp(1.f, 0.f, dcs/50.f));
+
+						e.vx += dx / ds * strength * dt;
+						e.vy += dy / ds * strength * dt;
+					}
+				}
+				else
+				{
+					if (ds > 0.f && (ds < md || md == 0.f))
+					{
+						md = ds;
+						me = &other;
+					}
+				}
+			}
+
+#if 1
+			if (me != nullptr)
+			{
+				const float dx = me->px - e.px;
+				const float dy = me->py - e.py;
+				const float ds = std::hypot(dx, dy);
+				const float dc = ds - 50.f;
+
+				//const float strength = (std::abs(dc) < 100.f ? Calc::Sign(dc) : 0.f) * 100.f;
+
+				const float strength = Calc::Sign(dc) * 100.f;
+				//const float strength = Calc::Sign(dc) / (std::abs(dc) / 1000.f + .001f);
+
+				e.vx += dx / ds * strength * dt;
+				e.vy += dy / ds * strength * dt;
+			}
+#endif
+
+			if (true)
+			{
+				const float dx = mx - e.px;
+				const float dy = my - e.py;
+				const float ds = std::hypot(dx, dy);
+
+				const float strength = 100.f;
+
+				e.vx += dx / ds * strength * dt;
+				e.vy += dy / ds * strength * dt;
+			}
+		}
+
+		for (FlockElem & e : elems)
+		{
+			e.pxOld = e.px;
+			e.pyOld = e.py;
+
+			e.px += e.vx * dt;
+			e.py += e.vy * dt;
+
+			if (false)
+			{
+				const float v = std::hypot(e.vx, e.vy);
+				const float kMaxSpeed = 100.f;
+
+				if (v > kMaxSpeed)
+				{
+					e.vx = e.vx / v * kMaxSpeed;
+					e.vy = e.vy / v * kMaxSpeed;
+				}
+			}
+			
+			e.vx *= falloff;
+			e.vy *= falloff;
+		}
+	}
+
+	void draw() const
+	{
+		//gxBegin(GL_LINES);
+		gxBegin(GL_POINTS);
+		{
+			for (const FlockElem & e : elems)
+			{
+				setColor(colorWhite);
+				gxVertex2f(e.pxOld, e.pyOld);
+				gxVertex2f(e.px, e.py);
+			}
+		}
+		gxEnd();
+	}
+};
+
+#endif
+
 int main(int argc, char * argv[])
 {
 	changeDirectory("data");
 
+#if DO_COCREATE
 	createAudioCache();
+#endif
 
+	framework.enableRealTimeEditing = true;
+
+#if DO_COCREATE
 	framework.filedrop = true;
 	framework.actionHandler = handleAction;
+#endif
 
 	framework.exclusiveFullscreen = false;
 	framework.useClosestDisplayMode = true;
-	//framework.fullscreen = true;
 
-	framework.minification = 2;
+#if !defined(DEBUG)
+	framework.fullscreen = true;
+#endif
+
+	//framework.minification = 2;
+
+#if defined(DEBUG)
+	framework.windowX = 0;
+#endif
 
 	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
 	{
@@ -1908,10 +2398,13 @@ int main(int argc, char * argv[])
 			blurredSurfaces[i] = new Surface(sx, sy, true);
 		}
 
+#if DO_COCREATE
 		g_creation = new Creation();
+#endif
 
 		framework.process();
 
+#if DO_COCREATE
 		g_creation->insertBegin("camels.jpg", 100, 100);
 		g_creation->insertEnd(100, 100);
 
@@ -1958,6 +2451,28 @@ int main(int argc, char * argv[])
 		}
 #endif
 
+#endif
+
+#if DO_COMPUTE_PARTICLES
+		ShaderBufferRw particleBuffer;
+
+		const int particleCount = 100 * 10000;
+
+		randomizeParticles(particleBuffer, particleCount);
+#endif
+
+#if DO_LIGHT_PROPAGATION
+		LightMesh mesh;
+
+		createLightMesh(mesh);
+#endif
+
+#if DO_FLOCKING
+		Flock flock;
+
+		flock.randomize();
+#endif
+
 		while (!framework.quitRequested)
 		{
 			framework.process();
@@ -1967,6 +2482,9 @@ int main(int argc, char * argv[])
 				framework.quitRequested = true;
 			}
 
+			const float dt = framework.timeStep;
+
+#if DO_COCREATE
 			g_creation->evaluateMouseHover(mouse.x, mouse.y);
 
 			if (mouse.wentDown(BUTTON_LEFT))
@@ -1975,15 +2493,71 @@ int main(int argc, char * argv[])
 			}
 
 			g_creation->mouseMoveBase(mouse.x, mouse.y);
-
-			const float dt = framework.timeStep;
 			
 			g_creation->tickBase(dt);
+#endif
+
+			// compute
+
+#if DO_COMPUTE_PARTICLES
+			if (keyboard.wentDown(SDLK_p))
+				randomizeParticles(particleBuffer, particleCount);
+
+			ComputeShader particleCS("particleSim.cs", 64, 1, 1);
+			setShader(particleCS);
+			{
+				particleCS.setBufferRw("particleBuffer", particleBuffer);
+				particleCS.setImmediate("dt", dt);
+				particleCS.setImmediate("time", framework.time);
+				particleCS.setImmediate("gravityStrength", 2.f * mouse.x / float(GFX_SX));
+				particleCS.dispatch(particleCount, 1, 1);
+			}
+			clearShader();
+#endif
+
+#if DO_LIGHT_PROPAGATION
+			if (keyboard.wentDown(SDLK_m))
+			{
+				createLightMesh(mesh);
+			}
+
+			if (keyboard.wentDown(SDLK_l))
+			{
+				const float hue = random(-.1f, .4f);
+				const Color color = Color::fromHSL(hue, .4f, .5f);
+
+				mesh.addLight(0, Vec3(color.r, color.g, color.b) * 20.f);
+			}
+
+			if (keyboard.wentDown(SDLK_k))
+			{
+				const float hue = random(-.1f, .4f);
+				const Color color = Color::fromHSL(hue, .4f, .5f);
+
+				for (int i = 0; i < 4; ++i)
+				{
+					mesh.addLight(rand() % mesh.vertices.size(), Vec3(color.r, color.g, color.b) * 20.f);
+				}
+			}
+			
+			for (int i = 0; i < 8; ++i)
+				mesh.tick(dt);
+#endif
+
+#if DO_FLOCKING
+			if (keyboard.wentDown(SDLK_f))
+			{
+				flock.randomize();
+			}
+			
+			flock.tick(dt);
+#endif
 
 			framework.beginDraw(0, 0, 0, 0);
 			{
 				Surface * surface = downresSurfaces[0];
 
+#if DO_COCREATE
 				pushSurface(surface);
 				{
 					surface->clear(127, 127, 127, 255);
@@ -1991,8 +2565,77 @@ int main(int argc, char * argv[])
 					g_creation->draw();
 				}
 				popSurface();
+#else
+				pushSurface(surface);
+				{
+					surface->clear(0, 0, 0, 255);
+				}
+				popSurface();
+#endif
 
-			#if 0
+#if DO_COMPUTE_PARTICLES
+				pushSurface(surface);
+				{
+					gxPushMatrix();
+					{
+						gxTranslatef(GFX_SX/2, GFX_SY/2, 0.f);
+
+						Shader particle("particle");
+						setShader(particle);
+						{
+							particle.setBufferRw("particleBuffer", particleBuffer);
+							particle.setImmediate("colorStrength", 8.f * mouse.y / float(GFX_SY));
+
+							setBlend(BLEND_ADD);
+							gxEmitVertices(GL_POINTS, particleCount);
+							setBlend(BLEND_ALPHA);
+						}
+						clearShader();
+					}
+					gxPopMatrix();
+				}
+				popSurface();
+#endif
+
+#if DO_LIGHT_PROPAGATION
+				pushSurface(surface);
+				{
+					glPointSize(4.f);
+
+					gxBegin(GL_POINTS);
+					{
+						for (const LightVertex & v : mesh.vertices)
+						{
+							const float a = .4f;
+							const float b = 1.f + a;
+
+							const Vec3 c = (v.light + Vec3(a, a, a)) / b;
+
+							setColorf(c[0], c[1], c[2], 1.f);
+
+							gxVertex2f(v.px, v.py);
+						}
+					}
+					gxEnd();
+
+					glPointSize(1.f);
+				}
+				popSurface();
+#endif
+
+#if DO_FLOCKING
+				pushSurface(surface);
+				{
+					glPointSize(5.f);
+					{
+						flock.draw();
+					}
+					glPointSize(1.f);
+				}
+				popSurface();
+#endif
+
+			#if DO_GAUSSIAN_BLUR
 				setBlend(BLEND_OPAQUE);
 				{
 					// create downsample chain
@@ -2026,7 +2669,7 @@ int main(int argc, char * argv[])
 
 							Shader shader(shaderName, "effect.vs", shaderName);
 							shader.setTexture("colormap", 0, (j == 0) ? srcSurface->getTexture() : dstSurface->getTexture(), true, true);
-							shader.setImmediate("amount", 1.f);
+							shader.setImmediate("amount", mouse.x / float(GFX_SX) * 2.f);
 
 							dstSurface->postprocess(shader);
 						}
@@ -2048,44 +2691,380 @@ int main(int argc, char * argv[])
 				}
 				setBlend(BLEND_ALPHA);
 
-				setBlend(BLEND_ADD);
-				//setBlend(BLEND_OPAQUE);
+				//setBlend(BLEND_ADD);
+				setBlend(BLEND_OPAQUE);
 				//setBlend(BLEND_ALPHA);
 				{
 					for (int i = 3; i < 4; ++i)
-					//for (int i = 0; i < 1; ++i)
 					{
 						Surface * surface = blurredSurfaces[i];
 						//Surface * surface = downresSurfaces[i];
 
 						gxSetTexture(surface->getTexture());
 						{
-							const float c = .5f;
-							setColorf(c, c, c);
+							//const float c = .5f;
+							//setColorf(c, c, c);
 							//setColorf(1.f, 1.f, 1.f, .5f);
-							drawRect(0, 0, GFX_SX, GFX_SY);
+							setColor(colorWhite);
+							//drawRect(0, 0, GFX_SX, GFX_SY);
 						}
 						gxSetTexture(0);
 					}
 				}
 				setBlend(BLEND_ALPHA);
 			#else
+				static bool doPath = true;
+
+				if (keyboard.wentDown(SDLK_p))
+					doPath = !doPath;
+
+				pushSurface(surface);
+				{
+#if 0
+					gxSetTexture(getTexture("lights1.jpg"));
+					{
+						drawRect(0, 0, surface->getWidth(), surface->getHeight());
+					}
+					gxSetTexture(0);
+#endif
+
+					if (doPath)
+					{
+						gxPushMatrix();
+						{
+							gxTranslatef(GFX_SX/2, GFX_SY/2, 0.f);
+							//gxScalef(1.f, 1.f, 0.f);
+							//gxRotatef(framework.time * 40.f, 0.f, 1.f, 1.f);
+							const float scale = mouse.x / float(GFX_SX) * 10.f;
+							gxScalef(scale, scale, 1.f);
+
+							setColor(colorWhite);
+							Path2d path;
+							path.moveTo(-100.f, -100.f);
+							path.line(+100.f,    0.f);
+							path.line(   0.f, +100.f);
+							path.line(-100.f,    0.f);
+							path.curve(-200.f, +100.f, -200.f, 0.f, 0.f, -100.f -200.f * std::cos(framework.time * 0.f));
+							path.curveTo(0.f, 0.f, 0.f, +100.f, 0.f, +100.f +500.f * std::cos(framework.time * 1.f));
+
+							setBlend(BLEND_ALPHA);
+
+							if (keyboard.isDown(SDLK_h))
+								hqDrawPath(path);
+							else
+								drawPath(path);
+						}
+						gxPopMatrix();
+					}
+				}
+				popSurface();
+
+			#if DO_HQ_PRIMITIVES
+				pushSurface(surface);
+				{
+					static bool doTransform = false;
+
+					static float txTime = 0.f;
+					static float txSpeed = 0.f;
+
+					static bool fixedStrokeSize = false;
+
+					//
+
+					if (keyboard.wentDown(SDLK_t))
+						doTransform = !doTransform;
+					if (keyboard.wentDown(SDLK_s))
+						fixedStrokeSize = !fixedStrokeSize;
+
+					//
+
+					if (doTransform)
+						txSpeed = std::min(1.f, txSpeed + dt/2.f);
+					else
+						txSpeed = std::max(0.f, txSpeed - dt/2.f);
+					txTime += txSpeed * dt;
+
+					//
+
+					{
+						setBlend(BLEND_ALPHA);
+
+						setFont("calibri.ttf");
+						setColor(colorWhite);
+						drawText(10.f, 10.f, 24, +1, +1, "mode: %s", false ? "software transform / single draw" : "hardware transform / multi draw");
+
+						struct Ve
+						{
+							Vec2 p;
+							Vec2 v;
+							float strokeSize;
+						};
+
+						const int kMaxVe = 256;
+						static int numVe = 0;
+						static Ve ve[kMaxVe];
+						static bool veInit = true;
+
+						if (veInit || keyboard.isDown(SDLK_i))
+						{
+							veInit = false;
+
+							numVe = random(0, kMaxVe);
+
+							for (int i = 0; i < numVe; ++i)
+							{
+								ve[i].p[0] = random(0, GFX_SX);
+								ve[i].p[1] = random(0, GFX_SY);
+								ve[i].v[0] = random(-30.f, +10.f) * .1f;
+								ve[i].v[1] = random(-80.f, +10.f) * .1f;
+								ve[i].strokeSize = random(.1f, 1.f);
+							}
+						}
+						else
+						{
+							for (int i = 0; i < numVe; ++i)
+							{
+								ve[i].p += ve[i].v * dt;
+							}
+						}
+
+						//const float strokeSize = 2.f - std::cos(framework.time * .5f) * 1.f;
+						const float strokeSize = 0.f + mouse.y / float(GFX_SY) * 10.f;
+
+						{
+							setBlend(BLEND_ALPHA);
+
+							gxPushMatrix();
+							{
+								gxTranslatef(+GFX_SX/2, +GFX_SY/2, 0.f);
+								gxRotatef(std::sin(txTime) * 10.f, 0.f, 0.f, 1.f);
+								gxScalef(std::cos(txTime / 23.45f) * 1.f, std::cos(txTime / 34.56f) * 1.f, 1.f);
+								gxTranslatef(-GFX_SX/2, -GFX_SY/2, 0.f);
+
+								hqBegin(HQ_LINES);
+								{
+									for (int i = 0; i < numVe/2; ++i)
+									{
+										const Ve & ve1 = ve[i * 2 + 0];
+										const Ve & ve2 = ve[i * 2 + 1];
+
+										const float strokeSize1 = fixedStrokeSize ?  0.f : strokeSize * ve1.strokeSize;
+										const float strokeSize2 = fixedStrokeSize ? 12.f : strokeSize * ve2.strokeSize;
+
+										setColor(colorWhite);
+										hqLine(ve1.p[0], ve1.p[1], strokeSize1, ve2.p[0], ve2.p[1], strokeSize2);
+									}
+								}
+								hqEnd();
+							}
+							gxPopMatrix();
+						}
+					}
+
+#if 1
+					gxPushMatrix();
+					{
+						gxTranslatef(GFX_SX/2, GFX_SY/2, 0.f);
+
+						hqBegin(HQ_FILLED_TRIANGLES);
+						{
+							for (int i = 1; i <= 10; ++i)
+							{
+								setColorf(1.f / i, .5f / i, .25f / i);
+								hqFillTriangle(-200.f / i, 0.f, +200.f / i, 0.f, 0.f, +400.f / i);
+							}
+						}
+						hqEnd();
+
+						hqBegin(HQ_STROKED_TRIANGLES);
+						{
+							for (int i = 1; i <= 10; ++i)
+							{
+								setColorf(1.f, 1.f, 1.f, 1.f);
+								hqStrokeTriangle(-200.f / i, 0.f, +200.f / i, 0.f, 0.f, +400.f / i, 4.f);
+							}
+						}
+						hqEnd();
+
+						hqBegin(HQ_FILLED_CIRCLES);
+						{
+							for (int i = 1; i <= 10; ++i)
+							{
+								setColorf(.25f / i, .5f / i, 1.f / i);
+								hqFillCircle(0.f, 0.f, 100.f / i);
+							}
+						}
+						hqEnd();
+
+						hqBegin(HQ_STROKED_CIRCLES);
+						{
+							for (int i = 1; i <= 10; ++i)
+							{
+								setColor(colorWhite);
+								hqStrokeCircle(0.f, 0.f, 100.f / i, 10.f / i + .5f);
+							}
+						}
+						hqEnd();
+
+						hqBegin(HQ_LINES);
+						{
+							setColor(colorWhite);
+
+							for (int i = 1; i <= 10; ++i)
+							{
+								hqLine(-100.f, 400.f / i, (i % 2) ? 10-i : 0.f, +100.f, 400.f / i, (i % 2) ? 0.f : 10-i);
+							}
+						}
+						hqEnd();
+
+						gxPushMatrix();
+						{
+							gxRotatef(framework.time, 0.f, 0.f, 1.f);
+
+							hqBegin(HQ_FILLED_RECTS);
+							{
+								setColor(colorWhite);
+								//hqFillRect(-50.f, -50.f, +50.f, +50.f);
+							}
+							hqEnd();
+
+							hqBegin(HQ_STROKED_RECTS);
+							{
+								setColor(colorBlack);
+								for (int i = 0; i < 10; ++i)
+									hqStrokeRect(-50.f - i * 10, -50.f - i * 10, +50.f + i * 10, +50.f + i * 10, i + .5f);
+							}
+							hqEnd();
+						}
+						gxPopMatrix();
+					}
+					gxPopMatrix();
+
+					gxPushMatrix();
+					{
+						const float scale = mouse.y / float(GFX_SY) * 10.f;
+
+						gxTranslatef(+GFX_SX/2, +GFX_SY/2, 0.f);
+						gxRotatef(std::sin(txTime) * 10.f, 0.f, 0.f, 1.f);
+						//gxScalef(std::cos(txTime / 23.45f) * 1.f, std::cos(txTime / 34.56f) * 1.f, 1.f);
+						gxScalef(scale, scale, 1.f);
+
+						setColorf(1.f / 10.f, .5f / 10.f, .25f / 10.f);
+
+						hqBegin(HQ_FILLED_TRIANGLES);
+						{
+							const Vec2 po1(-10.f, 0.f);
+							const Vec2 po2(+10.f, 0.f);
+							const Vec2 po3(0.f, +20.f);
+
+							for (int t = 0; t < 11 * 11; ++t)
+							{
+								const int ox = (t % 11) - 5;
+								const int oy = (t / 11) - 5;
+
+								if (std::abs(ox) + std::abs(oy) <= 3)
+									continue;
+
+								const Vec2 o(ox * 20.f, oy * 20.f);
+
+								const Vec2 p1 = po1 + o;
+								const Vec2 p2 = po2 + o;
+								const Vec2 p3 = po3 + o;
+
+								hqFillTriangle(p1[0], p1[1], p2[0], p2[1], p3[0], p3[1]);
+							}
+						}
+						hqEnd();
+					}
+					gxPopMatrix();
+#endif
+
+#if 0
+					gxPushMatrix();
+					{
+						const float scale = mouse.y / float(GFX_SY) * 10.f;
+
+						gxTranslatef(+GFX_SX/2, +GFX_SY/2, 0.f);
+						gxRotatef(std::sin(txTime) * 10.f, 0.f, 0.f, 1.f);
+						//gxScalef(std::cos(txTime / 23.45f) * 1.f, std::cos(txTime / 34.56f) * 1.f, 1.f);
+						gxScalef(scale, scale, 1.f);
+
+						hqBegin(HQ_FILLED_CIRCLES);
+						{
+							const Vec2 po(0.f, 0.f);
+							const float radius = 25.f;
+
+							for (int t = 0; t < 11 * 11; ++t)
+							{
+								const int ox = (t % 11) - 5;
+								const int oy = (t / 11) - 5;
+
+								const Vec2 o(ox * 20.f, oy * 20.f);
+								const Vec2 p = po + o;
+									
+								hqFillCircle(p[0], p[1], radius);
+							}
+						}
+						hqEnd();
+					}
+					gxPopMatrix();
+#endif
+				}
+				popSurface();
+			#endif
+
+			#if DO_BUILTIN_SHADER
+				const float treshold = (1.f - std::cos(framework.time)) / 2.f;
+				setShader_Invert(surface->getTexture());
+				//setShader_TresholdLumi(surface->getTexture(), treshold, colorBlack, colorYellow);
+				//setShader_TresholdValue(surface->getTexture(), Color(treshold, treshold*2.f, treshold*3.f, 0.f), colorBlack, colorWhite);
+				//setShader_TresholdLumiFail(surface->getTexture(), treshold, colorBlack);
+				//setShader_TresholdLumiPass(surface->getTexture(), treshold, colorWhite);
+				//setShader_TresholdValuePass(surface->getTexture(), Color(treshold, treshold*2.f, treshold*3.f, 0.f), colorBlack);
+				//setShader_GrayscaleLumi(surface->getTexture());
+				const float weight1 = (1.f - std::cos(framework.time / 1.1f))/2.f;
+				const float weight2 = (1.f - std::cos(framework.time / 2.3f))/2.f;
+				const float weight3 = (1.f - std::cos(framework.time / 3.4f))/2.f;
+				const Vec3 weights = Vec3(weight1, weight2, weight3).CalcNormalized();
+				//setShader_GrayscaleWeights(surface->getTexture(), weights);
+				//setShader_Colorize(surface->getTexture(), framework.time * .1f);
+				//setShader_HueShift(surface->getTexture(), framework.time * .1f);
+				{
+					setBlend(BLEND_OPAQUE);
+					surface->postprocess();
+				}
+				clearShader();
+			#endif
+
+				setBlend(BLEND_OPAQUE);
 				gxSetTexture(surface->getTexture());
 				{
 					setColor(colorWhite);
-					drawRect(0, 0, surface->getWidth(), surface->getHeight());
+					if (keyboard.isDown(SDLK_z))
+					{
+						gxTranslatef(+GFX_SX/2, +GFX_SY/2, 0.f);
+						gxScalef(4.f, 4.f, 1.f);
+						gxTranslatef(-GFX_SX/2, -GFX_SY/2, 0.f);
+						drawRect(0, 0, surface->getWidth(), surface->getHeight());
+					}
+					else
+					{
+						drawRect(0, 0, surface->getWidth(), surface->getHeight());
+					}
 				}
 				gxSetTexture(0);
+				setBlend(BLEND_ALPHA);
 			#endif
 			}
 			framework.endDraw();
 		}
 
+#if DO_COCREATE
 		delete g_creation;
 		g_creation = nullptr;
-
-		framework.shutdown();
+#endif
 	}
+	framework.shutdown();
 
 	return 0;
 }
