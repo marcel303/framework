@@ -362,6 +362,7 @@ public:
 	void setImmediateMatrix4x4(GLint index, const float * matrix);
 	void setTextureUnit(const char * name, int unit); // bind <name> to GL_TEXTURE0 + unit
 	void setTextureUnit(GLint index, int unit); // bind <name> to GL_TEXTURE0 + unit
+	void setTexture(const char * name, int unit, GLuint texture);
 	void setTexture(const char * name, int unit, GLuint texture, bool filtered, bool clamp = true);
 	void setTextureArray(const char * name, int unit, GLuint texture, bool filtered, bool clamp = true);
 	void setBuffer(const char * name, const ShaderBuffer & buffer);

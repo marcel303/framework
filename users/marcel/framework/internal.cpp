@@ -364,12 +364,16 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 					const void * source = ((int*)imageData->imageData) + sourceOffset;
 					
 					glBindTexture(GL_TEXTURE_2D, textures[i]);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+					checkErrorGL();
+
 					glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 					glPixelStorei(GL_UNPACK_ROW_LENGTH, imageData->sx);
 					glTexImage2D(
 						GL_TEXTURE_2D,
 						0,
-						GL_RGBA,
+						GL_RGBA8,
 						cellSx,
 						cellSy,
 						0,
@@ -1700,6 +1704,10 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 
 		#if USE_LEGACY_OPENGL
 			glBindTexture(GL_TEXTURE_2D, elem.texture);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+			checkErrorGL();
+
 			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 			glTexImage2D(
 				GL_TEXTURE_2D,
@@ -1714,6 +1722,10 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 			checkErrorGL();
 		#else
 			glBindTexture(GL_TEXTURE_2D, elem.texture);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+			checkErrorGL();
+
 			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 			glTexImage2D(
 				GL_TEXTURE_2D,

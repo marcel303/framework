@@ -1218,11 +1218,14 @@ bool Surface::init(int sx, int sy, bool highPrecision, bool withDepthBuffer)
 		checkErrorGL();
 		
 		glBindTexture(GL_TEXTURE_2D, m_texture[i]);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+		checkErrorGL();
+
 		if (highPrecision)
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, sx, sy, 0, GL_RGBA, GL_HALF_FLOAT, 0);
 		else
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sx, sy, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
-		
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, sx, sy, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
 		checkErrorGL();
 
 		// set filtering
@@ -1240,6 +1243,10 @@ bool Surface::init(int sx, int sy, bool highPrecision, bool withDepthBuffer)
 			checkErrorGL();
 
 			glBindTexture(GL_TEXTURE_2D, m_depthTexture);
+			checkErrorGL();
+
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 			checkErrorGL();
 
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, sx, sy, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
@@ -1604,6 +1611,17 @@ void Shader::setTextureUnit(GLint index, int unit)
 	fassert(index != -1);
 	fassert(globals.shader == this);
 	glUniform1i(index, unit);
+	checkErrorGL();
+}
+
+void Shader::setTexture(const char * name, int unit, GLuint texture)
+{
+	SET_UNIFORM(name, glUniform1i(index, unit));
+	checkErrorGL();
+
+	glActiveTexture(GL_TEXTURE0 + unit);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	glActiveTexture(GL_TEXTURE0);
 	checkErrorGL();
 }
 
@@ -4925,7 +4943,7 @@ void drawPath(const Path2d & path)
 #endif
 }
 
-static GLuint createTexture(const void * source, int sx, int sy, bool filter, bool clamp, GLenum format)
+static GLuint createTexture(const void * source, int sx, int sy, bool filter, bool clamp, GLenum internalFormat, GLenum uploadFormat)
 {
 	checkErrorGL();
 
@@ -4945,16 +4963,20 @@ static GLuint createTexture(const void * source, int sx, int sy, bool filter, bo
 		// copy image data
 
 		glBindTexture(GL_TEXTURE_2D, texture);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+		checkErrorGL();
+
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 		glPixelStorei(GL_UNPACK_ROW_LENGTH, sx);
 		glTexImage2D(
 			GL_TEXTURE_2D,
 			0,
-			format,
+			internalFormat,
 			sx,
 			sy,
 			0,
-			format,
+			uploadFormat,
 			GL_UNSIGNED_BYTE,
 			source);
 
@@ -4979,12 +5001,12 @@ static GLuint createTexture(const void * source, int sx, int sy, bool filter, bo
 
 GLuint createTextureFromRGB8(const void * source, int sx, int sy, bool filter, bool clamp)
 {
-	return createTexture(source, sx, sy, filter, clamp, GL_RGB);
+	return createTexture(source, sx, sy, filter, clamp, GL_RGB8, GL_RGB);
 }
 
 GLuint createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp)
 {
-	return createTexture(source, sx, sy, filter, clamp, GL_RGBA);
+	return createTexture(source, sx, sy, filter, clamp, GL_RGBA8, GL_RGBA);
 }
 
 void debugDrawText(float x, float y, int size, float alignX, float alignY, const char * format, ...)
