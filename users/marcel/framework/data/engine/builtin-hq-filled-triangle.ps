@@ -27,7 +27,7 @@ float distanceFade(float distance)
 	// todo : add 0.5 to distance so 'stroke' center is actually along edge?
 	//        required for adjacent triangles to touch..
 	
-	return clamp(distance, 0.0, 1.0);
+	return clamp(distance + 0.5, 0.0, 1.0);
 }
 
 void main()
@@ -36,7 +36,7 @@ void main()
 	
 	float d = computeDistance(v_p);
 	
-	if (d > 1.0 && enableOptimizations)
+	if (d > 0.5 && enableOptimizations)
 	{
 		v = 1.0;
 	}
@@ -45,9 +45,7 @@ void main()
 		v = sampleDistanceFunction(v_p);
 	}
 
-	vec4 color = hqColor(v);
-	
-	color = color * v_color;
+	vec4 color = hqColor(v, v_color);
 	
 	shader_fragColor = color;
 }

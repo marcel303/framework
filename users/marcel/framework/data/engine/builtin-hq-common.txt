@@ -43,14 +43,16 @@ float sampleDistanceFunction(vec2 p)
 	return v;
 }
 
-vec4 hqColor(float v)
+vec4 hqColor(float v, vec4 color)
 {
-	vec4 color = vec4(vec3(1), v);
+	color.a *= v;
 	
 	if (debugHq)
 	{
-		color.a = clamp(color.a + 0.2, 0.0, 1.0);
-		color.r = color.a;
+		if (v == 0.0)
+		{
+			color = vec4(0.0, 1.0, 1.0, 0.5);
+		}
 	}
 	
 	return color;

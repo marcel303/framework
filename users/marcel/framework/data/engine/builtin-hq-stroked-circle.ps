@@ -38,9 +38,7 @@ void main()
 		v = sampleDistanceFunction(v_p);
 	}
 
-	vec4 color = hqColor(v);
-	
-	color = color * v_color;
+	vec4 color = hqColor(v, v_color);
 	
 	shader_fragColor = color;
 }
