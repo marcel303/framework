@@ -7,9 +7,10 @@
 #define GFX_SX (1600/2)
 #define GFX_SY (1200/2)
 
-#define DO_FUNKYCAT 1
-#define DO_RGBSPACE 1
-#define DO_INTEGRALIMAGE 0
+#define DO_FUNKYCAT 0
+#define DO_RGBSPACE 0
+#define DO_INTEGRALIMAGE 1
+#define DO_GUASSIAN_PDF 0
 
 struct Camera
 {
@@ -578,11 +579,11 @@ int main(int argc, char * argv[])
 							clearShader();
 						#endif
 
+							const float scale = 100.f;
+							gxScalef(scale, scale, scale);
+
 					#if DO_RGBSPACE
 							{
-								const float scale = 100.f;
-								gxScalef(scale, scale, scale);
-
 								Shader shader("colordots");
 								shader.setTexture("texture", 0, rgbSurface.getTexture(), false, true);
 								shader.setImmediate("time", time);
@@ -601,41 +602,46 @@ int main(int argc, char * argv[])
 									gxEnd();
 								}
 								clearShader();
-
-								setColor(colorWhite);
-								gxBegin(GL_LINES);
-								{
-									auto dist = [](double x) { return 0.5 * erfc(-x * M_SQRT1_2); };
-
-									const float step = .05f;
-									const float eps = .01f;
-									float dt = 0.f;
-									for (float x = -10.f; x <= 10.f; x += step)
-									{
-										const float x1 = x - step/2.f;
-										const float x2 = x + step/2.f;
-										const float d1 = dist(x1);
-										const float d2 = dist(x2);
-										const float dd = d2 - d1;
-										gxVertex2f(x1, dd);
-										gxVertex2f(x2, dd);
-										gxVertex2f(x1, dd/step);
-										gxVertex2f(x2, dd/step);
-										
-										const float dt1 = dt;
-										dt += dd;
-										const float dt2 = dt;
-
-										gxVertex2f(x1, dt1);
-										gxVertex2f(x2, dt2);
-									}
-								}
-								gxEnd();
 							}
 						#endif
 
+						#if DO_GUASSIAN_PDF
+							setColor(colorWhite);
+							gxBegin(GL_LINES);
+							{
+								auto dist = [](double x) { return 0.5 * erfc(-x * M_SQRT1_2); };
+
+								const float step = .05f;
+								const float eps = .01f;
+								float dt = 0.f;
+								for (float x = -10.f; x <= 10.f; x += step)
+								{
+									const float x1 = x - step/2.f;
+									const float x2 = x + step/2.f;
+									const float d1 = dist(x1);
+									const float d2 = dist(x2);
+									const float dd = d2 - d1;
+									gxVertex2f(x1, dd);
+									gxVertex2f(x2, dd);
+									gxVertex2f(x1, dd/step);
+									gxVertex2f(x2, dd/step);
+
+									const float dt1 = dt;
+									dt += dd;
+									const float dt2 = dt;
+
+									gxVertex2f(x1, dt1);
+									gxVertex2f(x2, dt2);
+								}
+							}
+							gxEnd();
+						#endif
+
+
 						#if DO_INTEGRALIMAGE
 							{
+								setBlend(BLEND_OPAQUE);
+
 								Shader shader("integralimage");
 								shader.setTexture("texture", 0, integralTexture, false, true);
 								shader.setImmediate("maxValue", totalValue);
