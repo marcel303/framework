@@ -521,23 +521,20 @@ static bool fileExists(const char * filename)
 {
 	const char * text = nullptr;
 
-	if (framework.tryGetShaderSource(filename, text))
+	FILE * file;
+
+	if (fopen_s(&file, filename, "rb") == 0)
+	{
+		fclose(file);
+		return true;
+	}
+	else if (framework.tryGetShaderSource(filename, text))
 	{
 		return true;
 	}
 	else
 	{
-		FILE * file;
-
-		if (fopen_s(&file, filename, "rb") == 0)
-		{
-			fclose(file);
-			return true;
-		}
-		else
-		{
-			return false;
-		}
+		return false;
 	}
 }
 
@@ -550,7 +547,26 @@ static bool loadFileContents(const char * filename, bool normalizeLineEndings, c
 
 	const char * text = nullptr;
 
-	if (framework.tryGetShaderSource(filename, text))
+	FILE * file = 0;
+
+	if (fopen_s(&file, filename, "rb") == 0)
+	{
+		// load source from file
+
+		fseek(file, 0, SEEK_END);
+		numBytes = ftell(file);
+		fseek(file, 0, SEEK_SET);
+
+		bytes = new char[numBytes];
+
+		if (fread(bytes, 1, numBytes, file) != (size_t)numBytes)
+		{
+			result = false;
+		}
+
+		fclose(file);
+	}
+	else if (framework.tryGetShaderSource(filename, text))
 	{
 		const size_t textLength = strlen(text);
 
@@ -561,29 +577,7 @@ static bool loadFileContents(const char * filename, bool normalizeLineEndings, c
 	}
 	else
 	{
-		FILE * file = 0;
-
-		if (fopen_s(&file, filename, "rb") != 0)
-		{
-			result = false;
-		}
-		else
-		{
-			// load source from file
-
-			fseek(file, 0, SEEK_END);
-			numBytes = ftell(file);
-			fseek(file, 0, SEEK_SET);
-
-			bytes = new char[numBytes];
-
-			if (fread(bytes, 1, numBytes, file) != (size_t)numBytes)
-			{
-				result = false;
-			}
-
-			fclose(file);
-		}
+		result = false;
 	}
 
 	if (result)
