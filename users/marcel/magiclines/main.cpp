@@ -4,8 +4,8 @@
 #include "Noise.h"
 #include "Timer.h"
 
-#define GFX_SX 1600
-#define GFX_SY 1200
+#define GFX_SX (1600/2)
+#define GFX_SY (1200/2)
 
 #define DO_FUNKYCAT 1
 #define DO_RGBSPACE 1
