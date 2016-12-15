@@ -77,8 +77,14 @@ struct QuadNode
 		}
 		else
 		{
-			//if (isResident)
+			if (isResident)
 				makeResident(level, x, y, size, params, false);
+		}
+
+		if (isResident)
+		{
+			setColor(255, 0, 0, 31);
+			drawRect(x, y, x + size, y + size);
 		}
 
 		if (children == nullptr || doTraverse == false)
@@ -106,30 +112,6 @@ struct QuadNode
 			children[1].traverse(level + 1, x2, y1, childSize, params);
 			children[2].traverse(level + 1, x2, y2, childSize, params);
 			children[3].traverse(level + 1, x1, y2, childSize, params);
-		}
-	}
-
-	void traverseDrawResidency(const int level, const int x, const int y, const int size, const QuadParams & params)
-	{
-		if (isResident)
-		{
-			setColor(255, 0, 0, 63);
-			drawRect(x, y, x + size, y + size);
-		}
-
-		if (children != nullptr)
-		{
-			const int childSize = size / 2;
-
-			const int x1 = x;
-			const int x2 = x + childSize;
-			const int y1 = y;
-			const int y2 = y + childSize;
-
-			children[0].traverseDrawResidency(level + 1, x1, y1, childSize, params);
-			children[1].traverseDrawResidency(level + 1, x2, y1, childSize, params);
-			children[2].traverseDrawResidency(level + 1, x2, y2, childSize, params);
-			children[3].traverseDrawResidency(level + 1, x1, y2, childSize, params);
 		}
 	}
 
@@ -161,6 +143,8 @@ struct QuadNode
 		else
 			return false;
 	}
+
+	size_t memUsage(const QuadParams & params) const;
 };
 
 struct QuadTree
@@ -325,6 +309,26 @@ void QuadNode::makeResident(const int level, const int x, const int y, const int
 	}
 }
 
+size_t QuadNode::memUsage(const QuadParams & params) const
+{
+	size_t result = 0;
+
+	if (isResident)
+	{
+		result += params.tree->pageSize * params.tree->pageSize;
+	}
+
+	if (children != nullptr)
+	{
+		for (int i = 0; i < 4; ++i)
+		{
+			result += children[i].memUsage(params);
+		}
+	}
+
+	return result;
+}
+
 struct CubeSide
 {
 	QuadTree quadTree;
@@ -356,7 +360,7 @@ struct CubeSide
 		int t[3];
 
 		gxPushMatrix();
-		if (i == d)
+		if (i == d && false)
 		{
 			const int cubeSize = quadTree.initSize;
 			gxTranslatef(-cubeSize/2, -cubeSize/2, -cubeSize/2);
@@ -408,9 +412,29 @@ struct CubeSide
 			drawRectLine(0, 0, quadTree.initSize, quadTree.initSize);
 
 #if 1
-			if (i == d)
+			gxBegin(GL_LINES);
 			{
-				setColor(255, 255, 255, 127);
+				setColor(255, 255, 0);
+				gxVertex3f(localParams.viewX, localParams.viewY, localParams.viewZ * .9f);
+				gxVertex3f(localParams.viewX, localParams.viewY, 0.f);
+
+				setColor(127, 127, 0);
+				gxVertex3f(localParams.viewX, localParams.viewY, 0.f);
+				gxVertex3f(localParams.viewX, 0.f, 0.f);
+
+				gxVertex3f(localParams.viewX, localParams.viewY, 0.f);
+				gxVertex3f(0.f, localParams.viewY, 0.f);
+			}
+			gxEnd();
+
+			setColor(colorRed);
+			drawCircle(localParams.viewX, localParams.viewY, 64.f, 20);
+#endif
+
+#if 0
+			if (i == d || true)
+			{
+				setColor(255, 255, 255, 63);
 				gxBegin(GL_POINTS);
 				{
 					for (int x = 0; x < quadTree.initSize; x += 128)
@@ -425,6 +449,10 @@ struct CubeSide
 			}
 #endif
 			i = (i + 1) % 6;
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, quadTree.texture);
+			checkErrorGL();
 
 			quadTree.root.traverse(0, 0, 0, quadTree.initSize, localParams);
 		}
@@ -521,15 +549,83 @@ struct Cube
 			sides[i].eval(params);
 		}
 	}
+
+	size_t memUsage(const QuadParams & params) const
+	{
+		size_t result = 0;
+
+		for (int i = 0; i < 6; ++i)
+		{
+			result += sides[i].quadTree.root.memUsage(params);
+		}
+
+		return result;
+	}
 };
 
 #endif
 
+struct Camera
+{
+	Vec3 position;
+	Vec3 rotation;
+
+	float speed;
+
+	Camera()
+		: position()
+		, rotation()
+		, speed(100.f)
+	{
+	}
+
+	void tick(const float dt)
+	{
+		rotation[0] -= mouse.dy / 100.f;
+		rotation[1] -= mouse.dx / 100.f;
+
+		if (gamepad[0].isConnected)
+		{
+			rotation[0] -= gamepad[0].getAnalog(1, ANALOG_Y) * dt;
+			rotation[1] -= gamepad[0].getAnalog(1, ANALOG_X) * dt;
+		}
+
+		Mat4x4 mat;
+
+		calculateTransform(mat);
+
+		const Vec3 xAxis(mat(0, 0), mat(0, 1), mat(0, 2));
+		const Vec3 zAxis(mat(2, 0), mat(2, 1), mat(2, 2));
+
+		Vec3 direction;
+
+		if (keyboard.isDown(SDLK_UP))
+			direction += zAxis;
+		if (keyboard.isDown(SDLK_DOWN))
+			direction -= zAxis;
+		if (keyboard.isDown(SDLK_LEFT))
+			direction -= xAxis;
+		if (keyboard.isDown(SDLK_RIGHT))
+			direction += xAxis;
+
+		if (gamepad[0].isConnected)
+		{
+			direction -= zAxis * gamepad[0].getAnalog(0, ANALOG_Y);
+			direction += xAxis * gamepad[0].getAnalog(0, ANALOG_X);
+		}
+
+		position += direction * speed * dt;
+	}
+
+	void calculateTransform(Mat4x4 & matrix) const
+	{
+		matrix = Mat4x4(true).Translate(position).RotateY(rotation[1]).RotateX(rotation[0]);
+	}
+};
+
 int main(int argc, char * argv[])
 {
 	changeDirectory("data");
-
-	framework.enableDepthBuffer = true;
 
 	framework.enableRealTimeEditing = true;
 
@@ -538,10 +634,14 @@ int main(int argc, char * argv[])
 	#if DO_QUADTREE
 		Cube * cube = new Cube();
 
-		cube->init(8 * 1024);
+		cube->init(16 * 1024);
 	#endif
 
 		//
+
+		Camera camera;
+
+		camera.speed = 2000.f;
 
 		while (!framework.quitRequested)
 		{
@@ -550,13 +650,12 @@ int main(int argc, char * argv[])
 			if (keyboard.wentDown(SDLK_ESCAPE))
 				framework.quitRequested = true;
 
+			const float dt = framework.timeStep;
+
+			camera.tick(dt);
+
 			framework.beginDraw(0, 0, 0, 0);
 			{
-				glEnable(GL_DEPTH_TEST);
-				glDepthFunc(GL_LESS);
-
-				setBlend(BLEND_OPAQUE);
-
 			#if DO_QUADTREE
 				Mat4x4 matP;
 				Mat4x4 matV;
@@ -565,16 +664,20 @@ int main(int argc, char * argv[])
 
 				matP.MakePerspectiveLH(Calc::DegToRad(90.f), GFX_SY / float(GFX_SX), 1.f, 100000.f);
 
-#if 1
+#if 0
 				matV = Mat4x4(true)
 					.Translate(0, 0, 6000)
 					.RotateY(std::sin(framework.time * .1f) * .1f);
-#else
+#elif 0
 				matV = Mat4x4(true)
-					.Translate(0, 0, 6000)
+					.Translate(0, 0, 4500)
 					.RotateX(framework.time * .1f)
 					.RotateY(framework.time * .1f)
 					.RotateZ(framework.time * .1f);
+#else
+				camera.calculateTransform(matV);
+
+				matV = matV.CalcInv();
 #endif
 
 				gxMatrixMode(GL_PROJECTION);
@@ -584,14 +687,14 @@ int main(int argc, char * argv[])
 				gxPushMatrix();
 				gxLoadMatrixf(matV.m_v);
 				{
-					glDisable(GL_DEPTH_TEST);
-					//setBlend(BLEND_ALPHA);
 					setBlend(BLEND_ADD);
 
 					QuadParams params;
 					params.tree = nullptr;
-					params.viewX = +(mouse.x / float(GFX_SX) - .5f) * 2.f * cubeSize + cubeSize/2;
-					params.viewY = -(mouse.y / float(GFX_SY) - .5f) * 2.f * cubeSize + cubeSize/2;
+					//params.viewX = +(mouse.x / float(GFX_SX) - .5f) * 2.f * cubeSize + cubeSize/2;
+					//params.viewY = -(mouse.y / float(GFX_SY) - .5f) * 2.f * cubeSize + cubeSize/2;
+					params.viewX = (std::cos(framework.time / 12.34f) + 1.f) / 2.f * cubeSize;
+					params.viewY = (std::cos(framework.time / 23.45f) + 1.f) / 2.f * cubeSize;
 					params.viewZ = (std::cos(framework.time * .1f) + 1.f) / 2.f * cubeSize;
 
 					setFont("calibri.ttf");
@@ -613,8 +716,7 @@ int main(int argc, char * argv[])
 					}
 					gxPopMatrix();
 
-					setBlend(BLEND_OPAQUE);
-					glEnable(GL_DEPTH_TEST);
+					setBlend(BLEND_ALPHA);
 				}
 				gxMatrixMode(GL_PROJECTION);
 				gxPopMatrix();
