@@ -1079,7 +1079,7 @@ struct QuadNode
 		}
 		else
 		{
-			if (isResident)
+			//if (isResident)
 				makeResident(level, x, y, size, params, false);
 		}
 
