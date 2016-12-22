@@ -1640,6 +1640,17 @@ void Shader::setTexture(const char * name, int unit, GLuint texture, bool filter
 	checkErrorGL();
 }
 
+void Shader::setTextureArray(const char * name, int unit, GLuint texture)
+{
+	SET_UNIFORM(name, glUniform1i(index, unit));
+	checkErrorGL();
+
+	glActiveTexture(GL_TEXTURE0 + unit);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, texture);
+	glActiveTexture(GL_TEXTURE0);
+	checkErrorGL();
+}
+
 void Shader::setTextureArray(const char * name, int unit, GLuint texture, bool filtered, bool clamped)
 {
 	SET_UNIFORM(name, glUniform1i(index, unit));
@@ -6055,7 +6066,7 @@ void hqBegin(HQ_TYPE type, bool useScreenSize)
 
 		shader->setImmediate("disableOptimizations", 0.f);
 		shader->setImmediate("disableAA", 0.f);
-		shader->setImmediate("_debugHq", 1.f);
+		shader->setImmediate("_debugHq", 0.f);
 	}
 }
 

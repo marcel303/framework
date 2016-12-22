@@ -364,6 +364,7 @@ public:
 	void setTextureUnit(GLint index, int unit); // bind <name> to GL_TEXTURE0 + unit
 	void setTexture(const char * name, int unit, GLuint texture);
 	void setTexture(const char * name, int unit, GLuint texture, bool filtered, bool clamp = true);
+	void setTextureArray(const char * name, int unit, GLuint texture);
 	void setTextureArray(const char * name, int unit, GLuint texture, bool filtered, bool clamp = true);
 	void setBuffer(const char * name, const ShaderBuffer & buffer);
 	void setBuffer(GLint index, const ShaderBuffer & buffer);
