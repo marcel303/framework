@@ -204,11 +204,11 @@ struct VoxelSpace
 					if (!voxelSet.aabb.intersect(px, py, pz, rdx, rdy, rdz, t))
 						continue;
 
-#if 0
+				#if 0
 					const float lx = px - DS_SX * x;
 					const float ly = py - DS_SY * y;
 					const float lz = pz - DS_SZ * z;
-#else
+				#else
 					const float gx = px + dx * t;
 					const float gy = py + dy * t;
 					const float gz = pz + dz * t;
@@ -216,15 +216,15 @@ struct VoxelSpace
 					const float lx = gx - _DS_SX * x;
 					const float ly = gy - _DS_SY * y;
 					const float lz = gz - _DS_SZ * z;
-#endif
+				#endif
 
-#if 0
+				#if 0
 					ox = gx;
 					oy = gy;
 					oz = gz;
 
 					return true;
-#endif
+				#endif
 
 					float lox;
 					float loy;
@@ -421,11 +421,11 @@ struct PqElem
 
 	bool operator<(const PqElem & other) const
 	{
-#if INVERTED_DISTANCE_METRIC
+	#if INVERTED_DISTANCE_METRIC
 		return distance < other.distance;
-#else
+	#else
 		return distance > other.distance;
-#endif
+	#endif
 	}
 };
 
@@ -455,10 +455,10 @@ struct Pq
 
 	Pq()
 	{
-#if USE_BINARY_HEAP
-#elif USE_HEAP
+	#if USE_BINARY_HEAP
+	#elif USE_HEAP
 		elems.reserve(sx * sy * sz);
-#endif
+	#endif
 	}
 
 	void insert(VoxelSet<sx, sy, sz> & voxelSet, const int srcX, const int srcY, const int srcZ, const int x, const int y, const int z)
@@ -486,15 +486,15 @@ struct Pq
 
 		e.distance = distanceSq;
 
-#if USE_BINARY_HEAP
+	#if USE_BINARY_HEAP
 		elems.push(e);
-#elif USE_HEAP
+	#elif USE_HEAP
 		elems.push_back(e);
 
 		std::push_heap(elems.begin(), elems.end());
-#else
+	#else
 		elems.push(e);
-#endif
+	#endif
 
 		//
 
@@ -542,21 +542,21 @@ struct Pq
 
 		while (!elems.empty())
 		{
-#if USE_BINARY_HEAP
+		#if USE_BINARY_HEAP
 			const PqElem e = elems.top();
 
 			elems.pop();
-#elif USE_HEAP
+		#elif USE_HEAP
 			std::pop_heap(elems.begin(), elems.end());
 
 			const PqElem e = elems.back();
 
 			elems.pop_back();
-#else
+		#else
 			const PqElem e = elems.top();
 
 			elems.pop();
-#endif
+		#endif
 
 			if (sx > 1)
 			{
@@ -575,7 +575,7 @@ struct Pq
 			}
 		}
 
-#if defined(DEBUG) && 0
+	#if defined(DEBUG) && 0
 		for (int x = 0; x < sx; ++x)
 		{
 			for (int y = 0; y < sy; ++y)
@@ -586,7 +586,7 @@ struct Pq
 				}
 			}
 		}
-#endif
+	#endif
 	}
 };
 
@@ -1072,7 +1072,7 @@ struct QuadNode
 	{
 		const bool doTraverse = traverseImpl(x, y, size, params);
 
-		if (doTraverse || children == nullptr)
+		if (doTraverse/* || children == nullptr*/)
 		{
 			if (!isResident)
 				makeResident(level, x, y, size, params, true);
