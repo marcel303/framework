@@ -16,6 +16,8 @@
 #define DO_CUBE_SAMPLING_QUADS 0
 #define DO_TEXTURE_ARRAY_TEST 0
 #define DO_TEXTURE_ARRAY_RESIDENCY 0
+#define DO_PAGELOAD 1
+#define DO_PAGELOAD_TEST 0
 #define DO_ADDTIVE_BLENDING 0
 #define DO_ALEX_BATHOLOMEUS 0
 
@@ -31,6 +33,90 @@ static void drawPointGrid(const int x, const int y, const int size, const int st
 static void calculateMipInfo(const int baseSize, const int pageSize, int & numLevels, int & lastLevel, int & numAllocatedLevels);
 static void setPlanarTexShader(const Cube * cube, const int debugCubeSideIndex);
 static void drawFractalSphere();
+
+struct PageData
+{
+	const static int kPageSize = 128;
+
+	uint8_t bytes[kPageSize * kPageSize * 4];
+};
+
+bool pageFilename(const int baseSize, const int pageSize, const int cubeSide, const int levelSize, const int pageX, const int pageY, char * filename, const int filenameSize)
+{
+	sprintf_s(filename, filenameSize, "heightmap/%06d-%04d-%01d-%06d-%03d-%03d",
+		baseSize,
+		pageSize,
+		cubeSide,
+		levelSize,
+		pageX,
+		pageY);
+
+	return true;
+}
+
+bool pageSave(const int baseSize, const int pageSize, const int cubeSide, const int levelSize, const int pageX, const int pageY, PageData & pageData)
+{
+	bool result = true;
+
+	char filename[1024];
+
+	if (result)
+	{
+		result &= pageFilename(baseSize, pageSize, cubeSide, levelSize, pageX, pageY, filename, sizeof(filename));
+	}
+
+	if (result)
+	{
+		FILE * f = fopen(filename, "wb");
+
+		result &= f != nullptr;
+
+		if (result)
+		{
+			result &= fwrite(pageData.bytes, sizeof(pageData.bytes), 1, f) == 1;
+		}
+
+		if (f != nullptr)
+		{
+			fclose(f);
+			f = nullptr;
+		}
+	}
+
+	return result;
+}
+
+bool pageLoad(const int baseSize, const int pageSize, const int cubeSide, const int levelSize, const int pageX, const int pageY, PageData & pageData)
+{
+	bool result = true;
+
+	char filename[1024];
+
+	if (result)
+	{
+		result &= pageFilename(baseSize, pageSize, cubeSide, levelSize, pageX, pageY, filename, sizeof(filename));
+	}
+
+	if (result)
+	{
+		FILE * f = fopen(filename, "rb");
+
+		result &= f != nullptr;
+
+		if (result)
+		{
+			result &= fread(pageData.bytes, sizeof(pageData.bytes), 1, f) == 1;
+		}
+
+		if (f != nullptr)
+		{
+			fclose(f);
+			f = nullptr;
+		}
+	}
+
+	return result;
+}
 
 struct QuadParams
 {
@@ -495,6 +581,21 @@ void QuadNode::makeResident(const int level, const int x, const int y, const int
 		params.cube->m_residencyMapLevels[params.cubeSideIndex].setMipLevels(level + 1, x, y, size, params.cube->m_pageSize);
 #endif
 
+#if DO_PAGELOAD
+		PageData pageData;
+
+		if (pageLoad(params.cube->m_initSize, params.cube->m_pageSize, params.cubeSideIndex, levelSize, px / params.cube->m_pageSize, py / params.cube->m_pageSize, pageData))
+		{
+			glTexSubImage3D(
+				GL_TEXTURE_2D_ARRAY,
+				mipIndex,
+				px, py, pz,
+				sx, sy, sz,
+				GL_RGBA, GL_UNSIGNED_BYTE,
+				pageData.bytes);
+			checkErrorGL();
+		}
+#else
 		uint8_t * pixels = new uint8_t[sx * sy * 4];
 		uint8_t * pixelPtr = pixels;
 
@@ -558,8 +659,10 @@ void QuadNode::makeResident(const int level, const int x, const int y, const int
 
 		delete[] pixels;
 		pixels = nullptr;
+#endif
 
 #if DO_ALEX_BATHOLOMEUS
+		// todo : what's the fastest way to stream pages once we want to do it async?
 		if (levelSize == params.cube->m_initSize)
 		{
 			Surface s(128, 128, false);
@@ -1543,27 +1646,45 @@ static float * nextMip(const float * values, const int size)
 	return result;
 }
 
-static void writeMip(const int baseSize, const int cubeSide, const int size, const float * heightMap, const int pageSize)
+static void writeMip(const int baseSize, const int cubeSide, const int levelSize, const float * heightMap, const int pageSize)
 {
-	const int numPages = (size + pageSize - 1) / pageSize;
-	Assert(numPages * pageSize == size);
+	const int numPages = (levelSize + pageSize - 1) / pageSize;
+	Assert(numPages * pageSize == levelSize);
+	Assert(pageSize == PageData::kPageSize);
 
-	char filename[128];
-	sprintf_s(filename, sizeof(filename), "heightmap/%06d-%01d-%06d-%04d",
-		baseSize,
-		cubeSide,
-		size,
-		pageSize);
-
-	FILE * f = fopen(filename, "wb");
-	if (f != nullptr)
+	for (int pageX = 0; pageX < numPages; ++pageX)
 	{
-		const int byteSize = size * size * sizeof(float);
+		for (int pageY = 0; pageY < numPages; ++pageY)
+		{
+			PageData pageData;
 
-		fwrite(heightMap, 1, byteSize, f);
+			// convert height map data to page data
 
-		fclose(f);
-		f = nullptr;
+			for (int y = 0; y < pageSize; ++y)
+			{
+				const int px = pageX * pageSize;
+				const int py = pageY * pageSize + y;
+
+				const float * __restrict heightMapLine = heightMap + py * levelSize + px;
+				uint8_t * __restrict pageLine = pageData.bytes + y * pageSize * 4;
+
+				for (int x = 0; x < pageSize; ++x)
+				{
+					const float height = heightMapLine[x];
+					
+					const uint8_t value = std::max(0, std::min(255, int(height * 256.f)));
+
+					*pageLine++ = value;
+					*pageLine++ = value;
+					*pageLine++ = value;
+					*pageLine++ = 255;
+				}
+			}
+
+			//
+
+			pageSave(baseSize, pageSize, cubeSide, levelSize, pageX, pageY, pageData);
+		}
 	}
 }
 
@@ -1573,18 +1694,22 @@ static void generateTextureArray(const int baseSize, const int pageSize)
 	{
 		float * heightMap = new float[baseSize * baseSize];
 
-		for (int y = baseSize * 0/10; y < baseSize; ++y)
+		for (int y = 0; y < baseSize; ++y)
 		{
 			float * __restrict heightMapLine = heightMap + y * baseSize;
 
-			for (int x = baseSize * 0/10; x < baseSize; ++x)
+			for (int x = 0; x < baseSize; ++x)
 			{
+#if 1
 				const float height = scaled_octave_noise_2d(
 					16, .5f, .005f,
 					0.f,
 					1.f,
 					x,
 					y);
+#else
+				const float height = random(0.f, 1.f);
+#endif
 				
 				heightMapLine[x] = height;
 			}
@@ -1619,11 +1744,11 @@ int main(int argc, char * argv[])
 {
 	changeDirectory("data");
 
-	framework.enableRealTimeEditing = true;
+	//framework.enableRealTimeEditing = true;
 	framework.enableDepthBuffer = true;
 
 	{
-		const int baseSize = 1024 * 8;
+		const int baseSize = 1024 * 16;
 		const int pageSize = 128;
 
 		//generateTextureArray(baseSize, pageSize);
@@ -1723,8 +1848,8 @@ int main(int argc, char * argv[])
 				const Vec3 deltaFromSphereCenter = camera.position;
 				const float distanceFromSphereCenter = deltaFromSphereCenter.CalcSize();
 				const float distanceFromSphereShell = distanceFromSphereCenter - sphereRadius;
-				//const float speed = std::abs(distanceFromSphereShell) / sphereRadius * 5000.f + 400.f;
-				const float speed = 50.f;
+				const float speed = std::abs(distanceFromSphereShell) / sphereRadius * 5000.f + 400.f;
+				//const float speed = 50.f;
 				camera.speed = speed;
 
 				camera.tick(dt);
@@ -1890,6 +2015,59 @@ int main(int argc, char * argv[])
 				setColor(colorWhite);
 				setFont("calibri.ttf");
 				drawText(10, 10, 24, +1, +1, "estimated memory usage: %.2f Mb", cube->memUsage() / 1024.f / 1024.f);
+
+#if DO_PAGELOAD_TEST
+				{
+					const int baseSize = 1024 * 16;
+					const int pageSize = PageData::kPageSize;
+					static int cubeSide = 0;
+					static int levelSize = baseSize;
+					static int pageX = 0;
+					static int pageY = 0;
+
+					PageData pageData;
+					if (pageLoad(baseSize, pageSize, cubeSide, levelSize, pageX, pageY, pageData))
+					{
+						GLuint texture = createTextureFromRGBA8(pageData.bytes, pageSize, pageSize, false, true);
+						gxSetTexture(texture);
+						{
+							setColor(colorWhite);
+							setBlend(BLEND_OPAQUE);
+							drawRect(0, 0, pageSize, pageSize);
+							setBlend(BLEND_ALPHA);
+						}
+						gxSetTexture(0);
+						glDeleteTextures(1, &texture);
+					}
+
+					pageX++;
+					
+					const int numPagesX = (levelSize + pageSize - 1) / pageSize;
+					if (pageX == numPagesX)
+					{
+						pageX = 0;
+						pageY++;
+					}
+
+					const int numPagesY = (levelSize + pageSize - 1) / pageSize;
+					if (pageY == numPagesY)
+					{
+						pageY = 0;
+						levelSize /= 2;
+					}
+
+					if (levelSize < pageSize)
+					{
+						levelSize = baseSize;
+						cubeSide++;
+					}
+
+					if (cubeSide == 6)
+					{
+						// done!
+					}
+				}
+#endif
 			}
 			framework.endDraw();
 		}
