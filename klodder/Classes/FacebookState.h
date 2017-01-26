@@ -1,3 +1,5 @@
+#if BUILD_FACEBOOK
+
 #import <Foundation/Foundation.h>
 #import "FBConnect/FBConnect.h"
 
@@ -17,3 +19,5 @@
 -(void)request:(FBRequest*)request didFailWithError:(NSError*)error;
 
 @end
+
+#endif

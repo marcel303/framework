@@ -3,6 +3,7 @@
 #import "AppDelegate.h"
 #import "Calc.h"
 #import "ExceptionLoggerObjC.h"
+#import "Log.h"
 #import "MenuView.h"
 #import "UIColorEx.h"
 #import "View_ColorPicker.h"

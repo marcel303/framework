@@ -5,6 +5,7 @@
 #import "ExceptionLoggerObjC.h"
 #import "KlodderSystem.h"
 #import "LayerMgr.h"
+#import "Log.h"
 #import "UIImageEx.h"
 #import "View_LayerClearMgr.h"
 #import "View_LayerManager.h"
@@ -28,7 +29,7 @@ static bool IsLastLayer(int index, std::vector<int> layerOrder);
 		self.title = @"Layers";
 		[self setModalTransitionStyle:UIModalTransitionStyleCoverVertical];
 		//[self setModalInPopover:YES];
-		[self setContentSizeForViewInPopover:CGSizeMake(320.0f, 480.0f)];
+		[self setPreferredContentSize:CGSizeMake(320.0f, 480.0f)];
 		
 		focusLayerIndex = -1;
 		
@@ -75,7 +76,7 @@ static bool IsLastLayer(int index, std::vector<int> layerOrder);
 	
 	[self setMenuOpaque];
 	
-	focusLayerIndex = app.mApplication->LayerMgr_get()->ActiveDataLayer_get();
+	focusLayerIndex = app.mApplication->LayerMgr_get()->EditingDataLayer_get();
 
 	layerOrder = app.mApplication->LayerMgr_get()->LayerOrder_get();
 	
@@ -241,13 +242,13 @@ static bool IsLastLayer(int index, std::vector<int> layerOrder);
 	
 	LOG_DBG("View_LayersMgr: updateUi", 0);
 	
-	UIBarButtonItem* item_MergeDown = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_layer_merge")] style:UIBarButtonItemStyleBordered target:self action:@selector(handleLayerMergeDown)] autorelease];
-	UIBarButtonItem* item_Clear = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_layer_fill")] style:UIBarButtonItemStyleBordered target:self action:@selector(handleLayerClear)] autorelease];
+	UIBarButtonItem* item_MergeDown = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_layer_merge")] style:UIBarButtonItemStylePlain target:self action:@selector(handleLayerMergeDown)] autorelease];
+	UIBarButtonItem* item_Clear = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_layer_fill")] style:UIBarButtonItemStylePlain target:self action:@selector(handleLayerClear)] autorelease];
 	UIBarButtonItem* item_Undo = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_undo")] style:UIBarButtonItemStylePlain target:self action:@selector(handleUndo)] autorelease];
 	UIBarButtonItem* item_Redo = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_redo")] style:UIBarButtonItemStylePlain target:self action:@selector(handleRedo)] autorelease];
 	UIBarButtonItem* item_Acquire = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCamera target:self action:@selector(handleAcquire)] autorelease];
 //	UIBarButtonItem* item_ToggleVisibility = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAction target:self action:@selector(handleToggleVisibility)] autorelease];
-	UIBarButtonItem* item_ToggleVisibility = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_visibility")] style:UIBarButtonItemStyleBordered target:self action:@selector(handleToggleVisibility)] autorelease];
+	UIBarButtonItem* item_ToggleVisibility = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_visibility")] style:UIBarButtonItemStylePlain target:self action:@selector(handleToggleVisibility)] autorelease];
 	UIBarButtonItem* item_Space = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
 	[item_MergeDown setEnabled:focusLayerIndex >= 0 && !IsLastLayer(focusLayerIndex, app.mApplication->LayerMgr_get()->LayerOrder_get())];
 	[item_Clear setEnabled:focusLayerIndex >= 0];

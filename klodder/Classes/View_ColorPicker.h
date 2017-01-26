@@ -5,6 +5,7 @@
 #import "Types.h"
 #import "View_ColorPicker_ColorBar.h"
 #import "ViewBase.h"
+#include <stdint.h>
 
 #include <vector> // exclusion zone
 class ExclusionZone

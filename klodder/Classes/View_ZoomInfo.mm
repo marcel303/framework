@@ -20,7 +20,7 @@
 		[label setOpaque:FALSE];
 		[label setBackgroundColor:[UIColor clearColor]];
 		[label setTextColor:[UIColor blueColor]];
-		[label setTextAlignment:UITextAlignmentCenter];
+		[label setTextAlignment:NSTextAlignmentCenter];
 		[label setFont:[UIFont fontWithName:@"Helvetica" size:14.0f]];
 		[self addSubview:label];
     }

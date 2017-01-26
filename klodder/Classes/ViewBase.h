@@ -13,7 +13,7 @@
 -(void)handleFocusLost;
 -(void)drawFrameBorder;
 
-extern UILabel* CreateLabel(float x, float y, float sx, float sy, NSString* text, NSString* font, float fontSize, UITextAlignment alignment);
+extern UILabel* CreateLabel(float x, float y, float sx, float sy, NSString* text, NSString* font, float fontSize, NSTextAlignment alignment);
 extern UIToolbar* CreateToolBar();
 
 @end

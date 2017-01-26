@@ -1,5 +1,6 @@
 #import "Calc.h"
 #import "ColorPickerState.h"
+#import "Log.h"
 
 PickerState::PickerState()
 {

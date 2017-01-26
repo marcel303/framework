@@ -1,5 +1,6 @@
 #import "AppDelegate.h"
 #import "ExceptionLoggerObjC.h"
+#import "Log.h"
 #import "View_MenuSelection.h"
 
 #define MENU_COUNT 5

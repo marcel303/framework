@@ -902,7 +902,8 @@ void LayerMgr::EditingBegin(const bool rebuildCaches)
 	Assert(!mEditingEnabled);
 	
 #if defined(DEBUG) && defined(IPHONEOS)
-	sleep(1);
+    // fixme
+	//sleep(1);
 #endif
 	
 	UsingBegin(Benchmark bm("LayerMgr::EditingBegin"))

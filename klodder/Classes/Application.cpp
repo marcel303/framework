@@ -1126,7 +1126,8 @@ void Application::UndoBegin(const bool doReplay, const int dirtyLayerIndex, cons
 	if (doReplay)
 		mUndoBuffer->mNext.SetReplay();
 
-	mDirtyCommandStreamPosition = mCommandStream->Position_get();
+    if (mCommandStream != nullptr)
+        mDirtyCommandStreamPosition = mCommandStream->Position_get();
 	if (mDataStream != nullptr)
 		mDirtyDataStreamPosition = mDataStream->Position_get();
 

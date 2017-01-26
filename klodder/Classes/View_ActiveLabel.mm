@@ -4,7 +4,7 @@
 
 @implementation View_ActiveLabel
 
--(id)initWithFrame:(CGRect)frame andText:(NSString*)text andFont:(NSString*)font ofSize:(CGFloat)size andAlignment:(UITextAlignment)alignment andColor:(UIColor*)color andDelegate:(id)_delegate andClicked:(SEL)_clicked
+-(id)initWithFrame:(CGRect)frame andText:(NSString*)text andFont:(NSString*)font ofSize:(CGFloat)size andAlignment:(NSTextAlignment)alignment andColor:(UIColor*)color andDelegate:(id)_delegate andClicked:(SEL)_clicked
 {
 	HandleExceptionObjcBegin();
 	

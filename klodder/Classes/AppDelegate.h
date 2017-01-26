@@ -14,9 +14,9 @@
 #endif
 
 #ifdef IPAD
-const extern NSString* cancelTitle;
+extern NSString* cancelTitle;
 #else
-const extern NSString* cancelTitle;
+extern NSString* cancelTitle;
 #endif
 
 class BrushSettings;
@@ -33,8 +33,12 @@ class BrushSettings;
 	
 	UINavigationController* rootController;
 	
+#if BUILD_FACEBOOK
 	FacebookState* facebookState;
+#endif
+#if BUILD_FLICKR
 	FlickrState* flickrState;
+#endif
 	
 	View_EditingMgr* vcEditing;
 	View_PictureGalleryMgr* vcPictureGallery;
@@ -51,8 +55,12 @@ class BrushSettings;
 
 @property (assign) Application* mApplication;
 
+#if BUILD_FACEBOOK
 @property (assign) FacebookState* facebookState;
+#endif
+#if BUILD_FLICKR
 @property (assign) FlickrState* flickrState;
+#endif
 
 @property (nonatomic, retain) UINavigationController* rootController;
 

@@ -5,6 +5,7 @@
 #import "ExceptionLoggerObjC.h"
 //#import "FlickrLoginDialog.h"
 #import "KlodderSystem.h"
+#import "Log.h"
 #import "StreamReader.h"
 #import "StringEx.h"
 #import "View_AboutMgr.h"
@@ -30,15 +31,15 @@
 		
 		self.title = @"Gallery";
 		
-		UIBarButtonItem* item_Serve = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_serve")] style:UIBarButtonItemStyleBordered target:self action:@selector(handleServeHttp)] autorelease];
-		UIBarButtonItem* item_About = [[[UIBarButtonItem alloc] initWithTitle:@"A" style:UIBarButtonItemStyleBordered target:self action:@selector(handleAbout)] autorelease];
+		UIBarButtonItem* item_Serve = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_serve")] style:UIBarButtonItemStylePlain target:self action:@selector(handleServeHttp)] autorelease];
+		UIBarButtonItem* item_About = [[[UIBarButtonItem alloc] initWithTitle:@"A" style:UIBarButtonItemStylePlain target:self action:@selector(handleAbout)] autorelease];
 		UIBarButtonItem* item_Debug = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCompose target:self action:@selector(handleDebug)] autorelease];
 		UIBarButtonItem* item_Space = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
 		[self setToolbarItems:[NSArray arrayWithObjects:item_Serve, item_Space, item_About, item_Debug, nil]];
 		
-		UIBarButtonItem* item_Help = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_help")] style:UIBarButtonItemStyleBordered target:self action:@selector(handleHelp)] autorelease];
+		UIBarButtonItem* item_Help = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_help")] style:UIBarButtonItemStylePlain target:self action:@selector(handleHelp)] autorelease];
 		self.navigationItem.leftBarButtonItem = item_Help;
-		UIBarButtonItem* item_New = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_new")] style:UIBarButtonItemStyleBordered target:self action:@selector(handleNew)] autorelease];
+		UIBarButtonItem* item_New = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_new")] style:UIBarButtonItemStylePlain target:self action:@selector(handleNew)] autorelease];
 		self.navigationItem.rightBarButtonItem = item_New;
 		
 		overwritePictureAlert = [[UIAlertView alloc] initWithTitle:NS(Deployment::PictureOverwriteTitle) message:NS(Deployment::PictureOverwriteText) delegate:self cancelButtonTitle:@"Cancel" otherButtonTitles:@"OK", nil];

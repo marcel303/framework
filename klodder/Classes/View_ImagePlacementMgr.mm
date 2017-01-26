@@ -4,6 +4,7 @@
 #import "Calc.h"
 #import "ExceptionLoggerObjC.h"
 #import "LayerMgr.h"
+#import "Log.h"
 #import "View_ImagePlacement.h"
 #import "View_ImagePlacementMgr.h"
 
@@ -25,7 +26,7 @@
 		self.title = @"Image placement";
 		self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(handleDone)] autorelease];
 		
-		UIBarButtonItem* item_RotateLeft = [[[UIBarButtonItem alloc] initWithTitle:@"L" style:UIBarButtonItemStyleBordered target:self action:@selector(handleRotateLeft)] autorelease];
+		UIBarButtonItem* item_RotateLeft = [[[UIBarButtonItem alloc] initWithTitle:@"L" style:UIBarButtonItemStylePlain target:self action:@selector(handleRotateLeft)] autorelease];
 		slider = [[[UISlider alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 200.0f, 30.0f)] autorelease];
 		[slider setMinimumValue:0.0f];
 		[slider setMaximumValue:1.0f];
@@ -33,7 +34,7 @@
 		[slider addTarget:self action:@selector(handleZoomChanged) forControlEvents:UIControlEventTouchUpInside|UIControlEventValueChanged];
 		[slider setAutoresizingMask:UIViewAutoresizingFlexibleWidth];
 		UIBarButtonItem* item_Zoom = [[[UIBarButtonItem alloc] initWithCustomView:slider] autorelease];
-		UIBarButtonItem* item_RotateRight = [[[UIBarButtonItem alloc] initWithTitle:@"R" style:UIBarButtonItemStyleBordered target:self action:@selector(handleRotateRight)] autorelease];
+		UIBarButtonItem* item_RotateRight = [[[UIBarButtonItem alloc] initWithTitle:@"R" style:UIBarButtonItemStylePlain target:self action:@selector(handleRotateRight)] autorelease];
 		UIBarButtonItem* item_Space = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
 		[self setToolbarItems:[NSArray arrayWithObjects:item_RotateLeft, item_Space, item_Zoom, item_Space, item_RotateRight, nil]];
 		

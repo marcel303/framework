@@ -1,6 +1,7 @@
 #import "AppDelegate.h"
 #import "ExceptionLoggerObjC.h"
 #import "KlodderSystem.h"
+#import "Log.h"
 #import "View_EditingMgr.h"
 #import "View_PictureGallery.h"
 #import "View_PictureGalleryImage.h"

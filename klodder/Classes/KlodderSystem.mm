@@ -23,7 +23,7 @@ std::string System::GetResourcePath(const char* fileName)
 	
 	const NSBundle* bundle = [NSBundle mainBundle];
 	
-	const NSString* path = [bundle pathForResource:nsFileName ofType:nsFileExtension];
+	const NSString* path = [bundle pathForResource:(NSString*)nsFileName ofType:(NSString*)nsFileExtension];
 	
 	if (!path)
 		throw ExceptionVA("path does not exist: %s", fileName);

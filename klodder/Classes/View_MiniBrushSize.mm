@@ -2,6 +2,7 @@
 #import "Application.h"
 #import "BrushSettingsLibrary.h"
 #import "ExceptionLoggerObjC.h"
+#import "Log.h"
 #import "View_BrushPreview.h"
 #import "View_MiniBrushSize.h"
 #import "View_MiniToolSelect.h"

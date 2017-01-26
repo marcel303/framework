@@ -11,6 +11,7 @@
 #import "HTTPResponse.h"
 #import "ImageId.h"
 #import "KlodderSystem.h"
+#import "Log.h"
 #import "MemoryStream.h"
 #import "MyHTTPConnection.h"
 #import "Path.h"

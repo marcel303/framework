@@ -35,7 +35,11 @@ void HandleAssert(const char * func, int line, const char * expr, ...)
 	char text[1024];
 	va_list args;
 	va_start(args, expr);
+#ifdef IPHONEOS // fixme
+    vsprintf(text, expr, args);
+#else
 	vsprintf_s(text, expr, args);
+#endif
 	va_end(args);
 
 	LOG_ERR("assertion failed: %s: %d: %s", func, line, text);

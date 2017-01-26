@@ -3,6 +3,7 @@
 #import "ExceptionLoggerObjC.h"
 #import "KlodderSystem.h"
 #import "LayerMgr.h"
+#import "Log.h"
 #import "View_BarButtonItem_Color.h"
 #import "View_ColorPickerMgr.h"
 #import "View_Editing.h"
@@ -26,10 +27,10 @@
 	if (self = [super initWithApp:_app])
 	{
 		[self setWantsFullScreenLayout:YES];
-		
-		self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithTitle:@"Back" style:UIBarButtonItemStyleBordered target:self action:@selector(handleDoneAnimated)] autorelease];
+        
+		self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithTitle:@"Back" style:UIBarButtonItemStylePlain target:self action:@selector(handleDoneAnimated)] autorelease];
 
-		UIBarButtonItem* item_Done = [[[UIBarButtonItem alloc] initWithTitle:@"Done" style:UIBarButtonItemStyleBordered target:self action:@selector(handleDoneAnimated)] autorelease];
+		UIBarButtonItem* item_Done = [[[UIBarButtonItem alloc] initWithTitle:@"Done" style:UIBarButtonItemStylePlain target:self action:@selector(handleDoneAnimated)] autorelease];
 		self.navigationItem.rightBarButtonItem = item_Done;
 		self.title = @"Drawing";
 		
@@ -424,13 +425,13 @@
 //	[vw_Color setAutoresizingMask:UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin];
 //	[vw_Color setContentMode:UIViewContentModeScaleToFill];
 	item_Color = [[[UIBarButtonItem alloc] initWithCustomView:vw_Color] autorelease];
-	item_Tool = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_tool")] style:UIBarButtonItemStyleBordered target:self action:@selector(handleToolSettings)] autorelease];
-	item_Layers = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_layers")] style:UIBarButtonItemStyleBordered target:self action:@selector(handleLayers)] autorelease];
+	item_Tool = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_tool")] style:UIBarButtonItemStylePlain target:self action:@selector(handleToolSettings)] autorelease];
+	item_Layers = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_layers")] style:UIBarButtonItemStylePlain target:self action:@selector(handleLayers)] autorelease];
 	UIBarButtonItem* item_Undo = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_undo")]style:UIBarButtonItemStylePlain target:self action:@selector(handleUndo)] autorelease];
 	UIBarButtonItem* item_Redo = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_redo")] style:UIBarButtonItemStylePlain target:self action:@selector(handleRedo)] autorelease];
 	UIBarButtonItem* item_DBG_TestBezierTraveller = nil;
 #ifndef DEPLOYMENT
-	item_DBG_TestBezierTraveller = [[[UIBarButtonItem alloc] initWithTitle:@"B" style:UIBarButtonItemStyleBordered target:self action:@selector(DBG_handleTestBezierTraveller)] autorelease];
+	item_DBG_TestBezierTraveller = [[[UIBarButtonItem alloc] initWithTitle:@"B" style:UIBarButtonItemStylePlain target:self action:@selector(DBG_handleTestBezierTraveller)] autorelease];
 #endif
 	
 	UIBarButtonItem* item_Space = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
@@ -462,7 +463,7 @@ static void RenderBezier(void* obj, BezierTravellerState state, float x, float y
 	Application* app = (Application*)obj;
 	
 	if (state == BezierTravellerState_Begin)
-		app->StrokeBegin(app->LayerMgr_get()->ActiveDataLayer_get(), false, false, x, y);
+		app->StrokeBegin(app->LayerMgr_get()->EditingDataLayer_get(), false, false, x, y);
 	if (state == BezierTravellerState_End)
 		app->StrokeEnd();
 	if (state == BezierTravellerState_Update)

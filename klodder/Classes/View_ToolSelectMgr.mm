@@ -27,7 +27,7 @@ static ToolType ToToolType(ToolViewType toolViewType, bool softBrush);
 	if (self = [super initWithApp:_app])
 	{
 		//[self setModalInPopover:YES];
-		[self setContentSizeForViewInPopover:CGSizeMake(320.0f, 480.0f)];
+		[self setPreferredContentSize:CGSizeMake(320.0f, 480.0f)];
 		
 		brushSettingsLibrary = new BrushSettingsLibrary();
 		
@@ -288,22 +288,28 @@ static ToolType ToToolType(ToolViewType toolViewType, bool softBrush);
 static ToolType ToToolType(ToolViewType toolViewType, bool softBrush)
 {
 	if (toolViewType == ToolViewType_Brush)
+    {
 		if (softBrush)
 			return ToolType_SoftBrushDirect;
 		else
 			return ToolType_PatternBrushDirect;
-	
+    }
+        
 	if (toolViewType == ToolViewType_Smudge)
+    {
 		if (softBrush)
 			return ToolType_SoftSmudge;
 		else
 			return ToolType_PatternSmudge;
-	
+    }
+    
 	if (toolViewType == ToolViewType_Eraser)
+    {
 		if (softBrush)
 			return ToolType_SoftEraser;
 		else
 			return ToolType_PatternEraser;
+    }
 	
 	return ToolType_Undefined;
 }

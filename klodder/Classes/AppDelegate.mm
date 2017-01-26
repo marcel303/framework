@@ -19,9 +19,9 @@
 //#define MENU_HEIGHT 58.0f
 
 #ifdef IPAD
-const NSString* cancelTitle = nil;
+NSString* cancelTitle = nil;
 #else
-const NSString* cancelTitle = @"Cancel";
+NSString* cancelTitle = @"Cancel";
 #endif
 
 @implementation AppDelegate
@@ -31,8 +31,12 @@ static void HandleChange(void* obj, void* arg);
 @synthesize window;
 @synthesize rootController;
 @synthesize mApplication;
+#if BUILD_FACEBOOK
 @synthesize facebookState;
+#endif
+#if BUILD_FLICKR
 @synthesize flickrState;
+#endif
 
 @synthesize vcEditing;
 @synthesize vcPictureGallery;
@@ -93,10 +97,14 @@ static void HandleChange(void* obj, void* arg);
 	
 	mApplication = 0;
 	
+#if BUILD_FACEBOOK
 	facebookState = [[FacebookState alloc] init];
 	[facebookState resume];
+#endif
+#if BUILD_FLICKR
 	flickrState = [[FlickrState alloc] init];
 	[flickrState resume];
+#endif
 	
 	NSLog(@"Creating touch mgr");
 	
@@ -129,14 +137,16 @@ static void HandleChange(void* obj, void* arg);
 
 	mActiveView = rootController;
 	
-	[window addSubview:rootController.view];
-	
+	[window setRootViewController:rootController];
+    
+#if BUILD_FLICKR
 	NSURL* url = [launchOptions objectForKey:UIApplicationLaunchOptionsURLKey];
 	
 	if (url)
 	{
 		[flickrState handleOpenUrl:url];
 	}
+#endif
 	
 #ifdef DEBUG
 #if 0
@@ -667,10 +677,14 @@ static void HandleChange(void* obj, void* arg)
 	delete mApplication;
 	mApplication = 0;
 	
+#if BUILD_FACEBOOK
 	[facebookState release];
 	facebookState = nil;
+#endif
+#if BUILD_FLICKR
 	[flickrState release];
 	flickrState = nil;
+#endif
 	
 	delete brushSettings;
 	brushSettings = 0;

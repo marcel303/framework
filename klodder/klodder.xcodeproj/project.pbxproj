@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 45;
+	objectVersion = 46;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -68,14 +68,6 @@
 		9516823F1195FB3F009CEE85 /* View_ToolSettings_Erazor.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9516823A1195FB3F009CEE85 /* View_ToolSettings_Erazor.mm */; };
 		951682401195FB3F009CEE85 /* View_ToolSettings_Smudge.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9516823C1195FB3F009CEE85 /* View_ToolSettings_Smudge.mm */; };
 		9516824A1195FBC3009CEE85 /* View_BrushSettings.mm in Sources */ = {isa = PBXBuildFile; fileRef = 951682491195FBC3009CEE85 /* View_BrushSettings.mm */; };
-		9517A8DB1153BC4F008A74EF /* Tool_Brush.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9517A8DA1153BC4F008A74EF /* Tool_Brush.cpp */; };
-		9517A8DE1153BC56008A74EF /* Tool_Smudge.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9517A8DD1153BC56008A74EF /* Tool_Smudge.cpp */; };
-		9517A8F41153BD4C008A74EF /* ITool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9517A8F31153BD4C008A74EF /* ITool.cpp */; };
-		9517A8FB1153BE65008A74EF /* Bitmap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9517A8FA1153BE65008A74EF /* Bitmap.cpp */; };
-		9517A8FE1153BEC0008A74EF /* MacImage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9517A8FD1153BEC0008A74EF /* MacImage.cpp */; };
-		9517A9011153BFAC008A74EF /* LayerMgr.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9517A9001153BFAC008A74EF /* LayerMgr.cpp */; };
-		9517A9221153C5A4008A74EF /* Filter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9517A9211153C5A4008A74EF /* Filter.cpp */; };
-		9517A9E01153CA2E008A74EF /* Util_Mem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9517A9DF1153CA2E008A74EF /* Util_Mem.cpp */; };
 		9517AA561153D130008A74EF /* Application.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9517AA551153D130008A74EF /* Application.cpp */; };
 		95189EBE1165D9BE00D20E9E /* View_ColorPickerMgr.mm in Sources */ = {isa = PBXBuildFile; fileRef = 95189EBD1165D9BE00D20E9E /* View_ColorPickerMgr.mm */; };
 		95189EC11165D9C900D20E9E /* View_EditingMgr.mm in Sources */ = {isa = PBXBuildFile; fileRef = 95189EC01165D9C900D20E9E /* View_EditingMgr.mm */; };
@@ -93,7 +85,6 @@
 		951AC8F213413506000B610F /* Heap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 951AC8F013413506000B610F /* Heap.cpp */; };
 		951AC8F51341352C000B610F /* MemOps.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 951AC8F31341352C000B610F /* MemOps.cpp */; };
 		951B9BA41296D3CA00EC1CFE /* Icon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 951B9BA31296D3CA00EC1CFE /* Icon@2x.png */; };
-		951BBCA411F709F1001B1883 /* ImageResampling.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 951BBCA311F709F1001B1883 /* ImageResampling.cpp */; };
 		951BBE6C11F71BE5001B1883 /* agg_image_filters.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 951BBE5B11F71BE5001B1883 /* agg_image_filters.cpp */; };
 		951BBE6D11F71BE5001B1883 /* agg_trans_affine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 951BBE6A11F71BE5001B1883 /* agg_trans_affine.cpp */; };
 		951BBFFE11F7495E001B1883 /* StreamProvider_Replay.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 951BBFFB11F7495E001B1883 /* StreamProvider_Replay.cpp */; };
@@ -117,11 +108,8 @@
 		951E629F11F84A9500F5D46B /* StreamProvider.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 951E629E11F84A9500F5D46B /* StreamProvider.cpp */; };
 		951E6D0F11EF2CF1009AF7DB /* FacebookState.mm in Sources */ = {isa = PBXBuildFile; fileRef = 951E6D0E11EF2CF1009AF7DB /* FacebookState.mm */; };
 		951E6D1211EF2CFB009AF7DB /* FlickrState.mm in Sources */ = {isa = PBXBuildFile; fileRef = 951E6D1111EF2CFB009AF7DB /* FlickrState.mm */; };
-		951E6D8911EF364A009AF7DB /* ChangeType.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 951E6D8811EF364A009AF7DB /* ChangeType.cpp */; };
-		951E6E6C11EF481A009AF7DB /* BezierTraveller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 951E6E6B11EF481A009AF7DB /* BezierTraveller.cpp */; };
 		951E6FFF11EF6944009AF7DB /* FileStreamExtends.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 951E6FFE11EF6944009AF7DB /* FileStreamExtends.cpp */; };
 		951E823011BBD5BC00739225 /* ExceptionLogger.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 951E822E11BBD5BC00739225 /* ExceptionLogger.cpp */; };
-		951EC0AC11862AD900B0449B /* ImageConversion.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 951EC0AA11862AD900B0449B /* ImageConversion.cpp */; };
 		951EC0CD11863AD500B0449B /* ximage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 951EC0CB11863AD500B0449B /* ximage.cpp */; };
 		951EC0D511863BD200B0449B /* ximainfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 951EC0D411863BD200B0449B /* ximainfo.cpp */; };
 		951EC0DF11863C1700B0449B /* ximalpha.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 951EC0DE11863C1700B0449B /* ximalpha.cpp */; };
@@ -134,7 +122,6 @@
 		9524F74B1192AD6E00E26096 /* HttpServerView_iPhone.xib in Resources */ = {isa = PBXBuildFile; fileRef = 9524F74A1192AD6E00E26096 /* HttpServerView_iPhone.xib */; };
 		9524FB501192F50900E26096 /* layer0.png in Resources */ = {isa = PBXBuildFile; fileRef = 9524FB4E1192F50900E26096 /* layer0.png */; };
 		9524FB511192F50900E26096 /* layer1.png in Resources */ = {isa = PBXBuildFile; fileRef = 9524FB4F1192F50900E26096 /* layer1.png */; };
-		95274A2811F5C107001F1292 /* BlitTransform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 95274A2711F5C107001F1292 /* BlitTransform.cpp */; };
 		9527B8C4119D41A600D6FA3C /* View_Gauge_ActiveRegion.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9527B8C3119D41A600D6FA3C /* View_Gauge_ActiveRegion.mm */; };
 		9527B8C7119D41B200D6FA3C /* View_Gauge_Button.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9527B8C6119D41B200D6FA3C /* View_Gauge_Button.mm */; };
 		9527B9EB119D55F100D6FA3C /* gauge_button_less_0.png in Resources */ = {isa = PBXBuildFile; fileRef = 9527B9E7119D55F100D6FA3C /* gauge_button_less_0.png */; };
@@ -200,8 +187,6 @@
 		9529F02411CBA8C200B95E9D /* Types.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9529EFC811CBA8C200B95E9D /* Types.cpp */; };
 		9529F02511CBA8C200B95E9D /* TypesBase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9529EFCA11CBA8C200B95E9D /* TypesBase.cpp */; };
 		9529F02611CBA8C200B95E9D /* Util_Angle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9529EFCC11CBA8C200B95E9D /* Util_Angle.cpp */; };
-		9529F02711CBA8C200B95E9D /* Vec2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9529EFCE11CBA8C200B95E9D /* Vec2.cpp */; };
-		9529F02811CBA8C200B95E9D /* Vec3.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9529EFD011CBA8C200B95E9D /* Vec3.cpp */; };
 		9529F03011CBA8EE00B95E9D /* TouchDLG.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9529F02C11CBA8EE00B95E9D /* TouchDLG.cpp */; };
 		9529F03111CBA8EE00B95E9D /* TouchInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9529F02E11CBA8EE00B95E9D /* TouchInfo.cpp */; };
 		952B6DC011A526EE00F13A4D /* TestCode_iPhone.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 952B6DBF11A526EE00F13A4D /* TestCode_iPhone.cpp */; };
@@ -231,26 +216,10 @@
 		95396F2111EDDD4E009D9EC0 /* Swatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 95396F2011EDDD4E009D9EC0 /* Swatch.cpp */; };
 		9539708D11EDFDD9009D9EC0 /* View_Replay.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9539708C11EDFDD9009D9EC0 /* View_Replay.mm */; };
 		9539709011EDFDE1009D9EC0 /* View_ReplayMgr.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9539708F11EDFDE1009D9EC0 /* View_ReplayMgr.mm */; };
-		954201D911FD82B0005037D7 /* CommandPacket.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 954201D811FD82B0005037D7 /* CommandPacket.cpp */; };
 		9542053411FDCB76005037D7 /* View_HelpMgr.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9542053211FDCB76005037D7 /* View_HelpMgr.mm */; };
 		9542053511FDCB76005037D7 /* HelpView_iPhone.xib in Resources */ = {isa = PBXBuildFile; fileRef = 9542053311FDCB76005037D7 /* HelpView_iPhone.xib */; };
 		954B88E611558C15004EC0F2 /* MenuView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 954B88E511558C15004EC0F2 /* MenuView.mm */; };
 		954B89881155946F004EC0F2 /* ColorView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 954B89871155946F004EC0F2 /* ColorView.mm */; };
-		954CC7BD1167A7D0003933FD /* ObjectiveFlickr.m in Sources */ = {isa = PBXBuildFile; fileRef = 954CC7B91167A7D0003933FD /* ObjectiveFlickr.m */; };
-		954CC7BE1167A7D0003933FD /* OFXMLMapper.m in Sources */ = {isa = PBXBuildFile; fileRef = 954CC7BC1167A7D0003933FD /* OFXMLMapper.m */; };
-		954CC7C61167A7DD003933FD /* LFHTTPRequest.m in Sources */ = {isa = PBXBuildFile; fileRef = 954CC7C01167A7DD003933FD /* LFHTTPRequest.m */; };
-		954CC7C71167A7DD003933FD /* LFSiteReachability.m in Sources */ = {isa = PBXBuildFile; fileRef = 954CC7C21167A7DD003933FD /* LFSiteReachability.m */; };
-		954CC7C81167A7DD003933FD /* NSData+LFHTTPFormExtensions.m in Sources */ = {isa = PBXBuildFile; fileRef = 954CC7C51167A7DD003933FD /* NSData+LFHTTPFormExtensions.m */; };
-		954CC8041167A8EE003933FD /* FBConnectGlobal.m in Sources */ = {isa = PBXBuildFile; fileRef = 954CC7F21167A8EE003933FD /* FBConnectGlobal.m */; };
-		954CC8051167A8EE003933FD /* FBSession.m in Sources */ = {isa = PBXBuildFile; fileRef = 954CC7F41167A8EE003933FD /* FBSession.m */; };
-		954CC8061167A8EE003933FD /* FBRequest.m in Sources */ = {isa = PBXBuildFile; fileRef = 954CC7F61167A8EE003933FD /* FBRequest.m */; };
-		954CC8071167A8EE003933FD /* FBXMLHandler.m in Sources */ = {isa = PBXBuildFile; fileRef = 954CC7F81167A8EE003933FD /* FBXMLHandler.m */; };
-		954CC8081167A8EE003933FD /* FBLoginButton.m in Sources */ = {isa = PBXBuildFile; fileRef = 954CC7FA1167A8EE003933FD /* FBLoginButton.m */; };
-		954CC8091167A8EE003933FD /* FBDialog.m in Sources */ = {isa = PBXBuildFile; fileRef = 954CC7FC1167A8EE003933FD /* FBDialog.m */; };
-		954CC80A1167A8EE003933FD /* FBLoginDialog.m in Sources */ = {isa = PBXBuildFile; fileRef = 954CC7FE1167A8EE003933FD /* FBLoginDialog.m */; };
-		954CC80B1167A8EE003933FD /* FBPermissionDialog.m in Sources */ = {isa = PBXBuildFile; fileRef = 954CC8001167A8EE003933FD /* FBPermissionDialog.m */; };
-		954CC80C1167A8EE003933FD /* FBStreamDialog.m in Sources */ = {isa = PBXBuildFile; fileRef = 954CC8021167A8EE003933FD /* FBStreamDialog.m */; };
-		954CC80D1167A8EE003933FD /* FBConnect.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 954CC8031167A8EE003933FD /* FBConnect.bundle */; };
 		954CC8781167AFB8003933FD /* View_PictureGallery.mm in Sources */ = {isa = PBXBuildFile; fileRef = 954CC8771167AFB8003933FD /* View_PictureGallery.mm */; };
 		954CC87B1167AFC6003933FD /* View_PictureGalleryMgr.mm in Sources */ = {isa = PBXBuildFile; fileRef = 954CC87A1167AFC6003933FD /* View_PictureGalleryMgr.mm */; };
 		954FE97F14A8EF4B001341D0 /* HTTPAuthenticationRequest.m in Sources */ = {isa = PBXBuildFile; fileRef = 954FE97414A8EF4B001341D0 /* HTTPAuthenticationRequest.m */; };
@@ -341,7 +310,6 @@
 		95BDC9581209C19500F5E455 /* tool_eraser@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 95BDC94E1209C19500F5E455 /* tool_eraser@2x.png */; };
 		95BDC9591209C19500F5E455 /* tool_smudge_sel@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 95BDC94F1209C19500F5E455 /* tool_smudge_sel@2x.png */; };
 		95BDC95A1209C19500F5E455 /* tool_smudge@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 95BDC9501209C19500F5E455 /* tool_smudge@2x.png */; };
-		95D83396115EB98200C0EBF2 /* Bezier.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 95D83395115EB98200C0EBF2 /* Bezier.cpp */; };
 		95DD2B0711F4A2E400F15061 /* View_MiniToolSelect.mm in Sources */ = {isa = PBXBuildFile; fileRef = 95DD2B0611F4A2E400F15061 /* View_MiniToolSelect.mm */; };
 		95E5114711DDF9A400B96D42 /* ExceptionLoggerObjC.mm in Sources */ = {isa = PBXBuildFile; fileRef = 95E5114611DDF9A400B96D42 /* ExceptionLoggerObjC.mm */; };
 		95E511A311DE069200B96D42 /* Deployment.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 95E511A211DE069200B96D42 /* Deployment.cpp */; };
@@ -354,6 +322,26 @@
 		95F326341227F606007C6286 /* button_visibility@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 95F326301227F605007C6286 /* button_visibility@2x.png */; };
 		95F3264B1227F8AA007C6286 /* button_new.png in Resources */ = {isa = PBXBuildFile; fileRef = 95F326491227F8AA007C6286 /* button_new.png */; };
 		95F3264C1227F8AA007C6286 /* button_new@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 95F3264A1227F8AA007C6286 /* button_new@2x.png */; };
+		C44CD4531E37D32D00C52159 /* Bezier.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C44CD4521E37D32D00C52159 /* Bezier.cpp */; };
+		C44CD47A1E37D34600C52159 /* BezierTraveller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C44CD4551E37D34600C52159 /* BezierTraveller.cpp */; };
+		C44CD47B1E37D34600C52159 /* Bitmap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C44CD4571E37D34600C52159 /* Bitmap.cpp */; };
+		C44CD47C1E37D34600C52159 /* BlitTransform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C44CD4591E37D34600C52159 /* BlitTransform.cpp */; };
+		C44CD47D1E37D34600C52159 /* ChangeType.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C44CD45B1E37D34600C52159 /* ChangeType.cpp */; };
+		C44CD47E1E37D34600C52159 /* CMakeLists.txt in Resources */ = {isa = PBXBuildFile; fileRef = C44CD45D1E37D34600C52159 /* CMakeLists.txt */; };
+		C44CD47F1E37D34600C52159 /* CommandPacket.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C44CD45E1E37D34600C52159 /* CommandPacket.cpp */; };
+		C44CD4801E37D34600C52159 /* Filter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C44CD4601E37D34600C52159 /* Filter.cpp */; };
+		C44CD4811E37D34600C52159 /* ImageConversion.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C44CD4621E37D34600C52159 /* ImageConversion.cpp */; };
+		C44CD4821E37D34600C52159 /* ImageResampling.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C44CD4641E37D34600C52159 /* ImageResampling.cpp */; };
+		C44CD4831E37D34600C52159 /* LayerMgr.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C44CD4661E37D34600C52159 /* LayerMgr.cpp */; };
+		C44CD4841E37D34600C52159 /* libklodder_forward.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C44CD4681E37D34600C52159 /* libklodder_forward.cpp */; };
+		C44CD4851E37D34600C52159 /* MacImage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C44CD46A1E37D34600C52159 /* MacImage.cpp */; };
+		C44CD4861E37D34600C52159 /* Tool_Blur.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C44CD46C1E37D34600C52159 /* Tool_Blur.cpp */; };
+		C44CD4871E37D34600C52159 /* Tool_Brush.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C44CD46E1E37D34600C52159 /* Tool_Brush.cpp */; };
+		C44CD4881E37D34600C52159 /* Tool_Colorize.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C44CD4701E37D34600C52159 /* Tool_Colorize.cpp */; };
+		C44CD4891E37D34600C52159 /* Tool_Sharpen.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C44CD4721E37D34600C52159 /* Tool_Sharpen.cpp */; };
+		C44CD48A1E37D34600C52159 /* Tool_Smudge.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C44CD4741E37D34600C52159 /* Tool_Smudge.cpp */; };
+		C44CD48B1E37D34600C52159 /* Tool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C44CD4761E37D34600C52159 /* Tool.cpp */; };
+		C44CD48C1E37D34600C52159 /* Util_Mem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C44CD4781E37D34600C52159 /* Util_Mem.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -457,22 +445,6 @@
 		9516823C1195FB3F009CEE85 /* View_ToolSettings_Smudge.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = View_ToolSettings_Smudge.mm; sourceTree = "<group>"; };
 		951682481195FBC3009CEE85 /* View_BrushSettings.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = View_BrushSettings.h; sourceTree = "<group>"; };
 		951682491195FBC3009CEE85 /* View_BrushSettings.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = View_BrushSettings.mm; sourceTree = "<group>"; };
-		9517A8D91153BC4F008A74EF /* Tool_Brush.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Tool_Brush.h; sourceTree = "<group>"; };
-		9517A8DA1153BC4F008A74EF /* Tool_Brush.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Tool_Brush.cpp; sourceTree = "<group>"; };
-		9517A8DC1153BC56008A74EF /* Tool_Smudge.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Tool_Smudge.h; sourceTree = "<group>"; };
-		9517A8DD1153BC56008A74EF /* Tool_Smudge.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Tool_Smudge.cpp; sourceTree = "<group>"; };
-		9517A8F21153BD4C008A74EF /* ITool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ITool.h; sourceTree = "<group>"; };
-		9517A8F31153BD4C008A74EF /* ITool.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ITool.cpp; sourceTree = "<group>"; };
-		9517A8F91153BE65008A74EF /* Bitmap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Bitmap.h; sourceTree = "<group>"; };
-		9517A8FA1153BE65008A74EF /* Bitmap.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Bitmap.cpp; sourceTree = "<group>"; };
-		9517A8FC1153BEC0008A74EF /* MacImage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MacImage.h; sourceTree = "<group>"; };
-		9517A8FD1153BEC0008A74EF /* MacImage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MacImage.cpp; sourceTree = "<group>"; };
-		9517A8FF1153BFAC008A74EF /* LayerMgr.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LayerMgr.h; sourceTree = "<group>"; };
-		9517A9001153BFAC008A74EF /* LayerMgr.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LayerMgr.cpp; sourceTree = "<group>"; };
-		9517A9201153C5A4008A74EF /* Filter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Filter.h; sourceTree = "<group>"; };
-		9517A9211153C5A4008A74EF /* Filter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Filter.cpp; sourceTree = "<group>"; };
-		9517A9DE1153CA2E008A74EF /* Util_Mem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Util_Mem.h; sourceTree = "<group>"; };
-		9517A9DF1153CA2E008A74EF /* Util_Mem.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Util_Mem.cpp; sourceTree = "<group>"; };
 		9517AA541153D130008A74EF /* Application.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Application.h; sourceTree = "<group>"; };
 		9517AA551153D130008A74EF /* Application.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Application.cpp; sourceTree = "<group>"; };
 		95189EBC1165D9BE00D20E9E /* View_ColorPickerMgr.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = View_ColorPickerMgr.h; sourceTree = "<group>"; };
@@ -502,8 +474,6 @@
 		951AC8F31341352C000B610F /* MemOps.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MemOps.cpp; path = ../libgg/MemOps.cpp; sourceTree = "<group>"; };
 		951AC8F41341352C000B610F /* MemOps.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MemOps.h; path = ../libgg/MemOps.h; sourceTree = "<group>"; };
 		951B9BA31296D3CA00EC1CFE /* Icon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "Icon@2x.png"; path = "Resources/Icon@2x.png"; sourceTree = "<group>"; };
-		951BBCA211F709F1001B1883 /* ImageResampling.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ImageResampling.h; sourceTree = "<group>"; };
-		951BBCA311F709F1001B1883 /* ImageResampling.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ImageResampling.cpp; sourceTree = "<group>"; };
 		951BBE5311F71BE5001B1883 /* agg_array.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = agg_array.h; path = libagg/agg_array.h; sourceTree = "<group>"; };
 		951BBE5411F71BE5001B1883 /* agg_basics.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = agg_basics.h; path = libagg/agg_basics.h; sourceTree = "<group>"; };
 		951BBE5511F71BE5001B1883 /* agg_clip_liang_barsky.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = agg_clip_liang_barsky.h; path = libagg/agg_clip_liang_barsky.h; sourceTree = "<group>"; };
@@ -556,16 +526,10 @@
 		951E6D0E11EF2CF1009AF7DB /* FacebookState.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = FacebookState.mm; sourceTree = "<group>"; };
 		951E6D1011EF2CFB009AF7DB /* FlickrState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FlickrState.h; sourceTree = "<group>"; };
 		951E6D1111EF2CFB009AF7DB /* FlickrState.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = FlickrState.mm; sourceTree = "<group>"; };
-		951E6D8711EF364A009AF7DB /* ChangeType.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ChangeType.h; sourceTree = "<group>"; };
-		951E6D8811EF364A009AF7DB /* ChangeType.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ChangeType.cpp; sourceTree = "<group>"; };
-		951E6E6A11EF481A009AF7DB /* BezierTraveller.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BezierTraveller.h; sourceTree = "<group>"; };
-		951E6E6B11EF481A009AF7DB /* BezierTraveller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BezierTraveller.cpp; sourceTree = "<group>"; };
 		951E6FFD11EF6944009AF7DB /* FileStreamExtends.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FileStreamExtends.h; path = ../libgg/FileStreamExtends.h; sourceTree = SOURCE_ROOT; };
 		951E6FFE11EF6944009AF7DB /* FileStreamExtends.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = FileStreamExtends.cpp; path = ../libgg/FileStreamExtends.cpp; sourceTree = SOURCE_ROOT; };
 		951E822E11BBD5BC00739225 /* ExceptionLogger.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ExceptionLogger.cpp; sourceTree = "<group>"; };
 		951E822F11BBD5BC00739225 /* ExceptionLogger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ExceptionLogger.h; sourceTree = "<group>"; };
-		951EC0AA11862AD900B0449B /* ImageConversion.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ImageConversion.cpp; sourceTree = "<group>"; };
-		951EC0AB11862AD900B0449B /* ImageConversion.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ImageConversion.h; sourceTree = "<group>"; };
 		951EC0C911863AD500B0449B /* ximacfg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ximacfg.h; path = CxImage/ximacfg.h; sourceTree = "<group>"; };
 		951EC0CA11863AD500B0449B /* ximadef.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ximadef.h; path = CxImage/ximadef.h; sourceTree = "<group>"; };
 		951EC0CB11863AD500B0449B /* ximage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ximage.cpp; path = CxImage/ximage.cpp; sourceTree = "<group>"; };
@@ -584,8 +548,6 @@
 		9524F74A1192AD6E00E26096 /* HttpServerView_iPhone.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = HttpServerView_iPhone.xib; sourceTree = "<group>"; };
 		9524FB4E1192F50900E26096 /* layer0.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = layer0.png; path = Resources/layer0.png; sourceTree = "<group>"; };
 		9524FB4F1192F50900E26096 /* layer1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = layer1.png; path = Resources/layer1.png; sourceTree = "<group>"; };
-		95274A2611F5C107001F1292 /* BlitTransform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BlitTransform.h; sourceTree = "<group>"; };
-		95274A2711F5C107001F1292 /* BlitTransform.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BlitTransform.cpp; sourceTree = "<group>"; };
 		9527B8C2119D41A600D6FA3C /* View_Gauge_ActiveRegion.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = View_Gauge_ActiveRegion.h; sourceTree = "<group>"; };
 		9527B8C3119D41A600D6FA3C /* View_Gauge_ActiveRegion.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = View_Gauge_ActiveRegion.mm; sourceTree = "<group>"; };
 		9527B8C5119D41B200D6FA3C /* View_Gauge_Button.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = View_Gauge_Button.h; sourceTree = "<group>"; };
@@ -648,7 +610,6 @@
 		9529EF7E11CBA8C200B95E9D /* Path.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Path.h; path = ../libgg/Path.h; sourceTree = SOURCE_ROOT; };
 		9529EF8011CBA8C200B95E9D /* PolledTimer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PolledTimer.cpp; path = ../libgg/PolledTimer.cpp; sourceTree = SOURCE_ROOT; };
 		9529EF8111CBA8C200B95E9D /* PolledTimer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PolledTimer.h; path = ../libgg/PolledTimer.h; sourceTree = SOURCE_ROOT; };
-		9529EF8211CBA8C200B95E9D /* Precompiled.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Precompiled.h; path = ../libgg/Precompiled.h; sourceTree = SOURCE_ROOT; };
 		9529EF8311CBA8C200B95E9D /* PsdChannel.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PsdChannel.cpp; path = ../libgg/PsdChannel.cpp; sourceTree = SOURCE_ROOT; };
 		9529EF8411CBA8C200B95E9D /* PsdChannel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdChannel.h; path = ../libgg/PsdChannel.h; sourceTree = SOURCE_ROOT; };
 		9529EF8511CBA8C200B95E9D /* PsdColorModeData.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PsdColorModeData.cpp; path = ../libgg/PsdColorModeData.cpp; sourceTree = SOURCE_ROOT; };
@@ -716,9 +677,7 @@
 		9529EFCB11CBA8C200B95E9D /* TypesBase.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TypesBase.h; path = ../libgg/TypesBase.h; sourceTree = SOURCE_ROOT; };
 		9529EFCC11CBA8C200B95E9D /* Util_Angle.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Util_Angle.cpp; path = ../libgg/Util_Angle.cpp; sourceTree = SOURCE_ROOT; };
 		9529EFCD11CBA8C200B95E9D /* Util_Angle.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Util_Angle.h; path = ../libgg/Util_Angle.h; sourceTree = SOURCE_ROOT; };
-		9529EFCE11CBA8C200B95E9D /* Vec2.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Vec2.cpp; path = ../libgg/Vec2.cpp; sourceTree = SOURCE_ROOT; };
 		9529EFCF11CBA8C200B95E9D /* Vec2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Vec2.h; path = ../libgg/Vec2.h; sourceTree = SOURCE_ROOT; };
-		9529EFD011CBA8C200B95E9D /* Vec3.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Vec3.cpp; path = ../libgg/Vec3.cpp; sourceTree = SOURCE_ROOT; };
 		9529EFD111CBA8C200B95E9D /* Vec3.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Vec3.h; path = ../libgg/Vec3.h; sourceTree = SOURCE_ROOT; };
 		9529EFD211CBA8C200B95E9D /* Vec4.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Vec4.h; path = ../libgg/Vec4.h; sourceTree = SOURCE_ROOT; };
 		9529F02C11CBA8EE00B95E9D /* TouchDLG.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TouchDLG.cpp; path = ../libiphone/TouchDLG.cpp; sourceTree = SOURCE_ROOT; };
@@ -769,8 +728,6 @@
 		9539708C11EDFDD9009D9EC0 /* View_Replay.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = View_Replay.mm; sourceTree = "<group>"; };
 		9539708E11EDFDE1009D9EC0 /* View_ReplayMgr.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = View_ReplayMgr.h; sourceTree = "<group>"; };
 		9539708F11EDFDE1009D9EC0 /* View_ReplayMgr.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = View_ReplayMgr.mm; sourceTree = "<group>"; };
-		954201D711FD82B0005037D7 /* CommandPacket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CommandPacket.h; sourceTree = "<group>"; };
-		954201D811FD82B0005037D7 /* CommandPacket.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CommandPacket.cpp; sourceTree = "<group>"; };
 		9542053111FDCB76005037D7 /* View_HelpMgr.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = View_HelpMgr.h; sourceTree = "<group>"; };
 		9542053211FDCB76005037D7 /* View_HelpMgr.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = View_HelpMgr.mm; sourceTree = "<group>"; };
 		9542053311FDCB76005037D7 /* HelpView_iPhone.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = HelpView_iPhone.xib; path = Classes/HelpView_iPhone.xib; sourceTree = "<group>"; };
@@ -948,8 +905,6 @@
 		95BDC94E1209C19500F5E455 /* tool_eraser@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "tool_eraser@2x.png"; path = "Resources/tool_eraser@2x.png"; sourceTree = "<group>"; };
 		95BDC94F1209C19500F5E455 /* tool_smudge_sel@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "tool_smudge_sel@2x.png"; path = "Resources/tool_smudge_sel@2x.png"; sourceTree = "<group>"; };
 		95BDC9501209C19500F5E455 /* tool_smudge@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "tool_smudge@2x.png"; path = "Resources/tool_smudge@2x.png"; sourceTree = "<group>"; };
-		95D83394115EB98200C0EBF2 /* Bezier.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Bezier.h; sourceTree = "<group>"; };
-		95D83395115EB98200C0EBF2 /* Bezier.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Bezier.cpp; sourceTree = "<group>"; };
 		95DD2B0511F4A2E400F15061 /* View_MiniToolSelect.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = View_MiniToolSelect.h; sourceTree = "<group>"; };
 		95DD2B0611F4A2E400F15061 /* View_MiniToolSelect.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = View_MiniToolSelect.mm; sourceTree = "<group>"; };
 		95E5114511DDF9A400B96D42 /* ExceptionLoggerObjC.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ExceptionLoggerObjC.h; sourceTree = "<group>"; };
@@ -967,6 +922,45 @@
 		95F326301227F605007C6286 /* button_visibility@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "button_visibility@2x.png"; path = "Resources/button_visibility@2x.png"; sourceTree = "<group>"; };
 		95F326491227F8AA007C6286 /* button_new.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = button_new.png; path = Resources/button_new.png; sourceTree = "<group>"; };
 		95F3264A1227F8AA007C6286 /* button_new@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "button_new@2x.png"; path = "Resources/button_new@2x.png"; sourceTree = "<group>"; };
+		C44CD4521E37D32D00C52159 /* Bezier.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Bezier.cpp; path = libklodder/Bezier.cpp; sourceTree = "<group>"; };
+		C44CD4541E37D34600C52159 /* Bezier.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Bezier.h; path = libklodder/Bezier.h; sourceTree = "<group>"; };
+		C44CD4551E37D34600C52159 /* BezierTraveller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = BezierTraveller.cpp; path = libklodder/BezierTraveller.cpp; sourceTree = "<group>"; };
+		C44CD4561E37D34600C52159 /* BezierTraveller.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BezierTraveller.h; path = libklodder/BezierTraveller.h; sourceTree = "<group>"; };
+		C44CD4571E37D34600C52159 /* Bitmap.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Bitmap.cpp; path = libklodder/Bitmap.cpp; sourceTree = "<group>"; };
+		C44CD4581E37D34600C52159 /* Bitmap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Bitmap.h; path = libklodder/Bitmap.h; sourceTree = "<group>"; };
+		C44CD4591E37D34600C52159 /* BlitTransform.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = BlitTransform.cpp; path = libklodder/BlitTransform.cpp; sourceTree = "<group>"; };
+		C44CD45A1E37D34600C52159 /* BlitTransform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BlitTransform.h; path = libklodder/BlitTransform.h; sourceTree = "<group>"; };
+		C44CD45B1E37D34600C52159 /* ChangeType.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ChangeType.cpp; path = libklodder/ChangeType.cpp; sourceTree = "<group>"; };
+		C44CD45C1E37D34600C52159 /* ChangeType.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ChangeType.h; path = libklodder/ChangeType.h; sourceTree = "<group>"; };
+		C44CD45D1E37D34600C52159 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = CMakeLists.txt; path = libklodder/CMakeLists.txt; sourceTree = "<group>"; };
+		C44CD45E1E37D34600C52159 /* CommandPacket.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandPacket.cpp; path = libklodder/CommandPacket.cpp; sourceTree = "<group>"; };
+		C44CD45F1E37D34600C52159 /* CommandPacket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CommandPacket.h; path = libklodder/CommandPacket.h; sourceTree = "<group>"; };
+		C44CD4601E37D34600C52159 /* Filter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Filter.cpp; path = libklodder/Filter.cpp; sourceTree = "<group>"; };
+		C44CD4611E37D34600C52159 /* Filter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Filter.h; path = libklodder/Filter.h; sourceTree = "<group>"; };
+		C44CD4621E37D34600C52159 /* ImageConversion.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ImageConversion.cpp; path = libklodder/ImageConversion.cpp; sourceTree = "<group>"; };
+		C44CD4631E37D34600C52159 /* ImageConversion.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ImageConversion.h; path = libklodder/ImageConversion.h; sourceTree = "<group>"; };
+		C44CD4641E37D34600C52159 /* ImageResampling.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ImageResampling.cpp; path = libklodder/ImageResampling.cpp; sourceTree = "<group>"; };
+		C44CD4651E37D34600C52159 /* ImageResampling.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ImageResampling.h; path = libklodder/ImageResampling.h; sourceTree = "<group>"; };
+		C44CD4661E37D34600C52159 /* LayerMgr.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LayerMgr.cpp; path = libklodder/LayerMgr.cpp; sourceTree = "<group>"; };
+		C44CD4671E37D34600C52159 /* LayerMgr.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = LayerMgr.h; path = libklodder/LayerMgr.h; sourceTree = "<group>"; };
+		C44CD4681E37D34600C52159 /* libklodder_forward.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = libklodder_forward.cpp; path = libklodder/libklodder_forward.cpp; sourceTree = "<group>"; };
+		C44CD4691E37D34600C52159 /* libklodder_forward.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = libklodder_forward.h; path = libklodder/libklodder_forward.h; sourceTree = "<group>"; };
+		C44CD46A1E37D34600C52159 /* MacImage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MacImage.cpp; path = libklodder/MacImage.cpp; sourceTree = "<group>"; };
+		C44CD46B1E37D34600C52159 /* MacImage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MacImage.h; path = libklodder/MacImage.h; sourceTree = "<group>"; };
+		C44CD46C1E37D34600C52159 /* Tool_Blur.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Tool_Blur.cpp; path = libklodder/Tool_Blur.cpp; sourceTree = "<group>"; };
+		C44CD46D1E37D34600C52159 /* Tool_Blur.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Tool_Blur.h; path = libklodder/Tool_Blur.h; sourceTree = "<group>"; };
+		C44CD46E1E37D34600C52159 /* Tool_Brush.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Tool_Brush.cpp; path = libklodder/Tool_Brush.cpp; sourceTree = "<group>"; };
+		C44CD46F1E37D34600C52159 /* Tool_Brush.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Tool_Brush.h; path = libklodder/Tool_Brush.h; sourceTree = "<group>"; };
+		C44CD4701E37D34600C52159 /* Tool_Colorize.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Tool_Colorize.cpp; path = libklodder/Tool_Colorize.cpp; sourceTree = "<group>"; };
+		C44CD4711E37D34600C52159 /* Tool_Colorize.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Tool_Colorize.h; path = libklodder/Tool_Colorize.h; sourceTree = "<group>"; };
+		C44CD4721E37D34600C52159 /* Tool_Sharpen.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Tool_Sharpen.cpp; path = libklodder/Tool_Sharpen.cpp; sourceTree = "<group>"; };
+		C44CD4731E37D34600C52159 /* Tool_Sharpen.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Tool_Sharpen.h; path = libklodder/Tool_Sharpen.h; sourceTree = "<group>"; };
+		C44CD4741E37D34600C52159 /* Tool_Smudge.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Tool_Smudge.cpp; path = libklodder/Tool_Smudge.cpp; sourceTree = "<group>"; };
+		C44CD4751E37D34600C52159 /* Tool_Smudge.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Tool_Smudge.h; path = libklodder/Tool_Smudge.h; sourceTree = "<group>"; };
+		C44CD4761E37D34600C52159 /* Tool.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Tool.cpp; path = libklodder/Tool.cpp; sourceTree = "<group>"; };
+		C44CD4771E37D34600C52159 /* Tool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Tool.h; path = libklodder/Tool.h; sourceTree = "<group>"; };
+		C44CD4781E37D34600C52159 /* Util_Mem.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Util_Mem.cpp; path = libklodder/Util_Mem.cpp; sourceTree = "<group>"; };
+		C44CD4791E37D34600C52159 /* Util_Mem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Util_Mem.h; path = libklodder/Util_Mem.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1053,6 +1047,7 @@
 				951BBC7F11F709C2001B1883 /* libagg */,
 				9529EF3611CBA89700B95E9D /* libgg */,
 				9529F02B11CBA8DB00B95E9D /* libiphone */,
+				C44CD4511E37D31600C52159 /* libklodder */,
 				29B97315FDCFA39411CA2CEA /* Other Sources */,
 				19C28FACFE9D520D11CA2CBB /* Products */,
 				29B97317FDCFA39411CA2CEA /* Resources */,
@@ -1405,14 +1400,6 @@
 			children = (
 				9517AA551153D130008A74EF /* Application.cpp */,
 				9517AA541153D130008A74EF /* Application.h */,
-				95D83395115EB98200C0EBF2 /* Bezier.cpp */,
-				95D83394115EB98200C0EBF2 /* Bezier.h */,
-				951E6E6B11EF481A009AF7DB /* BezierTraveller.cpp */,
-				951E6E6A11EF481A009AF7DB /* BezierTraveller.h */,
-				9517A8FA1153BE65008A74EF /* Bitmap.cpp */,
-				9517A8F91153BE65008A74EF /* Bitmap.h */,
-				95274A2711F5C107001F1292 /* BlitTransform.cpp */,
-				95274A2611F5C107001F1292 /* BlitTransform.h */,
 				95316E6111ECA16000351B90 /* Brush_Pattern.cpp */,
 				95316E6011ECA16000351B90 /* Brush_Pattern.h */,
 				9508255E1178AFDE00998ACF /* BrushLibrary.cpp */,
@@ -1421,44 +1408,24 @@
 				9504E3371189A436000DE46F /* BrushLibrarySet.h */,
 				950825611178AFE800998ACF /* BrushSettingsLibrary.cpp */,
 				950825601178AFE800998ACF /* BrushSettingsLibrary.h */,
-				951E6D8811EF364A009AF7DB /* ChangeType.cpp */,
-				951E6D8711EF364A009AF7DB /* ChangeType.h */,
-				954201D811FD82B0005037D7 /* CommandPacket.cpp */,
-				954201D711FD82B0005037D7 /* CommandPacket.h */,
 				9519E4C4116D27CE00A8A8A9 /* CommandStream.cpp */,
 				9519E4C3116D27CE00A8A8A9 /* CommandStream.h */,
 				9535A5E611E4808C008F307E /* DataStream.cpp */,
 				9535A5E511E4808C008F307E /* DataStream.h */,
-				9517A9211153C5A4008A74EF /* Filter.cpp */,
-				9517A9201153C5A4008A74EF /* Filter.h */,
-				951EC0AA11862AD900B0449B /* ImageConversion.cpp */,
-				951EC0AB11862AD900B0449B /* ImageConversion.h */,
 				9514759F11EB104900DB1F35 /* ImageDescription.cpp */,
 				9514759E11EB104900DB1F35 /* ImageDescription.h */,
 				9514763911EB1A7400DB1F35 /* ImageId.cpp */,
 				9514763811EB1A7400DB1F35 /* ImageId.h */,
-				951BBCA311F709F1001B1883 /* ImageResampling.cpp */,
-				951BBCA211F709F1001B1883 /* ImageResampling.h */,
-				9517A8F31153BD4C008A74EF /* ITool.cpp */,
-				9517A8F21153BD4C008A74EF /* ITool.h */,
 				9514763611EB1A0300DB1F35 /* klodder_forward.cpp */,
 				9514763511EB1A0300DB1F35 /* klodder_forward.h */,
 				95396D3811EDA847009D9EC0 /* klodder_forward_objc.h */,
 				95396D3911EDA847009D9EC0 /* klodder_forward_objc.mm */,
-				9517A9001153BFAC008A74EF /* LayerMgr.cpp */,
-				9517A8FF1153BFAC008A74EF /* LayerMgr.h */,
-				9517A8FD1153BEC0008A74EF /* MacImage.cpp */,
-				9517A8FC1153BEC0008A74EF /* MacImage.h */,
 				951E629E11F84A9500F5D46B /* StreamProvider.cpp */,
 				951BBFFD11F7495E001B1883 /* StreamProvider.h */,
 				951BBFFB11F7495E001B1883 /* StreamProvider_Replay.cpp */,
 				951BBFFC11F7495E001B1883 /* StreamProvider_Replay.h */,
 				95396F2011EDDD4E009D9EC0 /* Swatch.cpp */,
 				95396F1F11EDDD4E009D9EC0 /* Swatch.h */,
-				9517A8DA1153BC4F008A74EF /* Tool_Brush.cpp */,
-				9517A8D91153BC4F008A74EF /* Tool_Brush.h */,
-				9517A8DD1153BC56008A74EF /* Tool_Smudge.cpp */,
-				9517A8DC1153BC56008A74EF /* Tool_Smudge.h */,
 				9519E4C1116D1F1300A8A8A9 /* UndoStack.cpp */,
 				9519E4C0116D1F1300A8A8A9 /* UndoStack.h */,
 			);
@@ -1488,8 +1455,6 @@
 				9586F24411E1E4FF006A1EA8 /* UIImageEx.mm */,
 				957AC2AA11D223F300E5BFB0 /* Util_Color.cpp */,
 				957AC2AB11D223F300E5BFB0 /* Util_Color.h */,
-				9517A9DF1153CA2E008A74EF /* Util_Mem.cpp */,
-				9517A9DE1153CA2E008A74EF /* Util_Mem.h */,
 				950AE2F21168D1BD00025463 /* XmlNode.cpp */,
 				950AE2F11168D1BD00025463 /* XmlNode.h */,
 				950AE2EF1168D18F00025463 /* XmlReader.cpp */,
@@ -1646,7 +1611,6 @@
 				9529EF7E11CBA8C200B95E9D /* Path.h */,
 				9529EF8011CBA8C200B95E9D /* PolledTimer.cpp */,
 				9529EF8111CBA8C200B95E9D /* PolledTimer.h */,
-				9529EF8211CBA8C200B95E9D /* Precompiled.h */,
 				9529EF8311CBA8C200B95E9D /* PsdChannel.cpp */,
 				9529EF8411CBA8C200B95E9D /* PsdChannel.h */,
 				9529EF8511CBA8C200B95E9D /* PsdColorModeData.cpp */,
@@ -1714,9 +1678,7 @@
 				9529EFCB11CBA8C200B95E9D /* TypesBase.h */,
 				9529EFCC11CBA8C200B95E9D /* Util_Angle.cpp */,
 				9529EFCD11CBA8C200B95E9D /* Util_Angle.h */,
-				9529EFCE11CBA8C200B95E9D /* Vec2.cpp */,
 				9529EFCF11CBA8C200B95E9D /* Vec2.h */,
-				9529EFD011CBA8C200B95E9D /* Vec3.cpp */,
 				9529EFD111CBA8C200B95E9D /* Vec3.h */,
 				9529EFD211CBA8C200B95E9D /* Vec4.h */,
 			);
@@ -1852,6 +1814,52 @@
 			name = "Resources-Static";
 			sourceTree = "<group>";
 		};
+		C44CD4511E37D31600C52159 /* libklodder */ = {
+			isa = PBXGroup;
+			children = (
+				C44CD4521E37D32D00C52159 /* Bezier.cpp */,
+				C44CD4541E37D34600C52159 /* Bezier.h */,
+				C44CD4551E37D34600C52159 /* BezierTraveller.cpp */,
+				C44CD4561E37D34600C52159 /* BezierTraveller.h */,
+				C44CD4571E37D34600C52159 /* Bitmap.cpp */,
+				C44CD4581E37D34600C52159 /* Bitmap.h */,
+				C44CD4591E37D34600C52159 /* BlitTransform.cpp */,
+				C44CD45A1E37D34600C52159 /* BlitTransform.h */,
+				C44CD45B1E37D34600C52159 /* ChangeType.cpp */,
+				C44CD45C1E37D34600C52159 /* ChangeType.h */,
+				C44CD45D1E37D34600C52159 /* CMakeLists.txt */,
+				C44CD45E1E37D34600C52159 /* CommandPacket.cpp */,
+				C44CD45F1E37D34600C52159 /* CommandPacket.h */,
+				C44CD4601E37D34600C52159 /* Filter.cpp */,
+				C44CD4611E37D34600C52159 /* Filter.h */,
+				C44CD4621E37D34600C52159 /* ImageConversion.cpp */,
+				C44CD4631E37D34600C52159 /* ImageConversion.h */,
+				C44CD4641E37D34600C52159 /* ImageResampling.cpp */,
+				C44CD4651E37D34600C52159 /* ImageResampling.h */,
+				C44CD4661E37D34600C52159 /* LayerMgr.cpp */,
+				C44CD4671E37D34600C52159 /* LayerMgr.h */,
+				C44CD4681E37D34600C52159 /* libklodder_forward.cpp */,
+				C44CD4691E37D34600C52159 /* libklodder_forward.h */,
+				C44CD46A1E37D34600C52159 /* MacImage.cpp */,
+				C44CD46B1E37D34600C52159 /* MacImage.h */,
+				C44CD46C1E37D34600C52159 /* Tool_Blur.cpp */,
+				C44CD46D1E37D34600C52159 /* Tool_Blur.h */,
+				C44CD46E1E37D34600C52159 /* Tool_Brush.cpp */,
+				C44CD46F1E37D34600C52159 /* Tool_Brush.h */,
+				C44CD4701E37D34600C52159 /* Tool_Colorize.cpp */,
+				C44CD4711E37D34600C52159 /* Tool_Colorize.h */,
+				C44CD4721E37D34600C52159 /* Tool_Sharpen.cpp */,
+				C44CD4731E37D34600C52159 /* Tool_Sharpen.h */,
+				C44CD4741E37D34600C52159 /* Tool_Smudge.cpp */,
+				C44CD4751E37D34600C52159 /* Tool_Smudge.h */,
+				C44CD4761E37D34600C52159 /* Tool.cpp */,
+				C44CD4771E37D34600C52159 /* Tool.h */,
+				C44CD4781E37D34600C52159 /* Util_Mem.cpp */,
+				C44CD4791E37D34600C52159 /* Util_Mem.h */,
+			);
+			name = libklodder;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -1877,8 +1885,11 @@
 /* Begin PBXProject section */
 		29B97313FDCFA39411CA2CEA /* Project object */ = {
 			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0820;
+			};
 			buildConfigurationList = C01FCF4E08A954540054247B /* Build configuration list for PBXProject "klodder" */;
-			compatibilityVersion = "Xcode 3.1";
+			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 1;
 			knownRegions = (
@@ -1920,7 +1931,6 @@
 				95ABFF44115F8321004AA538 /* crosshair_large.png in Resources */,
 				95ABFF45115F8321004AA538 /* crosshair_medium.png in Resources */,
 				95ABFF46115F8321004AA538 /* crosshair_small.png in Resources */,
-				954CC80D1167A8EE003933FD /* FBConnect.bundle in Resources */,
 				950AE4EB1169095200025463 /* eyedropper.png in Resources */,
 				955261DA116FA14B005791FD /* MainWindow_iPad.xib in Resources */,
 				951E2ED7117702EA00A29AE2 /* colorwheel.png in Resources */,
@@ -2005,6 +2015,7 @@
 				950E7A301222C340007E0C13 /* button_tool@2x.png in Resources */,
 				95F326311227F605007C6286 /* button_redo@2x.png in Resources */,
 				95F326321227F606007C6286 /* button_undo@2x.png in Resources */,
+				C44CD47E1E37D34600C52159 /* CMakeLists.txt in Resources */,
 				95F326331227F606007C6286 /* button_visibility.png in Resources */,
 				95F326341227F606007C6286 /* button_visibility@2x.png in Resources */,
 				95F3264B1227F8AA007C6286 /* button_new.png in Resources */,
@@ -2022,14 +2033,6 @@
 			files = (
 				1D60589B0D05DD56006BFB54 /* main.mm in Sources */,
 				1D3623260D0F684500981E51 /* AppDelegate.mm in Sources */,
-				9517A8DB1153BC4F008A74EF /* Tool_Brush.cpp in Sources */,
-				9517A8DE1153BC56008A74EF /* Tool_Smudge.cpp in Sources */,
-				9517A8F41153BD4C008A74EF /* ITool.cpp in Sources */,
-				9517A8FB1153BE65008A74EF /* Bitmap.cpp in Sources */,
-				9517A8FE1153BEC0008A74EF /* MacImage.cpp in Sources */,
-				9517A9011153BFAC008A74EF /* LayerMgr.cpp in Sources */,
-				9517A9221153C5A4008A74EF /* Filter.cpp in Sources */,
-				9517A9E01153CA2E008A74EF /* Util_Mem.cpp in Sources */,
 				9517AA561153D130008A74EF /* Application.cpp in Sources */,
 				954B88E611558C15004EC0F2 /* MenuView.mm in Sources */,
 				954B89881155946F004EC0F2 /* ColorView.mm in Sources */,
@@ -2040,7 +2043,6 @@
 				951C6E5E115CB5B300AF5564 /* TouchMgrV2.mm in Sources */,
 				951C7526115D0F5200AF5564 /* View_MenuSelection.mm in Sources */,
 				9518E22B115EA70B00F421C6 /* View_Gauge.mm in Sources */,
-				95D83396115EB98200C0EBF2 /* Bezier.cpp in Sources */,
 				95ABFF0D115F6A95004AA538 /* View_ToolType.mm in Sources */,
 				95AB00AE115F9625004AA538 /* View_ActiveLabel.mm in Sources */,
 				95AB00D1115F992A004AA538 /* View_ImageButton.mm in Sources */,
@@ -2054,21 +2056,10 @@
 				9518A0E71165F70200D20E9E /* View_EditingImage.mm in Sources */,
 				9518A14A1166089800D20E9E /* View_Layers.mm in Sources */,
 				9518A14D116608A300D20E9E /* View_LayersMgr.mm in Sources */,
-				954CC7BD1167A7D0003933FD /* ObjectiveFlickr.m in Sources */,
-				954CC7BE1167A7D0003933FD /* OFXMLMapper.m in Sources */,
-				954CC7C61167A7DD003933FD /* LFHTTPRequest.m in Sources */,
-				954CC7C71167A7DD003933FD /* LFSiteReachability.m in Sources */,
-				954CC7C81167A7DD003933FD /* NSData+LFHTTPFormExtensions.m in Sources */,
-				954CC8041167A8EE003933FD /* FBConnectGlobal.m in Sources */,
-				954CC8051167A8EE003933FD /* FBSession.m in Sources */,
-				954CC8061167A8EE003933FD /* FBRequest.m in Sources */,
-				954CC8071167A8EE003933FD /* FBXMLHandler.m in Sources */,
-				954CC8081167A8EE003933FD /* FBLoginButton.m in Sources */,
-				954CC8091167A8EE003933FD /* FBDialog.m in Sources */,
-				954CC80A1167A8EE003933FD /* FBLoginDialog.m in Sources */,
-				954CC80B1167A8EE003933FD /* FBPermissionDialog.m in Sources */,
-				954CC80C1167A8EE003933FD /* FBStreamDialog.m in Sources */,
+				C44CD4831E37D34600C52159 /* LayerMgr.cpp in Sources */,
+				C44CD48A1E37D34600C52159 /* Tool_Smudge.cpp in Sources */,
 				954CC8781167AFB8003933FD /* View_PictureGallery.mm in Sources */,
+				C44CD4891E37D34600C52159 /* Tool_Sharpen.cpp in Sources */,
 				954CC87B1167AFC6003933FD /* View_PictureGalleryMgr.mm in Sources */,
 				950AE2ED1168D18A00025463 /* XmlWriter.cpp in Sources */,
 				950AE2F01168D18F00025463 /* XmlReader.cpp in Sources */,
@@ -2091,11 +2082,11 @@
 				95099A18117B937400C42195 /* Settings.cpp in Sources */,
 				95973E161181D523009528E1 /* MyHTTPConnection.mm in Sources */,
 				9512233F1184EE9700187BF2 /* View_HttpServerMgr.mm in Sources */,
-				951EC0AC11862AD900B0449B /* ImageConversion.cpp in Sources */,
 				951EC0CD11863AD500B0449B /* ximage.cpp in Sources */,
 				951EC0D511863BD200B0449B /* ximainfo.cpp in Sources */,
 				951EC0DF11863C1700B0449B /* ximalpha.cpp in Sources */,
 				951EC0E311863C2500B0449B /* ximapal.cpp in Sources */,
+				C44CD4531E37D32D00C52159 /* Bezier.cpp in Sources */,
 				951EC11511863F3B00B0449B /* ximatran.cpp in Sources */,
 				951EC11711863F9B00B0449B /* ximaint.cpp in Sources */,
 				951EC11B1186401100B0449B /* ximath.cpp in Sources */,
@@ -2107,6 +2098,7 @@
 				9555B73F118F5ADD00FA91F5 /* tinyxml.cpp in Sources */,
 				9555B740118F5ADD00FA91F5 /* tinyxmlerror.cpp in Sources */,
 				9555B741118F5ADD00FA91F5 /* tinyxmlparser.cpp in Sources */,
+				C44CD47D1E37D34600C52159 /* ChangeType.cpp in Sources */,
 				9524F7491192ACAF00E26096 /* View_HttpServer.mm in Sources */,
 				9530845411942C01005E4211 /* View_BarButtonItem_Color.mm in Sources */,
 				9506784D11943B4D00D057C7 /* View_BrushSelect_Strip.mm in Sources */,
@@ -2125,12 +2117,14 @@
 				952B705911A5725600F13A4D /* View_MiniBrushSize.mm in Sources */,
 				9575344B11A685EA000C5BD9 /* View_EditingImageBorder.mm in Sources */,
 				951E823011BBD5BC00739225 /* ExceptionLogger.cpp in Sources */,
+				C44CD47B1E37D34600C52159 /* Bitmap.cpp in Sources */,
 				9529EFD311CBA8C200B95E9D /* AnimTimer.cpp in Sources */,
 				9529EFD411CBA8C200B95E9D /* Base64.cpp in Sources */,
 				9529EFD511CBA8C200B95E9D /* Benchmark.cpp in Sources */,
 				9529EFD711CBA8C200B95E9D /* ByteString.cpp in Sources */,
 				9529EFD811CBA8C200B95E9D /* Calc.cpp in Sources */,
 				9529EFD911CBA8C200B95E9D /* CallBack.cpp in Sources */,
+				C44CD47A1E37D34600C52159 /* BezierTraveller.cpp in Sources */,
 				9529EFDA11CBA8C200B95E9D /* ColHashMap.cpp in Sources */,
 				9529EFDB11CBA8C200B95E9D /* ColList.cpp in Sources */,
 				9529EFDC11CBA8C200B95E9D /* Debugging.cpp in Sources */,
@@ -2158,6 +2152,7 @@
 				9529F00411CBA8C200B95E9D /* PsdImageData.cpp in Sources */,
 				9529F00511CBA8C200B95E9D /* PsdInfo.cpp in Sources */,
 				9529F00611CBA8C200B95E9D /* PsdLayer.cpp in Sources */,
+				C44CD48B1E37D34600C52159 /* Tool.cpp in Sources */,
 				9529F00711CBA8C200B95E9D /* PsdLayerAndMaskInfo.cpp in Sources */,
 				9529F00811CBA8C200B95E9D /* PsdRect.cpp in Sources */,
 				9529F00911CBA8C200B95E9D /* PsdResource_ChannelNames.cpp in Sources */,
@@ -2167,6 +2162,7 @@
 				9529F00D11CBA8C200B95E9D /* PsdResourceList.cpp in Sources */,
 				9529F00E11CBA8C200B95E9D /* PsdTypes.cpp in Sources */,
 				9529F01011CBA8C200B95E9D /* Random.cpp in Sources */,
+				C44CD4811E37D34600C52159 /* ImageConversion.cpp in Sources */,
 				9529F01111CBA8C200B95E9D /* Stream.cpp in Sources */,
 				9529F01311CBA8C200B95E9D /* StreamReader.cpp in Sources */,
 				9529F01511CBA8C200B95E9D /* StreamWriter.cpp in Sources */,
@@ -2176,6 +2172,7 @@
 				9529F01D11CBA8C200B95E9D /* TextureRGBA.cpp in Sources */,
 				9529F01E11CBA8C200B95E9D /* TgaLoader.cpp in Sources */,
 				9529F01F11CBA8C200B95E9D /* Timer.cpp in Sources */,
+				C44CD48C1E37D34600C52159 /* Util_Mem.cpp in Sources */,
 				9529F02011CBA8C200B95E9D /* TimeTracker.cpp in Sources */,
 				9529F02111CBA8C200B95E9D /* Traveller.cpp in Sources */,
 				9529F02211CBA8C200B95E9D /* TravellerCapturer.cpp in Sources */,
@@ -2183,8 +2180,6 @@
 				9529F02411CBA8C200B95E9D /* Types.cpp in Sources */,
 				9529F02511CBA8C200B95E9D /* TypesBase.cpp in Sources */,
 				9529F02611CBA8C200B95E9D /* Util_Angle.cpp in Sources */,
-				9529F02711CBA8C200B95E9D /* Vec2.cpp in Sources */,
-				9529F02811CBA8C200B95E9D /* Vec3.cpp in Sources */,
 				9529F03011CBA8EE00B95E9D /* TouchDLG.cpp in Sources */,
 				9529F03111CBA8EE00B95E9D /* TouchInfo.cpp in Sources */,
 				957AC2AC11D223F300E5BFB0 /* Util_Color.cpp in Sources */,
@@ -2201,6 +2196,7 @@
 				95110E9411E755A7003FF01A /* View_LayerClear.mm in Sources */,
 				951475A011EB104900DB1F35 /* ImageDescription.cpp in Sources */,
 				9514763711EB1A0300DB1F35 /* klodder_forward.cpp in Sources */,
+				C44CD4801E37D34600C52159 /* Filter.cpp in Sources */,
 				9514763A11EB1A7400DB1F35 /* ImageId.cpp in Sources */,
 				9514776511EB533600DB1F35 /* View_About.mm in Sources */,
 				9514776811EB534000DB1F35 /* View_AboutMgr.mm in Sources */,
@@ -2216,18 +2212,18 @@
 				9539709011EDFDE1009D9EC0 /* View_ReplayMgr.mm in Sources */,
 				951E6D0F11EF2CF1009AF7DB /* FacebookState.mm in Sources */,
 				951E6D1211EF2CFB009AF7DB /* FlickrState.mm in Sources */,
-				951E6D8911EF364A009AF7DB /* ChangeType.cpp in Sources */,
-				951E6E6C11EF481A009AF7DB /* BezierTraveller.cpp in Sources */,
 				951E6FFF11EF6944009AF7DB /* FileStreamExtends.cpp in Sources */,
+				C44CD4821E37D34600C52159 /* ImageResampling.cpp in Sources */,
+				C44CD4861E37D34600C52159 /* Tool_Blur.cpp in Sources */,
 				95DD2B0711F4A2E400F15061 /* View_MiniToolSelect.mm in Sources */,
-				95274A2811F5C107001F1292 /* BlitTransform.cpp in Sources */,
-				951BBCA411F709F1001B1883 /* ImageResampling.cpp in Sources */,
 				951BBE6C11F71BE5001B1883 /* agg_image_filters.cpp in Sources */,
+				C44CD4881E37D34600C52159 /* Tool_Colorize.cpp in Sources */,
+				C44CD4871E37D34600C52159 /* Tool_Brush.cpp in Sources */,
 				951BBE6D11F71BE5001B1883 /* agg_trans_affine.cpp in Sources */,
 				951BBFFE11F7495E001B1883 /* StreamProvider_Replay.cpp in Sources */,
+				C44CD4851E37D34600C52159 /* MacImage.cpp in Sources */,
 				951E629F11F84A9500F5D46B /* StreamProvider.cpp in Sources */,
 				95F31F2511F99ADD000CDC45 /* View_LayerClearPreview.mm in Sources */,
-				954201D911FD82B0005037D7 /* CommandPacket.cpp in Sources */,
 				9542053411FDCB76005037D7 /* View_HelpMgr.mm in Sources */,
 				9596FC821200255100BA32AB /* View_ToolSelect_NavBar.mm in Sources */,
 				956FA8FD1206F3680016F39D /* View_MiniBrushSizeContainer.mm in Sources */,
@@ -2237,6 +2233,8 @@
 				954FE97F14A8EF4B001341D0 /* HTTPAuthenticationRequest.m in Sources */,
 				954FE98014A8EF4B001341D0 /* HTTPConnection.m in Sources */,
 				954FE98114A8EF4B001341D0 /* HTTPMessage.m in Sources */,
+				C44CD4841E37D34600C52159 /* libklodder_forward.cpp in Sources */,
+				C44CD47C1E37D34600C52159 /* BlitTransform.cpp in Sources */,
 				954FE98214A8EF4B001341D0 /* HTTPServer.m in Sources */,
 				954FE98314A8EF4B001341D0 /* WebSocket.m in Sources */,
 				954FE98A14A8EF5F001341D0 /* DDData.m in Sources */,
@@ -2249,6 +2247,7 @@
 				954FE99D14A8EF8B001341D0 /* HTTPRedirectResponse.m in Sources */,
 				954FE9A214A8F044001341D0 /* DDLog.m in Sources */,
 				954FE9A714A8F06E001341D0 /* GCDAsyncSocket.m in Sources */,
+				C44CD47F1E37D34600C52159 /* CommandPacket.cpp in Sources */,
 				954FE9B614A8F324001341D0 /* localhostAddresses.m in Sources */,
 				957F46B014AD22FF00910D4F /* Events.mm in Sources */,
 			);
@@ -2274,11 +2273,13 @@
 				GCC_WARN_SIGN_COMPARE = YES;
 				GCC_WARN_UNUSED_LABEL = YES;
 				INFOPLIST_FILE = "klodder-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 4.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"$(SRCROOT)/../libgg\"",
+					"\"$(SRCROOT)/../klodder/libklodder\"",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.grannies-games.${PRODUCT_NAME:rfc1034identifier}";
 				PRODUCT_NAME = paintapp;
 				SDKROOT = iphoneos;
 				STRIP_INSTALLED_PRODUCT = YES;
@@ -2301,11 +2302,13 @@
 				GCC_WARN_SIGN_COMPARE = YES;
 				GCC_WARN_UNUSED_LABEL = YES;
 				INFOPLIST_FILE = "klodder-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 4.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"$(SRCROOT)/../libgg\"",
+					"\"$(SRCROOT)/../klodder/libklodder\"",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.grannies-games.${PRODUCT_NAME:rfc1034identifier}";
 				PRODUCT_NAME = paintapp;
 				SDKROOT = iphoneos;
 				STRIP_INSTALLED_PRODUCT = YES;
@@ -2316,10 +2319,22 @@
 		9514762511EB18DB00DB1F35 /* Debug (lite) */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_FAST_MATH = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					SETTINGS_MACOS,
@@ -2331,16 +2346,20 @@
 				);
 				GCC_STRICT_ALIASING = YES;
 				GCC_THUMB_SUPPORT = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
 				GCC_WARN_SHADOW = YES;
 				GCC_WARN_SIGN_COMPARE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_LABEL = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = ../FacebookConnect/src;
-				IPHONEOS_DEPLOYMENT_TARGET = 4.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				ONLY_ACTIVE_ARCH = YES;
 				PREBINDING = NO;
 				PRODUCT_NAME = paintapp;
@@ -2366,11 +2385,13 @@
 				GCC_WARN_SIGN_COMPARE = YES;
 				GCC_WARN_UNUSED_LABEL = YES;
 				INFOPLIST_FILE = "klodder-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 4.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"$(SRCROOT)/../libgg\"",
+					"\"$(SRCROOT)/../klodder/libklodder\"",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.grannies-games.${PRODUCT_NAME:rfc1034identifier}";
 				PRODUCT_NAME = paintapp;
 				SDKROOT = iphoneos;
 				STRIP_INSTALLED_PRODUCT = YES;
@@ -2380,14 +2401,25 @@
 		951B9BAB1296D41D00EC1CFE /* Deployment (iPad) */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer: Marcel Smit (NZFNZB6N52)";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_AUTO_VECTORIZATION = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = YES;
 				GCC_FAST_MATH = YES;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 3;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					SETTINGS_MACOS,
@@ -2401,6 +2433,7 @@
 				GCC_STRICT_ALIASING = YES;
 				GCC_THUMB_SUPPORT = NO;
 				GCC_UNROLL_LOOPS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
@@ -2408,10 +2441,13 @@
 				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
 				GCC_WARN_SHADOW = YES;
 				GCC_WARN_SIGN_COMPARE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_LABEL = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = ../FacebookConnect/src;
-				IPHONEOS_DEPLOYMENT_TARGET = 4.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "-DNS_BLOCK_ASSERTIONS=1";
 				OTHER_CPLUSPLUSFLAGS = (
@@ -2447,11 +2483,13 @@
 				GCC_WARN_SIGN_COMPARE = YES;
 				GCC_WARN_UNUSED_LABEL = YES;
 				INFOPLIST_FILE = "klodder-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 4.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"$(SRCROOT)/../libgg\"",
+					"\"$(SRCROOT)/../klodder/libklodder\"",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.grannies-games.${PRODUCT_NAME:rfc1034identifier}";
 				PRODUCT_NAME = paintapp;
 				SDKROOT = iphoneos;
 				STRIP_INSTALLED_PRODUCT = YES;
@@ -2462,13 +2500,24 @@
 		951D25B811AAE42C00C2593F /* Distribution */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_AUTO_VECTORIZATION = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = YES;
 				GCC_FAST_MATH = YES;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 3;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					SETTINGS_MACOS,
@@ -2481,16 +2530,20 @@
 				GCC_STRICT_ALIASING = YES;
 				GCC_THUMB_SUPPORT = NO;
 				GCC_UNROLL_LOOPS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
 				GCC_WARN_SHADOW = YES;
 				GCC_WARN_SIGN_COMPARE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_LABEL = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = ../FacebookConnect/src;
-				IPHONEOS_DEPLOYMENT_TARGET = 4.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				OTHER_CFLAGS = "-DNS_BLOCK_ASSERTIONS=1";
 				OTHER_CPLUSPLUSFLAGS = (
 					"-mfpu=neon",
@@ -2521,11 +2574,13 @@
 				GCC_WARN_SIGN_COMPARE = YES;
 				GCC_WARN_UNUSED_LABEL = YES;
 				INFOPLIST_FILE = "klodder-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 4.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"$(SRCROOT)/../libgg\"",
+					"\"$(SRCROOT)/../klodder/libklodder\"",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.grannies-games.${PRODUCT_NAME:rfc1034identifier}";
 				PRODUCT_NAME = paintapp;
 				SDKROOT = iphoneos;
 				STRIP_INSTALLED_PRODUCT = YES;
@@ -2536,14 +2591,25 @@
 		951D25BA11AAE43200C2593F /* Distribution_Adhoc */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_ENTITLEMENTS = Entitlements.plist;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution: Grannies Games";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_AUTO_VECTORIZATION = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = YES;
 				GCC_FAST_MATH = YES;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 3;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					SETTINGS_MACOS,
@@ -2556,16 +2622,20 @@
 				GCC_STRICT_ALIASING = YES;
 				GCC_THUMB_SUPPORT = NO;
 				GCC_UNROLL_LOOPS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
 				GCC_WARN_SHADOW = YES;
 				GCC_WARN_SIGN_COMPARE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_LABEL = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = ../FacebookConnect/src;
-				IPHONEOS_DEPLOYMENT_TARGET = 4.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				OTHER_CFLAGS = "-DNS_BLOCK_ASSERTIONS=1";
 				PREBINDING = NO;
 				PRODUCT_NAME = paintapp;
@@ -2592,11 +2662,13 @@
 				GCC_WARN_SIGN_COMPARE = YES;
 				GCC_WARN_UNUSED_LABEL = YES;
 				INFOPLIST_FILE = "klodder-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 4.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"$(SRCROOT)/../libgg\"",
+					"\"$(SRCROOT)/../klodder/libklodder\"",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.grannies-games.${PRODUCT_NAME:rfc1034identifier}";
 				PRODUCT_NAME = paintapp;
 				SDKROOT = iphoneos;
 				STRIP_INSTALLED_PRODUCT = YES;
@@ -2607,13 +2679,24 @@
 		95231ADF11DCA1BD004A3BC5 /* Deployment */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_AUTO_VECTORIZATION = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = YES;
 				GCC_FAST_MATH = YES;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 3;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					SETTINGS_MACOS,
@@ -2626,6 +2709,7 @@
 				GCC_STRICT_ALIASING = YES;
 				GCC_THUMB_SUPPORT = NO;
 				GCC_UNROLL_LOOPS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
@@ -2633,10 +2717,13 @@
 				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
 				GCC_WARN_SHADOW = YES;
 				GCC_WARN_SIGN_COMPARE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_LABEL = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = ../FacebookConnect/src;
-				IPHONEOS_DEPLOYMENT_TARGET = 4.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "-DNS_BLOCK_ASSERTIONS=1";
 				OTHER_CPLUSPLUSFLAGS = (
@@ -2671,11 +2758,13 @@
 				GCC_WARN_SIGN_COMPARE = YES;
 				GCC_WARN_UNUSED_LABEL = YES;
 				INFOPLIST_FILE = "klodder-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 4.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"$(SRCROOT)/../libgg\"",
+					"\"$(SRCROOT)/../klodder/libklodder\"",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.grannies-games.${PRODUCT_NAME:rfc1034identifier}";
 				PRODUCT_NAME = paintapp;
 				SDKROOT = iphoneos;
 				STRIP_INSTALLED_PRODUCT = YES;
@@ -2686,10 +2775,22 @@
 		9543979F120C5F8F00380215 /* Debug (iPad) */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_FAST_MATH = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					SETTINGS_MACOS,
@@ -2702,16 +2803,20 @@
 				);
 				GCC_STRICT_ALIASING = YES;
 				GCC_THUMB_SUPPORT = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
 				GCC_WARN_SHADOW = YES;
 				GCC_WARN_SIGN_COMPARE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_LABEL = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = ../FacebookConnect/src;
-				IPHONEOS_DEPLOYMENT_TARGET = 4.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
@@ -2741,11 +2846,13 @@
 				GCC_WARN_SIGN_COMPARE = YES;
 				GCC_WARN_UNUSED_LABEL = YES;
 				INFOPLIST_FILE = "klodder-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 4.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"$(SRCROOT)/../libgg\"",
+					"\"$(SRCROOT)/../klodder/libklodder\"",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.grannies-games.${PRODUCT_NAME:rfc1034identifier}";
 				PRODUCT_NAME = paintapp;
 				SDKROOT = iphoneos;
 				STRIP_INSTALLED_PRODUCT = YES;
@@ -2755,14 +2862,25 @@
 		957F46CD14AD26DE00910D4F /* Deployment (iPad) - Neon */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer: Marcel Smit (NZFNZB6N52)";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_AUTO_VECTORIZATION = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = YES;
 				GCC_FAST_MATH = YES;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 3;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					SETTINGS_MACOS,
@@ -2776,6 +2894,7 @@
 				GCC_STRICT_ALIASING = YES;
 				GCC_THUMB_SUPPORT = NO;
 				GCC_UNROLL_LOOPS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
@@ -2783,10 +2902,13 @@
 				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
 				GCC_WARN_SHADOW = YES;
 				GCC_WARN_SIGN_COMPARE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_LABEL = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = ../FacebookConnect/src;
-				IPHONEOS_DEPLOYMENT_TARGET = 4.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "-DNS_BLOCK_ASSERTIONS=1";
 				OTHER_CPLUSPLUSFLAGS = (
@@ -2822,11 +2944,13 @@
 				GCC_WARN_SIGN_COMPARE = YES;
 				GCC_WARN_UNUSED_LABEL = YES;
 				INFOPLIST_FILE = "klodder-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 4.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"$(SRCROOT)/../libgg\"",
+					"\"$(SRCROOT)/../klodder/libklodder\"",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.grannies-games.${PRODUCT_NAME:rfc1034identifier}";
 				PRODUCT_NAME = paintapp;
 				SDKROOT = iphoneos;
 				STRIP_INSTALLED_PRODUCT = YES;
@@ -2837,13 +2961,24 @@
 		9582546814ADFD9500FC3ADF /* Release (iPad) - Neon */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_AUTO_VECTORIZATION = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = YES;
 				GCC_FAST_MATH = YES;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 3;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					SETTINGS_MACOS,
@@ -2856,6 +2991,7 @@
 				GCC_STRICT_ALIASING = YES;
 				GCC_THUMB_SUPPORT = NO;
 				GCC_UNROLL_LOOPS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
@@ -2863,10 +2999,13 @@
 				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
 				GCC_WARN_SHADOW = YES;
 				GCC_WARN_SIGN_COMPARE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_LABEL = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = ../FacebookConnect/src;
-				IPHONEOS_DEPLOYMENT_TARGET = 4.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "-DNS_BLOCK_ASSERTIONS=1";
 				OTHER_CPLUSPLUSFLAGS = (
@@ -2899,11 +3038,13 @@
 				GCC_WARN_SIGN_COMPARE = YES;
 				GCC_WARN_UNUSED_LABEL = YES;
 				INFOPLIST_FILE = "klodder-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 4.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"$(SRCROOT)/../libgg\"",
+					"\"$(SRCROOT)/../klodder/libklodder\"",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.grannies-games.${PRODUCT_NAME:rfc1034identifier}";
 				PRODUCT_NAME = paintapp;
 				SDKROOT = iphoneos;
 				STRIP_INSTALLED_PRODUCT = YES;
@@ -2914,10 +3055,22 @@
 		C01FCF4F08A954540054247B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_FAST_MATH = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					SETTINGS_MACOS,
@@ -2929,16 +3082,20 @@
 				);
 				GCC_STRICT_ALIASING = YES;
 				GCC_THUMB_SUPPORT = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
 				GCC_WARN_SHADOW = YES;
 				GCC_WARN_SIGN_COMPARE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_LABEL = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = ../FacebookConnect/src;
-				IPHONEOS_DEPLOYMENT_TARGET = 4.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CPLUSPLUSFLAGS = "$(OTHER_CFLAGS)";
 				PREBINDING = NO;
@@ -2951,13 +3108,24 @@
 		C01FCF5008A954540054247B /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_AUTO_VECTORIZATION = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = YES;
 				GCC_FAST_MATH = YES;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 3;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					SETTINGS_MACOS,
@@ -2969,6 +3137,7 @@
 				GCC_STRICT_ALIASING = YES;
 				GCC_THUMB_SUPPORT = NO;
 				GCC_UNROLL_LOOPS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
@@ -2976,10 +3145,13 @@
 				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
 				GCC_WARN_SHADOW = YES;
 				GCC_WARN_SIGN_COMPARE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_LABEL = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = ../FacebookConnect/src;
-				IPHONEOS_DEPLOYMENT_TARGET = 4.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "-DNS_BLOCK_ASSERTIONS=1";
 				OTHER_CPLUSPLUSFLAGS = (

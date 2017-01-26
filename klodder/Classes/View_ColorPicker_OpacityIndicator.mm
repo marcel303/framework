@@ -1,4 +1,5 @@
 #import "ExceptionLoggerObjC.h"
+#import "Log.h"
 #import "View_ColorPicker_OpacityIndicator.h"
 
 #import "AppDelegate.h" // IMG()

@@ -1,3 +1,5 @@
+#if BUILD_FLICKR
+
 #import "Deployment.h"
 #import "ExceptionLoggerObjC.h"
 #import "FlickrState.h"
@@ -239,3 +241,5 @@ static NSString* kUploadImageStep = @"kUploadImageStep";
 }
 
 @end
+
+#endif

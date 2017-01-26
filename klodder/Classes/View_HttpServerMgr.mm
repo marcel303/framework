@@ -97,7 +97,7 @@
 	[httpServer setType:@"_http._tcp."];
 	[httpServer setConnectionClass:[MyHTTPConnection class]];
 	NSString* root = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask,YES) objectAtIndex:0];
-	[httpServer setDocumentRoot:[NSURL fileURLWithPath:root]];
+	[httpServer setDocumentRoot:[NSURL fileURLWithPath:root].absoluteString];
 	[httpServer setPort:8080];
 	[httpServer setName:@"Klodder"];
 	

@@ -22,7 +22,7 @@
 	UIGraphicsPopContext();
 }
 
-UILabel* CreateLabel(float x, float y, float sx, float sy, NSString* text, NSString* font, float fontSize, UITextAlignment alignment)
+UILabel* CreateLabel(float x, float y, float sx, float sy, NSString* text, NSString* font, float fontSize, NSTextAlignment alignment)
 {
 	UILabel* label = [[[UILabel alloc] initWithFrame:CGRectMake(x, y, sx, sy)] autorelease];
 	[label setOpaque:FALSE];

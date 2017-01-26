@@ -13,9 +13,9 @@
 	{
 		[self setWantsFullScreenLayout:YES];
 		
-		self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithTitle:@"Back" style:UIBarButtonItemStyleBordered target:self action:@selector(handleBack)] autorelease];
+		self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithTitle:@"Back" style:UIBarButtonItemStylePlain target:self action:@selector(handleBack)] autorelease];
 			
-		UIBarButtonItem* item_Restart = [[[UIBarButtonItem alloc] initWithTitle:@"R" style:UIBarButtonItemStyleBordered target:self action:@selector(handleRestart)] autorelease];
+		UIBarButtonItem* item_Restart = [[[UIBarButtonItem alloc] initWithTitle:@"R" style:UIBarButtonItemStylePlain target:self action:@selector(handleRestart)] autorelease];
 		UIBarButtonItem* item_Space = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];		
 		[self setToolbarItems:[NSArray arrayWithObjects:item_Space, item_Restart, item_Space, nil]];
 			

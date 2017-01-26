@@ -1,3 +1,5 @@
+#if BUILD_FACEBOOK
+
 #import "Debugging.h"
 #import "Deployment.h"
 #import "ExceptionLoggerObjC.h"
@@ -146,3 +148,5 @@
 }
 
 @end
+
+#endif

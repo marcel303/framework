@@ -17,7 +17,7 @@
 		UINavigationBar* navigationBar = [[[UINavigationBar alloc] initWithFrame:self.bounds] autorelease];
 		[navigationBar setBarStyle:UIBarStyleDefault];
 		UINavigationItem* item = [[[UINavigationItem alloc] init] autorelease];
-		item.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithTitle:@"Close" style:UIBarButtonItemStyleBordered target:self action:@selector(handleDone)] autorelease];
+		item.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithTitle:@"Close" style:UIBarButtonItemStylePlain target:self action:@selector(handleDone)] autorelease];
 		[item setTitle:name];
 		[navigationBar setItems:[NSArray arrayWithObject:item]];
 		[self addSubview:navigationBar];

@@ -8,6 +8,7 @@
 #import "Image.h"
 #import "ImageLoader_Photoshop.h"
 #import "KlodderSystem.h"
+#import "Log.h"
 #import "ObjectiveFlickr.h"
 #import "View_EditingMgr.h"
 #import "View_PictureDetail.h"
@@ -38,16 +39,16 @@
 //		UIBarButtonItem* item_Delete = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemTrash target:self action:@selector(handleDelete)] autorelease];
 		UIBarButtonItem* item_More = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemOrganize target:self action:@selector(handleMore)] autorelease];
 		UIBarButtonItem* item_Replay = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemPlay target:self action:@selector(handleReplay)] autorelease];
-		UIBarButtonItem* item_Share = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_share")] style:UIBarButtonItemStyleBordered target:self action:@selector(handleShare)] autorelease];
+		UIBarButtonItem* item_Share = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_share")] style:UIBarButtonItemStylePlain target:self action:@selector(handleShare)] autorelease];
 		UIBarButtonItem* item_Space = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
 		UIBarButtonItem* item_DbgvalidateCommandStream = nil;
 #ifdef DEBUG
-		item_DbgvalidateCommandStream = [[[UIBarButtonItem alloc] initWithTitle:@"V" style:UIBarButtonItemStyleBordered target:self action:@selector(handleValidateCommandStream)] autorelease];
+		item_DbgvalidateCommandStream = [[[UIBarButtonItem alloc] initWithTitle:@"V" style:UIBarButtonItemStylePlain target:self action:@selector(handleValidateCommandStream)] autorelease];
 #endif
 //		[self setToolbarItems:[NSArray arrayWithObjects:item_Delete, item_Space, item_Replay, item_Space, item_Share, item_DbgvalidateCommandStream, nil]];
 		[self setToolbarItems:[NSArray arrayWithObjects:item_More, item_Space, item_Replay, item_Space, item_Share, item_DbgvalidateCommandStream, nil]];
 		
-		UIBarButtonItem* item_Edit = [[[UIBarButtonItem alloc] initWithTitle:@"Edit" style:UIBarButtonItemStyleBordered target:self action:@selector(handleEdit)] autorelease];
+		UIBarButtonItem* item_Edit = [[[UIBarButtonItem alloc] initWithTitle:@"Edit" style:UIBarButtonItemStylePlain target:self action:@selector(handleEdit)] autorelease];
 		self.navigationItem.rightBarButtonItem = item_Edit;
 			
 		asMore = [[UIActionSheet alloc] initWithTitle:@"Organize" delegate:self cancelButtonTitle:cancelTitle destructiveButtonTitle:nil otherButtonTitles:nil];
@@ -362,6 +363,7 @@
 {
 	HandleExceptionObjcBegin();
 	
+#if BUILD_FACEBOOK
 	// check if logged in to Facebook. if not, present login view
 	
 	if (![app.facebookState loggedIntoFacebook])
@@ -374,6 +376,7 @@
 	{
 		[facebookUploadAlert show];
 	}
+#endif
 	
 	HandleExceptionObjcEnd(false);
 }
@@ -382,6 +385,7 @@
 {
 	HandleExceptionObjcBegin();
 	
+#if BUILD_FLICKR
 	// check if logged in to Flickr. if not, present login view
 	
 	if (![app.flickrState loggedIntoFlickr])
@@ -392,6 +396,7 @@
 	{
 		[flickrUploadAlert show];
 	}
+#endif
 	
 	HandleExceptionObjcEnd(false);
 }
@@ -408,6 +413,8 @@
 		[self shareFacebook];
 	}
 }
+
+#if BUILD_FLICKR
 
 -(void)uploadToFlickr
 {
@@ -430,6 +437,10 @@
 	HandleExceptionObjcEnd(false);
 }
 
+#endif
+
+#if BUILD_FACEBOOK
+
 -(void)uploadToFacebook
 {
 	HandleExceptionObjcBegin();
@@ -448,6 +459,8 @@
 	
 	HandleExceptionObjcEnd(false);
 }
+
+#endif
 
 -(void)loadView 
 {
@@ -495,7 +508,9 @@
 		{
 			LOG_DBG("flickr login", 0);
 			
+        #if BUILD_FLICKR
 			[app.flickrState logIntoFlickr];
+        #endif
 		}
 	}
 	if (alertView == flickrUploadAlert)
@@ -509,7 +524,9 @@
 		{
 			LOG_DBG("flickr upload", 0);
 			
+        #if BUILD_FLICKR
 			[self uploadToFlickr];
+        #endif
 		}
 	}
 	if (alertView == facebookUploadAlert)

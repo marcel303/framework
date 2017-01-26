@@ -1,6 +1,7 @@
 #import <QuartzCore/QuartzCore.h>
 #import "Calc.h"
 #import "ExceptionLoggerObjC.h"
+#import "Log.h"
 #import "View_ColorPicker.h"
 #import "View_ColorPicker_BasicIndicator.h"
 #import "View_ColorPicker_BrightnessGauge.h"

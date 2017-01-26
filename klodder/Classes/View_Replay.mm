@@ -5,6 +5,7 @@
 #import "FileStream.h"
 #import "KlodderSystem.h"
 #import "LayerMgr.h"
+#import "Log.h"
 #import "StreamReader.h"
 #import "Timer.h"
 #import "View_Replay.h"

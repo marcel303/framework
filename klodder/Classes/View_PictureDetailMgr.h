@@ -53,8 +53,12 @@ enum ImageEncoding
 
 -(void)logIntoFlickrPrompt;
 -(void)handleFacebookLogin;
+#if BUILD_FLICKR
 -(void)uploadToFlickr;
+#endif
+#if BUILD_FACEBOOK
 -(void)uploadToFacebook;
+#endif
 
 // UIAlertViewDelegate
 -(void)alertView:(UIAlertView*)alertView clickedButtonAtIndex:(NSInteger)buttonIndex;

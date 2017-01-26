@@ -3,6 +3,7 @@
 #import "Calc.h"
 #import "ExceptionLogger.h"
 #import "LayerMgr.h"
+#import "Log.h"
 #import "View_ActiveLabel.h"
 #import "View_DefineBrush.h"
 #import "View_EditingMgr.h"
@@ -15,7 +16,7 @@
 
 static int diameter[3] = { 15, 31, 71 };
 
-static UIView* MakeButton(id self, SEL action, float x, float y, float sx, float sy, NSString* text, UITextAlignment alignment)
+static UIView* MakeButton(id self, SEL action, float x, float y, float sx, float sy, NSString* text, NSTextAlignment alignment)
 {
 	/*
 	UIButton* button = [UIButton buttonWithType:UIButtonTypeRoundedRect];
@@ -44,12 +45,12 @@ static UIView* MakeButton(id self, SEL action, float x, float y, float sx, float
 		size = 0;
 		location = Vec2I(160, 240); // fixme: dont assume
 		
-		[self addSubview:MakeButton(self, @selector(sizeSmall), 10.0f, 0.0f, 100.0f, 40.0f, @"Small", UITextAlignmentLeft)];
-		[self addSubview:MakeButton(self, @selector(sizeMedium), 110.0f, 0.0f, 100.0f, 40.0f, @"Medium", UITextAlignmentCenter)];
-		[self addSubview:MakeButton(self, @selector(sizeLarge), 210.0f, 0.0f, 100.0f, 40.0f, @"Large", UITextAlignmentRight)];
+		[self addSubview:MakeButton(self, @selector(sizeSmall), 10.0f, 0.0f, 100.0f, 40.0f, @"Small", NSTextAlignmentLeft)];
+		[self addSubview:MakeButton(self, @selector(sizeMedium), 110.0f, 0.0f, 100.0f, 40.0f, @"Medium", NSTextAlignmentCenter)];
+		[self addSubview:MakeButton(self, @selector(sizeLarge), 210.0f, 0.0f, 100.0f, 40.0f, @"Large", NSTextAlignmentRight)];
 		
-		[self addSubview:MakeButton(self, @selector(save), 10.0f, self.frame.size.height - 40.0f, 100.0f, 40.0f, @"Save", UITextAlignmentLeft)];
-		[self addSubview:MakeButton(self, @selector(cancel), 210.0f, self.frame.size.height - 40.0f, 100.0f, 40.0f, @"Cancel", UITextAlignmentRight)];
+		[self addSubview:MakeButton(self, @selector(save), 10.0f, self.frame.size.height - 40.0f, 100.0f, 40.0f, @"Save", NSTextAlignmentLeft)];
+		[self addSubview:MakeButton(self, @selector(cancel), 210.0f, self.frame.size.height - 40.0f, 100.0f, 40.0f, @"Cancel", NSTextAlignmentRight)];
     }
 	
     return self;

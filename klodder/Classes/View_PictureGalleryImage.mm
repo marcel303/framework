@@ -1,6 +1,7 @@
 #import "AppDelegate.h"
 #import "Application.h"
 #import "ExceptionLoggerObjC.h"
+#import "Log.h"
 #import "View_PictureGalleryImage.h"
 
 @implementation View_PictureGalleryImage

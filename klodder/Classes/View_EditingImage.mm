@@ -31,11 +31,6 @@ static void handleSwipe(void* obj, void* arg);
 static void handleTouchZoomStateChange(void* obj, void* arg);
 static void handleZoomChange(void* obj, void* arg);
 
-static UIImage* mShadow(int x, int y)
-{
-	return [UIImage imageNamed:[NSString stringWithFormat:@"shadow_%d%d.png", x, y]];
-}
-
 -(id)initWithFrame:(CGRect)frame andApp:(AppDelegate*)app controller:(View_EditingMgr*)_controller parent:(View_Editing*)_parent;
 {
 	HandleExceptionObjcBegin();
@@ -391,7 +386,7 @@ static UIImage* mShadow(int x, int y)
 			
 			// todo: smooth = option?
 			
-			app->StrokeBegin(app->LayerMgr_get()->ActiveDataLayer_get(), true, mirrorX, location[0], location[1]);
+			app->StrokeBegin(app->LayerMgr_get()->EditingDataLayer_get(), true, mirrorX, location[0], location[1]);
 			
 			[controller showMenu:FALSE];
 			
