@@ -112,7 +112,7 @@ void LayerMgr::Setup(const int layerCount, const int sx, const int sy, const Rgb
 		}
 		
 		mEditingDataLayer = 0;
-		mEditingBuffer.Size_set(sx, sy, false);
+		mEditingBuffer.Size_set(sx, sy, true);
 		mBmpBrush.Size_set(sx, sy);
 
 		mCacheBack.Size_set(sx, sy, false);
