@@ -173,8 +173,8 @@
 	const float scale = [AppDelegate displayScale];
 	
 	CGImageRef cgImage = brushPreview->ImageWithAlpha_get();
-	const int sx = CGImageGetWidth(cgImage);
-	const int sy = CGImageGetHeight(cgImage);
+	const int sx = (int)CGImageGetWidth(cgImage);
+	const int sy = (int)CGImageGetHeight(cgImage);
 	CGRect r = CGRectMake(0.0f, 0.0f, sx / scale, sy / scale);
 	CGContextDrawImage(ctx, r, cgImage);
 	

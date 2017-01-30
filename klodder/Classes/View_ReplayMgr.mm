@@ -11,7 +11,7 @@
 	
 	if ((self = [super initWithApp:_app]))
 	{
-		[self setWantsFullScreenLayout:YES];
+        [self setFullScreenLayout];
 		
 		self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithTitle:@"Back" style:UIBarButtonItemStylePlain target:self action:@selector(handleBack)] autorelease];
 			

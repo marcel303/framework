@@ -36,7 +36,7 @@ static void MakeSureCachesDirectoryExists()
 	if (![fileManager fileExistsAtPath:path])
 	{
 		LOG_INF("caches directory does not exist. creating path", 0);
-		[fileManager createDirectoryAtPath:path attributes:nil];
+        [fileManager createDirectoryAtPath:path withIntermediateDirectories:YES attributes:NULL error:NULL];
 	}
 }
 

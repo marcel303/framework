@@ -48,7 +48,7 @@ typedef std::vector<BrushItem> BrushItemList;
 }
 
 @property (nonatomic, assign) NSTimer* animationTimer;
-@property (assign) float scrollPosition;
+@property (nonatomic, assign) float scrollPosition;
 
 -(id)initWithFrame:(CGRect)frame controller:(View_ToolSelectMgr*)controller delegate:(id<BrushSelectDelegate>)delegate;
 -(void)loadBrushes;

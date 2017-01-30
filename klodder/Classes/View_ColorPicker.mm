@@ -185,7 +185,7 @@ void ExclusionZone::RenderUi()
 	
 	View_SwatchesMgr* subController = [[[View_SwatchesMgr alloc] initWithApp:app] autorelease];
 	[subController setModalTransitionStyle:UIModalTransitionStyleCrossDissolve];
-	[controller presentModalViewController:subController animated:TRUE];
+    [controller presentViewController:subController animated:TRUE completion:NULL];
 }
 
 //
@@ -209,7 +209,7 @@ void ExclusionZone::RenderUi()
 	}
 	else
 	{
-		[controller dismissModalViewControllerAnimated:YES];
+        [controller dismissViewControllerAnimated:YES completion:NULL];
 	}
 
 	HandleExceptionObjcEnd(false);

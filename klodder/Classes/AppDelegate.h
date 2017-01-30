@@ -56,20 +56,20 @@ class BrushSettings;
 @property (assign) Application* mApplication;
 
 #if BUILD_FACEBOOK
-@property (assign) FacebookState* facebookState;
+@property (nonatomic, assign) FacebookState* facebookState;
 #endif
 #if BUILD_FLICKR
-@property (assign) FlickrState* flickrState;
+@property (nonatomic, assign) FlickrState* flickrState;
 #endif
 
 @property (nonatomic, retain) UINavigationController* rootController;
 
 @property (nonatomic, retain) View_EditingMgr* vcEditing;
 @property (nonatomic, retain) View_PictureGalleryMgr* vcPictureGallery;
-@property (assign) BrushSettings* brushSettings;
-@property (assign) PickerState* colorPickerState;
+@property (nonatomic, assign) BrushSettings* brushSettings;
+@property (nonatomic, assign) PickerState* colorPickerState;
 
-@property (readonly, assign) NSDictionary* addresses;
+@property (nonatomic, readonly, assign) NSDictionary* addresses;
 
 -(void)handleChange:(ChangeType)type;
 -(void)show:(UIViewController*)vc animated:(BOOL)animated;

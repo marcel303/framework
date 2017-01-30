@@ -40,7 +40,7 @@
 	Rgba color = delegate.colorPickerState->Color_get();
 	float opacity = delegate.colorPickerState->Opacity_get();
 	
-	float rgba[4];
+	CGFloat rgba[4];
 	float radius = 8.0f;
 	Vec2F mid(self.frame.size.width / 2.0f, self.frame.size.height / 2.0f);
 	CGRect area = CGRectMake(mid[0] - radius, mid[1] - radius, radius * 2.0f, radius * 2.0f);

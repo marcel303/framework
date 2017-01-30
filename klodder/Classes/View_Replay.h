@@ -15,7 +15,7 @@
 	int commandStreamPosition;
 }
 
-@property (assign) bool replayActive;
+@property (nonatomic, assign) bool replayActive;
 
 -(id)initWithFrame:(CGRect)frame app:(AppDelegate*)app controller:(View_ReplayMgr*)controller imageId:(ImageId)imageId;
 -(void)replayBegin;

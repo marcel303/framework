@@ -43,7 +43,7 @@
 {
 	HandleExceptionObjcBegin();
 	
-	[self dismissModalViewControllerAnimated:YES];
+    [self dismissViewControllerAnimated:YES completion:NULL];
 	
 	HandleExceptionObjcEnd(false);
 }

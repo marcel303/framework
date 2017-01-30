@@ -27,7 +27,6 @@
 @synthesize targetZoom;
 @synthesize mirrorX;
 
-static void handleSwipe(void* obj, void* arg);
 static void handleTouchZoomStateChange(void* obj, void* arg);
 static void handleZoomChange(void* obj, void* arg);
 
@@ -309,9 +308,9 @@ static void handleZoomChange(void* obj, void* arg);
 		{
 			Assert(ti->touchCount >= 2);
 			
-			Vec2F delta = ti->location2Delta / 2.0f / zoom;
+			//Vec2F delta = ti->location2Delta / 2.0f / zoom;
 			
-//			[self swipe:delta];
+			//[self swipe:delta];
 			
 			break;
 		}
@@ -640,7 +639,7 @@ static void handleZoomChange(void* obj, void* arg);
 }
 
 -(void)updateTransform
-{	
+{
 	LOG_DBG("updateTransform: %3.2f, %3.2f @ %1.2f (size: %f, %f)", pan[0], pan[1], zoom, self.bounds.size.width, self.bounds.size.height);
 	
 	[self.layer setAnchorPoint:CGPointMake(0.0f, 0.0f)];
@@ -657,14 +656,6 @@ static void handleZoomChange(void* obj, void* arg);
 	transform = CGAffineTransformTranslate(transform, -self.bounds.size.width / 2.0f, -self.bounds.size.height / 2.0f);
 	
 	[self setTransform:transform];
-}
-
-static void handleSwipe(void* obj, void* arg)
-{
-	View_EditingImage* self = (View_EditingImage*)obj;
-	Vec2F delta = *(Vec2F*)arg;
-	
-	[self swipe:delta];
 }
 
 static void handleTouchZoomStateChange(void* obj, void* arg)

@@ -26,7 +26,7 @@
 	{
 		self.title = @"Preview";
 		
-		[self setWantsFullScreenLayout:YES];
+		[self setFullScreenLayout];
 		
 		/*
 		UIBarButtonSystemItemAction
@@ -322,7 +322,7 @@
 		[mailController setSubject:NS(Deployment::EmailMessageSubject)];
 		[mailController setMessageBody:NS(Deployment::EmailMessageBody) isHTML:NO]; 
 		[mailController addAttachmentData:[self getImageData:ImageEncoding_Png] mimeType:@"image/png" fileName:NS(Deployment::EmailAttachmentName)];
-		[self presentModalViewController:mailController animated:YES];
+		[self presentViewController:mailController animated:YES completion:NULL];
 		[mailController release];
 	}
 	else
@@ -348,7 +348,7 @@
 		[mailController setSubject:NS(Deployment::EmailMessageSubject)];
 		[mailController setMessageBody:NS(Deployment::EmailMessageBody) isHTML:NO]; 
 		[mailController addAttachmentData:[self getImageData:ImageEncoding_Psd] mimeType:@"image/psd" fileName:@"picture.psd"];
-		[self presentModalViewController:mailController animated:YES];
+		[self presentViewController:mailController animated:YES completion:NULL];
 		[mailController release];
 	}
 	else
@@ -540,7 +540,9 @@
 		{
 			LOG_DBG("facebook upload", 0);
 			
+        #if BUILD_FACEBOOK
 			[self uploadToFacebook];
+        #endif
 		}
 	}
 	
@@ -631,7 +633,7 @@
 		[[[[UIAlertView alloc] initWithTitle:NS(Deployment::EmailFailedTitle) message:NS(Deployment::EmailFailedText) delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil] autorelease] show];
 	}
 	
-	[self dismissModalViewControllerAnimated:YES];
+	[self dismissViewControllerAnimated:YES completion:NULL];
 	
 	HandleExceptionObjcEnd(false);
 }
@@ -646,7 +648,7 @@
 	
 	LOG_DBG("FB dialog fail", 0);
 	
-	NSString* text = [NSString stringWithFormat:@"Error: %@ (%d)", error.localizedDescription, error.code];
+	NSString* text = [NSString stringWithFormat:@"Error: %@ (%ld)", error.localizedDescription, (long)error.code];
 	
 	LOG_ERR("reason: %s", [text cStringUsingEncoding:NSASCIIStringEncoding]);
 	

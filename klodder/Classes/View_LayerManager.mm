@@ -131,7 +131,7 @@ static bool Compare(const View_LayerManagerLayer* l1, const View_LayerManagerLay
 		
 		for (size_t i = 0; i < layers.size(); ++i)
 		{
-			int index = layers.size() - 1 - i;
+			int index = (int)(layers.size() - 1 - i);
 			
 			Vec2F location = [self desiredLayerPosition:index];
 			

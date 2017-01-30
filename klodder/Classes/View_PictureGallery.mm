@@ -98,7 +98,7 @@
 	int ox = 15;
 	int oy = 15;
 	
-	int i = [scroll subviews].count;
+	int i = (int)[scroll subviews].count;
 	
 	int ix = i % nx;
 	int iy = i / nx;

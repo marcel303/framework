@@ -27,7 +27,7 @@
 	app.colorPickerState->Opacity_set(color.rgb[3]);
 	[app applyColor];
 	
-	[self dismissModalViewControllerAnimated:TRUE];
+	[self dismissViewControllerAnimated:TRUE completion:NULL];
 }
 
 -(void)loadView

@@ -17,7 +17,7 @@
 	ImageId imageId;
 }
 
-@property (assign) ImageId* imageId;
+@property (nonatomic, assign) ImageId* imageId;
 
 - (id)initWithApp:(AppDelegate*)app imageId:(ImageId*)imageId target:(id)target action:(SEL)action;
 -(ImageId*)imageId;

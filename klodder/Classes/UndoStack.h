@@ -17,8 +17,8 @@ public:
 	
 	void SetReplay();
 	void SetDataLayerImage(int imageIndex, int index, const MacImage* image, int x, int y, int sx, int sy);
-	void SetCommandStreamLocation(size_t location);
-	void SetDataStreamLocation(size_t location);
+	void SetCommandStreamLocation(int location);
+	void SetDataStreamLocation(int location);
 	void SetDataLayerOpacity(int index, float opacity);
 	void SetLayerOrder(std::vector<int> order);
 	void SetEditingDataLayer(int index);
@@ -47,10 +47,10 @@ public:
 	DataLayerImage mDataLayerImage[2];
 
 	bool mHasCommandStreamLocation;
-	size_t mCommandStreamLocation;
+	int mCommandStreamLocation;
 	
 	bool mHasDataStreamLocation;
-	size_t mDataStreamLocation;
+	int mDataStreamLocation;
 	
 	bool mHasLayerOrder;
 	std::vector<int> mLayerOrder;

@@ -26,7 +26,7 @@
 	
 	if (self = [super initWithApp:_app])
 	{
-		[self setWantsFullScreenLayout:YES];
+		[self setFullScreenLayout];
         
 		self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithTitle:@"Back" style:UIBarButtonItemStylePlain target:self action:@selector(handleDoneAnimated)] autorelease];
 
@@ -77,7 +77,7 @@
 	}
 #else
 	View_ColorPickerMgr* subController = [[[View_ColorPickerMgr alloc] initWithApp:app] autorelease];
-	[self presentModalViewController:subController animated:YES];
+    [self presentViewController:subController animated:YES completion:NULL];
 #endif
 	
 	HandleExceptionObjcEnd(false);
@@ -110,7 +110,7 @@
 	}
 #else
 	View_ToolSelectMgr* subController = [[[View_ToolSelectMgr alloc] initWithApp:app] autorelease];
-	[self presentModalViewController:subController animated:TRUE];
+    [self presentViewController:subController animated:TRUE completion:NULL];
 #endif
 	
 	HandleExceptionObjcEnd(false);
@@ -443,20 +443,20 @@
 	HandleExceptionObjcEnd(false);
 }
 
+#ifdef IPAD
 // UIPopoverControllerDelegate
 
 -(void)popoverControllerDidDismissPopover:(UIPopoverController*)_popoverController
 {
-#ifdef IPAD
 	popoverController = nil;
 	//[popoverController autorelease];
-#endif
 }
 
 -(BOOL)popoverControllerShouldDismissPopover:(UIPopoverController*)popoverController
 {
 	return YES;
 }
+#endif
 
 static void RenderBezier(void* obj, BezierTravellerState state, float x, float y)
 {

@@ -1316,9 +1316,9 @@ void Application::Undo()
 	
 	if (buffer->mPrev.mHasCommandStreamLocation)
 	{
-		size_t location = buffer->mPrev.mCommandStreamLocation;
+		const int location = buffer->mPrev.mCommandStreamLocation;
 		
-		LOG_DBG("undo: update stream location: %d", (int)location);
+		LOG_DBG("undo: update stream location: %d", location);
 		
 		mCommandStream->Seek(location, SeekMode_Begin);
 		mCommandStreamPosition = location;
@@ -1326,9 +1326,9 @@ void Application::Undo()
 
 	if (buffer->mPrev.mHasDataStreamLocation)
 	{
-		size_t location = buffer->mPrev.mDataStreamLocation;
+		const int location = buffer->mPrev.mDataStreamLocation;
 
-		LOG_DBG("undo: update data stream location: %lu", location);
+		LOG_DBG("undo: update data stream location: %d", location);
 
 		Assert(!mDataStream);
 		mDataStreamPosition = location;
@@ -1506,9 +1506,9 @@ void Application::Redo()
 	
 	if (buffer->mNext.mHasCommandStreamLocation)
 	{
-		size_t location = buffer->mNext.mCommandStreamLocation;
+		const int location = buffer->mNext.mCommandStreamLocation;
 		
-		LOG_DBG("redo: update stream location: %d", (int)location);
+		LOG_DBG("redo: update stream location: %d", location);
 		
 		mCommandStream->Seek(location, SeekMode_Begin);
 		mCommandStreamPosition = location;
@@ -1516,9 +1516,9 @@ void Application::Redo()
 
 	if (buffer->mNext.mHasDataStreamLocation)
 	{
-		size_t location = buffer->mNext.mDataStreamLocation;
+		const int location = buffer->mNext.mDataStreamLocation;
 
-		LOG_DBG("undo: update data stream location: %lu", location);
+		LOG_DBG("undo: update data stream location: %d", location);
 
 		Assert(!mDataStream);
 		mDataStreamPosition = location;
@@ -1713,7 +1713,7 @@ void Application::DataLayerOpacity(const int index, const float opacity)
 
 void Application::LayerOrder(const std::vector<int> & layerOrder)
 {
-	const CommandPacket packet = CommandPacket::Make_LayerOrder(&layerOrder[0], layerOrder.size());
+	const CommandPacket packet = CommandPacket::Make_LayerOrder(&layerOrder[0], (int)layerOrder.size());
 	
 	ExecuteAndSave(packet);
 }

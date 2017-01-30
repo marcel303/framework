@@ -39,12 +39,12 @@ enum LayerMoveMode
 	UIImageView* visibilityIcon;
 }
 
-@property (assign) int index;
-@property (assign) Vec2F animationLocation;
-@property (assign) Vec2F targetLocation;
-@property (assign) LayerMoveMode moveMode;
-//@property (assign) bool isFocused;
-@property (assign) Nullable<float> previewOpacity;
+@property (nonatomic, assign) int index;
+@property (nonatomic, assign) Vec2F animationLocation;
+@property (nonatomic, assign) Vec2F targetLocation;
+@property (nonatomic, assign) LayerMoveMode moveMode;
+//@property (nonatomic, assign) bool isFocused;
+@property (nonatomic, assign) Nullable<float> previewOpacity;
 @property (nonatomic, assign) NSTimer* animationTimer;
 @property (nonatomic, retain) UIImageView* selectionOverlay;
 

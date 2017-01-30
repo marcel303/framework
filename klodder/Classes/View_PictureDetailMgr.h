@@ -16,15 +16,15 @@ enum ImageEncoding
 	ImageId imageId;
 	
 	UIActionSheet* asMore;
-	int asMoreDuplicate;
-	int asMoreDelete;
+	NSInteger asMoreDuplicate;
+	NSInteger asMoreDelete;
 	
 	UIActionSheet* asShare;
-	int asSharePhotoAlbum;
-	int asShareEmail;
-	int asShareEmailPsd;
-	int asShareFlickr;
-	int asShareFacebook;
+	NSInteger asSharePhotoAlbum;
+	NSInteger asShareEmail;
+	NSInteger asShareEmailPsd;
+	NSInteger asShareFlickr;
+	NSInteger asShareFacebook;
 		
 	UIAlertView* deleteAlert;
 	UIAlertView* flickrLoginAlert;

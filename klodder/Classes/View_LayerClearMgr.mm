@@ -16,7 +16,7 @@
 	
 	if ((self = [super initWithNibName:@"LayerClear_iPhone" bundle:nil]))
 	{
-		[self setWantsFullScreenLayout:YES];
+		[self setFullScreenLayout];
 		
 		self.title = @"Clear layer";
 		self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(handleDone:)] autorelease];
@@ -46,7 +46,7 @@
 {
 	LOG_DBG("clearLayer", 0);
 	
-	const float* components = CGColorGetComponents(color.CGColor);
+	const CGFloat* components = CGColorGetComponents(color.CGColor);
 	
 	app.mApplication->DataLayerClear(index, components[0], components[1], components[2], components[3]);
 }
@@ -57,7 +57,7 @@
 	
 	[self clearLayer];
 	
-	[self dismissModalViewControllerAnimated:TRUE];
+	[self dismissViewControllerAnimated:TRUE completion:NULL];
 	
 	HandleExceptionObjcEnd(false);
 }

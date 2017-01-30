@@ -32,7 +32,7 @@
 
 -(void)handleDone
 {
-	[controller dismissModalViewControllerAnimated:YES];
+	[controller dismissViewControllerAnimated:YES completion:NULL];
 }
 
 -(void)dealloc 

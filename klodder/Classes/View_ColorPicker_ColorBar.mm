@@ -242,7 +242,7 @@ static void DrawRoundedRect(CGContextRef context, float x, float y, float sx, fl
 	
 	if (fillColor != nil)
 		CGContextFillPath(context);
-	if (strokeColor != nil);
+	if (strokeColor != nil)
 		CGContextStrokePath(context);
 	
     //CGContextDrawPath(context, kCGPathFillStroke);

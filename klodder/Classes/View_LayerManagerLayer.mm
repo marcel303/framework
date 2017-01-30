@@ -395,7 +395,7 @@ static void CreatePreview(const MacImage* _src, MacImage* dst, int _sx1, int _sx
 	
 	UITouch* touch = [touches anyObject];
 	
-	CGPoint location = [touch locationInView:self];
+	//CGPoint location = [touch locationInView:self];
 	
 	[self moveEnd];
 	

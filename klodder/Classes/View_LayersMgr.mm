@@ -107,7 +107,7 @@ static bool IsLastLayer(int index, std::vector<int> layerOrder);
 
 -(void)handleBack
 {
-	[self dismissModalViewControllerAnimated:YES];
+	[self dismissViewControllerAnimated:YES completion:NULL];
 }
 
 -(void)handleAcquire
@@ -195,7 +195,7 @@ static bool IsLastLayer(int index, std::vector<int> layerOrder);
 	
 	View_LayerClearMgr* controller = [[[View_LayerClearMgr alloc] initWithApp:app index:index] autorelease];
 	//[app show:controller];
-	[self presentModalViewController:controller animated:YES];
+	[self presentViewController:controller animated:YES completion:NULL];
 	
 	HandleExceptionObjcEnd(false);
 }
@@ -313,7 +313,7 @@ static bool IsLastLayer(int index, std::vector<int> layerOrder);
 	[imagePickerAlbum setDelegate:self];
 	[imagePickerAlbum setSourceType:UIImagePickerControllerSourceTypePhotoLibrary];
 	
-	[self presentModalViewController:imagePickerAlbum animated:TRUE];
+	[self presentViewController:imagePickerAlbum animated:TRUE completion:NULL];
 	
 	HandleExceptionObjcEnd(false);
 }
@@ -344,7 +344,7 @@ static bool IsLastLayer(int index, std::vector<int> layerOrder);
 	[imagePickerCamera setDelegate:self];
 	[imagePickerCamera setSourceType:UIImagePickerControllerSourceTypeCamera];
 	
-	[self presentModalViewController:imagePickerCamera animated:TRUE];
+    [self presentViewController:imagePickerCamera animated:TRUE completion:NULL];
 
 	HandleExceptionObjcEnd(false);
 }
@@ -669,7 +669,7 @@ static void ApplySobel(Bitmap* bmp)
 	
 	LOG_DBG("image picker: finish", 0);
 	
-	[self dismissModalViewControllerAnimated:TRUE];
+    [self dismissViewControllerAnimated:TRUE completion:NULL];
 	
 	const int index = [self selectedDataLayer];
 	
@@ -713,7 +713,7 @@ static void ApplySobel(Bitmap* bmp)
 	
 	LOG_DBG("image picker: canceled", 0);
 	
-	[self dismissModalViewControllerAnimated:TRUE];
+    [self dismissViewControllerAnimated:TRUE completion:NULL];
 	
 	HandleExceptionObjcEnd(false);
 }

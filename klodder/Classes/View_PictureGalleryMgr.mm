@@ -27,7 +27,7 @@
 	
 	if (self = [super initWithApp:_app])
 	{
-		[self setWantsFullScreenLayout:TRUE];
+		//[self setFullScreenLayout];
 		
 		self.title = @"Gallery";
 		
@@ -119,7 +119,7 @@
 	HandleExceptionObjcBegin();
 	
 	View_HttpServerMgr* controller = [[[View_HttpServerMgr alloc] initWithApp:app] autorelease];
-	[self presentModalViewController:controller animated:YES];
+    [self presentViewController:controller animated:YES completion:NULL];
 	
 	HandleExceptionObjcEnd(false);
 }
@@ -129,7 +129,7 @@
 	HandleExceptionObjcBegin();
 	
 	View_AboutMgr* controller = [[[View_AboutMgr alloc] initWithApp:app] autorelease];
-	[self presentModalViewController:controller animated:YES];
+    [self presentViewController:controller animated:YES completion:NULL];
 	
 	HandleExceptionObjcEnd(false);
 }
@@ -139,7 +139,7 @@
 	HandleExceptionObjcBegin();
 	
 	View_HelpMgr* controller = [[[View_HelpMgr alloc] initWithApp:app] autorelease];
-	[self presentModalViewController:controller animated:YES];
+    [self presentViewController:controller animated:YES completion:NULL];
 	
 	HandleExceptionObjcEnd(false);
 }

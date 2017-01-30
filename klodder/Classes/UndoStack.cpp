@@ -63,14 +63,14 @@ void UndoState::SetDataLayerImage(int imageIndex, int index, const MacImage* ima
 	m.mImageLocation.Set(x, y);
 }
 
-void UndoState::SetCommandStreamLocation(size_t location)
+void UndoState::SetCommandStreamLocation(int location)
 {
 	Assert(!mHasCommandStreamLocation);
 	mHasCommandStreamLocation = true;
 	mCommandStreamLocation = location;
 }
 
-void UndoState::SetDataStreamLocation(size_t location)
+void UndoState::SetDataStreamLocation(int location)
 {
 	Assert(!mHasDataStreamLocation);
 	mHasDataStreamLocation = true;

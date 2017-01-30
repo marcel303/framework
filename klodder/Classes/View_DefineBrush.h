@@ -17,8 +17,8 @@
 	Vec2I location;
 }
 
-@property (assign) int size;
-@property (assign) Vec2I location;
+@property (nonatomic, assign) int size;
+@property (nonatomic, assign) Vec2I location;
 
 -(id)initWithFrame:(CGRect)frame andApp:(AppDelegate*)app;
 -(void)handleFocus;

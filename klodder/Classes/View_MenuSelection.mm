@@ -58,7 +58,7 @@
 {
 	HandleExceptionObjcBegin();
 	
-	[controller dismissModalViewControllerAnimated:YES];
+    [controller dismissViewControllerAnimated:YES completion:NULL];
 	
 	HandleExceptionObjcEnd(false);
 }

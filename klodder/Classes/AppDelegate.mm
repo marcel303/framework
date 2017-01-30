@@ -64,7 +64,7 @@ static void HandleChange(void* obj, void* arg);
 	
 #if 1
 	[application setNetworkActivityIndicatorVisible:FALSE];
-	[application setStatusBarHidden:TRUE animated:FALSE];
+	[application setStatusBarHidden:TRUE withAnimation:UIStatusBarAnimationNone];
 #else
 //	[application setStatusBarStyle:UIStatusBarStyleBlackTranslucent];
 	[application setNetworkActivityIndicatorVisible:TRUE];
@@ -108,8 +108,8 @@ static void HandleChange(void* obj, void* arg);
 	
 	NSLog(@"Creating touch mgr");
 	
-	CGRect frame = [window frame];
-	CGRect childFrame = frame;
+	//CGRect frame = [window frame];
+	//CGRect childFrame = frame;
 //	CGRect menuFrame = CGRectMake(frame.origin.x, frame.origin.y + frame.size.height - MENU_HEIGHT, frame.size.width, MENU_HEIGHT);
 	
 	brushSettings = new BrushSettings();

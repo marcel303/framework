@@ -28,10 +28,10 @@
 	BrushSettingsLibrary* brushSettingsLibrary;
 }
 
-@property (assign) ToolViewType toolViewType;
-@property (readonly) BrushSettings* brushSettings;
-@property (assign) BrushSettingsLibrary* brushSettingsLibrary;
-@property (readonly) ToolType toolType;
+@property (nonatomic, assign) ToolViewType toolViewType;
+@property (nonatomic, readonly) BrushSettings* brushSettings;
+@property (nonatomic, assign) BrushSettingsLibrary* brushSettingsLibrary;
+@property (nonatomic, readonly) ToolType toolType;
 
 
 -(void)load:(BOOL)restoreLastBrush;
