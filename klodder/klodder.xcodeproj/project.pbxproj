@@ -342,6 +342,7 @@
 		C44CD48A1E37D34600C52159 /* Tool_Smudge.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C44CD4741E37D34600C52159 /* Tool_Smudge.cpp */; };
 		C44CD48B1E37D34600C52159 /* Tool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C44CD4761E37D34600C52159 /* Tool.cpp */; };
 		C44CD48C1E37D34600C52159 /* Util_Mem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C44CD4781E37D34600C52159 /* Util_Mem.cpp */; };
+		C4E8C1E31E3F649700CD71B2 /* PsdLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4E8C1E21E3F649700CD71B2 /* PsdLog.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -961,6 +962,7 @@
 		C44CD4771E37D34600C52159 /* Tool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Tool.h; path = libklodder/Tool.h; sourceTree = "<group>"; };
 		C44CD4781E37D34600C52159 /* Util_Mem.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Util_Mem.cpp; path = libklodder/Util_Mem.cpp; sourceTree = "<group>"; };
 		C44CD4791E37D34600C52159 /* Util_Mem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Util_Mem.h; path = libklodder/Util_Mem.h; sourceTree = "<group>"; };
+		C4E8C1E21E3F649700CD71B2 /* PsdLog.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PsdLog.cpp; path = ../libgg/PsdLog.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1549,10 +1551,6 @@
 		9529EF3611CBA89700B95E9D /* libgg */ = {
 			isa = PBXGroup;
 			children = (
-				951AC8F31341352C000B610F /* MemOps.cpp */,
-				951AC8F41341352C000B610F /* MemOps.h */,
-				951AC8F013413506000B610F /* Heap.cpp */,
-				951AC8F113413506000B610F /* Heap.h */,
 				9529EF3711CBA8C200B95E9D /* AnimTimer.cpp */,
 				9529EF3811CBA8C200B95E9D /* AnimTimer.h */,
 				9529EF3911CBA8C200B95E9D /* Arguments.h */,
@@ -1583,6 +1581,8 @@
 				951E6FFD11EF6944009AF7DB /* FileStreamExtends.h */,
 				9529EF5811CBA8C200B95E9D /* Hash.cpp */,
 				9529EF5911CBA8C200B95E9D /* Hash.h */,
+				951AC8F013413506000B610F /* Heap.cpp */,
+				951AC8F113413506000B610F /* Heap.h */,
 				9529EF5B11CBA8C200B95E9D /* IImageLoader.cpp */,
 				9529EF5C11CBA8C200B95E9D /* IImageLoader.h */,
 				9529EF5E11CBA8C200B95E9D /* Image.cpp */,
@@ -1601,6 +1601,8 @@
 				9529EF7411CBA8C200B95E9D /* Mat4x4.h */,
 				9529EF7511CBA8C200B95E9D /* MemAllocators.cpp */,
 				9529EF7611CBA8C200B95E9D /* MemAllocators.h */,
+				951AC8F31341352C000B610F /* MemOps.cpp */,
+				951AC8F41341352C000B610F /* MemOps.h */,
 				9529EF7711CBA8C200B95E9D /* MemoryStream.cpp */,
 				9529EF7811CBA8C200B95E9D /* MemoryStream.h */,
 				95231C6011DCC653004A3BC5 /* Nullable.cpp */,
@@ -1629,17 +1631,18 @@
 				9529EF9211CBA8C200B95E9D /* PsdLayer.h */,
 				9529EF9311CBA8C200B95E9D /* PsdLayerAndMaskInfo.cpp */,
 				9529EF9411CBA8C200B95E9D /* PsdLayerAndMaskInfo.h */,
+				C4E8C1E21E3F649700CD71B2 /* PsdLog.cpp */,
 				9529EF9511CBA8C200B95E9D /* PsdLog.h */,
 				9529EF9611CBA8C200B95E9D /* PsdRect.cpp */,
 				9529EF9711CBA8C200B95E9D /* PsdRect.h */,
-				9529EF9E11CBA8C200B95E9D /* PsdResource.cpp */,
-				9529EF9F11CBA8C200B95E9D /* PsdResource.h */,
 				9529EF9811CBA8C200B95E9D /* PsdResource_ChannelNames.cpp */,
 				9529EF9911CBA8C200B95E9D /* PsdResource_ChannelNames.h */,
 				9529EF9A11CBA8C200B95E9D /* PsdResource_DisplayInfo.cpp */,
 				9529EF9B11CBA8C200B95E9D /* PsdResource_DisplayInfo.h */,
 				9529EF9C11CBA8C200B95E9D /* PsdResource_ResolutionInfo.cpp */,
 				9529EF9D11CBA8C200B95E9D /* PsdResource_ResolutionInfo.h */,
+				9529EF9E11CBA8C200B95E9D /* PsdResource.cpp */,
+				9529EF9F11CBA8C200B95E9D /* PsdResource.h */,
 				9529EFA011CBA8C200B95E9D /* PsdResourceList.cpp */,
 				9529EFA111CBA8C200B95E9D /* PsdResourceList.h */,
 				9529EFA211CBA8C200B95E9D /* PsdTypes.cpp */,
@@ -2071,6 +2074,7 @@
 				955F63AB116DFF1C00623F92 /* View_ColorPicker_BrightnessGauge.mm in Sources */,
 				955F63B8116DFFC000623F92 /* View_ColorPicker_OpacityGauge.mm in Sources */,
 				955F63FD116E063C00623F92 /* View_BrushPreview.mm in Sources */,
+				C4E8C1E31E3F649700CD71B2 /* PsdLog.cpp in Sources */,
 				950824011178867B00998ACF /* View_Eyedropper.mm in Sources */,
 				950824F51178934700998ACF /* View_ColorPicker_BasicIndicator.mm in Sources */,
 				950824F81178935600998ACF /* View_ColorPicker_OpacityIndicator.mm in Sources */,
