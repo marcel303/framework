@@ -29,7 +29,7 @@ static bool IsLastLayer(int index, std::vector<int> layerOrder);
 		self.title = @"Layers";
 		[self setModalTransitionStyle:UIModalTransitionStyleCoverVertical];
 		//[self setModalInPopover:YES];
-		[self setPreferredContentSize:CGSizeMake(320.0f, 480.0f)];
+		//[self setPreferredContentSize:CGSizeMake(320.0f, 480.0f)];
 		
 		focusLayerIndex = -1;
 		
@@ -491,9 +491,9 @@ static void ApplySobel(Bitmap* bmp)
 	HandleExceptionObjcBegin();
 	
 #ifdef DEBUG
-	app.mApplication->LayerMgr_get()->EditingBegin(false);
-	ApplySobel(app.mApplication->LayerMgr_get()->EditingBuffer_get());
-	app.mApplication->LayerMgr_get()->EditingEnd();
+	//app.mApplication->LayerMgr_get()->EditingBegin(false);
+	//ApplySobel(app.mApplication->LayerMgr_get()->EditingBuffer_get());
+	//app.mApplication->LayerMgr_get()->EditingEnd();
 #endif
 	
 	View_Layers* vw = (View_Layers*)self.view;

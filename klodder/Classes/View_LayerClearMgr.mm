@@ -16,16 +16,13 @@
 	
 	if ((self = [super initWithNibName:@"LayerClear_iPhone" bundle:nil]))
 	{
-		[self setFullScreenLayout];
+		//[self setFullScreenLayout];
 		
 		self.title = @"Clear layer";
 		self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(handleDone:)] autorelease];
 		
 		app = _app;
 		index = _index;
-		
-		Rgba brushColor = app.mApplication->BrushColor_get();
-		color = [[UIColor colorWithRed:brushColor.rgb[0] green:brushColor.rgb[1] blue:brushColor.rgb[2] alpha:brushColor.rgb[3]] retain];
 	}
 	
 	return self;
@@ -37,7 +34,7 @@
 
 -(void)colorChanged
 {
-	View_ColorPicker* vw = (View_ColorPicker*)self.view;
+	View_LayerClear* vw = (View_LayerClear*)self.view;
 	
 	[vw updateUi];
 }
@@ -67,9 +64,10 @@
 	HandleExceptionObjcBegin();
 	
 	[self setMenuOpaque];
-	
-	View_LayerClear* vw = (View_LayerClear*)self.view;
-	[vw updateUi];
+    
+    Rgba brushColor = app.mApplication->BrushColor_get();
+    color = [[UIColor colorWithRed:brushColor.rgb[0] green:brushColor.rgb[1] blue:brushColor.rgb[2] alpha:brushColor.rgb[3]] retain];
+    [self colorChanged];
 
 	HandleExceptionObjcEnd(false);
 }

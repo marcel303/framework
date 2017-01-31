@@ -10,7 +10,6 @@
 #import "StringEx.h"
 #import "View_AboutMgr.h"
 #import "View_EditingMgr.h"
-#import "View_HelpMgr.h"
 #import "View_HttpServerMgr.h"
 #import "View_PictureDetailMgr.h"
 #import "View_PictureGallery.h"
@@ -37,8 +36,6 @@
 		UIBarButtonItem* item_Space = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
 		[self setToolbarItems:[NSArray arrayWithObjects:item_Serve, item_Space, item_About, item_Debug, nil]];
 		
-		UIBarButtonItem* item_Help = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_help")] style:UIBarButtonItemStylePlain target:self action:@selector(handleHelp)] autorelease];
-		self.navigationItem.leftBarButtonItem = item_Help;
 		UIBarButtonItem* item_New = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_new")] style:UIBarButtonItemStylePlain target:self action:@selector(handleNew)] autorelease];
 		self.navigationItem.rightBarButtonItem = item_New;
 		
@@ -129,16 +126,6 @@
 	HandleExceptionObjcBegin();
 	
 	View_AboutMgr* controller = [[[View_AboutMgr alloc] initWithApp:app] autorelease];
-    [self presentViewController:controller animated:YES completion:NULL];
-	
-	HandleExceptionObjcEnd(false);
-}
-
--(void)handleHelp
-{
-	HandleExceptionObjcBegin();
-	
-	View_HelpMgr* controller = [[[View_HelpMgr alloc] initWithApp:app] autorelease];
     [self presentViewController:controller animated:YES completion:NULL];
 	
 	HandleExceptionObjcEnd(false);

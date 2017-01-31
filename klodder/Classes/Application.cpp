@@ -508,7 +508,7 @@ void Application::ExecuteDataLayerClear(const int index, const float _r, const f
 	// convert RGB to premultiplied values
 
 	const float r = _r * _a;
-	const float g = _b * _a;
+	const float g = _g * _a;
 	const float b = _b * _a;
 	const float a = _a;
 

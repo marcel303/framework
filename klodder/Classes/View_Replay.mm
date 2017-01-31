@@ -29,7 +29,7 @@
 		[self setOpaque:TRUE];
 		[self setMultipleTouchEnabled:FALSE];
 		[self setClearsContextBeforeDrawing:NO];
-		[self setContentMode:UIViewContentModeScaleAspectFit];
+		//[self setContentMode:UIViewContentModeScaleAspectFit];
 		
 		app = _app;
 		controller = _controller;

@@ -15,10 +15,10 @@
 
 -(void)setMenuTransparent
 {
-	[self.navigationController.navigationBar setBarStyle:UIBarStyleBlack];
+	[self.navigationController.navigationBar setBarStyle:UIBarStyleDefault];
     [self.navigationController.navigationBar setTranslucent:YES];
     
-	[self.navigationController.toolbar setBarStyle:UIBarStyleBlack];
+	[self.navigationController.toolbar setBarStyle:UIBarStyleDefault];
     [self.navigationController.toolbar setTranslucent:YES];
 }
 

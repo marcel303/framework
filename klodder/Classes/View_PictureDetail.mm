@@ -14,7 +14,7 @@
     if ((self = [super initWithFrame:frame])) 
 	{
 		[self setOpaque:TRUE];
-		[self setClearsContextBeforeDrawing:FALSE];
+		[self setClearsContextBeforeDrawing:NO];
 		
 		controller = _controller;
 		imageId = _imageId;
@@ -42,8 +42,15 @@
 	
 	// render image
 	
-	CGImageRef cgImage = image.ImageWithAlpha_get();
+	CGImageRef cgImage = image.Image_get();
 	
+    if (!cgImage)
+    {
+        LOG_WRN("no CG image", 0);
+        return;
+    }
+    
+    CGContextSetBlendMode(ctx, kCGBlendModeCopy);
 	CGContextDrawImage(ctx, CGRectMake(0.0f, 0.0f, image.Sx_get() / scale, image.Sy_get() / scale), cgImage);
 	
 	CGImageRelease(cgImage);

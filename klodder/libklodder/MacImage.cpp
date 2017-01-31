@@ -614,7 +614,7 @@ CGImageRef MacImage::CreateImage()
 		mSx,
 		mSy, 8, 32, mSx * 4,
 		colorSpace,
-		0,
+		kCGImageAlphaPremultipliedLast,
 		CGDataProviderCreateWithData(0, mData, mSx * mSy * 4, 0),
 		0, FALSE,
 		kCGRenderingIntentDefault);
