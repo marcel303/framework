@@ -249,7 +249,7 @@ static bool IsLastLayer(int index, std::vector<int> layerOrder);
 	UIBarButtonItem* item_Acquire = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCamera target:self action:@selector(handleAcquire)] autorelease];
 //	UIBarButtonItem* item_ToggleVisibility = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAction target:self action:@selector(handleToggleVisibility)] autorelease];
 	UIBarButtonItem* item_ToggleVisibility = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_visibility")] style:UIBarButtonItemStylePlain target:self action:@selector(handleToggleVisibility)] autorelease];
-	UIBarButtonItem* item_Space = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
+	UIBarButtonItem* item_Space = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil] autorelease];
 	[item_MergeDown setEnabled:focusLayerIndex >= 0 && !IsLastLayer(focusLayerIndex, app.mApplication->LayerMgr_get()->LayerOrder_get())];
 	[item_Clear setEnabled:focusLayerIndex >= 0];
 	[item_Acquire setEnabled:focusLayerIndex >= 0];
@@ -397,104 +397,9 @@ static bool IsLastLayer(int index, std::vector<int> layerOrder);
 	HandleExceptionObjcEnd(false);
 }
 
-#ifdef DEBUG
-static float ToFloat(const Rgba* rgba)
-{
-	return (rgba->rgb[0] + rgba->rgb[1] + rgba->rgb[2]) / 3.0f;
-}
-
-static void ApplySobel(Bitmap* bmp)
-{
-	Bitmap temp;
-	
-	temp.Size_set(bmp->Sx_get(), bmp->Sy_get(), false);
-	
-//	const float coeff[3] = { 1, 2, 1 };
-	
-	for (int y = 0; y < bmp->Sy_get(); ++y)
-	{
-		for (int x = 0 ; x < bmp->Sx_get(); ++x)
-		{
-#if 0
-			const Rgba* x1[3] = {
-				bmp->Sample_Clamped_Ref(x - 1, y - 1),
-				bmp->Sample_Clamped_Ref(x + 0, y - 1),
-				bmp->Sample_Clamped_Ref(x + 1, y - 1)
-			};
-			
-			const Rgba* x2[3] = {
-				bmp->Sample_Clamped_Ref(x - 1, y + 1),
-				bmp->Sample_Clamped_Ref(x + 0, y + 1),
-				bmp->Sample_Clamped_Ref(x + 1, y + 1)
-			};
-			
-			Rgba c = { 0.0f, 0.0f, 0.0f, 0.0f };
-			
-			for (int i = 0; i < 3; ++i)
-			{
-				for (int j = 0; j < 3; ++j)
-				{
-					c.rgb[j] -= x1[i]->rgb[j] * coeff[i];
-					c.rgb[j] += x2[i]->rgb[j] * coeff[i];
-				}
-			}
-			
-			for (int i = 0; i < 3; ++i)
-				c.rgb[i] = Calc::Saturate(Calc::Abs(c.rgb[i]));
-			
-			for (int i = 0; i < 4; ++i)
-			{
-				temp.Line_get(y)[x] = c;
-			}
-#else
-			const float x1[3] = {
-				ToFloat(bmp->Sample_Clamped_Ref(x - 1, y - 1)),
-				ToFloat(bmp->Sample_Clamped_Ref(x + 0, y - 1)),
-				ToFloat(bmp->Sample_Clamped_Ref(x + 1, y - 1))
-			};
-			
-			const float x2[3] = {
-				ToFloat(bmp->Sample_Clamped_Ref(x - 1, y + 1)),
-				ToFloat(bmp->Sample_Clamped_Ref(x + 0, y + 1)),
-				ToFloat(bmp->Sample_Clamped_Ref(x + 1, y + 1))
-			};
-			
-			const float y1[3] = {
-				ToFloat(bmp->Sample_Clamped_Ref(x - 1, y - 1)),
-				ToFloat(bmp->Sample_Clamped_Ref(x - 1, y + 0)),
-				ToFloat(bmp->Sample_Clamped_Ref(x - 1, y + 1))
-			};
-			
-			const float y2[3] = {
-				ToFloat(bmp->Sample_Clamped_Ref(x + 1, y - 1)),
-				ToFloat(bmp->Sample_Clamped_Ref(x + 1, y + 0)),
-				ToFloat(bmp->Sample_Clamped_Ref(x + 1, y + 1))
-			};
-			
-			const float vx = -x1[0] - x1[1] * 2.0f - x1[2] + x2[0] + x2[1] * 2.0f + x2[2];
-			const float vy = -y1[0] - y1[1] * 2.0f - y1[2] + y2[0] + y2[1] * 2.0f + y2[2];
-			
-			const float v = Calc::Saturate(Calc::Abs(vx) + Calc::Abs(vy));
-			
-			for (int i = 0; i < 4; ++i)
-				temp.Line_get(y)[x].rgb[i] = bmp->Line_get(y)[x].rgb[i] * v;
-#endif
-		}
-	}
-	
-	temp.Blit(bmp);
-}
-#endif
-
 -(void)handleLayerOpacityChanged:(float)opacity
 {
 	HandleExceptionObjcBegin();
-	
-#ifdef DEBUG
-	//app.mApplication->LayerMgr_get()->EditingBegin(false);
-	//ApplySobel(app.mApplication->LayerMgr_get()->EditingBuffer_get());
-	//app.mApplication->LayerMgr_get()->EditingEnd();
-#endif
 	
 	View_Layers* vw = (View_Layers*)self.view;
 	
@@ -506,9 +411,9 @@ static void ApplySobel(Bitmap* bmp)
 		
 		//
 		
-		const int index = [self selectedDataLayer];
+		//const int index = [self selectedDataLayer];
 		
-		app.mApplication->DataLayerOpacity(index, opacity);
+		//app.mApplication->DataLayerOpacity(index, opacity);
 		
 		[Events post:EVT_LAYERS_CHANGED];
 	}

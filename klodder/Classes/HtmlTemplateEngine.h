@@ -1,3 +1,5 @@
+#if BUILD_HTTPSERVER
+
 #pragma once
 
 #include <map>
@@ -34,3 +36,5 @@ private:
 	std::map<std::string, std::string> mKVPs;
 	std::string mText;
 };
+
+#endif

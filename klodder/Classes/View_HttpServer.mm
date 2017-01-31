@@ -1,3 +1,5 @@
+#if BUILD_HTTPSERVER
+
 #import "ExceptionLoggerObjC.h"
 #import "HTTPServer.h"
 #import "View_HttpServer.h"
@@ -60,3 +62,5 @@
 }
 
 @end
+
+#endif

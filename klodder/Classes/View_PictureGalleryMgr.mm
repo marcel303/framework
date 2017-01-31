@@ -30,11 +30,26 @@
 		
 		self.title = @"Gallery";
 		
+    #if BUILD_HTTPSERVER
 		UIBarButtonItem* item_Serve = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_serve")] style:UIBarButtonItemStylePlain target:self action:@selector(handleServeHttp)] autorelease];
+    #endif
+        
 		UIBarButtonItem* item_About = [[[UIBarButtonItem alloc] initWithTitle:@"A" style:UIBarButtonItemStylePlain target:self action:@selector(handleAbout)] autorelease];
 		UIBarButtonItem* item_Debug = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCompose target:self action:@selector(handleDebug)] autorelease];
-		UIBarButtonItem* item_Space = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
-		[self setToolbarItems:[NSArray arrayWithObjects:item_Serve, item_Space, item_About, item_Debug, nil]];
+		UIBarButtonItem* item_Space = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil] autorelease];
+        
+        NSMutableArray* items = [[[NSMutableArray alloc] init] autorelease];
+    #if BUILD_HTTPSERVER
+        [items addObject:item_Serve];
+    #endif
+        [items addObject:item_Space];
+    #if 0
+        [items addObject:item_About];
+    #endif
+    #if DEBUG
+        [items addObject:item_Debug];
+    #endif
+		[self setToolbarItems:items];
 		
 		UIBarButtonItem* item_New = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_new")] style:UIBarButtonItemStylePlain target:self action:@selector(handleNew)] autorelease];
 		self.navigationItem.rightBarButtonItem = item_New;
@@ -111,6 +126,8 @@
 	HandleExceptionObjcEnd(false);
 }
 
+#if BUILD_HTTPSERVER
+
 -(void)handleServeHttp
 {
 	HandleExceptionObjcBegin();
@@ -120,6 +137,8 @@
 	
 	HandleExceptionObjcEnd(false);
 }
+
+#endif
 
 -(void)handleAbout
 {

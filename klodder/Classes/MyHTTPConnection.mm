@@ -1,3 +1,5 @@
+#if BUILD_HTTPSERVER
+
 #import "Application.h"
 #import "GCDAsyncSocket.h"
 #import "Exception.h"
@@ -51,7 +53,7 @@ static void RenderHtml(HtmlTemplateEngine& engine, std::string func, std::vector
 		{
 			NSString* path = [NSString stringWithCString:gSystem.GetDocumentPath("").c_str() encoding:NSASCIIStringEncoding];
 			
-		    NSArray* fileList = [[NSFileManager defaultManager] directoryContentsAtPath:path];
+            NSArray* fileList = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:path error:NULL];
 			
 			for (NSString* fileName in fileList)
 			{
@@ -62,7 +64,7 @@ static void RenderHtml(HtmlTemplateEngine& engine, std::string func, std::vector
 					NSString* baseName = [fileName stringByDeletingPathExtension];
 					NSString* fileNameThumb = [[baseName stringByAppendingString:@"_thumbnail"] stringByAppendingPathExtension:@"png"];
 					
-					NSDictionary* attributes = [[NSFileManager defaultManager] fileAttributesAtPath:[path stringByAppendingPathComponent:fileName] traverseLink:NO];
+					NSDictionary* attributes = [[NSFileManager defaultManager] attributesOfItemAtPath:[path stringByAppendingPathComponent:fileName] error:NULL];
 					NSString* modicationDate = [[attributes objectForKey:NSFileModificationDate] description];
 					
 					engine.SetKey("thumbnail", [fileNameThumb cStringUsingEncoding:NSASCIIStringEncoding]);
@@ -203,3 +205,5 @@ static void RenderHtml(HtmlTemplateEngine& engine, std::string func, std::vector
 }
 
 @end
+
+#endif

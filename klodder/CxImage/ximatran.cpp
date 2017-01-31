@@ -460,8 +460,8 @@ bool CxImage::Rotate(float angle, CxImage* iDst)
 	// Negative the angle, because the y-axis is negative.
 	double ang = -angle*acos((float)0)/90;
 	int newWidth, newHeight;
-	int nWidth = GetWidth();
-	int nHeight= GetHeight();
+	int nWidth = (int)GetWidth();
+	int nHeight= (int)GetHeight();
 	double cos_angle = cos(ang);
 	double sin_angle = sin(ang);
 

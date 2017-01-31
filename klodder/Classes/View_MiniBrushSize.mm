@@ -113,7 +113,7 @@
 	{
 		case ToolViewType_Brush:
 			patternId = [View_ToolSettings_Brush lastPatternId];
-			toolType = patternId ? ToolType_PatternBrushDirect : ToolType_SoftBrushDirect;
+			toolType = patternId ? ToolType_PatternBrush : ToolType_SoftBrush;
 			break;
 		case ToolViewType_Smudge:
 			patternId = [View_ToolSettings_Smudge lastPatternId];

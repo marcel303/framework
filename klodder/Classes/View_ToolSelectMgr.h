@@ -40,8 +40,8 @@
 -(ToolType)toolType;
 -(void)brushPatternChanged:(uint32_t)patternId;
 -(void)brushSettingsChanged;
--(ViewBase*)createView:(ToolViewType)type;
--(void)changeView:(ViewBase*)view;
+-(ViewBase<ToolView>*)createView:(ToolViewType)type;
+-(void)changeView:(ViewBase<ToolView>*)view;
 -(void)apply;
 -(void)loadViewWithCurrentToolSettings;
 

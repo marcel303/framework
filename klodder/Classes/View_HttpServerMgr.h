@@ -1,3 +1,5 @@
+#if BUILD_HTTPSERVER
+
 #import <UIKit/UIView.h>
 #import "klodder_forward_objc.h"
 #import "ViewControllerBase.h"
@@ -19,3 +21,5 @@
 -(NSDictionary*)addresses;
 
 @end
+
+#endif

@@ -1,3 +1,5 @@
+#if BUILD_HTTPSERVER
+
 #pragma once
 #import <Foundation/Foundation.h>
 #import "HTTPConnection.h"
@@ -10,3 +12,5 @@
 - (NSString *)createBrowseableIndex:(NSString *)path;
 
 @end
+
+#endif

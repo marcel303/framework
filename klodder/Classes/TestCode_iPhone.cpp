@@ -143,6 +143,8 @@ void DBG_TestPhotoshop()
 	}
 }
 
+#if BUILD_HTTPSERVER
+
 static void RenderHtml(HtmlTemplateEngine& engine, std::string func, std::vector<std::string> args)
 {
 	if (func == "render")
@@ -186,6 +188,8 @@ void DBG_TestHtmlTemplate()
 	
 	LOG_DBG("%s", text.c_str());
 }
+
+#endif
 
 void DBG_TestHslRgb()
 {

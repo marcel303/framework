@@ -150,7 +150,7 @@ BrushItem::BrushItem(ToolType type, Brush_Pattern* pattern)
 	
 	for (size_t i = 0; i < itemList.size(); ++i)
 		if (itemList[i].mPatternId == patternId)
-			index = i;
+			index = (int)i;
 	
 	if (index == -1)
 		return;

@@ -40,7 +40,7 @@
 		UIBarButtonItem* item_More = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemOrganize target:self action:@selector(handleMore)] autorelease];
 		UIBarButtonItem* item_Replay = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemPlay target:self action:@selector(handleReplay)] autorelease];
 		UIBarButtonItem* item_Share = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_share")] style:UIBarButtonItemStylePlain target:self action:@selector(handleShare)] autorelease];
-		UIBarButtonItem* item_Space = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
+		UIBarButtonItem* item_Space = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil] autorelease];
 		UIBarButtonItem* item_DbgvalidateCommandStream = nil;
 #ifdef DEBUG
 		item_DbgvalidateCommandStream = [[[UIBarButtonItem alloc] initWithTitle:@"V" style:UIBarButtonItemStylePlain target:self action:@selector(handleValidateCommandStream)] autorelease];

@@ -112,7 +112,7 @@
 		951EC0D511863BD200B0449B /* ximainfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 951EC0D411863BD200B0449B /* ximainfo.cpp */; };
 		951EC0DF11863C1700B0449B /* ximalpha.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 951EC0DE11863C1700B0449B /* ximalpha.cpp */; };
 		951EC0E311863C2500B0449B /* ximapal.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 951EC0E211863C2500B0449B /* ximapal.cpp */; };
-		951EC11511863F3B00B0449B /* ximatran.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 951EC11411863F3B00B0449B /* ximatran.cpp */; };
+		951EC11511863F3B00B0449B /* ximatran.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 951EC11411863F3B00B0449B /* ximatran.cpp */; settings = {COMPILER_FLAGS = "-w"; }; };
 		951EC11711863F9B00B0449B /* ximaint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 951EC11611863F9B00B0449B /* ximaint.cpp */; };
 		951EC11B1186401100B0449B /* ximath.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 951EC11A1186401100B0449B /* ximath.cpp */; };
 		95231C6111DCC653004A3BC5 /* Nullable.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 95231C6011DCC653004A3BC5 /* Nullable.cpp */; };
@@ -221,8 +221,8 @@
 		954FE97F14A8EF4B001341D0 /* HTTPAuthenticationRequest.m in Sources */ = {isa = PBXBuildFile; fileRef = 954FE97414A8EF4B001341D0 /* HTTPAuthenticationRequest.m */; };
 		954FE98014A8EF4B001341D0 /* HTTPConnection.m in Sources */ = {isa = PBXBuildFile; fileRef = 954FE97614A8EF4B001341D0 /* HTTPConnection.m */; };
 		954FE98114A8EF4B001341D0 /* HTTPMessage.m in Sources */ = {isa = PBXBuildFile; fileRef = 954FE97914A8EF4B001341D0 /* HTTPMessage.m */; };
-		954FE98214A8EF4B001341D0 /* HTTPServer.m in Sources */ = {isa = PBXBuildFile; fileRef = 954FE97C14A8EF4B001341D0 /* HTTPServer.m */; };
-		954FE98314A8EF4B001341D0 /* WebSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = 954FE97E14A8EF4B001341D0 /* WebSocket.m */; };
+		954FE98214A8EF4B001341D0 /* HTTPServer.m in Sources */ = {isa = PBXBuildFile; fileRef = 954FE97C14A8EF4B001341D0 /* HTTPServer.m */; settings = {COMPILER_FLAGS = "-w"; }; };
+		954FE98314A8EF4B001341D0 /* WebSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = 954FE97E14A8EF4B001341D0 /* WebSocket.m */; settings = {COMPILER_FLAGS = "-w"; }; };
 		954FE98A14A8EF5F001341D0 /* DDData.m in Sources */ = {isa = PBXBuildFile; fileRef = 954FE98514A8EF5F001341D0 /* DDData.m */; };
 		954FE98B14A8EF5F001341D0 /* DDNumber.m in Sources */ = {isa = PBXBuildFile; fileRef = 954FE98714A8EF5F001341D0 /* DDNumber.m */; };
 		954FE98C14A8EF5F001341D0 /* DDRange.m in Sources */ = {isa = PBXBuildFile; fileRef = 954FE98914A8EF5F001341D0 /* DDRange.m */; };
@@ -231,8 +231,8 @@
 		954FE99B14A8EF8B001341D0 /* HTTPDynamicFileResponse.m in Sources */ = {isa = PBXBuildFile; fileRef = 954FE99414A8EF8B001341D0 /* HTTPDynamicFileResponse.m */; };
 		954FE99C14A8EF8B001341D0 /* HTTPFileResponse.m in Sources */ = {isa = PBXBuildFile; fileRef = 954FE99614A8EF8B001341D0 /* HTTPFileResponse.m */; };
 		954FE99D14A8EF8B001341D0 /* HTTPRedirectResponse.m in Sources */ = {isa = PBXBuildFile; fileRef = 954FE99814A8EF8B001341D0 /* HTTPRedirectResponse.m */; };
-		954FE9A214A8F044001341D0 /* DDLog.m in Sources */ = {isa = PBXBuildFile; fileRef = 954FE9A114A8F044001341D0 /* DDLog.m */; };
-		954FE9A714A8F06E001341D0 /* GCDAsyncSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = 954FE9A614A8F06E001341D0 /* GCDAsyncSocket.m */; };
+		954FE9A214A8F044001341D0 /* DDLog.m in Sources */ = {isa = PBXBuildFile; fileRef = 954FE9A114A8F044001341D0 /* DDLog.m */; settings = {COMPILER_FLAGS = "-w"; }; };
+		954FE9A714A8F06E001341D0 /* GCDAsyncSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = 954FE9A614A8F06E001341D0 /* GCDAsyncSocket.m */; settings = {COMPILER_FLAGS = "-w"; }; };
 		954FE9B614A8F324001341D0 /* localhostAddresses.m in Sources */ = {isa = PBXBuildFile; fileRef = 954FE9B514A8F324001341D0 /* localhostAddresses.m */; };
 		955261DA116FA14B005791FD /* MainWindow_iPad.xib in Resources */ = {isa = PBXBuildFile; fileRef = 955261D9116FA14B005791FD /* MainWindow_iPad.xib */; };
 		9555B73E118F5ADD00FA91F5 /* tinystr.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9555B738118F5ADD00FA91F5 /* tinystr.cpp */; };

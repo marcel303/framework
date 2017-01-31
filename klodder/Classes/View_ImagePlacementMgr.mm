@@ -35,7 +35,7 @@
 		[slider setAutoresizingMask:UIViewAutoresizingFlexibleWidth];
 		UIBarButtonItem* item_Zoom = [[[UIBarButtonItem alloc] initWithCustomView:slider] autorelease];
 		UIBarButtonItem* item_RotateRight = [[[UIBarButtonItem alloc] initWithTitle:@"R" style:UIBarButtonItemStylePlain target:self action:@selector(handleRotateRight)] autorelease];
-		UIBarButtonItem* item_Space = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
+		UIBarButtonItem* item_Space = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil] autorelease];
 		[self setToolbarItems:[NSArray arrayWithObjects:item_RotateLeft, item_Space, item_Zoom, item_Space, item_RotateRight, nil]];
 		
 		self.image = _image;

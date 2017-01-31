@@ -31,7 +31,8 @@
 		self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithTitle:@"Back" style:UIBarButtonItemStylePlain target:self action:@selector(handleDoneAnimated)] autorelease];
 
 		UIBarButtonItem* item_Done = [[[UIBarButtonItem alloc] initWithTitle:@"Done" style:UIBarButtonItemStylePlain target:self action:@selector(handleDoneAnimated)] autorelease];
-		self.navigationItem.rightBarButtonItem = item_Done;
+		//self.navigationItem.rightBarButtonItem = item_Done;
+        //self.navigationItem.leftBarButtonItem = item_Done;
 		self.title = @"Drawing";
 		
 		lastZoom = 4.0f;
@@ -434,7 +435,7 @@
 	item_DBG_TestBezierTraveller = [[[UIBarButtonItem alloc] initWithTitle:@"B" style:UIBarButtonItemStylePlain target:self action:@selector(DBG_handleTestBezierTraveller)] autorelease];
 #endif
 	
-	UIBarButtonItem* item_Space = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
+	UIBarButtonItem* item_Space = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil] autorelease];
 	[item_Undo setEnabled:app.mApplication->HasUndo_get()];
 	[item_Redo setEnabled:app.mApplication->HasRedo_get()];
 	

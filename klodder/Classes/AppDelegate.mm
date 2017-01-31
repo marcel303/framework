@@ -117,8 +117,10 @@ static void HandleChange(void* obj, void* arg);
 	
 	LOG_INF("create: vcEditing", 0);
 	vcEditing = [[View_EditingMgr alloc] initWithApp:self];
-//	LOG_INF("create: vcHttpServer", 0);
-//	vcHttpServer = [[View_HttpServerMgr alloc] initWithApp:self];
+#if BUILD_HTTPSERVER
+	LOG_INF("create: vcHttpServer", 0);
+	vcHttpServer = [[View_HttpServerMgr alloc] initWithApp:self];
+#endif
 	LOG_INF("create: vcPictureGallery", 0);
 	vcPictureGallery = [[View_PictureGalleryMgr alloc] initWithApp:self];
 	
