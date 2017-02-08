@@ -33,7 +33,7 @@
 	
 	const float scale = [AppDelegate displayScale];
 	CGContextRef ctx = UIGraphicsGetCurrentContext();
-
+    
 	// load image preview
 	
 	MacImage image;

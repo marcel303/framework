@@ -34,7 +34,7 @@
 {
 	HandleExceptionObjcBegin();
 	
-	self.view = [[[View_Swatches alloc] initWithFrame:[UIScreen mainScreen].applicationFrame delegate:self] autorelease];
+	self.view = [[[View_Swatches alloc] initWithFrame:[UIScreen mainScreen].bounds delegate:self] autorelease];
 	
 	HandleExceptionObjcEnd(false);
 }

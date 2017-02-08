@@ -28,15 +28,6 @@
 		
 		[self setFullScreenLayout];
 		
-		/*
-		UIBarButtonSystemItemAction
-		UIBarButtonSystemItemUndo
-		UIBarButtonSystemItemPlay
-		UIBarButtonSystemItemRedo
-		UIBarButtonSystemItemTrash
-		*/
-
-//		UIBarButtonItem* item_Delete = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemTrash target:self action:@selector(handleDelete)] autorelease];
 		UIBarButtonItem* item_More = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemOrganize target:self action:@selector(handleMore)] autorelease];
 		UIBarButtonItem* item_Replay = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemPlay target:self action:@selector(handleReplay)] autorelease];
 		UIBarButtonItem* item_Share = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_share")] style:UIBarButtonItemStylePlain target:self action:@selector(handleShare)] autorelease];
@@ -45,7 +36,6 @@
 #ifdef DEBUG
 		item_DbgvalidateCommandStream = [[[UIBarButtonItem alloc] initWithTitle:@"V" style:UIBarButtonItemStylePlain target:self action:@selector(handleValidateCommandStream)] autorelease];
 #endif
-//		[self setToolbarItems:[NSArray arrayWithObjects:item_Delete, item_Space, item_Replay, item_Space, item_Share, item_DbgvalidateCommandStream, nil]];
 		[self setToolbarItems:[NSArray arrayWithObjects:item_More, item_Space, item_Replay, item_Space, item_Share, item_DbgvalidateCommandStream, nil]];
 		
 		UIBarButtonItem* item_Edit = [[[UIBarButtonItem alloc] initWithTitle:@"Edit" style:UIBarButtonItemStylePlain target:self action:@selector(handleEdit)] autorelease];
@@ -466,7 +456,7 @@
 {
 	HandleExceptionObjcBegin();
 	
-	self.view = [[[View_PictureDetail alloc] initWithFrame:[UIScreen mainScreen].applicationFrame controller:self imageId:imageId] autorelease];
+	self.view = [[[View_PictureDetail alloc] initWithFrame:[UIScreen mainScreen].bounds controller:self imageId:imageId] autorelease];
 	
 	HandleExceptionObjcEnd(false);
 }

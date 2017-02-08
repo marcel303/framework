@@ -430,6 +430,8 @@
 	item_Layers = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_layers")] style:UIBarButtonItemStylePlain target:self action:@selector(handleLayers)] autorelease];
 	UIBarButtonItem* item_Undo = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_undo")]style:UIBarButtonItemStylePlain target:self action:@selector(handleUndo)] autorelease];
 	UIBarButtonItem* item_Redo = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_redo")] style:UIBarButtonItemStylePlain target:self action:@selector(handleRedo)] autorelease];
+    //UIBarButtonItem* item_Undo = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemUndo target:self action:@selector(handleUndo)] autorelease];
+    //UIBarButtonItem* item_Redo = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemRedo target:self action:@selector(handleRedo)] autorelease];
 	UIBarButtonItem* item_DBG_TestBezierTraveller = nil;
 #ifndef DEPLOYMENT
 	item_DBG_TestBezierTraveller = [[[UIBarButtonItem alloc] initWithTitle:@"B" style:UIBarButtonItemStylePlain target:self action:@selector(DBG_handleTestBezierTraveller)] autorelease];
@@ -504,7 +506,7 @@ static void RenderBezier(void* obj, BezierTravellerState state, float x, float y
 	
 	LOG_DBG("view create", 0);
 	
-	self.view = [[[View_Editing alloc] initWithFrame:[UIScreen mainScreen].applicationFrame andApp:app controller:self] autorelease];
+	self.view = [[[View_Editing alloc] initWithFrame:[UIScreen mainScreen].bounds andApp:app controller:self] autorelease];
 	
 	HandleExceptionObjcEnd(false);
 }

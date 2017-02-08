@@ -115,7 +115,7 @@
 {
 	HandleExceptionObjcBegin();
 	
-	self.view = [[[View_Replay alloc] initWithFrame:[UIScreen mainScreen].applicationFrame app:app controller:self imageId:imageId] autorelease];
+	self.view = [[[View_Replay alloc] initWithFrame:[UIScreen mainScreen].bounds app:app controller:self imageId:imageId] autorelease];
 	
 	HandleExceptionObjcEnd(false);
 }

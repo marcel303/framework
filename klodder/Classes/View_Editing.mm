@@ -32,20 +32,16 @@
         frame.origin.x = 0;
         frame.origin.y = 0;
         
-        //[self setAutoresizesSubviews:FALSE];
-        
         [self setUserInteractionEnabled:TRUE];
 		[self setMultipleTouchEnabled:TRUE];
 		
 #if 1
-//		[self setAlpha:0.0f];
 		[self setOpaque:TRUE];
-//		[self setBackgroundColor:[UIColor blackColor]];
-		[self setClipsToBounds:FALSE];
-//		[self setHidden:TRUE];
+		//[self setClipsToBounds:FALSE];
+		//[self setHidden:TRUE];
 #endif
 		
-#if DEBUG && 0
+#if DEBUG || 0
 		[self setBackgroundColor:[UIColor greenColor]];
 #else
 		[self setClearsContextBeforeDrawing:FALSE];

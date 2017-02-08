@@ -79,7 +79,7 @@ static void HandleChange(void* obj, void* arg);
 	[window setClearsContextBeforeDrawing:FALSE];
 #endif
 	
-//	[window setBounds:[UIScreen mainScreen].applicationFrame];
+//	[window setBounds:[UIScreen mainScreen].bounds];
 	
 	[window makeKeyAndVisible];
 

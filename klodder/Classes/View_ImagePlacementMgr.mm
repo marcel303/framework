@@ -243,7 +243,7 @@ static float GetScale(Vec2F size, Vec2F maxSize)
 {
 	HandleExceptionObjcBegin();
 	
-	self.view = [[[View_ImagePlacement alloc] initWithFrame:[UIScreen mainScreen].applicationFrame controller:self] autorelease];
+	self.view = [[[View_ImagePlacement alloc] initWithFrame:[UIScreen mainScreen].bounds controller:self] autorelease];
 	
 	HandleExceptionObjcEnd(false);
 }

@@ -214,8 +214,6 @@
 		return;
 	}
 	
-	// draw shadow
-	
 	const float sx = CGImageGetWidth(cgImage);
 	const float sy = CGImageGetHeight(cgImage);
 	

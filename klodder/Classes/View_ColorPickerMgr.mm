@@ -31,7 +31,7 @@
 #ifdef IPAD
 	CGRect rect = CGRectMake(0.0f, 0.0f, 320.0f, 480.0f);
 #else
-	CGRect rect = [UIScreen mainScreen].applicationFrame;
+	CGRect rect = [UIScreen mainScreen].bounds;
 #endif
 	
 	self.view = [[[View_ColorPicker alloc] initWithFrame:rect app:app controller:self delegate:self] autorelease];

@@ -16,7 +16,7 @@
 {	
 	HandleExceptionObjcBegin();
 	
-	float sx = [UIScreen mainScreen].applicationFrame.size.width;
+	float sx = [UIScreen mainScreen].bounds.size.width;
 	float sy = 50.0f;
 	
 	frame.origin.y = frame.size.height - sy;

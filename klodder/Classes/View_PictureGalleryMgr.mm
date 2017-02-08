@@ -91,7 +91,7 @@
 	lastImageId = imageId;
 	
 	const float scale = [AppDelegate displayScale];
-	CGSize screenSize = [UIScreen mainScreen].applicationFrame.size;
+	CGSize screenSize = [UIScreen mainScreen].bounds.size;
 	screenSize.width *= scale;
 	screenSize.height *= scale;
 	
@@ -154,7 +154,7 @@
 {
 	HandleExceptionObjcBegin();
 	
-	UITextView* textView = [[[UITextView alloc] initWithFrame:[UIScreen mainScreen].applicationFrame] autorelease];
+	UITextView* textView = [[[UITextView alloc] initWithFrame:[UIScreen mainScreen].bounds] autorelease];
 	FileStream stream;
 	stream.Open(gSystem.GetDocumentPath("exception.log").c_str(), OpenMode_Read);
 	StreamReader reader(&stream, false);
@@ -192,7 +192,7 @@
 {
 	HandleExceptionObjcBegin();
 	
-	self.view = [[[View_PictureGallery alloc] initWithFrame:[UIScreen mainScreen].applicationFrame app:app controller:self] autorelease];
+	self.view = [[[View_PictureGallery alloc] initWithFrame:[UIScreen mainScreen].bounds app:app controller:self] autorelease];
 	
 	HandleExceptionObjcEnd(false);
 }

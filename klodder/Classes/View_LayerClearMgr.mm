@@ -16,8 +16,6 @@
 	
 	if ((self = [super initWithNibName:@"LayerClear_iPhone" bundle:nil]))
 	{
-		//[self setFullScreenLayout];
-		
 		self.title = @"Clear layer";
 		self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(handleDone:)] autorelease];
 		
@@ -63,7 +61,7 @@
 {
 	HandleExceptionObjcBegin();
 	
-	[self setMenuOpaque];
+	//[self setMenuOpaque];
     
     Rgba brushColor = app.mApplication->BrushColor_get();
     color = [[UIColor colorWithRed:brushColor.rgb[0] green:brushColor.rgb[1] blue:brushColor.rgb[2] alpha:brushColor.rgb[3]] retain];
