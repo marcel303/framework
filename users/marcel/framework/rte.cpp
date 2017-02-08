@@ -3,7 +3,10 @@
 #include "rte.h"
 #include "StringEx.h"
 #include <sys/stat.h>
-#include <Windows.h>
+
+#if defined(WIN32)
+    #include <Windows.h>
+#endif
 
 #if defined(WIN32)
 

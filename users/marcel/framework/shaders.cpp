@@ -1,4 +1,7 @@
 #include "framework.h"
+
+#if ENABLE_OPENGL
+
 #include "shaders.h"
 
 #include "data/engine/BasicSkinned.vs"
@@ -81,3 +84,5 @@ void registerBuiltinShaders()
 	shaderSource("engine/builtin-hq-stroked-triangle.ps", s_hqStrokedTrianglePs);
 	shaderSource("engine/builtin-hq-stroked-triangle.vs", s_hqStrokedTriangleVs);
 }
+
+#endif

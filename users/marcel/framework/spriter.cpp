@@ -392,7 +392,13 @@ namespace spriter
 
 	class Animation
 	{
-	public:
+        struct TransformedBoneKey
+        {
+            const BoneTimelineKey * key;
+            Transform transform;
+        };
+    
+    public:
 		std::string name;
 		int length;
 		LoopType loopType;
@@ -423,12 +429,6 @@ namespace spriter
 			}
 
 			const MainlineKey & mainKey = mainlineKeyFromTime(newTime);
-
-			struct TransformedBoneKey
-			{
-				const BoneTimelineKey * key;
-				Transform transform;
-			};
 
 			std::vector<TransformedBoneKey> transformedBoneKeys;
 			transformedBoneKeys.resize(mainKey.boneRefs.size());

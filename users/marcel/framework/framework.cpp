@@ -32,12 +32,25 @@
 #include "shaders.h"
 #include "spriter.h"
 
+#include "StringEx.h"
 #include "Timer.h"
 
 // -----
 
 #if ENABLE_UTF8_SUPPORT
 #include "utf8rewind.h"
+#endif
+
+#if defined(MACOS)
+    #define INDEX_TYPE GL_UNSIGNED_INT
+#else
+    #define INDEX_TYPE GL_UNSIGNED_SHORT
+#endif
+
+#if INDEX_TYPE == GL_UNSIGNED_INT
+typedef unsigned int glindex_t;
+#else
+typedef unsigned short glindex_t;
 #endif
 
 extern bool initMidi(int deviceIndex);
@@ -47,7 +60,9 @@ extern void shutMidi();
 extern void lockMidi();
 extern void unlockMidi();
 
+#if ENABLE_OPENGL && !USE_LEGACY_OPENGL
 static void gxFlush(bool endOfBatch);
+#endif
 
 static float scale255(const float v)
 {
@@ -144,8 +159,14 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
 #else
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+#if OPENGL_VERSION == 430
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+#endif
+#if OPENGL_VERSION == 410
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+#endif
 #endif
 	
 #if 1
@@ -2427,12 +2448,19 @@ int Dictionary::getInt(const char * name, int _default) const
 
 int64_t Dictionary::getInt64(const char * name, int64_t _default) const
 {
-	// fixme : _atoi64 is windows only?
-	Map::const_iterator i = m_map.find(name);
-	if (i != m_map.end())
+#if defined(WINDOWS)
+    Map::const_iterator i = m_map.find(name);
+    if (i != m_map.end())
 		return _atoi64(i->second.c_str());
-	else
-		return _default;
+    else
+        return _default;
+#else
+    Map::const_iterator i = m_map.find(name);
+    if (i != m_map.end())
+        return atoll(i->second.c_str());
+    else
+        return _default;
+#endif
 }
 
 bool Dictionary::getBool(const char * name, bool _default) const
@@ -2453,7 +2481,7 @@ void * Dictionary::getPtr(const char * name, void * _default) const
 {
 	// fixme : right now this only works with 32 bit pointers
 
-	return reinterpret_cast<void*>(getInt(name, reinterpret_cast<int>(_default)));
+	return reinterpret_cast<void*>(getInt(name, (int)(reinterpret_cast<intptr_t>(_default))));
 }
 
 std::string & Dictionary::operator[](const char * name)
@@ -2722,8 +2750,6 @@ void Sprite::setAnimFrame(int frame)
 	
 	if (m_animSegment)
 	{
-		AnimCacheElem::Anim * anim = reinterpret_cast<AnimCacheElem::Anim*>(m_animSegment);
-		
 		const int frame1 = m_animFrame;
 		{
 			m_animFrame = calculateLoopedFrameIndex(frame);
@@ -3329,7 +3355,7 @@ void Path2d::PathElem::curveSubdiv(const float t1, const float t2, float *& xy, 
 
 		const float d1 = px1 * nx + py1 * ny;
 		const float d2 = px2 * nx + py2 * ny;
-		const float d3 = px3 * nx + py3 * ny;
+		//const float d3 = px3 * nx + py3 * ny;
 
 		const float dd = d2 - d1;
 
@@ -3400,7 +3426,7 @@ void Path2d::PathElem::curveSubdiv(const Path2d::Vertex & v1, const Path2d::Vert
 
 		const float d1 = n.dot(v1);
 		const float d2 = n.dot(v2);
-		const float d3 = n.dot(v3);
+		//const float d3 = n.dot(v3);
 
 		const float dd = d2 - d1;
 
@@ -5251,7 +5277,11 @@ struct GxVertex
 #define GX_USE_BUFFER_RENAMING 0
 #define GX_BUFFER_DRAW_MODE GL_DYNAMIC_DRAW
 //#define GX_BUFFER_DRAW_MODE GL_STREAM_DRAW
-#define GX_USE_ELEMENT_ARRAY_BUFFER 0
+#if defined(MACOS)
+    #define GX_USE_ELEMENT_ARRAY_BUFFER 1
+#else
+    #define GX_USE_ELEMENT_ARRAY_BUFFER 0
+#endif
 #define GX_VAO_COUNT 1
 
 static Shader s_gxShader;
@@ -5313,7 +5343,7 @@ void gxInitialize()
 	glGenBuffers(GX_VAO_COUNT, s_gxIndexBufferObject);
 #if GX_USE_UBERBUFFER
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, kUberIndexBufferSize * sizeof(unsigned short), 0, GL_STREAM_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, kUberIndexBufferSize * sizeof(glindex_t), 0, GL_STREAM_DRAW);
 #endif
 	
 	// create vertex array
@@ -5411,18 +5441,18 @@ static void gxFlush(bool endOfBatch)
 	#endif
 		
 		bool indexed = false;
-		unsigned short * indices = 0;
+		glindex_t * indices = 0;
 		int numElements = s_gxVertexCount;
 		int numIndices = 0;
-		
-		static int lastPrimitiveType = -1;
-		static int lastVertexCount = -1;
 
 	#if !GX_USE_ELEMENT_ARRAY_BUFFER || GX_VAO_COUNT > 1
 		bool needToRegenerateIndexBuffer = true;
 	#else
 		bool needToRegenerateIndexBuffer = false;
-
+        
+        static int lastPrimitiveType = -1;
+        static int lastVertexCount = -1;
+        
 		if (s_gxPrimitiveType != lastPrimitiveType && s_gxVertexCount != lastVertexCount)
 		{
 			lastPrimitiveType = s_gxPrimitiveType;
@@ -5444,10 +5474,10 @@ static void gxFlush(bool endOfBatch)
 
 			if (needToRegenerateIndexBuffer)
 			{
-				indices = (unsigned short*)alloca(sizeof(unsigned short) * numIndices);
+				indices = (glindex_t*)alloca(sizeof(glindex_t) * numIndices);
 
-				unsigned short * __restrict indexPtr = indices;
-				unsigned short baseIndex = 0;
+				glindex_t * __restrict indexPtr = indices;
+				glindex_t baseIndex = 0;
 			
 				for (int i = 0; i < numQuads; ++i)
 				{
@@ -5467,17 +5497,17 @@ static void gxFlush(bool endOfBatch)
 				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject);
 				if (s_gxUberIndexBufferPosition + numIndices > kUberIndexBufferSize)
 				{
-					glBufferData(GL_ELEMENT_ARRAY_BUFFER, kUberIndexBufferSize * sizeof(unsigned short), 0, GX_BUFFER_DRAW_MODE);
+					glBufferData(GL_ELEMENT_ARRAY_BUFFER, kUberIndexBufferSize * sizeof(glindex_t), 0, GX_BUFFER_DRAW_MODE);
 					s_gxUberIndexBufferPosition = 0;
 				}
-				glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, s_gxUberIndexBufferPosition * sizeof(unsigned short), numIndices * sizeof(unsigned short), indices);
+				glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, s_gxUberIndexBufferPosition * sizeof(glindex_t), numIndices * sizeof(glindex_t), indices);
 				checkErrorGL();
 			#else
 				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject[vaoIndex]);
 				#if GX_USE_BUFFER_RENAMING
-				glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned short) * numIndices, 0, GX_BUFFER_DRAW_MODE);
+				glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(glindex_t) * numIndices, 0, GX_BUFFER_DRAW_MODE);
 				#endif
-				glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned short) * numIndices, indices, GX_BUFFER_DRAW_MODE);
+				glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(glindex_t) * numIndices, indices, GX_BUFFER_DRAW_MODE);
 				checkErrorGL();
 			#endif
 			#endif
@@ -5514,11 +5544,11 @@ static void gxFlush(bool endOfBatch)
 		if (indexed)
 		{
 			#if GX_USE_UBERBUFFER
-			glDrawElementsBaseVertex(s_gxPrimitiveType, numElements, GL_UNSIGNED_SHORT, (void*)(s_gxUberIndexBufferPosition * sizeof(unsigned short)), s_gxUberVertexBufferPosition);
+			glDrawElementsBaseVertex(s_gxPrimitiveType, numElements, INDEX_TYPE, (void*)(s_gxUberIndexBufferPosition * sizeof(glindex_t)), s_gxUberVertexBufferPosition);
 			#elif GX_USE_ELEMENT_ARRAY_BUFFER
-			glDrawElements(s_gxPrimitiveType, numElements, GL_UNSIGNED_SHORT, 0);
+			glDrawElements(s_gxPrimitiveType, numElements, INDEX_TYPE, 0);
 			#else
-			glDrawElements(s_gxPrimitiveType, numElements, GL_UNSIGNED_SHORT, indices);
+			glDrawElements(s_gxPrimitiveType, numElements, INDEX_TYPE, indices);
 			#endif
 			checkErrorGL();
 		}

@@ -148,6 +148,7 @@ void unlockMidi()
 
 bool initMidi(int deviceIndex)
 {
+    return true;
 }
 
 void shutMidi()

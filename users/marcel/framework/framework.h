@@ -14,6 +14,7 @@
 #include "Mat4x4.h"
 #include "Vec3.h"
 #include "Vec4.h"
+#include <float.h>
 
 #if defined(DEBUG)
 	#define fassert(x) Assert(x)
@@ -50,7 +51,11 @@
 */
 
 #define USE_LEGACY_OPENGL 0
-#define OPENGL_VERSION 430
+#if defined(MACOS)
+    #define OPENGL_VERSION 410
+#else
+    #define OPENGL_VERSION 430
+#endif
 #define ENABLE_UTF8_SUPPORT 1 // todo : remove redundant conversions and make this enabled by default
 
 static const int MAX_GAMEPAD = 4;
@@ -1108,30 +1113,32 @@ void debugDrawText(float x, float y, int size, float alignX, float alignY, const
 
 SDL_Surface * getWindowSurface();
 
-static void gxMatrixMode(GLenum mode) { }
-static void gxPopMatrix() { }
-static void gxPushMatrix() { }
-static void gxLoadIdentity() { }
-static void gxLoadMatrixf(const float * m) { }
-static void gxGetMatrixf(GLenum mode, float * m) { }
-static void gxMultMatrixf(const float * m) { }
-static void gxTranslatef(float x, float y, float z) { }
-static void gxRotatef(float angle, float x, float y, float z) { }
-static void gxScalef(float x, float y, float z) { }
-static void gxValidateMatrices() { }
+static inline void gxMatrixMode(GLenum mode) { }
+static inline void gxPopMatrix() { }
+static inline void gxPushMatrix() { }
+static inline void gxLoadIdentity() { }
+static inline void gxLoadMatrixf(const float * m) { }
+static inline void gxGetMatrixf(GLenum mode, float * m) { }
+static inline void gxMultMatrixf(const float * m) { }
+static inline void gxTranslatef(float x, float y, float z) { }
+static inline void gxRotatef(float angle, float x, float y, float z) { }
+static inline void gxScalef(float x, float y, float z) { }
+static inline void gxValidateMatrices() { }
 
-static void gxInitialize() { }
-static void gxShutdown() { }
-static void gxBegin(int primitiveType) { }
-static void gxEnd() { }
-static void gxColor4f(float r, float g, float b, float a) { }
-static void gxColor4fv(const float * rgba) { }
-static void gxColor3ub(int r, int g, int b) { }
-static void gxTexCoord2f(float u, float v) { }
-static void gxNormal3f(float x, float y, float z) { }
-static void gxVertex2f(float x, float y) { }
-static void gxVertex3f(float x, float y, float z) { }
-static void gxSetTexture(GLuint texture) { }
+static inline void gxInitialize() { }
+static inline void gxShutdown() { }
+static inline void gxBegin(int primitiveType) { }
+static inline void gxEnd() { }
+static inline void gxColor4f(float r, float g, float b, float a) { }
+static inline void gxColor4fv(const float * rgba) { }
+static inline void gxColor3ub(int r, int g, int b) { }
+static inline void gxColor4ub(int r, int g, int b, int a) { }
+static inline void gxTexCoord2f(float u, float v) { }
+static inline void gxNormal3f(float x, float y, float z) { }
+static inline void gxVertex2f(float x, float y) { }
+static inline void gxVertex3f(float x, float y, float z) { }
+static inline void gxVertex4f(float x, float y, float z, float w) { }
+static inline void gxSetTexture(GLuint texture) { }
 
 #elif !USE_LEGACY_OPENGL
 
