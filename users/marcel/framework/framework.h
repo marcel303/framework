@@ -526,6 +526,7 @@ public:
 	
 	void setString(const char * name, const char * value);
 	void setInt(const char * name, int value);
+    void setInt64(const char * name, int64_t value);
 	void setBool(const char * name, bool value);
 	void setFloat(const char * name, float value);
 	void setPtr(const char * name, void * value);
