@@ -327,7 +327,7 @@ bool Channel::Send(const Packet & packet, int channelSendFlags)
 	bool unreliable = (channelSendFlags & ChannelSendFlag_Unreliable) != 0;
 	bool sendImmediately = (channelSendFlags & ChannelSendFlag_SendImmediately) != 0;
 
-	if (channelSendFlags & ChannelSendFlag_Unreliable)
+	if (unreliable)
 	{
 		return SendUnreliable(packet, sendImmediately);
 	}

@@ -144,11 +144,9 @@ void ReplicationManager::SV_Shutdown()
 
 void ReplicationManager::CL_Shutdown()
 {
-	for (auto i = m_clientClients.begin(); i != m_clientClients.end(); ++i)
+    while (!m_clientClients.empty())
 	{
-		ReplicationClient * client = i->second;
-
-		CL_DestroyClient(m_clientClients.begin()->first);
+        CL_DestroyClient(m_clientClients.begin()->first);
 	}
 }
 
@@ -426,6 +424,11 @@ int ReplicationManager::CreateClientEx(Channel * channel, bool serverSide, void 
 	return clientID;
 }
 
+static bool CompareByCreationID(const ReplicationObject* o1, const ReplicationObject* o2)
+{
+    return o1->GetCreationID() < o2->GetCreationID();
+};
+
 void ReplicationManager::SyncClient(ReplicationClient * client)
 {
 	std::vector<ReplicationObject*> objects;
@@ -433,7 +436,9 @@ void ReplicationManager::SyncClient(ReplicationClient * client)
 	for (auto i = m_serverObjects.begin(); i != m_serverObjects.end(); ++i)
 		objects.push_back(i->second);
 
-	std::sort(objects.begin(), objects.end(), [] (ReplicationObject* o1, ReplicationObject* o2) { return o1->GetCreationID() < o2->GetCreationID(); });
+    
+    
+	std::sort(objects.begin(), objects.end(), CompareByCreationID);
 
 	for (auto i = objects.begin(); i != objects.end(); ++i)
 		SyncClientObject(client, *i);

@@ -21,8 +21,9 @@ list(REMOVE_ITEM source test.cpp)
 
 add_library(libnet ${source})
 
-target_compile_definitions(libnet PUBLIC WINDOWS)
-target_compile_definitions(libnet PRIVATE _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS)
+if (MSVC)
+	target_compile_definitions(libnet PRIVATE _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS)
+endif (MSVC)
 
 target_include_directories(libnet PUBLIC "${PROJECT_SOURCE_DIR}")
 target_include_directories(libnet PUBLIC "${PROJECT_SOURCE_DIR}/../libgg") # because CMake sucks and only imports the PUBLIC include directories if you're DIRECTLY linking against a library

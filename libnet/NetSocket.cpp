@@ -79,7 +79,7 @@ bool NetSocketUDP::Bind(uint16_t port, bool broadcast)
 		setsockopt(m_socket, SOL_SOCKET, SO_SNDBUF, (char*)&receiveBufferSize, sizeof(int));
 	}
 
-	LOG_DBG("NetSocket::Bind [done]");
+	LOG_DBG("NetSocket::Bind [done]", 0);
 
 	return true;
 }
