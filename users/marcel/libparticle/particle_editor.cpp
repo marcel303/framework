@@ -5,6 +5,8 @@
 #include "particle_framework.h"
 #include "tinyxml2.h"
 
+#include "StringEx.h" // _s functions
+
 /*
 
 + color curve key highlight on hover
@@ -1203,12 +1205,7 @@ void doParticleCurve(ParticleCurve & curve, const char * name, UiElem & elem)
 	const int y2 = g_drawY + kCurveHeight;
 
 	g_drawY += kCurveHeight;
-
-	const int cx1 = x1;
-	const int cy1 = y1;
-	const int cx2 = x2;
-	const int cy2 = y2;
-
+    
 	if (g_doActions)
 	{
 		elem.tick(x1, y1, x2, y2);
@@ -1511,6 +1508,7 @@ static void doMenu_LoadSave(float dt)
 	static UiElem loadElem;
 	if (doButton("Load", 0.f, 1.f, true, loadElem))
 	{
+    #ifdef WIN32
 		nfdchar_t * path = 0;
 		nfdresult_t result = NFD_OpenDialog("pfx", "", &path);
 
@@ -1548,6 +1546,7 @@ static void doMenu_LoadSave(float dt)
 				refreshUi();
 			}
 		}
+    #endif
 	}
 
 	bool save = false;
@@ -1570,6 +1569,7 @@ static void doMenu_LoadSave(float dt)
 	{
 		if (saveFilename.empty())
 		{
+        #ifdef WIN32
 			nfdchar_t * path = 0;
 			nfdresult_t result = NFD_SaveDialog("pfx", "", &path);
 
@@ -1577,6 +1577,7 @@ static void doMenu_LoadSave(float dt)
 			{
 				saveFilename = path;
 			}
+        #endif
 		}
 
 		if (!saveFilename.empty())

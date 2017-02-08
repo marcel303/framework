@@ -2,10 +2,22 @@
 #include "tinyxml2.h"
 #include <algorithm>
 #include <assert.h>
+#include <cmath>
+#include <xmmintrin.h>
+
+#include "StringEx.h" // _s functions
 
 //#pragma optimize("", off)
 
 using namespace tinyxml2;
+
+//
+
+#if defined(__GNUC__)
+    #define _MM_ACCESS(r, i) r[i]
+#else
+    #define _MM_ACCESS(r, i) r.m128_f32[i]
+#endif
 
 //
 
@@ -262,6 +274,11 @@ void ParticleColorCurve::clearKeys()
 	numKeys = 0;
 }
 
+static bool compareKeysByTime(const ParticleColorCurve::Key * k1, const ParticleColorCurve::Key * k2)
+{
+    return k1->t < k2->t;
+}
+
 ParticleColorCurve::Key * ParticleColorCurve::sortKeys(Key * keyToReturn)
 {
 	Key * result = 0;
@@ -273,7 +290,7 @@ ParticleColorCurve::Key * ParticleColorCurve::sortKeys(Key * keyToReturn)
 		Key * keysForSorting[kMaxKeys];
 		for (int i = 0; i < numKeys; ++i)
 			keysForSorting[i] = &keys[i];
-		std::sort(keysForSorting, keysForSorting + numKeys, [](Key * k1, Key * k2) { return k1->t < k2->t; });
+        std::sort(keysForSorting, keysForSorting + numKeys, compareKeysByTime);
 		for (int i = 0; i < numKeys; ++i)
 		{
 			if (keysForSorting[i] == keyToReturn)
@@ -791,8 +808,8 @@ void ParticleInfo::load(XMLElement * elem)
 
 ParticleInfo::SubEmitter::SubEmitter()
 	: enabled(false)
-	, count(1)
 	, chance(1.f)
+	, count(1)
 {
 	memset(emitterName, 0, sizeof(emitterName));
 }
@@ -1016,8 +1033,8 @@ bool tickParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei
 
 			p.speed[0] -= nx * d * (1.f + pi.bounciness);
 			p.speed[1] -= ny * d * (1.f + pi.bounciness);
-
-			const float particleSpeed = _mm_sqrt_ss(_mm_set_ss(p.speed[0] * p.speed[0] + p.speed[1] * p.speed[1])).m128_f32[0];
+            
+			const float particleSpeed = _MM_ACCESS(_mm_sqrt_ss(_mm_set_ss(p.speed[0] * p.speed[0] + p.speed[1] * p.speed[1])), 0);
 
 			if (particleSpeed < pi.minKillSpeed)
 				p.life = 0.f;
@@ -1041,7 +1058,7 @@ bool tickParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei
 
 	const float particleLife = 1.f - p.life;
 	//const float particleSpeed = sqrtf(p.speed[0] * p.speed[0] + p.speed[1] * p.speed[1]);
-	const float particleSpeed = _mm_sqrt_ss(_mm_set_ss(p.speed[0] * p.speed[0] + p.speed[1] * p.speed[1])).m128_f32[0];
+	const float particleSpeed = _MM_ACCESS(_mm_sqrt_ss(_mm_set_ss(p.speed[0] * p.speed[0] + p.speed[1] * p.speed[1])), 0);
 	p.speedScalar = particleSpeed;
 
 	p.rotation = computeParticleRotation(pei, pi, timeStep, particleLife, particleSpeed, p.rotation);

@@ -1,14 +1,13 @@
+#if 0
+
 #include "framework.h"
 #include "particle.h"
 #include "particle_editor.h"
 #include "tinyxml2.h"
 
-using namespace tinyxml2;
+#include "StringEx.h" // _s functions
 
-static float toRadians(float degrees)
-{
-	return degrees / 180.f * M_PI;
-}
+using namespace tinyxml2;
 
 int main(int argc, char * argv[])
 {
@@ -318,3 +317,5 @@ int main(int argc, char * argv[])
 
 	return 0;
 }
+
+#endif
