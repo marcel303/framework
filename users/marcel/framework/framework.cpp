@@ -5460,7 +5460,7 @@ static void gxFlush(bool endOfBatch)
         static int lastPrimitiveType = -1;
         static int lastVertexCount = -1;
         
-		if (s_gxPrimitiveType != lastPrimitiveType && s_gxVertexCount != lastVertexCount)
+		if (s_gxPrimitiveType != lastPrimitiveType || s_gxVertexCount != lastVertexCount)
 		{
 			lastPrimitiveType = s_gxPrimitiveType;
 			lastVertexCount = s_gxVertexCount;
