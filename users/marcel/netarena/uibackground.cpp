@@ -21,6 +21,10 @@ void UiBackground::tick(float dt)
 
 void UiBackground::draw()
 {
+    // todo : don't just hide it lame like this
+    if (m_state == kState_Hidden)
+        return;
+    
 	const float kBackFadeinTime = .4f;
 	const float kCharFadeinTime = 1.f;
 	const float kLogoFadeinTime = .6f;

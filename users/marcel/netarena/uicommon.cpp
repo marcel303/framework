@@ -16,6 +16,10 @@ MenuNavElem::MenuNavElem()
 {
 }
 
+MenuNavElem::~MenuNavElem()
+{
+}
+
 void MenuNavElem::getPosition(int & x, int & y) const
 {
 	x = 0;
@@ -538,8 +542,6 @@ void SpinButton::changeValue(int delta)
 
 bool SpinButton::hasChanged()
 {
-	bool result = false;
-
 	const int oldValue = m_value;
 
 	if (m_hasFocus)
@@ -802,8 +804,6 @@ void Slider::changeValue(float delta)
 
 bool Slider::hasChanged()
 {
-	bool result = false;
-
 	const float oldValue = m_value;
 
 	if (m_hasFocus)

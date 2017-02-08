@@ -103,7 +103,7 @@ if (APPLE)
 	find_library(BZ2_LIBRARY bz2)
 	
 	target_link_libraries(riposte PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/macos/glew/lib/libGLEW.a)
-	target_link_libraries(riposte PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/macos/FreeImage-10.12/libfreeimage.a)
+	target_link_libraries(riposte PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/macos/lib/libfreeimage.a)
 	target_link_libraries(riposte PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/macos/lib/libfreetype.a)
 	target_link_libraries(riposte PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/macos/lib/libSDL2.a)
 	target_link_libraries(riposte PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/macos/lib/libSDL2main.a)

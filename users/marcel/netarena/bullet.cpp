@@ -1,5 +1,3 @@
-#pragma once
-
 #include <cmath>
 #include <string.h>
 #include "arena.h"
@@ -402,7 +400,7 @@ void BulletPool::tick(GameSim & gameSim, float _dt)
 					if (b.type == kBulletType_Grenade)
 					{
 						if (DEBUG_RANDOM_CALLSITES)
-							LOG_DBG("Random called from kBulletType_Grenade explode");
+							LOG_DBG("Random called from kBulletType_Grenade explode", 0);
 						for (int i = 0; i < BULLET_GRENADE_FRAG_COUNT; ++i)
 						{
 							const int angle = gameSim.Random() % 256;
@@ -700,7 +698,7 @@ uint32_t BulletPool::calcCRC() const
 void initBullet(GameSim & gameSim, Bullet & b, const ParticleSpawnInfo & spawnInfo)
 {
 	if (DEBUG_RANDOM_CALLSITES)
-		LOG_DBG("Random called from initBullet");
+		LOG_DBG("Random called from initBullet", 0);
 	const float angle = gameSim.Random() % 256;
 	const float velocity = gameSim.RandomFloat(spawnInfo.minVelocity, spawnInfo.maxVelocity);
 

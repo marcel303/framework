@@ -139,7 +139,7 @@ public:
 
 public:
 	App();
-	~App();
+	virtual ~App();
 
 	bool init();
 	void shutdown();

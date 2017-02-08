@@ -4,6 +4,8 @@
 #include "main.h"
 #include "textfield.h"
 
+#include "StringEx.h" // _s functions
+
 static SDLKey s_shiftMap[256];
 static bool s_shiftMapIsInit = false;
 

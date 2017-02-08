@@ -16,6 +16,8 @@
 #include "player.h"
 #include "StreamReader.h"
 
+#include "StringEx.h" // _s functions
+
 //#pragma optimize("", off)
 
 class BlockMask

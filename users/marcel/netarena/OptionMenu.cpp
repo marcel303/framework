@@ -3,6 +3,8 @@
 #include "OptionMenu.h"
 #include "Options.h"
 
+#include "StringEx.h" // _s functions
+
 #if ENABLE_OPTIONS
 
 #define NETWORKED_OPTIONS_MENU 1

@@ -216,13 +216,15 @@ bool MainMenu::tick(float dt)
 	{
 		logDebug("new game!");
 
-#if 1
+#if 0
 		g_app->m_menuMgr->push(new Menu_NewGame());
 #else
 	#if ITCHIO_BUILD
 		// fixme : this is a hack to 'fix' automatically selecting a character in the lobby screen
 		SDL_Delay(250);
 	#endif
+        
+        g_uiBackground->setState(UiBackground::kState_Hidden);
 
 		g_app->startHosting();
 #endif

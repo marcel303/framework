@@ -81,7 +81,7 @@ void OnlineSteam::lobbyJoinBegin(CSteamID lobbyId)
 
 	if (m_currentCall == k_uAPICallInvalid)
 	{
-		LOG_DBG("OnlineSteam: lobbyJoinBegin: failure");
+		LOG_DBG("OnlineSteam: lobbyJoinBegin: failure", 0);
 		m_currentCallFailure = true;
 		m_currentCallIsDone = true;
 	}
@@ -126,7 +126,7 @@ void OnlineSteam::OnLobbyJoined(LobbyEnter_t * lobbyEntered, bool failure)
 
 void OnlineSteam::OnLobbyChatUpdate(LobbyChatUpdate_t * lobbyChatUpdate)
 {
-	LOG_DBG("OnlineSteam: OnLobbyChatUpdate");
+	LOG_DBG("OnlineSteam: OnLobbyChatUpdate", 0);
 
 	/*
 	k_EChatMemberStateChangeEntered			= 0x0001,		// This user has joined or is joining the chat room
@@ -165,7 +165,7 @@ void OnlineSteam::OnLobbyChatUpdate(LobbyChatUpdate_t * lobbyChatUpdate)
 
 void OnlineSteam::OnLobbyKicked(LobbyKicked_t * lobbyKicked)
 {
-	LOG_DBG("OnlineSteam: OnLobbyKicked");
+	LOG_DBG("OnlineSteam: OnLobbyKicked", 0);
 
 	/*
 	struct LobbyKicked_t
@@ -229,7 +229,7 @@ void OnlineSteam::tick()
 		case kCallType_LobbyCreate:
 			if (failure)
 			{
-				LOG_DBG("OnlineSteam: LobbyCreate failure");
+				LOG_DBG("OnlineSteam: LobbyCreate failure", 0);
 				m_callbacks->OnOnlineLobbyCreateResult(m_currentRequestId, false);
 			}
 			else
@@ -251,7 +251,7 @@ void OnlineSteam::tick()
 		case kCallType_LobbyList:
 			if (failure)
 			{
-				LOG_DBG("OnlineSteam: LobbyList failure");
+				LOG_DBG("OnlineSteam: LobbyList failure", 0);
 
 				m_callbacks->OnOnlineLobbyJoinResult(m_currentRequestId, false);
 			}
@@ -295,13 +295,13 @@ void OnlineSteam::tick()
 		case kCallType_LobbyJoin:
 			if (failure)
 			{
-				LOG_DBG("OnlineSteam: LobbyJoin failure");
+				LOG_DBG("OnlineSteam: LobbyJoin failure", 0);
 				m_callbacks->OnOnlineLobbyJoinResult(m_currentRequestId, false);
 			}
 			else
 			{
 				Assert(m_lobbyId.IsLobby());
-				LOG_DBG("OnlineSteam: LobbyJoin success");
+				LOG_DBG("OnlineSteam: LobbyJoin success", 0);
 				m_callbacks->OnOnlineLobbyJoinResult(m_currentRequestId, true);
 
 				/*
@@ -324,12 +324,12 @@ void OnlineSteam::tick()
 		case kCallType_LobbyLeave:
 			if (failure)
 			{
-				LOG_DBG("OnlineSteam: LobbyLeave failure");
+				LOG_DBG("OnlineSteam: LobbyLeave failure", 0);
 				m_callbacks->OnOnlineLobbyLeaveResult(m_currentRequestId, false);
 			}
 			else
 			{
-				LOG_DBG("OnlineSteam: LobbyLeave success");
+				LOG_DBG("OnlineSteam: LobbyLeave success", 0);
 				m_callbacks->OnOnlineLobbyLeaveResult(m_currentRequestId, true);
 			}
 			break;
@@ -391,14 +391,14 @@ OnlineRequestId OnlineSteam::lobbyCreateBegin()
 	k_ELobbyTypeInvisible = 3,		// returned by search, but not visible to other friends 
 	*/
 
-	LOG_DBG("OnlineSteam: lobbyCreateBegin");
+	LOG_DBG("OnlineSteam: lobbyCreateBegin", 0);
 	m_currentCall = SteamMatchmaking()->CreateLobby(k_ELobbyTypePublic, MAX_PLAYERS);
 	m_currentRequestId++;
 	m_currentCallType = kCallType_LobbyCreate;
 
 	if (m_currentCall == k_uAPICallInvalid)
 	{
-		LOG_DBG("OnlineSteam: lobbyCreateBegin: failure");
+		LOG_DBG("OnlineSteam: lobbyCreateBegin: failure", 0);
 		m_currentCallFailure = true;
 		m_currentCallIsDone = true;
 	}
@@ -417,7 +417,7 @@ void OnlineSteam::lobbyCreateEnd(OnlineRequestId id)
 	Assert(m_currentCallType == kCallType_LobbyCreate);
 	Assert(m_currentCall != k_uAPICallInvalid);
 
-	LOG_DBG("OnlineSteam: lobbyCreateEnd");
+	LOG_DBG("OnlineSteam: lobbyCreateEnd", 0);
 
 	finalizeCall();
 }
@@ -426,7 +426,7 @@ OnlineRequestId OnlineSteam::lobbyFindBegin()
 {
 	assertNewCall();
 
-	LOG_DBG("OnlineSteam: lobbyFindBegin");
+	LOG_DBG("OnlineSteam: lobbyFindBegin", 0);
 
 	//void AddRequestLobbyListStringFilter( const char *pchKeyToMatch, const char *pchValueToMatch, ELobbyComparison eComparisonType )
 	//void AddRequestLobbyListNumericalFilter( const char *pchKeyToMatch, int nValueToMatch, ELobbyComparison eComparisonType )
@@ -441,7 +441,7 @@ OnlineRequestId OnlineSteam::lobbyFindBegin()
 
 	if (m_currentCall == k_uAPICallInvalid)
 	{
-		LOG_DBG("OnlineSteam: lobbyFindBegin: failure");
+		LOG_DBG("OnlineSteam: lobbyFindBegin: failure", 0);
 		m_currentCallFailure = true;
 		m_currentCallIsDone = true;
 	}
@@ -460,7 +460,7 @@ void OnlineSteam::lobbyFindEnd(OnlineRequestId id)
 	Assert(m_currentCallType == kCallType_LobbyList || m_currentCallType == kCallType_LobbyJoin);
 	Assert(m_currentCall != k_uAPICallInvalid);
 
-	LOG_DBG("OnlineSteam: lobbyFindEnd");
+	LOG_DBG("OnlineSteam: lobbyFindEnd", 0);
 
 	finalizeCall();
 }
@@ -484,7 +484,7 @@ void OnlineSteam::lobbyJoinEnd(OnlineRequestId id)
 	Assert(m_currentCallType == kCallType_LobbyJoin);
 	Assert(m_currentCall != k_uAPICallInvalid);
 
-	LOG_DBG("OnlineSteam: lobbyJoinEnd");
+	LOG_DBG("OnlineSteam: lobbyJoinEnd", 0);
 
 	finalizeCall();
 }
@@ -494,7 +494,7 @@ OnlineRequestId OnlineSteam::lobbyLeaveBegin()
 	assertNewCall();
 	Assert(m_lobbyId.IsLobby());
 
-	LOG_DBG("OnlineSteam: lobbyLeaveBegin");
+	LOG_DBG("OnlineSteam: lobbyLeaveBegin", 0);
 	SteamMatchmaking()->LeaveLobby(m_lobbyId);
 	m_currentCall = k_uAPICallInvalid + 1; // fixme : only here to silence asserts. LeaveLobby isn't actually async!
 	m_currentRequestId++;
@@ -513,7 +513,7 @@ void OnlineSteam::lobbyLeaveEnd(OnlineRequestId id)
 	Assert(m_currentCall != k_uAPICallInvalid);
 	Assert(m_lobbyId.IsLobby());
 
-	LOG_DBG("OnlineSteam: lobbyLeaveEnd");
+	LOG_DBG("OnlineSteam: lobbyLeaveEnd", 0);
 
 	m_lobbyId = CSteamID();
 

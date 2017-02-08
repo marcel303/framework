@@ -10,6 +10,8 @@
 #include "spriter.h"
 #include "Timer.h"
 
+#include "StringEx.h" // _s functions
+
 #define ENABLE_CHARACTER_OUTLINE 1
 #define ENABLE_FOOTBALL_PICKUP 0
 #define ENABLE_FOOTBALL_HIT 0
@@ -596,7 +598,7 @@ const char * SoundBag::getRandomSound(GameSim & gameSim, int & lastSoundId) cons
 			if (m_random)
 			{
 				if (DEBUG_RANDOM_CALLSITES)
-					LOG_DBG("Random called from getRandomSound");
+					LOG_DBG("Random called from getRandomSound", 0);
 				index = gameSim.Random() % m_files.size();
 			}
 			else
@@ -1048,7 +1050,7 @@ void Player::tick(GameSim & gameSim, float dt)
 			{
 				const auto & triggers = triggersItr->second;
 
-				for (auto & trigger = triggers.cbegin(); trigger != triggers.cend(); ++trigger)
+				for (auto trigger = triggers.cbegin(); trigger != triggers.cend(); ++trigger)
 				{
 					Dictionary d = trigger->args;
 					d.setPtr("obj", m_instanceData);

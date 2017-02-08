@@ -54,7 +54,7 @@ void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 	// collision
 
 #if 1
-	const float wrapSizes[2] = { gameSim.m_arena.m_sxPixels, gameSim.m_arena.m_syPixels };
+	const float wrapSizes[2] = { (float)gameSim.m_arena.m_sxPixels, (float)gameSim.m_arena.m_syPixels };
 
 	if (gameSim.m_arena.m_wrapAround)
 	{

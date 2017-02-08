@@ -19,6 +19,7 @@ public:
 
 public:
 	MenuNavElem();
+    virtual ~MenuNavElem();
 
 	virtual void getPosition(int & x, int & y) const;
 	virtual void getSize(int & sx, int & sy) const;
@@ -114,7 +115,7 @@ public:
 
 public:
 	Button(int x, int y, const char * idleFilename, const char * overFilename, const char * localString, const char * textFont, int textX, int textY, int textSize, const Color & textColor);
-	~Button();
+	virtual ~Button();
 
 	void setPosition(int x, int y);
 	void setAnimation(int moveX, int moveY, float opacity, float time);
@@ -146,7 +147,7 @@ public:
 
 public:
 	SpinButton(int x, int y, int min, int max, int value, const char * filename, const char * localString, int textX, int textY, int textSize);
-	~SpinButton();
+	virtual ~SpinButton();
 
 	void setPosition(int x, int y);
 	void changeValue(int delta);
@@ -178,7 +179,7 @@ public:
 
 public:
 	CheckButton(int x, int y, bool value, const char * filename, const char * localString, int textX, int textY, int textSize);
-	~CheckButton();
+	virtual ~CheckButton();
 
 	void setPosition(int x, int y);
 
@@ -209,7 +210,7 @@ public:
 
 public:
 	Slider(int x, int y, float min, float max, float value, const char * filename, const char * localString, int textX, int textY, int textSize);
-	~Slider();
+	virtual ~Slider();
 
 	void setPosition(int x, int y);
 	void setValue(float value);

@@ -4,6 +4,8 @@
 #include "gamesim.h"
 #include "main.h"
 
+#include "StringEx.h" // _s functions
+
 OPTION_DECLARE(bool, s_debugBackground, false);
 OPTION_DEFINE(bool, s_debugBackground, "Debug/Debug Background");
 

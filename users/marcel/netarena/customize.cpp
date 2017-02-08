@@ -4,6 +4,8 @@
 #include "player.h"
 #include "uicommon.h"
 
+#include "StringEx.h" // _s functions
+
 OPTION_EXTERN(float, PLAYER_SPRITE_SCALE);
 
 CustomizeMenu::CustomizeMenu()
