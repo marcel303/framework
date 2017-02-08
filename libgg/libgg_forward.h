@@ -14,6 +14,7 @@ class ITimer;
 class Mat3x2;
 class Mat4x4;
 class MemoryStream;
+class OptionValueAlias;
 class PolledTimer;
 class Stream;
 class StreamReader;

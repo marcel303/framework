@@ -45,7 +45,7 @@ bool StatTimerManager::Update()
 		if (timer->m_isAutoCommit)
 		{
 			if (timer->GetUpdateMode() == StatTimer::PerFrame ||
-				timer->GetUpdateMode() == StatTimer::PerSecond && oneSecondElapsed)
+				(timer->GetUpdateMode() == StatTimer::PerSecond && oneSecondElapsed))
 			{
 				timer->Commit(true);
 			}
@@ -81,10 +81,10 @@ StatTimer::StatTimer(UpdateMode updateMode, const char * path)
 	: m_updateMode(updateMode)
 	, m_isAutoCommit(true)
 	, m_path(path)
-	, m_timeValue(0)
-	, m_countValue(0)
 	, m_historySize(0)
 	, m_nextHistoryIndex(0)
+    , m_timeValue(0)
+    , m_countValue(0)
 	, m_next(0)
 {
 	g_statTimerManager.Register(this);

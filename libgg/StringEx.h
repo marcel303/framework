@@ -31,3 +31,9 @@ public:
 	static std::string Join(const std::vector<std::string>& strings);
 	static std::string Join(const std::vector<std::string>& strings, const std::string& separator);
 };
+
+#if defined(PSP) || defined(__GNUC__)
+    #define sprintf_s(s, ss, f, ...) sprintf(s, f, __VA_ARGS__)
+    #define vsprintf_s(s, ss, f, a) vsprintf(s, f, a)
+    #define strcpy_s(d, ds, s) strcpy(d, s)
+#endif

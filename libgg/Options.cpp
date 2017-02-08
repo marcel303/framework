@@ -7,6 +7,7 @@
 #include "Log.h"
 #include "Parse.h"
 #include "StreamReader.h"
+#include "StringEx.h" // _s variants
 
 OptionManager g_optionManager;
 
@@ -165,94 +166,94 @@ OptionValueAlias::OptionValueAlias(OptionBase & option, const char * alias, int 
 
 // Option<bool>
 
-void Option<bool>::Increment()
+template<> void Option<bool>::Increment()
 {
 	m_value = !m_value;
 }
 
-void Option<bool>::Decrement()
+template<> void Option<bool>::Decrement()
 {
 	m_value = !m_value;
 }
 
-void Option<bool>::ToString(char * buffer, int bufferSize)
+template<> void Option<bool>::ToString(char * buffer, int bufferSize)
 {
 	sprintf_s(buffer, bufferSize, "%d", m_value ? 1 : 0);
 }
 
-void Option<bool>::FromString(const char * buffer)
+template<> void Option<bool>::FromString(const char * buffer)
 {
 	m_value = Parse::Bool(buffer);
 }
 
 // Option<int>
 
-void Option<int>::Increment()
+template<> void Option<int>::Increment()
 {
 	m_value += (int)m_step;
 
 	ApplyLimits();
 }
 
-void Option<int>::Decrement()
+template<> void Option<int>::Decrement()
 {
 	m_value -= (int)m_step;
 
 	ApplyLimits();
 }
 
-void Option<int>::ToString(char * buffer, int bufferSize)
+template<> void Option<int>::ToString(char * buffer, int bufferSize)
 {
 	sprintf_s(buffer, bufferSize, "%d", m_value);
 }
 
-void Option<int>::FromString(const char * buffer)
+template<> void Option<int>::FromString(const char * buffer)
 {
 	m_value = Parse::Int32(buffer);
 }
 
 // Option<float>
 
-void Option<float>::Increment()
+template<> void Option<float>::Increment()
 {
 	m_value += m_step;
 
 	ApplyLimits();
 }
 
-void Option<float>::Decrement()
+template<> void Option<float>::Decrement()
 {
 	m_value -= m_step;
 
 	ApplyLimits();
 }
 
-void Option<float>::ToString(char * buffer, int bufferSize)
+template<> void Option<float>::ToString(char * buffer, int bufferSize)
 {
 	sprintf_s(buffer, bufferSize, "%.3f", m_value);
 }
 
-void Option<float>::FromString(const char * buffer)
+template<> void Option<float>::FromString(const char * buffer)
 {
 	m_value = Parse::Float(buffer);
 }
 
 // Option<std::string>
 
-void Option<std::string>::Increment()
+template<> void Option<std::string>::Increment()
 {
 }
 
-void Option<std::string>::Decrement()
+template<> void Option<std::string>::Decrement()
 {
 }
 
-void Option<std::string>::ToString(char * buffer, int bufferSize)
+template<> void Option<std::string>::ToString(char * buffer, int bufferSize)
 {
 	strcpy_s(buffer, bufferSize, m_value.c_str());
 }
 
-void Option<std::string>::FromString(const char * buffer)
+template<> void Option<std::string>::FromString(const char * buffer)
 {
 	m_value = buffer;
 }

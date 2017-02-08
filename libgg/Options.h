@@ -4,6 +4,8 @@
 
 #if GG_ENABLE_OPTIONS
 
+#include "libgg_forward.h"
+
 class OptionBase
 {
 	friend class OptionAlias;
