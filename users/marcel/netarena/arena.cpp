@@ -1246,7 +1246,7 @@ bool Arena::getBlocksFromPixels(int baseX, int baseY, int x1, int y1, int x2, in
 					{
 						Block & block = getBlock(x, y);
 
-						if (block.type == kBlockShape_Empty)
+						if (block.type == kBlockType_Empty)
 							continue;
 
 						const float blockX = (x + .5f) * BLOCK_SX;

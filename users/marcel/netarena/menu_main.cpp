@@ -291,7 +291,7 @@ bool MainMenu::tick(float dt)
 	return false;
 }
 
-#if ITCHIO_BUILD
+#if DRAW_BACK_V1 && ITCHIO_BUILD
 static void drawParticles(float ballY)
 {
 	struct Part
@@ -379,6 +379,7 @@ static void drawParticles(float ballY)
 }
 #endif
 
+#if ITCHIO_BUILD && DRAW_BACK_V1
 static void drawSexyScroller(float x1, float y1, float x2, float y2, float xOffset, float yOffset, float scale, float a1, float a2)
 {
 	gxSetTexture(Sprite("itch-scroller.png").getTexture());
@@ -396,6 +397,7 @@ static void drawSexyScroller(float x1, float y1, float x2, float y2, float xOffs
 	gxEnd();
 	gxSetTexture(0);
 }
+#endif
 
 void MainMenu::draw()
 {

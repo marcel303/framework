@@ -84,8 +84,6 @@ void PhysicsActor::tick(GameSim & gameSim, float dt, PhysicsActorCBs & cbs)
 	{
 		const CollisionShape shape(m_collisionShape, m_pos);
 
-		const Arena & arena = gameSim.m_arena;
-
 		struct CollisionArgs
 		{
 			PhysicsActor * self;

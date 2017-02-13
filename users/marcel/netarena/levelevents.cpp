@@ -116,6 +116,9 @@ CollisionBox LevelEvent_SpikeWalls::getWallCollision(const GameSim & gameSim, in
 
 	switch (m_state)
 	{
+    case kState_Idle:
+        break;
+            
 	case kState_Warn:
 		move = .05f;
 		break;

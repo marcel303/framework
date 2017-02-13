@@ -602,7 +602,9 @@ const char * SoundBag::getRandomSound(GameSim & gameSim, int & lastSoundId) cons
 				index = gameSim.Random() % m_files.size();
 			}
 			else
-				index = (index + 1) % m_files.size();
+            {
+                index = lastSoundId;
+            }
 
 			// add 1 to the index to get the sound ID, so when lastSoundId initially is 0 it means 'pick any sound'
 			const int soundId = index + 1;
@@ -1543,7 +1545,6 @@ void Player::tick(GameSim & gameSim, float dt)
 				PlayerAnim anim = kPlayerAnim_NULL;
 				BulletType bulletType = kBulletType_COUNT;
 				BulletEffect bulletEffect = kBulletEffect_Damage;
-				bool hasAttackCollision = false;
 				int numBullets = 1;
 				bool randomBulletAngle = false;
 				bool addScreenShake = false;
@@ -2464,7 +2465,7 @@ void Player::tick(GameSim & gameSim, float dt)
 				if (Calc::Abs(move) > kMaxMove)
 					move = kMaxMove * Calc::Sign(move);
 				m_pos += dn * move;
-				const float speed = m_vel.CalcSize();
+				//const float speed = m_vel.CalcSize();
 				const float d = dn * m_vel;
 				m_vel -= dn * d;
 				//m_vel = m_vel.CalcNormalized() * speed;
@@ -3914,7 +3915,6 @@ void Player::handleLeave()
 {
 	despawn(false);
 
-	const CharacterData * characterData = getCharacterData(m_characterIndex);
 	GameSim & gameSim = *GAMESIM;
 
 	for (int i = 0; i < MAX_BULLETS; ++i)
@@ -4508,6 +4508,7 @@ void Player::dropWeapons(Vec2Arg velocity)
 				break;
 			default:
 				AssertMsg(false, "missing translation for player weapon %d to pickup type", weapon);
+                pickupType = kPickupType_Gun;
 				break;
 			}
 
@@ -4708,8 +4709,6 @@ void Player::endShieldSpecial()
 
 void Player::tickShieldSpecial(float dt)
 {
-	const CharacterData * characterData = getCharacterData(m_characterIndex);
-
 	if (m_shieldSpecial.spriterState.animIsActive)
 		m_shieldSpecial.spriterState.updateAnim(SHIELDSPECIAL_SPRITER, dt);
 
@@ -5272,6 +5271,10 @@ void Player::AttackInfo::Zweihander::tick(Player & player, float dt)
 		}
 		break;
 
+    case kState_Attack:
+    case kState_AttackDown:
+        break;
+            
 	case kState_Stunned:
 		timer -= dt;
 		if (timer < 0.f)
@@ -5285,17 +5288,21 @@ void Player::AttackInfo::Zweihander::tick(Player & player, float dt)
 //
 
 CharacterData::CharacterData(int characterIndex)
-	: m_collisionSx(0)
-	, m_collisionSy(0)
-	, m_spriter(0)
+    : m_spriter(0)
+    , m_numSkins(0)
+    , m_characterIndex(-1)
+    , m_props()
+    , m_collisionSx(0)
+    , m_collisionSy(0)
+    , m_animData()
 	, m_spriteScale(1.f)
 	, m_weight(1.f)
 	, m_meleeCooldown(0.f)
 	, m_special(kPlayerSpecial_None)
 	, m_traits(0)
-	, m_numSkins(0)
+    , m_sounds()
 {
-	load(characterIndex);
+    load(characterIndex);
 }
 
 CharacterData::~CharacterData()

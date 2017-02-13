@@ -20,6 +20,7 @@ Client::Client()
 	: m_channel(0)
 	, m_lobbyMenu(0)
 	, m_textChat(0)
+    , m_textChatLog()
 	, m_textChatFade(0.f)
 	, m_quickLook(0)
 	, m_gameSim(0)
@@ -89,8 +90,6 @@ void Client::tick(float dt)
 		for (int i = 0; i < MAX_GAMEPAD; ++i)
 			if (gamepad[i].isConnected)
 				numGamepads++;
-
-		const bool morePlayersThanControllers = (numGamepads < g_app->getControllerAllocationCount());
 
 		for (int i = 0; i < MAX_PLAYERS; ++i)
 		{
