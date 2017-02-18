@@ -120,12 +120,12 @@ static bool g_copyPiIsValid = false;
 
 //
 
-static float lerp(const float v1, const float v2, const float t)
+inline float lerp(const float v1, const float v2, const float t)
 {
 	return v1 * (1.f - t) + v2 * t;
 }
 
-static float saturate(const float v)
+inline float saturate(const float v)
 {
 	return v < 0.f ? 0.f : v > 1.f ? 1.f : v;
 }
@@ -1272,12 +1272,8 @@ void doParticleColor(ParticleColor & color, const char * name, UiElem & elem)
 
 		setColor(colorWhite);
 		drawRectCheckered(cx1, cy1, cx2, cy2, 4.f);
-		for (int x = cx1; x < cx2; ++x)
-		{
-			const float t = (x - cx1 + .5f) / float(cx2 - cx1 - .5f);
-			setColorf(color.rgba[0], color.rgba[1], color.rgba[2], color.rgba[3]);
-			drawRect(x, cy1, x + 1.f, cy2);
-		}
+        setColorf(color.rgba[0], color.rgba[1], color.rgba[2], color.rgba[3]);
+        drawRect(cx1, cy1, cx2, cy2);
 
 		setColor(colorWhite);
 		drawText(x1 + kPadding + kCheckButtonSize + kPadding, y1, kFontSize, +1.f, +1.f, "%s", name);
