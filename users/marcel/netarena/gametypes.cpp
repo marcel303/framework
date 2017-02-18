@@ -376,6 +376,10 @@ float CollisionShape::projectedMax(Vec2Arg n) const
 
 	switch (type)
 	{
+    case kType_None:
+        Assert(false);
+        break;
+            
 	case kType_Poly:
 		Assert(numPoints != 0);
 

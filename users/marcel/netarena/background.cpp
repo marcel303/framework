@@ -185,6 +185,13 @@ void Background::drawLight()
 		if (m_volcanoState.m_fireBall.m_isActive)
 			m_volcanoState.m_fireBall.drawLight();
 		break;
+            
+    case kLevelTheme_Ice:
+    case kLevelTheme_Lobby:
+        break;
+        
+    case kLevelTheme_COUNT:
+        break;
 	}
 }
 

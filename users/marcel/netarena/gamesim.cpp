@@ -822,7 +822,7 @@ void Axe::tick(GameSim & gameSim, float dt)
 		}
 
 		if (std::abs(actor.m_vel[cbs.axis]) >= TOKEN_BOUNCE_SOUND_TRESHOLD) // fixme : add gamedef
-			g_gameSim->playSound("objects/axe/bounce.ogg");
+			gameSim->playSound("objects/axe/bounce.ogg");
 	};
 	cbs.onHitPlayer = [](PhysicsActorCBs & cbs, PhysicsActor & actor, Player & player)
 	{
@@ -4463,6 +4463,9 @@ void GameSim::triggerLevelEvent(LevelEvent e)
 		name = "Day/Night Cycle (not yet implemented)";
 		break;
 		*/
+            
+    case kLevelEvent_COUNT:
+        break;
 	}
 
 	if (!RECORDMODE)

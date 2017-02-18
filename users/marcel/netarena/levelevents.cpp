@@ -254,9 +254,11 @@ void LevelEvent_SpikeWalls::draw(const GameSim & gameSim) const
 
 		switch (m_state)
 		{
+        case kState_Idle:
+            break;
+                
 		case kState_Warn:
 			{
-				const float t = m_time / SPIKEWALLS_TIME_PREVIEW;
 				setColor(colorRed);
 				drawRect(box.min[0], box.min[1], box.max[0], box.max[1]);
 			}
@@ -264,7 +266,6 @@ void LevelEvent_SpikeWalls::draw(const GameSim & gameSim) const
 
 		case kState_Close:
 			{
-				const float t = m_time / SPIKEWALLS_TIME_CLOSE;
 				setColor(colorWall);
 				drawRect(box.min[0], box.min[1], box.max[0], box.max[1]);
 			}
@@ -272,7 +273,6 @@ void LevelEvent_SpikeWalls::draw(const GameSim & gameSim) const
 
 		case kState_Closed:
 			{
-				const float t = m_time / SPIKEWALLS_TIME_CLOSED;
 				setColor(colorWall);
 				drawRect(box.min[0], box.min[1], box.max[0], box.max[1]);
 			}
@@ -280,7 +280,6 @@ void LevelEvent_SpikeWalls::draw(const GameSim & gameSim) const
 
 		case kState_Open:
 			{
-				const float t = m_time / SPIKEWALLS_TIME_OPEN;
 				setColor(colorWall);
 				drawRect(box.min[0], box.min[1], box.max[0], box.max[1]);
 			}
