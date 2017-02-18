@@ -343,7 +343,9 @@ public:
 		: MemAllocatorArray(_mm_malloc(size, 16), size)
 		, m_pStack(new void*[maxStackSize])
 		, m_stackSize(0)
+#ifdef DEBUG
 		, m_maxStackSize(maxStackSize)
+#endif
 	{
 	}
 
@@ -362,7 +364,7 @@ public:
 	virtual void * Alloc(size_t size, uint32_t tag = 0)
 	{
 		Assert(m_stackSize <= m_maxStackSize);
-#ifdef _DEBUG
+#ifdef DEBUG
 		if (m_stackSize == m_maxStackSize)
 			return 0;
 #endif
@@ -382,7 +384,9 @@ public:
 private:
 	void * * m_pStack;
 	uint32_t m_stackSize;
+#ifdef DEBUG
 	uint32_t m_maxStackSize;
+#endif
 };
 
 class MemAllocatorManualStack : public MemAllocatorArray
@@ -392,7 +396,9 @@ public:
 		: MemAllocatorArray(_mm_malloc(size, 16), size)
 		, m_pStack(new void*[maxStackSize])
 		, m_stackSize(0)
+#ifdef DEBUG
 		, m_maxStackSize(maxStackSize)
+#endif
 	{
 	}
 
@@ -441,7 +447,9 @@ public:
 private:
 	void * * m_pStack;
 	uint32_t m_stackSize;
+#ifdef DEBUG
 	uint32_t m_maxStackSize;
+#endif
 };
 
 template <uint32_t N, uint32_t POW2>
