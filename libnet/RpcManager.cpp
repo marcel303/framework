@@ -64,8 +64,8 @@ void RpcManager::Unregister(uint32_t method, RpcHandler handler)
 
 void RpcManager::Call(uint32_t method, const BitStream & bs, ChannelPool channelPool, uint16_t * channelId, bool broadcast, bool invokeLocal)
 {
-	const uint8_t protocolId = PROTOCOL_RPC;
-	const uint16_t payloadSize = bs.GetDataSize();
+	//const uint8_t protocolId = PROTOCOL_RPC;
+	//const uint16_t payloadSize = bs.GetDataSize();
 	
 	BitStream bs2;
 	bs2.WriteBits(PROTOCOL_RPC, 8);

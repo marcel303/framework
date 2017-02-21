@@ -25,7 +25,7 @@ void OptionManager::AddCommandOption(const char * path, OptionCommandHandlerWith
 {
 	// fixme : currently leaks
 
-	OptionCommandWithParam * option = new OptionCommandWithParam(path, handler, param);
+	new OptionCommandWithParam(path, handler, param);
 }
 
 OptionBase * OptionManager::FindOptionByPath(const char * path)
