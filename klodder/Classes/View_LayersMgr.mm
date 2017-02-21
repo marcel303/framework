@@ -100,6 +100,8 @@ static bool IsLastLayer(int index, std::vector<int> layerOrder);
 	
 	[self applyChanges];
 	
+	[super viewWillDisappear:animated];
+	
 	HandleExceptionObjcEnd(false);
 }
 
@@ -368,7 +370,7 @@ static bool IsLastLayer(int index, std::vector<int> layerOrder);
 {
 	HandleExceptionObjcBegin();
 	
-	[app hideWithAnimation:TRUE];
+	[self dismissViewControllerAnimated:YES completion:NULL];
 	
 	HandleExceptionObjcEnd(false);
 }
