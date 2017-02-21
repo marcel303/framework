@@ -4,7 +4,6 @@
 #include "klodder_forward.h"
 #include "Tool.h"
 
-extern int gMaxBrushRadius;
 extern int gMinBrushSpacing;
 extern int gMaxBrushSpacing;
 

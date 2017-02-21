@@ -88,8 +88,12 @@
 //	float yOffset = 50.0f;
 	float yOffset = 0.0f;
 	
-	int sx = 90;
-	int sy = 90 * 480 / 320;
+	CGRect screenRect = [UIScreen mainScreen].bounds;
+	
+	//int sx = 90;
+	//int sy = 90 * 480 / 320;
+	int sx = screenRect.size.width / 4;
+	int sy = screenRect.size.height / 4;
 	
 	int nx = 3;
 	

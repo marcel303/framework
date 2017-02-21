@@ -16,6 +16,15 @@
 #import "View_EditingMgr.h"
 #import "View_PictureGalleryMgr.h"
 
+/*
+todo:
+- explicitly set checker board size, remove display scale from Application
+- explicitly determine desired gallery thumbnail size. set it on Application init
+    - make a list of desired sizes per device class, display scale
+- fix gallery: use thumbnail size from centralized device/scale size manager. make sure thumbnails are centered horizontally
+- add a nice picture frame around thumbnails?
+
+*/
 //#define MENU_HEIGHT 58.0f
 
 #ifdef IPAD
@@ -230,24 +239,6 @@ static void HandleChange(void* obj, void* arg)
 	[self show:vc animated:TRUE];
 }
 
-/*-(void)showModal:(UIViewController*)vc
-{
-	if (rootController.modalViewController != nil)
-	{
-		LOG_DBG("showModal: change", 0);
-		
-		[rootController dismissModalViewControllerAnimated:FALSE];
-		[rootController presentModalViewController:vc animated:FALSE];
-	}
-	else
-	{
-		LOG_DBG("showModal: new", 0);
-		
-		[rootController setModalTransitionStyle:UIModalTransitionStyleCoverVertical];
-		[rootController presentModalViewController:vc animated:TRUE];
-	}
-}*/
-
 -(void)hide
 {
 	[self hideWithAnimation:FALSE];
@@ -264,7 +255,7 @@ static void HandleChange(void* obj, void* arg)
 {
 	delete mApplication;
 	
-	mApplication = new Application();
+	mApplication = new Application([AppDelegate displayScale]);
 	mApplication->OnChange = CallBack(self, HandleChange);
 	
 	mApplication->Setup(0, gSystem.GetResourcePath("brushes_lq.lib").c_str(), gSystem.GetDocumentPath("brushes_cs.lib").c_str(), 1, Rgba_Make(0.9f, 0.9f, 0.9f, 1.0f), Rgba_Make(0.8f, 0.8f, 0.8f, 1.0f));
@@ -620,12 +611,7 @@ static void HandleChange(void* obj, void* arg)
 
 +(float)displayScale
 {
-#if !defined(IPAD)
 	return [UIScreen mainScreen].scale;
-#else
-#warning retina display support disabled
-	return 1.0f;
-#endif
 }
 
 -(void)memoryReport

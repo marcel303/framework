@@ -6,6 +6,12 @@
 #import "ViewBase.h"
 #import "ViewControllerBase.h"
 
+#if defined(IPAD)
+	#define MAX_BRUSH_RADIUS_UI 255
+#else
+	#define MAX_BRUSH_RADIUS_UI 127
+#endif
+
 @protocol ToolView
 
 -(void)load; // Called when view settings ought to be loaded

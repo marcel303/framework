@@ -34,7 +34,7 @@
 		UIBarButtonItem* item_Serve = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_serve")] style:UIBarButtonItemStylePlain target:self action:@selector(handleServeHttp)] autorelease];
     #endif
         
-		UIBarButtonItem* item_About = [[[UIBarButtonItem alloc] initWithTitle:@"A" style:UIBarButtonItemStylePlain target:self action:@selector(handleAbout)] autorelease];
+		//UIBarButtonItem* item_About = [[[UIBarButtonItem alloc] initWithTitle:@"A" style:UIBarButtonItemStylePlain target:self action:@selector(handleAbout)] autorelease];
 		UIBarButtonItem* item_Debug = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCompose target:self action:@selector(handleDebug)] autorelease];
 		UIBarButtonItem* item_Space = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil] autorelease];
         

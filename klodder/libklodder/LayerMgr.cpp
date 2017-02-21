@@ -80,7 +80,7 @@ LayerMgr::LayerMgr()
 	mEditingDirty.Reset();
 }
 
-void LayerMgr::Setup(const int layerCount, const int sx, const int sy, const Rgba & backColor1, const Rgba & backColor2)
+void LayerMgr::Setup(const int layerCount, const int sx, const int sy, const Rgba & backColor1, const Rgba & backColor2, const int checkerBoardSize)
 {
 	Assert(layerCount == MAX_LAYERS);
 
@@ -129,6 +129,7 @@ void LayerMgr::Setup(const int layerCount, const int sx, const int sy, const Rgb
 			uint8_t(backColor2.rgb[1] * 255.0f),
 			uint8_t(backColor2.rgb[2] * 255.0f),
 			uint8_t(backColor2.rgb[3] * 255.0f));
+		mCheckerBoardSize = checkerBoardSize;
 
 		mMode = LayerMode_Undefined;
 
@@ -151,7 +152,7 @@ void LayerMgr::RenderMerged(MacImage & __restrict dst, const MacRgba & backColor
 	
 	// render solid background
 
-	RenderCheckerBoard(dst, backColor1, backColor2, 16);
+	RenderCheckerBoard(dst, backColor1, backColor2, mCheckerBoardSize);
 	
 	// flatten layers
 	

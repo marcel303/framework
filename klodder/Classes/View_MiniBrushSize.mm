@@ -35,7 +35,7 @@
 		
 		slider = [[[UISlider alloc] initWithFrame:CGRectMake(25.0, 100.0f, 200.0f, 20.0f)] autorelease];
 		[slider setMinimumValue:1.0f];
-		[slider setMaximumValue:gMaxBrushRadius];
+		[slider setMaximumValue:MAX_BRUSH_RADIUS_UI];
 		[slider addTarget:self action:@selector(handleSliderChanged) forControlEvents:UIControlEventTouchUpInside|UIControlEventValueChanged];
 		[slider addTarget:self action:@selector(handleSliderUp) forControlEvents:UIControlEventTouchUpInside|UIControlEventTouchUpOutside];
 		[self addSubview:slider];

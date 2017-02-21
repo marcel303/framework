@@ -30,7 +30,7 @@
         
 		self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithTitle:@"Back" style:UIBarButtonItemStylePlain target:self action:@selector(handleDoneAnimated)] autorelease];
 
-		UIBarButtonItem* item_Done = [[[UIBarButtonItem alloc] initWithTitle:@"Done" style:UIBarButtonItemStylePlain target:self action:@selector(handleDoneAnimated)] autorelease];
+		//UIBarButtonItem* item_Done = [[[UIBarButtonItem alloc] initWithTitle:@"Done" style:UIBarButtonItemStylePlain target:self action:@selector(handleDoneAnimated)] autorelease];
 		//self.navigationItem.rightBarButtonItem = item_Done;
         //self.navigationItem.leftBarButtonItem = item_Done;
 		self.title = @"Drawing";
@@ -145,7 +145,6 @@
 #else
 	View_LayersMgr* subController = [[[View_LayersMgr alloc] initWithApp:app] autorelease];
 	[self.navigationController pushViewController:subController animated:TRUE];
-	//[self presentModalViewController:subController animated:TRUE];
 #endif
 	
 	HandleExceptionObjcEnd(false);

@@ -25,7 +25,7 @@
 		float y = 0.0f;
 		
 		[self addSubview:CreateLabel(0.0f, y, 80.0f, GAUGE_HEIGHT, @"Size:", FONT_MARKER, 18.0f, NSTextAlignmentCenter)];
-		sizeGauge = [[[View_Gauge alloc] initWithLocation:CGPointMake(80.0f, y) scale:1.0f height:GAUGE_HEIGHT min:1 max:gMaxBrushRadius value:controller.brushSettings->diameter unit:@"px" delegate:self changed:@selector(sizeChanged:) provideText:nil] autorelease];
+		sizeGauge = [[[View_Gauge alloc] initWithLocation:CGPointMake(80.0f, y) scale:1.0f height:GAUGE_HEIGHT min:1 max:MAX_BRUSH_RADIUS_UI value:controller.brushSettings->diameter unit:@"px" delegate:self changed:@selector(sizeChanged:) provideText:nil] autorelease];
 		[self addSubview:sizeGauge];
 		y += sizeGauge.frame.size.height + 5.0f;
 		

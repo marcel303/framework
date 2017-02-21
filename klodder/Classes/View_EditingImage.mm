@@ -40,9 +40,6 @@ static void handleZoomChange(void* obj, void* arg);
 	Assert(size[0] > 0);
 	Assert(size[1] > 0);
 	
-	//frame.size.width = size[0];
-	//frame.size.height = size[1];
-	
 	LOG_DBG("editing size: %dx%d", size[0], size[1]);
 	
     if ((self = [super initWithFrame:frame])) 

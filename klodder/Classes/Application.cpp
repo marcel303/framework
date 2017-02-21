@@ -34,7 +34,7 @@
 #endif
 #define MAX_SWATCHES 100
 
-Application::Application()
+Application::Application(const float displayScale)
 {
 	// setup
 	mIsSetup = false;
@@ -42,13 +42,14 @@ Application::Application()
 	mScale = 1;
 	mBackColor1 = Rgba_Make(0.0f, 0.0f, 0.0f);
 	mBackColor2 = Rgba_Make(0.2f, 0.0f, 0.0f);
+	mDisplayScale = displayScale;
 
 	// change notification
 	OnChange = CallBack();
 	
 	// canvas
 	mLayerMgr = new LayerMgr();
-	mLayerMgr->Setup(MAX_LAYERS, 0, 0, Rgba_Make(0.0f, 0.0f, 0.0f), Rgba_Make(0.0f, 0.0f, 0.0f));
+	mLayerMgr->Setup(MAX_LAYERS, 0, 0, Rgba_Make(0.0f, 0.0f, 0.0f), Rgba_Make(0.0f, 0.0f, 0.0f), 128);
 	
 	// command execution
 	//mLastColorCommand;
@@ -454,7 +455,7 @@ void Application::ExecuteImageSize(const int layerCount, const int sx, const int
 	Assert(sx > 0);
 	Assert(sy > 0);
 
-	mLayerMgr->Setup(layerCount, sx, sy, mBackColor1, mBackColor2);
+	mLayerMgr->Setup(layerCount, sx, sy, mBackColor1, mBackColor2, 16 * mDisplayScale);
 
 	Invalidate();
 }
@@ -2313,7 +2314,7 @@ void Application::SaveImageThumbnail(const std::string & path, const MacImage * 
 	volatile Benchmark bm("save image thumbnail");
 	
 	MacImage thumbnail;
-	thumbnail.Size_set(90, 135, false);
+	thumbnail.Size_set(90 * mDisplayScale, 135 * mDisplayScale, false);
 	merged->Blit_Resampled(&thumbnail, false);
 	
 #if 1

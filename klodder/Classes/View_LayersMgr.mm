@@ -609,7 +609,6 @@ static bool IsLastLayer(int index, std::vector<int> layerOrder);
 	
 	View_ImagePlacementMgr* vc = [[[View_ImagePlacementMgr alloc] initWithImage:image size:size dataLayer:index app:app delegate:self] autorelease];
 	[app show:vc];
-//	[self presentModalViewController:vc animated:FALSE];
 
 	HandleExceptionObjcEnd(false);
 }

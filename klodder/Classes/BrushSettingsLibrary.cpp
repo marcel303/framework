@@ -6,11 +6,6 @@
 #include "StringEx.h"
 #include "Tool.h"
 
-#if 1
-int gMaxBrushRadius = MAX_BRUSH_RADIUS;
-#else
-iny gMaxBrushRadius = 65;
-#endif
 int gMinBrushSpacing = 5;
 int gMaxBrushSpacing = 250;
 
@@ -26,7 +21,7 @@ BrushSettings::BrushSettings()
 
 void BrushSettings::Validate()
 {
-	Assert(diameter > 0 && diameter <= gMaxBrushRadius);
+	Assert(diameter > 0 && diameter <= MAX_BRUSH_RADIUS);
 	Assert(hardness >= 0.0f && hardness <= 1.0f);
 	Assert(spacing > 0.0f && spacing <= 10.0f);
 	Assert(strength >= 0.0f && strength <= 1.0f);
@@ -34,7 +29,7 @@ void BrushSettings::Validate()
 
 void BrushSettings::Normalize()
 {
-	diameter = Calc::Mid(diameter, 1, gMaxBrushRadius);
+	diameter = Calc::Mid(diameter, 1, MAX_BRUSH_RADIUS);
 	hardness = Calc::Mid(hardness, 0.0f, 1.0f);
 	spacing = Calc::Mid(spacing, gMinBrushSpacing / 100.0f, gMaxBrushSpacing / 100.0f);
 	strength = Calc::Mid(strength, 0.0f, 1.0f);
