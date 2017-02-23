@@ -29,8 +29,13 @@
 #endif
 
 #if ENABLE_VIDEO
-	#include "mediaplayer_old/MPContext.h"
-	#include "mediaplayer_old/MPUtil.h"
+	#if defined(MACOS)
+		#include "mediaplayer_new/MPContext.h"
+		#include "mediaplayer_new/MPUtil.h"
+	#else
+		#include "mediaplayer_old/MPContext.h"
+		#include "mediaplayer_old/MPUtil.h"
+	#endif
 #endif
 
 #ifdef MACOS
@@ -2224,8 +2229,10 @@ int main(int argc, char * argv[])
 			#if ENABLE_DEBUG_MENUS
 				setFont("VeraMono.ttf");
 				setColor(colorWhite);
-				const int spacingY = 28;
-				const int fontSize = 24;
+				//const int spacingY = 28;
+				//const int fontSize = 24;
+				const int spacingY = 16;
+				const int fontSize = 14;
 				int x = 20;
 				int y = 45;
 

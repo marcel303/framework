@@ -14,7 +14,7 @@
 	#define ENABLE_RESOURCE_PRECACHE 0
 	#define ENABLE_LEAPMOTION 0
 	#define ENABLE_MIDI 0
-	#define ENABLE_VIDEO 0
+	#define ENABLE_VIDEO 1
 #else
 	#define ENABLE_DEBUG_TEXT 0
 	#define ENABLE_WINDOWED_MODE 0
@@ -29,7 +29,7 @@
 	#define ENABLE_RESOURCE_PRECACHE 1
 	#define ENABLE_LEAPMOTION 0
 	#define ENABLE_MIDI 0
-	#define ENABLE_VIDEO 0
+	#define ENABLE_VIDEO 1
 #endif
 
 struct Config

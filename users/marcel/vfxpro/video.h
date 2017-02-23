@@ -4,7 +4,12 @@
 
 #if ENABLE_VIDEO
 
-#include "mediaplayer_old/MPContext.h"
+#if defined(MACOS)
+	#include "mediaplayer_new/MPContext.h"
+#else
+	#include "mediaplayer_old/MPContext.h"
+#endif
+
 #include <stdint.h>
 
 struct MediaPlayer
