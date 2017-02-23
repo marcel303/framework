@@ -1,5 +1,9 @@
 #pragma once
 
+#include "config.h"
+
+#if ENABLE_VIDEO
+
 #include "mediaplayer_old/MPContext.h"
 #include <stdint.h>
 
@@ -95,3 +99,5 @@ struct MediaPlayer
 	void startMediaPlayerThread();
 	void stopMediaPlayerThread();
 };
+
+#endif

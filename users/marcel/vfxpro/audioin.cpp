@@ -2,6 +2,8 @@
 #include "audiostream/AudioStream.h"
 #include "Debugging.h"
 
+#ifdef WIN32
+
 AudioIn::AudioIn()
 	: m_waveIn(nullptr)
 	, m_buffer(nullptr)
@@ -169,3 +171,5 @@ bool AudioIn::provide(AudioSample * __restrict buffer, int & sampleCount)
 		}
 	}
 }
+
+#endif

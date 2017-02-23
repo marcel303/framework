@@ -169,6 +169,7 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 	{
 		effect = new Effect_Vignette(m_name.c_str());
 	}
+#if ENABLE_VIDEO
 	else if (type == "video")
 	{
 		const std::string file = stringAttrib(xmlEffect, "file", "");
@@ -186,6 +187,7 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 			effect = new Effect_Video(m_name.c_str(), file.c_str(), shader.c_str(), yuv, centered, play);
 		}
 	}
+#endif
 	else if (type == "picture")
 	{
 		const std::string file = stringAttrib(xmlEffect, "file", "");
@@ -285,8 +287,6 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 
 	if (effect != nullptr)
 	{
-		auto effectInfo = g_effectInfosByName.find(m_name);
-
 		effect->typeName = typeName;
 
 		for (const XMLAttribute * xmlAttrib = xmlEffect->FirstAttribute(); xmlAttrib; xmlAttrib = xmlAttrib->Next())
@@ -1307,9 +1307,7 @@ bool Scene::load(const char * filename)
 	tinyxml2::XMLDocument xmlDoc;
 
 	const auto t1_loadDocument = loadtimer();
-
-	bool readSuccess = true;
-
+	
 	Array<uint8_t> * fileContents = nullptr;
 	if (getSceneFileContents(filename, fileContents))
 	{

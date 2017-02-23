@@ -285,6 +285,7 @@ struct Effect_Boxes : Effect
 		int m_axis;
 
 		Box();
+		virtual ~Box();
 
 		bool tick(const float dt);
 	};
@@ -334,6 +335,8 @@ struct Effect_Picture : Effect
 
 //
 
+#if ENABLE_VIDEO
+
 struct Effect_Video : Effect
 {
 	TweenFloat m_alpha;
@@ -357,6 +360,8 @@ struct Effect_Video : Effect
 	virtual void handleSignal(const std::string & name) override;
 	virtual void syncTime(const float time) override;
 };
+
+#endif
 
 //
 

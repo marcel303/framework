@@ -28,9 +28,7 @@ namespace MP
 	bool VideoContext::Initialize(Context * context, const size_t streamIndex, const bool outputYuv)
 	{
 		Assert(m_initialized == false);
-
-		bool result = true;
-
+		
 		m_initialized = true;
 
 		m_streamIndex = streamIndex;

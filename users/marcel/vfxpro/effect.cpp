@@ -707,7 +707,7 @@ void Effect_Fsfx::draw()
 	for (size_t i = 0; i < m_colors.size(); ++i)
 	{
 		char name[64];
-		sprintf_s(name, sizeof(name), "color%d", i + 1);
+		sprintf_s(name, sizeof(name), "color%d", int(i) + 1);
 		const Color & c = m_colors[i];
 		shader.setImmediate(name, c.r, c.g, c.b, c.a);
 	}
@@ -958,6 +958,10 @@ Effect_Boxes::Box::Box()
 	addVar("rz", m_rz);
 }
 
+Effect_Boxes::Box::~Box()
+{
+}
+
 bool Effect_Boxes::Box::tick(const float dt)
 {
 	TweenFloatCollection::tick(dt);
@@ -1177,6 +1181,7 @@ void Effect_Boxes::handleSignal(const std::string & message)
 				d.getFloat("sy", 1.f),
 				d.getFloat("sz", 1.f),
 				d.getInt("axis", 0.f));
+			(void)box;
 		}
 	}
 	if (String::StartsWith(message, "transform"))
@@ -1300,6 +1305,8 @@ void Effect_Picture::draw()
 }
 
 //
+
+#if ENABLE_VIDEO
 
 const bool kVideoPreload = true;
 
@@ -1443,6 +1450,8 @@ void Effect_Video::syncTime(const float time)
 		}
 	}
 }
+
+#endif
 
 //
 
@@ -2070,10 +2079,10 @@ void Effect_Lines::tick(const float dt)
 
 			//
 
-			if (m_lines[i].x + m_lines[i].sx < 0.f && m_lines[i].speedX < 0.f ||
-				m_lines[i].y + m_lines[i].sy < 0.f && m_lines[i].speedY < 0.f ||
-				m_lines[i].x > GFX_SX && m_lines[i].speedX > 0.f ||
-				m_lines[i].y > GFX_SY && m_lines[i].speedY > 0.f)
+			if ((m_lines[i].x + m_lines[i].sx < 0.f && m_lines[i].speedX < 0.f) ||
+				(m_lines[i].y + m_lines[i].sy < 0.f && m_lines[i].speedY < 0.f) ||
+				(m_lines[i].x > GFX_SX && m_lines[i].speedX > 0.f) ||
+				(m_lines[i].y > GFX_SY && m_lines[i].speedY > 0.f))
 			{
 				m_lines[i] = Line();
 			}
@@ -3149,9 +3158,7 @@ void Effect_Fireworks::tick(const float dt)
 
 							const float a = random(0.f, Calc::m2PI);
 							const float v = random(float(m_child2Speed), float(m_child2Speed + m_child2SpeedVar));
-
-							const float pv = 0.f;
-
+							
 							pc.type = kPT_Child2;
 							pc.x = p.x;
 							pc.y = p.y;

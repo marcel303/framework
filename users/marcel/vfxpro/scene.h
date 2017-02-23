@@ -58,8 +58,8 @@ typedef ScopedBlock<Surface*, &g_currentSurface> ScopedSurfaceBlock;
 struct SceneEffect
 {
 	std::string m_name;
-	float m_strength;
 	Effect * m_effect;
+	float m_strength;
 
 	SceneEffect();
 	~SceneEffect();
@@ -90,7 +90,7 @@ struct SceneLayer : TweenFloatCollection
 	bool m_debugEnabled;
 
 	SceneLayer(Scene * scene);
-	~SceneLayer();
+	virtual ~SceneLayer();
 
 	bool load(const tinyxml2::XMLElement * xmlLayer);
 
@@ -351,7 +351,7 @@ struct Scene : public TweenFloatCollection, public TweenFloatModifier
 #endif
 
 	Scene();
-	~Scene();
+	virtual ~Scene();
 
 	void tick(const float dt);
 	void draw(DrawableList & drawableList);
@@ -396,6 +396,6 @@ public:
 extern void logLoadtime(const uint64_t time, const char * format, ...);
 extern uint64_t loadtimer();
 #else
-static void logLoadtime(const uint64_t time, const char * format, ...) { }
-static uint64_t loadtimer() { return 0; }
+inline void logLoadtime(const uint64_t time, const char * format, ...) { }
+inline uint64_t loadtimer() { return 0; }
 #endif

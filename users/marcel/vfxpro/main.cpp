@@ -1,5 +1,4 @@
 #include "ip/UdpSocket.h"
-#include "mediaplayer_old/MPContext.h"
 #include "osc/OscOutboundPacketStream.h"
 #include "osc/OscPacketListener.h"
 #include "audiostream/AudioOutput.h"
@@ -12,7 +11,6 @@
 #include "FileStream.h"
 #include "framework.h"
 #include "leap/Leap.h"
-#include "mediaplayer_old/MPUtil.h"
 #include "Path.h"
 #include "scene.h"
 #include "StringEx.h"
@@ -25,13 +23,25 @@
 #include <list>
 #include <map>
 #include <sys/stat.h>
-#include <Windows.h>
+
+#ifdef WIN32
+	#include <Windows.h>
+#endif
+
+#if ENABLE_VIDEO
+	#include "mediaplayer_old/MPContext.h"
+	#include "mediaplayer_old/MPUtil.h"
+#endif
+
+#ifdef MACOS
+	//#include <stat.h>
+#endif
 
 #include "data/ShaderConstants.h"
 
 #include "BezierPath.h" // fixme
 
-#if !defined(DEBUG) && !ENABLE_LOADTIME_PROFILING
+#if defined(WIN32) && !defined(DEBUG) && !ENABLE_LOADTIME_PROFILING
 	#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 #endif
 
@@ -276,8 +286,8 @@ static std::vector<SceneEffect*> buildEffectsList()
 
 //
 
-static CRITICAL_SECTION s_oscMessageMtx;
-static HANDLE s_oscMessageThread = INVALID_HANDLE_VALUE;
+static SDL_mutex * s_oscMessageMtx = nullptr;
+static SDL_Thread * s_oscMessageThread = nullptr;
 
 enum OscMessageType
 {
@@ -387,13 +397,13 @@ protected:
 
 			if (message.type != kOscMessageType_None)
 			{
-				EnterCriticalSection(&s_oscMessageMtx);
+				SDL_LockMutex(s_oscMessageMtx);
 				{
 					logDebug("enqueue OSC message. type=%d, id=%d", message.type, (int)message.param[0]);
 
 					s_oscMessages.push_back(message);
 				}
-				LeaveCriticalSection(&s_oscMessageMtx);
+				SDL_UnlockMutex(s_oscMessageMtx);
 			}
 		}
 		catch (osc::Exception & e)
@@ -406,7 +416,7 @@ protected:
 static MyOscPacketListener s_oscListener;
 UdpListeningReceiveSocket * s_oscReceiveSocket = nullptr;
 
-static DWORD WINAPI ExecuteOscThread(LPVOID pParam)
+static int ExecuteOscThread(void * data)
 {
 	s_oscReceiveSocket = new UdpListeningReceiveSocket(IpEndpointName(IpEndpointName::ANY_ADDRESS, OSC_RECV_PORT), &s_oscListener);
 	s_oscReceiveSocket->Run();
@@ -722,6 +732,8 @@ static void handleAction(const std::string & action, const Dictionary & args)
 
 //
 
+#if ENABLE_RESOURCE_PRECACHE
+
 static void fillCachesCallback(float filePercentage)
 {
 	framework.process();
@@ -738,7 +750,11 @@ static void fillCachesCallback(float filePercentage)
 	framework.endDraw();
 }
 
+#endif
+
 //
+
+#if ENABLE_RESOURCE_PRECACHE
 
 static void preloadResourceFiles()
 {
@@ -755,7 +771,11 @@ static void preloadResourceFiles()
 	}
 }
 
+#endif
+
 //
+
+#if ENABLE_RESOURCE_PRECACHE
 
 static std::map<std::string, Array<uint8_t>> s_sceneFiles;
 
@@ -810,6 +830,15 @@ bool getSceneFileContents(const std::string & filename, Array<uint8_t> *& out_by
 		return true;
 	}
 }
+
+#else
+
+bool getSceneFileContents(const std::string & filename, Array<uint8_t> *& out_bytes)
+{
+	return false;
+}
+
+#endif
 
 //
 
@@ -893,6 +922,7 @@ static void initFileMonitor()
 
 	std::vector<std::string> files = listFiles(".", true);
 
+#if !defined(MACOS) // fixme
 	for (auto & file : files)
 	{
 		FILE * f = fopen(file.c_str(), "rb");
@@ -913,6 +943,7 @@ static void initFileMonitor()
 			f = 0;
 		}
 	}
+#endif
 
 #if defined(WIN32)
 	Assert(s_fileWatcher == INVALID_HANDLE_VALUE);
@@ -944,6 +975,7 @@ static void tickFileMonitor()
 		{
 			bool changed = false;
 
+		#if !defined(MACOS) // fixme
 			struct _stat s;
 			if (_fstat(fileno(f), &s) == 0)
 			{
@@ -961,14 +993,15 @@ static void tickFileMonitor()
 
 			fclose(f);
 			f = 0;
-
+		#endif
+			
 			if (changed)
 			{
 				handleFileChange(fi.filename);
 			}
 		}
 	}
-
+	
 #ifdef WIN32
 	if (s_fileWatcher != INVALID_HANDLE_VALUE)
 	{
@@ -1312,14 +1345,14 @@ int main(int argc, char * argv[])
 
 	// initialise OSC
 
-	InitializeCriticalSectionAndSpinCount(&s_oscMessageMtx, 256);
-
-	s_oscMessageThread = CreateThread(NULL, 64 * 1024, ExecuteOscThread, NULL, CREATE_SUSPENDED, NULL);
-	ResumeThread(s_oscMessageThread);
+	s_oscMessageMtx = SDL_CreateMutex();
+	s_oscMessageThread = SDL_CreateThread(ExecuteOscThread, "OSC thread", nullptr);
 
 	// initialize avcodec
 
+#if ENABLE_VIDEO
 	MP::Util::InitializeLibAvcodec();
+#endif
 
 	// initialise framework
 
@@ -1623,7 +1656,7 @@ int main(int argc, char * argv[])
 
 				for (size_t i = 0; i < g_scene->m_events.size(); ++i)
 				{
-					if (i - base < 0 || i - base > 9)
+					if (int(i) - base < 0 || int(i) - base > 9)
 						continue;
 
 					if (keyboard.wentDown((SDLKey)(SDLK_0 + i - base)))
@@ -1705,7 +1738,7 @@ int main(int argc, char * argv[])
 
 			// update network input
 
-			EnterCriticalSection(&s_oscMessageMtx);
+			SDL_LockMutex(s_oscMessageMtx);
 			{
 				while (!s_oscMessages.empty())
 				{
@@ -1795,7 +1828,7 @@ int main(int argc, char * argv[])
 					s_oscMessages.pop_front();
 				}
 			}
-			LeaveCriticalSection(&s_oscMessageMtx);
+			SDL_UnlockMutex(s_oscMessageMtx);
 
 		#if 1
 			const float timeDilationMultiplier = 1.f;
@@ -2215,9 +2248,7 @@ int main(int argc, char * argv[])
 
 						const std::string & effectName = (*i)->m_name;
 						Effect * effect = (*i)->m_effect;
-
-						const EffectInfo & info = g_effectInfosByName[effectName];
-
+						
 						char temp[1024];
 						sprintf_s(temp, sizeof(temp), "%d %-20s", index, effectName.c_str());
 
@@ -2499,8 +2530,7 @@ int main(int argc, char * argv[])
 	//
 
 	s_oscReceiveSocket->AsynchronousBreak();
-	WaitForSingleObject(s_oscMessageThread, INFINITE);
-	CloseHandle(s_oscMessageThread);
+	SDL_WaitThread(s_oscMessageThread, nullptr);
 
 	delete s_oscReceiveSocket;
 	s_oscReceiveSocket = nullptr;

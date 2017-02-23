@@ -1,3 +1,7 @@
+#include "config.h"
+
+#if ENABLE_VIDEO
+
 #include "framework.h"
 #include "video.h"
 #include <atomic>
@@ -286,3 +290,5 @@ void MediaPlayer::stopMediaPlayerThread()
 
 	logDebug("MP thread shutdown took %dms", t2 - t1);
 }
+
+#endif
