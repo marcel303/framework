@@ -893,7 +893,11 @@ std::vector<std::string> listFiles(const char * path, bool recurse)
 	if (dir)
 	{
 		while ((ent = readdir(dir)) != 0)
-			result.push_back(ent->d_name);
+		{
+			char fullPath[PATH_MAX];
+			sprintf_s(fullPath, sizeof(fullPath), "%s/%s", path, ent->d_name);
+			result.push_back(fullPath);
+		}
 		closedir(dir);
 	}
 	return result;
