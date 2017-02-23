@@ -5,11 +5,7 @@
 #include <stdlib.h>
 #include "Random.h"
 
-#if defined(WIN32) || defined(IPAD) || !USE_PSPVEC || defined(BBOS)
-	#define CALC_HQ_SINCOS 1
-#else
-	#define CALC_HQ_SINCOS 0
-#endif
+#define CALC_HQ_SINCOS 1
 
 #if defined(PSP) && USE_PSPVEC
 #include <libfpu.h>
