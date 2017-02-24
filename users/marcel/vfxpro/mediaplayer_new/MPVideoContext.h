@@ -43,6 +43,7 @@ namespace MP
 		uint8_t * m_tempFrameBuffer; ///< Frame buffer for temp frame.
 		VideoBuffer m_videoBuffer; // TODO: Init/destroy.
 		SwsContext * m_swsContext;
+		AVRational m_timeBase;
 
 		size_t m_streamIndex;
 		bool m_outputYuv;

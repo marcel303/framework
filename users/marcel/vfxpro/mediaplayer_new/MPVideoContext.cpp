@@ -103,7 +103,9 @@ namespace MP
 						m_codecContext->width, m_codecContext->height, m_codecContext->pix_fmt,
 						m_codecContext->width, m_codecContext->height, AV_PIX_FMT_RGB24,
 						SWS_POINT, nullptr, nullptr, nullptr);
-						
+					
+					m_timeBase = context->GetFormatContext()->streams[streamIndex]->time_base;
+					
 					return true;
 				}
 			}
@@ -315,13 +317,9 @@ namespace MP
 			sws_scale(m_swsContext, src.data, src.linesize, 0, src.height, dst.data, dst.linesize);
 		}
 		
-		// fixme !! presentation timestamps broke down again ..
-
-        //if (m_tempFrame->pts != 0 && m_tempFrame->pts != AV_NOPTS_VALUE)
-		if (false)
+        if (m_tempFrame->pts != 0 && m_tempFrame->pts != AV_NOPTS_VALUE)
 		{
-			//m_time = av_q2d(m_codecContext->time_base) * m_tempFrame->pts;
-			m_time = av_frame_get_best_effort_timestamp(m_tempFrame) * av_q2d(m_codecContext->time_base);
+			m_time = av_frame_get_best_effort_timestamp(m_tempFrame) * av_q2d(m_timeBase);
 		}
 		else
 		{
