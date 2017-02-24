@@ -277,25 +277,25 @@ namespace MP
 	{
 		bool result = true;
 		
-		const AVPicture * src = (const AVPicture*)m_tempFrame;
-		      AVPicture * dst = (AVPicture*)out_frame->m_frame;
+		const AVFrame & src = *m_tempFrame;
+		      AVFrame & dst = *out_frame->m_frame;
 
 		if (m_outputYuv)
 		{
-			const uint8_t * __restrict srcYLine = src->data[0];
-			const uint8_t * __restrict srcULine = src->data[1];
-			const uint8_t * __restrict srcVLine = src->data[2];
-			uint8_t * __restrict dstLine  = dst->data[0];
+			const uint8_t * __restrict srcYLine = src.data[0];
+			const uint8_t * __restrict srcULine = src.data[1];
+			const uint8_t * __restrict srcVLine = src.data[2];
+			uint8_t * __restrict dstLine  = dst.data[0];
 
 			const int sx = m_codecContext->width;
 			const int sy = m_codecContext->height;
 
 			for (int y = 0; y < sy; ++y)
 			{
-				const uint8_t * __restrict srcY   = srcYLine + src->linesize[0] * (y     );
-				const uint8_t * __restrict srcU   = srcULine + src->linesize[1] * (y >> 1);
-				const uint8_t * __restrict srcV   = srcVLine + src->linesize[2] * (y >> 1);
-				uint8_t * __restrict dstRGB = dstLine  + dst->linesize[0] * (y     );
+				const uint8_t * __restrict srcY   = srcYLine + src.linesize[0] * (y     );
+				const uint8_t * __restrict srcU   = srcULine + src.linesize[1] * (y >> 1);
+				const uint8_t * __restrict srcV   = srcVLine + src.linesize[2] * (y >> 1);
+				uint8_t * __restrict dstRGB = dstLine  + dst.linesize[0] * (y     );
 
 				for (int x = 0; x < sx; ++x, dstRGB += 3)
 				{
@@ -311,9 +311,6 @@ namespace MP
 		}
 		else
 		{
-			AVFrame & src = *m_tempFrame;
-			AVFrame & dst = *out_frame->m_frame;
-			
 			sws_scale(m_swsContext, src.data, src.linesize, 0, src.height, dst.data, dst.linesize);
 		}
 		
