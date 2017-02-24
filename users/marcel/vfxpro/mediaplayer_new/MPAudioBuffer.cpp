@@ -4,127 +4,82 @@
 namespace MP
 {
 	AudioBuffer::AudioBuffer()
+		: m_mutex()
 	{
-		Free();
 	}
 
-	size_t AudioBuffer::GetBufferSize()
+	void AudioBuffer::AddSegment(const AudioBufferSegment & segment)
 	{
-		return m_samples.getSize();
-	}
-
-	void AudioBuffer::SetBufferSize(size_t size)
-	{
-		Free();
-
-		m_samples.setSize(size);
-	}
-
-	bool AudioBuffer::WriteSamples(int16_t* samples, size_t sampleCount)
-	{
-		Assert(m_samples.getSize() > 0);
-		Assert(m_sampleCount + sampleCount <= (size_t)m_samples.getSize());
-
-#if 1
-		m_sampleCount += sampleCount;
-
-		while (sampleCount > 0)
+		m_mutex.Lock();
 		{
-			size_t numSamples = sampleCount;
-			if (m_writePosition + numSamples >= (size_t)m_samples.getSize())
-				numSamples = m_samples.getSize() - m_writePosition;
+			m_segments.push_back(segment);
+		}
+		m_mutex.Unlock();
+	}
 
-			memcpy(&m_samples[m_writePosition], samples, numSamples * sizeof(int16_t));
+	bool AudioBuffer::ReadSamples(int16_t * __restrict samples, size_t & sampleCount)
+	{
+		bool result = true;
 
-			m_writePosition += numSamples;
-			if (m_writePosition == m_samples.getSize())
-				m_writePosition = 0;
+		size_t samplesRead = 0;
 
-			samples += numSamples;
-			sampleCount -= numSamples;
+		if (m_segments.empty())
+		{
+			result = false;
+		}
+		else
+		{
+			m_mutex.Lock();
+			{
+				while (sampleCount > 0)
+				{
+					if (!m_segments.empty())
+					{
+						AudioBufferSegment & segment = m_segments.front();
+
+						size_t numSamples = segment.m_numSamples - segment.m_readOffset;
+						if (numSamples > sampleCount)
+							numSamples = sampleCount;
+
+						memcpy(samples, &segment.m_samples[segment.m_readOffset], numSamples * sizeof(int16_t));
+
+						samples += numSamples;
+						sampleCount -= numSamples;
+						samplesRead += numSamples;
+
+						segment.m_readOffset += numSamples;
+
+						if (segment.m_readOffset == segment.m_numSamples)
+						{
+							m_segments.pop_front();
+						}
+					}
+					else
+					{
+						size_t numSamples = sampleCount;
+
+						memset(samples, 0, numSamples * sizeof(int16_t));
+
+						samples += numSamples;
+						sampleCount -= numSamples;
+					}
+				}
+			}
+			m_mutex.Unlock();
 		}
 
-#else
-		// NOTE: This could be done much-o faster.
-		//       This is a reference implementation only.
-		for (size_t i = 0; i < sampleCount; ++i)
-		{
-			m_samples[m_writePosition] = samples[i];
+		sampleCount = samplesRead;
 
-			++m_writePosition;
-
-			if (m_writePosition >= m_samples.GetSize())
-				m_writePosition = 0;
-		}
-
-		m_sampleCount += sampleCount;
-#endif
-
-		Assert(m_sampleCount < (size_t)m_samples.getSize());
-
-		return true;
+		return result;
 	}
 
-	bool AudioBuffer::ReadSamples(int16_t* samples, size_t sampleCount)
+	bool AudioBuffer::Depleted() const
 	{
-		Assert(m_samples.getSize() > 0);
-		Assert(m_sampleCount >= sampleCount);
-
-#if 1
-		m_sampleCount -= sampleCount;
-
-		while (sampleCount > 0)
-		{
-			size_t numSamples = sampleCount;
-			if (m_readPosition + numSamples >= (size_t)m_samples.getSize())
-				numSamples = m_samples.getSize() - m_readPosition;
-
-			memcpy(samples, &m_samples[m_readPosition], numSamples * sizeof(int16_t));
-
-			m_readPosition += numSamples;
-			if (m_readPosition == m_samples.getSize())
-				m_readPosition = 0;
-
-			samples += numSamples;
-			sampleCount -= numSamples;
-		}
-#else
-		// NOTE: This could be done much-o faster.
-		//       This is a reference implementation only.
-		for (size_t i = 0; i < sampleCount; ++i)
-		{
-			samples[i] = m_samples[m_readPosition];
-
-			++m_readPosition;
-
-			if (m_readPosition >= m_samples.GetSize())
-				m_readPosition = 0;
-		}
-
-		m_sampleCount -= sampleCount;
-#endif
-
-		return true;
-	}
-
-	size_t AudioBuffer::GetSampleCount()
-	{
-		return m_sampleCount;
+		return m_segments.empty();
 	}
 
 	void AudioBuffer::Clear()
 	{
-		m_writePosition = 0;
-		m_readPosition = 0;
-		m_sampleCount = 0;
-	}
-
-	void AudioBuffer::Free()
-	{
-		m_samples.setSize(0);
-
-		m_writePosition = 0;
-		m_readPosition = 0;
-		m_sampleCount = 0;
+		m_segments.clear();
 	}
 };

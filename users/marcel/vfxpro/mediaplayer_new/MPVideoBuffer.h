@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.h"
+#include "MPMutex.h"
 #include <libavcodec/avcodec.h>
 #include <list>
 
@@ -8,18 +8,6 @@
 
 namespace MP
 {
-	class Mutex
-	{
-		SDL_mutex * mutex;
-
-	public:
-		Mutex();
-		~Mutex();
-
-		void Lock();
-		void Unlock();
-	};
-
 	class VideoFrame
 	{
 	public:

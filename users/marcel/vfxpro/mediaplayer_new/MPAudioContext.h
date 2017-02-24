@@ -21,6 +21,7 @@ namespace MP
 		size_t GetStreamIndex();
 		double GetTime();
 
+		bool FillAudioBuffer();
 		bool RequestAudio(int16_t* out_samples, size_t frameCount, bool& out_gotAudio);
 
 		bool IsQueueFull();
@@ -38,7 +39,6 @@ namespace MP
 		size_t m_streamIndex;
 		double m_time;
 		size_t m_frameTime;
-		size_t m_availableFrameCount;
 
 		bool m_initialized;
 	};
