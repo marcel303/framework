@@ -3,6 +3,8 @@
 #include "MPDebug.h"
 #include "MPUtil.h"
 #include "MPVideoContext.h"
+#include <libavutil/imgutils.h>
+#include <libswscale/swscale.h>
 
 #define QUEUE_SIZE (4 * 10)
 //#define QUEUE_SIZE (4 * 30)
@@ -17,6 +19,7 @@ namespace MP
 		, m_tempFrame(nullptr)
 		, m_tempFrameBuffer(nullptr)
 		, m_videoBuffer()
+		, m_swsContext(nullptr)
 		, m_streamIndex(-1)
 		, m_outputYuv(false)
 		, m_time(0.0)
@@ -79,27 +82,28 @@ namespace MP
 				}
 				else
 				{
-					/*
 					// Allocate buffer to use for frame.
-					const int frameBufferSize = avpicture_get_size(
-						PIX_FMT_RGB24,
+					const int frameBufferSize = av_image_get_buffer_size(
+						AV_PIX_FMT_RGB24,
 						m_codecContext->width,
-						m_codecContext->height);
+						m_codecContext->height,
+						1);
 
 					Assert(m_tempFrameBuffer == nullptr);
 					m_tempFrameBuffer = new uint8_t[frameBufferSize];
 
 					// Assign buffer to frame.
-					avpicture_fill(
-						(AVPicture*)m_tempFrame,
-						m_tempFrameBuffer,
-						PIX_FMT_RGB24,
-						m_codecContext->width,
-						m_codecContext->height);
-					*/
+					av_image_fill_arrays(
+						m_tempFrame->data, m_tempFrame->linesize, m_tempFrameBuffer,
+						AV_PIX_FMT_RGB24, m_codecContext->width, m_codecContext->height, 1);
 					
 					m_videoBuffer.Initialize(m_codecContext->width, m_codecContext->height);
 
+					m_swsContext = sws_getContext(
+						m_codecContext->width, m_codecContext->height, m_codecContext->pix_fmt,
+						m_codecContext->width, m_codecContext->height, AV_PIX_FMT_RGB24,
+						SWS_POINT, nullptr, nullptr, nullptr);
+						
 					return true;
 				}
 			}
@@ -113,6 +117,12 @@ namespace MP
 		bool result = true;
 
 		m_initialized = false;
+
+		if (m_swsContext)
+		{
+			sws_freeContext(m_swsContext);
+			m_swsContext = nullptr;
+		}
 
 		if (m_videoBuffer.m_initialized)
 			m_videoBuffer.Destroy();
@@ -204,8 +214,6 @@ namespace MP
 
 		packet.data = packet.buf->data;
 		bytesRemaining = packet.size;
-
-		AVFrame * frame = av_frame_alloc();
 		
 		// Decode entire packet.
 		while (bytesRemaining > 0)
@@ -215,7 +223,7 @@ namespace MP
 			// Decode some data.
 			bytesDecoded = avcodec_decode_video2(
 				m_codecContext,
-				frame,
+				m_tempFrame,
 				&gotPicture,
 				&packet);
 
@@ -245,8 +253,6 @@ namespace MP
 				}
 			}
 		}
-
-		av_frame_unref(frame);
 		
 		return true;
 	}
@@ -303,17 +309,19 @@ namespace MP
 		}
 		else
 		{
-			/*
-			img_convert((AVPicture *)out_frame->m_frame, PIX_FMT_RGB24, src, 
-				m_codecContext->pix_fmt,
-				m_codecContext->width,
-				m_codecContext->height);
-			*/
+			AVFrame & src = *m_tempFrame;
+			AVFrame & dst = *out_frame->m_frame;
+			
+			sws_scale(m_swsContext, src.data, src.linesize, 0, src.height, dst.data, dst.linesize);
 		}
+		
+		// fixme !! presentation timestamps broke down again ..
 
-        if (m_tempFrame->pts != 0 && m_tempFrame->pts != AV_NOPTS_VALUE)
+        //if (m_tempFrame->pts != 0 && m_tempFrame->pts != AV_NOPTS_VALUE)
+		if (false)
 		{
-			m_time = av_q2d(m_codecContext->time_base) * m_tempFrame->pts;
+			//m_time = av_q2d(m_codecContext->time_base) * m_tempFrame->pts;
+			m_time = av_frame_get_best_effort_timestamp(m_tempFrame) * av_q2d(m_codecContext->time_base);
 		}
 		else
 		{
@@ -327,7 +335,7 @@ namespace MP
 
 		++m_frameCount;
 
-		Debug::Print("VIDEO: Decoded frame. Time = %03.3f.", m_time);
+		Debug::Print("VIDEO: Decoded frame. Time = %03.3f.", float(m_time));
 
 		return result;
 	}

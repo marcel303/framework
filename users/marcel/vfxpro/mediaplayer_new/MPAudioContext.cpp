@@ -240,8 +240,6 @@ namespace MP
 			{
 				packet.data += bytesDecoded;
 				packet.size -= bytesDecoded;
-				packet.pts = AV_NOPTS_VALUE;
-				packet.dts = AV_NOPTS_VALUE;
 				
 				bytesRemaining -= bytesDecoded;
 

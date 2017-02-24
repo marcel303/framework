@@ -6,6 +6,8 @@
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 
+struct SwsContext;
+
 namespace MP
 {
 	class Context;
@@ -40,6 +42,7 @@ namespace MP
 		AVFrame * m_tempFrame; ///< Temporary frame for decoder. The results stored in this frame are converted to RGB and stored in the final frame.
 		uint8_t * m_tempFrameBuffer; ///< Frame buffer for temp frame.
 		VideoBuffer m_videoBuffer; // TODO: Init/destroy.
+		SwsContext * m_swsContext;
 
 		size_t m_streamIndex;
 		bool m_outputYuv;

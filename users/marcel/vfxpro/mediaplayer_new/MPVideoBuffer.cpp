@@ -1,6 +1,7 @@
 #include "Debugging.h"
 #include "MPDebug.h"
 #include "MPVideoBuffer.h"
+#include <libavutil/imgutils.h>
 
 //#define BUFFER_SIZE (3)
 #define BUFFER_SIZE (10)
@@ -67,24 +68,20 @@ namespace MP
 			Assert(0);
 			return;
 		}
-
-	/*
+	
 		// Allocate buffer to use for RGB frame.
-		const int frameBufferSize = avpicture_get_size(
-			PIX_FMT_RGB24,
+		const int frameBufferSize = av_image_get_buffer_size(
+			AV_PIX_FMT_RGB24,
 			static_cast<int>(width),
-			static_cast<int>(height));
+			static_cast<int>(height),
+			1);
 		
 		m_frameBuffer = new uint8_t[frameBufferSize];
-
-		// Assign buffer to frame.
-		avpicture_fill(
-			(AVPicture*)m_frame,
-			m_frameBuffer,
-			PIX_FMT_RGB24,
-			static_cast<int>(width),
-			static_cast<int>(height));
-	 */
+		
+		m_frame->format = AV_PIX_FMT_RGB24;
+		m_frame->width = width;
+		m_frame->height = height;
+		av_image_fill_arrays(m_frame->data, m_frame->linesize, m_frameBuffer, AV_PIX_FMT_RGB24, width, height, 1);
 	}
 
 	void VideoFrame::Destroy()

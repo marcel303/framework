@@ -19,6 +19,10 @@
 #ifndef AVUTIL_IMGUTILS_H
 #define AVUTIL_IMGUTILS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @file
  * misc image utilities
@@ -223,5 +227,8 @@ int av_image_check_sar(unsigned int w, unsigned int h, AVRational sar);
  * @}
  */
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* AVUTIL_IMGUTILS_H */
