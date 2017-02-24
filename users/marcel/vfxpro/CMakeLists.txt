@@ -28,12 +28,6 @@ project(vfxpro)
 # --- vfxpro ---
 
 file(GLOB_RECURSE source "*.cpp" "*.h")
-list(REMOVE_ITEM source "${PROJECT_SOURCE_DIR}/mediaplayer/MediaPlayer.cpp")
-list(REMOVE_ITEM source "${PROJECT_SOURCE_DIR}/mediaplayer/MediaPlayer.h")
-list(REMOVE_ITEM source "${PROJECT_SOURCE_DIR}/mediaplayer_old/MediaPlayer.cpp")
-list(REMOVE_ITEM source "${PROJECT_SOURCE_DIR}/mediaplayer_old/MediaPlayer.h")
-list(REMOVE_ITEM source "${PROJECT_SOURCE_DIR}/mediaplayer_new/MediaPlayer.cpp")
-list(REMOVE_ITEM source "${PROJECT_SOURCE_DIR}/mediaplayer_new/MediaPlayer.h")
 
 file(GLOB_RECURSE source_macos "macos/*.*")
 
@@ -57,9 +51,6 @@ if (APPLE)
 	list(REMOVE_ITEM source ${source_mediaplayer_old})
 endif (APPLE)
 
-file(GLOB_RECURSE source_osc "ip/*.*" "osc/*.*")
-list(REMOVE_ITEM source ${source_osc})
-
 set(GAME_FILES
 	main.cpp
 	effect.h
@@ -73,7 +64,6 @@ source_group("mediaplayer_new" FILES ${source_mediaplayer_new})
 source_group("ffmpeg" FILES ${source_ffmpeg})
 source_group("ffmpeg_old" FILES ${source_ffmpeg_old})
 source_group("include" FILES ${source_macos})
-#source_group("osc" FILES ${source_osc})
 
 add_executable(vfxpro ${source})
 
