@@ -1,6 +1,5 @@
 syntax: glob
 *.o
-*.a
 prototypes/vecrend/veccompile
 tools/atlcompiler/atlcompiler
 tools/fontcompiler/fontcompiler
