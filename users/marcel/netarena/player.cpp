@@ -1420,6 +1420,7 @@ void Player::tick(GameSim & gameSim, float dt)
 							kBulletType_SprayCannon,
 							kBulletEffect_Spray,
 							m_index);
+                        (void)bulletId;
 
 						//
 
@@ -2355,9 +2356,7 @@ void Player::tick(GameSim & gameSim, float dt)
 				gravity = 0.f;
 			else
 				gravity = m_isAttachedToSticky ? -GRAVITY : +GRAVITY;
-
-			bool canWallSlide = true;
-
+            
 			if (!JETPACK_NEW_STEERING && m_jetpack.isActive)
 				gravity -= JETPACK_ACCEL;
 			
@@ -4233,6 +4232,9 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 
 				switch (GAMESIM->m_gameMode)
 				{
+                case kGameMode_Lobby:
+                    break;
+                        
 				case kGameMode_DeathMatch:
 					attacker->awardScore(1);
 					hasScored = true;
@@ -4246,6 +4248,16 @@ bool Player::handleDamage(float amount, Vec2Arg velocity, Player * attacker, boo
 						hasScored = true;
 					}
 					break;
+                        
+                case kGameMode_CoinCollector:
+                    break;
+                        
+                case kGameMode_FootBrawl:
+                    break;
+                        
+                case kGameMode_COUNT:
+                    Assert(false);
+                    break;
 				}
 
 				attacker->handleKill(hasScored, GAMESIM->m_isFirstKill);

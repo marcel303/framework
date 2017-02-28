@@ -24,7 +24,7 @@ static void openBrowserWithUrl(const char * url)
 	ShellExecute(NULL, "open", url, NULL, NULL, SW_SHOWNORMAL);
 }
 #else
-static void openBrowserWithUrl(const char * url) { }
+inline void openBrowserWithUrl(const char * url) { }
 #endif
 
 OPTION_EXTERN(std::string, g_connect);

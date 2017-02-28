@@ -702,7 +702,6 @@ void Arena::drawBlocks(const GameSim & gameSim, int layer) const
 	int numVerts = 0;
 
 	const int ATLAS_TILE_SX = (m_textureSx / BLOCK_SX);
-	const int ATLAS_TILE_SY = (m_textureSy / BLOCK_SY);
 	const int OFFSET_X[4] = { 0, 1, 1, 0 };
 	const int OFFSET_Y[4] = { 0, 0, 1, 1 };
 

@@ -192,6 +192,7 @@ static void HandleAction(const std::string & action, const Dictionary & args)
 	{
 		const std::string address = args.getString("address", "");
 		const uint64_t userData = args.getInt64("userdata", 0);
+        (void)userData;
 
 		if (!address.empty())
 		{
