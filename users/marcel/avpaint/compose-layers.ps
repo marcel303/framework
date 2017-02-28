@@ -1,0 +1,45 @@
+include engine/ShaderPS.txt
+
+uniform sampler2D layerAlpha0;
+uniform sampler2D layerAlpha1;
+uniform sampler2D layerAlpha2;
+uniform sampler2D layerColor0;
+uniform sampler2D layerColor1;
+uniform sampler2D layerColor2;
+
+shader_in vec2 texcoord;
+
+vec4 blend(vec4 color, vec3 layerColor, float layerAlpha)
+{
+	layerColor = layerColor * layerAlpha;
+
+	color = color * (1.0 - layerAlpha);
+	color.xyz += layerColor;
+	color.w += layerAlpha;
+
+	return color;
+}
+
+void main()
+{
+	vec2 alphaCoord = texcoord.xy;
+	vec2 colorCoord = vec2(texcoord.x, 1.0 - texcoord.y);
+
+	float alphas[3];
+	vec3 colors[3];
+
+	alphas[0] = texture(layerAlpha0, alphaCoord).x;
+	alphas[1] = texture(layerAlpha1, alphaCoord).x;
+	alphas[2] = texture(layerAlpha2, alphaCoord).x;
+
+	colors[0] = texture(layerColor0, colorCoord).xyz;
+	colors[1] = texture(layerColor1, colorCoord).xyz;
+	colors[2] = texture(layerColor2, colorCoord).xyz;
+
+	vec4 color = vec4(0.0);
+
+	for (int i = 0; i < 3; ++i)
+		color = blend(color, colors[i], alphas[i]);
+
+	shader_fragColor = color;
+}
