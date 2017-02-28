@@ -10,9 +10,9 @@ namespace MP
 {
 	namespace Debug
 	{
-		void Print(const char* format, ...)
+		void Print(const char * format, ...)
 		{
-			#if DEBUG_MEDIAPLAYER
+		#if DEBUG_MEDIAPLAYER
 			static char string[4096];
 
 			va_list list;
@@ -21,11 +21,11 @@ namespace MP
 
 			fprintf(stderr, "%s\n", string);
 
-			#if defined(SYSTEM_WINDOWS)
+		#if defined(SYSTEM_WINDOWS)
 			strcat(string, "\n");
 			OutputDebugString(string);
-			#endif
-			#endif
+		#endif
+		#endif
 		}
 	};
 };

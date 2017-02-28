@@ -1,7 +1,7 @@
 #pragma once
 
+#include "MPForward.h"
 #include "MPMutex.h"
-#include <libavcodec/avcodec.h>
 #include <list>
 
 #include <SDL2/SDL.h> // fixme : abstract away
@@ -14,7 +14,7 @@ namespace MP
 		VideoFrame();
 		~VideoFrame();
 
-		void Initialize(const size_t width, const size_t height);
+		bool Initialize(const size_t width, const size_t height);
 		void Destroy();
 
 		size_t m_width;
@@ -22,7 +22,7 @@ namespace MP
 
 		AVFrame * m_frame;
 		uint8_t * m_frameBuffer;
-		double m_time; // Time at which the frame should be presented.
+		double m_time;
 
 		bool m_initialized;
 	};
@@ -35,11 +35,12 @@ namespace MP
 
 		bool Initialize(const size_t width, const size_t height);
 		bool Destroy();
+		bool IsInitialized() const;
 
-		VideoFrame * AllocateFrame(); ///< Allocate new frame.
-		void StoreFrame(VideoFrame * frame); ///< Add frame to consume list
-		VideoFrame * GetCurrentFrame(); ///< Get current frame.
-		void AdvanceToTime(double time); ///< Move to next frame.
+		VideoFrame * AllocateFrame();
+		void StoreFrame(VideoFrame * frame);
+		VideoFrame * GetCurrentFrame();
+		void AdvanceToTime(double time);
 		bool Depleted() const;
 		bool IsFull() const;
 		void Clear();
@@ -52,7 +53,6 @@ namespace MP
 
 		VideoFrame * m_currentFrame;
 
-	public: // FIXME: Write accessor.
 		bool m_initialized;
 	};
 };

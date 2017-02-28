@@ -1,8 +1,12 @@
 #include "Debugging.h"
 #include "MPContext.h"
 #include "MPDebug.h"
+#include "MPPacketQueue.h"
 #include "MPUtil.h"
+#include "MPVideoBuffer.h"
 #include "MPVideoContext.h"
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
 #include <libavutil/imgutils.h>
 #include <libswscale/swscale.h>
 
@@ -13,12 +17,12 @@
 namespace MP
 {
 	VideoContext::VideoContext()
-		: m_packetQueue()
+		: m_packetQueue(nullptr)
 		, m_codecContext(nullptr)
 		, m_codec(nullptr)
 		, m_tempFrame(nullptr)
 		, m_tempFrameBuffer(nullptr)
-		, m_videoBuffer()
+		, m_videoBuffer(nullptr)
 		, m_swsContext(nullptr)
 		, m_streamIndex(-1)
 		, m_outputYuv(false)
@@ -38,8 +42,19 @@ namespace MP
 		m_outputYuv = outputYuv;
 		m_time = 0.0;
 		m_frameCount = 0;
+		
+		Assert(m_packetQueue == nullptr);
+		m_packetQueue = new PacketQueue();
+		
+		Assert(m_videoBuffer == nullptr);
+		m_videoBuffer = new VideoBuffer();
 
 		AVCodecParameters * codecParams = context->GetFormatContext()->streams[m_streamIndex]->codecpar;
+		if (!codecParams)
+		{
+			Debug::Print("Video: codec params missing.");
+			return false;
+		}
 		
 		// Get codec for video stream.
 		Assert(m_codec == nullptr);
@@ -51,25 +66,33 @@ namespace MP
 		}
 		else
 		{
-			Debug::Print("Video codec: %s.", m_codec->name);
+			Debug::Print("Video: codec: %s.", m_codec->name);
 			
 			// Get codec context for video stream.
 			Assert(m_codecContext == nullptr);
 			m_codecContext = avcodec_alloc_context3(m_codec);
+			if (!m_codecContext)
+			{
+				Debug::Print("Video: failed to allocate codec context.");
+				return false;
+			}
 			
-			avcodec_parameters_to_context(m_codecContext, codecParams);
-			//Util::SetDefaultCodecContextOptions(m_codecContext);
-
+			if (avcodec_parameters_to_context(m_codecContext, codecParams) < 0)
+			{
+				Debug::Print("Video: failed to set codec params on codec context.");
+			}
+			
 			// Open codec.
 			if (avcodec_open2(m_codecContext, m_codec, nullptr) < 0)
 			{
+				Debug::Print("Video: failed to open codec context.");
 				return false;
 			}
 			else
 			{
 				// Display codec info.
-				Debug::Print("Video: width: %d.",   m_codecContext->width   );
-				Debug::Print("Video: height: %d.",  m_codecContext->height  );
+				Debug::Print("Video: width: %d.", m_codecContext->width);
+				Debug::Print("Video: height: %d.", m_codecContext->height);
 				Debug::Print("Video: bitrate: %d.", m_codecContext->bit_rate);
 
 				// Create frame.
@@ -78,6 +101,7 @@ namespace MP
 
 				if (!m_tempFrame)
 				{
+					Debug::Print("Video: failed to allocate AV frame for decode.");
 					return false;
 				}
 				else
@@ -93,18 +117,37 @@ namespace MP
 					m_tempFrameBuffer = new uint8_t[frameBufferSize];
 
 					// Assign buffer to frame.
-					av_image_fill_arrays(
+					const int requiredFrameBufferSize = av_image_fill_arrays(
 						m_tempFrame->data, m_tempFrame->linesize, m_tempFrameBuffer,
 						AV_PIX_FMT_RGB24, m_codecContext->width, m_codecContext->height, 1);
 					
-					m_videoBuffer.Initialize(m_codecContext->width, m_codecContext->height);
+					Debug::Print("Vide: frameBufferSize: %d.", frameBufferSize);
+					Debug::Print("Video: requiredFrameBufferSize: %d.", requiredFrameBufferSize);
+					
+					if (requiredFrameBufferSize > frameBufferSize)
+					{
+						Debug::Print("Video: required frame buffer size exceeds allocated frame buffer size.");
+						return false;
+					}
+					
+					if (!m_videoBuffer->Initialize(m_codecContext->width, m_codecContext->height))
+					{
+						Debug::Print("Video: failed to initialize video buffer.");
+						return false;
+					}
 
 					m_swsContext = sws_getContext(
 						m_codecContext->width, m_codecContext->height, m_codecContext->pix_fmt,
 						m_codecContext->width, m_codecContext->height, AV_PIX_FMT_RGB24,
 						SWS_POINT, nullptr, nullptr, nullptr);
 					
-					m_timeBase = context->GetFormatContext()->streams[streamIndex]->time_base;
+					if (!m_swsContext)
+					{
+						Debug::Print("Video: failed to allocated sws context.");
+						return false;
+					}
+					
+					m_timeBase = av_q2d(context->GetFormatContext()->streams[streamIndex]->time_base);
 					
 					return true;
 				}
@@ -126,8 +169,10 @@ namespace MP
 			m_swsContext = nullptr;
 		}
 
-		if (m_videoBuffer.m_initialized)
-			m_videoBuffer.Destroy();
+		if (m_videoBuffer->IsInitialized())
+		{
+			m_videoBuffer->Destroy();
+		}
 
 		if (m_tempFrame)
 		{
@@ -147,6 +192,23 @@ namespace MP
 			avcodec_close(m_codecContext);
 			m_codecContext = nullptr;
 		}
+		
+		if (m_codec != nullptr)
+		{
+			m_codec = nullptr;
+		}
+		
+		if (m_videoBuffer != nullptr)
+		{
+			delete m_videoBuffer;
+			m_videoBuffer = nullptr;
+		}
+		
+		if (m_packetQueue != nullptr)
+		{
+			delete m_packetQueue;
+			m_packetQueue = nullptr;
+		}
 
 		return result;
 	}
@@ -163,8 +225,8 @@ namespace MP
 
 	void VideoContext::FillVideoBuffer()
 	{
-		while (!m_videoBuffer.IsFull() && !m_packetQueue.IsEmpty() && ProcessPacket(m_packetQueue.GetPacket()))
-			m_packetQueue.PopFront();
+		while (!m_videoBuffer->IsFull() && !m_packetQueue->IsEmpty() && ProcessPacket(m_packetQueue->GetPacket()))
+			m_packetQueue->PopFront();
 	}
 
 	bool VideoContext::RequestVideo(const double time, VideoFrame ** out_frame, bool & out_gotVideo)
@@ -176,9 +238,9 @@ namespace MP
 		out_gotVideo = false;
 
 		// Check if the frame is in the buffer.
-		VideoFrame * oldFrame = m_videoBuffer.GetCurrentFrame();
-		m_videoBuffer.AdvanceToTime(time);
-		VideoFrame * newFrame = m_videoBuffer.GetCurrentFrame();
+		VideoFrame * oldFrame = m_videoBuffer->GetCurrentFrame();
+		m_videoBuffer->AdvanceToTime(time);
+		VideoFrame * newFrame = m_videoBuffer->GetCurrentFrame();
 
 		*out_frame = newFrame;
 
@@ -192,12 +254,12 @@ namespace MP
 
 	bool VideoContext::IsQueueFull() const
 	{
-		return m_packetQueue.GetSize() >= QUEUE_SIZE;
+		return m_packetQueue->GetSize() >= QUEUE_SIZE;
 	}
 
 	bool VideoContext::AddPacket(const AVPacket & packet)
 	{
-		m_packetQueue.PushBack(packet);
+		m_packetQueue->PushBack(packet);
 
 		Debug::Print("PQVIDEO");
 
@@ -206,16 +268,13 @@ namespace MP
 
 	bool VideoContext::ProcessPacket(AVPacket & _packet)
 	{
-		int bytesRemaining = 0;
-		int bytesDecoded   = 0;
-
 		AVPacket packet = _packet;
 		
 		Assert(packet.data);
 		Assert(packet.size >= 0);
 
 		packet.data = packet.buf->data;
-		bytesRemaining = packet.size;
+		int bytesRemaining = packet.size;
 		
 		// Decode entire packet.
 		while (bytesRemaining > 0)
@@ -223,7 +282,7 @@ namespace MP
 			int gotPicture = 0;
 			
 			// Decode some data.
-			bytesDecoded = avcodec_decode_video2(
+			const int bytesDecoded = avcodec_decode_video2(
 				m_codecContext,
 				m_tempFrame,
 				&gotPicture,
@@ -231,7 +290,7 @@ namespace MP
 
 			if (bytesDecoded < 0)
 			{
-				Debug::Print("Unable to decode video packet.");
+				Debug::Print("Video: unable to decode video packet.");
 				bytesRemaining = 0;
 				Assert(0);
 			}
@@ -247,11 +306,11 @@ namespace MP
 				// Video frame finished?
 				if (gotPicture)
 				{
-					VideoFrame * frame = m_videoBuffer.AllocateFrame();
+					VideoFrame * frame = m_videoBuffer->AllocateFrame();
 
 					Convert(frame);
 
-					m_videoBuffer.StoreFrame(frame);
+					m_videoBuffer->StoreFrame(frame);
 				}
 			}
 		}
@@ -261,16 +320,16 @@ namespace MP
 
 	bool VideoContext::AdvanceToTime(const double time, VideoFrame ** out_currentFrame)
 	{
-		m_videoBuffer.AdvanceToTime(time);
+		m_videoBuffer->AdvanceToTime(time);
 
-		*out_currentFrame = m_videoBuffer.GetCurrentFrame();
+		*out_currentFrame = m_videoBuffer->GetCurrentFrame();
 
 		return true;
 	}
 
 	bool VideoContext::Depleted() const
 	{
-		return m_videoBuffer.Depleted() && (m_packetQueue.GetSize() == 0);
+		return m_videoBuffer->Depleted() && (m_packetQueue->GetSize() == 0);
 	}
 
 	bool VideoContext::Convert(VideoFrame * out_frame)
@@ -316,7 +375,7 @@ namespace MP
 		
         if (m_tempFrame->pts != 0 && m_tempFrame->pts != AV_NOPTS_VALUE)
 		{
-			m_time = av_frame_get_best_effort_timestamp(m_tempFrame) * av_q2d(m_timeBase);
+			m_time = av_frame_get_best_effort_timestamp(m_tempFrame) * m_timeBase;
 		}
 		else
 		{
@@ -330,7 +389,7 @@ namespace MP
 
 		++m_frameCount;
 
-		Debug::Print("VIDEO: Decoded frame. Time = %03.3f.", float(m_time));
+		Debug::Print("Video: decoded frame. time: %03.3f.", float(m_time));
 
 		return result;
 	}

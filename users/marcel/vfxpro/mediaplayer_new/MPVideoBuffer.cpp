@@ -1,6 +1,7 @@
 #include "Debugging.h"
 #include "MPDebug.h"
 #include "MPVideoBuffer.h"
+#include <libavcodec/avcodec.h>
 #include <libavutil/imgutils.h>
 
 //#define BUFFER_SIZE (3)
@@ -25,7 +26,7 @@ namespace MP
 		Assert(m_initialized == false);
 	}
 
-	void VideoFrame::Initialize(const size_t width, const size_t height)
+	bool VideoFrame::Initialize(const size_t width, const size_t height)
 	{
 		Assert(m_initialized == false);
 
@@ -39,8 +40,8 @@ namespace MP
 
 		if (!m_frame)
 		{
-			Assert(0);
-			return;
+			Debug::Print("Video: frame allocation failed");
+			return false;
 		}
 	
 		// Allocate buffer to use for RGB frame.
@@ -55,7 +56,18 @@ namespace MP
 		m_frame->format = AV_PIX_FMT_RGB24;
 		m_frame->width = width;
 		m_frame->height = height;
-		av_image_fill_arrays(m_frame->data, m_frame->linesize, m_frameBuffer, AV_PIX_FMT_RGB24, width, height, 1);
+		const int requiredFrameBufferSize = av_image_fill_arrays(m_frame->data, m_frame->linesize, m_frameBuffer, AV_PIX_FMT_RGB24, width, height, 1);
+		
+		Debug::Print("Video: frameBufferSize: %d.", frameBufferSize);
+		Debug::Print("Video: requiredFrameBufferSize: %d.", requiredFrameBufferSize);
+		
+		if (requiredFrameBufferSize > frameBufferSize)
+		{
+			Debug::Print("Video: required frame buffer size exceeds allocated frame buffer size.");
+			return false;
+		}
+		
+		return true;
 	}
 
 	void VideoFrame::Destroy()
@@ -103,7 +115,7 @@ namespace MP
 		{
 			VideoFrame * frame = new VideoFrame();
 
-			frame->Initialize(width, height);
+			result &= frame->Initialize(width, height);
 
 			m_freeList.push_back(frame);
 		}
@@ -134,6 +146,11 @@ namespace MP
 		m_freeList.clear();
 
 		return result;
+	}
+	
+	bool VideoBuffer::IsInitialized() const
+	{
+		return m_initialized;
 	}
 
 	VideoFrame * VideoBuffer::AllocateFrame()
@@ -197,14 +214,14 @@ namespace MP
 
 			++skipCount;
 
-			Debug::Print("Advancing frame.");
+			Debug::Print("Video: Advancing frame.");
 		}
 
 		m_mutex.Unlock();
 
 		if (skipCount > 1)
 		{
-			Debug::Print("VIDEO: Warning: Skipped %d frames.", skipCount - 1);
+			Debug::Print("Video: Warning: Skipped %d frames.", skipCount - 1);
 		}
 	}
 

@@ -1,8 +1,9 @@
+#include "MPDebug.h"
 #include "MPMutex.h"
+#include <SDL2/SDL.h>
 
 namespace MP
 {
-	// Mutex
 	Mutex::Mutex()
 		: mutex(nullptr)
 	{
@@ -11,17 +12,26 @@ namespace MP
 
 	Mutex::~Mutex()
 	{
-		SDL_DestroyMutex(mutex);
-		mutex = nullptr;
+		if (mutex != nullptr)
+		{
+			SDL_DestroyMutex(mutex);
+			mutex = nullptr;
+			}
 	}
 
 	void Mutex::Lock()
 	{
-		SDL_LockMutex(mutex);
+		if (SDL_LockMutex(mutex) < 0)
+		{
+			Debug::Print("SDL mutex lock failed");
+		}
 	}
 
 	void Mutex::Unlock()
 	{
-		SDL_UnlockMutex(mutex);
+		if (SDL_UnlockMutex(mutex) < 0)
+		{
+			Debug::Print("SDL mutex unlock failed");
+		}
 	}
 }

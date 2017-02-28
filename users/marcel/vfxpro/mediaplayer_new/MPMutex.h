@@ -1,6 +1,6 @@
 #pragma once
 
-#include <SDL2/SDL.h> // fixme : abstract away
+struct SDL_mutex;
 
 namespace MP
 {

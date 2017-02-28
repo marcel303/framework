@@ -1,7 +1,14 @@
+#include "MPAudioBuffer.h"
+#include "MPAudioContext.h"
 #include "MPContext.h"
 #include "MPDebug.h"
+#include "MPPacketQueue.h"
 #include "MPUtil.h"
+#include "MPVideoBuffer.h"
+#include "MPVideoContext.h"
 #include <algorithm>
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
 #include <vector>
 
 #define STREAM_NOT_FOUND 0xFFFF
@@ -290,15 +297,15 @@ namespace MP
 		if (m_audioContext != nullptr)
 		{
 			streams.push_back(m_audioContext->GetStreamIndex());
-			m_audioContext->m_packetQueue.Clear();
-			m_audioContext->m_audioBuffer.Clear();
+			m_audioContext->m_packetQueue->Clear();
+			m_audioContext->m_audioBuffer->Clear();
 		}
 
 		if (m_videoContext != nullptr)
 		{
 			streams.push_back(m_videoContext->GetStreamIndex());
-			m_videoContext->m_packetQueue.Clear();
-			m_videoContext->m_videoBuffer.Clear();
+			m_videoContext->m_packetQueue->Clear();
+			m_videoContext->m_videoBuffer->Clear();
 			m_videoContext->m_time = 0.0;
 		}
 
@@ -330,15 +337,15 @@ namespace MP
 
 		if (m_audioContext != nullptr)
 		{
-			m_audioContext->m_packetQueue.Clear();
-			m_audioContext->m_audioBuffer.Clear();
+			m_audioContext->m_packetQueue->Clear();
+			m_audioContext->m_audioBuffer->Clear();
 			avcodec_flush_buffers(m_audioContext->m_codecContext);
 		}
 
 		if (m_videoContext != nullptr)
 		{
-			m_videoContext->m_packetQueue.Clear();
-			m_videoContext->m_videoBuffer.Clear();
+			m_videoContext->m_packetQueue->Clear();
+			m_videoContext->m_videoBuffer->Clear();
 			m_videoContext->m_time = time;
 			avcodec_flush_buffers(m_videoContext->m_codecContext);
 		}

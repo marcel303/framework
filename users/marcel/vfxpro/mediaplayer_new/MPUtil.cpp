@@ -1,4 +1,5 @@
 #include "MPUtil.h"
+#include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 
 namespace MP
@@ -21,7 +22,7 @@ namespace MP
 			}
 		}
 
-		void SetDefaultCodecContextOptions(AVCodecContext* codecContext)
+		void SetDefaultCodecContextOptions(AVCodecContext * codecContext)
 		{
 			// Define options.
 			bool lowres                = false; // Decode at full resolution.

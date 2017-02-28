@@ -1,10 +1,9 @@
 #pragma once
 
-#include "MPAudioContext.h"
-#include "MPVideoContext.h"
+#include "MPForward.h"
 #include "Types.h"
-#include <libavcodec/avcodec.h>
 #include <stdint.h>
+#include <string>
 
 namespace MP
 {

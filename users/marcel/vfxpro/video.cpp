@@ -3,6 +3,7 @@
 #if ENABLE_VIDEO
 
 #include "framework.h"
+#include "mediaplayer_new/MPVideoBuffer.h"
 #include "video.h"
 #include <atomic>
 

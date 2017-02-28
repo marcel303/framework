@@ -1,10 +1,7 @@
 #pragma once
 
-#include "MPPacketQueue.h"
-#include "MPVideoBuffer.h"
+#include "MPForward.h"
 #include "Types.h"
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
 
 struct SwsContext;
 
@@ -36,14 +33,14 @@ namespace MP
 	//private:
 		bool Convert(VideoFrame * out_frame);
 
-		PacketQueue m_packetQueue;
+		PacketQueue * m_packetQueue;
 		AVCodecContext * m_codecContext;
 		AVCodec * m_codec;
-		AVFrame * m_tempFrame; ///< Temporary frame for decoder. The results stored in this frame are converted to RGB and stored in the final frame.
-		uint8_t * m_tempFrameBuffer; ///< Frame buffer for temp frame.
-		VideoBuffer m_videoBuffer; // TODO: Init/destroy.
+		AVFrame * m_tempFrame;
+		uint8_t * m_tempFrameBuffer;
+		VideoBuffer * m_videoBuffer;
 		SwsContext * m_swsContext;
-		AVRational m_timeBase;
+		double m_timeBase;
 
 		size_t m_streamIndex;
 		bool m_outputYuv;

@@ -1,18 +1,28 @@
+#include "MPAudioBuffer.h"
 #include "MPAudioContext.h"
 #include "MPContext.h"
 #include "MPDebug.h"
+#include "MPPacketQueue.h"
 #include "MPUtil.h"
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libswresample/swresample.h>
 
 #define QUEUE_SIZE (4 * 3 * 10)
 
 namespace MP
 {
 	AudioContext::AudioContext()
+		: m_packetQueue(nullptr)
+		, m_audioBuffer(nullptr)
+		, m_codecContext(nullptr)
+		, m_codec(nullptr)
+		, m_swrContext(nullptr)
+		, m_streamIndex(-1)
+		, m_time(0.0)
+		, m_frameTime(0)
+		, m_initialized(false)
 	{
-		m_initialized = false;
-
-		m_codecContext = 0;
-		m_codec = 0;
 	}
 
 	AudioContext::~AudioContext()
@@ -20,11 +30,9 @@ namespace MP
 		Assert(m_initialized == false);
 	}
 
-	bool AudioContext::Initialize(Context* context, size_t streamIndex)
+	bool AudioContext::Initialize(Context * context, const size_t streamIndex)
 	{
 		Assert(m_initialized == false);
-
-		bool result = true;
 
 		m_initialized = true;
 
@@ -32,37 +40,68 @@ namespace MP
 		m_time = 0.0;
 		m_frameTime = 0;
 		
-		AVCodecParameters * audioParams = context->GetFormatContext()->streams[m_streamIndex]->codecpar;
-		m_codec = avcodec_find_decoder(audioParams->codec_id);
+		Assert(m_packetQueue == nullptr);
+		m_packetQueue = new PacketQueue();
 		
-		// Get codec for audio stream.
-		if (!m_codec)
+		Assert(m_audioBuffer == nullptr);
+		m_audioBuffer = new AudioBuffer();
+		
+		AVCodecParameters * audioParams = context->GetFormatContext()->streams[m_streamIndex]->codecpar;\
+		if (!audioParams)
 		{
-			Assert(0);
-			return false; // Codec not found
+			Debug::Print("Audio: failed to find audio params.");
+			return false;
 		}
 		
-		Debug::Print("Audio codec: %s.", m_codec->name);
+		// Get codec for audio stream.
+		m_codec = avcodec_find_decoder(audioParams->codec_id);
+		if (!m_codec)
+		{
+			Debug::Print("Audio: unable to find codec.");
+			return false;
+		}
+		
+		Debug::Print("Audio: codec: %s.", m_codec->name);
 		
 		// Get codec context for audio stream.
 		m_codecContext = avcodec_alloc_context3(m_codec);
-		avcodec_parameters_to_context(m_codecContext, audioParams);
-
-		//Util::SetDefaultCodecContextOptions(m_codecContext);
+		if (!m_codecContext)
+		{
+			Debug::Print("Audio: failed to allocate codec context.");
+			return false;
+		}
+		
+		if (avcodec_parameters_to_context(m_codecContext, audioParams) < 0)
+		{
+			Debug::Print("Audio: failed to set params on codec context.");
+			return false;
+		}
 
 		// Open codec.
 		if (avcodec_open2(m_codecContext, m_codec, nullptr) < 0)
 		{
-			Assert(0);
+			Debug::Print("Audio: failed to open codec context.");
 			return false;
 		}
 
 		// Display codec info.
 		Debug::Print("Audio: samplerate: %d.", m_codecContext->sample_rate);
-		Debug::Print("Audio: channels: %d.",   m_codecContext->channels   );
-		Debug::Print("Audio: framesize: %d.",  m_codecContext->frame_size ); // Number of samples/packet.
+		Debug::Print("Audio: channels: %d.", m_codecContext->channels);
+		Debug::Print("Audio: framesize: %d.", m_codecContext->frame_size); // Number of samples/packet.
 		
-		return result;
+		Assert(m_swrContext == nullptr);
+		m_swrContext = swr_alloc_set_opts(nullptr,
+			AV_CH_LAYOUT_STEREO, AV_SAMPLE_FMT_S16, m_codecContext->sample_rate,
+			audioParams->channel_layout, (AVSampleFormat)audioParams->format, audioParams->sample_rate,
+		0, nullptr);
+		
+		if (!m_swrContext)
+		{
+			Debug::Print("Audio: failed to alloc/init swr context.");
+			return false;
+		}
+		
+		return true;
 	}
 
 	bool AudioContext::Destroy()
@@ -73,6 +112,12 @@ namespace MP
 
 		m_initialized = false;
 
+		if (m_swrContext)
+		{
+			swr_free(&m_swrContext);
+			m_swrContext = nullptr;
+		}
+		
 		// Close audio codec context.
 		if (m_codecContext)
 		{
@@ -82,17 +127,32 @@ namespace MP
 			m_codecContext = nullptr;
 		}
 		
-		m_codec = nullptr;
+		if (m_codec)
+		{
+			m_codec = nullptr;
+		}
+		
+		if (m_audioBuffer)
+		{
+			delete m_audioBuffer;
+			m_audioBuffer = nullptr;
+		}
+		
+		if (m_packetQueue)
+		{
+			delete m_packetQueue;
+			m_packetQueue = nullptr;
+		}
 
 		return result;
 	}
 
-	size_t AudioContext::GetStreamIndex()
+	size_t AudioContext::GetStreamIndex() const
 	{
 		return m_streamIndex;
 	}
 
-	double AudioContext::GetTime()
+	double AudioContext::GetTime() const
 	{
 		return m_time;
 	}
@@ -101,24 +161,26 @@ namespace MP
 	{
 		bool result = true;
 
-		while (m_packetQueue.GetSize() > 0)
+		while (m_packetQueue->GetSize() > 0)
 		{
-			Debug::Print("\tAUDIO: Decoding to provide more frames.");
-			Debug::Print("\t\tAUDIO: Packet queue size: %d -> %d.", int(m_packetQueue.GetSize()), int(m_packetQueue.GetSize() - 1));
+			Debug::Print("\tAudio: decoding to provide more frames.");
+			Debug::Print("\t\tAudio: packet queue size: %d -> %d.", int(m_packetQueue->GetSize()), int(m_packetQueue->GetSize() - 1));
 
-			AVPacket & packet = m_packetQueue.GetPacket();
+			AVPacket & packet = m_packetQueue->GetPacket();
 
 			if (ProcessPacket(packet) != true)
 				result = false;
 
-			m_packetQueue.PopFront();
+			m_packetQueue->PopFront();
 		}
 
 		return result;
 	}
 
-	bool AudioContext::RequestAudio(int16_t* out_samples, size_t frameCount, bool& out_gotAudio)
+	bool AudioContext::RequestAudio(int16_t * out_samples, const size_t _frameCount, bool & out_gotAudio)
 	{
+		size_t frameCount = _frameCount;
+		
 		Assert(out_samples);
 
 		bool result = true;
@@ -127,13 +189,13 @@ namespace MP
 
 		bool stop = false;
 
-		Debug::Print("AUDIO: Begin request.");
+		Debug::Print("Audio: begin request.");
 
 		while (frameCount > 0 && stop == false)
 		{
 			size_t numSamples = frameCount * m_codecContext->channels;
 
-			if (!m_audioBuffer.ReadSamples(out_samples, numSamples))
+			if (!m_audioBuffer->ReadSamples(out_samples, numSamples))
 			{
 				stop = true;
 			}
@@ -147,30 +209,30 @@ namespace MP
 				m_frameTime += numFrames;
 				m_time = m_frameTime / (double)m_codecContext->sample_rate;
 
-				Debug::Print("\tAUDIO: Read from buffer. Time = %03.3f", m_time);
+				Debug::Print("\tAudio: read from buffer. time: %03.3f", m_time);
 
 				if (frameCount == 0)
 				{
-					Debug::Print("\tAUDIO: Read done.");
+					Debug::Print("\tAudio: read done.");
 				}
 			}
 		}
 
-		Debug::Print("AUDIO: End request.");
+		Debug::Print("Audio: end request.");
 
 		out_gotAudio = true;
 
 		return result;
 	}
 
-	bool AudioContext::IsQueueFull()
+	bool AudioContext::IsQueueFull() const
 	{
-		return m_packetQueue.GetSize() >= QUEUE_SIZE;
+		return m_packetQueue->GetSize() >= QUEUE_SIZE;
 	}
 
 	bool AudioContext::AddPacket(AVPacket & packet)
 	{
-		m_packetQueue.PushBack(packet);
+		m_packetQueue->PushBack(packet);
 
 		Debug::Print("PQAUDIO");
 
@@ -197,10 +259,6 @@ namespace MP
 			
 			AudioBufferSegment segment;
 			
-			//AVFrame frame;
-			//frame.data[0] = segment.data;
-			//frame.linesize[0] = segment.size;
-			
 			int gotFrame = 0;
 			int bytesDecoded = avcodec_decode_audio4(
 				m_codecContext,
@@ -211,7 +269,7 @@ namespace MP
 			// Error?
 			if (bytesDecoded < 0)
 			{
-				Debug::Print("Unable to decode audio packet.\n");
+				Debug::Print("Audio: unable to decode audio packet.");
 				bytesRemaining = 0;
 				Assert(0);
 			}
@@ -224,7 +282,9 @@ namespace MP
 
 				Assert(bytesDecoded >= 0);
 				Assert(bytesRemaining >= 0);
-
+				
+				//swr_convert(m_swrContext, out, out_count, in, in_count);
+				
 				if (frameSize > 0)
 				{
 					if (m_codecContext->channels != 0)
@@ -233,11 +293,11 @@ namespace MP
 
 						segment.m_numSamples = frameCount * m_codecContext->channels;
 
-						m_audioBuffer.AddSegment(segment);
+						m_audioBuffer->AddSegment(segment);
 
 						Assert(frameCount * (m_codecContext->channels * sizeof(int16_t)) == frameSize);
 
-						Debug::Print("\t\tAUDIO: Decoded frame. Got %d frames.", int(frameCount));
+						Debug::Print("\t\tAudio: decoded frame. got %d frames.", int(frameCount));
 					}
 				}
 				else
@@ -255,6 +315,6 @@ namespace MP
 
 	bool AudioContext::Depleted() const
 	{
-		return m_audioBuffer.Depleted() && (m_packetQueue.GetSize() == 0);
+		return m_audioBuffer->Depleted() && (m_packetQueue->GetSize() == 0);
 	}
 };

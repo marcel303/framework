@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libavcodec/avcodec.h>
+#include "MPForward.h"
 
 namespace MP
 {
@@ -8,6 +8,6 @@ namespace MP
 	{
 		void InitializeLibAvcodec();
 
-		void SetDefaultCodecContextOptions(AVCodecContext* codecContext);
+		void SetDefaultCodecContextOptions(AVCodecContext * codecContext);
 	}
 };

@@ -2,7 +2,6 @@
 
 #include "ColArray.h"
 #include "MPMutex.h"
-#include <libavcodec/avcodec.h>
 #include <list>
 #include <stdint.h>
 
