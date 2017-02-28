@@ -2,7 +2,6 @@
 #include "video.h"
 #include <atomic>
 
-#include "audiostream/AudioOutput.h" // fixme!!!
 #include "mediaplayer_new/MPVideoBuffer.h"
 
 static SDL_mutex * s_avcodecMutex = nullptr;
@@ -26,9 +25,7 @@ static int ExecMediaPlayerThread(void * param)
 	while (!context->stopMpThread)
 	{
 		// todo : tick event on video or audio buffer consumption *only*
-
-		const int delayMS = 5;
-
+		
 		if (context->hasBegun)
 		{
 			context->tick();
@@ -72,25 +69,6 @@ void MediaPlayer::Context::tick()
 	mpContext.FillBuffers();
 
 	mpContext.FillAudioBuffer();
-
-#if 0
-	static bool b = false;
-	static AudioOutput_OpenAL * audioOutput = nullptr;
-	static AudioStream_MediaPlayer * audioStream = nullptr;
-
-	if (!b)
-	{
-		b = true;
-		audioOutput = new AudioOutput_OpenAL();
-		audioOutput->Initialize(mpContext.GetAudioChannelCount(), mpContext.GetAudioFrameRate(), 4096);
-		audioOutput->Play();
-
-		audioStream = new AudioStream_MediaPlayer();
-		audioStream->mpContext = this;
-	}
-
-	audioOutput->Update(audioStream);
-#endif
 
 	mpContext.FillVideoBuffer();
 }
@@ -202,14 +180,6 @@ void MediaPlayer::updateTexture()
 		textureSy = videoFrame->m_height;
 
 		//logDebug("gotVideo. t=%06dms, sx=%d, sy=%d", int(time * 1000.0), textureSx, textureSy);
-
-#if 0
-		if (texture)
-		{
-			glDeleteTextures(1, &texture);
-			texture = 0;
-		}
-#endif
 
 		if (texture)
 		{

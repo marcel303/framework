@@ -1,11 +1,18 @@
 #include "Calc.h"
 #include "framework.h"
+#include "StringEx.h"
 #include "video.h"
 
 #define GFX_SX 640
 #define GFX_SY 480
 
 #define NUM_LAYERS 3
+
+// todo : mask using rotating and scaling objects as mask alpha
+// todo : grooop logo animation
+// todo : think of ways to mix/vj
+// todo : use touchpad for map-like moving and scaling videos?
+// todo : multitouch touch pad? can SDL handle this? else look for api
 
 int main(int argc, char * argv[])
 {
@@ -25,10 +32,13 @@ int main(int argc, char * argv[])
 		{
 			mediaPlayers[i] = new MediaPlayer();
 			
-			mediaPlayers[i]->openAsync("flowers.mpg", false);
+			std::string filename = String::Format("video%d.mpg", i + 1);
+			
+			mediaPlayers[i]->openAsync(filename.c_str(), false);
 		}
 		
 		float mouseDownTime = 0.f;
+		int activeLayer = 0;
 		
 		while (!framework.quitRequested)
 		{
@@ -37,16 +47,77 @@ int main(int argc, char * argv[])
 			if (keyboard.wentDown(SDLK_ESCAPE))
 				framework.quitRequested = true;
 			
+			if (keyboard.wentDown(SDLK_1))
+				activeLayer = 0;
+			if (keyboard.wentDown(SDLK_2))
+				activeLayer = 1;
+			if (keyboard.wentDown(SDLK_3))
+				activeLayer = 2;
+			
 			const float dt = framework.timeStep;
 			
 			for (int i = 0; i < NUM_LAYERS; ++i)
 			{
 				pushSurface(layerAlphas[i]);
 				{
-					setBlend(BLEND_SUBTRACT);
-					setColor(1, 1, 1, 255);
-					drawRect(0, 0, GFX_SX, GFX_SY);
-					setBlend(BLEND_ALPHA);
+					if (i == 0)
+					{
+						setBlend(BLEND_OPAQUE);
+						setColor(colorWhite);
+						drawRect(0, 0, GFX_SX, GFX_SY);
+						setBlend(BLEND_ALPHA);
+					}
+					else
+					{
+						setBlend(BLEND_SUBTRACT);
+						setColor(1, 1, 1, 255);
+						drawRect(0, 0, GFX_SX, GFX_SY);
+						setBlend(BLEND_ALPHA);
+						
+						if (i == 1)
+						{
+							gxPushMatrix();
+							{
+								gxTranslatef(GFX_SX/2.f, GFX_SY/2.f, 0.f);
+								
+								const float scale = std::cos(framework.time * .1f) + 1.2f;
+								gxScalef(scale, scale, 1.f);
+								
+								const float angle = std::cos(framework.time * .1f) * 360.f;
+								gxRotatef(angle, 0.f, 0.f, 1.f);
+								
+								hqBegin(HQ_STROKED_CIRCLES);
+								{
+									setColor(colorBlack);
+									hqStrokeCircle(0, 0, 100, 30.f);
+									
+									setColor(colorWhite);
+									hqStrokeCircle(0, 0, 100, 5.f);
+								}
+								hqEnd();
+								
+								for (int x = -3; x <= +3; ++x)
+								{
+									gxPushMatrix();
+									gxTranslatef(x * 150 * scale, 0, 0);
+									gxScalef(scale, scale, 1.f);
+									
+									hqBegin(HQ_STROKED_CIRCLES);
+									{
+										setColor(colorBlack);
+										hqStrokeCircle(0, 0, 50, 5.f);
+										
+										setColor(colorWhite);
+										hqStrokeCircle(0, 0, 50, 3.f);
+									}
+									hqEnd();
+									
+									gxPopMatrix();
+								}
+							}
+							gxPopMatrix();
+						}
+					}
 				}
 				popSurface();
 			}
@@ -63,9 +134,9 @@ int main(int argc, char * argv[])
 			{
 				mouseDownTime += dt;
 				
-				pushSurface(layerAlphas[0]);
+				pushSurface(layerAlphas[activeLayer]);
 				{
-					const float radius = Calc::Min(mouseDownTime / 2.f, 1.f) * 50.f;
+					const float radius = Calc::Min(mouseDownTime / .5f, 1.f) * 50.f;
 					
 					setColor(colorWhite);
 					fillCircle(mouse.x, mouse.y, radius, 100);
@@ -99,6 +170,14 @@ int main(int argc, char * argv[])
 					setBlend(BLEND_OPAQUE);
 					drawRect(0, 0, GFX_SX, GFX_SY);
 					setBlend(BLEND_ALPHA);
+					
+					hqBegin(HQ_LINES);
+					{
+						setColor(colorWhite);
+						hqLine(50, 50, 0, GFX_SX - 50, 50, 50);
+						hqLine(50, GFX_SY - 50, 50, GFX_SX - 50, GFX_SY - 50, 0);
+					}
+					hqEnd();
 				}
 				clearShader();
 			}
