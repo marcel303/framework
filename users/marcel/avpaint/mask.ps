@@ -1,0 +1,18 @@
+include engine/ShaderPS.txt
+
+uniform sampler2D colormapA;
+uniform sampler2D colormapB;
+uniform sampler2D mask;
+
+shader_in vec2 texcoord;
+
+void main()
+{
+	vec4 color1 = texture(colormapA, texcoord);
+	vec4 color2 = texture(colormapB, texcoord);
+	float maskValue = texture(mask, texcoord).x;
+
+	vec4 color = mix(color1, color2, maskValue);
+
+	shader_fragColor = color;
+}

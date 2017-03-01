@@ -1,0 +1,20 @@
+include engine/ShaderPS.txt
+
+shader_in vec2 texcoord;
+shader_in vec4 color;
+
+void main()
+{
+	vec2 center = vec2(0.5, 0.5);
+	float innerDistance = 0.0;
+	float outerDistance = 0.5;
+
+	vec2 delta = texcoord - center;
+	float distance = length(delta);
+
+	float v = 1.0 - (distance - innerDistance) / (outerDistance - innerDistance);
+
+	float alpha = clamp(v, 0.0, 1.0);
+
+	shader_fragColor = color * alpha;
+}
