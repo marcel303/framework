@@ -13,6 +13,10 @@
 #include "data/engine/ShaderCS.txt"
 #include "data/engine/ShaderUtil.txt"
 
+#include "data/engine/builtin-guassian-h.ps"
+#include "data/engine/builtin-guassian-h.vs"
+#include "data/engine/builtin-guassian-v.ps"
+#include "data/engine/builtin-guassian-v.vs"
 #include "data/engine/builtin-hq-common.txt"
 #include "data/engine/builtin-hq-filled-circle.ps"
 #include "data/engine/builtin-hq-filled-circle.vs"
@@ -69,6 +73,10 @@ void registerBuiltinShaders()
 	shaderSource("engine/ShaderUtil.txt", s_shaderUtil);
 
 	shaderSource("engine/builtin-hq-common.txt", s_hqCommon);
+	shaderSource("engine/builtin-gaussian-h.ps", s_guassianHPs);
+	shaderSource("engine/builtin-gaussian-h.vs", s_guassianHVs);
+	shaderSource("engine/builtin-gaussian-v.ps", s_guassianVPs);
+	shaderSource("engine/builtin-gaussian-v.vs", s_guassianVVs);
 	shaderSource("engine/builtin-hq-filled-circle.ps", s_hqFilledCirclePs);
 	shaderSource("engine/builtin-hq-filled-circle.vs", s_hqFilledCircleVs);
 	shaderSource("engine/builtin-hq-filled-rect.ps", s_hqFilledRectPs);

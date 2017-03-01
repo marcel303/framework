@@ -1,0 +1,27 @@
+static const char * s_guassianHPs = R"SHADER(
+
+include engine/ShaderPS.txt
+
+shader_in vec2 texcoord;
+uniform sampler2D source;
+uniform int kernelSize;
+uniform float radius;
+
+const float weights[5] = float[] (0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216);
+
+void main()
+{
+    float texScale = radius / textureSize(source, 0).x;
+	
+	vec4 result = texture(source, texcoord) * weights[0];
+	
+	for (int i = 1; i < 5; ++i)
+	{
+		result += texture(source, texcoord + vec2(texScale * i, 0.0)) * weights[i];
+		result += texture(source, texcoord - vec2(texScale * i, 0.0)) * weights[i];
+	}
+	
+    shader_fragColor = result;
+}
+
+)SHADER";

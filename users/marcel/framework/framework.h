@@ -1219,8 +1219,8 @@ void showErrorMessage(const char * caption, const char * format, ...);
 
 // builtin shaders
 
-void setShader_GaussianBlurH(const GLuint source, const int kernelSize);
-void setShader_GaussianBlurV(const GLuint source, const int kernelSize);
+void setShader_GaussianBlurH(const GLuint source, const int kernelSize, const float radius);
+void setShader_GaussianBlurV(const GLuint source, const int kernelSize, const float radius);
 void setShader_Invert(const GLuint source);
 void setShader_TresholdLumi(const GLuint source, const float lumi, const Color & failColor, const Color & passColor);
 void setShader_TresholdLumiFail(const GLuint source, const float lumi, const Color & failColor);
@@ -1355,6 +1355,7 @@ static T random(T min, T max)
 
 // constants
 
+extern Color colorBlackTranslucent;
 extern Color colorBlack;
 extern Color colorWhite;
 extern Color colorRed;

@@ -72,6 +72,7 @@ static float scale255(const float v)
 
 // -----
 
+Color colorBlackTranslucent(0, 0, 0, 0);
 Color colorBlack(0, 0, 0, 255);
 Color colorWhite(255, 255, 255, 255);
 Color colorRed(255, 0, 0, 255);
@@ -274,6 +275,9 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 
 	if (!windowBorder)
 		flags |= SDL_WINDOW_BORDERLESS;
+	
+	// todo : enable flag by default. make automatic DPI upscaling optional
+	//flags |= SDL_WINDOW_ALLOW_HIGHDPI;
 
 	globals.window = SDL_CreateWindow(
 		windowTitle.c_str(),
@@ -886,18 +890,40 @@ std::vector<std::string> listFiles(const char * path, bool recurse)
 	}
 	return result;
 #else
-	Assert(!recurse); // todo : implement & test
+	//Assert(!recurse); // todo : implement & test
 	std::vector<std::string> result;
-	DIR * dir = opendir(path);
-	dirent * ent;
-	if (dir)
+	
+	std::vector<DIR*> dirs;
 	{
+		DIR * dir = opendir(path);
+		if (dir)
+			dirs.push_back(dir);
+	}
+	
+	while (!dirs.empty())
+	{
+		DIR * dir = dirs.back();
+		dirs.pop_back();
+		
+		dirent * ent;
+		
 		while ((ent = readdir(dir)) != 0)
 		{
-			char fullPath[PATH_MAX];
-			sprintf_s(fullPath, sizeof(fullPath), "%s/%s", path, ent->d_name);
-			result.push_back(fullPath);
+			if (ent->d_type == DT_DIR)
+			{
+				if (recurse)
+				{
+					// todo : push directory
+				}
+			}
+			else
+			{
+				char fullPath[PATH_MAX];
+				sprintf_s(fullPath, sizeof(fullPath), "%s/%s", path, ent->d_name);
+				result.push_back(fullPath);
+			}
 		}
+		
 		closedir(dir);
 	}
 	return result;
@@ -5853,9 +5879,9 @@ void gxSetTexture(GLuint texture)
 
 // todo : move these shaders to BuiltinShaders and supply shader source
 
-void setShader_GaussianBlurH(const GLuint source, const float kernelSize)
+void setShader_GaussianBlurH(const GLuint source, const int kernelSize, const float radius)
 {
-	Shader shader("builtin-gaussian-v");
+	static Shader shader("engine/builtin-gaussian-v");
 	setShader(shader);
 
 	// todo : calculate seperable gaussian blur kernel weights
@@ -5863,12 +5889,13 @@ void setShader_GaussianBlurH(const GLuint source, const float kernelSize)
 
 	shader.setTexture("source", 0, source, true, true);
 	shader.setImmediate("kernelSize", kernelSize);
-	shader.setBuffer("kernel", kernel);
+	shader.setImmediate("radius", radius);
+	//shader.setBuffer("kernel", kernel);
 }
 
-void setShader_GaussianBlurV(const GLuint source, const float kernelSize)
+void setShader_GaussianBlurV(const GLuint source, const int kernelSize, const float radius)
 {
-	Shader shader("builtin-gaussian-v");
+	static Shader shader("engine/builtin-gaussian-v");
 	setShader(shader);
 	
 	// todo : calculate seperable gaussian blur kernel weights
@@ -5876,7 +5903,8 @@ void setShader_GaussianBlurV(const GLuint source, const float kernelSize)
 
 	shader.setTexture("source", 0, source, true, true);
 	shader.setImmediate("kernelSize", kernelSize);
-	shader.setBuffer("kernel", kernel);
+	shader.setImmediate("radius", radius);
+	//shader.setBuffer("kernel", kernel);
 }
 
 void setShader_Invert(const GLuint source)
