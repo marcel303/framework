@@ -890,7 +890,6 @@ std::vector<std::string> listFiles(const char * path, bool recurse)
 	}
 	return result;
 #else
-	//Assert(!recurse); // todo : implement & test
 	std::vector<std::string> result;
 	
 	std::vector<DIR*> dirs;
@@ -909,17 +908,22 @@ std::vector<std::string> listFiles(const char * path, bool recurse)
 		
 		while ((ent = readdir(dir)) != 0)
 		{
+			char fullPath[PATH_MAX];
+			if (strcmp(path, "."))
+				sprintf_s(fullPath, sizeof(fullPath), "%s/%s", path, ent->d_name);
+			else
+				strcpy_s(fullPath, sizeof(fullPath), ent->d_name);
+			
 			if (ent->d_type == DT_DIR)
 			{
-				if (recurse)
+				if (recurse && strcmp(ent->d_name, ".") && strcmp(ent->d_name, ".."))
 				{
-					// todo : push directory
+					std::vector<std::string> subResult = listFiles(fullPath, recurse);
+					result.insert(result.end(), subResult.begin(), subResult.end());
 				}
 			}
 			else
 			{
-				char fullPath[PATH_MAX];
-				sprintf_s(fullPath, sizeof(fullPath), "%s/%s", path, ent->d_name);
 				result.push_back(fullPath);
 			}
 		}
