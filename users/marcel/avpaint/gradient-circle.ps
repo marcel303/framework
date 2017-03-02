@@ -15,6 +15,6 @@ void main()
 	float v = 1.0 - (distance - innerDistance) / (outerDistance - innerDistance);
 
 	float alpha = clamp(v, 0.0, 1.0);
-
+	
 	shader_fragColor = color * alpha;
 }

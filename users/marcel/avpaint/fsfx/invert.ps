@@ -1,0 +1,11 @@
+include engine/ShaderPS.txt
+include fsfx/constants.inc
+
+void main()
+{
+	vec4 color = texture(colormap, texcoord);
+
+	color.rgb = vec3(1.0) - color.rgb;
+
+	shader_fragColor = color;
+}

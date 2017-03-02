@@ -1,10 +1,11 @@
+#include "avtypes.h"
 #include "Calc.h"
 #include "framework.h"
 #include "StringEx.h"
 #include "video.h"
 
-#define GFX_SX 640
-#define GFX_SY 480
+#define GFX_SX 1024
+#define GFX_SY 768
 
 #define NUM_LAYERS 3
 
@@ -23,6 +24,7 @@ struct Grain
 	float py;
 	float vx;
 	float vy;
+	float vfalloff;
 };
 
 struct GrainsEffect
@@ -41,6 +43,8 @@ struct GrainsEffect
 		for (int i = 0; i < kMaxGrains; ++i)
 		{
 			grains[i].life -= dt;
+			grains[i].vx *= std::powf(1.f - grains[i].vfalloff, dt);
+			grains[i].vy *= std::powf(1.f - grains[i].vfalloff, dt);
 			grains[i].px += grains[i].vx * dt;
 			grains[i].py += grains[i].vy * dt;
 		}
@@ -71,7 +75,7 @@ struct GrainsEffect
 	}
 };
 
-void applyMask(GLuint a, GLuint b, GLuint mask)
+static void applyMask(GLuint a, GLuint b, GLuint mask)
 {
 	Shader shader("mask");
 	setShader(shader);
@@ -91,8 +95,26 @@ void applyMask(GLuint a, GLuint b, GLuint mask)
 	clearShader();
 }
 
+static void applyFsfx(Surface & surface, const char * name, const float param1 = 0.f, const float param2 = 0.f, const float param3 = 0.f, const float param4 = 0.f)
+{
+	Shader shader(name, "fsfx/fsfx.vs", name);
+	setShader(shader);
+	{
+		shader.setImmediate("params", param1, param2, param3, param4);
+		shader.setTexture("colormap", 0, surface.getTexture());
+		surface.postprocess();
+	}
+	clearShader();
+}
+
 int main(int argc, char * argv[])
 {
+#if defined(DEBUG)
+	framework.enableRealTimeEditing = true;
+#endif
+
+	//framework.fullscreen = true;
+	
 	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
 	{
 		Surface surface(GFX_SX, GFX_SY, false);
@@ -121,6 +143,7 @@ int main(int argc, char * argv[])
 		float presentTime = 0.f;
 		float blurStrength = 0.f;
 		float desiredBlurStrength = 0.f;
+		FollowValue barAngle(0.f, .9f);
 		
 		GrainsEffect grainsEffect;
 		int nextGrainIndex = 0;
@@ -221,7 +244,7 @@ int main(int argc, char * argv[])
 				mediaPlayers[i]->tick(mediaPlayers[i]->context);
 				
 				if (mediaPlayers[i]->context->hasBegun)
-					mediaPlayers[i]->presentTime = presentTime;
+					mediaPlayers[i]->presentTime = presentTime * (i == 0 ? .5f : 1.f);
 			}
 			
 			if (mouse.isDown(BUTTON_LEFT))
@@ -234,14 +257,15 @@ int main(int argc, char * argv[])
 				grain.lifeRcp = 1.f / grain.life;
 				grain.px = mouse.x;
 				grain.py = mouse.y;
-				const float speed = 10.f;
+				const float speed = random(5.f, 15.f);
 				grain.vx = mouse.dx * speed;
 				grain.vy = mouse.dy * speed;
+				grain.vfalloff = .9;
 				
-			#if 0
+			#if 1
 				pushSurface(layerAlphas[activeLayer]);
 				{
-					const float radius = Calc::Min(mouseDownTime / .2f, 1.f) * 100.f;
+					const float radius = Calc::Min(mouseDownTime / .2f, 1.f) * 50.f;
 					
 					Shader shader("gradient-circle");
 					setShader(shader);
@@ -260,9 +284,14 @@ int main(int argc, char * argv[])
 				mouseDownTime = 0.f;
 			}
 			
+			if (keyboard.wentDown(SDLK_r))
+				barAngle.targetValue += 45.f;
+			
+			barAngle.tick(dt);
+			
 			pushSurface(layerAlphas[activeLayer]);
 			{
-				//setBlend(BLEND_ADD);
+				setBlend(BLEND_ADD);
 				grainsEffect.draw();
 				setBlend(BLEND_ALPHA);
 			}
@@ -305,7 +334,8 @@ int main(int argc, char * argv[])
 					gxPushMatrix();
 					{
 						gxTranslatef(GFX_SX/3.f, GFX_SY/3.f, 0.f);
-						gxRotatef(framework.time * 10.f, 0.f, 0.f, 1.f);
+						//gxRotatef(framework.time * 10.f, 0.f, 0.f, 1.f);
+						gxRotatef(barAngle.value, 0.f, 0.f, 1.f);
 						
 						setColor(colorWhite);
 						hqBegin(HQ_FILLED_RECTS);
@@ -364,6 +394,8 @@ int main(int argc, char * argv[])
 				}
 				popSurface();
 			#endif
+			
+				applyFsfx(surface, "fsfx/invert.ps");
 				
 				setBlend(BLEND_OPAQUE);
 				applyMask(surface.getTexture(), layerColors[0], mask.getTexture());
