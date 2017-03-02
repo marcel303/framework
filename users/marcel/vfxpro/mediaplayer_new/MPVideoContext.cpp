@@ -108,18 +108,18 @@ namespace MP
 				{
 					// Allocate buffer to use for frame.
 					const int frameBufferSize = av_image_get_buffer_size(
-						AV_PIX_FMT_RGB24,
+						m_codecContext->pix_fmt,
 						m_codecContext->width,
 						m_codecContext->height,
 						1);
 
 					Assert(m_tempFrameBuffer == nullptr);
-					m_tempFrameBuffer = new uint8_t[frameBufferSize];
+					m_tempFrameBuffer = (uint8_t*)_mm_malloc(frameBufferSize, 16);
 
 					// Assign buffer to frame.
 					const int requiredFrameBufferSize = av_image_fill_arrays(
 						m_tempFrame->data, m_tempFrame->linesize, m_tempFrameBuffer,
-						AV_PIX_FMT_RGB24, m_codecContext->width, m_codecContext->height, 1);
+						m_codecContext->pix_fmt, m_codecContext->width, m_codecContext->height, 16);
 					
 					Debug::Print("Vide: frameBufferSize: %d.", frameBufferSize);
 					Debug::Print("Video: requiredFrameBufferSize: %d.", requiredFrameBufferSize);
@@ -138,7 +138,7 @@ namespace MP
 
 					m_swsContext = sws_getContext(
 						m_codecContext->width, m_codecContext->height, m_codecContext->pix_fmt,
-						m_codecContext->width, m_codecContext->height, AV_PIX_FMT_RGB24,
+						m_codecContext->width, m_codecContext->height, AV_PIX_FMT_RGBA,
 						SWS_POINT, nullptr, nullptr, nullptr);
 					
 					if (!m_swsContext)
@@ -182,7 +182,7 @@ namespace MP
 
 		if (m_tempFrameBuffer)
 		{
-			delete [] m_tempFrameBuffer;
+			_mm_free(m_tempFrameBuffer);
 			m_tempFrameBuffer = nullptr;
 		}
 
@@ -351,20 +351,21 @@ namespace MP
 
 			for (int y = 0; y < sy; ++y)
 			{
-				const uint8_t * __restrict srcY   = srcYLine + src.linesize[0] * (y     );
-				const uint8_t * __restrict srcU   = srcULine + src.linesize[1] * (y >> 1);
-				const uint8_t * __restrict srcV   = srcVLine + src.linesize[2] * (y >> 1);
-				uint8_t * __restrict dstRGB = dstLine  + dst.linesize[0] * (y     );
+				const uint8_t * __restrict srcY    = srcYLine + src.linesize[0] * (y     );
+				const uint8_t * __restrict srcU    = srcULine + src.linesize[1] * (y >> 1);
+				const uint8_t * __restrict srcV    = srcVLine + src.linesize[2] * (y >> 1);
+				      uint8_t * __restrict dstRGBA = dstLine  + dst.linesize[0] * (y     );
 
-				for (int x = 0; x < sx; ++x, dstRGB += 3)
+				for (int x = 0; x < sx; ++x, dstRGBA += 4)
 				{
 					const int y = srcY[x];
 					const int u = srcU[x >> 1];
 					const int v = srcV[x >> 1];
 
-					dstRGB[0] = y;
-					dstRGB[1] = u;
-					dstRGB[2] = v;
+					dstRGBA[0] = y;
+					dstRGBA[1] = u;
+					dstRGBA[2] = v;
+					dstRGBA[3] = 255;
 				}
 			}
 		}
@@ -373,7 +374,8 @@ namespace MP
 			sws_scale(m_swsContext, src.data, src.linesize, 0, src.height, dst.data, dst.linesize);
 		}
 		
-        if (m_tempFrame->pts != 0 && m_tempFrame->pts != AV_NOPTS_VALUE)
+        //if (m_tempFrame->pts != 0 && m_tempFrame->pts != AV_NOPTS_VALUE)
+		if (false)
 		{
 			m_time = av_frame_get_best_effort_timestamp(m_tempFrame) * m_timeBase;
 		}

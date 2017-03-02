@@ -46,17 +46,17 @@ namespace MP
 	
 		// Allocate buffer to use for RGB frame.
 		const int frameBufferSize = av_image_get_buffer_size(
-			AV_PIX_FMT_RGB24,
+			AV_PIX_FMT_RGBA,
 			static_cast<int>(width),
 			static_cast<int>(height),
 			1);
 		
-		m_frameBuffer = new uint8_t[frameBufferSize];
+		m_frameBuffer = (uint8_t*)_mm_malloc(frameBufferSize, 16);
 		
-		m_frame->format = AV_PIX_FMT_RGB24;
+		m_frame->format = AV_PIX_FMT_RGBA;
 		m_frame->width = width;
 		m_frame->height = height;
-		const int requiredFrameBufferSize = av_image_fill_arrays(m_frame->data, m_frame->linesize, m_frameBuffer, AV_PIX_FMT_RGB24, width, height, 1);
+		const int requiredFrameBufferSize = av_image_fill_arrays(m_frame->data, m_frame->linesize, m_frameBuffer, AV_PIX_FMT_RGBA, width, height, 16);
 		
 		Debug::Print("Video: frameBufferSize: %d.", frameBufferSize);
 		Debug::Print("Video: requiredFrameBufferSize: %d.", requiredFrameBufferSize);
@@ -84,7 +84,7 @@ namespace MP
 
 		if (m_frameBuffer)
 		{
-			delete [] m_frameBuffer;
+			_mm_free(m_frameBuffer);
 			m_frameBuffer = nullptr;
 		}
 	}

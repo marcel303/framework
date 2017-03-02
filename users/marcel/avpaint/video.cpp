@@ -181,45 +181,43 @@ void MediaPlayer::updateTexture()
 
 		//logDebug("gotVideo. t=%06dms, sx=%d, sy=%d", int(time * 1000.0), textureSx, textureSy);
 
+		if (!texture)
+		{
+			glGenTextures(1, &texture);
+		}
+		
 		if (texture)
 		{
 			const void * source = videoFrame->m_frameBuffer;
 			const int sx = videoFrame->m_width;
 			const int sy = videoFrame->m_height;
-			const GLenum format = GL_RGB;
-
-			GLuint restoreTexture;
-			glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-			GLint restoreUnpackAlignment;
-			glGetIntegerv(GL_UNPACK_ALIGNMENT, &restoreUnpackAlignment);
-			GLint restoreUnpackRowLength;
-			glGetIntegerv(GL_UNPACK_ROW_LENGTH, &restoreUnpackRowLength);
-
+			const GLenum internalFormat = GL_RGBA8;
+			const GLenum uploadFormat = GL_RGBA;
+			
 			// copy image data
 
 			glBindTexture(GL_TEXTURE_2D, texture);
-			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-			glPixelStorei(GL_UNPACK_ROW_LENGTH, sx);
 			glTexImage2D(
 				GL_TEXTURE_2D,
 				0,
-				format,
+				internalFormat,
 				sx,
 				sy,
 				0,
-				format,
+				uploadFormat,
 				GL_UNSIGNED_BYTE,
 				source);
+			checkErrorGL();
+			
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 
-			// restore previous OpenGL states
-
-			glBindTexture(GL_TEXTURE_2D, restoreTexture);
-			glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpackAlignment);
-			glPixelStorei(GL_UNPACK_ROW_LENGTH, restoreUnpackRowLength);
-		}
-		else
-		{
-			texture = createTextureFromRGB8(videoFrame->m_frameBuffer, videoFrame->m_width, videoFrame->m_height, true, true);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			
+			glBindTexture(GL_TEXTURE_2D, 0);
 		}
 	}
 }
