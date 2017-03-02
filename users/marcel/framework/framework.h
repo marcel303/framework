@@ -1221,18 +1221,19 @@ void showErrorMessage(const char * caption, const char * format, ...);
 
 void setShader_GaussianBlurH(const GLuint source, const int kernelSize, const float radius);
 void setShader_GaussianBlurV(const GLuint source, const int kernelSize, const float radius);
-void setShader_Invert(const GLuint source);
-void setShader_TresholdLumi(const GLuint source, const float lumi, const Color & failColor, const Color & passColor);
-void setShader_TresholdLumiFail(const GLuint source, const float lumi, const Color & failColor);
-void setShader_TresholdLumiPass(const GLuint source, const float lumi, const Color & passColor);
-void setShader_TresholdValue(const GLuint source, const Color & value, const Color & failColor, const Color & passColor);
-void setShader_GrayscaleLumi(const GLuint source);
-void setShader_GrayscaleWeights(const GLuint source, const Vec3 & weights);
-void setShader_Colorize(const GLuint source, const float hue);
-void setShader_HueShift(const GLuint source, const float hue);
+void setShader_Invert(const GLuint source, const float opacity);
+void setShader_TresholdLumi(const GLuint source, const float lumi, const Color & failColor, const Color & passColor, const float opacity);
+void setShader_TresholdLumiFail(const GLuint source, const float lumi, const Color & failColor, const float opacity);
+void setShader_TresholdLumiPass(const GLuint source, const float lumi, const Color & passColor, const float opacity);
+void setShader_TresholdValue(const GLuint source, const Color & value, const Color & failColor, const Color & passColor, const float opacity);
+void setShader_GrayscaleLumi(const GLuint source, const float opacity);
+void setShader_GrayscaleWeights(const GLuint source, const Vec3 & weights, const float opacity);
+void setShader_Colorize(const GLuint source, const float hue, const float opacity);
+void setShader_HueShift(const GLuint source, const float hue, const float opacity);
 void setShader_Compositie(const GLuint source1, const GLuint source2);
 void setShader_CompositiePremultiplied(const GLuint source1, const GLuint source2);
 void setShader_Premultiply(const GLuint source);
+void setShader_ColorTemperature(const GLuint source, const float temperature, const float opacity);
 
 // high quality rendering
 

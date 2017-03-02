@@ -5881,8 +5881,6 @@ void gxSetTexture(GLuint texture)
 
 // builtin shaders
 
-// todo : move these shaders to BuiltinShaders and supply shader source
-
 void setShader_GaussianBlurH(const GLuint source, const int kernelSize, const float radius)
 {
 	Shader & shader = globals.builtinShaders->gaussianBlurH;
@@ -5911,13 +5909,16 @@ void setShader_GaussianBlurV(const GLuint source, const int kernelSize, const fl
 	//shader.setBuffer("kernel", kernel);
 }
 
-void setShader_Invert(const GLuint source)
+void setShader_Invert(const GLuint source, const float opacity)
 {
 	static Shader shader("builtin-invert", "builtin-effect.vs", "builtin-invert.ps");
 	setShader(shader);
+	shader.setImmediate("opacity", opacity);
 
 	shader.setTexture("source", 0, source, true, true);
 }
+
+// todo : move these shaders to BuiltinShaders and supply shader source
 
 static void setShader_TresholdLumiEx(
 	const GLuint source,
@@ -5928,6 +5929,7 @@ static void setShader_TresholdLumiEx(
 	const Color & failColor,
 	const Color & passColor)
 {
+	//Shader & shader = globals.builtinShaders->tresholdEx;
 	static Shader shader("builtin-treshold-ex", "builtin-effect.vs", "builtin-treshold-ex.ps");
 	setShader(shader);
 
@@ -5942,6 +5944,7 @@ static const Vec4 lumiVec(.30f, .59f, .11f, 0.f);
 
 void setShader_TresholdLumi(const GLuint source, const float lumi, const Color & failColor, const Color & passColor)
 {
+	//Shader & shader = globals.builtinShaders->tresholdLumi;
 	static Shader shader("builtin-treshold-lumi", "builtin-effect.vs", "builtin-treshold-lumi.ps");
 	setShader(shader);
 
@@ -5977,6 +5980,7 @@ void setShader_TresholdLumiPass(const GLuint source, const float lumi, const Col
 
 void setShader_TresholdValue(const GLuint source, const Color & value, const Color & failColor, const Color & passColor)
 {
+	//Shader & shader = globals.builtinShaders->tresholdValue;
 	static Shader shader("builtin-treshold-value", "builtin-effect.vs", "builtin-treshold-value.ps");
 	setShader(shader);
 
@@ -5986,43 +5990,52 @@ void setShader_TresholdValue(const GLuint source, const Color & value, const Col
 	shader.setImmediate("passValue", passColor.r, passColor.g, passColor.b, passColor.a);
 }
 
-void setShader_GrayscaleLumi(const GLuint source)
+void setShader_GrayscaleLumi(const GLuint source, const float opacity)
 {
+	//Shader & shader = globals.builtinShaders->grayscaleLumi;
 	static Shader shader("builtin-grayscale-lumi", "builtin-effect.vs", "builtin-grayscale-lumi.ps");
 	setShader(shader);
+	shader.setImmediate("opacity", opacity);
 
 	shader.setTexture("source", 0, source, true, true);
 }
 
-void setShader_GrayscaleWeights(const GLuint source, const Vec3 & weights)
+void setShader_GrayscaleWeights(const GLuint source, const Vec3 & weights, const float opacity)
 {
+	//Shader & shader = globals.builtinShaders->grayscaleWeights;
 	static Shader shader("builtin-grayscale-weights", "builtin-effect.vs", "builtin-grayscale-weights.ps");
 	setShader(shader);
 
 	shader.setTexture("source", 0, source, true, true);
 	shader.setImmediate("weights", weights[0], weights[1], weights[2]);
+	shader.setImmediate("opacity", opacity);
 }
 
-void setShader_Colorize(const GLuint source, const float hue)
+void setShader_Colorize(const GLuint source, const float hue, const float opacity)
 {
+	//Shader & shader = globals.builtinShaders->hueAssign;
 	static Shader shader("builtin-hue-assign", "builtin-effect.vs", "builtin-hue-assign.ps");
 	setShader(shader);
 
 	shader.setTexture("source", 0, source, true, true);
 	shader.setImmediate("hue", hue);
+	shader.setImmediate("opacity", opacity);
 }
 
-void setShader_HueShift(const GLuint source, const float hue)
+void setShader_HueShift(const GLuint source, const float hue, const float opacity)
 {
+	//Shader & shader = globals.builtinShaders->hueShift;
 	static Shader shader("builtin-hue-shift", "builtin-effect.vs", "builtin-hue-shift.ps");
 	setShader(shader);
 
 	shader.setTexture("source", 0, source, true, true);
 	shader.setImmediate("hueShift", hue);
+	shader.setImmediate("opacity", opacity);
 }
 
 void setShader_Compositie(const GLuint source1, const GLuint source2)
 {
+	//Shader & shader = globals.builtinShaders->compositeAlpha;
 	Shader shader("builtin-composite-alpha");
 	setShader(shader);
 
@@ -6032,6 +6045,7 @@ void setShader_Compositie(const GLuint source1, const GLuint source2)
 
 void setShader_CompositiePremultiplied(const GLuint source1, const GLuint source2)
 {
+	//Shader & shader = globals.builtinShaders->compositeAlphaPremultiplied;
 	Shader shader("builtin-composite-alpha-premultiplied");
 	setShader(shader);
 
@@ -6041,10 +6055,21 @@ void setShader_CompositiePremultiplied(const GLuint source1, const GLuint source
 
 void setShader_Premultiply(const GLuint source)
 {
+	//Shader & shader = globals.builtinShaders->premultiplyAlpha;
 	Shader shader("builtin-premultiply-alpha");
 	setShader(shader);
 
 	shader.setTexture("source", 0, source, true, true);
+}
+
+void setShader_ColorTemperature(const GLuint source, const float temperature, const float opacity)
+{
+	Shader & shader = globals.builtinShaders->colorTemperature;
+	setShader(shader);
+	
+	shader.setTexture("source", 0, source);
+	shader.setImmediate("temperature", temperature);
+	shader.setImmediate("opacity", opacity);
 }
 
 //

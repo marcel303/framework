@@ -530,6 +530,7 @@ public:
 	
 	Shader gaussianBlurH;
 	Shader gaussianBlurV;
+	Shader colorTemperature;
 	
 	Shader hqLine;
 	Shader hqFilledTriangle;
