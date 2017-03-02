@@ -5885,7 +5885,7 @@ void gxSetTexture(GLuint texture)
 
 void setShader_GaussianBlurH(const GLuint source, const int kernelSize, const float radius)
 {
-	static Shader shader("engine/builtin-gaussian-v");
+	Shader & shader = globals.builtinShaders->gaussianBlurH;
 	setShader(shader);
 
 	// todo : calculate seperable gaussian blur kernel weights
@@ -5899,7 +5899,7 @@ void setShader_GaussianBlurH(const GLuint source, const int kernelSize, const fl
 
 void setShader_GaussianBlurV(const GLuint source, const int kernelSize, const float radius)
 {
-	static Shader shader("engine/builtin-gaussian-v");
+	Shader & shader = globals.builtinShaders->gaussianBlurV;
 	setShader(shader);
 	
 	// todo : calculate seperable gaussian blur kernel weights

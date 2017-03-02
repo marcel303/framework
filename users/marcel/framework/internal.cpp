@@ -1862,7 +1862,9 @@ UiCacheElem & UiCache::findOrCreate(const char * filename)
 //
 
 BuiltinShaders::BuiltinShaders()
-	: hqLine("engine/builtin-hq-line")
+	: gaussianBlurH("engine/builtin-gaussian-h")
+	, gaussianBlurV("engine/builtin-gaussian-v")
+	, hqLine("engine/builtin-hq-line")
 	, hqFilledTriangle("engine/builtin-hq-filled-triangle")
 	, hqFilledCircle("engine/builtin-hq-filled-circle")
 	, hqFilledRect("engine/builtin-hq-filled-rect")

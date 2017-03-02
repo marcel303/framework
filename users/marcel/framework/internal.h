@@ -527,7 +527,10 @@ class BuiltinShaders
 {
 public:
 	BuiltinShaders();
-
+	
+	Shader gaussianBlurH;
+	Shader gaussianBlurV;
+	
 	Shader hqLine;
 	Shader hqFilledTriangle;
 	Shader hqFilledCircle;
