@@ -95,12 +95,13 @@ static void applyMask(GLuint a, GLuint b, GLuint mask)
 	clearShader();
 }
 
-static void applyFsfx(Surface & surface, const char * name, const float param1 = 0.f, const float param2 = 0.f, const float param3 = 0.f, const float param4 = 0.f)
+static void applyFsfx(Surface & surface, const char * name, const float strength = 1.f, const float param1 = 0.f, const float param2 = 0.f, const float param3 = 0.f, const float param4 = 0.f)
 {
 	Shader shader(name, "fsfx/fsfx.vs", name);
 	setShader(shader);
 	{
-		shader.setImmediate("params", param1, param2, param3, param4);
+		shader.setImmediate("params1", strength, 0.f, 0.f, 0.f);
+		shader.setImmediate("params2", param1, param2, param3, param4);
 		shader.setTexture("colormap", 0, surface.getTexture());
 		surface.postprocess();
 	}
@@ -144,6 +145,7 @@ int main(int argc, char * argv[])
 		float blurStrength = 0.f;
 		float desiredBlurStrength = 0.f;
 		FollowValue barAngle(0.f, .9f);
+		FollowValue invertValue(0.f, .9f);
 		
 		GrainsEffect grainsEffect;
 		int nextGrainIndex = 0;
@@ -286,8 +288,12 @@ int main(int argc, char * argv[])
 			
 			if (keyboard.wentDown(SDLK_r))
 				barAngle.targetValue += 45.f;
+			if (keyboard.wentDown(SDLK_i))
+				invertValue.targetValue += .2f;
 			
 			barAngle.tick(dt);
+			
+			invertValue.tick(dt);
 			
 			pushSurface(layerAlphas[activeLayer]);
 			{
@@ -395,7 +401,7 @@ int main(int argc, char * argv[])
 				popSurface();
 			#endif
 			
-				applyFsfx(surface, "fsfx/invert.ps");
+				applyFsfx(surface, "fsfx/invert.ps", (std::cosf(invertValue.value * Calc::m2PI) + 1.f) / 2.f);
 				
 				setBlend(BLEND_OPAQUE);
 				applyMask(surface.getTexture(), layerColors[0], mask.getTexture());

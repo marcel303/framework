@@ -3,9 +3,10 @@ include fsfx/constants.inc
 
 void main()
 {
-	vec4 color = texture(colormap, texcoord);
+	vec4 colorSrc = texture(colormap, texcoord);
+	vec4 colorDst = vec4(vec3(1.0) - colorSrc.xyz, colorSrc.w);
 
-	color.rgb = vec3(1.0) - color.rgb;
+	vec4 color = mix(colorSrc, colorDst, strength);
 
 	shader_fragColor = color;
 }
