@@ -1076,6 +1076,8 @@ void setDrawRect(int x, int y, int sx, int sy);
 void clearDrawRect();
 
 void setBlend(BLEND_MODE blendMode);
+void pushBlend(BLEND_MODE blendMode);
+void popBlend();
 void setColorMode(COLOR_MODE colorMode);
 void setColor(const Color & color);
 void setColor(int r, int g, int b, int a = 255, int rgbMul = 255);

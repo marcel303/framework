@@ -40,6 +40,7 @@ public:
 	Globals()
 	{
 		memset(this, 0, sizeof(Globals));
+		blendMode = BLEND_ALPHA;
 		colorMode = COLOR_MUL;
 		transform = TRANSFORM_SCREEN;
 		transformScreen.MakeIdentity();
@@ -58,6 +59,7 @@ public:
 #endif
 	FT_Library freeType;
 	int resourceVersion;
+	BLEND_MODE blendMode;
 	COLOR_MODE colorMode;
 	Color color;
 	Gradient gradient;
@@ -539,6 +541,8 @@ public:
 	Shader hqStrokeTriangle;
 	Shader hqStrokedCircle;
 	Shader hqStrokedRect;
+	
+	Shader invert;
 };
 
 //

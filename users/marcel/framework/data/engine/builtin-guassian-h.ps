@@ -4,21 +4,42 @@ include engine/ShaderPS.txt
 
 shader_in vec2 texcoord;
 uniform sampler2D source;
-uniform int kernelSize;
+uniform float kernelSize;
 uniform float radius;
 
-const float weights[5] = float[] (0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216);
+layout (std140) uniform kernel
+{
+	vec4 weights[16];
+};
+
+// todo : optimize getWeight function
+
+float getWeight(int i)
+{
+	vec4 v = weights[i / 4];
+
+	i = i & 3;
+
+	if (i == 0)
+		return v.x;
+	else if (i == 1)
+		return v.y;
+	else if (i == 2)
+		return v.z;
+	else
+		return v.w;
+}
 
 void main()
 {
-    float texScale = radius / textureSize(source, 0).x;
+    float texScale = radius / textureSize(source, 0).x / (kernelSize - 1.0);
 	
-	vec4 result = texture(source, texcoord) * weights[0];
+	vec4 result = texture(source, texcoord) * getWeight(0);
 	
-	for (int i = 1; i < 5; ++i)
+	for (int i = 1; i < kernelSize; ++i)
 	{
-		result += texture(source, texcoord + vec2(texScale * i, 0.0)) * weights[i];
-		result += texture(source, texcoord - vec2(texScale * i, 0.0)) * weights[i];
+		result += texture(source, texcoord + vec2(texScale * i, 0.0)) * getWeight(i);
+		result += texture(source, texcoord - vec2(texScale * i, 0.0)) * getWeight(i);
 	}
 	
     shader_fragColor = result;

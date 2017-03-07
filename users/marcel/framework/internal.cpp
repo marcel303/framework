@@ -1872,5 +1872,6 @@ BuiltinShaders::BuiltinShaders()
 	, hqStrokeTriangle("engine/builtin-hq-stroked-triangle")
 	, hqStrokedCircle("engine/builtin-hq-stroked-circle")
 	, hqStrokedRect("engine/builtin-hq-stroked-rect")
+	, invert("engine/builtin-invert")
 {
 }

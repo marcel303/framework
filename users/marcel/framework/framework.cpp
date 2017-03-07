@@ -4254,7 +4254,7 @@ void clearCaches(int caches)
 // -----
 
 static const int kMaxSurfaceStackSize = 32;
-static Surface * surfaceStack[kMaxSurfaceStackSize];
+static Surface * surfaceStack[kMaxSurfaceStackSize] = { };
 static int surfaceStackSize = 0;
 
 void setTransform(TRANSFORM transform)
@@ -4430,6 +4430,8 @@ void clearDrawRect()
 
 void setBlend(BLEND_MODE blendMode)
 {
+	globals.blendMode = blendMode;
+	
 	switch (blendMode)
 	{
 	case BLEND_OPAQUE:
@@ -4490,6 +4492,26 @@ void setBlend(BLEND_MODE blendMode)
 		fassert(false);
 		break;
 	}
+}
+
+static const int kMaxBlendStackSize = 32;
+static BLEND_MODE blendStack[kMaxBlendStackSize] = { BLEND_ALPHA };
+static int blendStackSize = 0;
+
+void pushBlend(BLEND_MODE blendMode)
+{
+	fassert(blendStackSize < kMaxBlendStackSize);
+	blendStack[blendStackSize++] = globals.blendMode;
+	setBlend(blendMode);
+}
+
+void popBlend()
+{
+	fassert(blendStackSize > 0);
+	--blendStackSize;
+	const BLEND_MODE blendMode = blendStack[blendStackSize];
+	blendStack[blendStackSize] = BLEND_ALPHA;
+	setBlend(blendMode);
 }
 
 void setColorMode(COLOR_MODE colorMode)
@@ -5881,18 +5903,45 @@ void gxSetTexture(GLuint texture)
 
 // builtin shaders
 
+static void makeGaussianKernel(const int kernelSize, ShaderBuffer & kernel)
+{
+	const float s = 1.632;
+	//const float s = 1.8355;
+	
+	auto dist = [](const float x) { return .5f * erfcf(-x); };
+	
+	float * values = (float*)alloca(sizeof(float) * kernelSize);
+	
+	for (int i = 0; i < kernelSize; ++i)
+	{
+		const float x1 = (i - .5f) / float(kernelSize - 1.f);
+		const float x2 = (i + .5f) / float(kernelSize - 1.f);
+		
+		const float y1 = dist(x1 * s);
+		const float y2 = dist(x2 * s);
+		
+		const float dy = y2 - y1;
+		
+		//printf("%02.2f - %02.2f : %02.4f\n", x1, x2, dy);
+		
+		values[i] = dy;
+	}
+	
+	kernel.setData(values, sizeof(float) * kernelSize);
+}
+
 void setShader_GaussianBlurH(const GLuint source, const int kernelSize, const float radius)
 {
 	Shader & shader = globals.builtinShaders->gaussianBlurH;
 	setShader(shader);
 
-	// todo : calculate seperable gaussian blur kernel weights
-	ShaderBuffer kernel;
-
+	static ShaderBuffer kernel;
+	makeGaussianKernel(kernelSize, kernel);
+	
 	shader.setTexture("source", 0, source, true, true);
 	shader.setImmediate("kernelSize", kernelSize);
 	shader.setImmediate("radius", radius);
-	//shader.setBuffer("kernel", kernel);
+	shader.setBuffer("kernel", kernel);
 }
 
 void setShader_GaussianBlurV(const GLuint source, const int kernelSize, const float radius)
@@ -5900,21 +5949,21 @@ void setShader_GaussianBlurV(const GLuint source, const int kernelSize, const fl
 	Shader & shader = globals.builtinShaders->gaussianBlurV;
 	setShader(shader);
 	
-	// todo : calculate seperable gaussian blur kernel weights
-	ShaderBuffer kernel;
+	static ShaderBuffer kernel;
+	makeGaussianKernel(kernelSize, kernel);
 
 	shader.setTexture("source", 0, source, true, true);
 	shader.setImmediate("kernelSize", kernelSize);
 	shader.setImmediate("radius", radius);
-	//shader.setBuffer("kernel", kernel);
+	shader.setBuffer("kernel", kernel);
 }
 
 void setShader_Invert(const GLuint source, const float opacity)
 {
-	static Shader shader("builtin-invert", "builtin-effect.vs", "builtin-invert.ps");
+	Shader & shader = globals.builtinShaders->invert;
 	setShader(shader);
+	
 	shader.setImmediate("opacity", opacity);
-
 	shader.setTexture("source", 0, source, true, true);
 }
 
