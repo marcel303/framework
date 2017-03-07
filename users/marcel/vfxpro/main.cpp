@@ -1824,6 +1824,9 @@ int main(int argc, char * argv[])
 						}
 						break;
 						*/
+					case kOscMessageType_AudioBegin:
+					case kOscMessageType_AudioEnd:
+						break;
 
 					default:
 						fassert(false);
