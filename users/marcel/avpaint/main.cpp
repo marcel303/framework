@@ -113,6 +113,64 @@ static void applyFsfx(Surface & surface, const char * name, const float strength
 	clearShader();
 }
 
+struct VideoEffect
+{
+	std::string filename;
+	MediaPlayer * mediaPlayer;
+	MediaPlayer * mediaPlayer2;
+	
+	VideoEffect(const char * _filename)
+		: filename()
+		, mediaPlayer(nullptr)
+		, mediaPlayer2(nullptr)
+	{
+		filename = _filename;
+	}
+	
+	void tick(const float dt)
+	{
+		if (mediaPlayer2 == nullptr)
+		{
+			if (mediaPlayer == nullptr || mediaPlayer->presentTime >= 1.0)
+			{
+				mediaPlayer2 = new MediaPlayer();
+				mediaPlayer2->openAsync(filename.c_str(), false);
+			}
+		}
+		
+		if (mediaPlayer && mediaPlayer->context->hasPresentedLastFrame)
+		{
+			delete mediaPlayer;
+			mediaPlayer = nullptr;
+		}
+		
+		if (mediaPlayer == nullptr)
+		{
+			mediaPlayer = mediaPlayer2;
+			mediaPlayer2 = nullptr;
+		}
+		
+		if (mediaPlayer)
+		{
+			mediaPlayer->tick(mediaPlayer->context);
+			
+			if (mediaPlayer->context->hasBegun)
+				mediaPlayer->presentTime += dt;
+			else
+				logDebug("??");
+		}
+		
+		if (mediaPlayer2)
+		{
+			mediaPlayer2->tick(mediaPlayer2->context);
+		}
+	}
+	
+	void draw()
+	{
+	}
+};
+
 int main(int argc, char * argv[])
 {
 #if defined(DEBUG)
@@ -147,26 +205,43 @@ int main(int argc, char * argv[])
 			layerAlphas[i]->clear();
 		}
 		
-		MediaPlayer * mediaPlayers[NUM_LAYERS] = { };
+	#if 0
 		const char * videoFilenames[NUM_LAYERS] =
 		{
-			"video1.mpg",
+			"video5.mpg",
+			"video5.mpg",
+			"video5.mpg",
+		};
+	#elif 0
+		const char * videoFilenames[NUM_LAYERS] =
+		{
+			"video4.mp4",
+			"video4.mp4",
+			"video4.mp4",
+		};
+	#else
+		const char * videoFilenames[NUM_LAYERS] =
+		{
+			//"video1.mpg",
+			"video5.mpg",
 			"video2.mpg",
 			"video4.mp4",
 		};
+	#endif
+		
+		VideoEffect * videoEffects[NUM_LAYERS] = { };
 		
 		for (int i = 0; i < NUM_LAYERS; ++i)
 		{
-			mediaPlayers[i] = new MediaPlayer();
+			videoEffects[i] = new VideoEffect(videoFilenames[i]);
 			
-			mediaPlayers[i]->openAsync(videoFilenames[i], false);
+			videoEffects[i]->tick(0.f);
 		}
 		
 		Surface mask(GFX_SX, GFX_SY, false);
 		
 		float mouseDownTime = 0.f;
 		int activeLayer = 0;
-		float presentTime = 0.f;
 		float blurStrength = 0.f;
 		float desiredBlurStrength = 0.f;
 		FollowValue barAngle(0.f, .9f);
@@ -204,8 +279,6 @@ int main(int argc, char * argv[])
 				desiredBlurStrength = 1.f - desiredBlurStrength;
 			
 			const float dt = framework.timeStep;
-			
-			presentTime += dt;
 			
 			blurStrength = Calc::Lerp(desiredBlurStrength, blurStrength, std::powf(.5f, dt));
 			
@@ -279,10 +352,7 @@ int main(int argc, char * argv[])
 			
 			for (int i = 0; i < NUM_LAYERS; ++i)
 			{
-				mediaPlayers[i]->tick(mediaPlayers[i]->context);
-				
-				if (mediaPlayers[i]->context->hasBegun)
-					mediaPlayers[i]->presentTime = presentTime * (i == 0 ? .5f : 1.f);
+				videoEffects[i]->tick(dt * (i == 0 ? 1.f : 1.f));
 			}
 			
 			if (mouse.isDown(BUTTON_LEFT))
@@ -345,7 +415,7 @@ int main(int argc, char * argv[])
 				
 				for (int i = 0; i < NUM_LAYERS; ++i)
 				{
-					layerVideos[i] = mediaPlayers[i]->getTexture();
+					layerVideos[i] = videoEffects[i]->mediaPlayer->getTexture();
 					
 					pushSurface(layerColors[i]);
 					{
@@ -553,11 +623,15 @@ int main(int argc, char * argv[])
 							{
 								gxTranslatef(GFX_SX/2, GFX_SY/2, 0.f);
 								setColor(255, 255, 255, g_leapState.hands[h].fingers[f].position[1]);
-								fillCircle(
-									g_leapState.hands[h].fingers[f].position[0],
-									g_leapState.hands[h].fingers[f].position[2],
-									5.f,
-									20);
+								hqBegin(HQ_STROKED_CIRCLES);
+								{
+									hqStrokeCircle(
+										g_leapState.hands[h].fingers[f].position[0],
+										g_leapState.hands[h].fingers[f].position[2],
+										5.f,
+										6.f);
+								}
+								hqEnd();
 							}
 							gxPopMatrix();
 						}
@@ -572,8 +646,8 @@ int main(int argc, char * argv[])
 		
 		for (int i = 0; i < NUM_LAYERS; ++i)
 		{
-			delete mediaPlayers[i];
-			mediaPlayers[i] = nullptr;
+			delete videoEffects[i];
+			videoEffects[i] = nullptr;
 		}
 		
 		for (int i = 0; i < NUM_LAYERS; ++i)
