@@ -73,7 +73,7 @@ namespace MP
 			else if (enableAudioStream)
 			{
 				// Initialize audio stream/context.
-				m_audioContext = new AudioContext;
+				m_audioContext = new AudioContext();
 				if (!m_audioContext->Initialize(this, audioStreamIndex))
 					result &= false;
 			}
@@ -88,7 +88,7 @@ namespace MP
 			else if (enableVideoStream)
 			{
 				// Initialize video stream/context.
-				m_videoContext = new VideoContext;
+				m_videoContext = new VideoContext();
 				if (!m_videoContext->Initialize(this, videoStreamIndex, outputYuv))
 					result &= false;
 			}
@@ -102,15 +102,13 @@ namespace MP
 		Assert(m_begun == true);
 
 		bool result = true;
-
-		m_begun = false;
-
+		
 		// Destroy audio context.
 		if (m_audioContext)
 		{
 			Debug::Print("Destroying audio context.");
 
-			m_audioContext->Destroy();
+			result &= m_audioContext->Destroy();
 			delete m_audioContext;
 			m_audioContext = nullptr;
 		}
@@ -120,7 +118,7 @@ namespace MP
 		{
 			Debug::Print("Destroying video context.");
 
-			m_videoContext->Destroy();
+			result &= m_videoContext->Destroy();
 			delete m_videoContext;
 			m_videoContext = nullptr;
 		}
@@ -133,7 +131,13 @@ namespace MP
 			avformat_close_input(&m_formatContext);
 			m_formatContext = nullptr;
 		}
-
+		
+		m_filename.clear();
+		m_eof = false;
+		m_time = 0.0;
+		
+		m_begun = false;
+		
 		return result;
 	}
 
