@@ -23,6 +23,7 @@ namespace MP
 		AVFrame * m_frame;
 		uint8_t * m_frameBuffer;
 		double m_time;
+		bool m_isFirstFrame;
 
 		bool m_initialized;
 	};

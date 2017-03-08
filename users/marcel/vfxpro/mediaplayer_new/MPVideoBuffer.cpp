@@ -17,6 +17,7 @@ namespace MP
 		, m_frame(nullptr)
 		, m_frameBuffer(nullptr)
 		, m_time(0.0)
+		, m_isFirstFrame(false)
 		, m_initialized(false)
 	{
 	}
@@ -201,9 +202,9 @@ namespace MP
 
 		int skipCount = 0;
 
-		while (!m_consumeList.empty() && m_consumeList.front()->m_time < time)
+		while (!m_consumeList.empty() && (m_consumeList.front()->m_time < time || m_consumeList.front()->m_isFirstFrame))
 		{
-			if (m_currentFrame != nullptr)
+			if (m_currentFrame != nullptr && m_currentFrame != m_consumeList.front())
 			{
 				m_freeList.push_back(m_currentFrame);
 				m_currentFrame = nullptr;

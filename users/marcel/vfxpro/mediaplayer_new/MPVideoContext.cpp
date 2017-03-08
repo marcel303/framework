@@ -358,9 +358,9 @@ namespace MP
 
 				for (int x = 0; x < sx; ++x, dstRGBA += 4)
 				{
-					const int y = srcY[x];
-					const int u = srcU[x >> 1];
-					const int v = srcV[x >> 1];
+					const uint8_t y = srcY[x];
+					const uint8_t u = srcU[x >> 1];
+					const uint8_t v = srcV[x >> 1];
 
 					dstRGBA[0] = y;
 					dstRGBA[1] = u;
@@ -386,8 +386,9 @@ namespace MP
 
 			m_time += frameDelay;
 		}
-
+		
 		out_frame->m_time = m_time;
+		out_frame->m_isFirstFrame = (m_frameCount == 0);
 
 		++m_frameCount;
 
