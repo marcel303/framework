@@ -8,6 +8,7 @@ XLeapState g_leapState;
 
 LeapListener::LeapListener()
 	: mutex(nullptr)
+	, shadowState()
 {
 	mutex = SDL_CreateMutex();
 }
@@ -29,72 +30,76 @@ void LeapListener::tick()
 
 void LeapListener::onFrame(const Leap::Controller & controller)
 {
-	SDL_LockMutex(mutex);
+	XLeapState leapState = shadowState;
+	
+	auto frame = controller.frame(0);
+	auto hands = frame.hands();
+	
+	// deallocate unused hands
+	
+	for (int i = 0; i < 2; ++i)
 	{
-		XLeapState & leapState = shadowState;
+		bool used = false;
 		
-		auto frame = controller.frame(0);
-		auto hands = frame.hands();
+		for (auto hand = hands.begin(); hand != hands.end(); ++hand)
+			if (leapState.hands[i].id == (*hand).id())
+				used = true;
 		
-		// deallocate unused hands
+		if (used == false)
+		{
+			leapState.hands[i] = XLeapState::Hand();
+		}
+	}
+	
+	// update hands, allocate as necessary
+	
+	for (auto hand = hands.begin(); hand != hands.end(); ++hand)
+	{
+		const auto & h = *hand;
+		
+		XLeapState::Hand * usedHand = nullptr;
+		XLeapState::Hand * freeHand = nullptr;
 		
 		for (int i = 0; i < 2; ++i)
 		{
-			bool used = false;
-			
-			for (auto hand = hands.begin(); hand != hands.end(); ++hand)
-				if (leapState.hands[i].id == (*hand).id())
-					used = true;
-			
-			if (!used)
-				leapState.hands[i] = XLeapState::Hand();
+			if (h.id() == leapState.hands[i].id)
+				usedHand = &leapState.hands[i];
+			if (freeHand == nullptr && leapState.hands[i].active == false)
+				freeHand = &leapState.hands[i];
 		}
 		
-		// update hands, allocate as necessary
+		if (usedHand == nullptr)
+			usedHand = freeHand;
 		
-		for (auto hand = hands.begin(); hand != hands.end(); ++hand)
+		if (usedHand != nullptr)
 		{
-			XLeapState::Hand * usedHand = nullptr;
-			XLeapState::Hand * freeHand = nullptr;
+			usedHand->active = true;
+			usedHand->id = h.id();
 			
-			for (int i = 0; i < 2; ++i)
+			for (int i = 0; i < 3; ++i)
 			{
-				if ((*hand).id() == leapState.hands[i].id)
-					usedHand = &leapState.hands[i];
-				if (freeHand == nullptr && leapState.hands[i].active == false)
-					freeHand = &leapState.hands[i];
+				usedHand->position[i] = h.palmPosition()[i];
+				usedHand->velocity[i] = h.palmVelocity()[i];
 			}
 			
-			if (usedHand == nullptr)
-				usedHand = freeHand;
+			const auto fingers = h.fingers();
 			
-			if (usedHand != nullptr)
+			for (auto finger = fingers.begin(); finger != fingers.end(); ++finger)
 			{
-				auto & h = *hand;
-				
-				usedHand->active = true;
-				usedHand->id = h.id();
+				const auto & f = *finger;
 				
 				for (int i = 0; i < 3; ++i)
 				{
-					usedHand->position[i] = h.palmPosition()[i];
-					usedHand->velocity[i] = h.palmVelocity()[i];
-				}
-				
-				auto fingers = h.fingers();
-				
-				for (auto finger = fingers.begin(); finger != fingers.end(); ++finger)
-				{
-					auto & f = *finger;
-					
-					for (int i = 0; i < 3; ++i)
-					{
-						usedHand->fingers[f.type()].position[i] = f.tipPosition()[i];
-						usedHand->fingers[f.type()].velocity[i] = f.tipVelocity()[i];
-					}
+					usedHand->fingers[f.type()].position[i] = f.tipPosition()[i];
+					usedHand->fingers[f.type()].velocity[i] = f.tipVelocity()[i];
 				}
 			}
 		}
+	}
+	
+	SDL_LockMutex(mutex);
+	{
+		shadowState = leapState;
 	}
 	SDL_UnlockMutex(mutex);
 }

@@ -26,6 +26,7 @@ struct XLeapState
 	struct Hand
 	{
 		bool active;
+		
 		int id;
 		Vec3 position;
 		Vec3 velocity;
@@ -35,6 +36,7 @@ struct XLeapState
 			: active(false)
 			, id(-1)
 			, position(0.f, 0.f, 0.f)
+			, velocity(0.f, 0.f, 0.f)
 			, fingers()
 		{
 		}
@@ -53,7 +55,9 @@ public:
 	~LeapListener();
 
 	void tick();
-	virtual void onFrame(const Leap::Controller & controller);
+	
+	// Leap::Listener implementation
+	virtual void onFrame(const Leap::Controller & controller) override;
 };
 
 extern XLeapState g_leapState;
