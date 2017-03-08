@@ -151,6 +151,8 @@ void MediaPlayer::seek(const double time)
 {
 	SDL_LockMutex(context->mpTickMutex);
 	{
+		// todo : should only be allowed from mp thread. else, how do we know context has actually begun?
+		
 		context->mpContext.SeekToTime(time);
 	}
 	SDL_UnlockMutex(context->mpTickMutex);

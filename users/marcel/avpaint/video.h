@@ -39,6 +39,12 @@ struct MediaPlayer : public AudioStream
 
 		struct OpenParams
 		{
+			OpenParams()
+				: filename()
+				, yuv(false)
+			{
+			}
+			
 			std::string filename;
 			bool yuv;
 		};
@@ -74,7 +80,7 @@ struct MediaPlayer : public AudioStream
 		, texture(0)
 		, textureSx(0)
 		, textureSy(0)
-		, presentTime(-1.0)
+		, presentTime(-0.0001)
 		, audioChannelCount(-1)
 		, audioSampleRate(-1)
 		// threading related
