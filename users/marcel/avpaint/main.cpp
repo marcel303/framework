@@ -3,6 +3,7 @@
 #include "framework.h"
 #include "leapstate.h"
 #include "StringEx.h"
+#include "Traveller.h"
 #include "video.h"
 
 #if ENABLE_LEAPMOTION
@@ -113,18 +114,27 @@ static void applyFsfx(Surface & surface, const char * name, const float strength
 	clearShader();
 }
 
-struct VideoEffect
+struct VideoLoop
 {
 	std::string filename;
 	MediaPlayer * mediaPlayer;
 	MediaPlayer * mediaPlayer2;
 	
-	VideoEffect(const char * _filename)
+	VideoLoop(const char * _filename)
 		: filename()
 		, mediaPlayer(nullptr)
 		, mediaPlayer2(nullptr)
 	{
 		filename = _filename;
+	}
+	
+	~VideoLoop()
+	{
+		delete mediaPlayer;
+		mediaPlayer = nullptr;
+		
+		delete mediaPlayer2;
+		mediaPlayer2 = nullptr;
 	}
 	
 	void tick(const float dt)
@@ -156,8 +166,8 @@ struct VideoEffect
 			
 			if (mediaPlayer->context->hasBegun)
 				mediaPlayer->presentTime += dt;
-			else
-				logDebug("??");
+			//else
+			//	logDebug("??");
 		}
 		
 		if (mediaPlayer2)
@@ -166,8 +176,98 @@ struct VideoEffect
 		}
 	}
 	
-	void draw()
+	GLuint getTexture() const
 	{
+		return mediaPlayer->getTexture();
+	}
+};
+
+struct VideoEffect
+{
+	VideoLoop * currVideoLoop;
+	VideoLoop * nextVideoLoop;
+	Surface * surface;
+	
+	VideoEffect(const char * currFilename, const char * nextFilename)
+		: currVideoLoop(nullptr)
+		, nextVideoLoop(nullptr)
+		, surface(nullptr)
+	{
+		currVideoLoop = new VideoLoop(currFilename);
+		nextVideoLoop = new VideoLoop(nextFilename);
+	}
+	
+	~VideoEffect()
+	{
+		delete currVideoLoop;
+		currVideoLoop = nullptr;
+		
+		delete nextVideoLoop;
+		nextVideoLoop = nullptr;
+		
+		delete surface;
+		surface = nullptr;
+	}
+	
+	void switchVideoLoop(const char * nextFilename)
+	{
+		delete currVideoLoop;
+		currVideoLoop = nullptr;
+		
+		delete surface;
+		surface = nullptr;
+		
+		currVideoLoop = nextVideoLoop;
+		nextVideoLoop = nullptr;
+		
+		nextVideoLoop = new VideoLoop(nextFilename);
+	}
+	
+	void tick(const float dt)
+	{
+		currVideoLoop->tick(dt);
+		nextVideoLoop->tick(0.f);
+		
+		int sx;
+		int sy;
+		
+		if (currVideoLoop->mediaPlayer->getVideoProperties(sx, sy))
+		{
+			if (surface == nullptr)
+			{
+				surface = new Surface(sx, sy, true);
+				surface->clear();
+			}
+			
+			if (surface)
+			{
+				Shader shader("video-fade");
+				setShader(shader);
+				{
+					//const float opacity = 1.f - std::powf(.1f, dt);
+					const float opacity = 1.f;
+					shader.setImmediate("opacity", opacity);
+					shader.setTexture("source", 0, currVideoLoop->getTexture());
+					shader.setTexture("colormap", 1, surface->getTexture());
+					shader.setTexture("ditherTexture", 2, framework.ditherTexture);
+					setBlend(BLEND_OPAQUE);
+					surface->postprocess();
+					setBlend(BLEND_ALPHA);
+				}
+				clearShader();
+				
+				setBlend(BLEND_OPAQUE);
+				const float luminanceStrength = (-std::cosf(framework.time / 4.567f) + 1.f) / 2.f;
+				applyFsfx(*surface, "fsfx/luminance.ps", luminanceStrength);
+				//applyFsfx(*surface, "fsfx/godrays.ps");
+				setBlend(BLEND_ALPHA);
+			}
+		}
+	}
+	
+	GLuint getTexture() const
+	{
+		return surface ? surface->getTexture() : 0;
 	}
 };
 
@@ -187,7 +287,7 @@ int main(int argc, char * argv[])
 		Leap::Controller leapController;
 		leapController.setPolicy(Leap::Controller::POLICY_BACKGROUND_FRAMES);
 
-		LeapListener * leapListener = new LeapListener;
+		LeapListener * leapListener = new LeapListener();
 		leapController.addListener(*leapListener);
 	#endif
 
@@ -223,20 +323,23 @@ int main(int argc, char * argv[])
 		const char * videoFilenames[NUM_LAYERS] =
 		{
 			//"video1.mpg",
-			"video5.mpg",
+			"video6.mpg",
 			"video2.mpg",
 			"video4.mp4",
 		};
 	#endif
 		
-		VideoEffect * videoEffects[NUM_LAYERS] = { };
+		VideoLoop * videoLoops[NUM_LAYERS] = { };
 		
 		for (int i = 0; i < NUM_LAYERS; ++i)
 		{
-			videoEffects[i] = new VideoEffect(videoFilenames[i]);
+			videoLoops[i] = new VideoLoop(videoFilenames[i]);
 			
-			videoEffects[i]->tick(0.f);
+			videoLoops[i]->tick(0.f);
 		}
+		
+		VideoEffect * videoEffect1 = new VideoEffect("video6.mpg", "video6.mpg");
+		VideoEffect * videoEffect2 = new VideoEffect("video1.mpg", "video1.mpg");
 		
 		Surface mask(GFX_SX, GFX_SY, false);
 		
@@ -244,6 +347,8 @@ int main(int argc, char * argv[])
 		int activeLayer = 0;
 		float blurStrength = 0.f;
 		float desiredBlurStrength = 0.f;
+		bool showVideoEffects = true;
+		bool showGrooopCircles = true;
 		FollowValue barAngle(0.f, .9f);
 		FollowValue invertValue(0.f, .9f);
 		
@@ -278,6 +383,29 @@ int main(int argc, char * argv[])
 			if (keyboard.wentDown(SDLK_b))
 				desiredBlurStrength = 1.f - desiredBlurStrength;
 			
+			if (keyboard.wentDown(SDLK_e))
+				showVideoEffects = !showVideoEffects;
+			if (keyboard.wentDown(SDLK_c))
+				showGrooopCircles = !showGrooopCircles;
+			
+			if (keyboard.wentDown(SDLK_n))
+			{
+				{
+					const char * filename = videoFilenames[rand() % NUM_LAYERS];
+					videoEffect1->switchVideoLoop(filename);
+				}
+				
+				{
+					const int numSegments = 12;
+					const int segmentIndex = rand() % numSegments;
+					
+					char filename[64];
+					sprintf_s(filename, sizeof(filename), "video-chunks/001.%03d.mp4", segmentIndex);
+					
+					videoEffect2->switchVideoLoop(filename);
+				}
+			}
+			
 			const float dt = framework.timeStep;
 			
 			blurStrength = Calc::Lerp(desiredBlurStrength, blurStrength, std::powf(.5f, dt));
@@ -286,23 +414,133 @@ int main(int argc, char * argv[])
 			
 			for (int i = 0; i < NUM_LAYERS; ++i)
 			{
-				pushSurface(layerAlphas[i]);
+				if (i == 0)
 				{
-					if (i == 0)
+					pushSurface(layerAlphas[i]);
 					{
 						setBlend(BLEND_OPAQUE);
 						setColor(colorWhite);
 						drawRect(0, 0, GFX_SX, GFX_SY);
 						setBlend(BLEND_ALPHA);
 					}
-					else
+					popSurface();
+				}
+				
+				{
+					if (i != 0)
 					{
-						setBlend(BLEND_SUBTRACT);
-						setColor(1, 1, 1, 255);
-						drawRect(0, 0, GFX_SX, GFX_SY);
-						setBlend(BLEND_ALPHA);
+						pushSurface(layerAlphas[i]);
+						{
+							setBlend(BLEND_SUBTRACT);
+							setColor(1, 1, 1, 255);
+							drawRect(0, 0, GFX_SX, GFX_SY);
+							setBlend(BLEND_ALPHA);
+						}
+						popSurface();
+					}
+					
+					if (1 && i == 1)
+					{
+						pushSurface(layerAlphas[i]);
+						{
+							static Traveller traveller;
+							
+							setBlend(BLEND_ADD);
+							setColor(255, 255, 255, 255, 31);
+							
+							if (!traveller.m_Active)
+							{
+								static float x = mouse.x;
+								static float y = mouse.y;
+								
+								auto callback = [](void * obj, const TravelEvent & e)
+								{
+									x = Calc::Lerp(x, e.x, .05f);
+									y = Calc::Lerp(y, e.y, .05f);
+									
+									Sprite brush("brush1006.png");
+									brush.pivotX = brush.getWidth() / 2.f;
+									brush.pivotY = brush.getHeight() / 2.f;
+									//brush.drawEx(e.x, e.y, 0.f, .2f);
+									brush.drawEx(x, y, 0.f, .2f);
+								};
+								
+								traveller.Setup(2.f, callback, nullptr);
+								traveller.Begin(mouse.x, mouse.y);
+							}
+							
+							traveller.Update(mouse.x, mouse.y);
+							
+							setBlend(BLEND_ALPHA);
+						}
+						popSurface();
+					}
+					
+					if (0 && i == 0)
+					{
+						static Traveller traveller;
+						static Surface * surface = nullptr;
 						
-						if (i == 1)
+						surface = layerColors[i];
+						//surface = layerAlphas[i];
+						
+						pushBlend(BLEND_ALPHA);
+						{
+							if (!traveller.m_Active)
+							{
+								static float x = mouse.x;
+								static float y = mouse.y;
+								
+								auto callback = [](void * obj, const TravelEvent & e)
+								{
+									x = Calc::Lerp(x, e.x, .05f);
+									y = Calc::Lerp(y, e.y, .05f);
+									
+									// todo : use (x, y) and calculate deltas
+									
+									Shader shader("paint-smudge");
+									setShader(shader);
+									{
+										const GLuint brush = getTexture("brush1006.png");
+										shader.setTexture("brush", 0, brush);
+										shader.setTexture("colormap", 1, surface->getTexture());
+										
+										surface->swapBuffers();
+										
+										pushSurface(surface);
+										{
+											setColor(colorWhite);
+											gxBegin(GL_QUADS);
+											{
+												const float s = 30.f;
+												gxTexCoord2f(0.f, 0.f); gxVertex4f(e.x - s, e.y - s, e.dx, e.dy);
+												gxTexCoord2f(1.f, 0.f); gxVertex4f(e.x + s, e.y - s, e.dx, e.dy);
+												gxTexCoord2f(1.f, 1.f); gxVertex4f(e.x + s, e.y + s, e.dx, e.dy);
+												gxTexCoord2f(0.f, 1.f); gxVertex4f(e.x - s, e.y + s, e.dx, e.dy);
+												//gxTexCoord2f(0.f, 0.f); gxVertex2f(e.x - s, e.y - s);
+												//gxTexCoord2f(1.f, 0.f); gxVertex2f(e.x + s, e.y - s);
+												//gxTexCoord2f(1.f, 1.f); gxVertex2f(e.x + s, e.y + s);
+												//gxTexCoord2f(0.f, 1.f); gxVertex2f(e.x - s, e.y + s);
+											}
+											gxEnd();
+										}
+										popSurface();
+									}
+									clearShader();
+								};
+								
+								traveller.Setup(2.f, callback, nullptr);
+								traveller.Begin(mouse.x, mouse.y);
+							}
+							
+							traveller.Update(mouse.x, mouse.y);
+						}
+						popBlend();
+					}
+					
+					if (showGrooopCircles && i == 1)
+					{
+						pushSurface(layerAlphas[i]);
 						{
 							gxPushMatrix();
 							{
@@ -345,14 +583,56 @@ int main(int argc, char * argv[])
 							}
 							gxPopMatrix();
 						}
+						popSurface();
 					}
 				}
-				popSurface();
 			}
 			
 			for (int i = 0; i < NUM_LAYERS; ++i)
 			{
-				videoEffects[i]->tick(dt * (i == 0 ? 1.f : 1.f));
+				videoLoops[i]->tick(dt);
+			}
+			
+			{
+				static float speed = 1.f;
+				
+				if (leapController.isConnected() && leapController.hasFocus())
+				{
+					if (g_leapState.hands[0].active)
+					{
+						const float maxSpeed = 4.f;
+						
+						float desiredSpeed = Calc::Max(0.f, (g_leapState.hands[0].fingers[0].position[1] - 50) / 50.f);
+						desiredSpeed *= desiredSpeed;
+						desiredSpeed *= maxSpeed;
+						desiredSpeed = Calc::Mid(desiredSpeed, 0.f, maxSpeed);
+						
+						speed = Calc::Lerp(desiredSpeed, speed, std::powf(.05f, dt));
+					}
+				}
+				
+				videoEffect1->tick(dt * speed);
+			}
+			
+			{
+				static float speed = 1.f;
+				
+				if (leapController.isConnected() && leapController.hasFocus())
+				{
+					if (g_leapState.hands[1].active)
+					{
+						const float maxSpeed = 4.f;
+						
+						float desiredSpeed = Calc::Max(0.f, (g_leapState.hands[1].fingers[0].position[1] - 50) / 50.f);
+						desiredSpeed *= desiredSpeed;
+						desiredSpeed *= maxSpeed;
+						desiredSpeed = Calc::Mid(desiredSpeed, 0.f, maxSpeed);
+						
+						speed = Calc::Lerp(desiredSpeed, speed, std::powf(.05f, dt));
+					}
+				}
+				
+				videoEffect2->tick(dt * speed);
 			}
 			
 			if (mouse.isDown(BUTTON_LEFT))
@@ -415,11 +695,12 @@ int main(int argc, char * argv[])
 				
 				for (int i = 0; i < NUM_LAYERS; ++i)
 				{
-					layerVideos[i] = videoEffects[i]->mediaPlayer->getTexture();
+					layerVideos[i] = videoLoops[i]->getTexture();
 					
 					pushSurface(layerColors[i]);
 					{
-						setColorf(1.f, 1.f, 1.f, 1.f);
+						//setColorf(1.f, 1.f, 1.f, 1.f);
+						setColorf(1.f, 1.f, 1.f, .1f);
 						gxSetTexture(layerVideos[i]);
 						drawRect(0, 0, GFX_SX, GFX_SY);
 						gxSetTexture(0);
@@ -585,6 +866,25 @@ int main(int argc, char * argv[])
 				applyMask(surface.getTexture(), layerColors[0]->getTexture(), mask.getTexture());
 				setBlend(BLEND_ALPHA);
 			#endif
+			
+				if (showVideoEffects)
+				{
+					gxSetTexture(videoEffect1->getTexture());
+					{
+						setBlend(BLEND_OPAQUE);
+						drawRect(0, 0, 300, 600);
+						setBlend(BLEND_ALPHA);
+					}
+					gxSetTexture(0);
+					
+					gxSetTexture(videoEffect2->getTexture());
+					{
+						setBlend(BLEND_OPAQUE);
+						drawRect(300, 0, 600, 600);
+						setBlend(BLEND_ALPHA);
+					}
+					gxSetTexture(0);
+				}
 				
 				//logDebug("presentTime: %g", presentTime);
 
@@ -644,10 +944,16 @@ int main(int argc, char * argv[])
 			framework.endDraw();
 		}
 		
+		delete videoEffect1;
+		videoEffect1 = nullptr;
+		
+		delete videoEffect2;
+		videoEffect2 = nullptr;
+		
 		for (int i = 0; i < NUM_LAYERS; ++i)
 		{
-			delete videoEffects[i];
-			videoEffects[i] = nullptr;
+			delete videoLoops[i];
+			videoLoops[i] = nullptr;
 		}
 		
 		for (int i = 0; i < NUM_LAYERS; ++i)
