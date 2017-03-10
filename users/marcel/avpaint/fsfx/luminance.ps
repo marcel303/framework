@@ -1,0 +1,25 @@
+include engine/ShaderPS.txt
+include engine/ShaderUtil.txt
+include fsfx/constants.inc
+
+void main()
+{
+	vec4 colorSrc = texture(colormap, texcoord);
+	
+	float luminance = rgbLuminance(colorSrc.rgb);
+	
+	vec4 colorDst = vec4(vec3(luminance), colorSrc.a);
+	
+	if (true)
+	{
+		float scale = 4.0;
+		//colorDst.rgb += colorDither8ScreenSpace(texcoord * textureSize(colormap, 0)) * (256.0 / scale);
+		colorDst.rgb += colorDither8ScreenSpace(floor(texcoord * textureSize(colormap, 0) / 8.0) * 8.0) * (256.0 / scale);
+		//colorDst.rgb += colorDitherScreenSpace(texcoord * textureSize(colormap, 0), 3);
+		colorDst.rgb = floor(colorDst.rgb * scale) / scale;
+	}
+
+	vec4 color = mix(colorSrc, colorDst, strength);
+
+	shader_fragColor = color;
+}

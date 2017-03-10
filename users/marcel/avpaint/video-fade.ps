@@ -1,0 +1,28 @@
+include engine/ShaderPS.txt
+include engine/ShaderUtil.txt
+
+uniform sampler2D source;
+uniform sampler2D colormap;
+uniform sampler2D ditherTexture;
+uniform float opacity;
+
+shader_in vec2 texcoord;
+
+void main()
+{
+	vec4 srcColor = texture(source, vec2(texcoord.x, 1.0 - texcoord.y));
+	vec4 dstColor = texture(colormap, texcoord);
+	
+	float srcLuminance = rgbLuminance(srcColor.rgb);
+	//srcColor += srcColor * pow(srcLuminance, 8) * 4.0;
+	//srcColor.rgb = srcLuminance > 0.4 ? vec3(1.0) : vec3(0.0);
+	//srcColor.rgb = vec3(1.0) - srcColor.rgb;
+
+	vec4 color = mix(dstColor, srcColor, opacity);
+	//color.rgb = vec3(0.0);
+
+	//color.rgb = vec3(texcoord.y/3 + 0.5);
+	//color += vec4(colorDither8(ditherTexture, gl_FragCoord.xy));
+
+	shader_fragColor = color;
+}

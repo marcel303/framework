@@ -1,0 +1,29 @@
+include engine/ShaderPS.txt
+include engine/ShaderUtil.txt
+
+uniform sampler2D brush;
+uniform sampler2D colormap;
+
+shader_in vec2 texcoordColor;
+shader_in vec2 texcoordBrush;
+shader_in vec2 movementDelta;
+
+void main()
+{
+	vec2 colormapSize = textureSize(colormap, 0);
+	vec2 colormapSizeRcp = 1.0 / colormapSize;
+
+	float brushValue = texture(brush, texcoordBrush).r;
+
+	vec2 offset = - normalize(movementDelta) * brushValue;
+	vec2 texcoord = texcoordColor + offset * 32.0 * colormapSizeRcp;
+	texcoord.y = 1.0 - texcoord.y;
+
+	vec4 dstColor = texture(colormap, texcoord);
+
+	//vec4 color = srcColor;
+	vec4 color = dstColor;
+	//color = vec4(1.0);
+
+	shader_fragColor = color;
+}

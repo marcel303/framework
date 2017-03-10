@@ -1,0 +1,44 @@
+include engine/ShaderPS.txt
+include engine/ShaderUtil.txt
+include fsfx/constants.inc
+
+#define NUM_SAMPLES 50
+
+void main()
+{
+  vec4 colorDst = texture(colormap, texcoord);
+  
+  vec2 lightPosition = vec2(0.5, 0.6);
+  vec2 delta = vec2(texcoord - lightPosition);
+  vec2 sampleCoord = texcoord;
+
+  float weight = 3.25;
+  float illuminationDecay = 1.0;
+  float decay = 0.75;
+  float exposure = 0.525;
+  float density = 0.996;
+
+  vec2 sampleStep = delta / float(NUM_SAMPLES) * density;
+
+  vec4 blurColor = vec4(0.0, 0.0, 0.0, 0.0);
+
+  for (int i = 0; i < NUM_SAMPLES; ++i)
+  {
+    sampleCoord -= sampleStep;
+
+    vec4 sampleColor = texture(colormap, sampleCoord);
+    sampleColor *= illuminationDecay * weight;
+    blurColor += sampleColor;
+    illuminationDecay *= decay; 
+  }
+
+  blurColor *= exposure;
+  blurColor *= 0.15;
+  //blurColor *= 0.5;
+  
+  vec4 color = mix(colorDst, blurColor, strength * 0.45);
+
+  color = max(vec4(0.0), min(vec4(1.0), color));
+
+  shader_fragColor = color;
+}
