@@ -13,6 +13,7 @@ namespace MP
 	{
 	public:
 		VideoContext();
+		~VideoContext();
 
 		bool Initialize(Context * context, const size_t streamIndex, const bool outputYuv);
 		bool Destroy();

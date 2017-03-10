@@ -31,6 +31,11 @@ namespace MP
 		, m_initialized(false)
 	{
 	}
+	
+	VideoContext::~VideoContext()
+	{
+		Assert(m_initialized == false);
+	}
 
 	bool VideoContext::Initialize(Context * context, const size_t streamIndex, const bool outputYuv)
 	{
@@ -168,19 +173,25 @@ namespace MP
 			sws_freeContext(m_swsContext);
 			m_swsContext = nullptr;
 		}
-
-		if (m_videoBuffer->IsInitialized())
+		
+		if (m_videoBuffer != nullptr)
 		{
-			m_videoBuffer->Destroy();
+			if (m_videoBuffer->IsInitialized())
+			{
+				m_videoBuffer->Destroy();
+			}
+			
+			delete m_videoBuffer;
+			m_videoBuffer = nullptr;
 		}
 
-		if (m_tempFrame)
+		if (m_tempFrame != nullptr)
 		{
 			av_frame_unref(m_tempFrame);
 			m_tempFrame = nullptr;
 		}
 
-		if (m_tempFrameBuffer)
+		if (m_tempFrameBuffer != nullptr)
 		{
 			_mm_free(m_tempFrameBuffer);
 			m_tempFrameBuffer = nullptr;
@@ -189,19 +200,13 @@ namespace MP
 		// Close video codec context.
 		if (m_codecContext != nullptr)
 		{
-			avcodec_close(m_codecContext);
+			avcodec_free_context(&m_codecContext);
 			m_codecContext = nullptr;
 		}
 		
 		if (m_codec != nullptr)
 		{
 			m_codec = nullptr;
-		}
-		
-		if (m_videoBuffer != nullptr)
-		{
-			delete m_videoBuffer;
-			m_videoBuffer = nullptr;
 		}
 		
 		if (m_packetQueue != nullptr)

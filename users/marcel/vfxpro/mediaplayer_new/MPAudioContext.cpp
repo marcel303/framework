@@ -121,8 +121,6 @@ namespace MP
 		// Close audio codec context.
 		if (m_codecContext)
 		{
-			avcodec_close(m_codecContext);
-			
 			avcodec_free_context(&m_codecContext);
 			m_codecContext = nullptr;
 		}

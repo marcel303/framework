@@ -4,6 +4,11 @@
 #include <libavcodec/avcodec.h>
 #include <libavutil/imgutils.h>
 
+#if DEBUG_MEDIAPLAYER
+#include <atomic>
+static std::atomic_int s_numFrameBufferAllocations(0);
+#endif
+
 //#define BUFFER_SIZE (3)
 #define BUFFER_SIZE (10)
 //#define BUFFER_SIZE (60)
@@ -54,6 +59,17 @@ namespace MP
 		
 		m_frameBuffer = (uint8_t*)_mm_malloc(frameBufferSize, 16);
 		
+		if (!m_frameBuffer)
+		{
+			Debug::Print("Video: failed to allocate frame buffer.");
+			m_frameBuffer = nullptr;
+			return false;
+		}
+		
+	#if DEBUG_MEDIAPLAYER
+		s_numFrameBufferAllocations++;
+	#endif
+		
 		m_frame->format = AV_PIX_FMT_RGBA;
 		m_frame->width = width;
 		m_frame->height = height;
@@ -87,6 +103,11 @@ namespace MP
 		{
 			_mm_free(m_frameBuffer);
 			m_frameBuffer = nullptr;
+			
+		#if DEBUG_MEDIAPLAYER
+			s_numFrameBufferAllocations--;
+			//printf("numFrameBufferAllocations: %d\n", (int)s_numFrameBufferAllocations);
+		#endif
 		}
 	}
 
@@ -135,7 +156,10 @@ namespace MP
 		m_initialized = false;
 
 		Clear();
-
+		
+		Assert(m_freeList.size() == BUFFER_SIZE);
+		Assert(m_consumeList.empty());
+		
 		for (auto frame : m_freeList)
 		{
 			frame->Destroy();
@@ -247,7 +271,5 @@ namespace MP
 		for (auto frame : m_consumeList)
 			m_freeList.push_back(frame);
 		m_consumeList.clear();
-
-		m_currentFrame = nullptr;
 	}
 };
