@@ -24,6 +24,8 @@ static int ExecMediaPlayerThread(void * param)
 
 	while (!context->stopMpThread)
 	{
+		SDL_UnlockMutex(context->mpTickMutex);
+		
 		// todo : tick event on video or audio buffer consumption *only*
 		
 		if (context->hasBegun)
@@ -31,7 +33,10 @@ static int ExecMediaPlayerThread(void * param)
 			context->tick();
 		}
 		
-		SDL_CondWait(context->mpTickEvent, context->mpTickMutex);
+		SDL_LockMutex(context->mpTickMutex);
+		
+		if (!context->stopMpThread)
+			SDL_CondWait(context->mpTickEvent, context->mpTickMutex);
 	}
 
 	// media player thread is completely detached from the main thread at this point
@@ -229,6 +234,21 @@ uint32_t MediaPlayer::getTexture() const
 	return texture;
 }
 
+bool MediaPlayer::getVideoProperties(int & sx, int & sy) const
+{
+	if (context->hasBegun)
+	{
+		sx = context->mpContext.GetVideoWidth();
+		sy = context->mpContext.GetVideoHeight();
+		
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
 void MediaPlayer::updateAudio()
 {
 	if (!context->hasBegun)
@@ -314,7 +334,12 @@ void MediaPlayer::stopMediaPlayerThread()
 	{
 		Assert(context->stopMpThread == false);
 		
-		context->stopMpThread = true;
+		SDL_LockMutex(context->mpTickMutex);
+		{
+			context->stopMpThread = true;
+		}
+		SDL_UnlockMutex(context->mpTickMutex);
+		
 		SDL_CondSignal(context->mpTickEvent);
 
 		context = nullptr;
