@@ -1220,6 +1220,12 @@ void Surface::destruct()
 			m_texture[i] = 0;
 		}
 	}
+	
+	if (m_depthTexture)
+	{
+		glDeleteTextures(1, &m_depthTexture);
+		m_depthTexture = 0;
+	}
 }
 
 void Surface::swapBuffers()
@@ -6109,6 +6115,17 @@ void setShader_Premultiply(const GLuint source)
 	setShader(shader);
 
 	shader.setTexture("source", 0, source, true, true);
+}
+
+void setShader_ColorMultiply(const GLuint source, const Color & color, const float opacity)
+{
+	Shader & shader = globals.builtinShaders->colorMultiply;
+	setShader(shader);
+	
+	shader.setTexture("source", 0, source);
+	shader.setImmediate("color", color.r, color.g, color.b, color.a);
+	shader.setImmediate("opacity", opacity);
+
 }
 
 void setShader_ColorTemperature(const GLuint source, const float temperature, const float opacity)

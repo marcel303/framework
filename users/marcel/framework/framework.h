@@ -1235,6 +1235,7 @@ void setShader_HueShift(const GLuint source, const float hue, const float opacit
 void setShader_Compositie(const GLuint source1, const GLuint source2);
 void setShader_CompositiePremultiplied(const GLuint source1, const GLuint source2);
 void setShader_Premultiply(const GLuint source);
+void setShader_ColorMultiply(const GLuint source, const Color & color, const float opacity);
 void setShader_ColorTemperature(const GLuint source, const float temperature, const float opacity);
 
 // high quality rendering
