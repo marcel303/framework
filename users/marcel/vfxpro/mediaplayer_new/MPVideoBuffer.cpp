@@ -55,7 +55,7 @@ namespace MP
 			AV_PIX_FMT_RGBA,
 			static_cast<int>(width),
 			static_cast<int>(height),
-			1);
+			16);
 		
 		m_frameBuffer = (uint8_t*)_mm_malloc(frameBufferSize, 16);
 		

@@ -116,7 +116,7 @@ namespace MP
 						m_codecContext->pix_fmt,
 						m_codecContext->width,
 						m_codecContext->height,
-						1);
+						16);
 
 					Assert(m_tempFrameBuffer == nullptr);
 					m_tempFrameBuffer = (uint8_t*)_mm_malloc(frameBufferSize, 16);
@@ -380,7 +380,7 @@ namespace MP
 		}
 		
         //if (m_tempFrame->pts != 0 && m_tempFrame->pts != AV_NOPTS_VALUE)
-		if (false)
+		if (true)
 		{
 			m_time = av_frame_get_best_effort_timestamp(m_tempFrame) * m_timeBase;
 		}
