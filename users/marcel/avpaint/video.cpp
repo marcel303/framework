@@ -201,6 +201,14 @@ void MediaPlayer::updateTexture()
 			const GLenum internalFormat = GL_RGBA8;
 			const GLenum uploadFormat = GL_RGBA;
 			
+			const int alignment = 16;
+			const int alignmentMask = ~(alignment - 1);
+			const int numBytesPerRow = ((sx * 4) + alignment - 1) & alignmentMask;
+			const int numPixelsPerRow = numBytesPerRow / 4;
+			
+			glPixelStorei(GL_UNPACK_ROW_LENGTH, numPixelsPerRow);
+			checkErrorGL();
+			
 			// copy image data
 
 			glBindTexture(GL_TEXTURE_2D, texture);
@@ -218,13 +226,18 @@ void MediaPlayer::updateTexture()
 			
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+			checkErrorGL();
 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			checkErrorGL();
 			
 			glBindTexture(GL_TEXTURE_2D, 0);
+			
+			glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+			checkErrorGL();
 		}
 	}
 }
