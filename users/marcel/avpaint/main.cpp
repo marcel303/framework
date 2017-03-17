@@ -18,14 +18,123 @@
 #define LOOP_SY 874
 
 #define DO_VIDEOLOOPS 0
+#define DO_GAME 1
 
 #define NUM_LAYERS 3
+
+//#define kMixVideoSurfaceOpacity (mouse.x / float(GFX_SX))
+//#define kMixPostSurfaceRetain (mouse.y / float(GFX_SY))
+
+#define kMixVideoSurfaceOpacity mixingPanel.sliders[0].value
+#define kMixPostSurfaceRetain mixingPanel.sliders[1].value
+#define kMixLogoOpacity mixingPanel.sliders[2].value
+#define kMixUserContentOpacity mixingPanel.sliders[3].value
+#define kMixVideoSpeed1 mixingPanel.sliders[4].value
+#define kMixVideoSpeed2 mixingPanel.sliders[5].value
 
 // todo : mask using rotating and scaling objects as mask alpha
 // todo : grooop logo animation
 // todo : think of ways to mix/vj
 // todo : use touchpad for map-like moving and scaling videos?
 // todo : multitouch touch pad? can SDL handle this? else look for api
+
+struct UIMixingSlider
+{
+	int px;
+	int py;
+	int sx;
+	int sy;
+	
+	float value;
+	
+	bool active;
+	
+	UIMixingSlider()
+	{
+		memset(this, 0, sizeof(*this));
+	}
+	
+	void tick(const float dt, const int mx, const int my)
+	{
+		const bool isInside =
+			mx >= px &&
+			my >= py &&
+			mx < px + sx &&
+			my < py + sy;
+		
+		const float yRelative = (my - py) / float(sy - 1.f);
+		
+		if (mouse.wentDown(BUTTON_LEFT))
+		{
+			if (isInside)
+				active = true;
+		}
+		
+		if (mouse.wentUp(BUTTON_LEFT))
+			active = false;
+		
+		if (active)
+			value = clamp(1.f - yRelative, 0.f, 1.f);
+	}
+	
+	void draw() const
+	{
+		setColor(255, 0, 0);
+		drawRect(px, py + sy * (1.f - value), px + sx, py + sy);
+		
+		setColor(255, 255, 255);
+		drawRectLine(px, py, px + sx, py + sy);
+	}
+};
+
+struct UIMixingPanel
+{
+	static const int kNumSliders = 10;
+	
+	int px;
+	int py;
+	
+	UIMixingSlider sliders[kNumSliders];
+	
+	UIMixingPanel()
+		: px(0)
+		, py(0)
+	{
+		int sx = 20;
+		int sy = 200;
+		int px = 4;
+		
+		for (int i = 0; i < kNumSliders; ++i)
+		{
+			UIMixingSlider & slider = sliders[i];
+			
+			slider.px = i * (sx + px/2);
+			slider.py = 0;
+			slider.sx = sx;
+			slider.sy = sy;
+		}
+	}
+	
+	void tick(const float dt)
+	{
+		for (int i = 0; i < kNumSliders; ++i)
+			sliders[i].tick(dt, mouse.x - px, mouse.y - py);
+	}
+	
+	void draw() const
+	{
+		gxPushMatrix();
+		{
+			gxTranslatef(px, py, 0);
+			
+			for (int i = 0; i < kNumSliders; ++i)
+				sliders[i].draw();
+		}
+		gxPopMatrix();
+	}
+};
+
+static UIMixingPanel mixingPanel;
 
 struct Grain
 {
@@ -62,7 +171,7 @@ struct GrainsEffect
 		}
 	}
 	
-	void draw()
+	void draw() const
 	{
 		Shader shader("gradient-circle");
 		setShader(shader);
@@ -183,8 +292,9 @@ struct VideoLoop
 			{
 				int sx;
 				int sy;
+				double duration;
 				
-				if (mediaPlayer->getVideoProperties(sx, sy) && mediaPlayer->getTexture())
+				if (mediaPlayer->getVideoProperties(sx, sy, duration) && mediaPlayer->getTexture())
 				{
 					firstFrame = new Surface(sx, sy, false);
 					
@@ -286,8 +396,9 @@ struct VideoEffect
 		
 		int sx;
 		int sy;
+		double duration;
 		
-		if (currVideoLoop != nullptr && currVideoLoop->mediaPlayer->getVideoProperties(sx, sy))
+		if (currVideoLoop != nullptr && currVideoLoop->mediaPlayer->getVideoProperties(sx, sy, duration))
 		{
 			if (surface == nullptr)
 			{
@@ -331,6 +442,8 @@ struct VideoEffect
 		return currVideoLoop->getFirstFrameTexture();
 	}
 };
+
+#if DO_GAME
 
 struct VideoGame
 {
@@ -461,11 +574,11 @@ struct VideoGame
 		
 		// process videos
 	
-		videoEffectL->tick(dt);
-		videoEffectR->tick(dt * .6f);
+		videoEffectL->tick(dt * Calc::Lerp(0.f, 2.f, kMixVideoSpeed1));
+		videoEffectR->tick(dt * Calc::Lerp(0.f, 2.f, kMixVideoSpeed2));
 	}
 	
-	void draw()
+	void draw() const
 	{
 		// composite both left and right videos onto video surface
 		
@@ -550,9 +663,35 @@ struct VideoGame
 		}
 		popSurface();
 		
+		float godraysStrength = 0.f;
+		
+		bool hasDurationL;
+		bool hasDurationR;
+		int sx;
+		int sy;
+		double durationL;
+		double durationR;
+		
+		hasDurationL = videoEffectL->currVideoLoop->mediaPlayer->getVideoProperties(sx, sy, durationL);
+		hasDurationR = videoEffectR->currVideoLoop->mediaPlayer->getVideoProperties(sx, sy, durationR);
+		
+		if (hasDurationL && hasDurationR)
+		{
+			const double positionL = videoEffectL->currVideoLoop->mediaPlayer->presentTime;
+			const double positionR = videoEffectR->currVideoLoop->mediaPlayer->presentTime;
+			
+			const double deltaL = std::abs(durationL / 2.0 - positionL);
+			const double deltaR = std::abs(durationR / 2.0 - positionR);
+			
+			double nearnessL = std::max(0.0, 1.0 - deltaL / 2.0);
+			double nearnessR = std::max(0.0, 1.0 - deltaR / 2.0);
+			
+			godraysStrength = nearnessL + nearnessR;
+		}
+		
 	#if 0
 		pushBlend(BLEND_OPAQUE);
-		applyFsfx(*videoSurface, "fsfx/godrays.ps", 1.f);
+		applyFsfx(*videoSurface, "fsfx/godrays.ps", godraysStrength);
 		popBlend();
 	#endif
 		
@@ -560,7 +699,7 @@ struct VideoGame
 		{
 			gxPushMatrix();
 			{
-				const float opacity = Calc::Lerp(0.f, 1.f, mouse.x / float(GFX_SX));
+				const float opacity = Calc::Lerp(0.f, 1.f, kMixVideoSurfaceOpacity);
 				
 				const float sx = postSurface->getWidth();
 				const float sy = postSurface->getHeight();
@@ -590,7 +729,7 @@ struct VideoGame
 		#if 1
 			pushBlend(BLEND_OPAQUE);
 			{
-				const float retain = Calc::Lerp(0.f, 1.f, mouse.y / float(GFX_SY));
+				const float retain = Calc::Lerp(0.f, 1.f, kMixPostSurfaceRetain);
 				
 				setShader_ColorMultiply(postSurface->getTexture(), Color(retain, retain, retain, 1.f), 1.f);
 				postSurface->postprocess();
@@ -618,13 +757,83 @@ struct VideoGame
 				applyFsfx(*postSurface, "fsfx/distort-gradient.ps", 1.f, 10.f, 0.f, -.5f, 0.f, glitchLoop->getTexture());
 			#endif
 			#if 1
-				applyFsfx(*postSurface, "fsfx/godrays.ps", .5f);
+				applyFsfx(*postSurface, "fsfx/godrays.ps", godraysStrength);
 			#endif
 			}
 			popBlend();
 		#endif
 		}
 		popSurface();
+		
+	#if 0
+		Surface mask(postSurface->getWidth(), postSurface->getHeight(), true);
+		mask.clear();
+		pushSurface(&mask);
+		{
+			hqBegin(HQ_FILLED_CIRCLES);
+			{
+				setColor(colorWhite);
+				hqFillCircle(mask.getWidth()/2, mask.getHeight()/2, 300.f);
+			}
+			hqEnd();
+		}
+		popSurface();
+		
+		{
+			const GLuint a = videoSurface->getTexture();
+			const GLuint b = postSurface->getTexture();
+			postSurface->swapBuffers();
+			
+			pushSurface(postSurface);
+			applyMask(a, b, mask.getTexture());
+			popSurface();
+		}
+	#endif
+	}
+};
+
+#endif
+
+struct GrooopLogo
+{
+	float t;
+	
+	GrooopLogo()
+		: t(0.f)
+	{
+	}
+	
+	void tick(const float dt)
+	{
+		t += dt;
+	}
+	
+	void draw() const
+	{
+		const float circleFade = Calc::Mid((t - 2.f) / .5f, 0.f, 1.f);
+		
+		gxPushMatrix();
+		{
+			gxTranslatef(GFX_SX/2, GFX_SY/2, 1.f);
+			
+			setColorf(1.f, 1.f, 1.f, kMixLogoOpacity);
+			
+			hqBegin(HQ_STROKED_CIRCLES);
+			{
+				hqStrokeCircle(0.f, 0.f, 100.f, 10.f);
+			}
+			hqEnd();
+			
+			for (int i = -1; i <= +1; ++i)
+			{
+				hqBegin(HQ_STROKED_CIRCLES);
+				{
+					hqStrokeCircle(i * 60 * circleFade, 0.f, 25.f, 10.f);
+				}
+				hqEnd();
+			}
+		}
+		gxPopMatrix();
 	}
 };
 
@@ -657,7 +866,7 @@ struct SineOsc : BaseOsc
 	
 	virtual void generate(float * __restrict samples, const int numSamples) override
 	{
-		const float phaseStep = this->phaseStep + (mouse.y / float(GFX_SY) * 600.f) / 44100.f * M_PI * 2.f;
+		const float phaseStep = this->phaseStep + (mouse.y / float(GFX_SY) * 2600.f) / 44100.f * M_PI * 2.f;
 		
 		for (int i = 0; i < numSamples; ++i)
 		{
@@ -700,6 +909,66 @@ struct SawOsc : BaseOsc
 	}
 };
 
+struct TriangleOsc : BaseOsc
+{
+	float phase;
+	float phaseStep;
+	
+	virtual ~TriangleOsc() override
+	{
+	}
+	
+	virtual void init(const float frequency) override
+	{
+		phase = 0.f;
+		phaseStep = frequency / 44100.f * 2.f;
+	}
+	
+	virtual void generate(float * __restrict samples, const int numSamples) override
+	{
+		const float phaseStep = this->phaseStep + (mouse.x / float(GFX_SX) * 600.f) / 44100.f * 2.f;
+		
+		for (int i = 0; i < numSamples; ++i)
+		{
+			samples[i] = (std::abs(std::fmodf(phase, 2.f) - 1.f) - .5f) * 2.f;
+			
+			phase += phaseStep;
+		}
+		
+		phase = std::fmodf(phase, 2.f);
+	}
+};
+
+struct SquareOsc : BaseOsc
+{
+	float phase;
+	float phaseStep;
+	
+	virtual ~SquareOsc() override
+	{
+	}
+	
+	virtual void init(const float frequency) override
+	{
+		phase = 0.f;
+		phaseStep = frequency / 44100.f * 2.f;
+	}
+	
+	virtual void generate(float * __restrict samples, const int numSamples) override
+	{
+		const float phaseStep = this->phaseStep + (mouse.x / float(GFX_SX) * 600.f) / 44100.f * 2.f;
+		
+		for (int i = 0; i < numSamples; ++i)
+		{
+			samples[i] = std::fmodf(phase, 2.f) < 1.f ? -1.f : +1.f;
+			
+			phase += phaseStep;
+		}
+		
+		phase = std::fmodf(phase, 2.f);
+	}
+};
+
 static const int kMaxOscs = 4;
 
 static BaseOsc * oscs[kMaxOscs] = { };
@@ -713,16 +982,22 @@ static void initOsc()
 	
 	oscIsInit = true;
 	
-	float frequency = 300.f;
+	float frequency = 400.f;
 	
 	for (int s = 0; s < kMaxOscs; ++s)
 	{
 		BaseOsc *& osc = oscs[s];
 		
-		if (s & 1)
+		const int o = s % 4;
+		
+		if (o == 0)
 			osc = new SineOsc();
-		else
+		else if (o == 1)
 			osc = new SawOsc();
+		else if (o == 2)
+			osc = new TriangleOsc();
+		else
+			osc = new SquareOsc();
 		
 		osc->init(frequency);
 		
@@ -774,7 +1049,7 @@ static int portaudioCallback(
 		float v = 0.f;
 		
 		for (int s = 0; s < kMaxOscs; ++s)
-			v += oscBuffers[s][i] * .05f;
+			v += oscBuffers[s][i] * .2f;
 		
 		*buffer++ = v;
 	}
@@ -879,7 +1154,7 @@ static void testPortaudio()
 	{
 		for (;;)
 		{
-			Pa_Sleep(1000);
+			framework.process();
 		}
 	}
 	
@@ -890,8 +1165,6 @@ static void testPortaudio()
 
 int main(int argc, char * argv[])
 {
-	//testPortaudio();
-	
 	changeDirectory("/Users/thecat/Google Drive/The Grooop - Welcome");
 	
 #if defined(DEBUG)
@@ -902,6 +1175,8 @@ int main(int argc, char * argv[])
 	
 	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
 	{
+		//testPortaudio();
+		
 		framework.fillCachesWithPath(".", false);
 		
 		//initOsc();
@@ -970,7 +1245,26 @@ int main(int argc, char * argv[])
 		
 		VideoLoop * glitchLoop = new VideoLoop("testvideos/glitch3.mp4");
 		
+	#if DO_GAME
 		VideoGame * videoGame = new VideoGame();
+	#endif
+		
+		GrooopLogo grooopLogo;
+		
+		mixingPanel = UIMixingPanel();
+		mixingPanel.px = 100;
+		mixingPanel.py = 50;
+		
+		Dictionary mixingSettings;
+		if (mixingSettings.load("mixing.txt"))
+		{
+			for (int i = 0; i < UIMixingPanel::kNumSliders; ++i)
+			{
+				char name[32];
+				sprintf_s(name, sizeof(name), "slider%03d", i);
+				mixingPanel.sliders[i].value = mixingSettings.getFloat(name, 0.f);
+			}
+		}
 		
 		Surface mask(GFX_SX, GFX_SY, false);
 		
@@ -978,7 +1272,7 @@ int main(int argc, char * argv[])
 		int activeLayer = 0;
 		float blurStrength = 0.f;
 		float desiredBlurStrength = 0.f;
-		bool showBackgroundVideo = false;
+		bool showBackgroundVideo = true;
 		bool showVideoEffects = true;
 		bool showGrooopCircles = true;
 		bool drawIsolines = false;
@@ -987,6 +1281,8 @@ int main(int argc, char * argv[])
 		
 		GrainsEffect grainsEffect;
 		int nextGrainIndex = 0;
+		
+		auto uploadedImages = listFiles("/Users/thecat/Downloads/messenger-platform-samples/node/uploads/images", false);
 		
 		while (!framework.quitRequested)
 		{
@@ -1256,7 +1552,13 @@ int main(int argc, char * argv[])
 				}
 			}
 			
+		#if DO_GAME
 			videoGame->tick(dt);
+		#endif
+			
+			grooopLogo.tick(dt);
+			
+			mixingPanel.tick(dt);
 			
 		#if DO_VIDEOLOOPS
 			if (mouse.isDown(BUTTON_LEFT))
@@ -1505,6 +1807,7 @@ int main(int argc, char * argv[])
 				#endif
 				}
 			
+			#if DO_GAME
 				if (showVideoEffects)
 				{
 					videoGame->draw();
@@ -1522,6 +1825,7 @@ int main(int argc, char * argv[])
 					}
 					popSurface();
 				}
+			#endif
 				
 				if (drawIsolines)
 				{
@@ -1539,6 +1843,41 @@ int main(int argc, char * argv[])
 				
 					applyFsfx(surface, "fsfx/isolines.ps", 1.f);
 				}
+				
+				pushSurface(&surface);
+				{
+					grooopLogo.draw();
+				}
+				popSurface();
+				
+				pushSurface(&surface);
+				{
+					for (int i = 0; i < (int)uploadedImages.size(); ++i)
+					{
+						const int cx = i % 6;
+						const int cy = i / 6;
+						
+						const int sx = 100;
+						const int sy = 100;
+						const int px = 10;
+						const int py = 10;
+						
+						const int x = cx * (sx + px/2);
+						const int y = cy * (sy + py/2);
+						
+						const GLuint texture = getTexture(uploadedImages[i].c_str());
+						
+						gxSetTexture(texture);
+						{
+							setColorf(1.f, 1.f, 1.f, kMixUserContentOpacity);
+							drawRect(x, y, x + sx, y + sy);
+						}
+						gxSetTexture(0);
+					}
+					
+					mixingPanel.draw();
+				}
+				popSurface();
 				
 				pushBlend(BLEND_OPAQUE);
 				{
@@ -1607,8 +1946,24 @@ int main(int argc, char * argv[])
 			framework.endDraw();
 		}
 		
+		// save mixing settings
+		
+		for (int i = 0; i < UIMixingPanel::kNumSliders; ++i)
+		{
+			char name[32];
+			sprintf_s(name, sizeof(name), "slider%03d", i);
+			
+			mixingSettings.setFloat(name, mixingPanel.sliders[i].value);
+		}
+		
+		mixingSettings.save("mixing.txt");
+		
+		//
+		
+	#if DO_GAME
 		delete videoGame;
 		videoGame = nullptr;
+	#endif
 		
 		delete glitchLoop;
 		glitchLoop = nullptr;
