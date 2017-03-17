@@ -2384,6 +2384,27 @@ bool Dictionary::load(const char * filename)
 	return result;
 }
 
+bool Dictionary::save(const char * filename)
+{
+	FILE * file = nullptr;
+	
+	fopen_s(&file, filename, "wt");
+	
+	if (file != nullptr)
+	{
+		for (auto i : m_map)
+		{
+			const char * key = i.first.c_str();
+			const char * value = i.second.c_str();
+			
+			fprintf(file, "%s:%s\n", key, value);
+		}
+		
+		fclose(file);
+		file = nullptr;
+	}
+}
+
 bool Dictionary::parse(const std::string & line, bool clear)
 {
 	bool result = true;

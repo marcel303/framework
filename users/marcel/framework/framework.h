@@ -520,6 +520,7 @@ class Dictionary
 	
 public:
 	bool load(const char * filename);
+	bool save(const char * filename);
 	bool parse(const std::string & line, bool clear = true); // line = key1:value1 key2:value2 key3:value3 ..
 	
 	bool contains(const char * name) const;
