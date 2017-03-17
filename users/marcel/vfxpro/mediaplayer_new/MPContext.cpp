@@ -161,6 +161,11 @@ namespace MP
 	{
 		return m_eof;
 	}
+	
+	double Context::GetDuration() const
+	{
+		return m_formatContext->duration / double(AV_TIME_BASE);
+	}
 
 	size_t Context::GetVideoWidth() const
 	{

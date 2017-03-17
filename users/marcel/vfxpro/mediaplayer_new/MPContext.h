@@ -20,6 +20,7 @@ namespace MP
 		bool HasAudioStream() const;
 		bool HasVideoStream() const; // TODO: Make media player check these flags. Use them to determine master clock.
 		bool HasReachedEOF() const;
+		double GetDuration() const;
 
 		size_t GetVideoWidth() const;
 		size_t GetVideoHeight() const;

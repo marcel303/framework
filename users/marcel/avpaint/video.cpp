@@ -247,17 +247,22 @@ uint32_t MediaPlayer::getTexture() const
 	return texture;
 }
 
-bool MediaPlayer::getVideoProperties(int & sx, int & sy) const
+bool MediaPlayer::getVideoProperties(int & sx, int & sy, double & duration) const
 {
 	if (context->hasBegun)
 	{
 		sx = context->mpContext.GetVideoWidth();
 		sy = context->mpContext.GetVideoHeight();
+		duration = context->mpContext.GetDuration();
 		
 		return true;
 	}
 	else
 	{
+		sx = 0;
+		sy = 0;
+		duration = 0.0;
+		
 		return false;
 	}
 }
