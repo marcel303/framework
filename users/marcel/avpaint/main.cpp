@@ -10,6 +10,8 @@
 	#include "leap/Leap.h"
 #endif
 
+#include <turbojpeg/turbojpeg.h>
+
 #define GFX_SX 1024
 #define GFX_SY 768
 
@@ -31,6 +33,7 @@
 #define kMixUserContentOpacity mixingPanel.sliders[3].value
 #define kMixVideoSpeed1 mixingPanel.sliders[4].value
 #define kMixVideoSpeed2 mixingPanel.sliders[5].value
+#define kMixGodraysStrength mixingPanel.sliders[6].value
 
 // todo : mask using rotating and scaling objects as mask alpha
 // todo : grooop logo animation
@@ -425,7 +428,7 @@ struct VideoEffect
 				
 				pushBlend(BLEND_OPAQUE);
 				//applyFsfx(*surface, "fsfx/godrays.ps");
-				const float luminanceStrength = (-std::cosf(framework.time / 4.567f) + 1.f) / 2.f;
+				//const float luminanceStrength = (-std::cosf(framework.time / 4.567f) + 1.f) / 2.f;
 				//applyFsfx(*surface, "fsfx/luminance.ps", luminanceStrength);
 				popBlend();
 			}
@@ -574,8 +577,8 @@ struct VideoGame
 		
 		// process videos
 	
-		videoEffectL->tick(dt * Calc::Lerp(0.f, 2.f, kMixVideoSpeed1));
-		videoEffectR->tick(dt * Calc::Lerp(0.f, 2.f, kMixVideoSpeed2));
+		videoEffectL->tick(dt * Calc::Lerp(0.f, 4.f, kMixVideoSpeed1));
+		videoEffectR->tick(dt * Calc::Lerp(0.f, 4.f, kMixVideoSpeed2));
 	}
 	
 	void draw() const
@@ -689,6 +692,8 @@ struct VideoGame
 			godraysStrength = nearnessL + nearnessR;
 		}
 		
+		godraysStrength *= kMixGodraysStrength;
+		
 	#if 0
 		pushBlend(BLEND_OPAQUE);
 		applyFsfx(*videoSurface, "fsfx/godrays.ps", godraysStrength);
@@ -794,33 +799,53 @@ struct VideoGame
 
 #endif
 
-struct GrooopLogo
+struct GrooopLogo : TweenFloatCollection
 {
-	float t;
+	TweenFloat unfold;
+	TweenFloat scale;
+	TweenFloat opacity;
 	
 	GrooopLogo()
-		: t(0.f)
+		: unfold(0.f)
+		, scale(1.f)
+		, opacity(1.f)
+	{
+		addVar("unfold", unfold);
+		addVar("scale", scale);
+		addVar("opacity", opacity);
+		
+		unfold.wait(1.f);
+		unfold.to(1.f, .5f, kEaseType_SineIn, 0.f);
+		
+		scale.wait(3.f);
+		scale.to(0.f, .5f, kEaseType_SineOut, 0.f);
+		
+		opacity.wait(3.f);
+		opacity.to(0.f, .75f, kEaseType_SineOut, 0.f);
+	}
+	
+	virtual ~GrooopLogo()
 	{
 	}
 	
 	void tick(const float dt)
 	{
-		t += dt;
+		TweenFloatCollection::tick(dt);
 	}
 	
 	void draw() const
 	{
-		const float circleFade = Calc::Mid((t - 2.f) / .5f, 0.f, 1.f);
+		const float circleFade = (float)unfold;
 		
 		gxPushMatrix();
 		{
 			gxTranslatef(GFX_SX/2, GFX_SY/2, 1.f);
 			
-			setColorf(1.f, 1.f, 1.f, kMixLogoOpacity);
+			setColorf(1.f, 1.f, 1.f, kMixLogoOpacity * (float)opacity);
 			
 			hqBegin(HQ_STROKED_CIRCLES);
 			{
-				hqStrokeCircle(0.f, 0.f, 100.f, 10.f);
+				hqStrokeCircle(0.f, 0.f, 100.f * (float)scale, 10.f);
 			}
 			hqEnd();
 			
@@ -828,7 +853,7 @@ struct GrooopLogo
 			{
 				hqBegin(HQ_STROKED_CIRCLES);
 				{
-					hqStrokeCircle(i * 60 * circleFade, 0.f, 25.f, 10.f);
+					hqStrokeCircle(i * 60 * circleFade, 0.f, 25.f * (float)scale, 10.f);
 				}
 				hqEnd();
 			}
@@ -838,6 +863,9 @@ struct GrooopLogo
 };
 
 #include <portaudio/portaudio.h>
+
+static float mousePx = 0.f;
+static float mousePy = 0.f;
 
 struct BaseOsc
 {
@@ -866,7 +894,7 @@ struct SineOsc : BaseOsc
 	
 	virtual void generate(float * __restrict samples, const int numSamples) override
 	{
-		const float phaseStep = this->phaseStep + (mouse.y / float(GFX_SY) * 2600.f) / 44100.f * M_PI * 2.f;
+		const float phaseStep = this->phaseStep * mousePy;
 		
 		for (int i = 0; i < numSamples; ++i)
 		{
@@ -896,7 +924,7 @@ struct SawOsc : BaseOsc
 	
 	virtual void generate(float * __restrict samples, const int numSamples) override
 	{
-		const float phaseStep = this->phaseStep + (mouse.x / float(GFX_SX) * 600.f) / 44100.f * 2.f;
+		const float phaseStep = this->phaseStep * mousePx;
 		
 		for (int i = 0; i < numSamples; ++i)
 		{
@@ -926,10 +954,19 @@ struct TriangleOsc : BaseOsc
 	
 	virtual void generate(float * __restrict samples, const int numSamples) override
 	{
-		const float phaseStep = this->phaseStep + (mouse.x / float(GFX_SX) * 600.f) / 44100.f * 2.f;
+		//const float phaseStep = this->phaseStep * mousePx;
+		
+		const float targetPhaseStep = this->phaseStep * (mousePx + 1.f);
+		
+		static float phaseStep = this->phaseStep; // fixme : non-static
+		
+		const float retain1 = .999f;
+		const float retain2 = 1.f - retain1;
 		
 		for (int i = 0; i < numSamples; ++i)
 		{
+			phaseStep = phaseStep * retain1 + targetPhaseStep * retain2;
+			
 			samples[i] = (std::abs(std::fmodf(phase, 2.f) - 1.f) - .5f) * 2.f;
 			
 			phase += phaseStep;
@@ -956,8 +993,8 @@ struct SquareOsc : BaseOsc
 	
 	virtual void generate(float * __restrict samples, const int numSamples) override
 	{
-		const float phaseStep = this->phaseStep + (mouse.x / float(GFX_SX) * 600.f) / 44100.f * 2.f;
-		
+		const float phaseStep = this->phaseStep * mousePx;
+
 		for (int i = 0; i < numSamples; ++i)
 		{
 			samples[i] = std::fmodf(phase, 2.f) < 1.f ? -1.f : +1.f;
@@ -969,7 +1006,7 @@ struct SquareOsc : BaseOsc
 	}
 };
 
-static const int kMaxOscs = 4;
+static const int kMaxOscs = 1;
 
 static BaseOsc * oscs[kMaxOscs] = { };
 
@@ -982,13 +1019,14 @@ static void initOsc()
 	
 	oscIsInit = true;
 	
-	float frequency = 400.f;
+	float frequency = 800.f;
 	
 	for (int s = 0; s < kMaxOscs; ++s)
 	{
 		BaseOsc *& osc = oscs[s];
 		
-		const int o = s % 4;
+		//const int o = s % 4;
+		const int o = 2;
 		
 		if (o == 0)
 			osc = new SineOsc();
@@ -1155,6 +1193,9 @@ static void testPortaudio()
 		for (;;)
 		{
 			framework.process();
+			
+			mousePx = mouse.x / float(GFX_SX);
+			mousePy = mouse.y / float(GFX_SY);
 		}
 	}
 	
@@ -1163,8 +1204,954 @@ static void testPortaudio()
 	shutOsc();
 }
 
+static bool loadFileContents(const char * filename, void * bytes, int & numBytes)
+{
+	bool result = true;
+	
+	FILE * file = fopen(filename, "rb");
+	
+	if (file == nullptr)
+	{
+		result = false;
+	}
+	else
+	{
+		// load source from file
+		
+		fseek(file, 0, SEEK_END);
+		const int fileSize = ftell(file);
+		fseek(file, 0, SEEK_SET);
+		
+		if (numBytes < fileSize)
+		{
+			result = false;
+		}
+		else
+		{
+			numBytes = fileSize;
+			
+			if (fread(bytes, 1, numBytes, file) != (size_t)numBytes)
+			{
+				result = false;
+			}
+		}
+		
+		fclose(file);
+	}
+	
+	if (!result)
+	{
+		numBytes = 0;
+	}
+	
+	return result;
+}
+
+struct JpegLoadData
+{
+	unsigned char * buffer;
+	int bufferSize;
+	bool flipY;
+	
+	int sx;
+	int sy;
+	
+	JpegLoadData()
+		: buffer(nullptr)
+		, bufferSize(0)
+		, flipY(false)
+		, sx(0)
+		, sy(0)
+	{
+	}
+};
+
+static bool loadImage_turbojpeg(const void * buffer, const int bufferSize, JpegLoadData & data)
+{
+	bool result = true;
+	
+	tjhandle h = tjInitDecompress();
+	
+	if (h == nullptr)
+	{
+		logError("turbojpeg: %s", tjGetErrorStr());
+		
+		result = false;
+	}
+	else
+	{
+		int sx = 0;
+		int sy = 0;
+		
+		int jpegSubsamp = 0;
+		int jpegColorspace = 0;
+		
+		if (tjDecompressHeader3(h, (unsigned char*)buffer, (unsigned long)bufferSize, &sx, &sy, &jpegSubsamp, &jpegColorspace) != 0)
+		{
+			logError("turbojpeg: %s", tjGetErrorStr());
+			
+			result = false;
+		}
+		else
+		{
+			data.sx = sx;
+			data.sy = sy;
+			
+			const TJPF pixelFormat = TJPF_RGBX;
+			
+			const int pitch = sx * tjPixelSize[pixelFormat];
+			
+			const int flags = TJFLAG_BOTTOMUP * (data.flipY ? 1 : 0);
+			
+			const int requiredBufferSize = pitch * sy;
+			
+			if (data.buffer == nullptr || data.bufferSize != requiredBufferSize)
+			{
+				delete [] data.buffer;
+				data.buffer = nullptr;
+				data.bufferSize = 0;
+				
+				//
+				
+				data.buffer = new unsigned char[requiredBufferSize];
+				data.bufferSize = requiredBufferSize;
+			}
+			
+			if (tjDecompress2(h, (unsigned char*)buffer, (unsigned long)bufferSize, (unsigned char*)data.buffer, sx, pitch, data.sy, pixelFormat, flags) != 0)
+			{
+				logError("turbojpeg: %s", tjGetErrorStr());
+				
+				result = false;
+			}
+			else
+			{
+				//logDebug("decoded jpeg!");
+			}
+		}
+		
+		tjDestroy(h);
+		h = nullptr;
+	}
+	
+	return result;
+}
+
+static bool loadImage_turbojpeg(const char * filename, JpegLoadData & data, void * fileBuffer, int fileBufferSize)
+{
+	bool result = true;
+	
+	void * buffer = fileBuffer;
+	int bufferSize = fileBufferSize;
+	
+	if (loadFileContents(filename, buffer, bufferSize) == false)
+	{
+		logDebug("turbojpeg: %s", "failed to load file contents");
+		
+		result = false;
+	}
+	else
+	{
+		result = loadImage_turbojpeg(buffer, bufferSize, data);
+	}
+	
+	return result;
+}
+
+static bool saveImage_turbojpeg(const void * srcBuffer, const int srcBufferSize, const int srcSx, const int srcSy, unsigned char *& dstBuffer, int & dstBufferSize)
+{
+	bool result = true;
+	
+	tjhandle h = tjInitCompress();
+	
+	if (h == nullptr)
+	{
+		logError("turbojpeg: %s", tjGetErrorStr());
+		
+		result = false;
+	}
+	else
+	{
+		const TJPF pixelFormat = TJPF_RGBX;
+		const TJSAMP subsamp = TJSAMP_422;
+		const int quality = 85;
+		
+		const int xPitch = srcSx * tjPixelSize[pixelFormat];
+		
+		unsigned long dstBufferSize2 = 0;
+		
+		if (tjCompress2(h, (const unsigned char *)srcBuffer, srcSx, xPitch, srcSy, TJPF_RGBX, (unsigned char**)&dstBuffer, &dstBufferSize2, subsamp, quality, 0) < 0)
+		{
+			logError("turbojpeg: %s", tjGetErrorStr());
+			
+			result = false;
+		}
+		else
+		{
+			dstBufferSize = dstBufferSize2;
+		}
+		
+		tjDestroy(h);
+		h = nullptr;
+	}
+	
+	return result;
+}
+
+static bool saveImage_turbojpeg(const char * filename, const void * srcBuffer, const int srcBufferSize, const int srcSx, const int srcSy)
+{
+	bool result = true;
+	
+	unsigned char * saveBuffer = nullptr;
+	int saveBufferSize = 0;
+	
+	if (saveImage_turbojpeg(srcBuffer, srcBufferSize, srcSx, srcSy, saveBuffer, saveBufferSize) == false)
+	{
+		result = false;
+	}
+	else
+	{
+		FILE * file = fopen(filename, "wb");
+		
+		if (file == nullptr)
+		{
+			result = false;
+		}
+		else
+		{
+			if (fwrite(saveBuffer, saveBufferSize, 1, file) != saveBufferSize)
+			{
+				result = false;
+			}
+			
+			fclose(file);
+		}
+		
+		tjFree(saveBuffer);
+		saveBuffer = nullptr;
+		saveBufferSize = 0;
+	}
+	
+	return result;
+}
+
+struct JpegStreamer
+{
+	static const int kFileBufferSize = 1024 * 1024;
+	
+	struct FileContents
+	{
+		unsigned char * buffer;
+		int bufferSize;
+		
+		int index;
+		
+		FileContents()
+			: buffer(nullptr)
+			, bufferSize(0)
+			, index(0)
+		{
+			 buffer = new unsigned char[kFileBufferSize];
+			 bufferSize = kFileBufferSize;
+		}
+		
+		~FileContents()
+		{
+			delete [] buffer;
+			buffer = nullptr;
+			bufferSize = 0;
+			
+			index = 0;
+		}
+	};
+	
+	struct ImageContents
+	{
+		unsigned char * buffer;
+		int bufferSize;
+		
+		int sx;
+		int sy;
+		
+		ImageContents()
+			: buffer(nullptr)
+			, bufferSize(0)
+			, sx(0)
+			, sy(0)
+		{
+		}
+		
+		~ImageContents()
+		{
+			delete [] buffer;
+			buffer = nullptr;
+			bufferSize = 0;
+			
+			sx = 0;
+			sy = 0;
+		}
+	};
+	
+	static const int kNumBuffers = 4;
+	
+	std::string fileBaseName;
+	int fileNextIndex;
+	
+	std::list<FileContents*> fileProduceList;
+	std::list<FileContents*> fileConsumeList;
+	
+	SDL_Thread * fileThread;
+	SDL_mutex * fileMutex;
+	SDL_sem * fileProduceSema;
+	SDL_sem * fileConsumeSema;
+	
+	//
+	
+	std::list<ImageContents*> imageProduceList;
+	std::list<ImageContents*> imageConsumeList;
+	
+	SDL_Thread * imageThread;
+	SDL_mutex * imageMutex;
+	SDL_sem * imageProduceSema;
+	SDL_sem * imageConsumeSema;
+	
+	bool stop;
+	
+	JpegStreamer(const char * _baseName)
+		: fileBaseName(_baseName)
+		, fileNextIndex(0)
+		, fileProduceList()
+		, fileConsumeList()
+		, fileThread(nullptr)
+		, fileMutex(nullptr)
+		, fileProduceSema(nullptr)
+		, fileConsumeSema(nullptr)
+		, imageProduceList()
+		, imageConsumeList()
+		, imageThread(nullptr)
+		, imageMutex(nullptr)
+		, imageProduceSema(nullptr)
+		, imageConsumeSema(nullptr)
+		, stop(false)
+	{
+		for (int i = 0; i < kNumBuffers; ++i)
+		{
+			FileContents * fileContents = new FileContents();
+			
+			fileProduceList.push_back(fileContents);
+		}
+		
+		fileMutex = SDL_CreateMutex();
+		
+		fileProduceSema = SDL_CreateSemaphore(kNumBuffers);
+		fileConsumeSema = SDL_CreateSemaphore(0);
+		
+		fileThread = SDL_CreateThread(fileProcess, "JpegStreamer File Process", this);
+		
+		//
+		
+		for (int i = 0; i < kNumBuffers; ++i)
+		{
+			ImageContents * imageContents = new ImageContents();
+			
+			imageProduceList.push_back(imageContents);
+		}
+		
+		imageMutex = SDL_CreateMutex();
+		
+		imageProduceSema = SDL_CreateSemaphore(kNumBuffers);
+		imageConsumeSema = SDL_CreateSemaphore(0);
+		
+		imageThread = SDL_CreateThread(imageProcess, "JpegStreamer Image Process", this);
+	}
+	
+	~JpegStreamer()
+	{
+		SDL_LockMutex(imageMutex);
+		{
+			stop = true;
+		}
+		SDL_UnlockMutex(imageMutex);
+		
+		SDL_SemPost(imageProduceSema);
+		
+		SDL_WaitThread(imageThread, nullptr);
+		imageThread = nullptr;
+		
+		SDL_DestroySemaphore(imageConsumeSema);
+		imageConsumeSema = nullptr;
+		
+		SDL_DestroySemaphore(imageProduceSema);
+		imageProduceSema = nullptr;
+		
+		SDL_DestroyMutex(imageMutex);
+		imageMutex = nullptr;
+		
+		while (imageProduceList.size() > 0)
+		{
+			delete imageProduceList.front();
+			
+			imageProduceList.pop_front();
+		}
+		
+		while (imageConsumeList.size() > 0)
+		{
+			delete imageConsumeList.front();
+			
+			imageConsumeList.pop_front();
+		}
+		
+		//
+		
+		SDL_LockMutex(fileMutex);
+		{
+			stop = true;
+		}
+		SDL_UnlockMutex(fileMutex);
+		
+		SDL_SemPost(fileProduceSema);
+		
+		SDL_WaitThread(fileThread, nullptr);
+		fileThread = nullptr;
+		
+		SDL_DestroySemaphore(fileConsumeSema);
+		fileConsumeSema = nullptr;
+		
+		SDL_DestroySemaphore(fileProduceSema);
+		fileProduceSema = nullptr;
+		
+		SDL_DestroyMutex(fileMutex);
+		fileMutex = nullptr;
+		
+		while (fileProduceList.size() > 0)
+		{
+			delete fileProduceList.front();
+			
+			fileProduceList.pop_front();
+		}
+		
+		while (fileConsumeList.size() > 0)
+		{
+			delete fileConsumeList.front();
+			
+			fileConsumeList.pop_front();
+		}
+	}
+	
+	static int fileProcess(void * obj)
+	{
+		JpegStreamer * self = (JpegStreamer*)obj;
+		
+		self->fileProcess();
+		
+		return 0;
+	}
+	
+	void fileProcess()
+	{
+		while (stop == false)
+		{
+			SDL_SemWait(fileProduceSema);
+			
+			//
+			
+			FileContents * fileContents = nullptr;
+			
+			SDL_LockMutex(fileMutex);
+			{
+				if (stop == false)
+				{
+					fileContents = fileProduceList.front();
+					
+					fileProduceList.pop_front();
+				}
+			}
+			SDL_UnlockMutex(fileMutex);
+			
+			//
+			
+			if (fileContents == nullptr)
+				break;
+			
+			//
+			
+			char filename[256];
+			sprintf_s(filename, sizeof(filename), fileBaseName.c_str(), fileNextIndex + 1);
+			
+			fileContents->bufferSize = kFileBufferSize;
+			fileContents->index = fileNextIndex;
+	
+			const bool hasFile = loadFileContents(filename, fileContents->buffer, fileContents->bufferSize);
+			
+			fileNextIndex++;
+			
+			//
+			
+			if (hasFile)
+			{
+				SDL_LockMutex(fileMutex);
+				{
+					fileConsumeList.push_back(fileContents);
+				}
+				SDL_UnlockMutex(fileMutex);
+				
+				SDL_SemPost(fileConsumeSema);
+			}
+			else
+			{
+				delete fileContents;
+				fileContents = nullptr;
+			}
+		}
+	}
+	
+	static int imageProcess(void * obj)
+	{
+		JpegStreamer * self = (JpegStreamer*)obj;
+		
+		self->imageProcess();
+		
+		return 0;
+	}
+	
+	void imageProcess()
+	{
+		while (stop == false)
+		{
+			SDL_SemWait(imageProduceSema);
+			
+			ImageContents * imageContents = nullptr;
+			
+			SDL_LockMutex(imageMutex);
+			{
+				if (stop == false)
+				{
+					imageContents = imageProduceList.front();
+					
+					imageProduceList.pop_front();
+				}
+			}
+			SDL_UnlockMutex(imageMutex);
+			
+			//
+			
+			if (imageContents == nullptr)
+				break;
+			
+			//
+			
+			SDL_SemWait(fileConsumeSema);
+			
+			FileContents * fileContents = nullptr;
+			
+			SDL_LockMutex(fileMutex);
+			{
+				if (stop == false)
+				{
+					fileContents = fileConsumeList.front();
+					
+					fileConsumeList.pop_front();
+				}
+			}
+			SDL_UnlockMutex(fileMutex);
+			
+			//
+			
+			// fixme : stop here is not guaranteed to work (I think)
+			
+			if (fileContents == nullptr)
+				break;
+			
+			//
+			
+			JpegLoadData data;
+			
+			const bool hasImage = loadImage_turbojpeg(
+				fileContents->buffer,
+				fileContents->bufferSize,
+				data);
+			
+			imageContents->buffer = data.buffer;
+			imageContents->bufferSize = data.bufferSize;
+			imageContents->sx = data.sx;
+			imageContents->sy = data.sy;
+			
+			if (hasImage)
+			{
+				SDL_LockMutex(fileMutex);
+				{
+					fileProduceList.push_back(fileContents);
+				}
+				SDL_UnlockMutex(fileMutex);
+				
+				SDL_SemPost(fileProduceSema);
+				
+				//
+				
+				SDL_LockMutex(imageMutex);
+				{
+					imageConsumeList.push_back(imageContents);
+				}
+				SDL_UnlockMutex(imageMutex);
+				
+				SDL_SemPost(imageConsumeSema);
+			}
+			else
+			{
+				delete imageContents;
+				imageContents = nullptr;
+				
+				delete fileContents;
+				fileContents = nullptr;
+			}
+		}
+	}
+	
+	void consume(ImageContents *& contents)
+	{
+		SDL_SemWait(imageConsumeSema);
+		
+		SDL_LockMutex(imageMutex);
+		{
+			contents = imageConsumeList.front();
+			
+			imageConsumeList.pop_front();
+		}
+		SDL_UnlockMutex(imageMutex);
+	}
+	
+	void release(ImageContents *& contents)
+	{
+		SDL_LockMutex(imageMutex);
+		{
+			imageProduceList.push_back(contents);
+			
+			contents = nullptr;
+		}
+		SDL_UnlockMutex(imageMutex);
+		
+		SDL_SemPost(imageProduceSema);
+	}
+};
+
+struct JpegLoop
+{
+	std::string baseFilename;
+	double fps;
+	
+	unsigned char * fileBuffer;
+	int fileBufferSize;
+	
+	unsigned char ** dstBuffer;
+	int * dstBufferSize;
+	
+	GLuint texture;
+	
+	JpegLoop(const char * _baseFilename, const double _fps, unsigned char * _fileBuffer, int _fileBufferSize, unsigned char ** _dstBuffer, int * _dstBufferSize)
+		: baseFilename(_baseFilename)
+		, fps(_fps)
+		, fileBuffer(_fileBuffer)
+		, fileBufferSize(_fileBufferSize)
+		, dstBuffer(_dstBuffer)
+		, dstBufferSize(_dstBufferSize)
+		, texture(0)
+	{
+		glGenTextures(1, &texture);
+		
+		if (texture != 0)
+		{
+			glBindTexture(GL_TEXTURE_2D, texture);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+			checkErrorGL();
+			
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			checkErrorGL();
+			
+			glBindTexture(GL_TEXTURE_2D, 0);
+			checkErrorGL();
+		}
+	}
+	
+	~JpegLoop()
+	{
+		glDeleteTextures(1, &texture);
+		texture = 0;
+	}
+	
+	void seek(const double time)
+	{
+		const int frameIndex = std::floor(time * fps);
+		
+		char filename[256];
+		sprintf_s(filename, sizeof(filename), baseFilename.c_str(), frameIndex + 1);
+		
+		JpegLoadData data;
+		data.buffer = *dstBuffer;
+		data.bufferSize = *dstBufferSize;
+		data.flipY = true;
+		
+		const bool hasImage = loadImage_turbojpeg(filename, data, fileBuffer, fileBufferSize);
+		
+		*dstBuffer = data.buffer;
+		*dstBufferSize = data.bufferSize;
+		
+		if (hasImage)
+		{
+			glBindTexture(GL_TEXTURE_2D, texture);
+			checkErrorGL();
+			
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, data.sx, data.sy, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.buffer);
+			checkErrorGL();
+			
+			glBindTexture(GL_TEXTURE_2D, 0);
+			checkErrorGL();
+		}
+	}
+};
+
 int main(int argc, char * argv[])
 {
+#if 0
+	const char * srcFilename1 = "/Users/thecat/videosplitter/slides/000001.jpg";
+	const char * srcFilename2 = "/Users/thecat/videosplitter/slides/000100.jpg";
+	const char * dstFilename = "/Users/thecat/videosplitter/savetest.jpg";
+	
+	int fileBufferSize = 1024 * 1024;
+	char * fileBuffer = new char[fileBufferSize];
+	
+	JpegLoadData loadData[2];
+	
+	if (loadImage_turbojpeg(srcFilename1, loadData[0], fileBuffer, fileBufferSize) &&
+		loadImage_turbojpeg(srcFilename2, loadData[1], fileBuffer, fileBufferSize) &&
+		(loadData[0].bufferSize == loadData[1].bufferSize))
+	{
+		for (int i = 0; i < loadData[0].bufferSize; ++i)
+		{
+			loadData[0].buffer[i] = (int(loadData[0].buffer[i]) + int(loadData[1].buffer[i])) / 2;
+		}
+		
+		saveImage_turbojpeg(dstFilename, loadData[0].buffer, loadData[0].bufferSize, loadData[0].sx, loadData[0].sy);
+	}
+	
+	for (int i = 0; i < 2; ++i)
+	{
+		delete [] loadData[i].buffer;
+		loadData[i].buffer = nullptr;
+		loadData[i].bufferSize = 0;
+	}
+	
+	delete [] fileBuffer;
+	fileBuffer = nullptr;
+	fileBufferSize = 0;
+#endif
+
+#if 0
+	JpegStreamer * jpegStreamer = new JpegStreamer("/Users/thecat/videosplitter/slides/%06d.jpg");
+	
+	logDebug("testJpegStreamer: start");
+	
+	for (int i = 0; i < 1000; ++i)
+	{
+		JpegStreamer::ImageContents * contents = nullptr;
+		
+		jpegStreamer->consume(contents);
+		
+		jpegStreamer->release(contents);
+	}
+	
+	logDebug("testJpegStreamer: stop");
+	
+	delete jpegStreamer;
+	jpegStreamer = nullptr;
+#endif
+
+#if 0
+	unsigned char * dstBuffer = nullptr;
+	int dstBufferSize = 0;
+	
+	int fileBufferSize = 1024 * 1024;
+	char * fileBuffer = new char[fileBufferSize];
+	
+	logDebug("testTurbojpeg: start");
+	
+	for (int i = 0; i < 1000; ++i)
+	{
+		char filename[256];
+		sprintf_s(filename, sizeof(filename), "/Users/thecat/videosplitter/slides/%06d.jpg", i + 1);
+		
+		int dstSx;
+		int dstSy;
+		
+		loadImage_turbojpeg(filename, dstBuffer, dstBufferSize, dstSx, dstSy, fileBuffer, fileBufferSize);
+	}
+	
+	logDebug("testTurbojpeg: stop");
+	
+	delete [] fileBuffer;
+	fileBuffer = nullptr;
+	fileBufferSize = 0;
+	
+	delete [] dstBuffer;
+	dstBuffer = nullptr;
+	dstBufferSize = 0;
+#endif
+
+#if 1
+	framework.init(0, nullptr, GFX_SX, GFX_SY);
+	{
+		const int fps = 24;
+		const double duration = 1800.0;
+		
+		unsigned char * dstBuffer = nullptr;
+		int dstBufferSize = 0;
+		
+		int fileBufferSize = 1024 * 1024;
+		unsigned char * fileBuffer = new unsigned char[fileBufferSize];
+		
+		const int kNumJpegLoops = 3;
+		
+		JpegLoop * jpegLoop[kNumJpegLoops] = { };
+		
+		for (int i = 0; i < kNumJpegLoops; ++i)
+		{
+			jpegLoop[i] = new JpegLoop("/Users/thecat/videosplitter/slides/%06d.jpg", fps, fileBuffer, fileBufferSize, &dstBuffer, &dstBufferSize);
+		}
+		
+		Surface * surface = new Surface(GFX_SX, GFX_SY, true);
+		surface->clear();
+		
+		double time = 0.0;
+		
+		while (!framework.quitRequested)
+		{
+			framework.process();
+			
+			if (keyboard.wentDown(SDLK_ESCAPE))
+				framework.quitRequested = true;
+			
+			if (mouse.isDown(BUTTON_LEFT))
+			{
+				time = duration * mouse.x / double(GFX_SX);
+			}
+			
+			for (int i = 0; i < kNumJpegLoops; ++i)
+			{
+				if (i == 0)
+					jpegLoop[i]->seek(time);
+				else
+					jpegLoop[i]->seek((1800.0 / i) - time);
+			}
+			
+			time += framework.timeStep * Calc::Lerp(-6.f, 20.f, mouse.x / float(GFX_SX));
+			
+			framework.beginDraw(0, 0, 0, 0);
+			{
+				pushSurface(surface);
+				{
+				#if 0
+					pushBlend(BLEND_ALPHA);
+				#else
+					pushBlend(BLEND_OPAQUE);
+				#endif
+					setColor(255, 255, 255, 15);
+					gxSetTexture(jpegLoop[0]->texture);
+					drawRect(0, 0, GFX_SX, GFX_SY);
+					gxSetTexture(0);
+					popBlend();
+				}
+				popSurface();
+				
+			#if 1
+				const float kernelSize = 63.f * mouse.y / float(GFX_SY);
+				pushBlend(BLEND_OPAQUE);
+				setShader_GaussianBlurH(surface->getTexture(), kernelSize + 1, kernelSize);
+				surface->postprocess();
+				setShader_GaussianBlurV(surface->getTexture(), kernelSize + 1, kernelSize);
+				surface->postprocess();
+				clearShader();
+				popBlend();
+			#endif
+			
+				pushSurface(surface);
+				{
+				#if 1
+					for (int i = 0; i < kNumJpegLoops; ++i)
+					{
+						const int nx = 3;
+						const int sx = 128 * 2;
+						const int sy = 72 * 2;
+						const int px = 10;
+						const int py = 10;
+						
+						const int ix = i % nx;
+						const int iy = i / nx;
+						
+						const int x = (sx + px) * ix + sx/2;
+						const int y = (sy + py) * iy + sy/2;
+						
+						gxPushMatrix();
+						{
+							gxTranslatef(x, y, 0);
+							pushBlend(BLEND_ALPHA);
+							setColor(255, 255, 255, 227);
+							gxSetTexture(jpegLoop[i]->texture);
+							drawRect(0, 0, sx, sy);
+							gxSetTexture(0);
+							popBlend();
+						}
+						gxPopMatrix();
+					}
+				#endif
+				
+				#if 1
+					const int padding = 10;
+					setColor(255, 0, 0, 191);
+					const int sxf = GFX_SX - padding * 2;
+					const double sxt = sxf * time / duration;
+					drawRect(padding, GFX_SY - 40 - padding, padding + sxt, GFX_SY - padding);
+					setColor(colorBlack);
+					drawRectLine(padding, GFX_SY - 40 - padding, padding + sxf, GFX_SY - padding);
+				#endif
+				}
+				popSurface();
+				
+				pushBlend(BLEND_OPAQUE);
+				setColor(colorWhite);
+				gxSetTexture(surface->getTexture());
+				drawRect(0, 0, GFX_SX, GFX_SY);
+				gxSetTexture(0);
+				popBlend();
+			}
+			framework.endDraw();
+		}
+		
+		for (int i = 0; i < kNumJpegLoops; ++i)
+		{
+			delete jpegLoop[i];
+			jpegLoop[i] = nullptr;
+		}
+		
+		delete surface;
+		surface = nullptr;
+		
+		delete [] fileBuffer;
+		fileBuffer = nullptr;
+		fileBufferSize = 0;
+		
+		delete [] dstBuffer;
+		dstBuffer = nullptr;
+		dstBufferSize = 0;
+	}
+	framework.shutdown();
+	
+	return 0;
+#endif
+	
+	//
+	
 	changeDirectory("/Users/thecat/Google Drive/The Grooop - Welcome");
 	
 #if defined(DEBUG)
@@ -1249,7 +2236,7 @@ int main(int argc, char * argv[])
 		VideoGame * videoGame = new VideoGame();
 	#endif
 		
-		GrooopLogo grooopLogo;
+		GrooopLogo * grooopLogo = new GrooopLogo();
 		
 		mixingPanel = UIMixingPanel();
 		mixingPanel.px = 100;
@@ -1283,6 +2270,13 @@ int main(int argc, char * argv[])
 		int nextGrainIndex = 0;
 		
 		auto uploadedImages = listFiles("/Users/thecat/Downloads/messenger-platform-samples/node/uploads/images", false);
+		for (auto i = uploadedImages.begin(); i != uploadedImages.end(); )
+			if (!String::EndsWith((*i), ".jpg") && !String::EndsWith((*i), ".png"))
+				i = uploadedImages.erase(i);
+			else
+				++i;
+		int uploadedImageIndex = 0;
+		float uploadedImageFade = 0.f;
 		
 		while (!framework.quitRequested)
 		{
@@ -1556,9 +2550,25 @@ int main(int argc, char * argv[])
 			videoGame->tick(dt);
 		#endif
 			
-			grooopLogo.tick(dt);
+			if (kMixLogoOpacity == 0.f)
+			{
+				delete grooopLogo;
+				grooopLogo = nullptr;
+				
+				grooopLogo = new GrooopLogo();
+			}
+			
+			grooopLogo->tick(dt);
 			
 			mixingPanel.tick(dt);
+			
+			uploadedImageFade += dt / 4.f;
+			
+			if (!uploadedImages.empty() && uploadedImageFade >= 1.f)
+			{
+				uploadedImageFade = 0.f;
+				uploadedImageIndex = (uploadedImageIndex + 1) % uploadedImages.size();
+			}
 			
 		#if DO_VIDEOLOOPS
 			if (mouse.isDown(BUTTON_LEFT))
@@ -1846,12 +2856,44 @@ int main(int argc, char * argv[])
 				
 				pushSurface(&surface);
 				{
-					grooopLogo.draw();
+					grooopLogo->draw();
 				}
 				popSurface();
 				
 				pushSurface(&surface);
 				{
+					if (!uploadedImages.empty())
+					{
+						const char * filename = uploadedImages[uploadedImageIndex].c_str();
+						
+						const GLuint texture = getTexture(filename);
+						
+						gxPushMatrix();
+						{
+							gxTranslatef(GFX_SX/2, GFX_SY/2, 0.f);
+							
+							float opacity = 0.f;
+							
+							if (uploadedImageFade < .25f)
+								opacity = EvalEase((uploadedImageFade - 0.f) / .25f, kEaseType_SineIn, 0.f);
+							else if (uploadedImageFade > .75f)
+								opacity = 1.f - EvalEase((uploadedImageFade - .75f) / .25f, kEaseType_SineOut, 0.f);
+							else
+								opacity = 1.f;
+							
+							//const float opacity = std::sinf(uploadedImageFade * M_PI);
+							
+							gxSetTexture(texture);
+							{
+								setColorf(1.f, 1.f, 1.f, kMixUserContentOpacity * opacity);
+								drawRect(-100, -100, +100, +100);
+							}
+							gxSetTexture(0);
+						}
+						gxPopMatrix();
+					}
+					
+					if (false)
 					for (int i = 0; i < (int)uploadedImages.size(); ++i)
 					{
 						const int cx = i % 6;
@@ -1959,6 +3001,9 @@ int main(int argc, char * argv[])
 		mixingSettings.save("mixing.txt");
 		
 		//
+		
+		delete grooopLogo;
+		grooopLogo = nullptr;
 		
 	#if DO_GAME
 		delete videoGame;
