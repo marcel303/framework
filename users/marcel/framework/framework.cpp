@@ -481,6 +481,8 @@ bool Framework::shutdown()
 #endif
 
 	gxShutdown();
+	
+	m_shaderSources.clear();
 
 	glBlendEquation = 0;
 	glClampColor = 0;
@@ -2386,11 +2388,17 @@ bool Dictionary::load(const char * filename)
 
 bool Dictionary::save(const char * filename)
 {
+	bool result = true;
+	
 	FILE * file = nullptr;
 	
 	fopen_s(&file, filename, "wt");
 	
-	if (file != nullptr)
+	if (file == nullptr)
+	{
+		result = false;
+	}
+	else
 	{
 		for (auto i : m_map)
 		{
@@ -2403,6 +2411,8 @@ bool Dictionary::save(const char * filename)
 		fclose(file);
 		file = nullptr;
 	}
+	
+	return result;
 }
 
 bool Dictionary::parse(const std::string & line, bool clear)
