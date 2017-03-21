@@ -1264,6 +1264,26 @@ struct JpegLoadData
 		, sy(0)
 	{
 	}
+	
+	~JpegLoadData()
+	{
+		free();
+	}
+	
+	void disown()
+	{
+		buffer = 0;
+		bufferSize = 0;
+		sx = 0;
+		sy = 0;
+	}
+	
+	void free()
+	{
+		delete [] buffer;
+		buffer = nullptr;
+		bufferSize = 0;
+	}
 };
 
 static bool loadImage_turbojpeg(const void * buffer, const int bufferSize, JpegLoadData & data)
@@ -1357,7 +1377,7 @@ static bool loadImage_turbojpeg(const char * filename, JpegLoadData & data, void
 	return result;
 }
 
-static bool saveImage_turbojpeg(const void * srcBuffer, const int srcBufferSize, const int srcSx, const int srcSy, unsigned char *& dstBuffer, int & dstBufferSize)
+static bool saveImage_turbojpeg(const void * srcBuffer, const int srcBufferSize, const int srcSx, const int srcSy, void *& dstBuffer, int & dstBufferSize)
 {
 	bool result = true;
 	
@@ -1377,7 +1397,7 @@ static bool saveImage_turbojpeg(const void * srcBuffer, const int srcBufferSize,
 		
 		const int xPitch = srcSx * tjPixelSize[pixelFormat];
 		
-		unsigned long dstBufferSize2 = 0;
+		unsigned long dstBufferSize2 = dstBufferSize;
 		
 		if (tjCompress2(h, (const unsigned char *)srcBuffer, srcSx, xPitch, srcSy, TJPF_RGBX, (unsigned char**)&dstBuffer, &dstBufferSize2, subsamp, quality, 0) < 0)
 		{
@@ -1397,12 +1417,12 @@ static bool saveImage_turbojpeg(const void * srcBuffer, const int srcBufferSize,
 	return result;
 }
 
-static bool saveImage_turbojpeg(const char * filename, const void * srcBuffer, const int srcBufferSize, const int srcSx, const int srcSy)
+static bool saveImage_turbojpeg(const char * filename, const void * srcBuffer, const int srcBufferSize, const int srcSx, const int srcSy, void * _saveBuffer, int _saveBufferSize)
 {
 	bool result = true;
 	
-	unsigned char * saveBuffer = nullptr;
-	int saveBufferSize = 0;
+	void * saveBuffer = _saveBuffer;
+	int saveBufferSize = _saveBufferSize;
 	
 	if (saveImage_turbojpeg(srcBuffer, srcBufferSize, srcSx, srcSy, saveBuffer, saveBufferSize) == false)
 	{
@@ -1425,11 +1445,29 @@ static bool saveImage_turbojpeg(const char * filename, const void * srcBuffer, c
 			
 			fclose(file);
 		}
-		
-		tjFree(saveBuffer);
-		saveBuffer = nullptr;
-		saveBufferSize = 0;
 	}
+	
+	Assert(saveBuffer == _saveBuffer);
+	Assert(saveBufferSize <= _saveBufferSize);
+	
+	return result;
+}
+
+static bool saveImage_turbojpeg(const char * filename, const void * srcBuffer, const int srcBufferSize, const int srcSx, const int srcSy)
+{
+	bool result = true;
+	
+	void * saveBuffer = nullptr;
+	int saveBufferSize = 0;
+	
+	if (saveImage_turbojpeg(filename, srcBuffer, srcBufferSize, srcSx, srcSy, saveBuffer, saveBufferSize) == false)
+	{
+		result = false;
+	}
+	
+	tjFree((unsigned char*)saveBuffer);
+	saveBuffer = nullptr;
+	saveBufferSize = 0;
 	
 	return result;
 }
@@ -1909,63 +1947,147 @@ struct JpegLoop
 			glBindTexture(GL_TEXTURE_2D, 0);
 			checkErrorGL();
 		}
+		
+		data.disown();
 	}
 };
 
-int main(int argc, char * argv[])
+static void speedup(const char * srcBasename, const char * dstBasename, const int numFrames)
 {
-#if 0
-	const char * srcFilename1 = "/Users/thecat/videosplitter/slides/000001.jpg";
-	const char * srcFilename2 = "/Users/thecat/videosplitter/slides/000100.jpg";
-	const char * dstFilename = "/Users/thecat/videosplitter/savetest.jpg";
+	const int numDstFrames = numFrames / 2;
 	
-	int fileBufferSize = 1024 * 1024;
-	char * fileBuffer = new char[fileBufferSize];
+	int loadBufferSize = 1024 * 1024;
+	char * loadBuffer = new char[loadBufferSize];
+	
+	int saveBufferSize = 1024 * 1024;
+	char * saveBuffer = new char[saveBufferSize];
 	
 	JpegLoadData loadData[2];
 	
-	if (loadImage_turbojpeg(srcFilename1, loadData[0], fileBuffer, fileBufferSize) &&
-		loadImage_turbojpeg(srcFilename2, loadData[1], fileBuffer, fileBufferSize) &&
-		(loadData[0].bufferSize == loadData[1].bufferSize))
+	for (int i = 0; i < numDstFrames; ++i)
 	{
-		for (int i = 0; i < loadData[0].bufferSize; ++i)
+		char srcFilename1[256];
+		char srcFilename2[256];
+		char dstFilename[256];
+		
+		sprintf_s(srcFilename1, sizeof(srcFilename1), srcBasename, i*2+0 + 1);
+		sprintf_s(srcFilename2, sizeof(srcFilename2), srcBasename, i*2+1 + 1);
+		sprintf_s(dstFilename, sizeof(dstFilename), dstBasename, i + 1);
+		
+		if (loadImage_turbojpeg(srcFilename1, loadData[0], loadBuffer, loadBufferSize) &&
+			loadImage_turbojpeg(srcFilename2, loadData[1], loadBuffer, loadBufferSize) &&
+			(loadData[0].sx) == (loadData[1].sx) &&
+			(loadData[0].sy) == (loadData[1].sy))
 		{
-			loadData[0].buffer[i] = (int(loadData[0].buffer[i]) + int(loadData[1].buffer[i])) / 2;
+			for (int i = 0; i < loadData[0].bufferSize; ++i)
+			{
+				loadData[0].buffer[i] = (int(loadData[0].buffer[i]) + int(loadData[1].buffer[i])) / 2;
+			}
+			
+			saveImage_turbojpeg(dstFilename, loadData[0].buffer, loadData[0].bufferSize, loadData[0].sx, loadData[0].sy, saveBuffer, saveBufferSize);
 		}
 		
-		saveImage_turbojpeg(dstFilename, loadData[0].buffer, loadData[0].bufferSize, loadData[0].sx, loadData[0].sy);
+		if ((i % 100) == 0)
+		{
+			printf("processing frame %d/%d\n", i, numFrames);
+		}
 	}
 	
 	for (int i = 0; i < 2; ++i)
-	{
-		delete [] loadData[i].buffer;
-		loadData[i].buffer = nullptr;
-		loadData[i].bufferSize = 0;
-	}
+		loadData[i].free();
 	
-	delete [] fileBuffer;
-	fileBuffer = nullptr;
-	fileBufferSize = 0;
+	delete [] saveBuffer;
+	saveBuffer = nullptr;
+	saveBufferSize = 0;
+	
+	delete [] loadBuffer;
+	loadBuffer = nullptr;
+	loadBufferSize = 0;
+}
+
+#include <sys/stat.h>
+
+int main(int argc, char * argv[])
+{
+	changeDirectory("/Users/thecat/Google Drive/The Grooop - Welcome");
+	
+	//
+	
+#if 1
+	int numFrames = 43200;
+	
+	for (int i = 0; numFrames >= 2; ++i, numFrames /= 2)
+	{
+		char srcPath[256];
+		char dstPath[256];
+		
+		sprintf_s(srcPath, sizeof(srcPath), "/Users/thecat/videosplitter/slides-%02d", i + 0);
+		sprintf_s(dstPath, sizeof(dstPath), "/Users/thecat/videosplitter/slides-%02d", i + 1);
+		
+		mkdir(dstPath, S_IRUSR | S_IWUSR);
+		
+		char srcBasename[256];
+		char dstBasename[256];
+		
+		sprintf_s(srcBasename, sizeof(srcBasename), "%s/%%06d.jpg", srcPath);
+		sprintf_s(dstBasename, sizeof(dstBasename), "%s/%%06d.jpg", dstPath);
+		
+		speedup(srcBasename, dstBasename, numFrames);
+	}
 #endif
 
 #if 0
-	JpegStreamer * jpegStreamer = new JpegStreamer("/Users/thecat/videosplitter/slides/%06d.jpg");
-	
-	logDebug("testJpegStreamer: start");
-	
-	for (int i = 0; i < 1000; ++i)
 	{
-		JpegStreamer::ImageContents * contents = nullptr;
+		const char * srcFilename1 = "/Users/thecat/videosplitter/slides-00/000001.jpg";
+		const char * srcFilename2 = "/Users/thecat/videosplitter/slides-00/000100.jpg";
+		const char * dstFilename = "/Users/thecat/videosplitter/savetest.jpg";
 		
-		jpegStreamer->consume(contents);
+		int fileBufferSize = 1024 * 1024;
+		char * fileBuffer = new char[fileBufferSize];
 		
-		jpegStreamer->release(contents);
+		JpegLoadData loadData[2];
+		
+		if (loadImage_turbojpeg(srcFilename1, loadData[0], fileBuffer, fileBufferSize) &&
+			loadImage_turbojpeg(srcFilename2, loadData[1], fileBuffer, fileBufferSize) &&
+			(loadData[0].bufferSize == loadData[1].bufferSize))
+		{
+			for (int i = 0; i < loadData[0].bufferSize; ++i)
+			{
+				loadData[0].buffer[i] = (int(loadData[0].buffer[i]) + int(loadData[1].buffer[i])) / 2;
+			}
+			
+			saveImage_turbojpeg(dstFilename, loadData[0].buffer, loadData[0].bufferSize, loadData[0].sx, loadData[0].sy);
+		}
+		
+		for (int i = 0; i < 2; ++i)
+			loadData[i].free();
+		
+		delete [] fileBuffer;
+		fileBuffer = nullptr;
+		fileBufferSize = 0;
 	}
-	
-	logDebug("testJpegStreamer: stop");
-	
-	delete jpegStreamer;
-	jpegStreamer = nullptr;
+#endif
+
+#if 0
+	{
+		JpegStreamer * jpegStreamer = new JpegStreamer("/Users/thecat/videosplitter/slides-00/%06d.jpg");
+		
+		logDebug("testJpegStreamer: start");
+		
+		for (int i = 0; i < 1000; ++i)
+		{
+			JpegStreamer::ImageContents * contents = nullptr;
+			
+			jpegStreamer->consume(contents);
+			
+			jpegStreamer->release(contents);
+		}
+		
+		logDebug("testJpegStreamer: stop");
+		
+		delete jpegStreamer;
+		jpegStreamer = nullptr;
+	}
 #endif
 
 #if 0
@@ -1980,7 +2102,7 @@ int main(int argc, char * argv[])
 	for (int i = 0; i < 1000; ++i)
 	{
 		char filename[256];
-		sprintf_s(filename, sizeof(filename), "/Users/thecat/videosplitter/slides/%06d.jpg", i + 1);
+		sprintf_s(filename, sizeof(filename), "/Users/thecat/videosplitter/slides-00/%06d.jpg", i + 1);
 		
 		int dstSx;
 		int dstSy;
@@ -2017,13 +2139,14 @@ int main(int argc, char * argv[])
 		
 		for (int i = 0; i < kNumJpegLoops; ++i)
 		{
-			jpegLoop[i] = new JpegLoop("/Users/thecat/videosplitter/slides/%06d.jpg", fps, fileBuffer, fileBufferSize, &dstBuffer, &dstBufferSize);
+			jpegLoop[i] = new JpegLoop("/Users/thecat/videosplitter/slides-07/%06d.jpg", fps, fileBuffer, fileBufferSize, &dstBuffer, &dstBufferSize);
 		}
 		
 		Surface * surface = new Surface(GFX_SX, GFX_SY, true);
 		surface->clear();
 		
 		double time = 0.0;
+		bool isPaused = false;
 		
 		while (!framework.quitRequested)
 		{
@@ -2032,20 +2155,59 @@ int main(int argc, char * argv[])
 			if (keyboard.wentDown(SDLK_ESCAPE))
 				framework.quitRequested = true;
 			
+			if (keyboard.wentDown(SDLK_SPACE))
+				isPaused = !isPaused;
+			
 			if (mouse.isDown(BUTTON_LEFT))
 			{
 				time = duration * mouse.x / double(GFX_SX);
 			}
 			
+			const float speedInterp = (mouse.x / float(GFX_SX) - .5f) * 2.f;
+			const float speedFactor = Calc::Lerp(0.f, 1000.f, std::powf(std::abs(speedInterp), 2.5f)) * Calc::Sign(speedInterp);
+			
+			int streamIndex = 0;
+			
+			for (float i = 1.f; i * 2.f < std::abs(speedFactor) && streamIndex < 14; i *= 2.f)
+				streamIndex++;
+			
+			logDebug("stream index: %d", streamIndex);
+			
+			//
+			
+			float fpsMultiplier = 1.f;
+			
+			for (int i = 0; i < streamIndex; ++i)
+				fpsMultiplier /= 2.f;
+			
 			for (int i = 0; i < kNumJpegLoops; ++i)
 			{
+				float seek = 0.f;
+				
 				if (i == 0)
-					jpegLoop[i]->seek(time);
+					seek = time;
 				else
-					jpegLoop[i]->seek((1800.0 / i) - time);
+					seek = (duration / i) - time;
+				
+				jpegLoop[i]->fps = fps * fpsMultiplier;
+				
+				char baseFilename[256];
+				sprintf_s(baseFilename, sizeof(baseFilename), "/Users/thecat/videosplitter/slides-%02d/%%06d.jpg", streamIndex);
+				
+				jpegLoop[i]->baseFilename = baseFilename;
+				
+				jpegLoop[i]->seek(seek);
 			}
 			
-			time += framework.timeStep * Calc::Lerp(-6.f, 20.f, mouse.x / float(GFX_SX));
+			if (isPaused == false)
+			{
+				time += framework.timeStep * speedFactor;
+			}
+			
+			if (time > duration)
+				time = 0.0;
+			if (time < 0.0)
+				time = duration;
 			
 			framework.beginDraw(0, 0, 0, 0);
 			{
@@ -2065,7 +2227,7 @@ int main(int argc, char * argv[])
 				popSurface();
 				
 			#if 1
-				const float kernelSize = 63.f * mouse.y / float(GFX_SY);
+				const float kernelSize = 127.f * std::pow(std::abs(mouse.y / float(GFX_SY) - .5f) * 2.f, 4.f);
 				pushBlend(BLEND_OPAQUE);
 				setShader_GaussianBlurH(surface->getTexture(), kernelSize + 1, kernelSize);
 				surface->postprocess();
@@ -2111,9 +2273,19 @@ int main(int argc, char * argv[])
 					setColor(255, 0, 0, 191);
 					const int sxf = GFX_SX - padding * 2;
 					const double sxt = sxf * time / duration;
-					drawRect(padding, GFX_SY - 40 - padding, padding + sxt, GFX_SY - padding);
+					drawRect(padding, GFX_SY - padding - 40, padding + sxt, GFX_SY - padding);
 					setColor(colorBlack);
-					drawRectLine(padding, GFX_SY - 40 - padding, padding + sxf, GFX_SY - padding);
+					drawRectLine(padding, GFX_SY - padding - 40, padding + sxf, GFX_SY - padding);
+					
+					setColor(colorWhite);
+					setFont("calibri.ttf");
+					int timeInSeconds = int(std::floor(time));
+					const int hh = timeInSeconds / 3600;
+					timeInSeconds -= hh * 3600;
+					const int mm = timeInSeconds / 60;
+					timeInSeconds -= mm * 60;
+					const int ss = timeInSeconds;
+					drawText(GFX_SX/2, GFX_SY - padding - 22, 22, 0.f, -.5f, "%02d:%02d:%02d - %gx", hh, mm, ss, speedFactor);
 				#endif
 				}
 				popSurface();
@@ -2151,8 +2323,6 @@ int main(int argc, char * argv[])
 #endif
 	
 	//
-	
-	changeDirectory("/Users/thecat/Google Drive/The Grooop - Welcome");
 	
 #if defined(DEBUG)
 	framework.enableRealTimeEditing = true;
