@@ -24,6 +24,8 @@
 
 #define NUM_LAYERS 3
 
+#define STREAM_ID "b"
+
 //#define kMixVideoSurfaceOpacity (mouse.x / float(GFX_SX))
 //#define kMixPostSurfaceRetain (mouse.y / float(GFX_SY))
 
@@ -1230,7 +1232,7 @@ static bool loadFileContents(const char * filename, void * bytes, int & numBytes
 		{
 			numBytes = fileSize;
 			
-			if (fread(bytes, 1, numBytes, file) != (size_t)numBytes)
+			if (fread(bytes, numBytes, 1, file) != (size_t)1)
 			{
 				result = false;
 			}
@@ -1360,10 +1362,7 @@ static bool loadImage_turbojpeg(const char * filename, JpegLoadData & data, void
 {
 	bool result = true;
 	
-	void * buffer = fileBuffer;
-	int bufferSize = fileBufferSize;
-	
-	if (loadFileContents(filename, buffer, bufferSize) == false)
+	if (loadFileContents(filename, fileBuffer, fileBufferSize) == false)
 	{
 		logDebug("turbojpeg: %s", "failed to load file contents");
 		
@@ -1371,7 +1370,7 @@ static bool loadImage_turbojpeg(const char * filename, JpegLoadData & data, void
 	}
 	else
 	{
-		result = loadImage_turbojpeg(buffer, bufferSize, data);
+		result = loadImage_turbojpeg(fileBuffer, fileBufferSize, data);
 	}
 	
 	return result;
@@ -1438,7 +1437,7 @@ static bool saveImage_turbojpeg(const char * filename, const void * srcBuffer, c
 		}
 		else
 		{
-			if (fwrite(saveBuffer, saveBufferSize, 1, file) != saveBufferSize)
+			if (fwrite(saveBuffer, saveBufferSize, 1, file) != (size_t)1)
 			{
 				result = false;
 			}
@@ -1460,9 +1459,27 @@ static bool saveImage_turbojpeg(const char * filename, const void * srcBuffer, c
 	void * saveBuffer = nullptr;
 	int saveBufferSize = 0;
 	
-	if (saveImage_turbojpeg(filename, srcBuffer, srcBufferSize, srcSx, srcSy, saveBuffer, saveBufferSize) == false)
+	if (saveImage_turbojpeg(srcBuffer, srcBufferSize, srcSx, srcSy, saveBuffer, saveBufferSize) == false)
 	{
 		result = false;
+	}
+	else
+	{
+		FILE * file = fopen(filename, "wb");
+		
+		if (file == nullptr)
+		{
+			result = false;
+		}
+		else
+		{
+			if (fwrite(saveBuffer, saveBufferSize, 1, file) != (size_t)1)
+			{
+				result = false;
+			}
+			
+			fclose(file);
+		}
 	}
 	
 	tjFree((unsigned char*)saveBuffer);
@@ -1989,7 +2006,7 @@ static void speedup(const char * srcBasename, const char * dstBasename, const in
 		
 		if ((i % 100) == 0)
 		{
-			printf("processing frame %d/%d\n", i, numFrames);
+			printf("processing frame %d/%d\n", i, numDstFrames);
 		}
 	}
 	
@@ -2013,18 +2030,27 @@ int main(int argc, char * argv[])
 	
 	//
 	
-#if 1
+#if 0
 	int numFrames = 43200;
+	int streamIndex = 0;
 	
-	for (int i = 0; numFrames >= 2; ++i, numFrames /= 2)
+#if 0
+	while (numFrames >= 2 && streamIndex < 12)
+	{
+		numFrames /= 2;
+		++streamIndex;
+	}
+#endif
+	
+	while (numFrames >= 2)
 	{
 		char srcPath[256];
 		char dstPath[256];
 		
-		sprintf_s(srcPath, sizeof(srcPath), "/Users/thecat/videosplitter/slides-%02d", i + 0);
-		sprintf_s(dstPath, sizeof(dstPath), "/Users/thecat/videosplitter/slides-%02d", i + 1);
+		sprintf_s(srcPath, sizeof(srcPath), "/Users/thecat/videosplitter/slides-" STREAM_ID "-%02d", streamIndex + 0);
+		sprintf_s(dstPath, sizeof(dstPath), "/Users/thecat/videosplitter/slides-" STREAM_ID "-%02d", streamIndex + 1);
 		
-		mkdir(dstPath, S_IRUSR | S_IWUSR);
+		mkdir(dstPath, S_IRWXU | S_IRGRP | S_IROTH);
 		
 		char srcBasename[256];
 		char dstBasename[256];
@@ -2033,13 +2059,16 @@ int main(int argc, char * argv[])
 		sprintf_s(dstBasename, sizeof(dstBasename), "%s/%%06d.jpg", dstPath);
 		
 		speedup(srcBasename, dstBasename, numFrames);
+		
+		numFrames /= 2;
+		++streamIndex;
 	}
 #endif
 
 #if 0
 	{
-		const char * srcFilename1 = "/Users/thecat/videosplitter/slides-00/000001.jpg";
-		const char * srcFilename2 = "/Users/thecat/videosplitter/slides-00/000100.jpg";
+		const char * srcFilename1 = "/Users/thecat/videosplitter/slides-" STREAM_ID "-00/000001.jpg";
+		const char * srcFilename2 = "/Users/thecat/videosplitter/slides-" STREAM_ID "-00/000100.jpg";
 		const char * dstFilename = "/Users/thecat/videosplitter/savetest.jpg";
 		
 		int fileBufferSize = 1024 * 1024;
@@ -2070,7 +2099,7 @@ int main(int argc, char * argv[])
 
 #if 0
 	{
-		JpegStreamer * jpegStreamer = new JpegStreamer("/Users/thecat/videosplitter/slides-00/%06d.jpg");
+		JpegStreamer * jpegStreamer = new JpegStreamer("/Users/thecat/videosplitter/slides-" STREAM_ID "-00/%06d.jpg");
 		
 		logDebug("testJpegStreamer: start");
 		
@@ -2102,7 +2131,7 @@ int main(int argc, char * argv[])
 	for (int i = 0; i < 1000; ++i)
 	{
 		char filename[256];
-		sprintf_s(filename, sizeof(filename), "/Users/thecat/videosplitter/slides-00/%06d.jpg", i + 1);
+		sprintf_s(filename, sizeof(filename), "/Users/thecat/videosplitter/slides-" STREAM_ID "-00/%06d.jpg", i + 1);
 		
 		int dstSx;
 		int dstSy;
@@ -2139,7 +2168,7 @@ int main(int argc, char * argv[])
 		
 		for (int i = 0; i < kNumJpegLoops; ++i)
 		{
-			jpegLoop[i] = new JpegLoop("/Users/thecat/videosplitter/slides-07/%06d.jpg", fps, fileBuffer, fileBufferSize, &dstBuffer, &dstBufferSize);
+			jpegLoop[i] = new JpegLoop("/Users/thecat/videosplitter/slides-" STREAM_ID "-00/%06d.jpg", fps, fileBuffer, fileBufferSize, &dstBuffer, &dstBufferSize);
 		}
 		
 		Surface * surface = new Surface(GFX_SX, GFX_SY, true);
@@ -2171,7 +2200,7 @@ int main(int argc, char * argv[])
 			for (float i = 1.f; i * 2.f < std::abs(speedFactor) && streamIndex < 14; i *= 2.f)
 				streamIndex++;
 			
-			logDebug("stream index: %d", streamIndex);
+			//logDebug("stream index: %d", streamIndex);
 			
 			//
 			
@@ -2192,7 +2221,7 @@ int main(int argc, char * argv[])
 				jpegLoop[i]->fps = fps * fpsMultiplier;
 				
 				char baseFilename[256];
-				sprintf_s(baseFilename, sizeof(baseFilename), "/Users/thecat/videosplitter/slides-%02d/%%06d.jpg", streamIndex);
+				sprintf_s(baseFilename, sizeof(baseFilename), "/Users/thecat/videosplitter/slides-" STREAM_ID "-%02d/%%06d.jpg", streamIndex);
 				
 				jpegLoop[i]->baseFilename = baseFilename;
 				
