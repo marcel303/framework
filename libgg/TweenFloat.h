@@ -67,10 +67,19 @@ public:
 		applyModifiers();
 	}
 
+#if TWEENFLOAT_ALLOW_IMPLICIT_CONVERSION
+	// vfxpro was written before it was noticed there's an issue with copy-constructors this way
+	// todo : decide whether to remove implicit conversion, or allow it but warn in copy-ctor
+	operator float() const
+	{
+		return m_valueWithModifier;
+	}
+#else
 	explicit operator float() const
 	{
 		return m_valueWithModifier;
 	}
+#endif
 };
 
 struct TweenFloatCollection
