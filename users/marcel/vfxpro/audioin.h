@@ -29,14 +29,22 @@ struct AudioSample;
 
 class AudioIn
 {
+	void * m_stream;
+	AudioSample * m_sampleBuffer;
+	int m_sampleBufferSize;
+	
+	bool m_hasData;
+	
 public:
-	AudioIn() { }
-	~AudioIn() { }
+	AudioIn();
+	~AudioIn();
 	
-	bool init(int deviceIndex, int channelCount, int sampleRate, int bufferSampleCount) { return true; }
-	void shutdown() { }
+	bool init(int deviceIndex, int channelCount, int sampleRate, int bufferSampleCount);
+	void shutdown();
 	
-	bool provide(AudioSample * __restrict buffer, int & sampleCount) { return false; }
+	bool provide(AudioSample * __restrict buffer, int & sampleCount);
+	
+	void handleAudioData(const short * __restrict buffer);
 };
 
 #endif
