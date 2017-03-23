@@ -1,5 +1,36 @@
 #pragma once
 
+/*
+
+usage:
+
+	typedef RedBlackTree<unsigned short> Tree;
+	
+	Tree t;
+	
+	Tree::Node nodes[10000];
+	
+	memset(nodes, 0, sizeof(nodes));
+	
+	for (unsigned int i = 0; i < 10000; ++i)
+	{
+		nodes[i].SetValue(rand());
+	}
+	
+	for (unsigned int i = 0; i < 10000; ++i)
+	{
+		t.insert(&nodes[i]);
+	}
+	
+	for (Tree::iterator i = t.begin(); i != t.end(); ++i)
+	{
+		const unsigned short v = i.get_value();
+
+		// ...
+	}
+
+*/
+
 template <typename T>
 class RedBlackNode
 {

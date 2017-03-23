@@ -1,5 +1,34 @@
 #pragma once
 
+/*
+
+usage:
+
+	typedef RadixSorter<unsigned short, unsigned short, 10000, 8> Sorter;
+	
+	// the scratch space required by a sorter can be quite large. for safety, allocate it on the heap
+	Sorter * sorter = new Sorter();
+	
+	for (unsigned int i = 0; i < 10000; ++i)
+	{
+		sorter->elem[i].key = rand();
+		sorter->elem[i].value = i;
+	}
+	
+	sorter->Sort(10000, 16);
+	
+	for (unsigned int i = 0; i < 10000; ++i)
+	{
+		const unsinged short k = sorter->elem[i].key;
+		const unsinged short v = sorter->elem[i].value;
+
+		// ...
+	}
+
+	delete sorter;
+	
+*/
+
 #include "Debugging.h"
 #include <string.h>
 
