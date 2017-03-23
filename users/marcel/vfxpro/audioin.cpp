@@ -17,10 +17,8 @@ int portaudioCallback(
 	PaStreamCallbackFlags statusFlags,
 	void * userData)
 {
-	//LOG_DBG("portaudioCallback!", 0);
-	
 	AudioIn * self = (AudioIn*)userData;
-	const short * __restrict buffer = (short*)inputBuffer;
+	const short * buffer = (const short*)inputBuffer;
 	
 	self->handleAudioData(buffer);
 	
@@ -47,7 +45,7 @@ bool AudioIn::init(int deviceIndex, int channelCount, int sampleRate, int buffer
 	m_sampleBuffer = new AudioSample[bufferSampleCount];
 	m_sampleBufferSize = bufferSampleCount;
 	
-	PaError err;
+	PaError err = paNoError;
 	
 	err = Pa_Initialize();
 	
@@ -67,12 +65,13 @@ bool AudioIn::init(int deviceIndex, int channelCount, int sampleRate, int buffer
 	if (parameters.device == paNoDevice)
 	{
 		LOG_ERR("portaudio: failed to find output device", 0);
+		shutdown();
 		return false;
 	}
 	
 	const PaDeviceInfo * deviceInfo = Pa_GetDeviceInfo(parameters.device);
 	
-	parameters.channelCount = 2;
+	parameters.channelCount = 1;
 	parameters.sampleFormat = paInt16;
 	parameters.suggestedLatency = deviceInfo->defaultLowOutputLatency;
 	parameters.hostApiSpecificStreamInfo = nullptr;
@@ -82,6 +81,7 @@ bool AudioIn::init(int deviceIndex, int channelCount, int sampleRate, int buffer
 	if (err != paNoError)
 	{
 		LOG_ERR("portaudio: failed to open stream: %s", Pa_GetErrorText(err));
+		shutdown();
 		return false;
 	}
 	
@@ -90,6 +90,7 @@ bool AudioIn::init(int deviceIndex, int channelCount, int sampleRate, int buffer
 	if (err != paNoError)
 	{
 		LOG_ERR("portaudio: failed to start stream: %s", Pa_GetErrorText(err));
+		shutdown();
 		return false;
 	}
 	
@@ -104,26 +105,29 @@ void AudioIn::shutdown()
 	{
 		if (Pa_IsStreamActive(m_stream) != 0)
 		{
-			if ((err = Pa_StopStream(m_stream)) != paNoError)
+			err = Pa_StopStream(m_stream);
+			
+			if (err != paNoError)
 			{
 				LOG_ERR("portaudio: failed to stop stream: %s", Pa_GetErrorText(err));
-				return;
 			}
 		}
 		
-		if ((err = Pa_CloseStream(m_stream)) != paNoError)
+		err = Pa_CloseStream(m_stream);
+		
+		if (err != paNoError)
 		{
 			LOG_ERR("portaudio: failed to close stream: %s", Pa_GetErrorText(err));
-			return;
 		}
 		
 		m_stream = nullptr;
 	}
 	
-	if ((err = Pa_Terminate()) != paNoError)
+	err = Pa_Terminate();
+	
+	if (err != paNoError)
 	{
 		LOG_ERR("portaudio: failed to shutdown: %s", Pa_GetErrorText(err));
-		return;
 	}
 	
 	delete [] m_sampleBuffer;
@@ -159,7 +163,10 @@ void AudioIn::handleAudioData(const short * __restrict buffer)
 	
 	for (int i = 0; i < m_sampleBufferSize; ++i)
 	{
-		sampleBuffer[i].channel[0] = sampleBuffer[i].channel[1] = buffer[i];
+		const short value = buffer[i];
+		
+		sampleBuffer[i].channel[0] = value;
+		sampleBuffer[i].channel[1] = value;
 	}
 	
 	m_hasData = true;
