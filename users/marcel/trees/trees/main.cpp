@@ -1,8 +1,17 @@
+#include "../../../../libgg/Debugging.h"
+#include "../../../../libgg/RadixSorter.h"
+#include <algorithm>
 #include <assert.h>
 #include <ctime>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+//
+
+static const unsigned int kMaxDataSetSize = 1 << 16;
+
+//
 
 template <typename T>
 class RedBlackNode
@@ -82,6 +91,11 @@ public:
 		
 		Node * m_n;
 	};
+	
+	RedBlackTree()
+		: r(0)
+	{
+	}
 	
 	void insert(Node * n) { Insert(n); }
 	void clear() { r = 0; }
@@ -308,75 +322,144 @@ private:
 
 //
 
-extern void testRadixSort();
+static void testRadixSort(unsigned short * __restrict dataSet, const unsigned int dataSetSize)
+{
+	typedef RadixSorter<unsigned short, unsigned short, kMaxDataSetSize, 8> Sorter;
+	
+	Sorter * sorter = new Sorter();
+	
+	clock_t time = 0;
+	
+	time -= clock();
+	
+	for (unsigned int i = 0; i < dataSetSize; ++i)
+	{
+		sorter->elem[i].key = dataSet[i];
+	}
+	
+	sorter->Sort(dataSetSize, 16);
+	
+#if 1
+	for (unsigned int i = 0; i < dataSetSize; ++i)
+	{
+		dataSet[i] = sorter->elem[i].key;
+	}
+#endif
+
+	time += clock();
+	
+	printf("testRadixSort: time: %gms\n", float(time) / CLOCKS_PER_SEC * 1000.f);
+	
+	delete sorter;
+	sorter = 0;
+}
+
+//
+
+static void testRedBlackTree(unsigned short * __restrict dataSet, const unsigned int dataSetSize)
+{
+	typedef RedBlackTree<unsigned short> Tree;
+	
+	Tree t;
+	
+	Tree::Node * nodes = new Tree::Node[dataSetSize];
+	
+	memset(nodes, 0, sizeof(Tree::Node) * dataSetSize);
+	
+	clock_t time = 0;
+	
+	time -= clock();
+	
+	for (unsigned int i = 0; i < dataSetSize; ++i)
+	{
+		nodes[i].SetValue(dataSet[i]);
+	}
+	
+	for (unsigned int i = 0; i < dataSetSize; ++i)
+	{
+		Tree::Node & n = nodes[i];
+		
+		t.insert(&n);
+	}
+	
+#if 1
+	unsigned int c = 0;
+	
+	for (Tree::iterator i = t.begin(); i != t.end(); ++i)
+	{
+		const unsigned short v = i.get_value();
+		
+		dataSet[c] = v;
+		
+		++c;
+	}
+#endif
+
+	time += clock();
+	
+#if 1
+	printf("testRedBlackTree: time = %gms\n", float(time) / CLOCKS_PER_SEC * 1000.f);
+#endif
+	
+	delete[] nodes;
+	nodes = 0;
+}
+
+//
+
+static void testStdSort(unsigned short * dataSet, const unsigned int dataSetSize)
+{
+	clock_t time = 0;
+	
+	time -= clock();
+	
+	std::sort(dataSet, dataSet + dataSetSize);
+	
+	time += clock();
+	
+	printf("testStdSort: time = %gms\n", float(time) / CLOCKS_PER_SEC * 1000.f);
+}
+
+//
+
+static void verifySortingResult(const unsigned short * dataSet, const unsigned int dataSetSize)
+{
+	for (unsigned int i = 0; i < dataSetSize - 1; ++i)
+	{
+		Assert(dataSet[i] <= dataSet[i + 1]);
+	}
+}
 
 //
 
 int main (int argc, const char * argv[])
 {
-	testRadixSort();
+	const unsigned int N = kMaxDataSetSize;
 	
-	typedef RedBlackTree<unsigned short> Tree;
+	unsigned short originalDataSet[N];
 	
-	Tree t;
-	
-	int n = 1 << 16;
-	
-	Tree::Node * nodes = new Tree::Node[n];
-	int * nv = new int[n];
-	for (int i = 0; i < n; ++i)
-		//nv[i] = rand() % (i + 1);
-		nv[i] = rand();
-		//nv[i] = rand() % n;
-
-	clock_t time = 0;
-	
-	for (int i = 0; i < 1; ++i)
+	for (unsigned int i = 0; i < N; ++i)
 	{
-		memset(nodes, 0, sizeof(Tree::Node) * n);
-		
-		t.clear();
-		
-		time -= clock();
-		
-		for (int i = 0; i < n; ++i)
-		{
-			int v = nv[i];
-			//int v = i % 10;
-			//int v = rand() % n;
-			
-			Tree::Node & n = nodes[i];
-			
-			n.SetValue(v);
-			
-			t.insert(&n);
-		}
-		
-		time += clock();
+		originalDataSet[i] = rand() + rand() * RAND_MAX;
 	}
 	
-#if 1
-	printf("time = %gms\n", float(time) / CLOCKS_PER_SEC * 1000.f);
-#endif
+	unsigned short dataSet[N];
 	
-#if 0
-	int c = 0;
+	//
 	
-	for (Tree::iterator i = t.begin(); i != t.end(); ++i)
-	{
-		int v = i.get_value();
-		printf("v: %d\n", v);
-		c++;
-	}
+	memcpy(dataSet, originalDataSet, sizeof(dataSet));
+	testRadixSort(dataSet, N);
+	verifySortingResult(dataSet, N);
 	
-	printf("%d elems total\n", c);
-#endif
+	memcpy(dataSet, originalDataSet, sizeof(dataSet));
+	testRedBlackTree(dataSet, N);
+	verifySortingResult(dataSet, N);
 	
-	delete[] nodes;
-	nodes = 0;
+	memcpy(dataSet, originalDataSet, sizeof(dataSet));
+	testStdSort(dataSet, N);
+	verifySortingResult(dataSet, N);
 	
-	delete[] nv;
-	nv = 0;
+	//
 	
 	return 0;
 }

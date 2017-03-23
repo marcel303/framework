@@ -9,7 +9,8 @@
 /* Begin PBXBuildFile section */
 		9557C2B6163C6362005351AA /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9557C2B5163C6362005351AA /* main.cpp */; };
 		9557C2B8163C6362005351AA /* trees.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9557C2B7163C6362005351AA /* trees.1 */; };
-		95900523163D8C0600DD6705 /* radix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 95900522163D8C0600DD6705 /* radix.cpp */; };
+		C47D56541E841CD70045DFFA /* Debugging.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C47D56511E841CD70045DFFA /* Debugging.cpp */; };
+		C47D56571E841D450045DFFA /* Log.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C47D56551E841D450045DFFA /* Log.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -29,7 +30,11 @@
 		9557C2B1163C6362005351AA /* trees */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = trees; sourceTree = BUILT_PRODUCTS_DIR; };
 		9557C2B5163C6362005351AA /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		9557C2B7163C6362005351AA /* trees.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = trees.1; sourceTree = "<group>"; };
-		95900522163D8C0600DD6705 /* radix.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = radix.cpp; sourceTree = "<group>"; };
+		C47D56511E841CD70045DFFA /* Debugging.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Debugging.cpp; path = ../../../../libgg/Debugging.cpp; sourceTree = "<group>"; };
+		C47D56521E841CD70045DFFA /* Debugging.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Debugging.h; path = ../../../../libgg/Debugging.h; sourceTree = "<group>"; };
+		C47D56531E841CD70045DFFA /* RadixSorter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RadixSorter.h; path = ../../../../libgg/RadixSorter.h; sourceTree = "<group>"; };
+		C47D56551E841D450045DFFA /* Log.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Log.cpp; path = ../../../../libgg/Log.cpp; sourceTree = "<group>"; };
+		C47D56561E841D450045DFFA /* Log.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Log.h; path = ../../../../libgg/Log.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -62,9 +67,13 @@
 		9557C2B4163C6362005351AA /* trees */ = {
 			isa = PBXGroup;
 			children = (
+				C47D56551E841D450045DFFA /* Log.cpp */,
+				C47D56561E841D450045DFFA /* Log.h */,
+				C47D56511E841CD70045DFFA /* Debugging.cpp */,
+				C47D56521E841CD70045DFFA /* Debugging.h */,
+				C47D56531E841CD70045DFFA /* RadixSorter.h */,
 				9557C2B5163C6362005351AA /* main.cpp */,
 				9557C2B7163C6362005351AA /* trees.1 */,
-				95900522163D8C0600DD6705 /* radix.cpp */,
 			);
 			path = trees;
 			sourceTree = "<group>";
@@ -119,8 +128,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C47D56541E841CD70045DFFA /* Debugging.cpp in Sources */,
 				9557C2B6163C6362005351AA /* main.cpp in Sources */,
-				95900523163D8C0600DD6705 /* radix.cpp in Sources */,
+				C47D56571E841D450045DFFA /* Log.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -180,6 +190,11 @@
 		9557C2BC163C6362005351AA /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"MACOS=1",
+					"$(inherited)",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -187,6 +202,10 @@
 		9557C2BD163C6362005351AA /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"MACOS=1",
+					"$(inherited)",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
