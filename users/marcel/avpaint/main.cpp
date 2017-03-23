@@ -518,6 +518,7 @@ struct VideoGame
 	
 	void findVideos()
 	{
+	#if 1
 		// retrieve a list of all video loops in the videos folder
 		
 		auto videos = listFiles("videos", true);
@@ -538,6 +539,12 @@ struct VideoGame
 				videoLoopInfos.push_back(videoLoopInfo);
 			}
 		}
+	#else
+		VideoLoopInfo videoLoopInfo;
+		videoLoopInfo.videoFilenameL = "testvideos/video7.mp4";
+		videoLoopInfo.videoFilenameR = "testvideos/video7.mp4";
+		videoLoopInfos.push_back(videoLoopInfo);
+	#endif
 	}
 	
 	bool nextVideoLoopInfo(VideoLoopInfo & videoLoopInfo)
@@ -2162,7 +2169,7 @@ int main(int argc, char * argv[])
 		int fileBufferSize = 1024 * 1024;
 		unsigned char * fileBuffer = new unsigned char[fileBufferSize];
 		
-		const int kNumJpegLoops = 3;
+		const int kNumJpegLoops = 1;
 		
 		JpegLoop * jpegLoop[kNumJpegLoops] = { };
 		
@@ -2176,6 +2183,16 @@ int main(int argc, char * argv[])
 		
 		double time = 0.0;
 		bool isPaused = false;
+		bool doMotionBlur = true;
+		bool showThumbnails = true;
+		
+		enum UiState
+		{
+			UiState_Idle,
+			UiState_Seek
+		};
+		
+		UiState uiState = UiState_Idle;
 		
 		while (!framework.quitRequested)
 		{
@@ -2187,7 +2204,25 @@ int main(int argc, char * argv[])
 			if (keyboard.wentDown(SDLK_SPACE))
 				isPaused = !isPaused;
 			
-			if (mouse.isDown(BUTTON_LEFT))
+			if (keyboard.wentDown(SDLK_m))
+				doMotionBlur = !doMotionBlur;
+			
+			if (keyboard.wentDown(SDLK_t))
+				showThumbnails = !showThumbnails;
+			
+			if (uiState == UiState_Idle)
+			{
+				if (mouse.wentDown(BUTTON_LEFT))
+					uiState = UiState_Seek;
+			}
+			
+			if (uiState == UiState_Seek)
+			{
+				if (mouse.wentUp(BUTTON_LEFT))
+					uiState = UiState_Idle;
+			}
+			
+			if (uiState == UiState_Seek)
 			{
 				time = duration * mouse.x / double(GFX_SX);
 			}
@@ -2197,8 +2232,11 @@ int main(int argc, char * argv[])
 			
 			int streamIndex = 0;
 			
-			for (float i = 1.f; i * 2.f < std::abs(speedFactor) && streamIndex < 14; i *= 2.f)
-				streamIndex++;
+			if (doMotionBlur)
+			{
+				for (float i = 1.f; i * 2.f < std::abs(speedFactor) && streamIndex < 14; i *= 2.f)
+					streamIndex++;
+			}
 			
 			//logDebug("stream index: %d", streamIndex);
 			
@@ -2228,9 +2266,12 @@ int main(int argc, char * argv[])
 				jpegLoop[i]->seek(seek);
 			}
 			
-			if (isPaused == false)
+			if (uiState == UiState_Idle)
 			{
-				time += framework.timeStep * speedFactor;
+				if (isPaused == false)
+				{
+					time += framework.timeStep * speedFactor;
+				}
 			}
 			
 			if (time > duration)
@@ -2268,43 +2309,45 @@ int main(int argc, char * argv[])
 			
 				pushSurface(surface);
 				{
-				#if 1
-					for (int i = 0; i < kNumJpegLoops; ++i)
+					if (showThumbnails)
 					{
-						const int nx = 3;
-						const int sx = 128 * 2;
-						const int sy = 72 * 2;
-						const int px = 10;
-						const int py = 10;
-						
-						const int ix = i % nx;
-						const int iy = i / nx;
-						
-						const int x = (sx + px) * ix + sx/2;
-						const int y = (sy + py) * iy + sy/2;
-						
-						gxPushMatrix();
+						for (int i = 0; i < kNumJpegLoops; ++i)
 						{
-							gxTranslatef(x, y, 0);
-							pushBlend(BLEND_ALPHA);
-							setColor(255, 255, 255, 227);
-							gxSetTexture(jpegLoop[i]->texture);
-							drawRect(0, 0, sx, sy);
-							gxSetTexture(0);
-							popBlend();
+							const int nx = 3;
+							const int sx = 128 * 2;
+							const int sy = 72 * 2;
+							const int px = 10;
+							const int py = 10;
+							
+							const int ix = i % nx;
+							const int iy = i / nx;
+							
+							const int x = (sx + px) * ix + sx/2;
+							const int y = (sy + py) * iy + sy/2;
+							
+							gxPushMatrix();
+							{
+								gxTranslatef(x, y, 0);
+								pushBlend(BLEND_ALPHA);
+								setColor(255, 255, 255, 227);
+								gxSetTexture(jpegLoop[i]->texture);
+								drawRect(0, 0, sx, sy);
+								gxSetTexture(0);
+								popBlend();
+							}
+							gxPopMatrix();
 						}
-						gxPopMatrix();
 					}
-				#endif
 				
 				#if 1
 					const int padding = 10;
-					setColor(255, 0, 0, 191);
+					const int sy = 30;
+					setColor(255, 255, 0, 191);
 					const int sxf = GFX_SX - padding * 2;
 					const double sxt = sxf * time / duration;
-					drawRect(padding, GFX_SY - padding - 40, padding + sxt, GFX_SY - padding);
+					drawRect(padding, GFX_SY - padding - sy, padding + sxt, GFX_SY - padding);
 					setColor(colorBlack);
-					drawRectLine(padding, GFX_SY - padding - 40, padding + sxf, GFX_SY - padding);
+					drawRectLine(padding, GFX_SY - padding - sy, padding + sxf, GFX_SY - padding);
 					
 					setColor(colorWhite);
 					setFont("calibri.ttf");
@@ -2314,7 +2357,7 @@ int main(int argc, char * argv[])
 					const int mm = timeInSeconds / 60;
 					timeInSeconds -= mm * 60;
 					const int ss = timeInSeconds;
-					drawText(GFX_SX/2, GFX_SY - padding - 22, 22, 0.f, -.5f, "%02d:%02d:%02d - %gx", hh, mm, ss, speedFactor);
+					drawText(GFX_SX/2, GFX_SY - padding - sy/2, 22, 0.f, -1.f, "%02d:%02d:%02d - %gx", hh, mm, ss, speedFactor);
 				#endif
 				}
 				popSurface();
