@@ -89,6 +89,38 @@ int main(int argc, char * argv[])
 			
 			graphEdit->tick(dt);
 			
+			if (keyboard.wentDown(SDLK_s))
+			{
+				XMLPrinter xmlGraph;
+				
+				xmlGraph.OpenElement("graph");
+				{
+					graphEdit->graph->saveXml(xmlGraph);
+				}
+				xmlGraph.CloseElement();
+				
+				const char * xml = xmlGraph.CStr();
+				
+				logDebug(xml);
+				
+				{
+					delete graphEdit->graph;
+					graphEdit->graph = nullptr;
+					
+					//
+					
+					graphEdit->graph = new Graph();
+					
+					//
+					
+					XMLDocument document;
+					document.Parse(xml);
+					const XMLElement * xmlGraph = document.FirstChildElement("graph");
+					if (xmlGraph != nullptr)
+						graphEdit->graph->loadXml(xmlGraph);
+				}
+			}
+			
 			framework.beginDraw(31, 31, 31, 255);
 			{
 				graphEdit->draw();

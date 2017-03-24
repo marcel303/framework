@@ -8,6 +8,7 @@
 namespace tinyxml2
 {
 	class XMLElement;
+	class XMLPrinter;
 }
 
 typedef unsigned int GraphNodeId;
@@ -58,8 +59,8 @@ struct Graph
 	void addNode(GraphNode & node);
 	void removeNode(const GraphNodeId nodeId);
 	
-	bool loadXml(const char * xml);
-	bool saveXml(std::string & xml) const;
+	bool loadXml(const tinyxml2::XMLElement * xmlGraph);
+	bool saveXml(tinyxml2::XMLPrinter & xmlGraph) const;
 };
 
 //

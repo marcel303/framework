@@ -116,14 +116,64 @@ void Graph::removeNode(const GraphNodeId nodeId)
 	}
 }
 
-bool Graph::loadXml(const char * xml)
+bool Graph::loadXml(const XMLElement * xmlGraph)
 {
-	return false;
+	for (const XMLElement * xmlNode = xmlGraph->FirstChildElement("node"); xmlNode != nullptr; xmlNode = xmlNode->NextSiblingElement("node"))
+	{
+		GraphNode node;
+		node.id = intAttrib(xmlNode, "id", node.id);
+		node.type = stringAttrib(xmlNode, "typeName", node.type.c_str());
+		node.editorX = floatAttrib(xmlNode, "editorX", node.editorX);
+		node.editorY = floatAttrib(xmlNode, "editorY", node.editorY);
+		
+		addNode(node);
+		
+		nextId = std::max(nextId, node.id + 1);
+	}
+	
+	for (const XMLElement * xmlLink = xmlGraph->FirstChildElement("link"); xmlLink != nullptr; xmlLink = xmlLink->NextSiblingElement("link"))
+	{
+		GraphNodeSocketLink link;
+		link.srcNodeId = intAttrib(xmlLink, "srcNodeId", link.srcNodeId);
+		link.srcNodeSocketIndex = intAttrib(xmlLink, "srcNodeSocketIndex", link.srcNodeSocketIndex);
+		link.dstNodeId = intAttrib(xmlLink, "dstNodeId", link.dstNodeId);
+		link.dstNodeSocketIndex = intAttrib(xmlLink, "dstNodeSocketIndex", link.dstNodeSocketIndex);
+		
+		links.push_back(link);
+	}
+	
+	return true;
 }
 
-bool Graph::saveXml(std::string & xml) const
+bool Graph::saveXml(XMLPrinter & xmlGraph) const
 {
-	return false;
+	for (auto & nodeItr : nodes)
+	{
+		auto & node = nodeItr.second;
+		
+		xmlGraph.OpenElement("node");
+		{
+			xmlGraph.PushAttribute("id", node.id);
+			xmlGraph.PushAttribute("typeName", node.type.c_str());
+			xmlGraph.PushAttribute("editorX", node.editorX);
+			xmlGraph.PushAttribute("editorY", node.editorY);
+		}
+		xmlGraph.CloseElement();
+	}
+	
+	for (auto & link : links)
+	{
+		xmlGraph.OpenElement("link");
+		{
+			xmlGraph.PushAttribute("srcNodeId", link.srcNodeId);
+			xmlGraph.PushAttribute("srcNodeSocketIndex", link.srcNodeSocketIndex);
+			xmlGraph.PushAttribute("dstNodeId", link.dstNodeId);
+			xmlGraph.PushAttribute("dstNodeSocketIndex", link.dstNodeSocketIndex);
+		}
+		xmlGraph.CloseElement();
+	}
+	
+	return true;
 }
 
 //
@@ -279,7 +329,7 @@ bool GraphEdit_TypeDefinition::hitTest(const float x, const float y, HitTestResu
 	return false;
 }
 
-void GraphEdit_TypeDefinition::loadXml(const tinyxml2::XMLElement * xmlType)
+void GraphEdit_TypeDefinition::loadXml(const XMLElement * xmlType)
 {
 	typeName = stringAttrib(xmlType, "typeName", "");
 	
