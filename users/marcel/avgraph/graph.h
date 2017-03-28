@@ -23,7 +23,12 @@ struct GraphNode
 	float editorX;
 	float editorY;
 	
+	std::string editorValue;
+	bool editorIsPassthrough;
+	
 	GraphNode();
+	
+	void togglePassthrough();
 };
 
 struct GraphNodeSocketLink
@@ -224,9 +229,11 @@ struct GraphEdit
 	enum State
 	{
 		kState_Idle,
+		kState_NodeSelect,
 		kState_NodeDrag,
 		kState_InputSocketConnect,
-		kState_OutputSocketConnect
+		kState_OutputSocketConnect,
+		kState_SocketValueEdit
 	};
 	
 	struct HitTestResult
@@ -259,6 +266,27 @@ struct GraphEdit
 		}
 	};
 	
+	// state support structures
+	
+	struct NodeSelect
+	{
+		int beginX;
+		int beginY;
+		int endX;
+		int endY;
+		
+		std::set<GraphNodeId> nodeIds;
+		
+		NodeSelect()
+			: beginX(0)
+			, beginY(0)
+			, endX(0)
+			, endY(0)
+			, nodeIds()
+		{
+		}
+	};
+	
 	struct SocketConnect
 	{
 		GraphNodeId srcNodeId;
@@ -275,6 +303,18 @@ struct GraphEdit
 		}
 	};
 	
+	struct SocketValueEdit
+	{
+		GraphNodeId nodeId;
+		const GraphEdit_Editor * editor;
+		
+		SocketValueEdit()
+			: nodeId(kGraphNodeIdInvalid)
+			, editor(nullptr)
+		{
+		}
+	};
+	
 	Graph * graph;
 	
 	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
@@ -286,7 +326,9 @@ struct GraphEdit
 	
 	State state;
 	
+	NodeSelect nodeSelect;
 	SocketConnect socketConnect;
+	SocketValueEdit socketValueEdit;
 	
 	GraphEdit();
 	~GraphEdit();
@@ -298,7 +340,9 @@ struct GraphEdit
 	bool hitTest(const float x, const float y, HitTestResult & result) const;
 	
 	void tick(const float dt);
+	void nodeSelectEnd();
 	void socketConnectEnd();
+	void socketValueEditEnd();
 	
 	void draw() const;
 	void drawTypeUi(const GraphNode & node, const GraphEdit_TypeDefinition & typeDefinition) const;

@@ -1,5 +1,8 @@
+#include "Calc.h"
 #include "Debugging.h"
 #include "graph.h"
+#include "Parse.h"
+#include "StringEx.h"
 #include "tinyxml2.h"
 #include "tinyxml2_helpers.h"
 #include <cmath>
@@ -56,6 +59,26 @@ static bool areCompatibleSocketLinkTypeNames(const std::string & srcTypeName, co
 	return false;
 }
 
+static bool testOverlap(
+	const int _ax1, const int _ay1, const int _ax2, const int _ay2,
+	const int _bx1, const int _by1, const int _bx2, const int _by2)
+{
+	const int ax1 = std::min(_ax1, _ax2);
+	const int ay1 = std::min(_ay1, _ay2);
+	const int ax2 = std::max(_ax1, _ax2);
+	const int ay2 = std::max(_ay1, _ay2);
+	
+	const int bx1 = std::min(_bx1, _bx2);
+	const int by1 = std::min(_by1, _by2);
+	const int bx2 = std::max(_bx1, _bx2);
+	const int by2 = std::max(_by1, _by2);
+	
+	if (ax2 < bx1 || ay2 < by1 || ax1 > bx2 || ay1 > by2)
+		return false;
+	else
+		return true;
+}
+
 //
 
 GraphNode::GraphNode()
@@ -63,7 +86,14 @@ GraphNode::GraphNode()
 	, type()
 	, editorX(0.f)
 	, editorY(0.f)
+	, editorValue()
+	, editorIsPassthrough(false)
 {
+}
+
+void GraphNode::togglePassthrough()
+{
+	editorIsPassthrough = !editorIsPassthrough;
 }
 
 //
@@ -125,6 +155,8 @@ bool Graph::loadXml(const XMLElement * xmlGraph)
 		node.type = stringAttrib(xmlNode, "typeName", node.type.c_str());
 		node.editorX = floatAttrib(xmlNode, "editorX", node.editorX);
 		node.editorY = floatAttrib(xmlNode, "editorY", node.editorY);
+		node.editorValue = stringAttrib(xmlNode, "editorValue", node.editorValue.c_str());
+		node.editorIsPassthrough = boolAttrib(xmlNode, "editorIsPassthrough", node.editorIsPassthrough);
 		
 		addNode(node);
 		
@@ -157,6 +189,8 @@ bool Graph::saveXml(XMLPrinter & xmlGraph) const
 			xmlGraph.PushAttribute("typeName", node.type.c_str());
 			xmlGraph.PushAttribute("editorX", node.editorX);
 			xmlGraph.PushAttribute("editorY", node.editorY);
+			xmlGraph.PushAttribute("editorValue", node.editorValue.c_str());
+			xmlGraph.PushAttribute("editorIsPassthrough", node.editorIsPassthrough);
 		}
 		xmlGraph.CloseElement();
 	}
@@ -385,6 +419,9 @@ GraphEdit::GraphEdit()
 	, typeDefinitionLibrary(nullptr)
 	, selectedNodes()
 	, state(kState_Idle)
+	, nodeSelect()
+	, socketConnect()
+	, socketValueEdit()
 {
 	graph = new Graph();
 }
@@ -522,6 +559,14 @@ void GraphEdit::tick(const float dt)
 							break;
 						}
 						
+						if (hitTestResult.nodeHitTestResult.editor)
+						{
+							socketValueEdit.nodeId = hitTestResult.node->id;
+							socketValueEdit.editor = hitTestResult.nodeHitTestResult.editor;
+							state = kState_SocketValueEdit;
+							break;
+						}
+						
 						if (hitTestResult.nodeHitTestResult.background)
 						{
 							state = kState_NodeDrag;
@@ -529,17 +574,30 @@ void GraphEdit::tick(const float dt)
 						}
 					}
 				}
+				else
+				{
+					nodeSelect.beginX = mouse.x;
+					nodeSelect.beginY = mouse.y;
+					nodeSelect.endX = nodeSelect.beginX;
+					nodeSelect.endY = nodeSelect.beginY;
+					
+					state = kState_NodeSelect;
+					break;
+				}
 			}
 			
 			if (keyboard.wentDown(SDLK_i))
 			{
-				char typeName[256];
-				sprintf(typeName, "effect_%03d", rand() % 5);
+				std::vector<std::string> typeNames;
+				for (auto i : typeDefinitionLibrary->typeDefinitions)
+					typeNames.push_back(i.first);
 				
-				if (keyboard.isDown(SDLK_LSHIFT))
-					sprintf(typeName, "intLiteral");
-				if (keyboard.isDown(SDLK_RSHIFT))
-					sprintf(typeName, "fsfx");
+				const std::string & typeName = typeNames[rand() % typeNames.size()];
+				
+				//if (keyboard.isDown(SDLK_LSHIFT))
+				//	sprintf(typeName, "intLiteral");
+				//if (keyboard.isDown(SDLK_RSHIFT))
+				//	sprintf(typeName, "fsfx");
 				
 				GraphNode node;
 				node.id = graph->allocId();
@@ -548,6 +606,77 @@ void GraphEdit::tick(const float dt)
 				node.editorY = mouse.y;
 				
 				graph->addNode(node);
+				
+				selectedNodes.clear();
+				selectedNodes.insert(node.id);
+			}
+			
+			if (keyboard.wentDown(SDLK_d))
+			{
+				std::set<GraphNodeId> newSelectedNodes;
+				
+				for (auto nodeId : selectedNodes)
+				{
+					auto node = tryGetNode(nodeId);
+					
+					Assert(node != nullptr);
+					if (node != nullptr)
+					{
+						GraphNode newNode;
+						newNode.id = graph->allocId();
+						newNode.type = node->type;
+						newNode.editorX = node->editorX + 20;
+						newNode.editorY = node->editorY + 20;
+						
+						graph->addNode(newNode);
+						
+						newSelectedNodes.insert(newNode.id);
+					}
+				}
+				
+				if (!newSelectedNodes.empty())
+					selectedNodes = newSelectedNodes;
+			}
+			
+			if (keyboard.wentDown(SDLK_p))
+			{
+				for (auto nodeId : selectedNodes)
+				{
+					auto node = tryGetNode(nodeId);
+					
+					Assert(node);
+					if (node)
+					{
+						node->togglePassthrough();
+					}
+				}
+			}
+			
+			int moveX = 0;
+			int moveY = 0;
+			
+			if (keyboard.wentDown(SDLK_LEFT))
+				moveX -= 10;
+			if (keyboard.wentDown(SDLK_RIGHT))
+				moveX += 10;
+			if (keyboard.wentDown(SDLK_UP))
+				moveY -= 10;
+			if (keyboard.wentDown(SDLK_DOWN))
+				moveY += 10;
+			
+			if (moveX != 0 || moveY != 0)
+			{
+				for (auto nodeId : selectedNodes)
+				{
+					auto node = tryGetNode(nodeId);
+					
+					Assert(node);
+					if (node)
+					{
+						node->editorX += moveX;
+						node->editorY += moveY;
+					}
+				}
 			}
 			
 			if (keyboard.wentDown(SDLK_BACKSPACE))
@@ -558,6 +687,49 @@ void GraphEdit::tick(const float dt)
 				}
 				
 				selectedNodes.clear();
+			}
+		}
+		break;
+		
+	case kState_NodeSelect:
+		{
+			nodeSelect.endX = mouse.x;
+			nodeSelect.endY = mouse.y;
+			
+			// todo : hit test nodes
+			
+			nodeSelect.nodeIds.clear();
+			
+			for (auto nodeItr : graph->nodes)
+			{
+				auto & node = nodeItr.second;
+				
+				auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.type);
+				
+				Assert(typeDefinition != nullptr);
+				if (typeDefinition != nullptr)
+				{
+					if (testOverlap(
+						nodeSelect.beginX,
+						nodeSelect.beginY,
+						nodeSelect.endX,
+						nodeSelect.endY,
+						node.editorX,
+						node.editorY,
+						node.editorX + typeDefinition->sx,
+						node.editorY + typeDefinition->sy))
+					{
+						nodeSelect.nodeIds.insert(node.id);
+					}
+				}
+			}
+			
+			if (mouse.wentUp(BUTTON_LEFT))
+			{
+				nodeSelectEnd();
+				
+				state = kState_Idle;
+				break;
 			}
 		}
 		break;
@@ -644,7 +816,44 @@ void GraphEdit::tick(const float dt)
 			}
 		}
 		break;
+		
+	case kState_SocketValueEdit:
+		{
+			if (mouse.wentUp(BUTTON_LEFT))
+			{
+				socketValueEditEnd();
+				
+				state = kState_Idle;
+				break;
+			}
+			
+			auto node = tryGetNode(socketValueEdit.nodeId);
+			
+			if (node == nullptr)
+			{
+				// todo : complain
+			}
+			else
+			{
+				const float x1 = node->editorX + socketValueEdit.editor->editorX;
+				const float x2 = x1 + socketValueEdit.editor->editorSx;
+				const float value = Calc::Clamp((mouse.x - x1) / (x2 - x1), 0.f, 1.f);
+				
+				char valueText[256];
+				sprintf_s(valueText, sizeof(valueText), "%.2f", value);
+				
+				node->editorValue = valueText;
+			}
+		}
+		break;
 	}
+}
+
+void GraphEdit::nodeSelectEnd()
+{
+	selectedNodes = nodeSelect.nodeIds;
+	
+	nodeSelect = NodeSelect();
 }
 
 void GraphEdit::socketConnectEnd()
@@ -658,6 +867,13 @@ void GraphEdit::socketConnectEnd()
 		link.dstNodeSocketIndex = socketConnect.dstNodeSocket->index;
 		graph->links.push_back(link);
 	}
+	
+	socketConnect = SocketConnect();
+}
+
+void GraphEdit::socketValueEditEnd()
+{
+	socketValueEdit = SocketValueEdit();
 }
 
 void GraphEdit::draw() const
@@ -686,7 +902,7 @@ void GraphEdit::draw() const
 				setColor(255, 255, 0);
 				hqLine(
 					srcNode->editorX + inputSocket->px, srcNode->editorY + inputSocket->py, 2.f,
-					dstNode->editorX + outputSocket->px, dstNode->editorY + outputSocket->py, 2.f);
+					dstNode->editorX + outputSocket->px, dstNode->editorY + outputSocket->py, 4.f);
 			}
 			hqEnd();
 		}
@@ -703,6 +919,13 @@ void GraphEdit::draw() const
 		if (typeDefinition == nullptr)
 		{
 			// todo : draw error node ?
+			setColor(colorBlack);
+			drawRectLine(node.editorX, node.editorY, node.editorX + 100, node.editorY + 20);
+			setColor(colorRed);
+			drawRectLine(node.editorX, node.editorY, node.editorX + 100, node.editorY + 20);
+			setColor(colorWhite);
+			setFont("calibri.ttf");
+			drawText(node.editorX + 100/2, node.editorY + 20/2, 12, 0.f, 0.f, "%s", node.type.c_str());
 		}
 		else
 		{
@@ -719,6 +942,16 @@ void GraphEdit::draw() const
 	switch (state)
 	{
 	case kState_Idle:
+		break;
+		
+	case kState_NodeSelect:
+		{
+			setColor(127, 127, 255, 127);
+			drawRect(nodeSelect.beginX, nodeSelect.beginY, nodeSelect.endX, nodeSelect.endY);
+			
+			setColor(127, 127, 255, 255);
+			drawRectLine(nodeSelect.beginX, nodeSelect.beginY, nodeSelect.endX, nodeSelect.endY);
+		}
 		break;
 	
 	case kState_NodeDrag:
@@ -769,6 +1002,9 @@ void GraphEdit::draw() const
 			}
 		}
 		break;
+	
+	case kState_SocketValueEdit:
+		break;
 	}
 }
 
@@ -787,11 +1023,33 @@ void GraphEdit::drawTypeUi(const GraphNode & node, const GraphEdit_TypeDefinitio
 	setColor(255, 255, 255);
 	drawText(definition.sx/2, 12, 14, 0.f, 0.f, "%s", definition.typeName.c_str());
 	
-	for (auto & editor : definition.editors)
+	if (node.editorIsPassthrough)
 	{
 		setFont("calibri.ttf");
-		setColor(255, 255, 255);
-		drawText(editor.editorX + editor.editorSx/2, editor.editorY + editor.editorSy/2, 12, 0.f, 0.f, "%s", editor.typeName.c_str());
+		setColor(127, 127, 255);
+		drawText(definition.sx - 8, 12, 14, -1.f, 0.f, "P");
+	}
+	
+	for (auto & editor : definition.editors)
+	{
+		if (editor.typeName == "floatLiteral")
+		{
+			const float value = Parse::Float(node.editorValue);
+			
+			setColor(255, 0, 0);
+			drawRect(
+				editor.editorX,
+				editor.editorY,
+				editor.editorX + editor.editorSx * value,
+				editor.editorY + editor.editorSy);
+			
+			setFont("calibri.ttf");
+			setColor(255, 255, 255);
+			drawText(
+				editor.editorX + editor.editorSx/2,
+				editor.editorY + editor.editorSy/2,
+				12, 0.f, 0.f, "%s : %s", editor.typeName.c_str(), node.editorValue.c_str());
+		}
 		
 		setColor(127, 127, 127, 255);
 		drawRectLine(
