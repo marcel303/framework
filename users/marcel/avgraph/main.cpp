@@ -8,17 +8,17 @@ using namespace tinyxml2;
 /*
 
 todo :
-- replace surface type inputs and outputs to image type
-- add VfxImageBase type. let VfxPlug use this type for image type inputs and outputs. has virtual getTexture method
-- add VfxImage_Surface type. let VfxNodeFsfx use this type
-- add VfxPicture type. type name = 'picture'
-- add VfxImage_Texture type. let VfxPicture use this type
++ replace surface type inputs and outputs to image type
++ add VfxImageBase type. let VfxPlug use this type for image type inputs and outputs. has virtual getTexture method
++ add VfxImage_Surface type. let VfxNodeFsfx use this type
++ add VfxPicture type. type name = 'picture'
++ add VfxImage_Texture type. let VfxPicture use this type
 - add VfxVideo type. type name = 'video'
 - add default value to socket definitions
 - add editorValue to node inputs and outputs. let get*** methods use this value when plug is not connected
 - let graph editor set editorValue for nodes. only when editor is set on type definition
 - add socket connection selection. remove connection on BACKSPACE
-- add multiple node selection
++ add multiple node selection
 - on typing 0..9 let node value editor erase editorValue and begin typing. requires state transition? end editing on ENTER or when selecting another entity
 - add ability to increment and decrement editorValue. use mouse Y movement or scroll wheel (?)
 - remember number of digits entered after '.' when editing editorValue. use this information when incrementing/decrementing values
@@ -262,14 +262,14 @@ struct VfxNodeBase
 			return plug->getFloat();
 	}
 	
-	const std::string & getInputString(const int index, const std::string & defaultValue) const
+	const char * getInputString(const int index, const char * defaultValue) const
 	{
 		const VfxPlug * plug = tryGetInput(index);
 		
 		if (plug == nullptr || !plug->isConnected())
 			return defaultValue;
 		else
-			return plug->getString();
+			return plug->getString().c_str();
 	}
 	
 	const VfxImageBase * getInputImage(const int index, const VfxImageBase * defaultValue) const
@@ -292,6 +292,7 @@ struct VfxNodeBase
 			return plug->getSurface();
 	}
 	
+	virtual void initSelf(const GraphNode & node) { }
 	virtual void init(const GraphNode & node) { }
 	virtual void tick(const float dt) { }
 	virtual void draw() const { }
@@ -332,6 +333,54 @@ struct VfxNodeDisplay : VfxNodeBase
 			gxSetTexture(0);
 		}
 	#endif
+	}
+};
+
+struct VfxNodePicture : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_Source,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Image,
+		kOutput_COUNT
+	};
+	
+	VfxImage_Texture * image;
+	
+	VfxNodePicture()
+		: VfxNodeBase()
+		, image(nullptr)
+	{
+		image = new VfxImage_Texture();
+		
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Source, kVfxPlugType_String);
+		addOutput(kOutput_Image, kVfxPlugType_Image, image);
+	}
+	
+	virtual ~VfxNodePicture()
+	{
+		delete image;
+		image = nullptr;
+	}
+	
+	virtual void init(const GraphNode & node) override
+	{
+		const char * filename = getInputString(kInput_Source, nullptr);
+		
+		if (filename == nullptr)
+		{
+			image->texture = 0;
+		}
+		else
+		{
+			image->texture = getTexture(filename);
+		}
 	}
 };
 
@@ -473,7 +522,7 @@ struct VfxNodeIntLiteral : VfxNodeBase
 		addOutput(kOutput_Value, kVfxPlugType_Int, &value);
 	}
 	
-	virtual void init(const GraphNode & node) override
+	virtual void initSelf(const GraphNode & node) override
 	{
 		value = Parse::Int32(node.editorValue);
 	}
@@ -497,7 +546,7 @@ struct VfxNodeFloatLiteral : VfxNodeBase
 		addOutput(kOutput_Value, kVfxPlugType_Float, &value);
 	}
 	
-	virtual void init(const GraphNode & node) override
+	virtual void initSelf(const GraphNode & node) override
 	{
 		value = Parse::Float(node.editorValue);
 	}
@@ -521,10 +570,9 @@ struct VfxNodeStringLiteral : VfxNodeBase
 		addOutput(kOutput_Value, kVfxPlugType_String, &value);
 	}
 	
-	virtual void init(const GraphNode & node) override
+	virtual void initSelf(const GraphNode & node) override
 	{
-		//value = node.editorValue;
-		value = "test";
+		value = node.editorValue;
 	}
 };
 
@@ -665,19 +713,19 @@ static VfxGraph * constructVfxGraph(const Graph & graph)
 		
 		VfxNodeBase * vfxNode = nullptr;
 		
-		if (node.type == "intLiteral")
+		if (node.typeName == "intLiteral")
 		{
 			vfxNode= new VfxNodeIntLiteral();
 		}
-		else if (node.type == "floatLiteral")
+		else if (node.typeName == "floatLiteral")
 		{
 			vfxNode = new VfxNodeFloatLiteral();
 		}
-		else if (node.type == "stringLiteral")
+		else if (node.typeName == "stringLiteral")
 		{
 			vfxNode = new VfxNodeStringLiteral();
 		}
-		else if (node.type == "display")
+		else if (node.typeName == "display")
 		{
 			auto vfxDisplayNode = new VfxNodeDisplay();
 			
@@ -686,17 +734,21 @@ static VfxGraph * constructVfxGraph(const Graph & graph)
 			
 			vfxNode = vfxDisplayNode;
 		}
-		else if (node.type == "mouse")
+		else if (node.typeName == "mouse")
 		{
 			vfxNode = new VfxNodeMouse();
 		}
-		else if (node.type == "fsfx")
+		else if (node.typeName == "picture")
+		{
+			vfxNode = new VfxNodePicture();
+		}
+		else if (node.typeName == "fsfx")
 		{
 			vfxNode = new VfxNodeFsfx();
 		}
 		else
 		{
-			logError("unknown node type: %s", node.type.c_str());
+			logError("unknown node type: %s", node.typeName.c_str());
 		}
 		
 		Assert(vfxNode != nullptr);
@@ -706,7 +758,7 @@ static VfxGraph * constructVfxGraph(const Graph & graph)
 		}
 		else
 		{
-			vfxNode->init(node);
+			vfxNode->initSelf(node);
 			
 			vfxGraph->nodes[node.id] = vfxNode;
 		}
@@ -750,6 +802,16 @@ static VfxGraph * constructVfxGraph(const Graph & graph)
 		}
 	}
 	
+	for (auto vfxNodeItr : vfxGraph->nodes)
+	{
+		auto nodeId = vfxNodeItr.first;
+		auto nodeItr = graph.nodes.find(nodeId);
+		auto & node = nodeItr->second;
+		auto vfxNode = vfxNodeItr.second;
+		
+		vfxNode->init(node);
+	}
+	
 	return vfxGraph;
 }
 
@@ -779,48 +841,6 @@ int main(int argc, char * argv[])
 			delete document;
 			document = nullptr;
 		}
-		
-	#if 0
-		{
-			const std::string typeName = "intLiteral";
-			
-			GraphEdit_TypeDefinition definition;
-			definition.typeName = typeName;
-			definition.outputSockets.resize(1);
-			definition.outputSockets[0].typeName = "intLiteral";
-			GraphEdit_Editor editor;
-			editor.typeName = "int";
-			editor.outputSocketIndex = 0;
-			definition.editors.push_back(editor);
-			definition.createUi();
-			
-			typeDefinitionLibrary->typeDefinitions[definition.typeName] = definition;
-		}
-		
-		for (int i = 0; i < 5; ++i)
-		{
-			char typeName[256];
-			sprintf(typeName, "effect_%03d", i);
-			
-			GraphEdit_TypeDefinition definition;
-			definition.typeName = typeName;
-			definition.inputSockets.resize(random(1, 8));
-			for (auto & s : definition.inputSockets)
-			{
-				const int t = (rand() % 4);
-				s.typeName = t == 0 ? "int" : t == 1 ? "intLiteral" : t == 2 ? "float" : "floatLiteral";
-			}
-			definition.outputSockets.resize(1);
-			for (auto & s : definition.outputSockets)
-			{
-				const int t = (rand() % 4);
-				s.typeName = t == 0 ? "int" : t == 1 ? "intLiteral" : t == 2 ? "float" : "floatLiteral";
-			}
-			definition.createUi();
-			
-			typeDefinitionLibrary->typeDefinitions[definition.typeName] = definition;
-		}
-	#endif
 		
 		//
 		

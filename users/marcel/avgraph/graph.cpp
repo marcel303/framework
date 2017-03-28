@@ -20,42 +20,6 @@ static bool areCompatibleSocketLinkTypeNames(const std::string & srcTypeName, co
 	if (srcTypeName == dstTypeName)
 		return true;
 	
-	if (srcTypeName == "int")
-	{
-		if (dstTypeName == "int" || dstTypeName == "intLiteral")
-			return true;
-	}
-	
-	if (srcTypeName == "intLiteral")
-	{
-		if (dstTypeName == "intLiteral")
-			return true;
-	}
-	
-	if (srcTypeName == "float")
-	{
-		if (dstTypeName == "float" || dstTypeName == "floatLiteral")
-			return true;
-	}
-	
-	if (srcTypeName == "floatLiteral")
-	{
-		if (dstTypeName == "floatLiteral")
-			return true;
-	}
-	
-	if (srcTypeName == "string")
-	{
-		if (dstTypeName == "string" || dstTypeName == "stringLiteral")
-			return true;
-	}
-	
-	if (srcTypeName == "stringLiteral")
-	{
-		if (dstTypeName == "stringLiteral")
-			return true;
-	}
-	
 	return false;
 }
 
@@ -83,7 +47,7 @@ static bool testOverlap(
 
 GraphNode::GraphNode()
 	: id(kGraphNodeIdInvalid)
-	, type()
+	, typeName()
 	, editorX(0.f)
 	, editorY(0.f)
 	, editorValue()
@@ -152,7 +116,7 @@ bool Graph::loadXml(const XMLElement * xmlGraph)
 	{
 		GraphNode node;
 		node.id = intAttrib(xmlNode, "id", node.id);
-		node.type = stringAttrib(xmlNode, "typeName", node.type.c_str());
+		node.typeName = stringAttrib(xmlNode, "typeName", node.typeName.c_str());
 		node.editorX = floatAttrib(xmlNode, "editorX", node.editorX);
 		node.editorY = floatAttrib(xmlNode, "editorY", node.editorY);
 		node.editorValue = stringAttrib(xmlNode, "editorValue", node.editorValue.c_str());
@@ -186,7 +150,7 @@ bool Graph::saveXml(XMLPrinter & xmlGraph) const
 		xmlGraph.OpenElement("node");
 		{
 			xmlGraph.PushAttribute("id", node.id);
-			xmlGraph.PushAttribute("typeName", node.type.c_str());
+			xmlGraph.PushAttribute("typeName", node.typeName.c_str());
 			xmlGraph.PushAttribute("editorX", node.editorX);
 			xmlGraph.PushAttribute("editorY", node.editorY);
 			xmlGraph.PushAttribute("editorValue", node.editorValue.c_str());
@@ -367,6 +331,8 @@ void GraphEdit_TypeDefinition::loadXml(const XMLElement * xmlType)
 {
 	typeName = stringAttrib(xmlType, "typeName", "");
 	
+	displayName = stringAttrib(xmlType, "displayName", "");
+	
 	for (auto xmlEditor = xmlType->FirstChildElement("editor"); xmlEditor != nullptr; xmlEditor = xmlEditor->NextSiblingElement("editor"))
 	{
 		GraphEdit_Editor editor;
@@ -414,6 +380,41 @@ void GraphEdit_TypeDefinitionLibrary::loadXml(const XMLElement * xmlLibrary)
 
 //
 
+bool GraphEdit::SocketValueEdit::processKeyboard()
+{
+	bool result = false;
+	
+	for (int i = 0; i <= 9; ++i)
+	{
+		const SDLKey key = SDLKey(SDLK_0 + i);
+		
+		if (keyboard.wentDown(key))
+		{
+			keyboardText.push_back('0' + i);
+			
+			result = true;
+		}
+	}
+	
+	if (keyboard.wentDown(SDLK_PERIOD))
+	{
+		keyboardText.push_back('.');
+		
+		result = true;
+	}
+	
+	if (keyboard.wentDown(SDLK_BACKSPACE))
+	{
+		keyboardText.pop_back();
+		
+		result = true;
+	}
+	
+	return result;
+}
+
+//
+
 GraphEdit::GraphEdit()
 	: graph(nullptr)
 	, typeDefinitionLibrary(nullptr)
@@ -450,7 +451,7 @@ const GraphEdit_TypeDefinition::InputSocket * GraphEdit::tryGetInputSocket(const
 	
 	if (node == nullptr)
 		return nullptr;
-	auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node->type);
+	auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node->typeName);
 	if (typeDefinition == nullptr)
 		return nullptr;
 	if (socketIndex < 0 || socketIndex >= typeDefinition->inputSockets.size())
@@ -464,7 +465,7 @@ const GraphEdit_TypeDefinition::OutputSocket * GraphEdit::tryGetOutputSocket(con
 	
 	if (node == nullptr)
 		return nullptr;
-	auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node->type);
+	auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node->typeName);
 	if (typeDefinition == nullptr)
 		return nullptr;
 	if (socketIndex < 0 || socketIndex >= typeDefinition->outputSockets.size())
@@ -480,7 +481,7 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 	{
 		auto & node = nodeItr.second;
 		
-		const auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.type);
+		const auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
 		
 		if (typeDefinition == nullptr)
 		{
@@ -533,15 +534,17 @@ void GraphEdit::tick(const float dt)
 		
 			if (mouse.wentDown(BUTTON_LEFT))
 			{
-				selectedNodes.clear();
-				
 				HitTestResult hitTestResult;
 				
 				if (hitTest(mouse.x, mouse.y, hitTestResult))
 				{
 					if (hitTestResult.hasNode)
 					{
-						selectedNodes.insert(hitTestResult.node->id);
+						if (selectedNodes.count(hitTestResult.node->id) == 0)
+						{
+							selectedNodes.clear();
+							selectedNodes.insert(hitTestResult.node->id);
+						}
 						
 						if (hitTestResult.nodeHitTestResult.inputSocket)
 						{
@@ -594,14 +597,9 @@ void GraphEdit::tick(const float dt)
 				
 				const std::string & typeName = typeNames[rand() % typeNames.size()];
 				
-				//if (keyboard.isDown(SDLK_LSHIFT))
-				//	sprintf(typeName, "intLiteral");
-				//if (keyboard.isDown(SDLK_RSHIFT))
-				//	sprintf(typeName, "fsfx");
-				
 				GraphNode node;
 				node.id = graph->allocId();
-				node.type = typeName;
+				node.typeName = typeName;
 				node.editorX = mouse.x;
 				node.editorY = mouse.y;
 				
@@ -624,7 +622,7 @@ void GraphEdit::tick(const float dt)
 					{
 						GraphNode newNode;
 						newNode.id = graph->allocId();
-						newNode.type = node->type;
+						newNode.typeName = node->typeName;
 						newNode.editorX = node->editorX + 20;
 						newNode.editorY = node->editorY + 20;
 						
@@ -704,7 +702,7 @@ void GraphEdit::tick(const float dt)
 			{
 				auto & node = nodeItr.second;
 				
-				auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.type);
+				auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
 				
 				Assert(typeDefinition != nullptr);
 				if (typeDefinition != nullptr)
@@ -819,14 +817,6 @@ void GraphEdit::tick(const float dt)
 		
 	case kState_SocketValueEdit:
 		{
-			if (mouse.wentUp(BUTTON_LEFT))
-			{
-				socketValueEditEnd();
-				
-				state = kState_Idle;
-				break;
-			}
-			
 			auto node = tryGetNode(socketValueEdit.nodeId);
 			
 			if (node == nullptr)
@@ -835,14 +825,113 @@ void GraphEdit::tick(const float dt)
 			}
 			else
 			{
-				const float x1 = node->editorX + socketValueEdit.editor->editorX;
-				const float x2 = x1 + socketValueEdit.editor->editorSx;
-				const float value = Calc::Clamp((mouse.x - x1) / (x2 - x1), 0.f, 1.f);
+				if (socketValueEdit.editor->typeName == "float")
+				{
+					float value = Parse::Float(node->editorValue);
+					
+					if (socketValueEdit.mode == SocketValueEdit::kMode_Idle)
+					{
+						if (mouse.dx || mouse.dy)
+						{
+							socketValueEdit.mode = SocketValueEdit::kMode_MouseAbsolute;
+							break;
+						}
+						
+						if (mouse.wentUp(BUTTON_LEFT))
+						{
+							socketValueEdit.mode = SocketValueEdit::kMode_MouseRelative;
+							break;
+						}
+					}
+					
+					if (socketValueEdit.mode == SocketValueEdit::kMode_MouseAbsolute)
+					{
+						const float x1 = node->editorX + socketValueEdit.editor->editorX;
+						const float x2 = x1 + socketValueEdit.editor->editorSx;
+						value = (mouse.x - x1) / (x2 - x1);
+						
+						if (mouse.wentUp(BUTTON_LEFT))
+						{
+							socketValueEditEnd();
+							
+							state = kState_Idle;
+							break;
+						}
+					}
+					
+					if (socketValueEdit.mode == SocketValueEdit::kMode_MouseRelative)
+					{
+						value += -mouse.dy * .01f;
+						
+						if (socketValueEdit.processKeyboard())
+						{
+							socketValueEdit.mode = SocketValueEdit::kMode_Keyboard;
+							break;
+						}
+						
+						if (mouse.wentDown(BUTTON_LEFT))
+						{
+							socketValueEditEnd();
+							
+							state = kState_Idle;
+							break;
+						}
+					}
+					
+					if (socketValueEdit.mode == SocketValueEdit::kMode_Keyboard)
+					{
+						socketValueEdit.processKeyboard();
+						
+						value = Parse::Float(socketValueEdit.keyboardText);
+						
+						if (keyboard.wentDown(SDLK_RETURN))
+						{
+							socketValueEditEnd();
+							
+							state = kState_Idle;
+							break;
+						}
+					}
+					
+					value = Calc::Clamp(value, 0.f, 1.f);
+					
+					char valueText[256];
+					sprintf_s(valueText, sizeof(valueText), "%f", value);
+					
+					node->editorValue = valueText;
+				}
 				
-				char valueText[256];
-				sprintf_s(valueText, sizeof(valueText), "%.2f", value);
-				
-				node->editorValue = valueText;
+				if (socketValueEdit.editor->typeName == "string")
+				{
+					if (keyboard.wentDown(SDLK_BACKSPACE))
+					{
+						if (!node->editorValue.empty())
+							node->editorValue.pop_back();
+					}
+					
+					for (int i = 0; i < 256; ++i)
+					{
+						SDLKey key = SDLKey(i);
+						
+						int c = i;
+						
+						if (keyboard.isDown(SDLK_LSHIFT))
+							c = toupper(c);
+					
+						if (isprint(c) && keyboard.wentDown(key))
+						{
+							node->editorValue.push_back(c);
+						}
+					}
+					
+					if (mouse.wentDown(BUTTON_LEFT) || keyboard.wentDown(SDLK_RETURN))
+					{
+						socketValueEditEnd();
+						
+						state = kState_Idle;
+						break;
+					}
+				}
 			}
 		}
 		break;
@@ -914,7 +1003,7 @@ void GraphEdit::draw() const
 	{
 		auto & node = nodeItr.second;
 		
-		const auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.type);
+		const auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
 		
 		if (typeDefinition == nullptr)
 		{
@@ -925,7 +1014,7 @@ void GraphEdit::draw() const
 			drawRectLine(node.editorX, node.editorY, node.editorX + 100, node.editorY + 20);
 			setColor(colorWhite);
 			setFont("calibri.ttf");
-			drawText(node.editorX + 100/2, node.editorY + 20/2, 12, 0.f, 0.f, "%s", node.type.c_str());
+			drawText(node.editorX + 100/2, node.editorY + 20/2, 12, 0.f, 0.f, "%s", node.typeName.c_str());
 		}
 		else
 		{
@@ -1021,7 +1110,7 @@ void GraphEdit::drawTypeUi(const GraphNode & node, const GraphEdit_TypeDefinitio
 	
 	setFont("calibri.ttf");
 	setColor(255, 255, 255);
-	drawText(definition.sx/2, 12, 14, 0.f, 0.f, "%s", definition.typeName.c_str());
+	drawText(definition.sx/2, 12, 14, 0.f, 0.f, "%s", definition.displayName.empty() ? definition.typeName.c_str() : definition.displayName.c_str());
 	
 	if (node.editorIsPassthrough)
 	{
@@ -1032,7 +1121,17 @@ void GraphEdit::drawTypeUi(const GraphNode & node, const GraphEdit_TypeDefinitio
 	
 	for (auto & editor : definition.editors)
 	{
-		if (editor.typeName == "floatLiteral")
+		if (socketValueEdit.nodeId == node.id && socketValueEdit.editor == &editor)
+		{
+			setColor(63, 63, 127);
+			drawRect(
+				editor.editorX,
+				editor.editorY,
+				editor.editorX + editor.editorSx,
+				editor.editorY + editor.editorSy);
+		}
+		
+		if (editor.typeName == "float")
 		{
 			const float value = Parse::Float(node.editorValue);
 			
@@ -1048,7 +1147,17 @@ void GraphEdit::drawTypeUi(const GraphNode & node, const GraphEdit_TypeDefinitio
 			drawText(
 				editor.editorX + editor.editorSx/2,
 				editor.editorY + editor.editorSy/2,
-				12, 0.f, 0.f, "%s : %s", editor.typeName.c_str(), node.editorValue.c_str());
+				12, 0.f, 0.f, "%s : %.2f", editor.typeName.c_str(), value);
+		}
+		
+		if (editor.typeName == "string")
+		{
+			setFont("calibri.ttf");
+			setColor(255, 255, 255);
+			drawText(
+				editor.editorX + editor.editorSx/2,
+				editor.editorY + editor.editorSy/2,
+				12, 0.f, 0.f, "%s", node.editorValue.c_str());
 		}
 		
 		setColor(127, 127, 127, 255);

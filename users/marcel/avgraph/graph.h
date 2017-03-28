@@ -18,7 +18,7 @@ extern GraphNodeId kGraphNodeIdInvalid;
 struct GraphNode
 {
 	GraphNodeId id;
-	std::string type;
+	std::string typeName;
 	
 	float editorX;
 	float editorY;
@@ -177,6 +177,8 @@ struct GraphEdit_TypeDefinition
 	
 	// ui
 	
+	std::string displayName;
+	
 	float sx;
 	float sy;
 	
@@ -305,14 +307,27 @@ struct GraphEdit
 	
 	struct SocketValueEdit
 	{
+		enum Mode
+		{
+			kMode_Idle,
+			kMode_MouseAbsolute,
+			kMode_MouseRelative,
+			kMode_Keyboard
+		};
+		
 		GraphNodeId nodeId;
 		const GraphEdit_Editor * editor;
+		Mode mode;
+		std::string keyboardText;
 		
 		SocketValueEdit()
 			: nodeId(kGraphNodeIdInvalid)
 			, editor(nullptr)
+			, mode(kMode_Idle)
 		{
 		}
+		
+		bool processKeyboard();
 	};
 	
 	Graph * graph;
