@@ -511,6 +511,8 @@ GraphEdit::GraphEdit()
 	, nodeSelect()
 	, socketConnect()
 	, socketValueEdit()
+	, mousePosition()
+	, dragAndZoom()
 {
 	graph = new Graph();
 }
@@ -621,6 +623,13 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 
 void GraphEdit::tick(const float dt)
 {
+	{
+		const Vec2 srcMousePosition(mouse.x, mouse.y);
+		const Vec2 dstMousePosition = dragAndZoom.invTransform * srcMousePosition;
+		mousePosition.x = dstMousePosition[0];
+		mousePosition.y = dstMousePosition[1];
+	}
+	
 	highlightedSockets = SocketSelection();
 	highlightedLinks.clear();
 	
@@ -630,7 +639,7 @@ void GraphEdit::tick(const float dt)
 		{
 			HitTestResult hitTestResult;
 			
-			if (hitTest(mouse.x, mouse.y, hitTestResult))
+			if (hitTest(mousePosition.x, mousePosition.y, hitTestResult))
 			{
 				if (hitTestResult.hasNode)
 				{
@@ -657,7 +666,7 @@ void GraphEdit::tick(const float dt)
 			{
 				HitTestResult hitTestResult;
 				
-				if (hitTest(mouse.x, mouse.y, hitTestResult))
+				if (hitTest(mousePosition.x, mousePosition.y, hitTestResult))
 				{
 					// todo : clear node selection ?
 					// todo : clear link selection ?
@@ -714,8 +723,8 @@ void GraphEdit::tick(const float dt)
 				}
 				else
 				{
-					nodeSelect.beginX = mouse.x;
-					nodeSelect.beginY = mouse.y;
+					nodeSelect.beginX = mousePosition.x;
+					nodeSelect.beginY = mousePosition.y;
 					nodeSelect.endX = nodeSelect.beginX;
 					nodeSelect.endY = nodeSelect.beginY;
 					
@@ -735,13 +744,25 @@ void GraphEdit::tick(const float dt)
 				GraphNode node;
 				node.id = graph->allocNodeId();
 				node.typeName = typeName;
-				node.editorX = mouse.x;
-				node.editorY = mouse.y;
+				node.editorX = mousePosition.x;
+				node.editorY = mousePosition.y;
 				
 				graph->addNode(node);
 				
 				selectedNodes.clear();
 				selectedNodes.insert(node.id);
+			}
+			
+			if (keyboard.wentDown(SDLK_a))
+			{
+				if (keyboard.isDown(SDLK_LGUI))
+					selectAll();
+			}
+			
+			if (keyboard.wentDown(SDLK_o))
+			{
+				if (keyboard.isDown(SDLK_LGUI))
+					dragAndZoom = DragAndZoom();
 			}
 			
 			if (keyboard.wentDown(SDLK_d))
@@ -828,13 +849,35 @@ void GraphEdit::tick(const float dt)
 				
 				selectedLinks.clear();
 			}
+			
+			if (keyboard.wentDown(SDLK_TAB))
+			{
+				state = kState_Hidden;
+				break;
+			}
+			
+			// drag and zoom
+			
+			if (keyboard.isDown(SDLK_LCTRL))
+			{
+				dragAndZoom.focusX -= mouse.dx;
+				dragAndZoom.focusY -= mouse.dy;
+		
+			}
+			
+			if (keyboard.isDown(SDLK_LALT))
+			{
+				dragAndZoom.zoom += mouse.dy / 100.f;
+			}
+			
+			dragAndZoom.tick(dt);
 		}
 		break;
 		
 	case kState_NodeSelect:
 		{
-			nodeSelect.endX = mouse.x;
-			nodeSelect.endY = mouse.y;
+			nodeSelect.endX = mousePosition.x;
+			nodeSelect.endY = mousePosition.y;
 			
 			// todo : hit test nodes
 			
@@ -902,7 +945,7 @@ void GraphEdit::tick(const float dt)
 			
 			HitTestResult hitTestResult;
 			
-			if (hitTest(mouse.x, mouse.y, hitTestResult))
+			if (hitTest(mousePosition.x, mousePosition.y, hitTestResult))
 			{
 				if (hitTestResult.hasNode &&
 					hitTestResult.node->id != socketConnect.srcNodeId &&
@@ -933,7 +976,7 @@ void GraphEdit::tick(const float dt)
 			
 			HitTestResult hitTestResult;
 			
-			if (hitTest(mouse.x, mouse.y, hitTestResult))
+			if (hitTest(mousePosition.x, mousePosition.y, hitTestResult))
 			{
 				if (hitTestResult.hasNode &&
 					hitTestResult.node->id != socketConnect.dstNodeId &&
@@ -990,7 +1033,7 @@ void GraphEdit::tick(const float dt)
 					{
 						const float x1 = node->editorX + socketValueEdit.editor->editorX;
 						const float x2 = x1 + socketValueEdit.editor->editorSx;
-						value = (mouse.x - x1) / (x2 - x1);
+						value = (mousePosition.x - x1) / (x2 - x1);
 						
 						if (mouse.wentUp(BUTTON_LEFT))
 						{
@@ -1077,6 +1120,16 @@ void GraphEdit::tick(const float dt)
 			}
 		}
 		break;
+	
+	case kState_Hidden:
+		{
+			if (keyboard.wentDown(SDLK_TAB))
+			{
+				state = kState_Idle;
+				break;
+			}
+		}
+		break;
 	}
 }
 
@@ -1111,8 +1164,46 @@ void GraphEdit::socketValueEditEnd()
 	socketValueEdit = SocketValueEdit();
 }
 
+void GraphEdit::selectNode(const GraphNodeId nodeId)
+{
+	Assert(selectedNodes.count(nodeId) == 0);
+	selectedNodes.insert(nodeId);
+}
+
+void GraphEdit::selectLink(const GraphLinkId linkId)
+{
+	Assert(selectedLinks.count(linkId) == 0);
+	selectedLinks.insert(linkId);
+}
+
+void GraphEdit::selectNodeAll()
+{
+	selectedNodes.clear();
+	for (auto & nodeItr : graph->nodes)
+		selectedNodes.insert(nodeItr.first);
+}
+
+void GraphEdit::selectLinkAll()
+{
+	selectedLinks.clear();
+	for (auto & linkItr : graph->links)
+		selectedLinks.insert(linkItr.first);
+}
+
+void GraphEdit::selectAll()
+{
+	selectNodeAll();
+	selectLinkAll();
+}
+
 void GraphEdit::draw() const
 {
+	if (state == kState_Hidden)
+		return;
+	
+	gxPushMatrix();
+	gxMultMatrixf(dragAndZoom.transform.m_v);
+	
 	// traverse links and draw
 	
 	for (auto & linkItr : graph->links)
@@ -1220,7 +1311,7 @@ void GraphEdit::draw() const
 					hqLine(
 						node->editorX + socketConnect.srcNodeSocket->px,
 						node->editorY + socketConnect.srcNodeSocket->py, 1.5f,
-						mouse.x, mouse.y, 1.5f);
+						mousePosition.x, mousePosition.y, 1.5f);
 				}
 				hqEnd();
 			}
@@ -1243,7 +1334,7 @@ void GraphEdit::draw() const
 					hqLine(
 						node->editorX + socketConnect.dstNodeSocket->px,
 						node->editorY + socketConnect.dstNodeSocket->py, 1.5f,
-						mouse.x, mouse.y, 1.5f);
+						mousePosition.x, mousePosition.y, 1.5f);
 				}
 				hqEnd();
 			}
@@ -1251,6 +1342,9 @@ void GraphEdit::draw() const
 		break;
 	
 	case kState_SocketValueEdit:
+		break;
+	
+	case kState_Hidden:
 		break;
 	}
 	
@@ -1284,6 +1378,8 @@ void GraphEdit::draw() const
 		}
 	}
 #endif
+
+	gxPopMatrix();
 }
 
 void GraphEdit::drawTypeUi(const GraphNode & node, const GraphEdit_TypeDefinition & definition) const

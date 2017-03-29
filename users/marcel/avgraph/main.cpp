@@ -22,6 +22,11 @@ todo :
 - on typing 0..9 let node value editor erase editorValue and begin typing. requires state transition? end editing on ENTER or when selecting another entity
 - add ability to increment and decrement editorValue. use mouse Y movement or scroll wheel (?)
 - remember number of digits entered after '.' when editing editorValue. use this information when incrementing/decrementing values
+- add zoom in/out
+	+ add basic implementation
+	- improve zoom in and out behavior
+	- save/load zoom and focus position to/from XML
+	+ add option to quickly reset drag and zoom values
 
 */
 

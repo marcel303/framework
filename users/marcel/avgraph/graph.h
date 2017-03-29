@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Mat4x4.h"
 #include <string>
 #include <vector>
 #include <map>
@@ -235,7 +236,8 @@ struct GraphEdit
 		kState_NodeDrag,
 		kState_InputSocketConnect,
 		kState_OutputSocketConnect,
-		kState_SocketValueEdit
+		kState_SocketValueEdit,
+		kState_Hidden
 	};
 	
 	struct HitTestResult
@@ -269,6 +271,49 @@ struct GraphEdit
 			, srcNodeSocket(nullptr)
 			, dstNodeId(kGraphNodeIdInvalid)
 			, dstNodeSocket(nullptr)
+		{
+		}
+	};
+	
+	struct DragAndZoom
+	{
+		float zoom;
+		float focusX;
+		float focusY;
+		
+		Mat4x4 transform;
+		Mat4x4 invTransform;
+		
+		DragAndZoom()
+			: zoom(1.f)
+			, focusX(0.f)
+			, focusY(0.f)
+			, transform(true)
+			, invTransform(true)
+		{
+			updateTransform();
+		}
+		
+		void tick(const float dt)
+		{
+			updateTransform();
+		}
+		
+		void updateTransform()
+		{
+			transform = Mat4x4(true).Translate(1024/2, 768/2, 0).Scale(zoom, zoom, 1.f).Translate(-focusX, -focusY, 0.f);
+			invTransform = transform.Invert();
+		}
+	};
+	
+	struct GraphEditMouse
+	{
+		float x;
+		float y;
+		
+		GraphEditMouse()
+			: x(0.f)
+			, y(0.f)
 		{
 		}
 	};
@@ -352,6 +397,10 @@ struct GraphEdit
 	SocketConnect socketConnect;
 	SocketValueEdit socketValueEdit;
 	
+	GraphEditMouse mousePosition;
+	
+	DragAndZoom dragAndZoom;
+	
 	GraphEdit();
 	~GraphEdit();
 	
@@ -365,6 +414,12 @@ struct GraphEdit
 	void nodeSelectEnd();
 	void socketConnectEnd();
 	void socketValueEditEnd();
+	
+	void selectNode(const GraphNodeId nodeId);
+	void selectLink(const GraphLinkId linkId);
+	void selectNodeAll();
+	void selectLinkAll();
+	void selectAll();
 	
 	void draw() const;
 	void drawTypeUi(const GraphNode & node, const GraphEdit_TypeDefinition & typeDefinition) const;
