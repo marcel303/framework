@@ -12,6 +12,7 @@ using namespace tinyxml2;
 //
 
 GraphNodeId kGraphNodeIdInvalid = 0;
+GraphLinkId kGraphLinkIdInvalid = 0;
 
 //
 
@@ -23,7 +24,7 @@ static bool areCompatibleSocketLinkTypeNames(const std::string & srcTypeName, co
 	return false;
 }
 
-static bool testOverlap(
+static bool testRectOverlap(
 	const int _ax1, const int _ay1, const int _ax2, const int _ay2,
 	const int _bx1, const int _by1, const int _bx2, const int _by2)
 {
@@ -41,6 +42,56 @@ static bool testOverlap(
 		return false;
 	else
 		return true;
+}
+
+static bool testLineOverlap(
+	const int lx1, const int ly1,
+	const int lx2, const int ly2,
+	const int cx, const int cy, const int cr)
+{
+	{
+		const int dx = lx1 - cx;
+		const int dy = ly1 - cy;
+		const int dsSq = dx * dx + dy * dy;
+		if (dsSq <= cr * cr)
+			return true;
+	}
+	
+	{
+		const int dx = lx2 - cx;
+		const int dy = ly2 - cy;
+		const int dsSq = dx * dx + dy * dy;
+		if (dsSq <= cr * cr)
+			return true;
+	}
+	
+	{
+		const double ldx = lx2 - lx1;
+		const double ldy = ly2 - ly1;
+		const double lds = std::hypot(ldx, ldy);
+		const double nx = -ldy / lds;
+		const double ny = +ldx / lds;
+		const double nd = nx * lx1 + ny * ly1;
+		
+		const double dMin = ldx * lx1 + ldy * ly1;
+		const double dMax = ldx * lx2 + ldy * ly2;
+		Assert(dMin <= dMax);
+		
+		const double dd = ldx * cx + ldy * cy;
+		
+		if (dd < dMin || dd > dMax)
+			return false;
+		
+		const double dTreshold = cr;
+		const double d = std::abs(cx * nx + cy * ny - nd);
+		
+		//printf("d = %f / %f\n", float(d), float(dTreshold));
+		
+		if (d <= dTreshold)
+			return true;
+	}
+	
+	return false;
 }
 
 //
@@ -62,10 +113,22 @@ void GraphNode::togglePassthrough()
 
 //
 
+GraphNodeSocketLink::GraphNodeSocketLink()
+	: id(kGraphLinkIdInvalid)
+	, srcNodeId(kGraphNodeIdInvalid)
+	, srcNodeSocketIndex(-1)
+	, dstNodeId(kGraphNodeIdInvalid)
+	, dstNodeSocketIndex(-1)
+{
+}
+
+//
+
 Graph::Graph()
 	: nodes()
 	, links()
-	, nextId(1)
+	, nextNodeId(1)
+	, nextLinkId(1)
 {
 }
 
@@ -73,13 +136,24 @@ Graph::~Graph()
 {
 }
 
-GraphNodeId Graph::allocId()
+GraphNodeId Graph::allocNodeId()
 {
-	GraphNodeId result = nextId;
+	GraphNodeId result = nextNodeId;
 	
-	nextId++;
+	nextNodeId++;
 	
 	Assert(nodes.find(result) == nodes.end());
+	
+	return result;
+}
+
+GraphNodeId Graph::allocLinkId()
+{
+	GraphLinkId result = nextLinkId;
+	
+	nextLinkId++;
+	
+	Assert(links.find(result) == links.end());
 	
 	return result;
 }
@@ -99,15 +173,25 @@ void Graph::removeNode(const GraphNodeId nodeId)
 	
 	nodes.erase(nodeId);
 	
-	for (auto i = links.begin(); i != links.end(); )
+	for (auto linkItr = links.begin(); linkItr != links.end(); )
 	{
-		if (i->srcNodeId == nodeId)
-			i = links.erase(i);
-		else if (i->dstNodeId == nodeId)
-			i = links.erase(i);
+		auto & link = linkItr->second;
+		
+		if (link.srcNodeId == nodeId)
+			linkItr = links.erase(linkItr);
+		else if (link.dstNodeId == nodeId)
+			linkItr = links.erase(linkItr);
 		else
-			++i;
+			++linkItr;
 	}
+}
+
+void Graph::removeLink(const GraphLinkId linkId)
+{
+	Assert(linkId != kGraphLinkIdInvalid);
+	Assert(links.find(linkId) != links.end());
+	
+	links.erase(linkId);
 }
 
 bool Graph::loadXml(const XMLElement * xmlGraph)
@@ -124,18 +208,19 @@ bool Graph::loadXml(const XMLElement * xmlGraph)
 		
 		addNode(node);
 		
-		nextId = std::max(nextId, node.id + 1);
+		nextNodeId = std::max(nextNodeId, node.id + 1);
 	}
 	
 	for (const XMLElement * xmlLink = xmlGraph->FirstChildElement("link"); xmlLink != nullptr; xmlLink = xmlLink->NextSiblingElement("link"))
 	{
 		GraphNodeSocketLink link;
+		link.id = allocLinkId();
 		link.srcNodeId = intAttrib(xmlLink, "srcNodeId", link.srcNodeId);
 		link.srcNodeSocketIndex = intAttrib(xmlLink, "srcNodeSocketIndex", link.srcNodeSocketIndex);
 		link.dstNodeId = intAttrib(xmlLink, "dstNodeId", link.dstNodeId);
 		link.dstNodeSocketIndex = intAttrib(xmlLink, "dstNodeSocketIndex", link.dstNodeSocketIndex);
 		
-		links.push_back(link);
+		links[link.id] = link;
 	}
 	
 	return true;
@@ -159,8 +244,10 @@ bool Graph::saveXml(XMLPrinter & xmlGraph) const
 		xmlGraph.CloseElement();
 	}
 	
-	for (auto & link : links)
+	for (auto & linkItr : links)
 	{
+		auto & link = linkItr.second;
+		
 		xmlGraph.OpenElement("link");
 		{
 			xmlGraph.PushAttribute("srcNodeId", link.srcNodeId);
@@ -419,6 +506,7 @@ GraphEdit::GraphEdit()
 	: graph(nullptr)
 	, typeDefinitionLibrary(nullptr)
 	, selectedNodes()
+	, selectedLinks()
 	, state(kState_Idle)
 	, nodeSelect()
 	, socketConnect()
@@ -491,11 +579,38 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 		{
 			GraphEdit_TypeDefinition::HitTestResult hitTestResult;
 			
-			if (typeDefinition->hitTest(mouse.x - node.editorX, mouse.y - node.editorY, hitTestResult))
+			if (typeDefinition->hitTest(x - node.editorX, y - node.editorY, hitTestResult))
 			{
 				result.hasNode = true;
 				result.node = &node;
 				result.nodeHitTestResult = hitTestResult;
+				return true;
+			}
+		}
+	}
+	
+	for (auto & linkItr : graph->links)
+	{
+		auto & link = linkItr.second;
+		
+		auto srcNode = tryGetNode(link.srcNodeId);
+		auto dstNode = tryGetNode(link.dstNodeId);
+		
+		auto srcNodeSocket = tryGetInputSocket(link.srcNodeId, link.srcNodeSocketIndex);
+		auto dstNodeSocket = tryGetOutputSocket(link.dstNodeId, link.dstNodeSocketIndex);
+		
+		Assert(srcNode != nullptr && dstNode != nullptr && srcNodeSocket != nullptr && dstNodeSocket != nullptr);
+		if (srcNode != nullptr && dstNode != nullptr && srcNodeSocket != nullptr && dstNodeSocket != nullptr)
+		{
+			if (testLineOverlap(
+				srcNode->editorX + srcNodeSocket->px,
+				srcNode->editorY + srcNodeSocket->py,
+				dstNode->editorX + dstNodeSocket->px,
+				dstNode->editorY + dstNodeSocket->py,
+				x, y, 20.f))
+			{
+				result.hasLink = true;
+				result.link = &link;
 				return true;
 			}
 		}
@@ -507,6 +622,7 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 void GraphEdit::tick(const float dt)
 {
 	highlightedSockets = SocketSelection();
+	highlightedLinks.clear();
 	
 	switch (state)
 	{
@@ -530,6 +646,11 @@ void GraphEdit::tick(const float dt)
 						highlightedSockets.dstNodeSocket = hitTestResult.nodeHitTestResult.outputSocket;
 					}
 				}
+				
+				if (hitTestResult.hasLink)
+				{
+					highlightedLinks.insert(hitTestResult.link->id);
+				}
 			}
 		
 			if (mouse.wentDown(BUTTON_LEFT))
@@ -538,8 +659,14 @@ void GraphEdit::tick(const float dt)
 				
 				if (hitTest(mouse.x, mouse.y, hitTestResult))
 				{
+					// todo : clear node selection ?
+					// todo : clear link selection ?
+					// todo : make method to update selection and move logic for selecting/deselecting items there ?
+					
 					if (hitTestResult.hasNode)
 					{
+						selectedLinks.clear();
+						
 						if (selectedNodes.count(hitTestResult.node->id) == 0)
 						{
 							selectedNodes.clear();
@@ -576,6 +703,14 @@ void GraphEdit::tick(const float dt)
 							break;
 						}
 					}
+					
+					if (hitTestResult.hasLink)
+					{
+						selectedNodes.clear();
+						
+						selectedLinks.clear();
+						selectedLinks.insert(hitTestResult.link->id);
+					}
 				}
 				else
 				{
@@ -598,7 +733,7 @@ void GraphEdit::tick(const float dt)
 				const std::string & typeName = typeNames[rand() % typeNames.size()];
 				
 				GraphNode node;
-				node.id = graph->allocId();
+				node.id = graph->allocNodeId();
 				node.typeName = typeName;
 				node.editorX = mouse.x;
 				node.editorY = mouse.y;
@@ -621,7 +756,7 @@ void GraphEdit::tick(const float dt)
 					if (node != nullptr)
 					{
 						GraphNode newNode;
-						newNode.id = graph->allocId();
+						newNode.id = graph->allocNodeId();
 						newNode.typeName = node->typeName;
 						newNode.editorX = node->editorX + 20;
 						newNode.editorY = node->editorY + 20;
@@ -685,6 +820,13 @@ void GraphEdit::tick(const float dt)
 				}
 				
 				selectedNodes.clear();
+				
+				for (auto linkId : selectedLinks)
+				{
+					graph->removeLink(linkId);
+				}
+				
+				selectedLinks.clear();
 			}
 		}
 		break;
@@ -698,7 +840,7 @@ void GraphEdit::tick(const float dt)
 			
 			nodeSelect.nodeIds.clear();
 			
-			for (auto nodeItr : graph->nodes)
+			for (auto & nodeItr : graph->nodes)
 			{
 				auto & node = nodeItr.second;
 				
@@ -707,7 +849,7 @@ void GraphEdit::tick(const float dt)
 				Assert(typeDefinition != nullptr);
 				if (typeDefinition != nullptr)
 				{
-					if (testOverlap(
+					if (testRectOverlap(
 						nodeSelect.beginX,
 						nodeSelect.beginY,
 						nodeSelect.endX,
@@ -941,6 +1083,7 @@ void GraphEdit::tick(const float dt)
 void GraphEdit::nodeSelectEnd()
 {
 	selectedNodes = nodeSelect.nodeIds;
+	selectedLinks.clear(); // todo : also select links
 	
 	nodeSelect = NodeSelect();
 }
@@ -950,11 +1093,14 @@ void GraphEdit::socketConnectEnd()
 	if (socketConnect.srcNodeId != kGraphNodeIdInvalid && socketConnect.dstNodeId != kGraphNodeIdInvalid)
 	{
 		GraphNodeSocketLink link;
+		link.id = graph->allocLinkId();
 		link.srcNodeId = socketConnect.srcNodeId;
 		link.srcNodeSocketIndex = socketConnect.srcNodeSocket->index;
 		link.dstNodeId = socketConnect.dstNodeId;
 		link.dstNodeSocketIndex = socketConnect.dstNodeSocket->index;
-		graph->links.push_back(link);
+		
+		// todo : add addLink method
+		graph->links[link.id] = link;
 	}
 	
 	socketConnect = SocketConnect();
@@ -969,8 +1115,11 @@ void GraphEdit::draw() const
 {
 	// traverse links and draw
 	
-	for (auto & link : graph->links)
+	for (auto & linkItr : graph->links)
 	{
+		auto linkId = linkItr.first;
+		auto & link = linkItr.second;
+		
 		auto srcNode = tryGetNode(link.srcNodeId);
 		auto dstNode = tryGetNode(link.dstNodeId);
 		
@@ -988,7 +1137,16 @@ void GraphEdit::draw() const
 		{
 			hqBegin(HQ_LINES);
 			{
-				setColor(255, 255, 0);
+				const bool isSelected = selectedLinks.count(linkId) != 0;
+				const bool isHighlighted = highlightedLinks.count(linkId) != 0;
+				
+				if (isSelected)
+					setColor(127, 127, 255);
+				else if (isHighlighted)
+					setColor(255, 255, 255);
+				else
+					setColor(255, 255, 0);
+				
 				hqLine(
 					srcNode->editorX + inputSocket->px, srcNode->editorY + inputSocket->py, 2.f,
 					dstNode->editorX + outputSocket->px, dstNode->editorY + outputSocket->py, 4.f);
@@ -1095,6 +1253,37 @@ void GraphEdit::draw() const
 	case kState_SocketValueEdit:
 		break;
 	}
+	
+#if 0
+	// todo : remove
+	
+	for (int x = 0; x < 1024; x += 10)
+	{
+		for (int y = 0; y < 768; y += 10)
+		{
+			HitTestResult hitTestResult;
+			
+			if (hitTest(x, y, hitTestResult))
+			{
+				if (hitTestResult.hasLink)
+				{
+					setColor(colorYellow);
+					fillCircle(x, y, 5.f, 10);
+				}
+				else
+				{
+					setColor(colorRed);
+					fillCircle(x, y, 5.f, 10);
+				}
+			}
+			else
+			{
+				setColor(colorBlue);
+				fillCircle(x, y, 5.f, 10);
+			}
+		}
+	}
+#endif
 }
 
 void GraphEdit::drawTypeUi(const GraphNode & node, const GraphEdit_TypeDefinition & definition) const

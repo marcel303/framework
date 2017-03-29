@@ -12,8 +12,10 @@ namespace tinyxml2
 }
 
 typedef unsigned int GraphNodeId;
+typedef unsigned int GraphLinkId;
 
 extern GraphNodeId kGraphNodeIdInvalid;
+extern GraphLinkId kGraphLinkIdInvalid;
 
 struct GraphNode
 {
@@ -33,36 +35,34 @@ struct GraphNode
 
 struct GraphNodeSocketLink
 {
+	GraphLinkId id;
+	
 	GraphNodeId srcNodeId;
 	int srcNodeSocketIndex;
 	
 	GraphNodeId dstNodeId;
 	int dstNodeSocketIndex;
 	
-	// todo : move to cpp
-	GraphNodeSocketLink()
-		: srcNodeId(kGraphNodeIdInvalid)
-		, srcNodeSocketIndex(-1)
-		, dstNodeId(kGraphNodeIdInvalid)
-		, dstNodeSocketIndex(-1)
-	{
-	}
+	GraphNodeSocketLink();
 };
 
 struct Graph
 {
 	std::map<GraphNodeId, GraphNode> nodes;
-	std::vector<GraphNodeSocketLink> links;
+	std::map<GraphLinkId, GraphNodeSocketLink> links;
 	
-	GraphNodeId nextId;
+	GraphNodeId nextNodeId;
+	GraphLinkId nextLinkId;
 	
 	Graph();
 	~Graph();
 	
-	GraphNodeId allocId();
+	GraphNodeId allocNodeId();
+	GraphLinkId allocLinkId();
 	
 	void addNode(GraphNode & node);
 	void removeNode(const GraphNodeId nodeId);
+	void removeLink(const GraphLinkId linkId);
 	
 	bool loadXml(const tinyxml2::XMLElement * xmlGraph);
 	bool saveXml(tinyxml2::XMLPrinter & xmlGraph) const;
@@ -244,10 +244,15 @@ struct GraphEdit
 		GraphNode * node;
 		GraphEdit_TypeDefinition::HitTestResult nodeHitTestResult;
 		
+		bool hasLink;
+		GraphNodeSocketLink * link;
+		
 		HitTestResult()
 			: hasNode(false)
 			, node(nullptr)
 			, nodeHitTestResult()
+			, hasLink(false)
+			, link(nullptr)
 		{
 		}
 	};
@@ -335,6 +340,8 @@ struct GraphEdit
 	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
 	
 	std::set<GraphNodeId> selectedNodes;
+	std::set<GraphLinkId> highlightedLinks;
+	std::set<GraphLinkId> selectedLinks;
 	
 	SocketSelection highlightedSockets;
 	SocketSelection selectedSockets;

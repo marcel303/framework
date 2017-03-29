@@ -17,7 +17,7 @@ todo :
 - add default value to socket definitions
 - add editorValue to node inputs and outputs. let get*** methods use this value when plug is not connected
 - let graph editor set editorValue for nodes. only when editor is set on type definition
-- add socket connection selection. remove connection on BACKSPACE
++ add socket connection selection. remove connection on BACKSPACE
 + add multiple node selection
 - on typing 0..9 let node value editor erase editorValue and begin typing. requires state transition? end editing on ENTER or when selecting another entity
 - add ability to increment and decrement editorValue. use mouse Y movement or scroll wheel (?)
@@ -406,12 +406,15 @@ struct VfxNodeFsfx : VfxNodeBase
 	
 	Surface * surface;
 	
-	VfxImage_Surface * image;
+	VfxImage_Texture * image;
+	
+	bool isPassthrough;
 	
 	VfxNodeFsfx()
 		: VfxNodeBase()
 		, surface(nullptr)
 		, image(nullptr)
+		, isPassthrough(false)
 	{
 		surface = new Surface(GFX_SX, GFX_SY, true);
 		
@@ -420,7 +423,7 @@ struct VfxNodeFsfx : VfxNodeBase
 		surface->clear();
 		surface->swapBuffers();
 		
-		image = new VfxImage_Surface(surface);
+		image = new VfxImage_Texture();
 		
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addInput(kInput_Image, kVfxPlugType_Image);
@@ -442,8 +445,21 @@ struct VfxNodeFsfx : VfxNodeBase
 		surface = nullptr;
 	}
 	
+	virtual void init(const GraphNode & node) override
+	{
+		isPassthrough = node.editorIsPassthrough;
+	}
+	
 	virtual void draw() const override
 	{
+		if (isPassthrough)
+		{
+			const VfxImageBase * inputImage = getInputImage(kInput_Image, nullptr);
+			const GLuint inputTexture = inputImage != nullptr ? inputImage->getTexture() : surface->getTexture();
+			image->texture = inputTexture;
+			return;
+		}
+		
 		const std::string & shaderName = getInputString(kInput_Shader, "");
 		
 		if (shaderName.empty())
@@ -458,8 +474,6 @@ struct VfxNodeFsfx : VfxNodeBase
 			
 			if (shader.isValid())
 			{
-				checkErrorGL();
-				
 				pushBlend(BLEND_OPAQUE);
 				setShader(shader);
 				{
@@ -501,6 +515,8 @@ struct VfxNodeFsfx : VfxNodeBase
 				popSurface();
 			}
 		}
+		
+		image->texture = surface->getTexture();
 	}
 };
 
@@ -764,8 +780,10 @@ static VfxGraph * constructVfxGraph(const Graph & graph)
 		}
 	}
 	
-	for (auto & link : graph.links)
+	for (auto & linkItr : graph.links)
 	{
+		auto & link = linkItr.second;
+		
 		auto srcNodeItr = vfxGraph->nodes.find(link.srcNodeId);
 		auto dstNodeItr = vfxGraph->nodes.find(link.dstNodeId);
 		
