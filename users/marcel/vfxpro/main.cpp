@@ -849,7 +849,7 @@ bool getSceneFileContents(const std::string & filename, Array<uint8_t> *& out_by
 
 #if ENABLE_REALTIME_EDITING
 
-static void handleFileChange(const std::string & filename)
+static void handleRealTimeEdit(const std::string & filename)
 {
 	if (filename == "settings.xml")
 		config.load(filename.c_str());
@@ -861,13 +861,7 @@ static void handleFileChange(const std::string & filename)
 	{
 		const std::string extension = Path::GetExtension(filename);
 
-		if (extension == "vs")
-		{
-			const std::string name = Path::StripExtension(filename);
-
-			Shader(name.c_str()).reload();
-		}
-		else if (extension == "ps")
+		if (extension == "ps")
 		{
 			const std::string baseName = Path::GetBaseName(filename);
 
@@ -875,150 +869,12 @@ static void handleFileChange(const std::string & filename)
 			{
 				Shader(filename.c_str(), "fsfx.vs", filename.c_str()).reload();
 			}
-			else
-			{
-				const std::string name = Path::StripExtension(filename);
-
-				Shader(name.c_str()).reload();
-			}
 		}
 		else if (extension == "inc")
 		{
 			clearCaches(CACHE_SHADER);
 		}
-		else if (extension == "png" || extension == "jpg")
-		{
-			Sprite(filename.c_str()).reload();
-		}
 	}
-}
-
-#endif
-
-//
-
-#if ENABLE_REALTIME_EDITING
-
-struct FileInfo
-{
-	std::string filename;
-	time_t time;
-};
-
-static std::vector<FileInfo> s_fileInfos;
-
-#ifdef WIN32
-static HANDLE s_fileWatcher = INVALID_HANDLE_VALUE;
-#endif
-
-static void initFileMonitor()
-{
-	s_fileInfos.clear();
-
-#ifdef WIN32
-	if (s_fileWatcher != INVALID_HANDLE_VALUE)
-	{
-		BOOL result = FindCloseChangeNotification(s_fileWatcher);
-		Assert(result);
-
-		s_fileWatcher = INVALID_HANDLE_VALUE;
-	}
-#endif
-
-	std::vector<std::string> files = listFiles(".", true);
-
-#if !defined(MACOS) // fixme
-	for (auto & file : files)
-	{
-		FILE * f = fopen(file.c_str(), "rb");
-		if (f)
-		{
-			struct _stat s;
-			if (_fstat(fileno(f), &s) == 0)
-			{
-				FileInfo fi;
-				fi.filename = file;
-				fi.time = s.st_mtime;
-
-				if (String::EndsWith(file, ".ps") || String::EndsWith(file, ".xml") || String::EndsWith(file, ".png") || String::EndsWith(file, ".jpg"))
-					s_fileInfos.push_back(fi);
-			}
-
-			fclose(f);
-			f = 0;
-		}
-	}
-#endif
-
-#if defined(WIN32)
-	Assert(s_fileWatcher == INVALID_HANDLE_VALUE);
-	s_fileWatcher = FindFirstChangeNotificationA(".", TRUE, FILE_NOTIFY_CHANGE_LAST_WRITE);
-	Assert(s_fileWatcher != INVALID_HANDLE_VALUE);
-	if (s_fileWatcher == INVALID_HANDLE_VALUE)
-		logError("failed to find first change notification");
-#endif
-}
-
-static void tickFileMonitor()
-{
-#if defined(WIN32)
-	if (s_fileWatcher != INVALID_HANDLE_VALUE)
-	{
-		if (WaitForSingleObject(s_fileWatcher, 0) != WAIT_OBJECT_0)
-		{
-			return;
-		}
-
-		Sleep(100);
-	}
-#endif
-
-	for (auto & fi: s_fileInfos)
-	{
-		FILE * f = fopen(fi.filename.c_str(), "rb");
-		if (f)
-		{
-			bool changed = false;
-
-		#if !defined(MACOS) // fixme
-			struct _stat s;
-			if (_fstat(fileno(f), &s) == 0)
-			{
-				if (fi.time < s.st_mtime)
-				{
-					// file has changed!
-
-					logDebug("%s has changed!", fi.filename.c_str());
-
-					fi.time = s.st_mtime;
-
-					changed = true;
-				}
-			}
-
-			fclose(f);
-			f = 0;
-		#endif
-			
-			if (changed)
-			{
-				handleFileChange(fi.filename);
-			}
-		}
-	}
-	
-#ifdef WIN32
-	if (s_fileWatcher != INVALID_HANDLE_VALUE)
-	{
-		BOOL result = FindNextChangeNotification(s_fileWatcher);
-		Assert(result);
-
-		if (!result)
-		{
-			logError("failed to watch for next file change notification");
-		}
-	}
-#endif
 }
 
 #endif
@@ -1274,10 +1130,6 @@ static void doStressTest()
 
 int main(int argc, char * argv[])
 {
-#if ENABLE_REALTIME_EDITING
-	initFileMonitor();
-#endif
-
 	if (!config.load("settings.xml"))
 	{
 		logError("failed to load: settings.xml");
@@ -1383,6 +1235,11 @@ int main(int argc, char * argv[])
 	//framework.reloadCachesOnActivate = true;
 #endif
 
+#if ENABLE_REALTIME_EDITING
+	framework.enableRealTimeEditing = true;
+	framework.realTimeEditCallback = handleRealTimeEdit;
+#endif
+
 	framework.filedrop = true;
 	framework.actionHandler = handleAction;
 
@@ -1432,6 +1289,10 @@ int main(int argc, char * argv[])
 	#if ENABLE_STRESS_TEST || 0
 		doStressTest();
 	#endif
+	
+	#if 1
+		nextScene("tracks/Wobbly.scene.xml");
+	#endif
 
 		Surface prevSurface(GFX_SX, GFX_SY, true);
 		Surface surface(GFX_SX, GFX_SY, true);
@@ -1466,11 +1327,7 @@ int main(int argc, char * argv[])
 			if (keyboard.wentDown(SDLK_f))
 			{
 				fileMonitorEnabled = !fileMonitorEnabled;
-				if (fileMonitorEnabled)
-					initFileMonitor();
 			}
-			if (fileMonitorEnabled)
-				tickFileMonitor();
 		#endif
 
 			// process audio input

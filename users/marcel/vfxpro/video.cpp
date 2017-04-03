@@ -177,15 +177,7 @@ void MediaPlayer::updateTexture()
 		textureSy = videoFrame->m_height;
 
 		//logDebug("gotVideo. t=%06dms, sx=%d, sy=%d", int(time * 1000.0), textureSx, textureSy);
-
-#if 0
-		if (texture)
-		{
-			glDeleteTextures(1, &texture);
-			texture = 0;
-		}
-#endif
-
+		
 		if (!texture)
 		{
 			glGenTextures(1, &texture);
@@ -198,6 +190,14 @@ void MediaPlayer::updateTexture()
 			const int sy = videoFrame->m_height;
 			const GLenum internalFormat = GL_RGBA8;
 			const GLenum uploadFormat = GL_RGBA;
+			
+			const int alignment = 16;
+			const int alignmentMask = ~(alignment - 1);
+			const int numBytesPerRow = ((sx * 4) + alignment - 1) & alignmentMask;
+			const int numPixelsPerRow = numBytesPerRow / 4;
+			
+			glPixelStorei(GL_UNPACK_ROW_LENGTH, numPixelsPerRow);
+			checkErrorGL();
 			
 			// copy image data
 
@@ -212,16 +212,22 @@ void MediaPlayer::updateTexture()
 				uploadFormat,
 				GL_UNSIGNED_BYTE,
 				source);
+			checkErrorGL();
 			
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+			checkErrorGL();
 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			checkErrorGL();
 			
 			glBindTexture(GL_TEXTURE_2D, 0);
+			
+			glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+			checkErrorGL();
 		}
 	}
 }
@@ -229,6 +235,26 @@ void MediaPlayer::updateTexture()
 uint32_t MediaPlayer::getTexture() const
 {
 	return texture;
+}
+
+bool MediaPlayer::getVideoProperties(int & sx, int & sy, double & duration) const
+{
+	if (context->hasBegun)
+	{
+		sx = context->mpContext.GetVideoWidth();
+		sy = context->mpContext.GetVideoHeight();
+		duration = context->mpContext.GetDuration();
+		
+		return true;
+	}
+	else
+	{
+		sx = 0;
+		sy = 0;
+		duration = 0.0;
+		
+		return false;
+	}
 }
 
 void MediaPlayer::startMediaPlayerThread()

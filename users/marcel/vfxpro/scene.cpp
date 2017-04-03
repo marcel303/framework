@@ -187,6 +187,23 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 			effect = new Effect_Video(m_name.c_str(), file.c_str(), shader.c_str(), yuv, centered, play);
 		}
 	}
+	else if (type == "videoloop")
+	{
+		const std::string file = stringAttrib(xmlEffect, "file", "");
+		const std::string shader = stringAttrib(xmlEffect, "shader", "");
+		const bool yuv = boolAttrib(xmlEffect, "yuv", false);
+		const bool centered = boolAttrib(xmlEffect, "centered", true);
+		const bool play = boolAttrib(xmlEffect, "play", false);
+
+		if (file.empty())
+		{
+			logWarning("file not set. skipping effect");
+		}
+		else
+		{
+			effect = new Effect_VideoLoop(m_name.c_str(), file.c_str(), shader.c_str(), yuv, centered, play);
+		}
+	}
 #endif
 	else if (type == "picture")
 	{
@@ -277,6 +294,10 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 	else if (type == "sparklies")
 	{
 		effect = new Effect_Sparklies(m_name.c_str());
+	}
+	else if (type == "wobbly")
+	{
+		effect = new Effect_Wobbly(m_name.c_str());
 	}
 	else
 	{

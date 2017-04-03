@@ -40,6 +40,7 @@ extern bool g_isReplay;
 
 struct Effect;
 struct EffectInfo;
+struct VideoLoop;
 
 //
 
@@ -359,6 +360,27 @@ struct Effect_Video : Effect
 
 	virtual void handleSignal(const std::string & name) override;
 	virtual void syncTime(const float time) override;
+};
+
+struct Effect_VideoLoop : Effect
+{
+	TweenFloat m_alpha;
+	std::string m_filename;
+	std::string m_shader;
+	bool m_yuv;
+	bool m_centered;
+
+	VideoLoop * m_videoLoop;
+	bool m_playing;
+
+	Effect_VideoLoop(const char * name, const char * filename, const char * shader, const bool yuv, const bool centered, const bool play);
+	virtual ~Effect_VideoLoop();
+
+	virtual void tick(const float dt) override;
+	virtual void draw(DrawableList & list) override;
+	virtual void draw() override;
+
+	virtual void handleSignal(const std::string & name) override;
 };
 
 #endif
@@ -822,6 +844,40 @@ struct Effect_Sparklies : Effect
 	TweenFloat m_alpha;
 
 	Effect_Sparklies(const char * name);
+
+	virtual void tick(const float dt) override;
+	virtual void draw(DrawableList & list) override;
+	virtual void draw() override;
+};
+
+//
+
+struct Effect_Wobbly : Effect
+{
+	struct WaterSim
+	{
+		static const int kNumElems = 768;
+		
+		double p[kNumElems];
+		double v[kNumElems];
+		
+		WaterSim();
+		
+		void tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond);
+	};
+	
+	TweenFloat m_drop;
+	TweenFloat m_wobbliness;
+	TweenFloat m_stretch;
+	TweenFloat m_numIterations;
+	TweenFloat m_alpha;
+	
+	WaterSim * m_waterSim;
+	
+	GLuint elementsTexture;
+
+	Effect_Wobbly(const char * name);
+	virtual ~Effect_Wobbly();
 
 	virtual void tick(const float dt) override;
 	virtual void draw(DrawableList & list) override;

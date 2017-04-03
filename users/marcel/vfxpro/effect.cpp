@@ -1,6 +1,7 @@
 #include "effect.h"
 #include "Parse.h"
 #include "tinyxml2.h"
+#include "videoloop.h"
 #include "xml.h"
 
 //
@@ -1448,6 +1449,108 @@ void Effect_Video::syncTime(const float time)
 
 			m_time = videoTime;
 		}
+	}
+}
+
+//
+
+Effect_VideoLoop::Effect_VideoLoop(const char * name, const char * filename, const char * shader, const bool yuv,const bool centered, const bool play)
+	: Effect(name)
+	, m_alpha(1.f)
+	, m_yuv(false)
+	, m_centered(true)
+	, m_videoLoop(nullptr)
+	, m_playing(false)
+{
+	is2D = true;
+
+	addVar("alpha", m_alpha);
+
+	m_filename = filename;
+	m_shader = shader;
+	m_yuv = yuv;
+	m_centered = centered;
+	
+	m_videoLoop = new VideoLoop(m_filename.c_str(), false);
+
+	if (play)
+	{
+		handleSignal("start");
+	}
+}
+
+Effect_VideoLoop::~Effect_VideoLoop()
+{
+	delete m_videoLoop;
+	m_videoLoop = nullptr;
+}
+
+void Effect_VideoLoop::tick(const float dt)
+{
+	if (m_playing)
+	{
+		m_videoLoop->tick(dt);
+	}
+	else
+	{
+		m_videoLoop->tick(0.f);
+	}
+}
+
+void Effect_VideoLoop::draw(DrawableList & list)
+{
+	new (list) EffectDrawable(this);
+}
+
+void Effect_VideoLoop::draw()
+{
+	if (m_alpha <= 0.f)
+		return;
+
+	int sx;
+	int sy;
+	double duration;
+	
+	const uint32_t texture = m_videoLoop->getTexture();
+
+	if (texture != 0 && m_videoLoop->getVideoProperties(sx, sy, duration))
+	{
+		gxPushMatrix();
+		{
+			const float scaleX = SCREEN_SX / float(sx);
+			const float scaleY = SCREEN_SY / float(sy);
+			const float scale = Calc::Min(scaleX, scaleY);
+
+			gxScalef(scale, scale, 1.f);
+			if (m_centered)
+				gxTranslatef(-sx / 2.f, -sy / 2.f, 0.f);
+
+			if (!m_shader.empty())
+			{
+				Shader shader(m_shader.c_str());
+				setShader(shader);
+				shader.setTexture("colormap", 0, texture, true, true);
+				setColorf(1.f, 1.f, 1.f, m_alpha);
+				drawRect(0, sy, sx, 0);
+				clearShader();
+			}
+			else
+			{
+				setColorf(1.f, 1.f, 1.f, m_alpha);
+				gxSetTexture(texture);
+				drawRect(0, sy, sx, 0);
+				gxSetTexture(0);
+			}
+		}
+		gxPopMatrix();
+	}
+}
+
+void Effect_VideoLoop::handleSignal(const std::string & name)
+{
+	if (name == "start")
+	{
+		m_playing = true;
 	}
 }
 
@@ -3313,5 +3416,174 @@ void Effect_Sparklies::draw()
 	}
 	gxEnd();
 
+	clearShader();
+}
+
+//
+
+Effect_Wobbly::WaterSim::WaterSim()
+{
+	memset(p, 0, sizeof(p));
+	memset(v, 0, sizeof(v));
+}
+
+void Effect_Wobbly::WaterSim::tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond)
+{
+	const double vRetain = std::pow(vRetainPerSecond, dt);
+	const double pRetain = std::pow(pRetainPerSecond, dt);
+	
+	for (int i = 0; i < kNumElems; ++i)
+	{
+		const int i1 = i - 1 >= 0             ? i - 1 : i;
+		const int i2 = i;
+		const int i3 = i + 1 <= kNumElems - 1 ? i + 1 : i;
+		
+		const double p1 = p[i1];
+		const double p2 = p[i2];
+		const double p3 = p[i3];
+		
+		const double d1 = p1 - p2;
+		const double d2 = p3 - p2;
+		
+		double a = 0.f;
+		
+		a += d1 * c;
+		a += d2 * c;
+		
+		v[i] += a * dt;
+	}
+	
+	for (int i = 0; i < kNumElems; ++i)
+	{
+		p[i] += v[i] * dt;
+		
+		p[i] *= pRetain;
+		v[i] *= vRetain;
+	}
+}
+
+Effect_Wobbly::Effect_Wobbly(const char * name)
+	: Effect(name)
+	, m_drop(0.f)
+	, m_wobbliness(20000.f)
+	, m_stretch(1.f)
+	, m_numIterations(100)
+	, m_alpha(1.f)
+	, m_waterSim(nullptr)
+	, elementsTexture(0)
+{
+	addVar("drop", m_drop);
+	addVar("wobbliness", m_wobbliness);
+	addVar("stretch", m_stretch);
+	addVar("num_iterations", m_numIterations);
+	addVar("alpha", m_alpha);
+	
+	m_waterSim = new WaterSim();
+	
+	glGenTextures(1, &elementsTexture);
+}
+
+Effect_Wobbly::~Effect_Wobbly()
+{
+	glDeleteTextures(1, &elementsTexture);
+	elementsTexture = 0;
+	
+	delete m_waterSim;
+	m_waterSim = nullptr;
+}
+
+void Effect_Wobbly::tick(const float dt)
+{
+	const double vRetainPerSecond = 0.99;
+	const double pRetainPerSecond = 0.99;
+	
+	const int numIterations = std::max(1, int(m_numIterations));
+	
+	const double dtSub = double(dt) / numIterations;
+	
+	static int spot = -1;
+	
+	if (keyboard.wentDown(SDLK_SPACE))
+	{
+		const int r = 200;
+		const int v = WaterSim::kNumElems - r * 2;
+		
+		if (v > 0)
+		{
+			spot = r + (rand() % v);
+			
+			const double s = random(-1.f, +1.f);
+			
+			for (int i = -r; i <= +r; ++i)
+			{
+				const int x = spot + i;
+				const double value = (1.0 + std::cos(i / double(r) * Calc::mPI)) / 2.0;
+				
+				if (x >= 0 && x < WaterSim::kNumElems)
+					m_waterSim->p[x] += value * s;
+			}
+		}
+	}
+	
+	for (int i = 0; i < numIterations; ++i)
+	{
+		m_waterSim->tick(dtSub, m_wobbliness, vRetainPerSecond, pRetainPerSecond);
+	}
+}
+
+void Effect_Wobbly::draw(DrawableList & list)
+{
+	new (list) EffectDrawable(this);
+}
+
+void Effect_Wobbly::draw()
+{
+	float * data = (float*)alloca(sizeof(float) * WaterSim::kNumElems * 2);
+	
+	for (int i = 0; i < WaterSim::kNumElems; ++i)
+	{
+		data[i * 2 + 0] = float(m_waterSim->p[i]);
+		data[i * 2 + 1] = float(m_waterSim->v[i]);
+	}
+	
+	glBindTexture(GL_TEXTURE_2D, elementsTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, WaterSim::kNumElems, 1, 0, GL_RG, GL_FLOAT, data);
+	checkErrorGL();
+	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+	checkErrorGL();
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	checkErrorGL();
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+	checkErrorGL();
+	
+	//
+	
+	SceneLayer * video1Layer = g_currentScene->findLayerByName("video1");
+	SceneLayer * video2Layer = g_currentScene->findLayerByName("video2");
+	
+	const GLuint video1Texture = video1Layer ? video1Layer->m_surface->getTexture() : 0;
+	const GLuint video2Texture = video2Layer ? video2Layer->m_surface->getTexture() : 0;
+	
+	Shader shader("track-wobbly/fsfx_wobbly");
+	setShader(shader);
+	{
+		//shader.setTexture("colormap", 0, g_currentSurface->getTexture());
+		shader.setTexture("elements", 1, elementsTexture);
+		shader.setTexture("video1", 2, video1Texture, true, true);
+		shader.setTexture("video2", 3, video2Texture, true, true);
+		shader.setImmediate("colormapSize", GFX_SX, GFX_SY);
+		shader.setImmediate("stretch", m_stretch);
+		shader.setImmediate("distort", .05f, .05f);
+		shader.setImmediate("alpha", m_alpha);
+		
+		drawRect(0.f, 0.f, GFX_SX, GFX_SY);
+	}
 	clearShader();
 }

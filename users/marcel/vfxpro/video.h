@@ -100,6 +100,7 @@ struct MediaPlayer
 
 	void updateTexture();
 	uint32_t getTexture() const;
+	bool getVideoProperties(int & sx, int & sy, double & duration) const;
 
 	void startMediaPlayerThread();
 	void stopMediaPlayerThread();
