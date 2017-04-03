@@ -117,6 +117,7 @@ Framework::Framework()
 	actionHandler = 0;
 	fillCachesCallback = 0;
 	fillCachesUnknownResourceCallback = 0;
+	realTimeEditCallback = 0;
 	initErrorHandler = 0;
 	
 	quitRequested = false;
@@ -538,6 +539,7 @@ bool Framework::shutdown()
 	actionHandler = 0;
 	fillCachesCallback = 0;
 	fillCachesUnknownResourceCallback = 0;
+	realTimeEditCallback = 0;
 	initErrorHandler = 0;
 
 	return result;
@@ -571,6 +573,8 @@ void Framework::process()
 	globals.keyChangeCount = 0;
 	globals.keyRepeatCount = 0;
 	memset(globals.mouseChange, 0, sizeof(globals.mouseChange));
+	
+	keyboard.events.clear();
 
 	lockMidi();
 	{
@@ -612,6 +616,8 @@ void Framework::process()
 
 		if (e.type == SDL_KEYDOWN)
 		{
+			keyboard.events.push_back(e);
+			
 			bool isRepeat = false;
 			for (int i = 0; i < globals.keyDownCount; ++i)
 				if (globals.keyDown[i] == e.key.keysym.sym)
@@ -628,6 +634,8 @@ void Framework::process()
 		}
 		else if (e.type == SDL_KEYUP)
 		{
+			keyboard.events.push_back(e);
+			
 			for (int i = 0; i < globals.keyDownCount; ++i)
 			{
 				if (globals.keyDown[i] == e.key.keysym.sym)
@@ -1591,6 +1599,11 @@ Shader::~Shader()
 void Shader::load(const char * name, const char * filenameVs, const char * filenamePs)
 {
 	m_shader = &g_shaderCache.findOrCreate(name, filenameVs, filenamePs);
+}
+
+bool Shader::isValid() const
+{
+	return m_shader != 0 && m_shader->program != 0;
 }
 
 GLuint Shader::getProgram() const
@@ -4781,7 +4794,7 @@ void fillCircle(float x, float y, float radius, int numSegments)
 	gxEnd();
 }
 
-static void measureText(FT_Face face, int size, const char * _text, float & sx, float & sy)
+static void measureText(FT_Face face, int size, const char * _text, float & sx, float & sy, float & yTop)
 {
 #if ENABLE_UTF8_SUPPORT
 	// fixme : convert in calling function
@@ -4800,6 +4813,8 @@ static void measureText(FT_Face face, int size, const char * _text, float & sx, 
 	
 	float x = 0.f;
 	float y = 0.f;
+	
+	//y += size;
 	
 	for (size_t i = 0; i < textLength; ++i)
 	{
@@ -4836,6 +4851,8 @@ static void measureText(FT_Face face, int size, const char * _text, float & sx, 
 		sx = maxX - minX;
 		sy = maxY - minY;
 	}
+	
+	yTop = minY;
 }
 
 static void drawTextInternal(FT_Face face, int size, const char * _text)
@@ -4855,7 +4872,7 @@ static void drawTextInternal(FT_Face face, int size, const char * _text)
 	// the (0,0) coordinate represents the lower left corner of a glyph
 	// we want to render the glyph using its top left corner at (0,0)
 	
-	y += size;
+	//y += size;
 	
 	for (size_t i = 0; i < textLength; ++i)
 	{
@@ -4869,12 +4886,12 @@ static void drawTextInternal(FT_Face face, int size, const char * _text)
 			
 			gxBegin(GL_QUADS);
 			{
-				const float sx = float(elem.g.bitmap.width);
-				const float sy = float(elem.g.bitmap.rows);
+				const float bsx = float(elem.g.bitmap.width);
+				const float bsy = float(elem.g.bitmap.rows);
 				const float x1 = x + elem.g.bitmap_left;
 				const float y1 = y - elem.g.bitmap_top;
-				const float x2 = x1 + sx;
-				const float y2 = y1 + sy;
+				const float x2 = x1 + bsx;
+				const float y2 = y1 + bsy;
 				
 				gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
 				gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
@@ -4898,8 +4915,10 @@ void measureText(int size, float & sx, float & sy, const char * format, ...)
 	va_start(args, format);
 	vsprintf_s(text, sizeof(text), format, args);
 	va_end(args);
+	
+	float yTop;
 
-	measureText(globals.font->face, size, text, sx, sy);
+	measureText(globals.font->face, size, text, sx, sy, yTop);
 }
 
 void drawText(float x, float y, int size, float alignX, float alignY, const char * format, ...)
@@ -4913,13 +4932,15 @@ void drawText(float x, float y, int size, float alignX, float alignY, const char
 	gxMatrixMode(GL_MODELVIEW);
 	gxPushMatrix();
 	{
-		float sx, sy;
-		measureText(globals.font->face, size, text, sx, sy);
+		float sx, sy, yTop;
+		measureText(globals.font->face, size, text, sx, sy, yTop);
 		
 		x += sx * (alignX - 1.f) / 2.f;
 		y += sy * (alignY - 1.f) / 2.f;
 		//y += sy * (alignY - 2.f) / 2.f;
 		//y += size * (alignY - 1.f) / 2.f;
+		
+		y -= yTop;
 
  		gxTranslatef(x, y, 0.f);
 		
@@ -4971,10 +4992,10 @@ void drawTextArea(float x, float y, float sx, float sy, int size, float alignX, 
 		while (*nextptr)
 		{
 			char * tempptr = eatWord(nextptr);
-			float _sx, _sy;
+			float _sx, _sy, _yTop;
 			char temp = *tempptr;
 			*tempptr = 0;
-			measureText(globals.font->face, size, textptr, _sx, _sy);
+			measureText(globals.font->face, size, textptr, _sx, _sy, _yTop);
 			*tempptr = temp;
 
 			if (_sx > tsx)

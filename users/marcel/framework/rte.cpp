@@ -50,9 +50,12 @@ static void handleFileChange(const std::string & filename)
 	{
 		Sprite(filename.c_str()).reload();
 	}
-	else
+	
+	// call real time editing callback
+	
+	if (framework.realTimeEditCallback)
 	{
-		// todo : call real time editing callback
+		framework.realTimeEditCallback(filename);
 	}
 }
 
@@ -205,6 +208,14 @@ void shutRealTimeEditing()
 
 void tickRealTimeEditing()
 {
+	// todo : add something similar to watch api on platforms other than win32
+	
+	static int x = 0;
+	x++;
+	
+	if ((x % 60) != 0)
+		return;
+	
 	checkFileInfos();
 }
 

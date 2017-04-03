@@ -205,6 +205,7 @@ extern Ui ui;
 typedef void (*ActionHandler)(const std::string & action, const Dictionary & args);
 typedef void (*FillCachesCallback)(float filePercentage);
 typedef void (*FillCachesUnknownResourceCallback)(const char * filename);
+typedef void (*RealTimeEditCallback)(const std::string & filename);
 typedef void (*InitErrorHandler)(INIT_ERROR error);
 
 //
@@ -266,6 +267,7 @@ public:
 	ActionHandler actionHandler;
 	FillCachesCallback fillCachesCallback;
 	FillCachesUnknownResourceCallback fillCachesUnknownResourceCallback;
+	RealTimeEditCallback realTimeEditCallback;
 	InitErrorHandler initErrorHandler;
 	
 private:
@@ -351,7 +353,7 @@ public:
 	~Shader();
 	
 	void load(const char * name, const char * filenameVs, const char * filenamePs);
-	bool isValid() const { return m_shader != 0; }
+	bool isValid() const;
 	virtual GLuint getProgram() const override;
 	virtual SHADER_TYPE getType() const override { return SHADER_VSPS; }
 	
@@ -944,6 +946,8 @@ public:
 class Keyboard
 {
 public:
+	std::vector<SDL_Event> events;
+	
 	bool isDown(SDLKey key) const;
 	bool wentDown(SDLKey key, bool allowRepeat = false) const;
 	bool wentUp(SDLKey key) const;
