@@ -1,7 +1,9 @@
 #include "framework.h"
 #include "graph.h"
 #include "Parse.h"
+#include "StringEx.h"
 #include "tinyxml2.h"
+#include "../avpaint/video.h"
 
 using namespace tinyxml2;
 
@@ -27,6 +29,17 @@ todo :
 	- improve zoom in and out behavior
 	- save/load zoom and focus position to/from XML
 	+ add option to quickly reset drag and zoom values
+- add sine, saw, triangle and square oscillators
+- save/load link ids
+- save/load next alloc ids for nodes and links
+
+todo : fsfx :
+- let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
+- expose uniforms/inputs from FSFX pixel shader
+- iterate FSFX pixel shaders and generate type definitions based on FSFX name and exposed uniforms
+
+reference :
+- http://www.dsperados.com (company based in Utrecht ? send to Stijn)
 
 */
 
@@ -389,6 +402,59 @@ struct VfxNodePicture : VfxNodeBase
 	}
 };
 
+struct VfxNodeVideo : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_Source,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Image,
+		kOutput_COUNT
+	};
+	
+	VfxImage_Texture * image;
+	
+	MediaPlayer * mediaPlayer;
+	
+	VfxNodeVideo()
+		: VfxNodeBase()
+		, image(nullptr)
+		, mediaPlayer(nullptr)
+	{
+		image = new VfxImage_Texture();
+		
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Source, kVfxPlugType_String);
+		addOutput(kOutput_Image, kVfxPlugType_Image, image);
+		
+		mediaPlayer = new MediaPlayer();
+		mediaPlayer->openAsync("video6.mpg", false);
+	}
+	
+	~VfxNodeVideo()
+	{
+		delete mediaPlayer;
+		mediaPlayer = nullptr;
+		
+		delete image;
+		image = nullptr;
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		mediaPlayer->tick(mediaPlayer->context);
+		
+		if (mediaPlayer->context->hasBegun)
+			mediaPlayer->presentTime += dt;
+		
+		image->texture = mediaPlayer->getTexture();
+	}
+};
+
 struct VfxNodeFsfx : VfxNodeBase
 {
 	enum Input
@@ -482,6 +548,7 @@ struct VfxNodeFsfx : VfxNodeBase
 				pushBlend(BLEND_OPAQUE);
 				setShader(shader);
 				{
+					shader.setImmediate("screenSize", surface->getWidth(), surface->getHeight());
 					shader.setTexture("colormap", 0, inputTexture);
 					shader.setImmediate("param1", getInputFloat(kInput_Param1, 0.f));
 					shader.setImmediate("param2", getInputFloat(kInput_Param2, 0.f));
@@ -594,6 +661,339 @@ struct VfxNodeStringLiteral : VfxNodeBase
 	virtual void initSelf(const GraphNode & node) override
 	{
 		value = node.editorValue;
+	}
+};
+
+struct VfxNodeMath : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_A,
+		kInput_B,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_R,
+		kOutput_COUNT
+	};
+	
+	enum Type
+	{
+		kType_Unknown,
+		kType_Add,
+		kType_Sub,
+		kType_Mul,
+		kType_Sin,
+		kType_Cos,
+		kType_Abs,
+		kType_Min,
+		kType_Max,
+		kType_Sat,
+		kType_Neg,
+		kType_Sqrt,
+		kType_Pow,
+		kType_Exp,
+		kType_Mod,
+		kType_Fract,
+		kType_Floor,
+		kType_Ceil,
+		kType_Round,
+		kType_Sign,
+		kType_Hypot
+	};
+	
+	Type type;
+	float result;
+	
+	VfxNodeMath(Type _type)
+		: VfxNodeBase()
+		, type(kType_Unknown)
+		, result(0.f)
+	{
+		type = _type;
+		
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_A, kVfxPlugType_Float);
+		addInput(kInput_B, kVfxPlugType_Float);
+		addOutput(kOutput_R, kVfxPlugType_Float, &result);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		const float a = getInputFloat(kInput_A, 0.f);
+		const float b = getInputFloat(kInput_B, 0.f);
+		
+		float r;
+		
+		switch (type)
+		{
+		case kType_Unknown:
+			r = 0.f;
+			break;
+			
+		case kType_Add:
+			r = a + b;
+			break;
+		
+		case kType_Sub:
+			r = a - b;
+			break;
+			
+		case kType_Mul:
+			r = a * b;
+			break;
+			
+		case kType_Sin:
+			r = std::sin(a);
+			break;
+			
+		case kType_Cos:
+			r = std::cos(a);
+			break;
+			
+		case kType_Abs:
+			r = std::abs(a);
+			break;
+			
+		case kType_Min:
+			r = std::min(a, b);
+			break;
+			
+		case kType_Max:
+			r = std::max(a, b);
+			break;
+			
+		case kType_Sat:
+			r = std::max(0.f, std::min(1.f, a));
+			break;
+			
+		case kType_Neg:
+			r = -a;
+			break;
+			
+		case kType_Sqrt:
+			r = std::sqrt(a);
+			break;
+			
+		case kType_Pow:
+			r = std::pow(a, b);
+			break;
+			
+		case kType_Exp:
+			r = std::exp(a);
+			break;
+			
+		case kType_Mod:
+			r = std::fmod(a, b);
+			break;
+			
+		case kType_Fract:
+			if (a >= 0.f)
+				r = a - std::floor(a);
+			else
+				r = a - std::ceil(a);
+			break;
+			
+		case kType_Floor:
+			r = std::floor(a);
+			break;
+			
+		case kType_Ceil:
+			r = std::ceil(a);
+			break;
+			
+		case kType_Round:
+			r = std::round(a);
+			break;
+			
+		case kType_Sign:
+			r = a < 0.f ? -1.f : +1.f;
+			break;
+			
+		case kType_Hypot:
+			r = std::hypot(a, b);
+			break;
+		}
+		
+		result = r;
+	}
+};
+
+#define DefineMathNode(name, type) \
+	struct name : VfxNodeMath \
+	{ \
+		name() \
+			: VfxNodeMath(type) \
+		{ \
+		} \
+	};
+
+DefineMathNode(VfxNodeAdd, kType_Add);
+DefineMathNode(VfxNodeSub, kType_Sub);
+DefineMathNode(VfxNodeMul, kType_Mul);
+DefineMathNode(VfxNodeSin, kType_Sin);
+DefineMathNode(VfxNodeCos, kType_Cos);
+DefineMathNode(VfxNodeAbs, kType_Abs);
+DefineMathNode(VfxNodeMin, kType_Min);
+DefineMathNode(VfxNodeMax, kType_Max);
+DefineMathNode(VfxNodeSat, kType_Sat);
+DefineMathNode(VfxNodeNeg, kType_Neg);
+DefineMathNode(VfxNodeSqrt, kType_Sqrt);
+DefineMathNode(VfxNodePow, kType_Pow);
+DefineMathNode(VfxNodeExp, kType_Exp);
+DefineMathNode(VfxNodeMod, kType_Mod);
+DefineMathNode(VfxNodeFract, kType_Fract);
+DefineMathNode(VfxNodeFloor, kType_Floor);
+DefineMathNode(VfxNodeCeil, kType_Ceil);
+DefineMathNode(VfxNodeRound, kType_Round);
+DefineMathNode(VfxNodeSign, kType_Sign);
+DefineMathNode(VfxNodeHypot, kType_Hypot);
+
+#undef DefineMathNode
+
+struct VfxNodeOscSine : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_Frequency,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Value,
+		kOutput_COUNT
+	};
+	
+	float phase;
+	float value;
+	
+	VfxNodeOscSine()
+		: VfxNodeBase()
+		, phase(0.f)
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Frequency, kVfxPlugType_Float);
+		addOutput(kOutput_Value, kVfxPlugType_Float, &value);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		const float frequency = getInputFloat(kInput_Frequency, 0.f);
+		
+		value = std::sin(phase * 2.f * float(M_PI));
+		
+		phase = std::fmod(phase + dt * frequency, 1.f);
+	}
+};
+
+struct VfxNodeOscSaw : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_Frequency,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Value,
+		kOutput_COUNT
+	};
+	
+	float phase;
+	float value;
+	
+	VfxNodeOscSaw()
+		: VfxNodeBase()
+		, phase(.5f) // we start at phase=.5 so our saw wave starts at 0.0 instead of -1.0
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Frequency, kVfxPlugType_Float);
+		addOutput(kOutput_Value, kVfxPlugType_Float, &value);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		const float frequency = getInputFloat(kInput_Frequency, 0.f);
+		
+		value = -1.f + 2.f * phase;
+		
+		phase = std::fmod(phase + dt * frequency, 1.f);
+	}
+};
+
+struct VfxNodeOscTriangle : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_Frequency,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Value,
+		kOutput_COUNT
+	};
+	
+	float phase;
+	float value;
+	
+	VfxNodeOscTriangle()
+		: VfxNodeBase()
+		, phase(.25f) // we start at phase=.25 so our triangle wave starts at 0.0 instead of -1.0
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Frequency, kVfxPlugType_Float);
+		addOutput(kOutput_Value, kVfxPlugType_Float, &value);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		const float frequency = getInputFloat(kInput_Frequency, 0.f);
+		
+		value = 1.f - std::abs(phase * 4.f - 2.f);
+		
+		phase = std::fmod(phase + dt * frequency, 1.f);
+	}
+};
+
+struct VfxNodeOscSquare : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_Frequency,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Value,
+		kOutput_COUNT
+	};
+	
+	float phase;
+	float value;
+	
+	VfxNodeOscSquare()
+		: VfxNodeBase()
+		, phase(0.f)
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Frequency, kVfxPlugType_Float);
+		addOutput(kOutput_Value, kVfxPlugType_Float, &value);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		const float frequency = getInputFloat(kInput_Frequency, 0.f);
+		
+		value = 0.f; // todo
+		
+		phase = std::fmod(phase + dt * frequency, 1.f);
 	}
 };
 
@@ -728,6 +1128,10 @@ static VfxGraph * constructVfxGraph(const Graph & graph)
 {
 	VfxGraph * vfxGraph = new VfxGraph();
 	
+#define DefineNodeImpl(_typeName, _type) \
+	else if (node.typeName == _typeName) \
+		vfxNode = new _type();
+
 	for (auto nodeItr : graph.nodes)
 	{
 		auto & node = nodeItr.second;
@@ -746,6 +1150,30 @@ static VfxGraph * constructVfxGraph(const Graph & graph)
 		{
 			vfxNode = new VfxNodeStringLiteral();
 		}
+		DefineNodeImpl("math.add", VfxNodeAdd)
+		DefineNodeImpl("math.sub", VfxNodeSub)
+		DefineNodeImpl("math.mul", VfxNodeMul)
+		DefineNodeImpl("math.sin", VfxNodeSin)
+		DefineNodeImpl("math.cos", VfxNodeCos)
+		DefineNodeImpl("math.abs", VfxNodeAbs)
+		DefineNodeImpl("math.min", VfxNodeMin)
+		DefineNodeImpl("math.max", VfxNodeMax)
+		DefineNodeImpl("math.sat", VfxNodeSat)
+		DefineNodeImpl("math.neg", VfxNodeNeg)
+		DefineNodeImpl("math.sqrt", VfxNodeSqrt)
+		DefineNodeImpl("math.pow", VfxNodePow)
+		DefineNodeImpl("math.exp", VfxNodeExp)
+		DefineNodeImpl("math.mod", VfxNodeMod)
+		DefineNodeImpl("math.fract", VfxNodeFract)
+		DefineNodeImpl("math.floor", VfxNodeFloor)
+		DefineNodeImpl("math.ceil", VfxNodeCeil)
+		DefineNodeImpl("math.round", VfxNodeRound)
+		DefineNodeImpl("math.sign", VfxNodeSign)
+		DefineNodeImpl("math.hypot", VfxNodeHypot)
+		DefineNodeImpl("osc.sine", VfxNodeOscSine)
+		DefineNodeImpl("osc.saw", VfxNodeOscSaw)
+		DefineNodeImpl("osc.triangle", VfxNodeOscTriangle)
+		DefineNodeImpl("osc.square", VfxNodeOscSquare)
 		else if (node.typeName == "display")
 		{
 			auto vfxDisplayNode = new VfxNodeDisplay();
@@ -762,6 +1190,10 @@ static VfxGraph * constructVfxGraph(const Graph & graph)
 		else if (node.typeName == "picture")
 		{
 			vfxNode = new VfxNodePicture();
+		}
+		else if (node.typeName == "video")
+		{
+			vfxNode = new VfxNodeVideo();
 		}
 		else if (node.typeName == "fsfx")
 		{
@@ -784,6 +1216,8 @@ static VfxGraph * constructVfxGraph(const Graph & graph)
 			vfxGraph->nodes[node.id] = vfxNode;
 		}
 	}
+	
+#undef DefineNodeImpl
 	
 	for (auto & linkItr : graph.links)
 	{
@@ -840,9 +1274,22 @@ static VfxGraph * constructVfxGraph(const Graph & graph)
 
 int main(int argc, char * argv[])
 {
+	for (float phase = 0.f; phase <= 1.f; phase += .02f)
+	{
+		//const float phase2 = std::fmod(phase + .25f, 1.f);
+		const float phase2 = std::fmod(phase + .5f, 1.f);
+		
+		//const float value = 1.f - std::abs(phase2 * 4.f - 2.f);
+		const float value = -1.f + 2.f * phase2;
+		
+		printf("value: %f\n", value);
+	}
+	
 	//framework.waitForEvents = true;
 	
 	framework.enableRealTimeEditing = true;
+	
+	//framework.minification = 2;
 	
 	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
 	{
@@ -864,6 +1311,8 @@ int main(int argc, char * argv[])
 			delete document;
 			document = nullptr;
 		}
+		
+		GraphUi::PropEdit propEdit(typeDefinitionLibrary);
 		
 		//
 		
@@ -930,6 +1379,15 @@ int main(int argc, char * argv[])
 			#endif
 			}
 			
+			if (!graphEdit->selectedNodes.empty())
+			{
+				GraphNode & node = *graphEdit->tryGetNode(*graphEdit->selectedNodes.begin());
+				
+				propEdit.setNode(node);
+			}
+			
+			propEdit.tick(dt);
+			
 			framework.beginDraw(31, 31, 31, 255);
 			{
 				if (vfxGraph != nullptr)
@@ -939,6 +1397,8 @@ int main(int argc, char * argv[])
 				}
 				
 				graphEdit->draw();
+				
+				//propEdit.draw();
 			}
 			framework.endDraw();
 		}

@@ -196,6 +196,9 @@ void Graph::removeLink(const GraphLinkId linkId)
 
 bool Graph::loadXml(const XMLElement * xmlGraph)
 {
+	nextNodeId = intAttrib(xmlGraph, "nextNodeId", nextNodeId);
+	nextLinkId = intAttrib(xmlGraph, "nextLinkId", nextLinkId);
+	
 	for (const XMLElement * xmlNode = xmlGraph->FirstChildElement("node"); xmlNode != nullptr; xmlNode = xmlNode->NextSiblingElement("node"))
 	{
 		GraphNode node;
@@ -214,13 +217,15 @@ bool Graph::loadXml(const XMLElement * xmlGraph)
 	for (const XMLElement * xmlLink = xmlGraph->FirstChildElement("link"); xmlLink != nullptr; xmlLink = xmlLink->NextSiblingElement("link"))
 	{
 		GraphNodeSocketLink link;
-		link.id = allocLinkId();
+		link.id = intAttrib(xmlLink, "id", link.id);
 		link.srcNodeId = intAttrib(xmlLink, "srcNodeId", link.srcNodeId);
 		link.srcNodeSocketIndex = intAttrib(xmlLink, "srcNodeSocketIndex", link.srcNodeSocketIndex);
 		link.dstNodeId = intAttrib(xmlLink, "dstNodeId", link.dstNodeId);
 		link.dstNodeSocketIndex = intAttrib(xmlLink, "dstNodeSocketIndex", link.dstNodeSocketIndex);
 		
 		links[link.id] = link;
+		
+		nextLinkId = std::max(nextLinkId, link.id + 1);
 	}
 	
 	return true;
@@ -228,6 +233,9 @@ bool Graph::loadXml(const XMLElement * xmlGraph)
 
 bool Graph::saveXml(XMLPrinter & xmlGraph) const
 {
+	xmlGraph.PushAttribute("nextNodeId", nextNodeId);
+	xmlGraph.PushAttribute("nextLinkId", nextLinkId);
+	
 	for (auto & nodeItr : nodes)
 	{
 		auto & node = nodeItr.second;
@@ -250,6 +258,7 @@ bool Graph::saveXml(XMLPrinter & xmlGraph) const
 		
 		xmlGraph.OpenElement("link");
 		{
+			xmlGraph.PushAttribute("id", link.id);
 			xmlGraph.PushAttribute("srcNodeId", link.srcNodeId);
 			xmlGraph.PushAttribute("srcNodeSocketIndex", link.srcNodeSocketIndex);
 			xmlGraph.PushAttribute("dstNodeId", link.dstNodeId);
@@ -762,7 +771,11 @@ void GraphEdit::tick(const float dt)
 			if (keyboard.wentDown(SDLK_o))
 			{
 				if (keyboard.isDown(SDLK_LGUI))
-					dragAndZoom = DragAndZoom();
+				{
+					dragAndZoom.desiredZoom = 1.f;
+					dragAndZoom.desiredFocusX = 0.f;
+					dragAndZoom.desiredFocusY = 0.f;
+				}
 			}
 			
 			if (keyboard.wentDown(SDLK_d))
@@ -860,14 +873,16 @@ void GraphEdit::tick(const float dt)
 			
 			if (keyboard.isDown(SDLK_LCTRL))
 			{
-				dragAndZoom.focusX -= mouse.dx;
-				dragAndZoom.focusY -= mouse.dy;
-		
+				dragAndZoom.desiredFocusX -= mouse.dx;
+				dragAndZoom.desiredFocusY -= mouse.dy;
+				dragAndZoom.focusX = dragAndZoom.desiredFocusX;
+				dragAndZoom.focusY = dragAndZoom.desiredFocusY;
 			}
 			
 			if (keyboard.isDown(SDLK_LALT))
 			{
-				dragAndZoom.zoom += mouse.dy / 100.f;
+				dragAndZoom.desiredZoom += mouse.dy / 100.f;
+				dragAndZoom.zoom = dragAndZoom.desiredZoom;
 			}
 			
 			dragAndZoom.tick(dt);
@@ -1384,10 +1399,16 @@ void GraphEdit::draw() const
 
 void GraphEdit::drawTypeUi(const GraphNode & node, const GraphEdit_TypeDefinition & definition) const
 {
-	setColor(63, 63, 63, 255);
+	const bool isSelected = selectedNodes.count(node.id) != 0;
+	
+	if (isSelected)
+		setColor(63, 63, 127, 255);
+	else
+		setColor(63, 63, 63, 255);
+	
 	drawRect(0.f, 0.f, definition.sx, definition.sy);
 	
-	if (selectedNodes.count(node.id) != 0)
+	if (isSelected)
 		setColor(255, 255, 255, 255);
 	else
 		setColor(127, 127, 127, 255);
@@ -1514,4 +1535,216 @@ void GraphEdit::drawTypeUi(const GraphNode & node, const GraphEdit_TypeDefinitio
 		}
 	}
 	hqEnd();
+}
+
+//
+
+void GraphUi::TextEdit::tick(const float dt)
+{
+	if (hasFocus)
+	{
+		std::string newEditText = editText;
+		
+		if (keyboard.wentDown(SDLK_BACKSPACE))
+		{
+			if (!newEditText.empty())
+			{
+				newEditText.pop_back();
+			}
+		}
+		
+		for (int c = '0'; c <= '9'; ++c)
+		{
+			if (keyboard.wentDown((SDLKey)c))
+			{
+				newEditText.push_back(c);
+			}
+		}
+		
+		if (newEditText != editText)
+		{
+			editText = newEditText;
+			
+			if (onChange != nullptr)
+			{
+				onChange(*this);
+			}
+		}
+	}
+}
+
+void GraphUi::TextEdit::draw() const
+{
+	gxPushMatrix();
+	{
+		gxTranslatef(px, py, 0.f);
+		
+		if (hasFocus)
+		{
+			if (editTextIsValid)
+				setColor(colorBlue);
+			else
+				setColor(colorRed);
+		}
+		else
+		{
+			setColor(colorBlack);
+		}
+		drawRect(0.f, 0.f, sx, sy);
+		setColor(colorWhite);
+		drawRectLine(0.f, 0.f, sx, sy);
+		
+		setFont("calibri.ttf");
+		setColor(colorWhite);
+		drawText(sx/2.f, sy/2.f, 12, 0.f, 0.f, "%s", editText.c_str());
+	}
+	gxPopMatrix();
+}
+
+void GraphUi::TextEdit::setHasFocus(const bool _hasFocus)
+{
+	if (_hasFocus != hasFocus)
+	{
+		logDebug("setHasFocus: %d -> %d", int(hasFocus), int(_hasFocus));
+		
+		hasFocus = _hasFocus;
+		
+		if (hasFocus)
+		{
+			if (onChange != nullptr)
+			{
+				onChange(*this);
+			}
+		}
+		else
+		{
+			if (editTextIsValid)
+				realText = editText;
+			else
+			{
+				editText = realText;
+				editTextIsValid = true;
+			}
+		}
+	}
+}
+
+bool GraphUi::TextEdit::hitTest(const float x, const float y) const
+{
+	return
+		x >= px &&
+		y >= py &&
+		x < px + sx &&
+		y < py + sy;
+}
+
+GraphUi::PropEdit::PropEdit(GraphEdit_TypeDefinitionLibrary * _typeLibrary)
+	: typeLibrary(nullptr)
+	, node(nullptr)
+	, hasFocus(true)
+	, textEdits()
+	, focusedTextEdit(nullptr)
+{
+	typeLibrary = _typeLibrary;
+}
+
+void GraphUi::PropEdit::tick(const float dt)
+{
+	if (hasFocus)
+	{
+		if (mouse.wentDown(BUTTON_LEFT))
+		{
+			TextEdit * newFocusedTextEdit = nullptr;
+			
+			for (auto & textEdit : textEdits)
+			{
+				if (textEdit.hitTest(mouse.x, mouse.y))
+				{
+					newFocusedTextEdit = &textEdit;
+					break;
+				}
+			}
+			
+			if (newFocusedTextEdit != focusedTextEdit)
+			{
+				logDebug("focus: %p -> %p", focusedTextEdit, newFocusedTextEdit);
+				
+				if (focusedTextEdit != nullptr)
+					focusedTextEdit->setHasFocus(false);
+				
+				focusedTextEdit = newFocusedTextEdit;
+			
+				if (focusedTextEdit != nullptr)
+					focusedTextEdit->setHasFocus(true);
+			}
+		}
+	}
+	
+	for (auto & textEdit : textEdits)
+	{
+		textEdit.tick(dt);
+	}
+}
+
+void GraphUi::PropEdit::draw() const
+{
+	for (auto & textEdit : textEdits)
+	{
+		textEdit.draw();
+	}
+}
+
+void GraphUi::PropEdit::setNode(GraphNode & _node)
+{
+	if (&_node != node)
+	{
+		logDebug("setNode: %p", &node);
+		
+		node = &_node;
+		
+		createUi();
+	}
+}
+
+void GraphUi::PropEdit::createUi()
+{
+	textEdits.clear();
+	focusedTextEdit = nullptr;
+	
+	if (node != nullptr)
+	{
+		int y = 100;
+		
+		const GraphEdit_TypeDefinition * typeDefinition = typeLibrary->tryGetTypeDefinition(node->typeName);
+		
+		if (typeDefinition != nullptr)
+		{
+			for (auto & inputSocket : typeDefinition->inputSockets)
+			{
+				// todo : create text edit
+				
+				y += 5;
+				
+				TextEdit textEdit;
+				textEdit.editText = "0";
+				textEdit.px = 100.f;
+				textEdit.py = y;
+				textEdit.sx = 200.f;
+				textEdit.sy = 40.f;
+				textEdit.onChange = [](GraphUi::TextEdit & textEdit)
+				{
+					const int value = Parse::Int32(textEdit.editText);
+					const std::string valueText = String::ToString(value);
+					
+					textEdit.realText = valueText;
+					textEdit.editTextIsValid = textEdit.editText == textEdit.realText;
+				};
+				
+				textEdits.push_back(textEdit);
+				
+				y += textEdit.sy;
+				y += 5;
+			}
+		}
+	}
 }

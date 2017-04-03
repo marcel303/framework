@@ -280,6 +280,9 @@ struct GraphEdit
 		float zoom;
 		float focusX;
 		float focusY;
+		float desiredZoom;
+		float desiredFocusX;
+		float desiredFocusY;
 		
 		Mat4x4 transform;
 		Mat4x4 invTransform;
@@ -288,6 +291,9 @@ struct GraphEdit
 			: zoom(1.f)
 			, focusX(0.f)
 			, focusY(0.f)
+			, desiredZoom(1.f)
+			, desiredFocusX(0.f)
+			, desiredFocusY(0.f)
 			, transform(true)
 			, invTransform(true)
 		{
@@ -296,6 +302,13 @@ struct GraphEdit
 		
 		void tick(const float dt)
 		{
+			const float falloff = std::powf(.01f, dt);
+			const float t1 = falloff;
+			const float t2 = 1.f - falloff;
+			zoom = zoom * t1 + desiredZoom * t2;
+			focusX = focusX * t1 + desiredFocusX * t2;
+			focusY = focusY * t1 + desiredFocusY * t2;
+			
 			updateTransform();
 		}
 		
@@ -424,3 +437,68 @@ struct GraphEdit
 	void draw() const;
 	void drawTypeUi(const GraphNode & node, const GraphEdit_TypeDefinition & typeDefinition) const;
 };
+
+//
+
+namespace GraphUi
+{
+	struct TextEdit
+	{
+		typedef void (*changeHandler)(TextEdit & textEdit);
+		
+		void * userData;
+		bool hasFocus;
+		std::string editText;
+		bool editTextIsValid;
+		std::string realText;
+		
+		float px;
+		float py;
+		float sx;
+		float sy;
+		
+		changeHandler onChange;
+		
+		TextEdit()
+			: userData(nullptr)
+			, hasFocus(false)
+			, editText()
+			, editTextIsValid(true)
+			, realText()
+			, px(0.f)
+			, py(0.f)
+			, sx(100.f)
+			, sy(100.f)
+			, onChange(nullptr)
+		{
+		}
+		
+		void tick(const float dt);
+		
+		void draw() const;
+		
+		void setHasFocus(const bool _hasFocus);
+		
+		bool hitTest(const float x, const float y) const;
+	};
+	
+	struct PropEdit
+	{
+		GraphEdit_TypeDefinitionLibrary * typeLibrary;
+		GraphNode * node;
+		
+		bool hasFocus;
+		
+		std::vector<TextEdit> textEdits;
+		TextEdit * focusedTextEdit;
+		
+		PropEdit(GraphEdit_TypeDefinitionLibrary * _typeLibrary);
+		
+		void tick(const float dt);
+		void draw() const;
+		
+		void setNode(GraphNode & _node);
+		
+		void createUi();
+	};
+}
