@@ -10,6 +10,11 @@ using namespace tinyxml2;
 
 //
 
+extern int GFX_SX;
+extern int GFX_SY;
+
+//
+
 Config::Midi::Midi()
 {
 	memset(this, 0, sizeof(*this));
@@ -24,7 +29,9 @@ Config::AudioIn::AudioIn()
 }
 
 Config::Display::Display()
-	: fullscreen(false)
+	: sx(0)
+	, sy(0)
+	, fullscreen(false)
 	, showTestImage(false)
 	, showScaleOverlay(false)
 	, gamma(1.f)
@@ -126,6 +133,8 @@ bool Config::load(const char * filename)
 			}
 			else
 			{
+				display.sx = intAttrib(xmlDisplay, "sx", GFX_SX);
+				display.sy = intAttrib(xmlDisplay, "sy", GFX_SY);
 				display.fullscreen = boolAttrib(xmlDisplay, "fullscreen", false);
 				display.showTestImage = boolAttrib(xmlDisplay, "show_testimage", false);
 				display.showScaleOverlay = boolAttrib(xmlDisplay, "show_scaleoverlay", false);

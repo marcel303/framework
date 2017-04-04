@@ -24,8 +24,8 @@ extern float screenYToVirtual(const float y);
 extern const int SCREEN_SX;
 extern const int SCREEN_SY;
 
-extern const int GFX_SX;
-extern const int GFX_SY;
+extern int GFX_SX;
+extern int GFX_SY;
 
 extern Config config;
 
@@ -863,20 +863,23 @@ struct Effect_Wobbly : Effect
 		
 		WaterSim();
 		
-		void tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond);
+		void tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds);
 	};
 	
 	TweenFloat m_drop;
 	TweenFloat m_wobbliness;
+	TweenFloat m_closedEnds;
 	TweenFloat m_stretch;
 	TweenFloat m_numIterations;
 	TweenFloat m_alpha;
+	
+	std::string m_shader;
 	
 	WaterSim * m_waterSim;
 	
 	GLuint elementsTexture;
 
-	Effect_Wobbly(const char * name);
+	Effect_Wobbly(const char * name, const char * shader);
 	virtual ~Effect_Wobbly();
 
 	virtual void tick(const float dt) override;

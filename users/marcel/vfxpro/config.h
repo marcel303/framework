@@ -60,7 +60,9 @@ struct Config
 	struct Display
 	{
 		Display();
-
+		
+		int sx;
+		int sy;
 		bool fullscreen;
 		bool showTestImage;
 		bool showScaleOverlay;

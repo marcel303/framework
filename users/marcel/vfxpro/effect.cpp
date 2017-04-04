@@ -3427,16 +3427,27 @@ Effect_Wobbly::WaterSim::WaterSim()
 	memset(v, 0, sizeof(v));
 }
 
-void Effect_Wobbly::WaterSim::tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond)
+void Effect_Wobbly::WaterSim::tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds)
 {
 	const double vRetain = std::pow(vRetainPerSecond, dt);
 	const double pRetain = std::pow(pRetainPerSecond, dt);
 	
 	for (int i = 0; i < kNumElems; ++i)
 	{
-		const int i1 = i - 1 >= 0             ? i - 1 : i;
-		const int i2 = i;
-		const int i3 = i + 1 <= kNumElems - 1 ? i + 1 : i;
+		int i1, i2, i3;
+		
+		if (closedEnds)
+		{
+			i1 = i - 1 >= 0             ? i - 1 : i;
+			i2 = i;
+			i3 = i + 1 <= kNumElems - 1 ? i + 1 : i;
+		}
+		else
+		{
+			i1 = i - 1 >= 0             ? i - 1 : kNumElems - 1;
+			i2 = i;
+			i3 = i + 1 <= kNumElems - 1 ? i + 1 : 0;
+		}
 		
 		const double p1 = p[i1];
 		const double p2 = p[i2];
@@ -3462,21 +3473,28 @@ void Effect_Wobbly::WaterSim::tick(const double dt, const double c, const double
 	}
 }
 
-Effect_Wobbly::Effect_Wobbly(const char * name)
+Effect_Wobbly::Effect_Wobbly(const char * name, const char * shader)
 	: Effect(name)
 	, m_drop(0.f)
 	, m_wobbliness(20000.f)
+	, m_closedEnds(1.f)
 	, m_stretch(1.f)
 	, m_numIterations(100)
 	, m_alpha(1.f)
+	, m_shader()
 	, m_waterSim(nullptr)
 	, elementsTexture(0)
 {
 	addVar("drop", m_drop);
 	addVar("wobbliness", m_wobbliness);
+	addVar("closed", m_closedEnds);
 	addVar("stretch", m_stretch);
 	addVar("num_iterations", m_numIterations);
 	addVar("alpha", m_alpha);
+	
+	m_shader = shader;
+	if (m_shader.empty())
+		m_shader = "track-wobbly/fsfx_wobbly.ps";
 	
 	m_waterSim = new WaterSim();
 	
@@ -3525,9 +3543,11 @@ void Effect_Wobbly::tick(const float dt)
 		}
 	}
 	
+	const bool closedEnds = m_closedEnds != 0.f;
+	
 	for (int i = 0; i < numIterations; ++i)
 	{
-		m_waterSim->tick(dtSub, m_wobbliness, vRetainPerSecond, pRetainPerSecond);
+		m_waterSim->tick(dtSub, m_wobbliness, vRetainPerSecond, pRetainPerSecond, closedEnds);
 	}
 }
 
@@ -3571,7 +3591,7 @@ void Effect_Wobbly::draw()
 	const GLuint video1Texture = video1Layer ? video1Layer->m_surface->getTexture() : 0;
 	const GLuint video2Texture = video2Layer ? video2Layer->m_surface->getTexture() : 0;
 	
-	Shader shader("track-wobbly/fsfx_wobbly");
+	Shader shader(m_shader.c_str(), "fsfx.vs", m_shader.c_str());
 	setShader(shader);
 	{
 		//shader.setTexture("colormap", 0, g_currentSurface->getTexture());

@@ -58,11 +58,11 @@ using namespace tinyxml2;
 const int SCREEN_SX = (1024 / NUM_SCREENS);
 const int SCREEN_SY = 768;
 
-const int GFX_SX = (SCREEN_SX * NUM_SCREENS);
-const int GFX_SY = (SCREEN_SY * 1);
+int GFX_SX = (SCREEN_SX * NUM_SCREENS);
+int GFX_SY = (SCREEN_SY * 1);
 const int GFX_SCALE = ENABLE_UPSCALING ? 2 : 1;
-const int GFX_SX_SCALED = GFX_SX * GFX_SCALE;
-const int GFX_SY_SCALED = GFX_SY * GFX_SCALE;
+int GFX_SX_SCALED = GFX_SX * GFX_SCALE;
+int GFX_SY_SCALED = GFX_SY * GFX_SCALE;
 
 #define OSC_ADDRESS "127.0.0.1"
 #define OSC_RECV_PORT 8000
@@ -1135,6 +1135,11 @@ int main(int argc, char * argv[])
 		logError("failed to load: settings.xml");
 		return -1;
 	}
+	
+	GFX_SX = config.display.sx;
+	GFX_SY = config.display.sy;
+	GFX_SX_SCALED = GFX_SX * GFX_SCALE;
+	GFX_SY_SCALED = GFX_SY * GFX_SCALE;
 
 	if (!g_effectInfosByName.load("effects_meta.xml"))
 	{

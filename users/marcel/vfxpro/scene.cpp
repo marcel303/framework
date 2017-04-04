@@ -19,8 +19,10 @@ bool getSceneFileContents(const std::string & filename, Array<uint8_t> *& out_by
 
 //
 
-extern const int GFX_SX;
-extern const int GFX_SY;
+extern int GFX_SX;
+extern int GFX_SY;
+extern int GFX_SX_SCALED;
+extern int GFX_SY_SCALED;
 
 extern Config config;
 
@@ -297,7 +299,9 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 	}
 	else if (type == "wobbly")
 	{
-		effect = new Effect_Wobbly(m_name.c_str());
+		const char * shader = stringAttrib(xmlEffect, "shader", "");
+		
+		effect = new Effect_Wobbly(m_name.c_str(), shader);
 	}
 	else
 	{
