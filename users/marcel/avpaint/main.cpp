@@ -12,6 +12,18 @@
 
 #include <turbojpeg/turbojpeg.h>
 
+// todo : integrate Facebook Messenger Node.js app with https://cloud.google.com/vision/, for inappropriate content detection
+// todo : write something to extract dominant colors from (crowd sourced) images
+
+/*
+
+https://github.com/LabSound/LabSound
+LabSound is a graph-based audio engine built using modern C++11. As a fork of the WebAudio implementation in Chrome, LabSound implements the WebAudio API specification while extending it with new features, nodes, bugfixes, and performance improvements.
+
+The engine is packaged as a batteries-included static library meant for integration in many types of software: games, visualizers, interactive installations, live coding environments, VST plugins, audio editing/sequencing applications, and more.
+
+*/
+
 #define GFX_SX 1024
 #define GFX_SY 768
 
@@ -21,6 +33,8 @@
 
 #define DO_VIDEOLOOPS 0
 #define DO_GAME 1
+#define DO_JPEGSEQUENCE 0
+#define DO_PORTAUDIO 0
 
 #define NUM_LAYERS 3
 
@@ -871,6 +885,8 @@ struct GrooopLogo : TweenFloatCollection
 	}
 };
 
+#if DO_PORTAUDIO
+
 #include <portaudio/portaudio.h>
 
 static float mousePx = 0.f;
@@ -1034,8 +1050,8 @@ static void initOsc()
 	{
 		BaseOsc *& osc = oscs[s];
 		
-		//const int o = s % 4;
-		const int o = 2;
+		const int o = s % 4;
+		//const int o = 2;
 		
 		if (o == 0)
 			osc = new SineOsc();
@@ -1199,7 +1215,7 @@ static void testPortaudio()
 	
 	if (initAudioOutput())
 	{
-		for (;;)
+		while (!framework.quitRequested)
 		{
 			framework.process();
 			
@@ -1212,6 +1228,10 @@ static void testPortaudio()
 	
 	shutOsc();
 }
+
+#endif
+
+#if DO_JPEGSEQUENCE
 
 static bool loadFileContents(const char * filename, void * bytes, int & numBytes)
 {
@@ -2029,6 +2049,8 @@ static void speedup(const char * srcBasename, const char * dstBasename, const in
 	loadBufferSize = 0;
 }
 
+#endif
+
 #include <sys/stat.h>
 
 int main(int argc, char * argv[])
@@ -2037,6 +2059,8 @@ int main(int argc, char * argv[])
 	
 	//
 	
+#if DO_JPEGSEQUENCE
+
 #if 0
 	int numFrames = 43200;
 	int streamIndex = 0;
@@ -2069,38 +2093,6 @@ int main(int argc, char * argv[])
 		
 		numFrames /= 2;
 		++streamIndex;
-	}
-#endif
-
-#if 0
-	{
-		const char * srcFilename1 = "/Users/thecat/videosplitter/slides-" STREAM_ID "-00/000001.jpg";
-		const char * srcFilename2 = "/Users/thecat/videosplitter/slides-" STREAM_ID "-00/000100.jpg";
-		const char * dstFilename = "/Users/thecat/videosplitter/savetest.jpg";
-		
-		int fileBufferSize = 1024 * 1024;
-		char * fileBuffer = new char[fileBufferSize];
-		
-		JpegLoadData loadData[2];
-		
-		if (loadImage_turbojpeg(srcFilename1, loadData[0], fileBuffer, fileBufferSize) &&
-			loadImage_turbojpeg(srcFilename2, loadData[1], fileBuffer, fileBufferSize) &&
-			(loadData[0].bufferSize == loadData[1].bufferSize))
-		{
-			for (int i = 0; i < loadData[0].bufferSize; ++i)
-			{
-				loadData[0].buffer[i] = (int(loadData[0].buffer[i]) + int(loadData[1].buffer[i])) / 2;
-			}
-			
-			saveImage_turbojpeg(dstFilename, loadData[0].buffer, loadData[0].bufferSize, loadData[0].sx, loadData[0].sy);
-		}
-		
-		for (int i = 0; i < 2; ++i)
-			loadData[i].free();
-		
-		delete [] fileBuffer;
-		fileBuffer = nullptr;
-		fileBufferSize = 0;
 	}
 #endif
 
@@ -2357,7 +2349,7 @@ int main(int argc, char * argv[])
 					const int mm = timeInSeconds / 60;
 					timeInSeconds -= mm * 60;
 					const int ss = timeInSeconds;
-					drawText(GFX_SX/2, GFX_SY - padding - sy/2, 22, 0.f, -1.f, "%02d:%02d:%02d - %gx", hh, mm, ss, speedFactor);
+					drawText(GFX_SX/2, GFX_SY - padding - sy/2, 22, 0.f, 0.f, "%02d:%02d:%02d - %gx", hh, mm, ss, speedFactor);
 				#endif
 				}
 				popSurface();
@@ -2393,6 +2385,7 @@ int main(int argc, char * argv[])
 	
 	return 0;
 #endif
+#endif
 	
 	//
 	
@@ -2404,13 +2397,17 @@ int main(int argc, char * argv[])
 	
 	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
 	{
-		//testPortaudio();
+	#if DO_PORTAUDIO
+		testPortaudio();
+	#endif
 		
 		framework.fillCachesWithPath(".", false);
 		
+	#if DO_PORTAUDIO
 		//initOsc();
 		
 		//initAudioOutput();
+	#endif
 	
 	#if ENABLE_LEAPMOTION
 		// initialise LeapMotion controller
@@ -3279,9 +3276,11 @@ int main(int argc, char * argv[])
 		leapListener = nullptr;
 	#endif
 	
+	#if DO_PORTAUDIO
 		shutAudioOutput();
 		
 		shutOsc();
+	#endif
 		
 		framework.shutdown();
 	}
