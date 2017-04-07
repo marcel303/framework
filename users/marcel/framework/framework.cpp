@@ -112,6 +112,8 @@ Framework::Framework()
 	windowY = -1;
 	windowBorder = true;
 	windowTitle.clear();
+	windowSx = 0;
+	windowSy = 0;
 	windowIsActive = false;
 	numSoundSources = 32;
 	actionHandler = 0;
@@ -295,6 +297,9 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 			initErrorHandler(INIT_ERROR_WINDOW);
 		return false;
 	}
+	
+	windowSx = sx;
+	windowSy = sy;
 	
 #if ENABLE_OPENGL
 	globals.glContext = SDL_GL_CreateContext(globals.window);
@@ -535,6 +540,8 @@ bool Framework::shutdown()
 	windowY = -1;
 	windowBorder = true;
 	windowTitle.clear();
+	windowSx = 0;
+	windowSy = 0;
 	windowIsActive = false;
 	actionHandler = 0;
 	fillCachesCallback = 0;

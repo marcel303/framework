@@ -263,6 +263,8 @@ public:
 	bool windowBorder;
 	std::string windowTitle;
 	std::string windowIcon;
+	int windowSx;
+	int windowSy;
 	bool windowIsActive;
 	ActionHandler actionHandler;
 	FillCachesCallback fillCachesCallback;
