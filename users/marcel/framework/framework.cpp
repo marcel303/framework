@@ -5705,6 +5705,15 @@ static void gxFlush(bool endOfBatch)
 					s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 1];
 					s_gxVertexCount = 1;
 					break;
+				case GL_TRIANGLE_FAN:
+					s_gxVertices[0] = s_gxVertices[0];
+					s_gxVertexCount = 1;
+					break;
+				case GL_TRIANGLE_STRIP:
+					s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 2];
+					s_gxVertices[1] = s_gxVertices[s_gxVertexCount - 1];
+					s_gxVertexCount = 2;
+					break;
 				default:
 					s_gxVertexCount = 0;
 			}
@@ -5743,6 +5752,12 @@ void gxBegin(int primitiveType)
 			s_gxPrimitiveSize = 1;
 			break;
 		case GL_POINTS:
+			s_gxPrimitiveSize = 1;
+			break;
+		case GL_TRIANGLE_FAN:
+			s_gxPrimitiveSize = 1;
+			break;
+		case GL_TRIANGLE_STRIP:
 			s_gxPrimitiveSize = 1;
 			break;
 		default:
