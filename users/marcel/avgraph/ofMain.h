@@ -6,9 +6,14 @@ OpenFrameworks -> framework interop classes
 
 */
 
+#include <iostream>
+#include <cmath>
+#include <memory>
+#include <sstream>
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include "framework.h"
 
 using namespace std;
 
@@ -217,6 +222,13 @@ struct ofParameter
 	
 	T getMin() const { return min; }
 	T getMax() const { return max; }
+	
+	//
+	
+	template <typename EventArgment, typename ListenerClass>
+	void addListener(ListenerClass  * listenerClass, void (ListenerClass::*listenerMethod)(EventArgment&))
+	{
+	}
 };
 
 struct ofKeyEventArgs
@@ -367,8 +379,11 @@ struct ofEvent
 
 struct ofCoreEvents
 {
+	ofEvent<ofResizeEventArgs> windowResized;
 	ofEvent<ofKeyEventArgs> keyPressed;
 	ofEvent<ofMouseEventArgs> mouseScrolled;
+	ofEvent<ofEventArgs> update;
+	ofEvent<ofEventArgs> draw;
 };
 
 ofCoreEvents & ofEvents();

@@ -21,7 +21,8 @@
 */
 
 #pragma once
-#include "ofxDatGuiThemes.h"
+#include "../../ofMain.h"
+#include "../themes/ofxDatGuiThemes.h"
 #include "ofxDatGuiEvents.h"
 #include "ofxDatGuiConstants.h"
 

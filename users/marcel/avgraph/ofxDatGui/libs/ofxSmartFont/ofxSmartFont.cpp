@@ -22,6 +22,7 @@
 */
 
 
+#include "framework.h"
 #include "ofxSmartFont.h"
 vector<shared_ptr<ofxSmartFont>> ofxSmartFont::mFonts;
 
@@ -31,7 +32,9 @@ vector<shared_ptr<ofxSmartFont>> ofxSmartFont::mFonts;
 
 void ofxSmartFont::draw(string s, int x, int y)
 {
-    ttf.drawString(s, x, y);
+    //ttf.drawString(s, x, y);
+	setFont(mName.c_str());
+	drawText(x, y, mSize * 2, 1.f, -1.f, "%s", s.c_str());
 }
 
 string ofxSmartFont::name()
@@ -56,22 +59,30 @@ int ofxSmartFont::size()
 
 ofRectangle ofxSmartFont::rect(string s, int x, int y)
 {
-    return ttf.getStringBoundingBox(s, x, y);
+    //return ttf.getStringBoundingBox(s, x, y);
+	setFont(mName.c_str());
+	
+	float sx;
+	float sy;
+	
+	measureText(mSize * 2, sx, sy, "%s", s.c_str());
+	
+	return ofRectangle(0.f, 0.f, sx, sy);
 }
 
 float ofxSmartFont::width(string s, int x, int y)
 {
-    return ttf.getStringBoundingBox(s, x, y).width;
+    return rect(s, x, y).width;
 }
 
 float ofxSmartFont::height(string s, int x, int y)
 {
-    return ttf.getStringBoundingBox(s, x, y).height;
+    return rect(s, x, y).height;
 }
 
 float ofxSmartFont::getLineHeight()
 {
-    return ttf.getLineHeight();
+    return mSize;
 }
 
 /*

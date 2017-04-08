@@ -21,8 +21,8 @@
 */
 
 #pragma once
-#include "ofxDatGuiGroups.h"
-#include "ofxDatGuiControls.h"
+#include "components/ofxDatGuiGroups.h"
+#include "components/ofxDatGuiControls.h"
 
 class ofxDatGui : public ofxDatGuiInteractiveObject
 {

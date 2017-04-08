@@ -21,7 +21,7 @@
 */
 
 #pragma once
-#include "ofxDatGuiComponent.h"
+#include "../core/ofxDatGuiComponent.h"
 #include "ofxDatGuiTextInputField.h"
 
 class ofxDatGuiSlider : public ofxDatGuiComponent {
@@ -135,11 +135,11 @@ class ofxDatGuiSlider : public ofxDatGuiComponent {
         void printValue()
         {
             if (mTruncateValue == false){
-                cout << setprecision(16) << getValue() << endl;
+                //cout << setprecision(16) << getValue() << endl;
             }   else{
                 int n = ofToString(mValue).find(".");
                 if (n == -1) n = ofToString(mValue).length();
-                cout << setprecision(mPrecision + n) << mValue << endl;
+                //cout << setprecision(mPrecision + n) << mValue << endl;
             }
         }
     
@@ -147,7 +147,7 @@ class ofxDatGuiSlider : public ofxDatGuiComponent {
         {
             mScale = scale;
             if (mScale < 0 || mScale > 1){
-                ofLogError() << "row #" << mIndex << " : scale must be between 0 & 1" << " [setting to 50%]";
+                //ofLogError() << "row #" << mIndex << " : scale must be between 0 & 1" << " [setting to 50%]";
                 mScale = 0.5f;
             }
             mValue = ((mMax-mMin) * mScale) + mMin;
@@ -357,7 +357,7 @@ class ofxDatGuiSlider : public ofxDatGuiComponent {
     
         void onInvalidMinMaxValues()
         {
-            ofLogError() << "row #" << mIndex << " : invalid min & max values" << " [setting to 50%]";
+            //ofLogError() << "row #" << mIndex << " : invalid min & max values" << " [setting to 50%]";
             mMin = 0;
             mMax = 100;
             mScale = 0.5f;
