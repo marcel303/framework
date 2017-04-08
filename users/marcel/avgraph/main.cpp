@@ -1433,7 +1433,7 @@ int main(int argc, char * argv[])
 	
 	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
 	{
-		testDatGui();
+		//testDatGui();
 		
 		//
 		
@@ -1455,8 +1455,6 @@ int main(int argc, char * argv[])
 			delete document;
 			document = nullptr;
 		}
-		
-		GraphUi::PropEdit propEdit(typeDefinitionLibrary);
 		
 		//
 		
@@ -1495,14 +1493,16 @@ int main(int argc, char * argv[])
 			
 			if (keyboard.wentDown(SDLK_l))
 			{
-				propEdit.setGraph(nullptr);
-				
 				delete graphEdit->graph;
 				graphEdit->graph = nullptr;
+				
+				graphEdit->propertyEditor->setGraph(nullptr);
 				
 				//
 				
 				graphEdit->graph = new Graph();
+				
+				graphEdit->propertyEditor = new GraphUi::PropEdit(typeDefinitionLibrary);
 				
 				//
 				
@@ -1514,7 +1514,12 @@ int main(int argc, char * argv[])
 				
 				//
 				
-				propEdit.setGraph(graphEdit->graph);
+				if (graphEdit->propertyEditor != nullptr)
+				{
+					graphEdit->propertyEditor->typeLibrary = typeDefinitionLibrary;
+					
+					graphEdit->propertyEditor->setGraph(graphEdit->graph);
+				}
 				
 				//
 				
@@ -1533,10 +1538,8 @@ int main(int argc, char * argv[])
 			{
 				const GraphNodeId nodeId = *graphEdit->selectedNodes.begin();
 				
-				propEdit.setNode(nodeId);
+				graphEdit->propertyEditor->setNode(nodeId);
 			}
-			
-			propEdit.tick(dt);
 			
 			framework.beginDraw(31, 31, 31, 255);
 			{
@@ -1547,8 +1550,6 @@ int main(int argc, char * argv[])
 				}
 				
 				graphEdit->draw();
-				
-				propEdit.draw();
 			}
 			framework.endDraw();
 		}

@@ -15,6 +15,11 @@ namespace tinyxml2
 class ofxDatGui;
 class ofxDatGuiTextInputEvent;
 
+namespace GraphUi
+{
+	struct PropEdit;
+};
+
 //
 
 typedef unsigned int GraphNodeId;
@@ -420,6 +425,8 @@ struct GraphEdit
 	GraphEditMouse mousePosition;
 	
 	DragAndZoom dragAndZoom;
+	
+	GraphUi::PropEdit * propertyEditor;
 	
 	GraphEdit();
 	~GraphEdit();

@@ -552,8 +552,11 @@ GraphEdit::GraphEdit()
 	, socketValueEdit()
 	, mousePosition()
 	, dragAndZoom()
+	, propertyEditor(nullptr)
 {
 	graph = new Graph();
+	
+	propertyEditor = new GraphUi::PropEdit(nullptr);
 }
 
 GraphEdit::~GraphEdit()
@@ -1176,6 +1179,11 @@ void GraphEdit::tick(const float dt)
 		}
 		break;
 	}
+	
+	if (propertyEditor != nullptr)
+	{
+		propertyEditor->tick(dt);
+	}
 }
 
 void GraphEdit::nodeSelectEnd()
@@ -1425,6 +1433,11 @@ void GraphEdit::draw() const
 #endif
 
 	gxPopMatrix();
+	
+	if (propertyEditor != nullptr)
+	{
+		propertyEditor->draw();
+	}
 }
 
 void GraphEdit::drawTypeUi(const GraphNode & node, const GraphEdit_TypeDefinition & definition) const
@@ -1742,11 +1755,14 @@ void GraphUi::PropEdit::setGraph(Graph * _graph)
 
 void GraphUi::PropEdit::setNode(const GraphNodeId _nodeId)
 {
-	logDebug("setNode: %d", _nodeId);
-	
-	nodeId = _nodeId;
-	
-	createUi();
+	if (_nodeId != nodeId)
+	{
+		logDebug("setNode: %d", _nodeId);
+		
+		nodeId = _nodeId;
+		
+		createUi();
+	}
 }
 
 void GraphUi::PropEdit::createUi()
@@ -1760,14 +1776,16 @@ void GraphUi::PropEdit::createUi()
 	
 	std::string headerText;
 	
-	gui->addButton("save");
-	gui->addButton("load");
-	gui->addBreak();
+	//gui->addButton("save");
+	//gui->addButton("load");
+	//gui->addBreak();
 	
 	GraphNode * node = tryGetNode();
 	
 	if (node != nullptr)
 	{
+		gui->addLabel(node->typeName);
+		
 		const GraphEdit_TypeDefinition * typeDefinition = typeLibrary->tryGetTypeDefinition(node->typeName);
 		
 		if (typeDefinition != nullptr)
@@ -1810,11 +1828,13 @@ void GraphUi::PropEdit::createUi()
 	
 	gui->addBreak();
 	
-	gui->addHeader(headerText);
+	//gui->addHeader(headerText);
 	gui->addFooter();
 	
 	gui->onTextInputEvent(this, &PropEdit::onTextInputEvent);
 	gui->onSliderEvent(this, &PropEdit::onSliderEvent);
+	
+	datGui->setTheme(new ofxDatGuiThemeAutumn(), true);
 }
 
 GraphNode * GraphUi::PropEdit::tryGetNode()

@@ -3,8 +3,14 @@
 
 struct ofApp
 {
+	struct ThemeInfo
+	{
+		const char * name;
+		ofxDatGuiTheme * theme;
+	};
+	
 	ofxDatGui * gui;
-	std::vector<ofxDatGuiTheme*> themes;
+	std::vector<ThemeInfo> themes;
 	int tIndex;
 	bool mFullscreen;
 	ofxDatGuiValuePlotter * valuePlotter;
@@ -94,14 +100,17 @@ struct ofApp
 	//  gui->setLabelAlignment(ofxDatGuiAlignment::CENTER);
 
 	// finally let's load up the stock themes, press spacebar to cycle through them //
-	    themes = {  new ofxDatGuiTheme(true),
-	                new ofxDatGuiThemeSmoke(),
-	                new ofxDatGuiThemeWireframe(),
-	                new ofxDatGuiThemeMidnight(),
-	                new ofxDatGuiThemeAqua(),
-	                new ofxDatGuiThemeCharcoal(),
-	                new ofxDatGuiThemeAutumn(),
-	                new ofxDatGuiThemeCandy()};
+	    themes =
+		{
+			{ "default", new ofxDatGuiTheme(true) },
+			{ "smoke", new ofxDatGuiThemeSmoke() },
+			{ "wireframe", new ofxDatGuiThemeWireframe() },
+			{ "midnight", new ofxDatGuiThemeMidnight() },
+			{ "aqua", new ofxDatGuiThemeAqua() },
+			{ "charcoal", new ofxDatGuiThemeCharcoal() },
+			{ "autumn", new ofxDatGuiThemeAutumn() },
+			{ "candy", new ofxDatGuiThemeCandy() }
+		};
 	    tIndex = 0;
 	    
 	// launch the app //
@@ -153,7 +162,13 @@ struct ofApp
 	    std::cout << "onMatrixEvent " << e.target->getLabel() << " : " << e.target->getSelected().size() << std::endl;
 	}
 
-	void draw() { }
+	void draw()
+	{
+		setFont("Verdana.ttf");
+		setColor(colorWhite);
+		drawText(5, 5, 20, +1, +1, "Theme: %s", themes[tIndex].name);
+	}
+	
 	void update()
 	{
 		valuePlotter->setValue((rand() % 4096) / 4096.f);
@@ -165,7 +180,7 @@ struct ofApp
 	        toggleFullscreen();
 	    }   else if (key == 32){
 	        tIndex = tIndex < themes.size()-1 ? tIndex+1 : 0;
-	        gui->setTheme(themes[tIndex]);
+	        gui->setTheme(themes[tIndex].theme);
 	    }
 	}
 
