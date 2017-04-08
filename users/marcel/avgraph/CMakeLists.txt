@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.6)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 
 set(HAS_LIBGG 0)
 set(HAS_LIBOSC 0)
@@ -32,14 +32,18 @@ file(GLOB_RECURSE source_video "../avpaint/video.cpp" "../avpaint/video.h")
 file(GLOB_RECURSE source_mediaplayer_new "../vfxpro/mediaplayer_new/*.*")
 file(GLOB_RECURSE source_ffmpeg "../vfxpro/ffmpeg/*.*")
 
+file(GLOB_RECURSE source_datgui "ofxDatGui/*.*")
+
 list(APPEND source ${source_video})
 list(APPEND source ${source_mediaplayer_new})
 list(APPEND source ${source_ffmpeg})
+#list(REMOVE_ITEM source ${source_datgui})
 
 source_group("Source Files" FILES ${source})
 source_group("video" FILES ${source_video})
 source_group("mediaplayer_new" FILES ${source_mediaplayer_new})
 source_group("ffmpeg" FILES ${source_ffmpeg})
+source_group("ofxDatGui" FILES ${source_datgui})
 
 add_executable(avgraph ${source})
 

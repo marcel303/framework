@@ -1,6 +1,7 @@
 #include "Calc.h"
 #include "Debugging.h"
 #include "graph.h"
+#include "ofxDatGUi/ofxDatGui.h"
 #include "Parse.h"
 #include "StringEx.h"
 #include "tinyxml2.h"
@@ -101,6 +102,7 @@ GraphNode::GraphNode()
 	, typeName()
 	, editorX(0.f)
 	, editorY(0.f)
+	, editorInputValues()
 	, editorValue()
 	, editorIsPassthrough(false)
 {
@@ -194,6 +196,16 @@ void Graph::removeLink(const GraphLinkId linkId)
 	links.erase(linkId);
 }
 
+GraphNode * Graph::tryGetNode(const GraphNodeId nodeId)
+{
+	auto nodeItr = nodes.find(nodeId);
+	
+	if (nodeItr == nodes.end())
+		return nullptr;
+	else
+		return &nodeItr->second;
+}
+
 bool Graph::loadXml(const XMLElement * xmlGraph)
 {
 	nextNodeId = intAttrib(xmlGraph, "nextNodeId", nextNodeId);
@@ -208,6 +220,14 @@ bool Graph::loadXml(const XMLElement * xmlGraph)
 		node.editorY = floatAttrib(xmlNode, "editorY", node.editorY);
 		node.editorValue = stringAttrib(xmlNode, "editorValue", node.editorValue.c_str());
 		node.editorIsPassthrough = boolAttrib(xmlNode, "editorIsPassthrough", node.editorIsPassthrough);
+		
+		for (const XMLElement * xmlInput = xmlNode->FirstChildElement("input"); xmlInput != nullptr; xmlInput = xmlInput->NextSiblingElement("input"))
+		{
+			const std::string socket = stringAttrib(xmlInput, "socket", "");
+			const std::string value = stringAttrib(xmlInput, "value", "");
+			
+			node.editorInputValues[socket] = value;
+		}
 		
 		addNode(node);
 		
@@ -248,6 +268,16 @@ bool Graph::saveXml(XMLPrinter & xmlGraph) const
 			xmlGraph.PushAttribute("editorY", node.editorY);
 			xmlGraph.PushAttribute("editorValue", node.editorValue.c_str());
 			xmlGraph.PushAttribute("editorIsPassthrough", node.editorIsPassthrough);
+			
+			for (auto input : node.editorInputValues)
+			{
+				xmlGraph.OpenElement("input");
+				{
+					xmlGraph.PushAttribute("socket", input.first.c_str());
+					xmlGraph.PushAttribute("value", input.second.c_str());
+				}
+				xmlGraph.CloseElement();
+			}
 		}
 		xmlGraph.CloseElement();
 	}
@@ -442,7 +472,7 @@ void GraphEdit_TypeDefinition::loadXml(const XMLElement * xmlType)
 	{
 		InputSocket socket;
 		socket.typeName = stringAttrib(xmlInput, "typeName", socket.typeName.c_str());
-		socket.displayName = stringAttrib(xmlInput, "displayName", socket.displayName.c_str());
+		socket.name = stringAttrib(xmlInput, "name", socket.name.c_str());
 		
 		inputSockets.push_back(socket);
 	}
@@ -451,7 +481,7 @@ void GraphEdit_TypeDefinition::loadXml(const XMLElement * xmlType)
 	{
 		OutputSocket socket;
 		socket.typeName = stringAttrib(xmlOutput, "typeName", socket.typeName.c_str());
-		socket.displayName = stringAttrib(xmlOutput, "displayName", socket.displayName.c_str());
+		socket.name = stringAttrib(xmlOutput, "name", socket.name.c_str());
 		
 		outputSockets.push_back(socket);
 	}
@@ -618,7 +648,7 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 				srcNode->editorY + srcNodeSocket->py,
 				dstNode->editorX + dstNodeSocket->px,
 				dstNode->editorY + dstNodeSocket->py,
-				x, y, 20.f))
+				x, y, 10.f))
 			{
 				result.hasLink = true;
 				result.link = &link;
@@ -1478,14 +1508,14 @@ void GraphEdit::drawTypeUi(const GraphNode & node, const GraphEdit_TypeDefinitio
 	{
 		setFont("calibri.ttf");
 		setColor(255, 255, 255);
-		drawText(inputSocket.px + inputSocket.radius + 2, inputSocket.py, 12, +1.f, 0.f, "%s", inputSocket.displayName.c_str());
+		drawText(inputSocket.px + inputSocket.radius + 2, inputSocket.py, 12, +1.f, 0.f, "%s", inputSocket. name.c_str());
 	}
 	
 	for (auto & outputSocket : definition.outputSockets)
 	{
 		setFont("calibri.ttf");
 		setColor(255, 255, 255);
-		drawText(outputSocket.px - outputSocket.radius - 2, outputSocket.py, 12, -1.f, 0.f, "%s", outputSocket.displayName.c_str());
+		drawText(outputSocket.px - outputSocket.radius - 2, outputSocket.py, 12, -1.f, 0.f, "%s", outputSocket.name.c_str());
 	}
 	
 	hqBegin(HQ_FILLED_CIRCLES);
@@ -1640,111 +1670,179 @@ bool GraphUi::TextEdit::hitTest(const float x, const float y) const
 
 GraphUi::PropEdit::PropEdit(GraphEdit_TypeDefinitionLibrary * _typeLibrary)
 	: typeLibrary(nullptr)
-	, node(nullptr)
+	, graph(nullptr)
+	, nodeId(kGraphNodeIdInvalid)
 	, hasFocus(true)
-	, textEdits()
-	, focusedTextEdit(nullptr)
+	, datGui(nullptr)
 {
 	typeLibrary = _typeLibrary;
 }
 
+GraphUi::PropEdit::~PropEdit()
+{
+	delete datGui;
+	datGui = nullptr;
+}
+
 void GraphUi::PropEdit::tick(const float dt)
 {
-	if (hasFocus)
+	// todo : move event triggering to ofMain
+	
+	for (auto & e : keyboard.events)
 	{
-		if (mouse.wentDown(BUTTON_LEFT))
+		if (e.type == SDL_KEYDOWN)
 		{
-			TextEdit * newFocusedTextEdit = nullptr;
+			ofKeyEventArgs args;
 			
-			for (auto & textEdit : textEdits)
-			{
-				if (textEdit.hitTest(mouse.x, mouse.y))
-				{
-					newFocusedTextEdit = &textEdit;
-					break;
-				}
-			}
+			int c = e.key.keysym.sym;
 			
-			if (newFocusedTextEdit != focusedTextEdit)
-			{
-				logDebug("focus: %p -> %p", focusedTextEdit, newFocusedTextEdit);
-				
-				if (focusedTextEdit != nullptr)
-					focusedTextEdit->setHasFocus(false);
-				
-				focusedTextEdit = newFocusedTextEdit;
+			int caps = 0;
 			
-				if (focusedTextEdit != nullptr)
-					focusedTextEdit->setHasFocus(true);
-			}
+			if (e.key.keysym.mod & (KMOD_LSHIFT | KMOD_RSHIFT))
+				caps = +1;
+			if (e.key.keysym.mod & (KMOD_CAPS))
+				caps = caps ? -1 : +1;
+			
+			if (caps == -1)
+				c = tolower(c);
+			if (caps == +1)
+				c = toupper(c);
+			
+			args.key = c;
+			
+			ofEvents().keyPressed.notify(args);
 		}
 	}
 	
-	for (auto & textEdit : textEdits)
 	{
-		textEdit.tick(dt);
+		ofMouseEventArgs args;
+		ofEvents().mouseScrolled.notify(args);
 	}
+	
+	ofEventArgs e;
+	
+	ofEvents().update.notify(e);
 }
 
 void GraphUi::PropEdit::draw() const
 {
-	for (auto & textEdit : textEdits)
-	{
-		textEdit.draw();
-	}
+	// todo : move event triggering to ofMain
+	
+	ofEventArgs e;
+	
+	ofEvents().draw.notify(e);
 }
 
-void GraphUi::PropEdit::setNode(GraphNode & _node)
+void GraphUi::PropEdit::setGraph(Graph * _graph)
 {
-	if (&_node != node)
-	{
-		logDebug("setNode: %p", &node);
-		
-		node = &_node;
-		
-		createUi();
-	}
+	graph = _graph;
+	
+	createUi();
+}
+
+void GraphUi::PropEdit::setNode(const GraphNodeId _nodeId)
+{
+	logDebug("setNode: %d", _nodeId);
+	
+	nodeId = _nodeId;
+	
+	createUi();
 }
 
 void GraphUi::PropEdit::createUi()
 {
-	textEdits.clear();
-	focusedTextEdit = nullptr;
+	delete datGui;
+	datGui = nullptr;
+	
+	datGui = new ofxDatGui(ofxDatGuiAnchor::TOP_RIGHT);
+	
+	ofxDatGui * gui = datGui;
+	
+	std::string headerText;
+	
+	gui->addButton("save");
+	gui->addButton("load");
+	gui->addBreak();
+	
+	GraphNode * node = tryGetNode();
 	
 	if (node != nullptr)
 	{
-		int y = 100;
-		
 		const GraphEdit_TypeDefinition * typeDefinition = typeLibrary->tryGetTypeDefinition(node->typeName);
 		
 		if (typeDefinition != nullptr)
 		{
+			headerText = typeDefinition->typeName;
+			
+			if (!typeDefinition->displayName.empty())
+				headerText = typeDefinition->displayName;
+			
+			int inputSocketIndex = 0;
+			
 			for (auto & inputSocket : typeDefinition->inputSockets)
 			{
-				// todo : create text edit
+				const auto valueItr = node->editorInputValues.find(inputSocket.name);
+				const std::string valueText = valueItr == node->editorInputValues.end() ? "" : valueItr->second;
 				
-				y += 5;
+				ofxDatGuiTextInput * textInput = nullptr;
+				ofxDatGuiSlider * slider = nullptr;
 				
-				TextEdit textEdit;
-				textEdit.editText = "0";
-				textEdit.px = 100.f;
-				textEdit.py = y;
-				textEdit.sx = 200.f;
-				textEdit.sy = 40.f;
-				textEdit.onChange = [](GraphUi::TextEdit & textEdit)
-				{
-					const int value = Parse::Int32(textEdit.editText);
-					const std::string valueText = String::ToString(value);
-					
-					textEdit.realText = valueText;
-					textEdit.editTextIsValid = textEdit.editText == textEdit.realText;
-				};
+				if (inputSocket.typeName == "int")
+					textInput = gui->addTextInput(inputSocket.name, valueText);
+				if (inputSocket.typeName == "float")
+					slider = gui->addSlider(inputSocket.name, 0, 100, Parse::Float(valueText));
+				if (inputSocket.typeName == "string")
+					textInput = gui->addTextInput(inputSocket.name, valueText);
 				
-				textEdits.push_back(textEdit);
+				if (textInput != nullptr)
+					textInput->setName(inputSocket.name);
+				if (slider != nullptr)
+					slider->setName(inputSocket.name);
 				
-				y += textEdit.sy;
-				y += 5;
+				//gui->addColorPicker("color picker", ofColor::fromHex(0xeeeeee));
+				
+				//gui->addBreak();
+				
+				++inputSocketIndex;
 			}
 		}
+	}
+	
+	gui->addBreak();
+	
+	gui->addHeader(headerText);
+	gui->addFooter();
+	
+	gui->onTextInputEvent(this, &PropEdit::onTextInputEvent);
+	gui->onSliderEvent(this, &PropEdit::onSliderEvent);
+}
+
+GraphNode * GraphUi::PropEdit::tryGetNode()
+{
+	if (graph == nullptr)
+		return nullptr;
+	else
+		return graph->tryGetNode(nodeId);
+}
+
+void GraphUi::PropEdit::onTextInputEvent(ofxDatGuiTextInputEvent e)
+{
+	GraphNode * node = tryGetNode();
+	
+	if (node != nullptr)
+	{
+		node->editorInputValues[e.target->getName()] = e.text;
+	}
+}
+
+void GraphUi::PropEdit::onSliderEvent(ofxDatGuiSliderEvent e)
+{
+	GraphNode * node = tryGetNode();
+	
+	if (node != nullptr)
+	{
+		const std::string text = String::ToString(e.value);
+		
+		node->editorInputValues[e.target->getName()] = text;
 	}
 }

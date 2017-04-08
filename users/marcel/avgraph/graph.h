@@ -12,6 +12,11 @@ namespace tinyxml2
 	class XMLPrinter;
 }
 
+class ofxDatGui;
+class ofxDatGuiTextInputEvent;
+
+//
+
 typedef unsigned int GraphNodeId;
 typedef unsigned int GraphLinkId;
 
@@ -26,6 +31,7 @@ struct GraphNode
 	float editorX;
 	float editorY;
 	
+	std::map<std::string, std::string> editorInputValues;
 	std::string editorValue;
 	bool editorIsPassthrough;
 	
@@ -64,6 +70,8 @@ struct Graph
 	void addNode(GraphNode & node);
 	void removeNode(const GraphNodeId nodeId);
 	void removeLink(const GraphLinkId linkId);
+	
+	GraphNode * tryGetNode(const GraphNodeId nodeId);
 	
 	bool loadXml(const tinyxml2::XMLElement * xmlGraph);
 	bool saveXml(tinyxml2::XMLPrinter & xmlGraph) const;
@@ -104,10 +112,9 @@ struct GraphEdit_TypeDefinition
 	struct InputSocket
 	{
 		std::string typeName;
+		std::string name;
 		
 		// ui
-		
-		std::string displayName;
 		
 		int index;
 		float px;
@@ -116,7 +123,7 @@ struct GraphEdit_TypeDefinition
 		
 		InputSocket()
 			: typeName()
-			, displayName()
+			, name()
 			, index(-1)
 			, px(0.f)
 			, py(0.f)
@@ -130,10 +137,9 @@ struct GraphEdit_TypeDefinition
 	struct OutputSocket
 	{
 		std::string typeName;
+		std::string name;
 		
 		// ui
-		
-		std::string displayName;
 		
 		int index;
 		float px;
@@ -142,7 +148,7 @@ struct GraphEdit_TypeDefinition
 		
 		OutputSocket()
 			: typeName()
-			, displayName()
+			, name()
 			, index(-1)
 			, px(0.f)
 			, py(0.f)
@@ -189,6 +195,7 @@ struct GraphEdit_TypeDefinition
 		, editors()
 		, inputSockets()
 		, outputSockets()
+		, displayName()
 		, sx(0.f)
 		, sy(0.f)
 	{
@@ -440,6 +447,8 @@ struct GraphEdit
 
 //
 
+#include "ofxDatGui/ofxDatGui.h"
+
 namespace GraphUi
 {
 	struct TextEdit
@@ -485,20 +494,26 @@ namespace GraphUi
 	struct PropEdit
 	{
 		GraphEdit_TypeDefinitionLibrary * typeLibrary;
-		GraphNode * node;
+		Graph * graph;
+		GraphNodeId nodeId;
 		
 		bool hasFocus;
 		
-		std::vector<TextEdit> textEdits;
-		TextEdit * focusedTextEdit;
+		ofxDatGui * datGui;
 		
 		PropEdit(GraphEdit_TypeDefinitionLibrary * _typeLibrary);
+		~PropEdit();
 		
 		void tick(const float dt);
 		void draw() const;
 		
-		void setNode(GraphNode & _node);
+		void setGraph(Graph * graph);
+		void setNode(const GraphNodeId _nodeId);
 		
 		void createUi();
+		
+		GraphNode * tryGetNode();
+		void onTextInputEvent(ofxDatGuiTextInputEvent e);
+		void onSliderEvent(ofxDatGuiSliderEvent e);
 	};
 }
