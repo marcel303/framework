@@ -5,6 +5,8 @@
 #include "tinyxml2.h"
 #include "../avpaint/video.h"
 
+#include "testDatGui.h"
+
 using namespace tinyxml2;
 
 /*
@@ -15,7 +17,7 @@ todo :
 + add VfxImage_Surface type. let VfxNodeFsfx use this type
 + add VfxPicture type. type name = 'picture'
 + add VfxImage_Texture type. let VfxPicture use this type
-- add VfxVideo type. type name = 'video'
++ add VfxVideo type. type name = 'video'
 - add default value to socket definitions
 - add editorValue to node inputs and outputs. let get*** methods use this value when plug is not connected
 - let graph editor set editorValue for nodes. only when editor is set on type definition
@@ -30,8 +32,12 @@ todo :
 	- save/load zoom and focus position to/from XML
 	+ add option to quickly reset drag and zoom values
 - add sine, saw, triangle and square oscillators
-- save/load link ids
-- save/load next alloc ids for nodes and links
++ save/load link ids
++ save/load next alloc ids for nodes and links
++ free literal values on graph free
++ recreate DatGui when loading graph / current node gets freed
+- prioritize input between DatGui and graph editor. do hit test on DatGui
+- add 'color' type name
 
 todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
@@ -125,6 +131,18 @@ struct VfxPlug
 		else
 		{
 			mem = dst.mem;
+		}
+	}
+	
+	void connectTo(void * dstMem, const VfxPlugType dstType)
+	{
+		if (dstType != type)
+		{
+			logError("node connection failed. type mismatch");
+		}
+		else
+		{
+			mem = dstMem;
 		}
 	}
 	
@@ -577,7 +595,7 @@ struct VfxNodeFsfx : VfxNodeBase
 						pushBlend(BLEND_OPAQUE);
 						gxSetTexture(inputTexture);
 						setColorMode(COLOR_ADD);
-						setColor(31, 0, 31);
+						setColor(127, 0, 127);
 						drawRect(0, 0, GFX_SX, GFX_SY);
 						setColorMode(COLOR_MUL);
 						gxSetTexture(0);
@@ -1037,16 +1055,45 @@ struct VfxNodeMouse : VfxNodeBase
 
 struct VfxGraph
 {
+	struct ValueToFree
+	{
+		enum Type
+		{
+			kType_Unknown,
+			kType_Int,
+			kType_Float,
+			kType_String
+		};
+		
+		Type type;
+		void * mem;
+		
+		ValueToFree()
+			: type(kType_Unknown)
+			, mem(nullptr)
+		{
+		}
+		
+		ValueToFree(const Type _type, void * _mem)
+			: type(_type)
+			, mem(_mem)
+		{
+		}
+	};
+	
 	std::map<GraphNodeId, VfxNodeBase*> nodes;
 	
 	GraphNodeId displayNodeId;
 	
 	Graph * graph; // todo : remove ?
 	
+	std::vector<ValueToFree> valuesToFree;
+	
 	VfxGraph()
 		: nodes()
 		, displayNodeId(kGraphNodeIdInvalid)
 		, graph(nullptr)
+		, valuesToFree()
 	{
 	}
 	
@@ -1060,6 +1107,27 @@ struct VfxGraph
 		graph = nullptr;
 		
 		displayNodeId = kGraphNodeIdInvalid;
+		
+		for (auto i : valuesToFree)
+		{
+			switch (i.type)
+			{
+			case ValueToFree::kType_Int:
+				delete (int*)i.mem;
+				break;
+			case ValueToFree::kType_Float:
+				delete (float*)i.mem;
+				break;
+			case ValueToFree::kType_String:
+				delete (std::string*)i.mem;
+				break;
+			default:
+				Assert(false);
+				break;
+			}
+		}
+		
+		valuesToFree.clear();
 		
 		for (auto i : nodes)
 		{
@@ -1124,7 +1192,7 @@ struct VfxGraph
 	}
 };
 
-static VfxGraph * constructVfxGraph(const Graph & graph)
+static VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary)
 {
 	VfxGraph * vfxGraph = new VfxGraph();
 	
@@ -1259,6 +1327,78 @@ static VfxGraph * constructVfxGraph(const Graph & graph)
 		}
 	}
 	
+	for (auto nodeItr : graph.nodes)
+	{
+		auto & node = nodeItr.second;
+		
+		auto typeDefintion = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
+		
+		if (typeDefintion == nullptr)
+			continue;
+		
+		auto vfxNodeItr = vfxGraph->nodes.find(node.id);
+		
+		if (vfxNodeItr == vfxGraph->nodes.end())
+			continue;
+		
+		VfxNodeBase * vfxNode = vfxNodeItr->second;
+		
+		auto & vfxNodeInputs = vfxNode->inputs;
+		
+		for (auto inputValueItr : node.editorInputValues)
+		{
+			const std::string & inputName = inputValueItr.first;
+			const std::string & inputValue = inputValueItr.second;
+			
+			for (size_t i = 0; i < typeDefintion->inputSockets.size(); ++i)
+			{
+				if (typeDefintion->inputSockets[i].name == inputName)
+				{
+					if (i < vfxNodeInputs.size())
+					{
+						if (vfxNodeInputs[i].isConnected() == false)
+						{
+							if (vfxNodeInputs[i].type == kVfxPlugType_Int)
+							{
+								int * value = new int();
+								
+								*value = Parse::Int32(inputValue);
+								
+								vfxNodeInputs[i].connectTo(value, kVfxPlugType_Int);
+								
+								vfxGraph->valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Int, value));
+							}
+							else if (vfxNodeInputs[i].type == kVfxPlugType_Float)
+							{
+								float * value = new float();
+								
+								*value = Parse::Float(inputValue);
+								
+								vfxNodeInputs[i].connectTo(value, kVfxPlugType_Float);
+								
+								vfxGraph->valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Float, value));
+							}
+							else if (vfxNodeInputs[i].type == kVfxPlugType_String)
+							{
+								std::string * value = new std::string();
+								
+								*value = inputValue;
+								
+								vfxNodeInputs[i].connectTo(value, kVfxPlugType_String);
+								
+								vfxGraph->valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_String, value));
+							}
+							else
+							{
+								logWarning("cannot instantiate literal for non-supported type %d, value=%s", vfxNodeInputs[i].type, inputValue.c_str());
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	
 	for (auto vfxNodeItr : vfxGraph->nodes)
 	{
 		auto nodeId = vfxNodeItr.first;
@@ -1293,6 +1433,10 @@ int main(int argc, char * argv[])
 	
 	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
 	{
+		testDatGui();
+		
+		//
+		
 		GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary = new GraphEdit_TypeDefinitionLibrary();
 		
 		{
@@ -1351,6 +1495,8 @@ int main(int argc, char * argv[])
 			
 			if (keyboard.wentDown(SDLK_l))
 			{
+				propEdit.setGraph(nullptr);
+				
 				delete graphEdit->graph;
 				graphEdit->graph = nullptr;
 				
@@ -1368,10 +1514,14 @@ int main(int argc, char * argv[])
 				
 				//
 				
+				propEdit.setGraph(graphEdit->graph);
+				
+				//
+				
 				delete vfxGraph;
 				vfxGraph = nullptr;
 				
-				vfxGraph = constructVfxGraph(*graphEdit->graph);
+				vfxGraph = constructVfxGraph(*graphEdit->graph, typeDefinitionLibrary);
 				
 			#if 0
 				delete vfxGraph;
@@ -1381,9 +1531,9 @@ int main(int argc, char * argv[])
 			
 			if (!graphEdit->selectedNodes.empty())
 			{
-				GraphNode & node = *graphEdit->tryGetNode(*graphEdit->selectedNodes.begin());
+				const GraphNodeId nodeId = *graphEdit->selectedNodes.begin();
 				
-				propEdit.setNode(node);
+				propEdit.setNode(nodeId);
 			}
 			
 			propEdit.tick(dt);
@@ -1398,7 +1548,7 @@ int main(int argc, char * argv[])
 				
 				graphEdit->draw();
 				
-				//propEdit.draw();
+				propEdit.draw();
 			}
 			framework.endDraw();
 		}
