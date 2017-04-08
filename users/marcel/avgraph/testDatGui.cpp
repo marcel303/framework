@@ -4,7 +4,7 @@
 struct ofApp
 {
 	ofxDatGui * gui;
-	std::vector<ofxDatGuiTheme> themes;
+	std::vector<ofxDatGuiTheme*> themes;
 	int tIndex;
 	bool mFullscreen;
 	ofxDatGuiValuePlotter * valuePlotter;
@@ -165,7 +165,7 @@ struct ofApp
 	        toggleFullscreen();
 	    }   else if (key == 32){
 	        tIndex = tIndex < themes.size()-1 ? tIndex+1 : 0;
-	        gui->setTheme(&themes[tIndex]);
+	        gui->setTheme(themes[tIndex]);
 	    }
 	}
 
@@ -209,9 +209,9 @@ void testDatGui()
 					ofKeyEventArgs args;
 					args.key = e.key.keysym.sym;
 					ofEvents().keyPressed.notify(args);
+					
+					app.keyPressed(e.key.keysym.sym);
 				}
-
-				app.keyPressed(e.key.keysym.sym);
 			}
 			
 			{
