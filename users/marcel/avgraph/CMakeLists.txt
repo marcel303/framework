@@ -33,6 +33,8 @@ file(GLOB_RECURSE source_mediaplayer_new "../vfxpro/mediaplayer_new/*.*")
 file(GLOB_RECURSE source_ffmpeg "../vfxpro/ffmpeg/*.*")
 
 file(GLOB_RECURSE source_datgui "ofxDatGui/*.*")
+file(GLOB_RECURSE source_nanovg "nanovg/*.*")
+file(GLOB_RECURSE source_vfxnodes "vfxNodes/*.*")
 
 list(APPEND source ${source_video})
 list(APPEND source ${source_mediaplayer_new})
@@ -44,6 +46,8 @@ source_group("video" FILES ${source_video})
 source_group("mediaplayer_new" FILES ${source_mediaplayer_new})
 source_group("ffmpeg" FILES ${source_ffmpeg})
 source_group("ofxDatGui" FILES ${source_datgui})
+source_group("nanovg" FILES ${source_nanovg})
+source_group("vfxNodes" FILES ${source_vfxnodes})
 
 add_executable(avgraph ${source})
 
