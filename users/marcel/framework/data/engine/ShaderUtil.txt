@@ -152,7 +152,6 @@ vec3 colorDither8ScreenSpace(vec2 sampleCoord)
 vec3 colorDitherScreenSpace(vec2 sampleCoord, float dither_bit)
 {
 	//note: from comment by CeeJayDK
-	//float dither_bit = 8.0; //Bit-depth of display. Normally 8 but some LCD monitors are 7 or even 6-bit.	
 	float dither_num = pow(2.0,dither_bit);
 
 	//Calculate grid position
