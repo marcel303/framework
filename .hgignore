@@ -46,3 +46,10 @@ users/marcel/framework/ExampleRelease/*
 users/marcel/kdreams/game/*
 *.dll
 klodder/Resources/*.*
+klodder/klodder.xcodeproj/project.xcworkspace/xcuserdata/thecat.xcuserdatad/UserInterfaceState.xcuserstate
+klodder/klodder.xcodeproj/xcuserdata/thecat.xcuserdatad/xcdebugger/Breakpoints_v2.xcbkptlist
+klodder/klodder.xcodeproj/xcuserdata/thecat.xcuserdatad/xcschemes/klodder.xcscheme
+klodder/klodder.xcodeproj/xcuserdata/thecat.xcuserdatad/xcschemes/xcschememanagement.plist
+users/marcel/trees/trees.xcodeproj/project.xcworkspace/xcuserdata/thecat.xcuserdatad/UserInterfaceState.xcuserstate
+users/marcel/trees/trees.xcodeproj/xcuserdata/thecat.xcuserdatad/xcschemes/trees.xcscheme
+users/marcel/trees/trees.xcodeproj/xcuserdata/thecat.xcuserdatad/xcschemes/xcschememanagement.plist
