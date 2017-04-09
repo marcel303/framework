@@ -17,7 +17,7 @@ OpenFrameworks -> framework interop classes
 
 using namespace std;
 
-#define PI M_PI
+static const float PI = M_PI;
 
 #define OF_KEY_RETURN SDLK_RETURN
 #define OF_KEY_TAB SDLK_TAB
