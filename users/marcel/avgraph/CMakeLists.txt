@@ -27,7 +27,7 @@ project(avgraph)
 
 # --- avgraph ---
 
-file(GLOB_RECURSE source "*.cpp" "*.h")
+file(GLOB_RECURSE source "*.c" "*.cpp" "*.h")
 file(GLOB_RECURSE source_video "../avpaint/video.cpp" "../avpaint/video.h")
 file(GLOB_RECURSE source_mediaplayer_new "../vfxpro/mediaplayer_new/*.*")
 file(GLOB_RECURSE source_ffmpeg "../vfxpro/ffmpeg/*.*")
@@ -105,6 +105,7 @@ if (APPLE)
 	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../vfxpro/macos/lib/libavutil.a)
 	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../vfxpro/macos/lib/libswresample.a)
 	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../vfxpro/macos/lib/libswscale.a)
+	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../avpaint/macos/lib/libLeap.dylib)
 	target_link_libraries(avgraph PRIVATE ${COCOA_LIBRARY})
 	target_link_libraries(avgraph PRIVATE ${CARBON_LIBRARY})
 	target_link_libraries(avgraph PRIVATE ${COREAUDIO_LIBRARY})
