@@ -1,10 +1,11 @@
 #pragma once
 
 #include "vfxNodeBase.h"
-#include <string>
 
 class MyOscPacketListener;
 class UdpListeningReceiveSocket;
+
+struct SDL_Thread;
 
 struct VfxNodeOsc : VfxNodeBase
 {
@@ -29,7 +30,7 @@ struct VfxNodeOsc : VfxNodeBase
 	SDL_Thread * oscMessageThread;
 	
 	VfxNodeOsc();
-	virtual ~VfxNodeOsc();
+	virtual ~VfxNodeOsc() override;
 	
 	virtual void init(const GraphNode & node) override;
 	

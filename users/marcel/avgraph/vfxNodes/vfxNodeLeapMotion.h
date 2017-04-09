@@ -38,7 +38,7 @@ struct VfxNodeLeapMotion : VfxNodeBase
 	LeapListener * leapListener;
 	
 	VfxNodeLeapMotion();
-	~VfxNodeLeapMotion();
+	virtual ~VfxNodeLeapMotion() override;
 	
 	virtual void init(const GraphNode & node) override;
 
