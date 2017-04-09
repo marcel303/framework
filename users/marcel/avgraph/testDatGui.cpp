@@ -1,5 +1,4 @@
 #include "ofxDatGui/ofxDatGui.h"
-#include "testDatGui.h"
 
 struct ofApp
 {
