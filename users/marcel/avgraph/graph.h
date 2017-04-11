@@ -74,6 +74,8 @@ struct Graph
 	
 	void addNode(GraphNode & node);
 	void removeNode(const GraphNodeId nodeId);
+	
+	void addLink(const GraphNodeSocketLink & link, const bool clearInputDuplicates);
 	void removeLink(const GraphLinkId linkId);
 	
 	GraphNode * tryGetNode(const GraphNodeId nodeId);
@@ -108,6 +110,25 @@ struct GraphEdit_Editor
 };
 
 //
+
+struct GraphEdit_ValueTypeDefinition
+{
+	std::string typeName;
+	
+	// ui
+	
+	std::string editor;
+	std::string editorMin;
+	std::string editorMax;
+	
+	GraphEdit_ValueTypeDefinition()
+		: typeName()
+		, editor()
+	{
+	}
+	
+	void loadXml(const tinyxml2::XMLElement * xmlType);
+};
 
 struct GraphEdit_TypeDefinition
 {
@@ -210,17 +231,29 @@ struct GraphEdit_TypeDefinition
 	
 	bool hitTest(const float x, const float y, HitTestResult & result) const;
 	
-	void loadXml(const tinyxml2::XMLElement * xmlLibrary);
+	void loadXml(const tinyxml2::XMLElement * xmlNode);
 };
 
 struct GraphEdit_TypeDefinitionLibrary
 {
+	std::map<std::string, GraphEdit_ValueTypeDefinition> valueTypeDefinitions;
 	std::map<std::string, GraphEdit_TypeDefinition> typeDefinitions;
 	
 	// todo : move to cpp
 	GraphEdit_TypeDefinitionLibrary()
 		: typeDefinitions()
 	{
+	}
+	
+	// todo : move to cpp
+	const GraphEdit_ValueTypeDefinition * tryGetValueTypeDefinition(const std::string & typeName) const
+	{
+		auto i = valueTypeDefinitions.find(typeName);
+		
+		if (i != valueTypeDefinitions.end())
+			return &i->second;
+		else
+			return nullptr;
 	}
 	
 	// todo : move to cpp
@@ -249,6 +282,7 @@ struct GraphEdit
 		kState_InputSocketConnect,
 		kState_OutputSocketConnect,
 		kState_SocketValueEdit,
+		kState_PropEdit,
 		kState_Hidden
 	};
 	
@@ -261,12 +295,15 @@ struct GraphEdit
 		bool hasLink;
 		GraphNodeSocketLink * link;
 		
+		bool hasPropEdit;
+		
 		HitTestResult()
 			: hasNode(false)
 			, node(nullptr)
 			, nodeHitTestResult()
 			, hasLink(false)
 			, link(nullptr)
+			, hasPropEdit(false)
 		{
 		}
 	};
@@ -333,11 +370,15 @@ struct GraphEdit
 	
 	struct GraphEditMouse
 	{
+		float uiX;
+		float uiY;
 		float x;
 		float y;
 		
 		GraphEditMouse()
-			: x(0.f)
+			: uiX(0.f)
+			, uiY(0.f)
+			, x(0.f)
 			, y(0.f)
 		{
 		}
@@ -428,13 +469,16 @@ struct GraphEdit
 	
 	GraphUi::PropEdit * propertyEditor;
 	
+	ofxDatGui * dummyGui;
+	
 	GraphEdit();
 	~GraphEdit();
 	
 	GraphNode * tryGetNode(const GraphNodeId id) const;
 	const GraphEdit_TypeDefinition::InputSocket * tryGetInputSocket(const GraphNodeId nodeId, const int socketIndex) const;
 	const GraphEdit_TypeDefinition::OutputSocket * tryGetOutputSocket(const GraphNodeId nodeId, const int socketIndex) const;
-
+	
+	bool hitTestUi(const float x, const float y, HitTestResult & result) const;
 	bool hitTest(const float x, const float y, HitTestResult & result) const;
 	
 	void tick(const float dt);
@@ -522,5 +566,6 @@ namespace GraphUi
 		GraphNode * tryGetNode();
 		void onTextInputEvent(ofxDatGuiTextInputEvent e);
 		void onSliderEvent(ofxDatGuiSliderEvent e);
+		void onColorPickerEvent(ofxDatGuiColorPickerEvent e);
 	};
 }

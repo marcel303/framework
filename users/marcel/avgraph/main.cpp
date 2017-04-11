@@ -45,8 +45,10 @@ todo :
 + recreate DatGui when loading graph / current node gets freed
 - prioritize input between DatGui and graph editor. do hit test on DatGui
 - add 'color' type name
-- implement OSC node
-- implement Leap Motion node
++ implement OSC node
++ implement Leap Motion node
+- add undo/redo support. just serialize/deserialize graph for every action?
+- UI element focus: graph editor vs property editor
 
 todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
@@ -99,6 +101,30 @@ struct VfxNodeDisplay : VfxNodeBase
 			gxSetTexture(0);
 		}
 	#endif
+	}
+};
+
+struct VfxNodeBoolLiteral : VfxNodeBase
+{
+	enum Output
+	{
+		kOutput_Value,
+		kOutput_COUNT
+	};
+	
+	bool value;
+	
+	VfxNodeBoolLiteral()
+		: VfxNodeBase()
+		, value(false)
+	{
+		resizeSockets(0, kOutput_COUNT);
+		addOutput(kOutput_Value, kVfxPlugType_Bool, &value);
+	}
+	
+	virtual void initSelf(const GraphNode & node) override
+	{
+		value = Parse::Bool(node.editorValue);
 	}
 };
 
@@ -171,6 +197,88 @@ struct VfxNodeStringLiteral : VfxNodeBase
 	virtual void initSelf(const GraphNode & node) override
 	{
 		value = node.editorValue;
+	}
+};
+
+struct VfxNodeColorLiteral : VfxNodeBase
+{
+	enum Output
+	{
+		kOutput_Value,
+		kOutput_COUNT
+	};
+	
+	Color value;
+	
+	VfxNodeColorLiteral()
+		: VfxNodeBase()
+		, value(1.f, 1.f, 1.f, 1.f)
+	{
+		resizeSockets(0, kOutput_COUNT);
+		addOutput(kOutput_Value, kVfxPlugType_Color, &value);
+	}
+	
+	virtual void initSelf(const GraphNode & node) override
+	{
+		value = Color::fromHex(node.editorValue.c_str());
+	}
+};
+
+struct VfxNodeRange : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_In,
+		kInput_InMin,
+		kInput_InMax,
+		kInput_OutMin,
+		kInput_OutMax,
+		kInput_OutCurvePow,
+		kInput_Clamp,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutputValue,
+		kOutput_COUNT
+	};
+	
+	float outputValue;
+	
+	VfxNodeRange()
+		: VfxNodeBase()
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_In, kVfxPlugType_Float);
+		addInput(kInput_InMin, kVfxPlugType_Float);
+		addInput(kInput_InMax, kVfxPlugType_Float);
+		addInput(kInput_OutMin, kVfxPlugType_Float);
+		addInput(kInput_OutMax, kVfxPlugType_Float);
+		addInput(kInput_OutCurvePow, kVfxPlugType_Float);
+		addInput(kInput_Clamp, kVfxPlugType_Bool);
+		addOutput(kOutputValue, kVfxPlugType_Float, &outputValue);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		const float in = getInputFloat(kInput_In, 0.f);
+		const float inMin = getInputFloat(kInput_InMin, 0.f);
+		const float inMax = getInputFloat(kInput_InMax, 1.f);
+		const float outMin = getInputFloat(kInput_OutMin, 0.f);
+		const float outMax = getInputFloat(kInput_OutMax, 1.f);
+		const float outCurvePow = getInputFloat(kInput_OutCurvePow, 1.f);
+		const bool clamp = getInputBool(kInput_Clamp, false);
+		
+		float t = (in - inMin) / (inMax - inMin);
+		if (clamp)
+			t = t < 0.f ? 0.f : t > 1.f ? 1.f : t;
+		t = std::powf(t, outCurvePow);
+		
+		const float t1 = t;
+		const float t2 = 1.f - t;
+		
+		outputValue = outMax * t1 + outMin * t2;
 	}
 };
 
@@ -340,26 +448,26 @@ struct VfxNodeMath : VfxNodeBase
 		} \
 	};
 
-DefineMathNode(VfxNodeAdd, kType_Add);
-DefineMathNode(VfxNodeSub, kType_Sub);
-DefineMathNode(VfxNodeMul, kType_Mul);
-DefineMathNode(VfxNodeSin, kType_Sin);
-DefineMathNode(VfxNodeCos, kType_Cos);
-DefineMathNode(VfxNodeAbs, kType_Abs);
-DefineMathNode(VfxNodeMin, kType_Min);
-DefineMathNode(VfxNodeMax, kType_Max);
-DefineMathNode(VfxNodeSat, kType_Sat);
-DefineMathNode(VfxNodeNeg, kType_Neg);
-DefineMathNode(VfxNodeSqrt, kType_Sqrt);
-DefineMathNode(VfxNodePow, kType_Pow);
-DefineMathNode(VfxNodeExp, kType_Exp);
-DefineMathNode(VfxNodeMod, kType_Mod);
-DefineMathNode(VfxNodeFract, kType_Fract);
-DefineMathNode(VfxNodeFloor, kType_Floor);
-DefineMathNode(VfxNodeCeil, kType_Ceil);
-DefineMathNode(VfxNodeRound, kType_Round);
-DefineMathNode(VfxNodeSign, kType_Sign);
-DefineMathNode(VfxNodeHypot, kType_Hypot);
+DefineMathNode(VfxNodeMathAdd, kType_Add);
+DefineMathNode(VfxNodeMathSub, kType_Sub);
+DefineMathNode(VfxNodeMathMul, kType_Mul);
+DefineMathNode(VfxNodeMathSin, kType_Sin);
+DefineMathNode(VfxNodeMathCos, kType_Cos);
+DefineMathNode(VfxNodeMathAbs, kType_Abs);
+DefineMathNode(VfxNodeMathMin, kType_Min);
+DefineMathNode(VfxNodeMathMax, kType_Max);
+DefineMathNode(VfxNodeMathSat, kType_Sat);
+DefineMathNode(VfxNodeMathNeg, kType_Neg);
+DefineMathNode(VfxNodeMathSqrt, kType_Sqrt);
+DefineMathNode(VfxNodeMathPow, kType_Pow);
+DefineMathNode(VfxNodeMathExp, kType_Exp);
+DefineMathNode(VfxNodeMathMod, kType_Mod);
+DefineMathNode(VfxNodeMathFract, kType_Fract);
+DefineMathNode(VfxNodeMathFloor, kType_Floor);
+DefineMathNode(VfxNodeMathCeil, kType_Ceil);
+DefineMathNode(VfxNodeMathRound, kType_Round);
+DefineMathNode(VfxNodeMathSign, kType_Sign);
+DefineMathNode(VfxNodeMathHypot, kType_Hypot);
 
 #undef DefineMathNode
 
@@ -370,9 +478,11 @@ struct VfxGraph
 		enum Type
 		{
 			kType_Unknown,
+			kType_Bool,
 			kType_Int,
 			kType_Float,
-			kType_String
+			kType_String,
+			kType_Color
 		};
 		
 		Type type;
@@ -422,6 +532,9 @@ struct VfxGraph
 		{
 			switch (i.type)
 			{
+			case ValueToFree::kType_Bool:
+				delete (bool*)i.mem;
+				break;
 			case ValueToFree::kType_Int:
 				delete (int*)i.mem;
 				break;
@@ -430,6 +543,9 @@ struct VfxGraph
 				break;
 			case ValueToFree::kType_String:
 				delete (std::string*)i.mem;
+				break;
+			case ValueToFree::kType_Color:
+				delete (Color*)i.mem;
 				break;
 			default:
 				Assert(false);
@@ -516,9 +632,13 @@ static VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDef
 		
 		VfxNodeBase * vfxNode = nullptr;
 		
-		if (node.typeName == "intLiteral")
+		if (node.typeName == "intBool")
 		{
-			vfxNode= new VfxNodeIntLiteral();
+			vfxNode = new VfxNodeBoolLiteral();
+		}
+		else if (node.typeName == "intLiteral")
+		{
+			vfxNode = new VfxNodeIntLiteral();
 		}
 		else if (node.typeName == "floatLiteral")
 		{
@@ -528,26 +648,31 @@ static VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDef
 		{
 			vfxNode = new VfxNodeStringLiteral();
 		}
-		DefineNodeImpl("math.add", VfxNodeAdd)
-		DefineNodeImpl("math.sub", VfxNodeSub)
-		DefineNodeImpl("math.mul", VfxNodeMul)
-		DefineNodeImpl("math.sin", VfxNodeSin)
-		DefineNodeImpl("math.cos", VfxNodeCos)
-		DefineNodeImpl("math.abs", VfxNodeAbs)
-		DefineNodeImpl("math.min", VfxNodeMin)
-		DefineNodeImpl("math.max", VfxNodeMax)
-		DefineNodeImpl("math.sat", VfxNodeSat)
-		DefineNodeImpl("math.neg", VfxNodeNeg)
-		DefineNodeImpl("math.sqrt", VfxNodeSqrt)
-		DefineNodeImpl("math.pow", VfxNodePow)
-		DefineNodeImpl("math.exp", VfxNodeExp)
-		DefineNodeImpl("math.mod", VfxNodeMod)
-		DefineNodeImpl("math.fract", VfxNodeFract)
-		DefineNodeImpl("math.floor", VfxNodeFloor)
-		DefineNodeImpl("math.ceil", VfxNodeCeil)
-		DefineNodeImpl("math.round", VfxNodeRound)
-		DefineNodeImpl("math.sign", VfxNodeSign)
-		DefineNodeImpl("math.hypot", VfxNodeHypot)
+		else if (node.typeName == "colorLiteral")
+		{
+			vfxNode = new VfxNodeColorLiteral();
+		}
+		DefineNodeImpl("math.range", VfxNodeRange)
+		DefineNodeImpl("math.add", VfxNodeMathAdd)
+		DefineNodeImpl("math.sub", VfxNodeMathSub)
+		DefineNodeImpl("math.mul", VfxNodeMathMul)
+		DefineNodeImpl("math.sin", VfxNodeMathSin)
+		DefineNodeImpl("math.cos", VfxNodeMathCos)
+		DefineNodeImpl("math.abs", VfxNodeMathAbs)
+		DefineNodeImpl("math.min", VfxNodeMathMin)
+		DefineNodeImpl("math.max", VfxNodeMathMax)
+		DefineNodeImpl("math.sat", VfxNodeMathSat)
+		DefineNodeImpl("math.neg", VfxNodeMathNeg)
+		DefineNodeImpl("math.sqrt", VfxNodeMathSqrt)
+		DefineNodeImpl("math.pow", VfxNodeMathPow)
+		DefineNodeImpl("math.exp", VfxNodeMathExp)
+		DefineNodeImpl("math.mod", VfxNodeMathMod)
+		DefineNodeImpl("math.fract", VfxNodeMathFract)
+		DefineNodeImpl("math.floor", VfxNodeMathFloor)
+		DefineNodeImpl("math.ceil", VfxNodeMathCeil)
+		DefineNodeImpl("math.round", VfxNodeMathRound)
+		DefineNodeImpl("math.sign", VfxNodeMathSign)
+		DefineNodeImpl("math.hypot", VfxNodeMathHypot)
 		DefineNodeImpl("osc.sine", VfxNodeOscSine)
 		DefineNodeImpl("osc.saw", VfxNodeOscSaw)
 		DefineNodeImpl("osc.triangle", VfxNodeOscTriangle)
@@ -676,7 +801,17 @@ static VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDef
 					{
 						if (vfxNodeInputs[i].isConnected() == false)
 						{
-							if (vfxNodeInputs[i].type == kVfxPlugType_Int)
+							if (vfxNodeInputs[i].type == kVfxPlugType_Bool)
+							{
+								bool * value = new bool();
+								
+								*value = Parse::Bool(inputValue);
+								
+								vfxNodeInputs[i].connectTo(value, kVfxPlugType_Bool);
+								
+								vfxGraph->valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Bool, value));
+							}
+							else if (vfxNodeInputs[i].type == kVfxPlugType_Int)
 							{
 								int * value = new int();
 								
@@ -705,6 +840,16 @@ static VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDef
 								vfxNodeInputs[i].connectTo(value, kVfxPlugType_String);
 								
 								vfxGraph->valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_String, value));
+							}
+							else if (vfxNodeInputs[i].type == kVfxPlugType_Color)
+							{
+								Color * value = new Color();
+								
+								*value = Color::fromHex(inputValue.c_str());
+								
+								vfxNodeInputs[i].connectTo(value, kVfxPlugType_Color);
+								
+								vfxGraph->valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Color, value));
 							}
 							else
 							{
@@ -786,6 +931,23 @@ int main(int argc, char * argv[])
 		
 		VfxGraph * vfxGraph = nullptr;
 		
+		ofxDatGui * gui = nullptr;
+		
+		if (false)
+		{
+			gui = new ofxDatGui(ofxDatGuiAnchor::TOP_LEFT);
+			gui->setWidth(150);
+		
+			for (auto & typeDefinitionItr : typeDefinitionLibrary->typeDefinitions)
+			{
+				auto & typeDefiniton = typeDefinitionItr.second;
+				
+				//gui->addButton(typeDefiniton.typeName);
+			}
+			
+			gui->addHeader("node type");
+		}
+		
 		while (!framework.quitRequested)
 		{
 			framework.process();
@@ -823,6 +985,9 @@ int main(int argc, char * argv[])
 				//
 				
 				graphEdit->graph = new Graph();
+				
+				delete graphEdit->propertyEditor;
+				graphEdit->propertyEditor = nullptr;
 				
 				graphEdit->propertyEditor = new GraphUi::PropEdit(typeDefinitionLibrary);
 				
@@ -875,6 +1040,9 @@ int main(int argc, char * argv[])
 			}
 			framework.endDraw();
 		}
+		
+		delete gui;
+		gui = nullptr;
 		
 		delete graphEdit;
 		graphEdit = nullptr;

@@ -188,6 +188,28 @@ void Graph::removeNode(const GraphNodeId nodeId)
 	}
 }
 
+void Graph::addLink(const GraphNodeSocketLink & link, const bool clearInputDuplicates)
+{
+	if (clearInputDuplicates)
+	{
+		for (auto i = links.begin(); i != links.end(); )
+		{
+			auto & otherLink = i->second;
+			
+			if (link.srcNodeId == otherLink.srcNodeId && link.srcNodeSocketIndex == otherLink.srcNodeSocketIndex)
+			{
+				i = links.erase(i);
+			}
+			else
+			{
+				++i;
+			}
+		}
+	}
+	
+	links[link.id] = link;
+}
+
 void Graph::removeLink(const GraphLinkId linkId)
 {
 	Assert(linkId != kGraphLinkIdInvalid);
@@ -243,7 +265,7 @@ bool Graph::loadXml(const XMLElement * xmlGraph)
 		link.dstNodeId = intAttrib(xmlLink, "dstNodeId", link.dstNodeId);
 		link.dstNodeSocketIndex = intAttrib(xmlLink, "dstNodeSocketIndex", link.dstNodeSocketIndex);
 		
-		links[link.id] = link;
+		addLink(link, false);
 		
 		nextLinkId = std::max(nextLinkId, link.id + 1);
 	}
@@ -303,6 +325,15 @@ bool Graph::saveXml(XMLPrinter & xmlGraph) const
 //
 
 #include "framework.h"
+
+void GraphEdit_ValueTypeDefinition::loadXml(const XMLElement * xmlType)
+{
+	typeName = stringAttrib(xmlType, "typeName", "");
+	
+	editor = stringAttrib(xmlType, "editor", "textbox");
+	editorMin = stringAttrib(xmlType, "editorMin", "0");
+	editorMax = stringAttrib(xmlType, "editorMax", "1");
+}
 
 bool GraphEdit_TypeDefinition::InputSocket::canConnectTo(const GraphEdit_TypeDefinition::OutputSocket & socket) const
 {
@@ -491,6 +522,17 @@ void GraphEdit_TypeDefinition::loadXml(const XMLElement * xmlType)
 
 void GraphEdit_TypeDefinitionLibrary::loadXml(const XMLElement * xmlLibrary)
 {
+	for (auto xmlType = xmlLibrary->FirstChildElement("valueType"); xmlType != nullptr; xmlType = xmlType->NextSiblingElement("valueType"))
+	{
+		GraphEdit_ValueTypeDefinition typeDefinition;
+		
+		typeDefinition.loadXml(xmlType);
+		
+		// todo : check typeName doesn't exist yet
+		
+		valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
+	}
+	
 	for (auto xmlType = xmlLibrary->FirstChildElement("type"); xmlType != nullptr; xmlType = xmlType->NextSiblingElement("type"))
 	{
 		GraphEdit_TypeDefinition typeDefinition;
@@ -553,15 +595,24 @@ GraphEdit::GraphEdit()
 	, mousePosition()
 	, dragAndZoom()
 	, propertyEditor(nullptr)
+	, dummyGui(nullptr)
 {
 	graph = new Graph();
 	
 	propertyEditor = new GraphUi::PropEdit(nullptr);
+	
+	dummyGui = new ofxDatGui();
 }
 
 GraphEdit::~GraphEdit()
 {
 	selectedNodes.clear();
+	
+	delete dummyGui;
+	dummyGui = nullptr;
+	
+	delete propertyEditor;
+	propertyEditor = nullptr;
 	
 	delete graph;
 	graph = nullptr;
@@ -605,13 +656,33 @@ const GraphEdit_TypeDefinition::OutputSocket * GraphEdit::tryGetOutputSocket(con
 	return &typeDefinition->outputSockets[socketIndex];
 }
 
+bool GraphEdit::hitTestUi(const float x, const float y, HitTestResult & result) const
+{
+	result = HitTestResult();
+	
+	if (propertyEditor->datGui != nullptr)
+	{
+		auto p = propertyEditor->datGui->getPosition();
+		auto sx = propertyEditor->datGui->getWidth();
+		auto sy = propertyEditor->datGui->getHeight();
+		
+		if (x > p.x && y > p.y && x < p.x + sx && y < p.y + sy)
+		{
+			result.hasPropEdit = true;
+			return true;
+		}
+	}
+
+	return false;
+}
+
 bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) const
 {
 	result = HitTestResult();
 	
-	for (auto & nodeItr : graph->nodes)
+	for (auto nodeItr = graph->nodes.rbegin(); nodeItr != graph->nodes.rend(); ++nodeItr)
 	{
-		auto & node = nodeItr.second;
+		auto & node = nodeItr->second;
 		
 		const auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
 		
@@ -633,9 +704,9 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 		}
 	}
 	
-	for (auto & linkItr : graph->links)
+	for (auto linkItr = graph->links.rbegin(); linkItr != graph->links.rend(); ++linkItr)
 	{
-		auto & link = linkItr.second;
+		auto & link = linkItr->second;
 		
 		auto srcNode = tryGetNode(link.srcNodeId);
 		auto dstNode = tryGetNode(link.dstNodeId);
@@ -665,7 +736,12 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 
 void GraphEdit::tick(const float dt)
 {
+	bool enablePropEdit = false;
+	
 	{
+		mousePosition.uiX = mouse.x;
+		mousePosition.uiY = mouse.y;
+		
 		const Vec2 srcMousePosition(mouse.x, mouse.y);
 		const Vec2 dstMousePosition = dragAndZoom.invTransform * srcMousePosition;
 		mousePosition.x = dstMousePosition[0];
@@ -708,7 +784,11 @@ void GraphEdit::tick(const float dt)
 			{
 				HitTestResult hitTestResult;
 				
-				if (hitTest(mousePosition.x, mousePosition.y, hitTestResult))
+				if (hitTestUi(mousePosition.uiX, mousePosition.uiY, hitTestResult))
+				{
+					//
+				}
+				else if (hitTest(mousePosition.x, mousePosition.y, hitTestResult))
 				{
 					// todo : clear node selection ?
 					// todo : clear link selection ?
@@ -716,14 +796,6 @@ void GraphEdit::tick(const float dt)
 					
 					if (hitTestResult.hasNode)
 					{
-						selectedLinks.clear();
-						
-						if (selectedNodes.count(hitTestResult.node->id) == 0)
-						{
-							selectedNodes.clear();
-							selectedNodes.insert(hitTestResult.node->id);
-						}
-						
 						if (hitTestResult.nodeHitTestResult.inputSocket)
 						{
 							socketConnect.srcNodeId = hitTestResult.node->id;
@@ -738,6 +810,11 @@ void GraphEdit::tick(const float dt)
 							socketConnect.dstNodeSocket = hitTestResult.nodeHitTestResult.outputSocket;
 							state = kState_OutputSocketConnect;
 							break;
+						}
+						
+						if (selectedNodes.count(hitTestResult.node->id) == 0)
+						{
+							selectNode(hitTestResult.node->id);
 						}
 						
 						if (hitTestResult.nodeHitTestResult.editor)
@@ -757,10 +834,16 @@ void GraphEdit::tick(const float dt)
 					
 					if (hitTestResult.hasLink)
 					{
-						selectedNodes.clear();
-						
-						selectedLinks.clear();
-						selectedLinks.insert(hitTestResult.link->id);
+						if (selectedLinks.count(hitTestResult.link->id) == 0)
+						{
+							selectLink(hitTestResult.link->id);
+						}
+					}
+					
+					if (hitTestResult.hasPropEdit)
+					{
+						state = kState_PropEdit;
+						break;
 					}
 				}
 				else
@@ -791,8 +874,7 @@ void GraphEdit::tick(const float dt)
 				
 				graph->addNode(node);
 				
-				selectedNodes.clear();
-				selectedNodes.insert(node.id);
+				selectNode(node.id);
 			}
 			
 			if (keyboard.wentDown(SDLK_a))
@@ -835,7 +917,10 @@ void GraphEdit::tick(const float dt)
 				}
 				
 				if (!newSelectedNodes.empty())
+				{
 					selectedNodes = newSelectedNodes;
+					selectedLinks.clear();
+				}
 			}
 			
 			if (keyboard.wentDown(SDLK_p))
@@ -906,8 +991,8 @@ void GraphEdit::tick(const float dt)
 			
 			if (keyboard.isDown(SDLK_LCTRL))
 			{
-				dragAndZoom.desiredFocusX -= mouse.dx;
-				dragAndZoom.desiredFocusY -= mouse.dy;
+				dragAndZoom.desiredFocusX -= mouse.dx / dragAndZoom.zoom;
+				dragAndZoom.desiredFocusY -= mouse.dy / dragAndZoom.zoom;
 				dragAndZoom.focusX = dragAndZoom.desiredFocusX;
 				dragAndZoom.focusY = dragAndZoom.desiredFocusY;
 			}
@@ -919,6 +1004,8 @@ void GraphEdit::tick(const float dt)
 			}
 			
 			dragAndZoom.tick(dt);
+			
+			enablePropEdit = true;
 		}
 		break;
 		
@@ -1182,6 +1269,21 @@ void GraphEdit::tick(const float dt)
 	
 	if (propertyEditor != nullptr)
 	{
+		if (propertyEditor->datGui != nullptr)
+		{
+			logDebug("enablePropEdit: %d", int(enablePropEdit));
+			
+			ofxDatGui * focusGui = nullptr;
+			
+			if (enablePropEdit)
+				focusGui = propertyEditor->datGui;
+			else
+				focusGui = dummyGui;
+			
+			if (!focusGui->getFocused())
+				focusGui->focus();
+		}
+		
 		propertyEditor->tick(dt);
 	}
 }
@@ -1205,8 +1307,9 @@ void GraphEdit::socketConnectEnd()
 		link.dstNodeId = socketConnect.dstNodeId;
 		link.dstNodeSocketIndex = socketConnect.dstNodeSocket->index;
 		
-		// todo : add addLink method
-		graph->links[link.id] = link;
+		graph->addLink(link, true);
+		
+		selectLink(link.id);
 	}
 	
 	socketConnect = SocketConnect();
@@ -1220,25 +1323,35 @@ void GraphEdit::socketValueEditEnd()
 void GraphEdit::selectNode(const GraphNodeId nodeId)
 {
 	Assert(selectedNodes.count(nodeId) == 0);
+	selectedNodes.clear();
+	selectedLinks.clear();
+	
 	selectedNodes.insert(nodeId);
 }
 
 void GraphEdit::selectLink(const GraphLinkId linkId)
 {
 	Assert(selectedLinks.count(linkId) == 0);
+	selectedNodes.clear();
+	selectedLinks.clear();
+	
 	selectedLinks.insert(linkId);
 }
 
 void GraphEdit::selectNodeAll()
 {
 	selectedNodes.clear();
+	selectedLinks.clear();
+	
 	for (auto & nodeItr : graph->nodes)
 		selectedNodes.insert(nodeItr.first);
 }
 
 void GraphEdit::selectLinkAll()
 {
+	selectedNodes.clear();
 	selectedLinks.clear();
+	
 	for (auto & linkItr : graph->links)
 		selectedLinks.insert(linkItr.first);
 }
@@ -1802,20 +1915,38 @@ void GraphUi::PropEdit::createUi()
 				const auto valueItr = node->editorInputValues.find(inputSocket.name);
 				const std::string valueText = valueItr == node->editorInputValues.end() ? "" : valueItr->second;
 				
-				ofxDatGuiTextInput * textInput = nullptr;
-				ofxDatGuiSlider * slider = nullptr;
+				const GraphEdit_ValueTypeDefinition * valueTypeDefinition = typeLibrary->tryGetValueTypeDefinition(inputSocket.typeName);
 				
-				if (inputSocket.typeName == "int")
-					textInput = gui->addTextInput(inputSocket.name, valueText);
-				if (inputSocket.typeName == "float")
-					slider = gui->addSlider(inputSocket.name, 0, 100, Parse::Float(valueText));
-				if (inputSocket.typeName == "string")
-					textInput = gui->addTextInput(inputSocket.name, valueText);
+				ofxDatGuiComponent * component = nullptr;
 				
-				if (textInput != nullptr)
-					textInput->setName(inputSocket.name);
-				if (slider != nullptr)
-					slider->setName(inputSocket.name);
+				if (valueTypeDefinition == nullptr)
+				{
+					component = gui->addTextInput(inputSocket.name, valueText);
+				}
+				else
+				{
+					if (valueTypeDefinition->editor == "textbox")
+					{
+						component = gui->addTextInput(inputSocket.name, valueText);
+					}
+					else if (valueTypeDefinition->editor == "slider")
+					{
+						component = gui->addSlider(
+							inputSocket.name,
+							Parse::Float(valueTypeDefinition->editorMin),
+							Parse::Float(valueTypeDefinition->editorMax),
+							Parse::Float(valueText));
+					}
+					else if (valueTypeDefinition->editor == "colorpicker")
+					{
+						auto colorPicker = gui->addColorPicker(inputSocket.name, ofColor::fromHex(valueText.c_str()));
+						
+						component = colorPicker;
+					}
+				}
+				
+				if (component != nullptr)
+					component->setName(inputSocket.name);
 				
 				//gui->addColorPicker("color picker", ofColor::fromHex(0xeeeeee));
 				
@@ -1833,6 +1964,7 @@ void GraphUi::PropEdit::createUi()
 	
 	gui->onTextInputEvent(this, &PropEdit::onTextInputEvent);
 	gui->onSliderEvent(this, &PropEdit::onSliderEvent);
+	gui->onColorPickerEvent(this, &PropEdit::onColorPickerEvent);
 	
 	datGui->setTheme(new ofxDatGuiThemeAutumn(), true);
 }
@@ -1864,5 +1996,21 @@ void GraphUi::PropEdit::onSliderEvent(ofxDatGuiSliderEvent e)
 		const std::string text = String::ToString(e.value);
 		
 		node->editorInputValues[e.target->getName()] = text;
+	}
+}
+
+void GraphUi::PropEdit::onColorPickerEvent(ofxDatGuiColorPickerEvent e)
+{
+	GraphNode * node = tryGetNode();
+	
+	if (node != nullptr)
+	{
+		const std::string hexString = String::Format("%02x%02x%02x%02x",
+			e.color.r,
+			e.color.g,
+			e.color.b,
+			e.color.a);
+		
+		node->editorInputValues[e.target->getName()] = hexString;
 	}
 }
