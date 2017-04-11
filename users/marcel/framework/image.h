@@ -49,6 +49,11 @@ public:
 	{
 		return &imageData[y * sx];
 	}
+	
+	const Pixel * getLine(int y) const
+	{
+		return &imageData[y * sx];
+	}
 };
 
 ImageData * loadImage(const char * filename);
