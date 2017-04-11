@@ -25,7 +25,7 @@
 
 using namespace tinyxml2;
 
-#define GFX_SX 1000
+#define GFX_SX 1400
 //#define GFX_SX 1000
 #define GFX_SY 300
 #define SCALE 1
@@ -1251,7 +1251,7 @@ int main(int argc, char * argv[])
 			}
 
 			// process keyboard interaction
-
+			
 			if (g_editing.marker.g_selectedEventMarker != nullptr)
 			{
 				if (keyboard.wentDown(SDLK_LEFT) || keyboard.keyRepeat(SDLK_LEFT))
@@ -1259,7 +1259,7 @@ int main(int argc, char * argv[])
 					double time = g_editing.marker.g_selectedEventMarker->time;
 
 					if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
-						time = beatToTime(roundTimeToBeat(time * 4) - 1);
+						time = beatToTime(roundTimeToBeat(time * 4) - 1) / 4.0;
 					else
 						time = beatToTime(roundTimeToBeat(time * 1) - 1);
 
@@ -1272,7 +1272,7 @@ int main(int argc, char * argv[])
 						double time = g_editing.marker.g_selectedEventMarker->time;
 
 						if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
-							time = beatToTime(roundTimeToBeat(time * 4) + 1);
+							time = beatToTime(roundTimeToBeat(time * 4) + 1) / 4.0;
 						else
 							time = beatToTime(roundTimeToBeat(time * 1) + 1);
 
@@ -1290,6 +1290,16 @@ int main(int argc, char * argv[])
 				else if (keyboard.wentDown(SDLK_DELETE))
 				{
 					deleteEventMarker(g_editing.marker.g_selectedEventMarker);
+				}
+			}
+			
+			if (keyboard.wentDown(SDLK_q))
+			{
+				// let's celebration quantization!
+				
+				for (auto & marker : g_sequence.eventMarkers)
+				{
+					marker.time = beatToTime(roundTimeToBeat(marker.time * 4)) / 4.0;
 				}
 			}
 			
