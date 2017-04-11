@@ -866,7 +866,51 @@ struct Effect_Wobbly : Effect
 		void tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds);
 	};
 	
+	struct WaterDrop
+	{
+		bool isAlive;
+		bool isApplying;
+		
+		double x;
+		double y;
+		double vx;
+		double direction;
+		double strength;
+		double applyRadius;
+		double applyTime;
+		double applyTimeRcp;
+		double fadeInTime;
+		double fadeInTimeRcp;
+		
+		WaterDrop();
+		
+		void tick(const double dt, const double stretch, WaterSim & sim);
+		
+		double toWaterP(const WaterSim & sim, const double x, const double stretch) const;
+		double checkIntersection(const WaterSim & sim, const double stretch, const double radius, const double bias) const;
+	};
+	
+	struct Fade
+	{
+		double falloff;
+		double falloffD;
+		
+		Fade()
+			: falloff(0.0)
+			, falloffD(1.0)
+		{
+		}
+		
+		void tick(const double dt)
+		{
+			const double f = std::pow(1.0 - falloffD, dt);
+			
+			falloff *= f;
+		}
+	};
+	
 	TweenFloat m_drop;
+	TweenFloat m_showDrops;
 	TweenFloat m_wobbliness;
 	TweenFloat m_closedEnds;
 	TweenFloat m_stretch;
@@ -877,6 +921,10 @@ struct Effect_Wobbly : Effect
 	
 	WaterSim * m_waterSim;
 	
+	std::vector<WaterDrop> m_waterDrops;
+	
+	Fade fade;
+	
 	GLuint elementsTexture;
 
 	Effect_Wobbly(const char * name, const char * shader);
@@ -885,4 +933,6 @@ struct Effect_Wobbly : Effect
 	virtual void tick(const float dt) override;
 	virtual void draw(DrawableList & list) override;
 	virtual void draw() override;
+	
+	virtual void handleSignal(const std::string & name) override;
 };
