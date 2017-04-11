@@ -33,7 +33,7 @@ ofColor ofColor::fromHex(const char * hex)
 {
 	const Color color = Color::fromHex(hex);
 	
-	return ofColor(color.r * 255.f, color.g * 255.f, color.b * 255.f, 255);
+	return ofColor(color.r * 255.f, color.g * 255.f, color.b * 255.f, color.a * 255.f);
 }
 
 ofColor ofColor::fromHex(uint32_t hex)
@@ -47,9 +47,9 @@ ofColor ofColor::fromHex(uint32_t hex)
 
 int ofColor::getHex() const
 {
-	const int rh = (r << 24);
-	const int gh = (g << 16);
-	const int bh = (b << 8 );
+	const int rh = (r << 16);
+	const int gh = (g << 8 );
+	const int bh = (b << 0 );
 	
 	return rh | gh | bh;
 }
@@ -108,7 +108,9 @@ void ofVbo::draw(const int primitiveType, const int vertexOffset, const int numV
 {
 	gxBegin(primitiveType);
 	{
-		for (int i = 0; i < vertices.size(); ++i)
+		const int numVerticesToDraw = std::min(int(vertices.size()) - vertexOffset, numVertices);
+		
+		for (int i = vertexOffset, j = 0; j < numVerticesToDraw; ++i, ++j)
 		{
 			if (i < colors.size())
 				gxColor4f(colors[i].r, colors[i].g, colors[i].b, colors[i].a);

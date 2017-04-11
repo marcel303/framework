@@ -45,10 +45,10 @@ struct ofColor
 	static ofColor fromHex(uint32_t hex);
 	
 	ofColor()
-		: r(0)
-		, g(0)
-		, b(0)
-		, a(0)
+		: r(255)
+		, g(255)
+		, b(255)
+		, a(255)
 	{
 	}
 	
@@ -71,10 +71,10 @@ struct ofFloatColor
 	float a;
 	
 	ofFloatColor()
-		: r(0.f)
-		, g(0.f)
-		, b(0.f)
-		, a(0.f)
+		: r(1.f)
+		, g(1.f)
+		, b(1.f)
+		, a(1.f)
 	{
 	}
 	
