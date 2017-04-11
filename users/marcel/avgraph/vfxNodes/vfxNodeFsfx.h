@@ -10,6 +10,8 @@ struct VfxNodeFsfx : VfxNodeBase
 	{
 		kInput_Image,
 		kInput_Shader,
+		kInput_Color1,
+		kInput_Color2,
 		kInput_Param1,
 		kInput_Param2,
 		kInput_Param3,

@@ -1,6 +1,6 @@
 #include "vfxNodeBase.h"
 
-class MediaPlayer;
+struct MediaPlayer;
 
 struct VfxNodeVideo : VfxNodeBase
 {

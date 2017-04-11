@@ -1,7 +1,7 @@
 #include "vfxNodeLeapMotion.h"
 #include "leap/Leap.h"
 
-class LeapListener : public Leap::Listener
+struct LeapListener : public Leap::Listener
 {
 	struct State
 	{
@@ -16,8 +16,7 @@ class LeapListener : public Leap::Listener
 	
 	SDL_mutex * mutex;
 	State state;
-
-public:
+	
 	LeapListener()
 		: mutex(nullptr)
 		, state()
@@ -117,5 +116,36 @@ void VfxNodeLeapMotion::init(const GraphNode & node)
 
 void VfxNodeLeapMotion::tick(const float dt)
 {
-	// todo : read latest Leap Motion state
+	const bool isConnected = leapController->isConnected();
+	
+	if (isConnected)
+	{
+		// todo : read latest Leap Motion state
+		
+		const LeapListener::State state = leapListener->getState();
+		
+		leftHandX = state.leftHandPos[0];
+		leftHandY = state.leftHandPos[1];
+		leftHandZ = state.leftHandPos[2];
+		
+		rightHandX = state.rightHandPos[0];
+		rightHandY = state.rightHandPos[1];
+		rightHandZ = state.rightHandPos[2];
+	}
+	else
+	{
+		leftHandX = 0.f;
+		leftHandY = 0.f;
+		leftHandZ = 0.f;
+		rightHandX = 0.f;
+		rightHandY = 0.f;
+		rightHandZ = 0.f;
+	}
+	
+	setOuputIsValid(kOutput_LeftHandX, isConnected);
+	setOuputIsValid(kOutput_LeftHandY, isConnected);
+	setOuputIsValid(kOutput_LeftHandZ, isConnected);
+	setOuputIsValid(kOutput_RightHandX, isConnected);
+	setOuputIsValid(kOutput_RightHandY, isConnected);
+	setOuputIsValid(kOutput_RightHandZ, isConnected);
 }

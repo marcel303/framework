@@ -18,6 +18,8 @@ VfxNodeFsfx::VfxNodeFsfx()
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Image, kVfxPlugType_Image);
 	addInput(kInput_Shader, kVfxPlugType_String);
+	addInput(kInput_Color1, kVfxPlugType_Color);
+	addInput(kInput_Color2, kVfxPlugType_Color);
 	addInput(kInput_Param1, kVfxPlugType_Float);
 	addInput(kInput_Param2, kVfxPlugType_Float);
 	addInput(kInput_Param3, kVfxPlugType_Float);

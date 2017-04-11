@@ -8,6 +8,7 @@
 enum VfxTriggerDataType
 {
 	kVfxTriggerDataType_None,
+	kVfxTriggerDataType_Bool,
 	kVfxTriggerDataType_Int
 };
 
@@ -17,6 +18,7 @@ struct VfxTriggerData
 	
 	union
 	{
+		bool boolValue;
 		int intValue;
 		uint8_t mem[8];
 	};
@@ -27,12 +29,27 @@ struct VfxTriggerData
 		memset(mem, 0, sizeof(mem));
 	}
 	
+	bool asBool() const
+	{
+		switch (type)
+		{
+		case kVfxTriggerDataType_None:
+			return false;
+		case kVfxTriggerDataType_Bool:
+			return boolValue;
+		case kVfxTriggerDataType_Int:
+			return intValue != 0;
+		}
+	}
+	
 	int asInt() const
 	{
 		switch (type)
 		{
 		case kVfxTriggerDataType_None:
 			return 0;
+		case kVfxTriggerDataType_Bool:
+			return boolValue ? 1 : 0;
 		case kVfxTriggerDataType_Int:
 			return intValue;
 		}
@@ -44,6 +61,8 @@ struct VfxTriggerData
 		{
 		case kVfxTriggerDataType_None:
 			return 0.f;
+		case kVfxTriggerDataType_Bool:
+			return boolValue ? 1.f : 0.f;
 		case kVfxTriggerDataType_Int:
 			return float(intValue);
 		}
@@ -102,9 +121,11 @@ struct VfxImage_Surface : VfxImageBase
 enum VfxPlugType
 {
 	kVfxPlugType_None,
+	kVfxPlugType_Bool,
 	kVfxPlugType_Int,
 	kVfxPlugType_Float,
 	kVfxPlugType_String,
+	kVfxPlugType_Color,
 	kVfxPlugType_Image,
 	kVfxPlugType_Surface,
 	kVfxPlugType_Trigger
@@ -113,10 +134,12 @@ enum VfxPlugType
 struct VfxPlug
 {
 	VfxPlugType type;
+	bool isValid;
 	void * mem;
 	
 	VfxPlug()
 		: type(kVfxPlugType_None)
+		, isValid(true)
 		, mem(nullptr)
 	{
 	}
@@ -150,6 +173,14 @@ struct VfxPlug
 		return mem != nullptr;
 	}
 	
+	int getBool() const
+	{
+		if (type == kVfxPlugType_Trigger)
+			return ((VfxTriggerData*)mem)->asBool();
+		Assert(type == kVfxPlugType_Bool);
+		return *((bool*)mem);
+	}
+	
 	int getInt() const
 	{
 		if (type == kVfxPlugType_Trigger)
@@ -170,6 +201,12 @@ struct VfxPlug
 	{
 		Assert(type == kVfxPlugType_String);
 		return *((std::string*)mem);
+	}
+	
+	const Color & getColor() const
+	{
+		Assert(type == kVfxPlugType_Color);
+		return *((Color*)mem);
 	}
 	
 	VfxImageBase * getImage() const
@@ -295,6 +332,16 @@ struct VfxNodeBase
 			return &outputs[index];
 	}
 	
+	int getInputBool(const int index, const bool defaultValue) const
+	{
+		const VfxPlug * plug = tryGetInput(index);
+		
+		if (plug == nullptr || !plug->isConnected())
+			return defaultValue;
+		else
+			return plug->getBool();
+	}
+	
 	int getInputInt(const int index, const int defaultValue) const
 	{
 		const VfxPlug * plug = tryGetInput(index);
@@ -343,6 +390,19 @@ struct VfxNodeBase
 			return defaultValue;
 		else
 			return plug->getSurface();
+	}
+	
+	void setOuputIsValid(const int index, const bool isValid)
+	{
+		VfxPlug * plug = tryGetOutput(index);
+		
+		if (plug == nullptr)
+		{
+		}
+		else
+		{
+			plug->isValid = isValid;
+		}
 	}
 	
 	virtual void initSelf(const GraphNode & node) { }
