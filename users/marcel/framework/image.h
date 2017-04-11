@@ -3,6 +3,7 @@
 // Copyright (C) 2013 Grannies Games - All rights reserved
 
 #include <stdlib.h>
+#include <string.h>
 
 class ImageData
 {
