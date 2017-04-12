@@ -21,6 +21,10 @@
 #ifndef POSTPROC_POSTPROCESS_H
 #define POSTPROC_POSTPROCESS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @file
  * @ingroup lpp
@@ -107,5 +111,9 @@ void pp_free_context(pp_context *ppContext);
 /**
  * @}
  */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* POSTPROC_POSTPROCESS_H */

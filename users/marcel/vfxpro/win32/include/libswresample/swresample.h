@@ -21,6 +21,10 @@
 #ifndef SWRESAMPLE_SWRESAMPLE_H
 #define SWRESAMPLE_SWRESAMPLE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @file
  * @ingroup lswr
@@ -579,5 +583,9 @@ int swr_config_frame(SwrContext *swr, const AVFrame *out, const AVFrame *in);
  * @}
  * @}
  */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* SWRESAMPLE_SWRESAMPLE_H */

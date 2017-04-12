@@ -21,6 +21,10 @@
 #ifndef AVCODEC_AVCODEC_H
 #define AVCODEC_AVCODEC_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @file
  * @ingroup libavc
@@ -6237,5 +6241,9 @@ AVCPBProperties *av_cpb_properties_alloc(size_t *size);
 /**
  * @}
  */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* AVCODEC_AVCODEC_H */

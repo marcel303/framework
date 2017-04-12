@@ -21,6 +21,10 @@
 #ifndef AVUTIL_AVUTIL_H
 #define AVUTIL_AVUTIL_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @file
  * @ingroup lavu
@@ -341,5 +345,9 @@ AVRational av_get_time_base_q(void);
  * @}
  * @}
  */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* AVUTIL_AVUTIL_H */

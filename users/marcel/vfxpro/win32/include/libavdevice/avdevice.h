@@ -19,6 +19,10 @@
 #ifndef AVDEVICE_AVDEVICE_H
 #define AVDEVICE_AVDEVICE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "version.h"
 
 /**
@@ -511,5 +515,9 @@ int avdevice_list_output_sinks(struct AVOutputFormat *device, const char *device
 /**
  * @}
  */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* AVDEVICE_AVDEVICE_H */

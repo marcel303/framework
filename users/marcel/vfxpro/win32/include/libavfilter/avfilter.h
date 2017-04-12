@@ -22,6 +22,10 @@
 #ifndef AVFILTER_AVFILTER_H
 #define AVFILTER_AVFILTER_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @file
  * @ingroup lavfi
@@ -1122,5 +1126,9 @@ int avfilter_graph_request_oldest(AVFilterGraph *graph);
 /**
  * @}
  */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* AVFILTER_AVFILTER_H */

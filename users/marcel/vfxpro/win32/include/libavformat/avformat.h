@@ -21,6 +21,10 @@
 #ifndef AVFORMAT_AVFORMAT_H
 #define AVFORMAT_AVFORMAT_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @file
  * @ingroup libavf
@@ -2974,5 +2978,9 @@ AVRational av_stream_get_codec_timebase(const AVStream *st);
 /**
  * @}
  */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* AVFORMAT_AVFORMAT_H */
