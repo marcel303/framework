@@ -16,7 +16,8 @@
 #define DO_LIGHT_PROPAGATION 0
 #define DO_FLOCKING 0
 #define DO_HQ_PRIMITIVES 1
-#define DO_BUILTIN_SHADER 1
+#define DO_PATH 1
+#define DO_BUILTIN_SHADER  1
 
 /*
 
@@ -2348,8 +2349,6 @@ struct Flock
 
 int main(int argc, char * argv[])
 {
-	changeDirectory("data");
-
 #if DO_COCREATE
 	createAudioCache();
 #endif
@@ -2713,6 +2712,8 @@ int main(int argc, char * argv[])
 				}
 				setBlend(BLEND_ALPHA);
 			#else
+
+			#if DO_PATH
 				static bool doPath = true;
 
 				if (keyboard.wentDown(SDLK_p))
@@ -2758,6 +2759,7 @@ int main(int argc, char * argv[])
 					}
 				}
 				popSurface();
+			#endif
 
 			#if DO_HQ_PRIMITIVES
 				pushSurface(surface);
