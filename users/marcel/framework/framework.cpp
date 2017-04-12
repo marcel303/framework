@@ -6242,6 +6242,8 @@ void hqDrawPath(const Path2d & path)
 	if (mode == 3)
 		hqBegin(HQ_STROKED_CIRCLES, useScreenSpace);
 	{
+		const float strokeSize = (std::sin(framework.time) + 1.f) / 2.f * 4.f;
+
 		for (int i = 0; i < numPoints; ++i)
 		{
 			if (mode == 0)
@@ -6261,12 +6263,12 @@ void hqDrawPath(const Path2d & path)
 				hqStrokeRect(
 					pxy[0] - 5.f, pxy[1] - 5.f,
 					pxy[0] + 5.f, pxy[1] + 5.f,
-					2.f);
+					strokeSize);
 			}
 
 			if (mode == 3)
 			{
-				hqStrokeCircle(pxy[0], pxy[1], 5.f, 2.f);
+				hqStrokeCircle(pxy[0], pxy[1], 5.f, strokeSize);
 			}
 
 			pxy += 2;
