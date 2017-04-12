@@ -200,7 +200,7 @@ static void drawParagraph(NVGcontext* vg, float x, float y, float width, float h
 
 	if (gutter) {
 		char txt[16];
-		snprintf(txt, sizeof(txt), "%d", gutter);
+		sprintf_s(txt, sizeof(txt), "%d", gutter);
 		nvgFontSize(vg, 13.0f);
 		nvgTextAlign(vg, NVG_ALIGN_RIGHT|NVG_ALIGN_MIDDLE);
 
