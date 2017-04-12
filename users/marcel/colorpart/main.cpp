@@ -6,8 +6,8 @@
 #include "srt.h"
 #include "video.h"
 
-#define DO_VIDEO 1
-#define DO_LYRICS 1
+#define DO_VIDEO 0
+#define DO_LYRICS 0
 
 static int GFX_SX = 0;
 static int GFX_SY = 0;
@@ -562,14 +562,15 @@ int main(int argc, char * argv[])
 	
 	loadSrt("roar.srt", srt);
 
-	image = loadImage("2.jpg");
+	//image = loadImage("2.jpg");
+	image = loadImage("andreea.png");
 
 	GFX_SX = image->sx;
 	GFX_SY = image->sy;
 
 	framework.windowBorder = false;
 
-#if 1
+#if 0
 	framework.fullscreen = true;
 	framework.useClosestDisplayMode = true;
 	framework.exclusiveFullscreen = false;
@@ -721,7 +722,7 @@ int main(int argc, char * argv[])
 					}
 					popSurface();
 
-					if (true)
+					if (false)
 					{
 						Shader shader("kaleido.ps", "effect.vs", "kaleido.ps");
 						shader.setTexture("colormap", 0, particleSurface->getTexture(), true, false);
