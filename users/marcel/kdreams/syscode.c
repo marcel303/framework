@@ -2,6 +2,35 @@
 #include <SDL/SDL_opengl.h>
 #ifdef WIN32
 	#include <Windows.h>
+
+// ugh!
+	#pragma comment(lib, "legacy_stdio_definitions.lib")
+	#include <stdio.h>
+
+typedef struct _iobuf_VS2012 { // ...\Microsoft Visual Studio 11.0\VC\include\stdio.h #56
+	char *_ptr;
+	int   _cnt;
+	char *_base;
+	int   _flag;
+	int   _file;
+	int   _charbuf;
+	int   _bufsiz;
+	char *_tmpfname;
+} _iobuf_VS2012;
+
+FILE* __cdecl __iob_func()
+{
+	// VS2015 has only FILE = struct {void*}
+
+	int const count = sizeof(_iobuf_VS2012) / sizeof(FILE);
+
+	//// stdout
+	//return (FILE*)(&(__acrt_iob_func(1)->_Placeholder) - count);
+
+	// stderr
+	return (FILE*)(&(__acrt_iob_func(2)->_Placeholder) - 2 * count);
+}
+
 #else
 	#define _putenv putenv
 #endif
