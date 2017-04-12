@@ -1,11 +1,19 @@
 #include "Calc.h"
 #include "D:/temp/planetvis2/data/CubeSides.txt"
 #include "framework.h"
+#include "image.h"
+#include "paging.h"
 
+#include "FileStream.h"
 #include "Noise.h"
 
 #define GFX_SX 1024
 #define GFX_SY 1024
+
+#define CUBE_BASE_SIZE (1024 * 16)
+//#define CUBE_BASE_SIZE (1024 * 4)
+#define CUBE_PAGE_SIZE 256
+#define CUBE_PAGE_NAME "test"
 
 #define DO_CUBE_QUADS 0
 #define DO_CUBE_QUADS_INFOS 0
@@ -18,6 +26,7 @@
 #define DO_TEXTURE_ARRAY_RESIDENCY 0
 #define DO_PAGELOAD 1
 #define DO_PAGELOAD_TEST 0
+#define DO_PAGELOAD_ASYNC 1
 #define DO_ADDTIVE_BLENDING 0
 #define DO_ALEX_BATHOLOMEUS 0
 
@@ -33,90 +42,7 @@ static void drawPointGrid(const int x, const int y, const int size, const int st
 static void calculateMipInfo(const int baseSize, const int pageSize, int & numLevels, int & lastLevel, int & numAllocatedLevels);
 static void setPlanarTexShader(const Cube * cube, const int debugCubeSideIndex);
 static void drawFractalSphere();
-
-struct PageData
-{
-	const static int kPageSize = 128;
-
-	uint8_t bytes[kPageSize * kPageSize * 4];
-};
-
-bool pageFilename(const int baseSize, const int pageSize, const int cubeSide, const int levelSize, const int pageX, const int pageY, char * filename, const int filenameSize)
-{
-	sprintf_s(filename, filenameSize, "heightmap/%06d-%04d-%01d-%06d-%03d-%03d",
-		baseSize,
-		pageSize,
-		cubeSide,
-		levelSize,
-		pageX,
-		pageY);
-
-	return true;
-}
-
-bool pageSave(const int baseSize, const int pageSize, const int cubeSide, const int levelSize, const int pageX, const int pageY, PageData & pageData)
-{
-	bool result = true;
-
-	char filename[1024];
-
-	if (result)
-	{
-		result &= pageFilename(baseSize, pageSize, cubeSide, levelSize, pageX, pageY, filename, sizeof(filename));
-	}
-
-	if (result)
-	{
-		FILE * f = fopen(filename, "wb");
-
-		result &= f != nullptr;
-
-		if (result)
-		{
-			result &= fwrite(pageData.bytes, sizeof(pageData.bytes), 1, f) == 1;
-		}
-
-		if (f != nullptr)
-		{
-			fclose(f);
-			f = nullptr;
-		}
-	}
-
-	return result;
-}
-
-bool pageLoad(const int baseSize, const int pageSize, const int cubeSide, const int levelSize, const int pageX, const int pageY, PageData & pageData)
-{
-	bool result = true;
-
-	char filename[1024];
-
-	if (result)
-	{
-		result &= pageFilename(baseSize, pageSize, cubeSide, levelSize, pageX, pageY, filename, sizeof(filename));
-	}
-
-	if (result)
-	{
-		FILE * f = fopen(filename, "rb");
-
-		result &= f != nullptr;
-
-		if (result)
-		{
-			result &= fread(pageData.bytes, sizeof(pageData.bytes), 1, f) == 1;
-		}
-
-		if (f != nullptr)
-		{
-			fclose(f);
-			f = nullptr;
-		}
-	}
-
-	return result;
-}
+static void getCubeSideMatrix(const int cubeSide, Mat4x4 & mat);
 
 struct QuadParams
 {
@@ -152,10 +78,16 @@ struct QuadNode
 	QuadNode * m_children;
 
 	bool m_isResident;
+#if DO_PAGELOAD_ASYNC
+	int m_pageRequest;
+#endif
 
 	QuadNode()
 		: m_children(nullptr)
 		, m_isResident(false)
+	#if DO_PAGELOAD_ASYNC
+		, m_pageRequest(-1)
+	#endif
 	{
 	}
 
@@ -168,7 +100,8 @@ struct QuadNode
 	void subdivide(const int size, const int maxSize);
 	
 	void makeResident(const int level, const int x, const int y, const int size, const QuadParams & params, const bool isResident);
-	
+	void makeResident(const int level, const int x, const int y, const int size, const QuadParams & params, const PageData & pageData);
+
 	void traverse(const int level, const int x, const int y, const int size, const QuadParams & params);
 	bool traverseImpl(const int level, const int x, const int y, const int size, const QuadParams & params);
 	
@@ -321,23 +254,15 @@ struct Cube
 		GLint pageSx = 0;
 		GLint pageSy = 0;
 		GLint pageSz = 0;
-		glGetInternalformativ(GL_TEXTURE_2D_ARRAY, GL_RGBA8, GL_VIRTUAL_PAGE_SIZE_X_ARB, 1, &pageSx);
-		glGetInternalformativ(GL_TEXTURE_2D_ARRAY, GL_RGBA8, GL_VIRTUAL_PAGE_SIZE_Y_ARB, 1, &pageSy);
-		glGetInternalformativ(GL_TEXTURE_2D_ARRAY, GL_RGBA8, GL_VIRTUAL_PAGE_SIZE_Z_ARB, 1, &pageSz);
+		glGetInternalformativ(GL_TEXTURE_2D_ARRAY, GL_R8, GL_VIRTUAL_PAGE_SIZE_X_ARB, 1, &pageSx);
+		glGetInternalformativ(GL_TEXTURE_2D_ARRAY, GL_R8, GL_VIRTUAL_PAGE_SIZE_Y_ARB, 1, &pageSy);
+		glGetInternalformativ(GL_TEXTURE_2D_ARRAY, GL_R8, GL_VIRTUAL_PAGE_SIZE_Z_ARB, 1, &pageSz);
 		checkErrorGL();
-
-		/*
-		GLint maxSparseTextureSize = 0;
-		GLint maxSparseTexture3DSize = 0;
-		GLint maxSparseTextureArraySize = 0;
-		glGetIntegerv(GL_MAX_SPARSE_TEXTURE_SIZE_ARB, &maxSparseTextureSize);
-		glGetIntegerv(GL_MAX_SPARSE_3D_TEXTURE_SIZE_ARB, &maxSparseTexture3DSize);
-		glGetIntegerv(GL_MAX_SPARSE_ARRAY_TEXTURE_LAYERS_ARB, &maxSparseTextureArraySize);
-		*/
 
 		//
 
 		m_pageSize = std::max(pageSx, pageSy);
+		Assert(m_pageSize == CUBE_PAGE_SIZE);
 
 		calculateMipInfo(m_initSize, m_pageSize, m_numLevels, m_lastLevel, m_numAllocatedLevels);
 
@@ -353,11 +278,15 @@ struct Cube
 		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_ANISOTROPY_EXT, 8);
 		checkErrorGL();
 
-		glTexStorage3D(GL_TEXTURE_2D_ARRAY, m_numAllocatedLevels, GL_RGBA8, m_initSize, m_initSize, 6);
+		glTexStorage3D(GL_TEXTURE_2D_ARRAY, m_numAllocatedLevels, GL_R8, m_initSize, m_initSize, 6);
 		checkErrorGL();
 
 		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BASE_LEVEL, 0);
 		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_LEVEL, m_numAllocatedLevels - 1);
+		checkErrorGL();
+
+		const GLint swizzleMask[] = { GL_RED, GL_RED, GL_RED, GL_RED };
+		glTexParameteriv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
 		checkErrorGL();
 
 		// allocate residency map
@@ -392,12 +321,7 @@ struct Cube
 		{
 			Mat4x4 m;
 	
-			if (s == 0) m.MakeLookat(Vec3(0.f, 0.f, 0.f), Vec3(0.f, -1.f, 0.f), Vec3(1.f, 0.f, 0.f));
-			if (s == 1) m.MakeLookat(Vec3(0.f, 0.f, 0.f), Vec3(0.f, +1.f, 0.f), Vec3(1.f, 0.f, 0.f));
-			if (s == 2) m.MakeLookat(Vec3(0.f, 0.f, 0.f), Vec3(-1.f, 0.f, 0.f), Vec3(0.f, 0.f, -1.f));
-			if (s == 3) m.MakeLookat(Vec3(0.f, 0.f, 0.f), Vec3(+1.f, 0.f, 0.f), Vec3(0.f, 0.f, 1.f));
-			if (s == 4) m.MakeLookat(Vec3(0.f, 0.f, 0.f), Vec3(0.f, 0.f, -1.f), Vec3(0.f, 1.f, 0.f));
-			if (s == 5) m.MakeLookat(Vec3(0.f, 0.f, 0.f), Vec3(0.f, 0.f, +1.f), Vec3(0.f, 1.f, 0.f));
+			getCubeSideMatrix(s, m);
 			
 			//
 
@@ -551,21 +475,27 @@ void QuadNode::makeResident(const int level, const int x, const int y, const int
 
 	if (!isResident)
 	{
-		uint8_t * pixels = new uint8_t[sx * sy * 4];
-		memset(pixels, 0x00, sx * sy * 4);
+	#if DO_PAGELOAD_ASYNC
+		if (m_pageRequest != -1)
+		{
+			pageRequestAbort(m_pageRequest);
+			m_pageRequest = -1;
+		}
+	#endif
 
-		glTexSubImage3D(
-			GL_TEXTURE_2D_ARRAY,
+#if 1
+		glClearTexSubImage(
+			params.cube->m_texture,
 			mipIndex,
 			px, py, pz,
 			sx, sy, sz,
-			GL_RGBA, GL_UNSIGNED_BYTE,
-			pixels);
+			GL_RED, GL_UNSIGNED_BYTE,
+			nullptr);
 		checkErrorGL();
-
-		delete[] pixels;
-		pixels = nullptr;
+#endif
 	}
+
+	auto t1 = SDL_GetTicks();
 
 	glTexPageCommitmentARB(
 		GL_TEXTURE_2D_ARRAY,
@@ -575,29 +505,31 @@ void QuadNode::makeResident(const int level, const int x, const int y, const int
 		isResident);
 	checkErrorGL();
 
+	auto t2 = SDL_GetTicks();
+
+	//printf("glTexPageCommitmentARB took %dms\n", int(t2 - t1));
+
 	if (isResident)
 	{
-#if DO_TEXTURE_ARRAY_RESIDENCY
-		params.cube->m_residencyMapLevels[params.cubeSideIndex].setMipLevels(level + 1, x, y, size, params.cube->m_pageSize);
-#endif
+#if DO_PAGELOAD_ASYNC
+		Assert(m_pageRequest == -1);
+		char filename[1024];
+		
+		if (pageFilename(CUBE_PAGE_NAME, CUBE_BASE_SIZE, CUBE_PAGE_SIZE, params.cubeSideIndex, levelSize, px / CUBE_PAGE_SIZE, py / CUBE_PAGE_SIZE, filename, sizeof(filename)))
+		{
+			m_pageRequest = pageRequest(filename);
+		}
+#else
 
 #if DO_PAGELOAD
 		PageData pageData;
 
-		if (pageLoad(params.cube->m_initSize, params.cube->m_pageSize, params.cubeSideIndex, levelSize, px / params.cube->m_pageSize, py / params.cube->m_pageSize, pageData))
+		if (pageLoad(CUBE_PAGE_NAME, params.cube->m_initSize, params.cube->m_pageSize, params.cubeSideIndex, levelSize, px / params.cube->m_pageSize, py / params.cube->m_pageSize, pageData))
 		{
-			glTexSubImage3D(
-				GL_TEXTURE_2D_ARRAY,
-				mipIndex,
-				px, py, pz,
-				sx, sy, sz,
-				GL_RGBA, GL_UNSIGNED_BYTE,
-				pageData.bytes);
-			checkErrorGL();
+			makeResident(level, x, y, size, params, isResident, pageData);
 		}
 #else
-		uint8_t * pixels = new uint8_t[sx * sy * 4];
-		uint8_t * pixelPtr = pixels;
+		PageData pageData;
 
 #if DO_ALEX_BATHOLOMEUS
 		if (levelSize != params.cube->m_initSize)
@@ -635,10 +567,7 @@ void QuadNode::makeResident(const int level, const int x, const int y, const int
 				const int c = int(v);
 #endif
 
-				*pixelPtr++ = c;
-				*pixelPtr++ = c;
-				*pixelPtr++ = c;
-				*pixelPtr++ = 255;
+				pageData.bytes[y * pageData.kPageSize + x] = c;
 #else
 				*pixelPtr++ = x >> 0;
 				*pixelPtr++ = y >> 1;
@@ -648,45 +577,8 @@ void QuadNode::makeResident(const int level, const int x, const int y, const int
 			}
 		}
 
-		glTexSubImage3D(
-			GL_TEXTURE_2D_ARRAY,
-			mipIndex,
-			px, py, pz,
-			sx, sy, sz,
-			GL_RGBA, GL_UNSIGNED_BYTE,
-			pixels);
-		checkErrorGL();
-
-		delete[] pixels;
-		pixels = nullptr;
+		makeResident(level, x, y, size, params, pageData);
 #endif
-
-#if DO_ALEX_BATHOLOMEUS
-		// todo : what's the fastest way to stream pages once we want to do it async?
-		if (levelSize == params.cube->m_initSize)
-		{
-			Surface s(128, 128, false);
-
-			pushSurface(&s);
-			{
-				gxSetTexture(getTexture("alex.jpg"));
-				{
-					setColor(colorWhite);
-					drawRect(0, 0, 128, 128);
-				}
-				gxSetTexture(0);
-
-				glReadBuffer(GL_COLOR_ATTACHMENT0);
-				glCopyTexSubImage3D(
-					GL_TEXTURE_2D_ARRAY,
-					mipIndex,
-					px, py, pz,
-					0, 0,
-					sx, sy);
-				checkErrorGL();
-			}
-			popSurface();
-		}
 #endif
 	}
 
@@ -717,6 +609,84 @@ void QuadNode::makeResident(const int level, const int x, const int y, const int
 #endif
 }
 
+void QuadNode::makeResident(const int level, const int x, const int y, const int size, const QuadParams & params, const PageData & pageData)
+{
+#if 0
+	uint64_t sum = 0;
+	for (auto & b : pageData.bytes)
+		sum += b;
+	sum /= pageData.kPageSize * pageData.kPageSize;
+	logDebug("average page data value: %d", int(sum));
+#endif
+
+	Assert((x % params.cube->m_pageSize) == 0);
+	Assert((y % params.cube->m_pageSize) == 0);
+	Assert((size % params.cube->m_pageSize) == 0);
+
+	const int levelSize = params.cube->m_pageSize << level;
+	const int mipIndex = params.cube->m_numAllocatedLevels - level - 1;
+	const int scale = params.cube->m_initSize / levelSize;
+
+	Assert(levelSize >= params.cube->m_pageSize && levelSize <= params.cube->m_initSize);
+	Assert(mipIndex >= 0 && mipIndex < params.cube->m_numAllocatedLevels);
+	Assert((scale * levelSize) == params.cube->m_initSize);
+
+	const int px = x / scale;
+	const int py = y / scale;
+	const int pz = params.cubeSideIndex;
+
+	const int sx = params.cube->m_pageSize;
+	const int sy = params.cube->m_pageSize;
+	const int sz = 1;
+
+	Assert(px >= 0 && px <= (params.cube->m_initSize >> mipIndex));
+	Assert(py >= 0 && py <= (params.cube->m_initSize >> mipIndex));
+	Assert((px % params.cube->m_pageSize) == 0);
+	Assert((py % params.cube->m_pageSize) == 0);
+	Assert(pz >= 0 && pz < 6);
+
+#if DO_TEXTURE_ARRAY_RESIDENCY
+	params.cube->m_residencyMapLevels[params.cubeSideIndex].setMipLevels(level + 1, x, y, size, params.cube->m_pageSize);
+#endif
+
+	glTexSubImage3D(
+		GL_TEXTURE_2D_ARRAY,
+		mipIndex,
+		px, py, pz,
+		sx, sy, sz,
+		GL_RED, GL_UNSIGNED_BYTE,
+		pageData.bytes);
+	checkErrorGL();
+
+#if DO_ALEX_BATHOLOMEUS
+	// todo : what's the fastest way to stream pages once we want to do it async?
+	if (levelSize == params.cube->m_initSize)
+	{
+		Surface s(128, 128, false);
+
+		pushSurface(&s);
+		{
+			gxSetTexture(getTexture("alex.jpg"));
+			{
+				setColor(colorWhite);
+				drawRect(0, 0, CUBE_PAGE_SIZE, CUBE_PAGE_SIZE);
+			}
+			gxSetTexture(0);
+
+			glReadBuffer(GL_COLOR_ATTACHMENT0);
+			glCopyTexSubImage3D(
+				GL_TEXTURE_2D_ARRAY,
+				mipIndex,
+				px, py, pz,
+				0, 0,
+				sx, sy);
+			checkErrorGL();
+		}
+		popSurface();
+	}
+#endif
+}
+
 void QuadNode::traverse(const int level, const int x, const int y, const int size, const QuadParams & params)
 {
 	const bool doTraverse = traverseImpl(level, x, y, size, params) || (level == 0);
@@ -733,6 +703,21 @@ void QuadNode::traverse(const int level, const int x, const int y, const int siz
 		if (m_isResident)
 			makeResident(level, x, y, size, params, false);
 	}
+	
+#if DO_PAGELOAD_ASYNC
+	if (m_pageRequest != -1)
+	{
+		PageData * pageData = pageRequestPeek(m_pageRequest);
+		
+		if (pageData != nullptr)
+		{
+			makeResident(level, x, y, size, params, *pageData);
+
+			pageRequestConsume(m_pageRequest);
+			m_pageRequest = -1;
+		}
+	}
+#endif
 
 #if DO_CUBE_QUADS
 	//if (level == 0)
@@ -868,7 +853,7 @@ size_t QuadNode::memUsage(const Cube * cube) const
 
 	if (m_isResident)
 	{
-		result += cube->m_pageSize * cube->m_pageSize * 4;
+		result += cube->m_pageSize * cube->m_pageSize;
 	}
 
 	if (m_children != nullptr)
@@ -1211,6 +1196,7 @@ static void setPlanarTexShader(const Cube * cube, const int debugCubeSideIndex)
 	static Shader shader("PlanarTex");
 	setShader(shader);
 	shader.setTextureArray("texture", 0, cube->m_texture);
+	shader.setImmediate("textureBaseSize", cube->m_initSize);
 	shader.setImmediate("lod", -1.f);
 	shader.setImmediate("numLods", cube->m_numAllocatedLevels);
 	shader.setImmediate("debugCubeSideIndex", debugCubeSideIndex);
@@ -1364,6 +1350,16 @@ static void drawFractalSphere()
 	drawFractalSpherePart(v[3], v[4], v[1]);
 	drawFractalSpherePart(v[4], v[5], v[1]);
 	drawFractalSpherePart(v[5], v[2], v[1]);
+}
+
+static void getCubeSideMatrix(const int cubeSide, Mat4x4 & mat)
+{
+	if (cubeSide == 0) mat.MakeLookat(Vec3(0.f, 0.f, 0.f), Vec3(0.f, -1.f, 0.f), Vec3(1.f, 0.f, 0.f));
+	if (cubeSide == 1) mat.MakeLookat(Vec3(0.f, 0.f, 0.f), Vec3(0.f, +1.f, 0.f), Vec3(1.f, 0.f, 0.f));
+	if (cubeSide == 2) mat.MakeLookat(Vec3(0.f, 0.f, 0.f), Vec3(-1.f, 0.f, 0.f), Vec3(0.f, 0.f, -1.f));
+	if (cubeSide == 3) mat.MakeLookat(Vec3(0.f, 0.f, 0.f), Vec3(+1.f, 0.f, 0.f), Vec3(0.f, 0.f, 1.f));
+	if (cubeSide == 4) mat.MakeLookat(Vec3(0.f, 0.f, 0.f), Vec3(0.f, 0.f, -1.f), Vec3(0.f, 1.f, 0.f));
+	if (cubeSide == 5) mat.MakeLookat(Vec3(0.f, 0.f, 0.f), Vec3(0.f, 0.f, +1.f), Vec3(0.f, 1.f, 0.f));
 }
 
 #if DO_TEXTURE_ARRAY_TEST
@@ -1646,7 +1642,32 @@ static float * nextMip(const float * values, const int size)
 	return result;
 }
 
-static void writeMip(const int baseSize, const int cubeSide, const int levelSize, const float * heightMap, const int pageSize)
+void convertHeightValuesToPageData(const int levelSize, const int pageSize, const int pageX, const int pageY, const float * __restrict values, PageData & pageData)
+{
+	Assert(pageSize == PageData::kPageSize);
+
+	// convert height map data to page data
+
+	for (int y = 0; y < pageSize; ++y)
+	{
+		const int px = pageX * pageSize;
+		const int py = pageY * pageSize + y;
+
+		const float * __restrict heightMapLine = values + py * levelSize + px;
+		uint8_t * __restrict pageLine = pageData.bytes  +  y * pageSize;
+
+		for (int x = 0; x < pageSize; ++x)
+		{
+			const float height = heightMapLine[x];
+
+			const uint8_t value = std::max(0, std::min(255, int(height * 256.f)));
+
+			*pageLine++ = value;
+		}
+	}
+}
+
+static void writeMip(const char * name, const int baseSize, const int cubeSide, const int levelSize, const float * heightMap, const int pageSize)
 {
 	const int numPages = (levelSize + pageSize - 1) / pageSize;
 	Assert(numPages * pageSize == levelSize);
@@ -1654,42 +1675,180 @@ static void writeMip(const int baseSize, const int cubeSide, const int levelSize
 
 	for (int pageX = 0; pageX < numPages; ++pageX)
 	{
+//#if defined(DEBUG)
+		char filename[1024];
+		if (pageFilename(name, baseSize, pageSize, cubeSide, levelSize, pageX, 0, filename, sizeof(filename)))
+		{
+			//logDebug("writeMip: %s", filename);
+			printf("writeMip: %s\n", filename);
+		}
+//#endif
+
 		for (int pageY = 0; pageY < numPages; ++pageY)
 		{
 			PageData pageData;
 
-			// convert height map data to page data
+			convertHeightValuesToPageData(levelSize, pageSize, pageX, pageY, heightMap, pageData);
 
-			for (int y = 0; y < pageSize; ++y)
-			{
-				const int px = pageX * pageSize;
-				const int py = pageY * pageSize + y;
-
-				const float * __restrict heightMapLine = heightMap + py * levelSize + px;
-				uint8_t * __restrict pageLine = pageData.bytes + y * pageSize * 4;
-
-				for (int x = 0; x < pageSize; ++x)
-				{
-					const float height = heightMapLine[x];
-					
-					const uint8_t value = std::max(0, std::min(255, int(height * 256.f)));
-
-					*pageLine++ = value;
-					*pageLine++ = value;
-					*pageLine++ = value;
-					*pageLine++ = 255;
-				}
-			}
-
-			//
-
-			pageSave(baseSize, pageSize, cubeSide, levelSize, pageX, pageY, pageData);
+			pageSave(name, baseSize, pageSize, cubeSide, levelSize, pageX, pageY, pageData);
 		}
 	}
 }
 
-static void generateTextureArray(const int baseSize, const int pageSize)
+static void writeMips(const char * name, const int baseSize, const int pageSize, const int cubeSide, float *& heightMap)
 {
+	for (int size = baseSize; size >= pageSize; size /= 2)
+	{
+		writeMip(name, baseSize, cubeSide, size, heightMap, pageSize);
+
+		float * nextHeightMap = nextMip(heightMap, size);
+
+		delete[] heightMap;
+		heightMap = nullptr;
+
+		heightMap = nextHeightMap;
+	}
+
+	delete[] heightMap;
+	heightMap = nullptr;
+}
+
+static void generateTextureArray(const char * name, const int baseSize, const int pageSize, const char * imageFilename)
+{
+	for (int cubeSide = 0; cubeSide < 6; ++cubeSide)
+	{
+		Mat4x4 mat;
+
+		getCubeSideMatrix(cubeSide, mat);
+
+		Vec2 uv[4];
+
+		for (int u = 0; u <= 1; ++u)
+		{
+			for (int v = 0; v <= 1; ++v)
+			{
+				Vec3 p(u - .5f, v - .5f, .5f);
+				p = mat.CalcTranspose() * p;
+				p = p + Vec3(.5f, .5f, 0.f);
+				uv[u * 2 + v] = Vec2(p[0], p[1]);
+			}
+		}
+
+		for (int i = 0; i < 4; ++i)
+		{
+			logDebug("uv[%d] = %g, %g", i, uv[i][0], uv[i][1]);
+		}
+	}
+
+	ImageData * image = loadImage(imageFilename);
+
+	if (image == nullptr)
+	{
+		logError("failed to open %s", imageFilename);
+	}
+	else
+	{
+		GLuint texture = createTextureFromRGBA8(image->imageData, image->sx, image->sy, true, false);
+
+		delete image;
+		image = nullptr;
+
+		if (texture == 0)
+		{
+			logError("failed to create texture from image");
+		}
+		else
+		{
+			// render image to sides using cylinder-to-cube-side projection
+
+			for (int cubeSide = 0; cubeSide < 6; ++cubeSide)
+			{
+				Surface * cubeSideSurface = new Surface(baseSize, baseSize, false, false, SURFACE_R8);
+
+				pushSurface(cubeSideSurface);
+				{
+					Shader shader("RenderCubeSide");
+					setShader(shader);
+					{
+						shader.setTexture("texture", 0, texture);
+						shader.setImmediate("cubeSide", cubeSide);
+
+						drawRect(0, 0, cubeSideSurface->getWidth(), cubeSideSurface->getHeight());
+					}
+					clearShader();
+				}
+				popSurface();
+
+#if 0
+				framework.process();
+
+				while (!keyboard.wentDown(SDLK_SPACE))
+				{
+					framework.process();
+
+					framework.beginDraw(0, 0, 0, 0);
+					{
+						glBindTexture(GL_TEXTURE_2D, cubeSideSurface->getTexture());
+						const GLint swizzleMask[] = { GL_RED, GL_RED, GL_RED, GL_ONE };
+						glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+
+						gxSetTexture(cubeSideSurface->getTexture());
+						{
+							setBlend(BLEND_OPAQUE);
+							setColor(colorWhite);
+							drawRect(0, 0, GFX_SX, GFX_SY);
+						}
+						gxSetTexture(0);
+					}
+					framework.endDraw();
+				}
+#endif
+
+				const int pixelsCount = cubeSideSurface->getWidth() * cubeSideSurface->getHeight();
+				float * values = new float[pixelsCount];
+
+				glBindTexture(GL_TEXTURE_2D, cubeSideSurface->getTexture());
+				glPixelStorei(GL_PACK_ALIGNMENT, 1);
+				glGetnTexImageARB(GL_TEXTURE_2D, 0, GL_RED, GL_FLOAT, pixelsCount * sizeof(values[0]), values);
+				checkErrorGL();
+
+				delete cubeSideSurface;
+				cubeSideSurface = nullptr;
+
+				//for (int i = 0; i < pixelsCount; ++i)
+				//	values[i] = random(0.f, 1.f);
+				for (int i = 0; i < pixelsCount; ++i)
+				{
+					const int x = i % baseSize;
+					const int y = i / baseSize;
+					const float d = std::sqrtf(x * x + y * y);
+					//values[i] *= (std::sin((i / 1.234f + (i % baseSize) * 1.234f) * .2f) + 1.f) / 2.f;
+					//values[i] *= (std::sin(d * .2f) + 1.f) / 2.f;
+					//values[i] *= (std::sin((x / 1.234f + y * 1.234f) * .2f) + 1.f) / 2.f;
+					values[i] *= random(.5f, 1.f);
+				}
+
+				writeMips(name, baseSize, pageSize, cubeSide, values);
+				Assert(values == nullptr);
+			}
+
+			glDeleteTextures(1, &texture);
+			texture = 0;
+		}
+	}
+}
+
+static void generateTextureArray(const char * name, const int baseSize, const int pageSize)
+{
+	generateTextureArray(name, baseSize, pageSize, "highres-cylinder04.png");
+	return;
+
+	char lastFilename[1024];
+	if (!pageFilename(name, baseSize, pageSize, 5, pageSize, 0, 0, lastFilename, sizeof(lastFilename)))
+		return;
+	if (FileStream::Exists(lastFilename))
+		return;
+
 	for (int cubeSide = 0; cubeSide < 6; ++cubeSide)
 	{
 		float * heightMap = new float[baseSize * baseSize];
@@ -1702,7 +1861,8 @@ static void generateTextureArray(const int baseSize, const int pageSize)
 			{
 #if 1
 				const float height = scaled_octave_noise_2d(
-					16, .5f, .005f,
+					//16, .5f, .005f,
+					16, .5f, .01f,
 					0.f,
 					1.f,
 					x,
@@ -1715,20 +1875,8 @@ static void generateTextureArray(const int baseSize, const int pageSize)
 			}
 		}
 
-		for (int size = baseSize; size >= pageSize; size /= 2)
-		{
-			writeMip(baseSize, cubeSide, size, heightMap, pageSize);
-
-			float * nextHeightMap = nextMip(heightMap, size);
-
-			delete[] heightMap;
-			heightMap = nullptr;
-
-			heightMap = nextHeightMap;
-		}
-
-		delete[] heightMap;
-		heightMap = nullptr;
+		writeMips(name, baseSize, pageSize, cubeSide, heightMap);
+		Assert(heightMap == nullptr);
 	}
 }
 
@@ -1744,21 +1892,24 @@ int main(int argc, char * argv[])
 {
 	changeDirectory("data");
 
-	//framework.enableRealTimeEditing = true;
+	framework.enableRealTimeEditing = true;
 	framework.enableDepthBuffer = true;
-
-	{
-		const int baseSize = 1024 * 16;
-		const int pageSize = 128;
-
-		//generateTextureArray(baseSize, pageSize);
-	}
 
 	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
 	{
+		if (false)
+		{
+			const int baseSize = CUBE_BASE_SIZE;
+			const int pageSize = CUBE_PAGE_SIZE;
+
+			generateTextureArray(CUBE_PAGE_NAME, baseSize, pageSize);
+		}
+
+		pagingInit();
+
 		Cube * cube = new Cube();
 
-		cube->init(16 * 1024);
+		cube->init(CUBE_BASE_SIZE);
 
 	#if DO_TEXTURE_ARRAY_TEST
 		TextureArrayObject textureArrayObject;
@@ -1819,7 +1970,7 @@ int main(int argc, char * argv[])
 
 			const int cubeSize = cube->m_sides[0].m_quadTree.m_initSize;
 
-			int viewPos[3];
+			float viewPos[3];
 
 			if (controllerMode == kControl_ViewPos)
 			{
@@ -1829,8 +1980,8 @@ int main(int argc, char * argv[])
 			}
 			else if (controllerMode == kControl_ViewCam)
 			{
-				viewPos[0] = cubeSize/2 + std::cos(framework.time / 12.34f) * cubeSize * .1f;
-				viewPos[1] = cubeSize/2 + std::cos(framework.time / 23.45f) * cubeSize * .1f;
+				viewPos[0] = cubeSize/2 + std::cos(framework.time / 123.45f) * cubeSize * .1f;
+				viewPos[1] = cubeSize/2 + std::cos(framework.time / 234.56f) * cubeSize * .1f;
 				//viewPos[2] = cubeSize;
 
 				viewPos[2] = cubeSize/2 + cubeSize*4/3 * (mouse.x / float(GFX_SX));
@@ -1849,6 +2000,7 @@ int main(int argc, char * argv[])
 				const float distanceFromSphereCenter = deltaFromSphereCenter.CalcSize();
 				const float distanceFromSphereShell = distanceFromSphereCenter - sphereRadius;
 				const float speed = std::abs(distanceFromSphereShell) / sphereRadius * 5000.f + 400.f;
+				//const float speed = std::abs(distanceFromSphereShell) / sphereRadius * 500.f + 50.f;
 				//const float speed = 50.f;
 				camera.speed = speed;
 
@@ -1897,7 +2049,6 @@ int main(int argc, char * argv[])
 				gxLoadMatrixf(matP.m_v);
 				gxMatrixMode(GL_MODELVIEW);
 				gxPushMatrix();
-				//gxLoadMatrixf(matV.m_v);
 				gxLoadIdentity();
 				{
 #if DO_ADDTIVE_BLENDING
@@ -2014,11 +2165,47 @@ int main(int argc, char * argv[])
 				setBlend(BLEND_ALPHA);
 				setColor(colorWhite);
 				setFont("calibri.ttf");
-				drawText(10, 10, 24, +1, +1, "estimated memory usage: %.2f Mb", cube->memUsage() / 1024.f / 1024.f);
+
+				const int fontSize = 24;
+				const int lineHeight = fontSize + 4;
+				int y = 10;
+
+				drawText(10, y, fontSize, +1, +1, "estimated memory usage: %.2f Mb", cube->memUsage() / 1024.f / 1024.f);
+				y += lineHeight;
+
+				drawText(10, y, fontSize, +1, +1, "paging IO:");
+				y += lineHeight;
+
+			#if 1
+				pageIoMgr->condEnter();
+				{
+					for (int i = 0; i < pageIoMgr->kMaxPageRequests; ++i)
+					{
+						auto & request = pageIoMgr->requests[i];
+						
+						if (!request.isActive)
+							continue;
+
+						drawText(10, y, fontSize, +1, +1, "%s: active=%d, aborted=%d, ready=%d", request.filename, request.isActive, request.isAborted, request.isReady);
+						y += lineHeight;
+					}
+				}
+				pageIoMgr->condLeave();
+			#endif
+
+				const double dx = viewPos[0] - cubeSize/2.f;
+				const double dy = viewPos[1] - cubeSize/2.f;
+				const double dz = viewPos[2] - cubeSize/2.f;
+				const double ds = std::sqrt(dx * dx + dy * dy + dz * dz);
+				const double height = (ds / (cubeSize/2.f) - 1.f) * 1737.f;
+
+				drawText(10, y, fontSize, +1, +1, "height (moon): %05.2fkm", height);
+				y += lineHeight;
+				
 
 #if DO_PAGELOAD_TEST
 				{
-					const int baseSize = 1024 * 16;
+					const int baseSize = CUBE_BASE_SIZE;
 					const int pageSize = PageData::kPageSize;
 					static int cubeSide = 0;
 					static int levelSize = baseSize;
@@ -2026,7 +2213,7 @@ int main(int argc, char * argv[])
 					static int pageY = 0;
 
 					PageData pageData;
-					if (pageLoad(baseSize, pageSize, cubeSide, levelSize, pageX, pageY, pageData))
+					if (pageLoad(CUBE_PAGE_NAME, baseSize, pageSize, cubeSide, levelSize, pageX, pageY, pageData))
 					{
 						GLuint texture = createTextureFromRGBA8(pageData.bytes, pageSize, pageSize, false, true);
 						gxSetTexture(texture);
@@ -2074,6 +2261,8 @@ int main(int argc, char * argv[])
 
 		delete cube;
 		cube = nullptr;
+
+		pagingShut();
 
 		framework.shutdown();
 	}
