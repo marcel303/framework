@@ -2,6 +2,24 @@
 #include "video.h"
 #include <atomic>
 
+#include "audiostream/AudioOutput.h" // fixme!!!
+
+/*
+struct AudioStream_MediaPlayer : AudioStream
+{
+	MediaPlayer::Context * mpContext;
+
+	virtual int Provide(int numSamples, AudioSample* __restrict buffer)
+	{
+		bool gotAudio = false;
+
+		mpContext->mpContext.RequestAudio((int16_t*)buffer, numSamples, gotAudio);
+
+		return numSamples;
+	}
+};
+*/
+
 static SDL_mutex * s_avcodecMutex = nullptr;
 static std::atomic_int s_numVideoThreads;
 static const int kMaxVideoThreads = 64;
@@ -16,20 +34,23 @@ static int ExecMediaPlayerThread(void * param)
 
 	SDL_LockMutex(s_avcodecMutex);
 	{
-		context->hasBegun = context->mpContext.Begin(context->openParams.filename, false, true, context->openParams.yuv);
+		context->hasBegun = context->mpContext.Begin(context->openParams.filename, true, true, context->openParams.yuv);
 	}
 	SDL_UnlockMutex(s_avcodecMutex);
 
 	while (!context->stopMpThread)
 	{
-		const int delayMS = 10;
+		// todo : tick event on video or audio buffer consumption *only*
+
+		const int delayMS = 5;
 
 		if (context->hasBegun)
 		{
 			context->tick();
 		}
 
-		SDL_CondWaitTimeout(context->mpTickEvent, context->mpTickMutex, delayMS);
+		//SDL_CondWaitTimeout(context->mpTickEvent, context->mpTickMutex, delayMS);
+		SDL_CondWait(context->mpTickEvent, context->mpTickMutex);
 	}
 
 	// media player thread is completely detached from the main thread at this point
@@ -65,6 +86,27 @@ void MediaPlayer::Context::tick()
 		return;
 
 	mpContext.FillBuffers();
+
+	mpContext.FillAudioBuffer();
+
+#if 0
+	static bool b = false;
+	static AudioOutput_OpenAL * audioOutput = nullptr;
+	static AudioStream_MediaPlayer * audioStream = nullptr;
+
+	if (!b)
+	{
+		b = true;
+		audioOutput = new AudioOutput_OpenAL();
+		audioOutput->Initialize(mpContext.GetAudioChannelCount(), mpContext.GetAudioFrameRate(), 4096);
+		audioOutput->Play();
+
+		audioStream = new AudioStream_MediaPlayer();
+		audioStream->mpContext = this;
+	}
+
+	audioOutput->Update(audioStream);
+#endif
 
 	mpContext.FillVideoBuffer();
 }
@@ -129,6 +171,8 @@ void MediaPlayer::close()
 void MediaPlayer::tick(Context * context)
 {
 	updateTexture();
+
+	updateAudio();
 }
 
 bool MediaPlayer::isActive(Context * context) const
@@ -160,6 +204,8 @@ void MediaPlayer::updateTexture()
 
 	Assert(context->mpContext.HasBegun());
 
+	presentTime = context->mpContext.GetAudioTime();
+
 	const double time = presentTime >= 0.0 ? presentTime : 0.0;
 
 	MP::VideoFrame * videoFrame = nullptr;
@@ -168,12 +214,14 @@ void MediaPlayer::updateTexture()
 
 	if (gotVideo)
 	{
+		SDL_CondSignal(context->mpTickEvent);
+
 		textureSx = videoFrame->m_width;
 		textureSy = videoFrame->m_height;
 
 		//logDebug("gotVideo. t=%06dms, sx=%d, sy=%d", int(time * 1000.0), textureSx, textureSy);
 
-#if 1
+#if 0
 		if (texture)
 		{
 			glDeleteTextures(1, &texture);
@@ -227,6 +275,49 @@ void MediaPlayer::updateTexture()
 uint32_t MediaPlayer::getTexture() const
 {
 	return texture;
+}
+
+void MediaPlayer::updateAudio()
+{
+	if (!context->hasBegun)
+	{
+		Assert(texture == 0);
+		return;
+	}
+
+	Assert(context->mpContext.HasBegun());
+
+	if (audioChannelCount == -1)
+	{
+		audioChannelCount = context->mpContext.GetAudioChannelCount();
+		audioSampleRate = context->mpContext.GetAudioFrameRate();
+	}
+}
+
+bool MediaPlayer::getAudioProperties(int & channelCount, int & sampleRate) const
+{
+	if (audioChannelCount < 0 ||  audioSampleRate < 0)
+	{
+		return false;
+	}
+	else
+	{
+		channelCount = audioChannelCount;
+		sampleRate = audioSampleRate;
+
+		return true;
+	}
+}
+
+int MediaPlayer::Provide(int numSamples, AudioSample* __restrict buffer)
+{
+	bool gotAudio = false;
+
+	context->mpContext.RequestAudio((int16_t*)buffer, numSamples, gotAudio);
+
+	SDL_CondSignal(context->mpTickEvent);
+
+	return numSamples;
 }
 
 void MediaPlayer::startMediaPlayerThread()
