@@ -7,6 +7,7 @@ struct VfxNodeVideo : VfxNodeBase
 	enum Input
 	{
 		kInput_Source,
+		kInput_Transform,
 		kInput_COUNT
 	};
 	
@@ -25,4 +26,5 @@ struct VfxNodeVideo : VfxNodeBase
 	virtual ~VfxNodeVideo() override;
 	
 	virtual void tick(const float dt) override;
+	virtual void init(const GraphNode & node) override;
 };

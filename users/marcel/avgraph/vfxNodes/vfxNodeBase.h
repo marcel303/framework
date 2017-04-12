@@ -2,8 +2,19 @@
 
 #include "framework.h"
 #include "graph.h"
+#include "Mat4x4.h"
 #include <stdint.h>
 #include <string.h>
+
+struct VfxTransform
+{
+	VfxTransform()
+	{
+		matrix.MakeIdentity();
+	}
+	
+	Mat4x4 matrix;
+};
 
 enum VfxTriggerDataType
 {
@@ -124,6 +135,7 @@ enum VfxPlugType
 	kVfxPlugType_Bool,
 	kVfxPlugType_Int,
 	kVfxPlugType_Float,
+	kVfxPlugType_Transform,
 	kVfxPlugType_String,
 	kVfxPlugType_Color,
 	kVfxPlugType_Image,
@@ -195,6 +207,12 @@ struct VfxPlug
 			return ((VfxTriggerData*)mem)->asFloat();
 		Assert(type == kVfxPlugType_Float);
 		return *((float*)mem);
+	}
+	
+	VfxTransform & getTransform() const
+	{
+		Assert(type == kVfxPlugType_Transform);
+		return *((VfxTransform*)mem);
 	}
 	
 	const std::string & getString() const
@@ -360,6 +378,16 @@ struct VfxNodeBase
 			return defaultValue;
 		else
 			return plug->getFloat();
+	}
+	
+	const VfxTransform & getInputTransform(const int index, const VfxTransform & defaultValue) const
+	{
+		const VfxPlug * plug = tryGetInput(index);
+		
+		if (plug == nullptr || !plug->isConnected())
+			return defaultValue;
+		else
+			return plug->getTransform();
 	}
 	
 	const char * getInputString(const int index, const char * defaultValue) const

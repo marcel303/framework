@@ -35,6 +35,7 @@ struct GraphNode
 	
 	float editorX;
 	float editorY;
+	bool editorIsFolded;
 	
 	std::map<std::string, std::string> editorInputValues;
 	std::string editorValue;
@@ -164,6 +165,7 @@ struct GraphEdit_TypeDefinition
 	{
 		std::string typeName;
 		std::string name;
+		bool isEditable;
 		
 		// ui
 		
@@ -175,6 +177,7 @@ struct GraphEdit_TypeDefinition
 		OutputSocket()
 			: typeName()
 			, name()
+			, isEditable(false)
 			, index(-1)
 			, px(0.f)
 			, py(0.f)
@@ -214,6 +217,7 @@ struct GraphEdit_TypeDefinition
 	
 	float sx;
 	float sy;
+	float syFolded;
 	
 	// todo : move to cpp
 	GraphEdit_TypeDefinition()
@@ -224,6 +228,7 @@ struct GraphEdit_TypeDefinition
 		, displayName()
 		, sx(0.f)
 		, sy(0.f)
+		, syFolded(0.f)
 	{
 	}
 	

@@ -1,3 +1,4 @@
+#include "Calc.h"
 #include "framework.h"
 #include "graph.h"
 #include "Parse.h"
@@ -44,11 +45,19 @@ todo :
 + free literal values on graph free
 + recreate DatGui when loading graph / current node gets freed
 - prioritize input between DatGui and graph editor. do hit test on DatGui
-- add 'color' type name
++ add 'color' type name
 + implement OSC node
 + implement Leap Motion node
 - add undo/redo support. just serialize/deserialize graph for every action?
 - UI element focus: graph editor vs property editor
+- add ability to collapse nodes, so they take up less space
+	+ SPACE to toggle
+	- fix hit test
+	- fix link end point locations
+- passthrough toggle on selection: check if all passthrough. yes? disable passthrough, else enable
+- add socket output value editing, for node types that define it on their outputs. required for literals
+- add enum value types. use combo box to select values
+- add ability to randomize input values
 
 todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
@@ -176,6 +185,30 @@ struct VfxNodeFloatLiteral : VfxNodeBase
 	}
 };
 
+struct VfxNodeTransformLiteral : VfxNodeBase
+{
+	enum Output
+	{
+		kOutput_Value,
+		kOutput_COUNT
+	};
+	
+	VfxTransform value;
+	
+	VfxNodeTransformLiteral()
+		: VfxNodeBase()
+		, value()
+	{
+		resizeSockets(0, kOutput_COUNT);
+		addOutput(kOutput_Value, kVfxPlugType_Transform, &value);
+	}
+	
+	virtual void initSelf(const GraphNode & node) override
+	{
+		// todo : parse node.editorValue;
+	}
+};
+
 struct VfxNodeStringLiteral : VfxNodeBase
 {
 	enum Output
@@ -221,6 +254,67 @@ struct VfxNodeColorLiteral : VfxNodeBase
 	virtual void initSelf(const GraphNode & node) override
 	{
 		value = Color::fromHex(node.editorValue.c_str());
+	}
+};
+
+struct VfxNodeTransform2d : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_X,
+		kInput_Y,
+		kInput_Scale,
+		kInput_ScaleX,
+		kInput_ScaleY,
+		kInput_Angle,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Transform,
+		kOutput_COUNT
+	};
+	
+	VfxTransform transform;
+	
+	VfxNodeTransform2d()
+		: VfxNodeBase()
+		, transform()
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_X, kVfxPlugType_Float);
+		addInput(kInput_Y, kVfxPlugType_Float);
+		addInput(kInput_Scale, kVfxPlugType_Float);
+		addInput(kInput_ScaleX, kVfxPlugType_Float);
+		addInput(kInput_ScaleY, kVfxPlugType_Float);
+		addInput(kInput_Angle, kVfxPlugType_Float);
+		addOutput(kOutput_Transform, kVfxPlugType_Transform, &transform);
+	}
+	
+	virtual void initSelf(const GraphNode & node) override
+	{
+		// todo : parse node.editorValue;
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		const float x = getInputFloat(kInput_X, 0.f);
+		const float y = getInputFloat(kInput_Y, 0.f);
+		const float scale = getInputFloat(kInput_Scale, 1.f);
+		const float scaleX = getInputFloat(kInput_ScaleX, 1.f);
+		const float scaleY = getInputFloat(kInput_ScaleY, 1.f);
+		const float angle = getInputFloat(kInput_Angle, 0.f);
+		
+		Mat4x4 t;
+		Mat4x4 s;
+		Mat4x4 r;
+		
+		t.MakeTranslation(x, y, 0.f);
+		s.MakeScaling(scale * scaleX, scale * scaleY, 1.f);
+		r.MakeRotationZ(Calc::DegToRad(angle));
+		
+		transform.matrix = t * r * s;
 	}
 };
 
@@ -471,6 +565,108 @@ DefineMathNode(VfxNodeMathHypot, kType_Hypot);
 
 #undef DefineMathNode
 
+struct VfxNodeComposite : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_Image1,
+		kInput_Transform1,
+		kInput_Image2,
+		kInput_Transform2,
+		kInput_Image3,
+		kInput_Transform3,
+		kInput_Image4,
+		kInput_Transform4,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Image,
+		kOutput_COUNT
+	};
+	
+	Surface * surface;
+	
+	VfxImage_Texture image;
+	
+	VfxNodeComposite()
+		: VfxNodeBase()
+		, surface(nullptr)
+		, image()
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Image1, kVfxPlugType_Image);
+		addInput(kInput_Transform1, kVfxPlugType_Transform);
+		addInput(kInput_Image2, kVfxPlugType_Image);
+		addInput(kInput_Transform2, kVfxPlugType_Transform);
+		addInput(kInput_Image3, kVfxPlugType_Image);
+		addInput(kInput_Transform3, kVfxPlugType_Transform);
+		addInput(kInput_Image4, kVfxPlugType_Image);
+		addInput(kInput_Transform4, kVfxPlugType_Transform);
+		addOutput(kOutput_Image, kVfxPlugType_Image, &image);
+		
+		surface = new Surface(GFX_SX, GFX_SY, true);
+	}
+	
+	virtual ~VfxNodeComposite() override
+	{
+		delete surface;
+		surface = nullptr;
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		pushSurface(surface);
+		{
+			surface->clear();
+			
+			const int kNumImages = 4;
+			
+			const VfxImageBase * images[kNumImages] =
+			{
+				getInputImage(kInput_Image1, nullptr),
+				getInputImage(kInput_Image2, nullptr),
+				getInputImage(kInput_Image3, nullptr),
+				getInputImage(kInput_Image4, nullptr)
+			};
+			
+			const VfxTransform defaultTransform;
+			
+			const VfxTransform * transforms[kNumImages] =
+			{
+				&getInputTransform(kInput_Transform1, defaultTransform),
+				&getInputTransform(kInput_Transform2, defaultTransform),
+				&getInputTransform(kInput_Transform3, defaultTransform),
+				&getInputTransform(kInput_Transform4, defaultTransform)
+			};
+			
+			for (int i = 0; i < kNumImages; ++i)
+			{
+				if (images[i] == nullptr)
+					continue;
+				
+				gxPushMatrix();
+				{
+					gxTranslatef(+GFX_SX/2, +GFX_SY/2, 0.f);
+					gxMultMatrixf(transforms[i]->matrix.m_v);
+					gxTranslatef(-GFX_SX/2, -GFX_SY/2, 0.f);
+					
+					gxSetTexture(images[i]->getTexture());
+					{
+						drawRect(0, 0, GFX_SX, GFX_SY);
+					}
+					gxSetTexture(0);
+				}
+				gxPopMatrix();
+			}
+		}
+		popSurface();
+		
+		image.texture = surface->getTexture();
+	}
+};
+
 struct VfxGraph
 {
 	struct ValueToFree
@@ -481,6 +677,7 @@ struct VfxGraph
 			kType_Bool,
 			kType_Int,
 			kType_Float,
+			kType_Transform,
 			kType_String,
 			kType_Color
 		};
@@ -540,6 +737,9 @@ struct VfxGraph
 				break;
 			case ValueToFree::kType_Float:
 				delete (float*)i.mem;
+				break;
+			case ValueToFree::kType_Transform:
+				delete (VfxTransform*)i.mem;
 				break;
 			case ValueToFree::kType_String:
 				delete (std::string*)i.mem;
@@ -644,6 +844,10 @@ static VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDef
 		{
 			vfxNode = new VfxNodeFloatLiteral();
 		}
+		else if (node.typeName == "transformLiteral")
+		{
+			vfxNode = new VfxNodeTransformLiteral();
+		}
 		else if (node.typeName == "stringLiteral")
 		{
 			vfxNode = new VfxNodeStringLiteral();
@@ -652,6 +856,7 @@ static VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDef
 		{
 			vfxNode = new VfxNodeColorLiteral();
 		}
+		DefineNodeImpl("transform.2d", VfxNodeTransform2d)
 		DefineNodeImpl("math.range", VfxNodeRange)
 		DefineNodeImpl("math.add", VfxNodeMathAdd)
 		DefineNodeImpl("math.sub", VfxNodeMathSub)
@@ -697,6 +902,10 @@ static VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDef
 		else if (node.typeName == "osc")
 		{
 			vfxNode = new VfxNodeOsc();
+		}
+		else if (node.typeName == "composite")
+		{
+			vfxNode = new VfxNodeComposite();
 		}
 		else if (node.typeName == "picture")
 		{
@@ -831,6 +1040,16 @@ static VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDef
 								
 								vfxGraph->valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Float, value));
 							}
+							else if (vfxNodeInputs[i].type == kVfxPlugType_Transform)
+							{
+								VfxTransform * value = new VfxTransform();
+								
+								// todo : parse inputValue
+								
+								vfxNodeInputs[i].connectTo(value, kVfxPlugType_Transform);
+								
+								vfxGraph->valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Transform, value));
+							}
 							else if (vfxNodeInputs[i].type == kVfxPlugType_String)
 							{
 								std::string * value = new std::string();
@@ -874,6 +1093,8 @@ static VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDef
 	
 	return vfxGraph;
 }
+
+std::string insertNodeTypeName; // todo : remove
 
 int main(int argc, char * argv[])
 {
@@ -933,6 +1154,10 @@ int main(int argc, char * argv[])
 		
 		ofxDatGui * gui = nullptr;
 		
+		ofxDatGui * insertGui = nullptr;
+		
+		ofxDatGuiTextInput * insertNodeTypeName = nullptr;
+		
 		if (false)
 		{
 			gui = new ofxDatGui(ofxDatGuiAnchor::TOP_LEFT);
@@ -948,6 +1173,14 @@ int main(int argc, char * argv[])
 			gui->addHeader("node type");
 		}
 		
+		if (true)
+		{
+			insertGui = new ofxDatGui();
+			insertGui->setWidth(250);
+			insertGui->addHeader("insert");
+			insertNodeTypeName = insertGui->addTextInput("node type");
+		}
+		
 		while (!framework.quitRequested)
 		{
 			framework.process();
@@ -956,6 +1189,9 @@ int main(int argc, char * argv[])
 				framework.quitRequested = true;
 			
 			const float dt = framework.timeStep;
+			
+			if (insertNodeTypeName != nullptr)
+				::insertNodeTypeName = insertNodeTypeName->getText();
 			
 			graphEdit->tick(dt);
 			
@@ -1040,6 +1276,9 @@ int main(int argc, char * argv[])
 			}
 			framework.endDraw();
 		}
+		
+		delete insertGui;
+		insertGui = nullptr;
 		
 		delete gui;
 		gui = nullptr;

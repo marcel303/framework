@@ -8,12 +8,12 @@ VfxNodeVideo::VfxNodeVideo()
 {
 	image = new VfxImage_Texture();
 	
+	mediaPlayer = new MediaPlayer();
+	
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Source, kVfxPlugType_String);
+	addInput(kInput_Transform, kVfxPlugType_Transform);
 	addOutput(kOutput_Image, kVfxPlugType_Image, image);
-	
-	mediaPlayer = new MediaPlayer();
-	mediaPlayer->openAsync("video6.mpg", false);
 }
 
 VfxNodeVideo::~VfxNodeVideo()
@@ -33,4 +33,14 @@ void VfxNodeVideo::tick(const float dt)
 		mediaPlayer->presentTime += dt;
 	
 	image->texture = mediaPlayer->getTexture();
+}
+
+void VfxNodeVideo::init(const GraphNode & node)
+{
+	const std::string source = getInputString(kInput_Source, "");
+	
+	if (!source.empty())
+	{
+		mediaPlayer->openAsync(source.c_str(), false);
+	}
 }
