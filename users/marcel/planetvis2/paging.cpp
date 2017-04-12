@@ -14,8 +14,8 @@ PageIoManager * pageIoMgr = nullptr;
 
 bool pageFilename(const char * name, const int baseSize, const int pageSize, const int cubeSide, const int levelSize, const int pageX, const int pageY, char * filename, const int filenameSize)
 {
-	//sprintf_s(filename, filenameSize, "heightmap/%s-%06d-%04d-%01d-%06d-%03d-%03d",
-	sprintf_s(filename, filenameSize, "C:/PlanetVisHeightmap/%s-%06d-%04d-%01d-%06d-%03d-%03d",
+	sprintf_s(filename, filenameSize, "heightmap/%s-%06d-%04d-%01d-%06d-%03d-%03d",
+	//sprintf_s(filename, filenameSize, "C:/PlanetVisHeightmap/%s-%06d-%04d-%01d-%06d-%03d-%03d",
 		name,
 		baseSize,
 		pageSize,

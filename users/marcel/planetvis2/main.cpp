@@ -1,5 +1,5 @@
 #include "Calc.h"
-#include "D:/temp/planetvis2/data/CubeSides.txt"
+#include "CubeSides.txt"
 #include "framework.h"
 #include "image.h"
 #include "paging.h"
@@ -1899,7 +1899,7 @@ int main(int argc, char * argv[])
 	{
 		framework.fillCachesWithPath(".", true);
 		
-		changeDirectory("D:/temp/planetvis2");
+		changeDirectory("D:/temp/planetvis2/data");
 
 		if (false)
 		{
