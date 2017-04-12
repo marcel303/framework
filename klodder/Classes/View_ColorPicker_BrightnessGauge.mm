@@ -1,6 +1,7 @@
 #import <QuartzCore/QuartzCore.h>
 #import "Calc.h"
 #import "ExceptionLoggerObjC.h"
+#import "Log.h"
 #import "View_ColorPicker.h"
 #import "View_ColorPicker_BasicIndicator.h"
 #import "View_ColorPicker_BrightnessGauge.h"
@@ -72,7 +73,7 @@
 		Rgba color = delegate.colorPickerState->BaseColor_get();
 		CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
 		CGFloat components[] = { 0.0f, 0.0f, 0.0f, 1.0f, color.rgb[0], color.rgb[1], color.rgb[2], 1.0f };
-		float locations[] = { 0.0f, 1.0f };
+		CGFloat locations[] = { 0.0f, 1.0f };
 		CGGradientRef gradient = CGGradientCreateWithColorComponents(colorSpace, components, locations, 2);
 		CGContextDrawLinearGradient(ctx, gradient, CGPointMake(0.0f, y), CGPointMake(self.frame.size.width, height), 0);
 		CGGradientRelease(gradient);

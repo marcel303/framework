@@ -9,8 +9,8 @@
 	int acquireLayerIndex;
 	
 	UIActionSheet* asAcquire;
-	int asAcquirePhotoAlbum;
-	int asAcquirePhotoCamera;
+	NSInteger asAcquirePhotoAlbum;
+	NSInteger asAcquirePhotoCamera;
 	UIImagePickerController* imagePickerAlbum;
 	UIImagePickerController* imagePickerCamera;
 	
@@ -26,7 +26,7 @@
 }
 
 //@property (nonatomic, retain) View_LayerManagerLayer* focusLayer;
-@property (assign) int focusLayerIndex;
+@property (nonatomic, assign) int focusLayerIndex;
 
 // UI handlers
 

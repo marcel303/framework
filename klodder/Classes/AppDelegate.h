@@ -14,9 +14,9 @@
 #endif
 
 #ifdef IPAD
-const extern NSString* cancelTitle;
+extern NSString* cancelTitle;
 #else
-const extern NSString* cancelTitle;
+extern NSString* cancelTitle;
 #endif
 
 class BrushSettings;
@@ -33,8 +33,12 @@ class BrushSettings;
 	
 	UINavigationController* rootController;
 	
+#if BUILD_FACEBOOK
 	FacebookState* facebookState;
+#endif
+#if BUILD_FLICKR
 	FlickrState* flickrState;
+#endif
 	
 	View_EditingMgr* vcEditing;
 	View_PictureGalleryMgr* vcPictureGallery;
@@ -51,17 +55,21 @@ class BrushSettings;
 
 @property (assign) Application* mApplication;
 
-@property (assign) FacebookState* facebookState;
-@property (assign) FlickrState* flickrState;
+#if BUILD_FACEBOOK
+@property (nonatomic, assign) FacebookState* facebookState;
+#endif
+#if BUILD_FLICKR
+@property (nonatomic, assign) FlickrState* flickrState;
+#endif
 
 @property (nonatomic, retain) UINavigationController* rootController;
 
 @property (nonatomic, retain) View_EditingMgr* vcEditing;
 @property (nonatomic, retain) View_PictureGalleryMgr* vcPictureGallery;
-@property (assign) BrushSettings* brushSettings;
-@property (assign) PickerState* colorPickerState;
+@property (nonatomic, assign) BrushSettings* brushSettings;
+@property (nonatomic, assign) PickerState* colorPickerState;
 
-@property (readonly, assign) NSDictionary* addresses;
+@property (nonatomic, readonly, assign) NSDictionary* addresses;
 
 -(void)handleChange:(ChangeType)type;
 -(void)show:(UIViewController*)vc animated:(BOOL)animated;

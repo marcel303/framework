@@ -16,6 +16,10 @@ MenuNavElem::MenuNavElem()
 {
 }
 
+MenuNavElem::~MenuNavElem()
+{
+}
+
 void MenuNavElem::getPosition(int & x, int & y) const
 {
 	x = 0;
@@ -325,9 +329,9 @@ std::vector<ButtonLegend::DrawElem> ButtonLegend::getDrawElems(int x, int y)
 Button::Button(int x, int y, const char * idleFilename, const char * overFilename, const char * localString, const char * textFont, int textX, int textY, int textSize, const Color & textColor)
 	: m_idleSprite(new Sprite(idleFilename))
 	, m_overSprite(new Sprite(overFilename))
-	, m_isMouseDown(false)
 	, m_x(0)
 	, m_y(0)
+    , m_isMouseDown(false)
 	, m_hasBeenSelected(false)
 	, m_localString(localString)
 	, m_textFont(textFont)
@@ -538,8 +542,6 @@ void SpinButton::changeValue(int delta)
 
 bool SpinButton::hasChanged()
 {
-	bool result = false;
-
 	const int oldValue = m_value;
 
 	if (m_hasFocus)
@@ -647,10 +649,10 @@ void SpinButton::onSelect()
 
 CheckButton::CheckButton(int x, int y, bool value, const char * filename, const char * localString, int textX, int textY, int textSize)
 	: m_sprite(new Sprite(filename))
-	, m_isMouseDown(false)
 	, m_x(0)
 	, m_y(0)
 	, m_value(value)
+    , m_isMouseDown(false)
 	, m_hasBeenSelected(false)
 	, m_localString(localString)
 	, m_textX(textX)
@@ -802,8 +804,6 @@ void Slider::changeValue(float delta)
 
 bool Slider::hasChanged()
 {
-	bool result = false;
-
 	const float oldValue = m_value;
 
 	if (m_hasFocus)

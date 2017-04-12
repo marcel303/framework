@@ -15,9 +15,10 @@
 -(void)handleNew;
 -(void)beginNew:(ImageId)imageId;
 -(void)pictureSelected:(id)object;
+#if BUILD_HTTPSERVER
 -(void)handleServeHttp;
+#endif
 -(void)handleAbout;
--(void)handleHelp;
 -(void)handleDebug;
 
 // UIAlertViewDelegate

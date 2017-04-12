@@ -27,7 +27,7 @@ static ToolType ToToolType(ToolViewType toolViewType, bool softBrush);
 	if (self = [super initWithApp:_app])
 	{
 		//[self setModalInPopover:YES];
-		[self setContentSizeForViewInPopover:CGSizeMake(320.0f, 480.0f)];
+		[self setPreferredContentSize:CGSizeMake(320.0f, 480.0f)];
 		
 		brushSettingsLibrary = new BrushSettingsLibrary();
 		
@@ -145,7 +145,7 @@ static ToolType ToToolType(ToolViewType toolViewType, bool softBrush);
 	[activeView brushSettingsChanged];
 }
 
--(ViewBase*)createView:(ToolViewType)type
+-(ViewBase<ToolView>*)createView:(ToolViewType)type
 {
 	Benchmark bm("View_ToolSelectMgr: createView");
 	
@@ -154,7 +154,7 @@ static ToolType ToToolType(ToolViewType toolViewType, bool softBrush);
 #ifdef IPAD
 	CGRect rect = CGRectMake(0.0f, 0.0f, 320.0f, 480.0f);
 #else
-	CGRect rect = [UIScreen mainScreen].applicationFrame;
+	CGRect rect = [UIScreen mainScreen].bounds;
 #endif
 	
 	switch (type)
@@ -170,7 +170,7 @@ static ToolType ToToolType(ToolViewType toolViewType, bool softBrush);
 	}
 }
 
--(void)changeView:(ViewBase*)view
+-(void)changeView:(ViewBase<ToolView>*)view
 {
 	Benchmark bm("View_ToolSelectMgr: changeView");
 	
@@ -288,22 +288,28 @@ static ToolType ToToolType(ToolViewType toolViewType, bool softBrush);
 static ToolType ToToolType(ToolViewType toolViewType, bool softBrush)
 {
 	if (toolViewType == ToolViewType_Brush)
+    {
 		if (softBrush)
-			return ToolType_SoftBrushDirect;
+            return ToolType_SoftBrush;
 		else
-			return ToolType_PatternBrushDirect;
-	
+            return ToolType_PatternBrush;
+    }
+        
 	if (toolViewType == ToolViewType_Smudge)
+    {
 		if (softBrush)
 			return ToolType_SoftSmudge;
 		else
 			return ToolType_PatternSmudge;
-	
+    }
+    
 	if (toolViewType == ToolViewType_Eraser)
+    {
 		if (softBrush)
 			return ToolType_SoftEraser;
 		else
 			return ToolType_PatternEraser;
+    }
 	
 	return ToolType_Undefined;
 }

@@ -1,5 +1,6 @@
 #import "AppDelegate.h"
 #import "ExceptionLoggerObjC.h"
+#import "Log.h"
 #import "View_MenuSelection.h"
 
 #define MENU_COUNT 5
@@ -15,7 +16,7 @@
 {	
 	HandleExceptionObjcBegin();
 	
-	float sx = [UIScreen mainScreen].applicationFrame.size.width;
+	float sx = [UIScreen mainScreen].bounds.size.width;
 	float sy = 50.0f;
 	
 	frame.origin.y = frame.size.height - sy;
@@ -57,7 +58,7 @@
 {
 	HandleExceptionObjcBegin();
 	
-	[controller dismissModalViewControllerAnimated:YES];
+    [controller dismissViewControllerAnimated:YES completion:NULL];
 	
 	HandleExceptionObjcEnd(false);
 }

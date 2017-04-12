@@ -1,3 +1,5 @@
+#if BUILD_FLICKR
+
 #import <Foundation/Foundation.h>
 #import "ObjectiveFlickr.h"
 
@@ -21,3 +23,5 @@
 -(void)flickrResume;
 
 @end
+
+#endif

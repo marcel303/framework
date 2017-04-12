@@ -14,6 +14,7 @@
 #include "Mat4x4.h"
 #include "Vec3.h"
 #include "Vec4.h"
+#include <float.h>
 
 #if defined(DEBUG)
 	#define fassert(x) Assert(x)
@@ -50,7 +51,11 @@
 */
 
 #define USE_LEGACY_OPENGL 0
-#define OPENGL_VERSION 430
+#if defined(MACOS)
+    #define OPENGL_VERSION 410
+#else
+    #define OPENGL_VERSION 430
+#endif
 #define ENABLE_UTF8_SUPPORT 1 // todo : remove redundant conversions and make this enabled by default
 
 static const int MAX_GAMEPAD = 4;
@@ -200,6 +205,7 @@ extern Ui ui;
 typedef void (*ActionHandler)(const std::string & action, const Dictionary & args);
 typedef void (*FillCachesCallback)(float filePercentage);
 typedef void (*FillCachesUnknownResourceCallback)(const char * filename);
+typedef void (*RealTimeEditCallback)(const std::string & filename);
 typedef void (*InitErrorHandler)(INIT_ERROR error);
 
 //
@@ -257,10 +263,13 @@ public:
 	bool windowBorder;
 	std::string windowTitle;
 	std::string windowIcon;
+	int windowSx;
+	int windowSy;
 	bool windowIsActive;
 	ActionHandler actionHandler;
 	FillCachesCallback fillCachesCallback;
 	FillCachesUnknownResourceCallback fillCachesUnknownResourceCallback;
+	RealTimeEditCallback realTimeEditCallback;
 	InitErrorHandler initErrorHandler;
 	
 private:
@@ -357,7 +366,7 @@ public:
 	~Shader();
 	
 	void load(const char * name, const char * filenameVs, const char * filenamePs);
-	bool isValid() const { return m_shader != 0; }
+	bool isValid() const;
 	virtual GLuint getProgram() const override;
 	virtual SHADER_TYPE getType() const override { return SHADER_VSPS; }
 	
@@ -526,12 +535,14 @@ class Dictionary
 	
 public:
 	bool load(const char * filename);
+	bool save(const char * filename);
 	bool parse(const std::string & line, bool clear = true); // line = key1:value1 key2:value2 key3:value3 ..
 	
 	bool contains(const char * name) const;
 	
 	void setString(const char * name, const char * value);
 	void setInt(const char * name, int value);
+    void setInt64(const char * name, int64_t value);
 	void setBool(const char * name, bool value);
 	void setFloat(const char * name, float value);
 	void setPtr(const char * name, void * value);
@@ -948,6 +959,8 @@ public:
 class Keyboard
 {
 public:
+	std::vector<SDL_Event> events;
+	
 	bool isDown(SDLKey key) const;
 	bool wentDown(SDLKey key, bool allowRepeat = false) const;
 	bool wentUp(SDLKey key) const;
@@ -1081,6 +1094,8 @@ void setDrawRect(int x, int y, int sx, int sy);
 void clearDrawRect();
 
 void setBlend(BLEND_MODE blendMode);
+void pushBlend(BLEND_MODE blendMode);
+void popBlend();
 void setColorMode(COLOR_MODE colorMode);
 void setColor(const Color & color);
 void setColor(int r, int g, int b, int a = 255, int rgbMul = 255);
@@ -1120,30 +1135,32 @@ void debugDrawText(float x, float y, int size, float alignX, float alignY, const
 
 SDL_Surface * getWindowSurface();
 
-static void gxMatrixMode(GLenum mode) { }
-static void gxPopMatrix() { }
-static void gxPushMatrix() { }
-static void gxLoadIdentity() { }
-static void gxLoadMatrixf(const float * m) { }
-static void gxGetMatrixf(GLenum mode, float * m) { }
-static void gxMultMatrixf(const float * m) { }
-static void gxTranslatef(float x, float y, float z) { }
-static void gxRotatef(float angle, float x, float y, float z) { }
-static void gxScalef(float x, float y, float z) { }
-static void gxValidateMatrices() { }
+static inline void gxMatrixMode(GLenum mode) { }
+static inline void gxPopMatrix() { }
+static inline void gxPushMatrix() { }
+static inline void gxLoadIdentity() { }
+static inline void gxLoadMatrixf(const float * m) { }
+static inline void gxGetMatrixf(GLenum mode, float * m) { }
+static inline void gxMultMatrixf(const float * m) { }
+static inline void gxTranslatef(float x, float y, float z) { }
+static inline void gxRotatef(float angle, float x, float y, float z) { }
+static inline void gxScalef(float x, float y, float z) { }
+static inline void gxValidateMatrices() { }
 
-static void gxInitialize() { }
-static void gxShutdown() { }
-static void gxBegin(int primitiveType) { }
-static void gxEnd() { }
-static void gxColor4f(float r, float g, float b, float a) { }
-static void gxColor4fv(const float * rgba) { }
-static void gxColor3ub(int r, int g, int b) { }
-static void gxTexCoord2f(float u, float v) { }
-static void gxNormal3f(float x, float y, float z) { }
-static void gxVertex2f(float x, float y) { }
-static void gxVertex3f(float x, float y, float z) { }
-static void gxSetTexture(GLuint texture) { }
+static inline void gxInitialize() { }
+static inline void gxShutdown() { }
+static inline void gxBegin(int primitiveType) { }
+static inline void gxEnd() { }
+static inline void gxColor4f(float r, float g, float b, float a) { }
+static inline void gxColor4fv(const float * rgba) { }
+static inline void gxColor3ub(int r, int g, int b) { }
+static inline void gxColor4ub(int r, int g, int b, int a) { }
+static inline void gxTexCoord2f(float u, float v) { }
+static inline void gxNormal3f(float x, float y, float z) { }
+static inline void gxVertex2f(float x, float y) { }
+static inline void gxVertex3f(float x, float y, float z) { }
+static inline void gxVertex4f(float x, float y, float z, float w) { }
+static inline void gxSetTexture(GLuint texture) { }
 
 #elif !USE_LEGACY_OPENGL
 
@@ -1223,20 +1240,22 @@ void showErrorMessage(const char * caption, const char * format, ...);
 
 // builtin shaders
 
-void setShader_GaussianBlurH(const GLuint source, const int kernelSize);
-void setShader_GaussianBlurV(const GLuint source, const int kernelSize);
-void setShader_Invert(const GLuint source);
-void setShader_TresholdLumi(const GLuint source, const float lumi, const Color & failColor, const Color & passColor);
-void setShader_TresholdLumiFail(const GLuint source, const float lumi, const Color & failColor);
-void setShader_TresholdLumiPass(const GLuint source, const float lumi, const Color & passColor);
-void setShader_TresholdValue(const GLuint source, const Color & value, const Color & failColor, const Color & passColor);
-void setShader_GrayscaleLumi(const GLuint source);
-void setShader_GrayscaleWeights(const GLuint source, const Vec3 & weights);
-void setShader_Colorize(const GLuint source, const float hue);
-void setShader_HueShift(const GLuint source, const float hue);
+void setShader_GaussianBlurH(const GLuint source, const int kernelSize, const float radius);
+void setShader_GaussianBlurV(const GLuint source, const int kernelSize, const float radius);
+void setShader_Invert(const GLuint source, const float opacity);
+void setShader_TresholdLumi(const GLuint source, const float lumi, const Color & failColor, const Color & passColor, const float opacity);
+void setShader_TresholdLumiFail(const GLuint source, const float lumi, const Color & failColor, const float opacity);
+void setShader_TresholdLumiPass(const GLuint source, const float lumi, const Color & passColor, const float opacity);
+void setShader_TresholdValue(const GLuint source, const Color & value, const Color & failColor, const Color & passColor, const float opacity);
+void setShader_GrayscaleLumi(const GLuint source, const float opacity);
+void setShader_GrayscaleWeights(const GLuint source, const Vec3 & weights, const float opacity);
+void setShader_Colorize(const GLuint source, const float hue, const float opacity);
+void setShader_HueShift(const GLuint source, const float hue, const float opacity);
 void setShader_Compositie(const GLuint source1, const GLuint source2);
 void setShader_CompositiePremultiplied(const GLuint source1, const GLuint source2);
 void setShader_Premultiply(const GLuint source);
+void setShader_ColorMultiply(const GLuint source, const Color & color, const float opacity);
+void setShader_ColorTemperature(const GLuint source, const float temperature, const float opacity);
 
 // high quality rendering
 
@@ -1359,6 +1378,7 @@ static T random(T min, T max)
 
 // constants
 
+extern Color colorBlackTranslucent;
 extern Color colorBlack;
 extern Color colorWhite;
 extern Color colorRed;

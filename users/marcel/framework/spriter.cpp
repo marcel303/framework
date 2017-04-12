@@ -8,6 +8,7 @@
 #include "framework.h"
 #include "Path.h"
 #include "spriter.h"
+#include "tinyxml2_helpers.h"
 
 // todo : remove all of the dynamic memory allocations during draw
 
@@ -392,7 +393,13 @@ namespace spriter
 
 	class Animation
 	{
-	public:
+        struct TransformedBoneKey
+        {
+            const BoneTimelineKey * key;
+            Transform transform;
+        };
+    
+    public:
 		std::string name;
 		int length;
 		LoopType loopType;
@@ -423,12 +430,6 @@ namespace spriter
 			}
 
 			const MainlineKey & mainKey = mainlineKeyFromTime(newTime);
-
-			struct TransformedBoneKey
-			{
-				const BoneTimelineKey * key;
-				Transform transform;
-			};
 
 			std::vector<TransformedBoneKey> transformedBoneKeys;
 			transformedBoneKeys.resize(mainKey.boneRefs.size());
@@ -644,38 +645,6 @@ namespace spriter
 	}
 
 	// tinyxml helper functions
-
-	static const char * stringAttrib(const XMLElement * elem, const char * name, const char * defaultValue)
-	{
-		if (elem->Attribute(name))
-			return elem->Attribute(name);
-		else
-			return defaultValue;
-	}
-
-	static bool boolAttrib(const XMLElement * elem, const char * name, bool defaultValue)
-	{
-		if (elem->Attribute(name))
-			return elem->BoolAttribute(name);
-		else
-			return defaultValue;
-	}
-
-	static int intAttrib(const XMLElement * elem, const char * name, int defaultValue)
-	{
-		if (elem->Attribute(name))
-			return elem->IntAttribute(name);
-		else
-			return defaultValue;
-	}
-
-	static float floatAttrib(const XMLElement * elem, const char * name, float defaultValue)
-	{
-		if (elem->Attribute(name))
-			return elem->FloatAttribute(name);
-		else
-			return defaultValue;
-	}
 
 	static CurveType readCurveType(const XMLElement * elem, const char * name, CurveType defaultValue)
 	{

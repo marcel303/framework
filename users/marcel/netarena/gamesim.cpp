@@ -17,6 +17,7 @@
 #include "Timer.h"
 
 #include "BinaryDiff.h" // fixme : remove
+#include "StringEx.h" // _s functions
 
 #include <tinyxml2.h>
 using namespace tinyxml2;
@@ -67,12 +68,12 @@ struct PickupSprite
 	const char * filename;
 } s_pickupSprites[kPickupType_COUNT] =
 {
-	true,  "objects/pickups/deathray/deathray.scml",//false, "pickup-ammo.png",
-	true,  "objects/pickups/bomb/bomb.scml",//false, "pickup-nade.png"
-	true,  "objects/pickups/shield/shield.scml",//false, "pickup-shield.png",
-	true,  "objects/pickups/freezeray/freezeray.scml",
-	true,  "objects/pickups/bubble/bubble.scml",//false, "pickup-bubble.png",
-	true,  "objects/pickups/time/time.scml"//false, "pickup-time.png"
+    { true,  "objects/pickups/deathray/deathray.scml" },//false, "pickup-ammo.png",
+	{ true,  "objects/pickups/bomb/bomb.scml" },//false, "pickup-nade.png"
+	{ true,  "objects/pickups/shield/shield.scml" },//false, "pickup-shield.png",
+	{ true,  "objects/pickups/freezeray/freezeray.scml" },
+	{ true,  "objects/pickups/bubble/bubble.scml" },//false, "pickup-bubble.png",
+	{ true,  "objects/pickups/time/time.scml" }//false, "pickup-time.png"
 };
 
 #define TOKEN_SPRITER "objects/token/Token.scml"
@@ -418,8 +419,6 @@ void FootBall::tick(GameSim & gameSim, float dt)
 		m_spriterState.updateAnim(FOOTBALL_SPRITER, dt);
 
 		// check if we've hit a goal
-
-		bool hasScored = false;
 
 		for (int i = 0; i < MAX_FOOTBALL_GOALS; ++i)
 		{
@@ -823,7 +822,7 @@ void Axe::tick(GameSim & gameSim, float dt)
 		}
 
 		if (std::abs(actor.m_vel[cbs.axis]) >= TOKEN_BOUNCE_SOUND_TRESHOLD) // fixme : add gamedef
-			g_gameSim->playSound("objects/axe/bounce.ogg");
+			gameSim->playSound("objects/axe/bounce.ogg");
 	};
 	cbs.onHitPlayer = [](PhysicsActorCBs & cbs, PhysicsActor & actor, Player & player)
 	{
@@ -2287,7 +2286,7 @@ void GameSim::load(const char * name)
 				auto * mover = allocObject(m_movers, MAX_MOVERS);
 
 				if (mover == 0)
-					LOG_ERR("too many movers!");
+					LOG_ERR("too many movers!", 0);
 				else
 				{
 					mover->m_isActive = true;
@@ -2305,7 +2304,7 @@ void GameSim::load(const char * name)
 				auto * light = allocObject(m_lights, MAX_LIGHTS);
 
 				if (light == 0)
-					LOG_ERR("too many torches!");
+					LOG_ERR("too many torches!", 0);
 				else
 				{
 					light->m_isActive = true;
@@ -2325,7 +2324,7 @@ void GameSim::load(const char * name)
 				auto * tileSprite = allocObject(m_tileSprites, MAX_TILE_SPRITES);
 
 				if (tileSprite == 0)
-					LOG_ERR("too many tile sprites!");
+					LOG_ERR("too many tile sprites!", 0);
 				else
 				{
 					tileSprite->setup(
@@ -2356,7 +2355,7 @@ void GameSim::load(const char * name)
 				}
 				else
 				{
-					LOG_ERR("too many tile transitions!");
+					LOG_ERR("too many tile transitions!", 0);
 				}
 			}
 			else if (type == "particleeffect")
@@ -2371,7 +2370,7 @@ void GameSim::load(const char * name)
 				auto * portal = allocObject(m_portals, MAX_PORTALS);
 
 				if (portal == 0)
-					LOG_ERR("too many portals!");
+					LOG_ERR("too many portals!", 0);
 				else
 				{
 					portal->setup(
@@ -2387,7 +2386,7 @@ void GameSim::load(const char * name)
 				auto * spawner = allocObject(m_pickupSpawners, MAX_PICKUP_SPAWNERS);
 
 				if (spawner == 0)
-					LOG_ERR("too many pickup spawners!");
+					LOG_ERR("too many pickup spawners!", 0);
 				else
 				{
 					PickupType type;
@@ -2418,7 +2417,7 @@ void GameSim::load(const char * name)
 					auto * goal = allocObject(m_footBallGoals, MAX_FOOTBALL_GOALS);
 
 					if (goal == 0)
-						LOG_ERR("too many football goals!");
+						LOG_ERR("too many football goals!", 0);
 					else
 					{
 						const int x = (d.getInt("x1", 0) + d.getInt("x2", 0)) / 2;
@@ -2436,7 +2435,7 @@ void GameSim::load(const char * name)
 	}
 	catch (std::exception & e)
 	{
-		LOG_ERR(e.what());
+		LOG_ERR("%s", e.what());
 	}
 }
 
@@ -2607,7 +2606,7 @@ void GameSim::tick()
 		{
 			const bool doInactivityCheck =
 				m_gameState == kGameState_Play ||
-				m_gameState == kGameState_OnlineMenus && !m_playerInstanceDatas[i]->m_player->m_isReadyUpped;
+				(m_gameState == kGameState_OnlineMenus && !m_playerInstanceDatas[i]->m_player->m_isReadyUpped);
 
 			const float dt = 1.f / TICKS_PER_SECOND;
 
@@ -2684,7 +2683,7 @@ void GameSim::tickMenus()
 							player.m_characterIndex = player.m_characterIndex + dx;
 							if (player.m_characterIndex < 0 || player.m_characterIndex >= MAX_CHARACTERS)
 								break;
-							for (int o = 0; o < _countof(g_validCharacterIndices); ++o)
+							for (int o = 0; o < sizeof(g_validCharacterIndices) / sizeof(g_validCharacterIndices[0]); ++o)
 								valid |= player.m_characterIndex == g_validCharacterIndices[o];
 						} while (!valid);
 						if (!valid)
@@ -3206,7 +3205,7 @@ void GameSim::tickPlayPickupSpawn(float dt)
 				}
 
 				if (DEBUG_RANDOM_CALLSITES)
-					LOG_DBG("Random called from pre trySpawnPickup");
+					LOG_DBG("Random called from pre trySpawnPickup", 0);
 				int value = Random() % totalWeight;
 
 				PickupType type = kPickupType_COUNT;
@@ -4010,7 +4009,7 @@ void GameSim::trySpawnPickup(PickupType type)
 			}))
 		{
 			if (DEBUG_RANDOM_CALLSITES)
-				LOG_DBG("Random called from trySpawnPickup");
+				LOG_DBG("Random called from trySpawnPickup", 0);
 			const int index = Random() % numLocations;
 			const int spawnX = x[index];
 			const int spawnY = y[index];
@@ -4394,7 +4393,7 @@ void GameSim::addParticleEffect(const char * name, int x, int y)
 	}
 
 	if (particleEffect == 0)
-		LOG_ERR("too many particle effects!");
+		LOG_ERR("too many particle effects!", 0);
 	else
 	{
 		*particleEffect = getParticleEffect(name);
@@ -4464,6 +4463,9 @@ void GameSim::triggerLevelEvent(LevelEvent e)
 		name = "Day/Night Cycle (not yet implemented)";
 		break;
 		*/
+            
+    case kLevelEvent_COUNT:
+        break;
 	}
 
 	if (!RECORDMODE)
@@ -4576,10 +4578,10 @@ void GameSim::addDecal(int x, int y, const Color & color, int sprite, float scal
 		}
 	}
 
-	AssertMsg(false, "unable to find free decal");
+	AssertMsg(false, "unable to find free decal", 0);
 
 	if (DEBUG_RANDOM_CALLSITES)
-		LOG_DBG("Random called from addDecal");
+		LOG_DBG("Random called from addDecal", 0);
 	m_decals[Random() % MAX_DECALS] = Decal();
 	addDecal(x, y, color, sprite, scale);
 }
@@ -4605,10 +4607,10 @@ void GameSim::addScreenShake(float dx, float dy, float stiffness, float life, bo
 		}
 	}
 
-	AssertMsg(false, "unable to find free screen shake");
+	AssertMsg(false, "unable to find free screen shake", 0);
 
 	if (DEBUG_RANDOM_CALLSITES)
-		LOG_DBG("Random called from addScreenShake");
+		LOG_DBG("Random called from addScreenShake", 0);
 	m_screenShakes[Random() % MAX_SCREEN_SHAKES] = ScreenShake();
 	addScreenShake(dx, dy, stiffness, life, fade);
 }
@@ -4655,10 +4657,10 @@ void GameSim::addZoomEffect(float zoom, float life, int player)
 		}
 	}
 
-	AssertMsg(false, "unable to find free zoom effect");
+	AssertMsg(false, "unable to find free zoom effect", 0);
 
 	if (DEBUG_RANDOM_CALLSITES)
-		LOG_DBG("Random called from addZoomEffect");
+		LOG_DBG("Random called from addZoomEffect", 0);
 	m_zoomEffects[Random() % MAX_ZOOM_EFFECTS] = ZoomEffect();
 	addZoomEffect(zoom, life, player);
 }
@@ -4864,7 +4866,7 @@ void GameSim::addLightEffect(LightEffect::Type type, float time, float amount)
 		}
 	}
 
-	AssertMsg(false, "unable to find free light effect");
+	AssertMsg(false, "unable to find free light effect", 0);
 }
 
 float GameSim::getLightAmount() const

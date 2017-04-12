@@ -23,8 +23,8 @@
 }
 
 @property (nonatomic, retain) UIImage* image;
-@property (assign, readonly) int dataLayer;
-@property (assign) Vec2I location;
+@property (nonatomic, assign, readonly) int dataLayer;
+@property (nonatomic, assign) Vec2I location;
 
 -(id)initWithImage:(UIImage*)image size:(Vec2I)size dataLayer:(int)dalatLayer app:(AppDelegate*)app delegate:(id<ImagePlacementDelegate>)delegate;
 

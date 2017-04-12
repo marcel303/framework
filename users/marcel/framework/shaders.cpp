@@ -1,4 +1,7 @@
 #include "framework.h"
+
+#if ENABLE_OPENGL
+
 #include "shaders.h"
 
 #include "data/engine/BasicSkinned.vs"
@@ -10,6 +13,14 @@
 #include "data/engine/ShaderCS.txt"
 #include "data/engine/ShaderUtil.txt"
 
+#include "data/engine/builtin-colormultiply.vs"
+#include "data/engine/builtin-colormultiply.ps"
+#include "data/engine/builtin-colortemperature.vs"
+#include "data/engine/builtin-colortemperature.ps"
+#include "data/engine/builtin-guassian-h.ps"
+#include "data/engine/builtin-guassian-h.vs"
+#include "data/engine/builtin-guassian-v.ps"
+#include "data/engine/builtin-guassian-v.vs"
 #include "data/engine/builtin-hq-common.txt"
 #include "data/engine/builtin-hq-filled-circle.ps"
 #include "data/engine/builtin-hq-filled-circle.vs"
@@ -25,6 +36,8 @@
 #include "data/engine/builtin-hq-stroked-rect.vs"
 #include "data/engine/builtin-hq-stroked-triangle.ps"
 #include "data/engine/builtin-hq-stroked-triangle.vs"
+//#include "data/engine/builtin-invert.ps"
+//#include "data/engine/builtin-invert.vs"
 
 void registerBuiltinShaders()
 {
@@ -64,7 +77,15 @@ void registerBuiltinShaders()
 	shaderSource("engine/ShaderCS.txt", s_shaderCs);
 
 	shaderSource("engine/ShaderUtil.txt", s_shaderUtil);
-
+	
+	shaderSource("engine/builtin-colormultiply.ps", s_colorMultiplyPs);
+	shaderSource("engine/builtin-colormultiply.vs", s_colorMultiplyVs);
+	shaderSource("engine/builtin-colortemperature.ps", s_colorTemperaturePs);
+	shaderSource("engine/builtin-colortemperature.vs", s_colorTemperatureVs);
+	shaderSource("engine/builtin-gaussian-h.ps", s_guassianHPs);
+	shaderSource("engine/builtin-gaussian-h.vs", s_guassianHVs);
+	shaderSource("engine/builtin-gaussian-v.ps", s_guassianVPs);
+	shaderSource("engine/builtin-gaussian-v.vs", s_guassianVVs);
 	shaderSource("engine/builtin-hq-common.txt", s_hqCommon);
 	shaderSource("engine/builtin-hq-filled-circle.ps", s_hqFilledCirclePs);
 	shaderSource("engine/builtin-hq-filled-circle.vs", s_hqFilledCircleVs);
@@ -80,4 +101,8 @@ void registerBuiltinShaders()
 	shaderSource("engine/builtin-hq-stroked-rect.vs", s_hqStrokedRectVs);
 	shaderSource("engine/builtin-hq-stroked-triangle.ps", s_hqStrokedTrianglePs);
 	shaderSource("engine/builtin-hq-stroked-triangle.vs", s_hqStrokedTriangleVs);
+	//shaderSource("engine/builtin-invert.ps", s_invertPs);
+	//shaderSource("engine/builtin-invert.vs", s_invertVs);
 }
+
+#endif

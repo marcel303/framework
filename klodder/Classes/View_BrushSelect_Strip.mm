@@ -38,7 +38,7 @@
 -(void)updateUi
 {
 	int sy = PREVIEW_DIAMETER;
-	int sx = (PREVIEW_SIZE) * itemList->size();
+	int sx = (PREVIEW_SIZE) * (int)itemList->size();
 	
 	self.frame = CGRectMake(self.frame.origin.x, self.frame.origin.y, sx, sy);
 	

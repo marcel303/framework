@@ -3,6 +3,7 @@
 #import "Calc.h"
 #import "ExceptionLoggerObjC.h"
 #import "LayerMgr.h"
+#import "Log.h"
 #import "View_DefineBrush.h"
 #import "View_MenuSelection.h"
 #import "View_Gauge.h"

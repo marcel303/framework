@@ -34,7 +34,7 @@
 #endif
 #define MAX_SWATCHES 100
 
-Application::Application()
+Application::Application(const float displayScale)
 {
 	// setup
 	mIsSetup = false;
@@ -42,13 +42,14 @@ Application::Application()
 	mScale = 1;
 	mBackColor1 = Rgba_Make(0.0f, 0.0f, 0.0f);
 	mBackColor2 = Rgba_Make(0.2f, 0.0f, 0.0f);
+	mDisplayScale = displayScale;
 
 	// change notification
 	OnChange = CallBack();
 	
 	// canvas
 	mLayerMgr = new LayerMgr();
-	mLayerMgr->Setup(MAX_LAYERS, 0, 0, Rgba_Make(0.0f, 0.0f, 0.0f), Rgba_Make(0.0f, 0.0f, 0.0f));
+	mLayerMgr->Setup(MAX_LAYERS, 0, 0, Rgba_Make(0.0f, 0.0f, 0.0f), Rgba_Make(0.0f, 0.0f, 0.0f), 128);
 	
 	// command execution
 	//mLastColorCommand;
@@ -454,7 +455,7 @@ void Application::ExecuteImageSize(const int layerCount, const int sx, const int
 	Assert(sx > 0);
 	Assert(sy > 0);
 
-	mLayerMgr->Setup(layerCount, sx, sy, mBackColor1, mBackColor2);
+	mLayerMgr->Setup(layerCount, sx, sy, mBackColor1, mBackColor2, 16 * mDisplayScale);
 
 	Invalidate();
 }
@@ -508,7 +509,7 @@ void Application::ExecuteDataLayerClear(const int index, const float _r, const f
 	// convert RGB to premultiplied values
 
 	const float r = _r * _a;
-	const float g = _b * _a;
+	const float g = _g * _a;
 	const float b = _b * _a;
 	const float a = _a;
 
@@ -1126,7 +1127,8 @@ void Application::UndoBegin(const bool doReplay, const int dirtyLayerIndex, cons
 	if (doReplay)
 		mUndoBuffer->mNext.SetReplay();
 
-	mDirtyCommandStreamPosition = mCommandStream->Position_get();
+    if (mCommandStream != nullptr)
+        mDirtyCommandStreamPosition = mCommandStream->Position_get();
 	if (mDataStream != nullptr)
 		mDirtyDataStreamPosition = mDataStream->Position_get();
 
@@ -1315,9 +1317,9 @@ void Application::Undo()
 	
 	if (buffer->mPrev.mHasCommandStreamLocation)
 	{
-		size_t location = buffer->mPrev.mCommandStreamLocation;
+		const int location = buffer->mPrev.mCommandStreamLocation;
 		
-		LOG_DBG("undo: update stream location: %d", (int)location);
+		LOG_DBG("undo: update stream location: %d", location);
 		
 		mCommandStream->Seek(location, SeekMode_Begin);
 		mCommandStreamPosition = location;
@@ -1325,9 +1327,9 @@ void Application::Undo()
 
 	if (buffer->mPrev.mHasDataStreamLocation)
 	{
-		size_t location = buffer->mPrev.mDataStreamLocation;
+		const int location = buffer->mPrev.mDataStreamLocation;
 
-		LOG_DBG("undo: update data stream location: %lu", location);
+		LOG_DBG("undo: update data stream location: %d", location);
 
 		Assert(!mDataStream);
 		mDataStreamPosition = location;
@@ -1505,9 +1507,9 @@ void Application::Redo()
 	
 	if (buffer->mNext.mHasCommandStreamLocation)
 	{
-		size_t location = buffer->mNext.mCommandStreamLocation;
+		const int location = buffer->mNext.mCommandStreamLocation;
 		
-		LOG_DBG("redo: update stream location: %d", (int)location);
+		LOG_DBG("redo: update stream location: %d", location);
 		
 		mCommandStream->Seek(location, SeekMode_Begin);
 		mCommandStreamPosition = location;
@@ -1515,9 +1517,9 @@ void Application::Redo()
 
 	if (buffer->mNext.mHasDataStreamLocation)
 	{
-		size_t location = buffer->mNext.mDataStreamLocation;
+		const int location = buffer->mNext.mDataStreamLocation;
 
-		LOG_DBG("undo: update data stream location: %lu", location);
+		LOG_DBG("undo: update data stream location: %d", location);
 
 		Assert(!mDataStream);
 		mDataStreamPosition = location;
@@ -1712,7 +1714,7 @@ void Application::DataLayerOpacity(const int index, const float opacity)
 
 void Application::LayerOrder(const std::vector<int> & layerOrder)
 {
-	const CommandPacket packet = CommandPacket::Make_LayerOrder(&layerOrder[0], layerOrder.size());
+	const CommandPacket packet = CommandPacket::Make_LayerOrder(&layerOrder[0], (int)layerOrder.size());
 	
 	ExecuteAndSave(packet);
 }
@@ -2312,7 +2314,7 @@ void Application::SaveImageThumbnail(const std::string & path, const MacImage * 
 	volatile Benchmark bm("save image thumbnail");
 	
 	MacImage thumbnail;
-	thumbnail.Size_set(90, 135, false);
+	thumbnail.Size_set(90 * mDisplayScale, 135 * mDisplayScale, false);
 	merged->Blit_Resampled(&thumbnail, false);
 	
 #if 1

@@ -19,9 +19,9 @@
 	UILabel* label;
 }
 
-@property (assign) int value;
-@property (readonly, assign) float fill;
-@property (assign) bool enabled;
+@property (nonatomic, assign) int value;
+@property (nonatomic, readonly, assign) float fill;
+@property (nonatomic, assign) bool enabled;
 
 -(id)initWithLocation:(CGPoint)location scale:(float)scale height:(float)height min:(int)min max:(int)max value:(int)value unit:(NSString*)unitText delegate:(id)delegate changed:(SEL)changed provideText:(SEL)provideText;
 -(void)setValueDirect:(int)value;

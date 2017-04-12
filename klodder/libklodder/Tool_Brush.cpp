@@ -294,9 +294,10 @@ void Tool_BrushDirect::Setup_Pattern(const int diameter, const Filter * filter, 
 
 void Tool_BrushDirect::ApplyFilter(Bitmap * bmp, const Filter * filter, const float __x, const float __y, const float _dx, const float _dy, const Rgba & _color, AreaI & dirty)
 {
-	Rgba color;
-	for (int i = 0; i < 4; ++i)
-		color.rgb[i] = _color.rgb[i] * 0.1f;
+	//Rgba color;
+    Rgba color = _color;
+	//for (int i = 0; i < 4; ++i)
+	//	color.rgb[i] = _color.rgb[i] * 0.1f;
 	
 	if (mIsOriented)
 	{

@@ -1,5 +1,4 @@
 #include "ip/UdpSocket.h"
-#include "mediaplayer_old/MPContext.h"
 #include "osc/OscOutboundPacketStream.h"
 #include "osc/OscPacketListener.h"
 #include "audiostream/AudioOutput.h"
@@ -12,7 +11,6 @@
 #include "FileStream.h"
 #include "framework.h"
 #include "leap/Leap.h"
-#include "mediaplayer_old/MPUtil.h"
 #include "Path.h"
 #include "scene.h"
 #include "StringEx.h"
@@ -25,13 +23,30 @@
 #include <list>
 #include <map>
 #include <sys/stat.h>
-#include <Windows.h>
+
+#ifdef WIN32
+	#include <Windows.h>
+#endif
+
+#if ENABLE_VIDEO
+	#if defined(MACOS)
+		#include "mediaplayer_new/MPContext.h"
+		#include "mediaplayer_new/MPUtil.h"
+	#else
+		#include "mediaplayer_old/MPContext.h"
+		#include "mediaplayer_old/MPUtil.h"
+	#endif
+#endif
+
+#ifdef MACOS
+	//#include <stat.h>
+#endif
 
 #include "data/ShaderConstants.h"
 
 #include "BezierPath.h" // fixme
 
-#if !defined(DEBUG) && !ENABLE_LOADTIME_PROFILING
+#if defined(WIN32) && !defined(DEBUG) && !ENABLE_LOADTIME_PROFILING
 	#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 #endif
 
@@ -43,11 +58,11 @@ using namespace tinyxml2;
 const int SCREEN_SX = (1024 / NUM_SCREENS);
 const int SCREEN_SY = 768;
 
-const int GFX_SX = (SCREEN_SX * NUM_SCREENS);
-const int GFX_SY = (SCREEN_SY * 1);
+int GFX_SX = (SCREEN_SX * NUM_SCREENS);
+int GFX_SY = (SCREEN_SY * 1);
 const int GFX_SCALE = ENABLE_UPSCALING ? 2 : 1;
-const int GFX_SX_SCALED = GFX_SX * GFX_SCALE;
-const int GFX_SY_SCALED = GFX_SY * GFX_SCALE;
+int GFX_SX_SCALED = GFX_SX * GFX_SCALE;
+int GFX_SY_SCALED = GFX_SY * GFX_SCALE;
 
 #define OSC_ADDRESS "127.0.0.1"
 #define OSC_RECV_PORT 8000
@@ -276,8 +291,8 @@ static std::vector<SceneEffect*> buildEffectsList()
 
 //
 
-static CRITICAL_SECTION s_oscMessageMtx;
-static HANDLE s_oscMessageThread = INVALID_HANDLE_VALUE;
+static SDL_mutex * s_oscMessageMtx = nullptr;
+static SDL_Thread * s_oscMessageThread = nullptr;
 
 enum OscMessageType
 {
@@ -387,13 +402,13 @@ protected:
 
 			if (message.type != kOscMessageType_None)
 			{
-				EnterCriticalSection(&s_oscMessageMtx);
+				SDL_LockMutex(s_oscMessageMtx);
 				{
 					logDebug("enqueue OSC message. type=%d, id=%d", message.type, (int)message.param[0]);
 
 					s_oscMessages.push_back(message);
 				}
-				LeaveCriticalSection(&s_oscMessageMtx);
+				SDL_UnlockMutex(s_oscMessageMtx);
 			}
 		}
 		catch (osc::Exception & e)
@@ -406,7 +421,7 @@ protected:
 static MyOscPacketListener s_oscListener;
 UdpListeningReceiveSocket * s_oscReceiveSocket = nullptr;
 
-static DWORD WINAPI ExecuteOscThread(LPVOID pParam)
+static int ExecuteOscThread(void * data)
 {
 	s_oscReceiveSocket = new UdpListeningReceiveSocket(IpEndpointName(IpEndpointName::ANY_ADDRESS, OSC_RECV_PORT), &s_oscListener);
 	s_oscReceiveSocket->Run();
@@ -722,6 +737,8 @@ static void handleAction(const std::string & action, const Dictionary & args)
 
 //
 
+#if ENABLE_RESOURCE_PRECACHE
+
 static void fillCachesCallback(float filePercentage)
 {
 	framework.process();
@@ -738,7 +755,11 @@ static void fillCachesCallback(float filePercentage)
 	framework.endDraw();
 }
 
+#endif
+
 //
+
+#if ENABLE_RESOURCE_PRECACHE
 
 static void preloadResourceFiles()
 {
@@ -755,7 +776,11 @@ static void preloadResourceFiles()
 	}
 }
 
+#endif
+
 //
+
+#if ENABLE_RESOURCE_PRECACHE
 
 static std::map<std::string, Array<uint8_t>> s_sceneFiles;
 
@@ -811,11 +836,20 @@ bool getSceneFileContents(const std::string & filename, Array<uint8_t> *& out_by
 	}
 }
 
+#else
+
+bool getSceneFileContents(const std::string & filename, Array<uint8_t> *& out_bytes)
+{
+	return false;
+}
+
+#endif
+
 //
 
 #if ENABLE_REALTIME_EDITING
 
-static void handleFileChange(const std::string & filename)
+static void handleRealTimeEdit(const std::string & filename)
 {
 	if (filename == "settings.xml")
 		config.load(filename.c_str());
@@ -827,13 +861,7 @@ static void handleFileChange(const std::string & filename)
 	{
 		const std::string extension = Path::GetExtension(filename);
 
-		if (extension == "vs")
-		{
-			const std::string name = Path::StripExtension(filename);
-
-			Shader(name.c_str()).reload();
-		}
-		else if (extension == "ps")
+		if (extension == "ps")
 		{
 			const std::string baseName = Path::GetBaseName(filename);
 
@@ -841,146 +869,12 @@ static void handleFileChange(const std::string & filename)
 			{
 				Shader(filename.c_str(), "fsfx.vs", filename.c_str()).reload();
 			}
-			else
-			{
-				const std::string name = Path::StripExtension(filename);
-
-				Shader(name.c_str()).reload();
-			}
 		}
 		else if (extension == "inc")
 		{
 			clearCaches(CACHE_SHADER);
 		}
-		else if (extension == "png" || extension == "jpg")
-		{
-			Sprite(filename.c_str()).reload();
-		}
 	}
-}
-
-#endif
-
-//
-
-#if ENABLE_REALTIME_EDITING
-
-struct FileInfo
-{
-	std::string filename;
-	time_t time;
-};
-
-static std::vector<FileInfo> s_fileInfos;
-
-#ifdef WIN32
-static HANDLE s_fileWatcher = INVALID_HANDLE_VALUE;
-#endif
-
-static void initFileMonitor()
-{
-	s_fileInfos.clear();
-
-#ifdef WIN32
-	if (s_fileWatcher != INVALID_HANDLE_VALUE)
-	{
-		BOOL result = FindCloseChangeNotification(s_fileWatcher);
-		Assert(result);
-
-		s_fileWatcher = INVALID_HANDLE_VALUE;
-	}
-#endif
-
-	std::vector<std::string> files = listFiles(".", true);
-
-	for (auto & file : files)
-	{
-		FILE * f = fopen(file.c_str(), "rb");
-		if (f)
-		{
-			struct _stat s;
-			if (_fstat(fileno(f), &s) == 0)
-			{
-				FileInfo fi;
-				fi.filename = file;
-				fi.time = s.st_mtime;
-
-				if (String::EndsWith(file, ".ps") || String::EndsWith(file, ".xml") || String::EndsWith(file, ".png") || String::EndsWith(file, ".jpg"))
-					s_fileInfos.push_back(fi);
-			}
-
-			fclose(f);
-			f = 0;
-		}
-	}
-
-#if defined(WIN32)
-	Assert(s_fileWatcher == INVALID_HANDLE_VALUE);
-	s_fileWatcher = FindFirstChangeNotificationA(".", TRUE, FILE_NOTIFY_CHANGE_LAST_WRITE);
-	Assert(s_fileWatcher != INVALID_HANDLE_VALUE);
-	if (s_fileWatcher == INVALID_HANDLE_VALUE)
-		logError("failed to find first change notification");
-#endif
-}
-
-static void tickFileMonitor()
-{
-#if defined(WIN32)
-	if (s_fileWatcher != INVALID_HANDLE_VALUE)
-	{
-		if (WaitForSingleObject(s_fileWatcher, 0) != WAIT_OBJECT_0)
-		{
-			return;
-		}
-
-		Sleep(100);
-	}
-#endif
-
-	for (auto & fi: s_fileInfos)
-	{
-		FILE * f = fopen(fi.filename.c_str(), "rb");
-		if (f)
-		{
-			bool changed = false;
-
-			struct _stat s;
-			if (_fstat(fileno(f), &s) == 0)
-			{
-				if (fi.time < s.st_mtime)
-				{
-					// file has changed!
-
-					logDebug("%s has changed!", fi.filename.c_str());
-
-					fi.time = s.st_mtime;
-
-					changed = true;
-				}
-			}
-
-			fclose(f);
-			f = 0;
-
-			if (changed)
-			{
-				handleFileChange(fi.filename);
-			}
-		}
-	}
-
-#ifdef WIN32
-	if (s_fileWatcher != INVALID_HANDLE_VALUE)
-	{
-		BOOL result = FindNextChangeNotification(s_fileWatcher);
-		Assert(result);
-
-		if (!result)
-		{
-			logError("failed to watch for next file change notification");
-		}
-	}
-#endif
 }
 
 #endif
@@ -1236,15 +1130,16 @@ static void doStressTest()
 
 int main(int argc, char * argv[])
 {
-#if ENABLE_REALTIME_EDITING
-	initFileMonitor();
-#endif
-
 	if (!config.load("settings.xml"))
 	{
 		logError("failed to load: settings.xml");
 		return -1;
 	}
+	
+	GFX_SX = config.display.sx;
+	GFX_SY = config.display.sy;
+	GFX_SX_SCALED = GFX_SX * GFX_SCALE;
+	GFX_SY_SCALED = GFX_SY * GFX_SCALE;
 
 	if (!g_effectInfosByName.load("effects_meta.xml"))
 	{
@@ -1312,14 +1207,14 @@ int main(int argc, char * argv[])
 
 	// initialise OSC
 
-	InitializeCriticalSectionAndSpinCount(&s_oscMessageMtx, 256);
-
-	s_oscMessageThread = CreateThread(NULL, 64 * 1024, ExecuteOscThread, NULL, CREATE_SUSPENDED, NULL);
-	ResumeThread(s_oscMessageThread);
+	s_oscMessageMtx = SDL_CreateMutex();
+	s_oscMessageThread = SDL_CreateThread(ExecuteOscThread, "OSC thread", nullptr);
 
 	// initialize avcodec
 
+#if ENABLE_VIDEO
 	MP::Util::InitializeLibAvcodec();
+#endif
 
 	// initialise framework
 
@@ -1343,6 +1238,11 @@ int main(int argc, char * argv[])
 
 #ifdef DEBUG
 	//framework.reloadCachesOnActivate = true;
+#endif
+
+#if ENABLE_REALTIME_EDITING
+	framework.enableRealTimeEditing = true;
+	framework.realTimeEditCallback = handleRealTimeEdit;
 #endif
 
 	framework.filedrop = true;
@@ -1394,6 +1294,10 @@ int main(int argc, char * argv[])
 	#if ENABLE_STRESS_TEST || 0
 		doStressTest();
 	#endif
+	
+	#if 1
+		nextScene("tracks/Wobbly.scene.xml");
+	#endif
 
 		Surface prevSurface(GFX_SX, GFX_SY, true);
 		Surface surface(GFX_SX, GFX_SY, true);
@@ -1428,11 +1332,7 @@ int main(int argc, char * argv[])
 			if (keyboard.wentDown(SDLK_f))
 			{
 				fileMonitorEnabled = !fileMonitorEnabled;
-				if (fileMonitorEnabled)
-					initFileMonitor();
 			}
-			if (fileMonitorEnabled)
-				tickFileMonitor();
 		#endif
 
 			// process audio input
@@ -1623,7 +1523,7 @@ int main(int argc, char * argv[])
 
 				for (size_t i = 0; i < g_scene->m_events.size(); ++i)
 				{
-					if (i - base < 0 || i - base > 9)
+					if (int(i) - base < 0 || int(i) - base > 9)
 						continue;
 
 					if (keyboard.wentDown((SDLKey)(SDLK_0 + i - base)))
@@ -1705,7 +1605,7 @@ int main(int argc, char * argv[])
 
 			// update network input
 
-			EnterCriticalSection(&s_oscMessageMtx);
+			SDL_LockMutex(s_oscMessageMtx);
 			{
 				while (!s_oscMessages.empty())
 				{
@@ -1786,6 +1686,9 @@ int main(int argc, char * argv[])
 						}
 						break;
 						*/
+					case kOscMessageType_AudioBegin:
+					case kOscMessageType_AudioEnd:
+						break;
 
 					default:
 						fassert(false);
@@ -1795,7 +1698,7 @@ int main(int argc, char * argv[])
 					s_oscMessages.pop_front();
 				}
 			}
-			LeaveCriticalSection(&s_oscMessageMtx);
+			SDL_UnlockMutex(s_oscMessageMtx);
 
 		#if 1
 			const float timeDilationMultiplier = 1.f;
@@ -2191,8 +2094,10 @@ int main(int argc, char * argv[])
 			#if ENABLE_DEBUG_MENUS
 				setFont("VeraMono.ttf");
 				setColor(colorWhite);
-				const int spacingY = 28;
-				const int fontSize = 24;
+				//const int spacingY = 28;
+				//const int fontSize = 24;
+				const int spacingY = 16;
+				const int fontSize = 14;
 				int x = 20;
 				int y = 45;
 
@@ -2215,9 +2120,7 @@ int main(int argc, char * argv[])
 
 						const std::string & effectName = (*i)->m_name;
 						Effect * effect = (*i)->m_effect;
-
-						const EffectInfo & info = g_effectInfosByName[effectName];
-
+						
 						char temp[1024];
 						sprintf_s(temp, sizeof(temp), "%d %-20s", index, effectName.c_str());
 
@@ -2499,8 +2402,7 @@ int main(int argc, char * argv[])
 	//
 
 	s_oscReceiveSocket->AsynchronousBreak();
-	WaitForSingleObject(s_oscMessageThread, INFINITE);
-	CloseHandle(s_oscMessageThread);
+	SDL_WaitThread(s_oscMessageThread, nullptr);
 
 	delete s_oscReceiveSocket;
 	s_oscReceiveSocket = nullptr;

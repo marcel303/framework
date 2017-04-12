@@ -49,7 +49,7 @@ bool ChannelManager::Initialize(PacketDispatcher * packetDispatcher, ChannelHand
 
 	m_serverVersion = serverVersion;
 
-	LOG_DBG("ChannelManager::Initialize: done");
+	LOG_DBG("ChannelManager::Initialize: done", 0);
 
 	return true;
 }
@@ -85,7 +85,7 @@ void ChannelManager::Shutdown(bool sendDisconnectNotification)
 	SharedNetSocket nullSocket;
 	m_socket = nullSocket;
 
-	LOG_DBG("ChannelManager::Shutdown [done]");
+	LOG_DBG("ChannelManager::Shutdown [done]", 0);
 }
 
 bool ChannelManager::IsInitialized()

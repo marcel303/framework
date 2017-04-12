@@ -45,6 +45,7 @@
 	
 	CGContextRef ctx = UIGraphicsGetCurrentContext();
 	CGContextSetFillColorWithColor(ctx, temp.CGColor);
+    CGContextSetBlendMode(ctx, kCGBlendModeCopy);
 	CGContextFillRect(ctx, self.bounds);
 	
 	CGContextSetStrokeColorWithColor(ctx, [UIColor blackColor].CGColor);

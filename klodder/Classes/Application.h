@@ -21,7 +21,7 @@
 class Application
 {
 public:
-	Application();
+	Application(const float displayScale);
 	~Application();
 	
 	void Setup(
@@ -39,6 +39,7 @@ private:
 	int mScale;
 	Rgba mBackColor1;
 	Rgba mBackColor2;
+	float mDisplayScale;
 	
 	// -------------------
 	// Change notification

@@ -24,8 +24,8 @@ extern float screenYToVirtual(const float y);
 extern const int SCREEN_SX;
 extern const int SCREEN_SY;
 
-extern const int GFX_SX;
-extern const int GFX_SY;
+extern int GFX_SX;
+extern int GFX_SY;
 
 extern Config config;
 
@@ -40,6 +40,7 @@ extern bool g_isReplay;
 
 struct Effect;
 struct EffectInfo;
+struct VideoLoop;
 
 //
 
@@ -285,6 +286,7 @@ struct Effect_Boxes : Effect
 		int m_axis;
 
 		Box();
+		virtual ~Box();
 
 		bool tick(const float dt);
 	};
@@ -334,6 +336,8 @@ struct Effect_Picture : Effect
 
 //
 
+#if ENABLE_VIDEO
+
 struct Effect_Video : Effect
 {
 	TweenFloat m_alpha;
@@ -357,6 +361,29 @@ struct Effect_Video : Effect
 	virtual void handleSignal(const std::string & name) override;
 	virtual void syncTime(const float time) override;
 };
+
+struct Effect_VideoLoop : Effect
+{
+	TweenFloat m_alpha;
+	std::string m_filename;
+	std::string m_shader;
+	bool m_yuv;
+	bool m_centered;
+
+	VideoLoop * m_videoLoop;
+	bool m_playing;
+
+	Effect_VideoLoop(const char * name, const char * filename, const char * shader, const bool yuv, const bool centered, const bool play);
+	virtual ~Effect_VideoLoop();
+
+	virtual void tick(const float dt) override;
+	virtual void draw(DrawableList & list) override;
+	virtual void draw() override;
+
+	virtual void handleSignal(const std::string & name) override;
+};
+
+#endif
 
 //
 
@@ -821,4 +848,91 @@ struct Effect_Sparklies : Effect
 	virtual void tick(const float dt) override;
 	virtual void draw(DrawableList & list) override;
 	virtual void draw() override;
+};
+
+//
+
+struct Effect_Wobbly : Effect
+{
+	struct WaterSim
+	{
+		static const int kNumElems = 768;
+		
+		double p[kNumElems];
+		double v[kNumElems];
+		
+		WaterSim();
+		
+		void tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds);
+	};
+	
+	struct WaterDrop
+	{
+		bool isAlive;
+		bool isApplying;
+		
+		double x;
+		double y;
+		double vx;
+		double direction;
+		double strength;
+		double applyRadius;
+		double applyTime;
+		double applyTimeRcp;
+		double fadeInTime;
+		double fadeInTimeRcp;
+		
+		WaterDrop();
+		
+		void tick(const double dt, const double stretch, WaterSim & sim);
+		
+		double toWaterP(const WaterSim & sim, const double x, const double stretch) const;
+		double checkIntersection(const WaterSim & sim, const double stretch, const double radius, const double bias) const;
+	};
+	
+	struct Fade
+	{
+		double falloff;
+		double falloffD;
+		
+		Fade()
+			: falloff(0.0)
+			, falloffD(1.0)
+		{
+		}
+		
+		void tick(const double dt)
+		{
+			const double f = std::pow(1.0 - falloffD, dt);
+			
+			falloff *= f;
+		}
+	};
+	
+	TweenFloat m_drop;
+	TweenFloat m_showDrops;
+	TweenFloat m_wobbliness;
+	TweenFloat m_closedEnds;
+	TweenFloat m_stretch;
+	TweenFloat m_numIterations;
+	TweenFloat m_alpha;
+	
+	std::string m_shader;
+	
+	WaterSim * m_waterSim;
+	
+	std::vector<WaterDrop> m_waterDrops;
+	
+	Fade fade;
+	
+	GLuint elementsTexture;
+
+	Effect_Wobbly(const char * name, const char * shader);
+	virtual ~Effect_Wobbly();
+
+	virtual void tick(const float dt) override;
+	virtual void draw(DrawableList & list) override;
+	virtual void draw() override;
+	
+	virtual void handleSignal(const std::string & name) override;
 };

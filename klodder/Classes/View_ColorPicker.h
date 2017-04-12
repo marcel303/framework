@@ -5,6 +5,7 @@
 #import "Types.h"
 #import "View_ColorPicker_ColorBar.h"
 #import "ViewBase.h"
+#include <stdint.h>
 
 #include <vector> // exclusion zone
 class ExclusionZone
@@ -39,7 +40,7 @@ private:
 	UIImageView* darkOverlay;
 }
 
-@property (readonly, assign) Rgba color;
+@property (nonatomic, readonly, assign) Rgba color;
 
 -(id)initWithFrame:(CGRect)frame app:(AppDelegate*)app controller:(UIViewController*)controller delegate:(id<PickerDelegate>)delegate;
 -(void)sampleAtPoint:(Vec2F)location;

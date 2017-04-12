@@ -2,6 +2,7 @@
 #import "Application.h"
 #import "BrushSettingsLibrary.h"
 #import "ExceptionLoggerObjC.h"
+#import "Log.h"
 #import "View_BrushPreview.h"
 #import "View_MiniBrushSize.h"
 #import "View_MiniToolSelect.h"
@@ -34,7 +35,7 @@
 		
 		slider = [[[UISlider alloc] initWithFrame:CGRectMake(25.0, 100.0f, 200.0f, 20.0f)] autorelease];
 		[slider setMinimumValue:1.0f];
-		[slider setMaximumValue:gMaxBrushRadius];
+		[slider setMaximumValue:MAX_BRUSH_RADIUS_UI];
 		[slider addTarget:self action:@selector(handleSliderChanged) forControlEvents:UIControlEventTouchUpInside|UIControlEventValueChanged];
 		[slider addTarget:self action:@selector(handleSliderUp) forControlEvents:UIControlEventTouchUpInside|UIControlEventTouchUpOutside];
 		[self addSubview:slider];
@@ -112,7 +113,7 @@
 	{
 		case ToolViewType_Brush:
 			patternId = [View_ToolSettings_Brush lastPatternId];
-			toolType = patternId ? ToolType_PatternBrushDirect : ToolType_SoftBrushDirect;
+			toolType = patternId ? ToolType_PatternBrush : ToolType_SoftBrush;
 			break;
 		case ToolViewType_Smudge:
 			patternId = [View_ToolSettings_Smudge lastPatternId];

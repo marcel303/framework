@@ -81,11 +81,18 @@ static void StretchBlitX(const MacImage* src, MacImage* dst, int sy, int dy, flo
 	//LOG_DBG("stretch: %f", dsx);
 	
 	MacRgba baseColor;
+#if 1
+    baseColor.rgba[0] = 0;
+    baseColor.rgba[1] = 0;
+    baseColor.rgba[2] = 0;
+    baseColor.rgba[3] = 0;
+#else
 	baseColor.rgba[0] = 191;
 	baseColor.rgba[1] = 227;
 	baseColor.rgba[2] = 255;
 	baseColor.rgba[3] = 63;
-	
+#endif
+    
 	for (float i = 0.0f; i < dsx; i += 1.0f)
 	{
 		const float stx = spx + ssx / dsx * i;
@@ -145,9 +152,9 @@ static void CreatePreview(const MacImage* _src, MacImage* dst, int _sx1, int _sx
 		
 		for (int x = 0; x < dst->Sx_get(); ++x)
 		{
-			for (int i = 3; i < 4; ++i)
+			for (int i = 0; i < 4; ++i)
 			{
-				line[x].rgba[i] = (line[x].rgba[i] * layerOpacity) >> 8;
+				line[x].rgba[i] = ((int)line[x].rgba[i] * layerOpacity) >> 8;
 			}
 		}
 	}
@@ -340,12 +347,13 @@ static void CreatePreview(const MacImage* _src, MacImage* dst, int _sx1, int _sx
 {
 	HandleExceptionObjcBegin();
 	
-	LOG_DBG("rendering layer preview", 0);
+	LOG_DBG("rendering layer preview, %dx%d", preview.Sx_get(), preview.Sy_get());
 	
 	CGContextRef ctx = UIGraphicsGetCurrentContext();
-	CGImageRef cgImage = preview.ImageWithAlpha_get();
+	CGImageRef cgImage = preview.Image_get();
 	int x = (self.frame.size.width - preview.Sx_get()) / 2.0f;
 	int y = (self.frame.size.height - preview.Sy_get()) / 2.0f;
+    CGContextSetBlendMode(ctx, kCGBlendModeCopy);
 	CGContextDrawImage(ctx, CGRectMake(x, y, preview.Sx_get(), preview.Sy_get()), cgImage);	
 	CGImageRelease(cgImage);
 	
@@ -395,7 +403,7 @@ static void CreatePreview(const MacImage* _src, MacImage* dst, int _sx1, int _sx
 	
 	UITouch* touch = [touches anyObject];
 	
-	CGPoint location = [touch locationInView:self];
+	//CGPoint location = [touch locationInView:self];
 	
 	[self moveEnd];
 	

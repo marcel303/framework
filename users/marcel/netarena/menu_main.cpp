@@ -24,7 +24,7 @@ static void openBrowserWithUrl(const char * url)
 	ShellExecute(NULL, "open", url, NULL, NULL, SW_SHOWNORMAL);
 }
 #else
-static void openBrowserWithUrl(const char * url) { }
+inline void openBrowserWithUrl(const char * url) { }
 #endif
 
 OPTION_EXTERN(std::string, g_connect);
@@ -216,13 +216,15 @@ bool MainMenu::tick(float dt)
 	{
 		logDebug("new game!");
 
-#if 1
+#if 0
 		g_app->m_menuMgr->push(new Menu_NewGame());
 #else
 	#if ITCHIO_BUILD
 		// fixme : this is a hack to 'fix' automatically selecting a character in the lobby screen
 		SDL_Delay(250);
 	#endif
+        
+        g_uiBackground->setState(UiBackground::kState_Hidden);
 
 		g_app->startHosting();
 #endif
@@ -289,7 +291,7 @@ bool MainMenu::tick(float dt)
 	return false;
 }
 
-#if ITCHIO_BUILD
+#if DRAW_BACK_V1 && ITCHIO_BUILD
 static void drawParticles(float ballY)
 {
 	struct Part
@@ -377,6 +379,7 @@ static void drawParticles(float ballY)
 }
 #endif
 
+#if ITCHIO_BUILD && DRAW_BACK_V1
 static void drawSexyScroller(float x1, float y1, float x2, float y2, float xOffset, float yOffset, float scale, float a1, float a2)
 {
 	gxSetTexture(Sprite("itch-scroller.png").getTexture());
@@ -394,6 +397,7 @@ static void drawSexyScroller(float x1, float y1, float x2, float y2, float xOffs
 	gxEnd();
 	gxSetTexture(0);
 }
+#endif
 
 void MainMenu::draw()
 {

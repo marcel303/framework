@@ -1,11 +1,17 @@
 #pragma once
 
 #ifdef DEBUG
-	#define ITCHIO_BUILD 0
+	#define ITCHIO_BUILD 1
 	#define DEPLOY_BUILD 0
 #else
 	#define ITCHIO_BUILD 1
 	#define DEPLOY_BUILD 0
+#endif
+
+#if defined(WIN32)
+    #define STEAM_AVAILABLE 1
+#else
+    #define STEAM_AVAILABLE 0
 #endif
 
 #if DEPLOY_BUILD
@@ -23,7 +29,7 @@
 	#define ENABLE_NETWORKING_DISCOVERY 0
 	#define ENABLE_OPTIONS 1
 	#define ENABLE_DEVMODE 1
-	#define ENABLE_STEAM 1
+	#define ENABLE_STEAM 0
 #else
 	#define PUBLIC_DEMO_BUILD 0
 	#define ENABLE_NETWORKING 1
@@ -31,7 +37,7 @@
 	#define ENABLE_NETWORKING_DISCOVERY 0
 	#define ENABLE_OPTIONS 1
 	#define ENABLE_DEVMODE 1
-	#define ENABLE_STEAM 1
+	#define ENABLE_STEAM STEAM_AVAILABLE
 #endif
 
 #if ITCHIO_BUILD

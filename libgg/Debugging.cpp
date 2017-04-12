@@ -35,7 +35,11 @@ void HandleAssert(const char * func, int line, const char * expr, ...)
 	char text[1024];
 	va_list args;
 	va_start(args, expr);
+#if defined(IPHONEOS) || defined(MACOS)
+    vsprintf(text, expr, args);
+#else
 	vsprintf_s(text, expr, args);
+#endif
 	va_end(args);
 
 	LOG_ERR("assertion failed: %s: %d: %s", func, line, text);
@@ -88,9 +92,10 @@ static const int kAllocBack = 4;
 
 #endif
 
+#if DEBUG_MEM
+
 static void* Alloc(size_t size)
 {
-#if DEBUG_MEM
 	// reserve space for debug info
 	size_t allocSize = kAllocFront + size + kAllocBack;
 	
@@ -144,23 +149,10 @@ static void* Alloc(size_t size)
 #endif
 
 	return result;
-#else
-	void* p = HeapAlloc(size);
-
-	if (p == 0)
-	{
-		LOG_DBG("attempted to allocate %lu bytes", size);
-		DBG_PrintAllocState();
-		throw MemoryException();
-	}
-
-	return p;
-#endif
 }
 
 static void Free(void* _p)
 {
-#if DEBUG_MEM
 	if (_p == 0)
 		return;
 
@@ -195,10 +187,9 @@ static void Free(void* _p)
 
 	// free
 	HeapFree(_p);
-#else
-	HeapFree(_p);
-#endif
 }
+
+#endif
 
 #if DEBUG_MEM
 

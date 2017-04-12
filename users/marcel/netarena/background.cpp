@@ -4,6 +4,8 @@
 #include "gamesim.h"
 #include "main.h"
 
+#include "StringEx.h" // _s functions
+
 OPTION_DECLARE(bool, s_debugBackground, false);
 OPTION_DEFINE(bool, s_debugBackground, "Debug/Debug Background");
 
@@ -183,6 +185,13 @@ void Background::drawLight()
 		if (m_volcanoState.m_fireBall.m_isActive)
 			m_volcanoState.m_fireBall.drawLight();
 		break;
+            
+    case kLevelTheme_Ice:
+    case kLevelTheme_Lobby:
+        break;
+        
+    case kLevelTheme_COUNT:
+        break;
 	}
 }
 

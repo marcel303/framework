@@ -26,8 +26,8 @@ void PsdColorModeData::Write(PsdInfo* pi, Stream* stream)
 
 	writer.WriteUInt32(SwapU32(length));
 
-	for (uint32_t i = 0; i < length; ++i)
-		writer.WriteUInt8(0);
+	//for (uint32_t i = 0; i < length; ++i)
+	//	writer.WriteUInt8(0);
 
 	PSD_LOG_DBG("color mode data: write: length: %lu", length);
 }

@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef WIMN32
+
 #include <Windows.h>
 
 struct AudioSample;
@@ -20,3 +22,29 @@ public:
 
 	bool provide(AudioSample * __restrict buffer, int & sampleCount);
 };
+
+#else
+
+struct AudioSample;
+
+class AudioIn
+{
+	void * m_stream;
+	AudioSample * m_sampleBuffer;
+	int m_sampleBufferSize;
+	
+	bool m_hasData;
+	
+public:
+	AudioIn();
+	~AudioIn();
+	
+	bool init(int deviceIndex, int channelCount, int sampleRate, int bufferSampleCount);
+	void shutdown();
+	
+	bool provide(AudioSample * __restrict buffer, int & sampleCount);
+	
+	void handleAudioData(const short * __restrict buffer);
+};
+
+#endif

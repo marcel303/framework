@@ -21,11 +21,21 @@ class QuickLook;
 class Client
 {
 public:
-	Channel * m_channel;
+    struct TextChatLog
+    {
+        int playerIndex;
+        int characterIndex;
+        std::string playerDisplayName;
+        std::string message;
+    };
+    
+    Channel * m_channel;
 
 	LobbyMenu * m_lobbyMenu;
 
 	TextField * m_textChat;
+    std::list<TextChatLog> m_textChatLog;
+    float m_textChatFade;
 
 	QuickLook * m_quickLook;
 
@@ -39,16 +49,6 @@ public:
 	bool m_hasAddedPlayers;
 
 	std::vector<PlayerInstanceData*> m_players;
-
-	struct TextChatLog
-	{
-		int playerIndex;
-		int characterIndex;
-		std::string playerDisplayName;
-		std::string message;
-	};
-	std::list<TextChatLog> m_textChatLog;
-	float m_textChatFade;
 
 	Client();
 	~Client();

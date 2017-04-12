@@ -27,10 +27,18 @@ list(REMOVE_ITEM source aniplay.cpp)
 list(REMOVE_ITEM source example.cpp)
 list(REMOVE_ITEM source ../fbx1/main.cpp)
 
+if (APPLE)
+	list(REMOVE_ITEM source remotery.cpp)
+endif (APPLE)
+
 add_library(framework ${source})
 
 target_compile_definitions(framework PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS)
 target_compile_definitions(framework PUBLIC $<$<CONFIG:Debug>:DEBUG>)
+
+if (APPLE)
+	target_compile_definitions(framework PUBLIC MACOS)
+endif (APPLE)
 
 target_include_directories(framework PUBLIC "${PROJECT_SOURCE_DIR}")
 target_include_directories(framework PRIVATE "${PROJECT_SOURCE_DIR}/audiostream")
@@ -43,7 +51,6 @@ add_dependencies(framework libgg)
 if (MSVC)
 	set_property(TARGET framework APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
 endif (MSVC)
-
 
 # --- test application ---
 

@@ -3,6 +3,7 @@
 #import "ExceptionLoggerObjC.h"
 #import "KlodderSystem.h"
 #import "LayerMgr.h"
+#import "Log.h"
 #import "View_BarButtonItem_Color.h"
 #import "View_ColorPickerMgr.h"
 #import "View_Editing.h"
@@ -25,12 +26,13 @@
 	
 	if (self = [super initWithApp:_app])
 	{
-		[self setWantsFullScreenLayout:YES];
-		
-		self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithTitle:@"Back" style:UIBarButtonItemStyleBordered target:self action:@selector(handleDoneAnimated)] autorelease];
+		[self setFullScreenLayout];
+        
+		self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithTitle:@"Back" style:UIBarButtonItemStylePlain target:self action:@selector(handleDoneAnimated)] autorelease];
 
-		UIBarButtonItem* item_Done = [[[UIBarButtonItem alloc] initWithTitle:@"Done" style:UIBarButtonItemStyleBordered target:self action:@selector(handleDoneAnimated)] autorelease];
-		self.navigationItem.rightBarButtonItem = item_Done;
+		//UIBarButtonItem* item_Done = [[[UIBarButtonItem alloc] initWithTitle:@"Done" style:UIBarButtonItemStylePlain target:self action:@selector(handleDoneAnimated)] autorelease];
+		//self.navigationItem.rightBarButtonItem = item_Done;
+        //self.navigationItem.leftBarButtonItem = item_Done;
 		self.title = @"Drawing";
 		
 		lastZoom = 4.0f;
@@ -76,7 +78,7 @@
 	}
 #else
 	View_ColorPickerMgr* subController = [[[View_ColorPickerMgr alloc] initWithApp:app] autorelease];
-	[self presentModalViewController:subController animated:YES];
+    [self presentViewController:subController animated:YES completion:NULL];
 #endif
 	
 	HandleExceptionObjcEnd(false);
@@ -109,7 +111,7 @@
 	}
 #else
 	View_ToolSelectMgr* subController = [[[View_ToolSelectMgr alloc] initWithApp:app] autorelease];
-	[self presentModalViewController:subController animated:TRUE];
+    [self presentViewController:subController animated:TRUE completion:NULL];
 #endif
 	
 	HandleExceptionObjcEnd(false);
@@ -143,7 +145,6 @@
 #else
 	View_LayersMgr* subController = [[[View_LayersMgr alloc] initWithApp:app] autorelease];
 	[self.navigationController pushViewController:subController animated:TRUE];
-	//[self presentModalViewController:subController animated:TRUE];
 #endif
 	
 	HandleExceptionObjcEnd(false);
@@ -424,16 +425,18 @@
 //	[vw_Color setAutoresizingMask:UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin];
 //	[vw_Color setContentMode:UIViewContentModeScaleToFill];
 	item_Color = [[[UIBarButtonItem alloc] initWithCustomView:vw_Color] autorelease];
-	item_Tool = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_tool")] style:UIBarButtonItemStyleBordered target:self action:@selector(handleToolSettings)] autorelease];
-	item_Layers = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_layers")] style:UIBarButtonItemStyleBordered target:self action:@selector(handleLayers)] autorelease];
+	item_Tool = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_tool")] style:UIBarButtonItemStylePlain target:self action:@selector(handleToolSettings)] autorelease];
+	item_Layers = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_layers")] style:UIBarButtonItemStylePlain target:self action:@selector(handleLayers)] autorelease];
 	UIBarButtonItem* item_Undo = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_undo")]style:UIBarButtonItemStylePlain target:self action:@selector(handleUndo)] autorelease];
 	UIBarButtonItem* item_Redo = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_redo")] style:UIBarButtonItemStylePlain target:self action:@selector(handleRedo)] autorelease];
+    //UIBarButtonItem* item_Undo = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemUndo target:self action:@selector(handleUndo)] autorelease];
+    //UIBarButtonItem* item_Redo = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemRedo target:self action:@selector(handleRedo)] autorelease];
 	UIBarButtonItem* item_DBG_TestBezierTraveller = nil;
 #ifndef DEPLOYMENT
-	item_DBG_TestBezierTraveller = [[[UIBarButtonItem alloc] initWithTitle:@"B" style:UIBarButtonItemStyleBordered target:self action:@selector(DBG_handleTestBezierTraveller)] autorelease];
+	item_DBG_TestBezierTraveller = [[[UIBarButtonItem alloc] initWithTitle:@"B" style:UIBarButtonItemStylePlain target:self action:@selector(DBG_handleTestBezierTraveller)] autorelease];
 #endif
 	
-	UIBarButtonItem* item_Space = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
+	UIBarButtonItem* item_Space = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil] autorelease];
 	[item_Undo setEnabled:app.mApplication->HasUndo_get()];
 	[item_Redo setEnabled:app.mApplication->HasRedo_get()];
 	
@@ -442,27 +445,27 @@
 	HandleExceptionObjcEnd(false);
 }
 
+#ifdef IPAD
 // UIPopoverControllerDelegate
 
 -(void)popoverControllerDidDismissPopover:(UIPopoverController*)_popoverController
 {
-#ifdef IPAD
 	popoverController = nil;
 	//[popoverController autorelease];
-#endif
 }
 
 -(BOOL)popoverControllerShouldDismissPopover:(UIPopoverController*)popoverController
 {
 	return YES;
 }
+#endif
 
 static void RenderBezier(void* obj, BezierTravellerState state, float x, float y)
 {
 	Application* app = (Application*)obj;
 	
 	if (state == BezierTravellerState_Begin)
-		app->StrokeBegin(app->LayerMgr_get()->ActiveDataLayer_get(), false, false, x, y);
+		app->StrokeBegin(app->LayerMgr_get()->EditingDataLayer_get(), false, false, x, y);
 	if (state == BezierTravellerState_End)
 		app->StrokeEnd();
 	if (state == BezierTravellerState_Update)
@@ -502,7 +505,7 @@ static void RenderBezier(void* obj, BezierTravellerState state, float x, float y
 	
 	LOG_DBG("view create", 0);
 	
-	self.view = [[[View_Editing alloc] initWithFrame:[UIScreen mainScreen].applicationFrame andApp:app controller:self] autorelease];
+	self.view = [[[View_Editing alloc] initWithFrame:[UIScreen mainScreen].bounds andApp:app controller:self] autorelease];
 	
 	HandleExceptionObjcEnd(false);
 }

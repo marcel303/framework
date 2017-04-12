@@ -1,6 +1,7 @@
 #import "AppDelegate.h"
 #import "ExceptionLoggerObjC.h"
 #import "KlodderSystem.h"
+#import "Log.h"
 #import "View_EditingMgr.h"
 #import "View_PictureGallery.h"
 #import "View_PictureGalleryImage.h"
@@ -87,8 +88,12 @@
 //	float yOffset = 50.0f;
 	float yOffset = 0.0f;
 	
-	int sx = 90;
-	int sy = 90 * 480 / 320;
+	CGRect screenRect = [UIScreen mainScreen].bounds;
+	
+	//int sx = 90;
+	//int sy = 90 * 480 / 320;
+	int sx = screenRect.size.width / 4;
+	int sy = screenRect.size.height / 4;
 	
 	int nx = 3;
 	
@@ -97,7 +102,7 @@
 	int ox = 15;
 	int oy = 15;
 	
-	int i = [scroll subviews].count;
+	int i = (int)[scroll subviews].count;
 	
 	int ix = i % nx;
 	int iy = i / nx;

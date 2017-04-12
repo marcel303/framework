@@ -56,7 +56,7 @@ bool XmlNode::GetAttribute_Bytes(const char* name, Stream* stream)
 	
 	std::vector<uint8_t> bytes = BytesDecode(value);
 	
-	stream->Write(&bytes[0], bytes.size());
+	stream->Write(&bytes[0], (int)bytes.size());
 	
 	return true;
 }

@@ -1,6 +1,15 @@
 #pragma once
 
-#include "mediaplayer_old/MPContext.h"
+#include "config.h"
+
+#if ENABLE_VIDEO
+
+#if defined(MACOS)
+	#include "mediaplayer_new/MPContext.h"
+#else
+	#include "mediaplayer_old/MPContext.h"
+#endif
+
 #include <stdint.h>
 
 struct MediaPlayer
@@ -91,7 +100,10 @@ struct MediaPlayer
 
 	void updateTexture();
 	uint32_t getTexture() const;
+	bool getVideoProperties(int & sx, int & sy, double & duration) const;
 
 	void startMediaPlayerThread();
 	void stopMediaPlayerThread();
 };
+
+#endif

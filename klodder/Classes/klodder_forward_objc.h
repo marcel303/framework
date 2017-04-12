@@ -2,7 +2,9 @@
 
 @class AppDelegate;
 @class FacebookState;
+#if BUILD_FLICKR
 @class FlickrState;
+#endif
 @class HTTPServer;
 @class View_About;
 @class View_AboutMgr;

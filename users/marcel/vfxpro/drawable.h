@@ -2,7 +2,10 @@
 
 #include "framework.h"
 #include <algorithm>
-#include <malloc.h>
+
+#ifdef WIN32
+	#include <malloc.h>
+#endif
 
 struct Drawable
 {
@@ -75,7 +78,7 @@ struct DrawableList
 	}
 };
 
-static void * operator new(size_t size, DrawableList & list)
+inline void * operator new(size_t size, DrawableList & list)
 {
 	Drawable * drawable = (Drawable*)malloc(size);
 
@@ -84,7 +87,7 @@ static void * operator new(size_t size, DrawableList & list)
 	return drawable;
 }
 
-static void operator delete(void * p, DrawableList & list)
+inline void operator delete(void * p, DrawableList & list)
 {
 	free(p);
 }

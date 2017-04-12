@@ -12,5 +12,6 @@
 -(id)initWithApp:(AppDelegate*)app;
 -(void)setMenuTransparent;
 -(void)setMenuOpaque;
+-(void)setFullScreenLayout;
 
 @end

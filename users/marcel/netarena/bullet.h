@@ -93,10 +93,10 @@ struct ParticleSpawnInfo
 	}
 
 	ParticleSpawnInfo(int16_t _x, int16_t _y, BulletType _type, uint8_t _count, uint16_t _minVelocity, uint16_t _maxVelocity, uint16_t _maxDistance)
-		: x(_x)
+        : type(_type)
+        , count(_count)
+		, x(_x)
 		, y(_y)
-		, type(_type)
-		, count(_count)
 		, minVelocity(_minVelocity)
 		, maxVelocity(_maxVelocity)
 		, maxDistance(_maxDistance)

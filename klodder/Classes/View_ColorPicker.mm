@@ -3,6 +3,7 @@
 #import "AppDelegate.h"
 #import "Calc.h"
 #import "ExceptionLoggerObjC.h"
+#import "Log.h"
 #import "MenuView.h"
 #import "UIColorEx.h"
 #import "View_ColorPicker.h"
@@ -184,7 +185,7 @@ void ExclusionZone::RenderUi()
 	
 	View_SwatchesMgr* subController = [[[View_SwatchesMgr alloc] initWithApp:app] autorelease];
 	[subController setModalTransitionStyle:UIModalTransitionStyleCrossDissolve];
-	[controller presentModalViewController:subController animated:TRUE];
+    [controller presentViewController:subController animated:TRUE completion:NULL];
 }
 
 //
@@ -208,7 +209,7 @@ void ExclusionZone::RenderUi()
 	}
 	else
 	{
-		[controller dismissModalViewControllerAnimated:YES];
+        [controller dismissViewControllerAnimated:YES completion:NULL];
 	}
 
 	HandleExceptionObjcEnd(false);

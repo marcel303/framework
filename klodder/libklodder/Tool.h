@@ -3,11 +3,7 @@
 #include "libklodder_forward.h"
 #include "Types.h"
 
-#if defined(IPAD)
 #define MAX_BRUSH_RADIUS 255
-#else
-#define MAX_BRUSH_RADIUS 127
-#endif
 
 enum ToolType
 {

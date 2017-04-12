@@ -1,6 +1,7 @@
 #import "AppDelegate.h"
 #import "Application.h"
 #import "ExceptionLoggerObjC.h"
+#import "Log.h"
 #import "View_Swatches.h"
 #import "View_SwatchesMgr.h"
 
@@ -26,14 +27,14 @@
 	app.colorPickerState->Opacity_set(color.rgb[3]);
 	[app applyColor];
 	
-	[self dismissModalViewControllerAnimated:TRUE];
+	[self dismissViewControllerAnimated:TRUE completion:NULL];
 }
 
 -(void)loadView
 {
 	HandleExceptionObjcBegin();
 	
-	self.view = [[[View_Swatches alloc] initWithFrame:[UIScreen mainScreen].applicationFrame delegate:self] autorelease];
+	self.view = [[[View_Swatches alloc] initWithFrame:[UIScreen mainScreen].bounds delegate:self] autorelease];
 	
 	HandleExceptionObjcEnd(false);
 }

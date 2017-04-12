@@ -1,3 +1,5 @@
+#if BUILD_HTTPSERVER
+
 #import "Application.h"
 #import "GCDAsyncSocket.h"
 #import "Exception.h"
@@ -11,6 +13,7 @@
 #import "HTTPResponse.h"
 #import "ImageId.h"
 #import "KlodderSystem.h"
+#import "Log.h"
 #import "MemoryStream.h"
 #import "MyHTTPConnection.h"
 #import "Path.h"
@@ -35,7 +38,7 @@ static void MakeSureCachesDirectoryExists()
 	if (![fileManager fileExistsAtPath:path])
 	{
 		LOG_INF("caches directory does not exist. creating path", 0);
-		[fileManager createDirectoryAtPath:path attributes:nil];
+        [fileManager createDirectoryAtPath:path withIntermediateDirectories:YES attributes:NULL error:NULL];
 	}
 }
 
@@ -50,7 +53,7 @@ static void RenderHtml(HtmlTemplateEngine& engine, std::string func, std::vector
 		{
 			NSString* path = [NSString stringWithCString:gSystem.GetDocumentPath("").c_str() encoding:NSASCIIStringEncoding];
 			
-		    NSArray* fileList = [[NSFileManager defaultManager] directoryContentsAtPath:path];
+            NSArray* fileList = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:path error:NULL];
 			
 			for (NSString* fileName in fileList)
 			{
@@ -61,7 +64,7 @@ static void RenderHtml(HtmlTemplateEngine& engine, std::string func, std::vector
 					NSString* baseName = [fileName stringByDeletingPathExtension];
 					NSString* fileNameThumb = [[baseName stringByAppendingString:@"_thumbnail"] stringByAppendingPathExtension:@"png"];
 					
-					NSDictionary* attributes = [[NSFileManager defaultManager] fileAttributesAtPath:[path stringByAppendingPathComponent:fileName] traverseLink:NO];
+					NSDictionary* attributes = [[NSFileManager defaultManager] attributesOfItemAtPath:[path stringByAppendingPathComponent:fileName] error:NULL];
 					NSString* modicationDate = [[attributes objectForKey:NSFileModificationDate] description];
 					
 					engine.SetKey("thumbnail", [fileNameThumb cStringUsingEncoding:NSASCIIStringEncoding]);
@@ -202,3 +205,5 @@ static void RenderHtml(HtmlTemplateEngine& engine, std::string func, std::vector
 }
 
 @end
+
+#endif

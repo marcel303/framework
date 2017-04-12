@@ -44,25 +44,31 @@ if (MSVC)
 	set_property(TARGET libparticle APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
 endif (MSVC)
 
+if (APPLE)
+	target_compile_definitions(libparticle PUBLIC MACOS)
+endif (APPLE)
+
 # --- libparticle_test ---
 
-add_executable(libparticle_test ${source})
-
-target_compile_definitions(libparticle_test PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS)
-
-target_link_libraries(libparticle_test PRIVATE framework)
-target_link_libraries(libparticle_test PRIVATE libnfd)
-target_link_libraries(libparticle_test PRIVATE libgg)
-
-target_link_libraries(libparticle_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/FreeImage.lib)
-target_link_libraries(libparticle_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/freetype252.lib)
-target_link_libraries(libparticle_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/glew32.lib)
-target_link_libraries(libparticle_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/OpenAL32.lib)
-target_link_libraries(libparticle_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/SDL2.lib)
-target_link_libraries(libparticle_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/SDL2main.lib)
-target_link_libraries(libparticle_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/XInput9_1_0.lib)
-target_link_libraries(libparticle_test PRIVATE Winmm.lib OpenGL32.lib WSock32.lib)
-
-if (MSVC)
-	set_property(TARGET libparticle_test APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
-endif (MSVC)
+#add_executable(libparticle_test ${source})
+#
+#target_compile_definitions(libparticle_test PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS)
+#
+#target_link_libraries(libparticle_test PRIVATE framework)
+#target_link_libraries(libparticle_test PRIVATE libnfd)
+#target_link_libraries(libparticle_test PRIVATE libgg)
+#
+#if (MSVC)
+#	target_link_libraries(libparticle_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/FreeImage.lib)
+#	target_link_libraries(libparticle_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/freetype252.lib)
+#	target_link_libraries(libparticle_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/glew32.lib)
+#	target_link_libraries(libparticle_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/OpenAL32.lib)
+#	target_link_libraries(libparticle_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/SDL2.lib)
+#	target_link_libraries(libparticle_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/SDL2main.lib)
+#	target_link_libraries(libparticle_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/win32/lib/XInput9_1_0.lib)
+#	target_link_libraries(libparticle_test PRIVATE Winmm.lib OpenGL32.lib WSock32.lib)
+#endif (MSVC)
+#
+#if (MSVC)
+#	set_property(TARGET libparticle_test APPEND_STRING PROPERTY COMPILE_FLAGS /wd4244)
+#endif (MSVC)

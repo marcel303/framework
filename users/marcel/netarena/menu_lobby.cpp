@@ -221,7 +221,7 @@ void LobbyMenu::draw()
 			Sprite front("itch-lobby-bubble-front.png");
 
 			int idx = 0;
-			for (int o = 0; o < _countof(g_validCharacterIndices); ++o)
+			for (int o = 0; o < sizeof(g_validCharacterIndices) / sizeof(g_validCharacterIndices[0]); ++o)
 				if (p.m_characterIndex == g_validCharacterIndices[o])
 					idx = o;
 

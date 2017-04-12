@@ -54,7 +54,7 @@
 		[self addSubview:more];
 		x += more.frame.size.width;
 		
-		label = CreateLabel(x, 0.0f, TEXT_SX, frame.size.height, @"", FONT_TYPWRITER, 10.0f, UITextAlignmentLeft);
+		label = CreateLabel(x, 0.0f, TEXT_SX, frame.size.height, @"", FONT_TYPWRITER, 10.0f, NSTextAlignmentLeft);
 		[self addSubview:label];
 		
 		[self setValueDirect:value];

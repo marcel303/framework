@@ -7,6 +7,8 @@
 #include "tools.h"
 #include <string>
 
+#include "StringEx.h" // _s functions
+
 #define ENABLE_TIMINGS 0
 
 #if ENABLE_TIMINGS

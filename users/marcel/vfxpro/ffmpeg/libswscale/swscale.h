@@ -21,6 +21,10 @@
 #ifndef SWSCALE_SWSCALE_H
 #define SWSCALE_SWSCALE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @file
  * @ingroup libsws
@@ -346,5 +350,9 @@ const AVClass *sws_get_class(void);
 /**
  * @}
  */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* SWSCALE_SWSCALE_H */

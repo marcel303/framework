@@ -23,7 +23,7 @@ class LayerMgr
 public:
 	LayerMgr();
 
-	void Setup(const int layerCount, const int sx, const int sy, const Rgba & backColor1, const Rgba & backColor2);
+	void Setup(const int layerCount, const int sx, const int sy, const Rgba & backColor1, const Rgba & backColor2, const int checkerBoardSize);
 	
 	void RenderMerged(MacImage & __restrict dst, const MacRgba & backColor1, const MacRgba & backColor2, const int layerBegin, const int layerEnd);
 	void RenderMergedFinal(MacImage & __restrict dst);
@@ -100,6 +100,7 @@ private:
 	MacRgba mBackColor2;
 	MacImage mCacheBack;
 	MacImage mCacheFront;
+	int mCheckerBoardSize;
 
 	// editing
 	bool mEditingEnabled;

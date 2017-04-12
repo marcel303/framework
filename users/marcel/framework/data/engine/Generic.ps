@@ -16,7 +16,7 @@ void main()
 	
 	if (params.x != 0)
 	{
-		vec4 texColor = texture2D(texture0, v_texcoord0);
+		vec4 texColor = texture(texture0, v_texcoord0);
 		
 		if (params.z != 0)
 		{

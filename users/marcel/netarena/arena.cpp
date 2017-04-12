@@ -16,6 +16,8 @@
 #include "player.h"
 #include "StreamReader.h"
 
+#include "StringEx.h" // _s functions
+
 //#pragma optimize("", off)
 
 class BlockMask
@@ -700,7 +702,6 @@ void Arena::drawBlocks(const GameSim & gameSim, int layer) const
 	int numVerts = 0;
 
 	const int ATLAS_TILE_SX = (m_textureSx / BLOCK_SX);
-	const int ATLAS_TILE_SY = (m_textureSy / BLOCK_SY);
 	const int OFFSET_X[4] = { 0, 1, 1, 0 };
 	const int OFFSET_Y[4] = { 0, 0, 1, 1 };
 
@@ -1244,7 +1245,7 @@ bool Arena::getBlocksFromPixels(int baseX, int baseY, int x1, int y1, int x2, in
 					{
 						Block & block = getBlock(x, y);
 
-						if (block.type == kBlockShape_Empty)
+						if (block.type == kBlockType_Empty)
 							continue;
 
 						const float blockX = (x + .5f) * BLOCK_SX;

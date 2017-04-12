@@ -1,6 +1,178 @@
 #include "audioin.h"
 #include "audiostream/AudioStream.h"
 #include "Debugging.h"
+#include "Log.h"
+
+#if !defined(WIN32)
+
+#include <algorithm>
+#include <portaudio/portaudio.h>
+#include <string.h>
+
+int portaudioCallback(
+	const void * inputBuffer,
+	      void * outputBuffer,
+	unsigned long framesPerBuffer,
+	const PaStreamCallbackTimeInfo * timeInfo,
+	PaStreamCallbackFlags statusFlags,
+	void * userData)
+{
+	AudioIn * self = (AudioIn*)userData;
+	const short * buffer = (const short*)inputBuffer;
+	
+	self->handleAudioData(buffer);
+	
+    return paContinue;
+}
+
+AudioIn::AudioIn()
+	: m_stream(nullptr)
+	, m_sampleBuffer(nullptr)
+	, m_sampleBufferSize(0)
+	, m_hasData(false)
+{
+}
+
+AudioIn::~AudioIn()
+{
+	Assert(m_stream == nullptr);
+	Assert(m_sampleBuffer == nullptr);
+	Assert(m_sampleBufferSize == 0);
+}
+
+bool AudioIn::init(int deviceIndex, int channelCount, int sampleRate, int bufferSampleCount)
+{
+	m_sampleBuffer = new AudioSample[bufferSampleCount];
+	m_sampleBufferSize = bufferSampleCount;
+	
+	PaError err = paNoError;
+	
+	err = Pa_Initialize();
+	
+	if (err != paNoError)
+	{
+		LOG_ERR("portaudio: failed to initialize: %s", Pa_GetErrorText(err));
+		return false;
+	}
+	
+	LOG_DBG("portaudio: version=%d, versionText=%s", Pa_GetVersion(), Pa_GetVersionText());
+	
+	PaStreamParameters parameters;
+	memset(&parameters, 0, sizeof(parameters));
+	
+	parameters.device = Pa_GetDefaultInputDevice();
+	
+	if (parameters.device == paNoDevice)
+	{
+		LOG_ERR("portaudio: failed to find output device", 0);
+		shutdown();
+		return false;
+	}
+	
+	const PaDeviceInfo * deviceInfo = Pa_GetDeviceInfo(parameters.device);
+	
+	parameters.channelCount = 1;
+	parameters.sampleFormat = paInt16;
+	parameters.suggestedLatency = deviceInfo->defaultLowOutputLatency;
+	parameters.hostApiSpecificStreamInfo = nullptr;
+	
+	err = Pa_OpenStream(&m_stream, &parameters, nullptr, sampleRate, bufferSampleCount, 0, portaudioCallback, this);
+	
+	if (err != paNoError)
+	{
+		LOG_ERR("portaudio: failed to open stream: %s", Pa_GetErrorText(err));
+		shutdown();
+		return false;
+	}
+	
+	err = Pa_StartStream(m_stream);
+	
+	if (err != paNoError)
+	{
+		LOG_ERR("portaudio: failed to start stream: %s", Pa_GetErrorText(err));
+		shutdown();
+		return false;
+	}
+	
+	return true;
+}
+
+void AudioIn::shutdown()
+{
+	PaError err;
+	
+	if (m_stream != nullptr)
+	{
+		if (Pa_IsStreamActive(m_stream) != 0)
+		{
+			err = Pa_StopStream(m_stream);
+			
+			if (err != paNoError)
+			{
+				LOG_ERR("portaudio: failed to stop stream: %s", Pa_GetErrorText(err));
+			}
+		}
+		
+		err = Pa_CloseStream(m_stream);
+		
+		if (err != paNoError)
+		{
+			LOG_ERR("portaudio: failed to close stream: %s", Pa_GetErrorText(err));
+		}
+		
+		m_stream = nullptr;
+	}
+	
+	err = Pa_Terminate();
+	
+	if (err != paNoError)
+	{
+		LOG_ERR("portaudio: failed to shutdown: %s", Pa_GetErrorText(err));
+	}
+	
+	delete [] m_sampleBuffer;
+	m_sampleBuffer = nullptr;
+	m_sampleBufferSize = 0;
+	
+	m_hasData = false;
+}
+
+bool AudioIn::provide(AudioSample * __restrict buffer, int & sampleCount)
+{
+	if (m_hasData == false)
+	{
+		return false;
+	}
+	else
+	{
+		const int numSamples = std::min(sampleCount, m_sampleBufferSize);
+		
+		memcpy(buffer, m_sampleBuffer, sizeof(AudioSample) * numSamples);
+		
+		sampleCount = numSamples;
+		
+		m_hasData = false;
+		
+		return true;
+	}
+}
+
+void AudioIn::handleAudioData(const short * __restrict buffer)
+{
+	AudioSample * __restrict sampleBuffer = m_sampleBuffer;
+	
+	for (int i = 0; i < m_sampleBufferSize; ++i)
+	{
+		const short value = buffer[i];
+		
+		sampleBuffer[i].channel[0] = value;
+		sampleBuffer[i].channel[1] = value;
+	}
+	
+	m_hasData = true;
+}
+
+#else
 
 AudioIn::AudioIn()
 	: m_waveIn(nullptr)
@@ -169,3 +341,5 @@ bool AudioIn::provide(AudioSample * __restrict buffer, int & sampleCount)
 		}
 	}
 }
+
+#endif

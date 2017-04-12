@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Debugging.h"
 #include <string.h>
 
 namespace Col

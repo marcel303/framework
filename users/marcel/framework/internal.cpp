@@ -154,7 +154,7 @@ void bindVsInputs(const VsInput * vsInputs, int numVsInputs, int stride)
 		glEnableVertexAttribArray(vsInputs[i].id);
 		checkErrorGL();
 		
-		glVertexAttribPointer(vsInputs[i].id, vsInputs[i].components, vsInputs[i].type, vsInputs[i].normalize, stride, (void*)vsInputs[i].offset);
+		glVertexAttribPointer(vsInputs[i].id, vsInputs[i].components, vsInputs[i].type, vsInputs[i].normalize, stride, (void*)(intptr_t)vsInputs[i].offset);
 		checkErrorGL();
 	}
 }
@@ -682,6 +682,8 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 
 		#if USE_LEGACY_OPENGL
 			const GLchar * version = "#version 120\n#define _SHADER_ 1\n#define LEGACY_GL 1\n#define GLSL_VERSION 120";
+        #elif OPENGL_VERSION == 410
+            const GLchar * version = "#version 410\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
 		#elif OPENGL_VERSION == 430
 			const GLchar * version = "#version 430\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
 		#else
@@ -1740,8 +1742,8 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 			
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 			checkErrorGL();
 			
 			// restore previous OpenGL states
@@ -1860,12 +1862,17 @@ UiCacheElem & UiCache::findOrCreate(const char * filename)
 //
 
 BuiltinShaders::BuiltinShaders()
-	: hqLine("engine/builtin-hq-line")
+	: gaussianBlurH("engine/builtin-gaussian-h")
+	, gaussianBlurV("engine/builtin-gaussian-v")
+	, colorMultiply("engine/builtin-colormultiply")
+	, colorTemperature("engine/builtin-colortemperature")
+	, hqLine("engine/builtin-hq-line")
 	, hqFilledTriangle("engine/builtin-hq-filled-triangle")
 	, hqFilledCircle("engine/builtin-hq-filled-circle")
 	, hqFilledRect("engine/builtin-hq-filled-rect")
 	, hqStrokeTriangle("engine/builtin-hq-stroked-triangle")
 	, hqStrokedCircle("engine/builtin-hq-stroked-circle")
 	, hqStrokedRect("engine/builtin-hq-stroked-rect")
+	, invert("engine/builtin-invert")
 {
 }

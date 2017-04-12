@@ -1,6 +1,7 @@
 #import "AppDelegate.h"
 #import "Application.h"
 #import "ExceptionLoggerObjC.h"
+#import "Log.h"
 #import "View_PictureDetail.h"
 #import "View_PictureDetailMgr.h"
 
@@ -13,7 +14,7 @@
     if ((self = [super initWithFrame:frame])) 
 	{
 		[self setOpaque:TRUE];
-		[self setClearsContextBeforeDrawing:FALSE];
+		[self setClearsContextBeforeDrawing:NO];
 		
 		controller = _controller;
 		imageId = _imageId;
@@ -32,7 +33,7 @@
 	
 	const float scale = [AppDelegate displayScale];
 	CGContextRef ctx = UIGraphicsGetCurrentContext();
-
+    
 	// load image preview
 	
 	MacImage image;
@@ -41,8 +42,15 @@
 	
 	// render image
 	
-	CGImageRef cgImage = image.ImageWithAlpha_get();
+	CGImageRef cgImage = image.Image_get();
 	
+    if (!cgImage)
+    {
+        LOG_WRN("no CG image", 0);
+        return;
+    }
+    
+    CGContextSetBlendMode(ctx, kCGBlendModeCopy);
 	CGContextDrawImage(ctx, CGRectMake(0.0f, 0.0f, image.Sx_get() / scale, image.Sy_get() / scale), cgImage);
 	
 	CGImageRelease(cgImage);

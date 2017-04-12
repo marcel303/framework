@@ -6,7 +6,7 @@
 	float zoom;
 }
 
-@property (assign) float zoom;
+@property (nonatomic, assign) float zoom;
 
 -(void)setZoom:(float)zoom;
 

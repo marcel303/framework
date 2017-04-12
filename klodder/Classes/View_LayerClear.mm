@@ -19,7 +19,7 @@
 
 -(void)updateUi
 {
-	const float* components = CGColorGetComponents(controller.color.CGColor);
+	const CGFloat* components = CGColorGetComponents(controller.color.CGColor);
 	
 	sliderR.value = components[0];
 	sliderG.value = components[1];

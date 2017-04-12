@@ -1,3 +1,5 @@
+#if BUILD_HTTPSERVER
+
 #import "AppDelegate.h"
 #import "ExceptionLoggerObjC.h"
 #import "HTTPServer.h"
@@ -35,7 +37,7 @@
 {
 	HandleExceptionObjcBegin();
 	
-	[self dismissModalViewControllerAnimated:YES];
+	[self dismissViewControllerAnimated:YES completion:NULL];
 	
 	HandleExceptionObjcEnd(false);
 }
@@ -97,7 +99,7 @@
 	[httpServer setType:@"_http._tcp."];
 	[httpServer setConnectionClass:[MyHTTPConnection class]];
 	NSString* root = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask,YES) objectAtIndex:0];
-	[httpServer setDocumentRoot:[NSURL fileURLWithPath:root]];
+	[httpServer setDocumentRoot:[NSURL fileURLWithPath:root].absoluteString];
 	[httpServer setPort:8080];
 	[httpServer setName:@"Klodder"];
 	
@@ -156,3 +158,5 @@
 }
 
 @end
+
+#endif

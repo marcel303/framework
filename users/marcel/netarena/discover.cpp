@@ -102,6 +102,7 @@ namespace NetSessionDiscovery
 
 	void Service::refreshServerInfo(const NetAddress & address)
 	{
+    #if defined(WIN32)
 		const uint64_t time = g_TimerRT.TimeMS_get();
 
 		// find existing entry
@@ -131,6 +132,7 @@ namespace NetSessionDiscovery
 		m_serverList.push_back(serverInfo);
 
 		LOG_DBG("discovered new server. address=%s", address.ToString(true).c_str());
+    #endif
 	}
 
 	void Service::sendAdvertiseMessage() const

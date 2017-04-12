@@ -14,7 +14,7 @@
 	bool checked;
 }
 
-@property (assign) bool checked;
+@property (nonatomic, assign) bool checked;
 
 -(id)initWithLocation:(CGPoint)location andDelegate:(id)delegate andCallback:(SEL)changed;
 

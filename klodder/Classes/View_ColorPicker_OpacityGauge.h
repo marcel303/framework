@@ -17,7 +17,7 @@
 	View_ColorPicker_OpacityIndicator* indicator;
 }
 
-@property (assign) float value;
+@property (nonatomic, assign) float value;
 
 -(id)initWithFrame:(CGRect)frame height:(float)height delegate:(id<PickerDelegate>)delegate;
 -(void)sample:(Vec2F)location;

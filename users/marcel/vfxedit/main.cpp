@@ -14,7 +14,7 @@
 #include <algorithm>
 #include <list>
 
-#if !defined(DEBUG)
+#if defined(WIN32) && !defined(DEBUG)
 	#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 #endif
 
@@ -25,10 +25,10 @@
 
 using namespace tinyxml2;
 
-#define GFX_SX 1000
+#define GFX_SX 1400
 //#define GFX_SX 1000
 #define GFX_SY 300
-#define SCALE 2
+#define SCALE 1
 
 #define INSERT_Y (GFX_SY/2 - 70)
 #define SELECT_Y (GFX_SY/2)
@@ -216,7 +216,8 @@ static int SDLCALL ExecuteAudioThread(void * arg)
 			g_audioOutput->Stop();
 
 		g_audioOutput->Update(g_audioFile);
-		SDL_Delay(10);
+		//SDL_Delay(10);
+		SDL_Delay(5);
 
 		if (g_audioOutput->IsPlaying_get())
 		{
@@ -327,7 +328,7 @@ struct Sequence
 		}
 		else
 		{
-			fprintf_s(f, "%s", p.CStr());
+			fprintf(f, "%s", p.CStr());
 			fclose(f);
 		}
 
@@ -756,7 +757,6 @@ static bool isChar(char c)
 static bool doTextDialog(std::string & text)
 {
 	bool done = false;
-	int selection = 0;
 	bool accept = false;
 
 	while (!done)
@@ -1251,7 +1251,7 @@ int main(int argc, char * argv[])
 			}
 
 			// process keyboard interaction
-
+			
 			if (g_editing.marker.g_selectedEventMarker != nullptr)
 			{
 				if (keyboard.wentDown(SDLK_LEFT) || keyboard.keyRepeat(SDLK_LEFT))
@@ -1259,7 +1259,7 @@ int main(int argc, char * argv[])
 					double time = g_editing.marker.g_selectedEventMarker->time;
 
 					if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
-						time = beatToTime(roundTimeToBeat(time * 4) - 1);
+						time = beatToTime(roundTimeToBeat(time * 4) - 1) / 4.0;
 					else
 						time = beatToTime(roundTimeToBeat(time * 1) - 1);
 
@@ -1272,7 +1272,7 @@ int main(int argc, char * argv[])
 						double time = g_editing.marker.g_selectedEventMarker->time;
 
 						if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
-							time = beatToTime(roundTimeToBeat(time * 4) + 1);
+							time = beatToTime(roundTimeToBeat(time * 4) + 1) / 4.0;
 						else
 							time = beatToTime(roundTimeToBeat(time * 1) + 1);
 
@@ -1290,6 +1290,16 @@ int main(int argc, char * argv[])
 				else if (keyboard.wentDown(SDLK_DELETE))
 				{
 					deleteEventMarker(g_editing.marker.g_selectedEventMarker);
+				}
+			}
+			
+			if (keyboard.wentDown(SDLK_q))
+			{
+				// let's celebration quantization!
+				
+				for (auto & marker : g_sequence.eventMarkers)
+				{
+					marker.time = beatToTime(roundTimeToBeat(marker.time * 4)) / 4.0;
 				}
 			}
 			
@@ -1419,7 +1429,7 @@ int main(int argc, char * argv[])
 				if (g_audioFileSurface != nullptr)
 				{
 					gxSetTexture(g_audioFileSurface->getTexture());
-					const int c = 127;
+					//const int c = 127;
 					//setColor(c, c, c, 255);
 					setColor(colorBlue);
 					drawRect(0, 0, GFX_SX, GFX_SY);

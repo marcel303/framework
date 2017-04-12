@@ -1,6 +1,7 @@
 #pragma once
 
 #include "NetHandlePool.inl"
+#include <stdlib.h>
 
 template <class T>
 inline T HandlePool<T>::Allocate()

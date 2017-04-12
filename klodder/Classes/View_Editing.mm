@@ -29,20 +29,19 @@
 	
 	if (self = [super initWithFrame:frame])
 	{
-//		[self setAutoresizesSubviews:FALSE];
-		
-		[self setUserInteractionEnabled:TRUE];
+        frame.origin.x = 0;
+        frame.origin.y = 0;
+        
+        [self setUserInteractionEnabled:TRUE];
 		[self setMultipleTouchEnabled:TRUE];
 		
 #if 1
-//		[self setAlpha:0.0f];
 		[self setOpaque:TRUE];
-//		[self setBackgroundColor:[UIColor blackColor]];
-		[self setClipsToBounds:FALSE];
-//		[self setHidden:TRUE];
+		//[self setClipsToBounds:FALSE];
+		//[self setHidden:TRUE];
 #endif
 		
-#if 0
+#if DEBUG || 0
 		[self setBackgroundColor:[UIColor greenColor]];
 #else
 		[self setClearsContextBeforeDrawing:FALSE];
@@ -53,7 +52,7 @@
 		
 		imageBorder = [[[View_EditingImageBorder alloc] initWithFrame:frame] autorelease];
 		[self addSubview:imageBorder];
-		
+        
 		image = [[[View_EditingImage alloc] initWithFrame:frame andApp:app controller:controller parent:self] autorelease];
 		[self addSubview:image];
 		
@@ -96,16 +95,6 @@
 	HandleExceptionObjcEnd(false);
 	
 	return nil;
-}
-
--(void)layoutSubviews
-{
-	HandleExceptionObjcBegin();
-	
-//	NSLog(@"layoutSubviews");
-//	self.frame = CGRectMake(0, 0, 1, 1);
-	
-	HandleExceptionObjcEnd(false);
 }
 
 -(void)handleFocus

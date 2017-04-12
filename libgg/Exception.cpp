@@ -3,11 +3,6 @@
 #include "Exception.h"
 #include "StringEx.h"
 
-#if defined(PSP) || defined(__GNUC__)
-#define sprintf_s(dst, dstSize, ...) sprintf(dst, __VA_ARGS__)
-#define vsprintf_s(dst, dstSize, format, va) vsprintf(dst, format, va)
-#endif
-
 Exception::Exception(const char* function, int line) throw() : std::exception()
 {
 	sprintf_s(m_What, sizeof(m_What) / sizeof(char), "%s: %d", function, line);

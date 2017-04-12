@@ -100,7 +100,7 @@ enum {
 
 @class OFFlickrAPIRequest;
 
-#if MAC_OS_X_VERSION_MIN_REQUIRED > MAC_OS_X_VERSION_10_4
+#if MAC_OS_X_VERSION_MAX_ALLOWED > MAC_OS_X_VERSION_10_4
 @protocol OFFlickrAPIRequestDelegate <NSObject>
 @optional
 #else
@@ -152,7 +152,7 @@ typedef id OFFlickrAPIRequestDelegateType;
 // image upload—we use NSInputStream here because we want to have flexibity; with this you can upload either a file or NSData from NSImage
 - (BOOL)uploadImageStream:(NSInputStream *)inImageStream suggestedFilename:(NSString *)inFilename MIMEType:(NSString *)inType arguments:(NSDictionary *)inArguments;
 
-#if MAC_OS_X_VERSION_MIN_REQUIRED > MAC_OS_X_VERSION_10_4
+#if MAC_OS_X_VERSION_MAX_ALLOWED > MAC_OS_X_VERSION_10_4
 @property (nonatomic, readonly) OFFlickrAPIContext *context;
 @property (nonatomic, assign) OFFlickrAPIRequestDelegateType delegate;
 @property (nonatomic, retain) id sessionInfo;

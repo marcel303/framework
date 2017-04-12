@@ -2,7 +2,11 @@
 #import "View_MagicButton.h"
 #import "ViewControllerBase.h"
 
+#ifdef IPAD
 @interface View_EditingMgr : ViewControllerBase <MagicDelegate, UIPopoverControllerDelegate>
+#else
+@interface View_EditingMgr : ViewControllerBase <MagicDelegate>
+#endif
 {
 	float lastZoom;
 	NSTimer* menuTimer;
@@ -51,9 +55,11 @@
 
 -(void)updateUi;
 
+#ifdef IPAD
 // UIPopoverControllerDelegate
 -(void)popoverControllerDidDismissPopover:(UIPopoverController*)popoverController;
 -(BOOL)popoverControllerShouldDismissPopover:(UIPopoverController*)popoverController;
+#endif
 
 -(void)DBG_handleTestBezierTraveller;
 

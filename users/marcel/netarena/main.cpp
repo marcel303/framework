@@ -43,6 +43,8 @@
 #include "spriter.h"
 #include "StreamWriter.h"
 
+#include "StringEx.h" // _s functions
+
 //
 
 #if (DEPLOY_BUILD || PUBLIC_DEMO_BUILD) && !defined(DEBUG)
@@ -190,6 +192,7 @@ static void HandleAction(const std::string & action, const Dictionary & args)
 	{
 		const std::string address = args.getString("address", "");
 		const uint64_t userData = args.getInt64("userdata", 0);
+        (void)userData;
 
 		if (!address.empty())
 		{
@@ -495,12 +498,12 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 
 			if (!isFirst && !isLast)
 			{
-				LOG_DBG("handleRpc: s_rpcSyncGameSim (continuation)");
+				LOG_DBG("handleRpc: s_rpcSyncGameSim (continuation)", 0);
 			}
 
 			if (isFirst)
 			{
-				LOG_DBG("handleRpc: s_rpcSyncGameSim: first");
+				LOG_DBG("handleRpc: s_rpcSyncGameSim: first", 0);
 
 				delete client->m_syncStream;
 				client->m_syncStream = new BitStream();
@@ -514,7 +517,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 
 			if (isLast)
 			{
-				LOG_DBG("handleRpc: s_rpcSyncGameSim: last");
+				LOG_DBG("handleRpc: s_rpcSyncGameSim: last", 0);
 
 				BitStream bs2(client->m_syncStream->GetData(), client->m_syncStream->GetDataSize());
 
@@ -556,12 +559,12 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 		}
 		else
 		{
-			LOG_ERR("handleRpc: s_rpcSyncGameSim: couldn't find client");
+			LOG_ERR("handleRpc: s_rpcSyncGameSim: couldn't find client", 0);
 		}
 	}
 	else if (method == s_rpcAddPlayer)
 	{
-		LOG_DBG("handleRpc: s_rpcAddPlayer");
+		LOG_DBG("handleRpc: s_rpcAddPlayer", 0);
 
 		uint8_t characterIndex;
 		int8_t controllerIndex;
@@ -582,7 +585,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 	}
 	else if (method == s_rpcAddPlayerBroadcast)
 	{
-		LOG_DBG("handleRpc: s_rpcAddPlayerBroadcast");
+		LOG_DBG("handleRpc: s_rpcAddPlayerBroadcast", 0);
 
 		GameSim * gameSim = findGameSimForChannel(channel);
 		Assert(gameSim);
@@ -628,7 +631,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 	}
 	else if (method == s_rpcRemovePlayer)
 	{
-		LOG_DBG("handleRpc: s_rpcRemovePlayer");
+		LOG_DBG("handleRpc: s_rpcRemovePlayer", 0);
 
 		uint8_t index;
 
@@ -646,7 +649,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 	}
 	else if (method == s_rpcRemovePlayerBroadcast)
 	{
-		LOG_DBG("handleRpc: s_rpcRemovePlayerBroadcast");
+		LOG_DBG("handleRpc: s_rpcRemovePlayerBroadcast", 0);
 
 		GameSim * gameSim = findGameSimForChannel(channel);
 		Assert(gameSim);
@@ -817,7 +820,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 	}
 	else if (method == s_rpcSetPlayerCharacterIndex)
 	{
-		LOG_DBG("handleRpc: s_rpcSetPlayerCharacterIndex");
+		LOG_DBG("handleRpc: s_rpcSetPlayerCharacterIndex", 0);
 
 		Assert(g_host);
 
@@ -834,7 +837,7 @@ void App::handleRpc(Channel * channel, uint32_t method, BitStream & bitStream)
 	}
 	else if (method == s_rpcSetPlayerCharacterIndexBroadcast)
 	{
-		LOG_DBG("handleRpc: s_rpcSetPlayerCharacterIndexBroadcast");
+		LOG_DBG("handleRpc: s_rpcSetPlayerCharacterIndexBroadcast", 0);
 
 		GameSim * gameSim = findGameSimForChannel(channel);
 		Assert(gameSim);
@@ -1713,6 +1716,8 @@ void App::quit()
 	exit(0);
 }
 
+#if defined(WIN32)
+
 #include <Shlobj.h> // todo : remove once proper Steam integration?
 
 std::string App::getUserSettingsDirectory()
@@ -1742,6 +1747,15 @@ std::string App::getUserSettingsDirectory()
 #endif
 }
 
+#else
+
+std::string App::getUserSettingsDirectory()
+{
+    return "..";
+}
+
+#endif
+
 std::string App::getUserSettingsFilename()
 {
 #if 1
@@ -1762,9 +1776,11 @@ void App::saveUserSettings()
 		auto directory = getUserSettingsDirectory();
 		auto filename = getUserSettingsFilename();
 
+    #if defined(WIN32)
 		int result = SHCreateDirectoryEx(NULL, directory.c_str(), NULL);
 		fassert(result == S_OK || result == ERROR_FILE_EXISTS || result == ERROR_ALREADY_EXISTS);
-
+    #endif
+        
 		FileStream stream;
 		stream.Open(filename.c_str(), OpenMode_Write);
 		StreamWriter writer(&stream, false);
@@ -1917,7 +1933,7 @@ Client * App::connect(const NetAddress & address)
 
 	LOG_DBG("connect: %s (%llx) [done]", address.ToString(true).c_str(), address.m_userData);
 
-	LOG_DBG("connect: creating client");
+	LOG_DBG("connect: creating client", 0);
 
 	Client * client = new Client;
 
@@ -2425,13 +2441,13 @@ void App::tickNet()
 
 			//
 
-			LOG_DBG("creating host");
+			LOG_DBG("creating host", 0);
 
 			m_host = new Host();
 
 			m_host->init();
 
-			LOG_DBG("creating host [done]");
+			LOG_DBG("creating host [done]", 0);
 
 			//
 
@@ -2493,14 +2509,14 @@ void App::tickNet()
 
 			if (m_host)
 			{
-				LOG_DBG("destroying host");
+				LOG_DBG("destroying host", 0);
 
 				m_host->shutdown();
 
 				delete m_host;
 				m_host = 0;
 
-				LOG_DBG("destroying host [done]");
+				LOG_DBG("destroying host [done]", 0);
 			}
 
 			m_isHost = false;
@@ -2700,7 +2716,7 @@ void App::tickBgm()
 	}
 	else
 	{
-		sprintf_s(temp, sizeof(temp), "bgm/bgm-menus.ogg");
+		strcpy_s(temp, sizeof(temp), "bgm/bgm-menus.ogg");
 	}
 
 	if (strcmp(temp, bgm) != 0)
@@ -3056,12 +3072,12 @@ void App::debugDraw()
 			const auto & serverInfo = serverList[i];
 
 			char name[32];
-			sprintf(name, "connect_%d", i);
+			sprintf(name, "connect_%d", int(i));
 			Dictionary & button = (*m_discoveryUi)[name];
 			char props[1024];
 			sprintf(props, "type:button name:%s x:%d y:0 action:connect address:%s userdata:%llu image:button.png image_over:button-over.png image_down:button-down.png text_color:000000 font:calibri.ttf font_size:24",
 				name,
-				i * 300,
+				int(i) * 300,
 				serverInfo.m_address.ToString(false).c_str(),
 				serverInfo.m_address.m_userData);
 			button.parse(props);
@@ -3074,23 +3090,25 @@ void App::debugDraw()
 
 			{
 				char name[32];
-				sprintf(name, "disconnect_%d", i);
+				sprintf(name, "disconnect_%d", int(i));
 				Dictionary & button = (*m_discoveryUi)[name];
 				char props[1024];
 				sprintf(props, "type:button name:%s x:%d y:00 scale:0.65 action:disconnect client:%d image:button.png image_over:button-over.png image_down:button-down.png text:disconnect text_color:000000 font:calibri.ttf font_size:24",
-					name, GFX_SX + (i - m_clients.size()) * 150,
-					i);
+					name,
+                    GFX_SX + int(i - m_clients.size()) * 150,
+					int(i));
 				button.parse(props);
 			}
 
 			{
 				char name[32];
-				sprintf(name, "view_%d", i);
+				sprintf(name, "view_%d", int(i));
 				Dictionary & button = (*m_discoveryUi)[name];
 				char props[1024];
 				sprintf(props, "type:button name:%s x:%d y:50 scale:0.65 action:select client:%d image:button.png image_over:button-over.png image_down:button-down.png text:view text_color:000000 font:calibri.ttf font_size:24",
-					name, GFX_SX + (i - m_clients.size()) * 150,
-					i);
+					name,
+                    GFX_SX + int(i - m_clients.size()) * 150,
+					int(i));
 				button.parse(props);
 			}
 		}
@@ -3175,7 +3193,7 @@ void App::netSyncGameSim(Channel * channel)
 
 void App::netAddPlayer(Channel * channel, uint8_t characterIndex, const std::string & displayName, int8_t controllerIndex)
 {
-	LOG_DBG("netAddPlayer");
+	LOG_DBG("netAddPlayer", 0);
 
 	BitStream bs;
 
@@ -3566,6 +3584,10 @@ int main(int argc, char * argv[])
 
 static int RealMain(int argc, char * argv[])
 {
+#if defined(MACOS)
+    changeDirectory("/users/thecat/Dropbox/NetArena/build");
+#endif
+    
 #if defined(__WIN32__)
 	_CrtSetDebugFillThreshold(0);
 	const int kMaxModuleNameSize = 1024;
@@ -3575,10 +3597,13 @@ static int RealMain(int argc, char * argv[])
 		logError("failed to calculate CRC for %s", argv[0]);
 		return -1;
 	}
-	log("build ID: %0x8", g_buildId);
+#elif defined(MACOS)
+    // fixme : generaste proper build ID
+    g_buildId = rand();
 #else
 	#error calculate g_buildId
 #endif
+	log("build ID: %0x8", g_buildId);
 
 	changeDirectory("data");
 

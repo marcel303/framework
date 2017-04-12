@@ -32,12 +32,25 @@
 #include "shaders.h"
 #include "spriter.h"
 
+#include "StringEx.h"
 #include "Timer.h"
 
 // -----
 
 #if ENABLE_UTF8_SUPPORT
 #include "utf8rewind.h"
+#endif
+
+#if defined(MACOS)
+    #define INDEX_TYPE GL_UNSIGNED_INT
+#else
+    #define INDEX_TYPE GL_UNSIGNED_SHORT
+#endif
+
+#if INDEX_TYPE == GL_UNSIGNED_INT
+typedef unsigned int glindex_t;
+#else
+typedef unsigned short glindex_t;
 #endif
 
 extern bool initMidi(int deviceIndex);
@@ -47,7 +60,9 @@ extern void shutMidi();
 extern void lockMidi();
 extern void unlockMidi();
 
+#if ENABLE_OPENGL && !USE_LEGACY_OPENGL
 static void gxFlush(bool endOfBatch);
+#endif
 
 static float scale255(const float v)
 {
@@ -57,6 +72,7 @@ static float scale255(const float v)
 
 // -----
 
+Color colorBlackTranslucent(0, 0, 0, 0);
 Color colorBlack(0, 0, 0, 255);
 Color colorWhite(255, 255, 255, 255);
 Color colorRed(255, 0, 0, 255);
@@ -96,11 +112,14 @@ Framework::Framework()
 	windowY = -1;
 	windowBorder = true;
 	windowTitle.clear();
+	windowSx = 0;
+	windowSy = 0;
 	windowIsActive = false;
 	numSoundSources = 32;
 	actionHandler = 0;
 	fillCachesCallback = 0;
 	fillCachesUnknownResourceCallback = 0;
+	realTimeEditCallback = 0;
 	initErrorHandler = 0;
 	
 	quitRequested = false;
@@ -144,8 +163,14 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
 #else
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+#if OPENGL_VERSION == 430
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+#endif
+#if OPENGL_VERSION == 410
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+#endif
 #endif
 	
 #if 1
@@ -253,6 +278,9 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 
 	if (!windowBorder)
 		flags |= SDL_WINDOW_BORDERLESS;
+	
+	// todo : enable flag by default. make automatic DPI upscaling optional
+	//flags |= SDL_WINDOW_ALLOW_HIGHDPI;
 
 	globals.window = SDL_CreateWindow(
 		windowTitle.c_str(),
@@ -269,6 +297,9 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 			initErrorHandler(INIT_ERROR_WINDOW);
 		return false;
 	}
+	
+	windowSx = sx;
+	windowSy = sy;
 	
 #if ENABLE_OPENGL
 	globals.glContext = SDL_GL_CreateContext(globals.window);
@@ -456,6 +487,8 @@ bool Framework::shutdown()
 #endif
 
 	gxShutdown();
+	
+	m_shaderSources.clear();
 
 	glBlendEquation = 0;
 	glClampColor = 0;
@@ -507,10 +540,13 @@ bool Framework::shutdown()
 	windowY = -1;
 	windowBorder = true;
 	windowTitle.clear();
+	windowSx = 0;
+	windowSy = 0;
 	windowIsActive = false;
 	actionHandler = 0;
 	fillCachesCallback = 0;
 	fillCachesUnknownResourceCallback = 0;
+	realTimeEditCallback = 0;
 	initErrorHandler = 0;
 
 	return result;
@@ -544,6 +580,8 @@ void Framework::process()
 	globals.keyChangeCount = 0;
 	globals.keyRepeatCount = 0;
 	memset(globals.mouseChange, 0, sizeof(globals.mouseChange));
+	
+	keyboard.events.clear();
 
 	lockMidi();
 	{
@@ -585,6 +623,8 @@ void Framework::process()
 
 		if (e.type == SDL_KEYDOWN)
 		{
+			keyboard.events.push_back(e);
+			
 			bool isRepeat = false;
 			for (int i = 0; i < globals.keyDownCount; ++i)
 				if (globals.keyDown[i] == e.key.keysym.sym)
@@ -601,6 +641,8 @@ void Framework::process()
 		}
 		else if (e.type == SDL_KEYUP)
 		{
+			keyboard.events.push_back(e);
+			
 			for (int i = 0; i < globals.keyDownCount; ++i)
 			{
 				if (globals.keyDown[i] == e.key.keysym.sym)
@@ -865,14 +907,44 @@ std::vector<std::string> listFiles(const char * path, bool recurse)
 	}
 	return result;
 #else
-	Assert(!recurse); // todo : implement & test
 	std::vector<std::string> result;
-	DIR * dir = opendir(path);
-	dirent * ent;
-	if (dir)
+	
+	std::vector<DIR*> dirs;
 	{
+		DIR * dir = opendir(path);
+		if (dir)
+			dirs.push_back(dir);
+	}
+	
+	while (!dirs.empty())
+	{
+		DIR * dir = dirs.back();
+		dirs.pop_back();
+		
+		dirent * ent;
+		
 		while ((ent = readdir(dir)) != 0)
-			result.push_back(ent->d_name);
+		{
+			char fullPath[PATH_MAX];
+			if (strcmp(path, "."))
+				sprintf_s(fullPath, sizeof(fullPath), "%s/%s", path, ent->d_name);
+			else
+				strcpy_s(fullPath, sizeof(fullPath), ent->d_name);
+			
+			if (ent->d_type == DT_DIR)
+			{
+				if (recurse && strcmp(ent->d_name, ".") && strcmp(ent->d_name, ".."))
+				{
+					std::vector<std::string> subResult = listFiles(fullPath, recurse);
+					result.insert(result.end(), subResult.begin(), subResult.end());
+				}
+			}
+			else
+			{
+				result.push_back(fullPath);
+			}
+		}
+		
 		closedir(dir);
 	}
 	return result;
@@ -1572,6 +1644,11 @@ Shader::~Shader()
 void Shader::load(const char * name, const char * filenameVs, const char * filenamePs)
 {
 	m_shader = &g_shaderCache.findOrCreate(name, filenameVs, filenamePs);
+}
+
+bool Shader::isValid() const
+{
+	return m_shader != 0 && m_shader->program != 0;
 }
 
 GLuint Shader::getProgram() const
@@ -2367,6 +2444,35 @@ bool Dictionary::load(const char * filename)
 	return result;
 }
 
+bool Dictionary::save(const char * filename)
+{
+	bool result = true;
+	
+	FILE * file = nullptr;
+	
+	fopen_s(&file, filename, "wt");
+	
+	if (file == nullptr)
+	{
+		result = false;
+	}
+	else
+	{
+		for (auto i : m_map)
+		{
+			const char * key = i.first.c_str();
+			const char * value = i.second.c_str();
+			
+			fprintf(file, "%s:%s\n", key, value);
+		}
+		
+		fclose(file);
+		file = nullptr;
+	}
+	
+	return result;
+}
+
 bool Dictionary::parse(const std::string & line, bool clear)
 {
 	bool result = true;
@@ -2430,6 +2536,13 @@ void Dictionary::setInt(const char * name, int value)
 	setString(name, text);
 }
 
+void Dictionary::setInt64(const char * name, int64_t value)
+{
+    char text[32];
+    sprintf_s(text, sizeof(text), "%lld", value);
+    setString(name, text);
+}
+
 void Dictionary::setBool(const char * name, bool value)
 {
 	setInt(name, value ? 1 : 0);
@@ -2444,11 +2557,11 @@ void Dictionary::setFloat(const char * name, float value)
 
 void Dictionary::setPtr(const char * name, void * value)
 {
-	// fixme : right now this only works with 32 bit pointers
+	// fixme : right now this only works with 32 or 64 bit pointers
 
-	fassert(sizeof(intptr_t) <= sizeof(int));
+	fassert(sizeof(intptr_t) <= sizeof(int64_t));
 
-	setInt(name, reinterpret_cast<intptr_t>(value));
+	setInt64(name, reinterpret_cast<intptr_t>(value));
 }
 
 std::string Dictionary::getString(const char * name, const char * _default) const
@@ -2471,12 +2584,19 @@ int Dictionary::getInt(const char * name, int _default) const
 
 int64_t Dictionary::getInt64(const char * name, int64_t _default) const
 {
-	// fixme : _atoi64 is windows only?
-	Map::const_iterator i = m_map.find(name);
-	if (i != m_map.end())
+#if defined(WINDOWS)
+    Map::const_iterator i = m_map.find(name);
+    if (i != m_map.end())
 		return _atoi64(i->second.c_str());
-	else
-		return _default;
+    else
+        return _default;
+#else
+    Map::const_iterator i = m_map.find(name);
+    if (i != m_map.end())
+        return atoll(i->second.c_str());
+    else
+        return _default;
+#endif
 }
 
 bool Dictionary::getBool(const char * name, bool _default) const
@@ -2497,7 +2617,7 @@ void * Dictionary::getPtr(const char * name, void * _default) const
 {
 	// fixme : right now this only works with 32 bit pointers
 
-	return reinterpret_cast<void*>(getInt(name, reinterpret_cast<int>(_default)));
+	return reinterpret_cast<void*>(getInt64(name, (int)(reinterpret_cast<intptr_t>(_default))));
 }
 
 std::string & Dictionary::operator[](const char * name)
@@ -2766,8 +2886,6 @@ void Sprite::setAnimFrame(int frame)
 	
 	if (m_animSegment)
 	{
-		AnimCacheElem::Anim * anim = reinterpret_cast<AnimCacheElem::Anim*>(m_animSegment);
-		
 		const int frame1 = m_animFrame;
 		{
 			m_animFrame = calculateLoopedFrameIndex(frame);
@@ -3373,7 +3491,7 @@ void Path2d::PathElem::curveSubdiv(const float t1, const float t2, float *& xy, 
 
 		const float d1 = px1 * nx + py1 * ny;
 		const float d2 = px2 * nx + py2 * ny;
-		const float d3 = px3 * nx + py3 * ny;
+		//const float d3 = px3 * nx + py3 * ny;
 
 		const float dd = d2 - d1;
 
@@ -3444,7 +3562,7 @@ void Path2d::PathElem::curveSubdiv(const Path2d::Vertex & v1, const Path2d::Vert
 
 		const float d1 = n.dot(v1);
 		const float d2 = n.dot(v2);
-		const float d3 = n.dot(v3);
+		//const float d3 = n.dot(v3);
 
 		const float dd = d2 - d1;
 
@@ -4231,7 +4349,7 @@ void clearCaches(int caches)
 // -----
 
 static const int kMaxSurfaceStackSize = 32;
-static Surface * surfaceStack[kMaxSurfaceStackSize];
+static Surface * surfaceStack[kMaxSurfaceStackSize] = { };
 static int surfaceStackSize = 0;
 
 void setTransform(TRANSFORM transform)
@@ -4407,6 +4525,8 @@ void clearDrawRect()
 
 void setBlend(BLEND_MODE blendMode)
 {
+	globals.blendMode = blendMode;
+	
 	switch (blendMode)
 	{
 	case BLEND_OPAQUE:
@@ -4467,6 +4587,26 @@ void setBlend(BLEND_MODE blendMode)
 		fassert(false);
 		break;
 	}
+}
+
+static const int kMaxBlendStackSize = 32;
+static BLEND_MODE blendStack[kMaxBlendStackSize] = { BLEND_ALPHA };
+static int blendStackSize = 0;
+
+void pushBlend(BLEND_MODE blendMode)
+{
+	fassert(blendStackSize < kMaxBlendStackSize);
+	blendStack[blendStackSize++] = globals.blendMode;
+	setBlend(blendMode);
+}
+
+void popBlend()
+{
+	fassert(blendStackSize > 0);
+	--blendStackSize;
+	const BLEND_MODE blendMode = blendStack[blendStackSize];
+	blendStack[blendStackSize] = BLEND_ALPHA;
+	setBlend(blendMode);
 }
 
 void setColorMode(COLOR_MODE colorMode)
@@ -4699,7 +4839,7 @@ void fillCircle(float x, float y, float radius, int numSegments)
 	gxEnd();
 }
 
-static void measureText(FT_Face face, int size, const char * _text, float & sx, float & sy)
+static void measureText(FT_Face face, int size, const char * _text, float & sx, float & sy, float & yTop)
 {
 #if ENABLE_UTF8_SUPPORT
 	// fixme : convert in calling function
@@ -4718,6 +4858,8 @@ static void measureText(FT_Face face, int size, const char * _text, float & sx, 
 	
 	float x = 0.f;
 	float y = 0.f;
+	
+	//y += size;
 	
 	for (size_t i = 0; i < textLength; ++i)
 	{
@@ -4754,6 +4896,8 @@ static void measureText(FT_Face face, int size, const char * _text, float & sx, 
 		sx = maxX - minX;
 		sy = maxY - minY;
 	}
+	
+	yTop = minY;
 }
 
 static void drawTextInternal(FT_Face face, int size, const char * _text)
@@ -4773,7 +4917,7 @@ static void drawTextInternal(FT_Face face, int size, const char * _text)
 	// the (0,0) coordinate represents the lower left corner of a glyph
 	// we want to render the glyph using its top left corner at (0,0)
 	
-	y += size;
+	//y += size;
 	
 	for (size_t i = 0; i < textLength; ++i)
 	{
@@ -4787,12 +4931,12 @@ static void drawTextInternal(FT_Face face, int size, const char * _text)
 			
 			gxBegin(GL_QUADS);
 			{
-				const float sx = float(elem.g.bitmap.width);
-				const float sy = float(elem.g.bitmap.rows);
+				const float bsx = float(elem.g.bitmap.width);
+				const float bsy = float(elem.g.bitmap.rows);
 				const float x1 = x + elem.g.bitmap_left;
 				const float y1 = y - elem.g.bitmap_top;
-				const float x2 = x1 + sx;
-				const float y2 = y1 + sy;
+				const float x2 = x1 + bsx;
+				const float y2 = y1 + bsy;
 				
 				gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
 				gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
@@ -4816,8 +4960,10 @@ void measureText(int size, float & sx, float & sy, const char * format, ...)
 	va_start(args, format);
 	vsprintf_s(text, sizeof(text), format, args);
 	va_end(args);
+	
+	float yTop;
 
-	measureText(globals.font->face, size, text, sx, sy);
+	measureText(globals.font->face, size, text, sx, sy, yTop);
 }
 
 void drawText(float x, float y, int size, float alignX, float alignY, const char * format, ...)
@@ -4831,13 +4977,15 @@ void drawText(float x, float y, int size, float alignX, float alignY, const char
 	gxMatrixMode(GL_MODELVIEW);
 	gxPushMatrix();
 	{
-		float sx, sy;
-		measureText(globals.font->face, size, text, sx, sy);
+		float sx, sy, yTop;
+		measureText(globals.font->face, size, text, sx, sy, yTop);
 		
 		x += sx * (alignX - 1.f) / 2.f;
 		y += sy * (alignY - 1.f) / 2.f;
 		//y += sy * (alignY - 2.f) / 2.f;
 		//y += size * (alignY - 1.f) / 2.f;
+		
+		y -= yTop;
 
  		gxTranslatef(x, y, 0.f);
 		
@@ -4889,10 +5037,10 @@ void drawTextArea(float x, float y, float sx, float sy, int size, float alignX, 
 		while (*nextptr)
 		{
 			char * tempptr = eatWord(nextptr);
-			float _sx, _sy;
+			float _sx, _sy, _yTop;
 			char temp = *tempptr;
 			*tempptr = 0;
-			measureText(globals.font->face, size, textptr, _sx, _sy);
+			measureText(globals.font->face, size, textptr, _sx, _sy, _yTop);
 			*tempptr = temp;
 
 			if (_sx > tsx)
@@ -5300,7 +5448,11 @@ struct GxVertex
 #define GX_USE_BUFFER_RENAMING 0
 #define GX_BUFFER_DRAW_MODE GL_DYNAMIC_DRAW
 //#define GX_BUFFER_DRAW_MODE GL_STREAM_DRAW
-#define GX_USE_ELEMENT_ARRAY_BUFFER 0
+#if defined(MACOS)
+    #define GX_USE_ELEMENT_ARRAY_BUFFER 1
+#else
+    #define GX_USE_ELEMENT_ARRAY_BUFFER 0
+#endif
 #define GX_VAO_COUNT 1
 
 static Shader s_gxShader;
@@ -5362,7 +5514,7 @@ void gxInitialize()
 	glGenBuffers(GX_VAO_COUNT, s_gxIndexBufferObject);
 #if GX_USE_UBERBUFFER
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, kUberIndexBufferSize * sizeof(unsigned short), 0, GL_STREAM_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, kUberIndexBufferSize * sizeof(glindex_t), 0, GL_STREAM_DRAW);
 #endif
 	
 	// create vertex array
@@ -5460,19 +5612,19 @@ static void gxFlush(bool endOfBatch)
 	#endif
 		
 		bool indexed = false;
-		unsigned short * indices = 0;
+		glindex_t * indices = 0;
 		int numElements = s_gxVertexCount;
 		int numIndices = 0;
-		
-		static int lastPrimitiveType = -1;
-		static int lastVertexCount = -1;
 
 	#if !GX_USE_ELEMENT_ARRAY_BUFFER || GX_VAO_COUNT > 1
 		bool needToRegenerateIndexBuffer = true;
 	#else
 		bool needToRegenerateIndexBuffer = false;
-
-		if (s_gxPrimitiveType != lastPrimitiveType && s_gxVertexCount != lastVertexCount)
+        
+        static int lastPrimitiveType = -1;
+        static int lastVertexCount = -1;
+        
+		if (s_gxPrimitiveType != lastPrimitiveType || s_gxVertexCount != lastVertexCount)
 		{
 			lastPrimitiveType = s_gxPrimitiveType;
 			lastVertexCount = s_gxVertexCount;
@@ -5493,10 +5645,10 @@ static void gxFlush(bool endOfBatch)
 
 			if (needToRegenerateIndexBuffer)
 			{
-				indices = (unsigned short*)alloca(sizeof(unsigned short) * numIndices);
+				indices = (glindex_t*)alloca(sizeof(glindex_t) * numIndices);
 
-				unsigned short * __restrict indexPtr = indices;
-				unsigned short baseIndex = 0;
+				glindex_t * __restrict indexPtr = indices;
+				glindex_t baseIndex = 0;
 			
 				for (int i = 0; i < numQuads; ++i)
 				{
@@ -5516,17 +5668,17 @@ static void gxFlush(bool endOfBatch)
 				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject);
 				if (s_gxUberIndexBufferPosition + numIndices > kUberIndexBufferSize)
 				{
-					glBufferData(GL_ELEMENT_ARRAY_BUFFER, kUberIndexBufferSize * sizeof(unsigned short), 0, GX_BUFFER_DRAW_MODE);
+					glBufferData(GL_ELEMENT_ARRAY_BUFFER, kUberIndexBufferSize * sizeof(glindex_t), 0, GX_BUFFER_DRAW_MODE);
 					s_gxUberIndexBufferPosition = 0;
 				}
-				glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, s_gxUberIndexBufferPosition * sizeof(unsigned short), numIndices * sizeof(unsigned short), indices);
+				glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, s_gxUberIndexBufferPosition * sizeof(glindex_t), numIndices * sizeof(glindex_t), indices);
 				checkErrorGL();
 			#else
 				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject[vaoIndex]);
 				#if GX_USE_BUFFER_RENAMING
-				glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned short) * numIndices, 0, GX_BUFFER_DRAW_MODE);
+				glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(glindex_t) * numIndices, 0, GX_BUFFER_DRAW_MODE);
 				#endif
-				glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned short) * numIndices, indices, GX_BUFFER_DRAW_MODE);
+				glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(glindex_t) * numIndices, indices, GX_BUFFER_DRAW_MODE);
 				checkErrorGL();
 			#endif
 			#endif
@@ -5563,11 +5715,11 @@ static void gxFlush(bool endOfBatch)
 		if (indexed)
 		{
 			#if GX_USE_UBERBUFFER
-			glDrawElementsBaseVertex(s_gxPrimitiveType, numElements, GL_UNSIGNED_SHORT, (void*)(s_gxUberIndexBufferPosition * sizeof(unsigned short)), s_gxUberVertexBufferPosition);
+			glDrawElementsBaseVertex(s_gxPrimitiveType, numElements, INDEX_TYPE, (void*)(s_gxUberIndexBufferPosition * sizeof(glindex_t)), s_gxUberVertexBufferPosition);
 			#elif GX_USE_ELEMENT_ARRAY_BUFFER
-			glDrawElements(s_gxPrimitiveType, numElements, GL_UNSIGNED_SHORT, 0);
+			glDrawElements(s_gxPrimitiveType, numElements, INDEX_TYPE, 0);
 			#else
-			glDrawElements(s_gxPrimitiveType, numElements, GL_UNSIGNED_SHORT, indices);
+			glDrawElements(s_gxPrimitiveType, numElements, INDEX_TYPE, indices);
 			#endif
 			checkErrorGL();
 		}
@@ -5602,6 +5754,15 @@ static void gxFlush(bool endOfBatch)
 				case GL_LINE_STRIP:
 					s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 1];
 					s_gxVertexCount = 1;
+					break;
+				case GL_TRIANGLE_FAN:
+					s_gxVertices[0] = s_gxVertices[0];
+					s_gxVertexCount = 1;
+					break;
+				case GL_TRIANGLE_STRIP:
+					s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 2];
+					s_gxVertices[1] = s_gxVertices[s_gxVertexCount - 1];
+					s_gxVertexCount = 2;
 					break;
 				default:
 					s_gxVertexCount = 0;
@@ -5641,6 +5802,12 @@ void gxBegin(int primitiveType)
 			s_gxPrimitiveSize = 1;
 			break;
 		case GL_POINTS:
+			s_gxPrimitiveSize = 1;
+			break;
+		case GL_TRIANGLE_FAN:
+			s_gxPrimitiveSize = 1;
+			break;
+		case GL_TRIANGLE_STRIP:
 			s_gxPrimitiveSize = 1;
 			break;
 		default:
@@ -5859,41 +6026,71 @@ void gxSetTexture(GLuint texture)
 
 // builtin shaders
 
-// todo : move these shaders to BuiltinShaders and supply shader source
-
-void setShader_GaussianBlurH(const GLuint source, const float kernelSize)
+static void makeGaussianKernel(const int kernelSize, ShaderBuffer & kernel)
 {
-	Shader shader("builtin-gaussian-v");
+	const float s = 1.632;
+	//const float s = 1.8355;
+	
+	auto dist = [](const float x) { return .5f * erfcf(-x); };
+	
+	float * values = (float*)alloca(sizeof(float) * kernelSize);
+	
+	for (int i = 0; i < kernelSize; ++i)
+	{
+		const float x1 = (i - .5f) / float(kernelSize - 1.f);
+		const float x2 = (i + .5f) / float(kernelSize - 1.f);
+		
+		const float y1 = dist(x1 * s);
+		const float y2 = dist(x2 * s);
+		
+		const float dy = y2 - y1;
+		
+		//printf("%02.2f - %02.2f : %02.4f\n", x1, x2, dy);
+		
+		values[i] = dy;
+	}
+	
+	kernel.setData(values, sizeof(float) * kernelSize);
+}
+
+void setShader_GaussianBlurH(const GLuint source, const int kernelSize, const float radius)
+{
+	Shader & shader = globals.builtinShaders->gaussianBlurH;
 	setShader(shader);
 
-	// todo : calculate seperable gaussian blur kernel weights
-	ShaderBuffer kernel;
-
+	static ShaderBuffer kernel;
+	makeGaussianKernel(kernelSize, kernel);
+	
 	shader.setTexture("source", 0, source, true, true);
 	shader.setImmediate("kernelSize", kernelSize);
+	shader.setImmediate("radius", radius);
 	shader.setBuffer("kernel", kernel);
 }
 
-void setShader_GaussianBlurV(const GLuint source, const float kernelSize)
+void setShader_GaussianBlurV(const GLuint source, const int kernelSize, const float radius)
 {
-	Shader shader("builtin-gaussian-v");
+	Shader & shader = globals.builtinShaders->gaussianBlurV;
 	setShader(shader);
 	
-	// todo : calculate seperable gaussian blur kernel weights
-	ShaderBuffer kernel;
+	static ShaderBuffer kernel;
+	makeGaussianKernel(kernelSize, kernel);
 
 	shader.setTexture("source", 0, source, true, true);
 	shader.setImmediate("kernelSize", kernelSize);
+	shader.setImmediate("radius", radius);
 	shader.setBuffer("kernel", kernel);
 }
 
-void setShader_Invert(const GLuint source)
+void setShader_Invert(const GLuint source, const float opacity)
 {
-	static Shader shader("builtin-invert", "builtin-effect.vs", "builtin-invert.ps");
+	Shader & shader = globals.builtinShaders->invert;
 	setShader(shader);
-
+	
+	shader.setImmediate("opacity", opacity);
 	shader.setTexture("source", 0, source, true, true);
 }
+
+// todo : move these shaders to BuiltinShaders and supply shader source
 
 static void setShader_TresholdLumiEx(
 	const GLuint source,
@@ -5904,6 +6101,7 @@ static void setShader_TresholdLumiEx(
 	const Color & failColor,
 	const Color & passColor)
 {
+	//Shader & shader = globals.builtinShaders->tresholdEx;
 	static Shader shader("builtin-treshold-ex", "builtin-effect.vs", "builtin-treshold-ex.ps");
 	setShader(shader);
 
@@ -5918,6 +6116,7 @@ static const Vec4 lumiVec(.30f, .59f, .11f, 0.f);
 
 void setShader_TresholdLumi(const GLuint source, const float lumi, const Color & failColor, const Color & passColor)
 {
+	//Shader & shader = globals.builtinShaders->tresholdLumi;
 	static Shader shader("builtin-treshold-lumi", "builtin-effect.vs", "builtin-treshold-lumi.ps");
 	setShader(shader);
 
@@ -5953,6 +6152,7 @@ void setShader_TresholdLumiPass(const GLuint source, const float lumi, const Col
 
 void setShader_TresholdValue(const GLuint source, const Color & value, const Color & failColor, const Color & passColor)
 {
+	//Shader & shader = globals.builtinShaders->tresholdValue;
 	static Shader shader("builtin-treshold-value", "builtin-effect.vs", "builtin-treshold-value.ps");
 	setShader(shader);
 
@@ -5962,43 +6162,52 @@ void setShader_TresholdValue(const GLuint source, const Color & value, const Col
 	shader.setImmediate("passValue", passColor.r, passColor.g, passColor.b, passColor.a);
 }
 
-void setShader_GrayscaleLumi(const GLuint source)
+void setShader_GrayscaleLumi(const GLuint source, const float opacity)
 {
+	//Shader & shader = globals.builtinShaders->grayscaleLumi;
 	static Shader shader("builtin-grayscale-lumi", "builtin-effect.vs", "builtin-grayscale-lumi.ps");
 	setShader(shader);
+	shader.setImmediate("opacity", opacity);
 
 	shader.setTexture("source", 0, source, true, true);
 }
 
-void setShader_GrayscaleWeights(const GLuint source, const Vec3 & weights)
+void setShader_GrayscaleWeights(const GLuint source, const Vec3 & weights, const float opacity)
 {
+	//Shader & shader = globals.builtinShaders->grayscaleWeights;
 	static Shader shader("builtin-grayscale-weights", "builtin-effect.vs", "builtin-grayscale-weights.ps");
 	setShader(shader);
 
 	shader.setTexture("source", 0, source, true, true);
 	shader.setImmediate("weights", weights[0], weights[1], weights[2]);
+	shader.setImmediate("opacity", opacity);
 }
 
-void setShader_Colorize(const GLuint source, const float hue)
+void setShader_Colorize(const GLuint source, const float hue, const float opacity)
 {
+	//Shader & shader = globals.builtinShaders->hueAssign;
 	static Shader shader("builtin-hue-assign", "builtin-effect.vs", "builtin-hue-assign.ps");
 	setShader(shader);
 
 	shader.setTexture("source", 0, source, true, true);
 	shader.setImmediate("hue", hue);
+	shader.setImmediate("opacity", opacity);
 }
 
-void setShader_HueShift(const GLuint source, const float hue)
+void setShader_HueShift(const GLuint source, const float hue, const float opacity)
 {
+	//Shader & shader = globals.builtinShaders->hueShift;
 	static Shader shader("builtin-hue-shift", "builtin-effect.vs", "builtin-hue-shift.ps");
 	setShader(shader);
 
 	shader.setTexture("source", 0, source, true, true);
 	shader.setImmediate("hueShift", hue);
+	shader.setImmediate("opacity", opacity);
 }
 
 void setShader_Compositie(const GLuint source1, const GLuint source2)
 {
+	//Shader & shader = globals.builtinShaders->compositeAlpha;
 	Shader shader("builtin-composite-alpha");
 	setShader(shader);
 
@@ -6008,6 +6217,7 @@ void setShader_Compositie(const GLuint source1, const GLuint source2)
 
 void setShader_CompositiePremultiplied(const GLuint source1, const GLuint source2)
 {
+	//Shader & shader = globals.builtinShaders->compositeAlphaPremultiplied;
 	Shader shader("builtin-composite-alpha-premultiplied");
 	setShader(shader);
 
@@ -6017,10 +6227,32 @@ void setShader_CompositiePremultiplied(const GLuint source1, const GLuint source
 
 void setShader_Premultiply(const GLuint source)
 {
+	//Shader & shader = globals.builtinShaders->premultiplyAlpha;
 	Shader shader("builtin-premultiply-alpha");
 	setShader(shader);
 
 	shader.setTexture("source", 0, source, true, true);
+}
+
+void setShader_ColorMultiply(const GLuint source, const Color & color, const float opacity)
+{
+	Shader & shader = globals.builtinShaders->colorMultiply;
+	setShader(shader);
+	
+	shader.setTexture("source", 0, source);
+	shader.setImmediate("color", color.r, color.g, color.b, color.a);
+	shader.setImmediate("opacity", opacity);
+
+}
+
+void setShader_ColorTemperature(const GLuint source, const float temperature, const float opacity)
+{
+	Shader & shader = globals.builtinShaders->colorTemperature;
+	setShader(shader);
+	
+	shader.setTexture("source", 0, source);
+	shader.setImmediate("temperature", temperature);
+	shader.setImmediate("opacity", opacity);
 }
 
 //

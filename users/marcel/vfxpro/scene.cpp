@@ -19,8 +19,10 @@ bool getSceneFileContents(const std::string & filename, Array<uint8_t> *& out_by
 
 //
 
-extern const int GFX_SX;
-extern const int GFX_SY;
+extern int GFX_SX;
+extern int GFX_SY;
+extern int GFX_SX_SCALED;
+extern int GFX_SY_SCALED;
 
 extern Config config;
 
@@ -169,6 +171,7 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 	{
 		effect = new Effect_Vignette(m_name.c_str());
 	}
+#if ENABLE_VIDEO
 	else if (type == "video")
 	{
 		const std::string file = stringAttrib(xmlEffect, "file", "");
@@ -186,6 +189,24 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 			effect = new Effect_Video(m_name.c_str(), file.c_str(), shader.c_str(), yuv, centered, play);
 		}
 	}
+	else if (type == "videoloop")
+	{
+		const std::string file = stringAttrib(xmlEffect, "file", "");
+		const std::string shader = stringAttrib(xmlEffect, "shader", "");
+		const bool yuv = boolAttrib(xmlEffect, "yuv", false);
+		const bool centered = boolAttrib(xmlEffect, "centered", true);
+		const bool play = boolAttrib(xmlEffect, "play", false);
+
+		if (file.empty())
+		{
+			logWarning("file not set. skipping effect");
+		}
+		else
+		{
+			effect = new Effect_VideoLoop(m_name.c_str(), file.c_str(), shader.c_str(), yuv, centered, play);
+		}
+	}
+#endif
 	else if (type == "picture")
 	{
 		const std::string file = stringAttrib(xmlEffect, "file", "");
@@ -276,6 +297,12 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 	{
 		effect = new Effect_Sparklies(m_name.c_str());
 	}
+	else if (type == "wobbly")
+	{
+		const char * shader = stringAttrib(xmlEffect, "shader", "");
+		
+		effect = new Effect_Wobbly(m_name.c_str(), shader);
+	}
 	else
 	{
 		logError("unknown effect type: %s", type.c_str());
@@ -285,8 +312,6 @@ bool SceneEffect::load(const XMLElement * xmlEffect)
 
 	if (effect != nullptr)
 	{
-		auto effectInfo = g_effectInfosByName.find(m_name);
-
 		effect->typeName = typeName;
 
 		for (const XMLAttribute * xmlAttrib = xmlEffect->FirstAttribute(); xmlAttrib; xmlAttrib = xmlAttrib->Next())
@@ -1307,9 +1332,7 @@ bool Scene::load(const char * filename)
 	tinyxml2::XMLDocument xmlDoc;
 
 	const auto t1_loadDocument = loadtimer();
-
-	bool readSuccess = true;
-
+	
 	Array<uint8_t> * fileContents = nullptr;
 	if (getSceneFileContents(filename, fileContents))
 	{

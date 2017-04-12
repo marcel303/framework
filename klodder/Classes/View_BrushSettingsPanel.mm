@@ -5,6 +5,7 @@
 #import "Calc.h"
 #import "ExceptionLoggerObjC.h"
 #import "Filter.h"
+#import "Log.h"
 #import "TravellerCapturer.h"
 #import "View_BrushSettingsPanel.h"
 #import "View_BrushPreview.h"
@@ -59,7 +60,7 @@
 		[self addSubview:viewPreview];
 		y += viewPreview.frame.size.height + 10.0f;
 		
-		[self addSubview:CreateLabel(0.0f, y, 80.0f, GAUGE_HEIGHT, @"Spacing:", FONT_MARKER, 18.0f, UITextAlignmentCenter)];
+		[self addSubview:CreateLabel(0.0f, y, 80.0f, GAUGE_HEIGHT, @"Spacing:", FONT_MARKER, 18.0f, NSTextAlignmentCenter)];
 		spacingGauge = [[[View_Gauge alloc] initWithLocation:CGPointMake(80.0f, y) scale:1.0f height:GAUGE_HEIGHT min:gMinBrushSpacing max:gMaxBrushSpacing value:app.brushSettings->spacing * 100.0f unit:@"%" delegate:self changed:@selector(spacingChanged:) provideText:nil] autorelease];
 		[self addSubview:spacingGauge];
 		y += spacingGauge.frame.size.height + 10.0f;

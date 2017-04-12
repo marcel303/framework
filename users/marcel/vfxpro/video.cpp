@@ -1,4 +1,9 @@
+#include "config.h"
+
+#if ENABLE_VIDEO
+
 #include "framework.h"
+#include "mediaplayer_new/MPVideoBuffer.h"
 #include "video.h"
 #include <atomic>
 
@@ -172,54 +177,57 @@ void MediaPlayer::updateTexture()
 		textureSy = videoFrame->m_height;
 
 		//logDebug("gotVideo. t=%06dms, sx=%d, sy=%d", int(time * 1000.0), textureSx, textureSy);
-
-#if 1
-		if (texture)
+		
+		if (!texture)
 		{
-			glDeleteTextures(1, &texture);
-			texture = 0;
+			glGenTextures(1, &texture);
 		}
-#endif
 
 		if (texture)
 		{
 			const void * source = videoFrame->m_frameBuffer;
 			const int sx = videoFrame->m_width;
 			const int sy = videoFrame->m_height;
-			const GLenum format = GL_RGB;
-
-			GLuint restoreTexture;
-			glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-			GLint restoreUnpackAlignment;
-			glGetIntegerv(GL_UNPACK_ALIGNMENT, &restoreUnpackAlignment);
-			GLint restoreUnpackRowLength;
-			glGetIntegerv(GL_UNPACK_ROW_LENGTH, &restoreUnpackRowLength);
-
+			const GLenum internalFormat = GL_RGBA8;
+			const GLenum uploadFormat = GL_RGBA;
+			
+			const int alignment = 16;
+			const int alignmentMask = ~(alignment - 1);
+			const int numBytesPerRow = ((sx * 4) + alignment - 1) & alignmentMask;
+			const int numPixelsPerRow = numBytesPerRow / 4;
+			
+			glPixelStorei(GL_UNPACK_ROW_LENGTH, numPixelsPerRow);
+			checkErrorGL();
+			
 			// copy image data
 
 			glBindTexture(GL_TEXTURE_2D, texture);
-			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-			glPixelStorei(GL_UNPACK_ROW_LENGTH, sx);
 			glTexImage2D(
 				GL_TEXTURE_2D,
 				0,
-				format,
+				internalFormat,
 				sx,
 				sy,
 				0,
-				format,
+				uploadFormat,
 				GL_UNSIGNED_BYTE,
 				source);
+			checkErrorGL();
+			
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+			checkErrorGL();
 
-			// restore previous OpenGL states
-
-			glBindTexture(GL_TEXTURE_2D, restoreTexture);
-			glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpackAlignment);
-			glPixelStorei(GL_UNPACK_ROW_LENGTH, restoreUnpackRowLength);
-		}
-		else
-		{
-			texture = createTextureFromRGB8(videoFrame->m_frameBuffer, videoFrame->m_width, videoFrame->m_height, true, true);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			checkErrorGL();
+			
+			glBindTexture(GL_TEXTURE_2D, 0);
+			
+			glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+			checkErrorGL();
 		}
 	}
 }
@@ -227,6 +235,26 @@ void MediaPlayer::updateTexture()
 uint32_t MediaPlayer::getTexture() const
 {
 	return texture;
+}
+
+bool MediaPlayer::getVideoProperties(int & sx, int & sy, double & duration) const
+{
+	if (context->hasBegun)
+	{
+		sx = context->mpContext.GetVideoWidth();
+		sy = context->mpContext.GetVideoHeight();
+		duration = context->mpContext.GetDuration();
+		
+		return true;
+	}
+	else
+	{
+		sx = 0;
+		sy = 0;
+		duration = 0.0;
+		
+		return false;
+	}
 }
 
 void MediaPlayer::startMediaPlayerThread()
@@ -286,3 +314,5 @@ void MediaPlayer::stopMediaPlayerThread()
 
 	logDebug("MP thread shutdown took %dms", t2 - t1);
 }
+
+#endif

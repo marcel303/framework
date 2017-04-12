@@ -1,3 +1,5 @@
+#if BUILD_HTTPSERVER
+
 #import <UIKit/UIView.h>
 #import "klodder_forward_objc.h"
 #import "ViewControllerBase.h"
@@ -9,7 +11,7 @@
 }
 
 @property (nonatomic, retain) HTTPServer* httpServer;
-@property (readonly, assign) NSDictionary* addresses;
+@property (nonatomic, readonly, assign) NSDictionary* addresses;
 
 -(IBAction)handleBack:(id)sender;
 -(void)handleAddressUpdate:(NSNotification*)notification;
@@ -19,3 +21,5 @@
 -(NSDictionary*)addresses;
 
 @end
+
+#endif

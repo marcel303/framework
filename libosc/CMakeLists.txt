@@ -11,7 +11,10 @@ project(libosc)
 
 # --- libosc ---
 
-file(GLOB source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "*.c" "*.cpp" "*.h")
+file(GLOB_RECURSE source "*.c" "*.cpp" "*.h")
+
+file(GLOB_RECURSE source_win32 "ip/win32/*.*")
+list(REMOVE_ITEM source ${source_win32})
 
 add_library(libosc ${source})
 

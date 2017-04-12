@@ -71,7 +71,7 @@
 	CGContextSetFillColorWithColor(ctx, color.CGColor);
 //	CGContextFillRect(ctx, );
 	CGContextFillEllipseInRect(ctx, rectO);
-	float colorI[] = { 1.0f, 1.0f, 1.0f, 0.0f };
+	CGFloat colorI[] = { 1.0f, 1.0f, 1.0f, 0.0f };
 	CGContextSetFillColor(ctx, colorI);
 	CGContextFillEllipseInRect(ctx, rectI);
 	

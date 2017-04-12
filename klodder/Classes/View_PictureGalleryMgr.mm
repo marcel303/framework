@@ -5,11 +5,11 @@
 #import "ExceptionLoggerObjC.h"
 //#import "FlickrLoginDialog.h"
 #import "KlodderSystem.h"
+#import "Log.h"
 #import "StreamReader.h"
 #import "StringEx.h"
 #import "View_AboutMgr.h"
 #import "View_EditingMgr.h"
-#import "View_HelpMgr.h"
 #import "View_HttpServerMgr.h"
 #import "View_PictureDetailMgr.h"
 #import "View_PictureGallery.h"
@@ -26,19 +26,32 @@
 	
 	if (self = [super initWithApp:_app])
 	{
-		[self setWantsFullScreenLayout:TRUE];
+		//[self setFullScreenLayout];
 		
 		self.title = @"Gallery";
 		
-		UIBarButtonItem* item_Serve = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_serve")] style:UIBarButtonItemStyleBordered target:self action:@selector(handleServeHttp)] autorelease];
-		UIBarButtonItem* item_About = [[[UIBarButtonItem alloc] initWithTitle:@"A" style:UIBarButtonItemStyleBordered target:self action:@selector(handleAbout)] autorelease];
+    #if BUILD_HTTPSERVER
+		UIBarButtonItem* item_Serve = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_serve")] style:UIBarButtonItemStylePlain target:self action:@selector(handleServeHttp)] autorelease];
+    #endif
+        
+		//UIBarButtonItem* item_About = [[[UIBarButtonItem alloc] initWithTitle:@"A" style:UIBarButtonItemStylePlain target:self action:@selector(handleAbout)] autorelease];
 		UIBarButtonItem* item_Debug = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCompose target:self action:@selector(handleDebug)] autorelease];
-		UIBarButtonItem* item_Space = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
-		[self setToolbarItems:[NSArray arrayWithObjects:item_Serve, item_Space, item_About, item_Debug, nil]];
+		UIBarButtonItem* item_Space = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil] autorelease];
+        
+        NSMutableArray* items = [[[NSMutableArray alloc] init] autorelease];
+    #if BUILD_HTTPSERVER
+        [items addObject:item_Serve];
+    #endif
+        [items addObject:item_Space];
+    #if 0
+        [items addObject:item_About];
+    #endif
+    #if DEBUG
+        [items addObject:item_Debug];
+    #endif
+		[self setToolbarItems:items];
 		
-		UIBarButtonItem* item_Help = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_help")] style:UIBarButtonItemStyleBordered target:self action:@selector(handleHelp)] autorelease];
-		self.navigationItem.leftBarButtonItem = item_Help;
-		UIBarButtonItem* item_New = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_new")] style:UIBarButtonItemStyleBordered target:self action:@selector(handleNew)] autorelease];
+		UIBarButtonItem* item_New = [[[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@IMG("button_new")] style:UIBarButtonItemStylePlain target:self action:@selector(handleNew)] autorelease];
 		self.navigationItem.rightBarButtonItem = item_New;
 		
 		overwritePictureAlert = [[UIAlertView alloc] initWithTitle:NS(Deployment::PictureOverwriteTitle) message:NS(Deployment::PictureOverwriteText) delegate:self cancelButtonTitle:@"Cancel" otherButtonTitles:@"OK", nil];
@@ -78,7 +91,7 @@
 	lastImageId = imageId;
 	
 	const float scale = [AppDelegate displayScale];
-	CGSize screenSize = [UIScreen mainScreen].applicationFrame.size;
+	CGSize screenSize = [UIScreen mainScreen].bounds.size;
 	screenSize.width *= scale;
 	screenSize.height *= scale;
 	
@@ -113,32 +126,26 @@
 	HandleExceptionObjcEnd(false);
 }
 
+#if BUILD_HTTPSERVER
+
 -(void)handleServeHttp
 {
 	HandleExceptionObjcBegin();
 	
 	View_HttpServerMgr* controller = [[[View_HttpServerMgr alloc] initWithApp:app] autorelease];
-	[self presentModalViewController:controller animated:YES];
+    [self presentViewController:controller animated:YES completion:NULL];
 	
 	HandleExceptionObjcEnd(false);
 }
+
+#endif
 
 -(void)handleAbout
 {
 	HandleExceptionObjcBegin();
 	
 	View_AboutMgr* controller = [[[View_AboutMgr alloc] initWithApp:app] autorelease];
-	[self presentModalViewController:controller animated:YES];
-	
-	HandleExceptionObjcEnd(false);
-}
-
--(void)handleHelp
-{
-	HandleExceptionObjcBegin();
-	
-	View_HelpMgr* controller = [[[View_HelpMgr alloc] initWithApp:app] autorelease];
-	[self presentModalViewController:controller animated:YES];
+    [self presentViewController:controller animated:YES completion:NULL];
 	
 	HandleExceptionObjcEnd(false);
 }
@@ -147,7 +154,7 @@
 {
 	HandleExceptionObjcBegin();
 	
-	UITextView* textView = [[[UITextView alloc] initWithFrame:[UIScreen mainScreen].applicationFrame] autorelease];
+	UITextView* textView = [[[UITextView alloc] initWithFrame:[UIScreen mainScreen].bounds] autorelease];
 	FileStream stream;
 	stream.Open(gSystem.GetDocumentPath("exception.log").c_str(), OpenMode_Read);
 	StreamReader reader(&stream, false);
@@ -185,7 +192,7 @@
 {
 	HandleExceptionObjcBegin();
 	
-	self.view = [[[View_PictureGallery alloc] initWithFrame:[UIScreen mainScreen].applicationFrame app:app controller:self] autorelease];
+	self.view = [[[View_PictureGallery alloc] initWithFrame:[UIScreen mainScreen].bounds app:app controller:self] autorelease];
 	
 	HandleExceptionObjcEnd(false);
 }

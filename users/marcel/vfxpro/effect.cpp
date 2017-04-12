@@ -1,6 +1,7 @@
 #include "effect.h"
 #include "Parse.h"
 #include "tinyxml2.h"
+#include "videoloop.h"
 #include "xml.h"
 
 //
@@ -707,7 +708,7 @@ void Effect_Fsfx::draw()
 	for (size_t i = 0; i < m_colors.size(); ++i)
 	{
 		char name[64];
-		sprintf_s(name, sizeof(name), "color%d", i + 1);
+		sprintf_s(name, sizeof(name), "color%d", int(i) + 1);
 		const Color & c = m_colors[i];
 		shader.setImmediate(name, c.r, c.g, c.b, c.a);
 	}
@@ -958,6 +959,10 @@ Effect_Boxes::Box::Box()
 	addVar("rz", m_rz);
 }
 
+Effect_Boxes::Box::~Box()
+{
+}
+
 bool Effect_Boxes::Box::tick(const float dt)
 {
 	TweenFloatCollection::tick(dt);
@@ -1177,6 +1182,7 @@ void Effect_Boxes::handleSignal(const std::string & message)
 				d.getFloat("sy", 1.f),
 				d.getFloat("sz", 1.f),
 				d.getInt("axis", 0.f));
+			(void)box;
 		}
 	}
 	if (String::StartsWith(message, "transform"))
@@ -1300,6 +1306,8 @@ void Effect_Picture::draw()
 }
 
 //
+
+#if ENABLE_VIDEO
 
 const bool kVideoPreload = true;
 
@@ -1443,6 +1451,110 @@ void Effect_Video::syncTime(const float time)
 		}
 	}
 }
+
+//
+
+Effect_VideoLoop::Effect_VideoLoop(const char * name, const char * filename, const char * shader, const bool yuv,const bool centered, const bool play)
+	: Effect(name)
+	, m_alpha(1.f)
+	, m_yuv(false)
+	, m_centered(true)
+	, m_videoLoop(nullptr)
+	, m_playing(false)
+{
+	is2D = true;
+
+	addVar("alpha", m_alpha);
+
+	m_filename = filename;
+	m_shader = shader;
+	m_yuv = yuv;
+	m_centered = centered;
+	
+	m_videoLoop = new VideoLoop(m_filename.c_str(), false);
+
+	if (play)
+	{
+		handleSignal("start");
+	}
+}
+
+Effect_VideoLoop::~Effect_VideoLoop()
+{
+	delete m_videoLoop;
+	m_videoLoop = nullptr;
+}
+
+void Effect_VideoLoop::tick(const float dt)
+{
+	if (m_playing)
+	{
+		m_videoLoop->tick(dt);
+	}
+	else
+	{
+		m_videoLoop->tick(0.f);
+	}
+}
+
+void Effect_VideoLoop::draw(DrawableList & list)
+{
+	new (list) EffectDrawable(this);
+}
+
+void Effect_VideoLoop::draw()
+{
+	if (m_alpha <= 0.f)
+		return;
+
+	int sx;
+	int sy;
+	double duration;
+	
+	const uint32_t texture = m_videoLoop->getTexture();
+
+	if (texture != 0 && m_videoLoop->getVideoProperties(sx, sy, duration))
+	{
+		gxPushMatrix();
+		{
+			const float scaleX = SCREEN_SX / float(sx);
+			const float scaleY = SCREEN_SY / float(sy);
+			const float scale = Calc::Min(scaleX, scaleY);
+
+			gxScalef(scale, scale, 1.f);
+			if (m_centered)
+				gxTranslatef(-sx / 2.f, -sy / 2.f, 0.f);
+
+			if (!m_shader.empty())
+			{
+				Shader shader(m_shader.c_str());
+				setShader(shader);
+				shader.setTexture("colormap", 0, texture, true, true);
+				shader.setImmediate("alpha", m_alpha);
+				drawRect(0, sy, sx, 0);
+				clearShader();
+			}
+			else
+			{
+				setColorf(1.f, 1.f, 1.f, m_alpha);
+				gxSetTexture(texture);
+				drawRect(0, sy, sx, 0);
+				gxSetTexture(0);
+			}
+		}
+		gxPopMatrix();
+	}
+}
+
+void Effect_VideoLoop::handleSignal(const std::string & name)
+{
+	if (name == "start")
+	{
+		m_playing = true;
+	}
+}
+
+#endif
 
 //
 
@@ -2070,10 +2182,10 @@ void Effect_Lines::tick(const float dt)
 
 			//
 
-			if (m_lines[i].x + m_lines[i].sx < 0.f && m_lines[i].speedX < 0.f ||
-				m_lines[i].y + m_lines[i].sy < 0.f && m_lines[i].speedY < 0.f ||
-				m_lines[i].x > GFX_SX && m_lines[i].speedX > 0.f ||
-				m_lines[i].y > GFX_SY && m_lines[i].speedY > 0.f)
+			if ((m_lines[i].x + m_lines[i].sx < 0.f && m_lines[i].speedX < 0.f) ||
+				(m_lines[i].y + m_lines[i].sy < 0.f && m_lines[i].speedY < 0.f) ||
+				(m_lines[i].x > GFX_SX && m_lines[i].speedX > 0.f) ||
+				(m_lines[i].y > GFX_SY && m_lines[i].speedY > 0.f))
 			{
 				m_lines[i] = Line();
 			}
@@ -3149,9 +3261,7 @@ void Effect_Fireworks::tick(const float dt)
 
 							const float a = random(0.f, Calc::m2PI);
 							const float v = random(float(m_child2Speed), float(m_child2Speed + m_child2SpeedVar));
-
-							const float pv = 0.f;
-
+							
 							pc.type = kPT_Child2;
 							pc.x = p.x;
 							pc.y = p.y;
@@ -3307,4 +3417,365 @@ void Effect_Sparklies::draw()
 	gxEnd();
 
 	clearShader();
+}
+
+//
+
+Effect_Wobbly::WaterSim::WaterSim()
+{
+	memset(p, 0, sizeof(p));
+	memset(v, 0, sizeof(v));
+}
+
+void Effect_Wobbly::WaterSim::tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds)
+{
+	const double vRetain = std::pow(vRetainPerSecond, dt);
+	const double pRetain = std::pow(pRetainPerSecond, dt);
+	
+	for (int i = 0; i < kNumElems; ++i)
+	{
+		int i1, i2, i3;
+		
+		if (closedEnds)
+		{
+			i1 = i - 1 >= 0             ? i - 1 : i;
+			i2 = i;
+			i3 = i + 1 <= kNumElems - 1 ? i + 1 : i;
+		}
+		else
+		{
+			i1 = i - 1 >= 0             ? i - 1 : kNumElems - 1;
+			i2 = i;
+			i3 = i + 1 <= kNumElems - 1 ? i + 1 : 0;
+		}
+		
+		const double p1 = p[i1];
+		const double p2 = p[i2];
+		const double p3 = p[i3];
+		
+		const double d1 = p1 - p2;
+		const double d2 = p3 - p2;
+		
+		double a = 0.f;
+		
+		a += d1 * c;
+		a += d2 * c;
+		
+		v[i] += a * dt;
+	}
+	
+	for (int i = 0; i < kNumElems; ++i)
+	{
+		p[i] += v[i] * dt;
+		
+		p[i] *= pRetain;
+		v[i] *= vRetain;
+	}
+}
+
+static void applyWaterDrop(Effect_Wobbly::WaterSim & sim, const int spot, const int r, const double s)
+{
+	for (int i = -r; i <= +r; ++i)
+	{
+		const int x = (spot + i + sim.kNumElems) % sim.kNumElems;
+		const double value = (1.0 + std::cos(i / double(r) * Calc::mPI)) / 2.0;
+		
+		sim.p[x] += value * s;
+	}
+}
+
+Effect_Wobbly::WaterDrop::WaterDrop()
+	: isAlive(false)
+	, isApplying(false)
+	, x(0.0)
+	, y(0.0)
+	, vx(0.0)
+	, direction(0.0)
+	, strength(0.0)
+	, applyRadius(0.0)
+	, applyTime(0.0)
+	, applyTimeRcp(0.0)
+	, fadeInTime(0.0)
+	, fadeInTimeRcp(0.0)
+{
+}
+		
+void Effect_Wobbly::WaterDrop::tick(const double dt, const double stretch, WaterSim & sim)
+{
+	x += vx * dt;
+	
+	const double intersection = checkIntersection(sim, stretch, applyRadius, -1.0);
+	
+	if (intersection > -1.0)
+		isApplying = true;
+	
+	fadeInTime -= dt;
+	if (fadeInTime < 0.0)
+		fadeInTime = 0.0;
+	
+	if (isApplying)
+	{
+		applyTime -= dt;
+	}
+	
+	if (applyTime <= 0.0)
+	{
+		isAlive = false;
+		applyTime = 0.0;
+	}
+	else if (isApplying)
+	{
+		const int yi = int(GFX_SY - 1 - y);
+		
+		//const double applyStrength = strength * (1.0 - std::abs(intersection));
+		const double applyStrength = strength * applyTime * applyTimeRcp;
+		
+		applyWaterDrop(sim, yi, 200, applyStrength * direction * dt);
+	}
+}
+
+double Effect_Wobbly::WaterDrop::toWaterP(const WaterSim & sim, const double x, const double stretch) const
+{
+	const double p = (x - GFX_SX/2) / stretch;
+	
+	return p;
+}
+
+double Effect_Wobbly::WaterDrop::checkIntersection(const WaterSim & sim, const double stretch, const double radius, const double bias) const
+{
+	const double p1 = x;
+	
+	const int yi = int(GFX_SY - 1 - y);
+	const double p2 = GFX_SX/2 + sim.p[yi % sim.kNumElems] * stretch;
+	
+	const double pd = (p1 - p2) * direction;
+	
+	const double intersection = pd / radius + bias;
+	
+	return intersection < -1.0 ? -1.0 : intersection > +1.0 ? +1.0 : intersection;
+}
+
+Effect_Wobbly::Effect_Wobbly(const char * name, const char * shader)
+	: Effect(name)
+	, m_showDrops(1.f)
+	, m_drop(0.f)
+	, m_wobbliness(20000.f)
+	, m_closedEnds(1.f)
+	, m_stretch(1.f)
+	, m_numIterations(100)
+	, m_alpha(1.f)
+	, m_shader()
+	, m_waterSim(nullptr)
+	, m_waterDrops()
+	, elementsTexture(0)
+{
+	addVar("drop", m_drop);
+	addVar("show_drops", m_showDrops);
+	addVar("wobbliness", m_wobbliness);
+	addVar("closed", m_closedEnds);
+	addVar("stretch", m_stretch);
+	addVar("num_iterations", m_numIterations);
+	addVar("alpha", m_alpha);
+	
+	m_shader = shader;
+	if (m_shader.empty())
+		m_shader = "track-wobbly/fsfx_wobbly.ps";
+	
+	m_waterSim = new WaterSim();
+	
+	glGenTextures(1, &elementsTexture);
+}
+
+Effect_Wobbly::~Effect_Wobbly()
+{
+	glDeleteTextures(1, &elementsTexture);
+	elementsTexture = 0;
+	
+	delete m_waterSim;
+	m_waterSim = nullptr;
+}
+
+void Effect_Wobbly::tick(const float dt)
+{
+	fade.tick(dt);
+	
+	//
+	
+	const double vRetainPerSecond = 0.99 * (1.0 - fade.falloff);
+	const double pRetainPerSecond = 0.99 * (1.0 - fade.falloff);
+	
+	const int numIterations = std::max(1, int(m_numIterations));
+	
+	const double dtSub = double(dt) / numIterations;
+	
+	static int spot = -1;
+	
+	if (keyboard.wentDown(SDLK_SPACE))
+	{
+		const int r = 200;
+		const int v = WaterSim::kNumElems - r * 2;
+		
+		if (v > 0)
+		{
+			spot = r + (rand() % v);
+			
+			const double s = random(-1.f, +1.f);
+			
+			applyWaterDrop(*m_waterSim, spot, r, s);
+			/*
+			for (int i = -r; i <= +r; ++i)
+			{
+				const int x = spot + i;
+				const double value = (1.0 + std::cos(i / double(r) * Calc::mPI)) / 2.0;
+				
+				if (x >= 0 && x < WaterSim::kNumElems)
+					m_waterSim->p[x] += value * s;
+			}
+			*/
+		}
+	}
+	
+	const bool closedEnds = m_closedEnds != 0.f;
+	
+	for (int i = 0; i < numIterations; ++i)
+	{
+		m_waterSim->tick(dtSub, m_wobbliness, vRetainPerSecond, pRetainPerSecond, closedEnds);
+		
+		for (auto w = m_waterDrops.begin(); w != m_waterDrops.end(); )
+		{
+			auto & drop = *w;
+			
+			drop.tick(dtSub, m_stretch, *m_waterSim);
+			
+			if (drop.isAlive)
+				++w;
+			else
+				w = m_waterDrops.erase(w);
+		}
+	}
+}
+
+void Effect_Wobbly::draw(DrawableList & list)
+{
+	new (list) EffectDrawable(this);
+}
+
+void Effect_Wobbly::draw()
+{
+	float * data = (float*)alloca(sizeof(float) * WaterSim::kNumElems * 2);
+	
+	for (int i = 0; i < WaterSim::kNumElems; ++i)
+	{
+		data[i * 2 + 0] = float(m_waterSim->p[i]);
+		data[i * 2 + 1] = float(m_waterSim->v[i]);
+	}
+	
+	glBindTexture(GL_TEXTURE_2D, elementsTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, WaterSim::kNumElems, 1, 0, GL_RG, GL_FLOAT, data);
+	checkErrorGL();
+	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+	checkErrorGL();
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	checkErrorGL();
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+	checkErrorGL();
+	
+	//
+	
+	SceneLayer * video1Layer = g_currentScene->findLayerByName("video1");
+	SceneLayer * video2Layer = g_currentScene->findLayerByName("video2");
+	
+	const GLuint video1Texture = video1Layer ? video1Layer->m_surface->getTexture() : 0;
+	const GLuint video2Texture = video2Layer ? video2Layer->m_surface->getTexture() : 0;
+	
+	Shader shader(m_shader.c_str(), "fsfx.vs", m_shader.c_str());
+	setShader(shader);
+	{
+		//shader.setTexture("colormap", 0, g_currentSurface->getTexture());
+		shader.setTexture("elements", 1, elementsTexture);
+		shader.setTexture("video1", 2, video1Texture, true, true);
+		shader.setTexture("video2", 3, video2Texture, true, true);
+		shader.setImmediate("colormapSize", GFX_SX, GFX_SY);
+		shader.setImmediate("stretch", m_stretch);
+		shader.setImmediate("distort", .05f, .05f);
+		shader.setImmediate("alpha", m_alpha);
+		
+		drawRect(0.f, 0.f, GFX_SX, GFX_SY);
+	}
+	clearShader();
+	
+	if (m_showDrops)
+	{
+		for (auto & drop : m_waterDrops)
+		{
+			//const double intersection = drop.checkIntersection(*m_waterSim, m_stretch, drop.applyRadius, -1.0);
+			
+			double opacity = 1.0;
+			opacity *= drop.applyTime * drop.applyTimeRcp;
+			opacity *= 1.0 - drop.fadeInTime * drop.fadeInTimeRcp;
+			
+			double radius = drop.applyRadius;
+			radius *= 0.5;
+			radius *= drop.applyTime * drop.applyTimeRcp;
+			
+			hqBegin(HQ_FILLED_CIRCLES);
+			{
+				setColorf(1.f, 1.f, 1.f, opacity);
+				hqFillCircle(drop.x, drop.y, radius);
+			}
+			hqEnd();
+		}
+	}
+}
+
+void Effect_Wobbly::handleSignal(const std::string & name)
+{
+	Dictionary d;
+	d.parse(name);
+	
+	const std::string action = d.getString("action", "");
+	
+	if (action == "drop")
+	{
+		const float y1 = d.getFloat("y1", 0.f);
+		const float y2 = d.getFloat("y2", 0.f);
+		const float position = d.getFloat("position", 100.f);
+		const float speed = d.getFloat("speed", 0.f);
+		const float strength = d.getFloat("strength", 0.f);
+		const int direction = d.getInt("direction", 1) >= 0 ? +1 : -1;
+		const int radius = d.getFloat("radius", 100.f);
+		const float time = d.getFloat("time", 1.f);
+		const float fadeInTime = d.getFloat("intime", 1.f);
+		
+		if (position > 0.f && speed > 0.f)
+		{
+			WaterDrop drop;
+			drop.isAlive = true;
+			drop.x = GFX_SX/2 - position * direction;
+			drop.y = GFX_SY/2 + random(y1, y2);
+			drop.vx = speed * direction;
+			drop.strength = strength;
+			drop.direction = direction;
+			drop.applyRadius = radius;
+			drop.applyTime = time;
+			drop.applyTimeRcp = 1.f / time;
+			drop.fadeInTime = fadeInTime;
+			drop.fadeInTimeRcp = 1.f / fadeInTime;
+			
+			m_waterDrops.push_back(drop);
+		}
+	}
+	
+	if (action == "fade")
+	{
+		fade.falloff = d.getFloat("falloff", 0.f);
+		fade.falloffD = d.getFloat("falloffD", 1.f);
+	}
 }

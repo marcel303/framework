@@ -5,6 +5,8 @@
 #include "particle_framework.h"
 #include "tinyxml2.h"
 
+#include "StringEx.h" // _s functions
+
 /*
 
 + color curve key highlight on hover
@@ -118,12 +120,12 @@ static bool g_copyPiIsValid = false;
 
 //
 
-static float lerp(const float v1, const float v2, const float t)
+inline float lerp(const float v1, const float v2, const float t)
 {
 	return v1 * (1.f - t) + v2 * t;
 }
 
-static float saturate(const float v)
+inline float saturate(const float v)
 {
 	return v < 0.f ? 0.f : v > 1.f ? 1.f : v;
 }
@@ -1203,12 +1205,7 @@ void doParticleCurve(ParticleCurve & curve, const char * name, UiElem & elem)
 	const int y2 = g_drawY + kCurveHeight;
 
 	g_drawY += kCurveHeight;
-
-	const int cx1 = x1;
-	const int cy1 = y1;
-	const int cx2 = x2;
-	const int cy2 = y2;
-
+    
 	if (g_doActions)
 	{
 		elem.tick(x1, y1, x2, y2);
@@ -1275,12 +1272,8 @@ void doParticleColor(ParticleColor & color, const char * name, UiElem & elem)
 
 		setColor(colorWhite);
 		drawRectCheckered(cx1, cy1, cx2, cy2, 4.f);
-		for (int x = cx1; x < cx2; ++x)
-		{
-			const float t = (x - cx1 + .5f) / float(cx2 - cx1 - .5f);
-			setColorf(color.rgba[0], color.rgba[1], color.rgba[2], color.rgba[3]);
-			drawRect(x, cy1, x + 1.f, cy2);
-		}
+        setColorf(color.rgba[0], color.rgba[1], color.rgba[2], color.rgba[3]);
+        drawRect(cx1, cy1, cx2, cy2);
 
 		setColor(colorWhite);
 		drawText(x1 + kPadding + kCheckButtonSize + kPadding, y1, kFontSize, +1.f, +1.f, "%s", name);
@@ -1511,6 +1504,7 @@ static void doMenu_LoadSave(float dt)
 	static UiElem loadElem;
 	if (doButton("Load", 0.f, 1.f, true, loadElem))
 	{
+    #ifdef WIN32
 		nfdchar_t * path = 0;
 		nfdresult_t result = NFD_OpenDialog("pfx", "", &path);
 
@@ -1548,6 +1542,7 @@ static void doMenu_LoadSave(float dt)
 				refreshUi();
 			}
 		}
+    #endif
 	}
 
 	bool save = false;
@@ -1570,6 +1565,7 @@ static void doMenu_LoadSave(float dt)
 	{
 		if (saveFilename.empty())
 		{
+        #ifdef WIN32
 			nfdchar_t * path = 0;
 			nfdresult_t result = NFD_SaveDialog("pfx", "", &path);
 
@@ -1577,6 +1573,7 @@ static void doMenu_LoadSave(float dt)
 			{
 				saveFilename = path;
 			}
+        #endif
 		}
 
 		if (!saveFilename.empty())

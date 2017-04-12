@@ -27,14 +27,8 @@
 @synthesize targetZoom;
 @synthesize mirrorX;
 
-static void handleSwipe(void* obj, void* arg);
 static void handleTouchZoomStateChange(void* obj, void* arg);
 static void handleZoomChange(void* obj, void* arg);
-
-static UIImage* mShadow(int x, int y)
-{
-	return [UIImage imageNamed:[NSString stringWithFormat:@"shadow_%d%d.png", x, y]];
-}
 
 -(id)initWithFrame:(CGRect)frame andApp:(AppDelegate*)app controller:(View_EditingMgr*)_controller parent:(View_Editing*)_parent;
 {
@@ -46,19 +40,13 @@ static UIImage* mShadow(int x, int y)
 	Assert(size[0] > 0);
 	Assert(size[1] > 0);
 	
-	frame.size.width = size[0];
-	frame.size.height = size[1];
-	
 	LOG_DBG("editing size: %dx%d", size[0], size[1]);
 	
     if ((self = [super initWithFrame:frame])) 
 	{
 		[self setUserInteractionEnabled:FALSE];
 		[self setOpaque:TRUE];
-//		[self setMultipleTouchEnabled:TRUE];
 		[self setClearsContextBeforeDrawing:NO];
-//		[self setAutoresizingMask:UIViewAutoresizingNone];
-//		[self setAutoresizesSubviews:FALSE];
 		
 		mAppDelegate = app;
 		controller = _controller;
@@ -147,7 +135,7 @@ static UIImage* mShadow(int x, int y)
 	
 	[self updateTransform];
 	
-	if (zoom >= 1.1f && zoom < 2.5f)
+	if (/*zoom >= 1.1f &&*/ zoom < 2.5f)
 		[self.layer setMagnificationFilter:kCAFilterLinear];
 	else
 		[self.layer setMagnificationFilter:kCAFilterNearest];
@@ -314,9 +302,9 @@ static UIImage* mShadow(int x, int y)
 		{
 			Assert(ti->touchCount >= 2);
 			
-			Vec2F delta = ti->location2Delta / 2.0f / zoom;
+			//Vec2F delta = ti->location2Delta / 2.0f / zoom;
 			
-//			[self swipe:delta];
+			//[self swipe:delta];
 			
 			break;
 		}
@@ -391,7 +379,7 @@ static UIImage* mShadow(int x, int y)
 			
 			// todo: smooth = option?
 			
-			app->StrokeBegin(app->LayerMgr_get()->ActiveDataLayer_get(), true, mirrorX, location[0], location[1]);
+			app->StrokeBegin(app->LayerMgr_get()->EditingDataLayer_get(), true, mirrorX, location[0], location[1]);
 			
 			[controller showMenu:FALSE];
 			
@@ -645,7 +633,7 @@ static UIImage* mShadow(int x, int y)
 }
 
 -(void)updateTransform
-{	
+{
 	LOG_DBG("updateTransform: %3.2f, %3.2f @ %1.2f (size: %f, %f)", pan[0], pan[1], zoom, self.bounds.size.width, self.bounds.size.height);
 	
 	[self.layer setAnchorPoint:CGPointMake(0.0f, 0.0f)];
@@ -662,14 +650,6 @@ static UIImage* mShadow(int x, int y)
 	transform = CGAffineTransformTranslate(transform, -self.bounds.size.width / 2.0f, -self.bounds.size.height / 2.0f);
 	
 	[self setTransform:transform];
-}
-
-static void handleSwipe(void* obj, void* arg)
-{
-	View_EditingImage* self = (View_EditingImage*)obj;
-	Vec2F delta = *(Vec2F*)arg;
-	
-	[self swipe:delta];
 }
 
 static void handleTouchZoomStateChange(void* obj, void* arg)
@@ -869,8 +849,6 @@ static void handleZoomChange(void* obj, void* arg)
 		return;
 	}
 	
-	// draw shadow
-	
 	const float sx = CGImageGetWidth(cgImage);
 	const float sy = CGImageGetHeight(cgImage);
 	
@@ -983,10 +961,25 @@ static void handleZoomChange(void* obj, void* arg)
 	HandleExceptionObjcEnd(false);
 }
 
--(void)touchesMoved:(NSSet*)_touches withEvent:(UIEvent*)event
+-(void)touchesMoved:(NSSet*)touches withEvent:(UIEvent*)event
 {
 	HandleExceptionObjcBegin();
-	
+    
+    LOG_DBG("event type: %d", [event type]);
+    
+    bool hasMoved = false;
+    
+    for (NSUInteger i = 0; i < [[touches allObjects] count]; ++i)
+    {
+        UITouch* touch = [[touches allObjects] objectAtIndex:i];
+        
+        if (touch.phase == UITouchPhaseMoved)
+            hasMoved = true;
+    }
+    
+    if (!hasMoved)
+        return;
+    
 	if (doubletapState == 1)
 	{
 		[self doubletapFlush:false];
@@ -996,19 +989,20 @@ static void handleZoomChange(void* obj, void* arg)
 	
 	Assert(doubletapState == 0);
 	
-	NSSet* touches = _touches;
-	
 	for (NSUInteger i = 0; i < [[touches allObjects] count]; ++i)
 	{
 		UITouch* touch = [[touches allObjects] objectAtIndex:i];
 		
-		Vec2F location = [self touchToView:touch];
-		Vec2F location2 = [self touchToScreen:touch];
-		
-		mTouchMgr.TouchMoved(touch, location, location2);
+        if (touch.phase == UITouchPhaseMoved)
+        {
+            Vec2F location = [self touchToView:touch];
+            Vec2F location2 = [self touchToScreen:touch];
+            
+            mTouchMgr.TouchMoved(touch, location, location2);
+        }
 	}
-	
-	[self eyedropperTimerEnd];
+    
+    [self eyedropperTimerEnd];
 	
 	HandleExceptionObjcEnd(false);
 }

@@ -1,6 +1,7 @@
 #import "AppDelegate.h"
 #import "Application.h"
 #import "ExceptionLoggerObjC.h"
+#import "Log.h"
 #import "View_ColorPicker.h"
 #import "View_ColorPickerMgr.h"
 
@@ -13,7 +14,7 @@
 	if (self = [super initWithApp:_app])
 	{
 		//[self setModalInPopover:YES];
-		[self setContentSizeForViewInPopover:CGSizeMake(320.0f, 480.0f)];
+		[self setPreferredContentSize:CGSizeMake(320.0f, 480.0f)];
 	}
 	
 	return self;
@@ -30,7 +31,7 @@
 #ifdef IPAD
 	CGRect rect = CGRectMake(0.0f, 0.0f, 320.0f, 480.0f);
 #else
-	CGRect rect = [UIScreen mainScreen].applicationFrame;
+	CGRect rect = [UIScreen mainScreen].bounds;
 #endif
 	
 	self.view = [[[View_ColorPicker alloc] initWithFrame:rect app:app controller:self delegate:self] autorelease];
@@ -42,7 +43,7 @@
 {
 	HandleExceptionObjcBegin();
 	
-	[self dismissModalViewControllerAnimated:YES];
+    [self dismissViewControllerAnimated:YES completion:NULL];
 	
 	HandleExceptionObjcEnd(false);
 }

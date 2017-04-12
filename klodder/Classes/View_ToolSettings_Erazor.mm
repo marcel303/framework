@@ -1,6 +1,7 @@
 #import "AppDelegate.h"
 #import "BrushSettingsLibrary.h"
 #import "ExceptionLoggerObjC.h"
+#import "Log.h"
 #import "Settings.h"
 #import "View_BrushSettingsPanel.h"
 #import "View_CheckBox.h"
@@ -36,7 +37,7 @@
 		[self addSubview:vwBrushSettingsPanel];
 		y += vwBrushSettingsPanel.frame.size.height;
 		
-		[self addSubview:CreateLabel(x, y, 80.0f, 30.0f, @"Strength:", FONT_MARKER, 18.0f, UITextAlignmentCenter)];
+		[self addSubview:CreateLabel(x, y, 80.0f, 30.0f, @"Strength:", FONT_MARKER, 18.0f, NSTextAlignmentCenter)];
 		strengthGauge = [[[View_Gauge alloc] initWithLocation:CGPointMake(80.0f, y) scale:1.0f height:30.0f min:0 max:100 value:app.colorPickerState->Opacity_get() * 100.0f unit:@"%" delegate:self changed:@selector(opacityChanged:) provideText:nil] autorelease];
 		[self addSubview:strengthGauge];
 		y += strengthGauge.frame.size.height;

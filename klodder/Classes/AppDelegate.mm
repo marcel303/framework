@@ -16,12 +16,21 @@
 #import "View_EditingMgr.h"
 #import "View_PictureGalleryMgr.h"
 
+/*
+todo:
+- explicitly set checker board size, remove display scale from Application
+- explicitly determine desired gallery thumbnail size. set it on Application init
+    - make a list of desired sizes per device class, display scale
+- fix gallery: use thumbnail size from centralized device/scale size manager. make sure thumbnails are centered horizontally
+- add a nice picture frame around thumbnails?
+
+*/
 //#define MENU_HEIGHT 58.0f
 
 #ifdef IPAD
-const NSString* cancelTitle = nil;
+NSString* cancelTitle = nil;
 #else
-const NSString* cancelTitle = @"Cancel";
+NSString* cancelTitle = @"Cancel";
 #endif
 
 @implementation AppDelegate
@@ -31,8 +40,12 @@ static void HandleChange(void* obj, void* arg);
 @synthesize window;
 @synthesize rootController;
 @synthesize mApplication;
+#if BUILD_FACEBOOK
 @synthesize facebookState;
+#endif
+#if BUILD_FLICKR
 @synthesize flickrState;
+#endif
 
 @synthesize vcEditing;
 @synthesize vcPictureGallery;
@@ -60,7 +73,7 @@ static void HandleChange(void* obj, void* arg);
 	
 #if 1
 	[application setNetworkActivityIndicatorVisible:FALSE];
-	[application setStatusBarHidden:TRUE animated:FALSE];
+	[application setStatusBarHidden:TRUE withAnimation:UIStatusBarAnimationNone];
 #else
 //	[application setStatusBarStyle:UIStatusBarStyleBlackTranslucent];
 	[application setNetworkActivityIndicatorVisible:TRUE];
@@ -75,7 +88,7 @@ static void HandleChange(void* obj, void* arg);
 	[window setClearsContextBeforeDrawing:FALSE];
 #endif
 	
-//	[window setBounds:[UIScreen mainScreen].applicationFrame];
+//	[window setBounds:[UIScreen mainScreen].bounds];
 	
 	[window makeKeyAndVisible];
 
@@ -93,15 +106,19 @@ static void HandleChange(void* obj, void* arg);
 	
 	mApplication = 0;
 	
+#if BUILD_FACEBOOK
 	facebookState = [[FacebookState alloc] init];
 	[facebookState resume];
+#endif
+#if BUILD_FLICKR
 	flickrState = [[FlickrState alloc] init];
 	[flickrState resume];
+#endif
 	
 	NSLog(@"Creating touch mgr");
 	
-	CGRect frame = [window frame];
-	CGRect childFrame = frame;
+	//CGRect frame = [window frame];
+	//CGRect childFrame = frame;
 //	CGRect menuFrame = CGRectMake(frame.origin.x, frame.origin.y + frame.size.height - MENU_HEIGHT, frame.size.width, MENU_HEIGHT);
 	
 	brushSettings = new BrushSettings();
@@ -109,8 +126,10 @@ static void HandleChange(void* obj, void* arg);
 	
 	LOG_INF("create: vcEditing", 0);
 	vcEditing = [[View_EditingMgr alloc] initWithApp:self];
-//	LOG_INF("create: vcHttpServer", 0);
-//	vcHttpServer = [[View_HttpServerMgr alloc] initWithApp:self];
+#if BUILD_HTTPSERVER
+	LOG_INF("create: vcHttpServer", 0);
+	vcHttpServer = [[View_HttpServerMgr alloc] initWithApp:self];
+#endif
 	LOG_INF("create: vcPictureGallery", 0);
 	vcPictureGallery = [[View_PictureGalleryMgr alloc] initWithApp:self];
 	
@@ -129,14 +148,16 @@ static void HandleChange(void* obj, void* arg);
 
 	mActiveView = rootController;
 	
-	[window addSubview:rootController.view];
-	
+	[window setRootViewController:rootController];
+    
+#if BUILD_FLICKR
 	NSURL* url = [launchOptions objectForKey:UIApplicationLaunchOptionsURLKey];
 	
 	if (url)
 	{
 		[flickrState handleOpenUrl:url];
 	}
+#endif
 	
 #ifdef DEBUG
 #if 0
@@ -218,24 +239,6 @@ static void HandleChange(void* obj, void* arg)
 	[self show:vc animated:TRUE];
 }
 
-/*-(void)showModal:(UIViewController*)vc
-{
-	if (rootController.modalViewController != nil)
-	{
-		LOG_DBG("showModal: change", 0);
-		
-		[rootController dismissModalViewControllerAnimated:FALSE];
-		[rootController presentModalViewController:vc animated:FALSE];
-	}
-	else
-	{
-		LOG_DBG("showModal: new", 0);
-		
-		[rootController setModalTransitionStyle:UIModalTransitionStyleCoverVertical];
-		[rootController presentModalViewController:vc animated:TRUE];
-	}
-}*/
-
 -(void)hide
 {
 	[self hideWithAnimation:FALSE];
@@ -252,7 +255,7 @@ static void HandleChange(void* obj, void* arg)
 {
 	delete mApplication;
 	
-	mApplication = new Application();
+	mApplication = new Application([AppDelegate displayScale]);
 	mApplication->OnChange = CallBack(self, HandleChange);
 	
 	mApplication->Setup(0, gSystem.GetResourcePath("brushes_lq.lib").c_str(), gSystem.GetDocumentPath("brushes_cs.lib").c_str(), 1, Rgba_Make(0.9f, 0.9f, 0.9f, 1.0f), Rgba_Make(0.8f, 0.8f, 0.8f, 1.0f));
@@ -608,12 +611,7 @@ static void HandleChange(void* obj, void* arg)
 
 +(float)displayScale
 {
-#if !defined(IPAD)
 	return [UIScreen mainScreen].scale;
-#else
-#warning retina display support disabled
-	return 1.0f;
-#endif
 }
 
 -(void)memoryReport
@@ -667,10 +665,14 @@ static void HandleChange(void* obj, void* arg)
 	delete mApplication;
 	mApplication = 0;
 	
+#if BUILD_FACEBOOK
 	[facebookState release];
 	facebookState = nil;
+#endif
+#if BUILD_FLICKR
 	[flickrState release];
 	flickrState = nil;
+#endif
 	
 	delete brushSettings;
 	brushSettings = 0;

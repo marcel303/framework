@@ -45,12 +45,12 @@
 	float targetZoom;
 }
 
-@property (assign) Vec2F pan;
-@property (readonly, assign) Vec2F targetPan;
-//@property (assign) Vec2F focus;
-@property (assign) float zoom;
-@property (readonly, assign) float targetZoom;
-@property (assign) bool mirrorX;
+@property (nonatomic, assign) Vec2F pan;
+@property (nonatomic, readonly, assign) Vec2F targetPan;
+//@property (nonatomic, assign) Vec2F focus;
+@property (nonatomic, assign) float zoom;
+@property (nonatomic, readonly, assign) float targetZoom;
+@property (nonatomic, assign) bool mirrorX;
 
 -(id)initWithFrame:(CGRect)frame andApp:(AppDelegate*)app controller:(View_EditingMgr*)controller parent:(View_Editing*)parent;
 -(void)handleFocus;

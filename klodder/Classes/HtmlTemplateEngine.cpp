@@ -1,3 +1,5 @@
+#if BUILD_HTTPSERVER
+
 #include "Exception.h"
 #include "FileStream.h"
 #include "HtmlTemplateEngine.h"
@@ -135,3 +137,6 @@ std::string HtmlTemplateEngine::ToString()
 {
 	return mText;
 }
+
+#endif
+

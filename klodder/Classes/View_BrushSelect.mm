@@ -21,12 +21,6 @@
 #define SPACING_SY 12.0f
 #define ANIMATION_INTERVAL (1.0f / 60.0f)
 
-static void GetMinMax(int index, float& min, float& max)
-{
-	min = index * PREVIEW_SIZE;
-	max = min + PREVIEW_SIZE;
-}
-
 BrushItem::BrushItem()
 {
 	mToolType = ToolType_Undefined;
@@ -135,7 +129,7 @@ BrushItem::BrushItem(ToolType type, Brush_Pattern* pattern)
 {
 	int result = (x - scrollPosition) / PREVIEW_SIZE;
 	
-	return Calc::Mid(result, 0, itemList.size() - 1);
+	return Calc::Mid(result, 0, (int)itemList.size() - 1);
 }
 
 -(int)scrollToIndex
@@ -156,7 +150,7 @@ BrushItem::BrushItem(ToolType type, Brush_Pattern* pattern)
 	
 	for (size_t i = 0; i < itemList.size(); ++i)
 		if (itemList[i].mPatternId == patternId)
-			index = i;
+			index = (int)i;
 	
 	if (index == -1)
 		return;

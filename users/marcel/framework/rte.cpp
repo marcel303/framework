@@ -3,9 +3,10 @@
 #include "rte.h"
 #include "StringEx.h"
 #include <sys/stat.h>
-#include <Windows.h>
 
 #if defined(WIN32)
+    #include <Windows.h>
+#endif
 
 static void handleFileChange(const std::string & filename)
 {
@@ -49,13 +50,16 @@ static void handleFileChange(const std::string & filename)
 	{
 		Sprite(filename.c_str()).reload();
 	}
-	else
+	
+	// call real time editing callback
+	
+	if (framework.realTimeEditCallback)
 	{
-		// todo : call real time editing callback
+		framework.realTimeEditCallback(filename);
 	}
 }
 
-//
+#if 1
 
 struct FileInfo
 {
@@ -65,19 +69,9 @@ struct FileInfo
 
 static std::vector<FileInfo> s_fileInfos;
 
-static HANDLE s_fileWatcher = INVALID_HANDLE_VALUE;
-
-void initRealTimeEditing()
+static void fillFileInfos()
 {
 	s_fileInfos.clear();
-
-	if (s_fileWatcher != INVALID_HANDLE_VALUE)
-	{
-		BOOL result = FindCloseChangeNotification(s_fileWatcher);
-		Assert(result);
-
-		s_fileWatcher = INVALID_HANDLE_VALUE;
-	}
 
 	std::vector<std::string> files = listFiles(".", true);
 
@@ -86,8 +80,8 @@ void initRealTimeEditing()
 		FILE * f = fopen(file.c_str(), "rb");
 		if (f)
 		{
-			struct _stat s;
-			if (_fstat(fileno(f), &s) == 0)
+			struct stat s;
+			if (fstat(fileno(f), &s) == 0)
 			{
 				FileInfo fi;
 				fi.filename = file;
@@ -101,31 +95,15 @@ void initRealTimeEditing()
 			f = 0;
 		}
 	}
-
-	Assert(s_fileWatcher == INVALID_HANDLE_VALUE);
-	s_fileWatcher = FindFirstChangeNotificationA(".", TRUE, FILE_NOTIFY_CHANGE_LAST_WRITE);
-	Assert(s_fileWatcher != INVALID_HANDLE_VALUE);
-	if (s_fileWatcher == INVALID_HANDLE_VALUE)
-		logError("failed to find first change notification");
 }
 
-void shutRealTimeEditing()
+static void clearFileInfos()
 {
 	s_fileInfos.clear();
 }
 
-void tickRealTimeEditing()
+static void checkFileInfos()
 {
-	if (s_fileWatcher != INVALID_HANDLE_VALUE)
-	{
-		if (WaitForSingleObject(s_fileWatcher, 0) != WAIT_OBJECT_0)
-		{
-			return;
-		}
-
-		Sleep(100);
-	}
-
 	for (auto & fi: s_fileInfos)
 	{
 		FILE * f = fopen(fi.filename.c_str(), "rb");
@@ -134,8 +112,8 @@ void tickRealTimeEditing()
 		{
 			bool changed = false;
 
-			struct _stat s;
-			if (_fstat(fileno(f), &s) == 0)
+			struct stat s;
+			if (fstat(fileno(f), &s) == 0)
 			{
 				if (fi.time < s.st_mtime)
 				{
@@ -158,7 +136,52 @@ void tickRealTimeEditing()
 			}
 		}
 	}
+}
 
+#endif
+
+#if defined(WIN32)
+
+static HANDLE s_fileWatcher = INVALID_HANDLE_VALUE;
+
+void initRealTimeEditing()
+{
+	if (s_fileWatcher != INVALID_HANDLE_VALUE)
+	{
+		BOOL result = FindCloseChangeNotification(s_fileWatcher);
+		Assert(result);
+
+		s_fileWatcher = INVALID_HANDLE_VALUE;
+	}
+	
+	fillFileInfos();
+	
+	Assert(s_fileWatcher == INVALID_HANDLE_VALUE);
+	s_fileWatcher = FindFirstChangeNotificationA(".", TRUE, FILE_NOTIFY_CHANGE_LAST_WRITE);
+	Assert(s_fileWatcher != INVALID_HANDLE_VALUE);
+	if (s_fileWatcher == INVALID_HANDLE_VALUE)
+		logError("failed to find first change notification");
+}
+
+void shutRealTimeEditing()
+{
+	clearFileInfos();
+}
+
+void tickRealTimeEditing()
+{
+	if (s_fileWatcher != INVALID_HANDLE_VALUE)
+	{
+		if (WaitForSingleObject(s_fileWatcher, 0) != WAIT_OBJECT_0)
+		{
+			return;
+		}
+
+		Sleep(100);
+	}
+	
+	checkFileInfos();
+	
 	if (s_fileWatcher != INVALID_HANDLE_VALUE)
 	{
 		BOOL result = FindNextChangeNotification(s_fileWatcher);
@@ -175,14 +198,25 @@ void tickRealTimeEditing()
 
 void initRealTimeEditing()
 {
+	fillFileInfos();
 }
 
 void shutRealTimeEditing()
 {
+	clearFileInfos();
 }
 
 void tickRealTimeEditing()
 {
+	// todo : add something similar to watch api on platforms other than win32
+	
+	static int x = 0;
+	x++;
+	
+	if ((x % 60) != 0)
+		return;
+	
+	checkFileInfos();
 }
 
 #endif

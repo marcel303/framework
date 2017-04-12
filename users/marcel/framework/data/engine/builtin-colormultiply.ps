@@ -1,0 +1,19 @@
+static const char * s_colorMultiplyPs = R"SHADER(
+
+include engine/ShaderPS.txt
+
+shader_in vec2 texcoord;
+
+uniform sampler2D source;
+uniform vec4 color;
+uniform float opacity;
+
+void main()
+{	
+	vec4 colorDst = texture(source, texcoord);
+	vec4 colorSrc = colorDst * color;
+
+    shader_fragColor = mix(colorDst, colorSrc, opacity);
+}
+
+)SHADER";
