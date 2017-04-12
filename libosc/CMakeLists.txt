@@ -13,8 +13,13 @@ project(libosc)
 
 file(GLOB_RECURSE source "*.c" "*.cpp" "*.h")
 
-file(GLOB_RECURSE source_win32 "ip/win32/*.*")
-list(REMOVE_ITEM source ${source_win32})
+if (MSVC)
+	file(GLOB_RECURSE source_posix "ip/posix/*.*")
+	list(REMOVE_ITEM source ${source_posix})
+else (MSVC)
+	file(GLOB_RECURSE source_win32 "ip/win32/*.*")
+	list(REMOVE_ITEM source ${source_win32})
+endif (MSVC)
 
 add_library(libosc ${source})
 
