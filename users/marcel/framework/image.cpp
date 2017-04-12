@@ -39,10 +39,10 @@ ImageData * loadImage(const char * filename)
 			
 			for (int x = 0; x < sx; ++x)
 			{
-				const int r = source[2];
-				const int g = source[1];
-				const int b = source[0];
-				const int a = 255;
+				const uint8_t r = source[2];
+				const uint8_t g = source[1];
+				const uint8_t b = source[0];
+				const uint8_t a = 255;
 
 				*dest++ = r;
 				*dest++ = g;

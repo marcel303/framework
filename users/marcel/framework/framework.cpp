@@ -6028,8 +6028,8 @@ void gxSetTexture(GLuint texture)
 
 static void makeGaussianKernel(const int kernelSize, ShaderBuffer & kernel)
 {
-	const float s = 1.632;
-	//const float s = 1.8355;
+	const float s = 1.632f;
+	//const float s = 1.8355f;
 	
 	auto dist = [](const float x) { return .5f * erfcf(-x); };
 	
