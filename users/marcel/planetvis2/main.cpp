@@ -1897,6 +1897,10 @@ int main(int argc, char * argv[])
 
 	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
 	{
+		framework.fillCachesWithPath(".", true);
+		
+		changeDirectory("D:/temp/planetvis2");
+
 		if (false)
 		{
 			const int baseSize = CUBE_BASE_SIZE;
