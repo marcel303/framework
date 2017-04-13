@@ -58,7 +58,7 @@ struct ofApp
 	   
 	// add a wave monitor //
 	// take a look inside example-TimeGraph for more examples of this component and the value plotter //
-	    gui->addWaveMonitor("wave\nmonitor", 3, .2);
+	    gui->addWaveMonitor("wave\nmonitor", 3, .2f);
 
 	    valuePlotter = gui->addValuePlotter("value plotter", -1.f, +1.f);
 	    
@@ -163,7 +163,7 @@ struct ofApp
 
 	void draw()
 	{
-		setFont("Verdana.ttf");
+		setFont("calibri.ttf");
 		setColor(colorWhite);
 		drawText(5, 5, 20, +1, +1, "Theme: %s", themes[tIndex].name);
 	}

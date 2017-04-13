@@ -51,6 +51,8 @@ struct VfxTriggerData
 		case kVfxTriggerDataType_Int:
 			return intValue != 0;
 		}
+
+		return false;
 	}
 	
 	int asInt() const
@@ -64,6 +66,8 @@ struct VfxTriggerData
 		case kVfxTriggerDataType_Int:
 			return intValue;
 		}
+
+		return 0;
 	}
 	
 	float asFloat() const
@@ -77,6 +81,8 @@ struct VfxTriggerData
 		case kVfxTriggerDataType_Int:
 			return float(intValue);
 		}
+
+		return 0.f;
 	}
 };
 
