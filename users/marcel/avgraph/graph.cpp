@@ -1619,9 +1619,7 @@ void GraphEdit::drawTypeUi(const GraphNode & node, const GraphEdit_TypeDefinitio
 	const bool isSelected = selectedNodes.count(node.id) != 0;
 	const bool isFolded = node.editorIsFolded;
 	
-	if (isFolded)
-		setColor(63, 0, 0, 255);
-	else if (isSelected)
+	if (isSelected)
 		setColor(63, 63, 127, 255);
 	else
 		setColor(63, 63, 63, 255);
