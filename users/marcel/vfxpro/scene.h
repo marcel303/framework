@@ -374,7 +374,7 @@ struct Scene : public TweenFloatCollection, public TweenFloatModifier
 
 	// TweenFloatModifier
 
-	virtual float applyModifier(TweenFloat * tweenFloat, float value) override;
+	virtual float applyModifier(TweenFloat * tweenFloat, const float value) override;
 };
 
 //

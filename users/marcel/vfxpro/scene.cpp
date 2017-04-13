@@ -1703,17 +1703,19 @@ void Scene::syncTime(const float time)
 	}
 }
 
-float Scene::applyModifier(TweenFloat * tweenFloat, float value)
+float Scene::applyModifier(TweenFloat * tweenFloat, const float value)
 {
+	float result = value;
+
 	for (Modifier & modifier : m_modifiers)
 	{
 		if (modifier.var == tweenFloat)
 		{
-			value = modifier.apply(value);
+			result = modifier.apply(result);
 		}
 	}
 
-	return value;
+	return result;
 }
 
 //
