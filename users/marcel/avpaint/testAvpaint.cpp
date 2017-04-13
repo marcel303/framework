@@ -1,4 +1,4 @@
-#define DO_VIDEOLOOPS 1
+#define DO_VIDEOLOOPS 0
 #define ENABLE_LEAPMOTION 1
 
 #if DO_VIDEOLOOPS
@@ -486,7 +486,7 @@ void testAvpaint()
 						popSurface();
 						
 						pushBlend(BLEND_OPAQUE);
-						applyFsfx(*layerColors[i], "fsfx/godrays.ps", Calc::Lerp(0.f, 2.f, mouse.y / float(GFX_SY)));
+						applyFsfx(*layerColors[i], "fsfx/godrays.ps", Calc::Lerp(0.f, 1.f, mouse.y / float(GFX_SY)));
 						popBlend();
 					}
 					
@@ -691,6 +691,12 @@ void testAvpaint()
 	
 		framework.shutdown();
 	}
+}
+
+#else
+
+void testAvpaint()
+{
 }
 
 #endif

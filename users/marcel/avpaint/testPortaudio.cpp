@@ -1,7 +1,8 @@
-#define DO_PORTAUDIO 0
+#define DO_PORTAUDIO 1
 #define DO_PORTAUDIO_BASIC_OSCS 0
 #define DO_PORTAUDIO_SPRING_OSC1D 0
 #define DO_PORTAUDIO_SPRING_OSC2D 1
+#define DO_MONDRIAAN 1
 
 #if DO_PORTAUDIO
 
@@ -841,7 +842,20 @@ static void floodFill(SpringOsc2D & osc, const ImageData * image, std::set<int> 
 	
 	//if (pixel.r > 127 && pixel.g > 127 && pixel.b < 127)
 	{
-		const double v = (pixel.r + pixel.g + pixel.b) / 3.0 / 255.0;
+		/*
+		double luminance =
+			pixel.r * 0.30 +
+			pixel.g * 0.59 +
+			pixel.b * 0.11;
+		*/
+		double luminance =
+			pixel.r * 0.30 +
+			pixel.g * 0.11 +
+			pixel.b * 0.59;
+		
+		double v = luminance / 255.0;
+		
+		v = (v + 0.05) / 1.05;
 		
 		osc.m_waterSim.f[x][y] = v;
 		
@@ -871,7 +885,7 @@ void testPortaudio()
 		const int sy = SpringOsc2D::WaterSim::kNumElems;
 		Color colors[sx][sy];
 		
-	#if 0
+	#if DO_MONDRIAAN == 0
 		for (int y = 0; y < sy; ++y)
 			for (int x = 0; x < sx; ++x)
 				colors[x][y].set(1.f, 1.f, 1.f, 1.f);
