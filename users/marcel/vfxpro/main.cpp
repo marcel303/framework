@@ -1294,8 +1294,8 @@ int main(int argc, char * argv[])
 		nextScene("tracks/Wobbly.scene.xml");
 	#endif
 
-		Surface prevSurface(GFX_SX, GFX_SY, true);
-		Surface surface(GFX_SX, GFX_SY, true);
+		Surface * prevSurface = new Surface(GFX_SX, GFX_SY, true);
+		Surface * surface = new Surface(GFX_SX, GFX_SY, true);
 
 	#if ENABLE_3D
 		Vec3 cameraPosition(0.f, .5f, -1.f);
@@ -1872,9 +1872,9 @@ int main(int argc, char * argv[])
 				}
 			#endif
 
-				pushSurface(&prevSurface);
+				pushSurface(prevSurface);
 				{
-					ScopedSurfaceBlock scopedBlock(&prevSurface);
+					ScopedSurfaceBlock scopedBlock(prevSurface);
 
 					glClearColor(0.f, 0.f, 0.f, 0.f);
 					glClear(GL_COLOR_BUFFER_BIT);
@@ -1887,9 +1887,9 @@ int main(int argc, char * argv[])
 				}
 				popSurface();
 
-				pushSurface(&surface);
+				pushSurface(surface);
 				{
-					ScopedSurfaceBlock scopedBlock(&surface);
+					ScopedSurfaceBlock scopedBlock(surface);
 
 					glClearColor(0.f, 0.f, 0.f, 1.f);
 					glClear(GL_COLOR_BUFFER_BIT);
@@ -1940,8 +1940,8 @@ int main(int argc, char * argv[])
 					setShader(shader);
 					shader.setImmediate("gamma", config.display.gamma);
 					shader.setImmediate("alpha", alpha);
-					shader.setTexture("prevColormap", 0, prevSurface.getTexture(), false, true);
-					shader.setTexture("currColormap", 1, surface.getTexture(), false, true);
+					shader.setTexture("prevColormap", 0, prevSurface->getTexture(), false, true);
+					shader.setTexture("currColormap", 1, surface->getTexture(), false, true);
 
 					if (config.display.mirror)
 						drawRect(GFX_SX_SCALED, 0, 0, GFX_SY_SCALED);
@@ -1960,7 +1960,7 @@ int main(int argc, char * argv[])
 					Shader shader("gamma");
 					setShader(shader);
 					shader.setImmediate("gamma", config.display.gamma);
-					shader.setTexture("colormap", 0, surface.getTexture(), false, true);
+					shader.setTexture("colormap", 0, surface->getTexture(), false, true);
 
 					if (config.display.mirror)
 						drawRect(GFX_SX_SCALED, 0, 0, GFX_SY_SCALED);
@@ -2385,6 +2385,12 @@ int main(int argc, char * argv[])
 
 		delete g_sceneSurfacePool;
 		g_sceneSurfacePool = nullptr;
+
+		delete prevSurface;
+		prevSurface = nullptr;
+
+		delete surface;
+		surface = nullptr;
 
 		glDeleteTextures(1, &g_fftTextureWithFade);
 		g_fftTextureWithFade = 0;
