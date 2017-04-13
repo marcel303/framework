@@ -2429,7 +2429,6 @@
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "-DNS_BLOCK_ASSERTIONS=1";
 				OTHER_CPLUSPLUSFLAGS = (
-					"-mfpu=neon",
 					"$(OTHER_CFLAGS)",
 					"-funsafe-math-optimizations",
 					"-ffast-math",
@@ -2523,10 +2522,7 @@
 				HEADER_SEARCH_PATHS = ../FacebookConnect/src;
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				OTHER_CFLAGS = "-DNS_BLOCK_ASSERTIONS=1";
-				OTHER_CPLUSPLUSFLAGS = (
-					"-mfpu=neon",
-					"$(OTHER_CFLAGS)",
-				);
+				OTHER_CPLUSPLUSFLAGS = "$(OTHER_CFLAGS)";
 				PREBINDING = NO;
 				PRODUCT_NAME = paintapp;
 				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
@@ -2706,7 +2702,6 @@
 				OTHER_CFLAGS = "-DNS_BLOCK_ASSERTIONS=1";
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
-					"-mfpu=neon",
 					"-funsafe-math-optimizations",
 					"-ffast-math",
 					"-fast",
@@ -2796,10 +2791,7 @@
 				HEADER_SEARCH_PATHS = ../FacebookConnect/src;
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				ONLY_ACTIVE_ARCH = YES;
-				OTHER_CPLUSPLUSFLAGS = (
-					"$(OTHER_CFLAGS)",
-					"-mfpu=neon",
-				);
+				OTHER_CPLUSPLUSFLAGS = "$(OTHER_CFLAGS)";
 				PREBINDING = NO;
 				PRODUCT_NAME = paintapp;
 				SDKROOT = iphoneos;
@@ -2891,7 +2883,6 @@
 				OTHER_CFLAGS = "-DNS_BLOCK_ASSERTIONS=1";
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
-					"-mfpu=neon",
 					"-funsafe-math-optimizations",
 					"-ffast-math",
 					"-fast",
@@ -2988,7 +2979,6 @@
 				OTHER_CFLAGS = "-DNS_BLOCK_ASSERTIONS=1";
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
-					"-mfpu=neon",
 					"-funsafe-math-optimizations",
 					"-ffast-math",
 					"-fast",
@@ -3134,7 +3124,6 @@
 				OTHER_CFLAGS = "-DNS_BLOCK_ASSERTIONS=1";
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
-					"-mfpu=neon",
 					"-funsafe-math-optimizations",
 					"-ffast-math",
 					"-fast",
