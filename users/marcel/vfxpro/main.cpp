@@ -1315,13 +1315,20 @@ int main(int argc, char * argv[])
 
 		bool showCredits = false;
 		float showCreditsAlpha = 0.f;
-
+		
+		bool showUi = true;
+		
 		while (!stop)
 		{
 			// process
 
 			framework.process();
-
+			
+			if (keyboard.wentDown(SDLK_TAB))
+			{
+				showUi = !showUi;
+			}
+			
 			if (keyboard.wentDown(SDLK_b))
 			{
 				showCredits = !showCredits;
@@ -1969,7 +1976,7 @@ int main(int argc, char * argv[])
 					setBlend(BLEND_ALPHA);
 				}
 
-				if (config.display.showScaleOverlay)
+				if (showUi && config.display.showScaleOverlay)
 				{
 					gxPushMatrix();
 					{
@@ -1996,7 +2003,7 @@ int main(int argc, char * argv[])
 				}
 
 			#if ENABLE_3D
-				if (drawProjectorSetup)
+				if (showUi && drawProjectorSetup)
 				{
 					glClearColor(0.05f, 0.05f, 0.05f, 0.f);
 					glClear(GL_COLOR_BUFFER_BIT);
@@ -2067,7 +2074,7 @@ int main(int argc, char * argv[])
 			#endif
 
 			#if ENABLE_3D
-				if (drawScreenIds)
+				if (showUi && drawScreenIds)
 				{
 					for (int c = 0; c < NUM_SCREENS; ++c)
 					{
@@ -2092,187 +2099,193 @@ int main(int argc, char * argv[])
 			#endif
 
 			#if ENABLE_DEBUG_MENUS
-				setFont("VeraMono.ttf");
-				setColor(colorWhite);
-				//const int spacingY = 28;
-				//const int fontSize = 24;
-				const int spacingY = 16;
-				const int fontSize = 14;
-				int x = 20;
-				int y = 45;
-
-				if (s_debugMode == kDebugMode_None)
+				if (showUi)
 				{
-				}
-				else if (s_debugMode == kDebugMode_EffectList || s_debugMode == kDebugMode_EffectListCondensed)
-				{
-					drawText(x, y, fontSize, +1.f, +1.f, (s_debugMode == kDebugMode_EffectList) ? "effects list:" : "effects list (condensed):");
-					x += 50;
-					y += spacingY;
-
-					int index = 0;
-
-					const auto effects = buildEffectsList();
-
-					for (auto i = effects.begin(); i != effects.end(); ++i, ++index)
-					{
-						float xOld = x;
-
-						const std::string & effectName = (*i)->m_name;
-						Effect * effect = (*i)->m_effect;
-						
-						char temp[1024];
-						sprintf_s(temp, sizeof(temp), "%d %-20s", index, effectName.c_str());
-
-						float sx, sy;
-						measureText(fontSize, sx, sy, "%s", temp);
-
-						setColor(effect->debugEnabled ? colorWhite : colorRed);
-						drawText(x, y, fontSize, +1.f, +1.f, "%s", temp);
-
-						x += sx;
-						x += 4.f;
-
-						bool anyActive = false;
-
-						if (s_debugMode != kDebugMode_EffectListCondensed)
-						{
-							for (auto j : effect->m_tweenVars)
-								anyActive |= j.second->isActive();
-						}
-						else
-						{
-							anyActive |= !effect->m_tweenVars.empty();
-						}
-
-						float yNew = y;
-
-						if (anyActive)
-						{
-							for (auto j : effect->m_tweenVars)
-							{
-								float yOld = y;
-
-								std::string varName = effectParamToName(effectName, j.first);
-								TweenFloat & var = *j.second;
-
-								setColor(colorWhite);
-								drawText(x, y, fontSize, +1.f, +1.f, "%-8s", varName.c_str());
-								y += spacingY;
-
-								setColor(var.isActive() ? colorYellow : colorWhite);
-								drawText(x, y, fontSize, +1.f, +1.f, "%.2f", (float)var);
-								y += spacingY;
-
-								x += 150.f;
-								yNew = y;
-								y = yOld;
-							}
-						}
-						else
-						{
-							yNew += spacingY;
-						}
-
-						x = xOld;
-						y = yNew;
-					}
-
-					y += spacingY;
-					x -= 50;
-				}
-			#if ENABLE_3D
-				else if (s_debugMode == kDebugMode_Camera)
-				{
-				}
-			#endif
-				else if (s_debugMode == kDebugMode_EventList)
-				{
-					drawText(x, y, fontSize, +1.f, +1.f, "events list:");
-					x += 50;
-					y += spacingY;
-
-					for (size_t i = 0; i < g_scene->m_events.size(); ++i)
-					{
-						setColor(g_scene->m_events[i]->m_enabled ? colorWhite : colorRed);
-						drawText(x, y, fontSize, +1.f, +1.f, "%02d: %-40s", i, g_scene->m_events[i]->m_name.c_str());
-						y += spacingY;
-					}
-
-					y += spacingY;
-					x -= 50;
-				}
-				else if (s_debugMode == kDebugMode_LayerList)
-				{
-					drawText(x, y, fontSize, +1.f, +1.f, "layer list:");
-					x += 50;
-					y += spacingY;
-
-					for (int i = 0; i < (int)g_scene->m_layers.size(); ++i)
-					{
-						SceneLayer * layer = g_scene->m_layers[i];
-
-						char temp[1024];
-						sprintf_s(temp, sizeof(temp), "%d %-20s", i, layer->m_name.c_str());
-
-						setColor(layer->m_debugEnabled ? colorWhite : colorRed);
-						drawText(x, y, fontSize, +1.f, +1.f, "%s", temp);
-						y += spacingY;
-					}
-
-					y += spacingY;
-					x -= 50;
-				}
-				else if (s_debugMode == kDebugMode_Help)
-				{
-					drawText(x, y, fontSize, +1.f, +1.f, "Press F1 to toggle help"); y += spacingY;
-					x += 50;
-					drawText(x, y, fontSize, +1.f, +1.f, ""); y += spacingY;
-
-					drawText(x, y, fontSize, +1.f, +1.f, "E: toggle events list"); y += spacingY;
-					drawText(x, y, fontSize, +1.f, +1.f, "I: identify screens"); y += spacingY;
-					drawText(x, y, fontSize, +1.f, +1.f, "S: toggle project setup view"); y += spacingY;
-					x += 50;
-					drawText(x, y, fontSize, +1.f, +1.f, "RIGHT SHIFT: enable camera controls in project setup view"); y += spacingY;
-					drawText(x, y, fontSize, +1.f, +1.f, "ARROW KEYS: move the camera around in project setup view"); y += spacingY;
-					drawText(x, y, fontSize, +1.f, +1.f, "END: change the active virtual camera in project setup view"); y += spacingY;
-					drawText(x, y, fontSize, +1.f, +1.f, "LEFT SHIFT: when pressed, draw test objects in 3D space"); y += spacingY;
-					drawText(x, y, fontSize, +1.f, +1.f, ""); y += spacingY;
-					x -= 50;
-					drawText(x, y, fontSize, +1.f, +1.f, "A: spawn a Spriter effect"); y += spacingY;
-					drawText(x, y, fontSize, +1.f, +1.f, "G: when pressed, enables gravity on cloth"); y += spacingY;
-					drawText(x, y, fontSize, +1.f, +1.f, ""); y += spacingY;
-					drawText(x, y, fontSize, +1.f, +1.f, "R: reload data caches"); y += spacingY;
-					drawText(x, y, fontSize, +1.f, +1.f, "C: disable screen clear and enable a fade effect instead"); y += spacingY;
-					drawText(x, y, fontSize, +1.f, +1.f, "P: toggle fullscreen shader effect"); y += spacingY;
-					drawText(x, y, fontSize, +1.f, +1.f, "D: toggle debug draw"); y += spacingY;
-					drawText(x, y, fontSize, +1.f, +1.f, ""); y += spacingY;
-					drawText(x, y, fontSize, +1.f, +1.f, "ESCAPE: quit"); y += spacingY;
-
-					//
-
-					drawText(GFX_SX/2, GFX_SY/2, 32, 0.f, 0.f, "Listening for OSC messages on port %d", OSC_RECV_PORT);
-
-					static int easeFunction = 0;
-					if (keyboard.wentDown(SDLK_SPACE))
-						easeFunction = (easeFunction + 1) % kEaseType_Count;
+					setFont("VeraMono.ttf");
 					setColor(colorWhite);
-					for (int i = 0; i <= 100; ++i)
-						drawCircle(GFX_SX/2 + i, GFX_SY/2 + EvalEase(i / 100.f, (EaseType)easeFunction, mouse.y / float(GFX_SY) * 2.f) * 100.f, 5.f, 4);
+					//const int spacingY = 28;
+					//const int fontSize = 24;
+					const int spacingY = 16;
+					const int fontSize = 14;
+					int x = 20;
+					int y = 45;
+
+					if (s_debugMode == kDebugMode_None)
+					{
+					}
+					else if (s_debugMode == kDebugMode_EffectList || s_debugMode == kDebugMode_EffectListCondensed)
+					{
+						drawText(x, y, fontSize, +1.f, +1.f, (s_debugMode == kDebugMode_EffectList) ? "effects list:" : "effects list (condensed):");
+						x += 50;
+						y += spacingY;
+
+						int index = 0;
+
+						const auto effects = buildEffectsList();
+
+						for (auto i = effects.begin(); i != effects.end(); ++i, ++index)
+						{
+							float xOld = x;
+
+							const std::string & effectName = (*i)->m_name;
+							Effect * effect = (*i)->m_effect;
+							
+							char temp[1024];
+							sprintf_s(temp, sizeof(temp), "%d %-20s", index, effectName.c_str());
+
+							float sx, sy;
+							measureText(fontSize, sx, sy, "%s", temp);
+
+							setColor(effect->debugEnabled ? colorWhite : colorRed);
+							drawText(x, y, fontSize, +1.f, +1.f, "%s", temp);
+
+							x += sx;
+							x += 4.f;
+
+							bool anyActive = false;
+
+							if (s_debugMode != kDebugMode_EffectListCondensed)
+							{
+								for (auto j : effect->m_tweenVars)
+									anyActive |= j.second->isActive();
+							}
+							else
+							{
+								anyActive |= !effect->m_tweenVars.empty();
+							}
+
+							float yNew = y;
+
+							if (anyActive)
+							{
+								for (auto j : effect->m_tweenVars)
+								{
+									float yOld = y;
+
+									std::string varName = effectParamToName(effectName, j.first);
+									TweenFloat & var = *j.second;
+
+									setColor(colorWhite);
+									drawText(x, y, fontSize, +1.f, +1.f, "%-8s", varName.c_str());
+									y += spacingY;
+
+									setColor(var.isActive() ? colorYellow : colorWhite);
+									drawText(x, y, fontSize, +1.f, +1.f, "%.2f", (float)var);
+									y += spacingY;
+
+									x += 150.f;
+									yNew = y;
+									y = yOld;
+								}
+							}
+							else
+							{
+								yNew += spacingY;
+							}
+
+							x = xOld;
+							y = yNew;
+						}
+
+						y += spacingY;
+						x -= 50;
+					}
+				#if ENABLE_3D
+					else if (s_debugMode == kDebugMode_Camera)
+					{
+					}
+				#endif
+					else if (s_debugMode == kDebugMode_EventList)
+					{
+						drawText(x, y, fontSize, +1.f, +1.f, "events list:");
+						x += 50;
+						y += spacingY;
+
+						for (size_t i = 0; i < g_scene->m_events.size(); ++i)
+						{
+							setColor(g_scene->m_events[i]->m_enabled ? colorWhite : colorRed);
+							drawText(x, y, fontSize, +1.f, +1.f, "%02d [osc=%02d]: %-40s", i, g_scene->m_events[i]->m_oscId, g_scene->m_events[i]->m_name.c_str());
+							y += spacingY;
+						}
+
+						y += spacingY;
+						x -= 50;
+					}
+					else if (s_debugMode == kDebugMode_LayerList)
+					{
+						drawText(x, y, fontSize, +1.f, +1.f, "layer list:");
+						x += 50;
+						y += spacingY;
+
+						for (int i = 0; i < (int)g_scene->m_layers.size(); ++i)
+						{
+							SceneLayer * layer = g_scene->m_layers[i];
+
+							char temp[1024];
+							sprintf_s(temp, sizeof(temp), "%d %-20s", i, layer->m_name.c_str());
+
+							setColor(layer->m_debugEnabled ? colorWhite : colorRed);
+							drawText(x, y, fontSize, +1.f, +1.f, "%s", temp);
+							y += spacingY;
+						}
+
+						y += spacingY;
+						x -= 50;
+					}
+					else if (s_debugMode == kDebugMode_Help)
+					{
+						drawText(x, y, fontSize, +1.f, +1.f, "Press F1 to toggle help"); y += spacingY;
+						x += 50;
+						drawText(x, y, fontSize, +1.f, +1.f, ""); y += spacingY;
+
+						drawText(x, y, fontSize, +1.f, +1.f, "E: toggle events list"); y += spacingY;
+						drawText(x, y, fontSize, +1.f, +1.f, "I: identify screens"); y += spacingY;
+						drawText(x, y, fontSize, +1.f, +1.f, "S: toggle project setup view"); y += spacingY;
+						x += 50;
+						drawText(x, y, fontSize, +1.f, +1.f, "RIGHT SHIFT: enable camera controls in project setup view"); y += spacingY;
+						drawText(x, y, fontSize, +1.f, +1.f, "ARROW KEYS: move the camera around in project setup view"); y += spacingY;
+						drawText(x, y, fontSize, +1.f, +1.f, "END: change the active virtual camera in project setup view"); y += spacingY;
+						drawText(x, y, fontSize, +1.f, +1.f, "LEFT SHIFT: when pressed, draw test objects in 3D space"); y += spacingY;
+						drawText(x, y, fontSize, +1.f, +1.f, ""); y += spacingY;
+						x -= 50;
+						drawText(x, y, fontSize, +1.f, +1.f, "A: spawn a Spriter effect"); y += spacingY;
+						drawText(x, y, fontSize, +1.f, +1.f, "G: when pressed, enables gravity on cloth"); y += spacingY;
+						drawText(x, y, fontSize, +1.f, +1.f, ""); y += spacingY;
+						drawText(x, y, fontSize, +1.f, +1.f, "R: reload data caches"); y += spacingY;
+						drawText(x, y, fontSize, +1.f, +1.f, "C: disable screen clear and enable a fade effect instead"); y += spacingY;
+						drawText(x, y, fontSize, +1.f, +1.f, "P: toggle fullscreen shader effect"); y += spacingY;
+						drawText(x, y, fontSize, +1.f, +1.f, "D: toggle debug draw"); y += spacingY;
+						drawText(x, y, fontSize, +1.f, +1.f, ""); y += spacingY;
+						drawText(x, y, fontSize, +1.f, +1.f, "ESCAPE: quit"); y += spacingY;
+
+						//
+
+						drawText(GFX_SX/2, GFX_SY/2, 32, 0.f, 0.f, "Listening for OSC messages on port %d", OSC_RECV_PORT);
+
+						static int easeFunction = 0;
+						if (keyboard.wentDown(SDLK_SPACE))
+							easeFunction = (easeFunction + 1) % kEaseType_Count;
+						setColor(colorWhite);
+						for (int i = 0; i <= 100; ++i)
+							drawCircle(GFX_SX/2 + i, GFX_SY/2 + EvalEase(i / 100.f, (EaseType)easeFunction, mouse.y / float(GFX_SY) * 2.f) * 100.f, 5.f, 4);
+					}
 				}
 			#endif
 
 			#if ENABLE_DEBUG_PCMTEX
-				setBlend(BLEND_ADD);
-				setColor(colorWhite);
-				gxSetTexture(g_pcmTexture);
-				drawRect(0, 0, GFX_SX, GFX_SY);
-				gxSetTexture(0);
-				setBlend(BLEND_ALPHA);
+				if (showUi)
+				{
+					setBlend(BLEND_ADD);
+					setColor(colorWhite);
+					gxSetTexture(g_pcmTexture);
+					drawRect(0, 0, GFX_SX, GFX_SY);
+					gxSetTexture(0);
+					setBlend(BLEND_ALPHA);
+				}
 			#endif
 
 			#if ENABLE_DEBUG_FFTTEX || 1
-				if (keyboard.isDown(SDLK_f))
+				if (showUi && keyboard.isDown(SDLK_f))
 				{
 					const int sx = 800;
 					const int sy = 100;
@@ -2304,16 +2317,20 @@ int main(int argc, char * argv[])
 			#endif
 
 			#if ENABLE_DEBUG_INFOS && 0
-				setFont("VeraMono.ttf");
-				setColor(colorBlack);
-				drawRect(mouse.x-100, mouse.y-10, mouse.x+100, mouse.y+20);
-				setColor(colorWhite);
-				drawText(mouse.x, mouse.y, 24, 0, 0, "(%d, %d)",
-					mouse.isDown(BUTTON_LEFT) ? (int)screenXToVirtual(mouse.x) : mouse.x,
-					mouse.isDown(BUTTON_LEFT) ? (int)screenYToVirtual(mouse.y) : mouse.y);
+				if (showUi)
+				{
+					setFont("VeraMono.ttf");
+					setColor(colorBlack);
+					drawRect(mouse.x-100, mouse.y-10, mouse.x+100, mouse.y+20);
+					setColor(colorWhite);
+					drawText(mouse.x, mouse.y, 24, 0, 0, "(%d, %d)",
+						mouse.isDown(BUTTON_LEFT) ? (int)screenXToVirtual(mouse.x) : mouse.x,
+						mouse.isDown(BUTTON_LEFT) ? (int)screenYToVirtual(mouse.y) : mouse.y);
+				}
 			#endif
 
 			#if ENABLE_DEBUG_INFOS
+				if (showUi)
 				{
 					setFont("VeraMono.ttf");
 					setColor(colorWhite);
