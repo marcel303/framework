@@ -29,13 +29,8 @@
 #endif
 
 #if ENABLE_VIDEO
-	#if defined(MACOS)
-		#include "mediaplayer_new/MPContext.h"
-		#include "mediaplayer_new/MPUtil.h"
-	#else
-		#include "mediaplayer_old/MPContext.h"
-		#include "mediaplayer_old/MPUtil.h"
-	#endif
+	#include "mediaplayer_new/MPContext.h"
+	#include "mediaplayer_new/MPUtil.h"
 #endif
 
 #ifdef MACOS

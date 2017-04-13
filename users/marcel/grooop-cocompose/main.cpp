@@ -12,11 +12,12 @@
 
 #define DO_COCREATE 0
 #define DO_GAUSSIAN_BLUR 0
-#define DO_COMPUTE_PARTICLES 1
+#define DO_COMPUTE_PARTICLES 0
 #define DO_LIGHT_PROPAGATION 0
 #define DO_FLOCKING 0
-#define DO_HQ_PRIMITIVES 0
-#define DO_BUILTIN_SHADER 0
+#define DO_HQ_PRIMITIVES 1
+#define DO_PATH 1
+#define DO_BUILTIN_SHADER  1
 
 /*
 
@@ -2348,8 +2349,6 @@ struct Flock
 
 int main(int argc, char * argv[])
 {
-	changeDirectory("data");
-
 #if DO_COCREATE
 	createAudioCache();
 #endif
@@ -2713,6 +2712,8 @@ int main(int argc, char * argv[])
 				}
 				setBlend(BLEND_ALPHA);
 			#else
+
+			#if DO_PATH
 				static bool doPath = true;
 
 				if (keyboard.wentDown(SDLK_p))
@@ -2745,7 +2746,7 @@ int main(int argc, char * argv[])
 							path.line(   0.f, +100.f);
 							path.line(-100.f,    0.f);
 							path.curve(-200.f, +100.f, -200.f, 0.f, 0.f, -100.f -200.f * std::cos(framework.time * 0.f));
-							path.curveTo(0.f, 0.f, 0.f, +100.f, 0.f, +100.f +500.f * std::cos(framework.time * 1.f));
+							path.curveTo(0.f, 0.f, 0.f, +100.f, 0.f, +100.f +500.f * std::cos(framework.time * .1f));
 
 							setBlend(BLEND_ALPHA);
 
@@ -2758,6 +2759,7 @@ int main(int argc, char * argv[])
 					}
 				}
 				popSurface();
+			#endif
 
 			#if DO_HQ_PRIMITIVES
 				pushSurface(surface);
@@ -2792,6 +2794,9 @@ int main(int argc, char * argv[])
 						setFont("calibri.ttf");
 						setColor(colorWhite);
 						drawText(10.f, 10.f, 24, +1, +1, "mode: %s", false ? "software transform / single draw" : "hardware transform / multi draw");
+
+						if (keyboard.isDown(SDLK_a))
+							setBlend(BLEND_PREMULTIPLIED_ALPHA_DRAW);
 
 						struct Ve
 						{
@@ -2832,8 +2837,6 @@ int main(int argc, char * argv[])
 						const float strokeSize = 0.f + mouse.y / float(GFX_SY) * 10.f;
 
 						{
-							setBlend(BLEND_ALPHA);
-
 							gxPushMatrix();
 							{
 								gxTranslatef(+GFX_SX/2, +GFX_SY/2, 0.f);
@@ -2921,12 +2924,18 @@ int main(int argc, char * argv[])
 						{
 							gxRotatef(framework.time, 0.f, 0.f, 1.f);
 
-							hqBegin(HQ_FILLED_RECTS);
+							gxPushMatrix();
 							{
-								setColor(colorWhite);
-								//hqFillRect(-50.f, -50.f, +50.f, +50.f);
+								gxTranslatef(200.f, 0.f, 0.f);
+
+								hqBegin(HQ_FILLED_RECTS);
+								{
+									setColor(colorWhite);
+									hqFillRect(-50.f, -50.f, +50.f, +50.f);
+								}
+								hqEnd();
 							}
-							hqEnd();
+							gxPopMatrix();
 
 							hqBegin(HQ_STROKED_RECTS);
 							{
@@ -2979,7 +2988,7 @@ int main(int argc, char * argv[])
 					gxPopMatrix();
 #endif
 
-#if 0
+#if 1
 					gxPushMatrix();
 					{
 						const float scale = mouse.y / float(GFX_SY) * 10.f;
@@ -2989,21 +2998,117 @@ int main(int argc, char * argv[])
 						//gxScalef(std::cos(txTime / 23.45f) * 1.f, std::cos(txTime / 34.56f) * 1.f, 1.f);
 						gxScalef(scale, scale, 1.f);
 
-						hqBegin(HQ_FILLED_CIRCLES);
+						hqBegin(HQ_FILLED_CIRCLES, true);
 						{
 							const Vec2 po(0.f, 0.f);
-							const float radius = 25.f;
+							const float radius = 15.f;
 
 							for (int t = 0; t < 11 * 11; ++t)
 							{
 								const int ox = (t % 11) - 5;
 								const int oy = (t / 11) - 5;
 
+								if (ox == 0 && oy == 0)
+									continue;
+
 								const Vec2 o(ox * 20.f, oy * 20.f);
 								const Vec2 p = po + o;
 									
 								hqFillCircle(p[0], p[1], radius);
 							}
+						}
+						hqEnd();
+					}
+					gxPopMatrix();
+#endif
+
+#if 0 // GL vs HQ rect
+					surface->clear();
+
+					gxPushMatrix();
+					{
+						gxTranslatef(GFX_SX/2, GFX_SY/2, 0.f);
+
+#if 0
+						setColor(colorWhite);
+						drawRect(-100.f, -100.f, +100.f, +100.f);
+#else
+						hqBegin(HQ_FILLED_RECTS);
+						{
+							setColor(colorWhite);
+							hqFillRect(-100.f, -100.f, +100.f, +100.f);
+						}
+						hqEnd();
+#endif
+
+						hqBegin(HQ_STROKED_RECTS);
+						{
+							setColor(255, 0, 0, 127);
+							hqStrokeRect(-100.f, -100.f, +100.f, +100.f, 3.f);
+						}
+						hqEnd();
+					}
+					gxPopMatrix();
+#endif
+
+#if 0 // GL vs HQ circle
+					surface->clear();
+
+					gxPushMatrix();
+					{
+						gxTranslatef(GFX_SX/2, GFX_SY/2, 0.f);
+
+#if 0
+						setColor(colorWhite);
+						fillCircle(0.f, 0.f, 100.f, 100);
+#else
+						hqBegin(HQ_FILLED_CIRCLES);
+						{
+							setColor(colorWhite);
+							hqFillCircle(0.f, 0.f, 100.f);
+						}
+						hqEnd();
+#endif
+
+						hqBegin(HQ_STROKED_CIRCLES);
+						{
+							setColor(255, 0, 0, 127);
+							hqStrokeCircle(0.f, 0.f, 100.f, 3.f);
+						}
+						hqEnd();
+					}
+					gxPopMatrix();
+#endif
+
+#if 0 // GL vs HQ triangle
+					surface->clear();
+
+					gxPushMatrix();
+					{
+						gxTranslatef(GFX_SX/2, GFX_SY/2, 0.f);
+
+#if 0
+						setColor(colorWhite);
+						gxBegin(GL_TRIANGLES);
+						{
+							gxVertex2f(-100.f,    0.f);
+							gxVertex2f(+100.f,    0.f);
+							gxVertex2f(   0.f, +100.f);
+						}
+						gxEnd();
+#else
+						hqBegin(HQ_FILLED_TRIANGLES);
+						{
+							setColor(colorWhite);
+							hqFillTriangle(-100.f, 0.f, +100.f, 0.f, 0.f, +100.f);
+						}
+						hqEnd();
+#endif
+
+						hqBegin(HQ_STROKED_TRIANGLES);
+						{
+							setColor(255, 0, 0, 127);
+							hqStrokeTriangle(-100.f, 0.f, +100.f, 0.f, 0.f, +100.f, 3.f);
 						}
 						hqEnd();
 					}

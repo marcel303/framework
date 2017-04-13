@@ -1209,6 +1209,8 @@ void Surface::construct()
 	
 	m_bufferId = 0;
 	
+	m_doubleBuffered = false;
+
 	m_buffer[0] = 0;
 	m_buffer[1] = 0;
 	m_texture[0] = 0;
@@ -1223,30 +1225,37 @@ void Surface::destruct()
 	
 	m_bufferId = 0;
 	
-	for (int i = 0; i < 2; ++i)
+	for (int i = 0; i < (m_doubleBuffered ? 2 : 1); ++i)
 	{
 		if (m_buffer[i])
 		{
 			glDeleteFramebuffers(1, &m_buffer[i]);
 			m_buffer[i] = 0;
+			checkErrorGL();
 		}
 		
 		if (m_texture[i])
 		{
 			glDeleteTextures(1, &m_texture[i]);
 			m_texture[i] = 0;
+			checkErrorGL();
 		}
 	}
-	
+
 	if (m_depthTexture)
 	{
 		glDeleteTextures(1, &m_depthTexture);
 		m_depthTexture = 0;
+		checkErrorGL();
 	}
+
+	m_doubleBuffered = false;
 }
 
 void Surface::swapBuffers()
 {
+	fassert(m_doubleBuffered);
+
 	m_bufferId = (m_bufferId + 1) % 2;
 }
 
@@ -1255,11 +1264,18 @@ Surface::Surface()
 	construct();
 }
 
-Surface::Surface(int sx, int sy, bool highPrecision, bool withDepthBuffer)
+Surface::Surface(int sx, int sy, bool highPrecision, bool withDepthBuffer, bool doubleBuffered)
 {
 	construct();
 	
-	init(sx, sy, highPrecision, withDepthBuffer);
+	init(sx, sy, highPrecision ? SURFACE_RGBA16F : SURFACE_RGBA8, withDepthBuffer, doubleBuffered);
+}
+
+Surface::Surface(int sx, int sy, bool withDepthBuffer, bool doubleBuffered, SURFACE_FORMAT format)
+{
+	construct();
+
+	init(sx, sy, format, withDepthBuffer, doubleBuffered);
 }
 
 Surface::~Surface()
@@ -1267,7 +1283,7 @@ Surface::~Surface()
 	destruct();
 }
 
-bool Surface::init(int sx, int sy, bool highPrecision, bool withDepthBuffer)
+bool Surface::init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered)
 {
 	fassert(m_buffer[0] == 0);
 	
@@ -1287,39 +1303,17 @@ bool Surface::init(int sx, int sy, bool highPrecision, bool withDepthBuffer)
 	m_size[0] = sx * framework.minification;
 	m_size[1] = sy * framework.minification;
 	
-	for (int i = 0; i < 2; ++i)
+	m_doubleBuffered = doubleBuffered;
+
+	if (result && withDepthBuffer)
 	{
-		// allocate storage
-		
-		glGenTextures(1, &m_texture[i]);
-		result &= m_texture[i] != 0;
-		checkErrorGL();
-		
-		glBindTexture(GL_TEXTURE_2D, m_texture[i]);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+		fassert(m_depthTexture == 0);
+		glGenTextures(1, &m_depthTexture);
+		result &= m_depthTexture != 0;
 		checkErrorGL();
 
-		if (highPrecision)
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, sx, sy, 0, GL_RGBA, GL_HALF_FLOAT, 0);
-		else
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, sx, sy, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
-		checkErrorGL();
-
-		// set filtering
-		
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		checkErrorGL();
-
-		if (withDepthBuffer)
+		if (result)
 		{
-			glGenTextures(1, &m_depthTexture);
-			result &= m_depthTexture != 0;
-			checkErrorGL();
-
 			glBindTexture(GL_TEXTURE_2D, m_depthTexture);
 			checkErrorGL();
 
@@ -1338,6 +1332,44 @@ bool Surface::init(int sx, int sy, bool highPrecision, bool withDepthBuffer)
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			checkErrorGL();
 		}
+	}
+
+	for (int i = 0; result && i < (doubleBuffered ? 2 : 1); ++i)
+	{
+		// allocate storage
+		
+		glGenTextures(1, &m_texture[i]);
+		result &= m_texture[i] != 0;
+		checkErrorGL();
+		
+		glBindTexture(GL_TEXTURE_2D, m_texture[i]);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+		checkErrorGL();
+
+		GLenum glFormat = GL_INVALID_ENUM;
+
+		if (format == SURFACE_RGBA8)
+			glFormat = GL_RGBA8;
+		if (format == SURFACE_RGBA16F)
+			glFormat = GL_RGBA16F;
+		if (format == SURFACE_R8)
+			glFormat = GL_R8;
+		if (format == SURFACE_R16F)
+			glFormat = GL_R16F;
+		if (format == SURFACE_R32F)
+			glFormat = GL_R32F;
+
+		glTexStorage2D(GL_TEXTURE_2D, 1, glFormat, sx, sy);
+		checkErrorGL();
+
+		// set filtering
+		
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		checkErrorGL();
 		
 		// create attachment
 		
@@ -1365,6 +1397,12 @@ bool Surface::init(int sx, int sy, bool highPrecision, bool withDepthBuffer)
 			
 			result = false;
 		}
+	}
+
+	if (result && doubleBuffered == false)
+	{
+		m_texture[1] = m_texture[0];
+		m_buffer[1] = m_buffer[0];
 	}
 	
 	if (!result)
@@ -5164,14 +5202,19 @@ static GLuint createTexture(const void * source, int sx, int sy, bool filter, bo
 	return texture;
 }
 
+GLuint createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp)
+{
+	return createTexture(source, sx, sy, filter, clamp, GL_RGBA8, GL_RGBA);
+}
+
 GLuint createTextureFromRGB8(const void * source, int sx, int sy, bool filter, bool clamp)
 {
 	return createTexture(source, sx, sy, filter, clamp, GL_RGB8, GL_RGB);
 }
 
-GLuint createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp)
+GLuint createTextureFromR8(const void * source, int sx, int sy, bool filter, bool clamp)
 {
-	return createTexture(source, sx, sy, filter, clamp, GL_RGBA8, GL_RGBA);
+	return createTexture(source, sx, sy, filter, clamp, GL_R8, GL_RED);
 }
 
 void debugDrawText(float x, float y, int size, float alignX, float alignY, const char * format, ...)
@@ -5985,8 +6028,8 @@ void gxSetTexture(GLuint texture)
 
 static void makeGaussianKernel(const int kernelSize, ShaderBuffer & kernel)
 {
-	const float s = 1.632;
-	//const float s = 1.8355;
+	const float s = 1.632f;
+	//const float s = 1.8355f;
 	
 	auto dist = [](const float x) { return .5f * erfcf(-x); };
 	
@@ -6431,6 +6474,8 @@ void hqDrawPath(const Path2d & path)
 	if (mode == 3)
 		hqBegin(HQ_STROKED_CIRCLES, useScreenSpace);
 	{
+		const float strokeSize = (std::sin(framework.time) + 1.f) / 2.f * 4.f;
+
 		for (int i = 0; i < numPoints; ++i)
 		{
 			if (mode == 0)
@@ -6450,12 +6495,12 @@ void hqDrawPath(const Path2d & path)
 				hqStrokeRect(
 					pxy[0] - 5.f, pxy[1] - 5.f,
 					pxy[0] + 5.f, pxy[1] + 5.f,
-					2.f);
+					strokeSize);
 			}
 
 			if (mode == 3)
 			{
-				hqStrokeCircle(pxy[0], pxy[1], 5.f, 2.f);
+				hqStrokeCircle(pxy[0], pxy[1], 5.f, strokeSize);
 			}
 
 			pxy += 2;

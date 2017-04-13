@@ -2,7 +2,7 @@
 
 #include <string>
 
-class MediaPlayer;
+struct MediaPlayer;
 class Surface;
 
 struct VideoLoop

@@ -1,7 +1,7 @@
 #include "Noise.h"
 
 float octave_noise_1d(
-	const float octaves,
+	const int octaves,
 	const float persistence,
 	const float scale,
 	const float x)
@@ -15,7 +15,7 @@ float octave_noise_1d(
 }
 
 float scaled_octave_noise_1d(
-	const float octaves,
+	const int octaves,
 	const float persistence,
 	const float scale,
 	const float loBound,

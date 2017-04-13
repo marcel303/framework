@@ -289,10 +289,20 @@ private:
 
 //
 
+enum SURFACE_FORMAT
+{
+	SURFACE_RGBA8,
+	SURFACE_RGBA16F,
+	SURFACE_R8,
+	SURFACE_R16F,
+	SURFACE_R32F
+};
+
 class Surface
 {
 	int m_size[2];
 	int m_bufferId;
+	bool m_doubleBuffered;
 	GLuint m_buffer[2];
 	GLuint m_texture[2];
 	GLuint m_depthTexture;
@@ -302,12 +312,13 @@ class Surface
 	
 public:
 	Surface();
-	Surface(int sx, int sy, bool highPrecision, bool withDepthBuffer = false);
+	explicit Surface(int sx, int sy, bool highPrecision, bool withDepthBuffer = false, bool doubleBuffered = true);
+	explicit Surface(int sx, int sy, bool withDepthBuffer, bool doubleBuffered, SURFACE_FORMAT format);
 	~Surface();
 	
 	void swapBuffers();
 
-	bool init(int sx, int sy, bool highPrecision, bool withDepthBuffer);
+	bool init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered);
 	GLuint getFramebuffer() const;
 	GLuint getTexture() const;
 	GLuint getDepthTexture() const;
@@ -1114,6 +1125,7 @@ void drawPath(const Path2d & path);
 
 GLuint createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp);
 GLuint createTextureFromRGB8(const void * source, int sx, int sy, bool filter, bool clamp);
+GLuint createTextureFromR8(const void * source, int sx, int sy, bool filter, bool clamp);
 
 void debugDrawText(float x, float y, int size, float alignX, float alignY, const char * format, ...);
 

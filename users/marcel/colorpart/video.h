@@ -1,9 +1,10 @@
 #pragma once
 
+#include "audiostream/AudioStream.h"
 #include "mediaplayer/MPContext.h"
 #include <stdint.h>
 
-struct MediaPlayer
+struct MediaPlayer : public AudioStream
 {
 	struct Context
 	{
@@ -62,6 +63,9 @@ struct MediaPlayer
 	int textureSy;
 	double presentTime;
 
+	int audioChannelCount;
+	int audioSampleRate;
+
 	// threading related
 	SDL_Thread * mpThread;
 
@@ -71,6 +75,8 @@ struct MediaPlayer
 		, textureSx(0)
 		, textureSy(0)
 		, presentTime(-1.0)
+		, audioChannelCount(-1)
+		, audioSampleRate(-1)
 		// threading related
 		, mpThread(0)
 	{
@@ -91,6 +97,11 @@ struct MediaPlayer
 
 	void updateTexture();
 	uint32_t getTexture() const;
+
+	void updateAudio();
+	bool getAudioProperties(int & channelCount, int & sampleRate) const;
+
+	virtual int Provide(int numSamples, AudioSample* __restrict buffer) override;
 
 	void startMediaPlayerThread();
 	void stopMediaPlayerThread();
