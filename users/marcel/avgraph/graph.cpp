@@ -1465,9 +1465,20 @@ void GraphEdit::draw() const
 				else
 					setColor(255, 255, 0);
 				
+				auto srcTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(srcNode->typeName);
+				auto dstTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(dstNode->typeName);
+				
+				const float srcSy = srcTypeDefinition == nullptr ? 0.f : srcTypeDefinition->syFolded;
+				const float dstSy = dstTypeDefinition == nullptr ? 0.f : dstTypeDefinition->syFolded;
+				
+				const float srcX = srcNode->editorX + inputSocket->px;
+				const float srcY = srcNode->editorY + (srcNode->editorIsFolded ? srcSy/2.f : inputSocket->py);
+				const float dstX = dstNode->editorX + outputSocket->px;
+				const float dstY = dstNode->editorY + (dstNode->editorIsFolded ? dstSy/2.f : outputSocket->py);
+				
 				hqLine(
-					srcNode->editorX + inputSocket->px, srcNode->editorY + inputSocket->py, 2.f,
-					dstNode->editorX + outputSocket->px, dstNode->editorY + outputSocket->py, 4.f);
+					srcX, srcY, 2.f,
+					dstX, dstY, 4.f);
 			}
 			hqEnd();
 		}
@@ -1762,6 +1773,33 @@ void GraphEdit::drawTypeUi(const GraphNode & node, const GraphEdit_TypeDefinitio
 		}
 		hqEnd();
 	}
+}
+
+void GraphEdit::loadXml(const tinyxml2::XMLElement * editorElem)
+{
+	auto dragAndZoomElem = editorElem->FirstChildElement("dragAndZoom");
+	
+	if (dragAndZoomElem != nullptr)
+	{
+		dragAndZoom.desiredFocusX = floatAttrib(dragAndZoomElem, "x", 0.f);
+		dragAndZoom.desiredFocusY = floatAttrib(dragAndZoomElem, "y", 0.f);
+		dragAndZoom.desiredZoom = floatAttrib(dragAndZoomElem, "zoom", 1.f);
+		
+		dragAndZoom.focusX = dragAndZoom.desiredFocusX;
+		dragAndZoom.focusY = dragAndZoom.desiredFocusY;
+		dragAndZoom.zoom = dragAndZoom.desiredZoom;
+	}
+}
+
+void GraphEdit::saveXml(tinyxml2::XMLPrinter & editorElem) const
+{
+	editorElem.OpenElement("dragAndZoom");
+	{
+		editorElem.PushAttribute("x", dragAndZoom.desiredFocusX);
+		editorElem.PushAttribute("y", dragAndZoom.desiredFocusY);
+		editorElem.PushAttribute("zoom", dragAndZoom.desiredZoom);
+	}
+	editorElem.CloseElement();
 }
 
 //
