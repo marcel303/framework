@@ -2,7 +2,7 @@
 #define DO_PORTAUDIO_BASIC_OSCS 0
 #define DO_PORTAUDIO_SPRING_OSC1D 0
 #define DO_PORTAUDIO_SPRING_OSC2D 1
-#define DO_MONDRIAAN 1
+#define DO_MONDRIAAN 0
 
 #if DO_PORTAUDIO
 
@@ -166,15 +166,21 @@ struct SquareOsc : BaseOsc
 
 #if DO_PORTAUDIO_SPRING_OSC1D || DO_PORTAUDIO_SPRING_OSC2D
 
+#ifdef WIN32
+#define ALIGNED __declspec(align(32))
+#else
+#define ALIGNED __attribute__((aligned(32)))
+#endif
+
 struct SpringOsc1D : BaseOsc
 {
 	struct WaterSim
 	{
 		static const int kNumElems = 256;
 		
-		__attribute__((aligned(32))) double p[kNumElems];
-		__attribute__((aligned(32))) double v[kNumElems];
-		__attribute__((aligned(32))) double f[kNumElems];
+		ALIGNED double p[kNumElems];
+		ALIGNED double v[kNumElems];
+		ALIGNED double f[kNumElems];
 		
 		WaterSim()
 		{
@@ -233,8 +239,8 @@ struct SpringOsc1D : BaseOsc
 			
 			for (int i = 0; i < kNumElems/4; ++i)
 			{
-				_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i];
-				_mm_v[i] = _mm_v[i] * _mm_vRetain;
+				_mm_p[i] = _mm256_add_pd(_mm256_mul_pd(_mm_p[i], _mm_pRetain), _mm256_mul_pd(_mm256_mul_pd( _mm_v[i], _mm_dt), _mm_f[i]));
+				_mm_v[i] = _mm256_mul_pd(_mm_v[i], _mm_vRetain);
 			}
 		#elif 1
 			__m128d _mm_dt = _mm_set1_pd(dt);
@@ -354,9 +360,9 @@ struct SpringOsc2D : BaseOsc
 	{
 		static const int kNumElems = 64;
 		
-		__attribute__((aligned(32))) double p[kNumElems][kNumElems];
-		__attribute__((aligned(32))) double v[kNumElems][kNumElems];
-		__attribute__((aligned(32))) double f[kNumElems][kNumElems];
+		ALIGNED double p[kNumElems][kNumElems];
+		ALIGNED double v[kNumElems][kNumElems];
+		ALIGNED double f[kNumElems][kNumElems];
 		
 		WaterSim()
 		{
@@ -422,7 +428,7 @@ struct SpringOsc2D : BaseOsc
 				v[x][y] += a * dt * f[x][y];
 			}
 			
-		#if 1
+		#if 0
 			__m256d _mm_dt = _mm256_set1_pd(dt);
 			__m256d _mm_pRetain = _mm256_set1_pd(pRetain);
 			__m256d _mm_vRetain = _mm256_set1_pd(vRetain);
@@ -433,10 +439,10 @@ struct SpringOsc2D : BaseOsc
 			
 			for (int i = 0; i < kNumElems*kNumElems/4; ++i)
 			{
-				_mm_p[i] = _mm_p[i] * _mm_pRetain + _mm_v[i] * _mm_dt * _mm_f[i];
-				_mm_v[i] = _mm_v[i] * _mm_vRetain;
+				_mm_p[i] = _mm256_add_pd(_mm256_mul_pd(_mm_p[i], _mm_pRetain), _mm256_mul_pd(_mm256_mul_pd(_mm_v[i], _mm_dt), _mm_f[i]));
+				_mm_v[i] = _mm256_mul_pd(_mm_v[i], _mm_vRetain);
 			}
-		#elif 1
+		#elif 0
 			__m128d _mm_dt = _mm_set1_pd(dt);
 			__m128d _mm_pRetain = _mm_set1_pd(pRetain);
 			__m128d _mm_vRetain = _mm_set1_pd(vRetain);
@@ -451,12 +457,13 @@ struct SpringOsc2D : BaseOsc
 				_mm_v[i] = _mm_v[i] * _mm_vRetain;
 			}
 		#else
-			for (int i = 0; i < kNumElems; ++i)
+			for (int x = 0; x < kNumElems; ++x)
+			for (int y = 0; y < kNumElems; ++y)
 			{
-				p[i] += v[i] * dt * f[i];
+				p[x][y] += v[x][y] * dt * f[x][y];
 				
-				p[i] *= pRetain;
-				v[i] *= vRetain;
+				p[x][y] *= pRetain;
+				v[x][y] *= vRetain;
 			}
 		#endif
 		}
@@ -779,7 +786,7 @@ static bool initAudioOutput()
 	
 	//if (Pa_OpenDefaultStream(&stream, 1, 0, paFloat32, 44100, 1024, portaudioCallback, nullptr) != paNoError)
 	//if (Pa_OpenDefaultStream(&stream, 0, 2, paFloat32, 44100, 1024, portaudioCallback, nullptr) != paNoError)
-	if ((err = Pa_OpenStream(&stream, nullptr, &outputParameters, 44100, 256, paDitherOff, portaudioCallback, nullptr)) != paNoError)
+	if ((err = Pa_OpenStream(&stream, nullptr, &outputParameters, 44100, 512, paDitherOff, portaudioCallback, nullptr)) != paNoError)
 	{
 		logError("portaudio: failed to open stream: %s", Pa_GetErrorText(err));
 		return false;
