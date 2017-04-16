@@ -1213,6 +1213,12 @@ int main(int argc, char * argv[])
 				xmlGraph.OpenElement("graph");
 				{
 					graphEdit->graph->saveXml(xmlGraph);
+					
+					xmlGraph.OpenElement("editor");
+					{
+						graphEdit->saveXml(xmlGraph);
+					}
+					xmlGraph.CloseElement();
 				}
 				xmlGraph.CloseElement();
 				
@@ -1242,7 +1248,15 @@ int main(int argc, char * argv[])
 				document.LoadFile("graph.xml");
 				const XMLElement * xmlGraph = document.FirstChildElement("graph");
 				if (xmlGraph != nullptr)
+				{
 					graphEdit->graph->loadXml(xmlGraph);
+					
+					const XMLElement * xmlEditor = xmlGraph->FirstChildElement("editor");
+					if (xmlEditor != nullptr)
+					{
+						graphEdit->loadXml(xmlEditor);
+					}
+				}
 				
 				//
 				

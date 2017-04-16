@@ -502,6 +502,9 @@ struct GraphEdit
 	
 	void draw() const;
 	void drawTypeUi(const GraphNode & node, const GraphEdit_TypeDefinition & typeDefinition) const;
+	
+	void loadXml(const tinyxml2::XMLElement * editorElem);
+	void saveXml(tinyxml2::XMLPrinter & editorElem) const;
 };
 
 //
