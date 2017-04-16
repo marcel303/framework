@@ -1578,9 +1578,9 @@ void GraphEdit::draw() const
 #if 0
 	// todo : remove
 	
-	for (int x = 0; x < 1024; x += 10)
+	for (int x = 0; x < GFX_SX; x += 10)
 	{
-		for (int y = 0; y < 768; y += 10)
+		for (int y = 0; y < GFX_SY; y += 10)
 		{
 			HitTestResult hitTestResult;
 			

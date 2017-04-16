@@ -6,6 +6,9 @@
 #include <map>
 #include <set>
 
+extern const int GFX_SX;
+extern const int GFX_SY;
+
 namespace tinyxml2
 {
 	class XMLElement;
@@ -368,7 +371,7 @@ struct GraphEdit
 		
 		void updateTransform()
 		{
-			transform = Mat4x4(true).Translate(1024/2, 768/2, 0).Scale(zoom, zoom, 1.f).Translate(-focusX, -focusY, 0.f);
+			transform = Mat4x4(true).Translate(GFX_SX/2, GFX_SY/2, 0).Scale(zoom, zoom, 1.f).Translate(-focusX, -focusY, 0.f);
 			invTransform = transform.Invert();
 		}
 	};

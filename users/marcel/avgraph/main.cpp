@@ -69,8 +69,16 @@ reference :
 
 */
 
-#define GFX_SX 1024
-#define GFX_SY 768
+extern const int GFX_SX;
+extern const int GFX_SY;
+
+#ifdef WIN32
+const int GFX_SX = 1024*2;
+const int GFX_SY = 768*2;
+#else
+const int GFX_SX = 1024;
+const int GFX_SY = 768;
+#endif
 
 extern void testDatGui();
 extern void testNanovg();
