@@ -221,23 +221,42 @@ class ofxDatGuiTheme{
     
         static string AssetPath;
     
-        struct {
+        struct Font {
+			Font()
+			{
+				file = AssetPath + "ofxbraitsch/fonts/Verdana.ttf";
+			}
+
             int size = 6;
-            string file = AssetPath + "ofxbraitsch/fonts/Verdana.ttf";
+            string file;
             shared_ptr<ofxSmartFont> ptr;
         } font;
     
-        struct{
-            shared_ptr<ofImage> rainbow = make_shared<ofImage>();
-            shared_ptr<ofImage> radioOn = make_shared<ofImage>();
-            shared_ptr<ofImage> radioOff = make_shared<ofImage>();
-            shared_ptr<ofImage> groupOpen = make_shared<ofImage>();
-            shared_ptr<ofImage> groupClosed = make_shared<ofImage>();
-            string rainbowPath = AssetPath + "ofxbraitsch/ofxdatgui/picker-rainbow.png";
-            string radioOnPath = AssetPath + "ofxbraitsch/ofxdatgui/icon-radio-on.png";
-            string radioOffPath = AssetPath + "ofxbraitsch/ofxdatgui/icon-radio-off.png";
-            string groupOpenPath = AssetPath + "ofxbraitsch/ofxdatgui/icon-group-open.png";
-            string groupClosedPath = AssetPath + "ofxbraitsch/ofxdatgui/icon-group-closed.png";
+        struct Icon {
+			Icon()
+			{
+				rainbow = make_shared<ofImage>();
+				radioOn = make_shared<ofImage>();
+				radioOff = make_shared<ofImage>();
+				groupOpen = make_shared<ofImage>();
+				groupClosed = make_shared<ofImage>();
+				rainbowPath = AssetPath + "ofxbraitsch/ofxdatgui/picker-rainbow.png";
+				radioOnPath = AssetPath + "ofxbraitsch/ofxdatgui/icon-radio-on.png";
+				radioOffPath = AssetPath + "ofxbraitsch/ofxdatgui/icon-radio-off.png";
+				groupOpenPath = AssetPath + "ofxbraitsch/ofxdatgui/icon-group-open.png";
+				groupClosedPath = AssetPath + "ofxbraitsch/ofxdatgui/icon-group-closed.png";
+			}
+
+            shared_ptr<ofImage> rainbow;
+            shared_ptr<ofImage> radioOn;
+            shared_ptr<ofImage> radioOff;
+            shared_ptr<ofImage> groupOpen;
+            shared_ptr<ofImage> groupClosed;
+            string rainbowPath;
+            string radioOnPath;
+            string radioOffPath;
+            string groupOpenPath;
+            string groupClosedPath;
         } icon;
 
         static ofColor hex(int n)
