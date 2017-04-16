@@ -654,6 +654,7 @@ struct VfxNodeComposite : VfxNodeBase
 					
 					gxSetTexture(images[i]->getTexture());
 					{
+						setColor(colorWhite);
 						drawRect(0, 0, GFX_SX, GFX_SY);
 					}
 					gxSetTexture(0);
