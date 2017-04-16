@@ -3722,6 +3722,7 @@ void Effect_Wobbly::draw()
 			opacity *= 1.0 - drop.fadeInTime * drop.fadeInTimeRcp;
 			
 			double radius = drop.applyRadius;
+			radius *= Calc::Lerp(1.f, .7f, (std::cosf(drop.x / 40.f) + 1.f) / 2.f);
 			radius *= 0.5;
 			radius *= drop.applyTime * drop.applyTimeRcp;
 			
