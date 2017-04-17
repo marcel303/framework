@@ -2,7 +2,7 @@
 
 #include "vfxNodeBase.h"
 
-class LeapListener;
+struct LeapListener;
 
 namespace Leap
 {
