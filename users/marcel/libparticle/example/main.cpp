@@ -1,5 +1,3 @@
-#if 0
-
 #include "framework.h"
 #include "particle.h"
 #include "particle_editor.h"
@@ -317,5 +315,3 @@ int main(int argc, char * argv[])
 
 	return 0;
 }
-
-#endif
