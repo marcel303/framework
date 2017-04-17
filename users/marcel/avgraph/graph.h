@@ -36,6 +36,8 @@ struct GraphNode
 	float editorX;
 	float editorY;
 	bool editorIsFolded;
+	float editorFoldAnimTime;
+	float editorFoldAnimTimeRcp;
 	
 	std::map<std::string, std::string> editorInputValues;
 	std::string editorValue;
@@ -43,7 +45,10 @@ struct GraphNode
 	
 	GraphNode();
 	
-	void togglePassthrough();
+	void tick(const float dt);
+	
+	void setIsPassthrough(const bool isPassthrough);
+	void setIsFolded(const bool isFolded);
 };
 
 struct GraphNodeSocketLink
@@ -234,7 +239,7 @@ struct GraphEdit_TypeDefinition
 	
 	void createUi();
 	
-	bool hitTest(const float x, const float y, HitTestResult & result) const;
+	bool hitTest(const float x, const float y, const bool isFolded, HitTestResult & result) const;
 	
 	void loadXml(const tinyxml2::XMLElement * xmlNode);
 };

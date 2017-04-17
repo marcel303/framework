@@ -105,15 +105,32 @@ GraphNode::GraphNode()
 	, editorX(0.f)
 	, editorY(0.f)
 	, editorIsFolded(false)
+	, editorFoldAnimTime(0.f)
+	, editorFoldAnimTimeRcp(0.f)
 	, editorInputValues()
 	, editorValue()
 	, editorIsPassthrough(false)
 {
 }
 
-void GraphNode::togglePassthrough()
+void GraphNode::tick(const float dt)
 {
-	editorIsPassthrough = !editorIsPassthrough;
+	editorFoldAnimTime = Calc::Max(0.f, editorFoldAnimTime - dt);
+}
+
+void GraphNode::setIsPassthrough(const bool isPassthrough)
+{
+	editorIsPassthrough = isPassthrough;
+}
+
+void GraphNode::setIsFolded(const bool isFolded)
+{
+	if (editorIsFolded == isFolded)
+		return;
+	
+	editorIsFolded = isFolded;
+	editorFoldAnimTime = isFolded ? .1f : .07f;
+	editorFoldAnimTimeRcp = 1.f / editorFoldAnimTime;
 }
 
 //
@@ -443,49 +460,52 @@ void GraphEdit_TypeDefinition::createUi()
 	syFolded = pf;
 }
 
-bool GraphEdit_TypeDefinition::hitTest(const float x, const float y, HitTestResult & result) const
+bool GraphEdit_TypeDefinition::hitTest(const float x, const float y, const bool isFolded, HitTestResult & result) const
 {
 	result = HitTestResult();
 	
-	for (auto & editor : editors)
+	if (isFolded == false)
 	{
-		if (x >= editor.editorX &&
-			y >= editor.editorY &&
-			x < editor.editorX + editor.editorSx &&
-			y < editor.editorY + editor.editorSy)
+		for (auto & editor : editors)
 		{
-			result.editor = &editor;
-			return true;
+			if (x >= editor.editorX &&
+				y >= editor.editorY &&
+				x < editor.editorX + editor.editorSx &&
+				y < editor.editorY + editor.editorSy)
+			{
+				result.editor = &editor;
+				return true;
+			}
 		}
-	}
-	
-	for (auto & inputSocket : inputSockets)
-	{
-		const float dx = x - inputSocket.px;
-		const float dy = y - inputSocket.py;
-		const float ds = std::hypotf(dx, dy);
 		
-		if (ds <= inputSocket.radius)
+		for (auto & inputSocket : inputSockets)
 		{
-			result.inputSocket = &inputSocket;
-			return true;
+			const float dx = x - inputSocket.px;
+			const float dy = y - inputSocket.py;
+			const float ds = std::hypotf(dx, dy);
+			
+			if (ds <= inputSocket.radius)
+			{
+				result.inputSocket = &inputSocket;
+				return true;
+			}
 		}
-	}
-	
-	for (auto & outputSocket : outputSockets)
-	{
-		const float dx = x - outputSocket.px;
-		const float dy = y - outputSocket.py;
-		const float ds = std::hypotf(dx, dy);
 		
-		if (ds <= outputSocket.radius)
+		for (auto & outputSocket : outputSockets)
 		{
-			result.outputSocket = &outputSocket;
-			return true;
+			const float dx = x - outputSocket.px;
+			const float dy = y - outputSocket.py;
+			const float ds = std::hypotf(dx, dy);
+			
+			if (ds <= outputSocket.radius)
+			{
+				result.outputSocket = &outputSocket;
+				return true;
+			}
 		}
 	}
 	
-	if (x >= 0.f && y >= 0.f && x < sx && y < sy)
+	if (x >= 0.f && y >= 0.f && x < sx && y < (isFolded ? syFolded : sy))
 	{
 		result.background = true;
 		return true;
@@ -705,7 +725,7 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 		{
 			GraphEdit_TypeDefinition::HitTestResult hitTestResult;
 			
-			if (typeDefinition->hitTest(x - node.editorX, y - node.editorY, hitTestResult))
+			if (typeDefinition->hitTest(x - node.editorX, y - node.editorY, node.editorIsFolded, hitTestResult))
 			{
 				result.hasNode = true;
 				result.node = &node;
@@ -968,7 +988,7 @@ void GraphEdit::tick(const float dt)
 					Assert(node);
 					if (node)
 					{
-						node->editorIsPassthrough = allPassthrough ? false : true;
+						node->setIsPassthrough(allPassthrough ? false : true);
 					}
 				}
 			}
@@ -1020,7 +1040,7 @@ void GraphEdit::tick(const float dt)
 					
 					if (node != nullptr)
 					{
-						node->editorIsFolded = anyUnfolded ? true : false;
+						node->setIsFolded(anyUnfolded ? true : false);
 					}
 				}
 			}
@@ -1096,7 +1116,7 @@ void GraphEdit::tick(const float dt)
 						node.editorX,
 						node.editorY,
 						node.editorX + typeDefinition->sx,
-						node.editorY + typeDefinition->sy))
+						node.editorY + (node.editorIsFolded ? typeDefinition->syFolded : typeDefinition->sy)))
 					{
 						nodeSelect.nodeIds.insert(node.id);
 					}
@@ -1346,6 +1366,16 @@ void GraphEdit::tick(const float dt)
 		}
 		
 		propertyEditor->tick(dt);
+	}
+	
+	if (graph != nullptr)
+	{
+		for (auto & nodeItr : graph->nodes)
+		{
+			auto & node = nodeItr.second;
+			
+			node.tick(dt);
+		}
 	}
 }
 
@@ -1630,18 +1660,20 @@ void GraphEdit::drawTypeUi(const GraphNode & node, const GraphEdit_TypeDefinitio
 	const bool isSelected = selectedNodes.count(node.id) != 0;
 	const bool isFolded = node.editorIsFolded;
 	
+	const float nodeSy = Calc::Lerp(definition.syFolded, definition.sy, isFolded ? node.editorFoldAnimTime * node.editorFoldAnimTimeRcp : 1.f - node.editorFoldAnimTime * node.editorFoldAnimTimeRcp);
+	
 	if (isSelected)
 		setColor(63, 63, 127, 255);
 	else
 		setColor(63, 63, 63, 255);
 	
-	drawRect(0.f, 0.f, definition.sx, isFolded ? definition.syFolded : definition.sy);
+	drawRect(0.f, 0.f, definition.sx, nodeSy);
 	
 	if (isSelected)
 		setColor(255, 255, 255, 255);
 	else
 		setColor(127, 127, 127, 255);
-	drawRectLine(0.f, 0.f, definition.sx, isFolded ? definition.syFolded : definition.sy);
+	drawRectLine(0.f, 0.f, definition.sx, nodeSy);
 	
 	setFont("calibri.ttf");
 	setColor(255, 255, 255);
