@@ -1,4 +1,4 @@
 #pragma once
 
-void particleEditorTick(bool menuActive, float sx, float sy, float dt);
-void particleEditorDraw(bool menuActive, float sx, float sy);
+void particleEditorTick(const bool menuActive, const float sx, const float sy, const float dt);
+void particleEditorDraw(const bool menuActive, const float sx, const float sy);

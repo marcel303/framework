@@ -169,7 +169,7 @@ struct UiElem
 	{
 	}
 	
-	void tick(int x1, int y1, int x2, int y2);
+	void tick(const int x1, const int y1, const int x2, const int y2);
 	
 	void resetVars()
 	{
@@ -280,7 +280,7 @@ static void popMenu()
 
 static UiElem * g_activeElem = 0;
 
-void UiElem::tick(int x1, int y1, int x2, int y2)
+void UiElem::tick(const int x1, const int y1, const int x2, const int y2)
 {
 	hasFocus = mouse.x >= x1 && mouse.x <= x2 && mouse.y >= y1 && mouse.y <= y2;
 	if (hasFocus && mouse.wentDown(BUTTON_LEFT))
@@ -295,7 +295,7 @@ static ParticleColor * g_activeColor = 0;
 
 //
 
-static bool doButton(const char * name, float xOffset, float xScale, bool lineBreak)
+static bool doButton(const char * name, const float xOffset, const float xScale, const bool lineBreak)
 {
 	UiElem & elem = g_menu->getElem(name);
 	
@@ -338,19 +338,19 @@ static bool doButton(const char * name, float xOffset, float xScale, bool lineBr
 	return result;
 }
 
-static bool valueToString(const std::string & src, char * dst, int dstSize)
+static bool valueToString(const std::string & src, char * dst, const int dstSize)
 {
 	sprintf_s(dst, dstSize, "%s", src.c_str());
 	return true;
 }
 
-static bool valueToString(int src, char * dst, int dstSize)
+static bool valueToString(int src, char * dst, const int dstSize)
 {
 	sprintf_s(dst, dstSize, "%d", src);
 	return true;
 }
 
-static bool valueToString(float src, char * dst, int dstSize)
+static bool valueToString(float src, char * dst, const int dstSize)
 {
 	sprintf_s(dst, dstSize, "%g", src);
 	return true;
@@ -375,7 +375,7 @@ static bool stringToValue(const char * src, float & dst)
 }
 
 template <typename T>
-static void doTextBox(T & value, const char * name, float xOffset, float xScale, bool lineBreak, float dt)
+static void doTextBox(T & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt)
 {
 	UiElem & elem = g_menu->getElem(name);
 	
@@ -458,12 +458,12 @@ static void doTextBox(T & value, const char * name, float xOffset, float xScale,
 }
 
 template <typename T>
-static void doTextBox(T & value, const char * name, float dt)
+static void doTextBox(T & value, const char * name, const float dt)
 {
 	doTextBox(value, name, 0.f, 1.f, true, dt);
 }
 
-static bool doCheckBox(bool & value, const char * name, bool isCollapsable)
+static bool doCheckBox(bool & value, const char * name, const bool isCollapsable)
 {
 	UiElem & elem = g_menu->getElem(name);
 	
@@ -703,7 +703,7 @@ void doParticleColor(ParticleColor & color, const char * name)
 	}
 }
 
-static float screenToCurve(int x1, int x2, int x, float offset)
+static float screenToCurve(const int x1, const int x2, const int x, const float offset)
 {
 	return saturate((x - x1) / float(x2 - x1) + offset);
 }
@@ -713,7 +713,7 @@ static float curveToScreen(int x1, int x2, float t)
 	return x1 + (x2 - x1) * t;
 }
 
-static ParticleColorCurve::Key * findNearestKey(ParticleColorCurve & curve, float t, float maxDeviation)
+static ParticleColorCurve::Key * findNearestKey(ParticleColorCurve & curve, const float t, const float maxDeviation)
 {
 	ParticleColorCurve::Key * nearestKey = 0;
 	float nearestDistance = 0.f;
@@ -921,7 +921,7 @@ struct Menu_LoadSave
 	}
 };
 
-static void doMenu_LoadSave(Menu_LoadSave & menu, float dt)
+static void doMenu_LoadSave(Menu_LoadSave & menu, const float dt)
 {
 	if (doButton("Load", 0.f, 1.f, true))
 	{
@@ -1025,7 +1025,7 @@ static void doMenu_LoadSave(Menu_LoadSave & menu, float dt)
 	}
 }
 
-static void doMenu_EmitterSelect(float dt)
+static void doMenu_EmitterSelect(const float dt)
 {
 	for (int i = 0; i < 6; ++i)
 	{
@@ -1039,7 +1039,7 @@ static void doMenu_EmitterSelect(float dt)
 	}
 }
 
-static void doMenu_Pi(float dt)
+static void doMenu_Pi(const float dt)
 {
 	if (doButton("Copy", 0.f, .5f, !g_copyPiIsValid))
 	{
@@ -1222,7 +1222,7 @@ static void doMenu_Pi(float dt)
 	doEnum(g_pi().blendMode, "Blend Mode", blendModeValues);
 }
 
-static void doMenu_Pei(float dt)
+static void doMenu_Pei(const float dt)
 {
 	if (doButton("Copy", 0.f, .5f, !g_copyPeiIsValid))
 	{
@@ -1260,7 +1260,7 @@ static void doMenu_Pei(float dt)
 	strcpy_s(g_pei().materialName, sizeof(g_pei().materialName), materialName.c_str());
 }
 
-static void doMenu_ColorWheel(float dt)
+static void doMenu_ColorWheel(const float dt)
 {
 	static UiElem colorPickerElem;
 	if (g_activeColor)
@@ -1306,7 +1306,7 @@ struct Menu
 
 static Menu s_menu;
 
-static void doMenu(Menu & menu, bool doActions, bool doDraw, int sx, int sy, float dt)
+static void doMenu(Menu & menu, const bool doActions, const bool doDraw, const int sx, const int sy, const float dt)
 {
 	g_doActions = doActions;
 	g_doDraw = doDraw;
@@ -1361,7 +1361,7 @@ static void doMenu(Menu & menu, bool doActions, bool doDraw, int sx, int sy, flo
 		g_forceUiRefresh = false;
 }
 
-void particleEditorTick(bool menuActive, float sx, float sy, float dt)
+void particleEditorTick(const bool menuActive, const float sx, const float sy, const float dt)
 {
 	static bool firstTick = true;
 	if (firstTick)
@@ -1394,7 +1394,7 @@ void particleEditorTick(bool menuActive, float sx, float sy, float dt)
 	}
 }
 
-void particleEditorDraw(bool menuActive, float sx, float sy)
+void particleEditorDraw(const bool menuActive, const float sx, const float sy)
 {
 	gxPushMatrix();
 	gxTranslatef(sx/2.f, sy/2.f, 0.f);
