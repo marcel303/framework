@@ -4,7 +4,7 @@
 
 #define CARET_PADDING_X 0
 #define CARET_PADDING_Y 5 // todo : look these up
-#define CARET_SX 4
+#define CARET_SX 2
 
 static bool isAllowed(const int c)
 {
@@ -172,7 +172,7 @@ void EditorTextField::draw(const int ax, const int ay, const int asy, const int 
 				const int x = ax + sx + CARET_PADDING_X;
 
 				setColor(63, 127, 255);
-				drawRect(x, ay + CARET_PADDING_Y, x + CARET_SX, ay + asy - CARET_PADDING_Y * 2);
+				drawRect(x, ay + CARET_PADDING_Y, x + CARET_SX, ay + asy - CARET_PADDING_Y);
 			}
 		}
 

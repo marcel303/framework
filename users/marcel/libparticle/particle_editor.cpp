@@ -144,6 +144,7 @@ struct UiElem
 	
 	bool hasFocus;
 	bool isActive;
+	bool clicked;
 	
 	struct Var
 	{
@@ -164,6 +165,7 @@ struct UiElem
 	UiElem()
 		: hasFocus(false)
 		, isActive(false)
+		, clicked(false)
 		, vars()
 		, varMask(0)
 	{
@@ -282,9 +284,14 @@ static UiElem * g_activeElem = 0;
 
 void UiElem::tick(const int x1, const int y1, const int x2, const int y2)
 {
+	clicked = false;
+	
 	hasFocus = mouse.x >= x1 && mouse.x <= x2 && mouse.y >= y1 && mouse.y <= y2;
 	if (hasFocus && mouse.wentDown(BUTTON_LEFT))
+	{
 		g_activeElem = this;
+		clicked = true;
+	}
 	isActive = (g_activeElem == this);
 }
 
@@ -374,6 +381,20 @@ static bool stringToValue(const char * src, float & dst)
 	return true;
 }
 
+static void increment(const char * text, int direction, int & value)
+{
+	value += direction;
+}
+
+static void increment(const char * text, int direction, float & value)
+{
+	value += direction;
+}
+
+static void increment(const char * text, int direction, std::string & value)
+{
+}
+
 template <typename T>
 static void doTextBox(T & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt)
 {
@@ -411,32 +432,47 @@ static void doTextBox(T & value, const char * name, const float xOffset, const f
 
 			textField.close();
 		}
-
-		const bool wasActive = elem.isActive;
-
+		
 		elem.tick(x1, y1, x2, y2);
 
-		if (elem.isActive != wasActive)
+		if (elem.clicked)
 		{
-			if (elem.isActive)
-			{
-				textField.open(32, false, false);
+			textField.open(32, false, false);
 
-				char temp[32];
-				valueToString(value, temp, sizeof(temp));
-				textField.setText(temp);
-				
-				textField.setTextIsSelected(true);
-			}
-			else if (textField.isActive())
+			char temp[32];
+			valueToString(value, temp, sizeof(temp));
+			textField.setText(temp);
+			
+			textField.setTextIsSelected(true);
+		}
+		
+		if (!elem.isActive)
+		{
+			if (textField.isActive())
 				textField.close();
 		}
 
 		if (textField.isActive())
 		{
 			textField.tick(dt);
-
+			
 			stringToValue(textField.getText(), value);
+			
+			int incrementDirection = 0;
+			
+			if (keyboard.wentDown(SDLK_DOWN, true))
+				incrementDirection--;
+			if (keyboard.wentDown(SDLK_UP, true))
+				incrementDirection++;
+			
+			if (incrementDirection != 0)
+			{
+				increment(textField.getText(), incrementDirection, value);
+				
+				char temp[32];
+				valueToString(value, temp, sizeof(temp));
+				textField.setText(temp);
+			}
 		}
 	}
 
