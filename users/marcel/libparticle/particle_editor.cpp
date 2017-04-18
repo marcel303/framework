@@ -140,17 +140,143 @@ struct ScopedValueAdjust
 
 struct UiElem
 {
+	static const int kMaxVars = 10;
+	
 	bool hasFocus;
 	bool isActive;
-
+	
+	struct Var
+	{
+		union
+		{
+			bool boolValue;
+			int intValue;
+			float floatValue;
+			void * pointerValue;
+		};
+	};
+	
+	Var vars[kMaxVars];
+	int varMask;
+	
+	EditorTextField textField; // ugh
+	
 	UiElem()
 		: hasFocus(false)
 		, isActive(false)
+		, vars()
+		, varMask(0)
 	{
 	}
-
+	
 	void tick(int x1, int y1, int x2, int y2);
+	
+	void resetVars()
+	{
+		varMask = 0;
+	}
+	
+	bool & getBool(const int index, const bool defaultValue)
+	{
+		fassert(index >= 0 && index < kMaxVars);
+		if ((varMask & (1 << index)) == 0)
+		{
+			vars[index].boolValue = defaultValue;
+			varMask |= (1 << index);
+		}
+		return vars[index].boolValue;
+	}
+	
+	int & getInt(const int index, const int defaultValue)
+	{
+		fassert(index >= 0 && index < kMaxVars);
+		if ((varMask & (1 << index)) == 0)
+		{
+			vars[index].intValue = defaultValue;
+			varMask |= (1 << index);
+		}
+		return vars[index].intValue;
+	}
+	
+	float & getFloat(const int index, const float defaultValue)
+	{
+		fassert(index >= 0 && index < kMaxVars);
+		if ((varMask & (1 << index)) == 0)
+		{
+			vars[index].floatValue = defaultValue;
+			varMask |= (1 << index);
+		}
+		return vars[index].floatValue;
+	}
+	
+	template <typename T>
+	T & getPointer(const int index, const T defaultValue)
+	{
+		fassert(index >= 0 && index < kMaxVars);
+		if ((varMask & (1 << index)) == 0)
+		{
+			vars[index].pointerValue = defaultValue;
+			varMask |= (1 << index);
+		}
+		return (T&)vars[index].pointerValue;
+	}
 };
+
+struct UiMenu
+{
+	std::map<std::string, UiElem> elems;
+	
+	UiElem & getElem(const char * name)
+	{
+		return elems[name];
+	}
+};
+
+//
+
+static const int kMaxUiElemStoreDepth = 4;
+static std::map<std::string, UiMenu> g_menus;
+static std::string g_menuStack[kMaxUiElemStoreDepth];
+static int g_menuStackSize = -1;
+static UiMenu * g_menu = nullptr;
+
+static void pushMenu(const char * name)
+{
+	std::string childName;
+	
+	if (g_menuStackSize == -1)
+	{
+		childName = name;
+	}
+	else
+	{
+		const std::string & parentName = g_menuStack[g_menuStackSize];
+		
+		childName = parentName + "." + name;
+	}
+	
+	g_menuStackSize++;
+	
+	g_menuStack[g_menuStackSize] = childName;
+	
+	g_menu = &g_menus[g_menuStack[g_menuStackSize]];
+}
+
+static void popMenu()
+{
+	g_menuStackSize--;
+	
+	if (g_menuStackSize == -1)
+	{
+		g_menu = nullptr;
+	}
+	else
+	{
+		g_menu = &g_menus[g_menuStack[g_menuStackSize]];
+	}
+}
+
+//
 
 static UiElem * g_activeElem = 0;
 
@@ -169,8 +295,10 @@ static ParticleColor * g_activeColor = 0;
 
 //
 
-static bool doButton(const char * name, float xOffset, float xScale, bool lineBreak, UiElem & elem)
+static bool doButton(const char * name, float xOffset, float xScale, bool lineBreak)
 {
+	UiElem & elem = g_menu->getElem(name);
+	
 	const int kPadding = 5;
 
 	const int x1 = g_drawX + kMenuWidth * xOffset;
@@ -247,8 +375,18 @@ static bool stringToValue(const char * src, float & dst)
 }
 
 template <typename T>
-static void doTextBox(T & value, const char * name, float xOffset, float xScale, bool lineBreak, UiElem & elem, EditorTextField & textField, bool & textFieldIsInit, float dt)
+static void doTextBox(T & value, const char * name, float xOffset, float xScale, bool lineBreak, float dt)
 {
+	UiElem & elem = g_menu->getElem(name);
+	
+	enum Vars
+	{
+		kVar_TextfieldIsInit
+	};
+	
+	bool & textFieldIsInit = elem.getBool(kVar_TextfieldIsInit, false);
+	EditorTextField & textField = elem.textField;
+	
 	const int kPadding = 5;
 
 	const int x1 = g_drawX + kMenuWidth * xOffset;
@@ -319,8 +457,16 @@ static void doTextBox(T & value, const char * name, float xOffset, float xScale,
 	}
 }
 
-static bool doCheckBox(bool & value, const char * name, bool isCollapsable, UiElem & elem)
+template <typename T>
+static void doTextBox(T & value, const char * name, float dt)
 {
+	doTextBox(value, name, 0.f, 1.f, true, dt);
+}
+
+static bool doCheckBox(bool & value, const char * name, bool isCollapsable)
+{
+	UiElem & elem = g_menu->getElem(name);
+	
 	const int kPadding = 5;
 	const int kCheckButtonSize = kCheckBoxHeight - kPadding * 2;
 
@@ -405,8 +551,10 @@ struct EnumValue
 };
 
 template <typename E>
-static void doEnum(E & value, const char * name, const std::vector<EnumValue> & enumValues, UiElem & elem)
+static void doEnum(E & value, const char * name, const std::vector<EnumValue> & enumValues)
 {
+	UiElem & elem = g_menu->getElem(name);
+	
 	const int kPadding = 5;
 
 	const int x1 = g_drawX;
@@ -465,8 +613,10 @@ static void doEnum(E & value, const char * name, const std::vector<EnumValue> & 
 	}
 }
 
-void doParticleCurve(ParticleCurve & curve, const char * name, UiElem & elem)
+void doParticleCurve(ParticleCurve & curve, const char * name)
 {
+	UiElem & elem = g_menu->getElem(name);
+	
 	const int kPadding = 5;
 	const int kCheckButtonSize = kCheckBoxHeight - kPadding * 2;
 
@@ -499,8 +649,10 @@ void doParticleCurve(ParticleCurve & curve, const char * name, UiElem & elem)
 	}
 }
 
-void doParticleColor(ParticleColor & color, const char * name, UiElem & elem)
+void doParticleColor(ParticleColor & color, const char * name)
 {
+	UiElem & elem = g_menu->getElem(name);
+	
 	const int kPadding = 5;
 	const int kCheckButtonSize = kCheckBoxHeight - kPadding * 2;
 
@@ -581,8 +733,21 @@ static ParticleColorCurve::Key * findNearestKey(ParticleColorCurve & curve, floa
 	return nearestKey;
 }
 
-void doParticleColorCurve(ParticleColorCurve & curve, const char * name, UiElem & elem, ParticleColorCurve::Key *& selectedKey, bool & isDragging, float & dragOffset)
+void doParticleColorCurve(ParticleColorCurve & curve, const char * name)
 {
+	UiElem & elem = g_menu->getElem(name);
+	
+	enum Vars
+	{
+		kVar_SelectedKey,
+		kVar_IsDragging,
+		kVar_DragOffset
+	};
+	
+	ParticleColorCurve::Key *& selectedKey = elem.getPointer<ParticleColorCurve::Key*>(kVar_SelectedKey, nullptr);
+	bool & isDragging = elem.getBool(kVar_IsDragging, false);
+	float & dragOffset = elem.getFloat(kVar_DragOffset, 0.f);
+	
 	const int kPadding = 5;
 	const int kCheckButtonSize = kCheckBoxHeight - kPadding * 2;
 	const float kMaxSelectionDeviation = 5 / float(kMenuWidth);
@@ -604,7 +769,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, UiElem 
 		elem.tick(x1, y1, x2, y2);
 
 		if (!elem.isActive)
-			selectedKey = 0;
+			selectedKey = nullptr;
 		else if (elem.hasFocus)
 		{
 			if (mouse.wentDown(BUTTON_LEFT))
@@ -646,7 +811,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, UiElem 
 
 				selectedKey = key;
 
-				if (selectedKey)
+				if (selectedKey != nullptr)
 				{
 					isDragging = true;
 					dragOffset = key->t - t;
@@ -657,7 +822,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, UiElem 
 			{
 				if (mouse.wentDown(BUTTON_RIGHT) || keyboard.wentDown(SDLK_DELETE) || keyboard.wentDown(SDLK_BACKSPACE))
 				{
-					selectedKey = 0;
+					selectedKey = nullptr;
 
 					// erase key
 
@@ -674,7 +839,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, UiElem 
 
 		if (isDragging)
 		{
-			if (elem.isActive && selectedKey && mouse.isDown(BUTTON_LEFT))
+			if (elem.isActive && selectedKey != nullptr && mouse.isDown(BUTTON_LEFT))
 			{
 				// move selected key around
 
@@ -693,7 +858,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, UiElem 
 
 		if (elem.isActive)
 		{
-			g_activeColor = selectedKey ? &selectedKey->color : 0;
+			g_activeColor = selectedKey != nullptr ? &selectedKey->color : 0;
 		}
 	}
 
@@ -739,41 +904,6 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name, UiElem 
 	}
 }
 
-#define DO_TEXTBOX(sym, value, name) \
-	static UiElem sym ## elem; \
-	static EditorTextField sym ## textField; \
-	static bool sym ## textFieldIsInit = false; \
-	if (g_doActions && g_forceUiRefresh) \
-		sym ## textFieldIsInit = false; \
-	doTextBox(value, name, 0.f, 1.f, true, sym ## elem, sym ## textField, sym ## textFieldIsInit, dt);
-
-#define DO_TEXTBOX2(sym, value, xOffset, xScale, lineBreak, name) \
-	static UiElem sym ## elem; \
-	static EditorTextField sym ## textField; \
-	static bool sym ## textFieldIsInit = false; \
-	if (g_doActions && g_forceUiRefresh) \
-		sym ## textFieldIsInit = false; \
-	doTextBox(value, name, xOffset, xScale, lineBreak, sym ## elem, sym ## textField, sym ## textFieldIsInit, dt);
-
-#define DO_CHECKBOX(sym, value, name, isCollapsable) \
-	static UiElem sym ## elem; \
-	doCheckBox(value, name, isCollapsable, sym ## elem);
-
-#define DO_ENUM(sym, value, enumValues, name) \
-	static UiElem sym ## elem; \
-	doEnum(value, name, enumValues, sym ## elem);
-
-#define DO_PARTICLECURVE(sym, value, name) \
-	static UiElem sym ## elem; \
-	doParticleCurve(value, name, sym ## elem);
-
-#define DO_PARTICLECOLORCURVE(sym, value, name) \
-	static UiElem sym ## elem; \
-	static ParticleColorCurve::Key * sym ## selectedKey = 0; \
-	static bool sym ## isDragging = false; \
-	static float sym ## dragOffset = 0.f; \
-	doParticleColorCurve(value, name, sym ## elem, sym ## selectedKey, sym ## isDragging, sym ## dragOffset);
-
 static void refreshUi()
 {
 	g_activeElem = 0;
@@ -781,11 +911,19 @@ static void refreshUi()
 	g_forceUiRefreshRequested = true;
 }
 
-static void doMenu_LoadSave(float dt)
+struct Menu_LoadSave
 {
-	static std::string activeFilename;
-	static UiElem loadElem;
-	if (doButton("Load", 0.f, 1.f, true, loadElem))
+	std::string activeFilename;
+	
+	Menu_LoadSave()
+		: activeFilename()
+	{
+	}
+};
+
+static void doMenu_LoadSave(Menu_LoadSave & menu, float dt)
+{
+	if (doButton("Load", 0.f, 1.f, true))
 	{
 		nfdchar_t * path = 0;
 		nfdresult_t result = NFD_OpenDialog("pfx", "", &path);
@@ -818,7 +956,7 @@ static void doMenu_LoadSave(float dt)
 					g_piList[piIdx++].load(particleElem);
 				}
 
-				activeFilename = path;
+				menu.activeFilename = path;
 
 				g_activeEditingIndex = 0;
 				refreshUi();
@@ -828,16 +966,14 @@ static void doMenu_LoadSave(float dt)
 
 	bool save = false;
 	std::string saveFilename;
-
-	static UiElem saveElem;
-	if (doButton("Save", 0.f, 1.f, true, saveElem))
+	
+	if (doButton("Save", 0.f, 1.f, true))
 	{
 		save = true;
-		saveFilename = activeFilename;
+		saveFilename = menu.activeFilename;
 	}
-
-	static UiElem saveAsElem;
-	if (doButton("Save as..", 0.f, 1.f, true, saveAsElem))
+	
+	if (doButton("Save as..", 0.f, 1.f, true))
 	{
 		save = true;
 	}
@@ -878,12 +1014,11 @@ static void doMenu_LoadSave(float dt)
 			d.Parse(p.CStr());
 			d.SaveFile(saveFilename.c_str());
 
-			activeFilename = saveFilename;
+			menu.activeFilename = saveFilename;
 		}
 	}
-
-	static UiElem restartSimulationElem;
-	if (doButton("Restart simulation", 0.f, 1.f, true, restartSimulationElem))
+	
+	if (doButton("Restart simulation", 0.f, 1.f, true))
 	{
 		for (int i = 0; i < kMaxParticleInfos; ++i)
 			g_pe[i].restart(g_pool[i]);
@@ -892,12 +1027,11 @@ static void doMenu_LoadSave(float dt)
 
 static void doMenu_EmitterSelect(float dt)
 {
-	static UiElem uiElems[kMaxParticleInfos];
 	for (int i = 0; i < 6; ++i)
 	{
 		char name[32];
 		sprintf_s(name, sizeof(name), "System %d", i + 1);
-		if (doButton(name, 0.f, 1.f, true, uiElems[i]))
+		if (doButton(name, 0.f, 1.f, true))
 		{
 			g_activeEditingIndex = i;
 			refreshUi();
@@ -907,21 +1041,19 @@ static void doMenu_EmitterSelect(float dt)
 
 static void doMenu_Pi(float dt)
 {
-	static UiElem copyPiElem;
-	if (doButton("Copy", 0.f, .5f, !g_copyPiIsValid, copyPiElem))
+	if (doButton("Copy", 0.f, .5f, !g_copyPiIsValid))
 	{
 		g_copyPi = g_pi();
 		g_copyPiIsValid = true;
 	}
-
-	static UiElem pastePiElem;
-	if (g_copyPiIsValid && doButton("Paste", .5f, .5f, true, pastePiElem))
+	
+	if (g_copyPiIsValid && doButton("Paste", .5f, .5f, true))
 	{
 		g_pi() = g_copyPi;
 		refreshUi();
 	}
 
-	DO_TEXTBOX(rate, g_pi().rate, "Rate (Particles/Sec)");
+	doTextBox(g_pi().rate, "Rate (Particles/Sec)", dt);
 
 	/*
 	struct Burst
@@ -942,180 +1074,189 @@ static void doMenu_Pi(float dt)
 	shapeValues.push_back(EnumValue('e', "Edge"));
 	shapeValues.push_back(EnumValue('b', "Box"));
 	shapeValues.push_back(EnumValue('c', "Circle"));
-	DO_ENUM(shape, g_pi().shape, shapeValues, "Shape");
+	doEnum(g_pi().shape, "Shape", shapeValues);
+	
+	doCheckBox(g_pi().randomDirection, "Random Direction", false);
+	doTextBox(g_pi().circleRadius, "Circle Radius", dt);
+	doTextBox(g_pi().boxSizeX, "Box Width", dt);
+	doTextBox(g_pi().boxSizeY, "Box Height", dt);
+	doCheckBox(g_pi().emitFromShell, "Emit From Shell", false);
 
-	DO_CHECKBOX(randomDirection, g_pi().randomDirection, "Random Direction", false);
-	DO_TEXTBOX(circleRadius, g_pi().circleRadius, "Circle Radius");
-	DO_TEXTBOX(boxSizeX, g_pi().boxSizeX, "Box Width");
-	DO_TEXTBOX(boxSizeY, g_pi().boxSizeY, "Box Height");
-	DO_CHECKBOX(emitFromShell, g_pi().emitFromShell, "Emit From Shell", false);
-
-	static UiElem velocityOverLifetimeElem;
-	if (doCheckBox(g_pi().velocityOverLifetime, "Velocity Over Lifetime", true, velocityOverLifetimeElem))
+	if (doCheckBox(g_pi().velocityOverLifetime, "Velocity Over Lifetime", true))
 	{
+		pushMenu("Velocity Over Lifetime");
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
-		DO_TEXTBOX2(velocityOverLifetimeValueX, g_pi().velocityOverLifetimeValueX, 0.f, .5f, false, "X");
-		DO_TEXTBOX2(velocityOverLifetimeValueY, g_pi().velocityOverLifetimeValueY, .5f, .5f, true, "Y");
+		doTextBox(g_pi().velocityOverLifetimeValueX, "X", 0.f, .5f, false, dt);
+		doTextBox(g_pi().velocityOverLifetimeValueY, "Y", .5f, .5f, true, dt);
+		popMenu();
 	}
-
-	static UiElem velocityOverLifetimeLimitElem;
-	if (doCheckBox(g_pi().velocityOverLifetimeLimit, "Velocity Over Lifetime Limit", true, velocityOverLifetimeLimitElem))
+	
+	if (doCheckBox(g_pi().velocityOverLifetimeLimit, "Velocity Over Lifetime Limit", true))
 	{
+		pushMenu("Velocity Over Lifetime Limit");
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
-		DO_PARTICLECURVE(velocityOverLifetimeLimitCurve, g_pi().velocityOverLifetimeLimitCurve, "Curve");
-		DO_TEXTBOX(velocityOverLifetimeLimitDampen, g_pi().velocityOverLifetimeLimitDampen, "Dampen/Sec");
+		doParticleCurve(g_pi().velocityOverLifetimeLimitCurve, "Curve");
+		doTextBox(g_pi().velocityOverLifetimeLimitDampen, "Dampen/Sec", dt);
+		popMenu();
 	}
-
-	static UiElem forceOverLifetimeElem;
-	if (doCheckBox(g_pi().forceOverLifetime, "Force Over Lifetime", true, forceOverLifetimeElem))
+	
+	if (doCheckBox(g_pi().forceOverLifetime, "Force Over Lifetime", true))
 	{
+		pushMenu("Force Over Lifetime");
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
-		DO_TEXTBOX2(forceOverLifetimeValueX, g_pi().forceOverLifetimeValueX, 0.f, .5f, false, "X");
-		DO_TEXTBOX2(forceOverLifetimeValueY, g_pi().forceOverLifetimeValueY, .5f, .5f, true, "Y");
+		doTextBox(g_pi().forceOverLifetimeValueX, "X", 0.f, .5f, false, dt);
+		doTextBox(g_pi().forceOverLifetimeValueY, "Y", .5f, .5f, true, dt);
+		popMenu();
 	}
-
-	static UiElem colorOverLifetimeElem;
-	if (doCheckBox(g_pi().colorOverLifetime, "Color Over Lifetime", true, colorOverLifetimeElem))
+	
+	if (doCheckBox(g_pi().colorOverLifetime, "Color Over Lifetime", true))
 	{
+		pushMenu("Color Over Lifetime");
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
-		DO_PARTICLECOLORCURVE(colorOverLifetimeCurve, g_pi().colorOverLifetimeCurve, "Curve");
+		doParticleColorCurve(g_pi().colorOverLifetimeCurve, "Curve");
+		popMenu();
 	}
-
-	static UiElem colorBySpeedElem;
-	if (doCheckBox(g_pi().colorBySpeed, "Color By Speed", true, colorBySpeedElem))
+	
+	if (doCheckBox(g_pi().colorBySpeed, "Color By Speed", true))
 	{
+		pushMenu("Color By Speed");
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
-		DO_PARTICLECOLORCURVE(colorBySpeedCurve, g_pi().colorBySpeedCurve, "Curve");
-		DO_TEXTBOX2(colorBySpeedRangeMin, g_pi().colorBySpeedRangeMin, 0.f, .5f, false, "Range");
-		DO_TEXTBOX2(colorBySpeedRangeMax, g_pi().colorBySpeedRangeMax, .5f, .5f, true, "");
+		doParticleColorCurve(g_pi().colorBySpeedCurve, "Curve");
+		doTextBox(g_pi().colorBySpeedRangeMin, "Range", 0.f, .5f, false, dt);
+		doTextBox(g_pi().colorBySpeedRangeMax, "", .5f, .5f, true, dt);
+		popMenu();
 	}
-
-	static UiElem sizeOverLifetimeElem;
-	if (doCheckBox(g_pi().sizeOverLifetime, "Size Over Lifetime", true, sizeOverLifetimeElem))
+	
+	if (doCheckBox(g_pi().sizeOverLifetime, "Size Over Lifetime", true))
 	{
+		pushMenu("Size Over Lifetime");
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
-		DO_PARTICLECURVE(sizeOverLifetimeCurve, g_pi().sizeOverLifetimeCurve, "Curve");
+		doParticleCurve(g_pi().sizeOverLifetimeCurve, "Curve");
+		popMenu();
 	}
-
-	static UiElem sizeBySpeedElem;
-	if (doCheckBox(g_pi().sizeBySpeed, "Size By Speed", true, sizeBySpeedElem))
+	
+	if (doCheckBox(g_pi().sizeBySpeed, "Size By Speed", true))
 	{
+		pushMenu("Size By Speed");
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
-		DO_PARTICLECURVE(sizeBySpeedCurve, g_pi().sizeBySpeedCurve, "Curve");
-		DO_TEXTBOX2(sizeBySpeedRangeMin, g_pi().sizeBySpeedRangeMin, 0.f, .5f, false, "Range");
-		DO_TEXTBOX2(sizeBySpeedRangeMax, g_pi().sizeBySpeedRangeMax, .5f, .5f, true, "");
+		doParticleCurve(g_pi().sizeBySpeedCurve, "Curve");
+		doTextBox(g_pi().sizeBySpeedRangeMin, "Range", 0.f, .5f, false, dt);
+		doTextBox(g_pi().sizeBySpeedRangeMax, "", .5f, .5f, true, dt);
+		popMenu();
 	}
-
-	static UiElem rotationOverLifetimeElem;
-	if (doCheckBox(g_pi().rotationOverLifetime, "Rotation Over Lifetime", true, rotationOverLifetimeElem))
+	
+	if (doCheckBox(g_pi().rotationOverLifetime, "Rotation Over Lifetime", true))
 	{
+		pushMenu("Rotation Over Lifetime");
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
-		DO_TEXTBOX(rotationOverLifetimeValue, g_pi().rotationOverLifetimeValue, "Degrees/Sec");
+		doTextBox(g_pi().rotationOverLifetimeValue, "Degrees/Sec", dt);
+		popMenu();
 	}
-
-	static UiElem rotationBySpeedElem;
-	if (doCheckBox(g_pi().rotationBySpeed, "Rotation By Speed", true, rotationBySpeedElem))
+	
+	if (doCheckBox(g_pi().rotationBySpeed, "Rotation By Speed", true))
 	{
+		pushMenu("Rotation By Speed");
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
-		DO_PARTICLECURVE(rotationBySpeedCurve, g_pi().rotationBySpeedCurve, "Curve");
-		DO_TEXTBOX2(rotationBySpeedRangeMin, g_pi().rotationBySpeedRangeMin, 0.f, .5f, false, "Range");
-		DO_TEXTBOX2(rotationBySpeedRangeMax, g_pi().rotationBySpeedRangeMax, .5f, .5f, true, "");
+		doParticleCurve(g_pi().rotationBySpeedCurve, "Curve");
+		doTextBox(g_pi().rotationBySpeedRangeMin, "Range", 0.f, .5f, false, dt);
+		doTextBox(g_pi().rotationBySpeedRangeMax, "", .5f, .5f, true, dt);
+		popMenu();
 	}
-
-	static UiElem collisionElem;
-	if (doCheckBox(g_pi().collision, "Collision", true, collisionElem))
+	
+	if (doCheckBox(g_pi().collision, "Collision", true))
 	{
+		pushMenu("Collision");
 		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
-		DO_TEXTBOX(bounciness, g_pi().bounciness, "Bounciness");
-		DO_TEXTBOX(lifetimeLoss, g_pi().lifetimeLoss, "Lifetime Loss On Collision");
-		DO_TEXTBOX(minKillSpeed, g_pi().minKillSpeed, "Kill Speed");
-		DO_TEXTBOX(collisionRadius, g_pi().collisionRadius, "Collision Radius");
+		doTextBox(g_pi().bounciness, "Bounciness", dt);
+		doTextBox(g_pi().lifetimeLoss, "Lifetime Loss On Collision", dt);
+		doTextBox(g_pi().minKillSpeed, "Kill Speed", dt);
+		doTextBox(g_pi().collisionRadius, "Collision Radius", dt);
+		popMenu();
 	}
-
-	static UiElem subEmittersElem;
-	if (doCheckBox(g_pi().enableSubEmitters, "Sub Emitters", true, subEmittersElem))
+	
+	if (doCheckBox(g_pi().enableSubEmitters, "Sub Emitters", true))
 	{
-		ScopedValueAdjust<int> xAdjust(g_drawX, +10);
-		static bool onEvent[ParticleInfo::kSubEmitterEvent_COUNT] = { };
-		const char * onEventName[ParticleInfo::kSubEmitterEvent_COUNT] = { "onBirth", "onCollision", "onDeath" };
-		static UiElem onEventElem[ParticleInfo::kSubEmitterEvent_COUNT];
-		struct SubEmitterField
+		pushMenu("Sub Emitters");
 		{
-			SubEmitterField()
-				: textFieldIsInit(false)
+			ScopedValueAdjust<int> xAdjust(g_drawX, +10);
+			
+			const char * eventNames[ParticleInfo::kSubEmitterEvent_COUNT] =
 			{
-			}
-
-			UiElem elem;
-			EditorTextField textField;
-			bool textFieldIsInit;
-		};
-		static SubEmitterField fields[ParticleInfo::kSubEmitterEvent_COUNT][3];
-		for (int i = 0; i < ParticleInfo::kSubEmitterEvent_COUNT; ++i) // fixme : cannot use loops
-		{
-			if (doCheckBox(g_pi().subEmitters[i].enabled, onEventName[i], true, onEventElem[i]))
+				"onBirth",
+				"onCollision",
+				"onDeath"
+			};
+			
+			for (int i = 0; i < ParticleInfo::kSubEmitterEvent_COUNT; ++i) // fixme : cannot use loops
 			{
-				ScopedValueAdjust<int> xAdjust(g_drawX, +10);
-				doTextBox(g_pi().subEmitters[i].chance, "Spawn Chance", 0.f, 1.f, true, fields[i][0].elem, fields[i][0].textField, fields[i][0].textFieldIsInit, dt);
-				doTextBox(g_pi().subEmitters[i].count, "Spawn Count", 0.f, 1.f, true, fields[i][1].elem, fields[i][1].textField, fields[i][1].textFieldIsInit, dt);
+				if (doCheckBox(g_pi().subEmitters[i].enabled, eventNames[i], true))
+				{
+					pushMenu(eventNames[i]);
+					{
+						ScopedValueAdjust<int> xAdjust(g_drawX, +10);
+						doTextBox(g_pi().subEmitters[i].chance, "Spawn Chance", dt);
+						doTextBox(g_pi().subEmitters[i].count, "Spawn Count", dt);
 
-				std::string emitterName = g_pi().subEmitters[i].emitterName;
-				doTextBox(emitterName, "Emitter Name", 0.f, 1.f, true, fields[i][2].elem, fields[i][2].textField, fields[i][2].textFieldIsInit, dt);
-				strcpy_s(g_pi().subEmitters[i].emitterName, sizeof(g_pi().subEmitters[i].emitterName), emitterName.c_str());
+						std::string emitterName = g_pi().subEmitters[i].emitterName;
+						doTextBox(emitterName, "Emitter Name", dt);
+						strcpy_s(g_pi().subEmitters[i].emitterName, sizeof(g_pi().subEmitters[i].emitterName), emitterName.c_str());
+					}
+					popMenu();
+				}
 			}
+			//SubEmitter onBirth;
+			//SubEmitter onCollision;
+			//SubEmitter onDeath;
 		}
-		//SubEmitter onBirth;
-		//SubEmitter onCollision;
-		//SubEmitter onDeath;
+		popMenu();
 	}
 
 	std::vector<EnumValue> sortModeValues;
 	sortModeValues.push_back(EnumValue(ParticleInfo::kSortMode_OldestFirst, "Oldest First"));
 	sortModeValues.push_back(EnumValue(ParticleInfo::kSortMode_YoungestFirst, "Youngest First"));
-	DO_ENUM(sortMode, g_pi().sortMode, sortModeValues, "Sort Mode");
+	doEnum(g_pi().sortMode, "Sort Mode", sortModeValues);
 
 	std::vector<EnumValue> blendModeValues;
 	blendModeValues.push_back(EnumValue(ParticleInfo::kBlendMode_AlphaBlended, "Use Alpha"));
 	blendModeValues.push_back(EnumValue(ParticleInfo::kBlendMode_Additive, "Additive"));
-	DO_ENUM(blendMode, g_pi().blendMode, blendModeValues, "Blend Mode");
+	doEnum(g_pi().blendMode, "Blend Mode", blendModeValues);
 }
 
 static void doMenu_Pei(float dt)
 {
-	static UiElem copyPeiElem;
-	if (doButton("Copy", 0.f, .5f, !g_copyPeiIsValid, copyPeiElem))
+	if (doButton("Copy", 0.f, .5f, !g_copyPeiIsValid))
 	{
 		g_copyPei = g_pei();
 		g_copyPeiIsValid = true;
 	}
-
-	static UiElem pastePeiElem;
-	if (g_copyPeiIsValid && doButton("Paste", .5f, .5f, true, pastePeiElem))
+	
+	if (g_copyPeiIsValid && doButton("Paste", .5f, .5f, true))
 	{
 		g_pei() = g_copyPei;
 		refreshUi();
 	}
-
+	
 	std::string name;
 	name = g_pei().name;
-	DO_TEXTBOX(name, name, "Name");
+	doTextBox(name, "Name", dt);
 	strcpy_s(g_pei().name, sizeof(g_pei().name), name.c_str());
-	DO_TEXTBOX(duration, g_pei().duration, "Duration");
-	DO_CHECKBOX(loop, g_pei().loop, "Loop", false);
-	DO_CHECKBOX(prewarm, g_pei().prewarm, "Prewarm", false);
-	DO_TEXTBOX(startDelay, g_pei().startDelay, "Start Delay");
-	DO_TEXTBOX(startLifetime, g_pei().startLifetime, "Start Lifetime");
-	DO_TEXTBOX(startSpeed, g_pei().startSpeed, "Start Speed");
-	DO_TEXTBOX(startSize, g_pei().startSize, "Start Size");
-	DO_TEXTBOX(startRotation, g_pei().startRotation, "Start Rotation"); // todo : min and max values for random start rotation?
-	static UiElem startColorElem;
-	doParticleColor(g_pei().startColor, "Start Color", startColorElem);
-	DO_TEXTBOX(gravityMultiplier, g_pei().gravityMultiplier, "Gravity Multiplier");
-	DO_CHECKBOX(inheritVelocity, g_pei().inheritVelocity, "Inherit Velocity", false);
-	DO_CHECKBOX(worldSpace, g_pei().worldSpace, "World Space", false);
-	DO_TEXTBOX(maxParticles, g_pei().maxParticles, "Max Particles");
+	
+	doTextBox(g_pei().duration, "Duration", dt);
+	doCheckBox(g_pei().loop, "Loop", false);
+	doCheckBox(g_pei().prewarm, "Prewarm", false);
+	doTextBox(g_pei().startDelay, "Start Delay", dt);
+	doTextBox(g_pei().startLifetime, "Start Lifetime", dt);
+	doTextBox(g_pei().startSpeed, "Start Speed", dt);
+	doTextBox(g_pei().startSize, "Start Size", dt);
+	doTextBox(g_pei().startRotation, "Start Rotation", dt); // todo : min and max values for random start rotation?
+	doParticleColor(g_pei().startColor, "Start Color");
+	doTextBox(g_pei().gravityMultiplier, "Gravity Multiplier", dt);
+	doCheckBox(g_pei().inheritVelocity, "Inherit Velocity", false);
+	doCheckBox(g_pei().worldSpace, "World Space", false);
+	doTextBox(g_pei().maxParticles, "Max Particles", dt);
+	
 	std::string materialName = g_pei().materialName;
-	DO_TEXTBOX(materialName, materialName, "Material");
+	doTextBox(materialName, "Material", dt);
 	strcpy_s(g_pei().materialName, sizeof(g_pei().materialName), materialName.c_str());
 }
 
@@ -1153,7 +1294,19 @@ static void doMenu_ColorWheel(float dt)
 	}
 }
 
-static void doMenu(bool doActions, bool doDraw, int sx, int sy, float dt)
+struct Menu
+{
+	Menu_LoadSave loadSave;
+	
+	Menu()
+		: loadSave()
+	{
+	}
+};
+
+static Menu s_menu;
+
+static void doMenu(Menu & menu, bool doActions, bool doDraw, int sx, int sy, float dt)
 {
 	g_doActions = doActions;
 	g_doDraw = doDraw;
@@ -1162,6 +1315,10 @@ static void doMenu(bool doActions, bool doDraw, int sx, int sy, float dt)
 	{
 		g_forceUiRefreshRequested = false;
 		g_forceUiRefresh = true;
+		
+		g_activeElem = nullptr;
+		
+		g_menus.clear();
 	}
 
 	// left side menu
@@ -1169,26 +1326,36 @@ static void doMenu(bool doActions, bool doDraw, int sx, int sy, float dt)
 	setFont("calibri.ttf");
 	g_drawX = 10;
 	g_drawY = 0;
-
+	
+	pushMenu("pi");
 	doMenu_Pi(dt);
+	popMenu();
 
 	// right side menu
 
 	setFont("calibri.ttf");
 	g_drawX = sx - kMenuWidth - 10;
 	g_drawY = 0;
-
-	doMenu_LoadSave(dt);
+	
+	pushMenu("loadSave");
+	doMenu_LoadSave(menu.loadSave, dt);
 	g_drawY += kMenuSpacing;
+	popMenu();
 
+	pushMenu("emitterSelect");
 	doMenu_EmitterSelect(dt);
 	g_drawY += kMenuSpacing;
-
+	popMenu();
+	
+	pushMenu("pei");
 	doMenu_Pei(dt);
 	g_drawY += kMenuSpacing;
+	popMenu();
 
+	pushMenu("colorWheel");
 	doMenu_ColorWheel(dt);
 	g_drawY += kMenuSpacing;
+	popMenu();
 
 	if (g_doActions)
 		g_forceUiRefresh = false;
@@ -1210,9 +1377,9 @@ void particleEditorTick(bool menuActive, float sx, float sy, float dt)
 		for (int i = 0; i < kMaxParticleInfos; ++i)
 			strcpy_s(g_peiList[i].materialName, sizeof(g_peiList[i].materialName), "texture.png");
 	}
-
+	
 	if (menuActive)
-		doMenu(true, false, sx, sy, dt);
+		doMenu(s_menu, true, false, sx, sy, dt);
 
 	for (int i = 0; i < kMaxParticleInfos; ++i)
 	{
@@ -1335,5 +1502,5 @@ void particleEditorDraw(bool menuActive, float sx, float sy)
 	gxPopMatrix();
 
 	if (menuActive)
-		doMenu(false, true, sx, sy, 0.f);
+		doMenu(s_menu, false, true, sx, sy, 0.f);
 }
