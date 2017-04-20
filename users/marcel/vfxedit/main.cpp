@@ -198,6 +198,8 @@ static Surface * g_audioFileSurface = nullptr;
 
 static double g_lastAudioTime = 0.0;
 
+static float g_audioVolume = 1.f;
+
 //
 
 static SDL_Thread * g_audioThread = nullptr;
@@ -1012,6 +1014,16 @@ int main(int argc, char * argv[])
 				{
 					sendEvent("/audio_begin", 0);
 				}
+			}
+			
+			if (keyboard.wentDown(SDLK_MINUS))
+				g_audioVolume = Calc::Max(0.f, g_audioVolume - .25f);
+			if (keyboard.wentDown(SDLK_EQUALS))
+				g_audioVolume = Calc::Min(1.f, g_audioVolume + .25f);
+			
+			if (g_audioOutput != nullptr)
+			{
+				g_audioOutput->Volume_set(g_audioVolume);
 			}
 
 			// determine mouse interaction
