@@ -1,8 +1,9 @@
 #define DO_PORTAUDIO 1
 #define DO_PORTAUDIO_BASIC_OSCS 0
-#define DO_PORTAUDIO_SPRING_OSC1D 0
-#define DO_PORTAUDIO_SPRING_OSC2D 1
-#define DO_MONDRIAAN 1
+#define DO_PORTAUDIO_SPRING_OSC1D 1
+#define DO_PORTAUDIO_SPRING_OSC2D 0
+#define DO_PORTAUDIO_AUDIODSP 0
+#define DO_MONDRIAAN 0
 
 #if DO_PORTAUDIO
 
@@ -222,6 +223,15 @@ struct SpringOsc1D : BaseOsc
 				v[i] += a * dt * f[i];
 			}
 			
+			if (closedEnds)
+			{
+				v[0] = 0.f;
+				v[kNumElems - 1] = 0.f;
+				
+				p[0] = 0.f;
+				p[kNumElems - 1] = 0.f;
+			}
+			
 		#if 1
 			__m256d _mm_dt = _mm256_set1_pd(dt);
 			__m256d _mm_pRetain = _mm256_set1_pd(pRetain);
@@ -314,27 +324,54 @@ struct SpringOsc1D : BaseOsc
 		if (keyboard.isDown(SDLK_RIGHT))
 			m_sampleLocation = (m_sampleLocation + WaterSim::kNumElems + 1) % WaterSim::kNumElems;
 		
-		if (keyboard.wentDown(SDLK_a))
-			m_waterSim.f[m_sampleLocation] *= 1.3;
-		if (keyboard.wentDown(SDLK_z))
-			m_waterSim.f[m_sampleLocation] /= 1.3;
+		if (keyboard.isDown(SDLK_a))
+			m_waterSim.f[m_sampleLocation] = 1.f;
+		if (keyboard.isDown(SDLK_z))
+			m_waterSim.f[m_sampleLocation] /= 1.01;
+		if (keyboard.isDown(SDLK_n))
+			m_waterSim.f[m_sampleLocation] *= random(.95f, 1.f);
 		
 		if (keyboard.wentDown(SDLK_r))
-			m_waterSim.p[rand() % WaterSim::kNumElems] = random(-1.f, +1.f) * 10.f;
+			m_waterSim.p[rand() % WaterSim::kNumElems] = random(-1.f, +1.f) * (keyboard.isDown(SDLK_LSHIFT) ? 40.f : 4.f);
 		
 		if (keyboard.wentDown(SDLK_c))
 			m_closedEnds = !m_closedEnds;
+		
+		if (keyboard.wentDown(SDLK_t))
+		{
+			const double xRatio = random(0.0, 1.0 / 10.0);
+			const double randomFactor = random(0.0, 1.0);
+			//const double cosFactor = random(0.0, 1.0);
+			const double cosFactor = 0.0;
+			const double perlinFactor = random(0.0, 1.0);
+			
+			for (int x = 0; x < WaterSim::kNumElems; ++x)
+			{
+				m_waterSim.f[x] = 1.0;
+				
+				m_waterSim.f[x] *= Calc::Lerp(1.0, random(0.f, 1.f), randomFactor);
+				m_waterSim.f[x] *= Calc::Lerp(1.0, (std::cos(x * xRatio) + 1.0) / 2.0, cosFactor);
+				//m_waterSim.f[x] = 1.0 - std::pow(m_waterSim.f[x], 2.0);
+				
+				//m_waterSim.f[x] = 1.0 - std::pow(random(0.f, 1.f), 2.0) * (std::cos(x / 4.32) + 1.0)/2.0 * (std::cos(y / 3.21) + 1.0)/2.0;
+				m_waterSim.f[x] *= Calc::Lerp(1.0, scaled_octave_noise_1d(16, .4f, 1.f / 20.f, 0.f, 1.f, x), perlinFactor);
+			}
+		}
 		
 	#if 0
 		const double dt = 1.0 / 44100.0 * Calc::Lerp(0.0, 1.0, mouse.y / double(GFX_SY - 1));
 		const double c = 1000000000.0;
 	#else
 		const double dt = 1.0 / 44100.0;
-		const double c = Calc::Lerp(10000000.0, 1000000000.0, mouse.y / double(GFX_SY - 1));
+		const double m2 = mouse.y / double(GFX_SY - 1);
+		const double m1 = 1.0 - m2;
+		const double c1 = 100000.0;
+		const double c2 = 1000000000.0;
+		const double c = c1 * m1 + c2 * m2;
 	#endif
 		
-		const double vRetainPerSecond = 0.1;
-		const double pRetainPerSecond = 0.1;
+		const double vRetainPerSecond = 0.45;
+		const double pRetainPerSecond = 0.95;
 		
 		const int sampleLocation = m_sampleLocation;
 		const bool closedEnds = m_closedEnds;
@@ -368,51 +405,66 @@ struct SpringOsc2D : BaseOsc
 					f[x][y] = 1.0;
 		}
 		
-		void tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond)
+		void tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool _closedEnds)
 		{
 			const double vRetain = std::pow(vRetainPerSecond, dt);
 			const double pRetain = std::pow(pRetainPerSecond, dt);
+			
+			const bool closedEnds = _closedEnds && false;
 			
 			for (int x = 0; x < kNumElems; ++x)
 			for (int y = 0; y < kNumElems; ++y)
 			{
 				const double p0 = p[x][y];
 				
-			#if 1
-				const int x0 = x;
-				const int x1 = (x + kNumElems - 1) & (kNumElems - 1);
-				const int x2 = (x + kNumElems + 1) & (kNumElems - 1);
-				const int y0 = y;
-				const int y1 = (y + kNumElems - 1) & (kNumElems - 1);
-				const int y2 = (y + kNumElems + 1) & (kNumElems - 1);
-			#else
-				const int x0 = x;
-				const int x1 = x > 0             ? x - 1 : 0;
-				const int x2 = x < kNumElems - 1 ? x + 1 : kNumElems - 1;
-				const int y0 = y;
-				const int y1 = y > 0             ? y - 1 : 0;
-				const int y2 = y < kNumElems - 1 ? y + 1 : kNumElems - 1;
-			#endif
+				int x0, x1, x2;
+				int y0, y1, y2;
+				
+				if (closedEnds)
+				{
+					x0 = x > 0             ? x - 1 : 0;
+					x1 = x;
+					x2 = x < kNumElems - 1 ? x + 1 : kNumElems - 1;
+					y0 = y > 0             ? y - 1 : 0;
+					y1 = y;
+					y2 = y < kNumElems - 1 ? y + 1 : kNumElems - 1;
+				}
+				else
+				{
+					x0 = (x + kNumElems - 1) & (kNumElems - 1);
+					x1 = x;
+					x2 = (x + kNumElems + 1) & (kNumElems - 1);
+					y0 = (y + kNumElems - 1) & (kNumElems - 1);
+					y1 = y;
+					y2 = (y + kNumElems + 1) & (kNumElems - 1);
+				}
 				
 				double pt = 0.0;
 				
 			#if 0
-				//pt += p[x0][y0];
+				pt += p[x0][y0];
 				pt += p[x1][y0];
 				pt += p[x2][y0];
 				pt += p[x0][y1];
-				pt += p[x1][y1];
 				pt += p[x2][y1];
 				pt += p[x0][y2];
 				pt += p[x1][y2];
 				pt += p[x2][y2];
 				
 				const double d = pt - p0 * 8.0;
-			#else
-				pt += p[x1][y0];
+			#elif 0
+				pt += p[x0][y0];
 				pt += p[x2][y0];
-				pt += p[x0][y1];
 				pt += p[x0][y2];
+				pt += p[x2][y2];
+				
+				//const double d = pt - p0 * 4.0;
+				const double d = pt - p0 * 16.0;
+			#else
+				pt += p[x0][y1];
+				pt += p[x2][y1];
+				pt += p[x1][y0];
+				pt += p[x1][y2];
 				
 				const double d = pt - p0 * 4.0;
 			#endif
@@ -420,6 +472,21 @@ struct SpringOsc2D : BaseOsc
 				double a = d * c;
 				
 				v[x][y] += a * dt * f[x][y];
+			}
+			
+			if (closedEnds)
+			{
+				for (int x = 0; x < kNumElems; ++x)
+				{
+					v[x][0] = 0.f;
+					v[x][kNumElems - 1] = 0.f;
+				}
+				
+				for (int y = 0; y < kNumElems; ++y)
+				{
+					v[0][y] = 0.f;
+					v[kNumElems - 1][y] = 0.f;
+				}
 			}
 			
 		#if 1
@@ -498,7 +565,7 @@ struct SpringOsc2D : BaseOsc
 				const int spotX = r + (rand() % v);
 				const int spotY = r + (rand() % v);
 				
-				const double s = random(-1.f, +1.f) * 10.f;
+				const double s = random(-1.f, +1.f) * 4.0;
 				//const double s = 1.0;
 				
 				for (int i = -r; i <= +r; ++i)
@@ -581,7 +648,7 @@ struct SpringOsc2D : BaseOsc
 		const double dt = 1.0 / 44100.0 * (m_slowMotion ? 0.001 : 1.0);
 		const double m1 = mouse.y / double(GFX_SY - 1);
 		const double m2 = 1.0 - m1;
-		const double c = 10000000.0 * m2 + 100000000.0 * m1;
+		const double c = 10000.0 * m2 + 1000000000.0 * m1;
 	#endif
 		
 		const double vRetainPerSecond = 0.05;
@@ -594,9 +661,7 @@ struct SpringOsc2D : BaseOsc
 			
 			samples[i] = sample(m_sampleLocation[0], m_sampleLocation[1]);
 			
-			//samples[i] = Calc::Clamp(samples[i], -1.f, +1.f);
-			
-			m_waterSim.tick(dt, c, vRetainPerSecond, pRetainPerSecond);
+			m_waterSim.tick(dt, c, vRetainPerSecond, pRetainPerSecond, true);
 		}
 	}
 	
@@ -620,6 +685,134 @@ struct SpringOsc2D : BaseOsc
 		const float v = v0 * ty1 + v1 * ty2;
 		
 		return v;
+	}
+};
+
+#endif
+
+#if DO_PORTAUDIO_AUDIODSP
+
+#include "audiostream/AudioStreamVorbis.h"
+
+static std::vector<AudioSample> loadAudioFile(const char * filename)
+{
+	std::vector<AudioSample> pcmData;
+
+	AudioStream_Vorbis audioStream;
+
+	audioStream.Open(filename, false);
+
+	const int sampleBufferSize = 1 << 16;
+	AudioSample sampleBuffer[sampleBufferSize];
+
+	for (;;)
+	{
+		const int numSamples = audioStream.Provide(sampleBufferSize, sampleBuffer);
+
+		const int offset = pcmData.size();
+
+		pcmData.resize(pcmData.size() + numSamples);
+
+		memcpy(&pcmData[offset], sampleBuffer, sizeof(AudioSample) * numSamples);
+
+		if (numSamples != sampleBufferSize)
+			break;
+	}
+	
+	return pcmData;
+}
+
+struct DelayLine
+{
+	std::vector<float> samples;
+	
+	int nextWriteIndex;
+	
+	DelayLine()
+		: samples()
+		, nextWriteIndex(0)
+	{
+	}
+	
+	void setLength(const int numSamples)
+	{
+		samples.resize(numSamples);
+		
+		std::fill(samples.begin(), samples.end(), 0.f);
+	}
+	
+	void push(const float value)
+	{
+		fassert(!samples.empty());
+		
+		samples[nextWriteIndex] = value;
+		
+		nextWriteIndex++;
+		
+		if (nextWriteIndex == samples.size())
+			nextWriteIndex = 0;
+	}
+	
+	float read(const int offset) const
+	{
+		const int index = (samples.size() + nextWriteIndex + offset) % samples.size();
+		
+		return samples[index];
+	}
+};
+
+struct AudioDspOsc : BaseOsc
+{
+	std::vector<AudioSample> pcmData;
+	
+	int nextReadIndex;
+	
+	DelayLine delayLine;
+	
+	AudioDspOsc()
+		: BaseOsc()
+		, nextReadIndex(0)
+		, delayLine()
+	{
+	}
+	
+	virtual ~AudioDspOsc() override
+	{
+	}
+	
+	virtual void init(const float frequency) override
+	{
+		pcmData = loadAudioFile("test.ogg");
+		
+		delayLine.setLength(10000);
+	}
+	
+	virtual void generate(float * __restrict samples, const int numSamples) override
+	{
+		for (int i = 0; i < numSamples; ++i)
+		{
+			if (nextReadIndex < pcmData.size())
+			{
+				float value = (pcmData[nextReadIndex].channel[0] + pcmData[nextReadIndex].channel[1]) / 65536.f / 3.f;
+				
+				const int offset = delayLine.samples.size() * mouse.x / GFX_SX;
+				for (int i = 0; i < 4; ++i)
+					value += delayLine.read(offset + i) * (.6f / 4);
+				
+				delayLine.push(value);
+				
+				nextReadIndex++;
+			}
+			
+			float value = 0.f;
+			
+			//for (int i = 0; i < 5; ++i)
+			//	value += delayLine.read(i * i * 50);
+			
+			value += delayLine.read(-1);
+			
+			samples[i] = value;
+		}
 	}
 };
 
@@ -680,6 +873,17 @@ static void initOsc()
 		BaseOsc *& osc = oscs[s];
 		
 		osc = new SpringOsc2D();
+		
+		osc->init(400.f);
+	}
+#endif
+
+#if DO_PORTAUDIO_AUDIODSP
+	for (int s = 0; s < kMaxOscs; ++s)
+	{
+		BaseOsc *& osc = oscs[s];
+		
+		osc = new AudioDspOsc();
 		
 		osc->init(400.f);
 	}
@@ -954,16 +1158,31 @@ void testPortaudio()
 						const float a = osc.m_waterSim.f[i] / 2.f;
 						
 						setColorf(1.f, 1.f, 1.f, a);
-						hqFillCircle(i, p, .2f);
+						hqFillCircle(i, p, .5f);
 					}
-					
+				}
+				hqEnd();
+				
+				hqBegin(HQ_LINES);
+				{
+					for (int i = 0; i < osc.m_waterSim.kNumElems; ++i)
 					{
-						const float p = osc.m_waterSim.p[osc.m_sampleLocation];
-						const float a = 1.f;
+						const float p = osc.m_waterSim.p[i];
+						const float a = osc.m_waterSim.f[i] / 2.f;
 						
-						setColorf(1.f, 1.f, 0.f, a);
-						hqFillCircle(osc.m_sampleLocation, p, 1.f);
+						setColorf(1.f, 1.f, 1.f, a);
+						hqLine(i, 0.f, 3.f, i, p, 1.f);
 					}
+				}
+				hqEnd();
+				
+				hqBegin(HQ_FILLED_CIRCLES);
+				{
+					const float p = osc.m_waterSim.p[osc.m_sampleLocation];
+					const float a = 1.f;
+					
+					setColorf(1.f, 1.f, 0.f, a);
+					hqFillCircle(osc.m_sampleLocation, p, 1.f);
 				}
 				hqEnd();
 				
@@ -1019,6 +1238,13 @@ void testPortaudio()
 				//popBlend();
 				
 				gxPopMatrix();
+			}
+			framework.endDraw();
+		#endif
+		
+		#if DO_PORTAUDIO_AUDIODSP
+			framework.beginDraw(0, 0, 63, 0);
+			{
 			}
 			framework.endDraw();
 		#endif
