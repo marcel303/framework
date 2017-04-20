@@ -102,6 +102,7 @@ static bool testLineOverlap(
 GraphNode::GraphNode()
 	: id(kGraphNodeIdInvalid)
 	, typeName()
+	, isEnabled(true)
 	, editorX(0.f)
 	, editorY(0.f)
 	, editorIsFolded(false)
@@ -116,6 +117,11 @@ GraphNode::GraphNode()
 void GraphNode::tick(const float dt)
 {
 	editorFoldAnimTime = Calc::Max(0.f, editorFoldAnimTime - dt);
+}
+
+void GraphNode::setIsEnabled(const bool _isEnabled)
+{
+	isEnabled = _isEnabled;
 }
 
 void GraphNode::setIsPassthrough(const bool isPassthrough)
@@ -137,11 +143,17 @@ void GraphNode::setIsFolded(const bool isFolded)
 
 GraphNodeSocketLink::GraphNodeSocketLink()
 	: id(kGraphLinkIdInvalid)
+	, isEnabled(true)
 	, srcNodeId(kGraphNodeIdInvalid)
 	, srcNodeSocketIndex(-1)
 	, dstNodeId(kGraphNodeIdInvalid)
 	, dstNodeSocketIndex(-1)
 {
+}
+
+void GraphNodeSocketLink::setIsEnabled(const bool _isEnabled)
+{
+	isEnabled = _isEnabled;
 }
 
 //
@@ -258,6 +270,7 @@ bool Graph::loadXml(const XMLElement * xmlGraph)
 		GraphNode node;
 		node.id = intAttrib(xmlNode, "id", node.id);
 		node.typeName = stringAttrib(xmlNode, "typeName", node.typeName.c_str());
+		node.isEnabled = boolAttrib(xmlNode, "enabled", node.isEnabled);
 		node.editorX = floatAttrib(xmlNode, "editorX", node.editorX);
 		node.editorY = floatAttrib(xmlNode, "editorY", node.editorY);
 		node.editorIsFolded = boolAttrib(xmlNode, "folded", node.editorIsFolded);
@@ -281,6 +294,7 @@ bool Graph::loadXml(const XMLElement * xmlGraph)
 	{
 		GraphNodeSocketLink link;
 		link.id = intAttrib(xmlLink, "id", link.id);
+		link.isEnabled = boolAttrib(xmlLink, "enabled", link.isEnabled);
 		link.srcNodeId = intAttrib(xmlLink, "srcNodeId", link.srcNodeId);
 		link.srcNodeSocketIndex = intAttrib(xmlLink, "srcNodeSocketIndex", link.srcNodeSocketIndex);
 		link.dstNodeId = intAttrib(xmlLink, "dstNodeId", link.dstNodeId);
@@ -307,6 +321,7 @@ bool Graph::saveXml(XMLPrinter & xmlGraph) const
 		{
 			xmlGraph.PushAttribute("id", node.id);
 			xmlGraph.PushAttribute("typeName", node.typeName.c_str());
+			xmlGraph.PushAttribute("enabled", node.isEnabled);
 			xmlGraph.PushAttribute("editorX", node.editorX);
 			xmlGraph.PushAttribute("editorY", node.editorY);
 			xmlGraph.PushAttribute("folded", node.editorIsFolded);
@@ -333,6 +348,7 @@ bool Graph::saveXml(XMLPrinter & xmlGraph) const
 		xmlGraph.OpenElement("link");
 		{
 			xmlGraph.PushAttribute("id", link.id);
+			xmlGraph.PushAttribute("enabled", link.isEnabled);
 			xmlGraph.PushAttribute("srcNodeId", link.srcNodeId);
 			xmlGraph.PushAttribute("srcNodeSocketIndex", link.srcNodeSocketIndex);
 			xmlGraph.PushAttribute("dstNodeId", link.dstNodeId);
@@ -654,6 +670,16 @@ GraphNode * GraphEdit::tryGetNode(const GraphNodeId id) const
 	auto i = graph->nodes.find(id);
 	
 	if (i != graph->nodes.end())
+		return &i->second;
+	else
+		return nullptr;
+}
+
+GraphNodeSocketLink * GraphEdit::tryGetLink(const GraphLinkId id) const
+{
+	auto i = graph->links.find(id);
+	
+	if (i != graph->links.end())
 		return &i->second;
 	else
 		return nullptr;
@@ -1041,6 +1067,51 @@ void GraphEdit::tick(const float dt)
 					if (node != nullptr)
 					{
 						node->setIsFolded(anyUnfolded ? true : false);
+					}
+				}
+			}
+			
+			if (keyboard.wentDown(SDLK_e))
+			{
+				bool anyEnabled = false;
+				
+				for (auto nodeId : selectedNodes)
+				{
+					auto node = tryGetNode(nodeId);
+					
+					if (node != nullptr && node->isEnabled)
+					{
+						anyEnabled = true;
+					}
+				}
+				
+				for (auto linkId : selectedLinks)
+				{
+					auto link = tryGetLink(linkId);
+					
+					if (link != nullptr && link->isEnabled)
+					{
+						anyEnabled = true;
+					}
+				}
+				
+				for (auto nodeId : selectedNodes)
+				{
+					auto node = tryGetNode(nodeId);
+					
+					if (node != nullptr)
+					{
+						node->setIsEnabled(anyEnabled ? false : true);
+					}
+				}
+				
+				for (auto linkId : selectedLinks)
+				{
+					auto link = tryGetLink(linkId);
+					
+					if (link != nullptr)
+					{
+						link->setIsEnabled(anyEnabled ? false : true);
 					}
 				}
 			}
@@ -1485,10 +1556,13 @@ void GraphEdit::draw() const
 		{
 			hqBegin(HQ_LINES);
 			{
+				const bool isEnabled = link.isEnabled;
 				const bool isSelected = selectedLinks.count(linkId) != 0;
 				const bool isHighlighted = highlightedLinks.count(linkId) != 0;
 				
-				if (isSelected)
+				if (!isEnabled)
+					setColor(191, 191, 191);
+				else if (isSelected)
 					setColor(127, 127, 255);
 				else if (isHighlighted)
 					setColor(255, 255, 255);
@@ -1657,12 +1731,15 @@ void GraphEdit::draw() const
 
 void GraphEdit::drawTypeUi(const GraphNode & node, const GraphEdit_TypeDefinition & definition) const
 {
+	const bool isEnabled = node.isEnabled;
 	const bool isSelected = selectedNodes.count(node.id) != 0;
 	const bool isFolded = node.editorIsFolded;
 	
 	const float nodeSy = Calc::Lerp(definition.syFolded, definition.sy, isFolded ? node.editorFoldAnimTime * node.editorFoldAnimTimeRcp : 1.f - node.editorFoldAnimTime * node.editorFoldAnimTimeRcp);
 	
-	if (isSelected)
+	if (!isEnabled)
+		setColor(191, 191, 191, 255);
+	else if (isSelected)
 		setColor(63, 63, 127, 255);
 	else
 		setColor(63, 63, 63, 255);

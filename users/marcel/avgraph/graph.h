@@ -32,6 +32,7 @@ struct GraphNode
 {
 	GraphNodeId id;
 	std::string typeName;
+	bool isEnabled;
 	
 	float editorX;
 	float editorY;
@@ -47,6 +48,7 @@ struct GraphNode
 	
 	void tick(const float dt);
 	
+	void setIsEnabled(const bool isEnabled);
 	void setIsPassthrough(const bool isPassthrough);
 	void setIsFolded(const bool isFolded);
 };
@@ -54,6 +56,7 @@ struct GraphNode
 struct GraphNodeSocketLink
 {
 	GraphLinkId id;
+	bool isEnabled;
 	
 	GraphNodeId srcNodeId;
 	int srcNodeSocketIndex;
@@ -62,6 +65,8 @@ struct GraphNodeSocketLink
 	int dstNodeSocketIndex;
 	
 	GraphNodeSocketLink();
+	
+	void setIsEnabled(const bool isEnabled);
 };
 
 struct Graph
@@ -485,6 +490,7 @@ struct GraphEdit
 	~GraphEdit();
 	
 	GraphNode * tryGetNode(const GraphNodeId id) const;
+	GraphNodeSocketLink * tryGetLink(const GraphLinkId id) const;
 	const GraphEdit_TypeDefinition::InputSocket * tryGetInputSocket(const GraphNodeId nodeId, const int socketIndex) const;
 	const GraphEdit_TypeDefinition::OutputSocket * tryGetOutputSocket(const GraphNodeId nodeId, const int socketIndex) const;
 	

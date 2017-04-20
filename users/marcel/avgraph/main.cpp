@@ -27,8 +27,10 @@ todo :
 + add VfxImage_Texture type. let VfxPicture use this type
 + add VfxVideo type. type name = 'video'
 - add default value to socket definitions
-- add editorValue to node inputs and outputs. let get*** methods use this value when plug is not connected
-- let graph editor set editorValue for nodes. only when editor is set on type definition
+	- add to XML
+	- add ability to reset values to their default in UI
++ add editorValue to node inputs and outputs. let get*** methods use this value when plug is not connected
++ let graph editor set editorValue for nodes. only when editor is set on type definition
 + add socket connection selection. remove connection on BACKSPACE
 + add multiple node selection
 - on typing 0..9 let node value editor erase editorValue and begin typing. requires state transition? end editing on ENTER or when selecting another entity
@@ -37,9 +39,9 @@ todo :
 - add zoom in/out
 	+ add basic implementation
 	- improve zoom in and out behavior
-	- save/load zoom and focus position to/from XML
+	+ save/load zoom and focus position to/from XML
 	+ add option to quickly reset drag and zoom values
-- add sine, saw, triangle and square oscillators
++ add sine, saw, triangle and square oscillators
 + save/load link ids
 + save/load next alloc ids for nodes and links
 + free literal values on graph free
@@ -50,14 +52,22 @@ todo :
 + implement Leap Motion node
 - add undo/redo support. just serialize/deserialize graph for every action?
 - UI element focus: graph editor vs property editor
-- add ability to collapse nodes, so they take up less space
++ add ability to collapse nodes, so they take up less space
 	+ SPACE to toggle
-	- fix hit test
-	- fix link end point locations
-- passthrough toggle on selection: check if all passthrough. yes? disable passthrough, else enable
+	+ fix hit test
+	+ fix link end point locations
++ passthrough toggle on selection: check if all passthrough. yes? disable passthrough, else enable
 - add socket output value editing, for node types that define it on their outputs. required for literals
 - add enum value types. use combo box to select values
 - add ability to randomize input values
+- fix white screen issue on Windows when GUI is visible
+- add trigger support
+- add real-time connection
+	- editing values updates values in live version
+	- marking nodes passthrough gets reflected in live
++ make it possible to disable nodes
++ make it possible to disable links
+- add drag and drop support string literals
 
 todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
@@ -65,7 +75,7 @@ todo : fsfx :
 - iterate FSFX pixel shaders and generate type definitions based on FSFX name and exposed uniforms
 
 reference :
-- http://www.dsperados.com (company based in Utrecht ? send to Stijn)
++ http://www.dsperados.com (company based in Utrecht ? send to Stijn)
 
 */
 
@@ -830,6 +840,11 @@ static VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDef
 	{
 		auto & node = nodeItr.second;
 		
+		if (node.isEnabled == false)
+		{
+			continue;
+		}
+		
 		VfxNodeBase * vfxNode = nullptr;
 		
 		if (node.typeName == "intBool")
@@ -942,6 +957,11 @@ static VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDef
 	for (auto & linkItr : graph.links)
 	{
 		auto & link = linkItr.second;
+		
+		if (link.isEnabled == false)
+		{
+			continue;
+		}
 		
 		auto srcNodeItr = vfxGraph->nodes.find(link.srcNodeId);
 		auto dstNodeItr = vfxGraph->nodes.find(link.dstNodeId);
