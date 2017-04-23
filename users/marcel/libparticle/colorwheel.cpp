@@ -183,7 +183,7 @@ void ColorWheel::draw()
 
 	{
 		setColor(colorWhite);
-		drawRectCheckered(barX1, barY1, barX2, barY2, barHeight / 2.f);
+		drawUiRectCheckered(barX1, barY1, barX2, barY2, barHeight / 2.f);
 		float r, g, b, a;
 		toColor(r, g, b, a);
 		setColorf(r, g, b, a);

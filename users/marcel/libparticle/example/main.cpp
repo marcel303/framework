@@ -4,6 +4,7 @@
 #include "tinyxml2.h"
 
 #include "StringEx.h" // _s functions
+#include "ui.h"
 
 using namespace tinyxml2;
 
@@ -13,6 +14,7 @@ int main(int argc, char * argv[])
 	_CrtSetDebugFillThreshold(0);
 #endif
 
+#if 0
 	ParticleColor c1;
 	ParticleColor c2;
 	ParticleColorCurve cc1;
@@ -207,6 +209,7 @@ int main(int argc, char * argv[])
 		tickParticleEmitter(pei2, pi2, pp, timeStep, gravityX, gravityY, pe);
 	}
 #endif
+#endif
 
 	framework.fullscreen = false;
 
@@ -215,6 +218,8 @@ int main(int argc, char * argv[])
 
 	if (framework.init(argc, (const char**)argv, windowSx, windowSy))
 	{
+		initUi();
+		
 		bool menuActive = true;
 
 		while (!framework.quitRequested)
@@ -309,6 +314,8 @@ int main(int argc, char * argv[])
 				framework.endDraw();
 			}
 		}
+		
+		shutUi();
 
 		framework.shutdown();
 	}
