@@ -6,6 +6,7 @@ shader_out vec2 v_p;
 shader_out vec3 v_edgePlane1;
 shader_out vec3 v_edgePlane2;
 shader_out vec3 v_edgePlane3;
+shader_out vec3 v_baryDistances;
 shader_out vec4 v_color;
 
 vec3 calculatePlane(vec2 p1, vec2 p2)
@@ -39,6 +40,15 @@ void main()
 	vec3 edgePlane2 = calculatePlane(p2, p3);
 	vec3 edgePlane3 = calculatePlane(p3, p1);
 	
+	// calculate barycentric distances to opposing points of edge planes
+	// note : these are only used to optionally calculate interpolated colors, not for distance calculations
+
+	vec3 baryDistances;
+
+	baryDistances.x = dot(edgePlane1, vec3(p3, 1.0));
+	baryDistances.y = dot(edgePlane2, vec3(p1, 1.0));
+	baryDistances.z = dot(edgePlane3, vec3(p2, 1.0));
+
 	// determine vertex coord, stroke offset and stroke size based on vertex ID
 	
 	float borderSize = 1.0;
@@ -97,6 +107,7 @@ void main()
 	v_edgePlane1 = edgePlane1;
 	v_edgePlane2 = edgePlane2;
 	v_edgePlane3 = edgePlane3;
+	v_baryDistances = baryDistances;
 	v_color = unpackColor();
 }
 
