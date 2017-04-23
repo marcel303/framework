@@ -770,6 +770,9 @@ bool doCheckBox(bool & value, const char * name, const bool isCollapsable)
 	
 	const int kPadding = 5;
 	const int kCheckButtonSize = kCheckBoxHeight - kPadding * 2;
+	const int kCheckButtonRadius = kCheckButtonSize/2;
+	const int kCollapseIconSx = kCheckButtonSize;
+	const int kCollapseIconSy = kCheckButtonSize * 2 / 5;
 
 	const int x1 = g_drawX;
 	const int x2 = g_drawX + g_menu->sx;
@@ -803,31 +806,47 @@ bool doCheckBox(bool & value, const char * name, const bool isCollapsable)
 		setColor(colorBlue);
 		drawRectLine(x1, y1, x2, y2);
 
-		setColor(colorGreen);
+		hqBegin(HQ_STROKED_CIRCLES);
+			setColor(colorWhite);
+			hqStrokeCircle((cx1 + cx2)/2, (cy1 + cy2)/2, kCheckButtonRadius, 2.f);
+		hqEnd();
+		
 		if (value)
-			drawRect(cx1, cy1, cx2, cy2);
-		setColor(colorWhite);
-		drawRectLine(cx1, cy1, cx2, cy2);
+		{
+			hqBegin(HQ_FILLED_CIRCLES);
+				setColor(63, 255, 127);
+				hqFillCircle((cx1 + cx2)/2, (cy1 + cy2)/2, kCheckButtonRadius - 2);
+			hqEnd();
+		}
 
 		setColor(colorWhite);
 		drawText(x1 + kPadding + kCheckButtonSize + kPadding, (y1+y2)/2, kFontSize, +1.f, 0.f, "%s", name);
 
 		if (isCollapsable)
 		{
-			setColor(colorWhite);
-			drawLine(
-				x2 - kPadding - kCheckButtonSize,
-				(y1 + y2) / 2,
-				x2 - kPadding,
-				(y1 + y2) / 2);
-
-			if (!value)
+			const float strokeSize = 1.25f;
+			const float x = x2 - kPadding - kCollapseIconSx;
+			const float y = (y1 + y2) / 2 - kCollapseIconSy / 2;
+			
+			if (value)
 			{
-				drawLine(
-					x2 - kPadding - kCheckButtonSize / 2,
-					y1 + kPadding,
-					x2 - kPadding - kCheckButtonSize / 2,
-					y2 - kPadding);
+				hqBegin(HQ_LINES);
+				{
+					setColor(colorWhite);
+					hqLine(x, y + kCollapseIconSy, strokeSize, x + kCollapseIconSx/2, y, strokeSize);
+					hqLine(x + kCollapseIconSx, y + kCollapseIconSy, strokeSize, x + kCollapseIconSx/2, y, strokeSize);
+				}
+				hqEnd();
+			}
+			else
+			{
+				hqBegin(HQ_LINES);
+				{
+					setColor(colorWhite);
+					hqLine(x, y, strokeSize, x + kCollapseIconSx/2, y + kCollapseIconSy, strokeSize);
+					hqLine(x + kCollapseIconSx, y, strokeSize, x + kCollapseIconSx/2, y + kCollapseIconSy, strokeSize);
+				}
+				hqEnd();
 			}
 		}
 	}
