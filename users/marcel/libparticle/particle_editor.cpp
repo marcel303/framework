@@ -521,7 +521,6 @@ void doMenu(Menu & menu, const bool doActions, const bool doDraw, const int sx, 
 
 	// left side menu
 
-	setFont("calibri.ttf");
 	g_drawX = 10;
 	g_drawY = 0;
 	
@@ -530,8 +529,7 @@ void doMenu(Menu & menu, const bool doActions, const bool doDraw, const int sx, 
 	popMenu();
 
 	// right side menu
-
-	setFont("calibri.ttf");
+	
 	g_drawX = sx - kMenuWidth - 10;
 	g_drawY = 0;
 	

@@ -52,6 +52,7 @@ UiState::UiState()
 	: x(0)
 	, y(0)
 	, sx(100)
+	, font("calibri.ttf")
 	, activeElem(nullptr)
 	, activeColor(nullptr)
 	, colorWheel(nullptr)
@@ -390,6 +391,8 @@ void makeActive(UiState * state, const bool doActions, const bool doDraw)
 	
 	g_drawX = state->x;
 	g_drawY = state->y;
+	
+	setFont(state->font.c_str());
 }
 
 //

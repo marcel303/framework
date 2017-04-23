@@ -204,7 +204,6 @@ void ColorWheel::draw()
 		toColor(c);
 		setColorf(c.rgba[0], c.rgba[1], c.rgba[2], c.rgba[3]);
 		drawRect(0.f, 0.f, 100.f, 20.f);
-		setFont("calibri.ttf");
 		drawText(0.f, 0.f, 18, +1.f, +1.f, "%f, %f, %f", c.rgba[0], c.rgba[1], c.rgba[2]);
 	}
 #endif
@@ -276,7 +275,6 @@ bool ColorWheel::intersectTriangle(const float x, const float y, float & baryWhi
 	}
 
 #if 0
-	setFont("calibri.ttf");
 	setColor(colorWhite);
 	drawText(xy[2], xy[3], 16, +1.f, +1.f, "bb: %f", baryWhite);
 	drawText(xy[4], xy[5], 16, +1.f, +1.f, "bw: %f", baryBlack);

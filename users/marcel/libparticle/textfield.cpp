@@ -136,7 +136,6 @@ void EditorTextField::draw(const int ax, const int ay, const int asy, const int 
 			float textSx;
 			float textSy;
 			
-			setFont("calibri.ttf");
 			measureText(fontSize, textSx, textSy, "%s", text);
 			
 			float x1 = -2 + ax;
@@ -152,7 +151,6 @@ void EditorTextField::draw(const int ax, const int ay, const int asy, const int 
 			setColor(127, 227, 255);
 		else
 			setColor(127, 127, 127);
-		setFont("calibri.ttf");
 		drawText(ax, ay+asy/2, fontSize, +1.f, 0.f, "%s", text);
 		
 		if (m_textIsSelected == false)

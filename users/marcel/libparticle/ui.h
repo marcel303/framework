@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 class ColorWheel;
 struct ParticleColor;
 struct ParticleColorCurve;
@@ -13,6 +15,8 @@ struct UiState
 	int x;
 	int y;
 	int sx;
+	
+	std::string font;
 	
 	UiElem * activeElem;
 	ParticleColor * activeColor;
