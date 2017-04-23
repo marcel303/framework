@@ -1,8 +1,8 @@
 #define DO_PORTAUDIO 1
 #define DO_PORTAUDIO_BASIC_OSCS 0
-#define DO_PORTAUDIO_SPRING_OSC1D 1
+#define DO_PORTAUDIO_SPRING_OSC1D 0
 #define DO_PORTAUDIO_SPRING_OSC2D 0
-#define DO_PORTAUDIO_AUDIODSP 0
+#define DO_PORTAUDIO_AUDIODSP 1
 #define DO_MONDRIAAN 0
 
 #if DO_PORTAUDIO
@@ -759,6 +759,23 @@ struct DelayLine
 		
 		return samples[index];
 	}
+	
+	float readInterp(const float offset) const
+	{
+		const float index = std::fmodf(samples.size() + nextWriteIndex + offset, samples.size());
+		const int index1 = int(index);
+		const int index2 = (index1 + 1) % samples.size();
+		
+		const float t2 = index - index1;
+		const float t1 = 1.f - t2;
+		
+		const float sample1 = samples[index1];
+		const float sample2 = samples[index2];
+		
+		const float sample = sample1 * t1 + sample2 * t2;
+		
+		return sample;
+	}
 };
 
 struct AudioDspOsc : BaseOsc
@@ -789,15 +806,24 @@ struct AudioDspOsc : BaseOsc
 	
 	virtual void generate(float * __restrict samples, const int numSamples) override
 	{
+		static double t = 0.0;
+		static double tStep = 1.0 / 44100.0;
+		
 		for (int i = 0; i < numSamples; ++i)
 		{
 			if (nextReadIndex < pcmData.size())
 			{
 				float value = (pcmData[nextReadIndex].channel[0] + pcmData[nextReadIndex].channel[1]) / 65536.f / 3.f;
 				
-				const int offset = delayLine.samples.size() * mouse.x / GFX_SX;
-				for (int i = 0; i < 4; ++i)
-					value += delayLine.read(offset + i) * (.6f / 4);
+				//const float offset = delayLine.samples.size() * mouse.x / float(GFX_SX) / 10.f;
+				const float offset = delayLine.samples.size() * mouse.x / float(GFX_SX) / 10.f + (float)std::sin(t * 2.0 * M_PI * 5.0) * 100.0;
+				
+				t += tStep;
+				if (t >= 1.0)
+					t = 0.0;
+				
+				for (int i = 0; i < 2; ++i)
+					value += delayLine.readInterp(offset + i) * (mouse.y / float(GFX_SX) / 2);
 				
 				delayLine.push(value);
 				
