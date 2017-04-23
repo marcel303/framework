@@ -2,6 +2,7 @@
 
 #include <string>
 
+class Color;
 class ColorWheel;
 struct ParticleColor;
 struct ParticleColorCurve;
@@ -41,6 +42,7 @@ void shutUi();
 
 void drawUiRectCheckered(float x1, float y1, float x2, float y2, float scale);
 void drawUiCircle(const float x, const float y, const float radius, const float r, const float g, const float b, const float a);
+void drawUiShadedTriangle(float x1, float y1, float x2, float y2, float x3, float y3, const Color & c1, const Color & c2, const Color & c3);
 
 extern void hlsToRGB(float hue, float lum, float sat, float & r, float & g, float & b);
 extern void rgbToHSL(float r, float g, float b, float & hue, float & lum, float & sat);

@@ -134,6 +134,23 @@ void drawUiCircle(const float x, const float y, const float radius, const float 
 	hqEnd();
 }
 
+void drawUiShadedTriangle(float x1, float y1, float x2, float y2, float x3, float y3, const Color & c1, const Color & c2, const Color & c3)
+{
+	Shader shader("hq-shaded-triangle");
+	setShader(shader);
+	
+	shader.setImmediate("color1", c1.r, c1.g, c1.b, c1.a);
+	shader.setImmediate("color2", c2.r, c2.g, c2.b, c2.a);
+	shader.setImmediate("color3", c3.r, c3.g, c3.b, c3.a);
+	
+	hqBeginCustom(HQ_FILLED_TRIANGLES, shader);
+	{
+		setColor(colorWhite);
+		hqFillTriangle(x1, y1, x2, y2, x3, y3);
+	}
+	hqEnd();
+}
+
 void hlsToRGB(float hue, float lum, float sat, float & r, float & g, float & b)
 {
 	float m2 = (lum <= .5f) ? (lum + (lum * sat)) : (lum + sat - lum * sat);
