@@ -9,7 +9,7 @@ struct UiElem;
 struct UiMenu;
 
 // ui design
-static const int kMenuWidth = 300;
+static const int kMenuWidth = 100;
 static const int kFontSize = 12;
 static const int kTextBoxHeight = 20;
 static const int kTextBoxTextOffset = 150;
@@ -23,18 +23,16 @@ static const Color kBackgroundFocusColor(0.f, 0.f, 1.f, .5f);
 static const Color kBackgroundColor(0.f, 0.f, 0.f, .7f);
 
 // ui draw state
-extern bool g_doActions;
-extern bool g_doDraw;
-extern int g_drawX;
-extern int g_drawY;
+bool g_doActions;
+bool g_doDraw;
+int g_drawX;
+int g_drawY;
 
 //
 
-UiElem * g_activeElem = nullptr;
+UiState * g_uiState = nullptr;
 
-ParticleColor * g_activeColor = nullptr;
-
-extern ColorWheel g_colorWheel;
+static ColorWheel g_colorWheel;
 
 static GLuint checkersTexture = 0;
 
@@ -313,13 +311,23 @@ void UiElem::tick(const int x1, const int y1, const int x2, const int y2)
 	hasFocus = mouse.x >= x1 && mouse.x <= x2 && mouse.y >= y1 && mouse.y <= y2;
 	if (hasFocus && mouse.wentDown(BUTTON_LEFT))
 	{
-		g_activeElem = this;
+		g_uiState->g_activeElem = this;
 		clicked = true;
 	}
-	isActive = (g_activeElem == this);
+	isActive = (g_uiState->g_activeElem == this);
 }
 
 //
+
+void beginUi(UiState & state)
+{
+	g_uiState = &state;
+}
+
+void endUi()
+{
+	g_uiState = nullptr;
+}
 
 static const int kMaxUiElemStoreDepth = 4;
 static std::map<std::string, UiMenu> g_menus;
@@ -346,8 +354,10 @@ void pushMenu(const char * name, const int width)
 	
 	g_menuStack[g_menuStackSize] = childName;
 	
+	const int previousSx = g_menu == nullptr ? kMenuWidth : g_menu->sx;
+	
 	g_menu = &g_menus[g_menuStack[g_menuStackSize]];
-	g_menu->sx = width ? width : kMenuWidth;
+	g_menu->sx = width ? width : previousSx;
 }
 
 void popMenu()
@@ -377,8 +387,8 @@ bool doButton(const char * name, const float xOffset, const float xScale, const 
 	
 	const int kPadding = 5;
 
-	const int x1 = g_drawX + kMenuWidth * xOffset;
-	const int x2 = g_drawX + kMenuWidth * xOffset + kMenuWidth * xScale;
+	const int x1 = g_drawX + g_menu->sx * xOffset;
+	const int x2 = g_drawX + g_menu->sx * xOffset + g_menu->sx * xScale;
 	const int y1 = g_drawY;
 	const int y2 = g_drawY + kCheckBoxHeight;
 
@@ -546,8 +556,8 @@ static void doTextBoxImpl(T & value, const char * name, const float xOffset, con
 	
 	const int kPadding = 5;
 
-	const int x1 = g_drawX + kMenuWidth * xOffset;
-	const int x2 = g_drawX + kMenuWidth * xOffset + kMenuWidth * xScale;
+	const int x1 = g_drawX + g_menu->sx * xOffset;
+	const int x2 = g_drawX + g_menu->sx * xOffset + g_menu->sx * xScale;
 	const int y1 = g_drawY;
 	const int y2 = g_drawY + kTextBoxHeight;
 
@@ -674,7 +684,7 @@ bool doCheckBox(bool & value, const char * name, const bool isCollapsable)
 	const int kCheckButtonSize = kCheckBoxHeight - kPadding * 2;
 
 	const int x1 = g_drawX;
-	const int x2 = g_drawX + kMenuWidth;
+	const int x2 = g_drawX + g_menu->sx;
 	const int y1 = g_drawY;
 	const int y2 = g_drawY + kCheckBoxHeight;
 
@@ -744,7 +754,7 @@ void doEnumImpl(int & value, const char * name, const std::vector<EnumValue> & e
 	const int kPadding = 5;
 
 	const int x1 = g_drawX;
-	const int x2 = g_drawX + kMenuWidth;
+	const int x2 = g_drawX + g_menu->sx;
 	const int y1 = g_drawY;
 	const int y2 = g_drawY + kEnumHeight;
 
@@ -807,7 +817,7 @@ void doParticleCurve(ParticleCurve & curve, const char * name)
 	const int kCheckButtonSize = kCheckBoxHeight - kPadding * 2;
 
 	const int x1 = g_drawX;
-	const int x2 = g_drawX + kMenuWidth;
+	const int x2 = g_drawX + g_menu->sx;
 	const int y1 = g_drawY;
 	const int y2 = g_drawY + kCurveHeight;
 
@@ -843,7 +853,7 @@ void doParticleColor(ParticleColor & color, const char * name)
 	const int kCheckButtonSize = kCheckBoxHeight - kPadding * 2;
 
 	const int x1 = g_drawX;
-	const int x2 = g_drawX + kMenuWidth;
+	const int x2 = g_drawX + g_menu->sx;
 	const int y1 = g_drawY;
 	const int y2 = g_drawY + kColorHeight;
 
@@ -862,10 +872,14 @@ void doParticleColor(ParticleColor & color, const char * name)
 
 		if (elem.isActive && elem.hasFocus && mouse.wentDown(BUTTON_LEFT))
 		{
-			g_activeColor = &color;
+			g_uiState->g_activeColor = &color;
 
 			if (!wasActive)
-				g_colorWheel.fromColor(g_activeColor->rgba[0], g_activeColor->rgba[1], g_activeColor->rgba[2], g_activeColor->rgba[3]);
+				g_colorWheel.fromColor(
+					g_uiState->g_activeColor->rgba[0],
+					g_uiState->g_activeColor->rgba[1],
+					g_uiState->g_activeColor->rgba[2],
+					g_uiState->g_activeColor->rgba[3]);
 		}
 	}
 
@@ -936,10 +950,10 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name)
 	
 	const int kPadding = 5;
 	const int kCheckButtonSize = kCheckBoxHeight - kPadding * 2;
-	const float kMaxSelectionDeviation = 5 / float(kMenuWidth);
+	const float kMaxSelectionDeviation = 5 / float(g_menu->sx);
 
 	const int x1 = g_drawX;
-	const int x2 = g_drawX + kMenuWidth;
+	const int x2 = g_drawX + g_menu->sx;
 	const int y1 = g_drawY;
 	const int y2 = g_drawY + kColorCurveHeight;
 
@@ -1044,7 +1058,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name)
 
 		if (elem.isActive)
 		{
-			g_activeColor = selectedKey != nullptr ? &selectedKey->color : 0;
+			g_uiState->g_activeColor = selectedKey != nullptr ? &selectedKey->color : 0;
 		}
 	}
 
@@ -1094,7 +1108,7 @@ void doColorWheel(ParticleColor & color, const char * name, const float dt)
 {
 	UiElem & elem = g_menu->getElem(name);
 	
-	const float wheelX = g_drawX + (kMenuWidth - g_colorWheel.getSx()) / 2;
+	const float wheelX = g_drawX + (g_menu->sx - g_colorWheel.getSx()) / 2;
 	const float wheelY = g_drawY;
 
 	if (g_doActions)
@@ -1103,10 +1117,10 @@ void doColorWheel(ParticleColor & color, const char * name, const float dt)
 		if (elem.isActive)
 			g_colorWheel.tick(mouse.x - wheelX, mouse.y - wheelY, mouse.wentDown(BUTTON_LEFT), mouse.isDown(BUTTON_LEFT), dt); // fixme : mouseDown and dt
 		g_colorWheel.toColor(
-			g_activeColor->rgba[0],
-			g_activeColor->rgba[1],
-			g_activeColor->rgba[2],
-			g_activeColor->rgba[3]);
+			g_uiState->g_activeColor->rgba[0],
+			g_uiState->g_activeColor->rgba[1],
+			g_uiState->g_activeColor->rgba[2],
+			g_uiState->g_activeColor->rgba[3]);
 	}
 
 	if (g_doDraw)

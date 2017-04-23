@@ -1,10 +1,8 @@
-#include "colorwheel.h"
 #include "framework.h"
 #include "nfd.h"
 #include "particle.h"
 #include "particle_editor.h"
 #include "particle_framework.h"
-#include "textfield.h"
 #include "tinyxml2.h"
 #include "ui.h"
 
@@ -27,7 +25,7 @@
 + add support for multiple particle emitters
 - add support for subemitters
 + fix subemitter UI reusing elems etc
-- fix elems not refreshing when not drawn at refresh frame. use version number on elems?
++ fix elems not refreshing when not drawn at refresh frame. use version number on elems?
 
 + add copy & paste buttons pi, pei
 
@@ -40,10 +38,6 @@ static const int kMenuWidth = 300;
 static const int kMenuSpacing = 15;
 
 // ui draw state
-bool g_doActions = false;
-bool g_doDraw = false;
-int g_drawX = 0;
-int g_drawY = 0;
 static bool g_forceUiRefreshRequested = false;
 static bool g_forceUiRefresh = false;
 
@@ -129,14 +123,10 @@ struct ScopedValueAdjust
 
 //
 
-ColorWheel g_colorWheel;
-
-//
-
 static void refreshUi()
 {
-	g_activeElem = 0;
-	g_activeColor = 0;
+	g_uiState->g_activeElem = 0;
+	g_uiState->g_activeColor = 0;
 	g_forceUiRefreshRequested = true;
 }
 
@@ -494,9 +484,9 @@ static void doMenu_Pei(const float dt)
 
 static void doMenu_ColorWheel(const float dt)
 {
-	if (g_activeColor)
+	if (g_uiState->g_activeColor)
 	{
-		doColorWheel(*g_activeColor, "colorwheel", dt);
+		doColorWheel(*g_uiState->g_activeColor, "colorwheel", dt);
 	}
 }
 
@@ -511,9 +501,13 @@ struct Menu
 };
 
 static Menu s_menu;
+static UiState s_uiState;
 
 static void doMenu(Menu & menu, const bool doActions, const bool doDraw, const int sx, const int sy, const float dt)
 {
+	beginUi(s_uiState);
+	pushMenu("", kMenuWidth);
+	
 	g_doActions = doActions;
 	g_doDraw = doDraw;
 
@@ -522,7 +516,7 @@ static void doMenu(Menu & menu, const bool doActions, const bool doDraw, const i
 		g_forceUiRefreshRequested = false;
 		g_forceUiRefresh = true;
 		
-		g_activeElem = nullptr;
+		g_uiState->g_activeElem = nullptr;
 		
 		resetMenuState();
 	}
@@ -565,6 +559,9 @@ static void doMenu(Menu & menu, const bool doActions, const bool doDraw, const i
 
 	if (g_doActions)
 		g_forceUiRefresh = false;
+	
+	popMenu();
+	endUi();
 }
 
 void particleEditorTick(const bool menuActive, const float sx, const float sy, const float dt)

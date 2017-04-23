@@ -6,8 +6,24 @@ struct ParticleCurve;
 struct UiElem;
 struct UiMenu;
 
-extern ParticleColor * g_activeColor;
-extern UiElem * g_activeElem;
+struct UiState
+{
+	UiElem * g_activeElem;
+	ParticleColor * g_activeColor;
+	
+	UiState()
+		: g_activeElem(nullptr)
+		, g_activeColor(nullptr)
+	{
+	}
+};
+
+extern UiState * g_uiState;
+
+extern bool g_doActions;
+extern bool g_doDraw;
+extern int g_drawX;
+extern int g_drawY;
 
 void initUi();
 void shutUi();
@@ -19,6 +35,9 @@ extern void hlsToRGB(float hue, float lum, float sat, float & r, float & g, floa
 extern void rgbToHSL(float r, float g, float b, float & hue, float & lum, float & sat);
 
 //
+
+void beginUi(UiState & state);
+void endUi();
 
 void pushMenu(const char * name, const int width = 0);
 void popMenu();
