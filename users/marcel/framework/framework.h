@@ -1273,6 +1273,7 @@ enum HQ_TYPE
 };
 
 void hqBegin(HQ_TYPE type, bool useScreenSize = false);
+void hqBeginCustom(HQ_TYPE type, Shader & shader, bool useScreenSize = false);
 void hqEnd();
 
 void hqLine(float x1, float y1, float strokeSize1, float x2, float y2, float strokeSize2);

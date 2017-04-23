@@ -6351,6 +6351,60 @@ void hqBegin(HQ_TYPE type, bool useScreenSize)
 	}
 }
 
+void hqBeginCustom(HQ_TYPE type, Shader & shader, bool useScreenSize)
+{
+	switch (type)
+	{
+	case HQ_LINES:
+		gxBegin(GL_QUADS);
+		break;
+
+	case HQ_FILLED_TRIANGLES:
+		gxBegin(GL_TRIANGLES);
+		break;
+
+	case HQ_FILLED_CIRCLES:
+		gxBegin(GL_QUADS);
+		break;
+
+	case HQ_FILLED_RECTS:
+		gxBegin(GL_QUADS);
+		break;
+
+	case HQ_STROKED_TRIANGLES:
+		gxBegin(GL_TRIANGLES);
+		break;
+
+	case HQ_STROKED_CIRCLES:
+		gxBegin(GL_QUADS);
+		break;
+
+	case HQ_STROKED_RECTS:
+		gxBegin(GL_QUADS);
+		break;
+
+	default:
+		fassert(false);
+		break;
+	}
+	
+	setShader(shader);
+
+	if (globals.shader != nullptr && globals.shader->getType() == SHADER_VSPS)
+	{
+		Shader * shader = static_cast<Shader*>(globals.shader);
+
+		shader->setImmediate("useScreenSize", useScreenSize ? 1.f : 0.f);
+
+		//shader->setImmediate("disableOptimizations", cos(framework.time * 6.28f) < 0.f ? 0.f : 1.f);
+		//shader->setImmediate("disableAA", cos(framework.time) < 0.f ? 0.f : 1.f);
+
+		shader->setImmediate("disableOptimizations", 0.f);
+		shader->setImmediate("disableAA", 0.f);
+		shader->setImmediate("_debugHq", 0.f);
+	}
+}
+
 void hqEnd()
 {
 	gxEnd();
