@@ -41,7 +41,6 @@ struct ParticleEditorState
 {
 // ui draw state
 bool g_forceUiRefreshRequested = false;
-bool g_forceUiRefresh = false;
 
 // library
 static const int kMaxParticleInfos = 6;
@@ -133,11 +132,8 @@ struct ScopedValueAdjust
 
 void refreshUi()
 {
-	g_uiState->g_activeElem = 0;
-	g_uiState->g_activeColor = 0;
 	g_forceUiRefreshRequested = true;
 }
-
 
 //
 
@@ -522,11 +518,8 @@ void doMenu(Menu & menu, const bool doActions, const bool doDraw, const int sx, 
 	if (g_doActions && g_forceUiRefreshRequested)
 	{
 		g_forceUiRefreshRequested = false;
-		g_forceUiRefresh = true;
 		
-		g_uiState->g_activeElem = nullptr;
-		
-		resetMenuState();
+		g_uiState->reset();
 	}
 
 	// left side menu
@@ -564,9 +557,6 @@ void doMenu(Menu & menu, const bool doActions, const bool doDraw, const int sx, 
 	doMenu_ColorWheel(dt);
 	g_drawY += kMenuSpacing;
 	popMenu();
-
-	if (g_doActions)
-		g_forceUiRefresh = false;
 	
 	popMenu();
 }

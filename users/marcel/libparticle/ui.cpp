@@ -36,18 +36,44 @@ static GLuint checkersTexture = 0;
 
 //
 
+struct UiMenuStates
+{
+	std::map<std::string, UiMenu> g_menus;
+};
+
+static const int kMaxUiElemStoreDepth = 4;
+
+static std::string g_menuStack[kMaxUiElemStoreDepth];
+static int g_menuStackSize = -1;
+static UiMenu * g_menu = nullptr;
+
+//
+
 UiState::UiState()
 	: g_activeElem(nullptr)
 	, g_activeColor(nullptr)
 	, g_colorWheel(nullptr)
+	, g_menuStates(nullptr)
 {
 	g_colorWheel = new ColorWheel();
+	g_menuStates = new UiMenuStates();
 }
 	
 UiState::~UiState()
 {
 	delete g_colorWheel;
 	g_colorWheel = nullptr;
+	
+	delete g_menuStates;
+	g_menuStates = nullptr;
+}
+
+void UiState::reset()
+{
+	g_activeElem = nullptr;
+	g_activeColor = nullptr;
+	
+	g_menuStates->g_menus.clear();
 }
 
 //
@@ -352,16 +378,13 @@ void UiElem::tick(const int x1, const int y1, const int x2, const int y2)
 
 void makeActive(UiState * state)
 {
+	fassert(g_menu == nullptr);
+	fassert(g_menuStackSize == 0);
+	
 	g_uiState = state;
 }
 
 //
-
-static const int kMaxUiElemStoreDepth = 4;
-static std::map<std::string, UiMenu> g_menus;
-static std::string g_menuStack[kMaxUiElemStoreDepth];
-static int g_menuStackSize = -1;
-static UiMenu * g_menu = nullptr;
 
 void pushMenu(const char * name, const int width)
 {
@@ -384,7 +407,7 @@ void pushMenu(const char * name, const int width)
 	
 	const int previousSx = g_menu == nullptr ? kMenuWidth : g_menu->sx;
 	
-	g_menu = &g_menus[g_menuStack[g_menuStackSize]];
+	g_menu = &g_uiState->g_menuStates->g_menus[g_menuStack[g_menuStackSize]];
 	g_menu->sx = width ? width : previousSx;
 }
 
@@ -398,13 +421,8 @@ void popMenu()
 	}
 	else
 	{
-		g_menu = &g_menus[g_menuStack[g_menuStackSize]];
+		g_menu = &g_uiState->g_menuStates->g_menus[g_menuStack[g_menuStackSize]];
 	}
-}
-
-void resetMenuState()
-{
-	g_menus.clear();
 }
 
 //

@@ -6,15 +6,19 @@ struct ParticleColorCurve;
 struct ParticleCurve;
 struct UiElem;
 struct UiMenu;
+struct UiMenuStates;
 
 struct UiState
 {
 	UiElem * g_activeElem;
 	ParticleColor * g_activeColor;
 	ColorWheel * g_colorWheel;
+	UiMenuStates * g_menuStates;
 	
 	UiState();
 	~UiState();
+	
+	void reset();
 };
 
 extern UiState * g_uiState;
@@ -41,7 +45,6 @@ void makeActive(UiState * state);
 
 void pushMenu(const char * name, const int width = 0);
 void popMenu();
-void resetMenuState();
 
 //
 
