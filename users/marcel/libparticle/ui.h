@@ -1,5 +1,6 @@
 #pragma once
 
+class ColorWheel;
 struct ParticleColor;
 struct ParticleColorCurve;
 struct ParticleCurve;
@@ -10,12 +11,10 @@ struct UiState
 {
 	UiElem * g_activeElem;
 	ParticleColor * g_activeColor;
+	ColorWheel * g_colorWheel;
 	
-	UiState()
-		: g_activeElem(nullptr)
-		, g_activeColor(nullptr)
-	{
-	}
+	UiState();
+	~UiState();
 };
 
 extern UiState * g_uiState;
@@ -36,8 +35,7 @@ extern void rgbToHSL(float r, float g, float b, float & hue, float & lum, float 
 
 //
 
-void beginUi(UiState & state);
-void endUi();
+void makeActive(UiState * state);
 
 void pushMenu(const char * name, const int width = 0);
 void popMenu();

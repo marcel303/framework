@@ -505,7 +505,7 @@ static UiState s_uiState;
 
 static void doMenu(Menu & menu, const bool doActions, const bool doDraw, const int sx, const int sy, const float dt)
 {
-	beginUi(s_uiState);
+	makeActive(&s_uiState);
 	pushMenu("", kMenuWidth);
 	
 	g_doActions = doActions;
@@ -561,7 +561,6 @@ static void doMenu(Menu & menu, const bool doActions, const bool doDraw, const i
 		g_forceUiRefresh = false;
 	
 	popMenu();
-	endUi();
 }
 
 void particleEditorTick(const bool menuActive, const float sx, const float sy, const float dt)

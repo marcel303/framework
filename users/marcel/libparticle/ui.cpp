@@ -32,9 +32,23 @@ int g_drawY;
 
 UiState * g_uiState = nullptr;
 
-static ColorWheel g_colorWheel;
-
 static GLuint checkersTexture = 0;
+
+//
+
+UiState::UiState()
+	: g_activeElem(nullptr)
+	, g_activeColor(nullptr)
+	, g_colorWheel(nullptr)
+{
+	g_colorWheel = new ColorWheel();
+}
+	
+UiState::~UiState()
+{
+	delete g_colorWheel;
+	g_colorWheel = nullptr;
+}
 
 //
 
@@ -319,15 +333,12 @@ void UiElem::tick(const int x1, const int y1, const int x2, const int y2)
 
 //
 
-void beginUi(UiState & state)
+void makeActive(UiState * state)
 {
-	g_uiState = &state;
+	g_uiState = state;
 }
 
-void endUi()
-{
-	g_uiState = nullptr;
-}
+//
 
 static const int kMaxUiElemStoreDepth = 4;
 static std::map<std::string, UiMenu> g_menus;
@@ -875,11 +886,13 @@ void doParticleColor(ParticleColor & color, const char * name)
 			g_uiState->g_activeColor = &color;
 
 			if (!wasActive)
-				g_colorWheel.fromColor(
+			{
+				g_uiState->g_colorWheel->fromColor(
 					g_uiState->g_activeColor->rgba[0],
 					g_uiState->g_activeColor->rgba[1],
 					g_uiState->g_activeColor->rgba[2],
 					g_uiState->g_activeColor->rgba[3]);
+			}
 		}
 	}
 
@@ -948,8 +961,6 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name)
 	bool & isDragging = elem.getBool(kVar_IsDragging, false);
 	float & dragOffset = elem.getFloat(kVar_DragOffset, 0.f);
 	
-	const int kPadding = 5;
-	const int kCheckButtonSize = kCheckBoxHeight - kPadding * 2;
 	const float kMaxSelectionDeviation = 5 / float(g_menu->sx);
 
 	const int x1 = g_drawX;
@@ -981,7 +992,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name)
 				
 				if (key)
 				{
-					g_colorWheel.fromColor(
+					g_uiState->g_colorWheel->fromColor(
 						key->color.rgba[0],
 						key->color.rgba[1],
 						key->color.rgba[2],
@@ -999,7 +1010,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name)
 						key->color = color;
 						key->t = t;
 
-						g_colorWheel.fromColor(
+						g_uiState->g_colorWheel->fromColor(
 							key->color.rgba[0],
 							key->color.rgba[1],
 							key->color.rgba[2],
@@ -1108,15 +1119,21 @@ void doColorWheel(ParticleColor & color, const char * name, const float dt)
 {
 	UiElem & elem = g_menu->getElem(name);
 	
-	const float wheelX = g_drawX + (g_menu->sx - g_colorWheel.getSx()) / 2;
+	const float wheelX = g_drawX + (g_menu->sx - g_uiState->g_colorWheel->getSx()) / 2;
 	const float wheelY = g_drawY;
 
 	if (g_doActions)
 	{
-		elem.tick(wheelX, wheelY, wheelX + g_colorWheel.getSx(), wheelY + g_colorWheel.getSy());
+		elem.tick(wheelX, wheelY, wheelX + g_uiState->g_colorWheel->getSx(), wheelY + g_uiState->g_colorWheel->getSy());
 		if (elem.isActive)
-			g_colorWheel.tick(mouse.x - wheelX, mouse.y - wheelY, mouse.wentDown(BUTTON_LEFT), mouse.isDown(BUTTON_LEFT), dt); // fixme : mouseDown and dt
-		g_colorWheel.toColor(
+		{
+			g_uiState->g_colorWheel->tick(
+				mouse.x - wheelX,
+				mouse.y - wheelY,
+				mouse.wentDown(BUTTON_LEFT),
+				mouse.isDown(BUTTON_LEFT), dt); // fixme : mouseDown and dt
+		}
+		g_uiState->g_colorWheel->toColor(
 			g_uiState->g_activeColor->rgba[0],
 			g_uiState->g_activeColor->rgba[1],
 			g_uiState->g_activeColor->rgba[2],
@@ -1128,10 +1145,10 @@ void doColorWheel(ParticleColor & color, const char * name, const float dt)
 		gxPushMatrix();
 		{
 			gxTranslatef(wheelX, wheelY, 0.f);
-			g_colorWheel.draw();
+			g_uiState->g_colorWheel->draw();
 		}
 		gxPopMatrix();
 	}
 
-	g_drawY += g_colorWheel.getSy();
+	g_drawY += g_uiState->g_colorWheel->getSy();
 }
