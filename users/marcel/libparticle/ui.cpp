@@ -965,7 +965,9 @@ static ParticleColorCurve::Key * findNearestKey(ParticleColorCurve & curve, cons
 
 void doParticleColorCurve(ParticleColorCurve & curve, const char * name)
 {
-	UiElem & elem = g_menu->getElem(name);
+	pushMenu(name);
+	
+	UiElem & elem = g_menu->getElem("curve");
 	
 	enum Vars
 	{
@@ -1020,7 +1022,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name)
 					// insert a new key
 
 					ParticleColor color;
-					curve.sample(t, false, color);
+					curve.sample(t, curve.useLinearColorSpace, color);
 
 					if (curve.allocKey(key))
 					{
@@ -1106,7 +1108,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name)
 		{
 			const float t = (x - cx1 + .5f) / float(cx2 - cx1 - .5f);
 			ParticleColor c;
-			curve.sample(t, false, c);
+			curve.sample(t, curve.useLinearColorSpace, c);
 			setColorf(c.rgba[0], c.rgba[1], c.rgba[2], c.rgba[3]);
 			drawRect(x, cy1, x + 1.f, cy2);
 		}
@@ -1130,6 +1132,10 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name)
 		//setColor(colorWhite);
 		//drawText(x1 + kPadding + kCheckButtonSize + kPadding, y1, kFontSize, +1.f, +1.f, "%s", name);
 	}
+	
+	doCheckBox(curve.useLinearColorSpace, "Linear Color Space", false);
+	
+	popMenu();
 }
 
 void doColorWheel(ParticleColor & color, const char * name, const float dt)

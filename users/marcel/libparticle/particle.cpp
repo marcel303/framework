@@ -255,6 +255,7 @@ bool ParticleColorCurve::Key::operator!=(const Key & other) const
 
 ParticleColorCurve::ParticleColorCurve()
 	: numKeys(0)
+	, useLinearColorSpace(true)
 {
 }
 
@@ -408,6 +409,8 @@ void ParticleColorCurve::sample(const float t, const bool linearColorSpace, Part
 
 void ParticleColorCurve::save(XMLPrinter * printer)
 {
+	printer->PushAttribute("useLinearColorSpace", useLinearColorSpace);
+	
 	for (int i = 0; i < numKeys; ++i)
 	{
 		printer->OpenElement("key");
@@ -422,7 +425,11 @@ void ParticleColorCurve::save(XMLPrinter * printer)
 void ParticleColorCurve::load(XMLElement * elem)
 {
 	clearKeys();
-
+	
+	//
+	
+	useLinearColorSpace = boolAttrib(elem, "useLinearColorSpace", useLinearColorSpace);
+	
 	for (auto keyElem = elem->FirstChildElement("key"); keyElem; keyElem = keyElem->NextSiblingElement())
 	{
 		Key * key;
@@ -1249,7 +1256,7 @@ void computeParticleColor(const ParticleEmitterInfo & pei, const ParticleInfo & 
 	if (pi.colorOverLifetime)
 	{
 		ParticleColor temp(true);
-		pi.colorOverLifetimeCurve.sample(particleLife, false, temp);
+		pi.colorOverLifetimeCurve.sample(particleLife, pi.colorOverLifetimeCurve.useLinearColorSpace, temp);
 		result.modulateWith(temp);
 	}
 
@@ -1257,7 +1264,7 @@ void computeParticleColor(const ParticleEmitterInfo & pei, const ParticleInfo & 
 	{
 		const float t = (particleSpeed - pi.colorBySpeedRangeMin) / (pi.colorBySpeedRangeMax - pi.colorBySpeedRangeMin);
 		ParticleColor temp(true);
-		pi.colorBySpeedCurve.sample(t, false, temp);
+		pi.colorBySpeedCurve.sample(t, pi.colorBySpeedCurve.useLinearColorSpace, temp);
 		result.modulateWith(temp);
 	}
 }

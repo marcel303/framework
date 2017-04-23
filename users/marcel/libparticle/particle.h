@@ -80,6 +80,8 @@ struct ParticleColorCurve
 
 	Key keys[kMaxKeys];
 	int numKeys;
+	
+	bool useLinearColorSpace;
 
 	ParticleColorCurve();
 
