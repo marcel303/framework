@@ -97,7 +97,7 @@ void ColorWheel::draw()
 	gxPushMatrix();
 	gxTranslatef(size, size, 0.f);
 
-	const int numSteps = 100;
+	const int numSteps = 200;
 	const float r1 = size;
 	const float r2 = size - wheelThickness;
 
@@ -128,22 +128,19 @@ void ColorWheel::draw()
 
 	// selection circle on the color wheel
 	
-	hqBegin(HQ_STROKED_CIRCLES);
+	for (int i = 0; i < 3; ++i)
 	{
-		for (int i = 0; i < 3; ++i)
-		{
-			setColor(i == 0 ? colorWhite : colorBlack);
-			const float a = hue + i / 3.f * 2.f * float(M_PI);
-			const float x = cosf(a) * (size - wheelThickness / 2.f);
-			const float y = sinf(a) * (size - wheelThickness / 2.f);
-			hqStrokeCircle(x, y, 5.5f, 4.f);
-		}
+		const float c = i == 0 ? 1.f : 0.5f;
+		const float a = hue + i / 3.f * 2.f * float(M_PI);
+		const float x = cosf(a) * (size - wheelThickness / 2.f);
+		const float y = sinf(a) * (size - wheelThickness / 2.f);
+		drawUiCircle(x, y, 5.5f, c, c, c, 1.f);
 	}
-	hqEnd();
 
 	// lightness triangle
 
 	{
+	#if 0
 		gxBegin(GL_TRIANGLES);
 		{
 			float xy[6];
@@ -161,9 +158,26 @@ void ColorWheel::draw()
 			gxVertex2f(xy[4], xy[5]);
 		}
 		gxEnd();
+	#endif
+	
+	#if 1
+		{
+			float xy[6];
+			getTriangleCoords(xy);
+			
+			float r, g, b, a;
+			toColor(hue, 0.f, 0.f, r, g, b, a);
+			
+			const Color c1(r, g, b, 1.f);
+			const Color c2(0.f, 0.f, 0.f, 1.f);
+			const Color c3(1.f, 1.f, 1.f, 1.f);
+			
+			setColor(colorWhite);
+			drawUiShadedTriangle(xy[0], xy[1], xy[2], xy[3], xy[4], xy[5], c1, c2, c3);
+		}
+	#endif
 	}
 
-	hqBegin(HQ_STROKED_CIRCLES);
 	{
 		float xy[6];
 		getTriangleCoords(xy);
@@ -171,15 +185,8 @@ void ColorWheel::draw()
 		setColor(colorWhite);
 		const float x = xy[0] + (xy[2] - xy[0]) * baryBlack + (xy[4] - xy[0]) * baryWhite;
 		const float y = xy[1] + (xy[3] - xy[1]) * baryBlack + (xy[5] - xy[1]) * baryWhite;
-		hqStrokeCircle(x, y, 7.5, 2.f);
+		drawUiCircle(x, y, 5.5f, 1.f, 1.f, 1.f, 1.f);
 	}
-	hqEnd();
-
-#if 1 // fixme : work around for weird (driver?) issue where next draw call retains the color of the previous one
-	gxBegin(GL_TRIANGLES);
-	gxColor4f(0.f, 0.f, 0.f, 0.f);
-	gxEnd();
-#endif
 
 	{
 		setColor(colorWhite);
@@ -192,19 +199,15 @@ void ColorWheel::draw()
 		drawRectLine(barX1, barY1, barX2, barY2);
 	}
 
-#if 1 // fixme : work around for weird (driver?) issue where next draw call retains the color of the previous one
-	gxBegin(GL_TRIANGLES);
-	gxColor4f(0.f, 0.f, 0.f, 0.f);
-	gxEnd();
-#endif
-
 #if 0
+	if (g_doDraw)
 	{
-		ParticleColor c;
-		toColor(c);
-		setColorf(c.rgba[0], c.rgba[1], c.rgba[2], c.rgba[3]);
+		float r, g, b, a;
+		toColor(r, g, b, a);
+		setColorf(r, g, b, a);
 		drawRect(0.f, 0.f, 100.f, 20.f);
-		drawText(0.f, 0.f, 18, +1.f, +1.f, "%f, %f, %f", c.rgba[0], c.rgba[1], c.rgba[2]);
+		setColorf(1.f, 1.f, 1.f, 1.f);
+		drawText(0.f, 0.f, 12, +1.f, +1.f, "%f, %f, %f", r, g, b);
 	}
 #endif
 
@@ -275,9 +278,12 @@ bool ColorWheel::intersectTriangle(const float x, const float y, float & baryWhi
 	}
 
 #if 0
-	setColor(colorWhite);
-	drawText(xy[2], xy[3], 16, +1.f, +1.f, "bb: %f", baryWhite);
-	drawText(xy[4], xy[5], 16, +1.f, +1.f, "bw: %f", baryBlack);
+	if (g_doDraw)
+	{
+		setColor(colorWhite);
+		drawText(xy[2], xy[3], 16, +1.f, +1.f, "bb: %f", baryWhite);
+		drawText(xy[4], xy[5], 16, +1.f, +1.f, "bw: %f", baryBlack);
+	}
 #endif
 
 	return inside;
