@@ -10,10 +10,10 @@ struct UiMenuStates;
 
 struct UiState
 {
-	UiElem * g_activeElem;
-	ParticleColor * g_activeColor;
-	ColorWheel * g_colorWheel;
-	UiMenuStates * g_menuStates;
+	UiElem * activeElem;
+	ParticleColor * activeColor;
+	ColorWheel * colorWheel;
+	UiMenuStates * menuStates;
 	
 	UiState();
 	~UiState();

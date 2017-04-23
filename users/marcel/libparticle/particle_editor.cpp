@@ -488,9 +488,9 @@ void doMenu_Pei(const float dt)
 
 void doMenu_ColorWheel(const float dt)
 {
-	if (g_uiState->g_activeColor)
+	if (g_uiState->activeColor)
 	{
-		doColorWheel(*g_uiState->g_activeColor, "colorwheel", dt);
+		doColorWheel(*g_uiState->activeColor, "colorwheel", dt);
 	}
 }
 

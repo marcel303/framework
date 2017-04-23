@@ -38,7 +38,7 @@ static GLuint checkersTexture = 0;
 
 struct UiMenuStates
 {
-	std::map<std::string, UiMenu> g_menus;
+	std::map<std::string, UiMenu> menus;
 };
 
 static const int kMaxUiElemStoreDepth = 4;
@@ -50,30 +50,30 @@ static UiMenu * g_menu = nullptr;
 //
 
 UiState::UiState()
-	: g_activeElem(nullptr)
-	, g_activeColor(nullptr)
-	, g_colorWheel(nullptr)
-	, g_menuStates(nullptr)
+	: activeElem(nullptr)
+	, activeColor(nullptr)
+	, colorWheel(nullptr)
+	, menuStates(nullptr)
 {
-	g_colorWheel = new ColorWheel();
-	g_menuStates = new UiMenuStates();
+	colorWheel = new ColorWheel();
+	menuStates = new UiMenuStates();
 }
 	
 UiState::~UiState()
 {
-	delete g_colorWheel;
-	g_colorWheel = nullptr;
+	delete colorWheel;
+	colorWheel = nullptr;
 	
-	delete g_menuStates;
-	g_menuStates = nullptr;
+	delete menuStates;
+	menuStates = nullptr;
 }
 
 void UiState::reset()
 {
-	g_activeElem = nullptr;
-	g_activeColor = nullptr;
+	activeElem = nullptr;
+	activeColor = nullptr;
 	
-	g_menuStates->g_menus.clear();
+	menuStates->menus.clear();
 }
 
 //
@@ -368,10 +368,10 @@ void UiElem::tick(const int x1, const int y1, const int x2, const int y2)
 	hasFocus = mouse.x >= x1 && mouse.x <= x2 && mouse.y >= y1 && mouse.y <= y2;
 	if (hasFocus && mouse.wentDown(BUTTON_LEFT))
 	{
-		g_uiState->g_activeElem = this;
+		g_uiState->activeElem = this;
 		clicked = true;
 	}
-	isActive = (g_uiState->g_activeElem == this);
+	isActive = (g_uiState->activeElem == this);
 }
 
 //
@@ -407,7 +407,7 @@ void pushMenu(const char * name, const int width)
 	
 	const int previousSx = g_menu == nullptr ? kMenuWidth : g_menu->sx;
 	
-	g_menu = &g_uiState->g_menuStates->g_menus[g_menuStack[g_menuStackSize]];
+	g_menu = &g_uiState->menuStates->menus[g_menuStack[g_menuStackSize]];
 	g_menu->sx = width ? width : previousSx;
 }
 
@@ -421,7 +421,7 @@ void popMenu()
 	}
 	else
 	{
-		g_menu = &g_uiState->g_menuStates->g_menus[g_menuStack[g_menuStackSize]];
+		g_menu = &g_uiState->menuStates->menus[g_menuStack[g_menuStackSize]];
 	}
 }
 
@@ -918,15 +918,15 @@ void doParticleColor(ParticleColor & color, const char * name)
 
 		if (elem.isActive && elem.hasFocus && mouse.wentDown(BUTTON_LEFT))
 		{
-			g_uiState->g_activeColor = &color;
+			g_uiState->activeColor = &color;
 
 			if (!wasActive)
 			{
-				g_uiState->g_colorWheel->fromColor(
-					g_uiState->g_activeColor->rgba[0],
-					g_uiState->g_activeColor->rgba[1],
-					g_uiState->g_activeColor->rgba[2],
-					g_uiState->g_activeColor->rgba[3]);
+				g_uiState->colorWheel->fromColor(
+					g_uiState->activeColor->rgba[0],
+					g_uiState->activeColor->rgba[1],
+					g_uiState->activeColor->rgba[2],
+					g_uiState->activeColor->rgba[3]);
 			}
 		}
 	}
@@ -1029,7 +1029,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name)
 				
 				if (key)
 				{
-					g_uiState->g_colorWheel->fromColor(
+					g_uiState->colorWheel->fromColor(
 						key->color.rgba[0],
 						key->color.rgba[1],
 						key->color.rgba[2],
@@ -1047,7 +1047,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name)
 						key->color = color;
 						key->t = t;
 
-						g_uiState->g_colorWheel->fromColor(
+						g_uiState->colorWheel->fromColor(
 							key->color.rgba[0],
 							key->color.rgba[1],
 							key->color.rgba[2],
@@ -1106,7 +1106,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name)
 
 		if (elem.isActive)
 		{
-			g_uiState->g_activeColor = selectedKey != nullptr ? &selectedKey->color : 0;
+			g_uiState->activeColor = selectedKey != nullptr ? &selectedKey->color : 0;
 		}
 	}
 
@@ -1160,25 +1160,25 @@ void doColorWheel(ParticleColor & color, const char * name, const float dt)
 {
 	UiElem & elem = g_menu->getElem(name);
 	
-	const float wheelX = g_drawX + (g_menu->sx - g_uiState->g_colorWheel->getSx()) / 2;
+	const float wheelX = g_drawX + (g_menu->sx - g_uiState->colorWheel->getSx()) / 2;
 	const float wheelY = g_drawY;
 
 	if (g_doActions)
 	{
-		elem.tick(wheelX, wheelY, wheelX + g_uiState->g_colorWheel->getSx(), wheelY + g_uiState->g_colorWheel->getSy());
+		elem.tick(wheelX, wheelY, wheelX + g_uiState->colorWheel->getSx(), wheelY + g_uiState->colorWheel->getSy());
 		if (elem.isActive)
 		{
-			g_uiState->g_colorWheel->tick(
+			g_uiState->colorWheel->tick(
 				mouse.x - wheelX,
 				mouse.y - wheelY,
 				mouse.wentDown(BUTTON_LEFT),
 				mouse.isDown(BUTTON_LEFT), dt); // fixme : mouseDown and dt
 		}
-		g_uiState->g_colorWheel->toColor(
-			g_uiState->g_activeColor->rgba[0],
-			g_uiState->g_activeColor->rgba[1],
-			g_uiState->g_activeColor->rgba[2],
-			g_uiState->g_activeColor->rgba[3]);
+		g_uiState->colorWheel->toColor(
+			g_uiState->activeColor->rgba[0],
+			g_uiState->activeColor->rgba[1],
+			g_uiState->activeColor->rgba[2],
+			g_uiState->activeColor->rgba[3]);
 	}
 
 	if (g_doDraw)
@@ -1186,10 +1186,10 @@ void doColorWheel(ParticleColor & color, const char * name, const float dt)
 		gxPushMatrix();
 		{
 			gxTranslatef(wheelX, wheelY, 0.f);
-			g_uiState->g_colorWheel->draw();
+			g_uiState->colorWheel->draw();
 		}
 		gxPopMatrix();
 	}
 
-	g_drawY += g_uiState->g_colorWheel->getSy();
+	g_drawY += g_uiState->colorWheel->getSy();
 }
