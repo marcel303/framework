@@ -32,6 +32,8 @@ void drawUiCircle(const float x, const float y, const float radius, const float 
 
 extern void hlsToRGB(float hue, float lum, float sat, float & r, float & g, float & b);
 extern void rgbToHSL(float r, float g, float b, float & hue, float & lum, float & sat);
+extern void srgbToLinear(float r, float g, float b, float & out_r, float & out_g, float & out_b);
+extern void linearToSrgb(float r, float g, float b, float & out_r, float & out_g, float & out_b);
 
 //
 

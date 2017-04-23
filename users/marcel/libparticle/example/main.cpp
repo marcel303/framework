@@ -8,13 +8,8 @@
 
 using namespace tinyxml2;
 
-int main(int argc, char * argv[])
+static void testParticleLib()
 {
-#ifdef WIN32
-	_CrtSetDebugFillThreshold(0);
-#endif
-
-#if 0
 	ParticleColor c1;
 	ParticleColor c2;
 	ParticleColorCurve cc1;
@@ -209,8 +204,100 @@ int main(int argc, char * argv[])
 		tickParticleEmitter(pei2, pi2, pp, timeStep, gravityX, gravityY, pe);
 	}
 #endif
+
+	if (framework.init(0, nullptr, 1400, 900))
+	{
+		while (!framework.quitRequested)
+		{
+			framework.process();
+			
+			const float timeStep = std::min(framework.timeStep, 1.f / 15.f);
+			
+		#if 1
+			const float gravityX = 0.f;
+			const float gravityY = 100.f;
+			ParticleCallbacks cbs;
+			cbs.randomInt = [](void* userData, int min, int max) { return random(min, max); };
+			cbs.randomFloat = [](void* userData, float min, float max) { return random(min, max); };
+			for (Particle * p = pp.head; p; )
+				if (!tickParticle(cbs, pei2, pi2, timeStep, gravityX, gravityY, *p))
+					p = pp.freeParticle(p);
+				else
+					p = p->next;
+			tickParticleEmitter(cbs, pei2, pi2, pp, timeStep, gravityX, gravityY, pe);
+		#endif
+		
+			framework.beginDraw(0, 0, 0, 0);
+			{
+			#if 1
+				gxSetTexture(Sprite(pei2.materialName).getTexture());
+				for (Particle * p = pp.head; p; p = p->next)
+				{
+					const float particleLife = 1.f - p->life;
+					const float particleSpeed = std::sqrtf(p->speed[0] * p->speed[0] + p->speed[1] * p->speed[1]);
+
+					ParticleColor color;
+					computeParticleColor(pei2, pi2, particleLife, particleSpeed, color);
+					const float size = computeParticleSize(pei2, pi2, particleLife, particleSpeed);
+					gxPushMatrix();
+					const float offs[2] = { 320, 240 };
+					gxTranslatef(
+						offs[0] + p->position[0],
+						offs[1] + p->position[1],
+						0.f);
+					gxRotatef(p->rotation, 0.f, 0.f, 1.f);
+					setColorf(color.rgba[0], color.rgba[1], color.rgba[2], color.rgba[3]);
+					drawRect(
+						- size / 2.f,
+						- size / 2.f,
+						+ size / 2.f,
+						+ size / 2.f);
+					gxPopMatrix();
+				}
+				gxSetTexture(0);
+			#endif
+
+			#if 1
+				gxBegin(GL_QUADS);
+				{
+					const int sx = 5;
+					const int sy = 100;
+					for (int i = 0; i < 100; ++i)
+					{
+						ParticleColor c;
+						cc2.sample(i / 99.f, std::fmod(framework.time, 2.f) < 1.f, c);
+						gxColor4f(c.rgba[0], c.rgba[1], c.rgba[2], c.rgba[3]);
+						gxVertex2f((i + 0) * sx, 0);
+						gxVertex2f((i + 1) * sx, 0);
+						gxVertex2f((i + 1) * sx, sy);
+						gxVertex2f((i + 0) * sx, sy);
+						//printf("sampled color: %01.2f, %01.2f, %01.2f, %01.2f\n", c.rgba[0], c.rgba[1], c.rgba[2], c.rgba[3]);
+					}
+				}
+				gxEnd();
+
+			#if 0 // work around for weird (driver?) issue where next draw call retains the color of the previous one
+				gxBegin(GL_TRIANGLES);
+				gxColor4f(0.f, 0.f, 0.f, 0.f);
+				gxEnd();
+			#endif
+			#endif
+			}
+			framework.endDraw();
+		}
+
+		framework.shutdown();
+	}
+}
+
+int main(int argc, char * argv[])
+{
+#ifdef WIN32
+	_CrtSetDebugFillThreshold(0);
 #endif
 
+	//testParticleLib();
+	
 	framework.fullscreen = false;
 
 	const int windowSx = 1400;
@@ -220,99 +307,35 @@ int main(int argc, char * argv[])
 	{
 		initUi();
 		
+		ParticleEditor particleEditor;
+		
 		bool menuActive = true;
 
 		while (!framework.quitRequested)
 		{
 			framework.process();
+			
+			const float timeStep = std::min(framework.timeStep, 1.f / 15.f);
+
+			if (keyboard.wentDown(SDLK_ESCAPE))
+				framework.quitRequested = true;
+
+			if (keyboard.wentDown(SDLK_F1))
 			{
-				const float timeStep = 1.f / 60.f;
-
-				if (keyboard.wentDown(SDLK_ESCAPE))
-					framework.quitRequested = true;
-
-				if (keyboard.wentDown(SDLK_F1))
-				{
-					framework.fullscreen = !framework.fullscreen;
-					framework.setFullscreen(framework.fullscreen);
-				}
-
-				if (keyboard.wentDown(SDLK_TAB))
-					menuActive = !menuActive;
-
-				particleEditorTick(menuActive, windowSx, windowSy, timeStep);
-
-#if 0
-				const float gravityX = 0.f;
-				const float gravityY = 100.f;
-				for (Particle * p = pp.head; p; )
-					if (!tickParticle(pei2, pi2, timeStep, gravityX, gravityY, *p))
-						p = pp.freeParticle(p);
-					else
-						p = p->next;
-				tickParticleEmitter(pei2, pi2, pp, timeStep, gravityX, gravityY, pe);
-#endif
-
-				framework.beginDraw(0, 0, 0, 0);
-				{
-#if 0
-					gxSetTexture(Sprite(pei2.materialName).getTexture());
-					for (Particle * p = pp.head; p; p = p->next)
-					{
-						const float particleLife = 1.f - p->life;
-						const float particleSpeed = std::sqrtf(p->speed[0] * p->speed[0] + p->speed[1] * p->speed[1]);
-
-						ParticleColor color;
-						computeParticleColor(pei2, pi2, particleLife, particleSpeed, color);
-						const float size = computeParticleSize(pei2, pi2, particleLife, particleSpeed);
-						gxPushMatrix();
-						const float offs[2] = { 320, 240 };
-						gxTranslatef(
-							offs[0] + p->position[0],
-							offs[1] + p->position[1],
-							0.f);
-						gxRotatef(p->rotation, 0.f, 0.f, 1.f);
-						setColorf(color.rgba[0], color.rgba[1], color.rgba[2], color.rgba[3]);
-						drawRect(
-							- size / 2.f,
-							- size / 2.f,
-							+ size / 2.f,
-							+ size / 2.f);
-						gxPopMatrix();
-					}
-					gxSetTexture(0);
-#endif
-
-#if 0
-					gxBegin(GL_QUADS);
-					{
-						const int sx = 5;
-						const int sy = 100;
-						for (int i = 0; i < 100; ++i)
-						{
-							ParticleColor c;
-							cc2.sample(i / 99.f, c);
-							gxColor4f(c.rgba[0], c.rgba[1], c.rgba[2], c.rgba[3]);
-							gxVertex2f((i + 0) * sx, 0);
-							gxVertex2f((i + 1) * sx, 0);
-							gxVertex2f((i + 1) * sx, sy);
-							gxVertex2f((i + 0) * sx, sy);
-							//printf("sampled color: %01.2f, %01.2f, %01.2f, %01.2f\n", c.rgba[0], c.rgba[1], c.rgba[2], c.rgba[3]);
-						}
-					}
-					gxEnd();
-
-				#if 1 // work around for weird (driver?) issue where next draw call retains the color of the previous one
-					gxBegin(GL_TRIANGLES);
-					gxColor4f(0.f, 0.f, 0.f, 0.f);
-					gxEnd();
-				#endif
-#endif
-
-					particleEditorDraw(menuActive, windowSx, windowSy);
-				}
-				framework.endDraw();
+				framework.fullscreen = !framework.fullscreen;
+				framework.setFullscreen(framework.fullscreen);
 			}
+
+			if (keyboard.wentDown(SDLK_TAB))
+				menuActive = !menuActive;
+			
+			particleEditor.tick(menuActive, windowSx, windowSy, timeStep);
+			
+			framework.beginDraw(0, 0, 0, 0);
+			{
+				particleEditor.draw(menuActive, windowSx, windowSy);
+			}
+			framework.endDraw();
 		}
 		
 		shutUi();

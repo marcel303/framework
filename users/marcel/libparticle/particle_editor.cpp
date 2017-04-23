@@ -37,43 +37,51 @@ using namespace tinyxml2;
 static const int kMenuWidth = 300;
 static const int kMenuSpacing = 15;
 
+struct ParticleEditorState
+{
 // ui draw state
-static bool g_forceUiRefreshRequested = false;
-static bool g_forceUiRefresh = false;
+bool g_forceUiRefreshRequested = false;
+bool g_forceUiRefresh = false;
 
 // library
 static const int kMaxParticleInfos = 6;
-static ParticleEmitterInfo g_peiList[kMaxParticleInfos];
-static ParticleInfo g_piList[kMaxParticleInfos];
+ParticleEmitterInfo g_peiList[kMaxParticleInfos];
+ParticleInfo g_piList[kMaxParticleInfos];
 
 // current editing
-static int g_activeEditingIndex = 0;
-static ParticleEmitterInfo & g_pei() { return g_peiList[g_activeEditingIndex]; }
-static ParticleInfo & g_pi() { return g_piList[g_activeEditingIndex]; }
+int g_activeEditingIndex = 0;
+ParticleEmitterInfo & g_pei() { return g_peiList[g_activeEditingIndex]; }
+ParticleInfo & g_pi() { return g_piList[g_activeEditingIndex]; }
 
 // preview
-static ParticlePool g_pool[kMaxParticleInfos];
-static ParticleEmitter g_pe[kMaxParticleInfos];
-static ParticleCallbacks g_callbacks;
+ParticlePool g_pool[kMaxParticleInfos];
+ParticleEmitter g_pe[kMaxParticleInfos];
+ParticleCallbacks g_callbacks;
+
 static int randomInt(void * userData, int min, int max) { return min + (rand() % (max - min + 1)); }
 static float randomFloat(void * userData, float min, float max) { return min + (rand() % 4096) / 4095.f * (max - min); }
 static bool getEmitterByName(void * userData, const char * name, const ParticleEmitterInfo *& pei, const ParticleInfo *& pi, ParticlePool *& pool, ParticleEmitter *& pe)
 {
+	ParticleEditorState & self = *(ParticleEditorState*)userData;
+	
 	for (int i = 0; i < kMaxParticleInfos; ++i)
 	{
-		if (!strcmp(name, g_peiList[i].name))
+		if (!strcmp(name, self.g_peiList[i].name))
 		{
-			pei = &g_peiList[i];
-			pi = &g_piList[i];
-			pool = &g_pool[i];
-			pe = &g_pe[i];
+			pei = &self.g_peiList[i];
+			pi = &self.g_piList[i];
+			pool = &self.g_pool[i];
+			pe = &self.g_pe[i];
 			return true;
 		}
 	}
 	return false;
 }
+
 static bool checkCollision(void * userData, float x1, float y1, float x2, float y2, float & t, float & nx, float & ny)
 {
+	//ParticleEditorState & self = *(ParticleEditorState*)userData;
+	
 	const float px = 0.f;
 	const float py = 100.f;
 	const float pnx = 0.f;
@@ -95,10 +103,10 @@ static bool checkCollision(void * userData, float x1, float y1, float x2, float 
 }
 
 // copy & paste
-static ParticleEmitterInfo g_copyPei;
-static bool g_copyPeiIsValid = false;
-static ParticleInfo g_copyPi;
-static bool g_copyPiIsValid = false;
+ParticleEmitterInfo g_copyPei;
+bool g_copyPeiIsValid = false;
+ParticleInfo g_copyPi;
+bool g_copyPiIsValid = false;
 
 //
 
@@ -123,7 +131,7 @@ struct ScopedValueAdjust
 
 //
 
-static void refreshUi()
+void refreshUi()
 {
 	g_uiState->g_activeElem = 0;
 	g_uiState->g_activeColor = 0;
@@ -143,7 +151,7 @@ struct Menu_LoadSave
 	}
 };
 
-static void doMenu_LoadSave(Menu_LoadSave & menu, const float dt)
+void doMenu_LoadSave(Menu_LoadSave & menu, const float dt)
 {
 	if (doButton("Load", 0.f, 1.f, true))
 	{
@@ -247,7 +255,7 @@ static void doMenu_LoadSave(Menu_LoadSave & menu, const float dt)
 	}
 }
 
-static void doMenu_EmitterSelect(const float dt)
+void doMenu_EmitterSelect(const float dt)
 {
 	for (int i = 0; i < 6; ++i)
 	{
@@ -261,7 +269,7 @@ static void doMenu_EmitterSelect(const float dt)
 	}
 }
 
-static void doMenu_Pi(const float dt)
+void doMenu_Pi(const float dt)
 {
 	if (doButton("Copy", 0.f, .5f, !g_copyPiIsValid))
 	{
@@ -444,7 +452,7 @@ static void doMenu_Pi(const float dt)
 	doEnum(g_pi().blendMode, "Blend Mode", blendModeValues);
 }
 
-static void doMenu_Pei(const float dt)
+void doMenu_Pei(const float dt)
 {
 	if (doButton("Copy", 0.f, .5f, !g_copyPeiIsValid))
 	{
@@ -482,7 +490,7 @@ static void doMenu_Pei(const float dt)
 	strcpy_s(g_pei().materialName, sizeof(g_pei().materialName), materialName.c_str());
 }
 
-static void doMenu_ColorWheel(const float dt)
+void doMenu_ColorWheel(const float dt)
 {
 	if (g_uiState->g_activeColor)
 	{
@@ -500,10 +508,10 @@ struct Menu
 	}
 };
 
-static Menu s_menu;
-static UiState s_uiState;
+Menu s_menu;
+UiState s_uiState;
 
-static void doMenu(Menu & menu, const bool doActions, const bool doDraw, const int sx, const int sy, const float dt)
+void doMenu(Menu & menu, const bool doActions, const bool doDraw, const int sx, const int sy, const float dt)
 {
 	makeActive(&s_uiState);
 	pushMenu("", kMenuWidth);
@@ -563,23 +571,21 @@ static void doMenu(Menu & menu, const bool doActions, const bool doDraw, const i
 	popMenu();
 }
 
-void particleEditorTick(const bool menuActive, const float sx, const float sy, const float dt)
+ParticleEditorState()
 {
-	static bool firstTick = true;
-	if (firstTick)
-	{
-		firstTick = false;
+	g_callbacks.userData = this;
+	g_callbacks.randomInt = randomInt;
+	g_callbacks.randomFloat = randomFloat;
+	g_callbacks.getEmitterByName = getEmitterByName;
+	g_callbacks.checkCollision = checkCollision;
 
-		g_callbacks.randomInt = randomInt;
-		g_callbacks.randomFloat = randomFloat;
-		g_callbacks.getEmitterByName = getEmitterByName;
-		g_callbacks.checkCollision = checkCollision;
+	g_piList[0].rate = 1.f;
+	for (int i = 0; i < kMaxParticleInfos; ++i)
+		strcpy_s(g_peiList[i].materialName, sizeof(g_peiList[i].materialName), "texture.png");
+}
 
-		g_piList[0].rate = 1.f;
-		for (int i = 0; i < kMaxParticleInfos; ++i)
-			strcpy_s(g_peiList[i].materialName, sizeof(g_peiList[i].materialName), "texture.png");
-	}
-	
+void tick(const bool menuActive, const float sx, const float sy, const float dt)
+{
 	if (menuActive)
 		doMenu(s_menu, true, false, sx, sy, dt);
 
@@ -596,7 +602,7 @@ void particleEditorTick(const bool menuActive, const float sx, const float sy, c
 	}
 }
 
-void particleEditorDraw(const bool menuActive, const float sx, const float sy)
+void draw(const bool menuActive, const float sx, const float sy)
 {
 	gxPushMatrix();
 	gxTranslatef(sx/2.f, sy/2.f, 0.f);
@@ -705,4 +711,27 @@ void particleEditorDraw(const bool menuActive, const float sx, const float sy)
 
 	if (menuActive)
 		doMenu(s_menu, false, true, sx, sy, 0.f);
+}
+};
+
+ParticleEditor::ParticleEditor()
+	: state(nullptr)
+{
+	state = new ParticleEditorState();
+}
+
+ParticleEditor::~ParticleEditor()
+{
+	delete state;
+	state = nullptr;
+}
+
+void ParticleEditor::tick(const bool menuActive, const float sx, const float sy, const float dt)
+{
+	state->tick(menuActive, sx, sy, dt);
+}
+
+void ParticleEditor::draw(const bool menuActive, const float sx, const float sy)
+{
+	state->draw(menuActive, sx, sy);
 }

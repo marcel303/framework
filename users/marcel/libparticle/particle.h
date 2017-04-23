@@ -33,6 +33,7 @@ struct ParticleColor
 	void set(float r, float g, float b, float a);
 	void modulateWith(const ParticleColor & other);
 	void interpolateBetween(const ParticleColor & v1, const ParticleColor & v2, const float t);
+	void interpolateBetweenLinear(const ParticleColor & v1, const ParticleColor & v2, const float t);
 
 	void save(tinyxml2::XMLPrinter * printer);
 	void load(tinyxml2::XMLElement * elem);
@@ -91,7 +92,7 @@ struct ParticleColorCurve
 	Key * sortKeys(Key * keyToReturn = 0);
 	void setLinear(const ParticleColor & v1, const ParticleColor & v2);
 	void setLinearAlpha(float v1, float v2);
-	void sample(const float t, ParticleColor & result) const;
+	void sample(const float t, const bool linearColorSpace, ParticleColor & result) const;
 
 	void save(tinyxml2::XMLPrinter * printer);
 	void load(tinyxml2::XMLElement * elem);

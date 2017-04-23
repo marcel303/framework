@@ -6,6 +6,7 @@
 #include <xmmintrin.h>
 
 #include "StringEx.h" // _s functions
+#include "ui.h" // srgb <-> linear
 
 //#pragma optimize("", off)
 
@@ -98,6 +99,26 @@ void ParticleColor::interpolateBetween(const ParticleColor & v1, const ParticleC
 	const float t2 =       t;
 	for (int i = 0; i < 4; ++i)
 		rgba[i] = v1.rgba[i] * t1 + v2.rgba[i] * t2;
+}
+
+void ParticleColor::interpolateBetweenLinear(const ParticleColor & v1, const ParticleColor & v2, const float t)
+{
+	const float t1 = 1.f - t;
+	const float t2 =       t;
+	
+	float linear1[3];
+	float linear2[3];
+	float linear[3];
+	
+	srgbToLinear(v1.rgba[0], v1.rgba[1], v1.rgba[2], linear1[0], linear1[1], linear1[2]);
+	srgbToLinear(v2.rgba[0], v2.rgba[1], v2.rgba[2], linear2[0], linear2[1], linear2[2]);
+	
+	for (int i = 0; i < 3; ++i)
+		linear[i] = linear1[i] * t1 + linear2[i] * t2;
+	for (int i = 3; i < 4; ++i)
+		rgba[i] = v1.rgba[i] * t1 + v2.rgba[i] * t2;
+	
+	linearToSrgb(linear[0], linear[1], linear[2], rgba[0], rgba[1], rgba[2]);
 }
 
 void ParticleColor::save(XMLPrinter * printer)
@@ -349,7 +370,7 @@ void ParticleColorCurve::setLinearAlpha(float v1, float v2)
 	sortKeys();
 }
 
-void ParticleColorCurve::sample(const float t, ParticleColor & result) const
+void ParticleColorCurve::sample(const float t, const bool linearColorSpace, ParticleColor & result) const
 {
 	if (numKeys == 0)
 		result.set(1.f, 1.f, 1.f, 1.f);
@@ -377,7 +398,10 @@ void ParticleColorCurve::sample(const float t, ParticleColor & result) const
 			const ParticleColor & c1 = keys[startKey].color;
 			const ParticleColor & c2 = keys[endKey].color;
 			const float t2 = (t - keys[startKey].t) / (keys[endKey].t - keys[startKey].t);
-			result.interpolateBetween(c1, c2, t2);
+			if (linearColorSpace)
+				result.interpolateBetweenLinear(c1, c2, t2);
+			else
+				result.interpolateBetween(c1, c2, t2);
 		}
 	}
 }
@@ -1225,7 +1249,7 @@ void computeParticleColor(const ParticleEmitterInfo & pei, const ParticleInfo & 
 	if (pi.colorOverLifetime)
 	{
 		ParticleColor temp(true);
-		pi.colorOverLifetimeCurve.sample(particleLife, temp);
+		pi.colorOverLifetimeCurve.sample(particleLife, false, temp);
 		result.modulateWith(temp);
 	}
 
@@ -1233,7 +1257,7 @@ void computeParticleColor(const ParticleEmitterInfo & pei, const ParticleInfo & 
 	{
 		const float t = (particleSpeed - pi.colorBySpeedRangeMin) / (pi.colorBySpeedRangeMax - pi.colorBySpeedRangeMin);
 		ParticleColor temp(true);
-		pi.colorBySpeedCurve.sample(t, temp);
+		pi.colorBySpeedCurve.sample(t, false, temp);
 		result.modulateWith(temp);
 	}
 }

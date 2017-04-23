@@ -199,6 +199,23 @@ void rgbToHSL(float r, float g, float b, float & hue, float & lum, float & sat)
 	}
 }
 
+static const float kSrgbToLinear = 2.2f;
+static const float kLinearToSrgb = 1.f / kSrgbToLinear;
+
+void srgbToLinear(float r, float g, float b, float & out_r, float & out_g, float & out_b)
+{
+	out_r = std::powf(r, kSrgbToLinear);
+	out_g = std::powf(g, kSrgbToLinear);
+	out_b = std::powf(b, kSrgbToLinear);
+}
+
+void linearToSrgb(float r, float g, float b, float & out_r, float & out_g, float & out_b)
+{
+	out_r = std::powf(r, kLinearToSrgb);
+	out_g = std::powf(g, kLinearToSrgb);
+	out_b = std::powf(b, kLinearToSrgb);
+}
+
 //
 
 struct UiElem
@@ -1003,7 +1020,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name)
 					// insert a new key
 
 					ParticleColor color;
-					curve.sample(t, color);
+					curve.sample(t, false, color);
 
 					if (curve.allocKey(key))
 					{
@@ -1089,7 +1106,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name)
 		{
 			const float t = (x - cx1 + .5f) / float(cx2 - cx1 - .5f);
 			ParticleColor c;
-			curve.sample(t, c);
+			curve.sample(t, false, c);
 			setColorf(c.rgba[0], c.rgba[1], c.rgba[2], c.rgba[3]);
 			drawRect(x, cy1, x + 1.f, cy2);
 		}
