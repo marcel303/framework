@@ -509,12 +509,9 @@ UiState s_uiState;
 
 void doMenu(Menu & menu, const bool doActions, const bool doDraw, const int sx, const int sy, const float dt)
 {
-	makeActive(&s_uiState);
+	makeActive(&s_uiState, doActions, doDraw);
 	pushMenu("", kMenuWidth);
 	
-	g_doActions = doActions;
-	g_doDraw = doDraw;
-
 	if (g_doActions && g_forceUiRefreshRequested)
 	{
 		g_forceUiRefreshRequested = false;

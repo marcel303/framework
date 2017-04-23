@@ -9,7 +9,6 @@ struct UiElem;
 struct UiMenu;
 
 // ui design
-static const int kMenuWidth = 100;
 static const int kFontSize = 12;
 static const int kTextBoxHeight = 20;
 static const int kTextBoxTextOffset = 150;
@@ -50,7 +49,10 @@ static UiMenu * g_menu = nullptr;
 //
 
 UiState::UiState()
-	: activeElem(nullptr)
+	: x(0)
+	, y(0)
+	, sx(100)
+	, activeElem(nullptr)
 	, activeColor(nullptr)
 	, colorWheel(nullptr)
 	, menuStates(nullptr)
@@ -376,12 +378,18 @@ void UiElem::tick(const int x1, const int y1, const int x2, const int y2)
 
 //
 
-void makeActive(UiState * state)
+void makeActive(UiState * state, const bool doActions, const bool doDraw)
 {
 	fassert(g_menu == nullptr);
 	fassert(g_menuStackSize == 0);
 	
 	g_uiState = state;
+	
+	g_doActions = doActions;
+	g_doDraw = doDraw;
+	
+	g_drawX = state->x;
+	g_drawY = state->y;
 }
 
 //
@@ -405,7 +413,7 @@ void pushMenu(const char * name, const int width)
 	
 	g_menuStack[g_menuStackSize] = childName;
 	
-	const int previousSx = g_menu == nullptr ? kMenuWidth : g_menu->sx;
+	const int previousSx = g_menu == nullptr ? g_uiState->sx : g_menu->sx;
 	
 	g_menu = &g_uiState->menuStates->menus[g_menuStack[g_menuStackSize]];
 	g_menu->sx = width ? width : previousSx;

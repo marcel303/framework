@@ -10,6 +10,10 @@ struct UiMenuStates;
 
 struct UiState
 {
+	int x;
+	int y;
+	int sx;
+	
 	UiElem * activeElem;
 	ParticleColor * activeColor;
 	ColorWheel * colorWheel;
@@ -41,7 +45,7 @@ extern void linearToSrgb(float r, float g, float b, float & out_r, float & out_g
 
 //
 
-void makeActive(UiState * state);
+void makeActive(UiState * state, const bool doActions, const bool doDraw);
 
 void pushMenu(const char * name, const int width = 0);
 void popMenu();
