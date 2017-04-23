@@ -8,6 +8,11 @@
 
 using namespace tinyxml2;
 
+#define DO_PARTICLELIB_TEST 0
+#define DO_UIAPI_TEST 1
+
+#if DO_PARTICLELIB_TEST
+
 static void testParticleLib()
 {
 	ParticleColor c1;
@@ -290,13 +295,17 @@ static void testParticleLib()
 	}
 }
 
+#endif
+
 int main(int argc, char * argv[])
 {
 #ifdef WIN32
 	_CrtSetDebugFillThreshold(0);
 #endif
 
-	//testParticleLib();
+#if DO_PARTICLELIB_TEST
+	testParticleLib();
+#endif
 	
 	framework.fullscreen = false;
 
@@ -310,7 +319,19 @@ int main(int argc, char * argv[])
 		ParticleEditor particleEditor;
 		
 		bool menuActive = true;
-
+	
+	#if DO_UIAPI_TEST
+		UiState s;
+		s.x = 400;
+		s.y = 10;
+		s.sx = 250;
+		s.font = "GloriaHallelujah.ttf";
+		bool v[10] = { };
+		ParticleColorCurve c[10];
+		std::string t[10];
+		std::for_each(t, t + 10, [](auto & t) { t = "01234"; });
+	#endif
+		
 		while (!framework.quitRequested)
 		{
 			framework.process();
@@ -333,6 +354,29 @@ int main(int argc, char * argv[])
 			
 			framework.beginDraw(0, 0, 0, 0);
 			{
+			#if DO_UIAPI_TEST
+				makeActive(&s, true, true);
+				pushMenu("");
+				for (int i = 0; i < 10; ++i)
+				{
+					char n[2] = { char('a' + i), 0 };
+					if (doCheckBox(v[i], n, true))
+					{
+						pushMenu(n);
+						g_drawX += 10;
+						doParticleColorCurve(c[i], "Color Curve");
+						doTextBox(t[i], "Hey!", timeStep);
+						g_drawX -= 10;
+						popMenu();
+					}
+				}
+				if (s.activeColor)
+					doColorWheel(*s.activeColor, "Color", timeStep);
+				if (s.activeElem == nullptr)
+					s.activeColor = nullptr;
+				popMenu();
+			#endif
+				
 				particleEditor.draw(menuActive, windowSx, windowSy);
 			}
 			framework.endDraw();

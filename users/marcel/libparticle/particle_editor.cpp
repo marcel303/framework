@@ -553,6 +553,9 @@ void doMenu(Menu & menu, const bool doActions, const bool doDraw, const int sx, 
 	g_drawY += kMenuSpacing;
 	popMenu();
 	
+	if (g_uiState->activeElem == nullptr)
+		g_uiState->activeColor = nullptr;
+
 	popMenu();
 }
 

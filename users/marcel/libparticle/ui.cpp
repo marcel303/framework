@@ -369,11 +369,25 @@ void UiElem::tick(const int x1, const int y1, const int x2, const int y2)
 	clicked = false;
 	
 	hasFocus = mouse.x >= x1 && mouse.x <= x2 && mouse.y >= y1 && mouse.y <= y2;
-	if (hasFocus && mouse.wentDown(BUTTON_LEFT))
+	
+	isActive = (g_uiState->activeElem == this);
+	
+	if (hasFocus)
 	{
-		g_uiState->activeElem = this;
-		clicked = true;
+		if (mouse.wentDown(BUTTON_LEFT))
+		{
+			g_uiState->activeElem = this;
+			clicked = true;
+		}
 	}
+	else
+	{
+		if (isActive && mouse.wentDown(BUTTON_LEFT))
+		{
+			g_uiState->activeElem = nullptr;
+		}
+	}
+	
 	isActive = (g_uiState->activeElem == this);
 }
 
@@ -382,7 +396,7 @@ void UiElem::tick(const int x1, const int y1, const int x2, const int y2)
 void makeActive(UiState * state, const bool doActions, const bool doDraw)
 {
 	fassert(g_menu == nullptr);
-	fassert(g_menuStackSize == 0);
+	fassert(g_menuStackSize == -1);
 	
 	g_uiState = state;
 	
@@ -1186,10 +1200,10 @@ void doColorWheel(ParticleColor & color, const char * name, const float dt)
 				mouse.isDown(BUTTON_LEFT), dt); // fixme : mouseDown and dt
 		}
 		g_uiState->colorWheel->toColor(
-			g_uiState->activeColor->rgba[0],
-			g_uiState->activeColor->rgba[1],
-			g_uiState->activeColor->rgba[2],
-			g_uiState->activeColor->rgba[3]);
+			color.rgba[0],
+			color.rgba[1],
+			color.rgba[2],
+			color.rgba[3]);
 	}
 
 	if (g_doDraw)
