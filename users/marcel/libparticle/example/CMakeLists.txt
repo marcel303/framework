@@ -23,7 +23,10 @@ project(libparticle_test)
 
 # --- libparticle_test ---
 
-file(GLOB source "*.cpp" "*.h")
+file(GLOB_RECURSE source "*.cpp" "*.h")
+file(GLOB_RECURSE source_msdfgen "msdfgen/*.*")
+
+source_group("msdfgen" FILES ${source_msdfgen})
 
 add_executable(libparticle_test ${source})
 
