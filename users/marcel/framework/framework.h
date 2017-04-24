@@ -928,6 +928,7 @@ public:
 	void lineTo(const float x, const float y);
 	void line(const float dx, const float dy);
 	void curveTo(const float x, const float y, const float tx1, const float ty1, const float tx2, const float ty2);
+	void curveToAbs(const float x, const float y, const float cx1, const float cy1, const float cx2, const float cy2);
 	void curve(const float dx, const float dy, const float tx1, const float ty1, const float tx2, const float ty2);
 	void arc(const float angle, const float radius);
 	void close();
@@ -1126,6 +1127,7 @@ void drawPath(const Path2d & path);
 GLuint createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp);
 GLuint createTextureFromRGB8(const void * source, int sx, int sy, bool filter, bool clamp);
 GLuint createTextureFromR8(const void * source, int sx, int sy, bool filter, bool clamp);
+GLuint createTextureFromRGBF32(const void * source, int sx, int sy, bool filter, bool clamp);
 
 void debugDrawText(float x, float y, int size, float alignX, float alignY, const char * format, ...);
 

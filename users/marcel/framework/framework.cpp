@@ -3461,6 +3461,7 @@ void Path2d::PathElem::curveEval(float & x, float & y, const float t) const
 void Path2d::PathElem::curveSubdiv(const float t1, const float t2, float *& xy, float *& hxy, int & numPoints) const
 {
 	const float eps = .1f;
+	const float flatnessEps = .1f;
 
 	const float tm = (t1 + t2) * .5f;
 	
@@ -3495,7 +3496,7 @@ void Path2d::PathElem::curveSubdiv(const float t1, const float t2, float *& xy, 
 
 		const float dd = d2 - d1;
 
-		if (std::abs(dd) <= eps)
+		if (std::abs(dd) <= flatnessEps)
 			needsSubdiv = false;
 	}
 
@@ -3661,6 +3662,34 @@ void Path2d::curveTo(const float x, const float y, const float tx1, const float 
 
 	elem.v3.x = x2 + tx2;
 	elem.v3.y = y2 + ty2;
+
+	elem.v4.x = x2;
+	elem.v4.y = y2;
+
+	this->x = x2;
+	this->y = y2;
+}
+
+void Path2d::curveToAbs(const float x, const float y, const float cx1, const float cy1, const float cx2, const float cy2)
+{
+	fassert(hasMove);
+
+	PathElem & elem = allocElem();
+	elem.type = ELEM_CURVE;
+
+	const float x1 = this->x;
+	const float y1 = this->y;
+	const float x2 = x;
+	const float y2 = y;
+
+	elem.v1.x = x1;
+	elem.v1.y = y1;
+
+	elem.v2.x = cx1;
+	elem.v2.y = cy1;
+
+	elem.v3.x = cx2;
+	elem.v3.y = cy2;
 
 	elem.v4.x = x2;
 	elem.v4.y = y2;
@@ -5087,8 +5116,6 @@ void drawPath(const Path2d & path)
 	int numPoints = 0;
 	path.generatePoints(pxy, hxy, kMaxPoints, 1.f, numPoints);
 
-	glLineWidth(3.f);
-
 	gxBegin(GL_LINES);
 	{
 		for (int i = 0; i < numPoints - 1; ++i)
@@ -5129,7 +5156,8 @@ void drawPath(const Path2d & path)
 #if 0
 	pxy = pxyStorage;
 
-	glPointSize(10.f);
+	glPointSize(5.f);
+	setColor(255, 255, 255, 31);
 
 	gxBegin(GL_POINTS);
 	{
@@ -5146,7 +5174,7 @@ void drawPath(const Path2d & path)
 #endif
 }
 
-static GLuint createTexture(const void * source, int sx, int sy, bool filter, bool clamp, GLenum internalFormat, GLenum uploadFormat)
+static GLuint createTexture(const void * source, int sx, int sy, bool filter, bool clamp, GLenum internalFormat, GLenum uploadFormat, GLenum uploadElementType)
 {
 	checkErrorGL();
 
@@ -5180,7 +5208,7 @@ static GLuint createTexture(const void * source, int sx, int sy, bool filter, bo
 			sy,
 			0,
 			uploadFormat,
-			GL_UNSIGNED_BYTE,
+			uploadElementType,
 			source);
 
 		// set filtering
@@ -5204,17 +5232,22 @@ static GLuint createTexture(const void * source, int sx, int sy, bool filter, bo
 
 GLuint createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp)
 {
-	return createTexture(source, sx, sy, filter, clamp, GL_RGBA8, GL_RGBA);
+	return createTexture(source, sx, sy, filter, clamp, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
 }
 
 GLuint createTextureFromRGB8(const void * source, int sx, int sy, bool filter, bool clamp)
 {
-	return createTexture(source, sx, sy, filter, clamp, GL_RGB8, GL_RGB);
+	return createTexture(source, sx, sy, filter, clamp, GL_RGB8, GL_RGB, GL_UNSIGNED_BYTE);
 }
 
 GLuint createTextureFromR8(const void * source, int sx, int sy, bool filter, bool clamp)
 {
-	return createTexture(source, sx, sy, filter, clamp, GL_R8, GL_RED);
+	return createTexture(source, sx, sy, filter, clamp, GL_R8, GL_RED, GL_UNSIGNED_BYTE);
+}
+
+GLuint createTextureFromRGBF32(const void * source, int sx, int sy, bool filter, bool clamp)
+{
+	return createTexture(source, sx, sy, filter, clamp, GL_RGB32F, GL_RGB, GL_FLOAT);
 }
 
 void debugDrawText(float x, float y, int size, float alignX, float alignY, const char * format, ...)
