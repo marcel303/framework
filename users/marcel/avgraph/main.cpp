@@ -15,6 +15,8 @@
 #include "vfxNodes/vfxNodePicture.h"
 #include "vfxNodes/vfxNodeVideo.h"
 
+#include "ofxDatGui/ofxDatGui.h" // todo : remove
+
 using namespace tinyxml2;
 
 /*
@@ -68,6 +70,7 @@ todo :
 + make it possible to disable nodes
 + make it possible to disable links
 - add drag and drop support string literals
+- integrate with UI from libparticle. it supports enums, better color picking, incrementing values up and down in checkboxes
 
 todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
@@ -79,8 +82,11 @@ reference :
 
 */
 
-#define GFX_SX 1024
-#define GFX_SY 768
+extern const int GFX_SX;
+extern const int GFX_SY;
+
+const int GFX_SX = 1024;
+const int GFX_SY = 768;
 
 extern void testDatGui();
 extern void testNanovg();
@@ -664,6 +670,7 @@ struct VfxNodeComposite : VfxNodeBase
 					
 					gxSetTexture(images[i]->getTexture());
 					{
+						setColor(colorWhite);
 						drawRect(0, 0, GFX_SX, GFX_SY);
 					}
 					gxSetTexture(0);

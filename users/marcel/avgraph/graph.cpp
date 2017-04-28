@@ -1,12 +1,14 @@
 #include "Calc.h"
 #include "Debugging.h"
 #include "graph.h"
-#include "ofxDatGUi/ofxDatGui.h"
 #include "Parse.h"
 #include "StringEx.h"
 #include "tinyxml2.h"
 #include "tinyxml2_helpers.h"
 #include <cmath>
+
+extern const int GFX_SX; // fixme : make property of graph editor
+extern const int GFX_SY;
 
 using namespace tinyxml2;
 
@@ -363,6 +365,29 @@ bool Graph::saveXml(XMLPrinter & xmlGraph) const
 //
 
 #include "framework.h"
+#include "../libparticle/particle.h"
+#include "../libparticle/ui.h"
+
+
+static ParticleColor toParticleColor(const Color & color)
+{
+	ParticleColor particleColor;
+	particleColor.rgba[0] = color.r;
+	particleColor.rgba[1] = color.g;
+	particleColor.rgba[2] = color.b;
+	particleColor.rgba[3] = color.a;
+	return particleColor;
+}
+
+static Color toColor(const ParticleColor & particleColor)
+{
+	Color color;
+	color.r = particleColor.rgba[0];
+	color.g = particleColor.rgba[1];
+	color.b = particleColor.rgba[2];
+	color.a = particleColor.rgba[3];
+	return color;
+}
 
 void GraphEdit_ValueTypeDefinition::loadXml(const XMLElement * xmlType)
 {
@@ -642,21 +667,21 @@ GraphEdit::GraphEdit()
 	, mousePosition()
 	, dragAndZoom()
 	, propertyEditor(nullptr)
-	, dummyGui(nullptr)
+	, uiState(nullptr)
 {
 	graph = new Graph();
 	
 	propertyEditor = new GraphUi::PropEdit(nullptr);
 	
-	dummyGui = new ofxDatGui();
+	uiState = new UiState();
 }
 
 GraphEdit::~GraphEdit()
 {
 	selectedNodes.clear();
 	
-	delete dummyGui;
-	dummyGui = nullptr;
+	delete uiState;
+	uiState = nullptr;
 	
 	delete propertyEditor;
 	propertyEditor = nullptr;
@@ -711,26 +736,6 @@ const GraphEdit_TypeDefinition::OutputSocket * GraphEdit::tryGetOutputSocket(con
 	if (socketIndex < 0 || socketIndex >= typeDefinition->outputSockets.size())
 		return nullptr;
 	return &typeDefinition->outputSockets[socketIndex];
-}
-
-bool GraphEdit::hitTestUi(const float x, const float y, HitTestResult & result) const
-{
-	result = HitTestResult();
-	
-	if (propertyEditor->datGui != nullptr)
-	{
-		auto p = propertyEditor->datGui->getPosition();
-		auto sx = propertyEditor->datGui->getWidth();
-		auto sy = propertyEditor->datGui->getHeight();
-		
-		if (x > p.x && y > p.y && x < p.x + sx && y < p.y + sy)
-		{
-			result.hasPropEdit = true;
-			return true;
-		}
-	}
-
-	return false;
 }
 
 bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) const
@@ -793,6 +798,11 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 
 void GraphEdit::tick(const float dt)
 {
+	if (propertyEditor->tick(dt))
+	{
+		return;
+	}
+	
 	bool enablePropEdit = false;
 	
 	{
@@ -841,11 +851,7 @@ void GraphEdit::tick(const float dt)
 			{
 				HitTestResult hitTestResult;
 				
-				if (hitTestUi(mousePosition.uiX, mousePosition.uiY, hitTestResult))
-				{
-					//
-				}
-				else if (hitTest(mousePosition.x, mousePosition.y, hitTestResult))
+				if (hitTest(mousePosition.x, mousePosition.y, hitTestResult))
 				{
 					// todo : clear node selection ?
 					// todo : clear link selection ?
@@ -895,12 +901,6 @@ void GraphEdit::tick(const float dt)
 						{
 							selectLink(hitTestResult.link->id);
 						}
-					}
-					
-					if (hitTestResult.hasPropEdit)
-					{
-						state = kState_PropEdit;
-						break;
 					}
 				}
 				else
@@ -1421,21 +1421,6 @@ void GraphEdit::tick(const float dt)
 	
 	if (propertyEditor != nullptr)
 	{
-		if (propertyEditor->datGui != nullptr)
-		{
-			//logDebug("enablePropEdit: %d", int(enablePropEdit));
-			
-			ofxDatGui * focusGui = nullptr;
-			
-			if (enablePropEdit)
-				focusGui = propertyEditor->datGui;
-			else
-				focusGui = dummyGui;
-			
-			//if (focusGui != nullptr && !focusGui->getFocused())
-			//	focusGui->focus();
-		}
-		
 		propertyEditor->tick(dt);
 	}
 	
@@ -2017,64 +2002,41 @@ GraphUi::PropEdit::PropEdit(GraphEdit_TypeDefinitionLibrary * _typeLibrary)
 	, graph(nullptr)
 	, nodeId(kGraphNodeIdInvalid)
 	, hasFocus(true)
-	, datGui(nullptr)
+	, uiState(nullptr)
 {
 	typeLibrary = _typeLibrary;
+	
+	uiState = new UiState();
+	
+	const int kPadding = 10;
+	uiState->sx = 300;
+	uiState->x = GFX_SX - uiState->sx - kPadding;
+	uiState->y = kPadding;
 }
 
 GraphUi::PropEdit::~PropEdit()
 {
-	delete datGui;
-	datGui = nullptr;
+	delete uiState;
+	uiState = nullptr;
 }
 
-void GraphUi::PropEdit::tick(const float dt)
-{
-	// todo : move event triggering to ofMain
-	
-	for (auto & e : keyboard.events)
+bool GraphUi::PropEdit::tick(const float dt)
+{	
+	if (nodeId == kGraphNodeIdInvalid)
 	{
-		if (e.type == SDL_KEYDOWN)
-		{
-			ofKeyEventArgs args;
-			
-			int c = e.key.keysym.sym;
-			
-			int caps = 0;
-			
-			if (e.key.keysym.mod & (KMOD_LSHIFT | KMOD_RSHIFT))
-				caps = +1;
-			if (e.key.keysym.mod & (KMOD_CAPS))
-				caps = caps ? -1 : +1;
-			
-			if (caps == -1)
-				c = tolower(c);
-			if (caps == +1)
-				c = toupper(c);
-			
-			args.key = c;
-			
-			ofEvents().keyPressed.notify(args);
-		}
+		return false;
 	}
-	
+	else
 	{
-		ofMouseEventArgs args;
-		ofEvents().mouseScrolled.notify(args);
+		doMenus(true, false, dt);
+		
+		return uiState->activeElem != nullptr;
 	}
-	
-	ofEventArgs e;
-	
-	ofEvents().update.notify(e);
 }
 
 void GraphUi::PropEdit::draw() const
 {
-	// todo : move event triggering to ofMain
-	
-	ofEventArgs e;
-	
-	ofEvents().draw.notify(e);
+	const_cast<PropEdit*>(this)->doMenus(false, true, 0.f);
 }
 
 void GraphUi::PropEdit::setGraph(Graph * _graph)
@@ -2096,76 +2058,82 @@ void GraphUi::PropEdit::setNode(const GraphNodeId _nodeId)
 	}
 }
 
-void GraphUi::PropEdit::createUi()
+static void doMenuItem(std::string & valueText, const std::string & name, const std::string & editor, const float dt)
 {
-	delete datGui;
-	datGui = nullptr;
-	
-	datGui = new ofxDatGui(ofxDatGuiAnchor::TOP_RIGHT);
-	
-	ofxDatGui * gui = datGui;
-	
-	std::string headerText;
-	
-	//gui->addButton("save");
-	//gui->addButton("load");
-	//gui->addBreak();
+	if (editor == "textbox")
+	{
+		doTextBox(valueText, name.c_str(), dt);
+	}
+	else if (editor == "textbox_int")
+	{
+		int value = Parse::Int32(valueText);
+		
+		doTextBox(value, name.c_str(), dt);
+		
+		valueText = String::ToString(value);
+	}
+	else if (editor == "textbox_float")
+	{
+		float value = Parse::Int32(valueText);
+		
+		doTextBox(value, name.c_str(), dt);
+		
+		valueText = String::FormatC("%f", value);
+	}
+	else if (editor == "checkbox")
+	{
+		bool value = Parse::Bool(valueText);
+		
+		doCheckBox(value, name.c_str(), false);
+		
+		valueText = value ? "1" : "0";
+	}
+	else if (editor == "slider")
+	{
+		// todo : add doSlider
+		
+		doTextBox(valueText, name.c_str(), dt);
+	}
+	else if (editor == "colorpicker")
+	{
+		Color color = Color::fromHex(valueText.c_str());
+		ParticleColor particleColor = toParticleColor(color);
+		
+		doParticleColor(particleColor, name.c_str());
+		
+		color = toColor(particleColor);
+		valueText = color.toHexString(true);
+	}
+}
+
+void GraphUi::PropEdit::doMenus(const bool doActions, const bool doDraw, const float dt)
+{
+	makeActive(uiState, doActions, doDraw);
+	pushMenu("propEdit");
 	
 	GraphNode * node = tryGetNode();
 	
 	if (node != nullptr)
 	{
-		gui->addLabel(node->typeName);
-		
 		const GraphEdit_TypeDefinition * typeDefinition = typeLibrary->tryGetTypeDefinition(node->typeName);
 		
 		if (typeDefinition != nullptr)
 		{
-			headerText = typeDefinition->typeName;
+			std::string headerText = typeDefinition->typeName;
 			
 			if (!typeDefinition->displayName.empty())
 				headerText = typeDefinition->displayName;
 			
+			// todo : add doLabel
+			doTextBox(headerText, "__HEADER", dt);
+			
 			for (auto & inputSocket : typeDefinition->inputSockets)
 			{
-				const auto valueItr = node->editorInputValues.find(inputSocket.name);
-				const std::string valueText = valueItr == node->editorInputValues.end() ? "" : valueItr->second;
+				std::string & valueText = node->editorInputValues[inputSocket.name];
 				
 				const GraphEdit_ValueTypeDefinition * valueTypeDefinition = typeLibrary->tryGetValueTypeDefinition(inputSocket.typeName);
 				
-				ofxDatGuiComponent * component = nullptr;
-				
-				if (valueTypeDefinition == nullptr)
-				{
-					component = gui->addTextInput(inputSocket.name, valueText);
-				}
-				else
-				{
-					if (valueTypeDefinition->editor == "textbox")
-					{
-						component = gui->addTextInput(inputSocket.name, valueText);
-					}
-					else if (valueTypeDefinition->editor == "slider")
-					{
-						component = gui->addSlider(
-							inputSocket.name,
-							Parse::Float(valueTypeDefinition->editorMin),
-							Parse::Float(valueTypeDefinition->editorMax),
-							Parse::Float(valueText));
-					}
-					else if (valueTypeDefinition->editor == "colorpicker")
-					{
-						auto colorPicker = gui->addColorPicker(inputSocket.name, ofColor::fromHex(valueText.c_str()));
-						
-						component = colorPicker;
-					}
-				}
-				
-				if (component != nullptr)
-				{
-					component->setIndex(0);
-					component->setName(inputSocket.name);
-				}
+				doMenuItem(valueText, inputSocket.name, valueTypeDefinition == nullptr ? "textbox" : valueTypeDefinition->editor, dt);
 			}
 			
 			for (auto & outputSocket : typeDefinition->outputSockets)
@@ -2173,57 +2141,26 @@ void GraphUi::PropEdit::createUi()
 				if (!outputSocket.isEditable)
 					continue;
 				
-				const std::string & valueText = node->editorValue;
+				std::string & valueText = node->editorValue;
 				
 				const GraphEdit_ValueTypeDefinition * valueTypeDefinition = typeLibrary->tryGetValueTypeDefinition(outputSocket.typeName);
 				
-				ofxDatGuiComponent * component = nullptr;
-				
-				if (valueTypeDefinition == nullptr)
-				{
-					component = gui->addTextInput(outputSocket.name, valueText);
-				}
-				else
-				{
-					if (valueTypeDefinition->editor == "textbox")
-					{
-						component = gui->addTextInput(outputSocket.name, valueText);
-					}
-					else if (valueTypeDefinition->editor == "slider")
-					{
-						component = gui->addSlider(
-							outputSocket.name,
-							Parse::Float(valueTypeDefinition->editorMin),
-							Parse::Float(valueTypeDefinition->editorMax),
-							Parse::Float(valueText));
-					}
-					else if (valueTypeDefinition->editor == "colorpicker")
-					{
-						auto colorPicker = gui->addColorPicker(outputSocket.name, ofColor::fromHex(valueText.c_str()));
-						
-						component = colorPicker;
-					}
-				}
-				
-				if (component != nullptr)
-				{
-					component->setIndex(1);
-					component->setName(outputSocket.name);
-				}
+				doMenuItem(valueText, outputSocket.name, valueTypeDefinition == nullptr ? "textbox" : valueTypeDefinition->editor, dt);
 			}
 		}
 	}
 	
-	gui->addBreak();
+	if (uiState->activeColor)
+		doColorWheel(*uiState->activeColor, "__colorPicker", dt);
+	if (uiState->activeElem == nullptr)
+		uiState->activeColor = nullptr;
 	
-	//gui->addHeader(headerText);
-	gui->addFooter();
-	
-	gui->onTextInputEvent(this, &PropEdit::onTextInputEvent);
-	gui->onSliderEvent(this, &PropEdit::onSliderEvent);
-	gui->onColorPickerEvent(this, &PropEdit::onColorPickerEvent);
-	
-	datGui->setTheme(new ofxDatGuiThemeAutumn(), true);
+	popMenu();
+}
+
+void GraphUi::PropEdit::createUi()
+{
+	uiState->reset();
 }
 
 GraphNode * GraphUi::PropEdit::tryGetNode()
@@ -2232,51 +2169,4 @@ GraphNode * GraphUi::PropEdit::tryGetNode()
 		return nullptr;
 	else
 		return graph->tryGetNode(nodeId);
-}
-
-void GraphUi::PropEdit::onTextInputEvent(ofxDatGuiTextInputEvent e)
-{
-	GraphNode * node = tryGetNode();
-	
-	if (node != nullptr)
-	{
-		if (e.target->getIndex() == 0)
-			node->editorInputValues[e.target->getName()] = e.text;
-		else
-			node->editorValue = e.text;
-	}
-}
-
-void GraphUi::PropEdit::onSliderEvent(ofxDatGuiSliderEvent e)
-{
-	GraphNode * node = tryGetNode();
-	
-	if (node != nullptr)
-	{
-		const std::string text = String::ToString(e.value);
-		
-		if (e.target->getIndex() == 0)
-			node->editorInputValues[e.target->getName()] = text;
-		else
-			node->editorValue = text;
-	}
-}
-
-void GraphUi::PropEdit::onColorPickerEvent(ofxDatGuiColorPickerEvent e)
-{
-	GraphNode * node = tryGetNode();
-	
-	if (node != nullptr)
-	{
-		const std::string hexString = String::Format("%02x%02x%02x%02x",
-			e.color.r,
-			e.color.g,
-			e.color.b,
-			e.color.a);
-		
-		if (e.target->getIndex() == 0)
-			node->editorInputValues[e.target->getName()] = hexString;
-		else
-			node->editorValue = hexString;
-	}
 }

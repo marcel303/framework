@@ -400,3 +400,56 @@ void ofRemoveListener(Event & event, ListenerClass  * listenerClass, void (Liste
 {
     event.remove(listenerClass, listenerMethod, prio);
 }
+
+#if 0
+
+void ofxTick(const float dt)
+{
+	// todo : move event triggering to ofMain
+	
+	for (auto & e : keyboard.events)
+	{
+		if (e.type == SDL_KEYDOWN)
+		{
+			ofKeyEventArgs args;
+			
+			int c = e.key.keysym.sym;
+			
+			int caps = 0;
+			
+			if (e.key.keysym.mod & (KMOD_LSHIFT | KMOD_RSHIFT))
+				caps = +1;
+			if (e.key.keysym.mod & (KMOD_CAPS))
+				caps = caps ? -1 : +1;
+			
+			if (caps == -1)
+				c = tolower(c);
+			if (caps == +1)
+				c = toupper(c);
+			
+			args.key = c;
+			
+			ofEvents().keyPressed.notify(args);
+		}
+	}
+	
+	{
+		ofMouseEventArgs args;
+		ofEvents().mouseScrolled.notify(args);
+	}
+	
+	ofEventArgs e;
+	
+	ofEvents().update.notify(e);
+}
+
+void ofxDraw()
+{
+	// todo : move event triggering to ofMain
+	
+	ofEventArgs e;
+	
+	ofEvents().draw.notify(e);
+}
+
+#endif

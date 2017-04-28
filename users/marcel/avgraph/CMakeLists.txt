@@ -36,9 +36,12 @@ file(GLOB_RECURSE source_datgui "ofxDatGui/*.*")
 file(GLOB_RECURSE source_nanovg "nanovg/*.*")
 file(GLOB_RECURSE source_vfxnodes "vfxNodes/*.*")
 
+file(GLOB_RECURSE source_ui "../libparticle/ui.cpp" "../libparticle/ui.h" "../libparticle/textfield.cpp" "../libparticle/textfield.h" "../libparticle/colorwheel.cpp" "../libparticle/colorwheel.h" "../libparticle/particle.cpp" "../libparticle/particle.h")
+
 list(APPEND source ${source_video})
 list(APPEND source ${source_mediaplayer_new})
 list(APPEND source ${source_ffmpeg})
+list(APPEND source ${source_ui})
 #list(REMOVE_ITEM source ${source_datgui})
 
 source_group("Source Files" FILES ${source})
@@ -48,6 +51,7 @@ source_group("ffmpeg" FILES ${source_ffmpeg})
 source_group("ofxDatGui" FILES ${source_datgui})
 source_group("nanovg" FILES ${source_nanovg})
 source_group("vfxNodes" FILES ${source_vfxnodes})
+source_group("ui" FILES ${source_ui})
 
 add_executable(avgraph ${source})
 

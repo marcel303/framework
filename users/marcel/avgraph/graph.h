@@ -12,8 +12,7 @@ namespace tinyxml2
 	class XMLPrinter;
 }
 
-class ofxDatGui;
-class ofxDatGuiTextInputEvent;
+struct UiState;
 
 namespace GraphUi
 {
@@ -287,6 +286,57 @@ struct GraphEdit_TypeDefinitionLibrary
 
 //
 
+#include <list>
+
+struct GraphEdit_UndoBuffer
+{
+	std::string xml;
+	
+	GraphEdit_UndoBuffer()
+		: xml()
+	{
+	}
+	
+	void makeSnapshot(const Graph & graph)
+	{
+		//tinyxml2::XMLPrinter printer;
+		
+		//graph.saveXml(printer);
+	}
+	
+	void restoreSnapshot(Graph & graph)
+	{
+		//graph.loadXml();
+	}
+};
+
+struct GraphEdit_UndoHistory
+{
+	std::list<GraphEdit_UndoBuffer> undoBuffers;
+	
+	GraphEdit_UndoHistory()
+		: undoBuffers()
+	{
+	}
+	
+	void onInit(const Graph & graph)
+	{
+		undoBuffers.clear();
+		
+		undoBuffers.push_back(GraphEdit_UndoBuffer());
+		
+		GraphEdit_UndoBuffer & undoBuffer = undoBuffers.back();
+		
+		undoBuffer.makeSnapshot(graph);
+	}
+	
+	void commit(const Graph & graph)
+	{
+	}
+};
+
+//
+
 struct GraphEdit
 {
 	enum State
@@ -297,7 +347,6 @@ struct GraphEdit
 		kState_InputSocketConnect,
 		kState_OutputSocketConnect,
 		kState_SocketValueEdit,
-		kState_PropEdit,
 		kState_Hidden
 	};
 	
@@ -310,15 +359,12 @@ struct GraphEdit
 		bool hasLink;
 		GraphNodeSocketLink * link;
 		
-		bool hasPropEdit;
-		
 		HitTestResult()
 			: hasNode(false)
 			, node(nullptr)
 			, nodeHitTestResult()
 			, hasLink(false)
 			, link(nullptr)
-			, hasPropEdit(false)
 		{
 		}
 	};
@@ -484,7 +530,7 @@ struct GraphEdit
 	
 	GraphUi::PropEdit * propertyEditor;
 	
-	ofxDatGui * dummyGui;
+	UiState * uiState;
 	
 	GraphEdit();
 	~GraphEdit();
@@ -494,7 +540,6 @@ struct GraphEdit
 	const GraphEdit_TypeDefinition::InputSocket * tryGetInputSocket(const GraphNodeId nodeId, const int socketIndex) const;
 	const GraphEdit_TypeDefinition::OutputSocket * tryGetOutputSocket(const GraphNodeId nodeId, const int socketIndex) const;
 	
-	bool hitTestUi(const float x, const float y, HitTestResult & result) const;
 	bool hitTest(const float x, const float y, HitTestResult & result) const;
 	
 	void tick(const float dt);
@@ -508,6 +553,9 @@ struct GraphEdit
 	void selectLinkAll();
 	void selectAll();
 	
+	void undo();
+	void redo();
+	
 	void draw() const;
 	void drawTypeUi(const GraphNode & node, const GraphEdit_TypeDefinition & typeDefinition) const;
 	
@@ -516,8 +564,6 @@ struct GraphEdit
 };
 
 //
-
-#include "ofxDatGui/ofxDatGui.h"
 
 namespace GraphUi
 {
@@ -569,22 +615,20 @@ namespace GraphUi
 		
 		bool hasFocus;
 		
-		ofxDatGui * datGui;
+		UiState * uiState;
 		
 		PropEdit(GraphEdit_TypeDefinitionLibrary * _typeLibrary);
 		~PropEdit();
 		
-		void tick(const float dt);
+		bool tick(const float dt);
 		void draw() const;
 		
 		void setGraph(Graph * graph);
 		void setNode(const GraphNodeId _nodeId);
 		
+		void doMenus(const bool doActions, const bool doDraw, const float dt);
 		void createUi();
 		
 		GraphNode * tryGetNode();
-		void onTextInputEvent(ofxDatGuiTextInputEvent e);
-		void onSliderEvent(ofxDatGuiSliderEvent e);
-		void onColorPickerEvent(ofxDatGuiColorPickerEvent e);
 	};
 }
