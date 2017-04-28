@@ -70,6 +70,8 @@ void doTextBox(std::string & value, const char * name, const float dt);
 
 bool doCheckBox(bool & value, const char * name, const bool isCollapsable);
 
+void doLabel(const char * text, const float xAlign);
+
 struct EnumValue
 {
 	EnumValue()

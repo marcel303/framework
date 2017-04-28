@@ -306,6 +306,8 @@ struct UiElem
 	
 	void tick(const int x1, const int y1, const int x2, const int y2);
 	
+	void deactivate();
+	
 	void resetVars()
 	{
 		varMask = 0;
@@ -406,6 +408,13 @@ void UiElem::tick(const int x1, const int y1, const int x2, const int y2)
 	}
 	
 	isActive = (g_uiState->activeElem == this);
+}
+
+void UiElem::deactivate()
+{
+	if (g_uiState->activeElem == this)
+		g_uiState->activeElem = nullptr;
+	isActive = false;
 }
 
 //
@@ -688,7 +697,7 @@ static void doTextBoxImpl(T & value, const char * name, const float xOffset, con
 
 		if (textField.isActive())
 		{
-			textField.tick(dt);
+			const bool finished = textField.tick(dt);
 			
 			stringToValue(textField.getText(), value);
 			
@@ -707,6 +716,11 @@ static void doTextBoxImpl(T & value, const char * name, const float xOffset, con
 				increment(temp, sizeof(temp), incrementDirection, value);
 				
 				textField.setText(temp);
+			}
+			
+			if (finished)
+			{
+				elem.deactivate();
 			}
 		}
 	}
@@ -852,6 +866,29 @@ bool doCheckBox(bool & value, const char * name, const bool isCollapsable)
 	}
 
 	return value;
+}
+
+void doLabel(const char * text, const float xAlign)
+{
+	const int kPadding = 5;
+
+	const int x1 = g_drawX;
+	const int x2 = g_drawX + g_menu->sx;
+	const int y1 = g_drawY;
+	const int y2 = g_drawY + kEnumHeight;
+
+	g_drawY += kEnumHeight;
+
+	if (g_doDraw)
+	{
+		setColor(kBackgroundFocusColor);
+		drawRect(x1, y1, x2, y2);
+		setColor(colorBlue);
+		drawRectLine(x1, y1, x2, y2);
+
+		setColor(colorWhite);
+		drawText((x1+x2)/2, (y1+y2)/2, kFontSize, xAlign, 0.f, "%s", text);
+	}
 }
 
 void doEnumImpl(int & value, const char * name, const std::vector<EnumValue> & enumValues)
