@@ -498,6 +498,7 @@ public:
 	Color hueShift(float shift) const;
 
 	uint32_t toRGBA() const;
+	std::string toHexString(const bool withAlpha) const;
 
 	void set(const float r, const float g, const float b, const float a);
 	Color addRGB(const Color & other) const;

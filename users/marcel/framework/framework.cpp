@@ -2358,6 +2358,23 @@ uint32_t Color::toRGBA() const
 	return (ir << 24) | (ig << 16) | (ib << 8) | (ia << 0);
 }
 
+std::string Color::toHexString(const bool withAlpha) const
+{
+	const int ir = r < 0.f ? 0 : r > 1.f ? 255 : int(r * 255.f);
+	const int ig = g < 0.f ? 0 : g > 1.f ? 255 : int(g * 255.f);
+	const int ib = b < 0.f ? 0 : b > 1.f ? 255 : int(b * 255.f);
+	const int ia = a < 0.f ? 0 : a > 1.f ? 255 : int(a * 255.f);
+	
+	char text[64];
+	
+	if (withAlpha)
+		sprintf_s(text, sizeof(text), "%02x%02x%02x%02x", ir, ig, ib, ia);
+	else
+		sprintf_s(text, sizeof(text), "%02x%02x%02x", ir, ig, ib);
+	
+	return text;
+}
+
 void Color::set(const float r, const float g, const float b, const float a)
 {
 	this->r = r;
