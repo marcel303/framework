@@ -870,8 +870,6 @@ bool doCheckBox(bool & value, const char * name, const bool isCollapsable)
 
 void doLabel(const char * text, const float xAlign)
 {
-	const int kPadding = 5;
-
 	const int x1 = g_drawX;
 	const int x2 = g_drawX + g_menu->sx;
 	const int y1 = g_drawY;
@@ -889,6 +887,13 @@ void doLabel(const char * text, const float xAlign)
 		setColor(colorWhite);
 		drawText((x1+x2)/2, (y1+y2)/2, kFontSize, xAlign, 0.f, "%s", text);
 	}
+}
+
+void doBreak()
+{
+	const int kPadding = kEnumHeight*2/3;
+	
+	g_drawY += kPadding;
 }
 
 void doEnumImpl(int & value, const char * name, const std::vector<EnumValue> & enumValues)
