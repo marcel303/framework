@@ -17,6 +17,7 @@ struct UiState;
 namespace GraphUi
 {
 	struct PropEdit;
+	struct NodeTypeNameSelect;
 };
 
 //
@@ -204,7 +205,6 @@ struct GraphEdit_TypeDefinition
 		const OutputSocket * outputSocket;
 		bool background;
 		
-		// todo : move to cpp
 		HitTestResult()
 			: editor(nullptr)
 			, inputSocket(nullptr)
@@ -228,7 +228,6 @@ struct GraphEdit_TypeDefinition
 	float sy;
 	float syFolded;
 	
-	// todo : move to cpp
 	GraphEdit_TypeDefinition()
 		: typeName()
 		, editors()
@@ -253,9 +252,9 @@ struct GraphEdit_TypeDefinitionLibrary
 	std::map<std::string, GraphEdit_ValueTypeDefinition> valueTypeDefinitions;
 	std::map<std::string, GraphEdit_TypeDefinition> typeDefinitions;
 	
-	// todo : move to cpp
 	GraphEdit_TypeDefinitionLibrary()
-		: typeDefinitions()
+		: valueTypeDefinitions()
+		, typeDefinitions()
 	{
 	}
 	
@@ -530,6 +529,8 @@ struct GraphEdit
 	
 	GraphUi::PropEdit * propertyEditor;
 	
+	GraphUi::NodeTypeNameSelect * nodeTypeNameSelect;
+	
 	UiState * uiState;
 	
 	GraphEdit();
@@ -542,7 +543,7 @@ struct GraphEdit
 	
 	bool hitTest(const float x, const float y, HitTestResult & result) const;
 	
-	void tick(const float dt);
+	bool tick(const float dt);
 	void nodeSelectEnd();
 	void socketConnectEnd();
 	void socketValueEditEnd();
@@ -567,53 +568,11 @@ struct GraphEdit
 
 namespace GraphUi
 {
-	struct TextEdit
-	{
-		typedef void (*changeHandler)(TextEdit & textEdit);
-		
-		void * userData;
-		bool hasFocus;
-		std::string editText;
-		bool editTextIsValid;
-		std::string realText;
-		
-		float px;
-		float py;
-		float sx;
-		float sy;
-		
-		changeHandler onChange;
-		
-		TextEdit()
-			: userData(nullptr)
-			, hasFocus(false)
-			, editText()
-			, editTextIsValid(true)
-			, realText()
-			, px(0.f)
-			, py(0.f)
-			, sx(100.f)
-			, sy(100.f)
-			, onChange(nullptr)
-		{
-		}
-		
-		void tick(const float dt);
-		
-		void draw() const;
-		
-		void setHasFocus(const bool _hasFocus);
-		
-		bool hitTest(const float x, const float y) const;
-	};
-	
 	struct PropEdit
 	{
 		GraphEdit_TypeDefinitionLibrary * typeLibrary;
 		Graph * graph;
 		GraphNodeId nodeId;
-		
-		bool hasFocus;
 		
 		UiState * uiState;
 		
@@ -630,5 +589,24 @@ namespace GraphUi
 		void createUi();
 		
 		GraphNode * tryGetNode();
+	};
+	
+	struct NodeTypeNameSelect
+	{
+		GraphEdit_TypeDefinitionLibrary * typeLibrary;
+		
+		UiState * uiState;
+		
+		std::string typeName;
+		
+		NodeTypeNameSelect();
+		~NodeTypeNameSelect();
+		
+		bool tick(const float dt);
+		void draw() const;
+		
+		void doMenus(const bool doActions, const bool doDraw, const float dt);
+		
+		std::string & getNodeTypeName();
 	};
 }

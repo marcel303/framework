@@ -17,6 +17,8 @@
 
 #include "ofxDatGui/ofxDatGui.h" // todo : remove
 
+#include "../libparticle/ui.h"
+
 using namespace tinyxml2;
 
 /*
@@ -1146,6 +1148,8 @@ int main(int argc, char * argv[])
 	
 	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
 	{
+		initUi();
+		
 		//testDatGui();
 		
 		//testNanovg();
@@ -1220,9 +1224,10 @@ int main(int argc, char * argv[])
 			if (insertNodeTypeName != nullptr)
 				::insertNodeTypeName = insertNodeTypeName->getText();
 			
-			graphEdit->tick(dt);
-			
-			if (keyboard.wentDown(SDLK_s))
+			if (graphEdit->tick(dt))
+			{
+			}
+			else if (keyboard.wentDown(SDLK_s))
 			{
 				FILE * file = fopen("graph.xml", "wt");
 				
@@ -1243,8 +1248,7 @@ int main(int argc, char * argv[])
 				fclose(file);
 				file = nullptr;
 			}
-			
-			if (keyboard.wentDown(SDLK_l))
+			else if (keyboard.wentDown(SDLK_l))
 			{
 				delete graphEdit->graph;
 				graphEdit->graph = nullptr;
@@ -1283,6 +1287,11 @@ int main(int argc, char * argv[])
 					graphEdit->propertyEditor->typeLibrary = typeDefinitionLibrary;
 					
 					graphEdit->propertyEditor->setGraph(graphEdit->graph);
+				}
+				
+				if (graphEdit->nodeTypeNameSelect != nullptr)
+				{
+					graphEdit->nodeTypeNameSelect->typeLibrary = typeDefinitionLibrary;
 				}
 				
 				//
@@ -1326,6 +1335,8 @@ int main(int argc, char * argv[])
 		
 		delete graphEdit;
 		graphEdit = nullptr;
+		
+		shutUi();
 		
 		framework.shutdown();
 	}

@@ -667,11 +667,14 @@ GraphEdit::GraphEdit()
 	, mousePosition()
 	, dragAndZoom()
 	, propertyEditor(nullptr)
+	, nodeTypeNameSelect(nullptr)
 	, uiState(nullptr)
 {
 	graph = new Graph();
 	
 	propertyEditor = new GraphUi::PropEdit(nullptr);
+	
+	nodeTypeNameSelect = new GraphUi::NodeTypeNameSelect();
 	
 	uiState = new UiState();
 }
@@ -682,6 +685,9 @@ GraphEdit::~GraphEdit()
 	
 	delete uiState;
 	uiState = nullptr;
+	
+	delete nodeTypeNameSelect;
+	nodeTypeNameSelect = nullptr;
 	
 	delete propertyEditor;
 	propertyEditor = nullptr;
@@ -796,11 +802,16 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 	return false;
 }
 
-void GraphEdit::tick(const float dt)
+bool GraphEdit::tick(const float dt)
 {
 	if (propertyEditor->tick(dt))
 	{
-		return;
+		return true;
+	}
+	
+	if (nodeTypeNameSelect->tick(dt))
+	{
+		return true;
 	}
 	
 	bool enablePropEdit = false;
@@ -1166,7 +1177,7 @@ void GraphEdit::tick(const float dt)
 			nodeSelect.endX = mousePosition.x;
 			nodeSelect.endY = mousePosition.y;
 			
-			// todo : hit test nodes
+			// hit test nodes
 			
 			nodeSelect.nodeIds.clear();
 			
@@ -1419,11 +1430,6 @@ void GraphEdit::tick(const float dt)
 		break;
 	}
 	
-	if (propertyEditor != nullptr)
-	{
-		propertyEditor->tick(dt);
-	}
-	
 	if (graph != nullptr)
 	{
 		for (auto & nodeItr : graph->nodes)
@@ -1433,6 +1439,8 @@ void GraphEdit::tick(const float dt)
 			node.tick(dt);
 		}
 	}
+	
+	return state != kState_Idle;
 }
 
 void GraphEdit::nodeSelectEnd()
@@ -1674,39 +1682,13 @@ void GraphEdit::draw() const
 	case kState_Hidden:
 		break;
 	}
-	
-#if 0
-	// todo : remove
-	
-	for (int x = 0; x < 1024; x += 10)
-	{
-		for (int y = 0; y < 768; y += 10)
-		{
-			HitTestResult hitTestResult;
-			
-			if (hitTest(x, y, hitTestResult))
-			{
-				if (hitTestResult.hasLink)
-				{
-					setColor(colorYellow);
-					fillCircle(x, y, 5.f, 10);
-				}
-				else
-				{
-					setColor(colorRed);
-					fillCircle(x, y, 5.f, 10);
-				}
-			}
-			else
-			{
-				setColor(colorBlue);
-				fillCircle(x, y, 5.f, 10);
-			}
-		}
-	}
-#endif
 
 	gxPopMatrix();
+	
+	if (nodeTypeNameSelect != nullptr)
+	{
+		nodeTypeNameSelect->draw();
+	}
 	
 	if (propertyEditor != nullptr)
 	{
@@ -1898,110 +1880,10 @@ void GraphEdit::saveXml(tinyxml2::XMLPrinter & editorElem) const
 
 //
 
-void GraphUi::TextEdit::tick(const float dt)
-{
-	if (hasFocus)
-	{
-		std::string newEditText = editText;
-		
-		if (keyboard.wentDown(SDLK_BACKSPACE))
-		{
-			if (!newEditText.empty())
-			{
-				newEditText.pop_back();
-			}
-		}
-		
-		for (int c = '0'; c <= '9'; ++c)
-		{
-			if (keyboard.wentDown((SDLKey)c))
-			{
-				newEditText.push_back(c);
-			}
-		}
-		
-		if (newEditText != editText)
-		{
-			editText = newEditText;
-			
-			if (onChange != nullptr)
-			{
-				onChange(*this);
-			}
-		}
-	}
-}
-
-void GraphUi::TextEdit::draw() const
-{
-	gxPushMatrix();
-	{
-		gxTranslatef(px, py, 0.f);
-		
-		if (hasFocus)
-		{
-			if (editTextIsValid)
-				setColor(colorBlue);
-			else
-				setColor(colorRed);
-		}
-		else
-		{
-			setColor(colorBlack);
-		}
-		drawRect(0.f, 0.f, sx, sy);
-		setColor(colorWhite);
-		drawRectLine(0.f, 0.f, sx, sy);
-		
-		setFont("calibri.ttf");
-		setColor(colorWhite);
-		drawText(sx/2.f, sy/2.f, 12, 0.f, 0.f, "%s", editText.c_str());
-	}
-	gxPopMatrix();
-}
-
-void GraphUi::TextEdit::setHasFocus(const bool _hasFocus)
-{
-	if (_hasFocus != hasFocus)
-	{
-		logDebug("setHasFocus: %d -> %d", int(hasFocus), int(_hasFocus));
-		
-		hasFocus = _hasFocus;
-		
-		if (hasFocus)
-		{
-			if (onChange != nullptr)
-			{
-				onChange(*this);
-			}
-		}
-		else
-		{
-			if (editTextIsValid)
-				realText = editText;
-			else
-			{
-				editText = realText;
-				editTextIsValid = true;
-			}
-		}
-	}
-}
-
-bool GraphUi::TextEdit::hitTest(const float x, const float y) const
-{
-	return
-		x >= px &&
-		y >= py &&
-		x < px + sx &&
-		y < py + sy;
-}
-
 GraphUi::PropEdit::PropEdit(GraphEdit_TypeDefinitionLibrary * _typeLibrary)
 	: typeLibrary(nullptr)
 	, graph(nullptr)
 	, nodeId(kGraphNodeIdInvalid)
-	, hasFocus(true)
 	, uiState(nullptr)
 {
 	typeLibrary = _typeLibrary;
@@ -2124,8 +2006,7 @@ void GraphUi::PropEdit::doMenus(const bool doActions, const bool doDraw, const f
 			if (!typeDefinition->displayName.empty())
 				headerText = typeDefinition->displayName;
 			
-			// todo : add doLabel
-			doTextBox(headerText, "__HEADER", dt);
+			doLabel(headerText.c_str(), 0.f);
 			
 			for (auto & inputSocket : typeDefinition->inputSockets)
 			{
@@ -2169,4 +2050,86 @@ GraphNode * GraphUi::PropEdit::tryGetNode()
 		return nullptr;
 	else
 		return graph->tryGetNode(nodeId);
+}
+
+//
+
+	GraphEdit_TypeDefinitionLibrary * typeLibrary;
+	
+	UiState * uiState;
+	
+GraphUi::NodeTypeNameSelect::NodeTypeNameSelect()
+	: typeLibrary(nullptr)
+	, uiState(nullptr)
+{
+	uiState = new UiState();
+	
+	const int kPadding = 10;
+	uiState->sx = 200;
+	uiState->x = kPadding;
+	uiState->y = kPadding;
+}
+
+GraphUi::NodeTypeNameSelect::~NodeTypeNameSelect()
+{
+	delete uiState;
+	uiState = nullptr;
+}
+
+bool GraphUi::NodeTypeNameSelect::tick(const float dt)
+{
+	doMenus(true, false, dt);
+	
+	return uiState->activeElem != nullptr;
+}
+
+void GraphUi::NodeTypeNameSelect::draw() const
+{
+	const_cast<NodeTypeNameSelect*>(this)->doMenus(false, true, 0.f);
+}
+
+void GraphUi::NodeTypeNameSelect::doMenus(const bool doActions, const bool doDraw, const float dt)
+{
+	makeActive(uiState, doActions, doDraw);
+	pushMenu("nodeTypeSelect");
+	{
+		doTextBox(typeName, "type", dt);
+		
+		if (!typeName.empty())
+		{
+			// todo : list recommendations
+			
+			static bool v = false;
+			
+			doBreak();
+			for (int i = 0; i < 5; ++i)
+			{
+				char name[32];
+				sprintf_s(name, sizeof(name), "f%02d", i);
+				pushMenu(name);
+				{
+					doCheckBox(v, "x", false);
+				}
+				popMenu();
+			}
+			
+			doBreak();
+			for (int i = 0; i < 5; ++i)
+			{
+				char name[32];
+				sprintf_s(name, sizeof(name), "m%02d", i);
+				pushMenu(name);
+				{
+					doCheckBox(v, "x", false);
+				}
+				popMenu();
+			}
+		}
+	}
+	popMenu();
+}
+
+std::string & GraphUi::NodeTypeNameSelect::getNodeTypeName()
+{
+	return typeName;
 }
