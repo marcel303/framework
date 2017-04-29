@@ -1969,9 +1969,10 @@ GraphUi::PropEdit::PropEdit(GraphEdit_TypeDefinitionLibrary * _typeLibrary)
 	uiState = new UiState();
 	
 	const int kPadding = 10;
-	uiState->sx = 300;
+	uiState->sx = 200;
 	uiState->x = GFX_SX - uiState->sx - kPadding;
 	uiState->y = kPadding;
+	uiState->textBoxTextOffset = 80;
 }
 
 GraphUi::PropEdit::~PropEdit()
@@ -2146,6 +2147,7 @@ GraphUi::NodeTypeNameSelect::NodeTypeNameSelect()
 	uiState->sx = 200;
 	uiState->x = kPadding;
 	uiState->y = kPadding;
+	uiState->textBoxTextOffset = 50;
 }
 
 GraphUi::NodeTypeNameSelect::~NodeTypeNameSelect()
@@ -2200,6 +2202,8 @@ void GraphUi::NodeTypeNameSelect::doMenus(const bool doActions, const bool doDra
 	makeActive(uiState, doActions, doDraw);
 	pushMenu("nodeTypeSelect");
 	{
+		doLabel("insert", 0.f);
+		
 		doTextBox(typeName, "type", dt);
 		
 		if (!typeName.empty())

@@ -37,7 +37,7 @@ todo :
 + add multiple node selection
 - on typing 0..9 let node value editor erase editorValue and begin typing. requires state transition? end editing on ENTER or when selecting another entity
 - add ability to increment and decrement editorValue. use mouse Y movement or scroll wheel (?)
-- remember number of digits entered after '.' when editing editorValue. use this information when incrementing/decrementing values
++ remember number of digits entered after '.' when editing editorValue. use this information when incrementing/decrementing values
 - add zoom in/out
 	+ add basic implementation
 	- improve zoom in and out behavior
@@ -48,12 +48,12 @@ todo :
 + save/load next alloc ids for nodes and links
 + free literal values on graph free
 + recreate DatGui when loading graph / current node gets freed
-- prioritize input between DatGui and graph editor. do hit test on DatGui
+# prioritize input between DatGui and graph editor. do hit test on DatGui
 + add 'color' type name
 + implement OSC node
 + implement Leap Motion node
 - add undo/redo support. just serialize/deserialize graph for every action?
-- UI element focus: graph editor vs property editor
++ UI element focus: graph editor vs property editor
 + add ability to collapse nodes, so they take up less space
 	+ SPACE to toggle
 	+ fix hit test
@@ -62,7 +62,7 @@ todo :
 - add socket output value editing, for node types that define it on their outputs. required for literals
 - add enum value types. use combo box to select values
 - add ability to randomize input values
-- fix white screen issue on Windows when GUI is visible
+# fix white screen issue on Windows when GUI is visible
 - add trigger support
 - add real-time connection
 	- editing values updates values in live version
@@ -71,6 +71,9 @@ todo :
 + make it possible to disable links
 - add drag and drop support string literals
 - integrate with UI from libparticle. it supports enums, better color picking, incrementing values up and down in checkboxes
+- add mouse up/down support to increment/decrement values of int/float text boxes
++ add option to specify (in UiState) how far text boxes indent their text fields
+
 - add sample.float node
 - add sample.image node. outputs r/g/b/a. specify normalized vs screen coords?
 - add impulse response node. measure input impulse response with oscilator at given frequency
