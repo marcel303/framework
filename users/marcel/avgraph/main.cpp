@@ -79,7 +79,7 @@ todo :
 - add simplex noise node
 - add binary counter node, outputting 4-8 bit values (1.f or 0.f)
 - add delay node. 4 inputs for delay. take max for delay buffer. delay buffer filled at say fixed 120 hz. 4 outputs delayed values
-- add quantize node 
+- add quantize node
 
 todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
@@ -1186,6 +1186,18 @@ int main(int argc, char * argv[])
 		
 		graphEdit->typeDefinitionLibrary = typeDefinitionLibrary;
 		
+		if (graphEdit->propertyEditor != nullptr)
+		{
+			graphEdit->propertyEditor->typeLibrary = typeDefinitionLibrary;
+			
+			graphEdit->propertyEditor->setGraph(graphEdit->graph);
+		}
+		
+		if (graphEdit->nodeTypeNameSelect != nullptr)
+		{
+			graphEdit->nodeTypeNameSelect->typeLibrary = typeDefinitionLibrary;
+		}
+
 		VfxGraph * vfxGraph = nullptr;
 		
 		while (!framework.quitRequested)
@@ -1232,6 +1244,8 @@ int main(int argc, char * argv[])
 				
 				graphEdit->graph = new Graph();
 				
+				// fixme : we should delete/new the property editor here ..
+				
 				delete graphEdit->propertyEditor;
 				graphEdit->propertyEditor = nullptr;
 				
@@ -1253,7 +1267,7 @@ int main(int argc, char * argv[])
 					}
 				}
 				
-				//
+				// fixme : it's a bit messy to manually assign it here. we shouldn't have to do this
 				
 				if (graphEdit->propertyEditor != nullptr)
 				{

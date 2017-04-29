@@ -2204,43 +2204,58 @@ void GraphUi::NodeTypeNameSelect::doMenus(const bool doActions, const bool doDra
 		
 		if (!typeName.empty())
 		{
-			// todo : list recommendations
+			// list recommendations
+			
+			// todo : store this list in the type definition library ?
+			
+			struct TypeNameAndScore
+			{
+				std::string typeName;
+				uint32_t score;
+				
+				bool operator<(const TypeNameAndScore & other) const
+				{
+					if (score != other.score)
+						return score < other.score;
+					else
+						return typeName < other.typeName;
+				}
+			};
+			
+			std::vector<TypeNameAndScore> typeNamesAndScores;
+			typeNamesAndScores.resize(typeLibrary->typeDefinitions.size());
 			
 			static bool v = false;
 			
-			std::string bestString;
-			uint32_t bestStringDistance = 0;
+			int index = 0;
 			
-			// todo : build the list of strings based on the type names available in the type library
-			const char * strings[] =
+			for (auto & typeDefenition : typeLibrary->typeDefinitions)
 			{
-				"hello",
-				"world",
-				"this",
-				"is",
-				"hal",
-				"3000"
-			};
-			
-			for (int i = 0; i < sizeof(strings) / sizeof(strings[0]); ++i)
-			{
-				uint32_t distance = fuzzyStringDistance(strings[i], typeName);
+				const std::string & typeNameToMatch = typeDefenition.second.typeName;
+				const uint32_t score = fuzzyStringDistance(typeNameToMatch, typeName);
 				
-				if (distance < bestStringDistance || bestStringDistance == 0)
-				{
-					bestString = strings[i];
-					bestStringDistance = distance;
-				}
+				typeNamesAndScores[index].typeName = typeNameToMatch;
+				typeNamesAndScores[index].score = score;
+				
+				++index;
 			}
 			
+			std::sort(typeNamesAndScores.begin(), typeNamesAndScores.end());
+			
+			const int count = std::min(5, int(typeNamesAndScores.size()));
+			
 			doBreak();
-			for (int i = 0; i < 5; ++i)
+			for (int i = 0; i < count; ++i)
 			{
 				char name[32];
 				sprintf_s(name, sizeof(name), "f%02d", i);
 				pushMenu(name);
 				{
-					doCheckBox(v, bestString.c_str(), false);
+					if (doButton(typeNamesAndScores[i].typeName.c_str()))
+					{
+						uiState->reset();
+						typeName = typeNamesAndScores[i].typeName;
+					}
 				}
 				popMenu();
 			}
