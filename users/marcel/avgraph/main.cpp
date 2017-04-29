@@ -15,8 +15,6 @@
 #include "vfxNodes/vfxNodePicture.h"
 #include "vfxNodes/vfxNodeVideo.h"
 
-#include "ofxDatGui/ofxDatGui.h" // todo : remove
-
 #include "../libparticle/ui.h"
 
 using namespace tinyxml2;
@@ -73,6 +71,15 @@ todo :
 + make it possible to disable links
 - add drag and drop support string literals
 - integrate with UI from libparticle. it supports enums, better color picking, incrementing values up and down in checkboxes
+- add sample.float node
+- add sample.image node. outputs r/g/b/a. specify normalized vs screen coords?
+- add impulse response node. measure input impulse response with oscilator at given frequency
+- add sample and hold node. has trigger for input
+- add doValuePlotter to ui framework
+- add simplex noise node
+- add binary counter node, outputting 4-8 bit values (1.f or 0.f)
+- add delay node. 4 inputs for delay. take max for delay buffer. delay buffer filled at say fixed 120 hz. 4 outputs delayed values
+- add quantize node 
 
 todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
@@ -1123,8 +1130,6 @@ static VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDef
 	return vfxGraph;
 }
 
-std::string insertNodeTypeName; // todo : remove
-
 int main(int argc, char * argv[])
 {
 	for (float phase = 0.f; phase <= 1.f; phase += .02f)
@@ -1183,35 +1188,6 @@ int main(int argc, char * argv[])
 		
 		VfxGraph * vfxGraph = nullptr;
 		
-		ofxDatGui * gui = nullptr;
-		
-		ofxDatGui * insertGui = nullptr;
-		
-		ofxDatGuiTextInput * insertNodeTypeName = nullptr;
-		
-		if (false)
-		{
-			gui = new ofxDatGui(ofxDatGuiAnchor::TOP_LEFT);
-			gui->setWidth(150);
-		
-			for (auto & typeDefinitionItr : typeDefinitionLibrary->typeDefinitions)
-			{
-				auto & typeDefiniton = typeDefinitionItr.second;
-				
-				//gui->addButton(typeDefiniton.typeName);
-			}
-			
-			gui->addHeader("node type");
-		}
-		
-		if (true)
-		{
-			insertGui = new ofxDatGui();
-			insertGui->setWidth(250);
-			insertGui->addHeader("insert");
-			insertNodeTypeName = insertGui->addTextInput("node type");
-		}
-		
 		while (!framework.quitRequested)
 		{
 			framework.process();
@@ -1220,9 +1196,6 @@ int main(int argc, char * argv[])
 				framework.quitRequested = true;
 			
 			const float dt = framework.timeStep;
-			
-			if (insertNodeTypeName != nullptr)
-				::insertNodeTypeName = insertNodeTypeName->getText();
 			
 			if (graphEdit->tick(dt))
 			{
@@ -1235,7 +1208,7 @@ int main(int argc, char * argv[])
 				
 				xmlGraph.OpenElement("graph");
 				{
-					graphEdit->graph->saveXml(xmlGraph);
+					graphEdit->graph->saveXml(xmlGraph, typeDefinitionLibrary);
 					
 					xmlGraph.OpenElement("editor");
 					{
@@ -1271,7 +1244,7 @@ int main(int argc, char * argv[])
 				const XMLElement * xmlGraph = document.FirstChildElement("graph");
 				if (xmlGraph != nullptr)
 				{
-					graphEdit->graph->loadXml(xmlGraph);
+					graphEdit->graph->loadXml(xmlGraph, typeDefinitionLibrary);
 					
 					const XMLElement * xmlEditor = xmlGraph->FirstChildElement("editor");
 					if (xmlEditor != nullptr)
@@ -1326,12 +1299,6 @@ int main(int argc, char * argv[])
 			}
 			framework.endDraw();
 		}
-		
-		delete insertGui;
-		insertGui = nullptr;
-		
-		delete gui;
-		gui = nullptr;
 		
 		delete graphEdit;
 		graphEdit = nullptr;

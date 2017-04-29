@@ -22,6 +22,10 @@ namespace GraphUi
 
 //
 
+struct GraphEdit_TypeDefinitionLibrary;
+
+//
+
 typedef unsigned int GraphNodeId;
 typedef unsigned int GraphLinkId;
 
@@ -59,9 +63,11 @@ struct GraphNodeSocketLink
 	bool isEnabled;
 	
 	GraphNodeId srcNodeId;
+	std::string srcNodeSocketName;
 	int srcNodeSocketIndex;
 	
 	GraphNodeId dstNodeId;
+	std::string dstNodeSocketName;
 	int dstNodeSocketIndex;
 	
 	GraphNodeSocketLink();
@@ -91,8 +97,8 @@ struct Graph
 	
 	GraphNode * tryGetNode(const GraphNodeId nodeId);
 	
-	bool loadXml(const tinyxml2::XMLElement * xmlGraph);
-	bool saveXml(tinyxml2::XMLPrinter & xmlGraph) const;
+	bool loadXml(const tinyxml2::XMLElement * xmlGraph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary);
+	bool saveXml(tinyxml2::XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary) const;
 };
 
 //

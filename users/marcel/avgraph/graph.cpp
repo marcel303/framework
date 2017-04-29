@@ -12,8 +12,6 @@ extern const int GFX_SY;
 
 using namespace tinyxml2;
 
-extern std::string insertNodeTypeName;
-
 //
 
 GraphNodeId kGraphNodeIdInvalid = 0;
@@ -147,8 +145,10 @@ GraphNodeSocketLink::GraphNodeSocketLink()
 	: id(kGraphLinkIdInvalid)
 	, isEnabled(true)
 	, srcNodeId(kGraphNodeIdInvalid)
+	, srcNodeSocketName()
 	, srcNodeSocketIndex(-1)
 	, dstNodeId(kGraphNodeIdInvalid)
+	, dstNodeSocketName()
 	, dstNodeSocketIndex(-1)
 {
 }
@@ -262,7 +262,7 @@ GraphNode * Graph::tryGetNode(const GraphNodeId nodeId)
 		return &nodeItr->second;
 }
 
-bool Graph::loadXml(const XMLElement * xmlGraph)
+bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary)
 {
 	nextNodeId = intAttrib(xmlGraph, "nextNodeId", nextNodeId);
 	nextLinkId = intAttrib(xmlGraph, "nextLinkId", nextLinkId);
@@ -298,8 +298,10 @@ bool Graph::loadXml(const XMLElement * xmlGraph)
 		link.id = intAttrib(xmlLink, "id", link.id);
 		link.isEnabled = boolAttrib(xmlLink, "enabled", link.isEnabled);
 		link.srcNodeId = intAttrib(xmlLink, "srcNodeId", link.srcNodeId);
+		link.srcNodeSocketName = stringAttrib(xmlLink, "srcNodeSocketName", link.srcNodeSocketName.c_str());
 		link.srcNodeSocketIndex = intAttrib(xmlLink, "srcNodeSocketIndex", link.srcNodeSocketIndex);
 		link.dstNodeId = intAttrib(xmlLink, "dstNodeId", link.dstNodeId);
+		link.dstNodeSocketName = stringAttrib(xmlLink, "dstNodeSocketName", link.dstNodeSocketName.c_str());
 		link.dstNodeSocketIndex = intAttrib(xmlLink, "dstNodeSocketIndex", link.dstNodeSocketIndex);
 		
 		addLink(link, false);
@@ -307,10 +309,98 @@ bool Graph::loadXml(const XMLElement * xmlGraph)
 		nextLinkId = std::max(nextLinkId, link.id + 1);
 	}
 	
+#if 0
+	// todo : remove this once conversion is complete : fixup socket input and output names
+	
+	for (auto & linkItr : links)
+	{
+		auto & link = linkItr.second;
+		
+		auto srcNode = tryGetNode(link.srcNodeId);
+		
+		if (srcNode)
+		{
+			auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(srcNode->typeName);
+			
+			if (typeDefinition)
+			{
+				if (link.srcNodeSocketIndex >= 0 && link.srcNodeSocketIndex < typeDefinition->inputSockets.size())
+				{
+					link.srcNodeSocketName = typeDefinition->inputSockets[link.srcNodeSocketIndex].name;
+					printf("srcNodeSocketName: %s\n", link.srcNodeSocketName.c_str());
+				}
+			}
+		}
+		
+		auto dstNode = tryGetNode(link.dstNodeId);
+		
+		if (dstNode)
+		{
+			auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(dstNode->typeName);
+			
+			if (typeDefinition)
+			{
+				if (link.dstNodeSocketIndex >= 0 && link.dstNodeSocketIndex < typeDefinition->outputSockets.size())
+				{
+					link.dstNodeSocketName = typeDefinition->outputSockets[link.dstNodeSocketIndex].name;
+					printf("dstNodeSocketName: %s\n", link.dstNodeSocketName.c_str());
+				}
+			}
+		}
+	}
+#else
+	// determine socket indices based on src and dst socket names. These indices are used for rendering and also when saving to XML for easier instantiation in the run-time.
+	
+	for (auto & linkItr : links)
+	{
+		auto & link = linkItr.second;
+		
+		auto srcNode = tryGetNode(link.srcNodeId);
+		
+		if (srcNode)
+		{
+			auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(srcNode->typeName);
+			
+			if (typeDefinition)
+			{
+				for (auto & inputSocket : typeDefinition->inputSockets)
+				{
+					if (inputSocket.name == link.srcNodeSocketName)
+					{
+						//printf("srcNodeSocketIndex: %d -> %d\n", link.srcNodeSocketIndex, inputSocket.index);
+						link.srcNodeSocketIndex = inputSocket.index;
+						break;
+					}
+				}
+			}
+		}
+		
+		auto dstNode = tryGetNode(link.dstNodeId);
+		
+		if (dstNode)
+		{
+			auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(dstNode->typeName);
+			
+			if (typeDefinition)
+			{
+				for (auto & outputSocket : typeDefinition->outputSockets)
+				{
+					if (outputSocket.name == link.dstNodeSocketName)
+					{
+						//printf("dstNodeSocketIndex: %d -> %d\n", link.dstNodeSocketIndex, outputSocket.index);
+						link.dstNodeSocketIndex = outputSocket.index;
+						break;
+					}
+				}
+			}
+		}
+	}
+#endif
+
 	return true;
 }
 
-bool Graph::saveXml(XMLPrinter & xmlGraph) const
+bool Graph::saveXml(XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary) const
 {
 	xmlGraph.PushAttribute("nextNodeId", nextNodeId);
 	xmlGraph.PushAttribute("nextLinkId", nextLinkId);
@@ -352,8 +442,10 @@ bool Graph::saveXml(XMLPrinter & xmlGraph) const
 			xmlGraph.PushAttribute("id", link.id);
 			xmlGraph.PushAttribute("enabled", link.isEnabled);
 			xmlGraph.PushAttribute("srcNodeId", link.srcNodeId);
+			xmlGraph.PushAttribute("srcNodeSocketName", link.srcNodeSocketName.c_str());
 			xmlGraph.PushAttribute("srcNodeSocketIndex", link.srcNodeSocketIndex);
 			xmlGraph.PushAttribute("dstNodeId", link.dstNodeId);
+			xmlGraph.PushAttribute("dstNodeSocketName", link.dstNodeSocketName.c_str());
 			xmlGraph.PushAttribute("dstNodeSocketIndex", link.dstNodeSocketIndex);
 		}
 		xmlGraph.CloseElement();
@@ -928,23 +1020,7 @@ bool GraphEdit::tick(const float dt)
 			
 			if (keyboard.wentDown(SDLK_i))
 			{
-				std::string typeName;
-				
-				if (insertNodeTypeName.empty())
-				{
-					std::vector<std::string> typeNames;
-					for (auto i : typeDefinitionLibrary->typeDefinitions)
-						typeNames.push_back(i.first);
-					
-					typeName = typeNames[rand() % typeNames.size()];
-				}
-				else
-				{
-					auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(insertNodeTypeName);
-					
-					if (typeDefinition != nullptr)
-						typeName = insertNodeTypeName;
-				}
+				std::string typeName = nodeTypeNameSelect->getNodeTypeName();
 				
 				if (!typeName.empty())
 				{
@@ -1458,8 +1534,10 @@ void GraphEdit::socketConnectEnd()
 		GraphNodeSocketLink link;
 		link.id = graph->allocLinkId();
 		link.srcNodeId = socketConnect.srcNodeId;
+		link.srcNodeSocketName = socketConnect.srcNodeSocket->name;
 		link.srcNodeSocketIndex = socketConnect.srcNodeSocket->index;
 		link.dstNodeId = socketConnect.dstNodeId;
+		link.dstNodeSocketName = socketConnect.dstNodeSocket->name;
 		link.dstNodeSocketIndex = socketConnect.dstNodeSocket->index;
 		
 		graph->addLink(link, true);
@@ -2088,6 +2166,35 @@ void GraphUi::NodeTypeNameSelect::draw() const
 	const_cast<NodeTypeNameSelect*>(this)->doMenus(false, true, 0.f);
 }
 
+static uint32_t fuzzyStringDistance(const std::string & s1, const std::string & s2)
+{
+	const uint32_t len1 = s1.size();
+	const uint32_t len2 = s2.size();
+	
+	uint32_t ** d = (uint32_t**)alloca(sizeof(uint32_t*) * (len1 + 1));
+	for (uint32_t i = 0; i < len1 + 1; ++i)
+		d[i] = (uint32_t*)alloca(4 * (len2 + 1));
+	
+	d[0][0] = 0;
+	
+	for (uint32_t i = 1; i <= len1; ++i)
+		d[i][0] = i;
+	for (uint32_t i = 1; i <= len2; ++i)
+		d[0][i] = i;
+
+	for (uint32_t i = 1; i <= len1; ++i)
+	{
+		for (uint32_t j = 1; j <= len2; ++j)
+		{
+			// note that std::min({arg1, arg2, arg3}) works only in C++11,
+			// for C++98 use std::min(std::min(arg1, arg2), arg3)
+			d[i][j] = std::min({ d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (s1[i - 1] == s2[j - 1] ? 0 : 20) });
+		}
+	}
+	
+	return d[len1][len2];
+}
+
 void GraphUi::NodeTypeNameSelect::doMenus(const bool doActions, const bool doDraw, const float dt)
 {
 	makeActive(uiState, doActions, doDraw);
@@ -2101,6 +2208,31 @@ void GraphUi::NodeTypeNameSelect::doMenus(const bool doActions, const bool doDra
 			
 			static bool v = false;
 			
+			std::string bestString;
+			uint32_t bestStringDistance = 0;
+			
+			// todo : build the list of strings based on the type names available in the type library
+			const char * strings[] =
+			{
+				"hello",
+				"world",
+				"this",
+				"is",
+				"hal",
+				"3000"
+			};
+			
+			for (int i = 0; i < sizeof(strings) / sizeof(strings[0]); ++i)
+			{
+				uint32_t distance = fuzzyStringDistance(strings[i], typeName);
+				
+				if (distance < bestStringDistance || bestStringDistance == 0)
+				{
+					bestString = strings[i];
+					bestStringDistance = distance;
+				}
+			}
+			
 			doBreak();
 			for (int i = 0; i < 5; ++i)
 			{
@@ -2108,7 +2240,7 @@ void GraphUi::NodeTypeNameSelect::doMenus(const bool doActions, const bool doDra
 				sprintf_s(name, sizeof(name), "f%02d", i);
 				pushMenu(name);
 				{
-					doCheckBox(v, "x", false);
+					doCheckBox(v, bestString.c_str(), false);
 				}
 				popMenu();
 			}
