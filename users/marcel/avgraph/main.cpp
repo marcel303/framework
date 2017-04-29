@@ -1135,17 +1135,6 @@ static VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDef
 
 int main(int argc, char * argv[])
 {
-	for (float phase = 0.f; phase <= 1.f; phase += .02f)
-	{
-		//const float phase2 = std::fmod(phase + .25f, 1.f);
-		const float phase2 = std::fmod(phase + .5f, 1.f);
-		
-		//const float value = 1.f - std::abs(phase2 * 4.f - 2.f);
-		const float value = -1.f + 2.f * phase2;
-		
-		printf("value: %f\n", value);
-	}
-	
 	//framework.waitForEvents = true;
 	
 	framework.enableRealTimeEditing = true;

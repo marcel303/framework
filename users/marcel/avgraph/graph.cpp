@@ -2227,7 +2227,6 @@ void GraphUi::NodeTypeNameSelect::doMenus(const bool doActions, const bool doDra
 			};
 			
 			std::vector<TypeNameAndScore> typeNamesAndScores;
-			typeNamesAndScores.resize(typeLibrary->typeDefinitions.size());
 			
 			static bool v = false;
 			
@@ -2236,8 +2235,13 @@ void GraphUi::NodeTypeNameSelect::doMenus(const bool doActions, const bool doDra
 			for (auto & typeDefenition : typeLibrary->typeDefinitions)
 			{
 				const std::string & typeNameToMatch = typeDefenition.second.typeName;
+				
+				if (typeNameToMatch[0] != typeName[0])
+					continue;
+				
 				const uint32_t score = fuzzyStringDistance(typeNameToMatch, typeName);
 				
+				typeNamesAndScores.resize(index + 1);
 				typeNamesAndScores[index].typeName = typeNameToMatch;
 				typeNamesAndScores[index].score = score;
 				
