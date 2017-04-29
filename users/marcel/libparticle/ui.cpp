@@ -53,6 +53,7 @@ UiState::UiState()
 	, y(0)
 	, sx(100)
 	, font("calibri.ttf")
+	, textBoxTextOffset(kTextBoxTextOffset)
 	, activeElem(nullptr)
 	, activeColor(nullptr)
 	, colorWheel(nullptr)
@@ -743,7 +744,7 @@ static void doTextBoxImpl(T & value, const char * name, const float xOffset, con
 		setColor(colorWhite);
 		drawText(x1 + kPadding, (y1+y2)/2, kFontSize, +1.f, 0.f, "%s", name);
 
-		textField.draw(x1 + kPadding + kTextBoxTextOffset * xScale, y1, y2 - y1, kFontSize);
+		textField.draw(x1 + kPadding + g_uiState->textBoxTextOffset * xScale, y1, y2 - y1, kFontSize);
 	}
 }
 

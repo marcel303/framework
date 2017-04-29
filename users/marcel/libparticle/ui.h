@@ -18,6 +18,7 @@ struct UiState
 	int sx;
 	
 	std::string font;
+	float textBoxTextOffset;
 	
 	UiElem * activeElem;
 	ParticleColor * activeColor;
