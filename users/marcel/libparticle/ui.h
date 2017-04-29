@@ -59,6 +59,7 @@ void popMenu();
 //
 
 bool doButton(const char * name, const float xOffset, const float xScale, const bool lineBreak);
+bool doButton(const char * name);
 
 void doTextBox(int & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt);
 void doTextBox(float & value, const char * name, const float xOffset, const float xScale, const bool lineBreak, const float dt);

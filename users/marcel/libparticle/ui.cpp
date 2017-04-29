@@ -521,6 +521,11 @@ bool doButton(const char * name, const float xOffset, const float xScale, const 
 	return result;
 }
 
+bool doButton(const char * name)
+{
+	return doButton(name, 0.f, 1.f, true);
+}
+
 static bool valueToString(const std::string & src, char * dst, const int dstSize)
 {
 	sprintf_s(dst, dstSize, "%s", src.c_str());
