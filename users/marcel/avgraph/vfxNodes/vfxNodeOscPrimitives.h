@@ -1,6 +1,6 @@
 #pragma once
 
-#include "VfxNodeBase.h"
+#include "vfxNodeBase.h"
 
 struct VfxNodeOscSine : VfxNodeBase
 {

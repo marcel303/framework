@@ -18,7 +18,7 @@ public:
 	virtual double PlaybackPosition_get() = 0;
 };
 
-#include <OpenAL/AL.h>
+#include <OpenAL/al.h>
 
 class AudioOutput_OpenAL : public AudioOutput
 {

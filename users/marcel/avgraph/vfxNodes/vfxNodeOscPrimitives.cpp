@@ -1,4 +1,4 @@
-#include "VfxNodeOscPrimitives.h"
+#include "vfxNodeOscPrimitives.h"
 
 VfxNodeOscSine::VfxNodeOscSine()
 	: VfxNodeBase()
