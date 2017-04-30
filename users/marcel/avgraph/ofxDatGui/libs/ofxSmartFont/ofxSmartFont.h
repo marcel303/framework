@@ -25,6 +25,8 @@
 //#include "ofTrueTypeFont.h"
 #include "../../../ofMain.h"
 
+#undef log
+
 class ofxSmartFont {
 
     public:
