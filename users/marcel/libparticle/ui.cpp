@@ -12,6 +12,7 @@ struct UiMenu;
 static const int kFontSize = 12;
 static const int kTextBoxHeight = 20;
 static const int kTextBoxTextOffset = 150;
+static const int kTextBoxMousePixelsPerIncrement = 5;
 static const int kCheckBoxHeight = 20;
 static const int kEnumHeight = 20;
 static const int kEnumSelectOffset = 150;
@@ -651,11 +652,13 @@ static void doTextBoxImpl(T & value, const char * name, const float xOffset, con
 	
 	enum Vars
 	{
-		kVar_TextfieldIsInit
+		kVar_TextfieldIsInit,
+		kVar_MouseIncrementY
 	};
 	
 	bool & textFieldIsInit = elem.getBool(kVar_TextfieldIsInit, false);
 	EditorTextField & textField = elem.getTextField();
+	int & mouseIncrementY = elem.getInt(kVar_MouseIncrementY, 0);
 	
 	const int kPadding = 5;
 
@@ -682,6 +685,8 @@ static void doTextBoxImpl(T & value, const char * name, const float xOffset, con
 			textField.close();
 		}
 		
+		const bool wasActive = elem.isActive;
+		
 		elem.tick(x1, y1, x2, y2);
 
 		if (elem.clicked)
@@ -693,6 +698,10 @@ static void doTextBoxImpl(T & value, const char * name, const float xOffset, con
 			textField.setText(temp);
 			
 			textField.setTextIsSelected(true);
+			
+			//
+			
+			mouseIncrementY = mouse.y;
 		}
 		
 		if (!elem.isActive)
@@ -714,6 +723,25 @@ static void doTextBoxImpl(T & value, const char * name, const float xOffset, con
 			if (keyboard.wentDown(SDLK_UP, true))
 				incrementDirection++;
 			
+			if (mouse.isDown(BUTTON_LEFT))
+			{
+				const int mouseIncrement = (mouse.y - mouseIncrementY) / kTextBoxMousePixelsPerIncrement;
+				const int direction = mouseIncrement < 0 ? -1 : +1;
+				const int numIncrements = mouseIncrement * direction;
+				
+				for (int i = 0; i < numIncrements; ++i)
+				{
+					char temp[1024];
+					sprintf_s(temp, sizeof(temp), "%s", textField.getText());
+				
+					increment(temp, sizeof(temp), direction, value);
+					
+					textField.setText(temp);
+				}
+				
+				mouseIncrementY += mouseIncrement * kTextBoxMousePixelsPerIncrement;
+			}
+			
 			if (incrementDirection != 0)
 			{
 				char temp[1024];
@@ -725,6 +753,11 @@ static void doTextBoxImpl(T & value, const char * name, const float xOffset, con
 			}
 			
 			if (finished)
+			{
+				elem.deactivate();
+			}
+			
+			if (wasActive && elem.isActive && elem.hasFocus && mouse.wentDown(BUTTON_LEFT))
 			{
 				elem.deactivate();
 			}
