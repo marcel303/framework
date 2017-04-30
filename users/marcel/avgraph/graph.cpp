@@ -1206,29 +1206,49 @@ bool GraphEdit::tick(const float dt)
 				}
 			}
 			
-			int moveX = 0;
-			int moveY = 0;
-			
-			if (keyboard.wentDown(SDLK_LEFT))
-				moveX -= 10;
-			if (keyboard.wentDown(SDLK_RIGHT))
-				moveX += 10;
-			if (keyboard.wentDown(SDLK_UP))
-				moveY -= 10;
-			if (keyboard.wentDown(SDLK_DOWN))
-				moveY += 10;
-			
-			if (moveX != 0 || moveY != 0)
+			if (selectedNodes.empty())
 			{
-				for (auto nodeId : selectedNodes)
+				int moveX = 0;
+				int moveY = 0;
+				
+				if (keyboard.wentDown(SDLK_LEFT))
+					moveX -= 1;
+				if (keyboard.wentDown(SDLK_RIGHT))
+					moveX += 1;
+				if (keyboard.wentDown(SDLK_UP))
+					moveY -= 1;
+				if (keyboard.wentDown(SDLK_DOWN))
+					moveY += 1;
+				
+				dragAndZoom.desiredFocusX += moveX * GFX_SX * 1 / 5;
+				dragAndZoom.desiredFocusY += moveY * GFX_SY * 1 / 5;
+			}
+			else
+			{
+				int moveX = 0;
+				int moveY = 0;
+				
+				if (keyboard.wentDown(SDLK_LEFT))
+					moveX -= 10;
+				if (keyboard.wentDown(SDLK_RIGHT))
+					moveX += 10;
+				if (keyboard.wentDown(SDLK_UP))
+					moveY -= 10;
+				if (keyboard.wentDown(SDLK_DOWN))
+					moveY += 10;
+				
+				if (moveX != 0 || moveY != 0)
 				{
-					auto node = tryGetNode(nodeId);
-					
-					Assert(node);
-					if (node)
+					for (auto nodeId : selectedNodes)
 					{
-						node->editorX += moveX;
-						node->editorY += moveY;
+						auto node = tryGetNode(nodeId);
+						
+						Assert(node);
+						if (node)
+						{
+							node->editorX += moveX;
+							node->editorY += moveY;
+						}
 					}
 				}
 			}
@@ -1950,11 +1970,13 @@ void GraphEdit::draw() const
 					
 					if (hasGraph)
 					{
+						const int xOffset = realTimeSocketCapture.history.kMaxHistory - realTimeSocketCapture.history.historySize;
+						
 						for (int i = 0; i < realTimeSocketCapture.history.historySize; ++i)
 						{
 							const float value = realTimeSocketCapture.history.getGraphValue(i);
 							
-							const float plotX = kPadding + i;
+							const float plotX = kPadding + i + xOffset;
 							const float plotY = (value - graphMax) / (graphMin - graphMax);
 							
 							setColor(127, 127, 255);
@@ -2190,6 +2212,7 @@ GraphUi::PropEdit::PropEdit(GraphEdit_TypeDefinitionLibrary * _typeLibrary, Grap
 	, graph(nullptr)
 	, nodeId(kGraphNodeIdInvalid)
 	, uiState(nullptr)
+	, uiColors(nullptr)
 {
 	typeLibrary = _typeLibrary;
 	
@@ -2200,10 +2223,15 @@ GraphUi::PropEdit::PropEdit(GraphEdit_TypeDefinitionLibrary * _typeLibrary, Grap
 	uiState->x = GFX_SX - uiState->sx - kPadding;
 	uiState->y = kPadding;
 	uiState->textBoxTextOffset = 80;
+	
+	uiColors = new ParticleColor[kMaxUiColors];
 }
 
 GraphUi::PropEdit::~PropEdit()
 {
+	delete[] uiColors;
+	uiColors = nullptr;
+	
 	delete uiState;
 	uiState = nullptr;
 }
@@ -2246,7 +2274,7 @@ void GraphUi::PropEdit::setNode(const GraphNodeId _nodeId)
 	}
 }
 
-static bool doMenuItem(std::string & valueText, const std::string & name, const std::string & editor, const float dt)
+static bool doMenuItem(std::string & valueText, const std::string & name, const std::string & editor, const float dt, const int index, ParticleColor * uiColors, const int maxUiColors)
 {
 	if (editor == "textbox")
 	{
@@ -2294,13 +2322,21 @@ static bool doMenuItem(std::string & valueText, const std::string & name, const 
 	}
 	else if (editor == "colorpicker")
 	{
-		Color color = Color::fromHex(valueText.c_str());
-		ParticleColor particleColor = toParticleColor(color);
-		
-		doParticleColor(particleColor, name.c_str());
-		
-		color = toColor(particleColor);
-		valueText = color.toHexString(true);
+		if (index < maxUiColors)
+		{
+			ParticleColor & particleColor = uiColors[index];
+			
+			if (g_uiState->activeColor != &particleColor)
+			{
+				Color color = Color::fromHex(valueText.c_str());
+				particleColor = toParticleColor(color);
+			}
+			
+			doParticleColor(particleColor, name.c_str());
+			
+			Color color = toColor(particleColor);
+			valueText = color.toHexString(true);
+		}
 		
 		return true;
 	}
@@ -2343,7 +2379,7 @@ void GraphUi::PropEdit::doMenus(const bool doActions, const bool doDraw, const f
 				
 				const GraphEdit_ValueTypeDefinition * valueTypeDefinition = typeLibrary->tryGetValueTypeDefinition(inputSocket.typeName);
 				
-				const bool hasValue = doMenuItem(newValueText, inputSocket.name, valueTypeDefinition == nullptr ? "textbox" : valueTypeDefinition->editor, dt);
+				const bool hasValue = doMenuItem(newValueText, inputSocket.name, valueTypeDefinition == nullptr ? "textbox" : valueTypeDefinition->editor, dt, inputSocket.index, uiColors, kMaxUiColors);
 				
 				if (isPreExisting)
 				{
@@ -2378,7 +2414,7 @@ void GraphUi::PropEdit::doMenus(const bool doActions, const bool doDraw, const f
 				
 				const GraphEdit_ValueTypeDefinition * valueTypeDefinition = typeLibrary->tryGetValueTypeDefinition(outputSocket.typeName);
 				
-				doMenuItem(valueText, outputSocket.name, valueTypeDefinition == nullptr ? "textbox" : valueTypeDefinition->editor, dt);
+				doMenuItem(valueText, outputSocket.name, valueTypeDefinition == nullptr ? "textbox" : valueTypeDefinition->editor, dt, outputSocket.index, nullptr, 0);
 			}
 		}
 	}

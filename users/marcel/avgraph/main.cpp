@@ -65,17 +65,17 @@ todo :
 # fix white screen issue on Windows when GUI is visible
 - add trigger support
 - add real-time connection
-	- editing values updates values in live version
+	+ editing values updates values in live version
 	- marking nodes passthrough gets reflected in live
 	- disabling nodes and links gets reflected in live
-- add reverse real-time connection
-	- let graph edit sample socket input and output values
-		- let graph edit show a graph of the values when hovering over a socket
++ add reverse real-time connection
+	+ let graph edit sample socket input and output values
+		+ let graph edit show a graph of the values when hovering over a socket
 + make it possible to disable nodes
 + make it possible to disable links
 - add drag and drop support string literals
 + integrate with UI from libparticle. it supports enums, better color picking, incrementing values up and down in checkboxes
-- add mouse up/down support to increment/decrement values of int/float text boxes
+- add mouse up/down movement support to increment/decrement values of int/float text boxes
 + add option to specify (in UiState) how far text boxes indent their text fields
 - add history of last nodes added
 - insert node on pressing enter in the node type name box or when pressing one of the suggestion buttons

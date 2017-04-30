@@ -13,6 +13,7 @@ namespace tinyxml2
 }
 
 struct UiState;
+struct ParticleColor;
 
 namespace GraphUi
 {
@@ -348,6 +349,10 @@ struct GraphEdit_UndoHistory
 
 struct GraphEdit_RealTimeConnection
 {
+	virtual ~GraphEdit_RealTimeConnection()
+	{
+	}
+	
 	virtual void setSrcSocketValue(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, const std::string & value)
 	{
 	}
@@ -695,6 +700,9 @@ namespace GraphUi
 		GraphNodeId nodeId;
 		
 		UiState * uiState;
+		
+		static const int kMaxUiColors = 32;
+		ParticleColor * uiColors;
 		
 		PropEdit(GraphEdit_TypeDefinitionLibrary * _typeLibrary, GraphEdit * graphEdit);
 		~PropEdit();
