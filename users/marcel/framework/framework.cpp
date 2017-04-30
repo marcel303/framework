@@ -2212,7 +2212,13 @@ Color::Color(float r, float g, float b, float a)
 
 Color Color::fromHex(const char * str)
 {
-	if (strlen(str) == 6)
+	const size_t len = strlen(str);
+	
+	if (len == 0)
+	{
+		return Color(0.f, 0.f, 0.f, 0.f);
+	}
+	else if (len == 6)
 	{
 		const uint32_t hex = std::stoul(str, 0, 16);
 		const float r = scale255((hex >> 16) & 0xff);
