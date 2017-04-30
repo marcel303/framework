@@ -137,10 +137,14 @@ struct GraphEdit_ValueTypeDefinition
 	std::string editor;
 	std::string editorMin;
 	std::string editorMax;
+	std::string visualizer;
 	
 	GraphEdit_ValueTypeDefinition()
 		: typeName()
 		, editor()
+		, editorMin()
+		, editorMax()
+		, visualizer()
 	{
 	}
 	
@@ -342,6 +346,21 @@ struct GraphEdit_UndoHistory
 
 //
 
+struct GraphEdit_RealTimeConnection
+{
+	virtual bool getSrcSocketValue(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, std::string & value)
+	{
+		return false;
+	}
+	
+	virtual bool getDstSocketValue(const GraphNodeId nodeId, const int dstSocketIndex, const std::string & dstSocketName, std::string & value)
+	{
+		return false;
+	}
+};
+
+//
+
 struct GraphEdit
 {
 	enum State
@@ -390,6 +409,22 @@ struct GraphEdit
 		}
 	};
 	
+	struct GraphEditMouse
+	{
+		float uiX;
+		float uiY;
+		float x;
+		float y;
+		
+		GraphEditMouse()
+			: uiX(0.f)
+			, uiY(0.f)
+			, x(0.f)
+			, y(0.f)
+		{
+		}
+	};
+	
 	struct DragAndZoom
 	{
 		float zoom;
@@ -434,18 +469,88 @@ struct GraphEdit
 		}
 	};
 	
-	struct GraphEditMouse
+	struct RealTimeSocketCapture
 	{
-		float uiX;
-		float uiY;
-		float x;
-		float y;
+		struct History
+		{
+			const static int kMaxHistory = 100;
+			
+			float history[kMaxHistory];
+			int historySize;
+			int nextWriteIndex;
+			
+			float min;
+			float max;
+			
+			History()
+				: historySize(0)
+				, nextWriteIndex(0)
+				, min(0.f)
+				, max(0.f)
+			{
+			}
+			
+			void add(const float value)
+			{
+				if (historySize == 0)
+				{
+					min = value;
+					max = value;
+				}
+				else
+				{
+					if (value < min)
+						min = value;
+					if (value > max)
+						max = value;
+				}
+				
+				if (historySize < kMaxHistory)
+					historySize = historySize + 1;
+				
+				history[nextWriteIndex] = value;
+				
+				nextWriteIndex++;
+				
+				if (nextWriteIndex == kMaxHistory)
+					nextWriteIndex = 0;
+			}
+			
+			float getGraphValue(const int offset) const
+			{
+				const int index = (nextWriteIndex - historySize + offset + kMaxHistory) % kMaxHistory;
+				
+				return history[index];
+			}
+			
+			bool getRange(float & _min, float & _max) const
+			{
+				if (historySize == 0)
+					return false;
+				else
+				{
+					_min = min;
+					_max = max;
+					
+					return true;
+				}
+			}
+		};
 		
-		GraphEditMouse()
-			: uiX(0.f)
-			, uiY(0.f)
-			, x(0.f)
-			, y(0.f)
+		GraphNodeId nodeId;
+		int srcSocketIndex;
+		int dstSocketIndex;
+		
+		std::string value;
+		
+		History history;
+		
+		RealTimeSocketCapture()
+			: nodeId(kGraphNodeIdInvalid)
+			, srcSocketIndex(-1)
+			, dstSocketIndex(-1)
+			, value()
+			, history()
 		{
 		}
 	};
@@ -516,6 +621,8 @@ struct GraphEdit
 	
 	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
 	
+	GraphEdit_RealTimeConnection * realTimeConnection;
+	
 	std::set<GraphNodeId> selectedNodes;
 	std::set<GraphLinkId> highlightedLinks;
 	std::set<GraphLinkId> selectedLinks;
@@ -532,6 +639,8 @@ struct GraphEdit
 	GraphEditMouse mousePosition;
 	
 	DragAndZoom dragAndZoom;
+	
+	RealTimeSocketCapture realTimeSocketCapture;
 	
 	GraphUi::PropEdit * propertyEditor;
 	

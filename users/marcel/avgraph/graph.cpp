@@ -488,6 +488,7 @@ void GraphEdit_ValueTypeDefinition::loadXml(const XMLElement * xmlType)
 	editor = stringAttrib(xmlType, "editor", "textbox");
 	editorMin = stringAttrib(xmlType, "editorMin", "0");
 	editorMax = stringAttrib(xmlType, "editorMax", "1");
+	visualizer = stringAttrib(xmlType, "visualizer", "");
 }
 
 bool GraphEdit_TypeDefinition::InputSocket::canConnectTo(const GraphEdit_TypeDefinition::OutputSocket & socket) const
@@ -750,6 +751,7 @@ bool GraphEdit::SocketValueEdit::processKeyboard()
 GraphEdit::GraphEdit()
 	: graph(nullptr)
 	, typeDefinitionLibrary(nullptr)
+	, realTimeConnection(nullptr)
 	, selectedNodes()
 	, selectedLinks()
 	, state(kState_Idle)
@@ -896,18 +898,6 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 
 bool GraphEdit::tick(const float dt)
 {
-	if (propertyEditor->tick(dt))
-	{
-		return true;
-	}
-	
-	if (nodeTypeNameSelect->tick(dt))
-	{
-		return true;
-	}
-	
-	bool enablePropEdit = false;
-	
 	{
 		mousePosition.uiX = mouse.x;
 		mousePosition.uiY = mouse.y;
@@ -916,6 +906,116 @@ bool GraphEdit::tick(const float dt)
 		const Vec2 dstMousePosition = dragAndZoom.invTransform * srcMousePosition;
 		mousePosition.x = dstMousePosition[0];
 		mousePosition.y = dstMousePosition[1];
+	}
+	
+	if (realTimeConnection != nullptr)
+	{
+		bool isValid = false;
+		
+		HitTestResult result;
+		
+		if (hitTest(mousePosition.x, mousePosition.y, result))
+		{
+			if (result.hasNode && result.nodeHitTestResult.inputSocket != nullptr)
+			{
+				isValid = true;
+				
+				auto srcSocket = result.nodeHitTestResult.inputSocket;
+				
+				auto nodeId = result.node->id;
+				auto srcSocketIndex = srcSocket->index;
+				
+				if (nodeId != realTimeSocketCapture.nodeId || srcSocketIndex != realTimeSocketCapture.srcSocketIndex)
+				{
+					//logDebug("reset realTimeSocketCapture");
+					realTimeSocketCapture = RealTimeSocketCapture();
+				}
+				
+				realTimeSocketCapture.nodeId = nodeId;
+				realTimeSocketCapture.srcSocketIndex = srcSocketIndex;
+				
+				std::string value;
+				
+				if (realTimeConnection->getSrcSocketValue(nodeId, srcSocketIndex, srcSocket->name, value))
+				{
+					//logDebug("real time srcSocket value: %s", value.c_str());
+				}
+				
+				realTimeSocketCapture.value = value;
+				
+				//
+				
+				auto valueTypeDefinition = typeDefinitionLibrary->tryGetValueTypeDefinition(srcSocket->typeName);
+				
+				if (valueTypeDefinition != nullptr)
+				{
+					if (valueTypeDefinition->visualizer == "valueplotter")
+					{
+						const float valueAsFloat = Parse::Float(value);
+						
+						realTimeSocketCapture.history.add(valueAsFloat);
+					}
+				}
+			}
+			
+			if (result.hasNode && result.nodeHitTestResult.outputSocket != nullptr)
+			{
+				isValid = true;
+				
+				auto dstSocket = result.nodeHitTestResult.outputSocket;
+				
+				auto nodeId = result.node->id;
+				auto dstSocketIndex = dstSocket->index;
+				
+				if (nodeId != realTimeSocketCapture.nodeId || dstSocketIndex != realTimeSocketCapture.dstSocketIndex)
+				{
+					//logDebug("reset realTimeSocketCapture");
+					realTimeSocketCapture = RealTimeSocketCapture();
+				}
+				
+				realTimeSocketCapture.nodeId = nodeId;
+				realTimeSocketCapture.dstSocketIndex = dstSocketIndex;
+				
+				std::string value;
+				
+				if (realTimeConnection->getDstSocketValue(nodeId, dstSocketIndex, dstSocket->name, value))
+				{
+					//logDebug("real time srcSocket value: %s", value.c_str());
+				}
+				
+				realTimeSocketCapture.value = value;
+				
+				//
+				
+				auto valueTypeDefinition = typeDefinitionLibrary->tryGetValueTypeDefinition(dstSocket->typeName);
+				
+				if (valueTypeDefinition != nullptr)
+				{
+					if (valueTypeDefinition->visualizer == "valueplotter")
+					{
+						const float valueAsFloat = Parse::Float(value);
+						
+						realTimeSocketCapture.history.add(valueAsFloat);
+					}
+				}
+			}
+		}
+		
+		if (isValid == false && realTimeSocketCapture.nodeId != kGraphNodeIdInvalid)
+		{
+			//logDebug("reset realTimeSocketCapture");
+			realTimeSocketCapture = RealTimeSocketCapture();
+		}
+	}
+	
+	if (propertyEditor->tick(dt))
+	{
+		return true;
+	}
+	
+	if (nodeTypeNameSelect->tick(dt))
+	{
+		return true;
 	}
 	
 	highlightedSockets = SocketSelection();
@@ -1243,8 +1343,6 @@ bool GraphEdit::tick(const float dt)
 			}
 			
 			dragAndZoom.tick(dt);
-			
-			enablePropEdit = true;
 		}
 		break;
 		
@@ -1763,6 +1861,134 @@ void GraphEdit::draw() const
 
 	gxPopMatrix();
 	
+	switch (state)
+	{
+	case kState_Idle:
+		{
+			if (realTimeSocketCapture.nodeId != kGraphNodeIdInvalid)
+			{
+				gxPushMatrix();
+				{
+					gxTranslatef(mousePosition.uiX + 15, mousePosition.uiY, 0);
+					
+					const int kFontSize = 12;
+					const int kPadding = 5;
+					
+					std::string caption;
+					
+					if (realTimeSocketCapture.srcSocketIndex != -1)
+					{
+						auto srcSocket = tryGetInputSocket(realTimeSocketCapture.nodeId, realTimeSocketCapture.srcSocketIndex);
+						
+						if (srcSocket != nullptr)
+							caption = srcSocket->name;
+					}
+					
+					if (realTimeSocketCapture.dstSocketIndex != -1)
+					{
+						auto dstSocket = tryGetOutputSocket(realTimeSocketCapture.nodeId, realTimeSocketCapture.dstSocketIndex);
+						
+						if (dstSocket != nullptr)
+							caption = dstSocket->name;
+					}
+					
+					float captionSx;
+					float captionSy;
+					measureText(kFontSize, captionSx, captionSy, "%s", caption.c_str());
+					
+					//
+					
+					const std::string & value = realTimeSocketCapture.value;
+					
+					float valueSx;
+					float valueSy;
+					measureText(kFontSize, valueSx, valueSy, "%s", value.c_str());
+					
+					//
+					
+					int sx = std::max(120, std::max(int(captionSx), int(valueSx)));
+					int sy = 100;
+					
+					//
+					
+					float graphMin;
+					float graphMax;
+					
+					const bool hasGraph = realTimeSocketCapture.history.getRange(graphMin, graphMax);
+					
+					const int graphSx = realTimeSocketCapture.history.kMaxHistory;
+					const int graphSy = 50;
+					
+					if (hasGraph)
+					{
+						sx = std::max(sx, graphSx);
+					}
+					
+					//
+					
+					sx += kPadding * 2;
+					
+					//
+					
+					setColor(31, 31, 31);
+					drawRect(0, 0, sx, sy);
+					
+					setColor(191, 191, 191);
+					drawRectLine(0, 0, sx, sy);
+					
+					int y = kPadding;
+					
+					setColor(255, 255, 255);
+					drawText(sx/2, y, kFontSize, 0.f, +1.f, "%s", caption.c_str());
+					y += kFontSize + 4;
+					
+					setColor(191, 191, 255);
+					drawText(sx/2, y, kFontSize, 0.f, +1.f, "%s", value.c_str());
+					y += kFontSize + 4;
+					
+					//
+					
+					if (hasGraph)
+					{
+						for (int i = 0; i < realTimeSocketCapture.history.historySize; ++i)
+						{
+							const float value = realTimeSocketCapture.history.getGraphValue(i);
+							
+							const float plotX = kPadding + i;
+							const float plotY = (value - graphMax) / (graphMin - graphMax);
+							
+							setColor(127, 127, 255);
+							drawLine(plotX, y + graphSy, plotX, y + plotY * graphSy);
+						}
+						
+						setColor(colorWhite);
+						drawRectLine(kPadding, y, kPadding + graphSx, y + graphSy);
+					}
+				}
+				gxPopMatrix();
+			}
+		}
+		break;
+		
+	case kState_NodeSelect:
+		break;
+		
+	case kState_NodeDrag:
+		break;
+		
+	case kState_InputSocketConnect:
+		break;
+		
+	case kState_OutputSocketConnect:
+		break;
+		
+	case kState_SocketValueEdit:
+		break;
+	
+	case kState_Hidden:
+		break;
+	}
+	
 	if (nodeTypeNameSelect != nullptr)
 	{
 		nodeTypeNameSelect->draw();
@@ -2035,7 +2261,7 @@ static void doMenuItem(std::string & valueText, const std::string & name, const 
 	}
 	else if (editor == "textbox_float")
 	{
-		float value = Parse::Int32(valueText);
+		float value = Parse::Float(valueText);
 		
 		doTextBox(value, name.c_str(), dt);
 		

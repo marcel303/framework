@@ -67,12 +67,22 @@ todo :
 - add real-time connection
 	- editing values updates values in live version
 	- marking nodes passthrough gets reflected in live
+	- disabling nodes and links gets reflected in live
+- add reverse real-time connection
+	- let graph edit sample socket input and output values
+		- let graph edit show a graph of the values when hovering over a socket
 + make it possible to disable nodes
 + make it possible to disable links
 - add drag and drop support string literals
-- integrate with UI from libparticle. it supports enums, better color picking, incrementing values up and down in checkboxes
++ integrate with UI from libparticle. it supports enums, better color picking, incrementing values up and down in checkboxes
 - add mouse up/down support to increment/decrement values of int/float text boxes
 + add option to specify (in UiState) how far text boxes indent their text fields
+- add history of last nodes added
+- insert node on pressing enter in the node type name box or when pressing one of the suggestion buttons
+- add suggestion based purely on matching first part of string (no fuzzy string comparison)
+	- order of listing should be : pure matches, fuzzy matches, history. show history once type name text box is made active
+	- clear type name text box when adding node
+- automatically hide UI when mouse/keyboard is inactive for a while
 
 - add sample.float node
 - add sample.image node. outputs r/g/b/a. specify normalized vs screen coords?
@@ -93,6 +103,8 @@ reference :
 + http://www.dsperados.com (company based in Utrecht ? send to Stijn)
 
 */
+
+#define FILENAME "graph2.xml"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -1133,6 +1145,99 @@ static VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDef
 	return vfxGraph;
 }
 
+struct RealTimeConnection : GraphEdit_RealTimeConnection
+{
+	VfxGraph * vfxGraph;
+	
+	RealTimeConnection()
+		: GraphEdit_RealTimeConnection()
+		, vfxGraph(nullptr)
+	{
+	}
+	
+	static bool getPlugValue(VfxPlug * plug, std::string & value)
+	{
+		switch (plug->type)
+		{
+		case kVfxPlugType_None:
+			return false;
+		case kVfxPlugType_Bool:
+			value = String::ToString(plug->getBool());
+			return true;
+		case kVfxPlugType_Int:
+			value = String::ToString(plug->getInt());
+			return true;
+		case kVfxPlugType_Float:
+			value = String::FormatC("%f", plug->getFloat());
+			return true;
+		case kVfxPlugType_Transform:
+			return false;
+		case kVfxPlugType_String:
+			value = plug->getString();
+			return true;
+		case kVfxPlugType_Color:
+			{
+				const Color & color = plug->getColor();
+				value = color.toHexString(true);
+				return true;
+			}
+		case kVfxPlugType_Image:
+			value = String::ToString(plug->getImage()->getTexture());
+			return true;
+		case kVfxPlugType_Surface:
+			return false;
+		case kVfxPlugType_Trigger:
+			return false;
+		}
+		
+		Assert(false); // all cases should be handled explicitly
+		return false;
+	}
+	
+	virtual bool getSrcSocketValue(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, std::string & value) override
+	{
+		if (vfxGraph == nullptr)
+			return false;
+		
+		auto nodeItr = vfxGraph->nodes.find(nodeId);
+		
+		if (nodeItr == vfxGraph->nodes.end())
+			return false;
+		
+		auto node = nodeItr->second;
+		
+		auto input = node->tryGetInput(srcSocketIndex);
+		
+		if (input == nullptr)
+			return false;
+		
+		if (input->isConnected() == false)
+			return false;
+		
+		return getPlugValue(input, value);
+	}
+	
+	virtual bool getDstSocketValue(const GraphNodeId nodeId, const int dstSocketIndex, const std::string & dstSocketName, std::string & value) override
+	{
+		if (vfxGraph == nullptr)
+			return false;
+		
+		auto nodeItr = vfxGraph->nodes.find(nodeId);
+		
+		if (nodeItr == vfxGraph->nodes.end())
+			return false;
+		
+		auto node = nodeItr->second;
+		
+		auto output = node->tryGetOutput(dstSocketIndex);
+		
+		if (output == nullptr)
+			return false;
+		
+		return getPlugValue(output, value);
+	}
+};
+
 int main(int argc, char * argv[])
 {
 	//framework.waitForEvents = true;
@@ -1174,9 +1279,15 @@ int main(int argc, char * argv[])
 		
 		//
 		
+		RealTimeConnection * realTimeConnection = new RealTimeConnection();
+		
+		//
+		
 		GraphEdit * graphEdit = new GraphEdit();
 		
 		graphEdit->typeDefinitionLibrary = typeDefinitionLibrary;
+		
+		graphEdit->realTimeConnection = realTimeConnection;
 		
 		if (graphEdit->propertyEditor != nullptr)
 		{
@@ -1206,7 +1317,7 @@ int main(int argc, char * argv[])
 			}
 			else if (keyboard.wentDown(SDLK_s))
 			{
-				FILE * file = fopen("graph.xml", "wt");
+				FILE * file = fopen(FILENAME, "wt");
 				
 				XMLPrinter xmlGraph(file);;
 				
@@ -1246,7 +1357,7 @@ int main(int argc, char * argv[])
 				//
 				
 				XMLDocument document;
-				document.LoadFile("graph.xml");
+				document.LoadFile(FILENAME);
 				const XMLElement * xmlGraph = document.FirstChildElement("graph");
 				if (xmlGraph != nullptr)
 				{
@@ -1284,6 +1395,8 @@ int main(int argc, char * argv[])
 				delete vfxGraph;
 				vfxGraph = nullptr;
 			#endif
+				
+				realTimeConnection->vfxGraph = vfxGraph;
 			}
 			
 			if (!graphEdit->selectedNodes.empty())
@@ -1308,6 +1421,12 @@ int main(int argc, char * argv[])
 		
 		delete graphEdit;
 		graphEdit = nullptr;
+		
+		delete realTimeConnection;
+		realTimeConnection = nullptr;
+		
+		delete typeDefinitionLibrary;
+		typeDefinitionLibrary = nullptr;
 		
 		shutUi();
 		
