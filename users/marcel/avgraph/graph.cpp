@@ -766,7 +766,7 @@ GraphEdit::GraphEdit()
 {
 	graph = new Graph();
 	
-	propertyEditor = new GraphUi::PropEdit(nullptr);
+	propertyEditor = new GraphUi::PropEdit(nullptr, this);
 	
 	nodeTypeNameSelect = new GraphUi::NodeTypeNameSelect();
 	
@@ -2184,8 +2184,9 @@ void GraphEdit::saveXml(tinyxml2::XMLPrinter & editorElem) const
 
 //
 
-GraphUi::PropEdit::PropEdit(GraphEdit_TypeDefinitionLibrary * _typeLibrary)
+GraphUi::PropEdit::PropEdit(GraphEdit_TypeDefinitionLibrary * _typeLibrary, GraphEdit * _graphEdit)
 	: typeLibrary(nullptr)
+	, graphEdit(_graphEdit)
 	, graph(nullptr)
 	, nodeId(kGraphNodeIdInvalid)
 	, uiState(nullptr)
@@ -2333,23 +2334,38 @@ void GraphUi::PropEdit::doMenus(const bool doActions, const bool doDraw, const f
 				
 				const bool isPreExisting = valueTextItr != node->editorInputValues.end();
 				
-				std::string newValueText;
+				std::string oldValueText;
 				
-				std::string & valueText = isPreExisting ? valueTextItr->second : newValueText;
+				if (isPreExisting)
+					oldValueText = valueTextItr->second;
+				
+				std::string newValueText = oldValueText;
 				
 				const GraphEdit_ValueTypeDefinition * valueTypeDefinition = typeLibrary->tryGetValueTypeDefinition(inputSocket.typeName);
 				
-				const bool hasValue = doMenuItem(valueText, inputSocket.name, valueTypeDefinition == nullptr ? "textbox" : valueTypeDefinition->editor, dt);
+				const bool hasValue = doMenuItem(newValueText, inputSocket.name, valueTypeDefinition == nullptr ? "textbox" : valueTypeDefinition->editor, dt);
 				
 				if (isPreExisting)
 				{
 					if (!hasValue)
 						node->editorInputValues.erase(inputSocket.name);
+					else
+						valueTextItr->second = newValueText;
 				}
 				else
 				{
 					if (hasValue)
-						node->editorInputValues[inputSocket.name] = valueText;
+						node->editorInputValues[inputSocket.name] = newValueText;
+				}
+				
+				// todo : detect if text has changed. if so, notify graph edit of change and let it take care of callbacks and undo/redo
+				
+				if (graphEdit->realTimeConnection)
+				{
+					if (newValueText != oldValueText && !(!hasValue && oldValueText.empty()))
+					{
+						graphEdit->realTimeConnection->setSrcSocketValue(nodeId, inputSocket.index, inputSocket.name, newValueText);
+					}
 				}
 			}
 			

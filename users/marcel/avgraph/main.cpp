@@ -1155,6 +1155,71 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	{
 	}
 	
+	static bool setPlugValue(VfxPlug * plug, const std::string & value)
+	{
+		switch (plug->type)
+		{
+		case kVfxPlugType_None:
+			return false;
+		case kVfxPlugType_Bool:
+			plug->getRwBool() = Parse::Bool(value);
+			return true;
+		case kVfxPlugType_Int:
+			plug->getRwInt() = Parse::Int32(value);
+			return true;
+		case kVfxPlugType_Float:
+			plug->getRwFloat() = Parse::Float(value);
+			return true;
+			
+		case kVfxPlugType_Transform:
+			return false;
+			
+		case kVfxPlugType_String:
+			plug->getRwString() = value;
+			return true;
+		case kVfxPlugType_Color:
+			plug->getRwColor() = Color::fromHex(value.c_str());
+			return true;
+			
+		case kVfxPlugType_Image:
+			return false;
+		case kVfxPlugType_Surface:
+			return false;
+		case kVfxPlugType_Trigger:
+			return false;
+		}
+		
+		Assert(false); // all cases should be handled explicitly
+		return false;
+	}
+	
+	virtual void setSrcSocketValue(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, const std::string & value) override
+	{
+		logDebug("setSrcSocketValue called for nodeId=%d, srcSocket=%s", int(nodeId), srcSocketName.c_str());
+		
+		if (vfxGraph == nullptr)
+			return;
+		
+		auto nodeItr = vfxGraph->nodes.find(nodeId);
+		
+		if (nodeItr == vfxGraph->nodes.end())
+			return;
+		
+		auto node = nodeItr->second;
+		
+		auto input = node->tryGetInput(srcSocketIndex);
+		
+		if (input == nullptr)
+			return;
+		
+		// todo : create literal node type ?
+		
+		if (input->isConnected() == false)
+			return;
+		
+		setPlugValue(input, value);
+	}
+	
 	static bool getPlugValue(VfxPlug * plug, std::string & value)
 	{
 		switch (plug->type)
@@ -1352,7 +1417,7 @@ int main(int argc, char * argv[])
 				delete graphEdit->propertyEditor;
 				graphEdit->propertyEditor = nullptr;
 				
-				graphEdit->propertyEditor = new GraphUi::PropEdit(typeDefinitionLibrary);
+				graphEdit->propertyEditor = new GraphUi::PropEdit(typeDefinitionLibrary, graphEdit);
 				
 				//
 				

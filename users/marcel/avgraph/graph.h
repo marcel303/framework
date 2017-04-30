@@ -348,6 +348,10 @@ struct GraphEdit_UndoHistory
 
 struct GraphEdit_RealTimeConnection
 {
+	virtual void setSrcSocketValue(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, const std::string & value)
+	{
+	}
+	
 	virtual bool getSrcSocketValue(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, std::string & value)
 	{
 		return false;
@@ -686,12 +690,13 @@ namespace GraphUi
 	struct PropEdit
 	{
 		GraphEdit_TypeDefinitionLibrary * typeLibrary;
+		GraphEdit * graphEdit;
 		Graph * graph;
 		GraphNodeId nodeId;
 		
 		UiState * uiState;
 		
-		PropEdit(GraphEdit_TypeDefinitionLibrary * _typeLibrary);
+		PropEdit(GraphEdit_TypeDefinitionLibrary * _typeLibrary, GraphEdit * graphEdit);
 		~PropEdit();
 		
 		bool tick(const float dt);

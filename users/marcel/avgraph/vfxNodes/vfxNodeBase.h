@@ -185,7 +185,7 @@ struct VfxPlug
 		return mem != nullptr;
 	}
 	
-	int getBool() const
+	bool getBool() const
 	{
 		if (type == kVfxPlugType_Trigger)
 			return ((VfxTriggerData*)mem)->asBool();
@@ -209,7 +209,7 @@ struct VfxPlug
 		return *((float*)mem);
 	}
 	
-	VfxTransform & getTransform() const
+	const VfxTransform & getTransform() const
 	{
 		Assert(type == kVfxPlugType_Transform);
 		return *((VfxTransform*)mem);
@@ -237,6 +237,44 @@ struct VfxPlug
 	{
 		Assert(type == kVfxPlugType_Surface);
 		return *((Surface**)mem);
+	}
+	
+	//
+	
+	bool & getRwBool()
+	{
+		Assert(type == kVfxPlugType_Bool);
+		return *((bool*)mem);
+	}
+	
+	int & getRwInt()
+	{
+		Assert(type == kVfxPlugType_Int);
+		return *((int*)mem);
+	}
+	
+	float & getRwFloat()
+	{
+		Assert(type == kVfxPlugType_Float);
+		return *((float*)mem);
+	}
+	
+	VfxTransform & getRwTransform()
+	{
+		Assert(type == kVfxPlugType_Transform);
+		return *((VfxTransform*)mem);
+	}
+	
+	std::string & getRwString()
+	{
+		Assert(type == kVfxPlugType_String);
+		return *((std::string*)mem);
+	}
+	
+	Color & getRwColor()
+	{
+		Assert(type == kVfxPlugType_Color);
+		return *((Color*)mem);
 	}
 };
 
