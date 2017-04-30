@@ -2245,11 +2245,13 @@ void GraphUi::PropEdit::setNode(const GraphNodeId _nodeId)
 	}
 }
 
-static void doMenuItem(std::string & valueText, const std::string & name, const std::string & editor, const float dt)
+static bool doMenuItem(std::string & valueText, const std::string & name, const std::string & editor, const float dt)
 {
 	if (editor == "textbox")
 	{
 		doTextBox(valueText, name.c_str(), dt);
+		
+		return !valueText.empty();
 	}
 	else if (editor == "textbox_int")
 	{
@@ -2258,6 +2260,8 @@ static void doMenuItem(std::string & valueText, const std::string & name, const 
 		doTextBox(value, name.c_str(), dt);
 		
 		valueText = String::ToString(value);
+		
+		return value != 0;
 	}
 	else if (editor == "textbox_float")
 	{
@@ -2266,6 +2270,8 @@ static void doMenuItem(std::string & valueText, const std::string & name, const 
 		doTextBox(value, name.c_str(), dt);
 		
 		valueText = String::FormatC("%f", value);
+		
+		return value != 0.f;
 	}
 	else if (editor == "checkbox")
 	{
@@ -2274,12 +2280,16 @@ static void doMenuItem(std::string & valueText, const std::string & name, const 
 		doCheckBox(value, name.c_str(), false);
 		
 		valueText = value ? "1" : "0";
+		
+		return value != false;
 	}
 	else if (editor == "slider")
 	{
 		// todo : add doSlider
 		
 		doTextBox(valueText, name.c_str(), dt);
+		
+		return !valueText.empty();
 	}
 	else if (editor == "colorpicker")
 	{
@@ -2290,7 +2300,11 @@ static void doMenuItem(std::string & valueText, const std::string & name, const 
 		
 		color = toColor(particleColor);
 		valueText = color.toHexString(true);
+		
+		return true;
 	}
+	
+	return false;
 }
 
 void GraphUi::PropEdit::doMenus(const bool doActions, const bool doDraw, const float dt)
@@ -2315,11 +2329,28 @@ void GraphUi::PropEdit::doMenus(const bool doActions, const bool doDraw, const f
 			
 			for (auto & inputSocket : typeDefinition->inputSockets)
 			{
-				std::string & valueText = node->editorInputValues[inputSocket.name];
+				auto valueTextItr = node->editorInputValues.find(inputSocket.name);
+				
+				const bool isPreExisting = valueTextItr != node->editorInputValues.end();
+				
+				std::string newValueText;
+				
+				std::string & valueText = isPreExisting ? valueTextItr->second : newValueText;
 				
 				const GraphEdit_ValueTypeDefinition * valueTypeDefinition = typeLibrary->tryGetValueTypeDefinition(inputSocket.typeName);
 				
-				doMenuItem(valueText, inputSocket.name, valueTypeDefinition == nullptr ? "textbox" : valueTypeDefinition->editor, dt);
+				const bool hasValue = doMenuItem(valueText, inputSocket.name, valueTypeDefinition == nullptr ? "textbox" : valueTypeDefinition->editor, dt);
+				
+				if (isPreExisting)
+				{
+					if (!hasValue)
+						node->editorInputValues.erase(inputSocket.name);
+				}
+				else
+				{
+					if (hasValue)
+						node->editorInputValues[inputSocket.name] = valueText;
+				}
 			}
 			
 			for (auto & outputSocket : typeDefinition->outputSockets)
