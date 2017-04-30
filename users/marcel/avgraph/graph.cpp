@@ -2364,6 +2364,8 @@ void GraphUi::PropEdit::doMenus(const bool doActions, const bool doDraw, const f
 			
 			doLabel(headerText.c_str(), 0.f);
 			
+			int menuItemIndex = 0;
+			
 			for (auto & inputSocket : typeDefinition->inputSockets)
 			{
 				auto valueTextItr = node->editorInputValues.find(inputSocket.name);
@@ -2379,7 +2381,9 @@ void GraphUi::PropEdit::doMenus(const bool doActions, const bool doDraw, const f
 				
 				const GraphEdit_ValueTypeDefinition * valueTypeDefinition = typeLibrary->tryGetValueTypeDefinition(inputSocket.typeName);
 				
-				const bool hasValue = doMenuItem(newValueText, inputSocket.name, valueTypeDefinition == nullptr ? "textbox" : valueTypeDefinition->editor, dt, inputSocket.index, uiColors, kMaxUiColors);
+				const bool hasValue = doMenuItem(newValueText, inputSocket.name, valueTypeDefinition == nullptr ? "textbox" : valueTypeDefinition->editor, dt, menuItemIndex, uiColors, kMaxUiColors);
+				
+				menuItemIndex++;
 				
 				if (isPreExisting)
 				{
@@ -2414,7 +2418,9 @@ void GraphUi::PropEdit::doMenus(const bool doActions, const bool doDraw, const f
 				
 				const GraphEdit_ValueTypeDefinition * valueTypeDefinition = typeLibrary->tryGetValueTypeDefinition(outputSocket.typeName);
 				
-				doMenuItem(valueText, outputSocket.name, valueTypeDefinition == nullptr ? "textbox" : valueTypeDefinition->editor, dt, outputSocket.index, nullptr, 0);
+				doMenuItem(valueText, outputSocket.name, valueTypeDefinition == nullptr ? "textbox" : valueTypeDefinition->editor, dt, menuItemIndex, uiColors, kMaxUiColors);
+				
+				menuItemIndex++;
 			}
 		}
 	}

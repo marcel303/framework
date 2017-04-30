@@ -43,6 +43,7 @@ todo :
 	- improve zoom in and out behavior
 	+ save/load zoom and focus position to/from XML
 	+ add option to quickly reset drag and zoom values
+	+ use arrow keys to navigate workspace (when no nodes are selected)
 + add sine, saw, triangle and square oscillators
 + save/load link ids
 + save/load next alloc ids for nodes and links
@@ -75,7 +76,7 @@ todo :
 + make it possible to disable links
 - add drag and drop support string literals
 + integrate with UI from libparticle. it supports enums, better color picking, incrementing values up and down in checkboxes
-- add mouse up/down movement support to increment/decrement values of int/float text boxes
++ add mouse up/down movement support to increment/decrement values of int/float text boxes
 + add option to specify (in UiState) how far text boxes indent their text fields
 - add history of last nodes added
 - insert node on pressing enter in the node type name box or when pressing one of the suggestion buttons
@@ -83,6 +84,7 @@ todo :
 	- order of listing should be : pure matches, fuzzy matches, history. show history once type name text box is made active
 	- clear type name text box when adding node
 - automatically hide UI when mouse/keyboard is inactive for a while
+- remove 'editor' code
 
 - add sample.float node
 - add sample.image node. outputs r/g/b/a. specify normalized vs screen coords?
@@ -459,10 +461,13 @@ struct VfxNodeMath : VfxNodeBase
 	Type type;
 	float result;
 	
+	bool isPassthrough;
+	
 	VfxNodeMath(Type _type)
 		: VfxNodeBase()
 		, type(kType_Unknown)
 		, result(0.f)
+		, isPassthrough(false)
 	{
 		type = _type;
 		
@@ -470,6 +475,11 @@ struct VfxNodeMath : VfxNodeBase
 		addInput(kInput_A, kVfxPlugType_Float);
 		addInput(kInput_B, kVfxPlugType_Float);
 		addOutput(kOutput_R, kVfxPlugType_Float, &result);
+	}
+	
+	virtual void init(const GraphNode & node) override
+	{
+		isPassthrough = node.editorIsPassthrough;
 	}
 	
 	virtual void tick(const float dt) override
@@ -498,15 +508,24 @@ struct VfxNodeMath : VfxNodeBase
 			break;
 			
 		case kType_Sin:
-			r = std::sin(a);
+			if (isPassthrough)
+				r = a;
+			else
+				r = std::sin(a);
 			break;
 			
 		case kType_Cos:
-			r = std::cos(a);
+			if (isPassthrough)
+				r = a;
+			else
+				r = std::cos(a);
 			break;
 			
 		case kType_Abs:
-			r = std::abs(a);
+			if (isPassthrough)
+				r = a;
+			else
+				r = std::abs(a);
 			break;
 			
 		case kType_Min:
@@ -518,50 +537,82 @@ struct VfxNodeMath : VfxNodeBase
 			break;
 			
 		case kType_Sat:
-			r = std::max(0.f, std::min(1.f, a));
+			if (isPassthrough)
+				r = a;
+			else
+				r = std::max(0.f, std::min(1.f, a));
 			break;
 			
 		case kType_Neg:
-			r = -a;
+			if (isPassthrough)
+				r = a;
+			else
+				r = -a;
 			break;
 			
 		case kType_Sqrt:
-			r = std::sqrt(a);
+			if (isPassthrough)
+				r = a;
+			else
+				r = std::sqrt(a);
 			break;
 			
 		case kType_Pow:
-			r = std::pow(a, b);
+			if (isPassthrough)
+				r = a;
+			else
+				r = std::pow(a, b);
 			break;
 			
 		case kType_Exp:
-			r = std::exp(a);
+			if (isPassthrough)
+				r = a;
+			else
+				r = std::exp(a);
 			break;
 			
 		case kType_Mod:
-			r = std::fmod(a, b);
+			if (isPassthrough)
+				r = a;
+			else
+				r = std::fmod(a, b);
 			break;
 			
 		case kType_Fract:
-			if (a >= 0.f)
+			if (isPassthrough)
+				r = a;
+			else if (a >= 0.f)
 				r = a - std::floor(a);
 			else
 				r = a - std::ceil(a);
 			break;
 			
 		case kType_Floor:
-			r = std::floor(a);
+			if (isPassthrough)
+				r = a;
+			else
+				r = std::floor(a);
 			break;
 			
 		case kType_Ceil:
-			r = std::ceil(a);
+			if (isPassthrough)
+				r = a;
+			else
+				r = std::ceil(a);
 			break;
 			
 		case kType_Round:
-			r = std::round(a);
+			if (isPassthrough)
+				r = a;
+			else
+				r = std::round(a);
 			break;
 			
 		case kType_Sign:
-			r = a < 0.f ? -1.f : +1.f;
+			if (isPassthrough)
+				r = a;
+			else
+				r = a < 0.f ? -1.f : +1.f;
 			break;
 			
 		case kType_Hypot:
