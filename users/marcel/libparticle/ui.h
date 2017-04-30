@@ -105,4 +105,5 @@ void doParticleCurve(ParticleCurve & curve, const char * name);
 void doParticleColor(ParticleColor & color, const char * name);
 void doParticleColorCurve(ParticleColorCurve & curve, const char * name);
 
+void doColorWheel(float & r, float & g, float & b, float & a, const char * name, const float dt);
 void doColorWheel(ParticleColor & color, const char * name, const float dt);

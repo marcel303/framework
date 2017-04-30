@@ -1265,7 +1265,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name)
 	popMenu();
 }
 
-void doColorWheel(ParticleColor & color, const char * name, const float dt)
+void doColorWheel(float & r, float & g, float & b, float & a, const char * name, const float dt)
 {
 	UiElem & elem = g_menu->getElem(name);
 	
@@ -1283,11 +1283,7 @@ void doColorWheel(ParticleColor & color, const char * name, const float dt)
 				mouse.wentDown(BUTTON_LEFT),
 				mouse.isDown(BUTTON_LEFT), dt); // fixme : mouseDown and dt
 		}
-		g_uiState->colorWheel->toColor(
-			color.rgba[0],
-			color.rgba[1],
-			color.rgba[2],
-			color.rgba[3]);
+		g_uiState->colorWheel->toColor(r, g, b, a);
 	}
 
 	if (g_doDraw)
@@ -1301,4 +1297,9 @@ void doColorWheel(ParticleColor & color, const char * name, const float dt)
 	}
 
 	g_drawY += g_uiState->colorWheel->getSy();
+}
+
+void doColorWheel(ParticleColor & color, const char * name, const float dt)
+{
+	doColorWheel(color.rgba[0], color.rgba[1], color.rgba[2], color.rgba[3], name, dt);
 }
