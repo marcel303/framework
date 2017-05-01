@@ -520,22 +520,6 @@ void GraphEdit_TypeDefinition::createUi()
 	py += 15.f;
 	pf += 15.f;
 	
-	// (editors)
-	
-	for (auto & editor : editors)
-	{
-		py += 2.f;
-		
-		editor.editorX = 0.f;
-		editor.editorY = py;
-		editor.editorSx = 100.f;
-		editor.editorSy = 20.f;
-		
-		py += editor.editorSy;
-		
-		py += 2.f;
-	}
-	
 	// (sockets)
 	
 	const float socketPaddingY = 20.f;
@@ -600,18 +584,6 @@ bool GraphEdit_TypeDefinition::hitTest(const float x, const float y, const bool 
 	
 	if (isFolded == false)
 	{
-		for (auto & editor : editors)
-		{
-			if (x >= editor.editorX &&
-				y >= editor.editorY &&
-				x < editor.editorX + editor.editorSx &&
-				y < editor.editorY + editor.editorSy)
-			{
-				result.editor = &editor;
-				return true;
-			}
-		}
-		
 		for (auto & inputSocket : inputSockets)
 		{
 			const float dx = x - inputSocket.px;
@@ -653,15 +625,6 @@ void GraphEdit_TypeDefinition::loadXml(const XMLElement * xmlType)
 	typeName = stringAttrib(xmlType, "typeName", "");
 	
 	displayName = stringAttrib(xmlType, "displayName", "");
-	
-	for (auto xmlEditor = xmlType->FirstChildElement("editor"); xmlEditor != nullptr; xmlEditor = xmlEditor->NextSiblingElement("editor"))
-	{
-		GraphEdit_Editor editor;
-		editor.typeName = stringAttrib(xmlEditor, "typeName", editor.typeName.c_str());
-		editor.outputSocketIndex = intAttrib(xmlEditor, "output", editor.outputSocketIndex);
-		
-		editors.push_back(editor);
-	}
 	
 	for (auto xmlInput = xmlType->FirstChildElement("input"); xmlInput != nullptr; xmlInput = xmlInput->NextSiblingElement("input"))
 	{
@@ -713,41 +676,6 @@ void GraphEdit_TypeDefinitionLibrary::loadXml(const XMLElement * xmlLibrary)
 
 //
 
-bool GraphEdit::SocketValueEdit::processKeyboard()
-{
-	bool result = false;
-	
-	for (int i = 0; i <= 9; ++i)
-	{
-		const SDLKey key = SDLKey(SDLK_0 + i);
-		
-		if (keyboard.wentDown(key))
-		{
-			keyboardText.push_back('0' + i);
-			
-			result = true;
-		}
-	}
-	
-	if (keyboard.wentDown(SDLK_PERIOD))
-	{
-		keyboardText.push_back('.');
-		
-		result = true;
-	}
-	
-	if (keyboard.wentDown(SDLK_BACKSPACE))
-	{
-		keyboardText.pop_back();
-		
-		result = true;
-	}
-	
-	return result;
-}
-
-//
-
 GraphEdit::GraphEdit()
 	: graph(nullptr)
 	, typeDefinitionLibrary(nullptr)
@@ -757,7 +685,6 @@ GraphEdit::GraphEdit()
 	, state(kState_Idle)
 	, nodeSelect()
 	, socketConnect()
-	, socketValueEdit()
 	, mousePosition()
 	, dragAndZoom()
 	, propertyEditor(nullptr)
@@ -768,7 +695,7 @@ GraphEdit::GraphEdit()
 	
 	propertyEditor = new GraphUi::PropEdit(nullptr, this);
 	
-	nodeTypeNameSelect = new GraphUi::NodeTypeNameSelect();
+	nodeTypeNameSelect = new GraphUi::NodeTypeNameSelect(this);
 	
 	uiState = new UiState();
 }
@@ -935,13 +862,17 @@ bool GraphEdit::tick(const float dt)
 				realTimeSocketCapture.srcSocketIndex = srcSocketIndex;
 				
 				std::string value;
+				bool hasValue;
 				
-				if (realTimeConnection->getSrcSocketValue(nodeId, srcSocketIndex, srcSocket->name, value))
+				hasValue = realTimeConnection->getSrcSocketValue(nodeId, srcSocketIndex, srcSocket->name, value);
+				
+				if (hasValue)
 				{
 					//logDebug("real time srcSocket value: %s", value.c_str());
 				}
 				
 				realTimeSocketCapture.value = value;
+				realTimeSocketCapture.hasValue = hasValue;
 				
 				//
 				
@@ -977,13 +908,17 @@ bool GraphEdit::tick(const float dt)
 				realTimeSocketCapture.dstSocketIndex = dstSocketIndex;
 				
 				std::string value;
+				bool hasValue;
 				
-				if (realTimeConnection->getDstSocketValue(nodeId, dstSocketIndex, dstSocket->name, value))
+				hasValue = realTimeConnection->getDstSocketValue(nodeId, dstSocketIndex, dstSocket->name, value);
+				
+				if (hasValue)
 				{
 					//logDebug("real time srcSocket value: %s", value.c_str());
 				}
 				
 				realTimeSocketCapture.value = value;
+				realTimeSocketCapture.hasValue = hasValue;
 				
 				//
 				
@@ -1083,14 +1018,6 @@ bool GraphEdit::tick(const float dt)
 							selectNode(hitTestResult.node->id);
 						}
 						
-						if (hitTestResult.nodeHitTestResult.editor)
-						{
-							socketValueEdit.nodeId = hitTestResult.node->id;
-							socketValueEdit.editor = hitTestResult.nodeHitTestResult.editor;
-							state = kState_SocketValueEdit;
-							break;
-						}
-						
 						if (hitTestResult.nodeHitTestResult.background)
 						{
 							state = kState_NodeDrag;
@@ -1122,18 +1049,7 @@ bool GraphEdit::tick(const float dt)
 			{
 				std::string typeName = nodeTypeNameSelect->getNodeTypeName();
 				
-				if (!typeName.empty())
-				{
-					GraphNode node;
-					node.id = graph->allocNodeId();
-					node.typeName = typeName;
-					node.editorX = mousePosition.x;
-					node.editorY = mousePosition.y;
-					
-					graph->addNode(node);
-					
-					selectNode(node.id);
-				}
+				tryAddNode(typeName, mousePosition.x, mousePosition.x, true);
 			}
 			
 			if (keyboard.wentDown(SDLK_a))
@@ -1491,128 +1407,7 @@ bool GraphEdit::tick(const float dt)
 			}
 		}
 		break;
-		
-	case kState_SocketValueEdit:
-		{
-			auto node = tryGetNode(socketValueEdit.nodeId);
 			
-			if (node == nullptr)
-			{
-				// todo : complain
-			}
-			else
-			{
-				if (socketValueEdit.editor->typeName == "float")
-				{
-					float value = Parse::Float(node->editorValue);
-					
-					if (socketValueEdit.mode == SocketValueEdit::kMode_Idle)
-					{
-						if (mouse.dx || mouse.dy)
-						{
-							socketValueEdit.mode = SocketValueEdit::kMode_MouseAbsolute;
-							break;
-						}
-						
-						if (mouse.wentUp(BUTTON_LEFT))
-						{
-							socketValueEdit.mode = SocketValueEdit::kMode_MouseRelative;
-							break;
-						}
-					}
-					
-					if (socketValueEdit.mode == SocketValueEdit::kMode_MouseAbsolute)
-					{
-						const float x1 = node->editorX + socketValueEdit.editor->editorX;
-						const float x2 = x1 + socketValueEdit.editor->editorSx;
-						value = (mousePosition.x - x1) / (x2 - x1);
-						
-						if (mouse.wentUp(BUTTON_LEFT))
-						{
-							socketValueEditEnd();
-							
-							state = kState_Idle;
-							break;
-						}
-					}
-					
-					if (socketValueEdit.mode == SocketValueEdit::kMode_MouseRelative)
-					{
-						value += -mouse.dy * .01f;
-						
-						if (socketValueEdit.processKeyboard())
-						{
-							socketValueEdit.mode = SocketValueEdit::kMode_Keyboard;
-							break;
-						}
-						
-						if (mouse.wentDown(BUTTON_LEFT))
-						{
-							socketValueEditEnd();
-							
-							state = kState_Idle;
-							break;
-						}
-					}
-					
-					if (socketValueEdit.mode == SocketValueEdit::kMode_Keyboard)
-					{
-						socketValueEdit.processKeyboard();
-						
-						value = Parse::Float(socketValueEdit.keyboardText);
-						
-						if (keyboard.wentDown(SDLK_RETURN))
-						{
-							socketValueEditEnd();
-							
-							state = kState_Idle;
-							break;
-						}
-					}
-					
-					value = Calc::Clamp(value, 0.f, 1.f);
-					
-					char valueText[256];
-					sprintf_s(valueText, sizeof(valueText), "%f", value);
-					
-					node->editorValue = valueText;
-				}
-				
-				if (socketValueEdit.editor->typeName == "string")
-				{
-					if (keyboard.wentDown(SDLK_BACKSPACE))
-					{
-						if (!node->editorValue.empty())
-							node->editorValue.pop_back();
-					}
-					
-					for (int i = 0; i < 256; ++i)
-					{
-						SDLKey key = SDLKey(i);
-						
-						int c = i;
-						
-						if (keyboard.isDown(SDLK_LSHIFT))
-							c = toupper(c);
-					
-						if (isprint(c) && keyboard.wentDown(key))
-						{
-							node->editorValue.push_back(c);
-						}
-					}
-					
-					if (mouse.wentDown(BUTTON_LEFT) || keyboard.wentDown(SDLK_RETURN))
-					{
-						socketValueEditEnd();
-						
-						state = kState_Idle;
-						break;
-					}
-				}
-			}
-		}
-		break;
-	
 	case kState_Hidden:
 		{
 			if (keyboard.wentDown(SDLK_TAB))
@@ -1666,9 +1461,30 @@ void GraphEdit::socketConnectEnd()
 	socketConnect = SocketConnect();
 }
 
-void GraphEdit::socketValueEditEnd()
+bool GraphEdit::tryAddNode(const std::string & typeName, const int x, const int y, const bool select)
 {
-	socketValueEdit = SocketValueEdit();
+	if (state != kState_Idle)
+	{
+		return false;
+	}
+	else if (typeName.empty())
+	{
+		return false;
+	}
+	else
+	{
+		GraphNode node;
+		node.id = graph->allocNodeId();
+		node.typeName = typeName;
+		node.editorX = x;
+		node.editorY = y;
+		
+		graph->addNode(node);
+		
+		selectNode(node.id);
+		
+		return true;
+	}
 }
 
 void GraphEdit::selectNode(const GraphNodeId nodeId)
@@ -1871,10 +1687,7 @@ void GraphEdit::draw() const
 			}
 		}
 		break;
-	
-	case kState_SocketValueEdit:
-		break;
-	
+		
 	case kState_Hidden:
 		break;
 	}
@@ -1892,7 +1705,8 @@ void GraphEdit::draw() const
 					gxTranslatef(mousePosition.uiX + 15, mousePosition.uiY, 0);
 					
 					const int kFontSize = 12;
-					const int kPadding = 5;
+					const int kPadding = 8;
+					const int kElemPadding = 4;
 					
 					std::string caption;
 					
@@ -1919,6 +1733,7 @@ void GraphEdit::draw() const
 					//
 					
 					const std::string & value = realTimeSocketCapture.value;
+					const bool hasValue = realTimeSocketCapture.hasValue;
 					
 					float valueSx;
 					float valueSy;
@@ -1927,14 +1742,19 @@ void GraphEdit::draw() const
 					//
 					
 					int sx = std::max(120, std::max(int(captionSx), int(valueSx)));
-					int sy = 100;
+					int sy = kPadding;
+					
+					sy += kFontSize; // caption
+					sy += kElemPadding + kFontSize; // value
 					
 					//
 					
 					float graphMin;
 					float graphMax;
 					
-					const bool hasGraph = realTimeSocketCapture.history.getRange(graphMin, graphMax);
+					const bool hasGraph =
+						realTimeSocketCapture.history.getRange(graphMin, graphMax) &&
+						graphMin != graphMax;
 					
 					const int graphSx = realTimeSocketCapture.history.kMaxHistory;
 					const int graphSy = 50;
@@ -1942,11 +1762,13 @@ void GraphEdit::draw() const
 					if (hasGraph)
 					{
 						sx = std::max(sx, graphSx);
+						sy += kElemPadding + graphSy;
 					}
 					
 					//
 					
 					sx += kPadding * 2;
+					sy += kPadding;
 					
 					//
 					
@@ -1960,23 +1782,35 @@ void GraphEdit::draw() const
 					
 					setColor(255, 255, 255);
 					drawText(sx/2, y, kFontSize, 0.f, +1.f, "%s", caption.c_str());
-					y += kFontSize + 4;
+					y += kFontSize;
 					
-					setColor(191, 191, 255);
-					drawText(sx/2, y, kFontSize, 0.f, +1.f, "%s", value.c_str());
-					y += kFontSize + 4;
+					y += kElemPadding;
+					if (hasValue)
+					{
+						setColor(191, 191, 255);
+						drawText(sx/2, y, kFontSize, 0.f, +1.f, "%s", value.c_str());
+					}
+					else
+					{
+						setColor(255, 191, 127);
+						drawText(sx/2, y, kFontSize, 0.f, +1.f, "n/a");
+					}
+					y += kFontSize;
 					
 					//
 					
 					if (hasGraph)
 					{
+						y += kElemPadding;
+						
+						const int graphX = (sx - graphSx) / 2;
 						const int xOffset = realTimeSocketCapture.history.kMaxHistory - realTimeSocketCapture.history.historySize;
 						
 						for (int i = 0; i < realTimeSocketCapture.history.historySize; ++i)
 						{
 							const float value = realTimeSocketCapture.history.getGraphValue(i);
 							
-							const float plotX = kPadding + i + xOffset;
+							const float plotX = graphX + i + xOffset;
 							const float plotY = (value - graphMax) / (graphMin - graphMax);
 							
 							setColor(127, 127, 255);
@@ -1984,8 +1818,13 @@ void GraphEdit::draw() const
 						}
 						
 						setColor(colorWhite);
-						drawRectLine(kPadding, y, kPadding + graphSx, y + graphSy);
+						drawRectLine(graphX, y, graphX + graphSx, y + graphSy);
+						
+						y += graphSy;
 					}
+					
+					y += kPadding;
+					fassert(y == sy);
 				}
 				gxPopMatrix();
 			}
@@ -2004,9 +1843,6 @@ void GraphEdit::draw() const
 	case kState_OutputSocketConnect:
 		break;
 		
-	case kState_SocketValueEdit:
-		break;
-	
 	case kState_Hidden:
 		break;
 	}
@@ -2058,55 +1894,6 @@ void GraphEdit::drawTypeUi(const GraphNode & node, const GraphEdit_TypeDefinitio
 	
 	if (isFolded == false)
 	{
-		for (auto & editor : definition.editors)
-		{
-			if (socketValueEdit.nodeId == node.id && socketValueEdit.editor == &editor)
-			{
-				setColor(63, 63, 127);
-				drawRect(
-					editor.editorX,
-					editor.editorY,
-					editor.editorX + editor.editorSx,
-					editor.editorY + editor.editorSy);
-			}
-			
-			if (editor.typeName == "float")
-			{
-				const float value = Parse::Float(node.editorValue);
-				
-				setColor(255, 0, 0);
-				drawRect(
-					editor.editorX,
-					editor.editorY,
-					editor.editorX + editor.editorSx * value,
-					editor.editorY + editor.editorSy);
-				
-				setFont("calibri.ttf");
-				setColor(255, 255, 255);
-				drawText(
-					editor.editorX + editor.editorSx/2,
-					editor.editorY + editor.editorSy/2,
-					12, 0.f, 0.f, "%s : %.2f", editor.typeName.c_str(), value);
-			}
-			
-			if (editor.typeName == "string")
-			{
-				setFont("calibri.ttf");
-				setColor(255, 255, 255);
-				drawText(
-					editor.editorX + editor.editorSx/2,
-					editor.editorY + editor.editorSy/2,
-					12, 0.f, 0.f, "%s", node.editorValue.c_str());
-			}
-			
-			setColor(127, 127, 127, 255);
-			drawRectLine(
-				editor.editorX,
-				editor.editorY,
-				editor.editorX + editor.editorSx,
-				editor.editorY + editor.editorSy);
-		}
-		
 		for (auto & inputSocket : definition.inputSockets)
 		{
 			setFont("calibri.ttf");
@@ -2452,9 +2239,10 @@ GraphNode * GraphUi::PropEdit::tryGetNode()
 	
 	UiState * uiState;
 	
-GraphUi::NodeTypeNameSelect::NodeTypeNameSelect()
-	: typeLibrary(nullptr)
+GraphUi::NodeTypeNameSelect::NodeTypeNameSelect(GraphEdit * _graphEdit)
+	: graphEdit(_graphEdit)
 	, uiState(nullptr)
+	, history()
 {
 	uiState = new UiState();
 	
@@ -2543,11 +2331,9 @@ void GraphUi::NodeTypeNameSelect::doMenus(const bool doActions, const bool doDra
 			
 			std::vector<TypeNameAndScore> typeNamesAndScores;
 			
-			static bool v = false;
-			
 			int index = 0;
 			
-			for (auto & typeDefenition : typeLibrary->typeDefinitions)
+			for (auto & typeDefenition : graphEdit->typeDefinitionLibrary->typeDefinitions)
 			{
 				const std::string & typeNameToMatch = typeDefenition.second.typeName;
 				
@@ -2577,26 +2363,61 @@ void GraphUi::NodeTypeNameSelect::doMenus(const bool doActions, const bool doDra
 					if (doButton(typeNamesAndScores[i].typeName.c_str()))
 					{
 						uiState->reset();
-						typeName = typeNamesAndScores[i].typeName;
+						selectTypeName(typeNamesAndScores[i].typeName);
 					}
 				}
 				popMenu();
 			}
 			
-			doBreak();
-			for (int i = 0; i < 5; ++i)
+			if (!history.empty())
 			{
-				char name[32];
-				sprintf_s(name, sizeof(name), "m%02d", i);
-				pushMenu(name);
+				doBreak();
+				int index = 0;
+				auto historyCopy = history;
+				for (auto & historyItem : historyCopy)
 				{
-					doCheckBox(v, "x", false);
+					char name[32];
+					sprintf_s(name, sizeof(name), "m%02d", index);
+					pushMenu(name);
+					{
+						if (doButton(historyItem.c_str()))
+						{
+							uiState->reset();
+							selectTypeName(historyItem);
+						}
+					}
+					popMenu();
+					
+					++index;
 				}
-				popMenu();
 			}
 		}
 	}
 	popMenu();
+}
+
+void GraphUi::NodeTypeNameSelect::selectTypeName(const std::string & _typeName)
+{
+	typeName = _typeName;
+	
+	// update history
+	
+	for (auto i = history.begin(); i != history.end(); )
+	{
+		if ((*i) == typeName)
+			i = history.erase(i);
+		else
+			++i;
+	}
+	
+	history.push_front(_typeName);
+	
+	while (history.size() > kMaxHistory)
+		history.pop_back();
+	
+	//
+	
+	graphEdit->tryAddNode(typeName, graphEdit->dragAndZoom.focusX, graphEdit->dragAndZoom.focusY, true);
 }
 
 std::string & GraphUi::NodeTypeNameSelect::getNodeTypeName()

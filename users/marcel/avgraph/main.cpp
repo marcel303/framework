@@ -84,7 +84,7 @@ todo :
 	- order of listing should be : pure matches, fuzzy matches, history. show history once type name text box is made active
 	- clear type name text box when adding node
 - automatically hide UI when mouse/keyboard is inactive for a while
-- remove 'editor' code
++ remove 'editor' code
 - allocate literal values for unconnected plugs when live-editing change comes in for input
 
 - add sample.float node
@@ -1523,11 +1523,6 @@ int main(int argc, char * argv[])
 			
 			graphEdit->propertyEditor->setGraph(graphEdit->graph);
 		}
-		
-		if (graphEdit->nodeTypeNameSelect != nullptr)
-		{
-			graphEdit->nodeTypeNameSelect->typeLibrary = typeDefinitionLibrary;
-		}
 
 		VfxGraph * vfxGraph = nullptr;
 		
@@ -1605,11 +1600,6 @@ int main(int argc, char * argv[])
 					graphEdit->propertyEditor->typeLibrary = typeDefinitionLibrary;
 					
 					graphEdit->propertyEditor->setGraph(graphEdit->graph);
-				}
-				
-				if (graphEdit->nodeTypeNameSelect != nullptr)
-				{
-					graphEdit->nodeTypeNameSelect->typeLibrary = typeDefinitionLibrary;
 				}
 				
 				//

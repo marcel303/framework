@@ -104,31 +104,6 @@ struct Graph
 
 //
 
-struct GraphEdit_Editor
-{
-	std::string typeName;
-	int outputSocketIndex;
-	
-	// editor
-	
-	float editorX;
-	float editorY;
-	float editorSx;
-	float editorSy;
-	
-	GraphEdit_Editor()
-		: typeName()
-		, outputSocketIndex(-1)
-		, editorX(0.f)
-		, editorY(0.f)
-		, editorSx(0.f)
-		, editorSy(0.f)
-	{
-	}
-};
-
-//
-
 struct GraphEdit_ValueTypeDefinition
 {
 	std::string typeName;
@@ -211,14 +186,12 @@ struct GraphEdit_TypeDefinition
 	
 	struct HitTestResult
 	{
-		const GraphEdit_Editor * editor;
 		const InputSocket * inputSocket;
 		const OutputSocket * outputSocket;
 		bool background;
 		
 		HitTestResult()
-			: editor(nullptr)
-			, inputSocket(nullptr)
+			: inputSocket(nullptr)
 			, outputSocket(nullptr)
 			, background(false)
 		{
@@ -227,7 +200,6 @@ struct GraphEdit_TypeDefinition
 	
 	std::string typeName;
 	
-	std::vector<GraphEdit_Editor> editors;
 	std::vector<InputSocket> inputSockets;
 	std::vector<OutputSocket> outputSockets;
 	
@@ -241,7 +213,6 @@ struct GraphEdit_TypeDefinition
 	
 	GraphEdit_TypeDefinition()
 		: typeName()
-		, editors()
 		, inputSockets()
 		, outputSockets()
 		, displayName()
@@ -379,7 +350,6 @@ struct GraphEdit
 		kState_NodeDrag,
 		kState_InputSocketConnect,
 		kState_OutputSocketConnect,
-		kState_SocketValueEdit,
 		kState_Hidden
 	};
 	
@@ -551,6 +521,7 @@ struct GraphEdit
 		int dstSocketIndex;
 		
 		std::string value;
+		bool hasValue;
 		
 		History history;
 		
@@ -559,6 +530,7 @@ struct GraphEdit
 			, srcSocketIndex(-1)
 			, dstSocketIndex(-1)
 			, value()
+			, hasValue(false)
 			, history()
 		{
 		}
@@ -601,31 +573,6 @@ struct GraphEdit
 		}
 	};
 	
-	struct SocketValueEdit
-	{
-		enum Mode
-		{
-			kMode_Idle,
-			kMode_MouseAbsolute,
-			kMode_MouseRelative,
-			kMode_Keyboard
-		};
-		
-		GraphNodeId nodeId;
-		const GraphEdit_Editor * editor;
-		Mode mode;
-		std::string keyboardText;
-		
-		SocketValueEdit()
-			: nodeId(kGraphNodeIdInvalid)
-			, editor(nullptr)
-			, mode(kMode_Idle)
-		{
-		}
-		
-		bool processKeyboard();
-	};
-	
 	Graph * graph;
 	
 	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
@@ -643,7 +590,6 @@ struct GraphEdit
 	
 	NodeSelect nodeSelect;
 	SocketConnect socketConnect;
-	SocketValueEdit socketValueEdit;
 	
 	GraphEditMouse mousePosition;
 	
@@ -670,7 +616,8 @@ struct GraphEdit
 	bool tick(const float dt);
 	void nodeSelectEnd();
 	void socketConnectEnd();
-	void socketValueEditEnd();
+	
+	bool tryAddNode(const std::string & typeName, const int x, const int y, const bool select);
 	
 	void selectNode(const GraphNodeId nodeId);
 	void selectLink(const GraphLinkId linkId);
@@ -721,19 +668,24 @@ namespace GraphUi
 	
 	struct NodeTypeNameSelect
 	{
-		GraphEdit_TypeDefinitionLibrary * typeLibrary;
+		static const int kMaxHistory = 5;
+		
+		GraphEdit * graphEdit;
 		
 		UiState * uiState;
 		
 		std::string typeName;
 		
-		NodeTypeNameSelect();
+		std::list<std::string> history;
+		
+		NodeTypeNameSelect(GraphEdit * graphEdit);
 		~NodeTypeNameSelect();
 		
 		bool tick(const float dt);
 		void draw() const;
 		
 		void doMenus(const bool doActions, const bool doDraw, const float dt);
+		void selectTypeName(const std::string & typeName);
 		
 		std::string & getNodeTypeName();
 	};
