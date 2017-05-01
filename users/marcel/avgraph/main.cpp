@@ -35,12 +35,14 @@ todo :
 + let graph editor set editorValue for nodes. only when editor is set on type definition
 + add socket connection selection. remove connection on BACKSPACE
 + add multiple node selection
-- on typing 0..9 let node value editor erase editorValue and begin typing. requires state transition? end editing on ENTER or when selecting another entity
-- add ability to increment and decrement editorValue. use mouse Y movement or scroll wheel (?)
+# on typing 0..9 let node value editor erase editorValue and begin typing. requires state transition? end editing on ENTER or when selecting another entity
+# add ability to increment and decrement editorValue. use mouse Y movement or scroll wheel (?)
 + remember number of digits entered after '.' when editing editorValue. use this information when incrementing/decrementing values
 - add zoom in/out
 	+ add basic implementation
 	- improve zoom in and out behavior
+		- clamp max zoom level
+		- improve font rendering so it's both resolution independent and supports sub-pixel translation
 	+ save/load zoom and focus position to/from XML
 	+ add option to quickly reset drag and zoom values
 	+ use arrow keys to navigate workspace (when no nodes are selected)
@@ -91,8 +93,19 @@ todo :
 	- clear type name text box when adding node
 - automatically hide UI when mouse/keyboard is inactive for a while
 + remove 'editor' code
-- allocate literal values for unconnected plugs when live-editing change comes in for input
++ allocate literal values for unconnected plugs when live-editing change comes in for input
+- add live-connection callback so the graph editor can show which nodes and links are actively traversed
 
+todo : nodes :
+- add ease node
+	- value
+	- ease type
+	- ease param1
+	- ease param2
+	- mirror?
+	- result
+- add time node
+- add timer node
 - add sample.float node
 - add sample.image node. outputs r/g/b/a. specify normalized vs screen coords?
 - add impulse response node. measure input impulse response with oscilator at given frequency
@@ -383,7 +396,7 @@ struct VfxNodeRange : VfxNodeBase
 	
 	enum Output
 	{
-		kOutputValue,
+		kOutput_Value,
 		kOutput_COUNT
 	};
 	
@@ -391,6 +404,7 @@ struct VfxNodeRange : VfxNodeBase
 	
 	VfxNodeRange()
 		: VfxNodeBase()
+		, outputValue(0.f)
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addInput(kInput_In, kVfxPlugType_Float);
@@ -400,12 +414,19 @@ struct VfxNodeRange : VfxNodeBase
 		addInput(kInput_OutMax, kVfxPlugType_Float);
 		addInput(kInput_OutCurvePow, kVfxPlugType_Float);
 		addInput(kInput_Clamp, kVfxPlugType_Bool);
-		addOutput(kOutputValue, kVfxPlugType_Float, &outputValue);
+		addOutput(kOutput_Value, kVfxPlugType_Float, &outputValue);
 	}
 	
 	virtual void tick(const float dt) override
 	{
 		const float in = getInputFloat(kInput_In, 0.f);
+		
+		if (isPassthrough)
+		{
+			outputValue = in;
+			return;
+		}
+		
 		const float inMin = getInputFloat(kInput_InMin, 0.f);
 		const float inMax = getInputFloat(kInput_InMax, 1.f);
 		const float outMin = getInputFloat(kInput_OutMin, 0.f);
@@ -422,6 +443,70 @@ struct VfxNodeRange : VfxNodeBase
 		const float t2 = 1.f - t;
 		
 		outputValue = outMax * t1 + outMin * t2;
+	}
+};
+
+#include "Ease.h"
+
+struct VfxNodeEase : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_Value,
+		kInput_Type,
+		kInput_Param,
+		kInput_Mirror,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Result,
+		kOutput_COUNT
+	};
+	
+	float outputValue;
+	
+	VfxNodeEase()
+		: VfxNodeBase()
+		, outputValue(0.f)
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Value, kVfxPlugType_Float);
+		addInput(kInput_Type, kVfxPlugType_Int);
+		addInput(kInput_Param, kVfxPlugType_Float);
+		addInput(kInput_Mirror, kVfxPlugType_Bool);
+		addOutput(kOutput_Result, kVfxPlugType_Float, &outputValue);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		float value = getInputFloat(kInput_Value, 0.f);
+		
+		if (isPassthrough)
+		{
+			outputValue = value;
+			return;
+		}
+		
+		int type = getInputInt(kInput_Type, 0);
+		const float param = getInputFloat(kInput_Param, 0.f);
+		const bool mirror = getInputBool(kInput_Mirror, false);
+		
+		if (type < 0 || type >= kEaseType_Count)
+			type = kEaseType_Linear;
+		
+		if (mirror)
+		{
+			value = std::fmod(std::abs(value), 2.f);
+			
+			if (value > 1.f)
+				value = 2.f - value;
+		}
+		
+		value = value < 0.f ? 0.f : value > 1.f ? 1.f : value;
+		
+		outputValue = EvalEase(value, (EaseType)type, param);
 	}
 };
 
@@ -857,6 +942,74 @@ struct VfxGraph
 		nodes.clear();
 	}
 	
+	void connectToInputLiteral(VfxPlug & input, const std::string & inputValue)
+	{
+		if (input.type == kVfxPlugType_Bool)
+		{
+			bool * value = new bool();
+			
+			*value = Parse::Bool(inputValue);
+			
+			input.connectTo(value, kVfxPlugType_Bool);
+			
+			valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Bool, value));
+		}
+		else if (input.type == kVfxPlugType_Int)
+		{
+			int * value = new int();
+			
+			*value = Parse::Int32(inputValue);
+			
+			input.connectTo(value, kVfxPlugType_Int);
+			
+			valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Int, value));
+		}
+		else if (input.type == kVfxPlugType_Float)
+		{
+			float * value = new float();
+			
+			*value = Parse::Float(inputValue);
+			
+			input.connectTo(value, kVfxPlugType_Float);
+			
+			valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Float, value));
+		}
+		else if (input.type == kVfxPlugType_Transform)
+		{
+			VfxTransform * value = new VfxTransform();
+			
+			// todo : parse inputValue
+			
+			input.connectTo(value, kVfxPlugType_Transform);
+			
+			valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Transform, value));
+		}
+		else if (input.type == kVfxPlugType_String)
+		{
+			std::string * value = new std::string();
+			
+			*value = inputValue;
+			
+			input.connectTo(value, kVfxPlugType_String);
+			
+			valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_String, value));
+		}
+		else if (input.type == kVfxPlugType_Color)
+		{
+			Color * value = new Color();
+			
+			*value = Color::fromHex(inputValue.c_str());
+			
+			input.connectTo(value, kVfxPlugType_Color);
+			
+			valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Color, value));
+		}
+		else
+		{
+			logWarning("cannot instantiate literal for non-supported type %d, value=%s", input.type, inputValue.c_str());
+		}
+	}
+	
 	void tick(const float dt)
 	{
 		for (auto i : nodes)
@@ -954,6 +1107,7 @@ static VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDef
 		}
 		DefineNodeImpl("transform.2d", VfxNodeTransform2d)
 		DefineNodeImpl("math.range", VfxNodeRange)
+		DefineNodeImpl("ease", VfxNodeEase)
 		DefineNodeImpl("math.add", VfxNodeMathAdd)
 		DefineNodeImpl("math.sub", VfxNodeMathSub)
 		DefineNodeImpl("math.mul", VfxNodeMathMul)
@@ -1113,70 +1267,7 @@ static VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDef
 					{
 						if (vfxNodeInputs[i].isConnected() == false)
 						{
-							if (vfxNodeInputs[i].type == kVfxPlugType_Bool)
-							{
-								bool * value = new bool();
-								
-								*value = Parse::Bool(inputValue);
-								
-								vfxNodeInputs[i].connectTo(value, kVfxPlugType_Bool);
-								
-								vfxGraph->valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Bool, value));
-							}
-							else if (vfxNodeInputs[i].type == kVfxPlugType_Int)
-							{
-								int * value = new int();
-								
-								*value = Parse::Int32(inputValue);
-								
-								vfxNodeInputs[i].connectTo(value, kVfxPlugType_Int);
-								
-								vfxGraph->valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Int, value));
-							}
-							else if (vfxNodeInputs[i].type == kVfxPlugType_Float)
-							{
-								float * value = new float();
-								
-								*value = Parse::Float(inputValue);
-								
-								vfxNodeInputs[i].connectTo(value, kVfxPlugType_Float);
-								
-								vfxGraph->valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Float, value));
-							}
-							else if (vfxNodeInputs[i].type == kVfxPlugType_Transform)
-							{
-								VfxTransform * value = new VfxTransform();
-								
-								// todo : parse inputValue
-								
-								vfxNodeInputs[i].connectTo(value, kVfxPlugType_Transform);
-								
-								vfxGraph->valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Transform, value));
-							}
-							else if (vfxNodeInputs[i].type == kVfxPlugType_String)
-							{
-								std::string * value = new std::string();
-								
-								*value = inputValue;
-								
-								vfxNodeInputs[i].connectTo(value, kVfxPlugType_String);
-								
-								vfxGraph->valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_String, value));
-							}
-							else if (vfxNodeInputs[i].type == kVfxPlugType_Color)
-							{
-								Color * value = new Color();
-								
-								*value = Color::fromHex(inputValue.c_str());
-								
-								vfxNodeInputs[i].connectTo(value, kVfxPlugType_Color);
-								
-								vfxGraph->valuesToFree.push_back(VfxGraph::ValueToFree(VfxGraph::ValueToFree::kType_Color, value));
-							}
-							else
-							{
-								logWarning("cannot instantiate literal for non-supported type %d, value=%s", vfxNodeInputs[i].type, inputValue.c_str());
-							}
+							vfxGraph->connectToInputLiteral(vfxNodeInputs[i], inputValue);
 						}
 					}
 				}
@@ -1281,12 +1372,14 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 		if (input == nullptr)
 			return;
 		
-		// todo : create literal node type ?
-		
-		if (input->isConnected() == false)
-			return;
-		
-		setPlugValue(input, value);
+		if (input->isConnected())
+		{
+			setPlugValue(input, value);
+		}
+		else
+		{
+			vfxGraph->connectToInputLiteral(*input, value);
+		}
 	}
 	
 	static bool getPlugValue(VfxPlug * plug, std::string & value)
@@ -1481,6 +1574,27 @@ static void testChaosGame()
 	output = nullptr;
 }
 
+static void testImpulseResponseMeasurement()
+{
+	// todo : generate signal
+	
+	// todo : do impulse response measurement over time
+	
+	float impulseResponse = 0.f;
+	
+	do
+	{
+		framework.process();
+		
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			setFont("calibri.ttf");
+			drawText(GFX_SX/2, GFX_SY/2, 24, 0, 0, "impulse response: %f", impulseResponse);
+		}
+		framework.endDraw();
+	} while (!keyboard.wentDown(SDLK_SPACE));
+}
+
 int main(int argc, char * argv[])
 {
 	//framework.waitForEvents = true;
@@ -1500,6 +1614,8 @@ int main(int argc, char * argv[])
 		//testNanovg();
 		
 		//testChaosGame();
+		
+		testImpulseResponseMeasurement();
 		
 		//
 		
