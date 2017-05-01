@@ -691,17 +691,24 @@ static void doTextBoxImpl(T & value, const char * name, const float xOffset, con
 
 		if (elem.clicked)
 		{
-			textField.open(32, false, false);
+			if (textField.isActive())
+			{
+				elem.deactivate();
+			}
+			else
+			{
+				textField.open(32, false, false);
 
-			char temp[32];
-			valueToString(value, temp, sizeof(temp));
-			textField.setText(temp);
-			
-			textField.setTextIsSelected(true);
-			
-			//
-			
-			mouseIncrementY = mouse.y;
+				char temp[32];
+				valueToString(value, temp, sizeof(temp));
+				textField.setText(temp);
+				
+				textField.setTextIsSelected(true);
+				
+				//
+				
+				mouseIncrementY = mouse.y;
+			}
 		}
 		
 		if (!elem.isActive)
@@ -753,11 +760,6 @@ static void doTextBoxImpl(T & value, const char * name, const float xOffset, con
 			}
 			
 			if (finished)
-			{
-				elem.deactivate();
-			}
-			
-			if (wasActive && elem.isActive && elem.hasFocus && mouse.wentDown(BUTTON_LEFT))
 			{
 				elem.deactivate();
 			}
