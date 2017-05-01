@@ -1231,6 +1231,10 @@ static VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDef
 			{
 				input->connectTo(*output);
 				
+				// note : this may add the same node multiple times to the list of predeps. note that this
+				//        is ok as nodes will be traversed once through the travel id + it works nicely
+				//        with the live connection as we can just remove the predep and still have one or
+				//        references to the predep if the predep was referenced more than once
 				srcNode->predeps.push_back(dstNode);
 			}
 		}
@@ -1298,15 +1302,76 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	{
 	}
 	
+	virtual void nodeRemove(const GraphNodeId nodeId) override
+	{
+		logDebug("nodeRemove");
+	}
+	
+	virtual void linkRemove(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex) override
+	{
+		logDebug("linkRemove");
+		
+		Assert(vfxGraph != nullptr);
+		if (vfxGraph == nullptr)
+			return;
+		
+		auto nodeItr = vfxGraph->nodes.find(srcNodeId);
+		
+		Assert(nodeItr != vfxGraph->nodes.end());
+		if (nodeItr == vfxGraph->nodes.end())
+			return;
+		
+		auto node = nodeItr->second;
+		
+		auto input = node->tryGetInput(srcSocketIndex);
+		
+		Assert(input != nullptr);
+		if (input == nullptr)
+			return;
+		
+		Assert(input->isConnected());
+		input->disconnect();
+		
+		{
+			// attempt to remove dst node from predeps
+			
+			auto dstNodeItr = vfxGraph->nodes.find(dstNodeId);
+			
+			Assert(dstNodeItr != vfxGraph->nodes.end());
+			if (dstNodeItr != vfxGraph->nodes.end())
+			{
+				auto dstNode = dstNodeItr->second;
+				
+				bool foundPredep = false;
+				
+				for (auto i = node->predeps.begin(); i != node->predeps.end(); ++i)
+				{
+					VfxNodeBase * vfxNode = *i;
+					
+					if (vfxNode == dstNode)
+					{
+						node->predeps.erase(i);
+						foundPredep = true;
+						break;
+					}
+				}
+				
+				Assert(foundPredep);
+			}
+		}
+	}
+	
 	virtual void setNodeIsPassthrough(const GraphNodeId nodeId, const bool isPassthrough) override
 	{
 		logDebug("setNodeIsPassthrough called for nodeId=%d, isPassthrough=%d", int(nodeId), int(isPassthrough));
 		
+		Assert(vfxGraph != nullptr);
 		if (vfxGraph == nullptr)
 			return;
 		
 		auto nodeItr = vfxGraph->nodes.find(nodeId);
 		
+		Assert(nodeItr != vfxGraph->nodes.end());
 		if (nodeItr == vfxGraph->nodes.end())
 			return;
 		
@@ -1357,11 +1422,13 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	{
 		logDebug("setSrcSocketValue called for nodeId=%d, srcSocket=%s", int(nodeId), srcSocketName.c_str());
 		
+		Assert(vfxGraph != nullptr);
 		if (vfxGraph == nullptr)
 			return;
 		
 		auto nodeItr = vfxGraph->nodes.find(nodeId);
 		
+		Assert(nodeItr != vfxGraph->nodes.end());
 		if (nodeItr == vfxGraph->nodes.end())
 			return;
 		
@@ -1369,6 +1436,7 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 		
 		auto input = node->tryGetInput(srcSocketIndex);
 		
+		Assert(input != nullptr);
 		if (input == nullptr)
 			return;
 		
@@ -1580,16 +1648,118 @@ static void testImpulseResponseMeasurement()
 	
 	// todo : do impulse response measurement over time
 	
-	float impulseResponse = 0.f;
-	
 	do
 	{
 		framework.process();
 		
+		const int kNumSamples = 1000;
+		
+		double samples[kNumSamples];
+		
+		double responseX[kNumSamples];
+		double responseY[kNumSamples];
+		
+		double twoPi = M_PI * 2.0;
+		
+		double samplePhase = 0.0;
+		double sampleStep = twoPi / 87.65;
+		
+		for (int i = 0; i < kNumSamples; ++i)
+		{
+			samples[i] = std::cos(samplePhase);
+			
+			samplePhase = std::fmod(samplePhase + sampleStep, twoPi);
+		}
+		
+		double measurementPhase = twoPi * (mouse.y / double(GFX_SY));
+		double measurementStep = twoPi / (150.0 * mouse.x / double(GFX_SX));
+		
+		if (keyboard.isDown(SDLK_a))
+			measurementStep = sampleStep;
+		
+		for (int i = 0; i < kNumSamples; ++i)
+		{
+			const double x = std::cos(measurementPhase);
+			const double y = std::sin(measurementPhase);
+			
+			responseX[i] = samples[i] * x;
+			responseY[i] = samples[i] * y;
+			
+			measurementPhase = std::fmod(measurementPhase + measurementStep, twoPi);
+		}
+		
+		double sumS = 0.f;
+		double sumX = 0.f;
+		double sumY = 0.f;
+		
+		for (int i = 0; i < kNumSamples; ++i)
+		{
+			sumS += std::fabs(samples[i]);
+			sumX += responseX[i];
+			sumY += responseY[i];
+		}
+		
+		const double avgX = sumX / kNumSamples;
+		const double avgY = sumY / kNumSamples;
+		
+		double impulseResponse = std::hypot(avgX, avgY) * 2.0;
+		
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			setFont("calibri.ttf");
-			drawText(GFX_SX/2, GFX_SY/2, 24, 0, 0, "impulse response: %f", impulseResponse);
+			setColor(colorWhite);
+			drawText(GFX_SX/2, GFX_SY/2, 24, 0, 0, "impulse response: %f (%f^8)", impulseResponse, std::pow(impulseResponse, 8.0));
+			drawText(GFX_SX/2, GFX_SY/2 + 30, 24, 0, 0, "sampleFreq=%f, measurementFreq=%f", 1.f / sampleStep, 1.f / measurementStep);
+			drawText(GFX_SX/2, GFX_SY/2 + 60, 24, 0, 0, "sumS=%f, sumX=%f, sumY=%f", sumS, sumX, sumY);
+			
+			gxPushMatrix();
+			{
+				gxTranslatef(0, GFX_SY/2, 0);
+				gxScalef(GFX_SX / float(kNumSamples), 1.f, 0.f);
+				
+				setColor(255, 255, 255);
+				gxBegin(GL_POINTS);
+				{
+					for (int i = 0; i < kNumSamples; ++i)
+					{
+						gxVertex2f(i, samples[i] * 20.f);
+					}
+				}
+				gxEnd();
+				
+				setColor(colorRed);
+				gxBegin(GL_POINTS);
+				{
+					float rsum = 0.f;
+					
+					for (int i = 0; i < kNumSamples; ++i)
+					{
+						rsum += responseX[i];
+						
+						gxVertex2f(i, rsum);
+						
+						gxVertex2f(i, responseX[i] * 20.f);
+					}
+				}
+				gxEnd();
+				
+				setColor(colorGreen);
+				gxBegin(GL_POINTS);
+				{
+					float rsum = 0.f;
+					
+					for (int i = 0; i < kNumSamples; ++i)
+					{
+						rsum += responseY[i];
+						
+						gxVertex2f(i, rsum);
+						
+						gxVertex2f(i, responseY[i] * 20.f);
+					}
+				}
+				gxEnd();
+			}
+			gxPopMatrix();
 		}
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE));
@@ -1702,6 +1872,7 @@ int main(int argc, char * argv[])
 				//
 				
 				graphEdit->graph = new Graph();
+				graphEdit->graph->graphEditConnection = graphEdit;
 				
 				// fixme : we should delete/new the property editor here ..
 				

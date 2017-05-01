@@ -180,6 +180,11 @@ struct VfxPlug
 		}
 	}
 	
+	void disconnect()
+	{
+		mem = nullptr;
+	}
+	
 	bool isConnected() const
 	{
 		return mem != nullptr;

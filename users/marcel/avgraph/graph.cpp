@@ -165,6 +165,7 @@ Graph::Graph()
 	, links()
 	, nextNodeId(1)
 	, nextLinkId(1)
+	, graphEditConnection(nullptr)
 {
 }
 
@@ -207,19 +208,38 @@ void Graph::removeNode(const GraphNodeId nodeId)
 	Assert(nodeId != kGraphNodeIdInvalid);
 	Assert(nodes.find(nodeId) != nodes.end());
 	
-	nodes.erase(nodeId);
-	
 	for (auto linkItr = links.begin(); linkItr != links.end(); )
 	{
 		auto & link = linkItr->second;
 		
 		if (link.srcNodeId == nodeId)
+		{
+			if (graphEditConnection)
+			{
+				graphEditConnection->linkRemove(link.id, link.srcNodeId, link.srcNodeSocketIndex, link.dstNodeId, link.dstNodeSocketIndex);
+			}
+			
 			linkItr = links.erase(linkItr);
+		}
 		else if (link.dstNodeId == nodeId)
+		{
+			if (graphEditConnection)
+			{
+				graphEditConnection->linkRemove(link.id, link.srcNodeId, link.srcNodeSocketIndex, link.dstNodeId, link.dstNodeSocketIndex);
+			}
+			
 			linkItr = links.erase(linkItr);
+		}
 		else
 			++linkItr;
 	}
+	
+	if (graphEditConnection)
+	{
+		graphEditConnection->nodeRemove(nodeId);
+	}
+
+	nodes.erase(nodeId);
 }
 
 void Graph::addLink(const GraphNodeSocketLink & link, const bool clearInputDuplicates)
@@ -232,6 +252,11 @@ void Graph::addLink(const GraphNodeSocketLink & link, const bool clearInputDupli
 			
 			if (link.srcNodeId == otherLink.srcNodeId && link.srcNodeSocketIndex == otherLink.srcNodeSocketIndex)
 			{
+				if (graphEditConnection)
+				{
+					graphEditConnection->linkRemove(otherLink.id, otherLink.srcNodeId, otherLink.srcNodeSocketIndex, otherLink.dstNodeId, otherLink.dstNodeSocketIndex);
+				}
+				
 				i = links.erase(i);
 			}
 			else
@@ -248,6 +273,13 @@ void Graph::removeLink(const GraphLinkId linkId)
 {
 	Assert(linkId != kGraphLinkIdInvalid);
 	Assert(links.find(linkId) != links.end());
+	
+	if (graphEditConnection)
+	{
+		auto & link = links.find(linkId)->second;
+		
+		graphEditConnection->linkRemove(link.id, link.srcNodeId, link.srcNodeSocketIndex, link.dstNodeId, link.dstNodeSocketIndex);
+	}
 	
 	links.erase(linkId);
 }
@@ -692,6 +724,8 @@ GraphEdit::GraphEdit()
 	, uiState(nullptr)
 {
 	graph = new Graph();
+	
+	graph->graphEditConnection = this;
 	
 	propertyEditor = new GraphUi::PropEdit(nullptr, this);
 	
@@ -1994,6 +2028,18 @@ void GraphEdit::saveXml(tinyxml2::XMLPrinter & editorElem) const
 		editorElem.PushAttribute("zoom", dragAndZoom.desiredZoom);
 	}
 	editorElem.CloseElement();
+}
+
+void GraphEdit::nodeRemove(const GraphNodeId nodeId)
+{
+	if (realTimeConnection)
+		realTimeConnection->nodeRemove(nodeId);
+}
+
+void GraphEdit::linkRemove(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
+{
+	if (realTimeConnection)
+		realTimeConnection->linkRemove(linkId, srcNodeId, srcSocketIndex, dstNodeId, dstSocketIndex);
 }
 
 //

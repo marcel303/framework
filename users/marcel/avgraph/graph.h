@@ -76,6 +76,21 @@ struct GraphNodeSocketLink
 	void setIsEnabled(const bool isEnabled);
 };
 
+struct GraphEditConnection
+{
+	virtual ~GraphEditConnection()
+	{
+	}
+	
+	virtual void nodeRemove(const GraphNodeId nodeId)
+	{
+	}
+	
+	virtual void linkRemove(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
+	{
+	}
+};
+
 struct Graph
 {
 	std::map<GraphNodeId, GraphNode> nodes;
@@ -83,6 +98,8 @@ struct Graph
 	
 	GraphNodeId nextNodeId;
 	GraphLinkId nextLinkId;
+	
+	GraphEditConnection * graphEditConnection;
 	
 	Graph();
 	~Graph();
@@ -324,6 +341,14 @@ struct GraphEdit_RealTimeConnection
 	{
 	}
 	
+	virtual void nodeRemove(const GraphNodeId nodeId)
+	{
+	}
+	
+	virtual void linkRemove(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
+	{
+	}
+	
 	virtual void setNodeIsPassthrough(const GraphNodeId nodeId, const bool isPassthrough)
 	{
 	}
@@ -345,7 +370,7 @@ struct GraphEdit_RealTimeConnection
 
 //
 
-struct GraphEdit
+struct GraphEdit : GraphEditConnection
 {
 	enum State
 	{
@@ -637,6 +662,11 @@ struct GraphEdit
 	
 	void loadXml(const tinyxml2::XMLElement * editorElem);
 	void saveXml(tinyxml2::XMLPrinter & editorElem) const;
+	
+	// GraphEditConnection
+	
+	virtual void nodeRemove(const GraphNodeId nodeId) override;
+	virtual void linkRemove(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex) override;
 };
 
 //
