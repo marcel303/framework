@@ -30,12 +30,8 @@ struct VfxNodeFsfx : VfxNodeBase
 	
 	VfxImage_Texture * image;
 	
-	bool isPassthrough;
-	
 	VfxNodeFsfx();
 	virtual ~VfxNodeFsfx() override;
-	
-	virtual void init(const GraphNode & node) override;
 
 	virtual void draw() const override;
 };

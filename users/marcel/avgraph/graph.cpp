@@ -1118,6 +1118,11 @@ bool GraphEdit::tick(const float dt)
 					if (node)
 					{
 						node->setIsPassthrough(allPassthrough ? false : true);
+						
+						if (realTimeConnection != nullptr)
+						{
+							realTimeConnection->setNodeIsPassthrough(node->id, node->editorIsPassthrough);
+						}
 					}
 				}
 			}

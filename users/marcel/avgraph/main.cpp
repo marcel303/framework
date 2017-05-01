@@ -54,21 +54,26 @@ todo :
 + implement OSC node
 + implement Leap Motion node
 - add undo/redo support. just serialize/deserialize graph for every action?
+	- note : serialize/deserialize entire graph doesn't work nicely with real-time connection
+			 we will need to serialize node on remove and re-add/restore it during undo (also invoking real-time connection)
+			 same for links and all other actions. we need to perform the opposite action on undo
 + UI element focus: graph editor vs property editor
 + add ability to collapse nodes, so they take up less space
 	+ SPACE to toggle
 	+ fix hit test
 	+ fix link end point locations
 + passthrough toggle on selection: check if all passthrough. yes? disable passthrough, else enable
-- add socket output value editing, for node types that define it on their outputs. required for literals
++ add socket output value editing, for node types that define it on their outputs. required for literals
 - add enum value types. use combo box to select values
 - add ability to randomize input values
 # fix white screen issue on Windows when GUI is visible
 - add trigger support
 - add real-time connection
 	+ editing values updates values in live version
-	- marking nodes passthrough gets reflected in live
+	+ marking nodes passthrough gets reflected in live
 	- disabling nodes and links gets reflected in live
+	- adding nodes should add nodes in live
+	- removing nodes should remove nodes in live
 + add reverse real-time connection
 	+ let graph edit sample socket input and output values
 		+ let graph edit show a graph of the values when hovering over a socket
@@ -78,8 +83,9 @@ todo :
 + integrate with UI from libparticle. it supports enums, better color picking, incrementing values up and down in checkboxes
 + add mouse up/down movement support to increment/decrement values of int/float text boxes
 + add option to specify (in UiState) how far text boxes indent their text fields
-- add history of last nodes added
-- insert node on pressing enter in the node type name box or when pressing one of the suggestion buttons
++ add history of last nodes added
+- insert node on pressing enter in the node type name box
+	+ or when pressing one of the suggestion buttons
 - add suggestion based purely on matching first part of string (no fuzzy string comparison)
 	- order of listing should be : pure matches, fuzzy matches, history. show history once type name text box is made active
 	- clear type name text box when adding node
@@ -462,13 +468,10 @@ struct VfxNodeMath : VfxNodeBase
 	Type type;
 	float result;
 	
-	bool isPassthrough;
-	
 	VfxNodeMath(Type _type)
 		: VfxNodeBase()
 		, type(kType_Unknown)
 		, result(0.f)
-		, isPassthrough(false)
 	{
 		type = _type;
 		
@@ -476,11 +479,6 @@ struct VfxNodeMath : VfxNodeBase
 		addInput(kInput_A, kVfxPlugType_Float);
 		addInput(kInput_B, kVfxPlugType_Float);
 		addOutput(kOutput_R, kVfxPlugType_Float, &result);
-	}
-	
-	virtual void init(const GraphNode & node) override
-	{
-		isPassthrough = node.editorIsPassthrough;
 	}
 	
 	virtual void tick(const float dt) override
@@ -1029,6 +1027,8 @@ static VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDef
 		}
 		else
 		{
+			vfxNode->isPassthrough = node.editorIsPassthrough;
+			
 			vfxNode->initSelf(node);
 			
 			vfxGraph->nodes[node.id] = vfxNode;
@@ -1205,6 +1205,23 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 		: GraphEdit_RealTimeConnection()
 		, vfxGraph(nullptr)
 	{
+	}
+	
+	virtual void setNodeIsPassthrough(const GraphNodeId nodeId, const bool isPassthrough) override
+	{
+		logDebug("setNodeIsPassthrough called for nodeId=%d, isPassthrough=%d", int(nodeId), int(isPassthrough));
+		
+		if (vfxGraph == nullptr)
+			return;
+		
+		auto nodeItr = vfxGraph->nodes.find(nodeId);
+		
+		if (nodeItr == vfxGraph->nodes.end())
+			return;
+		
+		auto node = nodeItr->second;
+		
+		node->isPassthrough = isPassthrough;
 	}
 	
 	static bool setPlugValue(VfxPlug * plug, const std::string & value)

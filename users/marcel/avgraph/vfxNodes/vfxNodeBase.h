@@ -287,11 +287,14 @@ struct VfxNodeBase
 	
 	int lastTraversalId;
 	
+	bool isPassthrough;
+	
 	VfxNodeBase()
 		: inputs()
 		, outputs()
 		, predeps()
 		, lastTraversalId(-1)
+		, isPassthrough(false)
 	{
 	}
 	

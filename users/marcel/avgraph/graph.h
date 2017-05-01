@@ -324,6 +324,10 @@ struct GraphEdit_RealTimeConnection
 	{
 	}
 	
+	virtual void setNodeIsPassthrough(const GraphNodeId nodeId, const bool isPassthrough)
+	{
+	}
+	
 	virtual void setSrcSocketValue(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, const std::string & value)
 	{
 	}

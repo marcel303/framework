@@ -4,7 +4,6 @@ VfxNodeFsfx::VfxNodeFsfx()
 	: VfxNodeBase()
 	, surface(nullptr)
 	, image(nullptr)
-	, isPassthrough(false)
 {
 	surface = new Surface(framework.windowSx, framework.windowSy, true);
 	
@@ -35,11 +34,6 @@ VfxNodeFsfx::~VfxNodeFsfx()
 	
 	delete surface;
 	surface = nullptr;
-}
-
-void VfxNodeFsfx::init(const GraphNode & node)
-{
-	isPassthrough = node.editorIsPassthrough;
 }
 
 void VfxNodeFsfx::draw() const
