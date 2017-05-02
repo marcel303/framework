@@ -7,9 +7,12 @@
 #include "../avpaint/video.h"
 
 #include "vfxNodes/vfxNodeBase.h"
+#include "vfxNodes/vfxNodeComposite.h"
 #include "vfxNodes/vfxNodeFsfx.h"
 #include "vfxNodes/vfxNodeLeapMotion.h"
 #include "vfxNodes/vfxNodeLiteral.h"
+#include "vfxNodes/vfxNodeMapEase.h"
+#include "vfxNodes/vfxNodeMapRange.h"
 #include "vfxNodes/vfxNodeMath.h"
 #include "vfxNodes/vfxNodeMouse.h"
 #include "vfxNodes/vfxNodeOsc.h"
@@ -165,23 +168,6 @@ struct VfxNodeDisplay : VfxNodeBase
 	{
 		return getInputImage(kInput_Image, nullptr);
 	}
-	
-	virtual void draw() const override
-	{
-	#if 0
-		const VfxImageBase * image = getImage();
-		
-		if (image != nullptr)
-		{
-			gxSetTexture(image->getTexture());
-			pushBlend(BLEND_OPAQUE);
-			setColor(colorWhite);
-			drawRect(0, 0, GFX_SX, GFX_SY);
-			popBlend();
-			gxSetTexture(0);
-		}
-	#endif
-	}
 };
 
 struct VfxNodeTransform2d : VfxNodeBase
@@ -242,239 +228,6 @@ struct VfxNodeTransform2d : VfxNodeBase
 		r.MakeRotationZ(Calc::DegToRad(angle));
 		
 		transform.matrix = t * r * s;
-	}
-};
-
-struct VfxNodeRange : VfxNodeBase
-{
-	enum Input
-	{
-		kInput_In,
-		kInput_InMin,
-		kInput_InMax,
-		kInput_OutMin,
-		kInput_OutMax,
-		kInput_OutCurvePow,
-		kInput_Clamp,
-		kInput_COUNT
-	};
-	
-	enum Output
-	{
-		kOutput_Value,
-		kOutput_COUNT
-	};
-	
-	float outputValue;
-	
-	VfxNodeRange()
-		: VfxNodeBase()
-		, outputValue(0.f)
-	{
-		resizeSockets(kInput_COUNT, kOutput_COUNT);
-		addInput(kInput_In, kVfxPlugType_Float);
-		addInput(kInput_InMin, kVfxPlugType_Float);
-		addInput(kInput_InMax, kVfxPlugType_Float);
-		addInput(kInput_OutMin, kVfxPlugType_Float);
-		addInput(kInput_OutMax, kVfxPlugType_Float);
-		addInput(kInput_OutCurvePow, kVfxPlugType_Float);
-		addInput(kInput_Clamp, kVfxPlugType_Bool);
-		addOutput(kOutput_Value, kVfxPlugType_Float, &outputValue);
-	}
-	
-	virtual void tick(const float dt) override
-	{
-		const float in = getInputFloat(kInput_In, 0.f);
-		
-		if (isPassthrough)
-		{
-			outputValue = in;
-			return;
-		}
-		
-		const float inMin = getInputFloat(kInput_InMin, 0.f);
-		const float inMax = getInputFloat(kInput_InMax, 1.f);
-		const float outMin = getInputFloat(kInput_OutMin, 0.f);
-		const float outMax = getInputFloat(kInput_OutMax, 1.f);
-		const float outCurvePow = getInputFloat(kInput_OutCurvePow, 1.f);
-		const bool clamp = getInputBool(kInput_Clamp, false);
-		
-		float t = (in - inMin) / (inMax - inMin);
-		if (clamp)
-			t = t < 0.f ? 0.f : t > 1.f ? 1.f : t;
-		t = std::powf(t, outCurvePow);
-		
-		const float t1 = t;
-		const float t2 = 1.f - t;
-		
-		outputValue = outMax * t1 + outMin * t2;
-	}
-};
-
-#include "Ease.h"
-
-struct VfxNodeEase : VfxNodeBase
-{
-	enum Input
-	{
-		kInput_Value,
-		kInput_Type,
-		kInput_Param,
-		kInput_Mirror,
-		kInput_COUNT
-	};
-	
-	enum Output
-	{
-		kOutput_Result,
-		kOutput_COUNT
-	};
-	
-	float outputValue;
-	
-	VfxNodeEase()
-		: VfxNodeBase()
-		, outputValue(0.f)
-	{
-		resizeSockets(kInput_COUNT, kOutput_COUNT);
-		addInput(kInput_Value, kVfxPlugType_Float);
-		addInput(kInput_Type, kVfxPlugType_Int);
-		addInput(kInput_Param, kVfxPlugType_Float);
-		addInput(kInput_Mirror, kVfxPlugType_Bool);
-		addOutput(kOutput_Result, kVfxPlugType_Float, &outputValue);
-	}
-	
-	virtual void tick(const float dt) override
-	{
-		float value = getInputFloat(kInput_Value, 0.f);
-		
-		if (isPassthrough)
-		{
-			outputValue = value;
-			return;
-		}
-		
-		int type = getInputInt(kInput_Type, 0);
-		const float param = getInputFloat(kInput_Param, 0.f);
-		const bool mirror = getInputBool(kInput_Mirror, false);
-		
-		if (type < 0 || type >= kEaseType_Count)
-			type = kEaseType_Linear;
-		
-		if (mirror)
-		{
-			value = std::fmod(std::abs(value), 2.f);
-			
-			if (value > 1.f)
-				value = 2.f - value;
-		}
-		
-		value = value < 0.f ? 0.f : value > 1.f ? 1.f : value;
-		
-		outputValue = EvalEase(value, (EaseType)type, param);
-	}
-};
-
-struct VfxNodeComposite : VfxNodeBase
-{
-	enum Input
-	{
-		kInput_Image1,
-		kInput_Transform1,
-		kInput_Image2,
-		kInput_Transform2,
-		kInput_Image3,
-		kInput_Transform3,
-		kInput_Image4,
-		kInput_Transform4,
-		kInput_COUNT
-	};
-	
-	enum Output
-	{
-		kOutput_Image,
-		kOutput_COUNT
-	};
-	
-	Surface * surface;
-	
-	VfxImage_Texture image;
-	
-	VfxNodeComposite()
-		: VfxNodeBase()
-		, surface(nullptr)
-		, image()
-	{
-		resizeSockets(kInput_COUNT, kOutput_COUNT);
-		addInput(kInput_Image1, kVfxPlugType_Image);
-		addInput(kInput_Transform1, kVfxPlugType_Transform);
-		addInput(kInput_Image2, kVfxPlugType_Image);
-		addInput(kInput_Transform2, kVfxPlugType_Transform);
-		addInput(kInput_Image3, kVfxPlugType_Image);
-		addInput(kInput_Transform3, kVfxPlugType_Transform);
-		addInput(kInput_Image4, kVfxPlugType_Image);
-		addInput(kInput_Transform4, kVfxPlugType_Transform);
-		addOutput(kOutput_Image, kVfxPlugType_Image, &image);
-		
-		surface = new Surface(GFX_SX, GFX_SY, true);
-	}
-	
-	virtual ~VfxNodeComposite() override
-	{
-		delete surface;
-		surface = nullptr;
-	}
-	
-	virtual void tick(const float dt) override
-	{
-		pushSurface(surface);
-		{
-			surface->clear();
-			
-			const int kNumImages = 4;
-			
-			const VfxImageBase * images[kNumImages] =
-			{
-				getInputImage(kInput_Image1, nullptr),
-				getInputImage(kInput_Image2, nullptr),
-				getInputImage(kInput_Image3, nullptr),
-				getInputImage(kInput_Image4, nullptr)
-			};
-			
-			const VfxTransform defaultTransform;
-			
-			const VfxTransform * transforms[kNumImages] =
-			{
-				&getInputTransform(kInput_Transform1, defaultTransform),
-				&getInputTransform(kInput_Transform2, defaultTransform),
-				&getInputTransform(kInput_Transform3, defaultTransform),
-				&getInputTransform(kInput_Transform4, defaultTransform)
-			};
-			
-			for (int i = 0; i < kNumImages; ++i)
-			{
-				if (images[i] == nullptr)
-					continue;
-				
-				gxPushMatrix();
-				{
-					gxTranslatef(+GFX_SX/2, +GFX_SY/2, 0.f);
-					gxMultMatrixf(transforms[i]->matrix.m_v);
-					gxTranslatef(-GFX_SX/2, -GFX_SY/2, 0.f);
-					
-					gxSetTexture(images[i]->getTexture());
-					{
-						setColor(colorWhite);
-						drawRect(0, 0, GFX_SX, GFX_SY);
-					}
-					gxSetTexture(0);
-				}
-				gxPopMatrix();
-			}
-		}
-		popSurface();
-		
-		image.texture = surface->getTexture();
 	}
 };
 
@@ -730,8 +483,8 @@ static VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string &
 		vfxNode = new VfxNodeColorLiteral();
 	}
 	DefineNodeImpl("transform.2d", VfxNodeTransform2d)
-	DefineNodeImpl("math.range", VfxNodeRange)
-	DefineNodeImpl("ease", VfxNodeEase)
+	DefineNodeImpl("math.range", VfxNodeMapRange)
+	DefineNodeImpl("ease", VfxNodeMapEase)
 	DefineNodeImpl("math.add", VfxNodeMathAdd)
 	DefineNodeImpl("math.sub", VfxNodeMathSub)
 	DefineNodeImpl("math.mul", VfxNodeMathMul)

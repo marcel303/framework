@@ -1,5 +1,7 @@
 #pragma once
 
+#include "vfxNodeBase.h"
+
 struct VfxNodeBoolLiteral : VfxNodeBase
 {
 	enum Output

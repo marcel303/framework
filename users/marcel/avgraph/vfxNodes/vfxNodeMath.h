@@ -1,5 +1,7 @@
 #pragma once
 
+#include "vfxNodeBase.h"
+
 struct VfxNodeMath : VfxNodeBase
 {
 	enum Input
