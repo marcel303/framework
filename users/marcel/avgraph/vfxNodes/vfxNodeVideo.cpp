@@ -27,12 +27,15 @@ VfxNodeVideo::~VfxNodeVideo()
 
 void VfxNodeVideo::tick(const float dt)
 {
-	mediaPlayer->tick(mediaPlayer->context);
-	
-	if (mediaPlayer->context->hasBegun)
-		mediaPlayer->presentTime += dt;
-	
-	image->texture = mediaPlayer->getTexture();
+	if (mediaPlayer->isActive(mediaPlayer->context))
+	{
+		mediaPlayer->tick(mediaPlayer->context);
+		
+		if (mediaPlayer->context->hasBegun)
+			mediaPlayer->presentTime += dt;
+		
+		image->texture = mediaPlayer->getTexture();
+	}
 }
 
 void VfxNodeVideo::init(const GraphNode & node)
