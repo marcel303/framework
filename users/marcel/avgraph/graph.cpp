@@ -2124,7 +2124,7 @@ void GraphUi::PropEdit::setNode(const GraphNodeId _nodeId)
 {
 	if (_nodeId != nodeId)
 	{
-		logDebug("setNode: %d", _nodeId);
+		//logDebug("setNode: %d", _nodeId);
 		
 		nodeId = _nodeId;
 		

@@ -67,15 +67,18 @@ todo :
 + passthrough toggle on selection: check if all passthrough. yes? disable passthrough, else enable
 + add socket output value editing, for node types that define it on their outputs. required for literals
 - add enum value types. use combo box to select values
+	- define enums for ease node type
 - add ability to randomize input values
 # fix white screen issue on Windows when GUI is visible
 - add trigger support
-- add real-time connection
++ add real-time connection
 	+ editing values updates values in live version
 	+ marking nodes passthrough gets reflected in live
-	- disabling nodes and links gets reflected in live
-	- adding nodes should add nodes in live
-	- removing nodes should remove nodes in live
+	# disabling nodes and links gets reflected in live -> deferred until later
+	+ adding nodes should add nodes in live
+	+ removing nodes should remove nodes in live
+	+ adding links should add nodes in live
+	+ removing links should remove nodes in live
 + add reverse real-time connection
 	+ let graph edit sample socket input and output values
 		+ let graph edit show a graph of the values when hovering over a socket
@@ -2366,6 +2369,8 @@ int main(int argc, char * argv[])
 			}
 			else if (keyboard.wentDown(SDLK_l))
 			{
+				graphEdit->realTimeConnection = nullptr;
+				
 				delete graphEdit->graph;
 				graphEdit->graph = nullptr;
 				
@@ -2421,6 +2426,7 @@ int main(int argc, char * argv[])
 			#endif
 				
 				realTimeConnection->vfxGraph = vfxGraph;
+				graphEdit->realTimeConnection = realTimeConnection;
 			}
 			
 			if (!graphEdit->selectedNodes.empty())
