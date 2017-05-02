@@ -685,8 +685,6 @@ static void doTextBoxImpl(T & value, const char * name, const float xOffset, con
 			textField.close();
 		}
 		
-		const bool wasActive = elem.isActive;
-		
 		elem.tick(x1, y1, x2, y2);
 
 		if (elem.clicked)
