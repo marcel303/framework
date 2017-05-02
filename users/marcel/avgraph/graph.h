@@ -90,6 +90,10 @@ struct GraphEditConnection
 	{
 	}
 	
+	virtual void linkAdd(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
+	{
+	}
+	
 	virtual void linkRemove(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
 	{
 	}
@@ -350,6 +354,10 @@ struct GraphEdit_RealTimeConnection
 	}
 	
 	virtual void nodeRemove(const GraphNodeId nodeId)
+	{
+	}
+	
+	virtual void linkAdd(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
 	{
 	}
 	
@@ -675,6 +683,7 @@ struct GraphEdit : GraphEditConnection
 	
 	virtual void nodeAdd(const GraphNodeId, const std::string & typeName) override;
 	virtual void nodeRemove(const GraphNodeId nodeId) override;
+	virtual void linkAdd(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex) override;
 	virtual void linkRemove(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex) override;
 };
 

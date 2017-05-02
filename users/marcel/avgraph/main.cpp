@@ -1368,6 +1368,54 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 		vfxGraph->nodes.erase(nodeItr);
 	}
 	
+	virtual void linkAdd(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex) override
+	{
+		logDebug("linkAdd");
+		
+		Assert(vfxGraph != nullptr);
+		if (vfxGraph == nullptr)
+			return;
+		
+		auto srcNodeItr = vfxGraph->nodes.find(srcNodeId);
+		auto dstNodeItr = vfxGraph->nodes.find(dstNodeId);
+		
+		Assert(srcNodeItr != vfxGraph->nodes.end() && dstNodeItr != vfxGraph->nodes.end());
+		if (srcNodeItr == vfxGraph->nodes.end() || dstNodeItr == vfxGraph->nodes.end())
+		{
+			if (srcNodeItr == vfxGraph->nodes.end())
+				logError("source node doesn't exist");
+			if (dstNodeItr == vfxGraph->nodes.end())
+				logError("destination node doesn't exist");
+			
+			return;
+		}
+
+		auto srcNode = srcNodeItr->second;
+		auto dstNode = dstNodeItr->second;
+		
+		auto input = srcNode->tryGetInput(srcSocketIndex);
+		auto output = dstNode->tryGetOutput(dstSocketIndex);
+		
+		Assert(input != nullptr && output != nullptr);
+		if (input == nullptr || output == nullptr)
+		{
+			if (input == nullptr)
+				logError("input node socket doesn't exist");
+			if (output == nullptr)
+				logError("output node socket doesn't exist");
+			
+			return;
+		}
+		
+		input->connectTo(*output);
+		
+		// note : this may add the same node multiple times to the list of predeps. note that this
+		//        is ok as nodes will be traversed once through the travel id + it works nicely
+		//        with the live connection as we can just remove the predep and still have one or
+		//        references to the predep if the predep was referenced more than once
+		srcNode->predeps.push_back(dstNode);
+	}
+	
 	virtual void linkRemove(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex) override
 	{
 		logDebug("linkRemove");

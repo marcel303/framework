@@ -270,6 +270,11 @@ void Graph::addLink(const GraphNodeSocketLink & link, const bool clearInputDupli
 	}
 	
 	links[link.id] = link;
+	
+	if (graphEditConnection)
+	{
+		graphEditConnection->linkAdd(link.id, link.srcNodeId, link.srcNodeSocketIndex, link.dstNodeId, link.dstNodeSocketIndex);
+	}
 }
 
 void Graph::removeLink(const GraphLinkId linkId)
@@ -2043,6 +2048,12 @@ void GraphEdit::nodeRemove(const GraphNodeId nodeId)
 {
 	if (realTimeConnection)
 		realTimeConnection->nodeRemove(nodeId);
+}
+
+void GraphEdit::linkAdd(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
+{
+	if (realTimeConnection)
+		realTimeConnection->linkAdd(linkId, srcNodeId, srcSocketIndex, dstNodeId, dstSocketIndex);
 }
 
 void GraphEdit::linkRemove(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
