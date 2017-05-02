@@ -201,6 +201,9 @@ void Graph::addNode(GraphNode & node)
 	Assert(nodes.find(node.id) == nodes.end());
 	
 	nodes.insert(std::pair<GraphNodeId, GraphNode>(node.id, node));
+	
+	if (graphEditConnection != nullptr)
+		graphEditConnection->nodeAdd(node.id, node.typeName);
 }
 
 void Graph::removeNode(const GraphNodeId nodeId)
@@ -2028,6 +2031,12 @@ void GraphEdit::saveXml(tinyxml2::XMLPrinter & editorElem) const
 		editorElem.PushAttribute("zoom", dragAndZoom.desiredZoom);
 	}
 	editorElem.CloseElement();
+}
+
+void GraphEdit::nodeAdd(const GraphNodeId nodeId, const std::string & typeName)
+{
+	if (realTimeConnection)
+		realTimeConnection->nodeAdd(nodeId, typeName);
 }
 
 void GraphEdit::nodeRemove(const GraphNodeId nodeId)

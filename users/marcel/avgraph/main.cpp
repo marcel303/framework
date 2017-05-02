@@ -1062,14 +1062,115 @@ struct VfxGraph
 	}
 };
 
+static VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeName, VfxGraph * vfxGraph)
+{
+	VfxNodeBase * vfxNode = nullptr;
+	
+#define DefineNodeImpl(_typeName, _type) \
+	else if (typeName == _typeName) \
+		vfxNode = new _type();
+	
+	if (typeName == "intBool")
+	{
+		vfxNode = new VfxNodeBoolLiteral();
+	}
+	else if (typeName == "intLiteral")
+	{
+		vfxNode = new VfxNodeIntLiteral();
+	}
+	else if (typeName == "floatLiteral")
+	{
+		vfxNode = new VfxNodeFloatLiteral();
+	}
+	else if (typeName == "transformLiteral")
+	{
+		vfxNode = new VfxNodeTransformLiteral();
+	}
+	else if (typeName == "stringLiteral")
+	{
+		vfxNode = new VfxNodeStringLiteral();
+	}
+	else if (typeName == "colorLiteral")
+	{
+		vfxNode = new VfxNodeColorLiteral();
+	}
+	DefineNodeImpl("transform.2d", VfxNodeTransform2d)
+	DefineNodeImpl("math.range", VfxNodeRange)
+	DefineNodeImpl("ease", VfxNodeEase)
+	DefineNodeImpl("math.add", VfxNodeMathAdd)
+	DefineNodeImpl("math.sub", VfxNodeMathSub)
+	DefineNodeImpl("math.mul", VfxNodeMathMul)
+	DefineNodeImpl("math.sin", VfxNodeMathSin)
+	DefineNodeImpl("math.cos", VfxNodeMathCos)
+	DefineNodeImpl("math.abs", VfxNodeMathAbs)
+	DefineNodeImpl("math.min", VfxNodeMathMin)
+	DefineNodeImpl("math.max", VfxNodeMathMax)
+	DefineNodeImpl("math.sat", VfxNodeMathSat)
+	DefineNodeImpl("math.neg", VfxNodeMathNeg)
+	DefineNodeImpl("math.sqrt", VfxNodeMathSqrt)
+	DefineNodeImpl("math.pow", VfxNodeMathPow)
+	DefineNodeImpl("math.exp", VfxNodeMathExp)
+	DefineNodeImpl("math.mod", VfxNodeMathMod)
+	DefineNodeImpl("math.fract", VfxNodeMathFract)
+	DefineNodeImpl("math.floor", VfxNodeMathFloor)
+	DefineNodeImpl("math.ceil", VfxNodeMathCeil)
+	DefineNodeImpl("math.round", VfxNodeMathRound)
+	DefineNodeImpl("math.sign", VfxNodeMathSign)
+	DefineNodeImpl("math.hypot", VfxNodeMathHypot)
+	DefineNodeImpl("osc.sine", VfxNodeOscSine)
+	DefineNodeImpl("osc.saw", VfxNodeOscSaw)
+	DefineNodeImpl("osc.triangle", VfxNodeOscTriangle)
+	DefineNodeImpl("osc.square", VfxNodeOscSquare)
+	else if (typeName == "display")
+	{
+		vfxNode = new VfxNodeDisplay();
+		
+		// fixme : move display node id handling out of here. remove nodeId and vfxGraph passed in to this function
+		Assert(vfxGraph->displayNodeId == kGraphNodeIdInvalid);
+		vfxGraph->displayNodeId = nodeId;
+	}
+	else if (typeName == "mouse")
+	{
+		vfxNode = new VfxNodeMouse();
+	}
+	else if (typeName == "leap")
+	{
+		vfxNode = new VfxNodeLeapMotion();
+	}
+	else if (typeName == "osc")
+	{
+		vfxNode = new VfxNodeOsc();
+	}
+	else if (typeName == "composite")
+	{
+		vfxNode = new VfxNodeComposite();
+	}
+	else if (typeName == "picture")
+	{
+		vfxNode = new VfxNodePicture();
+	}
+	else if (typeName == "video")
+	{
+		vfxNode = new VfxNodeVideo();
+	}
+	else if (typeName == "fsfx")
+	{
+		vfxNode = new VfxNodeFsfx();
+	}
+	else
+	{
+		logError("unknown node type: %s", typeName.c_str());
+	}
+	
+#undef DefineNodeImpl
+
+	return vfxNode;
+}
+
 static VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary)
 {
 	VfxGraph * vfxGraph = new VfxGraph();
 	
-#define DefineNodeImpl(_typeName, _type) \
-	else if (node.typeName == _typeName) \
-		vfxNode = new _type();
-
 	for (auto nodeItr : graph.nodes)
 	{
 		auto & node = nodeItr.second;
@@ -1079,100 +1180,7 @@ static VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDef
 			continue;
 		}
 		
-		VfxNodeBase * vfxNode = nullptr;
-		
-		if (node.typeName == "intBool")
-		{
-			vfxNode = new VfxNodeBoolLiteral();
-		}
-		else if (node.typeName == "intLiteral")
-		{
-			vfxNode = new VfxNodeIntLiteral();
-		}
-		else if (node.typeName == "floatLiteral")
-		{
-			vfxNode = new VfxNodeFloatLiteral();
-		}
-		else if (node.typeName == "transformLiteral")
-		{
-			vfxNode = new VfxNodeTransformLiteral();
-		}
-		else if (node.typeName == "stringLiteral")
-		{
-			vfxNode = new VfxNodeStringLiteral();
-		}
-		else if (node.typeName == "colorLiteral")
-		{
-			vfxNode = new VfxNodeColorLiteral();
-		}
-		DefineNodeImpl("transform.2d", VfxNodeTransform2d)
-		DefineNodeImpl("math.range", VfxNodeRange)
-		DefineNodeImpl("ease", VfxNodeEase)
-		DefineNodeImpl("math.add", VfxNodeMathAdd)
-		DefineNodeImpl("math.sub", VfxNodeMathSub)
-		DefineNodeImpl("math.mul", VfxNodeMathMul)
-		DefineNodeImpl("math.sin", VfxNodeMathSin)
-		DefineNodeImpl("math.cos", VfxNodeMathCos)
-		DefineNodeImpl("math.abs", VfxNodeMathAbs)
-		DefineNodeImpl("math.min", VfxNodeMathMin)
-		DefineNodeImpl("math.max", VfxNodeMathMax)
-		DefineNodeImpl("math.sat", VfxNodeMathSat)
-		DefineNodeImpl("math.neg", VfxNodeMathNeg)
-		DefineNodeImpl("math.sqrt", VfxNodeMathSqrt)
-		DefineNodeImpl("math.pow", VfxNodeMathPow)
-		DefineNodeImpl("math.exp", VfxNodeMathExp)
-		DefineNodeImpl("math.mod", VfxNodeMathMod)
-		DefineNodeImpl("math.fract", VfxNodeMathFract)
-		DefineNodeImpl("math.floor", VfxNodeMathFloor)
-		DefineNodeImpl("math.ceil", VfxNodeMathCeil)
-		DefineNodeImpl("math.round", VfxNodeMathRound)
-		DefineNodeImpl("math.sign", VfxNodeMathSign)
-		DefineNodeImpl("math.hypot", VfxNodeMathHypot)
-		DefineNodeImpl("osc.sine", VfxNodeOscSine)
-		DefineNodeImpl("osc.saw", VfxNodeOscSaw)
-		DefineNodeImpl("osc.triangle", VfxNodeOscTriangle)
-		DefineNodeImpl("osc.square", VfxNodeOscSquare)
-		else if (node.typeName == "display")
-		{
-			auto vfxDisplayNode = new VfxNodeDisplay();
-			
-			Assert(vfxGraph->displayNodeId == kGraphNodeIdInvalid);
-			vfxGraph->displayNodeId = node.id;
-			
-			vfxNode = vfxDisplayNode;
-		}
-		else if (node.typeName == "mouse")
-		{
-			vfxNode = new VfxNodeMouse();
-		}
-		else if (node.typeName == "leap")
-		{
-			vfxNode = new VfxNodeLeapMotion();
-		}
-		else if (node.typeName == "osc")
-		{
-			vfxNode = new VfxNodeOsc();
-		}
-		else if (node.typeName == "composite")
-		{
-			vfxNode = new VfxNodeComposite();
-		}
-		else if (node.typeName == "picture")
-		{
-			vfxNode = new VfxNodePicture();
-		}
-		else if (node.typeName == "video")
-		{
-			vfxNode = new VfxNodeVideo();
-		}
-		else if (node.typeName == "fsfx")
-		{
-			vfxNode = new VfxNodeFsfx();
-		}
-		else
-		{
-			logError("unknown node type: %s", node.typeName.c_str());
-		}
+		VfxNodeBase * vfxNode = createVfxNode(node.id, node.typeName, vfxGraph);
 		
 		Assert(vfxNode != nullptr);
 		if (vfxNode == nullptr)
@@ -1188,8 +1196,6 @@ static VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDef
 			vfxGraph->nodes[node.id] = vfxNode;
 		}
 	}
-	
-#undef DefineNodeImpl
 	
 	for (auto & linkItr : graph.links)
 	{
@@ -1302,9 +1308,64 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	{
 	}
 	
+	virtual void nodeAdd(const GraphNodeId nodeId, const std::string & typeName) override
+	{
+		logDebug("nodeAdd");
+		
+		Assert(vfxGraph != nullptr);
+		if (vfxGraph == nullptr)
+			return;
+		
+		auto nodeItr = vfxGraph->nodes.find(nodeId);
+		
+		Assert(nodeItr == vfxGraph->nodes.end());
+		if (nodeItr != vfxGraph->nodes.end())
+			return;
+		
+		//
+		
+		GraphNode node;
+		node.id = nodeId;
+		node.typeName = typeName;
+		
+		//
+		
+		VfxNodeBase * vfxNode = createVfxNode(nodeId, typeName, vfxGraph);
+		vfxNode->initSelf(node);
+		
+		vfxGraph->nodes[node.id] = vfxNode;
+		
+		//
+		
+		vfxNode->init(node);
+	}
+	
 	virtual void nodeRemove(const GraphNodeId nodeId) override
 	{
 		logDebug("nodeRemove");
+		
+		Assert(vfxGraph != nullptr);
+		if (vfxGraph == nullptr)
+			return;
+		
+		auto nodeItr = vfxGraph->nodes.find(nodeId);
+		
+		Assert(nodeItr != vfxGraph->nodes.end());
+		if (nodeItr == vfxGraph->nodes.end())
+			return;
+		
+		auto node = nodeItr->second;
+		
+		// all links should be removed at this point. there should be no remaining predeps or connected nodes
+		Assert(node->predeps.empty());
+		//for (auto & input : node->inputs)
+		//	Assert(!input.isConnected()); // may be a literal value node with a non-accounted for (in the graph) connection when created directly from socket value
+		// todo : iterate all other nodes, to ensure there are no nodes with references back to this node?
+		
+		delete node;
+		node = nullptr;
+		
+		vfxGraph->nodes.erase(nodeItr);
 	}
 	
 	virtual void linkRemove(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex) override
