@@ -1113,8 +1113,8 @@ bool GraphEdit::tick(const float dt)
 						
 						if (node != nullptr)
 						{
-							node->editorX = std::round(node->editorX / kGridSize) * kGridSize;
-							node->editorY = std::round(node->editorY / kGridSize) * kGridSize;
+							node->editorX = std::round(node->editorX / float(kGridSize)) * kGridSize;
+							node->editorY = std::round(node->editorY / float(kGridSize)) * kGridSize;
 						}
 					}
 				}
@@ -1144,8 +1144,8 @@ bool GraphEdit::tick(const float dt)
 						GraphNode newNode;
 						newNode.id = graph->allocNodeId();
 						newNode.typeName = node->typeName;
-						newNode.editorX = node->editorX + 20;
-						newNode.editorY = node->editorY + 20;
+						newNode.editorX = node->editorX + kGridSize;
+						newNode.editorY = node->editorY + kGridSize;
 						
 						if (keyboard.isDown(SDLK_LGUI))
 						{
@@ -1201,13 +1201,13 @@ bool GraphEdit::tick(const float dt)
 				int moveX = 0;
 				int moveY = 0;
 				
-				if (keyboard.wentDown(SDLK_LEFT))
+				if (keyboard.wentDown(SDLK_LEFT, true))
 					moveX -= 1;
-				if (keyboard.wentDown(SDLK_RIGHT))
+				if (keyboard.wentDown(SDLK_RIGHT, true))
 					moveX += 1;
-				if (keyboard.wentDown(SDLK_UP))
+				if (keyboard.wentDown(SDLK_UP, true))
 					moveY -= 1;
-				if (keyboard.wentDown(SDLK_DOWN))
+				if (keyboard.wentDown(SDLK_DOWN, true))
 					moveY += 1;
 				
 				dragAndZoom.desiredFocusX += moveX * GFX_SX * 1 / 5;
@@ -1218,13 +1218,13 @@ bool GraphEdit::tick(const float dt)
 				int moveX = 0;
 				int moveY = 0;
 				
-				if (keyboard.wentDown(SDLK_LEFT))
+				if (keyboard.wentDown(SDLK_LEFT, true))
 					moveX -= 1;
-				if (keyboard.wentDown(SDLK_RIGHT))
+				if (keyboard.wentDown(SDLK_RIGHT, true))
 					moveX += 1;
-				if (keyboard.wentDown(SDLK_UP))
+				if (keyboard.wentDown(SDLK_UP, true))
 					moveY -= 1;
-				if (keyboard.wentDown(SDLK_DOWN))
+				if (keyboard.wentDown(SDLK_DOWN, true))
 					moveY += 1;
 				
 				moveX *= kGridSize;
