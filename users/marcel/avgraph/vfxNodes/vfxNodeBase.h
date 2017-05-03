@@ -20,7 +20,8 @@ enum VfxTriggerDataType
 {
 	kVfxTriggerDataType_None,
 	kVfxTriggerDataType_Bool,
-	kVfxTriggerDataType_Int
+	kVfxTriggerDataType_Int,
+	kVfxTriggerDataType_Float
 };
 
 struct VfxTriggerData
@@ -31,6 +32,7 @@ struct VfxTriggerData
 	{
 		bool boolValue;
 		int intValue;
+		float floatValue;
 		uint8_t mem[8];
 	};
 	
@@ -38,6 +40,24 @@ struct VfxTriggerData
 		: type(kVfxTriggerDataType_None)
 	{
 		memset(mem, 0, sizeof(mem));
+	}
+	
+	void setBool(const bool value)
+	{
+		type = kVfxTriggerDataType_Bool;
+		boolValue = value;
+	}
+	
+	void setInt(const int value)
+	{
+		type = kVfxTriggerDataType_Int;
+		intValue = value;
+	}
+	
+	void setFloat(const float value)
+	{
+		type = kVfxTriggerDataType_Float;
+		floatValue = value;
 	}
 	
 	bool asBool() const
@@ -50,6 +70,8 @@ struct VfxTriggerData
 			return boolValue;
 		case kVfxTriggerDataType_Int:
 			return intValue != 0;
+		case kVfxTriggerDataType_Float:
+			return floatValue != 0.f;
 		}
 	}
 	
@@ -63,6 +85,8 @@ struct VfxTriggerData
 			return boolValue ? 1 : 0;
 		case kVfxTriggerDataType_Int:
 			return intValue;
+		case kVfxTriggerDataType_Float:
+			return std::round(floatValue);
 		}
 	}
 	
@@ -76,6 +100,8 @@ struct VfxTriggerData
 			return boolValue ? 1.f : 0.f;
 		case kVfxTriggerDataType_Int:
 			return float(intValue);
+		case kVfxTriggerDataType_Float:
+			return floatValue;
 		}
 	}
 };
@@ -244,6 +270,12 @@ struct VfxPlug
 		return *((Surface**)mem);
 	}
 	
+	VfxTriggerData & getTriggerData() const
+	{
+		Assert(type == kVfxPlugType_Trigger);
+		return *((VfxTriggerData*)mem);
+	}
+	
 	//
 	
 	bool & getRwBool()
@@ -285,10 +317,25 @@ struct VfxPlug
 
 struct VfxNodeBase
 {
+	struct TriggerTarget
+	{
+		VfxNodeBase * srcNode;
+		int srcSocketIndex;
+		int dstSocketIndex;
+		
+		TriggerTarget()
+			: srcNode(nullptr)
+			, srcSocketIndex(-1)
+			, dstSocketIndex(-1)
+		{
+		}
+	};
+	
 	std::vector<VfxPlug> inputs;
 	std::vector<VfxPlug> outputs;
 	
 	std::vector<VfxNodeBase*> predeps;
+	std::vector<TriggerTarget> triggerTargets;
 	
 	int lastTickTraversalId;
 	int lastDrawTraversalId;
@@ -299,6 +346,7 @@ struct VfxNodeBase
 		: inputs()
 		, outputs()
 		, predeps()
+		, triggerTargets()
 		, lastTickTraversalId(-1)
 		, lastDrawTraversalId(-1)
 		, isPassthrough(false)
@@ -346,7 +394,15 @@ struct VfxNodeBase
 			Assert(outputSocket.type == kVfxPlugType_Trigger);
 			if (outputSocket.type == kVfxPlugType_Trigger)
 			{
-				// todo : iterate the list of outgoing connections, resolve nodes, call handleTrigger on nodes with correct inputSocketIndex
+				// iterate the list of outgoing connections, call handleTrigger on nodes with correct outputSocketIndex
+				
+				for (auto & triggerTarget : triggerTargets)
+				{
+					if (triggerTarget.dstSocketIndex == outputSocketIndex)
+					{
+						triggerTarget.srcNode->handleTrigger(triggerTarget.srcSocketIndex);
+					}
+				}
 			}
 		}
 	}

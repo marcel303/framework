@@ -231,6 +231,95 @@ struct VfxNodeTransform2d : VfxNodeBase
 	}
 };
 
+struct VfxNodeTriggerTimer : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_Interval,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Trigger,
+		kOutput_COUNT
+	};
+	
+	VfxTriggerData triggerCount;
+	
+	float timer;
+	
+	VfxNodeTriggerTimer()
+		: VfxNodeBase()
+		, triggerCount()
+		, timer(0.f)
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Interval, kVfxPlugType_Float);
+		addOutput(kOutput_Trigger, kVfxPlugType_Trigger, &triggerCount);
+		
+		triggerCount.setInt(0);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		const float interval = getInputFloat(kInput_Interval, 0.f);
+		
+		if (interval == 0.f)
+			timer = 0.f;
+		else
+		{
+			timer += dt;
+			
+			if (timer >= interval)
+			{
+				timer = 0.f;
+			
+				triggerCount.setInt(triggerCount.asInt() + 1);
+				
+				trigger(kOutput_Trigger);
+			}
+		}
+	}
+};
+
+struct VfxNodeLogicSwitch : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_Trigger,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Value,
+		kOutput_COUNT
+	};
+	
+	float outputValue;
+	
+	VfxNodeLogicSwitch()
+		: VfxNodeBase()
+		, outputValue(0.f)
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Trigger, kVfxPlugType_Trigger);
+		addOutput(kOutput_Value, kVfxPlugType_Float, &outputValue);
+	}
+	
+	virtual void handleTrigger(const int inputSocketIndex)
+	{
+		if (inputSocketIndex == kInput_Trigger)
+		{
+			const int value = getInputInt(kInput_Trigger, -1);
+			logDebug("trigger value: %d", value);
+			
+			outputValue = (outputValue == 0.f) ? 1.f : 0.f;
+		}
+	}
+};
+
 struct VfxGraph
 {
 	struct ValueToFree
@@ -506,6 +595,8 @@ static VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string &
 		vfxNode = new VfxNodeColorLiteral();
 	}
 	DefineNodeImpl("transform.2d", VfxNodeTransform2d)
+	DefineNodeImpl("trigger.timer", VfxNodeTriggerTimer)
+	DefineNodeImpl("logic.switch", VfxNodeLogicSwitch)
 	DefineNodeImpl("math.range", VfxNodeMapRange)
 	DefineNodeImpl("ease", VfxNodeMapEase)
 	DefineNodeImpl("math.add", VfxNodeMathAdd)
@@ -653,6 +744,17 @@ static VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDef
 				//        with the live connection as we can just remove the predep and still have one or
 				//        references to the predep if the predep was referenced more than once
 				srcNode->predeps.push_back(dstNode);
+				
+				// if this is a trigger, add a trigger target to dstNode
+				if (output->type == kVfxPlugType_Trigger)
+				{
+					VfxNodeBase::TriggerTarget triggerTarget;
+					triggerTarget.srcNode = srcNode;
+					triggerTarget.srcSocketIndex = link.srcNodeSocketIndex;
+					triggerTarget.dstSocketIndex = link.dstNodeSocketIndex;
+					
+					dstNode->triggerTargets.push_back(triggerTarget);
+				}
 			}
 		}
 	}
@@ -825,6 +927,17 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 		//        with the live connection as we can just remove the predep and still have one or
 		//        references to the predep if the predep was referenced more than once
 		srcNode->predeps.push_back(dstNode);
+		
+		// if this is a trigger, add a trigger target to dstNode
+		if (output->type == kVfxPlugType_Trigger)
+		{
+			VfxNodeBase::TriggerTarget triggerTarget;
+			triggerTarget.srcNode = srcNode;
+			triggerTarget.srcSocketIndex = srcSocketIndex;
+			triggerTarget.dstSocketIndex = dstSocketIndex;
+			
+			dstNode->triggerTargets.push_back(triggerTarget);
+		}
 	}
 	
 	virtual void linkRemove(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex) override
@@ -835,15 +948,15 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 		if (vfxGraph == nullptr)
 			return;
 		
-		auto nodeItr = vfxGraph->nodes.find(srcNodeId);
+		auto srcNodeItr = vfxGraph->nodes.find(srcNodeId);
 		
-		Assert(nodeItr != vfxGraph->nodes.end());
-		if (nodeItr == vfxGraph->nodes.end())
+		Assert(srcNodeItr != vfxGraph->nodes.end());
+		if (srcNodeItr == vfxGraph->nodes.end())
 			return;
 		
-		auto node = nodeItr->second;
+		auto srcNode = srcNodeItr->second;
 		
-		auto input = node->tryGetInput(srcSocketIndex);
+		auto input = srcNode->tryGetInput(srcSocketIndex);
 		
 		Assert(input != nullptr);
 		if (input == nullptr)
@@ -864,19 +977,48 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 				
 				bool foundPredep = false;
 				
-				for (auto i = node->predeps.begin(); i != node->predeps.end(); ++i)
+				for (auto i = srcNode->predeps.begin(); i != srcNode->predeps.end(); ++i)
 				{
 					VfxNodeBase * vfxNode = *i;
 					
 					if (vfxNode == dstNode)
 					{
-						node->predeps.erase(i);
+						srcNode->predeps.erase(i);
 						foundPredep = true;
 						break;
 					}
 				}
 				
 				Assert(foundPredep);
+			}
+		}
+		
+		// if this is a link hooked up to a trigger, remove the TriggerTarget from dstNode
+		
+		if (input->type == kVfxPlugType_Trigger)
+		{
+			auto dstNodeItr = vfxGraph->nodes.find(dstNodeId);
+			
+			Assert(dstNodeItr != vfxGraph->nodes.end());
+			if (dstNodeItr != vfxGraph->nodes.end())
+			{
+				auto dstNode = dstNodeItr->second;
+				
+				bool foundTriggerTarget = false;
+				
+				for (auto triggerTargetItr = dstNode->triggerTargets.begin(); triggerTargetItr != dstNode->triggerTargets.end(); ++triggerTargetItr)
+				{
+					auto & triggerTarget = *triggerTargetItr;
+					
+					if (triggerTarget.srcNode == srcNode && triggerTarget.srcSocketIndex == srcSocketIndex)
+					{
+						dstNode->triggerTargets.erase(triggerTargetItr);
+						foundTriggerTarget = true;
+						break;
+					}
+				}
+				
+				Assert(foundTriggerTarget);
 			}
 		}
 	}
@@ -1002,6 +1144,26 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 		case kVfxPlugType_Surface:
 			return false;
 		case kVfxPlugType_Trigger:
+			{
+				const VfxTriggerData & triggerData = plug->getTriggerData();
+				
+				if (triggerData.type == kVfxTriggerDataType_Bool ||
+					triggerData.type == kVfxTriggerDataType_Int)
+				{
+					value = String::FormatC("%d", triggerData.asInt());
+					return true;
+				}
+				else if (triggerData.type == kVfxTriggerDataType_Float)
+				{
+					value = String::FormatC("%f", triggerData.asFloat());
+					return true;
+				}
+				else
+				{
+					Assert(false);
+					return false;
+				}
+			}
 			return false;
 		}
 		
