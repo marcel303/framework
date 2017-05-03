@@ -75,7 +75,7 @@ todo :
 	- define enums for ease node type
 - add ability to randomize input values
 # fix white screen issue on Windows when GUI is visible
-- add trigger support
++ add trigger support
 + add real-time connection
 	+ editing values updates values in live version
 	+ marking nodes passthrough gets reflected in live
@@ -106,19 +106,19 @@ todo :
 - show min/max on valueplotter
 
 todo : nodes :
-- add ease node
-	- value
-	- ease type
-	- ease param1
-	- ease param2
-	- mirror?
-	- result
++ add ease node
+	+ value
+	+ ease type
+	+ ease param1
+	+ ease param2
+	+ mirror?
+	+ result
 - add time node
-- add timer node
++ add timer node
 - add sample.float node
 - add sample.image node. outputs r/g/b/a. specify normalized vs screen coords?
 - add impulse response node. measure input impulse response with oscilator at given frequency
-- add sample and hold node. has trigger for input
++ add sample and hold node. has trigger for input
 - add doValuePlotter to ui framework
 - add simplex noise node
 - add binary counter node, outputting 4-8 bit values (1.f or 0.f)
@@ -167,6 +167,73 @@ struct VfxNodeDisplay : VfxNodeBase
 	const VfxImageBase * getImage() const
 	{
 		return getInputImage(kInput_Image, nullptr);
+	}
+};
+
+struct VfxNodeCastTriggerToFloat : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_Trigger,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Value,
+		kOutput_COUNT
+	};
+	
+	float outputValue;
+	
+	VfxNodeCastTriggerToFloat()
+		: VfxNodeBase()
+		, outputValue(0.f)
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Trigger, kVfxPlugType_Trigger);
+		addOutput(kOutput_Value, kVfxPlugType_Float, &outputValue);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		outputValue = getInputFloat(kInput_Trigger, 0.f);
+	}
+};
+
+struct VfxNodeSampleAndHold : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_Trigger,
+		kInput_Value,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Value,
+		kOutput_COUNT
+	};
+	
+	float outputValue;
+	
+	VfxNodeSampleAndHold()
+		: VfxNodeBase()
+		, outputValue(0.f)
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Trigger, kVfxPlugType_Trigger);
+		addInput(kInput_Value, kVfxPlugType_Float);
+		addOutput(kOutput_Value, kVfxPlugType_Float, &outputValue);
+	}
+	
+	virtual void handleTrigger(const int inputSocketIndex)
+	{
+		if (inputs[kInput_Value].isConnected())
+			outputValue = getInputFloat(kInput_Value, 0.f);
+		else
+			outputValue = getInputFloat(kInput_Trigger, 0.f);
 	}
 };
 
@@ -594,6 +661,8 @@ static VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string &
 	{
 		vfxNode = new VfxNodeColorLiteral();
 	}
+	DefineNodeImpl("cast.triggerToFloat", VfxNodeCastTriggerToFloat)
+	DefineNodeImpl("sampleAndHold", VfxNodeSampleAndHold)
 	DefineNodeImpl("transform.2d", VfxNodeTransform2d)
 	DefineNodeImpl("trigger.timer", VfxNodeTriggerTimer)
 	DefineNodeImpl("logic.switch", VfxNodeLogicSwitch)
@@ -844,6 +913,10 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 		//
 		
 		VfxNodeBase * vfxNode = createVfxNode(nodeId, typeName, vfxGraph);
+		
+		if (vfxNode == nullptr)
+			return;
+		
 		vfxNode->initSelf(node);
 		
 		vfxGraph->nodes[node.id] = vfxNode;
