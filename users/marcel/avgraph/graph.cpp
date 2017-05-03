@@ -19,6 +19,10 @@ GraphLinkId kGraphLinkIdInvalid = 0;
 
 //
 
+static const int kGridSize = 16;
+
+//
+
 static bool areCompatibleSocketLinkTypeNames(const std::string & srcTypeName, const std::string & dstTypeName)
 {
 	if (srcTypeName == dstTypeName)
@@ -1101,6 +1105,19 @@ bool GraphEdit::tick(const float dt)
 			{
 				if (keyboard.isDown(SDLK_LGUI))
 					selectAll();
+				else
+				{
+					for (auto nodeId : selectedNodes)
+					{
+						auto node = tryGetNode(nodeId);
+						
+						if (node != nullptr)
+						{
+							node->editorX = std::round(node->editorX / kGridSize) * kGridSize;
+							node->editorY = std::round(node->editorY / kGridSize) * kGridSize;
+						}
+					}
+				}
 			}
 			
 			if (keyboard.wentDown(SDLK_o))
@@ -1202,13 +1219,16 @@ bool GraphEdit::tick(const float dt)
 				int moveY = 0;
 				
 				if (keyboard.wentDown(SDLK_LEFT))
-					moveX -= 10;
+					moveX -= 1;
 				if (keyboard.wentDown(SDLK_RIGHT))
-					moveX += 10;
+					moveX += 1;
 				if (keyboard.wentDown(SDLK_UP))
-					moveY -= 10;
+					moveY -= 1;
 				if (keyboard.wentDown(SDLK_DOWN))
-					moveY += 10;
+					moveY += 1;
+				
+				moveX *= kGridSize;
+				moveY *= kGridSize;
 				
 				if (moveX != 0 || moveY != 0)
 				{
