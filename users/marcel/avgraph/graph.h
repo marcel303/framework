@@ -382,6 +382,16 @@ struct GraphEdit_RealTimeConnection
 	{
 		return false;
 	}
+	
+	virtual bool nodeIsActive(const GraphNodeId nodeId)
+	{
+		return false;
+	}
+	
+	virtual bool linkIsActive(const GraphLinkId linkId)
+	{
+		return false;
+	}
 };
 
 //

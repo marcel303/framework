@@ -290,7 +290,8 @@ struct VfxNodeBase
 	
 	std::vector<VfxNodeBase*> predeps;
 	
-	int lastTraversalId;
+	int lastTickTraversalId;
+	int lastDrawTraversalId;
 	
 	bool isPassthrough;
 	
@@ -298,7 +299,8 @@ struct VfxNodeBase
 		: inputs()
 		, outputs()
 		, predeps()
-		, lastTraversalId(-1)
+		, lastTickTraversalId(-1)
+		, lastDrawTraversalId(-1)
 		, isPassthrough(false)
 	{
 	}
@@ -307,15 +309,29 @@ struct VfxNodeBase
 	{
 	}
 	
-	void traverse(const int traversalId)
+	void traverseTick(const int traversalId, const float dt)
 	{
-		Assert(lastTraversalId != traversalId);
-		lastTraversalId = traversalId;
+		Assert(lastTickTraversalId != traversalId);
+		lastTickTraversalId = traversalId;
 		
 		for (auto predep : predeps)
 		{
-			if (predep->lastTraversalId != traversalId)
-				predep->traverse(traversalId);
+			if (predep->lastTickTraversalId != traversalId)
+				predep->traverseTick(traversalId, dt);
+		}
+		
+		tick(dt);
+	}
+	
+	void traverseDraw(const int traversalId)
+	{
+		Assert(lastDrawTraversalId != traversalId);
+		lastDrawTraversalId = traversalId;
+		
+		for (auto predep : predeps)
+		{
+			if (predep->lastDrawTraversalId != traversalId)
+				predep->traverseDraw(traversalId);
 		}
 		
 		draw();

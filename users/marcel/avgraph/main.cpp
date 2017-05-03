@@ -102,7 +102,7 @@ todo :
 - automatically hide UI when mouse/keyboard is inactive for a while
 + remove 'editor' code
 + allocate literal values for unconnected plugs when live-editing change comes in for input
-- add live-connection callback so the graph editor can show which nodes and links are actively traversed
+- show which nodes and links are actively traversed. add live-connection callback to query activity
 - show min/max on valueplotter
 
 todo : nodes :
@@ -266,6 +266,9 @@ struct VfxGraph
 	
 	GraphNodeId displayNodeId;
 	
+	mutable int nextTickTraversalId;
+	mutable int nextDrawTraversalId;
+	
 	Graph * graph; // todo : remove ?
 	
 	std::vector<ValueToFree> valuesToFree;
@@ -273,6 +276,8 @@ struct VfxGraph
 	VfxGraph()
 		: nodes()
 		, displayNodeId(kGraphNodeIdInvalid)
+		, nextTickTraversalId(0)
+		, nextDrawTraversalId(0)
 		, graph(nullptr)
 		, valuesToFree()
 	{
@@ -400,20 +405,7 @@ struct VfxGraph
 	
 	void tick(const float dt)
 	{
-		for (auto i : nodes)
-		{
-			VfxNodeBase * node = i.second;
-			
-			node->tick(dt);
-		}
-	}
-	
-	void draw() const
-	{
-		static int traversalId = 0; // fixme
-		traversalId++;
-		
-		// todo : start at output to screen and traverse to leafs and back up again to draw
+		// todo : use traversalId, start update at display node
 		
 		if (displayNodeId != kGraphNodeIdInvalid)
 		{
@@ -425,7 +417,43 @@ struct VfxGraph
 				
 				VfxNodeDisplay * displayNode = static_cast<VfxNodeDisplay*>(node);
 				
-				displayNode->traverse(traversalId);
+				displayNode->traverseTick(nextTickTraversalId, dt);
+			}
+		}
+		
+		// todo : process nodes that aren't connected to the display node ?
+		//        perhaps process them as islands, following predeps again ?
+		
+		for (auto i : nodes)
+		{
+			VfxNodeBase * node = i.second;
+			
+			if (node->lastTickTraversalId != nextTickTraversalId)
+			{
+				node->lastTickTraversalId = nextTickTraversalId;
+				
+				node->tick(dt);
+			}
+		}
+		
+		++nextTickTraversalId;
+	}
+	
+	void draw() const
+	{
+		// start traversal at the display node and traverse to leafs following predeps and and back up the tree again to draw
+		
+		if (displayNodeId != kGraphNodeIdInvalid)
+		{
+			auto nodeItr = nodes.find(displayNodeId);
+			Assert(nodeItr != nodes.end());
+			if (nodeItr != nodes.end())
+			{
+				auto node = nodeItr->second;
+				
+				VfxNodeDisplay * displayNode = static_cast<VfxNodeDisplay*>(node);
+				
+				displayNode->traverseDraw(nextDrawTraversalId);
 				
 				const VfxImageBase * image = displayNode->getImage();
 				
@@ -441,12 +469,7 @@ struct VfxGraph
 			}
 		}
 		
-		for (auto i : nodes)
-		{
-			VfxNodeBase * node = i.second;
-			
-			node->draw();
-		}
+		++nextDrawTraversalId;
 	}
 };
 
@@ -988,11 +1011,13 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	
 	virtual bool getSrcSocketValue(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, std::string & value) override
 	{
+		Assert(vfxGraph != nullptr);
 		if (vfxGraph == nullptr)
 			return false;
 		
 		auto nodeItr = vfxGraph->nodes.find(nodeId);
 		
+		Assert(nodeItr != vfxGraph->nodes.end());
 		if (nodeItr == vfxGraph->nodes.end())
 			return false;
 		
@@ -1000,6 +1025,7 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 		
 		auto input = node->tryGetInput(srcSocketIndex);
 		
+		Assert(input != nullptr);
 		if (input == nullptr)
 			return false;
 		
@@ -1011,11 +1037,13 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	
 	virtual bool getDstSocketValue(const GraphNodeId nodeId, const int dstSocketIndex, const std::string & dstSocketName, std::string & value) override
 	{
+		Assert(vfxGraph != nullptr);
 		if (vfxGraph == nullptr)
 			return false;
 		
 		auto nodeItr = vfxGraph->nodes.find(nodeId);
 		
+		Assert(nodeItr != vfxGraph->nodes.end());
 		if (nodeItr == vfxGraph->nodes.end())
 			return false;
 		
@@ -1023,10 +1051,33 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 		
 		auto output = node->tryGetOutput(dstSocketIndex);
 		
+		Assert(output != nullptr);
 		if (output == nullptr)
 			return false;
 		
 		return getPlugValue(output, value);
+	}
+	
+	virtual bool nodeIsActive(const GraphNodeId nodeId) override
+	{
+		Assert(vfxGraph != nullptr);
+		if (vfxGraph == nullptr)
+			return false;
+		
+		auto nodeItr = vfxGraph->nodes.find(nodeId);
+		
+		Assert(nodeItr != vfxGraph->nodes.end());
+		if (nodeItr == vfxGraph->nodes.end())
+			return false;
+		
+		auto node = nodeItr->second;
+		
+		return node->lastDrawTraversalId + 1 == vfxGraph->nextDrawTraversalId;
+	}
+	
+	virtual bool linkIsActive(const GraphLinkId linkId) override
+	{
+		return false;
 	}
 };
 
