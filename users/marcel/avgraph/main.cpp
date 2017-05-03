@@ -228,12 +228,71 @@ struct VfxNodeSampleAndHold : VfxNodeBase
 		addOutput(kOutput_Value, kVfxPlugType_Float, &outputValue);
 	}
 	
-	virtual void handleTrigger(const int inputSocketIndex)
+	virtual void handleTrigger(const int inputSocketIndex) override
 	{
 		if (inputs[kInput_Value].isConnected())
 			outputValue = getInputFloat(kInput_Value, 0.f);
 		else
 			outputValue = getInputFloat(kInput_Trigger, 0.f);
+	}
+};
+
+struct VfxNodeBinaryOutput : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_Value,
+		kInput_Modulo,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Value1,
+		kOutput_Value2,
+		kOutput_Value3,
+		kOutput_Value4,
+		kOutput_Value5,
+		kOutput_Value6,
+		kOutput_COUNT
+	};
+	
+	float outputValue[6];
+	
+	VfxNodeBinaryOutput()
+		: VfxNodeBase()
+		, outputValue()
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Value, kVfxPlugType_Float);
+		addInput(kInput_Modulo, kVfxPlugType_Int);
+		addOutput(kOutput_Value1, kVfxPlugType_Float, &outputValue[0]);
+		addOutput(kOutput_Value2, kVfxPlugType_Float, &outputValue[1]);
+		addOutput(kOutput_Value3, kVfxPlugType_Float, &outputValue[2]);
+		addOutput(kOutput_Value4, kVfxPlugType_Float, &outputValue[3]);
+		addOutput(kOutput_Value5, kVfxPlugType_Float, &outputValue[4]);
+		addOutput(kOutput_Value6, kVfxPlugType_Float, &outputValue[5]);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		double valueAsDouble = getInputFloat(kInput_Value, 0.f);
+		
+		valueAsDouble = std::round(valueAsDouble);
+		
+		int valueAsInt = int(valueAsDouble);
+		
+		const int modulo = getInputInt(kInput_Modulo, 0);
+		
+		if (modulo != 0)
+			valueAsInt %= modulo;
+		
+		outputValue[0] = (valueAsInt & (1 << 0)) >> 0;
+		outputValue[1] = (valueAsInt & (1 << 1)) >> 1;
+		outputValue[2] = (valueAsInt & (1 << 2)) >> 2;
+		outputValue[3] = (valueAsInt & (1 << 3)) >> 3;
+		outputValue[4] = (valueAsInt & (1 << 4)) >> 4;
+		outputValue[5] = (valueAsInt & (1 << 5)) >> 5;
 	}
 };
 
@@ -375,13 +434,10 @@ struct VfxNodeLogicSwitch : VfxNodeBase
 		addOutput(kOutput_Value, kVfxPlugType_Float, &outputValue);
 	}
 	
-	virtual void handleTrigger(const int inputSocketIndex)
+	virtual void handleTrigger(const int inputSocketIndex) override
 	{
 		if (inputSocketIndex == kInput_Trigger)
 		{
-			const int value = getInputInt(kInput_Trigger, -1);
-			logDebug("trigger value: %d", value);
-			
 			outputValue = (outputValue == 0.f) ? 1.f : 0.f;
 		}
 	}
@@ -663,6 +719,7 @@ static VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string &
 	}
 	DefineNodeImpl("cast.triggerToFloat", VfxNodeCastTriggerToFloat)
 	DefineNodeImpl("sampleAndHold", VfxNodeSampleAndHold)
+	DefineNodeImpl("binary.output", VfxNodeBinaryOutput)
 	DefineNodeImpl("transform.2d", VfxNodeTransform2d)
 	DefineNodeImpl("trigger.timer", VfxNodeTriggerTimer)
 	DefineNodeImpl("logic.switch", VfxNodeLogicSwitch)
