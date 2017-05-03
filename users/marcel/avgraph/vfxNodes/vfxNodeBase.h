@@ -339,6 +339,7 @@ struct VfxNodeBase
 	
 	int lastTickTraversalId;
 	int lastDrawTraversalId;
+	bool editorIsTriggered; // only here for real-time connection with graph editor
 	
 	bool isPassthrough;
 	
@@ -349,6 +350,7 @@ struct VfxNodeBase
 		, triggerTargets()
 		, lastTickTraversalId(-1)
 		, lastDrawTraversalId(-1)
+		, editorIsTriggered(false)
 		, isPassthrough(false)
 	{
 	}
@@ -387,6 +389,8 @@ struct VfxNodeBase
 	
 	void trigger(const int outputSocketIndex)
 	{
+		editorIsTriggered = true;
+		
 		Assert(outputSocketIndex >= 0 && outputSocketIndex < outputs.size());
 		if (outputSocketIndex >= 0 && outputSocketIndex < outputs.size())
 		{
@@ -400,6 +404,8 @@ struct VfxNodeBase
 				{
 					if (triggerTarget.dstSocketIndex == outputSocketIndex)
 					{
+						triggerTarget.srcNode->editorIsTriggered = true;
+						
 						triggerTarget.srcNode->handleTrigger(triggerTarget.srcSocketIndex);
 					}
 				}

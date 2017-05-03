@@ -103,7 +103,7 @@ todo :
 + remove 'editor' code
 + allocate literal values for unconnected plugs when live-editing change comes in for input
 - show which nodes and links are actively traversed. add live-connection callback to query activity
-- show min/max on valueplotter
++ show min/max on valueplotter
 
 todo : nodes :
 + add ease node
@@ -170,7 +170,7 @@ struct VfxNodeDisplay : VfxNodeBase
 	}
 };
 
-struct VfxNodeCastTriggerToFloat : VfxNodeBase
+struct VfxNodeTriggerAsFloat : VfxNodeBase
 {
 	enum Input
 	{
@@ -186,7 +186,7 @@ struct VfxNodeCastTriggerToFloat : VfxNodeBase
 	
 	float outputValue;
 	
-	VfxNodeCastTriggerToFloat()
+	VfxNodeTriggerAsFloat()
 		: VfxNodeBase()
 		, outputValue(0.f)
 	{
@@ -717,7 +717,7 @@ static VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string &
 	{
 		vfxNode = new VfxNodeColorLiteral();
 	}
-	DefineNodeImpl("cast.triggerToFloat", VfxNodeCastTriggerToFloat)
+	DefineNodeImpl("trigger.asFloat", VfxNodeTriggerAsFloat)
 	DefineNodeImpl("sampleAndHold", VfxNodeSampleAndHold)
 	DefineNodeImpl("binary.output", VfxNodeBinaryOutput)
 	DefineNodeImpl("transform.2d", VfxNodeTransform2d)
@@ -1364,7 +1364,15 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 		
 		auto node = nodeItr->second;
 		
+	#if 0
 		return node->lastDrawTraversalId + 1 == vfxGraph->nextDrawTraversalId;
+	#else
+		const bool result = node->editorIsTriggered;
+		
+		node->editorIsTriggered = false;
+		
+		return result;
+	#endif
 	}
 	
 	virtual bool linkIsActive(const GraphLinkId linkId) override

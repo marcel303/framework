@@ -49,6 +49,9 @@ struct GraphNode
 	std::string editorValue;
 	bool editorIsPassthrough;
 	
+	float editorIsActiveAnimTime; // real-time connection node activation animation
+	float editorIsActiveAnimTimeRcp;
+	
 	GraphNode();
 	
 	void tick(const float dt);

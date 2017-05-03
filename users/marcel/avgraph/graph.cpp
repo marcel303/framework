@@ -111,12 +111,15 @@ GraphNode::GraphNode()
 	, editorInputValues()
 	, editorValue()
 	, editorIsPassthrough(false)
+	, editorIsActiveAnimTime(0.f)
+	, editorIsActiveAnimTimeRcp(0.f)
 {
 }
 
 void GraphNode::tick(const float dt)
 {
 	editorFoldAnimTime = Calc::Max(0.f, editorFoldAnimTime - dt);
+	editorIsActiveAnimTime = Calc::Max(0.f, editorIsActiveAnimTime - dt);
 }
 
 void GraphNode::setIsEnabled(const bool _isEnabled)
@@ -1127,6 +1130,13 @@ bool GraphEdit::tick(const float dt)
 						newNode.editorX = node->editorX + 20;
 						newNode.editorY = node->editorY + 20;
 						
+						if (keyboard.isDown(SDLK_LGUI))
+						{
+							// deep copy node including values
+							newNode.editorInputValues = node->editorInputValues;
+							newNode.editorValue = node->editorValue;
+						}
+						
 						graph->addNode(newNode);
 						
 						newSelectedNodes.insert(newNode.id);
@@ -1471,6 +1481,12 @@ bool GraphEdit::tick(const float dt)
 		for (auto & nodeItr : graph->nodes)
 		{
 			auto & node = nodeItr.second;
+			
+			if (realTimeConnection != nullptr && realTimeConnection->nodeIsActive(node.id))
+			{
+				node.editorIsActiveAnimTime = .2f;
+				node.editorIsActiveAnimTimeRcp = 1.f / node.editorIsActiveAnimTime;
+			}
 			
 			node.tick(dt);
 		}
@@ -1864,6 +1880,10 @@ void GraphEdit::draw() const
 							drawLine(plotX, y + graphSy, plotX, y + plotY * graphSy);
 						}
 						
+						setColor(255, 255, 255);
+						drawText(graphX + graphSx - 3, y           + 4, 10, -1.f, +1.f, "%0.03f", graphMax);
+						drawText(graphX + graphSx - 3, y + graphSy - 3, 10, -1.f, -1.f, "%0.03f", graphMin);
+						
 						setColor(colorWhite);
 						drawRectLine(graphX, y, graphX + graphSx, y + graphSy);
 						
@@ -1919,7 +1939,10 @@ void GraphEdit::drawTypeUi(const GraphNode & node, const GraphEdit_TypeDefinitio
 		setColor(63, 63, 127, 255);
 	else
 		setColor(63, 63, 63, 255);
+	drawRect(0.f, 0.f, definition.sx, nodeSy);
 	
+	const float activeAnim = node.editorIsActiveAnimTime * node.editorIsActiveAnimTimeRcp;
+	setColor(63, 63, 255, 255 * activeAnim);
 	drawRect(0.f, 0.f, definition.sx, nodeSy);
 	
 	if (isSelected)
@@ -2211,6 +2234,10 @@ void GraphUi::PropEdit::doMenus(const bool doActions, const bool doDraw, const f
 	
 	if (node != nullptr)
 	{
+		// todo : would be nice to change node type on the fly
+		
+		//doTextBox(node->typeName, "node type", dt);
+		
 		const GraphEdit_TypeDefinition * typeDefinition = typeLibrary->tryGetTypeDefinition(node->typeName);
 		
 		if (typeDefinition != nullptr)
