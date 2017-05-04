@@ -102,16 +102,18 @@ todo :
 - automatically hide UI when mouse/keyboard is inactive for a while
 + remove 'editor' code
 + allocate literal values for unconnected plugs when live-editing change comes in for input
-- show which nodes and links are actively traversed. add live-connection callback to query activity
-	- add support for one-shot activity
-	- add support for continuous activity
++ show which nodes and links are actively traversed. add live-connection callback to query activity
+	+ add support for one-shot activity
+	+ add support for continuous activity
 + show min/max on valueplotter
 + add editor options menu
 - improve OSC node
-	- purchase and evaluate TouchOSC
+	# purchase and evaluate TouchOSC
 	- purchase and evaluate Lemur (by Liine)
 	- figure out how to best interop with this software
 	- adapt OSC node to fit these products
+- save/load editor options to editor XML
++ add editorName to nodes and add a text box to edit it
 
 todo : nodes :
 + add ease node
@@ -1358,7 +1360,7 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 		return getPlugValue(output, value);
 	}
 	
-	virtual bool nodeIsActive(const GraphNodeId nodeId) override
+	virtual int nodeIsActive(const GraphNodeId nodeId) override
 	{
 		Assert(vfxGraph != nullptr);
 		if (vfxGraph == nullptr)
@@ -1372,18 +1374,22 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 		
 		auto node = nodeItr->second;
 		
-	#if 0
-		return node->lastDrawTraversalId + 1 == vfxGraph->nextDrawTraversalId;
-	#else
-		const bool result = node->editorIsTriggered;
+		int result = 0;
 		
-		node->editorIsTriggered = false;
+		if (node->lastDrawTraversalId + 1 == vfxGraph->nextDrawTraversalId)
+			result |= kActivity_Continuous;
+		
+		if (node->editorIsTriggered)
+		{
+			result |= kActivity_OneShot;
+			
+			node->editorIsTriggered = false;
+		}
 		
 		return result;
-	#endif
 	}
 	
-	virtual bool linkIsActive(const GraphLinkId linkId) override
+	virtual int linkIsActive(const GraphLinkId linkId) override
 	{
 		return false;
 	}

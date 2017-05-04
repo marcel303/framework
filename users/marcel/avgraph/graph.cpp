@@ -107,6 +107,7 @@ GraphNode::GraphNode()
 	: id(kGraphNodeIdInvalid)
 	, typeName()
 	, isEnabled(true)
+	, editorName()
 	, editorX(0.f)
 	, editorY(0.f)
 	, editorIsFolded(false)
@@ -117,6 +118,7 @@ GraphNode::GraphNode()
 	, editorIsPassthrough(false)
 	, editorIsActiveAnimTime(0.f)
 	, editorIsActiveAnimTimeRcp(0.f)
+	, editorIsActiveContinuous(false)
 {
 }
 
@@ -320,6 +322,7 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 		node.id = intAttrib(xmlNode, "id", node.id);
 		node.typeName = stringAttrib(xmlNode, "typeName", node.typeName.c_str());
 		node.isEnabled = boolAttrib(xmlNode, "enabled", node.isEnabled);
+		node.editorName = stringAttrib(xmlNode, "editorName", node.editorName.c_str());
 		node.editorX = floatAttrib(xmlNode, "editorX", node.editorX);
 		node.editorY = floatAttrib(xmlNode, "editorY", node.editorY);
 		node.editorIsFolded = boolAttrib(xmlNode, "folded", node.editorIsFolded);
@@ -463,6 +466,7 @@ bool Graph::saveXml(XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary
 			xmlGraph.PushAttribute("id", node.id);
 			xmlGraph.PushAttribute("typeName", node.typeName.c_str());
 			xmlGraph.PushAttribute("enabled", node.isEnabled);
+			xmlGraph.PushAttribute("editorName", node.editorName.c_str());
 			xmlGraph.PushAttribute("editorX", node.editorX);
 			xmlGraph.PushAttribute("editorY", node.editorY);
 			xmlGraph.PushAttribute("folded", node.editorIsFolded);
@@ -1546,11 +1550,19 @@ bool GraphEdit::tick(const float dt)
 		{
 			auto & node = nodeItr.second;
 			
-			if (realTimeConnection != nullptr && realTimeConnection->nodeIsActive(node.id))
+			//
+			
+			const int activity = realTimeConnection == nullptr ? 0 : realTimeConnection->nodeIsActive(node.id);
+			
+			if (activity & GraphEdit_RealTimeConnection::kActivity_OneShot)
 			{
 				node.editorIsActiveAnimTime = .2f;
 				node.editorIsActiveAnimTimeRcp = 1.f / node.editorIsActiveAnimTime;
 			}
+			
+			node.editorIsActiveContinuous = (activity & GraphEdit_RealTimeConnection::kActivity_Continuous) != 0;
+			
+			//
 			
 			node.tick(dt);
 		}
@@ -2123,6 +2135,15 @@ void GraphEdit::drawTypeUi(const GraphNode & node, const GraphEdit_TypeDefinitio
 		drawRect(0.f, 0.f, definition.sx, nodeSy);
 	}
 	
+	if (editorOptions.showContinuousActivity)
+	{
+		if (node.editorIsActiveContinuous)
+		{
+			setColor(63, 63, 255, 127 + 127 * (std::cos(framework.time * 8.f) + 1.f) / 2.f);
+			drawRect(0.f, 0.f, definition.sx, nodeSy);
+		}
+	}
+	
 	if (isSelected)
 		setColor(255, 255, 255, 255);
 	else
@@ -2131,7 +2152,7 @@ void GraphEdit::drawTypeUi(const GraphNode & node, const GraphEdit_TypeDefinitio
 	
 	setFont("calibri.ttf");
 	setColor(255, 255, 255);
-	drawText(definition.sx/2, 12, 14, 0.f, 0.f, "%s", definition.displayName.empty() ? definition.typeName.c_str() : definition.displayName.c_str());
+	drawText(definition.sx/2, 12, 14, 0.f, 0.f, "%s", !node.editorName.empty() ? node.editorName.c_str() : definition.displayName.empty() ? definition.typeName.c_str() : definition.displayName.c_str());
 	
 	if (node.editorIsPassthrough)
 	{
@@ -2531,6 +2552,8 @@ void GraphUi::PropEdit::doMenus(const bool doActions, const bool doDraw, const f
 				headerText = typeDefinition->displayName;
 			
 			doLabel(headerText.c_str(), 0.f);
+			
+			doTextBox(node->editorName, "display name", dt);
 			
 			int menuItemIndex = 0;
 			

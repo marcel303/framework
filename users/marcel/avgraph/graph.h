@@ -39,6 +39,7 @@ struct GraphNode
 	std::string typeName;
 	bool isEnabled;
 	
+	std::string editorName;
 	float editorX;
 	float editorY;
 	bool editorIsFolded;
@@ -51,6 +52,7 @@ struct GraphNode
 	
 	float editorIsActiveAnimTime; // real-time connection node activation animation
 	float editorIsActiveAnimTimeRcp;
+	bool editorIsActiveContinuous;
 	
 	GraphNode();
 	
@@ -348,6 +350,13 @@ struct GraphEdit_UndoHistory
 
 struct GraphEdit_RealTimeConnection
 {
+	enum ActivityFlags
+	{
+		kActivity_Inactive    = 0,
+		kActivity_OneShot     = 1 << 0,
+		kActivity_Continuous  = 1 << 1
+	};
+	
 	virtual ~GraphEdit_RealTimeConnection()
 	{
 	}
@@ -386,14 +395,14 @@ struct GraphEdit_RealTimeConnection
 		return false;
 	}
 	
-	virtual bool nodeIsActive(const GraphNodeId nodeId)
+	virtual int nodeIsActive(const GraphNodeId nodeId)
 	{
-		return false;
+		return kActivity_Inactive;
 	}
 	
-	virtual bool linkIsActive(const GraphLinkId linkId)
+	virtual int linkIsActive(const GraphLinkId linkId)
 	{
-		return false;
+		return kActivity_Inactive;
 	}
 };
 
