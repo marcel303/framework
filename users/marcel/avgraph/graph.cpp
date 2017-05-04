@@ -1614,7 +1614,9 @@ void GraphEdit::doMenu(const float dt)
 		
 		if (doButton("load", size * 0, size, false))
 		{
-			load(documentInfo.filename.c_str());
+			const std::string filename = documentInfo.filename.c_str();
+			
+			load(filename.c_str());
 		}
 		
 		if (doButton("save", size * 1, size, false))
@@ -1647,8 +1649,8 @@ void GraphEdit::doEditorOptions(const float dt)
 			doParticleColor(editorOptions.backgroundColor, "background color");
 			doParticleColor(editorOptions.gridColor, "grid color");
 			doCheckBox(editorOptions.snapToGrid, "snap to grid", false);
-			doCheckBox(editorOptions.showOneShotActivity, "show one-shot", false);
-			doCheckBox(editorOptions.showContinuousActivity, "show continuous", false);
+			doCheckBox(editorOptions.showOneShotActivity, "show one-shot activity", false);
+			doCheckBox(editorOptions.showContinuousActivity, "show continuous activity", false);
 			
 			if (uiState->activeColor == &editorOptions.gridColor ||
 				uiState->activeColor == &editorOptions.backgroundColor)
