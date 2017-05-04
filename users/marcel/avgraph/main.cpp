@@ -454,6 +454,182 @@ struct VfxNodeLogicSwitch : VfxNodeBase
 	}
 };
 
+#include "Noise.h"
+
+struct VfxNodeNoiseSimplex2D : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_X,
+		kInput_Y,
+		kInput_NumOctaves,
+		kInput_Persistence,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Value,
+		kOutput_COUNT
+	};
+	
+	float outputValue;
+	
+	VfxNodeNoiseSimplex2D()
+		: VfxNodeBase()
+		, outputValue(0.f)
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_X, kVfxPlugType_Float);
+		addInput(kInput_Y, kVfxPlugType_Float);
+		addInput(kInput_NumOctaves, kVfxPlugType_Int);
+		addInput(kInput_Persistence, kVfxPlugType_Float);
+		addOutput(kOutput_Value, kVfxPlugType_Float, &outputValue);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		const float x = getInputFloat(kInput_X, 0.f);
+		const float y = getInputFloat(kInput_Y, 0.f);
+		const int numOctaves = getInputInt(kInput_NumOctaves, 4);
+		const float persistence = getInputFloat(kInput_Persistence, .5f);
+		
+		outputValue = scaled_octave_noise_2d(numOctaves, persistence, 1.f, 0.f, 1.f, x, y);
+	}
+};
+
+struct DelayLine
+{
+	std::vector<float> samples;
+	
+	int nextWriteIndex;
+	
+	DelayLine()
+		: samples()
+		, nextWriteIndex(0)
+	{
+	}
+	
+	void setLength(const int numSamples)
+	{
+		samples.resize(numSamples);
+		
+		std::fill(samples.begin(), samples.end(), 0.f);
+	}
+	
+	int getLength() const
+	{
+		return int(samples.size());
+	}
+	
+	void push(const float value)
+	{
+		fassert(!samples.empty());
+		
+		samples[nextWriteIndex] = value;
+		
+		nextWriteIndex++;
+		
+		if (nextWriteIndex == samples.size())
+			nextWriteIndex = 0;
+	}
+	
+	float read(const int offset) const
+	{
+		const int index = (samples.size() + nextWriteIndex + offset) % samples.size();
+		
+		return samples[index];
+	}
+	
+	float readInterp(const float offset) const
+	{
+		const float index = std::fmodf(samples.size() + nextWriteIndex + offset, samples.size());
+		const int index1 = int(index);
+		const int index2 = (index1 + 1) % samples.size();
+		
+		const float t2 = index - index1;
+		const float t1 = 1.f - t2;
+		
+		const float sample1 = samples[index1];
+		const float sample2 = samples[index2];
+		
+		const float sample = sample1 * t1 + sample2 * t2;
+		
+		return sample;
+	}
+};
+
+struct VfxNodeDelayLine : VfxNodeBase
+{
+	const static int kSampleRate = 200;
+	
+	enum Input
+	{
+		kInput_Value,
+		kInput_Delay,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Value,
+		kOutput_COUNT
+	};
+	
+	float outputValue;
+	
+	float dtRemaining;
+	
+	DelayLine delayLine;
+	
+	VfxNodeDelayLine()
+		: VfxNodeBase()
+		, outputValue(0.f)
+		, dtRemaining(0.f)
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Value, kVfxPlugType_Float);
+		addInput(kInput_Delay, kVfxPlugType_Float);
+		addOutput(kOutput_Value, kVfxPlugType_Float, &outputValue);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		{
+			// set delay line length
+			
+			const float delay = getInputFloat(kInput_Delay, 0.f);
+			
+			const int numSamples = delay * kSampleRate;
+			
+			if (numSamples != delayLine.getLength())
+			{
+				delayLine.setLength(numSamples);
+			}
+		}
+		
+		if (delayLine.getLength() > 0)
+		{
+			const float value = getInputFloat(kInput_Value, 0.f);
+			
+			const float dtTotal = dtRemaining + dt;
+			
+			const int numSamples = std::floor(dtTotal * kSampleRate);
+			
+			dtRemaining = dtTotal - numSamples / float(kSampleRate);
+			
+			for (int i = 0; i < numSamples; ++i)
+				delayLine.push(value);
+			
+			outputValue = delayLine.read(0);
+		}
+		else
+		{
+			outputValue = 0.f;
+		}
+	}
+};
+
 struct VfxGraph
 {
 	struct ValueToFree
@@ -734,6 +910,8 @@ static VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string &
 	DefineNodeImpl("transform.2d", VfxNodeTransform2d)
 	DefineNodeImpl("trigger.timer", VfxNodeTriggerTimer)
 	DefineNodeImpl("logic.switch", VfxNodeLogicSwitch)
+	DefineNodeImpl("noise.simplex2d", VfxNodeNoiseSimplex2D)
+	DefineNodeImpl("sample.delay", VfxNodeDelayLine)
 	DefineNodeImpl("math.range", VfxNodeMapRange)
 	DefineNodeImpl("ease", VfxNodeMapEase)
 	DefineNodeImpl("math.add", VfxNodeMathAdd)
