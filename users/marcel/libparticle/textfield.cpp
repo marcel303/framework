@@ -103,16 +103,9 @@ bool EditorTextField::tick(const float dt)
 
 		if (keyboard.wentDown(SDLK_RETURN))
 		{
-			if (m_bufferSize > 0)
-			{
-				result = true;
+			result = true;
 
-				complete();
-			}
-			else if (m_canCancel)
-			{
-				close();
-			}
+			complete();
 		}
 		else if (keyboard.wentDown(SDLK_ESCAPE) && m_canCancel)
 		{
