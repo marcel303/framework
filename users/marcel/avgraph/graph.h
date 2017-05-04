@@ -594,6 +594,26 @@ struct GraphEdit : GraphEditConnection
 		}
 	};
 	
+	struct EditorOptions
+	{
+		bool menuIsVisible;
+		bool showBackground;
+		bool showGrid;
+		bool snapToGrid;
+		bool showOneShotActivity;
+		bool showContinuousActivity;
+		
+		EditorOptions()
+			: menuIsVisible(true)
+			, showBackground(true)
+			, showGrid(true)
+			, snapToGrid(false)
+			, showOneShotActivity(false)
+			, showContinuousActivity(false)
+		{
+		}
+	};
+	
 	// state support structures
 	
 	struct NodeSelect
@@ -655,6 +675,8 @@ struct GraphEdit : GraphEditConnection
 	
 	RealTimeSocketCapture realTimeSocketCapture;
 	
+	EditorOptions editorOptions;
+	
 	GraphUi::PropEdit * propertyEditor;
 	
 	GraphUi::NodeTypeNameSelect * nodeTypeNameSelect;
@@ -674,6 +696,9 @@ struct GraphEdit : GraphEditConnection
 	bool tick(const float dt);
 	void nodeSelectEnd();
 	void socketConnectEnd();
+	
+	void doMenu(const float dt);
+	void doEditorOptions(const float dt);
 	
 	bool tryAddNode(const std::string & typeName, const int x, const int y, const bool select);
 	
@@ -737,8 +762,6 @@ namespace GraphUi
 		
 		GraphEdit * graphEdit;
 		
-		UiState * uiState;
-		
 		std::string typeName;
 		
 		std::list<std::string> history;
@@ -746,10 +769,7 @@ namespace GraphUi
 		NodeTypeNameSelect(GraphEdit * graphEdit);
 		~NodeTypeNameSelect();
 		
-		bool tick(const float dt);
-		void draw() const;
-		
-		void doMenus(const bool doActions, const bool doDraw, const float dt);
+		void doMenus(UiState * uiState, const float dt);
 		void selectTypeName(const std::string & typeName);
 		
 		std::string & getNodeTypeName();

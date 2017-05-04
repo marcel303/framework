@@ -747,6 +747,12 @@ GraphEdit::GraphEdit()
 	nodeTypeNameSelect = new GraphUi::NodeTypeNameSelect(this);
 	
 	uiState = new UiState();
+	
+	const int kPadding = 10;
+	uiState->sx = 200;
+	uiState->x = kPadding;
+	uiState->y = kPadding;
+	uiState->textBoxTextOffset = 50;
 }
 
 GraphEdit::~GraphEdit()
@@ -992,15 +998,29 @@ bool GraphEdit::tick(const float dt)
 		}
 	}
 	
-	if (propertyEditor->tick(dt))
+	//
+	
+	bool inputIsCaptured = (state != kState_Idle);
+	
+	if (inputIsCaptured == false)
 	{
-		return true;
+		inputIsCaptured |= propertyEditor->tick(dt);
 	}
 	
-	if (nodeTypeNameSelect->tick(dt))
+	makeActive(uiState, true, false);
+	
+	if (inputIsCaptured == false)
 	{
-		return true;
+		doMenu(dt);
+		
+		doEditorOptions(dt);
+		
+		nodeTypeNameSelect->doMenus(uiState, dt);
+		
+		inputIsCaptured |= uiState->activeElem != nullptr;
 	}
+	
+	//
 	
 	highlightedSockets = SocketSelection();
 	highlightedLinks.clear();
@@ -1009,6 +1029,9 @@ bool GraphEdit::tick(const float dt)
 	{
 	case kState_Idle:
 		{
+			if (inputIsCaptured)
+				break;
+			
 			HitTestResult hitTestResult;
 			
 			if (hitTest(mousePosition.x, mousePosition.y, hitTestResult))
@@ -1210,8 +1233,8 @@ bool GraphEdit::tick(const float dt)
 				if (keyboard.wentDown(SDLK_DOWN, true))
 					moveY += 1;
 				
-				dragAndZoom.desiredFocusX += moveX * GFX_SX * 1 / 5;
-				dragAndZoom.desiredFocusY += moveY * GFX_SY * 1 / 5;
+				dragAndZoom.desiredFocusX += moveX * kGridSize * 8;
+				dragAndZoom.desiredFocusY += moveY * kGridSize * 10;
 			}
 			else
 			{
@@ -1512,7 +1535,7 @@ bool GraphEdit::tick(const float dt)
 		}
 	}
 	
-	return state != kState_Idle;
+	return inputIsCaptured;
 }
 
 void GraphEdit::nodeSelectEnd()
@@ -1542,6 +1565,53 @@ void GraphEdit::socketConnectEnd()
 	}
 	
 	socketConnect = SocketConnect();
+}
+
+void GraphEdit::doMenu(const float dt)
+{
+	pushMenu("file");
+	{
+		const float size = 1.f / 3.f;
+		
+		if (doButton("load", size * 0, size, false))
+		{
+		}
+		
+		if (doButton("save", size * 1, size, false))
+		{
+		}
+		
+		if (doButton("save as", size * 2, size, true))
+		{
+		}
+		
+		std::string filename;
+		
+		doTextBox(filename, "filename", dt);
+		
+		doBreak();
+	}
+	popMenu();
+}
+
+void GraphEdit::doEditorOptions(const float dt)
+{
+	pushMenu("editorOptions");
+	{
+		doLabel("editor options", 0.f);
+		
+		if (doCheckBox(editorOptions.menuIsVisible, "options", true))
+		{
+			doCheckBox(editorOptions.showBackground, "show background", false);
+			doCheckBox(editorOptions.showGrid, "show grid", false);
+			doCheckBox(editorOptions.snapToGrid, "snap to grid", false);
+			doCheckBox(editorOptions.showOneShotActivity, "show one-shot", false);
+			doCheckBox(editorOptions.showContinuousActivity, "show continuous", false);
+		}
+		
+		doBreak();
+	}
+	popMenu();
 }
 
 bool GraphEdit::tryAddNode(const std::string & typeName, const int x, const int y, const bool select)
@@ -1620,6 +1690,42 @@ void GraphEdit::draw() const
 	gxPushMatrix();
 	gxMultMatrixf(dragAndZoom.transform.m_v);
 	
+	// draw background and grid
+	
+	{
+		const Vec2 p1 = dragAndZoom.invTransform * Vec2(0.f, 0.f);
+		const Vec2 p2 = dragAndZoom.invTransform * Vec2(GFX_SX, GFX_SY);
+		
+		if (editorOptions.showBackground)
+		{
+			setColor(0, 0, 0, 227);
+			drawRect(p1[0], p1[1], p2[0], p2[1]);
+		}
+		
+		if (editorOptions.showGrid)
+		{
+			const int cx1 = std::floor(p1[0] / kGridSize);
+			const int cy1 = std::floor(p1[1] / kGridSize);
+			const int cx2 = std::floor(p2[0] / kGridSize);
+			const int cy2 = std::floor(p2[1] / kGridSize);
+			
+			setColor(255, 255, 255, 63);
+			hqBegin(HQ_LINES);
+			{
+				for (int cx = cx1; cx <= cx2; ++cx)
+				{
+					hqLine(cx * kGridSize, cy1 * kGridSize, 1.f, cx * kGridSize, cy2 * kGridSize, 1.f);
+				}
+				
+				for (int cy = cy1; cy <= cy2; ++cy)
+				{
+					hqLine(cx1 * kGridSize, cy * kGridSize, 1.f, cx2 * kGridSize, cy * kGridSize, 1.f);
+				}
+			}
+			hqEnd();
+		}
+	}
+
 	// traverse links and draw
 	
 	for (auto & linkItr : graph->links)
@@ -1934,14 +2040,22 @@ void GraphEdit::draw() const
 		break;
 	}
 	
-	if (nodeTypeNameSelect != nullptr)
-	{
-		nodeTypeNameSelect->draw();
-	}
-	
 	if (propertyEditor != nullptr)
 	{
 		propertyEditor->draw();
+	}
+	
+	makeActive(uiState, false, true);
+	
+	GraphEdit * self = const_cast<GraphEdit*>(this);
+	
+	self->doMenu(0.f);
+	
+	self->doEditorOptions(0.f);
+	
+	if (nodeTypeNameSelect != nullptr)
+	{
+		nodeTypeNameSelect->doMenus(uiState, 0.f);
 	}
 }
 
@@ -1961,9 +2075,12 @@ void GraphEdit::drawTypeUi(const GraphNode & node, const GraphEdit_TypeDefinitio
 		setColor(63, 63, 63, 255);
 	drawRect(0.f, 0.f, definition.sx, nodeSy);
 	
-	const float activeAnim = node.editorIsActiveAnimTime * node.editorIsActiveAnimTimeRcp;
-	setColor(63, 63, 255, 255 * activeAnim);
-	drawRect(0.f, 0.f, definition.sx, nodeSy);
+	if (editorOptions.showOneShotActivity)
+	{
+		const float activeAnim = node.editorIsActiveAnimTime * node.editorIsActiveAnimTimeRcp;
+		setColor(63, 63, 255, 255 * activeAnim);
+		drawRect(0.f, 0.f, definition.sx, nodeSy);
+	}
 	
 	if (isSelected)
 		setColor(255, 255, 255, 255);
@@ -2353,40 +2470,14 @@ GraphNode * GraphUi::PropEdit::tryGetNode()
 
 //
 
-	GraphEdit_TypeDefinitionLibrary * typeLibrary;
-	
-	UiState * uiState;
-	
 GraphUi::NodeTypeNameSelect::NodeTypeNameSelect(GraphEdit * _graphEdit)
 	: graphEdit(_graphEdit)
-	, uiState(nullptr)
 	, history()
 {
-	uiState = new UiState();
-	
-	const int kPadding = 10;
-	uiState->sx = 200;
-	uiState->x = kPadding;
-	uiState->y = kPadding;
-	uiState->textBoxTextOffset = 50;
 }
 
 GraphUi::NodeTypeNameSelect::~NodeTypeNameSelect()
 {
-	delete uiState;
-	uiState = nullptr;
-}
-
-bool GraphUi::NodeTypeNameSelect::tick(const float dt)
-{
-	doMenus(true, false, dt);
-	
-	return uiState->activeElem != nullptr;
-}
-
-void GraphUi::NodeTypeNameSelect::draw() const
-{
-	const_cast<NodeTypeNameSelect*>(this)->doMenus(false, true, 0.f);
 }
 
 static uint32_t fuzzyStringDistance(const std::string & s1, const std::string & s2)
@@ -2418,9 +2509,8 @@ static uint32_t fuzzyStringDistance(const std::string & s1, const std::string & 
 	return d[len1][len2];
 }
 
-void GraphUi::NodeTypeNameSelect::doMenus(const bool doActions, const bool doDraw, const float dt)
+void GraphUi::NodeTypeNameSelect::doMenus(UiState * uiState, const float dt)
 {
-	makeActive(uiState, doActions, doDraw);
 	pushMenu("nodeTypeSelect");
 	{
 		doLabel("insert", 0.f);
@@ -2510,6 +2600,8 @@ void GraphUi::NodeTypeNameSelect::doMenus(const bool doActions, const bool doDra
 				}
 			}
 		}
+		
+		doBreak();
 	}
 	popMenu();
 }
