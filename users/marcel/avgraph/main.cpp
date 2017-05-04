@@ -107,6 +107,11 @@ todo :
 	- add support for continuous activity
 + show min/max on valueplotter
 + add editor options menu
+- improve OSC node
+	- purchase and evaluate TouchOSC
+	- purchase and evaluate Lemur (by Liine)
+	- figure out how to best interop with this software
+	- adapt OSC node to fit these products
 
 todo : nodes :
 + add ease node
@@ -1435,20 +1440,13 @@ int main(int argc, char * argv[])
 		
 		//
 		
-		GraphEdit * graphEdit = new GraphEdit();
-		
-		graphEdit->typeDefinitionLibrary = typeDefinitionLibrary;
+		GraphEdit * graphEdit = new GraphEdit(typeDefinitionLibrary);
 		
 		graphEdit->realTimeConnection = realTimeConnection;
-		
-		if (graphEdit->propertyEditor != nullptr)
-		{
-			graphEdit->propertyEditor->typeLibrary = typeDefinitionLibrary;
-			
-			graphEdit->propertyEditor->setGraph(graphEdit->graph);
-		}
 
-		VfxGraph * vfxGraph = nullptr;
+		VfxGraph * vfxGraph = new VfxGraph();
+		
+		realTimeConnection->vfxGraph = vfxGraph;
 		
 		while (!framework.quitRequested)
 		{
@@ -1464,70 +1462,15 @@ int main(int argc, char * argv[])
 			}
 			else if (keyboard.wentDown(SDLK_s))
 			{
-				FILE * file = fopen(FILENAME, "wt");
-				
-				XMLPrinter xmlGraph(file);;
-				
-				xmlGraph.OpenElement("graph");
-				{
-					graphEdit->graph->saveXml(xmlGraph, typeDefinitionLibrary);
-					
-					xmlGraph.OpenElement("editor");
-					{
-						graphEdit->saveXml(xmlGraph);
-					}
-					xmlGraph.CloseElement();
-				}
-				xmlGraph.CloseElement();
-				
-				fclose(file);
-				file = nullptr;
+				graphEdit->save(FILENAME);
 			}
 			else if (keyboard.wentDown(SDLK_l))
 			{
 				graphEdit->realTimeConnection = nullptr;
 				
-				delete graphEdit->graph;
-				graphEdit->graph = nullptr;
-				
-				graphEdit->propertyEditor->setGraph(nullptr);
-				
 				//
 				
-				graphEdit->graph = new Graph();
-				graphEdit->graph->graphEditConnection = graphEdit;
-				
-				// fixme : we should delete/new the property editor here ..
-				
-				delete graphEdit->propertyEditor;
-				graphEdit->propertyEditor = nullptr;
-				
-				graphEdit->propertyEditor = new GraphUi::PropEdit(typeDefinitionLibrary, graphEdit);
-				
-				//
-				
-				XMLDocument document;
-				document.LoadFile(FILENAME);
-				const XMLElement * xmlGraph = document.FirstChildElement("graph");
-				if (xmlGraph != nullptr)
-				{
-					graphEdit->graph->loadXml(xmlGraph, typeDefinitionLibrary);
-					
-					const XMLElement * xmlEditor = xmlGraph->FirstChildElement("editor");
-					if (xmlEditor != nullptr)
-					{
-						graphEdit->loadXml(xmlEditor);
-					}
-				}
-				
-				// fixme : it's a bit messy to manually assign it here. we shouldn't have to do this
-				
-				if (graphEdit->propertyEditor != nullptr)
-				{
-					graphEdit->propertyEditor->typeLibrary = typeDefinitionLibrary;
-					
-					graphEdit->propertyEditor->setGraph(graphEdit->graph);
-				}
+				graphEdit->load(FILENAME);
 				
 				//
 				
@@ -1536,14 +1479,11 @@ int main(int argc, char * argv[])
 				
 				vfxGraph = constructVfxGraph(*graphEdit->graph, typeDefinitionLibrary);
 				
-			#if 0
-				delete vfxGraph;
-				vfxGraph = nullptr;
-			#endif
-				
 				realTimeConnection->vfxGraph = vfxGraph;
 				graphEdit->realTimeConnection = realTimeConnection;
 			}
+			
+			// fixme : this should be handled by graph edit
 			
 			if (!graphEdit->selectedNodes.empty())
 			{

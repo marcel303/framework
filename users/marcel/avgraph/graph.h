@@ -152,7 +152,7 @@ struct GraphEdit_ValueTypeDefinition
 	{
 	}
 	
-	void loadXml(const tinyxml2::XMLElement * xmlType);
+	bool loadXml(const tinyxml2::XMLElement * xmlType);
 };
 
 struct GraphEdit_TypeDefinition
@@ -254,7 +254,7 @@ struct GraphEdit_TypeDefinition
 	
 	bool hitTest(const float x, const float y, const bool isFolded, HitTestResult & result) const;
 	
-	void loadXml(const tinyxml2::XMLElement * xmlNode);
+	bool loadXml(const tinyxml2::XMLElement * xmlNode);
 };
 
 struct GraphEdit_TypeDefinitionLibrary
@@ -290,7 +290,7 @@ struct GraphEdit_TypeDefinitionLibrary
 			return nullptr;
 	}
 	
-	void loadXml(const tinyxml2::XMLElement * xmlLibrary);
+	bool loadXml(const tinyxml2::XMLElement * xmlLibrary);
 };
 
 //
@@ -598,6 +598,11 @@ struct GraphEdit : GraphEditConnection
 		}
 	};
 	
+	struct DocumentInfo
+	{
+		std::string filename;
+	};
+	
 	struct EditorOptions
 	{
 		bool menuIsVisible;
@@ -683,6 +688,8 @@ struct GraphEdit : GraphEditConnection
 	
 	RealTimeSocketCapture realTimeSocketCapture;
 	
+	DocumentInfo documentInfo;
+	
 	EditorOptions editorOptions;
 	
 	GraphUi::PropEdit * propertyEditor;
@@ -691,7 +698,7 @@ struct GraphEdit : GraphEditConnection
 	
 	UiState * uiState;
 	
-	GraphEdit();
+	GraphEdit(GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary);
 	~GraphEdit();
 	
 	GraphNode * tryGetNode(const GraphNodeId id) const;
@@ -722,8 +729,11 @@ struct GraphEdit : GraphEditConnection
 	void draw() const;
 	void drawTypeUi(const GraphNode & node, const GraphEdit_TypeDefinition & typeDefinition) const;
 	
-	void loadXml(const tinyxml2::XMLElement * editorElem);
-	void saveXml(tinyxml2::XMLPrinter & editorElem) const;
+	bool load(const char * filename);
+	bool save(const char * filename);
+	
+	bool loadXml(const tinyxml2::XMLElement * editorElem);
+	bool saveXml(tinyxml2::XMLPrinter & editorElem) const;
 	
 	// GraphEditConnection
 	

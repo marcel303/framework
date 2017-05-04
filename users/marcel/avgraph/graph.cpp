@@ -449,6 +449,8 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 
 bool Graph::saveXml(XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary) const
 {
+	bool result = true;
+	
 	xmlGraph.PushAttribute("nextNodeId", nextNodeId);
 	xmlGraph.PushAttribute("nextLinkId", nextLinkId);
 	
@@ -498,7 +500,7 @@ bool Graph::saveXml(XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary
 		xmlGraph.CloseElement();
 	}
 	
-	return true;
+	return result;
 }
 
 //
@@ -528,7 +530,7 @@ static Color toColor(const ParticleColor & particleColor)
 	return color;
 }
 
-void GraphEdit_ValueTypeDefinition::loadXml(const XMLElement * xmlType)
+bool GraphEdit_ValueTypeDefinition::loadXml(const XMLElement * xmlType)
 {
 	typeName = stringAttrib(xmlType, "typeName", "");
 	
@@ -536,6 +538,8 @@ void GraphEdit_ValueTypeDefinition::loadXml(const XMLElement * xmlType)
 	editorMin = stringAttrib(xmlType, "editorMin", "0");
 	editorMax = stringAttrib(xmlType, "editorMax", "1");
 	visualizer = stringAttrib(xmlType, "visualizer", "");
+	
+	return true;
 }
 
 bool GraphEdit_TypeDefinition::InputSocket::canConnectTo(const GraphEdit_TypeDefinition::OutputSocket & socket) const
@@ -667,7 +671,7 @@ bool GraphEdit_TypeDefinition::hitTest(const float x, const float y, const bool 
 	return false;
 }
 
-void GraphEdit_TypeDefinition::loadXml(const XMLElement * xmlType)
+bool GraphEdit_TypeDefinition::loadXml(const XMLElement * xmlType)
 {
 	typeName = stringAttrib(xmlType, "typeName", "");
 	
@@ -691,17 +695,21 @@ void GraphEdit_TypeDefinition::loadXml(const XMLElement * xmlType)
 		
 		outputSockets.push_back(socket);
 	}
+	
+	return true;
 }
 
 //
 
-void GraphEdit_TypeDefinitionLibrary::loadXml(const XMLElement * xmlLibrary)
+bool GraphEdit_TypeDefinitionLibrary::loadXml(const XMLElement * xmlLibrary)
 {
+	bool result = true;
+	
 	for (auto xmlType = xmlLibrary->FirstChildElement("valueType"); xmlType != nullptr; xmlType = xmlType->NextSiblingElement("valueType"))
 	{
 		GraphEdit_ValueTypeDefinition typeDefinition;
 		
-		typeDefinition.loadXml(xmlType);
+		result &= typeDefinition.loadXml(xmlType);
 		
 		// todo : check typeName doesn't exist yet
 		
@@ -712,18 +720,20 @@ void GraphEdit_TypeDefinitionLibrary::loadXml(const XMLElement * xmlLibrary)
 	{
 		GraphEdit_TypeDefinition typeDefinition;
 		
-		typeDefinition.loadXml(xmlType);
+		result &= typeDefinition.loadXml(xmlType);
 		typeDefinition.createUi();
 		
 		// todo : check typeName doesn't exist yet
 		
 		typeDefinitions[typeDefinition.typeName] = typeDefinition;
 	}
+	
+	return result;
 }
 
 //
 
-GraphEdit::GraphEdit()
+GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary)
 	: graph(nullptr)
 	, typeDefinitionLibrary(nullptr)
 	, realTimeConnection(nullptr)
@@ -734,6 +744,9 @@ GraphEdit::GraphEdit()
 	, socketConnect()
 	, mousePosition()
 	, dragAndZoom()
+	, realTimeSocketCapture()
+	, documentInfo()
+	, editorOptions()
 	, propertyEditor(nullptr)
 	, nodeTypeNameSelect(nullptr)
 	, uiState(nullptr)
@@ -742,7 +755,9 @@ GraphEdit::GraphEdit()
 	
 	graph->graphEditConnection = this;
 	
-	propertyEditor = new GraphUi::PropEdit(nullptr, this);
+	typeDefinitionLibrary = _typeDefinitionLibrary;
+	
+	propertyEditor = new GraphUi::PropEdit(_typeDefinitionLibrary, this);
 	
 	nodeTypeNameSelect = new GraphUi::NodeTypeNameSelect(this);
 	
@@ -753,6 +768,10 @@ GraphEdit::GraphEdit()
 	uiState->x = kPadding;
 	uiState->y = kPadding;
 	uiState->textBoxTextOffset = 50;
+	
+	//
+	
+	propertyEditor->setGraph(graph);
 }
 
 GraphEdit::~GraphEdit()
@@ -1175,6 +1194,8 @@ bool GraphEdit::tick(const float dt)
 							// deep copy node including values
 							newNode.editorInputValues = node->editorInputValues;
 							newNode.editorValue = node->editorValue;
+							
+							// todo : deep copy doesn't work nicely with real-time editing for now. we need to tell the run-time the socket values
 						}
 						
 						graph->addNode(newNode);
@@ -1575,19 +1596,20 @@ void GraphEdit::doMenu(const float dt)
 		
 		if (doButton("load", size * 0, size, false))
 		{
+			load(documentInfo.filename.c_str());
 		}
 		
 		if (doButton("save", size * 1, size, false))
 		{
+			save(documentInfo.filename.c_str());
 		}
 		
 		if (doButton("save as", size * 2, size, true))
 		{
+			save(documentInfo.filename.c_str());
 		}
 		
-		std::string filename;
-		
-		doTextBox(filename, "filename", dt);
+		doTextBox(documentInfo.filename, "filename", dt);
 		
 		doBreak();
 	}
@@ -1620,6 +1642,9 @@ void GraphEdit::doEditorOptions(const float dt)
 		doBreak();
 	}
 	popMenu();
+	
+	if (uiState->activeElem == nullptr)
+		uiState->activeColor = nullptr;
 }
 
 bool GraphEdit::tryAddNode(const std::string & typeName, const int x, const int y, const bool select)
@@ -2187,7 +2212,108 @@ void GraphEdit::drawTypeUi(const GraphNode & node, const GraphEdit_TypeDefinitio
 	}
 }
 
-void GraphEdit::loadXml(const tinyxml2::XMLElement * editorElem)
+bool GraphEdit::load(const char * filename)
+{
+	bool result = true;
+	
+	//
+	
+	documentInfo = DocumentInfo();
+	
+	//
+	
+	propertyEditor->setGraph(nullptr);
+	
+	//
+	
+	delete graph;
+	graph = nullptr;
+	
+	graph = new Graph();
+	graph->graphEditConnection = this;
+	
+	//
+	
+	XMLDocument document;
+	
+	result &= document.LoadFile(filename) == XML_SUCCESS;
+	
+	if (result == true)
+	{
+		const XMLElement * xmlGraph = document.FirstChildElement("graph");
+		if (xmlGraph != nullptr)
+		{
+			result &= graph->loadXml(xmlGraph, typeDefinitionLibrary);
+			
+			const XMLElement * xmlEditor = xmlGraph->FirstChildElement("editor");
+			if (xmlEditor != nullptr)
+			{
+				result &= loadXml(xmlEditor);
+			}
+		}
+	}
+	
+	//
+	
+	propertyEditor->setGraph(graph);
+	
+	//
+	
+	if (result)
+	{
+		documentInfo.filename = filename;
+	}
+	
+	uiState->reset();
+	
+	//
+	
+	return result;
+}
+
+bool GraphEdit::save(const char * filename)
+{
+	bool result = true;
+	
+	FILE * file = fopen(filename, "wt");
+	result &= file != nullptr;
+	
+	if (result)
+	{
+		XMLPrinter xmlGraph(file);;
+		
+		xmlGraph.OpenElement("graph");
+		{
+			result &= graph->saveXml(xmlGraph, typeDefinitionLibrary);
+			
+			xmlGraph.OpenElement("editor");
+			{
+				result &= saveXml(xmlGraph);
+			}
+			xmlGraph.CloseElement();
+		}
+		xmlGraph.CloseElement();
+	}
+	
+	if (file != nullptr)
+	{
+		fclose(file);
+		file = nullptr;
+	}
+	
+	//
+	
+	if (result)
+	{
+		documentInfo.filename = filename;
+	}
+	
+	uiState->reset();
+	
+	return result;
+}
+
+bool GraphEdit::loadXml(const tinyxml2::XMLElement * editorElem)
 {
 	auto dragAndZoomElem = editorElem->FirstChildElement("dragAndZoom");
 	
@@ -2201,9 +2327,11 @@ void GraphEdit::loadXml(const tinyxml2::XMLElement * editorElem)
 		dragAndZoom.focusY = dragAndZoom.desiredFocusY;
 		dragAndZoom.zoom = dragAndZoom.desiredZoom;
 	}
+	
+	return true;
 }
 
-void GraphEdit::saveXml(tinyxml2::XMLPrinter & editorElem) const
+bool GraphEdit::saveXml(tinyxml2::XMLPrinter & editorElem) const
 {
 	editorElem.OpenElement("dragAndZoom");
 	{
@@ -2212,6 +2340,8 @@ void GraphEdit::saveXml(tinyxml2::XMLPrinter & editorElem) const
 		editorElem.PushAttribute("zoom", dragAndZoom.desiredZoom);
 	}
 	editorElem.CloseElement();
+	
+	return true;
 }
 
 void GraphEdit::nodeAdd(const GraphNodeId nodeId, const std::string & typeName)
