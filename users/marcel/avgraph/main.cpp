@@ -112,7 +112,7 @@ todo :
 	- purchase and evaluate Lemur (by Liine)
 	- figure out how to best interop with this software
 	- adapt OSC node to fit these products
-- save/load editor options to editor XML
++ save/load editor options to editor XML
 + add editorName to nodes and add a text box to edit it
 
 todo : nodes :

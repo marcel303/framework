@@ -2349,6 +2349,26 @@ bool GraphEdit::loadXml(const tinyxml2::XMLElement * editorElem)
 		dragAndZoom.zoom = dragAndZoom.desiredZoom;
 	}
 	
+	auto editorOptionsElem = editorElem->FirstChildElement("editorOptions");
+	
+	if (editorOptionsElem != nullptr)
+	{
+		EditorOptions defaultOptions;
+		
+		editorOptions.menuIsVisible = boolAttrib(editorOptionsElem, "menuIsVisible", defaultOptions.menuIsVisible);
+		editorOptions.showBackground = boolAttrib(editorOptionsElem, "showBackground", defaultOptions.showBackground);
+		editorOptions.showGrid = boolAttrib(editorOptionsElem, "showGrid", defaultOptions.showGrid);
+		editorOptions.snapToGrid = boolAttrib(editorOptionsElem, "snapToGrid", defaultOptions.snapToGrid);
+		editorOptions.showOneShotActivity = boolAttrib(editorOptionsElem, "showOneShotActivity", defaultOptions.showOneShotActivity);
+		editorOptions.showContinuousActivity = boolAttrib(editorOptionsElem, "showContinuousActivity", defaultOptions.showContinuousActivity);
+		
+		const std::string defaultBackgroundColor = toColor(defaultOptions.backgroundColor).toHexString(true);
+		const std::string defaultGridColor = toColor(defaultOptions.gridColor).toHexString(true);
+		
+		editorOptions.backgroundColor = toParticleColor(Color::fromHex(stringAttrib(editorOptionsElem, "backgroundColor", defaultBackgroundColor.c_str())));
+		editorOptions.gridColor = toParticleColor(Color::fromHex(stringAttrib(editorOptionsElem, "gridColor", defaultGridColor.c_str())));
+	}
+	
 	return true;
 }
 
@@ -2359,6 +2379,23 @@ bool GraphEdit::saveXml(tinyxml2::XMLPrinter & editorElem) const
 		editorElem.PushAttribute("x", dragAndZoom.desiredFocusX);
 		editorElem.PushAttribute("y", dragAndZoom.desiredFocusY);
 		editorElem.PushAttribute("zoom", dragAndZoom.desiredZoom);
+	}
+	editorElem.CloseElement();
+	
+	editorElem.OpenElement("editorOptions");
+	{	
+		editorElem.PushAttribute("menuIsVisible", editorOptions.menuIsVisible);
+		editorElem.PushAttribute("showBackground", editorOptions.showBackground);
+		editorElem.PushAttribute("showGrid", editorOptions.showGrid);
+		editorElem.PushAttribute("snapToGrid", editorOptions.snapToGrid);
+		editorElem.PushAttribute("showOneShotActivity", editorOptions.showOneShotActivity);
+		editorElem.PushAttribute("showContinuousActivity", editorOptions.showContinuousActivity);
+		
+		const std::string backgroundColor = toColor(editorOptions.backgroundColor).toHexString(true);
+		const std::string gridColor = toColor(editorOptions.gridColor).toHexString(true);
+		
+		editorElem.PushAttribute("backgroundColor", backgroundColor.c_str());
+		editorElem.PushAttribute("gridColor", gridColor.c_str());
 	}
 	editorElem.CloseElement();
 	
