@@ -24,6 +24,8 @@ VfxNodeFsfx::VfxNodeFsfx()
 	addInput(kInput_Param3, kVfxPlugType_Float);
 	addInput(kInput_Param4, kVfxPlugType_Float);
 	addInput(kInput_Opacity, kVfxPlugType_Float);
+	addInput(kInput_Image1, kVfxPlugType_Image);
+	addInput(kInput_Image2, kVfxPlugType_Image);
 	addOutput(kOutput_Image, kVfxPlugType_Image, image);
 }
 
@@ -63,6 +65,11 @@ void VfxNodeFsfx::draw() const
 			pushBlend(BLEND_OPAQUE);
 			setShader(shader);
 			{
+				const VfxImageBase * image1 = getInputImage(kInput_Image1, nullptr);
+				const VfxImageBase * image2 = getInputImage(kInput_Image2, nullptr);
+				const GLuint texture1 = image1 ? image1->getTexture() : 0;
+				const GLuint texture2 = image2 ? image2->getTexture() : 0;
+				
 				shader.setImmediate("screenSize", surface->getWidth(), surface->getHeight());
 				shader.setTexture("colormap", 0, inputTexture);
 				shader.setImmediate("param1", getInputFloat(kInput_Param1, 0.f));
@@ -70,6 +77,8 @@ void VfxNodeFsfx::draw() const
 				shader.setImmediate("param3", getInputFloat(kInput_Param3, 0.f));
 				shader.setImmediate("param4", getInputFloat(kInput_Param4, 0.f));
 				shader.setImmediate("opacity", getInputFloat(kInput_Opacity, 1.f));
+				shader.setTexture("texture1", 1, texture1);
+				shader.setTexture("texture2", 2, texture2);
 				shader.setImmediate("time", framework.time);
 				surface->postprocess();
 			}

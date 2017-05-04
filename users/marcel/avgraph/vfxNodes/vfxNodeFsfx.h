@@ -17,6 +17,8 @@ struct VfxNodeFsfx : VfxNodeBase
 		kInput_Param3,
 		kInput_Param4,
 		kInput_Opacity,
+		kInput_Image1,
+		kInput_Image2,
 		kInput_COUNT
 	};
 	

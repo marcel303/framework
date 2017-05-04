@@ -114,6 +114,7 @@ todo :
 	- adapt OSC node to fit these products
 + save/load editor options to editor XML
 + add editorName to nodes and add a text box to edit it
++ add 2 texture inputs to fsfx node
 
 todo : nodes :
 + add ease node
@@ -131,7 +132,7 @@ todo : nodes :
 + add sample and hold node. has trigger for input
 - add doValuePlotter to ui framework
 - add simplex noise node
-- add binary counter node, outputting 4-8 bit values (1.f or 0.f)
++ add binary counter node, outputting 4-8 bit values (1.f or 0.f)
 - add delay node. 4 inputs for delay. take max for delay buffer. delay buffer filled at say fixed 120 hz. 4 outputs delayed values
 - add quantize node
 
