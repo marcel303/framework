@@ -71,14 +71,14 @@ void VfxNodeFsfx::draw() const
 				const GLuint texture2 = image2 ? image2->getTexture() : 0;
 				
 				shader.setImmediate("screenSize", surface->getWidth(), surface->getHeight());
-				shader.setTexture("colormap", 0, inputTexture);
+				shader.setTexture("colormap", 0, inputTexture, true, false);
 				shader.setImmediate("param1", getInputFloat(kInput_Param1, 0.f));
 				shader.setImmediate("param2", getInputFloat(kInput_Param2, 0.f));
 				shader.setImmediate("param3", getInputFloat(kInput_Param3, 0.f));
 				shader.setImmediate("param4", getInputFloat(kInput_Param4, 0.f));
 				shader.setImmediate("opacity", getInputFloat(kInput_Opacity, 1.f));
-				shader.setTexture("texture1", 1, texture1);
-				shader.setTexture("texture2", 2, texture2);
+				shader.setTexture("texture1", 1, texture1, true, false);
+				shader.setTexture("texture2", 2, texture2, true, false);
 				shader.setImmediate("time", framework.time);
 				surface->postprocess();
 			}
