@@ -131,9 +131,9 @@ todo : nodes :
 - add impulse response node. measure input impulse response with oscilator at given frequency
 + add sample and hold node. has trigger for input
 - add doValuePlotter to ui framework
-- add simplex noise node
++ add simplex noise node
 + add binary counter node, outputting 4-8 bit values (1.f or 0.f)
-- add delay node. 4 inputs for delay. take max for delay buffer. delay buffer filled at say fixed 120 hz. 4 outputs delayed values
++ add delay node. 4 inputs for delay. take max for delay buffer. delay buffer filled at say fixed 120 hz. 4 outputs delayed values
 - add quantize node
 
 todo : fsfx :
@@ -464,6 +464,7 @@ struct VfxNodeNoiseSimplex2D : VfxNodeBase
 		kInput_Y,
 		kInput_NumOctaves,
 		kInput_Persistence,
+		kInput_Scale,
 		kInput_COUNT
 	};
 	
@@ -484,6 +485,7 @@ struct VfxNodeNoiseSimplex2D : VfxNodeBase
 		addInput(kInput_Y, kVfxPlugType_Float);
 		addInput(kInput_NumOctaves, kVfxPlugType_Int);
 		addInput(kInput_Persistence, kVfxPlugType_Float);
+		addInput(kInput_Scale, kVfxPlugType_Float);
 		addOutput(kOutput_Value, kVfxPlugType_Float, &outputValue);
 	}
 	
@@ -493,8 +495,9 @@ struct VfxNodeNoiseSimplex2D : VfxNodeBase
 		const float y = getInputFloat(kInput_Y, 0.f);
 		const int numOctaves = getInputInt(kInput_NumOctaves, 4);
 		const float persistence = getInputFloat(kInput_Persistence, .5f);
+		const float scale = getInputFloat(kInput_Scale, 1.f);
 		
-		outputValue = scaled_octave_noise_2d(numOctaves, persistence, 1.f, 0.f, 1.f, x, y);
+		outputValue = scaled_octave_noise_2d(numOctaves, persistence, scale, 0.f, 1.f, x, y);
 	}
 };
 
@@ -566,17 +569,23 @@ struct VfxNodeDelayLine : VfxNodeBase
 	enum Input
 	{
 		kInput_Value,
-		kInput_Delay,
+		kInput_Delay1,
+		kInput_Delay2,
+		kInput_Delay3,
+		kInput_Delay4,
 		kInput_COUNT
 	};
 	
 	enum Output
 	{
-		kOutput_Value,
+		kOutput_Value1,
+		kOutput_Value2,
+		kOutput_Value3,
+		kOutput_Value4,
 		kOutput_COUNT
 	};
 	
-	float outputValue;
+	float outputValue[4];
 	
 	float dtRemaining;
 	
@@ -584,23 +593,34 @@ struct VfxNodeDelayLine : VfxNodeBase
 	
 	VfxNodeDelayLine()
 		: VfxNodeBase()
-		, outputValue(0.f)
+		, outputValue()
 		, dtRemaining(0.f)
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addInput(kInput_Value, kVfxPlugType_Float);
-		addInput(kInput_Delay, kVfxPlugType_Float);
-		addOutput(kOutput_Value, kVfxPlugType_Float, &outputValue);
+		addInput(kInput_Delay1, kVfxPlugType_Float);
+		addInput(kInput_Delay2, kVfxPlugType_Float);
+		addInput(kInput_Delay3, kVfxPlugType_Float);
+		addInput(kInput_Delay4, kVfxPlugType_Float);
+		addOutput(kOutput_Value1, kVfxPlugType_Float, &outputValue[0]);
+		addOutput(kOutput_Value2, kVfxPlugType_Float, &outputValue[1]);
+		addOutput(kOutput_Value3, kVfxPlugType_Float, &outputValue[2]);
+		addOutput(kOutput_Value4, kVfxPlugType_Float, &outputValue[3]);
 	}
 	
 	virtual void tick(const float dt) override
 	{
+		const float delay1 = getInputFloat(kInput_Delay1, 0.f);
+		const float delay2 = getInputFloat(kInput_Delay2, 0.f);
+		const float delay3 = getInputFloat(kInput_Delay3, 0.f);
+		const float delay4 = getInputFloat(kInput_Delay4, 0.f);
+	
+		const float maxDelay = std::max(std::max(delay1, delay2), std::max(delay3, delay4));
+		
 		{
 			// set delay line length
 			
-			const float delay = getInputFloat(kInput_Delay, 0.f);
-			
-			const int numSamples = delay * kSampleRate;
+			const int numSamples = maxDelay * kSampleRate;
 			
 			if (numSamples != delayLine.getLength())
 			{
@@ -621,11 +641,22 @@ struct VfxNodeDelayLine : VfxNodeBase
 			for (int i = 0; i < numSamples; ++i)
 				delayLine.push(value);
 			
-			outputValue = delayLine.read(0);
+			const int offset1 = std::min(delayLine.getLength() - 1, int((maxDelay - delay1) * kSampleRate));
+			const int offset2 = std::min(delayLine.getLength() - 1, int((maxDelay - delay2) * kSampleRate));
+			const int offset3 = std::min(delayLine.getLength() - 1, int((maxDelay - delay3) * kSampleRate));
+			const int offset4 = std::min(delayLine.getLength() - 1, int((maxDelay - delay4) * kSampleRate));
+			
+			outputValue[0] = delayLine.read(offset1);
+			outputValue[1] = delayLine.read(offset2);
+			outputValue[2] = delayLine.read(offset3);
+			outputValue[3] = delayLine.read(offset4);
 		}
 		else
 		{
-			outputValue = 0.f;
+			outputValue[0] = 0.f;
+			outputValue[1] = 0.f;
+			outputValue[2] = 0.f;
+			outputValue[3] = 0.f;
 		}
 	}
 };
