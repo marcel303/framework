@@ -884,11 +884,17 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 		Assert(srcNode != nullptr && dstNode != nullptr && srcNodeSocket != nullptr && dstNodeSocket != nullptr);
 		if (srcNode != nullptr && dstNode != nullptr && srcNodeSocket != nullptr && dstNodeSocket != nullptr)
 		{
+			auto srcTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(srcNode->typeName);
+			auto dstTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(dstNode->typeName);
+			
+			const int srcY = srcTypeDefinition == nullptr ? 0 : srcNode->editorIsFolded ? srcTypeDefinition->syFolded/2 : srcNodeSocket->py;
+			const int dstY = dstTypeDefinition == nullptr ? 0 : dstNode->editorIsFolded ? dstTypeDefinition->syFolded/2 : dstNodeSocket->py;
+			
 			if (testLineOverlap(
 				srcNode->editorX + srcNodeSocket->px,
-				srcNode->editorY + srcNodeSocket->py,
+				srcNode->editorY + srcY,
 				dstNode->editorX + dstNodeSocket->px,
-				dstNode->editorY + dstNodeSocket->py,
+				dstNode->editorY + dstY,
 				x, y, 10.f))
 			{
 				result.hasLink = true;
