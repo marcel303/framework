@@ -1604,9 +1604,17 @@ void GraphEdit::doEditorOptions(const float dt)
 		{
 			doCheckBox(editorOptions.showBackground, "show background", false);
 			doCheckBox(editorOptions.showGrid, "show grid", false);
+			doParticleColor(editorOptions.backgroundColor, "background color");
+			doParticleColor(editorOptions.gridColor, "grid color");
 			doCheckBox(editorOptions.snapToGrid, "snap to grid", false);
 			doCheckBox(editorOptions.showOneShotActivity, "show one-shot", false);
 			doCheckBox(editorOptions.showContinuousActivity, "show continuous", false);
+			
+			if (uiState->activeColor == &editorOptions.gridColor ||
+				uiState->activeColor == &editorOptions.backgroundColor)
+			{
+				doColorWheel(*uiState->activeColor, "colorwheel", dt);
+			}
 		}
 		
 		doBreak();
@@ -1698,7 +1706,11 @@ void GraphEdit::draw() const
 		
 		if (editorOptions.showBackground)
 		{
-			setColor(0, 0, 0, 227);
+			setColorf(
+				editorOptions.backgroundColor.rgba[0],
+				editorOptions.backgroundColor.rgba[1],
+				editorOptions.backgroundColor.rgba[2],
+				editorOptions.backgroundColor.rgba[3]);
 			drawRect(p1[0], p1[1], p2[0], p2[1]);
 		}
 		
@@ -1709,7 +1721,11 @@ void GraphEdit::draw() const
 			const int cx2 = std::floor(p2[0] / kGridSize);
 			const int cy2 = std::floor(p2[1] / kGridSize);
 			
-			setColor(255, 255, 255, 63);
+			setColorf(
+				editorOptions.gridColor.rgba[0],
+				editorOptions.gridColor.rgba[1],
+				editorOptions.gridColor.rgba[2],
+				editorOptions.gridColor.rgba[3]);
 			hqBegin(HQ_LINES);
 			{
 				for (int cx = cx1; cx <= cx2; ++cx)

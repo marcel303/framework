@@ -103,7 +103,10 @@ todo :
 + remove 'editor' code
 + allocate literal values for unconnected plugs when live-editing change comes in for input
 - show which nodes and links are actively traversed. add live-connection callback to query activity
+	- add support for one-shot activity
+	- add support for continuous activity
 + show min/max on valueplotter
++ add editor options menu
 
 todo : nodes :
 + add ease node

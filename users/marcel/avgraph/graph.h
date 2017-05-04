@@ -399,6 +399,10 @@ struct GraphEdit_RealTimeConnection
 
 //
 
+#include "../libparticle/particle.h" // todo : remove ParticleColor dependency
+
+//
+
 struct GraphEdit : GraphEditConnection
 {
 	enum State
@@ -602,14 +606,18 @@ struct GraphEdit : GraphEditConnection
 		bool snapToGrid;
 		bool showOneShotActivity;
 		bool showContinuousActivity;
+		ParticleColor backgroundColor;
+		ParticleColor gridColor;
 		
 		EditorOptions()
-			: menuIsVisible(true)
+			: menuIsVisible(false)
 			, showBackground(true)
 			, showGrid(true)
 			, snapToGrid(false)
 			, showOneShotActivity(false)
 			, showContinuousActivity(false)
+			, backgroundColor(0.f, 0.f, 0.f, .8f)
+			, gridColor(1.f, 1.f, 1.f, .3f)
 		{
 		}
 	};
