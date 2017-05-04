@@ -124,7 +124,7 @@ todo : nodes :
 	+ ease param2
 	+ mirror?
 	+ result
-- add time node
++ add time node
 + add timer node
 - add sample.float node
 - add sample.image node. outputs r/g/b/a. specify normalized vs screen coords?
@@ -209,6 +209,37 @@ struct VfxNodeTriggerAsFloat : VfxNodeBase
 	virtual void tick(const float dt) override
 	{
 		outputValue = getInputFloat(kInput_Trigger, 0.f);
+	}
+};
+
+struct VfxNodeTime : VfxNodeBase
+{
+	enum Input
+	{
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_Time,
+		kOutput_COUNT
+	};
+	
+	float time;
+	
+	VfxNodeTime()
+		: VfxNodeBase()
+		, time(0.f)
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addOutput(kOutput_Time, kVfxPlugType_Float, &time);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		// todo : use a synchronized clock
+		
+		time = framework.time;
 	}
 };
 
@@ -936,6 +967,7 @@ static VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string &
 		vfxNode = new VfxNodeColorLiteral();
 	}
 	DefineNodeImpl("trigger.asFloat", VfxNodeTriggerAsFloat)
+	DefineNodeImpl("time", VfxNodeTime)
 	DefineNodeImpl("sampleAndHold", VfxNodeSampleAndHold)
 	DefineNodeImpl("binary.output", VfxNodeBinaryOutput)
 	DefineNodeImpl("transform.2d", VfxNodeTransform2d)
