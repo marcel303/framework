@@ -197,6 +197,11 @@ void ColorWheel::draw()
 		drawRect(barX1, barY1, barX2, barY2);
 		setColor(colorBlue);
 		drawRectLine(barX1, barY1, barX2, barY2);
+		
+		setColor(colorWhite);
+		const float x = barX1 * (1.f - a) + barX2 * a;
+		const float y = (barY1 + barY2) / 2.f;
+		drawUiCircle(x, y, 3.5f, 1.f, 1.f, 1.f, 1.f);
 	}
 
 #if 0
