@@ -30,3 +30,17 @@ void VfxNodePicture::init(const GraphNode & node)
 		image->texture = getTexture(filename);
 	}
 }
+
+void VfxNodePicture::tick(const float dt)
+{
+	const char * filename = getInputString(kInput_Source, nullptr);
+	
+	if (filename == nullptr)
+	{
+		image->texture = 0;
+	}
+	else
+	{
+		image->texture = getTexture(filename);
+	}
+}

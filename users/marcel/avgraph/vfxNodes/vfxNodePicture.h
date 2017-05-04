@@ -23,4 +23,5 @@ struct VfxNodePicture : VfxNodeBase
 	virtual ~VfxNodePicture() override;
 	
 	virtual void init(const GraphNode & node) override;
+	virtual void tick(const float dt) override;
 };
