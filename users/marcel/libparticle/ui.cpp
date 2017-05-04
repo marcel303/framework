@@ -36,6 +36,18 @@ static GLuint checkersTexture = 0;
 
 //
 
+struct UiMenu
+{
+	int sx;
+	
+	std::map<std::string, UiElem> elems;
+	
+	UiElem & getElem(const char * name)
+	{
+		return elems[name];
+	}
+};
+
 struct UiMenuStates
 {
 	std::map<std::string, UiMenu> menus;
@@ -78,7 +90,12 @@ void UiState::reset()
 	activeElem = nullptr;
 	activeColor = nullptr;
 	
-	menuStates->menus.clear();
+	for (auto & menuItr : menuStates->menus)
+	{
+		auto & menu = menuItr.second;
+		
+		menu.elems.clear();
+	}
 }
 
 //
@@ -366,20 +383,6 @@ struct UiElem
 			textField = new EditorTextField();
 		
 		return *textField;
-	}
-};
-
-//
-
-struct UiMenu
-{
-	int sx;
-	
-	std::map<std::string, UiElem> elems;
-	
-	UiElem & getElem(const char * name)
-	{
-		return elems[name];
 	}
 };
 
