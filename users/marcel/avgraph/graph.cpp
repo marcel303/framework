@@ -1642,7 +1642,7 @@ void GraphEdit::doEditorOptions(const float dt)
 	{
 		doLabel("editor options", 0.f);
 		
-		if (doCheckBox(editorOptions.menuIsVisible, "options", true))
+		if (doDrawer(editorOptions.menuIsVisible, "options"))
 		{
 			doCheckBox(editorOptions.showBackground, "show background", false);
 			doCheckBox(editorOptions.showGrid, "show grid", false);
