@@ -11,13 +11,18 @@
 #include "vfxNodes/vfxNodeFsfx.h"
 #include "vfxNodes/vfxNodeLeapMotion.h"
 #include "vfxNodes/vfxNodeLiteral.h"
+#include "vfxNodes/vfxNodeLogicSwitch.h"
 #include "vfxNodes/vfxNodeMapEase.h"
 #include "vfxNodes/vfxNodeMapRange.h"
 #include "vfxNodes/vfxNodeMath.h"
 #include "vfxNodes/vfxNodeMouse.h"
+#include "vfxNodes/vfxNodeNoiseSimplex2D.h"
 #include "vfxNodes/vfxNodeOsc.h"
 #include "vfxNodes/vfxNodeOscPrimitives.h"
 #include "vfxNodes/vfxNodePicture.h"
+#include "vfxNodes/vfxNodeSampleAndHold.h"
+#include "vfxNodes/vfxNodeTime.h"
+#include "vfxNodes/vfxNodeTriggerTimer.h"
 #include "vfxNodes/vfxNodeVideo.h"
 
 #include "../libparticle/ui.h"
@@ -215,73 +220,6 @@ struct VfxNodeTriggerAsFloat : VfxNodeBase
 	}
 };
 
-struct VfxNodeTime : VfxNodeBase
-{
-	enum Input
-	{
-		kInput_COUNT
-	};
-	
-	enum Output
-	{
-		kOutput_Time,
-		kOutput_COUNT
-	};
-	
-	float time;
-	
-	VfxNodeTime()
-		: VfxNodeBase()
-		, time(0.f)
-	{
-		resizeSockets(kInput_COUNT, kOutput_COUNT);
-		addOutput(kOutput_Time, kVfxPlugType_Float, &time);
-	}
-	
-	virtual void tick(const float dt) override
-	{
-		// todo : use a synchronized clock
-		
-		time = framework.time;
-	}
-};
-
-struct VfxNodeSampleAndHold : VfxNodeBase
-{
-	enum Input
-	{
-		kInput_Trigger,
-		kInput_Value,
-		kInput_COUNT
-	};
-	
-	enum Output
-	{
-		kOutput_Value,
-		kOutput_COUNT
-	};
-	
-	float outputValue;
-	
-	VfxNodeSampleAndHold()
-		: VfxNodeBase()
-		, outputValue(0.f)
-	{
-		resizeSockets(kInput_COUNT, kOutput_COUNT);
-		addInput(kInput_Trigger, kVfxPlugType_Trigger);
-		addInput(kInput_Value, kVfxPlugType_Float);
-		addOutput(kOutput_Value, kVfxPlugType_Float, &outputValue);
-	}
-	
-	virtual void handleTrigger(const int inputSocketIndex) override
-	{
-		if (inputs[kInput_Value].isConnected())
-			outputValue = getInputFloat(kInput_Value, 0.f);
-		else
-			outputValue = getInputFloat(kInput_Trigger, 0.f);
-	}
-};
-
 struct VfxNodeBinaryOutput : VfxNodeBase
 {
 	enum Input
@@ -399,139 +337,6 @@ struct VfxNodeTransform2d : VfxNodeBase
 		r.MakeRotationZ(Calc::DegToRad(angle));
 		
 		transform.matrix = t * r * s;
-	}
-};
-
-struct VfxNodeTriggerTimer : VfxNodeBase
-{
-	enum Input
-	{
-		kInput_Interval,
-		kInput_COUNT
-	};
-	
-	enum Output
-	{
-		kOutput_Trigger,
-		kOutput_COUNT
-	};
-	
-	VfxTriggerData triggerCount;
-	
-	float timer;
-	
-	VfxNodeTriggerTimer()
-		: VfxNodeBase()
-		, triggerCount()
-		, timer(0.f)
-	{
-		resizeSockets(kInput_COUNT, kOutput_COUNT);
-		addInput(kInput_Interval, kVfxPlugType_Float);
-		addOutput(kOutput_Trigger, kVfxPlugType_Trigger, &triggerCount);
-		
-		triggerCount.setInt(0);
-	}
-	
-	virtual void tick(const float dt) override
-	{
-		const float interval = getInputFloat(kInput_Interval, 0.f);
-		
-		if (interval == 0.f)
-			timer = 0.f;
-		else
-		{
-			timer += dt;
-			
-			if (timer >= interval)
-			{
-				timer = 0.f;
-			
-				triggerCount.setInt(triggerCount.asInt() + 1);
-				
-				trigger(kOutput_Trigger);
-			}
-		}
-	}
-};
-
-struct VfxNodeLogicSwitch : VfxNodeBase
-{
-	enum Input
-	{
-		kInput_Trigger,
-		kInput_COUNT
-	};
-	
-	enum Output
-	{
-		kOutput_Value,
-		kOutput_COUNT
-	};
-	
-	float outputValue;
-	
-	VfxNodeLogicSwitch()
-		: VfxNodeBase()
-		, outputValue(0.f)
-	{
-		resizeSockets(kInput_COUNT, kOutput_COUNT);
-		addInput(kInput_Trigger, kVfxPlugType_Trigger);
-		addOutput(kOutput_Value, kVfxPlugType_Float, &outputValue);
-	}
-	
-	virtual void handleTrigger(const int inputSocketIndex) override
-	{
-		if (inputSocketIndex == kInput_Trigger)
-		{
-			outputValue = (outputValue == 0.f) ? 1.f : 0.f;
-		}
-	}
-};
-
-#include "Noise.h"
-
-struct VfxNodeNoiseSimplex2D : VfxNodeBase
-{
-	enum Input
-	{
-		kInput_X,
-		kInput_Y,
-		kInput_NumOctaves,
-		kInput_Persistence,
-		kInput_Scale,
-		kInput_COUNT
-	};
-	
-	enum Output
-	{
-		kOutput_Value,
-		kOutput_COUNT
-	};
-	
-	float outputValue;
-	
-	VfxNodeNoiseSimplex2D()
-		: VfxNodeBase()
-		, outputValue(0.f)
-	{
-		resizeSockets(kInput_COUNT, kOutput_COUNT);
-		addInput(kInput_X, kVfxPlugType_Float);
-		addInput(kInput_Y, kVfxPlugType_Float);
-		addInput(kInput_NumOctaves, kVfxPlugType_Int);
-		addInput(kInput_Persistence, kVfxPlugType_Float);
-		addInput(kInput_Scale, kVfxPlugType_Float);
-		addOutput(kOutput_Value, kVfxPlugType_Float, &outputValue);
-	}
-	
-	virtual void tick(const float dt) override
-	{
-		const float x = getInputFloat(kInput_X, 0.f);
-		const float y = getInputFloat(kInput_Y, 0.f);
-		const int numOctaves = getInputInt(kInput_NumOctaves, 4);
-		const float persistence = getInputFloat(kInput_Persistence, .5f);
-		const float scale = getInputFloat(kInput_Scale, 1.f);
-		
-		outputValue = scaled_octave_noise_2d(numOctaves, persistence, scale, 0.f, 1.f, x, y);
 	}
 };
 

@@ -72,6 +72,8 @@ void doTextBox(std::string & value, const char * name, const float dt);
 
 bool doCheckBox(bool & value, const char * name, const bool isCollapsable);
 
+bool doDrawer(bool & value, const char * name);
+
 void doLabel(const char * text, const float xAlign);
 void doBreak();
 

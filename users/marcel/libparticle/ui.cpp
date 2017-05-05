@@ -910,6 +910,73 @@ bool doCheckBox(bool & value, const char * name, const bool isCollapsable)
 	return value;
 }
 
+bool doDrawer(bool & value, const char * name)
+{
+	UiElem & elem = g_menu->getElem(name);
+	
+	const int kPadding = 5;
+	const int kCheckButtonSize = kCheckBoxHeight - kPadding * 2;
+	const int kCollapseIconSx = kCheckButtonSize;
+	const int kCollapseIconSy = kCheckButtonSize * 2 / 5;
+
+	const int x1 = g_drawX;
+	const int x2 = g_drawX + g_menu->sx;
+	const int y1 = g_drawY;
+	const int y2 = g_drawY + kCheckBoxHeight;
+
+	g_drawY += kCheckBoxHeight;
+
+	elem.tick(x1, y1, x2, y2);
+
+	if (g_doActions)
+	{
+		if (elem.isActive && elem.hasFocus && mouse.wentUp(BUTTON_LEFT))
+		{
+			value = !value;
+		}
+	}
+
+	if (g_doDraw)
+	{
+		setColor(kBackgroundFocusColor);
+		drawRect(x1, y1, x2, y2);
+		setColor(colorBlue);
+		drawRectLine(x1, y1, x2, y2);
+
+		setColor(colorWhite);
+		drawText((x1+x2)/2, (y1+y2)/2, kFontSize, 0.f, 0.f, "%s", name);
+
+		{
+			const float strokeSize = 1.25f;
+			const float x = x2 - kPadding - kCollapseIconSx;
+			const float y = (y1 + y2) / 2 - kCollapseIconSy / 2;
+			
+			if (value)
+			{
+				hqBegin(HQ_LINES);
+				{
+					setColor(colorWhite);
+					hqLine(x, y + kCollapseIconSy, strokeSize, x + kCollapseIconSx/2, y, strokeSize);
+					hqLine(x + kCollapseIconSx, y + kCollapseIconSy, strokeSize, x + kCollapseIconSx/2, y, strokeSize);
+				}
+				hqEnd();
+			}
+			else
+			{
+				hqBegin(HQ_LINES);
+				{
+					setColor(colorWhite);
+					hqLine(x, y, strokeSize, x + kCollapseIconSx/2, y + kCollapseIconSy, strokeSize);
+					hqLine(x + kCollapseIconSx, y, strokeSize, x + kCollapseIconSx/2, y + kCollapseIconSy, strokeSize);
+				}
+				hqEnd();
+			}
+		}
+	}
+
+	return value;
+}
+
 void doLabel(const char * text, const float xAlign)
 {
 	const int x1 = g_drawX;
@@ -1083,9 +1150,7 @@ void doParticleColor(ParticleColor & color, const char * name)
 		else
 			setColor(kBackgroundColor);
 		drawRect(x1, y1, x2, y2);
-		setColor(colorBlue);
-		drawRectLine(x1, y1, x2, y2);
-
+		
 		setColor(colorWhite);
 		drawUiRectCheckered(cx1, cy1, cx2, cy2, 4.f);
         setColorf(color.rgba[0], color.rgba[1], color.rgba[2], color.rgba[3]);
@@ -1093,6 +1158,9 @@ void doParticleColor(ParticleColor & color, const char * name)
 
 		setColor(colorWhite);
 		drawText(x1 + kPadding + kCheckButtonSize + kPadding, (y1+y2)/2, kFontSize, +1.f, 0.f, "%s", name);
+		
+		setColor(colorBlue);
+		drawRectLine(x1, y1, x2, y2);
 	}
 }
 
