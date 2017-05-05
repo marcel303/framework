@@ -15,6 +15,8 @@ namespace tinyxml2
 struct UiState;
 struct ParticleColor;
 
+struct GraphEdit;
+
 namespace GraphUi
 {
 	struct PropEdit;
@@ -358,6 +360,14 @@ struct GraphEdit_RealTimeConnection
 	};
 	
 	virtual ~GraphEdit_RealTimeConnection()
+	{
+	}
+	
+	virtual void loadBegin()
+	{
+	}
+	
+	virtual void loadEnd(GraphEdit & graphEdit)
 	{
 	}
 	

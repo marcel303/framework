@@ -1108,15 +1108,40 @@ static VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDef
 struct RealTimeConnection : GraphEdit_RealTimeConnection
 {
 	VfxGraph * vfxGraph;
+	VfxGraph ** vfxGraphPtr;
+	
+	bool isLoading;
 	
 	RealTimeConnection()
 		: GraphEdit_RealTimeConnection()
 		, vfxGraph(nullptr)
+		, vfxGraphPtr(nullptr)
+		, isLoading(false)
 	{
+	}
+	
+	virtual void loadBegin() override
+	{
+		isLoading = true;
+		
+		delete vfxGraph;
+		vfxGraph = nullptr;
+		*vfxGraphPtr = nullptr;
+	}
+	
+	virtual void loadEnd(GraphEdit & graphEdit) override
+	{
+		vfxGraph = constructVfxGraph(*graphEdit.graph, graphEdit.typeDefinitionLibrary);
+		*vfxGraphPtr = vfxGraph;
+		
+		isLoading = false;
 	}
 	
 	virtual void nodeAdd(const GraphNodeId nodeId, const std::string & typeName) override
 	{
+		if (isLoading)
+			return;
+		
 		logDebug("nodeAdd");
 		
 		Assert(vfxGraph != nullptr);
@@ -1153,6 +1178,9 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	
 	virtual void nodeRemove(const GraphNodeId nodeId) override
 	{
+		if (isLoading)
+			return;
+		
 		logDebug("nodeRemove");
 		
 		Assert(vfxGraph != nullptr);
@@ -1181,6 +1209,9 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	
 	virtual void linkAdd(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex) override
 	{
+		if (isLoading)
+			return;
+		
 		logDebug("linkAdd");
 		
 		Assert(vfxGraph != nullptr);
@@ -1240,6 +1271,9 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	
 	virtual void linkRemove(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex) override
 	{
+		if (isLoading)
+			return;
+		
 		logDebug("linkRemove");
 		
 		Assert(vfxGraph != nullptr);
@@ -1323,6 +1357,9 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	
 	virtual void setNodeIsPassthrough(const GraphNodeId nodeId, const bool isPassthrough) override
 	{
+		if (isLoading)
+			return;
+		
 		logDebug("setNodeIsPassthrough called for nodeId=%d, isPassthrough=%d", int(nodeId), int(isPassthrough));
 		
 		Assert(vfxGraph != nullptr);
@@ -1380,6 +1417,9 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	
 	virtual void setSrcSocketValue(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, const std::string & value) override
 	{
+		if (isLoading)
+			return;
+		
 		logDebug("setSrcSocketValue called for nodeId=%d, srcSocket=%s", int(nodeId), srcSocketName.c_str());
 		
 		Assert(vfxGraph != nullptr);
@@ -1471,6 +1511,9 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	
 	virtual bool getSrcSocketValue(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, std::string & value) override
 	{
+		if (isLoading)
+			return false;
+		
 		Assert(vfxGraph != nullptr);
 		if (vfxGraph == nullptr)
 			return false;
@@ -1497,6 +1540,9 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	
 	virtual bool getDstSocketValue(const GraphNodeId nodeId, const int dstSocketIndex, const std::string & dstSocketName, std::string & value) override
 	{
+		if (isLoading)
+			return false;
+		
 		Assert(vfxGraph != nullptr);
 		if (vfxGraph == nullptr)
 			return false;
@@ -1520,6 +1566,9 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	
 	virtual int nodeIsActive(const GraphNodeId nodeId) override
 	{
+		if (isLoading)
+			return false;
+		
 		Assert(vfxGraph != nullptr);
 		if (vfxGraph == nullptr)
 			return false;
@@ -1549,6 +1598,9 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	
 	virtual int linkIsActive(const GraphLinkId linkId) override
 	{
+		if (isLoading)
+			return false;
+		
 		return false;
 	}
 };
@@ -1611,6 +1663,7 @@ int main(int argc, char * argv[])
 		VfxGraph * vfxGraph = new VfxGraph();
 		
 		realTimeConnection->vfxGraph = vfxGraph;
+		realTimeConnection->vfxGraphPtr = &vfxGraph;
 		
 		while (!framework.quitRequested)
 		{
@@ -1630,21 +1683,7 @@ int main(int argc, char * argv[])
 			}
 			else if (keyboard.wentDown(SDLK_l))
 			{
-				graphEdit->realTimeConnection = nullptr;
-				
-				//
-				
 				graphEdit->load(FILENAME);
-				
-				//
-				
-				delete vfxGraph;
-				vfxGraph = nullptr;
-				
-				vfxGraph = constructVfxGraph(*graphEdit->graph, typeDefinitionLibrary);
-				
-				realTimeConnection->vfxGraph = vfxGraph;
-				graphEdit->realTimeConnection = realTimeConnection;
 			}
 			
 			// fixme : this should be handled by graph edit

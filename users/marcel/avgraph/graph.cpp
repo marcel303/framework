@@ -2247,6 +2247,11 @@ bool GraphEdit::load(const char * filename)
 	
 	//
 	
+	if (realTimeConnection)
+		realTimeConnection->loadBegin();
+	
+	//
+	
 	documentInfo = DocumentInfo();
 	
 	//
@@ -2294,6 +2299,11 @@ bool GraphEdit::load(const char * filename)
 	}
 	
 	uiState->reset();
+	
+	//
+	
+	if (realTimeConnection)
+		realTimeConnection->loadEnd(*this);
 	
 	//
 	
