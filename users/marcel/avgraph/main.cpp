@@ -128,7 +128,7 @@ todo : nodes :
 + add timer node
 - add sample.float node
 - add sample.image node. outputs r/g/b/a. specify normalized vs screen coords?
-- add impulse response node. measure input impulse response with oscilator at given frequency
++ add impulse response node. measure input impulse response with oscilator at given frequency
 + add sample and hold node. has trigger for input
 - add doValuePlotter to ui framework
 + add simplex noise node
@@ -140,6 +140,9 @@ todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
 - expose uniforms/inputs from FSFX pixel shader
 - iterate FSFX pixel shaders and generate type definitions based on FSFX name and exposed uniforms
+
+todo : framework :
+- optimize text rendering. use a dynamic texture atlas instead of one separate texture for each glyph. drawText should only emit a single draw call
 
 reference :
 + http://www.dsperados.com (company based in Utrecht ? send to Stijn)
@@ -549,6 +552,8 @@ struct DelayLine
 		samples.resize(numSamples);
 		
 		std::fill(samples.begin(), samples.end(), 0.f);
+		
+		nextWriteIndex = 0;
 	}
 	
 	int getLength() const
@@ -626,6 +631,7 @@ struct VfxNodeDelayLine : VfxNodeBase
 		: VfxNodeBase()
 		, outputValue()
 		, dtRemaining(0.f)
+		, delayLine()
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addInput(kInput_Value, kVfxPlugType_Float);
@@ -688,6 +694,110 @@ struct VfxNodeDelayLine : VfxNodeBase
 			outputValue[1] = 0.f;
 			outputValue[2] = 0.f;
 			outputValue[3] = 0.f;
+		}
+	}
+};
+
+struct VfxNodeImpulseResponse : VfxNodeBase
+{
+	const static int kSampleRate = 200;
+	
+	enum Input
+	{
+		kInput_Value,
+		kInput_Frequency,
+		kInput_COUNT
+	};
+	
+	enum Output
+	{
+		kOutput_ImpulseResponse,
+		kOutput_COUNT
+	};
+	
+	float impulseResponse;
+	
+	float dtRemaining;
+	
+	DelayLine delayLine;
+	
+	VfxNodeImpulseResponse()
+		: VfxNodeBase()
+		, impulseResponse(0.f)
+		, dtRemaining(0.f)
+		, delayLine()
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_Value, kVfxPlugType_Float);
+		addInput(kInput_Frequency, kVfxPlugType_Float);
+		addOutput(kOutput_ImpulseResponse, kVfxPlugType_Float, &impulseResponse);
+	}
+	
+	virtual void tick(const float dt) override
+	{
+		const float value = getInputFloat(kInput_Value, 0.f);
+		const float frequency = getInputFloat(kInput_Frequency, 0.f);
+		
+		if (frequency <= 0.f)
+		{
+			delayLine.setLength(0);
+		}
+		else
+		{
+			// set delay line length
+			
+			//const float delay = 1.f / frequency * 4.f;
+			const float delay = 1.f / frequency * 2.f;
+			
+			const int numSamples = delay * kSampleRate;
+			
+			if (numSamples != delayLine.getLength())
+			{
+				delayLine.setLength(numSamples);
+			}
+		}
+		
+		if (delayLine.getLength() > 0)
+		{
+			const float dtTotal = dtRemaining + dt;
+			
+			const int numSamples = std::floor(dtTotal * kSampleRate);
+			
+			dtRemaining = dtTotal - numSamples / float(kSampleRate);
+			
+			for (int i = 0; i < numSamples; ++i)
+				delayLine.push(value);
+		}
+		
+		//
+		
+		if (delayLine.getLength() > 0)
+		{
+			const double twoPi = 2.0 * M_PI;
+			
+			double measurementPhase = 0.0;
+			double measurementStep = twoPi * frequency / kSampleRate;
+			
+			double sumX = 0.0;
+			double sumY = 0.0;
+			
+			for (int i = 0; i < delayLine.getLength(); ++i)
+			{
+				const double value = delayLine.read(i);
+				
+				const double x = std::cos(measurementPhase);
+				const double y = std::sin(measurementPhase);
+				
+				sumX += value * x;
+				sumY += value * y;
+				
+				measurementPhase = std::fmod(measurementPhase + measurementStep, twoPi);
+			}
+			
+			const double avgX = sumX / delayLine.getLength();
+			const double avgY = sumY / delayLine.getLength();
+			
+			impulseResponse = float(std::hypot(avgX, avgY) * 2.0);
 		}
 	}
 };
@@ -975,6 +1085,7 @@ static VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string &
 	DefineNodeImpl("logic.switch", VfxNodeLogicSwitch)
 	DefineNodeImpl("noise.simplex2d", VfxNodeNoiseSimplex2D)
 	DefineNodeImpl("sample.delay", VfxNodeDelayLine)
+	DefineNodeImpl("impulse.response", VfxNodeImpulseResponse)
 	DefineNodeImpl("math.range", VfxNodeMapRange)
 	DefineNodeImpl("ease", VfxNodeMapEase)
 	DefineNodeImpl("math.add", VfxNodeMathAdd)
