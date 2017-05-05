@@ -7,6 +7,7 @@
 #include "../avpaint/video.h"
 
 #include "vfxGraph.h"
+#include "vfxTypes.h"
 
 #include "vfxNodes/vfxNodeBase.h"
 #include "vfxNodes/vfxNodeComposite.h"
@@ -319,69 +320,6 @@ struct VfxNodeTransform2d : VfxNodeBase
 		r.MakeRotationZ(Calc::DegToRad(angle));
 		
 		transform.matrix = t * r * s;
-	}
-};
-
-struct DelayLine
-{
-	std::vector<float> samples;
-	
-	int nextWriteIndex;
-	
-	DelayLine()
-		: samples()
-		, nextWriteIndex(0)
-	{
-	}
-	
-	void setLength(const int numSamples)
-	{
-		samples.resize(numSamples);
-		
-		std::fill(samples.begin(), samples.end(), 0.f);
-		
-		nextWriteIndex = 0;
-	}
-	
-	int getLength() const
-	{
-		return int(samples.size());
-	}
-	
-	void push(const float value)
-	{
-		fassert(!samples.empty());
-		
-		samples[nextWriteIndex] = value;
-		
-		nextWriteIndex++;
-		
-		if (nextWriteIndex == samples.size())
-			nextWriteIndex = 0;
-	}
-	
-	float read(const int offset) const
-	{
-		const int index = (samples.size() + nextWriteIndex + offset) % samples.size();
-		
-		return samples[index];
-	}
-	
-	float readInterp(const float offset) const
-	{
-		const float index = std::fmodf(samples.size() + nextWriteIndex + offset, samples.size());
-		const int index1 = int(index);
-		const int index2 = (index1 + 1) % samples.size();
-		
-		const float t2 = index - index1;
-		const float t1 = 1.f - t2;
-		
-		const float sample1 = samples[index1];
-		const float sample2 = samples[index2];
-		
-		const float sample = sample1 * t1 + sample2 * t2;
-		
-		return sample;
 	}
 };
 
