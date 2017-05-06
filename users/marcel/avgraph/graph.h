@@ -606,6 +606,8 @@ struct GraphEdit : GraphEditConnection
 		
 		History history;
 		
+		uint32_t texture;
+		
 		RealTimeSocketCapture()
 			: nodeId(kGraphNodeIdInvalid)
 			, srcSocketIndex(-1)
@@ -613,6 +615,7 @@ struct GraphEdit : GraphEditConnection
 			, value()
 			, hasValue(false)
 			, history()
+			, texture(0)
 		{
 		}
 	};

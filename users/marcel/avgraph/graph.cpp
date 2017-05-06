@@ -970,6 +970,11 @@ bool GraphEdit::tick(const float dt)
 						
 						realTimeSocketCapture.history.add(valueAsFloat);
 					}
+					
+					if (valueTypeDefinition->visualizer == "opengl-texture")
+					{
+						realTimeSocketCapture.texture = Parse::Int32(value);
+					}
 				}
 			}
 			
@@ -1015,6 +1020,11 @@ bool GraphEdit::tick(const float dt)
 						const float valueAsFloat = Parse::Float(value);
 						
 						realTimeSocketCapture.history.add(valueAsFloat);
+					}
+					
+					if (valueTypeDefinition->visualizer == "opengl-texture")
+					{
+						realTimeSocketCapture.texture = Parse::Int32(value);
 					}
 				}
 			}
@@ -2017,6 +2027,32 @@ void GraphEdit::draw() const
 					
 					//
 					
+					const bool hasTexture = realTimeSocketCapture.texture != 0;
+					
+					int textureSx = 200;
+					int textureSy = 200;
+					
+					if (hasTexture)
+					{
+						GLint baseTextureSx;
+						GLint baseTextureSy;
+						gxSetTexture(realTimeSocketCapture.texture);
+						glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &baseTextureSx);
+						glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &baseTextureSy);
+						gxSetTexture(0);
+						
+						const float scaleX = textureSx / float(baseTextureSx);
+						const float scaleY = textureSy / float(baseTextureSy);
+						const float scale = std::min(scaleX, scaleY);
+						textureSx = std::floor(baseTextureSx * scale);
+						textureSy = std::floor(baseTextureSy * scale);
+						
+						sx = std::max(sx, textureSx);
+						sy += kElemPadding + textureSy;
+					}
+					
+					//
+					
 					sx += kPadding * 2;
 					sy += kPadding;
 					
@@ -2075,6 +2111,27 @@ void GraphEdit::draw() const
 						drawRectLine(graphX, y, graphX + graphSx, y + graphSy);
 						
 						y += graphSy;
+					}
+					
+					//
+					
+					if (hasTexture)
+					{
+						y += kElemPadding;
+						
+						const int textureX = (sx - textureSx) / 2;
+						
+						setColor(colorWhite);
+						gxSetTexture(realTimeSocketCapture.texture);
+						{
+							drawRect(textureX, y, textureX + textureSx, y + textureSy);
+						}
+						gxSetTexture(0);
+						
+						setColor(colorWhite);
+						drawRectLine(textureX, y, textureX + textureSx, y + textureSy);
+						
+						y += textureSy;
 					}
 					
 					y += kPadding;
