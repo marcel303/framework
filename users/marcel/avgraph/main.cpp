@@ -124,6 +124,15 @@ todo :
 + save/load editor options to editor XML
 + add editorName to nodes and add a text box to edit it
 + add 2 texture inputs to fsfx node
+- integrate CCL bugfixes and changes
+- add Kinect and Kinect2 nodes
+- add ability to set node to horizontal or vertical mode. vertical mode hides socket names/is more condensed
+- add specialized visualizer node, that's present in the editor only. visualize values, but with lots of options for how to. also, make the node resizable
+- visualize active links and show direction of data flow
+- add buttons to manually trigger nodes
+	- like the BANG node in max
+	- add ability to trigger any input/output trigger (?)
+- investigate VVVV's ability to turn everything into vectors of values and to combine lists
 
 todo : nodes :
 + add ease node
