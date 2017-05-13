@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
 
+set(CMAKE_CXX_STANDARD 14)
+
 set(HAS_FRAMEWORK 1 PARENT_SCOPE)
 message("setting HAS_FRAMEWORK")
 
@@ -42,9 +44,17 @@ endif (APPLE)
 
 target_include_directories(framework PUBLIC "${PROJECT_SOURCE_DIR}")
 target_include_directories(framework PRIVATE "${PROJECT_SOURCE_DIR}/audiostream")
-target_include_directories(framework PUBLIC "${PROJECT_SOURCE_DIR}/win32/include")
-target_include_directories(framework PRIVATE "${PROJECT_SOURCE_DIR}/win32/include/freetype")
 target_include_directories(framework PUBLIC "${PROJECT_SOURCE_DIR}/../../../libgg") # because CMake sucks and only imports the PUBLIC include directories if you're DIRECTLY linking against a library
+
+if (MSVC)
+	target_include_directories(framework PUBLIC "${PROJECT_SOURCE_DIR}/win32/include")
+	target_include_directories(framework PRIVATE "${PROJECT_SOURCE_DIR}/win32/include/freetype")
+endif (MSVC)
+
+if (APPLE)
+	target_include_directories(framework PUBLIC "${PROJECT_SOURCE_DIR}/macos/include")
+	target_include_directories(framework PRIVATE "${PROJECT_SOURCE_DIR}/macos/include/freetype")
+endif (APPLE)
 
 add_dependencies(framework libgg)
 
