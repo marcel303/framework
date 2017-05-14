@@ -400,6 +400,10 @@ struct GraphEdit_RealTimeConnection
 		return false;
 	}
 	
+	virtual void setDstSocketValue(const GraphNodeId nodeId, const int dstSocketIndex, const std::string & dstSocketName, const std::string & value)
+	{
+	}
+	
 	virtual bool getDstSocketValue(const GraphNodeId nodeId, const int dstSocketIndex, const std::string & dstSocketName, std::string & value)
 	{
 		return false;

@@ -1225,6 +1225,34 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 		return getPlugValue(input, value);
 	}
 	
+	virtual void setDstSocketValue(const GraphNodeId nodeId, const int dstSocketIndex, const std::string & dstSocketName, const std::string & value) override
+	{
+		if (isLoading)
+			return;
+		
+		logDebug("setDstSocketValue called for nodeId=%d, dstSocket=%s", int(nodeId), dstSocketName.c_str());
+		
+		Assert(vfxGraph != nullptr);
+		if (vfxGraph == nullptr)
+			return;
+		
+		auto nodeItr = vfxGraph->nodes.find(nodeId);
+		
+		Assert(nodeItr != vfxGraph->nodes.end());
+		if (nodeItr == vfxGraph->nodes.end())
+			return;
+		
+		auto node = nodeItr->second;
+		
+		auto output = node->tryGetOutput(dstSocketIndex);
+		
+		Assert(output != nullptr);
+		if (output == nullptr)
+			return;
+		
+		setPlugValue(output, value);
+	}
+	
 	virtual bool getDstSocketValue(const GraphNodeId nodeId, const int dstSocketIndex, const std::string & dstSocketName, std::string & value) override
 	{
 		if (isLoading)

@@ -2717,11 +2717,21 @@ void GraphUi::PropEdit::doMenus(const bool doActions, const bool doDraw, const f
 				if (!outputSocket.isEditable)
 					continue;
 				
-				std::string & valueText = node->editorValue;
+				std::string & newValueText = node->editorValue;
+				
+				const std::string oldValueText = newValueText;
 				
 				const GraphEdit_ValueTypeDefinition * valueTypeDefinition = typeLibrary->tryGetValueTypeDefinition(outputSocket.typeName);
 				
-				doMenuItem(valueText, outputSocket.name, valueTypeDefinition == nullptr ? "textbox" : valueTypeDefinition->editor, dt, menuItemIndex, uiColors, kMaxUiColors);
+				const bool hasValue = doMenuItem(newValueText, outputSocket.name, valueTypeDefinition == nullptr ? "textbox" : valueTypeDefinition->editor, dt, menuItemIndex, uiColors, kMaxUiColors);
+				
+				if (graphEdit->realTimeConnection)
+				{
+					if (newValueText != oldValueText && !(!hasValue && oldValueText.empty()))
+					{
+						graphEdit->realTimeConnection->setDstSocketValue(nodeId, outputSocket.index, outputSocket.name, newValueText);
+					}
+				}
 				
 				menuItemIndex++;
 			}
