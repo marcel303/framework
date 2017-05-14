@@ -1,6 +1,6 @@
 #pragma once
 
-#define ENABLE_KINECT2 0
+#define ENABLE_KINECT2 1
 
 #if ENABLE_KINECT2
 
