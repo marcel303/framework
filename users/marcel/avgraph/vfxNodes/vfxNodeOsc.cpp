@@ -6,10 +6,6 @@
 
 #include <list>
 
-// todo : use port & ip address from socket inputs
-
-#define OSC_RECV_PORT 7000
-
 struct OscMessage
 {
 	OscMessage()
@@ -152,11 +148,11 @@ void VfxNodeOsc::init(const GraphNode & node)
 			// IpEndpointName::ANY_ADDRESS
 			
 			oscReceiveSocket = new UdpListeningReceiveSocket(IpEndpointName(ipAddress.c_str(), udpPort), oscPacketListener);
+			
+			logDebug("creating OSC receive thread");
+		
+			oscMessageThread = SDL_CreateThread(executeOscThread, "OSC thread", this);
 		}
-		
-		logDebug("creating OSC receive thread");
-		
-		oscMessageThread = SDL_CreateThread(executeOscThread, "OSC thread", this);
 	}
 	catch (std::exception & e)
 	{
