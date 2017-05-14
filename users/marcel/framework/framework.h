@@ -1129,6 +1129,8 @@ GLuint createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, 
 GLuint createTextureFromRGB8(const void * source, int sx, int sy, bool filter, bool clamp);
 GLuint createTextureFromR8(const void * source, int sx, int sy, bool filter, bool clamp);
 GLuint createTextureFromRGBF32(const void * source, int sx, int sy, bool filter, bool clamp);
+GLuint createTextureFromR16(const void * source, int sx, int sy, bool filter, bool clamp);
+GLuint createTextureFromR32F(const void * source, int sx, int sy, bool filter, bool clamp);
 
 void debugDrawText(float x, float y, int size, float alignX, float alignY, const char * format, ...);
 
