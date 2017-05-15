@@ -9,6 +9,7 @@ struct SDL_Thread;
 
 namespace libfreenect2
 {
+	class Frame;
 	class FrameListener;
 	class Freenect2;
 	class Freenect2Device;
@@ -31,8 +32,10 @@ struct Kinect2
 	bool hasVideo;
 	bool hasDepth;
 	
-	void * video;
-	void * depth;
+	void * frameMap;
+	
+	libfreenect2::Frame * video;
+	libfreenect2::Frame * depth;
 	
 	SDL_mutex * mutex;
 	SDL_Thread * thread;

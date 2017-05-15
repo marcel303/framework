@@ -1,5 +1,8 @@
 #include "kinect2.h"
 #include "vfxNodeKinect2.h"
+#include <libfreenect2/libfreenect2.hpp>
+
+#include <libfreenect2/frame_listener_impl.h> // fixme : remove
 
 VfxNodeKinect2::VfxNodeKinect2()
 	: VfxNodeBase()
@@ -57,7 +60,7 @@ void VfxNodeKinect2::tick(const float dt)
 				glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
 			}
 			else
-				videoImage.texture = createTextureFromRGB8(kinect->video, kinect->width, kinect->height, true, true);
+				videoImage.texture = createTextureFromRGB8(kinect->video->data, kinect->video->width, kinect->video->height, true, true);
 		}
 		
 		if (kinect->hasDepth)
@@ -74,11 +77,18 @@ void VfxNodeKinect2::tick(const float dt)
 				glDeleteTextures(1, &depthImage.texture);
 			}
 			
-			depthImage.texture = createTextureFromR16(kinect->depth, kinect->width, kinect->height, true, true);
+			depthImage.texture = createTextureFromR32F(kinect->depth->data, kinect->depth->width, kinect->depth->height, true, true);
 			
 			glBindTexture(GL_TEXTURE_2D, depthImage.texture);
 			GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
 			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+		}
+		
+		// fixme : remove. kinect2 should be able to handle double buffering for efficient threading.. !
+		if (kinect->frameMap != nullptr)
+		{
+			kinect->listener->release(*(libfreenect2::FrameMap*)kinect->frameMap);
+			kinect->frameMap = nullptr;
 		}
 	}
 	kinect->unlockBuffers();

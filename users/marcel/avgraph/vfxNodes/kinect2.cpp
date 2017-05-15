@@ -20,6 +20,7 @@ Kinect2::Kinect2()
 	, listener(nullptr)
 	, hasVideo(false)
 	, hasDepth(false)
+	, frameMap(nullptr)
 	, video(nullptr)
 	, depth(nullptr)
 	, mutex(nullptr)
@@ -74,28 +75,6 @@ bool Kinect2::init()
 	
 	mutex = SDL_CreateMutex();
 	thread = SDL_CreateThread(threadMain, "Kinect2 Thread", this);
-	
-#if 0
-	//
-	
-	threadInit();
-	
-	//
-	
-	bool stop = false;
-	
-	while (!stop)
-	{
-		if (keyboard.wentDown(SDLK_SPACE))
-			stop = true;
-		
-		threadProcess();
-	}
-	
-	//
-	
-	threadShut();
-#endif
 	
 	return true;
 }
@@ -183,6 +162,12 @@ void Kinect2::threadInit()
 
 void Kinect2::threadShut()
 {
+	if (frameMap != nullptr)
+	{
+		listener->release(*(libfreenect2::FrameMap*)frameMap);
+		frameMap = nullptr;
+	}
+	
 	if (device != nullptr)
 	{
 		device->stop();
@@ -207,65 +192,36 @@ bool Kinect2::threadProcess()
 	libfreenect2::Frame undistorted(512, 424, 4);
 	libfreenect2::Frame registered(512, 424, 4);
 
-	libfreenect2::FrameMap frames;
+	libfreenect2::FrameMap * frames = new libfreenect2::FrameMap();
 
-	if (!listener->waitForNewFrame(frames, 10*1000)) // 10 seconds
+	if (!listener->waitForNewFrame(*frames, 10*1000)) // 10 seconds
 	{
 		logError("timeout!");
 		shut();
 		return false;
 	}
-	
-#if 0
-	libfreenect2::Frame * rgb = frames[libfreenect2::Frame::Color];
-	libfreenect2::Frame * ir = frames[libfreenect2::Frame::Ir];
-	libfreenect2::Frame * depth = frames[libfreenect2::Frame::Depth];
-	
-	//registration->apply(rgb, depth, &undistorted, &registered);
-	
-	//if (depth->format == libfreenect2::Frame::Float)
-	//if (rgb->format == libfreenect2::Frame::BGRX)
-	{
-		framework.process();
-		
-		framework.beginDraw(0, 0, 0, 0);
-		{
-			//GLuint texture = createTextureFromRGBA8(rgb->data, rgb->width, rgb->height, true, true);
-			GLuint texture = createTextureFromR32F(depth->data, depth->width, depth->height, true, true);
-			//GLuint texture = createTextureFromR32F(registered.data, registered.width, registered.height, true, true);
-			
-			glBindTexture(GL_TEXTURE_2D, texture);
-			GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
-			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-			
-			gxSetTexture(texture);
-			{
-				const float s = std::pow(mouse.x / float(1024.f), 4.0);
-				gxColor4f(s, s, s, 1.f);
-				
-				const float x1 = 0.f;
-				const float y1 = 0.f;
-				const float x2 = depth->width;
-				const float y2 = depth->height;
-				
-				gxBegin(GL_QUADS);
-				{
-					gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
-					gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
-					gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y2);
-					gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y2);
-				}
-				gxEnd();
-			}
-			gxSetTexture(0);
-			
-			glDeleteTextures(1, &texture);
-		}
-		framework.endDraw();
-	}
-#endif
 
-	listener->release(frames);
+	lockBuffers();
+	{
+		if (frameMap != nullptr)
+		{
+			listener->release(*(libfreenect2::FrameMap*)frameMap);
+			frameMap = nullptr;
+		}
+		
+		frameMap = frames;
+		
+		//registration->apply(rgb, depth, &undistorted, &registered);
+		
+		video = (*frames)[libfreenect2::Frame::Color];
+		depth = (*frames)[libfreenect2::Frame::Depth];
+		
+		hasVideo = video != nullptr;
+		hasDepth = depth != nullptr;
+		
+		//libfreenect2::Frame * ir = (frames)[libfreenect2::Frame::Ir];
+	}
+	unlockBuffers();
 	
 	return true;
 }
