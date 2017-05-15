@@ -5,6 +5,11 @@
 #include "framework.h"
 #include "freenect_internal.h" // for access to freenect_device.registration.zero_plane_info
 
+Kinect1::~Kinect1()
+{
+	shut();
+}
+
 bool Kinect1::init()
 {
 	Assert(context == nullptr);
@@ -79,7 +84,7 @@ bool Kinect1::init()
 		}
 		
 		mutex = SDL_CreateMutex();
-		thread = SDL_CreateThread(threadMain, "Kinect Thread", this);
+		thread = SDL_CreateThread(threadMain, "Kinect1 Thread", this);
 		
 		//threadInit();
 		//threadMain();
@@ -100,6 +105,7 @@ bool Kinect1::shut()
 		SDL_UnlockMutex(mutex);
 		
 		SDL_WaitThread(thread, nullptr);
+		thread = nullptr;
 		
 		SDL_DestroyMutex(mutex);
 		mutex = nullptr;
@@ -297,8 +303,10 @@ int Kinect1::threadMain(void * userData)
 			break;
 		}
 		
-		self->threadProcess();
-	
+		if (self->threadProcess() == false)
+		{
+			logDebug("thread process failed");
+		}
 	}
 	
 	self->threadShut();

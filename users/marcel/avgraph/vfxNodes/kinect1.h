@@ -64,6 +64,8 @@ struct Kinect1
 	{
 	}
 	
+	~Kinect1();
+	
 	bool init();
 	bool shut();
 	
