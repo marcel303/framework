@@ -2858,10 +2858,10 @@ void Sprite::drawEx(float x, float y, float angle, float scaleX, float scaleY, b
 		#else
 			gxBegin(GL_QUADS);
 			{
-				gxTexCoord2f(0.f, 1.f); gxVertex2f(0.f, 0.f);
-				gxTexCoord2f(1.f, 1.f); gxVertex2f(rsx, 0.f);
-				gxTexCoord2f(1.f, 0.f); gxVertex2f(rsx, rsy);
-				gxTexCoord2f(0.f, 0.f); gxVertex2f(0.f, rsy);
+				gxTexCoord2f(0.f, 0.f); gxVertex2f(0.f, 0.f);
+				gxTexCoord2f(1.f, 0.f); gxVertex2f(rsx, 0.f);
+				gxTexCoord2f(1.f, 1.f); gxVertex2f(rsx, rsy);
+				gxTexCoord2f(0.f, 1.f); gxVertex2f(0.f, rsy);
 			}
 			gxEnd();
 		#endif
@@ -4428,8 +4428,11 @@ void applyTransformWithViewportSize(const float sx, const float sy)
 		{
 			gxLoadIdentity();
 			
-			// flip Y axis so the vertical axis runs top to bottom
-			gxScalef(1.f, -1.f, 1.f);
+			if (surfaceStackSize == 0)
+			{
+				// flip Y axis so the vertical axis runs top to bottom
+				gxScalef(1.f, -1.f, 1.f);
+			}
 		
 			// convert from (0,0),(1,1) to (-1,-1),(+1+1)
 			gxTranslatef(-1.f, -1.f, 0.f);
@@ -4802,10 +4805,10 @@ void drawRect(float x1, float y1, float x2, float y2)
 {
 	gxBegin(GL_QUADS);
 	{
-		gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y1);
-		gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y1);
-		gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y2);
-		gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y2);
+		gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
+		gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
+		gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y2);
+		gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y2);
 	}
 	gxEnd();
 }
@@ -4814,10 +4817,10 @@ void drawRectLine(float x1, float y1, float x2, float y2)
 {
 	gxBegin(GL_LINE_LOOP);
 	{
-		gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y1);
-		gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y1);
-		gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y2);
-		gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y2);
+		gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
+		gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
+		gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y2);
+		gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y2);
 	}
 	gxEnd();
 }
