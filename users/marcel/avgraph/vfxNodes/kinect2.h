@@ -4,6 +4,9 @@
 
 #if ENABLE_KINECT2
 
+struct SDL_mutex;
+struct SDL_Thread;
+
 namespace libfreenect2
 {
 	class FrameListener;
@@ -31,6 +34,10 @@ struct Kinect2
 	void * video;
 	void * depth;
 	
+	SDL_mutex * mutex;
+	SDL_Thread * thread;
+	bool stopThread;
+	
 	Kinect2();
 	~Kinect2();
 	
@@ -43,6 +50,8 @@ struct Kinect2
 	void threadInit();
 	void threadShut();
 	bool threadProcess();
+	
+	static int threadMain(void * userData);
 };
 
 #endif

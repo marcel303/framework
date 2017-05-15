@@ -22,6 +22,9 @@ Kinect2::Kinect2()
 	, hasDepth(false)
 	, video(nullptr)
 	, depth(nullptr)
+	, mutex(nullptr)
+	, thread(nullptr)
+	, stopThread(false)
 {
 }
 
@@ -32,8 +35,9 @@ Kinect2::~Kinect2()
 
 bool Kinect2::init()
 {
-	//libfreenect2::setGlobalLogger(libfreenect2::createConsoleLogger(libfreenect2::Logger::Debug));
+	libfreenect2::setGlobalLogger(libfreenect2::createConsoleLogger(libfreenect2::Logger::Warning));
 	
+	Assert(freenect2 == nullptr);
 	freenect2 = new libfreenect2::Freenect2();
 	
 	if (freenect2->enumerateDevices() == 0)
@@ -50,9 +54,10 @@ bool Kinect2::init()
 		serial = freenect2->getDefaultDeviceSerialNumber();
 	}
 	
-	//pipeline = new libfreenect2::CpuPacketPipeline();
+	Assert(pipeline == nullptr);
 	pipeline = new libfreenect2::OpenCLPacketPipeline();
 	
+	Assert(device == nullptr);
 	device = freenect2->openDevice(serial, pipeline);
 	
 	if (device == nullptr)
@@ -64,6 +69,15 @@ bool Kinect2::init()
 	
 	//
 	
+	Assert(mutex == nullptr);
+	Assert(thread == nullptr);
+	
+	mutex = SDL_CreateMutex();
+	thread = SDL_CreateThread(threadMain, "Kinect2 Thread", this);
+	
+#if 0
+	//
+	
 	threadInit();
 	
 	//
@@ -72,27 +86,50 @@ bool Kinect2::init()
 	
 	while (!stop)
 	{
+		if (keyboard.wentDown(SDLK_SPACE))
+			stop = true;
+		
 		threadProcess();
 	}
 	
 	//
 	
 	threadShut();
+#endif
 	
 	return true;
 }
 
 bool Kinect2::shut()
 {
+	if (thread != nullptr)
+	{
+		SDL_LockMutex(mutex);
+		{
+			stopThread = true;
+		}
+		SDL_UnlockMutex(mutex);
+		
+		SDL_WaitThread(thread, nullptr);
+		thread = nullptr;
+		
+		SDL_DestroyMutex(mutex);
+		mutex = nullptr;
+		
+		stopThread = false;
+	}
+	
 	return true;
 }
 
 void Kinect2::lockBuffers()
 {
+	SDL_LockMutex(mutex);
 }
 
 void Kinect2::unlockBuffers()
 {
+	SDL_UnlockMutex(mutex);
 }
 
 void Kinect2::threadInit()
@@ -107,10 +144,14 @@ void Kinect2::threadInit()
 	if (doDepth)
 		types |= libfreenect2::Frame::Ir | libfreenect2::Frame::Depth;
 	
+	Assert(listener == nullptr);
 	listener = new libfreenect2::SyncMultiFrameListener(types);
 	
-	device->setColorFrameListener(listener);
-	device->setIrAndDepthFrameListener(listener);
+	if (doColor)
+		device->setColorFrameListener(listener);
+	
+	if (doDepth)
+		device->setIrAndDepthFrameListener(listener);
 	
 	if (doColor && doDepth)
 	{
@@ -133,7 +174,8 @@ void Kinect2::threadInit()
 	
 	logDebug("device serial: %s", device->getSerialNumber().c_str());
 	logDebug("device firmware: %s", device->getFirmwareVersion().c_str());
-
+	
+	Assert(registration == nullptr);
 	registration = new libfreenect2::Registration(
 		device->getIrCameraParams(),
 		device->getColorCameraParams());
@@ -153,8 +195,8 @@ void Kinect2::threadShut()
 	delete listener;
 	listener = nullptr;
 	
-	delete pipeline;
-	pipeline = nullptr;
+	//delete pipeline;
+	//pipeline = nullptr;
 	
 	delete freenect2;
 	freenect2 = nullptr;
@@ -174,6 +216,7 @@ bool Kinect2::threadProcess()
 		return false;
 	}
 	
+#if 0
 	libfreenect2::Frame * rgb = frames[libfreenect2::Frame::Color];
 	libfreenect2::Frame * ir = frames[libfreenect2::Frame::Ir];
 	libfreenect2::Frame * depth = frames[libfreenect2::Frame::Depth];
@@ -220,8 +263,43 @@ bool Kinect2::threadProcess()
 		}
 		framework.endDraw();
 	}
-	
+#endif
+
 	listener->release(frames);
+	
+	return true;
+}
+
+int Kinect2::threadMain(void * userData)
+{
+	Kinect2 * self = (Kinect2*)userData;
+	
+	self->threadInit();
+	
+	for (;;)
+	{
+		bool stop = false;
+		
+		SDL_LockMutex(self->mutex);
+		{
+			stop = self->stopThread;
+		}
+		SDL_UnlockMutex(self->mutex);
+		
+		if (stop)
+		{
+			break;
+		}
+		
+		if (self->threadProcess() == false)
+		{
+			logDebug("thread process failed");
+		}
+	}
+	
+	self->threadShut();
+	
+	return 0;
 }
 
 #endif
