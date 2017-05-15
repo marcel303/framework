@@ -13,6 +13,8 @@
 #include "vfxNodes/vfxNodeComposite.h"
 #include "vfxNodes/vfxNodeDisplay.h"
 #include "vfxNodes/vfxNodeFsfx.h"
+#include "vfxNodes/vfxNodeKinect1.h"
+#include "vfxNodes/vfxNodeKinect2.h"
 #include "vfxNodes/vfxNodeLeapMotion.h"
 #include "vfxNodes/vfxNodeLiteral.h"
 #include "vfxNodes/vfxNodeLogicSwitch.h"
@@ -619,6 +621,14 @@ static VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string &
 	else if (typeName == "leap")
 	{
 		vfxNode = new VfxNodeLeapMotion();
+	}
+	else if (typeName == "kinect1")
+	{
+		vfxNode = new VfxNodeKinect1();
+	}
+	else if (typeName == "kinect2")
+	{
+		vfxNode = new VfxNodeKinect2();
 	}
 	else if (typeName == "osc")
 	{
