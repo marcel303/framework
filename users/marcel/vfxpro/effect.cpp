@@ -1400,14 +1400,14 @@ void Effect_Video::draw()
 				setShader(shader);
 				shader.setTexture("colormap", 0, texture, true, true);
 				setColorf(1.f, 1.f, 1.f, m_alpha);
-				drawRect(0, m_mediaPlayer.textureSy, m_mediaPlayer.textureSx, 0);
+				drawRect(0, 0, m_mediaPlayer.textureSx, m_mediaPlayer.textureSy);
 				clearShader();
 			}
 			else
 			{
 				setColorf(1.f, 1.f, 1.f, m_alpha);
 				gxSetTexture(texture);
-				drawRect(0, m_mediaPlayer.textureSy, m_mediaPlayer.textureSx, 0);
+				drawRect(0, 0, m_mediaPlayer.textureSx, m_mediaPlayer.textureSy);
 				gxSetTexture(0);
 			}
 		}
@@ -1531,14 +1531,14 @@ void Effect_VideoLoop::draw()
 				setShader(shader);
 				shader.setTexture("colormap", 0, texture, true, true);
 				shader.setImmediate("alpha", m_alpha);
-				drawRect(0, sy, sx, 0);
+				drawRect(0, 0, sx, sy);
 				clearShader();
 			}
 			else
 			{
 				setColorf(1.f, 1.f, 1.f, m_alpha);
 				gxSetTexture(texture);
-				drawRect(0, sy, sx, 0);
+				drawRect(0, 0, sx, sy);
 				gxSetTexture(0);
 			}
 		}
@@ -1936,8 +1936,8 @@ void Effect_Blit::transformCoords(float x, float y, bool addSize, float & out_x,
 		srcY = virtualToScreenY(srcY);
 	}
 
-	out_u =       srcX / SCREEN_SX;
-	out_v = 1.f - srcY / SCREEN_SY;
+	out_u = srcX / SCREEN_SX;
+	out_v = srcY / SCREEN_SY;
 
 	out_x = dstX;
 	out_y = dstY;
@@ -2086,10 +2086,10 @@ void Effect_Blocks::draw()
 
 		gxBegin(GL_QUADS);
 		{
-			gxTexCoord2f(0.f, 1.f); gxVertex2f(b.x - sx, b.y - sy);
-			gxTexCoord2f(1.f, 1.f); gxVertex2f(b.x + sx, b.y - sy);
-			gxTexCoord2f(1.f, 0.f); gxVertex2f(b.x + sx, b.y + sy);
-			gxTexCoord2f(0.f, 0.f); gxVertex2f(b.x - sx, b.y + sy);
+			gxTexCoord2f(0.f, 0.f); gxVertex2f(b.x - sx, b.y - sy);
+			gxTexCoord2f(1.f, 0.f); gxVertex2f(b.x + sx, b.y - sy);
+			gxTexCoord2f(1.f, 1.f); gxVertex2f(b.x + sx, b.y + sy);
+			gxTexCoord2f(0.f, 1.f); gxVertex2f(b.x - sx, b.y + sy);
 		}
 		gxEnd();
 	}
@@ -3407,10 +3407,10 @@ void Effect_Sparklies::draw()
 				const float c_sx_2 = c * sx_2;
 				const float c_sy_2 = c * sy_2;
 
-				gxTexCoord2f(0.f, 1.f); gxVertex2f(x + (-c_sx_2 - s_sy_2), y + (+s_sx_2 - c_sy_2));
-				gxTexCoord2f(1.f, 1.f); gxVertex2f(x + (+c_sx_2 - s_sy_2), y + (-s_sx_2 - c_sy_2));
-				gxTexCoord2f(1.f, 0.f); gxVertex2f(x + (+c_sx_2 + s_sy_2), y + (-s_sx_2 + c_sy_2));
-				gxTexCoord2f(0.f, 0.f); gxVertex2f(x + (-c_sx_2 + s_sy_2), y + (+s_sx_2 + c_sy_2));
+				gxTexCoord2f(0.f, 0.f); gxVertex2f(x + (-c_sx_2 - s_sy_2), y + (+s_sx_2 - c_sy_2));
+				gxTexCoord2f(1.f, 0.f); gxVertex2f(x + (+c_sx_2 - s_sy_2), y + (-s_sx_2 - c_sy_2));
+				gxTexCoord2f(1.f, 1.f); gxVertex2f(x + (+c_sx_2 + s_sy_2), y + (-s_sx_2 + c_sy_2));
+				gxTexCoord2f(0.f, 1.f); gxVertex2f(x + (-c_sx_2 + s_sy_2), y + (+s_sx_2 + c_sy_2));
 			}
 		}
 	}
