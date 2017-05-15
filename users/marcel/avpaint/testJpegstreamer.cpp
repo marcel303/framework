@@ -1,4 +1,4 @@
-#define DO_JPEGSEQUENCE 0
+#define DO_JPEGSEQUENCE 1
 #define STREAM_ID "b"
 #define NUM_JPEG_LOOPS 4
 
@@ -754,7 +754,7 @@ struct JpegLoop
 		JpegLoadData data;
 		data.buffer = *dstBuffer;
 		data.bufferSize = *dstBufferSize;
-		data.flipY = true;
+		//data.flipY = true;
 		
 		const bool hasImage = loadImage_turbojpeg(filename, data, fileBuffer, fileBufferSize);
 		
