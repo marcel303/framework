@@ -1568,6 +1568,11 @@ bool GraphEdit::tick(const float dt)
 			
 			//
 			
+			if (!node.isEnabled)
+				continue;
+			
+			//
+			
 			const int activity = realTimeConnection == nullptr ? 0 : realTimeConnection->nodeIsActive(node.id);
 			
 			if (activity & GraphEdit_RealTimeConnection::kActivity_OneShot)
