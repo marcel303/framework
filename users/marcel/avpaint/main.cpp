@@ -2,6 +2,7 @@
 #include "framework.h"
 #include "leapstate.h"
 #include "StringEx.h"
+#include "TweenFloat.h"
 #include "videoloop.h"
 
 #if ENABLE_LEAPMOTION
