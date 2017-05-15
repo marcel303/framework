@@ -4,8 +4,9 @@
 
 #include "framework.h"
 
+#include "kinect2FrameListener.h"
+
 #include <libfreenect2/libfreenect2.hpp>
-#include <libfreenect2/frame_listener_impl.h>
 #include <libfreenect2/registration.h>
 #include <libfreenect2/packet_pipeline.h>
 #include <libfreenect2/logger.h>
@@ -18,11 +19,6 @@ Kinect2::Kinect2()
 	, pipeline(nullptr)
 	, registration(nullptr)
 	, listener(nullptr)
-	, hasVideo(false)
-	, hasDepth(false)
-	, frameMap(nullptr)
-	, video(nullptr)
-	, depth(nullptr)
 	, mutex(nullptr)
 	, thread(nullptr)
 	, stopThread(false)
@@ -101,16 +97,6 @@ bool Kinect2::shut()
 	return true;
 }
 
-void Kinect2::lockBuffers()
-{
-	SDL_LockMutex(mutex);
-}
-
-void Kinect2::unlockBuffers()
-{
-	SDL_UnlockMutex(mutex);
-}
-
 void Kinect2::threadInit()
 {
 	const bool doColor = false;
@@ -121,10 +107,11 @@ void Kinect2::threadInit()
 	if (doColor)
 		types |= libfreenect2::Frame::Color;
 	if (doDepth)
-		types |= libfreenect2::Frame::Ir | libfreenect2::Frame::Depth;
+		//types |= libfreenect2::Frame::Ir | libfreenect2::Frame::Depth;
+		types |= libfreenect2::Frame::Depth;
 	
 	Assert(listener == nullptr);
-	listener = new libfreenect2::SyncMultiFrameListener(types);
+	listener = new DoubleBufferedFrameListener(types);
 	
 	if (doColor)
 		device->setColorFrameListener(listener);
@@ -162,12 +149,6 @@ void Kinect2::threadInit()
 
 void Kinect2::threadShut()
 {
-	if (frameMap != nullptr)
-	{
-		listener->release(*(libfreenect2::FrameMap*)frameMap);
-		frameMap = nullptr;
-	}
-	
 	if (device != nullptr)
 	{
 		device->stop();
@@ -189,39 +170,8 @@ void Kinect2::threadShut()
 
 bool Kinect2::threadProcess()
 {
-	libfreenect2::Frame undistorted(512, 424, 4);
-	libfreenect2::Frame registered(512, 424, 4);
-
-	libfreenect2::FrameMap * frames = new libfreenect2::FrameMap();
-
-	if (!listener->waitForNewFrame(*frames, 10*1000)) // 10 seconds
-	{
-		logError("timeout!");
-		shut();
-		return false;
-	}
-
-	lockBuffers();
-	{
-		if (frameMap != nullptr)
-		{
-			listener->release(*(libfreenect2::FrameMap*)frameMap);
-			frameMap = nullptr;
-		}
-		
-		frameMap = frames;
-		
-		//registration->apply(rgb, depth, &undistorted, &registered);
-		
-		video = (*frames)[libfreenect2::Frame::Color];
-		depth = (*frames)[libfreenect2::Frame::Depth];
-		
-		hasVideo = video != nullptr;
-		hasDepth = depth != nullptr;
-		
-		//libfreenect2::Frame * ir = (frames)[libfreenect2::Frame::Ir];
-	}
-	unlockBuffers();
+	//libfreenect2::Frame undistorted(512, 424, 4);
+	//libfreenect2::Frame registered(512, 424, 4);
 	
 	return true;
 }
@@ -251,6 +201,8 @@ int Kinect2::threadMain(void * userData)
 		{
 			logDebug("thread process failed");
 		}
+		
+		SDL_Delay(100);
 	}
 	
 	self->threadShut();

@@ -15,8 +15,9 @@ namespace libfreenect2
 	class Freenect2Device;
 	class PacketPipeline;
 	class Registration;
-	class SyncMultiFrameListener;
 };
+
+struct DoubleBufferedFrameListener;
 
 struct Kinect2
 {
@@ -27,15 +28,7 @@ struct Kinect2
 	libfreenect2::Freenect2Device * device;
 	libfreenect2::PacketPipeline * pipeline;
 	libfreenect2::Registration * registration;
-	libfreenect2::SyncMultiFrameListener * listener;
-	
-	bool hasVideo;
-	bool hasDepth;
-	
-	void * frameMap;
-	
-	libfreenect2::Frame * video;
-	libfreenect2::Frame * depth;
+	DoubleBufferedFrameListener * listener;
 	
 	SDL_mutex * mutex;
 	SDL_Thread * thread;
@@ -46,9 +39,6 @@ struct Kinect2
 	
 	bool init();
 	bool shut();
-	
-	void lockBuffers();
-	void unlockBuffers();
 	
 	void threadInit();
 	void threadShut();

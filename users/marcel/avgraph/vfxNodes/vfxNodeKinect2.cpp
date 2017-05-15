@@ -1,4 +1,5 @@
 #include "kinect2.h"
+#include "kinect2FrameListener.h"
 #include "vfxNodeKinect2.h"
 #include <libfreenect2/libfreenect2.hpp>
 
@@ -37,12 +38,10 @@ void VfxNodeKinect2::init(const GraphNode & node)
 
 void VfxNodeKinect2::tick(const float dt)
 {
-	kinect->lockBuffers();
+	kinect->listener->lockBuffers();
 	{
-		if (kinect->hasVideo)
+		if (kinect->listener->video)
 		{
-			kinect->hasVideo = false;
-			
 			// create texture from video data
 			
 			if (videoImage.texture != 0)
@@ -53,23 +52,23 @@ void VfxNodeKinect2::tick(const float dt)
 			//if (kinect->bIsVideoInfrared)
 			if (false)
 			{
-				videoImage.texture = createTextureFromR8(kinect->video, kinect->width, kinect->height, true, true);
+				videoImage.texture = createTextureFromR8(kinect->listener->video, kinect->listener->video->width, kinect->listener->video->height, true, true);
 				
 				glBindTexture(GL_TEXTURE_2D, videoImage.texture);
 				GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
 				glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
 			}
 			else
-				videoImage.texture = createTextureFromRGB8(kinect->video->data, kinect->video->width, kinect->video->height, true, true);
+				videoImage.texture = createTextureFromRGB8(kinect->listener->video->data, kinect->listener->video->width, kinect->listener->video->height, true, true);
+			
+			// consume video data
+			
+			delete kinect->listener->video;
+			kinect->listener->video = nullptr;
 		}
 		
-		if (kinect->hasDepth)
+		if (kinect->listener->depth)
 		{
-			kinect->hasDepth = false;
-			
-			// FREENECT_DEPTH_MM_MAX_VALUE
-			// FREENECT_DEPTH_MM_NO_VALUE
-			
 			// create texture from depth data
 			
 			if (depthImage.texture != 0)
@@ -77,19 +76,17 @@ void VfxNodeKinect2::tick(const float dt)
 				glDeleteTextures(1, &depthImage.texture);
 			}
 			
-			depthImage.texture = createTextureFromR32F(kinect->depth->data, kinect->depth->width, kinect->depth->height, true, true);
+			depthImage.texture = createTextureFromR32F(kinect->listener->depth->data, kinect->listener->depth->width, kinect->listener->depth->height, true, true);
 			
 			glBindTexture(GL_TEXTURE_2D, depthImage.texture);
 			GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
 			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-		}
-		
-		// fixme : remove. kinect2 should be able to handle double buffering for efficient threading.. !
-		if (kinect->frameMap != nullptr)
-		{
-			kinect->listener->release(*(libfreenect2::FrameMap*)kinect->frameMap);
-			kinect->frameMap = nullptr;
+			
+			// consume depth data
+			
+			delete kinect->listener->depth;
+			kinect->listener->depth = nullptr;
 		}
 	}
-	kinect->unlockBuffers();
+	kinect->listener->unlockBuffers();
 }
