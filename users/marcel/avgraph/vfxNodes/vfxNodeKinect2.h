@@ -22,8 +22,6 @@ struct VfxNodeKinect2 : VfxNodeBase
 
 	VfxImage_Texture videoImage;
 	VfxImage_Texture depthImage;
-	
-	Kinect2 * kinect;
 
 	VfxNodeKinect2();
 	virtual ~VfxNodeKinect2() override;

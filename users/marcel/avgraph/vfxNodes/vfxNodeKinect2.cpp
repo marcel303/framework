@@ -5,11 +5,15 @@
 
 #include <libfreenect2/frame_listener_impl.h> // fixme : remove
 
+static int initCount = 0;
+static Kinect2 * kinect = nullptr;
+static GLuint videoTexture = 0;
+static GLuint depthTexture = 0;
+
 VfxNodeKinect2::VfxNodeKinect2()
 	: VfxNodeBase()
 	, videoImage()
 	, depthImage()
-	, kinect(nullptr)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_DeviceId, kVfxPlugType_Int);
@@ -20,20 +24,44 @@ VfxNodeKinect2::VfxNodeKinect2()
 
 VfxNodeKinect2::~VfxNodeKinect2()
 {
-	kinect->shut();
-
-	delete kinect;
-	kinect = nullptr;	
+	initCount--;
+	
+	if (initCount == 0)
+	{
+		if (videoTexture != 0)
+		{
+			glDeleteTextures(1, &videoTexture);
+			videoTexture = 0;
+		}
+		
+		if (depthTexture != 0)
+		{
+			glDeleteTextures(1, &depthTexture);
+			depthTexture = 0;
+		}
+		
+		//
+		
+		kinect->shut();
+		
+		delete kinect;
+		kinect = nullptr;
+	}
 }
 
 void VfxNodeKinect2::init(const GraphNode & node)
 {
-	const bool videoIsInfrared = getInputBool(kInput_Infrared, false);
+	if (initCount == 0)
+	{
+		Assert(videoTexture == 0);
+		Assert(depthTexture == 0);
+		
+		kinect = new Kinect2();
+		
+		kinect->init();
+	}
 	
-	kinect = new Kinect2();
-	//kinect->bIsVideoInfrared = videoIsInfrared;
-	
-	kinect->init();
+	initCount++;
 }
 
 void VfxNodeKinect2::tick(const float dt)
@@ -44,14 +72,15 @@ void VfxNodeKinect2::tick(const float dt)
 		{
 			// create texture from video data
 			
-			if (videoImage.texture != 0)
+			if (videoTexture != 0)
 			{
-				glDeleteTextures(1, &videoImage.texture);
+				glDeleteTextures(1, &videoTexture);
+				videoTexture = 0;
 			}
 			
-			videoImage.texture = createTextureFromRGBA8(kinect->listener->video->data, kinect->listener->video->width, kinect->listener->video->height, true, true);
+			videoTexture = createTextureFromRGBA8(kinect->listener->video->data, kinect->listener->video->width, kinect->listener->video->height, true, true);
 			
-			glBindTexture(GL_TEXTURE_2D, videoImage.texture);
+			glBindTexture(GL_TEXTURE_2D, videoTexture);
 			GLint swizzleMask[4] = { GL_BLUE, GL_GREEN, GL_RED, GL_ONE };
 			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
 			
@@ -65,14 +94,15 @@ void VfxNodeKinect2::tick(const float dt)
 		{
 			// create texture from depth data
 			
-			if (depthImage.texture != 0)
+			if (depthTexture != 0)
 			{
-				glDeleteTextures(1, &depthImage.texture);
+				glDeleteTextures(1, &depthTexture);
+				depthTexture = 0;
 			}
 			
-			depthImage.texture = createTextureFromR32F(kinect->listener->depth->data, kinect->listener->depth->width, kinect->listener->depth->height, true, true);
+			depthTexture = createTextureFromR32F(kinect->listener->depth->data, kinect->listener->depth->width, kinect->listener->depth->height, true, true);
 			
-			glBindTexture(GL_TEXTURE_2D, depthImage.texture);
+			glBindTexture(GL_TEXTURE_2D, depthTexture);
 			GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
 			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
 			
@@ -83,4 +113,7 @@ void VfxNodeKinect2::tick(const float dt)
 		}
 	}
 	kinect->listener->unlockBuffers();
+	
+	videoImage.texture = videoTexture;
+	depthImage.texture = depthTexture;
 }
