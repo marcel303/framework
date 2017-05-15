@@ -35,8 +35,12 @@ endif (APPLE)
 
 add_library(framework ${source})
 
-target_compile_definitions(framework PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS)
+target_compile_definitions(framework PRIVATE NO_SDL_GLEXT)
 target_compile_definitions(framework PUBLIC $<$<CONFIG:Debug>:DEBUG>)
+
+if (MSVC)
+	target_compile_definitions(framework PRIVATE HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS)
+endif (MSVC)
 
 if (APPLE)
 	target_compile_definitions(framework PUBLIC MACOS)

@@ -55,7 +55,11 @@ source_group("ui" FILES ${source_ui})
 
 add_executable(avgraph ${source})
 
-target_compile_definitions(avgraph PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)
+target_compile_definitions(avgraph PRIVATE NO_SDL_GLEXT)
+
+if (WIN32)
+	target_compile_definitions(avgraph PRIVATE HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)
+endif (WIN32)
 
 target_include_directories(avgraph PRIVATE "${PROJECT_SOURCE_DIR}")
 
