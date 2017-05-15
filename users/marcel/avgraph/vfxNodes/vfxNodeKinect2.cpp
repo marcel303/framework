@@ -49,17 +49,11 @@ void VfxNodeKinect2::tick(const float dt)
 				glDeleteTextures(1, &videoImage.texture);
 			}
 			
-			//if (kinect->bIsVideoInfrared)
-			if (false)
-			{
-				videoImage.texture = createTextureFromR8(kinect->listener->video, kinect->listener->video->width, kinect->listener->video->height, true, true);
-				
-				glBindTexture(GL_TEXTURE_2D, videoImage.texture);
-				GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
-				glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-			}
-			else
-				videoImage.texture = createTextureFromRGB8(kinect->listener->video->data, kinect->listener->video->width, kinect->listener->video->height, true, true);
+			videoImage.texture = createTextureFromRGBA8(kinect->listener->video->data, kinect->listener->video->width, kinect->listener->video->height, true, true);
+			
+			glBindTexture(GL_TEXTURE_2D, videoImage.texture);
+			GLint swizzleMask[4] = { GL_BLUE, GL_GREEN, GL_RED, GL_ONE };
+			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
 			
 			// consume video data
 			

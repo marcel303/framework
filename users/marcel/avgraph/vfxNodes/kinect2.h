@@ -23,6 +23,8 @@ struct Kinect2
 {
 	const static int width = 512; // fixme
 	const static int height = 424;
+	const static bool doVideo = true;
+	const static bool doDepth = true;
 	
 	libfreenect2::Freenect2 * freenect2;
 	libfreenect2::Freenect2Device * device;
@@ -40,7 +42,8 @@ struct Kinect2
 	bool init();
 	bool shut();
 	
-	void threadInit();
+	bool threadInit();
+	bool threadInitImpl();
 	void threadShut();
 	bool threadProcess();
 	

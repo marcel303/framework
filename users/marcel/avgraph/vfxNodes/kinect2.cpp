@@ -34,13 +34,28 @@ bool Kinect2::init()
 {
 	libfreenect2::setGlobalLogger(libfreenect2::createConsoleLogger(libfreenect2::Logger::Warning));
 	
+	//
+	
 	Assert(freenect2 == nullptr);
 	freenect2 = new libfreenect2::Freenect2();
+	
+	//
+	
+	int types = 0;
+	
+	if (doVideo)
+		types |= libfreenect2::Frame::Color;
+	if (doDepth)
+		types |= libfreenect2::Frame::Depth;
+	
+	Assert(listener == nullptr);
+	listener = new DoubleBufferedFrameListener(types);
+	
+	//
 	
 	if (freenect2->enumerateDevices() == 0)
 	{
 		logDebug("no devices enumerated");
-		shut();
 		return false;
 	}
 	
@@ -49,6 +64,12 @@ bool Kinect2::init()
 	if (serial.empty())
 	{
 		serial = freenect2->getDefaultDeviceSerialNumber();
+	}
+	
+	if (serial.empty())
+	{
+		logDebug("no device found");
+		return false;
 	}
 	
 	Assert(pipeline == nullptr);
@@ -60,7 +81,6 @@ bool Kinect2::init()
 	if (device == nullptr)
 	{
 		logError("failed to create device");
-		shut();
 		return false;
 	}
 	
@@ -94,47 +114,52 @@ bool Kinect2::shut()
 		stopThread = false;
 	}
 	
+	delete listener;
+	listener = nullptr;
+	
+	delete device;
+	device = nullptr;
+	
+	delete freenect2;
+	freenect2 = nullptr;
+	
 	return true;
 }
 
-void Kinect2::threadInit()
+bool Kinect2::threadInit()
 {
-	const bool doColor = false;
-	const bool doDepth = true;
+	const bool result = threadInitImpl();
 	
-	int types = 0;
+	if (result == false)
+	{
+		threadShut();
+	}
 	
-	if (doColor)
-		types |= libfreenect2::Frame::Color;
-	if (doDepth)
-		//types |= libfreenect2::Frame::Ir | libfreenect2::Frame::Depth;
-		types |= libfreenect2::Frame::Depth;
-	
-	Assert(listener == nullptr);
-	listener = new DoubleBufferedFrameListener(types);
-	
-	if (doColor)
+	return result;
+}
+
+bool Kinect2::threadInitImpl()
+{
+	if (doVideo)
 		device->setColorFrameListener(listener);
 	
 	if (doDepth)
 		device->setIrAndDepthFrameListener(listener);
 	
-	if (doColor && doDepth)
+	if (doVideo && doDepth)
 	{
 		if (!device->start())
 		{
 			logError("failed to start device");
-			shut();
-			return;
+			return false;
 		}
 	}
 	else
 	{
-		if (!device->startStreams(doColor, doDepth))
+		if (!device->startStreams(doVideo, doDepth))
 		{
 			logError("failed to start device");
-			shut();
-			return;
+			return false;
 		}
 	}
 	
@@ -145,6 +170,8 @@ void Kinect2::threadInit()
 	registration = new libfreenect2::Registration(
 		device->getIrCameraParams(),
 		device->getColorCameraParams());
+	
+	return true;
 }
 
 void Kinect2::threadShut()
@@ -154,18 +181,6 @@ void Kinect2::threadShut()
 		device->stop();
 		device->close();
 	}
-	
-	delete device;
-	device = nullptr;
-	
-	delete listener;
-	listener = nullptr;
-	
-	//delete pipeline;
-	//pipeline = nullptr;
-	
-	delete freenect2;
-	freenect2 = nullptr;
 }
 
 bool Kinect2::threadProcess()
@@ -180,7 +195,10 @@ int Kinect2::threadMain(void * userData)
 {
 	Kinect2 * self = (Kinect2*)userData;
 	
-	self->threadInit();
+	if (self->threadInit() == false)
+	{
+		return -1;
+	}
 	
 	for (;;)
 	{
