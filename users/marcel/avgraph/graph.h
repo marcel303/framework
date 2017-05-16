@@ -26,6 +26,7 @@ namespace GraphUi
 //
 
 struct GraphEdit_TypeDefinitionLibrary;
+struct GraphEdit_Visualizer;
 
 //
 
@@ -35,9 +36,39 @@ typedef unsigned int GraphLinkId;
 extern GraphNodeId kGraphNodeIdInvalid;
 extern GraphLinkId kGraphLinkIdInvalid;
 
+enum GraphNodeType
+{
+	kGraphNodeType_Regular,
+	kGraphNodeType_Visualizer
+};
+
 struct GraphNode
 {
+	struct EditorVisualizer
+	{
+		GraphNodeId nodeId;
+		int srcSocketIndex;
+		int dstSocketIndex;
+		
+		GraphEdit_Visualizer * visualizer;
+		
+		mutable int sx;
+		mutable int sy;
+		
+		EditorVisualizer();
+		EditorVisualizer(const EditorVisualizer & other);
+		~EditorVisualizer();
+		
+		void allocVisualizer();
+		
+		// nodes (and thus also visualizers) get copied around. we want to copy parameters but not the
+		// dynamically allocated visualizer object. so we need a copy constructor/assignment operator
+		// to address this and copy the parameters manually and allocate a new visualizer object
+		void operator=(const EditorVisualizer & other);
+	};
+	
 	GraphNodeId id;
+	GraphNodeType nodeType;
 	std::string typeName;
 	bool isEnabled;
 	
@@ -56,13 +87,17 @@ struct GraphNode
 	float editorIsActiveAnimTimeRcp;
 	bool editorIsActiveContinuous;
 	
+	EditorVisualizer editorVisualizer;
+	
 	GraphNode();
 	
-	void tick(const float dt);
+	void tick(const GraphEdit & graphEdit, const float dt);
 	
 	void setIsEnabled(const bool isEnabled);
 	void setIsPassthrough(const bool isPassthrough);
 	void setIsFolded(const bool isFolded);
+	
+	void setVisualizer(const GraphNodeId nodeId, const int srcSocketIndex, const int dstSocketIndex);
 };
 
 struct GraphNodeSocketLink
@@ -350,6 +385,130 @@ struct GraphEdit_UndoHistory
 
 //
 
+struct GraphEdit_Visualizer
+{
+	struct History
+	{
+		const static int kMaxHistory = 100;
+		
+		float * history;
+		int maxHistorySize;
+		
+		int historySize;
+		int nextWriteIndex;
+		
+		float min;
+		float max;
+		
+		History()
+			: history(nullptr)
+			, maxHistorySize(0)
+			, historySize(0)
+			, nextWriteIndex(0)
+			, min(0.f)
+			, max(0.f)
+		{
+		}
+		
+		~History()
+		{
+			resize(0);
+		}
+		
+		void resize(const int _maxHistorySize)
+		{
+			delete[] history;
+			history = nullptr;
+			maxHistorySize = 0;
+			
+			if (_maxHistorySize > 0)
+			{
+				history = new float[_maxHistorySize];
+				maxHistorySize = _maxHistorySize;
+				historySize = 0;
+				nextWriteIndex = 0;
+				min = 0.f;
+				max = 0.f;
+			}
+		}
+		
+		void add(const float value)
+		{
+			if (historySize == 0)
+			{
+				min = value;
+				max = value;
+			}
+			else
+			{
+				if (value < min)
+					min = value;
+				if (value > max)
+					max = value;
+			}
+			
+			if (historySize < kMaxHistory)
+				historySize = historySize + 1;
+			
+			history[nextWriteIndex] = value;
+			
+			nextWriteIndex++;
+			
+			if (nextWriteIndex == kMaxHistory)
+				nextWriteIndex = 0;
+		}
+		
+		float getGraphValue(const int offset) const
+		{
+			const int index = (nextWriteIndex - historySize + offset + kMaxHistory) % kMaxHistory;
+			
+			return history[index];
+		}
+		
+		bool getRange(float & _min, float & _max) const
+		{
+			if (historySize == 0)
+				return false;
+			else
+			{
+				_min = min;
+				_max = max;
+				
+				return true;
+			}
+		}
+	};
+	
+	GraphNodeId nodeId;
+	int srcSocketIndex;
+	int dstSocketIndex;
+	
+	std::string value;
+	bool hasValue;
+	
+	History history;
+	
+	uint32_t texture;
+	
+	GraphEdit_Visualizer()
+		: nodeId(kGraphNodeIdInvalid)
+		, srcSocketIndex(-1)
+		, dstSocketIndex(-1)
+		, value()
+		, hasValue(false)
+		, history()
+		, texture(0)
+	{
+	}
+	
+	void init(const GraphNodeId _nodeId, const int _srcSocketIndex, const int _dstSocketIndex);
+	
+	void tick(const GraphEdit & graphEdit);
+	void draw(const GraphEdit & graphEdit, const bool isSelected, int * sx, int * sy) const;
+};
+
+//
+
 struct GraphEdit_RealTimeConnection
 {
 	enum ActivityFlags
@@ -535,91 +694,10 @@ struct GraphEdit : GraphEditConnection
 	
 	struct RealTimeSocketCapture
 	{
-		struct History
-		{
-			const static int kMaxHistory = 100;
-			
-			float history[kMaxHistory];
-			int historySize;
-			int nextWriteIndex;
-			
-			float min;
-			float max;
-			
-			History()
-				: historySize(0)
-				, nextWriteIndex(0)
-				, min(0.f)
-				, max(0.f)
-			{
-			}
-			
-			void add(const float value)
-			{
-				if (historySize == 0)
-				{
-					min = value;
-					max = value;
-				}
-				else
-				{
-					if (value < min)
-						min = value;
-					if (value > max)
-						max = value;
-				}
-				
-				if (historySize < kMaxHistory)
-					historySize = historySize + 1;
-				
-				history[nextWriteIndex] = value;
-				
-				nextWriteIndex++;
-				
-				if (nextWriteIndex == kMaxHistory)
-					nextWriteIndex = 0;
-			}
-			
-			float getGraphValue(const int offset) const
-			{
-				const int index = (nextWriteIndex - historySize + offset + kMaxHistory) % kMaxHistory;
-				
-				return history[index];
-			}
-			
-			bool getRange(float & _min, float & _max) const
-			{
-				if (historySize == 0)
-					return false;
-				else
-				{
-					_min = min;
-					_max = max;
-					
-					return true;
-				}
-			}
-		};
-		
-		GraphNodeId nodeId;
-		int srcSocketIndex;
-		int dstSocketIndex;
-		
-		std::string value;
-		bool hasValue;
-		
-		History history;
-		
-		uint32_t texture;
+		GraphEdit_Visualizer visualizer;
 		
 		RealTimeSocketCapture()
-			: nodeId(kGraphNodeIdInvalid)
-			, srcSocketIndex(-1)
-			, dstSocketIndex(-1)
-			, value()
-			, hasValue(false)
-			, history()
-			, texture(0)
+			: visualizer()
 		{
 		}
 	};
@@ -753,7 +831,8 @@ struct GraphEdit : GraphEditConnection
 	void redo();
 	
 	void draw() const;
-	void drawTypeUi(const GraphNode & node, const GraphEdit_TypeDefinition & typeDefinition) const;
+	void drawNode(const GraphNode & node, const GraphEdit_TypeDefinition & typeDefinition) const;
+	void drawVisualizer(const GraphNode & node) const;
 	
 	bool load(const char * filename);
 	bool save(const char * filename);

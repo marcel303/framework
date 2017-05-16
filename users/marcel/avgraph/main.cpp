@@ -130,6 +130,10 @@ todo :
 - add Kinect and Kinect2 nodes
 - add ability to set node to horizontal or vertical mode. vertical mode hides socket names/is more condensed
 - add specialized visualizer node, that's present in the editor only. visualize values, but with lots of options for how to. also, make the node resizable
+	- extract visualization code and make it reusable
+	- add support for resizing (special) node types
+	- add links to visualizer nodes too to visually 'document' what's the input
+	- figure out a way for the user to make a visualizer. maybe when dragging a link into empty space?
 - visualize active links and show direction of data flow
 - add buttons to manually trigger nodes
 	- like the BANG node in max
@@ -169,7 +173,7 @@ reference :
 
 */
 
-#define FILENAME "graph2.xml"
+#define FILENAME "kinect.xml"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -667,6 +671,11 @@ static VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDef
 	for (auto nodeItr : graph.nodes)
 	{
 		auto & node = nodeItr.second;
+		
+		if (node.nodeType != kGraphNodeType_Regular)
+		{
+			continue;
+		}
 		
 		if (node.isEnabled == false)
 		{
@@ -1389,6 +1398,12 @@ int main(int argc, char * argv[])
 		
 		realTimeConnection->vfxGraph = vfxGraph;
 		realTimeConnection->vfxGraphPtr = &vfxGraph;
+		
+		//
+		
+		graphEdit->load(FILENAME);
+		
+		//
 		
 		while (!framework.quitRequested)
 		{
