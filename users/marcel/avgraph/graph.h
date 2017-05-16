@@ -47,7 +47,9 @@ struct GraphNode
 	struct EditorVisualizer
 	{
 		GraphNodeId nodeId;
+		std::string srcSocketName;
 		int srcSocketIndex;
+		std::string dstSocketName;
 		int dstSocketIndex;
 		
 		GraphEdit_Visualizer * visualizer;
@@ -93,11 +95,13 @@ struct GraphNode
 	
 	void tick(const GraphEdit & graphEdit, const float dt);
 	
+	const std::string & getDisplayName() const;
+	
 	void setIsEnabled(const bool isEnabled);
 	void setIsPassthrough(const bool isPassthrough);
 	void setIsFolded(const bool isFolded);
 	
-	void setVisualizer(const GraphNodeId nodeId, const int srcSocketIndex, const int dstSocketIndex);
+	void setVisualizer(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex);
 };
 
 struct GraphNodeSocketLink
@@ -203,6 +207,7 @@ struct GraphEdit_TypeDefinition
 	{
 		std::string typeName;
 		std::string name;
+		std::string defaultValue;
 		
 		// ui
 		
@@ -480,7 +485,9 @@ struct GraphEdit_Visualizer
 	};
 	
 	GraphNodeId nodeId;
+	std::string srcSocketName;
 	int srcSocketIndex;
+	std::string dstSocketName;
 	int dstSocketIndex;
 	
 	std::string value;
@@ -492,7 +499,9 @@ struct GraphEdit_Visualizer
 	
 	GraphEdit_Visualizer()
 		: nodeId(kGraphNodeIdInvalid)
+		, srcSocketName()
 		, srcSocketIndex(-1)
+		, dstSocketName()
 		, dstSocketIndex(-1)
 		, value()
 		, hasValue(false)
@@ -501,10 +510,10 @@ struct GraphEdit_Visualizer
 	{
 	}
 	
-	void init(const GraphNodeId _nodeId, const int _srcSocketIndex, const int _dstSocketIndex);
+	void init(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex);
 	
 	void tick(const GraphEdit & graphEdit);
-	void draw(const GraphEdit & graphEdit, const bool isSelected, int * sx, int * sy) const;
+	void draw(const GraphEdit & graphEdit, const std::string & nodeName, const bool isSelected, int * sx, int * sy) const;
 };
 
 //
@@ -771,6 +780,7 @@ struct GraphEdit : GraphEditConnection
 	Graph * graph;
 	
 	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
+	GraphEdit_TypeDefinition typeDefinition_visualizer;
 	
 	GraphEdit_RealTimeConnection * realTimeConnection;
 	

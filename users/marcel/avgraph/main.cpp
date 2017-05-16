@@ -44,8 +44,8 @@ todo :
 + add VfxPicture type. type name = 'picture'
 + add VfxImage_Texture type. let VfxPicture use this type
 + add VfxVideo type. type name = 'video'
-- add default value to socket definitions
-	- add to XML
++ add default value to socket definitions
+	+ add to XML
 	- add ability to reset values to their default in UI
 + add editorValue to node inputs and outputs. let get*** methods use this value when plug is not connected
 + let graph editor set editorValue for nodes. only when editor is set on type definition
@@ -126,19 +126,24 @@ todo :
 + save/load editor options to editor XML
 + add editorName to nodes and add a text box to edit it
 + add 2 texture inputs to fsfx node
-- integrate CCL bugfixes and changes
-- add Kinect and Kinect2 nodes
++ integrate CCL bugfixes and changes
++ add Kinect and Kinect2 nodes
 - add ability to set node to horizontal or vertical mode. vertical mode hides socket names/is more condensed
 - add specialized visualizer node, that's present in the editor only. visualize values, but with lots of options for how to. also, make the node resizable
-	- extract visualization code and make it reusable
+	+ extract visualization code and make it reusable
 	- add support for resizing (special) node types
-	- add links to visualizer nodes too to visually 'document' what's the input
+	# add links to visualizer nodes too to visually 'document' what's the input (?)
+		+ add node names to visualizer caption
+		+ don't add links as it looks messy and not adding links adds less burden to organizing the visualizers the way you want to
 	- figure out a way for the user to make a visualizer. maybe when dragging a link into empty space?
 - visualize active links and show direction of data flow
 - add buttons to manually trigger nodes
 	- like the BANG node in max
 	- add ability to trigger any input/output trigger (?)
 - investigate VVVV's ability to turn everything into vectors of values and to combine lists
+- double click node to perform node-specific action
+	- add real-time editing callback for double click event
+	- open text editor for ps/vs when double clicking fsfx node
 
 todo : nodes :
 + add ease node
@@ -159,6 +164,11 @@ todo : nodes :
 + add binary counter node, outputting 4-8 bit values (1.f or 0.f)
 + add delay node. 4 inputs for delay. take max for delay buffer. delay buffer filled at say fixed 120 hz. 4 outputs delayed values
 - add quantize node
+- investigate how to render 2D and 3D shapes
+- investigate ways of composing/decomposing image data and masking
+	- is it possible to create a texture sharing data with a base texture and to just change to rgba swizzling?
+- add timeline node (?). trigger events based on markers on a timeline
+	- add (re)start input trigger
 
 todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
@@ -584,7 +594,7 @@ static VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string &
 	DefineNodeImpl("noise.simplex2d", VfxNodeNoiseSimplex2D)
 	DefineNodeImpl("sample.delay", VfxNodeDelayLine)
 	DefineNodeImpl("impulse.response", VfxNodeImpulseResponse)
-	DefineNodeImpl("math.range", VfxNodeMapRange)
+	DefineNodeImpl("map.range", VfxNodeMapRange)
 	DefineNodeImpl("ease", VfxNodeMapEase)
 	DefineNodeImpl("math.add", VfxNodeMathAdd)
 	DefineNodeImpl("math.sub", VfxNodeMathSub)
