@@ -701,7 +701,7 @@ static VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDef
 		}
 		else
 		{
-			vfxNode->isPassthrough = node.editorIsPassthrough;
+			vfxNode->isPassthrough = node.isPassthrough;
 			
 			vfxNode->initSelf(node);
 			

@@ -73,6 +73,7 @@ struct GraphNode
 	GraphNodeType nodeType;
 	std::string typeName;
 	bool isEnabled;
+	bool isPassthrough;
 	
 	std::string editorName;
 	float editorX;
@@ -83,7 +84,6 @@ struct GraphNode
 	
 	std::map<std::string, std::string> editorInputValues;
 	std::string editorValue;
-	bool editorIsPassthrough;
 	
 	float editorIsActiveAnimTime; // real-time connection node activation animation
 	float editorIsActiveAnimTimeRcp;

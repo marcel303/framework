@@ -170,6 +170,7 @@ GraphNode::GraphNode()
 	, nodeType(kGraphNodeType_Regular)
 	, typeName()
 	, isEnabled(true)
+	, isPassthrough(false)
 	, editorName()
 	, editorX(0.f)
 	, editorY(0.f)
@@ -178,7 +179,6 @@ GraphNode::GraphNode()
 	, editorFoldAnimTimeRcp(0.f)
 	, editorInputValues()
 	, editorValue()
-	, editorIsPassthrough(false)
 	, editorIsActiveAnimTime(0.f)
 	, editorIsActiveAnimTimeRcp(0.f)
 	, editorIsActiveContinuous(false)
@@ -207,9 +207,9 @@ void GraphNode::setIsEnabled(const bool _isEnabled)
 	isEnabled = _isEnabled;
 }
 
-void GraphNode::setIsPassthrough(const bool isPassthrough)
+void GraphNode::setIsPassthrough(const bool _isPassthrough)
 {
-	editorIsPassthrough = isPassthrough;
+	isPassthrough = _isPassthrough;
 }
 
 void GraphNode::setIsFolded(const bool isFolded)
@@ -411,12 +411,12 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 		node.nodeType = (GraphNodeType)intAttrib(xmlNode, "nodeType", node.nodeType);
 		node.typeName = stringAttrib(xmlNode, "typeName", node.typeName.c_str());
 		node.isEnabled = boolAttrib(xmlNode, "enabled", node.isEnabled);
+		node.isPassthrough = boolAttrib(xmlNode, "passthrough", node.isPassthrough);
 		node.editorName = stringAttrib(xmlNode, "editorName", node.editorName.c_str());
 		node.editorX = floatAttrib(xmlNode, "editorX", node.editorX);
 		node.editorY = floatAttrib(xmlNode, "editorY", node.editorY);
 		node.editorIsFolded = boolAttrib(xmlNode, "folded", node.editorIsFolded);
 		node.editorValue = stringAttrib(xmlNode, "editorValue", node.editorValue.c_str());
-		node.editorIsPassthrough = boolAttrib(xmlNode, "editorIsPassthrough", node.editorIsPassthrough);
 		
 		if (node.nodeType == kGraphNodeType_Visualizer)
 		{
@@ -451,10 +451,8 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 		link.isEnabled = boolAttrib(xmlLink, "enabled", link.isEnabled);
 		link.srcNodeId = intAttrib(xmlLink, "srcNodeId", link.srcNodeId);
 		link.srcNodeSocketName = stringAttrib(xmlLink, "srcNodeSocketName", link.srcNodeSocketName.c_str());
-		link.srcNodeSocketIndex = intAttrib(xmlLink, "srcNodeSocketIndex", link.srcNodeSocketIndex);
 		link.dstNodeId = intAttrib(xmlLink, "dstNodeId", link.dstNodeId);
 		link.dstNodeSocketName = stringAttrib(xmlLink, "dstNodeSocketName", link.dstNodeSocketName.c_str());
-		link.dstNodeSocketIndex = intAttrib(xmlLink, "dstNodeSocketIndex", link.dstNodeSocketIndex);
 		
 		addLink(link, false);
 		
@@ -620,6 +618,9 @@ bool Graph::saveXml(XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary
 			
 			if (!node.isEnabled)
 				xmlGraph.PushAttribute("enabled", node.isEnabled);
+			if (node.isPassthrough)
+				xmlGraph.PushAttribute("passthrough", node.isPassthrough);
+			
 			if (!node.editorName.empty())
 				xmlGraph.PushAttribute("editorName", node.editorName.c_str());
 			
@@ -630,8 +631,6 @@ bool Graph::saveXml(XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary
 				xmlGraph.PushAttribute("folded", node.editorIsFolded);
 			if (!node.editorValue.empty())
 				xmlGraph.PushAttribute("editorValue", node.editorValue.c_str());
-			if (node.editorIsPassthrough)
-				xmlGraph.PushAttribute("editorIsPassthrough", node.editorIsPassthrough);
 			
 			if (node.nodeType == kGraphNodeType_Visualizer)
 			{
@@ -669,10 +668,8 @@ bool Graph::saveXml(XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary
 			xmlGraph.PushAttribute("enabled", link.isEnabled);
 			xmlGraph.PushAttribute("srcNodeId", link.srcNodeId);
 			xmlGraph.PushAttribute("srcNodeSocketName", link.srcNodeSocketName.c_str());
-			xmlGraph.PushAttribute("srcNodeSocketIndex", link.srcNodeSocketIndex);
 			xmlGraph.PushAttribute("dstNodeId", link.dstNodeId);
 			xmlGraph.PushAttribute("dstNodeSocketName", link.dstNodeSocketName.c_str());
-			xmlGraph.PushAttribute("dstNodeSocketIndex", link.dstNodeSocketIndex);
 		}
 		xmlGraph.CloseElement();
 	}
@@ -1674,11 +1671,14 @@ bool GraphEdit::tick(const float dt)
 					Assert(node != nullptr);
 					if (node != nullptr)
 					{
-						GraphNode newNode;
+						GraphNode newNode = *node;
 						newNode.id = graph->allocNodeId();
-						newNode.typeName = node->typeName;
+						newNode.isEnabled = true;
+						newNode.isPassthrough = false;
 						newNode.editorX = node->editorX + kGridSize;
 						newNode.editorY = node->editorY + kGridSize;
+						newNode.editorInputValues.clear();
+						newNode.editorValue.clear();
 						
 						if (keyboard.isDown(SDLK_LGUI))
 						{
@@ -1711,7 +1711,7 @@ bool GraphEdit::tick(const float dt)
 					auto node = tryGetNode(nodeId);
 					
 					if (node != nullptr)
-						allPassthrough &= node->editorIsPassthrough;
+						allPassthrough &= node->isPassthrough;
 				}
 				
 				for (auto nodeId : selectedNodes)
@@ -1725,7 +1725,10 @@ bool GraphEdit::tick(const float dt)
 						
 						if (realTimeConnection != nullptr)
 						{
-							realTimeConnection->setNodeIsPassthrough(node->id, node->editorIsPassthrough);
+							if (node->nodeType == kGraphNodeType_Regular)
+							{
+								realTimeConnection->setNodeIsPassthrough(node->id, node->isPassthrough);
+							}
 						}
 					}
 				}
@@ -2555,7 +2558,7 @@ void GraphEdit::drawNode(const GraphNode & node, const GraphEdit_TypeDefinition 
 	setColor(255, 255, 255);
 	drawText(definition.sx/2, 12, 14, 0.f, 0.f, "%s", !node.editorName.empty() ? node.editorName.c_str() : definition.displayName.empty() ? definition.typeName.c_str() : definition.displayName.c_str());
 	
-	if (node.editorIsPassthrough)
+	if (node.isPassthrough)
 	{
 		setFont("calibri.ttf");
 		setColor(127, 127, 255);
