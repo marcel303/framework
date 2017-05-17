@@ -1623,8 +1623,8 @@ bool GraphEdit::tick(const float dt)
 						{
 							socketConnect.srcNodeId = hitTestResult.node->id;
 							socketConnect.srcNodeSocket = hitTestResult.nodeHitTestResult.inputSocket;
-							state = kState_InputSocketConnect;
 							
+							state = kState_InputSocketConnect;
 							break;
 						}
 						
@@ -1632,30 +1632,8 @@ bool GraphEdit::tick(const float dt)
 						{
 							socketConnect.dstNodeId = hitTestResult.node->id;
 							socketConnect.dstNodeSocket = hitTestResult.nodeHitTestResult.outputSocket;
+							
 							state = kState_OutputSocketConnect;
-							
-							// todo : remove
-							GraphNode node;
-							node.id = graph->allocNodeId();
-							node.editorX = mousePosition.x;
-							node.editorY = mousePosition.y;
-							node.setVisualizer(socketConnect.dstNodeId, String::Empty, -1, socketConnect.dstNodeSocket->name, socketConnect.dstNodeSocket->index);
-							graph->addNode(node);
-							
-						#if 0 // todo : remove ?
-							GraphNodeSocketLink link;
-							link.id = graph->allocLinkId();
-							link.srcNodeId = node.id;
-							link.srcNodeSocketName = "";
-							link.srcNodeSocketIndex = 0;
-							link.dstNodeId = socketConnect.dstNodeId;
-							link.dstNodeSocketName = socketConnect.dstNodeSocket->name;
-							link.dstNodeSocketIndex = socketConnect.dstNodeSocket->index;
-							graph->addLink(link, false);
-						#endif
-							
-							selectNode(node.id);
-							
 							break;
 						}
 						
@@ -1688,6 +1666,37 @@ bool GraphEdit::tick(const float dt)
 					
 					state = kState_NodeSelect;
 					break;
+				}
+			}
+			
+			if (mouse.wentDown(BUTTON_RIGHT))
+			{
+				HitTestResult hitTestResult;
+				
+				if (hitTest(mousePosition.x, mousePosition.y, hitTestResult))
+				{
+					if (hitTestResult.hasNode)
+					{
+						if (hitTestResult.nodeHitTestResult.inputSocket)
+						{
+							tryAddVisualizer(
+								hitTestResult.node->id,
+								hitTestResult.nodeHitTestResult.inputSocket->name,
+								hitTestResult.nodeHitTestResult.inputSocket->index,
+								String::Empty, -1,
+								mousePosition.x, mousePosition.y, true);
+						}
+						
+						if (hitTestResult.nodeHitTestResult.outputSocket)
+						{
+							tryAddVisualizer(
+								hitTestResult.node->id,
+								String::Empty, -1,
+								hitTestResult.nodeHitTestResult.outputSocket->name,
+								hitTestResult.nodeHitTestResult.outputSocket->index,
+								mousePosition.x, mousePosition.y, true);
+						}
+					}
 				}
 			}
 			
@@ -2178,6 +2187,17 @@ void GraphEdit::socketConnectEnd()
 		
 		selectLink(link.id);
 	}
+	else if (socketConnect.dstNodeId != kGraphNodeIdInvalid)
+	{
+		if (keyboard.isDown(SDLK_LGUI) || keyboard.isDown(SDLK_RGUI))
+		{
+			tryAddVisualizer(
+				socketConnect.dstNodeId,
+				String::Empty, -1,
+				socketConnect.dstNodeSocket->name, socketConnect.dstNodeSocket->index,
+				mousePosition.x, mousePosition.y, true);
+		}
+	}
 	
 	socketConnect = SocketConnect();
 }
@@ -2263,7 +2283,46 @@ bool GraphEdit::tryAddNode(const std::string & typeName, const int x, const int 
 		
 		graph->addNode(node);
 		
-		selectNode(node.id);
+		if (select)
+		{
+			selectNode(node.id);
+		}
+		
+		return true;
+	}
+}
+
+bool GraphEdit::tryAddVisualizer(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex, const int x, const int y, const bool select)
+{
+	if (nodeId == kGraphNodeIdInvalid)
+	{
+		return false;
+	}
+	else
+	{
+		GraphNode node;
+		node.id = graph->allocNodeId();
+		node.editorX = mousePosition.x;
+		node.editorY = mousePosition.y;
+		node.setVisualizer(nodeId, srcSocketName, srcSocketIndex, dstSocketName, dstSocketIndex);
+		graph->addNode(node);
+		
+	#if 0 // todo : remove ?
+		GraphNodeSocketLink link;
+		link.id = graph->allocLinkId();
+		link.srcNodeId = node.id;
+		link.srcNodeSocketName = "";
+		link.srcNodeSocketIndex = 0;
+		link.dstNodeId = socketConnect.dstNodeId;
+		link.dstNodeSocketName = socketConnect.dstNodeSocket->name;
+		link.dstNodeSocketIndex = socketConnect.dstNodeSocket->index;
+		graph->addLink(link, false);
+	#endif
+		
+		if (select)
+		{
+			selectNode(node.id);
+		}
 		
 		return true;
 	}

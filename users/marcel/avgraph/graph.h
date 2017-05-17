@@ -836,6 +836,7 @@ struct GraphEdit : GraphEditConnection
 	void doEditorOptions(const float dt);
 	
 	bool tryAddNode(const std::string & typeName, const int x, const int y, const bool select);
+	bool tryAddVisualizer(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex, const int x, const int y, const bool select);
 	
 	void selectNode(const GraphNodeId nodeId);
 	void selectLink(const GraphLinkId linkId);

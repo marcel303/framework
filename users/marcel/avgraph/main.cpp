@@ -145,6 +145,7 @@ todo :
 	- add real-time editing callback for double click event
 	- open text editor for ps/vs when double clicking fsfx node
 - rename _TypeDefinition to _NodeTypeDefinition
+- make time node use local vfx graph instance time, not process time
 
 todo : nodes :
 + add ease node
