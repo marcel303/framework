@@ -459,46 +459,6 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 		nextLinkId = std::max(nextLinkId, link.id + 1);
 	}
 	
-#if 0
-	// todo : remove this once conversion is complete : fixup socket input and output names
-	
-	for (auto & linkItr : links)
-	{
-		auto & link = linkItr.second;
-		
-		auto srcNode = tryGetNode(link.srcNodeId);
-		
-		if (srcNode)
-		{
-			auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(srcNode->typeName);
-			
-			if (typeDefinition)
-			{
-				if (link.srcNodeSocketIndex >= 0 && link.srcNodeSocketIndex < typeDefinition->inputSockets.size())
-				{
-					link.srcNodeSocketName = typeDefinition->inputSockets[link.srcNodeSocketIndex].name;
-					printf("srcNodeSocketName: %s\n", link.srcNodeSocketName.c_str());
-				}
-			}
-		}
-		
-		auto dstNode = tryGetNode(link.dstNodeId);
-		
-		if (dstNode)
-		{
-			auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(dstNode->typeName);
-			
-			if (typeDefinition)
-			{
-				if (link.dstNodeSocketIndex >= 0 && link.dstNodeSocketIndex < typeDefinition->outputSockets.size())
-				{
-					link.dstNodeSocketName = typeDefinition->outputSockets[link.dstNodeSocketIndex].name;
-					printf("dstNodeSocketName: %s\n", link.dstNodeSocketName.c_str());
-				}
-			}
-		}
-	}
-#else
 	// determine socket indices based on src and dst socket names. These indices are used for rendering and also when saving to XML for easier instantiation in the run-time.
 	
 	for (auto & linkItr : links)
@@ -591,7 +551,6 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 			node.editorVisualizer.allocVisualizer();
 		}
 	}
-#endif
 
 	return true;
 }
