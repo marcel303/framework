@@ -28,8 +28,11 @@
 #include "vfxNodes/vfxNodePicture.h"
 #include "vfxNodes/vfxNodeSampleAndHold.h"
 #include "vfxNodes/vfxNodeTime.h"
+#include "vfxNodes/vfxNodeTriggerOnchange.h"
 #include "vfxNodes/vfxNodeTriggerTimer.h"
+#include "vfxNodes/vfxNodeTriggerTreshold.h"
 #include "vfxNodes/vfxNodeVideo.h"
+#include "vfxNodes/vfxNodeXinput.h"
 
 #include "../libparticle/ui.h"
 
@@ -182,6 +185,7 @@ todo : nodes :
 + add restart signal to oscillators ? if input > 0, reset phase
 - add 'window' size to square oscillator
 - add spring node ? does physical simulation of a spring
+- add node which sends a trigger when a value changes. send new value as trigger data
 
 todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
@@ -602,7 +606,9 @@ static VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string &
 	DefineNodeImpl("sampleAndHold", VfxNodeSampleAndHold)
 	DefineNodeImpl("binary.output", VfxNodeBinaryOutput)
 	DefineNodeImpl("transform.2d", VfxNodeTransform2d)
+	DefineNodeImpl("trigger.onchange", VfxNodeTriggerOnchange)
 	DefineNodeImpl("trigger.timer", VfxNodeTriggerTimer)
+	DefineNodeImpl("trigger.treshold", VfxNodeTriggerTreshold)
 	DefineNodeImpl("logic.switch", VfxNodeLogicSwitch)
 	DefineNodeImpl("noise.simplex2d", VfxNodeNoiseSimplex2D)
 	DefineNodeImpl("sample.delay", VfxNodeDelayLine)
@@ -644,6 +650,10 @@ static VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string &
 	else if (typeName == "mouse")
 	{
 		vfxNode = new VfxNodeMouse();
+	}
+	else if (typeName == "xinput")
+	{
+		vfxNode = new VfxNodeXinput();
 	}
 	else if (typeName == "leap")
 	{

@@ -1,3 +1,4 @@
+#include "framework.h"
 #include "vfxNodeMouse.h"
 
 VfxNodeMouse::VfxNodeMouse()
