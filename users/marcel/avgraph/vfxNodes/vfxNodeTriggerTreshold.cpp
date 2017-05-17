@@ -9,6 +9,8 @@ VfxNodeTriggerTreshold::VfxNodeTriggerTreshold()
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Value, kVfxPlugType_Float);
 	addInput(kInput_Treshold, kVfxPlugType_Float);
+	addInput(kInput_UpValue, kVfxPlugType_Float);
+	addInput(kInput_DownValue, kVfxPlugType_Float);
 	addOutput(kOutput_WentUp, kVfxPlugType_Trigger, &wentUp);
 	addOutput(kOutput_WentDown, kVfxPlugType_Trigger, &wentDown);
 	
@@ -31,13 +33,17 @@ void VfxNodeTriggerTreshold::tick(const float dt)
 
 	if (wasDown && isUp)
 	{
-		wentUp.setFloat(treshold);
+		const float triggerValue = getInputFloat(kInput_UpValue, 0.f);
+		
+		wentUp.setFloat(triggerValue);
 		trigger(kOutput_WentUp);
 	}
 
 	if (wasUp && isDown)
 	{
-		wentDown.setFloat(treshold);
+		const float triggerValue = getInputFloat(kInput_DownValue, 0.f);
+		
+		wentDown.setFloat(triggerValue);
 		trigger(kOutput_WentDown);
 	}
 }

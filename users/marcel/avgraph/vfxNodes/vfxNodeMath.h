@@ -39,7 +39,9 @@ struct VfxNodeMath : VfxNodeBase
 		kType_Ceil,
 		kType_Round,
 		kType_Sign,
-		kType_Hypot
+		kType_Hypot,
+		kType_Pitch,
+		kType_Semitone
 	};
 	
 	Type type;
@@ -194,6 +196,20 @@ struct VfxNodeMath : VfxNodeBase
 		case kType_Hypot:
 			r = std::hypot(a, b);
 			break;
+		
+		case kType_Pitch:
+			if (isPassthrough)
+				r = a;
+			else
+				r = a * std::powf(2.f, b);
+			break;
+			
+		case kType_Semitone:
+			if (isPassthrough)
+				r = a;
+			else
+				r = a * std::powf(2.f, b / 12.f);
+			break;
 		}
 		
 		result = r;
@@ -229,5 +245,7 @@ DefineMathNode(VfxNodeMathCeil, kType_Ceil);
 DefineMathNode(VfxNodeMathRound, kType_Round);
 DefineMathNode(VfxNodeMathSign, kType_Sign);
 DefineMathNode(VfxNodeMathHypot, kType_Hypot);
+DefineMathNode(VfxNodeMathPitch, kType_Pitch);
+DefineMathNode(VfxNodeMathSemitone, kType_Semitone);
 
 #undef DefineMathNode

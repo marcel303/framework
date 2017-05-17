@@ -25,6 +25,7 @@
 #include "vfxNodes/vfxNodeNoiseSimplex2D.h"
 #include "vfxNodes/vfxNodeOsc.h"
 #include "vfxNodes/vfxNodeOscPrimitives.h"
+#include "vfxNodes/vfxNodePhysicalSpring.h"
 #include "vfxNodes/vfxNodePicture.h"
 #include "vfxNodes/vfxNodeSampleAndHold.h"
 #include "vfxNodes/vfxNodeTime.h"
@@ -132,13 +133,14 @@ todo :
 + integrate CCL bugfixes and changes
 + add Kinect and Kinect2 nodes
 - add ability to set node to horizontal or vertical mode. vertical mode hides socket names/is more condensed
-- add specialized visualizer node, that's present in the editor only. visualize values, but with lots of options for how to. also, make the node resizable
++ add specialized visualizer node, that's present in the editor only. visualize values, but with lots of options for how to. also, make the node resizable
 	+ extract visualization code and make it reusable
-	- add support for resizing (special) node types
+	+ add support for resizing (special) node types
 	# add links to visualizer nodes too to visually 'document' what's the input (?)
 		+ add node names to visualizer caption
 		+ don't add links as it looks messy and not adding links adds less burden to organizing the visualizers the way you want to
-	- figure out a way for the user to make a visualizer. maybe when dragging a link into empty space?
+	+ figure out a way for the user to make a visualizer. maybe when dragging a link into empty space?
+		+ add visualizer when right clicking on an in- or output socket
 - visualize active links and show direction of data flow
 - add buttons to manually trigger nodes
 	- like the BANG node in max
@@ -150,6 +152,7 @@ todo :
 - rename _TypeDefinition to _NodeTypeDefinition
 + make time node use local vfx graph instance time, not process time
 - add sub-graph container node. to help organize complex graphs
+- add mouse cursor to user interface
 
 todo : nodes :
 + add ease node
@@ -185,7 +188,9 @@ todo : nodes :
 + add restart signal to oscillators ? if input > 0, reset phase
 - add 'window' size to square oscillator
 - add spring node ? does physical simulation of a spring
-- add node which sends a trigger when a value changes. send new value as trigger data
++ add node which sends a trigger when a value changes. send new value as trigger data
++ add node which sends a trigger when a value crosses a treshold
++ add pitch and semitone nodes
 
 todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
@@ -613,6 +618,7 @@ static VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string &
 	DefineNodeImpl("noise.simplex2d", VfxNodeNoiseSimplex2D)
 	DefineNodeImpl("sample.delay", VfxNodeDelayLine)
 	DefineNodeImpl("impulse.response", VfxNodeImpulseResponse)
+	DefineNodeImpl("physical.spring", VfxNodePhysicalSpring)
 	DefineNodeImpl("map.range", VfxNodeMapRange)
 	DefineNodeImpl("ease", VfxNodeMapEase)
 	DefineNodeImpl("math.add", VfxNodeMathAdd)
@@ -635,6 +641,8 @@ static VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string &
 	DefineNodeImpl("math.round", VfxNodeMathRound)
 	DefineNodeImpl("math.sign", VfxNodeMathSign)
 	DefineNodeImpl("math.hypot", VfxNodeMathHypot)
+	DefineNodeImpl("math.pitch", VfxNodeMathPitch)
+	DefineNodeImpl("math.semitone", VfxNodeMathSemitone)
 	DefineNodeImpl("osc.sine", VfxNodeOscSine)
 	DefineNodeImpl("osc.saw", VfxNodeOscSaw)
 	DefineNodeImpl("osc.triangle", VfxNodeOscTriangle)
@@ -1099,7 +1107,7 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 		if (isLoading)
 			return;
 		
-		logDebug("setNodeIsPassthrough called for nodeId=%d, isPassthrough=%d", int(nodeId), int(isPassthrough));
+		//logDebug("setNodeIsPassthrough called for nodeId=%d, isPassthrough=%d", int(nodeId), int(isPassthrough));
 		
 		Assert(vfxGraph != nullptr);
 		if (vfxGraph == nullptr)
@@ -1159,7 +1167,7 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 		if (isLoading)
 			return;
 		
-		logDebug("setSrcSocketValue called for nodeId=%d, srcSocket=%s", int(nodeId), srcSocketName.c_str());
+		//logDebug("setSrcSocketValue called for nodeId=%d, srcSocket=%s", int(nodeId), srcSocketName.c_str());
 		
 		Assert(vfxGraph != nullptr);
 		if (vfxGraph == nullptr)
@@ -1282,7 +1290,7 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 		if (isLoading)
 			return;
 		
-		logDebug("setDstSocketValue called for nodeId=%d, dstSocket=%s", int(nodeId), dstSocketName.c_str());
+		//logDebug("setDstSocketValue called for nodeId=%d, dstSocket=%s", int(nodeId), dstSocketName.c_str());
 		
 		Assert(vfxGraph != nullptr);
 		if (vfxGraph == nullptr)
@@ -1372,6 +1380,124 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	}
 };
 
+#include "image.h"
+#include "Timer.h"
+
+static void testDotDetector()
+{
+	const char * filename = "polkadots.jpg";
+	
+	ImageData * image = loadImage(filename);
+	
+	if (image == nullptr)
+	{
+		logError("failed to load %s", filename);
+		return;
+	}
+	
+	struct Island
+	{
+		int totalX;
+		int totalY;
+		int numPixels;
+		
+		int x;
+		int y;
+	};
+	
+	const uint64_t t1 = g_TimerRT.TimeUS_get();
+	
+	const int kMaxIslands = 256;
+	Island islands[kMaxIslands];
+	int numIslands = 0;
+	
+	const int dtreshold = 20;
+	const int dtresholdSq = dtreshold * dtreshold;
+	
+	for (int y = 0; y < image->sy; ++y)
+	{
+		ImageData::Pixel * __restrict line = image->getLine(y);
+		
+		for (int x = 0; x < image->sx; ++x)
+		{
+			const int value = line[x].r;
+			
+			if (value < 32)
+			{
+				bool found = false;
+				
+				for (int i = 0; i < numIslands; ++i)
+				{
+					auto & island = islands[i];
+					
+					const int dx = x - island.x;
+					const int dy = y - island.y;
+					const int dsSq = dx * dx + dy * dy;
+					
+					if (dsSq < dtresholdSq)
+					{
+						found = true;
+						
+						island.totalX += x;
+						island.totalY += y;
+						island.numPixels++;
+						
+						island.x = island.totalX / island.numPixels;
+						island.y = island.totalY / island.numPixels;
+						
+						break;
+					}
+				}
+				
+				if (found == false)
+				{
+					if (numIslands < kMaxIslands)
+					{
+						Island & island = islands[numIslands];
+						
+						island.totalX = x;
+						island.totalY = y;
+						island.numPixels = 1;
+						
+						island.x = x;
+						island.y = y;
+					
+						numIslands++;
+					}
+				}
+			}
+		}
+	}
+	
+	const uint64_t t2 = g_TimerRT.TimeUS_get();
+	
+	printf("found %d islands. time=%lluus\n", numIslands, t2 - t1);
+	
+	do
+	{
+		framework.process();
+		
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			setColor(colorWhite);
+			Sprite(filename).draw();
+			
+			hqBegin(HQ_STROKED_CIRCLES);
+			{
+				for (int i = 0; i < numIslands; ++i)
+				{
+					auto & island = islands[i];
+					
+					setColor(colorRed);
+					hqStrokeCircle(island.x, island.y, dtreshold, 2.f);
+				}
+			}
+			hqEnd();
+		}
+		framework.endDraw();
+	} while (!keyboard.wentDown(SDLK_SPACE));
+}
+
 int main(int argc, char * argv[])
 {
 	//framework.waitForEvents = true;
@@ -1395,6 +1521,8 @@ int main(int argc, char * argv[])
 		//testFourier2d();
 		
 		//testImpulseResponseMeasurement();
+		
+		testDotDetector();
 		
 		//
 		

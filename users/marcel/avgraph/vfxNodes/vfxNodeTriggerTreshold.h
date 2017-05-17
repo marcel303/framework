@@ -8,6 +8,8 @@ struct VfxNodeTriggerTreshold : VfxNodeBase
 	{
 		kInput_Value,
 		kInput_Treshold,
+		kInput_UpValue,
+		kInput_DownValue,
 		kInput_COUNT
 	};
 	
