@@ -198,6 +198,26 @@ struct GraphEdit_ValueTypeDefinition
 	bool loadXml(const tinyxml2::XMLElement * xmlType);
 };
 
+struct GraphEdit_EnumDefinition
+{
+	struct Elem
+	{
+		int value;
+		std::string name;
+	};
+	
+	std::string enumName;
+	std::vector<Elem> enumElems;
+	
+	GraphEdit_EnumDefinition()
+		: enumName()
+		, enumElems()
+	{
+	}
+	
+	bool loadXml(const tinyxml2::XMLElement * xmlType);
+};
+
 struct GraphEdit_TypeDefinition
 {
 	struct InputSocket;
@@ -206,6 +226,7 @@ struct GraphEdit_TypeDefinition
 	struct InputSocket
 	{
 		std::string typeName;
+		std::string enumName;
 		std::string name;
 		std::string defaultValue;
 		
@@ -218,6 +239,7 @@ struct GraphEdit_TypeDefinition
 		
 		InputSocket()
 			: typeName()
+			, enumName()
 			, name()
 			, index(-1)
 			, px(0.f)
@@ -304,10 +326,12 @@ struct GraphEdit_TypeDefinition
 struct GraphEdit_TypeDefinitionLibrary
 {
 	std::map<std::string, GraphEdit_ValueTypeDefinition> valueTypeDefinitions;
+	std::map<std::string, GraphEdit_EnumDefinition> enumDefinitions;
 	std::map<std::string, GraphEdit_TypeDefinition> typeDefinitions;
 	
 	GraphEdit_TypeDefinitionLibrary()
 		: valueTypeDefinitions()
+		, enumDefinitions()
 		, typeDefinitions()
 	{
 	}
@@ -318,6 +342,17 @@ struct GraphEdit_TypeDefinitionLibrary
 		auto i = valueTypeDefinitions.find(typeName);
 		
 		if (i != valueTypeDefinitions.end())
+			return &i->second;
+		else
+			return nullptr;
+	}
+	
+	// todo : move to cpp
+	const GraphEdit_EnumDefinition * tryGetEnumDefinition(const std::string & typeName) const
+	{
+		auto i = enumDefinitions.find(typeName);
+		
+		if (i != enumDefinitions.end())
 			return &i->second;
 		else
 			return nullptr;

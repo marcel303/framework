@@ -706,14 +706,54 @@ static Color toColor(const ParticleColor & particleColor)
 
 bool GraphEdit_ValueTypeDefinition::loadXml(const XMLElement * xmlType)
 {
+	bool result = true;
+	
 	typeName = stringAttrib(xmlType, "typeName", "");
+	result &= !typeName.empty();
 	
 	editor = stringAttrib(xmlType, "editor", "textbox");
 	editorMin = stringAttrib(xmlType, "editorMin", "0");
 	editorMax = stringAttrib(xmlType, "editorMax", "1");
 	visualizer = stringAttrib(xmlType, "visualizer", "");
 	
-	return true;
+	if (result == false)
+	{
+		*this = GraphEdit_ValueTypeDefinition();
+	}
+	
+	return result;
+}
+
+bool GraphEdit_EnumDefinition::loadXml(const XMLElement * xmlEnum)
+{
+	bool result = true;
+	
+	enumName = stringAttrib(xmlEnum, "name", "");
+	result &= !enumName.empty();
+	
+	int value = 0;
+	
+	for (const XMLElement * xmlElem = xmlEnum->FirstChildElement("elem"); xmlElem != nullptr; xmlElem = xmlElem->NextSiblingElement("elem"))
+	{
+		value = intAttrib(xmlElem, "value", value);
+		
+		Elem elem;
+		
+		elem.value = value;
+		elem.name = stringAttrib(xmlElem, "name", "");
+		result &= !elem.name.empty();
+		
+		enumElems.push_back(elem);
+		
+		value++;
+	}
+	
+	if (result == false)
+	{
+		*this = GraphEdit_EnumDefinition();
+	}
+	
+	return result;
 }
 
 bool GraphEdit_TypeDefinition::InputSocket::canConnectTo(const GraphEdit_TypeDefinition::OutputSocket & socket) const
@@ -847,7 +887,10 @@ bool GraphEdit_TypeDefinition::hitTest(const float x, const float y, const bool 
 
 bool GraphEdit_TypeDefinition::loadXml(const XMLElement * xmlType)
 {
+	bool result = true;
+	
 	typeName = stringAttrib(xmlType, "typeName", "");
+	result &= !typeName.empty();
 	
 	displayName = stringAttrib(xmlType, "displayName", "");
 	
@@ -855,10 +898,14 @@ bool GraphEdit_TypeDefinition::loadXml(const XMLElement * xmlType)
 	{
 		InputSocket socket;
 		socket.typeName = stringAttrib(xmlInput, "typeName", socket.typeName.c_str());
+		socket.enumName = stringAttrib(xmlInput, "enumName", socket.enumName.c_str());
 		socket.name = stringAttrib(xmlInput, "name", socket.name.c_str());
 		socket.defaultValue = stringAttrib(xmlInput, "default", socket.defaultValue.c_str());
 		
 		inputSockets.push_back(socket);
+		
+		result &= !socket.typeName.empty();
+		result &= !socket.name.empty();
 	}
 	
 	for (auto xmlOutput = xmlType->FirstChildElement("output"); xmlOutput != nullptr; xmlOutput = xmlOutput->NextSiblingElement("output"))
@@ -869,9 +916,17 @@ bool GraphEdit_TypeDefinition::loadXml(const XMLElement * xmlType)
 		socket.isEditable = boolAttrib(xmlOutput, "editable", socket.isEditable);
 		
 		outputSockets.push_back(socket);
+		
+		result &= !socket.typeName.empty();
+		result &= !socket.name.empty();
 	}
 	
-	return true;
+	if (result == false)
+	{
+		*this = GraphEdit_TypeDefinition();
+	}
+	
+	return result;
 }
 
 //
@@ -889,6 +944,17 @@ bool GraphEdit_TypeDefinitionLibrary::loadXml(const XMLElement * xmlLibrary)
 		// todo : check typeName doesn't exist yet
 		
 		valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
+	}
+	
+	for (auto xmlEnum = xmlLibrary->FirstChildElement("enum"); xmlEnum != nullptr; xmlEnum = xmlEnum->NextSiblingElement("enum"))
+	{
+		GraphEdit_EnumDefinition enumDefinition;
+		
+		result &= enumDefinition.loadXml(xmlEnum);
+		
+		// todo : check typeName doesn't exist yet
+		
+		enumDefinitions[enumDefinition.enumName] = enumDefinition;
 	}
 	
 	for (auto xmlType = xmlLibrary->FirstChildElement("type"); xmlType != nullptr; xmlType = xmlType->NextSiblingElement("type"))
@@ -2951,7 +3017,7 @@ void GraphUi::PropEdit::setNode(const GraphNodeId _nodeId)
 	}
 }
 
-static bool doMenuItem(std::string & valueText, const std::string & name, const std::string & defaultValue, const std::string & editor, const float dt, const int index, ParticleColor * uiColors, const int maxUiColors)
+static bool doMenuItem(std::string & valueText, const std::string & name, const std::string & defaultValue, const std::string & editor, const float dt, const int index, ParticleColor * uiColors, const int maxUiColors, const GraphEdit_EnumDefinition * enumDefinition)
 {
 	if (editor == "textbox")
 	{
@@ -2988,6 +3054,25 @@ static bool doMenuItem(std::string & valueText, const std::string & name, const 
 		valueText = value ? "1" : "0";
 		
 		return value != Parse::Bool(defaultValue);
+	}
+	else if (editor == "enum")
+	{
+		Assert(enumDefinition != nullptr);
+		
+		int value = Parse::Int32(valueText);
+		
+		std::vector<EnumValue> enumValues;
+		
+		for (auto & elem : enumDefinition->enumElems)
+		{
+			enumValues.push_back(EnumValue(elem.value, elem.name));
+		}
+		
+		doEnum(value, name.c_str(), enumValues);
+		
+		valueText = String::ToString(value);
+		
+		return value != Parse::Int32(defaultValue);
 	}
 	else if (editor == "slider")
 	{
@@ -3068,7 +3153,15 @@ void GraphUi::PropEdit::doMenus(const bool doActions, const bool doDraw, const f
 				
 				const GraphEdit_ValueTypeDefinition * valueTypeDefinition = typeLibrary->tryGetValueTypeDefinition(inputSocket.typeName);
 				
-				const bool hasValue = doMenuItem(newValueText, inputSocket.name, inputSocket.defaultValue, valueTypeDefinition == nullptr ? "textbox" : valueTypeDefinition->editor, dt, menuItemIndex, uiColors, kMaxUiColors);
+				const GraphEdit_EnumDefinition * enumDefinition = typeLibrary->tryGetEnumDefinition(inputSocket.enumName);
+				
+				const bool hasValue = doMenuItem(newValueText, inputSocket.name, inputSocket.defaultValue,
+					enumDefinition != nullptr
+					? "enum"
+					: valueTypeDefinition != nullptr
+					? valueTypeDefinition->editor
+					: "textbox",
+					dt, menuItemIndex, uiColors, kMaxUiColors, enumDefinition);
 				
 				menuItemIndex++;
 				
@@ -3107,7 +3200,11 @@ void GraphUi::PropEdit::doMenus(const bool doActions, const bool doDraw, const f
 				
 				const GraphEdit_ValueTypeDefinition * valueTypeDefinition = typeLibrary->tryGetValueTypeDefinition(outputSocket.typeName);
 				
-				const bool hasValue = doMenuItem(newValueText, outputSocket.name, "", valueTypeDefinition == nullptr ? "textbox" : valueTypeDefinition->editor, dt, menuItemIndex, uiColors, kMaxUiColors);
+				const bool hasValue = doMenuItem(newValueText, outputSocket.name, "",
+					valueTypeDefinition != nullptr
+					? valueTypeDefinition->editor
+					: "textbox",
+					dt, menuItemIndex, uiColors, kMaxUiColors, nullptr);
 				
 				if (graphEdit->realTimeConnection)
 				{

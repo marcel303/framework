@@ -82,8 +82,8 @@ todo :
 	+ fix link end point locations
 + passthrough toggle on selection: check if all passthrough. yes? disable passthrough, else enable
 + add socket output value editing, for node types that define it on their outputs. required for literals
-- add enum value types. use combo box to select values
-	- define enums for ease node type
++ add enum value types. use combo box to select values
+	+ define enums for ease node type
 - add ability to randomize input values
 # fix white screen issue on Windows when GUI is visible
 + add trigger support
@@ -144,6 +144,7 @@ todo :
 - double click node to perform node-specific action
 	- add real-time editing callback for double click event
 	- open text editor for ps/vs when double clicking fsfx node
+- rename _TypeDefinition to _NodeTypeDefinition
 
 todo : nodes :
 + add ease node
@@ -169,6 +170,15 @@ todo : nodes :
 	- is it possible to create a texture sharing data with a base texture and to just change to rgba swizzling?
 - add timeline node (?). trigger events based on markers on a timeline
 	- add (re)start input trigger
+- add gamepad node
+- add MIDI node
+- kinect node:
+	- don't calculate images when output sockets are not connected (?) or when real-time connection asks for the output ..
+	- add player index output ?
+	- add point cloud xyz output
+- add pitch control to oscillators ?
+- add restart signal to oscillators ? if input >= 0, reset phase
+- add spring node ? does physical simulation of a spring
 
 todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
