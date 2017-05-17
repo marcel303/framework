@@ -63,6 +63,8 @@ struct GraphNode
 		
 		void allocVisualizer();
 		
+		void tick(const GraphEdit & graphEdit);
+		
 		// nodes (and thus also visualizers) get copied around. we want to copy parameters but not the
 		// dynamically allocated visualizer object. so we need a copy constructor/assignment operator
 		// to address this and copy the parameters manually and allocate a new visualizer object
@@ -524,10 +526,18 @@ struct GraphEdit_Visualizer
 	{
 	}
 	
+	static const int kDefaultMaxTextureSx = 200;
+	static const int kDefaultMaxTextureSy = 200;
+	static const int kDefaultGraphSx = History::kMaxHistory;
+	static const int kDefaultGraphSy = 50;
+	
 	void init(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex);
 	
 	void tick(const GraphEdit & graphEdit);
-	void measure(const GraphEdit & graphEdit, const std::string & nodeName, const int graphSx, const int graphSy, const int maxTextureSx, const int maxTextureSy, int & sx, int & sy) const;
+	void measure(const GraphEdit & graphEdit, const std::string & nodeName,
+		const int graphSx, const int graphSy,
+		const int maxTextureSx, const int maxTextureSy,
+		int & sx, int & sy) const;
 	void draw(const GraphEdit & graphEdit, const std::string & nodeName, const bool isSelected, const int * sx, const int * sy) const;
 };
 

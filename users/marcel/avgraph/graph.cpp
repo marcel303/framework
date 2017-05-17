@@ -110,8 +110,8 @@ GraphNode::EditorVisualizer::EditorVisualizer()
 	, dstSocketName()
 	, dstSocketIndex(-1)
 	, visualizer(nullptr)
-	, sx(300)
-	, sy(300)
+	, sx(250)
+	, sy(250)
 {
 }
 
@@ -150,6 +150,28 @@ void GraphNode::EditorVisualizer::allocVisualizer()
 			dstSocketName,
 			dstSocketIndex);
 	}
+}
+
+void GraphNode::EditorVisualizer::tick(const GraphEdit & graphEdit)
+{
+	if (sx == 0 || sy == 0)
+	{
+		if (/*visualizer->hasValue || */visualizer->texture != 0 || visualizer->history.historySize > 0)
+		{
+			int sxi = 0;
+			int syi = 0;
+			
+			visualizer->measure(graphEdit, "measure",
+				GraphEdit_Visualizer::kDefaultGraphSx, GraphEdit_Visualizer::kDefaultGraphSy,
+				GraphEdit_Visualizer::kDefaultMaxTextureSx, GraphEdit_Visualizer::kDefaultMaxTextureSy,
+				sxi, syi);
+			
+			sx = sxi;
+			sy = syi;
+		}
+	}
+	
+	visualizer->tick(graphEdit);
 }
 
 void GraphNode::EditorVisualizer::operator=(const EditorVisualizer & other)
@@ -195,7 +217,7 @@ void GraphNode::tick(const GraphEdit & graphEdit, const float dt)
 	
 	if (nodeType == kGraphNodeType_Visualizer)
 	{
-		editorVisualizer.visualizer->tick(graphEdit);
+		editorVisualizer.tick(graphEdit);
 	}
 }
 
@@ -430,6 +452,8 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 				node.editorVisualizer.nodeId = intAttrib(xmlVisualizer, "nodeId", node.editorVisualizer.nodeId);
 				node.editorVisualizer.srcSocketName = stringAttrib(xmlVisualizer, "srcSocketName", node.editorVisualizer.srcSocketName.c_str());
 				node.editorVisualizer.dstSocketName = stringAttrib(xmlVisualizer, "dstSocketName", node.editorVisualizer.dstSocketName.c_str());
+				node.editorVisualizer.sx = floatAttrib(xmlVisualizer, "sx", node.editorVisualizer.sx);
+				node.editorVisualizer.sy = floatAttrib(xmlVisualizer, "sy", node.editorVisualizer.sy);
 			}
 		}
 		
@@ -602,6 +626,8 @@ bool Graph::saveXml(XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary
 						xmlGraph.PushAttribute("srcSocketName", node.editorVisualizer.srcSocketName.c_str());
 					if (!node.editorVisualizer.dstSocketName.empty())
 						xmlGraph.PushAttribute("dstSocketName", node.editorVisualizer.dstSocketName.c_str());
+					xmlGraph.PushAttribute("sx", node.editorVisualizer.sx);
+					xmlGraph.PushAttribute("sy", node.editorVisualizer.sy);
 				}
 				xmlGraph.CloseElement();
 			}
@@ -1072,7 +1098,11 @@ void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit)
 	}
 }
 
-void GraphEdit_Visualizer::measure(const GraphEdit & graphEdit, const std::string & nodeName, const int graphSx, const int graphSy, const int maxTextureSx, const int maxTextureSy, int & sx, int & sy) const
+void GraphEdit_Visualizer::measure(
+	const GraphEdit & graphEdit, const std::string & nodeName,
+	const int graphSx, const int graphSy,
+	const int maxTextureSx, const int maxTextureSy,
+	int & sx, int & sy) const
 {
 	const int kFontSize = 12;
 	const int kPadding = 8;
@@ -1128,12 +1158,7 @@ void GraphEdit_Visualizer::measure(const GraphEdit & graphEdit, const std::strin
 	
 	//
 	
-	float graphMin;
-	float graphMax;
-	
-	const bool hasGraph =
-		history.getRange(graphMin, graphMax) &&
-		graphMin != graphMax;
+	const bool hasGraph = history.historySize > 0;
 	
 	if (hasGraph)
 	{
@@ -1247,12 +1272,15 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 	
 	//
 	
-	float graphMin;
-	float graphMax;
+	const bool hasGraph = history.historySize > 0;
 	
-	const bool hasGraph =
-		history.getRange(graphMin, graphMax) &&
-		graphMin != graphMax;
+	float graphMin = 0.f;
+	float graphMax = 0.f;
+	
+	if (hasGraph)
+	{
+		history.getRange(graphMin, graphMax);
+	}
 	
 	//
 	
@@ -1281,8 +1309,8 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 	
 	//
 	
-	int graphSx = hasVisualSy ? (*_sx - kPadding * 2) : history.kMaxHistory;
-	int graphSy = hasVisualSy ? perVisualSy : 50;
+	int graphSx = hasVisualSy ? (*_sx - kPadding * 2) : kDefaultGraphSx;
+	int graphSy = hasVisualSy ? perVisualSy : kDefaultGraphSy;
 	
 	if (hasGraph)
 	{
@@ -1294,8 +1322,8 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 	
 	//
 	
-	int textureSx = hasVisualSy ? (*_sx - kPadding * 2) : 200;
-	int textureSy = hasVisualSy ? perVisualSy : 200;
+	int textureSx = hasVisualSy ? (*_sx - kPadding * 2) : kDefaultMaxTextureSx;
+	int textureSy = hasVisualSy ? perVisualSy : kDefaultMaxTextureSy;
 	
 	int textureAreaSx = 0;
 	int textureAreaSy = 0;
@@ -1383,9 +1411,9 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		{
 			const float value = history.getGraphValue(i);
 			
-			const float plotX1 = graphX + (i + 0) * graphSx / history.historySize + xOffset;
-			const float plotX2 = graphX + (i + 1) * graphSx / history.historySize + xOffset;
-			const float plotY = (value - graphMax) / (graphMin - graphMax);
+			const float plotX1 = graphX + (i + 0 + xOffset) * graphSx / history.maxHistorySize;
+			const float plotX2 = graphX + (i + 1 + xOffset) * graphSx / history.maxHistorySize;
+			const float plotY = (graphMin == graphMax) ? .5f : (value - graphMax) / (graphMin - graphMax);
 			
 			setColor(127, 127, 255);
 			drawRect(plotX1, y + graphSy, plotX2, y + plotY * graphSy);
@@ -1410,12 +1438,15 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		const int textureX = (sx - textureSx) / 2;
 		const int textureY = (textureAreaSy - textureSy) / 2;
 		
-		setColor(colorWhite);
-		gxSetTexture(texture);
+		if (texture != 0)
 		{
-			drawRect(textureX, y + textureY, textureX + textureSx, y + textureY + textureSy);
+			setColor(colorWhite);
+			gxSetTexture(texture);
+			{
+				drawRect(textureX, y + textureY, textureX + textureSx, y + textureY + textureSy);
+			}
+			gxSetTexture(0);
 		}
-		gxSetTexture(0);
 		
 		setColor(colorWhite);
 		drawRectLine(textureX, y + textureY, textureX + textureSx, y + textureY + textureSy);
@@ -1758,6 +1789,8 @@ bool GraphEdit::tick(const float dt)
 					dstSocketIndex != realTimeSocketCapture.visualizer.dstSocketIndex)
 				{
 					//logDebug("reset realTimeSocketCapture");
+					realTimeSocketCapture = RealTimeSocketCapture();
+					
 					realTimeSocketCapture.visualizer.init(nodeId, String::Empty, -1, dstSocketName, dstSocketIndex);
 				}
 				
@@ -2590,6 +2623,10 @@ bool GraphEdit::tryAddVisualizer(const GraphNodeId nodeId, const std::string & s
 		node.editorX = mousePosition.x;
 		node.editorY = mousePosition.y;
 		node.setVisualizer(nodeId, srcSocketName, srcSocketIndex, dstSocketName, dstSocketIndex);
+		
+		node.editorVisualizer.sx = 0;
+		node.editorVisualizer.sy = 0;
+		
 		graph->addNode(node);
 		
 	#if 0 // todo : remove ?
