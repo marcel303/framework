@@ -110,10 +110,8 @@ GraphNode::EditorVisualizer::EditorVisualizer()
 	, dstSocketName()
 	, dstSocketIndex(-1)
 	, visualizer(nullptr)
-	, sx(0)
-	, sy(0)
-	, nodeSx(0.f)
-	, nodeSy(0.f)
+	, sx(300)
+	, sy(300)
 {
 }
 
@@ -126,8 +124,6 @@ GraphNode::EditorVisualizer::EditorVisualizer(const EditorVisualizer & other)
 	, visualizer(nullptr)
 	, sx(0)
 	, sy(0)
-	, nodeSx(0.f)
-	, nodeSy(0.f)
 {
 	*this = other;
 }
@@ -163,6 +159,8 @@ void GraphNode::EditorVisualizer::operator=(const EditorVisualizer & other)
 	srcSocketIndex = other.srcSocketIndex;
 	dstSocketName = other.dstSocketName;
 	dstSocketIndex = other.dstSocketIndex;
+	sx = other.sx;
+	sy = other.sy;
 	
 	allocVisualizer();
 }
@@ -1074,7 +1072,7 @@ void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit)
 	}
 }
 
-void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string & nodeName, const bool isSelected, int * _sx, int * _sy) const
+void GraphEdit_Visualizer::measure(const GraphEdit & graphEdit, const std::string & nodeName, const int graphSx, const int graphSy, const int maxTextureSx, const int maxTextureSy, int & sx, int & sy) const
 {
 	const int kFontSize = 12;
 	const int kPadding = 8;
@@ -1115,11 +1113,18 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 	
 	//
 	
-	int sx = std::max(120, std::max(int(captionSx), int(valueSx)));
-	int sy = kPadding;
+	sx = 0;
+	sy = 0;
+	
+	sx = std::max(sx, 120);
+	sx = std::max(sx, int(captionSx));
+	sx = std::max(sx, int(valueSx));
+	
+	sy += kPadding;
 	
 	sy += kFontSize; // caption
-	sy += kElemPadding + kFontSize; // value
+	sy += kElemPadding;
+	sy += kFontSize; // value
 	
 	//
 	
@@ -1130,24 +1135,175 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		history.getRange(graphMin, graphMax) &&
 		graphMin != graphMax;
 	
-	const int graphSx = history.kMaxHistory;
-	const int graphSy = 50;
-	
 	if (hasGraph)
 	{
+		sy += kElemPadding;
+		
 		sx = std::max(sx, graphSx);
-		sy += kElemPadding + graphSy;
+		sy += graphSy;
 	}
 	
 	//
 	
 	const bool hasTexture = texture != 0;
 	
-	int textureSx = 200;
-	int textureSy = 200;
+	int textureSx = 0;
+	int textureSy = 0;
 	
 	if (hasTexture)
 	{
+		sy += kElemPadding;
+		
+		GLint baseTextureSx;
+		GLint baseTextureSy;
+		gxSetTexture(texture);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &baseTextureSx);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &baseTextureSy);
+		gxSetTexture(0);
+		
+		const float scaleX = maxTextureSx / float(baseTextureSx);
+		const float scaleY = maxTextureSy / float(baseTextureSy);
+		const float scale = std::min(scaleX, scaleY);
+		textureSx = std::floor(baseTextureSx * scale);
+		textureSy = std::floor(baseTextureSy * scale);
+		
+		sx = std::max(sx, textureSx);
+		sy += textureSy;
+	}
+	
+	sx += kPadding * 2;
+	sy += kPadding;
+}
+
+void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string & nodeName, const bool isSelected, const int * _sx, const int * _sy) const
+{
+	const int kFontSize = 12;
+	const int kPadding = 8;
+	const int kElemPadding = 4;
+	
+	int visualSx = 0;
+	int visualSy = 0;
+	
+	if (_sx && _sy)
+	{
+		int minSx;
+		int minSy;
+		
+		measure(graphEdit, nodeName, 0, 0, 0, 0, minSx, minSy);
+		
+		//logDebug("minSize: %d, %d", minSx, minSy);
+		
+		visualSx = *_sx - kPadding * 2;
+		visualSy = *_sy - minSy;
+	}
+	
+	std::string caption;
+	
+	if (srcSocketIndex != -1)
+	{
+		auto srcSocket = graphEdit.tryGetInputSocket(nodeId, srcSocketIndex);
+		
+		if (srcSocket != nullptr)
+			caption = srcSocket->name;
+	}
+	
+	if (dstSocketIndex != -1)
+	{
+		auto dstSocket = graphEdit.tryGetOutputSocket(nodeId, dstSocketIndex);
+		
+		if (dstSocket != nullptr)
+			caption = dstSocket->name;
+	}
+	
+	if (!nodeName.empty())
+	{
+		caption = String::FormatC("%s : %s", nodeName.c_str(), caption.c_str());
+	}
+	
+	float captionSx;
+	float captionSy;
+	measureText(kFontSize, captionSx, captionSy, "%s", caption.c_str());
+	
+	//
+	
+	float valueSx;
+	float valueSy;
+	measureText(kFontSize, valueSx, valueSy, "%s", value.c_str());
+	
+	//
+	
+	int sx = 0;
+	int sy = 0;
+	
+	sx = std::max(sx, 120);
+	sx = std::max(sx, int(captionSx));
+	sx = std::max(sx, int(valueSx));
+	
+	sy += kPadding;
+	
+	sy += kFontSize; // caption
+	sy += kElemPadding;
+	sy += kFontSize; // value
+	
+	//
+	
+	float graphMin;
+	float graphMax;
+	
+	const bool hasGraph =
+		history.getRange(graphMin, graphMax) &&
+		graphMin != graphMax;
+	
+	//
+	
+	const bool hasTexture = texture != 0;
+	
+	//
+	
+	const bool hasVisualSy = _sx != nullptr && _sy != nullptr;
+	
+	int perVisualSy = 0;
+	
+	if (hasVisualSy)
+	{
+		int numVisuals = 0;
+		
+		if (hasGraph)
+			numVisuals++;
+		if (hasTexture)
+			numVisuals++;
+		
+		if (numVisuals > 0)
+		{
+			perVisualSy = visualSy / numVisuals;
+		}
+	}
+	
+	//
+	
+	int graphSx = hasVisualSy ? (*_sx - kPadding * 2) : history.kMaxHistory;
+	int graphSy = hasVisualSy ? perVisualSy : 50;
+	
+	if (hasGraph)
+	{
+		sy += kElemPadding;
+		
+		sx = std::max(sx, graphSx);
+		sy += graphSy;
+	}
+	
+	//
+	
+	int textureSx = hasVisualSy ? (*_sx - kPadding * 2) : 200;
+	int textureSy = hasVisualSy ? perVisualSy : 200;
+	
+	int textureAreaSx = 0;
+	int textureAreaSy = 0;
+	
+	if (hasTexture)
+	{
+		sy += kElemPadding;
+		
 		GLint baseTextureSx;
 		GLint baseTextureSy;
 		gxSetTexture(texture);
@@ -1161,8 +1317,19 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		textureSx = std::floor(baseTextureSx * scale);
 		textureSy = std::floor(baseTextureSy * scale);
 		
-		sx = std::max(sx, textureSx);
-		sy += kElemPadding + textureSy;
+		if (hasVisualSy)
+		{
+			textureAreaSx = (*_sx - kPadding * 2);
+			textureAreaSy = perVisualSy;
+		}
+		else
+		{
+			textureAreaSx = textureSx;
+			textureAreaSy = textureSy;
+		}
+		
+		sx = std::max(sx, textureAreaSx);
+		sy += textureAreaSy;
 	}
 	
 	//
@@ -1216,11 +1383,12 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		{
 			const float value = history.getGraphValue(i);
 			
-			const float plotX = graphX + i + xOffset;
+			const float plotX1 = graphX + (i + 0) * graphSx / history.historySize + xOffset;
+			const float plotX2 = graphX + (i + 1) * graphSx / history.historySize + xOffset;
 			const float plotY = (value - graphMax) / (graphMin - graphMax);
 			
 			setColor(127, 127, 255);
-			drawLine(plotX, y + graphSy, plotX, y + plotY * graphSy);
+			drawRect(plotX1, y + graphSy, plotX2, y + plotY * graphSy);
 		}
 		
 		setColor(255, 255, 255);
@@ -1240,27 +1408,23 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		y += kElemPadding;
 		
 		const int textureX = (sx - textureSx) / 2;
+		const int textureY = (textureAreaSy - textureSy) / 2;
 		
 		setColor(colorWhite);
 		gxSetTexture(texture);
 		{
-			drawRect(textureX, y, textureX + textureSx, y + textureSy);
+			drawRect(textureX, y + textureY, textureX + textureSx, y + textureY + textureSy);
 		}
 		gxSetTexture(0);
 		
 		setColor(colorWhite);
-		drawRectLine(textureX, y, textureX + textureSx, y + textureSy);
+		drawRectLine(textureX, y + textureY, textureX + textureSx, y + textureY + textureSy);
 		
-		y += textureSy;
+		y += textureAreaSy;
 	}
 	
 	y += kPadding;
 	fassert(y == sy);
-	
-	if (_sx)
-		*_sx = sx;
-	if (_sy)
-		*_sy = sy;
 }
 
 //
@@ -2211,23 +2375,23 @@ bool GraphEdit::tick(const float dt)
 					if (nodeResize.dragL)
 					{
 						node->editorX += dragX;
-						node->editorVisualizer.nodeSx -= dragX;
+						node->editorVisualizer.sx -= dragX;
 					}
 					
 					if (nodeResize.dragR)
 					{
-						node->editorVisualizer.nodeSx += dragX;
+						node->editorVisualizer.sx += dragX;
 					}
 					
 					if (nodeResize.dragT)
 					{
 						node->editorY += dragY;
-						node->editorVisualizer.nodeSy -= dragY;
+						node->editorVisualizer.sy -= dragY;
 					}
 					
 					if (nodeResize.dragB)
 					{
-						node->editorVisualizer.nodeSy += dragY;
+						node->editorVisualizer.sy += dragY;
 					}
 				}
 			}
@@ -2502,8 +2666,11 @@ void GraphEdit::draw() const
 	// draw background and grid
 	
 	{
-		const Vec2 p1 = dragAndZoom.invTransform * Vec2(0.f, 0.f);
-		const Vec2 p2 = dragAndZoom.invTransform * Vec2(GFX_SX, GFX_SY);
+		const Vec2 _p1 = dragAndZoom.invTransform * Vec2(0.f, 0.f);
+		const Vec2 _p2 = dragAndZoom.invTransform * Vec2(GFX_SX, GFX_SY);
+		
+		const Vec2 p1 = _p1.Min(_p2);
+		const Vec2 p2 = _p1.Max(_p2);
 		
 		if (editorOptions.showBackground)
 		{
@@ -2902,18 +3069,14 @@ void GraphEdit::drawVisualizer(const GraphNode & node) const
 	
 	const std::string & nodeName = srcNode != nullptr ? srcNode->getDisplayName() : String::Empty;
 	
+	const int visualizerSx = int(std::ceil(node.editorVisualizer.sx));
+	const int visualizerSy = int(std::ceil(node.editorVisualizer.sy));
+	node.editorVisualizer.visualizer->draw(*this, nodeName, isSelected, &visualizerSx, &visualizerSy);
+	
+#if 0
 	setColor(255, 255, 255, 63); // fixme : remove this drawRect call! only here to test node resizing
-	drawRect(0, 0, node.editorVisualizer.nodeSx, node.editorVisualizer.nodeSy);
-	
-	node.editorVisualizer.visualizer->draw(*this, nodeName, isSelected, &node.editorVisualizer.sx, &node.editorVisualizer.sy);
-	
-	// fixme : visualizer should use size passed in, not fill in the size. will have to make visualizer resizable
-	
-	if (node.editorVisualizer.nodeSx == 0 || node.editorVisualizer.nodeSy == 0)
-	{
-		node.editorVisualizer.nodeSx = node.editorVisualizer.sx;
-		node.editorVisualizer.nodeSy = node.editorVisualizer.sy;
-	}
+	drawRect(0, 0, node.editorVisualizer.sx, node.editorVisualizer.sy);
+#endif
 }
 
 bool GraphEdit::load(const char * filename)

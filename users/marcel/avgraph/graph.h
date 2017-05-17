@@ -54,11 +54,8 @@ struct GraphNode
 		
 		GraphEdit_Visualizer * visualizer;
 		
-		mutable int sx;
-		mutable int sy;
-		
-		mutable float nodeSx; // fixme : remove : only here to test node resizing
-		mutable float nodeSy;
+		float sx;
+		float sy;
 		
 		EditorVisualizer();
 		EditorVisualizer(const EditorVisualizer & other);
@@ -530,7 +527,8 @@ struct GraphEdit_Visualizer
 	void init(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex);
 	
 	void tick(const GraphEdit & graphEdit);
-	void draw(const GraphEdit & graphEdit, const std::string & nodeName, const bool isSelected, int * sx, int * sy) const;
+	void measure(const GraphEdit & graphEdit, const std::string & nodeName, const int graphSx, const int graphSy, const int maxTextureSx, const int maxTextureSy, int & sx, int & sy) const;
+	void draw(const GraphEdit & graphEdit, const std::string & nodeName, const bool isSelected, const int * sx, const int * sy) const;
 };
 
 //
