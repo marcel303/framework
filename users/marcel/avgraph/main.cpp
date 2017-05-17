@@ -146,6 +146,7 @@ todo :
 	- open text editor for ps/vs when double clicking fsfx node
 - rename _TypeDefinition to _NodeTypeDefinition
 + make time node use local vfx graph instance time, not process time
+- add sub-graph container node. to help organize complex graphs
 
 todo : nodes :
 + add ease node
@@ -178,7 +179,8 @@ todo : nodes :
 	- add player index output ?
 	- add point cloud xyz output
 - add pitch control to oscillators ?
-- add restart signal to oscillators ? if input >= 0, reset phase
++ add restart signal to oscillators ? if input > 0, reset phase
+- add 'window' size to square oscillator
 - add spring node ? does physical simulation of a spring
 
 todo : fsfx :
