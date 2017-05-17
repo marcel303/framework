@@ -57,6 +57,9 @@ struct GraphNode
 		mutable int sx;
 		mutable int sy;
 		
+		mutable float nodeSx; // fixme : remove : only here to test node resizing
+		mutable float nodeSy;
+		
 		EditorVisualizer();
 		EditorVisualizer(const EditorVisualizer & other);
 		~EditorVisualizer();
@@ -283,11 +286,19 @@ struct GraphEdit_TypeDefinition
 		const InputSocket * inputSocket;
 		const OutputSocket * outputSocket;
 		bool background;
+		bool borderL;
+		bool borderR;
+		bool borderT;
+		bool borderB;
 		
 		HitTestResult()
 			: inputSocket(nullptr)
 			, outputSocket(nullptr)
 			, background(false)
+			, borderL(false)
+			, borderR(false)
+			, borderT(false)
+			, borderB(false)
 		{
 		}
 	};
@@ -609,6 +620,7 @@ struct GraphEdit : GraphEditConnection
 		kState_NodeDrag,
 		kState_InputSocketConnect,
 		kState_OutputSocketConnect,
+		kState_NodeResize,
 		kState_Hidden
 	};
 	
@@ -783,6 +795,25 @@ struct GraphEdit : GraphEditConnection
 		}
 	};
 	
+	struct NodeResize
+	{
+		GraphNodeId nodeId;
+		
+		bool dragL;
+		bool dragR;
+		bool dragT;
+		bool dragB;
+		
+		NodeResize()
+			: nodeId(kGraphNodeIdInvalid)
+			, dragL(false)
+			, dragR(false)
+			, dragT(false)
+			, dragB(false)
+		{
+		}
+	};
+	
 	Graph * graph;
 	
 	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
@@ -801,6 +832,7 @@ struct GraphEdit : GraphEditConnection
 	
 	NodeSelect nodeSelect;
 	SocketConnect socketConnect;
+	NodeResize nodeResize;
 	
 	GraphEditMouse mousePosition;
 	

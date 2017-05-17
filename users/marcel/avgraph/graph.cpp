@@ -112,6 +112,8 @@ GraphNode::EditorVisualizer::EditorVisualizer()
 	, visualizer(nullptr)
 	, sx(0)
 	, sy(0)
+	, nodeSx(0.f)
+	, nodeSy(0.f)
 {
 }
 
@@ -124,6 +126,8 @@ GraphNode::EditorVisualizer::EditorVisualizer(const EditorVisualizer & other)
 	, visualizer(nullptr)
 	, sx(0)
 	, sy(0)
+	, nodeSx(0.f)
+	, nodeSy(0.f)
 {
 	*this = other;
 }
@@ -1271,6 +1275,7 @@ GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary)
 	, state(kState_Idle)
 	, nodeSelect()
 	, socketConnect()
+	, nodeResize()
 	, mousePosition()
 	, dragAndZoom()
 	, realTimeSocketCapture()
@@ -1426,11 +1431,66 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 				node.editorY + node.editorVisualizer.sy))
 			{
 				GraphEdit_TypeDefinition::HitTestResult hitTestResult;
-				hitTestResult.background = true;
+				
+				const int borderSize = 4;
+				
+				if (testRectOverlap(
+					x, y,
+					x, y,
+					node.editorX + borderSize * +0 + node.editorVisualizer.sx * 0,
+					node.editorY + borderSize * +0 + node.editorVisualizer.sy * 0,
+					node.editorX + borderSize * +1 + node.editorVisualizer.sx * 0,
+					node.editorY + borderSize * +0 + node.editorVisualizer.sy * 1))
+				{
+					hitTestResult.borderL = true;
+				}
+				
+				if (testRectOverlap(
+					x, y,
+					x, y,
+					node.editorX + borderSize * -1 + node.editorVisualizer.sx * 1,
+					node.editorY + borderSize * +0 + node.editorVisualizer.sy * 0,
+					node.editorX + borderSize * +0 + node.editorVisualizer.sx * 1,
+					node.editorY + borderSize * +0 + node.editorVisualizer.sy * 1))
+				{
+					hitTestResult.borderR = true;
+				}
+				
+				if (testRectOverlap(
+					x, y,
+					x, y,
+					node.editorX + borderSize * +0 + node.editorVisualizer.sx * 0,
+					node.editorY + borderSize * +0 + node.editorVisualizer.sy * 0,
+					node.editorX + borderSize * +0 + node.editorVisualizer.sx * 1,
+					node.editorY + borderSize * +1 + node.editorVisualizer.sy * 0))
+				{
+					hitTestResult.borderT = true;
+				}
+				
+				if (testRectOverlap(
+					x, y,
+					x, y,
+					node.editorX + borderSize * +0 + node.editorVisualizer.sx * 0,
+					node.editorY + borderSize * -1 + node.editorVisualizer.sy * 1,
+					node.editorX + borderSize * +0 + node.editorVisualizer.sx * 1,
+					node.editorY + borderSize * +0 + node.editorVisualizer.sy * 1))
+				{
+					hitTestResult.borderB = true;
+				}
+				
+				if (hitTestResult.borderL || hitTestResult.borderR || hitTestResult.borderT || hitTestResult.borderB)
+				{
+					// border, not background
+				}
+				else
+				{
+					hitTestResult.background = true;
+				}
 				
 				result.hasNode = true;
 				result.node = &node;
 				result.nodeHitTestResult = hitTestResult;
+				
 				return true;
 			}
 		}
@@ -1640,6 +1700,21 @@ bool GraphEdit::tick(const float dt)
 						if (selectedNodes.count(hitTestResult.node->id) == 0)
 						{
 							selectNode(hitTestResult.node->id);
+						}
+						
+						if (hitTestResult.nodeHitTestResult.borderL ||
+							hitTestResult.nodeHitTestResult.borderR ||
+							hitTestResult.nodeHitTestResult.borderT ||
+							hitTestResult.nodeHitTestResult.borderB)
+						{
+							nodeResize.nodeId = hitTestResult.node->id;
+							nodeResize.dragL = hitTestResult.nodeHitTestResult.borderL;
+							nodeResize.dragR = hitTestResult.nodeHitTestResult.borderR;
+							nodeResize.dragT = hitTestResult.nodeHitTestResult.borderT;
+							nodeResize.dragB = hitTestResult.nodeHitTestResult.borderB;
+							
+							state = kState_NodeResize;
+							break;
 						}
 						
 						if (hitTestResult.nodeHitTestResult.background)
@@ -2120,6 +2195,52 @@ bool GraphEdit::tick(const float dt)
 			}
 		}
 		break;
+		
+	case kState_NodeResize:
+		{
+			GraphNode * node = tryGetNode(nodeResize.nodeId);
+			
+			Assert(node != nullptr);
+			if (node != nullptr)
+			{
+				const float dragX = mouse.dx;
+				const float dragY = mouse.dy;
+				
+				if (node->nodeType == kGraphNodeType_Visualizer)
+				{
+					if (nodeResize.dragL)
+					{
+						node->editorX += dragX;
+						node->editorVisualizer.nodeSx -= dragX;
+					}
+					
+					if (nodeResize.dragR)
+					{
+						node->editorVisualizer.nodeSx += dragX;
+					}
+					
+					if (nodeResize.dragT)
+					{
+						node->editorY += dragY;
+						node->editorVisualizer.nodeSy -= dragY;
+					}
+					
+					if (nodeResize.dragB)
+					{
+						node->editorVisualizer.nodeSy += dragY;
+					}
+				}
+			}
+			
+			if (mouse.wentUp(BUTTON_LEFT))
+			{
+				nodeResize = NodeResize();
+				
+				state = kState_Idle;
+				break;
+			}
+		}
+		break;
 			
 	case kState_Hidden:
 		{
@@ -2586,6 +2707,11 @@ void GraphEdit::draw() const
 		}
 		break;
 		
+	case kState_NodeResize:
+		{
+			break;
+		}
+		
 	case kState_Hidden:
 		break;
 	}
@@ -2619,6 +2745,9 @@ void GraphEdit::draw() const
 		break;
 		
 	case kState_OutputSocketConnect:
+		break;
+		
+	case kState_NodeResize:
 		break;
 		
 	case kState_Hidden:
@@ -2773,7 +2902,18 @@ void GraphEdit::drawVisualizer(const GraphNode & node) const
 	
 	const std::string & nodeName = srcNode != nullptr ? srcNode->getDisplayName() : String::Empty;
 	
+	setColor(255, 255, 255, 63); // fixme : remove this drawRect call! only here to test node resizing
+	drawRect(0, 0, node.editorVisualizer.nodeSx, node.editorVisualizer.nodeSy);
+	
 	node.editorVisualizer.visualizer->draw(*this, nodeName, isSelected, &node.editorVisualizer.sx, &node.editorVisualizer.sy);
+	
+	// fixme : visualizer should use size passed in, not fill in the size. will have to make visualizer resizable
+	
+	if (node.editorVisualizer.nodeSx == 0 || node.editorVisualizer.nodeSy == 0)
+	{
+		node.editorVisualizer.nodeSx = node.editorVisualizer.sx;
+		node.editorVisualizer.nodeSy = node.editorVisualizer.sy;
+	}
 }
 
 bool GraphEdit::load(const char * filename)
