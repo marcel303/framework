@@ -1,4 +1,5 @@
 #include "framework.h"
+#include "vfxGraph.h"
 #include "vfxNodeTime.h"
 
 VfxNodeTime::VfxNodeTime()
@@ -11,7 +12,5 @@ VfxNodeTime::VfxNodeTime()
 
 void VfxNodeTime::tick(const float dt)
 {
-	// todo : use a synchronized clock
-	
-	time = framework.time;
+	time = g_currentVfxGraph->time;
 }

@@ -6,6 +6,12 @@
 extern const int GFX_SX;
 extern const int GFX_SY;
 
+//
+
+VfxGraph * g_currentVfxGraph = nullptr;
+
+//
+
 VfxGraph::VfxGraph()
 	: nodes()
 	, displayNodeId(kGraphNodeIdInvalid)
@@ -13,6 +19,7 @@ VfxGraph::VfxGraph()
 	, nextDrawTraversalId(0)
 	, graph(nullptr)
 	, valuesToFree()
+	, time(0.0)
 {
 }
 
@@ -138,6 +145,9 @@ void VfxGraph::connectToInputLiteral(VfxPlug & input, const std::string & inputV
 
 void VfxGraph::tick(const float dt)
 {
+	Assert(g_currentVfxGraph == nullptr);
+	g_currentVfxGraph = this;
+	
 	// use traversalId, start update at display node
 	
 	if (displayNodeId != kGraphNodeIdInvalid)
@@ -171,6 +181,14 @@ void VfxGraph::tick(const float dt)
 	}
 	
 	++nextTickTraversalId;
+	
+	//
+	
+	time += dt;
+	
+	//
+	
+	g_currentVfxGraph = nullptr;
 }
 
 void VfxGraph::draw() const

@@ -5,8 +5,11 @@
 #include <string>
 #include <vector>
 
+struct VfxGraph;
 struct VfxNodeBase;
 struct VfxPlug;
+
+extern VfxGraph * g_currentVfxGraph;
 
 struct VfxGraph
 {
@@ -49,6 +52,8 @@ struct VfxGraph
 	Graph * graph; // todo : remove ?
 	
 	std::vector<ValueToFree> valuesToFree;
+	
+	double time;
 	
 	VfxGraph();
 	~VfxGraph();
