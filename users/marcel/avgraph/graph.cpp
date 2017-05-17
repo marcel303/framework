@@ -930,7 +930,11 @@ bool GraphEdit_TypeDefinitionLibrary::loadXml(const XMLElement * xmlLibrary)
 		
 		result &= typeDefinition.loadXml(xmlType);
 		
-		// todo : check typeName doesn't exist yet
+		// check typeName doesn't exist yet
+		
+		auto itr = valueTypeDefinitions.find(typeDefinition.typeName);
+		Assert(itr == valueTypeDefinitions.end());
+		result &= itr == valueTypeDefinitions.end();
 		
 		valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
 	}
@@ -941,7 +945,11 @@ bool GraphEdit_TypeDefinitionLibrary::loadXml(const XMLElement * xmlLibrary)
 		
 		result &= enumDefinition.loadXml(xmlEnum);
 		
-		// todo : check typeName doesn't exist yet
+		// check typeName doesn't exist yet
+		
+		auto itr = enumDefinitions.find(enumDefinition.enumName);
+		Assert(itr == enumDefinitions.end());
+		result &= itr == enumDefinitions.end();
 		
 		enumDefinitions[enumDefinition.enumName] = enumDefinition;
 	}
@@ -953,7 +961,11 @@ bool GraphEdit_TypeDefinitionLibrary::loadXml(const XMLElement * xmlLibrary)
 		result &= typeDefinition.loadXml(xmlType);
 		typeDefinition.createUi();
 		
-		// todo : check typeName doesn't exist yet
+		// check typeName doesn't exist yet
+		
+		auto itr = typeDefinitions.find(typeDefinition.typeName);
+		Assert(itr == typeDefinitions.end());
+		result &= itr == typeDefinitions.end();
 		
 		typeDefinitions[typeDefinition.typeName] = typeDefinition;
 	}
@@ -2471,6 +2483,7 @@ void GraphEdit::draw() const
 		{
 			auto node = tryGetNode(socketConnect.srcNodeId);
 			
+			Assert(node != nullptr);
 			if (node == nullptr)
 			{
 				// todo : error
@@ -2494,6 +2507,7 @@ void GraphEdit::draw() const
 		{
 			auto node = tryGetNode(socketConnect.dstNodeId);
 			
+			Assert(node != nullptr);
 			if (node == nullptr)
 			{
 				// todo : error
