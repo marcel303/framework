@@ -931,6 +931,36 @@ bool GraphEdit_TypeDefinition::loadXml(const XMLElement * xmlType)
 
 //
 
+const GraphEdit_ValueTypeDefinition * GraphEdit_TypeDefinitionLibrary::tryGetValueTypeDefinition(const std::string & typeName) const
+{
+	auto i = valueTypeDefinitions.find(typeName);
+	
+	if (i != valueTypeDefinitions.end())
+		return &i->second;
+	else
+		return nullptr;
+}
+
+const GraphEdit_EnumDefinition * GraphEdit_TypeDefinitionLibrary::tryGetEnumDefinition(const std::string & typeName) const
+{
+	auto i = enumDefinitions.find(typeName);
+	
+	if (i != enumDefinitions.end())
+		return &i->second;
+	else
+		return nullptr;
+}
+
+const GraphEdit_TypeDefinition * GraphEdit_TypeDefinitionLibrary::tryGetTypeDefinition(const std::string & typeName) const
+{
+	auto i = typeDefinitions.find(typeName);
+	
+	if (i != typeDefinitions.end())
+		return &i->second;
+	else
+		return nullptr;
+}
+
 bool GraphEdit_TypeDefinitionLibrary::loadXml(const XMLElement * xmlLibrary)
 {
 	bool result = true;

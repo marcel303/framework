@@ -336,38 +336,9 @@ struct GraphEdit_TypeDefinitionLibrary
 	{
 	}
 	
-	// todo : move to cpp
-	const GraphEdit_ValueTypeDefinition * tryGetValueTypeDefinition(const std::string & typeName) const
-	{
-		auto i = valueTypeDefinitions.find(typeName);
-		
-		if (i != valueTypeDefinitions.end())
-			return &i->second;
-		else
-			return nullptr;
-	}
-	
-	// todo : move to cpp
-	const GraphEdit_EnumDefinition * tryGetEnumDefinition(const std::string & typeName) const
-	{
-		auto i = enumDefinitions.find(typeName);
-		
-		if (i != enumDefinitions.end())
-			return &i->second;
-		else
-			return nullptr;
-	}
-	
-	// todo : move to cpp
-	const GraphEdit_TypeDefinition * tryGetTypeDefinition(const std::string & typeName) const
-	{
-		auto i = typeDefinitions.find(typeName);
-		
-		if (i != typeDefinitions.end())
-			return &i->second;
-		else
-			return nullptr;
-	}
+	const GraphEdit_ValueTypeDefinition * tryGetValueTypeDefinition(const std::string & typeName) const;
+	const GraphEdit_EnumDefinition * tryGetEnumDefinition(const std::string & typeName) const;
+	const GraphEdit_TypeDefinition * tryGetTypeDefinition(const std::string & typeName) const;
 	
 	bool loadXml(const tinyxml2::XMLElement * xmlLibrary);
 };
