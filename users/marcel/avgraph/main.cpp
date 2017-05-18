@@ -1383,49 +1383,84 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 #include "image.h"
 #include "Timer.h"
 
-static void testDotDetector()
+#define USE_GRID 1
+
+struct Island
 {
-	const char * filename = "polkadots.jpg";
+	int totalX;
+	int totalY;
+	int numPixels;
 	
-	ImageData * image = loadImage(filename);
+	int x;
+	int y;
 	
-	if (image == nullptr)
-	{
-		logError("failed to load %s", filename);
-		return;
-	}
-	
-	struct Island
-	{
-		int totalX;
-		int totalY;
-		int numPixels;
-		
-		int x;
-		int y;
-	};
-	
-	const uint64_t t1 = g_TimerRT.TimeUS_get();
-	
-	const int kMaxIslands = 256;
-	Island islands[kMaxIslands];
+#if USE_GRID
+	Island * next;
+#endif
+};
+
+static int detectDots(const bool * data, const int sx, const int sy, const int maxRadius, Island * __restrict islands, int maxIslands)
+{
 	int numIslands = 0;
 	
-	const int dtreshold = 20;
-	const int dtresholdSq = dtreshold * dtreshold;
+	const int maxRadiusSq = maxRadius * maxRadius;
 	
-	for (int y = 0; y < image->sy; ++y)
+#if USE_GRID
+	const int gridSx = sx / maxRadius + 1;
+	const int gridSy = sy / maxRadius + 1;
+	
+	Island * grid[gridSx][gridSy];
+	memset(grid, 0, sizeof(grid));
+#endif
+
+	const bool * __restrict dataItr = data;
+	
+	for (int y = 0; y < sy; ++y)
 	{
-		ImageData::Pixel * __restrict line = image->getLine(y);
-		
-		for (int x = 0; x < image->sx; ++x)
+		for (int x = 0; x < sx; ++x)
 		{
-			const int value = line[x].r;
-			
-			if (value < 32)
+			if (*dataItr++)
 			{
 				bool found = false;
 				
+			#if USE_GRID
+				const int gridX = x / maxRadius;
+				const int gridY = y / maxRadius;
+				
+				for (int gx = gridX - 2; gx <= gridX + 1; ++gx)
+				{
+					for (int gy = gridY - 2; gy <= gridY + 1; ++gy)
+					{
+						if (gx >= 0 && gx < gridSx && gy >= 0 && gy < gridSy)
+						{
+							for (Island * islandItr = grid[gx][gy]; islandItr != nullptr; islandItr = islandItr->next)
+							{
+								auto & island = *islandItr;
+								
+								const int dx = x - island.x;
+								const int dy = y - island.y;
+								const int dsSq = dx * dx + dy * dy;
+								
+								if (dsSq < maxRadiusSq)
+								{
+									found = true;
+									
+									island.totalX += x;
+									island.totalY += y;
+									island.numPixels++;
+									
+									island.x = island.totalX / island.numPixels;
+									island.y = island.totalY / island.numPixels;
+									
+									goto foundIsland;
+								}
+							}
+						}
+					}
+				}
+				
+			foundIsland:
+			#else
 				for (int i = 0; i < numIslands; ++i)
 				{
 					auto & island = islands[i];
@@ -1434,7 +1469,7 @@ static void testDotDetector()
 					const int dy = y - island.y;
 					const int dsSq = dx * dx + dy * dy;
 					
-					if (dsSq < dtresholdSq)
+					if (dsSq < maxRadiusSq)
 					{
 						found = true;
 						
@@ -1448,10 +1483,11 @@ static void testDotDetector()
 						break;
 					}
 				}
+			#endif
 				
 				if (found == false)
 				{
-					if (numIslands < kMaxIslands)
+					if (numIslands < maxIslands)
 					{
 						Island & island = islands[numIslands];
 						
@@ -1461,6 +1497,11 @@ static void testDotDetector()
 						
 						island.x = x;
 						island.y = y;
+						
+					#if USE_GRID
+						island.next = grid[gridX][gridY];
+						grid[gridX][gridY] = &island;
+					#endif
 					
 						numIslands++;
 					}
@@ -1469,18 +1510,148 @@ static void testDotDetector()
 		}
 	}
 	
-	const uint64_t t2 = g_TimerRT.TimeUS_get();
+	return numIslands;
+}
+
+static void testDotDetector()
+{
+	const int sx = 768;
+	const int sy = 512;
+	Surface surface(sx, sy, false, false, SURFACE_R8);
 	
-	printf("found %d islands. time=%lluus\n", numIslands, t2 - t1);
+	glBindTexture(GL_TEXTURE_2D, surface.getTexture());
+	GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
+	glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+	checkErrorGL();
+	
+	uint8_t * surfaceData = new uint8_t[sx * sy];
+	bool * tresholdData = new bool[sx * sy];
+	
+	struct Circle
+	{
+		float x;
+		float y;
+		float angle;
+		float speed;
+		float timer;
+		float timerRcp;
+		
+		void randomize()
+		{
+			x = random(0, sx);
+			y = random(0, sy);
+			angle = random(0.f, float(M_PI * 2.f));
+			speed = random(50.f, 200.f);
+			timer = random(1.f, 3.f);
+			timerRcp = 1.f / timer;
+		}
+		
+		void tick(const float dt)
+		{
+			const float dx = std::cosf(angle);
+			const float dy = std::sinf(angle);
+			
+			x += dx * speed * dt;
+			y += dy * speed * dt;
+			
+			timer -= framework.timeStep;
+			
+			if (timer <= 0.f)
+			{
+				randomize();
+			}
+		}
+	};
+	
+	const int kNumCircles = 100;
+	Circle circles[kNumCircles];
+	
+	for (auto & c : circles)
+	{
+		c.randomize();
+	}
+	
+	//
+	
+	uint64_t averageTime = 0;
 	
 	do
 	{
 		framework.process();
 		
+		// generate a new pattern of moving dots
+		
+		pushSurface(&surface);
+		{
+			surface.clear(255, 255, 255, 255);
+			
+			setBlend(BLEND_ALPHA);
+			hqBegin(HQ_FILLED_CIRCLES);
+			{
+				for (auto & c : circles)
+				{
+					const float radius = c.timer * c.timerRcp * 12.f + 3.f;
+					
+					setColor(colorBlack);
+					hqFillCircle(c.x, c.y, radius);
+					
+					c.tick(framework.timeStep);
+				}
+			}
+			hqEnd();
+			
+			// capture the dots image into cpu accessible memory
+			
+			memset(surfaceData, 0xff, sizeof(uint8_t) * sx * sy);
+			glReadPixels(0, 0, sx, sy, GL_RED, GL_UNSIGNED_BYTE, surfaceData);
+			checkErrorGL();
+		}
+		popSurface();
+		
+		// creste treshold mask
+		
+		bool * __restrict tresholdDataItr = tresholdData;
+		
+		uint8_t * __restrict surfaceDataItr = surfaceData;
+		
+		for (int y = 0; y < sy; ++y)
+		{
+			for (int x = 0; x < sx; ++x)
+			{
+				const uint8_t value = *surfaceDataItr++;
+				
+				*tresholdDataItr++ = value < 32;
+			}
+		}
+		
+		// detect dots
+		
+		const int kMaxIslands = 256;
+		Island islands[kMaxIslands];
+		const int maxRadius = 20;// + mouse.x / 10;
+		
+		const uint64_t t1 = g_TimerRT.TimeUS_get();
+		
+		const int numIslands = detectDots(tresholdData, sx, sy, maxRadius, islands, kMaxIslands);
+		
+		const uint64_t t2 = g_TimerRT.TimeUS_get();
+		
+		//printf("found %d islands. time=%lluus\n", numIslands, t2 - t1);
+		
+		averageTime = ((t2 - t1) * 1 + averageTime * 49) / 50;
+		
+		//
+		
 		framework.beginDraw(0, 0, 0, 0);
 		{
+			// draw the original pattern of moving dots
+			
 			setColor(colorWhite);
-			Sprite(filename).draw();
+			gxSetTexture(surface.getTexture());
+			drawRect(0, 0, sx, sy);
+			gxSetTexture(0);
+			
+			// draw dots
 			
 			hqBegin(HQ_STROKED_CIRCLES);
 			{
@@ -1489,13 +1660,24 @@ static void testDotDetector()
 					auto & island = islands[i];
 					
 					setColor(colorRed);
-					hqStrokeCircle(island.x, island.y, dtreshold, 2.f);
+					hqStrokeCircle(island.x, island.y, maxRadius, 2.f);
 				}
 			}
 			hqEnd();
+			
+			// draw stats
+			setFont("calibri.ttf");
+			setColor(colorGreen);
+			drawText(5, 5 + sy, 12, +1, +1, "detected %d dots. process took %.02fms, average %.02fms", numIslands, (t2 - t1) / 1000.f, averageTime / 1000.f);
 		}
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE));
+	
+	delete[] tresholdData;
+	tresholdData = nullptr;
+
+	delete[] surfaceData;
+	surfaceData = nullptr;
 }
 
 int main(int argc, char * argv[])
