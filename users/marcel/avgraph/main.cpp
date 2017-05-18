@@ -1415,7 +1415,7 @@ static bool isValidIndex(const T value)
 	return value != T(-1);
 }
 
-static int detectDots(const uint8_t * data, const int sx, const int sy, const int maxRadius, DotIsland * __restrict islands, int maxIslands)
+static int detectDots(const uint8_t * data, const int sx, const int sy, const int maxRadius, DotIsland * __restrict islands, int maxIslands, const bool useGrid)
 {
 	int numIslands = 0;
 	
@@ -1428,103 +1428,105 @@ static int detectDots(const uint8_t * data, const int sx, const int sy, const in
 	uint16_t grid[gridSx][gridSy];
 	memset(grid, 0xff, sizeof(grid));
 #endif
-
-	const uint8_t * __restrict dataItr = data;
 	
 	for (int y = 0; y < sy; ++y)
 	{
+		const uint8_t * __restrict dataLine = data + y * sx;
+		
 	#if USE_GRID
 		const int gridY = y / maxRadius;
 	#endif
 	
 		for (int x = 0; x < sx; ++x)
 		{
-			if (*dataItr++)
+			if (dataLine[x])
 			{
-				bool found = false;
-				
 			#if USE_GRID
 				const int gridX = x / maxRadius;
 				
-				for (int gx = gridX - 2; gx <= gridX + 1; ++gx)
+				if (useGrid)
 				{
-					for (int gy = gridY - 2; gy <= gridY + 1; ++gy)
+					for (int gx = gridX - 2; gx <= gridX + 1; ++gx)
 					{
-						if (gx >= 0 && gx < gridSx && gy >= 0 && gy < gridSy)
+						for (int gy = gridY - 2; gy <= gridY + 1; ++gy)
 						{
-							for (uint16_t islandIndex = grid[gx][gy]; isValidIndex(islandIndex); islandIndex = islands[islandIndex].next)
+							if (gx >= 0 && gx < gridSx && gy >= 0 && gy < gridSy)
 							{
-								auto & island = islands[islandIndex];
-								
-								const int dx = x - island.x;
-								const int dy = y - island.y;
-								const int dsSq = dx * dx + dy * dy;
-								
-								if (dsSq < maxRadiusSq)
+								for (uint16_t islandIndex = grid[gx][gy]; isValidIndex(islandIndex); islandIndex = islands[islandIndex].next)
 								{
-									found = true;
+									auto & island = islands[islandIndex];
 									
-									island.totalX += x;
-									island.totalY += y;
-									island.numPixels++;
+									const int dx = x - island.x;
+									const int dy = y - island.y;
+									const int dsSq = dx * dx + dy * dy;
 									
-									island.x = island.totalX / island.numPixels;
-									island.y = island.totalY / island.numPixels;
-									
-									goto foundIsland;
+									if (dsSq < maxRadiusSq)
+									{
+										island.totalX += x;
+										island.totalY += y;
+										island.numPixels++;
+										
+										island.x = island.totalX / island.numPixels;
+										island.y = island.totalY / island.numPixels;
+										
+										goto foundIsland;
+									}
 								}
 							}
 						}
 					}
 				}
-				
-			foundIsland:
-			#else
-				for (int i = 0; i < numIslands; ++i)
+				else
+			#endif
 				{
-					auto & island = islands[i];
-					
-					const int dx = x - island.x;
-					const int dy = y - island.y;
-					const int dsSq = dx * dx + dy * dy;
-					
-					if (dsSq < maxRadiusSq)
+					for (int i = 0; i < numIslands; ++i)
 					{
-						found = true;
+						auto & island = islands[i];
 						
-						island.totalX += x;
-						island.totalY += y;
-						island.numPixels++;
+						const int dx = x - island.x;
+						const int dy = y - island.y;
+						const int dsSq = dx * dx + dy * dy;
 						
-						island.x = island.totalX / island.numPixels;
-						island.y = island.totalY / island.numPixels;
-						
-						break;
+						if (dsSq < maxRadiusSq)
+						{
+							island.totalX += x;
+							island.totalY += y;
+							island.numPixels++;
+							
+							island.x = island.totalX / island.numPixels;
+							island.y = island.totalY / island.numPixels;
+							
+							goto foundIsland;
+						}
 					}
 				}
-			#endif
 				
-				if (found == false)
+				// we didn't find an island close to this pixel. add a new one
+				
+				if (numIslands < maxIslands)
 				{
-					if (numIslands < maxIslands)
+					auto & island = islands[numIslands];
+					
+					island.totalX = x;
+					island.totalY = y;
+					island.numPixels = 1;
+					
+					island.x = x;
+					island.y = y;
+					
+				#if USE_GRID
+					if (useGrid)
 					{
-						auto & island = islands[numIslands];
-						
-						island.totalX = x;
-						island.totalY = y;
-						island.numPixels = 1;
-						
-						island.x = x;
-						island.y = y;
-						
-					#if USE_GRID
 						island.next = grid[gridX][gridY];
 						grid[gridX][gridY] = numIslands;
-					#endif
-					
-						numIslands++;
 					}
+				#endif
+				
+					numIslands++;
 				}
+				
+			foundIsland:
+				do { } while (false); // clang compiler errors if there is no expression of a label
 			}
 		}
 	}
@@ -1593,9 +1595,20 @@ static void testDotDetector()
 		c.randomize();
 	}
 	
+	bool useVideo = true;
+	
+	MediaPlayer mp;
+	
+	if (useVideo)
+	{
+		mp.openAsync("mocap.mp4", false);
+	}
+	
 	//
 	
 	uint64_t averageTime = 0;
+	
+	bool useGrid = true;
 	
 	do
 	{
@@ -1603,7 +1616,21 @@ static void testDotDetector()
 		
 		//
 		
+		if (keyboard.wentDown(SDLK_g))
+			useGrid = !useGrid;
+		
+		//
+		
 		const float dt = framework.timeStep * (mouse.isDown(BUTTON_LEFT) ? mouse.y / float(GFX_SY) : 1.f);
+		
+		//
+		
+		if (mp.isActive(mp.context))
+		{
+			mp.presentTime += dt;
+			
+			mp.tick(mp.context);
+		}
 		
 		// generate a new pattern of moving dots
 		
@@ -1611,21 +1638,36 @@ static void testDotDetector()
 		{
 			surface.clear(255, 255, 255, 255);
 			
-			pushBlend(BLEND_ALPHA);
-			hqBegin(HQ_FILLED_CIRCLES);
+			if (useVideo)
 			{
-				for (auto & c : circles)
+				if (mp.getTexture())
 				{
-					const float radius = c.timer * c.timerRcp * 12.f + 3.f;
-					
-					setColor(colorBlack);
-					hqFillCircle(c.x, c.y, radius);
-					
-					c.tick(dt);
+					pushBlend(BLEND_OPAQUE);
+					gxSetTexture(mp.getTexture());
+					setColor(colorWhite);
+					drawRect(0, 0, sx, sy);
+					gxSetTexture(0);
+					popBlend();
 				}
 			}
-			hqEnd();
-			popBlend();
+			else
+			{
+				pushBlend(BLEND_ALPHA);
+				hqBegin(HQ_FILLED_CIRCLES);
+				{
+					for (auto & c : circles)
+					{
+						const float radius = c.timer * c.timerRcp * 12.f + 3.f;
+						
+						setColor(colorBlack);
+						hqFillCircle(c.x, c.y, radius);
+						
+						c.tick(dt);
+					}
+				}
+				hqEnd();
+				popBlend();
+			}
 			
 			// capture the dots image into cpu accessible memory
 			// note : this is slow unless the operation is delayed by 1 or 2 frames,
@@ -1647,7 +1689,10 @@ static void testDotDetector()
 			{
 				const uint8_t value = *surfaceDataItr++;
 				
-				*maskedDataItr++ = value < 32 ? 1 : 0;
+				if (useVideo)
+					*maskedDataItr++ = value > 200 ? 1 : 0;
+				else
+					*maskedDataItr++ = value < 32 ? 1 : 0;
 			}
 		}
 		
@@ -1660,7 +1705,7 @@ static void testDotDetector()
 		
 		const uint64_t t1 = g_TimerRT.TimeUS_get();
 		
-		const int numIslands = detectDots(maskedData, sx, sy, maxRadius, islands, kMaxIslands);
+		const int numIslands = detectDots(maskedData, sx, sy, maxRadius, islands, kMaxIslands, useGrid);
 		
 		const uint64_t t2 = g_TimerRT.TimeUS_get();
 		
@@ -1695,14 +1740,26 @@ static void testDotDetector()
 			}
 			hqEnd();
 			
-			// draw stats
+ 			// draw stats and instructional text
 			
 			setFont("calibri.ttf");
 			setColor(colorGreen);
-			drawText(5, 5 + sy, 12, +1, +1, "detected %d dots. process took %.02fms, average %.02fms", numIslands, (t2 - t1) / 1000.f, averageTime / 1000.f);
+			
+			int y = 5 + sy;
+			int fontSize = 12;
+			int spacing = fontSize + 4;
+			
+			drawText(5, y, fontSize, +1, +1, "detected %d dots. process took %.02fms, average %.02fms", numIslands, (t2 - t1) / 1000.f, averageTime / 1000.f);
+			y += spacing;
+			drawText(5, y, fontSize, +1, +1, "useGrid: %d", useGrid ? 1 : 0);
+			y += spacing;
+			drawText(5, y, fontSize, +1, +1, "SPACE = quit test. G = toggle grid. MOUSE_LBUTTON = enable speed/radius test");
+			y += spacing;
 		}
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE));
+	
+	mp.close();
 	
 	delete[] maskedData;
 	maskedData = nullptr;
