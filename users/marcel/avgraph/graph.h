@@ -617,6 +617,8 @@ struct GraphEdit_RealTimeConnection
 
 #include "../libparticle/particle.h" // todo : remove ParticleColor dependency
 
+struct SDL_Cursor;
+
 //
 
 struct GraphEdit : GraphEditConnection
@@ -857,6 +859,8 @@ struct GraphEdit : GraphEditConnection
 	GraphUi::NodeTypeNameSelect * nodeTypeNameSelect;
 	
 	UiState * uiState;
+	
+	SDL_Cursor * cursorHand;
 	
 	GraphEdit(GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary);
 	~GraphEdit();

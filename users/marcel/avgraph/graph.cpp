@@ -1479,6 +1479,7 @@ GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary)
 	, propertyEditor(nullptr)
 	, nodeTypeNameSelect(nullptr)
 	, uiState(nullptr)
+	, cursorHand(nullptr)
 {
 	graph = new Graph();
 	
@@ -1501,6 +1502,8 @@ GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary)
 	uiState->y = kPadding;
 	uiState->textBoxTextOffset = 50;
 	
+	cursorHand = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
+	
 	//
 	
 	propertyEditor->setGraph(graph);
@@ -1509,6 +1512,9 @@ GraphEdit::GraphEdit(GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary)
 GraphEdit::~GraphEdit()
 {
 	selectedNodes.clear();
+	
+	SDL_FreeCursor(cursorHand);
+	cursorHand = nullptr;
 	
 	delete uiState;
 	uiState = nullptr;
@@ -1627,7 +1633,7 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 			{
 				GraphEdit_TypeDefinition::HitTestResult hitTestResult;
 				
-				const int borderSize = 4;
+				const int borderSize = 6;
 				
 				if (testRectOverlap(
 					x, y,
@@ -1832,6 +1838,8 @@ bool GraphEdit::tick(const float dt)
 	highlightedSockets = SocketSelection();
 	highlightedLinks.clear();
 	
+	SDL_Cursor * cursor = SDL_GetDefaultCursor();
+	
 	switch (state)
 	{
 	case kState_Idle:
@@ -1856,6 +1864,14 @@ bool GraphEdit::tick(const float dt)
 						highlightedSockets.dstNodeId = hitTestResult.node->id;
 						highlightedSockets.dstNodeSocket = hitTestResult.nodeHitTestResult.outputSocket;
 					}
+					
+					if (hitTestResult.nodeHitTestResult.borderL ||
+						hitTestResult.nodeHitTestResult.borderR ||
+						hitTestResult.nodeHitTestResult.borderT ||
+						hitTestResult.nodeHitTestResult.borderB)
+					{
+						cursor = cursorHand;
+					}
 				}
 				
 				if (hitTestResult.hasLink)
@@ -1863,7 +1879,7 @@ bool GraphEdit::tick(const float dt)
 					highlightedLinks.insert(hitTestResult.link->id);
 				}
 			}
-		
+			
 			if (mouse.wentDown(BUTTON_LEFT))
 			{
 				HitTestResult hitTestResult;
@@ -2227,7 +2243,7 @@ bool GraphEdit::tick(const float dt)
 			
 			// drag and zoom
 			
-			if (keyboard.isDown(SDLK_LCTRL))
+			if (keyboard.isDown(SDLK_LCTRL) || mouse.isDown(BUTTON_RIGHT))
 			{
 				dragAndZoom.desiredFocusX -= mouse.dx / dragAndZoom.zoom;
 				dragAndZoom.desiredFocusY -= mouse.dy / dragAndZoom.zoom;
@@ -2426,6 +2442,8 @@ bool GraphEdit::tick(const float dt)
 					{
 						node->editorVisualizer.sy += dragY;
 					}
+					
+					cursor = cursorHand;
 				}
 			}
 			
@@ -2476,6 +2494,8 @@ bool GraphEdit::tick(const float dt)
 			node.tick(*this, dt);
 		}
 	}
+	
+	SDL_SetCursor(cursor);
 	
 	return inputIsCaptured;
 }
@@ -2723,27 +2743,30 @@ void GraphEdit::draw() const
 		{
 			const int cx1 = std::floor(p1[0] / kGridSize);
 			const int cy1 = std::floor(p1[1] / kGridSize);
-			const int cx2 = std::floor(p2[0] / kGridSize);
-			const int cy2 = std::floor(p2[1] / kGridSize);
+			const int cx2 = std::ceil(p2[0] / kGridSize);
+			const int cy2 = std::ceil(p2[1] / kGridSize);
 			
-			setColorf(
-				editorOptions.gridColor.rgba[0],
-				editorOptions.gridColor.rgba[1],
-				editorOptions.gridColor.rgba[2],
-				editorOptions.gridColor.rgba[3]);
-			hqBegin(HQ_LINES);
+			if ((cx2 - cx1) < GFX_SX / 2)
 			{
-				for (int cx = cx1; cx <= cx2; ++cx)
+				setColorf(
+					editorOptions.gridColor.rgba[0],
+					editorOptions.gridColor.rgba[1],
+					editorOptions.gridColor.rgba[2],
+					editorOptions.gridColor.rgba[3]);
+				hqBegin(HQ_LINES);
 				{
-					hqLine(cx * kGridSize, cy1 * kGridSize, 1.f, cx * kGridSize, cy2 * kGridSize, 1.f);
+					for (int cx = cx1; cx <= cx2; ++cx)
+					{
+						hqLine(cx * kGridSize, cy1 * kGridSize, 1.f, cx * kGridSize, cy2 * kGridSize, 1.f);
+					}
+					
+					for (int cy = cy1; cy <= cy2; ++cy)
+					{
+						hqLine(cx1 * kGridSize, cy * kGridSize, 1.f, cx2 * kGridSize, cy * kGridSize, 1.f);
+					}
 				}
-				
-				for (int cy = cy1; cy <= cy2; ++cy)
-				{
-					hqLine(cx1 * kGridSize, cy * kGridSize, 1.f, cx2 * kGridSize, cy * kGridSize, 1.f);
-				}
+				hqEnd();
 			}
-			hqEnd();
 		}
 	}
 
