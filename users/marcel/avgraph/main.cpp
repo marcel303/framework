@@ -153,6 +153,7 @@ todo :
 + make time node use local vfx graph instance time, not process time
 - add sub-graph container node. to help organize complex graphs
 - add mouse cursor to user interface
+- allow trigger inputs to have multiple incoming connections
 
 todo : nodes :
 + add ease node
@@ -178,6 +179,8 @@ todo : nodes :
 	- is it possible to create a texture sharing data with a base texture and to just change to rgba swizzling?
 - add timeline node (?). trigger events based on markers on a timeline
 	- add (re)start input trigger
+	- can be very very useful to trigger effects
+	- add time! input trigger. performs seek operation
 - add gamepad node
 - add MIDI node
 - kinect node:
@@ -191,6 +194,13 @@ todo : nodes :
 + add node which sends a trigger when a value changes. send new value as trigger data
 + add node which sends a trigger when a value crosses a treshold
 + add pitch and semitone nodes
+- add audio playback node
+	- add (re)start! trigger
+	- add pause! trigger
+	- add resume! trigger
+	- add start! output trigger
+	- add time output
+	- add time! output
 
 todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
@@ -1385,7 +1395,7 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 
 #define USE_GRID 1
 
-struct Island
+struct DotIsland
 {
 	int totalX;
 	int totalY;
@@ -1395,11 +1405,17 @@ struct Island
 	int y;
 	
 #if USE_GRID
-	Island * next;
+	uint16_t next;
 #endif
 };
 
-static int detectDots(const bool * data, const int sx, const int sy, const int maxRadius, Island * __restrict islands, int maxIslands)
+template <typename T>
+static bool isValidIndex(const T value)
+{
+	return value != T(-1);
+}
+
+static int detectDots(const uint8_t * data, const int sx, const int sy, const int maxRadius, DotIsland * __restrict islands, int maxIslands)
 {
 	int numIslands = 0;
 	
@@ -1409,14 +1425,18 @@ static int detectDots(const bool * data, const int sx, const int sy, const int m
 	const int gridSx = sx / maxRadius + 1;
 	const int gridSy = sy / maxRadius + 1;
 	
-	Island * grid[gridSx][gridSy];
-	memset(grid, 0, sizeof(grid));
+	uint16_t grid[gridSx][gridSy];
+	memset(grid, 0xff, sizeof(grid));
 #endif
 
-	const bool * __restrict dataItr = data;
+	const uint8_t * __restrict dataItr = data;
 	
 	for (int y = 0; y < sy; ++y)
 	{
+	#if USE_GRID
+		const int gridY = y / maxRadius;
+	#endif
+	
 		for (int x = 0; x < sx; ++x)
 		{
 			if (*dataItr++)
@@ -1425,7 +1445,6 @@ static int detectDots(const bool * data, const int sx, const int sy, const int m
 				
 			#if USE_GRID
 				const int gridX = x / maxRadius;
-				const int gridY = y / maxRadius;
 				
 				for (int gx = gridX - 2; gx <= gridX + 1; ++gx)
 				{
@@ -1433,9 +1452,9 @@ static int detectDots(const bool * data, const int sx, const int sy, const int m
 					{
 						if (gx >= 0 && gx < gridSx && gy >= 0 && gy < gridSy)
 						{
-							for (Island * islandItr = grid[gx][gy]; islandItr != nullptr; islandItr = islandItr->next)
+							for (uint16_t islandIndex = grid[gx][gy]; isValidIndex(islandIndex); islandIndex = islands[islandIndex].next)
 							{
-								auto & island = *islandItr;
+								auto & island = islands[islandIndex];
 								
 								const int dx = x - island.x;
 								const int dy = y - island.y;
@@ -1489,7 +1508,7 @@ static int detectDots(const bool * data, const int sx, const int sy, const int m
 				{
 					if (numIslands < maxIslands)
 					{
-						Island & island = islands[numIslands];
+						auto & island = islands[numIslands];
 						
 						island.totalX = x;
 						island.totalY = y;
@@ -1500,7 +1519,7 @@ static int detectDots(const bool * data, const int sx, const int sy, const int m
 						
 					#if USE_GRID
 						island.next = grid[gridX][gridY];
-						grid[gridX][gridY] = &island;
+						grid[gridX][gridY] = numIslands;
 					#endif
 					
 						numIslands++;
@@ -1519,13 +1538,16 @@ static void testDotDetector()
 	const int sy = 512;
 	Surface surface(sx, sy, false, false, SURFACE_R8);
 	
+	// make sure the surface turns up black and white instead of shades of red when we draw it, by applying a swizzle mask
 	glBindTexture(GL_TEXTURE_2D, surface.getTexture());
 	GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
 	glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
 	checkErrorGL();
 	
 	uint8_t * surfaceData = new uint8_t[sx * sy];
-	bool * tresholdData = new bool[sx * sy];
+	memset(surfaceData, 0xff, sizeof(uint8_t) * sx * sy);
+	
+	uint8_t * maskedData = new uint8_t[sx * sy];
 	
 	struct Circle
 	{
@@ -1579,13 +1601,17 @@ static void testDotDetector()
 	{
 		framework.process();
 		
+		//
+		
+		const float dt = framework.timeStep * (mouse.isDown(BUTTON_LEFT) ? mouse.y / float(GFX_SY) : 1.f);
+		
 		// generate a new pattern of moving dots
 		
 		pushSurface(&surface);
 		{
 			surface.clear(255, 255, 255, 255);
 			
-			setBlend(BLEND_ALPHA);
+			pushBlend(BLEND_ALPHA);
 			hqBegin(HQ_FILLED_CIRCLES);
 			{
 				for (auto & c : circles)
@@ -1595,14 +1621,16 @@ static void testDotDetector()
 					setColor(colorBlack);
 					hqFillCircle(c.x, c.y, radius);
 					
-					c.tick(framework.timeStep);
+					c.tick(dt);
 				}
 			}
 			hqEnd();
+			popBlend();
 			
 			// capture the dots image into cpu accessible memory
+			// note : this is slow unless the operation is delayed by 1 or 2 frames,
+			//        but for testing purposes we don't care so much about performance
 			
-			memset(surfaceData, 0xff, sizeof(uint8_t) * sx * sy);
 			glReadPixels(0, 0, sx, sy, GL_RED, GL_UNSIGNED_BYTE, surfaceData);
 			checkErrorGL();
 		}
@@ -1610,9 +1638,8 @@ static void testDotDetector()
 		
 		// creste treshold mask
 		
-		bool * __restrict tresholdDataItr = tresholdData;
-		
-		uint8_t * __restrict surfaceDataItr = surfaceData;
+		const uint8_t * __restrict surfaceDataItr = surfaceData;
+		uint8_t * __restrict maskedDataItr = maskedData;
 		
 		for (int y = 0; y < sy; ++y)
 		{
@@ -1620,38 +1647,41 @@ static void testDotDetector()
 			{
 				const uint8_t value = *surfaceDataItr++;
 				
-				*tresholdDataItr++ = value < 32;
+				*maskedDataItr++ = value < 32 ? 1 : 0;
 			}
 		}
 		
 		// detect dots
 		
 		const int kMaxIslands = 256;
-		Island islands[kMaxIslands];
-		const int maxRadius = 20;// + mouse.x / 10;
+		DotIsland islands[kMaxIslands];
+		
+		const int maxRadius = 20 + (mouse.isDown(BUTTON_LEFT) ? mouse.x / 10 : 0);
 		
 		const uint64_t t1 = g_TimerRT.TimeUS_get();
 		
-		const int numIslands = detectDots(tresholdData, sx, sy, maxRadius, islands, kMaxIslands);
+		const int numIslands = detectDots(maskedData, sx, sy, maxRadius, islands, kMaxIslands);
 		
 		const uint64_t t2 = g_TimerRT.TimeUS_get();
 		
-		//printf("found %d islands. time=%lluus\n", numIslands, t2 - t1);
+		// update the smoothed out over time running average
 		
 		averageTime = ((t2 - t1) * 1 + averageTime * 49) / 50;
 		
-		//
+		// visualize the dot detection results!
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			// draw the original pattern of moving dots
 			
+			pushBlend(BLEND_OPAQUE);
 			setColor(colorWhite);
 			gxSetTexture(surface.getTexture());
 			drawRect(0, 0, sx, sy);
 			gxSetTexture(0);
+			popBlend();
 			
-			// draw dots
+			// draw detected dots
 			
 			hqBegin(HQ_STROKED_CIRCLES);
 			{
@@ -1666,6 +1696,7 @@ static void testDotDetector()
 			hqEnd();
 			
 			// draw stats
+			
 			setFont("calibri.ttf");
 			setColor(colorGreen);
 			drawText(5, 5 + sy, 12, +1, +1, "detected %d dots. process took %.02fms, average %.02fms", numIslands, (t2 - t1) / 1000.f, averageTime / 1000.f);
@@ -1673,8 +1704,8 @@ static void testDotDetector()
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE));
 	
-	delete[] tresholdData;
-	tresholdData = nullptr;
+	delete[] maskedData;
+	maskedData = nullptr;
 
 	delete[] surfaceData;
 	surfaceData = nullptr;
