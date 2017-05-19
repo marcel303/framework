@@ -1404,6 +1404,11 @@ struct DotIsland
 	int x;
 	int y;
 	
+	int minX;
+	int minY;
+	int maxX;
+	int maxY;
+	
 #if USE_GRID
 	uint16_t next;
 #endif
@@ -1469,6 +1474,11 @@ static int detectDots(const uint8_t * data, const int sx, const int sy, const in
 										island.x = island.totalX / island.numPixels;
 										island.y = island.totalY / island.numPixels;
 										
+										island.minX = std::min(island.minX, x);
+										island.minY = std::min(island.minY, y);
+										island.maxX = std::max(island.maxX, x);
+										island.maxY = std::max(island.maxY, y);
+										
 										goto foundIsland;
 									}
 								}
@@ -1496,6 +1506,11 @@ static int detectDots(const uint8_t * data, const int sx, const int sy, const in
 							island.x = island.totalX / island.numPixels;
 							island.y = island.totalY / island.numPixels;
 							
+							island.minX = std::min(island.minX, x);
+							island.minY = std::min(island.minY, y);
+							island.maxX = std::max(island.maxX, x);
+							island.maxY = std::max(island.maxY, y);
+							
 							goto foundIsland;
 						}
 					}
@@ -1513,6 +1528,11 @@ static int detectDots(const uint8_t * data, const int sx, const int sy, const in
 					
 					island.x = x;
 					island.y = y;
+					
+					island.minX = x;
+					island.minY = y;
+					island.maxX = x;
+					island.maxY = y;
 					
 				#if USE_GRID
 					if (useGrid)
@@ -1601,15 +1621,34 @@ static void testDotDetector()
 	
 	if (useVideo)
 	{
-		mp.openAsync("mocap.mp4", false);
+		mp.openAsync("mocap6.mp4", false);
 	}
 	
 	//
 	
 	uint64_t averageTime = 0;
+	uint64_t averageTimeR = 0;
+	uint64_t averageTimeM = 0;
 	
 	bool useGrid = true;
+	int tresholdFunction = 0;
+	int tresholdValue = 32;
 	
+	const int kNumPixelBuffers = 2;
+	bool hasPixels = false;
+	int pixelBufferIndex = 0;
+	GLuint pixelBuffers[kNumPixelBuffers] = { };
+	GLsync pixelSyncs[kNumPixelBuffers] = { };
+	
+	for (int i = 0; i < kNumPixelBuffers; ++i)
+	{
+		glGenBuffers(1, &pixelBuffers[i]);
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, pixelBuffers[i]);
+		glBufferData(GL_PIXEL_PACK_BUFFER, sx * sy, 0, GL_DYNAMIC_READ);
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+		checkErrorGL();
+	}
+
 	do
 	{
 		framework.process();
@@ -1618,10 +1657,16 @@ static void testDotDetector()
 		
 		if (keyboard.wentDown(SDLK_g))
 			useGrid = !useGrid;
+		if (keyboard.wentDown(SDLK_t))
+			tresholdFunction = (tresholdFunction + 1) % 2;
+		if (keyboard.wentDown(SDLK_UP, true))
+			tresholdValue += 1;
+		if (keyboard.wentDown(SDLK_DOWN, true))
+			tresholdValue -= 1;
 		
 		//
 		
-		const float dt = framework.timeStep * (mouse.isDown(BUTTON_LEFT) ? mouse.y / float(GFX_SY) : 1.f);
+		const float dt = framework.timeStep * (mouse.isDown(BUTTON_LEFT) ? mouse.y / float(GFX_SY) * 4.f : 1.f);
 		
 		//
 		
@@ -1630,9 +1675,23 @@ static void testDotDetector()
 			mp.presentTime += dt;
 			
 			mp.tick(mp.context);
+			
+			if (mp.context->hasPresentedLastFrame)
+			{
+				const std::string filename = mp.context->openParams.filename;
+				
+				mp.close(false);
+				
+				mp.presentTime = 0.0;
+				
+				mp.openAsync(filename.c_str(), false);
+			}
 		}
 		
 		// generate a new pattern of moving dots
+		
+		uint64_t tr1;
+		uint64_t tr2;
 		
 		pushSurface(&surface);
 		{
@@ -1673,45 +1732,101 @@ static void testDotDetector()
 			// note : this is slow unless the operation is delayed by 1 or 2 frames,
 			//        but for testing purposes we don't care so much about performance
 			
-			glReadPixels(0, 0, sx, sy, GL_RED, GL_UNSIGNED_BYTE, surfaceData);
+			tr1 = g_TimerRT.TimeUS_get();
+			
+			//glReadPixels(0, 0, sx, sy, GL_RED, GL_UNSIGNED_BYTE, surfaceData);
+			
+			glReadBuffer(GL_COLOR_ATTACHMENT0);
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, pixelBuffers[pixelBufferIndex]);
+			glReadPixels(0, 0, sx, sy, GL_RED, GL_UNSIGNED_BYTE, 0);
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 			checkErrorGL();
+			
+			Assert(pixelSyncs[pixelBufferIndex] == 0);
+			pixelSyncs[pixelBufferIndex] = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+			checkErrorGL();
+			
+			pixelBufferIndex = (pixelBufferIndex + 1) % kNumPixelBuffers;
+			
+			tr2 = g_TimerRT.TimeUS_get();
 		}
 		popSurface();
 		
-		// creste treshold mask
+		averageTimeR = ((tr2 - tr1) * 1 + averageTimeR * 49) / 50;
 		
-		const uint8_t * __restrict surfaceDataItr = surfaceData;
-		uint8_t * __restrict maskedDataItr = maskedData;
+		if (pixelBufferIndex == 0)
+			hasPixels = true;
 		
-		for (int y = 0; y < sy; ++y)
+		if (hasPixels)
 		{
-			for (int x = 0; x < sx; ++x)
+			const uint64_t tm1 = g_TimerRT.TimeUS_get();
+			
+			Assert(pixelSyncs[pixelBufferIndex] != 0);
+			const GLenum syncState = glClientWaitSync(pixelSyncs[pixelBufferIndex], GL_SYNC_FLUSH_COMMANDS_BIT, 0);
+			checkErrorGL();
+			
+			Assert(syncState != GL_TIMEOUT_EXPIRED);
+			if (syncState != GL_TIMEOUT_EXPIRED)
 			{
-				const uint8_t value = *surfaceDataItr++;
-				
-				if (useVideo)
-					*maskedDataItr++ = value > 200 ? 1 : 0;
-				else
-					*maskedDataItr++ = value < 32 ? 1 : 0;
+				Assert(syncState == GL_ALREADY_SIGNALED || syncState == GL_CONDITION_SATISFIED);
+				pixelSyncs[pixelBufferIndex] = 0;
 			}
+			else
+			{
+				const GLenum syncState = glClientWaitSync(pixelSyncs[pixelBufferIndex], GL_SYNC_FLUSH_COMMANDS_BIT, GL_TIMEOUT_IGNORED);
+				checkErrorGL();
+				
+				Assert(syncState == GL_ALREADY_SIGNALED || syncState == GL_CONDITION_SATISFIED);
+				pixelSyncs[pixelBufferIndex] = 0;
+			}
+			
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, pixelBuffers[pixelBufferIndex]);
+			const uint8_t * __restrict surfaceData = (uint8_t*)glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, sx * sy, GL_MAP_READ_BIT);
+			checkErrorGL();
+			
+			// creste treshold mask
+			
+			const uint8_t * __restrict surfaceDataItr = surfaceData;
+			uint8_t * __restrict maskedDataItr = maskedData;
+			
+			for (int y = 0; y < sy; ++y)
+			{
+				for (int x = 0; x < sx; ++x)
+				{
+					const uint8_t value = *surfaceDataItr++;
+					
+					if (tresholdFunction == 0)
+						*maskedDataItr++ = value > 255 - tresholdValue ? 1 : 0;
+					else
+						*maskedDataItr++ = value < tresholdValue ? 1 : 0;
+				}
+			}
+			
+			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+			checkErrorGL();
+			
+			const uint64_t tm2 = g_TimerRT.TimeUS_get();
+		
+			averageTimeM = ((tm2 - tm1) * 1 + averageTimeM * 49) / 50;
 		}
 		
 		// detect dots
 		
-		const int kMaxIslands = 256;
+		const int kMaxIslands = 1024;
 		DotIsland islands[kMaxIslands];
 		
-		const int maxRadius = 20 + (mouse.isDown(BUTTON_LEFT) ? mouse.x / 10 : 0);
+		const int maxRadius = mouse.isDown(BUTTON_LEFT) ? (1 + mouse.x / 30) : 20;
 		
-		const uint64_t t1 = g_TimerRT.TimeUS_get();
+		const uint64_t td1 = g_TimerRT.TimeUS_get();
 		
 		const int numIslands = detectDots(maskedData, sx, sy, maxRadius, islands, kMaxIslands, useGrid);
 		
-		const uint64_t t2 = g_TimerRT.TimeUS_get();
+		const uint64_t td2 = g_TimerRT.TimeUS_get();
 		
 		// update the smoothed out over time running average
 		
-		averageTime = ((t2 - t1) * 1 + averageTime * 49) / 50;
+		averageTime = ((td2 - td1) * 1 + averageTime * 49) / 50;
 		
 		// visualize the dot detection results!
 		
@@ -1734,8 +1849,15 @@ static void testDotDetector()
 				{
 					auto & island = islands[i];
 					
+					const int dx = island.maxX - island.minX;
+					const int dy = island.maxY - island.minY;
+					const float ds = std::sqrtf(dx * dx + dy * dy) / 2.f + 1.f;
+					
 					setColor(colorRed);
 					hqStrokeCircle(island.x, island.y, maxRadius, 2.f);
+					
+					setColor(colorGreen);
+					hqStrokeCircle(island.x, island.y, ds, 2.f);
 				}
 			}
 			hqEnd();
@@ -1749,17 +1871,21 @@ static void testDotDetector()
 			int fontSize = 12;
 			int spacing = fontSize + 4;
 			
-			drawText(5, y, fontSize, +1, +1, "detected %d dots. process took %.02fms, average %.02fms", numIslands, (t2 - t1) / 1000.f, averageTime / 1000.f);
+			drawText(5, y, fontSize, +1, +1, "detected %d dots. process took %.02fms, average %.02fms", numIslands, (td2 - td1) / 1000.f, averageTime / 1000.f);
 			y += spacing;
-			drawText(5, y, fontSize, +1, +1, "useGrid: %d", useGrid ? 1 : 0);
+			drawText(5, y, fontSize, +1, +1, "opengl-read took %.02fms, treshold took %.02fms", averageTimeR / 1000.f, averageTimeM / 1000.f);
 			y += spacing;
-			drawText(5, y, fontSize, +1, +1, "SPACE = quit test. G = toggle grid. MOUSE_LBUTTON = enable speed/radius test");
+			drawText(5, y, fontSize, +1, +1, "useGrid: %d, tresholdFunction: %d, tresholdValue: %d", useGrid ? 1 : 0, tresholdFunction, tresholdValue);
+			y += spacing;
+			drawText(5, y, fontSize, +1, +1, "G = toggle grid. T = next treshold function. A/Z = change treshold");
+			y += spacing;
+			drawText(5, y, fontSize, +1, +1, "SPACE = quit test. MOUSE_LBUTTON = enable speed/radius test");
 			y += spacing;
 		}
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE));
 	
-	mp.close();
+	mp.close(true);
 	
 	delete[] maskedData;
 	maskedData = nullptr;
