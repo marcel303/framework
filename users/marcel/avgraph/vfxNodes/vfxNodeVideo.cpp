@@ -35,15 +35,15 @@ void VfxNodeVideo::tick(const float dt)
 {
 	if (mediaPlayer->isActive(mediaPlayer->context))
 	{
-		const char * filename = getInputString(kInput_Source, "");
+		const char * source = getInputString(kInput_Source, "");
 		
-		if (mediaPlayer->context->openParams.filename != filename)
+		if (mediaPlayer->context->openParams.filename != source || mediaPlayer->context->hasPresentedLastFrame)
 		{
-			mediaPlayer->close();
+			mediaPlayer->close(false);
 			
 			mediaPlayer->presentTime = 0.f;
 			
-			mediaPlayer->openAsync(filename, false);
+			mediaPlayer->openAsync(source, false);
 		}
 		
 		mediaPlayer->tick(mediaPlayer->context);
@@ -52,6 +52,15 @@ void VfxNodeVideo::tick(const float dt)
 			mediaPlayer->presentTime += dt;
 		
 		image->texture = mediaPlayer->getTexture();
+	}
+	else
+	{
+		const char * source = getInputString(kInput_Source, "");
+		
+		if (source[0])
+		{
+			mediaPlayer->openAsync(source, false);
+		}
 	}
 	
 	if (image->texture == 0)
@@ -62,10 +71,10 @@ void VfxNodeVideo::tick(const float dt)
 
 void VfxNodeVideo::init(const GraphNode & node)
 {
-	const std::string source = getInputString(kInput_Source, "");
+	const char * source = getInputString(kInput_Source, "");
 	
-	if (!source.empty())
+	if (source[0])
 	{
-		mediaPlayer->openAsync(source.c_str(), false);
+		mediaPlayer->openAsync(source, false);
 	}
 }
