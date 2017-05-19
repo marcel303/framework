@@ -1672,7 +1672,7 @@ static void testDotDetector()
 	
 	if (useVideo)
 	{
-		mp.openAsync("mocapb.mp4", false);
+		mp.openAsync("mocap1.mp4", false);
 	}
 	
 	//
@@ -1684,6 +1684,7 @@ static void testDotDetector()
 	bool useGrid = true;
 	int tresholdFunction = 0;
 	int tresholdValue = 32;
+	int maxRadius = 10;
 	
 #if USE_READPIXELS_OPTIMIZE
 	const int kNumPixelBuffers = 2;
@@ -1718,6 +1719,10 @@ static void testDotDetector()
 			tresholdValue += 1;
 		if (keyboard.wentDown(SDLK_DOWN, true))
 			tresholdValue -= 1;
+		if (keyboard.wentDown(SDLK_a, true))
+			maxRadius += 1;
+		if (keyboard.wentDown(SDLK_z, true))
+			maxRadius -= 1;
 		
 		//
 		
@@ -1945,11 +1950,11 @@ static void testDotDetector()
 		const int kMaxIslands = 1024;
 		DotIsland islands[kMaxIslands];
 		
-		const int maxRadius = mouse.isDown(BUTTON_LEFT) ? (1 + mouse.x / 30) : 20;
+		const int radius = mouse.isDown(BUTTON_LEFT) ? (1 + mouse.x / 30) : maxRadius;
 		
 		const uint64_t td1 = g_TimerRT.TimeUS_get();
 		
-		const int numIslands = detectDots(maskedData, sx, sy, maxRadius, islands, kMaxIslands, useGrid);
+		const int numIslands = detectDots(maskedData, sx, sy, radius, islands, kMaxIslands, useGrid);
 		
 		const uint64_t td2 = g_TimerRT.TimeUS_get();
 		
@@ -1983,7 +1988,7 @@ static void testDotDetector()
 					const float ds = std::sqrtf(dx * dx + dy * dy) / 2.f + 1.f;
 					
 					setColor(colorRed);
-					hqStrokeCircle(island.x, island.y, maxRadius, 2.f);
+					hqStrokeCircle(island.x, island.y, radius, 2.f);
 					
 					setColor(colorGreen);
 					hqStrokeCircle(island.x, island.y, ds, 2.f);
