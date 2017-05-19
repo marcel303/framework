@@ -20,6 +20,7 @@ public:
 
 	bool IsOpen_get() const { return mFile != 0; }
 	const char * FileName_get() const { return mFileName.c_str(); }
+	bool Loop_get() const { return mLoop; }
 	
 	int mSampleRate;
 	
