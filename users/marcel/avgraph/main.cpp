@@ -1393,7 +1393,10 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 #include "image.h"
 #include "Timer.h"
 
-#define USE_GRID 1
+#define USE_GRID 1 // improves matching result as we find the closes island when enabled. also greatly increases detection speed when there's many dots being detected
+#define USE_SSE2 1// improves tresholding and detection speed
+#define USE_READPIXELS_OPTIMIZE 1
+#define USE_READPIXELS_FENCES 0
 
 struct DotIsland
 {
@@ -1442,8 +1445,24 @@ static int detectDots(const uint8_t * data, const int sx, const int sy, const in
 		const int gridY = y / maxRadius;
 	#endif
 	
-		for (int x = 0; x < sx; ++x)
+		for (int x = 0; x < sx; )
 		{
+		#if USE_SSE2
+			// see if ant of the next 16 pixels passes the treshold test. if not, skip the next 16 pixels
+			// we only do this test once every 16 pixels, to avoid redundant calculations
+			
+			if ((x & 15) == 0)
+			{
+				const __m128i data16 = _mm_loadu_si128((const __m128i*)(dataLine + x));
+				
+				if (_mm_movemask_epi8(data16) == 0)
+				{
+					x += 16;
+					continue;
+				}
+			}
+		#endif
+			
 			if (dataLine[x])
 			{
 			#if USE_GRID
@@ -1548,11 +1567,27 @@ static int detectDots(const uint8_t * data, const int sx, const int sy, const in
 			foundIsland:
 				do { } while (false); // clang compiler errors if there is no expression of a label
 			}
+			
+			++x;
 		}
 	}
 	
 	return numIslands;
 }
+
+#if USE_SSE2
+
+static __m128i _mm_cmple_epu8(__m128i x, __m128i y)
+{
+	return _mm_cmpeq_epi8(_mm_min_epu8(x, y), x);
+}
+
+static __m128i _mm_cmpge_epu8(__m128i x, __m128i y)
+{
+	return _mm_cmple_epu8(y, x);
+}
+
+#endif
 
 static void testDotDetector()
 {
@@ -1634,11 +1669,14 @@ static void testDotDetector()
 	int tresholdFunction = 0;
 	int tresholdValue = 32;
 	
+#if USE_READPIXELS_OPTIMIZE
 	const int kNumPixelBuffers = 2;
 	bool hasPixels = false;
 	int pixelBufferIndex = 0;
 	GLuint pixelBuffers[kNumPixelBuffers] = { };
+#if USE_READPIXELS_FENCES
 	GLsync pixelSyncs[kNumPixelBuffers] = { };
+#endif
 	
 	for (int i = 0; i < kNumPixelBuffers; ++i)
 	{
@@ -1648,6 +1686,7 @@ static void testDotDetector()
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 		checkErrorGL();
 	}
+#endif
 
 	do
 	{
@@ -1734,19 +1773,23 @@ static void testDotDetector()
 			
 			tr1 = g_TimerRT.TimeUS_get();
 			
-			//glReadPixels(0, 0, sx, sy, GL_RED, GL_UNSIGNED_BYTE, surfaceData);
-			
+		#if USE_READPIXELS_OPTIMIZE
 			glReadBuffer(GL_COLOR_ATTACHMENT0);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, pixelBuffers[pixelBufferIndex]);
 			glReadPixels(0, 0, sx, sy, GL_RED, GL_UNSIGNED_BYTE, 0);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 			checkErrorGL();
 			
+		#if USE_READPIXELS_FENCES
 			Assert(pixelSyncs[pixelBufferIndex] == 0);
 			pixelSyncs[pixelBufferIndex] = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 			checkErrorGL();
+		#endif
 			
 			pixelBufferIndex = (pixelBufferIndex + 1) % kNumPixelBuffers;
+		#else
+			glReadPixels(0, 0, sx, sy, GL_RED, GL_UNSIGNED_BYTE, surfaceData);
+		#endif
 			
 			tr2 = g_TimerRT.TimeUS_get();
 		}
@@ -1754,13 +1797,17 @@ static void testDotDetector()
 		
 		averageTimeR = ((tr2 - tr1) * 1 + averageTimeR * 49) / 50;
 		
+	#if USE_READPIXELS_OPTIMIZE
 		if (pixelBufferIndex == 0)
 			hasPixels = true;
 		
 		if (hasPixels)
+	#endif
 		{
 			const uint64_t tm1 = g_TimerRT.TimeUS_get();
 			
+		#if USE_READPIXELS_OPTIMIZE
+		#if USE_READPIXELS_FENCES
 			Assert(pixelSyncs[pixelBufferIndex] != 0);
 			const GLenum syncState = glClientWaitSync(pixelSyncs[pixelBufferIndex], GL_SYNC_FLUSH_COMMANDS_BIT, 0);
 			checkErrorGL();
@@ -1779,32 +1826,98 @@ static void testDotDetector()
 				Assert(syncState == GL_ALREADY_SIGNALED || syncState == GL_CONDITION_SATISFIED);
 				pixelSyncs[pixelBufferIndex] = 0;
 			}
-			
+		#endif
+		
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, pixelBuffers[pixelBufferIndex]);
 			const uint8_t * __restrict surfaceData = (uint8_t*)glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, sx * sy, GL_MAP_READ_BIT);
 			checkErrorGL();
+		#endif
 			
 			// creste treshold mask
 			
 			const uint8_t * __restrict surfaceDataItr = surfaceData;
-			uint8_t * __restrict maskedDataItr = maskedData;
+			      uint8_t * __restrict maskedDataItr = maskedData;
 			
-			for (int y = 0; y < sy; ++y)
+			if (tresholdFunction == 0)
 			{
-				for (int x = 0; x < sx; ++x)
+				const uint8_t treshold = 255 - tresholdValue;
+				
+				const int numPixels = sx * sy;
+				
+			#if USE_SSE2
+				const __m128i tresholdVec = _mm_set1_epi8(treshold);
+				
+				const int numPixels16 = numPixels >> 4;
+				
+				for (int i = 0; i < numPixels16; ++i)
+				{
+					const __m128i surfaceVec = _mm_loadu_si128((__m128i*)surfaceDataItr);
+					const __m128i maskVec = _mm_cmpge_epu8(surfaceVec, tresholdVec);
+					
+					_mm_storeu_si128((__m128i*)maskedDataItr, maskVec);
+					
+					surfaceDataItr += 16;
+					maskedDataItr += 16;
+				}
+				
+				for (int i = numPixels16 << 4; i < numPixels; ++i)
 				{
 					const uint8_t value = *surfaceDataItr++;
 					
-					if (tresholdFunction == 0)
-						*maskedDataItr++ = value > 255 - tresholdValue ? 1 : 0;
-					else
-						*maskedDataItr++ = value < tresholdValue ? 1 : 0;
+					*maskedDataItr++ = value >= treshold ? 1 : 0;
 				}
+			#else
+				for (int i = 0; i < numPixels; ++i)
+				{
+					const uint8_t value = *surfaceDataItr++;
+					
+					*maskedDataItr++ = value >= treshold ? 1 : 0;
+				}
+			#endif
+			}
+			else
+			{
+				const uint8_t treshold = tresholdValue;
+				
+				const int numPixels = sx * sy;
+				
+			#if USE_SSE2
+				const __m128i tresholdVec = _mm_set1_epi8(treshold);
+				
+				const int numPixels16 = numPixels >> 4;
+				
+				for (int i = 0; i < numPixels16; ++i)
+				{
+					const __m128i surfaceVec = _mm_loadu_si128((__m128i*)surfaceDataItr);
+					const __m128i maskVec = _mm_cmple_epu8(surfaceVec, tresholdVec);
+					
+					_mm_storeu_si128((__m128i*)maskedDataItr, maskVec);
+					
+					surfaceDataItr += 16;
+					maskedDataItr += 16;
+				}
+				
+				for (int i = numPixels16 << 4; i < numPixels; ++i)
+				{
+					const uint8_t value = *surfaceDataItr++;
+					
+					*maskedDataItr++ = value <= treshold ? 1 : 0;
+				}
+			#else
+				for (int i = 0; i < numPixels; ++i)
+				{
+					const uint8_t value = *surfaceDataItr++;
+					
+					*maskedDataItr++ = value <= treshold ? 1 : 0;
+				}
+			#endif
 			}
 			
+		#if USE_READPIXELS_OPTIMIZE
 			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 			checkErrorGL();
+		#endif
 			
 			const uint64_t tm2 = g_TimerRT.TimeUS_get();
 		
@@ -1884,6 +1997,24 @@ static void testDotDetector()
 		}
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_SPACE));
+	
+#if USE_READPIXELS_OPTIMIZE
+	for (int i = 0; i < kNumPixelBuffers; ++i)
+	{
+		glDeleteBuffers(1, &pixelBuffers[i]);
+		pixelBuffers[i] = 0;
+		checkErrorGL();
+		
+	#if USE_READPIXELS_FENCES
+		if (pixelSyncs[i] != 0)
+		{
+			const GLenum syncState = glClientWaitSync(pixelSyncs[pixelBufferIndex], GL_SYNC_FLUSH_COMMANDS_BIT, GL_TIMEOUT_IGNORED);
+			Assert(syncState != GL_TIMEOUT_EXPIRED);
+			checkErrorGL();
+		}
+	#endif
+	}
+#endif
 	
 	mp.close(true);
 	
