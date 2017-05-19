@@ -28,6 +28,7 @@
 #include "vfxNodes/vfxNodePhysicalSpring.h"
 #include "vfxNodes/vfxNodePicture.h"
 #include "vfxNodes/vfxNodeSampleAndHold.h"
+#include "vfxNodes/vfxNodeSound.h"
 #include "vfxNodes/vfxNodeTime.h"
 #include "vfxNodes/vfxNodeTriggerOnchange.h"
 #include "vfxNodes/vfxNodeTriggerTimer.h"
@@ -195,12 +196,20 @@ todo : nodes :
 + add node which sends a trigger when a value crosses a treshold
 + add pitch and semitone nodes
 - add audio playback node
-	- add (re)start! trigger
-	- add pause! trigger
-	- add resume! trigger
-	- add start! output trigger
-	- add time output
-	- add time! output
+	+ add play! trigger
+	+ add pause! trigger
+	+ add resume! trigger
+	- add play! output trigger
+	- add pause! output trigger
+	+ add time output
+	- add loop! output
+	+ add restart on filename change
+	+ add restart on loop change
+	+ add BPM and beat output trigger
+	- fix issue with output time not stable when paused
+	- fix issue with output time not reset on filename change or looping. remember start time? -> capture time on next provide
++ video: add loop input
++ video: add playback speed input
 
 todo : fsfx :
 - let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
@@ -209,6 +218,9 @@ todo : fsfx :
 
 todo : framework :
 - optimize text rendering. use a dynamic texture atlas instead of one separate texture for each glyph. drawText should only emit a single draw call
+
+todo : media player
+- for image analysis we often only need luminance. make it an option to output YUV Y-channel only?
 
 reference :
 + http://www.dsperados.com (company based in Utrecht ? send to Stijn)
@@ -700,6 +712,10 @@ static VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string &
 	else if (typeName == "video")
 	{
 		vfxNode = new VfxNodeVideo();
+	}
+	else if (typeName == "sound")
+	{
+		vfxNode = new VfxNodeSound();
 	}
 	else if (typeName == "fsfx")
 	{
@@ -1656,7 +1672,7 @@ static void testDotDetector()
 	
 	if (useVideo)
 	{
-		mp.openAsync("mocap6.mp4", false);
+		mp.openAsync("mocapb.mp4", false);
 	}
 	
 	//
