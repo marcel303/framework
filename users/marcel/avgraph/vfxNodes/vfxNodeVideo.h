@@ -8,6 +8,8 @@ struct VfxNodeVideo : VfxNodeBase
 	{
 		kInput_Source,
 		kInput_Transform,
+		kInput_Loop,
+		kInput_Speed,
 		kInput_COUNT
 	};
 	

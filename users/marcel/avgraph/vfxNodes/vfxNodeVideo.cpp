@@ -14,6 +14,8 @@ VfxNodeVideo::VfxNodeVideo()
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Source, kVfxPlugType_String);
 	addInput(kInput_Transform, kVfxPlugType_Transform);
+	addInput(kInput_Loop, kVfxPlugType_Bool);
+	addInput(kInput_Speed, kVfxPlugType_Float);
 	addOutput(kOutput_Image, kVfxPlugType_Image, image);
 	
 	uint32_t pixels[4] = { 0, 0, 0, 0 };
@@ -33,11 +35,14 @@ VfxNodeVideo::~VfxNodeVideo()
 
 void VfxNodeVideo::tick(const float dt)
 {
+	const bool loop = getInputBool(kInput_Loop, true);
+	const float speed = getInputFloat(kInput_Speed, 1.f);
+	
 	if (mediaPlayer->isActive(mediaPlayer->context))
 	{
 		const char * source = getInputString(kInput_Source, "");
 		
-		if (mediaPlayer->context->openParams.filename != source || mediaPlayer->context->hasPresentedLastFrame)
+		if (mediaPlayer->context->openParams.filename != source || (mediaPlayer->context->hasPresentedLastFrame && loop))
 		{
 			mediaPlayer->close(false);
 			
@@ -49,7 +54,7 @@ void VfxNodeVideo::tick(const float dt)
 		mediaPlayer->tick(mediaPlayer->context);
 		
 		if (mediaPlayer->context->hasBegun)
-			mediaPlayer->presentTime += dt;
+			mediaPlayer->presentTime += dt * speed;
 		
 		image->texture = mediaPlayer->getTexture();
 	}
