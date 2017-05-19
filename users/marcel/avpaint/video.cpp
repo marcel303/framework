@@ -115,24 +115,27 @@ void MediaPlayer::openAsync(const char * filename, const bool yuv)
 	logDebug("MP thread start took %dms", t3 - t2);
 }
 
-void MediaPlayer::close()
+void MediaPlayer::close(const bool freeTexture)
 {
 	if (mpThread)
 	{
 		stopMediaPlayerThread();
 	}
 
-	const int t1 = SDL_GetTicks();
-
-	if (texture)
+	if (freeTexture)
 	{
-		glDeleteTextures(1, &texture);
-		texture = 0;
+		const int t1 = SDL_GetTicks();
+
+		if (texture)
+		{
+			glDeleteTextures(1, &texture);
+			texture = 0;
+		}
+
+		const int t2 = SDL_GetTicks();
+
+		logDebug("MP texture delete took %dms", t2 - t1);
 	}
-
-	const int t2 = SDL_GetTicks();
-
-	logDebug("MP texture delete took %dms", t2 - t1);
 }
 
 void MediaPlayer::tick(Context * context)

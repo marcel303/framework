@@ -90,11 +90,11 @@ struct MediaPlayer : public AudioStream
 
 	~MediaPlayer()
 	{
-		close();
+		close(true);
 	}
 
 	void openAsync(const char * filename, const bool yuv);
-	void close();
+	void close(const bool freeTexture);
 	void tick(Context * context);
 
 	bool isActive(Context * context) const;
