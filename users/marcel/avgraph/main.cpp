@@ -1406,6 +1406,503 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	}
 };
 
+//
+
+#include "Timer.h"
+
+struct AtlasElem
+{
+	bool isAllocated;
+	
+	int x;
+	int y;
+	int sx;
+	int sy;
+};
+
+struct Atlas
+{
+	static const int kMaxElems = 2048;
+	
+	static const int kMaskShift = 2;
+	static const int kMaskSpace = 1 << kMaskShift;
+	static const int kMaskIMask = ~(kMaskSpace - 1);
+	
+	static const int MaskPad(const int v)
+	{
+		return (v + kMaskSpace - 1) & kMaskIMask;
+	}
+	
+	AtlasElem elems[kMaxElems];
+	
+	int nextAllocIndex;
+	
+	int sx;
+	int sy;
+	
+	int maskSx;
+	int maskSy;
+	
+	uint8_t * mask;
+	
+	int cacheMy;
+	
+	Atlas()
+		: elems()
+		, nextAllocIndex(0)
+		, sx(0)
+		, sy(0)
+		, maskSx(0)
+		, maskSy(0)
+		, mask(nullptr)
+		, cacheMy(0)
+	{
+	}
+	
+	~Atlas()
+	{
+		init(0, 0);
+	}
+	
+	void init(const int _sx, const int _sy)
+	{
+		cacheMy = 0;
+		
+		delete[] mask;
+		mask = nullptr;
+		
+		maskSx = 0;
+		maskSy = 0;
+		
+		sx = 0;
+		sy = 0;
+		
+		nextAllocIndex = 0;
+		
+		memset(elems, 0, sizeof(elems));
+		
+		//
+		
+		if (_sx > 0 && _sy > 0)
+		{
+			sx = _sx;
+			sy = _sy;
+			
+			maskSx = MaskPad(sx) >> kMaskShift;
+			maskSy = MaskPad(sy) >> kMaskShift;
+			
+			mask = new uint8_t[maskSx * maskSy];
+			memset(mask, 0, maskSx * maskSy);
+		}
+	}
+	
+	bool isFree(const int mx, const int my, const int msx, const int msy) const
+	{
+		const int mx1 = mx;
+		const int my1 = my;
+		const int mx2 = mx + msx;
+		const int my2 = my + msy;
+		
+		Assert(mx2 <= maskSx);
+		Assert(my2 <= maskSy);
+		
+		for (int y = my1; y < my2; ++y)
+		{
+			auto maskItr = mask + y * maskSx;
+			
+			for (int x = mx1; x < mx2; ++x)
+			{
+				if (maskItr[x] != 0)
+					return false;
+			}
+		}
+		
+		return true;
+	}
+	
+	bool findFreeSpot(const int msx, const int msy, int & mx, int & my)
+	{
+		for (int i = 0; i < 2; ++i)
+		{
+			const int mx1 = 0;
+			const int my1 = cacheMy;
+			const int mx2 = maskSx - msx;
+			const int my2 = maskSy - msy;
+			
+			for (int y = my1; y < my2; ++y)
+			{
+				auto maskItr = mask + y * maskSx;
+				
+				for (int x = mx1; x < mx2; )
+				{
+					while (maskItr[x] && x < mx2)
+						x++;
+					
+					if (isFree(x, y, msx, msy))
+					{
+						mx = x;
+						my = y;
+						
+						cacheMy = y;
+						
+						return true;
+					}
+					else
+					{
+						x++;
+					}
+				}
+			}
+			
+			cacheMy = 0;
+		}
+		
+		return false;
+	}
+	
+	AtlasElem * tryAlloc(const int esx, const int esy)
+	{
+		const int msx = MaskPad(esx) >> kMaskShift;
+		const int msy = MaskPad(esy) >> kMaskShift;
+		
+		int mx;
+		int my;
+		
+		if (findFreeSpot(msx, msy, mx, my))
+		{
+			const int mx1 = mx;
+			const int my1 = my;
+			const int mx2 = mx + msx;
+			const int my2 = my + msy;
+			
+			for (int y = my1; y < my2; ++y)
+			{
+				auto maskItr = mask + y * maskSx;
+				
+				for (int x = mx1; x < mx2; ++x)
+				{
+					maskItr[x] = 1;
+				}
+			}
+			
+			while (elems[nextAllocIndex].isAllocated)
+				nextAllocIndex = (nextAllocIndex + 1) % kMaxElems;
+			
+			const int index = nextAllocIndex;
+			
+			AtlasElem & e = elems[index];
+			
+			e.isAllocated = true;
+			
+			e.x = mx << kMaskShift;
+			e.y = my << kMaskShift;
+			e.sx = esx;
+			e.sy = esy;
+			
+			return &e;
+		}
+		else
+		{
+			return nullptr;
+		}
+	}
+	
+	void free(const int ex, const int ey, const int esx, const int esy)
+	{
+		const int mx1 = MaskPad(ex      ) >> kMaskShift;
+		const int my1 = MaskPad(ey      ) >> kMaskShift;
+		const int mx2 = MaskPad(ex + esx) >> kMaskShift;
+		const int my2 = MaskPad(ey + esy) >> kMaskShift;
+		
+		for (int y = my1; y < my2; ++y)
+		{
+			for (int x = mx1; x < mx2; ++x)
+			{
+				Assert(mask[x + y * maskSx] != 0);
+				
+				mask[x + y * maskSx] = 0;
+			}
+		}
+	}
+	
+	void free(AtlasElem *& e)
+	{
+		if (e != nullptr)
+		{
+			free(e->x, e->y, e->sx, e->sy);
+			
+			e->isAllocated = false;
+			
+			e = nullptr;
+		}
+	}
+};
+
+struct TextureAtlas
+{
+	Atlas a;
+	
+	GLuint texture;
+	
+	TextureAtlas()
+		: a()
+		, texture(0)
+	{
+	}
+	
+	~TextureAtlas()
+	{
+		init(0, 0);
+	}
+	
+	void init(const int sx, const int sy)
+	{
+		a.init(sx, sy);
+		
+		if (texture != 0)
+		{
+			glDeleteTextures(1, &texture);
+			texture = 0;
+			checkErrorGL();
+		}
+		
+		if (sx > 0 || sy > 0)
+		{
+			glGenTextures(1, &texture);
+			glBindTexture(GL_TEXTURE_2D, texture);
+			glTexStorage2D(GL_TEXTURE_2D, 1, GL_R8, sx, sy);
+			checkErrorGL();
+		}
+	}
+	
+	AtlasElem * alloc(const uint8_t * values, const int sx, const int sy)
+	{
+		auto e = a.tryAlloc(sx, sy);
+		
+		if (e != nullptr)
+		{
+			glBindTexture(GL_TEXTURE_2D, texture);
+			
+			GLint restoreUnpack;
+			glGetIntegerv(GL_UNPACK_ALIGNMENT, &restoreUnpack);
+			checkErrorGL();
+			
+			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+			glTexSubImage2D(GL_TEXTURE_2D, 0, e->x, e->y, sx, sy, GL_RED, GL_UNSIGNED_BYTE, values);
+			checkErrorGL();
+			
+			glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpack);
+			checkErrorGL();
+			
+			return e;
+		}
+		else
+		{
+			return nullptr;
+		}
+	}
+	
+	void free(AtlasElem *& e)
+	{
+		if (e != nullptr)
+		{
+			uint8_t * zeroes = (uint8_t*)alloca(e->sx * e->sy);
+			memset(zeroes, 0, e->sx * e->sy);
+			
+			glBindTexture(GL_TEXTURE_2D, texture);
+			
+			GLint restoreUnpack;
+			glGetIntegerv(GL_UNPACK_ALIGNMENT, &restoreUnpack);
+			checkErrorGL();
+			
+			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+			glTexSubImage2D(GL_TEXTURE_2D, 0, e->x, e->y, e->sx, e->sy, GL_RED, GL_UNSIGNED_BYTE, zeroes);
+			checkErrorGL();
+			
+			glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpack);
+			checkErrorGL();
+			
+			a.free(e);
+		}
+	}
+};
+
+static void testDynamicTextureAtlas()
+{
+	Atlas a;
+	
+	a.init(1024, 1024);
+	
+	const int kMaxElems = 1000;
+	//const int kMaxElems = 100;
+	
+	AtlasElem * elems[kMaxElems];
+	int numElems = 0;
+	
+	const uint64_t t1 = g_TimerRT.TimeUS_get();
+	
+	for (int i = 0; i < kMaxElems; ++i)
+	{
+		const int sx = random(8, 32);
+		const int sy = random(8, 32);
+		
+		AtlasElem * e = a.tryAlloc(sx, sy);
+		
+		if (e != nullptr)
+		{
+			//logDebug("alloc %d, %d @ %d, %d", sx, sy, e->x, e->y);
+			
+			elems[numElems++] = e;
+		}
+		else
+		{
+			logDebug("failed to alloc %d, %d", sx, sy);
+		}
+	}
+	
+	const uint64_t t2 = g_TimerRT.TimeUS_get();
+	
+	printf("insert took %.2fms for %d elems (%d/%d)\n", (t2 - t1) / 1000.f, kMaxElems, numElems, kMaxElems);
+	
+	for (int i = 0; i < numElems; ++i)
+	{
+		a.free(elems[i]);
+	}
+	
+	numElems = 0;
+	
+	//
+	
+	for (int i = 0; i < 6; ++i)
+	{
+		const int sx = random(64, 128);
+		const int sy = random(64, 128);
+		
+		AtlasElem * e = a.tryAlloc(sx, sy);
+		
+		if (e != nullptr)
+		{
+			logDebug("alloc %d, %d @ %d, %d", sx, sy, e->x, e->y);
+			
+			elems[numElems++] = e;
+		}
+		else
+		{
+			logDebug("failed to alloc %d, %d", sx, sy);
+		}
+	}
+	
+	for (int i = 0; i < numElems; ++i)
+	{
+		a.free(elems[i]);
+	}
+	
+	numElems = 0;
+	
+	//
+	
+	TextureAtlas ta;
+	
+	ta.init(1024, 1024);
+	
+	const uint64_t tt1 = g_TimerRT.TimeUS_get();
+
+	for (int i = 0; i < kMaxElems; ++i)
+	{
+		const int sx = random(8, 32);
+		const int sy = random(8, 32);
+		
+		uint8_t values[sx * sy];
+		
+		for (int i = 0; i < sx * sy; ++i)
+			values[i] = i;
+		
+		AtlasElem * e = ta.alloc(values, sx, sy);
+		
+		if (e != nullptr)
+		{
+			logDebug("alloc %d, %d @ %d, %d", sx, sy, e->x, e->y);
+			
+			elems[numElems++] = e;
+		}
+		else
+		{
+			logDebug("failed to alloc %d, %d", sx, sy);
+		}
+	}
+
+	const uint64_t tt2 = g_TimerRT.TimeUS_get();
+	
+	printf("OpenGL insert took %.2fms for %d elems (%d/%d)\n", (tt2 - tt1) / 1000.f, kMaxElems, numElems, kMaxElems);
+	
+#if 1
+	for (int i = 0; i < numElems; ++i)
+	{
+		ta.free(elems[i]);
+	}
+	
+	numElems = 0;
+#endif
+	
+	do
+	{
+		framework.process();
+		
+		//
+		
+	#if 1
+		if (numElems < kMaxElems)
+		{
+			const int sx = random(8, 100);
+			const int sy = random(8, 100);
+			
+			uint8_t values[sx * sy];
+			
+			for (int i = 0; i < sx * sy; ++i)
+				values[i] = i;
+			
+			AtlasElem * e = ta.alloc(values, sx, sy);
+			
+			if (e != nullptr)
+			{
+				logDebug("alloc %d, %d @ %d, %d", sx, sy, e->x, e->y);
+				
+				elems[numElems++] = e;
+			}
+			else
+			{
+				logDebug("failed to alloc %d, %d", sx, sy);
+			}
+		}
+		else
+		{
+			for (int i = 0; i < numElems; ++i)
+			{
+				ta.free(elems[i]);
+			}
+			
+			numElems = 0;
+		}
+	#endif
+		
+		//
+		
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			pushBlend(BLEND_OPAQUE);
+			gxSetTexture(ta.texture);
+			{
+				drawRect(0, 0, ta.a.sx, ta.a.sy);
+			}
+			gxSetTexture(0);
+			popBlend();
+		}
+		framework.endDraw();
+	} while (!keyboard.wentDown(SDLK_SPACE));
+	
+	logDebug("done!");
+}
+
 #include "image.h"
 #include "Timer.h"
 
@@ -1672,7 +2169,7 @@ static void testDotDetector()
 	
 	if (useVideo)
 	{
-		mp.openAsync("mocap1.mp4", false);
+		mp.openAsync("mocapc.mp4", false);
 	}
 	
 	//
@@ -1797,6 +2294,7 @@ static void testDotDetector()
 		#if USE_READPIXELS_OPTIMIZE
 			glReadBuffer(GL_COLOR_ATTACHMENT0);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, pixelBuffers[pixelBufferIndex]);
+			//logDebug("readPixels %d", pixelBufferIndex);
 			glReadPixels(0, 0, sx, sy, GL_RED, GL_UNSIGNED_BYTE, 0);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 			checkErrorGL();
@@ -1850,6 +2348,7 @@ static void testDotDetector()
 		#endif
 		
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, pixelBuffers[pixelBufferIndex]);
+			//logDebug("mapBuffer %d", pixelBufferIndex);
 			const uint8_t * __restrict surfaceData = (uint8_t*)glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, sx * sy, GL_MAP_READ_BIT);
 			checkErrorGL();
 		#endif
@@ -2069,6 +2568,9 @@ int main(int argc, char * argv[])
 		//testFourier2d();
 		
 		//testImpulseResponseMeasurement();
+		
+		for (int i = 0; i < 10; ++i)
+			testDynamicTextureAtlas();
 		
 		testDotDetector();
 		
