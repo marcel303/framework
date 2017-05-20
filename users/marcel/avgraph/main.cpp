@@ -1408,239 +1408,12 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 
 //
 
+#include "BoxAtlas.h"
 #include "Timer.h"
-
-struct AtlasElem
-{
-	bool isAllocated;
-	
-	int x;
-	int y;
-	int sx;
-	int sy;
-};
-
-struct Atlas
-{
-	static const int kMaxElems = 2048;
-	
-	static const int kMaskShift = 2;
-	static const int kMaskSpace = 1 << kMaskShift;
-	static const int kMaskIMask = ~(kMaskSpace - 1);
-	
-	static const int MaskPad(const int v)
-	{
-		return (v + kMaskSpace - 1) & kMaskIMask;
-	}
-	
-	AtlasElem elems[kMaxElems];
-	
-	int nextAllocIndex;
-	
-	int sx;
-	int sy;
-	
-	int maskSx;
-	int maskSy;
-	
-	uint8_t * mask;
-	
-	int cacheMy;
-	
-	Atlas()
-		: elems()
-		, nextAllocIndex(0)
-		, sx(0)
-		, sy(0)
-		, maskSx(0)
-		, maskSy(0)
-		, mask(nullptr)
-		, cacheMy(0)
-	{
-	}
-	
-	~Atlas()
-	{
-		init(0, 0);
-	}
-	
-	void init(const int _sx, const int _sy)
-	{
-		cacheMy = 0;
-		
-		delete[] mask;
-		mask = nullptr;
-		
-		maskSx = 0;
-		maskSy = 0;
-		
-		sx = 0;
-		sy = 0;
-		
-		nextAllocIndex = 0;
-		
-		memset(elems, 0, sizeof(elems));
-		
-		//
-		
-		if (_sx > 0 && _sy > 0)
-		{
-			sx = _sx;
-			sy = _sy;
-			
-			maskSx = MaskPad(sx) >> kMaskShift;
-			maskSy = MaskPad(sy) >> kMaskShift;
-			
-			mask = new uint8_t[maskSx * maskSy];
-			memset(mask, 0, maskSx * maskSy);
-		}
-	}
-	
-	bool isFree(const int mx, const int my, const int msx, const int msy) const
-	{
-		const int mx1 = mx;
-		const int my1 = my;
-		const int mx2 = mx + msx;
-		const int my2 = my + msy;
-		
-		Assert(mx2 <= maskSx);
-		Assert(my2 <= maskSy);
-		
-		for (int y = my1; y < my2; ++y)
-		{
-			auto maskItr = mask + y * maskSx;
-			
-			for (int x = mx1; x < mx2; ++x)
-			{
-				if (maskItr[x] != 0)
-					return false;
-			}
-		}
-		
-		return true;
-	}
-	
-	bool findFreeSpot(const int msx, const int msy, int & mx, int & my)
-	{
-		for (int i = 0; i < 2; ++i)
-		{
-			const int mx1 = 0;
-			const int my1 = cacheMy;
-			const int mx2 = maskSx - msx;
-			const int my2 = maskSy - msy;
-			
-			for (int y = my1; y < my2; ++y)
-			{
-				auto maskItr = mask + y * maskSx;
-				
-				for (int x = mx1; x < mx2; )
-				{
-					while (maskItr[x] && x < mx2)
-						x++;
-					
-					if (isFree(x, y, msx, msy))
-					{
-						mx = x;
-						my = y;
-						
-						cacheMy = y;
-						
-						return true;
-					}
-					else
-					{
-						x++;
-					}
-				}
-			}
-			
-			cacheMy = 0;
-		}
-		
-		return false;
-	}
-	
-	AtlasElem * tryAlloc(const int esx, const int esy)
-	{
-		const int msx = MaskPad(esx) >> kMaskShift;
-		const int msy = MaskPad(esy) >> kMaskShift;
-		
-		int mx;
-		int my;
-		
-		if (findFreeSpot(msx, msy, mx, my))
-		{
-			const int mx1 = mx;
-			const int my1 = my;
-			const int mx2 = mx + msx;
-			const int my2 = my + msy;
-			
-			for (int y = my1; y < my2; ++y)
-			{
-				auto maskItr = mask + y * maskSx;
-				
-				for (int x = mx1; x < mx2; ++x)
-				{
-					maskItr[x] = 1;
-				}
-			}
-			
-			while (elems[nextAllocIndex].isAllocated)
-				nextAllocIndex = (nextAllocIndex + 1) % kMaxElems;
-			
-			const int index = nextAllocIndex;
-			
-			AtlasElem & e = elems[index];
-			
-			e.isAllocated = true;
-			
-			e.x = mx << kMaskShift;
-			e.y = my << kMaskShift;
-			e.sx = esx;
-			e.sy = esy;
-			
-			return &e;
-		}
-		else
-		{
-			return nullptr;
-		}
-	}
-	
-	void free(const int ex, const int ey, const int esx, const int esy)
-	{
-		const int mx1 = MaskPad(ex      ) >> kMaskShift;
-		const int my1 = MaskPad(ey      ) >> kMaskShift;
-		const int mx2 = MaskPad(ex + esx) >> kMaskShift;
-		const int my2 = MaskPad(ey + esy) >> kMaskShift;
-		
-		for (int y = my1; y < my2; ++y)
-		{
-			for (int x = mx1; x < mx2; ++x)
-			{
-				Assert(mask[x + y * maskSx] != 0);
-				
-				mask[x + y * maskSx] = 0;
-			}
-		}
-	}
-	
-	void free(AtlasElem *& e)
-	{
-		if (e != nullptr)
-		{
-			free(e->x, e->y, e->sx, e->sy);
-			
-			e->isAllocated = false;
-			
-			e = nullptr;
-		}
-	}
-};
 
 struct TextureAtlas
 {
-	Atlas a;
+	BoxAtlas a;
 	
 	GLuint texture;
 	
@@ -1675,7 +1448,7 @@ struct TextureAtlas
 		}
 	}
 	
-	AtlasElem * alloc(const uint8_t * values, const int sx, const int sy)
+	BoxAtlasElem * alloc(const uint8_t * values, const int sx, const int sy)
 	{
 		auto e = a.tryAlloc(sx, sy);
 		
@@ -1702,7 +1475,7 @@ struct TextureAtlas
 		}
 	}
 	
-	void free(AtlasElem *& e)
+	void free(BoxAtlasElem *& e)
 	{
 		if (e != nullptr)
 		{
@@ -1729,14 +1502,14 @@ struct TextureAtlas
 
 static void testDynamicTextureAtlas()
 {
-	Atlas a;
+	BoxAtlas a;
 	
 	a.init(1024, 1024);
 	
 	const int kMaxElems = 1000;
 	//const int kMaxElems = 100;
 	
-	AtlasElem * elems[kMaxElems];
+	BoxAtlasElem * elems[kMaxElems];
 	int numElems = 0;
 	
 	const uint64_t t1 = g_TimerRT.TimeUS_get();
@@ -1746,7 +1519,7 @@ static void testDynamicTextureAtlas()
 		const int sx = random(8, 32);
 		const int sy = random(8, 32);
 		
-		AtlasElem * e = a.tryAlloc(sx, sy);
+		BoxAtlasElem * e = a.tryAlloc(sx, sy);
 		
 		if (e != nullptr)
 		{
@@ -1778,7 +1551,7 @@ static void testDynamicTextureAtlas()
 		const int sx = random(64, 128);
 		const int sy = random(64, 128);
 		
-		AtlasElem * e = a.tryAlloc(sx, sy);
+		BoxAtlasElem * e = a.tryAlloc(sx, sy);
 		
 		if (e != nullptr)
 		{
@@ -1803,7 +1576,7 @@ static void testDynamicTextureAtlas()
 	
 	TextureAtlas ta;
 	
-	ta.init(1024, 1024);
+	ta.init(GFX_SX, GFX_SY);
 	
 	const uint64_t tt1 = g_TimerRT.TimeUS_get();
 
@@ -1817,7 +1590,7 @@ static void testDynamicTextureAtlas()
 		for (int i = 0; i < sx * sy; ++i)
 			values[i] = i;
 		
-		AtlasElem * e = ta.alloc(values, sx, sy);
+		BoxAtlasElem * e = ta.alloc(values, sx, sy);
 		
 		if (e != nullptr)
 		{
@@ -1851,17 +1624,18 @@ static void testDynamicTextureAtlas()
 		//
 		
 	#if 1
-		if (numElems < kMaxElems)
+	for (int i = 0; i < 300; ++i)
+		if (numElems < kMaxElems && numElems < 300)
 		{
-			const int sx = random(8, 100);
-			const int sy = random(8, 100);
+			const int sx = random(4, 100);
+			const int sy = random(4, 100);
 			
 			uint8_t values[sx * sy];
 			
 			for (int i = 0; i < sx * sy; ++i)
 				values[i] = i;
 			
-			AtlasElem * e = ta.alloc(values, sx, sy);
+			BoxAtlasElem * e = ta.alloc(values, sx, sy);
 			
 			if (e != nullptr)
 			{
