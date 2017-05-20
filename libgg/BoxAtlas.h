@@ -42,12 +42,17 @@ struct BoxAtlas
 	BoxAtlas();
 	~BoxAtlas();
 	
-	void init(const int _sx, const int _sy);
+	void init(const int sx, const int sy);
 	
 	bool isFree(const int mx, const int my, const int msx, const int msy) const;
 	bool findFreeSpot(const int msx, const int msy, int & mx, int & my);
 	
-	BoxAtlasElem * tryAlloc(const int esx, const int esy);
+	BoxAtlasElem * tryAlloc(const int esx, const int esy, const int elemIndex = -1);
 	void free(const int ex, const int ey, const int esx, const int esy);
 	void free(BoxAtlasElem *& e);
+	
+	bool makeBigger(const int sx, const int sy);
+	bool optimize();
+	
+	void copyFrom(const BoxAtlas & other);
 };

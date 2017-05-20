@@ -1,5 +1,6 @@
 #include "Debugging.h"
 #include "BoxAtlas.h"
+#include <algorithm>
 #include <string.h>
 
 BoxAtlas::BoxAtlas()
@@ -84,11 +85,11 @@ bool BoxAtlas::findFreeSpot(const int msx, const int msy, int & mx, int & my)
 		const int mx2 = maskSx - msx;
 		const int my2 = maskSy - msy;
 		
-		for (int y = my1; y < my2; ++y)
+		for (int y = my1; y <= my2; ++y)
 		{
 			auto maskItr = mask + y * maskSx;
 			
-			for (int x = mx1; x < mx2; )
+			for (int x = mx1; x <= mx2; )
 			{
 				while (maskItr[x] && x < mx2)
 					x++;
@@ -115,7 +116,7 @@ bool BoxAtlas::findFreeSpot(const int msx, const int msy, int & mx, int & my)
 	return false;
 }
 
-BoxAtlasElem * BoxAtlas::tryAlloc(const int esx, const int esy)
+BoxAtlasElem * BoxAtlas::tryAlloc(const int esx, const int esy, const int elemIndex)
 {
 	const int msx = MaskPad(esx) >> kMaskShift;
 	const int msy = MaskPad(esy) >> kMaskShift;
@@ -140,10 +141,19 @@ BoxAtlasElem * BoxAtlas::tryAlloc(const int esx, const int esy)
 			}
 		}
 		
-		while (elems[nextAllocIndex].isAllocated)
-			nextAllocIndex = (nextAllocIndex + 1) % kMaxElems;
+		int index;
 		
-		const int index = nextAllocIndex;
+		if (elemIndex >= 0)
+		{
+			index = elemIndex;
+		}
+		else
+		{
+			while (elems[nextAllocIndex].isAllocated)
+				nextAllocIndex = (nextAllocIndex + 1) % kMaxElems;
+			
+			index = nextAllocIndex;
+		}
 		
 		auto & e = elems[index];
 		
@@ -190,4 +200,107 @@ void BoxAtlas::free(BoxAtlasElem *& e)
 		
 		e = nullptr;
 	}
+}
+
+bool BoxAtlas::makeBigger(const int _sx, const int _sy)
+{
+	if (_sx < sx || _sy < sy)
+	{
+		return false;
+	}
+	
+	// update size
+	
+	sx = _sx;
+	sy = _sy;
+	
+	// construct the new mask
+	
+	const int newMaskSx = MaskPad(_sx) >> kMaskShift;
+	const int newMaskSy = MaskPad(_sy) >> kMaskShift;
+	
+	uint8_t * newMask = new uint8_t[newMaskSx * newMaskSy];
+	memset(newMask, 0, newMaskSx * newMaskSy);
+	
+	for (int y = 0; y < maskSy; ++y)
+	{
+		const uint8_t * __restrict oldMaskItr = mask    + y *    maskSx;
+		      uint8_t * __restrict newMaskItr = newMask + y * newMaskSx;
+		
+		memcpy(newMaskItr, oldMaskItr, maskSx);
+	}
+	
+	// replace the old mask with the new one
+	
+	delete[] mask;
+	mask = nullptr;
+	
+	maskSx = 0;
+	maskSy = 0;
+	
+	//
+	
+	mask = newMask;
+	maskSx = newMaskSx;
+	maskSy = newMaskSy;
+	
+	return true;
+}
+
+bool BoxAtlas::optimize()
+{
+	BoxAtlasElem * sortedElems[kMaxElems];
+	int numElems = 0;
+	
+	for (int i = 0; i < kMaxElems; ++i)
+	{
+		auto & e = elems[i];
+		
+		if (e.isAllocated)
+		{
+			e.isAllocated = false;
+			
+			sortedElems[numElems++] = &e;
+		}
+	}
+	
+	memset(mask, 0, maskSx * maskSy);
+	
+	//
+	
+	std::sort(sortedElems, sortedElems + numElems,
+		[](const BoxAtlasElem * e1, const BoxAtlasElem * e2)
+		{
+			if (e1->sy != e2->sy)
+				return e1->sy > e2->sy;
+			else
+				return e1->sx > e2->sx;
+		});
+	
+	cacheMy = 0;
+	
+	for (int i = 0; i < numElems; ++i)
+	{
+		auto e = sortedElems[i];
+		
+		if (tryAlloc(e->sx, e->sy, e - elems) == nullptr)
+		{
+			return false;
+		}
+	}
+	
+	return true;
+}
+
+void BoxAtlas::copyFrom(const BoxAtlas & other)
+{
+	memcpy(elems, other.elems, sizeof(elems));
+	nextAllocIndex = other.nextAllocIndex;
+	sx = other.sx;
+	sy = other.sy;
+	maskSx = other.maskSx;
+	maskSy = other.maskSy;
+	mask = new uint8_t[maskSx * maskSy];
+	memcpy(mask, other.mask, maskSx * maskSy);
+	cacheMy = other.cacheMy;
 }
