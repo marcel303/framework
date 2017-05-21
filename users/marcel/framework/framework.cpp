@@ -4963,7 +4963,7 @@ static void measureText(FT_Face face, int size, const char * _text, float & sx, 
 	yTop = minY;
 }
 
-static void drawTextInternal(FT_Face face, int size, const char * _text)
+static void drawTextInternal(FT_Face face, int size, const char * _text, float x, float y)
 {
 #if ENABLE_UTF8_SUPPORT
 	const int kMaxTextSize = 2048;
@@ -4974,31 +4974,76 @@ static void drawTextInternal(FT_Face face, int size, const char * _text)
 	const size_t textLength = strlen(_text);
 #endif
 
-	float x = 0.f;
-	float y = 0.f;
-	
 	// the (0,0) coordinate represents the lower left corner of a glyph
 	// we want to render the glyph using its top left corner at (0,0)
 	
 	//y += size;
 	
+#if USE_GLYPH_ATLAS
+	GlyphCacheElem * glyphs[kMaxTextSize];
+	
+	for (size_t i = 0; i < textLength; ++i)
+	{
+		glyphs[i] = &g_glyphCache.findOrCreate(face, size, text[i]);
+	}
+	
+	if (globals.isInTextBatch == false)
+	{
+		gxSetTexture(globals.font->textureAtlas->texture);
+		
+		gxBegin(GL_QUADS);
+	}
+	
+	for (size_t i = 0; i < textLength; ++i)
+	{
+		const GlyphCacheElem & elem = *glyphs[i];
+		
+		// skip current character if the element is invalid
+		
+		if (elem.textureAtlasElem != nullptr)
+		{
+			const float bsx = float(elem.g.bitmap.width);
+			const float bsy = float(elem.g.bitmap.rows);
+			const float x1 = x + elem.g.bitmap_left;
+			const float y1 = y - elem.g.bitmap_top;
+			const float x2 = x1 + bsx;
+			const float y2 = y1 + bsy;
+			
+			const int iu1 = elem.textureAtlasElem->x + GLYPH_ATLAS_BORDER;
+			const int iu2 = elem.textureAtlasElem->x - GLYPH_ATLAS_BORDER + elem.textureAtlasElem->sx;
+			const int iv1 = elem.textureAtlasElem->y + GLYPH_ATLAS_BORDER;
+			const int iv2 = elem.textureAtlasElem->y - GLYPH_ATLAS_BORDER + elem.textureAtlasElem->sy;
+			const float u1 = iu1 / float(globals.font->textureAtlas->a.sx);
+			const float u2 = iu2 / float(globals.font->textureAtlas->a.sx);
+			const float v1 = iv1 / float(globals.font->textureAtlas->a.sy);
+			const float v2 = iv2 / float(globals.font->textureAtlas->a.sy);
+			
+			gxTexCoord2f(u1, v1); gxVertex2f(x1, y1);
+			gxTexCoord2f(u2, v1); gxVertex2f(x2, y1);
+			gxTexCoord2f(u2, v2); gxVertex2f(x2, y2);
+			gxTexCoord2f(u1, v2); gxVertex2f(x1, y2);
+		}
+		
+		x += (elem.g.advance.x / float(1 << 6));
+		y += (elem.g.advance.y / float(1 << 6));
+	}
+	
+	if (globals.isInTextBatch == false)
+	{
+		gxEnd();
+		
+		gxSetTexture(0);
+	}
+#else
 	for (size_t i = 0; i < textLength; ++i)
 	{
 		// find or create glyph. skip current character if the element is invalid
 		
 		const GlyphCacheElem & elem = g_glyphCache.findOrCreate(face, size, text[i]);
 		
-	#if USE_GLYPH_ATLAS
-		if (elem.textureAtlasElem != nullptr)
-	#else
 		if (elem.texture != 0)
-	#endif
 		{
-		#if USE_GLYPH_ATLAS
-			gxSetTexture(globals.font->textureAtlas->texture);
-		#else
 			gxSetTexture(elem.texture);
-		#endif
 			
 			gxBegin(GL_QUADS);
 			{
@@ -5009,26 +5054,10 @@ static void drawTextInternal(FT_Face face, int size, const char * _text)
 				const float x2 = x1 + bsx;
 				const float y2 = y1 + bsy;
 				
-			#if USE_GLYPH_ATLAS
-				const int iu1 = elem.textureAtlasElem->x + GLYPH_ATLAS_BORDER;
-				const int iu2 = elem.textureAtlasElem->x - GLYPH_ATLAS_BORDER + elem.textureAtlasElem->sx;
-				const int iv1 = elem.textureAtlasElem->y + GLYPH_ATLAS_BORDER;
-				const int iv2 = elem.textureAtlasElem->y - GLYPH_ATLAS_BORDER + elem.textureAtlasElem->sy;
-				const float u1 = iu1 / float(globals.font->textureAtlas->a.sx);
-				const float u2 = iu2 / float(globals.font->textureAtlas->a.sx);
-				const float v1 = iv1 / float(globals.font->textureAtlas->a.sy);
-				const float v2 = iv2 / float(globals.font->textureAtlas->a.sy);
-				
-				gxTexCoord2f(u1, v1); gxVertex2f(x1, y1);
-				gxTexCoord2f(u2, v1); gxVertex2f(x2, y1);
-				gxTexCoord2f(u2, v2); gxVertex2f(x2, y2);
-				gxTexCoord2f(u1, v2); gxVertex2f(x1, y2);
-			#else
 				gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
 				gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
 				gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y2);
 				gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y2);
-			#endif
 			}
 			gxEnd();
 			
@@ -5038,6 +5067,7 @@ static void drawTextInternal(FT_Face face, int size, const char * _text)
 	}
 
 	gxSetTexture(0);
+#endif
 }
 
 void measureText(int size, float & sx, float & sy, const char * format, ...)
@@ -5053,6 +5083,28 @@ void measureText(int size, float & sx, float & sy, const char * format, ...)
 	measureText(globals.font->face, size, text, sx, sy, yTop);
 }
 
+void beginTextBatch()
+{
+#if USE_GLYPH_ATLAS
+	Assert(!globals.isInTextBatch);
+	globals.isInTextBatch = true;
+	
+	gxSetTexture(globals.font->textureAtlas->texture);
+	gxBegin(GL_QUADS);
+#endif
+}
+
+void endTextBatch()
+{
+#if USE_GLYPH_ATLAS
+	Assert(globals.isInTextBatch);
+	globals.isInTextBatch = false;
+	
+	gxEnd();
+	gxSetTexture(0);
+#endif
+}
+
 void drawText(float x, float y, int size, float alignX, float alignY, const char * format, ...)
 {
 	char text[1024];
@@ -5061,6 +5113,19 @@ void drawText(float x, float y, int size, float alignX, float alignY, const char
 	vsprintf_s(text, sizeof(text), format, args);
 	va_end(args);
 	
+#if USE_GLYPH_ATLAS
+	float sx, sy, yTop;
+	measureText(globals.font->face, size, text, sx, sy, yTop);
+	
+	x += sx * (alignX - 1.f) / 2.f;
+	y += sy * (alignY - 1.f) / 2.f;
+	//y += sy * (alignY - 2.f) / 2.f;
+	//y += size * (alignY - 1.f) / 2.f;
+	
+	y -= yTop;
+	
+	drawTextInternal(globals.font->face, size, text, x, y);
+#else
 	gxMatrixMode(GL_MODELVIEW);
 	gxPushMatrix();
 	{
@@ -5076,9 +5141,10 @@ void drawText(float x, float y, int size, float alignX, float alignY, const char
 
  		gxTranslatef(x, y, 0.f);
 		
-		drawTextInternal(globals.font->face, size, text);
+		drawTextInternal(globals.font->face, size, text, 0.f, 0.f);
 	}
 	gxPopMatrix();
+#endif
 }
 
 static char * eatWord(char * str)

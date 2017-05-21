@@ -70,6 +70,7 @@ public:
 	Color color;
 	Gradient gradient;
 	FontCacheElem * font;
+	bool isInTextBatch;
 	bool mouseDown[BUTTON_MAX];
 	bool mouseChange[BUTTON_MAX];
 	bool hasOldMousePosition;
