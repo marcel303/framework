@@ -1,5 +1,5 @@
-#include "Debugging.h"
 #include "BoxAtlas.h"
+#include "Debugging.h"
 #include <algorithm>
 #include <string.h>
 
@@ -157,6 +157,7 @@ BoxAtlasElem * BoxAtlas::tryAlloc(const int esx, const int esy, const int elemIn
 		
 		auto & e = elems[index];
 		
+		Assert(e.isAllocated == false);
 		e.isAllocated = true;
 		
 		e.x = mx << kMaskShift;
@@ -194,6 +195,8 @@ void BoxAtlas::free(BoxAtlasElem *& e)
 {
 	if (e != nullptr)
 	{
+		Assert(e->isAllocated);
+		
 		free(e->x, e->y, e->sx, e->sy);
 		
 		e->isAllocated = false;
@@ -208,6 +211,11 @@ bool BoxAtlas::makeBigger(const int _sx, const int _sy)
 	{
 		return false;
 	}
+	
+	//
+	
+	if (_sx > sx)
+		cacheMy = 0;
 	
 	// update size
 	
@@ -258,13 +266,9 @@ bool BoxAtlas::optimize()
 		
 		if (e.isAllocated)
 		{
-			e.isAllocated = false;
-			
 			sortedElems[numElems++] = &e;
 		}
 	}
-	
-	memset(mask, 0, maskSx * maskSy);
 	
 	//
 	
@@ -277,23 +281,38 @@ bool BoxAtlas::optimize()
 				return e1->sx > e2->sx;
 		});
 	
-	cacheMy = 0;
+	//
+	
+	BoxAtlas temp;
+	temp.init(sx, sy);
 	
 	for (int i = 0; i < numElems; ++i)
 	{
 		auto e = sortedElems[i];
 		
-		if (tryAlloc(e->sx, e->sy, e - elems) == nullptr)
+		// note : allocation is not as tight as it could be when the cache-y optimization is active. reset the
+		//        cache before allocating each element to ensure the search for an empty spot begins at (0, 0)
+		
+		temp.cacheMy = 0;
+		
+		if (temp.tryAlloc(e->sx, e->sy, e - elems) == nullptr)
 		{
 			return false;
 		}
 	}
+	
+	//
+	
+	memcpy(mask, temp.mask, maskSx * maskSy);
+	memcpy(elems, temp.elems, sizeof(elems));
 	
 	return true;
 }
 
 void BoxAtlas::copyFrom(const BoxAtlas & other)
 {
+	init(0, 0);
+	
 	memcpy(elems, other.elems, sizeof(elems));
 	nextAllocIndex = other.nextAllocIndex;
 	sx = other.sx;
