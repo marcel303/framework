@@ -1407,17 +1407,29 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		const int graphX = (sx - graphSx) / 2;
 		const int xOffset = history.kMaxHistory - history.historySize;
 		
-		for (int i = 0; i < history.historySize; ++i)
+		setColor(127, 127, 255);
+		gxBegin(GL_QUADS);
 		{
-			const float value = history.getGraphValue(i);
-			
-			const float plotX1 = graphX + (i + 0 + xOffset) * graphSx / history.maxHistorySize;
-			const float plotX2 = graphX + (i + 1 + xOffset) * graphSx / history.maxHistorySize;
-			const float plotY = (graphMin == graphMax) ? .5f : (value - graphMax) / (graphMin - graphMax);
-			
-			setColor(127, 127, 255);
-			drawRect(plotX1, y + graphSy, plotX2, y + plotY * graphSy);
+			for (int i = 0; i < history.historySize; ++i)
+			{
+				const float value = history.getGraphValue(i);
+				
+				const float plotX1 = graphX + (i + 0 + xOffset) * graphSx / history.maxHistorySize;
+				const float plotX2 = graphX + (i + 1 + xOffset) * graphSx / history.maxHistorySize;
+				const float plotY = (graphMin == graphMax) ? .5f : (value - graphMax) / (graphMin - graphMax);
+				
+				const int x1 = plotX1;
+				const int y1 = y + graphSy;
+				const int x2 = plotX2;
+				const int y2 = y + plotY * graphSy;
+				
+				gxVertex2f(x1, y1);
+				gxVertex2f(x2, y1);
+				gxVertex2f(x2, y2);
+				gxVertex2f(x1, y2);
+			}
 		}
+		gxEnd();
 		
 		setColor(255, 255, 255);
 		drawText(graphX + graphSx - 3, y           + 4, 10, -1.f, +1.f, "%0.03f", graphMax);
@@ -3051,19 +3063,23 @@ void GraphEdit::drawNode(const GraphNode & node, const GraphEdit_TypeDefinition 
 	
 	if (isFolded == false)
 	{
-		for (auto & inputSocket : definition.inputSockets)
-		{
-			setFont("calibri.ttf");
-			setColor(255, 255, 255);
-			drawText(inputSocket.px + inputSocket.radius + 2, inputSocket.py, 12, +1.f, 0.f, "%s", inputSocket. name.c_str());
-		}
+		setFont("calibri.ttf");
 		
-		for (auto & outputSocket : definition.outputSockets)
+		beginTextBatch();
 		{
-			setFont("calibri.ttf");
-			setColor(255, 255, 255);
-			drawText(outputSocket.px - outputSocket.radius - 2, outputSocket.py, 12, -1.f, 0.f, "%s", outputSocket.name.c_str());
+			for (auto & inputSocket : definition.inputSockets)
+			{
+				setColor(255, 255, 255);
+				drawText(inputSocket.px + inputSocket.radius + 2, inputSocket.py, 12, +1.f, 0.f, "%s", inputSocket. name.c_str());
+			}
+			
+			for (auto & outputSocket : definition.outputSockets)
+			{
+				setColor(255, 255, 255);
+				drawText(outputSocket.px - outputSocket.radius - 2, outputSocket.py, 12, -1.f, 0.f, "%s", outputSocket.name.c_str());
+			}
 		}
+		endTextBatch();
 		
 		hqBegin(HQ_FILLED_CIRCLES);
 		{
